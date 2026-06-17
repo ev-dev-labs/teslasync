@@ -1,0 +1,141 @@
+I'll start by exploring the repository structure to understand the task scope and what exists.
+
+Xcode 26.5, swiftlint, swift 6.3.2, and pwsh are all available — so the gate is **not** blocked; I must actually build/lint/test. Let me explore the existing Apple app structure and parity infrastructure.
+
+The Apple app uses XcodeGen. Prior admin parity pages exist (UsersPage, AuditLogPage, etc.). Let me find where those Swift files live and study the established pattern, plus the project config and ledger.
+
+The real admin pages live in `Sources/Features/Admin/` (the prompt's path template is idealized). Let me study the closest analogs — AuditLogPage and UsersPage — which are admin list/table pages with filters and pagination.
+
+`Shared.xcframework` is **not** prebuilt — it's staged by a build preAction script. Let me check how prior admin pages handled the gate (read AuditLogPage's log), the build script, and the reference page source.
+
+Excellent — the AuditLogPage log reveals the exact established methodology. Prior admin pages ship to `Sources/Features/Admin/`, use a decomposed file pattern (Models / PageModel / PageModel.Sample / Page / sub-views / RouteRegistration / Tests), and verify via xcodegen + swiftformat + swiftlint + placeholder scan + isolated swiftc harness/typecheck (the full xcodebuild is pre-existing RED from an out-of-scope shared-surfaces compiler crash). Let me study the closest analog (AuditLog) and route infra in depth.
+
+Now I understand the page/model pattern. Let me read the remaining AuditLog files, the mutation pattern (UsersPage/FeatureFlags), and the web feedback hook + types to mirror the data contract exactly.
+
+Let me read the filters/badges/sample/route-registration, the web feedback hook+types, and a mutation example (UsersPage) to capture the PATCH pattern.
+
+Now the web data contract and mutation pattern. Let me read the web feedback hook/types, the UsersPage mutation example, and the route infrastructure.
+
+Now the web types and route infrastructure. Let me read those plus how routes chain into the app shell.
+
+Key finding: the catalog uses **web key names verbatim** for parity strings, and `common.next/previous/refresh` + all `feedback.*` keys do **not** exist yet — I must add 38 + a `route.feedbackQueue` nav key. Let me inventory the P2 tokens and P3 components I'll bind to.
+
+`TSMaskedValue`, `TSSelect`, `TSBadge`, `TSDataTable` all exist. Let me read the exact signatures of every component I'll use plus the design tokens.
+
+Let me read the design tokens, typography, an existing page+test, and the ledger to finalize my mental model.
+
+Let me confirm the generated token names, the ledger format/entry, the test pattern, and the manifest record.
+
+I have the full picture: 43 parity items = 1 panel + 4 states + 38 strings. Let me read the placeholder scanner, the test pattern, and the theme helper, then write the plan.
+
+I now have a complete understanding of the architecture, patterns, components, tokens, and contract. Let me set up tracking, check for exhaustive `AppRoute` switches I must update, and write a plan.
+
+`WatchDeepLink` is a separate enum — unaffected. Only `AppRoute.swift`'s `systemImage` + `group` switches are exhaustive and need the new case. I have everything. Let me record a plan and todos, then build.
+
+Now I'll build the implementation, starting with the value-types/models file.
+
+Now the badges, then the table and expansion views.
+
+Let me check the catalog for existing generic expand/collapse a11y keys before writing the table (to avoid inventing non-parity strings).
+
+Major discovery — the catalog imports web i18n keys under a `translation.` prefix (e.g., `translation.feedback.queue.expand.body` exists). Let me check whether **all 38** required web keys already exist under that prefix, which would change my approach from "add keys" to "reference existing keys."
+
+All 38 keys already exist under the `translation.` prefix (0 bare) — so I reference them like `translation.feedback.queue.col.category` (same convention as UsersPage). I must NOT add catalog keys, and must fix my files to use the prefix. Let me verify the stored default values, especially the `pageOf` format.
+
+All values match web defaults; `pageOf` uses `%1$@ %2$@ %3$@` (string args). The 38 parity keys exist — I only need to add the bare nav key `route.feedbackQueue`. Let me confirm its absence and inspect an existing route entry's JSON shape.
+
+Confirmed: I only add the bare `route.feedbackQueue` nav key; the 38 parity strings already exist as `translation.*`. Let me fix my two created files to use the `translation.` prefix (matching the UsersPage convention).
+
+Now I'll write the table view. Let me first check if there's a reusable user-cell component (web uses `UserCell` for the reporter column) and confirm the generic table-expand a11y keys.
+
+`TSUserCell` is the native `UserCell` peer, and `translation.table.expand.expand/collapse` ("Expand row"/"Collapse row") exist for the chevron a11y. Writing the adaptive table now.
+
+Now the main page view with filters, states, and pagination.
+
+Now the route registration and navigation wiring (AppRoute, parser, app shell chain).
+
+Now wiring `AppRoute.swift` (enum case, pathSegment, systemImage, group), the parser alias, and the app shell chain.
+
+Now add the bare `route.feedbackQueue` nav key to the catalog. First, let me verify the catalog's current formatting (sort order + indentation) so my edit is a minimal, faithful diff.
+
+The catalog uses Xcode's `"key" : {` style (space before colon) and isn't globally sorted — a full `json.dump` rewrite would reformat every line. I'll do a minimal text insertion instead. Let me extract the exact raw block for an existing route key as my formatting anchor.
+
+Now the XCTest model tests, mirroring the established pattern.
+
+All sources are written. Now the verification gates. Let me start with swiftformat, swiftlint, and the placeholder scan on my new/edited files.
+
+Two auto-fixable formatting issues. Let me apply swiftformat (write mode) to the affected files, then re-lint all.
+
+swiftformat passes (0/12). Now swiftlint --strict.
+
+swiftlint clean (0 violations). Now the placeholder scan — let me first self-check for flagged words, then run the gate on the Admin + Tests dirs.
+
+No flagged words; Admin scan is clean (COUNT=0, EXIT=0). Let me scan the Tests dir and regenerate the Xcode project.
+
+Placeholder scans clean, project regenerates. Now the **real-execution** model harness — compiling the model + models + sample with Swift 6 strict concurrency and running assertions (the established evidence method, since the full `xcodebuild` scheme is pre-existing RED).
+
+All 33 harness assertions pass under Swift 6 strict concurrency. Now the isolated **view type-check** against the real P2 tokens + P3 components for both platforms (`-DDEBUG` so previews compile too).
+
+Pre-existing `People.swift` needs `TSStatusDot` (from `StatusIndicators.swift`) — a dependency-completeness gap in my isolated set, not my code. Let me add it and re-run.
+
+macOS view type-check passes (0 errors). Now iOS (exercises the compact `horizontalSizeClass` branches).
+
+Both platforms type-check clean (0/0). Let me also verify the **test file** type-checks against the real sources (compiling it as part of the module with XCTest available).
+
+The XCTest errors are an artifact — XCTest's C assertion macros aren't available in a loose `-typecheck` (they only synthesize inside a real test bundle). Let me validate the test's actual logic/types with lightweight XCTest shims instead.
+
+Good — the shim approach caught a **real** test-file bug: `StubSource.updateFeedback` (nonisolated) calls the `@MainActor` test class's `makeRow`. That would fail in the real bundle too. Let me fix it by inlining the fallback.
+
+Test logic type-checks clean (0 errors) and the fix is sound. Let me re-lint the edited test file, then attempt the full `xcodebuild` to honestly document its real state.
+
+The inline fix made line 33 too long. Let me auto-format the test file and re-verify.
+
+Test file is clean (0/0). Gradle 8.14.5 is available. Now let me honestly attempt the full build. First I'll probe whether the KMP `Shared.xcframework` (a build prerequisite) can be assembled in this environment, running it in the background.
+
+While the KMP build runs, let me update the parity ledger (add the two FeedbackQueue rows, 43/43) by inserting after the AuditLog rows block.
+
+Ledger valid (2 rows, 43/43). The KMP build is downloading the Kotlin/Native distribution and compiling — let me wait and monitor.
+
+The KMP build is nearly done (debug framework written, now linking release). Let me wait for it to finish.
+
+Release linking (slower in Kotlin/Native) is in progress. Let me continue waiting.
+
+Release linking continues (ios-arm64 done, now ios-sim). Kotlin/Native release linking is slow but progressing. Let me keep waiting.
+
+macOS release framework is the last link step. Let me wait for assembly + staging to complete.
+
+`Shared.xcframework` built successfully (10m41s) and is staged. Now I can run the real full `xcodebuild`. Let me build the `TeslaSync` scheme (per the gate contract) in the background and monitor.
+
+Let me monitor the build progress.
+
+The build is consuming `Shared.xcframework` and compiling the app's surfaces. Let me continue monitoring for completion or the documented pre-existing crash.
+
+The build failed (3 failures) on the out-of-scope `TeslaSync/widget-primitives` batch — not my files. Let me confirm the failure signature and verify **zero** diagnostics in my FeedbackQueue files.
+
+The errors are in out-of-scope `TeslaSync/shared-surfaces` + `widget-primitives` files. Let me precisely enumerate which files have errors to confirm **none** are mine.
+
+Confirmed: the **only** errors are in pre-existing out-of-scope `TeslaSync/shared-surfaces/Input.Previews.swift` (2 `return`-in-ViewBuilder errors); **zero** in my scope. Let me verify that file is untouched by my change (pre-existing) and capture the exact error lines.
+
+Verified: `Input.Previews.swift` is pre-existing (not in my changeset). My changeset is clean and confined to allowed scope. Let me confirm my files were actually compiled by the build (zero diagnostics), then write the evidence log.
+
+The full build aborted on the pre-existing `Input.Previews.swift` errors before reaching my files; artifacts are git-ignored. My code's correctness is established by the isolated typechecks + executable harness. Let me now programmatically verify every one of the 38 parity string keys is actually wired in my code (binding evidence for the PARITY log section).
+
+All 38 strings wired + in catalog. Combined with 1 panel + 4 states = **43/43**. Let me capture file LOCs, then write the comprehensive evidence log.
+
+Now I'll write the comprehensive evidence log.
+
+Log written. Let me do a final consolidated re-verification of the in-scope gates (after all edits) before committing.
+
+All final in-scope gates are green (format 0/12, lint 0 violations, placeholder 0, JSON valid). Committing the in-scope changes.
+
+Committed (`7c1cb2ad1`), changeset clean. Let me update tracking and clean up temp artifacts.
+
+All work is complete and verified. Here's the summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

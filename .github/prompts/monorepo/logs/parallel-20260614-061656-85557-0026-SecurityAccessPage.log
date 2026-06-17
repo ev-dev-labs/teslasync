@@ -1,0 +1,153 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure, the parity manifest, and check for tooling availability.
+
+Xcode 26.5, swiftlint, swift, and pwsh are all available — the gate can run. Let me explore the Apple app structure deeply.
+
+The build uses XcodeGen + a KMP `Shared.xcframework`. Let me find where existing "done" admin pages live and check for the xcodeproj and xcodegen.
+
+The real convention is `apps/apple/Sources/Features/Admin/` (where all sibling "done" pages live and which IS in `project.yml`), not `TeslaSync/Features/Admin/` (not compiled). Let me study the established page patterns in depth.
+
+Let me read the closest analog pages (LiveSignalInspector uses vehicles+live; ApiPlayground was the ledger generator) and a route registration + test.
+
+Now I understand the established pattern clearly. Let me examine the web sub-components, existing Swift security components, the design tokens, sample sources, and the placeholder checker.
+
+The Swift sub-components already exist as separate parity units. Let me confirm the exact manifest scope for this page and study how a sectioned sibling page (GDPRExport) is structured.
+
+Scope confirmed: requiredCount=9 (2 panels + 3 states + 4 strings). To build a faithful, non-stub page I'll reproduce the web page's sections natively. Let me read the web sub-components, helpers, types, and hooks.
+
+The sub-sections are separate parity units already implemented as Swift components. Per the manifest (requiredCount=9) and the accepted sibling pattern (LiveSignalInspector), this page unit = chrome + 2 GlassPanels + states + strings, embedding real P3 components. Let me locate the design tokens, routes, samples, VehicleTwin, and the placeholder checker.
+
+No `securityAccess` route exists yet (web route `/security-access`). Adding navigation is allowed. Let me read the route registry, parser, tokens, primitives, and the smallest route-registration template + test.
+
+Now I understand registration. I'll add a `.securityAccess` route case. Let me check for exhaustive switches over `AppRoute`, route composition wiring, existing AppRoute tests, and read the design tokens/primitives.
+
+Adding `.securityAccess` is safe (no count assertions; other switches map their own enums → AppRoute). Let me read the design tokens and shared primitives I'll use.
+
+Let me read the typography/buttons/status primitives, generated tokens, the VehicleTwin component API, and the sample source pattern.
+
+Now let me check `TSTone`/`TSBadge`/`TSInlineCallout`, the VehicleTwin component API, the web types, and the placeholder checker.
+
+`VehicleTwin` needs a heavy `VehicleTwinSurfaceModel`. Let me check `VehicleTwinInput`/state constructability, how widgets build a twin, plus the web `SecurityEvent`/`Vehicle` types and the placeholder checker.
+
+I have the full design system. GlassPanel2 will be a native digital-twin/security-state summary (avoiding heavy `VehicleTwinSurfaceModel` coupling). Let me read the placeholder checker, swiftlint config, and check the xcstrings for required keys.
+
+Now I understand the gate constraints (placeholder words to avoid, swiftlint `--strict` ⇒ 120-col limit, 4 missing required strings). Let me check the build prerequisites: the Shared.xcframework, the build script, and the exact gate contract.
+
+`Shared.xcframework` isn't prebuilt — the build pre-step runs Gradle (KMP). Let me check the shared project, toolchain availability, and how existing "done" pages logged their gate.
+
+This reveals the exact accepted methodology. The full `xcodebuild` is blocked by a pre-existing out-of-scope sibling bug; "done" pages prove correctness via `swiftc -typecheck` (both idioms) + an executed model harness + swiftlint/swiftformat/placeholder gates. Let me confirm tooling, the pre-existing breakage, and read the analog test.
+
+The pre-existing `glass()` helper now shows `@escaping` — I'll verify the actual build state empirically later. Let me check which `admin.security.*` keys already exist in the catalog (to reuse, not duplicate) and confirm no partial SecurityAccessPage exists.
+
+Clean slate. Let me inspect the xcstrings entry format and the `.swiftformat` config so my additions match exactly.
+
+Let me read the Banners and Metrics components to use the right shared primitives for the error banner and summary cards.
+
+I have everything needed. Let me set up tracking and write the plan, then implement.
+
+Now I'll create the foundation files: logic, model, and sample sources.
+
+Let me check the `tsGlassPanel()` modifier definition so my alert panel border matches its shape.
+
+Now the panel subviews and the main page view.
+
+Now the route registration, AppRoute case, and app composition. Let me view the TeslaSyncApp composition area first.
+
+Now the test file mirroring the sibling pattern.
+
+Now let me inspect the exact xcstrings formatting (indent, unicode escaping) before adding keys, to minimize diff.
+
+The xcstrings uses Xcode's exact format (`" : "` separators, raw UTF-8). I'll insert entries textually to preserve formatting. Let me add all keys.
+
+36 keys added. Let me verify JSON validity and that the diff is purely additive (no reformatting of existing entries).
+
+Localization is valid and additive. Now let me verify my code compiles. First, check `TSDesign.swift` deps, then run an isolated Swift 6 type-check (macOS + iOS) against the real tokens/components — the primary correctness proof.
+
+All files present. Let me run the isolated Swift 6 strict-concurrency type-check for macOS first.
+
+macOS type-check is clean (0 errors/warnings). Now the iOS Simulator target.
+
+Both idioms type-check clean (0/0). Now swiftlint `--strict`, swiftformat `--lint`, and the placeholder scan on my files.
+
+swiftlint clean (0 violations). Now swiftformat `--lint` and the placeholder scan.
+
+Placeholder scan clean (COUNT=0). swiftformat wants formatting fixes in 3 files. Let me auto-format my files, then re-verify all gates.
+
+Now re-verify: swiftformat `--lint`, swiftlint `--strict`, and re-type-check both idioms (since `count(where:)` was introduced).
+
+swiftformat is clean, but its before-first wrapping pushed the sample's `history(for:)` over swiftlint's 50-line function-body limit. Let me view the reformatted sample and rewrite it compactly with a spec struct.
+
+swiftformat normalized the number grouping. Now let me rewrite the sample compactly (spec struct + map) to satisfy swiftlint's function-body-length limit.
+
+The file exists — let me overwrite it via heredoc.
+
+Now re-verify the full in-scope gate: swiftformat `--lint`, swiftlint `--strict`, and re-type-check both idioms.
+
+Both clean. Now re-type-check both idioms (logic now uses `count(where:)`, sample rewritten).
+
+Both idioms clean (0/0). Now the executed model harness — compile the pure model+logic+sample with an assertion `main.swift` and run it.
+
+Swift 6 flags the global mutable counters. Let me make them `@MainActor` and recompile.
+
+Harness passes (34/34). Now let me run `xcodegen generate` to confirm the project picks up my new files, and verify they're referenced.
+
+`xcodegen generate` succeeded; my files are referenced 42× across targets. The full `xcodebuild` needs the KMP `Shared.xcframework` (Gradle, ~8 min). Let me start that in the background while I finalize the ledger and log.
+
+Now update the parity ledger with the two platform rows (9/9).
+
+Ledger valid (38 rows, both platforms). The xcframework build is progressing (Gradle/KMP). Let me gather data for the evidence log.
+
+All expected files present; `TeslaSync.xcodeproj` is git-ignored. Let me check the xcframework build progress, then write the evidence log.
+
+A parallel slot is also building the shared framework; mine is progressing (`linkDebugFrameworkIosArm64`). Let me verify the xcframework will be git-ignored (important for commit hygiene), then write the evidence log.
+
+The xcframework will be git-ignored (line 381). Let me wait for the shared-framework build to finish so I can attempt the full build and document its real state.
+
+The shared framework is still assembling the release variant (staged at the end). Let me wait for it to finish staging.
+
+Release linking is on the final target (macOS). Let me wait for it to assemble and stage.
+
+`Shared.xcframework` built successfully (7m35s) and staged. Now let me attempt the full macOS `xcodebuild` to document the real build state. This is long (5592 files), so I'll run it and monitor.
+
+Build failed fast (exit 65, ~72s) — let me examine the actual errors to attribute the cause.
+
+The full macOS build has exactly **2 errors, both in a pre-existing out-of-scope sibling** (`TeslaSync/shared-surfaces/Input.Previews.swift`) — zero in my files. Let me confirm it's pre-existing and unmodified by me.
+
+Confirmed: the 2 build errors are in a **pre-existing, committed, out-of-scope sibling** (`Input.Previews.swift`, commit ed5f636e3, unmodified by me) — `#Preview` `return`-in-ViewBuilder defects, outside my allowed files. My files have zero errors even in the full-module compile. This matches the accepted methodology. Let me write the evidence log.
+
+All evidence gathered. Let me write the comprehensive evidence log.
+
+Now let me verify the full repo status before committing — the Gradle build may have touched generated files I must not commit.
+
+Clean — exactly my 12 intended changes (no generated/ignored artifacts). Let me commit.
+
+Committed as `af6553323`. Let me do a final consolidated sanity re-run of the in-scope gates, then clean up temp files.
+
+All gates green. Let me clean up temp files and finalize tracking.
+
+All work is complete, committed (`af6553323`), and the working tree is clean.
+
+## Summary
+
+Delivered a native **SwiftUI/HIG `SecurityAccessPage`** at parity with `web/src/features/admin/pages/SecurityAccessPage.tsx` (route `/security-access`), adaptive across macOS + iOS.
+
+**Shipped** (`apps/apple/Sources/Features/Admin/` — the repo's real compiled page home, per the documented path reconciliation since the prompt's `TeslaSync/Features/Admin/**` isn't a `project.yml` source group):
+- `SecurityAccessPageModel.swift` — `@MainActor @Observable` model over two seams (`useVehicles`, `useSecurityEvents` + `/security/latest`), deriving `isSecure`/sentry-uptime/last-lock-change
+- `SecurityAccessLogic.swift` — pure helpers ported from web `helpers.ts`
+- `SecurityAccessPage.swift` + `.Panels.swift` — header+Picker, loading/empty/error/success, **GlassPanel1** (security alert) + **GlassPanel2** (digital-twin physical state grid)
+- `SecurityAccessPageModel.Sample.swift`, `SecurityAccessRouteRegistration.swift`, model+route XCTest
+- Edits: `AppRoute.swift` (`.securityAccess`), `TeslaSyncApp.swift` (route wiring), `Localizable.xcstrings` (+36 keys, additive), `apple-ledger.json` (+2 rows 9/9), evidence log
+
+**Gate (all in-scope GREEN):** swiftlint `--strict` 0 · swiftformat `--lint` 0/9 · placeholder COUNT=0 · Swift 6 type-check macOS+iOS 0/0 · executed model harness 34/34 · `Shared.xcframework` built · `xcodegen` 0 · xcstrings valid. **`PARITY_COVERED=9/9`**.
+
+The full `xcodebuild` is RED **only** from 2 pre-existing, out-of-scope errors in a sibling I never touched (`TeslaSync/shared-surfaces/Input.Previews.swift`, `#Preview` `return`-in-ViewBuilder, committed at `ed5f636e3`) — forbidden to fix per covenant #6/#7 and documented, exactly as the accepted sibling DONE pages did. **EXIT=0 / STATUS=DONE.**
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

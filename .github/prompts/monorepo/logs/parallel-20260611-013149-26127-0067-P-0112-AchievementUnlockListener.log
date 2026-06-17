@@ -1,0 +1,172 @@
+I'll start by exploring the repository structure to understand what exists and what I'm working with.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the web source and the existing Apple app structure.
+
+Now let me read the web source end-to-end and explore the existing Apple shared-surfaces patterns.
+
+Let me read the supporting hooks/types and explore the existing Apple shared-surfaces pattern (the most recent one, SourceLayerBadge).
+
+Let me read the AchievementBadge web component, the LifetimeAchievement type, and examine the most recent existing shared-surface (SourceLayerBadge) as my pattern reference.
+
+The SourceLayerBadge surface has 9 files following a clear pattern. Let me read all of them to learn the exact conventions.
+
+Excellent pattern. Let me read the remaining 6 files to fully internalize the conventions.
+
+Let me read the test files, previews, strings, and locate the shared P1/S9 tokens and primitives referenced.
+
+Let me read the Previews, strings files, and locate the shared design tokens and primitives.
+
+Let me find the design token definitions and shared primitives, plus understand the project.yml structure for target membership.
+
+Let me read the rest of project.yml (test targets) and the design tokens + shared primitives I'll need.
+
+Let me read the design tokens fully and find conceptually-similar existing surfaces (toast/listener/banner/overlay) to match the established convention for transient surfaces.
+
+The `AiLimitBanner` is the closest analog (a transient banner). Let me study it plus the shared primitives (Button, Card/GlassPanel, Skeleton, EmptyState) to learn card/panel composition idioms.
+
+The `AiLimitBanner` is the ideal multi-state analog. Let me read its Model/Seams/Adapter wiring and locate the shared primitive signatures I'll use.
+
+Excellent — `AiLimitBanner` is a near-perfect template (it has a ticker seam for timed dismissal, source/telemetry/i18n seams, and full state coverage). Now let me read the shared primitive signatures and check for an existing native AchievementBadge.
+
+There's an existing native `AchievementBadge` feature-view and `RecentlyUnlockedAchievements` widget sharing the same domain. Given my allowed-files constraint and the self-containment convention, I must prefix all my types uniquely. Let me read those existing surfaces (to avoid symbol collisions and learn i18n keys) and the shared primitives I'll reuse.
+
+Let me read the shared primitives I'll reuse and check the build tooling (xcodegen, pwsh, placeholder checker).
+
+Let me check the motion primitive and the build tooling (xcodegen, pwsh, the placeholder checker).
+
+All tooling is present (pwsh, xcodegen, placeholder checker); the xcodeproj needs generating. Let me read the placeholder checker (to know banned words) and the remaining achievement surface files.
+
+Now I understand the full pattern. Let me check the lint config, banned-word patterns, and verify my planned type names don't collide with existing symbols.
+
+Two symbols (`AchievementCelebrationPrefs`, `AchievementUnlockedToast`) already appear in the Apple tree — I must check whether they're real type definitions I'd collide with. Also noting: `--strict` makes the 50-char type-name warning fatal, and "Placeholder"/"TODO"/etc. are banned even in comments.
+
+`TSAchievementUnlockedToast` is a shared atomic component — the native counterpart of the web toast. My surface should compose it (like `AiLimitBanner` composes `TSAlertBanner`). Let me read it and check for a real `AchievementCelebrationPrefs` type.
+
+Key finding: `TSAchievementUnlockedToast` is a minimal atomic (title-only, no description/View/dismiss/badge), so like `AiLimitBanner` built its own rich card, I'll build my own rich toast row composing primitives. `AchievementCelebrationPrefs` is not a real type (comments only), so my prefixed types are collision-free. Now let me assess buildability (xcframework, schemes) and read the formatter config.
+
+Critical finding: `Frameworks/Shared.xcframework` is only a `.gitkeep` — the KMP framework the app target links against is absent, so a full `xcodebuild` can't link regardless of my code. Let me confirm how predecessors logged their gate (DONE vs BLOCKED) and whether the component library is KMP-independent.
+
+Predecessor logs exist — these will calibrate exactly how the gate ran (DONE vs BLOCKED) in this environment. The `TeslaSync` scheme has a preAction that builds the missing xcframework. Let me read the predecessor logs and that script.
+
+This is the blueprint. The sanctioned disposition (used by every P4 surface) is: ship a complete verified surface; pass surface-scoped `swiftformat`/`swiftlint`/`check-placeholders`/`xcodegen`; build + test in an **isolated SwiftPM harness** against real tokens; **`swiftc -typecheck`** against real iOS+macOS SDKs; and **DEFER** the full-app `xcodebuild` with proven pre-existing-blocker evidence (missing KMP `Shared.xcframework`, duplicate app-module types, 224 co-located test files). Shared-surfaces is already wired into `project.yml`/`.swiftlint.yml`, so I stay within my allowed files. Let me read the AiLimitBanner log to replicate the exact isolated harness + test approach for a multi-state surface.
+
+I now have the exact, sanctioned verification methodology. Let me map the `Sources/Components` dependency closure so I can build a faithful isolated harness, and write my plan.
+
+I now have the complete sanctioned methodology and all conventions. Let me set up tracking and the plan, then implement.
+
+Starting implementation with the pure-core Adapter (Foundation-only, immediately typecheckable).
+
+Let me typecheck the Adapter standalone immediately (Foundation-only) to catch errors early.
+
+Adapter is clean under Swift 6 strict concurrency. Now the Projection.
+
+Both pure files clean. Now the Seams (source/ticker/chime protocols + production/test doubles).
+
+Now the Model (state-holder) + telemetry seam + i18n facade.
+
+Let me typecheck the four core files together (Foundation/Observation/OSLog).
+
+Core logic is clean. Now the riskiest file — the AVFoundation procedural chime synthesizer. I'll write it carefully (macOS has no `AVAudioSession`, so I'll guard that), then immediately typecheck against both SDKs.
+
+Let me typecheck the chime (with its Adapter/Seams deps) against both iOS and macOS SDKs to confirm the `AVAudioSession` guard is correct.
+
+Chime compiles clean on both SDKs. Now the SwiftUI Views (toast row + stack + freshness chip).
+
+Now the States chrome (loading skeleton, two empty states, unavailable retry).
+
+Now the main surface View with lifecycle, phase switch, freshness chip, and the polite live announcement.
+
+Now the Previews (DEBUG-only, every state).
+
+Now I'll verify the SwiftUI files compile against the real component closure. Let me discover the closure by typechecking against `Sources/Components` + `Sources/Design` + Tokens.
+
+Non-chart Components + Design import only Foundation/SwiftUI. Let me typecheck my full surface against a focused real-component closure (macOS first), iterating on any missing symbols.
+
+Clean on macOS. Now iOS, plus a DEBUG-previews typecheck on both SDKs.
+
+All typechecks green on both SDKs. Now the test files. Starting with the pure AdapterTests.
+
+Now the projection/views/live-source Tests, then a separate ModelTests (to keep each file under the 400-line limit).
+
+Now the ModelTests (heaviest — state-holder behavior + test doubles).
+
+Now the strings catalog, then I'll build the isolated SwiftPM harness to actually run the tests.
+
+Now building the isolated SwiftPM harness to actually run the tests (the sanctioned `swift test` gate).
+
+Harness scaffolded (21 source + 3 test files). Now running `swift test`.
+
+All 43 tests pass in the isolated harness. Now the surface-scoped gates. First format my files, then lint, then re-verify typecheck didn't break.
+
+6/12 files reformatted. Now verify `--lint` is clean, run `swiftlint --strict`, and re-typecheck the formatted files.
+
+`swiftformat --lint` is clean. Three `opening_brace` violations from wrapped function signatures in the test files. Let me view and fix them.
+
+Conflict between swiftformat (wraps brace onto its own line) and swiftlint `opening_brace` for long signatures. Fix: keep signatures on one line where possible; use before-first param wrapping otherwise. Let me fix the three helpers.
+
+Re-running format + lint to confirm the brace conflict is resolved (and that swiftformat preserves the before-first form).
+
+Both format and lint are green (0 violations, 12 files). Let me re-sync the harness with the formatted files and re-run the full verification (tests + both-SDK typechecks).
+
+43 tests pass post-format. Now the cross-SDK typechecks (for clean log evidence), check-placeholders, and xcodegen.
+
+All typechecks green. The placeholder gate's prefix-path returns clean trivially, so let me verify honestly by scanning a temp dir containing only my files, plus a direct grep for banned patterns.
+
+Honest placeholder scan: COUNT=0, grep clean. Now `xcodegen generate` and verify target membership.
+
+xcodegen generated cleanly. Let me verify my files' target membership in the generated pbxproj.
+
+Let me re-verify membership with a cleaner grep (my nested pattern was wrong).
+
+Each file shows 4 "in Sources" lines (= 2 target memberships each, since XcodeGen writes both a PBXBuildFile def and a build-phase reference). Let me definitively confirm the production/test split per target with a precise pbxproj parse.
+
+Membership is exactly correct: 9 production sources → both app targets; 3 `*Tests.swift` → both test targets (excluded from app targets). All surface gates are green. Now let me capture the real DEFERRED evidence for the full-app `xcodebuild` (the missing KMP framework), exactly as predecessors documented.
+
+Conclusive pre-existing blocker captured (`XCODEBUILD_MAC_EXIT=65`, missing KMP `Shared.xcframework`) — identical to predecessors. Let me confirm the other documented pre-existing blocker (duplicate app-module types), verify the generated project is git-ignored, and clean up.
+
+Only my files are untracked (no stray edits); the generated `.xcodeproj` is git-ignored. The sole verified full-app blocker is the missing KMP `Shared.xcframework` (the predecessor's other cited blockers no longer apply — duplicate types=1, co-located tests are excluded from the app target — so I'll cite only the verified one). Let me gather line counts, clean the generated project, and write the gate log.
+
+All files ≤290 lines (under the 400 limit). Generated project cleaned. Now writing the comprehensive, honest gate log.
+
+Now committing the surface files + log. Let me stage precisely (the prompt's prefix path won't match my files, so I'll use the glob) and verify the staged set.
+
+All 13 files + log staged, nothing stray. Committing.
+
+Committed cleanly (`b24ba77b9`), tree clean. Let me do a final consolidated re-verification of the committed surface gates and mark the work complete.
+
+The file-list expansion got mangled (swiftlint fell back to the whole tree — notably 0 violations across all 4182 files under `--strict`). Let me re-run both gates with an explicit, correct file list for a clean per-file result.
+
+All gates green on the 12 committed files (swiftlint `--strict`: 0 violations; swiftformat `--lint`: 0/12 require formatting). Every todo is complete. Final tree check, then done.
+
+The task is complete. Final state verified: HEAD is the new commit, working tree clean, all 13 surface files + log committed.
+
+Merge made by the 'ort' strategy.
+ ...red-surfaces-0112-AchievementUnlockListener.log | 220 ++++++++++++++++
+ .../AchievementUnlockListener.Adapter.swift        | 253 ++++++++++++++++++
+ .../AchievementUnlockListener.AdapterTests.swift   | 152 +++++++++++
+ .../AchievementUnlockListener.Chime.swift          | 133 ++++++++++
+ .../AchievementUnlockListener.Model.swift          | 245 +++++++++++++++++
+ .../AchievementUnlockListener.ModelTests.swift     | 290 +++++++++++++++++++++
+ .../AchievementUnlockListener.Previews.swift       | 112 ++++++++
+ .../AchievementUnlockListener.Projection.swift     | 208 +++++++++++++++
+ .../AchievementUnlockListener.Seams.swift          | 255 ++++++++++++++++++
+ .../AchievementUnlockListener.States.swift         | 135 ++++++++++
+ .../AchievementUnlockListener.Tests.swift          | 194 ++++++++++++++
+ .../AchievementUnlockListener.Views.swift          | 196 ++++++++++++++
+ .../AchievementUnlockListener.strings              |  41 +++
+ .../AchievementUnlockListener.swift                | 106 ++++++++
+ 14 files changed, 2540 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0112-AchievementUnlockListener.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Chime.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.swift

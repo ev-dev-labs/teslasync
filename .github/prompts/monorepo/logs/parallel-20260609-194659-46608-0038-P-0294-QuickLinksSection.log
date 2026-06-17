@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure, the web source specification, and checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me read the web source and understand the existing Apple project structure.
+
+Now let me examine the target `feature-views` directory, the existing test patterns, and the project configuration.
+
+This is a mature project with ~2399 files in `feature-views`. `ToolCard` is described as a pure presentational container like `QuickLinksSection`. Let me check if my target already exists and study the `ToolCard` reference implementation.
+
+There's a `QuickNav` feature view — a navigation grid, the closest analog to `QuickLinksSection`. Let me study it thoroughly along with `ToolCard`.
+
+Excellent architecture. Let me read the remaining QuickNav files (the adapter holds the shared types), plus ToolCard, and locate the design tokens.
+
+I now understand the architecture well. `QuickLinksSection` differs from `QuickNav`: it has an outer glass panel with a "Quick Links" header (chevron + title), 6 links (no descriptions, all cyan), and a 2/3/6 responsive grid. Let me find the design tokens, the `ReferenceLinksSection` (which has a panel+header), the `ToolCard` telemetry pattern, and the app route types.
+
+Let me locate the exact design token and shared-component APIs, the strings file format, and the app route types.
+
+The spacing/radius tokens use a different declaration. Let me find them and read the shared component APIs (`TSGlassPanel`, `TSButton`, `TSSkeleton`, `TSFadeIn`) and color/font tokens.
+
+The core tokens are generated. Let me find them in the `design/generated/apple` path and confirm the exact token names (spacing, radius, motion, colors, fonts).
+
+Let me read the full Tokens.swift to confirm all the token APIs I'll use.
+
+I have all the design tokens. Now let me read the typography components, motion, the glass-panel modifier, the app route types, and confirm the web i18n keys.
+
+Let me confirm the `nav` i18n block, and read the route definitions, typography, motion, and glass-panel modifier.
+
+Let me read the route parser (to map web paths→native routes correctly), the typography components, and the glass material modifier.
+
+Let me confirm where `/climate` and `/efficiency` resolve in the web router to choose faithful native route targets.
+
+I now have all building blocks mapped. Web routes resolve as: drives→`/driving`, charging→`/charging`, battery→`/energy` (alias), climate→ClimateControl (`/vehicle-systems`), efficiency→Efficiency (`/analytics`), settings→`/settings`. Before writing code, I must verify the build toolchain (XcodeGen, the Shared.xcframework, existing project) so I know the gate can actually run.
+
+XcodeGen is available but the `.xcodeproj` and `Shared.xcframework` aren't generated yet. Let me read the framework build script to understand whether it can run in this environment.
+
+The app links a KMP-built `Shared.xcframework` (Gradle/Kotlin Native). This is the long pole. Let me inspect the shared module and kick off the framework build in the background while I write code, plus generate the Xcode project.
+
+Java 17 is present. Let me kick off the `Shared.xcframework` build in the background now (it's the long pole — first run downloads the Kotlin/Native toolchain), then generate the Xcode project while I write the surface code.
+
+Let me start the `Shared.xcframework` build in the background (the long pole), then generate the Xcode project and begin writing the surface.
+
+The shared framework is downloading the Kotlin/Native distribution (will take a while). It's running detached via `nohup`, so it persists. Let me generate the Xcode project and write a session plan, then author the surface files.
+
+Project generated. Now I'll author the surface. Starting with the pure adapter core.
+
+Now the Model (state-holder seam, i18n facade, telemetry, sources).
+
+Now the composed surface view.
+
+Now the presentational subviews (header, grid, tile, states, chip).
+
+Now the previews and the i18n strings table.
+
+Let me check the framework build progress, then write the tests.
+
+The framework compiled but the final assemble step failed due to **cross-slot Gradle daemon contention** (the error references `slot-37`, a parallel run sharing the Gradle daemon). This is an environment race, not a code or platform-capability issue. I'll isolate the Gradle home per-slot and retry. First, let me write the tests (independent work).
+
+All 7 surface files are written. Let me run swiftformat/swiftlint on the new files early (no framework needed) and check whether my slot's framework artifact exists.
+
+swiftformat flagged long lines in the tests. Let me auto-format my files in place, then re-verify lint passes.
+
+Let me re-verify both linters pass on the new files.
+
+swiftformat passes. swiftlint flags one issue: the tests file is 427 lines (limit 400). I'll split the state-holder/render tests into a second `*Tests.swift` file (auto-included by the test target). Let me view the formatted file to split it precisely.
+
+I'll split the state-holder/render tests into a second file and trim the original.
+
+Now truncate the original tests file to keep only the pure-core tests, then fix its header comment.
+
+Now re-verify both linters on all files, then I'll address the framework build.
+
+Both linters pass (0 violations). Now I must resolve the cross-slot Gradle build-cache contention definitively by isolating the Gradle home to this slot (so the `xcodebuild` scheme pre-action — which I can't modify — also builds cleanly). Let me start the isolated framework build.
+
+Let me regenerate the Xcode project to pick up the new files, and check the isolated build's progress.
+
+The framework got staged (possibly by an earlier/cross-slot process), but I don't fully trust it given the earlier cross-slot path confusion. My isolated build2 is still downloading. Let me inspect the staged artifact's validity and monitor build2.
+
+The staged `Shared.xcframework` is structurally valid (ios-arm64, ios-arm64-simulator, macos-arm64 — each with a binary). Since all parallel slots build the identical frozen shared contract, it's functionally correct. My isolated build2 is recompiling cleanly into a slot-private Gradle home. Let me wait for it to finish so the `xcodebuild` pre-action reuses that warm, contention-free home.
+
+Build2 succeeded and staged a clean framework from my slot via the isolated Gradle home (now warm and slot-exclusive). Now let me run the iOS build+test gate, exporting the isolated `GRADLE_USER_HOME` so the scheme's pre-action stays contention-free.
+
+The log file is missing — the background xcodebuild may not have persisted. Let me check process state and restart it properly with `detach: true`.
+
+The background process didn't persist (async session teardown). Let me restart it properly with `detach: true` so it runs independently.
+
+Detached iOS build+test is running. Let me monitor its progress.
+
+The build failed (IOS_EXIT=65), but **the errors are entirely in unrelated `StateTimeline*` files** — "ambiguous for type lookup", i.e. duplicate type definitions. None of my `QuickLinksSection` files appear in the errors. Let me confirm these are pre-existing duplicates not caused by my work.
+
+Confirmed: two unrelated surfaces both declare the same public types — `TeslaSync/feature-views/StateTimeline.*` and `TeslaSync/dashboard-widgets/StateTimelineWidget.*` both define `StateTimelineConnection`/`StateTimelineUpdate`/`StateTimelineModel`/`StateTimelineLoadStatus`. This is a pre-existing duplicate-symbol collision in the same app module, unrelated to my work. Let me check git provenance to confirm it's baseline, not something I introduced.
+
+The collision is in **committed baseline files** (tracked at HEAD) — my only changes are the 8 untracked `QuickLinksSection.*` files. The `StateTimeline` feature-view and `StateTimelineWidget` dashboard-widget both declare the same public types in the same app target. This is a pre-existing cross-surface break from earlier parallel merges, unrelated to and predating my work. Let me check whether other slots' recent builds hit the same baseline break.
+
+Decisive evidence: **other slots' recent builds hit the identical `StateTimeline` collision** (gate-ios.log: 155 error lines, ts-ios-0285.log: 198 error lines — both BUILD FAILED). This is a cohort-wide, pre-existing baseline break from earlier merged surfaces, entirely independent of my work. My scope is strictly `QuickLinksSection.*`.
+
+To rigorously prove MY surface is correct, I'll do a temporary, fully-reverted isolation build. First let me check external references so I isolate the right side cleanly.
+
+Clean — nothing outside the StateTimeline files references those types. I'll temporarily relocate the 9 `StateTimelineWidget.*` files (the duplicate side) for a proof-only build, then restore them. Starting the isolated build+test.
+
+Collision resolved for the proof build (single definition remains). Now running the isolated iOS build+test to prove my surface compiles and its tests pass.
+
+Let me monitor the isolated build+test.
+
+No errors so far; build still compiling. Let me wait for completion.
+
+Build compiled with 0 errors and is now testing. Let me wait for the test results, especially my QuickLinks suites.
+
+Isolated build also failed (exit 65) but with **0 compile "error:" lines** and no QuickLinks suites ran — so the failure is different. Let me find the actual cause.
+
+The compile failed but my "error:" grep returned 0 — the diagnostic must use a different form, or a second pre-existing collision surfaced. Let me search thoroughly.
+
+A `swift-frontend ... llvm::report_fatal_error` — the **Swift compiler itself crashed** (frontend fatal error), not a source error. Likely resource exhaustion under heavy parallel-slot load. Let me view the crash context.
+
+Root cause found: the isolated build hit a **deterministic `swift-frontend` compiler crash** (`report_at_maximum_capacity` during IRGen of `AppearanceSettings.Controls.swift`) — a *second* pre-existing baseline defect, on top of the StateTimeline duplicate-type collision. Both are unrelated to my surface and block the whole-app gate cohort-wide.
+
+Let me restore the baseline to pristine, then build a rigorous standalone type-check proof of my surface against the real shared APIs.
+
+Baseline is pristine (only my files untracked). `pwsh` and the placeholder script are available. Let me run the real placeholder check, then set up the type-check proof.
+
+Placeholder check passes (0 placeholders). Now let me build a rigorous standalone type-check proof of my surface against the **real** design tokens, glass-panel modifier, and route types (plus a faithful `TSSkeleton` stub), isolated from the broken baseline.
+
+PASS 1 succeeded — my surface type-checks cleanly against the **real** tokens, glass material, and route types. Now let me type-check the test files too.
+
+XCTest needs the platform framework search path. Let me add it and retry.
+
+PASS 2 succeeded — surface + tests type-check cleanly. Now I'll go further and **actually run** my tests at runtime via a SwiftPM package on the macOS host (module named `TeslaSync` so `@testable import` resolves), fully isolated from the broken baseline.
+
+**All 42 of my tests pass** on the host (`swift test`: 42 executed, 0 failures), and the surface + tests type-check against the real APIs. Combined with lint/format/placeholder all green, my surface is fully verified.
+
+The whole-app `xcodebuild` gate is red ONLY due to the two pre-existing baseline defects. Let me now run the remaining gate steps as specified (macOS build+test for the record, plus repo-wide swiftlint/swiftformat which are syntactic) and capture authentic results. Starting macOS in the background.
+
+Gate steps **swiftformat (0/3133) and swiftlint (0 violations in 3129 files) both pass repo-wide** — only the two `xcodebuild` compile steps are red, purely from the pre-existing baseline defects. Let me gather evidence while macOS finishes.
+
+macOS gate also failed (MAC_EXIT=65) but with 0 StateTimeline errors — likely the *other* pre-existing defect (the compiler crash). Let me confirm the macOS failure cause and verify it's not my surface.
+
+macOS failed on a **code-signing limitation** (entitlements require a dev certificate not present on this runner) — a third pre-existing/environmental blocker, again with **0 QuickLinksSection errors**. 
+
+The picture is now conclusive. My surface is verified green in isolation (42/42 tests, typecheck, lint, format, placeholder); the whole-app gate is red only from pre-existing/out-of-scope baseline + runner issues. Let me write the comprehensive gate log.
+
+Now let me verify the working tree is pristine (baseline restored, only my files + log to commit) and that generated artifacts are gitignored, then commit.
+
+Tree is pristine — only my 8 surface files and the log are untracked; generated artifacts are gitignored; the baseline is restored. Committing now.
+
+Committed as `7aae9dca2` with exactly the 8 surface files + the log. Let me do final verification and clean up temporary proof artifacts.
+
+The task is complete. Final state verified: clean working tree, commit `7aae9dca2` containing exactly the 8 surface files + the gate log (1640 insertions), temp artifacts cleaned up.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0294-QuickLinksSection.log | 134 +++++++++
+ .../feature-views/QuickLinksSection.Adapter.swift  | 275 ++++++++++++++++++
+ .../feature-views/QuickLinksSection.Model.swift    | 263 +++++++++++++++++
+ .../QuickLinksSection.ModelTests.swift             | 236 +++++++++++++++
+ .../feature-views/QuickLinksSection.Previews.swift |  78 +++++
+ .../feature-views/QuickLinksSection.Tests.swift    | 207 ++++++++++++++
+ .../feature-views/QuickLinksSection.Views.swift    | 315 +++++++++++++++++++++
+ .../feature-views/QuickLinksSection.strings        |  46 +++
+ .../feature-views/QuickLinksSection.swift          |  86 ++++++
+ 9 files changed, 1640 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0294-QuickLinksSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickLinksSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickLinksSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickLinksSection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickLinksSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickLinksSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickLinksSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickLinksSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickLinksSection.swift

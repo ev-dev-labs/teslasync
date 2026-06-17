@@ -1,0 +1,34 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5 and swiftlint are available. Now let me explore the Apple app structure and reference implementations.
+
+I see existing Analytics pages follow a clear multi-file pattern. Let me resolve the path discrepancy (`TeslaSync/` vs `Sources/`) and study the project config and a reference page.
+
+Now I understand the layout. The real build-included convention is `Sources/Features/Analytics/` (where all 5 existing analytics pages live), not `TeslaSync/Features/`. Let me study reference pages in depth.
+
+Excellent pattern clarity. Let me read the rest of the Statistics reference set plus the FleetCompare table reference.
+
+Now let me read the Sections, Charts, Table references and the route parser to learn the UI building blocks.
+
+Now the table reference, format pattern, route parser, and a model test.
+
+I have a thorough grasp of the page patterns. Now let me locate the infrastructure: routes, units facade, and the components/tokens I'll need (Badge, StatCard, BarChart, etc.).
+
+`/timeline` is a standalone web route with no dedicated Apple route case yet. Let me check the route registry composition and the blast radius of adding an `AppRoute` case.
+
+Adding `.timeline` to `AppRoute` has a blast radius (menu catalog test asserts route-set equality). Let me read the affected files to handle it completely.
+
+`navigateCommands()` auto-derives from `AppRoute.allCases`, so adding `.timeline` is clean. Now let me read the component library and design tokens I'll use.
+
+Let me read the design tokens, typography, cards, pickers, and the Units facade.
+
+Now let me see the rest of the app wiring and inspect the string catalog format.
+
+I now have all component/token/format knowledge. Let me verify the build toolchain feasibility (xcodegen, prebuilt Shared.xcframework, pwsh) and the gate scripts before writing code.
+
+Xcodegen, pwsh, and Xcode are available, but `Shared.xcframework` is not prebuilt (KMP dependency). Let me assess the build script and check-placeholders tooling.
+
+The full build needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native) — the long pole. Let me kick that off in the background now while I write code.
+
+Gradle works. Let me start the full Shared.xcframework build in the background while I write the Swift implementation.
+

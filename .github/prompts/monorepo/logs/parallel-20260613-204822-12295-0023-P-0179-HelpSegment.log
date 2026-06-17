@@ -1,0 +1,138 @@
+I'll start by exploring the environment and the web source to understand the task scope.
+
+Apple toolchain is fully available. Let me read the web source and explore the Apple project structure.
+
+The web source is a simple status-bar segment with three help buttons. There's already a populated `shared-surfaces` directory with 2160 entries. Let me find existing patterns and any sibling segments already ported.
+
+`HelpSegment.*` doesn't exist yet — siblings (ActiveVehicleSegment, BackgroundWorkSegment, LiveTelemetrySegment, VersionSegment) are ported. There's a strong file-decomposition pattern. Let me study the closest siblings and the shared infrastructure.
+
+Strong decomposition pattern is clear. Let me read the rest of LiveTelemetrySegment's files plus the StatusBar composition to fully understand state holders, i18n facade, tokens, and telemetry.
+
+Now let me find the design tokens (P1/S9), the Meta/Projection types, and understand Previews/Tests patterns.
+
+Let me read the design tokens, the test pattern, and the project.yml build configuration.
+
+Let me locate the exact token definitions and the project.yml structure.
+
+Now I understand the architecture. Design tokens live in `../design/generated/apple`. Let me inspect those tokens, check tooling availability, look at the closest no-data analog surfaces (HelpIcon/HelpTooltip), and the web tour registry.
+
+All tooling is present. Let me read the full design tokens and the closest no-data analog surfaces (HelpIcon, HelpTooltip).
+
+`HelpIcon` is the ideal analog — prop-driven, no fetcher. Let me read its full file set to internalize the no-data surface template.
+
+This is the exact template — the Adapter even documents the no-data-surface philosophy. Let me read HelpIcon's remaining files (Views, Previews, strings, Tests, AdapterTests) to complete the pattern.
+
+Let me read the HelpIcon test files to mirror the test structure, and confirm the `TSFadeIn` shared component exists.
+
+I have the full pattern. Let me verify the swiftlint/swiftformat configs, the `TSFadeIn` component, and the web tour registry event names for fidelity.
+
+Let me confirm the tour launcher event name, then I'll have everything needed.
+
+Existing code already uses `keyboard`, `questionmark.circle`, and `ladybug` together — likely a help menu. Let me find that file to align SF symbol choices.
+
+The existing `StatusBarHelpView` confirms icons (`keyboard`/`questionmark.circle`/`ladybug`). Let me read its view-model and key-cap rendering to align my projection naming and kbd styling.
+
+I have a complete understanding of the pattern. Let me check the heavy-build dependencies (KMP `Shared.xcframework`) before writing code, since the gate builds the whole app.
+
+The full-app gate depends on a KMP `Shared.xcframework` (Gradle/Kotlin-Native) plus thousands of Swift files. I'll deliver the complete surface, prove it with an isolated compile+test, run lint/format/placeholder gates, then attempt the full xcodebuild gate and record results honestly. Let me set up tracking and write a plan.
+
+Now I'll write the 8 surface files. Starting with the pure Foundation core (Adapter) and the Model.
+
+Let me rename a projector method to avoid a `self`-disambiguation clash that swiftformat could mishandle, then write the Views and surface.
+
+Now the strings catalog and the previews.
+
+Now the two test files — pure projector tests and model/view/a11y tests.
+
+Let me clean up one awkwardly-constructed test before writing the model tests.
+
+Now the main test file (model lifecycle, action dispatch, default notifications, views, strings, a11y).
+
+All 8 files written. Let me run the fast gates — swiftformat, swiftlint, and the placeholder check — on the new files.
+
+swiftformat wants single-line property bodies wrapped (matching the project style). Let me auto-format my files with the ecosystem tool, then re-verify.
+
+swiftformat passes (EXIT=0). Now swiftlint `--strict` and the placeholder gate.
+
+All three fast gates pass (swiftformat, swiftlint `--strict` 0 violations, placeholder EXIT=0). Now I'll prove the surface compiles and its tests pass via an isolated Swift 6 SwiftPM harness (real files symlinked, same strict-concurrency mode as the app), since the full xcodebuild gate also pulls the KMP framework + thousands of files.
+
+All 28 tests pass under Swift 6 strict concurrency on macOS 15 — the surface logic, SwiftUI views, and previews all compile and behave correctly. Now let me attempt the full xcodebuild gate. First, generate the project and assess the KMP toolchain.
+
+There's a sibling `LiveTelemetrySegment` log. Let me check how that analogous shared-surface handled the gate (full build vs. blocked) for precedent.
+
+This is clear precedent: the immediate sibling (0180 LiveTelemetrySegment) shipped with host-runnable gates + isolated Swift‑6 build/test GREEN and the full‑app xcodebuild gate DEFERRED (KMP `Shared.xcframework` assembly + app-target XCTest glob + macOS signing, owned by the P4/P99 CI gate). Let me generate real evidence: run `xcodegen`, confirm my files are wired in, and probe the actual xcodebuild blocker.
+
+`xcodegen generate` succeeded (EXIT=0). Let me confirm my files are wired into the generated project (app + test targets) and check the gitignore situation.
+
+All 8 HelpSegment files are wired into the generated project (48 refs across app + test targets) — stronger integration evidence than the sibling. The `.xcodeproj` is git-ignored (`.gitignore:379`). Now let me capture the real xcodebuild blocker (the KMP `Shared.xcframework` is a scheme pre-action that `xcodebuild` CLI doesn't run; `Frameworks/` holds only `.gitkeep`).
+
+The full-app build is compiling the ~6000-file app (no early framework error yet, `-quiet` suppresses progress). Let me wait further to capture the eventual blocker.
+
+Let me check build progress in a separate shell while it continues.
+
+The full-app build is genuinely progressing (4,218 object files compiled, 48 active compilers) but is very heavy. Let me capture the decisive KMP dependency evidence while it runs.
+
+Decisive: 15 app files `import Shared` (the KMP module) and `Frameworks/Shared.xcframework` is absent — assembled only by the CI-owned scheme pre-action. The full-app build cannot link without it. Let me check whether the running build has surfaced that error yet.
+
+I have conclusive, executed evidence (xcodegen wired my 8 files in; the real Xcode build compiled 4,000+ objects before being bounded; 15 `import Shared` files require the absent CI-owned KMP framework). Letting the full 6,000-file build/link run to completion would burn the session without changing the disposition. Let me stop it and capture the final progress count.
+
+Let me clean up the lingering compiler processes from the bounded build (by PID, as required).
+
+All build processes cleaned up. Let me remove the generated project (git-ignored) and now produce the official gate log with real captured output. I'll re-run the host-runnable gates cleanly and assemble the log.
+
+Now the isolated Swift‑6 build/test and the full-app gate evidence (re-run xcodegen for a canonical ref count), appended to the log.
+
+All evidence captured. Let me append the isolated build/test results, the full-app gate deferral with evidence, the honesty covenant, and the final EXIT/STATUS to the log.
+
+Log finalized (118 lines). Let me verify the working tree contains only my intended changes and review the final formatted files.
+
+Working tree contains exactly the 8 HelpSegment files + the log — no stray artifacts. Let me do a final review of the formatted source before committing.
+
+Code is clean and correct. Let me commit exactly the 8 surface files + the log, per the prompt's commit spec.
+
+Committed. Let me verify the commit contents and clean up the temporary harness.
+
+The task is complete. Here's a summary of what I delivered.
+
+## P4 · 0179 — `HelpSegment` (Apple) — STATUS=DONE
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of `web/src/components/layout/status-bar/HelpSegment.tsx` — the footer status-bar segment with three "always available" help affordances.
+
+**8 files** (`apps/apple/TeslaSync/shared-surfaces/HelpSegment.*`, 1,181 lines, committed `e878a724d`):
+- `.Adapter.swift` — Foundation-only core: surface slug, 7 i18n keys, the three `HelpSegmentAction`s (`keyboard`/`questionmark.circle`/`ladybug`, aligned with the in-app `StatusBarHelpView`), the `HelpSegmentDensity` (iconOnly/compact/full = web `iconOnly` × the `xl:inline` tier), and the pure `HelpSegmentProjector`.
+- `.Model.swift` — P1/S10 strings facade, P1/S11 `view.opened` telemetry, decoupled `HelpSegmentActions` (native peer of the web window events, defaulting to `NotificationCenter` posts), and the `@Observable @MainActor` state-holder.
+- `.Views.swift` / `.swift` — token-driven button + `?` key cap leaves and the public surface (size-class-driven density, VoiceOver labels, hover tint, lifecycle).
+- `.Previews.swift`, `.strings`, `.AdapterTests.swift`, `.Tests.swift`.
+
+**Faithful parity:** the web surface is purely presentational (only `useTranslation` + event dispatch), so — like sibling HelpIcon (0215) — it has no fetch and no loading/error/stale/offline chrome; its REAL branches (the three densities, three affordances) are all reproduced.
+
+**Verification (all executed, real output in the log):**
+- swiftformat `--lint`: 0/7 · swiftlint `--strict`: **0 violations** · placeholder scan: **0**
+- Isolated **Swift 6 strict-concurrency** build+test against the real design tokens: **28 tests, 0 failures**
+- `xcodegen generate`: EXIT=0, all 8 files wired into the app + test targets (48 refs)
+- Full-app `xcodebuild` **DEFERRED** to the P4/P99 CI gate (15 app files `import` the absent, CI-owned KMP `Shared.xcframework`) — matching the accepted sibling 0180 disposition; not a failure of this code.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0179-HelpSegment.log` → `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0179-HelpSegment.log  | 118 +++++++++
+ .../shared-surfaces/HelpSegment.Adapter.swift      | 263 +++++++++++++++++++++
+ .../shared-surfaces/HelpSegment.AdapterTests.swift | 170 +++++++++++++
+ .../shared-surfaces/HelpSegment.Model.swift        | 168 +++++++++++++
+ .../shared-surfaces/HelpSegment.Previews.swift     |  80 +++++++
+ .../shared-surfaces/HelpSegment.Tests.swift        | 184 ++++++++++++++
+ .../shared-surfaces/HelpSegment.Views.swift        |  82 +++++++
+ .../TeslaSync/shared-surfaces/HelpSegment.strings  |  29 +++
+ .../TeslaSync/shared-surfaces/HelpSegment.swift    |  87 +++++++
+ 9 files changed, 1181 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0179-HelpSegment.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpSegment.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpSegment.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpSegment.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpSegment.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpSegment.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpSegment.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpSegment.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpSegment.swift

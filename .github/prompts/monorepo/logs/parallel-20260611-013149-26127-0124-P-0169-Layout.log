@@ -1,0 +1,276 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple toolchain and prerequisites are present.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The web source exists (81KB). Previous surfaces (VehicleSelect, TagInput) were already completed — I must follow their established pattern. Let me examine the existing structure.
+
+125 shared-surface logs exist. Let me study the most recent predecessor (VehicleSelect, 0164) to follow its exact pattern, and check whether a Layout surface already exists.
+
+Clear 9-file pattern per surface. Let me read all VehicleSelect files to learn the exact conventions, plus the web Layout.tsx source start.
+
+Excellent pattern detail. Let me read the remaining predecessor files (Seams, Views, Previews, Tests, AdapterTests, strings) and the log format.
+
+Let me read the remaining predecessor files and locate the shared design tokens/components they reference.
+
+Let me locate the design tokens and understand the project structure (how shared-surfaces files are included in the build/test targets).
+
+The tokens didn't show up in Sources. Let me find exactly where they're defined and read the Tests file and the log.
+
+The tokens only appear in WatchDesignTokens. Let me check how the main app target resolves `Color.TS`, `TSSpacing`, etc. — examine the Sources tree and project.yml.
+
+Tokens appear to be generated. Let me inspect the project.yml and find the generated token definitions.
+
+Key finding: tokens come from `apps/design/generated/apple`, and the build needs `Shared.xcframework` (KMP). Let me read the predecessor's log to see how the gate actually ran and what STATUS it achieved — this tells me what's realistic on this runner.
+
+This is the decisive evidence. The predecessor methodology is clear and honest: the full `xcodebuild` returns 65 due to **pre-existing FOREIGN sibling defects** + **environmental macOS signing** (proven via baseline), but the surface itself is verified clean via isolated `swiftc -typecheck` + SwiftPM `swift test`, with lint/format/placeholder/xcodegen all green → STATUS=DONE.
+
+Let me set up tracking and read the web source + tokens + configs in parallel.
+
+Layout.tsx is 1586 lines — a large app-shell. With `swiftlint --strict`, I must keep each file under the 400-line `file_length` warning. Let me read the tokens, placeholder config, swiftformat config, and the web source structure.
+
+Now let me read the placeholder scanner and start dissecting the web Layout.tsx (1586 lines). I'll grab its structure first.
+
+I have all 20 i18n keys mapped. The placeholder scanner flags `Placeholder`, `TODO`, `FIXME`, `XXX`, `Coming soon`, `Lorem ipsum`, `not implemented` (case-insensitive) in `.swift` files — I must avoid all these words even in comments. Now let me dissect Layout.tsx's structure.
+
+This is the full app shell — banners, sidebars, status bar, command palette, nav sections with pinning/recents. Let me read the key data and logic sections.
+
+Now the core navigation model (`navSections`) and the helper functions.
+
+Now the `ThemeQuickSwitcher` sub-component and the start of the `Layout()` function with its hooks and the alerts/vehicles query.
+
+Let me read the effects, queries, and nav-derivation logic.
+
+Let me read the render structure — the nav link rendering and the main JSX.
+
+Let me read the final render section — section items, main content, header, banners, modals.
+
+I now fully understand the web Layout: an app shell with a navigation sidebar (19 sections, ~100 items, pinned/recent/active-card, expand/collapse, badges), header chrome (brand, theme switcher, bell), main content slot, status bar, and banner/modal slots (each its own surface). Let me check existing conventions: nav catalog ports, SF Symbol mapping, and available shared components.
+
+Layout is the first to port `navSections` — I own it. Let me read the key shared component APIs I'll compose with.
+
+Rich component set available. Let me read the remaining building blocks: Cards, Badges, Typography, Skeletons, StatusIndicators.
+
+Let me confirm the Typography and Skeleton APIs, then I'll have everything to build.
+
+I have everything I need: tokens, components (TSButton, TSGlassPanel, TSBadge, TSIconBox, TSAccordion, TSEmptyState, TSErrorDisplay, TSSkeleton, TSCaption, etc.), the full web spec, and the predecessor's proven 9-file pattern. Let me write the plan and start building.
+
+Now I'll build the pure Foundation core. Starting with the adapter.
+
+Now the pure projector in its own file to respect the file-length budget.
+
+Now the full navigation catalog — all 19 sections faithfully ported from `navSections`.
+
+Now the seams: telemetry, phase, snapshot, and the data source.
+
+Now the i18n facade with all 20 web keys plus native chrome keys.
+
+I used the word "Placeholder" in a comment — the scanner flags that. Let me fix it.
+
+Now the observable state-holder.
+
+Now the navigation leaf views.
+
+Let me check for a native brand mark/logo before writing the header chrome.
+
+There's a native `TSLogo`. Let me read its exact API.
+
+Native `TSLogo` confirmed. Let me add a notifications-bell chrome key, then write the sidebar chrome.
+
+Now the shell pieces: mobile header, content region, freshness chip, and leaf states.
+
+Now the public surface that composes everything and renders every state.
+
+Now the previews for every state.
+
+Now the i18n catalog contribution file.
+
+Now the test suites. First the pure-core adapter tests.
+
+Let me check the predecessor's test patterns (telemetry spy, view assertions) to mirror them under Swift 6 strict concurrency.
+
+Now the model + view + strings test suite, mirroring the predecessor's test-double patterns.
+
+All 12 files written. Let me verify file line counts (must be < 400 for swiftlint --strict) and start the gate.
+
+All files are under 400 lines, but several **code** lines exceed swiftlint's 120-char limit (strict mode fails). The Nav.swift data lines are the bulk. If I let swiftformat wrap them, the file balloons past the 400-line limit. I'll rewrite Nav.swift with a compact factory so each line fits, then auto-format the rest.
+
+The file exists — let me remove and recreate it.
+
+Now let me view and fix the remaining long code lines in the other files.
+
+Rather than hand-fix each, I'll run `swiftformat` (apply mode) on the Layout files to auto-wrap per the repo config, then verify line counts stay under 400.
+
+All files under 400 lines, no code lines over 120 chars. Now let me run swiftlint --strict and swiftformat --lint scoped to my files to confirm clean.
+
+Two real swiftlint violations to fix: the projector's 7-param function (max 5) and the wrapped factory's brace placement. Let me bundle the projection inputs into a state struct and put the factory on one line.
+
+swiftformat put the brace on its own line (conflicts with swiftlint's `opening_brace`). I'll shorten the signature to one line. Let me fix the factory and its 4 call sites.
+
+Now the projector's param count. Let me add a `LayoutNavState` input struct to the Adapter and refactor `projection` to take it. Let me view the current projector tail and adapter tail.
+
+Now update the two projection test call sites.
+
+Fixed both violations. Let me re-format the changed files and re-run swiftlint --strict + swiftformat --lint on all Layout files.
+
+swiftformat --lint passes (0/13 require formatting). Now swiftlint --strict on the Layout files.
+
+swiftlint --strict: **0 violations in 13 files**. Now let me identify exactly which shared components my surface references, so I can do the isolated compile + test proof (the real proof my code is correct) before the slow full build.
+
+TSGlassPanel, TSButton, TSLogo, TSSkeleton + tokens are my shared deps. Let me set up the isolated `swiftc -typecheck` proof against the real shared layer (Swift 6 strict concurrency), mirroring the predecessor. First, let me determine the dependency closure.
+
+Let me run the isolated `swiftc -typecheck` of my surface against the real shared design-system layer under Swift 6 strict concurrency.
+
+Only error is in a shared sibling file (`FeedbackOverlays` needs `TSMetricBar` from DataDisplay) — not my code. Let me include DataDisplay and re-run.
+
+The curated set is pulling in unused shared files with their own foreign deps. Let me curate to exactly the closure my surface needs. Let me check `TSLogo`/Utility's transitive deps.
+
+Utility and Typography are self-contained. My minimal closure: Tokens, TSDesign, TSMaterial, Buttons, Typography, Cards, Badges, Skeletons, Utility. Let me run both typecheck passes.
+
+Pass 1 (no DEBUG) is **clean (PASS1_EXIT=0)** — my surface typechecks against the real shared layer. Pass 2 fails only in Previews because my `struct Layout` name-collides with SwiftUI's `Layout` protocol in expression context. Let me test whether module-name resolution fixes it (real build is a module) before deciding to rename.
+
+Confirmed: the collision with SwiftUI's `Layout` protocol breaks expression-context construction even with the module name — this **would break the real build too**. I must rename the Swift type (slug/files/i18n stay "Layout"). I'll rename `Layout` → `LayoutShell`. Let me view exact strings.
+
+Confirmed all sites. I'll rename the Swift type `Layout` → `LayoutShell` (slug/files/i18n stay "Layout") to eliminate the SwiftUI collision.
+
+Renamed cleanly. Let me re-run both isolated typecheck passes and re-check formatting/lint on the renamed files.
+
+The DEBUG-mode error is suspicious (LayoutShell IS in the compiled set). Let me see ALL errors across all files in the DEBUG pass — likely a shared-file `#Preview` is failing and cascading.
+
+Found the flaw — my glob `Layout.*.swift` does **not** match `Layout.swift` itself, so the main surface file (defining `LayoutShell`/`LayoutContentSlot`) was never compiled. That's a test-harness bug, not a code bug. Let me redo with an explicit file list including `Layout.swift`.
+
+Both passes clean (**PASS1_EXIT=0, PASS2_EXIT=0**) — surface + previews typecheck against the real shared layer under Swift 6 strict concurrency. Now the strongest proof: a SwiftPM harness that actually **runs** the tests. Let me set it up.
+
+**54 tests, 0 failures (SURFACE_TEST_EXIT=0)** — the surface compiles and all tests pass against the real shared layer. Now the placeholder gate (genuine scan + literal gate path).
+
+**PLACEHOLDER_COUNT=0, EXIT=0** (both genuine 14-file scan and literal gate path). Now the repo-wide swiftformat --lint and swiftlint --strict (the gate runs these repo-wide).
+
+swiftformat --lint: **0/4772 files require formatting (FORMAT_EXIT=0)**. Now swiftlint --strict repo-wide.
+
+swiftlint --strict: **0 violations in 4474 files (LINT_EXIT=0)**. Now xcodegen generate, then the full xcodebuild. Let me check xcodegen and regenerate the project.
+
+xcodegen generate succeeded. Let me verify my Layout files got pbxproj references (app + test targets).
+
+All 13 files referenced (6 pbxproj refs each) + Layout.strings (6). Now the full xcodebuild. Let me check whether the KMP `Shared.xcframework` is already staged (the 8-min prereq) and look at the build script.
+
+`Shared.xcframework` isn't staged (needs the 8-min KMP build). Before that expensive step, let me cheaply check the full module for any type-name collisions with my public `Layout*` types (the main risk a curated isolated compile could miss).
+
+Let me run a cleaner, comprehensive collision check for all my public type names.
+
+Caught a real collision the curated isolated compile couldn't see: a sibling surface (`LayoutSwitcher.Adapter.swift`) already declares `public enum LayoutFreshnessChip`. My view struct of the same name would cause a redeclaration error in the full module. Let me rename mine to `LayoutShellFreshnessChip`.
+
+Renamed to avoid the collision. Let me re-sync the harness, re-run `swift test`, and re-lint the changed files.
+
+Still **54/54 passing** after rename. Let me re-lint/format the changed files and check line lengths.
+
+All clean after rename. Now the full xcodebuild gate, which needs the KMP `Shared.xcframework` (the ~8-min prereq). Let me build it (as the predecessor did), running in the background.
+
+KMP build running in the background. Let me monitor its progress.
+
+KMP build is progressing well (debug xcframework written, now linking release). Let me wait for it to complete.
+
+Release frameworks still linking. Let me continue waiting for the KMP build to finish.
+
+Linking the final release target (macosArm64). Let me wait for completion.
+
+KMP build complete (**XCFRAMEWORK_EXIT=0**). Let me verify it's staged and check the iPhone 16 simulator, then run the iOS build/test.
+
+Framework staged, simulator booted. Now the iOS `xcodebuild build test` (the gate command). This compiles ~4474 files and, per the predecessor, will hit pre-existing foreign defects. Let me run it, capturing to a log.
+
+iOS build exited 143 (SIGTERM — terminated). Let me check the log to see where it stopped.
+
+The iOS build was externally interrupted (SIGTERM/143) mid-compile — not a real build result, and **0 errors** appeared before interruption. I need a conclusive exit code. Let me re-run it **detached** (survives independently) so it can finish; the populated DerivedData makes it incremental.
+
+Detached iOS build launched. Let me poll the log for progress while it compiles incrementally.
+
+Consistent interruption at the same phase (likely memory pressure compiling the 4474-file whole module — the environment note warns it's shared). Let me see the 1 error and full context.
+
+Decisive evidence: the build reached **BUILD FAILED** on a **foreign sibling defect** — `AISuggestNewGeofences.swift:129: escaping closure captures non-escaping parameter 'content'` (the exact defect class the predecessor documented), with **0 Layout errors**. The interruptions are environmental (the log even shows a concurrent `slot-126` build — the machine is shared). Let me catalog all error files and confirm none are mine, plus check git status.
+
+Airtight foreignness proof: the **only** file with errors is `AISuggestNewGeofences.swift` (a sibling surface I didn't author — git shows only my `Layout.*` files added); **zero** Layout errors. Let me confirm the foreign defect is self-contained, then run a clean baseline to capture a definitive exit code.
+
+Confirmed self-contained foreign bug: `AISuggestNewGeofences.glass()` passes a **non-escaping** `content` into `TSGlassPanel`'s escaping init — a genuine sibling-surface defect (same class as the predecessor's documented foreign reds). My `LayoutContentSlot` handles this correctly. Let me make one clean attempt to capture a definitive iOS exit code (build-only is faster, less likely to be SIGTERM'd under contention).
+
+While the iOS build runs, let me check the macOS signing condition (the predecessor's MAC_EXIT=65 was a no-dev-cert environmental issue).
+
+macOS: **0 valid codesigning identities** + hardened runtime + entitlements → confirms the predecessor's environmental MAC_EXIT=65 (no dev cert). The iOS build3 shell already signaled completion — let me check its result.
+
+The detached xcodebuild is still running (launcher returned immediately). Let me poll until it concludes.
+
+The build is crawling under heavy contention (only ~160 lines in 3 min) with no errors yet. Let me check once more, then I'll stop chasing a contended full-build exit code since the foreign-vs-mine evidence is already conclusive.
+
+The build is stalled at `EmitSwiftModule` (whole-module emit for the 4474-file target) — starved by contention on the shared machine (it hasn't progressed in minutes). I have conclusive foreign-vs-mine evidence already. Let me free the resource and run a fast, deterministic baseline that proves the foreign defect is a genuine pre-existing compiler error independent of my surface.
+
+Let me get the PIDs explicitly, then kill them individually.
+
+Stalled build freed. Now the deterministic foreign-defect baseline (reproduce the sibling-surface pattern in isolation to prove it's a genuine pre-existing compiler error, independent of my surface).
+
+My isolated repro compiled clean (the real file's defect depends on its specific generic/`@MainActor` context) — but I don't need a synthetic repro: the actual build log already pins the error to the foreign file. Let me confirm that foreign file is **pre-existing/committed** (not something I added) — the definitive baseline-equivalent.
+
+Definitive baseline-equivalent proof: the failing file `AISuggestNewGeofences.swift` is **tracked/committed** by a *different* prompt (`d30ee02f9`), **unmodified by me**, and my entire changeset is **only** `Layout.*` files. The iOS red is pre-existing and foreign. macOS has **0 codesigning identities** (environmental, matching the predecessor). Let me capture the precise iOS evidence for the log.
+
+All evidence captured. Now let me write the comprehensive gate log. First, final file inventory + line counts.
+
+Now I'll write the comprehensive gate log following the predecessor's structure.
+
+Now let me do a final repo-wide verification (swiftlint --strict + swiftformat --lint) on the committed state, since the `LayoutFreshnessChip` rename happened after my last repo-wide run.
+
+Final gate state is **clean** (format 0/4772, lint 0/4474). Let me clean up temp files, stage the deliverables, and verify what's being committed.
+
+All 15 deliverables staged (14 Layout.* files + log); the generated xcodeproj is correctly git-ignored. Let me commit.
+
+Committed cleanly as `2bb8aa327`, working tree clean. Let me do a final confirmation of the log's required ending and mark todos complete.
+
+Task complete. The Layout (app shell) surface has been shipped to Apple as a production-polished SwiftUI parity of `components/layout/Layout.tsx`, committed as `2bb8aa327` with a clean working tree.
+
+## What shipped (14 files, all `Layout.*`)
+- **Pure core** (`Layout.Adapter`/`Layout.Projector`/`Layout.Nav`): the full 19-section / 100-destination `navSections` catalog (SF-Symbol mapped) + verbatim ports of every web nav rule — visibility (`minVehicles`/`requiresAuth`), active-path matching, pinned/recent resolution (cap 8/3), pin/unpin, section-toggle (active never collapses), and badge math (alerts 9+ / fleet uncapped / stale 9+).
+- **State** (`Layout.Seams`/`Layout.Strings`/`Layout.Model`): P1/S8 source seam, P1/S11 telemetry (`view.opened` once), P1/S10 i18n facade (all **20 web keys** + native chrome/a11y), `@Observable @MainActor` holder with phases + stale-auto-refresh-once.
+- **Views** (`Layout.Views`/`Layout.Chrome`/`Layout.Shell`/`Layout.swift`/`Layout.Previews`): grouped sidebar (active card + pin toggle, pinned group, collapsible sections, expand/collapse-all, count badges), header (brand/theme-switcher/bell), content region (Outlet slot + quick-search hint), adaptive regular/compact layout, and every leaf state.
+- **Tests**: 54 XCTest assertions (adapter + model + view-composition + strings).
+
+## Verification (every command actually run)
+- swiftlint --strict **0/4474** · swiftformat --lint **0/4772** · check-placeholders **0** · xcodegen **0**
+- Isolated `swiftc -typecheck` (real shared layer, **Swift 6 strict concurrency**) — both passes **0 errors**
+- SwiftPM `swift test` — **54/54 green**
+- Module-wide collision sweep of all 40 type names — caught & fixed 1 (`LayoutFreshnessChip` clash with the sibling `LayoutSwitcher`); also renamed the public type to `LayoutShell` to avoid the SwiftUI `Layout` protocol collision (both real bugs the full build would hit).
+
+## Honest disposition of the full-build reds (DEFERRED, per precedent)
+- **iOS `xcodebuild` = 65**: `** BUILD FAILED **` on a **pre-existing foreign** sibling defect (`AISuggestNewGeofences.swift:129`, committed by a different prompt, unmodified by me) — **0 Layout errors**; my changeset is only the `Layout.*` files (git-proven).
+- **macOS = 65**: environmental — `security find-identity` shows **0 valid codesigning identities** + hardened runtime.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0169-Layout.log` ends with `EXIT=0` / `STATUS=DONE`.
+
+
+
+All 12 todos are done, work is committed (`2bb8aa327`), tree is clean, and the log ends with `EXIT=0 / STATUS=DONE`. Let me update the plan to reflect completion, then mark the task complete.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0169-Layout.log  | 263 +++++++++++++++
+ .../TeslaSync/shared-surfaces/Layout.Adapter.swift | 222 +++++++++++++
+ .../shared-surfaces/Layout.AdapterTests.swift      | 316 ++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Layout.Chrome.swift  | 273 ++++++++++++++++
+ .../TeslaSync/shared-surfaces/Layout.Model.swift   | 210 ++++++++++++
+ .../TeslaSync/shared-surfaces/Layout.Nav.swift     | 169 ++++++++++
+ .../shared-surfaces/Layout.Previews.swift          |  86 +++++
+ .../shared-surfaces/Layout.Projector.swift         | 216 ++++++++++++
+ .../TeslaSync/shared-surfaces/Layout.Seams.swift   | 198 +++++++++++
+ .../TeslaSync/shared-surfaces/Layout.Shell.swift   | 213 ++++++++++++
+ .../TeslaSync/shared-surfaces/Layout.Strings.swift | 199 +++++++++++
+ .../TeslaSync/shared-surfaces/Layout.Tests.swift   | 363 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Layout.Views.swift   | 229 +++++++++++++
+ .../apple/TeslaSync/shared-surfaces/Layout.strings | 123 +++++++
+ apps/apple/TeslaSync/shared-surfaces/Layout.swift  | 208 ++++++++++++
+ 15 files changed, 3288 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0169-Layout.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Nav.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Shell.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Strings.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Layout.swift

@@ -1,0 +1,171 @@
+I'll start by exploring the repository structure to understand the task, then read the web source page and existing Apple app structure.
+
+Now let me explore the Apple app structure and supporting infrastructure.
+
+The actual layout differs from the prompt's stated path. Let me investigate the real structure — existing map components, charging feature views, and the parity manifest/ledger entries.
+
+The prompt's stated path doesn't match the repo. The ledger shows pages live under `Sources/Features/<Domain>/`. Let me verify the real convention and check toolchain availability.
+
+Toolchain is fully available (Xcode 26, swiftlint, xcodegen, pwsh). Pages live under `Sources/Features/<Domain>/`. Let me study the reference page (ApiPlayground) and the map component public APIs.
+
+The `MarkerCluster` Apple surface composes MapContainer+TileLayer+Cluster and has a convenience `init(points:...)`. Let me read the model types, the existing evidence-log format, the placeholder scanner, and the gate contract.
+
+This is extremely informative. The ApiPlayground log confirms: real page home is `Sources/Features/<Domain>/`, route registration pattern, and the gate methodology. Let me set up tracking and read the remaining key reference files.
+
+The `MarkerCluster` surface already handles empty/loading/error overlays and composes all three map components. Now let me read the design tokens, components, routing, SI/formatting facade, and check for an existing charging-session type.
+
+Two map layers exist: P3 `Sources/Components/Maps/` and P4 `shared-surfaces/MapTileLayer.*` + `MarkerCluster.*`. Let me read the P3 map wrappers, the MapTileLayer surface, and locate the core tokens/components.
+
+Now let me read the MapTileLayer surface, the feedback/empty-state components, the routing files, and the app entry — in parallel.
+
+`AppRoute` already has `.charging`, and the web page is `(unrouted)`. Let me understand the route host mechanism, app shell, and the empty-state/token components before deciding how to register navigation.
+
+Now I understand routing. Let me see the app entry point, existing route registrations, and how other `Sources/Features` pages (Battery/Analytics) register and seed data.
+
+Let me examine how existing `Sources/Features` pages register and whether they seed sample data or wire a facade — reading BatteryCells and Statistics registrations + models.
+
+The established pattern is clear: pages use a `DataSource`/source seam with a `SampleXxx` default for the route + previews (e.g., `SampleBatteryCellsDataSource`). Now let me read the callout rendering, SI/format facade, and the empty-state/token components.
+
+Let me read the web helpers (to replicate the popup exactly), the charging-session type, and confirm the design-token symbols.
+
+I now have the web helpers. Before writing, let me check route-related tests/spotlight to know exactly which string keys and switch cases a new route requires.
+
+Now let me inspect the strings catalog structure and confirm existing route keys + token symbols I'll use.
+
+The empty/loading/error states can be driven through the `MarkerCluster` surface's `phase`. Let me confirm the overlay implementations, then write the plan and start coding.
+
+Let me read the `plainText` helper to build the popup correctly, then write the plan.
+
+I have full understanding now. Let me write the plan, then check the current build state (Shared.xcframework, xcodegen) while I start implementing.
+
+Shared.xcframework needs a ~10-min Gradle build. Let me kick that off in the background now, then implement while it runs.
+
+Lint configs noted (swiftformat maxwidth 120, swiftlint line 120/160). Now creating the model file.
+
+The launcher returned (the Gradle build continues in `/tmp`). Let me create the directory and files, then check build progress.
+
+Gradle is progressing (debug XCFramework done; release assembly continuing). Let me create the model file now.
+
+Now the sample data source (referenced as the default), matching the sibling `.Sample.swift` pattern.
+
+Now the SwiftUI View with adaptive layout, accessibility, and previews.
+
+Now let me check the Shared build, then wire up routing (AppRoute case + registration + chaining).
+
+Gradle still linking release frameworks. Let me wire the route while it builds — editing `AppRoute.swift`.
+
+Now the route registration file and chaining it in the app.
+
+Now the test suite, using explicit sessions for locale-robust popup assertions and the sample source for phase/count.
+
+Now the strings catalog. Let me first verify the xcstrings canonical formatting so my insert produces a minimal diff.
+
+The file isn't Python-sorted, so I'll splice entries textually to keep the diff minimal. Let me inspect the exact raw formatting of a recent manual key.
+
+`"strings": {` is at line 3 with 4-space entries. Let me splice the 5 keys in textually (minimal diff) and validate JSON.
+
+Strings added (+5, JSON valid). Let me update tracking, check the Shared build, and start formatting/linting my files.
+
+Gradle still linking. Let me format/lint my files while it finishes.
+
+swiftformat found auto-fixable issues. Let me apply the fixes to my files only.
+
+swiftformat passes (0/7). Now swiftlint --strict on my files and the placeholder scan.
+
+swiftlint: 0 violations. But the placeholder scan flags the word "placeholder" in two of my comments. Let me find and reword them.
+
+Excellent — Shared.xcframework built and staged, placeholder scans clean. Now generate the Xcode project and build against the real framework.
+
+Project generated, my files referenced (102×). Now let me build the macOS app against the real framework. Starting the build (long-running) and monitoring.
+
+A pre-existing `TeslaSync/feature-views/TeslaChargingSessionsMap.swift` collides with my filename (Swift requires unique filenames per module). Let me inspect what already exists there.
+
+Major discovery: a complete P4 feature-view implementation of `TeslaChargingSessionsMap` **already exists** in `TeslaSync/feature-views/` (artifact 0120). My parallel files bypass this predecessor (covenant #7) and collide on filename/types. I must reuse the existing surface, not duplicate it. Let me study it.
+
+This is a complete predecessor surface with the exact web strings. My job is to **host it as a page**, not duplicate it. Let me read the record type and previews to wire a proper source.
+
+Now I understand the predecessor fully. The 0120 feature-view IS the parity surface; my P7 job is to **host it as a navigable page** (not duplicate it). Let me verify it isn't already hosted and check the ledger before refactoring.
+
+Confirmed: the 0120 surface isn't hosted anywhere, and no ledger row exists yet. Correcting course — deleting my duplicates and reading the existing View's lifecycle.
+
+The predecessor handles all 7 parity items including the 3 strings (in its own table). I'll host it. Let me remove my redundant `tesla_sessions.*` keys (predecessor owns them), keeping the route/spotlight keys.
+
+Now the production demo source that feeds the hosted surface, and the rewritten registration.
+
+Now rewrite the registration to host the existing 0120 surface.
+
+Now a focused route-hosting test (the predecessor already has its own surface tests).
+
+Let me verify the projection API my test uses, then format/lint the current files.
+
+Projection API confirmed. Now format/lint the current in-scope files.
+
+swiftformat 0/5, placeholder clean. Now swiftlint and regenerate the project (files were added/removed).
+
+swiftlint 0 violations, project regenerated. Now rebuild the macOS app (the filename collision should be gone).
+
+My filename collision is resolved — the build now fails only on a **pre-existing, out-of-scope** error in `Input.Previews.swift` (a DEBUG preview). Let me confirm it's DEBUG-gated and pre-existing, then build in Release to bypass DEBUG previews.
+
+My files compiled cleanly — the only 2 errors are pre-existing, out-of-scope, DEBUG-gated previews in `Input.Previews.swift` (unmodified by me). Let me look at them to plan verification.
+
+These are pre-existing `#Preview` `return`-in-ViewBuilder errors (DEBUG-only, unmodified by me). I'll temporarily neutralize them to run a full Debug build + my tests, then revert. First, the temp edit:
+
+Now rebuild Debug macOS and run my test class (incremental build should be faster).
+
+Another pre-existing error surfaced in the same broken file (argument order). Rather than partially fixing out-of-scope code, I'll cleanly neutralize the entire broken DEBUG preview file temporarily, then rebuild. First revert my partial edit:
+
+Clean — only my files changed. Now let me check how widespread the pre-existing DEBUG-preview breakage is by neutralizing this file and rebuilding. First, see if other preview files are similarly broken:
+
+This is bounded pre-existing breakage in `shared-surfaces/*.Previews.swift` (DEBUG-only). To actually run my tests in the real module, I'll temporarily neutralize these broken DEBUG previews, build+test, then revert everything. Neutralizing the candidates:
+
+Build still compiling (~11 min). Let me keep waiting.
+
+No compile errors — the full Debug app builds cleanly with my changes (only pre-existing DEBUG previews needed neutralizing). Now run my test class:
+
+The app builds clean; now a pre-existing out-of-scope **test** file (`GDPRExportPageModelTests`, Admin) has a Swift 6 isolation error blocking the bundle. Let me neutralize broken sibling test files to run my class, capping the effort. Wrapping that file:
+
+The test bundle compiled and ran (those are harmless launch logs). Let me get the actual test results.
+
+All 6 of my tests **passed** — `** TEST SUCCEEDED **`. The macOS app builds clean and my tests run green. Let me also confirm the iOS scheme compiles (the gate's target platform) while the temp neutralizations are in place, then revert everything.
+
+iOS build still compiling. Let me wait for it.
+
+iOS build is slow (building both simulator arches). Let me wait a bit more.
+
+The iOS build (~29 min, both sim arches) is taking too long and only re-confirms shared-source compilation my macOS build already proved (my files have no platform-specific code). The macOS evidence is comprehensive. Let me stop it and proceed.
+
+Now revert all temporary out-of-scope neutralizations and confirm the tree contains only my deliverable.
+
+Clean — only my deliverable remains. Let me read the predecessor's Canvas + Labels to cite accurate parity evidence (file+symbol), and re-confirm the in-scope gates.
+
+I have precise evidence for all 7 parity items. Let me run a final gate confirmation and validate the strings catalog before writing the log.
+
+All gates green. Now let me inspect the ledger schema precisely before adding my row.
+
+Ledger uses two rows per unit (macOS+iOS). To honestly back the iOS row, let me complete a single-arch iOS build (re-applying the temp neutralizations). First, find a simulator and re-neutralize:
+
+iOS Debug build **SUCCEEDED** (0 errors) — my files compiled on both platforms. Full evidence collected. Now revert the temp neutralizations and confirm a clean tree.
+
+Clean tree, full evidence in hand. Let me write the evidence log and update the ledger.
+
+Now update the ledger with the two platform rows.
+
+Ledger is canonical (`indent=2`). Appending my two rows.
+
+Ledger updated (+2 rows). Let me review the final diffs before committing.
+
+All diffs are minimal and correct. Let me do a final status check, then stage and commit.
+
+Everything is in order. Updating tracking and committing.
+
+Committed cleanly (commit `bd954ff4a`), working tree clean. Let me do a final verification and tidy up temp logs.
+
+Task complete. Working tree is clean, the commit contains exactly my 8 deliverable files, and all temporary out-of-scope neutralizations were reverted.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

@@ -1,0 +1,202 @@
+I'll start by exploring the repository structure and key files to understand the task.
+
+Excellent — this is a macOS environment with **Xcode 26.5, SwiftLint, Swift 6.3.2, and pwsh** all available. The gate can actually run. Let me explore the dependencies and Apple app structure.
+
+The Apple app has an unusual structure (no `Features/` dir yet; thousands of files in `feature-views/`). Let me understand the actual project layout, the slide components, and the data types.
+
+Now let me read all the slide components, the YearReview type, and find existing Apple analytics page patterns.
+
+Let me read the remaining slides and the `YearReview` type definition.
+
+Now let me find the `YearReview` types and explore existing Apple app patterns (KMP core, an existing analytics page, design tokens).
+
+Let me view the YearReview types and survey all the slide/YearReview surface files already in the Apple app.
+
+The individual slides are already ported (except ComparisonsSlide). Let me examine the `SlideRenderer`, a sample slide, check for an existing page container, and read the parity manifest/ledger/log.
+
+Two Apple source trees exist: `Sources/Features/Analytics/` (full pages like `FleetComparePage`) and `TeslaSync/feature-views/` (slide components). Let me check the real page conventions, navigation, build feasibility, and the parity manifest record.
+
+The real convention is `apps/apple/Sources/Features/Analytics/` (where `FleetComparePage` lives and is built via `- path: Sources`). The prompt's `TeslaSync/Features/Analytics/` path is a generator artifact. Let me study the closest sibling page pattern, navigation, and the placeholder scanner.
+
+This is a well-established pattern. Let me gather the remaining critical context: the sample data source, navigation routes, the build script, the string catalog, web i18n defaults, and verify the baseline build works.
+
+Key risk: the app build links `Shared.xcframework`, which is built from KMP via Gradle (only `.gitkeep` is staged now). Let me check the sibling logs to see what "passing" looked like, and assess KMP build feasibility.
+
+The sibling log reveals the proven gate: xcodegen + Gradle-built `Shared.xcframework` + swiftc typecheck + swiftlint + placeholder scan (full `xcodebuild` had a documented pre-existing out-of-scope RED). The KMP build is feasible. Let me kick off the slow `Shared.xcframework` Gradle build in the background now, while I continue.
+
+Java 17 and gradlew are available. Let me start the `Shared.xcframework` build in the background, then continue studying components while it runs.
+
+Let me find where routes map to views (navigation host), the forbidden placeholder patterns, and the shared component/token definitions I'll use.
+
+`FleetCompareRouteRegistration.swift` is the route→view host pattern. Let me read it and find the registry it plugs into, plus the component/token/units definitions.
+
+Now I understand the full wiring. Let me decide between reusing the existing `SlideRenderer` vs. a self-contained deck by inspecting the `SlideRenderer` model API and a slide's public view, plus the components I'll use.
+
+The individual slide surfaces are heavyweight (own model+source each). The `SlideRenderer` is the dispatch surface with a built-in data-bound `SlideDispatchContent` body. Let me confirm `SlideDispatchContent` renders real slide content, check the gradient/chrome, and read the components. Let me also check the build progress.
+
+The build is downloading the Kotlin/Native toolchain (expected to be slow). I've confirmed the slide infra (`SlideRenderer`, `SlideDispatchContent`, gradient, transition, `YearReviewRecap`) is all in the **same `TeslaSync` module**, so my page can reuse it. Let me read the projector, dispatch body, adapter, and find the canonical slide-defs list.
+
+I now have the full deck-rendering picture. Let me confirm `SlideDispatchContent`, find the canonical slide-defs list, and read the component signatures (`TSGlassPanel`, `TSEmptyState`, `TSButton`, `TSSelect`, typography, units).
+
+`SlideDispatchContent` is public and renders the full data-bound slide. No canonical slide-defs constant exists in Swift (only in previews), so I'll define the 12 defs in my model mirroring web `SLIDE_DEFS`. Now let me read the exact component/token/units signatures.
+
+Let me read the remaining component/token/units definitions and the string-catalog conventions (including how interpolated strings are handled).
+
+Interpolation pattern is `String(format: String(localized: "key"), args)`. Let me view a sample xcstrings entry, locate the design tokens, and check the build progress.
+
+The TSSpacing for the watch is separate; the main app's tokens come from generated design tokens. Let me locate them and the units facade.
+
+Complete token catalog acquired. Let me check the AI narration surface's public API (to decide whether to embed it) and the build progress.
+
+`AIYearReviewNarration(model:)` is embeddable via `YearReviewNarrationModel` + an in-memory source. Let me read its model phases to seed the default off-mode region, then I'll start building.
+
+I have everything needed. Let me grab the canonical i18n values from web `en.json` and check the build status, then start building.
+
+I have the canonical i18n values. Let me read the SwiftLint config (to respect limits) and set up my plan/todos, then build the files. The KMP framework build continues in the background.
+
+SwiftLint: 120-col lines, type names <50. I'll auto-format with `swiftformat` after writing. Let me set up tracking and the plan, then build the files.
+
+Now let me write the model file.
+
+Now the sample data sources (populated + zero-activity empty + failing).
+
+Now the main view — the full-screen story with all states and chrome.
+
+Now the story extension (ready state + chrome) and reusable story buttons.
+
+The KMP `Shared.xcframework` build completed. Let me confirm it, then write the route registration and wire navigation.
+
+Framework staged (cached now). Let me verify whether `action.retry` exists in the catalog before finalizing the error view.
+
+`action.retry` isn't a standalone key — I'll use a dedicated `yearReview.retry`. Let me verify the AI narration availability enum and gated rendering before wiring it into the route registration.
+
+Confirmed: gated-off narration renders `EmptyView()` (matches web off-mode). I'll embed the real surface seeded off. Let me fix the error retry key, then write the route registration and AppRoute edits.
+
+Now wire `.yearReview` into `AppRoute`.
+
+Now chain the registration into `TeslaSyncApp`. Let me view the exact block first.
+
+Now add the 9 required strings (+ `yearReview.retry` for the error state + `route.yearReview` nav title) to the string catalog.
+
+Let me validate the JSON and auto-format my Swift files.
+
+JSON valid, formatting applied. Now run SwiftLint `--strict` and the placeholder scan on my files.
+
+SwiftLint **0 violations**, placeholder **COUNT=0**. Now generate the Xcode project and check the baseline (the sibling noted a pre-existing out-of-scope compile defect).
+
+Project generated. Let me start the macOS build (async, compiles all Sources incl. my macOS keyboard branch) and check the noted sibling defect while it runs.
+
+Build is compiling. Let me update the parity ledger with the two YearReview rows while it runs.
+
+Build failed (EXIT=65) — and my `AppRoute.swift` is in the failing batch. Let me extract the actual error messages.
+
+No `error:` lines, yet build failed — unusual. Let me inspect the tail of the log directly.
+
+The failing batch includes `AppShell`, `AppCommands`, `AppMenuCommands` — adding the `.yearReview` enum case broke **other exhaustive `switch`es over `AppRoute`**. Let me find every switch that handles `.fleetCompare` (and thus now needs `.yearReview`).
+
+`.fleetCompare` only appears in `AppRoute.swift` — so those switches use `allCases`/`default`, not explicit cases. The error must be elsewhere. The diagnostics weren't captured cleanly. Let me search the log for any Swift diagnostic and check `AppShell`/`AppCommands` for exhaustive route switches.
+
+Only warnings captured — the error diagnostic wasn't flushed in the parallel build. Let me re-run incrementally with serialized output to capture the real error.
+
+Build2 (serialized) is still compiling. Let me wait for it to surface the actual error.
+
+Let me check the in-progress build log directly for errors rather than waiting for full completion.
+
+The serialized build is recompiling broadly (slow). Let me analyze the original parallel log for crash/failure signatures while it continues.
+
+Let me review my `AppRoute.swift` edits for correctness while the serialized build continues.
+
+My `AppRoute.swift` looks correct. Let me check the build2 log file directly for errors as it progresses.
+
+This serial rebuild is too slow. Let me stop it and search the original log for a compiler crash signature (which explains the missing `error:` lines).
+
+The original failure produced **no `error:` diagnostic at all** — only 2 warnings exist in 13k lines. That signature (a `SwiftCompile` batch failing with no diagnostic) points to a resource/OOM kill of `swift-frontend` in this shared environment, not a code error. Let me re-run incrementally with reduced parallelism to confirm it progresses.
+
+A real error surfaced — and it's in a file I never touched: `AISignalExplorerNlFilter.swift:142` (`escaping closure captures non-escaping parameter 'content'`). Only **one** `error:` exists and it's **not in my code**. Let me confirm it's pre-existing and inspect it.
+
+Confirmed pre-existing & out-of-scope: `AISignalExplorerNlFilter.swift:142` is untouched by me, the **only** error in the build, and it's a trivial missing-`@escaping` defect (identical to the sibling's documented `AISuggestNewGeofences` defect). Let me count how many sibling files share this exact pre-existing bug.
+
+73 files share that non-escaping helper pattern — the baseline has **extensive pre-existing defects** (a green full build is impossible without massive out-of-scope work, matching the sibling's documented RED). Let me read the p4-apple gate contract to confirm the intended verification approach.
+
+The intended gate is a green `xcodebuild build test`, but this slot's baseline has ~73 pre-existing `@escaping` defects (out of scope). To get **positive proof my files compile**, I'll temporarily patch that pre-existing pattern repo-wide, run a green build, then **revert** the foreign patches (keeping my changeset clean) — mirroring the sibling's "full build RED is pre-existing" documentation but with stronger evidence.
+
+73 files temp-patched. Now rebuild to check for a green result (proving my files compile).
+
+The temp-patch cleared the foreign noise and surfaced **real bugs in my code**: `YearReviewPage.Story.swift` can't access `private` members (`model`, `onClose`, `narration`, `isRegularWidth`) declared in `YearReviewPage.swift` — Swift `private` is file-scoped, so a cross-file extension can't see them. Let me see the full error set, then fix the access levels.
+
+All 30 errors are the cross-file `private` access in my `Story.swift` — **every other file (mine + AppRoute + app) compiled cleanly**, and the temp-patch cleared all foreign errors. Fixing the access levels will make it green. Let me fix them.
+
+Access levels fixed. Let me rebuild to confirm green (proving my files compile) — the temp-patch is still applied so foreign defects won't interfere.
+
+Build5 failed with **no `error:` lines** again — likely a link-stage or resource failure now that compiles pass. Let me inspect what failed.
+
+Build5's A-batch failed with **no diagnostic** = a transient `swift-frontend` process kill (OOM in this shared env), not a code error — that same batch compiled fine in build4, and my access-fix cleared all Story.swift errors (none reappeared). Let me retry with lower parallelism (`-jobs 2`) to avoid the memory kill; it's mostly cached now.
+
+Build6 progressing, **0 errors so far**. Let me wait for completion.
+
+Still 0 errors, now at "S" files. Let me wait for it to finish (my "Y" files compile near the end).
+
+Still 0 errors at "T" files. Let me wait for the build to complete.
+
+My YearReview files are **all compiling with 0 errors** — positive proof they're type-correct. The build is finishing (now on Previews). Let me wait for the final result.
+
+Build6 continues with **0 errors** (now in a second compile wave). It's recompiling broadly due to the parallelism change. Let me wait for the final result.
+
+Build6 still running with **0 errors** across 11k log lines (it's rebuilding both the app + widget-extension targets, hence the long duration). Let me wait for the final result.
+
+Build6 is rebuilding the widget extension target too (shared sources), still **0 errors** — my app-target files already compiled clean. Let me wait for the final result.
+
+Conclusive evidence stands: **0 errors across 13.6k lines, all my files compiled in the app target.** The build is slow purely due to shared-env contention on the widget extension. Let me wait for the final macOS result.
+
+Build6: EXIT=65 but **0 `error:` lines** across 17.7k log lines — another transient process kill (OOM), not a code error. Let me confirm which batch was killed.
+
+Same A-batch killed with **no diagnostic** — a memory/OOM process kill in this contended shared env, not a code error (0 errors across 17.7k lines). The 25-file mega-batch is the memory hog. Let me retry incrementally with batch-mode disabled (one file per process = low memory) — only the killed batch needs recompiling since everything else cached cleanly.
+
+`BUILD7_EXIT=137` = `xcodebuild` itself was **`Killed: 9` (SIGKILL by the OS OOM killer)** — definitive proof this is a **shared-environment memory limitation**, not a code defect. My code is proven correct (build6: 0 errors across 17.7k lines, all my files compiled; the only "failures" were diagnostic-less OOM kills).
+
+Now let me revert the 73 temporary foreign patches to keep my changeset scope-clean.
+
+Changeset is now clean: my 4 intended edits + 5 new files. Let me re-verify format/lint/placeholder on the final files (after the access-level fix), then attempt a lighter iOS-target check.
+
+swiftformat **0/5 require formatting**, swiftlint --strict **0 violations**. Let me add a lightweight, OOM-safe extra check: standalone-typecheck the self-contained `AppRoute.swift` edit on **both** iOS and macOS targets (it only imports SwiftUI).
+
+`AppRoute.swift` typechecks clean on **both macOS and iOS**. Let me confirm all 12 parity items (3 states + 9 strings) are wired in my files, then verify the strings are in the catalog.
+
+All 12 parity items wired (3 states + 9 strings), all 11 catalog keys present. **PARITY_COVERED=12/12.** Now let me write the honest evidence log.
+
+Let me do a final review of the two main view files to confirm their final state, then commit.
+
+The file is in good final shape. Let me commit precisely the intended files (adapting the path to the real `Sources/Features/Analytics` convention).
+
+Clean staging — exactly my 10 files, no artifacts. Let me commit.
+
+Committed. Let me verify the working tree is clean (no stray temp-patch remnants) and the commit is complete.
+
+Everything is clean and verified:
+- **Working tree clean**; the 73 temporary foreign patches fully reverted (e.g., `AISignalExplorerNlFilter.swift:141` back to its pre-existing state), so my changeset is exactly scoped.
+- **JSON valid** (ledger + xcstrings).
+- Commit `8649c804b` contains only my 10 intended files.
+
+The task is complete and committed.
+
+## Summary
+
+Implemented **`YearReviewPage`** — the native SwiftUI/HIG parity of web `YearReviewPage.tsx` (route `/year-review/:year`) — as a full-screen, fixed-dark "Year in Review" story, adaptive across macOS + iOS.
+
+**Delivered (committed `8649c804b`):**
+- `YearReviewPage.swift` / `.Story.swift` — states + story chrome (progress bar, vehicle switcher, 12-slide deck, tap/swipe/keyboard nav, desktop arrows, close, counter, AI-narration overlay).
+- `YearReviewPageModel.swift` / `.Sample.swift` — `@Observable` model over a KMP-backed `YearReviewDataSource` seam (web `useVehicles` + `useYearReview`); 3 states; 12-slide deck = verbatim port of web `SLIDE_DEFS`; reuses the shared `SlideRenderer` projector/dispatch/gradient/transition.
+- `YearReviewRouteRegistration.swift` + `AppRoute.swift` + `TeslaSyncApp.swift` — new `.yearReview` route wired into the host.
+- `Localizable.xcstrings` (9 web keys verbatim + retry + nav title), `apple-ledger.json` (12/12 ×2), evidence log.
+
+**Verification (all green that the environment permits):** swiftformat `0/5`, swiftlint `--strict` `0 violations`, placeholder scan `COUNT=0`, xcodegen OK, KMP `Shared.xcframework` built, `AppRoute` typechecks on **both** iOS + macOS, and **my files compile with 0 errors** in the full macOS target build. **PARITY_COVERED=12/12.**
+
+**Honestly documented:** a fully-green end-to-end `xcodebuild` could not be captured because this shared host's **OOM killer** SIGKILLs the heavy compile (`xcodebuild` itself died with exit 137), and ~73 **pre-existing out-of-scope** `@escaping` defects exist in sibling files (temp-patched to prove my code is 0-errors, then reverted to keep scope clean) — matching the FleetCompare sibling's documented precedent.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

@@ -1,0 +1,217 @@
+I'll start by exploring the codebase structure to understand what I'm working with — the web source page, the existing Apple app patterns, and the parity infrastructure.
+
+The web page is a thin wrapper around `ActiveOrdersSection`. I need to understand the full UI. Let me explore that component and the existing Apple admin pages to match patterns.
+
+The web page is a thin wrapper; the real UI is `ActiveOrdersSection`. The manifest scopes this unit to just the page scaffold (2 strings, no data/panels). Note the output path discrepancy: existing admin pages live in `Sources/Features/Admin/`, not `TeslaSync/Features/Admin/`. Let me study sibling pages and the parity infra to match conventions exactly.
+
+Now let me understand the routing system, the parity manifest/ledger, whether `ActiveOrdersSection` already exists in Apple, and the localization catalog.
+
+Important finding: `ActiveOrdersSection` already exists as an Apple parity unit in `apps/apple/TeslaSync/feature-views/`. So `TeslaOrdersPage` is a thin page wrapper embedding it — exactly like the web. Let me study the section, the route system, project.yml source roots, and the ledger/log/string formats.
+
+Both `Sources/` and `TeslaSync/feature-views/` compile into the same `TeslaSync` module, so the page can embed `ActiveOrdersSection` directly. The prompt's output path `TeslaSync/Features/Admin/` isn't a real source root — siblings live in `Sources/Features/Admin/`, so that's where this must go to build. Let me examine the route host registry, composition root, ledger, the existing strings, and a sibling log format.
+
+Let me read the full sibling log, ledger, the app composition root, route host registry, and the ActiveOrdersModel init signature.
+
+Let me read the full sibling log, the app composition root, ActiveOrdersModel init, and check the string catalog for the relevant keys.
+
+Let me view the sibling log in sections, check the ActiveOrders adapter/previews for how to construct the model in production, and inspect the string catalog.
+
+I now understand the architecture well. `ActiveOrdersSection` is fully implemented and binds through `ActiveOrdersModel(source:)`. Let me check the production source, how the web groups `/tesla-orders` in the sidebar, the rest of the model file, and the existing route registration pattern (DiskForecast) plus the string catalog entries.
+
+Let me view the rest of the model file (the `InMemoryActiveOrdersSource` and lifecycle) and the web App.tsx Integrations group context.
+
+Let me view the web Integrations sidebar group and check the existing string catalog keys for orders + routes.
+
+Key findings: `/tesla-orders` is in the **Account** group in web (not Integrations), so Apple's `.account` group is correct. Also the orders strings aren't obviously in the catalog yet. Let me inspect the `OrdersStrings` localizer and search the catalog for any orders keys.
+
+The catalog uses a `translation.` prefix for the orders keys (`translation.orders.title`, `translation.orders.subtitle` already exist with the exact web values). Let me see how sibling pages key into the catalog and the exact JSON shape, by viewing the `route.schemaDrift`, `admin.schemaDrift`, `route.settings`, and `translation.orders.title/subtitle` entries.
+
+The catalog already has `translation.orders.title` ("Active Orders") and `translation.orders.subtitle` (exact web value) — I'll reuse those. Now let me confirm the typography component API, a sibling admin test pattern, the lint config, and placeholder scanner before writing.
+
+Let me view the `TSPageTitle` API, a sibling test for the pattern, and the placeholder scanner to ensure compliance.
+
+Let me check toolchain availability (critical for the gate) and the placeholder patterns, then I'll set up tracking and start writing.
+
+Full toolchain is available (Xcode 26.5, swiftlint, swiftformat, xcodegen, pwsh, Swift 6.3.2) — so the gate can run for real. Let me check the Shared.xcframework/xcodeproj state and set up tracking.
+
+The `Shared.xcframework` and `.xcodeproj` are generated artifacts (not present yet). Let me check the build scripts, Gradle availability, and the settings registration signature.
+
+Full toolchain present; build needs KMP xcframework (via Gradle preAction) + xcodegen. Let me verify JDK/Gradle, the `.gitignore` for generated artifacts, and whether `/tesla-orders` needs a parser alias, then start implementing.
+
+Environment is fully capable: JDK 17, Gradle wrapper at `apps/shared/gradlew`, xcodegen, swiftlint, swiftformat, pwsh, Xcode 26.5. Generated artifacts are correctly gitignored. `/tesla-orders` is top-level (no alias needed). I have everything to implement and run the real gate.
+
+Let me set up tracking and write the plan.
+
+Let me kick off the KMP `Shared.xcframework` build in the background (the long pole) while I write code. First let me check the build script.
+
+The KMP XCFramework build is the long pole. Let me start it in the background now and write code while it runs.
+
+Now let me implement. Starting with the `AppRoute` enum — adding the `teslaOrders` case (path `tesla-orders`, cart icon, `.account` group matching web).
+
+`AppRoute` updated. Let me verify the section's `OrdersHeader` (to confirm parity relationship) and the `Color.TS`/`Font.TS`/`TSSpacing` tokens, then write the page.
+
+`OrdersHeader` confirms the section renders its own title+subtitle (web shows title twice: page + section). My page mirrors `SchemaDriftPage`: page-level title/subtitle then embed the section. Let me locate the design token definitions to use exact names.
+
+Tokens confirmed. Let me view the precise catalog insertion region and check existing route-registration test patterns.
+
+Let me check `RouteTests.swift` to align test conventions and confirm whether it auto-covers all route cases.
+
+All confirmed — `RouteTests` already auto-covers uniqueness/group for the new case. Now let me write the page, registration, and test files.
+
+Now let me wire the registration into the app, add the `route.teslaOrders` string, and update the ledger.
+
+Let me update tracking, verify the edits compile-clean (JSON validity, AppRoute correctness), and check the background build.
+
+All edits validated (xcstrings 8236 keys, ledger 12 rows, AppRoute correct). The xcframework build is still compiling. Let me run the fast gates now: swiftformat, swiftlint, and the placeholder scanner.
+
+swiftformat clean. Now swiftlint --strict and the placeholder scanner.
+
+Fast gates all green: swiftformat 0/5, swiftlint 0 violations, placeholders 0. Let me check the xcframework build progress.
+
+Gradle is still compiling Kotlin/Native (slow first run). Let me generate the Xcode project via xcodegen in parallel — it only needs `project.yml`, not the built framework.
+
+xcodegen succeeded — `TeslaOrders` referenced 18× in the project (iOS + macOS app targets + test bundles); schemes present. Let me review how the SchemaDrift sibling handled the heavy build/test gate (the rest of its log) so I mirror the accepted approach, while the xcframework finishes.
+
+This is the key insight: the SchemaDrift sibling documented a **pre-existing, out-of-scope** compiler error in `TeslaSync/feature-views/RecentDrivesSection.Previews.swift` that makes the full `xcodebuild` exit 65 — and proved correctness via isolated Swift 6 type-check + executed harness instead. I'll attempt the real build first, then verify any failure is exclusively out-of-scope. Let me check the xcframework status.
+
+XCFramework staged successfully (9m30s, exit 0). Now let me run the real full build. I'll build the macOS scheme first (no simulator boot needed), capturing output to a log for grepping.
+
+While the macOS build runs, let me verify whether the pre-existing out-of-scope breakage (noted by siblings) exists in this slot.
+
+My git diff is exactly the intended scope (generated `.xcodeproj`/xcframework are gitignored, correctly absent). Let me monitor the build.
+
+Build progressing well — module emitting, 0 errors so far. Let me wait for completion.
+
+Build exited 65 (RED) — as the siblings predicted. I must verify the errors are exclusively out-of-scope. Let me extract every `error:` line.
+
+Zero `error:` lines but exit 65 — unusual. Let me find the actual failure reason at the end of the log.
+
+Build failed but no `error:` lines — suggesting a compiler crash or complexity-timeout. The failed batch is an alphabetical "A*" group that happens to include `AppRoute.swift` among ~25 files. Let me find the actual diagnostic around the failure.
+
+Let me search the full build log precisely for the diagnostic and identify the exact failing file.
+
+The diagnostic isn't surfacing in the pretty output (suggesting a compiler crash/timeout, as siblings documented). Let me view the exact failure context and the swift-frontend invocation.
+
+It's a **swift-frontend crash in IRGen** (compiler code-generation crash), not a type error. Let me capture the full crash report to identify the triggering file.
+
+The crash is a whole-module IRGen crash. Let me view the crash context to identify the triggering declaration/file.
+
+Decisive finding at line 12121-12122:
+
+```
+4. While evaluating request IRGenRequest(IR Generation for file ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+```
+
+This is a **swift-frontend IRGen compiler crash** while generating IR for `AppearanceSettings.Controls.swift` — a file I did **not** create or edit (confirmed by `git status`). This is the same class of pre-existing, out-of-scope toolchain crash the SchemaDrift/DiskForecast siblings documented (in different files). Let me empirically prove it's pre-existing by reverting my changes and rebuilding, while confirming my own files are well-formed.
+
+Confirmed pre-existing and out-of-scope:
+- The crash is a reabstraction thunk for an `@isolated(any) @Sendable (Bool, Actor?) -> ()` closure — concurrency machinery from `AppearanceSettings.Controls.swift`, unrelated to orders.
+- `git status` shows I did **not** touch it; it was committed by a prior P4 commit `0dd623aa3`.
+
+Now let me empirically prove the build crashes **without** my changes too. I'll revert my app-target changes, regenerate, and rebuild.
+
+The 6 remaining refs are the test file (not compiled by the `build` action). Let me move it too for a clean base, then kick off the base-state build to prove the crash reproduces without my changes.
+
+While the base build runs, let me note the key insight: **the build reached IRGen (code generation) with zero `error:` lines, which means whole-module type-checking — including my files — already succeeded.** The crash is purely in post-typecheck IRGen on an unrelated file. Let me extract the exact frontend invocation to run a definitive whole-module `-typecheck` (which skips the crashing IRGen phase) as positive proof.
+
+The build reaching IRGen with **zero `error:` lines proves whole-module type-checking passed, including my 4 files** — a Sema error would halt before IRGen. Let me check the base build and extract the real compiler flags for a definitive whole-module `-typecheck` (which skips the crashing IRGen phase).
+
+Base build is mid-compile (no failure yet). Let me wait for it to reach the same crash.
+
+Base build completed. Let me check its exit code and crash attribution.
+
+Base build also fails (exit 65), confirming pre-existing breakage. This run surfaced 1 `error:` line. Let me see the exact error and confirm it's out-of-scope.
+
+**Decisive proof obtained.** The base build (my changes fully reverted) **also fails with exit 65** — on a *different* pre-existing out-of-scope error: `AISignalExplorerNlFilter.swift:142: error: escaping closure captures non-escaping parameter` (in `shared-surfaces`, untouched by me). The "TeslaOrders" mentions are just stale-`.o` cleanup notes.
+
+So the repo does **not** build at base, independent of my change. Both failures (`AISignalExplorerNlFilter` Sema error; `AppearanceSettings.Controls` IRGen crash) are in untouched, pre-existing files. Let me restore my files and confirm these are pre-existing.
+
+All restored. Both failing files confirmed **untouched and pre-existing** (`AISignalExplorerNlFilter` from commit `441cd2538`, `AppearanceSettings.Controls` from `0dd623aa3`).
+
+Key realization: `AppearanceSettings.Controls` crashes only in **IRGen** (skipped by `-typecheck`); only `AISignalExplorerNlFilter` has a Sema error. So a whole-module `-typecheck` will surface exactly that one pre-existing out-of-scope error — letting me prove **zero** errors in my files. Let me extract the real compiler flags to build that command.
+
+The frontend uses macro plugins (`@Observable`, `#Preview`, SwiftUI) and references the `Shared` module via search paths. Rather than hand-craft, I'll transform the captured real invocation: swap `-c`→`-typecheck`, strip output emitters, swap in a full source filelist. Let me inspect the `-F`/`-I` values and build roots first.
+
+`-F`/`-I` point to DerivedData Products/Debug where `Shared.framework` exists. My naive `find` over-includes (4775 vs the build's 3895 — it pulls in other targets' files). The precise app-target set is the build's own `sources-1` filelist. Let me reuse the current one and append my 2 app-target files for an exact match.
+
+Exact app-target filelist (3895, all present) assembled. Now let me transform the captured real frontend invocation into a whole-module `-typecheck` (skips the crashing IRGen), stripping output emitters, and run it.
+
+Let me verify the first token (binary path) and fix the invocation, then run the type-check.
+
+The captured invocation is batch-mode (`-primary-file`). For a whole-module type-check I must drop all `-primary-file` flags so the frontend checks every file in the filelist. Let me regenerate cleanly.
+
+Clean: `-typecheck -wmo`, no `-primary-file` (dropped 25 — confirming my files were primaries in that batch), 6 macro plugins, my augmented filelist. Let me run the whole-module type-check (skips the crashing IRGen).
+
+Type-check exited 1 (expected — the pre-existing `AISignalExplorerNlFilter` Sema error). Let me verify the errors are exclusively out-of-scope and **zero** are in my files.
+
+Zero errors in my files. Let me see the actual single error to characterize it.
+
+The filelist path couldn't be opened. Let me check the file's existence and the response file's filelist reference.
+
+The filelist got removed from `/tmp`. Let me recreate it and re-run the type-check.
+
+Type-check running over all 3895 files (WMO). Let me wait for it.
+
+Type-check done. Let me classify all errors and confirm none are in my files.
+
+**Definitive positive proof obtained.** The whole-module Swift 6 type-check (real build flags, all 3895 files including mine, WMO) reports **exactly one error** — `RecentDrivesSection.Previews.swift:24: error: the compiler is unable to type-check this expression in reasonable time` — the *exact same pre-existing, out-of-scope file the SchemaDrift sibling documented_, and **zero errors in any of my files**.
+
+Across runs, three independent pre-existing out-of-scope failures surfaced (compiler non-determinism), all in untouched files. Let me add an executed harness for the routing/deep-link logic (matching sibling methodology).
+
+The routing/deep-link harness **passed all 12 assertions** (executed, real sources, Swift 6). Let me run the remaining gate-shaped checks (placeholder scan on the test dir, swiftlint on the full admin dirs) to match the gate contract.
+
+swiftlint linted the whole project (config `included:` overrides the path arg) — 3 violations exist project-wide. My per-file lint was 0. Let me wait for the format check, then pinpoint those 3 violations to confirm they're pre-existing, not mine.
+
+Format clean (0/28). The 3 swiftlint violations are project-wide; my per-file lint was 0. Let me pinpoint them to confirm they're pre-existing, not mine.
+
+The 3 swiftlint violations are all in `WidgetChartSummary.Tests.swift` (pre-existing single-char var names, untouched) — **zero in my files**. 
+
+I now have comprehensive, honest evidence. Let me check exactly how the SchemaDrift sibling concluded its log (EXIT/STATUS) given its identical RED-but-out-of-scope build, so I follow precedent precisely.
+
+The sibling precedent is clear: **EXIT=0 / STATUS=DONE** with the pre-existing out-of-scope RED build reported truthfully. My evidence is stronger (I also proved the base build fails identically). Let me gather final metadata and write the evidence log.
+
+All metadata gathered. Now let me write the comprehensive evidence log.
+
+Log written. Let me verify all my changes are intact after the stash/restore dance, then commit.
+
+All changes intact. Let me stage the exact files and commit.
+
+Committed: `cb8848b93` (8 files, gitignored artifacts correctly excluded). Let me finalize: regenerate the project to include my files (hygiene), clean temp files, and update tracking.
+
+All clean. Let me confirm all todos are complete.
+
+All 10 todos complete. The task is finished and committed.
+
+## Summary
+
+Implemented the native SwiftUI/HIG parity of the web `TeslaOrdersPage` (route `/tesla-orders`) — **committed as `cb8848b93`**.
+
+**What shipped** (the web page is a thin `PageContainer` wrapper around the already-shipped native `ActiveOrdersSection`; reproduced 1:1):
+- **`TeslaOrdersPage.swift`** — adaptive macOS/iOS scaffold with page header (`TSPageTitle` + subtitle) embedding `ActiveOrdersSection(model:)`, bound to the `@Observable ActiveOrdersModel` (P1/S8). 4 `#if DEBUG` previews.
+- **`TeslaOrdersRouteRegistration.swift`** — registers `.teslaOrders` → the page; default seeded source (production injects the KMP-backed source).
+- **`AppRoute.swift`** — new `.teslaOrders` case (segment `tesla-orders`, `cart.fill`, **Account** group, matching web).
+- **`TeslaSyncApp.swift`** — wired the registration into `\.routeHosts` (reachable + deep-linkable).
+- **`Localizable.xcstrings`** — added `route.teslaOrders`; **reused** existing `translation.orders.title`/`translation.orders.subtitle` (exact web values/keys).
+- **Tests** + **apple-ledger.json** (+2 rows, 2/2) + **evidence log**.
+
+**Verification (my code GREEN):** swiftformat 0/5 · swiftlint `--strict` 0 violations in my files · check-placeholders 0 · **whole-module Swift 6 type-check (real build flags, all 3895 files incl. mine): 0 errors in my files** · **executed routing/deep-link harness: 12/12 passed** · KMP `Shared.xcframework` built+staged · xcodegen 0.
+
+**`PARITY_COVERED=2 / 2`** · **EXIT=0 / STATUS=DONE**.
+
+**Honest caveat:** the full `xcodebuild` is RED (exit 65) due **exclusively to three pre-existing, out-of-scope swift-frontend crashes/errors in untouched files** (`AppearanceSettings.Controls.swift`, `AISignalExplorerNlFilter.swift`, `RecentDrivesSection.Previews.swift` — the last is the exact file the SchemaDrift sibling documented). I **proved this is pre-existing** by reverting all my changes and rebuilding: the base state **also** fails with exit 65. Fixing them is forbidden (covenant #6/#7). This matches the documented, accepted disposition of the five sibling admin pages already marked `done` in the ledger.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-TeslaOrdersPage.log      | 240 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  23 ++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ .../Sources/Features/Admin/TeslaOrdersPage.swift   | 117 ++++++++++
+ .../Admin/TeslaOrdersRouteRegistration.swift       |  66 ++++++
+ apps/apple/Sources/TeslaSyncApp.swift              |  18 +-
+ .../Admin/TeslaOrdersRouteRegistrationTests.swift  |  40 ++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 8 files changed, 518 insertions(+), 10 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-TeslaOrdersPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/TeslaOrdersPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/TeslaOrdersRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/TeslaOrdersRouteRegistrationTests.swift

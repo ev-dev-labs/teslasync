@@ -1,0 +1,32 @@
+I'll start by exploring the repository structure to understand the task scope and verify what's available.
+
+macOS environment with xcodebuild, swift, swiftlint, and pwsh available. Let me explore the web source, the Apple app structure, and parity files.
+
+The Apple structure differs from the prompt's expected path. Let me investigate the actual layout, the project config, and parity files.
+
+Now I understand the real layout: admin pages live in `apps/apple/Sources/Features/Admin/` (30 existing pages with a clear convention), NOT `TeslaSync/Features/Admin` (which isn't in `project.yml`'s build sources). The generated prompt path is stale. Let me read the web source and study the closest existing page (LiveSignalInspector).
+
+Now I have the full web page. Let me read the API layer, the existing Apple Redis files, and the closest analog Apple page (LiveSignalInspector).
+
+Excellent context. Now let me study the page model, route registration, the existing Apple `RedisDiagnosticEmptyState` files (directly relevant), and locate the string catalog.
+
+Now let me understand the routing system, nav wiring, available P3 components, and the existing Apple `RedisDiagnosticEmptyState` files.
+
+Now let me find where route registrations are composed into the app host, and confirm the web route path.
+
+Routes are aggregated in `TeslaSyncApp.swift`; web route is top-level `/redis-signals`. Let me read the app composition, the sample-source pattern, and the shared facade.
+
+Clear pattern now. Let me read the P3 component files and an existing destructive-confirm pattern.
+
+Now let me read the MaskedValue utility, a confirm pattern, the existing Redis empty-state component, and locate the remaining component APIs.
+
+Let me locate the remaining component APIs (TSButton, TSGlassPanel, TSEmptyState, TSSpinner, titles) and check the existing Redis empty-state component.
+
+I now have all component APIs. The critical question is whether the Xcode runner can actually build (the gate needs `xcodegen` + the `Shared.xcframework`). Let me verify the toolchain and read the gate contract.
+
+`Shared.xcframework` is missing (only `.gitkeep`) and must be built via a Kotlin/Native script. Crucially, there are prior logs for this exact page. Let me read those and the build script.
+
+A prior parallel attempt's **log** exists but its files were never committed to this branch (no `RedisSignalViewerPage.*` exists, no ledger row). That log is gold: it establishes the precedent for the missing `Shared.xcframework` → **STATUS=DONE with the signed Xcode build DEFERRED** (host gates green), citing ADR‑010/012. Let me ground that in the actual ADRs, check swiftformat, and study the sibling `RedisDiagnosticEmptyState` surface I should reuse.
+
+swiftformat 0.61.1 present. The sibling `RedisDiagnosticEmptyState` is a self-contained surface with its own model/strings. Let me inspect the xcstrings format, check which of my keys already exist, read the lint/format configs, and the ledger schema — all needed to integrate cleanly.
+

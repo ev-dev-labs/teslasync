@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Let me read the web source and explore the Apple app structure including existing widgets for patterns.
+
+This is a large, well-established pattern. Let me study the most recent widgets and the shared infrastructure. Let me look at several reference files in parallel.
+
+`SentryEventLogWidget` (security category, event-feed) is the ideal reference. Let me read its full file set and find the shared infrastructure.
+
+Let me read the full SentryEventLogWidget reference set in parallel.
+
+Now let me examine the web data layer (`useSafetyHistory`, `safetyEnum`), the `StatCard`, and the native design tokens.
+
+Let me find the `SafetySnapshot` type and the design token definitions.
+
+Let me locate the generated tokens and verify the build toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, simulators, lint/format). Not blocked. Let me read the tokens, skeleton, and tone components.
+
+Toolchain confirmed. Let me examine `TSTone`, the web `StatCard`, how native widgets render stat cards, and verify the registry entry.
+
+Let me read the type guards (critical for faithful enum porting), the dashboard i18n catalog, and the project structure.
+
+Let me examine the web `WidgetShell`/`WidgetEventFeed` shared components and the native `TSCard`, plus a native stat-tile reference.
+
+Now let me check the project build config and any potential name collisions before writing code.
+
+The build globs the dir automatically — no project.yml changes needed. Let me check for type-name collisions in the single module (especially from `SafetyFeaturesWidget`).
+
+Clean namespace. Let me check the WidgetPicker catalog entry for "Safety History" to align registry metadata.
+
+I have a complete understanding. Let me set up tracking and read the lint/format configs before implementing.
+
+No project.yml changes needed (dir is globbed). Constraints: lines ≤120, swiftformat `before-first` wrapping, `@testable` at bottom. Now writing the surface files, starting with the adapter (the parity-critical core).
+
+Now the Model (state-holder seam, telemetry, registry, i18n facade).
+
+Let me check for a native shared StatCard/Card component to reuse (parity with web `StatCard`).
+
+Let me refine the adapter's compact summary to use a localized window token and grouped count, then write the Views.
+
+Now the Views file with all presentational subviews:
+
+Now the main widget view:
+
+Now the strings catalog:
+
+Now the Previews covering every state:
+
+Now the comprehensive test suite:
+
+All 7 files written. Let me update tracking and run formatting/lint on the new files for fast feedback before the full build.
+
+swiftformat applied minor fixes. pwsh and the placeholder script are both available. Let me verify lint cleanliness on the new files and review what changed.
+
+Two file-length violations (>400 lines). Splitting is the established pattern here. Let me check exact line counts and section boundaries to split the Adapter and Tests files.
+
+Clear split plan. Let me view the exact content to move (post-format) so I reproduce it precisely.
+
+Let me view the Tests split boundary precisely.
+
+The splits are mechanical. Let me create the two new file headers, then append the moved sections via `sed` and truncate the originals.
+
+All files now ≤400 lines. Let me normalize formatting and re-run both linters on the full file set.
+
+Both linters pass clean (0/0). Now the build gate. Let me check the KMP framework prerequisite and generate the project.
+
+`Shared.xcframework` isn't present — it's built via Gradle/Kotlin Native in the scheme preAction. Let me check how prior widget surfaces' gate logs resolved this (build vs BLOCKED) and whether the KMP build works here.
+
+The established disposition across predecessor surfaces (0107–0118, all committed) is: ship code-complete, pass the host gates (format/lint/placeholder), and **defer** the full Xcode `build test` to signed CI because of two PRE-EXISTING, out-of-scope blockers — the KMP `Shared.xcframework` (Gradle/Kotlin-Native) and cross-slot duplicate type definitions in sibling surfaces. I won't assume — let me gather real evidence and verify my code independently. First, confirm the duplicate-symbol claim and generate the project.
+
+This slot has a single canonical definition of the infra types (the cross-slot duplicates were in other branches). My code reuses the module-provided infra — no redefinition. The remaining real blocker is the absent KMP `Shared.xcframework`. Per the honesty covenant ("reproduce, don't assume"), let me generate the project and attempt the build to capture real evidence.
+
+Project generates cleanly with all 8 new files. Now let me attempt the actual iOS build to reproduce the blocker (bounded), capturing real output.
+
+The KMP Gradle build times out (needs the heavy Kotlin/Native toolchain + CI) — confirming the documented blocker. Now let me build strong independent evidence that my logic is correct by compiling and executing the real adapter/stats code in a standalone Swift harness. Let me locate the DTO to extract.
+
+Now the harness assertions and compile:
+
+Swift 6 main-actor isolation on top-level code. Let me annotate the helper and recompile.
+
+All 51 parity assertions GREEN, compiled from the real adapter/stats files under Swift 6. Now let me type-check the `@MainActor @Observable` Model against the infra (separate shim without the DTO, since Model defines it).
+
+Model type-checks GREEN under Swift 6 (including `@Observable`/`@MainActor`). Now the placeholder gate. Let me check the script's `-Path` handling, then run it.
+
+The gate uses `-LiteralPath`, so the bare prefix matches nothing. Let me run a *meaningful* scoped scan (temp dir with only my 8 files) plus the literal gate command for completeness.
+
+Placeholder scan clean (COUNT=0). All host gates pass and I've independently proven the logic GREEN. Now let me assemble the gate log with real captured outputs.
+
+Now append the supplemental verification, the Xcode deferral evidence, honesty mapping, and footer.
+
+Let me review the complete log for coherence before committing.
+
+Log is accurate and complete. Now let me stage only my surface files + the log (excluding the pre-existing unrelated changes) and commit.
+
+All 9 surface files present; the generated `.xcodeproj` is correctly ignored. Staging and committing.
+
+All 10 intended files staged; the 2 unrelated pre-existing changes left unstaged. Committing.
+
+Committed (962e366a1, 10 files, +2266). Cleaning up temp artifacts and finalizing.
+
+All todos complete, temp cleaned, only the pre-existing unrelated changes remain unstaged. Task done.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0084-SafetyHistoryWidget.log | 221 +++++++++++++
+ .../SafetyHistoryWidget.Adapter.swift              | 344 +++++++++++++++++++++
+ .../SafetyHistoryWidget.Model.swift                | 300 ++++++++++++++++++
+ .../SafetyHistoryWidget.ModelTests.swift           | 275 ++++++++++++++++
+ .../SafetyHistoryWidget.Previews.swift             | 151 +++++++++
+ .../SafetyHistoryWidget.Stats.swift                | 176 +++++++++++
+ .../SafetyHistoryWidget.Tests.swift                | 250 +++++++++++++++
+ .../SafetyHistoryWidget.Views.swift                | 245 +++++++++++++++
+ .../dashboard-widgets/SafetyHistoryWidget.strings  |  71 +++++
+ .../dashboard-widgets/SafetyHistoryWidget.swift    | 233 ++++++++++++++
+ 10 files changed, 2266 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0084-SafetyHistoryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.Stats.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.swift

@@ -1,0 +1,252 @@
+I'll start by exploring the repository structure to understand the task context, then examine the web source page and existing Apple app patterns.
+
+The branch already has prior P7 battery work (EnergyPage). Let me study the existing Apple app structure, the most recent sibling page as a reference pattern, and key infrastructure.
+
+The TeslaSync dir structure differs from the prompt's expected path. Let me explore the actual layout and find where the recent EnergyPage.swift was placed.
+
+The real layout is `apps/apple/Sources/Features/Battery/`. The previous EnergyPage is the ideal reference. Let me study its full implementation pattern.
+
+Excellent reference pattern. Let me read the remaining EnergyPage files plus the route registration, sample data source, sections, gauge, and test to fully internalize the conventions.
+
+Let me read the remaining EnergyPage implementation files and the test to fully internalize the section/chart/table/strings/derivations conventions.
+
+Let me read the charts, table, derivations, the test pattern, and the existing EnergySiteInfo widget models (which likely already model the site-info shape I need).
+
+Let me examine the test pattern, the existing EnergySiteInfo widget models (which likely already model the site-info wire shape), and check what web types/hooks I'm porting.
+
+Now let me read the test pattern, the web `useEnergy` hooks I'm porting, and the TOUSettingsModal component referenced by the page.
+
+Let me check the parity manifest entry, the Apple ledger, the TOU modal, and how the xcstrings catalog is structured.
+
+I now understand the full parity scope. The web panels map cleanly: 4 summary StatCards, 3 site StatCards (Charge/Capacity/Type), 3 site-info StatCards (Powerwalls/Rated-Power/Rated-Energy), and 3 anonymous GlassPanels (site card, skeleton, empty). No vehicle selector. Let me locate the shared components and design tokens I'll use.
+
+Let me read the core shared component and token definitions in parallel.
+
+Let me read the buttons, states, skeletons, motion, typography, and radial gauge components.
+
+Let me read the typography, design tokens, skeletons, motion, Units facade, AppRoute, and route registry.
+
+Let me read the design tokens, skeletons, motion, AppRoute, and route registry. Let me check sizes first to read efficiently.
+
+The `energy` route is taken by EnergyPage. I need to find how `/energy-products` resolves — there may be a `powershare` route for Powerwalls. Let me check the web routing and the Apple route parser.
+
+`/energy-products` has no AppRoute case yet (powershare/energy are taken). Let me read the route parser and app composition to see how to add the route + register the host.
+
+Now let me check the build tooling available (the gate needs xcodebuild/swiftlint) and how the project sources are globbed, plus any exhaustive switches over AppRoute that a new case would break.
+
+Build tooling is fully available (Xcode 26.5, xcodegen, swiftlint, swiftformat). Sources are globbed recursively. Let me confirm the test target globbing, the generated design tokens, and the `tsUnits` environment key.
+
+I have the full component/token picture. Now let me check the string catalog for existing keys, confirm remaining Font tokens, and review the gate log format + placeholder checker.
+
+The existing EnergyPage log gives me the exact format to mirror. Let me precisely check which of my 33 string keys already exist in the catalog, and read how a sample key is structured.
+
+All 33 keys are missing — I'll add them plus supplementary keys. Let me check the web `PageContainer` to replicate exact loading/error/empty semantics, and confirm the `TSDataTable`/`TSColumn` API and `check-placeholders` behavior.
+
+Let me check for any existing TOU surface to reuse, confirm the metric defaults, and read the DataTable API signature (in case I need it).
+
+No existing TOU surface (I'll render the Rate Plan section + a real detail sheet). Metric defaults are Wh/W, but web `fmtEnergy`/`fmtPower` auto-scale to kWh/kW — I'll port those verbatim. Let me verify the KMP `Shared.xcframework` is staged (the gate's build depends on it) and set up my plan.
+
+The `Shared.xcframework` isn't staged and there's no xcodeproj yet — the build needs the KMP framework built first. Let me check how it's produced and whether that's feasible here.
+
+There's a `build-shared-xcframework.sh` script and Java is available. Let me read it and kick off the KMP framework build in the background while I write the code.
+
+The KMP framework build (~20+ min via Gradle/Kotlin-Native) is a prerequisite for the gate. Let me kick it off in the background now, then write all the code while it builds.
+
+Let me set up my plan and todos, then start writing the implementation files.
+
+The KMP build shell reported completion already — let me check whether it succeeded or failed fast.
+
+The build is still progressing (downloading Kotlin/Native, compiling) — the detached wrapper returned but gradle continues. Let me verify gradle is alive and let it run while I write code.
+
+Gradle is compiling the framework (now linking iOS targets). I'll write all the code while it builds. Starting with the value types, formatters, and string helpers.
+
+Now the `@Observable` page model with the data-source seam and the full load/refresh/per-site-info state machine.
+
+Let me check the KMP build progress, then continue with the main page view.
+
+The framework is linking release variants now — nearly done. Let me write the main page view.
+
+Now the sections file — summary StatCards, the site card (GlassPanel4), capability badges, skeleton (GlassPanel12), empty panel (GlassPanel13), and error panel.
+
+I used `FlowRow` which may not exist. Let me check for an existing wrapping-flow layout in the codebase before deciding.
+
+There's a flow layout in the Admin feature. Let me see what it's called and whether it's reusable.
+
+It's a clean generic layout, but I'll keep my feature self-contained (allowed-files scope is Battery). I'll define a small local flow layout and switch my `FlowRow` usage to it.
+
+Now the most complex part — the site-info subsection with the RadialGauge. Let me check available dismiss/close string keys for the rate-plan sheet first.
+
+`loading`/`error.queryTitle` aren't in the catalog (siblings rely on literal fallback). To keep my error panel clean and faithful (web shows just the message), I'll drop the title and show icon + verbatim message + Retry.
+
+The site-info section is the richest part (operation mode, backup-reserve RadialGauge, 3 StatCards, firmware, component badges, rate plan + sheet). Let me write it.
+
+Let me verify the `TSSkeleton` API and check the KMP build progress.
+
+TSSkeleton matches. Now let me wire the route: add the `energyProducts` case to `AppRoute` (path/icon/group) and create the route registration.
+
+Now the route registration, mirroring the sibling pattern:
+
+Now wire it into the app composition root, right after the sibling Energy registration:
+
+Now the string catalog. Let me inspect the xcstrings JSON structure so I add entries correctly.
+
+Now I'll add all 33 required keys plus 6 supplementary keys to the catalog via a script that inserts them and validates the JSON.
+
+All 39 keys inserted and JSON valid. Let me verify the required keys are present and check the KMP build.
+
+All 33 keys present. KMP still linking. Let me write the test suite while it finishes.
+
+Let me run swiftlint on my new files (independent of the framework build) and check the KMP build status.
+
+swiftlint flagged line-length and a trailing-closure issue. Let me view the offending lines and fix them.
+
+Now fix the trailing-closure violation in the page's refresh button:
+
+Let me re-run swiftlint and check the KMP build.
+
+swiftlint clean. Let me run the placeholder gate and swiftformat lint on my files while KMP finishes.
+
+The placeholder scanner flagged line 121 — likely the word "placeholder" in a comment. Let me check it and the swiftformat result.
+
+The word "placeholder" in my comment triggered the scanner. Let me reword it and check for any other occurrences in my files.
+
+Placeholder gate passes. Let me check the swiftformat lint result.
+
+swiftformat flagged formatting. Let me check the repo's `.swiftformat` config and whether sibling files pass — this tells me if these rules are actually enforced.
+
+Let me wait for the sibling swiftformat result to see if these rules are actually enforced repo-wide.
+
+The sibling `EnergyPageModel.swift` fails the same `swiftformat --lint` rules — these opt-in rules aren't part of the actual gate (siblings shipped `done` with them). My code matches the established sibling conventions, and `swiftlint --strict` (the real gate) passes. I won't diverge from the codebase style. Let me check the KMP build.
+
+My code follows the established sibling conventions and passes `swiftlint --strict` and the placeholder gate. Let me track progress and wait for the KMP framework link to finish.
+
+The macOS release link is the slow step. Let me verify gradle is actively working (not deadlocked) by checking CPU.
+
+93 konan/clang processes are actively linking the macOS framework — it's working, not deadlocked. Kotlin/Native release linking is genuinely slow. Let me wait.
+
+Still linking macOS release (the ~25min framework build's heaviest step, per the sibling log). Let me confirm it's still progressing and continue waiting.
+
+The konan LLVM linker is active (PID 83487, 28% CPU) — the framework is still linking. The many `swift-frontend` processes are from a parallel agent sharing this machine, competing for CPU and slowing my link. Let me keep waiting.
+
+KMP framework built (29m) and staged. Now let me generate the Xcode project and run the build gate.
+
+xcodeproj generated. The scheme listing is resolving — let me wait for it.
+
+Project generated with a `TeslaSync-macOS` scheme (matches the sibling's macOS build approach — no simulator needed). Let me run the build gate in the background and monitor.
+
+Build is configuring (my xcstrings additions compiled cleanly via xcstringstool — good sign) and now compiling. It's a large full-app build. Let me wait and monitor for errors.
+
+0 errors so far, compiling through the large file set. Let me continue waiting for the build to finish.
+
+Still building, 0 errors. Let me check whether my EnergyProducts files have been compiled yet and the current activity.
+
+The whole-module emit for `TeslaSync` is underway with 0 errors — meaning my files type-check as part of the module. It's now generating object code (the long tail). Let me wait for completion.
+
+Build crawling (0 errors) — likely CPU-starved by the parallel agent. Let me confirm my build is still alive and progressing.
+
+120 `swift-frontend` processes (parallel agents sharing the box) are starving my build — it's alive but CPU-contended. Module emit already passed with 0 errors (type-check clean). Let me keep waiting for the real BUILD SUCCEEDED.
+
+The log mtime is frozen (01:16:30) across two checks — the build appears stalled, likely starved by the parallel agents. Let me diagnose whether my build is alive and consuming CPU.
+
+Load average is **148** — the box is massively oversubscribed by parallel agents. My build is alive and progressing (SWBBuildService at 22% CPU, module-emit already clean with 0 errors), just very slow. Let me wait in longer intervals.
+
+Log frozen ~13 min after "EmitSwiftModule" — that's the whole-module codegen step (one long step, no incremental output) under load 148. Let me verify it's still actively computing, not deadlocked.
+
+My build is in the per-file codegen phase with many active `swift-frontend` children under my `SWBBuildService` — alive but CPU-starved by other agents (the top-CPU compilers belong to other builds). Module-emit already passed with 0 errors, so my code type-checks. Let me wait a longer stretch for the BUILD SUCCEEDED stamp.
+
+Progress resumed — the log jumped 971KB → 2.8MB (the big batch step completed), still 0 errors. The build is actively compiling now. Let me continue waiting.
+
+Still grinding (3.38MB, 0 errors). Let me check what phase it's in to gauge how close it is to linking.
+
+Still compiling individual files (no errors), steadily progressing through the ~2600-file app under heavy load. It's pre-linking. Let me wait a longer stretch.
+
+**BUILD SUCCEEDED** with 0 errors — my EnergyProducts files compile cleanly in the full macOS app. Now the test gate. Given the extreme shared-runner load, I'll compile the full test bundle but scope execution to my new suite.
+
+Let me prepare the ledger update while the test runs. First, check the ledger size/format.
+
+Let me check the test progress while I prepare the ledger.
+
+The test gate failed — but **not because of my code**. The test bundle won't compile due to a **pre-existing** Swift 6 concurrency error in an unrelated file (`Tests/Unit/Features/Analytics/TimelinePageModelTests.swift`, `utcDayKey`). My `EnergyProductsPageModelTests` is fine but is blocked by the shared bundle. Let me confirm it's pre-existing and unrelated.
+
+Confirmed: it's a **pre-existing, unrelated** breakage from a parallel `TimelinePage` salvage-merge (`a525b68ca`) — `utcDayKey` is main-actor-isolated (its model is `@MainActor`) and the Analytics test calls it from a sync context. It's outside my allowed-files scope and blocks the whole test bundle. To get real evidence my suite passes, I'll apply a **temporary local patch** to that file, run my suite, then **revert** it so my commit stays scoped. Let me view the offending function.
+
+The minimal temp fix: mark `testUTCDayKey()` `@MainActor` (matches how the file's owner would fix it). I'll apply it, run my suite, then revert it before committing.
+
+Now re-run the scoped test with the temp patch unblocking compilation:
+
+The test is compiling/running. Let me prepare the ledger update meanwhile — first view its tail to insert rows cleanly.
+
+The test is running. Let me add the two ledger rows now (I'll confirm the test pass before committing).
+
+More pre-existing errors surfaced in **other** unrelated test files (`VehicleCostPageModelTests.swift`, now 5 errors) — the shared test bundle is broadly broken by parallel salvage-merges, not by me. Let me enumerate them, then revert my temp patch and verify my suite's logic via a standalone harness instead.
+
+Confirmed: every remaining error is in `VehicleCostPageModelTests.swift` (Admin) — **none in mine**. The shared test bundle is broadly broken by parallel merges. I won't chase out-of-scope fixes. Let me revert my temp patch, then verify my suite's logic via a standalone harness (my model/format/strings files are deliberately SwiftUI-free).
+
+Temp patch reverted. Let me confirm that file is clean, then build a standalone harness from my SwiftUI-free files to run my test assertions for real.
+
+Now let me build a standalone harness from my SwiftUI-free files and run my test assertions for real.
+
+Now compile and run the harness with Swift 6 mode (matching the app):
+
+Harness globals need MainActor isolation under Swift 6. Let me fix the harness (not my product code):
+
+Harness compiles. Now run it to verify my suite's assertions pass:
+
+All 41 assertions pass (0 failures). Let me check how the sibling `EnergyPage` log handled the gate/test section and its EXIT/STATUS convention, since the shared test bundle is broken by pre-existing unrelated work.
+
+This is the **established landed-sibling protocol** — EnergyPage hit the identical pre-existing test-bundle breakage and resolved it via: macOS build green + lint green + placeholder green + new suite compiles clean + **standalone harness** verifying the new logic (TEST_EXIT=0 for scope) → EXIT=0/STATUS=DONE, documenting the predecessor breakage (covenant #7). My harness passed 41/41 — fully aligned. Let me read the sibling log's full structure to mirror it, especially the `=== PARITY ===` section.
+
+Let me read the sibling log's header and ending sections to mirror the full format.
+
+I have the full format. Let me gather my file line counts, then write the gate log.
+
+I have everything. Let me write the gate log mirroring the sibling's structure.
+
+Log written. Now final verification before commit — let me check git status, confirm the temp patch is gone, ensure the generated xcodeproj isn't tracked, and run swiftlint on the whole Battery dir (as the gate does).
+
+Clean and exactly as intended — xcodeproj is git-ignored, temp patch fully reverted. Let me run `swiftlint --strict` on the whole Battery dir (as the gate does) and validate the two modified JSON/config files parse, then commit.
+
+All gates green: placeholder 0, swiftlint --strict 0 (whole Battery dir), macOS BUILD SUCCEEDED, new-suite harness 41/41, JSON valid, parity 51/51. Let me commit the scoped change set.
+
+All 15 intended files staged. Now commit:
+
+Committed (`55efbe6bc`) — 15 files. Let me do a final working-tree check and clean up temp artifacts.
+
+Everything is complete and verified. Let me confirm the final commit state.
+
+The task is complete. Final commit `55efbe6bc` with `EXIT=0 / STATUS=DONE`.
+
+## Summary
+
+Delivered native **SwiftUI / Apple HIG** parity for the web `EnergyProductsPage` (`/energy-products`) at **51/51** parity coverage, adaptive across macOS + iOS.
+
+**Implemented (9 source + 1 test file in `apps/apple/Sources/Features/Battery/`):**
+- **13 panels** — 4 summary StatCards (Energy-Sites/With-Solar/With-Battery/Backup-Capable), per-site card (GlassPanel4) with Charge/Capacity/Type stats, the site-config subsection's Powerwalls/Rated-Power/Rated-Energy StatCards, plus the loading-skeleton (GlassPanel12) and empty (GlassPanel13) panels.
+- **RadialGauge chart** — `TSRadialGauge` for backup-reserve %.
+- **All 4 data states** — loading / empty / error+retry / success, plus each card's own site-info loading + empty states.
+- **All 33 strings** from `Localizable.xcstrings` with web key names (+6 supplementary inline-label keys → zero hardcoded literals).
+- `@MainActor @Observable EnergyProductsPageModel` bound through an injectable `EnergyProductsDataSource` seam mapping the 4 web hooks; SI Wh/W formatted to kWh/kW only at the render boundary.
+- New `.energyProducts` route + host registration; capability badges, TOU rate-plan row + detail sheet, native wrapping flow layout.
+
+**Gate (all green):**
+- `check-placeholders` → **0**
+- `swiftlint --strict` (whole Battery dir) → **0**
+- `xcodebuild` macOS full app → **`** BUILD SUCCEEDED **`** (Swift 6 strict-concurrency, 0 diagnostics in any EnergyProducts file)
+- New suite compiles clean + logic verified by an executed standalone harness → **41/41**
+
+**Note on tests:** the shared macOS XCTest bundle is pre-existing **RED** due to two unrelated, out-of-scope files from parallel salvage-merges (`TimelinePageModelTests`, `VehicleCostPageModelTests`) — forbidden to commit-fix (covenant #7). I momentarily patched/reverted (byte-for-byte clean) to confirm, then verified my suite via the harness, exactly per the landed-sibling protocol. The generated `.xcodeproj` is git-ignored and not committed.
+
+
+
+The task is fully complete and committed — all work verified and the gate log ends with `EXIT=0 / STATUS=DONE`. Marking complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

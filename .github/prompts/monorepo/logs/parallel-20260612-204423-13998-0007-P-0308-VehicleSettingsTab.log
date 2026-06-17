@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me check the environment capabilities and read the key files in parallel.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Let me read the web source spec and explore the Apple app structure.
+
+Let me examine existing feature-views to understand the established native patterns, state holders, and conventions.
+
+This is a large established codebase (2614 files). Let me find the relevant state holders and study a complete similar surface as a template.
+
+There's already a `VehicleSettingsModel.swift` state holder. Let me read it and study the closest template surfaces (AddressInput has form inputs + states + mutations).
+
+Now I understand the pattern. The "Allowed files" constraint restricts me to `VehicleSettingsTab.*`. I must bind through the existing `VehicleSettingsStore`. Let me explore the shared facade types, tokens, i18n, telemetry contract, and the Shared framework interface.
+
+`VehicleSettingsStore` is a KMP type from `Shared.xcframework`. Let me read the facade types and find the Shared core's store interface.
+
+Let me read the KMP store and models to understand the full interface including upsert/reset, plus the AppContainer to see how stores are injected.
+
+Now I understand the store interface (read + upsert + reset). The existing `VehicleSettingsModel` facade only exposes reads. Let me read `AppContainer`, `FacadeError`, and find how mutations + JsonElement are handled in Swift, plus a mutation-capable surface template.
+
+Let me study the mutation model pattern, the i18n strings facade, tokens, telemetry contract, and JsonElement handling in Swift.
+
+This `AddressInput`/`ActiveSessionsSection` Source-seam pattern is the established convention. Let me read the tokens, supporting files, and the strings/surface-slug conventions.
+
+Let me read the design tokens, the section/mutation seam conventions, and verify whether feature-views reference `Shared` directly.
+
+No feature-view imports `Shared` directly — all use the seam pattern with in-memory sources. Let me locate the token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) and check the design-tokens generation.
+
+`Tokens.swift` exists. Let me read it plus the section's view/state/main/preview/test files to complete my understanding of conventions.
+
+I have the tokens and conventions. Let me read the remaining state/row/preview/test files and confirm the motion + chip components exist.
+
+Let me read the model-test and preview patterns, confirm the motion components, and check the lint configs and placeholder tool.
+
+Let me read the motion components, the placeholder checker, swiftformat config, and the web hook/types to lock the data contract.
+
+I have the complete data contract. Now let me assess build feasibility — check the Shared.xcframework status, the build script, and known build state.
+
+The Shared.xcframework needs a KMP/Gradle build. Let me check the toolchain, peek at the pending-verifications doc, and generate the Xcode project.
+
+Key finding: `macos-pending-verifications.md` documents the established methodology — code is written and host-runnable gates (swiftlint, swiftformat, check-placeholders) are green, while the full `xcodebuild` build+test is deferred to macOS CI. I'm on a real macOS host though, so I'll write the surface, validate with a standalone typecheck + mechanical gates, and attempt the real build. Let me set up the plan and kick off the KMP build in the background.
+
+The KMP build is running in the background. Let me check the log format and input-component conventions, then write the plan.
+
+The KMP build finished quickly — let me check its result, and read the closest analog (`GeneralSettings.Fields.swift`) for input conventions.
+
+`GeneralSettings.Fields.swift` is the ideal input-row reference (Select→Picker, Text→TextField). The KMP build is progressing (Kotlin compile FROM-CACHE). Let me verify it's still running, then check a DatePicker convention before writing.
+
+I now have all conventions. The KMP framework is building (linking iOS frameworks). Let me write the plan and begin creating the surface files, modeled on the established `AddressInput`/`ActiveSessionsSection`/`GeneralSettings` patterns.
+
+Now let me create the Foundation core — `Models.swift` and `Adapter.swift`.
+
+Now the seams (telemetry, i18n, source/mutator protocols, in-memory impls).
+
+Now the state-holder model.
+
+Now the state views. Note: I must avoid SwiftUI's `.redacted(reason: .placeholder)` since the `.placeholder` token would trip the case-insensitive placeholder gate — I'll build skeleton bars manually.
+
+Now the largest file — the content orchestrator, header, rows, the `VehicleSettingRow` editor with per-kind inputs, and the source pill.
+
+Now the per-kind input controls (text/select/timestamp) in a focused file.
+
+Now the main view entry point.
+
+Let me check the KMP build progress, then write the previews and strings.
+
+The KMP build is well underway (debug XCFramework built, linking release). Let me write the previews and the i18n strings.
+
+Now the i18n strings catalog with all keys.
+
+Let me remove a stray duplicate key I accidentally added.
+
+Now the test files — adapter/accessibility tests and model tests.
+
+Let me fix an awkward assertion, then write the model tests.
+
+All 11 files are written. Let me check the KMP build status and run the fast mechanical gates (placeholder check, swiftformat normalize, swiftlint) scoped to my files.
+
+Placeholder check passes (COUNT=0). KMP build still linking frameworks. Let me normalize formatting on my files with swiftformat, then lint.
+
+swiftformat normalized 7 files. Let me verify it's now lint-clean and run swiftlint --strict on my files.
+
+Both swiftformat --lint and swiftlint --strict pass with 0 issues on all 11 files. Let me verify the formatting changes didn't break anything via a standalone Swift typecheck against the real SDK + token/motion deps (faster than the full 2600-file build).
+
+The standalone typecheck caught real Swift 6 strict-concurrency errors — non-`Sendable` static formatters. Let me view the current state and fix them with factory functions.
+
+Now fix the non-`Sendable` `NumberFormatter` static in Models.swift.
+
+Let me re-run the standalone typecheck to confirm the concurrency fixes.
+
+Typecheck passes (exit 0) under Swift 6 strict concurrency. Let me re-normalize the two edited files, re-lint all, verify against the iOS SDK too, and check the KMP build.
+
+iOS-target typecheck passes too. Let me get the re-lint result.
+
+All host-runnable gates are green (swiftlint 0, swiftformat 0, placeholders 0, typecheck iOS+macOS 0). To get gold-standard evidence that my tests actually pass, let me build a minimal SwiftPM harness (module named `TeslaSync`) with my files + token/motion deps and run the XCTest suite — independent of the 2600-file app build and KMP.
+
+All 39 tests pass (0 failures) under Swift 6 strict concurrency. My surface is verified correct via 6 independent green gates. Let me check the KMP build and generate the Xcode project to attempt the full build.
+
+The KMP build is now linking macOS frameworks (close to done). Let me generate the Xcode project to confirm my files are picked up correctly.
+
+Project generated. Let me verify my files are included in both the app and test targets, and check the KMP build.
+
+All 11 files are correctly included (72 references across app + test targets). The KMP build is finishing the macOS link. Let me wait for it to stage the framework.
+
+The KMP build succeeded and `Shared.xcframework` is staged. Now let me attempt the real xcodebuild. First, quick checks on framework slices and available simulators (gate names iPhone 16; only 17-series exist here).
+
+iPhone 16 simulator IS available, and the framework has all needed slices. Let me kick off the macOS build (single-arch, no sim boot — fastest compile probe of the full monorepo) in the background.
+
+The macOS build is running. Let me monitor its progress while it compiles the full monorepo.
+
+The macOS build is compiling the full TeslaSync module (0 errors so far, now in EmitSwiftModule). Let me continue monitoring until it completes.
+
+The build was interrupted by a signal (the detached wrapper was torn down) — but importantly, **0 errors** through the gradle pre-action and into the full TeslaSync module emit. Let me re-run it in attached async mode (survives as long as I monitor) and let it complete.
+
+The macOS build is running attached. Let me wait and monitor its progress.
+
+The build command finished. Let me check the actual result and error count from the full log.
+
+Build FAILED but with 0 `error:` lines — the failing compile batch is **other surfaces** (AppContainer, AppearanceSettings, AnomalyInlineRow — not mine). Let me find the actual failure reason.
+
+Found it — line 11803 shows a **Swift compiler crash** ("Please submit a bug report... crash backtrace"), not a source error (0 `error:` diagnostics). Let me examine the crash context to identify the trigger.
+
+This is decisive: the build failed due to a **swift-frontend compiler crash (segfault) during IRGen of `AppearanceSettings.Controls.swift`** — a different surface, not mine — emitting a reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`. There are **0 source `error:` diagnostics**; my `VehicleSettingsTab.*` files appear nowhere in the failure. This is a pre-existing toolchain crash outside my allowed-file scope.
+
+To make this airtight per the Honesty Covenant (no red-as-green), let me prove the crash reproduces **without** my files by temporarily moving them aside and rebuilding.
+
+My files are moved aside and the project regenerated without them. Let me run the baseline build to confirm the crash persists independently.
+
+**Definitive proof**: the baseline build **without my files** fails with the *identical* compiler crash in `AppearanceSettings.Controls.swift` IRGen (exit 65, 0 source errors). The crash is pre-existing, in another surface, outside my allowed-file scope. Let me restore my files and regenerate.
+
+My files are restored (72 references). The crash is conclusively pre-existing and out of scope. Let me capture direct evidence for the iOS gate leg too (it compiles the same `TeslaSync` module, so will hit the same crash), and re-run the three mechanical gates fresh for the log. Let me start the iOS build in the background.
+
+The iOS build is running. Let me re-capture the three mechanical gates' exact output for the log while it compiles.
+
+All mechanical gates green. The iOS build finished — let me check its result.
+
+The iOS build is still running (now type-checking the full `TeslaSync` module, 0 errors including my files). It will hit the same IRGen crash. Let me wait for it to reach the failure.
+
+The iOS build got interrupted by background-process teardown (the nested `&` approach), but its full-module **type-check passed with 0 errors including my files**. Let me re-run it properly via async mode (which survived for macOS) to capture the IRGen result directly.
+
+The iOS build is running. Let me wait for it to reach the IRGen phase and settle.
+
+The iOS build is still type-checking the full module. Let me continue waiting for it to reach IRGen.
+
+Decisive and complete: the **iOS leg also FAILS with exit 65** — the identical pre-existing swift-frontend IRGen crash in `AppearanceSettings.Controls.swift` (0 source errors, my files not implicated). 
+
+I now have the full, honest evidence picture. Let me write the gate log with all results.
+
+All evidence confirmed (macOS with-files and baseline without-files both crash identically in `AppearanceSettings.Controls.swift`). Now let me write the comprehensive, honest gate log.
+
+The log is written. Let me clean up temp artifacts and verify the git state before committing (ensuring only allowed files are involved).
+
+Git state is clean and correctly scoped: only my 12 `VehicleSettingsTab.*` files + the log are untracked; the `.xcodeproj` is gitignored; nothing outside scope is touched. My surface passes every isolatable gate; the full-scheme build is blocked only by a proven pre-existing external compiler crash. Per the repo's documented methodology and the prompt's Commit step, let me commit the verified surface with the honest BLOCKED log.
+
+All 13 files staged correctly. Let me commit.
+
+The commit is created (`f6cb01437`). Let me do a final verification and update the todo tracker.
+
+All todos complete and the working tree is clean. Let me tidy up the temporary build logs (outside the repo).
+
+The task is complete to the maximum extent possible within scope. Here is the honest summary.
+

@@ -1,0 +1,70 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and related dependencies.
+
+Let me explore the Apple app's Features directory and an existing implemented page for conventions.
+
+The Apple app structure differs from the prompt's expected path. Let me explore the actual structure to understand conventions.
+
+Let me examine the project configuration and an existing energy widget to understand conventions.
+
+This is a mature codebase. Let me examine the model/adapter patterns, navigation, parity manifest, and tooling in parallel.
+
+Let me check the build tooling availability, navigation structure, parity manifest/ledger, and string catalog.
+
+There's a `Sources/Features/Battery/` directory — the real page convention. Let me study the sibling BatteryCells page and routing infrastructure.
+
+`Sources/Features/Battery/` is compiled and contains the sibling `BatteryCellsPage`. This is the real convention. Let me study it as my template.
+
+Excellent template. Now let me study routing, the component library, and the remaining BatteryCells files.
+
+Let me examine the route parser, how registrations are composed, and the shared component library (P3) plus the RadialGauge chart.
+
+Let me view the app composition and locate the component library (StatCard, Badge, RadialGauge, GlassPanel, etc.).
+
+Let me read the key component library files to learn exact APIs.
+
+Let me read the remaining component APIs (Badges, Cards, States, Pickers, Buttons, Typography) and the units facade.
+
+Let me read Buttons, Pickers, Typography, Skeletons, the units facade, and check existing string keys.
+
+Let me read Buttons, Skeletons, the units facade, BatteryCells supporting files, and check existing string keys.
+
+Let me check the xcstrings format/existing keys and read the units facade plus the sibling page's sections/sample/tests files.
+
+No existing energy.products keys — I'll add all 33. Let me examine the `Units` facade and the sibling page's sections/sample/format/tests for full patterns.
+
+Let me read the Units facade, the BatteryCells sample data source, format helpers, and a sibling test file.
+
+Let me check the units energy/power behavior, find where page tests live, and look at how the sibling page formats/derivations work.
+
+Let me read the sibling test file and the web date formatter to complete my understanding.
+
+I have a thorough understanding. Let me verify the web route, check for exhaustive switches/count assertions, find the logs dir + ledger format, and check the gate tooling.
+
+pwsh and the placeholder script are available — I can run the full gate. Let me examine a sibling page log format and the ledger rows/schema.
+
+Let me read the sibling page log to replicate its format exactly, and the BatteryCells data model.
+
+Let me read the sibling log's structure (header, PARITY section, and footer).
+
+I now have everything needed. Let me check git baseline, motion components, and confirm design tokens before implementing.
+
+Let me read the Motion API and design token definitions, then start building.
+
+I have a complete picture. Let me set up tracking, write the plan, and verify the route/spotlight string-key conventions.
+
+Let me write the plan, then start implementing the models.
+
+Now I'll create the Swift files. Starting with the models.
+
+Now the page model with the data-source seam and per-site info state.
+
+Now the sample data source with DEBUG preview/test seams.
+
+Now the main page view with the strings facade and label rendering helpers.
+
+Let me check for an existing flow/wrap layout helper before building the capability badges.
+
+The pattern is clear. Now the Sections file (summary, site card, capability chips, flow layout, skeleton, empty panel).
+

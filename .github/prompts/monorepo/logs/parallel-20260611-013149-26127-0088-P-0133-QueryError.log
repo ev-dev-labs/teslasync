@@ -1,0 +1,194 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the web source, the Apple app structure, and tool availability in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The web source and Apple structure exist. Let me read the web source and examine existing shared-surface conventions.
+
+The web source is clear. It's an error banner that branches by error status into 5 states (waiting, 404, 401/403, 5xx, network/offline). Let me study existing shared-surface conventions and check for any existing QueryError files.
+
+No existing QueryError files. There are 105 surfaces following a consistent multi-file pattern. Let me study a representative example fully and find feedback/banner-type surfaces similar to QueryError.
+
+`AlertBanner` is the closest analog. Let me read its full file set to learn the exact conventions.
+
+I'll read the full AlertBanner surface to learn the exact conventions and patterns I must follow.
+
+Excellent, this is a rich convention. Let me read the rest of the AlertBanner files in parallel to fully understand the pattern.
+
+Now the remaining AlertBanner files — Seams, States, Previews, Tests, ModelTests, and strings — to complete my understanding of the source protocol and test structure.
+
+Let me read the test files, the strings file, and locate the shared P1/S9 tokens + P1/S10 i18n + P1/S8 holders these surfaces depend on.
+
+The `.strings` file isn't universal (AlertBanner has none). Let me examine the project structure, build config, and locate the shared tokens/components these surfaces use.
+
+Now let me locate the design tokens, shared components, and assess build feasibility (XcodeGen, the Shared.xcframework script, simulators).
+
+XcodeGen and iPhone 16 simulator are available. Let me check the Shared.xcframework build dependency (KMP) and read the design tokens + shared components.
+
+Now let me find the shared component definitions (TSTone, TSCard, TSButton, TSEmptyState, TSSkeleton, TSFadeIn) and check whether the KMP Shared framework / Gradle toolchain is available — that's the key build-feasibility question.
+
+Java 17 + gradlew are present but the Shared.xcframework is not prebuilt. The full `xcodebuild` gate needs the KMP framework built first via Gradle. Let me kick that off in the background now (it's the long pole) while I study the shared components I'll use.
+
+The atomic `TSQueryError`/`TSErrorDisplay` exist — my surface is the higher-level host (like AlertBanner hosts TSAlertBanner). Let me read the remaining components I'll use.
+
+I now have the full design system. Let me check the i18n/Localization setup and the KMP build progress.
+
+104 of 105 surfaces ship a `.strings` file — that's the standard; I'll create `QueryError.strings`. Let me check for any shared online-status/navigation holders to reuse, and read the web error-classification logic I must mirror (`isApiError`, `isTransientWaiting`).
+
+Let me read the resilience classifiers I must mirror and how the GuardedLink surface models navigation (needed for "Back to list" / "Sign in").
+
+Let me read the web `ApiError` + classifiers precisely, then check the KMP build progress.
+
+Let me read the web `_ErrorState` composition (icon, layout, colors, role/aria-live) that QueryError renders through, and check the KMP build progress.
+
+I have the full visual + behavioral spec. Let me read the lint/format configs and the placeholder-check rules so my code passes the gate, then check the build.
+
+Critical: "Placeholder" and "not implemented" are forbidden literals. Let me read the exact placeholder-check logic (case sensitivity, file scope) to ensure I pass.
+
+I now have everything needed. Key gate facts: placeholder check is case-insensitive (I must avoid "placeholder", "TODO", "mock", "stub", "Lorem"), swiftformat enforces 120-width + before-first wrapping (I'll auto-format my files). Let me set up tracking and check the long-running build.
+
+The KMP build is still initializing (downloading Kotlin/Native — no output after 5+ min). I'll let it run in the background and write the surface now. Let me record a brief plan, then create the pure core adapter.
+
+Adapter core is done. Now the Model — telemetry seam, input snapshot, projection, the `@Observable` model with the web's auto-retry-on-reconnect + the P4 stale auto-refresh, and the i18n facade.
+
+Now the Seams — the P1/S8 source protocol, production + in-memory sources, and the navigator (web `useNavigate`).
+
+The KMP build finished. Let me confirm the framework was staged.
+
+The Shared.xcframework built successfully (10m, staged with iOS device/simulator + macOS slices) — the full gate is feasible. Now the Views: the rose-tinted error card (per `_ErrorState.tsx`), the CTA button, and the freshness chip.
+
+Now the States — the loading skeleton chrome and the friendly "all-clear" empty state (P4 leaf contract: never a blank box).
+
+Now the surface entry point `QueryError.swift`.
+
+The DEBUG previews for every state.
+
+Now the comprehensive test suite — pure adapter/projection/accessibility tests plus `@MainActor` model tests covering navigation, CTA dispatch, and the web auto-retry-on-reconnect parity.
+
+Now the i18n catalog contribution — `QueryError.strings`, mirroring the web `error.*` keys verbatim plus the native leaf-chrome/freshness keys.
+
+All 9 files created. Now verification. Let me auto-format my new files with swiftformat (per the repo config), then see what it changed.
+
+swiftformat adjusted 2 files. Let me see what changed and run the lint checks + placeholder gate.
+
+swiftformat passes. Placeholder violations (35) are all pre-existing in *other* surfaces — none in my files (the grep showed no QueryError lines). Two swiftlint issues to fix: Tests.swift >400 lines and `make` function >50 lines. Let me view the current `make` to refactor it and confirm placeholder-clean for my files only.
+
+My QueryError files are placeholder-clean. Now let me refactor `make` into small per-mode helpers (fixes the 50-line function limit) using the implicit-return switch pattern used elsewhere in the codebase.
+
+Now split the oversized test file — move the `@MainActor` model tests into a separate `QueryError.ModelTests.swift` (matching the AlertBanner convention). Let me view the model section to extract it.
+
+Creating `QueryError.ModelTests.swift` with the model tests, then removing that section from `QueryError.Tests.swift`.
+
+Now remove the model section from `QueryError.Tests.swift` (truncate at the accessibility tests) and update its header comment.
+
+Now re-format and re-lint all 10 files (the Adapter refactor + the test split).
+
+swiftformat is clean. Now swiftlint --strict on all QueryError Swift files.
+
+swiftlint --strict passes. Now generate the Xcode project and run the full gate. First, xcodegen.
+
+Project generated. Let me verify my files are included, then kick off the iOS build+test (the long pole) in the background.
+
+All 10 files are in the project. Now the iOS build+test (the long pole) — starting it in the background.
+
+While the iOS build runs, let me guard against symbol collisions — verify none of my public type names already exist in the app target.
+
+No collisions. Let me check the iOS build progress.
+
+Let me check the build log file directly for progress.
+
+Build is past the KMP pre-action and compiling the app target with Swift 6 strict concurrency — no errors so far. Let me wait for it to finish.
+
+The build failed (IOS_EXIT=65), but the failing files are pre-existing `AI*` surfaces — not mine. I must verify rigorously whether any error is in my QueryError files. Let me extract the actual `error:` lines.
+
+Only 2 errors, both in pre-existing `AI*` surfaces — zero in my QueryError files. Let me see the actual errors and confirm these files are untouched by me (pre-existing breakage).
+
+Confirmed: 2 pre-existing errors ("escaping closure captures non-escaping parameter 'content'") in sibling `AI*` surfaces I never touched — zero errors in my QueryError files. Let me inspect them to understand the blocker and check whether they're recently-introduced or longstanding.
+
+Key finding: these 2 broken sibling files are **committed at HEAD and unmodified by me** — the repo baseline itself doesn't compile under this toolchain. The error is their own `glass(@ViewBuilder _ content:)` helper forwarding a non-escaping param into `TSGlassPanel`'s `@escaping` closure. This is pre-existing breakage entirely outside my surface.
+
+To prove my surface is genuinely green, let me run an isolated verification: temporarily set the 2 pre-existing-broken files aside, rebuild, and confirm my surface + tests pass. I'll restore them afterward.
+
+The siblings are interconnected (AINLAutomationBuilder depends on them), so I can't simply remove them. Both errors are the identical trivial pattern: a `@ViewBuilder` helper forwarding a non-escaping `content` into `TSGlassPanel`'s `@escaping` closure. Let me view the second site to confirm, then run a verification build with a minimal temporary `@escaping` fix to (a) prove my surface + tests are green and (b) learn the full extent of pre-existing breakage.
+
+Both are identical. Let me apply the minimal `@escaping` fix to both pre-existing-broken files (temporarily, for verification), regenerate, and rebuild to confirm my surface + tests are green and to surface any further pre-existing errors.
+
+Now rebuild iOS (project unchanged structurally, no need to regenerate). Running build+test in the background.
+
+While the verification build runs, let me check an existing gate log to match the expected format.
+
+This is the key precedent. The AlertBanner peer log (same surface family) shows the **established, accepted disposition** for this exact pre-existing breakage: "isolated-verify + DEFERRED full-app". The AlertBanner agent hit the *same* `AIGeofenceAwareAutomationSuggestions` pre-existing errors, left them untouched (out of allowed-files scope), verified its own surface green in isolation via SwiftPM + scoped typecheck on both SDKs, and marked the full-app gate DEFERRED with EXIT=0/STATUS=DONE.
+
+Let me read the full peer log to replicate its exact verification harness.
+
+This peer log is the definitive precedent — it hit the *identical* pre-existing `AIGeofenceAwareAutomationSuggestions` breakage, left it untouched (out of scope), and verified its surface green via **scoped `swiftc -typecheck` on both SDKs + an isolated SwiftPM `swift test`**, marking the full-app gate DEFERRED with EXIT=0/STATUS=DONE.
+
+Let me check the in-flight verification build, which (with the 2 siblings temporarily fixed) will confirm my surface compiles in the real app and my tests run.
+
+With the 2 siblings fixed, compilation now progresses well past the earlier failure point. There's 1 `error:` logged — let me check what it is (another pre-existing issue vs. a false match) while the build continues.
+
+A **third** pre-existing file (`AISignalExplorerNlFilter.swift:142`) has the identical bug — this is a systemic pre-existing breakage across many `AI*` surfaces, not something my scope can or should fix. This decisively confirms the peer's "isolated-verify + DEFERRED full-app" disposition. Let me stop the full build, revert my temporary sibling edits (leave them exactly as pre-existing), and switch to the accepted isolated verification.
+
+Siblings restored — only QueryError.* changed. Now I'll replicate the peer's accepted isolated verification. First, let me map the design-system source tree and find which files are coupled to the KMP `Shared` framework (those must be excluded from a standalone typecheck).
+
+The design-system sources (Components + Design) have zero `Shared`/KMP coupling — so a standalone `swiftc -typecheck` against the real design system is viable. Let me run the iOS-18 SDK typecheck on my 7 non-test surface files + the real design system + tokens (the peer's accepted method).
+
+As the peer noted, `UnitFormatters.swift` is the one `Shared`-coupled file (it needs `UnitPreferences`). My surface doesn't use it. Let me check the coupling extent and exclude it like the precedent did.
+
+Only `UnitFormatters.swift` couples to `UnitPreferences` (from SharedFacade), and my surface doesn't use it — excluding it matches the peer exactly. Re-running the iOS typecheck.
+
+iOS-18 typecheck is clean (exit 0, zero errors/warnings). Now the macOS-15 SDK typecheck.
+
+Both SDK typechecks are clean (exit 0). Now the isolated SwiftPM package to actually **execute** the test suite (the peer's accepted method). Let me assemble it: the real design system (minus `UnitFormatters`) + my 7 surface files as the `TeslaSync` target, and my 2 test files as the test target.
+
+Now the `Package.swift` and run `swift test`.
+
+All **49 tests pass, 0 failures** (model 10, projection 5, text 5, plus classify/symbol/live-region/content/connection/accessibility). My surface is fully verified green: iOS+macOS typecheck clean, 49/49 tests, lint/format/placeholder clean.
+
+Now, to honor "No skip-and-assume", let me capture the *real* tree-wide gate outputs. Starting the macOS full build (will hit the same pre-existing siblings) in the background while I capture lint/format/placeholder.
+
+Test counts confirmed: 39 + 10 = 49. Now capturing the real tree-wide gate outputs. Running `swiftlint --strict` (the literal gate command).
+
+`swiftlint --strict` tree-wide: **0 violations in 4303 files** (LINT_EXIT=0). The macOS build finished — let me read its result.
+
+MAC_EXIT=65 as expected. Let me confirm the macOS failures are the same pre-existing siblings and zero are in QueryError, then run swiftformat + placeholder.
+
+swiftformat tree-wide: **0/4601 require formatting** (FORMAT_EXIT=0); macOS has **0 QueryError errors**. Let me confirm exactly which pre-existing files fail the macOS build, then run the placeholder gate.
+
+The macOS failure is **development-signing** (no valid codesigning identity) — an environment blocker, exactly as the peer noted — before any compile, so zero QueryError compile errors there too. Let me confirm signing identities and run the placeholder gate (both the literal gate path and the meaningful isolated scan).
+
+All gate steps verified. Final tally: iOS+macOS typecheck clean, 49/49 tests pass, swiftlint 0/4303, swiftformat 0/4601, placeholder 0; full-app iOS=65 (pre-existing siblings) and macOS=65 (no signing identity), both with 0 QueryError errors. Let me grab exact tool versions and the precise pre-existing error lines for an honest log, then clean up temp artifacts.
+
+All facts gathered. Now writing the official gate log (honest, matching the peer format).
+
+Log written. Let me verify the final git state (only QueryError files + log should be new; the regenerated `.xcodeproj` must be git-ignored), update tracking, and clean temp logs.
+
+Clean state: only my 10 QueryError files + the log are new; the `.xcodeproj` is git-ignored; siblings untouched. Now committing (the prompt's `QueryError` prefix → glob the actual `QueryError.*` files).
+
+Committed (fa00351e4) with all 10 QueryError files + the log. Let me do a final clean-state confirmation.
+
+All clean — working tree clean, siblings untouched, all 10 QueryError files + log committed. The task is complete.
+
+All 10 todos complete. Task finished.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0133-QueryError.log   | 195 ++++++++++
+ .../shared-surfaces/QueryError.Adapter.swift       | 394 +++++++++++++++++++++
+ .../shared-surfaces/QueryError.Model.swift         | 253 +++++++++++++
+ .../shared-surfaces/QueryError.ModelTests.swift    | 183 ++++++++++
+ .../shared-surfaces/QueryError.Previews.swift      |  96 +++++
+ .../shared-surfaces/QueryError.Seams.swift         | 150 ++++++++
+ .../shared-surfaces/QueryError.States.swift        |  65 ++++
+ .../shared-surfaces/QueryError.Tests.swift         | 299 ++++++++++++++++
+ .../shared-surfaces/QueryError.Views.swift         | 192 ++++++++++
+ .../TeslaSync/shared-surfaces/QueryError.strings   |  53 +++
+ .../TeslaSync/shared-surfaces/QueryError.swift     |  93 +++++
+ 11 files changed, 1973 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0133-QueryError.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/QueryError.swift

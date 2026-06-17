@@ -1,0 +1,100 @@
+I'll start by exploring the environment to understand what exists and whether the Apple toolchain is available.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the existing structure and the web source.
+
+Large existing structure with an established pattern. Let me read the web source and check for any existing SignalCatalogPanel native files plus the most recent comparable example (SettingsSearch).
+
+Now I understand the web source. Let me study the SettingsSearch example (the most recent feature-view) to learn the established pattern, and look for any related signal/telemetry native code.
+
+Excellent, high-quality established pattern. Let me read the rest of the SettingsSearch files to fully internalize the conventions.
+
+Let me read the remaining SettingsSearch files plus the theme tokens and project config to understand wiring.
+
+Now let me read the test files and locate the theme tokens (P1/S9), diagnostics contract, and project config.
+
+I have the full pattern. Now let me read the theme tokens (P1/S9), project config, and check how the `useSignalGaps` data shape and any existing telemetry-related native surfaces look.
+
+Now let me check the build prerequisites: xcodegen, the Shared.xcframework (KMP), and the pending-verifications note.
+
+xcodegen is present but Shared.xcframework (KMP) must be built via Gradle. Let me read the pending-verifications note and check what prior surface logs concluded (DONE vs BLOCKED).
+
+I now understand the established disposition: surfaces are verified green in isolation (SwiftPM build + tests, dual-SDK `swiftc -typecheck`, swiftlint/swiftformat/placeholder), with the full-app `xcodebuild` deferred to the macOS CI gate due to pre-existing foreign merge collisions. Let me examine the design tokens, the tools dir, and a table-style reference surface.
+
+The placeholder gate only scans `.swift` files and the prompt's `-Path` points at a non-existent dir (files are `SignalCatalogPanel.*`), so it scans nothing. But I'll keep my Swift genuinely clean and also scan my real files. Let me read the full SettingsSearch log to match the established disposition/format precisely.
+
+I now have the complete methodology and exact log format. Let me check the `fmtInt` and `formatDateTime` helpers for precise parity, then set up my plan.
+
+Let me read the lint/format configs so my files comply, then I'll set up a plan and start building.
+
+I have everything needed. Let me set up tracking and write the plan.
+
+Now I'll build the Foundation-only core. Starting with Models, Projection, and Adapter.
+
+Let me fix two things in the Adapter: avoid `count(where:)` (use `.filter{}.count` for availability safety) and keep the sort line within 120 cols.
+
+Updating progress and writing the Model (S8 seam + @Observable model + S11 telemetry + S10 facade + selection + in-memory source).
+
+Let me verify file sizes stay under swiftlint's 400-line limit before continuing.
+
+All files within limits. Now the presentational layer. Writing the toolbar/chips/cards (Views), the table/row/badge (Table), and the load-state chrome (States).
+
+Now the table layer (status badge, signal row, columnar table with header). Writing Table and States.
+
+Let me fix an over-120 line in States and write the composed surface.
+
+Writing the previews (one per state, plus a selection-enabled variant).
+
+Now the test suites — adapter tests and model/a11y tests.
+
+Now the model + accessibility tests.
+
+Now the i18n catalog (strings file).
+
+All 12 files written. Let me run local checks: line lengths, file lengths, and placeholder scan of my Swift files.
+
+One 125-char line in Tests.swift to fix, and one placeholder-word hit (the verbatim web i18n key `signalGap.filterPlaceholder` — the established predecessor disposition). Fixing the long line:
+
+No long lines. Running swiftformat and swiftlint on my surface files.
+
+swiftformat wants auto-fixes (incl. `count(where:)` which the repo enforces tree-wide). Let me apply the formatter, then re-lint.
+
+swiftformat clean (0/11). Now swiftlint --strict on my files.
+
+swiftlint: 0 violations. swiftformat: clean. Now the decisive check — compile + run the tests in an isolated SwiftPM module named `TeslaSync` (so `@testable import TeslaSync` resolves) against the **real** design tokens.
+
+All 46 tests pass under Swift 6 strict concurrency against the real design tokens. Now the explicit dual-SDK type-check (iOS 18 simulator + macOS 15) of the surface + previews.
+
+Dual-SDK type-check clean (0/0 on both). Now the placeholder gate (prompt-literal path + a strict scan of my files) and xcodegen wiring.
+
+Placeholder gate matches the predecessor disposition exactly: prompt-path COUNT=0/EXIT=0; the single strict-scan hit is the verbatim web i18n key `signalGap.filterPlaceholder` (a translation key, not a stub). Now `xcodegen generate` to confirm my files wire in.
+
+xcodegen wired all 12 files (72 pbxproj refs) into both app targets + test bundles. Now the repo-wide gates (shown transparently) — swiftformat then swiftlint.
+
+swiftformat tree-wide: 0/2563 require formatting (my files included). Now the repo-wide swiftlint --strict.
+
+swiftlint tree-wide: 1 violation, in a **pre-existing foreign** file (`LiveSignalSparklinesWidget.Builder.swift`, cited by predecessor logs) — not mine. Let me confirm my changes are isolated and that I introduce no duplicate type names (esp. the generic `SignalRow`).
+
+The `SignalRow` hit was a false prefix match (`SignalRowProjection`). Let me verify exact-name collisions for my more generic type names.
+
+All my type names are unique — zero new collisions. The only tree-wide swiftlint red is the pre-existing foreign file. Now let me capture concrete evidence for the xcodebuild deferral (foreign duplicate types + unstaged KMP framework).
+
+Concrete deferral evidence: `Frameworks/` is empty (Shared.xcframework unstaged → needs Gradle/KMP) and `ChargingProjection` is declared twice (foreign struct vs enum) which breaks the monolithic app compile. Let me check the simulator/JDK and then attempt the real xcodebuild (bounded) to capture an honest non-zero result.
+
+All present (same iPhone 16 UDID as predecessor logs, JDK 17, gradlew). Let me attempt the real xcodebuild gate (bounded) to capture an honest result, logging to a file.
+
+While xcodebuild runs (bounded), let me check its early progress.
+
+Gradle KMP staging is actively running (downloading Kotlin/Native, compiling iOS frameworks) — exactly the long-pole the predecessors documented. Let me give it more time to see if it reaches the compile phase (where the foreign `ChargingProjection` duplicate would surface).
+
+The DEBUG `Shared.xcframework` assembled; the RELEASE Kotlin/Native link (the staged variant — the long pole) is now running. Let me give it more time to finish staging and reach the app compile (where the foreign duplicate surfaces).
+
+RELEASE Kotlin/Native link nearly done (iOS + sim done, macOS linking). Letting it finish staging and reach the app-target compile.
+
+Decisive evidence captured. The xcodebuild **BUILD FAILED (EXIT=65)** — but my surface is clean: `SignalCatalogPanel.strings` copied + validated, and there are **zero** `SignalCatalogPanel` compile errors. The failure is entirely pre-existing **foreign** ambiguous types (`ChargeSessionDTO`, `ChargeStatusUpdate`, `ChargeDistanceUnit`, `ChargeLoadStatus`, `ChargeConnection`) in sibling `Charge*` widgets. Let me confirm zero errors in my files and collect the root-cause set.
+
+I need to investigate: my `SignalCatalogPanel.Previews.swift` shows `'SignalCatalogUpdate' is ambiguous` — but I declared it once. The same pattern hits many foreign surfaces (`ChargeStatusUpdate`, `SafetyUpdate`, `DrivingCoachConnection`...). Let me find the source of the ambiguity.
+
+Found the real issue — and it's mine to fix. A pre-existing **foreign sibling** surface `SignalCatalogWidget` (dashboard-widgets) already declares `SignalCatalogUpdate` (and likely other `SignalCatalog*` names). My surface reused those names, which would introduce a NEW collision — not acceptable. I must rename my types to a unique namespace. Let me enumerate the foreign surface's type names.
+
+The foreign `SignalCatalogWidget` squats many `SignalCatalog*` names. I must rename my colliding types. Let me compute the exact intersection of my declared type names against all foreign declarations tree-wide.
+

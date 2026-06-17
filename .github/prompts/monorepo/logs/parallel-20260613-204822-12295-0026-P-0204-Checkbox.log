@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure to understand what exists for this task.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat). Let me explore the web source and the Apple app structure.
+
+The web source is a pure presentational checkbox primitive (sizes, label, checked/unchecked/indeterminate/disabled/focus). Now let me understand the Apple project layout, the P1 foundation layers (tokens, i18n, telemetry, state holders), and existing shared-surface patterns.
+
+This is a large, mature pattern (2176 files). Each surface has many co-located files. Let me study a complete simple example (Accordion) and locate the P1 foundation facades (tokens, i18n, telemetry, state holders).
+
+Excellent analog — Accordion is also a pure presentational component with no fetcher. Let me read the rest of its files plus locate the design tokens and check the build setup.
+
+Now let me read the design tokens, the test conventions, and check the simulator availability.
+
+I now understand the full convention. Let me check the lint configs, the placeholder checker, confirm no existing Checkbox, and find the closest interactive analog (a toggle/switch-like surface).
+
+There's a `Toggle` surface — the closest analog (boolean control with callback). Let me study it fully and read the forbidden-pattern list to avoid blocked words.
+
+Now let me read the complete Toggle surface — my closest template (boolean control + callback + controlled/uncontrolled + disabled).
+
+Let me read the rest of the Toggle surface (Views, main view, Previews, strings, both test files) to complete my template.
+
+I have a complete template. Let me verify no `Checkbox` naming collision and check the gate tooling availability (pwsh, simulators, xcodegen) before writing.
+
+I have everything I need. This is a pure presentational primitive (like the existing `Toggle`/`Accordion` surfaces), so I'll reproduce its real branches—unchecked/checked/indeterminate, the three sizes, disabled, and the optional label—following the established 9-file surface template. Let me create a tracking todo list and write the production core files.
+
+I need to remove the `init(model:)` seam — it would clobber the injected model's input via `onChange(of:initial:)`. Toggle (my template) doesn't have it; tests use the public inits with injectable telemetry.
+
+All 9 files are written. Now let me verify — starting with the fast, reliable checks: a standalone Swift typecheck (Swift 6, strict concurrency) against the design tokens, plus swiftformat, swiftlint, and the placeholder gate on my files.
+
+Three small issues. Let me check how the codebase writes `Button` with an inline action + label, and read the swiftformat config, before fixing.
+
+The accepted style is the multi-trailing-closure `Button { … } label: { … }`. Let me fix all three issues.
+
+All four fast checks pass: **typecheck (Swift 6 strict concurrency) = 0, swiftformat = 0, swiftlint --strict = 0, placeholder gate = 0**. 
+
+My surface depends only on SwiftUI/Foundation + the design tokens (no KMP/app deps), so I can actually **run the unit tests** by building a standalone SwiftPM module named `TeslaSync`. Let me set that up to execute the tests for real.
+
+**All 40 unit tests pass (0 failures).** The surface logic is verified — projection, model (controlled/uncontrolled/toggle/disabled/sync/once-only telemetry), accessibility tri-state, sizes, strings, and view composition.
+
+Now let me attempt the real gate. First `xcodegen generate`, then assess the KMP `Shared.xcframework` prerequisite.
+
+xcodegen works; schemes exist. The build's pre-action compiles the KMP `Shared.xcframework` via Gradle. Let me probe that prerequisite's feasibility.
+
+Java 17 + a populated `~/.gradle` cache are present, and the XCFramework isn't prebuilt. Let me attempt to build it (the build's pre-action). This is the heavy KMP step.
+
+The KMP build is compiling (Kotlin/Native for multiple Apple arches is slow on a cold build). Let me keep waiting.
+
+The KMP `Shared.xcframework` built successfully (13 min) and is staged. Now I can run the real `xcodebuild` gate. Let me set up the required log file and confirm its location first.
+
+Let me check a sibling gate log to match the expected format and see how siblings handled the full build.
+
+I now understand the established sibling precedent: the full-app `xcodebuild build test` fails with `IOS_EXIT=65` due to **pre-existing whole-tree** sibling-slot collisions / code-signing (not the individual surface), and siblings honestly report that red exit while proving the surface itself is green via per-surface gates (lint/format/placeholder/SwiftPM tests/typecheck). I'll follow that exactly — but first attempt the **real** xcodebuild now that the framework is staged, to capture authentic evidence. Let me add the iOS-SDK typecheck, then launch the real build.
+
+iOS typecheck = 0. Now the real iOS xcodebuild gate (compiles the whole app + runs tests). Let me launch it and capture full output.
+
+The whole-app iOS build is running. Let me monitor its progress.
+
+Build is compiling the full `TeslaSync` module and progressing. Let me wait for it to finish.
+
+No errors so far (17,663 lines), and none in Checkbox. Still compiling surfaces. Let me continue waiting.
+
+`BUILD FAILED` appeared but with **0 `error:` lines** and the build is still emitting. Let me investigate the actual failure cause around that line.
+
+The `BUILD FAILED` is from a **pre-existing sibling surface** `AppearanceSettings.*` (2 failures) — **not** Checkbox. This matches the documented sibling precedent. Let me wait for the gate to return its real exit code and confirm Checkbox itself compiled cleanly.
+
+Confirmed: **all 6 Checkbox files compiled in the real `TeslaSync` app target with zero Checkbox errors.** The only failures are pre-existing sibling files `AppearanceSettings.*`. Let me find that failure's detail (to document it's unrelated) while the gate finishes its second (test) pass.
+
+No standard `error:` lines exist — the pre-existing `AppearanceSettings` batch (a complex sibling surface: Adapter/Controls/Model/Models/Panels/Sections/…) failed without a normal compile error, indicating a sibling-slot issue unrelated to my change. Let me capture the precise failure signature while the gate runs.
+
+A **Swift compiler crash** ("Stack dump", line 23229/27624) is the failure — a compiler-internal crash triggered by a sibling surface, not a normal error. Let me confirm which file triggered it (must not be Checkbox).
+
+Confirmed: the failure is a **`swift-frontend` compiler crash (Stack dump / "Please submit a bug report")** while compiling the pre-existing `AppearanceSettings.*` sibling batch — a toolchain-level crash on sibling-slot code, **not** my Checkbox files (which compiled with 0 errors). This is precisely the documented sibling precedent. Let me capture the gate's authentic exit code.
+
+iOS gate returned the authentic **`IOS_EXIT=65`** — a pre-existing `swift-frontend` crash on the `AppearanceSettings`/`AreaChartWrapper`/`AuditLogPage` sibling batch, not Checkbox. Matching the sibling bar ("both iOS + macOS actually executed"), let me run the macOS gate too for its authentic exit code.
+
+Both gates executed: **IOS_EXIT=65, MAC_EXIT=65**. Let me confirm the macOS failure is the same pre-existing sibling crash and that Checkbox compiled cleanly for macOS too.
+
+Confirmed both failures are **pre-existing and unrelated to Checkbox**:
+- **iOS (65):** `swift-frontend` compiler crash on the `AppearanceSettings`/`AreaChartWrapper`/`AuditLogPage` sibling batch — my 6 Checkbox files compiled with 0 errors first.
+- **macOS (65):** code-signing — `"TeslaSync-macOS" has entitlements that require signing with a development certificate` (no dev cert on runner), failing before compilation.
+
+This exactly matches the documented sibling precedent. Let me check git state before writing the gate log and committing.
+
+Git state is clean — only my 9 Checkbox files are new (`.xcodeproj` and `Shared.xcframework` are git-ignored). Let me run a Checkbox-scoped placeholder check for the log, then write the gate log.
+
+PLACEHOLDER_COUNT=0 for all 9 files. Now let me write the comprehensive gate log with all the authentic evidence.
+
+Now let me commit the surface following the prompt's commit spec. Let me first check for pre-commit hooks that might act on unrelated repo state.
+
+It's a git worktree with no pre-commit hook installed. Let me stage the 9 surface files plus the log and commit.
+
+Committed as `f94139162`. Let me clean up the temp verification package and confirm the repo is in a clean state.
+
+The task is complete. Working tree is clean; the generated `.xcodeproj` and `Shared.xcframework` are correctly git-ignored (`!!`), and the temp verification package is removed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0204-Checkbox.log     | 129 ++++++++
+ .../shared-surfaces/Checkbox.Adapter.swift         | 229 +++++++++++++
+ .../shared-surfaces/Checkbox.AdapterTests.swift    | 153 +++++++++
+ .../TeslaSync/shared-surfaces/Checkbox.Model.swift | 163 +++++++++
+ .../shared-surfaces/Checkbox.Previews.swift        |  86 +++++
+ .../shared-surfaces/Checkbox.Projection.swift      | 132 ++++++++
+ .../TeslaSync/shared-surfaces/Checkbox.Tests.swift | 367 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Checkbox.Views.swift | 119 +++++++
+ .../TeslaSync/shared-surfaces/Checkbox.strings     |  30 ++
+ .../apple/TeslaSync/shared-surfaces/Checkbox.swift | 145 ++++++++
+ 10 files changed, 1553 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0204-Checkbox.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Checkbox.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Checkbox.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Checkbox.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Checkbox.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Checkbox.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Checkbox.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Checkbox.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Checkbox.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Checkbox.swift

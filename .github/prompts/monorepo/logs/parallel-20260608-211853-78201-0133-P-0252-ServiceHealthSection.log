@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple toolchain and dependencies are present.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the existing Apple app structure.
+
+Now let me explore the Apple app structure deeply to understand the existing patterns, dependencies, and conventions.
+
+The `feature-views` directory already has many ported surfaces (1808 entries). Let me find sibling/similar surfaces already ported to learn the exact pattern, and locate the shared dependencies.
+
+`DataPipelineSection` is the closest sibling (Section + Table + MetricCards). Let me study its full file set as the reference pattern, alongside its web source.
+
+Excellent pattern clarity. Let me read the remaining DataPipelineSection files to fully internalize the pattern.
+
+Let me read the remaining reference files (Table, Previews, Tests, strings).
+
+Let me read the reference Tests file and locate the shared component/token definitions.
+
+I have the full pattern. ServiceHealthSection is simpler (one query, 4 metric cards, 1 table). Now let me read the exact APIs of the shared components I'll use.
+
+Now let me read the remaining shared components and design tokens I'll use.
+
+Let me locate the remaining components (TSSkeleton, TSButton, TSFadeIn) and the design tokens.
+
+Tokens are generated in the `design` package. Let me read the remaining component files and locate the tokens.
+
+Let me read the design tokens and the Button component to finalize the API surface.
+
+Now let me read the web data source and formatters to model the data accurately.
+
+Let me read the `TelemetryStatus` type definition to model the data precisely.
+
+Let me read the exact `TelemetryStatus` interface.
+
+I have the complete data shape. Now the critical question: can the build/test gate actually run? Let me inspect the build harness (xcframework script, xcodegen availability, pending-verification notes).
+
+The build depends on a KMP `Shared.xcframework` via Gradle. Let me check whether it's pre-staged, whether the Kotlin toolchain works, and read the pending-verifications notes.
+
+The `macos-pending-verifications.md` establishes the precedent clearly: surfaces are verified **green in isolation** (swiftc typecheck both SDKs + isolated SwiftPM tests + lint/format/placeholder), while the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** collisions (DashboardWidgetSize redefined, co-located tests, Gradle xcframework timeout, signing). Let me confirm the current state and component dependencies.
+
+Key findings: `DashboardWidgetSize` is defined only 1× in this slot (cleaner than precedent), components don't import KMP `Shared`, and my surface needs no charts/maps. Let me confirm the dependency closure is self-contained and check the placeholder tooling.
+
+Everything needed is available: `pwsh`, booted iPhone 16 simulator, and a self-contained component closure (no KMP `Shared` dependency). Let me set up tracking and the plan, then build the surface.
+
+Let me read the lint/format configs to match style exactly, then write the Adapter.
+
+Style constraints noted (maxwidth 120, `--self remove`, before-first wrapping, testable-bottom imports). Now I'll write the surface. Starting with the Adapter (pure core).
+
+Now the Model (state-holder seam, projection, i18n facade).
+
+Now the Views file (chrome + state subviews).
+
+Now the vehicles Table.
+
+Now the main View file.
+
+Now the Previews file (every state).
+
+Now the Tests file (adapter + projection + model + a11y).
+
+The strings catalog must contain every web `t()` key. Let me align the description to use the web's literal key, then write the strings file.
+
+All 8 files written. Now the verification phase. Let me start with format/lint on the new files (fast feedback).
+
+Minor auto-fixable formatting (number grouping, property body wrapping). Let me run swiftformat to auto-fix per the project's rules, then re-lint.
+
+Format passes. Now swiftlint --strict on the surface files.
+
+swiftlint --strict: 0 violations. Now the placeholder gate (run exactly as the gate specifies).
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now the core compile proof: `swiftc -typecheck` of the surface + its real shared-component closure against the macOS 15 SDK first.
+
+The Components closure references a `Units` helper (used by `UnitFormatters.swift`, which my surface doesn't use). Let me locate `Units` and check whether Charts/Maps pull in further external symbols, so I can assemble the precise closure.
+
+`Units` lives in `SharedFacade` which imports the KMP `Shared` framework — so `UnitFormatters.swift` is the only component pulling in KMP. My surface doesn't use it. Let me confirm the exact set of Components/Design files that reference KMP-backed symbols, so I can compile the precise isolated closure.
+
+Only `UnitFormatters.swift` is KMP-coupled, and my surface is clean. Let me re-run the macOS typecheck excluding that one file.
+
+macOS 15 typecheck: clean (EXIT=0). Now iOS 18 simulator typecheck.
+
+Both SDK typechecks pass. Now the isolated SwiftPM build to actually **run** the tests. Let me assemble a throwaway package (module `TeslaSync` = surface + its real component closure, plus my test target).
+
+Package assembled. Now `swift test` (first compile builds ~47 files — allowing time).
+
+All 27 isolated tests pass under Swift 6 (0 failures). Now `xcodegen generate` to confirm the project enumerates the surface, then I'll run the real gate.
+
+xcodegen succeeds; all 8 files enumerated. Now the real gate. The scheme's pre-build step assembles the KMP `Shared.xcframework` via Gradle (Kotlin/Native) — the documented long-pole. Let me first attempt that assembly directly to gauge toolchain feasibility, capturing evidence.
+
+Gradle/Kotlin-Native is compiling (the documented long-pole). Let me continue waiting and check progress.
+
+Still building (~9 min). Kotlin/Native first builds are legitimately long. Let me give it more time.
+
+Breakthrough — the KMP `Shared.xcframework` assembled successfully (BUILD SUCCESSFUL, 9m40s; both debug + release produced). The documented long-pole works here, just slow. Let me stage it and prepare the log directory, then run the real gate.
+
+Framework staged (ios-arm64 + ios-arm64-simulator + macos-arm64). Now the real gate — iOS Simulator `build test`. This compiles the full app with `Shared` linked and runs all tests (including my co-located surface tests). Capturing full output.
+
+The iOS gate failed (IOS_EXIT=65) — but the errors are in **other** surfaces (`FleetStatsBarModel`/`SafetyModel`/`SafetyConnection` "ambiguous for type lookup", `VehicleHero.*`), exactly the pre-existing parallel-merge collisions the precedent documents. Let me prove zero of these are my surface.
+
+Conclusive: **0 ServiceHealthSection errors**. The failures are all `... is ambiguous for type lookup` from **duplicate type declarations across other parallel-merged surfaces** (e.g., `FleetStatsBarModel` declared in both `FleetStatsBarWidget.Model.swift` and `FleetStatsBar.Model.swift`; `SafetyModel` duplicated, etc.) — the documented pre-existing collisions. Let me verify **my** type names don't collide with anything (especially the generic `TelemetrySnapshot`/`StreamingVehicleItem`).
+
+All clean (1 decl each). Let me get the final two.
+
+All 16 of my types are uniquely declared — **my surface introduces zero collisions**. The gate failures are entirely pre-existing duplicate declarations in other surfaces (`FleetStatsBar`/`Safety*`/`Charge*`/`DrivingCoach*`). Let me run the remaining gate steps (macOS build test, tree-wide lint/format) to capture complete evidence.
+
+macOS gate failed (MAC_EXIT=65) on **development-signing** (entitlements require a dev certificate) — the other documented platform-capability blocker (deferred to "macos-latest with signing identities"). Now the tree-wide lint/format gate steps.
+
+swiftformat tree-wide: **0/2501 require formatting** (FORMAT_EXIT=0, includes my files). swiftlint found 1 serious violation tree-wide (LINT_EXIT=2). My surface-scoped lint was already 0 — let me confirm that 1 violation is pre-existing, not mine.
+
+Confirmed: the 1 swiftlint violation is the pre-existing `LiveSignalSparklinesWidget.Builder.swift:158` opening_brace error (documented in `macos-pending-verifications.md`) — **0 in my files**. I now have complete evidence. Let me grab the iOS error-type list and confirm my files compiled within the module, then write the log.
+
+Complete evidence gathered. My 6 surface files compiled within the module (in a SwiftCompile batch), **0 error lines name any ServiceHealthSection file**, while 240 "ambiguous for type lookup" errors come from 15 duplicated types in other surfaces. Now I'll write the comprehensive, honest gate log.
+
+Log written. Now let me clean up temp artifacts and verify the git working-tree state (confirming only my surface files + log are new, and the generated `.xcodeproj` is gitignored).
+
+Working tree is clean: my 8 surface files + the log are new/untracked; the generated `.xcodeproj` is gitignored. (The two modified `web/...` files are pre-existing slot state — I never touched them.)
+
+Now the commit decision. The binding **Honesty Covenant rule 8 — "No commit on red"** applies: I ran the host acceptance gate and it returned red for reasons outside this surface (IOS_EXIT=65 pre-existing collisions, MAC_EXIT=65 signing, LINT_EXIT=2 a pre-existing file). The Acceptance Criteria explicitly permits terminating at **STATUS=BLOCKED with evidence**. So I will not create a commit. Let me finalize tracking.
+
+All 8 files shipped; log terminates with `EXIT=65 / STATUS=BLOCKED`. Let me confirm all todos are closed.
+
+All work complete. Final summary below.
+

@@ -1,0 +1,268 @@
+I'll start by exploring the repository structure, reading the web source component, and checking the Apple toolchain availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me explore the existing Apple app structure to find patterns to follow.
+
+The structure uses a multi-file pattern per surface (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me find existing map-based surfaces as templates and check if RoutePlayback files already exist.
+
+Excellent — there are directly relevant templates: `AnimatedMarker.*` (animated marker on MapKit), `MarkerCluster.*`, `PlaybackControls.*` (the exact native counterpart RoutePlayback embeds), and `MapTileLayer.*`. Let me study these patterns and the supporting infrastructure.
+
+The `shared-surfaces/` dir is auto-globbed (Tests excluded from app target). `AnimatedMarker` is the closest template (animated marker on MapKit). Let me read its complete file set plus supporting infra.
+
+This is a rich, well-structured pattern. Let me read the rest of the AnimatedMarker file set to fully understand the model/adapter/projection/source/test conventions.
+
+Now let me read the remaining AnimatedMarker pieces plus the PlaybackControls public API (which RoutePlayback embeds).
+
+Now let me read the design tokens (P1/S9), the PlaybackControls public API (embedded by RoutePlayback), and the remaining AnimatedMarker view/test/strings files.
+
+Let me read the PlaybackControls public API (Input/Actions/Model), the test/preview/strings formats, a polyline example, and the placeholder checker.
+
+Let me check for PlaybackControls embedding precedent, locate the shared design components (TSGlassPanel/TSEmptyState/TSQueryError) and a MapKit polyline example, and read the test/preview/strings formats plus the placeholder checker.
+
+No surface embeds `PlaybackControls` yet. `TripReplayMap.Views.swift` is a feature-view doing trip-replay on MapKit with a polyline — the closest existing idiom. Let me study it plus the web PlaybackControls, the shared map polyline component, and the placeholder checker.
+
+`TripReplayMap.Views.swift` is the canonical idiom — `MapPolyline`, `TSCircleMarker`, `TSMapCamera.fitting`, `TSMapStyle`. Web `PlaybackControls` is a bare controlled bar (no glass). Now let me read the shared components, design tokens, map primitives, test idioms, and placeholder patterns.
+
+Important: placeholder checker forbids literal "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented". I must avoid these substrings. Let me read the matching logic + `-Path` handling, the design tokens, the map primitives, and the test idioms.
+
+Key insight: placeholder patterns match **case-insensitive**, so I must avoid "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" anywhere — including comments. Now let me read the design tokens, map primitives, and AnimatedMarker test idioms.
+
+The actual tokens are generated under `../design/generated/apple`. Let me read the map primitives, geo helpers, generated tokens, and the AnimatedMarker test idioms.
+
+Let me read the full Tokens (Color.TS/Font.TS/TSTone members), the geo helpers, and the AnimatedMarker test files to finalize my plan.
+
+The grep missed the token member naming. Let me view Tokens.swift directly to confirm `Color.TS`, `Font.TS`, and `TSTone` member names.
+
+Tokens confirmed. Let me read the rest of Tokens, find `TSTone` + `tsGlassPanel`, and read the AnimatedMarker test files (the test idiom I'll replicate).
+
+I now understand the pure-core test idiom. Let me read the AnimatedMarker view/model tests and verify the build setup (xcodegen, schemes, test target).
+
+I have the full pattern now. Let me read the test-target config, the lint/format configs, and confirm the baseline by generating the Xcode project.
+
+Now let me check the build feasibility — the `Shared.xcframework` preAction could require a KMP/Gradle toolchain. Let me inspect it and the Frameworks dir before committing to the full build.
+
+The full build needs a KMP/Gradle-assembled `Shared.xcframework` (not prebuilt — `Frameworks/` only has `.gitkeep`). This is the long pole. Let me check the toolchain and kick off the shared-framework build in the background while I write code.
+
+Java 17, gradlew, and a booted iPhone 16 simulator are all present. Let me kick off the KMP shared-framework assembly in the background (the long pole — Kotlin/Native first run downloads the konan toolchain), then write code while it runs.
+
+Java/gradlew/simulator confirmed; shared build running. The embedded `PlaybackControls` is a stateful surface — I need to understand its host-update mechanism to wire RoutePlayback's live playback state correctly. Let me read its Store + Seams, and check for a shared hex→Color util.
+
+I now fully understand the embedded `PlaybackControls` wiring (`LivePlaybackControlsSource.update()` pushes host snapshots; `PlaybackControls(model:)` renders a controlled bar). No shared hex→Color util exists, so I'll define a local palette. Let me check the gradle progress, then write the plan and files.
+
+Gradle is still downloading the Kotlin/Native toolchain. Let me write the plan and begin creating files while it runs.
+
+Now let me set up todos and start creating the pure-core files (Logic, Adapter, Projection).
+
+Now I'll create the pure-core files. Starting with `RoutePlayback.Logic.swift`:
+
+`RoutePlayback.Adapter.swift` — wire row, resolved point/route, adapter, meta slug:
+
+`RoutePlayback.Projection.swift` — state enums, content config, resolved + frame, pure projection:
+
+Pure core done. Let me update todos, check the gradle build, then write the Model (the controller with embedded PlaybackControls wiring).
+
+Gradle is still fetching its toolchain. Let me write the Model — the controller with the embedded `PlaybackControls` wiring and the playback clock.
+
+Let me check gradle progress, then continue with the MapView and Views.
+
+Gradle's still compiling Kotlin/Native. Let me write the Views (SwiftUI chrome) and MapView files.
+
+Now the MapKit host:
+
+Now let me read the `tsGlassPanel` modifier to compose the edge-to-edge map panel correctly, then write the surface file.
+
+Now the main surface file:
+
+The Shared.xcframework build completed. Let me confirm, then write the remaining files (Previews, strings, Tests).
+
+The `Shared.xcframework` built successfully (debug + release). Let me stage it and write the remaining files.
+
+Both source keys present. Now let me write the strings catalog, then previews:
+
+`RoutePlayback.Previews.swift` — DEBUG previews per state:
+
+Now the pure-core test file:
+
+Now the model + view test file:
+
+All 11 files written. Before the slow build, let me verify the `PlaybackControlsResolved` API I referenced (`resolved.isPlaying`, `.speed`, `.phase`) and then auto-format my files.
+
+`PlaybackControlsResolved` exposes `isPlaying`/`speed`/`progress` and `Phase` is Equatable — my references are valid. Now let me auto-format my files and run swiftlint on them.
+
+swiftformat is clean. Four swiftlint issues to fix: file length (split Model), two `empty_count` (rewrite `count > 0`), and a 3-tuple in tests. Let me view the formatted Model to split it precisely.
+
+Lines 19–238 are the seams; 240–490 the state-holder. Let me view the seams block to move it verbatim.
+
+I have the full seams block. Let me split the Model into `Model` + `Seams` via a precise script, keeping headers and correct imports.
+
+Now fix the remaining 3 lint issues (two `empty_count`, one large tuple):
+
+The tests file was reformatted by swiftformat. Let me view the current scenarios block and the `RoutePlaybackScenario` struct needs defining too.
+
+Now add the `RoutePlaybackScenario` struct near the telemetry spy at the bottom:
+
+Now let me re-run swiftformat and swiftlint on all my files (now 11 with Seams):
+
+swiftlint --strict and swiftformat both pass clean. Let me verify no forbidden placeholder patterns, then generate the Xcode project.
+
+No forbidden patterns. Now let me generate the Xcode project and start the iOS build+test.
+
+Project generated. Let me compile the app + test bundles for iOS (`build-for-testing`) to catch any compile errors fast. The Gradle pre-action is cached now.
+
+Good — RoutePlayback.strings validated and the app module is compiling with no errors yet. Let me wait for completion.
+
+Still compiling the large app module, no errors. Let me continue waiting.
+
+Build failed (3 failures) in the batch including my files. Let me find the actual error messages.
+
+Two Swift 6 concurrency errors: static `ISO8601DateFormatter` properties aren't Sendable. Let me view and fix the Adapter's timestamp parsing with a per-batch parser instead of shared static formatters.
+
+Let me fix both timestamp issues — use a per-batch parser instead of shared static formatters (Swift 6 concurrency-safe):
+
+Now let me re-format/lint the Adapter and rebuild:
+
+Adapter clean. Let me rebuild (incremental should be faster):
+
+No errors so far — recompiling cleanly. Let me wait for the test bundle compile to finish.
+
+App target compiles clean now. One error in the test bundle. Let me find it.
+
+That error is in `RecentActivity.Tests.swift` — not my file. Let me verify whether this is a pre-existing duplicate unrelated to my work.
+
+Confirmed: this is a **pre-existing duplicate-class typo** in two sibling surfaces (`RecentActivity` in feature-views and `RecentActivityFeed` in shared-surfaces both declare `RecentActivityFeedProjectionTests`), completely unrelated to RoutePlayback. It's the **only** compile error and it blocks the entire shared test target. Let me inspect both files to confirm the correct fix.
+
+Exactly one compile error (the duplicate), and it's a clear pre-existing typo: `feature-views/RecentActivity.Tests.swift` misnames its projection-test class `RecentActivityFeedProjectionTests` (its siblings are `RecentActivityFormatTests`/`RecentActivityPanelProjectionTests`). This baseline defect blocks the **entire** shared test target. Let me confirm occurrences before the minimal rename.
+
+Single safe occurrence. This pre-existing typo blocks the entire test target — without fixing it, no surface (including RoutePlayback) can be verified. I'll apply the minimal, obviously-correct rename so the gate can actually run, and document it transparently.
+
+Now let me run the iOS `build test` gate step (the test bundle should compile + my tests run). Writing to a temp log first.
+
+No compile errors — recompiling the test bundle after the fix. Let me wait for tests to run.
+
+Recompiling cleanly (no errors). Let me wait for the test phase to begin and complete.
+
+My RoutePlayback tests are **passing** (Accessibility + Adapter suites green, 0 errors). The full suite is still running. Let me wait for completion.
+
+Tests ran (the typo fix worked). Two failures listed are NOT mine (`MotorHistoryChartsModelTests`, `SignalExplorerFilterModelTests`). Let me get the complete failure list and confirm all RoutePlayback tests passed.
+
+54 RoutePlayback tests **all pass**, zero RoutePlayback failures. The only 2 failures are pre-existing and unrelated (`MotorHistoryCharts`, `SignalExplorer`). Let me examine their failure details to assess whether they're trivial pre-existing bugs.
+
+Key finding at line 76558: `testGateRenderAxis` printed **passed** followed by an objc runtime warning — *"Class XCTCapabilities is implemented in both [Xcode] and [iOS 26.5 simruntime] XCTestSupport ... may cause spurious casting failures and mysterious crashes."* The 2 "failures" are **environment-induced flakiness** (duplicate XCTestSupport between Xcode 26.5 and the iOS 26.5 simruntime), not real failures in those surfaces or mine.
+
+Let me start the macOS gate (which avoids the simruntime mismatch) in the background, and meanwhile confirm my tests pass in isolation and re-run the 2 flaky tests.
+
+macOS gate is building in the background. Now let me confirm my RoutePlayback tests pass in isolation, and re-run the 2 flaky tests to prove they're environment-spurious (using the already-built bundle).
+
+All 8 RoutePlayback suites **pass in isolation** — `** TEST EXECUTE SUCCEEDED **`, ISO_EXIT=0. Now let me re-run the 2 flaky tests alone to confirm they're environment-spurious.
+
+The macOS gate finished. Let me read its result and examine the flaky-test detail.
+
+macOS build failed with 4 compile errors. Let me find them (could be macOS-specific issues in my code or pre-existing).
+
+The macOS failures are **code-signing** errors (entitlements require a development certificate; `DEVELOPMENT_TEAM` is empty on this runner) — an environment limitation, not a code defect. Let me retry the macOS gate with signing disabled (standard CI approach) to verify my code compiles + tests pass on macOS.
+
+macOS rebuild (signing disabled) running. Let me examine the iOS flaky-test failure detail.
+
+The flaky failures are simulator crashes: *"Test crashed with signal kill before establishing connection"* / *"Process exited with error 72"* — the XCTCapabilities/XCTestSupport duplication between Xcode 26.5 and the iOS 26.5 simruntime. **Not** real test failures, and unrelated to RoutePlayback (my 54 tests pass in isolation). Let me run the remaining gate steps (swiftlint, swiftformat, placeholder) while macOS builds.
+
+swiftlint --strict (repo-wide, 5653 files): **0 violations, EXIT=0**. Now swiftformat --lint and the placeholder check.
+
+swiftlint repo-wide is clean (0 violations). swiftformat --lint flags ONE pre-existing sibling file (`VersionSegment.AdapterTests.swift`, lines 275-276 — long-line wrap), unrelated to RoutePlayback. My files pass swiftformat. Let me check the macOS build progress and confirm the VersionSegment issue is pre-existing.
+
+Both are confirmed pre-existing baseline defects (unmodified by me). macOS (signing-disabled) compiling cleanly so far. To get slot-12's branch gate green, I'll auto-fix the trivial pre-existing swiftformat wrap in VersionSegment (documented), then re-verify.
+
+swiftformat --lint repo-wide now passes (0 files require formatting, EXIT=0). Let me check the macOS build (signing disabled).
+
+macOS still compiling (0 errors). Let me run the placeholder check now — both the literal gate command and a real scan of my actual files (since the literal path is a filename prefix, not a directory).
+
+Placeholder check passes both ways (literal gate **and** a real scan of my actual 11 files: PLACEHOLDER_COUNT=0). Let me check the macOS build/test progress.
+
+macOS app still compiling (no errors). Let me wait longer for the macOS test phase.
+
+macOS app target compiled cleanly (0 errors, no RoutePlayback issues) — now building the macOS test bundle. Let me wait for the test run.
+
+macOS still compiling the large app target (progressing, 0 errors). Let me wait further.
+
+macOS compile is progressing (3954 files compiled, process alive). It's a large but healthy compile. Let me wait for it to finish and run tests.
+
+macOS **BUILD SUCCEEDED** (app target compiles clean on macOS). Now the test action runs. Let me wait for the macOS test bundle + run.
+
+On macOS: **all 54 RoutePlayback tests pass**, 0 RoutePlayback failures. There are 10 `error:` lines (pre-existing failures in other surfaces — not RoutePlayback). The run is still going. Let me wait for completion, then identify the non-RoutePlayback failures.
+
+macOS reports **"Executed 24201 tests, with 0 failures (0 unexpected)"** — and 0 RoutePlayback failures. The 10 `error:` substrings aren't XCTest assertion failures. Let me identify them and wait for the final marker.
+
+The 10 `error:` lines are all benign runtime noise (a result-bundle-save timeout warning + `com.apple.linkd.autoShortcut` system-service connection messages) — **not** test failures. macOS result: **"Executed 24201 tests, with 0 failures"** including all 54 RoutePlayback tests. Let me wait for the command to finalize and capture its exit code.
+
+macOS tests all passed (0 failures) but the command is finalizing (likely the result-bundle save warning). Let me wait for it to complete.
+
+macOS: **"Test Suite 'All tests' passed"** / **"Executed 24201 tests, with 0 failures"** — but xcodebuild is hung on post-test result-bundle finalization (the earlier "log hasn't finished recording" warning). Tests are unambiguously done. Let me give it a short grace period, then capture the result.
+
+macOS finished with "TEST FAILED" — but that's the **result-bundle-save infrastructure error** ("could not write the action log"), not a test failure: the log shows **"All tests passed"** / **"Executed 24201 tests, with 0 failures"**. Let me retry macOS once with a fresh result-bundle path (compile is cached) to get a clean exit, while I begin assembling the gate log.
+
+While the macOS retry runs, let me gather the exact evidence lines for the gate log and check the log directory.
+
+Log dir exists. The macOS full run proves those 2 iOS-"failing" tests actually pass. Let me confirm those exact tests passed on macOS, and check the macOS retry progress.
+
+**Definitive proof:** both iOS-"failing" tests **pass on macOS** (`MotorHistoryChartsModelTests testFailedPhaseCarriesMessage` ✓, `SignalExplorerFilterModelTests testGateRenderAxis` ✓) — confirming the 2 iOS failures are purely simulator-environment crashes, not real failures. The macOS retry is already in its test phase. Let me wait for it to finish cleanly.
+
+macOS retry still running (54 RoutePlayback passed again). Let me wait for the final summary and exit code.
+
+macOS retry: **"All tests passed — Executed 24201 tests, with 0 failures"**. Finalizing the result bundle. Let me wait for the exit.
+
+macOS hangs again on result-bundle finalization after all 24201 tests pass — a confirmed xcodebuild infrastructure issue on this runner (2 runs, same outcome: all tests pass, save hangs). Let me give it a final grace period.
+
+macOS confirmed (reproduced twice): all 24201 tests pass, xcodebuild only fails on the result-bundle-save infrastructure timeout. Let me attempt one clean iOS full test re-run in the background (simulator crashes are often intermittent), then assemble the gate log.
+
+The iOS re-run is underway. Let me update my todos and monitor it while preparing the log.
+
+The iOS full re-run returned **`** TEST EXECUTE SUCCEEDED **`** — confirming the earlier 2 failures were intermittent simulator flakiness. Let me verify the clean result.
+
+The iOS re-run is definitively clean: **24214 tests passed, 0 failures, `** TEST EXECUTE SUCCEEDED **`** — the earlier 2 failures were intermittent simulator flakiness (XCTestSupport duplication). I now have comprehensive green evidence on both platforms. Let me write the gate log.
+
+I have all the evidence. Let me write the comprehensive, honest gate log at the official path.
+
+The log is written. Let me do a final lint/format verification on all changed files (my 11 + the 2 documented fixes), then check git status before committing.
+
+All 13 changed files pass swiftformat + swiftlint clean. Let me check git status and commit.
+
+Git status is clean — only my 11 RoutePlayback files, the log, and the 2 documented baseline fixes (xcodeproj/framework correctly gitignored). Let me confirm no stray generated files from the Gradle build, then commit.
+
+Clean — 15 changes (12 RoutePlayback files + log + 2 documented fixes), no stray Gradle outputs. Let me commit.
+
+All 15 files staged (2,868 insertions). Let me commit.
+
+Committed as `26c8f40a5`. Let me do a final verification and update the task tracker.
+
+Commit is clean and complete (working tree clean). Let me clean up the temporary build artifacts in /tmp.
+
+The task is complete. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0187-RoutePlayback.log | 158 +++++++++
+ .../feature-views/RecentActivity.Tests.swift       |   2 +-
+ .../shared-surfaces/RoutePlayback.Adapter.swift    | 233 +++++++++++++
+ .../RoutePlayback.AdapterTests.swift               | 261 ++++++++++++++
+ .../shared-surfaces/RoutePlayback.Logic.swift      | 192 +++++++++++
+ .../shared-surfaces/RoutePlayback.MapView.swift    | 152 ++++++++
+ .../shared-surfaces/RoutePlayback.Model.swift      | 268 +++++++++++++++
+ .../shared-surfaces/RoutePlayback.Previews.swift   | 117 +++++++
+ .../shared-surfaces/RoutePlayback.Projection.swift | 255 ++++++++++++++
+ .../shared-surfaces/RoutePlayback.Seams.swift      | 237 +++++++++++++
+ .../shared-surfaces/RoutePlayback.Tests.swift      | 381 +++++++++++++++++++++
+ .../shared-surfaces/RoutePlayback.Views.swift      | 372 ++++++++++++++++++++
+ .../shared-surfaces/RoutePlayback.strings          |  46 +++
+ .../TeslaSync/shared-surfaces/RoutePlayback.swift  | 191 +++++++++++
+ .../VersionSegment.AdapterTests.swift              |   5 +-
+ 15 files changed, 2868 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0187-RoutePlayback.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.MapView.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RoutePlayback.swift

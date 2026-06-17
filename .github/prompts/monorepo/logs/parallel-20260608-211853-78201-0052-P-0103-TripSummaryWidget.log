@@ -1,0 +1,159 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the platform capabilities and locate the web source and Apple app structure.
+
+Platform is capable: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 26.5 simulators (iPhone 16 booted). Now let me understand the existing Apple app structure and conventions deeply.
+
+This uses XcodeGen (`project.yml`). The real widget location is `Sources/DashboardWidgets/`. Let me study the project config and a complete existing widget (BatteryCells) as a template.
+
+XcodeGen project. Key finding: new co-located widgets go in `apps/apple/TeslaSync/dashboard-widgets/` (per project.yml lines 41-44, 247-254), and shared infra types (`DashboardWidgetProps`, `DashboardWidgetSurface`, telemetry) already exist. Let me examine the existing co-located widgets and the complete BatteryCells template, plus locate shared facade/tokens/i18n.
+
+The co-located `dashboard-widgets/` dir has 563 files using a `WidgetName.Part.swift` dot convention. Let me find the widget shell, trips facade, and a representative complete widget to use as the template.
+
+No existing `TripSummaryWidget`. The closest analog is `RecentDrivesListWidget` (a list of drives). Canonical per-widget fileset: `.swift`, `.Model.swift`, `.Tests.swift`, `.strings`, `.Previews.swift` (+ optional `.Adapter.swift`). Let me read the RecentDrivesList widget set fully and find the WidgetShell + facade.
+
+`RecentDrivesListWidget` is the ideal template — same domain (drives/trips list). Let me read its complete fileset to learn every convention.
+
+Excellent template. Let me read the rest of the RecentDrivesList fileset (Adapter, Views, Previews, strings, both test files) to learn projector, row views, and test patterns.
+
+Let me read the remaining template files (Previews, strings, both Tests) and the web-side specifics (Trip type, WidgetShell, formatDurationRange).
+
+Now let me read the Previews + strings template, the web data/shell specifics, and locate the design tokens.
+
+Let me get the remaining web specifics (Trip type, formatDurationRange, registry entry, StatCard) and the native design tokens.
+
+Registry confirmed: `trip-summary`, default 2×4, min 1×2, max 4×40, category `driving`. Note: TripSummary computes duration from the **date range** (`formatDurationRange(start_date, end_date)`), not a duration field. Let me read the exact date/duration formatters and the StatCard/useUnits/useDateFormat web specifics.
+
+Now I have the data flow. Key detail: TripSummary computes duration from the date range and shows a "Last Trip" stat card block + a "Recent Trips" mini-list. Let me read the design tokens, skeletons, and check for native StatCard/Badge equivalents before writing.
+
+Tokens live in the generated DesignTokens group + TSMaterial. Let me read those, the skeletons, and the native Metric/Badge components to decide composition.
+
+I have the full token set and a native `TSStatCard`/`TSBadge` library. Let me read the lint/format configs (to match the envelope), the Badges component, the placeholder checker, and confirm no `TripSummary*` symbol collisions.
+
+Let me read the placeholder patterns and the script's path handling, and check whether `pwsh` and `xcodegen` are available.
+
+I now have everything: tokens, lint config (`--strict`, 120 cols, default body/file length limits), `pwsh`+`xcodegen`+`swiftlint`+`swiftformat` all present, native `TSBadge`/`TSStatCard` available, and no `TripSummary*` collisions. Let me confirm two web helpers (`formatRoundedInt`, `FALLBACK`) then start building.
+
+I have complete understanding of the architecture, data flow, tokens, conventions, and tooling. Let me set up tracking and write a brief plan, then build all files.
+
+Now I'll create the Model file (state-holder seam, telemetry, DTOs, registry, strings facade).
+
+Now the Adapter file (pure projection, formatters ported 1:1 from the web, accessibility, layout).
+
+Now the Views file (last-trip stat card, stat tile, recent row, chip sub-views).
+
+Now the main surface view with header, freshness chip, and all six states. Updating tracking first.
+
+Now the Previews and strings files.
+
+Now the two test files. Let me write the adapter/format/layout/phase tests with precisely computed expectations.
+
+Now the ModelTests file (model wiring, telemetry, registry, accessibility).
+
+All 8 files created. Let me auto-format my files to the repo style, then lint them.
+
+swiftformat adjusted 3 files. Let me verify lint-cleanliness of my files (format + swiftlint scoped).
+
+Both pass cleanly (0 violations). Now regenerate the Xcode project and inspect the Shared.xcframework staging before building.
+
+`Shared.xcframework` isn't staged yet — the scheme pre-action builds it via Gradle (KMP). Let me check the shared module and attempt to stage the framework (this is the heavy step).
+
+No prebuilt framework; Java is present and Gradle/Konan caches are shared across slots. Let me stage the `Shared.xcframework` first (the long pole), running in the background while I re-review my code.
+
+While the framework builds, let me verify the log directory exists and recheck the build script progress.
+
+Let me check a sibling widget's log to confirm the expected gate outcome format on this runner.
+
+Key insight: co-located `dashboard-widgets` surfaces (like predecessor 0078) deferred the Xcode gate due to the KMP framework + target registration, while target-registered ones (0010) ran real tests green. `project.yml` now includes `TeslaSync/dashboard-widgets`, so if I can stage the framework I can run the real gate. Let me check the framework build progress.
+
+Gradle is still building Kotlin/Native (first-run downloads). Let me keep waiting.
+
+The `tail` buffers output until completion. Let me check build progress via cache/daemon activity in a separate shell.
+
+Good progress — Kotlin/Native is actively compiling (iosArm64/iosSimulatorArm64/macosArm64 binaries building, release XCFramework pending). Let me continue waiting.
+
+Release frameworks linking (iosArm64 done, simulator + macos pending). Let me keep waiting.
+
+Framework staged successfully (BUILD SUCCESSFUL, 10m). Now regenerate the Xcode project and confirm my files are referenced.
+
+No prior `.xcodeproj` (git-ignored). Let me generate it.
+
+All 8 files referenced. Now run the iOS build (iPhone 16). Initializing the gate log and building in the background.
+
+Now build the iOS app target (compiles all sources incl. my surface). Running in the background.
+
+Build finished with "(4 failures)". Let me extract the actual errors and determine whether they're in my files or siblings.
+
+The build failed, but **zero** errors are in my files — all failures are pre-existing cross-widget type-name collisions among sibling `Charge*` co-located widgets (e.g. `ChargeSessionDTO`, `ChargeConnection` defined in multiple sibling files). My `TripSummary*`-namespaced code is clean. Let me confirm zero TripSummary diagnostics, then build an isolated target to actually compile my view + run my tests without the broken siblings.
+
+Confirmed: 148 errors, **all** in sibling `Charge*` widgets (pre-existing cross-widget collisions never compiled together before); **zero** in my files. My surface type-checks clean within the module. To get a real executed green for my view + tests, I'll generate an isolated project (shared `Sources` + only my TripSummary files, excluding the broken siblings) and run build+test in the simulator.
+
+`Sources/` has no dependency on co-located widgets. Let me create the isolated xcodegen spec and generate it.
+
+Isolated project generated. Now build + test it on the iPhone 16 simulator.
+
+**TEST SUCCEEDED** on iOS. My view compiles and all tests pass in the real simulator. Let me confirm the test counts and check for any failures.
+
+**iOS: BUILD SUCCEEDED + TEST SUCCEEDED — 28 tests, 0 failures**, all 7 suites green. Now add macOS targets to the isolated spec and run the macOS gate.
+
+**macOS: TEST SUCCEEDED.** Let me confirm counts, then run the remaining gates (full-repo swiftlint/swiftformat, placeholder check) and capture everything to the log.
+
+macOS green (28 tests, 0 failures). The placeholder count of 41 is from **other** widgets in the shared dir. Let me verify **my** files specifically are placeholder-clean by scanning an isolated copy.
+
+My files are placeholder-clean (COUNT=0). Now run the full-repo `swiftformat --lint` and `swiftlint --strict` exactly as the gate specifies.
+
+`swiftformat --lint`: **0/2047 files require formatting** (clean, incl. mine). `swiftlint --strict`: one pre-existing violation in sibling `LiveSignalSparklinesWidget.Builder.swift` (not my file). Let me confirm that's the only one and that my files are fully clean in the full run.
+
+Let me capture the lint output correctly to confirm the sole violation is the pre-existing sibling.
+
+Complete verification picture established. The **only** repo-wide reds (148 compile collisions in `Charge*` siblings; 1 swiftlint violation in `LiveSignalSparklines`) are **pre-existing, sibling-only, and outside my allowed scope** (`TripSummaryWidget.*`). My surface is fully green. Let me check git status before writing the final log and cleaning up.
+
+Everything verified. The temp `iso.project.yml` must be removed (only `TripSummaryWidget.*` + the log may be committed; `.xcodeproj`/`build/` are gitignored). Let me write the comprehensive, honest gate log, then clean up.
+
+The log was pre-initialized. Let me overwrite it with the full content.
+
+Now clean up the verification-only artifacts (`iso.project.yml` is untracked and must go; the `.xcodeproj`/`build` dirs are gitignored). Then verify the working tree shows only my 8 files + the log.
+
+Working tree is clean — exactly my 8 files + the log. Now commit (using a shell glob so all 8 `TripSummaryWidget.*` files are staged) with the prompt's message and co-author trailer.
+
+Committed: 9 files, 2034 insertions (commit `83cf84688`). Let me do a final cleanliness check and mark tracking complete.
+
+All clean: working tree committed, `Shared.xcframework` correctly gitignored, no temp artifacts remain.
+
+Task complete. Final summary:
+
+## TripSummaryWidget (Apple, P4 · 0103) — shipped & verified
+
+Built a production-polished native SwiftUI parity of `features/dashboard/widgets/TripSummaryWidget.tsx` — **8 files**, all under the allowed `apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.*` prefix, committed as `83cf84688` (+ gate log).
+
+**Architecture** (mirrors the accepted `RecentDrivesListWidget` template, uniquely `TripSummary*`-namespaced):
+- `.Model` — P1/S8 state-holder seam (`TripSummarySource`→`TripSummaryModel`, no view HTTP), P1/S11 `view.opened` telemetry (slug `TripSummaryWidget`), registry (`trip-summary`, 2×4/1×2/4×40), P1/S10 i18n facade.
+- `.Adapter` — pure projection ported **1:1** from the web: `convertDistanceFromSI`, `fmtNumber/fmtInt`, `formatDurationRange`, `formatDateShort`, `recentTrips=slice(0,3)`→rows`=slice(1)`, `isCompact=cols≤1`, accessibility, layout.
+- `.swift`/`.Views` — glass shell, freshness chip, **all six states** (loading/empty/error/content/stale/offline), last-trip 4-up/2-up stat block, recent-trips list; tokens-only (P1/S9), VoiceOver labels on every interactive element.
+
+**Verification (real, executed):**
+- **iOS (iPhone 16) + macOS Xcode build+test: BUILD & TEST SUCCEEDED — 28/28 tests, 0 failures** (run in an isolated project linking the real shared module so the surface compiles against the genuine design system + KMP `Shared.xcframework`, which I built from source).
+- `swiftformat --lint apps/apple`: **0/2047 require formatting**; `swiftlint --strict` on my files: **0 violations**; placeholder gate on my files: **COUNT=0**.
+
+**Honest disposition:** The verbatim whole-app scheme build and full-repo `swiftlint --strict` are RED — but **exclusively from pre-existing, out-of-scope sibling defects** (148 cross-widget type collisions in `Charge*` surfaces; 1 brace-spacing nit in `LiveSignalSparklinesWidget`). My surface contributes **0** compile errors, **0** lint violations, **0** placeholders, and those sibling files are outside my allowed scope. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ ...le-dashboard-widgets-0103-TripSummaryWidget.log | 176 ++++++++++
+ .../TripSummaryWidget.Adapter.swift                | 371 +++++++++++++++++++++
+ .../TripSummaryWidget.Model.swift                  | 336 +++++++++++++++++++
+ .../TripSummaryWidget.ModelTests.swift             | 194 +++++++++++
+ .../TripSummaryWidget.Previews.swift               | 179 ++++++++++
+ .../TripSummaryWidget.Tests.swift                  | 255 ++++++++++++++
+ .../TripSummaryWidget.Views.swift                  | 200 +++++++++++
+ .../dashboard-widgets/TripSummaryWidget.strings    |  47 +++
+ .../dashboard-widgets/TripSummaryWidget.swift      | 276 +++++++++++++++
+ 9 files changed, 2034 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0103-TripSummaryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.swift

@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure to understand the task context — both the web source and any existing Apple app infrastructure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim). Not blocked. Let me read the web source and explore the Apple app structure.
+
+Now let me examine the existing widget-primitives directory and project structure to understand the established native patterns.
+
+There's a complete `WidgetComparisonCard` primitive already built — the exact template to follow. Let me read all 8 of its files plus its web source.
+
+Excellent template. Now let me read the remaining reference files (previews, strings, tests) and the design tokens.
+
+Now let me find the design tokens, the native peers of `AnimatedNumber`/`EmptyState`, and how `project.yml` globs sources.
+
+Sources are globbed into both targets automatically. Now let me read the design tokens and the native `EmptyState` / `AnimatedNumber` peers I'll compose with.
+
+Let me read the generated design tokens, the AnimatedNumber public API, and check the Delta surface for how a shared widget references colors/status tones.
+
+Let me read the full token catalog, the AnimatedNumber public entry, and the `.tsUnits` modifier.
+
+The tokens are under `apps/design`. Let me read them and find `Font.TS` + `.tsUnits`.
+
+I have the full token picture. Let me check the web `EmptyState` source, whether a shared-surface `EmptyState` native peer exists, and the `.tsUnits` modifier — these determine how I render the empty branch and node values.
+
+Let me read the SwiftLint/SwiftFormat configs and the test-target wiring in project.yml so my files conform and get compiled into the right targets.
+
+I have a thorough understanding of the architecture and the exact template pattern. Let me check the log directory, scan for any existing native "Flow" references, and see how the web consumes `WidgetFlowDiagram` (to validate my icon/node modeling).
+
+Let me look at a web consumer (to validate icon/color modeling) and an existing native `.Diagram.swift` (to match the codebase's Canvas/Path conventions).
+
+I now have everything I need: the exact template (`WidgetComparisonCard`), the design tokens, the shared `AnimatedNumber` peer, and a sibling concrete diagram (`EnergyFlowDiagram`) that establishes the Canvas/dash conventions. My surface is the **generic** primitive (arbitrary nodes/arrows), composing the shared `AnimatedNumber`.
+
+Let me set up a plan and todos, then build.
+
+Starting with the Foundation-only adapter core.
+
+The adapter is 294 lines; adding the projector would exceed SwiftLint's 400-line file limit under `--strict`. I'll put the pure projector in its own `WidgetFlowDiagram.Projector.swift` (matches the allowed `WidgetFlowDiagram.*` glob).
+
+Now the model + strings facade + telemetry seam.
+
+Now the public view.
+
+Now the presentational subviews — the Canvas-based diagram, node view (composing the shared `AnimatedNumber`), empty leaf, and the tone→token color mapping.
+
+Now the i18n catalog and DEBUG previews.
+
+Now the pure-core adapter tests.
+
+Now the model/view/strings test half.
+
+All files created. Let me auto-format with SwiftFormat, then lint, then check file lengths.
+
+One lint issue: `segment(...)` has 7 parameters (limit 5). I'll refactor it to take the `FlowArrow` directly (tone/stroke/active derived inside), then update the two test call sites.
+
+Now update the two test call sites for the new `segment` signature:
+
+Re-running format and lint on the new files:
+
+SwiftLint `--strict` and SwiftFormat `--lint` both pass clean (0 violations). Now I need to actually build + test. Let me check the build toolchain — XcodeGen, the generated project, and the Shared.xcframework dependency.
+
+Build needs XcodeGen (✓) + a Kotlin/Native `Shared.xcframework` built via Gradle. This is a heavy build. Let me generate the project and check the shared-framework build path.
+
+Sibling slots already have a built `Shared.xcframework`, so the toolchain works here. Let me generate the Xcode project (the `.xcodeproj` is gitignored), then kick off the heavy framework + build.
+
+Project generated with the `TeslaSync` scheme. Now I'll build the Kotlin/Native `Shared.xcframework` (the build's heavy prerequisite) in the background, warming Gradle so subsequent `xcodebuild` scheme pre-actions are incremental.
+
+While the framework builds, let me harden the Views file: use the non-deprecated `overlay { }` closure form and rename the `stroke` helper to `drawArrow` for clarity.
+
+Let me re-lint Views and check the framework build progress.
+
+Views lint clean. Framework build is running (Gradle/Kotlin Native — takes a while). Let me inspect the placeholder-check tooling and confirm whether `pwsh` is available for the gate.
+
+`pwsh` is available — I can run the gate verbatim. Let me verify my shipped Swift files contain none of the forbidden placeholder patterns, and check the pattern set.
+
+My files are clean of all forbidden patterns. Let me monitor the framework build.
+
+Gradle/Kotlin-Native is compiling (output is buffered by `tail` until completion). Continuing to wait.
+
+Framework built (7m25s) and staged; Gradle is now warm. Let me first compile the whole iOS app target to validate my code integrates (fastest way to surface any type errors), capturing output to a file.
+
+While that compiles, let me gauge the test-suite size to plan the test phase.
+
+982 test files exist — running the entire suite on-simulator is impractical here. I'll instead do a **full compile** (app + test bundle) plus **targeted execution** of my surface's tests: `xcodebuild test -only-testing:` compiles every test file (validating all compile) but runs only mine. Let me check the in-progress build.
+
+The app module is type-checking cleanly (it's already at "Emitting module for TeslaSync", and my `.strings` is validated). No `error:` lines. Let me wait for build completion.
+
+Build failed — but the failures are in pre-existing `shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift` (and AI* batch), **not** my files. I must determine whether these are baseline failures or a name collision I introduced. Let me read the actual error diagnostics.
+
+The only `error:` is `AIGeofenceAwareAutomationSuggestions.swift:141 — escaping closure captures non-escaping parameter 'content'` — a self-contained Swift error in a **sibling surface I never touched**. My module type-checked (it reached "Emitting module"). Let me confirm this is pre-existing/unrelated and gauge how widespread the baseline breakage is.
+
+Confirmed: `git status` shows **only my 9 new files**; `AIGeofenceAwareAutomationSuggestions.swift` is tracked and unmodified by me. The bug is a pre-existing non-`@escaping` closure at line 141 in a sibling surface. My module type-checked fine. Let me gauge the blast radius of this pre-existing pattern across the baseline.
+
+Only 4 pre-existing `AI*` sibling surfaces share this broken non-`@escaping` pattern — all outside my allowed files and unmodified by me. To genuinely verify **my** surface compiles and its tests pass, I'll **temporarily** patch those 4 sibling errors (`git`-tracked, so I can cleanly revert), build, run my tests, then restore them untouched. This is a verification maneuver only — the committed deliverable will contain solely my files.
+
+Patched (4 one-line changes, will revert later). Rebuilding iOS — incremental, so faster.
+
+No errors yet; recompiling (the module changed). Let me keep waiting.
+
+Another pre-existing failure in a different sibling batch (`RecentActivity`/`RecentDrivesSection`/etc.) — not my files. This suggests broader baseline breakage (likely a Swift 6.3/Xcode 26.5 strictness mismatch). Let me see the specific error(s).
+
+More pre-existing breakage in another sibling (`RecentDrivesSection.Previews.swift` — a compiler type-check-timeout, different error class). The baseline app is broken in multiple unrelated places under this toolchain — chasing them is unbounded and out of scope. 
+
+The most rigorous way to prove **my** surface (bodies + tests) compiles and passes is an **isolated** SwiftPM build with the real dependencies. Let me map AnimatedNumber's dependency closure.
+
+AnimatedNumber's only external dependency is `Color.TS`/`Font.TS` (Tokens.swift), importing nothing app-specific. So my surface's full dependency closure is just **Tokens.swift + 5 AnimatedNumber files**. I'll build an isolated SwiftPM module (named `TeslaSync`, Swift 6 mode, matching the app) with the **real** sources + my tests. Same compiler (Swift 6.3.2), so this genuinely validates bodies + tests.
+
+Tokens path is under `apps/design` (not `apps/apple/design`). Fixing:
+
+All 13 files staged. Creating `Package.swift` (Swift 6 mode, macOS 15) and running the isolated build + my tests:
+
+**Isolated build + tests PASS: 42 tests, 0 failures** — my surface compiles cleanly under Swift 6 mode + complete concurrency (same as the app) and every test passes (geometry, projection, tone, compact, model telemetry, view composition for all branches, strings facade).
+
+Now let me revert the temporary sibling patches (so the commit contains only my files), then run the real lint/format/placeholder gates.
+
+Clean — only my 9 files, no tracked-file changes. Now the placeholder gate (exact gate invocation) and the full lint/format gates:
+
+Placeholder gate: `PLACEHOLDER_COUNT=0, EXIT=0`. Now the full-scope lint/format gates (as the gate specifies, `apps/apple`):
+
+SwiftFormat full-tree: `0/5112 files require formatting, FORMAT_EXIT=0`. Now full SwiftLint `--strict`:
+
+Full SwiftLint `--strict`: **0 violations across 4814 files**. SwiftFormat: clean. Placeholders: clean. 
+
+For complete, non-assumed evidence, let me capture the macOS build too (it will hit the same pre-existing sibling errors since they're platform-agnostic). Running it in the background while I prepare the log.
+
+The macOS build fails at **code-signing** (`entitlements require signing with a development certificate`; `DEVELOPMENT_TEAM=""`) — an environment blocker, before compilation even begins. So both full-app builds are blocked by issues entirely outside my surface: iOS by **pre-existing sibling compile errors**, macOS by **code-signing**. My surface itself is fully verified via the isolated Swift 6 build (42/42 tests).
+
+Let me write the honest, complete gate log.
+
+Now let me clean up temporary artifacts and commit the deliverable (the gitignored `.xcodeproj`/`build/` won't be included). I'll stage explicitly via glob to ensure only my files + the log are committed.
+
+Exactly my 9 files + the log are staged. Committing with the prescribed message:
+
+Committed cleanly as `4d13eb0de`; working tree is clean (the `.xcodeproj`/`build` are gitignored). Let me finalize tracking and do a last verification of the committed deliverable.
+
+All 10 files committed (1847 insertions); all todos complete; log terminates with the honest `EXIT=65 / STATUS=BLOCKED`. Let me do a final sanity check that my surface files are intact in the tree and the `.strings`/Swift counts match expectations.
+
+The deliverable is complete and verified. Final state confirmed: 9 surface files shipped, 42 passing tests, all consistent.
+

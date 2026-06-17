@@ -1,0 +1,5 @@
+I'll start by exploring the repository structure to understand what exists for this Apple parity task.
+
+Let me read the web source and explore the Apple app structure in parallel.
+
+The `Features/` directory doesn't exist yet. Let me understand the actual Apple project structure, the KMP shared core, and existing patterns.

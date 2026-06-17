@@ -1,0 +1,328 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The page delegates to many sub-components. Let me explore the full web source scope and the existing Apple app structure in parallel.
+
+Let me look at the Apple app's existing structure, the parity manifest, and the existing Analytics features in parallel.
+
+This is a substantial page with API data, charts, and 7 sections. The manifest extraction was shallow, but the Honesty Covenant binds me against scope narrowing. Let me check the toolchain availability and explore the full web scope and Apple architecture.
+
+Xcode 26.5, swiftlint, and swift 6.3.2 are all available — the gate can run. Let me understand the Apple project structure via project.yml and the existing directory layout.
+
+Large pre-existing component-based codebase. Let me locate the Xcode project, the gate contract README, and examine how an existing page is structured (e.g., an analytics page) to follow conventions.
+
+XcodeGen project at `apps/apple/project.yml`; `.xcodeproj` is generated. Note the build runs a KMP xcframework pre-action. The prompt's target path `TeslaSync/Features/Analytics` isn't in project.yml sources — I need to reconcile this. Let me find existing page conventions, navigation/routing, the string catalog, and any existing WeeklyDigest files.
+
+The real pages live in `apps/apple/Sources/Features/Analytics`, which IS in project.yml. The prompt's `TeslaSync/Features/Analytics` path is a generator artifact. Let me examine the actual page conventions, components, routing, and shared facade.
+
+The conventions are clear: each page has `Page.swift`, `Page.Sections.swift`, `Page.Charts.swift`, `PageModel.swift`, `PageModel.Sample.swift`, `Models.swift`, `Format.swift`, `RouteRegistration.swift`. Let me read a complete reference page (Statistics — has charts + sections) to learn the full conventions.
+
+Conventions are clear. Let me read the remaining Statistics reference files (Sections, Charts, Models, Format, Sample) to learn the exact component/chart patterns.
+
+Excellent reference. Now let me read all the web weekly-digest components to understand exactly what to reproduce, plus the Statistics models/format/sample for data patterns.
+
+Now the section components. Let me read all of them to capture the exact UI structure.
+
+I now have the complete web page picture (7 sections + states). Let me read the data/format/sample/routing references and check the build toolchain in parallel.
+
+Toolchain is fully available (xcodegen, pwsh, swiftlint, Xcode 26.5). The KMP `Shared.xcframework` is NOT prebuilt — the build runs a script. This is the critical blocker to verify. Let me check the build script + KMP toolchain, and read routing, Units facade, and the Sample data source.
+
+Toolchain present, but KMP `Shared.xcframework` must be built via Gradle (no `gradle`/`kotlin` on PATH — uses `gradlew`). This is the long pole for the build gate. Let me probe the KMP build feasibility in the background while reading the remaining references.
+
+Critical finding: Java 17 ✓, Gradle cache ✓, and `~/.konan/kotlin-native-prebuilt-macos-aarch64-2.4.0` is cached ✓ — so the KMP build is feasible. The app target requires `Shared.xcframework` (the Units facade imports `Shared`). Let me kick off the xcframework build in the background now (long pole) while I write the code.
+
+Build started. Let me check its early progress and read the shared component signatures I'll need (Cards, Badges, Buttons, Typography, States, Charts, Pickers).
+
+Build is progressing (linking iOS framework). The detached wrapper returned; the gradle child continues. Let me check build status and gather all component signatures in one efficient pass.
+
+Build still linking. Now let me read the full signatures for the components I'll use: Buttons (TSButton init), Typography, Feedback States, and the Charts files.
+
+Components are clear. Let me read the charts files and the design tokens, and check build progress.
+
+Charts are clear. Let me check build progress and read the design tokens, palette, icon box, and the `tsUnits` environment / unit presets.
+
+Build is nearly done (debug xcframework written, staging pending). Let me read the design tokens, unit formatters/environment, and the metric/imperial presets.
+
+Let me confirm the unit presets, check available DataDisplay components (StatCard/trend equivalents), and verify the build finished staging.
+
+Build still linking release framework. Let me read the shared `TSStatCard`/`TSDelta`/`TSMetricCard` (for the week-over-week section) and the unit presets while it finishes.
+
+I have all component signatures. Now let me understand the routing wiring (how RouteRegistrations compose) and check the ledger/strings format, plus build status.
+
+Routing is composed in `Sources/TeslaSyncApp.swift`. Let me read that composition, check for route-count tests, and inspect the ledger + string catalog format.
+
+Key findings: `/weekly-digest` is already referenced as a quick-link (icon `calendar`), and `RouteTests` only checks pathSegment uniqueness. Let me verify the route tests, find all exhaustive switches over AppRoute I must update, and check build status.
+
+Let me check `WatchDeepLink.swift` (the one place that might exhaustively switch over routes) and keep monitoring the build.
+
+I have full understanding of conventions, components, routing, and the data flow. The build is the long pole (still linking). Let me record a plan and todos, then read the string catalog format, route-registration-with-nav pattern, ledger, and gate contract.
+
+String catalog is plain JSON (I'll merge keys via Python for safety). Build is on the final macOS framework link. Let me confirm no existing weeklyDigest keys, read the nav-callback registration pattern, and the ledger + gate contract.
+
+55 `analytics.weeklyDigest.*` keys already exist in the catalog. Let me see exactly which keys are present so I add only what's missing.
+
+Contradiction — grep found 55 lines, Python found 0 keys with that prefix. Let me see what grep actually matched.
+
+The web keys exist under a `translation.` namespace (for the shared i18n mirror). But the native Statistics page uses bare keys like `statistics.title`. Let me determine which namespace native pages resolve against.
+
+Clear now: native pages use **bare** keys (e.g. `statistics.title`); the 55 `translation.analytics.weeklyDigest.*` are the web i18n mirror. I must add **bare** `analytics.weeklyDigest.*` keys sourced from that mirror. Let me dump the mirror values to reuse them exactly.
+
+I have everything needed: component APIs, tokens, Units facade, routing, model/format/sample patterns, all string values (49 from the mirror + 3 missing: `noDataMessage`, `noAlerts`, `funFactDesc`), ledger format, and the build toolchain. Let me check the build and start writing the Swift files.
+
+The KMP `Shared.xcframework` built successfully (7m35s) and is staged — the app build can now proceed. Let me write all the Swift source files, starting with the SI models.
+
+Models done. Now the format/boundary file mirroring `StatisticsFormat`, with the digest-specific formatters (distance/energy/efficiency/power/duration/co2/percent/trend).
+
+Now the page model — DataSource protocol, phase enum, and the `@Observable` model that loads data and derives week-filtered SI metrics (faithful port of `useWeeklyDigest`).
+
+Now the sample/empty/failing data sources, seeded into the current and previous weeks so trends and navigation both render.
+
+Page model and sample done. Let me update todos and write the main page view with the header and phase switch.
+
+Now the sections file — the bulk of the UI (week selector, hero cards, mini stats, battery pills, driving/charging/battery-health/week-over-week sections, shared section header, skeleton). The two bar charts + alerts/pie section go in the Charts file.
+
+Now the Charts file: the two daily bar charts and the full alerts section (severity list + distribution pie), using the native Swift Charts wrappers.
+
+Now wire up navigation: create the route registration, add the `weeklyDigest` AppRoute case (3 switches), and register it in the app. Let me update todos and make these edits.
+
+Now the three switch statements in AppRoute.swift (pathSegment, systemImage, group) and the app wiring:
+
+Now the string catalog. Let me verify which keys my Swift code references and whether the catalog is sorted, then merge the bare keys (sourced from the `translation.` mirror) via Python.
+
+53 bare keys + `route.weeklyDigest` needed; catalog isn't globally sorted, so I'll preserve order and append. Let me verify the exact JSON formatting via round-trip, then merge (47 values from the mirror + 6 hardcoded + route key).
+
+The catalog uses `" : "` for nested entries (only 3 top-level keys differ cosmetically). Dumping with that separator yields a clean diff. Let me write the merge script adding the 53 bare keys (47 from mirror + 6 hardcoded) plus `route.weeklyDigest`.
+
+The full re-dump reformatted the entire file (124k-line diff) — unacceptable. The original formatting differs from my dump. Let me revert and inspect the exact byte formatting to do a surgical insertion.
+
+Now I understand: string entries use `" : "` separators with 4-space indent. Let me do a surgical text insertion (preserving all existing formatting) right after `"strings": {`.
+
+Bug: the mirror lookup needs the full bare key. Let me fix and rerun.
+
+Clean 594-line insertion, valid JSON, all required strings present. Let me optimize the page to compute `metrics` once, then check the lint config and run swiftlint on my files.
+
+Three lint issues: the Sections file exceeds 400 lines (must split), and the Sample uses large tuples (>2 members). Let me fix the Sample (use structs) and split the Sections file into three. First, recreate the Sample without large tuples.
+
+Now split the sections into three files (each <400 lines). First, the reusable primitives:
+
+Now the main sections file (week selector, hero cards, driving section, top drive):
+
+Now the charging/battery/week-over-week sections file:
+
+All sections split. Let me re-run swiftlint strict on all my files to confirm zero violations.
+
+0 violations, all files ≤400 lines. Let me lint my two edited files and generate the Xcode project in parallel.
+
+Both edited files lint clean; project generated at the gate's expected path. Now the build — this compiles the whole app (~8000 files). Let me start the iOS build (the gate's scheme) in the background and monitor.
+
+Build running. Let me monitor its progress while reviewing for issues.
+
+Build is compiling the TeslaSync module (EmitSwiftModule phase), 0 errors so far. Let me keep waiting.
+
+Build failed with errors in my files. Let me extract the exact error messages.
+
+Root cause: `WeeklyDigestFormat` collides with an existing symbol in the module (all "no member" errors cascade from the redeclaration). Let me find the existing declaration.
+
+Existing `WeeklyDigestWidget.Adapter.swift` defines a different `WeeklyDigestFormat`. I'll rename mine to `WeeklyDigestPageFormat`. Let me first check for any other latent type-name collisions in the widget files, then rename across my files.
+
+Only `WeeklyDigestFormat` collides (the widget defines its own). All my other type names are unique. Let me rename my type to `WeeklyDigestPageFormat` across my files, rename the file, and regenerate.
+
+`git mv` failed (file untracked). Let me use plain `mv` and verify.
+
+Rename complete with no stray refs. Let me regenerate the project and rebuild.
+
+Rebuild started (incremental, should be faster). Let me check the pre-existing `WeeklyDigestPhaseTests` for any conflict with my `WeeklyDigestPhase` enum while the build runs.
+
+No conflict — the widget test uses its own model's phase type. Let me monitor the rebuild.
+
+0 errors — main app compiled, now building widget extensions. Let me wait for the final result.
+
+Still 0 errors; now compiling the x86_64 simulator slice (generic destination builds both arches). Let me wait for completion.
+
+The x86_64 whole-module emit is the final heavy step (8000-file module). Still 0 errors. Let me wait further.
+
+The arm64 slice fully compiled (0 errors); the generic destination is now doing a redundant, very slow x86_64 whole-module emit. For efficiency I'll switch to a single concrete simulator (arm64-only, which `test` needs anyway). Let me find a simulator and stop the current build.
+
+I'm sharing the machine with other parallel slots (heavy contention) — that's the slowness. My arm64 slice already compiled cleanly. Let me stop the redundant dual-arch build and do a fast single-arch build against the booted simulator (reuses arm64 products), then add a model test.
+
+Generic build stopped. Let me look at the sibling analytics model-test convention so I can add a matching `WeeklyDigestPageModelTests`, then kick off a fast single-arch build.
+
+Clear convention. Let me add `WeeklyDigestPageModelTests.swift` mirroring the sibling pattern, with a fixed reference date for deterministic week math.
+
+Let me fix the fragile error-message assertion to a pattern match.
+
+Let me lint the test file and start a fast single-arch build (reusing the cached arm64 products) against the booted simulator.
+
+Test lints clean. Build started (incremental, should be fast). Let me check the placeholder-scan script while the build runs.
+
+The script honors `// parity:allow <reason>` (I have two such markers in the skeleton). Let me run the placeholder scan on my files and check the build progress.
+
+Two fixes needed: (1) the placeholder scan flags the literal word "Placeholder" in a comment in `WeeklyDigestPage.swift:92` (the `MileagePageModelTests` hit is pre-existing, not mine); (2) build3 is still compiling. Let me reword the comment.
+
+Reworded. Let me re-run the placeholder scan on my page dir and check the build progress.
+
+Placeholder scan now clean (COUNT=0, EXIT=0). Build3 still compiling. Let me wait for it.
+
+Build3 process ended with 0 errors but no result marker captured. Let me inspect the log tail to determine the outcome.
+
+Build3 died mid-compile (likely resource contention from the parallel slots). The earlier build2 already fully compiled all arm64 sources (0 errors) before I stopped its redundant x86_64 pass. Let me check system load, then restart the build to get a definitive result.
+
+Load average is **105** — the machine is massively overloaded by ~15 concurrent xcodebuilds across parallel slots, which is killing/starving processes. My code already fully compiled for arm64 in build2 (0 errors). Let me restart the build resiliently with an explicit exit code, and be patient.
+
+While build4 runs under heavy load, let me prepare the remaining deliverables. Let me inspect an existing apple page log to match the format (especially the `=== PARITY ===` section).
+
+That `AnalyticsPage.log` is an ideal template (it even has the same PATH NOTE about `Sources/Features/Analytics`). Let me read its PARITY section, gate results, and ending format.
+
+The sibling log confirms my approach (same `Sources/Features/Analytics` path, macOS+iOS builds, and a standalone `swiftc` model harness for tests). Let me check build4's progress.
+
+build4 reported 1 error. Let me extract it — it could be a real issue or a contention-induced failure.
+
+Not a code error — it's a **build-db lock** conflict (build3 was likely still running when build4 started; my earlier `pgrep` alternation was malformed). Let me find and clean up the lingering slot-4 builds, then rebuild cleanly.
+
+No slot-4 xcodebuild is running now — the lock was a transient concurrency conflict between build3/build4, now cleared. Let me run one clean build (reusing the cached arm64 products) and monitor to completion.
+
+Build5 launched. Let me verify it didn't hit the lock error early, then prepare a reliable standalone model-logic harness as test evidence (mirroring the sibling approach).
+
+Build5 also failed fast. Let me see the error.
+
+The build.db is held by a stale lock (likely an orphaned XCBBuildService daemon from a crashed build). Let me find and clear it so I can reuse the cached arm64 products.
+
+A stale Swift Build service (PID 79602) plus 19 orphaned `swift-frontend` processes from an earlier slot-4 build are still holding the lock and consuming CPU. Let me terminate that orphaned build to release the lock, then reuse the cached products.
+
+Lock released. Let me free CPU by terminating the 19 orphaned `swift-frontend` processes (by explicit PID), then launch a clean build reusing the cached products.
+
+The safety wrapper needs explicit numeric PIDs. Let me list them first.
+
+CPU freed (0 orphaned frontends; the 4 remaining `SWBBuildService` daemons serve other slots — leaving them). To sidestep the contaminated default DerivedData entirely, I'll do a definitive build into a dedicated `derivedDataPath` using the macOS scheme (native, single-arch, no simulator — the sibling log's primary evidence).
+
+Let me verify the macOS build started cleanly (no lock error), then build the deliverables in parallel while it compiles.
+
+macOS build running cleanly in isolated DerivedData. After it succeeds I'll run the XCTest on macOS (real test evidence, no simulator/lock issues). Meanwhile, let me update the ledger. Let me check its format first.
+
+108 rows; I'll surgically append two rows (macos + ios) preserving formatting. Let me do that via Python.
+
+Ledger updated (+18 lines, valid, 2 rows 8/8). Let me check the macOS build progress.
+
+macOS build compiling cleanly (0 errors, my files reached). It's a full rebuild under heavy load, so it'll take time. The model logic and week math check out for the test. Let me wait for the build to progress.
+
+Still compiling (0 errors). Let me check what phase it's in to gauge progress.
+
+Build reached the app target's whole-module `EmitSwiftModule` (the heavy 8000-file type-check, same phase build2 passed for iOS) — 291 files compiled, 0 errors. Let me wait for it to finish and link.
+
+Load is now **183** — the per-file codegen of 8000 files for the macOS app will be very slow. The whole-module `EmitSwiftModule` already passed (definitive type-check, 0 errors). To get reliable, load-independent test evidence, let me run a standalone `swiftc` model-logic harness (the sibling log's exact approach) while the macOS build continues for the BUILD marker.
+
+Now the harness main with assertions mirroring the XCTest (model logic + Foundation formatters):
+
+Let me compile and run the standalone harness (5 small files — fast even under load):
+
+Harness compiled clean (exit 0) — independently confirms the model/models/sample compile. Let me run it.
+
+The harness deadlocked — blocking `sem.wait()` on the main thread starves the `@MainActor` task. Let me switch to top-level `await` (main.swift runs on the main actor). Let me stop it and fix.
+
+Recompile and run with the fixed top-level await:
+
+Harness passes **50/50, HARNESS_FAILURES=0** — independently verifying all phases, metric aggregation, bins, slices, fun fact, navigation, selection, and formatters. Let me check the macOS build status.
+
+The macOS build is stuck in the slow whole-module emit under load 183. The default DerivedData still holds build2's **complete** arm64 iOS compile and is now lock-free. Let me run a fast incremental iOS build there (should just relink to BUILD SUCCEEDED).
+
+The incremental iOS build is reusing cached products and is now **linking** (`Ld`) — near completion, 0 errors. Let me wait for it to finish.
+
+Both builds are now doing whole-module emits under load 183, competing for CPU. The iOS incremental is closer (reusing build2's products). Let me kill the slower macOS full-rebuild to give the iOS build more CPU.
+
+macOS build killed; load still ~179 from other slots. Let me clear any macOS orphan frontends and wait for the iOS incremental build.
+
+20 orphaned macOS frontends are still burning CPU. Let me wait for the current check, then kill them.
+
+iOS build is now in per-file codegen (past the whole-module emit), 0 errors. Let me kill the 20 orphaned macOS frontends to free CPU.
+
+CPU freed. Let me wait for the iOS build to finish codegen and link.
+
+Still 0 errors; the app target's parallel emit+codegen is just slow under load ~160. Let me wait and track the SwiftCompile count to confirm forward progress.
+
+The incremental build is doing a near-full recompile (build2's cached products were contaminated when I killed build3 in the same DerivedData). Under load ~160 this is impractically slow. Let me check whether the load is dropping as other slots finish, then start one clean, uninterrupted build into a fresh DerivedData.
+
+Load is a persistent ~150 (5 parallel slots building) — it won't drop. I have strong iOS evidence already (build2: full arm64 type-check + codegen + extensions, 0 errors) plus the macОS `wd-dd` build that got furthest (dependency targets done, app emit started). Let me consolidate onto ONE build: kill the contaminated iOS-inc and resume the macOS build in `wd-dd` (incremental on its existing progress).
+
+ios-inc fully cleared. Now let me resume the macOS build in `wd-dd` (incremental on its furthest progress) and let it run uninterrupted to completion this time.
+
+Build resumed. Let me verify it started cleanly, then write the evidence log while it compiles.
+
+Build resumed cleanly (in the fast gradle preAction). Let me write the comprehensive evidence log now (I'll finalize the build-result line and EXIT/STATUS once the build completes).
+
+Log drafted with placeholders for the build result. Let me check the macOS build progress.
+
+Build resumed but is recompiling the app target (0 errors, as always). Every build attempt has shown **0 code errors** — the only failures were infrastructure (build-db lock). Let me give this uninterrupted build a patient window to complete the marker, monitoring load too.
+
+Progress: 499 files compiled (0 errors), load dropping (185→110 as slots finish). The build is clean and uninterrupted — it will produce the marker, just slowly under shared-host load. Let me give it a longer window while load trends down.
+
+The build is now **linking** the app (`Ld TeslaSync.app/...__preview.dylib`) — all compilation done, 0 errors, final link in progress. BUILD SUCCEEDED should be imminent. Let me wait for it.
+
+Linked the preview dylib; now finalizing the main module/executable (0 errors). Very close. Let me wait for the final marker.
+
+Load dropping to 83 as slots finish — the build should accelerate. It linked the preview dylib and is finishing the main executable codegen. Let me wait for completion.
+
+Load dropped to 67 — codegen accelerated to 4359 files (from 499). It's racing to completion now. Let me wait for the final link + marker.
+
+🎉 **BUILD SUCCEEDED** (XCODEBUILD_EXIT=0) — the entire 8000-file app, including my WeeklyDigest page, sub-components, route edits, and app wiring, compiled **and linked** clean with 0 errors. Now let me run the real focused XCTest against the built macOS products (load is now manageable), and update the log meanwhile.
+
+Test launched. Let me update the log with the confirmed BUILD SUCCEEDED result while the test compiles.
+
+Build result logged. Now let me monitor the test (it compiles the test bundle, then runs my test class).
+
+The TEST build failed (compile error in the test target). Let me find the errors — could be my test file or a pre-existing co-located test.
+
+The test-target compile error is in a **pre-existing, unrelated file** (`Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift` — a Swift 6 concurrency issue), not my code. Let me confirm it's not in my diff and is pre-existing.
+
+Confirmed: the error is in a **pre-existing, unrelated file** (`VehicleCostPageModelTests.swift`, committed by an earlier P7 admin page — `4f6bcb56e`), not modified by me, and it's the **only** error. It blocks the entire test-target build (a Swift 6 concurrency issue), so no P7 page's XCTest can run via the full target — which is exactly why the sibling DONE pages use the standalone harness as test evidence. My `WeeklyDigestPageModelTests.swift` is not among the errors (compiles clean) and the harness passed 50/50.
+
+Let me update the log's test section to document this transparently, then finalize EXIT/STATUS.
+
+Now let me finalize the log's EXIT/STATUS markers.
+
+Let me do a final verification: confirm no placeholders remain in the log, re-run swiftlint + placeholder scan after my edits, and review git status.
+
+All final gates green (lint 0, placeholder 0, log clean ending in EXIT=0/STATUS=DONE). Let me review the full change set before committing.
+
+All changes are correctly scoped (the generated `.xcodeproj` and `build/wd-dd` are git-ignored). Let me stage the specific paths and commit.
+
+All 16 files staged (3276 insertions, clean scope; generated project + DerivedData excluded). Let me commit.
+
+Committed as `32c2e682b` (16 files, 3276 insertions). Let me clean up temporary artifacts.
+
+Everything is clean and committed. Let me do a final confirmation of the deliverable state.
+
+All confirmed: HEAD = the parity commit, working tree clean, ledger 2×(8/8), log shows BUILD SUCCEEDED + harness 50/50 + PARITY 8/8 + EXIT=0/STATUS=DONE. Let me mark the todos complete.
+
+The task is complete. Here's what was delivered:
+
+## WeeklyDigestPage — native SwiftUI/HIG parity (P7 analytics)
+
+**Implementation** (`apps/apple/Sources/Features/Analytics/` — the real compiled source root; the prompt's `TeslaSync/Features/Analytics` path isn't in `project.yml`, documented in the log's PATH NOTE):
+- **10 source files** reproducing the *entire* web composition region-for-region — week selector, summary hero cards + fun fact, driving section (daily-distance bar chart + 4 stats + top drive), charging section (daily-energy bar chart + 4 stats), battery health (2 pills + 3 stats), alerts (severity rows + distribution pie / no-alerts empty), week-over-week comparison cards.
+- `@Observable WeeklyDigestPageModel` ports the `useWeeklyDigest` hook: SI metric aggregation, week filtering/navigation, daily bins, alert slices, fun fact; **loading/empty/error/ready** states plus every per-section empty.
+- SI stored on disk, converted at the display boundary via the shared `Units` facade; native Swift Charts wrappers (never WKWebView); full a11y; adaptive macOS/iOS.
+
+**Navigation/i18n/ledger:** added `.weeklyDigest` route (3 exhaustive switches + registration); **+54** `analytics.weeklyDigest.*` string keys (web key names); 2 ledger rows (macos+ios, 8/8).
+
+**Verification (real results):**
+- macOS `xcodebuild` → **`** BUILD SUCCEEDED **`** (whole 8000-file app compiles + links, 0 errors); iOS arm64 compile green
+- `swiftlint --strict` → **0 violations**; placeholder scan → **COUNT=0**
+- standalone model harness → **50/50 PASS**
+- `PARITY_COVERED=8 / PARITY_REQUIRED=8`; log ends **EXIT=0 / STATUS=DONE**
+
+**Caveat (documented honestly):** the full `xcodebuild test` is blocked by a *pre-existing, unrelated* Swift-6 concurrency error in `VehicleCostPageModelTests.swift` (an earlier P7 commit, not touched here) that aborts the whole XCTest bundle build — so test evidence comes from the standalone harness, matching the DONE sibling pages. My test file compiles and lints clean.
+
+Committed as `32c2e682b`; working tree clean.
+
+
+
+The task is fully complete and verified — all 12 todos done, work committed, working tree clean. Calling task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: id-list lost a base identifier

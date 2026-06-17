@@ -1,0 +1,184 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the Apple app structure to understand existing patterns for feature-views, state holders, tokens, and i18n.
+
+`TeslaChargingSessionsMap` is the ideal reference — it has maps and a full file complement. Let me read all its files to learn the conventions.
+
+Let me read the remaining reference files to fully understand the pattern.
+
+Excellent — I now understand the full pattern. Let me examine the shared tokens (P1/S9), a Swift Charts area-chart example, and the web unit-conversion details.
+
+The tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it plus a Swift Charts area-chart example and the geo/skeleton/material helpers.
+
+Let me read the web data contracts (types, unit conversion, helpers), the geo helper, and the instruction files relevant to parity.
+
+Key finding: `Position.speed_mph` is passed to `convertSpeedFromSI` (which expects **SI m/s**) — the legacy field name holds SI values. Let me read the relevant types, helpers, geo helper, and instruction files.
+
+Now let me read the web type definitions for the data contracts and the unit-conversion instruction file.
+
+Let me check for existing native shared components (MetricCard equivalent, glass panel section header) used by other feature views.
+
+I have the data contracts. Let me check the native Maps components and web maps to finalize the map approach, plus the typography components.
+
+Let me check the build tooling availability and how `project.yml` includes feature-view files.
+
+All tools are present (Xcode 26.5, iOS 18 SDK). Feature-view files are auto-included via glob. Let me check the test target wiring, the KMP framework presence, the placeholder checker, and lint configs.
+
+Important: `Shared.xcframework` is absent (only `.gitkeep`) and no `.xcodeproj` exists. Let me check how sibling P4 surface logs handled the gate to understand the expected outcome.
+
+This is the canonical template. Let me read the rest of the sibling log to mirror its host-runnable gate methodology and final status.
+
+Let me read the placeholder checker patterns and confirm no symbol collisions for my planned `VehicleCharts*` types.
+
+Let me confirm the `fmtNumber` default precision and a couple web formatting details before writing.
+
+Default coordinate precision is 2 decimals. iPhone 16 sim is booted. Let me read the full lint/format configs to ensure my code passes cleanly.
+
+I now have a complete blueprint. The sanctioned disposition for these P4 Apple prompts is **code-complete + host-runnable gates GREEN + full-app xcodebuild DEFERRED** (the KMP `Shared.xcframework` is absent — a pre-existing environment block). Let me set up the plan and todos.
+
+Now I'll create the files. Starting with the Adapter (Foundation-only domain core).
+
+The projection filters to finite-speed samples (clean, idiomatic, faithful to the data story) — I'll document this as a platform adaptation. Now the Formatting file (telemetry + formatting + units seams).
+
+Now the Labels file (token interpolation, section titles, coordinate/chart labels, setting-value resolver). I'll split the two grid tile builders into a dedicated `.Tiles.swift` to keep each file under the 400-line strict limit.
+
+Now the Tiles file — the config (18) and preference (5) grid display models, ported exactly from the web arrays.
+
+Now the Model (state-holder seam, @Observable model, i18n facade, in-memory source).
+
+Now the Swift Charts speed area chart with tooltip and accessibility descriptor.
+
+Now the section/grid views and the map views. I'll split across `.Views.swift` and `.Map.swift` to stay under the 400-line strict limit.
+
+Now the live-map section (MapKit canvas, marker, style switcher, coordinate footer).
+
+Now the non-loaded chrome (skeleton, error, empty, freshness chip).
+
+Now the main surface (phase switch, lifecycle, responsive composition, freshness chip).
+
+Now the Previews with sample data for each state.
+
+Now the i18n catalog. Let me write all keys (web-exact + native chrome).
+
+Let me verify every key used in code exists in the catalog (catch any drift before tests).
+
+The trailing-quote artifact broke the diff. Let me re-extract cleanly.
+
+All 61 code keys are covered (the 2 "unused" are multi-line calls). Now the tests. I'll write three test files to stay under the strict line limit.
+
+Now the tiles/labels tests.
+
+Now the model state-holder tests.
+
+All 16 files written. Now the verification phase — formatting, linting, placeholder check.
+
+swiftformat auto-fixed 7 files. Now confirm `--lint` is clean and run swiftlint --strict + placeholder check.
+
+Two strict violations to fix: a brace-spacing issue from a wrapped signature, and a function-body-length issue in the config builder. Let me view both.
+
+Both are swiftformat/swiftlint interaction issues. Let me fix the Tests signature (wrap params so brace stays attached) and split the config builder into sub-helpers. Let me view the full post-format config builder.
+
+Let me split the config builder into four sub-builders (each well under 50 body lines) and fix the test signature.
+
+Now re-format and re-run both linters plus the placeholder check.
+
+Both linters are green (0 violations). Now the placeholder check.
+
+pwsh is available. Let me run the placeholder gate exactly as the gate specifies.
+
+Both linters and the placeholder gate are green. Now the sanctioned isolated SwiftPM build+test of the pure-logic files. Let me set up the harness.
+
+The isolated build caught a real error: an internal `Localize` typealias used in `public` signatures. Let me make the three typealiases public.
+
+The pure-logic module builds clean under Swift 6 strict concurrency. Now run the tests.
+
+All 35 tests pass. Now the SDK typecheck of the full view layer against the real design system (iOS 18 + macOS 15). Let me set that up.
+
+All shared symbols are in the Components set. Let me run the iOS 18 SDK typecheck of all 12 production files against the real design system.
+
+iOS typecheck: **0 errors**. Now the macOS 15 SDK typecheck.
+
+Both SDKs typecheck the full view layer with **0 errors**. Now xcodegen to confirm target membership, then document the full xcodebuild gate.
+
+Let me verify the generated project is git-ignored (must not be committed) and confirm target membership.
+
+The xcodeproj is git-ignored and all 15 files are project members. Now let me attempt the full xcodebuild gate to capture real environment-blocker evidence.
+
+The scheme pre-action triggers a KMP Kotlin/Native gradle build (the `Shared.xcframework` is absent — git-ignored, staged by that script). Let me make a bounded real attempt at the gate command for evidence.
+
+Let me make a bounded real attempt at the iOS gate command (backgrounded — the KMP build is slow).
+
+While that runs, let me check its early progress.
+
+My backgrounded attempt was torn down (and a sibling slot-48 is already running the contended KMP gradle build). Let me relaunch the gate command as a detached process that survives, then poll.
+
+Let me poll its progress after a couple minutes.
+
+The KMP framework build is progressing in my slot (it already wrote the debug xcframework, now linking release iOS arm64). It survived as detached. Let me keep polling.
+
+The KMP framework is still assembling (now linking release iOS-simulator arm64), contended by the parallel slot — 0 errors so far. Let me keep polling while I draft the gate log.
+
+The KMP framework finished; xcodebuild moved to app/test compile — now **54 errors, 0 in VehicleCharts files** (matching the reference's pre-existing sibling-collision condition). Let me capture the final result and which files own the errors.
+
+iOS gate finished: **IOS_EXIT=65, 108 errors — 0 in VehicleCharts**, all in unrelated sibling surfaces (RecentDrives*, StateTimeline*). Let me sample the error type to confirm it's the documented pre-existing collision, then run the macOS gate.
+
+Confirmed — all 108 iOS errors are "ambiguous for type lookup" duplicate-type collisions in unrelated sibling surfaces (the documented `macos-pending-verifications.md` condition); **0 in VehicleCharts**. Now the macOS gate (KMP framework is cached now, so faster).
+
+macOS gate: **MAC_EXIT=65, 4 errors, 0 in VehicleCharts**. Let me capture what those 4 errors are.
+
+Complete real evidence captured: macOS fails fast on dev code-signing (0 VehicleCharts errors) — the documented condition. Let me do a final lint/format pass (after the typealias edits) before writing the gate log.
+
+Final gates all green; every file under the strict line limit. Now I'll write the gate log with the raw evidence.
+
+The log is written. Let me verify git status shows only my intended changes (the generated xcodeproj/framework must be git-ignored), then clean up temp artifacts.
+
+Clean tree — exactly my 16 files + the log, no build artifacts. Let me clean up temp harness and commit.
+
+All 16 surface files + the gate log are staged (no build artifacts). Now commit with the prompt's message.
+
+Committed (HEAD `fbfbeb645`). Let me do a final verification of the commit and working tree.
+
+All 17 files committed, working tree clean, no stray processes. Let me finalize the todo tracking.
+
+The "labels" todo is a stale tracking flag — `VehicleCharts.Labels.swift` was written, verified, and committed. Let me correct it.
+
+All work is complete and verified. Let me update the plan file to reflect completion.
+
+The task is complete. All work is committed and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0303-VehicleCharts.log  | 247 ++++++++++++++++
+ .../feature-views/VehicleCharts.Adapter.swift      | 316 +++++++++++++++++++++
+ .../feature-views/VehicleCharts.Charts.swift       | 289 +++++++++++++++++++
+ .../feature-views/VehicleCharts.Formatting.swift   | 146 ++++++++++
+ .../feature-views/VehicleCharts.Labels.swift       | 160 +++++++++++
+ .../feature-views/VehicleCharts.Map.swift          | 205 +++++++++++++
+ .../feature-views/VehicleCharts.Model.swift        | 238 ++++++++++++++++
+ .../feature-views/VehicleCharts.ModelTests.swift   | 147 ++++++++++
+ .../feature-views/VehicleCharts.Previews.swift     | 171 +++++++++++
+ .../feature-views/VehicleCharts.Projection.swift   | 179 ++++++++++++
+ .../feature-views/VehicleCharts.States.swift       | 170 +++++++++++
+ .../feature-views/VehicleCharts.Tests.swift        | 189 ++++++++++++
+ .../feature-views/VehicleCharts.Tiles.swift        | 243 ++++++++++++++++
+ .../feature-views/VehicleCharts.TilesTests.swift   | 158 +++++++++++
+ .../feature-views/VehicleCharts.Views.swift        | 198 +++++++++++++
+ .../TeslaSync/feature-views/VehicleCharts.strings  |  95 +++++++
+ .../TeslaSync/feature-views/VehicleCharts.swift    | 127 +++++++++
+ 17 files changed, 3278 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0303-VehicleCharts.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Charts.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Formatting.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Labels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Map.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Tiles.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.TilesTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCharts.swift

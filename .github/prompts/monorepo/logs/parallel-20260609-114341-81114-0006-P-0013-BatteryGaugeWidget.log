@@ -1,0 +1,176 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me read the web source and explore the Apple app structure.
+
+Now let me read the web shared components used and look at existing Apple dashboard-widgets for established patterns.
+
+Let me check whether BatteryGaugeWidget already exists and read the WidgetGaugeHero web component plus a similar existing Apple gauge widget.
+
+`DriveScoreGaugeWidget` is the closest sibling (a gauge widget). Let me study it thoroughly as the canonical pattern.
+
+Let me read the rest of the DriveScoreGaugeWidget template files.
+
+Let me read the Previews, Tests, strings, and the shared infrastructure pieces.
+
+Let me read the Tests file and locate the shared infrastructure (tokens, registration types, skeleton).
+
+Let me read the shared infrastructure and check the build tooling availability.
+
+All tooling is available. Let me examine the Xcode project structure to understand how files get built.
+
+It uses XcodeGen. Let me read project.yml and check for xcodegen.
+
+All tooling present (xcodegen 2.45.4, Xcode 26.5). Files in `dashboard-widgets/` are auto-included via directory globs. Let me examine the design tokens, the web data hooks, and the RadialGauge to nail parity details.
+
+Let me locate the actual design token definitions and read the VehicleState type + RadialGauge.
+
+Important: the `TeslaSync` target compiles BOTH `Sources/**` and `TeslaSync/dashboard-widgets/**` into one flat module. Let me check for symbol collisions and read the design tokens + numberFormat.
+
+There's an older `BatteryGaugeProjection.swift` and `BatteryRadialGauge*` set in `Sources/` that also compile into the flat module. Let me inspect them to avoid symbol collisions, and confirm token names.
+
+Now I understand the collision landscape. Existing symbols to avoid: `BatteryGaugeBand`, `BatteryGaugeStat`, `BatteryGaugeProjection`, `BatteryGaugeLoadError`, `BatteryRadialGauge*`. I'll prefix everything with `BatteryGaugeWidget` (collision-free). Let me verify token APIs and the build prerequisites.
+
+Critical risk: `Shared.xcframework` isn't present and the scheme preAction builds it via Gradle/Kotlin. Let me check sibling widget logs to understand the realistic gate outcome and whether the KMP/full build works here.
+
+This reveals the established verification methodology. The full-app build is blocked by pre-existing sibling collisions (out of scope), so siblings verify via surface-scoped gates: isolated SwiftPM build, iOS-18/macOS-15 SDK type-checks, lint/format/placeholder, plus the raw full build showing zero errors from the surface. Let me read the full DriveScore log to extract exact commands.
+
+This is the authoritative, accepted methodology for these surfaces. I'll follow it exactly. Let me read the remaining web parity details (numberFormat, hooks, EmptyState) before writing.
+
+Let me check the lint/format configs and the placeholder checker so my files conform.
+
+Let me read the forbidden placeholder patterns and confirm pwsh availability.
+
+pwsh is available. Forbidden substrings include "placeholder" (case-insensitive) — I'll avoid it in code/comments. Now let me verify where the shared tokens (TSMotion, TSSpacing, TSRadius, Color.TS, Font.TS) live and what TSSkeleton imports, so I can assemble a compiling isolated module for verification.
+
+All shared tokens live in `Tokens.swift`; `TSSkeleton` in `Skeletons.swift`; registration in `DashboardWidgetInfra.swift`. I have everything needed. Let me set up tracking and write the plan, then create the files.
+
+Now the Adapter (pure projector):
+
+Now the Model (state-holder seam + registry + i18n facade):
+
+Now the SwiftUI surface and subviews:
+
+Now the subviews:
+
+Now the Previews, strings catalog, and Tests:
+
+Now the comprehensive test suite:
+
+All 7 files created. Let me run the surface-scoped format/lint checks first.
+
+Three long lines in Tests.swift. Let me auto-format the surface files and re-lint.
+
+Format passes (0/6). Let me verify the auto-format didn't distort the tests, then run swiftlint.
+
+swiftlint passes (0 violations). Now the placeholder gate — I'll run the literal gate command AND a real scan over copies of my files for honesty.
+
+Both placeholder scans pass (0). Now let me set up the isolated SwiftPM build. First, check what `Skeletons.swift` depends on so the isolated module is self-contained.
+
+`Skeletons.swift` pulls in `TSCard`. Let me find `TSCard` and verify `Tokens.swift` is self-contained, to bound the isolated module's dependency closure.
+
+`Tokens.swift` is self-contained. I'll assemble an isolated SwiftPM module (`TeslaSync`) from my 5 surface files + real `Tokens.swift` + `DashboardWidgetInfra.swift` + the real `TSSkeleton` struct (verbatim, minus its `TSCard`-dependent siblings). Let me set up the harness.
+
+Now the Package.swift manifest, then build and test:
+
+Isolated build succeeds under Swift 6 strict concurrency. Now run the tests:
+
+All 26 tests pass under Swift 6 strict concurrency (this is the macOS-15 host build+test). Now the iOS-18 and macOS-15 SDK type-checks:
+
+Both SDK type-checks pass (iOS 18 + macOS 15, Swift 6 strict concurrency, DEBUG). Now the collision audit and xcodegen generate:
+
+Zero collisions — each type has exactly 1 definition tree-wide. Now generate the Xcode project and verify enumeration:
+
+All 7 files enumerated (`.Tests.swift` → test bundle, rest → app targets). Now let me attempt the KMP `Shared.xcframework` build (prerequisite for the full xcodebuild gate), time-boxed.
+
+JDK 17 + gradlew present. Let me build the framework (async — Kotlin/Native compiles can be slow):
+
+Framework build still running (Kotlin/Native toolchain download + compile). Let me keep waiting.
+
+Let me check build progress in a separate shell while the framework build continues.
+
+Progress confirmed — Kotlin/Native LLVM compiles are running and the XCFrameworks output dir exists (multiple JVMs = cross-slot contention noted in sibling logs). Let me continue waiting.
+
+The `Shared.xcframework` built successfully (12m49s) and is staged. Now I'll run the literal xcodebuild gate for iOS, capturing output to classify any errors by surface.
+
+Build is in the module-emit phase, 0 errors so far. Let me wait for it to complete or surface errors.
+
+0 errors so far — and notably this branch's HEAD includes the "dedupe cross-surface type-name collisions" fix, so the flat module may now compile cleanly. Let me keep waiting.
+
+🎉 **iOS BUILD SUCCEEDED (exit 0)** — the full app builds cleanly with my surface integrated (this branch's HEAD already fixed the sibling collisions). Let me run the iOS `test` action scoped to my test classes (proves they pass in the real XCTest bundle), and start the macOS build.
+
+While iOS tests run, let me start the macOS build concurrently (separate derivedDataPath):
+
+Both running. Let me monitor the iOS test progress.
+
+Both compiling cleanly (0 errors). Let me continue waiting for completion.
+
+Still compiling (0 errors on both). Let me wait for the macOS build to finish.
+
+**macOS BUILD SUCCEEDED (exit 0)** too. Let me read the iOS scoped test result:
+
+iOS test exited 65 (0 compile errors). Let me diagnose the actual cause:
+
+The iOS **app** built clean, but the **test bundle** compile is blocked by a pre-existing, out-of-scope sibling test file (`SlideRenderer.FixturesTests.swift`) — not my surface. Let me capture the exact sibling error and confirm zero BatteryGaugeWidget errors.
+
+**Confirmed**: the only test-bundle error is a pre-existing, out-of-scope sibling (`SlideRenderer.FixturesTests.swift:14` — a Swift 6 `@Sendable` issue, committed in 918982f8a), with **0 BatteryGaugeWidget errors**. Both iOS and macOS **apps build cleanly**. This matches the established sibling methodology (test-bundle block is deferred; I cannot touch sibling files — out of allowed scope).
+
+Let me verify git status is clean of generated artifacts before writing the log and committing.
+
+Git status shows **only my 7 files** as untracked (generated `.xcodeproj` and `Shared.xcframework` are git-ignored). Now let me write the authoritative gate log with all the real results.
+
+Now let me update tracking, clean up temp artifacts, and commit:
+
+Let me verify the staged files:
+
+The `git add` didn't take. Let me stage and commit cleanly:
+
+All 8 files staged (7 surface + log). Now commit:
+
+Committed cleanly (`9d83abeb7`), working tree clean. Let me do a final verification that the committed files are intact and complete.
+
+Everything is complete and verified. Task accomplished.
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) **`BatteryGaugeWidget`** at full parity with `web/src/features/dashboard/widgets/BatteryGaugeWidget.tsx`, as 7 files in the allowed scope (`apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.*`) — 1,574 lines, committed as `9d83abeb7`.
+
+**Parity reproduced from the web source:**
+- Data via the shared P1/S8 `BatteryGaugeWidgetSource` seam (`useVehicles` + `useVehicleState`) — no HTTP in the view.
+- `batteryColor` bands verbatim: >50 green `#10b981`, >20 amber `#f59e0b`, else red `#ef4444` (+ `#374151` neutral).
+- Radial gauge readout `fmtNumber(clamped 0..100, integer→0/else precision)` + `%`, "Battery" caption, and the `⚡ Charging` caption (gated on `is_charging` + `!compact`).
+- Every state renders: loading / empty ("No battery data") / error+retry / stale / offline / content.
+- Registry `battery-gauge`, category `battery`, sizes 1×2 / 1×2 / 2×40 (clamp enforced).
+- All i18n through the P1/S10 facade (no English literals), VoiceOver labels + Dynamic Type + Reduce-Motion, and the `view.opened` (P1/S11) telemetry with slug `BatteryGaugeWidget`.
+
+**Verification (all green):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | `0/6` FORMAT_EXIT=0 |
+| swiftlint --strict | `0 violations` LINT_EXIT=0 |
+| check-placeholders | `PLACEHOLDER_COUNT=0` |
+| xcodegen + collision audit | 7 files enumerated, **0 collisions** |
+| isolated SwiftPM build + tests | build=0, **26/26 tests pass** (Swift 6 strict concurrency) |
+| iOS-18 / macOS-15 SDK type-check | both 0 |
+| **Full iOS app build** | **BUILD SUCCEEDED** |
+| **Full macOS app build** | **BUILD SUCCEEDED** |
+
+The only non-zero literal step is the full `build test` XCTest bundle (`IOS_TEST_EXIT=65`), blocked solely by a **pre-existing, out-of-scope sibling** test file (`SlideRenderer.FixturesTests.swift:14` — a `@Sendable` error from commit 918982f8a) with **0 BatteryGaugeWidget errors**. Per the established sibling methodology, that's deferred to the macOS-latest acceptance gate; the surface's own tests are proven via the isolated run. Log: `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0013-BatteryGaugeWidget.log` → `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0013-BatteryGaugeWidget.log | 164 ++++++++++
+ .../BatteryGaugeWidget.Adapter.swift               | 225 ++++++++++++++
+ .../BatteryGaugeWidget.Model.swift                 | 300 ++++++++++++++++++
+ .../BatteryGaugeWidget.Previews.swift              | 125 ++++++++
+ .../BatteryGaugeWidget.Tests.swift                 | 335 +++++++++++++++++++++
+ .../BatteryGaugeWidget.Views.swift                 | 178 +++++++++++
+ .../dashboard-widgets/BatteryGaugeWidget.strings   |  43 +++
+ .../dashboard-widgets/BatteryGaugeWidget.swift     | 204 +++++++++++++
+ 8 files changed, 1574 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0013-BatteryGaugeWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.swift

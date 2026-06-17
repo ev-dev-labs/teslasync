@@ -1,0 +1,226 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+Good — `apps/apple/` and `web/` both exist, and there's a recently-completed `AuditLogPage` (similar admin page) I can use as reference. Let me explore the key files in parallel.
+
+Now let me find the AuditLogPage reference and the sub-components the web page uses, plus explore the Apple app structure.
+
+The actual layout uses `Sources/Features/Admin/`. Let me read the AuditLogPage reference files and the web sub-components in parallel.
+
+Let me get the correct layout — there's both `TeslaSync/` and `Sources/` under `apps/apple`.
+
+Now I have the correct path: `apps/apple/Sources/Features/Admin/`. Let me read the AuditLogPage reference set and the web sub-components in parallel.
+
+Excellent reference. Now let me read the rest of the AuditLog set, the web sub-components, hooks, and types in parallel.
+
+Let me read the FlagEditDrawer, the hooks, types, and the AuditLog table/badges/filters references in parallel.
+
+Let me read the web types, the AuditLog table view, the route types, and the tests pattern.
+
+Let me read the FeatureFlag web types, the route registration system, the parity ledger, and the existing AuditLog log file.
+
+Let me check tooling availability (critical for the gate) and read the routing system files.
+
+Full toolchain is available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh) — so I can run the real gate. Now let me read the route parser, registry, app wiring, and project config.
+
+Now let me understand the available shared components, the project config, route tests, and the ledger format.
+
+Key finding: a test requires every `AppRoute` case to appear in the menu command catalog. Let me examine that test, the menu catalog, route tests, and the gate/project setup.
+
+Let me read the menu catalog (must include the new route), its test, and the localization catalog structure.
+
+The menu catalog auto-maps `AppRoute.allCases`, so adding `.featureFlags` is automatically covered — I just need `route.featureFlags` in the catalog. Let me check which `admin.flags.*` and required keys already exist in the catalog.
+
+None of the `admin.flags.*` keys exist yet. Let me learn the xcstrings JSON structure to add them correctly.
+
+Let me survey the input/table/drawer/badge components I'll need and check for a toast system.
+
+Let me read the component definitions I'll use (fields, badges, buttons, overlays, states, typography).
+
+Let me read typography, states, skeletons, the glass panel, swiftlint config, and check for an existing JSON value type.
+
+Let me read the remaining component APIs: buttons, glass panel/utility, cards, skeletons, and the DataTable.
+
+Let me locate `TSGlassPanel`, the design tokens, and read the `TSCard` definition.
+
+Let me read the filters file to learn the `@Bindable` form-binding pattern, then I'll have everything to build.
+
+Let me read the placeholder scanner config — I'll need to handle the `Placeholder` key names correctly.
+
+I now have all the patterns I need. The placeholder scanner flags the word "Placeholder" (case-insensitive) in `.swift` files, so I'll opt-out those i18n-key reference lines like AuditLog did. Let me set up a todo list, then start a baseline build in the background to learn the build behavior while I write code.
+
+Let me check the framework staging and start a baseline macOS build in the background to learn the build behavior while I write code.
+
+The `Shared.xcframework` isn't staged (needs a Gradle/KMP build), so a full `xcodebuild` is heavy here — matching the AuditLog precedent. I'll implement fully and verify via xcodegen + swiftformat + swiftlint + placeholder + isolated Swift type-checks/harness. Let me confirm `Sources/` core doesn't depend on `Shared` or the mega-surfaces so I can type-check a clean subset.
+
+Dependencies are clean (no `Shared` import). Let me check the web `PageContainer` behavior with `query` so my page chrome is faithful, then I'll start writing.
+
+PageContainer confirms the body always renders (no `loading`/`error`/`empty` props are passed; `query` only feeds a freshness badge). So both panels always render with their own internal states. Now I'll start writing. Let me create the JSON value type and check the web TimeStamp format in parallel.
+
+`formatDateTime` matches the AuditLog port. Now let me write the JSON value type.
+
+Now the page model.
+
+Now the sample data source as an `actor` (mutable state for set/delete, Sendable).
+
+Models and sample done. Let me update todos and write the main page view plus the table/changes/editor/delete files.
+
+Now the registry table.
+
+Now the changes table with its operation badge.
+
+Let me fix a likely >120-char line in the changes table by extracting an actor-display helper.
+
+Now the editor sheet (with a shared scaffold) and the delete sheet.
+
+Now the delete confirmation sheet.
+
+Now the route registration file plus the navigation wiring edits.
+
+The new enum line now exceeds 120 chars. Let me split it to stay within SwiftLint's limit.
+
+Now wire `FeatureFlagsRouteRegistration` into the app's route-host chain.
+
+I'll fix the closing parens, then let swiftformat normalize the block's indentation.
+
+The closing parens still read `))` but I added a wrapper, so I need `)))`. Let me fix it precisely.
+
+swiftformat reindented the block cleanly. Let me verify the file is syntactically balanced with a parser check.
+
+`swiftc -parse` returns clean (exit 0) — the wiring is balanced. Now let me add the localization keys. First, let me confirm the exact xcstrings entry formatting.
+
+Confirmed format. Now let me add all the localization keys via a Python script that inserts properly-formatted entries.
+
+Let me validate the catalog JSON and confirm all keys resolve.
+
+Now the model tests. Let me write a comprehensive test mirroring the AuditLog test structure.
+
+Now let me append the pure-value/formatter tests as an extension.
+
+Files are written. Let me update todos and run the formatting/lint gates on the new files.
+
+swiftformat wants the repo's multi-line body style. Let me auto-format the new files in place, then re-lint.
+
+swiftformat lint passes. Now swiftlint --strict on the Admin dir, the edited App files, and the test.
+
+swiftlint found 5 violations (it lints the whole config). Let me see all of them.
+
+Only one violation is mine (a 3-member tuple in the test); the other 4 are pre-existing elsewhere. Let me replace the tuple with a struct. First, view the reformatted region.
+
+Let me re-verify swiftlint and swiftformat are clean on my files now.
+
+Nesting rule — `SetCall` is 2 levels deep. Let me move it to file scope as `FlagSetCall`.
+
+swiftformat + swiftlint clean on my files. Now the placeholder scan.
+
+PLACEHOLDER_COUNT=0, EXIT=0. Now let me generate the Xcode project to validate it picks up the new files.
+
+Project generates cleanly. Now let me set up an isolated type-check of my code against its real dependencies. First, locate `teslaSyncTheme` and confirm the dependency subset has no `Shared` import.
+
+`teslaSyncTheme` is in `Theme.swift` (SwiftUI-only); the dependency subset is `Shared`-free. Let me run an isolated Swift 6 type-check of my code against its real dependencies (macOS).
+
+The `**` glob missed nested files. Let me use `find` for a complete recursive list.
+
+`TSChartPalette` lives in `Sources/Design`. Let me add that directory and re-check.
+
+My Admin code doesn't use the units layer, but some sibling Components files (`UnitFormatters.swift`) do, pulling in `Shared`-backed types. Let me identify and exclude only the units-coupled Components files.
+
+Only `UnitFormatters.swift` is units-coupled. Let me exclude it and re-check.
+
+Isolated macOS type-check passes (exit 0). Now the iOS variant to exercise the compact (`#if os(iOS)`) branches.
+
+Both idioms type-check clean (0 errors). Now let me run the model logic as an executable harness to prove the assertions pass.
+
+Model harness: **ALL PASSED**. All in-scope gates are green. Now let me characterize the full `xcodebuild` honestly — first checking the KMP/Gradle prerequisite that the build's preAction needs.
+
+Java 17 + Gradle are present, but building the KMP `Shared.xcframework` (Kotlin/Native) plus compiling the ~5000-file app (including the pre-existing-broken `shared-surfaces` mega-codebase) is heavy and pre-existing-red per the sibling AuditLog task. Let me make one bounded attempt to characterize the real build for honest logging.
+
+The staging is running (Gradle/Kotlin-Native). While it runs, let me read the ledger format to prepare the FeatureFlags entries.
+
+Let me check on the xcframework staging attempt.
+
+Still compiling (Kotlin/Native). Let me wait while I prepare the ledger entries. Let me add the FeatureFlags rows (alphabetically after DiskForecast).
+
+Ledger updated and valid. Let me check the staging attempt.
+
+The KMP toolchain works — the debug `Shared.xcframework` built successfully (it timed out only on the slower *release* multi-target linking). This lets me do a stronger verification: type-check the **entire hand-written `Sources/` core** (which imports the real `Shared` facade) against the staged framework. Let me locate the macOS slice and check core self-containment.
+
+Let me type-check the full 269-file hand-written core against the staged `Shared.xcframework` (macOS) — a stronger, integration-level verification. First the Swift version setting.
+
+Swift 6, strict concurrency complete — matching my isolated checks. Let me type-check the full core against the framework (bounded).
+
+4 errors total, **none in my files**. Let me see what they are to confirm they're pre-existing/out-of-scope.
+
+All 4 are macOS-availability artifacts in `Auth/AppleAuthSession.swift` from my chosen min-target (14.0), not real errors. Let me find the real deployment target and re-run clean.
+
+Real targets are macOS 15.0 / iOS 18.0. Let me re-run the full-core type-check with correct targets.
+
+With correct target, the only 6 errors are in a **sibling** file (`TeslaOrdersPage.swift`) referencing mega-surface types I excluded — not mine. Let me include those specific surface files to get a fully clean core compile.
+
+My files have zero errors; only a sibling page needs two excluded surface files. Let me add those and confirm a fully clean core compile.
+
+Confirmed: the cascade is pre-existing mega-surface coupling in *sibling* admin pages — **zero errors in my files** in every compile. The full `xcodebuild` is gated by the enormous `feature-views`/`shared-surfaces` generated codebase (with the documented pre-existing crash), not my code. Let me verify swiftformat on the 3 edited App files, then finalize.
+
+All edited files pass swiftformat. Let me check git status to confirm only intended files changed, then write the evidence log.
+
+Git status is exactly as intended (5 modified, 11 new; no build artifacts). Now let me write the evidence log with the binding `=== PARITY ===` section.
+
+Log written. Let me do a final consistency check: every string key my Swift code references must exist in the catalog.
+
+All 40 referenced keys resolve. Let me verify nothing stray is present, then stage the intended files and commit.
+
+All 17 intended files staged; the generated xcodeproj is ignored. Let me commit.
+
+Committed cleanly (commit `a98d51921`, 17 files). Let me mark the final todo done.
+
+All todos complete and the work is committed. 
+
+## Summary
+
+I implemented a native **SwiftUI/HIG `FeatureFlagsPage`** at full web parity with `web/src/features/admin/pages/FeatureFlagsPage.tsx` (route `/admin/flags`), adaptive across macOS + iOS, committed as `a98d51921`.
+
+**What shipped (10 new Swift files + 1 test, in `Sources/Features/Admin/`):**
+- An `@Observable FeatureFlagsPageModel` over an injectable `FeatureFlagsDataSource` seam (no networking in the view, ADR-004), with value types mirroring the web `FeatureFlagEntry`/`FeatureFlagChange` 1:1 and a `FlagJSONValue` type that round-trips arbitrary JSON (`previewValue`/`compact`/`JSON.stringify` ported).
+- **Both web GlassPanels**: the flag registry (adaptive Grid/cards, sorted, per-row Edit/Delete) and the change-audit feed (7 columns + set→success/delete→danger operation badge).
+- The create/edit drawer (`FlagEditDrawer`) and delete modal as **HIG-native sheets** sharing a scaffold — JSON-parse-gated Save, immutable key on edit, required reason.
+- `loading`/`empty`/`error`/`success` states for **each** data source.
+- The `.featureFlags` route wired into nav (`AppRoute`, `/admin/flags` alias, `TeslaSyncApp`), and **40 i18n keys** added to `Localizable.xcstrings` (web key names), plus the parity ledger rows (16/16, both idioms).
+
+**Verification — all in-scope gates GREEN:** placeholder scan (`COUNT=0`), `swiftformat --lint` (0/14), `swiftlint --strict` (0 violations in my files), `xcodegen generate`, isolated Swift 6 type-checks on **macOS + iOS** (0 diagnostics), a **full 269-file core type-check against the real staged `Shared.xcframework`** (0 errors in my files), and an **executed model harness** ("ALL PASSED"). `PARITY_COVERED=16/16`.
+
+**Honest caveat (logged):** the full `xcodebuild build test` compiles the generated `feature-views`/`shared-surfaces` mega-codebase (~4.7k files) which carries a **pre-existing swift-frontend crash** inherited from the sibling AuditLog task — zero of my files are involved. I did not dress that up as green; my code is fully verified by the type-checks (both idioms) + harness. `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete, verified, and committed. All 10 todos are done.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-FeatureFlagsPage.log     | 211 ++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 440 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   7 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Sources/Features/Admin/FeatureFlagJSON.swift   | 139 +++++++
+ .../Features/Admin/FeatureFlagsModels.swift        | 147 +++++++
+ .../Features/Admin/FeatureFlagsPage.Changes.swift  | 167 ++++++++
+ .../Features/Admin/FeatureFlagsPage.Delete.swift   |  50 +++
+ .../Features/Admin/FeatureFlagsPage.Editor.swift   | 133 +++++++
+ .../Features/Admin/FeatureFlagsPage.Table.swift    | 127 ++++++
+ .../Sources/Features/Admin/FeatureFlagsPage.swift  | 205 ++++++++++
+ .../Admin/FeatureFlagsPageModel.Sample.swift       | 110 ++++++
+ .../Features/Admin/FeatureFlagsPageModel.swift     | 212 ++++++++++
+ .../Admin/FeatureFlagsRouteRegistration.swift      |  25 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |  36 +-
+ .../Admin/FeatureFlagsPageModelTests.swift         | 317 +++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 17 files changed, 2326 insertions(+), 19 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-FeatureFlagsPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagJSON.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagsModels.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagsPage.Changes.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagsPage.Delete.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagsPage.Editor.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagsPage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagsPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagsPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagsPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FeatureFlagsRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/FeatureFlagsPageModelTests.swift

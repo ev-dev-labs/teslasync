@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, iPhone 16 simulator booted). Not blocked. Now let me study the existing Apple conventions and supporting infrastructure.
+
+This is a mature codebase with established conventions. There are two close sibling surfaces — `AINLDriveSearch` and `AINLAutomationBuilder` — both NL-stream drafters like my target. Let me study them deeply along with the AI infrastructure surfaces.
+
+`AINLAutomationBuilder` is the closest analog — it's an NL drafter with an apply action like Grafana's "Apply to editor". Let me read its complete file set as my primary template.
+
+Now let me read the remaining `AINLDriveSearch` files (the `{prompt}`-body template, closest to Grafana's body shape) and find the draft-capture sibling for the `tool_result` → typed draft → apply pattern.
+
+Now let me read the draft-capture sibling (`AIGeofenceAwareAutomationSuggestions`) and the remaining `AINLDriveSearch` template files (Views, Chrome, Adapter, strings, Previews).
+
+This is the ideal template — draft capture from `tool_result` + apply callback. Let me read its remaining files plus the `AINLDriveSearch` support files (for the `{prompt}`-only body shape, surface slug, request projection).
+
+Let me read the Adapter (draft type + parsing + surface slug + request projection), Source, Chrome, and the `AINLDriveSearch` Views/Adapter for the output panel and `{prompt}`-body projection.
+
+Let me read the Chrome (output panel, gate views, pulse modifier), strings, Previews, and Geofence Source to complete my understanding of the full file set.
+
+Let me read the test/preview patterns, the Geofence strings/Chrome/Previews, and verify the shared tokens/components and build tooling exist.
+
+Let me check build tooling feasibility and read the remaining reference files (Geofence Tests/ModelTests/Previews/Chrome/strings, DriveSearch Previews).
+
+Let me examine the build script, placeholder checker, and the remaining reference files (Geofence Previews/Chrome/strings/ModelTests, DriveSearch Previews).
+
+Let me empirically test the placeholder checker behavior and read the remaining reference files (Geofence Previews/Chrome/strings/ModelTests, DriveSearch Previews) plus verify shared design tokens exist.
+
+Key finding: the placeholder checker matches "placeholder" (case-insensitive) in `.swift` files — the gate's file-prefix path makes it scan nothing (clean), but I'll follow the Geofence sibling's `promptHint` naming to stay clean regardless. Let me read the web AI infra (to nail button/stream parity) plus the final reference files and component signatures.
+
+I now fully understand the parity contract. Let me verify the shared component signatures and tokens, and read the Geofence Chrome/ModelTests/strings before writing.
+
+Let me confirm the `TSButton` init signature and locate the `Font.TS`/`TSSpacing`/`TSRadius` token definitions.
+
+All infrastructure confirmed. I have a complete picture of the conventions. Let me set up tracking and write a brief plan, then create the 11-file surface.
+
+Now I'll create all 11 files. Starting with the pure Foundation core — the Adapter (draft envelope + parse + request projection):
+
+Now the pure Logic + accessibility seam:
+
+Now the Model (state-holder seam, observable model with the `onApply` editor callback, telemetry, i18n facade):
+
+Now the in-memory Source (previews + tests) with a `pushDraft` convenience that synthesizes a `draft_grafana_panel` frame:
+
+Now the main view, the presentational subviews (Views), and the output/gate chrome:
+
+Now the presentational subviews — header, Helix badge, prompt field, action button, and the captured-draft proposal box with "Apply to editor":
+
+I used a `WrapHStack` — let me verify it exists, and check the Geofence Chrome for the gate/output view patterns I still need to write.
+
+`WrapHStack` is used by several existing surfaces. Let me confirm its definition and signature so my usage is correct.
+
+`WrapHStack` is not defined — my earlier grep matched on substrings. Let me find the actual wrapping layout used by sibling surfaces.
+
+Each surface defines its own `Layout`-conforming flow. Let me read the proven `ChartLegendFlowLayout` to mirror it correctly.
+
+`WrapHStack` doesn't exist — each surface defines its own `Layout`. Let me replace my usage with a proper flow layout matching the sibling pattern:
+
+Let me check the current line counts to respect the 400-line SwiftLint limit (which `--strict` enforces).
+
+Views.swift is 457 lines — over the 400 limit that `--strict` enforces. I'll extract the proposal box + chips + flow layout into a dedicated `AINLGrafanaPanel.Proposal.swift` (allowed by the `AINLGrafanaPanel.*` scope). Let me view the boundary first.
+
+I'll view the full proposal section to move it verbatim, then remove it from Views.swift.
+
+Now I'll create the dedicated Proposal file and trim Views.swift:
+
+Now remove the proposal section from Views.swift (lines 214–457):
+
+Views.swift is now 213 lines. Now the Chrome file (output panel + gate chrome + symbol pulse):
+
+Now the Previews (all states):
+
+Now the i18n strings catalog (all web keys + shared Helix + native chrome):
+
+Now the test files — first the adapter/logic/accessibility/i18n coverage:
+
+Now the model state-holder tests:
+
+All 11 files created. Let me update tracking and run the quick verifications — line counts, forbidden-pattern scan, and a standalone typecheck of the pure files.
+
+All files ≤ 400 lines. One match: the web-parity i18n **key name** `promptPlaceholder` (required for parity with `AINLGrafanaPanel.tsx`). The sanctioned mechanism is a `// parity:allow` marker. Let me add it so the file is clean even under a direct scan:
+
+Now let me typecheck the pure Foundation files standalone (fast feedback) and run the formatters/linter on the new files:
+
+Pure files typecheck clean under Swift 6. Now swiftformat + swiftlint on the new files:
+
+swiftformat clean (0/11 need formatting). Now swiftlint --strict on the new files:
+
+swiftlint flags `w`/`h` identifiers (min length 2; only `x`/`y` are in the excluded list, and I can't edit `.swiftlint.yml` — it's out of scope). I'll rename the Swift properties to `width`/`height` while keeping the JSON wire keys `"w"`/`"h"` for parity.
+
+Now update the Tests.swift `gridPos` helper params and assertions (`w`/`h` → `width`/`height`):
+
+Now the call sites and assertions in Tests.swift:
+
+Re-running swiftlint and re-typechecking the pure files:
+
+One line-length violation (123 > 120 under `--strict`). Let me wrap it:
+
+Both linters pass and pure files typecheck. Now the heavy gate step: the full `xcodebuild build test`. Let me assess feasibility of the KMP `Shared.xcframework` preAction and generate the project.
+
+Project generated. Java 17 + gradlew are present, so the KMP `Shared.xcframework` build may be feasible (though it must download Gradle 8.14.5 + Kotlin/Native and compile). Let me attempt the full gate. I'll start with the `Shared.xcframework` build (the prerequisite + riskiest step) in the background and monitor.
+
+The KMP build is downloading/compiling (expected for a first run). Let me continue monitoring.
+
+`Shared.xcframework` built successfully (7m56s) and is staged — and it's now Gradle-cached so subsequent runs are fast. Now the full iOS `build test`. Let me set up the log and run it (long-running; I'll monitor).
+
+Now the iOS `build test` — the large compile of the whole app + all test bundles. Starting it in the background and monitoring:
+
+The iOS `build test` failed (IOS_EXIT=65) on a SwiftCompile error, but the tail only shows the failing batch command, not the diagnostic. Let me extract the actual error lines from the log.
+
+No `error:` diagnostic found — unusual. Let me search the log more broadly and inspect the result bundle for the real failure cause.
+
+Likely a compiler crash (no `error:` diagnostic emitted). Let me search for crash indicators and view context around the failure.
+
+My files compiled in a batch (line 12651+). Two SwiftCompile failures at lines 15710 and 24847. Let me view the context around them to find the actual diagnostic.
+
+It's a **Swift compiler crash in IRGen** (`IRGenSILFunction::visitFullApplySite`), not a normal error. Let me find which source location triggered it — the crash dump records the SIL function/file.
+
+The crash is definitive: a **swift-frontend IRGen segfault** while compiling a **pre-existing file** — `AppearanceSettings.Controls.swift` (SIL thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`), not any of my files. My surface is isolated (nothing references it yet). To rigorously prove this crash is pre-existing and not caused by my surface, I'll temporarily move my files aside and rebuild.
+
+Confirmed isolated. Now regenerate the project without my files and rebuild to verify the crash persists:
+
+Critical finding: **without my files, the build still fails** — with a *different* pre-existing error in another surface: `AISignalExplorerNlFilter.swift:142: escaping closure captures non-escaping parameter 'content'`. The monorepo has pre-existing build breakage outside my scope. Let me collect the full set of pre-existing errors.
+
+Conclusive: the baseline build (without my files) fails with a pre-existing error in a **peer** surface `AISignalExplorerNlFilter.swift:142` — outside my allowed `AINLGrafanaPanel.*` scope. The whole-app gate is already red independent of my work. Let me restore my files and investigate a standalone compile to maximize evidence for my SwiftUI files.
+
+Shared components only import SwiftUI. Let me attempt a standalone typecheck of my SwiftUI surface against the real tokens + shared components (macOS 15 SDK):
+
+The errors are all inside the shared `Cards.swift` (it depends on more helpers) — none in my files. Let me instead stub the exact 3 components my surface uses (signatures I verified earlier) and typecheck my code against the real tokens:
+
+Excellent — the standalone typecheck caught a **real bug in my code**: the method `draft()` collides with the stored property `draft` (Geofence avoided this by naming its action `suggest()`). Let me rename the action method to `draftPanel()` across Model, View, and tests.
+
+Now update the view and tests with `sed` (the property `model.draft` has no parens, so replacing `model.draft()` is safe):
+
+Renamed cleanly. Re-running the standalone typecheck of the SwiftUI surface:
+
+The full SwiftUI surface typechecks cleanly (STANDALONE_EXIT=0) against the real tokens + exact component signatures. Now let me validate the **test files** compile against my real symbols by compiling them in-module (stripping `@testable import` and providing XCTest):
+
+Those errors are just the XCTest C assertion macros being unavailable in a bare `swiftc` import (a tooling limitation, not my code). Let me instead stub the XCT assertions + `XCTestCase` so my test bodies typecheck against my real symbols:
+
+Another real catch — I missed one `GrafanaPanelGridPos(x:y:w:h:)` in the accessibility test helper. Let me fix it:
+
+All 11 files now typecheck against real tokens + exact component signatures (TESTS_TYPECHECK_EXIT=0). The standalone compile caught two real bugs that the blocked full-build masked. Let me re-verify the in-scope gates after the edits:
+
+swiftlint and swiftformat both clean (0/0). The placeholder opt-out needs to be on the **same line** as the match (the checker matches per-line). Let me wait for the scan loop to finish, then fix the marker placement.
+
+Let me fix the `parity:allow` marker to be on the same line as the match (per the checker's per-line logic):
+
+All clean: Views.swift now `PLACEHOLDER_COUNT=0` / `PLACEHOLDER_ALLOWED=1`, lint + format pass. Now let me run the full gate sequence and compose the authoritative log. First, re-init the log cleanly and run the iOS `build test`:
+
+Now the iOS `build test` (full app), capturing the definitive gate result and proving my files compile while peer files block:
+
+iOS `build test` FAILED (IOS_EXIT=65) — both failures are in **peer files** (`AppearanceSettings.Controls.swift` IRGen crash, `AISignalExplorerNlFilter.swift:142`). Let me confirm zero errors reference my surface, then record it all in the gate log:
+
+Confirmed: **zero errors reference my surface**; my 12 files compiled; the only failures are peer files. Now the macOS `build test` (gate requires it):
+
+macOS `build test` failed (MAC_EXIT=65) on a different, **environmental** blocker: code signing requires a development certificate (`DEVELOPMENT_TEAM` is empty in this CI-like environment). Let me bypass signing to confirm the macOS *compile* of my surface and whether it hits the same peer error:
+
+macOS compile (signing bypassed) confirms the **same peer error** blocks it, with zero errors in my surface. Now the remaining gate steps — whole-project swiftlint/swiftformat and the placeholder gate command:
+
+Whole-project swiftlint --strict: **0 violations in 3961 files** (LINT_EXIT=0). Now swiftformat and the placeholder gate command:
+
+swiftformat: **0/4259 files require formatting** (FORMAT_EXIT=0). Now the placeholder gate command + a real scan of my files:
+
+All in-scope checks pass; the two `build test` steps are blocked by peer/environment factors. Let me compose the authoritative gate log with full, honest evidence:
+
+The gate log is complete (EXIT=65 / STATUS=BLOCKED) with full evidence. Let me verify the working-tree state, confirm I touched only my allowed files, and clean up temporaries.
+
+Working tree is clean and correctly scoped: exactly my 12 surface files + the log are new; peer files and config (`.swiftlint.yml`, `project.yml`, `AISignalExplorerNlFilter.swift`, `AppearanceSettings.Controls.swift`) are untouched; the generated `.xcodeproj`/`.xcframework` are gitignored. Let me clean up temporaries and finalize tracking.
+
+Let me finalize the task tracking.
+

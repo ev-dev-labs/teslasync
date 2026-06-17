@@ -1,0 +1,130 @@
+I'll start by exploring the environment and repository structure to understand the task scope and verify capabilities.
+
+macOS + Xcode 26.5 + swiftlint + swiftformat all available — the gate is runnable. Now let me explore the Apple app structure deeply.
+
+Rich app with existing XCTest unit coverage (P9-0001) and 4 existing UI tests. Let me read the existing UI tests, the launch/fixture harness, and predecessor logs.
+
+Let me read the remaining UI tests and find the launch-argument/fixture harness in the app source.
+
+Now let me read the central app harness (TeslaSyncApp.swift) and the predecessor P9 logs to understand fixture injection and prior status.
+
+Now I understand the context: prior runs ended BLOCKED due to (A) macOS code-signing and (B) iOS Simulator dying under host load, plus incomplete P7 pages. This is a fresh slot with only 4 UI test files. Let me assess buildability and capability gates before writing extensive tests.
+
+iPhone 16 sim is booted (iOS 26.5), but **0 code-signing identities** (macOS gate will be BLOCKED, like predecessors) and the **Shared.xcframework must be built via Gradle/KMP**. Let me check the shared-core toolchain, host load, and the parity ledger.
+
+Host load has calmed (1-min avg 4.18, 39G free). The `Shared.xcframework` must be Gradle-built — that's the long pole. Let me read the parity ledger, check the Java/Gradle toolchain, and map the app's route/shell structure.
+
+Java 17 present. Let me read the core routing/shell files, parse the parity ledger rows, and kick off the long-pole Shared.xcframework Gradle build in the background.
+
+Routes and aliases are clear. Let me read the navigation shell + root view to find existing accessibility identifiers, and parse the parity ledger rows.
+
+Gradle build launched. Let me check its progress and get the full page inventory from the ledger.
+
+All 39 page parity units are "done" on both iOS and macOS — the predecessor's P7 gap is closed, so I can write real page-state tests. Gradle build is progressing (Kotlin/Native compiling). Let me understand the page/facade/fixture architecture.
+
+The page architecture is clear: each page has a View, PageModel (with LoadableState), a `.Sample.swift` fixture, and a RouteRegistration. Let me read these to understand state-driving for tests.
+
+Now I understand the page architecture: each page computes a `phase` from a `PageModel(dataSource:)`, and there are `Sample`/`Empty`/`Failing` data sources per page. The existing demo-harness pattern (`-uiTestPushDemo`) is my template. Let me map the data-source conventions, the registry, and the shared component identifiers.
+
+Let me check the gradle build status and the placeholder-check tooling (PowerShell), and look at how Admin pages and shared components are structured for the gallery.
+
+Gradle build nearly done (release variants linking). pwsh + placeholder script available. Components map to the spec's categories. Let me read a PageModel + its Sample data sources to understand state injection (loading/empty/error/stale).
+
+I now fully understand the page-state architecture (DEBUG-gated Empty/Failing/Sample data sources, `phase` enum). Let me check gradle completion and study the auth-injection harness + shared component APIs so my harness uses them correctly.
+
+`-uiTestAuthState authenticated` already renders the real authenticated `AppShell` with all pages in success state — a huge reuse win for navigation/flow tests. Let me read the key shared components I'll exercise in the gallery, plus the command palette, while gradle finishes the release slice.
+
+I have a thorough understanding now. Let me write a plan, set up todos, and check the gradle build completion before establishing a baseline iOS build.
+
+Gradle still linking the release slice. Let me write the plan file while it finishes.
+
+Let me wait for the gradle build to complete (it's the prerequisite for any iOS build).
+
+Gradle build succeeded (6m56s) — release `Shared.xcframework` is ready. Now let me generate the Xcode project and establish a baseline iOS build+test of the existing 4 UI tests.
+
+Project generated. Now let me run the baseline iOS build (slot-local DerivedData to avoid sibling conflicts).
+
+Build is taking a while (quiet mode shows output only at end). Let me peek at progress in a separate shell while it continues.
+
+App + Shared.framework + TeslaSync.app are built (3345 objects). Host load spiked to 49 (sibling slots), but progressing. Let me wait for the build to finish.
+
+Build is actively progressing (3569 files touched in 90s, 55 compiler processes) — just slow under load 45. Let me continue waiting.
+
+Baseline iOS build **succeeded** (BUILD_EXIT=0, warnings only). Toolchain works end-to-end. Now let me de-risk XCUITest execution by running a single existing UI test before authoring many.
+
+Pre-existing compile error in the **unit test target** (`VehicleCostPageModelTests.swift:10`) blocks the whole test action. Let me examine it — the test bundles must compile for any UI test to run.
+
+`build-for-testing` reveals **pre-existing Swift 6 strict-concurrency compile errors** in the *unit* test target (P9-0001's files: `VehicleCostPageModelTests`, `GDPRExportPageModelTests`). The scheme's test action compiles all test bundles, so these block my UI tests too. Let me get the complete error list before deciding fixes.
+
+Clean scan shows one error surface (`GDPRExportPageModelTests:20`), but the earlier run hit `VehicleCostPageModelTests:10` — parallel compilation reports them nondeterministically. Both are the same Swift-6 concurrency class. Let me examine both root causes.
+
+Both errors share one root cause: nested `StubSource` (nonisolated) calls a `@MainActor`-inherited static helper on the test class. Since P9-0001 ended BLOCKED, these unit-test compile errors are a genuine unresolved gap — and they block the scheme's test action (and thus my UI tests). Let me locate the model files to design a minimal `nonisolated` fix.
+
+Both model types are `Sendable` value types, so the minimal idiomatic fix is marking the test-class static helpers `nonisolated` (callable from the nonisolated nested `StubSource`). Let me apply both fixes, then re-scan for any remaining latent errors.
+
+Now let me re-run `build-for-testing` to confirm the fixes and surface any remaining latent errors in the test targets.
+
+Concurrency errors fixed; now a different pre-existing test bug surfaces: `VehicleCostPageModelTests:156` passes `Date` values to `XCTAssertEqual(...accuracy:)` which needs `FloatingPoint`. Let me view and fix it.
+
+Line 156 compares two `Date`s with `accuracy:`. The fix preserves intent by comparing time intervals.
+
+All test targets compile now (`TEST BUILD SUCCEEDED`). Three pre-existing predecessor test bugs fixed. Let me verify XCUITest **execution** works by running the existing UI bundle (reusing built products).
+
+All 13 existing UI tests **pass** on iPhone 16 (even under load 33). The full toolchain is proven: build → compile tests → execute UI tests. Let me update todos and read the component APIs I'll need for the gallery.
+
+I have enough component coverage. Let me grab the full inventory of public `TS*` components plus the Theme tokens (`Color.TS`, `Font.TS`, spacing), and the motion/chart/form/map APIs to build a faithful gallery.
+
+Comprehensive component inventory captured. Let me get the exact initializers for the specific components I'll place in the gallery (one per category for charts/maps/data-display/forms).
+
+Let me locate `TSToggle` and the Forms input components to round out the gallery's UI/forms categories.
+
+I have all component APIs. Before writing harness code, I must read the lint/format configs so my new files pass `swiftlint --strict` and `swiftformat --lint`.
+
+Key constraints: `swiftlint --strict` treats line_length>120 as error; swiftformat enforces maxwidth 120 with before-first wrapping. I'll auto-format with `swiftformat` after writing. Let me read the placeholder patterns to avoid forbidden markers.
+
+Forbidden markers noted (avoid TODO/FIXME/XXX/Placeholder/"not implemented"). I'll auto-format with `swiftformat` after writing. Now let me gather the 14 feature data-source protocols' method signatures to build deterministic "loading" (hanging) sources.
+
+All component APIs and constraints captured. The hanging-source approach for "loading" can be made trivial with a generic `forever()` helper. Let me start building the harness. First, the launch-argument parser + environment overrides.
+
+Now the component gallery surface, exercising each component category with accessibility identifiers and interaction.
+
+Now I need the exact names of the shipped `Sample`/`Empty`/`Failing` data-source doubles for each feature page before writing the catalog.
+
+Naming is consistent (`Sample`/`Empty`/`Failing<Name>DataSource`); FleetCompare lacks an Empty double. Let me verify the page **view** type names and their `init(model:)` so the catalog compiles.
+
+All 14 page views + models confirmed. Let me verify the model `init(dataSource:)` for the two outliers (PresetGalleryModel, AutomationBuilderPageModel) before writing the catalog.
+
+I need to settle how tests will assert each page state. Let me inspect the feature-page skeleton (loading) views and the shared terminal-state primitives' accessibility to design robust, low-edit identifiers.
+
+Decision: the catalog will surface each page model's **real phase** as a queryable label (`uitest.page.phase`), plus shared identifiers on `TSEmptyState`/`TSErrorDisplay`. Let me extract each model's phase/state property and enum cases.
+
+All models expose an observable `phase` (FleetCompare differs). I'll surface `String(describing: model.phase)` generically (case name) and normalize. Let me confirm FleetCompare's loading property and that phase strings start with loading/empty/error/ready.
+
+Phase enums vary (some use `ready`, `loaded`, `listState`/`single`). I'll normalize `String(describing:)`. Let me confirm Glance's cases, then write the catalog.
+
+I have every protocol signature, phase enum, and double name. Empty-state support: BatteryCells, BatteryDegradation, SleepEfficiency, Statistics, Mileage, TrueCost (6). Now let me write the page-state catalog (DEBUG) with hanging sources and a phase-observing host.
+
+Now the `UITestPageHost` view that surfaces the observed phase + stale banner, plus phase normalization.
+
+Now the dispatcher that TeslaSyncApp will consult, plus wiring into the app entry point.
+
+Now I'll make the override modifier safe (only apply when explicitly requested, so normal runs are unaffected), then wire the harness into `TeslaSyncApp`.
+
+Now wire the harness into `TeslaSyncApp.swift`: initial-route override, harness branch, env overrides, and deep-link injection.
+
+Now let me add accessibility identifiers to the shell (sidebar/More rows, route host, command palette) and the shared `TSEmptyState`/`TSErrorDisplay` primitives — high-leverage hooks for navigation and page-state assertions on both idioms.
+
+Now identifiers on the shared `TSEmptyState`/`TSErrorDisplay` (switching error display to `.contain` so the retry button stays individually tappable — an accessibility improvement).
+
+All app-side harness wiring is done. Since xcodegen enumerates files at generation time, I must regenerate the project to include the new files, then build to catch compile errors.
+
+One compile error: `accessibilityReduceMotion` is a read-only environment key in this SDK (not writable). I'll drop that override (Dynamic Type, which IS writable, remains the primary a11y override).
+
+`HangingAutomationsListDataSource` doesn't conform — the protocol likely has more/different methods. Let me read the full protocol.
+
+Missed two methods on `AutomationsListDataSource` (`useTestRunAutomation`, `importAutomations`). Let me dump all 13 protocols fully to cross-check before fixing.
+
+Only `AutomationsListDataSource` had extra methods. Let me add the two missing ones to the hanging source.
+
+Build actively progressing but host load is very high (88) from sibling slots. Let me keep waiting.
+

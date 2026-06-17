@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple app setup and platform capabilities.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+Let me explore the web helpers, related UI components, and the Apple app structure in depth.
+
+This is a large established codebase with a clear multi-file pattern per feature view. Let me study the conventions: project.yml, a representative simple feature view, and look for any existing devtools "Tool" conversions.
+
+Existing converted devtools exist (`Base64Tool`, `HttpStatusTool`, `UnixPermissionTool`). `Base64Tool` is the closest analog to `ColorConverter` (client-side converter using ToolCard). Let me study its complete file set as the template.
+
+Let me read the complete Base64Tool file set — the closest analog — to learn the exact conventions.
+
+Excellent pattern. Let me read the remaining Base64Tool files (Views, Previews, Tests, strings) to complete my understanding of the conventions.
+
+Now let me locate the shared design tokens and the `TSButton` component to confirm available token names (especially a purple accent, since ColorConverter uses `color="purple"`).
+
+Tokens are clear (`chartSeriesPower` is the purple). Let me check the web constants (purple mapping), the web `Input`/`CopyButton` components, and the test target wiring in project.yml.
+
+Let me read the web `Input`/`CopyButton` for parity and the native UI components (Buttons + any text field) plus the UnixPermissionTool for single-line input handling.
+
+Let me check the UnixPermissionTool (single-line input converter), the Localization integration, and available schemes.
+
+Two valid patterns exist. I'll follow the Base64Tool split (cleanest analog). Let me confirm `TSGlassPanel` and `TSCopyButton` shared components exist and check the UnixPermissionTool's Model/Adapter/Tests/strings to round out conventions.
+
+Let me confirm the shared component signatures (`TSGlassPanel`, `TSCopyButton`, `TSTextField`) and check the web locale entries for the ColorConverter keys.
+
+I have the full pattern. Let me check build prerequisites (xcodegen, xcframework, xcodeproj), the lint configs, and the placeholder check script before writing.
+
+Key finding: `Frameworks/Shared.xcframework` is absent (only `.gitkeep`) — the app targets depend on it, so a full `xcodebuild` will be blocked by that missing prerequisite. Let me confirm there's no build script for it and read the remaining style configs + placeholder checker.
+
+Let me read the xcframework build script and check whether the KMP shared core + Gradle are available on this runner (to judge if a full build is feasible at all).
+
+`apps/shared` + `gradlew` + Java exist, but a full KMP+app build is heavy. Let me read the pending-verifications doc (likely the platform-capability evidence), then start implementing the surface.
+
+I now have the full picture and the established precedent (`apps/macos-pending-verifications.md`): surfaces are implemented + verified via **isolated SwiftPM build/tests, swiftc -typecheck, swiftlint/swiftformat/placeholder gates, and xcodegen enumeration**; the full-app `xcodebuild` is macOS-pending due to pre-existing unrelated collisions + missing `Shared.xcframework` + signing. I'll follow this exactly. Let me set up a plan/todos and read the placeholder checker.
+
+Let me read the forbidden-patterns list so my code avoids every flagged token.
+
+Forbidden tokens noted (notably "Placeholder" is flagged — I'll avoid it). I have everything needed. Let me write the plan, set up todos, and create the surface files.
+
+Now I'll create all seven surface files, following the Base64Tool pattern exactly.
+
+All 7 files written. Let me verify my test expectations against the actual web `rgbToHsl` using Node (to guarantee parity), then set up the isolated SwiftPM verification.
+
+Parity confirmed — all expectations match the web algorithm exactly. Now let me set up the isolated SwiftPM verification (build + tests under Swift 6 strict concurrency), mirroring the established precedent.
+
+Isolated build is clean under Swift 6. Now running the tests.
+
+All 20 tests pass under Swift 6 strict concurrency. Now the real-SDK type-checks (iOS 18 + macOS 15) and the lint/format/placeholder gates.
+
+Both SDK type-checks pass. Now swiftformat, swiftlint, and the placeholder gate on my files.
+
+Expected — my new files need formatting. Let me auto-format them in place, then re-verify lint passes.
+
+Formatting now clean. Let me review the auto-formatted regions for correctness, then run swiftlint --strict.
+
+One `large_tuple` violation — my 3-member `swatchComponents` tuple. I'll replace it with a small struct (cleaner than an opt-out, keeping 0 opt-outs).
+
+Now re-verify format + lint, and re-run the isolated build/test with the struct change.
+
+swiftformat clean, swiftlint --strict clean (0 violations). Re-verifying the isolated build/test with the struct change.
+
+Let me confirm the explicit test count, then run the placeholder gate and xcodegen.
+
+20/20 tests pass. Now the placeholder gate (gate-exact + a real scan of my files) and xcodegen enumeration.
+
+Placeholder gate clean (0 violations, 0 opt-outs). Now `xcodegen generate` to confirm the surface is enumerated into the project.
+
+`xcodegen generate` succeeded. Let me confirm my files are enumerated in the generated project.
+
+All 7 files enumerated across the targets (9 refs each). Now let me gather concrete evidence of the pre-existing full-app build blockers, then attempt a bounded `xcodebuild` to capture the real failure.
+
+Definitive blocker in this tree: `Frameworks/Shared.xcframework` is absent while **15** `Sources/` files `import Shared` — the app/test targets cannot compile without it, independent of my surface. Let me attempt a bounded real `xcodebuild` to capture authentic failure evidence.
+
+iPhone 16 simulator is available. Let me wait for the build attempt to surface the blocker.
+
+The grep pattern was malformed (`**`). Let me stop and re-run cleanly, capturing full output to a file.
+
+The KMP/Kotlin-Native toolchain is present and warm — Gradle is actually assembling the xcframework now (linking release frameworks). The build may progress to the app compile. Let me keep monitoring.
+
+The Gradle pre-build is genuinely assembling the release xcframework (Kotlin/Native release linking — slow but progressing, no errors). I'll let it run and keep monitoring while I prepare the gate log.
+
+Big progress: Gradle assembled and **staged `Shared.xcframework`**, and xcodebuild is now compiling the app target (including my files) — `import Shared` resolves, no errors yet. Let me keep monitoring for completion.
+
+The build process finished. Let me read its exit code and the final result from the log.
+
+Definitive result: the iOS build **failed (exit 65), but with zero errors in my surface** — all failures are pre-existing ambiguous-type collisions in `TeslaSync/dashboard-widgets/` (parallel-merge artifacts). Let me capture the precise evidence.
+
+Conclusive: **76 compile errors, all in `TeslaSync/dashboard-widgets/`, zero in ColorConverter/feature-views.** These are pre-existing `ambiguous for type lookup` collisions (parallel-merge artifacts). My surface compiled cleanly inside the full app target. Let me run the macOS build in the background (to capture authentic evidence for that gate step too) while I write the log.
+
+The log must reflect both xcodebuild steps. Let me monitor the macOS build to its failure point.
+
+macOS build also failed. Let me confirm its exit code and that the cause is identical (dashboard-widgets collisions), with zero ColorConverter errors.
+
+The macOS build failed faster (cached xcframework). Let me see its 2 specific errors.
+
+Both xcodebuild steps are blocked by pre-existing, unrelated issues (iOS: 76 dashboard-widgets type collisions; macOS: dev-signing) — **zero ColorConverter errors**, and `Shared.xcframework` assembled fine. This matches the documented precedent. Let me verify the build artifacts are git-ignored, then write the gate log.
+
+All build artifacts are git-ignored; only my 7 surface files are new. Now I'll write the gate log with the full evidence trail.
+
+Now let me clean up scratch artifacts and commit the surface + log.
+
+Exactly the 7 surface files + log staged (pre-existing modified files excluded). Committing.
+
+Committed as `daf9613f5`. Let me finalize the todos and plan status.
+
+Let me do a final clean-state verification.
+
+The task is complete. Final state verified: my commit `daf9613f5` is HEAD, all 7 surface files are committed, build artifacts are git-ignored, and the only remaining working-tree changes are the two pre-existing unrelated `.tsx` files (correctly untouched).
+

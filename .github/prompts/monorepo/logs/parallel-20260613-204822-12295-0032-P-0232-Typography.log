@@ -1,0 +1,202 @@
+I'll start by exploring the repository structure and the web source specification before writing any native code.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me examine the existing shared-surfaces directory and the tokens file (the typography spec source) to understand conventions.
+
+Let me examine the build config, shared infrastructure (Sources), and a representative existing surface to learn conventions.
+
+Build uses XcodeGen with path globbing, so new files auto-include. Now let me study the shared infrastructure: design tokens, i18n facade, diagnostics contract, and the existing Components/UI typography.
+
+There's already an atomic `Sources/Components/UI/Typography.swift` (out of scope — component library). My task is the **surface** at `shared-surfaces/Typography.*`. Let me study the existing typography component, feedback states, tokens, and a representative surface to mirror conventions.
+
+Now let me study a representative surface end-to-end (Accordion) to learn the exact file structure, state-holder pattern, i18n, and telemetry conventions.
+
+The Accordion surface is the canonical template. Key insight: pure presentational primitives reproduce only the source's REAL branches (not fabricated fetch states), with a native "never a blank box" empty leaf — and this is documented precedent (cites siblings Delta/MetricCard/InlineCallout/etc.). Let me read the remaining Accordion files and a cited sibling to nail the conventions.
+
+Let me read the design tokens, the test conventions, and a variant-driven sibling (InlineCallout) to confirm the role/variant pattern closest to Typography.
+
+Let me read the model/telemetry test conventions, the variant-driven sibling (InlineCallout adapter), and the placeholder-check script.
+
+Let me check the placeholder patterns, PowerShell/xcodegen availability, and whether a project is already generated.
+
+I have a thorough understanding of the pattern. Let me check for naming collisions and read the swiftformat config before writing.
+
+No collisions. Let me check the Shared.xcframework staging and the design helpers my surface might touch, to plan a realistic compile verification.
+
+KMP shared core needs Gradle (heavy); my surface only depends on the design tokens. Let me check how existing surfaces handle SwiftLint complexity on multi-case mappings before I write.
+
+Only 1 disable across 2200 files — the codebase avoids complexity triggers. Let me confirm the SwiftLint baseline passes on existing files and find how large mappings are structured.
+
+swiftlint --strict passes cleanly. Let me study a multi-tier surface (ScoreBadge) to mirror the variant→token color bridge in the Views layer.
+
+I have everything I need. The pattern is clear: Foundation-only Adapter (pure core), Model (i18n + telemetry + `@Observable` holder), View, Views, Previews, strings, and split tests. Key constraint: avoid 11+ case `switch` (SwiftLint cyclomatic_complexity ≤10 under `--strict`) — use dictionaries for the role/text-style maps. Let me set up tracking and write the Adapter.
+
+Adapter done. Now the Model (i18n facade + telemetry + observable holder).
+
+Now the Views layer — the SwiftUI bridge (style→Font/Color/tracking tokens), the styled-text view, and the empty leaf.
+
+Now the public View file — `Typography` (web `Text`), `TypographyHeading` (web `Heading`), and convenience factories for all web exports.
+
+Let me remove the unused `reduceMotion` (Typography has no motion).
+
+Now the strings file and previews.
+
+The 13-case `switch` in the preview `sampleText` would trip SwiftLint's cyclomatic_complexity (>10) even under `#if DEBUG`. Let me convert it to a dictionary lookup.
+
+Now the tests. First the pure-core adapter tests.
+
+Now the state-holder, view-composition, facade, and SwiftUI-bridge tests.
+
+All 8 files written. Let me run the fast authoritative gates on them: swiftformat, swiftlint, and the placeholder check.
+
+swiftformat wants trailing commas removed (`--commas inline`). Let me auto-fix with swiftformat write mode (the ecosystem tool), then re-verify.
+
+swiftformat auto-fixed 4 files. Now let me verify format is clean and run swiftlint --strict + placeholder check.
+
+swiftlint --strict: 0 violations; swiftformat clean. Now the placeholder check. Let me see how the script resolves `-Path` so I scan my files genuinely.
+
+The script treats a non-existent path as vacuously clean — I'll scan my real files via a temp dir to verify honestly. But first, the patterns include "Placeholder" (case-insensitive) — I used that word in comments. Let me find any forbidden tokens in my files.
+
+Two pattern hazards: `xxx` (matches my `xxxl`/`.xxxLarge`) and `placeholder` (a comment word). Both would trip the gate. Let me find all occurrences to rename the size cases and reword.
+
+Let me rename the size cases (`xxs`→`twoXs`, `xxl`→`twoXl`, `xxxl`→`threeXl`), fix the `.xxxLarge` preview, and reword the comment.
+
+swiftformat stripped the last trailing comma. Let me view the current dict region and edit precisely.
+
+Now the test/preview references and the comment reword:
+
+Now let me verify no forbidden tokens remain and run the placeholder check on my real files (via temp dir, since the literal gate path doesn't exist).
+
+Placeholder check passes genuinely (COUNT=0). Re-verifying format/lint after the renames:
+
+Format + lint both clean (0 violations, 0 reformatting). Now the critical step: compile-verify my Swift against the **real** design tokens and SDK with Swift 6 strict concurrency (matching the project). I'll typecheck source + tests + previews together in a throwaway module.
+
+The only errors are an `XCTest`-overlay artifact of my standalone harness (`XCTAssertNotEqual` C-macro), not my code — no errors reference my source. Let me confirm the **production code + previews** typecheck cleanly (no XCTest), then tackle the tests via the real toolchain.
+
+Real bug caught: `Typography.body(...)` collides with the View protocol's `var body` — there's no `body` factory (web has no `Body` export; default `Text` *is* body). Let me fix the preview to use the role initializer.
+
+Let me re-run the source+previews typecheck to confirm it's clean now.
+
+Source + previews typecheck cleanly with Swift 6 strict concurrency. The test-file issue is an XCTest-overlay harness artifact — let me isolate it with a 3-line probe to confirm it's not my code.
+
+Probe B works — XCTest needs `-I .../Developer/usr/lib`. Now the full typecheck including tests:
+
+**Full typecheck of all 8 files passes (EXIT=0)** — Swift 6, strict concurrency, with the real design tokens and XCTest. Now let me attempt the heavy integration gate (xcodegen + Shared.xcframework + xcodebuild). First, generate the project and probe the KMP framework build.
+
+Project generates cleanly (all 12 targets, scheme present). The app build requires the KMP `Shared.xcframework` (built via Gradle). Let me attempt that build in the background and watch its progress.
+
+Gradle is running (likely downloading Kotlin/Native toolchain). Let me update my task tracking while it builds, then check back.
+
+Excellent — `Shared.xcframework` built successfully (9m, now cached). Let me stage it and kick off the full iOS app build, which will compile my surface alongside all siblings.
+
+Staged. Now the full iOS app build (compiles my surface with all siblings). Starting it in the background, streaming to a log:
+
+Build is running (PID 72765), streaming to `/tmp/ts_ios_build.log`. Let me monitor progress.
+
+Real integration error: `Typography.swift` basename collides with the existing atomic `Sources/Components/UI/Typography.swift` (Swift requires unique filenames per target). My other 6 files are fine. I must rename my main view file (staying within the `Typography.*` allowed pattern). Let me check how existing surfaces resolve such Components/UI name collisions.
+
+Clear convention: collision cases use `<Name>.Surface.swift` (e.g., `Tabs.Surface.swift`, `CommandPalette.Surface.swift`). Let me rename my entry file to `Typography.Surface.swift` and update its header.
+
+Now let me verify no other basename collisions exist for my files, then regenerate the project and rebuild.
+
+All basenames unique. Let me re-lint the renamed file, regenerate the project, and restart the build.
+
+Project regenerated, renamed file clean. Restarting the iOS build:
+
+Build is progressing past module emission with no errors (collision resolved). Let me continue monitoring.
+
+Still compiling the whole-module (no errors). Let me keep waiting for the build to finish.
+
+Module type-check done; now in object codegen (no errors). The whole-module emit succeeding means my surface type-checked in the real target. Let me wait for completion.
+
+All 5 surface files are in the compile set, no errors. Build is in final codegen. Let me wait for it to finish.
+
+**BUILD SUCCEEDED** — the entire iOS app (all 2200+ surfaces including my Typography surface) compiles and links. Now let me run my surface's tests to prove they pass at runtime (scoped, on the already-built derived data).
+
+Scoped test run started (compiles the test bundle, then runs my 11 classes). Monitoring:
+
+Two failures surfaced — let me check if either involves my surface. The `RecentActivityFeed` redeclaration is clearly a sibling's pre-existing bug, but I must verify the `Ld` failure isn't mine.
+
+Confirmed: the **only** error is a pre-existing duplicate-class bug in a sibling (`RecentActivityFeed.Tests.swift:106`) — outside my allowed scope. No error mentions Typography; the app `build` SUCCEEDED. Since that sibling blocks the shared test bundle, I'll run my tests via a standalone SwiftPM harness to prove they pass at runtime against my real code + tokens.
+
+**All 39 tests across my 11 test classes PASSED (0 failures).** The shared test bundle's only blocker is a pre-existing sibling defect. Let me confirm via git that I didn't touch that sibling and that the duplicate is pre-existing.
+
+`RecentActivityFeedProjectionTests` appears once in `.Tests.swift` — the duplicate must be in another RecentActivityFeed file. Let me locate it to document precisely, and confirm my change set is exactly the 8 Typography files.
+
+Root cause fully confirmed: a **pre-existing foreign cross-surface collision** — `RecentActivityFeed.Tests.swift:106` and `RecentActivity.Tests.swift:103` both declare `RecentActivityFeedProjectionTests` in the shared iOS test bundle. Both are foreign surfaces I'm forbidden to touch (git proves my changes = exactly the 8 Typography files). Let me kick off the macOS build for parity evidence while I write the gate log.
+
+Logs dir confirmed; macOS build running (PID 1834). Let me write the gate log with all evidence gathered so far.
+
+Log drafted. Now let me monitor the macOS build to completion before finalizing the log's last lines.
+
+macOS build failed on **code-signing/entitlements** (no development certificate on this runner) for `TeslaSync-macOS`/`TeslaSyncWidgets-macOS` — an environment limitation, not a compile error. Zero Typography errors. Let me confirm whether Swift compilation completed before the signing stage.
+
+The macOS failure is signing-only (no dev certificate) — it bailed *before* compiling (0 SwiftCompile, 0 non-signing errors). Simulator builds skip signing, which is why iOS succeeded. Let me retry the macOS build with signing disabled to get real compilation evidence.
+
+macOS build (signing disabled) running. Let me monitor it to completion.
+
+macOS build progressing, no errors. Continuing to wait.
+
+macOS at whole-module emit (type-check) phase, no errors. Let me continue waiting.
+
+macOS whole-module emit still in progress (this single phase type-checks the entire app target — slow but no errors). Let me wait more.
+
+macOS module type-check passed (now in per-file codegen, no errors) — my surface type-checks on macOS too. Waiting for link completion.
+
+**macOS BUILD SUCCEEDED** too — all 5 surface files compiled and the full macOS app linked. Both platforms green. Let me finalize the gate log.
+
+Log finalized. Let me run a final clean-state verification on all 7 swift files together and check git status before committing.
+
+All 7 files lint-clean; build artifacts are git-ignored. Let me view the full git status to confirm exactly what will be committed, then commit.
+
+Exactly 9 untracked files (8 surface + log), no stray artifacts. Committing per the prompt's commit step:
+
+Committed (72df609fb). Let me update task tracking and clean up temporary build artifacts.
+
+Task complete. Everything is committed and the working tree is clean (no stray artifacts).
+
+## Summary
+
+Shipped **P4 shared surface 0232 — `Typography`** (Apple), a production SwiftUI parity of `web/src/components/ui/Typography.tsx`, as 8 files in `apps/apple/TeslaSync/shared-surfaces/`:
+
+| File | Role |
+|---|---|
+| `Typography.Adapter.swift` | Foundation-only pure core — roles/levels/sizes/weights/colors enums, `TypographyStyle` projection, `TypographyProjector` (dictionary maps to stay within SwiftLint complexity) |
+| `Typography.Model.swift` | P1/S10 i18n facade, P1/S11 telemetry seam, P1/S8 `@Observable` holder (once-only `view.opened`) |
+| `Typography.Surface.swift` | Public `Typography` (web `<Text>`) + `TypographyHeading` (web `<Heading>`) + `PageTitle…Code` factories |
+| `Typography.Views.swift` | Descriptor→SwiftUI bridges (Dynamic-Type `Font.TextStyle`, token colors/tracking) + never-a-blank-box empty leaf |
+| `Typography.Previews.swift` · `.strings` · `.AdapterTests.swift` · `.Tests.swift` | Previews, native a11y strings, 39 tests |
+
+**Faithful parity:** reproduced the source's *real* branches (4 heading levels, 13 roles, granular size×weight×color×mono, empty leaf). The web component is purely presentational with no fetch, so — per established precedent (Accordion/InlineCallout) — no fabricated loading/error/stale/offline chrome. Dynamic Type, VoiceOver heading traits/ranks, theme tokens (no raw hex), and `view.opened` telemetry all wired.
+
+**Verification (all real, logged):**
+- ✅ `swiftformat --lint` 0/7 · `swiftlint --strict` 0 violations · placeholder check `COUNT=0`
+- ✅ Swift‑6 strict‑concurrency typecheck against real design tokens
+- ✅ **iOS full app build: BUILD SUCCEEDED** (all ~2200 surfaces) · **macOS full app build: BUILD SUCCEEDED** (`CODE_SIGNING_ALLOWED=NO` — runner has no dev cert)
+- ✅ **39 tests / 11 classes — 0 failures**
+
+**Honest blocker (disclosed, not masked):** the repo-wide `test` bundle can't compile due to a **pre-existing foreign** duplicate XCTest class across `RecentActivityFeed.Tests.swift` and `RecentActivity.Tests.swift` — both outside my allowed files (git confirms my change set is exactly the 8 Typography files). My surface's tests therefore pass in isolation; the aggregate-test redness is recorded as `EXIT=65` in the log rather than presented as green.
+
+Committed as `72df609fb`; gate log at `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0232-Typography.log` ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0232-Typography.log   | 152 +++++++++
+ .../shared-surfaces/Typography.Adapter.swift       | 364 +++++++++++++++++++++
+ .../shared-surfaces/Typography.AdapterTests.swift  | 202 ++++++++++++
+ .../shared-surfaces/Typography.Model.swift         | 138 ++++++++
+ .../shared-surfaces/Typography.Previews.swift      | 120 +++++++
+ .../shared-surfaces/Typography.Surface.swift       | 183 +++++++++++
+ .../shared-surfaces/Typography.Tests.swift         | 233 +++++++++++++
+ .../shared-surfaces/Typography.Views.swift         | 201 ++++++++++++
+ .../TeslaSync/shared-surfaces/Typography.strings   |  21 ++
+ 9 files changed, 1614 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0232-Typography.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Typography.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Typography.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Typography.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Typography.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Typography.Surface.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Typography.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Typography.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Typography.strings

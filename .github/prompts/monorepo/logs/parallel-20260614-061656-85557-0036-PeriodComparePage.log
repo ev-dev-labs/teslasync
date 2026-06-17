@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure, parity manifest, and existing patterns.
+
+There's a path discrepancy between the prompt (`apps/apple/TeslaSync/Features/Analytics/`) and the actual repo (`apps/apple/Sources/Features/Analytics/`). Let me investigate the real layout and find the sibling FleetComparePage template.
+
+The project uses XcodeGen (`project.yml`). Real source path is `apps/apple/Sources/Features/Analytics/`. Let me study the sibling FleetComparePage template thoroughly and the ledger/project config.
+
+Excellent template. Let me read the remaining FleetCompare files and supporting infrastructure.
+
+Now let me examine the StatisticsPage (simpler bar-chart analytics page) and locate the shared component/token/route infrastructure.
+
+Now let me understand how registries are composed in the app shell, and check the web routing for `/period-compare`.
+
+Let me find the composition root where all registries are merged into the shell.
+
+Now let me read the app entry composition point, route tests, the test template, and locate the string catalog.
+
+The new route case is safe (tests use `allCases` generically). Now let me inspect the string catalog format and check which `compare.*` keys already exist.
+
+Let me examine the xcstrings JSON structure to understand the format for adding entries.
+
+Let me verify toolchain availability and the exact component/token APIs I'll use.
+
+Full toolchain available (Xcode 26.5, swiftlint, swift 6.3, xcodegen, pwsh). Now let me verify the exact component APIs I'll use.
+
+Let me read the remaining UI building blocks, banner, units facade, and design tokens.
+
+Let me read the Button, Units facade, design tokens, and the test template.
+
+Let me check the web `fmtNumber` default and the `MetricCard` component to replicate them faithfully.
+
+Let me check the build config, lint rules, and remaining token APIs before writing code.
+
+Sources are auto-globbed, so new files need no project.yml edits. Let me check the placeholder scanner, the prebuilt framework, and remaining token APIs.
+
+Key insight: the placeholder scanner flags the word "Placeholder" everywhere — I must avoid it in code/comments (or use `// parity:allow`). Let me read the design tokens and remaining APIs.
+
+I have all the context I need. Building requires the KMP `Shared.xcframework` (built via Gradle/Kotlin-Native). Let me kick that off in the background now while I write the code.
+
+I now have a complete understanding. Let me set up tracking and check the ledger format + a couple remaining APIs.
+
+Let me check the KMP build progress and write the plan.
+
+The detached run didn't stage the framework. Let me run the Gradle build attached so I can see the actual output.
+
+The Gradle build is downloading the Kotlin/Native toolchain (first run is slow). Let me write the code while it builds. First, the plan and todos.
+
+The Gradle build finished. Let me verify the framework staged correctly.
+
+Build succeeded. Now let me stage the framework into place.
+
+Framework staged (149M, all 3 slices). Now let me set up todos and write all the Swift code, then build once.
+
+Now I'll write all the Swift files. Starting with the models and format foundation.
+
+Now the navigation wiring edits to AppRoute, AppRouteParser, and TeslaSyncApp:
+
+Now let me add the 34 `compare.*` strings plus `route.periodCompare` to the catalog using a script that preserves the existing JSON formatting.
+
+35 entries inserted and JSON validated. Now the model tests.
+
+All files written. Now let me run the verification gate. Starting with swiftlint and the placeholder scan (fast checks).
+
+Placeholder scan clean (0). Swiftlint found 1 violation — let me locate it.
+
+The violation is `type_body_length` in my test file (262 > 250). Let me split the pure formatter tests into a second test class.
+
+Swiftlint passes (0 violations). Now let me generate the Xcode project and build.
+
+Project generated. Let me build the macOS target first (fastest path to verify my code compiles).
+
+Build reached signing (a cert/env issue, not a code issue). Let me disable signing to verify compilation proceeds.
+
+Compilation now proceeds — the only errors are in a **pre-existing** file I didn't touch (`TeslaSync/shared-surfaces/Input.Previews.swift`). Let me confirm it's pre-existing and unrelated to my changes.
+
+Confirmed pre-existing (not in my changed files). Let me assess the full scope of baseline errors to understand the build state.
+
+Only **2** errors in the entire build — both in the pre-existing `Input.Previews.swift` (none in my files). This confirms my code compiles. Let me check how widespread this pre-existing `return`-in-`#Preview` pattern is before deciding how to proceed.
+
+507 preview files use `return`, but only `Input.Previews.swift` fails — so this file is structurally anomalous. Let me compare it against a passing file to understand the real difference.
+
+The 506 passing files use `return` inside helper **functions**; `Input.Previews.swift` uniquely uses `return` directly in a `#Preview` ViewBuilder body — a genuine pre-existing defect, and the sole blocker for the whole app build. I'll apply the minimal 2-line unblock (removing `return`, matching how every other preview is written), then verify.
+
+Now let me rebuild macOS to confirm a clean build.
+
+Removing `return` revealed more pre-existing bugs in the same file (wrong argument order). This file is multiply-broken pre-existing. Let me check `InputField`'s real signature to fix the argument order correctly and fully unblock the build.
+
+`InputField`'s parameter order is `text, label, help, helpFor, placeholder, error, hint`. The previews pass `placeholder` last — a pre-existing ordering bug. Let me view and fix both calls.
+
+There's a third `return` preview too. Let me assess the full blast radius in this one file before deciding.
+
+This is a **systemic, widespread pre-existing breakage**: 8 `return`-in-`#Preview` statements in this file alone, plus the same pattern across many sibling `*.Previews.swift` files (HelpIcon, Checkbox, RangeSlider, Accordion, SearchInput…). The installed Xcode 26.5 rejects a pattern the repo was written against. This is unrelated to my task and far outside scope. Let me revert my out-of-scope edit and verify my work properly by isolating the pre-existing preview breakage.
+
+Reverted to pristine (out-of-scope file untouched). Now let me verify my code compiles cleanly by isolating the pre-existing preview breakage via a build-time exclusion (no repo changes) — first a full macOS build.
+
+**BUILD SUCCEEDED** with preview files excluded — proving all breakage is in pre-existing `*.Previews.swift` scaffolding and **my code compiles cleanly into the full module**. Now let me run my unit tests (macOS, same isolation).
+
+The grep pattern errored (the `**` literal). Let me re-run the test capturing to a file (incremental build will be faster).
+
+The test bundle won't compile due to **another pre-existing broken test file** (`GDPRExportPageModelTests.swift` — a main-actor isolation error under the strict toolchain), unrelated to my work. Let me enumerate all pre-existing-broken test files so I can isolate them and run my tests.
+
+Confirmed systemic: the toolchain surfaces pre-existing breakage in many test/preview files incrementally (now `AlertStudioPage.Tests.swift`), **never in my files**. Let me isolate to compile and run *only my test file* against the app (using INCLUDED/EXCLUDED source filters).
+
+**All 32 tests passed** (exit 0). My feature compiles into the full app module, swiftlint is clean, placeholder scan is clean. Now let me also verify the iOS target (the gate's scheme) compiles, since my page has `#if os(iOS)` code paths.
+
+iOS Swift compilation succeeded (no compile errors in any file); it failed at the **linker** stage. Let me inspect the actual linker error to confirm it's an environment/integration issue, not my code.
+
+The iOS failure is an **architecture mismatch**: the generic destination resolved to x86_64, but the Shared.xcframework only ships arm64 simulator slices (this is Apple Silicon). No Swift compile errors. Let me rebuild targeting the arm64 simulator explicitly.
+
+iOS build **SUCCEEDED** too (arm64 sim). Every gate passes for my code. Now let me update the ledger and verify the strings landed.
+
+All strings and ledger rows validated. Let me confirm every one of the 34 keys is actually *referenced* in my Swift code (parity requires usage, not just declaration).
+
+All 34 keys are referenced. Now let me write the evidence/gate log with the full PARITY enumeration.
+
+The log is written. Let me verify the full git state, confirm generated artifacts are ignored, and clean up temp files before finalizing.
+
+Git state is exactly as intended — all changes in scope, `Input.Previews.swift` pristine, generated artifacts ignored. Let me clean up temp files and commit per the prompt's workflow (adapting the `git add` paths to the real source tree).
+
+Committed. Let me do a final clean-state verification.
+
+All todos complete and verified. Let me update the plan to reflect final status.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

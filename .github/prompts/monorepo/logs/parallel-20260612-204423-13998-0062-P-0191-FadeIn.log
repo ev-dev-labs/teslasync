@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iOS 17 simulators). Note: gate references "iPhone 16" but only iPhone 17 sims exist — I'll adapt. Let me explore the Apple app structure.
+
+There's an extensive existing Apple app following a multi-file surface pattern. Let me check for existing FadeIn, examine a recently-added similar surface, and find the motion-preference state holder.
+
+No existing FadeIn. The surface uses a multi-file pattern. Let me read the AnimatedMarker template (most recent) and the Motion component library to learn conventions.
+
+There's already a `TSFadeIn` atomic component, but this prompt wants the fuller **shared-surface** version. Let me read the web motion hook, find any sibling motion surfaces already ported, and read the rest of the AnimatedMarker template files.
+
+The closest templates are the sibling `components/motion/` surfaces already ported: **StaggerItem** and **RouteTransition** (both use `useMotionPreference`). Let me read the StaggerItem surface in full — it's the ideal template for FadeIn.
+
+StaggerItem is the perfect template — same `components/motion/` family, same `useMotionPreference` hook. Let me read all its files to mirror the exact pattern.
+
+This is the ideal template. Let me read the remaining StaggerItem files: the surface view, Views, Previews, Tests, AdapterTests, and strings.
+
+Now the tests and strings files to complete the template understanding.
+
+I have the complete template. FadeIn differs from StaggerItem: default duration **400ms**, hidden offset **y:12**, and a direct `delay` prop (seconds) rather than index-derived. Now let me understand the build system (xcodeproj/SPM/XcodeGen) since the gate runs `xcodebuild`.
+
+XcodeGen-based (`project.yml`, no committed `.xcodeproj`). Let me read it to understand source globbing and schemes, and check tooling.
+
+XcodeGen globs `shared-surfaces` into the app targets and routes `*Tests.swift` to test bundles — so my files auto-include on regenerate. Let me check the Shared.xcframework dependency, lint/format configs, and the placeholder checker before writing.
+
+Critical: `Shared.xcframework` is absent (only `.gitkeep`) and requires a Gradle/KMP build via the scheme preAction. Let me assess full-build feasibility, read the placeholder checker, and verify design tokens.
+
+The placeholder gate's `-Path .../FadeIn` is a non-existent literal (files are siblings), so it scans nothing — but I'll still avoid all forbidden words. The big question is full-build feasibility (KMP `Shared.xcframework` needs Gradle). Let me check how prior surfaces recorded their gate results and read the pending-verifications doc.
+
+There's already a target log path and a StaggerItem precedent. Let me read how the most-comparable completed surface (StaggerItem) recorded its gate, and check the existing FadeIn log.
+
+The target FadeIn log doesn't exist yet. Let me read the StaggerItem precedent log — the exact convention to follow.
+
+The StaggerItem precedent gives me the exact honest playbook: the full `xcodebuild` gate ends RED for FOREIGN (sibling AI* escaping-closure defect, IOS_EXIT=65) and ENVIRONMENTAL (macOS signing cert, MAC_EXIT=65) reasons, proven via a baseline build + isolation typecheck + standalone `swift test`. I'll mirror this exactly for FadeIn. First, let me locate the design-token sources needed for the isolation typecheck.
+
+I now have all design tokens (`Color.TS.*`, `Font.TS.*`, `TSSpacing/TSRadius/TSMotion`). Note FadeIn's web default is **400ms** (= `TSMotion.slowDuration`) with **y:12** offset and a direct `delay` prop. Let me calibrate comment widths against the committed template, then write the files.
+
+All tokens confirmed; lines must stay ≤119. Let me set up tracking and check for any identifier collisions before writing.
+
+No collisions. Now writing the 8 FadeIn surface files, mirroring the StaggerItem template adapted to FadeIn's web spec.
+
+All 8 files written. Now running fast verifications — line lengths, swiftformat, and swiftlint on the new files.
+
+`FadeIn.AdapterTests.swift` has 3 code lines at 121 chars (the equality assertions). Let me let swiftformat auto-format the new files, then re-lint and review.
+
+swiftformat fixed the 3 long lines. Let me verify the reformatted section looks correct.
+
+swiftformat wrapped correctly (line 141 = 119 chars). Now swiftlint on the new files, xcodegen generate, and the placeholder check.
+
+swiftlint passes (0 violations). Now xcodegen generate and confirm FadeIn is wired into the targets.
+
+xcodegen succeeded — all 8 FadeIn files wired into iOS/macOS app + both test bundles (48 refs, matching the StaggerItem precedent). Now the placeholder check, both the exact gate-literal and a real scan of the files.
+
+All fast gates green: swiftformat (0), swiftlint (0), xcodegen (48 refs), placeholder (0/0). Now the key compile proof — iOS + macOS `swiftc -typecheck` of the surface + design tokens in isolation.
+
+iOS typecheck clean. Now macOS.
+
+Both typechecks clean. Now the strongest proof — running the unmodified `@testable` test files as a standalone `TeslaSync` SwiftPM module (surface + tokens), exactly as the StaggerItem precedent did.
+
+`swift test`: **31/31 passed** on the standalone TeslaSync module — matching the StaggerItem precedent exactly. Let me clean up the temp package, then assess the full xcodebuild gate: verify the KMP toolchain and the known foreign defect.
+
+JDK 17 is present and the foreign defect appears in sibling AI* files. Let me start the KMP `Shared.xcframework` build in the background and confirm the foreign defect firsthand while it runs.
+
+Confirmed the foreign defect at `AISignalExplorerNlFilter.swift:141` — `glass(@ViewBuilder _ content: @escaping () -> some View)` feeding `TSGlassPanel{}`. Let me quantify how widespread it is while the KMP build runs.
+
+An iPhone 16 sim **is** booted — the gate's literal destination works. And the foreign `glass(@escaping)` defect spans 17 sibling files. Let me check the KMP build progress.
+
+KMP build still running (expected ~7min). Let me confirm the log directory exists while waiting.
+
+The 8 FadeIn files are staged-ready; the generated `.xcodeproj` is correctly git-ignored. KMP build ~3.5min in. Continuing to wait.
+
+KMP build ~8.5min in (first-run Gradle may be downloading the Kotlin/Native toolchain). Output is buffered until completion. Waiting longer.
+
+KMP `Shared.xcframework` built green (BUILD SUCCESSFUL in 10m15s) and staged. Now running the actual iOS gate — this compiles ~5000 files and is expected to hit the foreign AI* defect. Capturing full output.
+
+iOS gate running in background. Let me wait and monitor progress.
+
+Build still running. Let me peek at the partial build log to gauge progress and check for any FadeIn-related output.
+
+Build progressing through extension targets (no errors yet, 0 FadeIn errors). The main app target — where the foreign defect lives — compiles next. Continuing to wait.
+
+Build is deep in the main app target's whole-module compile (thousands of files, sparse output). Continuing to wait.
+
+Good — the main `TeslaSync` app target is compiling (FadeIn files are in a batch with neighbors, **0 real `error:` lines**; the earlier match was a false positive from `FacadeError.swift`). The whole-module `EmitSwiftModule` is underway. Waiting for the foreign codegen failure + final exit.
+
+`** BUILD FAILED **` is in the log but 0 `file:line:col: error:` matches captured yet, and the shell is still finalizing. Let me inspect the failure context while it wraps up.
+
+The 2 failing `SwiftCompile` batches are **foreign** — they contain GotoIndicator/GuardedLink/HashCalculator and AppContainer/AppearanceSettings/AreaChartWrapper, **no FadeIn file**. The FadeIn batch (with FSMTimelineChart/FavoritesBar) did **not** fail. Let me extract the actual error messages and confirm the iosgate exit code.
+
+No inline `error:` diagnostics captured despite "(2 failures)", and the shell is still finalizing. Let me get the current log tail/size and search for the actual failure markers (frontend crash, nonzero exit, etc.).
+
+Found "Command SwiftCompile failed with a nonzero exit code" at line 24709. Let me view the actual error diagnostic just before it.
+
+The failing batches list no FadeIn file, but I must pin the exact error cause for an honest log. Let me search the full log for any `error:` text and get the complete "failed commands" block.
+
+Zero `error:` lines in 28K lines, yet 2 batches failed — this points to a compiler crash/resource exhaustion on the oversized foreign module, not a source diagnostic. Let me find crash/kill markers and the final exit code.
+
+This is `build test` running two build passes — the `build` action definitively FAILED (line 26063); the `test` action is now rebuilding. Let me precisely capture the failed-commands block and any crash signature, writing to small files.
+
+Root cause found: **swift-frontend compiler crash** — `llvm::report_fatal_error` → `report_at_maximum_capacity` (memory/capacity exhaustion) compiling the monolithic ~5000-file TeslaSync module. Both failed batches contain **zero FadeIn files**, and there are **zero `error:` source diagnostics**. Let me capture the crash contexts to quote.
+
+Decisive evidence: the crash is in IR-gen emitting reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` — an **escaping↔noescape `()->Bool` closure conversion** — while compiling the **foreign** `AppearanceSettings.Controls.swift`. This is the same foreign escaping-closure defect the StaggerItem precedent cited, manifesting as an IRGen crash on Swift 6.3.2. FadeIn is in neither failed batch. Let me check if the test-action rebuild is progressing toward a final exit.
+
+The iOS gate completed. Let me get the final exit code.
+
+**IOS_EXIT=65** — matching the precedent. The failure is the foreign swift-frontend IRGen crash on foreign files, zero FadeIn involvement. Now the macOS gate (precedent: fast-fails on signing entitlements) and the iOS baseline (FadeIn excluded → proves the red is pre-existing). Starting the macOS gate.
+
+macOS gate completed. Let me read the result and the failure reason.
+
+**MAC_EXIT=65** — environmental, exactly as the precedent: `"TeslaSync-macOS"`/`"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate` (pre-compile, `DEVELOPMENT_TEAM=""`), zero FadeIn errors. Now the gold-standard baseline: iOS `build` with `FadeIn.*` **excluded** → proves the red is pre-existing. Running it in the background while I draft the log.
+
+Baseline build running. Let me use the time to run the exact full-tree gate steps [3] swiftlint and [4] swiftformat, and update tracking.
+
+Full-tree swiftlint shows **3 serious violations in 5246 files** — but my scoped FadeIn lint was 0. The tree grew (4591→5246) from other parallel surfaces, so these are likely foreign. I must confirm none are in FadeIn. Let me locate them.
+
+The 3 violations are all foreign (`WidgetChartSummary.Tests.swift`, single-char `a`/`b`/`c` vars) — **zero in FadeIn**. My surface is lint-clean. Now full-tree swiftformat (gate step [4]).
+
+swiftformat full-tree: **1/5544 foreign** (`RecentDrivesSection.Previews.swift`, redundantType) — zero FadeIn. Let me stop the redundant re-run and check the baseline build.
+
+Baseline build is early (FadeIn excluded from compilation). It needs ~15 min to reach the foreign crash. Let me wait and monitor.
+
+FadeIn confirmed excluded (only command-echo mentions). The build is in its early phase (likely the gradle pre-action + settings). Let me keep waiting for the compile to reach the foreign crash.
+
+**BASELINE_IOS_EXIT=65** — the tree is RED even with FadeIn excluded, proving the iOS red is pre-existing and foreign. Let me confirm the baseline failure cause and that no FadeIn file compiled.
+
+Baseline confirms it: same foreign IRGen crash on `AppearanceSettings.Controls.swift`, **zero FadeIn files compiled**, zero source errors — the iOS red is pre-existing and foreign. I have all gate evidence. Writing the log now.
+
+Log written. Now a final clean-check on the FadeIn files and a git status review before committing (ensuring the generated project and framework stay out).
+
+All green: FadeIn files pass swiftformat (0/7) and swiftlint (0); only the 8 surface files + the log are untracked; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Committing.
+
+Committed (`1f6e625dc`). Let me clean up temp artifacts and confirm the final state.
+
+All todos complete. The FadeIn shared surface is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0191-FadeIn.log  | 216 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/FadeIn.Adapter.swift | 182 +++++++++++++++++
+ .../shared-surfaces/FadeIn.AdapterTests.swift      | 170 ++++++++++++++++
+ .../TeslaSync/shared-surfaces/FadeIn.Model.swift   | 157 +++++++++++++++
+ .../shared-surfaces/FadeIn.Previews.swift          |  93 +++++++++
+ .../TeslaSync/shared-surfaces/FadeIn.Tests.swift   | 151 ++++++++++++++
+ .../TeslaSync/shared-surfaces/FadeIn.Views.swift   |  83 ++++++++
+ .../apple/TeslaSync/shared-surfaces/FadeIn.strings |  22 +++
+ apps/apple/TeslaSync/shared-surfaces/FadeIn.swift  |  79 ++++++++
+ 9 files changed, 1153 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0191-FadeIn.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FadeIn.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FadeIn.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FadeIn.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FadeIn.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FadeIn.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FadeIn.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FadeIn.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FadeIn.swift

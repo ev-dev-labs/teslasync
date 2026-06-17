@@ -168,7 +168,7 @@ public final class SignalDiffTableModel {
     }
 
     /// The pinned-first, sorted rows to render (web `sortedRows`).
-    public var displayedRows: [SignalDiffRow] {
+    public var displayedRows: [SignalDiffRowView] {
         projection.rows
     }
 

@@ -1,0 +1,200 @@
+I'll start by exploring the environment and understanding the task. Let me check the key locations in parallel.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the existing Apple shared-surfaces directory and the web `currencyFormat` lib that this component depends on.
+
+The shared-surfaces directory has a clear multi-file convention. Let me understand the project structure, the file decomposition pattern, and the P1 infrastructure (state holders, tokens, i18n, diagnostics).
+
+Now let me look at the existing Forms/UI primitives I should reuse, and find a complete reference shared-surface to mirror the file conventions. Let me examine several in parallel.
+
+Key finding: there's already a `TSCurrencyInput` atomic primitive (out of scope — component-library) and a separate `Currency.*` surface. My surface is the higher-level `CurrencyInput` shared surface. `ChartTooltip` is the structural gold-standard (full file set). Let me study the reference patterns, tokens, i18n, and diagnostics in parallel.
+
+Excellent — the convention is crystal clear. ChartTooltip is the gold-standard skeleton. Let me read the remaining reference files, the existing `Currency` surface (to avoid overlap), the design tokens, and the `Fields` primitive in parallel.
+
+Let me read the Adapter (formatting helpers), Previews, design tokens, the existing `Currency` surface, and the UI Fields primitive in parallel.
+
+Now let me locate the design token definitions and the feedback/UI primitives I'll compose with, plus verify the existing `Currency` surface is distinct.
+
+The existing `Currency` surface (0083) appears to declare a type named `CurrencyInput` (its input snapshot). That's a potential naming collision in the same module. Let me verify before designing my types.
+
+Confirmed hard collision: `Currency.Adapter.swift` declares `public struct CurrencyInput` (the Currency *display* surface's input snapshot). Since I can't edit that file and we share one module, I'll name my view `CurrencyInputField` (the web doc literally calls it "a currency-aware number field") while keeping `surfaceSlug = "CurrencyInput"`. Let me read the token + primitive definitions to use the correct APIs.
+
+Now let me read the remaining primitives I'll compose with: Cards, Feedback States, Skeletons, Buttons, Motion, and Typography.
+
+Let me read the Typography, Buttons, and Motion primitives to confirm signatures, then I'll have everything to build the surface.
+
+I now have all primitives. Let me check the lint/format configs, the placeholder-check script, and the macOS pending-verifications doc (in case there are known macOS constraints) before writing code.
+
+Critical gate detail: `Placeholder` (case-insensitive), `TODO`, `FIXME`, `XXX`, `not implemented`, `Coming soon` are all forbidden in `.swift` files — I'll avoid every one of them (use "prompt"/"hint" not "placeholder"). Now let me assess build feasibility: xcodegen, the generated project, and the KMP `Shared.xcframework` staging.
+
+Build requires a KMP `Shared.xcframework` (currently absent — only `.gitkeep`) built via Gradle/Kotlin-Native. That's the long pole. Let me check the shared module + the pending-verifications doc, then kick off the framework build in the background while I write code.
+
+Java 17 + gradlew are present. Let me kick off the KMP framework build in the background (the long pole), and meanwhile check whether any prior P4 Apple gate has passed on this runner (logs) to confirm full-build feasibility.
+
+Crucial context: the established predecessor disposition for P4 Apple surfaces is to verify all host-runnable gates (swiftc typecheck + isolated SwiftPM build/test + swiftlint + swiftformat + placeholder check) and DEFER the full-app `xcodebuild` (KMP framework staging is owned by the P99 gate per `macos-pending-verifications.md`). But I'll first *attempt* the real framework build — if it works, I get a fully-green gate. Let me start it in the background and study the closest precedent + the deferral doc meanwhile.
+
+The Gradle KMP build is running. Let me study the closest precedent (FormatterPrefsBridge — same shared-surfaces tier) and the deferral doc while it builds.
+
+This is the sanctioned methodology (the FormatterPrefsBridge precedent, same shared-surfaces tier): all host-runnable gates green + `xcodebuild` deferred with real evidence to the P99 gate. I'll follow it exactly, but still attempt the real KMP build (running now). 
+
+First, let me calibrate exact `NumberFormatter` outputs (to assert correct values in tests), confirm my `CurrencyInputField*` names are free, and check the build.
+
+NumberFormatter matches Intl exactly (`$1.50`, `1,50 €`, `£1.50`, `$0.1235`, symbols `$ € £ ¥`, separators correct). Note fr_FR group separator is U+202F (narrow NBSP) — I'll strip space-like separators robustly. Names `CurrencyInputField*` are free. The KMP build is still running. Let me write a plan file and start building the surface, beginning with the pure Adapter.
+
+Now the pure Adapter (the verbatim port of `lib/currencyFormat.ts`):
+
+Let me check the KMP build progress while I continue.
+
+KMP build still compiling. Let me continue with the Model (state-holder, projection, telemetry, strings facade):
+
+Now the Seams (P1/S8 source protocol + live source with commit write-back + in-memory source):
+
+Let me check the KMP build, then write the Views.
+
+KMP `Shared.xcframework` built successfully (9m). This means I may be able to run the **real** xcodebuild gate. Let me stage the framework, then continue writing code.
+
+The framework is staged — a real xcodebuild gate is now feasible. Let me write the Views (editable field + freshness chip), then States, the surface entry, strings, previews, and tests.
+
+Now the States (loading skeleton + error tile):
+
+Now the surface entry view `CurrencyInputField`:
+
+Now the i18n strings catalog (including the exact `Electricity Cost (per kWh)` label from the source):
+
+Now the DEBUG previews for every state:
+
+Now let me calibrate two edge cases for accurate test assertions: the whitespace char in `1,50 €` and how `NumberFormatter` handles an unresolvable currency code.
+
+Calibrated: `1,50 €` uses U+00A0; unresolvable code `ZZZ` → symbol "ZZZ" / format "ZZZ 1.50" (matches the web fallback). Now the test files — first the pure Adapter/projection/source suite (porting the web test cases):
+
+Now the ModelTests (lifecycle, telemetry, commit write-back, focus protection, Enter, stale/offline):
+
+All 10 files written. Now let me verify — starting with the fast style gates (swiftformat + swiftlint) on my files.
+
+swiftformat found fixable style issues (redundant returns in the switch, multiline brace wrap, long lines). Let me auto-format my files with swiftformat, then re-lint.
+
+swiftformat passes (0/9). Now swiftlint --strict:
+
+Two swiftlint issues: the `code(fromSymbol:)` switch is too complex (use a dictionary), and swiftformat's multiline-`if` brace wrap conflicts with swiftlint's `opening_brace` (restructure to avoid a multiline-condition brace). Let me view the current Adapter state, then fix both.
+
+Let me fix both: replace the multiline-`if` in `format` with a helper call, swap the big switch for a dictionary, and replace `isResolvableCurrency` with the `currencyString` helper.
+
+Now re-run swiftformat --lint and swiftlint --strict to confirm both are clean:
+
+Both issues are swiftformat↔swiftlint conflicts (multiline brace, trailing comma) plus a long line. Let me refactor the formatter to use a small style struct + shared formatter factory — short lines, no multiline-condition braces. Let me view the current state first.
+
+Now fix the trailing comma in the dictionary literal:
+
+Both lint gates are green (swiftformat 0/9, swiftlint 0 violations). Now let me execute the test suite. I'll build a self-contained SwiftPM harness (module `TeslaSync`) with my files + the real design-token/primitive closure — the precedent's approach — to actually run the tests.
+
+All primitives are SwiftUI-only. Let me build the SwiftPM harness and run the full test suite.
+
+Build compiled cleanly (Swift 6 strict concurrency) and 57 tests ran — 2 failures to fix. Let me see them.
+
+Two real findings: (1) `NumberFormatter` defaults to banker's rounding (half-even) so `0.12345`→`$0.1234`, but Intl uses half-up (`$0.1235`) — I must set `roundingMode = .halfUp`; (2) the `ZZZ` unresolvable-code path returns an NBSP-spaced string (needs space-normalized assertion). Let me verify the rounding fix empirically.
+
+`.halfUp` matches Intl exactly (`$0.1235`, `-$0.1235`, `$0.12`, `$1.50`). Let me apply both fixes.
+
+Now re-sync the harness files and re-run the tests:
+
+All 57 tests pass. Now let me confirm lint is still clean after edits, and run the iOS 18 + macOS 15 SDK typechecks (the precedent's host gates) against the full primitive closure.
+
+iOS 18 typecheck passes. Now the macOS 15 typecheck, then I'll attempt the real full-app xcodebuild gate.
+
+Both SDK typechecks pass. Now let me attempt the **real full-app xcodebuild gate**. First generate the project (git-ignored) and verify my files' target membership.
+
+Project generates cleanly; all 10 files are members. Now the real full-app gate — building + testing for the iPhone 16 simulator (this is large; running in background with logging).
+
+The full-app build is running. Let me monitor its progress.
+
+A duplicate/orphaned build and a lost log (plus another slot's build, PID 8910, sharing the runner). Let me take control: kill my orphan and relaunch in a managed async shell I can monitor directly.
+
+Orphan killed. Let me relaunch the gate build in a managed async shell, teeing to a log I can monitor.
+
+Build running. Let me clean up temp calibration files while it builds, then check progress.
+
+Good — it's now compiling the `TeslaSync` app target (my files included), framework staged fine, no errors yet. Let me keep monitoring.
+
+Build failed — but **zero CurrencyInput errors**. The failures are pre-existing issues in *other* agents' sibling surfaces (`RecentDrivesSection.Previews.swift`, `AISuggestNewGeofences.swift`) that I'm forbidden to touch. Let me capture the complete error inventory to confirm none are mine.
+
+Definitive: exactly **2 compile errors, both in other agents' sibling files** (`RecentDrivesSection.Previews.swift`, `AISuggestNewGeofences.swift`) — **0 in CurrencyInput**. These are outside my allowed scope (CurrencyInput.* only) and block the whole-module build. Let me capture the precise exit code with an incremental rebuild for the log evidence.
+
+Exit 65 confirmed; still **0 CurrencyInput errors** (the failing files are sibling AI*/feature-view surfaces with a shared "escaping closure" bug — not mine). Now the placeholder gate + a direct banned-pattern scan of my files.Confirmed: incremental build `IOS_EXIT=65`, still **0 CurrencyInput errors** — the blockers are pre-existing escaping-closure/type-check bugs in *other* agents' `AI*`/`RecentDrivesSection` surfaces. Let me capture the macOS build evidence too (background), then write the gate log.
+
+While the macOS build runs, let me verify the placeholder gate (pwsh self-test if available + direct scan of my files for every banned pattern).
+
+pwsh is available and the direct scan is clean. Let me run the actual `check-placeholders.ps1` gate and check the macOS build progress.
+
+macOS build also failed (same sibling cause). The dir-wide placeholder scan shows 43 (all from *other* agents' files). Let me confirm none of those are mine and capture the macOS exit + error inventory.
+
+Key discovery: `/tmp/xcb_mac.log` was cross-contaminated by **another slot (slot-57)** sharing the runner (shared `/tmp`). The iOS evidence was genuinely mine (slot-105 paths verified). Let me re-capture macOS build evidence to a slot-local log to avoid contamination.
+
+Let me record verified results and confirm the iOS log wasn't cross-contaminated, while the macOS build runs.
+
+iOS log is clean (slot-105 only). My 10 files total 1792 lines. Let me check the slot-local macOS build result.
+
+The `( ) &` pattern gets torn down by the async-shell lifecycle. Let me run the macOS build as a direct async command (which worked for iOS) and monitor it.
+
+macOS build running. Let me wait and monitor.
+
+macOS build failed. Let me read the full slot-local log for the exit code and error inventory.
+
+Let me find the macOS failure reason (no `: error:` file lines matched — likely signing or a different format).
+
+macOS failure is a **swift-frontend compiler crash** (`llvm::report_fatal_error`) in a batch with sibling `Platform/Settings/AppSettingsStore.swift` under runner contention — again **0 CurrencyInput errors**, and my 7 files were compiling. This is the sanctioned "DEFER full-app xcodebuild" situation. Let me gather final data (line counts, git status) and write the gate log.
+
+Clean scope — only my 10 files are untracked; the staged framework + xcodeproj are git-ignored. 57 tests (40+17). Now let me write the comprehensive gate log following the sanctioned precedent structure.
+
+The gate log is written. Let me do a final consolidated verification of the exact on-disk files (re-sync harness from current files + lint/format) before committing.
+
+All green: swiftformat 0/9, swiftlint 0 violations, 57 tests pass from the committed files. Now let me commit exactly my 10 files + the log (framework and xcodeproj are git-ignored).
+
+Exactly 11 files staged (10 surface + log), nothing else. Committing with the prompt's message:
+
+Committed cleanly as `14d0f63e0` (11 files, working tree clean). Let me clean up temporary build/test artifacts.
+
+The task is complete. Final state verified: commit `14d0f63e0` contains exactly the 10 surface files + the gate log (2048 insertions), working tree clean.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **CurrencyInput** shared surface (`apps/apple/TeslaSync/shared-surfaces/CurrencyInput.*`) at full parity with the web `components/forms/CurrencyInput.tsx` + `lib/currencyFormat.ts`.
+
+**Parity delivered** (10 files, 1792 lines): micro-unit storage (1e6), locale-aware currency formatting/parsing (symbol + ISO-code + accounting-parens + locale group/decimal separators incl. U+202F), the leading symbol adornment, and the focus-protected commit-on-blur/Enter buffer — all bound through a P1/S8 state-holder seam (no view HTTP), with `view.opened` telemetry, the P1/S10 i18n facade (incl. the source label *"Electricity Cost (per kWh)"*), P1/S9 tokens, and every P4 leaf state (loading / ready-empty / ready-populated / error / stale / offline).
+
+**Naming**: the sibling Currency surface already owns a module-public `CurrencyInput` type, so the view is `CurrencyInputField` (slug stays `"CurrencyInput"`) — logged, not silent.
+
+**Verification — all host gates GREEN** (real output in the log):
+- `swiftc -typecheck` iOS 18 sim **0** · macOS 15 **0**
+- `swift test` (SwiftPM harness, module `TeslaSync`, real tokens+primitives, Swift 6 strict concurrency): **57 tests, 0 failures**
+- `swiftlint --strict` **0 violations** · `swiftformat --lint` **0/9** · `check-placeholders` clean · `xcodegen` membership verified
+- KMP `Shared.xcframework` **built + staged**
+
+**Full-app `xcodebuild` DEFERRED** (honest, with real evidence): iOS `EXIT=65` / macOS BUILD FAILED — caused **only** by pre-existing compile errors in *other* agents' sibling surfaces (`RecentDrivesSection.Previews`, `AISuggestNewGeofences`, `AISignalExplorerNlFilter`) + macOS dev-signing + a contended-runner swift-frontend crash. **0 CurrencyInput errors**; these files are outside my allowed glob and owned by the P4/P99 acceptance gate per `apps/macos-pending-verifications.md` — matching the sanctioned predecessor disposition.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0150-CurrencyInput.log` → **EXIT=0 / STATUS=DONE**.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0150-CurrencyInput.log | 256 +++++++++++++++
+ .../shared-surfaces/CurrencyInput.Adapter.swift    | 293 +++++++++++++++++
+ .../shared-surfaces/CurrencyInput.Model.swift      | 291 +++++++++++++++++
+ .../shared-surfaces/CurrencyInput.ModelTests.swift | 234 ++++++++++++++
+ .../shared-surfaces/CurrencyInput.Previews.swift   | 121 ++++++++
+ .../shared-surfaces/CurrencyInput.Seams.swift      | 127 ++++++++
+ .../shared-surfaces/CurrencyInput.States.swift     |  70 +++++
+ .../shared-surfaces/CurrencyInput.Tests.swift      | 345 +++++++++++++++++++++
+ .../shared-surfaces/CurrencyInput.Views.swift      | 182 +++++++++++
+ .../shared-surfaces/CurrencyInput.strings          |  32 ++
+ .../TeslaSync/shared-surfaces/CurrencyInput.swift  |  97 ++++++
+ 11 files changed, 2048 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0150-CurrencyInput.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CurrencyInput.swift

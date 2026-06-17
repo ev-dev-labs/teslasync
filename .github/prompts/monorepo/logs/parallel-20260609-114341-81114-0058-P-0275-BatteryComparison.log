@@ -1,0 +1,153 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app structure.
+
+Let me read the web source and explore the Apple app structure.
+
+Let me examine the feature-views directory structure and existing similar surfaces to understand the patterns.
+
+This is a well-established codebase with a clear per-surface file pattern. Let me study a representative feature view that uses the same data sources (vehicles, units) and find the shared infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry).
+
+`FleetStatsBar` is the closest analog (fleet-level, per-vehicle battery). Let me read its full implementation to learn the established patterns.
+
+Let me read the remaining FleetStatsBar files and understand the shared infrastructure.
+
+Let me read the remaining FleetStatsBar files plus the shared tokens and state-holder infrastructure.
+
+Let me examine the test pattern, shared design tokens, and how surfaces bind to real P1/S8 state holders in production.
+
+Let me find the native GlassPanel equivalent, the design tokens, and the web `batteryColor` + `useUnits` helpers I need to port.
+
+The tokens are generated. Let me locate the generated tokens file and the shared component definitions.
+
+Let me read the web data layer I need to port: `useUnits`, the types, and `fetchVehicleState`.
+
+Let me check the precision/constants for distance formatting and how surfaces avoid type-name collisions (e.g. `DistanceUnitPref`).
+
+I have the full data picture. Now let me understand the Xcode project structure — critically, whether new files in `feature-views/` are auto-included (folder reference) or need explicit registration.
+
+It uses XcodeGen. Let me read `project.yml`, the lint/format configs, and check whether the toolchain (xcodebuild/swiftlint) is available on this runner.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, xcodegen). Let me check the Shared.xcframework staging, simulators, and the placeholder checker before writing code.
+
+Critical: `Shared.xcframework` is absent (needs KMP/Gradle), no `.xcodeproj` yet, but `pwsh` and the iPhone 16 sim are available. Let me confirm a few component signatures and check the KMP shared build feasibility while I plan.
+
+I have everything I need to build correctly. Let me set up a plan, kick off the long-pole KMP `Shared.xcframework` build in the background, and check the lint baseline in parallel.
+
+Baseline swiftformat is clean. Let me start the long-pole KMP framework build in the background and check the swiftlint baseline.
+
+Let me identify the 1 baseline swiftlint violation and confirm the true exit code (the `tail` pipe masked it).
+
+There's a pre-existing swiftlint violation in an unrelated surface (`LiveSignalSparklinesWidget.Builder.swift:158`) — outside my allowed files. Let me inspect it, then proceed to write my deliverable.
+
+Baseline confirmed: swiftformat clean; one pre-existing swiftlint violation in an unrelated surface (`LiveSignalSparklinesWidget.Builder.swift:158`) outside my allowed files — I'll document it and ensure my own files are spotless. Now writing the deliverable.
+
+Now the Views (presentational subviews): the header, the gradient battery bar, the row, plus loading/empty/error/banner states.
+
+Now the main view that composes the panel and switches over phase:
+
+Now the Previews (one per state). Let me also check the background KMP build progress.
+
+The KMP framework is nearly built (Gradle cache hit). Now the Tests file — comprehensive coverage of the adapter, projection, state holder, and accessibility.
+
+Now the i18n strings catalog contribution:
+
+All 8 files written. Let me update tracking, verify the KMP build finished, and format+lint my new files.
+
+swiftformat adjusted 2 files. Let me see what it changed and run swiftlint on my files.
+
+Files are untracked so git diff is empty — swiftformat already fixed them in place. Let me confirm both linters pass on my files.
+
+My 7 Swift files are swiftformat-clean and swiftlint-clean (0 violations). Let me check the KMP build status.
+
+The KMP framework is still linking. Important: XcodeGen snapshots the file list at generation time, and I added my files *after* generating — I must regenerate the project so my files are included.
+
+The KMP build finished. Let me confirm the framework is staged, then start the iOS build+test.
+
+Framework staged successfully. Now let me build the iOS app target to validate my code compiles (faster than full test run).
+
+The `/tmp` log is shared with other parallel slots (the errors reference `slot-56`, not my `slot-58`) — contaminating my view. Let me stop this run and re-run fully isolated with slot-local paths and module cache.
+
+My project uses clean relative paths — the `slot-56` errors were another slot's build contaminating the shared `/tmp` log. Re-running fully isolated (slot-local log, DerivedData, and module cache).
+
+Build failed (exit 65). Let me find the actual compile errors in my isolated log.
+
+The build paths are now correctly slot-58. No `error:` diagnostics appeared, which is unusual — let me locate where my files and the actual failures are in the log.
+
+A compiler crash occurred (not a normal error). Let me view the crash context to see which file/expression triggered it.
+
+The crash is in a batch of *other* files (AnomalyInlineRow/AppearanceSettings/App*) — none of mine. Let me get the crash signature to determine if it's a deterministic compiler bug or environmental (resource pressure from concurrent slots).
+
+Root cause identified: a **swift-frontend IRGen crash** (`report_at_maximum_capacity` while emitting a `@MainActor` closure reabstraction thunk) — in *other* surfaces' files (AnomalyInlineRow/AppearanceSettings), not mine. All files including mine **passed type-checking** (no `error:` diagnostics; the crash is in IRGen, after Sema). 
+
+The likely trigger is the **shared global Swift module cache** being corrupted by concurrent parallel slots. Let me fully isolate the module cache (`MODULE_CACHE_DIR`) with a fresh DerivedData and rebuild.
+
+The crash is **deterministic and identical** on a fresh, fully-isolated build — same thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, same unrelated file `AppearanceSettings`. My files type-check fine and aren't in the failing batch. 
+
+To prove conclusively this is a pre-existing baseline crash independent of my work, let me temporarily remove my 8 files, regenerate, and rebuild incrementally.
+
+**Conclusive evidence**: the baseline build **without my files crashes identically** (exit 65, same thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, same unrelated `AppearanceSettings` file). This is a **pre-existing swift-frontend IRGen crash** in the toolchain, fully independent of my deliverable.
+
+Let me restore my files, then try a `wholemodule` workaround to see if a green build is achievable despite the compiler bug.
+
+`wholemodule` also hits the identical crash; my files still have zero Sema diagnostics. The compiler bug is confirmed deterministic and baseline. Before concluding, let me check whether an alternate Xcode/toolchain is available that doesn't hit this IRGen crash.
+
+Only Xcode 26.5 is installed (no alternate toolchain). Let me demangle the crashing thunk to fully document the trigger, then accept this as a toolchain blocker.
+
+The crashing thunk demangles to:
+`reabstraction thunk helper from @escaping @isolated(any) @Sendable (Bool, Actor?) -> () to @escaping @isolated(any) @Sendable (Bool) -> ()`
+
+This is a confirmed **Swift 6.3.2 IRGen bug for `@isolated(any)` closures**, triggered by pre-existing code, reproducible without my files, in batch and wholemodule modes, with the only installed toolchain. Now let me run the **full official gate** faithfully and capture every step's exit into the official log.
+
+Prior logs exist for this exact surface. Let me read them plus a feature-view log to match conventions (especially DONE vs BLOCKED and commit handling).
+
+This is the key insight. The repo's **sanctioned P4 disposition** (confirmed by the prior `BatteryComparison` DONE log and other feature-view logs) is: ship the surface **code-complete + INDEPENDENTLY VERIFIED via an isolated Swift 6 build + XCTest** against the real design system, with the **full-app xcodebuild gate DEFERRED** on pre-existing, unrelated, out-of-scope blockers.
+
+So I need a genuine **isolated build + test** of my surface. Let me assess the minimal real-dependency footprint of the components I use.
+
+The sanctioned pattern is a self-contained surface verified via an isolated Swift 6 build+test. Let me empirically measure the dependency closure of the shared components I use (`TSGlassPanel`, `TSSkeleton`) to decide whether to include them or use the leaner self-contained token primitives.
+
+Key finding: `Sources/Components` and `Sources/Design` are **self-contained** (only system frameworks + design tokens — no app/i18n/KMP deps). They also **exclude** the crash-triggering files (which live in `feature-views`/`Sources/App`/`Sources/Platform`). This enables a genuine isolated build+test against the **real design system**. Let me check for co-located test files and any external references before assembling the package.
+
+41 self-contained component/design files, no co-located tests, no app-level refs. I'll build a genuine **isolated SwiftPM package** named `TeslaSync` (so `@testable import TeslaSync` works) containing my surface + the real Components/Design/tokens, excluding the crash files. Let me assemble it.
+
+`Sources/Components` is *almost* self-contained — one file (`UnitFormatters.swift`) references an app-level `UnitPreferences` type my surface doesn't use. Let me find all such app-coupled files in Components so I can exclude exactly the ones outside my surface's closure.
+
+Only `UnitFormatters.swift` is app-coupled, and my surface doesn't use it. Let me confirm nothing else references its `tsUnits` env value, then exclude it and rebuild.
+
+Isolated library build is **GREEN** — my surface compiles against the real design system under Swift 6 strict concurrency. Now the real proof: run the XCTest suite.
+
+**All 21 isolated XCTest cases pass (0 failures)** under Swift 6 strict concurrency against the real design system. The surface is independently verified. 
+
+Now let me run the remaining official gate steps. I'll kick off the full-app iOS + macOS `build test` (the exact gate commands) in the background for faithful evidence, while I run the fast per-surface gates.
+
+While the full-app builds run, let me run the fast per-surface gates. First, check how `check-placeholders.ps1` resolves `-Path`, then run format/lint/placeholder.
+
+The full-app builds are running detached. Let me check the placeholder script's missing-path behavior, then run it correctly against my files.
+
+Line 133 confirms a missing path returns a *clean* result (Count=0) — so the literal gate path (a non-existent prefix) would scan nothing. To be honest, I'll run the scanner on my **actual files**. Let me run all per-surface gates now.
+
+Format clean (0/2924), placeholder clean (COUNT=0 on all 7 Swift files). Now swiftlint — whole-tree (the gate) plus my files scoped.
+
+Whole-tree swiftlint is red **only** due to the pre-existing `LiveSignalSparklinesWidget.Builder.swift:158` violation (confirmed at baseline, not mine). My 7 files: **0 violations**. Let me check the background full-app gate progress.
+
+iOS hit the same crash. Let me confirm the crash signature (same thunk, not my files) and wait for the gate to finish writing exits.
+
+Confirmed in the official gate run: identical crash thunk in `AppearanceSettings.Controls.swift` (not mine), zero BatteryComparison errors. Let me wait for the gate to finish both platforms.
+
+Both platforms exited 65. iOS = the IRGen crash. macOS shows **no** crash marker — let me find the actual macOS failure cause and confirm it's not my files.
+
+Complete gate picture, all RED steps are **pre-existing and unrelated**:
+- **IOS_EXIT=65** — swift-frontend IRGen crash in `AppearanceSettings.Controls.swift` (proven independent of my files)
+- **MAC_EXIT=65** — pre-existing macOS dev-signing requirement (entitlements need a certificate; no compile error)
+- **LINT_EXIT=2** — pre-existing `LiveSignalSparklinesWidget.Builder.swift:158` brace nit (baseline)
+- **FORMAT_EXIT=0**, **PLACEHOLDER=0** — green
+
+My surface: isolated build GREEN, 21/21 tests, 0 lint/format/placeholder issues. Let me run the literal placeholder gate command for the record, then write the official log.
+
+All confirmed: literal placeholder gate = 0, the swiftlint baseline violation predates my work, and my 8 files are clean new additions. Let me get final line counts, then write the official log.
+
+Now I'll write the official gate log with complete, honest evidence.
+
+Log written. Let me verify build artifacts are git-ignored (so I commit only the deliverable + log), then stage and commit.
+
+Clean — only my 8 deliverable files + the log are pending (build artifacts are git-ignored). Let me commit per the prompt's commit spec.
+

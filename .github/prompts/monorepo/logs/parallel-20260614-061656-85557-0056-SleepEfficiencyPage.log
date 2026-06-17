@@ -1,0 +1,241 @@
+I'll start by exploring the repository structure and understanding the web source page I need to port, then look at the existing Apple app architecture.
+
+Important finding: actual feature pages live in `apps/apple/Sources/Features/`, not `apps/apple/TeslaSync/Features/`. The project.yml only compiles `Sources/`. Let me check existing patterns and confirm whether a SleepEfficiency page already exists.
+
+Now I understand the structure. The real convention is `Sources/Features/Battery/` with a decomposed file pattern. The `SleepEfficiencyWidget` exists but not the page. Let me study the closest analog (BatteryDegradation) and the parity manifest record in detail.
+
+Excellent. The architecture is clear. Now let me study the supporting pieces: routes, charts, data-display components, the model/sample patterns, and the string catalog.
+
+No `sleepEfficiency` route exists yet — I'll need to add one (navigation registration is allowed). Let me study the route parser, the BatteryDegradation models/sections/charts patterns, and the SleepEfficiency widget model for the data shape.
+
+Let me examine the chart wrappers, sections/panels patterns, the components directory, and the SleepEfficiency widget model (for data shape) and web types.
+
+Now let me look at the chart/component library to find Pie/Donut and Bar chart wrappers, plus the web data shapes and the BatterySeverity/BatteryVehicle types.
+
+Let me read the web data shapes (energy types + hook), the ChartContainer/DataTable/Metrics components, and the BatteryVehicle/BatterySeverity/Format types.
+
+Now let me read the ChartContainer, DataTable, Metrics components, the BatteryVehicle/Severity types, the Units facade, and the existing SleepEfficiency widget model for data-shape reference.
+
+Let me read the DataTable/Metrics/Badges/Cards components, the Units facade, the severity→tone mapping, and how route registrations are aggregated app-wide.
+
+Let me read the Units facade, the severity→tone mapping, the BatteryVehicle struct, and find where route registrations are aggregated app-wide.
+
+Let me find currency formatting, the route host registry, the design tokens, and key UI component signatures (GlassPanel, EmptyState, ErrorDisplay, Select, IconBox, AlertBanner, typography).
+
+Let me read the tsUnits environment, the currency formatter, the existing battery test pattern, and check the string catalog format.
+
+Let me check the existing `sleep.` keys in the catalog, the xcstrings format, and the degradation test pattern.
+
+30 lines mention `sleep.` but none are the dotted parity keys — I'll need to add all 32 strings. Let me check tool availability (Xcode/swiftlint/xcodegen), the placeholder scanner, and the gate contract before writing code.
+
+Xcode 26.5, swiftlint, xcodegen, pwsh all available — I can run the full gate. Let me read the placeholder patterns, the gate README, and the degradation test to mirror.
+
+Let me read the remaining component signatures (EmptyState/ErrorDisplay, Select, Cards/IconBox, Typography, AlertBanner), the gate README, and the ledger row.
+
+Let me read the remaining components (Cards/IconBox, Typography, AlertBanner, Forms/Filters), the design tokens, the gate README, and the ledger row.
+
+Let me read the AlertBanner, find TSIconBox, the Forms/Filters (range control), design tokens, gate README, and the ledger row.
+
+Let me check the chart palette, the gate README contract, the ledger row, and the Forms range filter.
+
+I now have all the web string defaults and full component knowledge. Let me check for tests that constrain `AppRoute` (counts, host coverage, parser) before adding a new route case, and record my plan.
+
+All clear — adding a route case is safe. Let me check the swiftlint config, then write the plan and start implementing.
+
+I have complete context now. Let me record the plan and todos, then implement.
+
+Let me check the chart categorical palette order and the derivations pattern before writing.
+
+Now I'll create the implementation files. Starting with the models (Foundation-only, pure, testable):
+
+Now the formatters (mirroring `BatteryDegradationFormat` + `TrueCostFormat` currency):
+
+Now the page model (`@Observable`, mirroring `BatteryDegradationPageModel`):
+
+Now the sample/preview/test data sources:
+
+Models, format, model, and sample data are done. Let me update todos and write the page view.
+
+Page view done. Now let me verify the shared chart-legend helper signature before writing the Sections file (to reuse vs. build local).
+
+Now the largest file — all sections, charts, callout, table, and skeleton:
+
+Let me check for any lines exceeding swiftlint's 120-char limit (which `--strict` enforces) across my new files.
+
+Three column lines exceed 120 chars. Let me reformat them to multi-line:
+
+I extracted `batteryLostCell` — let me add that helper method:
+
+Now the route registration:
+
+Now wire the route into `AppRoute` (case, pathSegment, icon, group) and register it in the app:
+
+Now let me add the i18n strings. First, check which of my planned keys already exist in the catalog:
+
+Most keys are missing. Let me inspect the exact catalog formatting style so I can insert entries cleanly with a minimal diff:
+
+The entry style is clear. Let me add all missing keys via a script that inserts Apple-style entries and validates the JSON:
+
+Strings added. Now the model/derivation/formatter tests:
+
+Now update the parity ledger. Let me check its tail structure first:
+
+Now add the two ledger rows (apple-macos + apple-ios) for `page:battery/SleepEfficiency`:
+
+Ledger updated with a minimal diff. Let me update todos and check the build prerequisites (the KMP `Shared.xcframework`) before running the gate.
+
+The KMP `Shared.xcframework` isn't built yet (only a `.gitkeep`) — the Xcode build/test depends on it. Let me first run the checks that don't need it (swiftlint, placeholder scan, project generation), then tackle the framework build. Starting with swiftlint on my new files:
+
+Two issues: the Sections file exceeds the 400-line limit, and one test line is 121 chars. Let me split the Sections file (mirroring the Battery Charts/Table decomposition). First, let me view the current structure to extract cleanly:
+
+Now I'll create the Charts file, the Table file, and remove those blocks from Sections:
+
+Now remove the moved blocks from the Sections file (the chart sections and the table section):
+
+Sections file is now 196 lines. Now fix the over-length test line:
+
+Now re-run swiftlint on all my files (including the two new ones), and run the placeholder scan:
+
+swiftlint is clean on my files. Now run the gate's two framework-independent checks: swiftlint on the whole Battery dir, and the placeholder scan:
+
+Placeholder scan passed (COUNT=0). Let me wait for the full-dir swiftlint:
+
+swiftlint `--strict` passed across the whole project (0 violations, 5787 files). Now the heavy part. Let me generate the Xcode project and check the KMP toolchain for building `Shared.xcframework`:
+
+Project generated. Now let me check the KMP toolchain (JDK/Gradle) needed to build `Shared.xcframework`:
+
+JDK 17 + gradlew present. Let me see the exact Gradle task the build script runs, then kick off the framework build in the background:
+
+The Gradle task is `:core:assembleSharedXCFramework`. Let me kick off the framework build in the background (first Kotlin/Native build can be slow):
+
+The framework build is running in the background. While it builds, let me do a careful self-review of my code for correctness. Let me re-read the page view and model for any issues:
+
+The framework build is still initializing. Let me check a concurrency concern: my test `StubSource` is a class with mutable state conforming to a `Sendable` protocol under `SWIFT_STRICT_CONCURRENCY: complete`. Let me see how existing recording test-doubles handle this:
+
+The established pattern is an `actor` for recording doubles. Let me convert my test `StubSource` to an actor and `await` its recorded state:
+
+Test file clean. Let me check the framework build progress:
+
+The Kotlin/Native build is still downloading/compiling. Let me check progress signals:
+
+The konan toolchain (1.6G) is present and Gradle is actively compiling (build dir 590M). Let me wait for it to finish:
+
+Build is progressing (640M, active compilation). Let me continue waiting:
+
+Frameworks are actively linking (debug done, release in progress). Let me keep waiting:
+
+Excellent — `Shared.xcframework` built successfully (14m) and staged. Now let me build the macOS app (validates my code compiles). The framework is cached so the pre-action will be fast:
+
+Build failed — but the singled-out file `VersionSegment.Previews.swift` is a pre-existing shared-surface, not mine. I need the actual error text (it was truncated). Let me re-run capturing errors to a file:
+
+While it rebuilds, let me check whether `VersionSegment.Previews.swift` is a known pre-existing macOS issue and whether it touches anything I changed:
+
+`VersionSegment.Previews.swift` doesn't reference anything I changed — likely a pre-existing macOS issue. Let me get the exact error from the rebuild:
+
+Found it: my new public `SleepStateSlice` collides with an existing type in `SleepEfficiencyWidget.Model.swift`. (The `Input.Previews.swift` errors are pre-existing, unrelated to me.) Let me find all colliding type names defined by the widget:
+
+Clear diagnosis: my new `SleepStateSlice` collides with an existing type in `SleepEfficiencyWidget.Model.swift`. (The `Input.Previews.swift` errors are pre-existing and unrelated.) Let me rename my type to `SleepStateShare` across my files:
+
+BSD `sed` doesn't support `\b`. Let me use a plain substitution (the token is unique enough in my files):
+
+Renamed cleanly. Now let me confirm the only other failing file (`Input.Previews.swift`) is genuinely pre-existing and untouched by me:
+
+Confirmed `Input.Previews.swift` is pre-existing (unmodified by me). Let me examine it — if it's `#if DEBUG`-gated, a Release build would skip it and let me get a clean gate:
+
+`Input.Previews.swift` errors are all inside `#if DEBUG` preview blocks (pre-existing toolchain issue). A **Release** build excludes `#if DEBUG`, so it should compile cleanly. Let me first confirm the full set of Debug errors, then build in Release:
+
+After my fix, the only remaining Debug errors are the pre-existing `Input.Previews.swift` `#if DEBUG` previews. A Release build excludes those. Let me run a **Release** build + test (with testability) for macOS — this validates the full app + my code + my tests:
+
+While the Release build+test runs, let me re-lint the renamed files to ensure the rename is clean:
+
+Renamed files lint clean. Let me monitor the Release build+test:
+
+Release build progressing (now x86_64 slice), no errors in my files. Let me keep waiting:
+
+Release uses whole-module optimization (slow). Let me check if it's still progressing or stuck:
+
+The Release WMO build is working but will take far too long (heavy whole-module optimization × 2 archs). Let me stop it and use a faster, equally-valid approach: a Debug build+test that excludes only the one pre-existing broken `#if DEBUG` preview file (a build-setting override, not a source change):
+
+Let me kill the orphaned build processes to free resources:
+
+The orphaned `swift-frontend` workers will hog RAM. Let me terminate them by PID:
+
+All cleaned up. System load is settling. Let me run a Debug build+test that excludes only the one pre-existing broken `#if DEBUG` preview file (build-setting override, no source change) — this validates my page compiles and runs my tests:
+
+No errors anywhere. Build progressing. Let me wait for build + test completion:
+
+Build is actively compiling (40 parallel frontends). Let me wait longer for it to finish compiling and reach the test phase:
+
+App module is emitting (compile nearly done). Next comes linking, the test bundle, then test execution. Let me wait:
+
+The test target is now compiling (60 frontends across app + test bundles). Let me wait for it to finish and run tests:
+
+Log flushed to 17923 lines (app build output emitted). Let me check for any errors and build-success markers now that output is visible:
+
+Zero errors, and all my files compiled cleanly (the widget collision is resolved). Now waiting for the test target build + test execution:
+
+`** BUILD SUCCEEDED **` — my app code compiles cleanly. The test run failed, but on a **pre-existing** unrelated file: `GDPRExportPageModelTests.swift` (a Swift-6 concurrency error). Let me get the complete list of pre-existing broken files blocking compilation in this Xcode 26.5 toolchain:
+
+App builds clean; the only test-bundle blocker now is the pre-existing `GDPRExportPageModelTests.swift` (Swift-6 concurrency error, unrelated to me). Let me run my test class with both known pre-existing broken files excluded (the app is cached, so this is faster). Swift batch-compiles, so this run will reveal any remaining pre-existing broken test files at once:
+
+While my tests run, let me update todos and draft the gate log. Let me check the test progress first:
+
+All 24 of my tests pass (`** TEST SUCCEEDED **`, 0 failures), and the test bundle compiled cleanly once the 2 pre-existing broken files were isolated. Comprehensive verification complete. Let me update todos and verify the generated artifacts (xcodeproj/xcframework) are gitignored so I don't commit them:
+
+All generated artifacts are properly gitignored. My change set is clean (4 modified + 10 new files). Now let me gather evidence and write the gate log:
+
+All 32 strings present; the page is ~1451 lines across 9 well-decomposed files. Now let me write the binding gate log with the full `=== PARITY ===` section:
+
+The gate log is written. Let me do a final focused review of the two most logic-heavy files before committing, to be confident in parity correctness (build + 24 tests already pass):
+
+The derivations faithfully mirror the web `useMemo` logic. Everything is verified. Let me commit the change set (the gitignored xcodeproj/xcframework/DerivedData are excluded automatically):
+
+Committed (`fcb6b2c06`). Let me verify the final state — todos complete and working tree clean (only gitignored build artifacts remain):
+
+All 11 todos complete, working tree clean, commit in place. The task is finished and verified.
+
+## Summary
+
+I implemented the native SwiftUI **`SleepEfficiencyPage`** at full web parity (web route `/sleep-efficiency`), adaptive across macOS + iOS, following the repo's established `Sources/Features/Battery/` decomposition pattern.
+
+**Delivered (committed `fcb6b2c06`):**
+- **9 source files** (~1,451 lines) + **1 test file** (297 lines, 24 cases): value types & pure derivations, formatters, `@Observable` model over the KMP facade, sample/empty/error data sources, the page view, and decomposed Sections / Charts / Table.
+- **48/48 parity items**: 8 panels (4 metric cards, State-Distribution donut, Sentry-vs-No-Sentry bars, Monthly-Sentry-Impact callout, Recent-Drain-Events table), 4 charts (2 `TSChartContainer` + `TSPieChart` + `TSBarChart`, native Swift Charts), 4 data states (loading→redacted skeleton, empty→`ContentUnavailableView`, error→retry, success), and 32 i18n strings using the web key names.
+- **Wiring**: new `.sleepEfficiency` `AppRoute` + `SleepEfficiencyRouteRegistration` + app registration; 46 catalog keys added to `Localizable.xcstrings`; ledger marked covered (48/48) for `apple-macos` + `apple-ios`.
+
+**Verification (all green for this page):**
+- `swiftlint --strict`: **0 violations** (5787 files)
+- placeholder scan: **0** (ADR-011)
+- Built the KMP `Shared.xcframework`, then `xcodebuild` → **BUILD SUCCEEDED** (all my files compile; widget name-collision fixed)
+- **24/24** model tests pass
+
+**Disclosed caveat (in the gate log):** the literal unmodified `xcodebuild build test` is blocked only by **two pre-existing, out-of-scope files** that fail under this newer Xcode 26.5 toolchain — `Input.Previews.swift` and `GDPRExportPageModelTests.swift` (both unmodified by this change, outside the artifact's allowed files, and documented as macOS-pending in the repo). Isolating just those two lets the app build and this page's tests pass. The gate log ends with `EXIT=0 / STATUS=DONE` and the full evidence.
+
+Merge made by the 'ort' strategy.
+ .../apple-page-battery-SleepEfficiencyPage.log     | 195 ++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 506 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   5 +-
+ .../Features/Battery/SleepEfficiencyFormat.swift   | 114 +++++
+ .../Features/Battery/SleepEfficiencyModels.swift   | 284 ++++++++++++
+ .../Battery/SleepEfficiencyPage.Charts.swift       | 142 ++++++
+ .../Battery/SleepEfficiencyPage.Sections.swift     | 196 ++++++++
+ .../Battery/SleepEfficiencyPage.Table.swift        | 142 ++++++
+ .../Features/Battery/SleepEfficiencyPage.swift     | 250 ++++++++++
+ .../Battery/SleepEfficiencyPageModel.Sample.swift  | 138 ++++++
+ .../Battery/SleepEfficiencyPageModel.swift         | 162 +++++++
+ .../Battery/SleepEfficiencyRouteRegistration.swift |  23 +
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Battery/SleepEfficiencyPageModelTests.swift    | 297 ++++++++++++
+ apps/parity/apple-ledger.json                      |  20 +-
+ 15 files changed, 2473 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-battery-SleepEfficiencyPage.log
+ create mode 100644 apps/apple/Sources/Features/Battery/SleepEfficiencyFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/SleepEfficiencyModels.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/SleepEfficiencyPage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/SleepEfficiencyPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/SleepEfficiencyPage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/SleepEfficiencyPage.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/SleepEfficiencyPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/SleepEfficiencyPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/SleepEfficiencyRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Battery/SleepEfficiencyPageModelTests.swift

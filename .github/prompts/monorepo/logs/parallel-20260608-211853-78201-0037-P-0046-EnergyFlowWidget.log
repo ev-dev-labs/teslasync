@@ -1,0 +1,172 @@
+I'll start by exploring the repository structure, the web source specification, and the Apple toolchain availability.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). No BLOCKED path. Let me explore the existing native structure and the web source's dependencies.
+
+The native dashboard-widgets directory has 513 files — many sibling widgets already follow a multi-file pattern. Let me examine the structure, find a good reference widget, and read the flow diagram spec.
+
+`LivePowerFlowWidget` already exists natively and is the closest sibling. Let me study its complete file set, the project config, and the shared infrastructure.
+
+`LivePowerFlowWidget` is the ideal template — a native flow-diagram widget. Let me read its complete file set to learn the established pattern.
+
+Excellent architecture. Let me read the remaining LivePowerFlow files and the shared infrastructure (tokens, registration types).
+
+Now let me read the Previews, Tests, strings, and locate the shared infrastructure types.
+
+I have the full pattern. Now let me locate the shared infrastructure types, design tokens, the vehicle-state data shape, and build config.
+
+Let me read the widget infra types, design tokens, the VehicleState shape, and find a vehicle-state-based widget for reference.
+
+Let me read the design tokens, build config, and check how strings/tests are wired.
+
+The tokens are generated. Let me locate them, the TSSkeleton component, and the build config.
+
+Let me read the test target config, the design tokens, and the skeleton component.
+
+Let me read the chart color palette region and the skeleton component signature.
+
+I have the full token set. Let me check the web's `neon-cyan` value and confirm the lucide icons used, to map colors/symbols faithfully.
+
+neon-cyan = `#00f0ff`. Targets iOS 18 / macOS 15. Now let me check the build system (XcodeGen?), whether there's a central registry to respect, and the baseline build setup.
+
+XcodeGen-based (no checked-in xcodeproj), and widgets are self-contained (no central registry to edit — consistent with the allowed-files constraint). Let me inspect the framework-staging script, lint configs, and write a plan.
+
+The Shared.xcframework needs a KMP Gradle build and `Frameworks/` is empty — that's a potential build blocker. Let me check the pending-verifications doc, the "swiftc host gate" hint, and a sibling widget's log to see the established verification convention.
+
+The convention is clear: full-app `xcodebuild` is blocked by pre-existing parallel-merge collisions + unstaged KMP framework, so each surface is verified in isolation (swiftc typecheck for both SDKs + isolated tests + lint/format/placeholder), deferring full-app build to macOS CI. Let me read my direct sibling's log to mirror its exact verification + log format.
+
+I now have the complete, approved precedent (LivePowerFlow 0056). The convention: implement 9 self-contained files, run all host-runnable gates for real (swiftc typecheck both SDKs, executed adapter harness, swiftlint, swiftformat, placeholder), and defer the full `xcodebuild` to signed macOS CI (KMP `Shared.xcframework` unstaged + signing). Let me probe the environment and set up tracking.
+
+Full Xcode + a **booted iPhone 16 simulator** are available; the only true blockers are the **unstaged KMP `Shared.xcframework`** and **0 signing identities**. I'll implement the 9 files, then verify via an isolated SwiftPM build that actually *runs* the tests, dual-SDK typecheck against real tokens, lint/format/placeholder — mirroring the approved precedent. Let me confirm one helper symbol and set up tracking.
+
+`tsDynamicColor` is self-contained in `Tokens.swift` (which has `swiftlint:disable all`). I have everything. Let me write the plan and start creating the 9 files.
+
+Now I'll create the surface files. Starting with the domain models and the pure adapter.
+
+Now the state-holder seam, telemetry, i18n facade, formatting, and accessibility (Model.swift).
+
+I spotted a name shadowing bug in `accessibleValue` (parameter `magnitude` shadows the `magnitude(_:)` function). Let me fix it.
+
+Now the flow diagram view (Canvas-stroked arrows + positioned nodes).
+
+Now the main surface file with the glass shell, header, all states, and registration.
+
+Now the previews (one per state) and the strings catalog.
+
+Now the test suite (adapter + model + registry + accessibility), mirroring the sibling's coverage.
+
+All 9 files written. Let me update tracking and begin verification with a dual-SDK typecheck against the **real** tokens + the sibling widget (proving no module-level type collision).
+
+`Skeletons.swift` pulls in other components (`TSCard`). The only app symbol I use that isn't in Tokens/Infra is `TSSkeleton`, so I'll stub just that for the typecheck (all token/registration deps stay real). Let me re-run with the sibling widget included to prove no module-level collision.
+
+Clean compile — `MACOS_TYPECHECK_EXIT=0`. The only warnings are the `nonisolated(unsafe)` NumberFormatter notes, identical to the committed sibling (so warnings-as-errors is off; I'll match precedent). Now let me validate the previews (`-D DEBUG`) and run the **iOS 18** SDK typecheck.
+
+Both SDK typechecks (incl. previews) pass at **EXIT=0**. Now the strongest gate: an isolated SwiftPM package that actually **runs** the XCTest suite (real tokens + infra + my surface, Swift 6 mode).
+
+Package scaffolded cleanly (no duplicate surface file — the loop's `swift` entry correctly no-op'd, and the explicit copy created `EnergyFlowWidget.Surface.swift`). Now let me run the test suite.
+
+**All 28 tests passed, 0 failures (exit 0)** — executed, not just typechecked. Now the lint/format/placeholder gates. Let me run swiftlint + swiftformat on the new files first for fast feedback.
+
+Minor style issues — swiftformat will auto-fix them (trailing commas, wrapping). Let me run it in fix mode, then re-verify both gates.
+
+Both pass for the new files. swiftformat reformatted 3 files — let me confirm the changes are semantically inert and re-run the typecheck + tests, then the full-tree gate commands.
+
+Formatting was cosmetic; **28/28 tests still pass**. Now the exact full-tree gate commands. Let me run `swiftlint --strict` and `swiftformat --lint apps/apple`.
+
+One violation across 2001 files. Let me identify it — I proved my 8 files clean individually, but I must confirm it's not mine.
+
+The single violation is in `LiveSignalSparklinesWidget.Builder.swift` — a **different slot's sibling widget**, not mine (my 8 files passed cleanly). It's pre-existing and outside my allowed files. Let me confirm I only added my own files, then run the swiftformat gate.
+
+Confirmed: only my 9 files are added (untracked); the swiftlint violation is in another slot's pre-existing file. **`swiftformat --lint apps/apple` = 0/2005 (GREEN)**. Now the placeholder gate — let me first scan my files for forbidden markers, then run the pwsh gate on an isolated copy + the self-test.
+
+Placeholder gate fully green (count=0; self-test confirms it detects stubs). Now let me run `xcodegen generate` to prove the project enumerates my files, and honestly probe the `xcodebuild` blockers (KMP framework + signing).
+
+`xcodegen generate` succeeded (EXIT=0). Let me confirm my files are enumerated into the app + test targets, then assess the KMP framework build feasibility.
+
+All 9 files enumerate into the generated project. Network is up and `apps/shared/gradlew` exists, so the KMP `Shared.xcframework` *might* be buildable — which would let me run the real iOS `xcodebuild`. Let me probe the toolchain and start the framework build (bounded), monitoring it.
+
+Java 17 + Gradle 8.14.5 + network — the KMP build is feasible. Let me start it (this first run downloads the Gradle distro + Kotlin/Native toolchain, so it may be slow) and monitor.
+
+While the KMP build runs, let me monitor its progress.
+
+The output is buffered by `tail`, so I can't see live progress. Let me check whether the build is actively downloading toolchains (disk growth) in a separate shell.
+
+The build is actively compiling (Kotlin/Native toolchain already cached from a prior run; `core/build` is 114M and growing, 19 Gradle processes). Let me continue waiting.
+
+Build dir grew to 590M; Konan `linkRelease`/`assembleSharedXCFramework` are running (optimized linking is slow). It's genuinely progressing — let me keep waiting.
+
+Three Kotlin/Native targets compiled (iosArm64, iosSimulatorArm64, macosArm64); the **debug** xcframework is already assembled and the **release** one is linking now (active clang/konan at high CPU). Let me wait for the release assembly to finish.
+
+KMP build **SUCCESSFUL** (18m27s) — release `Shared.xcframework` produced. This unblocks a real `xcodebuild`. Let me stage the framework and launch the iOS Simulator build (capturing to a file so I can watch progress).
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the real iOS Simulator build — launching async, teeing to a file so I can track progress.
+
+Compiling cleanly so far (0 errors, gradle preAction done, building the widgets target). Let me keep monitoring.
+
+Build FAILED with 6 errors in the `TeslaSync` target. Let me see exactly what failed — and whether any are in my files.
+
+The 6 errors are **all pre-existing cross-slot collisions** — `ChargingProjection` is redeclared by two *other* slots' surfaces (`ChargeStatusWidget` ↔ `ChargingDetailSection`). **Zero errors in my EnergyFlowWidget files.** Let me confirm this collision is independent of my changes and check for stray build artifacts.
+
+Confirmed: the `ChargingProjection` collision is between two **other** slots' files (`ChargeStatusWidget` + `ChargingDetailSection`) — pre-existing and outside my scope. The "2 files" for my types are just grep prefix-matches (e.g. `EnergyFlowNodeView`, `EnergyFlowBuilderTests`), not collisions — my dual-SDK typecheck and SwiftPM build already compiled all my files together with zero redeclarations. Let me check the full git status for build artifacts to keep out of the commit.
+
+All clear: the generated xcodeproj and staged framework are **gitignored**; only my 9 files are untracked. The aggregate build's only failures are two *other* slots' `ChargingProjection` redeclaration — zero in my code. Let me gather final metrics and write the gate log.
+
+Zero i18n drift (20 used = 20 defined). Let me verify the two digit-containing keys (`diagramA11y`, `openA11y`) that my regex skipped, then write the log.
+
+22 keys used = 22 defined, zero drift. All evidence gathered. Let me capture the commit base and write the gate log.
+
+Now I'll write the comprehensive gate log with the real results.
+
+Log written. Let me update tracking, clean up temp artifacts, and commit the 9 files + log.
+
+Exactly the 10 allowed files staged, no stray artifacts. Committing.
+
+Committed cleanly as `84ac631f5` (10 files, 1818 insertions); working tree clean. Let me do a final confirmation of the committed surface state.
+
+The final re-confirm command's `$(...)` expanded empty, so swiftlint fell back to full-tree (re-hitting the same pre-existing sibling violation). My files were already proven clean earlier — let me give an unambiguous final per-file confirmation with explicit paths.
+
+All gates confirmed green for the surface. Let me finalize tracking.
+
+All todos complete. The EnergyFlowWidget surface is shipped, verified, and committed.
+
+## Summary
+
+Delivered a production-polished native SwiftUI **`EnergyFlowWidget`** at full parity with `web/src/features/dashboard/widgets/EnergyFlowWidget.tsx`, following the approved sibling precedent (`LivePowerFlowWidget` 0056).
+
+**9 files committed** (`84ac631f5`, 1818 insertions) under `apps/apple/TeslaSync/dashboard-widgets/`:
+- `Models` (vehicle-state DTO + node/arrow/projection) · `Builder` (pure adapter) · `Palette` (Tailwind→native colors) · `Model` (P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 i18n facade + formatting + a11y) · `Diagram` (Canvas marching-dash arrows + positioned nodes) · `swift` (glass shell + all states + registry) · `Previews` · `Tests` · `strings` — plus the gate log.
+
+**Parity:** battery/motor/charger flow diagram bound through `EnergyFlowModel` (no view HTTP); Consuming/Regenerating/Standby motor logic; charger node+arrow only while charging; every state (loading/empty/error/stale/offline/content); VoiceOver summary; Reduce-Motion; registry-correct (`energy-flow`, `battery`, 2×4/2×4/4×40). i18n drift = 0 (22 used = 22 defined).
+
+**Verification — all surface-scoped gates GREEN (real output):**
+- swiftc `-typecheck` **iOS 18 + macOS 15** SDKs (incl. previews, alongside the sibling widget): EXIT=0
+- Isolated SwiftPM `swift test` — **28/28 executed, 0 failures**
+- `swiftlint --strict` on the 8 files: **0 violations**
+- `swiftformat --lint apps/apple` (whole tree): **0/2005**
+- check-placeholders: **COUNT=0** (+ self-test PASS) · `xcodegen generate`: EXIT=0, all 9 files enumerated
+
+**Full-app `xcodebuild` (went beyond precedent):** built + staged the KMP `Shared.xcframework` (18m27s) and ran the real iPhone 16 Simulator build — it fails on **6 pre-existing, unrelated errors**: a `ChargingProjection` type redeclared by two *other* slots (`ChargeStatusWidget` + `ChargingDetailSection`), outside this prompt's allowed files. **Zero errors in EnergyFlowWidget.\*** → deferred to the P4 acceptance gate (post-integration), exactly as the established disposition + `macos-pending-verifications.md` prescribe.
+
+`EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ple-dashboard-widgets-0046-EnergyFlowWidget.log | 207 ++++++++++++++
+ .../EnergyFlowWidget.Builder.swift                 | 137 ++++++++++
+ .../EnergyFlowWidget.Diagram.swift                 | 222 ++++++++++++++++
+ .../dashboard-widgets/EnergyFlowWidget.Model.swift | 296 +++++++++++++++++++++
+ .../EnergyFlowWidget.Models.swift                  | 197 ++++++++++++++
+ .../EnergyFlowWidget.Palette.swift                 |  55 ++++
+ .../EnergyFlowWidget.Previews.swift                | 118 ++++++++
+ .../dashboard-widgets/EnergyFlowWidget.Tests.swift | 296 +++++++++++++++++++++
+ .../dashboard-widgets/EnergyFlowWidget.strings     |  48 ++++
+ .../dashboard-widgets/EnergyFlowWidget.swift       | 242 +++++++++++++++++
+ 10 files changed, 1818 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0046-EnergyFlowWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.Diagram.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.Palette.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.swift

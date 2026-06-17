@@ -1,0 +1,136 @@
+I'll start by exploring the environment to understand what exists and what capabilities are available.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). There's a real `apps/apple` project. Let me read the web source and explore the native project structure.
+
+This is a large, established monorepo with 2541 Swift files and an existing `feature-views` directory. I need to follow established conventions exactly. Let me find sibling feature-views and the shared facade/i18n/token infrastructure.
+
+SharedFacade is under `apps/apple/Sources`. Let me examine the infrastructure (state holders, tokens, i18n, diagnostics) and a complete representative feature-view as a template.
+
+Now I understand the build globs `feature-views/*.swift`. Let me read the closest exemplar (`FleetTelemetryHealth` — telemetry + tabular) in full, plus the live-stream state holders and design tokens.
+
+Excellent — clear conventions. Let me read the remaining exemplar files plus the design tokens and live-stream infrastructure.
+
+Let me read the strings file, test file, and locate the design tokens (TSSpacing, TSTone, Color.TS, Font.TS, TSIconBox, TSSkeleton).
+
+Now let me locate the precise token definitions I'll need (Color.TS, Font.TS, TSSpacing, TSRadius, TSTone, TSIconBox, TSSkeleton).
+
+Now let me check the test-target wiring in project.yml, the native StatCard/Card equivalents, and the web helpers (`formatTime`, `FreshnessIndicator`, `StatCard`) that I must reproduce.
+
+Let me read the native StatCard/Card/motion components, the web FreshnessIndicator, and the lint/format configs to ensure conformance.
+
+I have the full picture of conventions. Before writing, let me verify the actual build capability (xcodegen, simulators, the Shared.xcframework dependency) since the gate runs a full `xcodebuild`.
+
+Critical finding: `Shared.xcframework` isn't present (only `.gitkeep`) — the scheme builds it via Gradle/KMP. Let me probe whether the KMP toolchain (Gradle/JDK + `apps/shared`) is available, since the full `xcodebuild` gate depends on it.
+
+KMP `apps/shared` + gradlew + JDK 17 are present. Feature-views don't import `Shared` (0 imports), but the whole app target links `Shared.xcframework`, which the gate builds via Gradle. Let me inspect the shared build and kick it off in the background (it's the long pole) while I write the surface.
+
+The framework build chain needs Gradle 8.14.5 + Kotlin/Native + **pwsh** (the codegen task and gate are PowerShell). Let me check pwsh/network and kick off the long-pole `Shared.xcframework` Gradle build in the background while I write the surface.
+
+Excellent — pwsh 7.6.2, network works, and the Kotlin/Native prebuilt toolchain is **already cached** (`~/.konan/kotlin-native-prebuilt-macos-aarch64-2.4.0`). The full build is feasible. Let me kick off the `Shared.xcframework` Gradle build in the background now (long pole), then write the surface in parallel.
+
+Build is running in the background. Let me confirm the `SignalEntry` shape and how the web stream builds entries, then set up my plan/todos.
+
+I have everything needed. `SignalEntry` = `{ id: number, timestamp: string, name, value: string, type: 'number'|'string'|'boolean' }`. Let me set up a plan and todos, then build the surface.
+
+Build is downloading Gradle/compiling in the background. Let me write the surface files, starting with the pure Adapter (foundation types + projections).
+
+Now the Model file (state-holder seam, telemetry seam, `@Observable` model, i18n facade).
+
+Let me check the background build progress, then continue with the Views file.
+
+Build still resolving dependencies. Continuing with the Views file (header chrome, banner, freshness chip, stat tiles, empty/loading/error states).
+
+Now the Table file (signal rows, freshness cells with a shared 10s tick, type badges).
+
+Now let me verify a couple of things before writing the main view: the `TSFadeIn` initializer, and that my new public type names don't collide with existing declarations in the module.
+
+Two findings: the Gradle build finished, and `LiveSignalRow` **already exists** in the module — I must rename mine to avoid a duplicate declaration. Let me locate the existing one and confirm the framework build.
+
+Gradle build succeeded (9m) — `Shared.xcframework` is built. Two actions: stage the framework, and fix the `LiveSignalRow` name collision (an existing `LiveSignalsTable` surface already declares it). Let me rename mine to `LiveSignalTailRow` and stage the framework.
+
+Rename clean, no other collisions (`LiveSignalEntry`≠`LiveSignalEntryInput`, `LiveSignalsTableProjection`≠`LiveSignalProjection`), and the framework is staged. Let me confirm `LiveSignalTail` itself is free, then write the main view, previews, tests, and strings.
+
+`LiveSignalTail` is free. Now the main composed view.
+
+Now the Previews file (every state).
+
+Now the Tests file (adapter + model + accessibility coverage).
+
+Now the strings catalog file.
+
+All 8 files written. Let me run the fast verifications first: format my files, then swiftlint, then the placeholder check.
+
+One swiftlint issue: `previewEntries` exceeds the 50-line function-body limit after formatting wrapped each call. Let me make it compact via a spec-tuple + map.
+
+swiftformat already reformatted that file. Let me view its current state.
+
+Now re-format and re-lint my files, and run the placeholder check.
+
+A 5-member tuple trips `large_tuple`. Let me use a small struct instead.
+
+swiftformat: 0/7, swiftlint: **0 violations**. Now the placeholder check — let me read the script and run it.
+
+The script returns "clean" when the path doesn't exist, and the gate passes an extension-less path. To genuinely verify (honoring "no stubs"), let me run the gate's exact command AND a real scan of my actual files.
+
+Real scan flagged one false positive: the i18n key `filterPlaceholder` contains the forbidden substring "Placeholder". Let me check the patterns file and how the existing codebase handles this.
+
+The established convention is the `// parity:allow web i18n key` marker (e.g. `LiveSignalsTable.Localization.swift` does exactly this for `filterPlaceholder`). Let me view the exact line and apply it.
+
+All fast checks pass: **swiftformat clean, swiftlint --strict 0 violations, placeholder 0 (1 sanctioned allow)**. Now the heavy gate: generate the Xcode project and build/test. Let me generate first.
+
+Project generated; my files are included. Now let me build the iOS app target (compile validation first) in the background, then run tests.
+
+iOS build running. Let me wait and monitor it.
+
+The build surfaced errors — but in `SafetyFeaturesWidget.Previews.swift` (a dashboard-widget), not my files. Let me check whether these are pre-existing and whether any errors touch my code.
+
+Build failed, but **every error is in pre-existing dashboard-widget files** (ChargeStatusLiveWidget, SafetyFeaturesWidget, DrivingCoachWidget, …) — **zero errors in my LiveSignalTail files**. Let me confirm I only added my files and characterize the baseline errors.
+
+The baseline errors are **"ambiguous type lookup"** — i.e., duplicate type declarations across pre-existing widget files (the same hazard I avoided by renaming `LiveSignalRow`). Let me prove these duplicates exist in committed files I never touched.
+
+Conclusive: committed widget files (`ChargeStatusWidget.Model.swift` & `ChargeStatusLiveWidget.Model.swift`) **both** declare `ChargeDistanceUnit`, `ChargeLoadStatus`, `ChargeConnection`, etc. → ambiguous types → module-wide failure. These are pre-existing, git-tracked, and **outside my allowed scope** (dashboard-widgets ≠ `feature-views/LiveSignalTail.*`).
+
+My files compile clean (zero errors). To independently prove my surface compiles AND my tests pass — decoupled from the broken widgets — let me find the exact TS dependencies my code uses and build an isolated module.
+
+Let me verify the component/design library is self-contained (no `Shared`/external deps) so I can build my surface in isolation against the real components.
+
+The component/design library imports only system frameworks (no `Shared`) — so I can verify my surface in isolation against the **real** components. Let me type-check my surface for iOS (the gate platform) against its real dependencies.
+
+The only failure is a `#Preview` in the dependency `Cards.swift` referencing `TSButton` from another component file. Let me include the full component library so all intra-component preview refs resolve.
+
+Some component files (e.g. `UnitFormatters.swift`) depend on out-of-module types. Let me use the curated transitive closure my code actually needs, without DEBUG (so dependency `#Preview` cross-refs don't interfere) — this is the clean iOS compile proof.
+
+My surface type-checks cleanly for iOS (**0 errors**, strict concurrency complete) against the real component library. Now let me set up an isolated SwiftPM module to actually **run my unit tests** (release config strips `#Preview` cross-refs), and separately verify Previews compile.
+
+Buttons.swift defines `TSButton`; UI/Feedback/Motion have zero external deps. Let me verify my Previews compile (iOS, DEBUG) with the full self-contained UI set, then build a SwiftPM harness to run my tests.
+
+My Previews compile clean (0 errors in my files). Now let me build an isolated SwiftPM module to actually **run my unit tests** against the real components.
+
+`FeedbackOverlays.swift` pulls in `TSMetricBar` from DataDisplay — but I don't need that file. Let me trim to the exact curated closure (the 8 deps Pass A proved at 0 errors) and re-run the tests.
+
+**All 20 unit tests passed** (Swift 6 mode, strict concurrency, against real components). 
+
+My surface is fully verified in isolation. The full-app gate, however, is red due to pre-existing out-of-scope widget collisions. Per the honesty covenant I must capture the *real* gate result. Let me prepare the log directory and run the actual gate commands (iOS + macOS `build test`) to capture authentic exit codes.
+
+Confirmed: the macOS target hits the same 74 duplicate-type errors. Both `build test` steps will fail for the identical pre-existing reason. Let me run the **actual gate** (both builds + lint/format/placeholder) to capture authentic exit codes, writing the real log.
+
+Let me verify the macOS scheme exists before the long run, then launch the gate.
+
+Both schemes exist. Now let me run the authentic gate in the background.
+
+Gate running (two failing builds ≈ 10 min). Let me monitor.
+
+Still building. Let me keep waiting.
+
+Gate complete: **IOS_EXIT=65, MAC_EXIT=65** (both TEST FAILED), but with **0 errors in my LiveSignalTail files** — all failures are pre-existing dashboard-widget ambiguous-type collisions. LINT/FORMAT/PLACEHOLDER = 0. Let me characterize the 4 macOS errors and view the current log.
+
+The 4 macOS "errors" are actually **code-signing** entitlement errors (no dev certificate in this CI env) — environmental, not compile errors, and the macOS target would otherwise hit the same widget collisions. Both builds fail for reasons entirely outside my files (0 LiveSignalTail errors in either). Let me append the isolation-verification evidence and the BLOCKED root-cause to the log.
+
+The log is complete and honest (EXIT=1 / STATUS=BLOCKED with full evidence). Let me verify git state — ensure generated artifacts are ignored and stage only my deliverable + log.
+
+All artifacts are ignored; only my 8 files + the log are untracked. Let me stage exactly those and commit with an honest message.
+
+Committed cleanly (9 files, 1885 insertions). Let me clean up temp artifacts and update the plan.
+
+Everything is clean and committed. Let me record the final status in the plan and wrap up.
+

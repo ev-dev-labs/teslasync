@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me check the environment and read the key files in parallel.
+
+Swift 6.3 toolchain is available, but `xcodebuild` requires full Xcode (only Command Line Tools present). Let me read the web source and explore existing Apple widget patterns to understand the canonical structure.
+
+The closest existing analog is `BatteryCellsWidget` (same battery category, gauge+stats pattern). Let me study its full file set and the shared infra to learn the canonical pattern.
+
+Now let me read the remaining `BatteryCells` files, the `DrivetrainHealth` widget (gauge pattern), and the web shared components to fully understand the pattern.
+
+The `BatteryCellsWidget` pattern is clear. Now I need the gauge-hero rendering details, the `EnergyStore` API, the data shape, the registry entry, and the i18n catalog. Let me read these in parallel.
+
+Key finding: the canonical output directory `apps/apple/TeslaSync/dashboard-widgets/` **already exists** with sibling widgets (`SolarProductionWidget`, `EnergySiteInfoWidget`, `LivePowerFlowWidget`). That's where my widget belongs. Let me study a complete sibling widget set.
+
+`RegenEfficiencyWidget` and `DriveScoreGaugeWidget` use the gauge-hero pattern. Let me read the web shared components plus both sibling widget sets to nail the exact conventions.
+
+`RegenEfficiencyWidget` is the ideal template — energy-backed gauge-hero widget. Let me read its complete file set.
+
+Now I understand the two patterns. Since my output goes in `TeslaSync/dashboard-widgets/`, I'll follow the `RegenEfficiencyWidget` convention exactly. Let me read its remaining files plus the web data type and registry entry.
+
+Let me read the remaining template files (previews, strings, tests), the web data type, registry entry, and verify the design tokens + build structure.
+
+Excellent template understanding. Now let me get the data shape, registry entry, the FormatTests file, and confirm design tokens.
+
+Let me get the full `BatteryHealthAnalytics` type, confirm the i18n keys in the web catalog, verify design tokens, and check the build structure.
+
+Build uses XcodeGen (`project.yml`), module `TeslaSync`. Let me read the data type, the exact i18n block, the design token definitions, and project.yml.
+
+I have the data shape and i18n keys. Let me locate the design token definitions (`Font.TS`, `Color.TS`, `TSSpacing`, `TSRadius`, `TSMotion`).
+
+Design tokens live in `apps/design/generated/apple`. Let me verify the exact token names and the test target config.
+
+Let me see the test target config (where `*Tests.swift` files compile) and confirm `TSSkeleton` API.
+
+I now have all design tokens and structure confirmed. Let me read the web number formatters to match formatting exactly, then I'll create a plan.
+
+Let me verify `safeNumber` semantics and the full registry entry (min/max sizes) to ensure exact parity.
+
+I have everything needed. Let me check for symbol collisions before writing, and confirm the i18n keys aren't already claimed by another widget's strings file.
+
+Critical: `BatteryHealthProjection`/`BatteryHealthInput` already exist in `feature-views/BatteryHealthSection`. I must namespace all my types as `BatteryHealthAnalytics*`. Let me enumerate that file's symbols to avoid every collision.
+
+Critical collisions identified — I'll namespace all types as `BatteryHealthAnalytics*`. The 9 parity i18n keys already exist in the master catalog (reassuring). Before writing, let me check whether full Xcode and `pwsh` are available (affects whether the gate can actually run vs. BLOCKED).
+
+Full Xcode.app is present plus `pwsh` and `xcodegen`. I can point at Xcode via `DEVELOPER_DIR` (no sudo needed). Let me verify the toolchain actually works.
+
+Xcode 26.5 works and iPhone 16 sim is booted. I can run the real gate. Let me establish the build baseline — check the Shared.xcframework dependency and project generation before writing code.
+
+Full build needs a KMP `Shared.xcframework` (Gradle/Kotlin-Native) + XcodeGen. That's heavy and network-dependent. Let me kick off the Shared.xcframework build in the background now while I write the production code, then assess feasibility. First, let me record a plan and todos.
+
+Gradle is building the KMP framework in the background. Let me check the SwiftLint/SwiftFormat config so my files pass `--strict`, then write the code.
+
+Config is clear: code lines ≤120 cols (comments ignored), no trailing commas on multiline collections, `--self remove`. I'll match the sibling style exactly. Now writing all 8 files. Starting with the Model and Support (core logic).
+
+Now the Components (subviews) file.
+
+Now the main View file (the surface with all states + chrome).
+
+The Gradle build finished — let me check its result while I continue writing the remaining files (Previews, strings, Tests).
+
+The KMP `Shared.xcframework` built successfully (7m39s) — so the **full real gate is feasible**. I'll aim for STATUS=DONE. Let me finish the remaining files (Previews, strings, Tests, FormatTests), then format/lint/build.
+
+Now the test files (adapter + model + registry + a11y, plus a format/zone file, mirroring the sibling's split).
+
+All 8 files created. Now let me auto-format my files with SwiftFormat (repo config), then verify with `--lint` and `swiftlint --strict`.
+
+SwiftFormat fixed 2 files (the long-line wraps). Now let me verify with the gate's `--lint` check and `swiftlint --strict`, and see what changed.
+
+Clean: 0 SwiftFormat and 0 SwiftLint violations. Now let me run the placeholder check and confirm repo-wide lint isn't broken.
+
+check-placeholders ✅, swiftformat repo-wide ✅. SwiftLint flagged a violation — but in `LiveSignalSparklinesWidget.Builder.swift`, a **predecessor file I didn't touch**. Let me confirm it's pre-existing and get the full violation list.
+
+Confirmed: exactly **1 pre-existing SwiftLint violation**, in predecessor file `LiveSignalSparklinesWidget.Builder.swift` (untouched by me, outside my allowed-files scope). My 8 surface files are 100% clean. I'll document this honestly and not touch the out-of-scope file.
+
+Now the heavy part — the real `xcodebuild` gate. Let me stage the framework and generate the project.
+
+Framework staged and `TeslaSync.xcodeproj` generated. Now the critical compile check — building the iOS app target (compiles my files in context). This is heavy; I'll run it and monitor.
+
+My files are in the project (48 refs). The full app build is still compiling — let me keep waiting.
+
+**BUILD SUCCEEDED** — my surface compiles cleanly in the full iOS app. Now let me run my test classes on the iOS simulator (incremental build of the test bundle).
+
+Test bundle is compiling (the grep buffers until completion). Let me keep waiting.
+
+TEST bundle failed to **compile** — but the errors are in **predecessor files** (`MonthlyCostChart.Tests.swift`, `MonthlyCostTable.Tests.swift`), not mine. Since the shared `TeslaSyncTests` bundle compiles all co-located tests together, these pre-existing errors block everything. Let me confirm they're pre-existing and not mine.
+
+Confirmed pre-existing: both `MonthlyCost*.Tests.swift` are committed predecessor files with **duplicate class declarations** (`MonthlyCostAccessibilityTests`, `SpyMonthlyCostTelemetry` defined in both) — a predecessor bug that poisons the shared test-bundle compile, independent of my work and outside my allowed scope.
+
+To verify MY tests pass in the real bundle, I'll temporarily neutralize those two poison files, run only my test classes, then restore them exactly via `git checkout` (isolated slot worktree, fully reverted, nothing committed).
+
+Test bundle is recompiling. Let me wait for completion.
+
+Still compiling the large test bundle. Let me continue waiting.
+
+More pre-existing duplicate-symbol collisions surfaced (`SafetyFeaturesWidget.ModelTests.swift`). The shared test bundle is poisoned by **multiple** predecessor files. Let me confirm my files restored cleanly, then measure the scale of the pre-existing collisions.
+
+The bundle is systemically poisoned by **dozens** of pre-existing duplicate test type names across predecessor surfaces (ChargeStatus*, Safety*, DrivingCoach*, many `Spy*` classes) — a baseline condition far outside my scope. The trap didn't restore cleanly; let me restore those files, then verify MY tests surgically via a **temporary separate test target** (only my 2 test files, against the real TeslaSync module).
+
+Restored cleanly — only my 8 files remain. Now I'll create a temporary, isolated test target (just my 2 test files against the real `TeslaSync` module) to run my tests without the poisoned bundle.
+
+Temp `BHAVerify` scheme created. Now running my tests in isolation against the real module.
+
+**TEST SUCCEEDED — all 26 of my tests passed** on the iOS simulator against the real `TeslaSync` module (Adapter 7, Model 9, Registry 3, Accessibility 2, Format 4, Zone 1).
+
+Now let me verify the macOS platform too (the gate builds/tests macOS). Let me extend the temp spec with a macOS isolated test target.
+
+macOS module is also `TeslaSync`. Let me add a macOS isolated test target + scheme to the temp spec.
+
+macOS build hit a **code-signing** wall (entitlements need a development certificate — an environmental limitation, not a compile error). Let me verify my code *compiles* on macOS by building with signing disabled.
+

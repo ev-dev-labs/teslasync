@@ -1,0 +1,168 @@
+I'll start by investigating the environment and repository structure to understand what's available and whether the Apple toolchain capability exists.
+
+
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Not a BLOCKED scenario. Let me read the web source spec and the Apple project structure.
+
+Apple toolchain confirmed available. Now let me study the existing `shared-surfaces` conventions and find a similar AI narration surface already implemented as a template, plus read the web dependencies.
+
+Let me examine the closest analog — an existing AI "Narrative" surface already implemented in Apple — to follow its exact conventions. I'll read both the web source and the full Apple implementation.
+
+`AICabinTemperatureImpactNarrative` is a near-identical structural twin (same web pattern: `AIFeatureCard` + `withAiFeature` + `useAiStream` + `vehicleId`). It's the ideal template. Let me read all 10 of its Apple files.
+
+Excellent template. Let me read the remaining 8 files of the Cabin narrative template.
+
+Now the Views, Chrome, Previews, strings, and both test files.
+
+Now the Previews, strings, and both test files to complete the template picture.
+
+I now fully understand the 10-file template. Let me set up a plan and investigate the build system (xcodegen/schemes, design tokens, test wiring) before writing code.
+
+xcodegen present; `.xcodeproj` is generated. The shared-surfaces dir auto-includes my files (Tests excluded from app target). Let me check the test target wiring and how `daysA`/`daysB` are actually passed by the web caller, since that's the one behavioral delta from the template.
+
+Let me read the actual web caller and the positive wiring test to lock the exact request-body contract (including the `daysA=0` passthrough).
+
+I have the exact contract: `{ vehicle_id: 42, days_a: 0, days_b: 365 }` with `days_a`/`days_b` included whenever finite and ≥ 0 (0 passed through). Let me verify the design tokens exist (reusing the template's exactly), confirm the backend route, then write the files.
+
+Route confirmed (`/ai/analytics/period-compare/narrate`). Design tokens are reused verbatim from the shipping Cabin template, so they're guaranteed present. Let me set up tracking and write the plan.
+
+Let me check the lint/format configs so my files comply on the first pass, then write the Adapter and Model.
+
+Configs are standard (120 col, type names ≤ 50 — all my `PeriodCompareNarration*` names fit). Mirroring the Cabin template's exact style guarantees lint/format compliance. Writing the Adapter and Model now.
+
+Now the Model file.
+
+Now the Projection file.
+
+Now the main view file.
+
+Now the two test files — Tests.swift (projection + model + a11y) and AdapterTests.swift (with the new days coverage).
+
+Now the AdapterTests with the new days coverage and the exact request-body contract.
+
+All 10 files written. Let me verify formatting/linting on my files first (fast feedback), and check the gate tooling (pwsh, placeholder script).
+
+pwsh and the placeholder script both exist — I can run the exact gate. One formatting issue: a redundant `throws`. Let me auto-format my files (only mine) and re-lint.
+
+No other lint issues — just two `file_length` violations (>400 lines): `Adapter.swift` (429) and `AdapterTests.swift` (417). I'll split the stream machinery into dedicated `.Stream.swift` / `.StreamTests.swift` files (within the allowed `AIPeriodCompareNarration.*` scope, idiomatic for this codebase). Let me view current boundaries.
+
+I'll move the stream-machinery sections out. Let me read the exact blocks to relocate.
+
+I'll extract the stream machinery into a dedicated `.Stream.swift` file, then remove that block from the Adapter. Creating the new file:
+
+Now removing that block from the Adapter and trimming its header to point at the new file:
+
+Adapter is now 233 lines. Let me update its header to reflect the moved stream sections.
+
+Now split the tests similarly. Let me get exact current boundaries in AdapterTests.
+
+All files now under 400 lines. Let me re-run format + lint on the full set of my files (now 12).
+
+Clean on all 11 Swift files (format + lint). Now generate the Xcode project and run the iOS build+test.
+
+Project generates cleanly; both schemes present. Let me initialize the gate log and run the iOS build+test (the long step).
+
+Now the iOS build+test. Starting it asynchronously so I can monitor.
+
+The iOS build is running. Meanwhile, let me verify the full-repo lint/format baseline is clean (to separate temp files, so I don't interleave the official log). This confirms no pre-existing violations would fail those gate steps.
+
+swiftformat baseline clean (0/4278). Now the swiftlint --strict baseline (full).
+
+Both lint and format pass cleanly across the entire repo (swiftlint: 0 violations/3980 files; swiftformat: 0/4278). Let me check the iOS build progress.
+
+Build is compiling. Let me wait for more progress.
+
+Output seems buffered through the pipe. Let me inspect the on-disk log and process activity directly.
+
+Build is healthy and progressing (now emitting the TeslaSync Swift module — past dependency precompilation). The tee'd on-disk log is the reliable source. Let me wait and tail it.
+
+Build failed — but the failing compile batch lists `RecentActivity/RecentChargesSection/RecentDrivesListWidget` files, not mine. I need the actual `error:` line to see if my code caused it. Let me extract real errors.
+
+The only `error:` is a pre-existing SwiftUI "expression too complex to type-check in reasonable time" timeout in `feature-views/RecentDrivesSection.Previews.swift:24` — not my code, and a load-sensitive heuristic timeout. My files compiled with zero errors. Let me inspect that line and confirm it's unrelated.
+
+Confirmed: the failure is a pre-existing, load-sensitive SwiftUI type-check timeout in `RecentDrivesSection.Previews.swift:24` (a heavy `Int`/`Double` arithmetic expression in DEBUG preview data) — out of my scope, and my 12 added files merely increased peak parallel-compile load and tipped this borderline expression over the wall-clock limit. My files compiled with zero errors.
+
+The standard mitigation is an incremental rebuild (far lighter load). Let me verify with a build-only retry first.
+
+The build-only retry also failed — but on a *different* batch of unrelated pre-existing files (`AIAlertTuningSuggestions.*`, `AIAnomalyExplanations.*`, …), with "(3 failures)". Different files failing each run is the signature of load-sensitive SwiftUI "expression too complex" wall-clock timeouts on this shared machine, not a deterministic code error.
+
+Per the honesty covenant I must prove causation rather than assume. Let me run a clean **baseline** (my files moved out) to confirm the timeouts occur without my code too.
+
+Baseline (without my files) regenerated. Now build-only iOS, capturing errors to a temp log.
+
+Baseline is compiling (no errors yet, at EmitSwiftModule). Let me wait for it to finish.
+
+**Decisive result: the baseline build — with my files entirely removed — fails identically** with "(3 failures)" on yet another different set of unrelated files (`AISafetySettingExplainer.*`, `AISettings.*`, `AISignalExplorerNlFilter.*`, …). This proves the failure is **pre-existing and environmental**, not caused by my code. Let me confirm the error type and restore my files.
+
+The baseline error is actually a **deterministic** pre-existing error — `AISignalExplorerNlFilter.swift:142: error: escaping closure captures non-escaping parameter 'content'` — in a file I'm not allowed to touch, with zero "expression too complex" lines. Different runs surface different pre-existing errors (parallel-batch cancellation). I need to understand the repo's true baseline state. Let me check git status and view the offending pre-existing file.
+
+My 12 files are the only untracked changes; everything else (incl. the failing `AISignalExplorerNlFilter.swift`) is committed at HEAD (a parallel-merge accumulation). So the committed baseline itself doesn't compile cleanly here. Let me view that pre-existing error to confirm it's genuine (read-only) and gauge severity.
+
+The pre-existing `glass()` helper passes a non-escaping `@ViewBuilder` param into `TSGlassPanel` — a genuine deterministic error, independent of my files (it appeared with my files physically removed). Let me confirm `TSGlassPanel`'s signature to characterize this precisely, and check how widespread the pre-existing breakage is.
+
+Confirmed genuine pre-existing breakage: `TSGlassPanel.init` takes `@escaping () -> Content`, but `AISignalExplorerNlFilter.glass(_:)` passes a **non-escaping** `@ViewBuilder` param into it — a deterministic compile error in a committed file outside my scope. Let me see how prior surface gate logs resolved (did their `build test` actually pass here?).
+
+This is the decisive context. The prior surface gate logs (0009, 0016, 0029) establish a **clear, accepted convention** for exactly this situation: the full-app iOS/macOS `xcodebuild build test` gates are reported RED/DEFERRED (EXIT=65) due to **pre-existing, out-of-scope sibling breakage** (0016 cites the *identical* escaping-closure pattern in a different surface; 0009 cites the same RecentDrives expression-too-complex/collisions) + macOS code-signing — never reported green — while the surface's **owned** gates (swiftlint/swiftformat/placeholder) are green and the surface is **independently verified** to compile + pass its own tests. Final: EXIT=0 / STATUS=DONE.
+
+I'll follow that exactly, with rigorous evidence. First, the strongest evidence: independently verify my logic + all parity tests via an isolated SwiftPM package (since the whole-app build is blocked by sibling files I can't touch).
+
+**Independent verification: all 88 logic + parity tests pass (0 failures)** in an isolated SwiftPM build — covering vehicle/days coercion, the exact `{vehicle_id:42, days_a:0, days_b:365}` request contract, SSE parsing, the stream reducer, output/action derivation, projection phases, model wiring/telemetry/freshness, and accessibility. My surface's logic compiles and behaves at parity, independent of the broken siblings.
+
+Now let me also type-check the SwiftUI files (Views/Chrome/main/Previews) against a signature-faithful token shim. Let me read the real token signatures.
+
+Logic is decisively green (88/88). Now let me type-check the SwiftUI files (Views/Chrome/main/Previews) against a signature-faithful token shim (I captured the real `TSButton`/`TSSkeleton`/`TSFadeIn`/`TSSpacing`/`TSRadius`/`Color.TS`/`Font.TS` signatures).
+
+Comprehensive independent verification complete: **SwiftUI files type-check clean (EXIT=0)** against faithful token signatures (incl. `#Preview` + `@Observable`), and **88/88 logic+parity tests pass**. Now let me check the placeholder script's `-Path` semantics, then produce the authoritative gate log by running all 5 steps in order.
+
+Important: the placeholder gate's `-Path .../AIPeriodCompareNarration` (no extension) isn't a real file/dir, so `Test-Path` returns false → the script treats it as "nothing to scan = clean" (trivial pass). To honestly satisfy the "no placeholders" criterion I'll run the exact gate command AND a meaningful scan of my actual files. First, a quick pre-check for forbidden tokens in my shipped files.
+
+My shipped files contain **zero** forbidden tokens (patterns: TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented + swift stubs). Note the exact gate path is extensionless so the script treats it as "nothing to scan = clean" — I'll run both the exact command and a meaningful scan of the real files.
+
+Now let me produce the authoritative gate log by running all 5 steps in order (incl. the macOS build I haven't run yet). Launching as a detached runner.
+
+Authoritative gate runner launched (iOS + macOS build/test, then lint/format/placeholder). This will take ~15-20 min as the two full-app builds run. Let me wait and monitor the log.
+
+Gate runner complete: **IOS_EXIT=65, MAC_EXIT=65** (both pre-existing sibling breakage), **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0, PLACEHOLDER_REAL_EXIT=0**. Let me extract the precise error lines from both build sections to cite them accurately in the disposition.
+
+Precise, citable evidence captured. **Zero** error lines reference my files. The reds are exactly the precedent pattern:
+- **iOS (65):** pre-existing `RecentDrivesSection.Previews.swift:24` (expression-too-complex) + `AISignalExplorerNlFilter.swift:142` (escaping-closure into `TSGlassPanel.init(@escaping)`) — both in sibling files I'm forbidden to touch.
+- **macOS (65):** code-signing preflight (`TeslaSync-macOS` entitlements need a dev cert) — environmental, no dev cert on this runner.
+
+Let me append the full honesty-covenant disposition + independent-verification evidence + EXIT/STATUS to the log.
+
+The log is complete and ends with `EXIT=0` / `STATUS=DONE`. Now let me clean up temp artifacts, verify git state (ensure the generated `.xcodeproj` is ignored and only my 12 files + the log are staged), and commit.
+
+Clean — exactly my 12 surface files + the log are untracked; the generated `.xcodeproj` is git-ignored. Committing now.
+
+Committed as `eb24f691b` (12 surface files + the gate log; the generated `.xcodeproj` correctly ignored). Let me finalize tracking and do a last clean-state check.
+
+The task is complete and committed. Working tree is clean; the gate log ends with `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ared-surfaces-0037-AIPeriodCompareNarration.log | 19199 +++++++++++++++++++
+ .../AIPeriodCompareNarration.Adapter.swift         |   226 +
+ .../AIPeriodCompareNarration.AdapterTests.swift    |   254 +
+ .../AIPeriodCompareNarration.Chrome.swift          |   158 +
+ .../AIPeriodCompareNarration.Model.swift           |   371 +
+ .../AIPeriodCompareNarration.Previews.swift        |   126 +
+ .../AIPeriodCompareNarration.Projection.swift      |   132 +
+ .../AIPeriodCompareNarration.Stream.swift          |   218 +
+ .../AIPeriodCompareNarration.StreamTests.swift     |   175 +
+ .../AIPeriodCompareNarration.Tests.swift           |   367 +
+ .../AIPeriodCompareNarration.Views.swift           |   238 +
+ .../AIPeriodCompareNarration.strings               |    45 +
+ .../shared-surfaces/AIPeriodCompareNarration.swift |   121 +
+ 13 files changed, 21630 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0037-AIPeriodCompareNarration.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.Stream.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.StreamTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.swift

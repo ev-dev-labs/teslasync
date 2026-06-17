@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and look at recently created pages for patterns.
+
+Let me look at the full manifest record and existing Apple page examples.
+
+The actual pages live in `apps/apple/Sources/Features/`. Let me examine how recent parity pages were structured by looking at the SleepEfficiency and Powershare commits.
+
+Now I understand the structure. PowersharePage is the closest analog (no charts/maps). Let me study all its files in detail.
+
+Let me read the remaining Powershare files and the shared infrastructure (AppRoute, TeslaSyncApp, route registration).
+
+Let me read the Format, Sample, RouteRegistration files and the shared App infrastructure.
+
+Now let me look at the AppRoute and TeslaSyncApp infrastructure and how the Powershare commit modified them.
+
+Let me check the TeslaSyncApp registration, test structure, and search for any existing quickStats references.
+
+Important: there's an existing `QuickStatsGrid.swift`/`QuickStatsModel`/`QuickStatsStrings` in the older `TeslaSync/feature-views/` tree (a different component). Let me check the build config and naming to avoid conflicts.
+
+Both `Sources/` and legacy `TeslaSync/feature-views/` compile into the same module, so I must avoid type-name collisions with existing `QuickStats*` types. Also the xcstrings already has `translation.quickStats.*` keys. Let me examine these closely.
+
+The existing `translation.quickStats.*` keys use a different namespace; Powershare added bare keys like `"powershare.title"`. I'll follow that convention. Let me check the xcstrings structure, existing QuickStats type names to avoid collisions, the ledger, and shared components.
+
+Let me inspect the apple-ledger.json structure and the shared component/token library.
+
+No existing QuickStats ledger row. Now let me explore the shared component/token library to know what's available.
+
+Let me examine the web MetricCard, the analytics/vehicle types, the SharedFacade domains, and the feedback/token components.
+
+Now let me look at the SI converters, measurement-system preference, and the Feedback components (EmptyState/ErrorDisplay) signatures.
+
+Let me study the StatisticsPage (closest analog: analytics/fleet + distance + currency) and the Feedback states component.
+
+Let me read the StatisticsPageModel, its models, the tsUnits environment, and the design tokens.
+
+Let me check tool availability (build gate viability), and read the Statistics models/sample/tests plus placeholder patterns.
+
+All tools are available (Xcode 26.5, swiftlint, pwsh, xcodegen). The gate can run, targeting STATUS=DONE. Let me read AppRouteParser, the Statistics models/sample, and the vehicle state hook.
+
+Let me check the web Vehicle/VehicleState types and the StatisticsModels for the vehicle `name` derivation.
+
+Let me confirm the Design token palette (Color.TS members, Font.TS, TSSpacing scale) so I use valid token names.
+
+Let me check the FleetCompare route registration (it wires `onNavigate`) to mirror the footer's "Open Dashboard" navigation.
+
+Let me verify how the route host renders pages (NavigationStack wrapping) and the FleetComparePage onNavigate usage, then I'll begin implementation.
+
+I have enough context. Let me set up a task plan and verify the xcstrings entry format + logs directory.
+
+Let me review the Powershare log format to mirror the `=== PARITY ===` evidence section and gate structure.
+
+Let me check the `TSIconBox` and `TSBadge` signatures to finalize the metric card design.
+
+I now have full understanding. Let me create the Dashboard feature directory and start writing the implementation files.
+
+Now I'll write all the source files. Starting with the value types and formatters.
+
+Now the main view file:
+
+Now the sections file (vehicle card, metric grid, footer, skeleton):
+
+Now the route registration:
+
+Now let me wire the route into `AppRoute.swift` and register it in `TeslaSyncApp.swift`.
+
+Now add the 10 string-catalog keys (9 `quickStats.*` + `route.quickStats`) in the Powershare style:
+
+Now the model tests, mirroring the Powershare test structure:
+
+Now update the parity ledger. Let me view its tail to insert rows cleanly.
+
+Implementation complete. Now running the gate. First the fast checks — placeholder scan and swiftlint:
+
+Placeholder scan passes (0 violations, 1 documented allow). Let me wait for swiftlint.
+
+swiftlint clean (0 violations across 11,606 files). Now the build. Let me check whether the Shared.xcframework and xcodeproj already exist (to avoid a needless 7-min KMP rebuild).
+
+JDK 17 available, gradle wrapper present. Let me kick off the KMP `Shared.xcframework` build (the long pole, ~7+ min) in the background.
+
+While the KMP framework builds, let me generate the Xcode project in parallel.
+
+Project generated. Let me verify my new files are picked up as compile sources while the KMP build continues.
+
+All 8 files are in the project. Let me wait for the KMP framework build to complete.
+
+The KMP build is still compiling Kotlin/Native (can take 7-10 min on first run). Let me continue waiting.
+
+The KMP/Native compilation is slow on first run (downloading the konan toolchain + compiling for multiple Apple targets). Let me keep waiting.
+
+Let me check whether the build is actively progressing (konan download / compilation) in a separate shell.
+
+The build is actively progressing (Kotlin/Native LLVM `clang++` emitting objects; konan 2.4.0 toolchain downloaded). It's just slow. Let me keep waiting.
+
+KMP framework built and staged (17m). Now the macOS app build, isolating the known pre-existing broken `Input.Previews.swift` (per the Powershare gate), with code signing disabled.
+
+Let me verify the build is actively progressing while it compiles the large source tree.
+
+Build is healthy (750 objects compiled in last 2 min, 40 active compilers). Let me stop the slow find and continue waiting for the build.
+
+macOS build **SUCCEEDED** — all 7 QuickStatsPage files compiled cleanly alongside the pre-existing `QuickStatsGrid` files (no naming collisions). Now running the model tests on macOS.
+
+All **16 tests passed** on macOS. Now the iOS Simulator build (exercises the `#if os(iOS)` adaptive `horizontalSizeClass` branch macOS doesn't compile).
+
+Let me confirm the iOS build is progressing.
+
+iOS build progressing (481 simulator objects in last 2 min). Let me wait for completion.
+
+My QuickStatsPage iOS objects compiled (including the iOS-only adaptive branch). The build is finalizing. Let me wait for the result.
+
+The iOS build hit a **linker** error (not a compile error — all my QuickStatsPage files compiled for both arch slices). Likely the KMP `Shared.xcframework` only has an `ios-arm64-simulator` slice (no `x86_64`), and `generic/platform=iOS Simulator` builds both arches. Let me verify and rebuild for arm64 simulator only.
+
+Confirmed — the KMP framework only ships an **arm64** simulator slice; `generic` forced an x86_64 link. Rebuilding for the booted arm64 iPhone 17 Pro simulator (matching the Powershare gate invocation).
+
+iOS arm64 simulator build **SUCCEEDED**. All gate steps pass. Now let me write the evidence log and check git status.
+
+Clean git status — xcodeproj and framework are git-ignored. Now writing the evidence log.
+
+Let me mark the gate done and verify the new AppRoute case doesn't break the watch target (which also compiles `AppRoute.swift`), then commit.
+
+No exhaustive AppRoute switches in the watch target, and `.powershare` lives only in `AppRoute.swift` — confirming a new case needs no other edits. Let me do a final placeholder scan and commit.
+
+All correct files staged (no xcodeproj/framework). Committing.
+
+Let me verify the commit contents and todo status.
+
+The task is complete and fully verified. All work committed cleanly (13 files, 1236 insertions; no generated artifacts).
+
+## Summary
+
+Implemented **`QuickStatsPage`** as a native SwiftUI / Apple HIG page at full web parity with `web/src/features/dashboard/pages/QuickStatsPage.tsx` (route `/quick-stats`), adaptive across macOS + iOS.
+
+**Delivered (7 source + 1 test file under `apps/apple/Sources/Features/Dashboard/`):** an `@Observable QuickStatsPageModel` over a KMP-facade `DataSource` seam (no networking in the view, ADR-004), SI-canonical value types, display-boundary formatters, the page view, sections, route registration, and 16 XCTest cases. Wired the `.quickStats` route (`AppRoute.swift`, `TeslaSyncApp.swift`), added 10 `Localizable.xcstrings` keys, updated the parity ledger, and wrote the evidence log.
+
+**Parity — 18/18 covered:**
+- **5 panels:** vehicle card (GlassPanel1) + 4 metric cards (Distance Driven / Drives / kWh Used / Total Cost)
+- **4 states:** loading skeleton · no-vehicle empty + summary zero-fallback · retryable error · populated success
+- **9 strings:** all `quickStats.*` keys resolved from the catalog with web key names
+
+**SI discipline (ADR-005):** summary stored as meters + watt-hours; distance converts to the user's unit and energy scales to kWh only at the render boundary via the shared `Units` facade.
+
+**Gate — all green (raw outputs in the log):**
+- `PLACEHOLDER_EXIT=0` (0 violations, 1 documented redaction allow)
+- `LINT_EXIT=0` (swiftlint --strict, 0 violations / 11,606 files)
+- macOS app **BUILD SUCCEEDED**; iOS-Simulator (arm64) **BUILD SUCCEEDED**
+- **16/16** model tests passed
+- `PARITY_COVERED==PARITY_REQUIRED==18` → **EXIT=0 / STATUS=DONE**
+
+Disclosed honestly in the log: two pre-existing, out-of-scope Xcode-26.5-incompatible files were isolated via `EXCLUDED_SOURCE_FILE_NAMES` (not modified), and the KMP framework ships arm64-only simulator slices (so the arm64 simulator destination is used, not `generic`).
+
+
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

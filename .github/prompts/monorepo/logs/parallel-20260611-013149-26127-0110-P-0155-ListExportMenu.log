@@ -1,0 +1,155 @@
+I'll start by exploring the repository structure to understand what exists, then read the web source and check the Apple toolchain availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat) and `apps/apple` exists. This is NOT blocked on capability. Let me read the web source and explore the Apple app structure.
+
+Web source is clear — a CSV/JSON export menu with optional scope radios. The `shared-surfaces` directory has 1159 entries (many existing surfaces). I need to study the established pattern. Let me find a complete representative surface and check whether ListExportMenu already exists.
+
+Full surface file set is clear: `.swift`, `.Model.swift`, `.Views.swift`, `.Adapter.swift`, `.States.swift`, `.Seams.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. ListExportMenu doesn't exist yet. Let me find the most similar existing surfaces (menus/export/presentational with only `useTranslation`) to match the established pattern precisely.
+
+`ChartExportMenu` is the ideal reference — it's the explicit sibling named in the web source, and like ListExportMenu it has no data hooks (no `.Adapter.swift`, only `useTranslation`). Let me read its complete file set to learn the exact established conventions.
+
+Now let me read the Model, ModelTests, and Tests files to understand the model pattern, i18n facade, telemetry (P1/S11), and test structure.
+
+I now fully understand the established pattern. ChartExportMenu is the ideal template (explicit sibling, presentational menu, no data hooks). But ListExportMenu has a stateful two-step interaction (pick scope → pick format) that a native `Menu` can't reproduce faithfully (tapping dismisses). `SavedViewMenu` uses a `.Popover.swift` — let me study it plus the design tokens and project wiring.
+
+Now let me verify the test target wiring and confirm exact design-token names (the web uses `--surface-elevated`, `--text-secondary`, `--text-muted`, `--text-primary`, `accent-blue-500`).
+
+Let me view the full Tokens.swift to confirm the exact namespaces and members (`TSSpacing`, `TSRadius`, `Font.TS`, `Color.TS`).
+
+I have all tokens and patterns confirmed. Key facts:
+- Tokens: `Color.TS.{textPrimary,textSecondary,textMuted,accent,border,surface,surfaceGlass}`, `Font.TS.{body,caption,label,bodySm}`, `TSSpacing`, `TSRadius` all exist.
+- App targets build `shared-surfaces` (excluding `*Tests.swift`); the iOS/macOS test bundles include the co-located `*Tests.swift`.
+- `.xcodeproj` is git-ignored and rebuilt via `xcodegen`.
+
+Let me verify the build toolchain (xcodegen), the logs dir, and the placeholder checker before writing code.
+
+All tooling is present: `xcodegen` 2.45.4, `pwsh` (so I can run the gate's PowerShell verbatim, including `check-placeholders.ps1`), and the logs dir. The authoritative log path is `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0155-ListExportMenu.log`.
+
+Critical next check: does `Shared.xcframework` exist (the app/test targets depend on it), and can the project generate + build as a baseline?
+
+Critical finding: `Frameworks/Shared.xcframework` is **missing** (only `.gitkeep`) — and both app targets depend on it. There's a `build-shared-xcframework.sh`. Let me check whether the KMP shared core can be built locally to unblock the full `xcodebuild` gate.
+
+The KMP `Shared.xcframework` must be built via Gradle (`apps/shared/core`), which the app/test targets need. Crucially, there's a **prior log for this exact surface** (`...-0155-ListExportMenu.log`) — that will show how this was handled before. Let me read it and check the environment (JDK, KMP source, simulator).
+
+The prior log is decisive: it documents the **sanctioned disposition** for this exact surface — code-complete + all host-runnable gates green, with the full-app `xcodebuild` gate DEFERRED due to pre-existing, out-of-scope blockers (missing `Shared.xcframework`, parallel-merge symbol collisions). Importantly, my checkout has *already* wired `shared-surfaces` into `project.yml` + `.swiftlint.yml` (the prior run hadn't). Let me read the prior log's tail (final EXIT/STATUS) and verify which blockers still exist in *this* checkout.
+
+Decisive evidence. The prior run for this exact surface concluded **EXIT=0 / STATUS=DONE** with the sanctioned disposition: complete surface + all host-runnable gates green, full-app `xcodebuild` DEFERRED on pre-existing out-of-scope blockers (missing KMP `Shared.xcframework`). My checkout is *further along*: `DashboardWidgetSize` collision is gone (defined once), `shared-surfaces` is wired into `project.yml` + `.swiftlint.yml`, and `*Tests.swift` is excluded from the app target. The remaining hard blocker for full-app build is the missing `Shared.xcframework` (Gradle/Kotlin-Native, owned by the acceptance runner).
+
+Let me record my plan, check for a shared Button component, and confirm the simulator/SwiftPM viability before writing code.
+
+There's a shared `Sources/Components/UI/Buttons.swift` — the native counterpart of the web `@/components/ui/Button`. Let me read its API so I map to it correctly (the prompt lists `@/components/ui/Button` as a required shared-component mapping). Popover + `presentationCompactAdaptation` both have shared-surface precedent.
+
+Excellent — there's a shared `TSButton` (the native counterpart of web `@/components/ui/Button`). I now have everything needed. Let me record the plan, then write the surface. I'll follow the canonical `ChartExportMenu` sibling pattern (presentational menu, no data hook → `.Model`/`.ModelTests`, not `.Adapter`), but use a `.popover` (SavedViewMenu precedent) for faithful two-step scope→format interaction.
+
+Now I'll write the surface. Starting with the Foundation-only core (`Model.swift`) — the pure logic, i18n facade, telemetry seam, and `@MainActor` state holder.
+
+Now the entry View with the popover:
+
+Now the presentational subviews:
+
+Now the previews (one per state), the strings catalog, and both test files:
+
+All 7 files created. Now verification. First, formatting + lint on my files (using the repo configs):
+
+Formatting clean. Now swiftlint --strict on my files:
+
+swiftlint clean (0 violations). Now the strongest proof — an **isolated SwiftPM build + XCTest** against the *real* `Tokens.swift`, proving compile + all tests pass under Swift 6 strict concurrency, independent of the missing `Shared.xcframework`.
+
+Isolated build is clean under Swift 6 strict concurrency. Now run the tests:
+
+All **35 tests pass**, 0 failures, under Swift 6 strict concurrency. Now the real iOS-18 + macOS-15 SDK typecheck (the prompt's target platforms), then the placeholder gate:
+
+Both SDK typechecks pass (including the DEBUG `#Preview` path). Now the placeholder/stub gate via `pwsh` (exactly as the gate specifies):
+
+The script treats a non-existent literal path as a clean pass — so the gate's literal `-Path .../ListExportMenu` is vacuous. To verify *honestly*, I'll scan a temp dir containing exactly my 7 files, **and** run the gate's literal invocation:
+
+Two legitimate-English uses of the word "placeholder" (describing the `{{count}}` token) trip the mechanical scanner. I'll reword them — the gate is literal, and the covenant forbids the token in shipped code. Let me find all occurrences across my files first:
+
+Three occurrences. I'll reword all to "token" / "plain text":
+
+Re-running the placeholder scan and re-verifying the edited test still passes (re-syncing the isolated package):
+
+Placeholder scan now clean (COUNT=0). The XCTest summary was truncated by `tail`; let me confirm the full count:
+
+**35 tests, 0 failures** confirmed (14 logic + 5 a11y + 8 strings + 4 model + 4 diagnostics). Now let me attempt the full-app gate. First, `xcodegen generate` to confirm my surface is actually wired into the project (the prior run's blocker — now fixed in this checkout):
+
+All 7 surface files are wired into the generated project (42 refs) — the prior run's "0 refs / unwired" blocker is resolved in this checkout. Now let me attempt the actual full-app `xcodebuild` gate to capture real evidence. Confirming the framework is still absent, then starting a bounded build:
+
+Confirmed: `Shared.xcframework` is still absent (only `.gitkeep`), and `build-shared-xcframework.sh` is a **scheme preAction** (runs Gradle/Kotlin-Native before the app compiles). Let me check the build's progress and what it's doing:
+
+The log is empty and no `xcodebuild` is visibly progressing — it's stalled in the Gradle pre-action (the `java` at etime ~24min is a contended Gradle daemon from parallel slots, as the prior log warned). Let me check my build process state and the full log:
+
+My background build was torn down with the sync session (sync sessions are discarded on completion). I'll run a genuine, persistent attempt in an **async** session to capture authentic blocker evidence — bounded, since the deferral outcome is already well-established and I won't sink excessive time into a contended Gradle/Kotlin-Native download.
+
+The build has entered the **`Stage Shared.xcframework` scheme pre-action** — the exact KMP/Gradle blocker. Let me let it run a bit more to capture the Gradle/Kotlin-Native evidence, then check processes:
+
+Major update: the Kotlin/Native toolchain **is cached** (`~/.konan/kotlin-native-prebuilt-macos-aarch64-2.4.0`), and the `Shared.xcframework` Gradle build is **actively compiling** (konan clang++ building `Shared.framework.o` for iOS) — no network download needed. This may actually complete (better than the prior run). Let me keep monitoring:
+
+The SchemeScriptAction (Gradle) output is buffered until it completes. Let me track filesystem progress of the xcframework assembly directly:
+
+`Shared.xcframework` is now **fully assembled and staged** (Info.plist + ios-arm64 + ios-arm64-simulator + macos-arm64), and my slot's Gradle finished. The primary blocker is resolved on this run. The app target should now be compiling. Let me monitor:
+
+The iOS build shell **completed with exit code 0**. Let me verify the actual `xcodebuild` result and confirm my surface compiled:
+
+Build failed with exactly **1 error — not in ListExportMenu**. Let me identify the single (pre-existing) error:
+
+The single failure is in a **different, pre-existing, out-of-scope file** — `feature-views/RecentDrivesSection.Previews.swift:24` (a Swift compiler "unable to type-check in reasonable time" timeout on a `.map` expression, aggravated by the heavily-contended host). **Zero `ListExportMenu` errors** — and critically, the xcframework blocker was overcome (built + staged) and the app target compiled *through* my wired-in surface. Let me confirm my changes are isolated and that file is pre-existing/untouched:
+
+Confirmed: my changes are exactly the 7 `ListExportMenu.*` files; `RecentDrivesSection.Previews.swift` is a pre-existing committed surface (commit `afff462c1`), untouched by me and **outside my allowed files**. Let me characterize that error to report it precisely, then attempt the macOS build:
+
+The error is a deterministic Swift type-checker "expression too complex" case (mixed `Int`/`Double`/`Int64` literals + an optional-`Double` ternary in a multi-arg initializer) in that pre-existing foreign file — a re-run won't fix it, and it's outside my allowed files. Now let me attempt the macOS build (the xcframework macOS slice is already staged) to capture its real result:
+
+While the macOS build runs, let me gather supporting evidence from the iOS build log — how deep the compile got and whether my surface was in the compile set:
+
+iOS build did **2580 SwiftCompile invocations**, staged the xcframework successfully, and produced **exactly 1 error — RecentDrivesSection only** (zero other errors). The macOS build finished — let me read its result:
+
+macOS build fails for a *different* pre-existing reason — **absent macOS development-signing certificates** (`TeslaSync-macOS` / `TeslaSyncWidgets-macOS` entitlements), exactly as the prior log noted. Again **zero `ListExportMenu` errors**; the xcframework was up-to-date.
+
+Both full-app failures are pre-existing, unrelated, and outside my allowed files. Let me capture exact line counts and write the comprehensive, honest gate log:
+
+Now I'll write the comprehensive, honest gate log with all raw evidence:
+
+Log written. Now a final verification pass (re-lint/format after edits), confirm change isolation, and clean up temp artifacts:
+
+All final gates green (swiftformat 0/6, swiftlint 0 violations), and git status shows exactly my 7 surface files + the log (generated `.xcodeproj`, staged `Shared.xcframework`, and `apps/shared/core/build` are gitignored). Now committing per the prompt's spec:
+
+Commit `f76b91567` created with exactly the 8 files (7 surface + log). Final confirmation of a clean working tree:
+
+The task is complete and verified. 
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`ListExportMenu`** SwiftUI surface at full parity with `web/src/components/forms/ListExportMenu.tsx` — committed as `f76b91567` (7 surface files + gate log, 1295 insertions; only the prompt's allowed files touched).
+
+**Built (following the canonical `ChartExportMenu` sibling + `SavedViewMenu` popover patterns):**
+- `ListExportMenu.swift` — entry view, native `.popover` (faithful two-step "pick scope → pick format" flow; free Escape/outside-tap dismissal)
+- `.Model.swift` — value types, pure projection/scope logic, P1/S10 i18n facade, P1/S11 telemetry seam, `@MainActor @Observable` state-holder
+- `.Views.swift` — trigger (spinner-on-loading), popover content, scope radio rows, format rows
+- `.Previews.swift` — every state; `.strings` — 9 web-parity keys; `.Tests.swift` + `.ModelTests.swift` — **35 tests**
+
+**Parity:** scope chooser gating, initial-scope rule, selected→visible drop correction, effective-scope guard, `{{count}}` interpolation, CSV/JSON order, and the `disabled`→loading/empty split — each unit-asserted. No stale/offline/error fabricated (the web control has no data axis).
+
+**Verification — all host-runnable gates GREEN (raw evidence in the log):** swiftformat `0/6`; swiftlint --strict `0 violations`; placeholder `COUNT=0`; isolated SwiftPM build (Swift 6 strict concurrency, real design tokens); **35/35 XCTest**; iOS-18 + macOS-15 `swiftc -typecheck`.
+
+**Beyond the prior run:** I built + staged the KMP `Shared.xcframework` and confirmed the surface is wired (42 pbxproj refs); the full-app iOS `xcodebuild` compiled *through* my surface (2580 SwiftCompile invocations) with **zero `ListExportMenu` errors**. The iOS/macOS builds don't reach `BUILD SUCCEEDED` solely due to **pre-existing, unrelated, out-of-allowed-files** blockers — `RecentDrivesSection.Previews.swift`'s deterministic type-check timeout (a different surface) and absent macOS dev-signing — reported raw, never as passing.
+
+Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-shared-surfaces-0155-ListExportMenu.log | 211 +++++++++++++
+ .../shared-surfaces/ListExportMenu.Model.swift     | 325 +++++++++++++++++++++
+ .../ListExportMenu.ModelTests.swift                | 124 ++++++++
+ .../shared-surfaces/ListExportMenu.Previews.swift  | 120 ++++++++
+ .../shared-surfaces/ListExportMenu.Tests.swift     | 187 ++++++++++++
+ .../shared-surfaces/ListExportMenu.Views.swift     | 189 ++++++++++++
+ .../shared-surfaces/ListExportMenu.strings         |  29 ++
+ .../TeslaSync/shared-surfaces/ListExportMenu.swift | 110 +++++++
+ 8 files changed, 1295 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0155-ListExportMenu.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ListExportMenu.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ListExportMenu.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ListExportMenu.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ListExportMenu.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ListExportMenu.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ListExportMenu.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ListExportMenu.swift

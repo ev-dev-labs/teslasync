@@ -1,0 +1,76 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple tooling is available.
+
+Apple tooling is available (xcodebuild, swiftlint, swiftformat, swift, Xcode). Now let me explore the web source and the existing Apple app structure in parallel.
+
+Now I have the full web source. Let me study the established Apple surface pattern and the shared infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry).
+
+Let me study a complete reference surface end-to-end to internalize the established pattern, plus the core infra files.
+
+This AI-stream surface shows the full file structure. Let me read the remaining files of this reference surface and find a CRUD/list-style surface closer to SavedViewMenu's domain.
+
+xcodegen and design tokens exist, but **Shared.xcframework is missing** (only .gitkeep). Let me check whether it can be built and study the closest mutation+dialog analog plus the components/tokens I'll need.
+
+The KMP shared core is real (503 Kotlin files) and JDK 17 is present. I'll kick off the `Shared.xcframework` build in the background (it's the long pole for the gate) while I study the pattern and implement the surface.
+
+The ShareDriveDialog is a strong mutation+list analog and I now have the tokens. Let me read its view/projection/seams files and the shared UI components I'll use.
+
+I have the core pattern. Now let me read the seam pattern and the exact APIs of the shared components I'll use (Button, EmptyState, TextField, Badge, Overlays).
+
+Now let me read the remaining shared component APIs and the ShareDriveDialog rendering/test files to nail the exact conventions.
+
+I have the component APIs. Now let me read how ShareDriveDialog renders these (Views/Controls/States/Rows) and its test + preview structure to match idioms exactly.
+
+Now the rendering idioms are clear. Let me read the pure-core Adapter, the state chrome, rows, strings, and crucially the placeholder-check script (to understand the gate's word filter for keys like "namePlaceholder").
+
+pwsh and a booted iPhone 16 simulator are both available. Let me read the forbidden-pattern list, the remaining ShareDriveDialog files (States/Rows/Tests/Previews/strings), and check the gradle build progress.
+
+"Placeholder" is a forbidden word — I'll use the `// parity:allow` opt-out for the `namePlaceholder` key like ShareDriveDialog does. The KMP build is running. Let me read the row rendering and the test/preview patterns to finalize my understanding.
+
+I have a thorough grasp of the pattern. Let me read the UI test + previews + strings + the test-target wiring in project.yml, and check the build progress.
+
+Let me confirm the exact test-target file inclusion and check the build progress.
+
+Test bundles include co-located `*Tests.swift` from `shared-surfaces`. The KMP build is still running (the long pole). I have the full pattern. Let me read the exact web wire contract (types + hooks) for `SavedView` to ensure data-shape parity, then write my plan.
+
+Let me read the exact `SavedView` type fields, then write my plan.
+
+I now have the complete wire contract and pattern. Let me check the lint/format config (to respect file-length/line-length budgets) and the build progress, then write my plan.
+
+Lint constraints are clear: ≤120 line width, `--strict` (warnings fail), so files <400 lines and types <~250 body lines, with `before-first` wrapping. The KMP build (long pole) is still running. Let me record my plan and todos, then implement.
+
+Now implementing. Starting with the pure core `Adapter.swift`.
+
+The KMP build finished. Let me read its result and stage the framework.
+
+BUILD SUCCESSFUL — the `Shared.xcframework` is built. Let me stage it and confirm the project's pre-build script wiring.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64 — covers the gate's targets). Continuing the implementation with the seams.
+
+Now the observable model — the core state holder. I'll keep the main type lean and push display/derived helpers into extensions (which don't count toward `type_body_length`).
+
+Let me add the derived/display + accessibility helpers as an extension in a separate small file to keep the main type body lean.
+
+Now the state chrome (loading/empty/error/freshness) plus the `.text` helper.
+
+Let me verify the `TSSkeleton` API before relying on it.
+
+`TSSkeleton` API confirmed. Now the views — trigger, popover content, rows (with a DRY icon-button), and the applied badge.
+
+Now I'll update `apply()` to also dismiss the manage sheet (web closes manage on apply), then build the dialogs file.
+
+Now I'll harden the delete-failure surfacing (alerts can't show inline errors) and write the main view that wires the popover, sheets, and the confirm alert.
+
+Now the i18n catalog. The web key `savedViews.emptyQuery` ("No filters") is the manage-row query tooltip — I'll wire it as a manage-row accessibility hint so the key is actually used, then write the strings file.
+
+Now the Xcode previews — one per state.
+
+Now the two test files. First the pure adapter/projection/accessibility tests.
+
+Now the model state-holder tests.
+
+All 11 files are written. Now let me verify formatting and lint on the new files before the heavy build. First, run swiftformat (apply) on my files, then swiftlint --strict.
+
+All auto-fixable. Let me apply swiftformat to my files, then re-verify.
+
+Formatting applied. Now let me run the two static gates exactly as the gate script does (whole tree), to confirm clean.
+

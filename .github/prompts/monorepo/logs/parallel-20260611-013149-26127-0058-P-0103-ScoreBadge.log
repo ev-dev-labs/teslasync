@@ -1,0 +1,159 @@
+I'll start by exploring the repository structure to understand what exists and what the task requires.
+
+Apple toolchain is fully available. Let me read the web source (the spec) and explore the existing Apple project structure.
+
+Now the critical dependency — the `scoreScale` logic — and existing native patterns to match.
+
+The shared-surfaces dir is large. Let me understand the established file pattern per surface and find a good exemplar to match.
+
+Each surface follows a multi-file pattern. Let me find pure-presentational surfaces (no Adapter) since ScoreBadge has no data fetching, and inspect the project config.
+
+`Avatar` is the closest analog — pure presentational, no Adapter/Projection. Let me study it completely as my exemplar.
+
+Avatar is the ideal exemplar. Let me read all its files to learn the exact established conventions.
+
+Let me read the rest of the Avatar surface — Adapter, Views, Previews, Tests, ModelTests, strings.
+
+Let me read the Avatar tests, previews, strings, and find the design-token definitions (P1/S9) plus project config.
+
+Let me read Avatar.Tests.swift and locate the P1/S9 design tokens and project config.
+
+Tokens aren't under that path. Let me locate the design-token definitions and project config across the Apple tree.
+
+Tokens live in `apps/apple/Sources/Design/TSDesign.swift`; project config is `apps/apple/project.yml`. Let me read both, plus the score palette colors and check-placeholders tool.
+
+The build auto-includes `shared-surfaces/*` via XcodeGen globs — no project.yml edit needed. Now let me read the full token definitions to see what semantic colors exist.
+
+Now I understand the tokens and conventions. Let me assess buildability of the gate (xcodegen, simulator, Shared.xcframework script) and how interpolation strings + placeholder-check work.
+
+Key risk identified: the gate's `xcodebuild` wires a **pre-build Gradle step** to build `Shared.xcframework` (Kotlin/Native). Let me check whether that toolchain, simulators, and the interpolation convention are viable here.
+
+iPhone 16 sim exists; Java 17 + gradlew present, but `Shared.xcframework` is **not staged** (only `.gitkeep`) — the Gradle/Kotlin-Native build is the gate risk. Let me confirm the interpolation convention, then write the surface.
+
+Convention confirmed: `String(format:)` with positional specifiers (Delta precedent). I have everything needed. Let me read the lint configs, then write a plan and the surface.
+
+Let me verify whether the web Tailwind config customizes `text-3xl` (to nail the `lg` size precisely), set up tracking, and write a brief plan.
+
+The Tailwind config customizes `fontSize` — I must read the exact values for parity.
+
+Confirmed: default Tailwind scale applies — `sm=12px`, `md=20px`, `lg=30px` (text-xs/text-xl/text-3xl). Now writing the surface, mirroring the Avatar pattern exactly. Starting with tokens and the pure core.
+
+Now creating the surface files. Starting with the value tokens.
+
+Now the Model (state-holder, telemetry/source seams, strings facade).
+
+Now the SwiftUI views (palette→Color bridge, Dynamic Type font, composed label).
+
+Now the entry view with web-prop-parity initializers.
+
+Now the i18n strings, then previews.
+
+Now the pure-adapter tests, reproducing the web test vectors plus boundaries.
+
+Now the model/source/view tests.
+
+All 9 files created. Now let me prove the pure-core logic compiles and is correct via a standalone `swiftc` build + parity harness (independent of Xcode/Gradle).
+
+Surface files compiled clean — the only error is in my harness (Swift 6 top-level concurrency). Fixing the harness.
+
+Pure core: **all parity checks pass under Swift 6**. Now type-check the SwiftUI layer (Views/Model/entry) and previews against the real design tokens.
+
+`@ScaledMetric` needs no attribute args when fully initialized in `init`. Fixing.
+
+Shipped surface and previews both type-check cleanly against the macOS SDK. Now let me type-check the **test files** against the surface symbols (compiling everything as one `TeslaSync` module, with the self-`@testable` import stripped).
+
+XCTest needs the platform framework path. Adding it.
+
+The only errors are XCTest's C-macro overlay (a bare-`swiftc` limitation), not my code — every ScoreBadge symbol resolved. Let me confirm the test bodies fully type-check against the surface by swapping in a tiny XCTest shim.
+
+Test files use only `XCTestCase`, `XCTAssertEqual`, `XCTAssertNil`. Let me shim those and confirm the test bodies type-check against the real surface.
+
+Found a real Swift 6 concurrency nit: `ScoreBadge.surfaceSlug` (on a `@MainActor` `View`) accessed from a non-`@MainActor` test. I'll mark it `nonisolated` (it's a Sendable `String` constant) — cleaner than forcing the test onto the main actor.
+
+Entire module type-checks clean under Swift 6. Now running the repo's actual `swiftformat` and `swiftlint --strict` on my files.
+
+Auto-fixable formatting (wrap property bodies, switch-expression assignment). Let me apply the project formatter, then re-verify.
+
+swiftformat passes. Let me review the auto-formatted projection and run `swiftlint --strict`.
+
+One swiftlint issue: the `swiftlint:disable` comment orphans the doc comment. Let me view and reorder it.
+
+Both pass. Re-verifying compilation after the edits, then running the placeholder gate.
+
+Pure core + full module: clean. Now the placeholder gate — let me check how it resolves `-Path` (the gate passes a file *prefix*, not a dir).
+
+The gate passes a file *prefix* as `-Path`; with flat files (not a `ScoreBadge/` dir) the script would scan nothing. To genuinely verify (honesty covenant), I'll scan my actual files via a temp `ScoreBadge/` dir, and also run the gate-literal path.
+
+Genuine scan caught the literal word "placeholder" in a doc comment (line 207) — a mechanical match I must scrub so the surface is truly clean (not reliant on the gate's path quirk). Let me read all forbidden patterns and scan my files for any.
+
+Only one match — the literal word "placeholder" in a doc comment. Rewording to "format specifier" (accurate and clean).
+
+Genuine placeholder scan clean. Let me re-confirm lint/format/typecheck on the final files, then attempt the heavy `xcodebuild` gate (starting with project generation).
+
+All green. Now attempting the full gate. First, generate the Xcode project.
+
+Project generated. The critical feasibility gate is the `Shared.xcframework` Kotlin/Native Gradle build. Let me probe it before committing to a long run.
+
+Excellent — Gradle 8.14.5 works and **both `~/.gradle` and `~/.konan` caches exist** (toolchain pre-warmed). This environment is set up for the Apple build. Let me build `Shared.xcframework` (async, monitored).
+
+Kotlin/Native compilation is underway (slow but expected). Let me continue waiting.
+
+`Shared.xcframework` built and staged (8m48s, Kotlin/Native compiles now cached). The full gate is feasible. Let me create the log and run the iOS build+test exactly as the gate specifies (backgrounded — this is a large build).
+
+Now running the iOS build+test (backgrounded; this is large). I'll capture full output to a file and surface key lines.
+
+Good — the app target (including my surface) is actively compiling. Let me wait and then check for errors and completion.
+
+The iOS build failed — but the **single error is in a different, pre-existing surface** (`AIGeofenceAwareAutomationSuggestions.swift:141`), not my ScoreBadge code. This is exactly the predecessor-red risk. Let me gather honest evidence: confirm I only added ScoreBadge files, capture all distinct errors, check the known-issues doc, and prove my surface compiles for iOS specifically.
+
+Confirmed: I added **only** ScoreBadge files, and the **sole** build error is a pre-existing bug in the out-of-scope sibling `AIGeofenceAwareAutomationSuggestions.swift:141` — no ScoreBadge error. Let me gather final evidence: the known-issues doc, the sibling error context, and a targeted **iOS-SDK** compile of my surface.
+
+My ScoreBadge surface **type-checks cleanly against the iOS SDK too** (exit 0). Let me read the full evidence on the sibling bug and the known-pending-verifications doc.
+
+The sibling bug is clear: `AIGeofenceAwareAutomationSuggestions.swift` passes a non-escaping `@ViewBuilder` closure into an escaping context (line 141) — pre-existing, unmodified by me, and the doc confirms full-app `xcodebuild build test` is a known macOS-pending verification. Let me launch the macOS gate (same shared sources → expected identical failure) to record a real `MAC_EXIT`, while I prepare the log.
+
+While macOS builds, let me capture the gate's tree-wide `swiftlint --strict` and `swiftformat --lint` (as the gate runs them), and update tracking.
+
+Tree-wide swiftformat: **FORMAT_EXIT=0** (0/4421 files). Now tree-wide `swiftlint --strict`.
+
+Tree-wide `swiftlint --strict`: **LINT_EXIT=0** (0 violations, 4123 files). Now checking macOS build progress.
+
+macOS failed fast on a **code-signing/entitlements** requirement (no development certificate in this environment) — another external/environment blocker, plus the same sibling compile error. Let me capture the distinct macOS errors, then confirm what's stageable for commit.
+
+Complete, honest picture confirmed: only my 9 files + log are staged (xcodeproj/framework are git-ignored); macOS failed on dev-signing (environment), iOS on the out-of-scope sibling — **zero ScoreBadge errors**. Writing the comprehensive gate log.
+
+Let me verify a factual claim in the log — whether ScoreBadge was actually reached in the iOS compile — and correct it if needed (honesty over assumption).
+
+Confirmed accurate: ScoreBadge files were included in the iOS compile batch (274 shared-surface files compiled) with zero ScoreBadge errors, and my isolated iOS typecheck passed. The log is truthful. Now committing the surface + log with a transparent message.
+
+Committed cleanly (working tree clean). Cleaning up my scratch dirs and finalizing tracking.
+
+Done. Here's the outcome.
+
+## ScoreBadge (Apple) — P4 shared surface 0103
+
+**Surface shipped & committed** (`cabbcee05`) — 9 files at `apps/apple/TeslaSync/shared-surfaces/ScoreBadge.*`, mirroring the established Avatar (0076) pattern:
+
+| File | Role |
+|---|---|
+| `.Tokens` | size enum (sm/md/lg → 12/20/30), `ScoreGrade`, pinned grade palette (`#10b981`/`#00f0ff`/`#f59e0b`/`#ef4444`/`#b91c1c`/`#6b7280` + numeric weights) |
+| `.Adapter` | verbatim port of `scoreScale.ts` (`numericToGrade`/`gradeInfo`/thresholds), descriptor, projection, meta, a11y |
+| `.Model` | P1/S8 source + P1/S11 telemetry seams, `@Observable` model, P1/S10 strings facade |
+| `.Views`/`.swift` | bold + tabular-nums + leading-none label, shared grade colour, Dynamic Type, VoiceOver, web-prop initializers |
+| `.Previews`/`.Tests`/`.ModelTests`/`.strings` | every branch + full web test-vector parity + `score.aria` |
+
+**Per-surface verification — all GREEN:** iOS & macOS SDK type-check (0), Swift 6 strict-concurrency module type-check incl. tests (0), full web-parity harness (`ALL_PURE_CORE_CHECKS_PASSED`), `swiftlint --strict` (0/4123), `swiftformat --lint` (0/4421), placeholder scan (0).
+
+## Gate: `STATUS=BLOCKED` (EXIT=65) — honestly reported, not faked
+
+The whole-app `xcodebuild build test` steps are red for causes **external to this surface and outside this prompt's allowed files** — not a capability gap (I built `Shared.xcframework` and 80+ surfaces compiled, incl. ScoreBadge, with **zero ScoreBadge errors**):
+
+1. **iOS** — one pre-existing compile error in the **out-of-scope sibling** `AIGeofenceAwareAutomationSuggestions.swift:141` (`escaping closure captures non-escaping parameter 'content'`), which I'm not permitted to edit.
+2. **macOS** — development code-signing certificate unavailable in this environment (a `macos-latest` CI concern per `macos-pending-verifications.md`).
+
+Per the Honesty Covenant (no red-as-green, no predecessor bypass, no commit-as-DONE-on-red), I did not work around these. Full evidence is in the committed gate log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0103-ScoreBadge.log`.
+
+
+
+The task is fully complete within scope: surface implemented, verified green on every per-surface check, full gate run with an honest `BLOCKED` (external, out-of-scope causes), and committed. The two blockers (a sibling surface's pre-existing compile error and macOS dev-signing) are outside my allowed-files scope and cannot be resolved without violating the prompt's constraints or faking green. Let me record final state in the plan and close out.
+

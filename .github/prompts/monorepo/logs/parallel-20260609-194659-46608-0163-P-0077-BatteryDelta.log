@@ -1,0 +1,159 @@
+I'll start by exploring the repository structure, the web source component, and checking the Apple app infrastructure and toolchain availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Apple app infrastructure exists. Let me read the web source and explore the Apple structure.
+
+The web source is a **pure presentational atomic component** — it takes `startPct`/`endPct` as props, uses only `useTranslation`, and has exactly two render branches (no-data dash, and delta display with compact/pair variants). There are no loading/error/stale/offline data states because it has no data hooks. I must reproduce its *actual* behavior faithfully, not invent fabricated states.
+
+Let me examine existing shared-surface conventions and infrastructure to match established patterns.
+
+Let me study the file convention for a simple, presentational (non-data-bound) surface to match patterns precisely.
+
+The convention is a 9-file bundle per surface: `.swift` (entry), `.Adapter`, `.AdapterTests`, `.Model`, `.Projection`, `.Views`, `.Previews`, `.strings`, `.Tests`. Let me study a complete presentational example (TimeMarker) to learn the exact patterns for i18n facade, tokens, state holders, telemetry, and tests.
+
+Strong understanding forming. Let me read the remaining TimeMarker files (Views, Previews, Adapter, Tests, AdapterTests) and the design tokens to nail the conventions, especially the surface slug, test framework, and token system.
+
+Let me find the surface-slug definition, the design tokens (P1/S9), and confirm how the build includes these files.
+
+`TimeMarker`'s Adapter explicitly documents the same honesty reasoning I identified — pure presentational components reproduce only their REAL branches (no fabricated loading/error/stale/offline), citing sibling `ChartTimeRangeContext` (0069) as precedent. `BatteryDelta` is even simpler. Now let me read the design tokens (P1/S9), project.yml build config, the placeholder checker, and the AdapterTests pattern.
+
+I need the exact token API. Let me locate the `Color.TS`, `Font.TS`, and `TSSpacing` definitions.
+
+Now I have the full token API. Let me check how a leaf presentational surface (not chart-annotation) emits `view.opened` and structures its main View — examining `ChartLegend` and `ChartTooltip` entry/model files, plus the cited sibling precedent `ChartTimeRangeContext`.
+
+`ChartLegend` is data-bound (full state machine); `TimeMarker` is the correct analog for a pure presentational atom and explicitly documents reproducing only real branches. `BatteryDelta` follows that model. Now I must verify build integration — critically, whether `project.yml` globs `shared-surfaces/*` (since I can only edit `BatteryDelta.*` files, not `project.yml`).
+
+project.yml uses **path-based globbing** for `shared-surfaces` — app targets include all non-`*Tests.swift` files, test bundles include `*Tests.swift`. So my new `BatteryDelta.*` files auto-integrate without editing project.yml. Now let me check the build prerequisites: xcodegen, the generated `.xcodeproj`, and the `Shared.xcframework` (KMP) dependency.
+
+xcodegen is installed, but `.xcodeproj` must be generated and `Shared.xcframework` (KMP/Gradle) is built by a scheme pre-action requiring the Kotlin toolchain. Let me check the top of Tokens.swift (for the `tsDynamicColor` helper I'll need for a standalone type-check) and the KMP/shared setup.
+
+The codebase uses `battery.100` as its battery SF Symbol. The KMP `Shared.xcframework` is built via Gradle as a scheme pre-action — a heavy/network dependency that's the main capability risk. Let me check for naming collisions before writing, then create a plan.
+
+There's already a component-library port `TSBatteryDelta` (in `Sources/Components/DataDisplay/Metrics.swift`) and a feature-view helper `ChargingBatteryDeltaDisplay` — both port this same web component. My prompt explicitly scopes a *shared-surface* bundle at `shared-surfaces/BatteryDelta.*` (the component-library atom is out of scope). Let me study these existing ports to stay faithful and consistent with the team's exact tone/format/sign decisions.
+
+This is the definitive reference. The team's faithful port (`ChargingBatteryDeltaDisplay.make`) confirms exact rules: U+2212 for drops, `+` for rises, `—` for zero/missing, emerald/amber/muted tones, from/to for a11y. I also confirmed a subtle web parity detail: in the **has-data** branch only the *value text* is tone-colored (icon inherits), while in **no-data** the *whole element* is muted. Let me read the lint configs before writing.
+
+I now have everything needed: exact tokens, conventions, the team's faithful delta logic, and confirmation that `BatteryDelta` is a pure presentational atom (reproduce only real branches, like sibling `TimeMarker`/`ChartTimeRangeContext`). Let me set up tracking and write the 9-file bundle.
+
+Now creating the 9-file bundle. Starting with the Foundation-only core and projection.
+
+Now the two test files (pure-core AdapterTests + model/view/facade Tests).
+
+All 9 files created. Now verifying — auto-format my new files to match the gate's `--lint`, then run swiftlint, a standalone type-check, and placeholders.
+
+`0/8 files formatted` = my files already match SwiftFormat style. Now running lint checks and a standalone type-check against the real design tokens (which doesn't need the KMP framework).
+
+swiftformat `--lint` and swiftlint `--strict` both pass with **0 violations** on all 8 files. Now a standalone type-check of the production sources against the real design tokens (no KMP needed) to prove they compile.
+
+Production sources type-check cleanly (exit 0) against the real iOS SDK + tokens with Swift 6. Now let me type-check the test files too (stripping the `@testable` import for a single-module compile, adding XCTest's framework path).
+
+Both test files type-check cleanly too — **all 8 files compile** against the real SDK + tokens. Now the placeholder gate. Let me see how it resolves the scoped path, then run it as the gate specifies.
+
+The gate's scoped path resolves to "nothing to scan = clean" for flat-file surfaces. To genuinely verify (honesty covenant: "no stubs as final"), I'll run the checker against my actual files too. Let me check the patterns and run both the real scan and the exact gate command.
+
+No forbidden patterns. Let me run the placeholder checker against my real files (genuine evidence) plus the exact gate command.
+
+Real placeholder scan of my actual files: **PLACEHOLDER_COUNT=0, EXIT=0**. Now the full build gate. First generate the Xcode project, then assess the KMP `Shared.xcframework` pre-action (the main capability risk).
+
+Project generated. Let me confirm my files were globbed into the targets, then test whether the KMP `Shared.xcframework` build (the scheme pre-action) is feasible on this runner.
+
+All 9 files (including `.strings` and tests) are globbed into the iOS + macOS app and test targets. Java 17 is present. The KMP `Shared.xcframework` needs a fresh Gradle build (Kotlin/Native + network). Let me attempt it — this is the gating dependency for the full `xcodebuild`.
+
+Gradle is running (downloading the Kotlin/Native toolchain — indicates network is available). Let me continue monitoring.
+
+The KMP build hit my 300s bound (exit 124 = timeout) but was progressing — network and toolchain are available, it's just a large first-run download of the Kotlin/Native compiler. The capability is present (not BLOCKED), so I'll let it complete. Restarting async (Gradle resumes from cache) and monitoring.
+
+While the KMP framework builds, let me re-verify my implementation against the web source once more and monitor progress.
+
+Good — the Kotlin/Native toolchain (2.4.0) was already cached and the build is actively compiling (`core/build/XCFrameworks` is being populated). Let me wait for it to finish.
+
+KMP `Shared.xcframework` built successfully (`BUILD SUCCESSFUL`). Now let me stage it, verify the iPhone 16 simulator exists, then build the full iOS app (which compiles my files in the real target).
+
+Framework staged; iPhone 16 simulator is booted. Let me locate the gate log directory, then launch the full iOS `build test` (compiles all my files + tests in the real target).
+
+Let me examine a sibling's gate log (TimeMarker 0074 — my closest analog) to match the expected log format and testing scope.
+
+Critical context: the sibling TimeMarker (0074) log establishes the precedent — the full-app `build test` gates are RED for **pre-existing, out-of-scope** reasons (sibling-slot duplicate-type errors on iOS, missing dev-signing cert on macOS), verified via baseline build + grep showing zero errors from the surface itself. Per precedent these are deferred to the P4 acceptance gate, with every in-scope check green.
+
+I must verify this empirically for my change, not assume. Let me run the real iOS gate and capture output.
+
+iOS gate running (output → /tmp/ios_gate.log). Let me monitor progress.
+
+iOS gate finished. Let me read the result and analyze.
+
+IOS_EXIT=65 (as the sibling precedent predicted). I must now rigorously verify this is pre-existing and **not** from my files. Analyzing the errors.
+
+All 162 iOS errors are in **sibling** surfaces (`StateTimeline*`, `RecentDrives*`) — "ambiguous for type lookup" (duplicate-type collisions across slots). **Zero** errors reference BatteryDelta. Let me confirm the 3 BatteryDelta log lines are benign progress, and prove the ambiguous types are pre-existing sibling duplicates.
+
+Conclusive: the 3 BatteryDelta log lines are successful `.strings` copy/validation (no errors). The ambiguous types (`StateTimelineModel`, `RecentDrivesModel`) are **duplicated across sibling files** (`dashboard-widgets/` + `feature-views/`) — a pre-existing collision independent of my surface. To match the precedent's rigor, let me run a **baseline build without my files** to prove identical errors.
+
+Baseline project regenerated without my files (BatteryDelta absent, grep=0). Now running the baseline iOS build to confirm identical pre-existing errors.
+
+Baseline building. Let me wait for it to complete.
+
+BASELINE_IOS_EXIT=65 — **identical** to the with-my-files build, proving the red is pre-existing. Let me confirm the baseline errors match exactly.
+
+**Definitive proof**: iOS `build test` = EXIT 65 both with AND without my files, with an *identical error set* — all pre-existing sibling `StateTimeline*`/`RecentDrives*` duplicate-type collisions, zero attributable to BatteryDelta (count differs only due to nondeterministic parallel-compile error reporting). Now restoring my files and running the macOS gate.
+
+Files restored, project regenerated. Now running the macOS gate.
+
+macOS gate running. Meanwhile, let me run the tree-wide swiftformat and swiftlint (the gate runs these whole-tree) to capture their real exits.
+
+swiftformat tree-wide: **FORMAT_EXIT=0** (0/3890 need formatting). macOS gate finished — let me read its result and run swiftlint tree-wide.
+
+MAC_EXIT=65. Let me analyze the macOS errors and run swiftlint tree-wide.
+
+macOS: **zero** BatteryDelta errors. The failures are code-signing ("entitlements require a development certificate") on `TeslaSync-macOS`/`TeslaSyncWidgets-macOS` — no dev cert on this runner (infrastructure, matching precedent). swiftlint tree-wide: **LINT_EXIT=0** (0 violations, 3660 files). Let me capture the full macOS error composition for an accurate log.
+
+macOS: exactly 4 errors, **all code-signing** (no dev cert), zero compile errors, zero BatteryDelta involvement. To prove my files also compile for the macOS target (the gate bailed at signing before exercising them), let me run a standalone macOS-SDK type-check.
+
+Comprehensive evidence gathered. My sources type-check cleanly for **both** iOS 18 and macOS 15 (Swift 6 strict concurrency). All in-scope gates green; both full-app gates are RED for proven pre-existing/out-of-scope reasons (iOS: sibling duplicate types, baseline-identical; macOS: missing dev-signing cert), matching the established precedent. Let me write the gate log.
+
+Gate log written. Now let me verify git state — confirm the generated `.xcodeproj` and staged `Shared.xcframework` are git-ignored (not accidentally committed), and clean up temp artifacts.
+
+Clean — only my 9 files + the log are untracked; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Committing per the prompt.
+
+Committed (1134 insertions across 10 files). Let me confirm a clean working tree and finalize.
+
+The task is complete. The `BatteryDelta` shared surface has been shipped, verified, and committed.
+
+## Summary
+
+Ported the web `components/data-display/BatteryDelta.tsx` to a production-polished, Apple-idiomatic SwiftUI shared surface — a **9-file bundle** under `apps/apple/TeslaSync/shared-surfaces/BatteryDelta.*`, following the established convention (Adapter / Projection / Model / View / Views / Previews / strings / Tests / AdapterTests).
+
+**Faithful parity** (verified against the web source and the team's existing port `ChargingBatteryDeltaDisplay`): `hasData` guard → muted "—"; compact `+N%` / `−N%` (U+2212 drop sign) / "—"; pair `A% → B%`; emerald/amber/muted tones via design tokens; web-exact coloring (whole element muted on no-data, value-only tone with inherited icon on populated); both i18n keys (`battery.delta.unknown`, `battery.delta.aria`); once-only `view.opened` telemetry. As a pure presentational atom (only hook is `useTranslation`), it reproduces **only the source's real branches** — no fabricated loading/error/stale/offline — matching sibling precedent `TimeMarker` (0074).
+
+**Verification — every in-scope gate GREEN:**
+- `swiftc -typecheck` against the **real iOS 18 *and* macOS 15 SDKs** (Swift 6, strict concurrency): **0 errors** for all files
+- `swiftlint --strict`: **0 violations** (tree-wide, 3660 files) · `swiftformat --lint`: **0** (3890 files)
+- `check-placeholders`: **0** · `xcodegen`: all 9 files enumerated · iOS build validated `BatteryDelta.strings`
+
+**Full-app gates (`IOS_EXIT=65` / `MAC_EXIT=65`) — proven pre-existing / out-of-scope:**
+- iOS: only sibling `StateTimeline*`/`RecentDrives*` duplicate-type errors. **Baseline build with my files removed = identical error set** (`BASELINE_IOS_EXIT=65`); **zero** BatteryDelta errors.
+- macOS: 4 errors, all code-signing (no dev cert on this runner); zero compile/BatteryDelta errors.
+
+The allowed-files scope forbids touching the colliding sibling files or signing config, so per documented precedent these are deferred to the P4 acceptance gate. Committed as `2b402c62d` with the gate log ending `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0077-BatteryDelta.log | 117 +++++++++++++
+ .../shared-surfaces/BatteryDelta.Adapter.swift     | 142 +++++++++++++++
+ .../BatteryDelta.AdapterTests.swift                | 194 +++++++++++++++++++++
+ .../shared-surfaces/BatteryDelta.Model.swift       | 170 ++++++++++++++++++
+ .../shared-surfaces/BatteryDelta.Previews.swift    |  64 +++++++
+ .../shared-surfaces/BatteryDelta.Projection.swift  | 121 +++++++++++++
+ .../shared-surfaces/BatteryDelta.Tests.swift       | 159 +++++++++++++++++
+ .../shared-surfaces/BatteryDelta.Views.swift       |  77 ++++++++
+ .../TeslaSync/shared-surfaces/BatteryDelta.strings |  23 +++
+ .../TeslaSync/shared-surfaces/BatteryDelta.swift   |  67 +++++++
+ 10 files changed, 1134 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0077-BatteryDelta.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BatteryDelta.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BatteryDelta.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BatteryDelta.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BatteryDelta.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BatteryDelta.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BatteryDelta.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BatteryDelta.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BatteryDelta.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BatteryDelta.swift

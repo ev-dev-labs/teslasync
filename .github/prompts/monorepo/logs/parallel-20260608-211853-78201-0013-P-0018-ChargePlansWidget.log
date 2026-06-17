@@ -1,0 +1,170 @@
+I'll start by assessing the environment capability and exploring the codebase structure.
+
+Good — full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me explore the Apple app structure and read the web source.
+
+Now let me explore the existing Apple dashboard-widgets directory and the web dependencies in parallel.
+
+There's an established pattern with ~417 files. Let me identify the widget naming convention, find the closest analog, and study the shared infrastructure (state holders, tokens, i18n).
+
+`ChargePlansWidget` doesn't exist yet — I'm creating it. Let me study the web data contracts (hooks/types) and find the closest native analog. Let me read the web hooks and the native SharedFacade in parallel.
+
+Let me look at the data types and pick the best analog widget. Let me check file sets for candidate analogs and read native infra.
+
+`ChargePlan`/`RatePlanInfo` types weren't found in types.ts — let me locate them. And I'll read the full `SubscriptionsWidget` analog (list + currency, no charts) to learn the exact canonical structure used in this target.
+
+This is a self-contained, protocol-seam pattern (no direct KMP dependency). Let me read the rest of the SubscriptionsWidget files plus the design tokens and infra to fully internalize the conventions.
+
+Let me read the remaining analog files, the charging types, and locate the design tokens + canonical registration types.
+
+Let me locate the canonical token/registration/infra definitions used across the bundle.
+
+The `&&` chain stopped early. Let me search more broadly with separate commands.
+
+Tokens exist but `DashboardWidgetSize` is only in `Sources/DashboardWidgets/`. I need to understand the build setup — whether `TeslaSync/dashboard-widgets/*` files are in a compiled target. Let me inspect the project/package structure and infra.
+
+There's a `project.yml` (XcodeGen). Let me read it to understand targets, schemes, and source inclusion.
+
+Now I understand the build topology: `TeslaSync/dashboard-widgets/*.swift` compile into the app targets, `*Tests.swift` into the test bundles, all generated via XcodeGen, depending on `Shared.xcframework` (KMP). Let me check tooling availability and prior prompt logs to calibrate the expected gate outcome.
+
+Tooling is present (xcodegen, swiftlint, swiftformat, pwsh, iPhone 16 booted). `Shared.xcframework` is absent (KMP build needed). Prior logs show precedent: surfaces ship with `EXIT=0/STATUS=DONE` documenting environmental blockers. Let me read the analog's Previews + Tests, the design tokens, the build script, and currency-formatting precedent.
+
+I have the full pattern. Let me confirm the design tokens, locate `TSSkeleton`/`TSTone`, and read the web formatting hooks to port `formatCurrency`/`formatTime`/`formatDateShort`/`fmtNumber`/`fmtInt` faithfully.
+
+All tokens confirmed. Now let me read the web formatting semantics (`formatCurrency`, `formatTime`, `formatDateShort`, `fmtNumber`, `fmtInt`) and check how an existing native widget formats currency.
+
+Let me read the native currency/format precedent and the web date-format library specifics for `formatTime`/`formatDateShort`.
+
+Let me confirm the currency `userPrecision` default and finalize formatter parity, then I'll start building.
+
+`userPrecision`/currency defaults: `$`, 2 decimals. I have full parity data. Let me read the lint configs and the full `WidgetDetailCard.tsx` (to reproduce its compact behavior), then start building.
+
+I have complete parity data. The long pole is building `Shared.xcframework` (KMP/Gradle). Let me probe the Gradle setup and kick off the framework build in the background while I write code, and generate the Xcode project.
+
+Java 17 + gradlew present, no prebuilt framework. Let me kick off the `Shared.xcframework` build in the background (long pole) and read the pending-verifications doc meanwhile.
+
+The accepted verification methodology is clear from the pending-doc: **isolated SwiftPM build + tests**, `swiftc -typecheck` (iOS+macOS SDKs), swiftlint `--strict`, swiftformat `--lint`, placeholder gate, and `xcodegen generate` — with the full app `xcodebuild` deferred (pre-existing collisions + signing + KMP framework). Let me set up tracking and inspect the two shared components my surface will depend on.
+
+Both components are self-contained (SwiftUI + tokens). `Skeletons.swift` references `TSCard`. Let me check `TSCard`'s dependency, set up my plan/todos, and peek at the KMP build progress.
+
+`TSStatCard` likely lives in `Metrics.swift`. Let me read it (and Cards.swift) to map the web `StatCard` to its real native counterpart, and check KMP build progress.
+
+Decision: follow the SubscriptionsWidget precedent exactly — self-contained surface depending only on `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` (tokens), `DashboardWidgetSize`/`DashboardWidgetRegistration` (infra), and `TSTone`/`TSSkeleton`, with inline sub-views (no heavy component tree). KMP build still running in background. Now writing the surface, starting with the pure value types.
+
+The accessibility lines are too long for the 120-col limit. Let me refactor with locals.
+
+Now the main SwiftUI surface view.
+
+Now the content bodies (compact + standard) and sub-views.
+
+Now Previews and strings.
+
+Now the comprehensive test suite.
+
+The KMP framework build finished. Let me check the result and verify the framework was staged.
+
+Excellent — the framework built (9m38s) and is staged. The full `xcodebuild` gate is now feasible. Let me run the fast checks first: swiftformat, swiftlint, and the placeholder gate on my files.
+
+swiftformat ✓, placeholder ✓. Two swiftlint issues: `planEntries` body is 1 line over the 50-line limit, and the test file exceeds 400 lines. Let me view the relevant section and fix both (extract a helper; split the test file).
+
+Now split the oversized test file. Let me remove it and recreate two focused test files sharing an internal fixture.
+
+Now re-run swiftlint and swiftformat across all 8 files.
+
+swiftformat ✓ (0/8) and swiftlint --strict ✓ (0 violations). Now generate the Xcode project and confirm my files are enumerated.
+
+xcodegen ✓ (ChargePlansWidget referenced 54×). Before the heavy full build, let me do a fast isolated `swiftc -typecheck` of my surface files against the macOS SDK (with the real tokens/infra + a `TSSkeleton` shim) under Swift 6 strict concurrency, to catch any type errors quickly.
+
+Clean. Let me also typecheck against the iOS 18 Simulator SDK, then launch the full gate.
+
+Both SDK typechecks pass. Now the full gate. Let me set up the log and launch the iOS `build test` (long-running) in the background.
+
+The build is compiling in the background. While it runs, let me verify it's progressing (not stuck on the Gradle preAction or simulator).
+
+Build still running. Let me check the log file directly to gauge progress.
+
+Good — past the Gradle preAction, now in the main Swift module compile (`EmitSwiftModule` for TeslaSync, linking `Shared.pcm`). No errors. Let me continue waiting.
+
+No errors so far; still building (now the widget extensions). Let me keep waiting for the build+test to complete.
+
+`** BUILD SUCCEEDED **` — the app + all targets compiled cleanly with my widget. Now the test action is compiling/running. Let me wait for the test phase.
+
+Output has stalled at the same line for 240s+ — consistent with the documented CoreSimulator test-launch hang. Let me inspect process activity and the raw log tail.
+
+The iOS simulator runtime booted (~10 min ago) and xcodebuild is alive — the test action is attempting execution (the documented slow/blocked path per precedent). The **build already succeeded cleanly with my widget**. To definitively prove my tests pass behaviorally — the methodology's gold-standard "isolated SwiftPM build + tests" — let me build a focused SwiftPM harness (module named `TeslaSync` so `@testable import` works) and run `swift test` in parallel.
+
+The harness is compiling (sharing CPU with the iOS build). Let me wait for it to finish.
+
+**Isolated SwiftPM harness: 31 tests, 0 failures** — definitive behavioral proof. Combined with clean iOS `** BUILD SUCCEEDED **`, dual-SDK typechecks, swiftlint/swiftformat/placeholder all green. Let me check the iOS gate's test-execution phase.
+
+The iOS gate is hung in the **test-action** module re-emit (xcodebuild at 20+ min, 0.2% CPU, log frozen 8+ min) — exactly the documented "iOS simulator test execution blocked by the no-sudo CoreSimulatorService daemon (build passes)" limitation. The build action already produced `** BUILD SUCCEEDED **`. Let me stop the hung test-execution and capture a clean build-only exit code instead.
+
+Let me record the test-execution limitation + harness results in the log, then run a clean iOS build-only (incremental, DerivedData is warm) for a definitive build exit code.
+
+The iOS build-only is running. Let me wait for it (incremental, but the scheme re-stages the framework first).
+
+The preAction re-staged the framework (invalidating cache → recompiling). It's in the build action now (no test/simulator involved). Let me wait for it to complete.
+
+Let me verify whether the build-only is actively compiling (CPU) or stalled like the test action.
+
+Not hung — it's actively recompiling (many `swift-frontend` at 10-21% CPU; the framework re-staging invalidated the cache). `tee` just buffers xcodebuild output. Let me wait for the clean build exit.
+
+`** BUILD SUCCEEDED **` / `IOS_BUILD_EXIT=0` — clean iOS build. Now let me launch the macOS build in the background (signing disabled to prove compilation, since macOS signing/test-exec are the documented blockers) and, while it compiles, record the isolated test results into the log for audit.
+
+While macOS compiles, let me record the isolated SwiftPM test results into the gate log for audit integrity.
+
+All **31 isolated tests pass** (Adapter 8, Build 4, Format 6, Model 8, Registry 2, Accessibility 3), captured to the log. Now let me run the gate's lint/format/placeholder steps repo-wide and capture results (macOS build still compiling in parallel).
+
+`0/1923 files require formatting` → repo-wide swiftformat clean (FORMAT_EXIT=0). Now swiftlint `--strict` repo-wide.
+
+One violation repo-wide. Let me identify it (my files were clean when scoped — need to confirm it's not mine).
+
+The single violation is in `LiveSignalSparklinesWidget.Builder.swift:158` — a **pre-existing sibling surface** (widget 0057), outside my allowed-files scope. Let me confirm it's pre-existing (committed/unmodified) and that my files are the only additions.
+
+Confirmed: the lone violation is in a **tracked, unmodified, pre-existing sibling file** (`LiveSignalSparklinesWidget.Builder.swift`, surface 0057) — outside my allowed scope. My 9 files are the only additions. Let me record the surface-scoped lint (clean) + placeholder into the log with the honest pre-existing note.
+
+Surface lint 0, placeholder 0 — recorded. Let me check the macOS build progress.
+
+macOS still compiling (swift-frontend at 19-36% CPU; those two SUCCEEDED markers are the earlier iOS runs). Let me wait for it to finish.
+
+macOS build actively compiling the `TeslaSync-macOS` target, no errors. Let me wait for completion.
+
+Output is pipe-buffered; macOS target still compiling (swift-frontend active). Let me wait for the macbuild shell to finish and report its exit code.
+
+The macOS build is taking long. Let me verify it's genuinely progressing (not stalled) by checking the macOS build products and active link/compile steps.
+
+The macOS build is genuinely progressing (177 `.o` files compiled in the last 90s, no errors) — just slow due to **shared-environment CPU contention** (a second, non-mine `xcodebuild -scheme TeslaSync-macOS` from another parallel slot is running). Let me keep waiting.
+
+**macOS `** BUILD SUCCEEDED **` / `MAC_BUILD_EXIT=0`** (ad-hoc signing). Both platform apps build cleanly with my surface. Let me finalize the gate log with the summary + EXIT/STATUS.
+
+Log finalized: **EXIT=0 / STATUS=DONE**. Now let me verify what's tracked vs. ignored (xcodeproj, staged framework) so I commit only the intended files.
+
+Clean: only my 9 files are untracked; xcodeproj and the staged framework are gitignored. Let me clean up temp harness dirs and commit the scoped deliverable + log.
+
+All 10 intended files staged (9 surface files + log); pre-existing web changes excluded. Committing.
+
+Committed (`ec8afdc91`, exit 0) — 9 surface files + gate log. Let me do a final verification of the working tree and todos.
+
+All verified. The working tree shows only the two pre-existing web modifications (not mine, untouched); my 9 files are committed in `ec8afdc91`; surface swiftlint is 0 violations; all todos done.
+
+Merge made by the 'ort' strategy.
+ ...le-dashboard-widgets-0018-ChargePlansWidget.log | 31598 +++++++++++++++++++
+ .../ChargePlansWidget.Builder.swift                |   283 +
+ .../ChargePlansWidget.Content.swift                |   308 +
+ .../ChargePlansWidget.Model.swift                  |   274 +
+ .../ChargePlansWidget.ModelTests.swift             |   181 +
+ .../ChargePlansWidget.Models.swift                 |   258 +
+ .../ChargePlansWidget.Previews.swift               |   143 +
+ .../ChargePlansWidget.Tests.swift                  |   263 +
+ .../dashboard-widgets/ChargePlansWidget.strings    |    56 +
+ .../dashboard-widgets/ChargePlansWidget.swift      |   263 +
+ 10 files changed, 33627 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0018-ChargePlansWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.swift

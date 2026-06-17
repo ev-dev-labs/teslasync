@@ -1,0 +1,188 @@
+I'll start by exploring the repository structure and understanding the task requirements, then check platform capability.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat). Let me explore the existing Apple project structure and the web source.
+
+Found the pattern: `DigitalTwinMiniWidget` is the reference widget using a multi-file structure. Let me study it completely along with the shared infrastructure.
+
+Now let me read the remaining reference files and the supporting infrastructure.
+
+Let me examine the supporting infrastructure: state holders, design tokens, shared components, tests, and the localization catalog.
+
+The dashboard-widgets directory has 419 entries (not just 7). Let me see the full picture and check if ChargeStatusLiveWidget already exists.
+
+There are 55 widgets already, but ChargeStatusLiveWidget doesn't exist. Newer widgets have `.strings` and `.Tests.swift` files. Let me see the full widget list and find the best charging/vehicle-state reference.
+
+`RangeEstimateWidget` (live vehicle state) is the closest template. Let me study it fully plus the `.strings`, `.Tests`, `.Previews` conventions and project.yml.
+
+`RangeEstimateWidget` is the ideal template (live vehicle state, same file structure). Let me read all its files plus project.yml.
+
+Let me read the web registry, the unit conversion source, and project.yml to finalize parity details.
+
+Now let me understand the build configuration: project.yml, the placeholder checker, and whether `iPhone 16` simulator and `pwsh` exist.
+
+All tooling is present (pwsh, xcodegen, iPhone 16 booted, placeholder script). The project uses XcodeGen + a KMP `Shared.xcframework` built via a preAction script. Let me check the framework-build script and the placeholder checker before writing code.
+
+The gate requires building the KMP `Shared.xcframework` via Gradle (Kotlin/Native) — the long pole. Let me start that in the background now while I write the widget code, and set up task tracking.
+
+Gradle build kicked off. Let me gather the remaining API details I need: number formatting, the native AnimatedNumber/Badge/feedback components, and the generated design tokens.
+
+Let me check the native `AnimatedNumber` and `Badge` component APIs so I reuse them correctly.
+
+I have everything I need. Let me create the widget files, starting with the Model (state-holder seam, telemetry, registry, i18n facade).
+
+Now the Adapter (pure, Foundation-only projection ported 1:1 from the web numeric pipeline).
+
+The gradle build is still running. Let me check on it briefly, then write the View file.
+
+Gradle's still working (first Kotlin/Native build downloads the compiler). Let me write the View file.
+
+Gradle finished. Let me confirm the framework built, then write the strings file.
+
+KMP framework built successfully (8m47s, now cached). Let me stage it and write the remaining files (strings, previews, tests).
+
+Let me verify every i18n key referenced in my Swift matches the strings file (no missing/extra keys).
+
+All real i18n keys match (the three "missing" are `accessibilityIdentifier` values, not localized strings — correct). Now the Previews file.
+
+Now the Tests file — adapter parity, model phases/telemetry, registry, layout, and accessibility.
+
+All 6 files are written. Now let me run the static checks (swiftformat, swiftlint) on the new files and auto-conform formatting.
+
+Three swiftlint issues to fix: projector function too long, a global constant naming, and the view file exceeds 400 lines. Let me check line counts and refactor — I'll split sub-views into a `.Content.swift` file (matching the allowed `ChargeStatusLiveWidget.*` pattern, like DigitalTwin does).
+
+Let me view the sub-views section to extract it into a Content file.
+
+I'll split the sub-views into a `.Content.swift` file and trim the main view file.
+
+Now remove the sub-views from the main view file (lines 329-583):
+
+Main view is now 328 lines. Now fix the Adapter: move the global constant into the enum and split the long `project` function. Let me view the current state.
+
+Now let me make the Adapter edits — add `emptyDash` to the enum, update `time`, remove the global, and refactor `project` into helpers.
+
+Now refactor the `project` function into helpers to satisfy the function-length rule:
+
+Now re-run format + lint on all files including the new Content file.
+
+All 6 files pass swiftformat and swiftlint strict, all under 400 lines. Let me run the placeholder checker and the full-tree lint (as the gate does), then generate the Xcode project.
+
+Let me check the forbidden-pattern list (my comments use the word "placeholder"), then run the placeholder gate exactly as specified.
+
+Placeholder gate passes (COUNT=0). Now let me generate the Xcode project and run the full-tree lint checks (as the gate does).
+
+Full-tree swiftlint reports 1 violation. Let me identify it — my 6 files were clean in isolation, so this may be pre-existing or a cross-file collision.
+
+The 1 violation is in `LiveSignalSparklinesWidget.Builder.swift` — a different widget, not mine. Let me confirm it's pre-existing and untouched by me.
+
+Confirmed: the single global swiftlint violation is pre-existing in `LiveSignalSparklinesWidget.Builder.swift` (another slot's committed widget, outside my allowed-files scope, unmodified by me). My 7 files contribute 0 violations.
+
+Now the critical step — the iOS build+test gate. Let me start it (compiles the full app + runs tests).
+
+iOS build+test started (compiling the full app — will take a while). Let me monitor progress.
+
+Good progress — it's emitting the TeslaSync Swift module (my files type-checked, no errors yet). Let me keep waiting.
+
+No compile errors, and my `ChargeStatusLiveWidget.strings` validated and bundled. The app module emitted cleanly. It's now building extensions, then tests. Let me continue waiting.
+
+Found 2 real compile errors in the Previews: global `let` projections need `Sendable` under Swift 6 strict concurrency. The fix is correct and proper — `ChargeStatusProjection` and `ChargeMetric` are pure value types and should be `Sendable`. Let me add the conformance.
+
+I also need to proactively fix test-class isolation to match the proven RangeEstimate pattern (all test classes `@MainActor`) — the app build failed before the test target compiled, so let me prevent a second round-trip. Let me mark the remaining test classes `@MainActor`.
+
+Let me re-lint the changed files, then rebuild.
+
+This is hanging unusually. Let me stop and run the checks separately.
+
+swiftformat clean (slow but 0/6 need formatting). Now swiftlint:
+
+Both clean (0 violations). Now rebuild iOS build+test with the fixes.
+
+iOS build+test retrying. Let me monitor for the previews fix and test progress.
+
+Build is in the Gradle preAction (staging cached framework). Let me wait for compilation and tests.
+
+Build is stalled on Gradle daemon startup — there's heavy contention (23 daemons from parallel slots). The framework is already staged correctly. Let me wait for the daemon to free up.
+
+Past the Gradle stall — now recompiling the app module with my fixes (no errors yet). Let me wait for the test phase.
+
+Log stalled at module emission — likely heavy CPU contention (19 Gradle daemons + parallel slot builds). Let me check whether compilation is actively progressing.
+
+System load is ~145 (extreme contention from parallel-slot Gradle/Kotlin-Native builds). My build type-checks (module emitted) but object compilation is CPU-starved. This is environmental, not a code issue. Let me wait longer.
+
+Compilation resumed (2025→8094 lines, no errors). Let me check what's compiling and keep waiting.
+
+My ChargeStatusLiveWidget files are compiling cleanly within the batch. Full app recompile in progress under high load. Let me wait for link + tests.
+
+`** BUILD SUCCEEDED **` — the app + my widget compiled cleanly. Now the test phase (compiling test bundles + running on simulator) under load 200. Let me wait.
+
+Test phase stalled after BUILD SUCCEEDED — the test scheme re-runs the Gradle preAction. Let me see exactly what it's waiting on.
+
+Understood — the `test` action re-ran the preAction and is recompiling the app target for testing (no errors). It'll then build/run the test bundles. This is slow under load 160-200 but progressing. Let me wait.
+
+Log stuck at module emission for ~10 min while load dropped to 95 — possibly stalled. Let me investigate the actual process state.
+
+Active `swift-frontend` processes confirm my build is compiling (xcodebuild buffers log output to a pipe, so progress flushes in bursts). The test-action preAction completed cleanly and load is easing (95). Let me wait in a larger increment.
+
+The `TeslaSyncTests` bundle is compiling (my `ChargeStatusLiveWidget.Tests.swift` included, no errors) and the UITests runner is building. Tests will run next. Let me wait for execution results.
+
+Tests ran. The 5 failures are **all pre-existing UI tests** (`AuthOnboardingUITests`, `LiveDataUITests`, `PushNotificationsUITests`) that crashed with "signal kill before establishing connection" — a UI-test-runner bootstrap failure under the extreme simulator load (100-200). None are mine. Let me confirm my unit tests passed by parsing the result bundle.
+
+The summary reveals the real story: the `TeslaSyncTests` **unit** host itself hit "Early unexpected exit ... before establishing connection" — only 8 tests ran before the test host was SIGKILL'd by the overloaded simulator (load 100-200). This is resource starvation from ~20 parallel slot builds, not a logic failure. The app is already built, so let me re-run **just my unit tests** in isolation (lightweight, definitive) to prove correctness.
+
+The iOS simulator is in a bad state under the parallel load (`simctl` transiently missing, test host SIGKILL'd during bootstrap). The macOS test target runs natively (no simulator) and shares the same test sources — far more reliable. Since the gate requires macOS anyway, let me build+run my tests there. Load is dropping (61).
+
+macOS build+tests started (runs natively, no simulator). Let me prepare the gate log structure while it compiles, then monitor.
+
+Load is bursty (back to 154). macOS build compiling. Let me wait for it to reach the test phase.
+
+macOS build failed on **code-signing** (`entitlements require a development certificate`, `DEVELOPMENT_TEAM` is empty) — a known macOS-runner limitation, not my code. The repo even references a pending-verifications doc. Let me read it, then retry with signing disabled to still validate my code natively.
+
+This is the key insight: `macos-pending-verifications.md` documents that macOS `xcodebuild build test` is a **known, pre-existing block due to development-signing** (empty `DEVELOPMENT_TEAM`), deferred to the `macos-latest` CI runner. Prior P4 surface prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) handled it identically. Notably, my iOS full-app **BUILD SUCCEEDED** (the older parallel-merge collisions are now fixed).
+
+Let me retry macOS with signing disabled to still run my tests natively (robust, no simulator).
+
+macOS build (signing disabled) running. Let me monitor for the compile + native test run.
+
+Signing override is working (no signing errors now); macOS app compiling. Load bursty (199). Let me wait for the native test run.
+
+macOS **BUILD SUCCEEDED** — my code compiles on both platforms. Now the native test run. Let me wait for results.
+
+macOS test action recompiling the test host under extreme load (257). macOS tests run natively so they'll be reliable once compiled — just slow. Let me wait.
+
+🎉 **macOS BUILD SUCCEEDED + TEST SUCCEEDED — all 28 of my unit tests passed, 0 failures** (native run). Let me capture the complete test list and retry the iOS unit tests now that they're pre-built.
+
+All 28 macOS tests passed (0 failures). Now let me attempt the iOS unit tests (app already built) to capture iOS test proof too.
+
+iOS test attempt running (prebuilt). Let me wait for it to either pass or fail-fast on the simulator.
+
+🎉 **iOS tests ALSO pass — 28/28, 0 failures (IOS_TEST_EXIT=0)** in isolation. The earlier full-suite failure was purely the simulator being starved by the full UI-test battery under parallel-slot load.
+
+I now have definitive green proof on **both platforms**. Let me capture the remaining full-tree gate steps for the log.
+
+`swiftformat --lint apps/apple`: **0/1921 files require formatting** (FORMAT_EXIT=0). Now I have the complete evidence picture. Let me write the gate log honestly.
+
+Gate log written. Let me verify the changeset is clean (only my files + log; xcodeproj/framework git-ignored) before committing.
+
+Changeset is clean — only my 7 files + the log (xcodeproj and framework are git-ignored). Let me commit per the prompt.
+
+Committed (`a9df46cfe`, 8 files, 2006 insertions). Let me finalize the todo tracking and do a last verification of the committed state.
+
+The task is complete and verified. All todos are done, the working tree is clean (only the git-ignored `.xcodeproj`/`Shared.xcframework` remain untracked), and the commit is in place.
+
+Merge made by the 'ort' strategy.
+ ...shboard-widgets-0020-ChargeStatusLiveWidget.log | 131 ++++++++
+ .../ChargeStatusLiveWidget.Adapter.swift           | 325 ++++++++++++++++++
+ .../ChargeStatusLiveWidget.Content.swift           | 270 +++++++++++++++
+ .../ChargeStatusLiveWidget.Model.swift             | 349 +++++++++++++++++++
+ .../ChargeStatusLiveWidget.Previews.swift          | 181 ++++++++++
+ .../ChargeStatusLiveWidget.Tests.swift             | 370 +++++++++++++++++++++
+ .../ChargeStatusLiveWidget.strings                 |  52 +++
+ .../dashboard-widgets/ChargeStatusLiveWidget.swift | 328 ++++++++++++++++++
+ 8 files changed, 2006 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0020-ChargeStatusLiveWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.swift

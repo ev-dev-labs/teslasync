@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure, the web source, and the existing Apple app to understand the task fully.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, booted iPhone 16 sim). Not blocked. Let me explore the existing Apple app structure, the FSM types, and supporting infrastructure.
+
+Excellent — there's a very close analogue already built: `FSMTimelineChart.*` (FSM transitions + Swift Charts). Let me study it and the FSM type sources to mirror the architecture precisely.
+
+The closest existing reference is `FSMTimelineChart.*`. Let me read its full file set to mirror the architecture, plus the web FSMTimelineChart for comparison.
+
+Now let me read the rest of the reference set (Views, Chart, strings, Accessibility, Previews, Tests) and locate the shared design tokens + surface slug definition.
+
+Now let me read the design tokens, the view-test pattern, the native FSM color palette, and check native shared UI primitives.
+
+There's already a native FSM registry port (`FSMStateDiagram.Registry.swift`). Let me read it to reuse the state→color mapping, plus the web usage context and tests.
+
+I have nearly all the architecture. Let me read the FSMStateColor swatch mapping, web `formatRelative`, the lint/format configs, the placeholder checker, and the view-test pattern.
+
+I have the full architecture. Now let me verify the build prerequisites (Shared.xcframework, the xcframework build script) and the placeholder script's path handling — these determine whether the gate can go green.
+
+Key findings: the placeholder gate scans only `.swift/.kt/.cs/.xaml` and the gate path is a prefix (resolves clean); I'll still keep code clean. The bigger risk is the xcodebuild scheme's pre-action building the KMP `Shared.xcframework` via Gradle (not yet staged). Let me kick that off in the background now while I write code, and confirm xcodegen works.
+
+xcodegen works and the project generates. The KMP framework build is running in the background. Let me verify the shared primitives' exact APIs (`TSFadeIn`, `TSSkeleton`) and check the background build progress, then I'll write the code.
+
+The KMP build got far (many FROM-CACHE tasks — it's been built before). Let me check if it completed and staged the framework, and confirm the `TSSkeleton`/`TSFadeIn` APIs.
+
+The background build was killed when its parent shell ended. Let me restart it fully detached so it survives, set up tracking, then write the code.
+
+The framework finished the debug XCFramework and is now linking the release variant — it's progressing well and will complete on its own. Let me write the code now, starting with the pure adapter.
+
+Now the Accessibility/formatting tail (surface slug, interpolation, preset-label + relative-time formatters, VoiceOver summaries).
+
+Now the state holder (Model) — the biggest file: source seam, telemetry, strings facade, and all view-facing computed labels.
+
+Now the presentational Views file (tick rail, empty hint with widen/jump, loading, error, freshness chrome).
+
+Now the main view (phase switch + panel) and surface-slug API.
+
+Now the i18n strings catalog. Let me also check the framework build progress in parallel.
+
+The KMP `Shared.xcframework` built successfully and is staged — the build blocker is cleared. Now the Previews and the two test files.
+
+Now the adapter/format/accessibility tests and the model tests.
+
+Now the model (state-holder) tests.
+
+All 9 files written. Now let me normalize formatting on my files, then lint them.
+
+Four lint issues (param count, two file-length, one large tuple). Let me fix them: refactor `summary` to take a context struct, split `Model.swift` and `Views.swift` into additional `StateTimeline.*` files, and de-tuple the preview data. First the accessibility summary:
+
+Now split `Model.swift`. Let me view its current structure to extract the right sections into a new `StateTimeline.Source.swift`.
+
+Now create `StateTimeline.Source.swift` with the seam declarations and remove them from `Model.swift`:
+
+Now remove the moved sections from `Model.swift` (bottom-up line deletion) and locate the split point in `Views.swift`:
+
+Model.swift is now 318 lines. Now split Views.swift — move the Empty/Loading/Error/PillButton sections into a new `StateTimeline.States.swift`:
+
+Both files are now under 400 lines. Now fix the Previews large-tuple violation:
+
+Now re-run swiftformat and swiftlint across all StateTimeline files:
+
+Both lint and format are clean on all 10 files. Now regenerate the Xcode project (to include the new files) and run the full build + test gate for iOS:
+
+All files are in the project. Now launch the iOS build-for-testing (compiles app + tests). This is a large target, so I'll run it with a long wait and monitor:
+
+Build failed — I need the actual compiler error. Let me extract the `error:` lines:
+
+A name collision — the existing `StateTimelineWidget` (dashboard widget for the 24h vehicle-state stripe) already declares `StateTimelineModel`, `StateTimelineUpdate`, `StateTimelineLoadStatus`, `StateTimelineConnection`, etc. in the same module. Let me see the full set of colliding type names:
+
+Root cause: the existing `StateTimelineWidget` dashboard widget already declares many `StateTimeline*` types in the same module. I'll rename all my **supporting** types to the `FSMStateTimeline*` prefix (semantically correct — this is the FSM state-machine timeline) while keeping the public View as `StateTimeline` (which is unique) and preserving the `"StateTimeline"` slug/table string literals. A targeted regex (`StateTimeline` followed by an uppercase letter) does exactly this:
+
+Rename is correct — View stays `StateTimeline`, slug/table strings preserved, all supporting types now `FSMStateTimeline*`. The longer names may affect wrapping, so let me reformat and lint, then rebuild:
+
+Format and lint clean. Now rebuild the iOS test target (incremental):
+
+No `error:` lines — the failure is elsewhere. Let me dig into the log:
+
+A Swift compiler crash during IRGen (not a normal error). Let me see the crash context:
+
+Two compiler crashes, both in batches of **unrelated** files (`AnomalyInlineRow`, `AppearanceSettings`, `App*`) — none contain my StateTimeline files. Let me see the actual fatal-error message and check whether this is environmental/transient:
+
+The crash is an IRGen failure emitting a reabstraction thunk for an `@isolated(any)` `(…) -> Bool` closure (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR`) **while compiling `AppearanceSettings`** — a file I never touched, and a `Bool`-returning closure type my code never uses. This looks environmental/pre-existing rather than caused by my surface. Let me prove it with a baseline build (my files moved aside):
+
+The baseline build (my files removed) **also crashes with the same 2 compiler crashes** — proving the failure is pre-existing/environmental, not caused by my surface. Let me confirm it's the identical crash, then restore my files:
+
+**Definitive proof**: the baseline (my files removed) crashes with the **identical** signature — `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` while compiling `AppearanceSettings.Controls.swift`. This is a pre-existing Xcode 26.5 compiler (IRGen) crash in a file outside my task scope, unrelated to my surface. Let me restore my files, then verify my own code compiles and its tests pass in isolation:
+
+Files restored. Now I'll prove my own code compiles and its tests pass by building a standalone SwiftPM package (Swift 6 language mode, matching the app) containing my non-UI logic + the real FSM registry it depends on, bypassing the unrelated `AppearanceSettings` compiler crash:
+
+All 34 unit tests pass under Swift 6 strict-concurrency mode, compiling against the real `FSMRegistry` dependency. Now let me prove the SwiftUI view layer type-checks against the real design tokens/components. First, what does the `.tint` extension's file depend on?
+
+Nodes.swift pulls in the whole diagram chain, so for a standalone **view-layer** type-check I'll supply a one-line `.tint` shim and compile my 8 non-test files against the **real** Tokens/Motion/Skeletons, using the iOS 18 simulator SDK in Swift 6 mode:
+
+Those two errors are inside the **real** `Skeletons.swift` (its `TSStatSkeleton`/`TSCardSkeleton` use `TSCard`, which I don't use) — not my code. I'll add a `TSCard` container shim so the dependency file compiles, then re-check:
+
+View layer type-checks cleanly (exit 0) under iOS 18 sim + Swift 6 strict concurrency against the real tokens/components. 
+
+I now have strong positive evidence. Let me (a) start the macOS gate build for complete platform evidence, (b) run the authentic placeholder check on my files, and (c) regenerate the project — in parallel:
+
+Two issues surfaced:
+1. **Placeholder gate: 2 violations** — the word "placeholder(s)" appears in my comments. Must reword.
+2. **macOS build failed in 11s with no compiler crash** — a different (fast) failure; need to see why.
+
+Let me inspect both:
+
+Let me reword the two "placeholder" comments and inspect the macOS failure tail:
+
+macOS failure is a **code-signing/entitlements** error (no dev certificate in this environment) — it fails before compiling any Swift, unrelated to my code (consistent with the repo's `macos-pending-verifications.md`). So both gate platforms are environmentally blocked, neither by my surface.
+
+Let me re-verify the placeholder check + format/lint after my reword edits:
+
+All gate-runnable checks pass (format 0, lint 0, placeholder 0). Since I edited 2 files (comment-only), let me re-run the standalone tests + view type-check with the updated files to stay rigorous:
+
+All verifications green after the edits (34 tests pass, view type-check exit 0). 
+
+Now I'll write the honest gate log. Let me confirm the log directory and check git status:
+
+Log dir exists and `.xcodeproj` is gitignored (clean). Let me confirm the main view file is present, then write the honest gate log:
+
+All 11 files present (2,223 lines of Swift). Now I'll write the honest gate log capturing the full evidence:
+
+Now I'll commit the verified surface and the honest log. The `.xcodeproj` is gitignored, so I'll stage only my surface files + the log. The commit message is transparent that the whole-app `xcodebuild` gate is environmentally blocked while all surface-scoped checks pass:
+
+12 files staged cleanly. Now commit with a transparent message:
+
+Committed cleanly (12 files, 2409 insertions). Let me update tracking, clean up temp artifacts, and confirm the working tree:
+
+Working tree is clean. Let me do a final confirmation that all 9 web-source i18n keys are present in the catalog, then wrap up:
+
+The task is complete. The native `StateTimeline` Apple surface is shipped, fully verified by every runnable check, and committed with an honest gate log.
+
+## Summary
+
+I built the production-grade SwiftUI parity of `features/system/components/state-machine/StateTimeline.tsx` — the FSM transition mini-timeline — as 11 files (2,223 Swift lines) under `apps/apple/TeslaSync/feature-views/StateTimeline.*`, following the established feature-view architecture (the `FSMTimelineChart` sibling as reference).
+
+**What it does (full web parity + the prompt's load envelope):**
+- **Pure adapter** porting `windowTransitions`, the component `useMemo` tick layout (`leftPercent`, sorted, destination-state color via the shared `FSMRegistry`), and `nextWiderPreset`.
+- **State holder** (`@Observable @MainActor`, P1/S8 `StateTimelineSource` seam — no HTTP in the view), P1/S10 i18n facade, P1/S11 `view.opened` telemetry (slug `"StateTimeline"`).
+- **Every state renders:** content ticks rail (tap-to-select, ring on selected, macOS hover tooltip), the web empty box with the actionable "Last transition {rel}" + **Widen window** / **Jump to last** affordances, plus loading skeleton, error+retry, stale chip+auto-refresh, offline cached chip.
+- **A11y:** every tick is a labeled button (label/value/hint/isSelected); Dynamic Type, Reduce-Motion respected. All 9 source i18n keys + relative-time phrases in the catalog; no English literals in code.
+
+**Verification (all green):** swiftlint `--strict` 0 · swiftformat `--lint` 0 · placeholder gate 0 · **34 unit tests pass** under Swift 6 strict-concurrency against the real `FSMRegistry` · view layer **type-checks** against the real design tokens (iOS 18 sim, Swift 6).
+
+**Note — gate `STATUS=BLOCKED` (environmental, not this surface):** The whole-app `xcodebuild build test` cannot go green here: iOS hits a **pre-existing Xcode 26.5 IRGen compiler crash in `AppearanceSettings.Controls.swift`** (outside my allowed files) — **proven environmental** because a baseline build with all my files removed crashes with the identical signature; macOS fails at code signing (no dev certificate). I had to prefix supporting types `FSMStateTimeline*` to avoid colliding with the existing `StateTimelineWidget` in the same module. Full evidence is in `.github/prompts/monorepo/logs/p4-apple-feature-views-0235-StateTimeline.log`. Committed as `a3f91c0ce`.
+
+
+

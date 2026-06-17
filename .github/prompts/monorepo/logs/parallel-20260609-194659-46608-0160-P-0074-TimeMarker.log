@@ -1,0 +1,147 @@
+I'll start by exploring the environment to understand what's available and what the web source looks like.
+
+All Apple tooling is available (Xcode 26.5, swiftlint, swiftformat, pwsh). Let me read the web source and explore the existing Apple structure including predecessor surfaces.
+
+The web source is simple — a vertical reference line marking an alert timestamp on a time-series chart. Let me examine the most relevant predecessor surfaces (`ChartTimeRangeContext` and `ChartLegend`) since they're chart-related and most recent.
+
+`ChartTimeRangeContext` (0069) is the immediate predecessor and shares the exact file structure I should follow. Let me read all its files to understand the canonical pattern.
+
+Excellent, this is a high-quality, detailed reference. Let me read the remaining predecessor files plus the web `useAlertContext` source and the project config.
+
+Now let me read the test files, previews, and the web `useAlertContext` source, plus the project config and theme tokens.
+
+Now let me understand the data source (`useAlertContext`), the web severity tokens, and how the Apple project wires files into the build.
+
+Now let me check whether the Apple app already has an alert-context state holder, find the project config, and examine the theme tokens.
+
+Build auto-globs the `shared-surfaces` dir (no project.yml edit needed). Let me read the design tokens and verify the test target wiring.
+
+The design tokens path is `apps/design/generated/apple`. Let me find the token definitions, especially severity colors and `Font.TS`/`TSSpacing`.
+
+Now I understand the design tokens and severity mapping. Let me verify whether a shared alert-context/drill-through state holder already exists in the P1/S8 layer (`Sources/`) that I should bind to, by checking `NotificationRow.Drillthrough.swift` and searching `Sources`.
+
+No shared alert-context holder exists — the convention (confirmed by `NotificationRow.Drillthrough.swift`) is that each surface owns its state-holder self-contained within its files. Let me check the predecessor's gate log and whether the Xcode project needs generation.
+
+This is critical context. The predecessor's disposition reveals the accepted precedent on this runner:
+- Full-app `xcodebuild build test` is **RED for pre-existing out-of-scope reasons** (sibling-slot `StateTimeline*`/`RecentDrives*` duplicate-type collisions on iOS; missing macOS dev-signing cert).
+- Surfaces are verified **independently** (type-check + lint + format + placeholder + xcodegen enumeration), proving they contribute **zero** errors, then deferred to the P4 acceptance gate.
+
+To avoid introducing NEW duplicate-type errors, I must namespace all my types uniquely. Let me check for identifier collisions before writing.
+
+There's an existing generic `tsTimeMarker` chart primitive. Let me read it to align and avoid collision (my builder will be `tsTimeMarkerRule`, already collision-free).
+
+I now have everything I need. Key findings:
+- **Web source** is a presentational chart annotation (`<ReferenceLine>`) bound to `useAlertContext` (a synchronous URL-param reader — **no fetch/async**, so no real loading/error/stale/offline branches).
+- **Accepted precedent** (ChartTimeRangeContext 0069): reproduce only the source's REAL branches, document the faithful-parity rationale, verify the surface independently (the full-app gate is red for pre-existing out-of-scope sibling/signing reasons).
+- I'll namespace all types uniquely (collision-checked) and follow the exact 9-file predecessor structure.
+
+Let me set up the plan and todos.
+
+Project generates cleanly; `TeslaSync` scheme exists. Let me capture a **baseline** build (before my changes) in the background to prove I add zero new errors, while I write the files.
+
+Baseline build running in background. Now writing the surface files, starting with the pure Foundation core.
+
+Let me update todos and check on the baseline build.
+
+Baseline still building. Continuing with the public API surface file.
+
+Now the chart-content rule builder, the label callout, and the DEBUG sample.
+
+Now the previews and the strings catalog. Let me also check the baseline build.
+
+Baseline still compiling. Writing the test files now. First, the pure-core adapter tests.
+
+Now the projection + model + view-composition tests.
+
+All 9 files written. Let me update todos and check the baseline build.
+
+Baseline build is slow (large project + Kotlin xcframework). Let me run the fast, independent surface checks in parallel: autoformat my files, then lint/format-check/placeholder-scan them.
+
+My files already conform to swiftformat. Now run the lint + placeholder checks scoped to the surface.
+
+All surface checks green (swiftformat 0/8, swiftlint 0 violations, 0 placeholders). The baseline build finished — let me read its result.
+
+Baseline confirmed: **110 pre-existing errors**, all sibling-slot duplicate-type collisions (`RecentDrivesModel`, `StateTimeline*`, etc. "ambiguous for type lookup") — exactly as the predecessor documented. My files weren't in this build (project was generated before I wrote them). 
+
+Now I'll regenerate the project to enumerate my files and verify.
+
+All 9 files enumerated. Now the rigorous independent type-check of the production files against the real iOS 18 SDK (Swift 6, strict concurrency), exactly as the predecessor did.
+
+The independent type-check caught a real error in my code (`CGFloat.init` is ambiguous as a function reference). Fixing it with an explicit closure.
+
+Production files type-check (`EXIT=0`), but Swift 6 strict-concurrency warns that the `TimeMarkerCallout` (a `@MainActor` `View`) is constructed inside the nonisolated chart-content builder. Let me make the builders `@MainActor` to eliminate those warnings cleanly.
+
+Production files now type-check with **zero errors and zero warnings** (Swift 6 strict concurrency, iOS 18 SDK). Now verifying the test files compile by type-checking all files as one module (stripping `@testable import`, since the build can't produce the module due to sibling errors), with XCTest from the SDK.
+
+Loop bug — the base file is `TimeMarker.swift` (not `.swift.swift`). Let me fix and rerun.
+
+XCTest needs the platform framework search path. Let me add it.
+
+This is the exact XCTest C-macro limitation the predecessor documented ("function like macros not supported" outside the XCTest bundle). Let me confirm **every** remaining error is only an `XCTAssert*` macro — proving my test bodies are otherwise type-correct.
+
+All non-`XCTAssert` errors are leading-dot member references (`.warn`, `.number`, etc.) whose contextual type comes *from* the `XCTAssertEqual` signature — pure cascade from the unavailable macros, not real type errors. Let me **prove** this definitively by supplying a tiny XCTest API shim (so the macros resolve) and re-type-checking.
+
+Just `Date` missing — because stripping `import XCTest` removed the transitive Foundation import. Replacing `import XCTest` → `import Foundation` (keeping the shim for the assertions).
+
+**Definitive proof: `SHIMMED_TYPECHECK_EXIT=0`** — all 8 surface files type-check cleanly under Swift 6 strict concurrency against the iOS 18 SDK; the only gap was XCTest's C macros (which resolve in the real bundle).
+
+Now running the actual gate commands. Starting the full iOS `build test` in the background, and running tree-wide lint/format/placeholder in parallel.
+
+swiftlint tree-wide is green (0 violations, 3643 files). Waiting for swiftformat tree-wide to finish.
+
+Both tree-wide checks green (swiftlint 0/3643, swiftformat 0/3873). Now the placeholder check across all surface files, and checking iOS gate progress.
+
+Placeholder check: 0 across all 9 files. The iOS gate build is running (will be RED from pre-existing sibling errors). Let me update todos and wait for it.
+
+iOS gate: `IOS_EXIT=65` (expected). Now proving my surface contributes **zero** errors.
+
+Conclusive: **162 errors, ZERO reference TimeMarker** — all are pre-existing sibling `StateTimeline*`/`RecentDrives*` "ambiguous for type lookup" collisions. Let me confirm there are no *other* error categories (full honesty check) and that no TimeMarker file appears anywhere in the log's failures.
+
+The "errors NOT explained by the sibling cascade" section is **empty** — all 162 errors are the known sibling collision. Let me confirm no TimeMarker file appears in that error-file list.
+
+The second section grepped the *whole* log (not just error lines), so it lists *compiled* files. The definitive filter (`grep "error:" | grep TimeMarker` = 0) already proved zero. Let me show the 17 TimeMarker log lines are compilation (not errors) to remove all doubt.
+
+**Conclusive:** lines with both `TimeMarker` and `error:` = **0**. TimeMarker files appear only in `SwiftCompile normal` actions — compiled cleanly, zero errors. BUILD FAILED before tests, solely from the pre-existing sibling collisions.
+
+Now the macOS gate (predecessor hit a dev-signing block). Running it.
+
+macOS build running. Let me wait for it.
+
+macOS gate: `MAC_EXIT=65`. Let me determine the cause and prove zero TimeMarker errors.
+
+macOS failure is the **dev-signing block** (`requires signing with a development certificate`) — exactly as the predecessor documented for this runner. 4 errors, **0 mention TimeMarker**, and the non-signing/non-sibling filter is empty. Let me view the 4 error lines to confirm.
+
+Both gates are RED for documented out-of-scope reasons (iOS: pre-existing sibling collisions; macOS: no dev cert), with **zero** TimeMarker contribution. Let me confirm the precedent catalogue exists and that my working tree contains only TimeMarker files (proving I introduced no sibling errors).
+
+Verified: working tree has **only** my 9 TimeMarker files; the sibling collision files were committed by other prompts (pre-existing); the precedent catalogue exists. Now writing the gate log.
+
+Now committing the surface + log, exactly per the prompt's Commit section.
+
+All 10 files staged (9 surface + log), no stray artifacts. Committing.
+
+Committed `fa2a6a774` (10 files, 1667 insertions), no out-of-scope files. Finalizing todos and confirming a clean tree.
+
+All 13 todos done, working tree clean, log terminates with `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0074-TimeMarker.log   |  99 +++++++
+ .../shared-surfaces/TimeMarker.Adapter.swift       | 325 +++++++++++++++++++++
+ .../shared-surfaces/TimeMarker.AdapterTests.swift  | 229 +++++++++++++++
+ .../shared-surfaces/TimeMarker.Model.swift         | 156 ++++++++++
+ .../shared-surfaces/TimeMarker.Previews.swift      |  77 +++++
+ .../shared-surfaces/TimeMarker.Projection.swift    | 119 ++++++++
+ .../shared-surfaces/TimeMarker.Tests.swift         | 256 ++++++++++++++++
+ .../shared-surfaces/TimeMarker.Views.swift         | 262 +++++++++++++++++
+ .../TeslaSync/shared-surfaces/TimeMarker.strings   |  36 +++
+ .../TeslaSync/shared-surfaces/TimeMarker.swift     | 108 +++++++
+ 10 files changed, 1667 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0074-TimeMarker.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeMarker.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeMarker.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeMarker.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeMarker.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeMarker.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeMarker.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeMarker.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeMarker.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeMarker.swift

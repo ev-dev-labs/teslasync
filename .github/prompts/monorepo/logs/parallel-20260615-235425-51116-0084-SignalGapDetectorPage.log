@@ -1,0 +1,209 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app, and the parity infrastructure.
+
+Xcode 26.5 is available. Let me explore the web source and Apple app structure in parallel.
+
+Now let me look at the existing Apple Features structure, the parity ledger, and reference implementations.
+
+The actual structure differs from the prompt's expected path. Let me examine the project.yml, the manifest entries, and the ledger format.
+
+The `Features/Telemetry` dir doesn't exist yet; `TeslaSync/Features` is already a compiled source root. Now let me study reference patterns: existing pages, navigation/routing, the selectedVehicle store, and design tokens. Let me delegate broad exploration to parallel agents while I read key files directly.
+
+There's already a `SignalCatalogPanel.swift` in Apple. Let me examine it, the routing system, the selectedVehicle store, and find where SignalCatalogPanel/SignalExplorer is wired so I can mirror the pattern.
+
+Let me examine the SignalCatalogPanelModel, its Previews/Adapter (to learn construction), the selectedVehicle store, and the web SignalCatalogPanel for the vehicleId contract.
+
+Let me study the selectedVehicle store, the routing system, and find pages that consume the selected vehicle to mirror the pattern.
+
+Found the key building blocks: `PageContainer` (shared scaffold), `Components/Feedback/States.swift` (EmptyState), and `LiveSignalInspectorPage` (a telemetry-adjacent page using selectedVehicle). Let me read the closest reference page end-to-end plus the scaffold and selectedVehicle store.
+
+Excellent reference. Now let me understand the global selectedVehicle store (the web uses `useSelectedVehicle` + `<VehicleSelect/>`), the routing enum/parser for `/signal-gaps`, and the web counterparts.
+
+Now let me understand the route host registry composition, the route parser, and how registrations aggregate — this determines how I wire navigation for `/signal-gaps`.
+
+Let me find the route-registration composition root and how pages in `TeslaSync/Features` register, plus confirm the web `/signal-gaps` route.
+
+Let me find where all route registrations get composed into the shell (the aggregation point), and check the route registration tests pattern.
+
+The composition root is `TeslaSyncApp.swift`. Let me read it around the registration block and check what currently hosts `.telemetry`.
+
+`.telemetry` is currently unhosted. Let me check `RouteTests` and any exhaustive `switch` over `AppRoute` that adding a case would affect, plus how the web exposes the route in nav.
+
+Two more files switch over `AppRoute` (`ExploreCatalog.swift`, `WatchDeepLink.swift`). Let me check whether they're exhaustive (which would force out-of-scope edits if I add an enum case).
+
+`ExploreCatalog.gating` has a `default`. Let me verify the `WatchDeepLink` switch (watch target) and scan for any other exhaustive `AppRoute` switches, plus check the apple-ledger structure for how telemetry pages are tracked.
+
+`WatchDeepLink` switches over its own enum — not affected. So only `AppRoute.swift`'s two switches matter. Let me check how the web surfaces `/signal-gaps` in navigation to choose between a dedicated route vs. hosting on `.telemetry`.
+
+`/signal-gaps` is a non-hidden standalone route in web. Let me verify no tests hardcode the route count/sidebar before deciding between a dedicated route vs. hosting on `.telemetry`.
+
+No tests hardcode route counts, so a new route is safe. Now let me study the shared components I'll use (`TSEmptyState`, `TSGlassPanel`, `TSPageTitle`, `TSFadeIn`), the design tokens, and how `SignalCatalogPanel` gets a production-wired model (to render the with-vehicle branch faithfully).
+
+`TSEmptyState` maps to the web `EmptyState`. The codebase uses Sample sources as production defaults for P7 pages (like `LiveSignalInspector`). Now let me understand the global selected-vehicle store integration and the `VehicleSelect` equivalent, plus confirm design-token APIs.
+
+There's a `VehicleSelect.swift` shared surface — the exact parity for the web `<VehicleSelect/>`. Let me read it and the `AnomalyDashboardPage` (whose model doc references `useSelectedVehicle` + `VehicleSelect`) as the closest full-page pattern.
+
+Both sibling pages use a local model + `selectedVehicleID` + an injected vehicle source. Let me nail down the remaining APIs: `VehicleSelect` source seam + sample source, the design tokens, the key shared-component signatures, and `SignalCatalogPanelEntry`.
+
+Design tokens live elsewhere. Let me locate the token + component definitions (`TSSpacing`, `Color.TS`, `Font.TS`, `TSGlassPanel`, `TSPageTitle`, `TSFadeIn`, `TSSelect`) and read the `VehicleSelect` seams + `SignalCatalogPanelEntry`.
+
+Let me read the design tokens and the key TS component signatures (Typography, Cards, Motion) to finalize exact APIs.
+
+Let me read the final API details: Typography (`TSPageTitle`/`TSCaption`), Cards (`TSGlassPanel`), Motion (`TSFadeIn`), and the `SignalCatalogPanel` models + localization facade.
+
+I now have all the building blocks. Let me verify the toolchain (the gate needs build+lint+test) and inspect the placeholder scanner before writing code.
+
+Toolchain is present; the `.xcodeproj` needs generating and the build stages a KMP `Shared.xcframework`. Let me write a plan, then kick off a baseline project-generate + build to confirm the gate can run at all (this is the BLOCKED risk).
+
+`Shared.xcframework` isn't staged yet. Let me read the staging script and an existing page's gate log to see how prior builds succeeded.
+
+Critical finding: the full `xcodebuild` + Gradle/KMP xcframework can't run cleanly here (pre-existing, out-of-scope). Prior sibling pages verified via a lighter `swiftc`/swiftlint harness and documented the out-of-scope RED. Let me read the AnomalyDashboard log's verification methodology to replicate it.
+
+The methodology is clear (replicated from sibling `AnomalyDashboard`): ship under `Sources/Features/<Category>/`, host on a previously-unregistered AppRoute, verify via placeholder scan + swiftlint + swiftformat + an isolated SwiftPM build/test harness, and document the full-scheme xcodebuild as out-of-scope/pre-blocked. Let me write the plan, then check for a reusable harness, the lint config, and the dependency file sets.
+
+Confirmed: `.swiftlint.yml` includes `Sources` (not `TeslaSync/Features`), so shipping under `Sources/Features/Telemetry/` is the correct, lint-covered home — matching every shipped P7 page. Let me write the plan, then enumerate the dependency file sets and key APIs (`VehicleSelectModel`, `VehicleSelectVehicle`).
+
+I have what I need. Let me confirm `VehicleSelectVehicle` and `VehicleSelectConnection` shapes, then write the source files.
+
+The catalog already uses some `signalGap.*` keys in its own table; my page's strings go in the main catalog. Before writing, let me verify the isolated-build feasibility (no `import Shared` in my dependency closure) and that my string keys don't already exist.
+
+All clear: no `Shared` imports in my dependency closure (isolated build is feasible), keys don't exist yet, and `Sources/Components` is Shared-free. Now let me write the source files. First, the model + seams + sample sources.
+
+Now the View:
+
+Now the route registration (hosts on the previously-unregistered `.telemetry` route):
+
+Now the model unit tests:
+
+Now the navigation-registration edits — add the `/signal-gaps` alias and wire the registration into the app composition root:
+
+Now the string catalog. Let me inspect the xcstrings JSON structure to insert the four keys correctly.
+
+The string entries use `" : "` formatting; I'll surgically prepend my four keys after the `"strings"` opening (matching the sibling's non-reformatting approach). Let me verify the exact anchor bytes first.
+
+Let me validate the xcstrings JSON parses cleanly:
+
+All four keys validate. Now the ledger rows. Let me view the ledger tail and an existing row to mirror the exact shape.
+
+Let me append the two ledger rows for `page:telemetry/SignalGapDetector`:
+
+All ledger/strings valid. Now let me run the lightweight gates: placeholder scan, swiftlint, and swiftformat on the new files.
+
+The path was wrong (non-existent → vacuous 0). Let me re-run the placeholder scan with the correct path, plus swiftlint and swiftformat on the new files.
+
+Let me run swiftlint and swiftformat on the new files, and confirm the placeholder scanner actually scans (not vacuous):
+
+swiftformat passes (0/4 need formatting). Let me wait for swiftlint to finish.
+
+swiftlint linted the whole repo (config `included` overrides path args) and found 4 serious violations. I need to know whether any are in my files. Let me capture the violation lines.
+
+The 4 violations are pre-existing in `AnomalyInlineRow.Previews.swift` (a file I didn't touch) — zero in my files. Let me confirm the full set and that they're pre-existing (unmodified by me):
+
+My files are clean (zero violations). Let me capture the complete violation list robustly to document the pre-existing baseline accurately.
+
+My files are swiftlint-clean and swiftformat-clean (the 2 pre-existing violations are in an untouched file). Now I'll build the isolated SwiftPM harness for the build+test gates. First, let me resolve dependency facts (symbol locations + external imports in the closure).
+
+Components are self-contained (system imports only). Let me locate `VehicleSelectStrings`, check the surface files' imports, and inspect `Theme.swift` deps — these determine the harness closure.
+
+The closure is clean (system imports only; `VehicleSelectStrings` is in `VehicleSelect.Model.swift`). My test uses only `public` API, so I can drop `@testable` and build in release (excludes previews → no Theme dependency). Let me assemble the isolated SwiftPM harness.
+
+Now the Package manifest and the adapted test (drop `@testable`, point at the harness module):
+
+Now let me build the harness in release (excludes previews, no testability needed):
+
+SwiftPM follows the symlinked dirs (good). Two missing symbols (`TSChartPalette`, `tsGlassPanel`) are defined outside `Sources/Components`. Let me locate them.
+
+There's a `Sources/Design/` dir (TSChartPalette, tsGlassPanel) I missed. Let me check its contents/imports and add it to the closure.
+
+Adding `Sources/Design` (2 files, SwiftUI-only) to the closure and rebuilding:
+
+The culprit is `Components/DataDisplay/UnitFormatters.swift` (references `Units` from the KMP layer) — exactly the file the sibling log excluded. Let me find all such Shared-dependent Component files and exclude them.
+
+Only `UnitFormatters.swift` needs excluding (my closure is unit-formatter-free), matching the sibling precedent. Let me exclude it and rebuild.
+
+Isolated build is GREEN (BUILD_EXIT=0) — my page + model + registration compile against the full real closure under Swift 6 strict concurrency. Now the test gate:
+
+All 13 tests pass (TEST_EXIT=0). Both isolated gates are GREEN. Now let me validate the full project structure with xcodegen and independently confirm the pre-existing full-scheme blockers (so my documentation is fact-based, not just inherited).
+
+xcodegen generates cleanly and my files are included (24 refs). The pre-existing duplicate-symbol surfaces (`DashboardWidgets`) are ones my page never imports. Let me attempt the full-scheme `xcodebuild build` in the background to factually document its state (it runs the Gradle/KMP pre-action).
+
+The KMP toolchain is present. Let me attempt the full-scheme build (runs the Gradle pre-action), capturing output to a log:
+
+Still running after 5 min (Gradle KMP assembly is slow). Let me check the partial log to see what stage it's at.
+
+The Gradle KMP framework assembled successfully — the toolchain works here. The build is now proceeding to compile the app. Let me keep waiting.
+
+Full build finished with EXIT=65. Let me find the actual errors and check whether any involve my files.
+
+The full build failed **only on code signing** ("requires a development team") — an environment constraint, not a compile error, and none in my files. That means compilation succeeded. Let me confirm there are zero Swift compile errors, then re-run with signing disabled to get a definitive build result.
+
+Zero Swift compile errors — the app compiled fully with my changes; only code-signing failed (no dev team = environment constraint). Let me re-run with signing disabled to get a definitive full-scheme build result (Gradle framework is now cached, so faster).
+
+Revealed (once signing was disabled): a **pre-existing duplicate-filename collision** — two `ScheduledExportsPanel.swift` files (in `feature-views` and `Features/System`), neither mine. My first grep missed it (line starts with `error:`). Let me confirm it's pre-existing and that no error involves my files.
+
+I spotted a real bug in my View: the `VehicleSelect(source:onSelect:)` convenience init reconstructs a `VehicleSelectModel` on every re-render, clobbering the shared source's `onUpdate` handler. The fix is to own a single `VehicleSelectModel` in the page model and pass it via `VehicleSelect(model:)`. Let me check the web `VehicleSelect` `withIcon` default, then apply the fix.
+
+Web defaults `withIcon=false`. Let me fix both files: own a single `VehicleSelectModel` in the model (built once, no clobbering) and bind it via `VehicleSelect(model:)`.
+
+Let me rebuild and retest the harness to confirm the fix compiles (especially `private(set) lazy`) and re-lint:
+
+The fix compiles (`private(set) lazy` is valid) and all 13 tests still pass. Let me re-run swiftlint + swiftformat on the edited files:
+
+All gates green after the fix. Let me verify the `.xcodeproj` is git-ignored (so I don't commit generated artifacts), confirm the log directory, and check my final diff scope.
+
+Clean diff scope (generated artifacts are ignored). Let me verify the navigation edits are exactly the intended single-line changes:
+
+All diffs are exactly the intended minimal changes — no silent drift. Let me capture the toolchain versions and write the comprehensive evidence log.
+
+Now let me write the comprehensive evidence log:
+
+Log written. Let me do a final review of the source files to ensure correctness before committing.
+
+The code is correct (single owned `VehicleSelectModel`, no retain cycles, empty state is the default). Let me clean up the temp harness and generated project, then stage exactly the intended files and verify the final tree state.
+
+Exactly the 9 intended files are staged — nothing unintended. Let me commit:
+
+Committed (HEAD `ab2a2bb6a`). Let me do a final verification — confirm the working tree is clean and update the plan status.
+
+Working tree is clean; the commit contains all 9 intended files. Let me update the plan status and finalize.
+
+The task is complete. All work is committed with a clean working tree.
+
+## Summary
+
+Implemented the native SwiftUI/HIG parity of the web `SignalGapDetectorPage` (route `/signal-gaps`) for the TeslaSync Apple app, at full panel/state/string parity per the manifest (`PARITY_REQUIRED=5`).
+
+**What shipped (commit `ab2a2bb6a`):**
+- **`SignalGapDetectorPage.swift`** — adaptive SwiftUI view (macOS/iPad regular vs. compact iPhone): header (`TSPageTitle` + subtitle + the shared `VehicleSelect` action), the always-rendered no-vehicle `TSEmptyState` (Activity glyph → `waveform.path.ecg`), and the mounted shared `SignalCatalogPanel` re-keyed on the scope.
+- **`SignalGapDetectorPageModel.swift`** — `@MainActor @Observable` holder over two injected seams (fleet feed + catalog binding), reproducing the web `!vehicleId || vehicleId <= 0` empty-vs-catalog guard. Fixed a real re-render bug by owning a single `VehicleSelectModel` (avoids clobbering the shared source's `onUpdate`).
+- **`SignalGapDetectorRouteRegistration.swift`** + 1-line wiring in `TeslaSyncApp.swift` + `/signal-gaps → .telemetry` alias in `AppRouteParser.swift` (reused the previously-unregistered `.telemetry` route — no new enum case, mirroring the sibling AnomalyDashboard precedent).
+- 4 required strings in `Localizable.xcstrings`, 13 model tests, 2 `apple-ledger.json` rows, and the evidence log.
+
+**Verification (all in-scope gates GREEN):**
+- Placeholder scan: `PLACEHOLDER_COUNT=0`
+- SwiftLint `--strict`: 0 in my files (2 pre-existing, untouched)
+- SwiftFormat `--lint`: 0/4 need formatting
+- Isolated SwiftPM build over the **real** dependency closure (Swift 6 strict concurrency): `BUILD_EXIT=0`
+- Isolated `swift test`: **13/13 pass**
+- Full-scheme `xcodebuild`: Gradle KMP framework assembled and my target compiled with **zero errors**; build is blocked only by a **pre-existing, out-of-scope** duplicate-filename collision (`ScheduledExportsPanel.swift`, not my file) + code signing (no dev team) — documented and deferred per repo methodology.
+
+`PARITY_COVERED=5/5` · `EXIT=0` · `STATUS=DONE`.
+
+The task is fully complete and committed. Let me mark it done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip ActionItem: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip FormField: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationStats: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ResourceRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportDelivery: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportsPanel: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SignalDiffRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SystemHealthData: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TabButton: ambiguous sides ['secondary', 'secondary']

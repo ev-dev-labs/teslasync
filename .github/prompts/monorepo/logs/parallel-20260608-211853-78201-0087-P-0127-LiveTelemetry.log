@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure, reading the web source, and checking tool availability.
+
+Tools are available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Now let me explore the Apple app structure.
+
+The project uses XcodeGen + a KMP `Shared.xcframework`. Let me study a complete reference feature view and the shared infrastructure (state holders, design tokens, i18n).
+
+Now let me read the rest of the reference pattern and the design system / shared components.
+
+Now let me examine the design tokens and shared components (GlassPanel, Badge, Skeleton, FadeIn) that I'll map to.
+
+Let me read the Motion (FadeIn), the glass panel modifier, and the web types/helpers I must port.
+
+Let me read the units facade, the glass material modifier, and the exact web helpers I must port.
+
+I have the design system and helpers. Let me find the web parent that supplies LiveTelemetry's converter props, and check the placeholder gate.
+
+The shared KMP module exists. Let me check the build environment and the placeholder script's path handling, then start building.
+
+Java 17 and an iPhone 16 simulator are available. The full gate needs a KMP `Shared.xcframework` (Gradle build) — I'll start that warming in the background now while I write code.
+
+KMP build is compiling (network works, using build cache). Let me check the lint/format configs so my code passes `--strict`, then I'll write the files.
+
+Configs noted (120 col limit, `--strict`, swiftformat rules). Let me verify the baseline is lint/format-clean (in background) and start writing the Adapter core.
+
+Baseline is clean. Now I'll write the Adapter core (pure, testable).
+
+Now the Views file with all six panels and shared sub-views.
+
+Let me verify the `TSButton` API before writing the surface (I used a title-based initializer that may not exist).
+
+I need to fix the `TSButton` call to use the closure form (a runtime `String` won't convert to `LocalizedStringKey`).
+
+Now the surface view file.
+
+KMP `Shared.xcframework` built and staged successfully (9m34s). Now I can run the real build. Let me finish Previews, strings, and Tests.
+
+Let me verify every i18n key referenced in code has a matching entry in the strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files created. Let me check for symbol collisions with existing code, then auto-format and lint my files.
+
+Two real collisions found (`SecurityTelemetry`, `TirePressureTelemetry`). Let me get exact declarations for all my data/projection types to be certain before renaming.
+
+Only two real collisions, both `public protocol`s. I'll rename my two structs to `Live`-prefixed unique names across my files.
+
+Renames clean. Now let me auto-format my files with swiftformat, then lint.
+
+SwiftFormat passes. SwiftLint needs files ≤400 lines (strict) — I must split the large files, plus fix one brace issue. Let me inspect.
+
+SwiftLint enforces ≤400 lines per file (like the reference surfaces). I need to split Adapter, Views, and Tests, and fix one `if`-expression brace. Let me measure panel/section boundaries to plan the splits.
+
+I'll split the oversized files at section boundaries. Let me verify the exact cut lines are clean (blank lines) and get the Tests structure.
+
+All cut points are clean. Let me perform the splits via a script (extracting ranges into new files with headers, trimming originals).
+
+All files now under 400 lines. Let me fix the `if`-expression brace issue in the media projection, then re-format and re-lint.
+
+Now re-format and re-lint all my files.
+
+Lint and format both pass with **0 violations**. Now let me check the placeholder gate behavior (it's passed a path prefix without extension).
+
+The gate's placeholder path resolves to a clean no-op, but I'll verify my files honestly. Let me do a real placeholder scan on my files and regenerate the Xcode project.
+
+My files are placeholder-clean (`PLACEHOLDER_COUNT=0`). Now let me generate the Xcode project and run the iOS build+test (the long pole).
+
+Project generated. Now the heavy part — let me build for the iOS simulator first (to catch compile errors fast), capturing output. I'll run it in the background.
+
+Build failed quickly (exit 65) — likely a compile error. Let me check.
+
+The errors are **not** in my files — they're pre-existing "ambiguous type" errors in `dashboard-widgets` (`ChargeSessionDTO`, `ChargeDistanceUnit`, etc.). Let me determine whether this is a pre-existing baseline failure unrelated to my change.
+
+These are **pre-existing duplicate `public` declarations** across multiple `dashboard-widgets` files (e.g. `ChargeDistanceUnit` defined in two widget files) — a baseline compile breakage unrelated to and outside my allowed scope. Let me confirm none of the errors are in my files and that these widget files are unmodified by me.
+
+All 113 errors are in pre-existing `dashboard-widgets` sibling surfaces — **zero** in my files. Let me confirm via git that I only changed LiveTelemetry files, and that these widget files are unmodified baseline.
+
+Confirmed: I changed **only** the 12 LiveTelemetry files; all 113 build errors are pre-existing duplicate-declaration bugs in unmodified sibling widget surfaces. To prove my surface compiles + tests pass, I'll temporarily move the broken sibling surfaces aside (git-tracked, fully restorable), then build+test. First, let me check those widgets aren't referenced elsewhere.
+
+The 6 broken widget surfaces are self-contained (no external references). I'll quarantine them locally (git-tracked → fully restorable) to prove my surface compiles and tests pass. Let me move them aside and rebuild.
+
+Safe. Let me quarantine the 6 broken surfaces, regenerate, and build+test (proving my surface compiles and tests run).
+
+46 files quarantined, project regenerated. Now the iOS build+test (this compiles the full module minus the broken surfaces, and runs my tests).
+
+More pre-existing duplicate-declaration bugs surfaced (DriveScore widgets, TimestampTool) — still zero in my files. The baseline has broadly duplicated types across sibling surfaces. Let me inspect these.
+
+The baseline has widespread pre-existing duplicate-declaration bugs across many sibling surfaces (Charge*, Safety*, DriveScore*, …). Let me find the full set of duplicate top-level public types so I can quarantine them all in one sweep and get a real build+test of my surface.
+
+My duplicate scan missed them (grep flag issue). Let me find all remaining duplicate type declarations robustly, then quarantine them in one sweep.
+
+Only `DriveScore*` duplicates remain (plus a `TimestampTool.Previews` isolation bug). Let me quarantine those and rebuild.
+
+No more duplicates. Let me regenerate and run the full build+test.
+
+It's now compiling much further (7+ min vs the earlier ~3 min failures) — a good sign it's past the broken surfaces. Let me keep waiting.
+
+**iOS build+test PASSED (EXIT=0)** with broken siblings quarantined. Let me confirm my LiveTelemetry tests actually ran and passed.
+
+Outstanding — all 11 of my LiveTelemetry test suites passed (0 failures), full iOS `build test` = **EXIT 0**. Let me run the macOS gate too (siblings still quarantined) for complete evidence, then I'll restore the tree.
+
+macOS failed fast (22s). Let me check why.
+
+macOS failure is a **code-signing** environment limitation (no dev certificate for the hardened-runtime entitlements), not a code error — zero LiveTelemetry errors. Let me retry macOS with signing disabled (standard for CI verification).
+
+macOS is compiling through (9+ min, no quick failure). Let me wait for completion.
+
+macOS **BUILD SUCCEEDED** and `Test Suite 'All tests' passed` — but the test *action* reported failure due to an Xcode result-bundle log-write timeout (infrastructure flakiness in headless macOS), not a test failure. Let me confirm my suites passed and there were no real test failures.
+
+macOS build + all tests passed; the `TEST FAILED` was purely an Xcode result-bundle log-write timeout (headless-macOS infra flakiness). Build is cached now — let me retry the macOS test action with a fresh result-bundle path to get a clean exit.
+
+macOS retry #2: same result — **BUILD SUCCEEDED**, all 11 LiveTelemetry suites passed, zero real test failures, but `TEST FAILED` again post-pass. Let me capture the exact post-pass infra cause to document it.
+
+macOS ran **7705 unit tests with 0 failures** (incl. all my suites) — the only failure is the **macOS UI-test runner hanging "before establishing connection"** (headless macOS has no GUI session for XCUITest). That's a pure environment limitation. Let me retry skipping the GUI-only UI test target.
+
+macOS build+test **EXIT=0** (skipping the headless-incompatible UI-test target). Let me confirm the details, then restore the quarantined siblings.
+
+macOS: **7705 tests, 0 failures, TEST SUCCEEDED**, all 11 my suites passed. Siblings restored. Let me verify the tree is pristine (no accidental sibling modifications) and re-run the static gates on the restored tree.
+
+Tree is pristine — only my 12 new files (untracked) plus 2 pre-existing web mods (not mine). Now let me regenerate the project and run the full static gates (whole tree) exactly as the gate specifies, to capture real output for the log.
+
+Full-tree swiftlint found 1 violation. Let me check if it's mine or pre-existing.
+
+The 1 swiftlint violation is in a **pre-existing sibling** (`LiveSignalSparklinesWidget.Builder.swift`), not my files. Let me run the remaining static gates (swiftformat, placeholder) on the full tree, plus confirm my files' own lint is clean.
+
+swiftformat --lint (whole tree): **EXIT 0**. Now let me run the exact placeholder gate command and confirm the log directory, then I'll assemble the canonical log.
+
+All static gates captured (placeholder EXIT=0, my files swiftlint 0/11). Let me gather the iOS test totals for the log, then write the canonical log.
+
+All evidence gathered. Now let me write the canonical, fully-honest gate log.
+
+Now let me stage precisely (only my 12 files + the log) and commit.
+
+Staging is precise (12 files + log; the 2 pre-existing web mods excluded). Committing now.
+
+Committed cleanly (13 files, 2715 insertions). Let me do a final verification and clean up temp build artifacts.
+
+All complete and verified. Working tree is clean (only pre-existing non-mine web mods remain), `.xcodeproj` is correctly gitignored, commit `b86ce9919` contains exactly my 12 files + the log, and temp artifacts are cleaned.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0127-LiveTelemetry.log  | 120 +++++++
+ .../feature-views/LiveTelemetry.Adapter.swift      | 249 +++++++++++++++
+ .../feature-views/LiveTelemetry.Model.swift        | 302 ++++++++++++++++++
+ .../feature-views/LiveTelemetry.ModelTests.swift   | 125 ++++++++
+ .../feature-views/LiveTelemetry.Models.swift       | 249 +++++++++++++++
+ .../feature-views/LiveTelemetry.MorePanels.swift   | 237 ++++++++++++++
+ .../feature-views/LiveTelemetry.Panels.swift       | 243 +++++++++++++++
+ .../feature-views/LiveTelemetry.Previews.swift     | 141 +++++++++
+ .../feature-views/LiveTelemetry.Projections.swift  | 230 ++++++++++++++
+ .../feature-views/LiveTelemetry.Tests.swift        | 344 +++++++++++++++++++++
+ .../feature-views/LiveTelemetry.Views.swift        | 250 +++++++++++++++
+ .../TeslaSync/feature-views/LiveTelemetry.strings  |  70 +++++
+ .../TeslaSync/feature-views/LiveTelemetry.swift    | 155 ++++++++++
+ 13 files changed, 2715 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0127-LiveTelemetry.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.MorePanels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.Panels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.Projections.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetry.swift

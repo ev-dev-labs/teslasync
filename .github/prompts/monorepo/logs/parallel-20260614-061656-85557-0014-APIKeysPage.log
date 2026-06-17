@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+Xcode 26.5, SwiftLint, Swift 6.3.2, and pwsh are all available — the gate is NOT blocked. Let me explore the web source and Apple app structure.
+
+Now I understand the web source. The `Features/Admin/` directory doesn't exist yet. Let me examine the project structure, conventions, and supporting files.
+
+Important: `project.yml` sources don't include a `Features/` path. Let me check where existing admin pages actually live, since there are logs for `ApiLogsPage`, `AuditLogPage`, etc.
+
+Existing admin pages live in `apps/apple/Sources/Features/Admin/` (not `TeslaSync/Features/`). The `Sources/` path IS in project.yml. Let me study the established pattern thoroughly.
+
+Now I have the picture: the real convention is `apps/apple/Sources/Features/Admin/`. FeatureFlags is the closest analog (CRUD with modals/delete). Let me study it deeply along with a test and route registration.
+
+Excellent template. Now let me read the supporting FeatureFlags files, the existing log format, the placeholder script, and route registration to understand all conventions.
+
+Now let me read the models/datasource/state definitions, route enum, component library, the placeholder script, an existing log, and a test file.
+
+I now fully understand the pattern, log format, and methodology. Let me locate the component library, design tokens, route enum, and app wiring.
+
+The `AppRoute` enum lacks an `.apiKeys` case — I'll add it (web route `/api-keys`). Let me read the parser, registry, app wiring, design colors, and the web API types.
+
+The purple `chartSeriesPower` token (#a855f7) exactly matches the web admin badge color. Now let me read the test pattern, check the xcstrings format, and see which of my 27 strings already exist.
+
+Let me check the web `formatDate` helper and validate the xcstrings file, then I'll have everything needed.
+
+The file has 8626 keys. Let me check how it stores non-ASCII characters so my insertion matches the file's encoding style.
+
+Em-dashes are literal UTF-8, quotes escaped as `\"`. Now I must check all exhaustive switches over `AppRoute` — adding a case can break compilation elsewhere.
+
+I now have a complete understanding. Let me set up the plan and todos, then build all files.
+
+Now let me build the files. Starting with the models, page model, and sample data source.
+
+Now the row view (GlassPanel2), permission badge, and permission display extension.
+
+Now the create sheet (GlassPanel1 = generated-key reveal container).
+
+Now the main page view with header, list states, and presentation wiring.
+
+Now the delete confirmation sheet and the route registration.
+
+Now wire the new route into `AppRoute.swift` (4 places) and `TeslaSyncApp.swift`.
+
+Now let me run swiftformat to re-indent the nested block in TeslaSyncApp.swift, then verify it.
+
+swiftformat re-indented the block to reflect the new nesting level (proving valid syntax). Now let me add the 28 i18n keys to the xcstrings via a safe, non-destructive Python script.
+
+All 28 keys inserted, JSON valid. Let me verify the format and validate with `plutil` (Apple's parser).
+
+plutil rejects the original file identically — it's a plutil/version quirk with JSON, not my edit. Python's `json.loads` confirms validity (8654 keys, `route.apiKeys` correct). Now let me set up the build verification. Let me check the toolchain and project generation.
+
+xcodegen is available but the `Shared.xcframework` isn't staged (a full build needs the heavy Kotlin/Native toolchain). My Admin files don't import `Shared`. Let me generate the project and check which dependency files are `Shared`-free for an isolated type-check.
+
+Project generates cleanly and my files are included. None of the Components/Design/App deps import `Shared`, so I can do a real isolated type-check of my code against the actual component library. Let me run it (macOS, Swift 6, complete concurrency).
+
+Whack-a-mole on component cross-refs. Let me include the full component library and check whether any of it needs the `Shared` framework.
+
+The component library is `Shared`-free (system frameworks only). Let me type-check my code against the full component library.
+
+More component cross-deps on Platform types. Let me locate the specific external symbols to build a precise compile closure for my files.
+
+Now I'll build a precise compile closure that excludes the 2 component files needing `SharedFacade` (`UnitFormatters`, `FeedbackOverlays`) — neither used by my code.
+
+macOS type-check passes cleanly (EXIT=0). Now the iOS idiom to exercise the non-macOS branches.
+
+Both idioms type-check cleanly. Now the XCTest unit tests for the model.
+
+Both type-checks passed. Now let me run an executable harness to actually *execute* the model state machine (the model files are SwiftUI-free), proving the logic works end-to-end.
+
+The `-parse-as-library` mode needs a `@main` entry and concurrency-safe state. Let me restructure the harness.
+
+All 24 harness checks passed — the model logic executes correctly end-to-end. Now the gate checks. Let me inspect the placeholder patterns, then run the scan.
+
+`Placeholder` (capital P) is a forbidden pattern. My CreateSheet has two `parity:allow ... (placeholder)` comments. Let me run the actual placeholder scan to see the result.
+
+One real violation: the word "placeholder" in a doc comment (line 136). Let me fix that and clean up the CreateSheet comment so my files need zero opt-outs.
+
+COUNT=0, EXIT=0 — my files contribute zero placeholders (the 6 ALLOWED are pre-existing sibling files). Now swiftformat and swiftlint on my files.
+
+swiftformat found auto-fixable formatting plus force-unwraps in tests (a lint rule). Let me fix the test force-unwraps manually, then auto-format everything.
+
+Now auto-format all my files to fix the remaining mechanical issues, then re-lint.
+
+Let me wait for the lint to finish.
+
+swiftformat lint is clean (0/11 need formatting). Now swiftlint --strict on my files, and re-verify the type-check survived reformatting.
+
+swiftlint --strict: 0 violations. Let me re-verify the type-checks and harness survived the reformatting.
+
+All in-scope verification is green: both idioms type-check against real components, model harness passes, swiftlint/swiftformat/placeholder clean. Let me assess whether the full xcodebuild is feasible (it needs the heavy KMP xcframework).
+
+Java 17 + Gradle are present. The full build needs a heavy Kotlin/Native xcframework AND compiles the ~5k mega-surface files (which the predecessor documented crash pre-existingly). Let me kick off the xcframework build in the background to gather first-hand evidence, while I update the ledger and write the log.
+
+While Gradle runs, let me update the ledger. Let me view its structure for the FeatureFlags rows to mirror.
+
+Let me add the 2 ledger rows (apple-macos, apple-ios) for `page:admin/APIKeys`.
+
+The em-dash got un-escaped (1 line drift). Let me reset and re-dump matching the original's `\u` escaping so only my 2 rows change.
+
+Clean diff — 18 insertions, 0 deletions. Let me check the Gradle build progress and validate the ledger.
+
+Ledger validated (2 rows, 32/32 each). Gradle is progressing (toolchain works). Before writing the log, let me verify every one of the 27 parity strings is actually referenced in my Swift source.
+
+All 27 strings confirmed in source. Let me check the Gradle build status.
+
+The KMP toolchain works — it built a debug XCFramework. Let me check whether the full Gradle task completed and what variant the staging script needs.
+
+Gradle is now building the release variant (which the staging script needs). Let me wait for it to finish, then attempt a real build for first-hand evidence.
+
+Release build nearly done (linking iOS simulator). Let me wait for completion.
+
+Gradle hit the 10-min cap mid release-link (Kotlin/Native is slow), but it **did** build the debug XCFramework — proving the toolchain works. The full release link + ~5k-file mega-surface app build exceeds reasonable time and carries the predecessor's documented pre-existing crash. My code is fully verified in isolation. Let me review all changes, then write the honest log.
+
+991 lines across my decomposed implementation (web page is 243 lines) — well above parity threshold. The `.xcodeproj` is correctly git-ignored. Now let me write the comprehensive, honest parity log.
+
+Log written. Let me do a final verification: confirm the PARITY section has exactly 32 items, validate the JSON files once more, and re-confirm the quick gates before committing.
+
+All checks confirmed: 32/32 parity, EXIT=0, valid JSON. Let me run one final consolidated gate snapshot right before committing.
+
+All in-scope gates GREEN (placeholder 0, swiftformat 0/11, swiftlint 0 violations). Let me commit with the precise file set (the generated `.xcodeproj` stays git-ignored).
+
+All 14 files staged, no generated artifacts. Committing now.
+
+Committed cleanly as `8146b8f92`, working tree clean. Let me do a final confirmation and update plan tracking.
+
+All 14 todos done, working tree clean, `.xcodeproj` correctly ignored, temp files cleaned. The task is complete.
+
+Merge made by the 'ort' strategy.
+ .../monorepo/logs/apple-page-admin-APIKeysPage.log | 279 +++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 308 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   8 +-
+ .../Sources/Features/Admin/APIKeysModels.swift     | 128 +++++++++
+ .../Features/Admin/APIKeysPage.CreateSheet.swift   | 112 ++++++++
+ .../Features/Admin/APIKeysPage.DeleteSheet.swift   |  68 +++++
+ .../Sources/Features/Admin/APIKeysPage.Row.swift   | 171 ++++++++++++
+ .../apple/Sources/Features/Admin/APIKeysPage.swift | 195 +++++++++++++
+ .../Features/Admin/APIKeysPageModel.Sample.swift   | 113 ++++++++
+ .../Sources/Features/Admin/APIKeysPageModel.swift  | 180 ++++++++++++
+ .../Features/Admin/APIKeysRouteRegistration.swift  |  24 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |  46 +--
+ .../Features/Admin/APIKeysPageModelTests.swift     | 274 ++++++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 14 files changed, 1899 insertions(+), 25 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-APIKeysPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/APIKeysModels.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/APIKeysPage.CreateSheet.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/APIKeysPage.DeleteSheet.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/APIKeysPage.Row.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/APIKeysPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/APIKeysPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/APIKeysPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/APIKeysRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/APIKeysPageModelTests.swift

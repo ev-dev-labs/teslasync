@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and checking tooling availability.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore existing Apple conventions.
+
+FadeIn is the most relevant sibling (same motion family). Let me examine all FadeIn-related files and check for any existing Stagger files.
+
+`StaggerItem` is the direct sibling and best reference. Let me read all 8 of its files to mirror the structure exactly.
+
+Now let me read the remaining StaggerItem files (view, Views, Previews, strings, Tests, AdapterTests).
+
+I now fully understand the conventions. Let me check the build setup (SwiftLint config, project.yml, design tokens, test target wiring) before writing.
+
+Let me verify the macOS scheme name and the placeholder-check script before writing code.
+
+Let me check if the app already has a native stagger container pattern (referenced as `TSStaggerItem` in comments) to mirror.
+
+The app's `TSStaggerContainer` confirms the canonical pattern: a `@ViewBuilder` VStack wrapper whose children carry their index. Let me read the existing EnvironmentKey pattern to mirror it precisely for the orchestration context.
+
+I have everything needed. Let me set up tracking and write the 8 surface files, mirroring the known-good `StaggerItem` sibling.
+
+All 8 files written. Let me lint the new files first (fast) before the slow build.
+
+swiftlint clean. Now let me verify how the placeholder gate resolves its `-Path` (the gate passes a file-prefix, not a real dir). Let me inspect the script's path handling and a sibling's log.
+
+The script treats the prefix path as "nothing to scan → clean" (a sibling log confirms this). I'll run both the literal gate and a real scan. Now let me generate the Xcode project and check the shared-framework preAction dependency.
+
+Project generated, but `Shared.xcframework` isn't staged and the build scheme's preAction runs Gradle/KMP. Let me check how sibling surfaces' gates handled this (their logs).
+
+The sibling StaggerItem log reveals the established, accepted methodology for this exact gate/environment: the full `xcodebuild build test` is RED from **foreign pre-existing** defects (AI* `glass()` escaping-closure) and **environmental** macOS signing — proven via baseline-exclusion + isolated typechecks + `swift test`. I'll replicate that harness. Let me verify the tokens file is self-contained and the foreign defect still exists.
+
+Foreign defect confirmed at `AISignalExplorerNlFilter.swift:141` (pre-existing, not mine). `Tokens.swift` is self-contained. Let me run the high-signal surface-attributable proofs first: iOS + macOS typecheck of my surface against the design tokens.
+
+iOS typecheck clean. Now macOS:
+
+Both typechecks clean. Now the `swift test` harness — build a temporary SwiftPM package named `TeslaSync` (surface + tokens as lib, the two test files as the test target) and run the real XCTests on macOS.
+
+All 33 surface XCTests pass on macOS (Swift 6 strict concurrency). Now the full-tree gate lint steps.
+
+swiftlint reports 3 violations. My files passed clean earlier — let me confirm these are foreign.
+
+The 3 lint violations are all in a foreign file I'm not allowed to touch (`WidgetChartSummary.Tests.swift`, pre-existing, unrelated). My surface has 0. Let me confirm via git and run the remaining gates.
+
+git confirms **only my 8 `StaggerContainer.*` files changed**. Both full-tree lint reds are foreign/pre-existing:
+- swiftlint: `WidgetChartSummary.Tests.swift` (vars a/b/c)
+- swiftformat: `RecentDrivesSection.Previews.swift` (redundantType)
+
+My surface passed both scoped (0 swiftlint, 0/7 swiftformat). Now the placeholder gate — real scan of my files + the literal gate path.
+
+Placeholder gate clean (real scan + literal). Now the literal gate's `xcodebuild build test`. This triggers a ~7‑min Gradle xcframework build then compiles the app. Let me verify the KMP toolchain, then run the iOS gate in the background.
+
+KMP toolchain present (Java 17 + gradlew). Launching the iOS gate in the background (it builds the Gradle xcframework first, then compiles).
+
+The iOS gate is building (Gradle xcframework first, ~7 min). Let me monitor progress.
+
+Gradle is downloading Kotlin/Native and compiling. Let me wait for it to reach the Swift compile stage.
+
+The Gradle xcframework is finishing (release slices now). Let me wait for the app compile/test phase.
+
+Release framework linking (the long pole). Let me continue waiting for the app compile phase.
+
+The Xcode app build reached `EmitSwiftModule` (whole-module type-check including my surface). Let me wait for the per-file compile result.
+
+Still compiling (no errors involving my surface). Let me wait further for completion.
+
+The app target (including my surface) compiled — the build is now **linking and code-signing** (past compile), even building preview dylibs. This may fully succeed. Let me wait for BUILD SUCCEEDED and the test run.
+
+`** BUILD FAILED **`. Let me extract the actual errors to determine if they're foreign or mine.
+
+The failing compile batch is the foreign `withAiFeature.*` / AI* surfaces (not mine). Let me pinpoint the exact foreign error message.
+
+The foreign failure is a **swift-frontend IRGen crash** (stack trace, not a diagnostic) compiling the foreign `withAiFeature.*` AI surfaces — consistent with the sibling's documented foreign defect. Let me wait for the process to finish writing `IOS_EXIT`, then identify the crashing source and run the baseline-exclusion proof.
+
+The IRGen crash is on foreign `feature-views/AppearanceSettings.Controls.swift` (a closure reabstraction thunk — the same foreign Swift 6.3 IRGen defect family), unrelated to my surface. Let me wait for the exit code to be written.
+
+The build action already emitted `** BUILD FAILED **`; remaining processes are parallel sibling-target compiles settling. Let me inspect the failure summary at the end of the log.
+
+Definitive: the failed batch is entirely **foreign** alphabetical files (`AppearanceSettings.*`, `AreaChartWrapper.*`, `AuditLog*`) — a swift-frontend IRGen crash on `AppearanceSettings.Controls.swift`. **Zero StaggerContainer files** in the failed commands. The `test` action is re-running. Let me wait briefly for the numeric exit code.
+
+I have definitive evidence the failure is foreign. The `build test` re-run is wastefully recompiling. Let me stop it and run a faster incremental build-only (warm DerivedData) to capture the exact exit code, plus the baseline-exclusion proof.
+
+The stopped `build test` left orphaned XCBBuildService workers. Let me wait for them to settle, then run a clean incremental build-only to capture the numeric exit code.
+
+Orphans settled. Now a clean **incremental** build-only (warm DerivedData) to capture the numeric exit code quickly.
+
+While the incremental build runs, let me prepare the session plan file and draft notes.
+
+Clean numeric result: **`IOS_BUILD_EXIT=65`**. Let me confirm the failing batch is still foreign (not my surface).
+
+Confirmed `IOS_BUILD_EXIT=65` — failing batch is entirely foreign (`AppearanceSettings.*`/`AreaChartWrapper.*`/`AuditLog*`, IRGen crash in `AppearanceSettings.Controls.swift`), **0 StaggerContainer files**. Now the macOS gate and the baseline-exclusion proof. Starting macOS build:
+
+`MAC_BUILD_EXIT=65`, no StaggerContainer errors. Let me identify the macOS failure reason (signing vs foreign).
+
+macOS failure is **environmental signing** (verbatim: `"TeslaSync-macOS" has entitlements that require signing with a development certificate`), pre-compile, zero StaggerContainer involvement — exactly the sibling's disposition. Now the baseline-exclusion proof (background) while I draft the gate log.
+
+While the baseline runs, let me gather line counts for the log.
+
+Let me check the baseline build progress.
+
+Baseline proof complete: **`BASELINE_IOS_EXIT=65`** with `StaggerContainer.*` excluded — the tree is **still red on the same foreign `AppearanceSettings.Controls.swift` IRGen crash**, proving the iOS red is pre-existing and foreign. I have all gate data. Let me confirm the log path is free, then write the comprehensive gate log.
+
+Log path is free; xcframework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Writing the comprehensive, honest gate log:
+
+Now let me verify git state before committing (ensure the generated `.xcodeproj` is ignored and only my files + log are staged).
+
+Clean — only my 8 files + the log are new; `.xcodeproj` is ignored; no foreign files touched. Committing:
+
+Committed as `1d7eac768`. Let me clean up temp artifacts and finalize tracking.
+
+All work committed and verified; working tree clean (only the git-ignored generated `.xcodeproj` remains untracked). Task complete.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0193-StaggerContainer.log | 226 +++++++++++++++++++++
+ .../shared-surfaces/StaggerContainer.Adapter.swift | 211 +++++++++++++++++++
+ .../StaggerContainer.AdapterTests.swift            | 190 +++++++++++++++++
+ .../shared-surfaces/StaggerContainer.Model.swift   | 158 ++++++++++++++
+ .../StaggerContainer.Previews.swift                |  87 ++++++++
+ .../shared-surfaces/StaggerContainer.Tests.swift   | 168 +++++++++++++++
+ .../shared-surfaces/StaggerContainer.Views.swift   | 147 ++++++++++++++
+ .../shared-surfaces/StaggerContainer.strings       |  22 ++
+ .../shared-surfaces/StaggerContainer.swift         | 100 +++++++++
+ 9 files changed, 1309 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0193-StaggerContainer.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerContainer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerContainer.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerContainer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerContainer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerContainer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerContainer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerContainer.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerContainer.swift

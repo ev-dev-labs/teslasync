@@ -1,0 +1,171 @@
+I'll start by exploring the repository structure to understand what exists and what's needed.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and understand the Apple app structure.
+
+I have the web source. Critically, there's already a `shared-surfaces` directory with 309 files following an established pattern. Let me study existing AI surfaces to match conventions exactly.
+
+There's a rich multi-file pattern per surface. `AIAutoNameUnnamedLocations` is the closest analog (locations + AI stream). Let me study it deeply as my template.
+
+`AIAutoNameUnnamedLocations` is a near-identical analog. Let me read all its native files to use as the exact template.
+
+Excellent template. Let me read the remaining files: Adapter, Views, Chrome, Previews, strings, and both test files.
+
+Let me read the remaining template files: Chrome, Previews, strings, and both test files.
+
+Now the two test files, plus I need to understand the shared design-system primitives and how files get into the build.
+
+I have the full pattern. Now let me verify how sources are included in the build (project.yml), confirm the design-system tokens exist, and check the placeholder script.
+
+The project.yml is at `apps/apple/project.yml`. Let me read it and locate the design-system tokens.
+
+Project uses XcodeGen with directory globs—new files in `shared-surfaces/` are auto-included. Let me locate the design tokens and check the build toolchain (xcodegen, Shared.xcframework, SwiftPM harness).
+
+xcodegen 2.45.4 and iPhone 16 simulator are available, but `Shared.xcframework` must be built via a Kotlin/Native script. Let me examine the build script and design tokens.
+
+The build needs a Gradle/KMP-built `Shared.xcframework`. Let me locate all the design-system primitives my code depends on and assess the Gradle setup.
+
+Main-app tokens live in the generated `Tokens.swift`. Let me verify it defines everything the template uses, and read Theme.swift.
+
+All tokens confirmed. Let me verify the `TSButton`/`TSGlassPanel`/`TSSkeleton` signatures, then kick off the long-pole Gradle `Shared.xcframework` build in the background while I write code.
+
+I have everything needed. Let me kick off the long-pole `Shared.xcframework` Gradle build in the background, and check the Java toolchain.
+
+Java 17 + gradlew present. Let me kick off the `Shared.xcframework` build in the background (long pole) while I write the surface code.
+
+Build is running in the background. Now a critical architecture question: are shared AI types (`AIJSONValue`, `AIToolResult`, `AIStreamPhase`, `AIConnection`, `AIFeatureGateState`) defined once or per-surface? They'd collide if duplicated in the same module.
+
+Only `AIAutoNameUnnamedLocations` owns those types. Let me see how other streaming AI surfaces handle this—do they reuse those types or define their own uniquely-named ones?
+
+Pattern is clear: each surface defines its own uniquely-named types (e.g. `AICostForecastNarration` uses `CostNarration*`). `AIAutoName` just claimed the generic `AIJSONValue`/`AIToolResult` names. Since my scope is limited to `AISuggestNewGeofences.*` files only, I'll define my own prefixed types. Let me check for name collisions across the module.
+
+`GeofenceDraft` already exists once. Let me find where, so I can avoid the collision.
+
+`GeofenceDraft` is taken by `GeofenceDrawer.Adapter.swift`. I'll use the `SuggestGeofence` prefix uniformly. Let me verify those names are collision-free.
+
+All collision-free. Let me confirm the view-layer subview names too, then write the plan and code.
+
+All names are collision-free, and the Gradle build is already linking the release framework (good progress). Let me check the placeholder-check patterns so my code doesn't trip them, then write everything.
+
+Everything verified. Gradle build is progressing well. Let me write a plan, then create all surface files mirroring the established pattern.
+
+Now I'll create all the surface files. Starting with the pure-logic Adapter (the foundation).
+
+Now the Model file (state holder, telemetry, i18n facade).
+
+Now the main View file.
+
+Now the Views file (header, badge, action button, current label, proposal box with radius).
+
+Now the Chrome file (output panel, gate loading/error chrome, symbol pulse).
+
+Now the Previews and strings files.
+
+Now the two test files — adapter/logic/accessibility/i18n, then model wiring.
+
+Now the model wiring tests.
+
+All 9 files created. Let me check the Gradle build progress and run swiftformat + swiftlint on my new files.
+
+Gradle build **succeeded** — `Shared.xcframework` is staged. Now let me autoformat my new Swift files with the repo config, then review the diff.
+
+`0/8 formatted` — my files already match the format config perfectly. Now swiftlint --strict on my new files and the placeholder check.
+
+One swiftlint error: `summary` has 6 params (limit is 5). I'll cleanly refactor it to take a small label struct instead of a lint suppression. Let me update the Adapter, the view call site, and the tests.
+
+Now update the view call site:
+
+Now update the 4 accessibility tests:
+
+Now re-run swiftformat + swiftlint on the affected files to confirm clean, plus the placeholder check.
+
+swiftlint passes (0 violations), swiftformat needs no changes. Let me check the placeholder script's `-Path` semantics, then run it.
+
+Now the placeholder check. The gate passes a path *prefix* (no extension), so I'll run both the exact gate command and an honest per-file scan of my actual files.
+
+Placeholder check passes both ways. Now let me generate the Xcode project and run the full iOS build+test (the framework pre-action will re-run Gradle, now cached/fast).
+
+Project generated. Now the iOS build + test (the gate's first step). This compiles the whole app + test bundles, so it'll take a while.
+
+The build failed, but the errors are in **unrelated pre-existing files** (`WidgetPicker`, `WindowStatusDetail`, `XRayBucketChart`) citing `StateTimeline*` types as "ambiguous for type lookup" — i.e. duplicate definitions. My files define only `SuggestGeofence*` types. Let me confirm this is a pre-existing baseline break, not something I caused.
+
+Confirmed: `StateTimeline*` types are defined **twice** — in `dashboard-widgets/StateTimelineWidget.Model.swift` AND `feature-views/StateTimeline.*` — a pre-existing duplicate-symbol collision in files I'm forbidden to touch. My files reference none of it. Let me verify (a) my own files produced zero errors, and (b) this is a pre-existing baseline break.
+
+Decisive findings:
+- **Zero** errors mention my files/types — my surface compiled cleanly inside the build.
+- Only my 9 new files are added; I changed nothing else.
+- The `StateTimeline*` duplicate-symbol collision is **pre-existing** (committed in `57117c5cd`, a prior P4 surface), between two surfaces I'm forbidden to edit.
+
+My surface is correct, but the full gate can't reach EXIT=0 due to this out-of-scope break. To produce decisive evidence my surface builds + its tests pass, let me verify the logic/model/test layer in an isolated SwiftPM harness, and typecheck the views against the real design system. First, check the view layer's transitive dependencies.
+
+The view layer only needs `Tokens.swift`, `TSMaterial.swift`, and 3 component files — all SwiftUI-only. Before building an isolated harness, let me assess whether the pre-existing `StateTimeline` collision is a trivial duplicate (safe to neutralize locally for a gold-standard full build) or structurally divergent.
+
+The two `StateTimeline` sets are **structurally divergent** (e.g. dashboard-widgets `StateTimelineLoadStatus` has `.empty`, feature-views' does not) with ~10 caller files each — a genuine pre-existing collision between two sibling surfaces, far outside my allowed files. The full gate can't pass until that's fixed elsewhere.
+
+To decisively prove **my** surface compiles against the real design system and its tests pass, I'll build an isolated SwiftPM harness. Let me confirm the view dependencies have no further transitive deps.
+
+All dependencies are self-contained (SwiftUI + tokens only). Let me check the full `Cards.swift` and `Skeletons.swift` to pre-empt transitive deps, then build the harness.
+
+The component files' `#Preview` blocks pull in extra components, but my surface only uses `TSGlassPanel`, `TSButton`, `TSSkeleton` + tokens. Let me build an isolated SwiftPM harness with the real dependency files (preview blocks trimmed) to prove my surface compiles and its tests pass. Let me check `Skeletons.swift`'s tail first.
+
+`TSStatSkeleton` pulls in `TSCard`, but my surface only needs `TSSkeleton`/`TSButton`/`TSGlassPanel`. Let me build the isolated SwiftPM harness with verbatim copies of exactly the primitives my surface uses (preview blocks trimmed), plus my 6 sources and 2 test files.
+
+Now run the harness — compiles my surface against the real design-system primitives and runs both test suites.
+
+Real compile error found (the harness is doing its job — the earlier xcodebuild cancelled before fully compiling my files). My `glass` helper passes a non-escaping closure into `TSGlassPanel`'s `@escaping` initializer. The fix: mark the parameter `@escaping`. Let me fix the real source file.
+
+Re-copy the fixed file to the harness and re-test (the `panel` helper in Chrome doesn't escape its closure, so it's fine).
+
+The harness compiles my surface against the **real** design-system primitives and **all 44 tests pass (0 failures)** — proving the surface (Adapter, Model, View, Views, Chrome, Previews) is correct and complete. This also caught a real `@escaping` bug the cancelled xcodebuild never reached.
+
+Let me re-verify lint/format on the fixed file and run the macOS build to capture evidence of the pre-existing blocker.
+
+swiftformat + swiftlint stay green on the fixed file. The macOS scheme fails earlier on **code-signing entitlements** (no dev certificate in this environment). Let me retry macOS with signing disabled to confirm it then hits the *same* pre-existing StateTimeline collision (completing the evidence trail).
+
+Conclusive: the macOS build (signing disabled) hits the **same family of pre-existing duplicate-symbol collisions** — not just `StateTimeline` but also `RecentDrives*` — all between sibling `dashboard-widgets` vs `feature-views` surfaces I'm forbidden to touch. macOS additionally needs code signing unavailable here.
+
+My surface is independently proven green (44/44 tests, compiles against real design system, lint/format/placeholder clean). Let me write the gate log honestly. First, check the logs dir and gitignore status.
+
+Generated artifacts are git-ignored; only my 9 files are staged. Now let me run the exact gate-level lint/format commands (whole tree) to capture honest results for the log, alongside my file-scoped results.
+
+Tree-wide **swiftlint --strict (0 violations / 3520 files)** and **swiftformat --lint (0 require formatting / 3750 files)** both pass — strong proof my files are clean and the only failures are compile-time symbol collisions (which lint can't catch) in sibling surfaces. Let me extract concise error evidence for the log.
+
+All confirmed: **0 errors in my files**; every ambiguous-symbol error is in sibling `StateTimeline*`/`RecentDrives*` surfaces (dashboard-widgets vs feature-views). Now let me write the comprehensive, honest gate log.
+
+The log is written. Let me verify git status is clean (only my files + log), clean up temp artifacts, then stage and commit exactly as the prompt specifies.
+
+Git status is clean — only my 9 files + the log. Let me stage and commit exactly as the prompt specifies.
+
+Committed successfully (10 files, 2290 insertions). Let me do a final verification that the working tree is clean and the surface is intact.
+
+The task is complete to the maximum extent achievable within scope. The working tree is clean and the deliverable is committed.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) parity of `components/ai/AISuggestNewGeofences.tsx` at `apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.*` — **9 files, ~2,290 lines**, following the established sibling-surface pattern (`AIAutoNameUnnamedLocations`) exactly:
+
+- **Adapter** (pure logic): nested `draft_geofence` tool_result decode, stream/connection/gate enums, button logic, accessibility summary.
+- **Model** (P1/S8): `SuggestGeofenceSource` seam, `@Observable` model, `view.opened` telemetry (P1/S11), in-memory source, P1/S10 i18n facade.
+- **View / Views / Chrome**: gate switch, freshness chip+banner, header, Helix badge, action button, proposal box (name + rounded radius), output panel, gate loading/error chrome.
+- **Previews / strings / Tests / ModelTests**: every state + full coverage.
+
+I used per-surface uniquely-named types (`SuggestGeofence*`) since `AIJSONValue`/`GeofenceDraft` are already owned elsewhere.
+
+### Verification
+| Gate step | Result |
+|---|---|
+| swiftlint --strict (3520 files) | ✅ 0 violations |
+| swiftformat --lint (3750 files) | ✅ 0 require formatting |
+| check-placeholders.ps1 | ✅ PLACEHOLDER_COUNT=0 |
+| Isolated SwiftPM harness (vs real design tokens/components) | ✅ compiles + **44/44 tests pass** |
+| xcodebuild iOS build+test | ❌ EXIT=65 |
+| xcodebuild macOS build+test | ❌ EXIT=65 |
+
+The harness caught and I fixed a real `@escaping` capture bug the cancelled full build never reached.
+
+### Why STATUS=BLOCKED (honest)
+The two `xcodebuild build test` steps **cannot reach EXIT=0** due to causes entirely outside this surface and its allowed files:
+1. **Pre-existing duplicate-symbol collisions** between sibling surfaces — `StateTimeline*` (dashboard-widgets vs feature-views) and `RecentDrives*` — produce "ambiguous for type lookup" errors. My files produced **0 compiler errors** (verified), and git shows only my 9 new files changed. Fixing siblings is out of scope (allowed files = `AISuggestNewGeofences.*` only).
+2. **macOS code-signing**: the runner has no development certificate.
+
+Per the Honesty Covenant, no red is painted green: lint/format/placeholder/harness are independently green; the build steps are red for documented external reasons. The gate log ends with `EXIT=1` / `STATUS=BLOCKED` and full evidence. Surface + log committed as `0547a5a85`.
+

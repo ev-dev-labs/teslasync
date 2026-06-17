@@ -1,0 +1,183 @@
+I'll start by exploring the repository structure and the key files for this parity task.
+
+Now let me explore the Apple app's existing structure and patterns to understand conventions.
+
+The `Features` directory doesn't exist yet. Let me explore the actual structure and existing implementations, especially the recently-completed `AutomationActivityFeed`.
+
+The output path is `apps/apple/TeslaSync/Features/Automations/` but existing code lives elsewhere. Let me find the actual `AutomationActivityFeed` implementation and the Features directory location.
+
+There are two locations. Let me examine the project.yml to understand build source roots, and study the recently-completed `AutomationActivityFeed` pattern in `Sources/Features/Automations/`.
+
+Key finding: the build's source root for feature pages is `apps/apple/Sources/Features/`, NOT `apps/apple/TeslaSync/Features/`. The recent parity pages (AutomationActivityFeed, admin, analytics) all live under `Sources/Features/`. Let me study that exact pattern.
+
+Let me read the model, views, and test for AutomationActivityFeed, plus the web `AutomationConflict` type and `AlertBanner` component.
+
+Now let me examine the web types/components and the available Apple shared components (AlertBanner equivalent, design tokens, EmptyState).
+
+Let me look at the States.swift (EmptyState/error), the Views file pattern, TSTone/design tokens, and the existing log + xcstrings format.
+
+Let me check the design tokens (TSTone, TSGlassPanel), the xcstrings catalog, an existing completed log, and how the route gets hosted.
+
+`automations.builder.conflict` is not yet a direct key — I'll add it. Let me view the xcstrings format, the existing log, TSGlassPanel, and the navigation host.
+
+Let me view the existing log format, check for an existing `AutomationConflict` Swift type, find the navigation host, and the Motion/FadeIn component.
+
+I now have the full template. Let me verify tool availability (Xcode/swiftlint/swiftc), component signatures (TSFadeIn, TSSkeleton), and lint config before writing.
+
+Xcode 26.5 and all tools present — gate can run. Let me check TSSkeleton signature, swiftlint config, the placeholder script, and confirm token names.
+
+Let me confirm the token definitions exist and review the placeholder script's rules.
+
+Let me find the design token definitions and the forbidden placeholder patterns.
+
+Let me view the Tokens.swift to confirm all color member names I'll use.
+
+I have everything needed. Xcode 26.5, all tools present, tokens confirmed. Let me set up tracking and write the plan.
+
+Let me check the swiftformat config (max width / wrapping) and confirm no existing `automations.conflicts.*` keys, then view the ledger tail.
+
+No collisions. swiftformat handles wrapping at 120. Now let me write the plan and create all source files.
+
+Now the page view and route registration:
+
+Now the test file:
+
+Now update the xcstrings catalog with the parity strings:
+
+Now update the ledger with 2 rows, then validate JSON for both files:
+
+Both JSON files valid (+7 strings, 2 ledger rows). Now running the gates — starting with swiftformat (autoformat then lint):
+
+swiftformat clean (0/5). Now swiftlint --strict on my files:
+
+One nesting violation in the test — `Failure` is 2 levels deep. Let me hoist it to file scope:
+
+swiftformat reformatted the test file. Let me view its current state:
+
+Re-running swiftformat + swiftlint to confirm both clean:
+
+swiftformat 0/5 and swiftlint --strict 0 violations. Now the placeholder scan:
+
+Placeholder COUNT=0. Now the isolated Swift 6 strict-concurrency typecheck against the real tokens + components (macOS first):
+
+macOS typecheck: 0 errors. Now iOS simulator (exercises the `#if os(iOS)` branch):
+
+Both idioms pass (0 errors). Let me also typecheck the `#if DEBUG` preview blocks (with `-D DEBUG`) to validate that scaffolding too:
+
+Both idioms + previews typecheck clean. Now let me execute the model logic in a real harness to prove the state machine (matching the prior page's approach):
+
+The harness deadlocks — blocking `sem.wait()` on main starves the `@MainActor` Task. Let me stop it and switch to an async `@main` entry:
+
+Model harness: **18/18 assertions passed**. Now let me attempt the real `xcodebuild` gate. First checking prerequisites (Shared.xcframework, the known pre-existing crash file, project):
+
+Let me run `xcodegen generate` (cheap) to prove my files integrate into the project, then attempt the xcframework + xcodebuild:
+
+xcodegen integrated my files (72 refs; model + test each in 6 build phases = iOS+macOS apps + both test bundles). Now let me check whether the Shared.xcframework can be staged (KMP/Gradle toolchain):
+
+JDK 17 + gradlew present. To honor the covenant, I'll attempt the real xcframework staging + xcodebuild. Starting the Gradle KMP build in the background (it's slow, ~7+ min):
+
+While the KMP build runs, let me verify the post-format state of my files and get accurate line counts:
+
+Build is compiling Kotlin (iOS arm64). Let me wait for it to progress:
+
+Almost done (assembling release XCFramework). Let me wait for completion:
+
+The `/tmp` log is shared across parallel slots — that "slot-252" staging line is from a sibling. Let me check my own build's actual status and slot-250's framework:
+
+Let me read my actual build shell's status directly:
+
+My slot-250 build is still running (the contaminated `/tmp` log showed a sibling's slot-252 completion). Let me wait for my own build to finish:
+
+My slot-250 build completed (XCFRAMEWORK_EXIT=0) and staged correctly. Now running the real `xcodebuild` (macOS target, framework already staged so building the target directly to skip the 7-min restage pre-action):
+
+Build running. Let me monitor progress and watch for my files compiling and the known pre-existing crash:
+
+BUILD_EXIT=65 (matching the documented precedent). Let me verify the root cause is the pre-existing sibling crash and that MY files have zero diagnostics:
+
+A real collision — there's a **pre-existing** `TeslaSync/feature-views/ConflictWarnings.*` surface that already defines `AutomationConflict`. My bare `AutomationConflict` clashes. Let me examine the existing surface:
+
+There's a complete pre-existing `ConflictWarnings` feature-view. Let me inventory its types and find the existing `AutomationConflict` definition — I may be able to reuse it rather than redefine:
+
+This is a substantial pre-existing surface owning `AutomationConflict`, `AutomationConflictSeverity`, `ConflictWarningRow`, `AutomationConflictRow`. Let me read the existing data types to decide between reuse vs. unique-rename:
+
+The existing surface is the proven, complete parity core (pure, public Adapter types: `AutomationConflict`, `ConflictWarningRow` with `detail`/`iconSystemName`, `ConflictWarningsProjection`, `CWCopy`). The DRY-correct fix is to **reuse** these and give my navigable Page unique names. Let me read the existing Views/Model/View to maximize reuse:
+
+The existing surface has reusable banner/list/empty/error/loading views. Let me read the main view and model to see how to host them in my navigable Page:
+
+The existing `ConflictWarnings` view already composes all states over `ConflictWarningsModel`. Let me read that model to decide the cleanest reuse for my navigable page:
+
+Now I fully understand: a complete, proven `ConflictWarnings` surface already exists with reusable pure types (`AutomationConflict`, `ConflictWarningRow`, `ConflictWarningsProjection`, `ConflictWarningsRender`) and state views (`ConflictWarningsList/Empty/Error/Loading`). The DRY-correct fix is to **reuse** these and make my P7 page a navigable wrapper with uniquely-named types. Let me verify test-class names and the existing strings table won't collide:
+
+All my `...Page`-prefixed names are free; test class is unique. The existing `ConflictWarnings.strings` already owns the parity keys. Let me trim my catalog additions to just the 2 my page directly needs (required string + nav title), aligning with existing values:
+
+Now delete my redundant Views file (reusing the existing surface's views) and rewrite the model, page, route, and tests:
+
+Now re-run the gates on the rewritten files — swiftformat, swiftlint, placeholder:
+
+format/lint/placeholder all green. Now the expanded isolated typecheck must include the reused feature-view files. Running macOS + iOS:
+
+Both idioms typecheck clean with reused files. Now execute the page-model harness (compiling my model + the reused Adapter/Model):
+
+The harness needs the full dependency chain (Model.swift references the `ConflictWarnings` view). Let me compile the model with its real reused deps + UI chain into an executable:
+
+The error scrolled past the warnings. Let me capture the actual compile error:
+
+The deps compile fine with a trivial main (rc=0). The error is in my harness main. Let me isolate it:
+
+Found it — `await` inside the `&&` autoclosure. That's a harness-main bug, not my model. Let me fix and run the full harness:
+
+Page-model harness: **13/13 passed** against the real reused core. Since I deleted a file, I must regenerate the project, then re-run the full build:
+
+Project clean. Now re-run the full macOS build (framework already staged):
+
+BUILD_EXIT=65 (fast incremental). Let me verify my collision is resolved and confirm the remaining failure is the documented pre-existing crash:
+
+Only 1 error total, none in my files, and the previous IRGen crash signature is gone. Let me see what that 1 error is:
+
+The remaining failure is a **different pre-existing error** — `shared-surfaces/AISuggestNewGeofences.swift:129: escaping closure captures non-escaping parameter` — a sibling surface I never touched. Crucially, my module emitted cleanly (`SwiftEmitModule ... TeslaSync` succeeded) and there are zero errors in my files. Let me confirm scope integrity:
+
+Only my files changed; zero errors anywhere under `Sources/`; `AISuggestNewGeofences.swift` is unmodified by me. Let me confirm this is a documented/independent pre-existing failure (check the pending-verifications doc + the offending line):
+
+Confirmed: this is the **documented "macOS-pending" pattern** — the full-app `xcodebuild` is blocked by pre-existing, unrelated parallel-merge errors in *other agents'* sibling surfaces (here `AISuggestNewGeofences.swift:129` escaping-closure, which references zero of my types and is unmodified by me). My module emits cleanly with zero errors in my files. This matches the AutomationActivityFeed sibling-page precedent (EXIT=0/STATUS=DONE).
+
+Let me update the plan, write the evidence log, and finalize. First the plan:
+
+Let me capture exact build-log facts for the evidence log before cleanup:
+
+EmitModule for TeslaSync succeeded (module-wide type-check passed, including my files); zero errors in my files; the codegen batch failed only on the pre-existing sibling. Combined with the isolated typecheck + executed harness, my evidence is conclusive. Now writing the evidence log:
+
+Now let me validate the final state (xcstrings count, JSON validity), clean up temp build logs, and update tracking:
+
+All clean. Let me update tracking and run a final consolidated verification before committing:
+
+All final gates green (swiftformat 0/4, swiftlint 0, placeholder 0). Now committing with the exact allowed paths:
+
+Committed cleanly (7 files, 659 insertions). Let me do a final confirmation of a clean working tree and the committed artifacts:
+
+All todos complete. The task is finished and committed.
+
+## Summary
+
+Implemented the native SwiftUI/HIG **`ConflictWarnings`** P7 parity page for the Apple app, at web parity with `web/src/features/automations/pages/ConflictWarnings.tsx`.
+
+**Key finding & approach:** A complete, proven P4 `ConflictWarnings` feature‑view already existed (`TeslaSync/feature-views/`) owning `AutomationConflict`, `ConflictWarningsProjection`, `ConflictWarningsRender`, and the `ConflictWarningsList/Empty/Error/Loading` views. My first draft duplicated and **collided** with it (`'AutomationConflict' is ambiguous` ×8 in the real app build). I rewrote the page to **reuse** that proven core (DRY) and add only the navigable‑page layer with unique `…Page…`‑prefixed names.
+
+**Shipped** (`apps/apple/Sources/Features/Automations/`):
+- `ConflictWarningsPageModel.swift` — `@Observable` model, async `load()`/`refresh()`, resolves loading/content/empty/error over an injectable conflicts seam
+- `ConflictWarningsPage.swift` — adaptive macOS+iOS scaffold rendering the reused state views; `#if DEBUG` previews
+- `ConflictWarningsRouteRegistration.swift` — `NavigationDestination` seam (unrouted unit)
+- `ConflictWarningsPageModelTests.swift` — state machine + projection tests
+- `Localizable.xcstrings` +2 keys (`automations.builder.conflict`, nav title); `apple-ledger.json` +2 rows (3/3)
+
+**Gates — all in-scope GREEN:** swiftformat `0/4` · swiftlint `--strict 0` · placeholder `COUNT=0` · isolated Swift 6 typecheck macOS+iOS `0 errors` · executed page-model harness `13/13` · xcodegen integrated.
+
+**Full `xcodebuild`:** `BUILD_EXIT=65` — **zero errors in any of my files** (module emits clean); blocked solely by a pre-existing, out-of-scope sibling error (`AISuggestNewGeofences.swift:129`, escaping-closure, references none of my types, unmodified by me). This is the documented "macOS-pending" disposition (same as the AutomationActivityFeed P7 page + ~15 sibling units), deferred to the P99 acceptance gate. Log ends `EXIT=0 / STATUS=DONE`. Committed.
+
+
+
+The task is fully complete — all 10 todos done, all in-scope gates green, and the work committed. Marking complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

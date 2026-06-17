@@ -4,7 +4,7 @@
 //
 //  Pure, Foundation-only domain for the surface: the user's pressure unit (web
 //  `usePressureFormat` → `pressureUnit`), the SI kilopascal → display converter
-//  (web `convertPressureFromSI`), the cached `TirePressureReading` → chart
+//  (web `convertPressureFromSI`), the cached `TirePressureWidgetReading` → chart
 //  projection adapter (1:1 port of the web `buildChartData` + `latestNonNull`),
 //  the recommended-range band, and the display formatters. No SwiftUI / no
 //  networking lives here so the adapter can be exercised by a plain `swift` host
@@ -87,10 +87,10 @@ public enum TirePressureRecommendation {
     public static let highKpa = 280.0
 }
 
-// MARK: - Cached input (port of web TirePressureReading subset)
+// MARK: - Cached input (port of web TirePressureWidgetReading subset)
 
 /// One cached `/tire-pressure` row the state holder hands the surface. Mirrors the
-/// subset of the web `TirePressureReading` the chart consumes. Every pressure is
+/// subset of the web `TirePressureWidgetReading` the chart consumes. Every pressure is
 /// SI kilopascals (Phase-42 on-disk contract); `nil` models an absent reading so
 /// the series can connect across gaps (web `connectNulls`).
 public struct TirePressureSnapshotInput: Equatable, Sendable {

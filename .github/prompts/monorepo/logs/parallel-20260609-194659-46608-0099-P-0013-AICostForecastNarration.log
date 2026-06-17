@@ -1,0 +1,176 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me read the web source and explore the Apple app structure.
+
+Now let me read the web dependencies (AIFeatureCard, withAiFeature, useAiStream) and explore the Apple app structure in depth.
+
+There's a near-identical analog: `AIBatteryHealthForecastNarrative` (also an AI narration surface using `useAiStream` + `AIFeatureCard`). Let me study it as the template, plus the web source it was built from.
+
+The template is nearly identical to my task (the only delta: `AICostForecastNarration` adds an optional `months` prop to the request body). Let me read the rest of the analog's files to learn the full pattern.
+
+Let me read the remaining analog files and locate the structural types referenced (StreamSnapshot, Action, Output, Accessibility).
+
+Now let me read the test files, strings, previews, and the project build config to understand integration.
+
+Let me read the strings/previews files, project config, and locate the shared token definitions.
+
+Now I understand the structure completely. Let me check build feasibility: xcodegen, existing project, the Shared.xcframework build, design tokens, and the placeholder checker.
+
+Key finding: `Shared.xcframework` isn't present (only `.gitkeep`) and must be built via `build-shared-xcframework.sh`. Let me inspect that script, the design tokens, and the placeholder checker.
+
+Let me locate the shared SwiftUI components (TSButton, TSSkeleton, TSFadeIn) and assess the KMP framework build situation.
+
+Let me read the shared component signatures and kick off the KMP framework build in the background (it may take a while).
+
+I have everything needed. Let me verify no symbol collisions for my naming prefix, then kick off the KMP framework build in the background (needed for the full app build).
+
+No collisions. Java 17 present. Let me kick off the KMP framework build in the background and start writing the surface files in parallel.
+
+Let me set up task tracking and write the plan, then author all the surface files.
+
+Now I'll author all the files. Starting with the Adapter (pure Foundation core), adapted for the cost endpoint + the extra `months` body field.
+
+Adapter done. Now the Model (state-holder seam, i18n facade, input with `months`, observable model, in-memory source).
+
+Build log check plus writing Projection, Chrome, and Views.
+
+KMP framework build is progressing (linking release frameworks now). Writing Projection, Chrome, and Views.
+
+Now the main View, Previews, strings catalog, and the two test files.
+
+Now the two test files — AdapterTests (including the `months` body parity) and Tests (model/projection/accessibility, plus the input→request wiring).
+
+Now the main Tests.swift (projection, model wiring, telemetry, freshness, the input→request `months` wiring, and accessibility).
+
+All 10 files created. Let me update tracking and check the framework build, then begin verification with lint/format on the new files.
+
+Framework still linking. Let me run swiftformat and swiftlint on the new files while it finishes (these don't need the framework).
+
+swiftformat passes (0/9 need formatting). Now swiftlint on the new files.
+
+swiftlint passes (0 violations). Let me inspect and run the placeholder checker, and check the framework build.
+
+Framework staged successfully. Now let me generate the Xcode project and kick off the iOS build+test in the background (the long pole), then run the placeholder check.
+
+Project generated. Starting the iOS build+test in the background (it rebuilds/stages the framework via a scheme pre-action, then builds the app + runs tests).
+
+Now the placeholder check — both the gate-exact form and a real scan of my actual files.
+
+All 9 files: PLACEHOLDER_COUNT=0; gate form EXIT=0. Let me monitor the iOS build+test.
+
+Build failed — but the errors are in **pre-existing** files (`StateTimelineModel`/`StateTimelineConnection` "ambiguous for type lookup" in `WidgetPicker`/`WindowStatusDetail`/`XRayBucketChart`), none of which are mine. This looks like a pre-existing name collision. Let me verify it's unrelated to my change.
+
+Confirmed: this is a **pre-existing collision** — `StateTimeline*` types are defined twice in committed sibling surfaces (`feature-views/StateTimeline.*` and `dashboard-widgets/StateTimelineWidget.*`), neither of which I touched. Let me confirm via git that these are baseline files, and set up an isolated typecheck of my surface to prove my code compiles.
+
+Confirmed: the collision is 100% pre-existing in committed baseline files (`StateTimelineModel` is declared in both `feature-views/StateTimeline.Model.swift` and `dashboard-widgets/StateTimelineWidget.Model.swift` at HEAD) — unrelated to my new surface. Let me understand when it was introduced and set up an isolated typecheck of my surface against the real shared components.
+
+Both colliding surfaces were added in separate prior commits (`57117c5cd`, `2737a7bb5`) — a pre-existing parallel-generation defect. `Sources/Components` only imports system frameworks, so I can isolate-typecheck my surface against the real component library + SDK. Let me try.
+
+Zero errors mention my surface types. The 6 errors are likely from the component library referencing symbols outside the subset I included. Let me see them.
+
+The only errors are a missing `TSChartPalette` symbol that the component library references from a sibling file. Let me locate it and add it to the closure.
+
+`TSChartPalette` lives in `Sources/Design/`. Let me include that subtree and re-run.
+
+The component library has deeper transitive deps (`Units`, `UnitPreferences`). Rather than chase them, let me typecheck my surface against the entire self-contained `Sources/` foundation (which excludes the colliding co-located surfaces). First, check whether `Sources/` needs the KMP `Shared` module.
+
+My surface only depends on `Color.TS`/`Font.TS`/tokens + `TSButton`/`TSSkeleton`/`TSFadeIn` — none import `Shared`. The earlier deps came from unused chart/map components. Let me build the minimal real closure (tokens + Buttons + Motion + Skeletons + its TSCard dep + my 6 files). Let me check Cards.swift deps first.
+
+The component library is interconnected. Let me do the definitive isolated typecheck: the entire real `Sources/` foundation + the `Shared` framework (simulator slice) + my 6 files. This excludes the colliding co-located surfaces. Let me locate the framework slice.
+
+Running the definitive isolated typecheck: the full real `Sources/` foundation + `Shared` framework + Tokens + my 6 files (excludes the colliding co-located surfaces).
+
+Definitive proof: **`TYPECHECK_FULL_EXIT=0`, 0 errors** — my 6 source files compile cleanly against the full real `Sources/` foundation (188 files) + `Shared` KMP framework under Swift 6. Now let me prove the test files typecheck too (compiling them in-module, against my real types).
+
+The test errors are all just `XCTAssertEqual/XCTAssertNil not found` (XCTest not on the raw-swiftc search path) — the `.gated`/`.loading` errors are secondary to that. My type references themselves resolve. Let me fix the XCTest search path and retry.
+
+Need the Swift overlay too (`XCTest.swiftmodule` lives in `Developer/usr/lib`). Adding `-I` for it and retrying.
+
+Both test files typecheck cleanly in-module (`TYPECHECK_TESTS_EXIT=0`). I now have strong isolated proof. Let me assess whether I can run the real in-target `build test` by temporarily excluding the unrelated colliding surface (via a throwaway project, no committed files touched). First, check the blast radius of the `StateTimelineWidget` collision.
+
+`StateTimelineWidget` types aren't referenced anywhere outside their own files — so the collision is isolated. Before attempting an in-target test run, let me scan the whole baseline for ALL duplicate public type names, to gauge whether this is the only collision or one of many.
+
+The baseline has **25 duplicate type names** across at least two collision families (`StateTimeline*` and `RecentDrives*`) — multiple pre-existing parallel-generation collisions, definitively not my scope. Let me identify the duplicate file locations to see if a bounded temporary stash (of the unrelated widget duplicates) could yield a real in-target test run.
+
+Two bounded collision families (both feature-view vs dashboard-widget pairs). I can temporarily set aside the two unrelated widget surfaces (not modifying/committing them) to run my tests in the real target. Let me stash them, regenerate, and run my test classes on iOS.
+
+One duplicate remains: `RecentDrivesConnectivityBanner`. Let me find both definitions.
+
+A third surface (`RecentDrivesWidget.*`) and `KioskClockPosition` (in `modals-dialogs`, which my first scan missed) also collide — the baseline has numerous unrelated parallel-generation collisions. This is an unbounded, out-of-scope yak-shave. Let me restore the stashed files and rely on the strong isolated-compile evidence.
+
+Restore confirmed clean (no git changes to dashboard-widgets). My 10 files are intact. The baseline has ~26 collisions. Let me get the complete collision→files map in one shot to decide if a bounded full stash is feasible for a real in-target run.
+
+Bounded but the collisions span 7 surfaces across 3 dirs (incl. intra-`modals-dialogs` Kiosk pair) with real cascade risk — clearly out of scope. I have definitive isolated proof already. Let me finalize: check the logs dir and the analog's log format, then run the official gate steps fresh for the log.
+
+This is the key finding: the analog's own gate log documents the **established methodology** — surfaces are verified GREEN in isolation on the host, with the full-app `xcodebuild build test` deferred to a dedicated acceptance-gate runner plus an audit row in `apps/macos-pending-verifications.md`. Let me read the rest of the analog log and the pending-verifications file to match the format exactly.
+
+The accepted analog (0008, committed) hit the **identical** pre-existing collisions (`IOS_EXIT=65`, same `RecentDrivesModel`/`StateTimelineModel` ambiguities), proved them unrelated, verified the surface GREEN in isolation via SwiftPM (ran its 70 tests), and concluded DONE. Let me read its conclusion + STATUS and the pending-verifications format.
+
+Authoritative precedent confirmed: the committed analog concluded `EXIT=0 / STATUS=DONE` after the identical pre-existing collision, having independently verified the surface green (incl. running its tests). To match that gold standard, let me actually RUN my tests in isolation via a throwaway xcodegen project (real foundation + Shared.xcframework, module-named `TeslaSync`, excluding the colliding siblings). First, locate the app `@main`.
+
+One `@main` (`Sources/TeslaSyncApp.swift`), which I'll exclude from an isolated framework target (module-named `TeslaSync`). Let me create a throwaway isolated project spec, generate, and run my tests against the real foundation.
+
+Generating the isolated project and running build+test (compiles the real foundation + my surface, runs my XCTest suite).
+
+Isolated build+test running. Let me wait for it to compile the foundation and run my tests.
+
+The framework built, but `@testable import TeslaSync` needs the target/module literally named `TeslaSync`. Let me rename the isolated framework target to `TeslaSync` and re-run.
+
+Let me remove and recreate the spec file cleanly.
+
+Generating and re-running the isolated build+test.
+
+Still a module-resolution error (likely stale DerivedData / framework module not on the test search path). Let me check whether the framework module was produced and clean DerivedData.
+
+Root cause: the framework bundle name didn't match the module name (`@testable import` needs `TeslaSync.framework`), compounded by stale DerivedData. The framework DID compile my surface cleanly. Let me pivot to the most reliable approach: a single unit-test bundle compiling the foundation + my surface + my tests in-module (stripping the cross-module import), with fresh DerivedData.
+
+**`** TEST SUCCEEDED **` — 76 tests, 0 failures** in a real `xcodebuild test` run against the real foundation + `Shared.xcframework` under Swift 6 strict concurrency. This matches the committed analog's gold-standard methodology. Let me clean up throwaway artifacts and check the analog's commit scope.
+
+76 tests, 0 failures confirmed; throwaway artifacts cleaned (tree shows only my surface files). Let me see the analog commit's full file list to mirror its scope exactly.
+
+The analog committed exactly its 10 surface files + 1 log (no `pending-verifications.md`) — I'll mirror that scope. Let me gather final facts for the gate log (tool versions, LOC, iOS-build error attribution, my-symbol uniqueness).
+
+All errors are pre-existing (`RecentDrives*`/`StateTimeline*` ambiguity); 0 in shared-surfaces; my symbols are each defined once. Let me capture the precise iOS-build exit code (background) and confirm the 3 AICostForecastNarration mentions aren't errors, while I draft the log.
+
+Confirmed: zero error lines mention my files. iOS build running to capture the exact exit. Let me write the gate log now (I'll fill the captured iOS exit when ready).
+
+Now let me wait for the iOS build to capture the precise exit code, then fill it into the log.
+
+Confirmed `IOS_EXIT=65` (build failed on the pre-existing collisions). Let me verify attribution on this fresh build log and fill the exit into the gate log.
+
+The build-only run pairs with the captured exit: 54 error lines, 0 in shared-surfaces. Let me reconcile the count in the log (I'd written 108 from the earlier build+test run) to the precise build-only figure.
+
+Let me run the final official gate checks and confirm a clean git tree (only my files) before committing.
+
+All final gates green; git tree contains exactly my 10 surface files + 1 log (throwaways gone, main project gitignored). Let me stage and commit with the prescribed message.
+
+Committed as `877021e1d` (11 files, clean tree). Let me do a final sanity check of the committed log's key lines and close out tracking.
+
+All gate lines verified in the committed log; working tree clean. Let me close out task tracking.
+
+The task is complete and verified. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ ...hared-surfaces-0013-AICostForecastNarration.log | 262 ++++++++++++++
+ .../AICostForecastNarration.Adapter.swift          | 337 ++++++++++++++++++
+ .../AICostForecastNarration.AdapterTests.swift     | 306 ++++++++++++++++
+ .../AICostForecastNarration.Chrome.swift           | 149 ++++++++
+ .../AICostForecastNarration.Model.swift            | 379 ++++++++++++++++++++
+ .../AICostForecastNarration.Previews.swift         | 120 +++++++
+ .../AICostForecastNarration.Projection.swift       | 124 +++++++
+ .../AICostForecastNarration.Tests.swift            | 383 +++++++++++++++++++++
+ .../AICostForecastNarration.Views.swift            | 238 +++++++++++++
+ .../AICostForecastNarration.strings                |  45 +++
+ .../shared-surfaces/AICostForecastNarration.swift  | 119 +++++++
+ 11 files changed, 2462 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0013-AICostForecastNarration.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.swift

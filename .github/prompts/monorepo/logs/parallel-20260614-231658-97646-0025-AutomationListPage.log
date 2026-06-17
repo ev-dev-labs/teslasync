@@ -1,0 +1,44 @@
+I'll start by exploring the repository structure to understand the web source and the Apple app architecture.
+
+Let me look at the web source, the Apple TeslaSync structure, and existing patterns.
+
+Interesting — there are two structures. Let me examine the project config, the parity manifest, and the closest existing reference page.
+
+Now let me read the closest reference implementation (the sibling card-based page) and check tool availability.
+
+Good — full Apple toolchain is available (Xcode 26.5, swiftlint, xcodegen, pwsh). The gate won't be blocked. Let me gather the manifest record, models, the main view, and routing/localization infrastructure.
+
+Now let me study the view layer — the page scaffold, shared components, and design tokens.
+
+Let me explore the shared component library, design tokens, and the test patterns.
+
+Let me read the card/button/typography components, the sample data sources, and the sibling test file.
+
+Let me examine the design tokens, button API, production data-source wiring, the composition root, and the swiftlint config.
+
+Let me check the build infrastructure (KMP framework, xcodeproj, build script) and an existing gate log for format.
+
+The sibling log reveals the established disposition: files live in `Sources/Features/Automations/**`, tests in `Tests/Unit/...`, and the full `xcodebuild` is RED only due to a pre-existing out-of-scope IRGen crash — verification is done via targeted `swiftc -typecheck` + a model harness. Let me extract the exact verification commands used.
+
+I now fully understand the established verification methodology. Let me probe the build environment: KMP coupling, the pre-existing crash file, and the canonical disposition doc.
+
+Key insight: only 14 files import `Shared`, and **none** are in `App`, `Components`, or `Features/Automations` — so my surface typechecks without the KMP framework. Let me list the Shared-coupled files and confirm the curated typecheck subset.
+
+Only 14 KMP-coupled files exist, none in my surface's dependency tree. Gradle works offline. Let me kick off the KMP framework build in the background (needed for a real `xcodebuild`) while I write the implementation.
+
+Framework build running. Let me read the design tokens and set up my plan while it builds.
+
+Let me check which of my 22 strings already exist in the catalog and confirm the xcstrings format.
+
+Let me verify no naming collisions and check for a checkbox/toggle component.
+
+No collisions, and there's a `TSCheckbox`. Let me read it to use for selection checkboxes.
+
+I have everything needed. Let me set up my plan and todos, then check the KMP build progress.
+
+KMP build still running. Let me write the implementation files. Starting with the models.
+
+Now the page model with the data-source seam:
+
+Now the sample/empty/failing data sources:
+

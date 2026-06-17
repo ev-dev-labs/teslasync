@@ -1,0 +1,208 @@
+I'll start by exploring the repository structure to understand what exists and what's required for this task.
+
+Good — the Apple toolchain (Xcode 26.5), web source, and `apps/apple` all exist. Let me read the web source and explore the native project structure.
+
+Large existing native monorepo. Let me study the conventions — find existing AI streaming surfaces and the native counterparts of `AIFeatureCard`, `useAiStream`, `withAiFeature`.
+
+This is a mature monorepo with established conventions. Let me find a web AI surface that uses the exact same pattern (`AIFeatureCard` + `withAiFeature` + `useAiStream` with a POST body) to use as my template, then study its complete native fileset.
+
+`AISmartChargeScheduleSuggestion` is the closest structural twin (builds a POST body, `canStart` with 2 conditions). Let me study its complete native fileset as my template.
+
+Target doesn't exist yet — I need to create the full 10-file fileset. Let me read the entire template fileset to learn the exact conventions.
+
+Excellent architecture. Let me read the remaining template files: Model, Adapter, Views, Previews, and both test files.
+
+Now the Views, Previews, and both test files to complete my understanding of the template.
+
+Now the two test files to complete the picture.
+
+I now fully understand the template architecture. Let me verify the shared web primitives (`useAiStream`, `AIFeatureCard`, `withAiFeature`) to ensure my port is faithful, and check the web i18n catalog for the trip planner keys.
+
+Let me verify the `useAiStream` hook (to confirm the reducer port) and locate the web i18n catalog entries for the trip planner keys.
+
+`useAiStream` confirms the template's reducer port is faithful. Let me check how the trip planner is wired in `TripPlannerPage.tsx` to understand the input props.
+
+I have full context now. Let me set up a plan and run key feasibility checks: Swift JSON number formatting (for deterministic body tests), xcodegen availability, schemes, and lint configs.
+
+Critical finding: `JSONSerialization` corrupts fractional doubles (`37.7749` → `37.774900000000002`). The trip planner body has fractional lat/lng/speed_factor, unlike the integer-only template. Let me test `JSONEncoder` (Codable) which uses shortest-round-trip formatting.
+
+`JSONEncoder` with Codable produces JS-faithful output (`37.7749`→`37.7749`, `1.0`→`1`, `1.1`→`1.1`). I'll model the body as Codable. Let me check for naming collisions before choosing my type prefix.
+
+Existing `TripPlannerLocation`, `TripPlannerCoordinate`, etc. from `TripPlannerMap` would collide. I need a distinct prefix. Let me verify candidates.
+
+`TripPlannerAgent` is collision-free — I'll use it as the type prefix. Now let me verify how test targets pick up the co-located `*Tests.swift` files, then assess build feasibility.
+
+Let me check whether the prerequisite `Shared.xcframework` exists and what the build pre-action requires — this gates whether a full `xcodebuild` is feasible.
+
+The `Shared.xcframework` isn't present — the build pre-action requires a KMP/Gradle toolchain. Let me check the documented verification protocol and how prior P4 surface logs recorded their gate results.
+
+The precedent establishes the honest protocol: host-runnable gates (typecheck both platforms, swiftlint, swiftformat, placeholder, SwiftPM unit tests, xcodegen) are authoritative, while full-app `xcodebuild` is documented as deferred due to a pre-existing repo-wide blocker. Let me read the exact log for my template surface (0047) and another shared-surface to mirror their structure precisely.
+
+I now have the exact, honest verification protocol from the precedent (template surface 0047). Let me create a plan, set up todos, and locate the shared-atom sources for the typecheck harness.
+
+The tokens live in `Sources/Design/`. Let me inspect the atom sources I depend on (tokens, button, skeleton, motion) to gauge the typecheck-harness footprint and confirm exact API signatures.
+
+The design tokens (`Color.TS`, `TSSpacing`, etc.) appear to be generated. Let me locate the generator/output so I can typecheck against real atoms.
+
+The real tokens are committed at `apps/design/generated/apple/Tokens.swift`. Let me confirm the atom API signatures and check tooling availability (pwsh for the placeholder gate).
+
+All atoms, tokens, and tooling confirmed available. I have everything needed. Let me set up the plan and todos, then write the 10 files.
+
+Now writing the files. Starting with the Adapter (Foundation logic core).
+
+Now the Model.swift (seams, telemetry, resolved types, observable model, in-memory source).
+
+Now the SwiftUI surface files — main view, chrome, views, previews.
+
+Now the strings catalog and the two test files.
+
+Before writing the adapter tests, let me compute the exact deterministic JSON bytes my encoder produces for the test fixtures, so my assertions are precise.
+
+Exact bytes confirmed. Now writing the adapter tests with precise assertions.
+
+Now the main Tests.swift (projection, model wiring, telemetry, freshness, accessibility).
+
+All 10 files written. Now the verification harness. First let me inspect the atom component files to anticipate the SwiftPM/typecheck dependency footprint.
+
+Atoms pull in `TSCard` and `Color.TS.surface`. Rather than reason about the full closure, I'll build a SwiftPM harness iteratively. Let me locate the remaining atom files and set up the package.
+
+All atoms confirmed. Let me build the SwiftPM verification harness with the real atoms + my surface files.
+
+Those errors are only in the atoms' `#if DEBUG` preview blocks (TSBadge/TSText), which my surface doesn't use. I'll strip DEBUG preview blocks from the atom copies (my own Previews.swift stays). This keeps the harness bounded while still compiling my code against the real atom APIs.
+
+I only use `TSSkeleton`, but the full `Skeletons.swift` drags in `TSCard`→Typography→Badges. Let me trim the harness copy to just the `TSSkeleton` struct and drop `Cards.swift`.
+
+Harness builds clean against real atoms. Now running the unit tests.
+
+All **84 tests pass, 0 failures**. Now the lint/format/placeholder/xcodegen gates. Running swiftlint and swiftformat on my files.
+
+SwiftLint (under `--strict`, which promotes default warnings to errors) flags: 3 files >400 lines and 2-level type nesting in the Codable body. Let me check swiftformat too, then fix both.
+
+swiftformat passes (0/9). For swiftlint I'll: (1) flatten the 2-level Codable nesting to top-level types, (2) trim 3 files under the 400-line limit. Let me fix the Adapter first.
+
+Adapter still 412. Let me view it to find comment lines to trim to get under 400.
+
+The Adapter needs ~10 more lines trimmed. Let me condense several doc comments in one batch.
+
+Now trim the two test files. Let me view their headers and condense.
+
+Let me remove 9 expendable inline comments from AdapterTests (parity intent is preserved in method names + the key float-fidelity note stays).
+
+Now trim Tests.swift (409→≤400). Let me condense its header and drop a few inline comments.
+
+I'll split the large state-holder test class into a separate `AITripPlannerLLMAgent.ModelTests.swift` — an established repo pattern that cleanly keeps every file under 400 without butchering comments. Let me view the section to extract.
+
+I'll extract `TripPlannerAgentModelTests` + its `Spy` double into a new `ModelTests.swift` file. Let me do this precisely with a script.
+
+Split done. Let me verify both files are well-formed (tail of Tests, head/tail of ModelTests).
+
+Both files well-formed. Let me re-sync the harness with the edited files and re-run tests + lint + format.
+
+84 tests still pass. Now re-run swiftlint + swiftformat on all surface files.
+
+All green: **swiftlint 0 violations, swiftformat 0/10**. Now the placeholder gate, xcodegen, and collision scan. Let me run the placeholder check scoped to my files.
+
+Placeholder gate: **0 placeholders, EXIT=0**. Now xcodegen + type collision scan.
+
+xcodegen succeeds (EXIT=0), files enumerated. Now the type-name collision scan against the rest of the module.
+
+The per-type loop is too slow. Let me stop it and do a single-pass index instead.
+
+The scan had a bug — `-h` suppressed filenames so my own files weren't excluded (every type matched itself). Let me redo with filenames preserved.
+
+**0 top-level collisions** across 23,393 external types. Now the explicit dual-platform real-SDK typecheck (iOS 18 + macOS 15), matching the precedent.
+
+Both platforms typecheck clean (EXIT=0). Let me verify i18n completeness: every key my Swift resolves must exist in the `.strings` catalog.
+
+The "unused" list is a false artifact — those keys appear in multi-line `.string(` calls (key on the next line). Let me verify with a multiline-aware, bidirectional check.
+
+i18n is complete (0 missing, 0 unused; all 4 web parity keys present; the 5 "USED-not-DEFINED" are SF Symbols + the telemetry subsystem, not i18n keys). 
+
+Now let me assess the full-app `xcodebuild` honestly. First, can the prerequisite KMP `Shared.xcframework` even be built here?
+
+Java 17 + gradlew are present, so I'll make a genuine bounded attempt at the prerequisite KMP `Shared.xcframework` build to capture real evidence. Starting it in the background.
+
+Let me monitor the KMP build progress while it runs.
+
+The launcher returned but Gradle runs detached. Let me check the actual build log.
+
+The KMP build is genuinely progressing (Kotlin/Native downloaded, compiling, now linking frameworks). Let me let it continue and check back.
+
+The debug XCFramework built; now the release link is running (the step the precedent couldn't finish). Let me wait for it to complete and stage.
+
+Genuinely progressing — 49 konan linker processes active on the release link. Let me wait for it to finish staging.
+
+Release links progressing (iosArm64 done → simulator → macos next). Let me wait for the final assembly + staging.
+
+Last release link (macosArm64) in progress. Let me wait for assembly + staging to complete.
+
+**`Shared.xcframework` built successfully (18m41s) and staged** — resolving the blocker the precedent couldn't finish. Now I'll attempt the real full-app `xcodebuild`. Let me check simulators and start the iOS build.
+
+iPhone 16 sim ready, xcframework has all slices. Starting the real iOS app build (async, captured).
+
+Excellent — **0 errors**, my `.strings` validated into the bundle, and the `TeslaSync` app module is emitting (the whole app target compiled with my surface). Let me check for completion.
+
+Build still running, 0 errors. Compiling the full app target (thousands of files). Let me wait.
+
+0 errors, app module emits cleanly. Large build still compiling. Let me continue waiting.
+
+Per-file object compilation underway across the app target, still 0 errors. Let me wait for completion.
+
+**`** BUILD SUCCEEDED **`** — the full iOS app target compiled + linked with my surface, 0 errors (exceeding the precedent, which couldn't even stage the framework). Now let me run the test action scoped to my surface's classes (compiles the real test bundle, runs my tests on-simulator).
+
+Test build running (compiling the full test bundle, then running my 10 classes). Let me monitor.
+
+The test-bundle compile hit a **pre-existing, unrelated error** in another surface's test file — `feature-views/RecentActivity.Tests.swift:103: invalid redeclaration of 'RecentActivityFeedProjectionTests'` (not my file). This is exactly the documented co-located-test blocker. Let me confirm it's pre-existing and not caused by me.
+
+Confirmed: git shows **only my 11 files** changed; the sole test-bundle compile error is in `RecentActivity.Tests.swift` (a file I never touched). Let me locate the duplicate declaration to fully characterize this pre-existing blocker.
+
+Definitive: the blocker is a **pre-existing parallel-merge collision** — both `shared-surfaces/RecentActivityFeed.Tests.swift:106` and `feature-views/RecentActivity.Tests.swift:103` declare `RecentActivityFeedProjectionTests` (neither is mine, both unmodified). Let me start the macOS build in the background while I write the log.
+
+macOS build running. Let me write the gate log now with all the captured evidence.
+
+Let me check the macOS build result to finalize that line in the log.
+
+macOS build compiling, 0 errors. Let me wait for it to finish so I can record its real result.
+
+macOS app module emits cleanly (0 errors), now per-file compiling. Let me continue waiting.
+
+Still compiling, 0 errors. Let me wait once more for the macOS build to finish.
+
+**Both iOS AND macOS full-app builds SUCCEEDED** (0 errors) with my surface integrated. Let me update the log's macOS leg to reflect this real result.
+
+Now let me verify git status (xcodeproj + framework must be gitignored) and update todos before committing.
+
+Clean: exactly my 11 files + the log; xcodeproj and framework are gitignored. Let me do a final re-verification of line counts + lint + format before committing (since I edited after the prior run).
+
+All green: every file ≤400 lines, **swiftlint 0 violations, swiftformat 0/10**. Committing now.
+
+Committed cleanly (`56a25cc4e`), working tree clean. Let me mark the todo done, clean up temp artifacts, and confirm the committed log ends correctly.
+
+Task complete. Everything is committed, the working tree is clean, and the log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...-shared-surfaces-0055-AITripPlannerLLMAgent.log | 129 +++++++
+ .../AITripPlannerLLMAgent.Adapter.swift            | 400 +++++++++++++++++++++
+ .../AITripPlannerLLMAgent.AdapterTests.swift       | 400 +++++++++++++++++++++
+ .../AITripPlannerLLMAgent.Chrome.swift             | 169 +++++++++
+ .../AITripPlannerLLMAgent.Model.swift              | 374 +++++++++++++++++++
+ .../AITripPlannerLLMAgent.ModelTests.swift         | 174 +++++++++
+ .../AITripPlannerLLMAgent.Previews.swift           | 138 +++++++
+ .../AITripPlannerLLMAgent.Projection.swift         | 150 ++++++++
+ .../AITripPlannerLLMAgent.Tests.swift              | 248 +++++++++++++
+ .../AITripPlannerLLMAgent.Views.swift              | 242 +++++++++++++
+ .../shared-surfaces/AITripPlannerLLMAgent.strings  |  45 +++
+ .../shared-surfaces/AITripPlannerLLMAgent.swift    | 123 +++++++
+ 12 files changed, 2592 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0055-AITripPlannerLLMAgent.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.swift

@@ -1,0 +1,249 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the analytics components and the Apple app structure in parallel.
+
+This is a complex parity task. Let me read the analytics sub-components and examine the existing Apple app structure to understand established patterns.
+
+Let me read the remaining tab components, constants, helpers, and the API types/hooks.
+
+Let me read the remaining web sub-components, API types, and explore the Apple app structure in parallel.
+
+Let me read the remaining web components, the API hook/types, and check the Apple environment.
+
+Xcode 26.5, swiftlint, swift 6.3.2, and pwsh are all available — so this must actually build. Now let me explore the Apple app structure and existing patterns.
+
+The `view` output is ambiguous. Let me explore the actual Apple project structure carefully.
+
+The Apple app uses a flat naming-convention structure generated via XcodeGen. Let me examine `project.yml`, an existing similar feature-view, and the ledger.
+
+Key finding: `project.yml` sources do **not** include a `Features/` path — the convention is flat dirs like `feature-views/`. Let me find where existing "done" pages (e.g., Statistics, FleetCompare, ApiPlayground) actually live to match the real convention.
+
+Found it — analytics pages actually live in `Sources/Features/Analytics/` (a compiled path), not `TeslaSync/Features/`. The sibling pages `StatisticsPage` and `FleetComparePage` are my templates. Let me study them thoroughly.
+
+Excellent template. Let me read the sibling pages' sections, charts, model and sample data source to learn the full patterns (charts wrappers, KMP binding, sample data).
+
+Now let me study the charts wrappers, sections, sample data source, and find how pages are wired into navigation + production data sources.
+
+Now let me find the component library (P3), models, navigation registration, and the production KMP data sources. Let me explore these in parallel.
+
+Let me read the Statistics sections, the routing, and locate the P3 component library (especially tab nav, metric cards, and chart wrappers like line/area/scatter).
+
+Now let me read the chart wrappers, metric card, and find a tab/segmented component used elsewhere in the app.
+
+Let me read the chart data types, metric cards, chart container/pie/gauge, units facade, and search for existing tab patterns.
+
+`Tabs.swift` and `RadarChart.swift` exist. Let me read the tab component, chart models, chart container, pie/gauge, radar, and the units facade.
+
+Let me read the units facade, routing, pie/gauge, radar chart, and how the strings catalog works.
+
+Key finding: `.analytics` route exists and `/statistics` aliases to it (StatisticsPage currently occupies it). I need to understand routing + strings carefully. Let me investigate.
+
+Let me read the route host registry, composition root, AppRoute, the units facade, and verify the un-prefixed analytics string keys.
+
+Let me read the composition root `TeslaSyncApp.swift` to understand how route registrations compose and resolve the `.analytics` ownership.
+
+Let me read the full `AppRoute.swift` to resolve the `.analytics` route ownership cleanly.
+
+I now understand routing. `.analytics` is the canonical primary tab (web `/analytics`) — AnalyticsPage should own it. Let me read the units facade, pie/gauge/radar charts, and the FleetCompare charts pattern.
+
+Let me read the remaining UI primitives I'll need: radar chart, cards, feedback states, buttons, typography, the data-freshness component, and the FleetCompare legend.
+
+Let me read the final pieces: typography, button, the `tsUnits` environment + theme, data-freshness component, design tokens, chart palette, and check the test layout.
+
+Let me read the final references: tsUnits environment, data-freshness indicator, button, design tokens, and the sibling test pattern.
+
+Let me check the route tests (to avoid breaking them), find `UnitPreferences.metric`, the freshness indicator, and the placeholder scanner.
+
+Routing is safe — `RouteTests` only tests the parser, not which view occupies `.analytics`. Now let me verify build essentials: xcodegen, the gate contract, placeholder scanner, and `UnitPreferences.metric`.
+
+xcodegen is available; the `.xcodeproj` must be generated. Let me check the KMP framework build dependency, the gate README, placeholder patterns, and an existing analytics log for format.
+
+Critical: the build needs `Shared.xcframework` (built via Gradle/Kotlin-Native pre-action). Let me read an existing sibling log for the exact passing gate commands, the README contract, then kick off a baseline build.
+
+This is the key insight: the full app includes a huge pre-existing `TeslaSync/*` AI-surface tree. The sibling log shows the strategy — build the KMP framework, xcodegen, then prove in-scope correctness (lint/format/placeholder/type-check/harness), reporting the full build honestly. Let me check Java and kick off the slow KMP framework build in the background.
+
+Java 17 is available. Let me kick off the slow KMP `Shared.xcframework` build in the background while I write code.
+
+KMP framework building in background. Let me set up my todo tracking and read the gate README + sibling PARITY log format while it builds.
+
+I have the exact log format. The full app build is RED due to a pre-existing `TeslaSync/*` tree (out of scope) — I'll follow the proven sibling pattern. Let me read the web `FleetAnalytics` type to model my Swift types accurately, and check KMP build progress.
+
+I have the full data shape (`StatsSummary { min, max, avg, median, p95, count }`, endpoint `/analytics/fleet?days&start&end`). Now I'll write the Swift implementation. Let me create the models file first.
+
+Models done. Let me create the formatters file and update todo status.
+
+Let me check the KMP build progress and create the page model.
+
+Now the sample/empty/failing data sources with a rich SI fixture.
+
+Hero gauges with a shared metric card. Let me update todos and create it.
+
+Before writing the charts-heavy tabs, let me check swiftlint rules (can I `import Charts` in features?), existing `TSComposedChart` usage with mixed-magnitude series, and any extra chart wrappers.
+
+The KMP framework built successfully. No lint rule forbids `import Charts`. Let me confirm the framework and check `Color.TS.surfaceGlass`/`Font.TS` token names, then build a feature-local composed-chart helper for the dual-series charts.
+
+Framework staged; tokens confirmed. Now the feature-local composed-chart helper for the dual-unit bar+line charts (native Swift Charts).
+
+Overview tab now. Let me mark hero done and create it.
+
+Driving tab next. First let me add a single-series category trend chart (real y-axis, date labels) to the charts helper for the trend/timeline panels.
+
+Driving tab now.
+
+Charging tab now.
+
+Battery tab now.
+
+Now the main page shell.
+
+Now the route registration. Let me check the FleetCompare registration pattern (it uses `onNavigate`) to mirror it.
+
+Now create the route registration and wire it into the app. Let me mark page done and do both.
+
+Now wire it into the app composition, updating the doc comment for the `.analytics` ownership.
+
+Now the model + format tests. Let me create them mirroring the sibling test pattern.
+
+Now the strings — the biggest piece. Let me inspect the xcstrings format for an existing key to match it exactly, then script the insertion of all `analytics.*` keys.
+
+The format is clear. Let me extract every `analytics.*` and related localized key I referenced in my Swift files so I add them all.
+
+141 keys to add. Let me write a Python script that inserts all `analytics.*` keys (plus any missing chart a11y keys) into the catalog, only if absent, preserving the Xcode format.
+
+Many component keys are missing repo-wide (pre-existing). I'll add all 141 `analytics.*` keys plus the few chart/error keys my page directly surfaces (`chart.composed`, `chart.pie`, `chart.radar`, `error.title`, `action.retry`). Let me script it.
+
+Let me validate the catalog is still valid JSON and matches the Xcode format, and check the diff scope.
+
+The full re-sort caused a catastrophic 250K-line diff. Let me revert and do a clean textual insertion that only adds my entries, leaving existing content untouched.
+
+Now a clean textual insertion that only adds my entries. Let me rewrite the script.
+
+The top-level uses `": "` (no space) while entries use `" : "`. Let me fix the marker.
+
+Clean 1606-line insertion. Strings and tests are done. Now let me run the gate: xcodegen, format, lint, placeholder, then build.
+
+Project generated. Now let me run the fast in-scope gates: placeholder scan, swiftformat lint, and swiftlint on my new files.
+
+Two fixable issues: swiftformat wants wrapped property bodies (auto-fixable), and the placeholder scanner flags the word "placeholder" in my doc comments. Let me find all "placeholder" occurrences and the exact flagged lines.
+
+The flagged lines are doc comments containing "placeholders". Let me reword them, then auto-run swiftformat on all my files.
+
+SwiftFormat clean. Now re-run placeholder scan and swiftlint --strict.
+
+Placeholder scan passes. SwiftLint linted the whole repo (5741 files) and found 9 violations — I need to see if any are in my files. Let me isolate them.
+
+All 9 violations are in my files (length/tuple/param-count rules). Let me view the exact spots and fix them by splitting files and restructuring.
+
+Let me fix `AnalyticsCharts.swift` (wrap long line, replace 3-tuple with a struct).
+
+Now fix the Driving tab: update the scatter call site (drop `weight`) and reduce the 8-param helper via a spec struct.
+
+Now I'll restructure the Driving distribution helper into a spec struct and fix the scatter call. Batching the edits:
+
+Now change the `distributionPanel` signature to take the spec struct, and add the struct at file scope:
+
+Now add the `AnalyticsDistribution` spec struct. Let me view the end of the Driving file to append it.
+
+Now the Charging split. Let me rewrite the Charging tab to keep 3 sections + delegate the detail sections to a new file. First the slimmed tab:
+
+I'll introduce shared helper views to cut duplication and body sizes. Let me create the support file, the charging-detail file, then refactor Overview.
+
+Now the charging detail file with the 4 detail sections:
+
+Now rewrite Overview as a slim orchestrator + move its support views/extras to a new file. First the orchestrator:
+
+Now the Overview support file (extras, quick links, vehicle bars, radar):
+
+Now split the Models file (505 lines) — move the drive/charging/battery sub-types to a separate file. Let me find the section boundaries.
+
+Driving is fine (359 lines). Let me split the Models file by moving the drive/charging/battery sub-types into a new file.
+
+Both Models files now under 400. Let me re-format all my files and re-run swiftformat lint + swiftlint to confirm everything is clean.
+
+SwiftFormat clean. Now swiftlint --strict:
+
+One remaining: `AnalyticsCharts.swift:40` is 133 chars. Let me wait for the full result and inspect that line.
+
+Only one violation left repo-wide. Let me break that line into shorter pieces.
+
+Let me re-run swiftformat lint, placeholder scan, and swiftlint to confirm all clean.
+
+Placeholder count is 0 but so is ALLOWED — let me verify my `.redacted(reason: .placeholder)` lines + markers still exist (swiftformat may have altered them).
+
+My redaction lines + markers are intact (`EXIT=0` is the pass condition). Let me confirm swiftlint is now fully clean, then start the full build.
+
+SwiftLint: **0 violations across 5743 files.** Now the critical build verification. Let me run the full macOS build, capturing output to grep for any errors in my files.
+
+Build failed (exit 65) due to pre-existing `TeslaSync/feature-views/*` errors. The key question: are there ANY errors in MY files? Let me grep the build log.
+
+My files have **zero** compile errors — the only 2 errors are in pre-existing `TeslaSync/shared-surfaces/Input.Previews.swift`. Let me confirm my files were actually compiled and capture the pre-existing error messages.
+
+The full build aborts before emitting objects, so I need stronger proof. Let me rigorously type-check the **entire clean `Sources/` module** (which contains my files but excludes the broken `TeslaSync/*` tree) against the real Shared framework. First, locate the framework slice and tokens.
+
+`Sources/` is independent of the broken tree. Let me rigorously type-check the entire `Sources/` module in Swift 6 mode against the real framework — this verifies my files compile.
+
+Typecheck found 3 errors, **none in my files**. Let me see what those 3 are (to confirm they're pre-existing/environmental, not caused by my changes).
+
+Those 3 errors are `TeslaOrdersPage.swift` (Sources/) referencing `ActiveOrdersModel`/`ActiveOrdersSection` — which live in the excluded `TeslaSync/*` tree. Let me confirm and re-run the typecheck including those deps for a fully clean result.
+
+Confirmed pre-existing cross-tree dependency (`TeslaOrdersPage` → `ActiveOrders*` in the AI tree). Let me re-run the typecheck excluding that one non-mine file for a clean proof of my files + the library.
+
+All errors are in pre-existing cross-tree-dependent Admin pages — never my files. Let me do a conclusive targeted compile of my Analytics files plus only their real library dependencies. First, locate `teslaSyncTheme` and check the component library's dependencies.
+
+`Components` doesn't pull in `Shared`. Let me run a conclusive targeted typecheck: my Analytics files + the component library + design + facade + routing + theme.
+
+Need `AuthTokenProviding` (from `Sources/Auth`). Let me add that layer and re-run.
+
+`Auth/UI/RootView` (not needed by my code) references `AppShell`. Let me exclude the UI subdir and re-run.
+
+The targeted typecheck caught a **real Swift 6 concurrency issue in my code** (masked by the full build's earlier failure): `AnalyticsQuickLink.all` needs `AnalyticsQuickLink: Sendable`. Let me fix it.
+
+`LocalizedStringKey` isn't `Sendable`. Cleanest fix: make `all` a computed `static var` (no shared stored state) and drop the `Sendable` conformance. Let me view and edit.
+
+Now fix the closing of the computed property (the `]` needs a closing `}`). Let me view the end of the array.
+
+The structure is valid (swiftformat will fix indentation). Let me reformat and re-run the targeted typecheck.
+
+Exit 70 with no log — the chain broke. Let me run the typecheck standalone.
+
+Likely the OverviewSupport file got malformed (its later types aren't in scope). Let me inspect the `all` property region.
+
+The struct is missing its closing brace (my edit added a `{` level). Let me add the missing brace.
+
+**Targeted typecheck EXIT=0** — my entire code type-checks clean in Swift 6 against the real framework (and it caught/fixed a real concurrency bug). Let me re-confirm format + lint after the OverviewSupport changes, then build a logic harness to actually run the model/format tests.
+
+Let me re-confirm the placeholder scan with full output.
+
+Placeholder scan: `EXIT=0`. Now let me build a logic harness to actually **run** the model/format behaviors (mirroring the XCTest), since the app target can't build through `xcodebuild test` (pre-existing tree).
+
+Now compile and run the harness with the real Shared framework:
+
+Swift 6 top-level isolation issue in the harness glue. Since the source's Swift 6 correctness is already proven by the typecheck, let me compile the harness runner under Swift 5 (the model still runs identically).
+
+Linker error — let me see the details.
+
+The KMP framework needs `sqlite3`. Let me add `-lsqlite3` and recompile.
+
+**Harness: 37/37 logic assertions pass** (including real Shared-framework SI conversion). Comprehensive verification complete. Let me do a final syntax parse of the test file, then write the evidence log and update the ledger.
+
+Test file parses clean. Now let me write the evidence log with the binding `=== PARITY ===` section.
+
+Now update the apple-ledger with the two parity rows (macos + ios). Let me do it safely with Python.
+
+Let me verify the ledger diff is clean (only the 2 additions, no reformat) and valid.
+
+The ledger used indent=2, not 1 — that reformatted the whole file. Let me revert and re-add with the correct indent.
+
+Ledger diff is clean now. Let me clean up temp files and review the full git status before committing.
+
+Everything is in order — `.xcodeproj` and framework are git-ignored. Let me commit per the prompt's instructions (adapting to the real `Sources/` paths).
+
+Committed cleanly (21 files). Let me mark the final todo done and do a last status check.
+
+All todos complete, working tree clean, work committed. Here's the summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

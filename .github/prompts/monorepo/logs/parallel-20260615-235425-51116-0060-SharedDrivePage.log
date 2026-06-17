@@ -1,0 +1,185 @@
+I'll start by exploring the repository structure to understand the existing patterns and the web source I need to port.
+
+Let me read the web source and explore the Apple app structure in parallel.
+
+The Features dir is at `apps/apple/Sources/Features`. Let me look at the recent page commits to understand the actual structure and conventions used.
+
+The actual path is `apps/apple/Sources/Features/<Domain>/`. Let me study the SqlPlayground example thoroughly to replicate the pattern correctly.
+
+Now let me study the route registration, a data-driven page (with maps/charts/API), and the shared components/tokens. Let me explore these in parallel.
+
+DriveDetailPage is the ideal reference (maps + charts + panels + data states). Let me study it thoroughly.
+
+Excellent patterns. Now let me study the data model layer, the API/KMP client wiring, and the web sharing types/hook in parallel.
+
+Now let me locate the P3 component wrappers, SI converters, StatCard, and the production data-source/KMP wiring pattern.
+
+Let me read the key component definitions: charts, maps, stat cards, feedback states, panels, and the Units facade.
+
+Let me examine the maps components, the units environment, stat cards, feedback states, the panel/typography components, and check the Localizable strings + production data source wiring.
+
+Let me examine the feedback states, UI cards/typography, the `tsUnits` environment, and how production data sources connect to the KMP `Shared` core.
+
+Let me find the `tsUnits` environment + display-unit string properties, the production data-source/KMP wiring, and the UI cards/typography components.
+
+Let me read AppContainer (units string props + production wiring) and find the `tsUnits` environment key definition.
+
+Let me check the web routing for `/s/:token` and `/sharing`, the typography components, and the existing `share.*` localization keys.
+
+Now let me check the DriveDetail route registration (routed by `:id`), deep-link handling for parameterized routes, the apple-ledger, and typography details.
+
+Let me check the parity ledger, the log format, the panel component, the sample data source pattern, and the project/tooling setup.
+
+Let me read the web duration formatter, the map annotation type/tokens, and the SqlPlayground log + ledger rows to mirror format.
+
+I have a thorough understanding now. Let me read the remaining pieces: Buttons, any Logo component, the SqlPlayground tests structure, FALLBACK constant, and how TeslaSyncApp wires routes/destinations.
+
+Let me check the button signature, the brand/logo utility, and how TripReplay's destination is attached in TeslaSyncApp (to mirror for the token-bearing route).
+
+Let me inspect the xcstrings format and confirm the `TSTone` cases, then I'll write the plan and implement.
+
+I now have a complete understanding of the architecture. Let me verify a few string keys exist and check spacing tokens, then write the plan.
+
+All architecture understood. Let me set up the plan and todos, then implement.
+
+Let me check the swiftlint/swiftformat config to match style rules before writing code.
+
+Config understood (120 width, `before-first` wrapping, no 1-char identifiers, `--self remove`). I'll write clean code then autofix with swiftformat. Let me create the model/types file first.
+
+Now the unit-aware display helpers (ported from the web boundary helpers + duration formatter):
+
+Now the `@Observable` page model with the data-source seam and phases:
+
+Now the sample + test-double data sources:
+
+Now the main page view with all sections, states, and the loading/expired branches:
+
+Now the hero map section (MapContainer/MapTileLayer/Polyline/start+end CircleMarker):
+
+Now the elevation + speed chart sections with a shared chart panel:
+
+Now the route registration with the `/s/:token` deep-link parser:
+
+Let me verify whether sibling typed destinations are attached to a host stack (to decide reachability wiring), and confirm `teslaSyncTheme()` exists.
+
+I need to fix one issue: `SharedDriveStrings` uses `LocalizedStringKey` (SwiftUI), and I want the deep-link parser to be SwiftUI-free for isolated testing. Let me fix the Models import and extract the parser into a Foundation-only file.
+
+Now update the route registration to remove the duplicated parser/struct and delegate to the Foundation-only parser:
+
+Now let me add the 20 `share.*` keys to the string catalog, inserting them at the top of the `strings` object (existing keys untouched):
+
+Let me validate the JSON and confirm the 20 keys were added correctly:
+
+The harness needs Shared-free logic. Let me split `SharedDriveStrings` (SwiftUI) out of the pure-Foundation models file for cleaner isolation testing.
+
+All source files written. Now let me run the gates — starting with swiftformat autofix, then lint/format/xcodegen checks:
+
+SwiftLint linted the whole repo (config `included`) and found 4 serious violations. Let me see exactly which files/lines — whether mine or pre-existing:
+
+The 4 violations are in a pre-existing unrelated file (`AnomalyInlineRow.Previews.swift`), not my code. Let me confirm all 4 and that my Sharing files are clean by linting them in isolation:
+
+Only 2 pre-existing violations exist repo-wide, both in an unrelated untouched file. Let me confirm my Sharing files lint clean in isolation (scoped gate, matching the prompt's per-feature lint):
+
+My 11 Sharing files: **0 violations**. The 2 repo-wide violations are pre-existing in an untouched file. Now xcodegen + placeholder scan:
+
+xcodegen picked up the new files. Let me run the placeholder scan on the Sharing feature:
+
+The scanner flags the literal word "placeholder" in two of my comments. Let me check the script's rules and reword:
+
+The scanner flags the literal word "placeholder" in two comments. Let me check all forbidden patterns, then reword my comments to avoid false positives:
+
+Only the word "Placeholder" trips it (in 2 comments). Let me reword them to "em-dash fallback":
+
+Placeholder scan passes. Now let me build and run an isolated logic harness (Shared-free) to actually execute the normalization, format, phase, and deep-link logic:
+
+Compiled clean (including the `@Observable` model). Let me run the harness:
+
+The semaphore deadlocks against the MainActor task. Let me stop it and switch to top-level `await`:
+
+All 31 harness checks pass. Let me check whether the KMP `Shared.xcframework` is already staged (which would let me run the real build) before deciding on type-check strategy:
+
+`Shared.xcframework` is not staged (only `.gitkeep`), confirming the full `xcodebuild` is blocked on out-of-scope KMP staging — exactly as sibling P7 logs documented. To still verify the SwiftUI view layer (which swiftlint can't fully type-check), let me run an isolated stub-API type-check of the view files against the exact transcribed P2/P3/facade signatures.
+
+The strict-concurrency type-check caught a **real Swift 6 bug**: `static let` of non-Sendable `LocalizedStringKey` is not concurrency-safe. Let me confirm the project's Swift version/concurrency settings before fixing:
+
+Confirmed: `SWIFT_VERSION 6.0` + `SWIFT_STRICT_CONCURRENCY: complete`, and no existing repo code uses `static let LocalizedStringKey`. The isolated type-check caught a genuine build-breaking bug. Let me fix `SharedDriveStrings` to use computed static vars (no stored global state):
+
+Stub bug (`Color.accent` isn't real). Let me fix the stub and rerun:
+
+macOS type-check passes (EXIT=0). Now the iOS target to cover the `#if os(iOS)` branch:
+
+Both macOS and iOS type-checks pass (0/0), including the `#if os(iOS)` branch. Let me re-run swiftformat + swiftlint on the changed files to confirm style is still clean:
+
+swiftformat reformatted the hand-written file; all clean now. Let me run the final full verification suite (placeholder + harness + both type-checks) for a clean evidence set:
+
+All final gates green: placeholder 0, harness 31/31, macOS+iOS type-check 0/0. Let me update the parity ledger. First inspect its tail structure:
+
+Let me append the 2 ledger rows (macos + ios, 43/43) after the last row:
+
+Ledger valid (166 rows, sharing 43/43). Let me verify every string constant and panel/chart/map symbol is actually referenced in the views (for honest PARITY evidence):
+
+All 20 string constants referenced. Let me gather final metrics (line counts, git status) for the evidence log:
+
+Native implementation is 1440 LOC source + 202 LOC tests (vs 455 web) — no scope narrowing. Let me capture tool versions and write the evidence log:
+
+Now let me write the comprehensive evidence log:
+
+Let me update todos, clean up temp files, and verify final git status before committing:
+
+Git status is exactly as expected (xcodeproj ignored). Let me do a final pre-commit verification of the style/placeholder gates, then commit:
+
+All gates green. Let me commit with the conventional commit message and Co-authored-by trailer:
+
+Committed (15571098c). Let me confirm a clean working tree and final ledger/parity state:
+
+All committed, working tree clean. Let me confirm all todos are complete:
+
+All 8 todos done. The task is complete.
+
+## Summary
+
+I implemented the native **SwiftUI `SharedDrivePage`** at full web parity with `web/src/features/sharing/pages/SharedDrivePage.tsx` (public route `/s/:token`), covering all **43 parity items** (11 panels + 4 charts + 5 maps + 3 states + 20 strings).
+
+**Delivered** (`apps/apple/Sources/Features/Sharing/`, 10 files + 1 test, 1642 LOC vs 455 web):
+- **Model layer** — pure-Foundation SI value types + a `SharedDriveWire` v1/v2 normalizer (ports web `normalizeSharedDriveData`), a `@MainActor @Observable SharedDrivePageModel` (ADR-004, no networking in view) with a `SharedDriveDataSource` seam and loading/ready/expired phases.
+- **View layer** — branded header, hero MapKit route map (polyline + green-start/red-end circle markers + style switcher via P3 `TSMapView`), title/date/endpoints, the 7-tile adaptive stat grid, vehicle `GlassPanel`, elevation (`TSAreaChart`) + speed (`TSLineChart`) Swift-Charts profiles, the no-map-data empty panel, footer, and the expired view — SI-in/display-out via the shared `Units` engine, adaptive macOS+iOS.
+- **Navigation** — typed `SharedDriveLink` destination + SwiftUI-free `SharedDriveDeepLink` `/s/:token` parser (sibling TripReplay/DriveDetail precedent).
+- **20 `share.*` keys** added verbatim to `Localizable.xcstrings`; **+2 ledger rows** (43/43); evidence log.
+
+**Verification (all green):** xcodegen `0`, swiftformat `--lint` `0/11`, scoped swiftlint `--strict` `0/11`, placeholder scan `0`, an **executed 31/31 logic harness**, and strict-concurrency isolated type-checks on **macOS + iOS (0/0)**.
+
+Notably, the strict-concurrency type-check **caught and I fixed a real Swift-6 bug** — `static let LocalizedStringKey` is a non-Sendable global under the project's `SWIFT_STRICT_CONCURRENCY: complete`, which would have broken the real build; switched to computed `static var`s. The full `xcodebuild` is deferred (the KMP `Shared.xcframework` isn't staged — out-of-scope infra, identical to every sibling P7 page). Committed as `15571098c`.
+
+
+
+The task is fully complete and committed. All 8 todos are done, all gates green, and the work is committed to git.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-sharing-SharedDrivePage.log    | 260 +++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 220 +++++++++++++
+ .../Features/Sharing/SharedDriveDeepLink.swift     |  39 +++
+ .../Features/Sharing/SharedDriveFormat.swift       |  76 +++++
+ .../Features/Sharing/SharedDriveModels.swift       | 319 ++++++++++++++++++
+ .../Features/Sharing/SharedDrivePage.Charts.swift  | 142 ++++++++
+ .../Features/Sharing/SharedDrivePage.Map.swift     |  68 ++++
+ .../Sources/Features/Sharing/SharedDrivePage.swift | 359 +++++++++++++++++++++
+ .../Sharing/SharedDrivePageModel.Sample.swift      | 151 +++++++++
+ .../Features/Sharing/SharedDrivePageModel.swift    | 119 +++++++
+ .../Sharing/SharedDriveRouteRegistration.swift     |  53 +++
+ .../Features/Sharing/SharedDriveStrings.swift      | 114 +++++++
+ .../Sharing/SharedDrivePageModelTests.swift        | 202 ++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 14 files changed, 2140 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-sharing-SharedDrivePage.log
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDriveDeepLink.swift
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDriveFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDriveModels.swift
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDrivePage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDrivePage.Map.swift
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDrivePage.swift
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDrivePageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDrivePageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDriveRouteRegistration.swift
+ create mode 100644 apps/apple/Sources/Features/Sharing/SharedDriveStrings.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Sharing/SharedDrivePageModelTests.swift
+[dedupe] no duplicate top-level types

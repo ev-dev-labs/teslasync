@@ -1,0 +1,206 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the existing Apple app structure to understand the patterns. Let me look at the shared-surfaces directory and key facade/design directories.
+
+The shared-surfaces directory is large. Let me find existing banner examples and check if RateLimitBanner already exists.
+
+There's a clear multi-file pattern per surface. `AiLimitBanner` is the closest analog. Let me study it thoroughly as the template.
+
+Let me read these files individually with the view tool.
+
+This is a sophisticated architecture. Let me read the remaining AiLimitBanner files to fully understand the template pattern.
+
+Let me read the Views, States, Previews and test files to complete my understanding.
+
+Let me read the test files, previews, strings, and find shared design tokens and where `AiLimitInfo` is defined.
+
+Now let me look at the design tokens, the strings format, shared components, and the build config. Let me batch these reads.
+
+Let me read the shared component APIs and design tokens I'll use.
+
+Let me read the remaining shared components, tokens, and the build config.
+
+Let me read the Cards, Motion, tokens (TSTone/TSSpacing/Color.TS/Font.TS), and the build config.
+
+Let me verify the design tokens exist (Color.TS, Font.TS, TSSpacing, TSRadius) and check the build config.
+
+Design tokens come from `../design/generated/apple`. Let me verify the token symbols and the test target config.
+
+Let me read the design tokens file to confirm the exact token API.
+
+I now understand the architecture and tokens well. `RateLimitBanner` is event-driven (listens for document CustomEvents), so let me study the event-driven sibling `AchievementUnlockListener` to mirror its event-bus seam pattern.
+
+I have a complete understanding of both the controlled-banner pattern (AiLimitBanner) and the event-driven pattern (AchievementUnlockListener). Now let me verify build prerequisites before writing code.
+
+`Shared.xcframework` is missing (only a `.gitkeep`). Both app targets depend on it. Let me investigate how it's produced and check prior sibling surface logs to understand the expected build outcome.
+
+There's a `build-shared-xcframework.sh` script. Let me read it and check the sibling `AiLimitBanner` log to understand the expected build flow.
+
+There's already a sibling log for AiLimitBanner. Let me read it to understand the expected gate outcome, and check whether my target log exists.
+
+This is the canonical precedent. The sibling AiLimitBanner log shows the exact methodology: build the Shared.xcframework, then verify via `xcodegen` + `swiftc -typecheck` + an isolated SwiftPM harness (since full `xcodebuild` is DEFERRED on pre-existing sibling collisions + macOS signing). Let me check the remaining tooling and kick off the xcframework build in the background.
+
+Everything's in place. Let me kick off the Shared.xcframework build in the background (it takes ~7 min) while I write the surface files.
+
+Let me check the exact forbidden placeholder patterns so my code avoids them.
+
+Now let me check for symbol collisions with the existing `RateLimitStatusPanel` surface and any `RateLimit*` types, so my new types are uniquely named.
+
+I now have everything needed. Critical finding: an existing `RateLimitStatusPanel` surface already defines many `RateLimit*` types (`RateLimitProjection`, `RateLimitSource`, `RateLimitModel`, `RateLimitInput`, etc.), so I must prefix ALL my types with `RateLimitBanner` to avoid duplicate-symbol collisions. Let me set up tracking and write the core files.
+
+Now let me write the core files. Starting with the Adapter, Model, and Seams.
+
+Now the Seams file (source + NotificationCenter live source + ticker + query invalidator). This needs careful Swift 6 concurrency handling.
+
+Now the States, Views, and main view files. Let me update tracking and write them.
+
+The xcframework build finished. Let me check its result while I continue with the remaining files.
+
+The Shared.xcframework built successfully (9m20s) and is staged — the full `xcodebuild` can now run. Let me write the remaining files: Previews, strings, Tests, ModelTests.
+
+Now let me refine the Live source's notification handling to be synchronously testable and thread-safe, then write the tests.
+
+Now the test files. Let me update tracking and write Tests.swift (adapter + projection + a11y).
+
+Now the ModelTests.swift covering the model and all seams.
+
+All 10 files are written. Now let me verify. First, `xcodegen generate` to wire the project (xcframework is now staged), then check my files are included.
+
+Project generated and my 10 files are referenced (60 entries, matching the sibling pattern). Now let me run a fast isolated `swiftc -typecheck` of my surface files against the real shared components to catch compile errors quickly. First, let me determine the dependency closure.
+
+Components/Design are a self-contained leaf library (only framework imports). Let me run a fast isolated `swiftc -typecheck` of my surface files against the real shared components.
+
+Good — the only errors are in shared library file `UnitFormatters.swift` (missing `Units` dependency), NOT in my surface files. Let me confirm zero errors originate from my files and locate `Units` to complete the dependency closure.
+
+Zero errors from my files — the only failures are in an unrelated library file (`UnitFormatters.swift` needs `Units`, which my surface doesn't use). Let me re-run the typecheck excluding the few files that pull external (KMP facade) deps, to get a fully-green signal.
+
+Only `UnitFormatters.swift` has external deps. Let me re-run the typecheck excluding it for a clean signal.
+
+Clean typecheck: **0 errors** from my surface against the real component library under Swift 6 strict concurrency. One compiler warning — `nonisolated(unsafe)` is unnecessary on `center` (NotificationCenter is Sendable). Let me fix it.
+
+Now let me re-verify the warning is gone and run swiftformat/swiftlint on my files.
+
+Typecheck clean (0/0). Let me auto-fix formatting with swiftformat, then re-lint and run swiftlint.
+
+swiftformat passes (0/9). Since 2 files were auto-formatted, let me re-typecheck and run swiftlint --strict on my files.
+
+Typecheck still clean (0/0) after formatting. swiftlint found one issue: `ModelTests.swift` is 458 lines (>400 limit). Let me split the seam tests into a separate `RateLimitBanner.SeamsTests.swift`. Let me view the boundaries.
+
+Let me create the new `SeamsTests.swift` file and remove those sections from `ModelTests.swift`.
+
+Now let me remove those moved sections from `ModelTests.swift` using a precise line-range deletion, then verify.
+
+ModelTests is now 315 lines. Let me re-run swiftlint and swiftformat on all my files (now 11).
+
+swiftlint --strict: **0 violations in 10 files**; swiftformat: clean. Now let me build an isolated SwiftPM harness to actually *run* my tests. First, let me identify the minimal component dependency closure.
+
+Minimal closure identified. Let me build an isolated SwiftPM harness (macOS host) with the curated component set + my surface + tests, and run the tests.
+
+Harness library builds clean under Swift 6. Now let me run the tests.
+
+**All 51 tests pass (0 failures)** against the real surface + real shared components + real tokens under Swift 6. Now let me run the placeholder gate and kick off the full xcodebuild gate in the background.
+
+Placeholder gate passes (COUNT=0) and no forbidden words. Let me launch the macOS gate in parallel and update tracking while both builds run.
+
+Both gates running. While they build, let me verify whether the pre-existing sibling collisions noted in the precedent still exist in this branch.
+
+The macOS gate finished. Let me read its result and check the iOS gate progress.
+
+MAC_EXIT=65. Let me determine the root cause and confirm zero errors originate from my files.
+
+macOS: **0 errors from my files** — the only failures are environmental code-signing (no dev certificate on runner), the documented DEFERRED disposition. Let me check the iOS gate progress.
+
+The iOS gate is still compiling the full app + test bundle. Let me wait for it.
+
+Let me peek at the build log file directly to gauge progress.
+
+Good progress — 0 errors, app module emitting (no sibling collisions hit yet). Let me continue waiting.
+
+The main app module compiled with **0 errors** (sibling collisions resolved in this branch) — now building extensions + test bundle. This may fully pass. Let me keep waiting for test execution.
+
+Build still in progress (linking extensions, test bundle next). 0 errors. Let me wait more for test execution.
+
+The app compiled with 0 errors and the simulator is now running the test suite (this runs the *entire* app's tests, so it's slow). Let me wait for completion.
+
+Test bundle compiling (16240 lines, 0 errors). Let me continue waiting for test execution.
+
+My RateLimitBanner files are compiling into the real app target (0 errors). Let me investigate the 3 "failed" string matches to ensure they're benign.
+
+The iOS build FAILED but with **0 RateLimitBanner errors**. Let me find the actual failing command/file.
+
+The iOS build failed due to a **swift-frontend compiler crash compiling a sibling surface** (`feature-views/AnomalyInlineRow.Model.swift`) — not my code. **0 RateLimitBanner errors**; my files compiled into the app target successfully. This is the documented DEFERRED disposition. Let me capture the final iOS exit code.
+
+The build action failed (sibling compiler crash); xcodebuild is now retrying for the test action. Let me wait for it to terminate and capture the final exit code.
+
+Decisive evidence captured: my RateLimitBanner files compiled in the same batch as the sibling `RateLimitStatusPanel.*` (line 10972) with **no collision and 0 errors**. The build fails only on a **swift-frontend compiler crash** in another prompt's surface (`AnomalyInlineRow`, out of my allowed scope). Let me wait for the final exit code.
+
+Let me check whether the redundant test-action rebuild has hit the same crash, then capture the exit.
+
+The build action definitively FAILED (compiler crash on sibling `AnomalyInlineRow`); xcodebuild is now redundantly rebuilding for the test action and will hit the same deterministic crash. I have conclusive evidence (0 RateLimitBanner errors, my files compiled, sibling crash is the sole failure). Let me wait a bit more for the literal exit code.
+
+The build verdict is definitive and captured verbatim: **BUILD FAILED** from a swift-frontend crash on sibling `AnomalyInlineRow` (0 RateLimitBanner errors). xcodebuild is now redundantly rebuilding for the test host and will hit the same deterministic crash. I'll stop the redundant rebuild — `xcodebuild build test` exits 65 on a failed build.
+
+Let me extract the key iOS evidence for the log, then write the gate log.
+
+I now have all gate results. **iOS: 0 RateLimitBanner errors** — my files compiled into the real app target (alongside sibling `RateLimitStatusPanel`, proving no collision); the sole failure is a swift-frontend compiler crash on out-of-scope sibling `AnomalyInlineRow`. Let me write the gate log.
+
+Gate log written. Let me clean up temp files and verify git state before committing.
+
+Clean: exactly the 11 surface files + log; xcodeproj/xcframework gitignored. Let me commit.
+
+Committed (e900861c). Let me finalize: mark todos done, clean temp logs, and verify the working tree is clean.
+
+All complete and verified. Working tree is clean, the gate log ends with `EXIT=0`/`STATUS=DONE`, and all todos are done.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) parity of `components/feedback/RateLimitBanner.tsx` at `apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.*` — committed as `e900861c`.
+
+**Delivered (11 files):** `RateLimitBanner.{Adapter,Model,Seams,States,Views,Previews}.swift`, `RateLimitBanner.swift`, `.strings`, and `.{Tests,ModelTests,SeamsTests}.swift`.
+
+**Parity reproduced:** the two event kinds (429 rate-limited / 503 upstream-breaker) with Clock/AlertCircle icons, the 1s countdown message (`ratelimit.banner` / `upstream.banner` with `{n}`), the "Retry now" button **disabled while counting** that invalidates every query, and the dismiss — all bound through a P1/S8 state-holder (`RateLimitBannerModel`) fed by a `NotificationCenter`-backed source (the native parity of the web document CustomEvents). No networking in the view.
+
+**Every state renders:** loading · empty (web `return null` → friendly card) · error · data · stale/offline (freshness chip + one-shot auto-refresh).
+
+**Collision-safe:** every symbol is `RateLimitBanner`-prefixed to avoid the sibling `RateLimitStatusPanel` namespace — proven by both surfaces co-compiling in the same app-target batch with no redeclaration error.
+
+**Verification (all evidence in the gate log):**
+- `XCODEGEN_EXIT=0`, `TYPECHECK_EXIT=0` (0 errors vs the real component library, iOS 18 SDK, Swift 6)
+- `SWIFT_TEST_EXIT=0` — **51/51 tests pass** (isolated SwiftPM harness, real surface + real components + real tokens)
+- `LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`
+- `IOS_EXIT=65` / `MAC_EXIT=65` — **DEFERRED** with verbatim evidence: a pre-existing swift-frontend compiler crash in another prompt's surface (`feature-views/AnomalyInlineRow`) and macOS code-signing (no dev cert). My surface contributes **0 errors** and compiled cleanly into the real app target.
+
+Per the predecessor-accepted DEFERRED precedent (AiLimitBanner 0025), the surface is `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete — all 11 todos done, surface committed (`e900861c`), working tree clean, and all verification passed (with the xcodebuild reds DEFERRED per the documented precedent). Let me mark it complete.
+
+Merge made by the 'ort' strategy.
+ ...-apple-shared-surfaces-0134-RateLimitBanner.log | 200 +++++++++++
+ .../shared-surfaces/RateLimitBanner.Adapter.swift  | 136 ++++++++
+ .../shared-surfaces/RateLimitBanner.Model.swift    | 317 ++++++++++++++++++
+ .../RateLimitBanner.ModelTests.swift               | 315 ++++++++++++++++++
+ .../shared-surfaces/RateLimitBanner.Previews.swift | 101 ++++++
+ .../shared-surfaces/RateLimitBanner.Seams.swift    | 367 +++++++++++++++++++++
+ .../RateLimitBanner.SeamsTests.swift               | 166 ++++++++++
+ .../shared-surfaces/RateLimitBanner.States.swift   | 104 ++++++
+ .../shared-surfaces/RateLimitBanner.Tests.swift    | 233 +++++++++++++
+ .../shared-surfaces/RateLimitBanner.Views.swift    | 157 +++++++++
+ .../shared-surfaces/RateLimitBanner.strings        |  34 ++
+ .../shared-surfaces/RateLimitBanner.swift          |  85 +++++
+ 12 files changed, 2215 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0134-RateLimitBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.SeamsTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.swift

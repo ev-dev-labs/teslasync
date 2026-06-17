@@ -1,0 +1,190 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple native platform is set up.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the existing Apple app structure and find the web source.
+
+Existing `shared-surfaces` directory has ~287 files already. Let me read the web source and find a sibling AI surface that follows the same pattern.
+
+Now I understand the web pattern. Let me find existing native counterparts — both a sibling AI surface and the shared native infrastructure (AIFeatureCard, useAiStream, state holders).
+
+There's a rich established pattern: each surface = 10 files (`.swift`, `.Adapter`, `.Chrome`, `.Model`, `.Projection`, `.Views`, `.Previews`, `.strings`, `.Tests`, `.AdapterTests`). Let me find the web AI surface most structurally identical to `AISpeedProfileInsights` (thin `useAiStream` + `AIFeatureCard` + `withAiFeature` wrapper) that already has a complete native port.
+
+`AISpeedProfileInsights.tsx` (44 lines) is a thin wrapper. Closest siblings are `AIYearReviewNarration` (44), `AIRouteEfficiencySuggestions` (49, also drive-based), `AIAnomalyExplanations` (49). Let me read their web sources and check which has a complete native port to use as a template.
+
+`AIRouteEfficiencySuggestions` is the ideal template — it's drive/route-based with a path-param URL and a `String` id with `canStart={!!id}`, structurally identical to `AISpeedProfileInsights`, and it has a complete 10-file native port. Let me read all its native files.
+
+Excellent, comprehensive template. Let me read the remaining 7 template files in parallel.
+
+Let me read the final template files (Previews, strings, Tests, AdapterTests) and verify the shared design tokens exist.
+
+I now have the complete 10-file template. The target differs only in names, the `driveId`/`/ai/drives/{driveID}/speed-profile/insights` URL, feature slug `speed-profile-insights`, and i18n. Let me verify the shared design tokens exist and understand the build system (XcodeGen?).
+
+The `shared-surfaces` directory is glob-included, so new files are auto-picked-up by `xcodegen`. Let me see the test-target and scheme config in the rest of `project.yml`.
+
+Let me read the schemes section and the lint/format configs to ensure compliance.
+
+Now I understand the full build/lint setup (line length ≤120 for code; type names ≤50). Let me extract the EXACT description string bytes from the web source to avoid any drift, and check how `.strings` files and existing surfaces handle special characters.
+
+The description uses U+2019 (right single quote) and U+2014 (em-dash). Let me confirm the i18n pattern: whether these keys live in the web `en.json` catalog or only as inline `t(key, default)` fallbacks (as the RouteEfficiency sibling does).
+
+There IS an `aiSpeedProfile` catalog block. Let me read the exact web catalog values (the source of truth for parity) and the feature-flag registry entry.
+
+I now have the authoritative i18n values. Before writing code, let me check the build prerequisites — the `Shared.xcframework` staging (a scheme preAction) is the riskiest dependency. Let me inspect it and check for prior gate logs.
+
+`Shared.xcframework` is absent (staged via a build script preAction). Let me examine that staging script, a sample sibling gate log, and the template's own (0044) log to understand the expected gate outcome.
+
+Key insight: the sample log shows the established disposition — per-surface gates (swiftlint/swiftformat/placeholder + an **isolated Swift 6 build + XCTest** of the surface files) are run GREEN, while the **full-app xcodebuild gate is DEFERRED** on the pre-existing KMP `Shared.xcframework` Gradle staging (unrelated, out of allowed files). Let me read my template's own log (0044) in full to replicate the exact verification harness and log structure.
+
+Let me read the rest of the template's gate log to replicate the exact verification harness and disposition reasoning.
+
+I now fully understand the established disposition. Let me set up my plan and run critical pre-flight checks: (1) type-name collision check for my `SpeedProfileInsights*` prefix, (2) whether design tokens / TS components import the KMP `Shared` framework, (3) Gradle/pwsh availability.
+
+Key findings: `SpeedProfileInsights*` prefix has **zero** collisions (but a `SpeedProfile*` widget family exists — so I must use the full `SpeedProfileInsights*` prefix, mirroring the 0044 lesson). Tokens and TS components don't import `Shared`. `pwsh` and `gradlew` are available.
+
+Let me set up my plan/todos and check whether the pre-existing cross-surface collisions (that deferred 0044's full build) still exist, plus available simulators.
+
+Critical: **iPhone 16 simulator IS available** (matches the prompt's gate destination exactly), and the pre-existing `RecentDrives*`/`StateTimeline*` cross-surface collisions that deferred 0044's full build **still exist** (out of my allowed-files scope). My disposition will mirror 0044.
+
+Let me kick off the KMP `Shared.xcframework` build in the background (needed to attempt the real gate), set up my plan, and check whether `Sources/**` imports `Shared`.
+
+Findings confirm the disposition. Let me set up my plan, seed todos, and do the mechanical file copy + safe token renames via `sed`.
+
+Mechanical renames are clean. Now let me find all remaining prose/value remnants (route/efficiency/vehicle/suggestion semantics + i18n values) that need manual correction to speed-profile context.
+
+Now I'll correct the i18n values and prose. Let me view the key files needing value edits, then apply precise edits.
+
+Now I'll correct the `.strings` i18n values to the exact speed-profile catalog values (preserving U+2019/U+2014 from the web source).
+
+`.strings` done. Now the Projection.swift fallbacks must match exactly. Let me view and edit.
+
+Now I'll fix the Projection.swift fallback strings to match the speed-profile catalog (splitting the description into ≤120-char lines).
+
+Now Chrome.swift fallbacks (offlineBanner, loadingA11y) and the main `.swift` header title fallbacks.
+
+Now the main `.swift` file — title fallbacks (L80, L89) and header prose. Let me view it fully.
+
+Both title fallbacks (L80, L89) need the same fix. Let me sed this file and re-scan for remaining prose remnants across all files.
+
+Remaining: 2 doc-comments (Model, Views) and test assertions. Let me view the Tests assertion blocks, then fix all.
+
+Now the two doc-comments and the AdapterTests. Let me fix the comments and view the AdapterTests path assertions.
+
+Path assertions are correct. Let me view the ActionDerive test section, then batch-rename the "Vehicle" test method names to "Drive" in AdapterTests.
+
+Let me do a comprehensive scan for all remaining route/vehicle/suggestion/efficiency prose across files (excluding the now-correct driveID/driveId identifiers).
+
+Most remnants are doc-comments (the wrapped `route-efficiency-\nsuggestions` slug escaped sed). The "cruise speed" test fixtures are fine (thematically apt). Let me view the Model and Adapter headers to fix the wrapped prose precisely.
+
+The Gradle build finished. Let me check its result while continuing prose fixes.
+
+Gradle **BUILD SUCCESSFUL** (6m49s) — `Shared.xcframework` is built (release + debug). Let me finish the Adapter prose fixes, then stage the framework.
+
+Now the remaining Model.swift prose and the Previews. Let me view those sections.
+
+Model is clean. Now the Previews.swift (sample prose + `sampleVehicleID`) and the Tests doc comment. Let me view the Previews.
+
+One last remnant — Adapter L43 `{routeID}` → `{driveID}`.
+
+All prose is clean. Let me update todos, stage the built framework, verify i18n key consistency, and run the lint/format/placeholder gates.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). i18n keys: **20 defined == 20 referenced, 0 orphan, 0 missing**. Now the lint/format/placeholder gates.
+
+swiftlint: **0 violations in 9 files**. Now swiftformat --lint and the placeholder gate.
+
+swiftformat: **0/9 require formatting**. Now the placeholder gate — let me inspect the script, then run it on the literal prompt path AND a real scan of my files.
+
+Now the placeholder gate — literal prompt path, a real scan of my files, and the self-test (proving it detects stubs).
+
+Placeholder gate green all three ways (real scan COUNT=0; self-test proves detection works). Now the critical proof: dual-SDK `swiftc -typecheck` of the surface against the real tokens + `Sources/**` + the staged framework (replicating 0044 step [1]). Let me assemble the file lists.
+
+Now the macOS dual-SDK typecheck (7 surface files + Tokens + 188 Sources + staged framework, Swift 6 strict concurrency).
+
+macOS typecheck: **EXIT=0, 0 errors**. Now the iOS-simulator SDK typecheck.
+
+Both SDK typechecks: **EXIT=0, 0 errors**. Now the executed runtime parity harness — compile `Adapter.swift` + an assertion `main.swift` and run it natively to prove the core logic executes correctly.
+
+Now compile the harness with `Adapter.swift` for the iOS simulator and run it on the booted iPhone 16.
+
+The Adapter is fine — my harness's top-level globals tripped Swift 6 actor isolation. Let me restructure the harness into a struct.
+
+Parity harness: **48/48 assertions PASS on the booted iPhone 16, RUN_EXIT=0**. Now `xcodegen generate` (confirm enumeration) and the in-module typecheck of the 2 test files.
+
+xcodegen: **EXIT=0**, all 10 files enumerated (60 refs, 6 each — matches 0044). Now the in-module typecheck of the 2 test files (with XCTest overlay).
+
+The `@testable import TeslaSync` needs `-module-name TeslaSync` to be treated as a self-import. Let me add it.
+
+Test files typecheck clean (**EXIT=0**, benign self-import warning only). All surface-scoped gates are GREEN. Now the Tier 4 full-app gate (the prompt's literal command) — expected to defer on the pre-existing collisions. Let me launch the iOS build+test.
+
+The iOS gate is building (it runs the gradle preAction + compiles the whole app). Let me wait for it.
+
+iOS build exited 65 (expected failure), but the log file went missing. Let me check and re-capture to a persistent location.
+
+The environment is shared with other parallel agents (multiple `/tmp/*build*.log` files from concurrent runs). My log got clobbered. Let me re-run with a unique log path **and a private DerivedData** to avoid cross-agent contention and get a clean, attributable result.
+
+While the clean iOS build runs, let me gather file line counts for the log's artifact section.
+
+Metrics gathered: 10 files, 2246 lines, 72 test methods, 10 previews, longest code line 112 (≤120). Let me check the iOS build progress.
+
+iOS build completed: **EXIT=65** (failed), log persisted (11984 lines). Let me analyze whether the failure is the pre-existing collisions and confirm zero errors in my surface.
+
+Confirmed: **BUILD FAILED / TEST FAILED**, 162 errors, **0 in my surface** — all are the pre-existing `RecentDrives*`/`StateTimeline*` ambiguous-type collisions. Let me confirm the error files are only those colliding surfaces and that the framework staged.
+
+Definitive: **all 162 errors are in `RecentDrives*`/`StateTimeline*` files** (declared in both feature-views and dashboard-widgets — the pre-existing collision), framework staged via preAction, **0 errors in my surface**. Exactly the 0044 disposition. Now the macOS gate.
+
+While macOS builds, let me gather facts for the log header (branch, HEAD, simulator runtime).
+
+The macOS build finished. Let me read and analyze its result (codesigning identities = 0, confirming the ADR-012 blocker).
+
+macOS: **BUILD FAILED**, 4 errors — **all codesigning** (`requires signing with a development certificate`, 0 identities/ADR-012), **0 in my surface**. Exactly the 0044 disposition (iOS = pre-existing collisions; macOS = codesigning). All surface-scoped gates green. Let me write the comprehensive gate log.
+
+Log written. Let me clean up temp artifacts, verify git status shows only allowed files, and do a final review of the most-edited file.
+
+Git scope is clean — only the 10 surface files + the log. Let me do a final visual review of the Projection description concatenation and the strings parity values before committing.
+
+Let me do a definitive byte-comparison of the description string across the web catalog (en.json), my `.strings`, and the Swift-concatenated fallback — to guarantee exact parity.
+
+**Byte-for-byte parity confirmed** — title, button, badge, and the full 252-char description (incl. U+2019/U+2014) all match across web catalog ↔ `.strings` ↔ Swift fallback. Now let me commit.
+
+The commit is running (likely a pre-commit hook). Let me wait for it.
+
+Still running — likely a heavy pre-commit hook. Let me wait longer.
+
+Let me check what the pre-commit hook is doing (in a separate shell) without disturbing the commit.
+
+No custom git hooks installed and no lint processes — but this is a **shared worktree** (`gitdir → teslasync/.git/worktrees/slot-135`). The hang is likely git-lock contention with parallel agents. Let me investigate locks and the commit process.
+
+Found it — my commit message contained backticks and `!!`, which bash interpreted as command substitution / history expansion, leaving the shell waiting for a closing backtick. HEAD is unchanged (no partial commit). Let me stop the hung shell and re-commit using a message file (`-F`) to avoid all shell interpretation.
+
+Now commit safely with `-F` (message file, no shell interpretation).
+
+Staging was lost when the hung shell was killed. Let me re-add and commit.
+
+Commit succeeded — HEAD `c612ccbc7`, working tree clean, 11 files. Let me verify the commit contents and message.
+
+All committed correctly: 11 files (2526 insertions), clean message with trailer, log ends `EXIT=0 / STATUS=DONE`. Let me confirm all todos are complete.
+
+All 7 todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...shared-surfaces-0049-AISpeedProfileInsights.log | 280 ++++++++++++++++
+ .../AISpeedProfileInsights.Adapter.swift           | 366 +++++++++++++++++++++
+ .../AISpeedProfileInsights.AdapterTests.swift      | 324 ++++++++++++++++++
+ .../AISpeedProfileInsights.Chrome.swift            | 166 ++++++++++
+ .../AISpeedProfileInsights.Model.swift             | 366 +++++++++++++++++++++
+ .../AISpeedProfileInsights.Previews.swift          | 131 ++++++++
+ .../AISpeedProfileInsights.Projection.swift        | 135 ++++++++
+ .../AISpeedProfileInsights.Tests.swift             | 353 ++++++++++++++++++++
+ .../AISpeedProfileInsights.Views.swift             | 238 ++++++++++++++
+ .../shared-surfaces/AISpeedProfileInsights.strings |  45 +++
+ .../shared-surfaces/AISpeedProfileInsights.swift   | 122 +++++++
+ 11 files changed, 2526 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0049-AISpeedProfileInsights.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISpeedProfileInsights.swift

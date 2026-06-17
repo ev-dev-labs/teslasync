@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure and reading the web source that this native surface must reproduce.
+
+Let me read the web source and examine existing Apple surfaces to follow established patterns.
+
+The web source is clear. Now let me examine the existing Apple surface patterns, focusing on the most recently created ones to follow established conventions.
+
+There's a clear multi-file pattern per surface. Let me read the most similar feedback surface (`AchievementUnlockedToast`) in full and check the build tooling availability.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat) — not blocked. Let me read the rest of the `AchievementUnlockedToast` files to fully internalize the architecture.
+
+Excellent, the architecture is clear. Now let me read the remaining files (Views, Previews, Tests, strings) and locate the shared design-system primitives (`TSCard`, `TSButton`, tokens, i18n facade).
+
+Now let me locate the shared design-system primitives, the i18n facade, the test patterns, and any existing Modal/sheet + relative-time helpers I'll need.
+
+Let me read the design tokens, shared components, and check how files are included in the Xcode project plus existing modal/relative-time patterns.
+
+Paths are under `apps/apple/Sources`, not `apps/apple/TeslaSync/Sources`. Let me correct.
+
+Let me read the design tokens, the Card component, find a Modal/sheet equivalent, a relative-time formatter, and understand how the Xcode project includes these files.
+
+No `.xcodeproj` checked in — likely generated. Let me find the project generation mechanism and read the key token/overlay/typography files.
+
+Project uses XcodeGen (`project.yml`). Let me read it, the Overlays (modal), Typography, and find where `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` tokens are defined.
+
+Now I understand the build wiring. Let me read the design tokens, typography, the web `formatRelativeTime`, and find how other surfaces handle a navigation seam (web `useNavigate`).
+
+I have a thorough understanding of tokens and patterns. Let me look at how a listener-style surface and a modal-presenting surface are built, plus confirm the navigation-seam shape.
+
+`SavedViewMenu` uses sheets/dialogs — the closest analog. Let me read it plus the typography components.
+
+I have a complete grasp of the architecture. Let me read the web `draftIndex` lib to model `DraftEntry` precisely, and check the existing `.strings`-table wiring and a Model with `@Bindable`/sheet binding for the modal.
+
+I now have everything needed. Let me check the lint/format configs to respect `--strict` budgets, then write a plan.
+
+Now let me verify the build prerequisites (xcodegen, existing project, the Shared.xcframework staging) since the gate runs `xcodebuild build test`.
+
+The full build depends on a KMP `Shared.xcframework` built via Gradle/Kotlin. Let me check whether prior surface gate logs succeeded or were blocked on this runner — that sets the realistic expectation.
+
+The precedent is clear and well-documented: on this runner the full `xcodebuild` gate is **DEFERRED** (pre-existing unstaged KMP `Shared.xcframework`, exit 65), while each surface is **independently verified** (compiles iOS+macOS, tests pass via an isolated harness, swiftlint/swiftformat/placeholder green). Let me find that isolated-harness mechanism.
+
+`pwsh` is available (placeholder gate runnable), and the precedent is fully clear. Let me record a plan and create the SQL todo tracking, then build the surface.
+
+Now I'll create the surface files. Starting with the pure adapter core.
+
+Now the model (state-holder, projection, telemetry, i18n facade).
+
+Now the seams (source protocol + production static source + in-memory test/preview source).
+
+Updating progress and creating the states chrome.
+
+Now the presentational views (toast card, review list, row, freshness chip) — the bulk of the UI.
+
+Now the main surface view, wiring the phase switch, the review sheet, and telemetry on appear.
+
+Now the previews and the i18n strings file.
+
+Now the comprehensive test file. First let me check line counts against swiftlint's `--strict` `file_length` budget (default warning 400).
+
+All files are well under the 400-line `--strict` budget. I'll split tests into two files (adapter+projection, and model) to stay safely under `file_length`/`type_body_length`. Writing the adapter+projection tests first.
+
+Now the model tests (@MainActor lifecycle + actions).
+
+All 9 surface files are created. Now the verification phase. First, normalize formatting with swiftformat (write mode) on my files, then lint.
+
+swiftformat normalized the files. Now run the lint checks: swiftformat `--lint` (gate) and swiftlint `--strict`.
+
+Both lint checks are clean on my files. Now the full-project gate lint commands + the placeholder gate.
+
+Full swiftformat gate passes (0/4515 require formatting). Now the full swiftlint `--strict` and the placeholder gate.
+
+Full swiftlint `--strict` passes (0 violations, 4217 files). Now the placeholder gate.
+
+Placeholder gate clean (the grep hits are doc-comment references to i18n token *placeholders*, not stubs). Now validate target membership via `xcodegen generate`.
+
+Project generated. Let me verify my files landed in the correct targets (app targets vs test bundles).
+
+Uniform reference counts. Let me confirm my files are treated identically to an already-shipping sibling surface (same XcodeGen glob rules), which proves correct target membership.
+
+Target membership is exactly correct (8 source files in both app targets; 2 `*Tests.swift` in both test bundles) — identical to the shipping sibling. Now I'll get genuine compile+test evidence. Let me check the KMP/Gradle prerequisites (the known blocker) and set up an isolated SwiftPM harness for the pure logic.
+
+Java 17 + gradlew + `apps/shared` are present, so the full KMP build *may* be feasible (though slow). Let me first get genuine test evidence via an isolated SwiftPM harness for the pure logic, then attempt the full `xcodebuild` gate in the background.
+
+All **43 tests pass** genuinely under Swift 6 in the isolated harness. Now let me verify the SwiftUI view layer typechecks against the **real** design tokens + shared components. First, check the dependency surface of the components I use.
+
+Components/Design only import system frameworks (no KMP). So I can genuinely type-check my SwiftUI layer against the **real** tokens + components for macOS. Let me do that.
+
+The errors are **not in my files** — they're in `Sources/Components/DataDisplay/UnitFormatters.swift`, which depends on an app-only `UnitPreferences` type. My views don't use those SI-formatter components. Let me include `UnitPreferences` too so the full real component set type-checks.
+
+Only the unused `UnitFormatters.swift` needs `UnitPreferences`, and my views don't use it. Let me re-run the type-check excluding that one unused formatter file.
+
+SwiftUI layer type-checks cleanly for **macOS 15** against the real tokens + components. Let me confirm **iOS 18** too (the gate's simulator target).
+
+Both **iOS 18** and **macOS 15** type-checks pass against the real tokens + components. I have strong independent evidence. Now let me attempt the actual `xcodebuild` gate — the KMP `Shared.xcframework` (built via Gradle) is the known blocker. Let me probe that build directly in the background first.
+
+KMP toolchain is warm (`~/.konan` has kotlin-native 2.4.0). Note: `xcodebuild` does **not** run scheme pre-actions, so the `Shared.xcframework` must be staged manually first. Let me attempt that staging build (Gradle) in the background and monitor.
+
+Gradle KMP build is progressing with warm cache (many `FROM-CACHE`). Let me wait for it to finish staging the framework.
+
+The Debug XCFramework assembled; the Release variant (what the script stages) is still building. Let me continue waiting.
+
+Release variant still linking. Let me wait for the staging script to complete.
+
+I have already gathered comprehensive genuine evidence. The KMP release link is slow (Kotlin/Native optimized linking). Let me retrieve the poll result and let staging continue.
+
+Release link is genuinely slow (optimized Kotlin/Native). I'll wait a bounded amount more; the Debug XCFramework already built successfully, proving the toolchain works.
+
+Progress: iOS arm64 release linked, now simulator, then macOS remains. Let me retrieve and continue waiting.
+
+Last target (macOS arm64 release) is linking now. Let me wait for final assembly and staging.
+
+**KMP `Shared.xcframework` built successfully (BUILD SUCCESSFUL in 10m 58s) and staged.** Now the real `xcodebuild` gate is unblocked. Let me verify the staged slices and run the iOS gate (build + test) in the background.
+
+All slices present and iPhone 16 sim is booted. Now running the real iOS gate (build + test) in the background — this compiles the whole app and runs all tests including mine.
+
+iOS build+test started. Let me poll its progress (full app compile takes several minutes).
+
+App target compiling normally. Let me continue waiting for the full build + test run.
+
+No errors so far; app target still compiling. Let me keep waiting.
+
+App module emitting + resources copying (good progress). Let me inspect the 2 `error:` matches to confirm they're not real failures.
+
+The iOS app build **finished with failures — but the failures are in two PRE-EXISTING sibling surfaces, not my code**. Let me get the definitive error list and confirm my files compiled cleanly + are the only thing I changed.
+
+**Definitive and conclusive:** the full iOS app build fails on exactly **2 pre-existing sibling-surface errors** (`AIAutoNameUnnamedLocations.swift:123`, `AIGeofenceAwareAutomationSuggestions.swift:141` — both `escaping closure captures non-escaping parameter 'content'`), which are **outside my allowed-files scope** and **not caused by my change** (my git changes are only the 10 `DraftRestorePrompt.*` files). **DraftRestorePrompt has ZERO compile errors.**
+
+Per the honesty covenant I won't fix out-of-scope files. Let me run the macOS gate too (to capture its real result, not assume), then compose the log.
+
+macOS build running in background. Let me wait for it (same full-app compile, ~10 min; it will hit the identical 2 pre-existing errors).
+
+macOS build also fails — on **macOS development-signing** (a headless-runner platform-capability gap, exactly as the precedent documents). Let me capture the complete macOS error set and the final build markers.
+
+I now have the complete, honest picture. Let me reconcile the exit codes precisely, then write the gate log.
+
+All confirmed: generated artifacts are git-ignored (commit will contain only my 10 files + log), and the harness re-confirms **43/43 tests pass**. Now writing the comprehensive, honest gate log.
+
+Log written. Now committing the 10 surface files + the log (generated artifacts are git-ignored, so they're excluded).
+
+The repo working tree is large (generated `.xcodeproj` + staged framework); `git add` index refresh is slow. Let me keep waiting.
+
+This is abnormally long for staging 11 small files — likely an `index.lock` held by a parallel sibling slot. Let me stop and investigate.
+
+It's a git **worktree** (shared object store across 12 parallel slots → contention), not a lock. No `index.lock` now and nothing staged yet. Let me retry `git add` with explicit paths and a generous wait.
+
+Staged instantly with explicit paths. Let me verify the staged set and commit.
+
+Exactly 11 files staged (10 surface + log), no generated artifacts. Committing with the prompt's message + Co-authored-by trailer.
+
+Committed cleanly as `b81face14`. Let me verify the commit contents/trailer and clean up temporary build artifacts.
+
+All complete and verified. Marking the final todo done.
+
+All todos complete. The task is finished and committed.
+
+Merge made by the 'ort' strategy.
+ ...ple-shared-surfaces-0117-DraftRestorePrompt.log | 183 ++++++++++++
+ .../DraftRestorePrompt.Adapter.swift               | 287 +++++++++++++++++++
+ .../shared-surfaces/DraftRestorePrompt.Model.swift | 313 +++++++++++++++++++++
+ .../DraftRestorePrompt.ModelTests.swift            | 210 ++++++++++++++
+ .../DraftRestorePrompt.Previews.swift              | 140 +++++++++
+ .../shared-surfaces/DraftRestorePrompt.Seams.swift | 149 ++++++++++
+ .../DraftRestorePrompt.States.swift                | 113 ++++++++
+ .../shared-surfaces/DraftRestorePrompt.Tests.swift | 275 ++++++++++++++++++
+ .../shared-surfaces/DraftRestorePrompt.Views.swift | 289 +++++++++++++++++++
+ .../shared-surfaces/DraftRestorePrompt.strings     |  55 ++++
+ .../shared-surfaces/DraftRestorePrompt.swift       | 133 +++++++++
+ 11 files changed, 2147 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0117-DraftRestorePrompt.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.swift

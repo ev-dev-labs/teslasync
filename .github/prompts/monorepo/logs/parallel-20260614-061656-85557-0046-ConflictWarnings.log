@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and understanding the task. Let me look at the web source, the Apple app structure, and related files.
+
+The web source is a simple component. Let me explore the Apple app structure, the type definition, and existing patterns.
+
+The Features listing failed. Let me look at the actual Apple app directory structure.
+
+There are two structures. The task targets `apps/apple/TeslaSync/Features/Automations/` but I see `apps/apple/TeslaSync/feature-views` and `apps/apple/Sources/Features/Automations`. Let me investigate which is real and how parity pages are actually implemented.
+
+Let me examine the parity manifest, ledger, the generator, and check for the Xcode project to understand conventions.
+
+There's already a `ConflictWarnings` in `feature-views/` (split into multiple files). Let me read the project config, the ledger, existing ConflictWarnings files, and a reference log to understand conventions.
+
+A complete `ConflictWarnings` implementation already exists in `feature-views/`. Let me check the ledger, the README gate contract, the remaining ConflictWarnings files, and a reference "DONE" log.
+
+Key finding: the ledger has rows for sibling pages (`AutomationActivityFeed`, `AutomationCard`, `AutomationsList`) but **none for `ConflictWarnings`**, and its log doesn't exist yet. The sibling pages live in `Sources/Features/Automations/`. Let me read the manifest record, a sibling done-log, the sibling page pattern, the placeholder scanner, and check for sibling feature-views counterparts.
+
+Now I fully understand the conventions. The sibling log reveals the canonical pattern precisely. Each automations unit has BOTH a `feature-views/<Name>.*` component AND a `Sources/Features/Automations/<Name>Page.swift` page. ConflictWarnings has the feature-view but **no page yet** — that's this task. Let me study the sibling page pattern (AutomationCard is the closest analog), the route registration seam, the placeholder scanner, and the test layout.
+
+The page pattern is clear: pages live in `Sources/Features/Automations/`, host the shared feature-view, are driven by an `@Observable` page model with a provider seam, and expose a `NavigationDestination` for the unrouted unit. Let me read the remaining ConflictWarnings feature-view files and the AutomationCard page model to design the hosting page faithfully.
+
+I now understand the full pattern. The page hosts the existing feature-view, driven by an `@Observable` page model with a provider seam, exposed via a `NavigationDestination`. Let me check the placeholder scanner, the string catalog format, an existing test, and confirm shared component APIs.
+
+`automations.builder.conflict` is absent from the catalog (only a `translation.` mirror exists) — I'll add it. The page will host the existing feature-view. Let me read the catalog values for consistency, the sibling test pattern, and confirm the shared component APIs.
+
+Let me confirm token symbols exist, check tool availability on this runner, and verify the baseline is clean.
+
+Full Xcode runner is available. Let me locate the token/component definitions so I can build an isolated type-check harness, and confirm the AppRoute (to confirm the unrouted unit needs no shell edits).
+
+I have everything needed. Let me set up tracking and verify there are no symbol clashes for the new types I'll introduce.
+
+No clashes. Let me view the ledger's automations region for a clean insertion anchor, then write the plan file.
+
+Now I'll write the plan file and create the four Swift source files.
+
+Now creating the page model, page view, and route registration.
+
+Now the page-model tests, mirroring the sibling test style.
+
+Now adding the catalog string. Let me insert it at the top of the `strings` object.
+
+Now the ledger rows, and validate the catalog JSON.
+
+Both JSON files valid. Let me update todos and run the in-scope gates: swiftformat, swiftlint, and the placeholder scan.
+
+swiftformat wants formatting fixes. Let me auto-format my files, then re-lint.
+
+swiftformat clean. Now swiftlint --strict. Let me check the config and run it on my files.
+
+swiftlint clean (0 violations). Now the placeholder scan on both source and test dirs.
+
+In-scope static gates green (format, lint, placeholder all 0). Now the authoritative isolated Swift 6 strict-concurrency type-check against the real tokens, components, and the hosted feature-view — on both macOS and iOS-simulator idioms.
+
+macOS typecheck clean (0 errors, 49 files). Now the iOS-simulator idiom (exercises the `#if os(iOS)` compact branch).
+
+Both idioms typecheck clean. Now an executed model harness — compiling the full real graph (tokens + components + hosted feature-view + my page model) into a runnable binary and asserting the page→feature render bridge.
+
+The top-level-code file must be named `main.swift`. Let me rename and rerun.
+
+Executed harness: 10/10 passed. Now let me regenerate the Xcode project and assess the full build (which needs the KMP `Shared.xcframework`).
+
+xcodegen succeeded. Let me confirm my files are wired into the project and inspect the xcframework staging script.
+
+My files are wired in (24 refs across app + test targets). The build needs the KMP `Shared.xcframework`. Let me check the toolchain and attempt staging it.
+
+JDK17 + gradlew present (Gradle 8.14.5 needs downloading). Let me attempt to stage the `Shared.xcframework` — this is the prerequisite for the real xcodebuild.
+
+Staging is running (downloading Gradle + KMP toolchain, compiling). Let me wait for it.
+
+`Shared.xcframework` staged (BUILD SUCCESSFUL, 6m46s). Now the real xcodebuild. Let me build the macOS scheme and capture the full log for analysis.
+
+BUILD_EXIT=65 with 4 failures — matching the sibling precedent. I must verify honestly whether any failure is in my files or the known pre-existing crash. Let me analyze the build log.
+
+4 `error:` diagnostics, none in my files, no compiler crash. Let me see exactly which files those 4 errors are in to confirm they're pre-existing and out-of-scope.
+
+The 4 errors are all pre-existing in an unrelated file `TeslaSync/shared-surfaces/Input.Previews.swift` (a different unit's preview, outside my allowed files) — a ViewBuilder `return` error, unrelated to strings/ConflictWarnings. Let me confirm my changeset is isolated and that this file is pre-existing/untouched.
+
+Confirmed: my changeset is 6 isolated paths; `Input.Previews.swift` is a pre-existing, untouched, tracked file with a baseline ViewBuilder-`return` error (forbidden to commit-fix). Let me confirm my files were compiled into the module without any diagnostics.
+
+Let me confirm my files were part of the compilation batch (not skipped) by searching the full build log.
+
+The app-target build aborted (pre-existing `Input.Previews.swift` errors) before reaching my files' batch, so xcodebuild didn't exercise my `#if DEBUG` previews — and my earlier typecheck ran without `-D DEBUG`. I must close that gap: re-run the isolated typecheck **with `-D DEBUG`** to validate the preview blocks on both idioms.
+
+Both DEBUG preview typechecks pass. Now let me close the last gap — the test file was linted/formatted but not yet compiled. Let me typecheck it against the real module sources (via a temp copy with the `@testable` import adjusted, so the real file is untouched).
+
+The test file typechecks in-module (0 errors). All code is fully validated. Now let me write the evidence log. First confirm the logs directory.
+
+All validated. Now writing the comprehensive evidence log.
+
+Log written. Now let me verify git state (ensure generated project/xcframework are ignored) before committing precisely my files.
+
+Clean — only my intended files; generated artifacts are git-ignored. Let me mark todos done and commit precisely these files.
+
+Committed cleanly (`8c9394c25`), working tree clean. Let me do a final verification of the commit contents.
+
+Everything is committed and verified. Let me clean up my ad-hoc temp tracking file.
+
+The task is complete. All work is committed (`8c9394c25`) with a clean working tree.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

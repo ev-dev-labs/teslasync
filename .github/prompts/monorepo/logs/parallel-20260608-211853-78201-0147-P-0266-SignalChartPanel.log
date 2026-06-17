@@ -1,0 +1,128 @@
+I'll start by exploring the environment to understand the task scope and check tooling availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the existing Apple project structure.
+
+Now let me explore the feature-views directory and find an existing complete example to follow as a template.
+
+The feature-views dir is large (1881 entries). Let me find chart-based examples and check for any existing signal-related surfaces, plus the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+`LiveSignalsTable` (live signals) and `BatteryLevelChart` (chart) are the closest analogs. Let me read both completely, plus the shared facade core.
+
+Excellent template. Let me read the remaining LiveSignalsTable files and the BatteryLevelChart (Swift Charts pattern).
+
+Now let me read the Table content view, Previews, Tests, and the BatteryLevelChart (Swift Charts pattern) plus design tokens.
+
+The pattern is clear and rich. Now let me read the Swift Charts example (BatteryLevelChart), the Previews/strings pattern, and locate the design tokens.
+
+Let me read the chart Model/Adapter, the strings file format, and locate all the design tokens used.
+
+Now let me locate the design token definitions and the web helpers (CHART_COLORS, useDateFormat, fmtInt, ChartTooltip) I need to reproduce.
+
+Now let me read the motion/skeleton components and the web helpers I need to reproduce (CHART_COLORS, fmtInt, useDateFormat, SignalStat, ChartTooltip, SmallMultiplesChart).
+
+Let me check the build feasibility (xcodegen, the shared framework, prior gate logs) and look at a multi-line Swift Charts example.
+
+Two prior SignalChartPanel artifact logs exist. Let me read those plus the LiveSignalsTable gate log and the pending-verifications doc to understand how the gate actually runs on this runner.
+
+This establishes the precedent clearly: code-complete + host-validated gates, with the Xcode app build/test deferred (KMP `Shared.xcframework` + signing). Let me check the two prior SignalChartPanel artifact logs and confirm no existing files, plus read the lint configs.
+
+Confirmed: no existing `SignalChartPanel.*` in this tree (prior `artifact-*` logs are from other parallel slots). My runner has Xcode, unlike that BLOCKED artifact. Let me verify the recent sibling disposition and probe signing/xcodegen, then read the lint configs.
+
+All 225 siblings are DONE, and recent ones run `XCODEGEN_EXIT=0`/`MAC_TYPECHECK_EXIT=0`/`TEST_EXIT=0`. Let me read the full 0250 log to match the current accepted gate methodology exactly.
+
+This is the exact current accepted methodology (0250). Let me find the tooling used for the host typecheck and isolated `swift test` so I reproduce it precisely, plus the placeholder checker.
+
+I now have a complete understanding of the conventions. Let me do a few final checks (KMP `Shared` import footprint for the typecheck dep-set, any existing small-multiples native component, and confirm the `swift test` harness approach) before writing code.
+
+`TSSmallMultiplesChart` and `TSGlassPanel` already exist as shared components — I should reuse them for parity (web uses `SmallMultiplesChart` + `GlassPanel`). Let me read their APIs.
+
+`TSGlassPanel` (web `GlassPanel`) and `TSSmallMultiplesChart` (web `SmallMultiplesChart`) are the correct shared-component mappings to reuse. Let me read the chart models and confirm the KMP-dependent exclude set for the typecheck.
+
+I have everything needed. Let me set up tracking and write the plan, then implement the surface.
+
+Let me write the plan, and kick off a baseline typecheck of the shared dep-set in the background to de-risk the gate.
+
+Baseline dep-set typechecks clean (40 files, macOS, Swift 6 strict). Now writing the surface. Starting with the pure adapter core.
+
+Now the state-holder model (P1/S8 seam + P1/S11 telemetry + `@Observable`).
+
+Now the localization facade (P1/S10) + accessibility builders.
+
+Now the main surface view.
+
+Let me check the `TSSkeleton` API before writing the states view.
+
+`TSChartSkeleton(height:)` is the right loading primitive. Now the states/header views.
+
+Now the overlay multi-line chart with auto dual-axis (the core Swift Charts work).
+
+Now the small-multiples grid mode.
+
+Now the previews (one per state).
+
+Now the strings catalog.
+
+Now the comprehensive XCTest suite.
+
+All 10 files written. Now running the host gates — starting with the macOS typecheck of the surface against the real shared library.
+
+macOS typecheck clean. Now the iOS simulator typecheck.
+
+Both typechecks clean. Now swiftformat + swiftlint on the surface files.
+
+swiftformat flagged formatting — let me auto-fix with the repo formatter, then re-verify.
+
+Formatting clean. Now swiftlint --strict on the surface files, and re-typecheck to confirm the auto-format didn't break anything.
+
+swiftlint flags the 3-member tuple in previews. Replacing it with a small struct.
+
+Now re-format, re-lint, and re-typecheck to confirm all green after the fix.
+
+swiftformat 0/9, swiftlint 0 violations. Re-running both typechecks to confirm the auto-format changes still compile.
+
+Both typechecks clean post-format. Now the placeholder gate (scanning only my files via a temp dir) + self-test.
+
+Placeholder gate clean (COUNT=0, self-test PASS). Now the isolated `swift test` — building an ephemeral SwiftPM package (module `TeslaSync`) with the surface + real shared lib + the test bundle.
+
+All 33 tests pass (TEST_EXIT=0). Final gate step: `xcodegen generate` to prove the spec regenerates with the new files.
+
+All host gates are green and the `.xcodeproj` (git-ignored) wires in the new files (60 refs across app + test targets). Now let me capture the deterministic evidence for the DEFERRED full-app build (the KMP framework blocker), exactly as siblings document it.
+
+Deterministic blocker confirmed (missing KMP `Shared.xcframework`, 0 signing identities) — identical to all 225 siblings, and not caused by my code. Let me clean up temp artifacts and review git status before writing the log.
+
+Git tree is clean — only my 10 files are new (the two pre-existing `M` files are unrelated and won't be touched). Let me gather final metrics for the log.
+
+All files within the 400-line budget; 33 tests green. Writing the gate log now.
+
+All gates green and the log is written. Now committing exactly the surface files + the log (excluding the two unrelated pre-existing changes).
+
+Exactly the 10 surface files + the log are staged (the two unrelated changes are excluded). Committing.
+
+Committed as `19cd69774` — exactly the 10 surface files + the gate log; the two unrelated pre-existing changes were correctly left untouched.
+
+All work is complete and verified. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0266-SignalChartPanel.log | 204 +++++++++++++
+ .../feature-views/SignalChartPanel.Adapter.swift   | 310 +++++++++++++++++++
+ .../feature-views/SignalChartPanel.Chart.swift     | 296 ++++++++++++++++++
+ .../feature-views/SignalChartPanel.Grid.swift      | 150 ++++++++++
+ .../SignalChartPanel.Localization.swift            | 152 ++++++++++
+ .../feature-views/SignalChartPanel.Model.swift     | 288 ++++++++++++++++++
+ .../feature-views/SignalChartPanel.Previews.swift  | 186 ++++++++++++
+ .../feature-views/SignalChartPanel.Tests.swift     | 332 +++++++++++++++++++++
+ .../feature-views/SignalChartPanel.Views.swift     | 279 +++++++++++++++++
+ .../feature-views/SignalChartPanel.strings         |  51 ++++
+ .../TeslaSync/feature-views/SignalChartPanel.swift | 109 +++++++
+ 11 files changed, 2357 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0266-SignalChartPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.Grid.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.Localization.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalChartPanel.swift

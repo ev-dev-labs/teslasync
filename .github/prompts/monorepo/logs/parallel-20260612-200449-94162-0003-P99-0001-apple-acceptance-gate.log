@@ -1,0 +1,30 @@
+I'll start by exploring the repository structure to understand what exists for this Apple acceptance gate, and check the runner's capabilities.
+
+Environment has the full Apple toolchain (Xcode 26.5, swiftlint, swiftformat, swift, pwsh). Now let me examine the tools, parity ledgers, and predecessor logs. Note: I already see `apps/parity/` has `apple-ledger.json` but I need to check for the required `apple-macos-ledger.json` and `apple-ios-ledger.json`.
+
+Key findings emerging. Let me dig deeper: the required `apple-macos-ledger.json`/`apple-ios-ledger.json` and `check-parity-ledger.ps1` appear missing. Let me verify thoroughly and check predecessor logs, the methodology doc, and how sibling acceptance gates (Windows/Android) handled this.
+
+The `apple-ledger.json` combines both platforms; the separate `apple-macos-ledger.json`/`apple-ios-ledger.json` and `check-parity-ledger.ps1` don't exist. There are sibling acceptance-gate logs from prior runs. Let me read the most recent one plus the canonical prompt and methodology to understand the established convention.
+
+Now I have full clarity. This is the canonical P99 Apple acceptance gate. Prior sibling runs recorded `STATUS=BLOCKED` on five grounds. I must run it fresh on this host with firsthand evidence — not copy. Let me understand the commit-on-blocked convention and scan predecessors comprehensively.
+
+Methodology is explicit: **Rule 8 — BLOCKED commits ONLY the log file** with message `chore(monorepo): BLOCKED <prompt> — <reason>`. P4 phases P0–P8 are all DONE, but I notice **no `p4-p9-*` logs exist** despite P9-0001/P9-0002 prompts existing. Let me verify the P9 gap, the P7 page logs, all generated component logs, and the KMP scaffold dependency.
+
+Confirmed multiple independent predecessor failures: **P9 logs missing**, **kmp-scaffold BLOCKED**, and **4 component logs non-DONE**. Per covenant rule 3 (no skip-and-assume), I must still run the actual gate commands for firsthand evidence. Let me check the anomalous AlertFeedWidget log, signing identities, clean tree, and JDK (needed for the KMP framework the build depends on).
+
+Complete preflight picture now: **0 signing identities** (archives impossible), **clean tree**, iPhone 16 sim booted, JDK17 available, and `AlertFeedWidget` predecessor ended `IOS_EXIT=143` (interrupted, no STATUS=DONE). The gate is decisively BLOCKED on multiple independent grounds, but per covenant rule 3 I must run the actual commands for firsthand evidence. Let me build the log starting with the header and PREFLIGHT, generating the Xcode project as a build prerequisite.
+
+Now let me generate the Xcode project (build prerequisite) and append predecessor + parity-ledger verification sections to the log.
+
+Schemes present. Now appending the PREDECESSORS verification section with firsthand evidence.
+
+Now the PARITY LEDGERS section. Let me compute combined-ledger totals for context and document the missing required artifacts.
+
+Sections 1–3 complete. Now the `=== GATE ===` section with firsthand command execution. Let me start with the fast, deterministic gates: SwiftLint, SwiftFormat, placeholder scanner, and the two ledger checks.
+
+SwiftLint failed (`LINT_EXIT=2`). Continuing with SwiftFormat, placeholder scanner, and the two ledger checks.
+
+SwiftLint: 4 serious violations. SwiftFormat: `FORMAT_EXIT=1`. Now the placeholder scanner and the two ledger checks (via pwsh, as the gate specifies).
+
+Placeholder: `COUNT=134 > ALLOWED=53`. Ledger verifier confirmed missing. Now the heavy xcodebuild gates. Both Apple targets link `Shared.xcframework` (not yet staged). Let me check how it's wired before running the builds.
+

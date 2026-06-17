@@ -1,0 +1,148 @@
+I'll start by exploring the environment and the repository structure to understand what's available and what the web source specifies.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). The web source is a pure presentational generic list component. Now let me study the predecessor surfaces and conventions.
+
+`AnnotationList` is the closest analog (presentational list). Let me read its full implementation as the template.
+
+Excellent template. Let me read the rest of the AnnotationList files to fully understand the pattern.
+
+Now let me examine the design tokens, project.yml structure, and the placeholder checker.
+
+Let me look at the AnimatedNumber surface — it's the closest precedent for a *pure presentational* primitive (like DateGroupedList), plus the shared primitive signatures.
+
+Let me check the immediate predecessor (Avatar) and confirm how pure-presentational surfaces handle the state matrix, plus verify the gate precedent passed.
+
+Both pure-presentational predecessors (AnimatedNumber, Avatar) passed `STATUS=DONE` and explicitly document that the network `stale/offline` axis does NOT apply to presentational components ("fabricating a network chip here would be drift, not parity"). The full-app xcodebuild is RED on **pre-existing, unrelated** duplicate-symbol collisions. Let me confirm shared primitives, scheme names, and establish the baseline.
+
+I have everything I need. Let me set up tracking, write a plan, generate the Xcode project, and establish the baseline build state (to honestly confirm any pre-existing failures).
+
+Now let me generate the Xcode project and start a baseline iOS build to confirm the pre-existing failure state.
+
+Project generated with both `TeslaSync` and `TeslaSync-macOS` schemes. Let me check available simulators and kick off the baseline iOS build in the background while I write the surface.
+
+iPhone 16 is available (matches the gate). Let me start the baseline iOS build in the background and write the surface files while it runs.
+
+While the baseline builds, let me check the swiftlint/swiftformat configs to match the exact style rules, then write the surface files.
+
+Config understood (120 col limit, `--self remove`, testable-bottom imports). Now I'll write the surface files. Starting with the pure core (Adapter, Projection, Model).
+
+Now the Views (subviews) and the main generic view:
+
+Now the main generic view:
+
+Now the strings catalog, previews, and tests:
+
+Let me check the baseline build progress before writing the tests.
+
+Baseline still compiling. Writing the test files meanwhile:
+
+Now the Projection + Model + Views tests:
+
+All nine files written. Let me update tracking and run swiftformat/swiftlint on the new files (fast checks) while the baseline build continues.
+
+Swiftformat flagged style issues. Let me auto-fix with the ecosystem tool rather than hand-editing:
+
+Swiftformat clean. Now swiftlint --strict on the new files:
+
+`multiple_closures_with_trailing_closure`: where I pass both an `itemKey:` closure and a trailing `rowContent` closure, I must label `rowContent:`. Let me view the affected spots and fix them.
+
+Baseline build finished — let me read its result, and fix the lint issues in parallel.
+
+The baseline iOS build **failed (EXIT=65) before my files existed** — the project was generated before I wrote them. The failure is in `globalShortcuts.Previews.swift` (misc-surfaces) — a pre-existing compile error outside my allowed scope. Let me capture the exact errors for honest documentation.
+
+This confirms the pre-existing blocker is the **exact** one the predecessors documented: `RecentDrives*`/`StateTimeline*` types are "ambiguous for type lookup" — duplicate type definitions across `feature-views` and `dashboard-widgets`, entirely outside my allowed scope, and present **before** my files existed. Let me locate the duplicate definitions to verify and plan rigorous isolated verification of my surface.
+
+Confirmed: `RecentDrives*` and `StateTimeline*` public types are each defined **twice** — in both `dashboard-widgets/` and `feature-views/` — a pre-existing collision from parallel surface work, entirely outside my allowed scope and present before my files. I'm forbidden to fix it. To rigorously verify my surface compiles + tests pass, I'll temporarily exclude the colliding surfaces, build/test, then revert. Let me inspect the test-target config first.
+
+The test bundles glob `*Tests.swift` from each surface dir. To verify my surface by actually running tests, I'll temporarily exclude only the colliding files, then revert. First, let me confirm what references these types outside their own files (to size the isolation safely).
+
+No external references — these surfaces are self-contained, so I can safely isolate them temporarily for verification. Let me enumerate the exact colliding files.
+
+All colliding files are tracked and clean. Now let me fix the remaining lint issues in `Tests.swift` (label `rowContent:` where an `itemKey:` closure is also passed), then re-verify format/lint.
+
+Re-running format + lint on all new files:
+
+All clean: swiftformat `0/8 require formatting`, swiftlint `--strict` exit 0. Now the placeholder check. Let me inspect the script's `-Path` semantics and run it.
+
+Important: the script returns "clean" when `-Path` doesn't resolve to an existing directory — and `.../DateGroupedList` is a filename prefix, not a dir. To genuinely verify (not rely on that gap), let me grep my files for forbidden patterns directly AND run the script against the real shared-surfaces directory.
+
+Placeholder check clean (verified three ways: direct grep, real-dir scan, literal gate command). 
+
+Now the critical verification: prove my surface compiles and its tests pass. I'll temporarily isolate the pre-existing colliding files (move out → regenerate → build/test → restore). Moving them to a backup:
+
+38 files isolated, project regenerated. Now build + test (scoped to my test classes) for iOS to prove my surface compiles and tests pass:
+
+Build running. Let me wait for it to compile and run my tests.
+
+Another pre-existing compile failure surfaced — this time in `AIAutoNameUnnamedLocations.swift` (another surface). Let me extract the actual errors.
+
+No DateGroupedList errors — my files compiled cleanly; the build only fails on 2 more **pre-existing** broken surfaces (`AIAutoNameUnnamedLocations`, `AIGeofenceAwareAutomationSuggestions` — an "escaping closure captures non-escaping parameter" bug, unrelated to me). Since the Swift compiler reports all module errors in one pass, isolating these two should yield a clean build. Let me confirm they're self-contained, then isolate them too.
+
+Only comment mentions, no code references — safe to isolate. Moving them out and rebuilding:
+
+Waiting for the rebuild and test run.
+
+Still failing (2 errors). Let me extract them.
+
+Same bug in a third file (`AISignalExplorerNlFilter.swift:142`). This is a recurring pattern across AI surfaces. Rather than rebuild per-file, let me identify the exact buggy construct and find ALL occurrences at once.
+
+The bug is an identical copy-pasted `glass(@ViewBuilder _ content: () -> some View)` helper that captures a non-escaping `content` inside `TSGlassPanel` (whose closure is escaping) — a pre-existing breakage across multiple surfaces. Let me find the full set to size the problem.
+
+23 candidate files have that buggy helper — too many for reliable per-file isolation (and the compiler reports them in batches). I'll switch to a **standalone SwiftPM package named `TeslaSync`** that compiles only my surface + the real design tokens + `TSFadeIn`, and runs my actual XCTests via `@testable import TeslaSync`. Let me check `TSFadeIn`'s dependencies first.
+
+`TSFadeIn` only needs SwiftUI + tokens. I'll build a standalone SwiftPM package named `TeslaSync` containing my 6 source files + the real `Tokens.swift` + `Motion.swift`, with my 2 test files — so `@testable import TeslaSync` and the real XCTests run, fully isolated from the broken app module.
+
+Now run `swift test` on the isolated package:
+
+The standalone build is faithful — it caught a real Swift 6 concurrency issue in **my** `Previews.swift`: the static preview arrays aren't `Sendable` because `DateGroupedListGroup` isn't. This would fail the app gate too. The correct fix: make `DateGroupedListGroup` conditionally `Sendable` when its items are. Let me fix the real files.
+
+Re-copying updated files to the package and re-running the tests:
+
+**All 33 XCTests pass, 0 failures** — my surface compiles under Swift 6 strict concurrency (including the `#Preview` matrix) and every test passes via `@testable import TeslaSync`. Now let me re-verify lint/format on the edited files, then restore the isolated app files.
+
+Two things to resolve: formatting needs re-applying after my edits, and the restore left 5 files in backup. Let me investigate and fix both.
+
+Restore confirmed complete (git shows 0 deleted files, backup empty). The "5" was a miscount. Now let me auto-fix the formatting from my edits and re-verify:
+
+All 8 files pass format + lint. Let me re-run the isolated tests against the final formatted files to confirm the exact committed content passes, then regenerate the full project.
+
+Final formatted files: 33/33 tests pass. Now let me regenerate the full project (all files restored) and confirm the working tree is clean except my additions.
+
+Working tree is clean except my 9 new files (`.xcodeproj` is gitignored). Now let me run the **official gate** (exact prompt commands, adapted to run from repo root) and capture to the log. This will exercise the full app build — which I expect to be RED on the pre-existing breakage. Running in background.
+
+Gate running in the background (~8-10 min for two full xcodebuild build+test cycles plus lint/format). Let me wait and check progress.
+
+Gate finished. Notably **LINT_EXIT=0, FORMAT_EXIT=0 (0/3905 files), PLACEHOLDER_EXIT=0** — the whole repo passes lint/format/placeholder. Let me read the iOS/macOS build exit codes from the log.
+
+The official gate confirms the precedent **exactly**: `IOS_EXIT=65`/`MAC_EXIT=65` are RED purely on pre-existing, unrelated breakage — `RecentDrives*`/`StateTimeline*` duplicate-type collisions + macOS dev-signing on an unsigned runner — with **zero DateGroupedList errors**. `LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`. Now let me append the honest disposition + isolated-verification evidence to the log.
+
+Log complete with full honest disposition. Let me clean up temp files and verify the final git state before committing.
+
+Perfect — exactly 9 new DateGroupedList files + the log, with zero tracked-file modifications (temporary isolation fully reverted). Committing the allowed files:
+
+Committed. Let me confirm the commit and finalize tracking.
+
+The task is complete and committed. Let me provide a final summary.
+
+Merge made by the 'ort' strategy.
+ ...-apple-shared-surfaces-0080-DateGroupedList.log | 16294 +++++++++++++++++++
+ .../shared-surfaces/DateGroupedList.Adapter.swift  |   187 +
+ .../DateGroupedList.AdapterTests.swift             |   156 +
+ .../shared-surfaces/DateGroupedList.Model.swift    |   107 +
+ .../shared-surfaces/DateGroupedList.Previews.swift |    98 +
+ .../DateGroupedList.Projection.swift               |   158 +
+ .../shared-surfaces/DateGroupedList.Tests.swift    |   252 +
+ .../shared-surfaces/DateGroupedList.Views.swift    |   162 +
+ .../shared-surfaces/DateGroupedList.strings        |    22 +
+ .../shared-surfaces/DateGroupedList.swift          |    93 +
+ 10 files changed, 17529 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0080-DateGroupedList.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DateGroupedList.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DateGroupedList.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DateGroupedList.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DateGroupedList.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DateGroupedList.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DateGroupedList.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DateGroupedList.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DateGroupedList.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DateGroupedList.swift

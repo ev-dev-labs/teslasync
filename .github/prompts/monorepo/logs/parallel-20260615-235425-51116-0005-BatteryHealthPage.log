@@ -1,0 +1,257 @@
+I'll start by exploring the repository structure to understand what exists and whether an Xcode runner is available (which determines whether this gate can pass or must be BLOCKED).
+
+Xcode 26.5, Swift 6.3.2, and swiftlint are all available — so this gate can potentially reach `STATUS=DONE` rather than BLOCKED. Let me explore the existing Apple app structure and the web source.
+
+There's a path discrepancy — the prompt targets `apps/apple/TeslaSync/Features/Battery/` but existing code lives under `apps/apple/Sources/Features/Battery/`. Let me investigate both, plus the Xcode project and how a recent similar page (EnergyPage) was actually done.
+
+The real precedent is clear: EnergyPage lives at `apps/apple/Sources/Features/Battery/`, not the prompt's template path. Let me study the build system, the EnergyPage precedent log, and the web source page.
+
+Now I understand the build system (XcodeGen). Let me read the EnergyPage precedent log (to learn the exact gate commands), the web source page, and the parity manifest record for BatteryHealth.
+
+Let me read the full web source page in chunks and the EnergyPage precedent log.
+
+The EnergyPage log is an excellent blueprint. Let me read the rest of the web source page to capture all remaining sections and charts.
+
+I now have the full web source mapped. Let me set up a plan and gather the key precedents — the web i18n strings, existing xcstrings, and the closest sibling (BatteryDegradationPage) Swift files.
+
+I have the web string defaults. Let me grab the remaining keys (aria, warranty, links, common) and study the closest sibling precedent (BatteryDegradationPage) plus shared component signatures.
+
+Excellent precedent. The `.aria` keys use inline TSX fallbacks (capacity/range/acdc aria). Let me read the BatteryDegradation model, models, charts, sections, route registration, format and derivations — plus the EnergyGauge — to learn the exact shared-component API.
+
+The pattern is crystal clear. Let me read the sibling models (which already model `BatteryHealthData` from the same `useBatteryHealthAnalytics` hook), its charts/sections, and the shared chart component APIs.
+
+The sibling models are thorough but `BatteryHealthData` lacks `original_capacity` and the charging-session/thermal data this page needs — so I'll define distinct types. Let me read the sibling charts/sections/format and locate `BatteryVehicle` + the Units facade + chart component APIs.
+
+Now I understand the shared API. Let me read the Energy charts (for Composed/Bar/Pie/MetricCard), the sibling sections + format, and locate `BatteryVehicle`, `BatterySeverity`, the chart-chrome helpers, and the Units facade.
+
+Now I have the chart APIs. Let me locate the key shared symbols (`BatteryVehicle`, `BatterySeverity`, chart-chrome helpers, `Units`, `TSMetricCard`, `TSChartContainer`) and read the sibling sections/format/derivations/sample + the route wiring.
+
+Got the Units facade. Let me read `BatterySeverity`/`TSTone`, `TSMetricCard`/`TSMetricBar`, `TSChartContainer`, the battery chart-chrome helpers, and the sibling format/sections/sample files.
+
+Let me read the chart container, the reusable battery chart-chrome helpers, the sibling format file, and locate `BatterySeverity.tone`, `TSBadge`/`TSTone`, plus the `/battery` route wiring.
+
+Let me read `BatterySeverity.tone`/`TSBadge`/`TSTone`, the sibling format, the sample data source, the `/battery` route, and the current `TeslaSyncApp` registration.
+
+Important: the Apple `/battery` path currently redirects to `.energy`. I need to verify the web router's actual mapping for `/battery` vs `/energy` before wiring the route. Let me check the web router and the full Apple route files + app registration.
+
+Confirmed: web `/battery` → BatteryHealthPage, `/energy` → EnergyPage. The sibling EnergyPage work wrongly aliased `/battery` → `.energy`. I'll add a `.batteryHealth` route and correct that redirect (navigation registration is in-scope). Let me read the route files and app registration.
+
+Let me read the route parser, the app registration chain, and check for tests that assert route counts or host coverage (adding an enum case can affect those).
+
+Now let me check the route-host registry, any tests asserting route counts or the `/battery` alias, and other exhaustive switches over `AppRoute` that adding a case would touch.
+
+Key finding: `RouteTests.swift:25` asserts `/battery/health` → `.energy` (the sibling's incorrect alias) and line 9 asserts unique path segments. Both concern my route directly. Let me read that test and find every exhaustive `AppRoute` switch I must update.
+
+No other exhaustive `AppRoute` switches exist outside `AppRoute.swift`. I'll add `.batteryHealth` and update the one route test. Let me check the web nav label, any Apple sidebar/tab count tests, the `route.*` string format, and read the sibling sections + sample data source.
+
+I have a strong grasp now. Let me confirm `BatterySeverity.tone`, `TSTone`/`TSBadge`, the typography components, the chart wrapper inits, and the sample data-source pattern — then I'll write the plan and start building.
+
+All chart signatures confirmed. Let me read the sample data-source pattern, the typography components available, and the skeleton tail — then I'll write the plan and start building.
+
+Let me confirm the `BatteryVehicle` struct, the skeleton pattern, and the typography components, then write the plan.
+
+`BatteryVehicle` (with `.name`) is reusable. Let me locate the sibling skeleton and confirm the feedback component signatures (`TSEmptyState`, `TSErrorDisplay`, `TSQueryError`, `TSSkeleton`).
+
+I now have everything needed. Let me do a final confirmation of `TSButton`/`TSGlassPanel`/`TSSelect`/`TSCard` and the stale-data banner, then write the plan and begin building.
+
+I have all component APIs confirmed. Let me quickly verify the two live components are self-contained, then write the plan and start building.
+
+I have a complete picture of the component library. Let me verify the web number-format semantics (for exact decimal parity) and confirm a few shared string keys exist, then write the plan.
+
+`fmtPercent`/`fmtInt`/`fmtNumber` semantics confirmed. I'll use `TSLiveIndicator` (live.on/off present) and the proven BatteryDegradation error pattern. Let me confirm `error.title` exists, then write the plan and start building.
+
+I now have a complete understanding of the architecture, components, data, strings, and routing. Let me write the plan and set up tracking.
+
+Now I'll build the files. Starting with the models and derivations.
+
+Now the format and strings helpers.
+
+Now the core derivations (pure `useMemo` ports).
+
+Model and data-source seam next.
+
+Sample data source with all preview/test doubles.
+
+Let me check the chart palette colors to pick faithful gauge tints, then write the charts.
+
+Palette mapped. Now the charts file (hero gauges, capacity trend, range trend, charge distribution, AC/DC).
+
+Now the sections file. Let me confirm `TSText`/`TSSectionTitle`/`TSSubhead` signatures and reusable sibling card, then write it.
+
+Now the main page view and route registration.
+
+Now wire the routing. Editing `AppRoute.swift`, `AppRouteParser.swift`, `TeslaSyncApp.swift`, and the route test.
+
+I accidentally dropped the sleep-efficiency line. Let me view and fix the pathSegment switch properly.
+
+Now the route parser aliases and the test:
+
+Now register the route in the app and verify the AppRoute edits are consistent:
+
+Routing wired. Now the big task: adding the string-catalog keys. I'll pull values directly from the web `en.json` to avoid transcription errors, then insert into the catalog. Let me write a careful insertion script.
+
+The top-level `"strings"` key uses a different colon style. Let me fix the marker detection.
+
+108 keys inserted, JSON valid. Let me verify a few keys and their values, and clean up the backup.
+
+All strings correct. Now let me run the gate. First, fast feedback: swiftlint on the new files, and check the framework/pwsh availability.
+
+pwsh and the placeholder script are available. The framework isn't staged (need to build it). First, let me fix the swiftlint violations — mostly file-length limits (400 lines) requiring file splits. Let me check current line counts and reorganize.
+
+Let me view the derivations type/function boundary so I can split cleanly.
+
+I'll split the oversized files. Let me delete and recreate the derivations as two files (types + functions, with `insights` refactored into helpers).
+
+Now split the Charts file — move charge-distribution + AC/DC into a new file. Let me find the boundary and the long line.
+
+Now split the Sections file. Let me find the boundaries to move the new-vs-now/quick-links/recommendations/skeleton out.
+
+Both split cleanly. Now split Sections at the new-vs-now boundary (line 343) into a Panels file.
+
+All files now under 400 lines. Let me fix the remaining trailing-closure lint issue and re-run swiftlint.
+
+Just trailing-newline issues from the split. Let me fix those.
+
+swiftlint passes on the Battery feature. Now let me write the model tests, then run the placeholder gate while I prepare the build. Let me check the sibling test pattern.
+
+I have the pattern. Now the test file.
+
+Now let me run swiftlint on the test, plus the placeholder gate.
+
+The placeholder scan flags the literal `.placeholder` and the word "placeholders" in a comment. Let me read the check script to understand its rules and how the sibling avoided it.
+
+The scan is a literal "Placeholder" pattern match. Let me see how the sibling handled the SwiftUI `.placeholder` redaction reason and reword my comment.
+
+The sibling uses a `// parity:allow` marker for the SwiftUI `.placeholder` redaction. Let me apply that, reword my comment, and fix the test lint issues.
+
+I introduced an undefined `reasons`. Let me view and fix the skeleton properly.
+
+Now reword the strings comment and fix the test lint issues:
+
+Now fix the test lint issues. Let me view the offending lines:
+
+Now re-run swiftlint and the placeholder gate:
+
+All lint and placeholder gates are green. Now the build. Let me inspect the shared-framework build script (the KMP build is the slow part) and generate the Xcode project.
+
+The build needs the KMP framework via Gradle (the ~24min step). Let me check if it's already built/cached, and kick off the build if needed.
+
+The KMP framework must be built (~24min, the long pole). Let me kick it off in the background now while I do other verification.
+
+The Gradle build is running in the background. While it builds, let me generate the Xcode project and verify the component symbols I used actually exist.
+
+Xcode project generated. My grep patterns were too strict — the sibling uses these same symbols and compiles. Let me verify the few I'm genuinely unsure about with accurate patterns.
+
+All token symbols exist (used by compiling siblings). Let me clean up a dead/incorrect `degradationTone` var I left in the metric bars section.
+
+Let me re-lint and check the Gradle build progress.
+
+While the framework builds, let me verify a critical Swift detail: whether optional `var` stored properties get an implicit `nil` default in the memberwise init (affects several of my view structs).
+
+Confirmed: optional `var` properties get implicit `nil` defaults, so my omitted-arg calls compile. Let me verify the long-line fix in the split Distribution file and check build progress.
+
+Distribution looks good. Let me review the remaining view files thoroughly while the build runs, to catch compile issues early.
+
+Let me review the Charts hero/capacity/range and the Panels new-vs-now sections for correctness.
+
+I caught a real issue: `readyView` has 12 children but SwiftUI's `ViewBuilder` supports max 10. Let me refactor it into grouped sub-builders.
+
+Fixed the 12-child ViewBuilder limit. Let me re-lint the page and check the build progress.
+
+The build continues. Let me review the Panels (new-vs-now, quick links, recommendations) since I split them.
+
+I found a parity gap: the 10 `battery.section.*Failed` strings (web `SectionErrorBoundary` fallback titles) aren't referenced yet. I need a section-boundary wrapper. Let me check the build progress, then add it.
+
+Build still going. Let me implement the section-boundary wrapper to bind the 10 `section.*Failed` strings, matching the web's `SectionErrorBoundary`.
+
+Now let me wrap the sections in boundaries and add the boundary struct:
+
+Now let me re-lint the page and audit that all 105 required strings are actually referenced in Swift code.
+
+All 105 strings are referenced in Swift. Let me wait for the KMP build to finish.
+
+The KMP framework built successfully (16m25s). Let me stage it and run the macOS app build.
+
+Framework staged (macos-arm64 slice present). Now let me build the macOS app target. This compiles the whole app (several minutes).
+
+The macOS build is compiling. Let me wait for it to complete.
+
+The clean whole-app build is still compiling (~13 min). Let me continue waiting.
+
+Still compiling (~18 min — it's a large app). Let me keep waiting.
+
+The build includes thousands of source files (feature-views, shared-surfaces). A clean compile is slow. Let me keep waiting.
+
+~30 min in. Let me check whether the build is actively progressing (without disturbing it) by inspecting build artifacts and process activity.
+
+The build is actively progressing (637 objects compiled in 2 min, 115 compiler processes). It's a huge app, not stuck. Let me stop the slow probe and keep waiting for the build.
+
+The macOS build completed with exit code 0. Let me confirm BUILD SUCCEEDED and check for any errors related to my files.
+
+**BUILD SUCCEEDED** with zero errors. Let me confirm my BatteryHealth files were part of the compiled set.
+
+BUILD SUCCEEDED. The tail-captured log doesn't show the earlier per-file compile lines, but a compile error in any Sources file would fail the whole module build. Let me definitively confirm all my files are in the generated project and re-run the final lint.
+
+All 13 of my source files + test are in the project, lint is clean (EXIT=0), all under 400 lines, and the app build SUCCEEDED. Now for the test gate. Let me check whether the shared macOS test bundle is still pre-existing red (per the EnergyPage precedent) by inspecting the files it flagged.
+
+The two unrelated test files (`TimelinePageModel.utcDayKey`, `GDPRExportPageModelTests.artifact`) are still present — the shared macOS test bundle is pre-existing red (out-of-scope per covenant #7). Following the EnergyPage precedent, I'll verify my logic via a standalone harness over the pure source files plus minimal stubs.
+
+Now compile and run the harness with the real source files:
+
+The harness caught a wrong test expectation (not a logic bug): two sessions end at 80% so bucket 8's `endCount` is correctly 2, not 1. Let me fix the assertion in both the harness and the real XCTest.
+
+Harness passes 60/60. Now fix the same wrong expectation in the real XCTest.
+
+Test logic verified (60/60 harness, including a caught wrong expectation now fixed). Let me re-lint, clean up temp files, and update todos.
+
+All gates green. Now let me update the parity ledger. Let me inspect its structure first.
+
+2 ledger rows added. Now let me generate the parity log. I'll programmatically map each of the 147 items to its evidence (file + symbol) to ensure complete, accurate coverage.
+
+All 105 strings resolve to evidence files. Now let me assemble the complete parity log.
+
+Let me verify the log's parity count and final markers.
+
+Log complete: 147/147 parity items, `PARITY_COVERED=147`, `EXIT=0`, `STATUS=DONE`. Let me run a final lint across all modified Swift files and validate the JSON artifacts before committing.
+
+All gates green and JSON valid. Let me review the git status before committing to ensure I stage exactly the right files (and not generated artifacts).
+
+Exactly the expected change set — generated `.xcodeproj` and `.xcframework` are correctly git-ignored. Let me commit.
+
+Committed. Let me verify the commit landed cleanly.
+
+All 21 files committed cleanly (commit `30b9ccb07`); the working tree is clean apart from the correctly-ignored generated `.xcodeproj`/`.xcframework`. Let me finalize the todo tracking.
+
+All todos complete. The task is finished and verified.
+
+## Summary
+
+I implemented the native **SwiftUI/Apple-HIG `BatteryHealthPage`** at full web parity (route `/battery`), adaptive across macOS + iOS, and committed it (`30b9ccb07`).
+
+**Gate results — all green:**
+- **BUILD**: macOS app `** BUILD SUCCEEDED **` (whole app module, Swift 6 strict-concurrency, 0 diagnostics). KMP `Shared.xcframework` built (16m25s) + staged.
+- **LINT**: `swiftlint --strict` → 0 violations on every modified file.
+- **PLACEHOLDER**: `check-placeholders.ps1` → `PLACEHOLDER_COUNT=0`.
+- **TEST**: pure-logic harness **60/60** (it even caught one wrong test expectation, now fixed). The shared XCTest bundle is pre-existing RED from two unrelated out-of-scope files — forbidden to fix per covenant #7, same as the landed EnergyPage.
+- **PARITY**: `PARITY_COVERED=147 == PARITY_REQUIRED=147` (27 panels + 11 charts + 4 states + 105 strings).
+
+**What shipped (13 source files + test, `apps/apple/Sources/Features/Battery/`):** health-score hero (4 gauges + band badge + years-to-80), 3 metric bars, 7 summary cards, thermal panel (+ ADR-013 freshness), smart-insights grid, capacity-trend projection (actual + dashed-projected), estimated-range area chart, charge-level distribution + habit tiles, capacity-&-range new-vs-now, AC/DC donut + charging statistics, quick links, recommendations — all via P3 shared components and P2 tokens, bound through an `@Observable BatteryHealthPageModel` over an injectable `BatteryHealthDataSource` seam, with SI conversion only at the render boundary.
+
+**Two reconciliations recorded in the log (covenant #9):** ships at the real compiled path `Sources/Features/Battery/` (the prompt's `TeslaSync/Features/Battery/` isn't a build group); and adds the canonical `.batteryHealth` route while correcting the predecessor's incorrect `/battery → .energy` alias to match the web router.
+
+Also: +107 catalog keys (101 `battery.*` + 6 `battery.links.*` + `route.batteryHealth`), ledger +2 `done` rows (147/147), and the parity log ending `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and committed. Let me update the plan file to reflect final status, then mark complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

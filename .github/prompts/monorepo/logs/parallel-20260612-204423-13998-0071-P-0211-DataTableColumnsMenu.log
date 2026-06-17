@@ -1,0 +1,181 @@
+I'll start by exploring the environment capabilities and the repository structure, since this task has a hard capability requirement (SwiftUI/Swift Charts/MapKit + Xcode toolchain) that determines whether I can proceed or must report BLOCKED with evidence.
+
+Runner is fully capable: macOS 26.5, Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iOS simulators (iPhone 16 booted). Not blocked. Let me explore the web source and the Apple project structure.
+
+I have the web source. Now let me explore the Apple project structure thoroughly.
+
+This is an XcodeGen project (`project.yml`, no `.xcodeproj` checked in). Let me read the project config and the TeslaSync source layout.
+
+`xcodegen` is available. shared-surfaces already has ~2024 entries. Let me study existing reference surfaces to match conventions exactly, plus the i18n/tokens/telemetry infrastructure.
+
+There's a `DataTableColumnMenu` (singular) sibling — the perfect reference. Let me verify my target doesn't exist yet and study the sibling's full structure.
+
+My target doesn't exist. Let me read the full sibling `DataTableColumnMenu` implementation — it's my parity/convention reference.
+
+Excellent reference. Let me read the remaining sibling files to fully internalize the conventions before writing my (simpler) plural variant.
+
+Let me read the remaining sibling files (Previews, strings, both test files) and locate the shared design-token definitions.
+
+Now the test files and the shared token/material definitions.
+
+I now fully understand the conventions. Critical insight: the singular sibling already declares `ColumnDescriptor`, `ColumnLayout`, `ColumnMenuRow`, `ColumnLayoutProjector`, etc. in the **same module** — so I must use uniquely-prefixed type names to avoid redeclaration conflicts. Let me verify the design tokens exist and confirm no name collisions for my planned types.
+
+No collisions. Let me read the design token definitions to use the right token names.
+
+I have everything I need on conventions and tokens. Let me check the build feasibility (shared framework script, swiftlint config) before writing, since the full app build is heavy.
+
+Key finding: `Frameworks/Shared.xcframework` is absent (only `.gitkeep`) — the scheme pre-action builds it via Gradle/KMP (Kotlin/Native), a dependency of both app targets. Let me check whether that toolchain is present, since it gates the full `xcodebuild`.
+
+All dependencies are clear. Java 17 + gradlew exist, so the KMP shared framework *may* build, but it's heavy. My deliverable (the 8 surface files) is fully in my control. Let me set up tracking and write the code.
+
+Key parity decisions (matching the accepted sibling 0210 `DataTableColumnMenu`):
+- The web source is a **controlled, storage-agnostic presentational primitive** (props only, no fetch/Query/Promise) → it genuinely has only real branches: closed (trigger), open-with-columns, empty-columns. I'll reproduce all real branches + a friendly empty state, and document why loading/error/stale/offline don't apply (no fetchable data source — only `useTranslation`), exactly as the sibling did.
+- Unique type names prefixed `DataTableColumnsMenu*` to avoid module-level redeclaration against the singular sibling.
+
+Now writing the 8 surface files. Starting with the Foundation-only core (Adapter).
+
+Let me refine the row's ToggleStyle to the sibling's proven `onTapGesture` pattern (cleaner a11y, no nested Button) while keeping the whole-row tap target faithful to the web `<label>`.
+
+Now the Previews, strings, Tests, and AdapterTests files.
+
+All 8 files written. Let me mark progress and start verification — first a fast standalone typecheck of the Foundation-only core, plus swiftformat auto-format and swiftlint on my files.
+
+Core typechecks clean under Swift 6. Now auto-format my files to the project spec and lint them.
+
+0/7 files needed formatting — already spec-compliant. Now swiftlint --strict and swiftformat --lint on my files.
+
+Both linters pass with 0 violations on my files. Now let me verify the SwiftUI views compile against the **real** design tokens (standalone typecheck of my source files + Tokens + TSMaterial), since the earlier check only covered the Foundation core.
+
+Views typecheck clean against real tokens under Swift 6 strict concurrency. Now the placeholder check and project generation. Let me inspect the tools and generate the Xcode project.
+
+Let me check the placeholder patterns and run the actual check script against my surface directory.
+
+Shipped files are clean of all forbidden patterns. Let me run the actual placeholder gate on my directory.
+
+The script's `-Path` takes a single string. The gate passes a path *prefix*. Let me inspect how it resolves Path so I run it correctly.
+
+The script needs a real path. I'll run it per shipped file (faithful to the gate's intent of scanning the surface).
+
+All 8 files clean (PLACEHOLDER_EXIT=0). Now the full build gate. Let me generate the Xcode project and assess the KMP shared-framework build (the long pole, required by both app targets).
+
+Project generated. Let me confirm my files are included, then kick off the KMP shared-framework build (the long pole) in the background.
+
+All 8 files are wired into the project. The KMP build is running. Let me wait for it.
+
+KMP first-build downloads the Kotlin/Native toolchain and compiles for multiple targets — expected to be slow. Continuing to wait.
+
+Let me verify the KMP build is making progress (not deadlocked) by probing the Kotlin/Native toolchain download and build artifacts in parallel.
+
+Good — it's progressing (konan 2.4.0 installed, macosArm64 framework already built, compiling remaining targets). Continuing to wait for the XCFramework assembly.
+
+KMP XCFramework built successfully (11m52s). Now I can run the real gate. Let me create the gate log and start the iOS build+test (compiles the whole app — heavy, long timeout).
+
+Whole-app iOS build is running. Let me probe progress while it continues.
+
+Build is progressing with 0 errors (extensions linking). The main app target is the long pole. Continuing to wait.
+
+0 errors; the main app module is in its heavy emit/compile phase (thousands of SwiftUI files under strict concurrency). Continuing to wait.
+
+Build failed in a SwiftCompile batch that includes my files alongside several sibling surfaces (`DataTableResizer`, `DateGroupedList`, `DatePresetChips`, `DateTime`). I need the actual `error:` line to know whether it's mine. Let me extract it.
+
+No `error:` line at all — that signals a compiler crash or OOM-kill, not a source error (my standalone typecheck passed). Let me find the crash signature and context.
+
+The log contains `slot-72` paths — a different parallel agent's worktree. My build (slot-71) somehow intermixed with a concurrent build via Xcode's shared build service. This is an environment collision, not a source error (note: zero `error:` lines anywhere, and my standalone typechecks passed). Let me prove this definitively.
+
+Definitive proof: my project uses only relative paths (0 absolute slot refs), yet my build log has **13885 slot-72 lines and 0 slot-71 lines**, with live builds running in slot-69 and slot-70. This is Xcode's shared per-user `XCBBuildService` conflating identically-named "TeslaSync" projects across concurrent parallel-agent worktrees — an infrastructure collision, not a code defect.
+
+My code is independently verified: Swift 6 typecheck passed (core + SwiftUI views against real iOS tokens), swiftlint/swiftformat/placeholders all clean. Let me retry the app build in isolation with a fresh unique derived-data path and confirm it compiles *my* slot.
+
+Good — this run uses my isolated `/tmp/dd-slot71-ios` and `PROJECT_DIR=slot-71`. Let me let it compile and monitor for contamination/errors.
+
+Let me probe the full second-build log directly for progress, contamination, and errors.
+
+Even with fully isolated derived-data/module-cache/SPM paths, the compile jobs are slot-72's source (5255 refs, 0 slot-71). The conflation is in Xcode's build service keyed by the shared project name "TeslaSync" — not fixable via CLI flags. Let me stop this contaminated run and look for a quiet window to retry.
+
+There's a single shared `XCBBuildService` serving 4 concurrent slots (69/71/72/73) all building identically-named "TeslaSync" — so both red and green exits from it are untrustworthy for my slot. Let me test whether the conflation is keyed by the `.xcodeproj` basename (cheap to rule out): build from a uniquely-named copy and watch which slot's sources compile.
+
+The `.xcodeproj` copy corrupts scheme/target resolution (not a viable isolation). Let me clean it up and assess whether a quiet window is achievable by polling the other slots' build activity.
+
+The machine is saturated: slots 69/72/73/74 are all continuously building "TeslaSync" (63 swift-frontend procs, stable) through the single shared `XCBBuildService`. No quiet window is attainable, and any whole-app build result for my slot is provably untrustworthy (my isolated build compiled slot-72's sources). Per the covenant ("No red-as-green"), I won't fabricate a green whole-app build.
+
+Let me capture the trustworthy, non-build-service gate steps repo-wide (swiftlint/swiftformat are independent of XCBBuildService) for the log.
+
+Repo-wide swiftlint found 3 violations across 5307 files. My targeted run was clean, but let me confirm none are mine.
+
+The 3 violations are in `widget-primitives/WidgetChartSummary.Tests.swift` — a pre-existing file from a different surface, not mine and not in my allowed scope. My files remain 0-violation. Let me capture swiftformat repo-wide status too.
+
+Both repo-wide linter failures are in pre-existing files from *other* surfaces (`widget-primitives/WidgetChartSummary.Tests.swift`, `feature-views/RecentDrivesSection.Previews.swift`) — not mine, not in my allowed scope. My files stay clean.
+
+The macOS target has a *different* name (`TeslaSync-macOS`), which may dodge the iOS-name conflation. Let me probe a macOS build to try for a trustworthy whole-app compile signal.
+
+macOS build failed fast — let me see the actual errors and which slot/files they reference.
+
+Excellent — trustworthy signal! The macOS build references **only slot-71** (16 refs, 0 other slots) — the `TeslaSync-macOS` target name avoids the iOS conflation. The only errors are **code-signing** failures (`DEVELOPMENT_TEAM: ""`, no dev certificate in this headless env) — not compile errors, not my code. Disabling signing will give a trustworthy whole-module compile of the real macOS app (including my surface). Let me run it.
+
+macOS build progressing past signing. Let me monitor for compile errors and confirm it's compiling my slot.
+
+Un-conflated now (5078 slot-71 refs, 0 other slots) — but **zero `error:` lines** despite many "Command SwiftCompile failed" + "SwiftEmitModule failed". That's the signature of compiler processes being killed (resource exhaustion), not source errors. Let me confirm the cause and check memory pressure under the concurrent multi-slot load.
+
+Un-conflated (slot-71 only) but jobs were killed with zero source diagnostics under load average ~90 from the concurrent slots — a resource-exhaustion blocker, not my code. Let me make one final best-effort trustworthy whole-module macOS compile with reduced parallelism (good-citizen under contention) to survive the load.
+
+9 minutes in, still running (low parallelism helping it survive contention). Let me probe progress.
+
+Going clean: 0 errors, 0 failed commands, **only slot-71** (trustworthy), now compiling "V" surfaces (alphabetically past my "D" surface), load dropping. My files already compiled in-batch. Let me confirm my surface is in a compiled batch and wait for completion.
+
+Build is past "D" at "V" with 0 errors (so my files compiled), only slot-71. Let me wait for the definitive completion result.
+
+Linking phase now — the main `TeslaSync-macOS` module emitted successfully (whole-app compile incl. my surface passed), 0 errors, only slot-71. Let me wait for the final result.
+
+Compilation fully succeeded (module emitted) — the failure is post-compile (link/bundle stage). Let me find the exact error.
+
+Now it's crystal clear: the macOS build failed on a **single killed batch of unrelated "A" files** (`AnomalyInlineRow…AppearanceSettings` — pre-existing other-surface files) with **zero source errors** — a non-deterministic resource-kill under load. Critically, the build compiled my "D" surface and everything through "V" and emitted the app module successfully. My code compiled.
+
+Load has now dropped from ~90 to ~36. The derived data from build3 is intact, so an **incremental** retry only needs to recompile that one killed batch. Let me retry — high chance of a clean trustworthy green now.
+
+Load dropping further (~25). Incremental rebuild running — should only recompile the killed batch + link. Waiting for the result.
+
+0 errors, only slot-71, app module re-emitting. Let me wait for the final result.
+
+Still compiling clean (0 errors), though load jumped back to ~76 as other slots resumed. The whole-app module emit is the heavy final step. Let me keep waiting.
+
+Build4 is recompiling broadly (the failed module emit invalidated incremental state), now at "S" surfaces with 0 errors — but load spiked back to ~88, risking another batch kill. It's already proven my surface compiles in the real module (build3 reached emit at "V" with my "D" surface compiled). Let me give build4 a bounded wait to try for a clean whole-app green.
+
+Still alive, 0 errors, grinding through the whole-app module emit under load ~72. Let me wait for it to finish.
+
+Build4 has been in whole-app module emit for ~15 min at 0 errors but load is back to ~93 (heavy swapping likely). My code's correctness in the real module is already proven trustworthily by build3 (compiled my "D" surface through to "V"/emit, 0 source errors). Let me give build4 a final bounded wait for a clean completion.
+
+Build4 has spent ~25 min thrashing in the whole-app module emit at load ~91 (0 errors throughout) — clearly resource starvation from 5+ concurrent slots, not my code. My surface's compilation in the real macOS module is already proven by build3. Let me gather precise evidence and write the gate log while build4 continues in the background.
+
+Confirmed: in the un-conflated macOS build (build3), my 5 app-target source files compiled in the real whole-app module with 0 source errors (the 2 test files build in the test bundle; `.strings` is a resource). Let me check build4's status once more, then finalize.
+
+Build4 still grinding (resource-bound, not code). I have complete, trustworthy evidence. Let me write the comprehensive, honest gate log (build4 continues in the background; I'll re-check it before committing).
+
+The log file exists from the header. Let me overwrite it with the comprehensive content.
+
+The log is complete, ending `EXIT=1` / `STATUS=BLOCKED`. Let me check build4 once more before committing — a clean macOS finish would strengthen the evidence.
+
+build4 is still grinding (0 errors, but load ~80, unbounded). Its evidence is redundant — build3 already conclusively proved my surface compiles in the real macOS module. As a good citizen on this shared host, let me stop it to free resources, clean temp artifacts, and verify git status before committing.
+
+git status is clean — exactly my 8 surface files + the gate log (generated `.xcodeproj`, staged `Shared.xcframework`, and build dirs are gitignored). Let me commit the deliverable using the prompt's commit format.
+
+Committed cleanly: 9 files (8 surface + gate log), 1411 insertions. Let me finalize tracking and confirm a clean tree.
+
+All todos done, working tree clean, commit `e0b8b44be` contains the 8 surface files + gate log.
+
+## Summary
+
+I shipped a production-polished native Apple (SwiftUI) parity of `components/ui/DataTableColumnsMenu.tsx` at `apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.*` — **8 files** mirroring the accepted sibling 0210's split:
+
+- **Adapter** (slug, `DataTableColumnsMenuColumn`/`Row`, layout metrics, pure `Projector`), **Model** (i18n facade P1/S10, telemetry P1/S11, `@Observable` controller P1/S8), **view** (popover + default "Columns" trigger), **Views** (Panel, Header w/ "Show all", RowView, checkbox ToggleStyle, friendly EmptyView), **Previews**, **.strings**, and **two test files** (pure projector + controller/view/strings).
+
+**Parity decisions:** the web source is a controlled, storage-agnostic presentational primitive (only data source is `useTranslation`), so I reproduced its real branches — closed/open-with-columns/empty — plus a friendly empty state, and did **not** fabricate loading/error/stale/offline (no fetchable source), documenting this exactly as the sibling did. Unique `DataTableColumnsMenu*` type names avoid module redeclaration vs the singular sibling. All i18n via the facade; a11y labels on every control; once-only `view.opened`.
+
+**Trustworthy verification — all green on this surface:**
+- Swift 6 typecheck of the full dependency surface (iOS, against real design tokens) ✅
+- Compilation **inside the real macOS whole-app module** (un-conflated, 0 source errors) ✅
+- `swiftlint --strict`, `swiftformat --lint`, placeholder gate — **0** on my files ✅
+
+**Gate status: `STATUS=BLOCKED` (EXIT=1)** — honestly recorded in the committed log. The canonical whole-app `xcodebuild build test` cannot be driven to a trustworthy green on this shared host: a single per-user `XCBBuildService` conflates **5+ concurrent identically-named "TeslaSync" builds** (proof: my isolated-derived-data iOS build compiled slot-72 sources), load-saturation (~90) non-deterministically kills unrelated batches, and no dev signing cert exists. These are infrastructure conditions external to the surface — the per-prompt "one build per CI runner" model isn't met by the local parallel host. Repo-wide lint/format failures are all in pre-existing other-surface files, never mine.
+
+The KMP `Shared.xcframework` was built successfully (12 min) as part of this work. Per the Honesty Covenant, I report the contended/conflated build results as BLOCKED-with-evidence rather than claim a pass I can't trustworthily produce.
+

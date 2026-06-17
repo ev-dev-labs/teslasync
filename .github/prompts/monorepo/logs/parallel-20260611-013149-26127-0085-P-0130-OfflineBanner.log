@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure to understand what exists and what capabilities are available on this runner.
+
+Good — the Apple toolchain is present and the web source exists. Let me verify Xcode capabilities and explore the Apple app structure in parallel.
+
+Toolchain confirmed: Xcode 26.5, Swift 6.3.2, SwiftLint 0.63.3, SwiftFormat 0.61.1. The web source is a simple offline banner. Let me explore the Apple app structure deeply to understand the existing patterns, state holders, tokens, and i18n facades I must bind to.
+
+The `shared-surfaces` directory exists. Let me look at existing surfaces as templates and map the Sources structure (state holders, tokens, i18n, diagnostics).
+
+Clear multi-file pattern per surface. Let me find surfaces that already bind to online/connectivity status (like the web `useOnlineStatus`) and identify the canonical file structure to mirror.
+
+Let me identify the online-status state holder (P1/S8) and read a complete banner surface as a structural template. `BrowserCompatBanner`, `CookieConsentBanner`, and `DraftRecoveryBanner` are the closest analogs.
+
+`Sources/Components/Feedback/Banners.swift` likely holds the native `AlertBanner`. `DraftRecoveryBanner` is the closest small template (banner + States + Seams + Views + Adapter). Let me read the full DraftRecoveryBanner set plus Banners.swift.
+
+This is a mature, well-defined pattern. Let me read the remaining DraftRecoveryBanner files and the native `Banners.swift` (AlertBanner equivalent).
+
+Now let me read the Tests file and the native `Banners.swift` (the `AlertBanner` equivalent), plus locate the design token and shared component definitions.
+
+I now understand the full pattern. There's a shared `TSAlertBanner` (the web `AlertBanner` parity) and a `TSOfflineBanner` atomic preset (out of scope — that's the component library). My job is the **P4 surface**: a state-holder-bound orchestration with all states. Let me locate the design tokens, shared components, and any existing online-status holder.
+
+No existing online-status holder — I'll create the source seam (like DraftRecoveryBanner did). Let me read the web `useOnlineStatus` hook for exact semantics, plus the token and component definitions I'll use.
+
+Let me read the web resilience module (the connection-status source of truth), the design tokens, and check the build setup (xcodegen + existing project).
+
+Connection model is binary (`online`/`offline`). Now let me confirm the component APIs I'll use (`TSButton`, `TSSkeleton`, `TSCard`, `TSCaption`) and check the gate tooling (pwsh, check-placeholders.ps1).
+
+All gate tooling is present (pwsh, check-placeholders.ps1, iPhone 16 sim, logs dir). One risk: the scheme's preAction builds `Shared.xcframework` (KMP). Let me check that script and whether the framework is prebuilt, plus the `TSButton`/`TSCard` signatures and a no-action banner example (`BrowserCompatBanner`).
+
+Important: `Shared.xcframework` is **not** prebuilt — the scheme preAction builds it via Gradle/Kotlin. Let me check the KMP toolchain and look at sibling surface gate logs to understand expected baseline behavior and timing.
+
+There's already an OfflineBanner artifact log from a prior run. Let me check the expected gate-log format from a sibling, whether the target log already exists, and crucially whether any `OfflineBanner.*` files already exist in shared-surfaces.
+
+The sibling gate log reveals the real baseline: the full-app `build test` is historically deferred on **pre-existing, unrelated** blockers (sibling surfaces' compile errors + macOS signing), while each surface is independently verified green. Let me read the head of that log to replicate the exact verification technique, then check current baseline health.
+
+This confirms the established, honest methodology: isolated SwiftPM tests + dual-SDK `swiftc -typecheck` against the real design system + swiftlint/swiftformat/placeholder + xcodegen, with the full-app `build test` attempted (deferring only pre-existing unrelated sibling errors). The KMP framework build (~8 min) is the long pole, so I'll start it now in the background while I write code.
+
+Now let me check the prior OfflineBanner artifact log (design hints) and confirm the current pre-existing baseline failures in sibling surfaces.
+
+The prior design (from a no-Xcode-runner BLOCKED run) confirms my mapping: states loading/empty(online)/error/offline/stale, i18n keys `pwa.offline.title` + `pwa.offline.banner`, warning-tone `wifi.slash` card, stale rising-edge auto-refresh. I'll use the fuller in-slot file split (matching DraftRecoveryBanner). Let me verify the KMP build is actually progressing (the launcher returned; Gradle runs detached) and confirm pre-existing sibling errors.
+
+The KMP build is progressing (compiling Kotlin/Native). Let me read `BrowserCompatBanner`'s Seams/Model/States/Views to mirror the in-slot conventions for the production `.live()` source, freshness chip, and empty/loading/error chrome precisely.
+
+I have a complete, precise understanding of the conventions. Let me write a plan file and then create the surface files. I'll mirror the proven `DraftRecoveryBanner` architecture (the closest in-slot sibling that passed its gate).
+
+KMP build is linking release frameworks — nearly done. Now let me write the surface files, starting with the pure core (Adapter, Model, Seams).
+
+Now the Seams file with the production `NWPathMonitor`-backed source (faithful to the web's connectivity subscription), the controlled source, the in-memory test source, and a `.live()` factory.
+
+Now the main surface view, States chrome, presentational Views, and Previews.
+
+Now the presentational Views — the offline warning card (warning tone, `wifi.slash`, `role=status` parity) and the freshness chip.
+
+Now the Previews and the i18n strings catalog.
+
+Now the test suite — covering copy/parity, accessibility, every projection branch, the state-holder model (telemetry, phase, stale rising-edge auto-refresh), and the sources.
+
+I have a bug in one test — comparing closures with `==` is invalid Swift. Let me fix it.
+
+Now let me run the fast gates on my files. First check the KMP build status, then run swiftformat (apply + lint) and swiftlint on my surface files.
+
+No formatting changes needed (0/8). Let me confirm with `--lint` and run `swiftlint --strict` on my surface files.
+
+All clean: swiftformat 0/8, swiftlint 0 violations. Now the placeholder gate — let me read the script to understand `-Path` semantics, then run it.
+
+The script recurses a directory via `-LiteralPath`. The gate's `-Path .../OfflineBanner` (a filename prefix, not a dir) would scan nothing — so for a *meaningful* per-surface check I'll scan a temp dir holding copies of my 8 files. Let me read the patterns and run it both ways.
+
+KMP framework built (8m58s) and staged — the full-app gate is now runnable. First, the placeholder gate. Let me verify my files contain none of the forbidden patterns and run the script on a temp dir of my 8 files.
+
+Placeholder gate is clean (COUNT=0 both ways; grep found no forbidden patterns). KMP framework is staged. Now the isolated Swift 6 SwiftPM test build (Adapter+Model+Seams+Tests) under strict concurrency — the predecessor's primary logic verification.
+
+Isolated Swift 6 tests: **27/27 passed** under strict concurrency. Now the dual-SDK `swiftc -typecheck` of the SwiftUI view files against the real design system. Let me first map what the components I use import (to assemble a clean compile set).
+
+Components are self-contained (only system frameworks, no `Shared` import) and tokens are a single `Tokens.swift`. That's a clean curated set. Let me run the dual-SDK `swiftc -typecheck` of my 7 view files + all Components + Tokens, for iOS and macOS, with and without DEBUG.
+
+Only error is `TSChartPalette` (used by `MapView.swift`, unrelated to my surface) — a missing dependency in my curated set, not my code. Let me locate it and include its defining file.
+
+`TSChartPalette` lives in `Sources/Design/TSDesign.swift`. Let me add `Sources/Design` to the curated set (checking it has no `Shared` coupling) and re-run both SDKs, including DEBUG for the `#Preview` blocks.
+
+All 52 errors are confined to `Sources/Components/DataDisplay/UnitFormatters.swift` (Shared-core-coupled — references `UnitPreferences`/`TSUnitsKey`; the predecessor explicitly excluded it as "NOT used"). My files don't use it. Let me exclude it and re-run all four typechecks.
+
+All four typechecks: **0 errors, 0 warnings** against the real design system (iOS + macOS, ±DEBUG). My surface is independently verified. Now `xcodegen generate`, then the full-app `xcodebuild build test`.
+
+xcodegen succeeded — all surface files enumerated (54 references across the targets). Now the full-app `xcodebuild build test` (iOS). The KMP framework is staged; the scheme's preAction will re-stage from Gradle cache. This is slow, so I'll run it in the background and capture full output.
+
+The iOS build/test is running in the background. Let me wait and monitor its progress.
+
+The build is now compiling the TeslaSync Swift module (where type errors surface). Let me wait and check for errors.
+
+Build failed — but the only error is in a **pre-existing, unrelated** sibling (`AISuggestNewGeofences.swift:129` — escaping-closure bug, exactly as the predecessor's log cited), with **zero OfflineBanner errors**. Let me extract the complete, deduplicated error list to fully characterize the pre-existing failures.
+
+Definitive: the **only** compile error in the entire iOS app build is the pre-existing, unrelated `AISuggestNewGeofences.swift:129` escaping-closure bug — **zero OfflineBanner errors**. Let me confirm my changeset is confined to OfflineBanner.*, characterize the pre-existing error, and start the macOS build.
+
+Confirmed: my changeset is exactly the 9 `OfflineBanner.*` files; `AISuggestNewGeofences.swift` is pre-existing and untouched (the same `glass(@ViewBuilder _ content:)` escaping-closure bug the predecessor cited). Now the macOS `build test` for completeness.
+
+While macOS builds, let me extract the precise iOS failure summary for the log.
+
+iOS build: exactly **1 error total**, all in pre-existing `AISuggestNewGeofences.swift`. Let me wait for the macOS build and check its errors.
+
+macOS failed on the **pre-existing development-signing entitlements** blocker (environmental, 0 signing identities — exactly as the predecessor cited), with **zero OfflineBanner errors**. The signing gate short-circuits before Swift compilation. To get a definitive macOS *compile* result for my surface (past the environmental signing gate), let me re-run with isolated DerivedData and signing disabled.
+
+Let me wait for the macOS compile-only build to reach the Swift compilation phase.
+
+I see cross-slot contamination: the macOS build (despite isolated DerivedData) is compiling files from *other* parallel slots (`slot-137`, `slot-27`) via shared Xcode module cache — 108 errors, all in other slots' files, **zero in OfflineBanner / slot-85**. This is a shared-runner artifact. Let me stop that contaminated run and verify the iOS build was clean slot-85.
+
+The iOS log now references `slot-86` (231 refs) and macOS referenced `slot-27`/`slot-137` — the shared runner's Xcode DerivedData is contaminated by ~85 concurrent parallel-slot agents. My isolated direct-compiler verifications (SwiftPM tests, dual-SDK typecheck) are uncontaminated and authoritative. Let me confirm slot-85's own xcodeproj is clean (references only slot-85) and attempt one fully-isolated iOS build.
+
+slot-85's own `.xcodeproj` is clean (relative `<group>` paths, zero foreign-slot references) — the contamination came from concurrent agents sharing Xcode's default DerivedData/module cache. This isolated build (own DerivedData + module cache) should give a clean slot-85 result. Let me wait for it.
+
+The `/tmp` log vanished — the shared `/tmp` is being cleaned by concurrent agents. Let me check process state and the other logs, then re-run isolated into my session workspace (stable storage).
+
+Key realization: the `/tmp` logs use **identical filenames across all ~85 concurrent agents** — I was reading *other* agents' logs (slot-86, slot-27, slot-137) that overwrote mine. My new build writes to a **unique session-workspace path**. Let me wait for it to compile and read my own isolated result.
+
+**Clean, isolated, slot-85-only result**: 3733 slot-85 refs, **zero foreign slots**, exactly **1 pre-existing sibling error** (`AIGeofenceAwareAutomationSuggestions.swift:141` — same `glass(@ViewBuilder _ content:)` escaping-closure bug class), and **zero OfflineBanner errors**. Let me confirm that sibling is pre-existing and run a matching isolated macOS build.
+
+Confirmed pre-existing (same `glass(@ViewBuilder _ content:)` bug), and my changeset is exactly the 9 `OfflineBanner.*` files. Let me wait for the isolated macOS build to complete.
+
+Both isolated builds are slot-85-clean: iOS fails only on pre-existing `AIGeofenceAwareAutomationSuggestions`, macOS only on pre-existing `AISignalExplorerNlFilter` — both the same `glass(@ViewBuilder _ content:)` escaping-closure bug, **zero OfflineBanner errors, zero signing errors** (signing disabled). Let me quantify how many pre-existing siblings carry this bug, then write the gate log.
+
+Comprehensive evidence gathered. Both isolated slot-85 builds fail only on **pre-existing sibling surfaces** (4 carry the broken `glass(@ViewBuilder _ content:)` pattern: `AISignalExplorerNlFilter`, `AISuggestNewGeofences`, `AIGeofenceAwareAutomationSuggestions`, `AIAutoNameUnnamedLocations`) — **zero OfflineBanner errors**, and OfflineBanner doesn't use that pattern. Let me clean up large build artifacts and write the gate log.
+
+Now let me write the comprehensive, honest gate log.
+
+Now let me do a final consolidated re-verification of the gates the log claims, then commit per the prompt's commit spec.
+
+All final gates green (0/8 format, 0 lint violations, placeholder COUNT=0, 9 files present). Let me stage exactly the surface files + log, verify nothing unintended (generated xcodeproj/framework are gitignored), and commit.
+
+Staging is clean — exactly the 9 surface files + the log. Now commit per the prompt's spec.
+
+Commit `ed4c2cab7` created with all 9 surface files + the gate log (1440 insertions, no generated artifacts). Let me do a final working-tree sanity check.
+
+The task is complete and fully verified. Working tree is clean; all 9 surface files + the gate log are committed; the generated `.xcodeproj` and staged `Shared.xcframework` are correctly gitignored.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0130-OfflineBanner.log | 195 ++++++++++++++
+ .../shared-surfaces/OfflineBanner.Adapter.swift    | 106 ++++++++
+ .../shared-surfaces/OfflineBanner.Model.swift      | 245 +++++++++++++++++
+ .../shared-surfaces/OfflineBanner.Previews.swift   |  52 ++++
+ .../shared-surfaces/OfflineBanner.Seams.swift      | 202 ++++++++++++++
+ .../shared-surfaces/OfflineBanner.States.swift     | 108 ++++++++
+ .../shared-surfaces/OfflineBanner.Tests.swift      | 300 +++++++++++++++++++++
+ .../shared-surfaces/OfflineBanner.Views.swift      | 109 ++++++++
+ .../shared-surfaces/OfflineBanner.strings          |  31 +++
+ .../TeslaSync/shared-surfaces/OfflineBanner.swift  |  92 +++++++
+ 10 files changed, 1440 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0130-OfflineBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OfflineBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OfflineBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OfflineBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OfflineBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OfflineBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OfflineBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OfflineBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OfflineBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OfflineBanner.swift

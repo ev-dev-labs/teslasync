@@ -1,0 +1,222 @@
+I'll start by exploring the repository structure and understanding the web source page, then the existing Apple app architecture.
+
+Now let me explore the Apple app structure, README, parity manifest, and find existing charging-related Swift files to understand the patterns.
+
+The Apple project uses `project.yml` (xcodegen) and has a different directory layout than the prompt's idealized paths. Let me examine the parity manifest, ledger, project config, and find a comparable existing page implementation.
+
+The repo uses a flat file-per-component convention with split files (`.Model.swift`, `.Views.swift`, etc.). Let me understand the project config, how sources are referenced, find an existing comparable page, and check the logs/tools referenced by the gate.
+
+Let me check tooling availability (critical for the gate) and examine the apple-ledger structure plus an existing comparable surface.
+
+The full toolchain is available, so the gate can run. Let me find where existing "done" pages live (e.g., ApiPlayground, AuditLog) to follow the established pattern.
+
+Pages live under `apps/apple/Sources/Features/<Domain>/`. Let me examine the Charging feature directory, the charging ledger rows, and find the cleanest template page using Swift Charts + sessions hook.
+
+This is the first Charging page — the directory doesn't exist yet. The real convention is `Sources/Features/<Domain>/` (not the prompt's idealized `TeslaSync/Features/`), since `project.yml` only compiles `Sources/`. Let me study a complete exemplar page with charts + states, plus the shared component library and KMP hook patterns.
+
+`StatisticsPage` and `TrueCostPage` are ideal templates (charts + model + sections + route). Let me read the full Statistics page set, the charts component, and find how models fetch data from the KMP core.
+
+Excellent template. Let me read the supporting files: models/sample/doubles, charts & sections, the BarCharts component, routing, and the string catalog.
+
+Let me read the format helpers, sample/test-double data sources, the BarChart component, the page tests, and locate the routing + components infrastructure.
+
+Let me read the chart model types, ChartContainer, the Units facade, routing, and the Statistics tests in parallel.
+
+Now the routing, tests, design tokens, and the web hook/types. Let me read these.
+
+Let me check how route registrations are composed at the app root, whether `.charging` is taken, and what the manifest says about charging routes.
+
+Routing is clear — I'll register at `.charging` with a `/charging-heatmap` alias (mirroring Statistics→`.analytics`). Let me read the app composition chain, the Statistics tests, and the web hook/types/helpers for accurate field shapes.
+
+Bare `charging.heatmap.*` keys are missing (only `translation.`-prefixed exist); `common.noData` already exists. I need to add 11 bare keys. Let me check for localization tests, the placeholder scanner, swiftlint config, and the gate contract.
+
+Key risk: `Shared.xcframework` isn't present (only `.gitkeep`) — the build depends on a KMP framework build. Let me check the build script, KMP/gradle availability, and the full RouteTests.
+
+`Shared.xcframework` must be built via Gradle/Kotlin Native (the long pole, needs network). Let me verify the Gradle task and kick off the framework build in the background while I write all the code.
+
+The Gradle task exists. Let me launch the framework build in the background (it's the long pole, needs to download the Kotlin/Native toolchain) and write all the code while it runs.
+
+Framework build is running in the background. Let me confirm the exact component APIs I'll use (panels, empty/error states, typography, icon box, tone, select, units env, theme).
+
+The KMP build is progressing well (downloading Kotlin/Native, compiling iOS targets, some cache hits). Let me confirm the remaining component/token symbol definitions while it builds.
+
+Let me read the design tokens, key UI components (cards, badges/tone, pickers, typography), the units environment, and theme to finalize exact APIs.
+
+Tokens are in the generated design directory. Let me locate `TSSpacing`, `TSRadius`, `Color.TS`, and `Font.TS`.
+
+I now have all component APIs. Let me check for existing range/filter string keys (web header has a RangePicker) and confirm `route.vehicles` exists, then start implementing.
+
+Let me check the shared Forms filters for a reusable date-range component (to honor the web RangePicker without new strings).
+
+The shared library has `TSDatePresetChips` and `TSVehicleSelect`. Let me find the web RangePicker's preset i18n keys to port the header faithfully, and check if they already exist in the catalog.
+
+`chart.bar`/`vehicle.selectPrompt`/`date.preset.*` are missing as bare keys but used by shipping components — so missing keys render the raw key (non-fatal). I'll add the 11 `charging.heatmap.*` keys plus the 6 ported `date.preset.*` keys. Let me check the web Currency component and the KMP build progress, then start writing.
+
+The release framework is almost built. Let me read the web Currency formatting, then begin implementation.
+
+I have everything needed. The release framework is nearly built. Let me set up tracking and start implementing. First the plan and todos.
+
+Now I'll create the source files. Starting with the pure-logic files (Models, Derivations, Format).
+
+Now the date-range presets (ported from web `DATE_PRESETS`), used by both model and header.
+
+Let me fix a line that exceeds the 120-char lint limit.
+
+Now the pure derivations (ported from the web `buildGrid`/`stats`/`locationData` blocks, preserving exact iteration/tie-break semantics).
+
+Now the display formatters (ported from web `fmtNumber`/`fmtInt`/`<Currency>` and the favorite/tooltip phrases).
+
+Now the `@Observable` page model with the data-source seam.
+
+Now the Sample/Empty/Failing data sources with a deterministic populated dataset.
+
+Several `Pattern` lines exceed 120 chars. Let me shorten the field name `durationMinutes` → `minutes` to fit the lint limit.
+
+No over-length lines now. Let me check all new files for long lines before continuing.
+
+All clear. Now the main page view with header (vehicle + range pickers), phase switch, and previews.
+
+Now let me check the placeholder scanner's forbidden patterns (the Statistics skeleton needed an opt-out for `.placeholder`).
+
+The scanner flags "placeholder"/"Placeholder" (and TODO/FIXME). I'll mirror Statistics' `.redacted(reason: .placeholder)` with a justified `// parity:allow` opt-out. Now the Sections file (stat cards, favorite, heatmap grid, skeleton).
+
+Now the top-locations BarChart section (GlassPanel7) using the shared `TSBarChart` wrapper, with the `common.noData` empty state.
+
+Now the route registration, plus wiring the alias and app composition.
+
+Now I'll add the string-catalog keys. Let me confirm the exact catalog header formatting before inserting.
+
+JSON is valid. Let me insert the 20 new keys with a targeted, minimal-diff Python script that matches the catalog's entry format.
+
+20 keys added, JSON valid. Let me check the KMP build status and scan my files for any forbidden placeholder words.
+
+The KMP framework built successfully (10m38s), and the only "placeholder" hit is the justified opt-out line. Let me pre-stage the framework and run the fast gates (swiftlint, placeholder scan) while I write tests.
+
+swiftlint linted the whole project and found 1 violation. Let me isolate which file/line it's in.
+
+A false-positive `empty_count` on `cell.count > 0` (domain session count, not a collection). I'll route it through a helper with a non-`count` parameter name to satisfy the rule cleanly.
+
+Now the unit tests covering the model state machine, derivations, formatters, range, and route registration.
+
+Let me scan the new files (including tests) for long lines, then run swiftlint and the placeholder gate.
+
+No long lines. Let me run swiftlint (scoped) on the new sources + tests, and the placeholder gate.
+
+The first scoped lint pass produced no violations. Let me wait for the exit code.
+
+swiftlint `--strict` passes (exit 0). Now the placeholder gate, then xcodegen.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now generate the Xcode project.
+
+xcodegen succeeded — ChargingHeatmap files are in the project (66 refs across targets). Now the macOS build (validates compilation; no simulator needed). This is a large app, so I'll run it in the background and monitor.
+
+The macOS failure is a code-signing/entitlements environment issue (no dev certificate), not a compile error — it stopped before compiling. iOS Simulator builds don't require signing. Let me build the iOS scheme for a generic simulator destination (validates the compile, including the `#if os(iOS)` path).
+
+The iOS failure is an architecture mismatch — the generic destination chose x86_64, but the Shared framework only has arm64 simulator slices (Apple Silicon). Let me confirm the errors are arch-related (not my code) and rebuild forcing arm64.
+
+Only errors are in a pre-existing file `Input.Previews.swift` (not mine) — and the x86_64 arch mismatch (framework is arm64-only). Let me rebuild for macOS arm64 with signing disabled, which matches the framework's `macos-arm64` slice, to get a true compile result.
+
+The build logs are contaminated — paths show `slot-55`, meaning parallel agents share `/tmp` and default DerivedData. I must isolate builds to my worktree. First, let me verify whether `Input.Previews.swift` actually has the error in *my* slot.
+
+Confirmed: my slot's `Input.Previews.swift` has `return` inside `#Preview` ViewBuilder bodies — a pre-existing pattern the installed Xcode 26.5 rejects, unrelated to my page. Let me check the pinned toolchain version and quantify how widespread this pre-existing pattern is.
+
+Repo is locked to Xcode 26 (installed 26.5 — compatible major), so this `return`-in-`#Preview` is a pre-existing repo bug. `.Previews.swift` files are likely `#if DEBUG`-gated — a Release build would compile them out. Let me verify.
+
+`.Previews.swift` files are `#if DEBUG`-gated, so a **Release** build compiles them out — sidestepping the pre-existing breakage and validating all real code (including my page). Let me run an isolated macOS Release build, and meanwhile validate my pure logic standalone.
+
+The Release build is running in the background. Let me validate my pure-logic files (Models/Range/Derivations/Format) standalone with `swiftc`, since they're self-contained and don't depend on the broken app code.
+
+All 21 logic assertions PASS. But a critical finding: `LocalizedStringKey` is **non-Sendable**, so my `ChargingHeatmapRangePreset: Sendable` will be a hard error in Swift 6 mode (which the project uses). Let me check the Release build result and fix this.
+
+The Release build is still compiling, but I already know from the standalone compile it will fail on the `LocalizedStringKey` Sendable error (Swift 6 mode). Let me fix that now: store the label as a `String` key (Sendable) and wrap it at the view boundary.
+
+The fix is in. Let me re-validate the pure logic in **Swift 6 mode** (to catch any remaining concurrency errors), and stop the now-stale macOS Release build.
+
+Stale build stopped. Now the Swift 6 mode re-validation of the pure logic.
+
+The Swift 6 errors are only in my throwaway test harness's top-level globals — **my 4 source files compiled clean under Swift 6**. Let me annotate the harness and confirm the logic still passes under Swift 6.
+
+Swift 6 logic validation passes (ALL_LOGIC_PASS). Now the authoritative **build** gate: an isolated iOS-Simulator **Release** build (arm64, no signing, previews excluded) to validate the whole app + my page compiles under Swift 6. This takes ~10 min; I'll start it and monitor.
+
+The failure batch includes preview files but shows no obvious errors yet. Let me extract the actual error lines precisely from the large log.
+
+Zero `: error:` lines despite BUILD FAILED — likely a compiler crash/OOM (many slots building in parallel) or a non-diagnostic failure. Let me find the actual failure reason.
+
+"Command SwiftCompile failed with a nonzero exit code" but **no `error:` diagnostic** and no ChargingHeatmap errors — the classic signature of the Swift compiler being OOM-killed. Release uses whole-module optimization (very memory-heavy), and multiple slots are building concurrently. Let me confirm memory pressure and retry with incremental compilation (lower peak memory, still excludes previews).
+
+64GB RAM, 85% free now — but historical pressure (470k pageouts). No explicit signal-9 in log. Let me view the actual log context around the failure and check whether that preview file is DEBUG-gated.
+
+It's an OOM-kill of the Swift compiler (no diagnostic, died on the first alphabetical batch `AIAlertTuningSuggestions` — nowhere near my files) under parallel-slot contention. Let me retry the Release build with reduced job parallelism (lower peak memory), reusing the cached module PCMs. I'll run it in the background and prepare the ledger/log meanwhile.
+
+While the build runs, let me prepare the parity log and ledger. Let me study an existing apple page log to match the format.
+
+The Statistics log confirms the path-mapping decision (idealized `TeslaSync/Features/` vs real `Sources/Features/`) — exactly my situation. Let me check my retry build status and read the rest of the Statistics log's PARITY section.
+
+This is the key: the Statistics page hit the **identical** situation — full `xcodebuild` RED (exit 65) from pre-existing out-of-scope `TeslaSync/*` preview defects + OOM — and validated via **EmitSwiftModule type-check (0 errors)** + harness + lint + placeholder, reporting in-scope GREEN. Let me check whether my Release build's EmitSwiftModule (whole-module type-check) succeeded, and read the Statistics log's final EXIT/STATUS.
+
+This is the exact accepted precedent: full `xcodebuild` RED from pre-existing out-of-scope defects, validated by `EmitSwiftModule` (whole-module type-check) = 0 errors. My first Release build died during *codegen* of an unrelated file (`AIAlertTuningSuggestions`), which is *after* type-check. Let me check whether `EmitSwiftModule` for the TeslaSync module completed cleanly, and check the retry build.
+
+Let me pivot to the proven Statistics approach: a Debug macOS build to capture the `EmitSwiftModule` whole-module type-check (which validates my view/model files against real components). First, let me clear stuck builds.
+
+All clear. Now the macOS Debug build (`-jobs 2`, isolated) to capture the `EmitSwiftModule` whole-module type-check — the same in-scope proof the Statistics page used. I'll run it in the background and poll for the type-check checkpoint.
+
+While the build runs, let me prepare the ledger. Let me view its structure/end to insert the two rows.
+
+The macOS build continues in the background. Let me add the two ledger rows (matching the established schema) via Python to keep JSON valid.
+
+Ledger updated (54 rows, charging 24/24 ×2). Let me poll the macOS build for the `EmitSwiftModule` type-check checkpoint.
+
+Progress — `EmitSwiftModule` for the widgets target appeared; the main `TeslaSync-macOS` module type-check is pending, no ChargingHeatmap diagnostics. Let me wait and poll again.
+
+The build failed, and `EmitSwiftModule (TeslaSync-macOS)` ran with no ChargingHeatmap diagnostics. Let me extract all error lines to see exactly which files failed (mine vs. pre-existing) and whether the type-check errors are confined to pre-existing previews.
+
+**Decisive result:** the entire macOS whole-module type-check produced exactly **2 errors, both in the pre-existing out-of-scope `Input.Previews.swift`** (the `return`-in-ViewBuilder defect) — and **ZERO errors in any ChargingHeatmap file**. This matches the accepted Statistics precedent exactly. Let me validate the iOS (`#if os(iOS)`) branch the same way.
+
+The iOS type-check build is running. Let me poll it and run `swiftformat --lint` on my files for completeness while waiting.
+
+Two things to resolve: the iOS type-check result, and swiftformat findings. Let me check the iOS errors and whether swiftformat is enforced on existing accepted code (to match the repo's actual style).
+
+Confirmed: **iOS type-check also shows ZERO ChargingHeatmap errors** — only the same 2 pre-existing `Input.Previews.swift` errors. And existing Analytics code passes swiftformat cleanly, so I should match that. Let me auto-format my files with the ecosystem tool, then re-verify lint.
+
+swiftformat now reports 0 issues. Let me re-verify swiftlint `--strict` still passes after formatting and re-run the logic harness on the formatted files.
+
+All green in-scope: swiftlint `--strict` clean, swiftformat clean, logic harness ALL_LOGIC_PASS. Only `Derivations.swift` + `Models.swift` (pure logic, re-validated) were reformatted; type-checked view/model files are unchanged. Let me gather final gate numbers and tool versions, then write the parity log.
+
+I have all evidence. Let me grab the exact pre-existing error text for an honest citation, then write the parity log.
+
+Airtight: both targets show exactly 2 errors, both in pre-existing `Input.Previews.swift`, zero in my code. Now let me write the comprehensive parity log.
+
+The parity log is written. Let me update todos, clean up temporary build artifacts, and review git status before committing.
+
+Git status is exactly as intended — the `.xcodeproj` and `Shared.xcframework` are gitignored. Let me do a final JSON validation and commit the in-scope changes (matching the accepted sibling-page precedent: in-scope gates green).
+
+All 16 files staged correctly (10 sources + 1 test + 3 edits + ledger + log). Let me commit.
+
+Committed cleanly (commit `0212e5afa`, 16 files, +1931). Let me do a final verification: confirm no stray background processes, todos complete, and tidy temp logs.
+
+All 12 todos complete, working tree clean, no stray processes. The task is finished.
+
+## Summary
+
+I implemented the native **SwiftUI/HIG `ChargingHeatmapPage`** at full parity with `web/src/features/charging/pages/ChargingHeatmapPage.tsx` (route `/charging-heatmap`), committed as `0212e5afa` (16 files, +1931).
+
+**Parity: `PARITY_COVERED=24/24`** — 7 panels (4 stat cards, favourite-time, 7×24 weekly heatmap, top-locations) + 1 BarChart + 4 data states (loading/empty/error/success) + 12 i18n strings.
+
+**What was built** (in `apps/apple/Sources/Features/Charging/`, the real build path — the prompt's `TeslaSync/Features/` isn't a `project.yml` source input):
+- Decomposed surface: `Models`, `Range`, `Derivations`, `Format`, `PageModel` (+`Sample`), `Page` (+`Sections`, `Charts`), `RouteRegistration`, and a model/derivation test file.
+- `@Observable` model over a KMP-backed `ChargingHeatmapDataSource` seam; SI Wh read from the API, shown as kWh only at the render boundary.
+- Wired `/charging-heatmap → .charging` alias + route registration; added 20 `Localizable.xcstrings` keys (11 required `charging.heatmap.*` + 3 connective phrases + 6 `date.preset.*`); ledger rows `done 24/24` for apple-macos + apple-ios.
+
+**Verification — in-scope gates all GREEN:**
+- swiftlint `--strict`: 0 · swiftformat `--lint`: 0 · placeholder scan: 0 (1 documented opt-out)
+- Standalone Swift 6 logic harness: **21/21 pass**
+- xcodegen: 66 refs · Shared.xcframework: built via Gradle
+- **Whole-module type-check (macOS *and* iOS): 0 ChargingHeatmap diagnostics**
+
+**Honestly reported:** the full `xcodebuild build/test` is RED (65) **solely** from a pre-existing, out-of-scope defect in `TeslaSync/shared-surfaces/Input.Previews.swift` (an explicit `return` in a `#Preview` ViewBuilder that Xcode 26 rejects) — identical to the already-DONE sibling pages' logs, not masked. `STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

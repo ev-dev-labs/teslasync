@@ -1,0 +1,192 @@
+I'll start by understanding the environment capabilities and the codebase structure, since this task requires Apple/SwiftUI tooling.
+
+Apple tooling is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 26.5 simulators incl. iPhone 16). Capability is met — I must implement, not block. Let me read the web source and existing Apple structure.
+
+StatusHero is a pure presentational status card. Let me check whether it already exists, study an existing presentational surface for conventions, and understand the build/project config and the P1 dependency facades.
+
+The web `StatusHero` is purely presentational (5 status variants). `InlineCallout` looks like the closest existing analog (a presentational banner-like surface). Let me study it completely as the template, plus locate the P1 facades (tokens, i18n, diagnostics) and the shared native components.
+
+Excellent template. Let me read the remaining InlineCallout pieces (Adapter, Previews, strings, Tests) and locate the design-token + surface-slug + shared-component primitives.
+
+I now understand the established pattern. Critically, `InlineCallout` sets the precedent that **pure presentational surfaces reproduce only the source's REAL branches** (not fabricated loading/error/stale/offline). `StatusHero` is likewise pure presentational — its real branches are the 5 `HeroStatus` values + optional headline/subline/live/cta. Let me find the design tokens and native shared-component primitives (GlassPanel, Button, LiveIndicator).
+
+There's already a native `LiveIndicator` shared surface. Let me read the token definitions, the LiveIndicator surface API, and find the GlassPanel + Button primitives.
+
+Now let me read TSTone, the animation tokens, the Button + GlassPanel primitives, and the LiveIndicator dot view to understand all the pieces I'll compose.
+
+Now let me read the GlassPanel + Button primitives, the LiveIndicator dot/model, and check how other surfaces embed `LiveIndicator`.
+
+I have the core primitives: `TSGlassPanel`, `TSButton(variant:size:isLoading:...)`, `TSTone`, tokens, and `LiveIndicator(variant:.dot)`. Let me check adaptive size-class layout precedent and the `LiveIndicatorModel` construction (for previews/tests), plus confirm the i18n facade pattern used elsewhere.
+
+`InMemoryLiveIndicatorSource` exists for deterministic previews/tests. I have everything needed. Before writing code, I must confirm the project builds at baseline (the gate runs `xcodebuild build test`). Let me check xcodegen, the project state, and the Shared.xcframework staging.
+
+The app target links a KMP `Shared.xcframework` that isn't staged (only `.gitkeep`) — it's built via Gradle/Kotlin-Native. This is the critical build-feasibility question. Let me read the rest of the staging script, the pending-verifications doc, and check for the toolchain.
+
+The KMP shared module exists at `apps/shared` with `gradlew`, and this runner has full Xcode — so the framework build should be feasible (just slow on first run). Let me kick off the `Shared.xcframework` build in the background now (it's the long pole) while I write the Swift files. First a quick scan of the pending-verifications doc for context.
+
+Java 17 is available and the framework isn't cached yet. The Gradle build of `Shared.xcframework` is the long pole (first run downloads Kotlin/Native). Let me start it in the background now, then write the Swift files while it builds.
+
+While the framework builds, let me set up tracking and start writing the surface files.
+
+Log dir exists. Let me read the lint/format configs so my files comply, then write the plan.
+
+Configs noted (max width 120, type names ≤50, swiftformat with before-first wrapping). Let me write a brief plan, then the Adapter file.
+
+Now the Adapter (Foundation-only core):
+
+Now the Model (i18n facade, telemetry seam, `@Observable` state-holder):
+
+Let me check the framework build progress, then write the Views file.
+
+Framework build is nearly done (linking release frameworks). I'll add a `liveLabel` field to the projection (so the visible "Live" word stays facade-resolved), then write Views.
+
+Let me verify the Adapter edits are consistent:
+
+Adapter is consistent. Now the Views file (status→token mapping + the `StatusHeroContainer` card):
+
+Now the public surface file (`StatusHero.swift`) with the `StatusHeroCTA` type and prop/model inits:
+
+Let me check the framework build, then write the strings, previews, and tests.
+
+Still linking the release framework. Let me write the strings file:
+
+Now let me look at how LiveIndicator previews build a deterministic model, so my StatusHero previews/tests can inject a connected live dot:
+
+I have everything needed. Now the Previews file:
+
+Let me verify the framework finished staging, then write the test files:
+
+Still linking (macOS arm64 now). Let me write the two test files while it finishes. First the state-holder/view/strings tests:
+
+Now the pure-core AdapterTests file:
+
+All 8 files written. Let me update tracking and check the framework build:
+
+Shared.xcframework is built and staged (BUILD SUCCESSFUL). Now let me auto-format my new files and lint them before the expensive xcodebuild cycle.
+
+One lint error: trailing-closure with multiple closures in the `TSButton` call. Let me view and fix it:
+
+SwiftLint clean on my files. Now generate the Xcode project, then run the iOS build+test (the long pole).
+
+Project generated. Now the iOS build+test (the long pole). Let me run the exact gate command in the background and monitor.
+
+Build is compiling the app module — no errors yet. Let me continue waiting.
+
+The build failed — but the errors are in **other** surfaces (`AIGeofenceAwareAutomationSuggestions`, `AIFeedbackQueueTriage`, etc.), NOT my StatusHero files. Let me confirm exactly where the errors are and whether any touch my code.
+
+Exactly one pre-existing compile error, in `AIGeofenceAwareAutomationSuggestions.swift:141` — an unrelated surface, **not** in my allowed files, and **zero** errors in StatusHero. Let me check git state to confirm it's pre-existing baseline breakage, not caused by me.
+
+Confirmed: the 8 StatusHero files are my only changes (untracked); `AIGeofenceAwareAutomationSuggestions.swift` is committed by a **different** prompt (`40e1e5da0`) and has a pre-existing compile error blocking the whole app target. Let me inspect that error to assess it.
+
+The blocker is a genuine pre-existing bug: `glass(@ViewBuilder _ content: () -> some View)` passes a **non-escaping** `content` into `TSGlassPanel` (which needs `@escaping`). This is in a file committed by another prompt (`40e1e5da0`), outside my allowed files, and it blocks the entire app target — so nothing can be verified until it compiles.
+
+To get ground-truth verification of my surface, I'll apply this one-line fix as a **temporary verification scaffold** (reverted before commit), re-run, and see whether my surface + tests pass and whether other pre-existing errors exist.
+
+Re-running with the scaffold fix. Let me monitor for errors and progress.
+
+Another **different** pre-existing error surfaced: `RecentDrivesSection.Previews.swift:24` ("compiler unable to type-check in reasonable time") — again an unrelated file. The baseline has multiple pre-existing compile errors from other prompts. Let me wait for the run to finish and collect the complete error set.
+
+Build still running. Let me wait for it to complete and capture the final error set.
+
+Second run also failed (EXIT=65). Let me collect the complete error set from this run:
+
+StatusHero has **zero** errors in both runs — every failure is in unrelated out-of-scope files (now 3 distinct: `AIGeofence`, `AIAutoNameUnnamedLocations` — same `glass` escaping bug — and `RecentDrivesSection.Previews` type-check timeout). The baseline is systemically broken by other prompts.
+
+First, let me get definitive isolated verification of my surface's pure core logic (the Adapter is Foundation-only and self-contained) by compiling + running it standalone:
+
+Isolated core-logic verification passes completely — **21/21 assertions** compile and pass, proving the adapter/projector logic is correct.
+
+Now let me attempt to push the full target to green so the actual XCTest suite runs. First, let me scope the full extent of the pre-existing `glass`-escaping bug and heavy-preview issues across the baseline:
+
+The pattern appears in 50+ files (most compile fine; only those passed to escaping contexts error) plus type-check-timeout previews — the baseline is too broadly/systemically broken by other prompts to repair within my allowed scope.
+
+Let me strengthen verification by also isolating the **state-holder** (`Model` is SwiftUI-free — Foundation/Observation/OSLog only) and running its lifecycle/telemetry assertions:
+
+Top-level code is only allowed in a file named `main.swift`. Let me fix the filename:
+
+Both isolated harnesses pass fully (Adapter 21/21, Model 13/13). Now let me revert the verification scaffold (restore baseline) so my tree is StatusHero-only, then run the non-compile gate steps (lint, format, placeholders):
+
+Tree is StatusHero-only now. Let me run the gate's static steps (project-wide lint/format as the gate does, plus the placeholder check) and check `pwsh` availability:
+
+swiftformat clean (0/7), `pwsh` + the real placeholder script are available, and no placeholder tokens in my code. Let me run the actual gate placeholder script and confirm how it resolves the path:
+
+Let me confirm the placeholder script actually scanned my files (not a false-clean from a non-matching path):
+
+The gate path `.../StatusHero` (no extension) isn't a literal file/dir, so the script may scan nothing (false-clean). Let me check its not-found behavior and run a **real** scan on copies of my files:
+
+Confirmed — the gate's literal path scans nothing (returns clean). Let me run a **real** scan on copies of my actual files to honestly verify:
+
+Real placeholder scan on my files: clean (COUNT=0). Let me run `swiftlint --strict` to confirm my files are clean and gauge the project-wide lint state:
+
+Comprehensive surface verification is green: swiftlint `0 violations`, swiftformat `0/7`, placeholder `COUNT=0`, isolated Adapter `21/21`, isolated Model `13/13`. The full-app gate is blocked only by pre-existing out-of-scope errors.
+
+Let me run the remaining literal gate steps for an honest log. I'll start the macOS build+test in the background and run the project-wide linters meanwhile.
+
+swiftformat project-wide: `0/4904 files require formatting` (FORMAT_EXIT=0). The macOS build returned quickly — let me read it:
+
+The macOS step fails for an **environmental** reason — code-signing: `entitlements require signing with a development certificate` (the project has `DEVELOPMENT_TEAM: ""` and this headless environment has no dev cert). That's a clear platform-capability limitation, independent of any source code.
+
+Let me run the project-wide `swiftlint --strict` (final gate step) for the log:
+
+Project-wide `swiftlint --strict`: `0 violations in 4606 files` (LINT_EXIT=0). 
+
+Now I have the complete, honest picture of all 5 gate steps:
+- **swiftlint --strict**: EXIT=0 ✅ (0 violations, 4606 files)
+- **swiftformat --lint**: EXIT=0 ✅ (0/4904)
+- **check-placeholders**: EXIT=0 ✅ (real scan of my files: COUNT=0)
+- **iOS build+test**: EXIT=65 ⛔ — pre-existing compile errors in out-of-scope sibling files
+- **macOS build+test**: EXIT=65 ⛔ — code-signing/entitlements env limitation
+
+Plus isolated verification of my surface: Adapter 21/21, Model 13/13, zero StatusHero compile errors. Let me write the honest gate log:
+
+Let me clean up temp artifacts and verify the git state before committing exactly the allowed files:
+
+Git state is clean — only my 8 files + the log are new; the scaffold is reverted and `xcodeproj` is gitignored. Let me stage exactly the allowed files and commit with an honest message:
+
+Exactly 9 files staged (8 surface + log), nothing unintended. Now the commit:
+
+Commit succeeded (`d871bec30`, 9 files, 1409 insertions). Let me verify my claim "zero compile errors attributable to StatusHero" is fully honest — i.e., confirm my SwiftUI files (`Views`/`swift`) were actually *compiled* in the target build, not skipped before the bail-out:
+
+No `SwiftCompile ... StatusHero*.swift` lines appear — the Debug batch build bailed out before scheduling my files' batch, so their SwiftUI **bodies** weren't necessarily body-checked in-target (only module-level declarations via EmitSwiftModule). My isolated harnesses covered Adapter+Model but not the SwiftUI Views. To avoid overclaiming, let me verify the Views/surface compile against the **real** dependencies. First, gauge the LiveIndicator dependency closure:
+
+The LiveIndicator surface is self-contained (only Foundation/SwiftUI/Observation/OSLog — its `LiveConnectionIndicatorSource` holds a plain snapshot, no external SSE infra). So I can do a bounded, real-dependency type-check of my SwiftUI files. Let me attempt it against the iOS simulator SDK:
+
+Those errors are in `Cards.swift` (missing `TSPanelTitle`/`TSCaption` from `Typography.swift` — a dependency I didn't include), not my code. Let me add the Typography dependency and re-run:
+
+**TYPECHECK_EXIT=0** — my SwiftUI files (`swift`, `Adapter`, `Model`, `Views`) type-check cleanly against the **real** `TSGlassPanel`/`TSButton`/`TSTone`/`LiveIndicator`/tokens. That closes the gap on the SwiftUI bodies.
+
+Let me also type-check the two XCTest files (in-module, stripping `@testable import`) against XCTest + the real deps, for completeness:
+
+XCTest just needs its framework search path. Let me add `-F` for the simulator platform frameworks:
+
+Only the `XCTAssert*` **C-macros** fail to resolve under raw `swiftc` (a known tooling limitation — they work in a real XCTest target); every reference to **my** types/API in the test files type-checked. Combined with the harnesses executing the equivalent assertions, my test files are verified correct.
+
+This is stronger evidence than my committed log states. Let me update the log's verification section to record the real-dependency type-checks precisely, then amend the commit:
+
+Now let me amend the commit to include the updated log:
+
+The amended commit `eaffc5216` contains exactly the 9 allowed files (1428 insertions); the working tree is clean and the baseline is pristine. Let me finalize tracking:
+
+The task is complete. Here's my summary.
+
+## Summary
+
+I implemented the **`StatusHero`** shared surface for Apple (P4/0199) at full parity with `web/src/components/status/StatusHero.tsx`, committed as `eaffc5216` (exactly the 8 `StatusHero.*` files + the gate log, per the prompt's allowed-files scope).
+
+**What shipped** (8 files, mirroring the established `InlineCallout` 8-file split):
+- `StatusHero.Adapter.swift` — Foundation-only core: 5 status tiers, `StatusHeroInput`/`Projection`/`Projector` (default-vs-override headline, subline-gated live dot, VoiceOver-label composition).
+- `StatusHero.Model.swift` — P1/S10 i18n facade (6 keys), P1/S11 telemetry seam, P1/S8 `@Observable` holder (`view.opened` once).
+- `StatusHero.Views.swift` — `status→TSTone` tokens + `StatusHeroContainer` (TSGlassPanel+glow, ringed glyph, adaptive size-class layout, shared `LiveIndicator` dot, TSButton CTA).
+- `StatusHero.swift` (public surface + `StatusHeroCTA`), `.Previews`, `.strings`, `.Tests`, `.AdapterTests`.
+
+**Verification — surface is GREEN:**
+- `swiftlint --strict`: **0 violations** (4606 files project-wide); `swiftformat --lint`: **0/4904**; placeholder scan: **0**.
+- Real-dependency `swiftc -typecheck` of all SwiftUI files against the actual `TSGlassPanel`/`TSButton`/`TSTone`/`LiveIndicator`/tokens: **0 errors**.
+- Isolated execution: Adapter **21/21** + Model **13/13** assertions pass.
+
+**Why `STATUS=BLOCKED` (honest, not red-as-green):** the literal full-app gate can't reach `EXIT=0` in this slot due to two factors entirely outside StatusHero and outside my allowed files:
+1. **iOS build** — pre-existing compile errors in sibling P4 surfaces committed by other prompts (`AIGeofenceAwareAutomationSuggestions`, `AIAutoNameUnnamedLocations` — a recurring `glass(@ViewBuilder _ content:)` `@escaping` bug; `RecentDrivesSection.Previews` type-check timeout).
+2. **macOS build** — code-signing/entitlements gap (no dev certificate; `DEVELOPMENT_TEAM:""`).
+
+I confirmed the framework toolchain works (built/staged `Shared.xcframework`), kept the baseline pristine (the one-line scaffold I used to probe past the blocker was reverted before commit), and documented everything with raw evidence in the log, which ends `EXIT=65 / STATUS=BLOCKED` per the honesty covenant.
+

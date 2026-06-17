@@ -1,0 +1,116 @@
+I'll start by exploring the environment and understanding the task requirements, including checking platform capability (this is critical — the prompt says if SwiftUI/MapKit toolchain is unavailable, I must report STATUS=BLOCKED with evidence).
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 simulator booted). Not blocked. Let me explore the web source and existing Apple app structure.
+
+Now I have the web source. Let me explore the existing Apple app conventions — the project structure, existing feature-views, maps components, state holders, i18n facade, and design tokens.
+
+There's a `TeslaSync/feature-views` directory. Let me examine existing feature-views, their tests, the project.yml, and the Maps components to learn conventions.
+
+Key findings: XcodeGen-based project, feature-views in `TeslaSync/feature-views/` with per-surface files (`.swift`, `.Model.swift`, `.Previews.swift`, `.strings`, `*Tests.swift`). The dir has 2184 files. Let me find similar existing map/trip surfaces and inspect the Maps components and a complete reference surface.
+
+The convention is clear: per-surface files (`.swift`, `.Model.swift`, `.Adapter.swift`, sub-views, `.Previews.swift`, `.strings`, `.Tests.swift`). Now let me find an existing MapKit-based surface to use as the gold reference, and locate the native `DrivePosition` equivalent.
+
+Excellent — there's a rich native maps library (`TSMapView`, `TSMapLayerSwitcher`, `tsPolyline`, `TSAnimatedMarker`, `TSMapCamera.fitting`, etc.). Let me read `GeoHelpers.swift` and study the most relevant existing map surface `RouteMapSection` as the gold reference for conventions.
+
+`RouteMapSection` is the gold reference — a map surface with the full file set. Let me read all its files to learn the exact conventions (state-holder binding, adapter, states, views, previews, strings, tests).
+
+This `RouteMapSection` reference is extremely close to what I need. Let me read its remaining files (Adapter/projector, Views/map canvas, Format, Previews, all Tests, strings) plus the web `geo` lib to understand the parity derivation helpers.
+
+Now let me read the remaining reference files (Format with geo helpers, Previews, all three Tests files, strings) and the web `geo` lib that the projector ports.
+
+Now let me read the reference test files and previews, check the web `DrivePosition` type, and confirm no `TripReplayMap.*` files exist yet.
+
+Let me check the exact `DrivePosition.speed` unit semantics and the broader driving types, plus confirm the design tokens (`Color.TS`, `Font.TS`, `TSGlassPanel`, `TSButton`, `TSSkeleton`, `TSFadeIn`) exist.
+
+`DrivePosition.speed` is SI m/s, but the web `TripReplayMap.speedColor(kmh)` bands the **raw** value against 30/60/100 (a verbatim-preserved web quirk — parity requires I reproduce it, not "fix" it). Let me locate the design token definitions and confirm shared components.
+
+I have all conventions. Before writing code, let me establish the build baseline — check the Shared.xcframework prerequisite, the build script, and how the project is generated.
+
+`Shared.xcframework` isn't present — it's built from KMP via Gradle (the long pole). Let me check `apps/shared` and kick off that build in the background while I write code.
+
+KMP module exists, Java 17 available, but no prior build. Let me kick off the Gradle XCFramework build in the background (it's the long pole — first Kotlin/Native build downloads the compiler) while I write the surface.
+
+KMP build is running with warm cache hits (good — siblings primed it). Java 17 + Gradle proceeding. Let me set up tracking and run a baseline lint while I write the surface.
+
+The `$?` captured `tail`, not swiftlint. Let me get the true baseline exit code and violation count — a pre-existing violation appeared which matters for the whole-tree gate.
+
+A pre-existing swiftlint violation exists in an unrelated file (`LiveSignalSparklinesWidget.Builder.swift:158`), outside my allowed scope. Let me inspect it and the swiftlint version to understand whether it's genuine before deciding how to handle the whole-tree gate.
+
+Key insight: swiftlint 0.63.3's `opening_brace` flags the brace-on-newline-after-multiline-`if` — a construct swiftformat may *produce*. This is a tool conflict in committed code. I must write my files to satisfy **both**. Let me check the swiftformat baseline too.
+
+Confirmed: swiftformat passes the existing tree; swiftlint has 1 pre-existing violation in a sibling file (a swiftformat/swiftlint conflict on wrapped-`if` braces). I'll write my files to satisfy **both** tools (single-line conditions). Now writing the surface, starting with the Model.
+
+The `ObservationIgnoredStorage` property wrapper was needless complexity. Let me simplify `rawPositions` to a plain stored `let`.
+
+Let me check the KMP build progress, then continue with the Views file.
+
+KMP build is linking release frameworks — nearly done. Continuing with the MapKit canvas Views file.
+
+Let me verify every string key used in code matches the catalog, and check the KMP build status.
+
+All keys match; KMP framework built successfully (9m) and staged. Now writing the test files and previews.
+
+All 11 files written. Now let me auto-format my files with swiftformat, then run swiftlint scoped to them to catch issues early.
+
+swiftformat reformatted 2 files. Let me see those changes and run swiftlint scoped to my files.
+
+New files are untracked (no diff baseline). Let me verify both tools pass on my files now.
+
+Both pass on my files (swiftformat 0/10, swiftlint exit 0). Now let me generate the Xcode project and build.
+
+Project generated. Let me run an iOS build first (faster feedback on compile errors) before the full build+test.
+
+Build failed (exit 65) but no `error:` in my grep — the diagnostics are elsewhere in the log. Let me find the actual compiler errors.
+
+The Swift compiler **crashed** (`llvm::report_fatal_error`), not a normal error. Let me find which source expression triggered the crash.
+
+The crash is a `swift-frontend` **IRGen crash** while generating code for a sibling file (`AppearanceSettings.Controls.swift`) — not a type error in my code (no `error:` lines exist; type-checking of all files passed). IRGen crashes on closure reabstraction thunks under batch mode are often nondeterministic. Let me retry the build incrementally.
+
+The crash reproduced on the **same sibling file** (`AppearanceSettings.Controls.swift`) — it's deterministic, in a file I didn't touch, with no `error:` in my code. I must definitively determine whether my addition triggered it. Let me inspect the crashing closure and run a baseline build with my files temporarily stashed.
+
+The crashing pattern is `Toggle("", isOn: Binding(get: { isOn }, set: onChange))` with `onChange: @MainActor (Bool) -> Void` — the thunk `Sb...ScA_pSg...` is exactly the Swift 6 reabstraction of a `@MainActor (Bool)->Void` closure into `Binding.set`. This is a pre-existing sibling file. Let me confirm with the baseline build (my files stashed).
+
+**Confirmed**: the baseline build (my files stashed) crashes identically on `AppearanceSettings.Controls.swift` — a **pre-existing** deterministic Swift 6.3.2 IRGen compiler crash, fully independent of my surface. Let me gather context on the toolchain expectation and the crash scope before deciding how to proceed.
+
+**Decisive finding:** `versions.lock.md` (ADR-012) locks the repo to **Swift 6.0.1**, but this runner has **Swift 6.3.2 / Xcode 26.5**. The pre-existing sibling file `AppearanceSettings.Controls.swift:122` uses an idiomatic `Toggle(isOn: Binding(get:{...}, set: onChange))` with an `@MainActor (Bool)->Void` setter — which compiles on the locked 6.0.1 but hits a deterministic IRGen crash on the runner's non-locked 6.3.2. This is a toolchain-version capability mismatch. Let me restore my files and check whether the locked toolchain is available on this runner (which would let me build green, in-scope).
+
+Only Xcode 26.5 (Swift 6.3.2) is installed — the locked Swift 6.0.1 toolchain isn't available, so I cannot run the gate on the intended toolchain. This confirms a **platform-capability block** on the full-app `build test` step (pre-existing sibling crash under the non-locked toolchain).
+
+To over-deliver on verifying my own surface, let me build + run my Foundation-only logic (Model/Format/Adapter + their tests) as a standalone package, decoupled from the broken sibling file.
+
+The parallel-merge workflow confirms each surface merges independently — the canonical gate runs on the locked Swift 6.0.1 (where the sibling compiles); this runner's 6.3.2 is the mismatch. Now let me finish the standalone package and run my logic tests.
+
+Only a harmless comment reference remains. Let me run the standalone logic tests — this also proves Model/Format/Adapter compile **and IRGen** cleanly under the runner's Swift 6.3.2.
+
+Excellent — Model/Format/Adapter **compiled and IRGen'd cleanly under Swift 6.3.2** (the package built them). The standalone run caught **3 real bugs in my test files** (missing `throws` for `try XCTUnwrap`, and optional-value `accuracy:` overload mismatches) — these would also fail the canonical `build test`. Let me fix them in the real files.
+
+Fixed. Let me re-sync the test files into the package and re-run.
+
+**All 40 standalone logic tests pass (0 failures) under Swift 6.3.2** — the entire host-testable core (geo, speed bands, projector, accessibility, model phases/seek/telemetry) is verified. Now let me re-lint/format my edited test files and run the placeholder check.
+
+My files are clean (swiftformat 0/10, swiftlint exit 0). Let me run the placeholder gate exactly as specified.
+
+Placeholder gate passes (COUNT=0, EXIT=0). I now have comprehensive positive evidence for my surface. Let me prep the log directory, check what's tracked/ignored, then run the **actual gate commands** to capture honest results.
+
+Clean: only my 11 files are untracked; xcodeproj/build are ignored. Now let me run the **actual gate commands** to capture honest results, starting with the iOS `build test` step.
+
+iOS gate: `IOS_EXIT=65`, crashing on the pre-existing sibling `AppearanceSettings.Controls.swift`. Now the macOS gate step (shares the same sources).
+
+Let me examine the actual macOS failure cause more thoroughly.
+
+The macOS gate fails differently — **code-signing**: the macOS app + widget entitlements require a development certificate not present in this environment (a separate platform-capability gap; it would also hit the same sibling IRGen crash if it reached compilation). Both targets are blocked by environment, not my surface (zero TripReplay errors in either log). Let me capture the remaining gate steps (swiftlint/swiftformat) for the log.
+
+Path slip on swiftformat (`cd ..` landed in `apps/`). Let me re-run it correctly from the repo root.
+
+All gate steps captured. swiftformat passes (0/2927, includes my 10 clean files). Let me extract the exact crash excerpt for the log, then assemble the official gate log.
+
+Confirmed: zero `error:` for any TripReplayMap file across both build logs. I have all gate results. Now let me write the official gate log with full, honest evidence.
+
+Both gate build steps are blocked by **independent** environment gaps (iOS: unavailable locked toolchain → sibling IRGen crash; macOS: no dev-signing certificate) — so a fully green gate is impossible on this runner regardless of any sibling edit, confirming BLOCKED is the only honest outcome. Let me clean up temp artifacts and stage the surface.
+
+Exactly my 11 surface files + the log are staged — nothing extraneous. Let me commit with the conventional title and an honest body reflecting the gate status.
+
+Committed cleanly (12 files, 2172 insertions, working tree clean). Let me finalize the tracking and do a last verification that the commit contents are exactly right.
+
+The task is complete. Let me provide the final summary.
+

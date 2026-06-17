@@ -1,0 +1,162 @@
+I'll start by exploring the repository structure and understanding the task. Let me look at the key files in parallel.
+
+Xcode tools are available. Let me read the web source page and explore the Apple app structure.
+
+The Features directory is empty. Let me read the rest of the web page and explore the Apple app's existing structure (Sources, views, navigation, design tokens).
+
+I have the full web source now. Let me explore the existing Apple app architecture: Features, SharedFacade (KMP bridge), App navigation, Design tokens, and Components.
+
+Let me examine the project.yml to understand the build configuration and source paths, plus look at an existing feature page and the design system.
+
+Important finding: `TeslaSync/Features` is NOT in project.yml sources. Let me examine the existing `feature-views` directory (likely where parity pages live), the navigation system, and the gate contract.
+
+Existing pages live in `feature-views` (e.g., `AlertStudioPage`), decomposed into many files. Let me check the build toolchain availability, the gate contract README, and the check-placeholders script.
+
+Let me check the KMP/Gradle toolchain availability (critical for build gate) and locate the ledger files.
+
+Java 17 + Gradle + Xcode 26.5 are present. The KMP `Shared.xcframework` build is the long pole — let me kick it off in the background now while I study the code patterns.
+
+Build is compiling Kotlin (progressing well). Let me study the navigation shell and the existing `AlertStudioPage` to learn the established page + registration pattern.
+
+Let me see how pages get registered (`TeslaSyncApp.swift`, `SettingsScene.swift`) and the deep-link parser, plus confirm the web route grouping.
+
+Now I understand registration. Let me check the routing tests (to avoid breakage) and study the page/model/component patterns I'll reuse. Reading several references in parallel.
+
+Let me check localization setup, the shared facade container, and whether the shared core exposes API-call-logs. Also checking build progress.
+
+`AdminRepository` and `AdminStore` exist in the shared core. Let me inspect them to see what's exposed for API logs.
+
+The shared core exposes `apiLogs(page:)` and `apiLogStats()` returning `Resource<JsonElement>`. Let me study how existing Apple models bridge the shared store, plus the AdminStore and container.
+
+Let me inspect the AdminStore, the AppContainer (how stores are built/exposed), and whether any Swift code already decodes `JsonElement`.
+
+Now I understand the architecture. Let me build an inventory of the exact public symbols (design tokens + components) I'll use, and check build progress.
+
+Complete token inventory captured. Now let me build a full inventory of component initializers and check build status.
+
+Rich component inventory captured. Let me get exact signatures for the components I'll use and inventory typography/forms/motion.
+
+Let me get the remaining component signatures (banners, typography, fields, pickers, motion, disclosure) and check the build.
+
+Almost all components mapped. Let me get the final signatures (alert banner, accordion, pagination, text variants, form fields).
+
+Let me inventory form fields, inspect the xcstrings catalog format, and check build status.
+
+Complete component inventory done. Now let me examine the `Localizable.xcstrings` catalog format (size, structure, interpolation, existing keys).
+
+The catalog has 8121 keys but no `apiLogs.*`. Let me check which of my 30 keys already exist and capture the exact JSON shape (simple + interpolated).
+
+All 30 keys are missing (including `error.loadFailed`). The format is clear. Now let me read the web API types and the `deriveServiceOptions` helper to port the data shapes faithfully, and check the build.
+
+Build is still linking (Kotlin/Native is slow). Let me verify it's progressing and check `FacadeError` constructability while I finalize the design.
+
+Build is on the final architecture (macosArm64). `FacadeError` and `LoadableState` are same-module — perfect. Before writing code, let me read the lint config and placeholder-scan rules to ensure the gate passes.
+
+`swiftlint --strict` makes the 120-col warning an error — I'll keep all code lines ≤120. Let me read the placeholder scanner to know what patterns to avoid, then start building.
+
+Forbidden words noted (notably "Placeholder", "TODO", "not implemented"). Let me set up tracking and check the date-range component's strings, since the web header has a range picker.
+
+The `Shared.xcframework` build **completed and staged successfully** — the gate is feasible. I noted that several shared-component keys aren't in the catalog (they fall back to verbatim), so I'll scope strictly to the 30 authorized strings. Let me write a brief plan, then build the implementation.
+
+Now let me create the Admin feature directory and the typed-models file.
+
+Now the data source layer (injectable, Sendable, build-safe bridge):
+
+Model file with state, filters, pagination, localized formatting, and export:
+
+Now the sub-views (the bulk of the rendering). Creating `ApiLogsPage.Views.swift`:
+
+I need to fix the `tableBody` switch (ambiguous `where`) and add a distinct error state. Let me update the Views file and add model helpers.
+
+Now add the error-detail and JSON-pretty helpers to the model:
+
+Now the log row, expanded detail, and JSON viewer (covers GlassPanel1/8/9). Creating `ApiLogsPage.Rows.swift`:
+
+Now the main page file that composes everything:
+
+Now the navigation registration. Creating the registration helper:
+
+Wiring the registration into the app shell and adding the `/api-logs` deep link:
+
+Now the previews and tests. Updating tracking and creating both:
+
+Before tests, I realized the model's type body likely exceeds SwiftLint's `type_body_length` (250) which `--strict` treats as an error. Let me restructure the model using extensions. Recreating it:
+
+Now the co-located unit tests:
+
+All Swift files are written. Now let me add the 30 strings to the catalog via surgical insertion (preserving existing formatting), then wire up the build config.
+
+30 keys inserted and JSON validates. Now wire `TeslaSync/Features` into the build config (project.yml) and swiftlint `included`:
+
+Build config wired. Let me run SwiftLint on the new files for fast feedback before the full build.
+
+SwiftLint linted all files and found 6 violations. Let me see exactly which (and whether they're mine):
+
+Three trailing-comma violations are mine (the other 3 are pre-existing in `widget-primitives`). Let me fix mine:
+
+My first DataSource edit was off. Let me view the exact lines and fix correctly:
+
+Let me re-run SwiftLint and check both my files and the overall scoping behavior:
+
+My Admin files are clean (the 3 remaining are pre-existing in `widget-primitives`). Let me confirm SwiftLint's path-scoping behavior — whether the gate command lints only my dir or the whole project:
+
+SwiftLint scoping confirmed: the gate (run from repo root) lints **only my 9 Admin files with the apple config → 0 violations**. The pre-existing widget violations are outside the gate's scope. Now let me generate the Xcode project and build.
+
+Project generated. Let me build the macOS target first (fastest correctness check), capturing to a log:
+
+Files are in the project (54 refs). The background launch didn't persist — let me run the macOS build properly in async mode:
+
+Build started. Let me check the log destination and ledger format while it compiles:
+
+The string catalog compiled cleanly (my 30 keys are valid) and Swift compilation is underway. Let me wait for completion.
+
+Build failed — my files have compile errors. Let me extract the exact errors:
+
+One root error: `previewModel` (nonisolated) calls the `@MainActor` model init. Let me confirm it's the only error, then fix:
+
+Only one error. Let me fix it — mark the preview helper `@MainActor`:
+
+Rebuilding macOS (incremental — most of the app is cached):
+
+No errors yet, still emitting the app module. Let me wait for completion:
+
+A different error appeared — in `shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift`, a file I never touched. Let me confirm it's pre-existing and check the documented build status:
+
+Confirmed: my code compiles — the only error is in pre-existing `AIGeofenceAwareAutomationSuggestions.swift` (unmodified by me). Let me check the documented macOS build status and the offending code to gauge scope:
+
+The repo documents that macOS/iOS Xcode builds are **deferred to CI** ("not unfinished work… host-runnable gates are green") — so the app build was never compiled on dev hosts and has pre-existing errors. My page compiles; only unrelated pre-existing files fail. Let me gauge whether these are few/trivial by examining the first one:
+
+The error is a non-`@escaping` `@ViewBuilder` closure captured by `TSGlassPanel` — a one-line fix, but likely a **systemic** pattern across many pre-existing files. Let me quantify how widespread this baseline issue is:
+
+This is **systemic pre-existing breakage**: 71+ files use the same non-`@escaping` `@ViewBuilder` pattern that doesn't compile — a baseline the repo explicitly defers to macOS CI and that was never compiled on a dev host. Fixing 71+ unrelated files is far outside the ApiLogsPage scope/allowed-files.
+
+My page compiles cleanly (zero errors attributable to my files). Let me get concrete standalone evidence for my pure-logic layer and run the placeholder scan:
+
+Pure-logic layer type-checks cleanly standalone. Now the placeholder gate (the gate's first step):
+
+Placeholder scan caught the word "placeholder" in a comment. Let me find all forbidden words in my files and fix them:
+
+Let me re-run the placeholder scan and SwiftLint to confirm both pass:
+
+Both host-runnable gates pass (placeholder=0, swiftlint=0). For honest dual-idiom evidence, let me confirm the iOS target hits the same baseline (running in background) while I write the parity log and ledger.
+
+Let me create the apple parity ledger while the iOS build runs:
+
+Let me check the iOS build progress:
+
+iOS build still compiling. Let me wait for it to reach the baseline error:
+
+iOS also fails — but on a *different* pre-existing file (`RecentDrivesSection.Previews.swift`, a type-check timeout). This confirms systemic, multi-category baseline breakage. Let me capture all iOS errors and verify none are mine:
+
+Confirmed: **zero errors in any of my files** on both macOS and iOS — both builds fail only on different pre-existing baseline files. Now let me write the comprehensive gate log with the full `=== PARITY ===` section:
+
+Now let me verify the catalog is valid, confirm the generated `.xcodeproj` is git-ignored, and review what will be committed:
+
+Everything is clean and `.xcodeproj` is correctly ignored. Let me run a final verification of both host gates and the test-file typecheck, then commit:
+
+Both host gates green. Let me commit all changes:
+
+Committed cleanly (`a65fdd746`), working tree clean. Let me verify final todo state:
+
+All work is complete. The `gate` is honestly marked `blocked` (build/test cannot run due to pre-existing baseline breakage); everything else is done and committed.
+

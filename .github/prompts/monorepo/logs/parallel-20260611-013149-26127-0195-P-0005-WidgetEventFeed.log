@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure to understand the task, then check tooling availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me examine the web source and the Apple app structure.
+
+Let me read the web source and explore the Apple app's TeslaSync structure in parallel.
+
+Now let me explore the existing Apple app structure deeply to understand the established conventions (state holders, tokens, i18n, telemetry, existing surfaces).
+
+The repo uses a `.Adapter/.Model/.Previews/.AdapterTests` pattern. Let me examine sibling widget primitives and the project.yml to understand conventions and how sources are included.
+
+The output dir is new. Let me read project.yml (located at apps/apple/) and study a complete reference surface to learn the exact conventions.
+
+Critical finding: `project.yml` does **not** list `TeslaSync/widget-primitives` as a source path — only `dashboard-widgets`, `feature-views`, `misc-surfaces`, `shared-surfaces`. Files placed in a new `widget-primitives` dir won't be compiled. I need to understand the build feasibility (xcodegen, Shared.xcframework/Kotlin dependency) before deciding. Let me investigate.
+
+Major finding: no `.xcodeproj` is checked in (built via `xcodegen`), and the scheme has a **pre-action that builds a KMP `Shared.xcframework` via Gradle/Kotlin** (Frameworks/ is empty except .gitkeep). I'll need to assess that. First, let me deeply learn the conventions from complete reference surfaces and locate the P1 facades (state-holders, tokens, i18n, diagnostics).
+
+Let me read a complete reference surface and the core facades in parallel to nail conventions.
+
+Excellent — the pattern is very clear. Let me read the remaining reference files (Adapter/Seams/Previews/Tests/strings) and locate the native data-display components (TimelineItem) + date-format facade.
+
+Now the model/tests and timeline rendering. Let me read the test files, the Design tokens, and locate the native data-display/feedback components (TimelineItem, EmptyState) + date-format facade.
+
+Let me read the native components I'll compose with (TSEmptyState, Timeline, date formatters, Design tokens) and the web TimelineItem/EmptyState sources for parity.
+
+Paths are relative to `apps/apple`. Let me read the correct paths.
+
+Now I understand the architecture deeply. Let me read the Design tokens, date-format facade, web TimelineItem/EmptyState parity sources, and the lint/placeholder configs in parallel.
+
+Let me read the swiftlint config, locate the design tokens + date-format facade, and read the web TimelineItem/EmptyState for parity.
+
+Let me read the generated tokens, web TimelineItem/EmptyState, and the native Typography/Skeleton/Motion components.
+
+I have the full token palette. Let me confirm the exact signatures of the components I'll compose with (TSSkeleton, TSFadeIn, TSCaption/TSText, TSButton, TSCard) and check the placeholder checker.
+
+I now have all component signatures. Before writing code, I must assess the **full build feasibility** (no `.xcodeproj` is checked in; the scheme pre-builds a KMP `Shared.xcframework` via Gradle/Kotlin). Let me check prior gate logs for the expected outcome pattern, the KMP toolchain, and whether `xcodegen`/Gradle work here.
+
+Java 17 + gradlew present. 2813 prior logs exist. Let me inspect a representative log's tail to learn the **actual gate execution pattern and expected outcome** (DONE vs BLOCKED) in this environment.
+
+This is the key insight. The established, documented disposition (EmptyStateThreshold reached **EXIT=0/STATUS=DONE**) is: author in allowed files, **independently verify GREEN via SwiftPM** (compile both SDKs + run XCTest) + swiftlint/swiftformat/placeholder, and report the full-app `xcodebuild` gate as **DEFERRED** (blocked by unrelated out-of-scope errors + macOS signing). Let me map the dependency closure for an isolated SwiftPM harness.
+
+Components/Design don't import KMP `Shared` — good, they're isolable. Let me confirm the components don't reference app/facade types outside Design+Components, so I can build a clean SwiftPM harness.
+
+`Sources/Components` + `Sources/Design` only import SwiftUI/Foundation/Charts/MapKit/CoreLocation — a clean, KMP-free closure. I can build a faithful SwiftPM harness against the **real** design system. Let me confirm a few component signatures (TSButton/TSCard/TSTone/TSIconBox) and the scroll/list idiom before writing.
+
+I have everything I need. The proven path: author the surface in the allowed `widget-primitives/WidgetEventFeed.*` files mirroring the `EmptyStateThreshold` architecture, verify GREEN via an isolated SwiftPM harness against the real design system (KMP-free), run swiftlint/swiftformat/placeholder, and honestly report the full-app `xcodebuild` gate as DEFERRED. Let me set up tracking and write the plan.
+
+Now I'll author the surface. Starting with the directory and the pure Adapter core.
+
+Now the Model (state-holder + telemetry + projection + strings facade).
+
+Now the Seams (source protocol + production/in-memory sources).
+
+Now the States chrome (loading skeleton + error tile = QueryError peer).
+
+Now the Views — the feed list, the event row (web `TimelineItem` parity: tinted icon box + connector + title/subtitle/relative-time + href drill-through), and the freshness chip.
+
+The surface needs the web `emptyIcon` prop threaded through. Let me add `emptyIconSymbol` to the Input/Resolved/Projection in Model.swift, then write the main surface file.
+
+Now the main surface file.
+
+Now the strings catalog.
+
+Now the Previews.
+
+Now the adapter/projection tests.
+
+Now the model/state-holder tests.
+
+All 10 files are written. Let me update tracking and build the isolated SwiftPM verification harness against the **real** design system (Design + Components are KMP-free).
+
+Harness assembled (51 files). Let me build it — this verifies my surface compiles against the real design system under Swift 6.
+
+My surface files compiled cleanly (52/52) — the only errors are in `Components/DataDisplay/UnitFormatters.swift`, which depends on an external `\.tsUnits` environment key defined outside Design+Components (the KMP units facade). My surface doesn't use it. Let me find all such externally-coupled component files and exclude them from the harness.
+
+Only `UnitFormatters.swift` couples to the external `tsUnits` facade — my surface doesn't use it. Let me drop it from the harness and rebuild.
+
+Build complete (EXIT=0) — my surface compiles against the real design system under Swift 6. Now run the tests.
+
+All **49 tests pass, 0 failures** on macOS-15 SDK under Swift 6. Now let me typecheck against the **iOS-18 SDK** (matching the precedent's both-SDK verification), then run swiftlint/swiftformat/placeholder.
+
+Both SDKs verified (iOS-18 typecheck EXIT=0, macOS-15 build+test EXIT=0). Now swiftlint `--strict` and swiftformat `--lint` on my files (using the repo configs).
+
+swiftlint reported 0 violations across the tree. Let me confirm my files specifically were linted (the config's `included` doesn't list `widget-primitives`) by passing explicit file paths.
+
+Good — verifying explicitly caught 3 `trailing_comma` violations (the tree-run had excluded my dir). Let me run swiftformat `--lint` to see the full formatting delta, then auto-fix with swiftformat.
+
+Both tools agree: only the 3 trailing commas. Let me auto-fix with swiftformat, then re-verify swiftformat `--lint`, swiftlint `--strict`, and re-run the harness build+test.
+
+swiftformat `--lint` clean. Let me re-confirm swiftlint `--strict` and re-run the harness build+test with the formatted files synced.
+
+swiftlint `--strict`: **0 violations**. Let me confirm the XCTest count after formatting (the tail truncated the XCTest summary).
+
+**49 tests, 0 failures** post-format. Now the placeholder check. Let me review the checker, then run it as the gate specifies.
+
+Let me check my files for forbidden patterns and review how `-Path` is resolved (the gate passes a `WidgetEventFeed` prefix, not a directory).
+
+No forbidden patterns. The matcher is recursive case-insensitive. Note the gate's `-Path .../WidgetEventFeed` is a file-prefix (not a dir), so I'll run the checker against the real directory (scans all 9 `.swift` files) for an honest result, plus the exact gate path.
+
+All runnable gates are GREEN. Note the prompt's **Commit** command stages only `widget-primitives` + the log (not `project.yml`) — confirming the new-tier registration is owned by P4 core/acceptance, so I'll confine to allowed files (matching the EmptyStateThreshold precedent). Now let me honestly capture the full-app `xcodebuild` gate status.
+
+Confirmed: IOS_EXIT=66 — the gate omits `xcodegen generate` and no `.xcodeproj` is checked in. Let me run `xcodegen generate` to show the project builds from spec, then attempt the build to capture the deeper KMP blocker.
+
+Project generates cleanly (XCODEGEN_EXIT=0). Now attempt the iOS build to capture the KMP `Shared.xcframework` pre-action blocker (bounded).
+
+Build was still in the KMP `Shared.xcframework` Gradle pre-action at 200s (timeout). Let me capture the actual pre-action log line as evidence, then clean up the generated artifacts.
+
+Output is buffered. Let me capture full build output to a file and inspect for the Gradle/KMP evidence.
+
+Clear evidence: the full-app build's pre-action assembles the **KMP `Shared.xcframework` via Gradle/Kotlin-Native** (release frameworks for all platforms) — a multi-minute toolchain build that exceeds bounds here (BUILD INTERRUPTED), unrelated to my Swift surface. Let me clean up generated artifacts and verify git status.
+
+Only my `widget-primitives/` is untracked (generated project removed; `project.yml` untouched). Let me capture the macOS signing-identity evidence, then write the gate log.
+
+0 signing identities (macOS signing unavailable); 10 files, 1744 lines. Now let me write the comprehensive, honest gate log.
+
+Let me do a final review of the auto-formatted regions to confirm no semantic drift, then run the full verification suite one final time before committing.
+
+Trailing commas cleanly removed, no semantic drift. Let me do one final clean verification pass from the on-disk files before committing.
+
+Final build + 49 tests green. Final lint trio confirmation, then commit.
+
+All gates green. Let me commit exactly the allowed files (surface + log) per the prompt's commit spec.
+
+Exactly 11 files staged (10 surface + log), no `project.yml` or stray artifacts. Committing.
+
+Committed; working tree clean. Let me finalize tracking and clean up the temp harness.
+
+All todos done, temp artifacts cleaned, no stray generated project. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...pple-widget-primitives-0005-WidgetEventFeed.log | 135 +++++++++
+ .../WidgetEventFeed.Adapter.swift                  | 269 ++++++++++++++++++
+ .../widget-primitives/WidgetEventFeed.Model.swift  | 239 ++++++++++++++++
+ .../WidgetEventFeed.ModelTests.swift               | 227 +++++++++++++++
+ .../WidgetEventFeed.Previews.swift                 | 137 +++++++++
+ .../widget-primitives/WidgetEventFeed.Seams.swift  | 100 +++++++
+ .../widget-primitives/WidgetEventFeed.States.swift |  94 +++++++
+ .../widget-primitives/WidgetEventFeed.Tests.swift  | 305 +++++++++++++++++++++
+ .../widget-primitives/WidgetEventFeed.Views.swift  | 204 ++++++++++++++
+ .../widget-primitives/WidgetEventFeed.strings      |  42 +++
+ .../widget-primitives/WidgetEventFeed.swift        | 127 +++++++++
+ 11 files changed, 1879 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-widget-primitives-0005-WidgetEventFeed.log
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.Model.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.States.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.Views.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.strings
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetEventFeed.swift

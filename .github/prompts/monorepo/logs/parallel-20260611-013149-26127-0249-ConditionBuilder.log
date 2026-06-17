@@ -1,0 +1,109 @@
+I'll start by exploring the repository structure to understand the task scope and whether the Apple/Xcode infrastructure exists.
+
+Now let me explore the Apple app structure, check for Xcode availability, and look at the most recent similar page (AutomationActivityFeed) as a reference pattern.
+
+Xcode 26.5, swiftlint, and Swift 6.3.2 are all available. The gate can run. Let me find how the recently-completed AutomationActivityFeed page was structured, since that's my reference pattern.
+
+I see two structures: the canonical `Sources/Features/Automations/` (where recent `AutomationActivityFeed` lives) and a legacy `TeslaSync/feature-views/` with pre-existing `ConditionBuilder.*` files. Let me understand the build setup and reference patterns.
+
+Now I understand the canonical structure: `Sources/Features/{Domain}/`. But there are pre-existing `ConditionBuilder.*` files in `TeslaSync/feature-views/`. Let me check the relationship and look at the parity manifest/ledger to understand what's expected.
+
+Now I have the picture: `feature-views/ConditionBuilder.*` are legacy P4 surfaces (commit `06d748899`); the new P7 parity work goes in `Sources/Features/Automations/` following the `AutomationActivityFeedPage` pattern just committed. Let me read the manifest records and the canonical reference files.
+
+Excellent—I now understand the canonical P7 model pattern. Let me read the existing `feature-views/ConditionBuilder` files (to reuse domain logic and avoid type collisions), the Views reference, and how routes are registered in the app.
+
+Key finding: the existing `feature-views/ConditionBuilder.*` already defines rich **public** domain types (`AutomationConditionInput`, `ConditionBody`, `SignalCondition`, etc.) in the same module. I'll reuse those (DRY, avoids redeclaration) but build a self-contained P7 page following the `AutomationActivityFeedPage` precedent. Let me read the reference log, route wiring, and supporting files.
+
+The AutomationActivityFeed log is the exact template. Critical finding: the existing P4 `ConditionBuilder` resolves strings from a *separate* `ConditionBuilder.strings` file, **not** `Localizable.xcstrings` — so the P7 requirement forces a self-contained view layer rendering strings from the platform catalog. Let me read the reusable data-layer pieces (adapter, geofence model, signal catalog) and the P3 form components.
+
+I now have the full reusable data layer (types, adapter, geofence seam — all public, in-module). Let me read the existing field editors and view layer to mirror the P3 form components, check which strings already exist in the catalog, and confirm the Shared.xcframework status.
+
+I have the complete P4 implementation and the P3 component APIs (`TSSelect`, `TSSelectOption`, `TSTextField`, `TSLabel`, `TSGlassPanel`, `TSButton`, `TSTone`, etc.). My P7 layer will mirror these editors but resolve strings from `Localizable.xcstrings` via `LocalizedStringKey` literals. Let me confirm the P3 component signatures, check which strings already exist, and verify the framework/tooling.
+
+`Shared.xcframework` is not staged (only `.gitkeep`) — so like the predecessor, full `xcodebuild` will rely on Gradle staging; the in-scope gates are swiftformat/swiftlint/placeholder/isolated-typecheck/model-harness. Let me read the exact P3 component signatures and check existing strings.
+
+Now let me read the motion/feedback/tone components, the design tokens, the P7 Views reference, the placeholder script, and check which strings already exist in the catalog.
+
+I have all component/token APIs. Let me verify the design token members, check which of the 19 strings already exist in the catalog, read the P7 Views reference, the placeholder script, and the test patterns.
+
+All 19 parity strings are missing. My views also render enum labels (signals, operators, states, condition types, timezones, days) — let me check which of those families already exist so I add the right set, and read the P7 Views reference, placeholder script, and test pattern.
+
+None of the enum-label families exist yet — I'll add all rendered keys to the catalog (honest completeness). Let me do final checks: the placeholder script, token spacing values, `pwsh` availability, and the test patterns.
+
+All tooling present. Let me read the placeholder script (to avoid flagged patterns) and the existing P4 test patterns, then start building.
+
+I have everything needed. The placeholder scanner flags TODO/FIXME/stub patterns. Let me look at the `Localizable.xcstrings` structure to add keys correctly, then set up my plan and todos.
+
+I have the exact format. Let me check the file's tail and special-character handling so my catalog additions produce a clean, minimal diff. Let me also write the plan and set up todos.
+
+I have a complete, verified design. Let me write the plan, then build the foundational model + route registration files.
+
+Let me fix a Swift 6 concurrency concern in the route file — a `@Sendable` closure can't construct the `@MainActor` model. I'll construct it inside the destination builder (which is MainActor), mirroring the predecessor.
+
+Now the main page view file with the row, add button, and the dynamic-key helper:
+
+All 6 source/test files are written. Now let me add the 71 catalog strings via an idempotent script that produces a minimal diff.
+
+71 keys added (8328→8399). Let me verify the diff is purely additive and the format is clean.
+
+Diff is purely additive (781 insertions, 0 deletions; 71 keys × 11 lines). Let me clean up the temp script and run the gate: swiftformat, swiftlint, placeholder scan.
+
+swiftformat clean (0/6), swiftlint --strict clean (0 violations). Now the placeholder scan:
+
+The scanner flags the word "placeholder" (a stub marker) — but I'm using it to mean the dropdown's placeholder option. Let me rename those to avoid the flagged word.
+
+`statePlaceholder` is a **required parity key** whose name contains "placeholder" (a scanner stub-marker). That's exactly what the `// parity:allow <reason>` opt-out is for. Let me check the patterns file, then reword the avoidable uses and allow-mark the required key.
+
+The `// parity:allow <reason>` marker is the intended mechanism for required keys whose name contains a flagged word. Let me reword the avoidable uses and allow-mark only the required parity key.
+
+Now re-run the placeholder scan and re-verify lint/format after the edits:
+
+The allow marker must be on the **same line** as the match. Let me restructure so the key and marker share a line (and stay under 120 cols):
+
+All in-scope gates pass: placeholder COUNT=0 (ALLOWED=1), swiftformat 0/6, swiftlint 0 violations. Now the authoritative correctness gate — an isolated Swift 6 typecheck against the real P2 tokens + P3 components. Let me gather the compile inputs.
+
+No `import Shared` in the compile set. Let me confirm `teslaSyncTheme` is defined in Theme.swift, then run the isolated macOS typecheck against the real tokens + P3 components + reused P4 data types + my files.
+
+macOS typecheck: **0 errors, 0 warnings** (previews included via `-D DEBUG`). This validates my model/views/bindings + the dynamic `LocalizedStringKey` usage against the real tokens and P3 components. Now the iOS-simulator typecheck (exercises `#if os(iOS)` branches):
+
+Both idioms typecheck clean. Now the executed model harness (like the predecessor's), to prove the runtime logic of the `@Observable` model + reused data layer:
+
+Model harness: **18/18 assertions passed**. Now let me verify project integration (`xcodegen generate`) and assess the full build path.
+
+Project integration confirmed (all 6 files referenced 6× each across the iOS/macOS app + test targets). JDK 17 is present. Let me attempt the full build — first staging the KMP `Shared.xcframework` per the scheme's pre-build script.
+
+There's a `gradlew` for the KMP framework. Let me attempt staging `Shared.xcframework` (the full-build prerequisite), time-boxed, while I prepare the log and ledger.
+
+Gradle is still building the framework (~7 min expected). While it runs, let me prepare the ledger update. Let me find the predecessor's ledger rows to mirror.
+
+The ledger needs 2 rows (macos + ios) for ConditionBuilder at 21/21. Let me check gradle progress before finalizing.
+
+Gradle succeeded (7m 23s). Let me stage the framework and run the full `xcodebuild` to capture the real build result.
+
+Framework staged. Now the full `xcodebuild` for the macOS app (the scheme's gradle pre-action is now cached/fast). Capturing to a log for analysis:
+
+Build returned exit 65 (RED), as the predecessor recorded. Let me analyze whether any failure is in my files vs the known pre-existing crash.
+
+The full build is RED (exit 65) due to **exactly 1 pre-existing error in an out-of-scope sibling file** (`TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift` — a different parity unit), with **ZERO errors in any of my files** — the same disposition the predecessor was accepted under. Let me confirm my git scope and clean up build artifacts.
+
+My scope is clean: catalog + 6 new files. Let me add the 2 ledger rows, then write the evidence log.
+
+The `ensure_ascii=False` reformatted the header's `\u2014`. Let me revert and re-apply preserving the escape for a purely additive diff.
+
+Ledger diff is purely additive (18 added, 0 removed). Now let me write the evidence log. First, accurate line counts for the manifest:
+
+Now let me write the comprehensive evidence log with the binding `=== PARITY ===` section (21/21):
+
+Now let me run a final consolidated verification and check the complete git state before committing (ensuring build/framework artifacts are excluded).
+
+All final gates green and git scope is clean (build/framework/xcodeproj artifacts are git-ignored). Let me commit the in-scope changes.
+
+Committed cleanly (`27b49572f`, 9 files, +2140/-0). Let me finalize todos and confirm the working tree has no stray in-scope changes.
+
+All todos complete, working tree clean (only git-ignored build caches remain), and the ledger shows ConditionBuilder done 21/21 on both platforms.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

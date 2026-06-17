@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure and checking the capability requirements (SwiftUI/Xcode toolchain availability).
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The web source is at `web/src/components/ui/Input.tsx`. Let me explore the web source and the Apple app structure.
+
+Now let me explore the Apple app structure deeply — the shared-surfaces directory, existing components, tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and project config.
+
+The Apple project is real and substantial (XcodeGen-based, ~1479 files in shared-surfaces). Let me examine existing surface conventions and check whether `Input.*` already exists. Let me look at a complete example surface and find similar form components.
+
+The full file-set pattern per surface is clear from Accordion (8 files: `.swift`, `.Adapter.swift`, `.AdapterTests.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me read the complete Accordion reference set to learn the exact conventions (tokens, i18n, telemetry, adapter, tests).
+
+Excellent — the Accordion reference reveals a sophisticated, faithful-parity pattern. Crucially, the Adapter.swift "faithful-parity note" confirms presentational primitives reproduce only REAL branches (no fake loading/error/stale/offline). Let me read the remaining 5 Accordion files and locate the design tokens (P1/S9).
+
+I have a thorough understanding of the pattern. Now let me read the design tokens (P1/S9) to use correct token names, and check the Frameworks/Shared.xcframework dependency (KMP) which the build pre-stages.
+
+Now I understand tokens and the full pattern. The build pre-stages a KMP `Shared.xcframework` via Gradle (potential heavyweight/blocker). Let me read the web `Label`/`HelpIcon` (composed by Input), check for any existing TextField-based surface for editable-field a11y idioms, and assess the KMP build feasibility.
+
+There's an existing `FormField` surface and `TagInput` — much closer analogs to `Input` (editable form fields). Let me study `FormField` fully (the closest reference for TextField + focus + label/error/hint composition).
+
+`FormField` is the closest analog (labeled wrapper with error/hint). Let me read its full set plus the web source to mirror the exact label/error/hint/required idioms used in this codebase.
+
+Let me read the remaining FormField files (swift/Previews/Tests/strings) and the TagInput TextField+focus idiom to complete my reference set before writing `Input`.
+
+I now have all the idioms I need (TextField, `@FocusState`, field chrome, error border). Let me resolve naming conventions (avoid `InputInput` awkwardness / collisions) and locate shared helpers `TSAnimation`/`TSFadeIn`.
+
+All shared helpers confirmed (`TSAnimation.fast/standard`, `TSFadeIn`). TagInput uses descriptive type names (not `TagInputInput`), so I'll use clean names. Let me run a collision check for every public type name I plan to introduce.
+
+All names clear; `pwsh` and the placeholder checker are present. Let me read the lint/format configs and the placeholder checker so my code passes the gate cleanly.
+
+Let me check the forbidden placeholder patterns — critically, whether "placeholder" itself is banned (the web Input has a `placeholder` prop I must handle carefully).
+
+I now have a complete picture: the proven 8-file pattern (Accordion + FormField + TagInput references), design tokens (P1/S9), shared helpers (`TSAnimation`, `TSFadeIn`), lint/format budgets (≤120 line, ≤400 file, `--strict`), and the forbidden-word list (critically, **"Placeholder" is banned** — I'll use SwiftUI's "prompt" idiom). Let me set up tracking and start writing the `Input` surface.
+
+Now I'll write the surface. Starting with the Foundation-only pure core (`Input.Adapter.swift`).
+
+Now the state-holder layer (`Input.Model.swift`) — i18n facade (P1/S10), telemetry seam (P1/S11), observable holder (P1/S8).
+
+Now the subviews (`Input.Views.swift`) — size metrics, label row, help trigger, the field control, and the message line.
+
+Now the public surface (`Input.swift`) that composes the pieces and binds through the holder.
+
+Now the previews covering every real branch.
+
+Now the pure-core unit tests (`Input.AdapterTests.swift`).
+
+Now the state-holder, view-composition, and i18n-facade tests (`Input.Tests.swift`).
+
+Finally the i18n catalog contribution (`Input.strings`).
+
+All 8 files written. Let me auto-format them, then run the lint checks exactly as the gate does.
+
+No formatting changes needed — files are already compliant. Now run SwiftLint `--strict` on my files for a fast signal, plus the full `swiftformat --lint` the gate uses.
+
+SwiftLint is clean (0 violations). Let me verify the full format gate, generate the Xcode project, check simulators, and inspect the shared-helper dependencies (to enable an isolated type-check independent of the KMP framework).
+
+Format gate passes (0/4982 files need formatting), iPhone 16 simulator is available, and the shared helpers only import SwiftUI. Let me do a fast **isolated type-check** of my view code (compiled with the tokens + design + motion helpers) to validate correctness independent of the heavyweight KMP framework build.
+
+The isolated type-check caught a real issue: explicit `return` in `@Previewable` `#Preview` closures isn't allowed by the strict compiler. The modern `@Previewable` pattern uses implicit return. Let me fix all preview closures and re-check.
+
+Another real catch — Swift requires arguments in declaration order (`error` before `hint`). Let me fix that preview.
+
+My non-test view code type-checks cleanly. Now let me validate the **test files** too by compiling them together with the sources as one module (stripping the `@testable import` since types co-locate), so I can verify the test API usage (e.g. `FocusState` construction) without needing the KMP framework.
+
+XCTest needs the platform framework search path. Let me add it and retry.
+
+Both source and test code type-check cleanly against the real iOS SDK — strong evidence the surface is correct. Now I'll attempt the **full gate**. First generate the Xcode project, then kick off the heavyweight KMP `Shared.xcframework` build (the scheme's pre-action dependency) in the background.
+
+Project generated. Now I'll start the KMP `Shared.xcframework` build (the long pole — first run may download the Kotlin/Native toolchain) in the background and monitor it.
+
+KMP build started. Let me monitor its progress.
+
+While the KMP build runs, let me honestly verify my files are placeholder-clean (the gate's literal `-Path .../Input` scans a non-existent path and passes trivially, so I'll run the checker against my actual files via a temp copy).
+
+The placeholder checker flags the literal word "placeholder" in my doc comments (5 references to the web attribute). Although the gate's literal `-Path .../Input` scans a non-existent path (passing trivially), the acceptance criterion forbids the token in shipped code. I'll reword all 5 to drop the literal token while keeping parity meaning. Let me view the exact lines.
+
+I'll reword all 5 to drop the literal token while preserving the parity meaning.
+
+Now let me re-verify: no banned tokens remain, formatting/lint still clean, and the placeholder checker passes on my files.
+
+All clean: zero banned tokens, placeholder checker passes (COUNT=0), formatting clean. Let me check the KMP build progress.
+
+Still running (~6 min) with no console output yet. Let me inspect whether Gradle is actively downloading the Kotlin/Native toolchain or compiling.
+
+Healthy progress — the Kotlin/Native toolchain (konan 2.4.0) is already installed (no download needed), and LLVM is actively compiling the `Shared.framework` for iOS simulator. Release K/N compilation is slow across architectures. Let me continue waiting.
+
+3 of 4 targets compiled (iosSimulatorArm64, iosArm64, macosArm64); the release XCFramework assembly is pending. Build is healthy. Let me wait for it to finish.
+
+KMP `Shared.xcframework` built successfully (8m29s) and staged. Now the full app can build. Let me run the iOS build of the whole app (proves my code compiles + links in the real target) and check the log directory.
+
+Log directory exists and the framework is staged (ios-arm64, ios-arm64-simulator, macos-arm64). The iOS build is running. Let me monitor it.
+
+Full-app compilation is underway (thousands of Swift files, first clean build). Let me keep waiting.
+
+The build failed (RC=65) — but in **other** surfaces (`AIAlertTuningSuggestions`, `AIAnomalyExplanations`, `AIAutoNameUnnamedLocations`), not my `Input` files. The actual compiler diagnostics were truncated. Let me re-run incrementally and capture the real `error:` messages to determine whether this is pre-existing or caused by my change.
+
+The real error is **pre-existing and unrelated to my change**: `AISuggestNewGeofences.swift:129: escaping closure captures non-escaping parameter 'content'` — a file I didn't create or modify. Let me confirm this is baseline breakage (not caused by `Input`) and enumerate all pre-existing errors.
+
+Confirmed: exactly **one** pre-existing error, in `AISuggestNewGeofences.swift` (a tracked baseline file I never touched — my `Input.*` files are all untracked additions with **zero** errors). This sibling surface is outside my allowed scope (`Input.*` only) and owned by a different prompt in this parallel migration. Let me view the pre-existing bug for the record, then prove my surface builds + its tests pass in isolation.
+
+Pre-existing bug confirmed (`glass(_ content:)` passes a non-escaping closure into `TSGlassPanel` — entirely within `AISuggestNewGeofences`, unrelated to `Input`). I will not touch that out-of-scope file. 
+
+To prove my surface genuinely builds **and its tests pass**, I'll spin up an isolated SwiftPM harness (my `Input` sources + the design/motion helpers) and run the real XCTest suite.
+
+All **41 Input tests pass** (0 failures), compiled under Swift 6 strict concurrency for macOS — real proof the surface builds and behaves correctly. Now let me run the remaining gate step that's meaningful on my scope: full-tree `swiftlint --strict` (lint is syntactic, so the pre-existing type error in the sibling won't affect it).
+
+Full-tree `swiftlint --strict`: **0 violations across 4684 files** (LINT_RC=0). Now let me run the macOS build (gate step 2) to capture real evidence of whether it hits the same pre-existing blocker, since both targets compile the shared-surfaces sources.
+
+While the macOS build runs, let me record findings. Let me check its progress.
+
+The macOS build hit a **different, environmental** blocker first: code-signing — its entitlements (hardened runtime/sandbox) require a development certificate, which isn't configured on this runner (`DEVELOPMENT_TEAM: ""`). That's a runner-capability limit, not my code. Let me re-run the macOS build with signing disabled so it actually compiles, to capture real evidence of whether the macOS target also hits the same pre-existing source error.
+
+Decisive evidence: with signing bypassed, the macOS target compiles and hits the **same pre-existing bug pattern** in *another* out-of-scope sibling (`AIGeofenceAwareAutomationSuggestions.swift:141` — identical `escaping closure captures non-escaping parameter 'content'`). The baseline has multiple AI* siblings with this defect; none are mine. Let me confirm zero `Input.*` errors in both build logs and gather final evidence.
+
+Complete, honest picture established:
+- **My `Input` surface: zero errors** in both iOS and macOS app builds; **41/41 tests pass**; lint/format/placeholder all clean.
+- **Full-scheme gate blocked externally**: (a) pre-existing `escaping closure captures non-escaping parameter 'content'` bugs in out-of-scope AI* sibling surfaces (`AISuggestNewGeofences`, `AIGeofenceAwareAutomationSuggestions`, …), and (b) macOS code-signing (no dev certificate on this runner).
+
+Neither blocker is in my allowed scope (`Input.*`). Let me write the honest gate log, then verify gitignore before committing.
+
+All generated artifacts are gitignored; only my `Input.*` files are new. Now let me write the honest gate log.
+
+Now I'll stage **only** my `Input.*` files plus the log and verify the staged set before committing.
+
+Exactly the 8 `Input.*` files + the log are staged — nothing else. Let me commit with an honest message.
+
+Committed cleanly (9 files, 1591 insertions). Let me clean up temp artifacts and finalize tracking.
+
+Working tree is clean; all tracking finalized. The task is complete within its allowed scope. Here's the final summary.
+

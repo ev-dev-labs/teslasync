@@ -1,0 +1,120 @@
+I'll start by exploring the environment and reading the web source that serves as the specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source and understand conventions.
+
+The web source is clear—a compact card showing total frontend errors + top offenders. Now let me study the Apple conventions using the closest analog (`AiUsageCard`, also a system-status admin card) and the data hook.
+
+Now let me read the data type, the projection/views/chrome/tests pattern, and the build/token infrastructure.
+
+Now let me understand the build dependency on `Shared.xcframework` (KMP) and whether the full build is feasible here.
+
+The established disposition is "code-complete + DEFERRED full Xcode gate" (KMP `Shared.xcframework` + signing are environment-blocked, owned by P4/P99). Let me read the closest analog's log to replicate its exact verification approach.
+
+I now fully understand the sanctioned disposition: **isolated SwiftPM build+test against the real design system + swiftlint/swiftformat/placeholder green, with the full-app Xcode gate DEFERRED** (KMP framework/signing owned by P99). Let me study the design system primitives I'll consume.
+
+Let me check the Button/Typography primitives, lint config, and the placeholder checker before designing the surface.
+
+All dependencies confirmed (Charts/MapKit isolated; my closure is self-contained). Let me verify the exact web number-format semantics and confirm no case-collision exists, then write the plan.
+
+I have everything I need. Let me set up tracking and write the plan.
+
+Now I'll author the surface. Starting with the pure-Foundation Adapter core.
+
+Now the presentational Views (web body regions) and update progress.
+
+Now the Previews and the i18n strings catalog.
+
+Now the two test files.
+
+All 10 files written. Now I'll set up the isolated SwiftPM verification harness (the sanctioned approach) compiling the shipped sources against the real design system.
+
+The toolchain points at Xcode 26.5. Now I'll scaffold the isolated package (copying the exact shipped sources + real design-system files) and run `swift test`.
+
+Single compile error — the `summaryBody` closure is captured by `TSFadeIn`'s escaping content. Let me make it generic + escaping.
+
+Isolated build is green: **24/24 tests pass** under Swift 6 strict concurrency. Now let me verify the surface typechecks against **both** the iOS 18 and macOS 15 SDKs (the dual-SDK claim predecessors make).
+
+Both SDKs typecheck clean (EXIT=0), `#Preview` included. Now the per-surface lint/format/placeholder gates.
+
+Two issues: a `redundantSelf` in Projection (renaming the local fixes it cleanly) and two long lines in Tests. Let me inspect and fix.
+
+Now auto-format my files in place (the tool's job), then re-lint.
+
+swiftformat clean (0/9). Now swiftlint --strict and re-running the isolated tests with the formatted/renamed sources.
+
+swiftlint clean (0 violations) and tests still 24/24 green. Now the placeholder gate — let me check how the script selects files so I scope it correctly.
+
+The gate's bare `FrontendErrorsCard` path is a non-existent path (trivially clean), so I'll scan a temp dir containing exactly my shipped files for a genuine count, plus grep all 10 files directly.
+
+All host gates are green (isolated build+24 tests, both SDKs, swiftformat, swiftlint, placeholder=0). Now I'll gather **real evidence** for the deferred full-app gate rather than assuming — first confirming the project generates with my files, then attempting the actual build.
+
+Project generates cleanly (GEN_EXIT=0) and my surface is wired into all targets (60 pbxproj refs). Now I'll attempt the real iOS build to capture the actual deferral blocker.
+
+The KMP `Shared.xcframework` Gradle build times out (exit 124) — confirming the full-app gate's blocker. Let me capture the nature of the block (download/build activity) for honest evidence.
+
+The Gradle build reaches live Kotlin/Native **release**-link tasks (`linkReleaseFrameworkIosArm64`) — the multi-minute long-pole that bounds the full-app gate. Notably the **debug** frameworks are already `UP-TO-DATE`. Let me check if a debug xcframework exists that I can stage to attempt a *real* in-app build for stronger evidence.
+
+A debug `Shared.xcframework` is already built. I'll stage it and attempt a **real in-app iOS build of the target** (bypassing the scheme's Gradle pre-action) to definitively prove my surface compiles in-app and identify the true blocker.
+
+The real in-app build gives **definitive evidence**: my surface compiles cleanly (strings validated, zero FrontendErrorsCard errors), while the target build fails only on **pre-existing** duplicate-type ambiguities in unrelated `dashboard-widgets` surfaces. Let me quantify this precisely.
+
+Zero errors are mine (0 in FrontendErrorsCard). Let me confirm the 23 `feature-views` errors are in *other* pre-existing surfaces, not mine.
+
+**Conclusive evidence captured.** My surface compiles cleanly in the real iOS app build against the real KMP framework — **0 errors in FrontendErrorsCard**. All 285 failures are pre-existing duplicate-type ambiguities in unrelated `dashboard-widgets` / `DrivingCoachSection` / `TimestampTool` surfaces (the documented parallel-merge collisions owned by P99). Let me verify the git tree is clean, then write the log.
+
+Clean tree — only my 10 files are new (the 2 modified web files are pre-existing, not mine; I'll scope the commit precisely). Let me grab exact tool versions, then write the gate log.
+
+All host gates green and the deferral is verified live. Now I'll write the comprehensive gate log.
+
+Now I'll clean up generated/temp artifacts and commit exactly my surface files + the log.
+
+Tree is clean — exactly my 10 files + the log. Committing with the prompt's specified message, scoped precisely (leaving the pre-existing modified web files untouched).
+
+Committed `14f40177` with exactly the 10 surface files + log (the 2 pre-existing web modifications left untouched). Final verification of the commit contents.
+
+All complete. Let me finalize tracking.
+
+Task complete. Committed `14f40177`.
+
+## Summary
+
+Shipped the native Apple parity of **`FrontendErrorsCard`** (P4 · 0243) — 10 files (1,233 Swift lines + strings) in `apps/apple/TeslaSync/feature-views/`, following the established P4 surface pattern (Adapter/Projection/Model/Views/Chrome/surface/Previews/strings/Tests/AdapterTests).
+
+**Parity with the web source** (`features/system/components/status/FrontendErrorsCard.tsx`): headline `fmtInt(total ?? 0)` + caption, top-offender list (neutral name chip · mono accent route · right count), `name/route || '—'` fallback, Bug→`ladybug`, cyan-300→`Color.TS.accent`. Bound through the P1/S8 state-holder seam (no HTTP in view), P1/S9 tokens, P1/S10 i18n facade, P1/S11 `view.opened` telemetry. All states render: **loading · error (retryable "unable to load") · empty (healthy) · data**, plus the live/stale/offline freshness axis with one-shot stale auto-refresh.
+
+**Verification (all host gates green):**
+- Isolated SwiftPM build + **24/24 XCTest** pass under Swift 6 strict-concurrency against the *real* design system.
+- Dual-SDK typecheck — **iOS 18 + macOS 15** both EXIT=0 (incl. `#Preview`).
+- swiftformat `0/9` · swiftlint `0 violations` · placeholder `COUNT=0`.
+- **Real in-app iOS build** against the real KMP `Shared.xcframework`: **0 FrontendErrorsCard errors** (strings validated into the bundle).
+
+**Deferred (verified, not assumed):** the full-app `xcodebuild` scheme gate — its Gradle KMP release-link long-pole, 285 *pre-existing* duplicate-type ambiguities in unrelated `dashboard-widgets`/`DrivingCoachSection`/`TimestampTool` surfaces, and macOS signing — owned by the P99 acceptance gate. Log ends `EXIT=0 / STATUS=DONE`. Pre-existing modified web files were left untouched.
+
+
+
+The task is fully complete and verified. All work is committed.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0243-FrontendErrorsCard.log | 188 ++++++++++++++
+ .../feature-views/FrontendErrorsCard.Adapter.swift | 104 ++++++++
+ .../FrontendErrorsCard.AdapterTests.swift          |  61 +++++
+ .../feature-views/FrontendErrorsCard.Chrome.swift  | 145 +++++++++++
+ .../feature-views/FrontendErrorsCard.Model.swift   | 280 +++++++++++++++++++++
+ .../FrontendErrorsCard.Previews.swift              |  75 ++++++
+ .../FrontendErrorsCard.Projection.swift            |  78 ++++++
+ .../feature-views/FrontendErrorsCard.Tests.swift   | 221 ++++++++++++++++
+ .../feature-views/FrontendErrorsCard.Views.swift   | 156 ++++++++++++
+ .../feature-views/FrontendErrorsCard.strings       |  35 +++
+ .../feature-views/FrontendErrorsCard.swift         | 113 +++++++++
+ 11 files changed, 1456 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0243-FrontendErrorsCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FrontendErrorsCard.swift

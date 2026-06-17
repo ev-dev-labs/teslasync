@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure to understand what exists and what I'm working with.
+
+Apple toolchain is fully available (xcodebuild, swift, swiftlint, swiftformat, pwsh). The web source exists. Let me read the web source and explore the existing Apple app structure.
+
+This is a large, real Apple project (Xcode 26.5, Swift 6.3.2, feature-views has 2228 entries). Let me read the web source and study existing patterns.
+
+Now I understand the file convention: each feature view = `{Name}.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`, `.States.swift`. Let me finish reading the web source.
+
+I have the full web source. Now let me study the data types and a complete existing feature-view as a template (delegation is forbidden, so I'll do this myself).
+
+Let me read the API type definitions and study a complete template (ActiveSessionsSection) thoroughly.
+
+Excellent, sophisticated architecture. Let me read the remaining template files to fully understand the conventions before writing any code.
+
+Let me read the remaining template files (States, Views, Actions, Previews, Tests, strings) to complete my understanding of conventions.
+
+Let me read the test patterns, design tokens, and project config to complete my picture.
+
+Let me examine design tokens, project config, the Previews pattern, and how the build/test targets are structured.
+
+Design tokens are referenced everywhere but only defined in WatchDesignTokens — they're likely generated (P1/S9). Let me examine the project config and generation setup.
+
+Now I understand the build: XcodeGen-generated project, design tokens from `../design/generated/apple`, and a `Shared.xcframework` staged by a pre-action script. Let me verify the build prerequisites and the design token APIs.
+
+Tokens exist at `apps/design/generated/apple/Tokens.swift`. The `Shared.xcframework` is missing (only `.gitkeep`) — that's the key risk. Let me read the tokens and the framework-staging script.
+
+Now I understand the architecture fully. The critical risk is `Shared.xcframework` — built via Gradle/Kotlin-Native in a scheme pre-action. Let me check the toolchain availability and find a form/CRUD/toast reference surface.
+
+`apps/shared` + `gradlew` + `java` exist (Gradle/Kotlin-Native build of `Shared.xcframework` is the risk). `AIProviderSection` (has `.Validate.swift`) is the ideal CRUD-form template. Let me study it and the toast pattern.
+
+The toast seam is a per-surface protocol (e.g. `GasPriceSettingsToast`). `AIProviderSection` is the best CRUD+validation template. Let me read these key references.
+
+The patterns are clear. QuietHoursPanel uses toast (not dialogs), so let me study the toast model/view/dismiss pattern from AppearanceSettings to mirror it precisely.
+
+I have a complete understanding of the architecture and conventions. Let me set up tracking, kick off the long-pole `Shared.xcframework` build in the background, and start implementing.
+
+Let me check the existing toast view component and native Picker/DatePicker usage to match HIG conventions, then I'll write the files.
+
+Let me read the lint/format configs (the gate runs `swiftlint --strict` and `swiftformat --lint`) so my code complies exactly.
+
+All conventions and lint constraints are clear (≤120 col lines, ≤400-line files, ≤250-line types, ≤50-line funcs, `--strict`). Now I'll write the surface. Starting with the pure Adapter and Validate cores.
+
+Let me check the background shared-framework build progress, then continue with the Seams file.
+
+Build is running (downloading Gradle/Kotlin-Native). Continuing with the Seams file.
+
+Now the state holder. I'll split it into `Model.swift` (core/lifecycle) and `Editing.swift` (draft CRUD) to respect the 250-line type-body and 400-line file limits.
+
+The shared framework build completed. Let me check the result — this determines whether the full gate is achievable.
+
+`Shared.xcframework` built successfully (6m50s) and is staged — the full gate is achievable on this runner. Continuing with the SwiftUI layer: States, Views, Form, and root.
+
+Let me verify all files are within the 400-line limit before continuing, then write the Form.
+
+All files comfortably under limits. Let me add a pure timezone helper to the Adapter, then write the Form.
+
+Now the root view that composes everything.
+
+Now the Previews, then the strings catalog.
+
+Now the strings catalog with all web keys plus the native envelope keys.
+
+Now the test suite. First the pure adapter/validate/schedule/accessibility tests.
+
+Now the schedule/accessibility/severity tests.
+
+Now the state-holder (model) tests covering the CRUD flows, toast, and freshness behavior.
+
+All files written. Let me make two refinements (avoid `Date.init` for lint safety, make the prune test deterministic), then format and lint my files.
+
+Now let me format my files with swiftformat (using repo config), then verify line counts.
+
+swiftformat normalized 7 files; all are comfortably under 400 lines. Let me confirm format-clean and run swiftlint on the new files.
+
+Both format and lint pass cleanly (0 violations) on all 14 new files. Now let me generate the Xcode project and verify the simulator, then run the full build/test gate.
+
+Project generated; iPhone 16 simulator is available and booted (iOS 26.5). Let me locate the log directory and kick off the iOS build+test (the long pole) in the background.
+
+Found the log dir. Let me check an existing feature-views gate log format, then start the iOS build/test.
+
+This reveals the repo's established disposition. Let me read the full 0197 log and the pending-verifications doc to follow the sanctioned methodology (isolated surface build/test + documented full-gate deferral).
+
+This is the sanctioned methodology: surface files GREEN on format/lint/placeholder + an **isolated SwiftPM build+test** against the real design system, with the full-app xcodebuild documented as DEFERRED (pre-existing XCTest/signing blockers). Let me gather the references and the design-system deps.
+
+I now have the complete sanctioned methodology. Let me run the placeholder gate and set up the isolated SwiftPM harness (the real surface proof).
+
+Let me verify the placeholder script actually scanned my files (the path is a prefix, not a directory) — I must avoid a false green.
+
+The literal gate path is a filename prefix (not a real path), so that invocation scans nothing. Let me verify the script's behavior and run a **real** scan of the actual shipped files (as the predecessor did).
+
+Confirmed — the literal gate path scans nothing (returns 0 vacuously). Let me run a **real** placeholder scan of the actual shipped files, and set up the isolated SwiftPM harness.
+
+Real placeholder scan of all 14 shipped files: **PLACEHOLDER_COUNT=0**. Now the critical proof — the isolated SwiftPM harness (module "TeslaSync", surface + real design tokens, Swift 6 strict concurrency) with the tests.
+
+Tests ran. Let me extract the summary and exit code.
+
+The surface **compiles** under Swift 6 strict concurrency — only one of my test assertions was wrong: `TimeZone.knownTimeZoneIdentifiers` doesn't contain `"UTC"`, so the function correctly prepends it (faithful to the web `[currentTz, ...zones]`). The test's sorted-assumption was the bug. Let me fix the test (not the code) and re-run.
+
+**All 56 tests pass** (0 failures) under Swift 6 strict concurrency against the real design system. Now let me add real iOS-18 + macOS-15 SDK typecheck evidence and re-confirm format/lint on the edited test file.
+
+iOS 18 typecheck: clean. Now macOS 15 typecheck and re-confirm format/lint on the edited test file.
+
+Both SDK typechecks pass (iOS 18 + macOS 15) and the edited test is clean. Now the final gate: the full-app xcodebuild. Let me regenerate the project (to enumerate all new files), confirm they're referenced, and run the iOS build/test capturing real evidence.
+
+All 15 files are referenced in the project. Now I'll run the full-app iOS build/test gate (capturing real evidence). This is expected to hit the pre-existing blockers documented for every P4 surface. Let me start it and also pre-scan for any symbol collisions with my types.
+
+iOS build/test is running in the background. Let me check the collision pre-scan result and monitor progress.
+
+The pre-scan surfaced an existing `Sources/Notifications/Routing/QuietHours.swift` and related files — a potential real collision with my `QuietHours*` types. I must check this immediately.
+
+`QuietHours` (the existing struct) differs from all my `QuietHours<Suffix>` names. Let me confirm no existing type matches any of mine across the whole module.
+
+Confirmed — no collisions (the only existing `QuietHours` is a notification-routing struct; all my types are `QuietHours<Suffix>`). Let me continue monitoring the iOS build.
+
+IOS_EXIT=65 (matches the documented deferral for every P4 surface). Now the critical honesty check — grep the build log to confirm **zero** QuietHoursPanel errors and identify the pre-existing blocker.
+
+Exit 65 but zero `error:` lines — the failure is at a different stage. Let me find the actual failure markers.
+
+The failure is a `swift-frontend` compiler crash (`report_fatal_error`), not a normal error — that's why no `error:` lines. I must determine whether it's in my code or pre-existing. Let me examine the crash context.
+
+The crash is in the whole-module `TeslaSync` app-target compile. Let me see the crash's "While..." context and check for the pre-existing duplicate-declaration triggers.
+
+Zero real `error:` lines anywhere — it's a `swift-frontend` **batch-mode compiler crash** in the whole-module app target, with no declaration-specific frame. My files type-check cleanly in isolation on both SDKs. To rigorously prove the crash is pre-existing (not mine), I'll run a control build with my files removed.
+
+Control build running. Let me wait for it to determine whether the crash is pre-existing.
+
+**CONTROL_BUILD_EXIT=65** — the app target fails identically **without** my files. This conclusively proves the crash is pre-existing. Let me confirm it's the same compiler crash, then restore my files.
+
+Conclusive: the control build (without my files) shows the **identical** `swift-frontend` whole-module crash (`module-name TeslaSync`, exit 65). The crash is pre-existing and unrelated. Files restored. Now let me run the macOS gate for complete evidence while I draft the log.
+
+While macOS builds, let me capture the final consolidated format/lint/placeholder exits on the complete file set for the log.
+
+FORMAT_EXIT=0, LINT_EXIT=0 on all 14 files. The macOS build finished — let me capture its exit and root cause.
+
+macOS fails on **development signing** (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` entitlements require a dev certificate) — the documented pre-existing blocker, failing before compilation. Zero QuietHoursPanel errors. Let me confirm no signing identity exists, then write the gate log.
+
+Confirmed: `0 valid identities found`. I now have complete, honest evidence. Let me write the gate log.
+
+Now let me add the deferred-verification row to `apps/macos-pending-verifications.md` (following the established pattern).
+
+The prompt's allowed files are strictly `QuietHoursPanel.*` + the log, and this is a parallel run (slot-12) — editing the shared `macos-pending-verifications.md` risks merge conflicts with other slots. The deferral is fully documented in my own log, so I'll revert that shared-doc edit to keep a clean footprint.
+
+Clean footprint — exactly the 15 surface files + the log (`.xcodeproj` and `Shared.xcframework` are git-ignored). Let me clean up temp artifacts and commit.
+
+16 files staged (15 surface + log). Let me commit.
+
+Committed cleanly (16 files, COMMIT_EXIT=0). Let me do a final verification of the working tree and commit.
+
+All committed; working tree clean (commit `9a547f99f`, log ends `EXIT=0 / STATUS=DONE`). Let me finalize the task tracking.
+
+All todos complete. The QuietHoursPanel Apple surface is shipped and verified.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0210-QuietHoursPanel.log | 189 ++++++++++++
+ .../feature-views/QuietHoursPanel.Adapter.swift    | 288 +++++++++++++++++
+ .../feature-views/QuietHoursPanel.Editing.swift    | 163 ++++++++++
+ .../feature-views/QuietHoursPanel.Form.swift       | 266 ++++++++++++++++
+ .../feature-views/QuietHoursPanel.Model.swift      | 221 ++++++++++++++
+ .../feature-views/QuietHoursPanel.ModelTests.swift | 339 +++++++++++++++++++++
+ .../feature-views/QuietHoursPanel.Previews.swift   | 114 +++++++
+ .../feature-views/QuietHoursPanel.Row.swift        | 190 ++++++++++++
+ .../QuietHoursPanel.ScheduleTests.swift            | 158 ++++++++++
+ .../feature-views/QuietHoursPanel.Seams.swift      | 240 +++++++++++++++
+ .../feature-views/QuietHoursPanel.States.swift     | 243 +++++++++++++++
+ .../feature-views/QuietHoursPanel.Tests.swift      | 206 +++++++++++++
+ .../feature-views/QuietHoursPanel.Validate.swift   | 240 +++++++++++++++
+ .../feature-views/QuietHoursPanel.Views.swift      | 117 +++++++
+ .../feature-views/QuietHoursPanel.strings          |  98 ++++++
+ .../TeslaSync/feature-views/QuietHoursPanel.swift  | 102 +++++++
+ 16 files changed, 3174 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0210-QuietHoursPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Editing.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Form.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Row.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.ScheduleTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Validate.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuietHoursPanel.swift

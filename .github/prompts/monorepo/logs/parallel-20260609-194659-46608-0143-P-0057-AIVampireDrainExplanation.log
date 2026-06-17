@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure to understand what exists and verify the platform capabilities required for this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me explore the existing Apple app structure and the web source component.
+
+The Apple app exists. Now let me explore its structure deeply and read the web dependencies (AIFeatureCard, withAiFeature, useAiStream) that I must reproduce.
+
+There's a rich set of existing ported AI surfaces. Let me find which web components use the exact same trio (`AIFeatureCard` + `withAiFeature` + `useAiStream`) to identify the closest already-ported analog to mirror.
+
+Many analogs exist. Let me read the web trio (`AIFeatureCard`, `withAiFeature`, `useAiStream`) and compare candidate analogs to find the closest already-ported surface to mirror.
+
+Now I fully understand the web contract. The vampire-drain surface is a simple `AIFeatureCard` + `withAiFeature` + `useAiStream` narration with a `{vehicle_id, lookback_days?}` body. Let me find the closest already-ported analog by comparing candidate web sources.
+
+`AIBatteryHealthForecastNarrative` and `AICabinTemperatureImpactNarrative` are nearly identical to my target. The only delta: vampire-drain adds an optional `lookbackDays`. Let me read the complete 10-file native port of `AIBatteryHealthForecastNarrative` as my canonical template.
+
+The battery narrative adapter notes that anomaly-explain (0005) has a `days` window — that's the closest analog for my optional `lookback_days` field. Let me read the anomaly-explain web source + adapter (for the days-window body handling) and the remaining battery-narrative template files.
+
+Now I understand the full 10-file architecture. The vampire-drain delta vs. battery: adds a conditional `lookback_days`, different URL/feature-id/strings. Let me read the remaining battery template files plus the project.yml to understand the build/test wiring.
+
+Let me read the remaining template files (Previews, strings, Tests, AdapterTests) plus the build config and design tokens.
+
+Now the test files and the build/test config plus design tokens.
+
+Complete template understood. Now let me examine the build wiring (project.yml), design tokens, and shared component primitives to confirm everything I'll reference exists.
+
+Sources are globbed, so new files are auto-discovered — but the git-ignored `.xcodeproj` must be regenerated with `xcodegen`. Let me check the toolchain prerequisites (xcodegen, the Shared.xcframework staging script, and where design tokens like TSSpacing live).
+
+Critical dependency: the build's pre-action stages `Shared.xcframework` from a KMP/Gradle module, and `Frameworks/` only has `.gitkeep`. Let me assess whether the shared core can build here (gradlew, JDK) and check the pending-verifications doc.
+
+Environment is fully capable: Xcode 26.5, Java 17, xcodegen 2.45.4, swiftlint, swiftformat, gradlew present, iPhone 16 simulator. STATUS=BLOCKED is not warranted. Let me confirm no naming collisions, the swiftlint rules, and the feature-id registration before writing.
+
+No existing shared-surface for vampire drain (good). `VampireDrainWidget*` types exist in dashboard-widgets (same module) — I'll use prefix `VampireDrainNarrative` to avoid collision. Feature id `vampire-drain-explanation` is registered. Let me confirm the widget's type names won't clash, then write a plan.
+
+No collision: widget uses `VampireDrain*` but never `VampireDrainNarrative*`. I'll use prefix `VampireDrainNarrative` (view struct `AIVampireDrainExplanation`, slug matching). Let me set up tracking and create the plan.
+
+Now I'll create the surface files, mirroring the proven battery-narrative template. Starting with the logic core (Adapter, Projection).
+
+Now the Projection, reproducing the exact web description string (em-dash `—` and right-quote `'` matching the web `\u2014`/`\u2019`).
+
+Logic core done. Now the SwiftUI view layer (main view, Chrome, Views).
+
+View layer done. Now Previews and the strings catalog.
+
+Now the test files — projection/model/a11y tests, then adapter tests (including the new conditional `lookback_days` coverage).
+
+All 10 files created. Let me verify the design tokens/components I referenced exist and lint the new files for formatting before the heavy build.
+
+Tokens all confirmed. swiftformat flagged 2 long lines in AdapterTests. Let me view and fix them.
+
+Fixed. Let me re-lint my files with both swiftformat and swiftlint --strict.
+
+Both linters pass with 0 violations on the new files. Now let me generate the Xcode project and check for `pwsh` (the placeholder script is PowerShell).
+
+Project generated; `pwsh` is available. Let me kick off the heavy iOS build+test (the long pole) in the background, then inspect the placeholder script while it runs.
+
+The placeholder script scans with IgnoreCase, so even the word "placeholder" in a comment would trip it. Let me grep my files for every forbidden pattern (case-insensitive) while the iOS build runs.
+
+No forbidden patterns. Let me run the placeholder gate command as specified and check the iOS build progress.
+
+Placeholder gate passes (`EXIT=0`). The iOS build+test is compiling (Gradle + full app). Let me wait for it.
+
+Output is buffered through `tail` until completion. The build is heavy (KMP Gradle + full app + tests). Continuing to wait.
+
+The iOS build failed — but **not in my files**. The errors are "ambiguous for type lookup" for `RecentDrives*` and `StateTimeline*` types in `YearlyTrendChart`, `globalShortcuts`, `helpers`, `selectedVehicle` — files outside my allowed scope. This looks like a pre-existing duplicate-type issue. Let me establish the baseline and confirm my files aren't the cause.
+
+git status confirms **only my 10 files are new** — I changed nothing else. The ambiguous types are defined in **two committed files each** (e.g., `RecentDrivesConnection` in both `RecentDrivesListWidget.Model.swift` and `RecentDrivesSection.Adapter.swift`), both compiled into the app module. This is a pre-existing baseline collision. Let me see the rest and view the actual declarations.
+
+Decisive evidence: these domain types (`RecentDrivesConnection`, `StateTimelineModel`, etc.) are each defined in **both** a `dashboard-widgets/*` file and a `feature-views/*` file — all committed, all compiled into the one app module. Let me view the actual declarations to confirm they're genuine module-level duplicates (access level, any `#if` guards).
+
+Conclusive: both `RecentDrivesConnection` definitions are `public`, top-level, no platform guards, in committed files — a genuine pre-existing duplicate-type collision in the app module. My surface is uninvolved. Per covenant rule 3 ("no skip-and-assume"), I'll verify the baseline fails *without* my files rather than assume. First, fast checks: framework staging, pbxproj membership, and the whole-project lint/format gate steps.
+
+Lint gate is green (0 violations across 3539 files), framework is staged, and both duplicate files are confirmed in the generated project. Now the full swiftformat gate step, then I'll prove the baseline build fails without my files.
+
+swiftformat gate is also green (0/3769). So **LINT, FORMAT, PLACEHOLDER are all green** — only the build/test is red. Now I'll prove the build fails *without* my files (per "no skip-and-assume"). Backing up my files and regenerating without them.
+
+The `ls` (no match) broke the chain before regenerate. Files are safely backed up. Let me regenerate and start the baseline build.
+
+Project regenerated with zero references to my files. Now building the **baseline** (no my files) to prove it fails identically.
+
+Baseline build running. Let me wait for it to confirm the same failure occurs without my files.
+
+**Conclusive proof**: with my 10 files removed and the project regenerated (0 references to them), the baseline build still **FAILED (exit 65)** with the identical `StateTimelineModel`/`StateTimelineConnection`/`RecentDrives*` ambiguity. The breakage is pre-existing and independent of my surface.
+
+Let me restore my files, regenerate, and run the macOS gate step while I write the log.
+
+Files restored (60 references). Now launching the macOS gate step in the background while I author the log.
+
+While macOS builds, let me gather precise duplicate-definition locations for the log evidence.
+
+I have the complete duplicate-type evidence table (8 types, each defined twice). The macOS build finished — let me read its result.
+
+Both build gates are red for reasons **outside my surface**:
+- **iOS** (`IOS_EXIT=65`): pre-existing duplicate public types across `dashboard-widgets/*` and `feature-views/*` — **proven** by the baseline build (my files removed) failing identically.
+- **macOS** (`MAC_EXIT=65`): a *different* blocker — code-signing requires a development certificate not provisioned on this runner (`DEVELOPMENT_TEAM=""`), a platform-capability gap.
+
+All **surface-scoped** gates are green: `LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`. Let me write the honest gate log.
+
+Log written. Let me clean up the empty backup dir and verify the final working-tree state matches the allowed-file scope exactly.
+
+The working tree is exactly scoped: 10 surface files + 1 log, nothing else touched (the `.xcodeproj` is gitignored). Let me record final state in the tracker.
+
+I've completed all in-scope work and verified it thoroughly. Here is the outcome.
+
+## Summary
+
+I implemented **`AIVampireDrainExplanation`** as a production-polished, native Apple (SwiftUI) surface at parity with `web/src/components/ai/AIVampireDrainExplanation.tsx`, then ran the full gate. The surface is complete and passes every surface-scoped check; the two whole-app build steps are **BLOCKED** by issues outside this prompt's allowed file scope.
+
+### Delivered (10 files, `apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.*`)
+Mirrors the proven P4 narrator template (sibling 0008), uniquely prefixed `VampireDrainNarrative*` (no clash with the existing `VampireDrainWidget*`). Full web parity: `withAiFeature` gate → `.gated`; `useAiStream` POST `/ai/charging/vampire-drain/explain` with body `{ vehicle_id, lookback_days? }` (the conditional `lookback_days>0` window unit-tested); `AIFeatureCard` title/description/"Narrate drain"/Helix badge; canStart, Ask-Helix label flip, all `AiOutputPanel` branches; **every state** (gated/loading/error/ready × idle/thinking/prose/stream-error/no-vehicle × live/stale/offline); P1/S8 binding, P1/S10 i18n (no English literals in Swift), P1/S11 `view.opened`; VoiceOver/Dynamic Type/Reduce-Motion. Adapter + projection + model + a11y tests authored.
+
+### Gate results (real, pasted in the log)
+- `LINT_EXIT=0` — swiftlint --strict, **0 violations / 3539 files**
+- `FORMAT_EXIT=0` — swiftformat --lint, **0/3769**
+- `PLACEHOLDER_EXIT=0` — **PLACEHOLDER_COUNT=0** (no TODO/stub/placeholder)
+- `IOS_EXIT=65` / `MAC_EXIT=65` — **BUILD FAILED, not in my files**
+
+### Why BLOCKED (both proven, both out of scope)
+1. **iOS** — pre-existing duplicate **public** types in the shared app module: `RecentDrives*` and `StateTimeline*` are each declared in **both** `dashboard-widgets/*` **and** `feature-views/*` → "ambiguous for type lookup" failing unrelated files. **Proven** by removing my 10 files, regenerating (0 refs), and rebuilding → identical failure.
+2. **macOS** — code-signing requires a development certificate not provisioned on this runner (`DEVELOPMENT_TEAM=""` in `project.yml`) — a platform-capability gap.
+
+Both live outside my Allowed files (`AIVampireDrainExplanation.*` + log) and are owned by other surfaces' prompts / `project.yml`; fixing them would violate scope and risk clobbering parallel work.
+
+Per the binding covenant (**rule 8, "no commit on red"**) I did **not** commit. The 10 surface files + the honest log (`.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0057-AIVampireDrainExplanation.log`, ending `EXIT=65` / `STATUS=BLOCKED`) are left in the working tree for inspection. This matches the prompt's accepted terminal state: *"STATUS=BLOCKED with platform-capability evidence in the log."*
+

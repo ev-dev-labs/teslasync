@@ -1,0 +1,157 @@
+I'll start by exploring the repository structure, reading the web source spec, and checking tooling availability.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 17 simulators). The web source is a pure presentational component. Let me explore the native Apple structure deeply.
+
+There's an extensive existing `shared-surfaces` directory. Let me study the file naming pattern and find a similar presentational surface to learn conventions.
+
+`MetricCard` doesn't exist yet — I'll create it. There are 59 existing surfaces. Let me find presentational surfaces without data adapters (closest to MetricCard) and study a complete example.
+
+There are 3 pure-presentational surfaces without adapters (`AiOutputPanel`, `ChartExportMenu`, `MetricSwitcherChart`), plus a relevant `BatteryDelta`. Let me study a complete presentational surface set and the relevant delta surface.
+
+Let me read the complete `AiOutputPanel` set (presentational, no adapter — the closest structural match to MetricCard).
+
+Now I understand the file conventions. Let me read the design tokens (P1/S9), the relevant `BatteryDelta` surface (since MetricCard uses Delta), the web `Delta`/`HelpTooltip`/tokens sources, and the remaining AiOutputPanel files.
+
+Let me locate the design system tokens and understand the project structure.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read the design token sources.
+
+Now let me read the web `Delta`, `HelpTooltip`, and tokens sources that MetricCard depends on, plus the BatteryDelta model and a test example to learn test conventions.
+
+Let me read the full neonColorMap, the BatteryDelta model + main file, project.yml build config, and a test example.
+
+Excellent reference material. `BatteryDelta` is the ideal template (presentational, state-holder, telemetry, i18n, projection). Now let me understand the build wiring (project.yml) and test conventions, plus check whether `Delta`/`HelpTooltip` native surfaces exist.
+
+Key insight: XcodeGen globs `TeslaSync/shared-surfaces/*` automatically, so new `MetricCard.*` files are picked up without editing project.yml. Tests co-locate into the test bundles. Now let me verify the build toolchain (xcodegen, Shared.xcframework, pwsh) and lint configs.
+
+`xcodegen`, `pwsh`, `swiftlint`, `swiftformat` all present, but `Shared.xcframework` is empty and the build pre-action requires a Kotlin/Native Gradle build. Let me assess KMP feasibility (the big risk) and read the lint configs + remaining BatteryDelta reference files (Projection, Adapter, Tests, ModelTests).
+
+Now I have the full pattern. Let me read the remaining BatteryDelta files (Adapter, AdapterTests, Previews, strings) and the placeholder checker to understand all conventions and forbidden patterns.
+
+Let me read the placeholder patterns, BatteryDelta.AdapterTests, and check the KMP/Gradle build feasibility (the long pole) — kicking off the shared framework build assessment.
+
+The Gradle + Konan (Kotlin Native 2.4.0) caches are present, so the KMP build should be feasible offline. Forbidden placeholder words noted (including case-insensitive "Placeholder"/"not implemented" — I'll avoid them in comments too). Let me read the rest of HelpTooltip and confirm the logs dir.
+
+Let me check `fmtNumber` semantics to faithfully reproduce the delta's number formatting, then I'll write the surface.
+
+I have a complete understanding of the conventions. The KMP/Konan caches are present so the full build gate is feasible. Let me set up tracking and write the plan, then build the surface following the `BatteryDelta` 9-file pattern.
+
+Now I'll write the surface files. Starting with the Foundation-only core (Adapter) and the pure projection.
+
+Now the pure projection (the faithful port of the web render body + `<Delta>` logic).
+
+Now the state-holder model (P1/S8) + telemetry (P1/S11) + i18n facade (P1/S10), plus the strings catalog.
+
+Adapter/Projection/Model/strings done. Let me verify the `TSSkeleton` API before writing Views, and confirm the iOS simulator name for the gate.
+
+`TSSkeleton(width:height:)` confirmed. Now writing the presentational subviews (label+help popover, value, subtitle, change pill, delta footer, icon box, and the assembled card content).
+
+Now the public `MetricCard` view with prop-style and injected-model initializers.
+
+Now the previews and the two test files.
+
+Now the model/view/facade test half.
+
+All 9 files created. Let me check line counts (must be <400 for `swiftlint --strict`) and auto-format the new files per the project config.
+
+Under 400 lines each. Let me verify formatting is now clean and run swiftlint on the new files.
+
+Clean on both swiftformat and swiftlint. Let me verify no forbidden placeholder patterns in my files, then start the build (xcodegen + the KMP framework — the long pole), running it in the background.
+
+No forbidden patterns. Let me run the placeholder gate command and generate the Xcode project.
+
+Placeholder checks pass. Now let me generate the Xcode project, then build.
+
+Project generated with `TeslaSync` and `TeslaSync-macOS` schemes. The build needs the KMP `Shared.xcframework` (built via Gradle — the long pole). Let me build it first in the background.
+
+Gradle 8.14.5 and Konan 2.4.0 are cached. Let me build the `Shared.xcframework` (background, long-running).
+
+The Gradle/KMP build is running (compiling Kotlin Native). Let me wait for it.
+
+`Shared.xcframework` built and staged successfully. Now let me do a fast compile check of the app (building the target directly to validate my code compiles) before the full gate.
+
+Build failed (exit 65) but my grep didn't capture the error. Let me re-run capturing the full log and extract the actual failure.
+
+These errors are in **other** surfaces (`RecentDrives*`, `StateTimeline*`) — "ambiguous for type lookup" (duplicate type definitions), not my MetricCard code. Let me confirm they're pre-existing in the baseline and unrelated to my additions.
+
+Confirmed: my files are the only additions (all `??` untracked), there are **zero** MetricCard errors, and `RecentDrivesModel` is duplicated across two pre-existing surfaces (`RecentDrivesListWidget.Model.swift` and `RecentDrivesSection.Model.swift`). This is a pre-existing baseline collision outside my allowed files. Let me characterize the full scope of pre-existing breakage.
+
+All ~40 errors are confined to pre-existing `RecentDrives*` / `StateTimeline*` surfaces (duplicate `public final class` definitions across dashboard-widgets and feature-views) — outside my allowed files, zero MetricCard errors. To strongly prove my contribution compiles, let me isolate-typecheck my files against the real design tokens with strict concurrency + Swift 6.
+
+App sources typecheck cleanly (Swift 6, strict concurrency, including `#Preview`). Now let me verify the two test files also type-check (combined with sources, against XCTest).
+
+The XCTest assertion errors are a raw-`swiftc` limitation (XCTest's C macros need the real build's overlay) — not a defect; my test classes and type references resolve. To actually *run* my tests, I'll attempt a real build with the pre-existing broken surfaces temporarily excluded. First, let me check whether anything outside those surfaces references their types (blast radius).
+
+Zero external referrers — the broken surfaces are self-contained. I'll temporarily relocate them, rebuild, and run my MetricCard tests for real (then restore). Let me move them and regenerate.
+
+Project regenerated without the broken surfaces. Now the real build + run of my MetricCard tests on the iOS simulator.
+
+More pre-existing errors surfaced in yet other unrelated surfaces (`AIAutoNameUnnamedLocations.swift`, `AISignalExplorerNlFilter.swift` — "escaping closure captures non-escaping parameter") — still zero MetricCard errors. The baseline has multiple unrelated broken surfaces. Let me restore the moved files, then verify my tests for real via an isolated SwiftPM package (where XCTest macros work).
+
+Clean — only my 9 MetricCard files remain as untracked; all moved files restored unmodified. Now let me run my tests for real via an isolated SwiftPM package (targeting macOS 15, Swift 6 strict concurrency, where XCTest macros resolve).
+
+All **41 MetricCard tests pass** (0 failures) in the isolated SwiftPM package (macOS, Swift 6, strict concurrency). My surface is fully green in isolation. Let me check how existing surface logs (e.g., BatteryDelta) handled the gate to mirror the convention.
+
+This clarifies the established convention: the whole-scheme `xcodebuild` is **DEFERRED** (documented as pre-existing/unrelated, proven by clean `git status`), while the surface is marked DONE based on green lint/format/placeholder/xcodegen + isolated `swift test`. Let me read a full analog log (BatteryDelta 0077) to mirror the exact structure.
+
+The BatteryDelta log (my exact analog) confirms the convention precisely: `IOS_EXIT=65`/`MAC_EXIT=65` are documented as pre-existing/out-of-scope and DEFERRED to the P4 acceptance gate; in-scope checks green → `EXIT=0 STATUS=DONE`. Let me regenerate the project (all files restored) and run the real official gate to capture my actual numbers — starting with the fast tree-wide checks.
+
+Tree-wide `swiftlint --strict` (0 violations / 3764 files) and `swiftformat --lint` (0/3994) are both green, and `xcodegen` succeeded. Now the placeholder gate and the iOS `xcodebuild build test` (capturing the real exit + error signature).
+
+`PLACEHOLDER_EXIT=0`, `IOS_EXIT=65` (expected). Let me confirm the iOS errors are all pre-existing/non-MetricCard, then run the macOS gate.
+
+iOS: 108 errors, all in 4 pre-existing surfaces (`RecentDrives*`/`StateTimeline*` duplicate-type collisions), **zero** MetricCard errors. `MAC_EXIT=65`. Let me characterize the macOS failure.
+
+Both gates (`IOS_EXIT=65`, `MAC_EXIT=65`) fail identically on the pre-existing `RecentDrives*`/`StateTimeline*` collisions — **zero** MetricCard errors in either. For airtight rigor (matching the BatteryDelta precedent), let me prove the baseline fails identically with my 9 files removed.
+
+**Airtight proof**: baseline build with my 9 files removed = `BASELINE_IOS_EXIT=65`, **108 errors, identical surfaces** — exactly the same as with MetricCard present. My surface contributes zero errors. Files restored (9 present, additive-only). 
+
+Now let me write the gate log (mirroring the BatteryDelta precedent) and mark the gate todo done.
+
+Log written. Let me verify the final git state (only my files), confirm the generated project is gitignored, clean up temp artifacts, and commit.
+
+Clean — only my 9 surface files + the log are new; `.xcodeproj` is gitignored; nothing else modified. Now the commit (using the prompt's message, which includes the required trailer).
+
+Committed (`628bceeb2`, 10 files, 2171 insertions). Let me do a final state check and close out the tracking.
+
+All todos complete. The MetricCard Apple surface is shipped and committed.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`MetricCard`** at parity with `web/src/components/data-display/MetricCard.tsx`, following the established `BatteryDelta` 9-file shared-surface pattern (commit `628bceeb2`, 2171 insertions).
+
+**Files (all within the allowed `MetricCard.*` scope):** `Adapter` (props/value types, `NeonColor`→`MetricCardColor`, JS value stringify), `Projection` (pure port of the render body + inline `<Delta>` logic), `Model` (P1/S8 `@Observable` holder + P1/S10 i18n facade + P1/S11 `view.opened`), `swift` (public view), `Views` (label+help popover, value, subtitle, change pill, delta footer, icon box), `Previews`, `Tests`, `AdapterTests`, `strings`.
+
+**Faithful parity:** Reproduces every real branch of the purely-presentational source — value, subtitle, the change-pill **or** delta footer (delta wins, per web), six accent colors, the help "?" affordance, and the delta's **loading** (skeleton) + **empty** (em-dash) sub-states (mapping the prompt's state list). No error/stale/offline invented (no data source), documented like the sibling presentational primitives.
+
+**Verification (in-scope — all green):**
+- `swiftlint --strict`: **0 violations** (tree-wide 3764 files) · `swiftformat --lint`: **0/3994** · placeholder check: **COUNT=0** · `xcodegen`: **0**
+- `swiftc -typecheck` (iOS 18 SDK, Swift 6, strict concurrency): production files **0 errors**
+- `swift test` (isolated SwiftPM, macOS, Swift 6): **41/41 tests pass**
+
+**Full-app gate (DEFERRED, per established precedent):** `IOS_EXIT=65` / `MAC_EXIT=65` are **pre-existing, out-of-scope** failures — sibling `RecentDrives*` / `StateTimeline*` duplicate-type collisions, **proven pre-existing** by an identical clean-baseline build (108 errors with *and* without MetricCard) and a clean `git status`. **Zero** MetricCard errors. The KMP `Shared.xcframework` built green. Log written with `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0095-MetricCard.log   | 133 ++++++++
+ .../shared-surfaces/MetricCard.Adapter.swift       | 372 ++++++++++++++++++++
+ .../shared-surfaces/MetricCard.AdapterTests.swift  | 261 ++++++++++++++
+ .../shared-surfaces/MetricCard.Model.swift         | 169 ++++++++++
+ .../shared-surfaces/MetricCard.Previews.swift      | 140 ++++++++
+ .../shared-surfaces/MetricCard.Projection.swift    | 329 ++++++++++++++++++
+ .../shared-surfaces/MetricCard.Tests.swift         | 232 +++++++++++++
+ .../shared-surfaces/MetricCard.Views.swift         | 374 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/MetricCard.strings   |  33 ++
+ .../TeslaSync/shared-surfaces/MetricCard.swift     | 128 +++++++
+ 10 files changed, 2171 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0095-MetricCard.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricCard.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricCard.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricCard.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricCard.swift

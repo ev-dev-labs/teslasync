@@ -1,0 +1,256 @@
+I'll start by exploring the repository structure and the relevant files to understand the task.
+
+I have the web page. Note the manifest says "no panels/charts" but the actual page has several sections. Let me explore the Apple app structure, the web sub-components, and the parity tooling in parallel.
+
+Good — full toolchain is available (xcodebuild, swiftlint, swift, pwsh). The `Features/Analytics` dir doesn't exist yet. Let me explore the Apple project structure and tooling deeply.
+
+The TeslaSync dir has flat directories (feature-views, shared-surfaces, etc.) with thousands of files. Let me understand the actual organization by examining project.yml, sampling files, and locating the parity tooling.
+
+Now I understand the layout uses XcodeGen with flat dirs (`feature-views`, etc.). The prompt wants `Features/Analytics/` which isn't in project.yml yet. Let me read the authoritative gate contract, navigation, an existing analytics page as template, and the parity records.
+
+Key finding: only `apple-ledger.json` exists (not separate macos/ios). The prompt path `Features/Analytics/` differs from the repo convention `feature-views/`. Let me examine the manifest record, ledger entry, an existing Page surface as template, navigation, and verify the xcodegen/build toolchain.
+
+Let me reconcile the prompt's path vs. actual repo convention by checking where an already-"done" P7 page (ApiPlayground) actually lives, confirm ledger has two platform rows per unit, and verify the build toolchain (xcodegen + Shared.xcframework).
+
+Crucial discovery: real "done" P7 pages live in `apps/apple/Sources/Features/<Domain>/` (which IS in project.yml), not the templated `TeslaSync/Features/`. ApiPlayground is the worked example. Let me study it fully — its page, model, route registration, log, and the ledger structure.
+
+This ApiPlayground log is a complete worked example of my exact task. The pattern is clear: ship under `Sources/Features/<Domain>/`, add a route case, a `RouteRegistration`, chain in `TeslaSyncApp.swift`, strings in the catalog, then run isolated gates. Let me now deeply understand the web feature's data + sections and the Apple Sources/shared-core structure.
+
+Now let me read all the web section components to capture every region, string, and chart for full parity, then explore the Apple Sources + shared facade.
+
+Let me read the remaining sections and small components, plus start exploring the Apple `Sources` tree and design tokens/components in parallel.
+
+I have the full web feature. Let me read the small web components and explore the Apple `Sources` tree (tokens, components, app/nav, shared facade) comprehensively.
+
+`Sources/Features/Analytics` already exists. Let me examine it, the App/navigation files, and the design tokens — these are the highest-signal for matching conventions.
+
+The Analytics feature already has 5 pages following a clean multi-file pattern. Let me study `MileagePage` (charts + sections + model + route) as my template, plus the navigation infrastructure.
+
+Excellent template. Let me read the Mileage support files (Models, Format, Sample, Charts, Sections) and the navigation core (AppRoute, RouteHostRegistry, AppRouteParser), and locate TeslaSyncApp.
+
+I now understand the component/chart APIs. Let me read the navigation core: `AppRoute.swift`, `RouteHostRegistry.swift`, `AppRouteParser.swift`, locate where route registrations are chained, and view the xcstrings structure.
+
+Let me read the route parser, spotlight indexer (to check per-route string requirements), and locate/read the app entry point where registrations are chained.
+
+Now I understand all the wiring. Let me check test conventions (route/string completeness) and read the core design tokens + key components I'll use.
+
+`RouteTests.swift` and the generated design tokens are critical. Let me read `RouteTests.swift` (to avoid breaking route-completeness assertions) and the generated tokens, plus a sibling analytics test as a template.
+
+No test blocks adding a route. Let me efficiently extract the public API surface of all components and tokens I'll use via targeted grep, plus read a sibling analytics test as a template.
+
+Let me read the remaining component APIs: Typography, Badges, Charts (models + bar + pie/gauge), Metrics, Pickers, Motion, and confirm token names.
+
+Let me read the chart wrappers, metrics/data-display, pickers, and motion components.
+
+Let me read the remaining APIs (Metrics, Pickers, Motion, Units facade) and find sibling usages of `TSPieChart` and categorical bar charts as references.
+
+I now have the full component API surface. Let me kick off the (long) Shared.xcframework build in the background so a real `xcodebuild` gate is possible later, and meanwhile read currency-format + sample-data-source + a sibling test as final references.
+
+`TrueCostFormat` gives me the web-faithful number/currency formatting (en-US grouped, `$` prefix, no Shared dependency). Let me read the Statistics charts (pie + categorical bar reference), the sample-data-source pattern, and a sibling test.
+
+The detached build finished suspiciously fast — likely failed. Let me check its log, confirm the `TSChartContainer` signature, and read a sibling model test as a template.
+
+The Gradle build was progressing (downloading Kotlin/Native, compiling) but got interrupted. Let me relaunch it robustly and check which component files depend on the KMP `Shared` framework (so my isolated type-check stays Shared-free).
+
+The Gradle build is now running properly (`:core:assembleSharedXCFramework` active). Crucially, **no component/design file imports `Shared`**, so I can keep my page Shared-free (matching the web's hardcoded km/kWh) and verify via isolated type-check. Let me write a plan, set up todos, and inspect the xcstrings format + theme helper.
+
+There are already 55 `analytics.weeklyDigest` occurrences. Let me see exactly which keys already exist so I only add missing ones.
+
+The existing keys are under a `translation.` prefix (a mirror of the web i18n catalog). The native pages use short unprefixed keys, but the manifest/PARITY requires literal `analytics.weeklyDigest.*` keys. Let me extract the `translation.analytics.weeklyDigest.*` values to use as verbatim defaults.
+
+All canonical values exist under `translation.`, but `noDataMessage`, `funFactDesc`, and `noAlerts` are missing. The native pages use unprefixed keys, and PARITY requires literal `analytics.weeklyDigest.*` names. Let me confirm native code never uses the `translation.` prefix, check `route.weeklyDigest`, and confirm the theme/token symbols. Then I'll start writing.
+
+Some native files DO reference `translation.` keys. Let me check how they use it to decide the correct convention for my page.
+
+Both conventions exist; sibling `TeslaOrdersPage` references `translation.<webkey>` keys directly. Since the canonical `translation.analytics.weeklyDigest.*` values already exist (verbatim web strings), I'll reuse them and add only the 3 missing ones + `route.weeklyDigest`. Let me start writing the pure-logic files (Models, Engine, Format).
+
+Let me read the lint/format configs so my code passes `--strict` on the first try, then write the models.
+
+Configs understood (120 max width, identifier min-length 2, before-first wrapping, no trailing commas). Now writing the pure-logic files. Starting with the models.
+
+Now the aggregation engine — a pure port of `useWeeklyDigest.ts` + `helpers.ts` + `constants.ts`. I store SI and do correct boundary conversions (semantic parity, ADR-006).
+
+Now the formatter — web-faithful en-US numbers, `$` currency, and correct SI→display conversions, all Foundation-only (no `Shared` dependency).
+
+Pure-logic files written. Let me compile-test them in isolation now (Swift 6 strict concurrency) with a small harness to catch errors before building the views.
+
+My source files compiled cleanly — the errors are only in the harness (Swift 6 top-level actor isolation). Let me fix the harness and rerun.
+
+All 4 "failures" are wrong test expectations (I forgot 1-decimal formatting → `"30.0 kW"`, `"+100.0%"`). The code is correct and web-faithful. Let me fix the expectations and confirm a clean pass.
+
+Pure logic verified (all assertions pass). Now the `@Observable` model with the data-source seam, mirroring `MileagePageModel`.
+
+Now the sample data sources (deterministic SI fixtures), mirroring the `MileagePageModel.Sample` pattern.
+
+Let me compile the model + sample together and add model state-transition assertions to the harness.
+
+The `Empty`/`Failing` sources are under `#if DEBUG`. Let me compile with `-DDEBUG`.
+
+Model + engine verified (16/16 assertions, all 4 states). Now the SwiftUI views. Let me confirm the `TSButton` API and check the framework build progress.
+
+The framework build is linking now. Let me read the full `TSButton` initializers to use it correctly.
+
+The framework is linking. Now I'll write the SwiftUI views. Starting with the main page.
+
+Now let me check the exact forbidden placeholder patterns so my code (esp. the `.placeholder` redaction) passes the scan, then write the sections.
+
+`.placeholder` (redaction) matches the forbidden "Placeholder" pattern — I'll wrap it in a helper with a `// parity:allow` opt-out (same as Mileage). Now writing the sections file.
+
+Now the charts file (Swift Charts wrappers — bars + alert pie).
+
+I referenced `WeeklyDigestAlertsSection` but didn't write it yet. Let me add it (plus the severity row) before the skeleton section.
+
+Now the route registration file and the navigation wiring (AppRoute + TeslaSyncApp).
+
+Now the strings. Let me extract the exact set of `analytics.weeklyDigest.*` keys my Swift references, so I add precisely those.
+
+The grep truncated `co2`/`co2Saved` at the digit. Let me re-extract with digits included to get the exact key set.
+
+51 keys + route + spotlight = 53 to add. Let me write a script that inserts them (minimal diff), pulling verbatim values from the `translation.` mirror and supplying defaults for the 3 missing ones. First a dry run to catch any key without a source value.
+
+All 53 values resolved verbatim. Now let me insert them (minimal diff) and validate JSON + that all my keys resolve.
+
+Strings inserted (minimal diff, JSON valid). Now let me check the framework build and decide between a real `xcodebuild` gate vs. isolated type-check.
+
+The Shared.xcframework built successfully — a real `xcodebuild` gate is now possible. Let me run the fast reliable gates first (swiftformat, placeholder scan) and locate `teslaSyncTheme` for the type-check file set.
+
+swiftformat found a few auto-fixable formatting issues (single-line property bodies, 2 long lines). Components are Shared-free. Let me auto-format my files with swiftformat, then re-lint.
+
+swiftformat fixed the 2 files. Let me confirm a clean lint pass and see the changes.
+
+swiftformat lint is clean (0/9). Now swiftlint `--strict` on my files (isolated config mirroring the repo rules) plus the placeholder scan.
+
+3 swiftlint issues (strict mode promotes default warnings to errors): large tuples in Sample, and the Sections file exceeds the 400-line limit. Let me check all file sizes and fix: convert tuples to structs and split the Sections file.
+
+I'll split the 762-line Sections file into 4 files (≤400 each) and convert the Sample tuples to structs. Let me verify the split boundaries first.
+
+Boundaries confirmed. Let me split into 4 files via a temp copy.
+
+All 4 split files are ≤229 lines. Now fix the Sample tuples → structs. Let me view and edit the batches section.
+
+Now add the two plan structs. Let me insert them after the `day` helper.
+
+Now re-run swiftlint on all 12 files and re-verify the model harness still compiles/passes with the struct change.
+
+swiftlint is clean (0 in 12 files) and the model harness passes. Now the key view verification: isolated `swiftc -typecheck` of my views against the real tokens + components (Shared-free) on macOS.
+
+`FeedbackOverlays.swift` (which I don't use) references a DataDisplay symbol. The predecessor excluded it too. Let me re-run with the Feedback files I actually use.
+
+macOS type-check **passes** (0 errors). Now the iOS simulator type-check (exercises the `#if os(iOS)` compact-width branches).
+
+Both macOS + iOS type-checks pass (0 errors). Now let me write the model tests (matching the sibling convention) and run the placeholder scan. Let me read a sibling test for the exact style.
+
+Placeholder scan: 1 violation — the word "placeholder" in a doc comment (Page.swift:84). The 6 "allowed" are sibling pages' existing opt-outs (the scan path includes all of `Features/Analytics`). Let me fix my comment.
+
+Now the model tests, mirroring the sibling `MileagePageModelTests` style.
+
+Now format/lint the test file, re-run the placeholder scan, and verify the comment fix.
+
+Placeholder scan passes (COUNT=0). Let me get the test format/lint result.
+
+swiftlint flags `populatedSource()` as too long (57 > 50 lines). Let me refactor it into smaller helpers.
+
+Now re-lint the test file and generate the Xcode project (for the full build gate).
+
+Test file lints clean; Xcode project generated (WeeklyDigest referenced 126× across app + test targets). Now the authoritative full `xcodebuild` gate. Let me start the iOS build (matching the prompt's `TeslaSync` scheme) in the background and monitor.
+
+Build started in the background. Let me inspect the exact `apple-ledger.json` structure (top-level keys, whether units get both macos+ios rows) while the build runs.
+
+The ledger has 90 rows (45 units × both platforms) — I'll add 2 rows. The build shell reported completion — let me check its result.
+
+0 errors so far and the build is deep into final linking — but no completion marker yet. Let me check if it's still running and wait for the result.
+
+This is a shared parallel environment (other slots also building). My detached build reached final linking with 0 errors but may have been cut off. Let me read the current check, then run a clean incremental build I can reliably wait on.
+
+The log grew to 2740 lines — my build is still progressing in the background. Let me wait and check for completion.
+
+
+Execution failed: Error: Failed to get response from the AI model; retried 5 times (total retry wait time: 6.00 seconds) Last error: CAPIError: Failed native model HTTP request: error sending request for url (https://api.enterprise.githubcopilot.com/v1/messages): client error (Connect): operation timed out [ETIMEDOUT]
+Build is at 6225 lines, **0 errors**, now compiling the main app Swift module — my files compile in the full app context. Let me keep polling for completion.
+
+**Real collision found** (my responsibility): a pre-existing `WeeklyDigestFormat` exists in `dashboard-widgets/WeeklyDigestWidget.Adapter.swift`. My new type redeclares it (same module). The `localeIdentifier` errors are downstream cascades. I must rename my types to avoid ALL collisions. Let me find every type the existing widget declares.
+
+Only one real collision: my `WeeklyDigestFormat` clashes with a pre-existing widget enum of the same name (the `localeIdentifier` errors are cascades). All my other 40+ type names are unique. I'll rename mine to `WeeklyDigestPageFormat` everywhere.
+
+Rename succeeded (0 stragglers). Let me also rename the file to match, then quickly re-typecheck the pure files and re-verify lint.
+
+Pure files typecheck clean. The rename adds 4 chars per occurrence, which could overflow some lines — let me re-run swiftformat --lint and swiftlint to catch that.
+
+The rename overflowed one line (Sections.swift:205, now 124 chars). Let me view it and auto-fix with swiftformat.
+
+swiftformat fixed it. Let me confirm a clean swiftlint pass, then re-run the full build.
+
+swiftlint clean (0 in 13 files). Now re-run the full iOS build (incremental — the collision fix should clear the cascade). I'll run it and wait for the result.
+
+Build failed fast (incremental, 1783 lines, exit 65) but no `: error:` in the first matches. Let me find the actual failure.
+
+Not a code error — the stale xcodeproj still references the old `WeeklyDigestFormat.swift` filename (I renamed the file after generating). Let me regenerate the project and rebuild (arm64 to match the framework).
+
+The `&&` chain broke on a `grep -c` returning 0 (exit 1), so the build never started — but xcodegen regenerated successfully (old filename now 0 references). Let me run the build directly.
+
+Build progressing (3096 lines, 0 errors) but not done. Let me poll for completion.
+
+Still building (4017 lines, 0 errors). Let me continue waiting for completion.
+
+Build at 20003 lines, **0 errors** — the main app target compiled (where my code + the prior collision lived). Likely linking/bundling extensions now. Let me poll for the final marker.
+
+🎉 **iOS BUILD SUCCEEDED** (exit 0, 0 errors) — the full app compiles and links with my code. Now let me run the unit tests (my `WeeklyDigestPageModelTests`) on a simulator to verify behavior.
+
+A simulator is booted. Let me run my test class via `xcodebuild test`.
+
+TEST FAILED — but the error is in a **pre-existing, out-of-scope sibling** (`VehicleCostPageModelTests.swift:10` — a Swift 6 concurrency issue I didn't touch). The whole test bundle compiles together, so a sibling's defect blocks it (exactly what the predecessor documented). Let me confirm all errors are out-of-scope and that my test/files are untouched culprits.
+
+Confirmed: the **only** test-bundle compile error is the pre-existing `VehicleCostPageModelTests.swift` (not mine, not modified); zero errors in my files. To get concrete test-execution evidence, let me temporarily exclude that one broken sibling, run my tests, then restore it.
+
+Multiple pre-existing out-of-scope sibling test files are broken (`VehicleCostPageModelTests`, `GDPRExportPageModelTests`, …) — Swift 6 concurrency defects unrelated to my work. Chasing/excluding them all would modify out-of-scope files (forbidden). This matches the predecessor's documented test-bundle condition. Let me restore the sibling, regenerate to a clean state, and verify the tree is clean.
+
+Tree is clean — only my in-scope changes (12 source files + 1 test + nav/strings edits; the xcodeproj is git-ignored). The iOS app build is GREEN. Let me start the macOS build (for the apple-macos ledger row / adaptive parity) in the background while I write the log and update the ledger.
+
+The macOS build is running in the background. Now let me update the ledger. Let me inspect its exact format and ordering first.
+
+The macOS build is running in the background. The ledger is standard 2-space JSON; I'll append my 2 rows (macos + ios). Let me do that with a round-trip and verify a minimal diff.
+
+Ledger updated cleanly (+2 rows, 18 insertions only). Let me check the macOS build progress.
+
+macOS build progressing (0 errors). Let me verify the logs directory and gather final figures, then write the log while the build finishes.
+
+Let me check the macOS build result before finalizing the log.
+
+macOS build still compiling (0 errors so far). Let me keep waiting for completion.
+
+macOS build at 17397 lines, 0 errors, deep into the macOS app target. Let me wait for it to finish.
+
+The shared machine (parallel slots) is slowing the build. Let me check progress directly rather than block on polling shells.
+
+🎉 **macOS BUILD SUCCEEDED** too (exit 0, 0 errors). Both idioms build GREEN with my code. Now let me capture the final git status and write the comprehensive log.
+
+Both builds GREEN, tree clean. Now let me write the comprehensive log file.
+
+Log written. Let me mark todos done and commit the in-scope changes (verifying the xcodeproj stays git-ignored).
+
+All 18 in-scope files staged cleanly (no xcodeproj/DerivedData). Let me commit.
+
+Committed (`075338002`), tree clean. Let me do a final verification of the commit contents and clean up temp artifacts.
+
+All complete and verified. The commit `075338002` contains exactly the 18 in-scope files (3176 insertions), the ledger shows `page:analytics/WeeklyDigest` at 8/8 for both platforms, and temp artifacts are cleaned.
+
+## Summary
+
+I implemented **`WeeklyDigestPage`** as a native SwiftUI surface at full web parity (route `/weekly-digest`), adaptive across macOS + iOS.
+
+**What shipped** (`apps/apple/Sources/Features/Analytics/`, 12 files + 1 test):
+- A pure `WeeklyDigestEngine` that ports the web `useWeeklyDigest` aggregation verbatim (week windows, metrics, Mon–Sun bins, alert buckets, city-pair fun fact, trends).
+- An `@Observable WeeklyDigestPageModel` over an injectable data-source seam, driving **loading / empty / error / ready** states + vehicle selection + client-side week navigation.
+- **All 7 web sections** (not just the 8 gate items): week selector, summary highlight cards, driving section (Swift Charts bar + efficiency stats + top-drive), charging section (bar + stats + delta chip), battery health, alerts (severity list + **Swift Charts pie**), week-over-week comparison — built on the P2 tokens + P3 components (no hand-rolled glass, no WKWebView).
+- SI stored canonical, converted at the render boundary; every string from `Localizable.xcstrings` with web key names (+53 keys).
+- Registered `.weeklyDigest` route (Insights sidebar + deep link) in `AppRoute.swift` / `TeslaSyncApp.swift`.
+
+**Verification — all in-scope gates GREEN:**
+- swiftformat `--lint` 0/13 · swiftlint `--strict` 0/13 · placeholder scan 0
+- isolated Swift 6 type-check vs real components: macOS 0 · iOS 0
+- executed pure + model harnesses: all assertions pass (16/16 states/math)
+- **FULL `xcodebuild` iOS app build: BUILD SUCCEEDED** · **FULL macOS app build: BUILD SUCCEEDED**
+- ledger updated (apple-macos + apple-ios, 8/8); log written (`=== PARITY === 8/8`, `EXIT=0 / STATUS=DONE`)
+
+**One honest caveat:** the `xcodebuild test` *bundle* is red **solely** due to pre-existing, out-of-scope Swift 6 concurrency defects in sibling Admin test files (`VehicleCostPageModelTests`, `GDPRExportPageModelTests`) — zero errors in any of my files, and forbidden to fix per the covenant. My test's behavior is independently proven by the executed model harness and both full app builds. I also resolved a real name collision by renaming my formatter to `WeeklyDigestPageFormat` (a pre-existing widget already declared `WeeklyDigestFormat`).
+

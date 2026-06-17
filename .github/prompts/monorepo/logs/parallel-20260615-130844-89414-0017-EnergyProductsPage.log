@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app architecture, and existing patterns.
+
+Let me explore the Apple app's existing Battery feature and patterns in parallel.
+
+Xcode tooling is available (xcodebuild, swiftlint, pwsh). The actual structure differs from the prompt's expected path. Let me explore the real layout.
+
+The pages live in `apps/apple/Sources/Features/Battery/`. Let me understand the project configuration and an existing page's full structure.
+
+Now I understand the build setup (XcodeGen, `Sources/` auto-discovery). Pages live in `Sources/Features/Battery/`. Let me study an existing page end-to-end as my template, plus the data layer and routing.
+
+The architecture is clear: each page has a View + `@Observable` model + `DataSource` protocol + sample/route registration. Let me study the data layer, models, charts, design tokens, and the web hooks in parallel.
+
+Excellent — I now have the data shapes. Let me study the section/chart rendering patterns, the routing system, and locate the design-system components.
+
+I have a deep understanding of the page patterns now. Let me locate the design-system components, the routing system, units facade, and the string catalog.
+
+The route enum auto-derives paths. I need to add an `energyProducts` route (allowed as "navigation registration"). Let me read the parser, units facade, gauge, and core components.
+
+Now let me read the formatting conventions, the core UI components, design tokens, and find where route registrations are composed.
+
+Let me find the design tokens/typography, the route-composition point, the parity ledger, and check the string catalog for existing energy keys.
+
+I now have the full design-system picture. Let me verify the string catalog state, the log directory, the placeholder-check tool, and test conventions.
+
+Most strings already exist — only `energy.products.empty` and `energy.siteInfo.empty` are missing. Now let me assess buildability (KMP framework, xcodegen) and the lint config.
+
+`xcodegen` is installed, but the KMP `Shared.xcframework` must be built via Gradle (the long pole). Let me kick that off in the background now while I write the code, and probe the toolchain.
+
+Java 17 and gradlew are present. Let me start the KMP framework build in the background while I write the page code.
+
+Java + gradlew are present and the KMP build is running. Let me set up a plan and check for route tests + the test conventions while the build runs.
+
+Let me check `RouteTests.swift` to ensure adding a route case won't break an assertion, and view the manifest record.
+
+Let me check the KMP build progress and inspect the xcstrings JSON format for adding keys.
+
+The Python lookup returned null for keys the grep found — I need to verify precisely which keys actually exist as top-level entries.
+
+All 34 keys are missing as top-level entries, yet grep found them in the file. Let me find where they actually appear (likely as comments in other entries).
+
+The keys exist under a `translation.` namespace prefix. Let me verify how existing pages' keys are stored and resolved.
+
+Clear now: the catalog stores both `translation.`-prefixed (bulk web import) and unprefixed keys; SwiftUI `Text` uses the **unprefixed** form. Battery has both; energy only has the prefixed form. I must add the 33 unprefixed energy keys + `route.energyProducts`. Let me extract the English values from the existing prefixed entries.
+
+I have all the English values. The two `empty` keys come from web defaults. Let me set up tracking and check the build, then write all the code.
+
+Build still running. Let me write the plan, then start implementing. First the models file.
+
+Now I'll write the implementation. Starting with the models file (mirrors `BatteryDegradationModels.swift` conventions, SI on disk):
+
+I need `import SwiftUI` since the models use `LocalizedStringKey`. Let me fix that.
+
+Let me check the `UnitPreferences.metric` preset before writing the formatter.
+
+`.metric` uses energy:"Wh"/power:"W", so the Units facade would show Wh not kWh. The web page (and sibling `BatteryDegradationFormat`) use a local kWh/kW boundary helper — I'll mirror that exactly (SI Wh/W in, kWh/kW out). Writing the formatter:
+
+Now the page model + data source seam:
+
+Now the sample/empty/failing data sources for previews and tests:
+
+Let me check the KMP build progress before writing the views.
+
+Let me verify a few component symbols (skeleton, bg color, Grid) before writing the views.
+
+The KMP build completed. Let me confirm and view the skeleton component pattern.
+
+The KMP `Shared.xcframework` built successfully (9m14s) — the gate is fully runnable. Now let me write the main page view.
+
+Now the chart file (the backup-reserve `RadialGauge`):
+
+Let me check for an existing flow/wrap layout (for badge rows), `surfaceGlass`, and confirm a couple symbols before writing the large Sections file.
+
+There's a FlowLayout in the Admin feature. Let me check if it's a reusable type I can use for badge rows.
+
+Let me view the existing `CoverageFlowLayout` to model a correct local flow layout.
+
+Let me check for reusable "Done/Close" action strings (for the rate-plan detail sheet) before writing Sections.
+
+`action.close` exists for the rate-plan sheet dismiss. Now writing the large Sections file (all panels, badges, skeleton, rate-plan sheet):
+
+Now the route registration file and the `AppRoute` + app wiring edits:
+
+Now wire the registration into the app:
+
+Now I'll add the i18n keys. Let me first inspect the catalog's exact JSON format and whether keys are sorted, to produce a minimal, format-matching diff.
+
+The catalog uses Xcode's `" : "` format and isn't Python-sorted, so a JSON round-trip would rewrite all 10006 entries. I'll do a format-preserving text insertion of the 38 new unprefixed keys. Let me write and run that script.
+
+The top-level keys use `": "` (no space before colon) unlike the entries. Let me fix the marker.
+
+38 keys added (total 10044), validated. Now the co-located model test, mirroring sibling conventions:
+
+Let me update progress and run the fast gates first: SwiftLint `--strict` and the placeholder scan on the new files.
+
+Three lint issues to fix: a trailing-closure violation, the Sections file exceeding 400 lines, and a pre-existing 123-char line in AppRoute (surfaced by `--strict`). Let me fix the two small ones first.
+
+Now I'll split the 693-line Sections file into three files (Components / Sections / Panels), each well under 400 lines. Let me remove the oversized file and recreate the parts.
+
+Now the Sections file (Summary + Site card):
+
+Now the Panels file (site-config section, config panel, rate-plan sheet, skeleton):
+
+Let me re-run SwiftLint `--strict` on all the files and check line counts.
+
+SwiftLint `--strict` is clean and all files are ≤400 lines. Now the placeholder scan and a full-directory lint (matching the gate scope).
+
+Placeholder scan passes (COUNT=0, EXIT=0). Let me wait for the full-directory lint.
+
+Placeholder scan and the full `--strict` lint of all 6041 files both pass with 0 violations. Now the heavy gate: stage the framework, generate the project, and build. Let me stage + generate first.
+
+Framework staged. Now generate the Xcode project and start the build.
+
+Project generated; an iPhone 17 Pro simulator is booted. Let me start the full iOS build (6000+ files — this takes a while) and monitor.
+
+Build is compiling in the background. Let me monitor it.
+
+The `tee` failed because `build/` didn't exist yet, which may have broken the pipe. Let me stop and restart the build cleanly with the directory pre-created.
+
+Build is running to a log file. Let me verify the manifest record while it compiles (read-only).
+
+Manifest confirms 51 items (13 panels + 1 chart + 4 states + 33 strings), exactly as implemented. Let me check the build progress.
+
+Let me peek at the build log to gauge progress and catch any early errors.
+
+Build progressing (7000+ log lines, 0 errors, compiling the app module). Let me continue waiting.
+
+The build is in the whole-module Swift compile phase (the long pole). Let me wait longer.
+
+Good progress — extensions linked, the preview dylib (which includes my `#Preview` code) built successfully, and the main app module is being emitted. 0 errors. Let me wait for completion.
+
+Still in the main-target whole-module compile (buffered output, 0 errors). This is the long pole. Let me wait further.
+
+Now actively compiling individual files (15k+ log lines, deep into the alphabet, 0 errors). Let me wait for completion.
+
+My EnergyProducts files are compiling in the main target with 0 errors. Let me wait for the link and final status.
+
+Still compiling steadily (19.6k lines, 0 errors). Let me keep waiting for the link step.
+
+Still compiling the large main target (now in Q–R files, 0 errors). Let me wait longer for the link step.
+
+Build still compiling the large main target with 0 errors. Let me wait further for the link.
+
+Progressing through the main target (now S-files, 0 errors, 22.8k lines). Let me keep waiting.
+
+Compilation continues (0 errors) but slowing as it hits type-check-heavy SwiftUI files. Let me verify the process is alive and keep waiting.
+
+130 active compiler processes, high load — building hard. Let me wait a longer stretch.
+
+The build was externally terminated (SIGTERM/exit 143 — resource pressure from 130 parallel compilers on a shared machine), not a compile error (0 errors throughout, and my files + the preview dylib compiled cleanly). I'll rebuild with limited parallelism. First, let me do the planned cleanup: remove the unused `units` threading (this surface has no unit-preference-dependent quantities — energy/power use the web's fixed kWh/kW boundary, matching the web page which never imports `useUnits`).
+
+Let me re-lint the edited files and start an incremental rebuild with limited parallelism (to avoid the resource-pressure termination).
+
+Lint clean. Now the incremental rebuild with limited parallelism (DerivedData is warm, so this should be much faster and won't get resource-killed):
+
+Build running with limited parallelism (warm DerivedData → should be fast). Let me wait and monitor.
+

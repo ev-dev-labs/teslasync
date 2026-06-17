@@ -1,0 +1,114 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the web source, the Apple app structure, and available build tools in parallel.
+
+The capability IS available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). The web source is a pure presentational loading skeleton. Now let me explore the existing Apple app structure to follow established patterns.
+
+A `TeslaSync/feature-views` directory exists with ~1800 entries. Let me find existing examples to follow, especially any skeleton/presentational surfaces, and understand the project.yml build structure.
+
+There's a `LoadingSkeleton.*` surface — the closest analog (also a presentational skeleton). Let me study it thoroughly along with the build script and a status-related example.
+
+Excellent — this is a high-quality established pattern. Let me read the remaining LoadingSkeleton files (Layouts, Telemetry, Previews, strings, Tests) and locate the native primitives (TSSkeleton, TSGlassPanel, TSSpacing, TSRadius).
+
+Now let me read the Tests file and locate the native primitives (TSSkeleton, TSGlassPanel, TSSpacing, TSRadius, Color.TS).
+
+I now understand the pattern well. Critical concern: `SkeletonBlock`, `SkeletonWidth`, `SkeletonShape`, `ResponsiveColumns` are `public` types in `LoadingSkeleton.Model.swift` (same module). I must avoid redeclaration collisions. Let me check whether these are shared or namespaced per-surface, and read the exact primitive signatures.
+
+The skeleton model types live only in `LoadingSkeleton.Model.swift`. To keep my surface self-contained and collision-free (and since I can't edit LoadingSkeleton), I'll namespace my own types. Let me read the web Skeleton component (to understand the `rounded` prop), TSGlassPanel, and the design tokens.
+
+Now I understand the web `rounded` prop → `rounded-full` (pill). Let me confirm the exact design token names and assess the build feasibility (xcodegen, existing project, the Shared.xcframework build script, simulators).
+
+`xcodegen` is available, iPhone 16 simulator is present and booted. But `Frameworks/` has no staged `Shared.xcframework` — the build preAction builds it via Gradle/KMP. Let me check the pending-verifications doc, the toolchain availability, and locate the design tokens.
+
+Now I understand the full picture. The `macos-pending-verifications.md` establishes clear precedent: prior P4 surfaces verify the surface **in isolation** (SwiftPM build + tests, `swiftc -typecheck` on iOS 18 + macOS 15 SDKs, swiftlint, swiftformat, placeholder, xcodegen), while the **full-app `xcodebuild build test`** is blocked by pre-existing, unrelated parallel-merge collisions + the KMP `Shared.xcframework` long-pole — deferred to a macOS CI gate.
+
+Let me read the design tokens and check the placeholder tooling.
+
+`pwsh` is available and the placeholder gate supports `-Path` scoping. The design tokens (TSSpacing/TSRadius/Color.TS) come from the generated `../design/generated/apple`. Let me confirm the token names and read the forbidden placeholder patterns (critical — my surface is a "skeleton" and must not trip the gate).
+
+Tokens confirmed (TSSpacing xs=4/sm=8/md=12/lg=16/xl=20). Forbidden words: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented" — I'll avoid all of these (notably won't call them "stubs"/"placeholder"). Let me read the TSRadius/Color.TS tokens and the rest of the placeholder script's path handling.
+
+All tokens confirmed (TSRadius: sm=8/md=12/lg=16/pill=9999; Color.TS: bg/surface/border/accent). Key gate insight: the placeholder check's `-Path …/StatusPageSkeleton` isn't a literal dir, so it scans nothing — but I'll still verify my files are clean myself. Let me read the lint/format configs and confirm no existing collisions.
+
+I have everything needed. Let me verify no `StatusSkeleton` symbol collisions and set up tracking, then write the surface.
+
+No collisions. Let me check the log directory location and begin writing the surface files.
+
+There are prior logs for this exact surface. Let me read the most recent one to match the established verification approach and honest outcome format.
+
+This is the key reference — a prior run of **this exact surface** concluded `EXIT=0 STATUS=DONE` using the sanctioned methodology: surface verified green in isolation (swiftformat, swiftlint, isolated SwiftPM build+19 tests against the real design system, iOS 18 + macOS 15 SDK `swiftc -typecheck`, xcodegen, placeholder), with the full-app `xcodebuild` gate DEFERRED (IOS/MAC_EXIT=65) due to pre-existing repo-wide XCTest-in-app-target composition + macOS dev-signing. This slot has none of the files yet, so I'll recreate the surface and reproduce that disposition.
+
+Let me write the surface files, starting with Model, Telemetry, and strings.
+
+Now the Model file with the value types, surface identity, i18n facade, and the static layout projection.
+
+Now the Views file with the sub-views and region dispatch.
+
+Now the main view.
+
+Now the Previews and Tests files.
+
+All 7 files created. Let me verify formatting and linting on my files.
+
+The `testFourAccordionRowsMatchWebMap` is `throws` but no longer throws. Let me fix it to unwrap each row (keeping the throw meaningful).
+
+Format and lint both clean (FORMAT_EXIT=0, LINT_EXIT=0, 0 violations). Now let me locate the design-system files for the isolated SwiftPM harness.
+
+Found all design-system files. Let me build an isolated SwiftPM harness (module named `TeslaSync`, Swift 6 language mode) compiling the real surface + real design system, then run the tests.
+
+Isolated build succeeded with all dependencies satisfied. Now run the tests.
+
+All 21 tests pass (10 layout + 5 block + 3 telemetry + 3 localization). Now the iOS 18 + macOS 15 SDK typechecks (with `-D DEBUG` so the `#Preview` code is included).
+
+Both SDK typechecks pass (0 errors). Now `xcodegen generate` to confirm the project enumerates my files.
+
+`xcodegen generate` succeeded and all 7 files are enumerated (42 pbxproj refs). Now the placeholder gate — both the exact gate command and an honest scoped scan of the real shipped files (to avoid a hollow pass since the literal path isn't a directory).
+
+Both placeholder scans clean (COUNT=0, 0 opt-outs). All in-scope gates are green. Now I'll attempt the full-app `xcodebuild build test` gate honestly (per covenant — execute, don't assume). The scheme preAction builds the KMP `Shared.xcframework` via Gradle (~10min long-pole), so I'll run it in the background and gather pre-existing-blocker evidence meanwhile.
+
+In this slot, `DashboardWidgetSize` is consolidated (1 decl), but `ChargingProjection` is redeclared across two app-target files (`ChargeStatusWidget.Adapter.swift` + `ChargingDetailSection.Adapter.swift`) — a confirmed pre-existing collision I'm forbidden to touch. Let me launch the full gate in the background and verify that collision while it runs.
+
+Confirmed pre-existing collision: `ChargingProjection` is declared as a `public struct` in `ChargeStatusWidget.Adapter.swift` AND a `public enum` in `ChargingDetailSection.Adapter.swift` — both app-target sources, same module → invalid redeclaration, unrelated to my surface and outside my allowed files. The background gate is running (Gradle first). Let me create the log directory and monitor progress.
+
+The launcher returned (the build runs in the detached driver). Let me read the polling output.
+
+Gradle is actively building the `Shared.xcframework` (downloading Kotlin/Native, compiling/linking iOS arm64 + simulator slices). Let me continue monitoring.
+
+The DEBUG `Shared.xcframework` is built; Gradle is now linking the RELEASE iOS arm64 framework (the `assembleSharedXCFramework` long-pole). Continuing to monitor.
+
+Release linking is nearly done (iOS arm64 ✓, iOS sim arm64 ✓, now macOS arm64). After staging, xcodebuild will compile the app target. Continuing to monitor.
+
+Both full-app builds completed: **IOS_EXIT=65, MAC_EXIT=65**. The KMP `Shared.xcframework` built + staged successfully (no longer a blocker), but the app target fails to compile on pre-existing ambiguities in **peer** surfaces (`SafetyModel` ambiguous, `ChargingProjection` redeclared) — the failing compile batch is WhyEndedPanel/WidgetPicker/WindowStatusDetail/XRayFieldsTable, not mine. Let me confirm zero StatusPageSkeleton errors and gather the evidence.
+
+Strong evidence: `Shared.xcframework` staged ✓ (ios-arm64, ios-arm64-simulator, macos-arm64); **0 StatusPageSkeleton errors** on both iOS and macOS. The 284 iOS errors are all pre-existing peer-surface type ambiguities (SafetyModel, ChargeStateDTO, ChargeUnitPrefs, etc. — duplicate decls across parallel-merged surfaces). Let me confirm the macOS failure category for log accuracy.
+
+Complete evidence gathered. macOS failed on **only 4 errors — all development-signing** ("requires signing with a development certificate" for TeslaSync-macOS / TeslaSyncWidgets-macOS); iOS failed on 284 pre-existing peer-surface type ambiguities. **Zero StatusPageSkeleton errors on both.** This is exactly the disposition `apps/macos-pending-verifications.md` defers to the P99 acceptance gate. Now let me write the gate log.
+
+Log written. Now let me verify git state — ensure only my 7 surface files + the log will be committed, and that the generated project/staged framework are gitignored.
+
+The generated project and staged framework are correctly gitignored. My 7 files + the log are untracked. The 2 modified `web/src/...` files are pre-existing changes unrelated to my task — I'll leave them unstaged. Let me clean up temp artifacts and stage exactly the allowed files.
+
+Staged set is exactly the 7 surface files + log; pre-existing web changes remain unstaged. Committing with the prescribed message.
+
+Commit succeeded (`6ae322dcf`) — exactly 8 files (7 surface + log), 1065 insertions, pre-existing web changes excluded. Let me run a final post-commit lint/format confirmation on the committed files.
+
+Final post-commit checks are green (FORMAT_EXIT=0, LINT_EXIT=0, 0 violations). Let me reconcile the one superseded todo (layout projection was folded into Model.swift) and finish.
+
+The surface is complete, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0254-StatusPageSkeleton.log | 134 +++++++
+ .../feature-views/StatusPageSkeleton.Model.swift   | 385 +++++++++++++++++++++
+ .../StatusPageSkeleton.Previews.swift              |  47 +++
+ .../StatusPageSkeleton.Telemetry.swift             |  34 ++
+ .../feature-views/StatusPageSkeleton.Tests.swift   | 208 +++++++++++
+ .../feature-views/StatusPageSkeleton.Views.swift   | 178 ++++++++++
+ .../feature-views/StatusPageSkeleton.strings       |  19 +
+ .../feature-views/StatusPageSkeleton.swift         |  60 ++++
+ 8 files changed, 1065 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0254-StatusPageSkeleton.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusPageSkeleton.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusPageSkeleton.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusPageSkeleton.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusPageSkeleton.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusPageSkeleton.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusPageSkeleton.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusPageSkeleton.swift

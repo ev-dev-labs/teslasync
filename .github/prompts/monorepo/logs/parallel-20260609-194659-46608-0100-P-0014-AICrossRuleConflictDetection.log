@@ -1,0 +1,187 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the existing Apple shared-surfaces patterns, especially any AI surfaces, and the supporting infrastructure (state holders, tokens, i18n, AIFeatureCard equivalent).
+
+There's a rich set of existing AI surfaces following a multi-file pattern. Let me find which web sources use `useAiStream` + `AIFeatureCard` (like my target) and read a complete analog. Let me check the web sources and supporting infra.
+
+`AIAutoNameUnnamedLocations` is the closest analog (streaming + per-row buttons + select callback). Let me read its web source and full native port, plus shared infrastructure.
+
+This is the ideal analog. Let me read all of its sibling files to understand the complete multi-file pattern.
+
+Excellent pattern. Now the remaining files: Chrome, Views, Previews, strings, Tests, ModelTests.
+
+Now the Tests file, design tokens, and project.yml for build configuration.
+
+Now let me verify the design tokens (P1/S9) exist with exact names, check xcodegen/build capability, and confirm the shared components I'll use.
+
+Let me read the design tokens precisely and assess build capability (the gate's critical path).
+
+The build depends on a KMP `Shared.xcframework` (Gradle/Kotlin). Let me check that toolchain, the generated design tokens, simulator, and pwsh availability.
+
+All toolchain present: xcodegen, java 17, pwsh, iPhone 16 sim (booted), all design tokens. Let me start the KMP framework build in the background (slow, independent of my code) while I read exact component APIs.
+
+Project generated. Let me kick off the KMP framework build in the background (the slow prerequisite) and read exact component/token signatures while it runs.
+
+All component/token APIs confirmed. Critical check before writing: the analog defines `public` types like `AIJSONValue`, `AIStreamPhase`, `AIConnection`, `AIToolResult`. I must ensure my new types don't collide with other surfaces in the same module. Let me check how existing AI surfaces avoid collisions.
+
+Key finding: those generic `AI*` types are owned solely by `AIAutoNameUnnamedLocations`. Other AI surfaces must use surface-prefixed names. Let me confirm the convention in another surface.
+
+Convention confirmed: surface-prefixed type names. Let me read the lint/format configs (file-length limits), check for name collisions on my chosen prefix, and peek at the KMP build progress.
+
+No collisions. Constraints noted: lines ≤120, files ≤400 (SwiftLint `--strict`). KMP build running in background. Let me confirm the Font/spacing tokens, then write code.
+
+All tokens confirmed. Color mapping: amber→`statusWarning`, rose→`statusDanger`, cyan→`accent`. Now I'll write the surface. Let me create a plan file and start with the pure adapter layer.
+
+Now the Logic file (kind labels, button logic, request body, accessibility).
+
+Let me check the KMP build progress, then write the Model file.
+
+KMP build still compiling. Writing the Model (state holder, source, telemetry, strings facade).
+
+Let me check line counts so far to stay under the 400-line limit, then place the in-memory source.
+
+Model is 303 lines. To stay safely under 400, I'll put the in-memory source (test/preview infra) in its own file.
+
+Now I need a wrapping chip layout for the flag chips. Let me check for an existing flow/wrap layout helper to reuse before writing the Views.
+
+No flow layout exists; I'll implement a small surface-scoped one. Let me check the web `AIFeatureCard` to render the action button faithfully.
+
+KMP build completed. Let me confirm the framework was staged, then continue writing the Views.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Gradle daemon is now warm. Writing the Views file (header, badge, action button, conflict list + rows).
+
+Now let me wire up flag localization (testable, in Logic), fix the flow-layout reference in Views, and write the Chrome file.
+
+Now the Chrome file (output panel, empty message, gate chrome, flag chip, flow layout, symbol pulse).
+
+Now the main View file (gate switch, ready card, freshness chrome, accessibility).
+
+Now the Previews (every state), then the strings catalog.
+
+Now the test files. I'll split into three to respect the 400-line limit: AdapterTests (decode/kind/flags), Tests (logic/request/a11y/i18n), ModelTests (wiring).
+
+Now the ModelTests (state-holder wiring).
+
+All files written. Let me verify line counts (≤400) and run the fast linters (swiftformat, swiftlint) on my new files.
+
+All under 400 lines. Now let me auto-format my files (swiftformat), then lint them strictly.
+
+One swiftlint violation: `reviewButton` passes a closure literal for `action` plus a trailing closure. Let me fix it by using the explicit `label:` argument.
+
+Format and lint are clean (0 violations) on all 11 files. Now the critical step: the full Xcode build + test. Let me verify the logs dir and start the iOS build+test (framework staged, Gradle daemon warm).
+
+Let me check a sibling surface's log (0006) to confirm the expected gate outcome/format, then start the build.
+
+The sanctioned disposition for this tier (per sibling 0006) is isolated verification with the full xcodebuild DEFERRED. But I have full capability here (Xcode, booted sim, framework staged), so I'll attempt the REAL gate for stronger evidence. Let me start the iOS build+test.
+
+Build started. Let me monitor it (it compiles the whole app + runs tests).
+
+Build failed — but the errors are in **pre-existing** files I never touched (`StateTimelineModel`, `VehicleStatePanel`, `VinDecoder` — ambiguous type lookups from cross-surface name collisions in this generated monorepo). Let me confirm none of the errors are in my files.
+
+Confirmed: **108 errors, zero in my files** — all are pre-existing cross-surface name collisions (`StateTimelineModel`, `RecentDrivesModel`, etc.) in other surfaces' files I never touched. The shared app target doesn't compile at baseline, independent of my work. This matches the sanctioned disposition for this tier (full app gate owned by the p4-apple acceptance gate).
+
+I'll build a faithful isolated verification (like sibling 0006): compile my exact sources against the **real** design system + components, and run my tests. Let me map the minimal real dependencies.
+
+Dependencies are clean (tokens + `tsGlassPanel` + `TSButton`/`TSSkeleton`, all token-only). Let me confirm `Cards.swift` has no extra deps, then build a faithful SwiftPM harness that compiles my exact sources against the real design system and runs my tests.
+
+`Cards.swift` pulls in Typography + Badges (via `TSCardHeader`/previews). Let me check `Typography.swift` deps to bound the closure.
+
+`Typography.swift` is token-only — the closure is bounded (7 real files). I'll build a faithful SwiftPM harness named `TeslaSync` (so `@testable import TeslaSync` works unchanged), compiling my exact sources against the **real** design system + components, and running my tests.
+
+Harness laid out. Let me run `swift test` (compiles my exact sources against the real design system and runs my tests).
+
+The harness caught a **real bug in my code** (that the broken app target couldn't surface): `TSGlassPanel` takes an `@escaping` closure, but my `glass` helper's `content` is non-escaping. Fixing it.
+
+All **55 tests pass** and the surface compiles against the **real** design system + components. The harness caught and I fixed a genuine `@escaping` bug. Now let me confirm format/lint still clean on the fixed file, and run a dual-SDK (iOS 18) typecheck to mirror the sibling-surface evidence.
+
+iOS 18 typecheck passes; macOS proven by `swift test`. Now the macOS typecheck (explicit, for the dual-SDK claim) and the gate's placeholder scanner.
+
+Both SDKs typecheck clean. Let me inspect and run the placeholder scanner exactly as the gate does.
+
+Let me check the placeholder patterns, then run the scanner both as the gate invokes it and thoroughly against my actual files.
+
+All placeholder checks pass (COUNT=0). Let me run the final canonical format+lint over all 11 files together and check git status to ensure I only commit my surface files.
+
+All clean: format 0/11, lint 0 violations, and git shows only my 12 surface files (build artifacts are git-ignored). Let me capture the final test summary, then write the official log.
+
+55/55 tests pass. For rigor (no skip-and-assume), let me also run the macOS gate to capture its real result, then write the log. Starting macOS build+test.
+
+While the macOS build runs, let me verify the tier-disposition reference I'll cite in the log.
+
+The macOS build finished. Let me analyze its result (confirm again zero errors in my files).
+
+macOS failed too — but for an unrelated reason: **code signing** (empty `DEVELOPMENT_TEAM`, no dev certificate on this runner), 4 signing errors, again **zero compile errors and zero referencing my surface**. Both full-app failures are outside my surface/scope (iOS = pre-existing cross-surface collisions; macOS = environment signing).
+
+Now let me produce a faithful official log by re-running the gate sequence with real captured exit codes (builds are cached now). First the host gates + isolated verification.
+
+The `.strings` file (not Swift) caused a spurious swiftformat message. Let me regenerate the whole log cleanly, running the actual gate commands (including the cached xcodebuilds) and capturing real exit codes.
+
+Host gates all 0. Now the isolated verification (SwiftPM 55 tests + dual-SDK typecheck against the real design system) — the strong surface-level green evidence.
+
+Isolated verification fully green (55 tests, both SDKs typecheck). Now the full-app xcodebuild gate (both platforms) with real captured exit codes and honest error analysis.
+
+IOS_EXIT=65 captured. Now the macOS gate.
+
+Both gates captured (IOS_EXIT=65, MAC_EXIT=65). Let me analyze both outputs and append the full-app section with honest evidence, then the disposition.
+
+Clean attribution confirmed: **iOS = 108 pre-existing errors, all in other surfaces' `RecentDrives*`/`StateTimeline*` files (0 mine); macOS = 4 code-signing errors (empty `DEVELOPMENT_TEAM`, 0 mine)**. Let me append the full-app section and final disposition to the log.
+
+Let me review the complete log for accuracy.
+
+The log is complete, honest, and accurate. Let me update the plan, clean up temp artifacts, and verify git status before committing only my surface files + the log.
+
+Clean — only my 12 surface files + the log. Committing with the prompt's message.
+
+Committed (`38d2d5825`), working tree clean. The task is complete.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`AICrossRuleConflictDetection`** SwiftUI surface at parity with `web/src/components/ai/AICrossRuleConflictDetection.tsx`, following the established sibling-surface (0006) architecture.
+
+**12 files** in `apps/apple/TeslaSync/shared-surfaces/` (all ≤400 lines):
+- `.swift` (main view: gate switch, ready card, freshness chip/banner, a11y summary)
+- `.Adapter` / `.Logic` (pure, tested: `tool_result`→`[RuleConflict]` decode mirroring the web `handleEvent` walk, button logic, request body, kind/flag mapping, accessibility)
+- `.Model` / `.Source` (P1/S8 state-holder, telemetry, i18n facade, in-memory test source)
+- `.Views` / `.Chrome` (header, Helix badge, action button, conflict rows with two "Review rule" buttons + mismatch chips in a wrapping flow layout, output panel, empty/gate chrome)
+- `.Previews` (every state), `.strings` (i18n catalog), `.Tests` / `.AdapterTests` / `.ModelTests`
+
+**Parity:** all web states (idle/streaming/empty/conflicts/stream-error) + P4 leaf states (gateLoading/gateError/stale/offline/gatedOff); binds via the shared state-holder (no HTTP in the view); every string through the P1/S10 facade; full VoiceOver + reduce-motion; `view.opened` telemetry.
+
+**Verification (honest, no shortcuts):**
+- swiftformat `0/11` · swiftlint `--strict` `0 violations` · placeholder `COUNT=0`
+- SwiftPM build against the **real** design system + **55/55 tests pass**
+- iOS 18 + macOS 15 SDK typecheck of the exact shipped sources: **0 errors** (caught & fixed a real `@escaping` bug)
+- Full-app `xcodebuild build test` was **run on both platforms** and is RED **only for pre-existing, out-of-scope reasons** — iOS = 108 cross-surface collisions in other prompts' `RecentDrives*`/`StateTimeline*` files (**0 in my surface**); macOS = 4 code-signing errors (empty `DEVELOPMENT_TEAM`). Deferred to the p4-apple acceptance gate, exactly as every sibling P4 surface.
+
+Log written ending `EXIT=0 / STATUS=DONE`; committed only the 12 surface files + log (build artifacts are git-ignored).
+
+Merge made by the 'ort' strategy.
+ ...-surfaces-0014-AICrossRuleConflictDetection.log | 139 ++++++++++
+ .../AICrossRuleConflictDetection.Adapter.swift     | 283 +++++++++++++++++++
+ ...AICrossRuleConflictDetection.AdapterTests.swift | 252 +++++++++++++++++
+ .../AICrossRuleConflictDetection.Chrome.swift      | 308 +++++++++++++++++++++
+ .../AICrossRuleConflictDetection.Logic.swift       | 175 ++++++++++++
+ .../AICrossRuleConflictDetection.Model.swift       | 303 ++++++++++++++++++++
+ .../AICrossRuleConflictDetection.ModelTests.swift  | 250 +++++++++++++++++
+ .../AICrossRuleConflictDetection.Previews.swift    | 122 ++++++++
+ .../AICrossRuleConflictDetection.Source.swift      | 111 ++++++++
+ .../AICrossRuleConflictDetection.Tests.swift       | 161 +++++++++++
+ .../AICrossRuleConflictDetection.Views.swift       | 264 ++++++++++++++++++
+ .../AICrossRuleConflictDetection.strings           |  54 ++++
+ .../AICrossRuleConflictDetection.swift             | 208 ++++++++++++++
+ 13 files changed, 2630 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0014-AICrossRuleConflictDetection.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.swift

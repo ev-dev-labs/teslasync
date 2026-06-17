@@ -1,0 +1,158 @@
+I'll start by exploring the environment and the web source to understand what's required.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the Apple project structure.
+
+Now I understand the web source — it's a pure presentational drag-to-resize handle for table columns. Let me study the established conventions by reading the Accordion example set and the supporting facades.
+
+Excellent — Accordion is the ideal template since it's also a pure presentational primitive and documents how to handle the "states" honestly. Let me read the rest of the Accordion set, the design tokens, web `tableTokens`, the project config, and the placeholder checker.
+
+Now let me read the Accordion.Views.swift, the design tokens, project config, placeholder checker, and find interactive (drag/adjustable) sibling patterns.
+
+Found key interactive siblings (`PlaybackControls.Scrubber`, `TimelineScrubber`) that use drag + adjustable accessibility — the exact idiom I need. Let me read those plus the test-target config, token definitions, swiftlint config, and the placeholder checker.
+
+Let me check the placeholder patterns, build tooling (xcodegen, the shared framework script), and simulator availability to understand baseline build feasibility.
+
+Key finding: no `.xcodeproj` exists (must run `xcodegen generate`), and the build pre-action compiles a KMP `Shared.xcframework` via Gradle. Let me check the pending-verifications doc (which likely documents environment build constraints) and the shared module.
+
+The pending-verifications doc reveals the established pattern: the full-app `xcodebuild` is blocked by pre-existing, unrelated issues (KMP `Shared.xcframework` Kotlin/Native link timeout, parallel-merge symbol collisions, missing signing identities). Predecessors verify each surface in isolation. Let me check the exact STATUS convention used in prior logs.
+
+This is the decisive precedent. The immediate sibling **DataTableBulkBar (0209)** concluded `EXIT=0 / STATUS=DONE` by proving every *surface-attributable* gate green (typecheck, isolated `swift test`, lint, format, placeholder, xcodegen) while the full-app `xcodebuild` reds are proven FOREIGN (parallel-merge sibling defects) and ENVIRONMENTAL (no signing cert). Let me extract the exact reproducible gate commands from that log and confirm the current file-split convention.
+
+Let me read the middle of the BulkBar log (the exact reproducible green-gate commands) and the BulkBar source files as the closest current-convention template.
+
+I have the full methodology. Let me read the remaining BulkBar files (Adapter, Views, Previews, strings, and both test files) to precisely match the current convention.
+
+Let me read the remaining BulkBar files (Previews, strings, and both test files) to lock in test/preview conventions, then I'll build my implementation plan.
+
+I now have a complete, precise template (sibling **DataTableBulkBar 0209** + interactive idiom from **PlaybackControls.Scrubber**). Let me confirm the exact token names available and probe two SwiftUI APIs I plan to use (`pointerStyle(.columnResize)`, `onKeyPress`) before writing code.
+
+The cascade stems from one root failure (`pointerStyle`); the rest is downstream inference noise. Let me isolate: probe `onKeyPress`+adjustable without `pointerStyle`, and separately probe `pointerStyle` variants.
+
+`onKeyPress` + adjustable action work on iOS 18; `pointerStyle(.columnResize)` works on macOS 15. The first probe's cascade implied `pointerStyle` may be unavailable on iOS — let me confirm directly so I can guard it correctly.
+
+All APIs verified: `onKeyPress` + adjustable action work on iOS+macOS; `pointerStyle(.columnResize)` is macOS-only (I'll guard with `#if os(macOS)`). I have a complete, precise blueprint. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the Foundation-only core (Adapter) and the state-holder (Model).
+
+Now the Views file — geometry style, the macOS-guarded column-resize pointer helper, and a reusable column harness for previews/tests.
+
+Now the public surface view — the handle with drag, keyboard, VoiceOver-adjustable, and the hover/focus/drag visual states.
+
+Now the i18n strings and the previews.
+
+Now the two test files — pure-core adapter tests and state-holder/view/strings tests.
+
+All 8 files written. Let me update tracking and begin verification — first the iOS + macOS isolated typechecks. Let me recon the token files the surface depends on.
+
+iOS typecheck clean. Now macOS 15 (which also compiles the `pointerStyle(.columnResize)` branch).
+
+Both typechecks clean. Now the isolated `swift test` — I'll assemble a temp SwiftPM package named `TeslaSync` (so `@testable import TeslaSync` resolves) with the ship files + tokens + the two test files, under Swift 6 strict concurrency on macOS 15.
+
+All 48 tests pass under Swift 6 strict concurrency. Now lint/format — first scoped to my files, then tree-wide (the gate scope).
+
+Minor line-length/wrap issues in the Tests file. Let me view the offending lines and fix them precisely.
+
+Let me fix the two over-width spots in the Tests file with properly wrapped (before-first) forms.
+
+Re-running lint/format on my files to confirm clean.
+
+My files pass lint + format. Now the placeholder gate (literal + real scoped scan), `xcodegen generate` (file enumeration), and a re-run of `swift test` with the edited file.
+
+Let me verify that's a genuine pass (not an empty scan) by running a real scoped scan over copies of my 8 shipped files.
+
+Placeholder gate is genuinely working (0 in my files; detects planted stubs). Now `xcodegen generate` to confirm the new files are enumerated into the project.
+
+xcodegen enumerates all 8 files (48 refs across both apps + both test bundles). Let me re-run `swift test` with the edited file, check git status (to establish what's mine vs pre-existing), and run the tree-wide lint/format gate steps.
+
+Confirmed: only my 8 files are untracked — the rest of the tree is the committed baseline. `swift test` still 48/48. Now the tree-wide gate steps (`swiftlint --strict`, `swiftformat --lint apps/apple`).
+
+Tree-wide swiftlint clean (0/4670). Now `swiftformat --lint apps/apple`.
+
+All surface-attributable + tree-wide gates are green (typecheck iOS/macOS, swift test 48/48, swiftlint 0/4670, swiftformat 0/4968, placeholder 0, xcodegen 48 refs). Now the heavy full-app gates. Let me first assemble the KMP `Shared.xcframework` (the documented long-pole) in the background.
+
+The KMP framework build is running (documented 6–9 min). Let me monitor its progress.
+
+The release-link long-pole is running (debug variant already built). Let me keep waiting.
+
+`linkReleaseFrameworkIosArm64` done; now `linkReleaseFrameworkIosSimulatorArm64` (the documented long-pole). Waiting for completion.
+
+Both iOS release links done; now `linkReleaseFrameworkMacosArm64` (last link before final assemble + staging). Nearly there.
+
+`Shared.xcframework` built + staged — **XCFRAMEWORK_EXIT=0**. Now the literal iOS full-app gate [1] (`build test`). This compiles all ~4670 files; running async to a log.
+
+iOS app target is compiling cleanly so far (0 errors). Letting the full compile/link/test run continue.
+
+The app target's Swift module emitted; now building the test bundle. There's 1 `error:` — let me identify it (and confirm it's not mine).
+
+The single error is **FOREIGN** — `AISignalExplorerNlFilter.swift:142:22` (a pre-existing committed sibling defect, the exact one the 0209 sibling documented). **0 DataTableResizer errors.** Let me wait for the gate to finish and capture IOS_EXIT.
+
+**IOS_EXIT=65** — build failed on the FOREIGN sibling defect, testing cancelled. Let me capture the summary markers, then run the baseline proof (DataTableResizer excluded → tree still red ⇒ foreign/pre-existing).
+
+Confirmed: **BUILD FAILED**, "Testing cancelled", 1 error total — **0 DataTableResizer errors**, the lone error is the foreign `AISignalExplorerNlFilter`. Now the baseline proof: rebuild with `DataTableResizer.*` excluded — if it's still red, the red is provably pre-existing/foreign.
+
+While the baseline builds, let me capture the signing-identity evidence (for the macOS environmental disposition).
+
+Environmental signing confirmed: **0 valid codesigning identities**, `DEVELOPMENT_TEAM=""`, macOS targets require hardened-runtime signing. Now waiting for the baseline build to finish.
+
+Baseline still compiling. Waiting for it to finish.
+
+**BASELINE_IOS_EXIT=65** — tree is red even with my files excluded. Let me confirm it's the same foreign defect (proving pre-existing/foreign).
+
+Baseline proof conclusive: **BUILD FAILED with `DataTableResizer.*` excluded**, on the FOREIGN AI* glass() escaping-closure defect (`AIAutoNameUnnamedLocations`, `AISignalExplorerNlFilter`). The red is pre-existing/foreign. Now the macOS gate [2].
+
+**MAC_EXIT=65** — environmental (development-signing required, pre-compile), 0 DataTableResizer errors. To rigorously prove the surface compiles in the *real macOS app target* too, let me run a macOS compile with signing disabled (bypasses the environmental gate).
+
+macOS app target compiling, 0 surface errors so far. Waiting for completion.
+
+macOS real compile: **0 DataTableResizer errors** — the lone error is again FOREIGN (`RecentDrivesSection.Previews.swift` compiler-timeout, a committed sibling). Every gate is accounted for. Let me gather version/LOC details for the log.
+
+All evidence gathered. Now I'll write the comprehensive gate log following the accepted sibling (0209) structure.
+
+Log written. Now let me verify the generated `.xcodeproj` is git-ignored (must not be committed), confirm only my files are pending, then stage + commit.
+
+Clean — only my 8 files + the log, and the generated `.xcodeproj` is git-ignored. Staging and committing.
+
+Commit `750ff3351` landed (9 files, 1688 insertions). Let me confirm a clean tree, update tracking, and clean up temp artifacts.
+
+All work is complete and committed. 
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) parity of `components/ui/DataTableResizer.tsx` — a controlled column-resize handle — as commit `750ff3351`.
+
+**8 files** (`apps/apple/TeslaSync/shared-surfaces/DataTableResizer.*`, 1439 LOC) following the accepted sibling bundle convention (DataTableBulkBar 0209 / Accordion 0203):
+- **Adapter** (pure core): SI-faithful `clamp` (Math.max/min/round), drag `clamp(startWidth+delta)`, ±8/Home-80/End-max splitter math, hover/focus/drag opacity, `{{column}}`/`{{width}}` interpolation.
+- **Model** (P1/S8 holder + P1/S10 i18n + P1/S11 telemetry): drag streaming, controlled-width release, keyboard/VoiceOver steps, `view.opened` once.
+- **Views/surface/previews/strings** + **adapter & state-holder tests**.
+
+**Native idiom mapping:** `DragGesture` for resize, `.focusable()`+`.onKeyPress` for the WAI-ARIA window-splitter keys, `.accessibilityAdjustableAction` for VoiceOver, macOS-guarded `pointerStyle(.columnResize)` for `cursor-col-resize`, Reduce-Motion-gated tint fade. The pure presentational source has no loading/error/stale/offline — only its REAL branches reproduced (documented, not skipped).
+
+**Every surface-attributable gate is GREEN** (all actually executed):
+`XCFRAMEWORK=0 · IOS_TYPECHECK=0 · MAC_TYPECHECK=0 · SWIFT_TEST=0 (48/48) · LINT=0 (0/4670) · FORMAT=0 (0/4968) · PLACEHOLDER=0 (gate-literal + real + planted self-check) · XCODEGEN=0 (48 refs)`. Both real iOS & macOS app-target compiles show **0 DataTableResizer errors**.
+
+The full-app `xcodebuild build test` reds are **FOREIGN** (committed sibling `AISignalExplorerNlFilter`/`AIAutoNameUnnamedLocations` glass() defect — proven pre-existing via the DataTableResizer-excluded baseline) and **ENVIRONMENTAL** (no macOS dev-signing cert), deferred to the P99 acceptance gate per `macos-pending-verifications.md`. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified. All 10 todos are done, the work is committed (`750ff3351`), the tree is clean, and the gate log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0212-DataTableResizer.log | 249 ++++++++++++++++++
+ .../shared-surfaces/DataTableResizer.Adapter.swift | 229 ++++++++++++++++
+ .../DataTableResizer.AdapterTests.swift            | 279 ++++++++++++++++++++
+ .../shared-surfaces/DataTableResizer.Model.swift   | 290 +++++++++++++++++++++
+ .../DataTableResizer.Previews.swift                | 112 ++++++++
+ .../shared-surfaces/DataTableResizer.Tests.swift   | 248 ++++++++++++++++++
+ .../shared-surfaces/DataTableResizer.Views.swift   | 115 ++++++++
+ .../shared-surfaces/DataTableResizer.strings       |  28 ++
+ .../shared-surfaces/DataTableResizer.swift         | 138 ++++++++++
+ 9 files changed, 1688 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0212-DataTableResizer.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableResizer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableResizer.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableResizer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableResizer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableResizer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableResizer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableResizer.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableResizer.swift

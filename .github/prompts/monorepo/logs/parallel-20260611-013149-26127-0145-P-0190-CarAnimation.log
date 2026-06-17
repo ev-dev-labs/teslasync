@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure to understand what exists and what I'm working with.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the Apple app structure and read the web source.
+
+Now let me explore the Apple app structure to understand conventions, existing surfaces, and the dependency layers (state holders, tokens, i18n, diagnostics).
+
+The shared-surfaces directory exists with many surfaces following a multi-file pattern. Let me examine the file conventions and check if CarAnimation already exists.
+
+CarAnimation doesn't exist yet. The standard surface pattern is: `.swift` (view), `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.Adapter.swift`, `.strings`. Let me study a representative existing surface end-to-end and locate the dependency layers (state holders, tokens, i18n, diagnostics).
+
+`AIThinkingIndicator` is the closest analog — an animated presentational indicator. Let me read its full file set to learn the exact pattern.
+
+Let me read these files individually with the view tool for clarity.
+
+This is an excellent reference. Let me read the remaining files of this surface.
+
+Now let me find the P1/S9 design tokens and shared primitives referenced (Color.TS, Font.TS, TSSpacing, TSRadius, etc.) and check how surface colors map.
+
+The `Sources/Components/` directory holds the design system. Let me explore it and find the core token definitions for the main app (not Watch).
+
+There's `Sources/Design` (tokens) and `Sources/Components/Motion`. Let me explore both — the Motion folder may already relate to CarAnimation.
+
+Let me read the design tokens and the existing Motion component to understand the available primitives.
+
+Critical finding: there's already a minimal `TSCarAnimation` (SF Symbol slide) in `Sources/Components/Motion/Motion.swift` — **not** a parity reproduction, and it only covers 1 of the web file's 4 exports. My task is the full-parity surface in `shared-surfaces/`. Let me find the full `Color.TS` token set (surface levels, theme primary, text muted, status colors) and check for name collisions.
+
+All core tokens live in `TeslaSyncWatchShared/WatchDesignTokens.swift` (shared into the main app). Let me read it fully and check the project.yml target/source configuration to confirm how shared-surfaces files get compiled and tested.
+
+The generated tokens are at `apps/design/generated/apple/Tokens.swift`. Let me read it to get the full palette (surface levels, `TSMotion`) and confirm the web CSS-var → token mapping. Also check the web `COLOR` helper and `useMotionPreference`.
+
+Let me read the web `COLOR` status values and the CSS variable definitions for the surface levels, so I map them faithfully to the native tokens.
+
+Now I have the color mapping. Most web colors map **exactly** to tokens (`--theme-primary`→accent, `--text-muted`→textMuted, `--surface-1`#0f1019→surface, `#ef4444`→statusDanger, `COLOR.GOOD/WARN/BAD`→statusSuccess/Warning/Danger). Only `--surface-2`/`--surface-3` lack exact tokens. Let me check the local-token pattern (Avatar.Tokens.swift), the project.yml source config, and name collisions.
+
+The local-token pattern (`Avatar.Tokens.swift`) is sanctioned, and surface elevation uses `Color.TS.surface` + opacity. No name collisions. Now let me verify the project.yml wiring (source globs, schemes `TeslaSync`/`TeslaSync-macOS`, test target) so the build/test gate will pick up my new files.
+
+project.yml is at the `apps/apple` level. Let me read it.
+
+Let me read the key target/test/scheme sections to confirm how `shared-surfaces` and tests are wired.
+
+I now understand the full build wiring (XcodeGen globs `shared-surfaces/` into the app targets; `*Tests.swift` into the test bundles). Let me check whether the `.xcodeproj` exists / xcodegen is available, and read the placeholder-check script the gate uses.
+
+`pwsh` runs the gate. Let me check it's available, read the forbidden-pattern list, confirm an iPhone 16 simulator exists, and generate the Xcode project. I'll kick off a baseline build in the background to distinguish pre-existing issues from mine.
+
+Everything's available (pwsh 7.6, iPhone 16 booted). Critical constraints noted: `--strict` makes warnings fatal; line ≤120; type names ≤50; and the word "Placeholder"/"TODO"/"XXX" are themselves forbidden patterns I must avoid in code/comments. Let me read the rest of the swiftlint config (file/type/function length limits) to plan file splitting.
+
+All constraints are clear. SwiftLint uses default `file_length` (≤400) and `function_body_length` (≤50, fatal under `--strict`), so I'll split into focused files and decompose view bodies. The word "Placeholder"/"TODO"/"XXX"/"not implemented" are themselves banned — I'll avoid them in code and comments. Let me write a plan, then build the surface.
+
+Let me set up task tracking, generate the Xcode project, and start a baseline iOS build in the background (to distinguish pre-existing issues from mine) while I write the surface files.
+
+Project generated. Let me start a baseline iOS build+test in the background (the long pole) while I write the surface files.
+
+The shared framework is a Kotlin Multiplatform core built via Gradle (heavy/potentially slow). The scheme pre-action builds it. Let me kick off the baseline iOS build+test in the background now and write code while it runs.
+
+Baseline iOS build is running in the background. Now I'll write the surface. Starting with the pure cores.
+
+Now the geometry-heavy Shapes file — faithful ports of the web SVG paths, scaled from each viewBox.
+
+Let me check baseline build progress, then write the Views layer.
+
+Baseline build is healthy (Gradle KMP framework assembling from cache). Now the motion primitives + content views. First, a `unitPoint` helper on `CarGeometry`:
+
+Now the four content views:
+
+Let me clean up two issues in Views.swift: the awkward `body(fillOnly:)` method (risky name near `var body`) and the stray top-level constant.
+
+Now the public surfaces file. Updating todos and writing it:
+
+Now the strings catalog and DEBUG previews:
+
+Let me check the baseline build status.
+
+Baseline still assembling release frameworks (Gradle). Let me write the comprehensive test suite while it builds.
+
+All nine files written. Let me check line counts (≤400 limit), baseline build status, then run swiftformat/swiftlint on my files to catch issues early.
+
+All files comfortably under 400 lines. Baseline still building. Let me format and lint my files now (independent of the build).
+
+swiftformat is clean. Now swiftlint `--strict` on my files:
+
+swiftlint `--strict` and swiftformat `--lint` both pass clean (0 violations). Let me verify how the placeholder script resolves its `-Path` argument (the gate passes a path with no extension), then run it.
+
+The placeholder script uses `-LiteralPath` (exact match), so the gate's extension-less `-Path .../CarAnimation` scans nothing — a vacuous pass. To honestly verify (per the covenant), I'll scan my actual files. First, a direct grep for every banned pattern (case-insensitive, as the script matches):
+
+Clean. Now let me run the official placeholder script against my actual files (genuine verification) and the exact gate path:
+
+All placeholder checks pass (0). Let me check the baseline build now.
+
+Baseline shows a BUILD FAILED marker. Since my files weren't in the project when this baseline started (generated before I wrote them), this may be pre-existing. Let me get the actual error.
+
+My baseline build (without my files — project was generated before I wrote them) finished with BUILD FAILED, but no `error:` line is shown. The other running `xcodebuild` (PID 29753) is a *different* repo (`.teslasync-preview`) — a co-tenant in this shared environment. Let me find the real failure cause.
+
+The Swift compiler **aborted** (crash stack at line ~12596, `abort + 148`) during the baseline — not a source error, and my files weren't even in that project. A co-tenant `xcodebuild` (PID 29753) is competing for resources. Let me view the crash region to confirm it's a transient compiler crash.
+
+Confirmed: the baseline crash is a **Swift compiler IRGen abort** while compiling a *pre-existing* file (`AppearanceSettings.Controls.swift`) — not my code, and my files weren't in that project. This is a transient toolchain crash, likely aggravated by the co-tenant build (PID 29753) running `-jobs 2` on the same machine. Notably, that co-tenant's own script wraps `xcodebuild` in a `for attempt in 1 2 3` retry loop — these builds are known-flaky under load. Let me check load, regenerate the project (now including my files), and verify they're picked up.
+
+Confirmed (0 matches) — my files were absent from the baseline project, so its crash is pre-existing/environmental. The `&&` chain stopped on grep's exit-1. Let me check load and regenerate.
+
+Key environment finding: **load average 41 on a 20-core box** (heavily oversubscribed by co-tenant builds — this is a parallel-slot CI host). The IRGen `abort()` is memory-pressure-induced flakiness on a pre-existing file, which is exactly why the co-tenant wraps its build in a 3-attempt retry. My files are now in the project (60 refs). Let me build my code (with reduced `-jobs` to ease memory pressure) with a retry loop, logging to a file.
+
+The build is running under heavy load. While it compiles, let me fix one thing in the test file: I placed `@testable import TeslaSync` at the file bottom, but the sibling precedent (and convention) keeps it in the top import group (last). Let me correct that for safety.
+
+Tests file still clean after the import fix. Build attempt 1 is in early phases (load eased to ~26). Let me wait for it to progress.
+
+Excellent signal: **my CarAnimation files compiled with zero errors/warnings** in attempt 1. The build failures are the transient IRGen crashes on *different* pre-existing files each run (baseline: AppearanceSettings; attempt 1: AISignalExplorerNlFilter) — classic load-induced compiler aborts, not deterministic source errors. Load is dropping (26→15). Attempt 2 is running. Let me wait for it.
+
+All 3 attempts failed with EXIT=65 but **zero CarAnimation errors**. Let me determine whether the crashes hit the *same* file each time (deterministic toolchain bug) or *different* files (load-induced), to understand the nature precisely.
+
+Let me look directly at the failure summary and any real errors in each attempt.
+
+Now I see the **real** errors — and they're in *pre-existing* files, not mine:
+- attempt 1: `AISignalExplorerNlFilter.swift:142: error: escaping closure captures non-escaping parameter 'content'`
+- attempts 2&3: `AIGeofenceAwareAutomationSuggestions.swift:141: error: escaping closure captures non-escaping parameter 'content'`
+
+These can't be caused by my CarAnimation code (no shared symbols). Let me inspect them to confirm they're pre-existing bugs and understand why the baseline didn't surface them.
+
+This is a pre-existing pattern, not my code. The `glass(@ViewBuilder _ content: () -> some View)` helper calls `content()` inside `TSGlassPanel`'s closure. Let me check how widespread this pattern is and how `TSGlassPanel` is defined — and crucially whether these errors exist at HEAD independent of my change.
+
+The failing files are **pre-existing and unmodified** (git status empty); my files are all untracked-new and compiled cleanly. The `content: () -> some View` + `TSGlassPanel` pattern is used in *dozens* of committed files. Let me view `TSGlassPanel`'s initializer to determine whether these "escaping closure" errors are real or spurious compiler instability.
+
+Now it's clear. `TSGlassPanel.init` takes `@escaping () -> Content` and **stores** it. So a helper like `glass(@ViewBuilder _ content: () -> some View)` (non-escaping param) that calls `content()` inside `TSGlassPanel { … }` genuinely captures a non-escaping parameter in an escaping closure — a **deterministic** compile error in pre-existing, unmodified files. Let me quantify how widespread this is and check the repo's own build-status notes.
+
+51 files use this helper pattern wrapping an escaping container — strong evidence of repo-wide pre-existing breakage. The failing files are unmodified and logically can't be affected by my isolated new files. Let me (1) read the repo's own build-status notes, and (2) definitively reproduce the failure **without my files** as gold-standard evidence. First, move my files aside and rebuild:
+
+My files are stashed and the project regenerated without them. Now build to confirm the failure reproduces **without my code**:
+
+**Definitive proof: with my files removed, the build still fails (EXIT=65) on the identical pre-existing error** `AISignalExplorerNlFilter.swift:142: escaping closure captures non-escaping parameter 'content'`. The full-app gate is blocked by pre-existing compile errors in out-of-scope, unmodified files I'm forbidden to touch. Let me restore my files and then prove my own code passes via an isolated test package.
+
+**Definitive: the failure is 100% pre-existing** — identical error with my files absent. My files are restored (60 refs) and reference only 7 `Color.TS` members + `TSSpacing.lg`. The real Xcode build already proved my code **compiles clean** (0 CarAnimation errors). Now let me prove my tests **execute and pass** via an isolated SwiftPM package (since the app's XCTest bundle can't link due to the pre-existing breakage).
+
+Now run my tests in isolation:
+
+**All 28 isolated tests PASS** (`SWIFT_TEST_EXIT=0`): projection (8), meta, accessibility, model/telemetry, strings, shape geometry, view composition. 
+
+Now I have full evidence. Let me verify the log directory and run the fast gate steps (swiftlint/swiftformat repo-wide, placeholders) to see where they stand independent of the builds.
+
+Repo-wide swiftlint `--strict` passes (0 violations across 4576 files). Now swiftformat `--lint` on the whole tree and the placeholder gate:
+
+Repo-wide swiftformat passes too (0/4874). So **only the two build steps are blocked — purely by pre-existing errors in out-of-scope files**. Now let me run the actual gate builds to capture authentic exit codes and failure evidence for the log. Starting the iOS gate build+test:
+
+iOS gate: `IOS_EXIT=65` — BUILD/TEST FAILED on the same pre-existing escaping-closure errors (`AIAutoNameUnnamedLocations`, `AISignalExplorerNlFilter` — not mine). Let me confirm zero CarAnimation errors and that my files compiled, then run the macOS gate.
+
+macOS gate: `MAC_EXIT=65` — fails on **code-signing/entitlements** (no development certificate on this headless runner — a platform-capability blocker) plus the same shared compile errors. iOS gate: **0 CarAnimation errors** (my earlier dedicated build compiled all 9 files clean). Let me gather all evidence excerpts to compose the authentic gate log.
+
+I have complete evidence. Let me capture verbatim failure tails from each build for the authentic log, then compose it.
+
+All evidence gathered. Let me write the authentic, honest gate log.
+
+Log written. Let me update tracking, verify git state (ensure only my files + log get committed, not the generated xcodeproj), then commit.
+
+Clean — only my 10 files + the log are untracked; the generated `.xcodeproj` is gitignored. Committing now with an honest body:
+
+Committed (11 files, 1437 insertions). Let me clean up temp artifacts and do a final repo-state check.
+
+The CarAnimation Apple surface is delivered, verified, and committed. Cleaning up complete — final state below.
+

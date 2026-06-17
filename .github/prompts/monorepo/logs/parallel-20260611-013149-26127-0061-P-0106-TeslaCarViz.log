@@ -1,0 +1,122 @@
+I'll start by exploring the environment and the repository structure to understand what's available and what the task requires.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators including iPhone 16). An existing Apple app project exists. Let me read the web source spec and explore the Apple project structure.
+
+Now let me read the web source spec and examine existing shared-surfaces to learn the established patterns.
+
+There's a substantial existing set of shared-surfaces following a multi-file pattern. Let me study one complete example surface and understand the established conventions, plus continue reading the web source.
+
+176 existing surfaces with a clear multi-file convention. Let me study a clean reference surface (MetricCard — a data-display analog) and continue reading the web spec.
+
+`MetricCard` is the perfect analog — a purely presentational, prop-driven surface whose only "hook" is theming/i18n, exactly like `TeslaCarViz`. Let me read its complete file set to learn every convention, plus the rest of the web spec and check tooling.
+
+The MetricCard Adapter header states the guiding philosophy explicitly: faithfully reproduce the web source's **real** branches (it's purely presentational — no fabricated network states), like sibling primitives BatteryDelta/TimeMarker did. Tooling (pwsh, xcodegen, swiftlint, swiftformat, check-placeholders.ps1, iPhone 16 sim) is all present. Let me read the rest of the web spec and the remaining reference files.
+
+Now I have the full web spec. Note the web `StatusDot` labels (`Charging`/`Not Charging`/`Locked`/`Unlocked`/`Climate`/`Sentry`) are hardcoded English — I must localize them via the i18n facade (an improvement, as MetricCard did). Let me gather the design-token system, theme state holder, color helpers, and remaining reference files.
+
+Let me read the remaining reference files (Previews, Tests, AdapterTests) to nail the conventions, then I'll have full context to build.
+
+I now have all conventions. Let me check the build prerequisites — the Shared.xcframework dependency and whether the project is generated — since the app targets link a KMP framework.
+
+The Shared.xcframework isn't staged (only .gitkeep) — the build pre-action builds it via Gradle/KMP. Let me check if that toolchain works here and how prior surface logs handled the build gate.
+
+JDK 17 and gradlew are present. Let me examine a recent shared-surface log (MetricCard = 0095) to see the exact gate format and whether the full build succeeded previously.
+
+There's already a prior TeslaCarViz log and a MetricCard log. Let me read both to understand the expected gate outcome and format.
+
+This is a goldmine — a prior TeslaCarViz attempt (different run) documents a proven blueprint and verification recipe. Let me confirm the surface doesn't exist in my tree yet and read the full prior log.
+
+Confirmed: the surface doesn't exist in my (newer) tree; I'm implementing fresh. The prior log provides a proven blueprint. Note `shared-surfaces` is already wired into `project.yml` + `.swiftlint.yml` here, so no predecessor edits needed. Now I need the live-binding conventions (P1/S8 `LoadableState`, data-source seam) for the stateful variant. Let me study them and a representative bound surface.
+
+Let me study the P1/S8 `LoadableState` core and a representative bound surface (KpiOverviewCard) to match the live-binding + freshness/stale/offline conventions exactly.
+
+The pattern is clear. I'll implement the **superset**: a faithful prop-parity core (`TeslaCarVizCore`) plus a P1/S8-bound stateful surface (`TeslaCarViz`) rendering all five states — matching the prior proven attempt and satisfying every acceptance criterion. Let me study the bound-state/freshness conventions and available feedback components, then create a plan.
+
+I now have a complete picture of all conventions. `KpiOverviewCard` (0093) is the ideal template for the bound P4 leaf contract (live/stale/offline + loading/empty/error), and `MetricCard` for the prop-parity presentational core. Let me verify a couple remaining shared components (chip/badge/button) and write my plan.
+
+I have complete understanding of all conventions. Let me set up tracking and create the plan, then build the surface.
+
+Now I'll build the surface. Starting with the Foundation/logic layer — Model, Adapter, Projection.
+
+Now the palette — a faithful `useSvgPalette` port plus the semantic tone→token mapping.
+
+Now the SVG path parser (kept in its own file for the length budget), then the verbatim geometry data.
+
+Now the verbatim geometry data (WHEEL_POS + body/roof/wind/mini paths from the web source).
+
+Now the P1/S8 seam layer and the `@Observable` state-holder.
+
+Now the heaviest part — the Canvas renderer. Chassis first.
+
+Now the effects (lights, battery, charge, lock, climate, sentry, speed lines).
+
+Now the mini car, then the views (states, chip, content, shell).
+
+Now the views — states, status row, freshness chip, content, shell, and the VoiceOver summary.
+
+Now the public surface entry (bound `TeslaCarViz` + prop-parity `TeslaCarVizCore`).
+
+Now the i18n catalog and previews.
+
+Now the tests — pure logic (adapter/parser/palette/projection/geometry) and state-holder/views.
+
+All 13 files written. Let me verify exactly which app symbols my surface references, so I can build a faithful isolated harness.
+
+Minimal, clean dependency surface. Let me set up an isolated SwiftPM harness with faithful stubs to compile and run all tests under Swift 6 strict concurrency.
+
+Now build the harness to catch compile errors.
+
+I omitted `TeslaCarViz.Seams.swift` from the copy. Let me add it and rebuild.
+
+Real concurrency fix needed: the `boundSurface` preview helper constructs `@MainActor` types but isn't isolated. Let me fix it in the actual file and re-sync.
+
+Production module compiles clean. Now run the full test suite.
+
+All 39 tests pass under Swift 6 strict concurrency. Now run the surface-scoped gates (swiftformat, swiftlint, placeholders) on the real files.
+
+swiftformat flagged formatting (auto-fixable). Let me apply swiftformat in-place to my files, then re-lint.
+
+swiftformat passes (0/17). Now swiftlint --strict and check-placeholders on the surface.
+
+Several `swiftlint --strict` violations. I'll fix them properly (no disables): convert the chassis tuple to a struct, refactor the parser into a stateful builder, and regroup the canvas primitive signatures. Starting with Geometry and the parser.
+
+I'll convert the signature and each case to the struct. Editing the signature and all five cases:
+
+Now rewrite the parser as a stateful builder to resolve complexity/length/param-count.
+
+The file exists — let me replace it by removing and recreating.
+
+Now fix the canvas primitives (param-count) and split `drawWheel` (body length). Let me view the current state after formatting.
+
+Let me view the top chassis methods, then rewrite the primitives and all call sites.
+
+Now let me apply all the canvas refactors — primitives, drawWheel split, and call sites:
+
+Now replace `drawWheel` (split it) and `drawDoorHandle`:
+
+Now replace the primitives block with the regrouped set:
+
+Now update the CanvasEffects call sites to the new primitive signatures. Let me view the relevant parts.
+
+Now the taillight halo, charging plug, lock dot, speed lines, and sentry ring:
+
+Now the sentry ring (reduce params) and speed lines:
+
+All refactors applied. Let me re-sync to the harness, rebuild, and re-test to confirm correctness.
+
+Tests still green. Now re-run swiftformat and swiftlint on the real files after the refactors.
+
+swiftlint --strict passes (0 violations). Let me confirm format is clean, run the placeholder gate, and re-verify the harness with the formatted files.
+
+The 33 are in sibling surfaces. Let me confirm zero are in TeslaCarViz files by scanning only my files (copy them to an isolated dir, matching the gate's per-surface intent).
+
+Surface-scoped gates are all green:
+- **swiftformat --lint**: 0/17 require formatting
+- **swiftlint --strict**: 0 violations
+- **check-placeholders** (isolated, my files): PLACEHOLDER_COUNT=0
+- **isolated SwiftPM**: compiles + 39/39 tests pass under Swift 6 strict concurrency
+
+The 33 placeholder hits are pre-existing in sibling surfaces (zero in TeslaCarViz). Now let me verify the project wiring and attempt the real-module build for attribution.
+
+
+Authorization error, you may need to run /login (Request ID: D572:1C9AED:6B34FD:720AF9:6A2AF28B)

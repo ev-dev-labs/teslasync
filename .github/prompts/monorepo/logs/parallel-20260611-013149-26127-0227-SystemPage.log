@@ -1,0 +1,161 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure, existing Admin pages, the parity manifest, and related infrastructure.
+
+The Admin Features directory doesn't exist yet. Let me look at the manifest record and existing Apple feature structure.
+
+The `Features/Admin` directory doesn't exist yet. Let me understand the project structure, build system, and existing patterns.
+
+Key finding: the project uses XcodeGen, but `project.yml` sources don't include `TeslaSync/Features/`. Let me see where the sibling admin pages (LiveSignalInspectorPage, DiskForecastPage) actually live and how they were registered.
+
+Let me see the full file paths from these commits.
+
+The real source path is `apps/apple/Sources/Features/Admin/` (which is in `project.yml`), not `TeslaSync/Features/Admin`. The siblings established this convention. Let me study the sibling pattern in detail and the web child panels.
+
+No separate parity units exist for the child panels. Let me examine the web child panels to gauge scope, and check the manifest/ledger more broadly.
+
+Let me read the two web panels and check if Swift equivalents already exist (they may be P3 component parity units already built).
+
+Both child panels already exist as P3 components in `feature-views/`. My SystemPage composes them. Let me read the panel entry points, a sibling page model, route wiring, and the app integration.
+
+Now let me understand the panel model initializers, the app route wiring, and a sibling page model + test.
+
+Now let me study the app route wiring and a sibling page model + test to mirror the integration pattern.
+
+The `.system` AppRoute case already exists. Let me examine the route host registry, RootView rendering, the simplest sibling model + test, and how the panels get live/sample sources.
+
+Let me read the route registry, app shell, a sibling test, and check the panel adapters for sample/live sources.
+
+Now I understand the wiring. Let me check the panel adapters/sample sources and the test pattern, plus verify the route/group strings exist in the catalog.
+
+No production source exists for the panels yet—they use injected sources (sample for previews). Let me read the sibling page header/model, the test pattern, panel previews for sample data, and confirm catalog strings.
+
+Let me read the test pattern, the p4-apple gate README, the catalog format around an existing key, and confirm remaining catalog strings + route tests.
+
+The `&&` short-circuited. Let me re-run those checks with `;` separators.
+
+Found `translation.system.page.title` already in the catalog. Let me investigate the key convention—whether siblings use a `translation.` prefix and how the web keys are stored.
+
+The convention is clear: bare web keys like `coverage.pageTitle`. I must use `system.page.title`/`system.page.subtitle`. Let me see the exact catalog entry format and the file header.
+
+Now I understand the full pattern. Let me check the critical gating factor: tool availability (Xcode, swiftlint, xcodegen, swift).
+
+Full toolchain is available — the gate can run. Let me check the Shared.xcframework build dependency and read the remaining wiring files before kicking off a baseline build.
+
+The `Shared.xcframework` isn't staged (needs a Gradle/KMP build via the scheme preAction). Siblings passed their gates, so the infra works. Let me read a sibling's gate log to get the EXACT working invocation, then establish a baseline.
+
+This sibling log is the authoritative gate contract. Key facts:
+- Real path is `apps/apple/Sources/Features/Admin/**` (prompt's `TeslaSync/Features/Admin` doesn't exist).
+- Full `xcodebuild` is RED due to a **pre-existing, out-of-scope** shared-surfaces bug; siblings verify in-scope via isolated `swiftc -typecheck` + model harness + lint/format/placeholder, then mark DONE.
+- `Shared.xcframework` must be staged via Gradle (~7 min); the `.xcodeproj` is git-ignored.
+
+Let me set up tracking, kick off the Gradle build (long pole), and verify the out-of-scope breakage + component signatures in parallel.
+
+Confirmed: the out-of-scope shared-surfaces bug still exists (full `xcodebuild` will be RED for reasons outside my files). `TSPageTitle(_:LocalizedStringKey)` exists. Let me check the Motion component for a FadeIn equivalent and the Text/Stack APIs.
+
+I have all component APIs confirmed (`TSFadeIn`, `TSPageTitle`, typography, motion). Let me check `RouteTests.swift` (to ensure my alias addition won't break it) and the `TSSpacing` tokens before implementing.
+
+RouteTests won't break from an additive alias. Let me confirm `TSSpacing` token values and check Gradle progress.
+
+All APIs confirmed (`TSSpacing.x2xl=24`=web `gap-6`; `TSFadeIn`=web `FadeIn`; RouteTests won't break from an additive alias). Now creating the implementation files.
+
+Now wiring: the route alias, the registry chain, and the catalog strings.
+
+Let me validate the catalog JSON and check the Gradle build progress.
+
+Catalog (8215 keys, both present) and ledger valid. Let me update tracking and run the fast in-scope gates (format, lint, placeholder) while Gradle continues.
+
+Format clean (0/6), lint clean (0 violations). Now the placeholder scan against the real path.
+
+Placeholder scan passes (COUNT=0, EXIT=0). Let me confirm my files specifically are clean and scan the tests dir.
+
+In-scope format/lint/placeholder all green. Now the heavier verification needs the staged framework. Let me check Gradle progress.
+
+Shared.xcframework staged. Now let me generate the Xcode project and kick off the full build (long-running — I'll background it).
+
+Project generated (System files referenced 24× across targets). Now the full macOS build via the scheme (re-stages framework as a pre-action, fast now). I'll run it in the background.
+
+While the macOS build runs, let me prepare the ledger update. Let me view the end of the ledger.
+
+I'll add the two ledger rows for `page:admin/System` after the last entry.
+
+Ledger validated (System: macos 2/2, ios 2/2). Let me continue waiting for the macOS build.
+
+macOS build is RED (EXIT=65) — exactly the pre-existing out-of-scope `shared-surfaces` failure the siblings documented. Let me rigorously analyze the log to prove zero errors are in my files.
+
+The macOS build's **only** error is the single pre-existing, out-of-scope `shared-surfaces` bug; **zero** errors in my files. Let me confirm my files were actually compiled (type-checked) in this build, not skipped.
+
+My files were compiled in a real `SwiftCompile` batch with **zero errors and zero warnings**; the single module error is an out-of-scope `shared-surfaces` function-body error (isolated to its own primary-file batch). For bulletproof in-scope proof, let me run an isolated `swiftc -typecheck` of my files against the real P2 tokens + P3 components + the two panels. First, enumerate the dependency files.
+
+None import `Shared`, so I can typecheck in isolation. Let me run an isolated `swiftc -typecheck` (Swift 6, strict concurrency) of my files against the real tokens + P3 components + both panels, for macOS.
+
+The errors are in an unrelated component file (`UnitFormatters.swift` needs `UnitPreferences`)—a gap in my hand-picked set, not my code. Let me find the missing dependency and what `MetricBar` needs, then trim/extend the closure precisely.
+
+`UnitFormatters.swift` is coupled to the KMP-backed `SharedFacade`; including the whole DataDisplay category dragged it in. Let me pin the exact component files my panels need and exclude the unrelated coupled ones.
+
+Clear now: only `UnitFormatters.swift` couples to the KMP facade. Let me re-run the macOS typecheck including all UI/Feedback/Motion + DataDisplay (minus the coupled `UnitFormatters.swift`).
+
+Isolated **macOS** typecheck passes (EXIT=0, zero diagnostics). Now the same for **iOS** (simulator target) to prove both idioms.
+
+Both isolated typechecks pass (macOS + iOS, zero diagnostics in my files). Since the app target is RED (out-of-scope), I can't run XCTest via `xcodebuild`, so let me prove the model's runtime behavior with an executable harness (same approach siblings used).
+
+Harness: **16/16 assertions passed**. Now let me run lint/format on the whole `Sources/Features/Admin` dir (the gate's literal target) to confirm no regressions, then clean up temp artifacts.
+
+Let me wait for the `swiftformat` dir lint and identify exactly where those 3 pre-existing swiftlint violations are (my targeted 6-file lint was already clean).
+
+`swiftformat` dir lint clean (0/19). The `swiftlint` config lints the whole repo (4871 files), surfacing 3 pre-existing violations. My targeted 6-file lint was already 0 — let me confirm none of the 3 are in my files.
+
+The 3 swiftlint violations are pre-existing and out-of-scope (vars `a`/`b`/`c` in `widget-primitives/WidgetChartSummary.Tests.swift`, never touched). **Zero in my files.** All in-scope gates are green. Let me verify git status and that generated artifacts are ignored.
+
+Git status is exactly the in-scope set; generated `.xcodeproj` and staged framework are correctly git-ignored. All verification complete. Now let me write the gate log.
+
+Let me verify the actual line counts (to keep the log honest) and do a final JSON validation before committing.
+
+Let me correct the LOC figures in the log to match the actual counts (66/174/25/83).
+
+LOC corrected. Now updating tracking and committing the in-scope files.
+
+All 9 in-scope files staged cleanly. Committing now.
+
+Committed cleanly (`15916e4c8`). Let me finalize tracking, clean up temp logs, and confirm a clean working tree.
+
+Working tree is clean; only the git-ignored generated `.xcodeproj` and staged framework remain (correctly ignored). Let me confirm all todos are complete.
+
+All todos complete. The task is finished and verified.
+
+## Summary
+
+Shipped a native **SwiftUI / HIG `SystemPage`** at web parity for `page:admin/System`, committed as `15916e4c8`.
+
+**What it does:** A pure `@Observable` composition (ADR-004 — no networking in the view) reproducing the web `SystemPage.tsx` 1:1 — the `PageContainer` chrome (title + subtitle) over a `FadeIn` + `Stack` of the two shipped P3 panels (`RateLimitStatusPanel` + `QueueStatusPanel`) in web order, each keeping its own loading/empty/error/data + stale/offline states. Adaptive across macOS/iPad/iPhone; reachable via the existing `.system` sidebar route + a new `/admin/system` deep-link alias.
+
+**Files (9, all in-scope):**
+- New: `SystemPage.swift`, `SystemPageModel.swift`, `SystemRouteRegistration.swift`, `SystemPageModelTests.swift`
+- Edited: `AppRouteParser.swift` (alias), `TeslaSyncApp.swift` (registry chain), `Localizable.xcstrings` (+2 web keys), `apple-ledger.json` (+2 rows, 2/2), gate log
+
+**`=== PARITY === PARITY_COVERED=2 / 2`** — `system.page.title` + `system.page.subtitle` bind through the model and resolve from the catalog with web key names verbatim.
+
+**Verification (real exit codes):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | 0/6 (dir 0/19) ✅ |
+| swiftlint --strict (in-scope) | 0 violations / 6 files ✅ |
+| check-placeholders | COUNT=0 ✅ |
+| isolated `swiftc -typecheck` macOS + iOS | 0/0 ✅ |
+| model harness | 16/16 assertions ✅ |
+| full `xcodebuild` | RED (65) **only** from 1 pre-existing, out-of-scope `shared-surfaces` error — **zero diagnostics in any of my files** (which compiled clean in a real batch) |
+
+The only REDs (the `shared-surfaces` build error and 3 pre-existing `widget-primitives` test-lint violations) are out-of-scope, untouched, and deferred to P99 — never recoloured or commit-fixed. Generated `.xcodeproj` + staged `Shared.xcframework` are git-ignored and uncommitted. **`EXIT=0 / STATUS=DONE`.**
+
+
+
+The task is fully complete, verified, and committed. All 9 todos are done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

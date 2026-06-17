@@ -1,0 +1,122 @@
+I'll start by investigating the environment and the web source that defines this task's specification.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The web source and `apps/apple` exist. Let me read the web source and explore the native structure.
+
+Lots of existing feature-views already. Let me examine the conventions from an existing example, check if RegexTester files already exist, and review prior logs.
+
+A prior parallel attempt exists (committed as `5feef9240` on a different branch) but is NOT in my branch — I must do the work fresh. The closest analog is `Base64Tool` (pure-logic devtool, same shape as RegexTester). Let me study it completely.
+
+Excellent template. Let me read the remaining Base64Tool files to complete my understanding of the conventions.
+
+Now the Previews, strings, Tests, and the shared tokens/components they reference.
+
+I now fully understand the 7-file convention. Let me discover the token system and shared components (TSSpacing, Color.TS, Font.TS, TSButton, and any badge/field/picker) before writing.
+
+Let me read the token definitions, TSButton, Fields, and Pickers to learn exact APIs.
+
+Let me confirm the typography component APIs and the exact token names.
+
+I have the full design system. Let me check the web `ToolCard` for header parity and review `project.yml` to confirm how feature-view files (and tests) are included in the build.
+
+Now let me check the build/gate prerequisites: the Shared.xcframework staging state, swiftlint/swiftformat configs, xcodegen availability, and the web color map.
+
+Let me read the placeholder patterns to ensure my code (which must reference a "Test String Placeholder" i18n key from the web source) won't trip the gate.
+
+I have everything needed. The matcher is case-insensitive, so I must avoid "placeholder" in my files (using the sanctioned `// parity:allow` marker for the one web source key that contains it). Let me confirm the per-surface facade/telemetry conventions are consistent, then write my plan.
+
+The toolchain is fully present and conventions are crystal clear (368 surfaces follow the same 7-file pattern). `Shared.xcframework` is unstaged (only `.gitkeep`), matching the documented KMP-staging constraint. Let me set up my plan and todos, then implement.
+
+Now I'll create the 7 surface files, starting with the pure engine core and model.
+
+Now the Previews, strings catalog, and Tests.
+
+All 7 files created. Now formatting and linting my files.
+
+swiftformat clean. Now swiftlint and a check of what swiftformat changed.
+
+swiftlint: **0 violations**. swiftformat: **clean**. Now let me understand the build prerequisite (the KMP framework staging) before choosing my verification strategy.
+
+The full `xcodebuild` requires building the KMP `Shared.xcframework` via Gradle/Kotlin-Native — **no gradle/kotlin on this runner**, and the source/script confirm it's a pre-build dependency (ADR-004), unrelated to my surface code. Let me check the disposition accepted for the most recently merged P4 surface (FleetStatsWidget, at HEAD) to align precisely.
+
+The HEAD precedent (FleetStatsWidget) is the key: it got real `BUILD SUCCEEDED` on iOS + macOS (signing off) and ran tests, but honestly reported `EXIT=1 / STATUS=BLOCKED` due to environmental gaps (macOS signing, KMP Gradle, flaky pre-existing UITests). I'll match that bar. Let me kick off the heavy KMP framework build in the background while I run fast, authoritative checks in parallel.
+
+Full Xcode toolchain active (Xcode 26.5, iOS 18 sim + macOS 15 SDKs). KMP build churning in background. Now the authoritative standalone typecheck of my surface against both SDKs, compiled with the real shared components under Swift 6 strict concurrency.
+
+Good — the standalone typecheck caught a real strict-concurrency bug: the `previewModel` helper is nonisolated but calls the `@MainActor` model init. Fixing it.
+
+Both **iOS 18 and macOS 15 typechecks pass (EXIT=0)** under Swift 6 strict concurrency. Re-verifying the edited Previews file and running the placeholder gate.
+
+Placeholder gate: `PLACEHOLDER_COUNT=0, EXIT=0`. But `ALLOWED=0` tells me `.strings` files aren't scanned (only language-extension files). Let me confirm the gate actually *saw* my `.swift` files (avoiding a false green) by inspecting its path/enumeration logic and running a positive control.
+
+The `-LiteralPath` with a non-existent prefix path could early-return a false green. Let me verify the script's behavior and then do an **honest** scan by copying my files to a temp dir.
+
+Confirmed: the literal gate path is a **prefix, not a real path**, so the script vacuously returns `EXIT=0` (false green). Per the Honesty Covenant I won't rely on that. Let me run an **honest** scan by copying my files to a real temp dir, plus a positive control proving the scanner detects violations.
+
+The honest scan caught a real violation I missed (and the positive control confirms the scanner works). `Views.swift:67` — a MARK comment literally says "placeholder". Let me find and fix all such occurrences across my Swift files.
+
+Just the one MARK comment. Fixing it.
+
+Re-running the honest placeholder scan and re-verifying lint/format.
+
+All clean now: honest placeholder scan **COUNT=0**, swiftformat **0**, swiftlint **0**, iOS+macOS typecheck **0**. Let me check the background KMP build and set up the test-execution harness.
+
+KMP build is still bootstrapping (heavy). Meanwhile, let me execute my pure-core tests via a SwiftPM harness (the precedent's runtime-correctness method) using the Xcode toolchain's XCTest.
+
+**21/21 tests pass green** under Swift 6 (engine JS-parity, model, flag catalog, accessibility all verified at runtime). Let me clean up the harness, confirm my files register in the Xcode project, and check the KMP build.
+
+The Xcode project generates cleanly and **all 7 RegexTester files are registered** (42 references across app + test targets). The KMP build is still downloading its toolchain. Let me give it more time while it works.
+
+~6 minutes with zero gradle output means the wrapper is blocked downloading its toolchain. Before concluding, let me check whether any sibling worktree already produced a `Shared.xcframework` I can legitimately stage, and capture precise blocker evidence.
+
+Key finding: the Gradle distribution **and** Kotlin/Native toolchain ARE cached, and sibling worktrees already produced valid `Shared.xcframework` artifacts. My `--no-daemon` build is stuck on cross-worktree daemon-lock contention (the documented FleetStatsWidget R3 issue). Let me stop it, stage a sibling's legitimate (gitignored) framework artifact, and attempt a real build.
+
+Sibling framework is valid (all 3 slices). Let me confirm the gitignore situation for `Frameworks/`, stage the artifact, and start the real iOS app build (bypassing the contended Gradle preAction via a direct target build).
+
+Confirmed gitignored (`.gitignore:381`) — staging won't affect my commit. Now starting the real iOS app build (direct target build to bypass the contended Gradle preAction, using the staged framework). This compiles my surface within the full 1400-file app.
+
+iOS build running. Let me monitor its progress.
+
+The iOS build failed (exit 65) — but notice it's compiling **x86_64**, and the failures are in **other surfaces** (`SettingField`, `SignalCatalogWidget`, `SocChart`), not RegexTester. Let me see the actual errors and confirm my files compiled.
+
+Decisive: **zero RegexTester errors** — my surface compiled cleanly inside the full app (both arm64 and x86_64 batches). The failures are all in **unrelated, out-of-scope surfaces** (`ChargeSessionChartWidget`, `ChargeStatusLiveWidget`, `SettingField`, etc.) with type-ambiguity errors tied to the staged KMP framework. Let me catalog every erroring file to prove none are mine.
+
+All **152 errors are in out-of-scope surfaces** (Charge\* widgets, etc.) — **zero in RegexTester**. Notably the first build compiled x86_64 too (the canonical gate targets arm64-only `iPhone 16`). Let me retry forcing arm64-only (matching the real gate's arch) to see if it's a clean build or confirms pre-existing breakage.
+
+arm64-only build also fails (exit 65) — but again in **different unrelated surfaces** (`EntriesTable`, `EnvironmentSlide`, `EventTimeline`, etc.), still **never RegexTester**. This confirms widespread pre-existing breakage across other surfaces in this branch. Let me verify the error nature and RegexTester's cleanliness.
+
+**Definitive:** arm64 build = 76 errors, **all in out-of-scope surfaces** (Charge\* widgets, FleetStatsBar) with pre-existing `ChargeSessionDTO`-ambiguity and view-state errors; **RegexTester compiled with 0 errors** (9 compile refs, none failing). The prompt forbids touching other surfaces. This is the HEAD-precedent (FleetStatsWidget) BLOCKED situation exactly.
+
+Let me capture final clean gate numbers for the log, then clean up build artifacts.
+
+Everything captured. `ChargeSessionDTO` is confirmed defined in other surfaces' app code **and** exported by the staged `Shared.xcframework` → the "ambiguous" errors are pre-existing in out-of-scope surfaces. Now writing the honest gate log.
+
+Log written. Now cleaning up git-ignored build artifacts and committing only my surface files + log (leaving pre-existing unrelated changes untouched).
+
+Clean — only my 7 files + log are new; the two pre-existing `web/` changes stay untouched. Verifying `.gitkeep` survived, then committing.
+
+Exactly 8 files staged (7 surface + log); `.gitkeep` intact; pre-existing `web/` changes excluded. Committing.
+
+Committed as `5989d5094` (8 files, 1291 insertions). Pre-existing `web/` changes left untouched. Let me finalize todos and confirm no stray background processes.
+
+All work is complete and committed; no stray processes remain. 
+
+## Summary
+
+I delivered the **RegexTester** Apple feature-view (P4 · 0019) as a production-polished, native SwiftUI parity of `web/src/features/admin/components/devtools/tools/RegexTester.tsx`.
+
+**Shipped (7 files, 1055 lines vs the 72-line web source):**
+- `RegexTester.Adapter.swift` — pure `NSRegularExpression` engine with faithful JS `RegExp` parity (global exec loop, `if(!m[0])break` zero-width guard, UTF-16 `m.index` offsets, `i`/`m`/`g` flag mapping), flag catalog, surface slug, a11y summary.
+- `RegexTester.Model.swift` — P1/S8 `@MainActor @Observable` state holder, P1/S11 `view.opened` telemetry seam, P1/S10 i18n facade.
+- `RegexTester.swift` / `.Views.swift` — composable view + token-driven subviews; renders **every** state (idle / invalid / no-match / matches), never a blank box.
+- `.Previews.swift`, `.strings` (all web i18n keys), `.Tests.swift` (21 cases).
+
+**Verification (all green for the surface):**
+- swiftformat --lint **0**, swiftlint --strict **0**, honest placeholder scan **0** (+ positive control; the prompt's literal prefix-path was a vacuous pass, so I scanned real copies).
+- iOS 18 **and** macOS 15 SDK typecheck **0** under Swift 6 strict concurrency (caught & fixed a real preview concurrency bug).
+- **21/21 tests executed green** (engine JS-parity, model, flag catalog, a11y).
+- Compiles **clean inside the full iOS app** (0 RegexTester errors) and is registered in the app + test targets.
+
+**Outcome: `EXIT=1 / STATUS=BLOCKED`** — honestly reported per the Honesty Covenant and matching the most recent merged P4 precedent (FleetStatsWidget). The aggregate `xcodebuild build test` can't reach 0 here for reasons **entirely outside this surface**: KMP `Shared.xcframework` Gradle-staging contention, macOS signing, and pre-existing compile errors in **other, out-of-scope surfaces** (Charge\* widgets, etc.) the prompt forbids touching. Full evidence is in the gate log. Committed 8 files as `5989d5094`; the two pre-existing `web/` changes were left untouched.
+
+
+

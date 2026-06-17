@@ -1,0 +1,198 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability on this runner.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators including iPhone 16 booted). This is NOT a BLOCKED scenario — I must build the real surface. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure thoroughly — the shared-surfaces directory, project.yml, and the P1 foundation layers (state holders, tokens, i18n, diagnostics).
+
+There's a clear multi-file surface convention (`.Model`, `.Adapter`, `.Views`, `.States`, `.Seams`, `.Previews`, `.strings`, `.Tests`, `.ModelTests`). The `ConfirmDialog` native counterpart exists. Let me study the ConfirmDialog files and find an existing shared-surface exemplar to follow conventions exactly.
+
+A `GuardedLink` surface already exists (direct sibling from the same web `components/feedback/` feature), plus context-provider exemplars like `BreadcrumbOverridesContext`. Let me check if NavigationGuardProvider already exists, and study the GuardedLink sibling files in detail.
+
+`GuardedLink` is the direct sibling (same web feature, 1584 lines). This is my exact template. Let me read all its files.
+
+Let me read the rest of the GuardedLink files and find where the shared types (`GuardedDestination`, `GuardedResolve`, etc.) are defined.
+
+I now understand the surface conventions well. Let me check the build tooling, project generation, design tokens, and a context-provider exemplar (since the provider owns a registry, unlike the leaf GuardedLink).
+
+All tooling present (xcodegen 2.45.4, pwsh). Let me read the prior artifact log, the placeholder checker, GuardedLink's remaining files, and locate the design tokens.
+
+The prior sibling-slot artifact log is an excellent blueprint, but the actual `NavigationGuardProvider.*` files were never created in this worktree — I must build them for real. Let me verify design-token APIs, the shared components, and check for type-name collisions (GuardedLink already defines a `NavigationGuardSource` protocol).
+
+All type names are free. Let me verify `NavigationGuardProvider`/`NavigationGuardSource` usage, extract exact token/component APIs, and study a context-provider exemplar + the ConfirmDialog native counterpart.
+
+Tokens are defined elsewhere. Let me locate the exact definitions of the tokens and components I'll use.
+
+The `Color.TS`/`Font.TS`/`TSSpacing` tokens must be generated or in a shared package. Let me find their true source and review project.yml's build scripts.
+
+Found it: `apps/design/generated/apple/Tokens.swift`. Let me extract the exact token APIs and the shared component initializer signatures I'll use.
+
+Let me view the full Tokens.swift Color/Font sections and the component signatures (TSCard, TSButton, TSEmptyState, TSSkeleton).
+
+Now let me get the exact component signatures (TSButton, TSEmptyState, TSSkeleton) and study the native ConfirmDialog (the web dependency) to decide whether to reuse it.
+
+Let me study the native `ConfirmDialog` surface (the web dependency) to decide whether to reuse it.
+
+I have the token and component APIs. Let me verify the `TSEmptyState` convenience overload, study how an existing provider injects an `@Observable` into the SwiftUI environment, and read the lint/format configs to match the rules exactly.
+
+I have all conventions. Let me confirm the sanctioned full-app-gate disposition by reading the macOS pending-verifications doc and the sibling GuardedLink artifact log, plus locate `tsDynamicColor`.
+
+My runner has full Xcode (unlike the CLT-only GuardedLink sibling), so I'll genuinely attempt the build. Let me check whether `Shared.xcframework` is prebuilt and review the rest of project.yml (schemes, test targets, pre-build scripts).
+
+I now have a complete understanding. The full-app gate requires a Gradle KMP `Shared.xcframework` build (the documented heavy/deferred step). My real verification will be a SwiftPM harness compiling my exact files against the real design system. Let me set up tracking and write the plan.
+
+Let me check the existing `ConfirmDialogSilenceStore` (UserDefaults + Sendable idiom) and telemetry/accessibility patterns so my seams match the app's strict-concurrency rules exactly.
+
+Design is finalized. Let me write the surface, starting with the pure core (`Adapter.swift`) and the value types (`Model.swift`).
+
+Now the main provider file: the `@MainActor` silence seam, registration token, context protocol + noop, environment key, the `@Observable` coordinator, and the `NavigationGuardProvider` view.
+
+Let me verify the exact `TSButton` initializer signature before writing the views.
+
+`TSButton(variant:size:isLoading:action:label:)` confirmed. Now the presenters in `Views.swift`.
+
+Now the i18n strings table and the DEBUG previews.
+
+Now the two test files — pure adapter tests and `@MainActor` coordinator async tests.
+
+All 8 files written. Let me run swiftformat (write mode) on my files to canonicalize formatting, then verify with `--lint`, and run swiftlint scoped to my files.
+
+Two swiftlint issues: file too long (439>400) and a multiple-trailing-closure. I'll extract the seams into a `NavigationGuardProvider.Seams.swift` file and fix the scrim call. Let me view the current state around those spots.
+
+I'll extract the seams (lines 23–169) into a new `Seams.swift`, then trim the main file and fix the scrim call.
+
+Now remove the extracted block from the main file, update its header, and fix the scrim trailing-closure call.
+
+Now re-run swiftformat (write + lint) and swiftlint across all 8 surface files.
+
+swiftformat and swiftlint are green (0 violations). Now the key verification: an isolated SwiftPM harness compiling my exact files + tests against the real design system. Let me inspect `tsDynamicColor` (platform color bridging) before assembling it.
+
+Design tokens bridge to AppKit on macOS — the harness will compile on the host. Let me build an isolated SwiftPM harness (module named `TeslaSync` so `@testable import TeslaSync` resolves) using **copies of the exact shipped files** (md5-verified) plus the real design-system sources.
+
+All copies are byte-identical. Now the `Package.swift` and a build.
+
+Good — real compile signal. Two things: my env-key default needs `Sendable` on the context protocol, and Cards.swift needs more design files (`tsGlassPanel`, `TSPanelTitle`, `TSCaption`). Let me locate those and fix the protocol.
+
+Let me fix the context protocol (add `Sendable`) and add the two missing design files to the harness.
+
+My surface files compiled cleanly — remaining errors are in the design files' own previews (`TSBadge`, `TSText`, `TSInlineCallout`). Let me locate and add those files (Badges, Banners, and wherever `TSText` lives).
+
+Let me add `Badges.swift` and `Banners.swift` (completing the design-system set) and rebuild.
+
+Library compiles cleanly under Swift 6. Now run the tests.
+
+All 38 tests pass (22 pure + 16 coordinator) compiling the exact md5-verified files against the real design system under Swift 6 strict concurrency. Now the placeholder gate — self-test, a real scan of my files, and a de-no-op control.
+
+Self-test PASS, real scan PLACEHOLDER_COUNT=0. Now the de-no-op control: inject a stub into a copy and confirm the scanner flags it.
+
+The de-no-op control confirms the scanner is real (COUNT=2, EXIT=1 on injected stubs). All surface-scoped gates are green. Now let me attempt the full-app xcodebuild gate honestly: generate the project, confirm my files are wired in, and probe the KMP/Gradle dependency.
+
+Project generated. Let me confirm my files are wired into the targets and probe the KMP/Gradle feasibility.
+
+My 6 source files and 2 test files are correctly wired (app target + test bundle). JDK 17 + gradlew present, so the KMP build is feasible. Let me genuinely attempt the full gate — first building the `Shared.xcframework` (the long pole) in the background.
+
+The xcframework build is running in the background. Meanwhile, I edited `Seams.swift` (added `Sendable`) after my last lint pass — let me re-verify swiftformat + swiftlint are still green on the final files.
+
+Final lint is green. Let me check the xcframework build progress.
+
+Gradle is progressing (mostly FROM-CACHE) and has assembled the debug xcframework. Let me wait for it to finish staging the release framework.
+
+Release frameworks are linking now. Let me wait for completion.
+
+Release linking is the slow, uncached step (the documented ~30-min pole). Let me wait longer.
+
+Progressing through release links (iOS arm64 done, now simulator). Let me continue waiting.
+
+Last release link (macOS arm64) in progress. Let me wait for it to finish and stage.
+
+The `Shared.xcframework` built successfully (`XCFRAMEWORK_EXIT=0`, ~18 min). Let me verify it's staged and launch the full iOS `build test` gate in the background.
+
+xcframework staged, iPhone 16 booted. Now the literal iOS gate (`build test`) in the background.
+
+The iOS gate is running. Let me monitor its progress.
+
+App target compiling cleanly (0 errors, now at X/Y files). My files in the "N" range already passed. Let me keep monitoring.
+
+0 errors still. Let me check the build phase with a corrected grep.
+
+App target compiled and linking (0 errors) — my 6 files compile in the real iOS app target. Now it's emitting the module and will move to test bundles. Let me continue.
+
+Module emission for the large app target is the slow step (0 errors). Let me wait further.
+
+`** BUILD FAILED** but 0 `error:` lines — let me examine the actual failure reason.
+
+A Swift **compiler crash** (not a source error) caused the failure. Let me examine the crash to identify which file triggered it.
+
+The failure is a **swift-frontend compiler crash** (Apple Swift 6.3.2 internal error) while batch-compiling a large group of sibling shared-surface files (`AIAlertTuningSuggestions…`, `AIAnomalyExplanations…`). Let me determine whether my files are implicated and check the crash backtrace.
+
+The crash is an **IRGen compiler bug** in Swift 6.3.2, attributed to sibling file `AppearanceSettings.Controls.swift`, emitting a reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`. Let me demangle that symbol and determine whether my code or pre-existing code produces this pattern.
+
+The demangled thunk is a pervasive `@Sendable @isolated(any) (Bool, Actor?) -> ()` reabstraction thunk — the `async -> Bool` continuation pattern used across **many** sibling surfaces (ConfirmDialog, SearchInput, PlaybackControls, etc.), and the crash is attributed to a sibling file (`AppearanceSettings.Controls.swift`). My exact files already completed IRGen cleanly in the isolated harness. To rigorously prove causation, let me rebuild the app **without** my files. First, confirm the iOS build's exit.
+
+The iOS build has definitively failed (1 compiler crash + `** BUILD FAILED **`) and the process is now idle/hung. I have the evidence. Let me stop it and run the **decisive causation test** — rebuild the app target without my files to prove the crash is pre-existing.
+
+Now the decisive causation test. Let me back up my files, remove them from the target, regenerate, and rebuild to see if the crash persists without my code.
+
+Files backed up and removed; project regenerated without them. Let me verify the backup is complete, then rebuild the app (build-only) to test if the crash persists.
+
+The causation build (without my files) is running. Let me monitor it for the crash.
+
+Backup confirmed intact (9 files). Let me check the causation build's progress and crash status.
+
+Causation build progressing (0 crashes so far, still in module emission). Let me wait for it to reach the IRGen batch phase where the crash occurred.
+
+`WITHOUT_EXIT=65` — the build failed **without my files too**. Let me confirm it's the same IRGen crash, proving it's pre-existing.
+
+**PROVEN pre-existing.** Without my files, the identical crash recurs — same thunk symbol `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, same `BUILD FAILED`, 0 source errors. My code is conclusively **not** the cause. Let me confirm the 13 stale `navigationguard` refs are just DerivedData artifacts, then restore my files.
+
+Conclusive: both builds crash at the **identical** sibling file (`AppearanceSettings.Controls.swift`) with the **identical** thunk — and the 13 stale refs are all DerivedData artifacts (no actual compile of my code). The failure is a **pre-existing Swift 6.3.2 IRGen toolchain crash**, independent of my surface. Let me restore my files, regenerate, and verify integrity.
+
+Files restored (md5-verified) and project regenerated. Now let me capture the macOS gate's real result (it shares the same app sources, so it'll hit the same pre-existing crash). Running in the background.
+
+While macOS builds, let me re-sync the harness with the final restored files and re-run the full surface verification (format, lint, build+test) for a clean final record.
+
+Final lint clean. Let me re-run the isolated harness test for a clean final record.
+
+Final harness: 38 tests, 0 failures. The macOS build finished — let me read its result.
+
+MAC_EXIT=65 (failed in ~40s — too fast for a full compile, so likely an early/signing/xcframework failure). Let me check the reason.
+
+macOS failed (`MAC_EXIT=65`) on the **documented dev-signing blocker** (`"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate`) — 0 navigationguard refs, pre-existing per `apps/macos-pending-verifications.md`. Both full-app gates fail for pre-existing, unrelated reasons. Let me capture exact evidence strings for the log.
+
+I have all evidence. Let me gather final line counts and confirm the surface-scoped gate exits one more time for the log.
+
+All gates captured. Now I'll write the comprehensive gate log (with the causation proof) at the required path.
+
+Log written. Let me update todos, verify git status (ensure only my files + log are staged, and the generated `.xcodeproj` is git-ignored), and clean up temp artifacts.
+
+Clean git status — exactly my 9 surface files + the log are new; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Let me clean temp artifacts, stage, and commit.
+
+Exactly 10 files staged. Now the commit.
+
+Committed. Let me do a final verification of the commit contents and working-tree cleanliness.
+
+Let me precisely confirm the commit contains exactly 10 files.
+
+All 12 todos done. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...hared-surfaces-0128-NavigationGuardProvider.log | 204 +++++++++++++
+ .../NavigationGuardProvider.Adapter.swift          | 269 ++++++++++++++++
+ .../NavigationGuardProvider.CoordinatorTests.swift | 302 ++++++++++++++++++
+ .../NavigationGuardProvider.Model.swift            | 157 ++++++++++
+ .../NavigationGuardProvider.Previews.swift         | 138 +++++++++
+ .../NavigationGuardProvider.Seams.swift            | 161 ++++++++++
+ .../NavigationGuardProvider.Tests.swift            | 210 +++++++++++++
+ .../NavigationGuardProvider.Views.swift            | 340 +++++++++++++++++++++
+ .../NavigationGuardProvider.strings                |  47 +++
+ .../shared-surfaces/NavigationGuardProvider.swift  | 292 ++++++++++++++++++
+ 10 files changed, 2120 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0128-NavigationGuardProvider.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.CoordinatorTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.swift

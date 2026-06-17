@@ -1,0 +1,177 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires the Apple toolchain (xcodebuild, swiftlint, swiftformat).
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Let me read the web source and explore the existing Apple app structure.
+
+Now let me explore the existing `modals-dialogs` directory and sibling patterns to understand conventions.
+
+The pattern is clear: each artifact has ~10 files (`.swift`, `.Model`, `.Adapter`, `.Seams`, `.States`, `.Views`, `.Previews`, `.Tests`, `.ModelTests`, `.strings`). `ConfirmDialog` is the closest analog. Let me study it fully as my template.
+
+Excellent architecture. Let me read the remaining ConfirmDialog template files (Seams, States, Views, Previews, Tests, ModelTests, strings).
+
+Now the Views, Previews, Tests, ModelTests, and strings files.
+
+Now the test files, previews, and the shared design tokens/components referenced (TSGlassPanel, TSButton, TSFadeIn, Color.TS, Font.TS, TSSpacing, TSRadius).
+
+Now let me read the Previews, find the shared design tokens/components, the web `CommandDef` type, and the build config.
+
+I now fully understand the pattern. Let me examine the build config, the placeholder checker, and verify the design tokens (`TSSpacing`, `TSRadius`, `Font.TS`) are defined for the main app target.
+
+Important finding: `project.yml` includes `dashboard-widgets`, `feature-views`, `misc-surfaces` but **not** `modals-dialogs`. Let me investigate the actual build setup (existing `.xcodeproj`, xcodegen, git state) before proceeding.
+
+No `.xcodeproj` yet (xcodegen 2.45.4 generates it). The ~20 sibling `modals-dialogs` surfaces exist but the directory isn't in `project.yml`. Let me understand the integration intent via git history.
+
+The "P4 baseline" commit wired in `dashboard-widgets`/`feature-views`; `misc-surfaces` was added later. `modals-dialogs` was never wired into `project.yml` — so the current build excludes all ~20 sibling dialogs. Before deciding how to integrate, I must verify the toolchain actually works end-to-end (notably the `Shared.xcframework` pre-build step).
+
+The build requires a KMP/Gradle-built `Shared.xcframework` (only a `.gitkeep` is present). This is a heavy precondition. Let me check the documented verification expectations and whether the KMP toolchain is usable here.
+
+Java 17 + gradlew are present. The `Shared.xcframework` build is the long pole — let me kick it off in the background now while I write the surface code.
+
+Let me check the build started cleanly and study how a sibling with a countdown (`SessionExpiringModal`) handles timers — since `CommandConfirmDialog`'s countdown is its unique feature.
+
+The countdown pattern uses a `tick()` method on the model. Let me see how `SessionExpiringModal` drives `tick()` from the SwiftUI view layer (the timer wiring), then I'll have the complete picture.
+
+Let me see how the panel drives the periodic `tick()` in SwiftUI (the timer mechanism).
+
+Complete picture now: the 1Hz countdown uses `Timer.publish(every:1).autoconnect()` → `model.tick()`, tested by calling `tick()` directly. Let me verify the exact shared-component APIs (`TSButton` variants, `TSFadeIn`, `Color.TS`/`Font.TS` tokens) before writing, then check the background build.
+
+`TSButton` supports `.ghost` (Cancel) and `.destructive` (Confirm) with `isLoading` — cleaner than ConfirmDialog's custom button. Let me confirm the full `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` token set exists, and check the background build.
+
+All tokens confirmed. Let me check the lint/format config so my code passes `swiftlint --strict` and `swiftformat --lint`, then check the background build progress.
+
+All config understood. Key findings:
+- `swiftlint` `included:` and `project.yml` both **omit** `modals-dialogs` — the entire dialog category (incl. my surface) isn't yet wired into build/lint. I'll integrate it so my gate is honest.
+- Shared.xcframework is nearly built.
+
+Let me write a plan, set up todos, then create all 10 surface files.
+
+Now let me create the surface files. Starting with the pure projection core (Adapter).
+
+Now the Seams file (telemetry, controller, source, strings facade, accessibility).
+
+Now the Model (state holder with countdown lifecycle).
+
+Now the States file (loading/empty/error/freshness/connectivity envelopes).
+
+Now the Views file (panel shell, header, content with 1Hz countdown ticker, typed field, footer actions).
+
+Now the main entry view and the strings catalog.
+
+Now the Previews file (one per state).
+
+Now the projection/accessibility test file.
+
+Now the model (state-holder) test file.
+
+All 10 files created. Let me set up tracking, check the Shared.xcframework build finished, run swiftformat/swiftlint on my files, and scan for type collisions.
+
+Shared.xcframework built (6m38s) and staged. Now let me run swiftformat/swiftlint on my files and scan for type-name collisions against the rest of the module.
+
+No type collisions. swiftformat flagged formatting issues — let me auto-fix with the formatter itself (ecosystem tool), then re-lint.
+
+swiftformat passes now. Let me verify its auto-changes didn't distort logic (the `docComments` fix in Model + property-body wrap in States).
+
+Clean changes. Now swiftlint `--strict` on my files (passing them explicitly since `modals-dialogs` isn't yet in the config's `included`).
+
+swiftlint: **0 violations**. swiftformat: clean. No collisions. Let me run the placeholder gate on my surface, then wire it into the build/lint config (the predecessor left `modals-dialogs` unintegrated — I'll add my surface minimally so the official gate genuinely covers it).
+
+Placeholder gate passes. Now I'll wire my surface into `project.yml` (both app targets + both test bundles) and `.swiftlint.yml` — minimal per-file entries so the official gates genuinely cover my code without pulling in the ~20 unverified sibling dialogs.
+
+Config wired. Let me regenerate the Xcode project and confirm my files are picked up.
+
+Project generated; 60 references to my files across targets. Let me confirm an `iPhone 16` simulator exists, then start the iOS build+test (the long pole).
+
+iPhone 16 is booted. Starting the iOS build+test (the long pole) in the background with `JAVA_HOME` set for the framework pre-action.
+
+iOS build+test running. Let me monitor progress.
+
+The iOS build failed — but the errors are in **sibling surfaces** (`StateTimelineModel`/`StateTimelineUpdate`... ambiguous; failing batch is `YearlyTrendChart`, `globalShortcuts`, `helpers`, `selectedVehicle` in `feature-views`/`misc-surfaces`). None of these are my files. This looks like a pre-existing duplicate-type collision from prior parallel merges. Let me verify it's pre-existing and not caused by my additive changes.
+
+**Confirmed pre-existing breakage, unrelated to my surface:** `StateTimelineModel`/`StateTimelineConnection`/`StateTimelineLoadStatus` are each defined **twice** — in `dashboard-widgets/StateTimelineWidget.*` AND `feature-views/StateTimeline.*` (both committed before my work; both already in the app target). My surface references none of them. So HEAD's app build was already red. Let me gauge the full scope of pre-existing collisions to decide whether it's a contained issue.
+
+This is a **large pre-existing breakage**: 24 genuine top-level type collisions from two surface families — `RecentDrives*` and `StateTimeline*` — each defined in **both** `dashboard-widgets` and `feature-views` (the rest like `Kind`/`Phase`/`Result` are nested-type false positives). These belong to 4 other surface prompts and are far outside my allowed scope (`CommandConfirmDialog` only). I will not fix them.
+
+To honestly prove **my** surface is production-correct, I'll build+test it in a clean-room target (real `Sources/` infra + my surface, isolated from the broken siblings).
+
+Clean-room project generated. Building + testing my surface against the real `Sources/` infra (isolated from broken siblings).
+
+Clean-room exit code 0. Let me confirm the test counts and "TEST SUCCEEDED" in the log.
+
+**Clean-room: BUILD SUCCEEDED + TEST SUCCEEDED — 42 tests, 0 failures**, all 8 suites green, against the real `Sources/` infra + design tokens + `Shared.xcframework`. My surface is production-correct. Now let me add a macOS clean-room target (covers the `#else` autocapitalization branch and the gate's macOS step).
+
+macOS clean-room building. Meanwhile, let me run the official `swiftformat --lint` and `swiftlint --strict` gate commands (now that my files are in the config) in parallel.
+
+`swiftlint --strict`: **0 violations in 3244 files** (my surface included). Now `swiftformat --lint` (official gate command) and check the macOS build.
+
+`swiftformat --lint apps/apple`: **0/3431 files require formatting** — clean. The macOS clean-room build finished; let me read its result.
+
+macOS clean-room failed (exit 65). Let me see why — could be my surface's macOS branch, a `Sources/` macOS issue, or a test-host setup problem.
+
+macOS **BUILD SUCCEEDED** (my surface compiles on macOS, `#else` branch works). One test failed — `testConfirmTogglesSubmittingFlagAndDelegates` — a timing race: relying on a single `Task.yield()` to advance the spawned confirm task to the gated controller is non-deterministic (passed on iOS, lost the race on macOS). The surface code is correct; my test's synchronization is fragile. Let me make it deterministic with an explicit "entered" expectation.
+
+Now re-format/lint the modified test file, then re-run the macOS clean-room test (and iOS) to confirm the fix is deterministic on both platforms.
+
+swiftlint flags `file_length`: 403 > 400 lines (my fix added 10 lines). Let me trim the verbose header comment to get under 400 without touching test logic.
+
+One more line to trim. Let me check the file end and remove a redundant blank line.
+
+400 lines exactly; lint + format clean. Now re-run **both** clean-room platforms to confirm the deterministic fix holds.
+
+Both pass (iOS=0, macOS=0). Let me confirm test counts on both platforms.
+
+**Both platforms: 42/42 tests pass**, and the previously-flaky test now passes deterministically on macOS.
+
+I now have complete verification of my surface. Given the prompt's commit step lists **only** the surface + log (not build config), and the entire `modals-dialogs` category is uniformly un-integrated in this repo, I'll revert my config edits and keep my surface as an authored surface alongside its 20 siblings. Then I'll capture authoritative evidence that the full-app build failure is pre-existing and independent of my surface.
+
+First, revert config + clean up throwaway artifacts:
+
+Config reverted; only my 10 surface files remain (untracked). Now regenerate the app project at HEAD config (my surface **not** in the build) and run the full-app build to prove the failure is pre-existing and independent of my surface.
+
+Definitive: at HEAD config (my surface has **0 references** in the project), the full-app build **still fails (exit 65)**. The breakage is 100% pre-existing and independent of my surface. Let me confirm it's the same collision errors.
+
+**Airtight evidence:** at HEAD config (my surface = 0 references in the project), the full-app build fails identically — errors are exclusively in sibling surfaces `RecentDrivesListWidget`/`RecentDrivesSection` (dashboard-widgets vs feature-views) and `StateTimelineWidget`/`StateTimeline`, all from duplicate public types. Zero involvement of `CommandConfirmDialog`.
+
+Let me capture the macOS full-app result too (for complete, non-inferred evidence), while I prepare the log.
+
+While the macOS baseline builds, let me gather metrics for the log (file line counts, re-confirm lint/format/placeholder at the reverted config).
+
+All surface checks green. Let me read the macOS baseline result.
+
+macOS baseline also fails (exit 65) — same pre-existing block. Let me confirm the error source, then write the gate log.
+
+Let me check the macOS baseline's actual error and that single `CommandConfirm` mention in the iOS baseline.
+
+**Complete evidence gathered.** Two pre-existing, out-of-scope blockers on the full-app gate, neither involving my surface:
+- **iOS**: duplicate public types `RecentDrives*`/`StateTimeline*` defined in **both** `dashboard-widgets` and `feature-views` (4 sibling surfaces, other prompts).
+- **macOS**: additionally blocked by code-signing entitlements (no dev certificate in this environment) — a platform-capability limit.
+
+The `CommandConfirmDialog.strings` mention was just a DerivedData cleanup note, not an error. My surface is independently verified green on both platforms.
+
+Now let me write the honest gate log.
+
+Log written. Now let me verify the repo state (only my surface + log should be staged; generated project must be git-ignored) and commit.
+
+Clean state: only my 10 surface files + log are untracked; `project.yml`/`.swiftlint.yml` reverted to HEAD; generated project is git-ignored. Let me commit.
+
+All 10 surface files + log staged (config reverted, generated project ignored). Committing:
+
+Committed (`fd627d656`). Let me verify the commit contents and final tree state.
+
+The commit is exactly right: 11 files (10 surface + log, 2195 insertions), no config changes, clean working tree, generated project git-ignored.
+
+## Summary
+
+I shipped a production-polished native Apple (SwiftUI) `CommandConfirmDialog` at parity with the web source `features/system/components/CommandConfirmDialog.tsx`.
+
+**Delivered** — 10 files (2063 lines) following the repo's established surface architecture (mirroring sibling `ConfirmDialog`):
+- Pure projection core, `@MainActor @Observable` state holder bound through P1/S8 seams, token-driven views (P1/S9), P1/S10 strings, P1/S11 `view.opened` telemetry.
+- Faithful parity: red AlertTriangle, title/message from `t(def.labelKey/confirmKey…)`, **case-insensitive + trimmed** typed-confirmation gate, **per-second countdown** (Confirm disabled+dimmed+`Confirm (Ns)` until `remaining==0`) driven by a 1Hz `Timer`, Cancel(ghost)/Confirm(danger+spinner), Esc/backdrop dismiss.
+- All P4 states render (loading/empty/error+retry/stale+auto-refresh/offline), VoiceOver labels, Dynamic Type, reduce-motion, iOS18/macOS15.
+
+**Verification — surface is GREEN on both platforms:**
+- Clean-room `xcodebuild build test` against the real `Sources/` design system + KMP `Shared.xcframework`: **BUILD + TEST SUCCEEDED, 42 tests/platform, 0 failures** (iOS + macOS).
+- `swiftlint --strict` 0 violations · `swiftformat --lint` clean · `check-placeholders` 0 · no type collisions.
+
+**STATUS=BLOCKED on the whole-app acceptance gate** (honestly reported, not red-as-green): `xcodebuild -scheme TeslaSync build test` fails on **pre-existing, out-of-scope** breakage — duplicate public types `RecentDrives*`/`StateTimeline*` defined in **both** `dashboard-widgets` and `feature-views` (4 sibling surfaces owned by other prompts), plus macOS dev-signing. **Proven independent of my surface:** the full app fails identically at HEAD with `CommandConfirmDialog` having 0 references in the project. Resolving those collisions is the P4 acceptance/integration step this surface blocks, outside my allowed files.
+
+I committed the surface + gate log (config reverted to HEAD per the prompt's commit scope; the whole `modals-dialogs` category is uniformly un-integrated awaiting P4 acceptance). Full evidence is in `.github/prompts/monorepo/logs/p4-apple-modals-dialogs-0029-CommandConfirmDialog.log`.
+

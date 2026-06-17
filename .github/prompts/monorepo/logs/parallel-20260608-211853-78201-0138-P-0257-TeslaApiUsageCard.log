@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure, checking tool availability, and reading the web source that serves as the specification.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me explore the Apple app structure and the predecessor layers I must bind to.
+
+`AiUsageCard` is the sibling card and my template (the web source explicitly says they share the `UsageCard` visual contract). Let me read all AiUsageCard files and the native `UsageCard` primitive.
+
+Now let me examine the native design tokens, shared chrome components (TSButton, TSSkeleton, TSFadeIn), and what's in Metrics.swift's UsageCard reference.
+
+Now let me understand the web data types (`APIUsage`, `useApiLogStats`/`ApiLogStats`) and the native shared chrome signatures I'll reuse.
+
+Now the number formatters and currency formatter the web uses, plus the native shared chrome signatures.
+
+The web test will give me canonical expected outputs to mirror. Let me read it plus the native shared chrome signatures.
+
+Let me read the Shared.xcframework build script and check whether the framework + simulator are present — this determines build feasibility.
+
+Critical feasibility check: the full build needs a Gradle/KMP-built `Shared.xcframework`. Let me check the KMP toolchain, simulators, and the documented build status.
+
+Good — Java 17, gradlew, and a booted iPhone 16 simulator are all present. The long pole is the KMP `Shared.xcframework` Gradle build. Let me kick it off in the background while I read the documented build status and write the surface.
+
+I now have complete understanding. The `macos-pending-verifications.md` documents the **sanctioned methodology** for this exact prompt class: verify the surface in isolation (SwiftPM build+tests, swiftc typecheck for both SDKs, swiftlint/swiftformat/placeholder), with the full-app `xcodebuild` deferred due to pre-existing unrelated collisions. Let me set up tracking and check the Gradle build progress.
+
+Gradle is downloading/building in the background. Let me write the plan and start creating the surface files, beginning with the pure-logic Adapter.
+
+Now I'll write the Adapter (pure, dependency-free logic) — the parity-critical arithmetic.
+
+Now the Model file — strings facade, view-model value types, seams, input snapshot, resolved state, and the `@Observable` state-holder.
+
+Now the Projection — the parity-critical pure transform from input snapshot to resolved view-state.
+
+Let me check Gradle progress, then write the Views file (budget bar, bands, details, top-lists, banner, footer, empty).
+
+Now the Chrome (freshness chip, refresh button, connectivity banner, loading skeleton, error/retry).
+
+Now the main surface view that composes the chrome and content states.
+
+Now the i18n strings catalog contribution.
+
+The Gradle build completed. Let me check its result and continue writing the strings file.
+
+Gradle succeeded — the release `Shared.xcframework` is built, so the full `xcodebuild` path is now feasible. Let me finish the strings, previews, and tests.
+
+Now the previews (DEBUG-only, one per state).
+
+Now the test suites. First the adapter-level tests (formatting, dedupe, month window, intents).
+
+Now the main test suite (projection content mirroring web canonical values + model wiring/telemetry/navigation).
+
+All 10 surface files are written. Now I'll verify. First, the highest-value check: an isolated SwiftPM build + real test run of the surface (the predecessor-sanctioned methodology). Let me set up a throwaway harness that compiles every non-test file against real SwiftUI + the real design tokens + faithful chrome shims, and runs all tests.
+
+Now build and run the isolated test harness (Swift 6 language mode, matching the app's strict-concurrency settings).
+
+**64/64 tests pass** in the isolated build against real SwiftUI + real tokens (Swift 6 strict concurrency). All parity arithmetic matches the web canonical values. Now the cross-SDK typechecks (iOS 18 + macOS 15) plus lint/format/placeholder gates, in parallel.
+
+Both cross-SDK typechecks pass cleanly. Now swiftlint, swiftformat, and the placeholder gate on the actual shipped files.
+
+Several swiftlint/swiftformat violations to fix (line length >120, file length >400, type body >250, conditionalAssignment, force-unwrap in tests). Let me read the configs to confirm thresholds, then refactor.
+
+The configs confirm: line_length warning 120 (→ error under `--strict`, comments ignored), file_length default 400, type_body_length 250, swiftformat maxwidth 120 + `conditionalAssignment` + `noForceUnwrapInTests`. I'll split oversized files and fix the lines. Let me reorganize: move the view-model value types out of `Model.swift` into a new `Sections.swift`, split `Views.swift`, split the tests, and fix Projection.
+
+Starting with the new `Sections.swift` (value types + resolved state):
+
+Now trim `Model.swift` to remove the value types and resolved state (now in Sections.swift). Let me view the boundaries first.
+
+Now remove both blocks (value types + resolved) from Model.swift using marker-based deletion:
+
+Model cut is clean (303 lines). Now split Views.swift at the "Detail grid" MARK — moving details/top-lists/banner/footer/empty into a new `Breakdown.swift`.
+
+Both files now fit. Let me find the remaining long code lines across the shipped files to wrap them precisely.
+
+Now I'll rewrite Projection.swift: reorganize into extensions (to satisfy type_body_length ≤250), convert the caption to a switch-expression (conditionalAssignment), and wrap the long lines.
+
+Now fix the 3 remaining long code lines (Views budget value, Views band label, Chrome loading label).
+
+Now let me re-scan all shipped files for any remaining long lines, then rewrite the test files (split + remove force-unwraps).
+
+All shipped files now pass length checks. Now I'll rewrite the test files: split `Tests.swift` into `Tests.swift` (projection phase/budget/bands/details) + a new `ModelTests.swift` (lists/banner/footer + model wiring), removing in-class force-unwraps.
+
+Now the new `ModelTests.swift` (lists/banner/footer projection + state-holder wiring + doubles).
+
+Let me re-sync the isolated harness with the refactored files, re-run the full test suite, and re-run swiftlint/swiftformat.
+
+64/64 still pass after the refactor. Now re-run swiftlint and swiftformat on all surface files.
+
+Two trivial fixes: a double trailing newline in Breakdown.swift and a comment-style nit in Tests.swift. Let me inspect and fix.
+
+Re-running swiftlint and swiftformat to confirm clean.
+
+swiftlint and swiftformat are both clean (EXIT=0). Let me re-sync the harness with the final edits and re-verify tests + both cross-SDK typechecks.
+
+64/64 pass. Now the cross-SDK typechecks plus the placeholder gate (both verbatim and an honest scan of just my files).
+
+Both typechecks pass; placeholder scan is clean (0). Now generate the Xcode project and confirm it enumerates all surface + test files.
+
+All 13 files are enumerated in the generated project. Now let me check whether the documented pre-existing collisions (that blocked prior sibling surfaces' full-app builds) still exist on this branch, before attempting the full `xcodebuild`.
+
+On this branch `DashboardWidgetSize`/`PowerFlowConnection` are each defined once — the documented collisions appear resolved here, and no symbol clashes with my types. The full build may actually pass. Let me pre-stage the framework and attempt the real `xcodebuild build` for the iOS simulator.
+
+The full iOS app build (1800+ files) is running in the background. Let me wait for it to compile.
+
+The build failed — but in `WidgetPicker.Previews.swift`, not my files. Let me extract the actual compiler errors to confirm they're pre-existing and unrelated to my surface.
+
+Decisive evidence: **zero errors mention TeslaApiUsageCard** — the full-app build fails only in unrelated dashboard-widget surfaces with `'ChargeSessionDTO'/'ChargeStatusProjection' is ambiguous for type lookup` (duplicate-type collisions across parallel-merged surfaces). Let me confirm these are genuine pre-existing duplicate definitions and gather the complete blocker evidence.
+
+**Conclusive evidence**: `ChargeSessionDTO` and `ChargeStatusProjection` are each defined in **two** different dashboard-widget surfaces → genuine pre-existing duplicate-type collisions. The full-app build has **142 errors, all in unrelated dashboard-widgets, 0 in TeslaApiUsageCard** — the exact "parallel-merge collision" class documented in `macos-pending-verifications.md`, and outside my allowed file scope. Let me write the evidence log and prepare the commit.
+
+All clear — xcodeproj/framework are git-ignored. Now I'll write the comprehensive, honest evidence log.
+
+Now I'll commit the verified surface + log. The surface is green by every isolated measure; the commit message and log transparently record the whole-app build as macOS-pending (unrelated pre-existing collisions), matching the documented sibling-surface methodology.
+
+All 13 surface files + log staged (nothing stray). Let me verify the staged set is exactly these, then commit.
+
+Committed cleanly as `50185bfbf` (13 surface files + log). Now let me clean up the temporary verification artifacts and confirm the working tree is tidy.
+
+Working tree is clean. Let me mark the tracking complete and do a final confirmation of the commit.
+
+The TeslaApiUsageCard surface is shipped, verified green in isolation, and committed. Here's the final summary.
+

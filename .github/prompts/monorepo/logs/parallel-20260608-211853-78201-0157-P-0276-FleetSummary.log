@@ -1,0 +1,52 @@
+I'll start by exploring the repository structure, reading the web source specification, and understanding the existing Apple app architecture.
+
+Now let me understand the Apple app architecture — existing feature views, state holders, tokens, and i18n facades.
+
+`FleetSummary` doesn't exist yet. `FleetStatsBar` is a close analog. Let me read its entire fileset to learn the architecture pattern.
+
+The architecture is clear and rich. Let me read the remaining FleetStatsBar files to fully internalize the pattern.
+
+Excellent — I now fully understand the pattern. `FleetSummary` is simpler (4 cards, no charts). Let me locate the shared P1/S9 tokens and P1/S10 components, verify the web types, and understand the build/localization setup.
+
+Tokens are generated (P1/S9). Let me find the generated token definitions across the whole tree.
+
+The feature-view tokens aren't in `Sources/`. Let me check `project.yml` and the build scripts to understand how feature-views are compiled and where tokens come from.
+
+Now I understand the build layout: tokens live in `apps/design/generated/apple`, shared components in `Sources/Components`. Let me read the token definitions and shared component APIs, and check tool availability.
+
+All tools available — this is a full macOS runner. Let me read the generated tokens and shared component APIs.
+
+Let me read the shared component APIs (TSAnimatedNumber, TSSkeleton, TSStaggerItem) and peek at the SharedFacade state holders to align the data model.
+
+I have the full component/token picture. Now let me read the web data contracts I'm porting and check the SharedFacade (P1/S8) vehicle state holders for alignment.
+
+I have the data contracts. Critical check before coding: `DistanceUnitPref`/`FleetUnits` are `public` top-level symbols in `FleetStatsBar.Adapter.swift`, and all feature-views compile into the same module. I must avoid duplicate declarations. Let me verify the per-surface namespacing convention.
+
+This confirms the convention: **every surface fully namespaces its symbols** (e.g. `EnergySummaryDistanceUnit`, not the generic `DistanceUnitPref`). I'll define `FleetSummary*`-prefixed types throughout to stay self-contained. `EnergySummaryPanel` is the closest "Summary" analog — let me read it fully to confirm the latest compact conventions.
+
+`EnergySummaryPanel` shows the current compact conventions (header + freshness chip + banner + `TSGlassPanel`). Let me read its remaining files plus `TSGlassPanel` and `MeasurementSystem` to finalize my design.
+
+Let me confirm the `TSGlassPanel`/`TSButton` APIs and read the EnergySummaryPanel strings/Previews/Tests to match conventions exactly.
+
+Let me read the EnergySummaryPanel tests and the Adapter's accessibility section to match the test conventions precisely.
+
+I have a thorough understanding. Let me confirm the web `AnimatedNumber` formatting (grouping/suffix), the `DistanceUnitPref` values, and the lint config before writing.
+
+I now have all the data contracts (`fmtNumber` uses grouping, suffix appended directly; `DistanceUnitPref = km|mi|ft`; lint: 120-col, `--strict`). Let me confirm the `TSGlassPanel` body so my tiles map the web `<GlassPanel>` correctly.
+
+I have everything needed. Let me set up tracking, write the plan, and check the build environment baseline (xcframework, xcodegen) before writing code.
+
+`Shared.xcframework` isn't prebuilt — it's produced by a script that likely needs the KMP/Kotlin toolchain. Let me inspect that script and the placeholder checker (pwsh is available).
+
+Full `xcodebuild` requires building the KMP `Shared.xcframework` via Gradle (Kotlin/Native). Let me check that toolchain's feasibility and kick off the heavy xcframework build in the background while I write code.
+
+Java 17 + gradlew are present. Let me kick off the heavy KMP `Shared.xcframework` build in the background now, then write the code while it runs.
+
+Now let me set up tracking and write the plan while the xcframework builds.
+
+xcodegen works (I'll regenerate after adding files). Let me write the plan, then create all 8 source files.
+
+Now I'll write all 8 source files, mirroring the `FleetStatsBar` twin. Starting with the pure adapter and projection cores.
+
+Now the main view and the presentational subviews.
+

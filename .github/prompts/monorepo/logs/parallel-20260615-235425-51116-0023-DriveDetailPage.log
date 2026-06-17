@@ -1,0 +1,348 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me examine the web source page and the existing Apple app structure in parallel.
+
+The `Features/Driving` dir doesn't exist yet. Let me look at how recent sibling pages (Charging) were built to follow the established pattern, and read the web source.
+
+Key finding: actual pages live under `apps/apple/Sources/Features/`, not `apps/apple/TeslaSync/Features/`. Let me study the established pattern (ChargingDetailPage is the closest analog), the parity manifest, and project config.
+
+Let me read the manifest record for DriveDetail and the ChargingDetailPage to understand the established pattern.
+
+Excellent — ChargingDetailPage is the proven analog. Let me check toolchain availability (Xcode/swiftlint — the gate depends on it), the model/route patterns, and whether drive-detail child components are separate parity units.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, xcodegen, pwsh) — so the gate must actually pass, not BLOCK. No `.xcodeproj` yet (generated via xcodegen). No separate drive-detail component parity records exist, so this page prompt owns full section reproduction (like ChargingDetail did). Let me study the build infra and the Charging model/route/section pattern.
+
+The pattern is very clear and thorough. Let me read the remaining Charging reference files (sections/charts/panels/stats/sample/format) and the web data hook + types in parallel.
+
+Now let me read the web data layer (hook/types/constants/helpers) and the Charging Charts/Panels/Format/Stats files to learn Swift Charts + Units usage.
+
+Now let me discover the P3 component library (charts, maps, tokens, Units, error/empty states) and existing driving models — these are compile-critical. Let me also read key web section components.
+
+Let me read the compile-critical component library APIs (charts, maps, cards, metrics, feedback, tokens, Units) in parallel.
+
+Let me read the maps, cards, metrics, feedback, design tokens, and Units facade — all compile-critical.
+
+Now the UI/data-display/feedback/design/Units APIs.
+
+Found `TSSectionErrorBoundary`. Now the metrics/lists/typography/badge/button/alert components, design tokens, and Units facade. Let me also see how DriveScore registers navigation.
+
+Let me read the design tokens, typography, banners, pie gauge, lists, badges, and the Units facade.
+
+Let me read the banners, pie gauge, lists, badges, buttons, Units facade, and locate the token/TSTone/TSIconBox definitions.
+
+Let me locate the token/TSTone/TSIconBox/badge/button definitions and read the Units facade + DriveScore route registration.
+
+Let me read the Badges/Buttons files and locate the token + environment (`tsUnits`, `teslaSyncTheme`, `tsGlassPanel`) definitions.
+
+Let me read the theme tokens, unit formatters env, route host registry, and DriveScore route registration.
+
+Now the build/gate infra: project.yml, the gate README, placeholder script, the string catalog, and the ledger format.
+
+Sources are globbed recursively, so new files under `Sources/Features/Driving/` auto-compile. Let me read the gate contract (README), placeholder script, existing driveDetail strings, the ledger format, and a test example.
+
+Let me locate the gate contract README, the logs dir, the placeholder script, and re-check the string catalog precisely.
+
+Catalog uses bare keys (e.g. `charging.detail.title`) for native pages plus a `translation.*` mirror. Let me check precisely which of the 23 `driveDetail.*` keys exist, and read the gate contract + placeholder script.
+
+The 23 keys exist only as `translation.driveDetail.*`; native pages use bare keys (I'll add bare `driveDetail.*`). Let me check the build prerequisites (Shared.xcframework, ledgers) and read the ChargingDetailPage gate log to calibrate the expected outcome.
+
+Very informative — the build is achievable (ChargingDetail built macOS+iOS clean; only the pre-existing shared XCTest bundle is blocked). Let me read the xcframework build script, the top of the ChargingDetail log (exact gate workflow), and the placeholder script.
+
+Let me read the placeholder patterns, the exact gate commands from the ChargingDetail log header, and verify the gradle toolchain — then I'll kick off the Shared.xcframework build in the background.
+
+I have the full picture. Let me kick off the long-pole Shared.xcframework gradle build in the background now, then read the remaining web section components and the Drive type in parallel.
+
+Let me read the remaining web section components and the Drive type in a large parallel batch.
+
+Let me read the remaining charts/panels and the Drive type, and check the gradle build progress.
+
+Let me read the remaining chart/section components and the Drive type, then check gradle progress.
+
+Let me read the final 3 sections plus the Drive type, and check the gradle build status.
+
+I now have full understanding of every web section. The gradle build is running. Let me confirm the Drive type fields and a few remaining API details (`teslaSyncTheme`, `UnitPreferences.metric/.imperial`, `TSButton`), then start building.
+
+I have everything needed. Let me set up the plan and todos, then check the gradle build.
+
+The gradle build is still compiling Kotlin/Native (expected on first run). I'll write the Swift code while it runs. Starting with the models file.
+
+Models written. Now the format helpers.
+
+Now the sample data sources.
+
+Let me check the gradle build progress before continuing with the views.
+
+Gradle still compiling. I'll keep writing views. Here's the root page.
+
+Now the sections file (boundary, header, timeline, hero gauges, stat grid, skeleton, no-telemetry banner).
+
+I used `.redacted(reason: .placeholder)` — the placeholder scanner flags the literal word "placeholder". Let me check how ChargingDetail's skeleton avoided this.
+
+The Charging precedent uses a `// parity:allow` marker on the redaction line. Let me apply the same pattern via a single helper.
+
+Now the panels file (more-details, energy, cost, journey, why-ended, AI sections).
+
+Now the charts file.
+
+Let me check the gradle build, then write the map section and route registration.
+
+Gradle still compiling Kotlin/Native (normal cold start). Continuing with the map section.
+
+Now the route registration.
+
+Now the tests. Let me check the gradle build and read the ChargingDetail test pattern.
+
+Now the model tests, mirroring the Charging pattern.
+
+The gradle build finished. Let me confirm the xcframework built, then add the strings to the catalog.
+
+The xcframework built. Let me pre-stage it and enumerate all string keys I referenced so I can add them to the catalog.
+
+Gradle built successfully and xcframework is staged. The grep also caught SF Symbol names (not catalog keys) and pre-existing `driveScore.*`/`driveSwift` keys. I only need the `driveDetail.*` keys. Let me verify the shared keys I rely on exist, then add the new keys.
+
+`loading` and `map.style.*` are referenced by shared components but missing (they render as literal fallback — not build errors). I'll add the `driveDetail.*` keys plus the map/loading keys my page surfaces. Let me write an insertion script.
+
+124 keys added and JSON validated. Now generate the Xcode project, run the placeholder scan, and verify keys.
+
+Project generated. Let me run the placeholder scan, then kick off the macOS build (the long pole).
+
+One violation: a comment at line 389 contains the word "Placeholder". Let me view and fix it.
+
+Placeholder scan clean. Now the macOS build (long pole). Let me start it.
+
+Placeholder scan clean. While the macOS build runs, let me proactively review for a likely compile error: the `boundary` helper forwards a non-escaping closure into a stored property. Let me check the build progress first.
+
+Build failed. Let me extract the compile errors.
+
+No compile errors in my code — only macOS code-signing/entitlement errors (an environment issue, not code). Let me check whether sources actually compiled, then rebuild with signing disabled.
+
+Signing errors short-circuited the build before compilation. Let me rebuild with code signing disabled so it actually compiles my code.
+
+The build is compiling now. Let me wait for it to surface any real compile errors.
+
+No errors yet — still compiling the module. Let me wait more.
+
+Build failed with errors. Let me extract them.
+
+A pre-existing `WhyEndedPanel` surface in `TeslaSync/feature-views/` already declares `DriveDiagnosticWindow` — my type collides. Let me find ALL my type names that collide with existing module declarations.
+
+Only `DriveDiagnosticWindow` collides. Let me stop the slow scan and confirm there are no other errors pointing at my files.
+
+Confirmed: only `DriveDiagnosticWindow` collides with a pre-existing type. I'll rename my type to `DriveDetailDiagnosticWindow` across my files (keeping my code self-contained per the no-legacy-coupling rule).
+
+Renamed cleanly. Let me fix that doc comment's web reference, and proactively fix the likely closure-escaping issue in the `boundary` helper before rebuilding.
+
+Now let me fix a display bug (double unit in tire pressure tile) before rebuilding.
+
+Now rebuild macOS (incremental, faster).
+
+The build is running. Let me run swiftlint on my files in parallel (it's independent of the build).
+
+swiftlint linted the whole project (config overrides the path arg). Let me isolate violations in my Driving files.
+
+All 74 violations are mine — mechanical issues (line length >120, trailing commas, file/function/type length, param count). Let me read the swiftlint config for exact limits, and check the build.
+
+Let me see the rest of the swiftlint config and wait for the build result (so I fix compile + lint together).
+
+Build still compiling. Let me wait for it to finish before editing (to avoid mid-build edits).
+
+The build is taking long. Let me check the log file and process status.
+
+The build is actively compiling (54 frontend processes — recompiling the full module after the earlier failure). Let me wait for it to finish to get a clean compile signal.
+
+The build is heavily compiling but the log capture is unclear. Let me wait for its completion notification with a longer read.
+
+This build is stuck/unproductive (no log output after 12+ min). Let me stop it and proceed with the lint cleanup + file splits, then run one clean build. DerivedData persists, so compiled objects are reused.
+
+Now I'll do the lint cleanup. First, split the over-length files. Let me view the exact current content boundaries to split precisely.
+
+Let me split out the derivations into their own file and truncate Models.
+
+Now fix the trailing comma and long line in the new Derivations file.
+
+My second edit was clumsy. Let me view and fix the edges array cleanly.
+
+I'm making this messy. Let me view and cleanly rewrite the whole `speedHistogram` function body.
+
+Derivations fixed. Many line-length/trailing-comma fixes remain. Let me check if `swiftformat` (with the project config) can auto-fix these efficiently.
+
+`swiftformat` has `--maxwidth 120` and `--commas inline` — it'll auto-fix line lengths and trailing commas. Let me run it on my files.
+
+swiftformat auto-fixed line lengths/commas but wrapping pushed 3 files over 400. Let me re-run swiftlint to see exactly what structural violations remain.
+
+Clear remaining list: 3 file splits, 1 test split, a few line wraps, 2 body-length trims, 1 param-count fix. Let me find split boundaries.
+
+Now let me perform the three file splits (extract bottom blocks into new files, truncate originals).
+
+All under 400. Let me verify the cut boundaries are clean (balanced braces).
+
+Clean splits. Let me re-run swiftlint to get current exact line numbers for the remaining fixes.
+
+8 mechanical fixes left. Let me view the relevant lines.
+
+Let me fix the Panels violations (elevSummary line, rateSub line, endpoint param count).
+
+Now the endpoint param-count fix (bundle into a struct) and its two call sites:
+
+Let me view the current exact Journey section content (swiftformat may have reformatted it).
+
+Let me apply the three edits for the endpoint struct refactor with exact matches.
+
+Now the Map and TirePower long lines. Let me view them.
+
+Let me view the full speedLegend/threshold region in Map to refactor it cleanly.
+
+Now fix the TirePower long line.
+
+Now the two body-length trims. Let me view `stats()` and `loadDrive()`.
+
+Now trim the Sample `loadDrive` body by extracting the telemetry mapping. Let me view it.
+
+Let me extract the telemetry mapping into a helper to trim `loadDrive`.
+
+Now split the test class. Let me find the test MARKs to extract formatter/registration tests into a second file.
+
+Let me create a second test file for the formatter/registration tests and remove them from the main file.
+
+Let me re-run swiftformat to normalize all files (including new ones), then re-run swiftlint to confirm zero violations.
+
+swiftlint reports **0 violations** in my files. Let me verify git only touched intended files, then run a clean macOS build to confirm compilation.
+
+Only intended files changed. Now the clean macOS build to confirm compilation. Let me run it with output redirected to a file I can poll reliably.
+
+Build running with a working log. Let me wait and check for compile errors.
+
+0 errors so far, build still compiling. Let me wait for completion.
+
+Still 0 errors, build progressing. Let me wait longer for completion.
+
+Let me check what the build is currently doing (tail) and whether it's actively progressing.
+
+The build is in the whole-module emit phase (69 frontend processes, 0 errors). Let me wait for it to finish.
+
+Build still running (0 errors) after ~10 min. Let me verify it's actively progressing, not stuck.
+
+The log now shows "(7 failures)". Let me get the actual errors — they may be real now, or signing-related for the widget extension.
+
+The failures are all "cannot find ... in scope" for symbols in my **newly-split files** — they weren't in the `.xcodeproj` because I created them after `xcodegen generate`. Re-running xcodegen will include them. Let me regenerate and rebuild.
+
+All new files now in the project. Let me rebuild macOS.
+
+Build running. Let me wait and poll for errors/completion.
+
+Still building, 0 errors. Let me continue waiting for the result.
+
+This build is taking unusually long. Let me check if it's actively progressing or stuck.
+
+It's in the whole-module compile phase (48 frontend processes working silently — normal for this large app under strict concurrency). Let me wait longer.
+
+**macOS BUILD SUCCEEDED** (0 errors) — my code compiles cleanly. Now the iOS build (the gate requires both idioms). Let me start it.
+
+iOS build running (~13 min expected). While it compiles, let me prepare the ledger update and gate log. Let me view the ledger format.
+
+The ledger row format is clear. Let me check the ledger tail and add the two DriveDetail rows (macos + ios).
+
+Let me add the two DriveDetail rows to the ledger.
+
+Ledger updated. Let me check the iOS build progress.
+
+iOS build progressing (0 errors). Let me wait for it to complete.
+
+iOS still compiling (0 errors). Let me keep waiting for completion.
+
+iOS build is very long. Let me check if it's actively progressing or stuck on a phase.
+
+iOS build is progressing — it's compiling **both** arm64 + x86_64 (generic simulator), hence ~2x slower. Let me wait for it to finish.
+
+Let me check how close the iOS build is to completing.
+
+iOS is compiling the full app for two architectures (arm64 + x86_64) — genuinely slow but progressing with 0 errors (the arm64 module already emitted clean). Let me wait for the final result.
+
+~32 min is excessive. Let me check whether it's near done (linking) or still mid-compile, to decide whether to wait or restart single-arch.
+
+It's still compiling thousands of files for two archs — not near done. Let me kill it and rebuild iOS for a single arch (arm64), which is ~2× faster and still validates the iOS target. The DerivedData (arm64 objects already built) will be reused.
+
+`pkill` isn't allowed. Let me kill just the xcodebuild PID.
+
+Let me wait for the orphaned compilers to drain, then start a faster single-arch iOS build.
+
+Single-arch iOS build started (reuses arm64 objects from DerivedData). Let me poll for completion.
+
+iOS build failed with 1 error (none in my files). Let me see what it is.
+
+A build-DB lock conflict from leftover processes of the killed build — not a code error. Let me confirm all build processes have drained, then retry.
+
+XCBBuildService is still dispatching the killed build (killing the `xcodebuild` CLI doesn't stop the build daemon). Let me stop my polling loop and kill the actual build-service/orphaned PIDs.
+
+Multiple orphaned xcodebuild processes are contending for the same build DB. Let me kill the old ones to get a clean slate.
+
+Let me kill each orphaned PID explicitly.
+
+5 orphans killed. Let me wait for the swift-frontend processes to drain fully before a clean rebuild.
+
+Processes are respawning — XCBBuildService (the build engine daemon) is still dispatching. Let me stop polling and find the root daemon to kill.
+
+Key insight: this machine is **shared with other parallel agents** (e.g., slot-19 is running its own `xcodebuild`). Those use separate DerivedData and must be left alone. The lock conflict was only between my own slot-23 builds (now killed). Let me confirm no slot-23 xcodebuild remains, then relaunch my iOS build.
+
+slot-23 is clean (no build holds the lock). Let me relaunch the single-arch iOS build.
+
+Build proceeding (no lock error). Let me poll for completion.
+
+0 errors, still building (single-arch under shared-CPU contention). Let me keep polling.
+
+Let me check the iOS build's actual phase to gauge how close it is.
+
+It's in the slow whole-module type-check phase (under strict concurrency + shared-CPU contention). macOS already proved correctness; iOS arm64 emitted clean earlier too. Let me keep waiting for the official result.
+
+~22 min and still going. Let me verify it's advancing past the module-emit phase, not stuck.
+
+Good — it advanced to per-file codegen (4523 files compiled, was 520). It's progressing through the app. Let me wait for it to finish compiling + link.
+
+**iOS BUILD SUCCEEDED** — both idioms compile cleanly with 0 errors. Now the test gate. Per the ChargingDetail precedent, the shared XCTest bundle may have pre-existing Swift 6 isolation errors. Let me attempt `build-for-testing` (reuses the built app) to validate my tests compile.
+
+build-for-testing running. Let me compute LOC and draft the gate log while it compiles.
+
+Native LOC (2974) exceeds web source (2215) — parity depth satisfied. Let me poll the test-bundle build.
+
+Test bundle build failed — **0 errors in my test files**, 4 elsewhere. Let me confirm they're pre-existing/unrelated.
+
+The 4 errors are all in a **pre-existing, unrelated** file (`Admin/VehicleCostPageModelTests.swift` — Swift 6 isolation + Date/Double errors) that blocks the shared bundle — exactly the condition the ChargingDetail gate documented. My test files have **0 errors**.
+
+Since my derivation/format logic is pure Foundation, let me run it standalone for **real** pass evidence (independent of the broken bundle).
+
+Let me write a standalone test harness that runs my derivation/format assertions.
+
+The harness caught **2 bugs in my test fixtures** (not the implementation — which correctly matches the web): `speedBand(20)` is `.medium` (not `.high`), and the "empty" record from `makeRecord` still hard-codes `maxSpeedMps: 25` so `hasMeaningful` is correctly `true`. Let me fix both test assertions to be correct, in the XCTest and the harness.
+
+Now update the harness to match the corrected expectations and re-run to confirm green.
+
+**All 35 harness checks PASS** — the pure logic is verified correct, and I fixed 2 real test-fixture bugs. Let me re-format/re-lint the edited test file.
+
+My edit pushed the test class to 252 lines (>250). Let me move the pure `testSpeedBands` into the format/logic test file.
+
+Let me confirm swiftlint is clean again after the test reshuffle.
+
+MY_VIOLATIONS=0. Let me re-verify the placeholder scan and confirm all 25 parity items are referenced in code (evidence for the log).
+
+Placeholder clean, all 25 parity items referenced. All gate evidence is in hand. Let me write the execution log.
+
+Let me write the execution log.
+
+Log written. Let me verify what git will stage (ensure no build artifacts/.xcodeproj), then commit.
+
+Everything is exactly as intended (artifacts properly gitignored). Let me commit.
+
+Committed. Let me clean up temp artifacts, update todos, and verify a clean tree.
+
+Clean tree; commit has all 19 files (4890 insertions). Let me finalize the todos.
+
+Let me do a final validation that the ledger JSON is valid and the log terminates correctly.
+
+All gates verified and the work is committed. Task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

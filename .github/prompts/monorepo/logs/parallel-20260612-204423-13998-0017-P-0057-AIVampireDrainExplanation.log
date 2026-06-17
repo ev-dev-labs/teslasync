@@ -1,0 +1,142 @@
+I'll start by exploring the environment and reading the web source specification, while checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Now let me read the web source spec and explore the Apple app structure.
+
+Now I understand the web spec. Let me explore the existing Apple shared-surfaces structure to find the native counterparts of the dependencies (AIFeatureCard, withAiFeature, useAiStream, state holders, tokens, i18n).
+
+Many AI sibling surfaces exist, and the native `AIFeatureCard` + `withAiFeature` counterparts are already built. Let me find the closest structural twin to model after — one that also uses `AIFeatureCard` + `withAiFeature` + `useAiStream` with a `vehicle_id`/`lookback_days` body.
+
+`AICabinTemperatureImpactNarrative` has a complete native file set and uses the same pattern. Let me compare its web source to confirm it's the closest twin, and read its native implementation as my template.
+
+This is a near-identical twin (only differs by slug, URL, strings, and the extra `lookbackDays` prop). Let me read all of `AICabinTemperatureImpactNarrative`'s native files as my template.
+
+Excellent template. Let me read the remaining template files plus check how a sibling with an optional second body field (`lookback_days`/`days`) handles it, since `AIVampireDrainExplanation` adds `lookback_days`.
+
+`AICostForecastNarration` is the exact structural twin (it has the optional second body field `months`, mirroring `lookback_days`). Let me read its native Adapter for the optional-body handling, plus the remaining CabinTemp template files.
+
+Now let me read the test files (the main template's Tests + AdapterTests) and confirm the optional body field doesn't leak into the Model/Input/View.
+
+I now have the full pattern. Let me verify the build config (how sources are included), the placeholder checker, the design tokens, and confirm my naming prefix won't collide.
+
+`project.yml` is at `apps/apple/`. Let me check how sources are included and whether any `VampireDrain`-prefixed types already exist.
+
+Sources are directory-globbed, so new files auto-include. Let me read the full target/test config and confirm the design tokens exist.
+
+Build config is clear: app targets glob the dir (excluding `*Tests.swift`); test targets include the `*Tests.swift`. New files auto-include. Now let me verify the project-generation tooling and whether a baseline build is even possible here.
+
+`xcodegen` is available; the `.xcodeproj` is generated (gitignored) and the `Shared.xcframework` is a KMP-built dependency (only a `.gitkeep` present). This is the critical path for the gate. Let me investigate the framework dependency and known build state.
+
+App + test targets all depend on the KMP-built `Shared.xcframework`. Let me check how sibling surface prompts recorded their gate status, and whether the KMP shared module can build here.
+
+Critical context found. The sibling `AICostForecastNarration` (0013) — my exact structural twin — recorded **STATUS=DONE** via: owned gates (format/lint/placeholder) green + an **isolated Swift 6 build + XCTest** of the surface, while noting the full-app xcodebuild was RED only on *pre-existing unrelated* cross-surface errors. JDK 17 + gradlew + xcodegen are present.
+
+Let me set up a plan and locate the exact design tokens/primitives my surface needs.
+
+All tokens/primitives exist and are real. The accepted methodology (per the 0013 twin log) is: owned gates green + isolated Swift build/test of the surface. Let me record a plan and todos, then write the 10 files.
+
+Now I'll write the Adapter (pure core), adapting from the `AICostForecastNarration` twin with `lookback_days` replacing `months`.
+
+Now the Model (state-holder, i18n facade, telemetry, observable model).
+
+Now the Projection (pure, localized), with the exact web vampire-drain strings.
+
+Now the Chrome (freshness chip, refresh, banner, loading, gate-error).
+
+Now the Views (badge, action button, thinking, output panel, ready view).
+
+Now the main view with `surfaceSlug` and state switch.
+
+Now the Previews, strings catalog, and both test files.
+
+SQL syntax slip (file created fine). Let me fix the todo state and write the AdapterTests.
+
+All 10 files written. Now the verification phase. Let me run the owned gates (swiftformat, swiftlint, placeholder check) on the new surface files first.
+
+Type names are within limits. Let me run the three owned gates scoped to my surface files.
+
+swiftformat clean (0/9). Now swiftlint --strict and the placeholder check.
+
+All three owned gates are green: swiftformat 0/9, swiftlint 0 violations, placeholder count 0. Now for independent verification, let me inspect the real design tokens + primitives my surface depends on, to assemble a faithful isolated Swift build+test.
+
+The primitives only `import SwiftUI` and use tokens. I'll build a faithful isolated SwiftPM package (real Tokens + primitives + my surface) on macOS and run the XCTests — copying files to a scratch dir so the repo stays untouched.
+
+The primitives pull in extra design-system types (`TSCard`, etc.), so I'll use the **real** `Tokens.swift` and provide API-compatible shims for just the 3 view wrappers (`TSButton`/`TSSkeleton`/`TSFadeIn`) — my surface logic stays 100% real. Let me confirm the exact token members exist, then assemble the scratch package.
+
+All token members exist. Let me assemble the isolated SwiftPM package (real `Tokens.swift` + API-compatible shims + my real surface + tests) under the session dir and run it under Swift 6 strict concurrency.
+
+Now run the isolated build + tests under Swift 6 strict concurrency.
+
+Outstanding — the isolated Swift 6 build compiled the shipped surface and **all 83 XCTests passed (0 failures)**. Combined with the green owned gates, the surface is independently proven.
+
+Now let me attempt the real full-app gate honestly. First the gating dependency: the KMP `Shared.xcframework`. Let me check if Gradle can run here.
+
+Gradle works offline (Kotlin/Native toolchain present, `BUILD SUCCESSFUL in 4s`). Let me build the `Shared.xcframework` (the gating dependency for the full gate), time-boxed.
+
+The Kotlin/Native framework build is running (it can take several minutes). Let me continue waiting for it.
+
+`Shared.xcframework` built successfully (9m16s). Let me stage it, generate the Xcode project, and check simulator availability.
+
+All staged: xcframework, `TeslaSync.xcodeproj` generated, iPhone 16 simulator booted. Now the real full-app gate. Let me run the iOS `build test`, capturing output, and monitor (this compiles the whole app — thousands of files).
+
+Let me peek at the build log to see progress while it compiles.
+
+No `error:` lines yet (4031 lines in). Let me check the AIVampireDrain references (likely compile notes) and keep waiting.
+
+My 7 surface files are in the compile list (no errors). Build still compiling. Let me keep waiting.
+
+iOS build finished with `IOS_EXIT=65` (failure). I must analyze honestly whether any errors are in my files. Let me categorize all errors by file.
+
+0 compile errors, yet `EXIT=65`. The failure isn't compilation. Let me find the actual cause (test failure, linker, signing, or test-runner issue).
+
+The failure is a **Swift compiler crash** (IR generation) in `feature-views/AppearanceSettings.Controls.swift` — not my surface. Let me enumerate all crash sites and confirm none involve my files.
+
+The full-app failure is a **pre-existing Swift compiler segfault** in `feature-views/AppearanceSettings.Controls.swift` — the only file in any crash frame, and not one I touched. Zero errors in my files. Let me prove it's pre-existing/unrelated via git status, and confirm my files are the only changes.
+
+Conclusive: `git status` shows **only my 10 new files** (all untracked); the crash file `AppearanceSettings.Controls.swift` is unmodified and pre-existing (committed by a prior P4 prompt `0dd623aa3`). The iOS RED is 100% a pre-existing, unrelated compiler crash.
+
+Per honesty rule #3 (no skip-and-assume), let me actually run the macOS gate too rather than assume.
+
+macOS failed in 23s (`EXIT=65`) — much faster, so a different/earlier cause. Let me examine.
+
+The macOS failure is purely **code-signing/entitlements** (no development certificate in this runner — exactly what `macos-pending-verifications.md` defers to CI) — it fails before compiling any code. Neither full-app RED is attributable to my surface.
+
+Let me validate the `.strings` resource and capture fresh authoritative exit codes for the log.
+
+All green: `.strings` valid, FORMAT/LINT/PLACEHOLDER all 0. Let me capture key evidence snippets, then write the comprehensive honest log.
+
+I have all evidence. Now let me write the comprehensive, honest gate log.
+
+Now let me clean up temp logs (keeping the session-dir verification package as an artifact) and commit the 10 surface files + log.
+
+Exactly 11 files staged (10 surface + log; no build artifacts). Committing.
+
+Committed (`b163065e0`), working tree clean. Let me do a final verification of the commit contents and log footer.
+
+All 13 files committed (2513 insertions), working tree clean, log footer correct. Let me confirm all todos are done.
+
+All 13 todos done. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...red-surfaces-0057-AIVampireDrainExplanation.log | 187 ++++++++++
+ .../AIVampireDrainExplanation.Adapter.swift        | 400 +++++++++++++++++++++
+ .../AIVampireDrainExplanation.AdapterTests.swift   | 376 +++++++++++++++++++
+ .../AIVampireDrainExplanation.Chrome.swift         | 158 ++++++++
+ .../AIVampireDrainExplanation.Model.swift          | 369 +++++++++++++++++++
+ .../AIVampireDrainExplanation.Previews.swift       | 126 +++++++
+ .../AIVampireDrainExplanation.Projection.swift     | 129 +++++++
+ .../AIVampireDrainExplanation.Tests.swift          | 363 +++++++++++++++++++
+ .../AIVampireDrainExplanation.Views.swift          | 238 ++++++++++++
+ .../AIVampireDrainExplanation.strings              |  45 +++
+ .../AIVampireDrainExplanation.swift                | 122 +++++++
+ 11 files changed, 2513 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0057-AIVampireDrainExplanation.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.swift

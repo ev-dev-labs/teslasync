@@ -1,0 +1,26 @@
+I'll start by exploring the repository structure to understand the Apple acceptance gate requirements and check what's actually present.
+
+Key findings so far: Xcode is **not** installed (only Command Line Tools), and the Apple ledgers + `check-parity-ledger.ps1` are **missing**. Let me gather more evidence before concluding.
+
+Prior runs of this exact gate exist. Let me read the most recent one and the methodology to match format and conclusions.
+
+I now understand the format and the prior BLOCKED conclusion. Let me read the actual canonical prompt file and check the git/commit convention for these logs.
+
+I have full clarity now. The canonical log doesn't exist yet (untracked); prior runs concluded **BLOCKED**. My host is even more constrained (no full Xcode). Let me gather the remaining predecessor evidence firsthand, then run the actual gate.
+
+All predecessor evidence gathered. Key blockers confirmed: no full Xcode, 0 signing identities, missing ledgers + checker, P9 logs absent, one page log lacks STATUS, and `p1-s3-0001`=BLOCKED. Now let me run the actual runnable gate commands to capture firsthand evidence.
+
+Placeholder gate RED (67 > 24). Now let me capture the xcodebuild capability failures firsthand and the missing-ledger/checker evidence. First confirm the project generates (git-ignored build prereq) and that `.xcodeproj` is ignored.
+
+`.xcodeproj` is **not** git-ignored on this host, so my xcodegen step created an untracked artifact. Since xcodebuild can't run anyway (no Xcode), I'll remove it to keep the tree clean. Let me verify tree state.
+
+Tree is clean. I have all firsthand evidence. Let me capture a clean preflight snapshot to embed verbatim, then write the canonical log.
+
+All firsthand evidence is captured. Now I'll write the canonical acceptance-gate log.
+
+Let me verify the log ends correctly (covenant rule 10) and confirm final tree state.
+
+The log ends correctly with `EXIT=1` / `STATUS=BLOCKED`. Two mid-document prose lines begin with `STATUS=` at column 0, which could confuse a naive status parser. I'll reword them so only the terminal markers start with `STATUS=`/`EXIT=`.
+
+Acceptance gate executed and recorded. The log is honest, firsthand, and ends cleanly with `EXIT=1` / `STATUS=BLOCKED` (only those two column-0 markers exist). Working tree holds only the untracked canonical log — no source touched, no build artifacts left, and per Covenant rule 8 ("no commit on red") + Implementation step 6 (commit only on green/DONE) it is intentionally **not** committed.
+

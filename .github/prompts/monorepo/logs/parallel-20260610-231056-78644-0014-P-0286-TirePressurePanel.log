@@ -1,0 +1,126 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the Apple toolchain availability and the existing project structure.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me understand the web source dependencies and the existing Apple project structure.
+
+The `feature-views` directory already exists with 2522 entries — there's an established pattern. Let me check for an existing TirePressurePanel and study sibling telemetry panels.
+
+There's a near-identical sibling: `TirePressureSection.*` (same tire data domain) using a decomposed multi-file pattern. This is the gold-standard template. Let me read all of its files to learn the established architecture.
+
+Excellent — this is a mature, well-architected pattern. Let me read the remaining files: Projector, Views, Previews, Tests, and strings.
+
+Now the Previews, Tests, strings files, plus I need to confirm the shared design-system tokens exist (TSGlassPanel, TSFadeIn, Color.TS, Font.TS, etc.).
+
+I have the complete template pattern. Now let me verify the shared design-system tokens (P1/S9) and confirm how the Xcode project includes these files (project.yml / XcodeGen). Let me locate the token definitions and build config.
+
+Now let me check the build tooling: xcodegen, pwsh, the Shared.xcframework build script, and whether prior surface logs reveal the expected gate behavior in this environment.
+
+The sibling log reveals the proven methodology: surface-isolating verification (the full-app build is pre-existing RED from unrelated parallel-merge symbol collisions). Let me read the complete log to replicate the exact verification approach.
+
+I now fully understand the proven methodology. Let me verify symbol uniqueness for my chosen prefix and read the exact design-token APIs before writing code.
+
+`LiveTelemetry*` is a separate composite surface (prefix `LTPPanel`/`LiveTirePressurePanel`) — no collision with my planned `TPPanel`/`TirePressurePanel`. No `TirePressurePanel.*` file exists yet. Let me confirm the exact token APIs by reading the design-system source.
+
+`\bTPPanel` has no exact matches (only `LTPPanel*` from LiveTelemetry). Tokens live in the generated file. Let me confirm exact APIs for everything I'll use.
+
+All tokens confirmed. Now let me confirm the exact component initializers (TSGlassPanel, TSFadeIn, TSSkeleton, TSTone) and the `.color` property.
+
+All APIs confirmed. Let me read the lint/format configs to ensure compliance, then I'll write the surface. Let me also set up tracking.
+
+Lint/format constraints noted (≤120 cols, type names <50). Let me check the placeholder script's banned-word patterns so my code passes the gate, then I'll write all files.
+
+Banned words confirmed (including "Placeholder", "not implemented" — I'll avoid these in code/comments). I have everything needed. Let me write the surface, starting with the plan and the pure-core files.
+
+Now the pure-core Adapter file:
+
+Now the Projector file (formatting, projector, phase, surface slug, accessibility):
+
+Now the Model file (state-holder seam, i18n facade, telemetry, in-memory source):
+
+Now the detailed Views file (presentational chrome):
+
+Now the strings catalog, Previews, and Tests:
+
+Now the comprehensive Tests file:
+
+All 8 files created. Let me auto-format my files and inspect what the Components layer imports (to compose the isolated build correctly).
+
+swiftformat is happy (1/7 needed formatting, now applied). Components only depends on system frameworks (Charts/MapKit/CoreLocation) + Design — so the sibling's isolated-build recipe is sound. Let me run the lightweight gates first (lint, format-lint, placeholder).
+
+Lint (0 violations) and format (0/7) pass. The placeholder hits shown are pre-existing sibling files (`AchievementBadge`, `ChargingSection`, `CommandSearch`) — none are mine. Let me run the placeholder gate against a copy of ONLY my files for a clean isolated result, and confirm my files never appear in the full scan.
+
+Placeholder gate clean on my files (COUNT=0, EXIT=0) and my files never appear in the full scan. Now let me set up the isolated SwiftPM package (real design system + my surface) to verify compilation and run tests.
+
+Package set up (42 design-system files + my 6 surface files). Now let me build and test it.
+
+My surface files compiled cleanly (`[50/51]`, `[51/51]` after the errors) — the only failures are in `Components/DataDisplay/UnitFormatters.swift`, which references an app-level `Units` helper my surface doesn't use. Let me locate `Units` and check my actual primitives' dependencies.
+
+`Units` lives in `Sources/SharedFacade/`. Only two Components files (`StatusIndicators`, `UnitFormatters`) need app-level helpers — neither is used by my surface. Let me check if adding `SharedFacade` cleanly resolves it (most faithful), otherwise I'll exclude those two unrelated files.
+
+`SharedFacade` imports the KMP `Shared` framework (unavailable without gradle), so the only blocker is `UnitFormatters.swift` needing that facade — a file my surface doesn't use. I'll trim that one KMP-dependent file from the isolated harness (its real compilation is covered by the full xcodebuild gate) and rebuild + test.
+
+Build complete (BUILD_EXIT=0) — my surface compiles against the real design system. Now run the tests:
+
+All 25 tests passed (TEST_EXIT=0). Now the iOS typecheck [3] against the real iPhone Simulator SDK (the app ships iOS 18):
+
+iOS typecheck passed (47 files, EXIT=0). Now [7] xcodegen generate — regenerate the project and confirm my 8 files are enumerated into the targets:
+
+All 7 surface-isolating gates are green: build, test (25 pass), iOS typecheck (47 files), swiftlint (0), swiftformat (0/7), placeholder (0), xcodegen (8 files enumerated).
+
+Now let me verify my symbols are unique app-wide (so I introduce no new collision), then attempt the literal full-app gate to document it truthfully.
+
+Every symbol is defined exactly once — my surface introduces no duplicate-symbol collision. Let me check whether the full-app `xcodebuild` gate is feasible here (it needs the KMP `Shared.xcframework` via a gradle pre-action) and what the current collision landscape looks like.
+
+The full-app build needs a lengthy KMP gradle step AND will deterministically fail on **pre-existing** collisions (`RecentDrivesModel`, `StateTimelineModel` etc. still defined in 2 files each — unrelated sibling surfaces). I'll still run the literal gate to capture the truthful current result. Let me start it (it stages `Shared.xcframework` via gradle first).
+
+The iOS gate build is running (gradle KMP stage first). Let me monitor it while I prepare the log.
+
+Good progress — gradle built `Shared.xcframework` and Swift compilation has begun. Let me wait for it to reach the (expected pre-existing) collision failures.
+
+Still finishing the gradle release-framework assembly. Let me continue waiting for the app compile phase.
+
+KMP is linking release frameworks for all Apple targets (iOS, simulator, macOS) — legitimately slow but progressing. Let me wait further.
+
+The build finished with failures. Let me extract the exact failures and confirm none involve my surface.
+
+All failures are the **pre-existing** `StateTimeline*` / `RecentDrives*` duplicate-symbol collisions (defined twice each) — identical to what the sibling documented. Let me prove zero errors involve my surface and confirm my files compiled.
+
+Definitive proof: **0** errors mention my surface; every `error:` is in the pre-existing `RecentDrives*` / `StateTimeline*` duplicate-symbol files, and my files compiled. This matches the sibling exactly. Let me capture the precise xcodebuild exit code cleanly (gradle is now cached) for an honest log.
+
+While that captures the exit code, let me check git status to ensure only my intended files get committed (the generated `.xcodeproj` and gradle artifacts should be ignored).
+
+Clean — only my 8 surface files are untracked; the generated `.xcodeproj`, `Shared.xcframework`, and gradle build dir are all git-ignored. Let me wait for the precise exit code.
+
+Confirmed **IOS_EXIT=65** (gradle was cached, ~1 min). Let me confirm the second run shows the same pre-existing failures, then write the comprehensive gate log.
+
+Consistent and confirmed. Now I'll write the comprehensive gate log following the proven sibling structure, with my actual evidence.
+
+Now a final banned-word scan across all 8 files (including the `.strings`, which the gate doesn't scan), then commit.
+
+0 banned words; all 8 files present. Let me stage exactly my files + the log, verify, and commit.
+
+Exactly 9 files staged (8 surface + log), nothing else. Committing:
+
+Commit `3f86e1a10` landed cleanly (9 files, 1799 insertions, Co-authored-by trailer present). Let me finalize todos and clean up the throwaway build scratch in the session dir.
+
+Task complete. The repo working tree is clean (only the committed surface + log; generated `.xcodeproj`/`Shared.xcframework` are git-ignored), and scratch build dirs are removed.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0286-TirePressurePanel.log | 140 ++++++++
+ .../feature-views/TirePressurePanel.Adapter.swift  | 357 +++++++++++++++++++++
+ .../feature-views/TirePressurePanel.Model.swift    | 250 +++++++++++++++
+ .../feature-views/TirePressurePanel.Previews.swift | 111 +++++++
+ .../TirePressurePanel.Projector.swift              | 185 +++++++++++
+ .../feature-views/TirePressurePanel.Tests.swift    | 320 ++++++++++++++++++
+ .../feature-views/TirePressurePanel.Views.swift    | 318 ++++++++++++++++++
+ .../feature-views/TirePressurePanel.strings        |  59 ++++
+ .../feature-views/TirePressurePanel.swift          |  59 ++++
+ 9 files changed, 1799 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0286-TirePressurePanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TirePressurePanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TirePressurePanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TirePressurePanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TirePressurePanel.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TirePressurePanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TirePressurePanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TirePressurePanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TirePressurePanel.swift

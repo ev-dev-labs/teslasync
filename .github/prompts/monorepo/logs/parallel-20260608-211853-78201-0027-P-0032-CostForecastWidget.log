@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source and explore the Apple app structure in parallel.
+
+`ChargeCostTrackerWidget` is the closest analog. Let me read its full file set as the reference pattern, and find a widget that uses Swift Charts (BarMark).
+
+`ChargeCostTrackerWidget` is an excellent, complete reference. Let me read its full supporting file set.
+
+Let me find the shared infrastructure (tokens, DashboardWidgetSize/Registration) and read the remaining reference files.
+
+Now let me read the remaining reference files, shared infra, and design tokens in parallel.
+
+Now let me read the test files, design tokens, and the MonthlyMileage chart widget's model/view to understand chart integration and test patterns.
+
+Let me read the web data layer (hook + types + shared components) and locate the design tokens.
+
+Let me read the web shared components and the MonthlyMileage chart widget's model/view/adapter to fully understand chart-widget patterns.
+
+Let me examine the MonthlyMileage chart-widget's full structure (model, view, adapter) as the chart-widget reference.
+
+Let me read the MonthlyMileage model (for compact/wide helpers + accessibility), verify shared `TSSkeleton`, and check Apple toolchain availability.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, xcodegen). Let me check simulators, the Shared.xcframework dependency, pwsh, and the placeholder checker before writing.
+
+iPhone 16 sim is available and pwsh works. The key risk is the `Shared.xcframework` (KMP) dependency. Let me inspect its build script.
+
+Let me read the MonthlyMileage test + preview patterns and assess the KMP/gradle feasibility plus placeholder rules in parallel.
+
+All prerequisites are present (Java 17, gradlew, iPhone 16 sim, full Xcode). The KMP `Shared.xcframework` build is the slow path — let me kick it off in the background now while I write the widget.
+
+Let me verify `useFormatting`'s `formatCurrency` default decimals and `currencySymbol`, plus `fmtNumber`, for exact parity. Also checking the background build.
+
+Parity confirmed: `formatCurrency(amount, d) = currencySymbol + fmtNumber(amount, d ?? precision)`. KMP build is compiling in the background. Now I'll write the widget, starting with the Foundation-only core (Model, Format, Adapter).
+
+Core logic written. Let me check the KMP build progress, then write the SwiftUI surface files.
+
+KMP build is linking iOS frameworks (progressing well). Now writing the SwiftUI surface.
+
+Now the leaf views and the Swift Charts bar chart.
+
+Now the strings catalog and previews. Let me also check the KMP build.
+
+KMP build wrote a debug xcframework; waiting for it to finish staging. Meanwhile, writing previews and tests.
+
+Now the two test files. Writing the adapter/format/layout tests first.
+
+All 9 files written. Let me check the KMP build and update progress.
+
+KMP build still linking (release frameworks). Other slots share the daemon. Let me run swiftformat + swiftlint on my new files now while it finishes.
+
+Configs understood (maxwidth 120, before-first wrapping, self-remove, testable-bottom). Let me auto-format my new files to spec, then review what changed.
+
+swiftformat passes (0/9 need formatting). Now swiftlint --strict on my files.
+
+One swiftlint issue: a 3-member tuple. Let me refactor `buildBars` to use `CostBar` directly instead.
+
+Two lines exceed 120. Let me auto-format the adapter to wrap them, then re-verify both linters.
+
+Formatted. Re-running both linters on all 9 files to confirm clean.
+
+Lint + format clean (0 violations). Let me check the KMP framework build.
+
+Framework still linking release (shared daemon, slow). Let me prepare in parallel: generate the Xcode project and verify the log directory.
+
+Project generated with both schemes. Let me wait for the framework build to finish staging.
+
+Release linking is progressing (iOS done, macOS Arm64 now). Kotlin/Native release linking is slow. Let me wait more.
+
+Framework staged (`BUILD SUCCESSFUL`). Now running the full gate. Starting with the iOS build+test (the long pole).
+
+Build failed: my types are "ambiguous" — there must be pre-existing definitions colliding in the single app module. Let me find them.
+
+A pre-existing `CostForecastSection` feature-view already owns the `CostForecast*` namespace in this single-module app. I must namespace my widget's types. Let me confirm the collision set and that `CostForecastWidget*` is free.
+
+My exclusion filter was wrong (`-h` stripped paths). The build confirms the collision is real and extensive — the existing `CostForecastSection` feature-view defines nearly every name I used (`CostForecastModel`, `CostForecastChart`, `CostForecastStatCell`, `CostBar`, `CostForecastFormat`, `CostForecastSurface`, test classes, etc.). `CostForecastWidget*` is free. Let me get the definitive existing-names list, then namespace all my types.
+
+This is the definitive picture: the existing `CostForecastSection` feature-view (plus `CostHeatmap`/`CostPerKwh`/`CostSavings`/`CostSummary` siblings) own the `CostForecast*`/`CostBar` names. `CostForecastWidget*` is entirely free. I'll namespace every type I introduced to `CostForecastWidget*` via a lookahead-guarded rename (keeping the `CostForecastWidget` struct, string literals, and lowercase i18n keys intact).
+
+Rename succeeded; string literals and i18n keys intact. But the rename also touched a few comment references to the *web* types (`CostForecastMonth`/`CostForecastData`). Let me find and restore those for doc accuracy.
+
+The historical comment is correct. Fixing the one mangled web-type reference on line 76.
+
+Now re-checking format/lint after the rename (longer names may have pushed lines over 120), auto-fixing if needed.
+
+Format + lint clean (0 violations). The ambiguity is resolved. Re-running the iOS build+test.
+
+The grep pattern was invalid (`**`) and broke the pipe early. Let me check the log to see the real build state.
+
+That log section is from attempt 1 (pre-rename, appended). Attempt 2 was killed early by the invalid grep regex breaking the pipe. Let me verify my files are fully namespaced, then re-run cleanly.
+
+Fully namespaced. Re-initializing the log and running the iOS build+test cleanly (full output to log via `tee`, no early-exiting filter).
+
+Build running (8+ min). Let me check progress via the output file.
+
+Build failed again but with NO CostForecast errors — a different file batch failed. Let me extract the actual `error:` messages.
+
+These errors are in **other** widgets (`ChargeStatusWidget`, `ChargeCostTrackerWidget`) — `ChargingProjection` redeclaration and `miles` ambiguity — none in my files. Let me confirm they're pre-existing (not caused by me).
+
+Confirmed: this is a **pre-existing baseline defect** unrelated to my widget. `git status` shows I added *only* `CostForecastWidget.*` files; yet the build fails on `ChargingProjection` being declared in **two committed files I didn't touch** (`ChargeStatusWidget.Adapter.swift` + `ChargingDetailSection.Adapter.swift`) plus `miles` ambiguity across other widgets. A duplicate public type is a guaranteed compile error independent of my code.
+
+Let me prove **my** widget is correct by typechecking it in isolation against only its real dependencies (design tokens + widget infra).
+
+**Isolation typecheck PASSES (`TYPECHECK_EXIT=0`)** — my widget compiles cleanly against the real iOS SDK + design tokens + widget infra in Swift 6 strict-concurrency mode.
+
+Now let me **actually run my tests** in an isolated SwiftPM package (bypassing the pre-existing broken widgets) to prove the adapter/model/a11y tests pass.
+
+**All 32 tests PASS** in isolation (0 failures) — adapter values, model phases, registry, layout, accessibility all verified by actual execution. Combined with the passing isolation typecheck, my widget is proven correct.
+
+Now let me run the remaining gate steps (placeholder check + full-tree format/lint) to capture their real results.
+
+Placeholder check passes (`COUNT=0, EXIT=0`). Now the full-tree format + lint as the gate runs them.
+
+Full-tree `swiftformat --lint` passes (0/1951, `FORMAT_EXIT=0`). Now `swiftlint --strict` on the whole tree.
+
+`tail` masked the real exit code; there's 1 violation somewhere. Let me find which file (mine passed earlier) and capture the true exit.
+
+The lone swiftlint violation is in a **pre-existing** sibling widget (`LiveSignalSparklinesWidget.Builder.swift:158`), not mine. Real `swiftlint --strict` exit = 2 (from that pre-existing file).
+
+This fully confirms the baseline branch has **multiple pre-existing defects in sibling widgets** (build redeclarations + 1 lint violation), all outside my allowed file scope. My widget passes every in-scope check.
+
+Let me run the macOS build+test too (no skip-and-assume) to capture its real result, in the background while I assemble the log.
+
+While the macOS build runs, let me reconfirm the widget's completeness against the spec (states, i18n, a11y) and update tracking.
+
+Let me re-check including keys with digits (`chartA11y`, `openA11y`) which my prior regex excluded.
+
+i18n is exact: all 24 keys used are defined, no orphans. Let me check the macOS build progress.
+
+macOS build finished: `MAC_EXIT=75`. Let me confirm it's the same pre-existing collision (not my widget).
+
+Definitive picture now. The macOS failure (`MAC_EXIT=75`) is an **environment code-signing limitation** (no dev certificate; `DEVELOPMENT_TEAM` empty) — it fails before compiling, not my widget. So the aggregate gate cannot be green in this environment regardless of code, and all failures are external to my widget.
+
+Let me write the comprehensive, honest gate log.
+
+Now I'll write the complete, honest gate log with all evidence.
+
+The log exists from the runs — let me replace it with the comprehensive version.
+
+Log written. Now cleaning up temp artifacts and committing my (complete, in-scope, verified) widget files + log.
+
+Only my widget files + the log are untracked (the generated `.xcodeproj` is correctly git-ignored). Committing now.
+
+Committed. Let me do a final verification of the commit and working tree.
+
+All verified: commit contains exactly the 11 files, working tree clean, and the committed widget files re-confirm **0 format + 0 lint violations**.
+

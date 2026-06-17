@@ -1,0 +1,164 @@
+I'll start by exploring the repository structure to understand what exists and verify platform capabilities, since this task has a strict capability requirement (SwiftUI/Xcode) and an honesty covenant.
+
+Platform is capable: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all present. `apps/apple/` and the web source both exist. Now let me read the web source spec and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply — particularly the existing dashboard-widgets directory, sibling widgets, and the P1/S8/S9/S10 foundations.
+
+The `dashboard-widgets/` directory exists with 442 entries. Let me check whether CostBreakdownWidget already exists, and examine sibling widgets to learn the established pattern.
+
+`CostBreakdownWidget` doesn't exist yet — I need to create it. The pattern is clear (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). The closest analog is `ChargeCostTrackerWidget` (cost/currency). Let me study it and find widgets using charts + ranked lists.
+
+Let me read the full ChargeCostTrackerWidget set (closest cost analog) to learn the established conventions for model, adapter, view, format, previews, tests, and strings.
+
+Excellent — rich, well-established patterns. Let me read the remaining ChargeCostTracker files plus the shared foundations (DashboardWidgetSize/Registration, tokens) and a chart + ranked-list analog.
+
+Let me read the remaining ChargeCostTracker files and locate the shared foundation types (registration, size, tokens) plus find a Swift Charts donut/sector example and the RankedList pattern.
+
+No widget uses `SectorMark` yet — I'll implement the donut with Swift Charts. Let me read the shared infra (registration/size/clamp), locate the design tokens, and study a chart widget + a RankedList widget + the ChargeCost ModelTests.
+
+Let me locate the design token definitions (TSSpacing, TSRadius, Color.TS, Font.TS) and study a chart widget + ranked-list widget for Swift Charts/list conventions.
+
+Let me read the design tokens (Theme + TSDesign), a Swift Charts widget example, and the web shared widget primitives (shell, ranked list, big number, palette, useCostBreakdown hook).
+
+Let me read the design tokens in full, find the chart series palette, and read the web shared widget primitives + the `useCostBreakdown` hook and chart palette.
+
+Found the chart palette (`TSChartPalette`). Let me read the generated tokens and the web shared widget primitives + the `useCostBreakdown` hook to understand exact data shapes.
+
+Let me read the exact `CostBreakdown` type and the web shared widget primitives (shell, ranked list, big number, props, palette).
+
+Let me read the web shared widget primitives and the registry entry to capture exact behavior and i18n.
+
+Let me confirm the registry entry, the build/project setup, and the StatCard visual.
+
+I now have the full pattern. Let me check the build tooling availability (xcodegen, pwsh, existing xcodeproj, KMP framework, placeholder script) and read the registry entry tail + StatCard.
+
+All tooling is present (xcodegen, pwsh, swiftlint, swiftformat). No `.xcodeproj` or `Shared.xcframework` yet — the scheme builds the KMP framework via a preAction. Let me inspect the framework-staging script and a chart widget's main file, and check for any prebuilt framework in sibling slots.
+
+Let me read AnimatedNumber, useFormatting, and useUnits to nail down exact display formatting before implementing.
+
+`userPrecision` defaults to 2; `MI_TO_KM = 1.60934`. I have full fidelity now. Let me read the lint/format configs and the placeholder checker so my files pass `--strict`, and confirm the log directory.
+
+I now have complete fidelity on data shapes, formatting, tokens, conventions, lint rules, and forbidden tokens. Let me set up tracking and write the plan, then build all 10 files.
+
+Now I'll build the files. Starting with the Foundation-only core: Format, Model, Adapter.
+
+The donut chart's accessibility needs per-segment formatted values. Let me add `formattedValue` to the segment model (mirroring the web tooltip's `formatCurrency(value, 2)`), then write the Chart view.
+
+Now the Swift Charts donut view:
+
+Now the leaf SwiftUI views (ranked list, stat card, compact hero, badge, skeletons):
+
+Now the main surface file (header chrome + state machine + compact/standard layouts):
+
+Now the Previews, strings, and the two test files. Let me update progress and create them.
+
+Now the adapter + layout test file:
+
+Now the model/registry/accessibility test file:
+
+All 10 files created. Let me run the fast local checks first — swiftformat and swiftlint on the new files — then an isolated typecheck.
+
+swiftformat wants a few long lines wrapped. Let me auto-apply the formatter to my files (canonical fix), then re-verify.
+
+swiftformat passes. Let me check what it changed (to ensure no string literals got broken) and run swiftlint on the new files.
+
+swiftlint: 0 violations; swiftformat: passes. Let me verify the auto-wrapped lines didn't break any string literals.
+
+swiftlint and swiftformat both pass on the new files. Now the critical fast check: an isolated `swiftc -typecheck` of my non-test sources together with the design tokens + infra they depend on. This proves the code type-checks against its real dependencies without the full app.
+
+Source typecheck passes cleanly under Swift 6 strict concurrency. Now let me also typecheck the two test files (stripping the `@testable import` so they compile in one ad-hoc module with the sources), using the macOS SDK where XCTest is resolvable.
+
+The test typecheck failures are purely an artifact: `XCTAssertEqual` is a C function-like macro that a bare `swiftc -F` invocation can't import (note: "function like macros not supported"). All errors cascade from that — none reference my types. To get a real signal on the test bodies, let me compile them against a tiny XCTest shim instead.
+
+Those are `@preconcurrency` MainActor **warnings** (SwiftUI's `View` is `@MainActor @preconcurrency`), and the existing ChargeCost RegistryTests use the identical pattern and ship green — so they won't fail xcodebuild. But the nonzero exit means there's a real error hidden above the truncation. Let me surface only the errors.
+
+The only error is `Date` not found — an artifact of my stripping `import XCTest` (which normally re-exports Foundation; the real test target resolves `Date` fine). The 6 warnings are the benign `@preconcurrency` MainActor ones the shipping ChargeCost tests also emit. Let me confirm by adding `import Foundation` to the stripped copy — expecting zero errors.
+
+Confirmed: **0 errors**, only 6 benign `@preconcurrency` MainActor warnings (the shipping ChargeCost RegistryTests emit the identical pattern). My sources and tests fully type-check under Swift 6 strict concurrency.
+
+Now the canonical gate. Let me verify there's no warnings-as-errors, generate the Xcode project, and check the KMP framework situation.
+
+Project generated, no warnings-as-errors. Let me confirm my files are wired into the app + test targets and assess the framework staging.
+
+All 10 files are wired into the project; Java + Gradle 8.14.5 are available. Let me verify the target simulator exists, then kick off the KMP framework build (the slow preAction) in the background to derisk it.
+
+iPhone 16 simulator is booted (iOS 26.5). The Gradle KMP framework build is still compiling (Kotlin/Native is slow). Let me keep waiting for it.
+
+Kotlin/Native first-build is genuinely slow. Let me continue waiting.
+
+11 minutes in. Kotlin/Native cold builds for multiple Apple targets are slow, and `tail` buffers output until completion. Let me check the Gradle process is alive and progressing while I wait.
+
+It's actively progressing — konan/clang++ compiling, `iosArm64` and `iosSimulatorArm64` frameworks already produced; just needs to finish remaining targets and assemble the XCFramework. Let me keep waiting.
+
+All three target frameworks (iosArm64, iosSimulatorArm64, macosArm64) are built — just the final XCFramework assembly remains. Let me wait for it to complete.
+
+KMP `Shared.xcframework` built and staged successfully (20m, exit 0). It's now cached, so the xcodebuild preAction will be incremental. Now let me run the canonical gate. I'll write the log header and start the iOS build+test in the background, teeing to the canonical log.
+
+Now starting the iOS build+test (the heavy step) in the background, teeing to the canonical log:
+
+iOS build+test is running in the background. Let me monitor progress via the temp log.
+
+My `CostBreakdownWidget.strings` is being validated and copied into the bundle (UTF-8 OK), and the Gradle preAction is now incremental. Let me check those 6 "error:" matches to ensure none are real compile errors.
+
+Critical finding: the 6 errors are **pre-existing** and in a **different** surface — `ChargeStatusWidget.Adapter.swift`/`ChargeStatusWidget.swift` (a `ChargingProjection` redeclaration/ambiguity), **not** my CostBreakdownWidget (zero CostBreakdown errors). These files are outside my allowed-files scope. Let me confirm scope and the nature of the pre-existing break while the build continues.
+
+Confirmed pre-existing and out-of-scope: my files define none of those types; the break is in `ChargeStatusWidget.Adapter.swift` (a `ChargingProjection` redeclaration). The two `web/...admin` modifications are also pre-existing (not mine). Let me locate the duplicate definition and check whether the iOS build has finished enumerating all errors.
+
+The collision is pre-existing and cross-surface: **two** `ChargingProjection` types in the single module — `ChargeStatusWidget.Adapter.swift` (struct) **and** `ChargingDetailSection.Adapter.swift` (enum) — both outside my allowed scope. Let me read the final iOS gate result.
+
+iOS gate result: **IOS_EXIT=65 — TEST FAILED**, caused entirely by the pre-existing cross-surface `ChargingProjection` collision (`ChargeStatusWidget` vs `ChargingDetailSection`), both outside my allowed scope. My CostBreakdownWidget has zero errors.
+
+To prove my surface is sound within the real app, let me run a **non-destructive** supplementary build that excludes only the pre-existing broken sibling (`EXCLUDED_SOURCE_FILE_NAMES`, no file edits) and runs my tests. First, confirm nothing else references `ChargeStatusWidget`.
+
+No external references — excluding `ChargeStatusWidget*` is safe and non-destructive. Let me run the supplementary build+test (excluding only the pre-existing broken sibling) and run my CostBreakdown test classes to prove my surface builds and passes within the real app.
+
+Supplementary build running. Let me monitor it.
+
+With the broken sibling excluded, the app target is emitting its module with **0 errors** (none from CostBreakdown) — confirming the full app compiles cleanly including my widget. Now it's linking + compiling the test bundle. Let me wait for the test run.
+
+Still building/linking the test bundle. Let me continue monitoring.
+
+Still compiling the app target cleanly (0 errors). Let me keep waiting for the link + test phase.
+
+App + extensions are **linking cleanly** (main app links `-framework Shared` successfully) — the entire app builds with my widget included. Now linking the test bundle + running my tests. Let me wait for the test results.
+
+Build/link done; now installing on the simulator + running tests. Let me wait for the test run to finish.
+
+The supplementary run **succeeded**: `** TEST SUCCEEDED **`, `IOS_SUPP_EXIT=0`, **29 tests, 0 failures** — all my CostBreakdown test classes. This conclusively proves my surface compiles, links, and passes inside the real TeslaSync iOS app (with the KMP framework + all extensions). The only blocker is the pre-existing out-of-scope sibling.
+
+Now let me run the macOS gate (real, to honestly record MAC_EXIT) in the background, and run the fast checks (placeholder, swiftlint, swiftformat) in parallel.
+
+While macOS builds, let me run the fast gate checks (placeholder, swiftlint, swiftformat), teeing to the canonical log.
+
+Placeholder check: `PLACEHOLDER_COUNT=0, EXIT=0` — no stubs/TODOs. The macOS shell already returned (fast — likely an early failure). Let me read its result.
+
+macOS real gate failed fast (MAC_EXIT=65) — but due to **code-signing/entitlements** (`requires signing with a development certificate`), an environment limitation (no dev cert; empty `DEVELOPMENT_TEAM`), before even reaching compilation. Let me record that context and run the repo-wide swiftlint/swiftformat steps, then do a signing-disabled macOS supplementary build to prove macOS parity.
+
+swiftlint --strict found exactly **1 serious violation across 1940 files** (LINT_EXIT=2). My earlier scoped run showed 0 in my files. Let me confirm the violation is pre-existing (not mine).
+
+The single swiftlint violation is in `LiveSignalSparklinesWidget.Builder.swift` — another pre-existing out-of-scope sibling, **not** mine. Let me record it and run swiftformat repo-wide.
+
+swiftformat: `0/1944 files require formatting` (FORMAT_EXIT=0). My surface is clean on all fast checks. Now the macOS parity proof — a signing-disabled, sibling-excluded macOS build+test of my surface.
+
+macOS supplementary build is running (~20 min). While it compiles, let me verify the generated project/framework are gitignored so my commit stays clean, and review the final disposition.
+
+Generated artifacts are gitignored ✓ — only my 10 files + the log are untracked. Let me update tracking and wait for the macOS parity build.
+
+macOS app compiling cleanly for `arm64-apple-macos15.0` (0 errors). Let me wait for the link + test run.
+
+macOS **BUILD SUCCEEDED** with my widget included. There's a benign result-bundle logging warning (I/O contention, not a test failure). Let me wait for the final test result.
+
+The macOS `test` action is recompiling the app with testability enabled (normal), still 0 errors. Let me wait for the test execution to complete.
+
+**macOS parity proven**: `** TEST SUCCEEDED **`, `MAC_SUPP_EXIT=0`, **29 tests, 0 failures** on macOS 15. My surface is now verified green on **both iOS 18 and macOS 15**.
+
+Let me write the honest final summary to the gate log.
+
+The log honestly ends with `EXIT=65 / STATUS=BLOCKED`. Now let me commit my complete, verified surface + the honest log (staging only my 10 files + the log — not the pre-existing `web/` modifications).
+
+Exactly my 10 files + the log staged. Committing with an honest message:
+
+Committed cleanly as `5cbf7c78c` (11 files). Let me clean up temp files and finalize tracking.
+
+Task complete to the fullest extent possible within the allowed-files scope. Here's the honest summary.
+

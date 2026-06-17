@@ -1,0 +1,166 @@
+I'll start by exploring the environment and understanding what's available, then read the web source specification.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+The pattern is clear. Let me check for any existing Tooltip files and study a reference surface (Accordion) to understand the established conventions.
+
+No `Tooltip` surface exists yet, but `HelpTooltip` and `ChartTooltip` are closely related references. Let me study the `HelpTooltip` pattern in depth since the web `Tooltip` underpins `HelpTooltip`.
+
+Let me read the full HelpTooltip implementation set (Model, Adapter, Views, Previews, strings, Tests) to understand the complete conventions.
+
+Excellent — this is a high-quality, faithful-parity pattern. Let me read the remaining HelpTooltip files (Views, Previews, strings, Tests, AdapterTests) to complete my understanding.
+
+Now let me read the test files and understand the shared token/i18n infrastructure (P1/S9, S10, S11) referenced throughout.
+
+Now I understand the full pattern. Let me locate the shared token infrastructure (P1/S9 — `Color.TS`, `Font.TS`, `TSSpacing`, etc.) and check how `project.yml` includes source files.
+
+`project.yml` uses path globbing, so new files are auto-included. Let me view the design tokens (`TSMaterial.swift`) and confirm the test target config.
+
+Let me find the test-target config and the `Color.TS` / `Font.TS` token definitions to ensure I use correct token names.
+
+Let me view the full token catalog and the test-target configuration to finalize my understanding before writing code.
+
+The tokens live at `apps/design/generated/apple/Tokens.swift`. Let me view it.
+
+I now have all tokens and patterns. Let me check for naming collisions and review the SwiftLint config + a sibling "reveal/overlay" surface (ContextMenu) for conventions.
+
+No collisions; faithful-parity stance is well-established. Now let me assess the build toolchain — whether the Xcode project is generated (XcodeGen) and what simulators/schemes exist, since the gate requires building.
+
+Project needs generation via XcodeGen (available), iPhone 16 sim is booted. Let me check `pwsh` availability and study how a sibling floating-overlay surface (ContextMenu controller + ChartTooltip card) handles reveal/placement.
+
+`pwsh` is available too. Let me check the placeholder-check patterns (to avoid tripping the gate) and study how a minimal pure-primitive sibling (Spinner) handles i18n/strings when the source is nearly anonymous.
+
+I have a complete understanding of the conventions. Let me set up a todo list and write a brief plan, then implement the 8-file surface following the established faithful-parity pattern.
+
+Log directory exists, working tree clean. Now I'll write the surface. Starting with the pure core (`Tooltip.Adapter.swift`).
+
+Now the Model (i18n facade, telemetry seam, observable controller).
+
+Now the presentational pieces (`Tooltip.Views.swift`): the inverted-surface card and text, plus the side→alignment mapping.
+
+Now the public view (`Tooltip.swift`) — the reveal mechanics, positioning, accessibility, and telemetry.
+
+I referenced `scaleAnchor` — let me add it to the `TooltipSide` extension in Views.swift and refactor the long `.background` line to stay within the 120-col limit.
+
+Now the Previews file covering all branches.
+
+Now the `.strings` catalog contribution, documenting the anonymous surface.
+
+Now the pure-core tests (`Tooltip.AdapterTests.swift`).
+
+Now the state-holder + view-composition + facade tests (`Tooltip.Tests.swift`).
+
+All 8 files written. Let me run the fast linters on the new files first to iterate quickly before the full build.
+
+One `preferKeyPath` formatting nit. Let me view the exact line.
+
+The `preferKeyPath` rule dislikes the trivial closure chain. Let me rewrite `describedBy` more cleanly.
+
+Re-running swiftformat on all Tooltip files to confirm clean.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+Both linters pass with 0 violations. Now I'll generate the Xcode project and run the build. First, generate with XcodeGen.
+
+Project generates cleanly; both gate schemes exist. Let me verify the `Shared.xcframework` dependency exists before building.
+
+Key finding: `Shared.xcframework` is absent (only `.gitkeep`). Let me investigate the dependency chain and whether it's buildable.
+
+The app links a KMP `Shared.xcframework` built via Gradle/Kotlin Native as a pre-build step. Let me check whether that toolchain (JDK/Gradle) is available.
+
+JDK 17 + gradlew present, so the KMP framework is potentially buildable. Before the heavy full build, let me get fast, focused proof my surface type-checks by compiling it standalone against the real design tokens.
+
+Path fix — tokens are one level up.
+
+My surface type-checks cleanly against the real tokens (macOS 15 target). Now I'll build the required KMP `Shared.xcframework` (the long pole). Starting it in the background.
+
+Gradle works and the XCFramework task exists. Now building + staging the framework via the project's script (Kotlin/Native compile — this is the slow step).
+
+Framework staged successfully (6m25s). Now running the iOS `build test` gate (this compiles the full app + test bundle — the heavy step). Starting in background.
+
+iOS build returned exit 65. Let me find the actual errors.
+
+No `error:` lines. Let me inspect the failure context (tail + failure markers).
+
+Let me see the compile failure context around line 17125.
+
+This is a **swift-frontend compiler crash** (an `abort()` during IR generation), not a source error in my code. The crashing file is `AppearanceSettings.Controls.swift` (an unrelated feature-view), and my Tooltip files aren't in the stack. Let me see the precise crash reason and the second failure.
+
+The full `build test` fails on a **swift-frontend compiler crash** — an internal `abort()` in IRGen (`report_at_maximum_capacity` → `report_fatal_error`) while compiling a batch of unrelated feature-view files (`AppearanceSettings.*`, `ApiPlaygroundPage`, etc.). My Tooltip files are not in the failing batch, and the crashing symbol is a SwiftUI reabstraction thunk unrelated to my code.
+
+Per the Honesty Covenant (no skip-and-assume), I must prove this is pre-existing and not caused by my surface. Let me build the baseline **without** my files to confirm the identical crash.
+
+My files are stashed and the baseline project regenerated (remaining "Tooltip" matches are `HelpTooltip`/`ChartTooltip`). Now build the baseline app to confirm the identical crash.
+
+Baseline (without my files) also fails with exit 65. Let me confirm it's the identical compiler crash.
+
+**Decisive proof.** The baseline (without my files) fails with the **identical** crash: same thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, same `report_at_maximum_capacity` → `SyncCallEmission::setArgs` stack, zero source-level errors. This is a **pre-existing swift-frontend compiler crash** in the existing codebase, independent of my surface.
+
+Let me restore my files and regenerate.
+
+Now, to get **real test-execution evidence** for my surface despite the unrelated full-module compiler crash, I'll compile my surface + its tests in isolation as a minimal SwiftPM module named `TeslaSync` and run the tests.
+
+**All 42 tests PASS** in isolation (real execution, macOS 15, `@testable import TeslaSync`). My surface compiles and every assertion passes.
+
+Now let me run the remaining gate steps that execute honestly on the full scope: whole-project swiftlint, swiftformat, and the placeholder check.
+
+Whole-project swiftlint reports **pre-existing** violations in `WidgetChartSummary.Tests.swift` (a widget-primitive, not mine). Let me confirm the complete violation set and that none are in Tooltip files.
+
+Confirmed: exactly 3 pre-existing swiftlint violations, all in `WidgetChartSummary.Tests.swift`, **zero** in Tooltip files. Now swiftformat (whole apps/apple) and the placeholder check.
+
+swiftformat: pre-existing issue in `RecentDrivesSection.Previews.swift` (not mine); **zero** Tooltip format issues. Now the placeholder check on the Tooltip surface.
+
+Placeholder check passes (COUNT=0, EXIT=0). Let me independently confirm my files contain none of the forbidden tokens.
+
+My Tooltip files are clean. Now let me run the macOS gate step too (the gate requires both platforms) to complete the honest evidence — it shares the same module/toolchain so I expect the same pre-existing crash, but per "no skip-and-assume" I'll verify rather than assume.
+
+macOS build also fails (EXIT=65). Let me confirm the same crash signature.
+
+macOS fails even earlier — on a **code-signing/entitlements** error (no development certificate in this environment), a separate pre-existing environmental blocker, before it can even compile. Both gate build steps are blocked by environmental/pre-existing issues, neither caused by my surface.
+
+Let me gather precise evidence excerpts to embed in the official log.
+
+Let me confirm macOS also hits the same compiler crash (beyond the signing blocker) by building with signing disabled — running in the background while I write the log.
+
+The macOS-no-signing build is compiling. Let me write the official gate log now while it runs, then update with its result.
+
+Let me check the macOS-no-signing build result.
+
+Still compiling (fresh derived data). Let me wait for it to confirm the macOS compiler-crash evidence.
+
+It's actively compiling (no crash yet — macOS may order the crashing batch later). Let me wait for it to reach a conclusion.
+
+Still compiling (19.8k log lines). Let me wait once more for it to conclude.
+
+macOS no-sign build finished (EXIT=65). Let me confirm the crash signature.
+
+Confirmed — macOS hits the **identical** pre-existing compiler crash (same thunk, same `AppearanceSettings.Controls.swift` IRGen, same stack) once signing is bypassed. Let me update the log with this confirmed result.
+
+Let me update todos and check the working-tree state (the generated project + framework are build artifacts that shouldn't be committed).
+
+Working tree is clean — only my 8 Tooltip files + the log are untracked; the generated project and framework are git-ignored. Per Honesty Covenant rule 8 ("no commit on red"), I will not commit since the gate is red on pre-existing/external blockers. Let me refine the log wording and clean up temp build artifacts.
+
+Let me do a final confirmation that the restored files are intact and still pass all surface-level checks (guarding against any issue from the stash/restore cycle).
+
+All restored files pass: 8 present, swiftlint clean, swiftformat 0/7, typecheck EXIT=0. Let me verify the log's closing lines are correct.
+
+The official gate log is complete and honest, ending with `EXIT=65` / `STATUS=BLOCKED`. All work within my allowed scope is finished and verified.
+
+## Summary
+
+I implemented the **`Tooltip` Apple shared surface (P4 · 0231)** at full parity with `web/src/components/ui/Tooltip.tsx`, following the established sibling-surface architecture (HelpTooltip 0216). **8 files**, all in the allowed `Tooltip.*` scope:
+
+- **`Tooltip.Adapter.swift`** — pure core: surface slug, i18n seam, `TooltipSide` (web `side` + `left→leading`/`right→trailing`, RTL-aware reveal-offset math), `TooltipLayout` (web Tailwind metrics), `TooltipProjector` (empty-content guard + `aria-describedby` join).
+- **`Tooltip.Model.swift`** — P1/S10 strings facade, P1/S11 telemetry seam, `@Observable` `TooltipController` (`useId`-peer id, reveal state, once-only `view.opened`).
+- **`Tooltip.Views.swift` / `Tooltip.swift`** — inverted-surface card (token-only), 4-side positioning, hover/tap/programmatic reveal, Reduce-Motion, `aria-describedby` hint, string-content convenience.
+- **`Tooltip.Previews.swift`**, **`Tooltip.strings`**, **`Tooltip.Tests.swift` + `Tooltip.AdapterTests.swift`** (42 tests).
+
+**Surface verification — all GREEN:** standalone typecheck (macOS 15) ✓ · `swift test` **42/42** ✓ · swiftlint `--strict` 0 violations ✓ · swiftformat 0 issues ✓ · placeholder gate 0 ✓.
+
+**Honest status: `STATUS=BLOCKED`.** The full-project xcodebuild gate cannot reach green due to **pre-existing/environmental blockers outside my allowed file set**, all proven *not* caused by Tooltip:
+- **iOS `build test`** → a swift-frontend **IRGen compiler crash** (`report_at_maximum_capacity`) on unrelated `AppearanceSettings.Controls.swift` — **proven pre-existing** by a baseline build *without* my files reproducing the identical crash.
+- **macOS `build test`** → dev-signing absence, then the *same* crash (confirmed).
+- whole-project swiftlint/swiftformat → pre-existing violations in `WidgetChartSummary.Tests.swift` / `RecentDrivesSection.Previews.swift` (other surfaces).
+
+Per Honesty Covenant rules 1 (no red-as-green) & 8 (no commit on red), I did **not** commit; the verified files remain in the working tree, and the gate log at `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0231-Tooltip.log` documents everything, ending with `EXIT=65` / `STATUS=BLOCKED`.
+

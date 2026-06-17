@@ -1,0 +1,329 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app, and the dependencies.
+
+Now let me explore the Apple app structure, parity manifest, and existing patterns.
+
+The output path uses `Features/Driving/` but the actual structure uses `feature-views/` etc. Let me investigate the existing patterns, parity manifest, and ledger.
+
+The `feature-views/` dir is flat with 2655 files. Let me find existing page implementations and similar driving pages to follow conventions, plus the manifest entry for this unit.
+
+Key finding: `DriveScore` and `DriveDetail` driving pages are already done. Let me see where those actually live to follow the real precedent, since the prompt's path differs from the repo's actual `feature-views/` layout.
+
+The real precedent lives in `apps/apple/Sources/Features/Driving/` (not the prompt's `TeslaSync/Features/Driving/`). Per covenant rule #7 (no predecessor bypass), I'll follow the DriveScore/DriveDetail convention. Let me study them and the project config.
+
+Excellent precedent. Let me dig into the model, charts, route registration, format, and locate the string catalog and the web hook/types.
+
+Now let me read the web hook + types, the charts precedent, and locate routing + string catalog + KMP data wiring.
+
+No `routeEfficiency` case exists in `AppRoute`. DriveScore used an alias to `.driving`. Let me understand the routing/registry mechanism and the alias approach.
+
+Let me see how registrations are aggregated and how DriveDetail (a sub-route) registered, to choose the right navigation approach.
+
+Let me read the app's registration wiring and check how `.driving` is hosted and whether there's a driving hub.
+
+Now I understand the routing. `.driving` is hosted by DriveScore; I'll mirror DriveDetail's typed `NavigationDestination` + alias approach. Critical next: check whether the Xcode/SwiftLint toolchain is available (determines BLOCKED vs DONE), and study charts + production data wiring.
+
+Full toolchain is available (Xcode 26.5, xcodegen, swiftlint, swift 6.3) — so the gate must reach DONE, not BLOCKED. Let me study charts, sample/production data sources, the placeholder gate, and check the string catalog.
+
+Strong grasp of the patterns now. Let me examine the panels precedent (stat cards, metric bars, badges, range control), the units facade, available components, and the placeholder gate + string catalog.
+
+Let me read the format helper, units facade, the range control, and survey the component library (DataDisplay, UI Badge, charts).
+
+Let me read the key component definitions and the range control to know exact APIs.
+
+Let me read the ChartContainer + models, Badges, the units facade, and the range control.
+
+Let me locate the `tsUnits` env key, check the Shared framework presence, inspect the placeholder gate, and grep the string catalog for existing keys.
+
+Two critical unknowns: the `Shared.xcframework` is absent (only `.gitkeep`), and I need the `tsUnits` env key. Let me investigate the framework build situation and the gate contract.
+
+The build needs a Gradle/Kotlin-Native-built `Shared.xcframework`. Let me read the gate contract (README), the placeholder script, and check the JVM/Gradle toolchain.
+
+Java 17 + Gradle wrapper present, but the `Shared.xcframework` must be built (Kotlin/Native). That's the long pole — I'll start it now in the background, and meanwhile finish studying APIs, the placeholder gate, and the string-catalog format.
+
+Now let me read the forbidden-pattern list and inspect the actual string-catalog format + existing `routeEfficiency` keys.
+
+The catalog keys are prefixed with `translation.` (e.g. `translation.routeEfficiency.title`), but DriveScore code uses bare keys like `"driveScore.title"`. I must understand this mapping. Also `routeEfficiency.comparison.aria` appears missing. Let me investigate the catalog mechanism and one full entry.
+
+Key insight: the catalog has **bare** keys (`"driveScore.title"`, `"common.noData"` — Xcode canonical style) that Swift actually resolves, plus auto-imported `translation.*` duplicates that are unused. DriveScore uses bare keys. So I must add **bare** `routeEfficiency.*` keys. Let me confirm none exist bare and view the canonical format.
+
+Confirmed: I must add **18 bare `routeEfficiency.*` keys** (`common.noData` already exists bare). The `translation.*` versions are a different, unused namespace. Let me extract the canonical English values from the existing `translation.routeEfficiency.*` block and check the Gradle build progress.
+
+I have all canonical string values. Gradle build is running. Now let me confirm the remaining component signatures and study the test pattern before writing code.
+
+Let me read the exact init signatures for GlassPanel/Card/CardHeader, EmptyState/ErrorDisplay, and Typography components.
+
+I have all component signatures. Let me check the chart palette/tokens and the Gradle build progress, then I'll start writing.
+
+I now have everything needed. Let me check how `DriveDetail`'s NavigationDestination is adopted (to mirror reachability) and the Gradle progress, then write the plan.
+
+`DriveDetail`'s NavigationDestination registration exists as infrastructure without being wired into a host — that's the accepted precedent. I'll mirror it exactly (typed link + destination + factory + `/route-efficiency` alias). Gradle is still compiling Kotlin/Native (the long pole). Let me write the plan and start implementing.
+
+Let me check the SwiftLint config (line limits, rules) before writing, so the code passes `--strict`.
+
+SwiftLint: code lines ≤120 (comments ignored), no trailing commas, use `.min()/.max()`/`.first(where:)`, identifiers ≥2 chars. I have everything. Let me create the files, starting with the model and sample data sources.
+
+Gradle finished — the Kotlin/Native framework is built (the long pole). Let me confirm, then continue creating files.
+
+Framework built successfully (release XCFramework). The pre-build phase will stage it. Now let me create the sample data sources and the formatter.
+
+Now the main page view:
+
+Now the panels file (summary, route cards, metrics, range control, skeleton):
+
+Now the comparison chart section (ChartContainer + BarChart):
+
+Now the navigation registration (mirroring DriveDetail's typed-link pattern) and the route alias:
+
+Now let me add the 18 bare `routeEfficiency.*` keys to the string catalog via a surgical textual insertion (avoiding a full JSON reformat):
+
+Strings added and JSON validated. Now the tests. Let me check the test target config and available `UnitPreferences` presets.
+
+Tests are auto-discovered from `Tests/Unit`. Let me write both test files (model + format):
+
+Now the format tests:
+
+All files created. Let me update todos and start the gate — first SwiftLint on the new files (fast feedback), then xcodegen.
+
+Two fixable lint issues: a 6-param test helper and Panels.swift at 418 lines (>400). Let me fix the test helper (reduce to 5 params) and split the skeleton/range-control into a Chrome file.
+
+Now split the Panels file: move the range control and skeleton into a new Chrome file.
+
+Now remove those two structs from Panels.swift:
+
+Let me re-run SwiftLint on all new/modified files to confirm clean:
+
+SwiftLint `--strict` is clean (0 violations). Let me check SwiftFormat lint on the new files, then generate the Xcode project.
+
+SwiftFormat clean too. Now let me generate the Xcode project:
+
+Project generated and references the new files. Now the build (first full build — the long pole). Let me start it for an iOS Simulator destination:
+
+While the build runs, let me run the placeholder gate on the new files and study the ledger + log formats.
+
+The placeholder scan flagged `.redacted(reason: .placeholder)` — the Apple API identifier `.placeholder` matches the "Placeholder" pattern. Let me see how sibling pages legitimately handle this (there are already 2 allowed opt-outs in the dir).
+
+The convention is a `// parity:allow` marker (sibling pages do exactly this). Let me add it:
+
+Let me re-run the placeholder gate and check the build progress:
+
+Placeholder gate passes (COUNT=0, EXIT=0). Build still compiling. Let me prepare the ledger insertion while waiting — viewing the driving rows for a clean anchor.
+
+Build is compiling. Let me wait for it to progress and check the tail.
+
+The piped tail only flushes at the end. Let me check the build log file directly for progress:
+
+Build is deep into compiling the app target (emitting module, no errors yet). Let me continue waiting:
+
+Let me check the log file again for compile progress or errors:
+
+No errors; the app-target module emission for this large app is the slow step. Let me wait longer:
+
+Now compiling individual files (past module emission), no errors. Let me keep waiting:
+
+Build failed — but in `AnomalyDashboardModels.swift` (Diagnostics), NOT my files. I must determine if this is pre-existing or caused by my change. Let me find the actual error.
+
+The error is a **pre-existing** Swift type-checker timeout in `AnomalyDashboardModels.swift:185` (Diagnostics) — a file I never touched. Let me confirm it's not from my change and inspect it.
+
+Confirmed pre-existing: `AnomalyDashboardModels.swift:185` is a Swift type-checker timeout in Diagnostics — not in my changeset (only my Driving files + AppRouteParser + xcstrings changed). This `dictionary.map{...}.sorted{...}` chain is a borderline type-inference expression that can be load-sensitive. Gradle was hammering the machine when the build started. Let me retry the build (now incremental, machine quiet) to see if it's deterministic:
+
+Retry running incrementally. Let me wait and check the result:
+
+Recompiling, no errors yet, AnomalyDashboard not reached. Let me wait more:
+
+The app target compiles in large batches (static log between bursts, as in the first build). My RouteEfficiency files are in the compile set with no errors so far. Let me wait for the AnomalyDashboard batch:
+
+Build jumped to 19337 lines, 21 active compiler processes, no errors yet — approaching the AnomalyDashboard batch. Let me wait:
+
+AnomalyDashboard compiled past the previous failure point (25318 lines, 3 mentions, **no errors**) — confirming the first failure was a load-induced flaky type-check timeout (overlapping the heavy Gradle build), not deterministic. The build is still linking. Let me wait for completion:
+
+Still compiling (dashboard-widgets now, 42 parallel processes, no errors). Large target set. Let me wait:
+
+Progressing steadily (33826 lines, shared-surfaces, no errors). Let me continue waiting:
+
+The retry failed at the **same** line — so `AnomalyDashboardModels.swift:185` is a **deterministic, pre-existing** Swift type-checker timeout in the Diagnostics feature (a `dictionary.map{…}.sorted{…}` chain), entirely unrelated to my RouteEfficiency work. It blocks the whole-app gate for everyone. The compiler itself prescribes the fix ("break up the expression").
+
+Since the gate requires a green full-app build and this is the sole blocker, I'll apply the minimal, behavior-preserving unblock the compiler recommends, and document it transparently. Let me view the exact context first:
+
+Only **one** type-check timeout in the entire build — fixing this single expression unblocks the whole build. `AnomalySignalCount` is trivial. I'll apply the compiler-recommended split (split the chain + annotate the intermediate), which is behavior-identical:
+
+Now let me verify with a quick lint of the changed file and kick off the incremental rebuild (only the changed file + link recompile now):
+
+Lint clean. Rebuild running. While it compiles, let me verify all 19 required strings are actually referenced in my code (parity evidence must be real):
+
+All 19 strings verified referenced in code. Let me check the rebuild progress:
+
+Heavy parallel recompile (65 processes) — the prior failed build left an incomplete module, so it's rebuilding much of the app target. No errors yet. Let me wait:
+
+Build is in a large parallel compile batch (86 processes, buffered output). No errors. Let me wait longer:
+
+Output is batch-buffered (static log is normal for Swift batch mode); 88 processes indicate all targets/extensions compiling in parallel under heavy contention. Let me wait longer:
+
+The build is dual-arch (arm64 **and** x86_64 for `generic/iOS Simulator`), doubling the work — that explains the duration. It's now emitting the x86_64 module (the whole-module type-check where the AnomalyDashboard fix matters), still no errors. Let me wait:
+
+Past the module-emit type-check (the timeout location) for both arches with **no errors** — the fix is working. Now in per-file SwiftCompile (arm64). Let me wait for completion:
+
+Steady progress (15333 lines, dual-arch compile, no errors anywhere). The full dual-arch build is just slow. Let me wait in a larger increment:
+
+No errors across 19k+ lines; compiling widget extensions now. The build will succeed but is slow (dual-arch, ~2600 files). Let me wait:
+
+x86_64 pass of the extension targets now (no errors, no link yet). Let me wait again:
+
+Main app x86_64 pass underway (27789 lines, 105 processes, still zero errors). The dual-arch build is heavy but clearly succeeding. Let me wait:
+
+Compilation continues for both arches (29866 lines, no errors); link not yet reached. It's a very large dual-arch build. Let me wait:
+
+Build is still compiling both arches (34019 lines, growing, zero errors) — just slow on this large codebase. Let me wait:
+
+I see "BUILD SUC", CodeSign, and Validate in the log — but the shell still shows running. Let me look at the actual result lines and whether my build finished:
+
+The authoritative check shows **no** "BUILD SUCCEEDED/FAILED" yet — the dual-arch build is still compiling the main app target (Avatar, DateGroupedList…) with zero errors. This dual-arch full build is extremely slow. Since `xcodebuild test` itself builds the app, I'll pivot to a **single-arch** test run (reusing cached arm64 objects) to get build + test verification together efficiently. Let me find a simulator and switch:
+
+Booted sims suggest other parallel slots are testing (explaining the heavy contention). I'll stop my slow dual-arch build and run a single-arch `build test` on a dedicated simulator (reusing cached arm64 objects gives both build + test verification efficiently):
+
+Dedicated sim created. Now I'll run `build test` single-arch on it, scoping the test action to my two new test classes (the full app still builds for the `build` action, giving real build verification, while avoiding unrelated/UI-test flakiness):
+
+Build+test running (reusing cached arm64 objects). Let me wait and monitor:
+
+Single-arch build progressing (44 processes, no errors). Let me wait:
+
+In the arm64 whole-module emit phase (where the AnomalyDashboard fix is exercised), no errors. Let me wait:
+
+The whole-module emit for the 2655-file app target is the bottleneck (no errors). Let me keep waiting:
+
+Past the module emit (the AnomalyDashboard fix held — no type-check error), now in per-file compile (18168 lines, no errors). Single-arch is moving faster. Let me wait:
+
+The app **BUILD SUCCEEDED** ✅ (my code + the whole app compiles, AnomalyDashboard fix held). The TEST action failed only because the `TeslaSyncTests` bundle won't compile due to **pre-existing errors in an unrelated file — `VehicleCostPageModelTests.swift` (Admin)** — which I never touched. The bundle compiles all test files together, so these block my tests from running. Let me assess them:
+
+These are **genuine pre-existing Swift 6 errors** in `VehicleCostPageModelTests.swift` (Admin), unrelated to me: (1) a `@MainActor` static referenced in a `nonisolated` struct default, and (2) `XCTAssertEqual(..., accuracy:)` applied to `Date` (not `FloatingPoint`). The bundle compiles all test files together, so this blocks my tests. The app itself BUILDS. Let me view the full context to apply minimal, behavior-preserving unblocks:
+
+Let me check `VehicleCostTotals` Sendability to choose the correct minimal fix:
+
+`VehicleCostTotals` is `Sendable`, so `nonisolated static let` is the correct minimal fix. Let me apply both unblocks (behavior-preserving) to the broken pre-existing test file:
+
+Both unblocks applied. Let me lint the changed test file and run `build-for-testing` (app is cached, so this mainly compiles the test bundles and surfaces ALL remaining test-build errors at once — faster than a full test run):
+
+Lint clean. `build-for-testing` running (app cached → compiling test bundles). Let me wait and check for any remaining errors:
+
+`build-for-testing` finished. Let me check whether the test bundle now compiles cleanly or has more pre-existing errors:
+
+VehicleCost is fixed; now one more pre-existing error surfaced in `DriveDetailFormatTests.swift:43` (a `@MainActor` `make(...)` called from a nonisolated test context) — again not my file. Let me view it and check for similar patterns across test files to fix them in one pass:
+
+The fix is a simple `@MainActor` on that test method. This is the third pre-existing test break (the base's `TeslaSyncTests` bundle doesn't compile under Swift 6). To avoid many slow one-error-at-a-time rebuilds, let me proactively scan ALL test files for the same `@MainActor`-factory-from-nonisolated pattern and fix them in one pass:
+
+Only `DriveDetailFormatTests` (non-`@MainActor` class) has the broken `.make()` call; `ChargingDetailPageModelTests` is already `@MainActor`. Let me apply the minimal `@MainActor` fix and re-run the test-bundle build to surface any remaining errors:
+
+Let me re-run the test-bundle build to confirm it compiles cleanly now:
+
+Test bundle rebuilding. Let me wait and check for remaining errors:
+
+Another pre-existing break in `GDPRExportPageModelTests.swift` — the base's test suite is broadly incompatible with this Xcode 26.5 / Swift 6.3 toolchain (these "done" pages were clearly gated on an older, more lenient toolchain). Fixing one-per-slow-build is impractical. Let me check the full error set and proactively find ALL affected test files in one scan:
+
+The base test suite is broadly toolchain-incompatible (Swift batch mode aborts at the first failing file, hiding the rest). Fixing one-per-slow-build is untenable. Let me enumerate **all** test-bundle errors in a single pass by disabling batch mode:
+
+While the enumeration runs, a key hypothesis: these "@MainActor static from nonisolated" errors across many test files suggest the test files were written assuming **module-wide default MainActor isolation** (Swift 6.2 approachable concurrency / `-default-isolation MainActor`). If the app target has it but the test target doesn't, one build-setting would fix all of them. Let me check the project config:
+
+No global default-isolation setting (`SWIFT_VERSION 6.0` + strict concurrency), so the base's test files genuinely fail under this newer toolchain — they were gated on an older one. Let me wait for the full enumeration to size the problem:
+
+Single-file enumeration still compiling (slower mode, no errors surfaced yet — hasn't reached the broken files). Let me wait:
+
+The single-file enumeration is too slow. Let me stop it and identify the broken-file scope statically — all these errors are non-`@MainActor` `XCTestCase` classes calling `@MainActor` code. Let me find how many test classes lack `@MainActor`:
+
+Good news — the broken set is **small**. Of 123 test classes, only ~7 lack `@MainActor`, and most of those are pure-function tests (fine). The breaks are two patterns: (1) non-`@MainActor` class calling `@MainActor` code, and (2) a nonisolated `Stub` struct defaulting a property to a `@MainActor` static. Let me view GDPRExport and proactively find all pattern-2 cases (stub-struct defaults calling factories):
+
+GDPRExport's pattern: a nonisolated `StubSource` calls the `@MainActor` static helper `artifact(...)`. The fix is `nonisolated` on that static (like VehicleCost's `zeroTotals`). Many Admin `*PageModelTests` share this `StubSource`-calls-static-fixture shape. Let me identify them all at once:
+
+Only GDPRExport has the qualified stub-to-static call. Let me fix it (`nonisolated` on the static fixture) and run a fast batch build-for-testing to surface any remaining breaks:
+
+Let me run a fast batch build-for-testing to find any remaining test-bundle breaks:
+
+While it builds, let me proactively scan the other Admin `*PageModelTests` for the same static-fixture-referenced-from-stub pattern to fix them in one batch:
+
+Those statics are mostly referenced from `@MainActor` test methods (fine) — only stub-referenced ones break, which the compiler pinpoints. I'll let the build identify them precisely rather than over-fixing. Let me wait for bft3:
+
+Still compiling (no errors yet). Let me wait:
+
+Test bundle still compiling (batch-buffered). Let me wait:
+
+No errors after extended compile (promising — the 3 fixes may have cleared the bundle). Let me wait for completion:
+
+Fourth break: `TimelinePageModelTests.swift:318` calls `@MainActor` static `utcDayKey` from a nonisolated context. The base test suite has a handful of these. Let me view it and locate `utcDayKey`'s definition to fix at the source:
+
+`testUTCDayKey` (in a deliberately non-`@MainActor` format-test class) calls the `@MainActor` static `TimelinePageModel.utcDayKey`. `utcDayKey` is a pure date formatter that *should* be `nonisolated`. Rather than keep doing test-side whack-a-mole, let me check whether fixing these at the **source** (marking pure statics `nonisolated`) is cleaner — but first let me see the class context:
+
+`TimelineFormatTests` (non-`@MainActor`) is the culprit. My earlier per-file scan missed it (the file also has a `@MainActor` class). Let me do an accurate **per-class** scan for all non-`@MainActor` test classes that call `@MainActor` statics, so I can fix them all at once:
+
+My scan found the pattern precisely: only **3** non-`@MainActor` classes call `@MainActor` `*PageModel`/`*RouteRegistration` statics — `ChargingHeatmapDerivationsTests` (new), `DriveDetailFormatTests` (method already fixed), and `TimelineFormatTests`. Let me broaden the scan to also catch `@MainActor` constructors and stub-static refs so I fix everything in one pass:
+
+Refined scan (accounting for method-level `@MainActor`) shows only **TimelineFormatTests** remains for this pattern — `DriveDetailFormatTests` is fixed and `ChargingHeatmap`'s call is inside an already-`@MainActor` method. Let me verify ChargingHeatmap and fix Timeline:
+
+Confirmed — ChargingHeatmap uses method-level `@MainActor` (the codebase convention), so it's fine. Timeline is now fixed. Before rebuilding, let me proactively scan for remaining **pattern-2** cases (nonisolated stub structs referencing `@MainActor` static fixtures, like VehicleCost/GDPRExport):
+
+The RedisSignalViewer hit is a false positive (it's the struct's own instance property, not the static). So pattern-2 is clear (VehicleCost + GDPRExport fixed). Let me run build-for-testing to confirm the bundle now compiles:
+
+While bft4 runs, let me draft the evidence log so I can finalize quickly. Let me prepare it in the session workspace:
+
+Let me check bft4 progress:
+
+**TEST BUILD SUCCEEDED** ✅ — the bundle now compiles after the 5 bounded unblocks. Now let me run my tests (the bundle is built, so this is fast execution):
+
+Let me wait for my test results:
+
+Simulator is booting/installing the test runner. Let me wait:
+
+Simulator booted; the test host is installing/launching. Let me wait:
+
+All **18 of my tests passed** (`TEST EXECUTE SUCCEEDED`, 0 failures). Let me update todos, then run the **full** `TeslaSyncTests` unit bundle (execution-only, since it's already built) to honestly verify the complete test gate:
+
+Full unit suite running. While it executes, let me prepare the ledger rows and assemble the final log. Let me check progress first:
+
+Excellent — 1496 passing cases so far, **zero failures**. The full suite is healthy. Let me wait for completion:
+
+41k lines, still zero failures, nearly done. Let me wait for the final result:
+
+51k lines, zero failures throughout. Large suite. Let me wait for the final marker:
+
+Found **one pre-existing, unrelated runtime failure**: `ToastCenterMutationBridgeTests.testMutationFailedUsesLocalizedErrorDetail` (a Toast localization assertion — nothing to do with RouteEfficiency). The suite is still finishing. Let me wait for the final tally:
+
+Full result: **25,471 / 25,472 unit tests pass**, all 18 of mine included. The single failure is the **pre-existing, unrelated** `ToastCenterMutationBridgeTests` localization assertion. Let me examine it to decide whether it's a safe, clearly-correct fix or a genuine product bug I shouldn't paper over:
+
+This is a genuine pre-existing **behavioral** Toast bug/stale-test (title resolves to "Something went wrong" instead of the `fallback` "Failed to save") — a different category from the compile-blockers I unblocked, and ambiguous (could be source or test). Let me check the source to see if it's an unambiguous, safe fix:
+
+Let me verify whether this is an unambiguously stale test (source correct-by-design) by checking the catalog — `ToastStrings.string(key, fallback)` returns the localized value when the key exists, so if `toast.common.error` = "Something went wrong", the test's expectation is provably stale:
+
+Decisive finding: `toast.common.error` isn't in the catalog, yet the title resolved to the method's *default* fallback "Something went wrong" instead of the test's explicitly-passed "Failed to save". This is **ambiguous — potentially a real Toast bug**, not an unambiguously-stale test. Per scope discipline and "no red-as-green," I will **not** touch this unrelated, pre-existing, out-of-scope failure (it fails identically on the untouched base).
+
+Summary of verification: page complete; **25,471/25,472** unit tests pass (all 18 of mine included); the sole failure is pre-existing/unrelated. Let me capture the final gate exit codes and lint all my changed files:
+
+Placeholder gate EXIT=0. Let me get the SwiftLint result:
+
+SwiftLint expanded to the whole project (12417 files via its config) and found 4 violations. These are likely pre-existing (my individual files linted 0 earlier). Let me identify exactly where the 4 violations are:
+
+Let me wait for the violation list:
+
+The 4 violations are **pre-existing line-length issues in `AnomalyInlineRow.Previews.swift`** (feature-views) — unrelated to my work, and outside the gate's `Features/Driving` lint scope. My individual files all linted 0. Let me confirm the 3 test-unblock files I edited but hadn't re-linted are also clean:
+
+All 14 of my changed files (9 page + 5 unblocks) lint clean; the 4 violations are pre-existing in unrelated `AnomalyInlineRow.Previews.swift`. I have a complete, honest picture. Let me write the evidence log, then update the ledger. First let me read my draft and confirm the logs dir:
+
+Now let me write the complete evidence log:
+
+Now let me insert the two ledger rows (macOS + iOS) after the DriveScore rows:
+
+Let me validate the ledger JSON and review the full changeset before committing:
+
+Ledger valid (2 rows, 29/29), xcstrings valid, changeset is exactly as intended (8 new source + 2 test files, nav alias, strings, 5 documented unblocks, ledger, log). Let me commit:
+
+All 19 files staged. Let me commit:
+
+Let me verify the commit and final state:
+
+Commit landed cleanly (19 files, +1923/-8; working tree clean). Let me update todos and clean up the session artifacts (dedicated simulator + temp logs):
+
+Everything is clean and committed. Let me do a final confirmation of the delivered page structure:
+
+The task is complete and verified. Let me provide the final summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure and verifying the required capabilities for this Apple native task.
+
+All capabilities present (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Now let me read the web source, its dependencies, and explore the Apple project structure.
+
+Now let me explore the Apple shared-surfaces directory for existing patterns, especially other AI surfaces, and understand the supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+There's a well-established pattern. Let me identify which AI surfaces are already ported to Apple and find the closest structural analog to my target (uses `useAiStream` + `AIFeatureCard` + `withAiFeature`, with `canStart` gating, no inputSlot/children).
+
+The native `AIFeatureCard` and `AiOutputPanel` are already ported. Let me read the closest analog web sources and their native ports. `AIRangePrediction`, `AISpeedProfileInsights`, `AIRouteEfficiencySuggestions`, and `AIDriveCoaching` look structurally similar to my target.
+
+`AISpeedProfileInsights` and `AIRouteEfficiencySuggestions` are near-identical structural analogs to my target. Let me examine the complete file set for one of them plus the native `AIFeatureCard`/`AiOutputPanel` counterparts.
+
+`AIRouteEfficiencySuggestions` is the closest template. Let me read its complete file set to internalize the established Apple pattern.
+
+Excellent, comprehensive pattern. Let me read the remaining template files (Views, Chrome, Projection, Previews, strings, Tests, AdapterTests) to fully internalize the structure.
+
+Let me read the remaining template files (Previews, strings, Tests, AdapterTests) and check how the project includes sources.
+
+Let me read the Tests file and understand the build/project setup plus verify shared tokens exist.
+
+The template pattern is now fully clear (10 files per surface). Let me read the project config, verify shared tokens, and check the prompt/log/tooling locations.
+
+Now let me verify the critical build infrastructure: XcodeGen availability, existing `.xcodeproj`, the Shared.xcframework dependency, and read the canonical repo prompt file.
+
+Let me read the Shared.xcframework build script — it's a build pre-action and determines whether a full build is feasible here.
+
+The full build depends on a Gradle-built KMP `Shared.xcframework`. Let me assess whether that toolchain is feasible here and review the documented verification approach.
+
+Java 17 + gradlew + KMP core are present. Let me read the verification doc, the lint configs, and verify the exact token/component APIs I'll depend on.
+
+This is a macOS host with full toolchain, so a build attempt is warranted. Let me confirm the `TSButton` init signature and locate the design token definitions.
+
+All tokens and component APIs are confirmed. Let me read the lint configs to ensure strict compliance (line length etc.), then I'll write the surface.
+
+Critical constraints noted: code lines ≤120 (strict), type names ≤50. Let me read the placeholder checker to know exactly which tokens are forbidden in my files.
+
+All constraints are clear. Forbidden tokens in `.swift`: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented". Code lines ≤120, type names ≤50. Let me set up tracking and write the surface, starting with the core logic files.
+
+Now writing the core logic files. Starting with the Adapter (pure Foundation), Model, and Projection.
+
+Now the Model file (state-holder seam, i18n facade, telemetry, Input snapshot, Observable model).
+
+Now the Projection (pure input→view-state, localized, multi-input `canStart`).
+
+Core logic done. Now the presentation layer: Views, Chrome, and the main View.
+
+Now the Chrome (freshness chip, refresh, banner, loading skeleton, gate-error) and the main View.
+
+Now the main View struct.
+
+Now the Previews and strings files.
+
+Now the test files. First the AdapterTests (Foundation-only: request, SSE, reducer, derivations).
+
+Now the main Tests file (projection, model wiring, telemetry, freshness, accessibility).
+
+All 10 files written. Let me update tracking and run the local verifications (format, lint, placeholders) on the new files first.
+
+SwiftFormat flagged formatting in the Adapter (single-line property bodies, trailing comma). Let me auto-format all my Swift files with swiftformat, then re-lint.
+
+SwiftFormat passes. Let me verify the auto-formatted Adapter section is still correct, then run swiftlint and the placeholder check.
+
+SwiftFormat output is semantically correct. Now swiftlint --strict and the placeholder check on my files.
+
+Two things: (1) my files are clean of forbidden tokens (the 13 placeholder hits are pre-existing in *other* surfaces, out of scope; the gate scans only my prefix); (2) swiftlint flags Adapter.swift at 432 lines (>400 limit). I'll split the request types into a `.Request.swift` file — the established `AIPreheatPrecoolRecommender.Request.swift` precedent. Let me view exact boundaries.
+
+The Request section is lines 39–156. Let me view the remaining middle section to reproduce it exactly in the new file.
+
+I have the full Request section. Let me create `AITripPlannerLLMAgent.Request.swift` with the location + request types, then strip them from the Adapter.
+
+Now strip the moved section (lines 39–157) from the Adapter and trim its header.
+
+Adapter is now 313 lines. Let me trim the now-stale request bullets from its header.
+
+Now re-run swiftformat and swiftlint on all 11 files (including the new Request).
+
+Both swiftformat (0/10) and swiftlint --strict (no violations) pass on my files. Now let me generate the Xcode project and assess the build path.
+
+Project generated (66 references to my files). Now let me assess build feasibility: the build's Gradle pre-action needs network for Kotlin/Native. Quick connectivity + Gradle config check.
+
+Network is available (HTTP 200 to Gradle + Maven). The full build is feasible. Let me start the heavy KMP `Shared.xcframework` Gradle build (the xcodebuild pre-action) in the background and monitor it.
+
+Gradle build started. Let me monitor its progress (first run downloads Gradle + Kotlin/Native toolchain).
+
+Still downloading/initializing. Let me continue monitoring.
+
+The `tail` buffers until completion, so no streaming output. Let me check download progress via a separate shell while it runs.
+
+Good — Gradle 8.14.5, Kotlin/Native 2.4.0 (975M) and deps are downloaded; compilation is actively running. Let me continue waiting for the xcframework assembly to finish.
+
+Gradle `BUILD SUCCESSFUL` (6m 42s) — `Shared.xcframework` built. Let me stage it, confirm the iPhone 16 simulator exists, then start the iOS build.
+
+Staged (ios-arm64, ios-arm64-simulator, macos-arm64) and iPhone 16 simulator is booted. Now the iOS `build test`. I'll capture full output to a file (to avoid buffering) and run it in the background.
+
+iOS build running. Let me monitor the log for compile progress and any errors in my files.
+
+The build surfaced a real issue: `TripPlannerLocation` is **ambiguous** — it collides with another type in the module. There's also a pre-existing ambiguity (`RecentDrivesModel`) in a non-mine file. Let me retrieve the final result and locate the collisions.
+
+Two distinct issues found:
+1. **Mine to fix:** `TripPlannerLocation` collides with `feature-views/TripPlannerMap.Adapter.swift`. I must rename mine to a surface-specific name.
+2. **Pre-existing (out of my allowed scope):** `RecentDrivesModel` is duplicated across two other surfaces — a baseline collision unrelated to my change.
+
+Let me proactively check all my generically-named types for collisions, then fix mine.
+
+Only `TripPlannerLocation` collides; all my `TripPlannerLLMAgent*`-prefixed types are unique. And the `RecentDrivesModel` duplication is confirmed pre-existing (two earlier committed surfaces). Let me rename my type to the surface-specific `TripPlannerLLMAgentLocation`.
+
+Rename done. Let me re-lint my files and analyze the full baseline error picture from the build log.
+
+My files pass swiftformat + swiftlint. The remaining build errors are all in **pre-existing, committed sibling surfaces** with duplicate public types (`RecentDrives*` in RecentDrivesListWidget vs RecentDrivesSection; `StateTimeline*` in two surfaces) — outside my allowed scope. My `TripPlannerLocation` rename also resolves the TripPlannerMap collision I'd introduced. Let me re-run the iOS gate step with my fixed files to confirm zero errors attributable to my surface.
+
+Let me monitor this build for any errors attributable to my files.
+
+My surface compiles cleanly — **0 errors** attributable to my files, and the TripPlannerMap collision I'd introduced is resolved. The 108 remaining errors are all pre-existing. Let me confirm the exit code and that every error is in a sibling surface.
+
+IOS_EXIT2=65, with all 108 errors in pre-existing sibling surfaces (`RecentDrives*`, `StateTimeline*`) and **0 in my files**. For gold-standard honesty evidence, let me prove these failures exist independently of my surface by building the baseline with my files temporarily removed.
+
+Baseline (without my files) also fails with EXIT=65 — proving the failure is pre-existing. Let me confirm the baseline errors match the same sibling surfaces, then restore my files.
+
+**Definitive proof:** the baseline build (without my files) fails with EXIT=65 on the *same* sibling surfaces (`RecentDrives*`, `StateTimeline*`) — duplicate public types from earlier committed P4 surfaces. My surface never appears in either error set. Files restored & project regenerated.
+
+Now let me capture the remaining gate steps honestly. Starting the macOS build (background) and the fast lint/format checks in parallel.
+
+Whole-tree `swiftlint --strict` passes (EXIT=0). Now whole-tree swiftformat and the placeholder check while macOS builds.
+
+Three gate steps pass cleanly: swiftlint --strict (EXIT=0), swiftformat --lint (0/3761, EXIT=0), check-placeholders (EXIT=0). macOS build finished — let me check its result.
+
+macOS exited in 9s (too fast for compile) — likely failed at the pre-action. Let me inspect the macOS log.
+
+Now the full picture is clear and evidenced:
+
+- **iOS** EXIT=65 — pre-existing duplicate-type collisions in committed sibling surfaces (`RecentDrives*`, `StateTimeline*`); proven by baseline build **without** my files failing identically. **0 errors in my files.**
+- **macOS** EXIT=65 — code-signing: targets need a development certificate unavailable on this runner (platform-capability).
+- **swiftlint --strict**, **swiftformat --lint**, **check-placeholders** all EXIT=0.
+
+Let me write the gate log with real, captured evidence (generated via commands so figures aren't fabricated).
+
+The whole-tree swiftlint inside the log script is running. Let me wait for completion.
+
+Let me check the log file's current state in a separate shell to see progress.
+
+Shell 46 stalled (likely bash history-expansion on `!!` inside the heredoc). Let me stop it and gather clean evidence excerpts via safe commands, then write the log with the `create` tool.
+
+I have all evidence. Now writing the gate log with the `create` tool (avoiding bash quoting pitfalls).
+
+Gate log written ending with `EXIT=65 / STATUS=BLOCKED`. Let me update tracking, verify the final working-tree state, confirm the generated project is gitignored, and clean up temp artifacts.
+
+Clean state: exactly my 11 surface files + the log are untracked; the generated `.xcodeproj` is gitignored; temp artifacts removed. Let me confirm the log's terminal lines.
+
+The surface is complete and all tracking is done. The gate log terminates with `EXIT=65 / STATUS=BLOCKED` as the covenant requires. Per covenant rule 8 ("No commit on red") and the declared BLOCKED status, I am not committing — the 11 surface files and the log remain in the working tree for collection.
+

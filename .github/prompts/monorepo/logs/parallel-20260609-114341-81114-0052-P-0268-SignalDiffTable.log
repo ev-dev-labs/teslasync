@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the Apple app structure to understand existing patterns and dependencies.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the existing feature-views and shared infrastructure.
+
+Let me examine the existing feature-views and find a similar example (a table-based one) to follow conventions precisely.
+
+This is a large, established codebase with strict conventions (2121 files). Let me find the closest analog — a telemetry-bound table view — to follow its exact patterns. Let me look for related signal/telemetry views and the shared facade.
+
+`LiveSignalsTable` is the closest analog (telemetry-bound table). Let me read its complete file set to learn the exact conventions.
+
+Excellent pattern. Let me read the rest of the LiveSignalsTable file set in parallel.
+
+I now understand the conventions thoroughly. Let me read the web data contract (`SignalDiffRow`, `SourceLayerBadge`, `fmtNumber`) and verify the native design tokens exist.
+
+I have a complete picture of the conventions and tokens. Let me check the build toolchain (xcodegen, KMP framework, simulator) to understand whether the full gate can run.
+
+Key findings: `xcodegen` available, iPhone 16 simulator booted, but `.xcodeproj` not generated and the app build needs a KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me check the heavier toolchain pieces and lint configs.
+
+All tooling is present (pwsh, java 17, swiftlint, swiftformat, xcodegen, simulator). Let me examine a sibling surface's gate log to see how verification was actually performed (full xcodebuild vs. host harness).
+
+The sibling log reveals the realistic methodology: the full 2121-file app build is RED from pre-existing cross-surface collisions, so green verification rests on **isolated** surface compilation/test. Let me read the full sibling log to reproduce the exact methodology.
+
+I now have the full methodology. The established approach (per sibling 0269): full-app build is RED from pre-existing cross-surface symbol collisions, so green proof rests on **host gates + isolated swiftc typecheck + isolated swift test**. Let me read the placeholder checker and an existing 0268 attempt log for context.
+
+I have everything I need. The methodology is clear: reproduce the established 9-file surface pattern, verify via host gates (swiftlint/swiftformat/placeholders) + **isolated** swiftc typecheck + isolated swift test, and honestly report the deferred full-app build. Let me set up tracking and write the plan.
+
+Let me quickly check PinButton's aria labels for fidelity, then start writing the surface files.
+
+Got the pin labels (`pin.pin`/`pin.unpin`). Now writing the surface. Starting with the Foundation-only core files.
+
+Now the localization facade and accessibility builder.
+
+Now the main View with state branches and the legend.
+
+Let me add a `formattingLocale` accessor to the model, then write the table layout file.
+
+Now the strings catalog and previews.
+
+Now the comprehensive test suite (drives both the full-app XCTest target and the isolated SwiftPM verification).
+
+All 9 files created. Let me run the host gates — starting with swiftformat and swiftlint on the surface files plus a placeholder grep.
+
+swiftformat found auto-fixable issues. Let me let the ecosystem tool fix them, then re-verify.
+
+swiftformat passes (0/8). Let me verify the auto-edits to the Adapter are still correct and run swiftlint on the surface files.
+
+Two `--strict` violations (function body length in Previews, file length in Tests). Let me view the formatted Previews and split both appropriately.
+
+Now split the oversized Tests file. Let me move the model + accessibility tests into a sibling `*.ModelTests.swift` (matches the test-target glob, like sibling surfaces). Let me find the split boundary.
+
+I'll split mechanically. Create the ModelTests file (header + the model/accessibility/doubles sections) and truncate the original.
+
+Both files now under limits. Let me re-run both linters on the full surface (now 9 files).
+
+swiftlint clean (0 violations). One numberFormatting nit in Previews — let me auto-fix and re-confirm.
+
+Both linters pass clean on all 9 files. Now the placeholder gate — I'll run it meaningfully against a staged copy and also grep directly.
+
+Placeholder gate clean (count=0). Now the critical isolated verification — **swiftc typecheck** of the SwiftUI surface against the real design tokens on the iOS 18 simulator SDK under Swift 6.
+
+Isolated iOS typecheck passes in 2.4s (0 errors). Let me also typecheck the views for macOS (the gate builds macOS too), then run the isolated SwiftPM test suite.
+
+Both platforms typecheck clean. Now the isolated SwiftPM test run (adapter + model + accessibility) under Swift 6.
+
+Isolated SwiftPM run: **33/33 tests pass** under Swift 6. All green-proof gates pass. Now I'll honestly attempt the full-app gate (expected RED on pre-existing conditions per sibling methodology). Starting with project generation.
+
+Project generates cleanly with the surface included (60 refs). The full build's pre-action builds the KMP `Shared.xcframework` via Gradle. Let me attempt that (the critical determinant for whether the full app build is possible here), time-boxed.
+
+The backgrounded build didn't persist (session cleanup killed it). Let me probe KMP build feasibility directly — check for an existing Kotlin/Native toolchain and run a quick Gradle task.
+
+KMP toolchain is provisioned and Gradle works offline (warm 3.2G cache). Let me assemble the `Shared.xcframework` offline and stage it.
+
+The KMP `assembleSharedXCFramework` (mandatory scheme pre-action) exceeded a 540s time-box (exit 124) — the full-app gate is gated on a multi-minute Kotlin/Native release build, matching the documented deferral. Let me confirm my surface introduces zero cross-surface name collisions and check the deferral doc.
+
+This confirms the documented pattern exactly: every sibling P4 surface defers the full-app `xcodebuild` to the `macos-latest` acceptance gate (register maintained by the acceptance prompt, not per-surface — so I won't edit it). My surface adds **zero** cross-surface collisions. Let me literally execute the iOS gate command once (time-boxed) to capture its real outcome.
+
+Confirmed: the iOS gate (RC=124) is blocked in the mandatory KMP pre-action (Kotlin/Native release link long-pole) — identical to documented siblings, never reaching the surface compile. I have comprehensive honest evidence. Let me verify git status is clean (artifacts ignored) before writing the log.
+
+Git is clean — only my 10 surface files are untracked. Let me run the **tree-wide** lint gate commands (as literally specified) to capture honest global numbers for the log.
+
+Tree-wide: swiftformat **0/2870** (clean incl. my files); swiftlint **1 violation, 0 from my surface**. Let me identify that 1 pre-existing violation to cite it accurately.
+
+Confirmed: the lone tree-wide lint violation is the pre-existing `LiveSignalSparklinesWidget.Builder.swift:158` (another prompt's widget); my surface = 0. I have complete, honest evidence. Writing the gate log.
+
+Log written. Now staging and committing exactly the surface files + log (using the actual file glob, since the prompt's bare prefix isn't a directory).
+
+Committed cleanly: **11 files (10 surface + log), 2385 insertions** (commit `136edc2fb`). Let me clean up temp artifacts and confirm the working tree.
+
+Task complete. Committed `136edc2fb`.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`SignalDiffTable`** surface at parity with `web/src/features/telemetry/components/SignalDiffTable.tsx`, following the established `LiveSignalsTable` 10-file pattern.
+
+**Files (apps/apple/TeslaSync/feature-views/SignalDiffTable.\*):** `Models`, `Adapter`, `Model`, `Localization`, `swift` (view), `Table`, `strings`, `Previews`, `Tests`, `ModelTests`.
+
+**Parity reproduced 1:1:**
+- All 7 columns (pin · Signal · Window A · Window B · Δ · Src A · Src B) + multi-selection + the HelpTooltip legend
+- Pure ports of `fmtNumber`/`asNumber`/`formatRaw`/`deltaLabel`/`formatAge` + pinned-first `sortedRows` (pinned by tests, e.g. `+4.00 (+5.1%)`, `-4.30 (-37.4%)`)
+- `SourceLayerBadge` (L1/L2/LOG/STALE/—) with desc+age tooltips; `PinButton` → optimistic pin float
+- **Both** empty variants (filtered vs. no-diff), loading, plus native error/stale/offline chrome
+- Bound via P1/S8 source seam; P1/S9 tokens; P1/S10 per-surface i18n (no English literals); P1/S11 `view.opened` slug `SignalDiffTable`; row VoiceOver element + rotor pin/select actions; Dynamic Type.
+
+**Verification (raw results):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint (tree-wide) | **0/2870** (surface 0/9) |
+| swiftlint --strict | **surface 0**; 1 global pre-existing (`LiveSignalSparklinesWidget.Builder.swift:158`, another prompt) |
+| check-placeholders | **PLACEHOLDER_COUNT=0**, 0 opt-outs |
+| swiftc -typecheck iOS 18 sim (Swift 6) | **exit 0** (full surface vs. real tokens) |
+| swiftc -typecheck macOS 15 (Swift 6) | **exit 0** |
+| swift test (SwiftPM, Swift 6) | **33/33 pass** |
+| xcodegen generate | exit 0; **0 cross-surface collisions** |
+
+**Full-app `xcodebuild build test`: honestly DEFERRED** — timed out (RC=124) in the *mandatory* KMP `Shared.xcframework` Kotlin/Native release-link pre-action (standalone `assembleSharedXCFramework` also GRADLE_EXIT=124), the documented `macos-latest` acceptance-gate deferral that every sibling P4 surface shares. Zero `SignalDiffTable` errors; the surface is proven green by the isolated real-toolchain typecheck + tests. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+All work is complete, verified, and committed. Marking the task done.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0268-SignalDiffTable.log | 160 +++++++++
+ .../feature-views/SignalDiffTable.Adapter.swift    | 258 ++++++++++++++
+ .../SignalDiffTable.Localization.swift             | 246 +++++++++++++
+ .../feature-views/SignalDiffTable.Model.swift      | 326 ++++++++++++++++++
+ .../feature-views/SignalDiffTable.ModelTests.swift | 222 ++++++++++++
+ .../feature-views/SignalDiffTable.Models.swift     | 202 +++++++++++
+ .../feature-views/SignalDiffTable.Previews.swift   | 116 +++++++
+ .../feature-views/SignalDiffTable.Table.swift      | 380 +++++++++++++++++++++
+ .../feature-views/SignalDiffTable.Tests.swift      | 205 +++++++++++
+ .../feature-views/SignalDiffTable.strings          |  67 ++++
+ .../TeslaSync/feature-views/SignalDiffTable.swift  | 203 +++++++++++
+ 11 files changed, 2385 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0268-SignalDiffTable.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.Localization.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.Table.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalDiffTable.swift

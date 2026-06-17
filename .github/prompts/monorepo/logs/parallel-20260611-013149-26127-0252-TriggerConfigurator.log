@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the Features directory structure and existing automations files specifically.
+
+I see existing automations files under `apps/apple/Sources/Features/Automations/`. Let me examine the project layout, the reference page, and parity files.
+
+This is a mature codebase with clear patterns. Let me check the build configuration, parity manifest, and the gate scripts to understand exactly what's required.
+
+Now let me check the build environment, the full parity manifest records, the ledger, and the strings/Views patterns.
+
+Full Xcode toolchain is available — the gate can run. Let me examine the ledger, design tokens, strings catalog, and the geofences data source.
+
+Let me understand the placeholder matching logic carefully — the string keys `cronPlaceholder`/`statePlaceholder` contain "Placeholder" which is a forbidden pattern.
+
+The scan is case-insensitive, so `cronPlaceholder`/`statePlaceholder` keys will match "Placeholder". Let me check how the existing codebase handles this with `parity:allow` markers.
+
+The convention is clear. Now let me examine the shared design components (forms, selects, toggles) and the geofences data source.
+
+Now let me examine the geofences data source binding pattern and the web constants/types I need to port.
+
+Let me look at how real data-bound pages wire to the KMP core via the facade (AppContainer, a representative page model).
+
+Let me study a canonical data-bound page (DiskForecast) end-to-end as the template for the geofences binding.
+
+The canonical data-bound pattern is clear. Now let me read the design tokens, feedback/typography components, and route registration so I know exactly which symbols exist.
+
+The design tokens are generated. Let me locate them and check the route registration + navigation patterns.
+
+Let me read the route system, the existing test pattern, and the Button/Skeleton components.
+
+Now let me check the strings catalog format and which of the 21 required keys already exist.
+
+All 21 required keys are missing — I'll add them. Let me also check which supplementary keys (trigger types, events, operators, geofence events, day/timezone labels) already exist, since full parity requires reproducing the whole builder.
+
+There are prior TriggerConfigurator logs. Let me check if a Swift TriggerConfigurator already exists (e.g., in feature-views) to avoid conflicts.
+
+A full `TriggerConfigurator` already exists in `feature-views/` (a sibling parity track). I must understand it to avoid symbol collisions. Let me read it.
+
+A complete `TriggerConfigurator` component already exists in `feature-views/` (same module). This is decisive for avoiding symbol collisions. Let me verify the exact build source paths and the test target config.
+
+Confirmed: `TeslaSync/Features` is NOT a build path. The build-correct location (matching sibling `AutomationActivityFeed`) is `apps/apple/Sources/Features/Automations/`. Let me read the existing component's strings handling and supporting files to plan reuse.
+
+The existing component reuses pure logic/catalog types I can leverage. Let me read the Adapter, Editors, and Views to understand the full reusable API.
+
+This is excellent — the existing component provides fully reusable pure logic, catalogs, model, and geofence seam. Let me read the existing Views/Editors to mirror the layout, then I'll build the page reusing this logic but rendering from `Localizable.xcstrings`.
+
+Let me read the existing Views file (shared field components + geofence picker) to mirror layout quality, then I'll start building.
+
+I now have a complete understanding. Let me verify a couple of remaining symbols (`TSTone`, theme helper) and confirm no `TriggerConfiguratorPage` exists yet.
+
+I have a complete understanding. Let me set up tracking and verify build prerequisites (Shared.xcframework, xcodeproj).
+
+`Shared.xcframework` (a P1 dependency) is absent and there's no `.xcodeproj`. Let me check the gate contract and how the already-"done" sibling page handled this.
+
+The sibling log confirms my path/nav reasoning exactly. Let me read the rest to mirror the gate transcript and PARITY/EXIT format.
+
+The disposition pattern is clear: ship at `Sources/Features/Automations/`, verify via isolated typecheck + harness + swiftlint, attempt full build (known pre-existing IRGen crash). Let me check the KMP/JDK toolchain to decide if I can build the xcframework.
+
+JDK17 + Gradle are available. Let me kick off the Shared.xcframework build in the background (it takes ~7 min) while I write the code.
+
+Now let me write the plan file and start building. First the plan:
+
+The xcframework build is running in the background. Let me check its progress briefly, then build the page model.
+
+Gradle is progressing (debug XCFramework done, release assembling). Let me proceed to build the page model while it continues.
+
+Page model created. Let me check the swiftlint config to match its rules, then build the views.
+
+The swiftlint rules are clear (line ≤120 code, no 1-char names, `empty_count`, `explicit_init`, etc.). Now let me build the page views file (per-kind editors rendering from `Localizable.xcstrings`).
+
+Now the main page view:
+
+Now the navigation registration (unrouted, mirroring `AutomationActivityFeed`):
+
+Let me check the xcframework build progress and update todos.
+
+Shared.xcframework is staged. Now let me write the page model tests.
+
+All page files are written. Now let me inspect the exact byte formatting of the xcstrings file so I can insert keys without reformatting the whole file.
+
+The xcstrings uses Xcode's format (nested entries use `" : "`, top-level uses `": "`). I'll do a safe text-insertion to avoid reformatting the file. Let me write all 84 keys via a script.
+
+All 84 keys added and JSON validated. Let me verify formatting integrity and required-key presence.
+
+Formatting is perfect. Let me update tracking and run the in-scope lint/format/placeholder gates on my files.
+
+swiftformat wants 4 long lines wrapped. Let me auto-format my files (sanctioned by the repo `.swiftformat`), then review.
+
+swiftformat clean. Now swiftlint --strict on my files and the placeholder scan:
+
+`file_length` ≤ 400 enforced; my Views file is 626 lines. I'll split editors into a separate file (matching the feature-views structure). Let me find the section boundaries.
+
+I'll split the editors into a separate file. Let me view the exact boundaries (end of Signal editor / start of shared primitives).
+
+I'll split the editors (lines 24–299) into a new file and trim the Views file. Let me do this precisely with a script.
+
+Both files now under 400 lines. Let me re-run swiftformat + swiftlint on all 6 files.
+
+swiftlint --strict: 0 violations. Now the placeholder scan (the `cronPlaceholder`/`statePlaceholder` lines should be ALLOWED via parity:allow markers):
+
+Placeholder scan clean (the 2 ALLOWED are my `parity:allow` markers). Now let me regenerate the Xcode project and attempt the full build (Shared.xcframework is staged).
+
+Project regenerated (my files referenced 36×). Now the full macOS build (includes Gradle pre-build + full app compile). This is slow — let me start it and monitor.
+
+BUILD_EXIT=65 (same as sibling). Let me verify the failure is the pre-existing out-of-scope crash and that MY files have zero errors.
+
+Real error in my code: `defaultGeofenceSource()` is `@MainActor` but called from a `@Sendable` (nonisolated) default closure. The `navigationDestination` content closure is already main-actor, so I'll build the source there instead. Let me fix it.
+
+Fixed. Let me re-run format/lint on the edited file and rebuild for macOS.
+
+My files now have ZERO errors. The 1 remaining error is in a pre-existing, out-of-scope sibling file (`AIAutoNameUnnamedLocations.swift`) I never touched. Let me confirm it's pre-existing and set up an isolated type-check to authoritatively prove my files compile.
+
+Confirmed pre-existing & out-of-scope: `AIAutoNameUnnamedLocations.swift` is unmodified by me (git clean) and has a genuine pre-existing escaping-closure error. This matches the sibling's documented HEAD breakage. Let me set up the isolated type-check to prove my files. First, find which P3 components depend on the unlinked Shared framework.
+
+Only `UnitFormatters.swift` needs the unlinked Shared framework; the reused TriggerConfigurator logic is pure Foundation/Observation. Let me run an isolated Swift 6 strict-concurrency type-check of my files against the real tokens + P3 components + reused logic, for macOS.
+
+Isolated macOS type-check passed (0 errors, Swift 6 strict concurrency + DEBUG, exercising previews). Now the iOS-simulator type-check (validates the `#if os(iOS)` branches):
+
+Both type-checks pass on both idioms. Now the executed model harness (runtime proof of the page model — the XCTest bundle can't link due to the pre-existing module breakage). Let me write and run it.
+
+Outstanding — 24/24 assertions passed. Let me do a final confirmation that my files were processed by the whole-module build (and remain the only clean ones), then move to the ledger + log.
+
+My files passed the whole-module type-check (only the out-of-scope error appeared) and the full isolated type-checks + runtime harness. This matches the sibling's accepted disposition. Now let me add the 2 ledger rows.
+
+Ledger updated (20 rows). Now let me gather file metrics and write the comprehensive evidence log.
+
+Now let me write the comprehensive evidence log.
+
+Now let me run a final consolidated in-scope verification to confirm the green state, and validate both JSON files.
+
+All in-scope gates green. Let me verify the git working-tree state (confirm only intended changes; build artifacts are git-ignored) and clean up temp files.
+
+Git tree is clean and scoped exactly to intended files (build artifacts git-ignored). Let me run a final code review on my changes to catch any subtle parity or logic issues.
+
+I'll start by understanding the change scope and reading the relevant files.Now let me read the route registration, tests, and the web source for comparison.Now let me read the sibling component-parity surface to understand the reused APIs.Let me read the sibling Editors and Views to compare behavior.Now let me examine the i18n keys in the modified Localizable.xcstrings and the parity ledger.Let me find the web parent that consumes `TRIGGER_TYPES`/`createDefaultTrigger` to validate the `selectKind` semantics.Let me read the sibling Views to compare the geofence picker and shared primitives against the new page.The new page editors/views are behaviorally identical to the siblings (only renamed types + string table differ, both intentional). Now let me verify the design-system symbols the new page references actually exist with the expected signatures, since a missing/mismatched symbol would be a real compile bug.Both new page and reused components must compile into one module. Let me verify the build/target setup so I understand whether the new files are actually included in the target.Confirmed: `Sources/` and `TeslaSync/feature-views/` compile into one `TeslaSync` module. Let me check the test target wiring for the new test file, and confirm a couple of design-system signatures used by the page.Both target and test wiring are correct. Let me confirm the page-init pattern (`@State` + `@MainActor @Observable` model with a default-arg init) matches an already-merged sibling page that compiles, to rule out a concurrency/init compile issue.Let me check one thing that could be a real selection mismatch: the default schedule timezone is `"UTC"`, but I want to verify the timezone option values against the web constant.I've completed a thorough review. Let me do a final verification of the one borderline item — that the default `"UTC"` timezone vs. the catalog's empty-string UTC option behaves identically in the sibling (to confirm it's reused/faithful behavior, not page-introduced).No significant bugs found in the reviewed (new) files. I verified each of your six concern areas and the per-kind editors are faithful to both the web `switch (trigger.kind)` and the sibling component surface.
+
+Verification summary (high-confidence):
+
+1. **Per-kind editor parity** — `.Editors.swift`/`.Views.swift` are behaviorally identical to the sibling `TriggerConfigurator.Editors/.Views` and faithful to the web: schedule (time+days vs cron+mode-toggle+timezone), event select, geofence (picker+event+dwell-on-`.dwell`), signal (signal+operator+typed value hidden on `changed`+change-only toggle). Dwell seed (`?? 5`), operator/value coercion, and the mode-toggle quirk (simple→simple no-op, advanced→`0 8 * * *`) all match. No missing field, wrong binding, or wrong default.
+
+2. **Observation** — Reading `model.editor.trigger` through the nested `@Observable` is correctly tracked: `withObservationTracking` registers the `(editorInstance, \.trigger)` access during `body`, so mutations recompose the page; the geofence editor additionally reads `model.geofencePhase/geofences/...` directly and recomposes. Value-typed params (`cronExpr`, `timezone`, `trigger`, `placeID`…) are refreshed by the parent switch on every `editor.trigger` change. No get/set or switch fails to recompose.
+
+3. **`selectKind` semantics** — The `guard kind != editor.trigger.kind` no-op exactly mirrors the web parent (`AutomationBuilderPage.tsx:706` uses a native `<select onChange>`, which never fires for the already-selected option), and switching kinds reseeds via `.createDefault` == web `createDefaultTrigger`. Edits are preserved on same-kind, discarded on switch — correct.
+
+4. **i18n** — All 21 keys (`automations.builder.{advancedCron,changedOnly,cronExpr,cronHint,cronPlaceholder,days,dwellHint,dwellMinutes,event,geofence,geofenceEvent,operator,selectGeofence,signal,simpleCron,statePlaceholder,time,timezone,value}` + `common.true`/`common.false`) resolve from the default `Localizable.xcstrings` table with English values (plus the page-chrome/geofence-state keys). Confirmed present.
+
+5. **Geofence states** — `.empty` renders picker + empty hint, `.data` renders the populated picker; `GeofenceProjection.resolve` maps the default 3-geofence source → `.data` and `[]` → `.empty`. Correct.
+
+6. **Concurrency/crashes** — Uniformly `@MainActor`; no force-unwraps (optionals guarded with `?? Date()`/`?? 0`/`?? hour`); `ForEach(0..<weekdayCount)` and `shortFallbacks[index]` are in-bounds (7 elements). The `@State` + default-arg `@MainActor @Observable` model init matches the already-merged `AutomationActivityFeedPage`, so it compiles under strict concurrency.
+
+---
+
+One **non-blocking FYI** (not a defect in your files — flagging only because you asked to verify defaults): the default schedule seed is `timezone: "UTC"`, but `TimezoneCatalog`'s UTC option has value `""` (empty string), so the timezone `Picker` has no tag matching `"UTC"` and renders with no selection on the default screen until the user picks a zone. This is **faithful to the web** (`COMMON_TIMEZONES[0].value === ''` while `createDefaultTrigger` sets `timezone: 'UTC'` — same mismatch) and lives entirely in the **reused** `TimezoneCatalog` + `AutomationTrigger.createDefault`, identical in the shipped sibling `ScheduleEditor`. So it's correct parity, not a divergence introduced by this page — surfacing it only in case you want to fix the latent quirk upstream.Code review found no bugs — all 6 concern areas verified clean. The one FYI (UTC timezone value) is faithful web parity living in the reused upstream code (not my page, and the sibling ships it identically) — correctly left as-is to avoid a parity divergence.
+
+Let me finalize tracking and do a last confirmation of the complete deliverable.
+
+All 23 parity items confirmed (21 strings referenced in code + present in catalog, plus 2 states). The task specifies a commit as the final step. Let me stage the in-scope files and commit (with the required trailer).
+
+The task is complete and committed. Here's the summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

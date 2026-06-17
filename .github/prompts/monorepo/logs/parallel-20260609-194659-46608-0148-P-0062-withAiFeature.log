@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source spec, the Apple app structure, and check platform tooling availability in parallel.
+
+Apple tooling is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen, iPhone 16 simulator). 
+
+The web source is an HOC (AI-Off Contract, ADR-015) — a visibility gate, not a visual chart surface. Let me explore the Apple app structure to understand the existing conventions I must follow.
+
+This is a rich, established codebase with a consistent multi-file surface pattern. Since `withAiFeature` is the AI-off gate HOC, let me find how existing AI surfaces gate themselves and locate the `useAiEnabled` state holder.
+
+`withAiFeature` is referenced across many AI surfaces. Let me check whether a native definition already exists and see the exact call signature these surfaces expect.
+
+`withAiFeature` has no native definition yet — each surface gates ad-hoc but references the web concept. Let me study how an existing surface implements the gate and find the shared state-holder it binds to.
+
+Now I understand the surface conventions. Let me study the data-binding layer: the `useAiEnabled` web hook, the AI features registry, and the native state-holder that backs these surfaces.
+
+Let me find where the surface models, the shared AI-gate state holder, tokens, i18n facade, and telemetry contract live. Let me also read the project.yml.
+
+`AIChatbotIndicator.Adapter.swift` reads `ai_features`/`ai_mode` — the closest analog to `useAiEnabled`. Let me read it and the CostNarration model/tests/strings/previews patterns, plus the project.yml.
+
+This is a mature, consistent architecture. `AIChatbotIndicator` is the closest analog (a gate-only AI surface). Let me read its full file set, the project.yml (to understand build/test wiring), and the design tokens.
+
+Build wiring is glob-based, so new `withAiFeature.*` files auto-include. Let me read the rest of the AIChatbotIndicator pattern, the design tokens, and the Shared.xcframework staging script to assess build feasibility.
+
+Let me read the model/source/telemetry, strings, previews, and tests for the analog surface, plus locate the design tokens and the Shared.xcframework staging script.
+
+Let me read the test patterns and locate the design tokens and the Shared.xcframework build script.
+
+Now let me read the design tokens, check for any existing native AI-features registry, and inspect the Shared.xcframework build script to gauge build feasibility.
+
+Key build finding: the Xcode scheme has a pre-action that builds a KMP `Shared.xcframework` via Gradle/Kotlin-Native, and `Frameworks/` only has `.gitkeep`. Let me check the pending-verifications doc and the shared-core build feasibility, since this determines whether the full gate can pass on this runner.
+
+This matches a clear, established precedent: prior P4-apple surfaces verify the surface in isolation (swiftc -typecheck against real Tokens, SwiftPM tests, lint/format/placeholder/i18n) and document the full-app `xcodebuild` gate as macOS-pending/BLOCKED by pre-existing unrelated infra (unstaged KMP `Shared.xcframework`, dev-signing, cross-surface collisions).
+
+Let me check the existing native AI-features registry (reuse candidate), the rest of the doc, signing status, and shared component signatures.
+
+I now have the full picture. There's a canonical native registry (`AIFeatureRegistry`, 57 ids) I'll reuse (DRY). The full-app `xcodebuild` gate is blocked by pre-existing unrelated infra (unstaged KMP framework + 0 signing identities + cross-surface collisions) — matching documented precedent. My surface is Shared-free, so it's independently verifiable.
+
+Let me read the lint/format configs and the placeholder checker before writing.
+
+Let me check the forbidden placeholder patterns and confirm `pwsh` availability for the gate.
+
+Forbidden tokens noted (avoid "Placeholder/TODO/FIXME/XXX/not implemented" etc.). `pwsh`, swiftlint 0.63.3, swiftformat 0.61.1 all present. Let me check for symbol collisions before writing, and confirm the chatbot uiTestId shape in the web registry.
+
+No collisions; web `chatbot-llm` uiTestId confirmed as `ai-feature-chatbot-llm-root` (the HOC default fallback is `ai-feature-<id>`). I have everything needed. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure core (Adapter), projection, and model.
+
+Now the comprehensive test suite — mirroring the web test cases and the chatbot precedent.
+
+All 8 files written. Let me run the fast checks first — swiftformat, swiftlint, and the placeholder gate on the new files.
+
+swiftformat found 3 auto-fixable issues. Let me apply the formatter (the ecosystem tool) to my files and re-verify.
+
+Formatting clean. Now swiftlint --strict and the placeholder gate on my files.
+
+swiftlint flagged only `file_length` (449 > 400) on the Tests file — all 13 placeholder hits are pre-existing in OTHER surfaces, not mine (my grep was clean). The codebase convention allows multiple test files per surface (e.g. `*.ModelTests.swift`). Let me split the tests. First, view the post-format boundaries.
+
+Splitting the model/view tests into `withAiFeature.ModelTests.swift` (established convention) to satisfy the 400-line limit.
+
+Now re-run swiftformat and swiftlint on all 9 files, plus the placeholder gate at the exact prompt scope.
+
+Excellent — swiftformat 0/8, swiftlint LINT=0, placeholder gate `PLACEHOLDER_COUNT=0` / `EXIT=0`. Now the critical correctness check: `swiftc -typecheck` against the real generated `Tokens.swift` + the reused `AIFeatureRegistry`, for both iOS 18 and macOS 15 under Swift 6.
+
+iOS 18 typecheck: **0 errors**. Now macOS 15.
+
+Both targets typecheck with **0 errors** under Swift 6. Now an executable Foundation harness to prove the gate/projection/model logic actually passes at runtime (the XCTest bundle can't run standalone without the app module).
+
+Now compile and run the harness against the real surface sources (macOS host).
+
+Harness: **53/53 PASS, 0 FAIL** under Swift 6 — the gate truth table, registry throw, marker, projection, model (telemetry + stale auto-refresh), and live source all behave correctly at runtime.
+
+Now confirm `xcodegen` enumerates the new files, then attempt the full gate.
+
+xcodegen enumerates all 9 files (54 pbxproj refs). Now the full gate. First, quick evidence on the framework blocker via a direct target build (no scheme pre-action), then I'll attempt the KMP assembly.
+
+Confirmed: the direct target build fails immediately with **"There is no XCFramework found at .../Frameworks/Shared.xcframework"** before any Swift compiles — the unstaged KMP framework is the first hard blocker (zero `withAiFeature` errors, matching precedent). Let me attempt to assemble it via Gradle (bounded) — if it succeeds I can prove a real in-module compile.
+
+Gradle is still running at 300s (the Kotlin/Native RELEASE link long-pole, as documented). Let me give it more time.
+
+**Gradle BUILD SUCCESSFUL in 7m 38s** — the RELEASE `Shared.xcframework` is now built. Let me stage it and run a real in-module app compile to prove zero `withAiFeature` errors.
+
+Framework staged; the in-module compile ran (exit 65 after ~66s). Let me analyze the errors — specifically whether any are `withAiFeature`-related vs pre-existing cross-surface collisions.
+
+Let me precisely confirm: zero `withAiFeature` errors, and that all 54 are the pre-existing `StateTimeline*` collisions.
+
+`withAiFeature` error count = **0**. Let me cleanly capture the "non-StateTimeline errors" count (the `&&` chain short-circuited on grep's exit code).
+
+Definitive: **TOTAL_ERRORS=54, WITHAIFEATURE_ERRORS=0**. All 54 are pre-existing cross-surface collisions (26 `StateTimeline*` + 28 `RecentDrives*`) between other agents' dashboard-widgets/feature-views — exactly as documented in `macos-pending-verifications.md`. My surface compiles cleanly in-module.
+
+Let me check how prior surface logs phrased their final STATUS to match convention.
+
+The sanctioned convention is clear: `EXIT=0 / STATUS=DONE` with a "code-complete + DEFERRED Xcode gate" disposition — showing the real RED gate variables (IOS_EXIT/MAC_EXIT=65) attributed to pre-existing unrelated causes, with all surface-attributable gates green. My evidence is strong (real framework staged, 0 surface errors in-module).
+
+Let me capture the real tree-wide lint/format exit codes and the official scheme build exit codes for the log.
+
+Tree-wide `LINT_EXIT=0` and `FORMAT_EXIT=0` (the collisions are compile errors, not lint/format violations). Now the official scheme `build test` exit codes (iOS + macOS) — these re-run the cached Gradle pre-action then fail on the pre-existing collisions.
+
+iOS scheme `build test`: **IOS_EXIT=65, 108 errors, 0 withAiFeature errors**. Now the macOS scheme.
+
+Full gate picture captured (all 0 `withAiFeature` errors):
+- **IOS_EXIT=65** → 108 pre-existing `StateTimeline*`/`RecentDrives*` collisions
+- **MAC_EXIT=65** → 4 macOS dev-signing errors (0 valid identities)
+- **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0**
+
+This matches the sanctioned "code-complete + deferred Xcode gate" disposition exactly. Let me write the official log.
+
+Now register the deferral row in `macos-pending-verifications.md`. Let me view the exact insertion point.
+
+Let me verify git status (ensure generated project + staged framework are ignored) before committing.
+
+Git status is exactly as intended — 9 new surface files, the log, the doc; generated `.xcodeproj` and staged `Frameworks` are ignored. Let me commit per the prompt.
+
+Committed (`45e05191b`), working tree clean. Let me do a final consolidated verification of the surface-scoped gates and clean up temp artifacts.
+
+All final surface-scoped gates green; log ends `EXIT=0 / STATUS=DONE`; temp cleaned. Let me close out the todos.
+
+The `withAiFeature` Apple shared surface (P4/0062) is complete, verified, and committed.
+
+## Summary
+
+Shipped the SwiftUI parity of the web AI-Off Contract HOC (`components/ai/withAiFeature.tsx`, ADR-015) as **9 files** under `apps/apple/TeslaSync/shared-surfaces/withAiFeature.*`:
+
+- **`.Adapter`** — surface meta (slug `withAiFeature`), connectivity/status/mode enums, registry guard (reuses the canonical 57-id `AIFeatureRegistry` — DRY), `AiFeatureGate` (verbatim port of `useAiEnabled`'s fail-closed truth table incl. the unknown-id throw), and the marker builder (`ai-feature-<id>` = web `data-testid`; `displayName` parity).
+- **`.Projection`** — pure `resolve` → `presented | withdrawn`.
+- **`.Model`** — P1/S10 i18n facade, P1/S11 telemetry seam (`view.opened`), P1/S8 source seam (Live/InMemory), and `@Observable WithAiFeatureGateModel` (lazy once-only `view.opened` only when presented; one-shot stale auto-refresh).
+- **`.swift`** — generic `WithAiFeature<Inner: View>` HOC + `.withAiFeature(_:gate:)` modifier (debug-assert on unknown id mirroring the web throw; fail-closed in release).
+- **`.Views`** (marker modifier), **`.strings`**, **`.Previews`**, **`.Tests` + `.ModelTests`**.
+
+**Parity-honest note:** the web HOC is transparent (enabled → marked inner; else → `null`); I did *not* invent skeleton/error/stale chrome it doesn't have. All non-enabled verdicts render nothing.
+
+### Verification (surface-attributable — all green)
+- `swiftc -typecheck` iOS 18 + macOS 15, Swift 6, vs real `Tokens.swift` + `AIFeatureRegistry` → **0 errors**
+- Executed Foundation harness → **53/53 PASS**
+- swiftlint --strict **0** (tree-wide 0) · swiftformat --lint **0** (tree-wide 0/3795) · placeholder **PLACEHOLDER_COUNT=0**
+- `xcodegen generate` enumerates all 9 files (54 pbxproj refs)
+- KMP `Shared.xcframework` **assembled live** (`BUILD SUCCESSFUL in 7m 38s`) + staged → real in-module iOS compile = **0 `withAiFeature` errors**
+
+### Full `xcodebuild build test` — DEFERRED (not caused by this code)
+- `IOS_EXIT=65` → 108 pre-existing `StateTimeline*`/`RecentDrives*` cross-surface collisions (other agents' surfaces)
+- `MAC_EXIT=65` → macOS dev-signing (0 valid identities)
+
+Both owned by the P4/P99 acceptance gate on a signed `macos-latest` runner — the repo's sanctioned disposition; recorded in `apps/macos-pending-verifications.md`. Log ends `EXIT=0 / STATUS=DONE`. Committed as `45e05191b`.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0062-withAiFeature.log | 129 ++++++++++
+ .../shared-surfaces/withAiFeature.Adapter.swift    | 192 +++++++++++++++
+ .../shared-surfaces/withAiFeature.Model.swift      | 227 ++++++++++++++++++
+ .../shared-surfaces/withAiFeature.ModelTests.swift | 259 +++++++++++++++++++++
+ .../shared-surfaces/withAiFeature.Previews.swift   | 104 +++++++++
+ .../shared-surfaces/withAiFeature.Projection.swift |  75 ++++++
+ .../shared-surfaces/withAiFeature.Tests.swift      | 205 ++++++++++++++++
+ .../shared-surfaces/withAiFeature.Views.swift      |  69 ++++++
+ .../shared-surfaces/withAiFeature.strings          |  19 ++
+ .../TeslaSync/shared-surfaces/withAiFeature.swift  | 110 +++++++++
+ apps/macos-pending-verifications.md                |   2 +
+ 11 files changed, 1391 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0062-withAiFeature.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/withAiFeature.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/withAiFeature.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/withAiFeature.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/withAiFeature.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/withAiFeature.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/withAiFeature.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/withAiFeature.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/withAiFeature.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/withAiFeature.swift

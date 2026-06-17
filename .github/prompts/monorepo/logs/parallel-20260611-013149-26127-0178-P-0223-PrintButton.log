@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure to understand what exists and what's required.
+
+Let me read the web source and explore the Apple app structure in detail.
+
+The web source is a simple print button. Now let me study existing shared-surface patterns to match conventions exactly. The directory is huge, so let me examine a representative existing surface's full file set.
+
+`CopyButton` is the closest analog to `PrintButton`. Let me read its full file set to learn the exact conventions.
+
+This is a rich, established pattern. Let me read the remaining CopyButton files and the shared button primitives.
+
+Let me read the test files and locate the shared primitives (`TSButton`, tokens, etc.) and project config.
+
+Now let me locate the shared primitives (`TSButton`, tokens, animation) and examine the build setup.
+
+Let me read the design tokens and project config to confirm how files are wired into targets.
+
+Now let me check the toolchain availability — this determines whether the gate can run or must be BLOCKED with evidence.
+
+Full toolchain is present (Xcode 26.5, swiftlint, swiftformat, xcodegen, pwsh, iPhone 16 sim). The gate can run. Let me study the cited precedent surfaces (ChartExportMenu 0066, CopyLinkButton 0168) and check for any existing print/share platform-action patterns.
+
+Let me calibrate the house style for platform-UI side effects (share/save/present) before designing the print service seam.
+
+I have a thorough understanding of the house style. Let me read the lint/format configs and confirm a couple of platform APIs before writing, plus set up a plan.
+
+Let me check the forbidden placeholder patterns to avoid tripping the gate.
+
+The KMP `Shared.xcframework` isn't staged yet and the gate's build depends on it. Let me assess whether the KMP toolchain can build it (this determines whether the full gate can pass or must be BLOCKED).
+
+Java 17 + gradlew are present. The KMP framework build is the long pole — let me kick it off in the background now (it's exactly the gate's pre-build step) while I write the PrintButton code.
+
+Toolchain confirmed. KMP build is running in the background. Let me set up a plan and todos, then peek at the KMP build progress.
+
+The background build got killed (sync session discarded its child). Let me check the log and relaunch the KMP build as a proper detached async process.
+
+Build relaunched detached. Now let me verify no symbol clashes, then write the surface. First mark first todo in progress and check for name collisions.
+
+A name appears in `Utility.swift`. Let me check what it is to avoid a collision, and verify the KMP build is still running.
+
+No clash — the existing symbol is `TSPrintButton` (an atomic UI primitive), distinct from my surface's `PrintButton`. The KMP build is actively progressing (Kotlin compiling, build cache hits). Let me view `TSPrintButton` to align with it.
+
+`TSPrintButton` is an atomic icon primitive (out of scope); my surface is the full parity component built on `TSButton`, consistent with the CopyButton/CopyLinkButton precedent. The KMP build is advancing. Now writing the surface files.
+
+Now the test files — the most rigorous part. Let me write the logic/view-state/a11y/i18n tests and the model/flow/re-entrancy tests.
+
+All 8 files written. Now let me format/lint my files and check the KMP build progress.
+
+swiftformat reports my files already conform (0/7 changed). KMP build is in final release-linking. Let me lint my files specifically and check placeholders.
+
+All my files pass swiftformat (0/7) and swiftlint --strict (0 violations). Now the placeholder check. The gate passes a path *prefix* (`.../PrintButton`) which isn't a real path — let me verify its behavior and also run a genuine scan of the actual files for honest evidence. Also checking KMP build completion.
+
+Placeholder check passes both literally and via genuine per-file scan (all 7 files: COUNT=0). KMP build is linking release frameworks. Let me generate the Xcode project and wait for the framework to stage.
+
+Project generated. Let me wait for the KMP framework to finish staging, then kick off the whole-tree lint checks.
+
+Framework staged, build successful. Now let me run the gate. First, a fast iOS build-only pass to catch any compile issues before the long test phase. Starting it in the background.
+
+Good — my `PrintButton.strings` is being bundled correctly (validated UTF-8), and no compile errors yet. The build is still compiling the app module. Let me keep monitoring.
+
+The iOS build failed — but on a **pre-existing, unrelated** error in `AIAutoNameUnnamedLocations.swift` (a different surface I didn't touch), not in my PrintButton code. Let me get the complete error picture and confirm it's pre-existing.
+
+Confirmed: **zero** PrintButton compile errors, no tracked files modified (only my 8 new files added). The build fails solely on a **pre-existing** Swift 6 error in the unrelated `AIAutoNameUnnamedLocations.swift` (owned by another prompt, out of my scope). 
+
+To gather genuine evidence that my surface compiles and its tests pass in-app, I'll temporarily neutralize that unrelated error for verification only, then restore it (committing nothing outside PrintButton.*). Let me inspect it first.
+
+The pre-existing error is a one-word Swift 6 fix (`content` needs `@escaping`) in another prompt's file. Since it's git-tracked, I can edit it for verification and restore precisely with `git checkout` afterward. Let me apply it **temporarily** (verification only) and rebuild to see if the module then compiles cleanly.
+
+No errors so far — the app module is recompiling. Let me wait for it to finish.
+
+Still compiling the large app target, no errors. Let me wait longer for completion.
+
+A **second, different** pre-existing error appeared in another unrelated surface (`RecentDrivesSection.Previews.swift` — a compiler type-check timeout). The baseline has **multiple** pre-existing compile failures across sibling surfaces (likely the newer Swift 6.3.2 toolchain), none in my code, all out of my allowed scope.
+
+Let me restore the sibling file I touched, then verify my core logic genuinely via an isolated Swift package (compiling my real Model+Seams and running the tests).
+
+Restored — only my 8 PrintButton files remain. Now let me genuinely verify my core logic by compiling my **real** Model + Seams in an isolated Swift package and running the tests there (the heart of the surface — telemetry, print-flow, re-entrancy, logic, i18n).
+
+All 21 isolated tests pass against my **real** Model + Seams — genuine green for the surface's logic, print-flow, re-entrancy, telemetry, and i18n under Swift 6.3.2 strict concurrency.
+
+Now let me run the actual gate commands (faithfully) to capture real evidence for the official log. Starting the iOS gate build+test (it will fail on the pre-existing sibling errors — that's the honest baseline result).
+
+While the iOS gate compiles, let me capture the whole-tree lint/format gate steps (run exactly as the gate specifies).
+
+swiftlint --strict whole-tree: **PASS** (0 violations in 4721 files, my files included). Now swiftformat --lint whole-tree and checking iOS gate progress.
+
+swiftformat --lint whole-tree: **PASS** (0/5019). So 3 of 5 gate steps are green (lint, format, placeholder). The iOS gate is still compiling. Let me wait for it to reach the pre-existing sibling error.
+
+The iOS gate hit the **pre-existing** `AIAutoNameUnnamedLocations.swift:123` error — zero PrintButton errors. Let me wait for it to finish and capture the final result + exit code.
+
+iOS gate: **BUILD FAILED** on the pre-existing `AIAutoNameUnnamedLocations.swift:123` (xcodebuild exit 65), zero PrintButton errors. Let me run the macOS gate step (faithful) and confirm the iOS process exited.
+
+Let me record the situation in a plan file and verify the iOS process exited while macOS builds.
+
+macOS gate fails on a **code-signing capability gap** (no development certificate in this environment — `MAC_EXIT=65`), a separate runner limitation. Let me capture the iOS gate's final state and ensure its process isn't lingering.
+
+iOS gate = **TEST/BUILD FAILED** (exit 65) on the pre-existing `AIAutoNameUnnamedLocations.swift:123`; macOS gate = **failed (exit 65)** on a code-signing capability gap. Both are outside my code and scope. Let me gather precise log excerpts and clean up the lingering process.
+
+The kill wrapper needs a literal PID. Let me get the PID and gather evidence separately.
+
+Evidence confirmed: my files compiled in-app (Model/Seams/Views/Previews), **0 PrintButton errors** across all builds; iOS blocked by pre-existing `AIAutoNameUnnamedLocations.swift:123`, macOS by signing capability. Let me terminate the lingering iOS process (literal PID) and write the official gate log.
+
+Now let me write the official gate log with the complete, honest evidence.
+
+Now let me verify the repo state (ensure only my files + log are meaningful changes, generated artifacts are gitignored) and clean up temporary verification files.
+
+Repo state is clean: **no tracked files modified**, only my 8 PrintButton files + the gate log are added; generated artifacts are gitignored. Let me confirm no build processes linger and finalize the todo state.
+
+Final state confirmed. The other running `xcodebuild`/`gradle` processes belong to **other parallel slots** (e.g., `slot-180`, `/tmp/dd-preview`, `EXCLUDED_SOURCE_FILE_NAMES=RangeSlider.*`) — not mine; my iOS process exited and I will not touch theirs. This also confirms this is a concurrent multi-slot environment where sibling-surface breakage is owned by other prompts.
+
+I've completed and verified the PrintButton surface to the maximum extent possible within scope. The whole-app gate is blocked by pre-existing, out-of-scope baseline breakage — reported honestly as BLOCKED per the covenant (not committing on red).
+

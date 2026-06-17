@@ -1,0 +1,275 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+All tooling is available (Xcode 26.5, swiftlint, swift, pwsh). Let me explore the Apple app structure and the web source.
+
+Let me explore the Apple app's internal structure and existing patterns.
+
+There's a discrepancy between `TeslaSync/` and `Sources/`. Let me examine the project config and existing Admin features.
+
+The actual sources live in `Sources/Features/Admin/`. Let me check for any existing Feedback page, the ledger entry, and the gate contract.
+
+No existing FeedbackQueue page or ledger row — I'll create both. Let me study the canonical admin page pattern (AuditLog: filterable table with badges, model, route registration).
+
+Now the Table/Filters/Badges/Models/Sample and the routing system.
+
+Let me examine the route enum, parser, and where registrations are aggregated.
+
+Let me read the composition root (`TeslaSyncApp.swift`) to see how registrations aggregate.
+
+Now let me survey the design-system components I'll need (panels, buttons, fields, badges, masked value, spinner, copy button).
+
+Let me read the web API hook/types, skeleton/banner components, and design tokens.
+
+Let me inspect design tokens, the Localization catalog, and how admin string keys are stored.
+
+The catalog is 5MB. Let me check which of the 38 required keys already exist there.
+
+Let me examine the exact JSON shape of existing entries (admin keys, route keys, common keys) to match the format precisely.
+
+Let me check where admin page tests live and confirm the SharedFacade data-source pattern.
+
+Let me review the placeholder scanner, an existing log for format, and the gate README.
+
+I have a complete picture now. The AuditLog log documents a known pre-existing full-build crash in out-of-scope `shared-surfaces`. Let me verify my baseline tooling and check the project setup.
+
+Tooling confirmed. Let me set up tracking and check the Shared.xcframework dependency (build prerequisite) before kicking off a baseline build.
+
+The `Shared.xcframework` isn't present — the full app build requires building the KMP core via Gradle/Kotlin-Native (a heavy, out-of-scope prerequisite). Let me probe its feasibility in the background while I write code.
+
+Java 17 + gradlew are present. Let me kick off the KMP `Shared.xcframework` build in the background (it's slow but would enable a real full build), then proceed to write code.
+
+Now I have a complete understanding. Let me start writing the implementation, beginning with the models file.
+
+Let me check for existing generic expand/collapse a11y keys so the expand control needs no invented visible string.
+
+The catalog already has the web strings under a `translation.` prefix (parallel set), but native code uses **unprefixed** keys (like `admin.auditLog.*`). Let me extract the authoritative web English values to use verbatim.
+
+The KMP build succeeded — I can attempt a real full build. Let me verify the framework staged, and read the build tail.
+
+Framework built but not staged. Let me see the staging logic and stage it.
+
+Let me stage the framework and write the expansion detail view in parallel.
+
+Now the route registration and navigation wiring.
+
+Now wire the route into the enum, parser, and app composition:
+
+Now let me add the catalog strings. First inspect the raw xcstrings formatting to preserve it exactly.
+
+The xcstrings uses Xcode's quirky ` : ` separator style. To avoid a 5MB reformatting diff, I'll insert new entries as raw text at the top of the `strings` object, then validate the JSON.
+
+All 41 keys added and validated. Now the model test, mirroring the AuditLog test suite.
+
+All files written. Let me run the formatter and linter on the new/edited files.
+
+Auto-fixable formatting issues. Let me apply the formatter and re-verify.
+
+swiftformat clean. Now swiftlint --strict on the new/edited files.
+
+swiftlint clean (0 violations). Now the placeholder scan, then I'll generate the project and build.
+
+Placeholder scan clean (0). Now let me generate the Xcode project and verify my files are included.
+
+Project generated, my files referenced 114×. Now let me kick off the full macOS build (I have the framework staged). This compiles ~6000 files, so I'll run it in the background.
+
+While the build runs, let me verify the catalog edit is purely additive and run the placeholder scan on the test dir.
+
+Catalog diff is purely additive (451 insertions, 0 deletions). Let me run the test-dir placeholder scan separately and check build progress.
+
+Test dir placeholder scan clean. The build is compiling. Let me check its progress via the log.
+
+Build is past module-emit (type-check) with 0 errors/crashes. Let me continue waiting for the compile/link phase.
+
+Build failed (EXIT=65). I must determine honestly whether it's my code or the documented pre-existing issue. Let me examine the errors.
+
+Exactly one error, and it's in my code — not the pre-existing issue. A `@MainActor`-isolated static (`FeedbackQueuePageModel.pageSize`) is used as a default in the nonisolated `FeedbackQuery.init`. Let me fix it by making the page-size constant nonisolated.
+
+Let me quickly validate the fix with an isolated strict-concurrency type-check of the model layer (fast), and re-format/lint the two changed files.
+
+Model layer is clean. Let me re-format/lint the two edited files, then rebuild.
+
+Clean. Now rebuild the full macOS target.
+
+Build running. Meanwhile, let me inspect the ledger schema and a sample 2-row entry to prepare the ledger update precisely.
+
+Let me check the rebuild progress.
+
+Type-check passed (0 errors). Compiling object files now. Let me wait for completion.
+
+Compiling through shared-surfaces with 0 errors/crashes — progressing well. Let me continue waiting.
+
+Now compiling "T" files, still 0 errors/crashes — near the end of the alphabet. Let me wait for link.
+
+**Full macOS build SUCCEEDED (EXIT=0)** — all my files compiled into the real app target, no pre-existing crash this run. Let me confirm and run the test suite.
+
+BUILD SUCCEEDED, 0 errors; xcframework has all 3 slices. Now run the test suite (focused on my new tests first for fast validation).
+
+Let me run the iOS build in parallel to verify the `#if os(iOS)` compact-layout branches compile.
+
+Both running. Let me update the parity ledger while they build.
+
+The iOS build finished. Let me verify the ledger diff is benign and check the iOS build + test results.
+
+The macOS test finished and iOS build failed with 1 non-FeedbackQueue error. Let me inspect both, and I'll fix the ledger's em-dash encoding.
+
+Both failures may be from running them concurrently (shared DerivedData DB lock). Let me check the macOS test failure cause.
+
+The macOS test failure is a **pre-existing** error in `VehicleCostPageModelTests.swift:10` (an out-of-scope sibling test with the same Swift 6.3.2 isolation diagnostic) — it blocks the whole test bundle from compiling. The iOS failure was a DB-lock from running concurrently. Let me verify the pre-existing nature and check my changeset is clean.
+
+Confirmed: my changeset is clean; `VehicleCostPageModelTests.swift` (pre-existing, unmodified by me) has the same Swift 6.3.2 isolation diagnostic that blocks the *whole test bundle*. The iOS failure was a DB-lock from concurrency. Let me fix the ledger em-dash encoding and re-run the iOS build alone.
+
+Ledger now purely additive (18 insertions, 0 deletions). Now the iOS build alone with `ARCHS=arm64`.
+
+The macOS app build already proved every file (model + views + table + expansion + badges + nav) compiles into the real app. Since the XCTest bundle is blocked by the pre-existing sibling error, let me prove my model's runtime behavior with an isolated harness (the sibling-page methodology).
+
+Top-level code needs a `main.swift` filename. Let me rename and recompile.
+
+Strict-concurrency needs `@MainActor` on the helpers that touch the counter. Let me annotate and rerun.
+
+Model harness: **all 38 assertions passed** (Swift 6 strict concurrency). Let me check the iOS build status.
+
+iOS build progressing cleanly (0 errors). Let me wait for it to complete.
+
+iOS build is in the linking phase (0 errors). Let me wait for completion.
+
+Still compiling shared-surfaces (0 errors). Let me continue waiting for completion.
+
+**iOS app build SUCCEEDED (EXIT=0).** Let me confirm, then write the evidence log.
+
+Both platforms build clean. Let me gather final file metrics and write the comprehensive evidence log.
+
+All gates green on both platforms. Now let me write the comprehensive evidence log.
+
+Log written. Let me run a final consolidated verification of the fast gates and launch a code review of the diff in parallel.
+
+I'll start by reading the web source reference and all the Swift files to compare them.Now let me read the remaining Swift files.Now the Table, Expansion, and Badges files.Final fast gates are green (swiftformat 0/12, swiftlint 0 violations, catalog parses with 9612 keys). I've launched a code review of the diff to catch any parity gaps before committing. I'm waiting for it to complete and will address any findings, then commit.
+
+I have the full picture of the Swift files. Now I need to verify a few web reference behaviors — specifically the `UserCell` rendering, `formatDateTime` format, and the `TSUserCell`/`TSMaskedValue` shared components — to assess parity. Let me look those up.Key finding on `UserCell`. Let me verify the web `dateFormat` lib and the native `TSUserCell`/`TSMaskedValue` shared components to confirm the reporter-cell and date parity.The code review is still in progress (verifying date handling and `TSUserCell` internals). I'll wait for it to finish and then address any findings before committing.
+
+Let me verify two more things: the backend contract for `forward_to_github` (to assess the `jsonBody` value encoding), and confirm JS `JSON.stringify` key-ordering behavior.The backend confirms `forward_to_github` is a Go `bool`. Let me view the handler struct and its unmarshalling to be precise.The review is going deep (now checking the backend `forward_to_github` contract). I'll stop polling and wait for the completion notification, then address any findings and commit.
+
+I now have everything I need. The backend confirms the decisive detail: `adminFeedbackPatchRequest.ForwardToGitHub` is a Go `bool` (handler.go:105) and the decoder uses `DisallowUnknownFields()` with strict typing (handler.go:185-186).
+
+Here are the genuine issues I found.
+
+---
+
+## Issue: Reporter cell mapping diverges from web `UserCell` and leaks the submitter IP
+**File:** /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-101008-2785/slot-4/apps/apple/Sources/Features/Admin/FeedbackQueuePage.Table.swift:190-200 (used at :56 and :183)
+**Severity:** High
+
+**Problem:** The web reporter column renders `<UserCell user={{ id: submitter_subject, email: user_email }} />` with `showEmail` defaulting to **false**. Per `UserCell.tsx:45-48` + `:64-66`, that produces a **single line** whose text is `email.split('@')[0] || id || 'Unknown user'` — i.e. email **local-part first**, the opaque subject only as a fallback, and **no secondary line at all**.
+
+The Swift port inverts and expands this:
+- `reporterName` (`:190-194`) returns `submitterSubject` **first**, then the **full** `userEmail` (not the `@`-local-part).
+- `reporterSecondary` (`:197-200`) returns the email when distinct, else falls back to `FeedbackQueueFormat.dash(row.submitterIP)`, and `TSUserCell` (People.swift:43-52) **always renders that secondary line**.
+
+Net effects vs. web:
+1. Display name priority is reversed (web shows `casey` from the email; Swift shows the raw `auth0|6628f0c19a` subject — exactly the "opaque header value" the web comment at `UserCell.tsx:42-44` deliberately avoids).
+2. Swift shows the full email string where web shows only the local-part.
+3. **The submitter IP is rendered in the queue table.** The web `UserCell` is never even handed the IP (it only receives `id` + `email`, and `showEmail=false`), so it cannot display it. All three sample rows hit this — e.g. row 312 renders secondary `10.0.4.51`. This is both a parity gap and an information-exposure regression on the list view.
+
+**Evidence:** `UserCell.tsx:30` (`showEmail = false` default), `:33-48` (display-priority chain), `:62-67` (secondary line gated on `showEmail`). Sample data (`FeedbackQueuePageModel.Sample.swift`) makes the IP visible in the default "Loaded" preview for every row.
+
+**Suggested fix:** Mirror `UserCell`: compute one display string = `userEmail.split("@").first` if email present, else `submitterSubject`, else em-dash; do not pass a secondary line, and never fall back to `submitterIP`.
+
+---
+
+## Issue: A failed inline update destroys the whole list (web keeps it and shows a toast)
+**File:** /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-101008-2785/slot-4/apps/apple/Sources/Features/Admin/FeedbackQueuePageModel.swift:151-160
+**Severity:** Medium
+
+**Problem:** `applyUpdate`'s `catch` sets `state = .error(...)` (`:158`), which switches the entire panel to `TSQueryError` and discards the loaded rows (`items` returns `[]` when state isn't `.loaded`). In the web, the list's error branch is driven solely by `useFeedbackList`'s `isError`; the mutation (`useUpdateFeedback`) is independent and on failure only fires a toast (`useFeedback.ts:79` → `useMutationToast`), leaving the rendered list — and the admin's typed-in URL — intact. So a transient PATCH failure on a status change or "Save URL" wipes the queue view in the native port but not on web.
+
+**Evidence:** `useFeedback.ts:65-81` (mutation error handled via `onError` toast, never touching the list query state); web page only renders the error view from `isError` of the list query (`FeedbackQueuePage.tsx:198-199`).
+
+**Suggested fix:** In the `applyUpdate` catch, surface the failure without clobbering `state` (e.g. a separate error/toast flag), so the loaded list stays rendered, matching the web's mutation-error-as-toast behavior.
+
+---
+
+## Issue: `forward_to_github` is encoded as a JSON string, but the backend requires a JSON boolean
+**File:** /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-101008-2785/slot-4/apps/apple/Sources/Features/Admin/FeedbackQueueModels.swift:175-181
+**Severity:** Medium
+
+**Problem:** `FeedbackUpdate.jsonBody` is typed `[String: String]` and emits `body["forward_to_github"] = "true"` (`:179`). The web sends `JSON.stringify({ forward_to_github: true })` → a JSON **boolean** `true`. The backend struct declares `ForwardToGitHub bool` (`adminfeedback/handler.go:105`) and decodes with `json.NewDecoder(...).DisallowUnknownFields()` + `Decode` (`handler.go:184-189`), which returns an error (→ HTTP 400 "invalid payload") when a JSON string is supplied for a `bool` field. A `[String: String]` dictionary cannot represent the boolean, so the "Forward to GitHub" PATCH body cannot match the contract the way the web's does. (`status` and `github_issue_url` are `*string` on the backend, so those keys are unaffected — this is isolated to the one boolean field.)
+
+The model harness asserting `jsonBody` dictionary-equality would not catch this, since the defect is wire-type fidelity, not key naming (the keys are correct).
+
+**Evidence:** `adminfeedback/handler.go:102-106` (`ForwardToGitHub bool`), `:184-189` (strict decode), `handler_test.go:244` (`{"forward_to_github":true}` — boolean). The reviewed file's `jsonBody` doc comment states it is "Used by the production adapter ... so the backend contract ... is reproduced exactly," which `[String: String]` cannot do for this field.
+
+**Suggested fix:** Represent the body so the boolean serializes as a JSON boolean — e.g. make `jsonBody` a `[String: Any]` / encode via a `Codable` struct with optional fields — so the forward action posts `{"forward_to_github": true}`.
+
+---
+
+## Minor note (parity, low impact)
+`FeedbackQueueModels.swift:261` — `prettyJSON` pretty-prints with `.sortedKeys`, so the `recent_errors` disclosure renders object keys alphabetized (e.g. `line, message, source`), whereas the web `JSON.stringify(recent_errors, null, 2)` preserves source order (`message, source, line`). Dropping `.sortedKeys` restores byte-for-byte parity of that rendered block. Cosmetic, but it's a concrete rendered-string difference.
+
+The rest — pagination math (`totalPages`/`canGoPrev`/`canGoNext`), filter→query snake_case mapping, badge tone/label maps, Save-button enable/disable, Forward-button visibility, and the loading/empty/error/loaded routing for the *list* query — all match the web source.The review found 3 genuine issues (plus 1 cosmetic I'll assess). Let me verify the web `UserCell` contract and the backend handler before fixing.
+
+Confirmed: web `UserCell` shows a single line (`email local-part → id → "Unknown user"`), no secondary, never the IP. Let me verify the backend `forward_to_github` contract and check the `avatar.unknown` key.
+
+All three issues confirmed against the backend (`ForwardToGitHub bool` + `DisallowUnknownFields`) and the web `UserCell`. `avatar.unknown` isn't in the native catalog yet. Let me view the exact current sections to fix precisely.
+
+Now I'll apply all fixes. Starting with `FeedbackUpdate` (Encodable with proper JSON boolean):
+
+Now fix the model's `applyUpdate` (don't clobber the list) and add `updateError`:
+
+Now surface the update-error banner in the page panel:
+
+Now fix the reporter cell in the table to mirror web `UserCell` (single line, email local-part priority, no IP). Let me view the current call sites and helpers.
+
+Now update the tests for the changed update-body encoding, reporter mapping, and update-failure behavior.
+
+Now update the update-body and reporter tests:
+
+Now update the runtime harness for the changed update-failure behavior and the new boolean encoding, then re-run it.
+
+Harness passes (39 checks). Now add the 2 supporting catalog keys (`toast.feedback.update.error`, `avatar.unknown`) used by the fixes.
+
+Now re-format/lint the changed files, then rebuild (incremental).
+
+One swiftlint rule (`optional_data_string_conversion`) wants the failable initializer. Let me fix the test helper.
+
+Format + lint clean (0/12, 0 violations). Now rebuild macOS (incremental) to confirm the fixes compile into the app.
+
+Build running. Let me wait for the incremental rebuild to confirm the fixes compile.
+
+0 errors so far, still linking. Let me wait for completion.
+
+macOS rebuild after fixes succeeded. Let me confirm and rebuild iOS.
+
+iOS rebuild running. Let me update the evidence log to document the post-review hardening while it builds.
+
+Now update the reporter parity-evidence line and add the post-review hardening section:
+
+Let me verify I didn't disturb the PARITY header structure.
+
+I accidentally removed the `=== PARITY ===` header. Let me view and restore it.
+
+Let me verify the log's PARITY section is well-formed (43 items) and check the iOS build.
+
+Log is well-formed (43 `[x]` items, PARITY_COVERED=43, ends EXIT=0/STATUS=DONE). The iOS rebuild is still running. Let me wait for it.
+
+macOS confirmed SUCCEEDED. iOS rebuild still running — let me wait.
+
+iOS rebuild progressing (0 errors; AppRoute change invalidated wide deps so it's near-full). Let me wait for completion.
+
+iOS rebuild after fixes: **SUCCEEDED (EXIT=0)**. Both platforms green with all fixes. Let me run the final consolidated verification and review the complete changeset.
+
+All green. Let me verify the final changeset is exactly the intended files (xcodeproj/xcframework git-ignored), then commit.
+
+Changeset is exactly the intended files; xcodeproj/xcframework are git-ignored. Let me clean up temp artifacts and commit.
+
+All 15 files staged (2431 insertions). Let me commit.
+
+Committed cleanly (`963a92262`, 15 files). Let me finalize the task tracking.
+
+All todos complete. The task is done and committed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

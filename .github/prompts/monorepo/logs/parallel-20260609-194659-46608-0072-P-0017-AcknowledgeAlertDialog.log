@@ -1,0 +1,148 @@
+I'll start by understanding the environment capabilities and the repository structure, since this task requires specific Apple tooling.
+
+The full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me explore the repository structure and the web source.
+
+Now let me understand the existing Apple app structure — particularly the `modals-dialogs` directory, existing modal patterns, state holders, tokens, and i18n.
+
+There's a clear multi-file pattern per surface. Let me study the closest analog (`ReauthDialog` — a form dialog) and the project wiring, tokens, and i18n facade.
+
+Critical observation: `TeslaSync/modals-dialogs` is **not** listed in `project.yml` sources. Let me investigate the build feasibility — xcodegen, the Shared.xcframework prebuild script, and whether modals are wired in.
+
+The build depends on a KMP `Shared.xcframework` built via Gradle. Let me check whether sibling surface prompts succeeded or were blocked, and how the build dependency resolves — this determines my expected outcome.
+
+Now I understand the protocol. Sibling `p4-apple-modals-dialogs-*` surfaces report `STATUS=DONE` with the full-app `xcodebuild` **deferred** (modals-dialogs group not yet wired into `project.yml`; KMP `Shared.xcframework` can't be staged without Gradle network access). They validate via a per-surface gate. Let me read the closest analog (`ReauthDialog`) log and its full source set.
+
+I now fully understand the established protocol. Let me deeply study the `ReauthDialog` source files (closest analog — its "confirm" mode is a text-field + Cancel + Confirm + submitting + validation, exactly AcknowledgeAlertDialog's shape) to replicate the exact idioms.
+
+Let me read the remaining ReauthDialog files (Model, Views, Previews, strings, tests) and locate the shared design-system primitives.
+
+Now let me read the previews, strings, and test files, and locate the design-system primitives (`TSButton`, `TSGlassPanel`, `TSFadeIn`, tokens) to confirm exact APIs.
+
+Let me verify the exact APIs of the design-system primitives and check for a shared multiline text component (web `<Textarea>`).
+
+The shared `TSTextArea` exists but uses `LocalizedStringKey` (can't resolve the per-surface table, per the ReauthDialog precedent), so I'll build an in-surface editor. Let me locate the design tokens (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`).
+
+Now I have all tokens. Let me read the lint/format configs and the placeholder checker, and confirm the modals-dialogs tier registration status (matching the sibling protocol).
+
+Let me read the placeholder checker and map the design-system files the view layer depends on (for the SDK typecheck gate).
+
+I have everything needed. Let me verify there are no symbol collisions for my planned `AckAlert*` / `AcknowledgeAlertDialog` namespace, then set up my plan and todos.
+
+No collisions. Let me record the plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure projection core (`Adapter.swift`).
+
+Now the Seams file (telemetry, service, controller, source, i18n facade, a11y).
+
+Now the state holder (`Model.swift`).
+
+Now the top View and the Views (header, form, note editor, footer).
+
+Now the States file (envelopes), then Previews, strings, and tests.
+
+Now the Previews and strings catalog.
+
+Now the two test files (projection/accessibility + state-holder).
+
+All 10 files written. Now let me run the gates. Starting with formatting and linting on the new files.
+
+swiftformat passes (0/9), all files < 400 lines. Now swiftlint on the surface files (passed explicitly, since the tier isn't yet in `included`).
+
+Both pass (0 violations). Now the full-tree `swiftformat --lint apps/apple` and the placeholder check.
+
+Full-tree format clean (0/3323). Let me verify no forbidden words in my files, then run the placeholder checker three ways (literal path, real dir, isolated copy).
+
+The matches are all the web i18n key `alerts.ack.notePlaceholder` (which must stay verbatim for parity). Let me check exactly how the scanner matches — substring vs word boundary — and whether it flags `notePlaceholder`.
+
+The matches are the web i18n key `alerts.ack.notePlaceholder`, which must stay verbatim for i18n parity. The scanner does case-insensitive **substring** matching, so it would flag `notePlaceholder`. The tool's sanctioned mechanism for exactly this (a key literally containing a trigger word — see its self-test) is the `// parity:allow <reason>` marker. I'll reword the comments to avoid the word and add the marker only on the one mandatory key line.
+
+Let me also tidy the `.strings` comment wording (cosmetic; not scanned), then re-verify format/lint and run the placeholder scan against the real dir + an isolated copy.
+
+Isolated scan: `ALLOWED=1` (the one i18n-key line, marker honored — proving the scanner read my files), `COUNT=0`. Now the real-directory scan, then the isolated SwiftPM build+test.
+
+Real-dir scan: `ALLOWED=3` (my 1 + sibling's 2), `COUNT=0`. Now gate [4]: an isolated SwiftPM package compiling the pure-logic files (Adapter+Seams+Model) + the tests, under Swift 6 strict concurrency — this actually runs my tests.
+
+All 39 tests pass under Swift 6 strict concurrency (gate [4] GREEN). Now gate [5]: SDK typecheck of the view layer against the real design system. Let me map the minimal design-system dependency closure.
+
+The design system is Shared-free (self-contained). Let me identify the `Sources/Design` files and run the iOS + macOS SDK typecheck of the view layer against the real design system.
+
+Cards.swift's own `#Preview` (compiled because of `-D DEBUG`) references `TSBadge`. Let me add `Badges.swift` and iterate until the real design-system closure resolves.
+
+Clean on macOS. Let me run both SDKs capturing swiftc's real exit codes explicitly.
+
+Both SDK typechecks pass: `MAC_TYPECHECK_EXIT=0`, `IOS_TYPECHECK_EXIT=0`, 0 errors (gate [5] GREEN). Gates [1]–[5] are all green. Now gate [6]: the prompt's full-app `xcodebuild`. Per the established sibling protocol this is environment-deferred, but per "no skip-and-assume" I'll actually run it and capture the real outcome. First, generate the project and confirm the modals-dialogs tier isn't wired in.
+
+Let me check progress from another shell without disturbing the running xcodegen.
+
+xcodegen is actively working (99% CPU) — it's building the group tree for 3300+ files. Let me keep waiting.
+
+xcodegen is pathologically slow on the parallel-merged 3300-file tree (~10 min, still CPU-bound). Let me give it one more window, then fall back to the authoritative direct proof if needed.
+
+A parallel slot is running its own `xcodebuild -scheme TeslaSync` (shared host — confirming the environment caveat), which contended with my xcodegen. My xcodegen exited without producing output in the pipeline. Let me stop the stuck shell and check state.
+
+Authoritative proof obtained: `modals-dialogs` appears **0 times** in `project.yml` — the entire tier (all 8 sibling surfaces + mine) is not globbed into any app/test target, so the full-app build cannot include or be affected by my files. This is the documented "tier not yet wired" condition (registration is owned by the P4 acceptance gate; `project.yml`/`.swiftlint.yml` are outside my allowed files).
+
+Let me kick off a best-effort xcodegen in the background (for pbxproj evidence parity with siblings) while I write the gate log.
+
+While xcodegen runs, let me gather exact metrics for the log (line counts, i18n key bijection).
+
+Perfect i18n bijection: 18 keys defined ↔ 18 used (0 orphan, 0 missing), including all 6 web-source keys. Let me check the background xcodegen, then write the gate log.
+
+xcodegen completed (in background). Now I can get the pbxproj evidence matching sibling quality.
+
+pbxproj confirms: **0 refs** to `AcknowledgeAlertDialog`/`modals-dialogs`/`ReauthDialog`, while wired tiers (StateTimelineWidget=54, RecentDrivesSection=66) appear — the generated project definitively excludes my surface. The project is git-ignored.
+
+Per "no skip-and-assume", let me attempt the actual full-app `xcodebuild` (bounded) to capture the real failure mode on this runner, while I write the log.
+
+The Gradle prebuild is genuinely running (`:core:downloadKotlinNativeDistribution` — network is available, so the KMP `Shared.xcframework` may actually build like the sibling). I'll let it run and write the gate log meanwhile, then finalize with the real iOS result.
+
+Log drafted with the iOS xcodebuild result pending. Let me check the iOS build progress.
+
+The KMP `Shared.xcframework` built successfully on this runner (network available) and is now linking — Gradle is genuinely progressing. Let me wait for the app-compile phase.
+
+Gradle is building both debug+release xcframework variants (the ~7-min step). Let me wait for it to reach the app-compile phase or hit the timeout.
+
+The full-app iOS `xcodebuild` ran to completion with `IOS_EXIT=65` — and the failures are exactly the documented pre-existing sibling collisions (`StateTimelineModel`/`StateTimelineUpdate` "ambiguous for type lookup" + cascading inference errors in `feature-views/Vehicle*`), **not** my files. The KMP `Shared.xcframework` built + staged fine. Let me quantify precisely.
+
+Decisive first-hand evidence: iOS `xcodebuild` exit 65, **108 total errors, 0 in my files** (0 in modals-dialogs), all 96 "ambiguous type" errors in pre-existing `RecentDrives*`/`StateTimeline*` sibling collisions; the KMP `Shared.xcframework` built+staged fine. Let me substantiate the macOS signing-deferral claim (quick check), then finalize the log.
+
+Confirmed: macOS has **0 valid signing identities** (substantiates the macOS deferral; the macOS targets carry entitlements + hardened runtime). iOS build finished `IOS_EXIT=65` (first-hand). Let me finalize the log with the real iOS evidence.
+
+Let me refine the covenant/disposition wording to reflect that the iOS step was actually run (exit 65 on unrelated pre-existing siblings) and set the final status.
+
+Let me refine the top-of-log disposition summary and verify no placeholders remain.
+
+The log is complete and accurate. Now let me verify git status shows only my allowed files (the generated `.xcodeproj`, `Shared.xcframework`, and temp dirs should be ignored/outside the repo), then commit.
+
+Exactly 11 files: my 10 surface files + the log. The generated `.xcodeproj`, staged `Shared.xcframework`, and shared build dir are all git-ignored (no drift). Let me commit (and tidy temp files).
+
+Committed cleanly (11 files, conventional message + Co-authored-by trailer). Let me do a final verification pass.
+
+All gates complete, working tree clean, commit `95791c800` contains exactly the 11 allowed files. Let me confirm all todos are done.
+
+All 15 todos done. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...-modals-dialogs-0017-AcknowledgeAlertDialog.log | 308 +++++++++++++++++++++
+ .../AcknowledgeAlertDialog.Adapter.swift           | 220 +++++++++++++++
+ .../AcknowledgeAlertDialog.Model.swift             | 254 +++++++++++++++++
+ .../AcknowledgeAlertDialog.ModelTests.swift        | 285 +++++++++++++++++++
+ .../AcknowledgeAlertDialog.Previews.swift          |  98 +++++++
+ .../AcknowledgeAlertDialog.Seams.swift             | 207 ++++++++++++++
+ .../AcknowledgeAlertDialog.States.swift            | 183 ++++++++++++
+ .../AcknowledgeAlertDialog.Tests.swift             | 186 +++++++++++++
+ .../AcknowledgeAlertDialog.Views.swift             | 259 +++++++++++++++++
+ .../modals-dialogs/AcknowledgeAlertDialog.strings  |  51 ++++
+ .../modals-dialogs/AcknowledgeAlertDialog.swift    |  90 ++++++
+ 11 files changed, 2141 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0017-AcknowledgeAlertDialog.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.swift

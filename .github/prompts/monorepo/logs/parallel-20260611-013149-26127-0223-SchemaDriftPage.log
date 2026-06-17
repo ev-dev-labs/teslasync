@@ -1,0 +1,135 @@
+I'll start by exploring the codebase to understand the task structure, the web source page, and the existing Apple app architecture.
+
+Now let me explore the Apple app structure, the parity manifest, and existing Apple pages for reference patterns.
+
+Let me examine the Apple app's structure, the existing admin features, and the apple ledger.
+
+The DiskForecast page also has 32 parity items — a perfect reference. Let me find the existing Apple Features/Admin directory and examine reference implementations.
+
+The real source tree is `apps/apple/Sources/Features/Admin/`. DiskForecast has exactly 32 parity items like SchemaDrift — let me study it as the primary reference.
+
+Excellent reference. Let me read the DiskForecast model, table, route registration, and tests to understand the full pattern.
+
+Let me read the DiskForecast Table, its tests, and the web DiskForecast source for the table mapping pattern.
+
+Now let me examine the web API hook for `useSchemaDrift`, the Go handler response shape, and the shared Apple components I'll need.
+
+Let me get the exact response shape from the TS types and Go model.
+
+Now I have the complete data shape. Let me locate the shared Apple components and design tokens used by the reference page.
+
+The web `StatCard` (with sublabel) maps to `TSMetricCard`. Let me read the remaining shared components and design tokens.
+
+Now the feedback components, design tokens, and the navigation/route system.
+
+Let me examine the navigation/route system, the design tokens, skeletons, and how route registrations are composed.
+
+Let me see how the route registrations are composed in the app entry point and check the other admin route registrations for the `.admin` conflict.
+
+Let me examine the route parser, project.yml for source mapping, and check for tests that assert the route set.
+
+The route tests iterate `allCases` generically — adding a case is safe there. Let me check for exhaustive switches over `AppRoute` that would force compile updates.
+
+Let me locate and inspect the string catalog, focusing on existing `route.*` and `admin.diskForecast.*` keys to mirror.
+
+The xcstrings format is clear. Let me verify the web `fmtNumber` and `formatDateTime` behavior precisely for faithful parity, then I'll create a plan.
+
+I have all the data shapes and behaviors. Let me check the DiskForecast evidence log format, the check-placeholders script, and the gate/README to understand exact gate expectations.
+
+The DiskForecast log gives me the exact methodology and reveals a known pre-existing out-of-scope build break. Let me check tool availability (decides DONE vs BLOCKED) and peek at any prior SchemaDrift logs.
+
+All tools present (Swift 6.3.2, Xcode, xcodegen, swiftlint, swiftformat, pwsh) — so I target STATUS=DONE. Let me peek at the prior SchemaDrift logs and the placeholder script.
+
+A prior *different-slot* attempt used a `feature-views/` convention without nav wiring. But in THIS slot, DiskForecast/ApiPlayground/etc. are live under `Sources/Features/Admin/` WITH nav wiring — that's the analogous, building sibling I'll follow. Let me read the placeholder script and design tokens.
+
+I now have a complete understanding. Let me verify the known pre-existing build blocker and whether the KMP framework is staged, then set up my plan.
+
+Pre-existing out-of-scope blocker confirmed (`AISuggestNewGeofences.swift:129` escaping-closure bug), KMP framework not staged, clean git baseline. I'll follow the DiskForecast verification methodology (isolated Swift 6 typecheck + model harness + lint/placeholder/xcodegen). Let me set up my plan and todos.
+
+Now I'll implement. Starting with the model (wire types, data-source seam, state, `@Observable` model, and display formatters).
+
+Now the panels/views file (GlassPanel1 summary, GlassPanel2 fingerprints with Tables/Columns/Indexes stats, status badge).
+
+The reverse-lookup `localized(_:)` helper is fragile. Let me refactor to resolve catalog literals directly at the call sites (matching DiskForecast's `String(localized:)` pattern).
+
+Now remove the obsolete `localized(_:)` helper at the bottom of the file.
+
+Now the main page view with header, state router, loading skeleton, empty (GlassPanel6), error, 503 banner, and previews.
+
+Now the route registration and navigation wiring (AppRoute case, parser alias, app composition).
+
+Now wire the `.schemaDrift` route into `AppRoute.swift` (case, pathSegment, systemImage, group), the parser alias, and the app composition.
+
+Now the parser alias and the app composition:
+
+Page, views, model, and routing are done. Let me update todos and write the tests.
+
+Now the string catalog. Let me inspect the exact formatting (indent, unicode escaping, key sort order) so my insertion produces a minimal, faithful diff.
+
+The catalog uses Xcode's quirky ` : ` spacing, is unsorted, and stores literal UTF-8. Safest is a purely-additive textual insertion before the `strings` close. Let me do that.
+
+Catalog updated (+22 keys, valid JSON). Now the parity ledger — append 2 rows for macOS + iOS.
+
+Catalog and ledger updated. Let me update todos and run the fast gates (swiftformat, swiftlint, placeholder scan) in parallel.
+
+The `docComments` rule flags the detached file-overview `///` block in the Views file (it's not attached to a declaration). Converting it to a regular `//` comment.
+
+swiftformat 0/8 and swiftlint --strict both clean. Now the placeholder scan and xcodegen generation.
+
+Placeholder scan clean (COUNT=0; the 1 ALLOWED is a pre-existing sibling marker). Let me run xcodegen and confirm my files contain none of the forbidden patterns.
+
+xcodegen succeeded; my files are clean. Now the isolated Swift 6 type-check. Let me locate the exact dependency files (matching DiskForecast's known-good set) and confirm symbol homes.
+
+All my files are wired into the project (30 pbxproj refs). Now the isolated Swift 6 strict-concurrency type-check against the real tokens + components, on macOS first.
+
+macOS type-check clean (0 errors). Now the iOS-simulator type-check (exercises the `#if os(iOS)` compact-width branches).
+
+Both type-checks pass (0 errors, macOS + iOS). Now the executable model harness to verify runtime logic and formatters.
+
+All in-scope gates GREEN: swiftformat 0/8, swiftlint 0, placeholder 0, typecheck macOS+iOS 0/0, harness 30/30. Let me confirm no other file has an exhaustive `AppRoute` switch broken by the new case, and assess the full-build path.
+
+Confirmed: only `AppRoute.swift` switches exhaustively over routes (already updated), and the full app build can't run here (KMP `Shared.xcframework` needs Java/Gradle — `java NOT FOUND`) plus the known pre-existing out-of-scope sibling error. Isolated typecheck + harness is the authoritative proof (matching the DiskForecast sibling). Let me verify all 22 required parity strings resolve in the catalog.
+
+All 22 strings present and correct. Let me confirm each parity string key is actually wired to a call site in my Swift source (evidence for the PARITY section).
+
+Every parity string is wired to a call site. Let me gather file metrics and git status for the evidence log.
+
+Let me gather the real `xcodebuild` failure mode honestly (it can't link the unstaged KMP framework here), so the log records a real command + exit code rather than an assumption.
+
+The scheme pre-action is building the KMP `Shared.xcframework` via Gradle (it's succeeding — a JDK is reachable to Gradle). The full build will continue into the app target. Let me wait for it.
+
+The KMP framework build is wrapping up; app-target compilation hasn't started yet. This will take several more minutes and is expected to go RED on the pre-existing out-of-scope sibling error. Let me keep it running and check back.
+
+Build finished with exit 65, and the framework got staged. Let me pull the actual compiler errors to confirm they're the pre-existing out-of-scope ones and not in my files.
+
+Exactly one error — and it's a pre-existing, out-of-scope expression-complexity timeout in a `feature-views/` sibling (`RecentDrivesSection.Previews.swift`), with zero diagnostics in any of my files. Let me capture the exact line and confirm build artifacts are git-ignored.
+
+The full macOS build (with the real KMP framework staged) fails on **exactly one pre-existing, out-of-scope** error in an untouched sibling (`RecentDrivesSection.Previews.swift:24` — an expression-complexity timeout), with **zero diagnostics in any of my files**. Build artifacts are git-ignored. This mirrors the DiskForecast disposition. Let me write the evidence log.
+
+Log written. Let me run a final consolidated verification on the exact committed state (format, lint, placeholder) before committing, to guarantee no commit-on-red.
+
+All green: swiftformat 0/8, swiftlint **0 violations in 8 files**, placeholder 0, JSON valid. Let me update todos and commit only my intended files.
+
+Committed as `777abee08`. Let me clean up the temp build log and do a final state check.
+
+All 9 todos done, working tree clean, log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-SchemaDriftPage.log      | 259 ++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 242 +++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Features/Admin/SchemaDriftPage.Views.swift     | 230 ++++++++++++++++++
+ .../Sources/Features/Admin/SchemaDriftPage.swift   | 230 ++++++++++++++++++
+ .../Features/Admin/SchemaDriftPageModel.swift      | 262 +++++++++++++++++++++
+ .../Admin/SchemaDriftRouteRegistration.swift       |  26 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |  14 +-
+ .../Features/Admin/SchemaDriftPageModelTests.swift | 180 ++++++++++++++
+ apps/parity/apple-ledger.json                      |  20 +-
+ 11 files changed, 1461 insertions(+), 9 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-SchemaDriftPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/SchemaDriftPage.Views.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SchemaDriftPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SchemaDriftPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SchemaDriftRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/SchemaDriftPageModelTests.swift

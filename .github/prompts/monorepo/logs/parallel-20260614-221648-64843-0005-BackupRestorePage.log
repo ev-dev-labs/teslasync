@@ -1,0 +1,208 @@
+I'll start by exploring the repository structure to understand what exists for this parity port task.
+
+Xcode 26.5, swiftlint, swift, and pwsh are all available. Let me explore the apps structure and the web source.
+
+The web source is large. Let me read it in sections and explore the existing Apple app structure for patterns.
+
+This is a substantial Apple project using XcodeGen. Let me examine the project config, ledger, and an existing feature-view page for patterns.
+
+The prompt's stated path differs from the actual repo layout. Let me examine the real structure: `Sources/Features/Admin`, `TeslaSync/feature-views`, and the ledger format.
+
+Now I understand the structure. Admin pages live in `Sources/Features/Admin/` (compiled by the app target), with tests in `Tests/Unit/Features/Admin/`. The prompt's `TeslaSync/Features/Admin` path is a template artifact — the real, compiled convention is `Sources/Features/Admin`. Let me study an existing admin page (APIKeys, with CRUD sheets) and the localization setup.
+
+The pattern is clear: `@Observable` model + injected `DataSource` protocol + `Sample` impl, TS design-token components. Now let me understand localization — the prompt wants dotted keys like `backup.title`. Let me find the string catalog and check how keyed strings are referenced.
+
+The catalog uses a `translation.` prefix for web i18n keys (e.g., `translation.backup.title`). Let me verify all 81 required keys exist and check how existing pages reference dotted keys.
+
+Convention confirmed: pages use `String(localized: "translation.<webKey>")`. Let me verify all 81 required keys exist in the catalog under the `translation.` prefix.
+
+All 81 keys exist under the `translation.` prefix — no catalog edits needed. Now let me read the full web source and extract the English values for the keys to build accurate UI.
+
+Now let me read the rest of the web source to fully understand the layout, table columns, modals, and render structure.
+
+I now have the complete web picture. Let me locate the shared component library (TS* primitives) and study a structurally similar admin page (FeatureFlags: table + editor + delete) including its model, sample, route registration, and tests.
+
+Let me read the component library APIs and the FeatureFlags page family (closest structural match: table + editor + delete + model + sample + route + tests).
+
+`TSMetricCard`, `TSGlassPanel`, `TSBadge`, `TSStatusPill` are available. I need to see how pages pass dynamic `translation.*` keys into `LocalizedStringKey` params, plus the Feedback/Button/Form APIs and the FeatureFlags family (table+editor+delete+model+sample+route+tests).
+
+Excellent — pattern is now very clear. Let me read the FeatureFlags model, sample, route registration, editor sheet, table, delete sheet, and its tests to mirror the full convention.
+
+Let me examine the state-enum definitions, the editor/table/delete sub-views, the test pattern, and critically the `AppRoute` enum to see if a `.backup` route exists.
+
+Now let me examine the routing system (`AppRoute`, parser, host registry) and the placeholder scanner that the gate runs — both are critical for correct integration.
+
+Key finding: `AppRoute` has **no `.backup` case** — and `systemImage`/`group` are exhaustive switches (no `default`). Adding a case has blast radius. Let me assess: read the parser + host registry, and find all exhaustive switches over `AppRoute`.
+
+To add a `.backup` route I must update two exhaustive switches plus wire the registration. Let me read the host registry, the app composition, and check for route-count tests.
+
+Wiring is clear. Now let me check for route-count tests (blast radius), read the Editor/Table sub-views and tests, and inventory the form/typography/formatting components I'll need.
+
+Adding a route has real blast radius — `MenuCommandCatalogTests` asserts navigate routes equal all `AppRoute` cases. Let me read those tests, the menu catalog, and the form/typography/button components.
+
+`navigateCommands()` derives from `allCases`, so the menu test auto-includes `.backup` — no manual edit needed. Blast radius is just the two switches + a title key. Let me confirm no other exhaustive route enumerations exist, and read the form/typography/button APIs plus the Editor/Table/scaffold/tests.
+
+`route.backup` is missing from the catalog — I'll add it. Now let me read the form inputs, buttons, the FeatureFlags editor/table/scaffold, the test pattern, and formatting utilities.
+
+Let me locate the remaining components (TSTextField, TSTextArea, TSToggle, TSPicker, TSButton) and formatting utilities, and read the table sub-view + test pattern.
+
+Now the form components are clear. Let me read the table sub-view pattern, the test pattern, skeletons, banners, and formatting utilities.
+
+Let me read the test pattern, the banner component (for the error banner), and the formatting utilities.
+
+I now have a full understanding of the component library and patterns. Let me do a final check on formatting utilities, skeleton signatures, and confirm no existing Backup types collide. Then I'll write a plan and start implementing.
+
+No collisions, and formatters need porting. Let me quickly read the web formatter implementations to port them faithfully, then I'll create a plan and start writing.
+
+I have the exact formatter behavior to port. Let me read the placeholder-scanner patterns (to avoid false positives like `configNamePlaceholder`) and confirm the `.swiftlint.yml` rules, then write my plan.
+
+Important: the placeholder scanner is case-insensitive and flags "Placeholder" — so lines referencing `configNamePlaceholder` need `// parity:allow` markers. SwiftLint `--strict` makes warnings fail (line ≤120, type name ≤50). Now the critical feasibility question: can I actually build/test? Let me check xcodegen, the KMP `Shared.xcframework`, and the build script.
+
+`xcodegen` is present but `Shared.xcframework` must be built via Gradle/Kotlin-Native (the long pole). Let me kick that off in the background now while I write code, and check the shared project + any environment notes.
+
+Java 17 + gradlew are present. Let me kick off the `Shared.xcframework` build in the background (the long pole) while I write code.
+
+While the framework builds, let me set up tracking and write the plan.
+
+Gradle is compiling (many `FROM-CACHE` hits — it's been built before, good sign). Let me write the plan and start creating files while it runs.
+
+Now I'll create the implementation files, mirroring the sibling admin-page convention. Starting with the models.
+
+Now the provider/status enums, formatters, and the data-source protocol.
+
+Now the formatters (faithful ports of the web `numberFormat`/`dateFormat` helpers) and the data-source protocol.
+
+Now the data-source protocol seam.
+
+Framework is linking the release variant — nearly done. Now the `@Observable` model.
+
+Now the sample data source (actor) seeding representative configs and runs.
+
+Let me check the framework build status, then write the main page view.
+
+Now the main page view.
+
+Now the four metric-card panels (panels 1–4).
+
+Now shared badge/chip helpers used by both tables, then the Configs panel.
+
+Now the Configs panel (GlassPanel5) — adaptive table with all config columns and row actions.
+
+Now the config table cells, row actions, and compact card.
+
+Let me check the framework build, then continue with the History panel.
+
+The `Shared.xcframework` built successfully (7m38s) and is staged. Now the History panel (GlassPanel6).
+
+Now the runs table, run actions, and run card.
+
+Now the compact run card.
+
+Now the create/edit config sheet plus its dynamic provider fields.
+
+I need to avoid the placeholder scanner (case-insensitive "Placeholder"). Let me rename the field property `placeholder` → `hint` and audit all my files for forbidden patterns.
+
+The `parity:allow` marker must be on the **same line** as the match. Let me verify the scanner's logic and fix my marker placement.
+
+Now the dynamic provider-settings fields.
+
+Now the delete-confirm and restore-preview sheets.
+
+Now the route registration and navigation wiring. Let me check the exact catalog formatting for a `route.*` key so I can insert `route.backup` surgically.
+
+I have the exact format. Let me insert `route.backup` and wire up the route registration + AppRoute + app composition.
+
+Now the three `AppRoute` edits (enum case + icon + group):
+
+Now the route registration file and app composition wiring.
+
+Now the tests, mirroring the sibling `FeatureFlagsPageModelTests` structure.
+
+I need to restructure the tests: shared helpers must be top-level (cross-file), and files must stay under SwiftLint's 400-line limit. Let me rewrite with shared support types + split test classes.
+
+The support file must end in `Tests.swift` to be compiled into the test bundle. Let me rename it and write the test classes.
+
+Now the formatter, enum, and sample-data tests.
+
+Let me update tracking, then verify all 81 strings are referenced and run the lint/placeholder checks.
+
+All 81 strings referenced. Now let me run SwiftLint (strict) and the placeholder scan on my new code.
+
+SwiftLint found line-length (>120) violations. Let me add shared display helpers and fix the long lines.
+
+Let me re-run SwiftLint to confirm the fixes.
+
+SwiftLint clean. Now the placeholder scan on the real Admin directory.
+
+Placeholder scan passes (COUNT=0). Now generate the Xcode project and build.
+
+Project generated. Now let me build the app (iOS scheme, per the gate). This is a large app, so I'll allow time.
+
+A simulator is booted. Let me start the build (async, since the app is large) and monitor.
+
+The build is running. While it compiles, let me examine the ledger format and the log directory to prepare those updates.
+
+Critical finding from the sibling log: the **full `xcodebuild` is known-RED due to a pre-existing swift-frontend crash on the generated `TeslaSync/shared-surfaces` mega-codebase** (out-of-scope, forbidden to fix). Siblings verified via isolated type-checks + model harness. Let me check my build's status.
+
+The whole module is emitting (type-check of the full app target — including my files — passed with no errors so far). It's now compiling object code, where the sibling hit the pre-existing crash. Let me wait for completion.
+
+The build failed on exactly the **pre-existing, out-of-scope swift-frontend crash** compiling the generated `shared-surfaces`/`feature-views` mega-codebase (ActiveVehicleSegment, AddressInput, etc. — none mine), matching the sibling logs. Crucially, `SwiftEmitModule` for the whole target succeeded earlier — meaning my files type-checked. Let me verify zero diagnostics in my files and capture the crash signature.
+
+Important: there's a real error — `'BackupRun' is ambiguous`. My type names likely collide with pre-existing types in the generated widget code (BackupHistoryWidget/BackupMonitorWidget). Let me find the collisions.
+
+Found collisions: `BackupRun` and `BackupRunStatus` exist in `BackupMonitorWidget.Projection.swift`. Let me get the full collision list.
+
+Only `BackupRun` and `BackupRunStatus` collide (with `BackupMonitorWidget.Projection.swift`). Let me inspect those existing types and confirm my other names are safe, then rename mine.
+
+This is **my** bug — a real name collision, not the pre-existing crash (no segfault markers). My `BackupRun`/`BackupRunStatus` collide with `BackupMonitorWidget.Projection.swift`. Let me rename my types (`BackupRun`→`BackupRunRecord`, `BackupRunStatus`→`BackupRestoreRunStatus`) across my files only.
+
+BSD `sed` doesn't support `\b`, so nothing changed. Let me use `perl` (which supports `\b`) for the rename.
+
+0 collisions remain. The web type is genuinely named `BackupRun`, so let me restore accuracy in the doc comments that reference the web type.
+
+The web type is genuinely `BackupRun`; I documented the rename rationale. Now let me re-run SwiftLint (the longer type name may affect line lengths) and then rebuild.
+
+SwiftLint clean after rename. Now let me rebuild to confirm the collision is resolved and check the post-rename state. This is a large build, so async.
+
+While the build runs, let me proactively check ALL my declared type names for any other collisions with the existing module.
+
+The rebuild completed. Let me read its result.
+
+The collision is fixed (0 ambiguity errors, 0 diagnostics in my files). Only 2 errors remain. Let me identify them — likely the pre-existing out-of-scope issue.
+
+Excellent — the collision is fully resolved. The build now fails **only** on 2 pre-existing errors in a generated out-of-scope file (`TeslaSync/shared-surfaces/Input.Previews.swift` — an illegal `return` in a ViewBuilder), with **zero diagnostics in any of my files**. This matches the sibling logs exactly. The whole-module type-check (EmitModule) passed.
+
+Let me now produce rigorous self-contained evidence: an executed model harness (my model layer is pure Foundation/Observation). First, confirm imports.
+
+Confirmed: my model files are pure Foundation/Observation, and `Input.Previews.swift` is a pre-existing generated file with an illegal `return` in a `#Preview` ViewBuilder (not mine). Let me read the final collision-check result, then build an executed model harness.
+
+The only real collisions were `BackupRun`/`BackupRunStatus` (fixed); "Failure"/"here" are false positives (nested-private preview types, same pattern as every sibling page). Now let me build an **executed** model harness (pure Foundation/Observation, Swift 6 strict concurrency) to prove the logic.
+
+Let me make the harness Swift 6 strict-concurrency-clean (avoid global mutable state) by scoping everything in a `@MainActor` function.
+
+Now compile and run the executed harness (app's exact Swift 6 + strict-concurrency flags).
+
+Harness compiled cleanly under Swift 6 strict concurrency. Now run it.
+
+All 33 harness assertions PASS — model logic proven (executed, Swift 6 strict concurrency). Now let me type-check my **view** files in their real dependency context. Let me locate the Shared framework slice and attempt an isolated `-typecheck` of `Sources/` (excluding the out-of-scope generated dirs).
+
+`Sources/` has no dependency on the generated surfaces. Let me run an isolated `-typecheck` of the entire `Sources/` tree + DesignTokens against the Shared framework (macOS), exactly mirroring the app target minus the out-of-scope generated dirs.
+
+The isolated typecheck has 6 errors but **none in my files**. Let me confirm what those 6 are (likely macOS-target nuances in unrelated files).
+
+The 6 errors are all in a sibling (`TeslaOrdersPage.swift`) referencing `ActiveOrders*` types that live in the excluded generated dirs — an artifact of my exclusion, not my code. Let me confirm, and that my view files fully type-check.
+
+Confirmed — all errors are in the sibling `TeslaOrdersPage.swift` referencing `ActiveOrders*` types that live in the excluded generated dirs (an artifact of my exclusion). Let me get the re-typecheck result (excluding that sibling).
+
+Excluding TeslaOrders caused *more* errors (it broke `TeslaSyncApp`'s reference to the route registration). The meaningful result is the first run: the only Sources/ errors are in the sibling `TeslaOrdersPage` (needs the excluded `ActiveOrdersSection`). Let me add just those 2 generated files so everything resolves — expecting a clean 0.
+
+I have comprehensive, consistent evidence: **zero errors in my files** across the full build (EmitModule passed), the isolated 415-file Sources/ typecheck, SwiftLint --strict, and an executed 33/33 model harness. The full `xcodebuild` is RED **only** on pre-existing out-of-scope generated files (`Input.Previews.swift`), matching the documented sibling precedent. Let me confirm git scope and generate per-string evidence for the log.
+
+Git scope is clean (my files + nav/string registration only; generated dirs untouched; xcodeproj ignored). Now let me generate per-string evidence for the PARITY log section.
+
+All 81 strings have file:line evidence. Let me run the exact gate commands (lint + placeholder on the Admin dir) to capture truthful exit codes for the log.
+
+Placeholder gate passes. Let me wait for the SwiftLint result on the full Admin directory.
+
+Gates green: **PLACEHOLDER_EXIT=0**, **LINT_EXIT=0** (0 violations). Now let me assemble the evidence log. First, read the full per-string evidence.
+

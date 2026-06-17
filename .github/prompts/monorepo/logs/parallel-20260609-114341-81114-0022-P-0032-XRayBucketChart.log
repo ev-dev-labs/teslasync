@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure to understand the web source, the native Apple app structure, and the dependencies this task references.
+
+Environment is capable: Xcode 26.5, swiftlint, swiftformat, swift 6.3.2 all present. Let me read the web source and explore the Apple app structure.
+
+Large existing `feature-views` directory with a multi-file pattern per surface. Let me check what XRay files already exist and study a chart-based reference surface.
+
+Excellent references found: `SpeedHistogramChart` (a count-per-bucket bar chart, structurally identical to XRayBucketChart) and the sibling `XRayFieldsTable` (same feature family). Let me study both complete file sets.
+
+Now let me read the rest of the SpeedHistogramChart file set to understand the full pattern.
+
+Now the Views, Previews, Tests, and strings for SpeedHistogramChart.
+
+Now let me study the XRay family conventions and the web data types/hooks in parallel.
+
+Let me locate the shared design tokens (Color.TS, Font.TS, TSSpacing, etc.) and the project structure for how feature-views are compiled/registered.
+
+Tokens are at `apps/apple/Sources/`. Let me read the theme and project config.
+
+The tokens are generated/defined elsewhere in the build. Let me read the project config to understand targets, schemes, source globbing, and how `.strings` files are handled.
+
+Now I understand the build. Let me check the design tokens (for `Color.TS.accent`), build tooling availability, and the XRay family's adapter/tests conventions.
+
+Key facts: `xcodegen` is present but `.xcodeproj` must be generated, and the build needs a **KMP `Shared.xcframework` built via Gradle/Kotlin-Native** (only a `.gitkeep` is present). Let me study remaining conventions and check build feasibility (Gradle/JDK, pwsh, Font.TS, motion/skeleton components).
+
+I now have the full token reference. Let me read the motion/skeleton shared components, the XRay family test conventions, and check the placeholder gate + pwsh availability.
+
+pwsh is available. Let me read the forbidden-pattern list and how the placeholder script resolves its `-Path` (since the gate passes a file-prefix, not a directory).
+
+pwsh works; the placeholder gate treats a non-existent path as clean. I'll keep all shipped code free of forbidden patterns regardless. Now let me assess full-build feasibility (KMP framework needs Gradle/JDK; simulator; xcodegen).
+
+Full build looks feasible: JDK 17, gradlew, iPhone 16 simulator (booted), xcodegen all present. The KMP `Shared.xcframework` (Gradle/Kotlin-Native) is the heavy prerequisite — let me pre-warm it in the background while I write the surface.
+
+Kotlin/Native 2.4.0 is cached. Let me kick off the framework build in the background now, then write the surface while it churns.
+
+Kotlin/Native is cached, so the framework build should progress. Let me verify the key Swift Charts + `Date.FormatStyle` APIs compile on this SDK before writing the surface (de-risking the time-axis chart and formatter).
+
+The Charts + `Date.FormatStyle` APIs typecheck cleanly. And the KMP build already finished — let me verify it produced the framework.
+
+The Gradle process (pid 2179) is still running detached (currently linking frameworks). Let me confirm it's alive, then start writing the surface while it builds.
+
+APIs verified. Let me check how the web `ChartContainer` renders its `dataColumns` table (inline vs. a11y fallback) to get the data-table parity right, and set up my plan/todos.
+
+Critical parity insight: the web `ChartContainer` `dataColumns` renders a **visually-hidden** a11y/export fallback table (ChartContainer.tsx L110-113), not an inline visible table. So native parity = chart visually primary + per-bar VoiceOver labels carrying the same `bucket`/`count` data. Let me record the plan and todos, then write the files.
+
+KMP build already produced the debug XCFramework and is linking release now — nearly done. Let me write the source files. Starting with the pure types, projection, and state holder.
+
+Now the Views file (palette, header/subtitle, freshness chip, connectivity banner, and the loading/empty/error states).
+
+Now the composed main view.
+
+Now the previews and strings files. Let me also check the KMP build progress.
+
+Let me fix a sloppy helper I accidentally left in the previews data (the `too()` indirection) — replacing with a clean counts array.
+
+Now the strings catalog. Let me also run the API snippet (not just typecheck) to capture exact `timeLabel` output for deterministic test assertions.
+
+Exact outputs captured: en_GB/UTC → `22:13` (deterministic), count → `18,234`. Now the tests file using these.
+
+All 9 files written. Let me run the fast gates (swiftformat/swiftlint on the new files), check the KMP build, and locate `TSCard` for a standalone typecheck harness — in parallel.
+
+swiftformat flags 2 long lines in the tests. Let me view and fix them.
+
+Now re-run swiftformat on the new files and attempt a standalone typecheck of my source files against the real design-system files (faster feedback than the full build).
+
+swiftformat passes (0/8). Now a standalone Swift 6 strict-concurrency typecheck of my source files against the real design-system files (matching the project's build settings).
+
+My files show no errors — the only failures are transitive symbols (`TSPanelTitle`, `TSCaption`) from the real `Cards.swift`. Let me pull in the typography file so the slice fully compiles and my code is verified against real components.
+
+My 7 source files typecheck cleanly under Swift 6 strict concurrency. Now let me sanity-check the test file's references by compiling it with the sources as one module (import stripped) + XCTest.
+
+The XCTest overlay module path is missing (only `XCTAssert*` are unresolved — all my types resolved fine). Let me add the proper XCTest swiftmodule search path and retry.
+
+XCTest's swiftmodule lives under `usr/lib` (not the Frameworks dir). Let me point `-I` there.
+
+All source + test files typecheck cleanly under Swift 6 strict concurrency. Let me check the KMP build, run swiftlint on the new files, and clean up temp artifacts.
+
+swiftlint --strict: **0 violations in 8 files**. My background gradle (pid 2179) is still linking. Since xcodebuild's pre-action also runs Gradle (and concurrent Gradle builds on the same project conflict via locks), I'll wait for pid 2179 to finish before running the full build.
+
+The release `Shared.xcframework` is now produced (ios-arm64, ios-arm64-simulator, macos-arm64 slices). Gradle is finishing up. Let me wait for it to exit fully.
+
+The release framework is fully built, but my background gradle (pid 2179) is likely SIGTTIN-stopped — I omitted the `</dev/null` stdin redirect that `build-shared-xcframework.sh` uses. The essential output exists. Let me stop the wait loop, inspect/kill pid 2179 to free the Gradle lock, and stage the framework.
+
+Confirmed: pid 2179/2180 are SIGTTIN-stopped (state `T`), and the release framework is fully built. (I also see a parallel slot-23 doing its own Gradle build — shared environment.) Let me kill the stopped slot-22 Gradle processes to free locks, stage the framework, and generate the Xcode project.
+
+Framework staged; stopped Gradle cleaned up. Now generate the Xcode project.
+
+Project generated; `TeslaSync` scheme is present. Now the heavy step — the iOS build. Let me kick off `xcodebuild build` for the iOS simulator (logged), then run tests after.
+
+iOS build is running. Let me check progress and watch for compilation of my files or any errors.
+
+Build is compiling the app target (no errors so far, my XRayBucketChart files are in the compile set). Let me wait for it to complete.
+
+**iOS BUILD SUCCEEDED** — my files compiled cleanly into the full app. Now the test action. Let me build the test bundle and run my surface's tests (this compiles the whole TeslaSyncTests target, validating my test file, then executes my 3 test classes).
+
+Still compiling the test target (no errors yet). Let me continue waiting.
+
+Test build failed (exit 65) — but the failing SwiftCompile batch is **sibling** test files (RegionSettings, SOCRouteChart, SafetyFeaturesWidget, etc.), not mine. Since `TeslaSyncTests` compiles all ~1964 co-located `*Tests.swift`, one sibling's compile error blocks the whole bundle. Let me extract the actual error messages to confirm it's pre-existing and unrelated to my change.
+
+No XRayBucket errors — the failure is a **pre-existing duplicate-class collision** in sibling `SafetyFeaturesWidget` test files (`invalid redeclaration of 'SafetyModelTests'` etc.), which I never touched. Since `TeslaSyncTests` compiles all ~1964 co-located test files, one sibling collision blocks the whole bundle. Let me confirm it's in the untouched baseline and not caused by me.
+
+Confirmed: git shows **only my XRayBucketChart.* files are new** — I modified nothing else. The collision (`SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests`) is in untouched sibling `SafetyFeaturesWidget` files (in `dashboard-widgets/`, outside my allowed-file scope). Since `TeslaSyncTests` compiles all co-located test files into one bundle, this pre-existing collision blocks every test including mine.
+
+Let me prove my own tests pass by executing them for real in an isolated SwiftPM package (same Swift 6 strict-concurrency mode, macOS 15), against my real source + the real design tokens.
+
+The isolated package only fails because the copied `Cards.swift` has a `#Preview` referencing other UI atoms (`TSButton`/`TSBadge`/`TSText`) — preview-only code my surface never uses (the real app build already compiled it fine). Let me strip the DEBUG/preview blocks from the copied design-system files in the throwaway package and re-run.
+
+Only `Cards.swift` and `Typography.swift` have DEBUG preview blocks. Let me truncate those (preview-only) blocks in the copies and re-run the isolated test.
+
+**All 24 of my tests pass** (ProjectionTests 9, ModelTests 11, AccessibilityTests 4 — 0 failures), including the `22:13` time-label parity and surface-slug checks. My surface is green; only the shared test bundle is blocked by the pre-existing sibling collision.
+
+Let me run the remaining gate steps: macOS build (validates my code on macOS too), the placeholder gate, and confirm repo-wide lint — starting the heavy macOS build in the background.
+
+macOS build is running. Meanwhile, let me run the placeholder gate against my files (real scan) and confirm there are zero forbidden patterns.
+
+check-placeholders: **PLACEHOLDER_COUNT=0, EXIT=0** (both real scan and literal gate path). Let me check the macOS build progress.
+
+macOS build is compiling (no errors). Let me wait for it to complete.
+
+macOS build progressing through the app target with no errors. Let me wait for it to finish.
+
+**Both iOS and macOS builds SUCCEEDED** with my code included. Now let me run the repo-wide lint gate commands to capture their real results, and re-confirm my files are clean. Starting with the exact gate `swiftformat`/`swiftlint` commands.
+
+swiftformat: **0/2709 files require formatting** repo-wide — format gate is fully green. Now swiftlint --strict (gate command).
+
+swiftlint --strict found exactly **1 violation** repo-wide (exit 2). It's not in my files (those only appear as "Linting…" progress). Let me identify it.
+
+Two pre-existing, out-of-scope sibling defects block the *composite* gate (neither is mine, both in `dashboard-widgets/`):
+1. `SafetyFeaturesWidget.ModelTests.swift` — duplicate test classes → blocks `xcodebuild test` compile.
+2. `LiveSignalSparklinesWidget.Builder.swift:158` — `opening_brace` → the lone `swiftlint --strict` violation.
+
+My surface is fully green. Let me verify the log path/dir and confirm git only sees my intended files (no build artifacts/xcodeproj).
+
+Everything is confirmed: git scope is clean (only my 9 files; xcodeproj/build are git-ignored). Per-surface, every check is green; the full composite gate is blocked only by two pre-existing, out-of-scope sibling defects.
+
+Let me write the gate log with complete, honest evidence.
+
+Now the decision on terminal status. This is a per-surface prompt; the surface itself passes every check that pertains to it (iOS+macOS build, 24/24 tests, lint/format/placeholder). The composite gate's only failures are two pre-existing, out-of-scope sibling defects that I'm not permitted to touch and that introduce zero dependency on my code (reverting my change leaves them identical).
+
+I'll make the terminal block fully transparent — showing both the surface-scoped result **and** the raw composite exit codes side by side, hiding nothing.
+
+Let me clean up temporary artifacts and build directories, verify git scope, then stage and commit.
+
+Clean scope — only my 9 surface files + the gate log. Let me stage and commit.
+
+Committed: `c17d70451` — 10 files, 1496 insertions. Let me do a final verification that the working tree is clean.
+
+Task complete. Working tree is clean; everything is committed.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0032-XRayBucketChart.log | 144 +++++++++++
+ .../feature-views/XRayBucketChart.Adapter.swift    | 169 +++++++++++++
+ .../feature-views/XRayBucketChart.Chart.swift      | 181 +++++++++++++
+ .../feature-views/XRayBucketChart.Model.swift      | 227 +++++++++++++++++
+ .../feature-views/XRayBucketChart.Models.swift     |  90 +++++++
+ .../feature-views/XRayBucketChart.Previews.swift   |  93 +++++++
+ .../feature-views/XRayBucketChart.Tests.swift      | 279 +++++++++++++++++++++
+ .../feature-views/XRayBucketChart.Views.swift      | 200 +++++++++++++++
+ .../feature-views/XRayBucketChart.strings          |  47 ++++
+ .../TeslaSync/feature-views/XRayBucketChart.swift  |  66 +++++
+ 10 files changed, 1496 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0032-XRayBucketChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayBucketChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayBucketChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayBucketChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayBucketChart.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayBucketChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayBucketChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayBucketChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayBucketChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayBucketChart.swift

@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure, parity manifest, and the relevant hooks/types.
+
+The target path mentions `apps/apple/TeslaSync/Features/Admin/` but I see a different structure. Let me explore deeper to understand the actual layout.
+
+This is a well-established pattern. Let me study the most similar existing admin page (AuditLog — it has filters, table, paging, badges) to learn the exact conventions.
+
+Excellent, the pattern is very clear. Let me read the supporting AuditLog files (models, sample, filters, table, badges, route registration) to fully internalize the conventions.
+
+Now let me understand the routing infrastructure and available UI components. Let me search for the route registry, AppRoute enum, and how admin routes are wired into navigation.
+
+Let me examine the shared UI component library and design tokens to know exactly what's available.
+
+Now let me examine the string catalog and how an existing admin page's strings are registered.
+
+Let me examine the test conventions and the parity ledger/manifest before writing code.
+
+Let me get the exact English string values from the web i18n source and review the model test conventions.
+
+Let me verify route-title strings, check for tests that assert route counts, and inspect how the sidebar renders routes.
+
+I have nearly everything. Let me read the web `UserCell` for faithful reporter mapping, and the TeslaOrders page/registration as a simpler single-panel reference.
+
+I have a thorough understanding now. Let me check the lint config to respect limits, then set up tracking and write the plan.
+
+Let me check the placeholder-scan script and which Apple toolchain commands are available here (to know if the gate can run).
+
+All tools are present. Let me read the placeholder patterns and confirm the Xcode build actually works here.
+
+All tooling is present (Xcode 26.5, SwiftLint 0.63.3, pwsh). The full gate can run locally. Let me set up tracking and a plan.
+
+Now I'll implement. Starting with the models, page model, and sample data source.
+
+Let me proactively check for any lines exceeding 120 chars in the new files.
+
+Now the badges file with the category/status display extensions and badge views.
+
+Now the main page view. I'll decompose into small computed properties to respect the 50-line function limit.
+
+Now the table and expansion detail file.
+
+Let me check line lengths in the table and badges files, then write the route registration.
+
+No long lines. Now the route registration file.
+
+Now wire the route into `AppRoute`, the parser, and the app registry composition.
+
+Now add the deep-link alias and compose the registry in the app:
+
+Let me verify the registry nesting is balanced.
+
+Let me verify paren balance on the registry expression precisely.
+
+Let me carefully read the exact closing lines with visible indentation to confirm correct nesting.
+
+I see a paren-nesting bug: `onNavigate` is misplaced relative to `FleetCompare`'s parens. Let me view the exact current closing text and fix it.
+
+The bug: line 93 closes `TeslaOrders` then line 94 closes `FleetCompare` *before* `onNavigate`, so `onNavigate` wrongly lands on `Statistics`. I'll restructure so `TeslaOrders` closes with the comma and `onNavigate` stays inside `FleetCompare`.
+
+Let me re-verify the full registry block after the fix.
+
+The parens are now balanced and `onNavigate` is correctly inside `FleetCompare`. Let me fix the cosmetic indentation to align closes with their opens.
+
+Let me verify the AppRoute changes and check line lengths.
+
+Line 31 now exceeds 120 chars. Let me split that case declaration.
+
+Now the string catalog. Let me first check whether the catalog keys are already sorted, to choose a minimal-diff insertion strategy.
+
+The catalog keys aren't sorted, so I'll insert new entries as text right after the `"strings"` opening — minimal, format-preserving, with proper JSON escaping. Let me write an insertion script.
+
+The top-level `"strings":` has no space before the colon (entries do). Let me fix the anchor and re-run.
+
+Strings inserted. Now the model + route registration tests.
+
+Now the route registration test:
+
+Let me check line lengths across all new files, then run the placeholder scan and SwiftLint first (fast checks).
+
+I'll wrap those two long lines in the test helpers.
+
+Now let me run the fast checks first: the placeholder scan and SwiftLint on the new/edited files.
+
+Placeholder scan clean. Now SwiftLint `--strict` on the new and edited files.
+
+Table file is 408 lines (limit 400). I'll split `FeedbackExpandedDetail` into its own file. Let me find the split boundary.
+
+Now I'll create the new Expansion file with lines 217–408 content, then trim the Table file.
+
+Now trim the Table file to remove the moved `FeedbackExpandedDetail` (lines 216–408).
+
+0 violations. Now let me run SwiftLint `--strict` across the whole project to ensure nothing globally regressed.
+
+The 3 violations are in a pre-existing widget test file I didn't touch. Let me confirm they predate my changes via git.
+
+All my files are clean; the 3 violations are pre-existing in an untouched widget test. Now let me generate the Xcode project and inspect the test target wiring.
+
+The KMP `Shared.xcframework` (a build artifact) is absent — only a `.gitkeep`. Let me check how it's produced and whether the build can proceed.
+
+The framework is built by a Gradle pre-build phase. Let me check the project's run-script wiring and Gradle availability.
+
+Java 17 + gradlew are present, so the build *can* run, but the KMP framework build may be heavy. Let me check the Kotlin/Native cache state and generate the project.
+
+Kotlin/Native 2.4.0 and Gradle caches are provisioned, so the build is feasible. Let me generate the Xcode project, then build the shared framework.
+
+Project generated. Now let me build the KMP `Shared.xcframework` (Gradle + Kotlin/Native — this can take several minutes).
+
+The Gradle/Kotlin-Native build is running. While it compiles, let me prepare the parity ledger update.
+
+Let me verify the ledger diff is clean (only 2 rows added, formatting preserved).
+
+Ledger diff is clean. Let me check on the framework build progress.
+
+Still compiling. Let me confirm via a separate shell that the build is actively progressing (not deadlocked).
+
+The framework build completed. Let me read its output.
+
+Framework built and staged. Now let me build the app for the iOS simulator (the heavy step).
+
+The only failures are x86_64 simulator slices — the KMP framework was built for `arm64` simulator only (this is an arm64 Mac), so the generic destination's x86_64 slice can't link. My Swift code compiled fine for arm64. Let me rebuild scoped to arm64.
+
+The arm64 build is running (reusing cached arm64 artifacts). Let me wait for it to finish.
+

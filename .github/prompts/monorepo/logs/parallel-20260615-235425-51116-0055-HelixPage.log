@@ -1,0 +1,233 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app architecture, and the parity requirements.
+
+Let me explore the `AISettings` component (the core surface) and the existing Apple app structure in parallel.
+
+This is a substantial parity task. Let me examine the web `AISettings` component and its sub-panels, plus study existing Apple page patterns to follow the established architecture.
+
+The Apple structure uses different directory names than the prompt template suggests. Let me examine the actual project layout, the build config, and find existing page implementations to follow the real established patterns.
+
+The Apple app uses a `feature-views/` directory with a multi-file-per-surface convention, not `Features/Settings/`. The prompt is auto-generated with a templated path. Let me determine the real convention by examining the parity manifest, the ledger, navigation registration, and an existing comparable "Page" surface.
+
+There's already a complete `AISettings.*` surface and an `AlertStudioPage` (the canonical "Page" pattern). The web `HelixPage` wraps `AISettings`, so the Apple `HelixPage` should host the existing `AISettings` view. Let me read the parity manifest entry, the ledger, and study both existing surfaces.
+
+Now let me read the ledger entry, the existing `AISettings.swift` host, and the `AlertStudioPage` (canonical Page pattern) to understand exactly how to structure `HelixPage`.
+
+No Helix or settings rows exist yet — I'll add them on completion. Let me study the canonical Page pattern (`AlertStudioPage`), the existing `AISettings` surface that HelixPage hosts, and the navigation/route system.
+
+There's a `Sources/Features/<Domain>/` convention for pages (e.g., `Sources/Features/Maps/NavigationRoutePage.swift`). Let me map the real page convention: examine `Sources/Features/`, the route registry, and a complete existing page+model+test triple to mirror exactly.
+
+Now I understand the real convention: pages live in `Sources/Features/<Domain>/` as a `<Name>Page.swift` + `<Name>PageModel.swift` + `<Name>RouteRegistration.swift` triple, with tests in `Tests/Unit/Features/<Domain>/`. The prompt's templated path differs from the actual repo layout. Let me study the minimal page triple (ApiPlayground), the route system, and the existing AISettings host.
+
+Excellent, the pattern is clear. The registration "Mirrors `SettingsRouteRegistration`" — so a Settings route already exists. Let me read the page model pattern, the route enum, the route registry, and locate the existing Settings route registration.
+
+Now let me read the full route enum, the route parser (web path mapping), the route host registry, and how routes get wired in the app. The web route is `/integrations/helix` and I'll need a `.helix` case.
+
+Now let me read the route parser, the registry, how routes are wired in the app, the existing route tests, and the AISettings host surface + its model.
+
+Now let me read the existing `AISettings` host surface (what HelixPage will embed), the app wiring, the route tests, and the Settings scene/registration reference.
+
+Let me read the AISettings model (to host it correctly), the Settings scene/registration reference, the route tests, and the app wiring.
+
+Let me read the AISettings projection/adapter (production source over the KMP core), the app wiring, and the route tests to understand how to construct the page and avoid breaking existing tests.
+
+Now I understand the wiring. Let me check for an existing production `AiSettingsSource`, the AISettings projection/previews (to construct the hosted view), the route tests, and confirm the shared design-token components exist.
+
+The pattern is fully clear. Production registrations use in-memory/sample sources as defaults (no KMP-core source exists for AISettings yet). Now let me verify the shared design-token components I'll use (TSPageTitle, TSGlassPanel, TSEmptyState, etc.), check for a breadcrumb component, and read the route tests to avoid breakage.
+
+Let me get the remaining token-location output and read the core component/token definitions plus how an existing wired page (NavigationRoutePage) composes title/error/empty.
+
+All components exist. Let me locate their exact definitions and signatures so I use them correctly. Let me find where the shared UI primitives are defined.
+
+Let me read the exact signatures of the shared components and design tokens I'll compose with.
+
+Let me locate the design token definitions (TSSpacing, TSRadius, Color.TS, Font.TS) and read the Typography page-title component and the breadcrumb component.
+
+I have all tokens and components. Now let me examine the localization catalog structure, the TSSkeleton signature, and how a wired page (NavigationRoutePage) composes title+subtitle chrome.
+
+The catalog is a 5.4MB JSON. The needed keys (`helix.*`, `route.helix`) aren't present yet. Let me inspect the exact xcstrings entry format to mirror it precisely, and check how the AISettings `.strings` keys are surfaced.
+
+Let me verify the common state/retry localization keys exist and read an existing PageModel test to mirror the test pattern.
+
+I have everything needed. `error.title` is missing so I'll define explicit helix state keys. Now let me check the toolchain availability (Xcode/swift/swiftlint/pwsh/xcodegen) and the gate script — this determines whether the gate runs green or is honestly BLOCKED.
+
+Full toolchain is available (Xcode 26.5, swiftlint, xcodegen, pwsh) — the gate can actually run. Let me read the gate contract, the placeholder script, and check the build prerequisites (Shared.xcframework staging).
+
+Let me check the build prerequisites: whether the `.xcodeproj` and `Shared.xcframework` exist or need generating (the KMP framework build could be a blocker).
+
+No `.xcodeproj` (needs xcodegen) and no `Shared.xcframework` (needs a full KMP Gradle/Kotlin-Native build). The build/test gate depends on that framework. Let me kick off the framework build in the background now so it can run while I write the implementation, then verify.
+
+Java 17 + network are available. Let me start the KMP framework build in the background now, then write the implementation while it runs.
+
+The KMP build is running in the background. Let me set up a plan, then read the lint/format configs so my new Swift files pass `--strict` on the first try.
+
+Let me read the forbidden placeholder patterns so my code avoids them, then start writing the implementation.
+
+I now have full context: real conventions, tokens, components, lint rules, and forbidden patterns. Let me write a plan, then implement. First the plan file and todos.
+
+Now I'll implement. Starting with the route enum and parser.
+
+Let me verify the route edits and line lengths.
+
+Route enum + parser done. Now the page model. Let me create the Settings feature directory with the `@Observable` model.
+
+Now the page view that hosts the existing `AISettings` surface with full chrome and all data states.
+
+Now the route registration and app wiring.
+
+Now the state-machine tests for the model.
+
+Tests written. Now let me add the localization keys. First, let me inspect the exact raw formatting of the xcstrings file to match it precisely.
+
+This is the Xcode `.xcstrings` format (note the `" : "` spacing in entries). I'll do a targeted textual insertion right after `"strings": {` to avoid re-serializing all 11,085 entries (which would create a massive diff). Let me add the 9 keys.
+
+Localization keys added and validated. Let me verify the inserted block matches the file's style, then check on the background KMP build.
+
+All 9 keys present and correctly formatted. Let me update progress and check the background KMP build, then run SwiftLint on the new files.
+
+The KMP build continues. Let me run SwiftLint `--strict` on all new/modified Swift files (fast, framework-independent) to catch lint issues early.
+
+SwiftLint linted the whole tree (config `included` overrides path args) and found 6 serious violations. I need to see whether any are in my new files. Let me capture just the violation lines.
+
+1 violation is mine (orphaned doc comment in HelixPageModel.swift); the AnomalyInlineRow line-length ones look pre-existing. Let me confirm the pre-existing ones via git and get the full list, and fix my file's header (convert the file-level `///` to `//`).
+
+Confirmed: my 1 violation (fixable) + 2 pre-existing unrelated ones (git shows AnomalyInlineRow unmodified). Let me fix my file's orphaned doc comment by converting the file-level `///` header to `//` (matching the codebase's file-header convention).
+
+Fixed. Let me re-run SwiftLint (no cache) to confirm my files are clean, and check SwiftFormat availability for the new files.
+
+My files are lint-clean. The KMP framework build completed successfully — I can now attempt the real xcodebuild gate. Let me read both results.
+
+The `Shared.xcframework` is built and staged (BUILD SUCCESSFUL, 10min). Now I can run the real gate. Let me verify the framework, generate the Xcode project, and run the placeholder check.
+
+Project generated with my files included. Let me run the placeholder gate (on the real path), then kick off the macOS build.
+
+Placeholder gate passes (0). Now the heavy step — the macOS build (verifies my code compiles against the full app + KMP framework). Let me start it in the background and monitor.
+
+While the build runs, let me prepare the ledger rows and log file. Let me examine an existing log to match the format and the exact ledger row shape.
+
+This existing log is gold — it shows the path-reconciliation note (covenant #9) and that the full `xcodebuild build` was BLOCKED by pre-existing out-of-scope breakage (EXIT=65), handled via targeted typecheck. Let me read the rest to see how they concluded (DONE vs BLOCKED) and the ledger handling.
+
+The macOS build finished. Let me check its actual exit code — the ApiPlayground precedent hit pre-existing out-of-scope breakage, so I need to verify whether mine succeeded or hit the same.
+
+The build failed at code-signing (no dev certificate in this environment) — not a compilation error; it stopped before compiling sources. Let me re-run with code signing disabled to actually compile the Swift sources (including my files).
+
+While the build compiles, let me update the ledger. Let me check its schema and exact row formatting.
+
+2-space indent, standard `": "` separators (matches `json.dumps`). Let me verify a round-trip is lossless before appending the 2 rows, to keep the diff minimal.
+
+Round-trip is lossless. Let me append the 2 Helix ledger rows (apple-macos + apple-ios).
+
+Ledger updated (162 rows). Let me check the macOS build progress.
+
+The build is compiling the full app (~12k files). Let me wait for it.
+
+Still compiling. Let me wait longer for the full build.
+
+The `tail` only emits at completion, so I'll see results when the build finishes. Let me continue waiting.
+
+Large project build in progress (~12 min). Let me keep waiting for the result.
+
+~17 min in. Let me verify the build is actively progressing (not stuck) by checking compiled-object activity in DerivedData.
+
+Build is healthy (419 `.o` files in last 2 min, 3385 total, processes alive). Let me continue waiting.
+
+Main app actively compiling (4836 objects, 250/min). Let me keep waiting.
+
+The build finished. Let me check the result (BUILD SUCCEEDED/FAILED and exit code).
+
+**macOS BUILD SUCCEEDED (EXIT=0)** — my code compiles cleanly against the full app + KMP framework, with zero errors. Now let me run the macOS unit tests (scoped to my new tests + RouteTests to confirm the route additions didn't break anything).
+
+Let me wait for the macOS test result (the test bundle must compile first).
+
+The test-bundle BUILD failed with "Cannot find 'LocalizedStringKey' in scope" — in sibling test files, not mine (my test uses only XCTest). xcodebuild compiles the *entire* test bundle, so one broken sibling fails it. Let me pinpoint the offending pre-existing files to confirm they're not mine.
+
+The `&&`-chain broke on an empty grep. Let me investigate properly — confirm I touched no sibling test files and find the pre-existing `LocalizedStringKey` breakage.
+
+Confirmed: my changes touch zero sibling files. The pre-existing breakage is `WebhooksPageModelTests.swift` (uses `LocalizedStringKey` without `import SwiftUI`) — a Notifications-domain test, not mine. Let me confirm it's unmodified vs HEAD and is the sole blocker.
+
+Confirmed pre-existing and the sole blocker. Following the established methodology (temporary verification fix → run → restore), I'll add the missing `import SwiftUI` to that sibling test, run my tests, then restore it verbatim so my changeset stays clean. Let me view its header first.
+
+Temporary verification fix applied. Now let me re-run the macOS tests (scoped to my tests + RouteTests).
+
+Let me wait for the test result (incremental rebuild + run).
+
+**macOS TEST SUCCEEDED — 14/14 tests pass** (my 6 HelixPageModelTests + 8 RouteTests, confirming the route additions don't break parsing/uniqueness/grouping). Now I must restore the temporary sibling fix so my changeset stays clean, then verify the iOS idiom. Let me restore and check simulators + swiftformat.
+
+Tree is clean (only my deliverable), swiftformat passes (0/7). Now let me verify the iOS idiom — the gate's literal scheme. Let me find an iOS simulator and start the iOS build + test.
+
+There's a booted iPhone 17 Pro simulator. Let me start the iOS build (the gate's literal scheme `TeslaSync`) to verify the iOS idiom. App-target build avoids the unrelated test-bundle breakage. I'll run it in the background and write the log meanwhile.
+
+The iOS build is running. Let me gather metadata for the log while it compiles.
+
+Metadata gathered (401 LOC across 4 files, Helix referenced 24× in the pbxproj = both app targets + both test bundles). Let me monitor the iOS build while it compiles.
+
+iOS build paused on `.o` output — could be a long whole-module compile or the known slow-typecheck sibling file. Let me check what it's actively compiling.
+
+Healthy — 465 new objects in 60s (959 total), compiling alphabetically through feature-views. Let me continue waiting for the iOS build.
+
+~10 min into the iOS build. Let me keep waiting for it to complete before finalizing the log with real exit codes.
+
+Near the end (compiling "W" files now). Let me wait for the iOS build to finish linking.
+
+The app bundle dir exists and it's finishing widget compilation. Let me wait for final link/completion.
+
+Still compiling (4393 objects, ~500/min). Let me continue waiting for the iOS link.
+
+**iOS BUILD SUCCEEDED (EXIT=0)** — my code compiles cleanly on *both* idioms (macOS + iOS), including widget embedding, AppIntents training, and validation. 
+
+To complete the gate rigorously, let me also run the iOS test (same temporary sibling-unblock → run → restore method) in the background while I write the log.
+
+The iOS test is building/running in the background. Let me write the evidence log now (I'll fill in the iOS-test result once it completes). First let me draft the full log.
+
+The iOS test finished. Let me read the result.
+
+**iOS TEST SUCCEEDED — 14/14** (HelixPageModelTests 6/6 + RouteTests 8/8) on iPhone 17 Pro simulator. Full green on **both** idioms. Now let me restore the temporary sibling fix, verify the tree is clean, and finalize the log.
+
+Tree is clean — only my deliverable. Now let me patch the iOS-test result into the log.
+
+Let me run a final consolidated verification: confirm my files are still lint-clean, placeholder-clean, the log token is replaced, and review the final AppRoute state.
+
+All final checks green. Let me make sure adding `.helix` doesn't break any *other* test that enumerates `AppRoute.allCases` (e.g., nav/Spotlight completeness assertions) — my scoped test run wouldn't have caught those.
+
+Two tests assert catalogs *exactly equal* `AppRoute.allCases` (`MenuCommandCatalogTests`, `ExploreCatalogTests`). If those catalogs are hand-maintained (not derived), my new `.helix` route breaks them. Let me check how they're built.
+
+Both catalogs derive from `AppRoute.allCases` (auto-include `.helix`). But `ExploreCatalog` has a hand-listed canonical-order array at L127 — let me verify `.helix` won't be dropped there, and read the relevant tests.
+
+`ExploreCatalog` is fully derived (group-based, `default` gating) — `.helix` is handled and those tests pass. Let me verify `MenuCommandCatalog` and the other `allCases` tests don't rely on a hand-maintained per-route map that `.helix` would miss.
+
+All `allCases` assertions are either non-`AppRoute` or derive from `allCases`/uniqueness — `.helix` satisfies them (unique pathSegment, `route.helix` string added, `.account` group, `default` gating). To verify empirically (no skip-and-assume), let me run the route-sensitive test classes on macOS. Let me check the SqlPlayground assertion, then run them.
+
+`SqlPlayground` just checks pathSegment uniqueness (satisfied). Sibling unblock re-applied. Let me run all route-sensitive test classes on macOS to empirically confirm `.helix` breaks nothing.
+
+Targeted route tests running. Let me wait for the result.
+
+All 52 route-sensitive tests pass (ExploreCatalog 13, IntentSupport 6, MenuCommandCatalog 7, Route 8, SqlPlayground 18) — `.helix` breaks nothing. Let me restore the sibling fix (final) and confirm a clean tree.
+
+The grep found nothing outside scope — tree is clean, all changes in-scope. Let me add the 52-test route-regression evidence to the log (strengthens the no-regression claim), then update my todos.
+
+Let me finalize todos and do a last review of the key deliverable files for coherence.
+
+Let me do a final holistic check: the diff summary, the AppRoute `.helix` additions, and confirm the log's PARITY section reads 5/5.
+
+Everything is coherent and all gates are green (5/5 parity, EXIT=0, STATUS=DONE). Let me check the git branch context, then create the commit per the prompt's Commit section.
+
+Confirmed: prior page prompts each commit (e.g., "feat(apps/apple): SqlPlaygroundPage at web parity (P7 power-user)"). Let me stage my in-scope files and create the commit.
+
+All 10 staged files are exactly my deliverable. Let me create the commit.
+
+The commit `b527547a0` is created with all 10 files and the tree is clean. Let me do a final verification that the generated `.xcodeproj` is git-ignored (not accidentally tracked) and confirm overall state.
+
+Complete and verified. The commit `b527547a0` includes all 10 files (719 insertions), the `.xcodeproj` is git-ignored, and the tree is clean. Let me confirm all todos are done.
+
+All 10 todos done. The P4-APPLE P7 `page:settings/Helix` parity task is complete and committed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

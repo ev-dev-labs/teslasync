@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure, the web source component, and checking platform capabilities.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Now let me read the web source's dependencies and explore the Apple app structure.
+
+Now I understand the web source. It's a streaming AI feature card (`AIFeatureCard` + `withAiFeature` + `useAiStream`). Let me find the closest existing native sibling that was built from the same web pattern, and understand the Xcode project setup and shared facades.
+
+No `.xcodeproj` — the project uses **XcodeGen** (`project.yml`). Let me read the project config, and compare candidate sibling web sources to find the closest structural match to mine.
+
+`AIPreheatPrecoolRecommender` is the closest structural twin (multi-input "draft a schedule" card gating `canStart` on several inputs, charging/climate domain). It's already built natively. Let me read its complete native file set to use as my template.
+
+`AIPreheatPrecoolRecommender` has the richest matching file set including `.Request.swift`/`.RequestTests.swift` (structured body builder with defaults + depart_by normalization) — exactly what my surface needs. Reading all 12 files of the template.
+
+Excellent template. Now reading the remaining template files: Adapter, Projection, Chrome, Views, Previews, Tests, RequestTests, AdapterTests, and strings.
+
+Now the Chrome, Views, Previews, and the three test files plus strings.
+
+Now the test files, previews, and strings to complete the template picture.
+
+Reading the two remaining test files plus verifying the design tokens (TSSpacing, Color.TS, Font.TS, TSButton, TSSkeleton, TSFadeIn) exist.
+
+I now have the complete template. Before writing code, I must verify the build path: XcodeGen project generation, the `Shared.xcframework` dependency, and confirm my type-name prefix won't collide.
+
+Key findings: xcodegen 2.45.4 present, but `Shared.xcframework` is not staged (only `.gitkeep`) and the build depends on it via a scheme preAction script. Let me read that build script and locate the design tokens — this is the critical build path.
+
+Build depends on a KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me assess toolchain feasibility and check how prior shared-surface gates ran, and confirm token APIs I'll use.
+
+Tokens confirmed. The long pole is the KMP `Shared.xcframework` Gradle build (Java 17 present). Let me kick that off in the background now while I write the surface files, and peek at a prior gate log to confirm the expected build flow.
+
+A prior gate confirms this host CAN build the KMP framework (~2 min warm) — my background build is running. Before writing tests, let me verify two Swift runtime behaviors my RequestTests depend on: JSONEncoder Double formatting (80.0→"80") and ISO8601 fractional output.
+
+All runtime behaviors verified (JSON `75`/`74.5`/`true`, ISO `…:00.000Z`). Let me read the lint/format configs so my code passes `--strict`, then write the files.
+
+Configs noted (line ≤120 for code, type names ≤50, before-first wrapping, `@testable` import bottom). The xcframework is mid-build. Let me set up tracking and write the surface files, starting with the Foundation core (Request + Adapter).
+
+Request core written. Now the Adapter (SSE parsing, stream reducer, output/action derivation) — generic logic renamed to the `SmartChargeSchedule` prefix.
+
+Now the Model (state-holder seam, i18n facade, telemetry, input snapshot, observable view-model, in-memory source).
+
+Now the Projection (pure input→view-state, localization applied here).
+
+Core logic files done. Let me check the xcframework build progress, then write the Chrome and Views.
+
+Release linking nearly done. Continuing with the Chrome (freshness chip, refresh, banner, loading, gate-error).
+
+Now the presentational Views (Helix badge, Ask-Helix button, thinking indicator, output panel, ready card body).
+
+Now the main entry View, plus the Previews and the `.strings` catalog.
+
+Source files complete. Now the three test files — Request, Adapter, and the projection/model/accessibility suite.
+
+Now the main projection/model/accessibility test suite.
+
+All 12 files written. Let me check the xcframework build status and run swiftformat/swiftlint on my new files (fast, no app build needed).
+
+Shared.xcframework built & staged (BUILD SUCCESSFUL, 6m18s). Only 3 trailing-comma nits. Let me auto-fix with swiftformat (the canonical formatter), then re-lint.
+
+Reformatted. Let me verify the diff is only trailing commas, then re-lint and run swiftlint.
+
+Files are untracked so no git diff. Let me confirm the lint now passes and run swiftlint --strict on the new files.
+
+swiftformat passes (0/11). Now swiftlint --strict on the new files.
+
+swiftlint --strict: 0 violations. Now let me check the placeholder script and scan my files for forbidden tokens (TODO/stub/mock/placeholder/Lorem) before running it.
+
+pwsh present, my files have none of the obvious tokens. Let me check the exact forbidden-pattern list (I use "skeleton"/"shimmer" in comments) to be safe.
+
+Forbidden patterns are specific (none match my code — my `EmptyView()` has no `// placeholder` suffix, no `fatalError`). Let me read how the checker resolves its `-Path` arg (the gate passes a filename prefix, not a dir), then proceed to generate the project.
+
+The checker returns clean if the path doesn't exist; I'll run the gate's literal command AND a real scan of my files for honest evidence. Now let me generate the Xcode project.
+
+Project generated; my files referenced 72× across targets. Now the critical validation: compile the whole iOS app + run my surface's tests. Launching in the background (first compile is the long pole).
+
+Launched. While the iOS build compiles, let me prepare the genuine placeholder scan and the gate-runner script. Let me check build progress first.
+
+App module is compiling/emitting (no compile errors so far). Let me wait for completion.
+
+Build failed — but the errors are in **other** files (`StateTimelineModel`/`StateTimelineConnection`/`StateTimelineLoadStatus` "ambiguous for type lookup"), not mine. That signals a pre-existing duplicate-type collision in the repo. Let me verify it's unrelated to my surface and predates my change.
+
+Confirmed: `StateTimelineModel`, `StateTimelineConnection`, `StateTimelineLoadStatus`, `StateTimelineUpdate` are each defined **twice** (in `dashboard-widgets/StateTimelineWidget.*` and `feature-views/StateTimeline.*`) — a pre-existing duplicate-type collision in two *other* surfaces, all committed files (my additions are untracked). This breaks the whole-app compile independent of my work.
+
+Let me confirm my surface itself is clean by compiling it in isolation. First, inspect the 3 shared components I depend on.
+
+My surface is the only new code (12 untracked files); the `StateTimeline*` collision is in committed files I'm forbidden to touch. To prove my surface compiles + its tests pass despite that external break, I'll compile it in an isolated SwiftPM package with the real tokens + components.
+
+My surface files **all compiled cleanly**. The only errors are in the real `Skeletons.swift` component (uses `TSCard`, which my surface doesn't). Let me add the file defining `TSCard` and rebuild.
+
+The real component files cross-reference each other (`TSPanelTitle`, `TSCaption`, …). Rather than chase each, I'll include the whole shared component kit + design sources (excluding anything that needs the KMP `Shared` framework). Let me check for such imports, then rebuild.
+
+No KMP `Shared` dependency in the component kit (only system frameworks). Let me rebuild the isolated lib with the full `Components` + `Design` trees + tokens + my surface, then run my tests.
+
+`Typography.swift` (in Components) has them. Let me rebuild the isolated lib with the full Components + Design trees.
+
+Got to 53/53 but exit 1 — error is scrolled off. Let me surface the actual error(s).
+
+Chasing the full kit pulls in `UnitFormatters`→`UnitPreferences` (a Platform-layer type my surface never uses). I'll switch to the **minimal** real component set my surface actually needs: Tokens + Buttons + Skeletons + Cards + Typography + Motion.
+
+My surface files compile fine — only the shared kit's *internal* coupling (Cards→TSBadge/tsGlassPanel, Skeletons→TSCard) and the Platform-dependent `UnitFormatters` fail. I'll include the whole `Components`+`Design` kit and drop only the few files that reach into the Platform layer (which my surface never uses).
+
+Only `UnitFormatters.swift` reaches into the Platform layer. I'll include the full kit minus that one file, then build and run my tests.
+
+Isolated build complete (0 errors) — my whole surface compiles against the real component kit. Now let me run my tests.
+
+**All 92 of my tests pass, 0 failures** — proving my surface is correct against the real component kit. Now let me confirm my files contribute **zero** errors to the full-app build (i.e., the only errors are the pre-existing `StateTimeline*` collision).
+
+**Definitive evidence:** every full-build error is a pre-existing duplicate-type collision in *other* surfaces (`StateTimeline*` and `RecentDrives*` — each defined twice, in `dashboard-widgets/` vs `feature-views/`). **Zero** errors involve my surface. My files are the only untracked additions.
+
+Let me update tracking, then run the official gate (exact commands) to capture genuine evidence into the log.
+
+Launching the official gate runner in the background (two full app builds + lint/format/placeholder, ~12 min).
+
+Gate running in background (~12 min for two full builds). Let me wait and check progress.
+
+Gate complete. Summary: **LINT=0, FORMAT=0, PLACEHOLDER=0** (all pass across the whole repo, including my files). **IOS=65 / MAC=65** fail — iOS purely from pre-existing `StateTimeline*`/`RecentDrives*` duplicate-type collisions in *other* surfaces (zero errors mention mine), macOS additionally blocked by missing dev-signing identity on the runner.
+
+Let me capture the supplementary isolated-verification evidence (my surface builds + 92 tests pass) and the duplicate-definition proof, then append the root-cause analysis, acceptance checklist, and final STATUS to the log.
+
+All evidence confirmed: isolated build complete, **92 tests 0 failures**, duplicate `StateTimelineModel`/`RecentDrivesModel` proven (defined 2× each), and my surface files are the only additions. Let me append the full root-cause analysis, acceptance checklist, and final status to the log.
+
+Log complete (194 lines), ending with `EXIT=1` / `STATUS=BLOCKED`. Let me verify nothing unintended would be staged, then commit the surface + log per the prompt.
+
+Exactly the 12 surface files + log staged (generated project & xcframework correctly gitignored). Committing with an honest message.
+
+Committed as `f07229967`; working tree clean. Let me clean up the temporary build artifacts outside the repo.
+
+Done. Cleaned up; the committed log opens with the host/gate evidence and ends with `EXIT=1` / `STATUS=BLOCKED`.
+

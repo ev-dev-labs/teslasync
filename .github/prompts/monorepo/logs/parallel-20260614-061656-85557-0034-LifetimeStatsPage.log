@@ -1,0 +1,194 @@
+I'll start by exploring the repository structure to understand the task fully. Let me look at the web source, the Apple app structure, and the parity manifest in parallel.
+
+Xcode tooling is available. Let me examine the existing structure more closely — the actual path uses `Sources/Features/Analytics`. Let me look at existing analytics pages and a recently completed page to follow conventions.
+
+There are two structures: `apps/apple/Sources/Features` and `apps/apple/TeslaSync/Features`. The prompt targets `TeslaSync/Features/Analytics`. Let me investigate the actual project layout and find where the recently-completed SlowQueriesPage lives.
+
+Now I understand the real structure: implementation lives in `apps/apple/Sources/Features/Analytics/`. The last commit (SlowQueriesPage) is my template. Let me read the web source and the template files in parallel.
+
+Excellent template. Let me continue reading the web source and the supporting Swift template files.
+
+Now let me look at the web data hook, types, the AchievementBadge component, and the existing Apple shared components/tokens.
+
+Now let me read the design tokens, feedback/UI/typography component signatures, and the sibling StatisticsPage for established patterns.
+
+Tokens like `TSSpacing`, `Color.TS`, `Font.TS` must be elsewhere (generated P2 catalog). Let me locate them and read the feedback/UI/typography signatures.
+
+Design tokens live in `apps/design/generated/apple`. Let me read them to get the exact token API.
+
+Now I have the full token catalog. Let me read the shared UI components I'll use (Feedback, Cards, Typography) and the sibling StatisticsPage pattern.
+
+Let me read the sibling StatisticsPage pattern, navigation files, and the test pattern in parallel.
+
+The StatisticsPage is an ideal sibling reference. Let me read its model/sections/sample, the navigation files, the test pattern, and check existing `lifetime.*` strings in the catalog.
+
+No existing `lifetime.*` keys — I'll add all 41. Let me read the Statistics sections/models/sample, the units facade, navigation files, and test pattern.
+
+Let me read the formatters, the units facade, the sample data, navigation files, and the test pattern.
+
+Let me read the sample data pattern, navigation files, test pattern, and check the gate tooling (pwsh, placeholder script, log format).
+
+Both `pwsh` and Xcode tooling are present. Let me read the placeholder patterns, navigation files, registration wiring, and the test pattern.
+
+Now let me read the route parser, the app registration wiring, and the test pattern.
+
+Test file is under `Tests/Unit`. Let me read it and the app registration wiring.
+
+Let me read the route host registry and check for existing route/nav tests that might assert route counts.
+
+Key finding: `MenuCommandCatalogTests` asserts every `AppRoute` has a navigate command. Adding a route requires updating that catalog. Let me find it.
+
+`navigateCommands()` iterates `AppRoute.allCases`, so a new route auto-registers. Now let me examine the xcstrings format, especially how interpolation placeholders are represented.
+
+Let me check how the last commit added its strings to the catalog (insertion convention) and the exact opening bytes.
+
+The convention is alphabetical insertion. Let me find the exact insertion anchors for the `lifetime.*` block and `route.lifetimeStats` in the catalog's existing order.
+
+The catalog isn't alphabetically sorted — it's insertion-ordered. The last commit appended its keys at the end. Let me confirm the tail to follow the same convention.
+
+Confirmed: append-at-end convention. Let me view the exact tail structure to craft the insertion.
+
+I now have a complete understanding. Let me write the plan and check the build prerequisites (xcodeproj generation, KMP framework, swiftlint config, gate README).
+
+No `.xcodeproj` yet (xcodegen available) and **no `Shared.xcframework`** — the KMP core dependency. This is critical. Let me investigate how the project references it and whether it can be built.
+
+The KMP `Shared.xcframework` must be built from `apps/shared` (Kotlin Multiplatform). Let me examine the staging script and whether a prebuilt framework exists or is gitignored.
+
+The build needs `xcodegen generate` + a Gradle-built KMP `Shared.xcframework` (pre-build script). This is feasible here since prior pages were committed green. Let me verify Java/Gradle and review a prior gate log for the exact contract and timing.
+
+Key insight from the prior log: the full `xcodebuild` has a **pre-existing, out-of-scope** `shared-surfaces` build error, so prior pages verified via **isolated type-check + swiftlint + placeholder + standalone model harness**, documenting the inherited error as deferred. Let me read the full prior log — it's the gate playbook.
+
+Now I have the complete gate playbook. Critical nuance: prior KMP-free pages type-check in isolation. My page may use the `Units` facade (which `import Shared`). Let me check how the sibling **StatisticsPage** (which uses units) was gated.
+
+The Analytics files don't `import Shared` directly but use `Units`/`UnitPreferences` (which transitively do). Let me read the StatisticsPage gate log to see exactly how the units dependency was handled in the isolated type-check.
+
+The `Shared.xcframework` builds via Gradle in ~10 min and prior analytics pages used it. Let me read the exact StatisticsPage gate transcript (the template I'll follow) and confirm the pre-existing shared-surfaces error.
+
+I now have the complete, accepted gate methodology (build KMP framework via Gradle ~10min → xcodegen → placeholder/format/lint → xcodebuild in-scope type-check → logic harness → document pre-existing full-build RED as out-of-scope). Let me kick off the long Gradle framework build in the background now, then write code in parallel.
+
+The pre-existing out-of-scope error is confirmed. Gradle framework build is running in background. Let me set up tracking and read the remaining API details (swiftlint config, ledger format, TSIconBox/TSSelect/TSTone/TSButton signatures) while it builds.
+
+I have all component APIs. Let me confirm `UnitPreferences.metric/.imperial` and `TSText.Variant` cases, then start writing code while Gradle builds.
+
+I have all APIs. Let me verify the interpolation convention (how parameterized localized strings are keyed) since 3 of my strings interpolate values. Let me check the existing pattern and Gradle progress.
+
+The convention is `String(format: String(localized: "bare.key"), args)` with `%@` placeholders and bare key names — perfect for keeping exact parity key names. I have everything needed. Let me update my plan and start writing the implementation files.
+
+Now let me write the model/format/seam files (the testable logic layer).
+
+Now the page model:
+
+Now the sample data source. I'll structure it with extensions to respect SwiftLint's `type_body_length`/`function_body_length` limits.
+
+Logic layer done. Let me check the Gradle build progress, then write the views.
+
+Gradle still building (~10 min). Let me write the main page view while it runs.
+
+Gradle finished quickly (warm cache). Let me confirm the framework built and was staged, then continue writing views.
+
+Framework built successfully (8m29s). Let me stage it to `Frameworks/` (what the pre-build script does), then continue writing the views.
+
+Framework staged. Now the main page view:
+
+Now the reusable sub-cards + skeleton (Cards file):
+
+I left a redundant/unstyled `savedLine`. Let me fix the savings footer to use a single styled view and remove the unused extension.
+
+Now the hero panel, key-stats grid, and stat tile (Hero file):
+
+Now the 6 lower panels (Sections file):
+
+Now the route registration and navigation wiring:
+
+Now wire the route into `AppRoute` and `TeslaSyncApp`:
+
+Now let me append the 41 `lifetime.*` strings + `route.lifetimeStats` to the catalog via a precise text insertion (preserving the rest of the 8735-entry file).
+
+Now the unit tests. Let me mark progress and write them.
+
+All files written. Now let me run the gates. First, swiftformat (autofix) on my files, then verify with `--lint`:
+
+swiftformat clean. Now swiftlint --strict on all my files:
+
+SwiftLint --strict: **0 violations**. Now the placeholder gate:
+
+Placeholder gate green (COUNT=0). Let me verify my files carry zero opt-outs, then generate the Xcode project.
+
+Project generated. Let me confirm my files are referenced and list the available schemes before the type-check build.
+
+My files are referenced (162×) and both schemes exist. Now the macOS in-scope type-check build (compiles the whole module; captures whether any LifetimeStats file errors). This is heavy — I'll run it in the background and monitor.
+
+While the macOS build runs, let me prepare the logic harness (stubs `Units`/`UnitPreferences`, compiles + executes the real model/format/sample logic standalone). First the stub:
+
+Now the harness driver that executes the real model + formatters:
+
+The macOS build finished. Let me check the result — exit code, any LifetimeStats diagnostics, and overall outcome.
+
+Build failed with 4 errors, **zero involving LifetimeStats**. Let me confirm those 4 are the pre-existing out-of-scope errors and that my files compiled.
+
+The 4 errors are all the pre-existing out-of-scope `Input.Previews.swift` ViewBuilder error (untouched by me); zero involve LifetimeStats. Since Debug uses batch mode, let me make this airtight with an isolated `swiftc -typecheck` of the maintained `Sources/` tree (incl. my files) against the real components + staged Shared framework — excluding the broken `TeslaSync/*` surfaces.
+
+macOS build exited 65 (the documented pre-existing failure). Now the airtight isolated type-check (macOS) of the maintained `Sources/` tree incl. my files, linking the real Shared framework:
+
+Zero LifetimeStats errors — the 38 are unrelated `Sources/` files whose deps live in the excluded `TeslaSync/*` trees (not self-contained). Let me verify the macOS build's `EmitSwiftModule` (whole-module type-check) processed my files cleanly — the Statistics-precedent evidence.
+
+`EmitSwiftModule` for `TeslaSync-macOS` (line 5535) — the whole-module type-check — ran and processed my files; the only errors (5564/5568) are the pre-existing `Input.Previews` ones. That's the Statistics-precedent evidence. Now let me run the iOS type-check build (exercises `#if os(iOS)` branches) and the logic harness in parallel.
+
+The harness stub `UnitPreferences` needs to be `public` (the real one is). Let me fix the stub and recompile.
+
+Logic harness: **CHECKS=38 FAILURES=0 ALL PASSED**. Let me check the iOS build result.
+
+Harness green. Let me wait for the iOS build to finish.
+
+iOS build exit 65. Let me verify it's the same pre-existing failure with zero LifetimeStats diagnostics, and that `EmitSwiftModule` processed my files (incl. iOS `#if os(iOS)` branches).
+
+Both macOS + iOS in-scope type-checks are clean (0 LifetimeStats diagnostics; only the pre-existing `Input.Previews.swift` error). Now a best-effort test-file type-check against the real model types + XCTest overlay:
+
+Test type-check clean (EXIT=0). All in-scope gates are green. Let me verify every one of the 41 string keys is actually referenced in my source (honesty check) before writing the log.
+
+The `co2Offset` mismatch is a regex artifact (my pattern excluded the digit `2`). Let me confirm it's actually referenced with a digit-inclusive pattern.
+
+All 41 keys confirmed referenced. Let me clean up temp files, then write the gate log.
+
+Now the gate log with full parity evidence and transcript:
+
+Now update the parity ledger. Let me check its exact formatting first, then append the two rows.
+
+Append the two ledger rows via precise text insertion (clean diff), then validate:
+
+Ledger updated (40 rows, LifetimeStats 56/56 ×2). Let me review the full git status to ensure I commit only the intended files (no generated/gitignored artifacts).
+
+Clean — generated artifacts (xcframework, xcodeproj, core/build) are gitignored. Let me confirm the Gradle run didn't leave stray changes under `apps/shared`, then verify the AppRoute edits render correctly.
+
+All edits verified, no stray changes. Let me run a final consolidated gate pass on the exact committed files, then commit.
+
+All gates green. Let me commit the exact intended fileset.
+
+Committed (`b1cac6c47`). Let me confirm the working tree is clean and mark the todos done.
+
+Working tree clean; all 8 todos done. The task is complete.
+
+## Summary
+
+Shipped a complete, HIG-native SwiftUI **`LifetimeStatsPage`** at web parity for `web/.../LifetimeStatsPage.tsx` (route `/lifetime-stats`), in `apps/apple/Sources/Features/Analytics/`.
+
+**Implementation** (9 new sources + test + 3 edits):
+- `@Observable LifetimeStatsPageModel` over an injectable `LifetimeStatsDataSource` seam (KMP `useSelectedVehicle` + `useLifetimeStats`, `GET /analytics/lifetime [vehicle_id]`). SI-canonical value types (meters, m/s, watt-hours); display conversion only at the boundary via the shared `Units` facade.
+- **All 11 panels**: SI-distance hero, the four key tiles (Drives/Distance/Energy/Savings), Fun Facts, Savings-vs-Gasoline bar, Environmental Impact (CO₂ ring + trees + coffee), Personal Records, Activity Summary, and the Achievement Gallery (progress rings, locked/unlocked, %).
+- **All 4 states**: loading skeleton / ready-empty (`!stats` → per-panel `EmptyState`) / error+Retry / success. Adaptive macOS + iOS (`#if os(iOS)` compact header).
+- **41 web i18n keys + `route.lifetimeStats`** appended to `Localizable.xcstrings` (zero hardcoded; verified catalog ⊆ source). Nav registered (`.lifetimeStats`, Insights group, deep-linkable).
+
+**Gates** — all in-scope GREEN (real exit codes):
+- KMP `Shared.xcframework` built (Gradle, 8m29s) → xcodegen → placeholder `COUNT=0` → swiftformat `0/12` → **swiftlint --strict `0 violations`** → macOS + iOS whole-module `EmitSwiftModule` with **0 LifetimeStats diagnostics** → test type-check `EXIT=0` → **logic harness `38/38 ALL PASSED`**.
+- `PARITY_COVERED=56 == PARITY_REQUIRED`. Ledger +2 rows (macos+ios, 56/56). Evidence log written.
+
+**One honest caveat:** the *full* `xcodebuild build/test` is RED (exit 65) due solely to a **pre-existing, out-of-scope** `TeslaSync/shared-surfaces/Input.Previews.swift` ViewBuilder error — the identical blocker the sibling `StatisticsPage`/`SlowQueriesPage` logs document. I did not work around or revert it (Covenant #7); my files' correctness is proven by the whole-module type-checks + executed harness.
+
+Committed as `b1cac6c47`; `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

@@ -1,0 +1,172 @@
+I'll start by exploring the environment, checking tool availability, and reading the web source specification.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat). The Apple app has an established modal pattern. Let me read the web source and check for existing ExportModal files plus a reference modal.
+
+No existing ExportModal. The `DashboardSettingsModal` is the same-feature analog. Let me read the full reference modal set to learn the established architecture.
+
+Now let me read the remaining reference files to fully internalize the pattern.
+
+Let me read the remaining reference files and locate the shared P1 infrastructure (tokens, components, state holders).
+
+Let me read the test patterns and locate shared infrastructure (tokens, components, project config) plus the web dependencies ExportModal relies on.
+
+Now let me locate the shared P1 design tokens/components and the project build config, plus read the web dependencies ExportModal relies on.
+
+Paths are under `apps/apple/` directly. Let me correct and explore the actual structure.
+
+Now let me read the shared Swift UI components I'll use and the web dependencies (MiniGridPreview, validateImport, SavedDashboard, useDateFormat).
+
+`TSBadge` only takes a `LocalizedStringKey` (no icon slot), so I'll build small token-styled chips for the dynamic summary data. Let me read the feedback banners, check for a shared copy affordance, and read the web dependencies.
+
+`ShareDriveDialog` is a near-perfect analog (shares/copies a URL with pasteboard). Let me study it plus the cross-platform copy helper and the remaining web dependencies.
+
+Let me read `ShareDriveDialog` (closest analog), the clipboard utility, and the web dependencies.
+
+`ShareDriveDialog` gives me the clipboard/URL/date seam patterns. Now let me read its Seams + Views, and the web dependencies (MiniGridPreview, validateImport, SavedDashboard type, useDateFormat).
+
+Now the web data shapes. Let me read `validateImport`, the `SavedDashboard` type, `GRID_COLS`, and `useDateFormat`.
+
+I now understand the web source fully. Let me read the build config (`project.yml`), lint/format configs, and the web date formatter to ensure faithful parity and correct build wiring.
+
+Important finding: `modals-dialogs` is **not** wired into `project.yml` or `.swiftlint.yml` — the existing sibling modals (DashboardSettingsModal, ShareDriveDialog) are staged for later integration. My allowed files are only `ExportModal.*`, so I must not touch build config. Let me assess what verification is actually feasible on this runner.
+
+`xcodebuild` needs a generated project + a KMP `Shared.xcframework` (Gradle/Kotlin-Native), and critically `modals-dialogs` isn't in any target — so even a full build wouldn't compile my files. I'll author to the proven sibling pattern and verify the pure logic standalone with `swift`, plus run format/lint/placeholder checks on my files. Let me read the remaining sibling view/test idioms, the placeholder script, and the web date formatter.
+
+Let me read the placeholder check script, the web date formatter, and the sibling test/preview/strings idioms.
+
+I have everything needed. Let me read the sibling test/preview/strings idioms to mirror them precisely, then start authoring.
+
+I have the complete pattern. Let me probe a couple of verification capabilities (swiftlint on an explicit out-of-config path, and standalone `swift` compile) before authoring.
+
+Let me confirm swiftlint actually analyzes out-of-`included` files (not silently skipping → false green) by feeding it a deliberate violation.
+
+swiftlint genuinely analyzes the files. Let me check `pwsh` availability and confirm an iOS-SDK `-typecheck` of the real shared sources works (so I can compile-verify my SwiftUI layer).
+
+All verification paths are available: `pwsh` (real placeholder gate), iOS-SDK `-typecheck` against real shared sources, standalone `swift` for logic tests, plus swiftlint/swiftformat. This lets me honestly verify the surface even though `modals-dialogs` integration into the Xcode project is a separate (out-of-scope) concern. Let me set up tracking and begin authoring the pure core.
+
+Now authoring the pure core. Starting with the Adapter (value model + enums):
+
+Important lint catch: swiftlint `identifier_name` (min 2 chars; only `x`,`y` excluded) would reject the 1-char `i`/`w`/`h` property names. Let me rename those in the Adapter (JSON keys stay `i`/`w`/`h`, emitted manually in the projection).
+
+Now the Projection (pure logic — JSON, base64url, size, share URL, phase, mini-grid geometry):
+
+Now the Seams (telemetry, clipboard, download action, origin, date, source, i18n, a11y):
+
+Now the Model (state holder):
+
+Let me fix the over-long `miniGrid` default line (pre-wrap to stay within 120 cols):
+
+Core authored. Before building the SwiftUI layer, let me verify the pure logic compiles and is correct with a standalone `swift` harness (Foundation/Observation only).
+
+Top-level code must live in `main.swift` when compiling multiple files. Let me rename and recompile.
+
+The run deadlocked (blocking the main thread starves the `@MainActor` task). Let me stop it and use `MainActor.assumeIsolated` for synchronous execution.
+
+All 54 logic checks pass — the pure core + model logic compiles and is verified correct. Now the SwiftUI layer.
+
+Now the populated content (mini-grid, summary chips, action rows, warning banner):
+
+Now the entry view:
+
+Now let me typecheck the full SwiftUI surface against the real shared sources (Tokens + TSButton) using the iOS 18 simulator SDK.
+
+Typecheck passes, but there's a Swift 6 strict-concurrency warning (a static `ISO8601DateFormatter` is non-Sendable) — and the target uses Swift 6 language mode where that's a hard error. Let me fix it to a local formatter and re-check under `-swift-version 6`.
+
+Clean compile under Swift 6 + complete concurrency. Now the Previews, strings, and tests.
+
+Now the i18n catalog:
+
+Now the test files. First the projection/adapter/accessibility tests:
+
+Now the state-holder tests:
+
+All files authored. Let me verify the test files compile by typechecking them together with the surface (stripping `@testable import` so types resolve in one module), and include Previews under `-D DEBUG`.
+
+XCTest needs its framework search path. Let me retry against the macOS SDK with the XCTest framework path added.
+
+The only errors are XCTest's assertion **macros** (C macros unavailable in ad-hoc Swift compiles) — not my code. To verify my tests actually use the real `ExportModal` API correctly (the genuine risk), I'll compile them against a tiny XCTest shim plus the real surface sources.
+
+The stripped `import XCTest` also provided Foundation (XCTest re-exports it, like the sibling tests). For the shim compile, I'll substitute `import Foundation` in the temp copies.
+
+Test files type-check cleanly against the real surface API (exit 0) under Swift 6. Logic is already proven by the 54-check harness. Now the format/lint/placeholder gates. Let me auto-format my files (write mode on my files only), then run the full-tree `swiftformat --lint` and `swiftlint --strict`.
+
+6/10 reformatted. Let me re-verify the formatted files still typecheck under Swift 6, then run the full gate-equivalent lint/format/placeholder checks.
+
+Two real issues to fix: (1) I ran `swiftformat --lint` from the wrong cwd (double path), and (2) swiftlint's default `optional_data_string_conversion` rule wants the failable `String(bytes:encoding:)` over `String(decoding:as:)`. Let me fix the two `String(decoding:as:)` call sites.
+
+Now re-run all gate-equivalent checks from the repo root (matching the gate's cwd), plus re-run the logic harness with the updated serializer.
+
+swiftlint (0 violations) and swiftformat (0/4179 need formatting) both pass. Now the placeholder gate and re-running the logic harness with the updated serializer.
+
+Harness still passes (ALL_PASS). The placeholder script uses `Get-ChildItem -LiteralPath -Recurse -File`, so the gate's `…/ExportModal` prefix needs a real path. Let me view the scan section, then run the script scoped to exactly my surface files via a temp dir.
+
+Confirmed: a non-existent literal path returns clean (false-pass), so I'll scope the scan to a temp dir containing exactly my surface files. Let me run the script's self-test plus the scoped scan.
+
+All scoped verifications are green: typecheck (Swift 6), logic harness (54/54), swiftlint (0), swiftformat (0), placeholder (0). Now let me attempt the literal `xcodebuild` gate to capture honest evidence of its state (it requires a KMP `Shared.xcframework` and the surface isn't yet in the target graph). First, generate the project and inspect the KMP prerequisite.
+
+xcodegen generated the project. Let me confirm whether my `modals-dialogs` files are in the target graph, then attempt the iOS build (bounded) to capture the KMP prerequisite outcome.
+
+Definitive evidence: the generated project contains **0** references to `ExportModal`, `modals-dialogs`, or even sibling `DashboardSettingsModal` — the entire tier is outside the target graph, so a scheme build cannot compile this surface. For completeness I'll still attempt the literal iOS build (bounded) to capture the KMP `Shared.xcframework` prerequisite behavior.
+
+The KMP `Shared.xcframework` **does** build on this runner (debug variant completed); the full scheme build is just heavy and was interrupted at the 300s bound — but critically it compiles **0** of my files (tier not in the project graph). So the literal `xcodebuild` step cannot cover this surface; my scoped Swift‑6 compile + runnable tests are the faithful equivalent. Let me record results, clean generated artifacts, and write the gate log.
+
+Only my 11 files are untracked; generated project + gradle output are git-ignored. Now let me generate the gate log with fresh, real outputs from every verification, and remove the generated `.xcodeproj` to restore the as-found tree.
+
+All five surface-covering checks pass (typecheck=0, harness=0, lint=0, format=0, placeholder=0). Now let me append the `xcodebuild` context (with captured KMP evidence) and the final honest EXIT/STATUS.
+
+Let me review the complete log for accuracy, then clean up generated artifacts.
+
+The log is complete, honest, and accurate. Let me clean up generated artifacts and temp files, then confirm the working tree contains only my deliverables.
+
+Working tree is clean — only my 11 files + the log. Final cross-check: verify every i18n key resolved in Swift has a matching entry in `ExportModal.strings` (and no forbidden words slipped in).
+
+Everything verified: all i18n keys resolve, no forbidden words. Let me commit the deliverables.
+
+All 13 todos complete and the work is committed. 
+
+## Summary
+
+I shipped a production-polished native Apple SwiftUI **`ExportModal`** at full parity with `features/dashboard/components/ExportModal.tsx`, following the established modals-dialogs architecture (proven by siblings `DashboardSettingsModal`/`ShareDriveDialog`).
+
+**Deliverable** (`apps/apple/TeslaSync/modals-dialogs/`, 11 files, ~2,500 lines):
+- `Adapter` (value model + enums), `Projection` (pure logic), `Seams` (telemetry/clipboard/download/origin/date/source + i18n + a11y), `Model` (`@Observable` state holder), `States` (header/freshness/banners/loading/empty/error), `Views` (mini-grid, summary chips, download + copy rows, warning), entry `swift`, `Previews`, `strings`, plus `Tests` + `ModelTests`.
+
+**Parity reproduced:** pretty JSON + byte-size badge (B/KB), minimal export → URL-safe base64 share link (`#import=`) with the >2000-char guard + warning, mini-grid geometry, download/copy-JSON/copy-URL actions, every state (loading/empty/error/populated + stale/offline), all web i18n keys, and VoiceOver labels on every interactive element.
+
+**Verification (all green, honestly logged):**
+- `swiftc -typecheck` under the app's exact `-swift-version 6 -strict-concurrency=complete` against the real shared tokens + `TSButton` (macOS **and** iOS 18 SDK) → 0
+- Runnable 54-assertion logic harness → ALL_PASS
+- `swiftlint --strict` (10 files) → 0 violations
+- `swiftformat --lint apps/apple` → 0/4179 need formatting
+- `check-placeholders.ps1` (surface scope) → 0
+
+**Honesty note (in the log):** the literal `xcodebuild -scheme` steps cannot validate this surface — the `modals-dialogs` tier isn't wired into `project.yml` yet (proven: 0 references in the generated project; integration is explicitly out-of-scope/`ExportModal.*`-only). I confirmed the KMP `Shared.xcframework` prerequisite *does* build here, then substituted the equivalent scoped compile under identical settings rather than report a build that compiles none of my files. Generated artifacts cleaned up; only the allowed files + log committed (`EXIT=0 / STATUS=DONE`).
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-modals-dialogs-0023-ExportModal.log   | 162 +++++++++++
+ .../modals-dialogs/ExportModal.Adapter.swift       | 206 +++++++++++++
+ .../modals-dialogs/ExportModal.Model.swift         | 240 ++++++++++++++++
+ .../modals-dialogs/ExportModal.ModelTests.swift    | 318 +++++++++++++++++++++
+ .../modals-dialogs/ExportModal.Previews.swift      | 144 ++++++++++
+ .../modals-dialogs/ExportModal.Projection.swift    | 261 +++++++++++++++++
+ .../modals-dialogs/ExportModal.Seams.swift         | 274 ++++++++++++++++++
+ .../modals-dialogs/ExportModal.States.swift        | 270 +++++++++++++++++
+ .../modals-dialogs/ExportModal.Tests.swift         | 235 +++++++++++++++
+ .../modals-dialogs/ExportModal.Views.swift         | 281 ++++++++++++++++++
+ .../TeslaSync/modals-dialogs/ExportModal.strings   |  49 ++++
+ .../TeslaSync/modals-dialogs/ExportModal.swift     |  72 +++++
+ 12 files changed, 2512 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0023-ExportModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ExportModal.swift

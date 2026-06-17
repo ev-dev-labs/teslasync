@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure to understand the web source and the Apple app layout.
+
+Let me read the web source and check the Apple toolchain availability in parallel.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen). Not blocked. Let me explore the Apple app structure deeply.
+
+Let me analyze the surface file structure and find a simple presentational template to model after.
+
+This is the canonical structure. Let me read the full `ActiveFilterChips` surface as my reference template.
+
+Excellent, rich conventions. Let me read the remaining reference files to fully internalize the pattern.
+
+I now understand the conventions deeply. The Adapter note confirms the codebase's honest approach for pure presentational components (no invented fetch states). Let me examine the design tokens, a simpler sibling primitive, and the project config.
+
+Let me read the project configuration to understand target structure and whether these surfaces actually compile.
+
+The tokens live in `apps/design/generated/apple` (P1/S9). Let me examine them and the build prerequisites.
+
+I have the full token vocabulary and lint rules. Now let me study how a sibling presentational primitive with no web `t()` keys handles i18n, and whether any interactive toggle-like control exists to model the binding pattern.
+
+I now have the complete token vocabulary, lint/format rules, and the surface conventions. Let me check the placeholder gate script and existing idioms for reduce-motion, toggle accessibility, and `@FocusState` so my Checkbox matches house style.
+
+I have everything I need: the 8-file surface convention, design tokens, lint/format rules, placeholder gate, and house idioms. Toolchain is fully present (`pwsh`, `xcodegen`, `swiftlint`, `swiftformat`, Xcode 26.5). Let me set up a plan and todos, then write the surface.
+
+Now writing the surface. Starting with the Foundation-only pure core (Adapter).
+
+Now the presentational subviews (Views).
+
+I need to wire keyboard focus into the control. Let me update `CheckboxControl` to own the `@FocusState` and pass it to the indicator.
+
+Now the public surface `Checkbox.swift`.
+
+Now the strings catalog and previews.
+
+Now the two test files.
+
+All 8 files created. Now let me auto-format with swiftformat, then run swiftlint and the placeholder gate scoped to the new files.
+
+Format passes. Now swiftlint `--strict`, scoped to the new files.
+
+Lint clean. Now the placeholder gate via pwsh.
+
+Placeholder gate passes. Now a standalone `swiftc` type-check of the sources + design tokens against the macOS SDK (catches type/concurrency errors without needing the KMP framework).
+
+Sources type-check clean. Now let me type-check the test files (merging them into one module with the sources, stripping `@testable import` since they'd share the module).
+
+The test references to my own types resolved — only the XCTest C-macros fail under raw `swiftc` (a known limitation). To actually *run* the tests, let me build a minimal SwiftPM package (my Checkbox files depend only on SwiftUI + tokens, not the KMP framework) and run `swift test`.
+
+Module builds clean under Swift 6. Now run the tests.
+
+All 36 tests pass. Strong evidence the surface is correct. Let me clean up the temp package and assess the full `xcodebuild` gate feasibility (it needs the KMP `Shared.xcframework` via Gradle + xcodegen).
+
+KMP shared module + Java 17 are present, so the framework build is theoretically possible but heavy (Kotlin/Native + network). Let me first run `xcodegen generate` (cheap) to confirm my files are correctly picked up by the app + test targets, and prepare the gate log dir.
+
+Project generated. Let me confirm my Checkbox files were picked up into the app and test targets.
+
+All 7 files are wired into the project. Now let me attempt the heavy part of the real gate: building the KMP `Shared.xcframework` (Gradle/Kotlin-Native), which the scheme's pre-action requires. I'll run it in the background and monitor.
+
+This is a full KMP build (Android + Apple targets, network-dependent). Let me attempt the `Shared.xcframework` assembly in the background with a bounded window and observe whether the environment can configure it.
+
+The offline Gradle build is progressing using a populated build cache (`FROM-CACHE`). Let me wait for it to complete.
+
+Gradle is building the release XCFramework now. Let me continue waiting.
+
+Release linking in progress (not cached, so slower). Continuing to wait.
+
+The offline build works (cache is populated) — it built the debug XCFramework and was mid-release-link when my 300s timeout fired. Let me run the actual staging script (which produces + stages the release framework) with a longer window.
+
+Release `Shared.xcframework` built. Let me stage it (as the scheme pre-action does) and check the iPhone 16 simulator availability.
+
+Framework staged, iPhone 16 simulator booted. Now the full iOS gate build+test. This compiles the entire app (1400+ surfaces) so I'll run it in the background and monitor.
+
+iOS gate running in background. Let me monitor progress.
+
+Compiling the full TeslaSync module, 0 errors so far. Let me wait for the build/test to progress further.
+
+Still in the whole-module emit phase (type-checking all 1400+ files), 0 errors. Let me wait for it to advance.
+
+iOS gate exited 65 (failure). Let me find the actual errors.
+
+The only compile error is in a sibling file I didn't touch — `feature-views/RecentDrivesSection.Previews.swift` ("unable to type-check in reasonable time"). Let me confirm my Checkbox files are clean and this is the sole blocker.
+
+Confirmed: my Checkbox files compile **clean** ("NONE"). The sole error is a pre-existing compiler type-check **timeout** in an out-of-scope sibling (`RecentDrivesSection.Previews.swift:24`) — a file I'm not permitted to touch (allowed files = `Checkbox.*`). Such "unable to type-check in reasonable time" errors are wall-clock heuristics and can be load-induced. Let me first confirm I only touched Checkbox files, then retry the build incrementally (cached) to see if it's deterministic.
+
+Confirmed — only 8 `Checkbox.*` files added; `RecentDrivesSection` is untouched baseline. Let me retry the build incrementally (cached derived data) to test whether the sibling's type-check timeout is deterministic or load-induced.
+
+The timeout is **deterministic** (failed identically on retry) — a genuine pre-existing borderline expression in the out-of-scope sibling. Let me view it to confirm it's unrelated to Checkbox and capture evidence.
+
+Confirmed — `RecentDrivesSection.Previews.swift:24` is a slow-to-type-check `.map` closure building sample `RecentDriveItem`s (numeric arithmetic + ternary), entirely within sibling feature-view **0297**, with zero relation to Checkbox. It's pre-existing, deterministic, and out-of-scope (I may only touch `Checkbox.*`).
+
+Let me capture the real whole-tree lint/format gate exit codes (the gate's actual scope) before assembling the log.
+
+Static gates are **green whole-tree**: swiftformat 0/4932, swiftlint 0 violations. The only red is the xcodebuild build/test, blocked by the pre-existing sibling. For airtight evidence, let me capture the **real** macOS exit code too (it shares the same `TeslaSync` sources, so it should hit the identical blocker).
+
+macOS build running (captures real `MAC_EXIT`). Let me wait for it.
+
+I have airtight, real evidence now. Both iOS (`IOS_EXIT=65`) and macOS (`MAC_EXIT=65`) builds fail at the **same** out-of-scope sibling `RecentDrivesSection.Previews.swift` (feature-view 0297); Checkbox compiles clean on both platforms; static gates are green whole-tree; and the isolated SwiftPM build runs all 36 Checkbox tests green.
+
+Let me write the gate log with the real results and full evidence.
+
+Now let me verify the working-tree state (ensure generated artifacts are git-ignored and only my intended files are untracked), and clean up temp build outputs.
+
+Working tree is clean — exactly the 8 `Checkbox.*` files + the gate log are untracked; the generated `.xcodeproj` and staged framework are git-ignored.
+
+Now the commit decision. The Honesty Covenant rule 8 — **"No commit on red"** — is binding and verbatim, and the full-app build/test gate is unambiguously red (`IOS_EXIT=65`, `MAC_EXIT=65`). The redness is a pre-existing, deterministic, out-of-scope sibling defect I'm forbidden to touch. Honoring the covenant literally, I will **not** run the commit step, and will report `STATUS=BLOCKED` with complete evidence. Committing (even with disclosure) risks the exact "red-as-green" failure mode the covenant guards against.
+
+Let me record final state and clean up temp build artifacts.
+
+Let me update the plan with the final outcome, then finalize.
+
+The Checkbox surface is complete and verified to the maximum extent possible within scope. I've finalized the gate log and recorded the honest `STATUS=BLOCKED`.
+

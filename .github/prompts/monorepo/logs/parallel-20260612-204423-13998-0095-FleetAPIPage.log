@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure to understand the task, the web source, and the existing Apple app architecture.
+
+The Xcode project uses XcodeGen (`project.yml`). Let me check tooling availability and explore the Apple app structure.
+
+All tooling is available (xcodebuild, swiftlint, swift, xcodegen). The Apple app uses XcodeGen. There's an existing ledger with "done" admin pages. Let me find how those completed pages are actually structured, since I must follow the established pattern.
+
+The real source location is `apps/apple/Sources/Features/Admin/` (the prompt's `TeslaSync/Features/Admin` is the logical path; `project.yml` compiles `Sources/`). Completed pages ApiPlayground & AuditLog live there. Let me study them as the canonical pattern, plus the existing FleetApiSection and the log format.
+
+The ApiPlayground page gives me a clear pattern. Now let me read the model, route registration, AuditLog (which has more complex state/toggle patterns), and the log format.
+
+Now let me explore the design system components (TSGlassPanel, toggle, select, badge equivalents), the route enum, strings catalog, and the log format. These are critical for parity.
+
+Now let me read the Toggle/Fields, Feedback states, route host wiring, parser, and the strings catalog + an existing log to understand the required format.
+
+Let me examine the route host registry/parser, the strings catalog, the design tokens, the test pattern, and the existing ApiPlayground log to replicate format exactly.
+
+Let me study the multi-source FleetTelemetryCoverage page (closest template — multiple data sources), its sample provider, design tokens, and the log format.
+
+Now let me examine the design tokens, the xcstrings format (sample with playground keys), and the existing ApiPlayground log to replicate format precisely.
+
+Now let me check which required strings already exist in the catalog, read the design tokens, the existing log format, and the web hooks data shapes.
+
+All 70 strings are new. Let me read the color/font tokens, the log format, the sample data source pattern, and the web data hook shapes.
+
+Now let me read the existing ApiPlayground log (to replicate exact format), the sample data source pattern, and the web hook data shapes.
+
+This is exactly the pattern I need. Now let me read the web data hooks (field shapes), the sample data source pattern, and the FleetTelemetryCoverage page layout (multi-panel template).
+
+Let me get the exact data shapes for polling config, capture stats, version, and settings from the web hooks and types.
+
+I now have all data shapes. Let me check the suspend mutation body, typography/button component signatures, and whether there's an alert/banner component for the toast messages.
+
+`TSAlertBanner` exists. Let me read its signature and confirm the theme modifier, then I'll have everything needed to build.
+
+I have everything needed. Let me set up tracking and check the build baseline (git state, Shared.xcframework presence) before writing code.
+
+Shared.xcframework isn't staged (10-min Gradle build per precedent). Let me inspect the build script and kick it off in the background while I write code.
+
+Kicking off the long Shared.xcframework Gradle build in the background while I write code.
+
+I have the full design. Let me verify a few remaining component signatures (TSSkeleton) and confirm helper i18n keys exist, then write all files.
+
+Those shared-component default keys appear missing — let me verify how existing pages handle them (they may exist under different casing or were added per-page).
+
+Those default keys fall back to literals, so I'll add a few native support keys. I have the complete design now. Let me write the model file first.
+
+Now the sample data source:
+
+Now the main page view — the largest file, mapping all 8 panels, 70 strings, and 3 states:
+
+Now the route registration:
+
+Now wire the route into `AppRoute.swift` and `TeslaSyncApp.swift`:
+
+Let me verify the TeslaSyncApp wiring is balanced:
+
+Now I'll add the strings. First, let me inspect the exact byte-level format of the xcstrings file so my insertion matches perfectly (no whitespace drift):
+
+Format is clear: root uses `": "`, nested uses `" : "`. I'll do a pure text insertion (zero existing lines touched). Let me write and run the script:
+
+Strings added cleanly (8513 → 8587). Let me verify the diff is purely additive and the format matches:
+
+Now let me refine the toggle row's accessibility (the `Toggle(title)` already provides the a11y label, so I'll simplify and remove the redundant param). Then write tests.
+
+Shared framework build finished — I'll check it shortly. Let me finish the remaining page edits first.
+
+Let me check the Shared.xcframework build result:
+
+Shared.xcframework is staged (ios-arm64, ios-arm64-simulator, macos-arm64). A real green build may be achievable. Let me write the tests:
+
+Now let me run the verification pipeline. First, check the lint configs, then format/lint my files:
+
+Config understood — `--strict` makes the 120-col line_length a hard error. Let me run swiftformat on my new files (it auto-wraps to 120), then review:
+
+swiftformat reformatted them. Let me confirm they're now lint-clean and check what changed (lines that may have wrapped):
+
+New files are format-clean. Now check the two edited shared files:
+
+AppRoute is clean; TeslaSyncApp needs reindent from my added nesting. Let me apply swiftformat to it and review the diff:
+
+The diff is a clean nesting addition (exactly like prior page wirings). Let me confirm format-clean and verify the balanced structure:
+
+All format-clean. Now swiftlint --strict on my files:
+
+swiftlint flags file/line/type-body lengths — the admin pages handle this by splitting into multiple files. Let me check the repo's conventions for long localized-string lines and file splits:
+
+No `swiftlint:disable` convention exists. Let me verify how the codebase constructs `LocalizedStringKey` from runtime strings (critical for my descriptor rendering) before I restructure:
+
+`LocalizedStringKey(runtimeString)` is an established pattern — good. Now I'll split files to satisfy swiftlint's 400-line/350-body limits (as the other admin pages do) and fix the long string. Let me check current line counts:
+
+I'll split files to satisfy swiftlint (as sibling admin pages do). First, the model split via script:
+
+Model split done (236 + 314 lines). Now let me view the full page file to split it cleanly into two:
+
+Let me view the rest of the page so I reproduce content exactly when splitting:
+
+Now I'll rewrite the page into two files. Remove the old, create the trimmed main + sections extension:
+
+Now the sections extension file (with toggle row + previews):
+
+Files split. Let me re-run swiftformat (apply) then swiftlint --strict on all my files:
+
+All files under 400 lines. Now swiftlint --strict:
+
+swiftlint + swiftformat both clean (0 violations). Now the placeholder scan. Let me locate the script and check for pwsh:
+
+Placeholder scan passes (COUNT=0). Now xcodegen + the real build. Let me generate the project:
+
+Project generated; FleetAPI referenced 42× (both apps + test bundles). Let me check how the Shared.xcframework build script is wired (to avoid a 10-min Gradle re-run per build) and list schemes:
+
+The script is a scheme **pre-action** (not a build phase), and the framework is already staged. Let me kick off the real macOS build in the background (Gradle will run incrementally), then validate iOS too:
+
+The macOS build is running (Gradle pre-action + full compile). While it builds, let me prepare the ledger update and confirm the manifest record. Let me check the ledger format and the manifest entry:
+
+Let me check the build progress and verify the manifest's required count:
+
+Confirmed: requiredCount=81 (8 panels + 3 states + 70 strings). Let me check build progress:
+
+Gradle pre-action done, now in Swift compilation (0 errors so far). Let me wait for completion:
+
+Still emitting module (whole-module type-check, where any errors in my files would surface). Let me keep waiting:
+
+The main app module compiled (my FleetAPI files included) and it's now linking. Let me wait for completion:
+
+Now in per-file object compilation (module type-check passed, 0 errors). Let me continue waiting:
+

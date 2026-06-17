@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure and verifying the Apple toolchain availability, since this task requires SwiftUI/Xcode capability.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 simulator). Not blocked on capability. Let me explore the existing Apple app structure and the web source.
+
+The Apple app uses xcodegen (project.yml) and has an extensive `shared-surfaces` directory. Let me examine the conventions, check if Breadcrumbs already exists, and find reference examples.
+
+There's already a `LayoutBreadcrumbs.*` surface for the same web source, but this prompt (0167) mandates a distinct `Breadcrumbs.*` surface. `Breadcrumbs.*` files don't exist yet. Let me study the `LayoutBreadcrumbs.*` set as the canonical template (same web source) plus the project config.
+
+The `LayoutBreadcrumbs` surface maps the *wired* `LayoutBreadcrumbs.tsx` and delegates trail rendering to `BreadcrumbOverridesTrailView` (the native `<Breadcrumbs>` renderer). This prompt 0167 wants a dedicated standalone `Breadcrumbs.*` surface for the pure `Breadcrumbs.tsx`. Let me study the trail renderer, tokens, strings, tests, and project config.
+
+Let me read the actual `<Breadcrumbs>` native renderer, locate the design tokens, and read the test/project conventions.
+
+Tokens live in `Sources/Design/TSDesign.swift`. Let me read the tokens, the test conventions, the trail item model, and the project test target config.
+
+`TSDesign.swift` only holds palette/animation. Let me find the core token definitions (`Color.TS`, `Font.TS`, `TSSpacing`) and read the adapter-test conventions plus the project test target.
+
+Tokens aren't in the Swift sources directly — they may be generated. Let me check the build scripts, project.yml fully, and whether token generation is a pre-build step.
+
+Tokens are generated into `apps/design/generated/apple` (the `DesignTokens` group). Let me read them.
+
+I now have the token palette. Let me check for naming collisions, read the surface-slug + model conventions, and the project.yml resources/test-target handling of `.strings` and `*Tests.swift`.
+
+No collisions. Now the critical build-prerequisite check: xcodegen availability, the `Shared.xcframework`, and whether the `.xcodeproj` can be generated. Let me also read the project.yml resources/test sections.
+
+`Shared.xcframework` is missing (only `.gitkeep`), and the app targets link it. This is the critical build prerequisite. Let me investigate how it's built and whether that's feasible here.
+
+Building requires xcodegen + a Gradle-built `Shared.xcframework` (pre-build script). The toolchain is present; the xcframework is a build dependency. Let me check Java/Gradle feasibility and read the remaining conventions (trail-item model, swiftlint/swiftformat configs, test-target wiring).
+
+Java 17 and Gradle wrapper are present, so the KMP build is feasible. Let me read the trail-item model (Adapter/Projection) and the public surface entry + project.yml test/resource wiring to finalize my design.
+
+I have a thorough grasp of the conventions. Let me read the project.yml test/resource/pre-build sections to confirm wiring, then write a plan and the files.
+
+Project wiring is clear: xcodegen auto-discovers `shared-surfaces/*.swift` (app target excludes `*Tests.swift`; test targets include them) and bundles `.strings` — so I just drop `Breadcrumbs.*` files in and regenerate. Let me verify cross-platform `horizontalSizeClass` availability (the gate builds iOS + macOS) before finalizing the responsive-collapse design.
+
+`horizontalSizeClass` is safe cross-platform (compiles on macOS, widely used in sibling surfaces). Design locked. Let me kick off the Gradle `Shared.xcframework` build in the background early (it's the long pole and independent of my code), and set up my plan + todos.
+
+The xcframework build finished already — let me check whether it succeeded.
+
+The detached `&` returned immediately; the actual Gradle build is still running (downloading Kotlin/Native distribution + compiling). Let me check process status and monitor the log.
+
+The Gradle build is actively progressing (mostly `FROM-CACHE`, now linking iOS frameworks) — it'll finish on its own. I'll write the surface files while it runs. Starting with the pure adapter core.
+
+Now the public surface entry and the trail renderer (Views).
+
+Now the previews, strings catalog, and both test files. Let me also check the xcframework build progress.
+
+The xcframework is nearly done (debug built, linking release). Writing the remaining files: previews, strings, and both test suites.
+
+Now both test suites.
+
+All 8 files written. Now formatting/linting my files and checking the xcframework build. Running swiftformat (write) on my Swift files, validating the `.strings`, and checking the build.
+
+swiftformat reformatted 4 files (they're new/untracked so diff-stat is empty). Let me verify they now pass `swiftformat --lint` and `swiftlint --strict`, and check what changed.
+
+Both pass cleanly — `swiftformat --lint`: 0/7 need formatting; `swiftlint --strict`: 0 violations. Let me verify the formatter didn't alter logic, read the placeholder-check script (the gate's `-Path` arg), and check the build.
+
+Let me read the placeholder patterns and run the check against my files (testing the exact gate `-Path` form), while the release framework finishes linking.
+
+My files are clean (no placeholder/stub patterns), and the script treats a non-matching `-Path` as a clean result. Let me confirm the log directory exists, wait for the xcframework to finish staging, then generate the Xcode project.
+
+The release framework is linking the last (macOS) slice. Let me look at a sibling surface log to match the expected format while the build finishes.
+
+This is the key reference. The established runner methodology: the raw full-repo gate commands fail on **pre-existing/environmental** issues (macOS signing, baseline iOS failures, other prompts' lint/format), so each surface adds **surface-scoped** verification (typecheck iOS+macOS, run the surface tests, scoped lint/format) plus baseline-reproduction evidence, then concludes EXIT=0/STATUS=DONE honestly. Let me study the full sibling logs to replicate this exactly.
+
+I now fully understand the predecessor-accepted methodology and exact log format. I'll run the **real** prompt gate commands AND surface-scoped verification (xcodegen, isolated typecheck on both SDKs, a real test-harness run), root-causing any pre-existing/environmental reds with baseline proof. Let me confirm the xcframework staged and start verification.
+
+Xcframework staged (`ios-arm64`, `ios-arm64-simulator`, `macos-arm64`). Now isolated typecheck of the 5 shipped surface files against both SDKs under Swift 6 + strict concurrency (strong, fast evidence), plus xcodegen.
+
+Both SDKs typecheck the surface with 0 errors. Now generating the Xcode project and setting up a standalone SwiftPM harness to actually run the surface tests (Swift 6, strict concurrency, macOS 15).
+
+Project generated (XCODEGEN_EXIT=0, 108 Breadcrumbs refs wired) and harness ready. Running the surface tests.
+
+All 29 surface tests pass (0 failures, Swift 6 strict concurrency). Now running the **real** prompt gate commands. Starting the long iOS xcodebuild in the background, then running whole-tree lint/format in parallel.
+
+Whole-tree lint and format (the gate's `LINT_EXIT`/`FORMAT_EXIT`), capturing any pre-existing violations and confirming my files contribute none.
+
+Whole-tree lint: `LINT_EXIT=2` — exactly 3 pre-existing violations in another prompt's `WidgetChartSummary.Tests.swift` (identifier names 'a'/'b'/'c'); **my surface contributes 0**. The iOS build finished — let me read its real result and run whole-tree format.
+
+Format: `FORMAT_EXIT=1` — 1 pre-existing file in another prompt; **my surface needs 0**. The iOS grep was noisy (linker lines). Let me read the actual iOS build status and root cause cleanly.
+
+The iOS build's `&` detached it from the shell wrapper (like the xcframework earlier) — the log ends mid-`EmitSwiftModule` with no verdict yet. Let me check if xcodebuild is still running.
+
+The iOS build is still compiling the full app (33 processes active, mid-`EmitSwiftModule`). While it runs, let me execute the placeholder gate (exact command + my files scanned in isolation) via pwsh.
+
+Placeholder: `PLACEHOLDER_EXIT=0` both via the exact gate command and scanning my 8 files in isolation. Now waiting for the iOS build to finish compiling the full app.
+
+iOS build hit `** BUILD FAILED **`. Let me find the root cause and verify whether any Breadcrumbs file is implicated or it's pre-existing.
+
+**Root cause confirmed**: the iOS failure is a pre-existing `swift-frontend` IRGen crash on `feature-views/AppearanceSettings.Controls.swift` (SIL thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`) — another prompt's file, **zero source-level errors, no Breadcrumbs file implicated**. This matches the committed sibling logs exactly. Per covenant #3, I must prove it's pre-existing via a files-removed baseline rebuild. Let me capture the exit code and run the baseline.
+
+Build still retrying (xcodebuild recompiles file-by-file after a batch compiler crash — AppearanceSettings appears 7× = batch + retries). Verdict is already `** BUILD FAILED **`. Let me wait for the exit code to be emitted.
+
+I've captured the definitive iOS verdict (`BUILD FAILED`) and root cause. The build is now in xcodebuild's unbounded file-by-file retry loop after the compiler crash. Let me check its current activity, then proceed efficiently to the baseline proof.
+
+iOS build finished: **`IOS_EXIT=65`**, crash on `AppearanceSettings.Controls.swift` (pre-existing). Now the covenant-required baseline proof: remove my files, regenerate (0 Breadcrumbs refs), rebuild, and show the identical crash without my surface.
+
+My 8 files are out (project refs dropped 108→60; the remaining 60 are the unrelated `LayoutBreadcrumbs.*` sibling). Running the baseline iOS build to reproduce the crash without my surface.
+
+Baseline build running. Polling for the same crash to appear without my surface.
+
+The baseline build's module compile is churning (output buffers until the batch crashes). Let me read the current state directly.
+
+Baseline is at `SwiftEmitModule` (type-check), same point where the with-surface build was; the IRGen crash comes in the subsequent CompileSwift phase. Continuing to wait for the crash.
+
+Let me check the baseline build's progress directly.
+
+Baseline now in the CompileSwift phase (11,930 lines, compiling many files). The crash batch will hit shortly. Continuing to wait.
+
+**Baseline proof complete.** With my surface entirely removed (0 Breadcrumbs refs), the iOS build fails **identically**: same `Stack dump`, same `IRGenRequest` on `AppearanceSettings.Controls.swift`, same SIL thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, `BASELINE_IOS_EXIT=65`. The failure is pre-existing/environmental, independent of my surface. Let me restore my files and run the macOS build.
+
+Files restored (108 refs). Now the macOS gate build (`xcodebuild -scheme TeslaSync-macOS build test`). Starting it in the background.
+
+While the macOS build runs, let me gather line counts and verify the macOS build's early progress.
+
+macOS build failed immediately on **code-signing** (`entitlements require signing with a development certificate` for `TeslaSync-macOS` + `TeslaSyncWidgets-macOS`) — environmental, no dev identity on the runner; 0 source errors, fails before even compiling. Let me capture `MAC_EXIT` and confirm no Breadcrumbs involvement.
+
+`MAC_EXIT=65` — environmental code-signing only (no dev certificate on runner), 0 source errors, no Breadcrumbs involvement. All gate data captured. Let me gather tool versions + git context for the log header, then write the comprehensive gate log.
+
+Confirmed: only my 8 files are untracked; project.yml/.swiftlint.yml unchanged (shared-surfaces already wired), and `.xcodeproj`/`Frameworks` are gitignored — no drift. Now writing the comprehensive gate log.
+
+Log written. Let me do a final surface-scoped re-verification (post move/restore), update todos, then commit.
+
+All green. Committing the surface + log.
+
+Committed (`5f912eda8`) with exactly the 8 surface files + log. Let me verify a clean tree and clean up temp artifacts.
+
+Clean tree, configs unchanged, temp cleaned. Let me finalize the todos and confirm everything's complete.
+
+All todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0167-Breadcrumbs.log  | 280 +++++++++++++++++++++
+ .../shared-surfaces/Breadcrumbs.Adapter.swift      | 212 ++++++++++++++++
+ .../shared-surfaces/Breadcrumbs.AdapterTests.swift | 177 +++++++++++++
+ .../shared-surfaces/Breadcrumbs.Model.swift        | 135 ++++++++++
+ .../shared-surfaces/Breadcrumbs.Previews.swift     |  60 +++++
+ .../shared-surfaces/Breadcrumbs.Tests.swift        | 154 ++++++++++++
+ .../shared-surfaces/Breadcrumbs.Views.swift        | 276 ++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Breadcrumbs.strings  |  30 +++
+ .../TeslaSync/shared-surfaces/Breadcrumbs.swift    | 102 ++++++++
+ 9 files changed, 1426 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0167-Breadcrumbs.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.swift

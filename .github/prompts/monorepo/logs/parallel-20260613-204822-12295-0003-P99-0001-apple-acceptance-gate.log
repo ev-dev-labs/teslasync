@@ -1,0 +1,83 @@
+I'll start by exploring the repository structure to understand what exists for this Apple acceptance gate.
+
+Critical findings already: `apps/parity` has only `apple-ledger.json` (no `apple-macos-ledger.json`/`apple-ios-ledger.json`), and `apps/tools` has no `check-parity-ledger.ps1`. Let me verify capabilities and predecessor structure.
+
+Capabilities mostly present (Xcode 26.5, swiftlint, swiftformat, pwsh, simulators) but **0 valid signing identities**. Also missing: `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1`. Let me examine the prompt file on disk, predecessor logs, and project schemes.
+
+Previous runs of this exact gate exist as `artifact-*-P99-0001-apple-acceptance-gate.log`. Let me read the on-disk prompt, a prior artifact log, and check project generation state.
+
+I now have full context. A prior run (20260608) recorded `STATUS=BLOCKED` on five grounds. I must run the gate **fresh** and record firsthand evidence (no skip-and-assume). Let me understand the commit convention and predecessor-log verification approach before executing.
+
+Working tree is clean; prior artifact logs were committed under a separate "logs commit". Let me read the methodology to confirm the BLOCKED-path commit convention, then set up my execution plan.
+
+I now understand the governing contract. Key resolution: **methodology Rule 8 + Commit discipline** say on BLOCKED, commit ONLY the log with `chore(monorepo): BLOCKED ...`. Mandatory log sections are defined. Let me verify predecessor logs and build prerequisites (JDK/gradlew for the KMP xcframework pre-action).
+
+Confirmed additional BLOCKED grounds: **P9 predecessor logs are absent** (no `p4-p9-0001`/`p4-p9-0002` logs) and ledger files + verifier script are missing. JDK 17 + gradlew are present so builds can attempt. Let me set up tracking and the build-prereq script check.
+
+All 15 P4/P0..P8 predecessor logs are `STATUS=DONE`, but **both P9 logs are missing**. Let me verify the .gitignore status of generated artifacts (for drift safety) and audit the P7 page-prompt logs.
+
+Found: 476 P7 logs, 1 with no `STATUS=DONE` (`AlertFeedWidget`). Let me inspect that anomaly and confirm gitignore covers the generated project dir.
+
+Investigation complete. Decisive facts gathered. The `AlertFeedWidget` P7 log is a 3.7MB interrupted log (`IOS_EXIT=143`, no STATUS footer). Generated artifacts are gitignored (directory patterns). Let me set up tracking and begin building the acceptance log.
+
+Now I'll initialize the acceptance log with the header and run the PREFLIGHT section live (firsthand command output).
+
+Good — no drift after xcodegen (gitignored). Let me verify the PREFLIGHT section reads correctly.
+
+PREFLIGHT is accurate. One nuance: `CLEAN_TREE_AT_ENTRY=NO (1 file)` — that 1 file is my own log (allowed). Let me confirm and annotate so it isn't misread as drift.
+
+Confirmed: no drift (only the log is untracked). Now appending SURVEY + REASONING, then I'll run the GATE exactly as specified via pwsh.
+
+Now I'll create a pwsh gate runner that mirrors the prompt's Gate block exactly (adding `-project` since the gate runs from repo root, and running SwiftLint in `apps/apple` for its config — matching the established prior-run method). Each real exit code is captured.
+
+Now running the full gate in the background (iOS build+test triggers the KMP xcframework build, so this is the long pole).
+
+Gate started in background. Let me monitor progress via the log tail.
+
+Good — STEP 1/9 running; the KMP `Shared.xcframework` is compiling (iosArm64, iosSimulatorArm64, macosArm64). Let me continue monitoring.
+
+KMP debug xcframework built; now linking release frameworks. Let me keep monitoring (still in STEP 1 KMP pre-action).
+
+Release framework linking in progress (Kotlin/Native is slow). Still in the STEP 1 KMP pre-action. Continuing to wait.
+
+The Xcode app build settings are now emitting (`SigningCert=` empty, consistent with simulator no-sign) while the final KMP macOS release framework links. Nearing end of the KMP pre-action. Continuing to wait.
+
+KMP framework staged (line 1881); Swift compilation of the TeslaSync app is now underway. Continuing to monitor.
+
+A `** BUILD FAILED **` appeared during STEP 1 (iOS). Let me inspect the failure reason — this is key firsthand evidence.
+
+iOS build FAILED with 2 SwiftCompile failures, but my `error:` grep found none — I need to find the actual diagnostics to characterize this accurately. Let me search the full log.
+
+No `error:` lines despite a build failure with "(2 failures)" — this suggests a possible compiler crash rather than a source error. Let me search for crash signatures and check the gate's live status.
+
+Root cause found: a **Swift compiler crash** (swift-frontend stack dump at line 9347), not a source error — that's why no `error:` lines. The gate has moved to STEP 2 (macOS). Let me capture the crash context and current markers.
+
+Lines are extremely long (full compiler invocations). Let me extract just the crash signature compactly.
+
+Confirmed: **Swift 6.3.2 compiler crash** (`swift-frontend` stack dump) during the TeslaSync iOS target batch compile — a toolchain crash, not a source `error:`. iOS build is RED. The gate is now on STEP 2 (macOS). Letting it run all steps for complete evidence.
+
+`IOS_EXIT=65` recorded (compiler crash). STEP 2 (macOS) compiling now. STEP 1 took ~26 min, so the remaining xcodebuild steps will also be lengthy. Letting it run to completion for full evidence; polling periodically.
+
+**GATE COMPLETE.** All 9 exit codes recorded firsthand:
+- `IOS_EXIT=65` (compiler crash), `MAC_EXIT=65`, `LINT_EXIT=2`, `FORMAT_EXIT=1`, `PLACEHOLDER_EXIT=1`, `MAC_LEDGER_EXIT=127`, `IOS_LEDGER_EXIT=127`, `IOS_ARCHIVE_EXIT=65`, `MAC_ARCHIVE_EXIT=65`.
+
+Let me extract the specific diagnostic lines for each failure to write an accurate summary.
+
+Strong evidence captured. Let me extract the remaining specifics: macOS/archive signing error text, and the placeholder count.
+
+All firsthand evidence gathered. Let me quickly check the existing combined `apple-ledger.json` coverage (for context) before writing the PARITY + determination sections.
+
+Context complete: the only present ledger (`apple-ledger.json`) is a 26-row partial (13 macOS + 13 iOS, all from one page prompt) — **not** the two full-program idiom ledgers the gate verifies, which are absent. Now writing the PARITY + DETERMINATION sections.
+
+Now the final determination (all BLOCKED grounds), promotion path, and EXIT/STATUS footer.
+
+Log ends correctly with `EXIT=1` / `STATUS=BLOCKED`. Now verifying drift before committing (must be log-only).
+
+No drift — generated `*.xcodeproj/` and `*.xcframework/` are gitignored (`!!`); only the log is untracked. Committing **only the log** per BLOCKED commit discipline (Rule 8).
+
+Committed (`4b6bfdc81`, COMMIT_EXIT=0) — only the log. Final verification and cleanup.
+
+All verified. Let me close out the tracking.
+
+Task complete. The P4/P99 Apple acceptance gate was executed faithfully (run-only, no code fixed, no delegation), with firsthand evidence captured and the log committed per the BLOCKED commit discipline.
+

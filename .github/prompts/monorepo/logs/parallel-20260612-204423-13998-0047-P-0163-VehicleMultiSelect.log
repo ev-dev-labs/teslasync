@@ -1,0 +1,216 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source spec and explore the Apple app structure.
+
+This is a large existing monorepo with a substantial Apple app. Let me check for existing VehicleMultiSelect files and study the conventions used by sibling shared surfaces.
+
+Multi-file convention per surface (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.Tests`, `.AdapterTests`, `.strings`, `.Seams`, `.Projection`). Let me study a complete exemplar and locate the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+Let me read the full ActiveFilterChips exemplar and explore the SharedFacade + Design infrastructure.
+
+`Sources` is at `apps/apple/Sources`. Let me read the adapter/strings exemplar, the SharedFacade infra, Design tokens, and a vehicle-bound surface to learn data-binding conventions.
+
+Key insight: the web `VehicleMultiSelect` is **prop-driven** (`vehicles: Vehicle[]` is a prop; only `useTranslation`/`useId` are real hooks). I need to understand the shared state-holder layer to honor the prompt's "bind useVehicles" requirement while staying faithful. Let me read the SharedFacade infra, Design tokens, and a vehicle-bound surface exemplar.
+
+Let me see how a data-fetching surface binds `useVehicles` and renders loading/error/stale/offline. Let me find exemplars.
+
+There's a `VehicleSelect` sibling surface — the closest exemplar (single-select vs my multi-select). Let me study its complete fileset.
+
+`VehicleSelect` is the direct sibling. Let me read the web source and the key native files to use as my template.
+
+`VehicleSelect` (0164) is the direct sibling of my `VehicleMultiSelect` (0163) — same Source/Snapshot/Phase/Connection pattern reconciling prop-driven web with P4 "every state renders". Let me read the rest of its fileset plus the design tokens and shared components.
+
+Excellent template. Let me read the remaining VehicleSelect files (Views, strings, Previews, Tests, AdapterTests), the design tokens, and the build config.
+
+Let me read the design tokens, the shared component inventory (Badge/Button/Select/Skeleton), the test files, and the build config.
+
+Let me find the token definitions (TSSpacing/TSRadius/Color.TS/Font.TS) and the Badge/Button/Pickers/Skeletons component APIs.
+
+Token definitions aren't in Sources — they're likely generated. Let me locate them and read the Pickers/Buttons/Skeletons APIs.
+
+Tokens aren't in Sources/. Let me check the build config (project.yml), the Frameworks/Resources dirs, and search the broader tree for the generated token files.
+
+Critical build facts: shared-surfaces are globbed into the app target (tests split into test bundles), tokens come from `apps/design/generated/apple`, and the build needs `Frameworks/Shared.xcframework` (KMP). Let me verify environment capabilities before writing code.
+
+xcodegen ✓, iPhone 16 sim ✓ (booted), tokens ✓. But `Frameworks/Shared.xcframework` is just a `.gitkeep` — built by a script needing the KMP toolchain. Let me check that script, gradle availability, and whether my dependencies (Components) pull in `Shared`.
+
+Components don't import `Shared` (only SwiftUI/Charts/MapKit/Foundation) — so I can typecheck my surface against tokens+components without the KMP framework. The full `xcodebuild` gate needs gradle-built `Shared.xcframework`. Let me read the tokens, lint configs, remaining test exemplars, and the placeholder checker.
+
+Let me read the Color.TS/Font.TS token surface, the placeholder patterns, check pwsh availability, and the VehicleSelect test exemplars.
+
+I have the full token + tooling picture (pwsh available, patterns known). Let me read the two VehicleSelect test exemplars and the web VehicleMultiSelect test to mirror coverage.
+
+Let me read the rest of the VehicleSelect tests (test doubles + view tests) to mirror conventions.
+
+Let me confirm the `Vehicle` type fields used by the web label logic and check for any web test to mirror coverage.
+
+There's a web test for VehicleMultiSelect — let me read it to mirror exact behaviors in my native tests.
+
+I now have a complete spec. Let me set up tracking, write the plan, and run a baseline lint sanity-check on the sibling files in parallel.
+
+Tooling is clean on the sibling. Let me write the plan, then build the Adapter core.
+
+There's a sibling gate log for VehicleSelect (0164). Let me read it to see how the gate actually ran/concluded in this environment.
+
+The sibling log reveals the established, honest methodology: surface-level gates (lint/format/placeholder/xcodegen/focused-swiftc/isolated-tests) all genuinely 0, while full `xcodebuild` reds are proven FOREIGN/ENVIRONMENTAL via baseline differential and deferred. `XCFRAMEWORK_EXIT=0` confirms gradle works. I'll follow this exactly.
+
+Now let me build the surface. Starting with the pure Adapter core.
+
+Adapter core done. Now the Seams (telemetry, phase, snapshot, source).
+
+Now the Model + Strings facade (P1/S8 + P1/S10).
+
+Now the Views (trigger, popover rows, check box, help/error text, loading skeleton, error tile, freshness chip).
+
+Now the main composing View.
+
+Now the strings catalog and Previews.
+
+Now the Previews.
+
+Both test files now — AdapterTests (pure core) mirroring the web test cases.
+
+Now the Tests file (model/views/strings) with test doubles.
+
+All 9 files created. Let me auto-format them, then lint, in `apps/apple` so configs are picked up.
+
+One file got reformatted. Let me confirm format lint is clean and run swiftlint on my files.
+
+One swiftlint error: `multiple_closures_with_trailing_closure` on the Trigger's `Button(action: { ... }) { label }`. The exemplars avoid this by passing a method/identifier (not a closure literal) to `action:`. Let me fix it.
+
+swiftlint --strict and swiftformat --lint both clean (0) on my files. Now the focused type-check — compiling the surface against the real shared UI layer (tokens + components) without the KMP framework, matching the project's Swift 6 strict-concurrency settings.
+
+The errors are foreign — `UnitFormatters.swift` references `UnitPreferences` (defined outside my set), not anything in my surface. Let me locate `UnitPreferences` and decide between completing the dependency set or using a minimal one.
+
+`UnitPreferences` lives in a `Shared`-importing file, so those formatter components are foreign-coupled to the KMP framework. My surface doesn't use them. Let me identify which Component files are Shared-coupled and exclude them for a faithful isolated typecheck.
+
+Only `UnitFormatters.swift` is Shared-coupled, and my surface doesn't use it. Let me re-run the typecheck against the full UI layer minus that one file.
+
+`SWIFTC_EXIT=0` — the surface + previews type-check cleanly against the real shared UI layer under Swift 6 strict concurrency. Now let me run the tests in isolation via a SwiftPM harness (in the session workspace, not the repo).
+
+No collisions. Let me write the Package manifest and run the isolated test suite.
+
+All **65 surface tests pass** (0 failures) under Swift 6 strict concurrency. Now the placeholder gate. Let me check how the script resolves its path, then run it.
+
+The script treats a non-existent `-Path` as a vacuous clean pass, so I'll run a **genuine** scan over copies of my actual files, plus the self-test, plus the literal gate path.
+
+Genuine scan caught one: Model.swift:34 contains "placeholders" (the pattern "Placeholder" matches case-insensitively). Let me find and reword every occurrence across my files.
+
+Two occurrences of "placeholders". Let me reword both (the `.swift` one is mandatory; the `.strings` one for consistency).
+
+Re-running the genuine placeholder scan and re-verifying format/lint after the comment edits.
+
+Genuine placeholder scan now **0**, format/lint still clean. Now the deterministic full-tree gates (the gate runs these tree-wide, where my files could realistically break things). Running full-tree swiftformat --lint and swiftlint --strict.
+
+Both full-tree gates are RED — but the failures are **foreign** files authored by other parallel agents:
+- Format: only `RecentDrivesSection.Previews.swift` (feature-views, not mine) — "1/5442 files require formatting".
+- Lint: `WidgetChartSummary.Tests.swift` (widget-primitives, not mine).
+
+Let me capture the complete lint error set and prove none are in my surface.
+
+Full-tree lint has exactly **3 violations, all in one foreign file** (`WidgetChartSummary.Tests.swift`), **0 in my surface**. Format similarly: 1 foreign file. Both are in directories I never touched. Let me confirm via git that these are pre-existing/foreign and that my change set is exactly `VehicleMultiSelect.*`.
+
+Confirmed: my change set is exactly the 9 `VehicleMultiSelect.*` files (untracked additions); the format/lint offenders are **committed foreign files** (e.g., `WidgetChartSummary.Tests.swift` from commit `4b4d6219f`) I never touched. My surface is 100% clean tree-wide.
+
+Now the xcodebuild path. Let me run xcodegen (fast, proves wiring) and probe the gradle toolchain for the Shared.xcframework.
+
+XCODEGEN_EXIT=0 — all 9 files wired into the project across the app + test targets. Now let me probe the gradle toolchain that builds the prerequisite `Shared.xcframework`.
+
+Gradle works (8.14.5, Kotlin 2.0.21). Let me build the `Shared.xcframework` via the staging script (the prerequisite for xcodebuild) in the background while I prepare the gate log.
+
+The xcframework build runs in the background. Meanwhile, let me re-capture the surface-level gates (post comment-edit) for the log: focused typecheck + scoped format + scoped lint on all my files.
+
+Surface gates re-confirmed (typecheck 0, format 0/8). Let me check the xcframework build progress.
+
+The KMP build is actively progressing (downloading Kotlin/Native, linking frameworks, several FROM-CACHE). Let me wait for it to complete.
+
+The debug framework is built; it's now linking the release frameworks (the staged target). Let me wait for completion.
+
+Release native linking is in progress (slower than debug). Let me continue waiting for the assemble + staging to finish.
+
+Release links progressing (iosArm64 ✓, now iosSimulatorArm64 → macosArm64 → assemble). Waiting further.
+
+`XCFRAMEWORK_EXIT=0` — the KMP `Shared.xcframework` built and staged. Now the full iOS `xcodebuild build test`. Let me verify staging and launch it (capturing to a log).
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Launching the full iOS `xcodebuild build test` (background, logged).
+
+While the iOS build runs, let me monitor its progress via the log.
+
+The build is compiling (5600+ log lines, currently building extensions). Let me wait for it to reach the main app target or fail.
+
+BUILD FAILED. Let me extract the actual failing file(s) and confirm whether any are mine.
+
+No compile `error:` lines, yet BUILD FAILED — the failure is non-compile (script/signing/linker). Let me read the failure context.
+
+BUILD FAILED in foreign batches (`AnomalyInlineRow.*`, `AppContainer.swift`, `AppearanceSettings.*`, `ComputedMetricEditor.*`) — **none are mine**. Let me find the actual diagnostic and confirm no VehicleMultiSelect file is implicated.
+
+Zero `error:` lines yet BUILD FAILED — that points to a compiler **crash/kill**, not a type error (and my earlier VMS "match" was scanning all compiled files, not the failed set). Let me find the real failure reason and the precise failed batches.
+
+The real cause: a **Swift compiler crash** (line 9624 "include the crash backtrace"). Let me find which source file triggered it.
+
+The compiler crashed during IR Generation for `AppearanceSettings.Controls.swift` — a **foreign feature-views file**. Let me enumerate all crash sites and confirm none are my surface, plus check that my files compiled cleanly.
+
+Conclusive: the **only** crash site is foreign `AppearanceSettings.Controls.swift` (IRGen crash); **zero** crash sites are mine. Let me capture the exit code and run the baseline differential (rebuild with my files removed → prove the same foreign crash persists).
+
+The `test` action is re-compiling (will re-crash on the same foreign file). Let me wait for the full `build test` command to finish and capture the authoritative exit code.
+
+The `build` action already failed (foreign crash); the `test` action is futilely recompiling. Let me stop it and record IOS_EXIT=65, then run the baseline differential.
+
+Baseline differential: removing my 9 files, regenerating, and rebuilding to prove the same foreign crash persists without my surface.
+
+My surface is removed (0 pbxproj refs). Now the baseline iOS build to prove the foreign crash persists without my files.
+
+While the baseline builds, let me gather shipped-file line counts (for the log) from the stash.
+
+Solid surface (2203 lines across 9 files vs 454-line web source — richer due to state-holder, seams, tests, i18n, P4 states). Let me check the baseline build.
+
+BASELINE_IOS_EXIT=65 — the build fails identically **without my surface**. Let me confirm it's the same foreign crash site.
+
+Baseline crashes at the **same foreign file** (`AppearanceSettings.Controls.swift`). The 13 VehicleMultiSelect mentions in the baseline log are unexpected (files were removed) — let me verify they're benign incremental-cache artifacts, not errors.
+
+Conclusive: the 13 mentions are benign "Removed stale file" notes (and they confirm my files *did* compile to `.o` objects before the foreign crash aborted the link). Baseline differential proven: **iOS failure is 100% foreign** (`AppearanceSettings.Controls.swift`), identical with/without my surface. Let me restore my files and regenerate.
+
+Restored (9 files, 54 pbxproj refs). Now the macOS gate. Launching `xcodebuild -scheme TeslaSync-macOS build test`.
+
+While the macOS build runs, let me monitor it for the build-phase result.
+
+MAC_EXIT=65. Let me confirm its cause and that my surface is not implicated.
+
+macOS fails early (line 1747) with 24 signing-related lines — the **environmental** "no development-signing certificate" issue (matching the sibling), not my surface. Let me capture the exact signing error for the log.
+
+macOS failure confirmed **environmental**: `error: "TeslaSync-macOS" has entitlements that require signing with a development certificate` — it failed at signing setup, before compiling; my surface has 0 errors. This matches the sibling exactly.
+
+I now have all gate data. Let me write the comprehensive, honest gate log.
+
+Log written. Let me do a final verification pass on the restored repo files, then commit.
+
+Final surface gates green (lint 0, placeholder 0). Let me verify the working tree state, then commit exactly my 9 files + the log.
+
+Clean tree: exactly my 9 files + the log (`.xcodeproj` ignored, no foreign files touched). Committing per the prompt's spec.
+
+Committed `bf368171b` — exactly the 9 surface files + the log. Let me finalize tracking and tidy the empty stash.
+
+Task complete. The `VehicleMultiSelect` Apple shared surface is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...ple-shared-surfaces-0163-VehicleMultiSelect.log | 192 ++++++++++
+ .../VehicleMultiSelect.Adapter.swift               | 349 ++++++++++++++++++
+ .../VehicleMultiSelect.AdapterTests.swift          | 325 +++++++++++++++++
+ .../shared-surfaces/VehicleMultiSelect.Model.swift | 331 +++++++++++++++++
+ .../VehicleMultiSelect.Previews.swift              | 101 ++++++
+ .../shared-surfaces/VehicleMultiSelect.Seams.swift | 180 ++++++++++
+ .../shared-surfaces/VehicleMultiSelect.Tests.swift | 392 +++++++++++++++++++++
+ .../shared-surfaces/VehicleMultiSelect.Views.swift | 324 +++++++++++++++++
+ .../shared-surfaces/VehicleMultiSelect.strings     |  93 +++++
+ .../shared-surfaces/VehicleMultiSelect.swift       | 108 ++++++
+ 10 files changed, 2395 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0163-VehicleMultiSelect.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.swift

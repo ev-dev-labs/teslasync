@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure and checking the runner's capabilities for Apple development.
+
+Runner has Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, and iOS simulators. Capability is available. Now let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure to understand the existing patterns, shared surfaces, and the P1/P4 core dependencies.
+
+The shared-surfaces directory has ~1850 files following a multi-file pattern per surface. Let me examine a complete existing surface to learn the exact conventions, and check if BottomTabBar already exists.
+
+The pattern is clear: each surface has `.swift` (view), `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`, `.AdapterTests.swift`. Let me read the complete Accordion surface as the canonical reference.
+
+Now I understand the surface pattern thoroughly. Let me locate the P4 core navigation/router state-holder (critical for `useLocation`) and the P1/S9 design tokens.
+
+Core nav is in `Sources/App/`. Let me examine the route system and design tokens, plus find a shared-surface that performs navigation.
+
+Let me examine the navigation system, design tokens, and find how surfaces consume navigation + i18n facades.
+
+`LinearSidebar` and `Layout.Nav` are the closest navigation peers (siblings of the web Sidebar/Layout). Let me study them to learn the location-binding and navigation patterns.
+
+Now let me read the model/adapter wiring (i18n facade, telemetry, location binding) and the design tokens to complete my understanding.
+
+The core tokens appear generated or provided by P1/S9. Let me check the project structure, build setup, and token generation to understand how the gate builds.
+
+Now let me check the design tokens location, the Shared.xcframework build script, and a recent surface's gate log to understand the build baseline.
+
+Let me read a recent gate log to understand the expected build outcome and whether the KMP/xcframework build succeeds on this runner.
+
+The KMP xcframework builds fine here; the full `xcodebuild` gate is red only for FOREIGN/pre-existing + ENVIRONMENTAL reasons, dispositioned with isolated typecheck + swift test + baseline evidence. Let me learn the exact verification methodology and find the SwiftPM setup.
+
+Now I understand the full methodology. Let me read the design tokens (exact symbols available) and the LinearSidebar view/tests/strings to finalize my implementation reference.
+
+I now have everything needed. Let me check the lint/format configs and tooling availability before writing, then set up a todo list.
+
+I have a complete understanding of the architecture, conventions, tokens, and the accepted verification methodology. Let me set up tracking and write a plan.
+
+Now writing the surface. Starting with the Foundation-only core, model, views, and public surface.
+
+Now the Views and the public surface:
+
+Now the previews, strings catalog, and the two test files:
+
+Now the two test files — pure adapter tests and model/view/strings tests:
+
+All 8 files written. Now let me normalize formatting and lint the new files.
+
+swiftformat reports 0 files needed changes — my files already comply. Now swiftlint:
+
+swiftlint --strict: 0 violations. Now the critical surface-attributable verification — isolated iOS + macOS typecheck of the surface compiled with the design tokens.
+
+iOS typecheck clean. Now macOS:
+
+Both typechecks clean. Now the strongest evidence — a temporary SwiftPM package that compiles the surface as module `TeslaSync` and actually runs the XCTest suites.
+
+All 35 tests pass. Now xcodegen to confirm the project picks up the new files:
+
+xcodegen: 48 BottomTabBar refs (matches the 8-file × target-membership convention). Now building the KMP Shared.xcframework (required by the app build):
+
+The KMP build is downloading toolchain/dependencies and compiling Kotlin/Native slices — this is slow on first run. Let me continue waiting.
+
+Shared.xcframework built and staged (BUILD SUCCESSFUL, 10m47s). Now the full iOS gate. This compiles the ~5000-file module, so I'll log to a file and analyze. Per the Label precedent, expect a FOREIGN/pre-existing red — I'll verify BottomTabBar contributes zero errors.
+
+iOS gate building in background. Let me wait and monitor progress.
+
+Build is compiling the main module, no errors yet. Let me continue waiting.
+
+Module emitted successfully and per-file compilation is progressing — 0 errors, 0 BottomTabBar errors. Let me keep monitoring.
+
+The `/tmp/ios-gate.log` path collided with a parallel slot (slot-49) sharing `/tmp`. My build/DerivedData is slot-specific and fine, but the log is contaminated. Let me check running processes and re-run with a unique, slot-scoped log path.
+
+My slot-48 build process is gone and the shared `/tmp` log was overwritten by slot-49 (0 slot-48 lines, 11 slot-49 lines) — there are 12 concurrent xcodebuilds from other slots. I'll switch to unique slot-scoped log paths under my session dir. My DerivedData is slot-specific (path-hashed) so it's intact and warm. Re-running the iOS build incrementally:
+
+Now monitoring the slot-scoped iOS build (incremental, DerivedData warm). Let me wait.
+
+iOS build failed (exit 65) with 0 BottomTabBar errors — matching the Label precedent. Let me identify the FOREIGN defect:
+
+The error is purely **environmental** — `build.db is locked: two concurrent builds in the same filesystem location` — caused by 12 parallel slots contending on a shared DerivedData. It is NOT a compile error; BottomTabBar contributes zero errors, and the earlier run's whole-module `EmitSwiftModule for TeslaSync` (which type-checks the entire module including BottomTabBar) succeeded. To get authoritative evidence free of cross-slot contention, I'll rebuild with an isolated, session-unique `-derivedDataPath`.
+
+While the isolated build runs, let me execute the other gate steps. First the placeholder check (the real gate tool) and full-tree swiftformat:
+
+Placeholder check: COUNT=0, EXIT=0. Now the full-tree swiftformat and swiftlint gate steps:
+
+swiftformat full-tree found 1 foreign pre-existing failure: `RecentDrivesSection.Previews.swift` (the same foreign file the Label gate cited) — not my surface. Let me confirm my files pass and that the foreign file is untouched, then run full-tree swiftlint:
+
+git status confirms only my 8 BottomTabBar.* files are new and the foreign file is untouched. Let me get the format result for my files:
+
+My files pass format (0/7); the full-tree failure is solely the foreign unmodified file. Now full-tree swiftlint --strict (gate step):
+
+swiftlint full-tree: 3 serious violations in 5151 files. Let me identify them and confirm none are in BottomTabBar:
+
+The 3 swiftlint violations are all in foreign `WidgetChartSummary.Tests.swift` — zero from BottomTabBar. Let me confirm foreign files are unmodified and check the iOS isolated build:
+
+Both foreign files confirmed unmodified by me. The isolated build is in whole-module type-check (EmitSwiftModule) with 0 errors. Let me wait for it to complete.
+
+Still type-checking the whole module under heavy cross-slot CPU contention. Let me wait further.
+
+Whole-module type-check (EmitSwiftModule) succeeded — proving BottomTabBar compiles in-context — but a BUILD FAILED appeared with 0 `error:` lines (likely a foreign compiler crash, like the Label precedent). Let me find the exact cause:
+
+A foreign Swift compiler crash (bug report + backtrace), consistent with the Label precedent. Let me identify the crashing file to document it's not BottomTabBar:
+
+The crash is a swift-frontend compiler crash with `-primary-file ...AnomalyInlineRow.Model.swift` — a FOREIGN feature-view file, not BottomTabBar. Let me capture the precise crash signature for the log:
+
+Confirmed: the crash is the foreign `AnomalyInlineRow.Model.swift` (batched with the AI* surfaces) — BottomTabBar is never the crash primary-file, exactly matching the Label precedent. Let me confirm the build finished and capture the final exit:
+
+The iOS red is a single FOREIGN compiler crash in `AnomalyInlineRow.Model.swift` (zero errors anywhere, zero BottomTabBar involvement) — matching the accepted precedent. While the iOS build finalizes, let me run the macOS gate (expected environmental signing red) with its own isolated DerivedData:
+
+macOS gate: MAC_EXIT=65 with 2 signing errors — the environmental no-certificate failure, matching the precedent. Let me capture the exact text:
+
+macOS: environmental signing red (2 signing errors, 0 compile steps, 0 BottomTabBar) — matches the precedent; macOS compilation is independently green via typecheck + swift test. Now waiting for the iOS build to finalize so I can record IOS_EXIT and then run the excluded-baseline on the warm DerivedData.
+
+iOS gate finalized: **IOS_EXIT=65**, 0 type errors, 2 FOREIGN compiler crashes, 0 BottomTabBar involvement. Now the baseline proof — rebuild with BottomTabBar.* EXCLUDED on the warm DerivedData to show the tree is red without my surface:
+
+Baseline building on warm DerivedData. Let me wait and check it reproduces the foreign crashes without any missing-BottomTabBar-symbol errors:
+
+Baseline re-emitting the module (0 missing-BottomTabBar-symbol errors so far — confirms nothing depends on it). The foreign crash reproduces in the later per-file phase. Let me wait.
+
+Baseline confirmed: **BASELINE_IOS_EXIT=65** — with BottomTabBar EXCLUDED the tree is still red on the SAME foreign crashes (AnomalyInlineRow, AppearanceSettings), and 0 "cannot find BottomTabBar" errors (nothing depends on my surface). Definitive proof the red is foreign. Let me capture the iOS crash primary-files for the log, then write the gate log.
+
+I have complete evidence. Both iOS crashes are foreign feature-views (AnomalyInlineRow.*, AppearanceSettings.*), the whole-module type-check passed, 0 errors. Now writing the comprehensive gate log:
+
+Gate log written. Now let me clean up temp artifacts, verify the working tree, and stage only the intended files.
+
+Working tree is clean — only my 8 files + the gate log are new; the foreign-red files are untouched; generated artifacts are git-ignored. Staging and committing:
+
+Committed. Let me verify the commit landed correctly and finalize:
+
+Commit `5fae4a4c4` landed with all 8 surface files + gate log (1257 insertions). Let me finalize tracking.
+
+The task is complete. Let me mark it done.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0165-BottomTabBar.log | 234 +++++++++++++++++++++
+ .../shared-surfaces/BottomTabBar.Adapter.swift     | 215 +++++++++++++++++++
+ .../BottomTabBar.AdapterTests.swift                | 177 ++++++++++++++++
+ .../shared-surfaces/BottomTabBar.Model.swift       | 173 +++++++++++++++
+ .../shared-surfaces/BottomTabBar.Previews.swift    |  54 +++++
+ .../shared-surfaces/BottomTabBar.Tests.swift       | 180 ++++++++++++++++
+ .../shared-surfaces/BottomTabBar.Views.swift       |  93 ++++++++
+ .../TeslaSync/shared-surfaces/BottomTabBar.strings |  38 ++++
+ .../TeslaSync/shared-surfaces/BottomTabBar.swift   |  93 ++++++++
+ 9 files changed, 1257 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0165-BottomTabBar.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BottomTabBar.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BottomTabBar.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BottomTabBar.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BottomTabBar.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BottomTabBar.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BottomTabBar.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BottomTabBar.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BottomTabBar.swift

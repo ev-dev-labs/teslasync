@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure, reading the web source spec, and checking the Apple toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat). Now let me study the predecessor feature-views and shared infrastructure.
+
+The feature-views directory has 2538 files. Let me examine the immediate predecessors (ClimatePanel, InfoTile) to learn the established multi-file pattern.
+
+ClimatePanel is the closest analog (both are vehicle-detail panels using `VehicleState`). Let me read all its files to learn the complete pattern.
+
+Excellent pattern. Let me read the remaining ClimatePanel files to complete my understanding.
+
+I have a thorough grasp of the pattern. Now let me examine the shared design system, build config, the gate's placeholder script, and the web components I must reproduce (RadialGauge, MetricCard, useUnits).
+
+Now let me read the web components I must reproduce (RadialGauge, MetricCard, unitConversion, numberFormat), the VehicleState type, and verify the shared design tokens exist.
+
+Now let me read the SI conversion + number formatting libs to reproduce `formatDistance` and `fmtNumber` exactly, plus confirm the design tokens and shared components exist.
+
+Now let me confirm the shared design tokens/components and study an existing native gauge implementation plus the placeholder gate.
+
+Let me read the design tokens, shared component signatures, and the existing native gauge references.
+
+Let me read the shared component signatures and check the build setup (xcodegen/xcodeproj, simulators).
+
+I have everything I need on the design system. Let me check for symbol collisions before naming my types, and set up a todo list and the build project.
+
+No collisions — I can use the clean `BatteryRangePanel*` prefix. Let me set up tracking, generate the Xcode project to confirm schemes, and verify the log directory.
+
+Project generated. Let me check a sibling's gate log to confirm the build is feasible here and verify schemes.
+
+The established disposition is clear: host-runnable gates must be green, and the full Xcode build/test is deferred to the signed acceptance gate due to a KMP `Shared.xcframework`/signing long-pole. I must verify this myself. Let me read the sibling log's verification section and check the framework/signing situation.
+
+This is the established, rigorous disposition. I'll reproduce its exact verification approach. Let me read the lint/format configs to comply precisely before writing code.
+
+Confirmed: `Frameworks/` has only `.gitkeep` (no `Shared.xcframework`), the scheme's pre-build runs the KMP Gradle long-pole, and there are 0 signing identities — the deferred-gate reasons are real and surface-unrelated. Now I'll write the surface. Starting with the foundational Adapter, Projection, and Model.
+
+Main view, subviews, and state chrome next.
+
+Now the two test files — adapter/math/projection branch tests plus state-holder wiring tests.
+
+All 10 files are written. Now the verification phase. First let me auto-format with swiftformat, then run the surface-scoped lint, and identify the Shared-free component closure for the isolated build harness.
+
+swiftformat normalized 2 files; Components/Design are confirmed Shared-free. Now let me run the surface-scoped swiftlint and inspect the closure files' dependencies.
+
+One swiftlint fix needed (wrapped brace). Let me fix it and re-verify formatting/lint.
+
+swiftformat wrapped the return arrow and pushed the brace to its own line. I'll rewrite it in the proven ClimatePanel style (parameters wrapped before-first, `) -> Type {` together).
+
+All host-runnable lint/format gates pass on the surface (0 violations, 0 format diffs). Now the isolated SwiftPM build+test harness with the Shared-free component closure.
+
+Good — the closure compiles; one argument-order fix needed in `.frame`. Let me fix it.
+
+Build complete under Swift 6 strict concurrency. Now run the test suite.
+
+All 37 tests pass under Swift 6. Now the cross-SDK typecheck for iOS 18 and macOS 15 (the actual target platforms).
+
+iOS 18 and macOS 15 both typecheck clean under Swift 6. Now the placeholder gate, previews compile-check, xcodegen enumeration, and symbol-collision check.
+
+Previews compile, placeholder gate clean (0/0 both ways), and 0 symbol collisions. Now let me confirm xcodegen enumerates my 8 files with tests wired into both XCTest bundles, and check the project is git-ignored.
+
+Both iOS and macOS test bundles include `feature-views/**/*Tests.swift`. Let me verify the generated pbxproj reflects correct target memberships for my files.
+
+Target memberships are correct (2 app targets for surface/previews, 2 test bundles for the test files). Let me inspect the `Shared.xcframework` staging script and then attempt the real full build to capture the actual deferred-gate evidence.
+
+The scheme's pre-build runs the KMP Gradle `:core:assembleSharedXCFramework` long-pole. Let me attempt the real full build to capture authentic deferred-gate evidence (capped).
+
+The Gradle KMP `Shared.xcframework` is actually building here (toolchain + cache present) — the staging long-pole is succeeding. Let me keep waiting; the iOS Simulator build may complete.
+
+The KMP `Shared.xcframework` staging is genuinely progressing here (debug done, release linking). Let me continue waiting for it to finish staging and move into the app Swift compile.
+
+The full iOS build failed (exit 65) — but the failing files are pre-existing unrelated surfaces (`TripReplayCharts.*`, `TripReplayMap.*`, `UnitFormatters.swift`, `Units+Facade.swift`, `UnixPermissionTool.*`), not mine. Let me extract the actual compiler errors to confirm none originate in BatteryRangePanel.
+
+Confirmed: **zero errors in BatteryRangePanel.** The full-app build fails on pre-existing duplicate-type collisions in unrelated sibling surfaces (`RecentDrives*`, `StateTimeline*` — "ambiguous for type lookup"). Let me prove these are pre-existing duplicates, not caused by my change.
+
+Definitively confirmed: the full-build failures are **pre-existing duplicate-type collisions** between other sibling surfaces (`RecentDrivesListWidget` vs `RecentDrivesSection`; `StateTimelineWidget` vs `StateTimeline`), each declaring the same public types. My files never reference them and add zero collisions. This is the established DEFERRED scenario — and I'm forbidden from editing those surfaces.
+
+Let me clean up build artifacts and confirm git status is clean except my intended files.
+
+Git status is clean — only my 10 files, all build artifacts ignored. Let me re-run the final lint/format on the post-edit files to capture authoritative numbers for the log.
+
+Final gates green (swiftformat 0/9, swiftlint 0 violations, 1840 lines). Let me capture per-file line counts, then write the gate log with fully transparent results.
+
+Now I'll write the gate log with the real, executed results and full transparency about the deferred scheme build.
+
+Now let me commit the allowed files and the log.
+
+Committed cleanly; working tree is clean. Let me confirm the final todo state.
+
+All work is complete and committed. Final summary below.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0289-BatteryRangePanel.log | 194 +++++++++++++
+ .../feature-views/BatteryRangePanel.Adapter.swift  | 311 +++++++++++++++++++++
+ .../feature-views/BatteryRangePanel.Model.swift    | 267 ++++++++++++++++++
+ .../feature-views/BatteryRangePanel.Previews.swift | 139 +++++++++
+ .../BatteryRangePanel.Projection.swift             | 183 ++++++++++++
+ .../BatteryRangePanel.ProjectionTests.swift        | 291 +++++++++++++++++++
+ .../feature-views/BatteryRangePanel.States.swift   | 217 ++++++++++++++
+ .../feature-views/BatteryRangePanel.Tests.swift    | 157 +++++++++++
+ .../feature-views/BatteryRangePanel.Views.swift    | 208 ++++++++++++++
+ .../feature-views/BatteryRangePanel.strings        |  35 +++
+ .../feature-views/BatteryRangePanel.swift          |  67 +++++
+ 11 files changed, 2069 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0289-BatteryRangePanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.ProjectionTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangePanel.swift

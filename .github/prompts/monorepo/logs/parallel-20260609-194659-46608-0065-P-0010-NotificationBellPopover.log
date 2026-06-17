@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and reading the web source and existing Apple app structure.
+
+Let me read the web source in full and explore the Apple app structure.
+
+The repo has existing `modals-dialogs` surfaces (`AddAnnotationPopover`, `JobProgressDrawer`) to use as the pattern. Let me read the rest of the web source and check toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen). Let me finish reading the web source and study the existing example files.
+
+This is a comprehensive, well-structured pattern. Let me read the remaining JobProgressDrawer files to fully understand the conventions.
+
+Let me read the remaining JobProgressDrawer files plus the AddAnnotationPopover (the popover-specific example).
+
+Now let me read the test files, previews, strings, and the AddAnnotationPopover (the popover-specific example), plus the design tokens.
+
+Let me read the AddAnnotationPopover files, the strings files, the Previews, and the design tokens.
+
+Let me examine the project.yml build config, design tokens (P1/S9), and shared components (TSFadeIn, TSGlassPanel).
+
+Important finding: `project.yml` lists `dashboard-widgets`, `feature-views`, `misc-surfaces` but NOT `modals-dialogs`. Let me investigate how the existing modals-dialogs surfaces are built and check the design tokens.
+
+The prior modals-dialogs surfaces were committed without wiring `modals-dialogs` into `project.yml`. Let me check how their gate logs handled the build.
+
+Now I understand the established protocol. The `modals-dialogs` tier isn't wired into `project.yml` (a known integration bootstrap outside this prompt's allowed files), so prior surfaces used **surface-scoped verification** (typecheck against both SDKs, swift test, lint, format, placeholder) and deferred the full-app xcodebuild gate with evidence. Let me read the full prior logs to reproduce their exact verification commands.
+
+I now have the complete protocol. Let me read the web API hooks/types, the date formatter, and the design tokens + shared components to build a faithful port.
+
+Let me find the specific hooks and wire types I need (`useUnreadCount`, `useUnreadNotifications`, `useBulkMarkRead`, `useAlertRules`, `NotificationLog`, `AlertRule`, `Vehicle`).
+
+Let me read the AddAnnotationPopover supporting files (popover-specific patterns) and the Motion/GlassPanel components.
+
+Let me verify the shared components (`TSFadeIn`, `TSGlassPanel`), check for naming collisions, and read the lint configs + placeholder script.
+
+Key collision finding: `NotificationSeverity` already exists in `feature-views`. I'll prefix everything with `NotificationBell`. Let me audit those names and read the remaining infra (TSGlassPanel signature, placeholder script, lint configs).
+
+I have everything needed. Let me read the rest of the swiftlint config (file_length rule) and the AddAnnotation Model/Adapter for the popover join pattern, then set up my plan.
+
+Confirmed: swiftlint uses default `file_length` (400 warning → error under `--strict`), so I'll split files like the sibling. I now have full context. Let me set up tracking and write the plan.
+
+Now I'll write the surface files, starting with the pure core (Adapter), Seams, and Model.
+
+Now the main view file (trigger + popover + lifecycle):
+
+Now the States.swift (trigger, panel, header, footer, body):
+
+Now the Rows.swift (entry row, severity dot, leaf states):
+
+Now the i18n strings catalog:
+
+Now the Previews:
+
+Now the adapter + accessibility tests:
+
+Now the model (state-holder) tests:
+
+All 10 files written. Let me verify line counts (≤400 for swiftlint) and start the surface-scoped verification gates.
+
+All files ≤295 lines, no lines >160 chars. Now the verification gates. Starting with swiftformat:
+
+Let me inspect the specific formatting issues before auto-fixing.
+
+The `todos` rule false-matches comment lines starting with "mark" (e.g., "mark-all-read"). Let me find all such lines and the over-width line.
+
+FORMAT_EXIT=0. Now swiftlint --strict on the surface:
+
+One `empty_count` violation — my `count` is an unread-count integer, not a collection count (false positive). Let me inspect and rename for clarity.
+
+`empty_count` false-positives on my integer property named `count`. Renaming to `unreadCount` (clearer and avoids the rule). Let me update all references in the model.
+
+Re-run swiftlint and swiftformat after the rename:
+
+Both lint gates green. Now the typecheck gates. Let me check which TS components I reference and get SDK paths.
+
+Surface uses only raw tokens. Running the iOS 18 typecheck (Tokens.swift + the 7 non-test surface files, Swift 6 = complete concurrency):
+
+iOS typecheck clean (0 errors). Now macOS 15 SDK:
+
+Both typechecks clean. Now [5/7] the isolated SwiftPM `swift test` for the pure logic + state holder (Adapter/Seams/Model + the two test files):
+
+All 31 tests pass (17 adapter + 14 model), SWIFT_TEST_EXIT=0. Now [6/7] the placeholder gate (scoped to my surface files via a temp dir):
+
+Placeholder gate clean. Now [7/7] xcodegen — [a] real spec still valid, then [b] a throwaway scratch spec to prove the surface enumerates once the tier is bootstrapped. First [a]:
+
+The `--project` flag needs an existing dir. Let me generate in-place (xcodeproj is git-ignored) and clean up after.
+
+REAL_XCODEGEN_EXIT=0, worktree clean. Now [7b] — build a throwaway scratch spec that wires `modals-dialogs` into the 4 source lists, generate it, and enumerate the surface files.
+
+Scratch project generated with `modals-dialogs` in all 4 source lists. Let me enumerate the surface files in the generated project, then clean up.
+
+XCODEGEN_EXIT=0 — all 10 files enumerate cleanly. Now the collision audit (no symbol my surface defines exists elsewhere in the compiled sources) and final worktree check:
+
+All 7 surface gates pass, collision audit clean, worktree contains only my 10 new files. Now let me gather concrete evidence for the deferred full-app `xcodebuild` gate (the established protocol), then attempt a bounded real build to capture the genuine blocker.
+
+Correction: iPhone 16 IS available (booted). So the only real blockers are the unstaged KMP `Shared.xcframework` and the unwired tier. Let me check the scheme's pre-build script, then attempt a bounded real `xcodebuild` to capture genuine evidence.
+
+The pre-build phase runs the KMP Gradle assemble (the known long-pole). Let me generate the real project and attempt a bounded real `xcodebuild` to capture genuine blocker evidence.
+
+The build is stuck (the expected KMP Gradle long-pole). Let me confirm what it's doing, then stop it.
+
+This is concrete evidence: the build is stuck in the `build-shared-xcframework.sh` pre-build phase running `gradlew :core:assembleSharedXCFramework` (KMP Kotlin/Native long-pole) — exactly the documented surface-independent blocker, before any Swift compilation. Let me stop it and clean up.
+
+Cleaned up. Let me verify the worktree is clean (only my 10 files) and check for any leftover artifacts.
+
+Worktree clean — only my 10 files, no shared files touched. Now let me gather final metrics and write the gate log.
+
+All metrics gathered (1746 non-blank Swift LOC, 9 swift files + 26 i18n keys, every file ≤295 lines). Now the gate log:
+
+Now let me do a final consolidated re-verification of all surface gates to confirm the log's claims are accurate before committing.
+
+Let me explicitly confirm swiftlint (0 violations) and re-run the `swift test` to confirm 31 passing tests against the final code.
+
+All gates confirmed green against final code (swiftlint 0 violations; 31/31 tests pass). Let me mark verification done and commit.
+
+All 11 files staged (10 surface + log), nothing else. Committing:
+
+Committed as `1d856f11b` with a clean working tree. Let me confirm all todos are done.
+
+All 11 todos done, working tree clean, surface committed. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...modals-dialogs-0010-NotificationBellPopover.log | 177 +++++++++++++
+ .../NotificationBellPopover.Adapter.swift          | 295 +++++++++++++++++++++
+ .../NotificationBellPopover.Model.swift            | 228 ++++++++++++++++
+ .../NotificationBellPopover.ModelTests.swift       | 277 +++++++++++++++++++
+ .../NotificationBellPopover.Previews.swift         | 119 +++++++++
+ .../NotificationBellPopover.Rows.swift             | 278 +++++++++++++++++++
+ .../NotificationBellPopover.Seams.swift            | 259 ++++++++++++++++++
+ .../NotificationBellPopover.States.swift           | 234 ++++++++++++++++
+ .../NotificationBellPopover.Tests.swift            | 228 ++++++++++++++++
+ .../modals-dialogs/NotificationBellPopover.strings |  50 ++++
+ .../modals-dialogs/NotificationBellPopover.swift   |  65 +++++
+ 11 files changed, 2210 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0010-NotificationBellPopover.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.Rows.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/NotificationBellPopover.swift

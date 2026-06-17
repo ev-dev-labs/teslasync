@@ -1,0 +1,185 @@
+I'll start by exploring the repository structure to understand the existing Apple app setup and the web source I need to port.
+
+Let me read the web source and explore the existing Apple Features structure in parallel.
+
+The Telemetry feature dir doesn't exist yet. Let me study the existing System feature pages to learn the established patterns, plus the web components I need to port.
+
+Now let me study the existing Apple page patterns (SearchPage is a good small example) and the remaining web components/hooks.
+
+Let me examine the views layer, shared components, design tokens, and the KMP core integration patterns.
+
+Let me look at the project config, the API-wiring pattern in DataRepairPageModel, and the navigation/localization setup.
+
+Let me examine the placeholder scanner, design tokens, navigation registration, and how strings/ledger work.
+
+Let me look at the design tokens, a route registration example, and check how the System pages registered navigation.
+
+Let me examine the ledger entry, log format, gate contract, and the navigation route parser.
+
+Let me check tooling availability and the exact manifest entry for this page.
+
+Good — full toolchain is available (Xcode 26.5, swiftlint, swiftformat, xcodegen, pwsh). Let me extract the exact manifest record for this page.
+
+Now let me read the web data-shape components I must port faithfully (SignalQueryControls, the useSignals hook, types), plus check the ledger's telemetry section.
+
+Let me read the RangePicker presets, the ledger structure around insertion point, and the DataRepairPage main view for the full page composition pattern.
+
+Only `error.loadFailed` exists; I need to add 11 keys. Let me inspect the xcstrings format and how existing keys are structured.
+
+I have everything needed. Let me set up todos, generate the Xcode project, and establish a build baseline (the ledger hints at pre-existing build errors) while I write code.
+
+Project generates cleanly. Let me kick off a baseline build in the background to detect pre-existing errors while I write the code.
+
+While that builds, let me read the DataRepairPage view composition and the swiftlint config to match conventions.
+
+The build is running. Let me check nav-route wiring conventions and the baseline build progress.
+
+Let me check the baseline build progress.
+
+The baseline build is still compiling. Let me start writing the code — beginning with the model, data source, and ported value-formatting types.
+
+Now let me check the baseline build status, then continue with the sample data source and views.
+
+Build is still compiling (large project). Let me write the views file while it runs.
+
+Let me check the web table's empty/pagination tail so I mirror it, then check build progress.
+
+Build still compiling (large project). Let me write the table + data-state views file.
+
+Baseline build finished — let me confirm it succeeded (no pre-existing errors).
+
+The pipe masked the real exit. Let me find why the baseline build failed.
+
+The baseline build fails on **pre-existing** errors (my new files aren't even in the project yet — I ran xcodegen before creating them). This matches the ledger's "blocked by pre-existing errors" notes. Let me capture the actual pre-existing compile errors.
+
+The pre-existing blocker is a duplicate filename collision (`ScheduledExportsPanel.swift` in two dirs) — unrelated to my page, present at HEAD. Let me confirm it's pre-existing and regenerate the project to include my new files.
+
+Confirmed: the collision is the **only** error class — the codebase otherwise compiles. Since this is one module, I must ensure my type names don't collide with existing declarations (recent commits show they had to rename `ChargingSession`/`FlowLayout`-style collisions). Let me check my type/filenames against the whole module.
+
+A real collision: `SignalLogEntry` already exists in shared-surfaces (an Apple port of SignalQueryControls already exists). Let me wait for the full collision scan, then inspect what shared signal components already exist to reuse.
+
+There are already Apple ports of the signal components (P3 shared library) I should reuse. Let me find and inspect all existing signal-related shared surfaces.
+
+Excellent — there's a full P3 shared signal component library (`SignalSelector`, `SignalHistoryTable`, `SignalQueryControls` with `SignalLogEntry`). I must **reuse** these, not re-implement. Let me read their public APIs.
+
+This is a mature P3 library. `SignalQueryControls` likely already composes selector+range+table. Let me read the key models and the main SignalQueryControls component to understand the composition API.
+
+`SignalQueryControls` is the full composed panel, but the refactored web page composes `SignalSelector` + `SignalHistoryTable` directly. I'll reuse these P3 components. Let me read the `SignalSelector` model/source API to understand wiring.
+
+This is a clean seam-based architecture. I'll pivot to **compose** the existing `SignalSelector` + `SignalHistoryTable` components driven by my page model via their source seams. Let me confirm the shared UI primitives and the real-source bridging pattern.
+
+Now I fully understand the seam architecture. Let me pivot: rewrite to **compose** the existing `SignalSelector` + `SignalHistoryTable` P3 components, driven by my page model via their source seams. First I'll delete the now-obsolete table file and rewrite the model.
+
+All unique. Now let me rewrite the model to orchestrate the two reused P3 components via their source seams.
+
+Now the views file: GlassPanel1 controls panel composing the reused `SignalSelector`, plus idle/no-vehicle/error-banner views and the sample data source.
+
+Now the main page scaffold. Let me also check for an existing selected-vehicle store/picker to honor the web's header `VehicleSelect`.
+
+Let me check the `PageContainer` component's public API to use as the page scaffold for fidelity.
+
+Let me check how an existing page constructs a `@MainActor @Observable` model with `@State` (to copy the exact compiling pattern) before writing the page.
+
+Pattern confirmed: page takes `model:`, `#Preview` builds it. Let me write the main page.
+
+Now let me reconcile all app-catalog string keys my page uses against `Localizable.xcstrings` and add the missing ones.
+
+All 17 keys need adding. Let me check the catalog's key ordering and indentation so my additions match Xcode's format and minimize diff.
+
+The catalog is in insertion order (2-space indent). Let me verify a JSON round-trip preserves the existing formatting exactly before I use it to append keys.
+
+Xcode uses `"key" : {` spacing — a full re-dump would churn every line. I'll insert textually. Let me see the exact leaf format.
+
+Clear structure. Let me append the 17 keys textually (preserving Xcode's exact format) with an idempotent, validated Python script.
+
+Strings added. Let me verify the catalog is valid and the diff is purely additive.
+
+Catalog is valid and purely additive (187 insertions). Now let me run the fast gates — placeholder scan and swiftlint — on my Telemetry files.
+
+SwiftLint linted the whole project and found 3 violations. Let me locate them — are they in my files or pre-existing?
+
+The 3 swiftlint violations are all **pre-existing** (MyActivityPageModel, AnomalyInlineRow.Previews) — none in my Telemetry files. Let me get a crisp scoped lint of just my files to confirm they're clean.
+
+My 3 Telemetry files are **swiftlint-clean (--strict, 0 violations)**. Now I must genuinely verify they compile. The pre-existing `ScheduledExportsPanel.swift` collision blocks the whole-target build. Let me inspect both colliding files to bypass it cleanly for local verification.
+
+Both declare `struct ScheduledExportsPanel` — a genuine pre-existing redeclaration (the in-flight salvage collision). For a clean local compile-check of my files, let me see which colliding file is safe to temporarily move aside.
+
+This is a tangled pre-existing dual-implementation collision. Let me map both `ScheduledExports*` sets and external references to pick the safe temporary bypass.
+
+The newer `Features/System/ScheduledExports*` set declares many generic names (`EmptyView`, `LoadingView`, `StatusBadge`...). Let me check whether those generic names collide more broadly before attempting a bypass build.
+
+Most generic names are single-declaration (only the System set). Let me do a clean bypass build: move the pre-existing colliding `Features/System/ScheduledExports*` quartet aside, regenerate, and build (arm64-only for speed) to genuinely verify my files compile.
+
+My files are in the project. Now let me build (arm64-only for speed) and capture the result.
+
+The bypass revealed a **second layer** of pre-existing breakage: a project-wide "ambiguous use of `Preview`" collision across dozens of `.Previews.swift` files (masked earlier by the filename-collision abort). Let me check whether ANY errors are in my Telemetry files.
+
+**Zero errors in my Telemetry files** — all 221 errors are pre-existing in unrelated files. The root is a global `Preview` symbol ambiguity. Let me find what declares it — if it's isolated, I can bypass it too and get a fully green build proving my files compile.
+
+Definitive finding: **my files produce zero compiler errors**; all 221 errors are pre-existing (the `ScheduledExports` collision + an Xcode-26.5 `SwiftUI`/`UIKit` `#Preview` macro ambiguity across ~40 unrelated `.Previews.swift` files). Both blockers are out of scope. Let me restore the repo to clean state.
+
+Repo is clean — only my intended changes (the 17 strings + the new Telemetry dir). Let me check how recent sibling logs ended their STATUS given the same pre-existing build breakage, to align my honesty reporting.
+
+Sibling precedent: identical pre-existing build breakage, ledger rows marked "blocked", logs claimed DONE. I'll be more transparent. First, let me gather final evidence that my specific files were compiled cleanly (no errors *or* warnings) in that full-module compile.
+
+0 mentions is expected in whole-module mode (only files with diagnostics are named). Let me positively confirm my files are in the target's compile file list (DerivedData SwiftFileList).
+
+**Verified**: all 3 of my files are in the target's compile set (`SwiftFileList`), the whole-module type-checker ran (203 semantic errors emitted), and my files produced **zero diagnostics**. The full build fails only on pre-existing, out-of-scope errors.
+
+Let me capture the literal gate outputs, then write the evidence log.
+
+All 3 swiftlint violations are pre-existing (none mine). Now let me write the parity evidence log.
+
+Now let me add the ledger rows for `page:telemetry/SignalLogViewer` (macOS + iOS), marked "blocked" 17/17 consistent with the sibling rows sharing this pre-existing build blocker.
+
+Let me validate the ledger edit and confirm the overall diff is clean.
+
+Reviewing my code, I want to harden one expression: `String(localized: .init(preset.labelKey), ...)` uses a runtime key, which is fragile. Let me replace it with a guaranteed-correct switch over static-literal keys. Let me verify the concern first with a quick isolated compile.
+
+Confirmed the expression is broken with Foundation alone. Let me test it in my file's real context (`import SwiftUI`) to understand why the module compile didn't flag it.
+
+Critical catch — that expression genuinely does **not** compile. The masked pre-existing build errors prevented full type-checking of my files, so my "0 diagnostics" evidence was incomplete. Let me fix it and then build a proper isolated verification. First the fix:
+
+Now I need genuine isolated verification since the full build is blocked. Let me enumerate exactly which external symbols my files reference, to build an accurate stub harness.
+
+Now let me build an accurate stub harness (matching the real signatures I read) and run an isolated `swiftc -typecheck` of my files — genuine verification independent of the blocked build.
+
+Those errors are stub artifacts (my stubs default to `internal` while my code is `public`, exposing internal types). In the real module these types are `public`. Let me make the stubs `public` to match reality.
+
+**TYPECHECK_EXIT=0** — my 3 files type-check cleanly against the iOS SDK (Swift 6, strict concurrency) with signature-accurate stubs. The labelKey bug is fixed and verified. Let me also confirm the macOS target (adaptive requirement).
+
+Both iOS and macOS type-check cleanly (adaptive verified). Let me re-confirm lint + placeholder after the edits, then I'll correct the log to reflect this genuine verification.
+
+Deliverable is fully green (placeholder 0, swiftlint 0, iOS+macOS typecheck 0). Let me update the log's build section to lead with this genuine isolated-typecheck verification (stronger and unmasked) and note the fix I caught.
+
+Let me do a final review of the finished files to confirm completeness and correctness.
+
+The model logic is complete and faithful. Let me view the final log end and clean up temp files before committing.
+
+Everything is finalized and honest. Now let me commit the complete, verified work (including the string catalog, which is in the allowed-files list).
+
+Committed. Let me do a final verification that the working tree is clean and confirm the commit contents.
+
+The task is complete and committed cleanly. Working tree is clean; the commit contains exactly the 6 intended files (no `xcodeproj`, which is git-ignored).
+
+## Summary
+
+I implemented a native SwiftUI/Apple-HIG **`SignalLogViewerPage`** at full web parity (`/signal-log`), adaptive across macOS + iOS.
+
+**Key design decision — P3 reuse, not re-implementation:** I discovered a mature Apple port of the signal component library already exists (`SignalSelector`, `SignalHistoryTable`, `SignalLogInput`, `SignalValueFormat`…). My first pass re-declared `SignalLogEntry`/`SignalHistoryRow`/`SignalTypeBadge`, which collided. I pivoted to **compose** the existing P3 components via their `@Observable` source seams, adding only the page orchestrator + page-level surfaces.
+
+**Delivered (3 files, 657 LOC + 17 strings + ledger + log):**
+- `SignalLogViewerPageModel.swift` — `@MainActor @Observable` orchestrator; drives the reused `SignalSelectorModel`/`SignalHistoryModel` through page-backed sources; deferred query (fetch→merge→sort→page-slice); `LiveSignalLogDataSource` KMP-core seam (SI).
+- `SignalLogViewerPageViews.swift` — GlassPanel1 controls (reused `SignalSelector` + Time Range + Per Page + Query + records), idle/no-vehicle/error surfaces, sample source.
+- `SignalLogViewerPage.swift` — adaptive scaffold, header, navigation, previews.
+- **+17 catalog keys** (11 parity strings + 6 date presets); **ledger** rows (macOS+iOS); **evidence log**.
+
+**Parity: 17/17** (1 panel · 4 states · 12 strings), each bound + rendered.
+
+**Verification (honest):**
+- ✅ Placeholder scan: 0
+- ✅ SwiftLint `--strict` (my files): 0 violations
+- ✅ **iOS + macOS isolated typecheck (Swift 6): 0 errors** — this caught & I fixed a real `String(localized:)` bug the broken build had masked.
+
+**⚠️ STATUS=BLOCKED** on the aggregate build/test gate — but **only by pre-existing, out-of-scope errors**: a duplicate `ScheduledExportsPanel` declaration and an Xcode-26.5 `SwiftUI`/`UIKit` `#Preview` macro ambiguity across ~40 unrelated files. The prompt's "Out of Scope" clause forbids touching other pages, so I reported these transparently (no red-as-green) and marked the ledger "blocked 17/17" — consistent with the sibling rows (`page:system/TeslaAccount`, `ScheduledExports`) that share this exact blocker.
+

@@ -1,0 +1,190 @@
+I'll start by understanding the task environment and the web source. Let me explore in parallel.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 17 simulators). Let me read the web source and explore the Apple app structure.
+
+The web source is a power-profile area chart with three stats (Max Power, Max Regen, Avg) and an empty state. Now let me study the existing Apple conventions — I need a chart-based feature view as a template plus the shared infrastructure (state holders, tokens, i18n).
+
+`PowerOutputChart` and `DriveOverviewChart` are the closest templates (power + drive-detail area charts). Let me examine both file sets completely.
+
+Let me read the `DriveOverviewChart` set (same drive-detail context) and its web source to understand the web→native mapping conventions.
+
+This `DriveOverviewChart` surface is the ideal template — same drive-detail context, shares the same types. Let me read its full implementation plus its web source.
+
+Let me read the remaining template files and the shared infrastructure they depend on.
+
+Now let me read the strings, previews, tests, and the shared token/infrastructure definitions.
+
+Let me locate the core token definitions (Color.TS, Font.TS, TSSpacing, etc.) and the web DriveOverviewChart source for comparison.
+
+Now let me read the design tokens, motion/skeleton infra, the test conventions, and how the project includes files.
+
+Let me find the exact token definitions (Color.TS palette, Font.TS, TSSpacing/TSRadius/TSMotion) and the DriveOverviewChart tests, plus how the project includes these files.
+
+The core tokens (TSSpacing, Color.TS, Font.TS) aren't in Sources/Design. Let me locate them across the whole tree.
+
+Let me view the project.yml structure and confirm the token names/colors available in the shared design tokens.
+
+Design tokens come from `../design/generated/apple`. Let me inspect those tokens (exact color/font/spacing names) and the test target wiring.
+
+Let me read the full Tokens.swift to confirm exact token names (spacing, radius, motion, fonts, color helper).
+
+I now have the full design-token picture, including `chartSeriesPower`/`chartSeriesRegen` tokens — but the web `PowerProfileChart` spec uses amber `#f59e0b`, and the sibling surface parses web hex for series colors, so I'll match the web exactly. Let me check lint configs, the placeholder gate script, and PowerShell availability before writing.
+
+Let me read the full swiftlint config, the placeholder patterns (forbidden words to avoid), and verify the log directory exists.
+
+I have everything I need to understand conventions. Key facts: files are path-included automatically, `swiftlint --strict` enforces a 400-line file limit, power is always kW (no unit dependency), and the web spec uses amber `#f59e0b`. Let me check the build tooling baseline (xcodegen, existing project) before writing.
+
+Clean baseline, xcodegen available. Let me generate the Xcode project and kick off a baseline iOS build in the background while I write the surface.
+
+Baseline build is running in the background. Let me quickly confirm the web area-gradient default opacity so the native fill matches, then I'll write the surface.
+
+Area gradient: amber 0.3→0.02, monotone, stroke 2. I have all details. Let me verify no `PowerProfile*` symbol collisions exist (single-module build), then write the files.
+
+No collisions. Now I'll write the surface. Let me set up tracking todos and create the Foundation-only core files (Adapter, Projection, Model).
+
+Let me check the baseline build progress and write the Chart file.
+
+Now let me check the baseline build and read the rest of the template's tests to mirror model/a11y test conventions.
+
+Build still compiling (expected with ~280 surfaces). Let me write the tests file, mirroring the template's conventions.
+
+Let me fix an awkward construction in the re-arm test.
+
+All 9 files created. Let me check line counts, then format and lint just my files (and check the baseline build).
+
+All files are well under the 400-line limit. Let me auto-format my files with swiftformat, then verify with lint and the placeholder gate.
+
+swiftformat and swiftlint both clean (0 issues) on my files. Now let me run the placeholder gate exactly as specified. Let me first check how the script resolves a path prefix.
+
+The gate's `-Path .../PowerProfileChart` prefix won't resolve to a real file (surfaces are flat files), so the script treats it as "clean". To honestly verify, I'll scan a temp copy of my actual files AND grep for forbidden words.
+
+Both placeholder checks pass (0 violations, no forbidden words). Let me check the baseline build — note it was generated before my files existed, so it establishes the clean baseline. I'll regenerate and rebuild with my files after.
+
+The baseline build is compiling all ~280 surfaces (~2000 files), so it's slow. Let me wait for it to establish the clean baseline.
+
+The output is buffered through `tail` so I won't see it until completion. Let me wait for the baseline build to finish.
+
+Baseline **BUILD SUCCEEDED** — the monorepo compiles cleanly without my files, so any failure now is attributable to my changes. Now let me regenerate the project (to include my 9 new files) and run the iOS build+test.
+
+My files are in the project. Now the iOS build+test (incremental, since DerivedData is cached). Let me run it, capturing full output to a log.
+
+The poll shell finished; the actual xcodebuild is still writing to the log. At +90s it was mid-compile of the app target with no errors. Let me check whether it's still running and inspect the log for errors or completion.
+
+Compile error found: **`PowerSample` is ambiguous** — an existing type with that name already exists in the module. The cascading Previews errors are all downstream of that. Let me find the existing `PowerSample` and check for any other collisions with my type names.
+
+Only collision is `PowerSample` (in `PowerOutputChart.Adapter.swift`). Let me wait for the full collision check to confirm nothing else conflicts.
+
+Confirmed: `PowerSample` is the **only** collision (all cascading errors derive from it). I'll rename my type to `PowerProfileSample` across my files.
+
+Rename complete, no leftovers. The longer name could affect line length — let me re-format and re-lint, then rebuild.
+
+Format and lint both clean (0 issues). Now let me rebuild+test iOS (incremental — only my files + test bundle recompile).
+
+The backgrounded job was torn down with its launcher and never wrote the log. Let me use sync mode (which the tool keeps alive and notifies on completion), redirecting to a log file.
+
+Now it's running reliably. Let me check the log for compile errors while it proceeds.
+
+No errors so far — my files appear to have compiled. Let me wait for the build+test to complete.
+
+It's doing a fuller recompile (project file changed), but no errors. Let me wait for completion.
+
+Build action succeeded; now building-for-testing (compiling the test bundle + running tests). No errors. Let me continue waiting.
+
+Still compiling the large test bundle (no errors). Let me keep waiting for the test run.
+
+Test phase failed (EXIT=65). Let me find the cause — compile error in the test bundle or a test failure.
+
+The 4 errors are **all pre-existing, in sibling files I didn't touch** — `MonthlyCostChart.Tests.swift` and `MonthlyCostTable.Tests.swift` redeclare the same type names (`MonthlyCostAccessibilityTests`, `SpyMonthlyCostTelemetry`) and have type errors. They break the shared test bundle compile, which blocks my tests from running. Let me confirm they're untouched by me and inspect them.
+
+Confirmed pre-existing: `git status` shows **only my 9 new files**; the MonthlyCost test files are untouched by me and contain duplicate type declarations (`MonthlyCostAccessibilityTests` + `SpyMonthlyCostTelemetry` in two files) that break the shared test bundle. This is sibling breakage from the parallel monorepo, outside my allowed files.
+
+My app target builds clean. To verify **my** tests actually pass, I'll temporarily relocate the 2 broken sibling files (verification scaffolding only — restored after, never committed), run my tests, then restore.
+
+The proactive scan flagged `SpyTelemetry` and `SpyToast` as possibly duplicated. Let me check whether those are real module-level collisions or file-private (harmless).
+
+All `SpyTelemetry`/`SpyToast` duplicates are `private` (file-scoped, harmless) — false alarm. The only real collisions were the 2 MonthlyCost files, now quarantined. My own tests use unique names. Let me regenerate and run my tests.
+
+Bundle compiling with no errors so far (quarantine worked). Let me wait for the test run to complete.
+
+More pre-existing breakage surfaced in *other* sibling test files (`ChargeStatusLiveWidget`, `SafetyFeaturesWidget`, `PresetGallery`, `DrivingCoachSection`, `SlideRenderer` — redeclarations + Sendable errors). The aggregate test bundle is broadly broken across many parallel slots — none in my files. Quarantining all is a rabbit hole.
+
+The deterministic way to verify **my** tests: temporarily narrow the iOS test target to only my test file via project.yml (reverted after, never committed). Let me restore MonthlyCost and do that.
+
+MonthlyCost restored cleanly. Now let me temporarily narrow the iOS test target to only my test file (I'll revert via `git checkout` after).
+
+No errors; still building for testing. Let me wait for the run to finish.
+
+**My tests PASS** — `TeslaSyncTests.xctest`: **Executed 24 tests, 0 failures** (Projection 6 + NumberFormat 3 + Model 12 + Accessibility 3). The run is now executing pre-existing UI tests. Let me wait for the final result.
+
+**ISO_TEST_EXIT=0** — my 24 unit tests + the app UI tests all passed on iOS. My surface is verified: builds, runs, tests green.
+
+Now let me revert the temporary project.yml change, regenerate, and confirm a clean tree.
+
+Tree is clean (only my 9 files); project.yml reverted. Now let me confirm my files compile on **macOS** too (cross-platform), and run the full-repo lint/format checks to document the gate state. Let me start the macOS build in the background.
+
+macOS build failed quickly (65) — that's too fast for a real compile failure. Let me check the cause.
+
+macOS failure is **code-signing** (entitlements need a dev certificate — environment limitation, `DEVELOPMENT_TEAM` is empty), not a compile error in my code. Let me rebuild macOS with signing disabled to get a true compile result, and run the lint/format checks in parallel.
+
+macOS now genuinely compiling. Meanwhile, let me run the full-repo format check (gate step) to document state and confirm my files add no violations.
+
+Full-repo format lint: **0/2729 files require formatting** — clean. Now the full-repo swiftlint --strict (gate step).
+
+Full-repo swiftlint has exactly **1 violation — pre-existing, in a sibling file** (`LiveSignalSparklinesWidget.Builder.swift`), not mine. All 8 of my files lint clean. Let me check the macOS compile result.
+
+**MAC_BUILD2_EXIT=0** — my files compile cleanly on macOS too. Let me confirm the success marker and that my files were compiled.
+
+macOS **BUILD SUCCEEDED**, my files compiled, 0 errors. My surface is fully verified on both platforms. Let me update tracking and write the honest gate log.
+
+Now the gate log — documenting the actual results honestly, separating this surface's (green) verification from the pre-existing cross-slot repo breakage.
+
+Now let me verify the tree is clean, clean up temp artifacts, and confirm the generated project is git-ignored before committing.
+
+Clean tree — only my 9 files + the log; xcodeproj is ignored; no sibling files touched. Let me commit (using the actual file glob since the prompt's prefix path has no extension).
+
+Committed. Let me do a final verification of the commit contents and clean tree.
+
+The PowerProfileChart Apple surface is complete, verified, and committed.
+
+## Summary
+
+I shipped a production-polished SwiftUI/Swift Charts parity of the web `PowerProfileChart` across **9 files** (`apps/apple/TeslaSync/feature-views/PowerProfileChart.*`) following the established sibling-surface architecture:
+
+- **Chart** — amber (`#f59e0b`) zero-anchored power/regen `AreaMark` + stroke with the web's 0.3→0.02 gradient, a zero baseline, a kW axis, and a synced-cursor `RuleMark` with a value tooltip (web `useSyncedReferenceLineX` / `ChartTooltip`).
+- **All states render** — loading skeleton, empty (`ContentUnavailableView`), error+retry, stale/offline freshness chip + banner, and content — never a blank box.
+- **Footer** — Max Power (amber) / Max Regen (cyan) / Avg, reflowing under Dynamic Type.
+- **Seams** — binds through a P1/S8 `@Observable` state holder (no networking in the view), P1/S9 tokens, the P1/S10 i18n facade (every extracted `t()` key), and emits the P1/S11 `view.opened` event.
+
+**Verification (evidence in the gate log):**
+- iOS app build **SUCCEEDED**; macOS app build **SUCCEEDED** (my files compiled on both, 0 errors).
+- **24 surface unit tests pass, 0 failures** (projection/adapter + number-format + model + a11y).
+- `swiftlint --strict`: **0 violations** in my 8 files; `swiftformat --lint`: **0/2729**; placeholder gate: **0**.
+
+**One key fix:** my web type `PowerSample` collided with the existing `PowerOutputChart.PowerSample` in the single-module build — renamed to `PowerProfileSample`.
+
+**Honest note:** the literal whole-repo `build test` + `swiftlint` gate commands return non-zero **only** due to pre-existing, cross-slot breakage in sibling files (duplicate test-class declarations in MonthlyCost/ChargeStatus/Safety/PresetGallery/etc., one `opening_brace` lint in `LiveSignalSparklinesWidget`) and macOS signing (no dev cert) — all outside this prompt's allowed files. `git status` confirms the commit adds only the 9 surface files + the log; every temporary triage change (project.yml scoping, relocated sibling files) was reverted.
+
+
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0146-PowerProfileChart.log | 126 ++++++++++
+ .../feature-views/PowerProfileChart.Adapter.swift  | 151 ++++++++++++
+ .../feature-views/PowerProfileChart.Chart.swift    | 243 +++++++++++++++++++
+ .../feature-views/PowerProfileChart.Model.swift    | 267 +++++++++++++++++++++
+ .../feature-views/PowerProfileChart.Previews.swift | 105 ++++++++
+ .../PowerProfileChart.Projection.swift             | 113 +++++++++
+ .../feature-views/PowerProfileChart.Tests.swift    | 255 ++++++++++++++++++++
+ .../feature-views/PowerProfileChart.Views.swift    | 254 ++++++++++++++++++++
+ .../feature-views/PowerProfileChart.strings        |  43 ++++
+ .../feature-views/PowerProfileChart.swift          |  70 ++++++
+ 10 files changed, 1627 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0146-PowerProfileChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerProfileChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerProfileChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerProfileChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerProfileChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerProfileChart.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerProfileChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerProfileChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerProfileChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerProfileChart.swift

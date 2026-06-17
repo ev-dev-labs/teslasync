@@ -1,0 +1,240 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the existing Apple app patterns.
+
+Xcode and swiftlint are available. Let me explore the web source page and the Apple app structure.
+
+The TeslaSync directory structure differs from the prompt's expected path. Let me explore deeper and read the web source in sections.
+
+The actual structure uses `apps/apple/Sources/Features/`. Let me examine the project.yml, existing feature pages, and the component library to understand conventions.
+
+Key finding: feature pages live in `Sources/Features/` (e.g., `Sources/Features/Admin/`), NOT `TeslaSync/Features/`. The project.yml only compiles `Sources/**` and specific `TeslaSync/*` subdirs. I'll place the page in `Sources/Features/Analytics/` to match the real structure. Let me read the full web source and a complete Apple page example.
+
+Excellent — clear patterns. Let me read the rest of the web source plus the model and route registration examples.
+
+Let me read the final section of the web source and the routing/sample infrastructure.
+
+I now have the full web page. Let me examine the SwiftUI component library, charts, design tokens, and the SharedFacade data layer.
+
+Let me read the chart models, list UI/feedback/data-display components, and inspect the design tokens.
+
+Let me read the key component definitions and design tokens I'll depend on.
+
+`TSSpacing/Color.TS/Font.TS/TSRadius` come from generated Tokens. Let me read the generated tokens and grep for the exact component signatures I'll use.
+
+Let me read the remaining component APIs (StatCard, EmptyState, Cards, Buttons, Pickers, Banners, Skeletons) and the web hooks for data shapes.
+
+Let me read buttons, pickers, banners, badges, skeletons, and the routing system.
+
+Let me read the routing system, button/tone definitions, the SI units facade, and locate the string catalog.
+
+Let me read the route parser, shell composition, and find where route registrations are aggregated, plus check for exhaustive switches over `AppRoute`.
+
+Let me narrow the search to the Apple app to find where registrations are composed and how routes are switched.
+
+Let me check how many exhaustive switches enumerate `AppRoute` cases, to gauge the safety of adding a new case.
+
+Per-route switches live only in `AppRoute.swift`, so adding a case is low-risk. Let me read the app entry/registration chain, the shell, route tests, the units facade, and the web hooks for data shapes.
+
+Let me check the units-access pattern, the web hooks data shapes, build viability (xcodegen/xcframework), and locate the string catalog.
+
+Critical: `Shared.xcframework` isn't staged yet. Let me inspect the build script, read the web hooks for data shapes, and kick off a baseline build to verify gate viability.
+
+Xcode is available but `Shared.xcframework` must be built via Gradle (Kotlin/Native) — the long pole. Let me find the gate README and start the framework build in the background now while I continue.
+
+Java 17 is present. Let me start the `Shared.xcframework` Gradle build in the background (long pole) and read the gate README plus a sibling page's log to learn the exact gate format.
+
+Let me read the gate README and a sibling page's log to learn the exact gate/log format.
+
+Let me study a sibling page's log format and check the parity ledger files.
+
+Now I fully understand the established methodology. Let me check the build progress, read the ledger, verify pwsh, check the known pre-existing breakage, and find route tests.
+
+pwsh and the placeholder script are present. The pre-existing `glass(@ViewBuilder)` build blocker still exists at this HEAD (out-of-scope, matching sibling logs). Let me read the route tests to ensure a new case is safe, while the Gradle build continues.
+
+Route tests are safe for a new case (unique segment, group iteration, menu commands derive from `allCases`). Let me confirm `MenuCommandCatalog` iterates `allCases` and check the Gradle build progress.
+
+`MenuCommandCatalog` derives navigate commands from `AppRoute.allCases`, so the menu test stays green. I have everything needed. Let me check `LoadableState` and currency formatting, then start implementing while Gradle builds.
+
+Let me read the currency formatter and the sibling's number-format pattern, then I'll write the plan and start implementing.
+
+I have all patterns needed. Let me check the Gradle build progress and write my plan.
+
+The Gradle build is the long pole. Let me verify the web SI conventions (to avoid unit errors) and check build progress, then write the plan.
+
+SI conventions confirmed (facade takes meters/°C/Wh). Let me set up todos and write the plan, then implement.
+
+Let me read the sibling test pattern and swiftlint config to match style, then start writing the model.
+
+The Gradle build completed. Let me verify the framework was staged, then start writing the Swift files.
+
+Gradle built the xcframework but didn't stage it (I ran gradle directly). Let me run the staging script (Gradle is now cached, so fast) while I begin writing the model.
+
+While that stages, let me write the model file.
+
+Let me create the directories and confirm the framework staged, then write the model.
+
+Framework staged (3 slices) and dirs created. Now let me write the model file.
+
+Model written. Let me write the Sample data source.
+
+Now the display-boundary formatting helpers (SI conversion via `Units`).
+
+Now the Sections sub-views (status cards, charts, comparison table, highlights).
+
+Now let me verify the `TSButton` API before writing the Page, then write it.
+
+Now I'll write the main Page view.
+
+Now the route registration and navigation wiring.
+
+I need to fix the parenthesis balance and add `onNavigate` in TeslaSyncApp. Let me view the current block.
+
+Let me rewrite the registration chain block correctly with `onNavigate` and balanced parens.
+
+Now the model tests. Let me write a comprehensive XCTest file.
+
+Now the string catalog. Let me inspect its structure and check which keys already exist.
+
+String Catalog structure is clear (newest keys use `en`-only). Let me inspect the exact serialization format to avoid reformatting the whole 8K-key file.
+
+Clear: Xcode uses `" : "` separators inside `strings`, keys aren't globally sorted, file ends with newline. Safest approach is a surgical text insertion of my 44 key-blocks right after `"strings": {`, leaving all other keys byte-for-byte intact. Let me do that with a validated Python script.
+
+44 strings inserted and validated. Now let me run the gate. Starting with SwiftFormat and SwiftLint on my files.
+
+SwiftFormat wants auto-formatting. Let me apply it to my files (the repo uses SwiftFormat as the canonical formatter), then re-lint.
+
+SwiftFormat clean. Now SwiftLint --strict on my files.
+
+SwiftLint scanned the whole repo (config `included` dirs). Let me filter violations to my files only.
+
+Clear set of fixes: rename `FleetCompareWinner` cases `.a/.b` (identifier_name), rename format params, fix banner multi-closure, and split two oversized files (file_length ≤400). I'll restructure cleanly. Let me remove the two files I'm splitting and recreate a well-sized set.
+
+Now the split Sections files. First the status card section.
+
+Now the Charts section file.
+
+Now the Table + Highlights section file.
+
+Now fix the format param names, the banner multi-closure, and the test winner cases. Let me view the format highlights section first.
+
+Now fix the banner multi-closure and update the test winner cases.
+
+Let me re-format and re-lint my files (now split into properly-sized files).
+
+SwiftFormat clean. Let me wait for the full SwiftLint scan to finish.
+
+One line too long (121 chars). Let me fix the efficiency highlight to wrap.
+
+Let me re-verify SwiftFormat and SwiftLint are now fully clean on my files.
+
+My files are SwiftFormat + SwiftLint `--strict` clean (the 3 remaining repo violations are pre-existing, out-of-scope). Now the placeholder scan.
+
+The scan flags `.redacted(reason: .placeholder)` — a false positive on the SwiftUI redaction API the manifest explicitly requires for loading states. Let me read the script to find the allow mechanism.
+
+The scanner matches the literal "placeholder" in `.redacted(reason: .placeholder)` — the SwiftUI redaction API the manifest mandates for the loading state. I'll add the required `// parity:allow` annotation (with reason) to each, exactly as the sibling did for its false positive. Let me find all occurrences.
+
+The pattern matches the literal word "Placeholder" — hitting my comment (line 37) and the SwiftUI `.placeholder` redaction API. I'll reword the comment and centralize the redaction into one annotated helper (DRY), keeping call sites clean. Let me view exact lines first.
+
+Now I'll reword the comment, add a single annotated redaction helper, and switch all call sites to it.
+
+The swiftlint disable directive references a non-existent rule. Let me remove it.
+
+Now update the 4 Table call sites. Let me view them for unique context.
+
+I'll update all 4 redaction call sites in the Table file (using surrounding context for the duplicate ones).
+
+Let me re-format and re-run the placeholder scan and lint.
+
+The allow marker may have been moved by SwiftFormat. Let me inspect line 252.
+
+SwiftFormat wrapped the long line, separating `.placeholder` from its `// parity:allow` marker. Let me check the format width and restructure so they stay on one short line.
+
+The file was reformatted (line wrapped). Let me match the current wrapped form.
+
+Let me verify SwiftFormat doesn't re-wrap, the placeholder scan passes, and lint stays clean.
+
+Placeholder scan green (1 allowed, 0 violations). Let me confirm SwiftLint is still clean on my files.
+
+SwiftLint green. Now the Swift 6 model harness to prove the model logic (mirrors the XCTests, runs standalone in case the test bundle is blocked by the known out-of-scope error). Let me write and run it.
+
+The format helpers depend on `Units` (KMP `Shared`), which complicates the standalone harness. I'll keep the harness focused on the Units-free model logic (matching the sibling pattern) and prove the format/Units path via the full type-check. Let me rewrite the harness.
+
+Now compile and run the harness with Swift 6 strict concurrency.
+
+`WritableKeyPath` on a class needs `ReferenceWritableKeyPath` to mutate via a `let self`. Let me fix the keypath type.
+
+Harness: **37 assertions, 0 failures** — model logic proven under Swift 6 strict concurrency. Now let me generate the Xcode project and run the full build to verify my files compile in-context.
+
+xcodegen succeeded (FleetCompare referenced 60× across targets). Now the full macOS build — this compiles the whole app and will reveal whether my files compile cleanly. Let me run it in the background, capturing the log.
+
+Build failed (exit 65, 3 failures) — as expected from the pre-existing out-of-scope breakage. Let me confirm none of the errors are in my files.
+
+Exactly ONE error file — the pre-existing out-of-scope `AISuggestNewGeofences.swift` — and ZERO in my files, matching the sibling logs. Let me confirm my files were actually compiled (scheduled) and verify the error is the documented `glass(@ViewBuilder)` bug.
+
+The build stopped before reaching my files (the broken batch failed first), so I need the isolated type-check the sibling used — proving my files compile against the real component library + tokens + facade. Let me type-check the whole `Sources/` tree (which contains my files + all deps, and excludes the broken `TeslaSync/shared-surfaces` file), linking `Shared`, for macOS.
+
+`teslaSyncTheme` is in `Sources/Theme.swift`, `tsGlassPanel` in `Sources/Design/TSMaterial.swift` — both in `Sources/`. Let me type-check the whole `Sources/` tree + Tokens against the linked `Shared` framework for macOS.
+
+`mapfile` isn't in macOS bash 3.2. Let me use command substitution instead.
+
+macOS type-check: **ZERO errors in my files**. The only 2 errors are in a pre-existing, out-of-scope file (`DashboardWidgets/BatteryCellsWidgetModel.swift`) I never touched. Let me confirm those are pre-existing and that excluding them yields a fully green type-check including my files.
+
+The lone error is `no such module 'Shared'` — my `-F` pointed at the xcframework wrapper, not the macos slice. Let me point it at the correct slice path and re-run for a clean result.
+
+`Shared` now resolves. Remaining errors are all in a sibling (`TeslaOrdersPage.swift`) that references types defined in the excluded `TeslaSync/*` surfaces — a scoping artifact, ZERO in my files. Let me locate those types and exclude that one reaching-file to get a fully green check.
+
+Only `TeslaOrdersPage.swift` (a sibling that depends on an excluded `TeslaSync/feature-views` surface) errors — a scoping artifact. Let me exclude just that file to get a fully green macOS check, then run the iOS check (exercising the `#if os(iOS)` adaptive branches).
+
+Sibling Admin pages depend on excluded `TeslaSync/*` surfaces (rabbit hole). My files don't — they only use `Components`/`Design`/`SharedFacade`/`App`/Tokens/`Shared`. Let me do the sibling's curated approach: type-check my files + exactly those dependency trees.
+
+`AppContainer` needs `AuthTokenProviding` (in `Sources/Auth`). Let me add that tree and re-run.
+
+`RootView` (app-wiring) needs `AppShell`. My page doesn't need it. Let me exclude that one wiring file.
+
+**macOS type-check: 0 errors** — my files + the full real component/design/facade/routing trees type-check under Swift 6 strict concurrency. Now the iOS check (exercises the `#if os(iOS)` compact-size-class adaptive branches).
+
+**Both type-checks GREEN (macOS + iOS, 0 errors)** — proving my view/sections/charts/table/format/model compile against the real P2 tokens + P3 components + Units/Shared facade on both idioms. Let me do a final format/lint pass (I edited the model's keypath after the last run), then update the ledger and write the evidence log.
+
+All gates green on my files. Now let me update the parity ledger with the 2 platform rows.
+
+Ledger updated (14 rows; FleetCompare macOS+iOS done 63/63). Let me capture tool versions for the log header.
+
+All tools captured. Now let me write the comprehensive evidence log with the full gate transcript and the 63-item PARITY section.
+
+The log is written. Let me do final verification of the two App edits (the registration chain parens are the one risky edit) and confirm the full change set.
+
+Registration chain is balanced (9/9 parens) and AppRoute additions are correct. Let me review the full change set, confirm the generated project is git-ignored, and validate the string catalog before committing.
+
+Change set is clean and scoped (generated project is git-ignored, xcstrings valid). Let me clean temp artifacts and commit.
+
+Committed cleanly (commit `75668c66e`). Let me finalize the todo tracking and confirm the working tree is clean.
+
+All complete. Let me fix the one bookkeeping todo and wrap up.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-analytics-FleetComparePage.log | 222 ++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 484 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   5 +-
+ .../Features/Analytics/FleetCompareFormat.swift    | 113 +++++
+ .../Features/Analytics/FleetCompareModels.swift    | 216 +++++++++
+ .../Analytics/FleetComparePage.Charts.swift        |  83 ++++
+ .../Analytics/FleetComparePage.Sections.swift      | 255 +++++++++++
+ .../Analytics/FleetComparePage.Table.swift         | 147 +++++++
+ .../Features/Analytics/FleetComparePage.swift      | 301 +++++++++++++
+ .../Analytics/FleetComparePageModel.Sample.swift   | 197 +++++++++
+ .../Features/Analytics/FleetComparePageModel.swift | 265 +++++++++++
+ .../Analytics/FleetCompareRouteRegistration.swift  |  35 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |  23 +-
+ .../Analytics/FleetComparePageModelTests.swift     | 309 +++++++++++++
+ apps/parity/apple-ledger.json                      |  20 +-
+ 15 files changed, 2663 insertions(+), 12 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-analytics-FleetComparePage.log
+ create mode 100644 apps/apple/Sources/Features/Analytics/FleetCompareFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/FleetCompareModels.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/FleetComparePage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/FleetComparePage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/FleetComparePage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/FleetComparePage.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/FleetComparePageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/FleetComparePageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/FleetCompareRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Analytics/FleetComparePageModelTests.swift

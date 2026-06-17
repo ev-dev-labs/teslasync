@@ -1,0 +1,123 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the available tools and the repository structure.
+
+All required tooling is available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Let me read the web source and explore the Apple app structure.
+
+Now I understand the web Spinner — it's a brand lightning-bolt loading mark that honors reduced motion. Let me study the existing conventions and find the closest template. Let me look at instructions, the Design/Facade layers, and a simple existing surface.
+
+Let me understand the build system (how files get included) and study the closest-matching existing surface plus the key shared layers.
+
+Build system is XcodeGen (`project.yml`). Let me read it to confirm file inclusion and schemes, check for any existing Spinner files, and locate the Spinner prompt.
+
+XcodeGen auto-globs the `shared-surfaces` folder, so no project.yml edits needed (but I must regenerate). Let me read the Spinner prompt, check tooling (xcodegen, pwsh, shared framework script), and study the simplest existing surfaces as templates.
+
+AnnouncerRegion is the ideal template (anonymous a11y primitive). Critical: the build has a pre-action that builds `Shared.xcframework` via Gradle/KMP. Let me check if it's prebuilt and read the full AnnouncerRegion template.
+
+Critical: the KMP `Shared.xcframework` is NOT prebuilt — the build relies on a Gradle pre-action. Let me verify the KMP toolchain works and read the full template (Model/Adapter/Seams/States) plus the web `useMotionPreference` hook.
+
+Now I understand the seam pattern. Let me read the rest of the AnnouncerRegion template (Adapter, Seams, States, Views, strings, Tests) and the native motion/token infrastructure to map `useMotionPreference` correctly.
+
+The architecture is clear. Now let me examine a purely-presentational sibling (Avatar) to see how the state-machine template maps to a component with no network feed, plus the native motion/token infrastructure and the remaining template files.
+
+Avatar is the ideal presentational analog (no network feed, has sizes). `@Environment(\.accessibilityReduceMotion)` and `TSMotion`/`Color.TS` tokens map the web hook. Let me read Avatar's full implementation and the token definitions.
+
+Avatar's Model explicitly documents the convention: **for pure presentational surfaces with no query feed, fabricating stale/offline/error states is drift, not parity.** This is exactly Spinner's situation. Let me read Avatar's pure core, tokens, views, and the design token definitions.
+
+Excellent — I now have the full structural pattern. Let me read Avatar's Views, Previews, strings, and tests, plus the design token definitions (TSDesign.swift) to map the glow/colors/motion correctly.
+
+Let me read the design tokens, Avatar's tests/previews, and the web Spinner's CSS animation/glow definitions to faithfully reproduce the bolt draw + glow.
+
+`TSDesign.swift` references tokens defined elsewhere (generated). Let me read the web bolt CSS and locate the native token definitions (Color.TS, TSSpacing, TSMotion, Font.TS).
+
+Now let me read the generated Tokens.swift to get exact token names, plus Avatar's test and preview files to mirror their structure.
+
+I have all tokens. `Color.TS.accent` (cyan) + `Color.TS.statusSuccess` (emerald) map the glow; `Color.TS.textPrimary` is the bolt. Now let me read Avatar's test and preview files to mirror their conventions.
+
+Let me read Avatar.ModelTests.swift to complete my understanding of the model/source/UI test conventions, then I'll check the swiftlint config and placeholder checker.
+
+I now have the complete pattern. Let me check the placeholder patterns (to avoid forbidden words) and confirm the Spinner prompt file matches, then I'll set up a todo list.
+
+I have everything needed. Let me check for symbol collisions (single app module) and set up the plan/todos before writing files.
+
+Only `TSSpinner` exists (the atomic component, explicitly out of scope) — no collision with my `Spinner` surface or its prefixed types. Let me write the plan and start creating files.
+
+Now I'll create the files. Starting with the pure core adapter.
+
+Now the Views file (bolt shape, glow, animated/static bolt, content) and fixing a trailing-comma in the Adapter (swiftformat `--commas inline`).
+
+Now the main surface view, wiring the environment reduce-motion (the native `useMotionPreference`) into the projection.
+
+Now the strings catalog and the previews.
+
+Now the two test files — pure adapter tests and model/source/view tests.
+
+All 7 source files created. Let me lint/format-check the new files first (fast) before the expensive build.
+
+swiftformat and swiftlint both pass cleanly. Let me run the placeholder check and generate the Xcode project.
+
+Placeholder check passes (COUNT=0) and the Xcode project generated. The build's scheme pre-action compiles the KMP `Shared.xcframework` via Gradle (not prebuilt). Let me kick that off first in the background to warm caches and surface any toolchain issues, then run the full gate.
+
+Java 17 available. Let me build the KMP framework directly (async) to warm caches and verify the toolchain works.
+
+The KMP framework build is running. Let me monitor its progress.
+
+Gradle is downloading/compiling Kotlin/Native (no output yet — this is normal for a first build). Let me continue waiting.
+
+Output is buffered through `tail` so it'll appear on completion. Kotlin/Native first builds are slow. Let me keep waiting.
+
+The KMP framework built successfully (6m58s) and is staged; Gradle cache is now warm. Let me run an iOS build-only first to quickly catch any compile errors (especially the `KeyframeAnimator` API) before the full build+test.
+
+Build failed — but in **other** files (VehicleConfigSection, VehicleGauges, WeeklyDigestWidget.Previews, WidgetPicker.Previews), not mine. The `tail` cut off the actual error diagnostics. I need to determine whether this is pre-existing or caused by my change. Let me capture full output and extract the real errors.
+
+The real error is in my `Spinner.Previews.swift`: `accessibilityReduceMotion` is a read-only environment key — it can't be overridden via `.environment(_:_:)`. (The "other files" were just batch-mates in the same compile command.) My Adapter/Model/Views/swift compiled fine. Let me fix the preview to render the reduced-motion branch directly via the internal `SpinnerBoltStatic`.
+
+Let me re-verify lint/format on the edited Previews file, then rebuild iOS.
+
+Clean. Now rebuild iOS (build-only) to confirm the fix compiles.
+
+Progress: my Previews error is fixed and my files now compile. But a **new, unrelated** pre-existing error surfaced in a sibling file `AISuggestNewGeofences.swift:129` (`escaping closure captures non-escaping parameter`) — not a Spinner file, and one I'm not allowed to touch. This looks like a broken baseline. Let me verify whether this is pre-existing (independent of my change) by checking git state and the scope of breakage.
+
+Confirmed: my Spinner files are the only uncommitted changes (all untracked `??`), while `AISuggestNewGeofences.swift` is **committed at HEAD** (d30ee02f9) and its error is self-contained (a `glass(@ViewBuilder _ content:)` helper passing a non-escaping closure to `TSGlassPanel`) — nothing my code touches. This is a pre-existing broken baseline. Let me prove it definitively by building HEAD **without** my Spinner files.
+
+Baseline regenerated without any Spinner files. Now build HEAD to prove the pre-existing breakage.
+
+**Definitive proof: the baseline is broken independent of my work.** Building HEAD with **zero** Spinner files present still fails (EXIT=65), now surfacing a *third* distinct pre-existing error: `RecentDrivesSection.Previews.swift:24` ("compiler unable to type-check in reasonable time"). Combined with `AISuggestNewGeofences.swift:129`, multiple committed sibling surfaces don't compile under this toolchain — all outside my allowed scope (`Spinner.*` + log only).
+
+Let me restore my files and then prove my surface is correct in isolation (compile + run my tests against a standalone module), since the full-app target can't link due to siblings.
+
+Files restored. The baseline is conclusively broken (multiple committed siblings fail to compile under Xcode 26.5). Since the app target can't link, I'll prove my surface is correct by compiling it **and running my full test suite** against a standalone SwiftPM module (my sources + the design tokens).
+
+Now compile and run my full test suite against the isolated module.
+
+Outstanding — the isolated module **compiled cleanly and all 32 tests passed** (0 failures), proving my Spinner surface is complete and correct. The full-app gate is blocked solely by pre-existing sibling breakage.
+
+Let me regenerate the project and run the **official gate sequence**, capturing real exit codes to the log.
+
+Now I'll run the official gate sequence, teeing real output and exit codes to the log (using `-quiet` so the build transcript stays readable while still showing the real errors and failures).
+
+iOS gate captured (EXIT=65, pre-existing sibling failure). Now the remaining gate steps — macOS build test, swiftlint, swiftformat, placeholder.
+
+All gate results are in. Summary:
+- **iOS build test: EXIT=65** — pre-existing sibling compile error (`RecentDrivesSection.Previews.swift:24`), not a Spinner file.
+- **macOS build test: EXIT=65** — runner lacks a development signing certificate (`DEVELOPMENT_TEAM` empty) — an environment/runner capability limit affecting all targets.
+- **swiftlint --strict: EXIT=0** (0 violations / 4343 files)
+- **swiftformat --lint: EXIT=0** (0/4641 need formatting)
+- **placeholder: EXIT=0** (COUNT=0)
+
+Both build failures are outside my allowed scope (`Spinner.*` + log). Let me append the full evidence + honest BLOCKED determination to the log.
+
+The log is complete and honest. Let me tidy one evidence line and verify the `.xcodeproj` is gitignored (so the commit only includes Spinner files + log).
+
+`.xcodeproj` is gitignored (commit will be clean), and the isolated tests reconfirm **32 passed, 0 failures**. Let me tidy the one awkward evidence line in the log.
+
+`.xcodeproj` is gitignored and the test summary is reconfirmed. Now I'll commit the surface + log with a fully transparent message (the work is complete and independently verified; the full-app gate is BLOCKED by documented external factors).
+
+All 8 source files + the log are staged (nothing extraneous). Committing now.
+
+Committed cleanly (a119961ba, 9 files, 1186 insertions). Let me clean up temp artifacts and finalize the todo tracker.
+
+The working tree is clean and all todos are complete. The task has reached its terminal state.
+
+Let me do a final confidence check on the committed log's conclusion.
+
+The log is faithful and complete. The task has reached its terminal state. Here's my summary.
+

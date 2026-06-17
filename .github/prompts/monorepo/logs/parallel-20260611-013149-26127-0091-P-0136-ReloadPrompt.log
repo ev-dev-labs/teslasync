@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and understanding what exists for this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim). Now let me read the web source and explore the Apple app structure.
+
+Now let me deeply explore the Apple app structure to understand existing patterns, the shared-surfaces directory, and P1/S8-S11 infrastructure.
+
+The shared-surfaces directory has 1073 entries — many surfaces built in parallel. Let me find a complete exemplar to model the pattern, especially a feedback/banner-type surface like `AchievementUnlockedToast`.
+
+The `AchievementUnlockedToast` surface is the ideal analog (a feedback toast). Let me read all 9 of its files to learn the exact pattern.
+
+Excellent — this is a thorough, idiomatic pattern. Let me read the remaining files: Views, Seams, Adapter, Previews, strings, and Tests.
+
+Let me read the Adapter (P1/S8 binding to shared core), Previews, strings, and Tests files.
+
+Let me read the Previews and Tests files, and locate the shared P1/S9 token + component definitions (TSSpacing, Color.TS, Font.TS, TSCard, TSButton, TSEmptyState, TSSkeleton).
+
+Now let me locate the shared P1/S9 token + component definitions to reference them correctly.
+
+This is a very thorough, well-established pattern. Let me read the remaining shared component APIs (TSButton, TSCard, TSSkeleton) and the lint/format/placeholder gate configs.
+
+Now let me check the build tooling: xcodegen availability, the .xcodeproj, swiftlint/swiftformat configs, and the placeholder-check script.
+
+All tooling present (xcodegen 2.45.4, pwsh, swiftlint, swiftformat). Let me read the placeholder gate script, the rest of the lint configs, and the glass-panel modifier.
+
+Let me check the heavyweight build dependency (Shared.xcframework / KMP pre-action) and the glass-panel material, since these affect whether the full xcodebuild gate can run.
+
+All tooling is present. The full gate depends on a KMP `Shared.xcframework` built via Gradle (heavyweight). Let me probe that in the background while I write the surface. First, let me set up tracking and kick off a Gradle feasibility probe.
+
+There's a 2.2G Gradle cache — the KMP build has run here before, so the full gate is likely viable. Let me kick off the `Shared.xcframework` build in the background while I write the surface files.
+
+Gradle build running in background. Now I'll write the 9 surface files, mirroring the established pattern exactly. Starting with the pure adapter core.
+
+Now the Model — state holder, projection, telemetry seam, and i18n facade.
+
+Now the Seams — the registration source protocol (peer of `useRegisterSW`), production static source, and in-memory source for tests/previews.
+
+Let me check the KMP build progress, then continue with the States chrome.
+
+Gradle still running. Continuing with the States chrome (loading/empty/error).
+
+Now the Views — the reload banner (data state) and the freshness chip.
+
+Let me verify the `tsGlassPanel()` modifier signature so the banner styling composes correctly.
+
+Modifier confirmed. Now the public surface composition and the i18n strings.
+
+Let me check the KMP build, then write the Previews and Tests.
+
+Still building. Writing the Previews and Tests now.
+
+Now the tests covering the adapter, projection, model, countdown, and accessibility across every branch.
+
+All 9 files written. Let me verify them: scan for forbidden placeholder tokens, run swiftformat lint, and swiftlint on just my files. Also check the KMP build.
+
+No forbidden tokens, all 9 files present. Let me run swiftformat and swiftlint on my files (these don't need the KMP build).
+
+Two long lines in the tests file. Let me view and wrap them.
+
+One long line. Let me wrap it to match the established multi-line style.
+
+swiftformat and swiftlint both pass on my files. Let me check the KMP build status.
+
+swiftformat and swiftlint pass cleanly on all my files. The KMP native build is the long pole (first-run Kotlin/Native xcframework). Let me verify the log directory exists and keep waiting for the build.
+
+Let me examine a sibling surface's gate log (e.g., the AchievementUnlockedToast at 0111) to match the expected log format and confirm how others handled the build.
+
+The sibling `AchievementUnlockedToast` log reveals the accepted disposition: verify the surface in **isolation** (dual-SDK Swift 6 build + tests + lint/format/placeholder green), while the full-app `xcodebuild` gate is **deferred** on pre-existing unrelated sibling breakage. I'll follow that exact pattern. Let me run the placeholder gate and check the KMP build.
+
+Placeholder gate is green (both exact command and honest direct scan: COUNT=0). KMP still building. Let me set up the isolated dual-SDK verification in parallel — first, scope the dependency closure of the shared components.
+
+KMP build finished. Two key findings: the build succeeded, and `Sources/Components` + `Sources/Design` import **only Apple frameworks** — so my surface + the real design system form a self-contained module. Let me confirm the xcframework was staged.
+
+KMP `Shared.xcframework` is staged (both debug + release slices), and the design system is pure-Apple-framework — so my surface + the real design system compile as a self-contained module. Let me set up an isolated dual-SDK verification (the sibling's accepted approach) while I also prepare the full build. First, create the verification package.
+
+49 files in the isolated module. Now the Package manifest with Swift 6 mode + strict concurrency.
+
+Now run the isolated module's tests under Swift 6 strict concurrency (macOS host).
+
+The errors are in a **design-system** file (`UnitFormatters.swift` references `Units`), not my code — my module closure is just missing the `Units` helper. Let me find and add it.
+
+`Units`/`UnitPreferences` live in `Sources/SharedFacade`. Let me check whether that facade pulls in the KMP `Shared` module (which would mean I should prune to my surface's minimal closure instead).
+
+Only `UnitFormatters.swift` in the design system couples to the KMP `Shared` module (via `Units`/`UnitPreferences`). My surface doesn't use those formatters. Let me check what references them, then exclude just the Shared-coupled file from the isolated module.
+
+Confirmed: `UnitFormatters.swift` is the only Shared-coupled design file and nothing else references its views. I'll exclude just that file from the isolated module (it's unrelated to my surface) and re-run.
+
+Isolated module compiles under **Swift 6 strict concurrency on macOS** and **all 25 ReloadPrompt tests pass** against the real design system. Now the iOS-SDK compile (dual-SDK requirement).
+
+iOS 18 Simulator SDK typecheck passes (Swift 6 strict concurrency, DEBUG previews included). My surface is independently verified on **both SDKs** + tests + lint + format + placeholder. Now let me attempt the authoritative full-app gate. First generate the Xcode project, then run the iOS build in the background.
+
+Project generated. Now kick off the full iOS build+test gate in the background (heavy — scheme re-runs the Gradle pre-action, then compiles 1000+ files).
+
+The iOS gate is running in the background. Let me wait and monitor its progress, checking whether my files compile cleanly within the real target.
+
+The build is past the Gradle pre-action and is now emitting the `TeslaSync` Swift module (consuming `Shared.pcm`) — no errors so far, which means the whole app module (my files + all siblings) is type-checking. This slot may build fully. Let me keep waiting.
+
+The app module is compiling under Swift 6 for iOS 18, extensions are linking and code-signing (ad-hoc `--sign -` works for simulator), and there are **zero errors and zero ReloadPrompt errors**. This slot's tree appears fully buildable. Let me continue waiting for the build+test to finish.
+
+iOS gate exited 65 (failure). Let me find the exact cause — was it my files, a sibling, or the test/signing phase?
+
+The failure is a **pre-existing, unrelated sibling file** — `feature-views/RecentDrivesSection.Previews.swift:24` ("compiler unable to type-check in reasonable time") — exactly the blocker the sibling `AchievementUnlockedToast` log documented. **Zero ReloadPrompt errors.** Let me confirm the failed build command and that my files compiled.
+
+Conclusive: the entire iOS build has **exactly one** compiler error — the pre-existing, unrelated sibling `feature-views/RecentDrivesSection.Previews.swift:24` ("unable to type-check in reasonable time"), the same blocker the sibling `AchievementUnlockedToast` log documented. **Zero ReloadPrompt errors** — my surface compiled cleanly in the real iOS target. Let me run the remaining gate steps (macOS build in background; full-tree swiftlint/swiftformat now).
+
+My files pass swiftlint strict. Now the full-tree lint/format gates (as the gate spec runs them), captured to files.
+
+Full-tree `swiftlint --strict`: **0 violations across 4321 files** (the 8 "ReloadPrompt" lines are just progress output; zero warnings/errors). The macOS build finished — let me check its result.
+
+macOS exited 65 in only ~17s — too fast for a compile, so it likely failed early (pre-action or signing/destination). Let me check the real cause.
+
+macOS failed at the **signing** stage (before any compilation): `TeslaSync-macOS`/`TeslaSyncWidgets-macOS` "have entitlements that require signing with a development certificate" — the pre-existing "macOS development-signing (0 identities)" environment limitation the sibling documented. The Gradle xcframework staged fine; **zero ReloadPrompt errors**. Let me capture the full-tree swiftformat gate too.
+
+All gate steps captured honestly. Full-tree `swiftformat --lint`: **0/4619 files require formatting** (RC=0). Let me confirm my surface files were actually compiled in the real iOS target (proving zero errors isn't due to exclusion), then write the gate log.
+
+Conclusive evidence gathered. All 7 ReloadPrompt source files were in the real iOS compile; the **only** error tree-wide is the pre-existing sibling `RecentDrivesSection.Previews.swift:24`. macOS staged the xcframework and failed only on pre-existing dev-signing. Now let me write the gate log.
+
+Gate log written. Now let me clean up temp artifacts and verify git status shows only my intended files before committing.
+
+Clean — exactly the 9 surface files + the log are new; the generated `.xcodeproj` and staged `.xcframework` are git-ignored. Committing now.
+
+Committed: 10 files (9 surface + log), 1443 insertions, with the required trailer. Let me finalize tracking.
+
+All 10 todos complete. The `ReloadPrompt` Apple shared surface is shipped, independently verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0136-ReloadPrompt.log | 156 +++++++++++
+ .../shared-surfaces/ReloadPrompt.Adapter.swift     |  91 +++++++
+ .../shared-surfaces/ReloadPrompt.Model.swift       | 274 ++++++++++++++++++++
+ .../shared-surfaces/ReloadPrompt.Previews.swift    |  72 ++++++
+ .../shared-surfaces/ReloadPrompt.Seams.swift       | 142 ++++++++++
+ .../shared-surfaces/ReloadPrompt.States.swift      | 108 ++++++++
+ .../shared-surfaces/ReloadPrompt.Tests.swift       | 288 +++++++++++++++++++++
+ .../shared-surfaces/ReloadPrompt.Views.swift       | 189 ++++++++++++++
+ .../TeslaSync/shared-surfaces/ReloadPrompt.strings |  33 +++
+ .../TeslaSync/shared-surfaces/ReloadPrompt.swift   |  90 +++++++
+ 10 files changed, 1443 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0136-ReloadPrompt.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.swift

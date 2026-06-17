@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure to understand the task: the web source component, the existing Apple app structure, and platform capabilities.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and understand the existing Apple app structure.
+
+Now let me explore the existing Apple app structure, especially the `modals-dialogs` directory and how existing surfaces are built.
+
+There's already a `ConfirmDialog.*` file set in `modals-dialogs/`. I must understand whether these are the AI confirm dialog (the web source) or the generic UI confirm dialog, and their current state. Let me read them all.
+
+The existing `ConfirmDialog.*` files map to a **different** web source — `components/ui/ConfirmDialog.tsx` (prompt 0012, the destructive-action dialog). My task's web source is `components/ai/ConfirmDialog.tsx` (the `AiConfirmDialog` — AI tool-use confirmation). This is a naming collision. Let me investigate the parity manifest and naming conventions before deciding how to name the native files.
+
+Both prompt 0001 (ai/ConfirmDialog) and 0012 (ui/ConfirmDialog) target native `ConfirmDialog.*`. Let me read both prompts and the parity manifest to determine the correct native naming.
+
+Confirmed: prompt **0001** = `components/ai/ConfirmDialog.tsx` (`AiConfirmDialog`), prompt **0012** = `components/ui/ConfirmDialog.tsx` — both generated with native target `ConfirmDialog.*`. The 0012 surface is already fully built. Writing to `ConfirmDialog.*` would destroy it. Let me check the parity manifest's intended native name and study the 0012 file structure as my template.
+
+Decision made: I'll name native files `AiConfirmDialog.*` — matching the web component name `AiConfirmDialog`, following the existing `Ai*` convention (AiOutputPanel, AiLimitBanner, AiUsageCard), and avoiding destruction of the existing `ConfirmDialog.*` (0012) surface. Let me study the 0012 file structure as my template and check the manifest entry shape.
+
+Excellent template. Let me read the remaining 0012 files (Adapter, Previews, Tests, ModelTests, strings) and locate where the core types and shared primitives are defined.
+
+Now let me read the Tests, ModelTests, and strings files, plus understand how files are registered in the project and verify shared primitives exist.
+
+I have a complete picture of the conventions. Now let me verify shared primitives exist, how the project includes files, and check tooling (pwsh, placeholder script).
+
+Key finding: `project.yml` sources list does **not** include `TeslaSync/modals-dialogs`. Let me check the full project.yml for modals-dialogs and the test targets, and properly locate the shared primitives.
+
+`modals-dialogs` is not referenced in project.yml at all. The existing 0012 ConfirmDialog files aren't wired into the build. Let me check the test targets, the 0012 gate log, and xcodegen availability to understand how this tier is meant to build.
+
+Now I understand the architecture. Critically: this runner has **full Xcode 26.5** (unlike the CommandLineTools-only runners that produced the BLOCKED logs). Also, `modals-dialogs` is deliberately **not** wired into `project.yml` (the 0012 predecessor left it unchanged — the whole tier defers full-app integration). 
+
+Let me set up a plan and read the remaining specifics (tokens, primitive signatures, lint config) before writing.
+
+Note: `swiftlint`'s `included:` list also omits `modals-dialogs`, but `swiftformat --lint apps/apple` will cover my files. I'll run both explicitly on my files. Let me read the design tokens to get exact names.
+
+I now have everything needed. Let me set up tracking, write a plan, and kick off a background probe of the build environment while I author the files.
+
+Key decisions (documented as assumptions):
+- **Naming**: The generator collided 0001 (`ai/ConfirmDialog.tsx` = `AiConfirmDialog`) with the already-shipped 0012 (`ui/ConfirmDialog.tsx`). Writing to `ConfirmDialog.*` would destroy 0012. I'll name files `AiConfirmDialog.*`, matching the web component name and the existing `Ai*` convention.
+- **No `project.yml` edits**: the entire `modals-dialogs` tier (incl. 0012) is deliberately not wired into the build; the predecessor left it unchanged. I'll honor scope isolation and verify independently (the precedent on this exact tier).
+
+All set: iPhone 16 sim is available, `design: .monospaced` is the established mono idiom, and `Shared.xcframework` is absent (built by a preAction — likely the env blocker for full xcodebuild, matching prior logs). Let me start writing the surface, beginning with the pure core.
+
+Now I'll author the surface. Starting with the pure core (`Adapter`), `Seams`, and `Model`.
+
+Core written. Now the States, Views, and top-level surface.
+
+Now the strings catalog, then Previews and the two test files.
+
+All 10 files written. Now the critical verification: compile + **run** the pure core to get real executed evidence and confirm the args formatter output matches my test expectations.
+
+`AiConfirmDialogAccessibility` is in Seams.swift — I need to include it. Let me recompile with both pure-Foundation files.
+
+All 33 pure-core assertions pass — including the args formatter producing exact JS-style `"key": value` 2-space output. Now let me typecheck the SwiftUI view layer against the real design system. First, survey the design-system sources.
+
+Now typecheck my view layer against the real design system (Sources/Design + Sources/Components + Tokens), targeting macOS 15.
+
+Those errors are in unrelated component files (`UnitFormatters.swift` needs an app-level `UnitPreferences` type) — not my code. Let me narrow to the exact design-system files my surface depends on (Tokens, Design, Buttons, Cards, Motion).
+
+`UnitPreferences` lives in `SharedFacade`. Let me verify the UI + Motion + Design + Tokens subset (what my surface actually needs) is self-contained, then typecheck against it.
+
+Self-contained. Now typecheck my full view layer (including Previews) against that real subset.
+
+Legitimate Swift 6 strict-concurrency errors in my code — the static `Copy` constants need `Copy` to be `Sendable`. Easy fix (it's an immutable value type).
+
+Clean typecheck on macOS 15 (0 errors), including Previews. Now the iOS 18 target, then I'll typecheck the test files in-module with an XCTest shim.
+
+Both targets typecheck clean (0 errors). Now typecheck the test files in-module against the real surface APIs (XCTest shim, single module — matching the predecessor's approach).
+
+Two harness bugs: the surface top-level file path, and the stripped tests lost their transitive `Foundation` import. Let me fix the harness (these are test-harness issues, not code issues).
+
+Test files typecheck clean in-module (0 errors). Now the linters and placeholder check on my files.
+
+Both linters flag the same single line — Previews.swift line 84 is 121 chars (max 120). Let me wrap it (and the similar `noArgs` line for consistency).
+
+Now re-run both linters and the placeholder check, and re-verify the typecheck still passes after the edit.
+
+All three gates pass: **swiftformat 0/9**, **swiftlint 0 violations**, **placeholder COUNT=0**. Let me re-verify the typecheck after the edit and inspect what the full `xcodebuild` gate requires (the `Shared.xcframework` preAction).
+
+View typecheck still 0 errors. The full `xcodebuild` gate requires building the KMP `Shared.xcframework` via Gradle (documented as a `macos-latest` CI step). Let me generate the project to definitively confirm whether my files are even included, then attempt a time-boxed build for honest evidence.
+
+Definitively confirmed: the generated `.xcodeproj` has **zero** references to `AiConfirmDialog`, `modals-dialogs`, or even the predecessor `ConfirmDialog` — `project.yml` deliberately excludes the entire tier (and editing it is outside my allowed scope + would risk ~30 sibling surfaces). Let me attempt the `xcodebuild` gate anyway for honest evidence, time-boxed.
+
+The grep regex was malformed but `xcodebuild` is running. Let me wait for it to complete.
+
+Let me stop this (the grep was malformed) and re-run capturing raw output to a file for clean evidence.
+
+I'll let the build run to its timeout and check back.
+
+`xcodebuild -scheme` **does** run the preAction — it's now building the real KMP `Shared.xcframework` via Gradle (Kotlin→native, multi-arch), which my 240s timeout interrupted (RC=124). The framework debug slice is already cached (UP-TO-DATE); release linking was in progress. This is the documented `macos-latest` CI step.
+
+Let me run the iOS build in the background (longer budget) to establish whether the app compiles at all on this runner, and meanwhile start writing the gate log with my completed independent-verification evidence.
+
+While the build runs, let me re-run the pure-core assertions (with the updated `Sendable` Adapter) to capture a clean transcript for the log.
+
+33/33 core assertions pass. Let me peek at the iOS build progress.
+
+The KMP Gradle build is progressing through multi-platform release framework linking (now `:core:linkReleaseFrameworkMacosArm64`) — still staging `Shared.xcframework` before the app Swift compile. This is the documented heavy CI step. Let me continue waiting while it progresses.
+
+Build FAILED — but the `Shared.xcframework` staged successfully, and the failure is in a **batch of unrelated sibling surfaces** (AnnouncerRegion, AnomalyInlineRow, AppContainer, AppearanceSettings…) — **none of which are mine** (mine aren't even in the project). This confirms the pre-existing breakage the 0012 log described. Let me extract the precise error to document it.
+
+Confirmed: **zero** `AiConfirmDialog` references in the entire build log — my surface is not implicated. Let me capture the precise pre-existing failure cause for honest documentation.
+
+The real cause: a **`swift-frontend` IRGen `report_fatal_error` crash** ("Command SwiftCompile failed") while whole-module-compiling a batch of **pre-existing sibling app surfaces** (AnnouncerRegion, AnomalyInlineRow, AppContainer…). The `Shared.xcframework` built fine. My surface isn't in the build (0 refs), so this is provably pre-existing and unrelated. Let me capture the crash context, then run the (now-faster, xcframework cached) macOS build for its evidence.
+
+The crash is a pre-existing `swift-frontend` IRGen fatal error emitting IR for `AppearanceSettings.Controls.swift` (a sibling feature-view) — not my code. Let me run the macOS build (xcframework now cached) for its evidence, time-boxed.
+
+macOS build: **RC=65 (BUILD FAILED)**, `Shared.xcframework` staged OK, **0 AiConfirmDialog references** — identical pre-existing failure pattern, not my code. Let me grab the exact iOS build RC and confirm the macOS crash file.
+
+iOS build RC=65 (BUILD FAILED). Let me capture the macOS failure cause.
+
+Both builds fail on **pre-existing, unrelated sibling code**: iOS on a `swift-frontend` IRGen crash in `AppearanceSettings.Controls.swift`, macOS on a type-check timeout in `RecentDrivesSection.Previews.swift:24` (the "RecentDrives*" issue the 0012 log named). Both staged `Shared.xcframework` fine; both have **0 AiConfirmDialog references**. My surface is provably not implicated.
+
+I now have complete evidence. Let me write the gate log.
+
+Log written. Now let me clean up temp artifacts and verify git status before committing — ensuring only my 10 files + the log are staged (the generated `.xcodeproj` and built `Shared.xcframework` must be git-ignored).
+
+Clean — only my 10 surface files + the log are untracked; the generated `.xcodeproj` and built `Shared.xcframework` are git-ignored (not shown). Now commit.
+
+Committed cleanly as `2ba5040a5` (11 files, 2010 insertions, only my files). Final working-tree check to confirm no stray build artifacts leaked in.
+
+All 12 todos done, working tree clean, generated artifacts correctly git-ignored. The task is complete.
+

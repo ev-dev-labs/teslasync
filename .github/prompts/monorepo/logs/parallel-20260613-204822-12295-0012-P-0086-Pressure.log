@@ -1,0 +1,115 @@
+I'll start by exploring the repository structure, the web source component, and checking what Apple tooling is available.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+The web source is a pure formatter. Let me examine the existing native shared-surfaces conventions, especially sibling formatters, and check the conversion lib.
+
+This is a large, well-established monorepo with a strict per-surface file convention. The closest siblings to `Pressure` are `Temperature`, `Distance`, and `Speed` (all `useUnits`-based SI formatters). Let me study the Temperature surface completely as my template, plus the web siblings.
+
+The Temperature surface is the ideal template. Let me read its remaining files (Adapter, Previews, strings, Tests) plus the web conversion details.
+
+Let me read the Temperature tests and find the shared infrastructure (`UnitPreferences`, `tsUnits` env, `Color.TS`/`Font.TS` tokens), plus the web `useUnits` pressure prefs.
+
+Let me read the `UnitPreferences` facade, the `tsUnits` environment, and the web conversion/format details (`convertPressureFromSI`, `fmtNumber`, `useUnits` pressure prefs).
+
+Now let me verify the exact pressure constants, the `PressureUnitPref` type, `derivePressure`, and how `project.yml` discovers source files.
+
+I now have the exact web behavior. Note key differences from Temperature: Pressure uses `bar`/`psi` inputs (normalized to kPa SI), `.toFixed(2)` for the tooltip, and a **space** between number and unit (`{display} {pressureUnit}`). Let me confirm the Distance peer's space handling and the lint configs before writing.
+
+Distance is the exact structural template for Pressure (non-SI caller input normalized to SI, `.toFixed(2)` tooltip, space-separated unit). Let me read the full Distance surface set to mirror it precisely.
+
+Let me read the remaining Distance files (Model, Projection, Views, Previews, strings, Tests) to use as exact templates for the Pressure tests and structure.
+
+Let me read the Distance test file to use as the exact test template, and double-check the `Color.TS`/`Font.TS` tokens exist and `.imperial` preset.
+
+I have a complete picture. Let me verify the `.imperial`/`.metric` presets' pressure values and confirm `Font.TS.title`/`Color.TS` tokens exist.
+
+`Color.TS`/`Font.TS` appear only in `TeslaSyncWatchShared`. Let me check whether the main target sees these tokens and locate the actual definitions used by the existing previews, plus understand the project/scheme setup.
+
+Key finding: the main targets consume `../design/generated/apple` (DesignTokens) where `Color.TS`/`Font.TS` live, and the KMP `Shared.xcframework`. Let me verify those dependencies exist before attempting a build.
+
+Important: `Frameworks/` has only a `.gitkeep` — the KMP `Shared.xcframework` is absent. Let me confirm how it's wired and whether the gate can run at all.
+
+The full toolchain exists (Java 17, gradlew, xcodegen, Xcode 26.5) but the KMP `Shared.xcframework` must be built via Gradle first. Let me kick that off in the background while I write the Pressure surface files.
+
+Now I'll create all 8 Pressure surface files, mirroring the proven Distance pattern with pressure semantics (bar/psi → kPa SI, `.toFixed(2)` tooltip, space-separated unit, 3-way kPa/psi/bar conversion).
+
+All 8 files created. Let me run the in-scope checks (swiftformat, swiftlint, placeholder), verify test-target wiring, and check the Gradle build progress.
+
+swiftformat (FORMAT_EXIT=0) and swiftlint --strict (0 violations) both pass on all 7 Pressure source files. Let me confirm the test target picks up co-located tests, check the placeholder gate, and the Gradle build.
+
+Test target picks up `shared-surfaces/**/*Tests.swift`, pwsh is available, and no placeholders found manually. Let me inspect the placeholder gate script so I run it exactly as the gate does, then execute it.
+
+Now let me run the placeholder gate — both exactly as the gate specifies and a genuine scan of the real Pressure files (by copying them to a temp dir, since the script recurses directories).
+
+Both placeholder checks pass (COUNT=0, EXIT=0), including a genuine scan of the real files. Now let me build a standalone harness to actually compile and execute the pure adapter/projection/model logic — real evidence the math and types are correct, independent of the long Xcode build.
+
+The Pressure files compiled cleanly — the errors are only in my harness's helper funcs (Swift 6 top-level is `@MainActor`). Let me fix the harness.
+
+Top-level vars can't carry actor annotations. Let me restructure the harness as a `@main` entry point with nested helpers (cleanest under Swift 6).
+
+All 50+ assertions pass (`ALL_PASS`, exit 0) under Swift 6 strict concurrency — the adapter, projection, and model logic is verified correct. Let me check the Gradle xcframework build progress.
+
+Gradle is still compiling the KMP framework (first-run Kotlin/Native builds are slow). Let me wait for it to progress.
+
+Let me verify Gradle is actively progressing (downloading Kotlin/Native toolchain + compiling) rather than stuck.
+
+Good — Kotlin/Native toolchain (2.4.0) is present and Gradle is actively linking release frameworks for iOS arm64, iOS simulator, and macOS. Let me continue waiting for the XCFramework assembly.
+
+Gradle build **SUCCESSFUL** (14m27s) — `Shared.xcframework` is built. Now let me stage it into `Frameworks/`, generate the Xcode project, and check available simulators.
+
+Xcframework staged (iOS arm64, simulator, macOS slices); iPhone 16 sim with iOS 26.5 is available. Let me generate the Xcode project.
+
+Project generated with `TeslaSync` and `TeslaSync-macOS` schemes. Now the main gate — building/testing 2000+ files. Let me launch the iOS build+test in the background and monitor.
+
+Let me verify the gate log directory exists and monitor the iOS build's early progress (the pre-build Gradle Run Script phase first).
+
+Let me monitor the iOS build progress (pre-build Gradle script, then compilation).
+
+Build is progressing well — past the Gradle script, now compiling/emitting the TeslaSync Swift module, 0 errors so far. (The exit 1 was just my `grep` finding 0 matches.) Let me keep monitoring.
+
+Still in the whole-module type-check/emit phase for the 2000+ file app target (no errors). Let me confirm the build process is actively running and continue waiting.
+
+53 `swift-frontend` processes actively compiling in parallel — the per-file compile phase is underway. Let me wait for a larger chunk and check for any errors.
+
+The build is in the long whole-module type-check phase (`EmitSwiftModule` emits no incremental output until it finishes type-checking all 2000+ files — this is exactly where my Pressure files get validated). Let me wait on the actual build shell for completion.
+
+App target compiled (log now 30k lines, no errors), and it's now building the test target (Pressure.Tests.swift + others) with ~7 cores busy. Let me continue waiting.
+
+0 errors. The test bundle is now in its own whole-module compile (thousands of test files). Let me keep waiting for completion.
+
+Build failed (IOS_EXIT=65) in a batch of **pre-existing app-target files** (AppContainer, AppearanceSettings, ApiPlaygroundPage…) — none are mine. I must find the real `error:` lines and confirm whether my `Pressure` symbols caused a collision. Let me extract the actual errors.
+
+0 `error:` lines but the compile batch failed — suggests a compiler crash or cancellation, not a type error. Let me search for crash/cancellation indicators.
+
+The Swift **compiler crashed** (stack dump + abort), twice — not a type error. Let me examine the crash context to identify the trigger and whether it involves my Pressure files.
+
+Definitive root cause: the Swift compiler **crashed during IR generation for `AppearanceSettings.Controls.swift`** (a pre-existing `feature-views` file, crashing on a reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`) — in **both** failing batches. This file is outside my allowed scope (`Pressure.*` only). Let me confirm my Pressure files compiled cleanly and that my change is purely additive.
+
+Airtight evidence gathered:
+- **My 8 Pressure files compiled cleanly** in the real Xcode build (`Compiling … Pressure.Adapter.swift, Pressure.Model.swift, …, Pressure.swift` — no error/crash on any).
+- **The crash is in pre-existing `AppearanceSettings.Controls.swift`** (IRGen, confirmed in both crash instances) — outside my allowed scope.
+- **My change is purely additive** (git shows only `Pressure.*` as new; `AppearanceSettings.Controls.swift` untouched).
+
+The macOS target shares that file, so it'll hit the same crash — but per "no skip-and-assume" I'll run it for a real exit code. Let me start it in the background and write the gate log meanwhile.
+
+Full crash signature captured: an IRGen `abort()` (LLVM `report_fatal_error` / SmallVector capacity overflow in `SyncCallEmission::setArgs`) while generating IR for the reabstraction thunk in pre-existing `AppearanceSettings.Controls.swift` — a **swift-frontend compiler bug** under Xcode 26.5/Swift 6.3.2, unrelated to my additive Pressure files.
+
+The macOS build is running (same blocker expected). Let me wait for it to produce a real exit code.
+
+macOS also failed (MAC_EXIT=65). Let me confirm it's the same crash and that my Pressure files compiled cleanly there too.
+
+The macOS failure differs (4 `error:` lines, no crash). Let me see exactly what those errors are and whether any involve my Pressure files.
+
+The macOS failure is a **code-signing/entitlements** error (`"TeslaSync-macOS" has entitlements that require signing with a development certificate`) — an environment/capability blocker (`DEVELOPMENT_TEAM` is empty), again unrelated to my code. So both platform gates are blocked by out-of-scope issues, while my Pressure surface compiles cleanly and passes all in-scope checks.
+
+Let me write the honest gate log with full evidence.
+
+Let me confirm `AppearanceSettings.Controls.swift` is a pre-existing tracked file (not introduced by me), then commit the surface + log.
+
+Confirmed: `AppearanceSettings.Controls.swift` is a tracked, pre-existing baseline file, unmodified by me — the iOS blocker is entirely out of scope. Let me stage the 8 Pressure files + the log and commit with a transparent message.
+
+Committed cleanly (b4a83de76, 9 files, working tree clean — generated project/xcframework are git-ignored). Let me update tracking and clean up temp artifacts.
+
+Task complete. Final summary below.
+

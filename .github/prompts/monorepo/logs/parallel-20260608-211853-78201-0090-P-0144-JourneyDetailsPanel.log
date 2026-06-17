@@ -1,0 +1,161 @@
+I'll start by exploring the environment, the web source, and checking whether the Apple toolchain is available.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, simctl). Now let me read the web source and explore the Apple app structure in depth.
+
+Now let me look at the `DriveDetail` type and the Apple app structure to understand the existing patterns I need to follow.
+
+There's an existing `TeslaSync/feature-views` directory. Let me examine it and study an existing feature view to follow the established pattern exactly.
+
+`JourneyDetailsPanel` doesn't exist yet. There's a clear, mature file-naming convention. Let me confirm it's absent and find how the `DriveDetail` domain and its state-holder are modeled in the Apple codebase.
+
+`DriveDetailHeader` is the ideal sibling template — same web `drive-detail/` directory, same `DriveDetail` prop. Let me read its web source and its complete native implementation to mirror the exact pattern.
+
+Excellent pattern. Let me read the remaining `DriveDetailHeader` files (Adapter, Views, Previews, Tests, strings) to fully internalize the conventions.
+
+Let me read the remaining template files plus the shared design tokens and components I'll need (GlassPanel, FadeIn, tokens), and how the project includes these files.
+
+Now let me examine the shared components I'll need: GlassPanel, FadeIn, the coordinate/number formatting, and DateTime equivalents, plus the design tokens.
+
+Let me read the design tokens and the GlassPanel/FadeIn component definitions directly.
+
+Let me find the token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) and the FadeIn/Skeleton/Text components.
+
+The real tokens are generated. Let me find and read the generated tokens file to confirm exact token names.
+
+Let me check the number formatting (web `fmtNumber`), the TSSkeleton signature, the project.yml file inclusion, and the lint/format configs.
+
+Let me read the TSSkeleton definition, the web DateTime component (to understand default rendering), and the project.yml build config.
+
+Let me read the `formatDateTime` (the `full` variant used by JourneyDetailsPanel) and surrounding functions to match the format precisely.
+
+Now let me read the project.yml to understand how feature-views files are compiled into the app and test targets.
+
+I now have a thorough understanding of the pattern. Let me verify the build prerequisites (xcodegen, existing project, Shared.xcframework, simulator) before writing code.
+
+iPhone 16 sim is booted and xcodegen is present, but `Shared.xcframework` must be built via Gradle/Kotlin. Let me verify the KMP build path, PowerShell availability, and the documented build status.
+
+This is critical context: the established precedent (in `macos-pending-verifications.md`) shows the full `xcodebuild` is blocked by **pre-existing, unrelated** parallel-merge collisions (`DashboardWidgetSize` redefined 15×, co-located test files, unstaged framework, signing). Each surface is verified green via **isolated SwiftPM build + tests + swiftc -typecheck + lint/format/placeholder**. Let me locate `TSButton`, confirm `Components`/`Design` self-containment, and check for preview dependencies.
+
+Components/Design are self-contained (only SwiftUI/Charts/CoreLocation/MapKit/Foundation). Let me read the `TSButton` API and `tsGlassPanel` modifier to use them correctly.
+
+Let me read the placeholder-check script to know exactly what it bans (so my code passes), and confirm `Skeletons.swift` has no heavy preview deps.
+
+I have a complete understanding of the pattern and constraints. Let me verify my planned type names don't collide with existing code (the documented blocker is redeclaration collisions), then set up tracking and start writing.
+
+All type names are collision-free, and `monospaced`/`horizontalSizeClass`/`ViewThatFits` are all used by siblings. Let me set up tracking and write the plan.
+
+Now I'll create the Foundation core: the Model (state-holder) and Adapter (projector) files.
+
+Foundation core written. Now the SwiftUI main view and chrome sub-views.
+
+Now the Previews, Tests, and strings files.
+
+All 7 files written. Now let me verify: first auto-format my files, check for banned words, then run swiftlint --strict scoped to my files.
+
+No banned words. Now let me auto-format my files with the repo's swiftformat config, then verify with lint.
+
+`0/6 files formatted` — already swiftformat-clean. Now run the lint gate (swiftformat --lint) and swiftlint --strict on my files.
+
+swiftformat clean; swiftlint flags only file_length (Tests.swift 425 > 400). The idiomatic fix (matching siblings like `*.AdapterTests.swift`) is to split adapter tests into `JourneyDetailsPanel.AdapterTests.swift` (still `JourneyDetailsPanel.*`, still matches `*Tests.swift`). Let me split.
+
+Now I'll rewrite `Tests.swift` to remove the adapter tests (now in AdapterTests.swift), keeping model/accessibility/view tests.
+
+Now re-run swiftformat + swiftlint --strict across all 7 Swift files.
+
+Lint + format clean. Now the placeholder gate — both as the gate literally specifies and against the real directory to truly verify my files.
+
+Placeholder gate passes (0/0). Now the key verification — an isolated SwiftPM build that actually **runs my tests**, vendoring the real design tokens + shared components. Let me set it up.
+
+Let me pinpoint where the `Vehicle` external references live so I can vendor a self-contained real-component set for the isolated build.
+
+`Vehicle` refs are only in Maps/DataDisplay — UI/Motion/Feedback/Forms are SwiftUI-only and self-contained. Let me build an isolated SwiftPM package with the **real** tokens + components + my files, and run my tests.
+
+Now build and run the isolated package tests (this compiles previews + runs my unit tests against the real tokens/components).
+
+Only one self-containment error: `FeedbackOverlays.swift` references `TSMetricBar` (from DataDisplay, which I didn't vendor). My surface doesn't need it — I'll drop that one file and rebuild.
+
+Build complete against real components. Now run my tests.
+
+All 34 tests pass, including the coordinate parity quirks and all 8 per-state view renders. Now the cross-platform real-SDK check: `swiftc -typecheck` against iOS 18 and macOS 15 SDKs (Swift 6 mode, DEBUG so previews are included).
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDK typechecks pass. Now `xcodegen generate` to confirm my files are enumerated, and verify the documented pre-existing collision blocker independently.
+
+xcodegen succeeded; my 7 files are enumerated (48 references across app + test + macOS targets). Now let me independently confirm the documented pre-existing collision blocker before attempting the full build.
+
+`DashboardWidgetSize` is now defined only once (that specific collision was resolved since the doc was written), but `ChargingProjection` appears 2×. The real state is best determined empirically. Let me attempt the actual Shared.xcframework Gradle assembly (the scheme's pre-build step) with a bounded wait to gauge feasibility.
+
+Network to Gradle works. The Shared.xcframework needs a full KMP/Kotlin-Native assembly (3 Apple targets + Android config). Let me attempt it async and monitor, since success would let me run the real xcodebuild.
+
+While Gradle runs, let me check the log directory and a sibling log to match the expected format.
+
+The precedent convention is clear: sibling surfaces log `STATUS=DONE` when all host-runnable, surface-scoped gates pass and the full-app xcodebuild/XCTest is deferred to the integration runner (KMP framework + signing). My host is more capable — I've already run both real SDK compilers and the tests green. Let me check the Gradle assembly progress.
+
+Gradle is fast (Kotlin/Native is cached) — it already built the debug XCFramework and is linking release frameworks. Let me wait for the release assembly to finish.
+
+Release linking is in progress (slower, optimized build). Let me wait for completion.
+
+Release links are progressing (iosArm64 done, now iosSimulatorArm64). Let me continue waiting for the full release assembly.
+
+Gradle BUILD SUCCESSFUL (10m46s). Let me locate the produced XCFramework and stage it as the build script does.
+
+Only the debug XCFramework was produced; the build script expects the release path. Let me explicitly produce the release XCFramework (release links already ran, so this should be quick).
+
+The release Shared.xcframework now exists. Let me confirm the Gradle task finished, then run the actual gate xcodebuild (iOS) via the scheme.
+
+Release Shared.xcframework is built. Let me stage it and run the actual gate xcodebuild (iOS) — starting with `build` to validate the app target compiles with my surface, capturing full output.
+
+Framework staged with all 3 slices. Now run the gate's iOS xcodebuild (via the scheme, matching the gate exactly) — async with full output captured.
+
+Build started. While it compiles, let me check progress and watch for any JourneyDetailsPanel-related errors.
+
+Compiling cleanly so far (0 errors, my files referenced). The whole-module emit is running. Let me continue monitoring.
+
+Build failed (4 failures, 226 error lines). The critical question per the honesty covenant: are ANY errors in my surface? Let me analyze.
+
+**Confirmed: 0 errors in JourneyDetailsPanel.** All 226 errors are in pre-existing `dashboard-widgets` files (a different artifact tier). Let me capture representative error messages to document the pre-existing blocker precisely.
+
+**Definitive finding:** all 226 errors are pre-existing `dashboard-widgets` duplicate-type collisions (`ChargeSessionDTO`, `ChargeStateDTO`, `ChargeStatusProjection`, etc. "ambiguous for type lookup") — exactly the documented parallel-merge blocker. **Zero errors in JourneyDetailsPanel**, which compiled cleanly inside the real app target. These files are outside my allowed scope (`JourneyDetailsPanel.*` only).
+
+Let me confirm the macOS target hits the identical pre-existing blocker (not assuming), and verify these failing types don't exist in my files.
+
+Let me read the independence proof and monitor the macOS build for the same pre-existing errors.
+
+macOS build also failed. Let me confirm it's the same pre-existing blocker with zero JourneyDetailsPanel errors.
+
+macOS build fails at **development-signing** (no host certificate) — before any source compiles — also a documented, pre-existing/environmental blocker, 0 JourneyDetailsPanel errors. Both gate build steps are blocked by out-of-scope issues exactly as `macos-pending-verifications.md` documents.
+
+Let me confirm my change scope via git and that generated artifacts are ignored.
+
+My 8 surface files are untracked (to commit); the generated `.xcodeproj` and staged framework are git-ignored; the 2 modified web files are pre-existing (not mine — I won't stage them). Let me capture precise gate numbers for the log.
+
+All confirmed: iOS = 226 errors across 17 files, **100% dashboard-widgets, 0 JourneyDetailsPanel**; macOS = signing-only, 0 JourneyDetailsPanel; Shared.xcframework assembled successfully. Now I'll write the comprehensive, honest gate log.
+
+Now let me commit exactly my surface files + the log (not the pre-existing modified web files, which I never touched; the generated project/framework are git-ignored).
+
+Exactly my 8 surface files + the log are staged (no pre-existing web changes, no generated artifacts). Now commit.
+
+Committed cleanly (5090d2219): 9 files, 1845 insertions — only my surface + log. Let me verify final git state and clean up temporary harness files.
+
+All my files are committed; the only remaining working-tree changes are the 2 pre-existing web edits I never touched. Let me finalize tracking.
+
+Let me do a final verification that the committed log ends with the required EXIT/STATUS markers.
+
+The task is complete. Final state verified: HEAD `5090d2219` contains my 8 surface files + the gate log, which ends with `EXIT=1 / STATUS=BLOCKED` per covenant rule 10.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) **`JourneyDetailsPanel`** at parity with `web/.../drive-detail/JourneyDetailsPanel.tsx`, following the established sibling pattern (0137 `DriveDetailHeader`).
+
+**Delivered (8 files, `JourneyDetailsPanel.*`):** `Model` (P1/S8 state-holder seam + P1/S11 `view.opened` telemetry + P1/S10 i18n facade, Foundation-only), `Adapter` (pure projector: `fmtNumber`/`formatDateTime` parity, coordinate fallback, a11y), the SwiftUI view + chrome `Views`, `Previews`, `Tests` + `AdapterTests`, and the `.strings` catalog. All six states (loading/content/empty/error/stale/offline), full i18n, VoiceOver/Dynamic Type/reduce-motion, no view HTTP. Parity quirks reproduced verbatim (non-abs latitude → `°S`, the `lat && lon` zero-gate, start-vs-destination fallback asymmetry).
+
+**Surface-scoped gates — all GREEN:**
+- swiftformat `--lint` 0/7 · swiftlint `--strict` 0 violations · placeholder COUNT=0
+- Isolated SwiftPM build + **34/34 tests pass** (against the real tokens + components)
+- `swiftc -typecheck` clean on **iOS 18 + macOS 15** SDKs (Swift 6 mode)
+- `xcodegen` enumerates all files · KMP `Shared.xcframework` assembled via Gradle
+- **Real iOS app-target compile: 0 `JourneyDetailsPanel` errors**
+
+**Why STATUS=BLOCKED (honest, covenant #1):** the full-app `xcodebuild build test` cannot go green on this host due to **pre-existing, out-of-scope** blockers — 226 duplicate-type collisions in `TeslaSync/dashboard-widgets` (0 in my surface) and macOS dev-signing — both outside my allowed files (`JourneyDetailsPanel.*` only) and documented in `apps/macos-pending-verifications.md`. I reported the observed `BUILD FAILED` truthfully rather than fake a green EXIT. The surface itself is complete, verified, and committed (`5090d2219`); I did not stage the unrelated pre-existing web edits or git-ignored build artifacts.
+

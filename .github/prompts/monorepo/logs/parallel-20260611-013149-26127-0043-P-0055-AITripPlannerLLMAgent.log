@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Apple toolchain is available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple project structure.
+
+Now I understand the multi-file pattern. Let me examine the `shared-surfaces` directory for existing AI surfaces to follow the established patterns.
+
+`AITripPlannerLLMAgent` doesn't exist yet — I need to create it. There are 757 files following a multi-file-per-surface pattern. Let me study the closest analogs — simple AI streaming feature cards. Let me read a few web sources plus a complete native surface fileset.
+
+`AIAutoTripNameSuggestion` is the closest analog — a trip-related streaming AI feature card. Let me read its complete fileset to learn the exact pattern.
+
+Excellent — this is a thorough, well-defined pattern. Let me read the remaining template files plus verify the feature registry and i18n keys.
+
+Let me read the remaining template files and verify the feature registry, i18n keys, and shared token infrastructure.
+
+Now the test files plus verification of feature registry, project structure, and shared tokens.
+
+I have the full template pattern. Critical concern: `AIAutoTripNameSuggestion.Views.swift` declares `HelixMark`, `AIBadge`, `AskHelixButton`, `HelixThinkingDots` as internal structs. If I redeclare them, I'll get duplicate-symbol errors in the same module. Let me verify how surfaces avoid collisions and confirm the feature registry + shared tokens.
+
+The convention is surface-prefixed helper names (e.g. `DriveCoachingActionButton`). `AIAutoTripNameSuggestion` is an outlier using generic names. I must check whether the generic stream types (`AiStreamSnapshot`, `AiStreamReducer`, `AiSseFrameParser`) are declared once module-wide or re-declared per surface — this determines whether I reuse or prefix them.
+
+Now it's clear: **each surface fully prefixes its types** (`DriveCoachingStreamReducer`, `DriveCoachingStreamSnapshot`). `AIAutoTripNameSuggestion` is an outlier with generic names. I'll follow the `DriveCoaching` prefixing convention to avoid all module collisions. Let me read the full DriveCoaching fileset as my primary template, plus verify the registry, tokens, and project.yml inclusion.
+
+I now understand both architectures. I'll follow the **AIAutoTripNameSuggestion** architecture (separate Source + real SSE StreamDriver — best fit for a streaming propose-only surface) but use **fully `TripPlanner`-prefixed type names** (the DriveCoaching convention) to stay self-contained and avoid module-wide symbol collisions. The key difference: the trip planner POSTs a **structured JSON body**, not `{}`.
+
+Let me verify the feature registry, i18n keys, shared tokens, and how project.yml includes files.
+
+Feature id and i18n keys confirmed. My token search paths were wrong. Let me locate `project.yml`, the design tokens, and shared components across the whole tree.
+
+Design tokens live in `Sources/Design/TSDesign.swift`. Let me read it plus the shared component APIs and `project.yml` (to confirm sources are glob-included, since project.yml isn't in my allowed files).
+
+Key insight: **sources are glob-included** — `- path: TeslaSync/shared-surfaces` with `*Tests.swift` excluded from app targets and included in test bundles. My new `AITripPlannerLLMAgent.*` files will be auto-picked-up by XcodeGen without editing `project.yml`. Tokens come from generated `../design/generated/apple`.
+
+Let me verify the build toolchain (xcodegen, Shared.xcframework), the exact shared-component APIs, and the lint/placeholder configs.
+
+Critical finding: **`Shared.xcframework` doesn't exist** (only `.gitkeep`) — the build scheme's preAction builds it via Gradle/KMP. This may be slow or unavailable. Let me assess the KMP/Gradle situation, the pending-verifications doc, lint configs, the placeholder checker, and whether `pwsh` is available.
+
+All tooling is available: `xcodegen` 2.45.4, `pwsh`, `swiftlint`, `swiftformat`. Tokens confirmed (`TSSpacing`, `TSRadius`, `TSButtonVariant.secondary`, `TSButtonSize.small`). Note: swiftlint `--strict` enforces `type_name` ≤ 50 chars and line length ≤ 120. `Shared.xcframework` must be built via Gradle/KMP (risk for full build).
+
+Let me read the placeholder checker + patterns (acceptance forbids TODO/stub/mock/placeholder/Lorem), and confirm no existing `TripPlanner` symbol collisions.
+
+I now have everything needed. Critical collision finding: an existing **`TripPlannerMap`** feature-view surface declares many `TripPlanner*`/`TripPlannerMap*` symbols. To stay collision-free and self-contained, I'll prefix all my types with **`TripPlannerAgent`**. Placeholder gate forbids TODO/FIXME/XXX/"Placeholder"/"Lorem ipsum"/"not implemented" + swift `fatalError("unimpl"...)` — I'll avoid all of these.
+
+Let me set up tracking and write `plan.md`, then build the files.
+
+Now writing the files. Starting with the pure core Adapter (stream types, reducer, SSE parser, request body, endpoint, accessibility).
+
+Now I'll create the Adapter (pure core) with the structured-body addition.
+
+Adapter done. Now the Model (telemetry, connection, input + canStart, resolved/phase, projection, observable model, strings facade).
+
+Now the Seams (Source + StreamDriver protocols, Live SSE driver posting the structured body, InMemory doubles).
+
+Now the States (output router + per-phase bodies: loading, idle, thinking, plan, error).
+
+Now the Views (Helix mark/badge, feature card, ask-Helix button, thinking dots, freshness chip).
+
+Now the main surface View, then Previews and the .strings catalog.
+
+Now the Previews and the `.strings` catalog.
+
+Now the test files — adapter/projection coverage (with new request-body tests) and model/seam coverage.
+
+Now the Model/seam tests.
+
+All 10 files created. Now verification. Let me start with the fast tools: swiftformat (apply to my files), then swiftlint --strict, then the placeholder gate.
+
+swiftformat fixed 2 files. Let me review the changes and run both linters in lint mode.
+
+swiftformat lint passes (0/9 require formatting). Now swiftlint `--strict` on my files.
+
+Three swiftlint violations: two file-length (>400) and one function-param-count (7>5). I'll fix by (1) splitting the request-body/endpoint into a new `.Request.swift`, (2) grouping the 7 body params into a `TripPlannerAgentDraftParams` struct (initializers are exempt from the param-count rule), and (3) splitting tests into `.Tests.swift` + `.AdapterTests.swift`. Let me recreate the affected files.
+
+Now the new `.Request.swift` (location, draft params, request body, endpoint).
+
+Now update the Model: add a `draftParams` projection to the input and simplify `generate()`.
+
+Now recreate the split test files. First the core `.Tests.swift` (lifecycle + parser + reducer).
+
+Now the `.AdapterTests.swift` (request body, endpoint, input, projection, accessibility) using the new `DraftParams`.
+
+Now fix the two `sampleBody()` helpers in ModelTests to use the new `DraftParams` API (each scoped by its unique class declaration).
+
+Now re-run swiftformat (apply) on all files, then both linters to confirm clean.
+
+swiftformat clean. Now swiftlint `--strict` on all 11 swift files.
+
+swiftlint `--strict`: **0 violations** across all 11 files. Now the placeholder gate. Let me inspect how it resolves `-Path` (the gate passes a filename prefix, not a real path) before running it.
+
+Important: the script returns a clean result if `-Path` doesn't resolve (the gate passes a filename prefix). To be genuinely honest, let me first grep my own files for every forbidden pattern (case-insensitive), then run the gate command.
+
+My files are genuinely clean (grep exit 1 = no matches). Now let me run the placeholder gate both as written and against a scoped copy of my files (for real evidence, since the literal gate path is a filename prefix that resolves to a vacuous clean).
+
+Both placeholder scans pass (`PLACEHOLDER_COUNT=0`), including a real scoped scan over copies of my 11 files. Now the heavy gate. Let me regenerate the Xcode project (my files are glob-included) and assess the build.
+
+Project generated. Let me confirm my files are wired into the app + test targets, then test whether the KMP/Gradle toolchain (required for `Shared.xcframework`) is usable in this environment.
+
+Gradle 8.14.5 + Kotlin 2.0.21 + JVM 17 are available, and my 11 files are wired into the project (72 references; all 3 test files in the test target). The build's long pole is the KMP `Shared.xcframework`. Let me build it (this is what the scheme's preAction does).
+
+Let me monitor the KMP build while it runs.
+
+Still running (Kotlin/Native first-run downloads + compilation). Let me keep waiting.
+
+8 minutes in with no output yet (piped through `tail`, so output appears at completion). Let me check filesystem progress in a separate shell to confirm it's actively working.
+
+KMP build is actively compiling (konan 1.6G downloaded, LLVM clang++ emitting objects, iOS+macOS framework dirs being produced). Let me continue waiting for the release XCFramework assembly.
+
+`Shared.xcframework` built and staged successfully (BUILD SUCCESSFUL in 10m). Now I can run the real xcodebuild gate. Let me verify the iPhone 16 simulator exists, then run the iOS build+test.
+
+Everything is ready: framework staged, iPhone 16 booted, schemes present. Now I'll run the full gate. Let me create the log directory and start the iOS build+test (the longest step) async, teeing into the canonical log path.
+
+Now the iOS build+test (longest step), teeing into the log.
+
+iOS build+test started. Let me wait and monitor.
+
+iOS exited 65 with "(3 failures)". Let me find the specific failures in the log.
+
+The two errors are in **other surfaces' files**, not mine:
+- `AIGeofenceAwareAutomationSuggestions.swift:141` — escaping-closure error
+- `RecentDrivesSection.Previews.swift:24` — type-check timeout
+
+Let me confirm these are pre-existing (I only added my files) and get the complete error list.
+
+Confirmed: only my files are new (git `??`); I modified nothing else. The 2 compile errors are pre-existing baseline breakage in sibling surfaces I'm **not allowed to modify**. Notably, the full Swift compile reported errors in *only* those 2 files — **none in my surface** — which proves my code compiles within the target.
+
+To actually run my tests, I'll do a scoped verification: temporarily disable just those 2 pre-existing-broken files, rebuild+test, confirm my tests pass, then restore them exactly. Let me first check the error sites and references.
+
+Both broken files are self-contained (the geofence error is its own `@ViewBuilder`/escaping bug; the RecentDrives file is a DEBUG preview). No external references to the geofence View constructor. Let me check for any other references before the scoped verification.
+
+Only prose-comment mentions exist elsewhere — the geofence surface is fully self-contained and safe to temporarily disable. Let me move the 2 pre-existing-broken sources (the whole geofence surface + the RecentDrives preview) to a holding dir, regenerate, and run a scoped build+test to prove my surface's tests pass.
+
+Moved aside and regenerated. Now run the scoped iOS build+test to prove my surface compiles and its tests pass.
+
+Still 3 failures after excluding those 2 — there are more pre-existing issues. Let me see whether these are compile errors or test failures now.
+
+More pre-existing errors of the **same systemic kind** in yet more siblings (`AIAutoNameUnnamedLocations.swift:123`, `AISignalExplorerNlFilter.swift:142`) — a `@ViewBuilder` non-escaping-closure pattern that doesn't compile under Xcode 26.5/Swift 6.3. This is **systemic baseline breakage** across many sibling surfaces, none of them mine. My surface uses `TSGlassPanel { ... }` inline and never appears in any error list.
+
+Disabling siblings is unbounded whack-a-mole. Let me restore the repo to pristine, then prove my surface via a bounded approach: my pure-logic files (Adapter/Request/Model/Seams) + my 3 test files depend only on Foundation/Observation/OSLog/XCTest — not SwiftUI or any sibling — so I can compile and run them as a standalone package.
+
+Repo restored to pristine (git shows nothing else changed). My pure-logic files (Adapter/Request/Model/Seams) and all 3 test files depend only on Foundation/Observation/OSLog/XCTest. Let me build a standalone SwiftPM package (module named `TeslaSync` so `@testable import` resolves) to compile and **run** my tests against the real logic.
+
+Now compile and run my tests via `swift test`.
+
+**All 69 of my tests pass (0 failures)** under Swift 6 strict concurrency — proving the parser, reducer, request body, endpoint, input/canStart, projection (all states), accessibility, model state-holder, seams, and live request builder are correct.
+
+Let me record this evidence in the log, then run the remaining literal gate steps (macOS build+test, full-tree swiftlint/swiftformat, placeholder) to honestly capture results.
+
+Now run macOS build+test (async) and the full-tree lint steps in parallel.
+
+While macOS builds, run the full-tree lint + placeholder steps and capture real results.
+
+Full-tree `swiftlint --strict`: **0 violations in 4040 files** (LINT_EXIT=0 — the pre-existing sibling issues are compile errors, not lint violations). macOS build finished — let me read its result.
+
+macOS also fails (MAC_EXIT=65) on the same pre-existing sibling compile errors. Now the remaining gate steps: full-tree swiftformat --lint and the placeholder check.
+
+Gate results captured: **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0**; iOS/macOS build = 65 (pre-existing sibling errors). For iron-clad proof the build failure is pre-existing and independent of my work, let me temporarily remove **all my files**, regenerate, and confirm the **same** sibling errors occur, then restore.
+
+Definitive: with my surface **entirely absent**, the baseline iOS build still fails (exit 65). Let me confirm the errors are the same sibling files, then restore my files.
+
+Conclusive: with my surface **entirely absent**, the baseline build still fails on the **same** pre-existing sibling error (`RecentDrivesSection.Previews.swift:24`). My files are restored and the repo is pristine (git shows nothing else changed). Let me finalize the log with the honest verdict.
+
+Log finalized with **EXIT=65 / STATUS=BLOCKED** and complete evidence. Per the binding Honesty Covenant ("No commit on red"), I will **not** run the commit while the aggregate gate is red due to pre-existing external breakage — the complete, verified surface remains in the working tree for handoff. Let me clean up temp artifacts and do a final state verification.
+
+Final state is clean and purely additive: 12 surface files + the gate log, nothing else touched. Let me update tracking and finalize.
+
+The surface is complete and verified to the maximum extent possible within scope. Here's my final summary.
+

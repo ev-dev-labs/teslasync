@@ -1,0 +1,163 @@
+I'll start by exploring the environment and understanding what's available, then read the web source specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Not blocked. Let me read the web source and explore the existing Apple app structure.
+
+Large established monorepo with a rich per-surface file pattern. Let me check if `IncidentsCard.*` already exists, find the shared `useIncidents` state holder, and identify a representative template surface.
+
+`IncidentsCard.*` doesn't exist yet — I need to create it. The sibling `IncidentForm.*` already exists natively (same domain, same `useIncidents` state holder) — that's my closest template. Let me read it fully plus the P1/S8 incidents state holder.
+
+Excellent template. Now I need: (1) the shared P1/S8 incidents state-holder I must bind to (read seam), (2) a read-data surface that demonstrates the loading/empty/error/stale/offline states (IncidentForm is a mutation form, so it doesn't), and (3) the rest of the IncidentForm files. Let me locate the state holder and a states-bearing sibling.
+
+State-holder seams are defined per-surface (like `IncidentCreating`), with production wiring deferred. The P1/S8 base lives in SharedFacade. Let me read the loadable/state-holder primitives, the project config, and a read-data surface's States file to learn the loading/empty/error/stale/offline pattern.
+
+`ActiveSessionsSection` is the ideal read-data + states template; `IncidentForm` is the ideal domain + seam template. Let me read the ActiveSessionsSection core files, the project config, and locate the design tokens + `LocalizedText`.
+
+The read-data pattern uses a push-based `source.onUpdate` seam + pure phase projection. Now let me read the design tokens (P1/S9), the projection/views of ActiveSessionsSection, the `LocalizedText` definition, and the project config.
+
+I have the full read-data pattern. Now I need the build wiring (project.yml — is it XcodeGen? are files globbed or explicit?), the token definitions (P1/S9), `LocalizedText`, and the IncidentForm test/preview/strings conventions.
+
+XcodeGen with glob-based inclusion — new files auto-included on regenerate. Key risk: the `Shared.xcframework` KMP pre-build. Let me check build feasibility, confirm token names, and read the remaining template files (IncidentForm Views/strings, LocalizedText).
+
+`Shared.xcframework` isn't present — the build pre-action builds it via Gradle/KMP, which is the key risk. Let me read the sibling's P4 gate log to see how the gate actually behaved, check the KMP toolchain, and confirm the full token set.
+
+The sibling log is extremely clarifying. Key facts about this environment:
+- The KMP `Shared.xcframework` builds successfully (~14 min) — toolchain works.
+- The **full `xcodebuild` scheme build is RED (exit 65)** due to *out-of-scope* sibling surfaces (duplicate types) + macOS code-signing — a known monorepo-integration state, forbidden to fix per covenant #6/#7.
+- Accepted disposition: prove the surface GREEN *in isolation* (host typecheck against the real design system for both SDKs, executed host harness of the tests, swiftformat/swiftlint/placeholder/xcodegen), document the out-of-scope RED as DEFERRED → STATUS=DONE.
+
+Let me confirm the exact token/component names and read the remaining template files.
+
+Now let me read the shared UI building blocks (Cards, Badges, Buttons, Typography, Motion), the typography/radius/motion tokens, and the `LocalizedText` definition.
+
+Correcting the token path and reading the remaining APIs (Buttons, Typography, `LocalizedText`, feedback States, and the IncidentForm view bridge).
+
+Now I have the full design-system API. Let me read the `LocalizedText` definition, the IncidentForm view-bridge (`IFView`) + tests + previews conventions, and the shared feedback states.
+
+I now have the full design system and conventions. Let me read the test conventions, the placeholder-check script (to know forbidden tokens), and the lint configs before writing.
+
+Let me read the forbidden-pattern list (to avoid them), check git state, and kick off the ~14-min KMP framework build in the background now so it's ready for the full gate later.
+
+Forbidden tokens noted (`TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` + Swift stubs). I'll avoid all. Working tree clean on branch `auto/.../41`. Let me kick off the KMP framework build in the background (needed later for the full gate), then write the surface.
+
+I now have everything needed: the design system API, the read-data + states pattern (ActiveSessionsSection), the domain types + seam pattern (IncidentForm), conventions, lint rules, and forbidden tokens. Let me write a brief plan, then create the surface.
+
+The framework build reported completion quickly — let me check whether it actually succeeded or errored early.
+
+The Gradle build is still running (compile tasks hit the cache; it's now linking release frameworks). The "completed" notification was just the `nohup` launcher shell exiting. Let me confirm the build process is alive, then proceed to write the surface files.
+
+Good — Gradle is still building (10 processes). Now let me write the surface files, starting with the value types and the pure adapter.
+
+Now the model with its seams (read source, telemetry, i18n facade) and in-memory test doubles.
+
+Now the read-state views (loading / empty / error / freshness chip / connectivity banner / inline error).
+
+Now the main Views file: the i18n bridge, severity/status color mappings, header, row, and content.
+
+Now the main surface view that ties it together (conditional alarm styling, state switch, IncidentForm sheet, lifecycle).
+
+Now the i18n strings table, previews, and tests.
+
+Now the comprehensive test suite (adapter projections, accessibility builders, and model lifecycle).
+
+All 9 files created. Let me check the framework build progress and run the fast in-scope gates (swiftformat, swiftlint, placeholder check) on my files.
+
+Framework built successfully (STAGED: ios-arm64, ios-arm64-simulator, macos-arm64). swiftformat flagged a few mechanical issues — let me auto-fix with swiftformat, then re-lint.
+
+swiftformat passes now. Let me verify the auto-format didn't alter test semantics (string assertions/numbers), then run swiftlint --strict.
+
+Test assertions intact (formatter only wrapped long lines). swiftlint found 4 mechanical issues: 2 `empty_count` (`.count > 0`) and 2 `multiple_closures_with_trailing_closure`. Let me fix them.
+
+Now re-run format + lint + the placeholder gate together.
+
+All three in-scope gates are green: **swiftformat 0/8, swiftlint 0 violations, placeholder COUNT=0**. The framework is staged. Now let me set up the isolating verification. First, regenerate the Xcode project and inspect the dependency surface for an executable harness.
+
+xcodegen succeeded — my files are registered (54 refs across both app targets, both test bundles, + the strings resource). The harness-candidate files (`ConditionBuilder.Types`, `IncidentForm.Types/Adapter/Model`) are all SwiftUI-free with no design-system deps — perfect for an executable logic harness. Let me build one that executes every test assertion.
+
+Now compile the harness as a native executable against the real surface logic + IncidentForm seams + LocalizedText, then run it.
+
+The surface code compiled clean — both errors are in my harness driver's own concurrency annotations. Let me fix those (mirror the real test's spy) and recompile.
+
+**Harness executed GREEN: CHECKS=76, FAILURES=0** — the logic core (Types + Adapter + Model) is proven correct by execution under Swift 6 strict concurrency. Now let me prove the SwiftUI views compile on both SDKs. First, kick off the full iOS `xcodebuild` (honest integration gate) in the background, and curate the isolated typecheck set.
+
+No `import Shared` in Components/Design (Shared-free subset), and iPhone 16 sim is booted. Let me verify no indirect KMP refs, then run the curated iOS + macOS typecheck of my views against the real design system + IncidentForm.
+
+UnitFormatters.swift uses KMP `Units` (excluded, unused by my surface — the sibling precedent). Let me run the iOS-18 typecheck of my views against the 41 design files + IncidentForm + LocalizedText.
+
+iOS 18 typecheck: **TYPECHECK_IOS_EXIT=0, 0 errors** — views compile clean against the real design system (validates `Color.mix`, `TimelineView`, `ContentUnavailableView`, the `IncidentForm` sheet). Now the macOS 15 typecheck.
+
+macOS 15 typecheck: **TYPECHECK_MAC_EXIT=0, 0 errors**. The surface compiles clean on both SDKs. Now let me check the full iOS `xcodebuild` integration result.
+
+The module is emitting (good sign — no module-level compile errors so far). Two unrelated `xcodebuild` processes are visible — those belong to other slots sharing this machine, not my build. Let me wait for my build to finish and capture the honest result.
+
+In-scope proofs are all green. The full iOS build is emitting the module (no errors yet) but slow due to the competing builds from other slots. Let me confirm my build is alive and keep waiting.
+
+My iOS build (PID 6172, `-derivedDataPath /tmp/ts-dd`) is confirmed alive. Let me wait longer for it to finish (it's contending with other slots' builds).
+
+Build FAILED with "2 failures" but **zero `error:` lines and zero IncidentsCard errors**. That pattern means non-compile failures (like the sibling's signing/environment issue). Let me extract the actual failure cause.
+
+Zero `error:` diagnostics and zero IncidentsCard errors — the 2 failures are killed `SwiftCompile` *batches* (none of them IncidentsCard), classic resource-contention from the 3 concurrent `xcodebuild` processes. Let me confirm the kill signal and check whether my surface compiled + whether the foreign builds have cleared.
+
+Definitive diagnosis: the 2 failures are `Command SwiftCompile failed with a nonzero exit code` with **zero `error:` diagnostics** — OOM-killed swift-frontend batches (none of them IncidentsCard). The machine is running **~8 concurrent `xcodebuild` processes from other slots** (3421, 5705, 8892, 10630, 12208/slot-40, 13137...). My IncidentsCard batch *did compile*. This is pure resource contention. The DerivedData cache is now warm — let me re-run with reduced parallelism to get a clean result.
+
+Let me wait for the warm-cache rebuild to complete.
+
+My rerun (PID 13638) is alive at module emit, 0 errors, but throttled by the ongoing ~8-build contention. Let me check machine load and give it more time.
+
+Load average is **142** with 5 competing `xcodebuild` processes from other slots — the machine is massively oversubscribed. My build sits at module-emit with **0 errors**, just starved. This is unambiguously environmental. My IncidentsCard batch already compiled in the first run. Let me give the warm-cache rerun a final window to complete while I prepare the gate log.
+
+Load is dropping (142→74, competing builds 5→4) and my build still shows 0 errors. It should accelerate now. Let me continue waiting.
+
+Both runs failed on the **identical out-of-scope batches** (`AnomalyInlineRow`/`App*`, `FrontendErrorsCard`/`GasPrice`/`General*`) with **zero `error:` diagnostics** and **zero IncidentsCard errors** — the OOM-kill signature ("nonzero exit code", no crash trace), consistent because those are the largest memory-intensive batches. Let me confirm there's no compiler crash trace and that those files are out-of-scope/committed.
+
+The crash-pattern grep returned 30 hits — let me inspect them; that could be a real compiler crash on out-of-scope files (still outside my scope, but I must characterize it honestly rather than assume OOM).
+
+There IS a Swift compiler crash ("Stack dump") — not OOM. My isolated typecheck of IncidentsCard passed cleanly (no crash), so the crash is in an out-of-scope batch. Let me pinpoint which file/expression crashes the compiler to characterize it honestly.
+
+**Definitive:** the compiler crash's primary-files are all out-of-scope predecessor files (`AnomalyInlineRow.*`, `App*`, `AppearanceSettings.*`) — **none are IncidentsCard**. This is the sibling-0246 precedent exactly: full scheme build RED on out-of-scope predecessor breakage (here a Swift compiler crash, forbidden to touch per covenant #7), surface proven green in isolation. Let me run one consolidated, clean evidence pass of all in-scope gates for the log.
+
+All three static gates green. Now let me re-run the SDK typechecks + executable harness on the final code state, consolidated, to capture clean evidence for the log.
+
+Both SDK typechecks: 0 errors on final code. Let me re-run the executable harness for final clean evidence.
+
+All in-scope gates are green on final code (**format 0, lint 0, placeholder 0, iOS typecheck 0 errors, macOS typecheck 0 errors, harness 76/76, framework built, xcodegen registered**). Let me start the macOS scheme build (honest completeness) in the background and write the gate log meanwhile.
+
+Log dir confirmed. Now let me write the comprehensive gate log with all real results.
+
+Now let me verify the macOS build result to back up the log's claim honestly (rather than assume).
+
+macOS build FAILED with "(1 failure)" — but differently from iOS: 2 `error:` lines (no crash), 0 IncidentsCard errors, 12 signing lines. Let me see exactly what those 2 errors are so the log is accurate (not assumed).
+
+The macOS build failed purely on the **environmental code-signing gap** (2 entitlements errors on `TeslaSync-macOS` + `TeslaSyncWidgets-macOS`, zero IncidentsCard errors) — it stops at signing *before* compiling, exactly the 0246 precedent. Let me correct that line in the log to be precise rather than assumed.
+
+macOS line corrected to match reality. Now let me verify the working-tree scope is clean (only my files), confirm the generated `.xcodeproj` is gitignored, and clean up temp artifacts.
+
+Let me re-check git status (the previous output came back empty).
+
+Working tree is exactly in scope: only the 9 `IncidentsCard.*` files + the gate log; the generated `.xcodeproj` is gitignored. Let me commit.
+
+Committed as `4cea15153`. Let me do a final verification that the working tree is clean and the commit contains exactly the intended files.
+
+The task is complete and verified. Final commit `4cea15153` contains exactly the 10 intended files (9 `IncidentsCard.*` + the gate log, 2072 insertions); the working tree is clean.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0247-IncidentsCard.log  | 253 ++++++++++++++
+ .../feature-views/IncidentsCard.Adapter.swift      | 294 +++++++++++++++++
+ .../feature-views/IncidentsCard.Model.swift        | 331 +++++++++++++++++++
+ .../feature-views/IncidentsCard.Previews.swift     |  99 ++++++
+ .../feature-views/IncidentsCard.States.swift       | 185 +++++++++++
+ .../feature-views/IncidentsCard.Tests.swift        | 362 +++++++++++++++++++++
+ .../feature-views/IncidentsCard.Types.swift        | 102 ++++++
+ .../feature-views/IncidentsCard.Views.swift        | 252 ++++++++++++++
+ .../TeslaSync/feature-views/IncidentsCard.strings  |  64 ++++
+ .../TeslaSync/feature-views/IncidentsCard.swift    | 130 ++++++++
+ 10 files changed, 2072 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0247-IncidentsCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentsCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentsCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentsCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentsCard.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentsCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentsCard.Types.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentsCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentsCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentsCard.swift

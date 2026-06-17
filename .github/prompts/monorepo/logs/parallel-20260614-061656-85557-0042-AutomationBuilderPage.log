@@ -1,0 +1,294 @@
+I'll start by exploring the codebase structure to understand both the web source and the existing Apple app architecture.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Now I understand the project layout. Note the prompt says output path `TeslaSync/Features/Automations/` but project.yml uses `TeslaSync/feature-views/`. Let me examine existing feature-views to understand the real structure and conventions.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, xcodegen, swift 6, pwsh). The gate can actually run. Let me find existing automations files and similar parity pages as templates.
+
+Files are flat in `feature-views/`, each surface = multiple files (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Sub-components like `ActionBuilder` already exist. Let me check the parity manifest/ledger and whether AutomationBuilder already exists.
+
+Now I have clarity: `AutomationBuilderPage` doesn't exist yet; sub-components (`TriggerConfigurator`, `ConditionBuilder`, `ActionBuilder`, `ConflictWarnings`) already exist. `AlertStudioPage` is the analogous editor-page template. Let me study the conventions thoroughly.
+
+Now I understand the surface architecture. Let me read the full ConflictWarnings surface (cleanest complete small example) plus AlertStudioPage's Model/Adapter/strings/ViewModel for the page-level pattern.
+
+The architecture is clear now. Per-surface `.strings` tables fold into `Localizable.xcstrings` at integration. Let me check `Sources/Features`, navigation registration, the parity ledger, and how `AlertStudioPage` is wired into nav.
+
+There IS a `Sources/Features/Automations` directory — the real intended location. Let me explore it and the routing system.
+
+The real convention: pages live in `Sources/Features/<Domain>/` (composing component surfaces from `feature-views/`). The prompt's `TeslaSync/Features/Automations` path is generator drift — actual is `Sources/Features/Automations/`. Let me study the sibling pages and routing system.
+
+Now I understand routing. The builder (`/automations/:id/edit`, `/automations/new`) is a sub-route like `AutomationActivityFeed` — registered as a `NavigationDestination` link, not a top-level `AppRoute`. Let me study the closest page templates in detail.
+
+The `Sources/Features/` pages use `LocalizedStringKey` directly against `Localizable.xcstrings` (unlike `feature-views/` which use per-table `.strings`). Let me locate the string catalog, study the list page model (data source / KMP binding), and find the form-control design tokens.
+
+Key finding: the catalog already has 102 `automations.builder` keys. Let me check exactly which required keys already exist, and study the form component APIs.
+
+The catalog keys are prefixed `translation.` (i18next namespace). But sibling pages reference `"automations.title"` without prefix. Let me resolve how the key mapping works.
+
+Now I understand the catalog: keys exist in two forms — `translation.X` (i18next) and un-namespaced `X` (what the Apple app uses via `LocalizedStringKey`). None of my 41 keys exist un-namespaced yet. Let me study the form components, the list page model, the catalog format, and assess composing the existing editor surfaces.
+
+Now I understand the catalog format (alphabetically-sorted un-namespaced keys). Let me read the remaining form components, the list page model pattern, and assess the editor surfaces' composability.
+
+Form components are clear (`TSTextField`, `TSTextArea`, `TSToggle`, `TSFormSection`, `TSCombobox`). The editor surfaces take their own `@Observable` models. Let me study the list page model (data-source/KMP pattern) and the trigger editor surface to decide composition depth.
+
+I have the full model/data-source pattern. Now the key decision: compose the existing editor surfaces (`TriggerConfigurator`, `ConditionBuilder`, `ActionBuilder`, `ConflictWarnings`) vs. faithful inline editors. Let me inspect their model APIs to assess composability.
+
+`ConditionBuilder` is binding-based (easy compose); `TriggerConfigurator`/`ActionBuilder`/`ConflictWarnings` are model-based. Composing the real editors is the faithful, DRY approach. Let me gather their exact model APIs and value types.
+
+All editor surfaces are in the same compiled module, so composable. Let me read the precise model init signatures and value types to wire them correctly.
+
+I now understand the editor APIs fully. Composing them is faithful and DRY. Let me gather the final pieces: trigger catalog/defaults, `ActionBuilderModel` init + `ChannelOption`, `GeofenceOptionsModel`, and condition/action default constructors.
+
+Let me read the final two model inits (ActionBuilderModel, GeofenceOptionsModel) and the ChannelOption/AutomationAction types.
+
+I have nearly all APIs. Let me verify test placement and read the last types (GeofenceOptionsModel/source, NotificationChannelSummary, AutomationAction) before writing my plan.
+
+Tests live in `Tests/Unit/Features/Automations/`. Let me read the test pattern and the remaining types (channels/actions, geofence options, condition input).
+
+I have all the composition APIs. Let me set up my plan and todos, then read the remaining UI component APIs (Button, banners, EmptyState) and the data types (AutomationFull, preset, channel).
+
+I have all the editor value types. Let me confirm `TriggerKind`, `TSButton` signatures, `Color.TS`/`Font.TS` tokens, and the existing Automations models (to reuse vehicle ref) before writing.
+
+Let me confirm the design tokens (`Color.TS`, `Font.TS`) and feedback component signatures (EmptyState, ErrorDisplay, banner, GlassPanel, FadeIn, PageTitle, SectionTitle).
+
+Tokens come from generated design tokens. Let me confirm the exact member names available.
+
+All tokens confirmed. Let me verify the feedback component signatures (EmptyState, ErrorDisplay, QueryError, Skeleton, PageTitle, SectionTitle, GlassPanel, FadeIn) before writing.
+
+Let me check for a banner/alert component and how interpolated string values are stored in the catalog.
+
+There's a `Banners.swift`. Let me read it to get the banner API for the save-error/conflict/draft banners.
+
+I have all APIs confirmed. Let me start the baseline build (async, since it builds the Shared.xcframework) while I write code. First check project generation state.
+
+`TSTone` confirmed. The big risk is building `Shared.xcframework` (KMP). Let me inspect the build script and toolchain availability.
+
+The Shared.xcframework builds via Gradle (Java 17 available). This is the long pole. Let me kick it off in the background now while I write code, and generate the Xcode project.
+
+Project generated. Let me start the Shared.xcframework Gradle build in the background (long pole), then write code while it builds.
+
+Let me check the swiftlint config so I write compliant code from the start, and verify a couple of feature-views types I'll reference.
+
+swiftlint: line ≤120 (strict), file ≤400, type body ≤200. Let me verify no name clashes for the types I'll define and confirm the conflict type, before writing.
+
+No clashes. Now I'll write the code. Starting with the models file.
+
+Form type, phase, and the `@Observable` model. Let me write the page model.
+
+Now the load/save/test-run logic as an extension (keeps the type body small).
+
+I need cross-file mutation. Let me make those properties `internal(set)` and rewrite Logic.swift to use direct assignment instead of funnel helpers.
+
+Now rewrite Logic.swift to use direct property assignment.
+
+Let me remove and recreate the Logic file cleanly.
+
+The Gradle build of Shared.xcframework completed. Let me check its result and clean up the model file's helper methods.
+
+Shared.xcframework built successfully (release variant ready to stage). Let me finalize the model's helper methods, then write the remaining files. Let me view the model tail.
+
+Now the sample/empty/failing data sources for previews and defaults.
+
+Now let me verify the generic confirm-dialog keys and trigger-type label keys exist before writing the view.
+
+The Shared.xcframework is built. Trigger labels resolve via `TCStrings`. I'll add `forms.discard`/`forms.keepEditing` for the discard dialog. Now let me write the section views.
+
+Now the editor-composition sections (Conditions, Actions, Conflicts).
+
+Now the form container, action bar, banners, and preset-hint panel (GlassPanel3).
+
+Now the main page view with the four data states, header, and the unsaved-changes dialog.
+
+Now the navigation registration (deep-link destination + factory), following the `AutomationActivityFeed` pattern.
+
+Let me check how the existing automation destinations/onCreate are wired into the app shell, to decide on shell integration.
+
+Navigation seams match the repo pattern (provided, not centrally wired — same as `AutomationActivityFeed`). Now let me add the string keys to the catalog via a script (targeted insertion, valid JSON).
+
+43 keys inserted, JSON valid. Now let me run the Xcode build (simulator, to avoid signing). The Gradle staging will be fast (cached).
+
+While the build runs, let me write the unit tests.
+
+Let me check the build progress.
+
+Build still compiling. Let me verify the enum cases I used in tests while it runs.
+
+Test enum usages are valid. Let me wait for the build to complete.
+
+Build failed but the tail didn't show the actual errors. Let me rebuild capturing only error lines (targeting an arm64 simulator to sidestep the x86_64 framework-arch note).
+
+While it builds, let me verify the Shared.xcframework slices to confirm the earlier failure was the x86_64 arch (generic destination), not my code.
+
+Confirmed: the xcframework has only arm64 slices (no x86_64 sim), so the generic-destination failure was the arch mismatch, not my code. The arm64-sim build is the correct target. Let me check its result.
+
+The only build errors are in a pre-existing file (`Input.Previews.swift`), not mine — my code compiled clean. Let me confirm it's pre-existing and inspect it.
+
+Confirmed: zero errors in my files — only a pre-existing `Input.Previews.swift` (untouched by me) fails under Swift 6.3 (explicit `return` in a ViewBuilder). This blocks the whole target. Let me inspect it.
+
+The fix is trivial (remove explicit `return` in `#Preview` ViewBuilders). But I need to gauge how widespread this pre-existing toolchain incompatibility is before deciding. Let me scan.
+
+The compiler flagged only lines 88 and 101. Let me view the surrounding structure to understand why those specific previews fail and apply the correct minimal fix.
+
+All 10 previews here use the same `@Previewable + return` pattern, yet only 2 were flagged. Let me check how widespread this pre-existing pattern is across the repo before deciding scope.
+
+8 pre-existing component-preview files use a pattern Swift 6.3 rejects. Let me check if they're `#if DEBUG`-wrapped (so a Release build sidesteps them) before deciding.
+
+The previews are `#if DEBUG`-wrapped and explicitly "DEBUG-only." 8 pre-existing component-preview files use a `@Previewable`+`return` pattern Swift 6.3 rejects — blocking Debug builds/tests. This is bounded and mechanical. Let me confirm every `return` in those files is a preview-body return (not a helper) before fixing.
+
+Most are preview-body returns (`return staged(...)` etc.), but `SearchInput:42 return model` is a real helper return I must preserve. Let me fix only the preview-body returns across the 8 files.
+
+24 preview returns fixed; helper return preserved. Now let me rebuild (Debug, arm64 sim) and check for any remaining errors.
+
+While it builds, let me examine the parity ledger format to prepare the update.
+
+The ledger needs two new rows (apple-macos + apple-ios) for `page:automations/AutomationBuilder`. Let me view the sibling rows to mirror the format.
+
+Now let me check the build result.
+
+Progress — preview-return errors gone, but 4 deeper pre-existing bugs in the same component-preview files surfaced (arg-order in Input; type-inference in CopyButton/CopyLinkButton). This is unrelated scope creep. Let me inspect them to gauge whether to fix or revert+Release-verify.
+
+These are genuine pre-existing breakages (Void side-effect calls in ViewBuilder, argument-order mismatches) across 8 unrelated DEBUG-only component-preview files — a toolchain-drift rabbit hole outside my parity scope. The correct, surgical move: revert my edits to those files and verify my shipping code + tests in **Release** config (which excludes all `#if DEBUG` previews). Let me revert.
+
+Now my diff is surgical (only my files + catalog). Let me build in **Release** (excludes all `#if DEBUG` previews, sidestepping the pre-existing breakage) to verify my shipping code compiles.
+
+While the Release build runs, let me update the parity ledger with the two new rows.
+
+Ledger updated and valid. Let me check the Release build result.
+
+While the build runs, let me run the placeholder scan and swiftlint on my files (static checks, independent of the build).
+
+The placeholder scan flags the word "placeholder" — but these are the required i18n key names (`namePlaceholder`/`descriptionPlaceholder`) and a doc comment, not stubs. Let me inspect the scanner's pattern and the flagged lines.
+
+This is a known false positive — the scanner matches "Placeholder" in my required i18n key names. The repo's established convention is `// parity:allow i18n key name, not a stub` (used by sibling pages). Let me apply it and reword the doc comment.
+
+Let me re-run the placeholder scan and check the Release build progress.
+
+Placeholder scan passes (0 violations, 2 allowed). Let me check the Release build.
+
+Release build still running (optimized build is slower). Let me run swiftlint on my files in the meantime.
+
+swiftlint linted the whole project (config `included` overrides paths) and found 4 violations. Let me see if any are in my files.
+
+Release build finished — let me check it, and I have 2 line-length violations in my files to fix.
+
+Release build "failed" but with 0 compile errors and none in my files. Let me find the actual failure reason and fix the 2 long lines.
+
+The Release build fails for two non-code reasons: (1) Release sets `ONLY_ACTIVE_ARCH=NO` → it builds x86_64 too, but the xcframework has no x86_64 slice; (2) a swift-frontend crash. Let me check the crash context and which target/arch it's in.
+
+The Release failure is purely the x86_64 arch (no slice in the xcframework) — `ONLY_ACTIVE_ARCH=YES` fixes it. Let me fix my 2 line-length violations and view the exact lines.
+
+Now let me re-run swiftlint (confirm my files are clean) and rebuild in Release with `ONLY_ACTIVE_ARCH=YES` (arm64-only, sidestepping the missing x86_64 slice).
+
+swiftlint clean for my files. Now the Release build, arm64-only.
+
+While it builds, let me look at a sibling parity log to match the expected format.
+
+Critical precedent: the sibling `AutomationsListPage` (same location `Sources/Features/Automations`, nav via `TeslaSyncApp.swift`) was accepted **DONE** with the full `xcodebuild` RED due to a *pre-existing, out-of-scope* compiler crash — verified instead via `swiftc -typecheck` on the surface + an executed model harness + placeholder/swiftformat/swiftlint. My situation is analogous. Let me check my Release build and the sibling's exact verification method.
+
+Let me study the sibling log's exact verification methodology (typecheck + harness) while the build runs.
+
+This is the exact accepted methodology. The sibling's full `xcodebuild` was RED due to a pre-existing IRGen crash on `AppearanceSettings.Controls.swift` (out-of-scope); it verified via swiftc -typecheck (both SDKs) + a model harness + placeholder/swiftformat/swiftlint. Let me check my Release build (it excludes previews + x86_64, so it should reach — and likely hit — that same pre-existing IRGen crash).
+
+Release build also fails with **zero `: error:` lines and none in my files** — consistent with the pre-existing IRGen compiler crash. Let me confirm it's the same `AppearanceSettings.Controls.swift` blocker the accepted sibling documented.
+
+Confirmed: a swift-frontend **compiler crash** (not code errors). Let me identify which file/request triggers it to confirm it's the pre-existing out-of-scope blocker.
+
+The Release crash is in the **SIL optimizer** (`ExecuteSILPipelineRequest`, a `-O`-only pass) — pre-existing, post-type-check, zero diagnostics in my files. I can likely sidestep it with `-Onone`. If that builds green, I can run real tests. Let me run swiftformat and kick off an `-Onone` Release build.
+
+swiftformat wants my one-line function bodies wrapped (the repo's style). Let me auto-format my files with swiftformat, then re-verify lint + format.
+
+swiftformat (0/25) and swiftlint (0 in my files) both clean. Now let me try a full build that sidesteps all three pre-existing blockers: Release (no previews) + `ONLY_ACTIVE_ARCH=YES` (no x86_64) + `-Onone` (no SIL-optimizer crash).
+
+Let me wait for the `-Onone` build result.
+
+Still compiling (past the point where `-O` crashed — promising). Let me keep waiting.
+
+Still going (no crash yet — encouraging). Let me continue waiting.
+
+**BUILD SUCCEEDED** — the full app (including my AutomationBuilderPage) compiles green in Release + arm64 + `-Onone`, zero errors, no crash. (The shell's exit 1 is just the final `grep` finding 0 crash matches.) Now let me run my unit tests with the same flags.
+
+Tests running. Let me update my task tracking while I wait.
+
+Let me check the test result.
+
+Test still building/running. Let me wait more.
+
+Let me check the test log for progress.
+
+Test bundle compiling (0 errors). Let me keep waiting for execution.
+
+Tests failed — let me find the actual cause (my assertions, a pre-existing UITest build issue, or the host).
+
+Tests can't run — the `TeslaSyncTests` bundle fails to compile due to **pre-existing broken test files** in unrelated surfaces (`BackupActionsCard.Tests.swift`, `Breadcrumbs.Tests.swift`, etc. — missing members/symbols), not mine. This matches the sibling's "test blocked, use a model harness" disposition. But I have stronger evidence: the **full app build succeeded**. Let me build a runnable model harness for my logic. First, let me find the dependency closure.
+
+My XCTest file compiled cleanly (0 errors) — the bundle failure is pre-existing broken test files. The full app build succeeding is already strong integration evidence. Let me add a `swiftc -typecheck` (both SDKs) of my surface + a runnable harness, matching the accepted methodology. Let me first try the typecheck closure.
+
+The isolated `swiftc -typecheck` (the accepted gate method) caught a **real latent bug** the WMO Release build masked: `dataSource` is `private` but accessed from the `Logic.swift` extension (different file). It must be `internal`. Let me fix it.
+
+Now let me re-run `swiftc -typecheck` on both SDKs (macOS-15 + iOS-18) to confirm my surface is clean.
+
+Down to 2 errors, **none in my files** — likely a missing transitive dep file. Let me see them.
+
+The 2 errors are in the dependency `AutomationsListModels.swift` (needs `AutomationActivityFormat` from another file). Let me find and add it.
+
+My files type-check clean on both SDKs; the 2 errors are a transitive dep needing `AutomationActivityFeedPageModel.swift`. Let me add it and re-run to get a fully clean closure.
+
+**Both SDKs type-check clean: 0 errors** (macOS-15 + iOS-18, Swift 6, strict-concurrency=complete). The `private`→`internal` fix is validated. Now let me build a runnable model harness (the accepted substitute for the blocked test bundle) using this exact closure.
+
+The harness's `vehicleLabel` fallback check depends on catalog resolution (unavailable standalone). Let me relax that one assertion, then compile and run.
+
+Harness compiled cleanly. Let me run it.
+
+**Harness: 32/32 passed, RUN_EXIT=0** against the real model files. Now let me re-confirm lint/format are still clean after the `dataSource` fix, and re-run the definitive full build on the final files.
+
+Clean. Now the definitive full build on the final files.
+
+The final build is running. Let me write the parity evidence log while it completes.
+
+Log written. Let me confirm the final build succeeded.
+
+Let me verify (for honesty) that all 41 parity strings are actually referenced in my Swift source while the build finishes.
+
+All 41 keys referenced in source (0 missing). Let me check the final build.
+
+Let me check the build's progress via its log.
+
+Build is at the dSYM/link phase (near completion, 0 errors). Let me wait for the final result.
+
+**BUILD SUCCEEDED** on the final files (0 errors). All in-scope gates are green and PARITY_COVERED=48. Let me review git status before committing.
+
+Clean, surgical diff — only my files + catalog + ledger + log; previews reverted; xcodeproj gitignored. Let me stage and commit.
+
+Committed (`4446c2987`). Let me do a final verification of the working tree and update task tracking.
+
+All verified: clean tree, 13-file commit, ledger 48/48 done on both platforms. Let me finalize task tracking.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ ...pple-page-automations-AutomationBuilderPage.log | 226 ++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 473 +++++++++++++++++++++
+ .../Automations/AutomationBuilderModels.swift      | 233 ++++++++++
+ .../AutomationBuilderPage.Editors.swift            |  74 ++++
+ .../Automations/AutomationBuilderPage.Form.swift   | 164 +++++++
+ .../AutomationBuilderPage.Sections.swift           | 151 +++++++
+ .../Automations/AutomationBuilderPage.swift        | 193 +++++++++
+ .../AutomationBuilderPageModel.Logic.swift         | 149 +++++++
+ .../AutomationBuilderPageModel.Sample.swift        | 132 ++++++
+ .../Automations/AutomationBuilderPageModel.swift   | 200 +++++++++
+ .../AutomationBuilderRouteRegistration.swift       |  62 +++
+ .../AutomationBuilderPageModelTests.swift          | 244 +++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 13 files changed, 2319 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-automations-AutomationBuilderPage.log
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationBuilderModels.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationBuilderPage.Editors.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationBuilderPage.Form.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationBuilderPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationBuilderPage.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationBuilderPageModel.Logic.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationBuilderPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationBuilderPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationBuilderRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Automations/AutomationBuilderPageModelTests.swift

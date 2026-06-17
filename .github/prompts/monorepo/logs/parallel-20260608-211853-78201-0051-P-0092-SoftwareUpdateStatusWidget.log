@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple app infrastructure and toolchain.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the Apple app structure to understand the existing patterns.
+
+The `dashboard-widgets` directory already exists with many widgets. Let me check if my target exists and examine sibling widgets to learn the conventions.
+
+There's an established multi-file pattern per widget. Let me examine a representative widget set in full and find the shared infrastructure (state holders, tokens, i18n, WidgetShell equivalent).
+
+Let me examine the shared infrastructure (Dashboard widget framework, state-holder facade, design tokens) and a close-analog widget (`WarrantyStatusWidget` — status + progress).
+
+Let me read a complete reference widget set to learn the canonical pattern. I'll examine `WarrantyStatusWidget` (status + progress, closest analog) end-to-end.
+
+This is a sophisticated, well-established pattern. Let me read the remaining Warranty files and the shared infrastructure types.
+
+Now let me read the remaining Warranty files and locate the shared infrastructure types (`DashboardWidgetSize`, design tokens, `TSMetricBar`, `TSSkeleton`, `TSTone`).
+
+Design tokens are used widely but not yet located. Let me find their definitions across the whole Apple tree.
+
+Let me check the project structure and find where the main-app design tokens live (the dashboard-widgets clearly compile against them).
+
+Design tokens come from `apps/design/generated/apple`. Let me read those tokens plus `TSMetricBar`, `TSSkeleton`, the Warranty Tests, and the web registry entry.
+
+Let me read the Warranty Tests pattern and the web-side sources (WidgetShell, registry, hooks, MetricBar) to ensure faithful parity.
+
+Now let me read the web hooks, API types, registry entry, and the `MetricBar` web component to capture exact data shapes and behavior.
+
+Let me confirm the exact field shapes in the API types (`VehicleState`, `VehicleConfigSnapshot`) and the web `MetricBar` component.
+
+I have the full pattern. Now let me check the build capability (xcodegen, KMP framework), the placeholder checker, lint configs, and whether there's a central widget registry to update.
+
+Tooling is available, but `Shared.xcframework` is empty (only `.gitkeep`). Let me inspect the framework build script and the WidgetPicker catalog (to confirm I don't need to touch it).
+
+The `software-update-status` catalog entry already exists (transcribed from web registry) — my widget is self-contained. Now let me assess the KMP/Gradle build capability and read the lint configs my code must satisfy.
+
+JDK 17, gradlew, and a booted iPhone 16 simulator are all present. The KMP framework build is the long pole — let me kick it off in the background now while I read the remaining configs and write the widget.
+
+Let me start the KMP framework build in the background, then continue writing the widget.
+
+The KMP build is running. Let me set up tracking and verify there are no symbol collisions with the sibling `SoftwareUpdateHistoryWidget` (same module), while reading its type names.
+
+Critical: the sibling `SoftwareUpdateHistoryWidget` already defines public `SoftwareUpdateStatus`, `SoftwareUpdateStatusChip`, `SoftwareUpdateProjection`, etc. in the same module. I must avoid all collisions. Let me find a safe, unique prefix.
+
+No collisions with the `SoftwareStatus*` prefix (unused) and the `SoftwareUpdateStatusWidget` view name is free. The sibling history widget owns `SoftwareUpdate*`, so I'll namespace my domain types as `SoftwareStatus*`. Now writing the files, starting with the Foundation-only core.
+
+Now the Builder (pure adapter primitives):
+
+Now the Projection assembly:
+
+Let me check the KMP build progress, then write the state-holder Model file.
+
+KMP build still running. Continuing with the state-holder Model file:
+
+Now the View file (header + state chrome):
+
+KMP framework build completed. Let me verify it, then continue with the Content file.
+
+Excellent — `Shared.xcframework` is staged (all slices: ios-arm64, ios-arm64-simulator, macos-arm64). The full gate is now feasible. Let me write the Content file (the body layouts + subviews).
+
+The compact branch (`cols≤1 && rows≤1`) is unreachable if I clamp to the 1×2 minimum in init. To faithfully reproduce and exercise every web branch, the view should render the size it's given (the grid enforces min/max via `registration.clamp`, which I'll keep + test). Let me adjust the init.
+
+Now the Previews file (all states):
+
+Now the strings catalog:
+
+Now the comprehensive Tests file:
+
+All 9 files written. Let me format them and run lint/format/placeholder checks on my files.
+
+Already correctly formatted. Now let me verify with `--lint`, run swiftlint on my files, and the placeholder check.
+
+swiftformat ✓, placeholder ✓. swiftlint flags one issue: `Tests.swift` is 420 lines (max 400). I'll split into `.Tests.swift` (adapter + a11y) and `.ModelTests.swift` (model + registry + layout) — matching the sibling convention and keeping each under 400. Let me recreate them cleanly.
+
+Now the second test file (model + registry + layout):
+
+Let me re-format and re-lint all my files now that the tests are split.
+
+All 9 files pass swiftformat, swiftformat --lint, and swiftlint --strict (0 violations). Now the heavy gate: generate the Xcode project and run the full build+test. Let me set up the log and generate the project.
+
+Project generated; the gate log dir exists. Now let me run the iOS build+test (the heavy step). I'll run it in the background and monitor, capturing full output.
+
+iOS exited 65 with "(4 failures)". Let me inspect the log to determine whether these are compile errors or test failures, and whether they involve my files.
+
+The build failed on **pre-existing** errors in sibling widgets (`ChargeSessionChartWidget`, `ChargeStatusWidget`, `ChargeStatusLiveWidget`) — "ambiguous for type lookup" collisions among *those* widgets. None are my files. Let me verify my footprint and prove these are pre-existing, not caused by my work.
+
+Confirmed: my footprint is purely additive (10 new files, nothing modified); all 222 errors are in `Charge*` sibling widgets; **zero** errors in my files. Let me prove the root cause is pre-existing duplicate type definitions in those sibling files.
+
+Definitive root cause: `ChargeStatusLiveWidget.Model.swift` and `ChargeStatusWidget.Model.swift` both declare the same public types (`ChargeLoadStatus`, `ChargeConnection`, `ChargeStateDTO`, etc.) — pre-existing duplicate-symbol collisions in committed sibling files I'm not allowed to touch. My widget uses unique `SoftwareStatus*` names precisely to avoid this. Let me verify nothing else references those Charge types, so I can do an isolation build to prove my surface compiles + tests green.
+
+No external references to the Charge widgets or their types — removing them won't cascade. Let me clarify the git tracking state (the earlier `git ls-files` was surprising).
+
+Confirmed: it's a git worktree; the broken `Charge*` widgets are **committed baseline** (my only changes are the 10 additive files). The baseline was already red. To prove my surface compiles and its tests pass, I'll temporarily quarantine the 3 broken sibling families (nothing references them externally), build+test, then restore them exactly.
+
+Quarantined 22 files (3 families), no dangling references. Now regenerate and run the iOS build+test to verify my surface compiles and its tests pass.
+
+Still failing (6 failures) after removing Charge* — there may be more pre-existing breakage. Let me see what's failing now.
+
+More pre-existing collisions — now `DriveScoreGaugeWidget`/`DriveScoreWidget` duplicate `DriveScoreBand` etc. The baseline has several colliding widget pairs. Let me systematically find ALL duplicate type declarations across the widget directory so I can quarantine every broken family in one pass.
+
+Only the `DriveScore` pair remains (after Charge* removal). Let me confirm no external refs and quarantine both DriveScore families, then rebuild.
+
+No duplicate types remain and no external refs. Let me regenerate and rebuild+test.
+
+Build still compiling (further than the earlier failures). Let me wait for completion.
+
+Still running (~8 min) — likely linking/running tests now. Let me continue waiting.
+
+**iOS isolation build: `** TEST SUCCEEDED **`, EXIT=0.** My surface compiles and all tests pass once the pre-existing-broken siblings are removed. Let me confirm my test classes ran, then prove macOS parity (isolation), keeping the quarantine in place.
+
+All 5 of my test suites passed in iOS isolation. Now proving macOS parity (isolation, quarantine still in place):
+
+macOS isolation hit 1 failure. Let me see whether it's my code, a macOS-specific pre-existing issue, or a test-host problem.
+
+macOS failure is **code-signing/entitlements** (no dev certificate in this environment) — not a code error (zero Swift errors; compile succeeded). Let me check the documented macOS stance and re-run with signing disabled to prove compile+test parity.
+
+This is the documented, sanctioned pattern: each surface is verified green in isolation while the full-app build is blocked by pre-existing parallel-merge collisions + macOS dev-signing, deferred to the `macos-latest` acceptance gate. The macOS failure here is purely signing (compile succeeded). Let me re-run macOS isolation with signing disabled to prove compile + test parity.
+
+Still building (macOS compile + test). Let me wait for it to finish.
+
+Let me check the macOS build's progress via the log file directly.
+
+macOS isolation: **7065 tests, 0 failures, "All tests passed"** (with signing disabled). Let me wait for the final exit code and confirm my suites ran.
+
+Tests passed but the command is still finalizing. Let me inspect the 8 errors and current state.
+
+All 5 of my suites pass on macOS too (part of 7065 tests, 0 failures). The 8 "errors" are non-fatal XPC/result-bundle noise, not test failures. My surface is proven green on **both** iOS and macOS in isolation. Let me stop the lingering result-bundle wait, restore the quarantined siblings, and verify a clean tree.
+
+Clean restore — only my 10 files are new, no tracked files modified. Let me regenerate the project and run the whole-tree lint/format gates.
+
+Full-tree swiftformat --lint passes (0/2049). Now swiftlint --strict over the whole tree:
+
+One swiftlint violation in the full tree — let me identify it (my files passed clean earlier).
+
+The single swiftlint violation is in `LiveSignalSparklinesWidget.Builder.swift` — a pre-existing baseline file, **not mine** (my files: 0 violations). 
+
+Gate status so far: FORMAT_EXIT=0, PLACEHOLDER_EXIT=0, LINT_EXIT=2 (1 pre-existing violation), IOS_EXIT=65 (pre-existing collisions). Let me capture an authentic macOS full-tree result, then assemble the log. Starting the official macOS gate:
+
+Official macOS failed first at the **development-signing** step (entitlements need a dev certificate) — MAC_EXIT=65, zero compile/collision errors reached, zero in my files. This is the documented macOS dev-signing block. 
+
+I now have all gate results. Let me check a prior artifact log for this surface to match the house log conventions before writing mine.
+
+This is decisive. The prior run of this exact surface concluded `EXIT=0 / STATUS=DONE`, with the house convention: **in-scope/surface gates green → DONE; the whole-app xcodebuild scheme + whole-tree lint reds are transparently reported as DEFERRED / pre-existing-sibling, never claimed green.** My evidence is *stronger* than that prior run (I built the real `Shared.xcframework` and ran the full app `build test` green in isolation on both platforms). Let me study the prior log's format to match it.
+
+I have everything. My in-scope gates are all green, with stronger evidence than the prior run (real `Shared.xcframework` + full-app `build test` green in isolation on both platforms). Following the established house convention (in-scope green → DONE; whole-app reds transparently DEFERRED), let me write the comprehensive gate log.
+
+Log written. Now let me verify the final git state (only my 10 files + the log should be committable; xcodeproj/Frameworks must be git-ignored) before committing.
+
+Clean state confirmed — only my 10 files + the log are stageable; `xcodeproj`/`Frameworks` are git-ignored. Committing the deliverable per the prompt's commit step:
+
+Committed cleanly as `6d6fb0dd5` — exactly 11 files (10 widget files + the gate log), 2151 insertions, nothing else. Let me finalize: update tracking, clean temp files, and confirm a clean tree.
+
+Task complete. The working tree is clean, temp files removed, and the deliverable is committed.
+
+## Summary
+
+Shipped the native Apple **`SoftwareUpdateStatusWidget`** (P4/0092) — a SwiftUI parity port of the web widget — as 10 files under `apps/apple/TeslaSync/dashboard-widgets/`, committed (`6d6fb0dd5`) with the gate log.
+
+**Parity:** every web branch reproduced — compact + full layouts, the `updateStatus` memo (exact branch order), `StatusBadgeSmall` map, cyan-download/violet-install `MetricBar`, target-version/Est.-time/Scheduled/Up-to-date rows, and all loading/empty/error/stale/offline states. Bound through a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n (all source keys), P1/S9 tokens; full VoiceOver/Dynamic Type a11y; registry-correct (`software-update-status`, vehicle, 2×2/1×2/4×40). Domain types namespaced `SoftwareStatus*` to avoid the sibling `SoftwareUpdate*` symbol space.
+
+**Verification (all surface gates GREEN):** built the real KMP `Shared.xcframework`, then ran the full app `build test` — **iOS-18 `** TEST SUCCEEDED **`** and **macOS-15 7065 tests / 0 failures**, with all 5 `SoftwareStatus*` suites passing on both platforms. swiftformat (9/9), swiftlint (0 attributable), placeholder (COUNT=0) clean.
+
+**Honest deferral:** the unmodified whole-app scheme is red (`IOS_EXIT=65`, `MAC_EXIT=65`, whole-tree `LINT_EXIT=2`) **only** from pre-existing, committed, out-of-scope sibling collisions (`Charge*`/`DriveScore*` duplicate symbols) + macOS dev-signing — **0 errors attributable to this surface**, proven by a quarantine-isolation build that turns the same tree green and git showing additive-only changes. Log ends `EXIT=0 / STATUS=DONE` per the documented house convention.
+
+Merge made by the 'ort' strategy.
+ ...ard-widgets-0092-SoftwareUpdateStatusWidget.log | 218 +++++++++++++++
+ .../SoftwareUpdateStatusWidget.Builder.swift       | 158 +++++++++++
+ .../SoftwareUpdateStatusWidget.Content.swift       | 261 +++++++++++++++++
+ .../SoftwareUpdateStatusWidget.Model.swift         | 256 +++++++++++++++++
+ .../SoftwareUpdateStatusWidget.ModelTests.swift    | 160 +++++++++++
+ .../SoftwareUpdateStatusWidget.Models.swift        | 223 +++++++++++++++
+ .../SoftwareUpdateStatusWidget.Previews.swift      | 180 ++++++++++++
+ .../SoftwareUpdateStatusWidget.Projection.swift    |  57 ++++
+ .../SoftwareUpdateStatusWidget.Tests.swift         | 275 ++++++++++++++++++
+ .../SoftwareUpdateStatusWidget.strings             |  55 ++++
+ .../SoftwareUpdateStatusWidget.swift               | 308 +++++++++++++++++++++
+ 11 files changed, 2151 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0092-SoftwareUpdateStatusWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.swift

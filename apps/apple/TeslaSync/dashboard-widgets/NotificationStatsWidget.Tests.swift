@@ -25,7 +25,7 @@ import XCTest
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
 
     private func data(failed: Int = 20) -> NotificationStatsData {
-        let stats = NotificationStats(
+        let stats = NotificationStatsWidgetStats(
             totalSent: 1000, sent: 950, failed: failed, pending: 30, totalChannels: 5, enabledChannels: 4
         )
         let logs = [
@@ -83,7 +83,7 @@ import XCTest
 
     func testDecodeStatsParsesSnakeCase() {
         let json = #"{"total_sent":1000,"sent":950,"failed":20,"pending":30,"total_channels":5,"enabled_channels":4}"#
-        let stats = NotificationStats.decode(fromJSONString: json)
+        let stats = NotificationStatsWidgetStats.decode(fromJSONString: json)
         XCTAssertEqual(stats?.totalSent, 1000)
         XCTAssertEqual(stats?.sent, 950)
         XCTAssertEqual(stats?.failed, 20)
@@ -92,10 +92,10 @@ import XCTest
     }
 
     func testDecodeStatsRejectsGarbageAndBridgesPayload() {
-        XCTAssertNil(NotificationStats.decode(fromJSONString: "not json"))
-        XCTAssertEqual(NotificationStats.decode(fromSharedPayload: 42), nil)
+        XCTAssertNil(NotificationStatsWidgetStats.decode(fromJSONString: "not json"))
+        XCTAssertEqual(NotificationStatsWidgetStats.decode(fromSharedPayload: 42), nil)
         let json = #"{"total_sent":10,"sent":9,"failed":1,"pending":0,"total_channels":1,"enabled_channels":1}"#
-        XCTAssertEqual(NotificationStats.decode(fromSharedPayload: json)?.sent, 9)
+        XCTAssertEqual(NotificationStatsWidgetStats.decode(fromSharedPayload: json)?.sent, 9)
     }
 
     func testDecodeLogsParsesArrayAndStatus() {
@@ -132,8 +132,8 @@ import XCTest
     }
 
     func testDeliveryRateGuardsZero() {
-        XCTAssertEqual(NotificationStats(totalSent: 0, sent: 0).deliveryRate, 0)
-        XCTAssertEqual(NotificationStats(totalSent: 200, sent: 100).deliveryRate, 50, accuracy: 0.0001)
+        XCTAssertEqual(NotificationStatsWidgetStats(totalSent: 0, sent: 0).deliveryRate, 0)
+        XCTAssertEqual(NotificationStatsWidgetStats(totalSent: 200, sent: 100).deliveryRate, 50, accuracy: 0.0001)
     }
 
     // MARK: Number formatting (web fmtInt / fmtNumber)
@@ -223,7 +223,9 @@ import XCTest
     }
 
     func testZeroFailedHasNoCompactTextAndFlatTrend() {
-        let zero = NotificationStatsData(stats: NotificationStats(totalSent: 0, sent: 0, failed: 0, enabledChannels: 0))
+        let zero = NotificationStatsData(
+            stats: NotificationStatsWidgetStats(totalSent: 0, sent: 0, failed: 0, enabledChannels: 0)
+        )
         let projection = NotificationStatsProjection.make(
             from: zero, size: DashboardWidgetSize(cols: 2, rows: 2), now: now, locale: locale, timeZone: timeZone
         )
@@ -256,7 +258,7 @@ import XCTest
 
     private func sampleData() -> NotificationStatsData {
         NotificationStatsData(
-            stats: NotificationStats(totalSent: 1000, sent: 950, failed: 20, enabledChannels: 4),
+            stats: NotificationStatsWidgetStats(totalSent: 1000, sent: 950, failed: 20, enabledChannels: 4),
             logs: [NotificationLog(id: 1, title: "Email", message: "Hi", status: .sent, createdAt: now)]
         )
     }
@@ -371,14 +373,14 @@ import XCTest
 
     @MainActor
     func testPreviewModelExposesInjectedState() {
-        let data = NotificationStatsData(stats: NotificationStats(totalSent: 5, sent: 5))
+        let data = NotificationStatsData(stats: NotificationStatsWidgetStats(totalSent: 5, sent: 5))
         let model = NotificationStatsModel(previewState: .loaded(data, stale: false))
         XCTAssertEqual(model.state, .loaded(data, stale: false))
     }
 
     @MainActor
     func testSourceBackedModelStartsOnceAndRefreshesAndPushes() {
-        let data = NotificationStatsData(stats: NotificationStats(totalSent: 5, sent: 4))
+        let data = NotificationStatsData(stats: NotificationStatsWidgetStats(totalSent: 5, sent: 4))
         let source = InMemoryNotificationStatsSource(initial: .loaded(data, stale: false))
         let model = NotificationStatsModel(source: source)
         model.start()

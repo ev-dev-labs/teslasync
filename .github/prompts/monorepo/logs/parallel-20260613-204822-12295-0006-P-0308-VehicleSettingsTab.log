@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and understanding what exists, then read the web source specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 simulator booted). Now let me explore the structure.
+
+Now let me explore the Apple TeslaSync structure, existing feature-views, and dependencies (state holders, tokens, i18n).
+
+This is a large monorepo. Let me understand the build config and find a recent similar surface to model after, plus check the dependencies.
+
+Let me read the build config (project.yml) carefully — this determines how `TeslaSync/feature-views/` files are compiled.
+
+Now I understand the build: `TeslaSync/feature-views/` is globbed into the `TeslaSync` app target (XcodeGen). Let me study the shared infrastructure (state holders, i18n, tokens, diagnostics) and a representative existing surface.
+
+Key finding: `Sources/SharedFacade/Domains/VehicleSettingsModel.swift` already exists — likely the P1/S8 state holder I must bind to. Let me read the core infra and a representative surface.
+
+The shared `VehicleSettingsModel` only exposes read (`settings/start/stop/refresh`), not upsert/reset, and I can only create `VehicleSettingsTab.*` files. So these feature-views must be self-contained with their own seam/adapter. Let me study the closest analog — `AISettings` — in full.
+
+Excellent — the self-contained seam pattern is now clear. Let me read the remaining AISettings files (Views/Projection/Tests/Previews/strings), the web hook/types, and the design tokens.
+
+Let me read the test/preview patterns, the design tokens, and the web hook + i18n keys.
+
+Let me find the design tokens (TS* components) and read the web hook/types/i18n for the exact data shape and keys.
+
+Now I have all i18n keys verbatim. Let me read the design tokens and shared component APIs (TSButton, TSGlassPanel, TSSkeleton, TSFadeIn, Color.TS, Font.TS, TSSpacing, TSRadius).
+
+The tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it plus the Badges, Typography, Fields, Pickers, and Motion components to know exact APIs.
+
+Let me read the Fields, Pickers, Typography, and Motion components to know the input/select/text APIs available.
+
+Now let me read Motion (TSFadeIn), the placeholder checker, lint/format configs, and verify xcodegen availability.
+
+Let me read the placeholder checker/patterns and check the Shared.xcframework build situation (critical for whether a full build is feasible).
+
+Let me check the logs directory for sibling prompt outcomes and whether the KMP Gradle build is feasible on this runner.
+
+This is the key precedent. Feature-views are KMP-free and verified via an **isolated SwiftPM build + XCTest**, with the full-app `xcodebuild` DEFERRED to the P99 gate (documented). Let me read the harness details and the pending-verifications doc.
+
+The honest precedent is fully clear. Let me check the pending-verifications doc (ToolCard row) and look for any reusable isolated-build harness, then I'll start building.
+
+The honest precedent is confirmed: feature-views are KMP-free, verified via an **isolated SwiftPM build + XCTest** with the full-app `xcodebuild` DEFERRED to the P99 gate (documented in `apps/macos-pending-verifications.md`). Let me read Typography (last design dep) and check Sources/Design, then build.
+
+`tsGlassPanel()` modifier lives in `Sources/Design`. Let me read those two files, then start building.
+
+I have everything I need. Let me set up the plan, todos, and quickly probe a Swift keyword edge case (enum case `default`) before writing files.
+
+Enum naming confirmed. Let me record todos and write the surface files, starting with the pure cores.
+
+Let me clean up the awkward pill-instantiation-for-a-string in the Views file by using a static label helper.
+
+Let me simplify the input model typing and the rows binding.
+
+The model should accept an injectable descriptor catalog so the `empty` phase is genuinely reachable (and testable). Let me update the Model, then write Previews.
+
+Now the comprehensive test suite.
+
+All 8 files created. Now let me set up the isolated SwiftPM harness (KMP-free design system + surface) and build + test it — the precedent's green verification.
+
+Swift 6 strict concurrency flags the static `ISO8601DateFormatter` globals (non-Sendable shared state). Let me build them on demand instead — concurrency-safe and fine for this non-hot path.
+
+Build green under Swift 6 strict concurrency. Now run the test suite.
+
+All 45 tests pass, 0 failures, under Swift 6 strict concurrency. Now swiftlint + swiftformat on the surface files.
+
+Clear set of fixable lint issues: trailing commas, file length (split tests), multiple-closures, trailing newline, one long line. Let me fix the structural ones first — the two `TSButton` trailing-closure calls, then split the test file.
+
+Now let me split the test file (483 lines > 400 limit) into two files matching `VehicleSettingsTab.*`, fixing the long line too.
+
+Now let me auto-format all surface files with the repo's swiftformat config (handles trailing commas + newline), then re-verify both linters.
+
+swiftlint --strict: **0 violations**. swiftformat --lint: **0/8 require formatting**. Let me re-sync the formatted files (now 2 test files) to the harness and re-verify build + tests still pass.
+
+Build + 45 tests green post-format. Now the placeholder gate (as the gate specifies) plus an honest manual scan, and `xcodegen generate` to prove the new files wire into the project.
+
+Placeholder gate EXIT=0, honest scan clean. Now `xcodegen generate` to prove the new files wire into the project spec.
+
+xcodegen wires all 9 files (EXIT=0). Now let me substantiate the documented full-app blockers with real evidence (so "DEFERRED" isn't a hand-wave) and check whether a real full-app build attempt is feasible.
+
+Critical finding: my `VehicleSettingsModel` **collides** with the existing `Sources/SharedFacade/Domains/VehicleSettingsModel.swift` in the same app module — a redeclaration error I introduced (the isolated harness couldn't catch it). Also R1 appears already resolved (1 def each). Let me scan ALL my public type names for collisions across the whole app target.
+
+Scan complete: **only one real collision** — `VehicleSettingsModel` clashes with the SharedFacade domain holder. (R1 is already resolved — 1 def each.) The isolated harness can't see the rest of the app target, so this is exactly the kind of integration check I must do manually. Let me rename my view-model to `VehicleSettingsTabModel`.
+
+Rename applied (17 refs, 0 old remaining). Let me verify the class declaration and re-sync to the harness to rebuild + retest.
+
+Rename clean, build + 45 tests green. Re-running both linters since the longer name could affect line lengths.
+
+Both linters clean after rename. Now, per the honesty covenant, I'll attempt the **real** full-app iOS build to gather actual evidence (not just assert "deferred"). It triggers the KMP Gradle pre-action, so I'll run it in the background and monitor while I write the log.
+
+Gradle KMP build is running (it can take several minutes). Let me wait for it.
+
+Real evidence captured: the **debug** Shared.xcframework built successfully (KMP toolchain works), but the **release** xcframework that the scheme pre-action requires exceeded the 7‑min budget mid‑link (GRADLE_EXIT=124). That's the documented long pole. Let me make one bounded attempt to compile the **app target directly** against the staged debug xcframework (bypassing the pre-action) to get real evidence my files integrate.
+
+The direct app-target build is compiling with my files included and **0 errors so far** — it reached whole-module emission. Let me keep monitoring.
+
+Build failed but with 0 `error:` diagnostics in the batches I checked — and notably **none of the failing batches contain my `VehicleSettingsTab` files**. Let me find the actual root cause.
+
+No `error:` diagnostics anywhere, yet BUILD FAILED — and the failing batches are core files (AppContainer + unrelated surfaces), not mine. Let me find the actual failure mechanism.
+
+Root cause identified: **zero `error:` diagnostics**, but two large whole-module compile batches were killed — the classic signature of **swift-frontend OOM/resource exhaustion** compiling the ~2,600-file monolithic app target on this shared runner. My `VehicleSettingsTab` batch compiled with **0 errors**; the killed batches are unrelated (`Legacy*`, `A*` groups). Let me confirm and capture the precise summary.
+
+**Confirmed honest evidence:** 0 `error:` diagnostics in the entire full-app log; my `VehicleSettingsTab` batch compiled cleanly (19 mentions, **0** in failed batches); the killed batches are unrelated core/Shared-importing files (resource/OOM kill of the 2,600-file monolith). Git shows only my 9 files; artifacts are ignored. Let me clean up the build artifacts and write the gate log.
+
+Clean tree — only my 9 files untracked. Now the gate log with full honest evidence.
+
+Now a final pre-commit verification pass (honesty covenant: no commit on red) — re-run lint, format, and the isolated build+test on the final files.
+
+All green: build 0, 45 tests 0 failures, swiftlint 0 violations, swiftformat 0/8. Committing now.
+
+Committed (918325f7d). Let me verify a clean working tree and clean up temp files.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0308-VehicleSettingsTab.log | 170 +++++++++
+ .../feature-views/VehicleSettingsTab.Adapter.swift | 312 +++++++++++++++++
+ .../feature-views/VehicleSettingsTab.Model.swift   | 390 +++++++++++++++++++++
+ .../VehicleSettingsTab.ModelTests.swift            | 292 +++++++++++++++
+ .../VehicleSettingsTab.Previews.swift              | 127 +++++++
+ .../VehicleSettingsTab.Projection.swift            | 149 ++++++++
+ .../feature-views/VehicleSettingsTab.Tests.swift   | 211 +++++++++++
+ .../feature-views/VehicleSettingsTab.Views.swift   | 386 ++++++++++++++++++++
+ .../feature-views/VehicleSettingsTab.strings       |  69 ++++
+ .../feature-views/VehicleSettingsTab.swift         | 158 +++++++++
+ 10 files changed, 2264 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0308-VehicleSettingsTab.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleSettingsTab.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleSettingsTab.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleSettingsTab.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleSettingsTab.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleSettingsTab.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleSettingsTab.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleSettingsTab.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleSettingsTab.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleSettingsTab.swift

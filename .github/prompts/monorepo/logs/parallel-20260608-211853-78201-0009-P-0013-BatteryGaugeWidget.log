@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and understanding what exists for both the web source and the Apple native app.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, Swift 6.3.2). Now let me understand the existing native widget patterns and project structure.
+
+Key finding: no `.xcodeproj` — uses `project.yml` (XcodeGen). There's also a prior log for BatteryGaugeWidget. Let me examine the project setup, the web shared components, and a complete existing widget as a template.
+
+The web source is simple: vehicle state → radial battery gauge with color thresholds + charging indicator, else empty state. Now let me study a complete native widget as a template, the prior log, and the project config.
+
+This slot is fresh (no BatteryGauge files yet). The prior log was BLOCKED only because that runner lacked Xcode — but **this** runner has full Xcode 26.5. Critically, the prior attempt invented symbols via stubs; I must follow the **real** shipped widget pattern (GuardModeWidget). Let me study its full companion fileset and shared infrastructure.
+
+Now I understand the full widget file structure. Let me read the remaining GuardMode template files and locate the shared infrastructure symbols (tokens, registration, gauge component, feedback components).
+
+Let me locate the shared infrastructure: registration type, design tokens, any existing gauge, and read the GuardMode tests.
+
+Important discovery: there's an existing sibling `BatteryRadialGaugeWidget` and a shared `PieGauge` chart, plus `BatteryGaugeProjection` in `Sources/Features/Dashboard/Widgets/`. I must reuse shared components and avoid symbol collisions. Let me read these and the infra/tokens.
+
+Critical: `BatteryGaugeProjection`, `BatteryGaugeBand`, `BatteryGaugeStat`, `BatteryGaugeLoadError`, `BatteryRadialGaugeRenderState` **already exist** as public module types (for the sibling `battery-radial-gauge`). I'm in the same `TeslaSync` module — I must reuse them and avoid collisions. Let me read the sibling's model/content/widget and the design tokens.
+
+Now I see two patterns: the newer self-contained P4 surfaces (GuardModeWidget, in my target dir) vs. the older KMP-bound siblings. I'll follow the **GuardModeWidget self-contained pattern**. Let me check the band→color mapping, the shared telemetry protocol, design tokens, and confirm which `Battery*` names are taken.
+
+The sibling uses tokens `Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`, `TSMotion`, `TSEmptyState`, `TSSkeleton`. The naming space is crowded — I'll follow the self-contained GuardModeWidget pattern with collision-free `BatteryGauge*` names. Let me confirm the tokens, feedback components, and lint configs.
+
+Tokens exist (the sibling compiles using them). Let me read the exact token names in `Tokens.swift` and the `TSEmptyState`/`TSQueryError` signatures to use valid APIs.
+
+I now have all token/component signatures. Two architectural patterns exist; my target dir uses the self-contained Guard pattern, but the data-binding analog is the sibling `BatteryRadialGaugeModel`. Let me assess build feasibility (xcodegen, Shared.xcframework, simulator) and verify the i18n catalog keys before deciding the exact approach.
+
+Excellent — all needed i18n keys exist in the catalog as `translation.*` (including `widget.battery/charging/noBattery`, `common.refresh/offline/retry`, `live.staleBanner.title`, `error.loadFailed`). xcodegen (2.45.4) and the Gradle wrapper exist, but `Shared.xcframework` must be built. Let me verify the catalog key format, check the sibling test style, pwsh, and simulators, then kick off the heavy xcframework build in the background.
+
+This runner is fully capable: Xcode 26.5, xcodegen, pwsh, **iPhone 16 simulator booted**, Gradle wrapper. Only `Shared.xcframework` needs building. Let me read the sibling's test file to mirror the Pattern-B test style, then start the long xcframework build in the background.
+
+I have the full pattern now. This runner is capable, so I'll attempt the real build. Let me start the long-pole `Shared.xcframework` Gradle build in the background, and meanwhile read the shared telemetry API and `LoadableState`/`VehicleState` definitions.
+
+Shared telemetry confirmed (`DashboardWidgetTelemetry` + `OSLogDashboardWidgetTelemetry`). Gradle build running in background. Let me confirm the `LoadableState` facade API and the `VehiclesStore`/`VehicleState` shapes I'll bind.
+
+`LoadableState` and `StateHolderModel` confirmed. `VehiclesStore`/`Vehicle`/`VehicleStateEnvelope`/`VehicleState`/`FacadeError` are KMP `Shared` types — the sibling proves exact usage, which I'll mirror. Let me read `StateHolderModel`'s init/start/stop and check the build progress.
+
+`StateHolderModel` confirmed. The Gradle build is running (downloading toolchain — the long pole). I have everything except the exact web `RadialGauge` composition. Let me read it to nail gauge parity, then start writing. Let me also set up my plan/todos.
+
+Now I have the exact web `RadialGauge` composition (ring + centered value+unit + label always shown, stroke 8). Let me check the placeholder-checker's forbidden patterns so my code passes, then write all files.
+
+Forbidden words: `TODO, FIXME, XXX, Coming soon, Placeholder, Lorem ipsum, not implemented` (+ I'll avoid `stub`/`mock`). I now have full parity details. Writing the pure adapter, the SwiftUI content, and the Shared-bound model.
+
+Now the entry point, previews, and tests. I'll document the source→catalog i18n key mapping in the entry header (matching the sibling's catalog approach — no separate `.strings` table, reusing the verified `translation.*` keys).
+
+All 6 surface files are written. Let me update tracking and run the lightweight gates (swiftlint, swiftformat, placeholder check) while the xcframework builds.
+
+Both pass on my 6 files. Now the full-scope gates (as the gate script runs them) plus the placeholder check, and a build progress check.
+
+Full-scope swiftlint reports 1 pre-existing violation somewhere in 1917 files (my 6 files are clean). I need to identify whether it's mine or pre-existing. Let me wait for swiftformat to finish, then pinpoint the lint violation.
+
+Key results: swiftformat clean (0/1921), placeholder check on the **gate's exact prefix** is clean (COUNT=0, EXIT=0 — the 24 hits are pre-existing `YearReviewWidget` files, out of my scope). The 1 swiftlint violation is in some other file — let me pinpoint it to confirm it's not mine, and check the build.
+
+The lint violation is pre-existing in `LiveSignalSparklinesWidget.Builder.swift` (a different surface, outside my allowed files) — not mine. The placeholder hits are in `YearReviewWidget.*` (also not mine; the gate's prefix-scoped check on my files is clean). Let me understand the repo baseline state and check the build progress.
+
+The `Shared.xcframework` built successfully (11m40s). The repo baseline (HEAD) already contains other surfaces with the pre-existing lint/placeholder violations — confirming those aren't mine. Now let me stage the framework, generate the Xcode project, and start the real build.
+
+Project generated. Now the real build. Let me build the iOS app first (to triage any compile issues quickly) before running tests.
+
+The log shows 10,702 lines with **0 compile errors** and unexpectedly shows test execution. Let me check the build shell status and search the log for my files and the build result.
+
+The shared `/tmp/ios_build.log` is contaminated by another slot in this shared environment (2502 test cases appeared though I only ran `build`). My actual build's output goes to the shell's stdout. Let me wait for my `ios-build` shell to finish and read its own output.
+
+My build runs in the background (the `tail -30` only emits on completion). Rather than rely on the contaminated shared file, I'll wait for the shell's own stdout. Let me wait longer for completion.
+
+Let me switch to a reliably monitorable build with a unique (non-shared) log path, since the build is hard to observe otherwise. DerivedData caching will make the restart fast.
+
+Build progressing cleanly (2052 lines, **0 errors**), currently linking the `TeslaSyncWidgets` extension. Let me continue monitoring for completion.
+
+The main `TeslaSync` app target is now emitting its Swift module (so my files type-checked) — still **0 errors**. Let me wait for the build to finish.
+
+Progress stalled at 3500 lines on the main module emission. Let me verify the build process is alive and consuming CPU (large 1900-file module emission can be slow), and check the build shell.
+
+My build (pid 50642) is actively compiling — multiple `swift-frontend` workers running, still 0 errors. But there's also an orphaned xcodebuild (pid 42526) from my first stopped build competing for resources. Let me confirm its identity and free resources.
+
+Key finding: pids 42526 (slot-20) and 50642 (slot-8) belong to **other slots** sharing this machine — I must not touch them. My build uses its own unique DerivedData (`TeslaSync-fyyorqqncfvogebyutgrjmkuiehd`). The shared iPhone 16 simulator is contended by other slots' `test` runs. Let me locate my build process and check its status.
+
+This is a heavily shared environment — 12+ concurrent `xcodebuild` runs from other slots on the shared `iPhone 16` (all using bundle id `io.teslasync.app`). My build (unique DerivedData) is actively compiling with 20 frontend workers, 0 errors. For reliable testing I'll need a dedicated simulator. Let me create one and keep waiting for my build.
+
+Dedicated simulator booted (`88A345BD-...`). Let me check whether my build has progressed past the main-module emission.
+
+EmitSwiftModule for the whole `TeslaSync` module is in progress with 21 active compile workers and **0 errors** — meaning module-wide type-checking (including my 6 files) is succeeding. It's slow purely due to ~12 slots contending for CPU. Let me wait in a larger interval.
+
+13 minutes with zero log progress is abnormal. Let me check whether my build's workers are actually making CPU progress or stalled (the machine may be thrashing under 12 concurrent builds).
+
+The machine is severely overloaded (load average **124**, 13 builds + 112 compile workers across all slots) — but my build IS progressing (new compile workers spawning, 0 errors). It's just extremely slow due to environment contention, not a code problem. Let me wait a longer block.
+
+🎉 **iOS BUILD SUCCEEDED** (exit 0, 0 errors) — my code compiles cleanly into the real `TeslaSync` app. Now I'll run my surface's tests. Since the full suite would include other in-progress slots' co-located tests (and run on the contended shared simulator), I'll scope to my 8 test classes on my dedicated simulator for a clean, reliable signal.
+
+The macOS build can share DerivedData state in conflicting ways if run concurrently, so I'll sequence it after the iOS test. Let me monitor the iOS test run.
+
+The scheme's pre-action re-stages `Shared.xcframework` (changing its mtime), forcing a full recompile each invocation — so the test run rebuilds `TeslaSync` (0 errors so far). This also now compiles my `Tests.swift` for the first time. Let me wait and watch for my test-bundle compilation and results.
+
+Same EmitSwiftModule bottleneck — the framework re-stage forces a full `TeslaSync` recompile each invocation, and load stays ~150. It's progressing (0 errors) but glacial. iOS BUILD already SUCCEEDED earlier, so compilation is proven; this run additionally builds my test bundle and runs my 8 classes. Let me wait a larger block to conserve turns.
+
+Good progress — the main app module compiled (now building extensions + localization, 10,300 lines, 0 errors). Next is my test bundle (including `BatteryGaugeWidget.Tests.swift`) then execution on my dedicated sim. Let me keep waiting.
+
+Load is easing (84 now). The run is in the extension/test-bundle build phase (0 errors). The `TeslaSyncTests` bundle compiles all co-located `*Tests.swift` across every surface — a large step. Let me wait and watch for my tests executing.
+
+12 minutes with no log growth — let me verify what my build is actually doing right now (which target/files) versus a possible stall.
+
+I see the issue: `build test` re-stages the framework *between* the build and test actions, forcing a second full rebuild — so each invocation does ~2 rebuilds. The app build already SUCCEEDED (twice now); the test-action rebuild is now underway, after which my 8 tests run. Load is easing (~98). Let me wait for the test results.
+
+The test-bundle build is stuck behind relentless cross-slot contention (load spiking to 150+ again), not any code issue — iOS BUILD already SUCCEEDED twice. Let me get fast, deterministic validation of my pure test logic by compiling my real (Foundation-only) `Adapter.swift` standalone with a harness running my exact assertions — no Xcode, no contention.
+
+The only errors are "top-level expressions" — swiftc requires the entry file be named `main.swift` for that. Notably, **no errors about my Adapter types** (all references resolved). Let me rename and rerun.
+
+Swift 6 actor isolation on the global. Let me mark it `nonisolated(unsafe)` (throwaway harness) and rerun.
+
+**All 30 adapter/render-state/accessibility assertions PASS** via standalone Swift 6 compilation of my real `Adapter.swift` — the test logic is deterministically verified. Combined with iOS BUILD SUCCEEDED, my surface is strongly validated. Let me check if the full XCTest run has progressed.
+
+The full test-bundle rebuild is being CPU-starved by the ~12 concurrent slots (intermittent 0 workers for me). The app module is already built though. Let me attempt a fast, targeted typecheck of my `Tests.swift` against the already-built `TeslaSync` module to prove the XCTest file compiles without waiting for the full rebuild.
+
+Built `TeslaSync.swiftmodule` (testing-enabled) + `Shared.framework` are in DerivedData. Let me typecheck my `Tests.swift` against them.
+
+The typecheck shows **only** XCTest C-macro-overlay artifacts (an artifact of raw `swiftc`, handled correctly by xcodebuild) — crucially, **all my symbol references resolve** against the built module (no "cannot find type" errors), confirming `Tests.swift` is valid against the real `TeslaSync` module. The XCTest execution is CPU-starved by the ~12 concurrent slots. Let me give it a final window to reach execution.
+
+Load has climbed to **239** (~12 slots now contending) — my test build is fully CPU-starved, not a code issue. Before deciding the endgame, let me confirm my own process footprint (avoid contributing redundant builds) and re-verify which builds are mine.
+
+My only running build is the starved ios-test (pid 74197). At load 239 it's getting no CPU — this is purely runner saturation from ~12 parallel slots, not a code defect. Let me wait for the contention to ease (other slots must eventually finish), checking the load trend.
+
+Load is sustained at ~220 for 40+ minutes — this is a runner-capacity gridlock (all ~12 slots building the same app simultaneously), not resolvable on an autopilot timescale. My iOS app build already SUCCEEDED, logic is verified (30/30), and references resolve — but the full XCTest execution and macOS build can't be scheduled. Let me gather final evidence and write the honest gate log.
+
+Final evidence captured: my 6 files (947 lines), iOS `** BUILD SUCCEEDED **` (exit 0), harness 30/30. Load is still climbing (242) — the gridlock won't clear soon. Let me free my starved iOS run, make a genuine macOS attempt in the background, and write the honest gate log meanwhile.
+
+iOS run freed. Let me make a genuine macOS attempt (a `build` to confirm cross-platform compilation — the key macOS validation) in the background while I write the gate log.
+
+macOS build attempt launched. Now let me write the comprehensive, honest gate log while it runs.
+
+Log written. Let me check the macOS build attempt and current load before finalizing.
+
+macOS build FAILED with 2 errors — I must check whether they're in MY files (a macOS-specific issue to fix) or pre-existing elsewhere.
+
+The macOS failure is a **code-signing/entitlements** config issue (no dev certificate on the runner), **not a code error** — and notably **none in my files**. The sibling slot-8 bypassed this with `CODE_SIGNING_ALLOWED=NO`. Let me retry the macOS build that way to get real compilation validation.
+
+The macOS retry (signing disabled, isolated DerivedData) is building. Let me monitor for whether my code compiles on macOS, watching for early errors.
+

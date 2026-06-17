@@ -1,0 +1,81 @@
+I'll start by exploring the repository structure and verifying what's actually present before running the Apple acceptance gate. The honesty covenant is binding, so I must verify everything truthfully.
+
+Toolchain is fully present: Xcode 26.5, swiftlint, swiftformat, pwsh, and `apps/apple` exists. Let me explore the structure deeply.
+
+Toolchain present but I notice discrepancies: the gate references `apple-macos-ledger.json`/`apple-ios-ledger.json` and `check-parity-ledger.ps1`, but actual files are `apple-ledger.json` and there's no `check-parity-ledger.ps1`. Let me read the reference log and key files to understand the real state. I must not assume — I'll verify everything.
+
+The reference run at a prior commit concluded `EXIT=70 STATUS=BLOCKED` with five independent blockers. I must run this gate for real at the current commit (`3eb58b919`) and record honest evidence — not cite the prior run. Let me do a comprehensive preflight to establish the current state.
+
+Clear capability picture: full Xcode 26.5 active, iPhone 16 simulator booted, but **0 valid signing identities**, and the gate-required `apple-macos-ledger.json`/`apple-ios-ledger.json` + `check-parity-ledger.ps1` are all **absent** (only a combined `apple-ledger.json` exists). Now let me verify predecessors and the exact prompt commands.
+
+The prompt confirms the exact gate. Now I'll verify predecessor logs and P7 page generation state — the reference run found P7 pages 0/861 and P9 incomplete, but this checkout has many `apple-page-*.log` files, so I must check the current reality.
+
+This checkout is far more complete than the reference run (6262 Swift files, Features generated, predecessor logs present). But still no `.xcodeproj`, no staged xcframework, 0 signing identities. Let me verify predecessor STATUS values and the P7 page completion.
+
+Critical findings confirmed. This checkout is more complete than the reference, but I've verified **three independent, decisive blockers**:
+- **p4-p9-0002-xcuitest-ui**: LOG ABSENT (rule 7 — a P4/P9 predecessor never ran)
+- **Parity**: `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1` all ABSENT (rule 5)
+- **Signing**: 0 valid identities → macOS build/test + both archives cannot sign
+
+Per the honesty covenant (rule 3, no skip-and-assume), I'll still run every runnable gate command for real. Let me start the host gates.
+
+Real evidence accumulating: `LINT_EXIT=0` (clean), but `FORMAT_EXIT=1` — swiftformat finds 9 files needing formatting (another genuine RED I must not fix). Now the placeholder scan and the two ledger checks.
+
+Recorded real REDs: `PLACEHOLDER_EXIT=1` (66 placeholders), and both ledger checks fail — `check-parity-ledger.ps1` is not recognized (absent). Now I'll attempt the xcodebuild halves for real. First generate the Xcode project and inspect the xcframework pre-build dependency.
+
+Build requires generating the project (xcodegen) plus a ~23-min KMP `Shared.xcframework` gradle pre-build. The verdict is already deterministically BLOCKED, but rule 3 (no skip-and-assume) means I'll attempt the xcodebuild halves for real. Let me generate the project and start the xcframework build.
+
+Project generated; both `TeslaSync` and `TeslaSync-macOS` schemes exist. Now let me start the KMP `Shared.xcframework` gradle build (the pre-build dependency) and monitor whether it's feasible in this environment.
+
+Gradle xcframework build is running (started 12:15:49, ~23 min expected). While it builds, let me gather remaining facts for the log: P7 page completion and git-ignore status of generated artifacts.
+
+Clean tree; generated `.xcodeproj` is git-ignored. The combined `apple-ledger.json` shows 86/86 rows done — but the gate's *required split files* (`apple-macos-ledger.json`/`apple-ios-ledger.json`) + checker remain absent. Let me confirm xcframework gitignore handling and apple P7 log completion while gradle builds.
+
+Refined the picture: apps/apple/Frameworks/*.xcframework/ IS gitignored (will apply once built). Apple P7 logs: 742/746 contain DONE, but 47 BLOCKED occurrences exist — so not all P7 predecessors are DONE. Let me get the precise final-status tally, then check gradle progress.
+
+Precise tally: 742/746 apple P7 logs DONE, but **3 BLOCKED** (AIFeedbackQueueTriage, AIMLChargingCurveClustering, AIRangePrediction) + 1 no-status — so P7 predecessors are not all DONE (rule 7). Gradle xcframework build still running (~5 min in, ~23 expected). Let me keep monitoring.
+
+Xcframework built successfully (`XCFRAMEWORK_EXIT=0`, 7m29s — Kotlin from cache). Now the long pole: the real iOS Simulator build+test gate command. Let me run it.
+
+iOS build+test running (compiling ~6000 Swift files). Let me continue waiting.
+
+iOS build+test is RED: `IOS_EXIT=65` — the `TeslaSyncTests` target fails to compile (`Main actor-isolated default value in a nonisolated context`). A real failure I must not fix. Now the macOS build/test gate.
+
+macOS build/test RED: `MAC_EXIT=65` — entitlements require a development certificate (the verified 0-identity capability gap). Now the two archive gates.
+
+iOS archive RED: `IOS_ARCHIVE_EXIT=65` — signing requires a development team; no archive produced. Final gate command: macOS archive.
+
+All gate commands executed. **8 of 9 RED** (only LINT green). macOS archive also failed on signing: `MAC_ARCHIVE_EXIT=65`. Now let me confirm the tree is clean (only the log should be committable) before writing the acceptance log.
+
+Tree is clean — generated `.xcodeproj` and `Shared.xcframework` are git-ignored, no tracked or untracked-non-ignored drift. All evidence gathered. Let me record final gate state and write the acceptance log.
+
+Now I'll write the comprehensive, honest acceptance log with all real evidence.
+
+Log written. Let me verify the footer (rule 10) and that only the log is staged, then commit.
+
+Footer correct (`EXIT=65` / `STATUS=BLOCKED`), exactly one file staged (the log), no other drift. Committing only the log with an honest BLOCKED message.
+
+The Apple acceptance gate (P4/P99) is complete. I ran it for real and recorded honest evidence.
+
+## Result: `EXIT=65` / `STATUS=BLOCKED` (committed `9726705fa`, log only)
+
+I executed the **full gate for real** at HEAD `3eb58b919` — generated the Xcode project (xcodegen) and built the KMP `Shared.xcframework` from source (`XCFRAMEWORK_EXIT=0`, 7m29s) to make the xcodebuild halves runnable, then ran all 9 verbatim gate commands.
+
+**8 of 9 gate steps RED** (only swiftlint green):
+
+| Step | Result | Cause |
+|---|---|---|
+| swiftlint --strict | ✅ 0 | 0 violations / 5955 files |
+| iOS build+test | ❌ 65 | `TeslaSyncTests` compile error (Main actor-isolated default in nonisolated context) |
+| macOS build+test | ❌ 65 | entitlements need dev cert (0 identities) |
+| swiftformat --lint | ❌ 1 | 4 files / 9 lines |
+| placeholder scan | ❌ 1 | 66 TODO/Placeholder markers |
+| macos ledger check | ❌ FAIL | `check-parity-ledger.ps1` + `apple-macos-ledger.json` absent |
+| ios ledger check | ❌ FAIL | checker + `apple-ios-ledger.json` absent |
+| iOS archive | ❌ 65 | requires development team; no archive |
+| macOS archive | ❌ 65 | requires dev cert; no archive |
+
+**Decisive blockers** (any one forces BLOCKED): predecessor `p4-p9-0002-xcuitest-ui` never ran + 3 BLOCKED/115 logless P7 prompts (rule 7); gate-mandated split ledgers + checker absent (rule 5); iOS test target compile failure; format/placeholder REDs; **0 signing identities** ⇒ macOS test + both archives can't sign.
+
+Per the covenant I **did not fix code, narrow scope, delegate, or fabricate** anything (creating the ledgers/checker, fixing the test/format/placeholders, and provisioning signing are all explicitly Out of Scope). Tree is clean; the generated `.xcodeproj`/`.xcframework` are git-ignored; only the acceptance log was committed.
+

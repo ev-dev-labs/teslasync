@@ -1,0 +1,179 @@
+I'll start by exploring the repository structure, reading the web source, and checking native Apple tooling availability.
+
+Tooling is available (Xcode 26.5, swiftlint, swiftformat, swift). The feature-views directory follows a clear multi-file pattern. Let me read the rest of the web source and check for existing TripReplayMap files plus a map-based reference.
+
+No existing `TripReplayMap.*`. Strong analogs exist: `RouteMapSection` and `TripPlannerMap` (both route/polyline maps via MapKit). Let me study the build system and the closest template files in depth.
+
+This uses XcodeGen (`project.yml`). Let me read the project config and the closest analog template (`RouteMapSection`) in full.
+
+XcodeGen auto-globs `feature-views/`, so new files are picked up automatically. There's a `Stage Shared.xcframework` pre-action (KMP). Let me study the closest analog `RouteMapSection` in full and check the shared framework situation.
+
+`RouteMapSection` is an almost-exact template — a speed-colored route map with markers, stationary fallback, and all states. Let me read its remaining files plus `TripPlannerMap` to fully internalize the pattern, including the MapKit/projection/freshness/state/test conventions.
+
+Now the Adapter/projector, Format, strings, and tests, plus verifying the shared native primitives exist.
+
+The pattern is crystal-clear and high quality. Now let me read the strings/previews/tests format, the web types/geo lib, and check `TripPlannerMap` for interactive seek/playhead patterns plus verify shared primitives exist.
+
+All shared primitives exist including `AnimatedMarker`. Let me read the native Maps component, the test conventions, the previews, and find how the web parent wires `currentIndex`/`onSeekToIndex` and the speed unit.
+
+Now the test conventions, previews, and the web parent page wiring (to confirm playhead/seek semantics and speed unit).
+
+Critical finding: `DrivePosition.speed` is **SI m/s** (parent uses `convertSpeedFromSI(p.speed, ...)`), and the web `TripReplayMap.speedColor()` bands raw m/s at 30/60/100. I'll reproduce `speedColor` verbatim for parity. Let me read the remaining test files and confirm shared token/component signatures.
+
+I have a complete understanding of the pattern. Let me verify the exact shared API signatures I'll consume so I don't guess.
+
+I now have the complete pattern and all shared API signatures. Let me set up tracking, check build feasibility in the background, and write the plan.
+
+KMP prerequisites exist (gradlew, JDK 17), design tokens generated, placeholder script + pwsh available. The Shared.xcframework build is the long pole — let me start it in the background now while I write the surface.
+
+KMP build is running in the background. Now I'll write the surface files following the canonical `RouteMapSection` pattern. Starting with the Foundation-only Format (geo + heading + speed bands).
+
+Now the core testable Adapter — projector, markers, playhead, nearest-sample seek, and accessibility.
+
+Now the Model — state-holder seam, telemetry seam, DTO, observable model with unidirectional seek, in-memory source, and the i18n facade.
+
+Now the main view and the MapKit canvas/views.
+
+Now the MapKit canvas, playhead, marker bridges, and style picker.
+
+Now the non-map states: stationary banner, skeleton, empty, error/retry, freshness chip.
+
+Let me check the background KMP build progress and write the strings catalog.
+
+KMP build is compiling (warming up). Let me write the previews and the three test files while it builds.
+
+Now the three test files — shared fixtures + pure-helper coverage, projector coverage, and model + render-smoke coverage.
+
+KMP build finished. Let me confirm the framework staged, then write the final test file.
+
+Framework built & cached (the scheme pre-action will stage it). Now the final test file.
+
+All 11 files created. Now let me verify — first format/lint my new files specifically before running the full gate.
+
+swiftformat clean. Now swiftlint on my files.
+
+Both clean on my files. Now the placeholder check.
+
+Placeholder check clean (0). Let me make the map tap-gesture overload explicit (avoids overload ambiguity) before the long build, then generate the Xcode project.
+
+Project generated; iPhone 16 simulator is available. Now the long pole — the gate's `xcodebuild build test`. Let me set up the log and run iOS build+test in the background.
+
+iOS build+test is running in the background (KMP staging + full app compile + tests). Let me monitor it.
+
+iOS build+test completed. Let me extract the key results from the log.
+
+The 104 errors are all in a **pre-existing, unrelated** surface (`StateTimeline*` — ambiguous duplicate type definitions), not my code. Let me confirm zero errors reference TripReplayMap.
+
+Confirmed: **zero** errors reference any TripReplayMap file. All 104 are a pre-existing duplicate-type collision in the out-of-scope `StateTimeline` predecessor surface. Let me confirm via git that I only added TripReplayMap files, and characterize the collision + its blast radius.
+
+Definitive: only my 12 TripReplayMap files are new (zero other changes), and the failure is a **pre-existing duplicate-definition collision** — both `dashboard-widgets/StateTimelineWidget.Model.swift` and `feature-views/StateTimeline.{Adapter,Model,Source}.swift` declare the same `public` `StateTimelineUpdate/Connection/LoadStatus/Model`. To prove my surface builds + tests pass, I'll run an isolation experiment (temporarily exclude the broken predecessor, then restore). First, the cascade check.
+
+No external references to either StateTimeline surface. Let me do one broader safety check, then run the isolation experiment (move the duplicate widget set aside → resolves ambiguity, leaves the feature-view StateTimeline intact).
+
+Only comment mentions remain — no real references. Safe. Running the isolation experiment: temporarily move the duplicate widget set aside, rebuild + test, then restore.
+
+Widget set moved aside, project regenerated. Now the isolation build+test.
+
+Isolation build running. Let me monitor progress.
+
+Let me stop the monitor and check the isolation build status directly.
+
+Build failed with 0 `error:` lines — a non-compile failure. Let me find the actual cause around the failure marker.
+
+Line 8722 shows a `SwiftCompile failed`. Let me see the actual diagnostic and the failed-commands list.
+
+The isolation revealed a SECOND, deeper pre-existing breakage: a `swift-frontend` IR-gen **compiler crash** on `AppearanceSettings.Controls.swift` (another out-of-scope predecessor file), plus an `AnomalyInlineRow` batch failure. This slot has multiple broken predecessor surfaces — the full-app gate cannot go green regardless of my work, and I'm not allowed to edit those files.
+
+First, let me restore the files I moved, then verify my surface in true isolation via a standalone type-check.
+
+Repo restored to only-my-additions; Shared.xcframework staged. Now a standalone **type-check** of my surface against the real shared library + iOS 18 SDK — excluding the broken sibling surfaces — to positively prove TripReplayMap is correct.
+
+The main filename got doubled. Let me fix the closure and run the type-check.
+
+Type-check exit 1 with 2 errors — none in TripReplayMap. Let me see what they are.
+
+That's just my standalone setup — `swiftc -F` needs the simulator `.framework` slice inside the `.xcframework` (xcodebuild resolves this automatically). Zero TripReplayMap errors. Let me point at the correct slice and re-run.
+
+**TYPECHECK_EXIT=0 — my TripReplayMap surface type-checks cleanly against the full shared library (189 Sources files) + Shared.xcframework + iOS 18 SDK under Swift 6 strict concurrency.** Now let me prove the test files compile too (compiling them in-module with XCTest, since the full xctest run is blocked by predecessors).
+
+The 44 errors are all "cannot find XCTAssert* in scope" — an XCTest-overlay resolution quirk in my ad-hoc `swiftc`, not a defect in the test logic. Let me confirm with a trivial XCTest probe to characterize it, and verify my copies kept `import XCTest`.
+
+Definitive: a **trivial** XCTest file fails identically ("macro unavailable: function like macros not supported") — this is a known ad-hoc `swiftc` limitation with XCTest's overlay, **not** a defect in my tests (which mirror the passing RouteMapSection tests exactly). 
+
+Let me run a fast full-app **`-typecheck`** (skips the IR-gen crash) to enumerate every predecessor semantic failure and confirm zero are mine, then a macOS-target check of my surface.
+
+Comprehensive result: across **all 2,447 non-test files**, the only semantic errors are in the predecessor `StateTimeline` surface (redeclared public types) — **zero in TripReplayMap**. Let me capture the exact predecessor diagnostics, then confirm macOS-target soundness of my surface.
+
+Comprehensive verification complete:
+- **iOS** typecheck of my surface + full shared lib: **EXIT=0**
+- **macOS 15** typecheck of my surface: **EXIT=0**
+- Full-app typecheck (2,447 files): **0 TripReplayMap errors**; only predecessor `StateTimeline` redeclarations.
+
+Predecessor blockers precisely characterized (`StateTimeline` redeclares public types also in `StateTimelineWidget.Model`; plus `AppearanceSettings.Controls.swift` IR-gen compiler crash). Now let me run the remaining real gate legs (macOS build+test in background; whole-tree lint/format) to populate the log faithfully.
+
+While macOS builds, let me run the whole-tree lint/format legs (the gate runs these over all of `apps/apple`).
+
+swiftlint --strict over all 3,022 files: **0 violations** (LINT_EXIT=0). macOS build finished — let me read its result and run the whole-tree format check.
+
+Both gate build legs are red for **out-of-scope reasons**: iOS = predecessor compile failures (0 mine); macOS = environment **code-signing** (no dev certificate) — neither is my code. Lint/format/placeholder all pass (0 issues, whole-tree). Let me finalize the log with the placeholder leg + a full evidence appendix.
+
+Now the evidence appendix and final status block.
+
+The log is complete and honest. Let me finalize: stage the deliverable (protects the work + signals readiness) without committing — honoring covenant **#8 "No commit on red"** since the gate is BLOCKED — then clean up temp artifacts and update tracking.
+
+Let me update tracking and record the final state in the plan.
+
+Let me do a final confirmation of the staged deliverable and the log's terminal status.
+
+The task is complete to the maximum extent possible within scope. Here is the final status.
+
+## TripReplayMap (Apple) — P4/0274 · STATUS=BLOCKED
+
+I shipped a complete, production-polished native Apple parity of `features/trips/components/TripReplayMap.tsx` — **12 files** under `apps/apple/TeslaSync/feature-views/`, following the canonical `RouteMapSection` (0147) multi-file pattern:
+
+- **`.swift`** GlassPanel + state switch · **`.Model`** P1/S8 state-holder + P1/S11 `view.opened` telemetry + unidirectional `seek` · **`.Adapter`** projector (trail/segments/markers/camera/stationary) + heading playhead + `nearestSampleIndex` + a11y · **`.Format`** geo + `computeHeading` + `speedColor` ladder (ported from the web libs) · **`.Views`** MapKit canvas (speed-colored polylines, start/end/anchor dots, heading playhead, `MapReader` tap→seek, style switcher) · **`.States`** stationary banner / skeleton / empty / error+retry / freshness chip · **`.Previews`** 8 states · **`.strings`** i18n (web-parity + native chrome keys) · **`.Tests`/`.ProjectorTests`/`.ModelTests`**.
+
+All states reproduced (loading, empty "No position data…", error, route, stationary "Route can't be plotted", stale, offline, reduced-motion). SI-aware: confirmed `DrivePosition.speed` is m/s and reproduced `speedColor` verbatim.
+
+### Verification — my surface is green on every controllable dimension
+| Check | Result |
+|---|---|
+| swiftlint --strict | **0** violations (mine; 0/3022 whole-tree) |
+| swiftformat --lint | **0** (mine; 0/3026 whole-tree) |
+| check-placeholders | **0** |
+| iOS typecheck (6 src + full Sources lib + Shared.xcframework + iOS 18 SDK, Swift 6) | **EXIT=0** |
+| macOS 15 typecheck (same) | **EXIT=0** |
+| Full-app typecheck (2,447 files) | **0** TripReplayMap errors |
+
+### Why the gate is BLOCKED (out of scope / outside allowed files)
+- **iOS build/test (65):** pre-existing **predecessor** failures — `StateTimeline.Adapter.swift` redeclares public types also declared in `StateTimelineWidget.Model.swift` (ambiguous lookup), plus a `swift-frontend` **IR-gen crash** in `AppearanceSettings.Controls.swift`. Zero errors in any TripReplayMap file.
+- **macOS build/test (65):** environment **code-signing** gap (no development certificate).
+
+Neither cause is in my allowed file set (`TripReplayMap.* + log`); editing them would violate the scope + "no predecessor bypass" covenant.
+
+Per Honesty Covenant **#1/#7** this is **STATUS=BLOCKED** (not DONE), and per **#8 (no commit on red)** the commit is **withheld**. The 12 files are **staged** and the log ends with `EXIT=65 / STATUS=BLOCKED` with full evidence. Once the predecessor surfaces are fixed and a signing identity is present:
+
+```
+git commit -m "feat(apps/apple/feature-views): add TripReplayMap surface (P4)"
+```
+
+
+
+The task is essentially done, but I can convert "tests typecheck" into "tests **actually execute and pass**" for the pure-logic core — my `Format`/`Adapter`/`Model` are Foundation-only (no SwiftUI/MapKit), so I can run the adapter/model/geo/a11y suites in a throwaway SwiftPM package. This directly satisfies the "adapter unit test + a11y label test" acceptance criterion with real execution. Worth doing.
+
+Let me verify the render-smoke block was fully stripped.
+
+Render-smoke block cleanly removed (only a harmless header comment remains). Now let me **execute** the pure-logic suites.
+
+Running the real tests caught a **genuine bug in my test file** that the XCTest-overlay limitation had masked: `XCTAssertEqual(playhead?.coordinate.latitude, …, accuracy:)` passes an optional to the accuracy overload. Let me fix it in the real deliverable.
+
+Let me scan all my test files for any other optional-with-accuracy patterns, then re-run the suite.
+
+**All 40 pure-logic tests executed and PASSED** (geo, heading, speed-band, accessibility, projector, playhead, model state-holder/seek/telemetry) — and the real run caught + I fixed a genuine test bug. Let me confirm the fixed file is still lint/format-clean and re-verify the full source typecheck.
+
+Fixed file stays lint/format-clean. Let me record the test-execution evidence in the log (keeping `EXIT`/`STATUS` as the final lines) and re-stage the corrected file.
+
+Let me do a final confirmation of the complete staged deliverable and that the real ModelTests (with render-smoke cases) is intact.
+
+The deliverable is complete and maximally verified. Everything is confirmed: 12 files staged, the real test suite intact, the bug-fix staged, and the log terminates correctly with `EXIT=65 / STATUS=BLOCKED`.
+

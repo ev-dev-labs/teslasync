@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires the Apple toolchain.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+Each surface follows a multi-file pattern. Let me study a representative complete example and find the closest analog (one using vehicle selection/pinned data), plus locate the shared P1 layers.
+
+A `VehicleSelect` surface exists — the closest analog. Let me read its complete file set to learn the exact conventions.
+
+This is the gold-standard analog. Let me read all 9 files of `VehicleSelect` to learn every convention.
+
+Now the remaining VehicleSelect files to complete my understanding of the pattern (Seams, Views, Previews, strings, Tests, AdapterTests).
+
+I have a complete picture of the pattern. Now I need the exact shapes of the web `usePinned` hook and the native shared components/tokens (`TSSelect`, `TSSelectOption`, `TSButton`, `TSSkeleton`, `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`). Let me locate them all.
+
+Components live in `Sources/Components/`. Let me read the exact APIs (TSSelect, TSButton, TSSkeleton, tokens) and the web hooks.
+
+Let me confirm the `PinnedItem` type, the `TSButton`/`TSSkeleton` signatures, and critically how `project.yml` includes these files in the build targets.
+
+Now let me verify the build wiring (`project.yml`), the lint config, and confirm tokens — critical for whether new files are auto-included.
+
+Build wiring confirmed: `shared-surfaces` is auto-globbed (non-test → app targets, `*Tests.swift` → test bundles). New files need `xcodegen generate`. Let me check toolchain feasibility (xcodegen, the KMP `Shared.xcframework`) and confirm token names.
+
+Tokens all confirmed. The full gate depends on a KMP `Shared.xcframework` built via Gradle/Kotlin-Native (currently absent). Let me assess that toolchain and the PowerShell gate harness before writing code.
+
+All tools are present (java 17, gradlew, pwsh, xcodegen 2.45.4) — the gate is genuinely attemptable. The full build also requires a Gradle-built KMP `Shared.xcframework` (currently absent), which I'll attempt during verification. Let me set up tracking and start writing the surface.
+
+All 9 files created. Now verification. Let me check line counts (SwiftLint `file_length` budget under `--strict`) and run swiftformat/swiftlint on the new files.
+
+swiftformat flagged formatting (doc-comment style, inline loop bodies, long lines). I'll let the ecosystem tool auto-fix, then re-lint.
+
+Auto-fixes are clean. Re-running both linters on the new files to confirm.
+
+One `large_tuple` violation — my 3-member sort-key tuple. I'll replace it with a small `Comparable` struct. Let me view the current section and fix it.
+
+Now I'll replace the 3-tuple sort key with a small `Comparable` struct:
+
+Format and lint are clean (0 violations). Now the placeholder gate. Let me understand how `check-placeholders.ps1` resolves `-Path` and which patterns it forbids.
+
+Forbidden (case-insensitive): `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`, plus Swift `fatalError("unimpl"/"not"`, `Text("TODO`. Let me genuinely scan my files.
+
+No forbidden tokens. Let me run the actual placeholder script on a genuine scoped copy of my files (the gate's literal path is a non-existent dir, so I'll verify meaningfully), and confirm `pwsh` executes it.
+
+Genuine placeholder scan: `PLACEHOLDER_COUNT=0, EXIT=0`. Now the heavy build steps. First, regenerate the Xcode project so the new files are included.
+
+Project regenerated with the new files included (54 references). Now the heavy gate. Let me first assess whether the KMP `Shared.xcframework` (a build prerequisite) can be built via Gradle in this environment.
+
+The Gradle/Kotlin-Native build is running (likely downloading the toolchain on first run). Let me keep monitoring.
+
+`Shared.xcframework` built successfully (`BUILD SUCCESSFUL in 7m 42s`) and staged. Now let me check the simulator destination and the log directory before the full app build+test.
+
+`iPhone 16` simulator exists and the logs dir is present. The KMP framework is staged so the app can now build. Let me start the iOS app build (compiles all sources including my new files) in the background and monitor.
+
+iOS build started in the background. Let me monitor it.
+
+Good progress — 0 errors, my `VehiclePicker.strings` is being compiled into the bundle, and the app module is emitting (compilation nearly done). Let me wait for completion.
+
+Build finished with failures (exit 65). Let me find the actual errors.
+
+The 2 errors are in **other, pre-existing files** (`AISignalExplorerNlFilter.swift`, `AIAutoNameUnnamedLocations.swift`) — not mine. Let me see the full failure list and confirm I didn't touch them.
+
+Confirmed: the only 2 compile errors are in **pre-existing, non-VehiclePicker files** I never touched (my git status shows only `VehiclePicker.*`). My surface produced **zero** errors. Let me examine the pre-existing failures and the repo's documented verification stance before deciding how to verify my surface around this blocker.
+
+Both broken surfaces are self-contained (no external references), so I can safely exclude them temporarily to verify my surface in the real app/test target. Let me move them aside, regenerate, and rebuild iOS.
+
+Project regenerated without the broken surfaces. Now I'll build + run **only** my VehiclePicker tests in the real iOS app/test target.
+
+iOS test build started. Meanwhile, let me run a fully-isolated `swiftc` verification of the pure Adapter core logic (pin ordering, parsing, projection) as independent evidence.
+
+All 20 standalone core checks pass. Let me check the iOS test build progress.
+
+App compiling cleanly (0 errors). Let me wait for the build + test run to complete.
+
+A compile error appeared (likely in the test target). Let me identify it.
+
+Another pre-existing surface (`AIGeofenceAwareAutomationSuggestions`) has the **same** bug — this is a systemic pre-existing defect across multiple AI* surfaces (a `@ViewBuilder` helper capturing a non-escaping `content`). Let me enumerate every affected file.
+
+My surface is clean — the same pre-existing `content`-capture bug affects ~16+ AI* surfaces (note: `VehiclePicker.Previews.swift` uses the pattern too but in a *non-escaping* context, so it compiles fine — confirmed by 0 VehiclePicker errors). Let me check whether the affected surfaces are self-contained before deciding how far to verify.
+
+The `ios-test` run completed. Let me read its result, and note: `AIFeatureCard` is a **widely-shared** component, so excluding broken surfaces would cascade — routing around the breakage isn't viable. Crucially, my Model+Seams+Adapter are **SwiftUI-free** (Foundation/Observation/OSLog only), so I can execute the state-holder tests standalone. Let me confirm the test exit and run that.
+
+Confirmed `IOS_TEST_EXIT=65` (pre-existing AIGeofence error). Let me restore the temporarily-moved pre-existing files so the repo is clean, then run the decisive standalone Model/state-holder test (SwiftUI-free).
+
+Repo is pristine (only `VehiclePicker.*` changed). Now the decisive standalone test of the **state-holder** (Model+Seams+Adapter are SwiftUI-free), executing the same logic as my XCTest `VehiclePickerModelTests`/`StringsTests`.
+
+All 24 state-holder + strings checks pass (`MODEL_EXIT=0`) — together with the 20 core checks, that's 44 passing logic assertions covering my entire XCTest suite minus SwiftUI view instantiation (which the clean app compile already proved). To honor "no skip-and-assume", let me confirm the macOS target hits the *same* pre-existing errors (shared platform-agnostic code), running it in the background.
+
+Let me clean up the throwaway compile artifacts while the macOS build runs.
+
+macOS build compiling (0 errors so far, hasn't reached the broken AI* surfaces yet). Let me wait.
+
+macOS build also fails (`MAC_BUILD_EXIT=65`) on the same pre-existing AI* errors. Let me confirm none are mine.
+
+Confirmed: macOS fails on the identical pre-existing error, **zero** VehiclePicker errors. Both platforms blocked solely by pre-existing, out-of-scope code. To report the gate's lint/format steps honestly (they run repo-wide), let me execute them exactly as the gate specifies and capture real exit codes.
+
+Repo-wide `swiftlint --strict`: **LINT_EXIT=0** (0 violations across 4533 files). Now the repo-wide `swiftformat --lint`.
+
+Both lint (`LINT_EXIT=0`) and format (`FORMAT_EXIT=0`) pass repo-wide. Let me capture the placeholder step exactly as the gate invokes it, then write the log.
+
+All three lint/format/placeholder gate steps pass (`EXIT=0`); only the `xcodebuild` steps are red, blocked by pre-existing AI* errors. Let me write the honest gate log.
+
+The log is written. Before committing, let me verify the working tree contains only my intended changes (the generated `.xcodeproj` and `build/` must be git-ignored), and clean up build artifacts.
+
+Working tree is exactly my 9 surface files + the gate log (generated `.xcodeproj`/`build/` are git-ignored). Committing the verified deliverable with a message that honestly discloses the BLOCKED full-gate status.
+
+Committed cleanly (`00cdddad9`, 10 files, 1962 insertions). Let me confirm the tree is clean and close out the todos.
+
+The VehiclePicker surface is complete, verified, and committed. Final status:
+
+## Delivered — `VehiclePicker` (P4 shared surface 0183)
+
+9 files at `apps/apple/TeslaSync/shared-surfaces/VehiclePicker.*` (1,962 lines), a faithful SwiftUI parity of `components/layout/VehiclePicker.tsx`, modeled on the existing `VehicleSelect` surface:
+
+- **Pin-aware** ordering (`usePinned('vehicle')` float + `📌` prefix) + `display_name || vin || Vehicle {id}` fallback chain, reproduced verbatim with a **stable** sort.
+- **All P4 states render** (no blank box): `loading` skeleton, `content` (icon + picker), `single` (web's `≤1` hide → labelled identity), `empty`, `error` + retry, plus the `live/stale/offline` freshness chip (stale auto-refreshes once).
+- Bound through the P1/S8 source seam (no HTTP in views); i18n via the P1/S10 facade (sole web key `vehiclePicker.aria`, zero hardcoded English); VoiceOver labels everywhere; `view.opened` telemetry once.
+
+## Verification
+
+| Check | Result |
+|---|---|
+| `swiftlint --strict` (repo-wide) | **0** violations / 4533 files |
+| `swiftformat --lint apps/apple` | **0** / 4831 files |
+| placeholder scan | **COUNT=0** |
+| KMP `Shared.xcframework` (Gradle) | **BUILD SUCCESSFUL** |
+| pure-core adapter assertions | **20/20** |
+| state-holder (Model+Seams) assertions | **24/24** |
+| compile into iOS **and** macOS app targets | **0 VehiclePicker errors** |
+
+## ⚠️ Full-gate STATUS=BLOCKED (EXIT=65) — pre-existing & out-of-scope
+
+`xcodebuild build test` (iOS + macOS) cannot complete because **unrelated, pre-existing** AI* surfaces fail to compile: `escaping closure captures non-escaping parameter 'content'` (e.g. `AISignalExplorerNlFilter.swift:142`, `AIAutoNameUnnamedLocations.swift:123`, `AIGeofenceAwareAutomationSuggestions.swift:141`, +~16 `AI*.Chrome` peers). These files are untouched by me (`git` shows only `VehiclePicker.*` added) and lie outside prompt 0183's allowed file set; `AIFeatureCard` is a shared atomic so the breakage can't be routed around. I verified my surface's behavior via standalone execution instead. Full evidence is in the committed gate log.
+
+Committed `00cdddad9` (surface + honest log). The commit message and log disclose the BLOCKED full-gate status — no red reported as green.
+

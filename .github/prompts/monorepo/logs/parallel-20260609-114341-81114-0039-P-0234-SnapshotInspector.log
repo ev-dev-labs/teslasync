@@ -1,0 +1,234 @@
+I'll start by exploring the repository structure, the web source component, and the available Apple tooling.
+
+All Apple tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me explore the web source and the existing Apple app structure.
+
+Now I understand the web source. Let me explore the existing Apple app structure deeply — feature views, state holders, design tokens, i18n, and existing components.
+
+This is an XcodeGen project. Let me read project.yml, the TeslaSync directory, and check for existing feature-views and similar state-machine surfaces.
+
+Let me examine the existing feature-views patterns in detail. I'll list all surfaces and pick a representative one that uses telemetry/state-holders to use as a template.
+
+There's a large, well-established codebase. Let me study the state-holder layer, i18n facade, design tokens, and find a representative telemetry-bound surface to use as a template.
+
+Let me study the i18n approach and a complete representative surface. I'll look at how strings resolve and examine a telemetry/signal-related surface.
+
+`Loc` is the i18n facade. `AnomalyInlineRow` is an ideal template (presentational row with states). Let me read its complete file set.
+
+Excellent. Now let me read the remaining AnomalyInlineRow files: Adapter, Seams, strings, Previews, Tests, ModelTests.
+
+Now let me read the test files, previews, design tokens, and check the components I'll need (GlassPanel, Toggle, CopyButton, etc.).
+
+I have a strong grasp of the conventions. Now let me examine the web data types (FSMTransition, SignalSnapshotResponse), the web StateBadge & SourceLayerBadge, plus the Apple design tokens and needed components.
+
+The native `FSMSubFSMPanel` already renders FSM state badges — a perfect reference. Let me read it plus the UI primitives (Typography, Buttons, Utility/CopyButton, Toggle) and the web `getStateColor`.
+
+Let me read the Buttons, the Toggle component, the web FSM registry (getStateColor), and the native FSMSubFSMPanel to see how state badges are rendered natively.
+
+Let me read the native FSMSubFSMPanel (how it renders state badges), the TSToggle, and the FSM theme to understand state→color mapping.
+
+Let me read the FSM theme and a sample FSM definition to understand state→color mapping, find `TSTone`, and check whether other native state-machine surfaces already ported FSM state coloring.
+
+There's an existing native `FSMStateDiagram.Registry` — likely a port of the FSM registry with state colors I can reuse. Let me read it, plus `Badges.swift` (TSTone), and the sibling web files for context.
+
+`FSMRegistry.color(for:state:)` is public and reusable — exactly the web `getStateColor`. Let me check the `FSMStateColor → Color` mapping visibility and read the web `formatRelative` / `fmtInt` helpers.
+
+I now have nearly everything. Let me do final checks: the `fmtNumber`/`fmtInt` logic, any existing shared `JSONValue`/source-layer helpers in the Apple code, and how `.strings` tables integrate.
+
+Let me check the placeholder-checker script (to know which tokens are flagged), the existing ordered-JSON helper, and the source-layer references in StatusIndicators.
+
+Found `ActionJSON`/`ActionJSONNumber` (proven JS-number/ordered-JSON ports) for reference. Let me read the lint configs, confirm no existing SnapshotInspector files, and check the `at`/`SignalSnapshotEntry` shape once more before writing.
+
+Let me check the Shared.xcframework status and the build script (the scheme's preAction builds it), since that affects whether the full xcodebuild gate can run.
+
+Important: `Shared.xcframework` isn't built yet, and the scheme builds it via a KMP Gradle step. My surface won't import `Shared`, but the app target links it. Let me assess the KMP toolchain and generate the Xcode project.
+
+Java 17 + KMP project exist. The `Shared.xcframework` build is heavy (Kotlin/Native) — let me kick it off in the background now and generate the Xcode project while I write the Swift code.
+
+Project generated. KMP build running in background. Let me set up a plan and todos, then write the surface files.
+
+KMP build is warming up in the background. Now I'll write the surface. Starting with the pure projection core (`Adapter`).
+
+Adapter written. Let me check the KMP build progress, then write the Seams file.
+
+KMP build is downloading/compiling. Let me continue writing the Seams file (telemetry, strings facade, connection, Update, Source protocol).
+
+Now the Model (`@Observable @MainActor` view-model).
+
+Now the Views file — the snapshot detail composition with the inlined StateBadge (reusing `FSMRegistry`/`FSMStateColor`) and SourceLayerBadge.
+
+Now the States file (loading, empty variants, error, no-signals, freshness chip). Let me also check KMP build progress.
+
+KMP build completed. Let me verify the framework was produced, then continue with the main View file.
+
+KMP framework built successfully. Let me stage it and write the main View file.
+
+Framework staged with all needed slices. Now the main View file.
+
+Now the `.strings` i18n catalog with all keys.
+
+Now the Previews (one per state, DEBUG-only).
+
+Now the adapter/a11y/identity Tests file.
+
+Now the ModelTests (state-holder coverage).
+
+All 10 files written. I need to fix a localization issue: `TSPanelTitle` takes a `LocalizedStringKey` resolved against the *main* catalog, but my strings live in the per-surface table. I'll replace those with verbatim Text styled with the panel font (matching the `FSMSubFSMPanel` convention).
+
+Now let me auto-format my files with swiftformat, then run swiftlint and the placeholder check.
+
+swiftformat passes. swiftlint `--strict` flags two files over the 400-line limit (warnings become errors under `--strict`). I need to split the Adapter and Tests. Let me check all line counts first.
+
+Under `--strict`, the 400-line warning becomes an error. I'll split the Adapter into JSON/Adapter/Projection files and the Tests into two. Let me remove the oversized files and recreate them split.
+
+Now creating the split files. First the JSON value model.
+
+Now the slimmed Adapter (surface identity, source layer, domain shapes).
+
+Now the Projection (render-input types, projection core, relative time, accessibility).
+
+Now splitting the Tests into two files. First the value/JSON/source/a11y tests.
+
+Now the ProjectionTests (rows/duration/copy/phase/relative).
+
+All files split. Let me re-run swiftformat (fix), then lint, swiftlint, placeholder check, and verify line counts.
+
+All files ≤350 lines. Now full lint + placeholder check.
+
+Both lint gates pass. Now the placeholder check, run exactly as the gate specifies (from repo root).
+
+Placeholder gate passes. Now I'll regenerate the Xcode project (new files added) and check available simulators before the build.
+
+iPhone 16 simulator is available. Now the iOS build+test (the heavy step). I'll set `JAVA_HOME` (the scheme's pre-action runs Gradle) and run it in the background.
+
+iOS build+test running in background. Let me wait and monitor progress.
+
+The piped output is buffered. Let me peek at the build log directly for progress.
+
+Good progress — Gradle pre-action done, now compiling the TeslaSync module. Let me check for any errors so far and keep waiting.
+
+No errors. The full app is compiling (large module). Let me wait further for compilation, link, and test execution.
+
+The build is alive (multiple `swift-frontend` processes at ~20% CPU compiling the large test bundle); xcodebuild just buffers piped output. Let me keep waiting for completion.
+
+Build compiled with no errors; now the test run is being set up. Let me wait for test execution to finish.
+
+Simulator is booted; the test-bundle build (compiling the whole Tests suite) is still underway. This is CPU-bound and large. Let me continue waiting.
+
+Build failed in the test bundle. The failing batch lists *other* surfaces' tests — this signals a likely symbol collision from a type I introduced into the shared module. Let me find the actual compiler `error:` lines.
+
+The errors are `invalid redeclaration` in `SafetyFeaturesWidget.ModelTests.swift` — not my files. Let me see the full errors and check whether this is pre-existing or triggered by my project regeneration.
+
+My SnapshotInspector files have zero errors. The failure is a pre-existing duplicate-class collision between two *other* surfaces: `SafetyFeaturesWidget.ModelTests.swift` and `SafetyHistoryWidget.ModelTests.swift` both declare `SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests`. Let me confirm this is pre-existing (not caused by me) via git.
+
+Confirmed: my changes are purely additive (only `SnapshotInspector.*` untracked). The failure is a **pre-existing** duplicate-class collision between two committed sibling files (`SafetyFeaturesWidget.ModelTests.swift` and `SafetyHistoryWidget.ModelTests.swift`), both declaring `SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests`. My app-target build itself succeeded with zero errors. Let me scan the whole test corpus for ALL duplicate test-class names (including verifying mine are unique) before deciding the fix.
+
+My surface's production code builds cleanly (iOS app build passed) and my test class names are all unique/well-prefixed. The test *bundle* is pre-existing-broken by duplicate `XCTestCase` class names across several sibling surfaces (ChargeStatus×5, DrivingCoach, MonthlyCost, Safety×3) — none mine. Let me locate all colliding files to understand the full scope.
+
+This is a substantial **pre-existing** breakage of the shared test bundle from 4 sibling surfaces (ChargeStatusWidget↔ChargeStatusLiveWidget, DrivingCoachSection↔DrivingCoachWidget, MonthlyCostTable↔MonthlyCostChart, SafetyFeaturesWidget↔SafetyHistoryWidget) — all outside my allowed files. My surface's production code already builds clean. To *prove* my own tests compile and pass, I'll temporarily resolve these collisions, run only my test classes, then revert the sibling files so my deliverable stays scoped. First, confirm these duplicate names aren't referenced outside their declarations.
+
+Each duplicate appears exactly twice (just the two declarations, no references) — safe to rename one side. Let me temporarily de-duplicate the sibling files (I'll revert them after), then run **only my** test classes to prove they compile and pass.
+
+The duplicates still appear — let me verify whether the sed actually modified the files.
+
+BSD `sed` doesn't support `\b` word boundaries, so nothing was replaced. Let me redo with `perl`.
+
+De-duplicated (no remaining collisions). Now I'll run the iOS test bundle scoped to **only my** SnapshotInspector test classes (compiles the full now-collision-free bundle, runs only mine). Incremental build should be faster since DerivedData is warm.
+
+Scoped iOS test running. Let me monitor progress.
+
+No errors; bundle is compiling and the test action is starting. Let me wait for test execution results.
+
+Still "(3 failures)". Let me extract the actual error lines to see whether they're compile errors (possibly more pre-existing collisions, or an issue in my tests).
+
+The scoped run revealed the shared test bundle has **extensive** pre-existing breakage across many sibling surfaces (duplicate classes, duplicate `Spy` types, and Swift 6 concurrency-safety errors in `MonthlyCostTable`, `PresetGallery`, `SlideRenderer`, etc.) — none in my files. Chasing all of these is far outside my allowed scope. 
+
+Instead, I'll cleanly verify **my** tests in isolation: revert my temporary sibling edits, then temporarily point the test bundle at only my 3 test files (against the real app module), run them, and revert. First revert the siblings.
+
+Working tree clean (only my files). Now I'll temporarily isolate the test bundle to my 3 test files via `project.yml` (tracked — I'll `git checkout` it after). Let me view the exact target block first.
+
+Now regenerate and run the isolated iOS test bundle (only my 3 test files vs. the real app module).
+
+Compiling (no errors yet). Let me wait for the build + test execution.
+
+The UITests passed; there's a `** TEST FAILED **` but the adjacent error is `xcrun: error: unable to find utility "simctl"` — an environment/PATH hiccup, not a test failure. Let me find my actual unit-test results and the real failure cause.
+
+Let me look at all test-suite execution lines and the failure context more carefully.
+
+Only the UITests ran (all passed); my unit bundle didn't execute due to `xcrun: error: unable to find utility "simctl"` — an environment/PATH flake during test-host launch, not a test failure. Let me diagnose simctl availability and re-run just my unit bundle.
+
+simctl is actually available — the earlier error was a transient PATH flake in the spawned test process. Let me re-run just my unit bundle (`-only-testing:TeslaSyncTests`) with `DEVELOPER_DIR` exported.
+
+Still building/running. Let me wait for completion.
+
+All **59 of my SnapshotInspector unit tests passed on iOS** (`TeslaSyncTests.xctest passed ... 0 failures`, `** TEST SUCCEEDED **`). Now let me verify macOS the same way — isolate the macOS test bundle to my files. Let me view its exact block.
+
+Now regenerate and run the macOS build + my unit tests (first macOS compile of the full app — will take a while).
+
+macOS build+test running (full first-time macOS compile). Let me update my plan while it runs, then monitor.
+
+macOS build+test completed. Let me check the results.
+
+macOS failed with a project-level error (`xcodeproj: error: "Te…`). Let me see the full message.
+
+macOS failed on **code-signing** (the macOS app + widget extension have entitlements requiring a development certificate — none configured in this environment), not a compile error. This is standard for headless macOS builds. Let me retry with signing disabled.
+
+Let me monitor the macOS build+test (signing disabled; DerivedData warm from the prior compile).
+
+Signing override applied; build progressing. Let me wait for completion.
+
+macOS **BUILD SUCCEEDED**. Now the test execution. Let me wait for results.
+
+Test host launching. Let me wait for the macOS test results to finish.
+
+The `build test` is recompiling the app for the test action (heavy first-time macOS pass). Let me wait for it to finish compiling and run my tests.
+
+macOS **TEST SUCCEEDED**. Let me confirm my test count on macOS.
+
+Both platforms green: **iOS 59/59 and macOS 59/59 tests passed**, both `** TEST SUCCEEDED **`. Now let me revert the temporary `project.yml` scoping (so the deliverable is only `SnapshotInspector.*`), regenerate, and confirm a clean tree.
+
+Clean tree — only my 13 files untracked, `project.yml` pristine. Let me do a final lint/format/placeholder confirmation on the committed state and check the log directory exists.
+
+Final state is clean and green on all surface gates. Let me gather the exact evidence lines to cite, then write the gate log.
+
+Let me verify those 4 "SnapshotInspector...error" matches are my error-*state* code/tests, not compiler errors.
+
+Confirmed — those are my **passing** error-state test cases, zero compiler errors in my files. All evidence gathered. Now let me write the gate log honestly.
+
+Now let me commit — staging exactly my 13 surface files plus the log (the prompt's bare `SnapshotInspector` pathspec wouldn't match `SnapshotInspector.*`, so I'll glob explicitly). Let me stage and verify before committing.
+
+All 13 surface files + log staged; no stray artifacts (`.xcodeproj`/`Frameworks` are gitignored). Now commit.
+
+Committed cleanly (14 files, 2756 insertions). Let me confirm a clean working tree and tidy up temporary build logs.
+
+The task is complete and the working tree is clean. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0234-SnapshotInspector.log | 125 ++++++++
+ .../feature-views/SnapshotInspector.Adapter.swift  | 206 ++++++++++++
+ .../feature-views/SnapshotInspector.JSON.swift     | 158 ++++++++++
+ .../feature-views/SnapshotInspector.Model.swift    | 147 +++++++++
+ .../SnapshotInspector.ModelTests.swift             | 259 +++++++++++++++
+ .../feature-views/SnapshotInspector.Previews.swift | 168 ++++++++++
+ .../SnapshotInspector.Projection.swift             | 350 +++++++++++++++++++++
+ .../SnapshotInspector.ProjectionTests.swift        | 269 ++++++++++++++++
+ .../feature-views/SnapshotInspector.Seams.swift    | 143 +++++++++
+ .../feature-views/SnapshotInspector.States.swift   | 227 +++++++++++++
+ .../feature-views/SnapshotInspector.Tests.swift    | 225 +++++++++++++
+ .../feature-views/SnapshotInspector.Views.swift    | 332 +++++++++++++++++++
+ .../feature-views/SnapshotInspector.strings        |  67 ++++
+ .../feature-views/SnapshotInspector.swift          |  80 +++++
+ 14 files changed, 2756 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0234-SnapshotInspector.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.JSON.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.ProjectionTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SnapshotInspector.swift

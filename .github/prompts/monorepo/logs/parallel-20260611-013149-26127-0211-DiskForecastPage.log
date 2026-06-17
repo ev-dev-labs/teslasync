@@ -1,0 +1,182 @@
+I'll start by exploring the repository structure and reading the relevant files to understand the task.
+
+Xcode 26.5, swiftlint, and swift are all available. Now let me explore the web source and Apple app structure.
+
+Xcode and tooling are available. Let me explore the Apple app structure and existing admin pages for reference.
+
+The structure differs from the prompt's expected path. Let me explore the actual layout.
+
+The actual structure is a flat `feature-views/` dir with multi-file components, not `Features/Admin/`. Let me investigate the conventions and look for existing related files.
+
+There's an existing `AlertStudioPage` (an admin page) I can use as a reference. Let me examine the project configuration and the reference page conventions.
+
+Now I understand the structure: pages live in `feature-views/` (not `Features/Admin/` — that's generator drift), built via XcodeGen. Let me study the `AlertStudioPage` reference and navigation infrastructure.
+
+This is a sophisticated codebase. Let me study the Adapter (KMP binding), strings format, Previews, and navigation in parallel.
+
+Let me understand navigation wiring, the KMP core for disk-forecast, and find native equivalents for StatCard/DataTable/formatBytes.
+
+The disk-forecast lives in the KMP `OperatorConfidence` domain. Let me examine the KMP models/store and check for existing Apple surfaces consuming it.
+
+Now let me look at the OperatorConfidenceStore and check whether sibling admin pages (SchemaDrift, SlowQueries, etc.) already exist as Apple surfaces — they'd be the ideal template.
+
+Now let me find whether any sibling admin page already binds to this store on Apple, and examine the SharedFacade bridge.
+
+No sibling admin pages exist yet on Apple — I'm building the first in this domain. Let me understand the SharedFacade bridge and how Apple ViewModels consume KMP stores/Resource/StateFlow.
+
+The SharedFacade has the KMP bridging infrastructure. Let me read the core facade files to learn the binding pattern.
+
+Now I understand the binding primitives. Let me read AppContainer (DI), FlowBridge, and an example domain model.
+
+Now I understand the binding pattern (VehicleSettingsModel is the template). Let me check the Shared framework state, AlertStudio's ViewModel approach, and available native components.
+
+Critical findings: `Shared.xcframework` is NOT pre-built (only `.gitkeep`), and feature-views are KMP-`Shared`-free (they use pure-Swift protocol seams, like AlertStudio's draft store). Let me check the build script, KMP toolchain, and xcodegen availability.
+
+xcodegen 2.45.4 and gradlew are available, but `Shared.xcframework` needs a KMP/gradle build (slow). Feature-views are KMP-decoupled via seams. Let me kick off the KMP framework build in the background now (it's the long pole) while I study the remaining patterns.
+
+KMP build is running in the background. Let me study the remaining patterns while it builds.
+
+Let me read the read-model seam pattern and locate the shared TS component/token definitions and byte formatter.
+
+Major discovery: `Sources/Features/Admin/ApiPlaygroundPage.swift` exists, and there's a `TSDataTable` component. Let me explore the `Sources/Features/Admin/` directory and the ApiPlayground page structure — this may be the correct home and template.
+
+This is the exact template I need: `Sources/Features/Admin/ApiPlaygroundPage.swift` is a native admin parity page using `@Observable` model + `Localizable.xcstrings` + route registration. The prompt's `TeslaSync/Features/Admin/` is drift — the real home is `Sources/Features/Admin/`. Let me read the full template trio and check the KMP build.
+
+Now I have the exact template. The route registration uses `AppRouteHostRegistry`, but `/admin/disk-forecast` is a sub-route (not a top-level `AppRoute`). Let me understand sub-route registration and check the KMP build progress.
+
+The disk-forecast is a sub-route under `.admin` (no top-level `AppRoute`). The nav entry already exists in `Layout.Nav.swift`. Let me understand how nav-item paths resolve to views and check the KMP build.
+
+Let me read the AppShell and app composition to finalize the navigation registration approach.
+
+Let me read the app composition and Settings registration pattern, then check the KMP build.
+
+The app chains route registrations (`ApiPlaygroundRouteRegistration.registry(base: SettingsRouteRegistration.registry(...))`). Let me study the Settings registration (which has sub-pages) and the components I'll need.
+
+`TSDataTable` forces selection checkboxes (web table has none) — I'll build a faithful inline table. Let me locate the remaining components (StatCard, GlassPanel, Badge, feedback states, AlertBanner, byte/number formatting) and read the Settings nav registration + full ApiPlayground view.
+
+Found all components. Let me read the component APIs I'll use (StatCard, AlertBanner, GlassPanel, formatters) and confirm byte formatting exists.
+
+KMP framework build completed. Let me verify it and read the remaining patterns (ApiPlayground view states, xcstrings interpolation convention, and component APIs).
+
+KMP framework is staged — full builds are now possible. Let me read the xcstrings interpolation convention, the rest of ApiPlayground, and the remaining component APIs.
+
+Now I understand the xcstrings interpolation convention (`%lld` + `String(format:)`). Let me read the web byte/number formatting to port, the xcstrings structure, and the remaining component APIs.
+
+I have the byte/number formatting logic to port and the banner API. Let me read the remaining component APIs: Cards (GlassPanel), Badges (Badge/Tone), States (EmptyState/ErrorDisplay), and Typography.
+
+Let me read the final component/token APIs (Typography, Cards, Skeletons, Motion, Buttons) and the design tokens, plus locate the test pattern and ledger.
+
+Let me confirm the design tokens, Button/Skeleton/Motion APIs, the test location pattern, and locate the parity ledger and log directory.
+
+I have all component APIs. Let me read the test pattern, the ApiPlayground log format (for the PARITY section), the ledger structure, and the Button signature.
+
+I now have the complete predecessor playbook. The full `xcodebuild` is blocked by pre-existing out-of-scope breakage; the proven methodology is swiftlint + placeholder scan + an executed model harness + isolated type-checks. Let me read the ledger structure and Button signature, then start building.
+
+I have everything needed. Let me verify no existing string-key collisions, then set up my plan and start building.
+
+No collisions. Let me set up my plan and todos, then build.
+
+Now I'll build. First let me check the SwiftLint config to avoid violations, then write the model.
+
+SwiftLint: ≤120 col code lines, `empty_count` (use `isEmpty`), `explicit_init`. Now let me write the model.
+
+Model written. Now the view — the largest file with all panels, states, adaptive table, and previews.
+
+View written. Now the route registration (interim `.admin` host) mirroring the ApiPlayground pattern.
+
+Now wire it into the app's route-host chain.
+
+Now add the 23 string keys to `Localizable.xcstrings` via a precise, minimal-diff insertion at the top of the `strings` object (matching the proven `%lld` format-specifier convention).
+
+Let me validate the xcstrings JSON is well-formed and the keys landed correctly.
+
+All 23 keys present, JSON valid. Now the tests, mirroring the ApiPlayground test pattern.
+
+Now let me run the gate. First swiftformat/swiftlint/placeholder checks on my files.
+
+swiftformat passes (0/5). Now swiftlint --strict on my files.
+
+Three violations: test nesting, and DiskForecastPage file/type-body length. Let me flatten the test stub and split the view's table rendering into a second file (mirroring `AlertStudioPage.Views.swift`).
+
+Now rewrite the trimmed main page file and create the table sub-view file.
+
+Now the table sub-view file.
+
+Now re-run swiftformat and swiftlint on all files including the new table file.
+
+swiftformat 0/6 and swiftlint 0 violations. Now the placeholder scan (check pwsh) and I'll prep the model harness.
+
+pwsh available. Let me run the placeholder scan on my Admin sources.
+
+Placeholder scan passes. Now I'll compile and execute the real model with a Swift 6 strict-concurrency harness.
+
+Model compiles clean under Swift 6 strict concurrency. Now run the harness.
+
+All 34 assertions pass. Now let me generate the Xcode project and kick off the full build in the background (capturing real exit codes), while I prepare the isolated view type-check.
+
+Project generated; DiskForecast referenced 30× across targets. Let me kick off the full macOS build in the background, then do the isolated view type-check while it runs.
+
+Build launched. Now let me map the view's dependencies for the isolated type-check (token/theme files, and whether Components import Shared).
+
+Build process may have detached. Let me check its status and locate the `Units`/`UnitPreferences` types (relevant for the type-check scope).
+
+The full macOS build is running (pid 8370) and already emitting the module — my files are compiling in-context. `Units`/`UnitPreferences` live in SharedFacade, confirming the predecessor's reason for a curated UI+Feedback type-check. Since the full build is the authoritative check, let me wait for it.
+
+Build is RED (BUILD_EXIT=65) — but the only errors are the pre-existing out-of-scope `escaping closure captures non-escaping parameter 'content'` bug in `shared-surfaces`, exactly as the predecessor documented. Let me confirm zero errors in my files and categorize all failures.
+
+Build halted at the **single** pre-existing out-of-scope error (`AISuggestNewGeofences.swift` — the documented `glass()` escaping-closure bug); **zero errors in my files**. For positive proof the view compiles, let me run an isolated `-typecheck` against the real tokens/components. Let me locate the last two dependencies.
+
+TSChartPalette/TSMotion are in the design files I already include, and all component files only `import SwiftUI` (no Shared). Let me run the isolated macOS type-check.
+
+macOS view type-check is clean (0). Now the iOS target (exercises the `#if os(iOS)` compact branches).
+
+Both view type-checks pass (macOS 0, iOS 0). Comprehensive verification complete. Let me capture git status and confirm the xcodeproj is git-ignored, then write the artifacts.
+
+All changes confirmed, xcodeproj git-ignored. Now let me write the evidence log and update the ledger.
+
+Now update the parity ledger with the two DiskForecast rows.
+
+Let me validate the ledger JSON, clean up temp files, and do a final lint pass before committing.
+
+All green. Now let me stage the exact in-scope files and commit.
+
+All 9 in-scope files staged (no generated/stray files). Committing.
+
+Committed (bf76efb7e, 9 files). Let me finalize the todos and confirm a clean working tree.
+
+The working tree is clean and the generated `.xcodeproj` was correctly excluded from the commit. The task is complete.
+
+## Summary
+
+I implemented the native SwiftUI parity page **`DiskForecastPage`** (web `/admin/disk-forecast`) for the TeslaSync Apple app, adaptive across macOS + iOS, and committed it (`bf76efb7e`).
+
+**Path reconciliation (prompt drift):** the prompt's `TeslaSync/Features/Admin/**` doesn't exist in this repo; the real compiled home is `Sources/Features/Admin/**` (where the only built sibling admin page, `ApiPlaygroundPage`, lives). I followed that proven convention, recorded in the log per covenant #9.
+
+**Delivered (9 files, +1432 LOC):**
+- `DiskForecastPage.swift` — header, 503 subsystem-unavailable `AlertBanner`, 4 fleet StatCards (gated on rows>0), hypertables `GlassPanel`, all states.
+- `DiskForecastPage.Table.swift` — adaptive table: columnar `Grid` (macOS/iPad) / compact cards (iPhone), all 6 web columns + severity badge.
+- `DiskForecastPageModel.swift` — `@MainActor @Observable` model + `DiskForecastDataSource` seam (value types mirror the KMP `DiskForecastResponse`/`HypertableSize` 1:1) + ported `formatBytes`/`fmtNumber` formatters.
+- `DiskForecastRouteRegistration.swift` + `TeslaSyncApp.swift` wiring.
+- `DiskForecastPageModelTests.swift` (XCTest), `Localizable.xcstrings` (+23 web-named keys), `apple-ledger.json` (+2 rows 32/32), and the evidence log.
+
+**Gate (real results):** swiftformat 0/6 · swiftlint --strict 0/6 · placeholder 0 · **executed model harness 34/34** (Swift 6 strict concurrency) · **isolated view type-check 0/0 on macOS AND iOS** against the real P2 tokens/P3 components · **PARITY_COVERED=32/32**.
+
+The full `xcodebuild` is RED (exit 65) due to **one pre-existing, out-of-scope** error (`shared-surfaces/AISuggestNewGeofences.swift` — the documented `glass()` escaping-closure bug); **zero diagnostics in any of my files**. Forbidden to commit-fix (covenant #6/#7), so it's deferred — exactly the disposition the predecessor `ApiPlayground` log established. **EXIT=0 / STATUS=DONE.**
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-DiskForecastPage.log     | 210 +++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 255 +++++++++++++++++-
+ .../Features/Admin/DiskForecastPage.Table.swift    | 204 +++++++++++++++
+ .../Sources/Features/Admin/DiskForecastPage.swift  | 260 +++++++++++++++++++
+ .../Features/Admin/DiskForecastPageModel.swift     | 284 +++++++++++++++++++++
+ .../Admin/DiskForecastRouteRegistration.swift      |  27 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |  10 +-
+ .../Admin/DiskForecastPageModelTests.swift         | 169 ++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 9 files changed, 1432 insertions(+), 5 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-DiskForecastPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/DiskForecastPage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DiskForecastPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DiskForecastPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DiskForecastRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/DiskForecastPageModelTests.swift

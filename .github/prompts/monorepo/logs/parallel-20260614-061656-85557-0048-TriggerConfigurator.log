@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web source is clear. Previous commits show `ActionBuilder` and `AutomationCard` were just completed — I'll follow that established pattern. Let me explore the existing Apple Automations feature and supporting files.
+
+The actual output paths differ from the prompt template — the real project uses `apps/apple/Sources/Features/Automations/` and `apps/apple/Localization/Localizable.xcstrings`. Let me study the sibling implementations.
+
+Let me read the complete ActionBuilder implementation — it's the closest analog (a configurator for the automation builder).
+
+Let me read the Views, Fields, route registration, and the test, plus find where the shared adapter layer lives.
+
+Let me find where the shared adapter/catalog layer and the shared components live.
+
+Two trees exist: `apps/apple/Sources/Features/` (P7 parity pages) and `apps/apple/TeslaSync/feature-views/` (module-public P4 layer with reusable adapters). Let me check for an existing TriggerConfigurator and understand the project structure.
+
+The module already has a P4 `TriggerConfigurator` feature-view layer I can reuse (same pattern as ActionBuilder). Let me read those adapter/catalog/model/view files.
+
+Now the model, main view, views, and editors of the existing feature-view.
+
+Now the editors/views of the feature-view, plus ActionBuilder's shared form views and test pattern.
+
+I have a thorough understanding of the architecture. Let me read ActionBuilder's shared page views, its test, and check the string catalog.
+
+Let me check the string catalog for existing keys and its structure.
+
+Most required keys are missing. Let me examine the xcstrings structure and how ActionBuilder added its keys via git history.
+
+Now let me check all the additional option/label keys the editors will reference, to know what to add to the catalog.
+
+Let me see what keys the ActionBuilder commit added to the catalog, to match the expected breadth.
+
+ActionBuilder added every referenced key. Let me check the remaining state/a11y/title keys and whether a separate strings table exists.
+
+A separate `TriggerConfigurator.strings` holds the feature-view copy. Let me read it to reuse exact English values.
+
+I have all exact English copy. Let me verify the design tokens and shared component APIs I'll use.
+
+All tokens confirmed. Let me check the gate scripts, swiftlint config, and whether an xcodeproj exists.
+
+Key constraint: swiftlint `--strict` (warnings fail, 120-char lines). Let me read the gate contract and the full predecessor log to replicate the verification methodology.
+
+Let me read the rest of the predecessor log for the exact verification commands.
+
+Let me read the placeholder scanner to understand its triggers and the `parity:allow` mechanism.
+
+I now have a complete understanding. Let me set up a todo list and create a plan, then build the implementation.
+
+Now I'll create the implementation files. Starting with the model.
+
+Let me fix a typo, then create the shared views file.
+
+Now the four per-kind editors.
+
+Now the page screen with scaffold, type picker, and previews.
+
+Now the route registration (unrouted → NavigationDestination seam).
+
+Now the model unit tests.
+
+All 6 source files created. Now I'll add the string keys to the catalog. First, let me inspect the exact raw formatting to preserve it.
+
+Clear: ActionBuilder textually inserted keys (Xcode ` : ` format) right after `"strings": {`. I'll replicate that pattern with a validated script.
+
+80 keys added (8840→8920), JSON validated. Let me verify the inserted region and re-confirm all 21 required keys resolve.
+
+All 21 required keys present; formatting matches. Let me mark strings done and run the gate — starting with swiftformat and swiftlint.
+
+swiftformat wants auto-fixes (wrapping + redundant type). Let me apply it, then re-lint.
+
+swiftformat clean (0/6). Now swiftlint --strict.
+
+File length: Views.swift is 402 lines (limit 400). I'll split the geofence components into their own file — cleaner organization. Let me view the boundaries.
+
+I'll move the chip + geofence components (lines 222–402) into a dedicated file. Let me read that block.
+
+I'll create a dedicated geofence file with lines 222–402 content, then trim Views.swift.
+
+Now truncate Views.swift to remove the moved block (lines 221–402).
+
+Now re-run swiftformat and swiftlint on all 7 source files.
+
+Format + lint clean. Let me verify the swiftformat change to the model's `setSignal` if-expression is still correct.
+
+Now the placeholder scan on my source + test directories.
+
+Placeholder scan clean (my files: 2 allowed, 0 violations). Let me scan the test dir, then build the executable model harness.
+
+Test dir clean. Reused core files are SwiftUI-free. Now I'll build and execute a Swift 6 model harness to prove runtime correctness.
+
+Strict-concurrency needs `@MainActor` on the global helper. Let me fix and re-run.
+
+Top-level vars can't be actor-annotated. Let me move the counter inside the function.
+
+All 28 harness assertions passed under Swift 6 strict concurrency. Now the dual-platform view type-check. Let me get SDK paths and deployment targets.
+
+macOS 15.0 / iOS 18.0 targets. Running the macOS view type-check against real tokens + components + reused core.
+
+macOS type-check: 0 errors. Now iOS (exercises the `#if os(iOS)` keyboard + size-class branches).
+
+Both platforms type-check clean (0 errors). Let me check the Shared framework state and regenerate the Xcode project to confirm my files are included.
+
+xcodeproj generated. Let me confirm my files are referenced and check whether the Shared framework (KMP/Gradle) build is feasible for a full xcodebuild.
+
+My files are referenced 36× in the pbxproj (iOS+macOS apps + both test bundles). JDK 17 + gradlew are available. Let me kick off the Shared framework build in the background and meanwhile verify the pre-existing blockers and prepare the ledger.
+
+Let me launch the Shared framework (Gradle/KMP) build in the background, then verify the pre-existing blockers while it runs.
+
+Git shows only my intended changes (1 modified catalog + 7 new files); xcodeproj is git-ignored. Pre-existing blocker files exist and are unmodified by me. Let me confirm the blocker and inspect the ledger format for ActionBuilder.
+
+Ledger format clear; I'll add 2 rows (macos+ios, 23/23). The Input.Previews blocker (explicit `return` in `#Preview`) is confirmed at lines 88/101, unmodified by me. Let me check the ledger's raw formatting before editing.
+
+The ledger round-trips cleanly with indent=2. Let me append my 2 rows.
+
+Ledger updated. Let me check the Gradle build progress.
+
+The Gradle/KMP build is running (these take several minutes). Let me wait for it while drafting the evidence log.
+
+Shared.xcframework built successfully (6m54s) and staged. Now I can attempt a real macOS app build. Let me check available targets/schemes first.
+
+Shared.xcframework is staged. I'll run the full macOS app build with the pre-existing-blocker exclusion (the disposition the sibling page used) to prove my files compile + link in the whole app. Launching in background.
+
+While the build runs, let me verify the final catalog JSON validity and re-confirm the full file set once more.
+
+All artifacts validate. Let me check the build progress.
+
+Build still compiling the full app. Let me wait for it to complete.
+
+**BUILD SUCCEEDED** — the full macOS app target compiled + linked with all six of my files included (visible in the transcript). This is authoritative proof. Now let me run the standard Debug build to honestly document the pre-existing out-of-scope reds.
+
+While the standard build runs, let me write the evidence log with all verified results.
+
+Standard build RED with **exactly 2 errors, both in the pre-existing `Input.Previews.swift` (lines 88/101)** — zero in my files. Supplementary build (blocker excluded) **SUCCEEDED** with all 6 files linked. Now writing the evidence log.
+
+Log written. Now let me verify git ignores the generated artifacts, then commit only the allowed paths.
+
+All artifacts ignored; git status shows exactly my intended changes. Committing now.
+
+Committed (75e31831d). Let me do a final verification of the clean tree and todo status.
+
+All todos done; working tree clean (only git-ignored build artifacts remain). The commit contains exactly the 10 intended files.
+
+## Summary
+
+I shipped a native SwiftUI/HIG `TriggerConfigurator` page at full parity with the web source, adaptive across macOS + iOS, and committed it (`75e31831d`).
+
+**What was built** (`apps/apple/Sources/Features/Automations/`):
+- `TriggerConfiguratorPageModel.swift` — `@Observable` state holder: editable `AutomationTrigger` + `onChange`, `useGeofences` resolved to loading/empty/error/success via an injectable provider seam, all web edit rules delegating to the **reused** P4 projection core.
+- `TriggerConfiguratorPage.swift` — screen scaffold + trigger-type selector + adaptive layout + 5 previews.
+- `.Editors.swift` — the four web `switch(trigger.kind)` editors (schedule/event/geofence/signal).
+- `.Views.swift` / `.Geofence.swift` — token-driven HIG primitives + the geofence data-state UI.
+- `TriggerConfiguratorRouteRegistration.swift` — `NavigationDestination` seam (unit is unrouted).
+- Tests + 80 new `Localizable.xcstrings` keys + ledger rows + evidence log.
+
+**Verification — all in-scope gates GREEN:**
+- swiftformat `--lint` 0/7 · swiftlint `--strict` 0 violations/7 files · placeholder scan COUNT=0
+- Executed Swift‑6 strict‑concurrency model harness: **28/28 passed**
+- Dual‑platform `swiftc -typecheck`: macOS **0 errors**, iOS **0 errors**
+- Built `Shared.xcframework` (Gradle/KMP) → full **macOS app `BUILD SUCCEEDED`** with all 6 files compiled + linked
+- `PARITY_COVERED=23 == PARITY_REQUIRED=23` (2 states + 21 strings)
+
+The only standard-build red is the **pre-existing, out-of-scope** `Input.Previews.swift:88/:101` blocker (zero errors in my files), documented honestly — the same disposition under which the sibling `ActionBuilder` page was accepted DONE.
+
+`EXIT=0 / STATUS=DONE`
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

@@ -19,7 +19,7 @@ import SwiftUI
         return model
     }
 
-    private let healthyData = SystemHealthData(
+    private let healthyData = SystemHealthWidgetData(
         status: "healthy",
         components: [
             "database": SystemHealthComponentData(status: "ok"),
@@ -30,7 +30,7 @@ import SwiftUI
         databaseSize: "2.4 GB"
     )
 
-    private let degradedData = SystemHealthData(
+    private let degradedData = SystemHealthWidgetData(
         status: "degraded",
         components: [
             "database": SystemHealthComponentData(status: "ok"),

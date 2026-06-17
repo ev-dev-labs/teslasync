@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure and reading the web source specification.
+
+Apple toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, simulators). Let me read the web source and explore the existing Apple app structure.
+
+There's an existing `dashboard-widgets` directory with established conventions (`.Adapter`, `.Model`, etc. file splits). Let me check if `CostForecastWidget` already exists and examine a similar chart-based widget as a template.
+
+Let me find a complete chart-based widget to use as a template, since `CostForecastWidget` is a bar-chart widget.
+
+`ChargeSessionChartWidget` is the closest analog (charging category, bar chart). Let me read its full file set to learn the conventions.
+
+Let me read all the ChargeSessionChartWidget files to understand the full conventions.
+
+Excellent, very thorough conventions. Let me read the remaining template files.
+
+Now I understand the template thoroughly. Let me examine the shared types (registration/size), design tokens, the web types/hooks for cost forecast, and the project build setup.
+
+Let me read the web `WidgetShell`, `WidgetChartSummary` (shared), `WidgetProps`, and the full `useCostForecast` hook to capture exact parity behavior.
+
+Let me verify the build setup (xcodegen/project), confirm design tokens exist, and check how widgets are included in the project.
+
+Critical: `Shared.xcframework` isn't present (built via a preAction script). Let me inspect that script and confirm the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, etc.) resolve.
+
+Let me check the KMP shared module situation and the documented verification stance, since the xcodebuild gate depends on building `Shared.xcframework` via Gradle/Kotlin.
+
+The repo has a documented, established protocol for exactly this situation. Let me read existing widget logs to match the precedent for STATUS and verification approach.
+
+I now fully understand the sanctioned protocol: surface code is verified green in isolation (SwiftPM build + tests, swiftc typecheck on both SDKs, swiftlint/swiftformat/placeholder), and the full-app `xcodebuild` gate is deferred (pre-existing unrelated collisions + Gradle long-pole + signing). Let me examine the isolation tooling and remaining dependencies.
+
+I have everything needed. Let me check the lint/format configs and placeholder patterns, then start building. Let me also set up my todo tracking.
+
+I have a complete picture. Let me verify the exact `fmtNumber` semantics for currency parity, then set up tracking and start writing.
+
+Everything is confirmed. Let me set up tracking and start writing the surface files following the established template.
+
+Now I'll write the surface files. Starting with the domain models and builder (pure logic).
+
+Let me clean up that unused-index artifact in the builder.
+
+Now the Model file (telemetry/source/i18n seams, view-model, accessibility).
+
+Now the main SwiftUI surface view with header and all states.
+
+Now the Swift Charts bar chart.
+
+Now the previews and strings catalog.
+
+Now the comprehensive test suite.
+
+All 8 files written. Now let me build an isolated SwiftPM harness (real design tokens + infra) to compile and test the surface under Swift 6 strict concurrency — the sanctioned host-runnable verification.
+
+Now build and test the harness under Swift 6.
+
+The surface compiles clean under Swift 6 strict concurrency. Now run the tests.
+
+All 28 tests pass under Swift 6 strict concurrency. Now platform proof via `swiftc -typecheck` against the real iOS 18 and macOS 15 SDKs.
+
+Both SDKs typecheck clean. Now lint, format, and inspect the placeholder script's path handling.
+
+swiftlint clean. swiftformat flagged one rule (`preferCountWhere`). Let me fix it.
+
+Now re-verify format/lint, re-sync the harness, re-run tests, and run the placeholder gate on the real files.
+
+The placeholder gate caught a "TODO" substring. Let me find it.
+
+False positive: `FallsBackToDollar` contains the substring "ToDo". Let me rename the test method.
+
+Placeholder gate clean, all 28 tests green. Now generate the Xcode project, confirm my files enumerate, and gather concrete evidence of the pre-existing blockers.
+
+xcodegen enumerates all 8 files across the 4 targets. Now let me confirm the documented pre-existing, unrelated blockers are present in the current tree (evidence for the deferred full-app gate).
+
+Confirmed pre-existing, unrelated blockers (forbidden to edit): the tree-wide `swiftlint --strict` already fails on `LiveSignalSparklinesWidget.Builder.swift:158`, `Shared.xcframework` is unstaged (Gradle Kotlin/Native long-pole), and macOS `DEVELOPMENT_TEAM` is empty. Let me genuinely attempt the Xcode framework build (time-boxed) to capture real evidence rather than assume.
+
+The Gradle Kotlin/Native build is exceeding 300s — consistent with the documented long-pole. Let me capture the timeout result.
+
+The Gradle build actually succeeded (GRADLE_EXIT=0) — the Kotlin sources are largely cached. Let me check whether the release XCFramework was produced and stage it, which could unblock a real Xcode build.
+
+The Gradle build produced the DEBUG XCFramework (release links are the long-pole). The DEBUG framework has all required slices (ios-arm64, ios-arm64-simulator, macos-arm64), so I can stage it and attempt a real app-target compile of my surface. Let me first run the tree-wide `swiftlint --strict` to capture that it fails only on pre-existing files, then stage and build.
+
+Tree-wide `swiftlint --strict`: exactly 1 violation, the pre-existing `LiveSignalSparklinesWidget.Builder.swift:158` (forbidden to edit), zero CostForecast violations. Let me rule out symbol collisions for my new public types across the app module, then stage the framework and attempt a real app-target build.
+
+Critical finding: an existing `feature-views/CostForecastSection.*` surface already claims the `CostForecast*` type prefix in the same module. My types collide and **would break the real app-target compile** — this is within my scope to fix. Let me get the complete collision picture.
+
+This is a real, in-scope collision: the existing `CostForecastSection` feature-view (and others) already own the `CostForecast*` prefix in the single app module — my supporting types AND test class names would break the real app/test compile. I must namespace all my supporting types/tests under the unique `CostForecastWidget` prefix (the view name stays). Let me apply a precise, word-boundary rename.
+
+Rename succeeded — the view `CostForecastWidget` is intact, all supporting types/tests are namespaced. The two remaining bare `CostForecastData`/`CostForecastMonth` are web-type references in comments (harmless). Let me namespace the private preview enum too for consistency, re-sync the harness, and re-verify build + tests.
+
+Still green after rename. Let me re-verify lint/format/placeholder/SDK-typecheck on the renamed files, then stage the framework for a real app-target build.
+
+The rename lengthened a couple of lines past 120 chars. Let me find and fix them.
+
+Two over-length lines in Tests.swift from the longer names. Let me wrap them.
+
+All green. Now the decisive test: stage the (already-built) DEBUG `Shared.xcframework` and compile my surface inside the **real** app module (which contains `CostForecastSection`) to prove the collision is resolved. Let me check the framework slices and start the app-target build.
+
+Framework staged with all required slices. Now build the iOS app target (compiling my surface inside the real module with `CostForecastSection` present). This is the decisive collision test.
+
+Build started. Let me monitor progress while it compiles.
+
+The whole `TeslaSync` Swift module emitted successfully (no CostForecast errors) — my surface compiles inside the real module. Let me wait for the final link/result.
+
+Module emission succeeded for both simulator archs — no collisions, my surface compiles in the real module. Let me wait for the final build result.
+
+Whole-module type-check passed for both archs (zero CostForecast errors) — collision resolved, surface integrates cleanly. It's now in per-file object compilation. (Note: a separate `iPhone 16` UI-test `xcodebuild` is another tenant's process — not mine; I'll leave it alone.) Let me wait for the final link.
+
+The entire app **Swift compilation succeeded** — `CostForecastWidget.*` and `CostForecastSection.*` compiled together in the same module with zero errors (collision resolved, clean integration). The build failed only at the **link** step with my manually-staged DEBUG framework. Let me capture the exact linker error for evidence.
+
+Exactly one `error:` in the entire build — the linker step. Let me capture the underlying ld diagnostic.
+
+The single linker error is `ld: symbol(s) not found for architecture x86_64` — undefined KMP `Shared.*` ObjC classes, because my manually-staged DEBUG framework only ships an **arm64** simulator slice (x86_64 absent). Not a code issue — the entire app Swift-compiled with zero errors. Let me re-link arm64-only (this host is Apple Silicon) to get a definitive green compile+link.
+
+The arm64 build is still compiling. Let me wait for it to finish linking.
+
+It's now at the `Ld` (link) step with `-framework Shared` for arm64. Let me get the final result.
+
+🎉 **BUILD SUCCEEDED** — the full iOS app target (arm64 simulator) compiled **and linked** with my `CostForecastWidget` integrated into the real `TeslaSync` module alongside `CostForecastSection`. This exceeds the documented precedent (isolated-only). Let me update tracking, confirm git cleanliness, and write the log.
+
+Only my 8 files are untracked; all build artifacts are git-ignored. Let me kick off a macOS app-target build (additional evidence, since the macOS-arm64 framework slice exists) while I write the log.
+
+Now I'll write the comprehensive, honest log with all real evidence.
+
+Let me check the macOS build result to fold it into the log.
+
+macOS module is compiling (no errors yet). Let me wait for it to finish linking.
+
+macOS still compiling the full module (no errors). Let me wait for completion.
+
+macOS is grinding through per-file compilation (slower under shared-host contention) with zero errors. Let me wait for the link.
+
+Definitive picture: macOS whole-module Swift compile **succeeded** (zero errors, zero CostForecast errors); its link fails only on KMP `Shared`/SQLite symbols (`_sqlite3_enable_load_extension`) — a framework-linkage detail, not my code. Let me record the precise macOS result in the log.
+
+Let me run one final consolidated verification on the committed-state files (post-rename, post-wrap), then commit.
+
+All final gates green (swiftlint 0, swiftformat 0, placeholder 0). Committing the 8 surface files + the log.
+
+Committed (9 files, commit `6fe4eb18e`). Let me confirm the working tree is clean of any unintended changes and finalize tracking.
+
+All complete and committed with a clean working tree. Let me finalize tracking.
+
+The task is complete and verified end-to-end.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0032-CostForecastWidget.log | 154 +++++++++
+ .../CostForecastWidget.Builder.swift               |  97 ++++++
+ .../CostForecastWidget.Chart.swift                 | 194 +++++++++++
+ .../CostForecastWidget.Model.swift                 | 306 +++++++++++++++++
+ .../CostForecastWidget.Models.swift                | 171 ++++++++++
+ .../CostForecastWidget.Previews.swift              | 136 ++++++++
+ .../CostForecastWidget.Tests.swift                 | 339 ++++++++++++++++++
+ .../dashboard-widgets/CostForecastWidget.strings   |  50 +++
+ .../dashboard-widgets/CostForecastWidget.swift     | 378 +++++++++++++++++++++
+ 9 files changed, 1825 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0032-CostForecastWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.swift

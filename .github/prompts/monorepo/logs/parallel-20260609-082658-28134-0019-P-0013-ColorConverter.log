@@ -1,0 +1,54 @@
+I'll start by exploring the repository structure to understand what exists and what's required for this task.
+
+Toolchain and source exist. Let me read the web source and explore the Apple app structure.
+
+Let me examine existing patterns. The web source is a simple devtools tool. Let me look at a reference file set and check if ColorConverter already exists.
+
+Excellent — `ByteSizeConverter` is a near-identical converter tool reference. Let me read its full file set and the `rgbToHsl` helper.
+
+`ByteSizeConverter` is the ideal reference. Let me read its complete file set.
+
+Now let me read the rest of the reference set plus the design tokens and find how copy-to-clipboard is handled (ColorConverter uses `CopyButton`).
+
+Let me examine the copy-to-clipboard pattern and the design tokens. Let me read the web `CopyButton`, a native tool that uses copy, and locate the token definitions.
+
+Let me locate the design token definitions and shared native components (TSGlassPanel, TSButton, Color.TS, Font.TS, TSSpacing, TSRadius).
+
+The tokens live in `TeslaSyncWatchShared/WatchDesignTokens.swift`. I need to understand the build target structure. Let me read `project.yml`.
+
+Now I understand the build structure. The feature-views are part of the app target. Let me verify what gate tooling is actually available on this runner (xcodegen, simulators, the KMP Shared.xcframework, PowerShell).
+
+Let me check the Shared framework build script, available simulators, and the KMP toolchain — these determine gate viability.
+
+No simulators and the Shared framework needs the KMP/Gradle toolchain. Let me check sibling P4 logs to see the established outcome pattern, plus simulator runtimes and the KMP toolchain.
+
+The sibling log reveals the established pattern on this runner. Let me read the full ByteSizeConverter log to understand the exact evidence structure and gate handling.
+
+I have the full template now. This is a pure-compute devtools tool exactly like the sibling ByteSizeConverter (0012). Let me gather the remaining details: CopyButton's exact i18n keys, lint config, the real design-system token files, and en.json entries.
+
+Let me find the en.json location, the i18n keys, and the real app-target token definitions (Sources/Design, design/generated/apple).
+
+Let me verify the en.json structure for those keys and read the actual token/component APIs I'll compile against.
+
+Correcting paths. Let me read the en.json copyButton block and the real token/component files (correct path is `apps/design/...`).
+
+I have the token API. Let me read the `TSGlassPanel`/`TSButton` component APIs and confirm the purple-icon mapping used by sibling surfaces.
+
+Let me confirm the established native mapping for the web "purple" ToolCard color by checking sibling tools.
+
+`UuidGenerator` (also `color="purple"`) confirms the mapping: web purple → `Color.TS.chartSeriesPower`. Let me read it as the structural template and check for any shared copy-button component.
+
+There's a shared `TSCopyButton` (DRY-correct, matches web's shared `CopyButton`). Let me read its API plus UuidGenerator's Model/Tests for the telemetry + test patterns.
+
+I now have everything needed. Let me pin exact expected values by running the real web logic in Node, so my tests assert true web outputs (no parity shortcuts).
+
+I have all exact values pinned and the full conventions. Let me set up a tracking todo and create the ColorConverter surface files. First the plan and todos.
+
+Now creating the surface files, starting with the pure adapter.
+
+Now the previews, strings, and tests files.
+
+All six files created. Now verifying — first swiftformat (auto-fix my files only), then swiftlint strict on the surface.
+
+Two `large_tuple` violations — my 3-member HSL tuple. Let me replace it with a small struct.
+

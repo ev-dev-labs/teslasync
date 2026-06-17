@@ -1,0 +1,180 @@
+I'll start by understanding the environment capabilities and the codebase structure, since this task requires the Apple toolchain (Xcode, SwiftUI, etc.).
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, booted iPhone 16 sim). Now let me read the web source and explore the Apple app structure.
+
+Now let me read the web source dependencies, the existing feature-views structure, and existing analytics tab implementations to follow established patterns.
+
+The feature-views directory is large with a clear multi-file convention (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`, `.Views.swift`). Let me check for sibling analytics tabs already ported and read the remaining web dependencies.
+
+`ChargingDetailSection` and sibling tabs (`BatteryTab`, `DrivingTab`, `OverviewTab`) are already ported — only `ChargingTab` is missing. I'll follow their exact convention. Let me read `DrivingTab` (closest analog: composed charts + metric cards) and `ChargingDetailSection` (which `ChargingTab` must embed) in full.
+
+Excellent — this is a mature codebase with a precise, well-established convention. `DrivingTab` is the ideal template (composed charts + metric cards + all states). Note `DrivingTab` does NOT embed its sibling surfaces (they slot in at integration), so `ChargingTab` similarly owns only its own panels, not `ChargingDetailSection` (surface 0053, already ported). Let me read the rest of the `DrivingTab` files to replicate the full pattern.
+
+Now let me read the `DrivingTab` Views/strings/Previews/Tests and the `OverviewTab` (for the MetricCard grid pattern, since `ChargingTab` has a 6-card summary grid).
+
+Now let me read the Previews/Tests pattern, the `OverviewTab` views (for the MetricCard grid pattern that `ChargingTab` needs), and `project.yml` to confirm how files are included in the build.
+
+Build uses XcodeGen with directory globbing — my `ChargingTab.*` files will be auto-included (no `project.yml` edit needed). Now let me locate the shared tokens/components I'll use (`MetricCard`, chart palette, `TSFadeIn`, `UnitPreferences`, `Color.TS`, `Font.TS`) and check the build prerequisites (xcodegen, prebuilt Shared.xcframework).
+
+The build needs the KMP `Shared.xcframework` (built via Gradle — not prebuilt). That's the main gate risk. Let me locate all the shared symbols I need and read the test pattern + chart/token components in parallel.
+
+I have the full surface/model/adapter/charts/views/strings/tests/previews pattern. Now let me read the design tokens, chart helpers, motion, feedback, units facade, and the `BatteryTab` metric-grid precedent (closest to ChargingTab's summary cards).
+
+`BatteryTab.Views.swift` is the ideal precedent for the metric-card grid + states. Let me read the remaining pieces: the native pie/donut chart component, design tokens, the `BatteryTab` model/main view (metric model pattern), and the exact web number-formatting semantics.
+
+I now have nearly everything. Let me confirm exact API signatures for the shared components/tokens I'll use, and read `BatteryTab`'s adapter/main view (the metric model + projection + accessibility patterns) plus the chart palette.
+
+Let me read the exact signatures of the shared components and `BatteryTab.Adapter` (metric model + projection + accessibility) to write fully-compatible code.
+
+Let me confirm the last component signatures and design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSCard`, `TSGlassPanel`, `TSIconBox`, `TSButton`, `TSEmptyState`, skeletons, `TSFadeIn`) before writing.
+
+I now have the complete pattern. Let me verify the last few symbols (`tsChartAxes`, `Font.TS` members, `Color.TS` members) and check the KMP framework build prerequisites, then start writing.
+
+A prior ChargingTab gate log exists — let me learn from it and the successful sibling (ChargingDetailSection), and confirm `Font.TS` tokens + the placeholder patterns I must avoid.
+
+I now have the complete picture, including a prior attempt's gate log showing the full-app build has **pre-existing, out-of-scope blockers** (`DashboardWidgetSize` ×15 collisions, XCTest-in-app-target) with **zero ChargingTab errors**. My code only depends on the Shared-free design/component layer. Let me verify `useFormatting.formatCurrency` semantics and that Components/Design are `Shared`-free (enabling isolated compile verification), then write.
+
+Everything's confirmed. `Components`/`Design` are `Shared`-free, so I can isolated-compile my files for verification. Let me set up tracking and write the surface.
+
+Now writing the surface. Starting with the Model (seams + DTOs + observable model):
+
+Now the pure Adapter (projection, formatting, accessibility):
+
+Now the main view + SwiftUI string facade:
+
+Now the Views file (panel chrome, chips, banner, metric cards, states):
+
+Now the Charts file (donut, bar histogram, composed hourly):
+
+Now the Previews and strings files:
+
+Now the Tests file (adapter, model, accessibility):
+
+All 8 files written. Let me update tracking and verify — starting with swiftformat/swiftlint config and linting my new files.
+
+Config noted (maxwidth 120, testable-bottom imports). Let me run swiftformat (fix) then swiftlint on my new files:
+
+No formatting changes needed. Now swiftformat --lint and swiftlint --strict:
+
+Three swiftlint violations in the Adapter (file length, one long function, 9-param function). Let me refactor that metrics-building section. Viewing the exact block:
+
+Re-running swiftformat + swiftlint on all my files:
+
+Lint clean (0 violations). Now the key verification: an isolated `swiftc -typecheck` of my files against the real (Shared-free) Components/Design layer — this validates compilation without needing the KMP framework or simulator.
+
+Components/Design are cleanly Shared-free. Running the isolated typecheck:
+
+The only errors are pre-existing `Components` files referencing `UnitPreferences` (from `SharedFacade`), which my files don't use. Let me check if `SharedFacade` is Shared-free so I can include it:
+
+`Units+Facade.swift` imports Shared. My files don't use `UnitPreferences`, so I'll exclude only the Shared-dependent Component files from the isolated check. Let me find them:
+
+Only `UnitFormatters.swift` needs Shared, and nothing else references its types. Excluding just that file and re-running the typecheck:
+
+Isolated typecheck passed. Let me confirm the raw swiftc exit code explicitly and run the placeholder check:
+
+swiftc typecheck clean (0 errors), placeholder scan clean. Now let me establish the full-app build baseline. First checking for the pre-existing collisions the prior log cited, then generating the project:
+
+Key findings: the prior `DashboardWidgetSize ×15` collision does NOT exist here (only 1 definition), and `pwsh` IS available (so I can run the real placeholder gate). Let me generate the Xcode project and kick off the KMP framework build (Gradle) in the background simultaneously.
+
+Project generated. While Gradle builds the framework, let me verify my files are correctly included and check the prior XCTest-in-app-target concern:
+
+All 8 files are correctly included (non-test files → 2 app targets, Tests file → 2 test targets; 2 memberships each). Let me check Gradle progress:
+
+Gradle is still building (Kotlin/Native first-run is slow). Let me precisely verify no `*.Tests.swift` leaks into the iOS app target (the prior blocker) while it runs:
+
+Definitive: app targets have **0** test files (prior XCTest blocker absent), `ChargingTab.swift` is in both app targets, `ChargingTab.Tests.swift` in both test targets. The project is correctly configured. Let me wait for the Gradle framework build:
+
+Kotlin/Native first-build is slow and `tail` buffers output until completion. Continuing to wait:
+
+~8 min elapsed. Let me check whether Gradle is actively working or stalled:
+
+Gradle is actively progressing — Kotlin/Native frameworks for `iosArm64` and `iosSimulatorArm64` are already built (CPU at 54%/30%). Continuing to wait for the XCFramework assembly:
+
+The debug XCFramework is assembled; the release variant (my target) is still compiling (konan at 188% CPU). Let me continue waiting:
+
+Gradle build succeeded (16m51s) — release `Shared.xcframework` assembled. Now let me stage it and start the iOS build+test gate:
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now starting the iOS build+test gate in the background (this compiles ~2000 files, so it's long):
+
+iOS build+test started in background. Let me monitor progress:
+
+The build surfaced a real collision: my `ChargingLoadStatus`/`ChargingConnection` (and likely other generic names) clash with a pre-existing sibling surface `ChargingSection` that declares identically-named module-level types. I can only edit `ChargingTab.*`, so I must namespace my types. Let me find ALL collisions precisely:
+
+Four collisions with the pre-existing `ChargingSection` surface: `ChargingLoadStatus`, `ChargingConnection`, `ChargingFreshnessChip`, `ChargingConnectivityBanner`. Let me cross-reference ALL declared type names between the two surfaces to catch every collision before rebuilding:
+
+Authoritative collision set: 4 module-level names (`ChargingLoadStatus`, `ChargingConnection`, `ChargingFreshnessChip`, `ChargingConnectivityBanner`) — `Descriptor` is a private nested type in both, so renaming the parents resolves it. I'll namespace all 4 with the `ChargingTab` prefix across my files:
+
+Renames clean. Before the slow rebuild, let me comprehensively verify NONE of my declared types collide with ANY other feature-view (not just ChargingSection), and re-validate my code with the isolated typecheck + lint:
+
+The `for` entry is a regex artifact (a keyword, not a real type). Let me wait for the check to finish and confirm nothing else collides:
+
+Only the bogus `for` keyword remains (a grep artifact, not a real type) — **zero real collisions** remain. Let me re-validate my renamed files (isolated typecheck + lint), then rebuild:
+
+Confirmed: the `for` is from a doc comment ("main actor for every..."). swiftformat + swiftlint clean. Waiting for the typecheck:
+
+Isolated typecheck passed (0 errors), collisions resolved, lint clean. Re-running the full iOS build+test gate (incremental — Sources are cached):
+
+Build+test running. Let me monitor for ChargingTab errors and overall progress:
+
+No ChargingTab errors, no compile errors — the app module is now emitting (whole app target compiled). Let me keep monitoring as it builds the test bundle and runs tests:
+
+Log appears block-buffered. Let me check actual build-process activity rather than the buffered log:
+
+Build is actively compiling object files (304 `.o` in 2 min, 12 parallel frontends, no errors). The app target (~2000 files) + test bundle will take a while. Let me wait:
+
+Strict-concurrency caught a real issue the isolated typecheck missed (it didn't enforce Swift 6 mode): `ChargingMetric` must be `Sendable` (it's stored in the `Sendable` `ChargingTabProjection`). Let me check the build shell status, fix it, and re-run the isolated typecheck **with Swift 6 strict concurrency** to catch all such issues at once:
+
+The build already failed on the Sendable error, but the shell is still winding down. Let me stop it and apply the fix:
+
+Fix: make `ChargingMetric` conform to `Sendable` (all its stored properties already are). Then I'll re-run the isolated typecheck under **Swift 6 mode** to catch any other strict-concurrency issues in one pass:
+
+Swift 6 strict-concurrency isolated typecheck now **passes** (exit 0) — this reproduces the full build's concurrency checking and confirms the fix. Re-running the full iOS build+test (incremental):
+
+Build+test attempt 3 running. Let me wait and check for the app module emit + test phase:
+
+No errors, app module re-emitting. Let me continue waiting for the app build to complete and tests to run:
+
+**BUILD SUCCEEDED** for the app target — the whole app compiles cleanly with my ChargingTab surface. Now the test bundle is compiling, then tests run on the simulator. Let me wait for test results:
+
+The app target **BUILD SUCCEEDED** and `ChargingTab.Tests.swift` compiled cleanly. But the **test bundle** build failed on 3 errors in a pre-existing, out-of-scope file — `SafetyFeaturesWidget.ModelTests.swift` (`invalid redeclaration of 'SafetyModelTests'`), which I'm not allowed to edit. Let me confirm this is a pre-existing duplicate unrelated to ChargingTab:
+
+Confirmed: `SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests` are each declared in **two pre-existing, git-tracked files** (`SafetyFeaturesWidget.ModelTests.swift` AND `SafetyHistoryWidget.ModelTests.swift`) — a parallel-merge duplicate in `dashboard-widgets/`, entirely outside my allowed `ChargingTab.*` scope. `git status` confirms I touched only ChargingTab files. The app target **builds clean**; only the shared test bundle is blocked by this sibling collision.
+
+My Model+Adapter are pure (Foundation only, no SwiftUI), so I can run my actual tests in isolation to prove they pass. Setting that up:
+
+Running my actual ChargingTab tests in isolation (Swift 6 mode):
+
+**All 25 ChargingTab tests PASS** in isolation (0 failures, Swift 6). Now let me run the macOS gate (build+test) in the background and, meanwhile, run the real placeholder check (`pwsh`) and whole-repo lint:
+
+Real placeholder gate: `PLACEHOLDER_COUNT=0, EXIT=0`. Now running the gate's whole-repo lints (`swiftformat --lint apps/apple` and `swiftlint --strict`) to capture the baseline while macOS builds:
+
+`swiftformat --lint apps/apple`: **0/2715 files require formatting** (FORMAT_EXIT=0). The macOS build completed — let me read its result and run the whole-repo swiftlint:
+
+The macOS failure is a **code-signing/entitlements** issue (`requires signing with a development certificate`) — an environment limitation (`DEVELOPMENT_TEAM: ""`, no dev cert), not a compile error. Let me confirm the macOS app *compiled* ChargingTab cleanly before the signing step, and run the whole-repo swiftlint:
+
+macOS compiled ChargingTab cleanly (no compile errors) — its failure is purely the environment signing/entitlements limitation. Now the final gate command, whole-repo `swiftlint --strict`:
+
+swiftlint --strict found 1 violation across 2711 files — my scoped check showed 0, so it's likely pre-existing. Let me identify it:
+
+The single swiftlint violation is in a **pre-existing** dashboard-widget (`LiveSignalSparklinesWidget.Builder.swift:158`), not ChargingTab (0 violations in my files). To strengthen macOS evidence past the environment signing limitation, let me confirm the macOS *app* compiles with signing disabled:
+
+Let me wait for the macOS no-sign build to confirm compile parity:
+
+macOS app actively compiling (80 frontends, no errors). Let me wait for completion:
+
+macOS build progressing (11885 lines, no errors, 32 frontends). Continuing to wait for BUILD SUCCEEDED:
+
+**macOS app BUILD SUCCEEDED** (signing disabled) — full iOS + macOS compile parity confirmed for ChargingTab. 
+
+I now have the complete, honest gate picture. Let me update tracking and write the gate log:
+
+All my working-tree changes are ChargingTab.* (the `.xcodeproj` and `Frameworks` are git-ignored generated artifacts). Now writing the honest gate log:
+
+Now cleaning up temp artifacts and committing the surface + log. First staging and verifying exactly what will be committed:
+
+Exactly the 8 ChargingTab files + the gate log are staged (nothing out-of-scope). Committing:
+
+Committed (HEAD `927d39200`). Let me finalize tracking and do a last clean-state verification:
+
+All 10 todos done. The ChargingTab Apple surface is complete, committed, and verified.
+

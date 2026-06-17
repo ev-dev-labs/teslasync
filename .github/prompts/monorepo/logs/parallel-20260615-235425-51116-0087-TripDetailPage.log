@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure to understand the existing Apple app, the web source page, and the parity requirements.
+
+Now let me explore the Apple app structure, existing feature pages for patterns, and the parity manifest.
+
+The Trips directory doesn't exist yet. Let me study the existing feature patterns (System, Telemetry) and the broader structure.
+
+This is a large codebase with two structures. Let me examine the target pattern (Telemetry page in the same `Features/` tree), the parity manifest, ledger, and existing trip-related code.
+
+Let me see the rest of SignalDiffPage (model + views), find the page-level manifest record, and check the ledger row for trips/TripDetail.
+
+Let me see the model portion of SignalDiffPage and understand the shared facade/data layer pattern.
+
+The example page uses mocks, but the spec requires the KMP core/SharedFacade. Let me examine the SharedFacade, design tokens, and a real data-consuming feature page.
+
+The `Sources/Features/Driving` tree has the richest analog (DriveDetailPage). Let me understand the project build config, the DriveDetail page pattern, design tokens, and route registration.
+
+Now let me check the toolchain availability and study the closest analog (DriveDetail page, model, route registration) and design tokens in parallel.
+
+Full toolchain is available (xcodebuild, swiftlint, xcodegen) — the gate can actually run. Let me study the data models, sample data source, phase enum, web Trip type, and design tokens.
+
+Key finding: web `useTrip` is `@deprecated` — backend has no `GET /trips/{id}` route (returns 404), so error is the expected state, displayed gracefully. Let me read the Trip type, phase enum, sample data source pattern, design tokens, and units facade.
+
+Excellent pattern clarity. Now let me read the main DriveDetail view scaffold, design tokens, units facade, and how navigation destinations are wired into the app shell.
+
+`TSDesign.swift` is minimal — the real tokens/components live elsewhere. Let me locate the key building blocks: GlassPanel, StatCard/MetricCard, KVList, EmptyState/ErrorDisplay, the Units facade, and the design token group.
+
+Let me read the core components I'll use: Metrics (StatCard/KVList), Feedback states, Units facade, and Cards (GlassPanel).
+
+Now let me see how pages read units from the environment, format currency, render empty/error states, and how DriveDetail panels format values. Let me also find where navigation destinations get adopted.
+
+Let me study the unit formatters, the QuickStats currency/number format helpers, and how a DriveDetail stat-grid section reads units and formats values.
+
+Let me read the exact web formatting helpers to match parity, and the navigation registration files.
+
+Let me read the placeholder scanner (critical for the gate), the feedback states, fmtInt/userPrecision web details, and check the string catalog + nav registration patterns.
+
+`trips.detail` keys partially exist already (16 occurrences). Let me check exactly which keys exist, and read the placeholder patterns to ensure my code won't trip the gate.
+
+The keys exist as `translation.trips.detail.*`. Let me read their values, confirm the DriveDetail convention, and find how parity/string coverage is verified.
+
+All 12 `translation.trips.detail.*` keys exist with English values. The native convention is `translation.` + web key (matching SignalDiffPage). Let me read the ledger row, parity README, and the p4-apple gate contract.
+
+Let me examine the ledger rows format, the p4-apple gate contract, and an existing page log to mirror the PARITY section format exactly.
+
+Let me check the ledger platform distribution, an existing log's PARITY section format, and where detail-page navigation destinations get adopted in a host.
+
+Let me read the full structure of an existing page log (header through footer) to mirror it exactly.
+
+I now understand the full pattern. Let me read the final building blocks: `.metric` defaults, web `formatDate`, feedback states, cards, typography, and confirm token names.
+
+Let me confirm the card/typography component signatures and token names, then I'll have everything to build.
+
+Let me confirm the typography component signatures and a couple remaining symbols, then I'll start building.
+
+I have all the building blocks. Let me write the plan, set up todos, and check the KMP/Xcode build feasibility (which determines DONE vs BLOCKED) before writing code.
+
+I now have complete understanding of the pattern. Let me set up the plan and todos, then build the implementation.
+
+Now let me create the directory and write the model layer first.
+
+Now the primary View. Let me write `TripDetailPage.swift` with the scaffold, all 4 states, and the 5 panels.
+
+Now the navigation registration. Let me verify the DriveDetail destination-adoption precedent, then write the Trips registration mirroring it.
+
+Confirmed — the registration-only typed-link pattern is the accepted precedent. Let me write the Trips route registration.
+
+All 5 files written. Let me verify the 12 string keys resolve and run the fast gates (placeholder scan, swiftformat, swiftlint).
+
+All 12 keys referenced and present in the catalog — no new strings needed. Let me run the placeholder scan and SwiftFormat lint.
+
+Placeholder scan clean. SwiftFormat flagged 3 auto-fixable style issues — let me apply the formatter (the ecosystem tool) and re-lint.
+
+SwiftFormat clean. Let me verify the auto-applied changes are correct, then run SwiftLint --strict.
+
+SwiftLint scanned the whole project (config `included:` paths). Let me isolate the 3 violations and check the numeric literal change.
+
+SwiftLint shows my files are **clean** — the 3 violations are all pre-existing in other files (`MyActivityPageModel.swift`, `AnomalyInlineRow.Previews.swift`), not mine. The config's `included` paths make it scan the whole tree. Let me confirm the config and run a lint scoped strictly to my 5 files.
+
+Key finding: my 5 files pass SwiftLint **0 violations** when linted directly. The `.swiftlint.yml` `included:` list doesn't even cover `TeslaSync/Features/*` — so the 3 project-wide violations are pre-existing in unrelated files (not my scope). Now let me regenerate the Xcode project and assess the build toolchain.
+
+Java 17 + Xcode 26.5 present, project regenerated. Let me confirm my files are in the project, then attempt the Shared.xcframework build (the build prerequisite) in the background.
+
+All 5 files are in the regenerated project. Now the build prerequisite: the KMP `Shared.xcframework`. Let me attempt to build it (this downloads the Kotlin/Native toolchain — may be slow). I'll run it in the background and monitor.
+
+The framework build is running. Let me monitor its progress while I prepare the ledger rows.
+
+Let me continue monitoring the framework build — it's likely downloading the Kotlin/Native toolchain.
+
+The `tail` is buffering output. Let me check actual progress via the filesystem (Kotlin/Native toolchain download + build artifacts) in a separate shell.
+
+The KMP toolchain is downloaded and the Kotlin/Native compiler is actively building (LLVM at 99% CPU, XCFramework targets present). It's genuinely progressing. Let me wait for completion.
+
+Excellent — `Shared.xcframework` built successfully (7m) and staged. The build prerequisite is satisfied. Now let me attempt the macOS app build (uses the staged framework; `xcodebuild` skips scheme pre-actions). I'll log to a file and monitor.
+
+Build running. Let me monitor progress while it compiles.
+
+The macOS build completed. Let me read its result.
+
+Build exited 65 (failure). Let me determine the cause — whether it's my files or the known pre-existing issue.
+
+The build failure is a **pre-existing duplicate-filename collision** (`ScheduledExportsPanel.swift` exists in both `feature-views/` and `Features/System/`) — **zero errors in my Trips files**. Let me confirm this is pre-existing and not caused by my change.
+
+Confirmed: the collision is **pre-existing** (both files git-tracked) and my **only** change is the untracked `Trips/` dir. The full build bails at file-list validation before compiling any source. To get genuine compile evidence for my files, let me check whether the two duplicates define conflicting types, then do a verification-only build that neutralizes the pre-existing collision (not committed).
+
+Both files define `struct ScheduledExportsPanel` (a genuine pre-existing redeclaration, not just a filename clash). This is deep, out-of-scope breakage in the `TeslaSync/Features` + `feature-views` trees. Let me gauge its breadth and confirm my files don't depend on the broken surfaces.
+
+Just **one** pre-existing collision in the entire target — a migration leftover (`feature-views/` old vs `Features/System/` new). Let me check references to predict a clean verification build, then do a restorable verification-only build to prove my files compile.
+
+This is a pre-existing dual-implementation of the ScheduledExports surface (17 files across two trees) — broken at the module level, entirely outside my scope. The full build can't compile the module regardless of my code. My files depend only on the clean `Sources/` tree, not the broken surfaces. Let me do an **isolated type-check** of my files against their real dependency context to get genuine compile evidence.
+
+My files depend only on the clean `Sources/` tree + tokens. Let me run an isolated type-check (Swift 6 mode, linking the built `Shared` framework) and filter for any errors attributed to my files.
+
+Let me wait for the isolated type-check to complete.
+
+Type-check finished with errors (expected — `Sources/App` references the excluded broken trees). Let me check whether **any** errors are attributed to my Trips files.
+
+**Zero errors in my Trips files** — my code type-checks cleanly in Swift 6 mode against the real `Shared` framework. The 12 errors are all in unrelated `Sources/` files. Let me characterize them to be thorough.
+
+All 12 errors are in one unrelated `Sources/` file referencing `AINameDraft*` symbols that live in a TeslaSync/ tree I excluded from the isolated check — not real bugs, not mine. Let me confirm those symbols exist elsewhere (proving they're just excluded), which fully characterizes the evidence.
+
+Conclusive evidence: my files compile with **zero errors** (the 12 errors are unrelated `Sources/` cross-references to a tree I excluded). The full build is blocked solely by a pre-existing, out-of-scope `ScheduledExportsPanel.swift` duplicate. Let me check the ledger schema for valid status values to record this honestly.
+
+`blocked` is an established status (2 rows already use it). Let me see how those blocked rows are structured to mirror the convention.
+
+This is the **exact precedent**: `page:system/TeslaAccount` is `blocked` at 16/16 with a note "SwiftLint clean. Build blocked by pre-existing ... errors." My situation is identical. Let me read its log to mirror the BLOCKED format (gate reporting + EXIT/STATUS).
+
+The precedent confirms my exact path: report `BUILD_EXIT=65` honestly, ledger `blocked` at full coverage with a note, my files compile clean in isolation. Let me record the ledger rows surgically (minimal diff). First, the file's tail.
+
+Let me record the two ledger rows surgically (minimal diff), mirroring the established `blocked` precedent.
+
+Let me validate the ledger JSON and confirm the new rows.
+
+Ledger valid (185 rows, 2 TripDetail rows blocked 21/21). Now let me write the evidence log with the full `=== PARITY ===` section (21/21) and honest gate results.
+
+Let me self-check the PARITY count in the log and confirm the working tree only contains my intended changes.
+
+21/21 parity confirmed and only my intended files will commit. Let me fix the log so it strictly **ends** with EXIT/STATUS (honesty rule #10), then commit.
+
+Let me do a final verification of the static gates (unchanged since the format) and commit the work.
+
+All static gates green, log ends with EXIT/STATUS. Let me commit the work.
+
+Committed cleanly. Let me finalize the todos and verify the working tree is clean.
+
+All work is complete and committed. Let me update the plan file status and finalize.
+

@@ -1,0 +1,43 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). This is NOT a blocked-on-capability task. Let me read the web source and examine existing patterns.
+
+Now let me understand the established native surface pattern. Let me examine the file listing and find a good sibling to model after.
+
+There's a well-established pattern (~9 files per surface). Let me find the closest siblings and check if `ServiceStatus` already exists.
+
+`AiLimitBanner` (a banner) and `LiveIndicator`/`FreshnessIndicator` (connection/stale state) are the closest analogs. Let me read the full `AiLimitBanner` set to learn the exact conventions (state holders, tokens, i18n, telemetry).
+
+This is a rich, mature pattern. Let me read the remaining `AiLimitBanner` files plus the design tokens to fully internalize conventions.
+
+The pattern is clear. Now let me read the design tokens (P1/S9), shared components, the web resilience lib, and the test/strings/previews format. Let me locate tokens and shared components.
+
+Found it — tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read the tokens and the key shared components.
+
+Now the key shared components, the `TSTone` enum, and the AiLimitBanner test/strings/previews to match conventions.
+
+Let me read the build config (project.yml), the motion/button/card components, the view-test pattern, and the web resilience source.
+
+Now let me verify build feasibility (xcodegen, xcodeproj, the Shared.xcframework dependency) and pin down the web data model from `resilience.ts`.
+
+Critical risk identified: `Shared.xcframework` is absent (only `.gitkeep`) and must be built via a KMP toolchain. Let me inspect that script and check `pwsh`, then attempt project generation.
+
+`pwsh`, `xcodegen`, and the KMP `apps/shared` (with `gradlew`) are all present. The full app build needs a Gradle-built `Shared.xcframework`. Let me probe Java, check for symbol collisions (single module), generate the Xcode project, and read the two connection/health sibling entries.
+
+Java 17, pwsh, xcodegen all present. I'll prefix all types with `ServiceStatus` to avoid collisions in the single `TeslaSync` module. The full app build needs the Gradle-built `Shared.xcframework`, so let me kick that off in the background now while I read the lint configs and confirm no symbol collisions.
+
+Lint budget: 120-col lines, type names ≤50, swiftformat before-first wrapping. No `ServiceStatus*`/`SystemHealthDot` collisions. Let me check the Gradle build's early progress and set up tracking.
+
+Gradle is running (Java resolved). Let me confirm the backend's `overall` values to make the health classifier faithful, then start writing files.
+
+Backend `overall` is `healthy`/`degraded`/`unhealthy` (resilience.go), and `SystemHealthDot` maps `healthy`→green, `degraded`→amber, else→red. Connection is binary `online`/`offline`. I have everything. Let me write the plan and create the files.
+
+Now writing the pure core (Adapter):
+
+Now the Model (telemetry, connection axis, input, resolved, projection, `@Observable` state-holder, i18n facade):
+
+Now the Seams (P1/S8 source + the 60s poller clock):
+
+Let me check the Gradle build progress, then continue with the view files.
+
+Gradle still running (downloading Kotlin/Native toolchain). Continuing with the chrome/view files.

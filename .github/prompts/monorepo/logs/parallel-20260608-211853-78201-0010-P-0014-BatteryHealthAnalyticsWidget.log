@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Now let me explore the Apple app structure, the web dependencies, and check Xcode availability.
+
+Tooling is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, xcodegen, iOS 17 simulators). The `dashboard-widgets` dir already exists with established patterns. Let me study the conventions and check what exists for this widget.
+
+No files exist yet for this widget. The common pattern is `.Model.swift`, `.swift` (main view), `.Previews.swift`, `.Tests.swift` (~54 each). Let me study a complete representative example and the shared infrastructure (state holders, tokens, i18n, gauge hero counterpart).
+
+No native battery widgets exist yet. Let me find the shared infrastructure (state holders, tokens, i18n, telemetry, native WidgetShell/GaugeHero counterparts) and a representative complete widget to follow.
+
+There are two native locations; the prompt targets `apps/apple/TeslaSync/dashboard-widgets/`. Let me study a complete representative widget there that uses a gauge-hero layout, plus the shared facade/state-holder, tokens, and i18n infrastructure those widgets consume.
+
+None have native versions yet. Let me examine the shared facade/state-holders, design tokens, and i18n infrastructure, plus a complete representative widget in the target directory to learn the exact conventions.
+
+55 widgets are implemented (sequence in progress; this is #0014). Battery-category analogs `RangeEstimateWidget` and `ProjectedRangeWidget` are implemented. Let me read `RangeEstimateWidget` end-to-end plus the shared facade files to learn exact conventions.
+
+Now let me read the complete `RangeEstimateWidget` reference (closest battery analog) end-to-end to learn the exact file structure, data binding, states, i18n, and tokens.
+
+Excellent reference. Now let me read the remaining `RangeEstimateWidget` files (Adapter, Previews, strings, Tests) and locate the shared types (`DashboardWidgetSize`, `DashboardWidgetRegistration`, design tokens `TSSpacing`/`Color.TS`/`Font.TS`, `TSSkeleton`).
+
+Now let me find where the shared types and tokens are **defined** (not just used), and understand the Xcode target structure via project.yml.
+
+The `TeslaSync/dashboard-widgets/` files compile into the same `TeslaSync` module as `Sources/` and the generated DesignTokens. Let me locate the token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) used by the main target.
+
+Let me read the generated design tokens, the dashboard widget infrastructure, and the skeleton component to know exactly what's available.
+
+Now I have the tokens and infra. Let me read the `TSSkeleton` component, the test pattern, the data hook shape, the web `RadialGauge`, and number formatters.
+
+Let me read the `BatteryHealthAnalytics` type, the web `RadialGauge`, number formatters, and check existing dashboard i18n keys for parity values.
+
+Let me read the `BatteryHealthAnalytics` type and the hook context to finalize the data contract.
+
+I have a complete understanding of the pattern and data contract. The score colors map cleanly to semantic tokens (`#10b981`→statusSuccess, `#f59e0b`→statusWarning, `#ef4444`→statusDanger). Let me read the lint configs and check the build setup before implementing.
+
+Let me check the KMP framework dependency situation and the pending-verifications note — these determine whether a full app build is feasible.
+
+Key finding: `Frameworks/Shared.xcframework` (the KMP shared core) is **absent** (only `.gitkeep`), and both app targets depend on it. My widget code is KMP-free, but the monolithic app build links `SharedFacade` → `Shared`. Let me confirm the test-target wiring, check `Skeletons.swift` imports, and read the apps-level verification note.
+
+This is the decisive finding. The repo's own `macos-pending-verifications.md` documents the **exact, sanctioned protocol** for this prompt family: the KMP `Shared.xcframework` is absent (deferred to `p5-hardening`), so the full-app `xcodebuild` is blocked by **pre-existing, unrelated** infra — while each surface is verified green in isolation (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder). Three prior P4 surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) followed this exactly.
+
+Let me set up my plan and confirm the isolated-verification toolchain.
+
+`Skeletons.swift` pulls in `TSCard`, so for isolated verification I'll stub just `TSSkeleton`. SDKs are iOS/macOS 26.5, Swift 6.3.2. Now implementing. Starting with the Model (state-holder seam, DTO, telemetry, registry, i18n facade).
+
+Now the Adapter (pure projection, number formatting ported from web, score→tone, accessibility):
+
+Now the Views file (radial gauge hero + stat grid — the native `WidgetGaugeHero`/`RadialGauge` parity built with SwiftUI shapes):
+
+Now the main surface view (shell, header, freshness, all state branches, compact/standard layouts):
+
+Now the Previews and strings files:
+
+Now the comprehensive test suite. Let me compute exact parity values and write `BatteryHealthAnalyticsWidget.Tests.swift`:
+
+I introduced a contradictory assertion in the tone tests. Let me fix it — `±∞` collapses to `0` → `.danger` via `safeNumber`:
+
+All 7 files written. Now let me run the host-runnable verification gates. First, swiftformat (auto-format my files) then confirm `--lint` clean, then swiftlint `--strict` scoped to my files.
+
+swiftformat clean. swiftlint flagged one issue: `project` function body is 61 lines (limit 50). Let me extract the stats builder into a helper.
+
+swiftformat reformatted the file, so my `old_str` is stale. Let me view the current projector section.
+
+swiftformat `--lint` and swiftlint `--strict` both clean (0 violations). Now the `swiftc -typecheck` on both the iOS 18 and macOS 15 SDKs. Let me build an isolated harness with the real design tokens + widget infra and a minimal `TSSkeleton` stub.
+
+iOS 18 typecheck passed under Swift 6 strict concurrency. Now macOS 15:
+
+Both SDKs typecheck clean under Swift 6 strict concurrency. Now the isolated SwiftPM package to build + run all unit tests:
+
+Compilation is running. Let me wait for it to complete.
+
+**All 23 tests passed** (0 failures) in the isolated SwiftPM build under Swift 6 / macOS 15 — proving projector parity values, the tone ladder, phase matrix, telemetry/refresh/stale wiring, registry, and the a11y summary (incl. the `de_DE` "1.480" grouping case). Now the placeholder gate:
+
+`-Path` requires a real directory (`Test-Path -LiteralPath`), and the gate's literal prefix path isn't one. I'll scope the scan exactly to my widget by copying my files into a temp dir (the gate's intent). First a manual grep for forbidden tokens, then the real scanner:
+
+Placeholder gate clean (`PLACEHOLDER_COUNT=0`, `EXIT=0`) and no forbidden tokens. Now `xcodegen generate` to prove the project enumerates my files, then I'll attempt the official `xcodebuild` gate to capture the pre-existing blocker evidence.
+
+xcodegen succeeded. Let me confirm my files are enumerated in the project and check the `.xcodeproj` ignore status (I must not commit it).
+
+All 7 files are enumerated in the generated project, and `.xcodeproj` is gitignored (won't be committed). Now let me attempt the official `xcodebuild` gate to capture evidence of the pre-existing blocker. I'll use an available simulator (iPhone 17; the gate's iPhone 16 doesn't exist on this runner).
+
+Confirmed: `Frameworks/` contains only `.gitkeep` — the KMP `Shared.xcframework` is absent. Now let me attempt the actual iOS build to capture the blocker evidence.
+
+The build is still running (compiling the large module). Let me wait for it to finish.
+
+Let me check the partial log for errors while the build continues.
+
+The build runs a Gradle pre-step that **assembles `Shared.xcframework` on the fly** — it's actively building the KMP framework (`xcframework successfully written out`). So the full build may be feasible, just slow (Kotlin/Native + the large Swift app). Let me keep waiting.
+
+No errors yet (0 `error:` lines) — Gradle is still linking the Kotlin/Native release frameworks (slow). The build is legitimately progressing. While it continues, let me set up the log directory and write the session plan.
+
+Prior P4 widget logs exist. Let me read a couple of battery-widget precedents to match the established log format and the STATUS convention.
+
+This is the key precedent: the 0015 BatteryRadialGauge widget achieved a **full green iOS `build test`** (the KMP framework builds via Gradle on-the-fly, exactly what mine is doing now), with macOS via a documented `CODE_SIGNING_ALLOWED=NO` workaround → `EXIT=0 STATUS=DONE`. And critically, my path `TeslaSync/dashboard-widgets/` is now the real wired source root (that precedent's "path reconciliation" is obsolete). So I'll drive the full gate to green. Let me keep waiting on the iOS build.
+
+Gradle is still in the slow Kotlin/Native release-link phase (no errors, 0 `error:`). This is the one-time framework build. Let me continue waiting.
+
+The Kotlin/Native release-link is genuinely slow (one-time framework assembly, no errors). Let me verify it's actively progressing (CPU) rather than hung, then continue waiting.
+
+Confirmed actively progressing: Gradle/konan `clang++` finishing the release framework slices, and `swift-frontend` has begun compiling the app (debug xcframework slices already staged). No errors. Let me continue waiting for the build to complete.
+
+Gradle has advanced to the final slice (`linkReleaseFrameworkMacosArm64`) — iOS release slices done, framework nearly staged, still 0 errors. Let me keep waiting for the app compile phase.
+
+Major milestone: Gradle `BUILD SUCCESSFUL` (39m), `Shared.xcframework` staged into `apps/apple/Frameworks/`, and xcodebuild is now compiling the `TeslaSync` app target (my widget + feature-views), still **0 errors**. The framework is now cached, so later `build test` will be fast. Let me wait for compilation to finish.
+
+The `TeslaSync` module is in the `EmitSwiftModule` phase (whole-module type-check/emit — includes my widget), still **0 errors**. Let me continue waiting for link + sign + `BUILD SUCCEEDED`.
+
+Confirmed actively compiling: 6 parallel `swift-frontend` processes and **1592 `.o` files** already produced (~85% of ~1857 files), still 0 errors. Let me continue waiting.
+
+**iOS `build` SUCCEEDED — `IOS_BUILD_EXIT=0`** (the matched lines are benign xcframework-staging messages, not errors). My widget compiled cleanly into the real app. Let me confirm the result line and that my widget objects were produced, then run the gate's `build test` scoped to my test classes (framework now cached).
+
+Confirmed: **`** BUILD SUCCEEDED **`**, 0 errors, my 5 source files compiled into the `TeslaSync` iOS target, and the KMP `Shared.framework` is built + embedded. Now the gate's `build test` scoped to my 7 test classes, run in the real iOS Simulator host (app + framework are cached):
+
+The test bundle is compiling (all co-located `*Tests.swift`). Let me wait for it.
+
+The full `TeslaSyncTests` bundle is compiling cleanly (314 objects, 0 errors) — including all co-located tests. UITests runner already built. Let me wait for my selected tests to execute on the simulator.
+
+My `BatteryHealthAnalyticsWidget.Tests.swift` is compiling into the `TeslaSyncTests` target (0 errors). Test bundle nearly linked. Let me wait for execution + results.
+
+**iOS gate FULLY GREEN:** `** TEST SUCCEEDED **`, `IOS_TEST_EXIT=0` — my 7 test classes (**23 tests, 0 failures**) ran in the real iOS Simulator host with the KMP framework. Now the macOS half. Per the precedent, the literal macOS `build test` is blocked only by repo-wide code-signing, neutralized with `CODE_SIGNING_ALLOWED=NO`. Let me run the macOS build (framework now cached).
+
+All 7 iOS test suites confirmed passed. macOS build compiling (framework cached, fresh macOS app compile). Let me wait.
+
+**macOS build SUCCEEDED — `MAC_BUILD_EXIT=0`** (signing-disabled workaround for the repo-wide entitlement requirement). Notably, the current `project.yml` already sets the correct macOS `TEST_HOST` (the precedent's mismatch is fixed), so let me run the macOS surface tests too, to fully close the gate.
+
+macOS test bundle compiling. Let me wait for it.
+

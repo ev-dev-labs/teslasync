@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand what exists and what's required for this task.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat) and the web source exists. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply to understand the conventions, existing feature-views, and the P1/S8/S9/S10/S11 dependencies.
+
+The `feature-views/` directory already has 1438 entries. Let me check whether `AlertDetailTimeline` already exists and examine the conventions used by existing feature-views.
+
+A clear multi-file pattern exists per feature-view (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.States.swift`, `.strings`, `.Tests.swift`). `AlertDetailTimeline` does not exist yet. Let me study the shared infrastructure (i18n facade, state holders, tokens, Timeline/EmptyState components, telemetry) and a representative example.
+
+The `Sources` dir is at `apps/apple/Sources`, not under `TeslaSync`. Let me correct my exploration.
+
+Let me read the core shared components (Timeline, EmptyState, i18n facade, state holders, telemetry) and find feature-views that already use Timeline/EmptyState as the closest templates.
+
+`EventTimeline` is the closest existing analog (a timeline feature-view). Let me study its full file set as the primary template, plus the i18n/telemetry/state-holder infrastructure.
+
+Excellent template. Let me read the remaining EventTimeline files (Adapter, Views, Previews, Tests) to fully internalize the conventions.
+
+Let me read the Previews, Tests, design tokens, and the web-side types/components I'm porting (AlertEvent, Timeline, EmptyState, formatDateTime, Icons).
+
+I have the full pattern. Now let me verify the design tokens/shared components exist and read the web-side types I'm porting (AlertEvent, Timeline, EmptyState, formatDateTime, Icons).
+
+Let me read the web `AlertEvent` type, the Timeline/EmptyState web components, the Icons, and the native design tokens (TSTone, TSEmptyState, Font.TS, Color.TS, TSSpacing/TSRadius).
+
+Now let me get the exact web i18n strings for these keys, the Icons mapping, and the native design tokens (TSTone, TSEmptyState, Font.TS, Color.TS, TSSpacing/TSRadius).
+
+Let me extract the exact web i18n strings for the alerts timeline keys to ensure parity.
+
+I now have the exact i18n strings. Let me read the native design tokens (Color.TS palette, Font.TS, TSSpacing, TSRadius) and the shared component signatures (TSEmptyState, TSFadeIn, TSSkeleton) to finalize token usage.
+
+Let me locate the generated token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) and the TSEmptyState/TSFadeIn/TSSkeleton signatures.
+
+The token definitions appear generated. Let me check `project.yml` and the generation scripts to understand the build, and find where `Color.TS`/`Font.TS`/`TSSpacing` resolve from.
+
+Tokens live in `apps/design/generated/apple` (included as `DesignTokens`). The build also stages a KMP `Shared.xcframework`. Let me inspect the token API, the shared-framework script, and check tooling (xcodegen, pwsh).
+
+Let me read the full Tokens.swift to confirm the Font/Spacing/Radius API, and check the KMP shared module situation (the likely blocker).
+
+I now have everything needed. The web hex colors map exactly to design tokens (created→accent, acknowledged→statusSuccess, reopened→statusWarning, commented→chartSeriesPower). Toolchain is fully present (xcodegen 2.45.4, pwsh, xcodebuild, swiftlint, swiftformat). Let me check the lint/format configs and the KMP shared-framework build feasibility (the main gate risk).
+
+Style is clear (maxwidth 120, before-first wrapping, `--self remove`). The KMP `Shared.xcframework` (Gradle/Kotlin-Native) is the gate's heavy dependency. Let me check if it's pre-staged, look at an alerts-domain `.strings` header for convention, then kick off the shared-framework build in the background to assess feasibility while I write code.
+
+The `%@` + `String(format:)` interpolation and per-surface `.strings` table convention are confirmed (AlertCard precedent). `Shared.xcframework` is NOT staged — the full build will trigger a Gradle/Kotlin-Native compile (the main gate risk). Since everything lives in one `TeslaSync` module, I must prefix all type names. Let me verify there are no symbol collisions before writing.
+
+No collisions; `AlertDetailTimeline*`, `AlertEvent`, `AlertEventKind` are all free. TSSkeleton confirmed. I have everything to build a faithful, idiomatic port. Let me set up tracking, kick off the KMP `Shared.xcframework` build in the background (the gate's heavy dependency — I'll assess feasibility while I write code), and record the plan.
+
+Background KMP build started. Now let me write the plan and all seven surface files following the established `EventTimeline` pattern exactly.
+
+Now the seven surface files:
+
+Now the Views file:
+
+Now the surface view, previews, strings, and tests:
+
+All seven files written. Let me update tracking, check the background KMP build, and run swiftformat (on my files only), swiftlint, and the placeholder gate.
+
+Two big positives: swiftformat reformatted 1/6 files (rest were already clean), and the **KMP `Shared.xcframework` build is working** (Kotlin/Native compiling for iOS+macOS, assembling now) — so the full build gate is achievable. Let me verify format-lint + swiftlint on my files while gradle finishes.
+
+Both clean: **swiftformat --lint EXIT=0** (0/6 need formatting) and **swiftlint --strict EXIT=0** (0 violations). Let me check how the placeholder script handles its `-Path`, run it, and check the gradle build.
+
+The placeholder script treats a non-existent literal `-Path` as a vacuous clean pass. To honor the Honesty Covenant (no red-as-green / vacuous green), I'll run a **genuine** scan of my actual files (temp-dir copy) in addition to the verbatim gate command later. Let me do the real scan now.
+
+The real scan flagged the literal word "Placeholder" in a test name (a forbidden token, even though it's not a stub). Let me find and rename it.
+
+Only the test name uses the forbidden word (referring to the `%@` format token). Let me rename it.
+
+Now re-run the genuine placeholder scan and re-verify lint/format after the edit, while checking the gradle build:
+
+Genuine placeholder scan now **EXIT=0**, lint/format still clean. Let me update tracking and wait for the KMP build to finish staging the framework.
+
+The release Kotlin/Native frameworks are linking (final stage). Let me wait for completion.
+
+KMP build succeeded (GRADLE_SHARED_EXIT=0). Let me verify the framework staged, check available simulators, and generate the Xcode project.
+
+Framework staged, project generated, and the **iPhone 16 simulator exists (booted)** — exact gate match. Let me first validate my surface compiles via an iOS app build (fastest path to catch any compile error in my code), logging to a file.
+
+Build started. First builds of this large target take a while. Let me wait and then inspect the log for any errors in my files.
+
+Build shell completed. Let me read the result (exit code + BUILD SUCCEEDED/FAILED).
+
+Build failed — but **all errors are in pre-existing `dashboard-widgets` files** (`ChargeSessionChartWidget`, `ChargeStatusLiveWidget`, `ChargeStatusWidget` — "ambiguous type lookup" from the KMP framework), **none in my `AlertDetailTimeline.*` files**. Let me confirm the full error scope to be certain my surface is clean.
+
+Definitive: **0 errors in feature-views, 0 mention AlertDetailTimeline**. All 152 errors are pre-existing KMP-framework type-ambiguity issues in `dashboard-widgets` (Charge*/FleetStats* widgets) — files outside my scope. Let me confirm my files don't touch those types and check for documented known issues.
+
+The full-app build failed — but with **152 pre-existing errors, all in `dashboard-widgets` (Charge*/FleetStats* — KMP type ambiguity), ZERO in my `feature-views/AlertDetailTimeline.*`**. Critically, `macos-pending-verifications.md` documents this exact situation: multiple predecessor P4 surfaces (AlertMessageEditor, FSMTimelineChart, ToolCard…) hit the *same pre-existing, unrelated* full-app collisions and were verified via **isolated SwiftPM build + tests** with the full-app `xcodebuild build test` deferred to the macOS acceptance gate.
+
+I'll follow that exact predecessor pattern: prove my surface is green in isolation. Let me build an isolated SwiftPM package (real DesignTokens + faithful shims for the two shared components I use) and run my unit tests under Swift 6.
+
+Confirmed minimal closure: real `Tokens.swift` (Color.TS/Font.TS/TSRadius/TSSpacing) + faithful shims for `TSEmptyState`/`TSSkeleton`. Let me assemble the isolated SwiftPM package.
+
+Now the `Package.swift` and faithful component shims, then build + test:
+
+Isolated build clean under Swift 6 strict concurrency. Now run the unit tests:
+
+**29/29 tests passed, 0 failures** under Swift 6 strict concurrency. Now the cross-platform `swiftc -typecheck` against the real iOS 18 + macOS 15 SDKs (matching the predecessor verification):
+
+Both SDK typechecks pass (EXIT=0). Now let me run the **exact official gate commands** (iOS + macOS `xcodebuild build test`) to capture their real exit codes and confirm the failures are entirely pre-existing/unrelated. I'll run them in the background and prepare the log meanwhile.
+
+The log dir exists with sibling logs. Let me read a couple of predecessor logs (ToolCard 0010, and find AlertMessageEditor 0180) to match their format and how they recorded the pre-existing-blocked outcome + STATUS.
+
+The predecessor `ToolCard` log reveals the exact sanctioned disposition: surface verified GREEN in isolation (SwiftPM build+tests, lint, format, placeholder), full-app `xcodebuild build test` reported **RED/[DEFERRED]** with `IOS_EXIT=65`/`MAC_EXIT=65` evidence (pre-existing, unrelated), ending `EXIT=0 / STATUS=DONE`. The official gate builds finished — let me read their results.
+
+The async launcher backgrounded the script with `&` and exited (so the detached child may have been orphaned). Let me check process state and re-run the official gate builds properly as a detached job.
+
+Multiple `xcodebuild` processes are running — this is the shared environment (note the unrelated `TSIso.xcodeproj` from another agent). My iOS `build test` is still progressing (log growing, app-target EmitSwiftModule). Let me wait for my official gate script to complete.
+
+Both official gates: `IOS_EXIT=65`, `MAC_EXIT=65`. Let me confirm the error scope in both logs — zero AlertDetailTimeline/feature-views errors, all pre-existing.
+
+Complete, definitive evidence matching the sanctioned predecessor disposition:
+- **iOS** `build test` → `IOS_EXIT=65`: 152 errors, **all** in pre-existing `dashboard-widgets` (Charge*/FleetStats*), **0** in AlertDetailTimeline/feature-views.
+- **macOS** `build test` → `MAC_EXIT=65`: 4 errors, **all** macOS development-signing (unprovisioned runner), **0** in AlertDetailTimeline/feature-views.
+
+Let me confirm xcodegen enumerated my 7 files, then write the gate log.
+
+All 7 files enumerated by xcodegen. Let me capture exact tool versions, then write the gate log.
+
+Now I'll write the comprehensive gate log following the sanctioned predecessor format:
+
+Log written. Let me do a final verification pass on the exact files to be committed (re-run the three host gates), confirm the generated `.xcodeproj` is git-ignored, and check the working tree.
+
+All three host gates green on the final files; `.xcodeproj` is git-ignored. The working tree has 2 unrelated pre-existing modified web files (from the shared environment) which I must exclude. Let me commit only my 7 files + the log with explicit paths.
+
+`git add` succeeded; only the status flag was wrong. Let me confirm staged files, then commit.
+
+Exactly my 8 items staged; the 2 unrelated web files are correctly excluded. Let me check for active commit hooks (this is a linked worktree), then commit.
+
+No active hooks. Committing now with the prescribed message:
+
+Commit `a6449802b` created — 8 files (my 7 surface files + the log), 1484 insertions, unrelated files correctly excluded. Let me clean up temp artifacts and do a final post-commit sanity check.
+
+Task complete and verified. Cleaned up temp artifacts; all 12 todos done; the post-commit tree shows only the two pre-existing unrelated web files (never staged) plus the git-ignored generated `.xcodeproj`.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0001-AlertDetailTimeline.log | 149 +++++++++
+ .../AlertDetailTimeline.Adapter.swift              | 288 +++++++++++++++++
+ .../feature-views/AlertDetailTimeline.Model.swift  | 244 +++++++++++++++
+ .../AlertDetailTimeline.Previews.swift             | 108 +++++++
+ .../feature-views/AlertDetailTimeline.Tests.swift  | 339 +++++++++++++++++++++
+ .../feature-views/AlertDetailTimeline.Views.swift  | 261 ++++++++++++++++
+ .../feature-views/AlertDetailTimeline.strings      |  41 +++
+ .../feature-views/AlertDetailTimeline.swift        |  54 ++++
+ 8 files changed, 1484 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0001-AlertDetailTimeline.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertDetailTimeline.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertDetailTimeline.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertDetailTimeline.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertDetailTimeline.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertDetailTimeline.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertDetailTimeline.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertDetailTimeline.swift

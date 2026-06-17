@@ -1,0 +1,138 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the toolchain availability and the web source file in parallel.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple feature-views structure, including the most recently completed surface (ChangesPanel) as a pattern reference.
+
+The web source is a small presentational timeline component. Now let me study the established pattern by reading the most recently completed surface (ChangesPanel) in full, plus the project configuration.
+
+Now let me read the full ChangesPanel implementation as the canonical pattern, plus the project.yml and supporting infra files.
+
+Excellent pattern. Let me read the rest of ChangesPanel (Components, Models, Table, Previews, Tests, strings) and the project.yml to understand shared infra (tokens, telemetry, build inclusion).
+
+The pattern is now clear. Let me examine the build configuration, test patterns, and shared infrastructure (tokens, telemetry) that I'll need to reference.
+
+Let me read the project.yml (it's one level up) and locate the shared infrastructure definitions (tokens, telemetry sink, skeleton).
+
+Files in `feature-views/` are auto-globbed into the build. Let me read the telemetry definitions, design tokens, the `formatTime` web helper, and check the build tooling (xcodegen, pwsh, placeholder script).
+
+Let me check how the predecessor surfaces handled the gate by reading their logs, plus the Shared.xcframework build script.
+
+This is the key finding. The predecessor (ChangesPanel) established the P4 disposition: full `xcodebuild` is DEFERRED due to pre-existing out-of-scope collisions, while the surface is validated via **swiftc typecheck (×3) + swiftlint + swiftformat + placeholder + xcodegen**, all EXIT=0. Let me read the exact validation harness methodology and confirm it against the most recent surface (ChargingBreakdownSlide).
+
+Now I fully understand the established P4 methodology. Let me read the design tokens, component library (TSTone, TSSkeleton), lint/format configs, and confirm the approach against the most recent surface log.
+
+Let me read the TSTone and TSSkeleton component APIs, confirm the methodology in the latest surface log, check for any reusable typecheck harness, and verify the Go drive model field names.
+
+Methodology confirmed across surfaces. Let me read the full Badges.swift and Skeletons.swift (to confirm they're self-contained for the typecheck harness) and locate the Go drive model.
+
+I have the data model confirmed (`start_ts`, `end_ts`, `duration_s` — SI seconds). Let me check the native motion components (FadeIn) and any GlassPanel equivalent, then set up my plan.
+
+Let me read the native Motion component and the most-recent surface's Model + Projection to align with current conventions.
+
+Let me read the most-recent surface's Projection and the `text()` helper location to finalize alignment, then I'll start building.
+
+I have a complete understanding of the established P4 pattern. Let me set up my plan and todos, then build the surface.
+
+Now I'll create the surface files. Starting with the Model and Projection (independent, so batched together).
+
+Now the Components file (the view pieces) and the surface file.
+
+Now the surface shell file.
+
+Now the strings catalog and previews.
+
+Now the comprehensive test suite.
+
+All 7 files created. Now let me run the validation gates. First, auto-format my files and check swiftlint, then set up the typecheck harness.
+
+Files already conform to swiftformat. Now swiftlint --strict on my files, and let me set up the typecheck harness.
+
+swiftlint clean (0 violations). Now let me build the swiftc typecheck harness against the real design tokens + component library, and run typecheck #1 (shipping surface).
+
+Skeletons.swift pulls in `TSCard` (from Cards.swift) — not my code. Let me check Cards.swift's dependencies and add it to the harness if self-contained.
+
+Skeletons.swift cascades into `TSCard`→`TSText`→… Following the predecessor's "verbatim subset" harness approach, I'll include just the real `TSSkeleton` struct (the only symbol I use). Badges/Motion compiled clean, so they stay full.
+
+The harness caught a real Swift 6 strict-concurrency issue in my code (static `ISO8601DateFormatter` isn't Sendable). Let me see how the predecessor's `ChangesAuditTime` solved this, to stay consistent.
+
+The predecessor builds formatters per-call (no static stored property). Let me apply the same pattern.
+
+Let me create a reusable harness script for the three typecheck variants and run typecheck #1.
+
+TYPECHECK1 = 0. Now typecheck #2 (+ Previews, `-D DEBUG`) and #3 (+ Tests, in-module).
+
+TYPECHECK2 = 0. The TYPECHECK3 failures are a harness artifact: the real `import XCTest` re-exports Foundation, but I commented it out. I'll map `import XCTest` → `import Foundation` in the harness copy instead.
+
+All three macOS typechecks pass (0/0/0). Now let me verify against the iOS 18 simulator SDK (the gate's primary destination) for all three variants, then run swiftformat --lint, the placeholder gate, and xcodegen.
+
+All iOS + macOS typechecks pass (6/6). Now swiftformat --lint, the placeholder gate, and xcodegen. Let me check the placeholder script's `-Path` semantics first.
+
+swiftformat --lint = 0. Let me check how the placeholder script resolves `-Path` (the gate passes a `DriveTimeline` prefix, not a directory).
+
+Confirmed: a non-existent literal `-Path` returns "nothing to scan" (Count=0). To do a *genuine* placeholder scan of my actual files (honesty: no hollow pass), I'll copy my 7 files into a temp dir and scan that, plus run the literal gate command for the record.
+
+Real placeholder scan on my actual files = 0 violations, EXIT=0. Now xcodegen generate and verify my files are enumerated.
+
+All host gates pass: typecheck ×6 (macOS+iOS), swiftlint, swiftformat, placeholder, xcodegen — all EXIT=0, and all 7 files are enumerated in the generated project. 
+
+Per the honesty covenant, I must get real on-host evidence for the full `xcodebuild` gate (not just cite the predecessor's DEFERRAL). Let me check the current state of the Shared.xcframework and the pre-existing out-of-scope collisions.
+
+Confirmed real on-host evidence for the DEFERRAL — both causes are outside my allowed files:
+1. `Shared.xcframework` is only a `.gitkeep` (KMP core needs a ~3-min Gradle build before any `xcodebuild` can link).
+2. A pre-existing duplicate-symbol collision: `ChargeSessionDTO` is declared in **two** dashboard-widget files.
+
+Let me capture the exact duplicate-declaration evidence for the log.
+
+Evidence is airtight: two `public struct ChargeSessionDTO` declarations in out-of-scope dashboard-widget files (ambiguous-type collision), and my git status shows only the 7 allowed `DriveTimeline.*` files. Let me gather line counts and write the gate log.
+
+All metadata gathered. Now let me write the comprehensive gate log.
+
+Log written. Now let me do a final lint/format reconfirmation, update todos, clean up temp artifacts, and stage exactly the allowed files.
+
+Final lint/format = 0. Let me stage exactly the allowed files (the 7 `DriveTimeline.*` + the log) and commit.
+
+Staging is clean (8 files: 7 surface + log, nothing else). Committing.
+
+Committed (`5ec0b3bad`, 8 files). Let me update the plan status and verify the working tree is clean.
+
+Task complete. The working tree is clean and all 7 `DriveTimeline.*` files plus the gate log are committed.
+
+## Summary
+
+Built the native Apple SwiftUI **DriveTimeline** feature view (P4/0140) at parity with `web/.../drive-detail/DriveTimeline.tsx`, following the established ChangesPanel/ChargingBreakdownSlide architecture.
+
+**Delivered** (7 files, 1358 lines, allowed-files-only):
+- `DriveTimeline.Model.swift` — surface-local `DriveTimelineDrive` DTO + snake-case decode (`start_ts`/`end_ts`/`duration_s`) + ISO-8601 parse, error taxonomy, cache-then-network load state, P1/S8 `DriveTimelineSource` seam + `@Observable` model, P1/S10 i18n facade
+- `DriveTimeline.Projection.swift` — verbatim `formatTime`/`formatDuration(durationS/60)` ports, projection, every-state presentation resolver, a11y summary
+- `DriveTimeline.Components.swift` — start/end flags + duration + the exact emerald→cyan progress bar, freshness/refresh/retry/empty/error/offline/loading chrome
+- `DriveTimeline.swift` — `TSFadeIn` + glass panel shell, state switch, P1/S11 `view.opened` telemetry, stale auto-refresh
+- `DriveTimeline.Previews.swift` (8 states), `DriveTimeline.Tests.swift` (26 methods), `DriveTimeline.strings`
+
+**Gates — all real on-host exit codes:**
+- `swiftc -typecheck` ×6 (macOS 15 + iOS 18 simulator SDKs × surface/+previews/+tests, Swift 6 strict-concurrency) = **0** — caught & fixed a real Swift 6 `ISO8601DateFormatter` Sendable issue
+- swiftlint `--strict` = **0**, swiftformat `--lint` = **0**, placeholder scan = **0**, xcodegen = **0** (all 7 files enumerated)
+- Full `xcodebuild build test` = **DEFERRED** with airtight evidence: `Shared.xcframework` is a `.gitkeep` (KMP core not staged) + a pre-existing out-of-scope duplicate `ChargeSessionDTO` in two `dashboard-widgets/` files — neither in my allowed set — per ADR-012, matching every sibling P4 surface.
+
+**EXIT=0 / STATUS=DONE.** Committed as `5ec0b3bad`; temp harnesses cleaned.
+
+
+
+The task is fully complete and verified — all gates pass, the commit is made, and the working tree is clean. Marking complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0140-DriveTimeline.log  | 190 +++++++++++++
+ .../feature-views/DriveTimeline.Components.swift   | 276 +++++++++++++++++++
+ .../feature-views/DriveTimeline.Model.swift        | 292 ++++++++++++++++++++
+ .../feature-views/DriveTimeline.Previews.swift     |  94 +++++++
+ .../feature-views/DriveTimeline.Projection.swift   | 212 ++++++++++++++
+ .../feature-views/DriveTimeline.Tests.swift        | 306 +++++++++++++++++++++
+ .../TeslaSync/feature-views/DriveTimeline.strings  |  45 +++
+ .../TeslaSync/feature-views/DriveTimeline.swift    | 133 +++++++++
+ 8 files changed, 1548 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0140-DriveTimeline.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveTimeline.Components.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveTimeline.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveTimeline.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveTimeline.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveTimeline.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveTimeline.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveTimeline.swift

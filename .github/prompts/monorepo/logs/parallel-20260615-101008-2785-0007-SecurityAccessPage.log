@@ -1,0 +1,222 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Good — Xcode, swiftlint, and pwsh are all available. Let me examine the web source page and the Apple app structure.
+
+The web page has many sub-components. Let me explore the security-access components, the Apple app structure, and existing admin pages to understand patterns.
+
+The `Features/Admin` directory doesn't exist yet despite git log mentioning those pages. Let me understand the actual Apple project structure.
+
+The structure differs from the prompt's stated path. Let me examine the project layout, `feature-views`, and how the most recent pages (BackupRestore/IngestXRay) were actually placed.
+
+This is a large component-per-file project. Let me check where the recent admin page commits actually placed files and look at one as a template.
+
+Now I see — pages live in `apps/apple/Sources/Features/Admin/`. Let me explore the Sources tree and study the BackupRestorePage as a template.
+
+Now I understand the real layout. Let me study the most recent/simplest pages as templates (IngestXRay) plus the data layer and route registration patterns.
+
+Let me read these template files directly with the view tool.
+
+The page delegates to 8 sub-components. The honesty covenant forbids scope narrowing, so I must reproduce all regions. Let me read the helpers, types, and all sub-components to understand full scope.
+
+Now let me read all 8 sub-components to understand what each renders.
+
+The manifest under-counts (says 0 charts, but SentryModeChart exists). To honor "no scope narrowing," I'll reproduce the full page. Let me read the remaining 3 components and the test file.
+
+I now understand the full web page. Let me study the Apple infrastructure: models pattern, data source, component library, design tokens, route registration, and ledger.
+
+I have a strong grasp of the page pattern. Now let me study the shared component library, design tokens, route wiring, the data layer (SharedFacade), and the ledger.
+
+No native security domain exists yet — pages use injected data sources (Sample default + protocol seam), matching IngestXRay. Let me learn the component library APIs and design tokens via targeted grep, then read route wiring and the ledger.
+
+Let me read the exact init signatures for the components I'll use, plus design tokens and typography.
+
+Let me read the StatCard/MetricCard region, DataTable, Typography, design tokens, and chart components.
+
+Let me read the DataTable init, design tokens, chart components, and the web MetricCard to finalize my component mapping.
+
+I have enough on components. Now let me examine route registration wiring, the ledger, the parity manifest record, design tokens, and chart APIs.
+
+No `securityAccess` route exists yet — I'll add it. Let me examine the full AppRoute structure, the ledger format, and how registrations are wired into the app.
+
+Let me see how registrations wire into the app, the route parser, and the ledger format.
+
+Let me read the route parser, ledger, project.yml build config, and the BackupRestore scaffold/model/state for the multi-source pattern.
+
+Let me read the ledger format, project.yml, the BackupRestore page scaffold, state enums, and test pattern.
+
+Let me check the ledger rows pattern, project.yml build config, the BackupRestore page scaffold, and design tokens/chart API.
+
+The `.xcodeproj` is generated via xcodegen. Let me locate the test files, read the gate contract, and find the build scripts.
+
+Let me read the IngestXRay log to see the exact gate commands and PARITY section format used by the precedent.
+
+Excellent — this log gives me the exact gate commands and known pre-existing test breaks. Let me verify the build environment (KMP framework, xcodegen) and read remaining infra (design tokens, bar chart, vehicle twin, test pattern).
+
+`Shared.xcframework` isn't staged yet — the scheme preAction builds it via Gradle. Let me read that preAction and check the Kotlin/Gradle toolchain.
+
+Let me read the framework staging script, then kick off a background build of the KMP framework so it's ready for the gate while I write code.
+
+Let me kick off the KMP framework build in the background (it's the slow part), then continue reading infra while it runs.
+
+While the framework builds, let me read the design tokens, bar chart API, and the test pattern.
+
+The framework build is running under nohup. Let me check its progress and find the exact token definitions (Color.TS, Font.TS, TSSpacing).
+
+The design tokens are generated (P2). Let me locate them and confirm token names.
+
+I have the full token set. Let me read the test pattern and the bar chart body, then start building.
+
+Let me check the framework build progress, the xcstrings structure, and the glass panel modifier.
+
+Framework build is nearly done. Let me confirm a few reused string keys exist and that the build finished, then start implementing.
+
+The framework built to the debug path but staging may have failed. Let me check the full build log tail.
+
+The framework built to `debug/` but the staging script expects `release/`. Let me check the gradle config and re-run the script to see its real exit status.
+
+The script likely got cut off before staging. Let me re-run it now (gradle is cached, so fast) and capture the full output and exit code.
+
+Good — it's now building the release variant (the first run was cut off after debug). Let me wait for it to complete staging.
+
+The release framework is compiling (slow Kotlin/Native step) in the background. I have everything I need — let me set up a plan and todos, then start writing code while it builds.
+
+Now let me write the code. Starting with the models and pure helpers (the testable data layer).
+
+Now the pure helpers ported from `helpers.ts` (testable):
+
+Now the central `@Observable` page model:
+
+I referenced `SecurityRange` — let me add it to the models file:
+
+Now the sample data source:
+
+Now the route registration, plus wiring into AppRoute and the app. Let me check the framework build too.
+
+Release framework still compiling. Let me write the route registration and wire it into AppRoute + the app.
+
+Now wire `.securityAccess` into AppRoute (case, pathSegment, icon, group) and register it in the app:
+
+Let me verify the glass panel padding behavior and how TSDataTable renders rows/empty before writing the views.
+
+The page model needs an explicit auto-select helper for the view's lifecycle tasks. Let me refine it:
+
+Now the page scaffold. Let me check the framework build and write the main page file.
+
+Almost done (macOS release linking). Let me write the page scaffold now.
+
+Now I'll write the supporting views (formatters, tiles, error banner, alert panel GlassPanel1, twin panel GlassPanel2). Let me check the framework finished first.
+
+Framework staged successfully (`Frameworks/Shared.xcframework`). The gradle daemon is warm now, so builds will be fast. Let me write the supporting views.
+
+Now the main data sections (summary, status cards, window detail, live state, statistics, history table, timeline):
+
+I referenced `SecurityLiveSignal.build` and `SecurityEventColumns.columns()` — let me create those plus the chart. First, the live-signals builder:
+
+Now the event-table columns:
+
+Now the sentry activity chart (Swift Charts):
+
+All view files written. Let me verify a few component signatures I depend on before building (TSButton, teslaSyncTheme, TSStatSkeleton).
+
+Component signatures check out. Now let me inspect the exact xcstrings raw formatting so I can insert keys without reformatting the whole file.
+
+Let me confirm how the file stores non-ASCII characters (literal UTF-8 vs `\u` escapes) so my inserted entries match.
+
+The file uses literal UTF-8. Let me insert all the new keys via a targeted script that preserves the rest of the file byte-for-byte.
+
+105 keys added, JSON valid. Now the tests. Let me write the helpers tests and model tests.
+
+Now the model state-machine tests:
+
+All source and test files written. Let me regenerate the Xcode project and run the placeholder + build gate.
+
+Placeholder clean, project generated (78 SecurityAccess refs). Now the macOS build (compiles the whole app):
+
+Name collisions with existing P3 components (`SecuritySignalValue`, `SentryDayBucket` already exist). There may be reusable P3 security components. Let me investigate before renaming.
+
+Major discovery — there's a **complete P3 native component set** for security-access (`SentryModeChart`, `EventTimeline`, `EventHistoryTable`, `SecurityStatistics`, `SecurityStatusCards`, `WindowStatusDetail`, `LiveVehicleState`). Like IngestXRay reused XRay*, I must reuse these instead of redefining colliding types. Let me wait for the collision scan, then study these components.
+
+This is the IngestXRay situation — a full P3 component set exists for security-access. I must reuse them. Let me find existing usages of these components for a wiring template, and locate the shared data model.
+
+Each P3 component is self-contained with its own model/adapter (e.g., `SecurityCardsUpdate`/`SecurityCardsLatest`). These exist precisely for this page (0 usages yet), like XRay for IngestXRay. Let me study one component fully to learn the wiring pattern, plus the shared `SecuritySignalValue`.
+
+`SecurityStatusCards(model: SecurityCardsModel)` — a self-driving live widget with phase/connection/start/stop. Let me read its model + adapter to learn how to construct and feed it.
+
+I understand the P3 pattern now: each component binds a `*Model(source:)` with an `InMemory*Source` I push `*Update` snapshots into. Let me map all 7 components' APIs (model init, source protocol, update/latest types, InMemory source, adapters) in one comprehensive scan.
+
+Clear pattern: each component has `InMemory*Source(initial: *Update)` + `*Model(source:)`. Now I need each component's `*Update`/`*Latest`/`*Row`/`*Bucket` shapes and their adapters. Let me scan all the data-carrying types and adapters at once.
+
+Let me locate the remaining data types (`SecurityCardsLatest`, `SentryDayBucket`, `EventHistoryRow`, `SecurityStatisticsOutcome`) and read each component's Update/data shapes.
+
+This is the IngestXRay pattern — 7 P3 widgets exist precisely for this page. The right architecture composes them. Let me back up my from-scratch files (in case I need them), then study the 7 adapters to wire the components.
+
+Now let me read the 7 adapters to learn the exact input data shapes for each component.
+
+SecurityStatusCards takes a RAW `SecurityCardsLatest` and projects internally — clean to feed. Let me check whether the other 6 components take raw or pre-projected inputs (determines wiring effort).
+
+Consistent pattern — components take raw inputs and project internally. Let me read the remaining input types (WindowStatusEvent, LiveVehicleStateLatest, SentryModeUpdate, SecurityStatistics, EventHistory, EventTimeline) to learn what each needs.
+
+Each component has its own raw-signal enum and raw event type, projecting internally. Let me read the final input types (WindowStatusEvent, SentryModeUpdate, SecurityStatistics input, EventHistoryInput/Row, EventTimelineUpdate) to complete my understanding.
+
+Sentry chart takes projected `[SentryDayBucket]`, window takes raw `WindowStatusEvent`. Let me read the final three: SecurityStatistics, EventHistory, EventTimeline inputs.
+
+Statistics uses `onOutcome`/`load()` (different seam) and defines its own `SecurityMetricTile` (another collision). Let me read the final types (SecurityStatsSnapshot, EventHistoryInput/Row, EventTimelineSecurityEvent) and all InMemory source push methods + entry-view inits.
+
+Let me get the last pieces: `SecurityStatsValue`, EventHistory input/row types, all signal enums, InMemory source push methods, and entry-view inits.
+
+Need `SecurityEventInput` (history raw event) + signal enums + InMemory source push methods. Final read:
+
+I now have the full picture. Let me get the last details: the `SecuritySignal` enum cases, all InMemory source push methods, the SecurityStatistics seam, and entry-view inits.
+
+All InMemory sources expose `.push(_:)`. Let me grab the last enum (`SecuritySignal` cases) then write the integration.
+
+I have the complete API surface. Now I'll pivot to composing the 7 P3 components. Let me delete my duplicate presentational files and rewrite around the P3 components.
+
+Now the raw data model, signal type with component mappers, data source, and sample:
+
+Now the projections + mappers from `SecurityReading` to each P3 component's input (reusing the components' tested logic where possible):
+
+Now let me verify a couple of enum case names (SentryModeLoadStatus, connections) to avoid build churn, then write the orchestrating page model.
+
+Let me add `lastLockChange` to projections, then write the orchestrating page model.
+
+The old model file still exists — let me replace it.
+
+Now the custom page-level regions (top error banner, alert GlassPanel1, twin GlassPanel2, summary stats row) — the parts with no P3 widget:
+
+Now I'll replace the page to compose the 7 P3 components plus my custom regions. Let me remove the old page and write the new one.
+
+Now let me update the tests for the new architecture. Remove the old ones and write projection + model tests.
+
+Now the model tests for the new orchestrating model:
+
+All files rewritten to compose the P3 components. Let me regenerate the project and build.
+
+The build is compiling the full app. Let me wait for it to finish.
+
+Let me check the raw build log progress directly.
+
+Build progressing well (0 errors so far, compiling shared-surfaces). Let me wait for completion.
+
+**BUILD SUCCEEDED** — the P3 composition compiles cleanly. Now let me run swiftlint, swiftformat, and the tests on my files.
+
+7 line-length violations to fix. Let me view and shorten each.
+
+Let me re-run swiftlint and add swiftformat lint:
+
+swiftlint clean. swiftformat wants computed-property bodies wrapped — let me auto-format my files with the project formatter, then re-verify.
+
+swiftformat clean now, but auto-format introduced 1 swiftlint violation. Let me find and fix it.
+
+The formatter expansion pushed the class body to 254 lines (>250). Let me move the push-orchestration methods into an extension. Let me view the current structure.
+
+Let me move the push-orchestration methods into a same-file extension to reduce the class body:
+
+Lint and format are both clean. Now let me check whether the known pre-existing test breaks still exist, then build + run my test suites.
+
+The two inherited files are unmodified (committed). Let me build + run my test suites; this will reveal whether the test bundle compiles.
+
+Confirmed — it's the same pre-existing `VehicleCostPageModelTests.swift:10` concurrency break documented in the IngestXRay log, not my code. I'll temporarily neutralize the 2 inherited-broken files (restoring them byte-for-byte via git afterward), run my suite, then restore. First, confirm they're tracked/clean.
+
+Both tracked and clean (MD5s recorded). Let me temporarily neutralize them, run my suites, then restore byte-for-byte.
+

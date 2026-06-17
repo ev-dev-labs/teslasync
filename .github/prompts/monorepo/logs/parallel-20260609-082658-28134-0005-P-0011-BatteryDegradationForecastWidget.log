@@ -1,0 +1,109 @@
+I'll start by exploring the repository structure and reading the web source specification, then assess the Apple toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are active. Let me verify thoroughly and explore the existing Apple structure and predecessor patterns.
+
+Full Xcode 26.5 IS available via `DEVELOPER_DIR`. The capability is present — not blocked. There's an existing `dashboard-widgets` directory with established patterns. Let me study them.
+
+The closest predecessor is `BatteryDegradationTrendWidget` (same `useBatteryDegradation` data source). Let me study it thoroughly to follow the established pattern.
+
+Excellent, well-established pattern. Let me read the remaining reference files and shared primitives in parallel.
+
+Now let me locate the shared primitives (tokens, registration types, shared components like Badge/StatCard/EmptyState equivalents) referenced by widgets.
+
+Let me find the design token definitions, the project build config, and the shared Badge/StatCard/EmptyState components.
+
+Now let me verify the generated design tokens, the Shared.xcframework build dependency, and whether there are shared widget-support components (WidgetShell, TipCards, StatCard, Badge, EmptyState).
+
+Critical: `Shared.xcframework` must be built via Gradle/KMP as a build pre-action. Let me check the verification reality doc, the predecessor's log/approach, available tokens, and the tip-cards pattern.
+
+Now I understand the established completion protocol: surface-scoped gates (swiftc typecheck, isolated SwiftPM test, swiftlint, swiftformat, placeholder, xcodegen) must be green; the full-app `xcodebuild` is deferred to the macOS acceptance gate (KMP `Shared.xcframework` long-pole + pre-existing collisions). Let me read the registry, shell, tip-cards, types, and tokens.
+
+Let me examine the degradation data types, the web tip-cards component, and how a native predecessor renders tip cards.
+
+I have the full data shape. Let me check the lint/format configs and confirm the isolated-build approach by peeking at a predecessor's harness, then write a plan.
+
+Predecessor 0012 ran the full build green earlier; later surfaces deferred as parallel-slot Gradle contention and pre-existing collisions accumulated. I'll make my surface fully green in isolation and attempt/defer the full-app build honestly. Let me check for symbol collisions before naming my types.
+
+Let me read the predecessor's exact verification commands to replicate them faithfully, then start building.
+
+I have a thorough understanding of the pattern and bar. Let me check the web StatCard styling and confirm my chosen type names don't collide, then start building.
+
+Everything is verified. Let me set up the plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the domain models.
+
+All 8 files written. Now the verification phase. Let me check the `TSSkeleton` dependency's own imports, then run the `swiftc -typecheck` gate.
+
+`TSSkeleton`'s file also contains `TSStatSkeleton` which needs `TSCard`. Let me check the dependency depth of `Cards.swift`.
+
+The dependency chain via `Cards.swift` is deep. Let me compile my surface against the whole real `Sources/Components` + `Sources/Design` + tokens as the dependency library — verifying whether that layer is self-contained.
+
+`Sources/Components` + `Sources/Design` only import system frameworks — self-contained. Let me run the real `swiftc -typecheck` gate (macOS, production files).
+
+The Components `DataDisplay`/`Maps` files need an external `Units` helper. My surface only needs `TSSkeleton`. Let me compile against just the real design-atom files `TSSkeleton` transitively needs.
+
+macOS production typecheck is clean (EXIT=0) against the real tokens, design, infra, and `TSSkeleton`. Now the iOS-simulator target and the previews (`-D DEBUG`) typechecks.
+
+All four typechecks are green. Now let me build an isolated SwiftPM package (module named `TeslaSync` so `@testable import TeslaSync` resolves) and run the real XCTest suite.
+
+All 33 tests pass under Swift 6 (0 failures). Now swiftlint, swiftformat, xcodegen, and the placeholder gate.
+
+Violations to fix: trailing commas, and two files exceed the 400-line `--strict` limit. Let me decompose the surface (move loaded-content subviews into `Views.swift`), split the tests, and fix trailing commas. First, let me view the surface's loaded-content section.
+
+Now I'll decompose: delegate loaded-content to a new `ForecastContent` view in `Views.swift`, removing the large extension from the surface file.
+
+Now add the `ForecastContent` view to `Views.swift`:
+
+Now fix the trailing commas. Let me view the exact spots.
+
+The violations are the commas at end of lines 45 and 50. Let me remove them precisely.
+
+Now split the oversized test file. Let me view the sections to move (Model/Registry/Accessibility tests + Spy).
+
+Now create the split test file and truncate the original.
+
+All files are now under 400 lines. Let me re-run swiftlint and swiftformat on all 8 files.
+
+swiftlint and swiftformat are clean (0 violations). Now re-verify typecheck and the full test suite after the refactor.
+
+Placeholder/typecheck/test all green. Now the placeholder gate and `xcodegen generate`.
+
+Placeholder gate clean. Now `xcodegen generate` to confirm the surface files are enumerated into the project.
+
+All surface-scoped gates are green and `xcodegen` enumerates all 9 files. Now let me attempt the full-app `xcodebuild` honestly — first checking the known pre-existing collision and attempting the KMP `Shared.xcframework` Gradle staging (bounded).
+
+Confirmed: my surface is collision-free (0 colliding symbols), and the full-app build is blocked by a pre-existing, surface-independent `ChargingProjection` struct-vs-enum redeclaration. Let me attempt the actual `xcodebuild` gate (bounded) to capture its real failure mode.
+
+The bounded iOS `xcodebuild` timed out at 150s (IOS_EXIT=124) during the KMP Gradle pre-action — the documented long-pole. Let me capture the exact Gradle task for honest evidence (bounded), then finalize.
+
+Full-app build is blocked by the KMP `Shared.xcframework` Gradle long-pole (GRADLE_EXIT=124) + the pre-existing `ChargingProjection` collision — both surface-independent, matching the documented deferral protocol. Let me write the verification log.
+
+Now record the deferred full-app verification in `macos-pending-verifications.md`.
+
+Now clean up temp artifacts and review what will be committed.
+
+Clean tree, generated project is git-ignored. Let me do a final consolidated green-gate snapshot, then commit.
+
+Everything is green. Committing the surface, log, and the deferral record.
+
+Committed as `7bd1349a8`. Let me verify the final state.
+
+Task complete. The `BatteryDegradationForecastWidget` Apple surface is shipped at parity with the web source, all surface-scoped gates green, committed as `7bd1349a8`.
+
+## Summary
+
+Built a production native SwiftUI parity of `BatteryDegradationForecastWidget.tsx` for iOS 18 / macOS 15 — **9 files** under `apps/apple/TeslaSync/dashboard-widgets/` (8 Swift + `.strings`), all ≤400 lines, decomposed across Models / Builder / Model / Views / surface / Previews / Tests / ModelTests.
+
+**Parity reproduced 1:1:** `healthTier` (≤0.05/≤0.12 thresholds), `scoreToImpact`, `riskIcon` (SF Symbol mapping, web order), `current_health_pct ?? current_health`, locale `yMMM` projected‑80% date, `−x.xx%` rate with U+2212, risk `slice(0,5)` + tips `maxTips(3)`, and `hasData`. Binds via the P1/S8 `BatteryDegradationForecastSource` seam (no HTTP in the view); renders **all six states** (loading/empty/error/stale/offline/content) + compact 1×N; **12/12 web i18n keys** via the P1/S10 facade; VoiceOver summary + per‑row labels, Dynamic Type, Reduce Motion; P1/S11 `view.opened` telemetry. Registry `battery-degradation-forecast` 2×4 / 1×2 / 4×40.
+
+**Gates executed green on this host** (real output):
+- `swiftc -typecheck` — iOS‑18 + macOS‑15, production **and** previews, Swift 6 `-strict-concurrency=complete`, against the REAL tokens + `DashboardWidgetInfra` + `TSSkeleton` → **0/0**
+- isolated `swift test` — **33/33** passed
+- `swiftlint --strict` **0/8** · `swiftformat --lint` **0/8** · placeholder gate `COUNT=0` (0 opt‑outs) · `xcodegen generate` enumerates all 9 files
+
+**Full‑app `xcodebuild build test` (iOS+macOS): deferred** to `p4-apple/P99-0001` on `macos-latest`, blocked only by **surface‑independent** causes — the unstaged KMP `Shared.xcframework` Gradle long‑pole (IOS_EXIT=124 @150s, GRADLE_EXIT=124 @90s) and the pre‑existing `ChargingProjection` struct‑vs‑enum redeclaration in two other surfaces. My 22 public types are collision‑free tree‑wide. Recorded in `apps/macos-pending-verifications.md`; evidence in the prompt log. `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete — all 15 todos done, all gates green, committed as `7bd1349a8`, working tree clean.
+

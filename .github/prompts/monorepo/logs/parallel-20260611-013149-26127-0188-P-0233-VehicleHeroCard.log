@@ -1,0 +1,187 @@
+I'll start by exploring the repository structure and checking tooling availability, since this task requires Apple toolchain (SwiftUI/Swift Charts/MapKit) and depends on predecessor artifacts.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simctl, pwsh). Now let me read the web source spec and explore the Apple project structure.
+
+The web source is clear. The `shared-surfaces` dir has 1569 files following a `{Name}.Adapter.swift` pattern. Let me understand the established conventions by examining existing VehicleHeroCard files (if any) and a complete reference surface.
+
+No VehicleHeroCard files exist yet — I'm creating from scratch. The full surface pattern is `.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`, `.Adapter.swift`, `.AdapterTests.swift`, `.States.swift`. Let me find a complete reference surface to match conventions exactly.
+
+`NewVersionBanner` is a clean, focused reference. Let me read its full file set to learn the established patterns (model, adapter, views, states, seams, tests, i18n, previews).
+
+`NewVersionBanner` is polling-based, but `VehicleHeroCard` is prop-driven with a `useUnits` binding. Let me read the rest of the reference pattern plus the units/formatting infrastructure (FormatterPrefsBridge is the `useUnits` peer) and the shared tokens/components I'll need.
+
+Now I understand the established pattern well. Let me locate the P1/S9 design tokens and the shared component library (to map GlassPanel/RadialGauge/StatusBadge/StatCard/Badge/Grid), plus the `useUnits` peer and supporting types.
+
+There's a `Sources/Components/` library mirroring the web. Let me read the design tokens, the shared components I'll map to (PieGauge/Badges/Cards/Metrics/StatusIndicators), and find the `useUnits` peer (FormatterPrefsBridge).
+
+Now let me read the web atomic sources for exact parity, the native shared components I'll map to, the token definitions, and find the `useUnits` peer (unit-preferences state holder).
+
+The shared library is rich. I need the token definitions, feedback/motion building blocks, and crucially the `useUnits` peer (unit-preferences state holder, P1/S8). Let me locate those and read the web atomic sources for exact parity.
+
+Key discovery: `Sources/SharedFacade/Units+Facade.swift` is the `useUnits` peer (P1/S8), and there are existing unit surfaces (Distance, Temperature, Range, FormatterPrefsBridge). Let me read the units facade, formatters, the building-block components, and locate token definitions.
+
+Design tokens are referenced everywhere but not in obvious spots — they may be generated or in a package. Let me find their definitions and understand the project structure (project.yml).
+
+Critical info: tokens come from `apps/design/generated/apple` (P1/S9), and the KMP core is `Frameworks/Shared.xcframework`. Let me verify build prerequisites (xcframework binary, xcodegen, existing project) and read the token names plus the closest peer surface (`MetricCard` — a unit-aware card).
+
+Need to verify the critical dependency: `Shared.xcframework`. Let me check the Frameworks directory and read the full token definitions plus the closest peer surface (`MetricCard`).
+
+**Critical finding:** `Frameworks/Shared.xcframework` is absent — only a `.gitkeep`. The app target depends on it and `Units+Facade.swift` does `import Shared`. Without it, `xcodebuild` cannot build the project at all. Let me check whether I can build the KMP `Shared.xcframework` on this runner.
+
+There's a KMP core at `apps/shared/core` and a build script `apps/apple/Scripts/build-shared-xcframework.sh`. Let me read it and check toolchain availability — I'll attempt to build the framework so the real gate can run.
+
+Java 17 + Gradle wrapper + `assembleSharedXCFramework` exist, and the xcframework build is wired as an Xcode pre-build step. I'll kick off the KMP framework build in the background (it's the long pole — Kotlin/Native compile), then continue studying references and writing code while it runs.
+
+Gradle works and the distribution is cached — `assembleSharedXCFramework` is available. Let me start the xcframework build in the background and study references while it compiles.
+
+While the framework builds, let me read the remaining building-block components (Buttons, feedback States/Skeletons, Motion, Typography) to know exact APIs.
+
+I now have all the building-block APIs. Let me check the framework build progress.
+
+The background build got killed when the launcher shell exited (the Kotlin/Native distribution download was interrupted). Much is `FROM-CACHE`, so it should be quick once the toolchain downloads. Let me relaunch it fully detached so it survives, then proceed to write code while it runs.
+
+Build is now detached and persistent. Let me study the closest unit-aware peer (`MetricCard`) and the web StatusBadge/Badge/Grid + FSM registry for exact parity, plus locate NewVersionBanner's supporting type definitions.
+
+Let me study the `MetricCard` surface (the canonical unit-aware card peer) and the web FSM registry for the StatusBadge tone/label mapping.
+
+MetricCard is purely prop-driven (no states), so VehicleHeroCard should follow the source/connection pattern of NewVersionBanner. Let me read NewVersionBanner's supporting types (in its Adapter), and check for shared `LoadableState`/connection primitives in the facade/Live layers to reuse.
+
+There are shared facade primitives: `LoadableState`, `LiveConnection`, `StateHolderModel`, `AppContainer`. I should reuse these for consistency. Let me read them and find a surface that combines them for the loading/empty/error/stale/offline states.
+
+Excellent — shared `LoadableState`, `LiveConnectionState`, `StateHolderModel`, `AppContainer` (holds `unitPreferences`), and the `Units` facade are all in-module. Now I need the FSM vehicle-state→tone/label mapping and number formatting. Let me read those web sources and check the framework build.
+
+Build is linking release frameworks — nearly done. Let me locate the FSM types file and read the exact status→color/variant mapping plus number formatters.
+
+I have the vehicle FSM states/variants. Let me check the framework build completion, read the exact number formatters, and check for any existing Apple vehicle-status mapping to reuse.
+
+**Major find:** a sibling `VehicleHeroCardWidget` surface already exists in `dashboard-widgets/` — it deals with the same vehicle-hero data natively. Reading it will reveal established data shapes, SI conversion, and status mapping, and prevent symbol collisions (same module). Let me read it.
+
+Crucial: the widget defines many `VehicleHero*` public symbols in the same module. My surface must use distinct `VehicleHeroCard*`-prefixed names and be self-contained. Let me verify there's no existing `VehicleHeroCard` type collision, check the widget's strings table + Model, and confirm the build finished.
+
+No collision with `VehicleHeroCard` (only `TSVehicleHeroCard` exists). I'll prefix all my types `VehicleHeroCard*` and keep the surface self-contained. Let me read the test-target wiring, swiftlint, and swiftformat configs before writing, and check build progress.
+
+Let me read the exact `TeslaSyncTests` target config and the lint/format configs precisely before writing.
+
+Test wiring confirmed: co-located `*Tests.swift` in `shared-surfaces` compile into `TeslaSyncTests`. Lint: lines ≤120, functions <50 lines, types <250 lines. The sibling widget ports conversions 1:1 (Foundation-only) — I'll follow that convention. Let me read the widget's Model + main to match the binding/state-switch idiom exactly.
+
+I now have the authoritative template (the sibling widget surface 0107). Let me check the framework build and set up tracking, then write all files.
+
+Build is finishing the release frameworks. I have the complete authoritative template now. Let me write the surface files. Starting with the pure core (Adapter + Projection).
+
+The detached framework build completed. Let me verify it staged, then continue writing the Projection file.
+
+`Shared.xcframework` is staged (ios-arm64, ios-arm64-simulator, macos-arm64) — the gate can now build. Let me write the Projection (pure projector + display models).
+
+Now the Model (state-holder, strings, telemetry, surface slug) — mirroring the widget's binding idiom with `VehicleHeroCard*` names and navigation callbacks for the 3 action links.
+
+Now the Seams (source protocol + in-memory source for previews/tests), matching the widget's seam pattern.
+
+Now the Views (presentational subviews) — tone→token mappings, photo, header/badges, the radial gauge reproducing the web `RadialGauge`, gauge row, stat grid/cell, and action bar.
+
+Now the chrome states (loading skeleton, empty, no-telemetry placeholder, error) and the freshness chip.
+
+Now the main public surface — the state switch, glass panel composition, freshness chip, and lifecycle.
+
+Now the previews (every state) and the i18n strings catalog.
+
+Now the i18n strings catalog (web-source keys + state labels + P4 chrome).
+
+Now the tests. Let me check the testing framework convention (XCTest vs Swift Testing) used by existing surface tests.
+
+XCTest is the convention. Let me write the pure adapter tests and the model/a11y tests.
+
+Now the model/lifecycle/a11y tests.
+
+All 11 files written. Let me run swiftformat and swiftlint on them to catch style issues early (fast, no framework needed), and check file lengths.
+
+swiftformat flagged style issues (single-line bodies must wrap, long lines need wrapping) — the established files multi-line those. Let me auto-format my files with swiftformat, then re-verify.
+
+swiftformat passes. Now swiftlint --strict on the files, and recheck line counts after wrapping.
+
+swiftformat ✓, swiftlint --strict ✓ (0 violations), all files < 400 lines. Now generate the Xcode project and run the gate. Let me generate first.
+
+Project generated with `TeslaSync` + `TeslaSync-macOS` schemes. Let me check the gate log directory, available simulators, then start the iOS build+test (the long pole).
+
+Log dir exists and iPhone 16 is booted. Let me start the iOS build+test (the long pole) in the background and monitor.
+
+Build+test started. Let me monitor progress (the pre-build Gradle step is cached, so this is mostly the Swift compile + test run).
+
+Build is in Swift module emission (type-checking passed so far, no errors). Let me continue waiting for the compile + test run.
+
+A BUILD FAILED — but the error is in `AISuggestNewGeofences.swift` (a pre-existing sibling surface, NOT my code). Let me get the full error list to determine scope and whether any are mine.
+
+Only **one** compile error, and it's in `AISuggestNewGeofences.swift` — a pre-existing sibling surface, not my code. My VehicleHeroCard files produced zero errors. Let me confirm it's pre-existing (untouched by me) and inspect it.
+
+Confirmed: the only error is a **pre-existing** one-line bug in `AISuggestNewGeofences.swift` (untouched by me — `glass`'s `@ViewBuilder` param needs `@escaping` because `TSGlassPanel` stores it). My 11 files produced zero errors. This sibling bug blocks the whole-app compile, preventing my gate from running. I'll apply the minimal, unambiguous fix to unblock verification, then check whether more pre-existing errors surface.
+
+The fix is applied. Let me re-run the iOS build (build-only first for fast iteration) to check whether more pre-existing errors surface.
+
+Build failed (exit 65) but with **0 compile errors** — likely a non-compile failure (signing, a build-phase script, or packaging). Let me see the actual failure.
+
+The second build progressed past the fix but hit a **Swift compiler crash** (`swift-frontend ... llvm::report_fatal_error`) — an internal compiler error (ICE) while batch-compiling unrelated files (TelemetryErrors*, etc.), with no source error. Let me get the crash details to determine if it's a toolchain ICE or a specific construct.
+
+The crash is an **IRGen internal compiler error** (Swift 6.3.2) emitting a reabstraction thunk for `AppearanceSettings.Controls.swift` — a pre-existing sibling file, not mine, and not a source error I can cleanly fix. Let me characterize the full blocker: how many distinct crash/error sites exist across the build.
+
+Precise characterization: after my trivial `@escaping` fix, the **entire app type-checks cleanly** — the only remaining blocker is a **single Swift 6.3.2 IRGen internal compiler error** on a reabstraction thunk in one sibling file (`AppearanceSettings.Controls.swift`), zero plain compile errors anywhere. Let me inspect that file to judge whether there's a safe, behavior-preserving workaround.
+
+Found the ICE trigger (line 122): `Binding(get: { isOn }, set: onChange)` where `onChange` is a `@MainActor (Bool) -> Void` — Swift 6.3.2's IRGen crashes emitting the reabstraction thunk for that actor-isolated setter. A behavior-preserving workaround (wrap the setter in a plain closure) sidesteps it. After my `@escaping` fix the whole app type-checks with zero errors; only this single ICE remains. I'll apply the minimal sibling unblock and re-run the full gate. Let me view the exact lines.
+
+Applied the workaround. Let me re-run the iOS build to confirm the ICE is resolved and no new ones surface.
+
+The ICE is fixed; now the same pre-existing `@escaping` bug appears in another sibling (`AIGeofenceAwareAutomationSuggestions.swift`). This looks like a **systemic pre-existing pattern** (a `glass()` helper missing `@escaping`) across many sibling surfaces. Let me quantify the scope of both pre-existing defect patterns.
+
+This is a **systemic pre-existing defect pattern** — 66 sibling files use a `@ViewBuilder content: () -> some View` helper, and those feeding `TSGlassPanel` (escaping) fail under Swift 6.3.2, plus the `Binding`/`@MainActor` IRGen ICE. These are all outside my allowed `VehicleHeroCard.*` scope, and the build reveals them one batch at a time (unbounded). The whole-app gate cannot pass without modifying dozens of sibling files.
+
+Before finalizing status, let me genuinely verify MY surface's logic by running my real test files against my real pure sources in a standalone package (the app target is blocked by siblings, not me).
+
+Now run my real tests against the real pure sources in the standalone package.
+
+All **34 unit tests pass** against the real pure sources. My surface logic is verified correct.
+
+Decision: the whole-app gate is blocked by **systemic pre-existing defects in ~dozens of sibling surfaces** (the `@escaping` helper pattern + a `Binding`/`@MainActor` IRGen ICE) under the runner's Swift 6.3.2 toolchain — all outside my allowed `VehicleHeroCard.*` scope, revealed progressively, and not part of my committable deliverable. Per the Honesty Covenant I won't fabricate green by hacking dozens of uncommittable sibling files. I'll revert my two temporary sibling unblocks to keep my footprint exactly my allowed files, then run the real gate and record STATUS=BLOCKED with full evidence.
+
+Working tree is now exactly my 11 files. Let me run the real gate steps (lint, format, placeholder check — which are independent of the compile blocker) and check the placeholder script.
+
+Placeholder check: **0 placeholders, EXIT=0**. Now let me run the real whole-tree swiftlint and swiftformat gate steps (independent of the compile blocker), and kick off the iOS build to capture the authentic gate failure.
+
+Whole-tree `swiftlint --strict`: **0 violations across 4767 files** (LINT_EXIT=0). Now `swiftformat --lint apps/apple`.
+
+`swiftformat --lint`: **0/5065 files require formatting** (FORMAT_EXIT=0). Lint, format, and placeholder gate steps all pass. Now let me capture the authentic iOS + macOS `build test` failures (with siblings reverted to original) for the gate log — they fail fast at the pre-existing sibling defects.
+
+IOS_EXIT=65 (build failed). Let me confirm the failure is the pre-existing sibling (not my code), then run the macOS step.
+
+Confirmed: the iOS gate fails on **multiple distinct pre-existing sibling defects** (`AIAutoNameUnnamedLocations.swift` `@escaping`, `RecentDrivesSection.Previews.swift` type-check-timeout) — and **zero** errors in any VehicleHeroCard file. This is a broad pre-existing toolchain incompatibility across many siblings. Let me capture the macOS step too.
+
+Decisive evidence: the macOS gate fails on a **code-signing requirement** (`"TeslaSync-macOS" has entitlements that require signing with a development certificate`; `DEVELOPMENT_TEAM` is empty on this runner) — a hard platform-capability gap, so `MAC_EXIT=0` is **unachievable on this runner regardless of code**. The iOS gate fails on **pre-existing systemic sibling defects** outside my scope. My surface is clean everywhere I control. This is a well-evidenced STATUS=BLOCKED. Let me write the gate log.
+
+Now let me write the comprehensive gate log with full evidence.
+
+Let me finalize: update tracking, clean up the temporary verification package, and confirm the working-tree state.
+
+The deliverable is complete and the working tree is clean — exactly the 11 `VehicleHeroCard.*` files plus the gate log (the `.xcodeproj` is a git-ignored build artifact; no sibling/source files modified). Per Honesty Covenant rule 8 ("No commit on red") and the BLOCKED gate, I am not committing.
+
+## Summary
+
+I built the **`VehicleHeroCard`** Apple shared surface (P4 · 0233) — a complete, native-idiomatic SwiftUI parity of `components/vehicles/VehicleHeroCard.tsx` — and verified it to the maximum extent this runner allows. Final gate status is **BLOCKED**, for reasons entirely outside the surface and its allowed-files scope.
+
+**Delivered (11 files, `apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.*`):** `swift` (surface + state switch), `Adapter` + `Projection` (pure, Foundation-only logic), `Model` (P1/S8 state-holder + P1/S11 telemetry + P1/S10 i18n facade), `Seams` (source protocol + in-memory source), `Views`, `States`, `Previews`, `strings`, `AdapterTests`, `Tests`.
+
+**Parity & contract:** identity header + StatusBadge, 4 radial gauges (battery/range/inside/outside), 8-cell stat grid, hero photo, and Details/Commands/Live Map actions; SI→display conversion + formatting ported 1:1 from the web; every web i18n key present; all states render (loading/empty/error/stale/offline + populated + the `vehicleState==null` no-telemetry branch); `view.opened` telemetry with slug `VehicleHeroCard`; VoiceOver labels, Dynamic Type, reduce-motion. Distinct `VehicleHeroCard*` naming avoids collisions with the sibling `VehicleHeroCardWidget`.
+
+**Verified green (everything under the surface's control):**
+- `swiftlint --strict`: 0 violations / 4767 files
+- `swiftformat --lint apps/apple`: 0/5065 need formatting
+- placeholder check: 0 placeholders
+- Type-checks cleanly inside the full app module (0 errors ever attributable to a VehicleHeroCard file) — I built the KMP `Shared.xcframework` from `apps/shared` to enable this.
+- **34/34 unit tests pass** against the real pure sources (run in an isolated SwiftPM package since the app target can't link).
+
+**Why BLOCKED (`EXIT=65`, evidence in the log):**
+- **macOS gate** fails on a hard code-signing capability gap (`DEVELOPMENT_TEAM=""`, hardened-runtime entitlements) — `MAC_EXIT=0` is impossible on this runner for *any* code.
+- **iOS gate** fails on ~dozens of **pre-existing** Swift-6.3.2 defects in unrelated sibling surfaces (a missing-`@escaping` helper pattern across 67 files, an IRGen internal-compiler-error in `AppearanceSettings.Controls.swift`, a type-check timeout in `RecentDrivesSection.Previews.swift`) — all outside the allowed `VehicleHeroCard.*` scope.
+
+I temporarily patched two siblings only to confirm my files build past them, then reverted both — the final tree touches only my allowed files. I did not hack the dozens of uncommittable siblings to fake a green gate (covenant rule 1), nor commit on red (rule 8). The gate log at `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0233-VehicleHeroCard.log` ends with `EXIT=65` / `STATUS=BLOCKED` and full evidence.
+
+
+
+All actionable work is complete and verified. The only paths to a green gate require capabilities unavailable on this runner (a macOS development signing certificate) or edits to dozens of pre-existing-broken sibling files outside my allowed scope — neither is achievable/permissible, and the macOS signing block makes the full gate unachievable for *any* code here. I won't invent out-of-scope work or fake green. Marking complete with an honest BLOCKED status.
+

@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Let me read the web source and explore the existing Apple project structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen). The web source is a small, self-contained regex testing tool. Let me study the existing feature-view conventions to match them exactly.
+
+`Base64Tool` is the closest analog — a devtools tool with the standard 7-file set. Let me study it thoroughly as my template, along with the web devtools shared components.
+
+Excellent — clear, established pattern. Let me read the remaining Base64Tool files to fully internalize the template.
+
+Now the Previews, strings, Tests, and the web Base64 + ToolCard sources to complete my understanding.
+
+Now let me look at the web ToolCard/Base64 sources, the design tokens, and how the build includes these files.
+
+Let me read the web ToolCard (for the `color="red"` mapping) and the native design tokens (TSSpacing, TSRadius, Color.TS, Font.TS, TSButton).
+
+The build is XcodeGen glob-based, so new files auto-include. Let me pin down exact token APIs (TSButton, Color.TS, Font.TS, TSSpacing, TSRadius) and check the project generation setup.
+
+Let me read the full token catalog and find native equivalents for the web `Input`, `Select`, and `Badge` components used by RegexTester.
+
+The shared UI library has `Badges`, `Fields`, `Pickers`, `Cards`. Let me read their APIs to map web `Input`/`Select`/`Badge`/`Textarea` to native.
+
+`TSTextField`, `TSTextArea`, `TSBadge` all exist. Now the `Select` equivalent and how other tools handle dynamic (interpolated) badge/text with i18n.
+
+`TSSelect` maps the web `Select`. Now let me check how the codebase handles dynamic localized text (counts, interpolation) in badges/rows, since RegexTester has `{count} Matches` and `At Index {n}`.
+
+Strong precedent established. Let me read the supporting pieces I'll reference: Typography (TSLabel/TSCode), Cards (glass panel chrome), an existing `*ViewTests` example for the per-state UI test convention, and the test target config.
+
+I have the full picture. Let me read the Cards (glass panel) API and check the build harness (simulators, xcodegen, xcframework script) before writing code.
+
+The full build runs a Gradle-based `Shared.xcframework` pre-action (Kotlin/Native). Let me check whether the framework is pre-staged, read the pending-verifications doc, and inspect a prior surface's gate log to understand the realistic verification path in this environment.
+
+The Base64Tool log defines the precedent verification methodology. Let me read it in full to reproduce it faithfully.
+
+I now have the complete, precedent-setting methodology (Base64Tool log). Let me check the lint/format configs and placeholder tool to match house style exactly before writing.
+
+The placeholder gate scans only `.swift` (not `.strings`), and "Placeholder"/"TODO"/etc. are forbidden substrings. I must keep the word "placeholder" out of all `.swift` files (comments included). Let me confirm the match logic's case sensitivity.
+
+I have everything I need. The Base64Tool log is my exact methodology template (host-runnable swiftc/swift-test/lint/format/placeholder gates pass; Xcode app build/test deferred with captured evidence — editing `project.yml` is out of scope). Let me set up tracking and write the surface.
+
+Now the Previews and the strings catalog:
+
+Now the executed test suite (adapter + model + accessibility), mirroring the Base64 precedent:
+
+Now the per-state render smoke tests (ImageRenderer), mirroring the `HealthGaugeGrid.ViewTests` precedent:
+
+All 8 files written. Now let me run the host gates. First, format + lint on the new files.
+
+swiftformat clean. One `empty_count` lint violation — fix `outcome.count > 0` to use `isEmpty`:
+
+Format + lint both clean. Now the SDK typechecks (iOS 18 simulator + macOS 15), compiling the 5 shipping files with their real component closure — exactly the Base64 precedent.
+
+iOS 18 typecheck passes. Now macOS 15 SDK + the `-D DEBUG` previews compile:
+
+macOS 15 passes. DEBUG previews caught a real concurrency issue: my `previewModel` helper is nonisolated but calls a `@MainActor` init. Marking it `@MainActor`:
+
+All typechecks green (iOS ✓ macOS ✓ DEBUG previews ✓), format + lint clean. Now execute the test suite via a throwaway SwiftPM harness (Base64 precedent — the pure Adapter+Model compile standalone):
+
+All 22 tests pass (0 failures). Now the ADR-011 placeholder/stub gate. I'll scan both my isolated files and the full dir (precedent):
+
+Placeholder gate clean (COUNT=0, ALLOWED=0). Critical correctness check: since `feature-views` is globbed into the app target, my type names must not collide with the full module. Let me verify uniqueness and capture the xcodegen registration evidence.
+
+No collisions — all type names unique. Now capture the Xcode-step evidence: generate the project, confirm my surface is wired in (feature-views is globbed), and capture the `Shared.xcframework` blocker.
+
+`*.xcodeproj/` is gitignored and only my 8 files are untracked. Generate the project and confirm my surface is registered (feature-views is globbed now):
+
+All 7 Swift files are now fully registered in the generated project (48 refs) — **stronger** than the Base64 precedent (which had 0). The surface is wired into the targets; only the KMP `Shared.xcframework` staging remains. Let me capture that blocker:
+
+Captured the identical deterministic blocker as the precedent: `BUILD_EXIT=65`, missing `Shared.xcframework` (KMP staging) — unrelated to my UI code. Let me clean up generated artifacts and gather log metadata.
+
+All gates green, tree clean. Now I'll write the comprehensive gate log (following the precedent structure with honest, real results) and commit.
+
+Let me run a consolidated final verification of all host gates before committing, to confirm nothing regressed after my fixes.
+
+All gates green. Let me confirm the shell finished and then commit.
+
+Final verification complete — all host gates green. Now commit (the 8 surface files + the log):
+
+Committed cleanly. Final tree-cleanliness check:
+
+Working tree clean, all todos done, surface committed. Task complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0019-RegexTester.log    | 244 +++++++++++++++++++++
+ .../feature-views/RegexTester.Adapter.swift        | 214 ++++++++++++++++++
+ .../feature-views/RegexTester.Model.swift          | 123 +++++++++++
+ .../feature-views/RegexTester.Previews.swift       |  73 ++++++
+ .../feature-views/RegexTester.Tests.swift          | 201 +++++++++++++++++
+ .../feature-views/RegexTester.ViewTests.swift      |  57 +++++
+ .../feature-views/RegexTester.Views.swift          | 223 +++++++++++++++++++
+ .../TeslaSync/feature-views/RegexTester.strings    |  46 ++++
+ .../TeslaSync/feature-views/RegexTester.swift      |  67 ++++++
+ 9 files changed, 1248 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0019-RegexTester.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegexTester.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegexTester.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegexTester.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegexTester.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegexTester.ViewTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegexTester.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegexTester.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegexTester.swift

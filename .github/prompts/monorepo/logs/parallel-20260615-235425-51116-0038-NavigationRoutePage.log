@@ -1,0 +1,267 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5 and swiftlint are available. Let me read the web source page and explore the Apple app structure.
+
+The Apple app uses `Sources/Features/` not `TeslaSync/Features/`. Let me investigate the actual project layout, existing feature pages, and the parity manifest/ledger.
+
+There's both `apps/apple/TeslaSync/` and `apps/apple/Sources/`. Let me understand the project layout via project.yml and examine the TeslaSync dir and ledger structure.
+
+Key finding: the prompt says output to `TeslaSync/Features/Maps/` but project.yml compiles `Sources/` and specific `TeslaSync/*` subdirs (not `TeslaSync/Features`). Let me find where existing parity pages actually live to follow precedent.
+
+Confirmed: all 71 existing parity pages live in `apps/apple/Sources/Features/<Domain>/`, which project.yml compiles. The prompt's `TeslaSync/Features/Maps/` path is a generator artifact not in the build — I'll follow repo precedent (`Sources/Features/Maps/`) so the page actually compiles into the app. Let me read the full web page now.
+
+I now understand the full web page. Mapping the 13 panels: GlassPanel1=Nav Status, GlassPanel2=Location Status Cards, panels 3-7=the 5 MetricCards (Distance/ETA/Traffic-Delay/Avg-Speed/Energy-at-Arrival), GlassPanel8-13=Speed Profile/Waypoints/Traffic Delay/Recent Destinations/Presence/History. Let me study existing Apple page architecture to mirror it precisely.
+
+Excellent architecture reference. Let me study the route registration, charts/panels sections, the production data source pattern, and the component library in parallel.
+
+The architecture is clear. Now let me examine the charts library, data-display components (MetricCard, DataTable, Badge), the production data source (SharedFacade), nav route parsing, and the string catalog.
+
+Now let me examine the data-display components, ChartContainer, the production data source wiring (SharedFacade), and how charging-telemetry/location data is exposed.
+
+Let me check the production/live data source pattern, AppRoute navigation, pwsh availability, and the placeholder patterns.
+
+pwsh is available. Key constraint: avoid forbidden words ("Placeholder", "not implemented", "TODO", "stub", etc.) in source. Data source pattern confirmed (Sample default + protocol seam). Let me read the Sample pattern, routing files, string catalog, and component signatures.
+
+There's already an `AppRoute.maps` case (path `/maps`, group `.vehicle`) and a `/location → .maps` alias. The web `/navigation` page maps to the maps host. Let me see how routes resolve to views (RouteHostRegistry) and what currently hosts `.maps`.
+
+Let me find where pages register into the host registry and how the shell populates it.
+
+The composition root is `TeslaSyncApp.swift`. Let me view its registration block to slot in the maps registration, and confirm `.maps` isn't already hosted.
+
+I now have a complete architectural picture. Let me set up a plan and todos, then examine the string catalog, units facade, and remaining component signatures.
+
+The catalog is 5.3MB with no `nav.*` keys yet. Let me check the xcstrings format and which of my required strings already exist.
+
+58 keys to add (57 `nav.*` + `navigation.noRoute`). Let me check how the codebase handles interpolated strings (e.g. `{{unit}}`) and verify remaining component signatures and the Units facade before I write code.
+
+Convention confirmed: `String(format: String(localized: "key"), args)`. Let me grab a format-arg example and inventory all component signatures and the Units facade I'll need.
+
+Let me read the core component definitions and the units facade in parallel.
+
+Let me read the typography, data table, chart container, units facade, and unit formatters.
+
+Let me read the DataTable, units facade, unit formatters, skeletons, and status indicators.
+
+Let me read the format helper pattern, the tsUnits environment, skeletons, and status indicators (LiveIndicator).
+
+I have the full component vocabulary. Let me verify design tokens, TSButton, and check the existing Tests/Unit/Maps directory before writing the plan.
+
+I have a complete picture now. Let me check where feature tests live and confirm the design tokens, then write my plan.
+
+I now have everything needed. Let me write the plan and set up todos.
+
+Let me check xcodegen, an existing log format, and the test pattern before building.
+
+Excellent — this confirms my path decision exactly. Let me read the rest of the AuditLog log to match the GATES + PARITY section format.
+
+This is the key precedent. The full `xcodebuild` is known to be blocked by a pre-existing out-of-scope Swift compiler crash on generated `shared-surfaces`; predecessors ship DONE on green in-scope gates (lint + placeholder + isolated Swift 6 typecheck on both platforms + executed harness). I must verify the baseline honestly rather than assume. Let me check the Shared.xcframework and kick off a baseline build.
+
+Shared.xcframework isn't staged (needs Gradle/Kotlin-Native). My page uses the `Units` facade (`import Shared`), unlike AuditLog. Let me check how a sibling page that uses units handled the isolated-typecheck/harness gate.
+
+The RouteEfficiency predecessor actually built `Shared.xcframework` via Gradle and achieved `BUILD_EXIT=0`. Let me read its full gates methodology.
+
+The best predecessor (RouteEfficiency) built `Shared.xcframework` via Gradle and achieved a real `BUILD_EXIT=0` + passing tests. I'll pursue that honest path. Let me kick off the Gradle XCFramework build in the background now (it's the long pole) while I write all the code.
+
+Java 17 and gradlew are present. Let me start the Shared.xcframework Gradle build in the background, then write code while it runs.
+
+Let me check the Gradle build started cleanly, then begin writing code.
+
+Gradle is compiling Kotlin/Native (the long pole). Now I'll write all the Swift code. Starting with the model.
+
+Now I'll write the model file with all types, the data source seam, phase, and derivations.
+
+Model done. Now the format helper (display-boundary SI converters) and the sample data sources.
+
+Now the sample data sources with SI-shaped fixtures.
+
+Let me check the Gradle build progress, then continue with the panels.
+
+Gradle is nearly done (debug XCFramework already built, linking release). Let me verify the banner and select component signatures before writing the page.
+
+I have what I need. Let me confirm the freshness indicator and `TSAlertBanner` convenience init, then write the page.
+
+All signatures confirmed. Now the main page view.
+
+Now the panels (GlassPanel1 Nav Status, GlassPanel2 Location Cards, the 5 metric cards, GlassPanel10 Traffic Delay).
+
+Let me check the Gradle build and write the charts file.
+
+Gradle is finishing the release link. Let me write the charts file (GlassPanel8 AreaChart, GlassPanel12 LineChart).
+
+Now the tables file (GlassPanel9 Waypoints, GlassPanel11 Recent Destinations, GlassPanel13 Location History).
+
+Now the route registration, then wire it into the app shell and parser.
+
+Now wire it into the app shell and add the `/navigation` route alias.
+
+Now the biggest remaining piece — the 58 strings. Let me check Gradle status and then add them via a Python script.
+
+Gradle continues. Let me add the 58 strings with a Python script that inserts Xcode-format entries and validates the JSON.
+
+The marker spacing differs. Let me check the exact format of the header line.
+
+The top-level `"strings":` has no space before colon (only nested entries do). Let me fix the marker and re-run.
+
+All 58 inserted and JSON validated. Let me verify all 60 required keys now resolve and check Gradle.
+
+All 60 keys present. Gradle still linking release frameworks. Let me write the tests, mirroring the existing test style.
+
+Let me write the model and format tests mirroring the existing style.
+
+All code written. Let me verify Gradle status and confirm `TSTone` is comparable in existing tests.
+
+Gradle is still building release frameworks (slow part). Let me run the in-scope gates that don't need the full build — placeholder scan, swiftlint, swiftformat — now.
+
+Placeholder scan clean. Now swiftlint and swiftformat on my files.
+
+SwiftLint found fixable violations in my files (the 2 AnomalyInlineRow ones are pre-existing/out-of-scope). Let me view the exact lines to fix them.
+
+Let me see the model file's class boundary to split it, then fix everything.
+
+Let me split the model file (file-length violation) via Python, then fix the remaining lint issues.
+
+Now fix the remaining lint issues. Starting with the charts axis captions and panels.
+
+Now refactor the Sample data source (function-body length + line length).
+
+Now fix the Tables multiple-closures violations. Let me view and edit each affected column.
+
+Let me re-run swiftlint on my Maps files only to confirm they're clean.
+
+Panels.swift is now 409 lines. Let me split out the metrics + traffic-delay sections into a new file. Let me find the extraction boundary.
+
+Gradle still running. Let me extract the metrics + traffic sections into a new file to fix the file length.
+
+Let me re-run swiftlint on all Maps files to confirm they're fully clean now.
+
+All my files are swiftlint-clean. Let me run swiftformat --lint and re-check the placeholder scan, plus Gradle status.
+
+swiftformat wants auto-formatting. Let me auto-format my files (the placeholder error was just a `cd` path slip), then re-verify swiftlint.
+
+Let me verify both swiftlint and swiftformat pass now, re-run the placeholder scan correctly, and check Gradle.
+
+swiftformat and swiftlint both clean on my files. Let me check Gradle and re-run the placeholder scan correctly.
+
+All in-scope gates pass (placeholder 0, swiftlint 0, swiftformat 0). Gradle's release XCFramework assembly is the long pole. Let me wait for it to finish.
+
+The release Shared.xcframework is built. Let me wait for Gradle to fully finish, then generate the Xcode project and build.
+
+Gradle finished. Let me stage the framework and generate the Xcode project.
+
+Framework staged. Now generate the Xcode project and build the macOS app.
+
+Project generated; my files are referenced 72× in the pbxproj (included in app + test targets). Now the full macOS build. This is heavy (~2000 shared files); I'll run it and monitor.
+
+Build running in background. Let me monitor its progress.
+
+The build process completed. Let me check the final result in the build log.
+
+Build is still running (the detach wrapper exited but xcodebuild continues), 0 errors so far. Let me wait longer for it to reach the Maps files and complete.
+
+Build failed with 2 errors. Let me find them.
+
+The 2 errors are both the same infrastructure error — `unable to open dependencies file (...primary-emit-module.d)` — not a source diagnostic in any of my files. This is a build-system/emit-module issue (often transient with explicit-module-build). Let me check disk space and retry the build incrementally.
+
+Disk is fine; no source diagnostics in my files — it's a transient emit-module infrastructure error. Let me retry the build incrementally (it should resume and clear).
+
+Retry building (incremental, faster). Let me wait and monitor.
+
+Incremental retry at 0 errors. Let me wait for it to finish and check the result.
+
+The emit-module step (which failed before) is now progressing with 0 errors. Let me wait for the build to complete.
+
+Still emitting the module (0 errors) — a slow step for this large module. Let me keep waiting.
+
+Build progressing through full module compile (0 errors). This large module takes time. Let me wait longer.
+
+Build still compiling (log growing, 0 errors). Large module — genuinely slow. Let me continue waiting.
+
+Module emission done — now compiling objects + merging headers (0 errors). Past the failure point. Let me wait for the link and final result.
+
+Steadily compiling objects (0 errors, 4534 files). Let me keep waiting for the link.
+
+**BUILD SUCCEEDED** with 0 errors — the full macOS app compiles with my NavigationRoute files. The transient emit-module error cleared on retry. Now let me run the tests (targeted to my Maps tests for speed) via the test bundle.
+
+Test build+run started (compiles the test bundle, then runs only my Maps tests). Let me monitor.
+
+**TEST SUCCEEDED** — 32 tests passed, 0 failed. Let me confirm the 9 `error:` matches are benign (test data, not compile errors) and get exact counts.
+
+All 32 Maps tests pass (0 failures); the `error:` lines are benign XCTest harness connection warnings. macOS build + tests are green. To honor ADR-002 (both platforms, and the gate names the iOS scheme), let me build the iOS app too while I write the log and ledger.
+
+Tests pass. Let me update todo status and write the comprehensive parity log while the iOS build runs.
+
+iOS build running (0 errors so far). Let me write the comprehensive parity log while it builds.
+
+Log drafted (with an iOS-result placeholder). Let me check the iOS build status.
+
+iOS build progressing (0 errors, at link stage). Let me update the ledger while it finishes. Let me check the ledger format first.
+
+Standard `json.dump(indent=2)` matches this format. Let me append the 2 ledger rows.
+
+Ledger updated (2 rows, valid JSON). Let me verify the ledger diff is clean and check the iOS build.
+
+Ledger diff is clean (18 insertions only). iOS build still linking (0 errors). Let me wait for it to complete.
+
+iOS build at the slow emit-module/link phase (like macOS was). Let me confirm it's actively working and keep waiting.
+
+iOS build actively compiling (multiple swift-frontend processes at 20-34% CPU, 0 errors — output just buffered). Healthy. Let me keep waiting.
+
+Still compiling (buffered output, 0 errors). Let me continue waiting.
+
+iOS build flushed to 19872 lines, now in object compilation (60 swift-frontend procs, 0 errors) — past the emit-module step. Let me wait for the link.
+
+Almost there (24115 lines, 0 errors). Let me wait for the final link result.
+
+Linking in progress (14 Ld steps, 0 errors). Let me wait for completion.
+
+Still building (extensions too, 0 errors). Let me wait a bit more for the result.
+
+The iOS `generic` destination is building both arm64 + x86_64 sim archs (now on x86_64, 0 errors) — that's why it's long. Let me wait for the final result.
+
+Still building x86_64 (0 errors). Let me wait for the dual-arch build to finish.
+
+Still building (42528 lines, 0 errors). The dual-arch build is lengthy. Let me wait for it to finish.
+
+x86_64 linking underway (7 Ld steps, 0 errors). Nearly done. Let me wait for the final result.
+
+Output buffered at the link stage. Let me check what's actively running to gauge progress.
+
+Fresh swift-frontend processes mean the dual-arch (`generic`) build is still grinding through x86_64 — redundant given macOS arm64 already SUCCEEDED and iOS arm64 compiled clean. Let me stop it and run a fast single-arch arm64 iOS build (reuses the already-compiled arm64 objects) for a definitive result.
+
+Important: those high-CPU processes belong to OTHER parallel slots (slot-42, slot-40) sharing this machine. Let me isolate MY slot-38 iOS build and its true status.
+
+My slot-38 iOS build process died mid-x86_64 compile (no result line) — likely killed under shared-machine memory pressure from other slots, not a compile error (iOS arm64 had compiled clean with 0 errors). Let me re-run a lighter single-arch arm64 iOS build for a definitive result.
+
+Single-arch iOS arm64 build started (should be faster — arm64 objects already cached). Let me wait.
+
+iOS arm64 build progressing (0 errors). Let me wait for completion.
+
+iOS arm64 build at 17526 lines, 0 errors, still compiling. Let me wait for the link.
+
+Link phase underway (7 Ld steps, 0 errors). Let me wait for the final result.
+
+**iOS BUILD SUCCEEDED** (0 errors). Both platforms now build cleanly. Let me fill the iOS result into the log honestly.
+
+Both platforms build clean, tests pass, log complete. Let me run a final consolidated verification of all in-scope gates and confirm the git change set is in-scope.
+
+Change set is fully in-scope; xcodeproj is gitignored. Let me run the final consolidated gate verification.
+
+Let me re-run the placeholder checks and log-marker verification cleanly.
+
+All gates green: placeholder 0, lint 0, format 0, macOS build SUCCEEDED, iOS build SUCCEEDED, 32/32 tests pass, PARITY 79/79. Let me verify the parity item count in the log and finalize todos.
+
+All 79 parity items verified (13+2+4+60), edited files have minimal 1-line additions. Let me finalize todos and commit the in-scope changes per the prompt's workflow.
+
+All 17 in-scope files staged, no xcodeproj. Let me commit.
+
+Committed cleanly (c7a04b185), working tree clean for in-scope files. The task is fully complete and verified. Let me do a final confirmation of the commit contents.
+
+The task is fully complete and verified. Let me mark it done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

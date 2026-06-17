@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure and the web source that serves as the specification, while checking the Apple toolchain availability.
+
+Toolchain is available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat). Now let me read the web source spec and understand the existing Apple app structure.
+
+Now I understand the structure—each surface has multiple files (Adapter, Model, Views, Previews, strings, Tests, plus the main `.swift`). Let me study the conventions by reading a representative table-based panel and the project configuration.
+
+There's an `AuditPanel` (audit-log table) and `FlagsTable` (sibling in the same web feature). These are the closest templates. Let me read them fully to learn the exact conventions.
+
+The pattern is very clear now. `FlagsTable` (prompt 0031) is the sibling template. Let me read its remaining files, the web types, and the shared infrastructure.
+
+Let me read the web type definitions, the `TimeStamp` web component (for the `changed_at` column), and locate the shared SwiftUI infrastructure.
+
+Now let me read the shared component APIs (`TSDataTable`/`TSColumn`, `TSBadge`), the web `TimeStamp`, and check how `AuditPanel` (the closest functional match) handles timestamps.
+
+Let me check the `AuditPanel` (closest functional match — audit log with timestamps) and the shared tokens/components for exact APIs.
+
+`AuditPanel` (prompt 0026) is the ideal template — a read-only audit-log table with timestamp/actor/badge columns that deliberately hand-composes its table (with per-surface i18n) instead of using `TSDataTable`. ChangesPanel is structurally identical. Let me read the rest of the AuditPanel files and the token/infra definitions.
+
+Let me read the remaining AuditPanel files, the shared tokens/components, the telemetry sink, and the project config.
+
+Excellent—AuditPanel is a near-exact structural twin. Let me read its Previews/Tests, the telemetry sink type, the design tokens, and the project config to finalize my understanding.
+
+Let me locate the design tokens, the telemetry event types, and the project build configuration.
+
+Key findings: tokens come from `../design/generated/apple` (the `DesignTokens` group); feature-views are auto-globbed into both app targets; telemetry types live in `BatteryCellsWidgetRegistry.swift`. The build uses **XcodeGen**. Let me verify the tokens, telemetry types, test-target wiring, and xcodegen availability.
+
+All infrastructure confirmed. Let me verify the exact token names, check the Shared framework presence, and review the lint/placeholder gate configs before writing code.
+
+Critical finding: `Shared.xcframework` is only a `.gitkeep` placeholder (not the real binary), and no `.xcodeproj` exists yet. Let me check how sibling prompts handled the build gate and whether there's a host-compile path.
+
+Let me read the sibling AuditPanel and FlagsTable gate logs to see how the build was actually verified and recorded.
+
+This is the key precedent. Sibling surfaces (AuditPanel 0026, FlagsTable 0031) ship as **code-complete + host-validated** (swiftc typecheck ×3 against real tokens + components, swiftlint, swiftformat, placeholder gate all green) with the **xcodebuild app build/test DEFERRED** due to the unstaged KMP `Shared.xcframework` — recorded honestly as `EXIT=0 STATUS=DONE`. Let me confirm the environment specifics and the exact host-compile invocation.
+
+Full Xcode 26.5 is active and an iPhone 16 simulator is booted. The documented precedent (`macos-pending-verifications.md`) shows the full-app `xcodebuild` is blocked by **pre-existing, out-of-scope** parallel-merge collisions + the unstaged KMP `Shared.xcframework`, so feature-view surfaces ship **code-complete + host-validated** with the app build deferred to the macOS acceptance gate. Each surface is **self-contained** (owns its types/strings) for parallel-safe merging. Let me run collision checks to choose conflict-free type names.
+
+I have complete understanding now. All type names are collision-free, and the disposition (code-complete + host-validated, xcodebuild deferred to the signed macOS gate) is the established precedent. Let me set up tracking and write the surface, modeled precisely on the `AuditPanel` twin.
+
+Now I'll create all nine surface files, modeled precisely on the `AuditPanel` twin and adapted to the `ChangesPanel` web spec.
+
+All nine files created. Now let me run the host-validation gates, starting with swiftformat (auto-format via ecosystem tool) and swiftlint.
+
+Both pass: `FORMAT_EXIT=0` (0/8 require formatting) and `LINT_EXIT=0` (0 violations in 8 files). Now the placeholder gate and the swiftc typecheck.
+
+All 9 files: `PLACEHOLDER_COUNT=0`, gate `EXIT=0`. Now the swiftc typecheck. Let me inspect the dependency files' imports to build the minimal real-file closure.
+
+All placeholder counts are 0. Now the swiftc host typecheck. The dependency files are self-contained (SwiftUI + tokens). Let me set up a typecheck harness against the real tokens + components + telemetry registry.
+
+The only error is in `BatteryCellsWidgetRegistry.swift` itself (`DashboardWidgetDescriptor`'s synthesized `Equatable` fails when compiled in isolation — a pre-existing, out-of-scope issue, not my code). I only need its 3 telemetry types. Let me confirm the error is entirely outside my files, then swap in a faithful telemetry shim (verbatim real API) for the harness.
+
+Confirmed: all 10 errors are inside `BatteryCellsWidgetRegistry.swift` (the pre-existing `DashboardWidgetSize` issue from `macos-pending-verifications.md`); **zero** errors in any ChangesPanel file. Let me swap in a faithful telemetry shim (verbatim real public API) so the harness can resolve those 3 types in isolation.
+
+Skeletons.swift's other members need `TSCard` (Cards.swift). Adding it — again, zero ChangesPanel errors.
+
+My surface only needs `TSSkeleton` (not the other skeletons that pull in `TSCard`→`TSPanelTitle`→…). Let me extract just the `TSSkeleton` struct verbatim for the harness. Let me find its exact bounds.
+
+`TSSkeleton` is lines 1–42. Let me rebuild the harness with just that verbatim slice (plus real Tokens + Badges + telemetry shim) and re-run all three typechecks.
+
+`TYPECHECK1_EXIT=0` — the shipping surface compiles cleanly against real tokens + components under macOS 15 / Swift 6 / strict-concurrency=complete. Now typecheck the Previews (with `-D DEBUG`) and the Tests (in-module + XCTest).
+
+`TYPECHECK2_EXIT=0`. Now the Tests — strip the `@testable import` (in-module harness) and compile with XCTest from the SDK.
+
+The remaining failures are purely the XCTest C-macro `XCTAssert*` not being importable under standalone `swiftc -typecheck` (a harness limitation, not my test logic). The sibling used an in-module XCTest shim for exactly this. Let me provide a faithful XCTest shim and strip the real imports for the harness.
+
+Root cause is just the stripped `import XCTest` also removed Foundation (so `Date` is unresolved, cascading the rest). Let me substitute `import Foundation` and re-run.
+
+All three host typechecks pass (`TYPECHECK1/2/3_EXIT=0`). Now the project/build gate. Let me run `xcodegen generate` (proves project validity + file enumeration), confirming the generated project is git-ignored.
+
+`xcodegen generate` succeeded. Let me verify my files are enumerated in the project, check the git status of the generated project, and then attempt the build.
+
+All 9 files are enumerated in the generated project, and the `.xcodeproj` is git-ignored (line 379). Now let me attempt the real `xcodebuild` to capture on-host evidence of the deferral cause. I'll run it in the background with a bounded wait.
+
+The `xcodebuild` hit the 280s timeout (`RAW_IOS_EXIT=124`) — stuck in the pre-build `build-shared-xcframework.sh` KMP gradle step, since `Frameworks/Shared.xcframework` is absent (only `.gitkeep`). Let me capture concrete evidence of both deferral causes: the gradle bottleneck and the pre-existing out-of-scope collisions.
+
+Concrete evidence captured. Two clarifications emerged:
+- **(a)** The blocker is the KMP `Shared.xcframework` gradle assembly — it's a slow Kotlin/Native **release-link** build (still running `linkReleaseFrameworkIosSimulatorArm64` at 100s), since the framework is unstaged.
+- **(b)** `DashboardWidgetSize` actually has a **single** definition in the current tree (`DashboardWidgetInfra.swift`); my earlier isolated-harness error was just from not including that file. My surface references it zero times.
+
+The gradle build is mostly cached and progressing. Let me give it a genuine chance to complete in the background, then attempt a real xcodebuild, while I write the log.
+
+The xcframework build is running. Let me monitor its progress while preparing the log.
+
+Gradle is on the final task (`linkReleaseFrameworkMacosArm64`) — nearly done. Let me wait for it to stage the xcframework.
+
+`✓ Shared.xcframework staged` — BUILD SUCCESSFUL. The framework is now real. Let me run the actual iOS `xcodebuild` (the pre-build script will now find it UP-TO-DATE) and capture full output to analyze where it lands.
+
+iOS build started. Let me monitor its progress.
+
+The iOS build failed with 76 errors — but the failing compile batches are all **other** surfaces (SummaryStatsGrid, SuperchargerHistoryWidget, SystemHealthWidget, TOTPEnrollmentSection…). Let me verify zero errors are in ChangesPanel and characterize the out-of-scope failures.
+
+**Definitive: 0 errors in ChangesPanel** — and `ChangesPanel.strings` was validated + bundled (CopyStringsFile succeeded). All 76 errors are in pre-existing, out-of-scope surfaces (`ChargeStatusWidget*`, `ChargeStatusLiveWidget*`, `ChargeSessionChartWidget*`, `FleetStatsBarWidget*`). Let me capture sample error messages for the log.
+
+All 76 errors are in `dashboard-widgets/` (shared source dir, e.g. `'ChargeSessionDTO' is ambiguous` — a classic parallel-merge collision), **zero in ChangesPanel**. This is the documented out-of-scope blocker. Let me gather line counts and write the gate log.
+
+Now let me clean up build artifacts and verify the working tree contains only my intended changes.
+
+Working tree is clean — only my 9 ChangesPanel files + the log are new; the 2 pre-existing modified files are untouched and won't be committed. Let me commit exactly my files + the log.
+
+Committed (`6a7790486`, 10 files, 1960 insertions). Let me run a final confirmation of the host gates on the committed files and verify the tree state.
+
+Lint and format are clean. Let me re-capture the placeholder gate output cleanly (the path context shifted) and confirm.
+
+All gates green. Let me finalize the todo tracking and verify the commit is intact.
+
+All 12 todos are done; the commit (`6a7790486`) contains exactly the 9 `ChangesPanel.*` files + the gate log (1960 insertions), and the 2 pre-existing unrelated modified files were left untouched. Task complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0030-ChangesPanel.log   | 152 +++++++++
+ .../feature-views/ChangesPanel.Components.swift    | 233 ++++++++++++++
+ .../feature-views/ChangesPanel.Model.swift         | 213 +++++++++++++
+ .../feature-views/ChangesPanel.Models.swift        | 348 +++++++++++++++++++++
+ .../feature-views/ChangesPanel.Previews.swift      | 125 ++++++++
+ .../feature-views/ChangesPanel.Projection.swift    | 176 +++++++++++
+ .../feature-views/ChangesPanel.Table.swift         | 187 +++++++++++
+ .../feature-views/ChangesPanel.Tests.swift         | 334 ++++++++++++++++++++
+ .../TeslaSync/feature-views/ChangesPanel.strings   |  50 +++
+ .../TeslaSync/feature-views/ChangesPanel.swift     | 142 +++++++++
+ 10 files changed, 1960 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0030-ChangesPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChangesPanel.Components.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChangesPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChangesPanel.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChangesPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChangesPanel.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChangesPanel.Table.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChangesPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChangesPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChangesPanel.swift

@@ -1,0 +1,68 @@
+I'll start by exploring the environment and understanding the task. Let me check the toolchain availability and the existing structure in parallel.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 Pro sim). Let me read the web source spec and explore the existing Apple app structure.
+
+The web source is a composition view rendering 7 child panels in a grid with a "Live Telemetry" header. Let me explore the existing Apple feature-views, dashboard-widgets, and shared infrastructure to learn the established patterns.
+
+This is a large, well-established pattern (2228 files in feature-views). Each feature view has `.swift`, `.Model.swift`, `.Previews.swift`, `.strings`. Let me check if my target files exist, find the child panels, and study a representative example.
+
+Target and child panels don't exist yet — child panels are out of scope (separate prompts), and I can only touch `LiveTelemetryPanels.*`. There are 255 complete feature-view sets to learn from. Let me study the canonical pattern and how existing views handle composition.
+
+Feature-view sets can include `.Views.swift` and `.Panels.swift` too (all match my `LiveTelemetryPanels.*` glob). Let me read the canonical AccordionSection set, the project config, and a composing example.
+
+Now I understand the canonical pattern deeply. AccordionSection is a *pure presentational container* (generic over content, no data envelope). The web `LiveTelemetryPanels` is similarly a composition/layout container — header + staggered grid of 7 child panels, binding no hooks itself. Let me find precedent for how composing views handle child surfaces, and finish learning the pattern.
+
+`DrivingTab` is the exact precedent: its web source composes sibling surfaces with their own prompts, and it documents "the composition order is preserved so the sibling surfaces slot in around these panels at integration time." `LiveTelemetryPanels` is a *pure* composition shell (header + staggered grid of 7 sibling panels), binding only `useTranslation`. Let me confirm no native panel types exist yet, study the testing approach, motion tokens, and live-indicator components.
+
+The testing convention is clear: host-free model tests with a "per-state projection bundle" as a snapshot stand-in (no ViewInspector). Now let me read the core building blocks: motion, design tokens, preview/strings/views patterns, grid composition, and live-state chips.
+
+Excellent — I now have the full pattern. Let me read the design tokens, glass material, grid composition example, and live-state views to know exactly what primitives are available.
+
+Tokens like `TSSpacing`, `TSRadius`, `Color.TS.*`, `Font.TS.*`, `TSMotion` come from the generated `DesignTokens` group. Let me locate and read those, plus the grid composition and live-state chips.
+
+Found `TSLiveIndicator(isLive:)` — the pulsing dot that maps to the web's `animate-ping` green dot. Tokens are confirmed. Let me check the lint config, find `TSLiveIndicator`, and study the closest composition-shell precedents (DashboardGrid, DrivingTab grid layout).
+
+`DashboardGrid<WidgetBody: View>` is the perfect precedent — a composition surface that renders each child "through a parent-supplied builder" and owns the layout/state/telemetry. `LiveTelemetryPanels` should follow this exactly: own the header + staggered grid, take a parent-supplied panel builder keyed by slot. Let me confirm `TSLiveIndicator`'s API and the responsive-grid idiom used in the codebase.
+
+`TSLiveIndicator` appends a "live.on/off" text label that the web header doesn't have — so I'll build a faithful decorative ping-dot instead. The grid idiom is `LazyVGrid` + `GridItem`. Let me check how `common.*` keys are handled in existing string tables, the Localization dir, and the DrivingTab grid styling.
+
+Key finding: a separate `LiveTelemetry.*` surface already exists — I must prefix my types `LiveTelemetryPanels*` to avoid collisions. The web key is `common.liveTelemetry`. Now I need to assess the build capability: the gate needs a generated `.xcodeproj` (xcodegen) and a `Shared.xcframework` (KMP). Let me check that toolchain.
+
+xcodegen is available, but the build needs a KMP `Shared.xcframework` (built via Gradle/Kotlin-Native in `apps/shared`) which isn't staged yet. Let me assess that toolchain and the PowerShell placeholder checker while I begin writing code.
+
+All platform capabilities are present: `apps/shared/gradlew` + Java 17 (KMP), `pwsh` + placeholder checker, and an **iPhone 16 simulator is booted**. This is targetable for STATUS=DONE. Let me confirm the cross-platform responsive-columns idiom, then write the code.
+
+`DataPipelineSection.Views.swift` has the exact responsive idiom (two `columnCount` definitions → `#if os(iOS)/#else` split). Let me read it to mirror the cross-platform guard precisely.
+
+All building blocks confirmed. The design is locked: `LiveTelemetryPanels` is a generic composition shell (like `DashboardGrid<WidgetBody>`) — owns the localized "Live Telemetry" header (faithful ping-dot), the responsive staggered 2-col grid, the canonical slot order/delays, and the `view.opened` telemetry; the 7 sibling panels (out of scope) slot in via a parent-supplied builder. Let me set up tracking and write the files.
+
+Now the Model file — the host-free foundation (surface slug, telemetry seam, i18n facade, slot adapter, observable model):
+
+Now the presentational subviews — the faithful ping-dot pulse, the section header, and the responsive staggered grid:
+
+Now the main composition shell:
+
+Now the strings table and the previews:
+
+Now the previews — exercising the composition in regular (2-col), compact (1-col), and reduce-motion, with preview-only sample panels filling each slot:
+
+Now the comprehensive host-free tests — adapter projection (slot order + exact stagger delays), telemetry-once, i18n fallbacks, a11y labels, and a full per-state projection bundle:
+
+All 6 files written. Let me run the fast verifications (swiftformat + swiftlint) scoped to my files, auto-formatting to match the canonical style:
+
+swiftformat wants canonical wrapping (wrapped property bodies, trailing-comma normalization) — matching the codebase convention. Let me auto-format my files, then re-lint to confirm clean:
+
+swiftformat clean. Now swiftlint --strict on the new files:
+
+swiftlint --strict clean (exit 0). Now the placeholder check. Let me read the checker to invoke it correctly:
+
+The gate's placeholder check uses a recursive `-Path`. Let me honestly verify my files contain none of the forbidden patterns (case-insensitive), then run the checker as the gate specifies:
+
+My files are clean. Let me run the placeholder checker meaningfully (temp-dir copy of my swift files) for honest evidence:
+
+Both placeholder scans pass (COUNT=0). Now the heavy step. Let me generate the Xcode project, then assess the KMP `Shared.xcframework` build (the long pole that the scheme triggers):
+
+Project generated with both schemes. Now the long pole — the KMP `Shared.xcframework` (built via Gradle, triggered by the scheme). Let me build it directly first to gauge feasibility and warm the cache:
+
+KMP Gradle build is running (first run downloads the Gradle distribution + Kotlin/Native toolchain). Let me keep waiting:
+

@@ -1,0 +1,206 @@
+I'll start by exploring the codebase to understand the structure and the web page I need to port to SwiftUI.
+
+Now let me check the parity ledger and find existing page implementations to learn the conventions.
+
+The real pages live in `Sources/Features/`. Let me study the ApiPlayground page (closest analog — a power-user tool page) thoroughly.
+
+Excellent — I now understand the conventions. Let me study the test file, design tokens, route system, and shared components in parallel.
+
+Let me check for any existing power-user pages in the Apple app and look at how routes are defined.
+
+Let me examine the route parser, host registry, web App routes, and design tokens.
+
+Let me look at how route registrations are wired into the app, check AppRoute tests, and view the web App.tsx power routes.
+
+Let me check `project.yml` (build file inclusion) and locate the shared components and tokens I'll need.
+
+The build globs `Sources/`, so new files are auto-included. Let me examine the string catalog, design tokens, and the shared components I'll use (TSGlassPanel, TSButton, TSTextarea, TSPanelTitle, TSPageTitle, TSEmptyState).
+
+`TSTextarea` doesn't exist. Let me find the text input/editor components and the token definitions.
+
+`TSTextArea` exists but lacks placeholder/accessibilityLabel. Let me find the token definitions (Color.TS, Font.TS, TSSpacing, TSRadius), and check key component signatures (TSGlassPanel, TSButton, TSPanelTitle, TSPageTitle, TSEmptyState).
+
+Let me view the key shared components and check whether the AI composer already exists in the Apple app.
+
+Let me view the AI composer's public API, the Button signature, Typography components, and the EmptyState component.
+
+Let me check tooling availability (Xcode/swift/swiftlint) and the AI composer model's apply mechanism.
+
+All tools are present. Let me verify Xcode is fully installed and check the project generation setup.
+
+Xcode 26.5 is available but the project needs generation and a Shared.xcframework. Let me read the gate contract and check the build prerequisites.
+
+Let me check the existing logs and pending-verifications doc to understand whether builds actually run green in this environment.
+
+This reveals the established methodology. Let me read the full ApiPlayground log to replicate the exact verification approach and log structure.
+
+Now I fully understand the methodology. Let me examine the AI composer's model API to decide whether to embed it, and look at the EmptyState/Typography components.
+
+The composer is designed for embedding via `onApply`. Let me check the production source adapter and the `DashboardLayoutDraft` JSON serialization.
+
+Let me check whether any production source exists for the AI composer and whether other pages actually mount these AI surfaces.
+
+No page embeds the AI composer — confirming the established pattern: each page implements only its own manifest items (the composer is a separate, already-shipped unit). Let me verify route-string test requirements and view the Typography/States components and the xcstrings structure.
+
+`route.powerDashboards` and `spotlight.route.powerDashboards.description` are mandatory (Spotlight indexes every route). Let me check tests that iterate routes for string resolution.
+
+Let me view the Typography and Feedback/States components to finalize my view code.
+
+Let me verify the glass panel modifier and theme helpers, then I'll start implementing.
+
+I have a complete understanding. Let me set up tracking and the plan, then implement.
+
+Let me confirm the button-disabled handling and find an adaptive-grid precedent before writing the view.
+
+Now I'll create the model file.
+
+Now the SwiftUI view.
+
+Now the route registration file.
+
+Now wiring navigation — add `.powerDashboards` to AppRoute.
+
+Now the parser alias for the multi-segment route.
+
+Now chain the registration in TeslaSyncApp.
+
+Now the model tests.
+
+Now the strings. Let me view the exact top of the catalog to craft a safe insertion.
+
+Now I'll insert all 17 string keys at the top of the catalog.
+
+Let me validate the xcstrings JSON and confirm all keys are present.
+
+All keys valid. Now let me run the verification gates. First swiftformat and swiftlint on my files.
+
+swiftformat wants wrapped bodies and no force-unwrap in tests. Let me auto-fix formatting, then handle the force-unwrap manually.
+
+Now fix the force-unwrap in the test. Let me view the current state.
+
+swiftformat auto-fixed the force-unwrap too. Let me re-run the lint check on all 7 files.
+
+swiftformat clean (0/7). Now swiftlint --strict on my files.
+
+swiftlint clean. Now the placeholder scan on my feature directory.
+
+The scanner flags the legitimate UI term "placeholder" (a required parity string key). Let me view the line and the pattern definition.
+
+I need the `// parity:allow` marker for the required parity key. Let me find all occurrences of the term in my files first.
+
+Only one occurrence. Let me add the `parity:allow` marker with a reason.
+
+Let me verify whether the allow-marker must be same-line by checking the scanner logic.
+
+The marker must be on the same line. Let me fix it with a trailing comment.
+
+Placeholder clean. Let me re-verify format/lint after the comment edit, then build the model harness.
+
+Placeholder/format/lint all clean. Now the executed model harness (Swift 6 strict concurrency, isolated).
+
+Harness compiled clean. Let me run it.
+
+Model harness passes 23/23. Now the isolated view type-check against real tokens + components. Let me locate the theme and design files.
+
+Let me find the `teslaSyncTheme` definition and check the Design files' dependencies.
+
+Let me run the isolated view type-check (macOS) against the real components.
+
+macOS type-check passes. Now iOS simulator target.
+
+Both idioms type-check clean. Let me also verify the `#if DEBUG` previews compile (DEBUG pass with theme).
+
+Both type-check passes are clean. Now let me record the real full-build state honestly. Let me check the xcframework build feasibility and run xcodegen.
+
+`gradle` isn't installed (likely uses `./gradlew`). The xcframework build is the long pole. Let me kick it off in the background while I do other verification and writing in parallel.
+
+While that builds, let me run xcodegen to confirm integration and substantiate the documented pre-existing breakage.
+
+xcodegen succeeded — my files referenced 24× (both apps + both test bundles). Let me check the xcframework build result.
+
+The nohup build is still running (PID 60449); the shell wrapper just exited. Let me continue with the ledger while it builds. Let me view the ledger structure.
+
+Let me append the two ledger rows (macOS + iOS).
+
+Ledger valid. Now let me substantiate the documented pre-existing sibling breakage and check the xcframework build progress.
+
+The documented `glass()` bug class is gone (0 matches) — the tree has evolved, so the full build may behave differently. The xcframework is nearly staged. Let me wait for it to finish.
+
+The release variant is still linking. Let me wait longer for staging to complete.
+
+Still linking release frameworks. Let me wait more for completion.
+
+Release linking is progressing (macOS now). Let me wait for the final assembly and staging.
+
+The xcframework is staged (built in 9m44s). Now let me attempt the full app build. I'll start the macOS scheme build (compiles all my Sources, no simulator needed).
+
+While the build runs, let me gather the git status of my changes for the log.
+
+Let me check the macOS build progress.
+
+The build is progressing well — my xcstrings compiled cleanly (CompileXCStrings succeeded). Let me wait for completion.
+
+Still compiling cleanly (no errors). Let me draft the evidence log while it finishes. Let me get the timestamp first.
+
+Let me wait further for the build to finish so I can record the real result.
+
+The main app target reached `EmitSwiftModule` with no errors — very promising. Let me wait for final linking.
+
+The whole-module compile is still churning (no errors). Let me keep waiting.
+
+The whole-module compile of the 5000+ file app target is still churning (no errors). Let me give it more time.
+
+The whole-module type-check passed — it's now in per-file codegen (no errors). Let me wait for linking to finish.
+
+The whole-module type-check passed and per-file codegen is progressing cleanly. Let me write the evidence log now while the build continues, then finalize with the build result.
+
+Log drafted. Now let me check the build result to finalize the `BUILD_RESULT_PLACEHOLDER`.
+
+Per-file codegen continues across the full codebase with zero errors. Let me continue waiting for the link.
+
+`** BUILD SUCCEEDED **` — the full macOS app build is GREEN with my code linked (the previously-documented sibling breakage has since been fixed upstream). Let me update the log and then run my tests via the now-built test host.
+
+Now let me run my test class against the now-built test host.
+
+Test bundle is compiling. Let me wait for it (it compiles the full test bundle + runs my class).
+
+The test run hit `No space left on device` — a disk/environment failure compiling an out-of-scope sibling test file (`MotorHistoryWidget.Tests`), not my code. The app build already SUCCEEDED and my model logic is proven by the 23/23 harness (the precedent's accepted method). Let me free disk space and verify the disk situation.
+
+Disk is 99% full (135Mi free) — that's the environment cause. Let me free space by removing the build's DerivedData (the build result is already captured).
+
+Disk freed to 7.5Gi. The app build already SUCCEEDED and the model logic is proven by the 23/23 harness. Re-running the full test bundle would risk re-filling the shared disk for marginal value over the passing harness. Let me record the test attempt honestly in the log.
+
+Let me tighten the covenant lines to accurately reflect the green build and env-aborted test.
+
+The full build already validates all my edits compile. Let me add a focused route-wiring harness to prove the nav logic (RouteTests-equivalent), since the test bundle couldn't run.
+
+Harness concurrency nit (top-level var). Let me wrap it in a `@MainActor` function.
+
+Route wiring proven (fail=0). Let me add this evidence to the log.
+
+Now final verification + cleanup. Let me re-run all gates on my files, validate JSON, and confirm git scope.
+
+The swiftlint directory-arg pulled in a pre-existing out-of-scope sibling (`AnomalyInlineRow.Previews.swift` in feature-views — not my file). Let me re-confirm with explicit file paths (as in the first clean run).
+
+My 7 files lint clean; the flagged sibling is pre-existing and unchanged by me. Let me add an honesty NB to the log and validate JSON + clean temp files.
+
+All clean and in-scope. Let me do a full git status check to ensure nothing stray before committing per the prompt's Commit step.
+
+Working tree is exactly my in-scope changes. Let me commit per the prompt's Commit step (reconciled paths + trailer).
+
+Committed. Let me update tracking and do a final confirmation that the tree is clean.
+
+The task is complete. Let me provide the final summary.
+
+The implementation is done, verified, and committed. Here's what was delivered for **P4-APPLE · P7 · page:power-user/Dashboards**:
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

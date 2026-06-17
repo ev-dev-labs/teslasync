@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and reading the web source component that serves as the specification.
+
+Now let me explore the Apple app structure and check runner capabilities for SwiftUI/Xcode.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Let me explore the TeslaSync app structure and existing patterns.
+
+There are already many shared surfaces. Let me check if ResourcesPanel exists and study the file pattern of a complete existing surface.
+
+A complete, established 9-file pattern exists per surface. Let me study a complete reference surface in full to mirror the exact conventions.
+
+`AiOutputPanel` (DONE, EXIT=0) is the closest analog — a panel surface. Let me read its full file set to mirror the structure.
+
+Excellent pattern reference. Let me read the remaining AiOutputPanel files and the design tokens (P1/S9) plus project.yml to understand the build setup.
+
+Now let me locate the P1/S9 design tokens and shared components, and read the test conventions + project.yml build setup.
+
+Let me find the exact token definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSSkeleton) and the test target config in project.yml.
+
+Let me read the full Tokens.swift and the TSDesign/TSMaterial to know exactly which tokens and shared components (TSSkeleton, etc.) exist.
+
+Now let me examine TSMaterial, TSSkeleton, the test target config, and the Localization setup to understand i18n integration.
+
+Let me read the test conventions and find shared components (EmptyState, TSCard) plus how the xcstrings catalog works.
+
+Let me read the EmptyState/Card components, the view-test pattern, and how a surface that ships a `.strings` file wires it up.
+
+Let me check the SwiftLint rules, TSCard API, existing key naming in web locales, and whether xcodegen/xcodeproj is set up.
+
+Let me read the typography components to pick the right title component, and check a couple more recent surfaces' Model files to confirm naming conventions are consistent.
+
+Let me check the placeholder-detection patterns and whether PowerShell is available for the gate.
+
+I have a thorough understanding of the established pattern. Let me set up a todo list and create the plan, then build the surface following the proven `AiOutputPanel` template.
+
+Now I'll create the surface files. Starting with the Foundation-only Model.
+
+Now the SwiftUI Views file.
+
+Now the main view file.
+
+Now the Previews, then the two test files.
+
+Now the two test files.
+
+All six files created. Let me auto-format them and run swiftlint on them to catch issues before the slow full build.
+
+Both linters pass on my files (0 violations). Let me verify the formatting diff is sane, then generate the Xcode project.
+
+Project generated. Now the heavy gate step — the full iOS build + test. Let me start it in the background and monitor (this compiles the whole app + runs all tests).
+
+Many cached DerivedData dirs exist (parallel slots). Let me start the iOS build+test now in the background with a long wait.
+
+Build running. Let me monitor its progress.
+
+Let me check the temp log directly for compile progress.
+
+The build is first compiling the KMP shared core via Gradle (a prebuild step), then will build the Swift app + run tests. No errors so far. Let me continue waiting.
+
+Still in the Gradle KMP framework build phase (building Shared.xcframework). Swift compilation hasn't started yet. Let me wait longer.
+
+The TeslaSync app module compiled and emitted successfully (including my 4 app-target files — no errors). Now it's building toward the test bundle + test run. Let me continue waiting.
+
+Build failed with a SwiftCompile error. Let me find the actual error.
+
+The failure is a **compiler crash during IR generation for `AppearanceSettings.Controls.swift`** — a file I did not touch. Let me get the full crash details to determine if it's related to my change or pre-existing.
+
+The crash is a **Swift compiler IRGen crash** in `AppearanceSettings.Controls.swift` (a reabstraction thunk for `Bool`/`(any Actor)?` closures) — a file outside my scope. My ResourcesPanel files are simple value types + SwiftUI views with no actors/async closures. Let me save this log, then determine whether it's deterministic or flaky with an incremental rebuild.
+
+Confirmed: a `swift-frontend` IRGen segfault (compiler crash), not a code error. Let me run an incremental rebuild (KMP framework is now cached, so faster) to check if it's deterministic.
+
+The run1 shell completed (already captured — it failed). Let me wait for the incremental build (run2) to check determinism.
+
+Incremental build skipped the KMP step and is recompiling Swift. No crash yet. Let me wait for it to reach the feature-views batch.
+
+Run2 failed at the **same** `AppearanceSettings.Controls.swift` batch (exit 65) — so it's **deterministic**, and that batch does **not** contain any of my files (mine are in a separate `RequestBuilder…ResourcesPanel…` batch). To prove it's pre-existing and independent of my change, let me rebuild with my files removed.
+
+Baseline build running. While it compiles, let me examine the exact crash and the offending file (read-only) to strengthen the evidence.
+
+Both runs crash on the **identical** file and **identical** SIL function `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` (a `Bool`/`(any Actor)?` reabstraction thunk — an async/isolated-closure construct). Let me inspect that file while the baseline build runs.
+
+Found the trigger: line 107 `let onChange: @MainActor (Bool) -> Void` passed as a `Binding` setter (line 122) — a known Swift 6.x IRGen crash for `@MainActor` closure reabstraction. This is pre-existing, committed code outside my allowed scope (only `ResourcesPanel.*` + the log). Let me check the baseline build result.
+
+Baseline build (with my files entirely removed) also failed (exit 65). Let me confirm it's the same crash — conclusive evidence it's pre-existing.
+
+The baseline (without my files) also fails — but on **different** files (`AIAlertTuningSuggestions`, `AIAutoNameUnnamedLocations`), with "3 failures". This confirms a **systemic, pre-existing toolchain IRGen crash** across multiple out-of-scope surfaces, independent of my change. Let me confirm the baseline failures are the same compiler-crash class (not type errors).
+
+**Conclusive finding:** The baseline build with my files **entirely absent** (`grep ResourcesPanel` = 0) still fails with **3 failures** — including a genuine pre-existing type error in `AIAutoNameUnnamedLocations.swift:123` (`escaping closure captures non-escaping parameter`) plus the IRGen compiler crashes. These are all in committed, out-of-scope files I'm not permitted to edit. The gate's red is **pre-existing and independent of my change**.
+
+Let me restore my files and independently verify my logic compiles + passes (my Model is Foundation-only, so it can be verified standalone, decoupled from the broken app target).
+
+Confirmed — the type error is in `AIAutoNameUnnamedLocations.swift` (pre-existing, out-of-scope). Now let me independently verify my Foundation-only Model logic compiles and all my test assertions pass, standalone (decoupled from the broken app target).
+
+The multi-file top-level-code rule requires the entrypoint be named `main.swift`. Let me fix and rerun.
+
+Swift 6 strict concurrency — `check` needs `@MainActor` (top-level vars are MainActor-isolated). Quick fix.
+
+All 47 standalone logic assertions **PASS** under Swift 6. Now let me also type-check the SwiftUI layer (Views + main view) against stub definitions of the design tokens, to prove those files are well-formed too (they can't link to the broken app target, but I can verify them against the real token API surface).
+
+The **entire SwiftUI layer type-checks cleanly** (Model + Views + main + Previews, Swift 6 strict concurrency, macOS 15 target, DEBUG). Now let me run the remaining fast gate steps (full swiftlint, swiftformat, placeholders) and verify my files specifically.
+
+Both full-tree linters **PASS**: swiftformat `0/4896 require formatting`, swiftlint `0 violations in 4598 files` — my files included. Now the placeholder gate (verbatim + a real scan of my files), then I'll start the macOS build.
+
+Placeholder gate: **PASS** (COUNT=0, EXIT=0) both verbatim and on a real scan of my files. Now let me regenerate the project (my files restored) and run the macOS build+test for the log — it shares the same app-target sources, so I expect the identical pre-existing failure, but I'll capture real evidence.
+
+While the macOS build runs, let me demangle the crashing symbol and gather precise evidence lines for the log.
+
+The demangle **confirms** the crash: a `reabstraction thunk helper from @escaping @isolated(any) @Sendable (Bool, Actor?) -> () to (Bool) -> ()` — exactly the `@MainActor (Bool) -> Void` setter closure, a Swift 6.3.2 IRGen compiler bug. Let me read the macOS build result.
+
+macOS build also fails (exit 65) — same shared app-target sources. Let me confirm the crash class, then assemble the official gate log.
+
+Now I have complete evidence. The macOS build is blocked even earlier by a **missing development signing certificate** (environmental), and would hit the same compiler crash after. Both build steps are blocked by pre-existing/environmental issues outside my allowed scope, while every check I *can* control passes. Let me write the official gate log.
+
+Now let me clean up temp artifacts, verify what will be committed, then commit.
+
+Clean — only my 6 surface files + the log are new (`.xcodeproj` is correctly gitignored). Committing now.
+
+Committed (7 files, 1034 insertions). Let me verify the commit landed cleanly.
+

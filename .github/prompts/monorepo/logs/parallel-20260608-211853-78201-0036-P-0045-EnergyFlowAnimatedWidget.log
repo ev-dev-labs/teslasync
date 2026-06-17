@@ -1,0 +1,155 @@
+I'll start by exploring the task requirements, the web source, and the Apple platform structure.
+
+Xcode 26.5, Swift 6.3.2, swiftlint, and swiftformat are all available. Let me explore the Apple app structure and the web components in detail.
+
+There's a substantial existing widget library. Let me examine the established patterns by looking at existing ported widgets and the shared infrastructure.
+
+`LivePowerFlowWidget` is the closest existing pattern — it's a flow-diagram energy widget. Let me study it thoroughly along with the WidgetFlowDiagram source and registry.
+
+Now let me study the native `LivePowerFlowWidget` implementation in full — it's the closest template for my flow-diagram widget.
+
+Excellent pattern clarity. Let me read the remaining LivePowerFlow files (Models, Builder, Diagram, Palette, Previews, Tests, strings) to complete my understanding.
+
+Let me read the Palette, Previews, Tests, and strings files, plus the design token definitions.
+
+Let me examine the strings file format, design tokens, registration types, and a widget that uses vehicle state (since my widget uses `useVehicleState`, not energy sites).
+
+Let me read the design tokens, `fmtNumber`, and find how vehicle state is modeled in the shared facade plus an existing widget using it.
+
+Let me locate the actual token definitions and read the full `useVehicleState` hook plus the `VehicleState` type.
+
+Tokens aren't in Sources/. Let me find where they're actually defined and understand the Xcode project file registration.
+
+Tokens live in `apps/design/generated/apple`. Let me verify the token names I'll use and check `TSSkeleton`.
+
+All tokens confirmed. Let me read the full `project.yml` to understand target/test wiring, and check the `Font.TS` token names.
+
+Now I understand the full build wiring. Let me assess what's actually runnable in this environment (xcodegen, simulators, the KMP Shared.xcframework dependency) and verify the `Font.TS` tokens.
+
+`xcodegen`, `pwsh`, and the placeholder checker are available, but the KMP `Shared.xcframework` (an app-target dependency) isn't present. Let me inspect the framework build script and simulator availability, plus the lint configs.
+
+Key finding: the KMP `Shared.xcframework` (required by the app targets) must be built via Gradle/Kotlin-Native, and an iPhone 16 simulator is booted. Let me probe the JDK/Gradle capability (the long pole) and set up tracking while I write the code.
+
+JDK 17 + Gradle 8.14.5 + Kotlin 2.0.21 are available, and an iPhone 16 simulator is booted — the full gate is potentially achievable. The KMP `Shared.xcframework` build is the long pole, so I'll start it in the background now while I write the Swift code.
+
+JDK + Gradle work and the framework build is running in the background. Let me record the plan and write the Swift sources, modeled precisely on the `LivePowerFlowWidget` sibling pattern.
+
+The wrapper finished (the gradle build continues via `nohup`). Let me check its progress, then continue writing code.
+
+Gradle is compiling the Kotlin/Native frameworks (many cache hits — promising). Let me write the source files while it runs. Starting with the domain types and the pure adapter.
+
+Now the palette, then the diagram + compact view.
+
+Now the main widget surface (view, header, state switch).
+
+Now the previews and the i18n strings catalog. Let me also check the background build.
+
+Now the test suite, then I'll check the build progress.
+
+All source files are written. Let me update tracking and run the fast quality gates (swiftformat, swiftlint, placeholder check) while checking the background build.
+
+swiftformat found a few issues. Let me auto-fix with the formatter itself (the ecosystem tool), then re-verify.
+
+swiftlint passes clean (0 violations). The swiftformat error was only because the glob included the `.strings` file (unsupported type) — when the gate scans the directory it skips non-Swift files. Let me confirm on the Swift files only and verify the auto-formatted `flowContent`.
+
+swiftformat passes (0/8 need formatting) and the redundant `@ViewBuilder` was correctly removed. Now the placeholder check — let me read the script to understand its `-Path` semantics, then run it.
+
+The gate's `-Path` points at an extension-less prefix, so the script's `Test-Path` will treat it as "nothing to scan." To be honest, I'll run both the literal gate command AND a real scan of my actual files. First let me see the forbidden patterns and grep my files.
+
+My files contain none of the forbidden tokens. Let me run the placeholder gate (literal command + an honest scan of my actual files) and check the build progress.
+
+The placeholder gate passes (literal EXIT=0; honest scan of my actual files PLACEHOLDER_COUNT=0). But the build log vanished from `/tmp` and the framework isn't staged. Let me check whether the Gradle build is still alive.
+
+Sibling slots are contending for the shared Gradle daemon, and my earlier `/tmp` log got cleaned. Let me restart the framework build with a stable log location and generate the Xcode project (which is independent and fast) in parallel.
+
+Project generated successfully. Let me confirm my files were included in the project and check the framework build progress.
+
+All 9 files are correctly referenced in the project. The framework build is the long pole. Let me monitor it.
+
+The nohup child didn't survive. Let me run the framework build as a properly detached async process and monitor it directly.
+
+My slot-36 build is now running and progressing through the framework assembly tasks. Let me wait for it to stage the framework.
+
+Progressing through the release link steps (the heavy Kotlin/Native phase, contended across slots). Let me continue waiting.
+
+Two of three release links done; iOS-simulator linking now. Let me keep waiting for the macOS link and final staging.
+
+The iOS-simulator link has stalled for several minutes under heavy cross-slot CPU contention (7 parallel Kotlin/Native links). Let me verify it's still actively progressing and give it more time.
+
+Last release link (macOS) is now running — the framework is close. Let me wait for it to finish and stage.
+
+The KMP `Shared.xcframework` built successfully (BUILD SUCCESSFUL in 12m 59s) and is staged. Now I can attempt the xcodebuild gate. Let me update tracking and first validate that the whole app (including my code) compiles for iOS.
+
+Build failed — but the failing compile batches are all in **other** files (`ChargeStatusWidget`, `ChargingDetailSection`, `ChargerSpecsPanel`, `ChargerTypeChart`), none of mine. Let me find the actual error messages to determine if this is a pre-existing baseline break.
+
+The errors are a pre-existing duplicate-type collision: `ChargingProjection` is declared in both `ChargeStatusWidget.Adapter.swift` and `ChargingDetailSection.Adapter.swift` — **none of my files**. Let me confirm this is a baseline break (present at HEAD, not introduced by me).
+
+Confirmed: this is a **pre-existing baseline break** at HEAD — `ChargingProjection` is declared twice (a `struct` in `ChargeStatusWidget.Adapter.swift` and an `enum` in `ChargingDetailSection.Adapter.swift`), both in unmodified committed files. My surface is in none of the errors. These files are out of my allowed scope.
+
+To still prove **my** surface compiles and its tests pass, I'll temporarily disambiguate the pre-existing collision locally (never committed), build+test, then revert. Let me assess the collision's reference scope first.
+
+This is a pre-existing, multi-file, out-of-scope collision. To prove **my** surface compiles in-module, I'll temporarily rename the duplicate enum (and its 3 in-app references) locally, rebuild iOS, then fully revert via `git checkout`. This change is never committed.
+
+BSD `sed` doesn't support `\b`. Let me redo the rename without word boundaries (the token is unique) and verify.
+
+Temp rename applied cleanly. Now rebuild iOS (build only) to prove my surface compiles in-module.
+
+My EnergyFlowAnimatedWidget files are all in the compile set with **zero errors against them**. The build now fails on yet another pre-existing, unrelated issue (`ambiguous use of 'miles'` in `ChargeCostTrackerWidget`). Let me enumerate all errors to confirm none are mine, then do an isolated typecheck of my surface.
+
+Only one remaining error — another pre-existing, out-of-scope issue (`ambiguous use of 'miles'` in `ChargeCostTrackerWidget`). **Zero** errors reference my files across two full module compilations. For a decisive, isolated proof, let me typecheck my surface against just its real module dependencies. Let me check those deps first.
+
+All dependencies are self-contained (`Tokens.swift`, `Skeletons.swift`, `DashboardWidgetInfra.swift`). Let me typecheck my surface in isolation against its real module dependencies, targeting the iOS simulator SDK.
+
+The only errors are in `Skeletons.swift` itself (`cannot find 'TSCard'`) — a dependency file, not my code. My code only needs `TSSkeleton`. Let me pull in the real `TSCard` definition to complete the isolated dependency set.
+
+`TSCard` cascades into material modifiers. Since my code only uses `TSSkeleton`, I'll provide a faithful minimal shim with its exact real signature (instead of the full component graph) for a decisive isolated typecheck.
+
+`TYPECHECK_EXIT=0` — my surface typechecks cleanly. Only two benign warnings about `nonisolated(unsafe)` on `NumberFormatter` (the sibling `LivePowerFlow` uses the identical pattern). Let me re-run the isolated typecheck under the app's exact build flags (Swift 6 language mode + complete strict concurrency) to be fully faithful, and check whether the warning is avoidable.
+
+Under the app's exact flags (Swift 6 + complete concurrency) my surface is **error-free** (`FULL_EXIT=0`). The only diagnostics are two benign warnings — the toolchain says `nonisolated(unsafe)` is unnecessary since `NumberFormatter` is `Sendable`. Let me clean those up for a zero-warning surface and re-verify.
+
+Zero errors **and** zero warnings under the exact app build flags. Let me re-lint the edited file and then run my unit tests in an isolated SwiftPM harness (the real test bundle can't build due to the pre-existing sibling breaks). First, re-verify lint/format on the changed file.
+
+Format and lint remain clean. Now let me build an isolated SwiftPM harness to actually **run** my unit tests (the real test bundle can't compile due to the pre-existing sibling breaks). Setting up the package:
+
+Package ready. Let me run the isolated test suite.
+
+All **30/30 unit tests pass** in isolation (adapter, model, registry, accessibility, format). Now let me revert the temporary collision workaround (so only my files are committed) and verify the working tree is clean.
+
+Working tree is clean — only my 9 new files (untracked) plus 2 pre-existing web modifications (not mine); all build artifacts are git-ignored. Let me run the literal whole-tree gate commands (swiftformat, swiftlint) to capture their real state for the log.
+
+Whole-tree swiftformat gate passes (0/2005). Now the swiftlint strict gate on the whole tree.
+
+One swiftlint violation across the whole tree — my files passed individually, so it's a sibling. Let me locate it.
+
+The single swiftlint violation is in a sibling (`LiveSignalSparklinesWidget.Builder.swift`), not mine. 
+
+**Summary of findings:** My surface is complete and verified DONE-quality (in-module compile: 0 errors; isolated typecheck under Swift 6 + strict concurrency: 0 errors/0 warnings; 30/30 unit tests pass; swiftlint/swiftformat/placeholder clean on my files). The monorepo-wide `xcodebuild` + `swiftlint --strict` gates are red **only** due to pre-existing, out-of-scope defects in sibling surfaces I'm forbidden to edit. Let me write the gate log with full evidence.
+
+Now let me stage exactly my surface files plus the log (not the unrelated pre-existing web changes), verify the staged set, and commit.
+
+Exactly my 9 files + the log are staged. Committing with the specified message.
+
+Committed cleanly (10 files, 1900 insertions). Let me finalize: update tracking, verify the commit, and clean up temporary verification artifacts.
+
+Everything is verified and committed. The committed `Model.swift` reflects the warning-free version, no temporary workaround leaked into tracked sources, and the working tree shows only the pre-existing (non-mine) web changes.
+
+## Summary
+
+I implemented the native Apple/SwiftUI **`EnergyFlowAnimatedWidget`** dashboard surface at full parity with `web/src/features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx`, following the established `LivePowerFlowWidget` sibling architecture. Committed as `9bafa3382` (10 files, 1900 insertions).
+
+**Delivered files** (all under the allowed `EnergyFlowAnimatedWidget.*` glob):
+- `.Models.swift`, `.Builder.swift` — domain types + pure cached→projection adapter (battery→drive cyan, drive→battery emerald/regen, charger→battery amber; dead-band thresholds; stroke/visibility math)
+- `.Model.swift` — P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, kW/percent formatters, a11y summary
+- `.Palette.swift`, `.Diagram.swift` — semantic palette + Canvas flow diagram (animated marching-dash, Reduce-Motion aware) + compact fallback
+- `.swift` — surface with header + all states (loading/empty/error/stale/offline/content) + connectivity banner
+- `.Previews.swift`, `.Tests.swift` (30 cases), `.strings` (all 7 parity keys + chrome)
+
+**Verification (honest):**
+- ✅ KMP `Shared.xcframework` built (BUILD SUCCESSFUL 12m59s) + `xcodegen generate`
+- ✅ `swiftformat --lint apps/apple`: 0/2005 need formatting
+- ✅ Placeholder gate: `PLACEHOLDER_COUNT=0`
+- ✅ My surface: in-module compile **0 errors**; isolated `swiftc -typecheck` under Swift 6 + `-strict-concurrency=complete` → **0 errors / 0 warnings**; **30/30 unit tests pass**; 0 swiftlint violations on my files
+
+**STATUS = BLOCKED (on predecessor).** The monorepo-wide `xcodebuild build test` and `swiftlint --strict` gates are red **solely** due to pre-existing, out-of-scope defects in *other* P4 surfaces I'm forbidden to edit — `ChargingProjection` duplicate declaration (`ChargeStatusWidget` vs `ChargingDetailSection`), `ambiguous use of 'miles'` (`ChargeCostTrackerWidget`), and a brace-spacing lint in `LiveSignalSparklinesWidget`. **Zero** errors reference my files. Full evidence (including the temporary, reverted, never-committed disambiguation used to prove my code compiles in-module) is recorded in the gate log.
+

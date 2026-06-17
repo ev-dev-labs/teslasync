@@ -1,0 +1,58 @@
+I'll start by exploring the repository structure to understand the task and what's available.
+
+Xcode toolchain is available. Let me explore the web components, hooks, types, and the Apple app structure in parallel.
+
+Now let me read the web components and explore existing Apple admin pages for conventions.
+
+Key finding: actual path is `apps/apple/Sources/Features/Admin/`, not `apps/apple/TeslaSync/Features/Admin/`. Let me verify the project layout and study the closest analog pages (LiveSignalInspector uses a vehicle picker; FeatureFlags is full CRUD).
+
+LiveSignalInspectorPage is the ideal analog. Let me read its model, route registration, project.yml (XcodeGen), and the parity manifest/ledger entries.
+
+Now let me examine the build config, route system, parity files, component library, and the gate contract.
+
+Let me view the full manifest entry for the page and the string-group, plus the route system.
+
+Now let me examine the shared component library (data-display, charts, ui) and design tokens to know what's available.
+
+Let me check the design tokens, timestamp formatters, a sibling test, and the gate tooling.
+
+Let me check the xcstrings `translation.*` mirror, the p4-apple gate README, and the FleetTelemetryCoverage model (closest analog with a report payload).
+
+Let me check how the AppShell renders registered routes and the FleetTelemetryCoverage model's report-state pattern, then I'll have enough to build.
+
+Let me verify the chart axis helper, live indicator, and the XcodeGen/project state before building.
+
+Project needs generating via XcodeGen. Let me check the Shared.xcframework prerequisite and locate `tsChartAxes`, then establish a baseline build.
+
+The build needs a KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me check that toolchain and the known macOS verification state, then kick off the framework build in the background while I write code.
+
+The xcframework isn't prebuilt — I'll build it via Gradle in the background (the long pole) while I write the Swift code. Let me verify Java and launch it.
+
+Full Xcode + Java present. Let me launch the KMP framework build in the background and write code while it runs.
+
+Framework build is running detached. Let me set up tracking and write the plan, then build the Swift code while Gradle compiles.
+
+Now I'll create the model. Starting with the core types, enums, seams, and the `@Observable` model.
+
+Now the sample sources. Let me also check the framework build progress.
+
+Framework build is linking (mostly cached). Let me write the sample sources.
+
+Now the main page view. Let me write the scaffold, header, controls (GlassPanel1), and no-vehicle (GlassPanel2), composing the chart/fields panels.
+
+Let me refine the localized-window helper and create the chart and fields panels. First let me verify `TSAnimatedNumber` handles arbitrary strings.
+
+`TSAnimatedNumber` renders verbatim, so the window phrase is fine. Let me clean up the window-label resolution and add a helper.
+
+Now the chart panel (GlassPanel3) and fields panel (GlassPanel4) as their own views.
+
+Now the fields panel (GlassPanel4) with the sortable table.
+
+Now the navigation wiring. Let me check the framework build and then add the route.
+
+Framework still building the release variant. Let me wire the route into `AppRoute`, the parser, and create the registration.
+
+Now the route registration file, mirroring the sibling pattern.
+
+Let me view the exact composition block to insert the registration cleanly.
+

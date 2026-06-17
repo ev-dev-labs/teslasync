@@ -76,7 +76,7 @@ extension SignalDiffTableContent {
         }
     }
 
-    private func dataRow(_ row: SignalDiffRow) -> some View {
+    private func dataRow(_ row: SignalDiffRowView) -> some View {
         GridRow {
             selectionToggle(row)
             pinToggle(row)
@@ -152,7 +152,7 @@ extension SignalDiffTableContent {
         }
     }
 
-    private func card(_ row: SignalDiffRow) -> some View {
+    private func card(_ row: SignalDiffRowView) -> some View {
         let selected = model.isSelected(row.name)
         return VStack(alignment: .leading, spacing: TSSpacing.sm) {
             HStack(spacing: TSSpacing.sm) {
@@ -206,7 +206,7 @@ extension SignalDiffTableContent {
         case secondary
     }
 
-    private func selectionToggle(_ row: SignalDiffRow) -> some View {
+    private func selectionToggle(_ row: SignalDiffRowView) -> some View {
         let selected = model.isSelected(row.name)
         return Button {
             model.toggleSelection(row.name)
@@ -220,7 +220,7 @@ extension SignalDiffTableContent {
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 
-    private func pinToggle(_ row: SignalDiffRow) -> some View {
+    private func pinToggle(_ row: SignalDiffRowView) -> some View {
         let pinned = model.isPinned(row.name)
         return Button {
             model.togglePin(row.name)
@@ -236,7 +236,7 @@ extension SignalDiffTableContent {
         .accessibilityAddTraits(pinned ? [.isButton, .isSelected] : .isButton)
     }
 
-    private func nameCell(_ row: SignalDiffRow) -> some View {
+    private func nameCell(_ row: SignalDiffRowView) -> some View {
         Text(verbatim: row.name)
             .font(.system(.caption, design: .monospaced))
             .foregroundStyle(Color.TS.textPrimary)
@@ -253,7 +253,7 @@ extension SignalDiffTableContent {
     }
 
     @ViewBuilder
-    private func deltaCell(_ row: SignalDiffRow) -> some View {
+    private func deltaCell(_ row: SignalDiffRowView) -> some View {
         switch row.delta {
         case .none:
             Text(verbatim: "—")
@@ -288,7 +288,7 @@ extension SignalDiffTableContent {
 /// accessible idiom for a data row that carries multiple controls.
 private struct SignalDiffRowAccessibility: ViewModifier {
     let model: SignalDiffTableModel
-    let row: SignalDiffRow
+    let row: SignalDiffRowView
 
     func body(content: Content) -> some View {
         content

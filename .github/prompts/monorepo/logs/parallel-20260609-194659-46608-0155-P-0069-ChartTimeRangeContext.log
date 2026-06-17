@@ -1,0 +1,132 @@
+I'll start by exploring the environment and reading the web source specification before writing any native code.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the dependency module and study existing native conventions.
+
+Now I understand the web source: it's a chart-cursor-sync coordination primitive (external store + React context + hooks), not a data-fetching UI. Let me study existing native conventions, especially analogous primitive/HOC surfaces like the just-committed `AnnotationList` and `withAiFeature`.
+
+40 surfaces, each with a consistent fileset (`.swift`, `.Model`, `.Adapter`, `.Projection`, `.Views`, `.Previews`, `.strings`, `.Tests`, `.AdapterTests`, sometimes `.Chrome`/`.ModelTests`). `withAiFeature` is the closest analog (anonymous HOC primitive). Let me read it fully.
+
+Excellent quality. Let me read the rest of `withAiFeature` (Projection, Views, Previews, strings, Tests, ModelTests) and the project structure.
+
+Now let me examine the build config, design tokens (P1/S9), and how existing surfaces use Swift Charts.
+
+`Sources/Components/Charts/Interaction.swift` likely holds existing chart-cursor infrastructure — highly relevant. Let me read it plus the build config and locate token definitions.
+
+Key facts: XcodeGen-based build, design tokens generated under `apps/design/generated/apple`, co-located `*Tests.swift` compile into the test bundles. The build needs XcodeGen + a KMP `Shared.xcframework` pre-action. Let me check build feasibility and read the design tokens.
+
+Now let me read the lint config, the most-recent real surface (`AnnotationList`) to see chart + state + a11y conventions, check for any existing cursor-sync code, and inspect the placeholder checker.
+
+Existing chart feature-views reference `syncId`/`chartSync`/`SyncedCursor`. I must understand the established native pattern to align with (or avoid duplicating). Let me inspect those usages closely.
+
+The established native pattern: charts use `.chartXSelection(value:)`, and `ElevationChart` already has a feature-local `ElevationCursorSync` seam. My shared surface is the canonical cross-feature version. Let me study the closest analog (`ElevationChart`) to match idioms exactly.
+
+I now understand the conventions thoroughly. Let me confirm the main-entry + "adapter (cached→projection)" pattern via `AnnotationList`, and verify the shared symbols I'll reference exist.
+
+Let me confirm the typography component API and set up my plan.
+
+I have all conventions and symbols. Let me verify no type-name collisions, then record the plan.
+
+No collisions. Let me record the plan and todos, then build the surface.
+
+No collisions. Building the surface now, starting with the pure core.
+
+Now the SwiftUI entry: environment context + provider + hook-parity mapping.
+
+Now the views: the persistent-cursor `RuleMark` builder and the DEBUG sample charts that exercise every branch.
+
+Now the previews and the i18n strings.
+
+Now the test files — pure adapter tests first.
+
+All 9 files created. Let me run the fast available checks (swiftformat, swiftlint, placeholder) on the new files first.
+
+The codebase convention is multi-line property bodies. Let me fix that.
+
+swiftformat: clean. swiftlint: 0 violations. Now the placeholder gate.
+
+Let me verify the placeholder script actually scanned my files (not zero files) by inspecting its path handling and testing detection.
+
+The gate's prefix path doesn't exist as a literal path, so the script returns "clean" without scanning. For honest verification, let me run it against each real file.
+
+All files clean for placeholders. Now let me verify my surface code actually compiles. First a standalone typecheck of the production files against the iOS SDK (replicating the codebase's MainActor-default isolation), independent of the heavy KMP framework.
+
+`-default-isolation MainActor` is supported. Let me typecheck the production surface files together with the design tokens against the iOS SDK.
+
+Production surface typechecks cleanly. Now let me verify the test files compile against the API (copying them with the in-module self-import stripped, since standalone can't `@testable import` its own module).
+
+The XCTestCase errors are an artifact of forcing `-default-isolation MainActor` onto test classes. The real regime is likely nonisolated-default with SwiftUI `View` being `@MainActor`. Let me verify and re-typecheck production without that flag.
+
+Production compiles cleanly under the real isolation regime (`View` is `@MainActor`). Now let me build a production module and typecheck the original test files against it (the faithful test-bundle replication).
+
+`@testable import TeslaSync` resolved and my API symbols typechecked — the only failures are XCTest's C assertion macros, which aren't available to bare `swiftc` outside a test bundle. Let me confirm the test bodies fully typecheck against my API using a small XCTest shim.
+
+Only `Date` is missing — because stripping `import XCTest` removed its transitive Foundation import (which the real build provides). Adding Foundation to the harness copy confirms it:
+
+All test bodies typecheck against the API. Static verification complete. Now the full `xcodebuild build test` gate needs the KMP `Shared.xcframework` (Gradle). Let me gauge that toolchain's feasibility.
+
+JDK 17 present. Let me confirm ignore rules, generate the Xcode project, and kick off the KMP framework build (the gate's hard dependency) in the background.
+
+Project generated (`.xcodeproj` is gitignored). Now the KMP framework build — the long pole. Let me run it in the background and monitor.
+
+Gradle works offline with the KMP plugin cached. Let me build the `Shared.xcframework` (offline first since deps appear cached).
+
+Building — Kotlin/Native compilation takes time. Let me continue waiting.
+
+KMP `Shared.xcframework` built successfully. Let me stage it and verify the iPhone 16 simulator exists before the full build+test.
+
+Framework staged, iPhone 16 booted. Now the full iOS build+test (the gate). This compiles the entire app + test bundles — it will take a while.
+
+The full iOS build is running in the background. Let me update progress and monitor it.
+
+The build failed — but the errors are in **other** surfaces (`StateTimelineModel` ambiguous, `VehicleHeader`/`VehicleHero`/`WebhookChannelsSection`), not my files. I must verify this is pre-existing and not caused by my change. Let me inspect the log and the duplicate-type source.
+
+Zero errors are in my files — all failures are pre-existing duplicate-type ambiguities in unrelated surfaces (`StateTimeline*`, `RecentDrives*`, `VehicleHero/Header`, `WebhookChannelsSection`). Let me prove these duplicates exist in files I never touched.
+
+Proven: `StateTimelineModel`, `RecentDrivesModel`, `StateTimelineUpdate` each have **two** `public` definitions across sibling `dashboard-widgets/` and `feature-views/` surfaces — a pre-existing integration break in files outside my allowed scope. Let me confirm I only added my own files, then run the macOS gate leg for a complete honest log.
+
+Confirmed: I added only my 9 files and touched none of the broken surfaces. The whole-app failure is pre-existing and out-of-scope. Let me run the macOS gate leg (for an honest, complete log) and the tree-wide lint/format in parallel.
+
+swiftformat clean tree-wide (0/3839). The macOS build finished — let me read its result and run swiftlint tree-wide.
+
+swiftlint clean tree-wide (LINT_EXIT=0). macOS build also failed (MAC_EXIT=65). Let me confirm the macOS failure is the same pre-existing duplicates and not my files.
+
+macOS failed on **code-signing entitlements** (no dev certificate in this environment) — another environmental blocker — with 0 ChartTimeRangeContext errors. Both build legs are red for reasons external to my surface. Let me check the logs directory and a sibling log format.
+
+This is the key precedent. The sibling `AnnotationList` (0063) hit the **identical** pre-existing failure (`RecentDrives*`/`StateTimeline*` duplicate-type ambiguity + macOS signing) and established the accepted disposition. Let me read its gate log in full to match the format and honesty framing exactly.
+
+The precedent is definitive: the identical pre-existing blocker (same `StateTimeline*`/`RecentDrives*` duplicates + macOS signing) was dispositioned **EXIT=0 / STATUS=DONE** with the xcodebuild legs documented as red/deferred-with-cause (never claimed as pass). Covenant rule 7 ("No predecessor bypass") requires the same disposition. Let me confirm the macOS signing cause and the catalog doc, then write my gate log.
+
+All corroborated: `apps/macos-pending-verifications.md` catalogs many surfaces blocked by these exact pre-existing collisions (`StateTimeline*`/`RecentDrives*`) + macOS dev-signing, dispositioned to the P99 acceptance gate. My situation is identical. Let me write the gate log mirroring the established format with my real captured evidence.
+
+Now let me verify the working tree state before committing (ensure xcodegen/framework-staging didn't touch tracked files) and stage only my 9 files + the log.
+
+Clean — no tracked files changed; `.xcodeproj`/`Shared.xcframework` are gitignored (not shown). Staging only my 9 surface files + the log, then committing.
+
+Exactly 10 files staged. Committing with the prescribed message.
+
+Committed as `d32bef4f4`. Let me update tracking and clean up scratch files.
+
+Task complete. Committed as `d32bef4f4`.
+
+Merge made by the 'ort' strategy.
+ ...-shared-surfaces-0069-ChartTimeRangeContext.log | 171 +++++++++++++
+ .../ChartTimeRangeContext.Adapter.swift            | 186 ++++++++++++++
+ .../ChartTimeRangeContext.AdapterTests.swift       | 172 +++++++++++++
+ .../ChartTimeRangeContext.Model.swift              | 214 ++++++++++++++++
+ .../ChartTimeRangeContext.Previews.swift           |  87 +++++++
+ .../ChartTimeRangeContext.Projection.swift         |  84 +++++++
+ .../ChartTimeRangeContext.Tests.swift              | 275 +++++++++++++++++++++
+ .../ChartTimeRangeContext.Views.swift              | 200 +++++++++++++++
+ .../shared-surfaces/ChartTimeRangeContext.strings  |  26 ++
+ .../shared-surfaces/ChartTimeRangeContext.swift    | 107 ++++++++
+ 10 files changed, 1522 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0069-ChartTimeRangeContext.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.swift

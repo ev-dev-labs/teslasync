@@ -1,0 +1,192 @@
+I'll start by understanding the task environment and checking platform capabilities, since this task requires Apple/SwiftUI tooling and has a capability-check escape hatch.
+
+Platform capabilities are available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). This is NOT a BLOCKED scenario — I must implement. Let me read the web source spec and explore the native structure.
+
+Now I understand the file pattern. Let me read the web hook for the exact data shape, the shared web widget components, and a complete reference native widget (same `charging` category).
+
+Now let me study the reference widget set (`ChargePlansWidget`, same category) and find the native equivalents of `WidgetShell`, `WidgetTipCards`, `Badge`, plus the state-holder/i18n/telemetry conventions.
+
+Excellent pattern clarity. Key insight: all widget files compile into ONE flat module, so every type must be prefixed with `ChargingOptimizer`. And I can only touch `ChargingOptimizerWidget.*` files — so the tip-card rendering must be inline. Let me locate the shared infra/tokens and read the rest of the reference set.
+
+Let me find the actual design tokens and read the rest of the reference set (Builder, Content, Models).
+
+Now I have the full token system. Let me read the remaining reference files (Builder, Content, Previews, strings, Tests, ModelTests) to complete my understanding of the pattern.
+
+Let me read the test harness, strings, and previews from the reference, plus locate `TSTone`.
+
+Let me read the `.strings` and `.Previews` reference files and locate `TSTone`.
+
+Let me check `TSTone`, the placeholder checker, build scripts, and whether `pwsh` is available (the gate is PowerShell).
+
+The placeholder gate's `-Path` points at a non-existent literal path, so it passes trivially — but I'll avoid all forbidden words anyway (notably I'll name the em-dash constant `emDash`, not `placeholder`). `pwsh` is available. Let me check the framework build script, then generate the Xcode project and kick off a baseline build while I write code.
+
+The build chain needs a KMP `Shared.xcframework` built via Gradle (a scheme pre-action). That's the slow part. Let me generate the Xcode project and pre-warm the Gradle framework build in the background while I write code.
+
+Project generated with `TeslaSync` and `TeslaSync-macOS` schemes. Let me pre-warm the Gradle framework build in the background, then write the widget while it runs.
+
+Let me set up tracking, check the framework build progress, and verify the exact web number formatting.
+
+The framework build was launched in the background. Let me verify it's actually running/completed and check the log.
+
+Framework debug xcframework built (release variant still finishing). I have all the formatting semantics I need. Let me write the widget files now, starting with the domain models.
+
+Now the content body — the parity-critical layouts (metric tiles, schedule chip, 24h timeline, tip cards).
+
+Now the strings catalog, previews, and both test files. Let me also check the framework staging status.
+
+Framework staged successfully. Now writing the strings catalog and previews.
+
+Now the two test files — adapter coverage and state-holder/registry/a11y coverage.
+
+Now the state-holder/registry/a11y/view tests.
+
+Let me refine the view tests to avoid `@State` access / `.body` evaluation outside a render host (which would emit warnings), asserting layout flags via `size` and phase via the model directly.
+
+All 9 files written. Let me check the lint configs and run swiftlint/swiftformat on my new files for fast feedback.
+
+Critical config notes: swiftlint `--strict` (warnings→errors), line_length 120 for code (comments ignored), `--importgrouping testable-bottom`, `--wraparguments before-first`. Let me lint my new files.
+
+Let me auto-fix with swiftformat (the authoritative tool) on my files, then re-verify.
+
+swiftformat passes. Now swiftlint `--strict` on the new files.
+
+`identifier_name` requires ≥2 chars — my `f`/`b`/`p` locals are flagged. Let me view and rename them.
+
+Now re-run both linters on all new files to confirm clean.
+
+Both linters pass on my files. Now regenerate the project (to include the new files) and run the iOS build+test — the heavy gate step.
+
+Project regenerated with new files included (54 refs). Now running the iOS build+test (the heavy gate step) in the background.
+
+Build running. While it compiles, let me proactively check for any cross-surface type-name collisions (the flat module's known risk) with my `ChargingOptimizer*` types.
+
+Some feature-views reference `charging-optimizer` / `ChargingOptimizerWidget`. Let me check whether they define conflicting types or just reference my widget (an expected integration point).
+
+Important — a collision risk. A sibling feature-view `OptimizerSection.*` already defines `ChargingOptimizer`, `ChargingOptimizerUpdate`, etc. In the flat module that would be a duplicate-symbol clash. Let me enumerate exactly what it declares.
+
+I found a real collision: the sibling `OptimizerSection` feature-view already declares a public `ChargingOptimizerUpdate` in the same flat module. My `ChargingOptimizerUpdate` would be a duplicate symbol. Let me confirm the in-flight build is hitting this, then fix it. First, locate their declaration and check my build log.
+
+Confirmed: `ChargingOptimizerUpdate` is the sole collision (with `OptimizerSection.Model.swift`), and it's even breaking the predecessor's previews. The other `ChargingOptimizer*` types don't collide (their siblings are `Optimizer*`). I'll surgically rename my `ChargingOptimizerUpdate` → `ChargingOptimizerWidgetUpdate`, then comprehensively verify no other collisions exist.
+
+Now a comprehensive collision check — grep the entire module (excluding my files) for declarations matching any of my type names.
+
+Let me wait for the collision scan to finish.
+
+No other collisions — clean. The rename may have lengthened some lines, so let me re-run swiftformat (fix), then both linters on my files.
+
+Clean. Now rebuild the iOS target (build+test). Running in background.
+
+Build running. Let me wait and monitor progress.
+
+No errors yet, still compiling. Let me wait for the build to complete.
+
+App target compiling cleanly (0 errors), now emitting the module and linking. Let me wait for the test phase to complete.
+
+Still 0 errors, now building the test bundle. Let me continue waiting for tests to execute.
+
+Still 0 errors. The build is heavy (full app + extensions + test host). Let me keep waiting for test execution.
+
+Still building the large test bundle (0 errors). Let me wait longer for test execution to begin and complete.
+
+iOS exited 65 (failure). Earlier error count was 0, so this is likely a test failure or test-bundle issue. Let me examine the full failure detail.
+
+Key finding: **`** BUILD SUCCEEDED **`** — my app code compiled cleanly. The failure is the shared **test bundle** failing to compile due to errors in **predecessor files I'm not allowed to touch** (`PresetGallery.*Tests.swift` Sendable error; `SafetyFeaturesWidget.ModelTests.swift` redeclares `SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests`). Let me confirm these are pre-existing and independent of my surface.
+
+Conclusive evidence this is pre-existing and outside my scope:
+- **git status**: only my 9 `ChargingOptimizerWidget.*` files are new; I touched nothing else.
+- **`SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests`** are declared in **two** predecessor files (`SafetyFeaturesWidget.ModelTests.swift` **and** `SafetyHistoryWidget.ModelTests.swift`) → guaranteed "invalid redeclaration" regardless of my work.
+- **`passthroughLocalize`** is a bare `private let` closure (no `nonisolated(unsafe)`) → a Swift 6 Sendable error regardless of my work.
+- The iOS log shows `** BUILD SUCCEEDED **` (my app code compiled) with **zero** errors referencing ChargingOptimizer.
+
+To make this airtight, let me prove the test target is already red **without** my files. I'll temporarily relocate my files, regenerate, and build-for-testing.
+
+My files are relocated and the project regenerated without them. Now run the baseline `build test` (without my files) to prove the test target is already red.
+
+While the baseline builds, let me capture the precise predecessor-error evidence.
+
+Conclusive: both `SafetyFeaturesWidget.ModelTests.swift` and `SafetyHistoryWidget.ModelTests.swift` (two predecessor surfaces) declare identical `SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests` classes — a guaranteed redeclaration in the shared XCTest bundle, unrelated to my work. Let me wait for the baseline build to reproduce the failure without my files.
+
+Baseline still compiling the app (no ChargingOptimizer refs, as expected). Let me wait for it to reach the test-bundle compile where the predecessor errors live.
+
+Still compiling. Let me wait for the baseline to complete.
+
+Baseline (without my files) also exited 65. Let me confirm it failed on the **same** predecessor errors with zero ChargingOptimizer involvement.
+
+The baseline (without my files) **also** fails the test build (EXIT 65) — and on **even more** predecessor collisions (`ChargeStatusLiveWidget.Tests.swift` vs `ChargeStatusWidget`). This proves the shared XCTest bundle is pre-broken. Let me capture the full predecessor-error picture and confirm none reference my widget.
+
+Definitive: the baseline (without my files) fails the test build on **`ChargeStatusLiveWidget.Tests.swift`** redeclarations; the only "ChargingOptimizer" mentions are stale-object cleanup notes (zero errors). The shared XCTest bundle is pre-broken by **multiple** predecessor cross-surface collisions. My surface is clean.
+
+Let me restore my files and run the **actual gate** to produce the canonical log.
+
+Log dir exists. Let me check how a sibling widget's gate log is formatted (to match conventions) before running the gate.
+
+This is the key: the sibling log reveals the **established methodology** for this runner. The full `xcodebuild build test` is known-blocked here (CoreSimulatorService stall, macOS signing, **pre-existing predecessor test-bundle collisions**), so predecessors prove their surface green via an **isolated SwiftPM build+test** + `swiftc -typecheck` for both SDKs, then document the environmental/pre-existing caveats and claim DONE. Let me read the full sibling log to replicate it exactly.
+
+The sibling log contains the raw gate output **plus** a hand-authored summary proving the surface green via an **isolated SwiftPM build+test** (bypassing the known-broken Xcode test bundle) and `swiftc -typecheck`. Let me find exactly how they ran that isolated harness.
+
+The established methodology (per `apps/macos-pending-verifications.md`, referenced in the sibling log): since the full Xcode test bundle is environmentally unrunnable here (CoreSimulatorService stall + pre-existing predecessor collisions), each surface is proven green via an **isolated SwiftPM build+test** plus compile proof, with the environment caveats documented. Let me set that up. First, identify the exact shared dependencies my non-test files need.
+
+My non-test files need only `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` (Tokens.swift), `TSSkeleton` (Skeletons.swift), `TSTone` (Badges.swift), and `DashboardWidget*` (Infra). Let me verify Badges/Skeletons are self-contained (SwiftUI + Tokens only).
+
+Badges.swift is self-contained, but Skeletons.swift references `TSCard` (external) in other structs — so I'll shim only the `TSTone` and `TSSkeleton` pieces I actually use. Let me grab the exact `TSSkeleton` source bounds.
+
+`TSSkeleton` is lines 1–42; `TSTone` is Badges lines 4–17. Let me build the isolated SwiftPM harness (vendoring only Tokens, Infra, and shims for TSSkeleton/TSTone) and run my full test suite there — the established way to prove the surface green despite the blocked Xcode test bundle.
+
+Harness assembled. Now run the isolated test suite.
+
+Isolated SwiftPM suite: **31 tests, 0 failures** (compiled Swift 6 strict-concurrency on macOS). My surface's logic is proven green. Now let me complete the verification matrix: kick off the macOS app build (compile proof) in the background, and run the full-tree lint/format/placeholder gate steps.
+
+Repo-wide swiftformat: **0/2643 files require formatting** (FORMAT_EXIT=0). Now the repo-wide swiftlint and the placeholder check.
+
+Repo-wide swiftlint reports **1 pre-existing violation** (LINT_EXIT=2). My files passed clean earlier, so this is in a sibling file. Let me identify it.
+
+The single repo-wide swiftlint violation is **`LiveSignalSparklinesWidget.Builder.swift:158`** — a predecessor file, **not mine** (the exact pre-existing violation the sibling 0018 log already documented as out-of-scope). My 8 files: 0 violations.
+
+Now the placeholder check (both the exact gate command and a genuine scan of my files), plus a macOS build progress check.
+
+All checks green for my surface: placeholder genuine scan = 0, gate-literal = 0. Let me check the macOS build progress.
+
+macOS still building (0 errors). Let me read the governing policy `apps/macos-pending-verifications.md` (referenced by sibling logs) to ground the DONE-vs-BLOCKED decision correctly.
+
+The governing policy `apps/macos-pending-verifications.md` confirms my exact scenario is an **established, sanctioned pattern**: surfaces proven green via isolated SwiftPM + compile + lint/format/placeholder, with the full-app `build test` deferred to the `P99` acceptance gate due to **pre-existing parallel-merge collisions** (it even names the same `LiveSignalSparklinesWidget` `opening_brace` error). Those precedents conclude `STATUS=DONE`. Let me wait for the macOS app build to finish.
+
+macOS app **BUILD SUCCEEDED** (EXIT=0) with my surface. Let me confirm and capture the exact status lines for both platform compiles.
+
+Both platforms: **BUILD SUCCEEDED**, zero ChargingOptimizer errors. The test bundle fails only on predecessor collisions. Let me gather the precise predecessor-error inventory from the iOS run for the log evidence.
+
+Complete, honest verification matrix in hand. Let me capture the host/toolchain details and the isolated-test suite breakdown, then write the canonical gate log.
+
+All 7 suites green (31/31). Now I'll write the canonical gate log — honest and thorough, mirroring the sibling-log convention (raw step results + surface-green proof + pre-existing/deferred section + EXIT/STATUS).
+
+Log written. Let me verify git state (ensure the generated `.xcodeproj` is ignored), clean up temp artifacts, and do a final lint sanity check before committing.
+
+Clean — exactly my 9 files + the log; the generated `.xcodeproj` is correctly ignored. Final lint sanity on my files, then commit.
+
+Final lint clean (0 format, 0 lint). Committing the surface + log.
+
+Committed (`f9cb0f53e`) — all 9 surface files + the gate log. Let me finalize tracking and confirm a clean tree.
+
+The task is complete. Working tree is clean; the commit (`f9cb0f53e`) contains all 9 surface files + the gate log (2,362 insertions).
+
+Merge made by the 'ort' strategy.
+ ...hboard-widgets-0022-ChargingOptimizerWidget.log | 150 +++++++++
+ .../ChargingOptimizerWidget.Builder.swift          | 237 +++++++++++++
+ .../ChargingOptimizerWidget.Content.swift          | 375 +++++++++++++++++++++
+ .../ChargingOptimizerWidget.Model.swift            | 269 +++++++++++++++
+ .../ChargingOptimizerWidget.ModelTests.swift       | 259 ++++++++++++++
+ .../ChargingOptimizerWidget.Models.swift           | 321 ++++++++++++++++++
+ .../ChargingOptimizerWidget.Previews.swift         | 168 +++++++++
+ .../ChargingOptimizerWidget.Tests.swift            | 252 ++++++++++++++
+ .../ChargingOptimizerWidget.strings                |  63 ++++
+ .../ChargingOptimizerWidget.swift                  | 268 +++++++++++++++
+ 10 files changed, 2362 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0022-ChargingOptimizerWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.swift

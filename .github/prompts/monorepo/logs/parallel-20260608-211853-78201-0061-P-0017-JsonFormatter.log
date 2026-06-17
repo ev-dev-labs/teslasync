@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and the web source that defines this task's specification.
+
+The Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Let me explore the web source and existing Apple structure.
+
+The `feature-views` directory already exists with ~1438 files. Let me read the web source and examine an existing feature-view as a template for conventions.
+
+Now I understand the web source — it's a local JSON formatter dev tool (input → formatted output or error), no API fetching. Let me examine existing ported devtools and the file conventions to match them precisely.
+
+`Base64Tool` and `UrlEncoder` are the closest analogs (text in → text/error out). Let me read the complete Base64Tool fileset as my primary template.
+
+Excellent template match. Let me read the complete Base64Tool fileset to understand all conventions (Model, Adapter, Views, Previews, strings, Tests).
+
+Now let me verify the design tokens (P1/S9) and how the build wires these files. I'll check token definitions and project.yml.
+
+The tokens live in shared files. Let me read `project.yml` to understand target wiring (sources, tests, strings), which is critical for the build gate.
+
+Now I understand the build wiring. Let me check the gate infrastructure: xcodegen, existing project, simulators, the shared framework build script, and the placeholder checker.
+
+Good — xcodegen, iPhone 16 sim, and pwsh are all present. The main risk is the KMP `Shared.xcframework` preAction. Let me inspect that build script and the placeholder patterns.
+
+Critical finding: `Shared.xcframework` isn't built (only `.gitkeep`), and the scheme preAction builds it via Gradle/KMP. Let me check whether that toolchain is available and read the pending-verifications notes.
+
+The documented precedent is clear: these P4 surfaces verify the surface in isolation (SwiftPM build + tests + swiftlint/swiftformat/placeholder + `swiftc -typecheck` on both SDKs), while the full-app `xcodebuild build test` is deferred because of pre-existing unrelated collisions. JDK 17 + gradlew exist. Let me confirm the design-token source for the app target and the logs dir before writing.
+
+Let me read the Base64Tool sibling log (the precedent for verification methodology) and the design tokens.
+
+I now have the full precedent (Base64Tool log + tokens). Let me read the lint/format configs to ensure compliance, then write a plan file.
+
+I have everything I need. Let me set up a todo list and probe Swift's number/`String(format:)` behavior (critical for faithful `JSON.stringify` number parity) before writing.
+
+Swift's `Double`→`String` and `String(format:)` behave as expected. I'll split the JSON scanner into its own `JsonFormatter.Parser.swift` (the `JsonFormatter.*` glob allows it) to keep files under the 400-line house limit. Let me write a plan file, then create the core.
+
+Now let me create the JSON scanner (parser) file.
+
+Now let me write the JSON scanner (recursive-descent parser).
+
+Now the Adapter (result types, error, number canonicalizer, pretty-printer, surface, accessibility).
+
+Let me validate the parser + printer logic immediately with a throwaway harness against known `JSON.stringify` outputs before writing the UI layer.
+
+`JsonSyntaxError` must conform to `Error`. Let me fix that.
+
+Output looks faithful. Let me cross-verify the exact bytes against Node's real `JSON.stringify` to be certain of parity.
+
+Byte-for-byte identical to Node's `JSON.stringify(JSON.parse(x), null, 2)` across all cases — key order, indentation, number canonicalization, escapes, emoji, and duplicate keys. The core is verified. Now the Model layer.
+
+Now the presentational subviews.
+
+Now the main view, previews, and strings.
+
+Now the test suite.
+
+All 8 files written. Now let me run the verification suite, mirroring the Base64 precedent. First, auto-format my files and run swiftlint/swiftformat/placeholder gates.
+
+swiftlint flagged the Parser: cyclomatic complexity in two functions, single-char names in `==`, and a brace issue. Let me view the affected regions and fix them.
+
+Conflicts between swiftformat and swiftlint plus complexity. Let me view the exact current blocks to refactor precisely.
+
+Now I'll refactor the four problem areas. Applying all edits:
+
+Now fix `skipWhitespace` (the brace conflict) and add the whitespace helper:
+
+Re-running format + lint and re-verifying behavior is unchanged via the harness:
+
+swiftlint --strict: **0 violations in 7 files**. swiftformat --lint: **0/7 require formatting**. Behavior identical. Now the placeholder gate and the dual-SDK `swiftc -typecheck` (real component closure = Tokens.swift), per the precedent.
+
+The placeholder gate caught the word "placeholder" (my input-hint variable) — it collides with the stub-detection pattern. The Base64 precedent named this concept `example` instead. Let me rename to match and eliminate the collision.
+
+The comment on line 56 still contains "placeholder" (the gate is case-insensitive). Let me reword it and update the `Text(verbatim:)` reference.
+
+"XXX" matches my `\uXXXX` escape notation in two doc comments. Let me reword those.
+
+Placeholder gate: **COUNT=0, EXIT=0**. Now the dual-SDK `swiftc -typecheck` against the real component closure (Tokens.swift), then the executed test harness.
+
+iOS 18 typecheck: **EXIT=0**. Now macOS 15 and the DEBUG-previews variant.
+
+iOS 18, macOS 15, and DEBUG-previews typechecks all **EXIT=0**. Now the executed test harness (isolated SwiftPM, real Adapter+Parser+Model verbatim).
+
+**All 25 tests passed, 0 failures** (16 printer + 3 number + 3 model + 3 accessibility). SWIFT_TEST_EXIT=0. Now `xcodegen generate` to confirm my files are enumerated into the targets.
+
+`xcodegen generate` EXIT=0; all 8 JsonFormatter files are enumerated (the current project.yml globs `feature-views`, so the surface IS target-registered now). The full app build still needs the KMP `Shared.xcframework` and is subject to the documented pre-existing collisions. Let me verify those collisions concretely and attempt the gradle framework build (time-boxed) for real evidence.
+
+`DashboardWidgetSize` now has a single definition (the documented 15× collision appears resolved on this branch), and the 205 co-located `*Tests.swift` are correctly excluded from the app target by project.yml. The real remaining blocker is the unstaged KMP `Shared.xcframework`. Let me capture the concrete missing-framework evidence (fast), then attempt the gradle build.
+
+Confirmed concrete blocker: missing `Shared.xcframework` → **BUILD_EXIT=65** (matches precedent). Let me attempt the KMP gradle build to see if I can stage it and push further. Running async with monitoring.
+
+Gradle is running (first-run KMP toolchain provisioning). Let me continue waiting.
+
+The KMP gradle build timed out at 8 minutes (GRADLE_EXIT=124) — first-run Kotlin/Native toolchain provisioning doesn't complete in this environment, confirming the documented deferral to the macos-latest CI runner. SwiftUI capability itself is proven (both SDKs compiled my surface). Let me confirm the generated project is git-ignored and check final repo state.
+
+Generated project is git-ignored; only my 8 files are untracked. Let me gather final metrics (line counts) and write the honest gate log.
+
+All files ≤ 400 lines (Parser 361 max), all lines ≤ 112 cols, 25 tests. Let me write the comprehensive honest log.
+
+Log written. Let me do a final re-verification of all gates on the final files (Adapter/Parser changed after the last lint), then commit.
+
+All final gates green. Since I made comment-only edits after the last typecheck/test, let me re-run those two with the exact final files to be rigorous (no skip-and-assume).
+
+Final re-verification all green: iOS+macOS typecheck EXIT=0, **25/25 tests pass**. Let me clean up temp artifacts and commit.
+
+Clean tree — only my 8 files + the log. Committing with the conventional message from the prompt.
+
+Committed as `24f05b9fa`, working tree clean. Let me finalize the todo tracking.
+
+All 10 todos done. Task complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0017-JsonFormatter.log  | 245 ++++++++++++++
+ .../feature-views/JsonFormatter.Adapter.swift      | 272 ++++++++++++++++
+ .../feature-views/JsonFormatter.Model.swift        | 100 ++++++
+ .../feature-views/JsonFormatter.Parser.swift       | 361 +++++++++++++++++++++
+ .../feature-views/JsonFormatter.Previews.swift     |  56 ++++
+ .../feature-views/JsonFormatter.Tests.swift        | 234 +++++++++++++
+ .../feature-views/JsonFormatter.Views.swift        | 237 ++++++++++++++
+ .../TeslaSync/feature-views/JsonFormatter.strings  |  45 +++
+ .../TeslaSync/feature-views/JsonFormatter.swift    |  62 ++++
+ 9 files changed, 1612 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0017-JsonFormatter.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/JsonFormatter.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JsonFormatter.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JsonFormatter.Parser.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JsonFormatter.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JsonFormatter.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JsonFormatter.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JsonFormatter.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/JsonFormatter.swift

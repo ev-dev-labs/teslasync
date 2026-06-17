@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure to understand the task scope, the web source page, and the Apple app structure.
+
+Xcode 26.5, swiftlint, and swift are all available. Now let me explore the web source page and the Apple app structure in parallel.
+
+Xcode tooling is available. Now let me understand the Apple project structure, build config, parity manifest, and existing patterns.
+
+The actual repo uses `feature-views/` with a multi-file pattern, not `Features/Charging/`. Let me examine the parity manifest, ledger, and an existing page implementation to understand conventions.
+
+Now I understand the multi-file surface pattern. Let me find how "pages" are implemented (vs panels) and look at the ledger entry plus a completed page example.
+
+Pages live in `apps/apple/Sources/Features/<Domain>/<Name>Page.swift`. Let me examine a complete reference page family and the ledger structure.
+
+Now I understand the page family pattern (~8 files per page). Let me study the TrueCost page family in detail to learn the exact conventions.
+
+The default data-source pattern uses a `Sample` source as the seam — that's the accepted (non-stub) convention. Let me read the remaining reference files, routing infra, and web charging types.
+
+Let me check the existing log format, gate contract, and tooling availability (xcodegen, pwsh, KMP framework).
+
+The TrueCost log is a goldmine — it shows the exact path-mapping, gate sequence, and navigation approach. Let me read the rest of it.
+
+I now fully understand the established pattern. The full `xcodebuild` triad is documented as pre-existing-RED (out-of-scope tree); in-scope gates (xcodegen, placeholders, swiftformat, swiftlint, swiftc type-check macOS+iOS, logic harness) must be green. Let me write a plan, then explore the component library, tokens, Units, and routing infra.
+
+Let me read the core component and token APIs I'll build with.
+
+Good — `TSStatCard`, `TSGlassPanel`, `TSCard`, `TSMetricLabel/Value`, `TSCaption`, `TSPanelTitle` are available. Let me read the form controls, feedback, typography, tokens, and Units facade.
+
+Now the forms/units/tokens and the data table (for history), plus skeletons.
+
+I have the full component palette. Now let me read the exact web data shapes and helpers (charging types, RateTimeline, useFormatting, UnitInput) to model fidelity precisely.
+
+Let me read the exact charging type definitions and the RateTimeline + formatting helpers.
+
+Let me read the rest of RateTimeline, the routing infra, existing charging strings, and the AppRoute group mapping.
+
+Most `chargePlanner.*` keys already exist (added by sibling component prompts). Let me verify exactly which of the 33 required keys are present/missing and inspect the xcstrings format.
+
+The earlier grep found these keys but the quoted check failed — let me inspect the actual catalog format directly.
+
+The catalog keys are prefixed with `translation.`. Let me verify how Swift views reference keys vs. how the catalog stores them.
+
+Now it's clear: Swift views use **short** keys (`chargePlanner.title`), stored canonically as `"chargePlanner.title" : {…}`. Only the bulk `translation.*` versions exist, so I must add 33 short keys + `route.smartCharge`. Let me view the canonical entry format.
+
+The catalog format is clear. Now let me check the RouteTests invariants (to safely add a `.smartCharge` route) and confirm `route.smartCharge` is absent.
+
+RouteTests only require unique `pathSegment`s and group membership — no per-route path round-trip. Adding `.smartCharge` is safe. Let me read the design tokens, `tsUnits` env, a sections reference, and the DataTable.
+
+I have the full token + component picture. Let me read the sections reference, the DataTable, and the TrueCost test file to mirror patterns.
+
+Let me read the TrueCost test file, the lint/format configs, and confirm `TSTone` cases before implementing.
+
+Test files live in `Tests/Unit/Features/<Domain>/`. Let me read the TrueCost test to mirror, then I'll begin implementing.
+
+I have the full pattern. Let me verify the web number/date/currency formatting semantics (fmtPercent, formatCurrency, formatTime) for fidelity, then start implementing.
+
+I have everything needed. Let me set up tracking todos and check which Sources files import `Shared` (to build a Shared-free type-check closure), then start implementing.
+
+`import Shared` is confined to SharedFacade/Dashboard/Live — none of the UI components I'll use need it. I can build a deterministic Shared-free type-check closure. Now let me implement. Starting with the models, formatters, model, and sample data sources.
+
+Now the main page view, mirroring the TrueCost adaptive structure with form bindings via `@Bindable`.
+
+Now the large sections file with all 7 panels, supporting views, and the loading skeleton. Let me first check the placeholder scanner's opt-out token to mirror it correctly.
+
+Patterns: "Placeholder" is forbidden (case-insensitive), so my `.placeholder` redaction line needs the `// parity:allow` opt-out, exactly like TrueCost. Now let me write the sections file.
+
+Now the route registration and navigation wiring. Let me create the registration file and edit `AppRoute`, `AppRouteParser`, and `TeslaSyncApp`.
+
+Now the test file, mirroring the TrueCost test structure with a configurable stub source.
+
+The color-equality test risks `Color` Equatable flakiness and needs SwiftUI. Let me drop it to keep tests pure-logic (matching the TrueCost precedent).
+
+Now let me audit exactly which of my referenced keys exist canonically (to avoid JSON duplicates) before adding the string entries.
+
+All 39 keys are absent (`route.vehicles` already exists). Let me insert the 39 canonical entries via a text-preserving Python script (matching the catalog's exact style), then validate JSON.
+
+The anchor spacing differs. Let me inspect the exact opening bytes.
+
+39 entries added and JSON validated. Let me scan my new files for forbidden placeholder tokens, then run swiftformat to normalize.
+
+Clean. Now let me run swiftformat (autofix) on the new/edited files, then verify with swiftlint --strict.
+
+swiftformat normalized 3 files. Now run swiftlint --strict on the new/edited files.
+
+swiftlint linted the whole `included` set (12 pre-existing-or-mine violations). Let me isolate which violations are in MY files.
+
+All 6 violations are in my files. Let me view the affected regions (post-format) to fix: function-body lengths, file length, two TSButton trailing-closure issues, and the test type-body length.
+
+Let me view the cost-section boundary in Sections.swift and the current Sample.swift to plan the split and function-length fixes.
+
+All 6 violations are mine. Let me fix them: rewrite the Sample file with a shared clock helper and split builders (function-length), fix the two TSButton trailing-closures, split the Sections file (file-length), and move formatter tests to an extension (type-body-length). Starting with the Sample rewrite.
+
+Now fix the two TSButton trailing-closure violations with explicit `label:`.
+
+Now split the Sections file at the Cost-cards MARK into a new `Panels.swift` to satisfy file-length.
+
+Both files now under 400. Now move the test's formatter section into an extension to satisfy type-body-length.
+
+Now re-run swiftformat on the changed files, then swiftlint --strict and confirm my files are clean.
+
+swiftformat lint clean. Now swiftlint --strict to confirm my files are violation-free.
+
+swiftlint --strict is fully clean (0 violations). Now run the placeholder gate on my Charging dir.
+
+Placeholder gate green (ALLOWED=1, COUNT=0). Now generate the Xcode project to confirm my files integrate.
+
+xcodegen succeeded; SmartCharge referenced 114× in the project. Now I'll build a deterministic Shared-free type-check closure. Let me find which component/design files depend on Shared-coupled symbols so I can exclude them precisely.
+
+Only `UnitFormatters.swift` is Shared-coupled. Let me check `Theme.swift`'s dependencies (used by my DEBUG previews) to finalize the closure.
+
+`Theme.swift` is token-only (safe). Let me confirm no other Components file references the Shared-coupled formatter views, so I can include all Components except `UnitFormatters.swift`.
+
+No external references. Let me run the macOS in-scope type-check against the real component library + tokens + routing (Shared-free closure), with `-D DEBUG` so previews compile too.
+
+One real error: `alternativeWindows` is internal but takes the private `SmartChargeSampleClock`. Make it `private`.
+
+macOS type-check is green (EXIT=0, with DEBUG previews). Now the iOS slice to validate the `#if os(iOS)` adaptive branches.
+
+Both macOS and iOS type-checks pass (EXIT=0). Now a logic harness to actually execute the model state machine + formatters at runtime (the 4 logic files are SwiftUI-free).
+
+Now compile the 4 SwiftUI-free logic files with the harness and run it.
+
+The fallback assertion was a harness bug — `EmptySmartChargeDataSource` returns one rate plan, so options=1 (not the empty→3 fallback). Let me fix the harness expectation and re-run.
+
+Logic harness green (44/44). All in-scope gates pass. Now let me honestly assess the full `xcodebuild` path: check whether the KMP `Shared.xcframework` can be staged (it's currently a `.gitkeep` placeholder) and whether Java/Gradle is available.
+
+Java 17 + Gradle wrapper exist. The full `xcodebuild` needs the KMP `Shared.xcframework` (Kotlin/Native, potentially slow) and also compiles the pre-existing-broken out-of-scope `TeslaSync/*` tree (documented RED by sibling pages). Let me attempt the framework build with a bounded window to capture real evidence.
+
+The KMP Gradle build is running. Let me wait for it.
+
+Excellent — the Gradle cache is warm (compile tasks `FROM-CACHE`); the DEBUG xcframework built, only the RELEASE link hit the 280s cap. Let me finish the assemble (cache-warm, should be quick) so I can stage the real framework and run a whole-Sources type-check.
+
+Release `Shared.xcframework` built successfully (BUILD SUCCESSFUL, all 3 slices). Let me stage it and run a whole-Sources type-check against the real framework to prove my changeset introduces zero errors (isolating any pre-existing out-of-scope breakage).
+
+Whole-Sources type-check against the **real** staged framework: 45 pre-existing errors, **zero in my changeset**. Let me identify which files own those pre-existing errors to document them honestly.
+
+The 45 pre-existing errors are all in out-of-scope sibling pages (TeslaOrdersPage, UsersPage, AutomationCardPage) referencing symbols in the excluded `feature-views` tree — **zero in my changeset**. This matches the documented sibling-page situation. I have comprehensive, honest evidence. Let me update tracking and write the evidence log.
+
+Now let me write the comprehensive evidence log with the real gate transcript and the full `=== PARITY ===` enumeration.
+
+Now update the parity ledger with the two rows (macos + ios). Let me view the ledger tail.
+
+Let me append the two ledger rows via JSON (preserving formatting and the em-dash), then validate.
+
+Ledger updated (56 rows, both SmartCharge rows). Let me verify the ledger head integrity, re-confirm formatting after the last edit, and check git status before committing.
+
+The `private` edit made the signature line exceed 120 chars; swiftformat wants to wrap it. Let me autofix and re-verify formatting + re-run the macOS type-check to confirm semantics are unchanged.
+
+swiftformat lint clean again. Let me re-confirm the macOS type-check and swiftlint still pass after the reformat (file content changed).
+
+Both green: macOS type-check EXIT=0, swiftlint 0 violations (none in my files). Let me clean up temp artifacts and the git-ignored staged framework, then do a final git status review.
+
+Clean, intended changes only. Let me confirm the Charging files, then stage and commit.
+
+All 15 files staged correctly (8 sources + test + 3 nav edits + strings + ledger + log). Let me commit.
+
+Committed (fe90fa37a, 15 files, +2746). Let me do a final verification of the log's parity count and terminal status.
+
+All verified: 44/44 parity items, `PARITY_COVERED=44`, log ends `EXIT=0`/`STATUS=DONE`, ledger has both platform rows. Let me finalize tracking.
+
+The task is complete. All work is implemented, verified, and committed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

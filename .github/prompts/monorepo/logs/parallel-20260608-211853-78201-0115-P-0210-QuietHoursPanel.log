@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure, the web source, the existing Apple app, and verifying platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me explore the Apple app structure and the web source.
+
+The web source is large (21.8KB). Let me read it in full and examine the existing feature-views structure to understand conventions.
+
+Now let me read the rest of the web source and examine a complete existing feature-view as a template (AchievementBadge has the full file set).
+
+I now fully understand the web source (582 lines, CRUD panel for quiet-hours windows). Let me examine the shared Apple infrastructure (state holders, tokens, i18n, telemetry) and a complete existing feature-view as a template.
+
+Let me read the complete AchievementBadge file set (the canonical template) and the shared infrastructure facade.
+
+Excellent — clear conventions. Let me read the rest of the AchievementBadge set and the shared infrastructure (SharedFacade, Design tokens).
+
+Now let me look at the shared component library, the Forms/Feedback components, and find a CRUD-with-toast feature-view example to match the mutation pattern.
+
+`NotificationChannelsView` is the closest match (notifications domain, Toast + mutations). Let me study its full file set.
+
+This is a near-perfect template. Let me read the rest of NotificationChannelsView's files (Projection, main view, Views, Form, Adapter, Builder).
+
+Let me read the Form, Views, Adapter, and Builder files for the full CRUD pattern.
+
+Let me read the remaining reference files (Builder, Views, strings, Previews, Tests, ModelTests) and the design tokens.
+
+Let me read the strings/previews/tests format, the design tokens, and the rest of project.yml (test wiring).
+
+Let me read the test files, the rest of project.yml, and the relevant component files (Pickers, Fields, Inputs) plus generated design tokens.
+
+I have a thorough grasp of the convention. Now let me read the design tokens and the component APIs I'll use (Buttons, Badges, Fields, Pickers, Typography, States, Skeletons, Cards, Forms/Inputs, Overlays, Motion), plus the test-target wiring in project.yml.
+
+Let me read the remaining component APIs (Fields, Pickers, Typography, States, Skeletons, Cards, Forms/Inputs, Overlays, Motion) and the project.yml test/target wiring.
+
+Now the typography, states, skeletons, cards, motion, and modal APIs, plus project.yml test-target wiring.
+
+Let me read the exact signatures for tsModal/TSEmptyState/TSQueryError/TSText, check project.yml test targets, and verify the build toolchain (xcodegen, existing xcodeproj).
+
+Let me read the test-target source configuration in project.yml to confirm co-located `*Tests.swift` are picked up.
+
+Now let me check the gate tooling (pwsh, check-placeholders.ps1), the Shared.xcframework presence, and the lint/format configs.
+
+Important finding: `Shared.xcframework` is missing (only `.gitkeep`). Let me check how the shared framework is produced and how sibling prompts handled the build in their logs.
+
+Let me examine the framework build script, a sibling's gate log (NotificationChannelsView), and the placeholder patterns.
+
+Very informative — the sibling log reveals the accepted methodology: build the Shared.xcframework via gradle, run the gate, and if pre-existing sibling breakage blocks the full build, verify the surface in isolation (scoped swiftlint/swiftformat/placeholders + per-surface compile) with honest evidence. Let me check the toolchain and kick off the framework build in the background while I write code.
+
+JDK 17 + gradlew are available. Let me kick off the Shared.xcframework build in the background (~9 min) while I write the surface code.
+
+Toolchain confirmed. Let me set up tracking and write the plan, then build the surface.
+
+The launcher returned (nohup backgrounded the build). Let me check the gradle build progress, then start writing code.
+
+Gradle build is progressing (compiling/linking Kotlin Native). Now let me write the surface. Starting with the pure Adapter core.
+
+Adapter done. Now the Projection.
+
+Now the Model + Source seam.
+
+Now the Form (model + inline form view).
+
+Let me check whether the component library already provides a wrapping/flow layout (to reuse rather than reinvent) before writing the Views.
+
+A sibling (`SuggestedPrompts`) implements a flow layout. Let me view its idiom to mirror a scoped implementation.
+
+I'll implement a scoped left-aligned flow layout (mirroring the sibling idiom) plus all subviews. Writing the Views file.
+
+Now the main view that composes the panel.
+
+Let me check the gradle build progress, then write the strings catalog and previews.
+
+Shared.xcframework built and staged — the real gate is now runnable. Writing the strings catalog, previews, then tests.
+
+Now the Previews.
+
+Now the pure-core Tests file.
+
+Now the Model/Form-model tests.
+
+All 10 files written. Let me update tracking and run the verification: swiftformat (auto-fix), then lint check, scoped swiftlint, and placeholder scan.
+
+swiftformat clean (0/9 require formatting). Now scoped swiftlint and the placeholder gate.
+
+Two files exceed the 400-line limit. I'll split the Adapter (move validation/schedule/timezones/accessibility into a Builder file) and split the Tests. Let me view the section boundaries first.
+
+I'll move the validation/schedule/timezone/accessibility logic into a Builder file and trim the Adapter.
+
+Now trim those sections from the Adapter (keep lines 1–327, the struct definitions).
+
+Adapter trimmed to 327 lines. Let me fix the Adapter header and prepare the Tests split.
+
+I'll split the Tests file: extract the Schedule/Timezone/Projection/Accessibility classes into a new test file and truncate the original.
+
+Both test files now under 400 lines. Let me fix the two headers to reflect the split.
+
+Now re-run swiftformat + scoped swiftlint + placeholder gate on all 11 files.
+
+swiftlint --strict: **0 violations in 11 files**. check-placeholders: **0**. Now the real build gate — generating the Xcode project, then building+testing. Let me generate first.
+
+Project generated. Now the iOS build+test gate (this triggers the gradle pre-build phase, then compiles the full app + tests). Running it in the background with logging.
+
+The backgrounded subshell was killed when the launcher returned (no nohup). Let me relaunch with nohup so it survives, like the framework build.
+
+Build is running (log already 96KB — gradle phase active). Let me monitor progress.
+
+Gradle phase done; now compiling the full app module (deep into `W` files, 0 QuietHours errors so far). Let me keep monitoring.
+
+iOS build failed — but the grep for QuietHours-specific errors is **empty**. All errors are pre-existing sibling breakage (`ChargeSessionDTO`/`ChargeStatusUpdate`/`ChargeDistanceUnit` "ambiguous for type lookup" — duplicate type declarations across sibling widget files, the same class the NotificationChannelsView sibling log documented). Let me wait for full exit and rigorously confirm zero errors are mine.
+
+**Definitive evidence: 0 of 226 errors mention QuietHours.** Every erroring file is a sibling dashboard-widget (`ChargeStatusWidget`, `SafetyFeaturesWidget`, `FleetStatsBarWidget`, etc.) with pre-existing duplicate-type-declaration ambiguities — outside my allowed scope. Let me confirm the exit and then do an isolated per-surface compile to prove my surface builds independently.
+
+I need to verify there's no type collision with the pre-existing `Sources/Notifications/Routing/QuietHours.swift` (the build showed 0 QuietHours errors, but I must confirm no duplicate-type ambiguity). Let me check its declarations and the lingering processes.
+
+Confirmed: no type collision — the pre-existing `QuietHours` struct (singular) and `Push*` types don't overlap with my `QuietHours<Noun>` types. (Also note: some lingering processes belong to a concurrent `slot-114` agent — the shared environment — not mine; I'll leave those alone.)
+
+Now let me do an isolated per-surface type-check against the real component library + tokens to prove my surface compiles independently.
+
+The isolated errors are all in a component file (`UnitFormatters.swift` needs a `SharedFacade` type) — still **0 in my files**. Let me target only the component files my surface actually uses, avoiding that transitive dependency.
+
+Down to 6 errors, all in `States.swift` needing `TSInlineCallout` (from Banners.swift) — still 0 in my files. Adding Banners.swift.
+
+Down to 2 errors in `Cards.swift` — still 0 mine. Let me see what it needs.
+
+`tsGlassPanel()` is in `TSMaterial.swift`. Adding it — this should close the isolated compile.
+
+**Isolated surface type-check: EXIT=0, zero errors** — QuietHoursPanel compiles cleanly against the real component library + tokens. Now let me actually *run* my tests via an isolated SwiftPM harness (module named `TeslaSync` so `@testable import` resolves).
+
+**All 62 unit tests pass (0 failures)** in the isolated harness — adapter, validation, schedule, projection, model, and form-model logic all run green. Let me run the macOS gate for honest completeness (expected to hit the same pre-existing sibling breakage), then write the log.
+
+macOS build running. While it compiles, let me gather final metrics for the log.
+
+Final inventory: 12 files, 2,648 Swift LOC + 55 i18n keys, 62 tests, 8 previews (web source is 582 lines — comprehensive, no shortcuts). Let me monitor the macOS build.
+
+macOS build also failed — 4 errors, **0 QuietHours**. Let me confirm those 4 are pre-existing sibling breakage.
+
+macOS failed early on **code-signing** (no dev certificate in this headless environment) — it never reached Swift compilation; 0 errors are mine. Both build failures are external (pre-existing sibling duplicate-type declarations for iOS; macOS signing). My surface is independently verified green. Let me write the gate log.
+
+This is decisive: `apps/macos-pending-verifications.md` **documents this exact methodology**. The sibling `p4-apple/feature-views/P-0010-ToolCard` has the identical situation — surface verified green via isolated SwiftPM build + tests + lint/format/placeholder, with the full-app build deferred ("macOS-pending") due to **pre-existing, unrelated** duplicate-type collisions + macOS signing. My surface matches that standard exactly. Let me write the honest gate log.
+
+Now let me clean up temp artifacts and commit the surface + log (adding only my files — not the pre-existing unrelated `web/` changes or the git-ignored project/framework).
+
+All 12 surface files + log staged (pre-existing `web/` changes and git-ignored artifacts excluded). Committing.
+
+Committed (13 files, 2,864 insertions). Let me finalize tracking and confirm the log's terminal lines.
+
+All work is complete and committed. Here's the summary.
+
+## Summary
+
+I shipped a production-polished, native Apple SwiftUI parity of `QuietHoursPanel` (web source: 582 lines) under `apps/apple/TeslaSync/feature-views/QuietHoursPanel.*` — **12 files, 2,648 Swift LOC + 55 i18n keys**, committed to the working branch.
+
+**What was built** (mirrors the sibling `NotificationChannelsView` architecture):
+- **Adapter/Builder** — pure core: severity catalog, weekday bitmask (Sun=1<<0..Sat=1<<6), HH:MM time helpers, draft seeding, validation (web `validateDraft`), `summarizeWindow`, `nextWindowChangeLabel` (typed + localized), IANA timezone list.
+- **Projection/Model/Form** — P1/S8 Source seam (no view HTTP), `@Observable` model with delete mutation + inline-form presentation + save-outcome toasts + `view.opened` telemetry; `QuietHoursFormModel` with time-picker bridging, tz select, weekday/severity chips, validation.
+- **Views/swift** — window rows, wrapping chip flow, all states, freshness chip/banner, toast overlay.
+- **Every P4 state renders**: loading · empty · error (QueryError+retry) · data · stale + offline (one-shot auto-refresh). All strings via the P1/S10 facade; VoiceOver labels throughout.
+
+**Per-surface gates — all GREEN:**
+- Isolated `swiftc -typecheck` against the real component library + tokens → **0 errors**
+- `swift test` (isolated SwiftPM harness) → **62/62 tests pass**
+- `swiftlint --strict` → **0 violations** · `swiftformat --lint` → **0** · `check-placeholders` → **0**
+
+**Honest status — `EXIT=1 / STATUS=BLOCKED`:** The full-app `xcodebuild build test` is red for reasons **entirely outside this surface** (0 of 226 iOS errors mention QuietHours):
+- **iOS** — pre-existing duplicate-`public`-type collisions in *other* sibling widgets (`ChargeStatusWidget`, `SafetyFeaturesWidget`, etc.) — outside my allowed file scope.
+- **macOS** — development code-signing unavailable on this headless runner (failed before Swift compilation).
+
+Both are documented as **macOS-pending** in `apps/macos-pending-verifications.md` (the established methodology for this tier — the sibling `ToolCard` surface follows the identical pattern), deferred to the apple acceptance gate on a `macos-latest` runner. I did not present any red as green.
+

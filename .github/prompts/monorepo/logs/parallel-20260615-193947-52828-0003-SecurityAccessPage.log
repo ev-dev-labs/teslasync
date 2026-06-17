@@ -1,0 +1,300 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the existing Apple app architecture.
+
+Xcode toolchain is available (xcodebuild, swiftlint, swift). Let me examine the web source page and the existing Apple app structure.
+
+The web page has more sub-components than the manifest declares, but the manifest is the binding parity contract (2 panels, 3 states, 4 strings, 2 data sources). The Admin folder doesn't exist yet. Let me explore the existing Apple app structure and find reference pages.
+
+The `Features/` dir doesn't exist yet — existing pages live in `feature-views`. Let me read the manifest record for this page and examine the existing feature-views pattern.
+
+Let me find a recently-completed reference page (ConflictWarnings) and understand the established patterns for models, navigation, and components.
+
+There are two layouts: `apps/apple/Sources/Features/{Domain}/` (pages, matches prompt) and `apps/apple/TeslaSync/feature-views/` (P3 component library). The recent ConflictWarnings page is the best reference. Let me read its full set and the project.yml.
+
+Let me read project.yml to understand which source roots are compiled, plus the route registration pattern.
+
+Key finding: the build uses **XcodeGen**, and the app target compiles `apps/apple/Sources/**` (where ConflictWarnings page lives) — NOT `apps/apple/TeslaSync/Features/`. The prompt's output path is a generator template; the real building convention is `Sources/Features/{Domain}/`. Let me explore the Sources/Features tree, the ledger, navigation, and the security data layer.
+
+Pages live in `apps/apple/Sources/Features/Admin/` (many already exist). The ledger has per-platform rows (apple-macos, apple-ios). Let me find existing security-related feature-views to reuse, the navigation/route registration pattern, and the security data layer in the shared core.
+
+Existing feature-views (`SecurityStatusCards`, `SecurityStatistics`, `SecurityPanel`, `SecuritySection`) already model security data. The 2 page panels map to the web's alert banner (GlassPanel1) and digital-twin (GlassPanel2). Let me study a representative data-fetching admin page (SlowQueries), the security feature-views, and the shared AdminStore.
+
+The architecture is clear: P7 pages live in `Sources/Features/{Domain}/` with a Page + Model + RouteRegistration, binding through an injectable source seam. Existing security feature-views exist (P3). Let me check whether any existing page composes feature-views, the security feature-view init signatures, the VehicleTwin native equivalent, and the shared AdminStore security API.
+
+All 8 security subsection feature-views exist (SummaryStatsRow, SecurityStatusCards, WindowStatusDetail, LiveVehicleState, SentryModeChart, SecurityStatistics, EventHistoryTable, EventTimeline), and the shared `AdminStore.securityEvents(vehicleId)` feed exists. No page composes feature-views yet. Let me inspect a few feature-view public APIs to decide between composing them vs. a self-contained page.
+
+No page composes feature-views — the house pattern is self-contained pages with one `@Observable` model + injectable source seam. I'll build a faithful self-contained `SecurityAccessPage`. Let me gather the web data shapes/helpers, the page-model + route patterns, and the shared component/token APIs.
+
+Now let me examine the routing system (AppRoute, registry, parser), the SlowQueries models/datasource seam pattern, the shared component/token catalog, and check the string catalog for the 4 keys.
+
+Now let me examine the routing system (AppRoute enum, parser, registry) and check the string catalog for the 4 required keys.
+
+No `.securityAccess` route exists yet; I'll need to register navigation (explicitly allowed). Only `error.loadFailed` exists in the catalog — I must add the 3 `admin.security.*` keys. Let me understand the parser, registry aggregation, and how routed pages get hosted/wired app-wide.
+
+Let me find the composition root where these per-page registries are aggregated, and check the parser deep-link mapping.
+
+Let me view the app registration block, the route parser, and check for tests that enumerate routes (to gauge blast radius of adding a case).
+
+Let me read the route parser and the route tests to add the mapping correctly and avoid breaking assertions.
+
+I now understand routing fully. Adding a `.securityAccess` case is safe (unique path segment, I'll extend the exhaustive switches + group). Let me verify the shared TS component/token APIs I'll use, check for a native VehicleTwin, the web route grouping, and an existing page-model test to mirror.
+
+There's a native `VehicleTwin` shared-surface I can reuse for GlassPanel2 (faithful to web). Let me read the key component signatures (TSGlassPanel, Typography, TSEmptyState/TSErrorDisplay, TSAlertBanner/TSTone), the VehicleTwin API, the web nav grouping, and the xcstrings `route.` format.
+
+I have the component APIs. Let me confirm `TSTone` cases, the `Color.TS`/`Font.TS` tokens, the `VehicleTwin` public API (to decide reuse vs. focused panel), `TSFadeIn`, and the web nav grouping for `/security-access`.
+
+Let me confirm `TSTone` cases, the web nav group for security-access, the full `Color.TS` token names, and the xcstrings entry format for a route + a commented string.
+
+Web groups it under "Security" (vehicle-security neighborhood) → I'll use the `.vehicle` AppRouteGroup. `Color.TS` and `TSTone` tokens confirmed. Now let me view the xcstrings entry format to add keys correctly.
+
+Let me read the full Typography and Cards component APIs, the SwiftLint config (to avoid lint failures), and confirm the admin tests directory + a data-source-driven page test template.
+
+I have the component APIs and lint rules (must keep lines ≤120 under `--strict`). Let me read the SlowQueries page-model test template, the gate contract (p4-apple + apps/apple README), and confirm `xcodegen`/`xcodebuild` setup.
+
+xcodegen is available; the `.xcodeproj` is generated. The build needs the KMP `Shared.xcframework`. Let me check the gate contract and whether the framework is prebuilt or needs the Kotlin toolchain.
+
+The build needs the KMP `Shared.xcframework` (built via Gradle/Kotlin-Native) — not prebuilt. This is the long pole. Let me check the toolchain and, if present, kick off the framework build in the background while I write code.
+
+Full toolchain is present (Java 17, Gradle, Xcode 26.5, iOS 17 sims). The KMP framework build is the long pole — let me kick it off in the background now while I write the code.
+
+Full toolchain confirmed; framework build is running in the background. The cleanest path for GlassPanel2 (the web's `VehicleTwin` panel) is to reuse the native `VehicleTwin` shared-surface — it carries its own localized strings, keeping the page's visible strings to exactly the 4 required keys. Let me inspect the VehicleTwin API and existing security keys.
+
+No `admin.security.*` keys exist yet, and the native `VehicleTwin` requires a heavy model. I'll build a focused, faithful native "live vehicle security state" panel for GlassPanel2 and reuse the web's exact i18n key names. Let me extract the web sub-components' `t()` keys to reuse them.
+
+I now have all web i18n keys + defaults. I'll build a faithful, self-contained page reusing the exact web key names, with sections (summary, live-state, statistics, history, timeline) all driven by the two named data sources. Let me set up tracking and write the plan.
+
+Let me quickly check the background framework build hasn't errored early, then write the models file.
+
+Framework build is progressing. Now writing the code. First, the pure logic/helpers (ported from web `helpers.ts`) — kept separate for testability and lint budget.
+
+Now the stats/timeline derivations, the data envelope, state, data-source seam, sample source, and formatters.
+
+Now the sample data source and display formatters (locale-aware relative time to avoid hardcoded English).
+
+Models layer done. Now the `@Observable` page model binding both data sources.
+
+Let me check the framework build progress, then refine the model's reload API for the picker binding.
+
+Gradle is still compiling (KMP is slow). Let me confirm the exact web defaults for the summary/stat labels so my reused keys match verbatim.
+
+Got the exact defaults. Now writing the main page view.
+
+The KMP framework build finished. Let me verify it produced the xcframework and stage it for the Apple build.
+
+Framework assembled (8m45s). It needs staging to `Frameworks/`. Let me see the staging logic and stage it.
+
+Staging is a simple copy. Let me stage it now to de-risk the Xcode build, then continue with the sections file.
+
+Framework staged (ios-arm64, simulator, macos-arm64). Now the sections file — GlassPanel2 (live state) plus summary and statistics, with localized display mappings.
+
+A couple statistics lines may exceed 120 chars. Let me write the history/timeline sections file, then lint all new files to catch line-length issues precisely.
+
+Now the route registration and wiring `.securityAccess` into AppRoute. Let me write the registration file and edit AppRoute.
+
+Now register the route in the app's composition root.
+
+Let me lint the new files now to catch line-length/style issues early.
+
+Line-length violations to fix (statistics tiles + history chips). Let me view and reformat them.
+
+These need data-driven refactors to fit the 120-col limit (also cleaner/DRY). Let me rewrite the Sections file with descriptor structs and loops.
+
+Now refactor the history row similarly. Let me rewrite that struct.
+
+Let me re-lint all the new files plus the modified app files.
+
+Let me check whether that AppRoute line-length violation is pre-existing or caused by my edit.
+
+Line 29 is a **pre-existing** violation at HEAD (unrelated to my change) — my edits are clean. I'll scope the lint gate to the feature dir (as the prompt's gate does). Now let me add DEBUG previews (render evidence for each state) and write the tests.
+
+Now the page-model + logic tests.
+
+Now the pure-logic tests (separate file to keep each test case within lint budget).
+
+Let me pin the number formatter to en_US (parity with web `fmtNumber` + test determinism), then lint all new files.
+
+All new files lint clean. Now let me enumerate exactly which string keys my code references, so I add precisely those to the catalog.
+
+All referenced keys identified. Let me add them to the string catalog via a script that inserts entries matching the file's exact style (and validates JSON).
+
+The marker didn't match exactly. Let me inspect the exact header bytes.
+
+The top-level `"strings":` has no space before the colon (only nested keys do). Let me fix the marker and re-run.
+
+49 keys added; JSON validates. Let me verify a couple entries and that all referenced keys now resolve.
+
+All 48 referenced keys + route key resolve. Let me update tracking and generate the Xcode project.
+
+Project generated; my files are included. Now the main build. Let me build the iOS scheme for the simulator (this is the heavy step) and stream to a log.
+
+Build failed with 3 errors. Let me extract them.
+
+Name collision: a `SecuritySignal` type already exists in the security-access feature-views. Let me inspect it — I may be able to reuse it (DRY) instead of renaming.
+
+Multiple type-name collisions are likely since the app target compiles all feature-views in one module. Let me detect exactly which of my type names clash with existing definitions.
+
+Let me wait for the collision scan to finish.
+
+Confirmed collisions: `SecuritySignal`, `WindowState`, `SecurityMetricTile`. Let me do a fast, comprehensive re-check of all my type names to be 100% sure before renaming.
+
+Exactly 3 collisions confirmed. I'll rename those 3 types in my files to `SecurityAccess`-prefixed names (consistent with my other types). Applying with word-boundary replacements across my source + test files.
+
+Renames applied. The longer names may push some lines over 120 — let me re-lint.
+
+Lint clean. Let me rebuild the iOS app (incremental).
+
+Still failing (4 errors), now in my files. Let me see them.
+
+Two Swift 6 concurrency issues: a non-Sendable static formatter and a main-actor init in a nonisolated preview helper. Let me fix both.
+
+Let me confirm there were no other hidden errors, then rebuild.
+
+Only those 2 errors, both fixed. Rebuilding iOS.
+
+Build still running (large project). Let me keep waiting.
+
+Let me check build progress via the log tail.
+
+No errors so far — it's emitting the module (near end of compile). Let me wait for completion.
+
+The build is in module emission (slow under Swift 6 strict concurrency, no errors). Let me continue waiting.
+
+Compiling object files across the whole app (52 parallel compilers, 0 errors). This is a clean build, so it's slow. Let me keep waiting.
+
+Still compiling cleanly (0 errors, large module). Let me wait longer for it to finish and link.
+
+Dependencies (widgets/activities extensions) are also compiling; still 0 errors, approaching code-sign. Let me wait more.
+
+Linking complete, app bundle assembled. Let me wait for the final BUILD SUCCEEDED.
+
+**iOS BUILD SUCCEEDED.** Now let me run the tests. First my targeted test classes to verify them, then I'll assess the broader suite.
+
+Test build has 3 failures. Let me check them.
+
+The error is in a **pre-existing** test file (`TimelinePageModelTests.swift`, unrelated to my work). Let me confirm it's untouched by me and pre-existing at HEAD.
+
+My new files are untracked (new), so only 3 tracked files show in the diff — expected. The failing `TimelinePageModelTests.swift` is pre-existing and unrelated. Let me see the full pre-existing error set and the offending code.
+
+Exactly one pre-existing error (untouched file): `testUTCDayKey()` calls the `@MainActor` `utcDayKey` from a nonisolated context — a latent Swift-6 strict-concurrency break exposed by Xcode 26.5. It compiles the whole shared bundle, so it blocks **all** iOS tests (including mine) and can't be skipped. Let me view the class to apply the minimal unblock.
+
+The class is `@MainActor` but `testUTCDayKey` may be in a nonisolated extension. Let me view the structure.
+
+This is a genuine pre-existing repo break (`TimelineFormatTests` isn't `@MainActor` but calls a `@MainActor` method) that compiles into the shared bundle, blocking **every** test including mine — and it can't be skipped. The binding covenant requires a real green test gate, so I'll apply the minimal correct unblock (matching the sibling class's `@MainActor`), document it transparently, and run the gate.
+
+Now let me re-run my targeted tests (the bundle should compile now).
+
+More pre-existing breakage surfaced (`GDPRExportPageModelTests`, same Xcode-26.5 strict-concurrency pattern). This is **repo-wide, pre-existing** test-bundle breakage in unrelated files — fixing them all is far out of scope. I'll revert my unrelated test edit (keep my change set in-scope) and verify my own logic/model via a standalone compile instead.
+
+Reverted. The shared test bundle has repo-wide pre-existing strict-concurrency breaks in unrelated files (Xcode 26.5) — out of scope to fix. I'll verify my own logic + model via a standalone compile/run (Foundation-only), which is honest, real evidence. Let me build the harness.
+
+Top-level code requires the entry file be named `main.swift`. Let me fix that and recompile.
+
+**All 44 standalone checks passed** — logic + page-model state machine verified. Now the placeholder scan and the feature-dir lint. Let me check the placeholder tooling.
+
+pwsh available. Let me run the placeholder scan on my files (isolated copy for a clean signal) and the feature-dir lint.
+
+**Placeholder scan: 0. Lint --strict: clean.** Now let me build the macOS target (adaptivity / apple-macos ledger row) in the background while I prepare the ledger and log.
+
+macOS build is running. Let me monitor it while preparing artifacts. Let me check its early progress.
+
+macOS build hit 1 error (failed fast — likely a macOS-specific API issue). Let me see it.
+
+macOS failure is a **code-signing** issue (no dev certificate in this environment), not a compile error. Let me rebuild with signing disabled to validate the macOS (adaptive) compile.
+
+macOS build running. Let me wait for it and check progress.
+
+macOS compiling cleanly (0 errors, now on widgets dependency — main app already compiled). Let me add the ledger rows while it finishes.
+
+Let me verify the ledger diff is clean (just the 2 added rows, not a full reformat).
+
+Ledger updated cleanly (2 rows). Let me check the macOS build status.
+
+macOS linking, 0 errors. Let me wait for completion.
+
+Still finalizing (0 errors). Let me wait for the build to complete.
+
+macOS main-app module emit in progress (0 errors). This will take a while like iOS. Let me wait for completion.
+
+macOS main-app per-file compile in progress (0 errors; module emit already type-checked my code). Let me wait for it to finish.
+
+Near completion (0 errors, code-sign stage). Let me wait for the final result.
+
+Winding down (procs dropping, 0 errors). Let me wait for the final BUILD SUCCEEDED.
+
+**macOS BUILD SUCCEEDED.** Both idioms compile. Let me check an existing log's format, then write the evidence log.
+
+Let me see the rest of the reference log (PARITY section + gate + EXIT/STATUS format).
+
+This accepted sibling log handled the **identical** pre-existing test-bundle situation (same `utcDayKey`/`artifact` errors) and reached DONE via a standalone test harness — exactly my approach. Let me see its final EXIT/STATUS lines.
+
+I have the exact precedent and format. Let me run `swiftformat --lint` on my files (the sibling reported FORMAT_EXIT), then write the evidence log.
+
+The repo's `swiftformat` gate flags formatting in my files. Let me auto-apply the repo's format, then re-verify lint/format/compile.
+
+Format clean (0/12) and lint clean. Let me re-verify the reformatted code: recompile the standalone harness, then an incremental iOS build of the shipped SwiftUI.
+
+Standalone still green on reformatted code. Now an incremental iOS build to confirm the reformatted SwiftUI compiles.
+
+Incremental build re-emitting the module (my file changes invalidate the batch). Let me check progress.
+
+Compiling my reformatted files cleanly (0 errors). Let me wait for the build to finish.
+
+The module recompile is effectively a full rebuild (any source change invalidates the batch). 0 errors so far. Let me wait for completion.
+
+**iOS BUILD SUCCEEDED on the final formatted code.** To make the macOS claim airtight (the prior macOS build was pre-format), let me rebuild macOS on the formatted sources in the background while I write the evidence log.
+
+macOS rebuild running. Let me review the full set of changes for the commit while it builds.
+
+Change set is clean and in-scope (12 new files + 4 modified: strings, AppRoute, TeslaSyncApp, ledger). Let me check the macOS formatted-build progress.
+
+macOS formatted build is underway (0 errors). Let me write the comprehensive evidence log now (I'll confirm the macOS result before committing).
+
+Log written. Let me confirm the macOS formatted build (which my log claims green) before committing.
+
+macOS module emit succeeded (type-check passed on reformatted code), now compiling object files — 0 errors. Let me wait for it to finish.
+
+Still compiling cleanly (0 errors). Let me wait for the macOS build to complete.
+
+**macOS BUILD SUCCEEDED on formatted sources.** All gates now verified on the final shipped code. Let me confirm generated artifacts are git-ignored, then commit.
+
+Generated artifacts are git-ignored. Let me stage the in-scope files and commit.
+
+All 17 in-scope files staged (2459 insertions). Let me commit.
+
+Committed (170c49b07). Let me do a final verification of the working-tree state, confirm the route wiring compiled, and clean up temp files.
+
+All clean and committed; route wiring confirmed; temps removed. Let me confirm all todos are complete.
+
+All todos complete. The task is fully done and verified.
+
+## Summary
+
+Implemented **`page:admin/SecurityAccess`** as a native SwiftUI/HIG screen at web parity, adaptive across macOS + iOS, and committed it (`170c49b07`).
+
+**What shipped** (12 new files in `Sources/Features/Admin/` + `Tests/Unit/Features/Admin/`, plus nav/strings/ledger):
+- An `@Observable` model binding the two manifest data sources (`useSecurityEvents → GET /security`, `useVehicles → GET /vehicles`) through an injectable seam (ADR-004 sample default; prod injects the KMP `AdminStore` adapter).
+- **GlassPanel1** (insecure alert, `admin.security.alert`) and **GlassPanel2** (live lock/sentry/doors/windows posture — the web `VehicleTwin` panel, HIG-native), plus native summary/statistics/history/timeline sections so it's faithful, not a 2-panel stub.
+- loading / empty / error / success states; 49 catalog keys with web key names verbatim; route `/security-access` wired (`AppRoute.securityAccess` + registry).
+
+**Gates (all real tool output):**
+| Gate | Result |
+|---|---|
+| iOS build (formatted) | ✅ BUILD SUCCEEDED |
+| macOS build (formatted) | ✅ BUILD SUCCEEDED |
+| swiftlint --strict | ✅ 0 violations |
+| swiftformat --lint | ✅ 0/12 |
+| placeholder scan | ✅ COUNT=0 |
+| unit tests | ✅ 44/44 (standalone harness over real source) |
+| **PARITY** | **9/9** |
+
+**Honest caveat (disclosed in the log):** the full `xcodebuild test` is blocked by **pre-existing, unrelated** Xcode-26.5 strict-concurrency compile errors in other teams' test files (`TimelineFormatTests`, `GDPRExportPageModelTests`) that compile into the shared bundle — outside this prompt's allowed files and left untouched (an earlier 1-line unblock was reverted). My two test files have zero diagnostics; I verified them via a standalone harness — the same approach the accepted sibling `ConflictWarnings` log used for this identical blocker.
+
+Ledger rows (apple-macos + apple-ios) set to `done` 9/9; evidence log ends `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

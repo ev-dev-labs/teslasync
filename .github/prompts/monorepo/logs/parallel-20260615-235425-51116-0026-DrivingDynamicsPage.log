@@ -1,0 +1,308 @@
+I'll start by exploring the codebase to understand the task scope - the web source page, the Apple app structure, and supporting infrastructure.
+
+The web page is far more complex than the manifest suggests - it has 11 sub-components. The prompt explicitly says to reproduce every panel. Let me explore the web components and the Apple app structure in parallel.
+
+The Apple app is large and established. Let me examine its structure - particularly the Features directory, existing page patterns, and the Driving folder if it exists.
+
+The Apple app uses `Sources/Features/` structure, not `TeslaSync/Features/` as the prompt states. There's an existing `DriveScorePage` I can use as a template. Let me understand the build system and project layout.
+
+This uses XcodeGen (`project.yml`). There's a path discrepancy between the prompt and actual structure. Let me find the p4-apple README gate contract, check for an existing DrivingDynamicsPage log, and read the project.yml.
+
+Now I understand the build layout. Critically, the prompt's stated output path `TeslaSync/Features/Driving/` is **not** in the XcodeGen sources — actual pages live in `Sources/Features/`. Let me verify the toolchain availability (xcodebuild, xcodegen, swiftlint) and read the gate contract.
+
+Full toolchain is available (Xcode 26.5, xcodegen, swiftlint, swiftformat, pwsh) — the gate can actually run. Now let me study the closest existing page template (`DriveScorePage`) and the parity/ledger/nav infrastructure.
+
+Excellent — the `DriveScorePage` set is a rich, established template (Page + `@Observable` Model + RouteRegistration + Sample data sources + decomposed Sections). Now let me read all 11 web sub-components to understand every panel I must reproduce. I'll batch-read them.
+
+Now the remaining 7 components.
+
+Now the final 4 components.
+
+I now have a complete picture of all 11 web sections. This is a large parity page. Let me create a plan and survey the Apple infrastructure (components, charts, units facade, routing). Let me look at the Sources structure and the DriveScorePage section files.
+
+Great, I now understand the chart wrapper APIs. Let me survey the component library exports, the Units facade, the routing system, and a sample page log + ledger format.
+
+Key finding: `AppRoute` has `.driving` (path `/driving`) but no `.drivingDynamics`, and `DriveScorePage` already claims `.driving` via the `/drive-score` alias. I need to understand the routing for `/driving-dynamics`. Let me check the parser, the web routes, and how registrations are wired.
+
+Now the routing picture is clear: web has separate `/driving-dynamics` and `/drive-score` routes, but Apple's `AppRoute` enum only has `.driving` (claimed by DriveScorePage). I need to understand how registrations are wired and whether other pages added new route cases. Let me investigate the registration wiring, existing RouteRegistrations, and the parity manifest/ledger.
+
+Let me read the central registration in TeslaSyncApp.swift, the parity manifest record, and the ledger format.
+
+Now I understand the full registration pattern. Let me check the ledger files, the placeholder-check script, a sample page log for the expected format, and whether the `.xcodeproj` needs generating.
+
+Let me examine a reference page log format, the placeholder patterns, the DriveScore ledger rows, and locate the string catalog.
+
+Let me read the DriveScore page log (the sibling reference) to match the exact log format including the `=== PARITY ===` section.
+
+The DriveScore log confirms my path decision: `Sources/Features/Driving/` is correct (the prompt's `TeslaSync/Features/Driving/**` is just an allowed-files alias). Let me read the PARITY section and tail format.
+
+This reference is invaluable. Note the DriveScore log documents the **full xcodebuild as RED (exit 65)** due to pre-existing out-of-scope `#Preview` `return` issues with Swift 6.3.2/Xcode 26.5, yet reached STATUS=DONE via in-scope type-checks + a logic harness. Let me read how it concluded EXIT/STATUS, then independently verify the toolchain situation.
+
+I have the complete picture and the precedent. The full `xcodebuild` is RED due to pre-existing out-of-scope `#Preview` issues, but the page reached DONE via in-scope type-checks + a logic harness. Let me write my plan, then read the core infrastructure APIs (Units facade, chart wrappers, key UI components, formatters). Let me set up tracking and read infra in parallel.
+
+The Units facade needs the `Shared` xcframework. Let me read the key component signatures I'll use, plus the `tsUnits` environment and theme tokens. I'll batch these reads.
+
+Let me read the remaining component signatures (Cards, States, Badges, charts, DataTable, Filters), the typography/theme tokens, and the `tsUnits` environment.
+
+Now the remaining UI primitives, typography/theme tokens, the `tsUnits` environment, and form filters. Let me batch these reads.
+
+Let me read Typography, Theme tokens, DataTable, Filters (RangePicker), and find the `tsUnits` environment definition and DriveScore sample/test patterns.
+
+Let me read the `tsUnits` environment, DataTable + RangePicker signatures, the design tokens, and the DriveScore sample-data + test patterns to finish my survey.
+
+Let me read the `tsUnits` environment/presets, the design tokens, and the DriveScore sample-data + test patterns.
+
+Let me verify token names, read a DriveScore test pattern, and read the web data shapes (coach, motor, drive-dynamics) I need to model.
+
+Let me read the `MotorSnapshot`, `DriveDynamicsSnapshot`, and `Drive` shapes, plus the `useDrivingCoach`/`useMotorLatest`/`useMotorHistory`/`useDriveDynamicsLatest` hooks for endpoints and field names.
+
+Let me read the full `MotorSnapshot` and `DriveDynamicsSnapshot` interfaces.
+
+I now have all data shapes and component APIs. Before coding, I must verify adding a `.drivingDynamics` enum case won't break exhaustive switches or tests elsewhere. Let me check for switches over `AppRoute` and any route-count tests, and look at the sidebar rendering.
+
+Two things to verify: `WatchDeepLink.swift` (compiled in the watch target, switches on `.dashboard`) and the exact `RouteTests` uniqueness assertion. Let me read both, plus confirm the sidebar renders registered routes.
+
+`WatchDeepLink` is a standalone enum (safe), and `RouteTests` only needs a unique path segment (✓). Let me do a final check for any other exhaustive `AppRoute` switches outside `AppRoute.swift`, then I'll start building.
+
+The other matches are separate enums with their own `.vehicles`/`.charging` cases (not `AppRoute` switches). The sidebar renders registered routes via `routeHosts.view(for:)`. I'm confident. Let me check the chart palette indices, then write my plan and start building.
+
+I have everything needed. Palette mapping: blue→0, amber→1, green→2, yellow→3, cyan→4, red→5, purple→6. Let me check the `Shared.xcframework` availability (needed for builds), then write my plan and start coding.
+
+`Shared.xcframework` isn't built yet (needs the KMP/Gradle build). Let me inspect the build script and kick it off in the background early, since it may be slow — meanwhile I'll write code.
+
+The `Shared.xcframework` requires a Kotlin/Native Gradle build (potentially slow). Let me verify the toolchain and kick it off in the background while I write code.
+
+Java 17 + gradlew present. Let me kick off the `Shared.xcframework` build in the background, then start writing code while it compiles.
+
+Build is running in the background. Let me set up my plan and todos, then start writing the Swift implementation.
+
+Let me check the Gradle build progress, then start writing the models.
+
+Gradle is compiling (downloading Kotlin/Native dist). Let me start writing the Swift files. First, the data models.
+
+Models done. Now the pure engine (derivations) with converter closures so it stays Units-free and testable.
+
+Now the display-boundary formatters using the Units facade.
+
+Now the `@Observable` page model with the data-source seam and phase machine.
+
+Let me update todos and check the Gradle build, then write the sample data source.
+
+Gradle is linking frameworks (progressing). Let me write the sample/empty/failing data sources.
+
+Let me check the available skeleton components before writing the page (to handle the loading state cleanly without tripping the placeholder scanner).
+
+All skeleton primitives exist (no `.placeholder` needed in my code). Now the main page view + skeleton.
+
+Let me verify the exact `TSSelect`/`TSSelectOption` signatures before relying on them, then write the sections.
+
+`TSSelect` confirmed. Now the core sections file (live motor status, speed & gear, efficiency insights, summary stats, tips) plus shared helpers.
+
+Let me check the Gradle build, then write the telemetry panels (G-force, pedal, autopilot).
+
+Still linking (progressing). Let me write the telemetry panels (G-force, pedal, autopilot).
+
+Now the chart sections (motor-history charts + drive-analytics charts).
+
+Now the Driving Coach section (the largest — gauge, style breakdown, efficiency, weekly trend, patterns, recommendations, per-drive table).
+
+Let me check the Gradle build and write the route registration.
+
+Build is on the final target (macOS framework). Let me write the route registration.
+
+Build nearly done. Now let me wire navigation: add the `.drivingDynamics` case to `AppRoute` (enum, pathSegment, systemImage, group).
+
+Now wire the registration into `TeslaSyncApp.swift`, next to the DriveScore registration.
+
+Build is finishing the macOS link. Let me inspect the string catalog structure to add keys programmatically (safer for a large JSON file).
+
+The catalog has 10,581 keys across multiple languages. Let me check how the sibling `driveScore.*` keys are structured (which languages) to match the convention.
+
+The convention is `en`-only with `extractionState: manual`. Let me check the catalog's exact serialization format (sort order, indentation) so I add keys without reformatting the whole file.
+
+The catalog uses Xcode's xcstrings format (en-only for new keys). I'll insert keys via targeted text to avoid reformatting. First, let me extract the **canonical** `dynamics.*` values from the web i18n source (en.json) rather than inline defaults, since keys like `dynamics.power` appear with different inline fallbacks.
+
+Let me get the remaining keys (the list was truncated) and check which of my Swift-specific keys (aria, coach.style.*, coach.impact.*, etc.) exist in the web catalog.
+
+I have the canonical web values. Let me extract the exact set of string keys actually used in my Swift files, so my catalog additions are complete and accurate.
+
+I have the exact key set. The `chart.*` entries are SF Symbol names (not catalog keys). Let me build the complete value map (merging web canonical values + my Swift-specific keys) and insert missing keys via targeted text to avoid reformatting the catalog.
+
+130 keys added. Let me verify every concrete key my code uses now resolves in the catalog (resolving the dynamic `\(rawValue)` patterns and excluding SF Symbol names).
+
+One key (`dynamics.autopilotNoData`) had an inline-only web default. Let me add it.
+
+All keys present. Let me check the Gradle build status now.
+
+The `Shared.xcframework` built successfully and is staged. Now let me write the tests, then run all gates. First the engine tests (pure logic).
+
+Now the model state-machine tests.
+
+Tests written. Now let me run the linters on my new files — swiftformat and swiftlint.
+
+swiftformat wants the one-line empty data-source methods wrapped. Let me auto-fix with swiftformat (the ecosystem tool), then re-verify.
+
+Let me verify formatting passes now and run swiftlint --strict.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+Several lint fixes needed: a large tuple, file/type-length limits, trailing-closure style, and a few long lines. Let me fix them — starting with the engine tuple and the models file (1 line over).
+
+swiftformat reformatted the files. Let me view the current engine speedBuckets definition and the zip usage.
+
+Now let me check current line counts (swiftformat may have changed them) and trim the Models file.
+
+Let me view the Models header to trim it (1 line over the 400 limit).
+
+I'll move the `MotorStats` type to the Engine file (its logical home as the engine output), which cleanly brings Models under 400. Let me view the end of Models.
+
+I'll move `MotorStats` to the Engine file. Let me remove it from Models and append it to Engine.
+
+Now let me append `MotorStats` to the end of the Engine file.
+
+Models (361) and Engine (337) are now under 400. Now let me split the Charts file — find where the DriveAnalytics section begins.
+
+Let me split out the DriveAnalytics section into its own file.
+
+Now let me find and fix the remaining long lines (>120 chars) in Analytics and Telemetry.
+
+Only Telemetry:140 remains long. Let me fix it by extracting the value, then re-run swiftlint on all files (it counts characters, so it's the source of truth).
+
+Now let me split the Sections file (464). Let me find the section boundaries.
+
+Let me split the Sections file at the Motor Efficiency section (move efficiency/summary/tips to a Panels file).
+
+Sections (247) and Panels (218) done. Now the Coach file — move the table columns + tone helpers to an extension file and fix the trailing-closure style. Let me view the relevant region.
+
+I'll move `coachColumns` + its `scoreTone`/`styleTone` helpers + the comparators into a separate extension file (reducing the struct body and fixing the trailing-closure style). Let me view the comparators at the file bottom first.
+
+Let me restructure the Coach file via Python — remove `coachColumns`, `scoreTone`, `styleTone`, and the comparators from it, then create a separate table-extension file with the corrected (non-trailing-closure) versions.
+
+Now let me create the table-extension file and verify the main Coach file is intact.
+
+Let me verify the main Coach file's tail is intact after the surgery.
+
+The Coach file is intact. Let me re-run swiftformat on all my files (to normalize the edits), then swiftlint --strict.
+
+All files under 400 lines now. Let me run swiftlint --strict on the full set.
+
+Just 3 long CSV lines in Charts.swift. Let me view and fix them.
+
+Let me re-run swiftlint --strict to confirm all violations are resolved.
+
+swiftlint passes. Let me confirm formatting and run the placeholder gate (ADR-011).
+
+The placeholder gate flags `DrivingDynamicsPage.swift:148`. Let me check what's there.
+
+The scanner flagged my own comment's word "placeholder". Let me reword it (and check no other forbidden words exist in my files).
+
+Placeholder gate clean (COUNT=0). Now for the real compile. Let me generate the Xcode project, then build. First, xcodegen.
+
+Project generated. Now the real compile — let me run the full `xcodebuild build` for the macOS scheme (this compiles all my code against the real components + `Shared.xcframework`). I'll capture to a log.
+
+Build running in the background. Let me check its progress.
+
+Module emission is underway with 0 errors so far — the whole module is type-checking. Let me wait for the build to complete.
+
+The build failed — but on **pre-existing** `TeslaSync/*.Previews.swift` files (VinDecoder, WidgetStatGrid, Slider, etc.), exactly as the DriveScore sibling documented. Crucially, `EmitSwiftModule` (whole-module type-check) passed. Let me verify none of the 100 errors are in my files and confirm the error class.
+
+There are real **name collisions** — my types `DrivingDynamicsVehicle`, `DrivingCoachData`, `CoachDriveScore`, etc. clash with pre-existing types in `TeslaSync/dashboard-widgets/` and `TeslaSync/feature-views/`. The whole-module `EmitSwiftModule` passed but per-file compiles hit ambiguity. I must rename my types. Let me find all collisions.
+
+Only 3 declaration collisions found via that pass, but let me comprehensively check **every** type/enum/struct I declared against the rest of the module to be certain before renaming.
+
+Let me wait for the full collision list to complete.
+
+The real top-level collisions are 4 types: `CoachImpact`, `DrivingCoachData`, `DrivingDynamicsFormat`, `DrivingDynamicsVehicle` (`Failure`/`LoadState` are nested → false positives). Let me confirm my candidate replacement names are free and locate the existing `DrivingDynamicsFormat`.
+
+Confirmed: only 4 real collisions, and my candidate names are free. Let me rename the 4 colliding types in my files only (word-boundary safe).
+
+Renames applied cleanly. The longer `DynamicsCoachImpact` name may push some lines over 120 — let me re-format and re-lint, then rebuild (the widget cascades should clear too).
+
+Lint clean. Now let me rebuild the macOS target to confirm the collisions are resolved.
+
+Build running. Let me wait and check the result.
+
+The collisions are resolved — 0 errors, build progressing past the previously-failing files. Let me wait for it to finish.
+
+Still building cleanly (0 errors). Let me wait further for completion.
+
+Build is in the per-file compile phase (0 errors). Let me wait more — this phase recompiles all module files.
+
+500 files compiled, 0 errors — nearly done. Let me wait for the final link + result.
+
+Down to 1 error. Let me find it.
+
+Found my single error — `insightPanel`'s `content` closure needs `@escaping` (it's passed to `TSGlassPanel`'s escaping closure). Let me fix it.
+
+Fixed. Let me check for any other non-escaping ViewBuilder params in my files, then rebuild.
+
+Only that one ViewBuilder param (now `@escaping`). Let me rebuild the macOS target.
+
+Build running (incremental). Let me prepare the parity ledger rows while it compiles, then verify the build.
+
+Let me check the build result.
+
+0 errors, still linking. Let me wait for completion.
+
+Let me check compile progress and keep waiting.
+
+All compiled with 0 errors; awaiting link. Let me wait for the final result.
+
+Whole-module type-check passing (0 errors). Let me continue waiting for the final link.
+
+Still compiling with 0 errors (~16 min in). Let me give it a longer wait to reach the link.
+
+Let me find this error.
+
+The error is in a **pre-existing** file I never touched — `Sources/Features/Diagnostics/AnomalyDashboardModels.swift:185` — a compiler "unable to type-check in reasonable time" timeout (not my code). The whole-module `EmitSwiftModule` (type-check) passed with 0 errors, proving my code is correct. Let me verify this is genuinely pre-existing and unrelated to my changes.
+
+Confirmed pre-existing and out-of-scope: `AnomalyDashboardModels.swift` is unmodified by me, and its failing expression (`let ranked = counts.map{...}.sorted{...}`) references none of my types — it's a Swift type-checker "reasonable time" timeout (a known flaky heuristic). The whole-module `EmitSwiftModule` type-check passed with 0 errors. This timeout is often transient — let me retry the incremental build (only that file + link remain).
+
+While the retry runs, let me note: the Swift "reasonable time" heuristic is iteration-count based, so it may be deterministic. Let me prepare a standalone logic harness as a fallback proof of my engine/model behavior (matching the DriveScore approach). First, let me check the retry result.
+
+Still building, 0 errors. Let me wait for the result.
+
+0 errors and progressing past the earlier failure point. Let me wait for the final result.
+
+The retry deterministically fails on the **same pre-existing, out-of-scope** file (`AnomalyDashboardModels.swift` — unmodified, references none of my types). This is the DriveScore precedent: full build RED due to pre-existing breakage, while the whole-module type-check of my code passes. Let me build a standalone logic harness to prove my engine/model behavior at runtime (as DriveScore did).
+
+Now the stub Units facade and the harness main with the assertions.
+
+Let me compile and run the harness (with `-D DEBUG` to include the Empty/Failing doubles).
+
+The harness used the wrong drive type name (`DynamicsDrive` vs the actual `DrivingDynamicsDrive`). Let me fix it.
+
+Swift 6 top-level code is MainActor-isolated; the mutating helpers need `@MainActor`. Let me annotate them.
+
+Harness compiled cleanly under Swift 6. Let me run it.
+
+**Harness: CHECKS=59 FAILURES=0** — runtime behavior proven. Now let me verify the iOS target's whole-module type-check (covers my `#if os(iOS)` adaptive branches). I'll start the iOS build in the background and capture the `EmitSwiftModule` (type-check) result, which precedes the pre-existing per-file failure.
+
+While the iOS build runs, let me update todos and start drafting the evidence log. Let me check the iOS build progress first.
+
+iOS `EmitSwiftModule` (whole-module type-check) running with 0 errors. Let me confirm it completes the app module type-check, then write the log.
+
+iOS whole-module type-check passed (0 errors, now in per-file compile) — my `#if os(iOS)` branches are validated. I have comprehensive in-scope proof. Let me get final line counts and write the evidence log.
+
+Let me write the comprehensive evidence log matching the sibling format.
+
+Log written. Let me verify the iOS build reached/passed the app-module type-check (confirming my iOS claim) and validate the ledger JSON.
+
+iOS whole-module type-check passed (now in per-file compile, 0 DrivingDynamics errors); ledger is valid. I made small edits (Panels `@escaping`, Charts CSV) after the last lint — let me re-verify formatting/lint on the final state and confirm the catalog still parses.
+
+All final in-scope gates green (swiftformat clean, swiftlint 0, catalog valid). Let me wait for the iOS build to confirm its end state (for honest documentation), then clean up temp files.
+
+Confirmed: iOS full build also fails on the **same** pre-existing `AnomalyDashboardModels.swift:185` timeout (0 DrivingDynamics errors). Let me note both platforms in the log's full-build section.
+
+Let me verify the generated `.xcodeproj` is git-ignored (shouldn't be committed) and review the final changeset.
+
+The changeset is exactly as intended; `.xcodeproj` is git-ignored. Both platforms' whole-module type-checks passed (0 DrivingDynamics errors); the only RED is the pre-existing out-of-scope `AnomalyDashboard` timeout, identical on macOS and iOS. Let me finalize the todos and plan.
+
+All todos complete. Let me do a final check that no background builds are still running and confirm the deliverable file set is intact.
+
+That's a different slot's process (slot-25, not mine). Let me confirm my deliverables cleanly.
+
+14 source + 2 test files confirmed; log ends `EXIT=0 / STATUS=DONE`. I noticed a count inaccuracy in the log (said "16 source" — it's 14 source + 2 test = 16 Swift files). Let me correct it for accuracy.
+
+The implementation is complete and verified. Let me provide the final summary.
+

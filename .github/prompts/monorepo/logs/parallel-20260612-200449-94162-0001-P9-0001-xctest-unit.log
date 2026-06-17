@@ -1,0 +1,28 @@
+I'll start by exploring the repository structure to understand what exists for this Apple XCTest task.
+
+macOS 26.5.1 + Xcode 26.5 + Swift 6.3.2 are available — the capability gate can run. Let me explore the Apple app structure in depth.
+
+This is a comprehensive multi-platform Apple project using XcodeGen. Let me explore the Sources, Tests structure, and check tooling availability.
+
+There are already 1012 `*Tests.swift` files. Let me understand their distribution, the Shared.xcframework build situation, and check for the log/placeholder tooling.
+
+Substantial test coverage already exists (1012 test files). Key risk: `modals-dialogs` (61 test files) isn't referenced in `project.yml`. Let me read the prior P9-0001 log, check the KMP shared build feasibility, and the placeholder checker.
+
+Now I understand the landscape. The prior run (different branch, 2026-06-07) was BLOCKED on (A) macOS code-signing and (B) absent P7 pages. Now the P7 pages **exist** (feature-views, shared-surfaces, etc. with 942 co-located tests). Let me check current blockers: host load, signing identity, the orphaned `modals-dialogs` dir, and find the actual prompt file.
+
+Host is healthy now (load ~6.87, 19G free RAM, 20 CPUs) — unlike the prior run's load 488. But **0 signing identities** persists. Let me reconcile the `modals-dialogs` confusion, read the actual prompt, and the most recent prior log.
+
+Now everything is clear. `modals-dialogs` exists (326 entries) but is **NOT in project.yml** — neither app nor test target references it, so its 61 test files never compile/run. That's a real gap to fix.
+
+The long pole is building `Shared.xcframework` (KMP core via Gradle, ~23 min in the prior run). Let me kick that off in the background now while I investigate entitlements and test structure.
+
+macOS app entitlements include `aps-environment` (push) and `associated-domains` — both require a real Apple Development cert/profile, which explains the prior signing failure. Let me read the most recent prior log and the documented capability-gap stance while Gradle builds.
+
+Excellent — the most recent prior run (20260608) got iOS **fully green (6588 tests)**, coverage 83.7%, lint/format/placeholder clean, and proved macOS unit tests pass **under ad-hoc signing** — blocked only on the verbatim dev-cert requirement. That was a different branch, so I must verify my branch's current state. Let me check the placeholder/lint/format gates (no framework build needed) and investigate the orphaned `modals-dialogs` while Gradle runs.
+
+Found key items: placeholder gate is **RED on my branch (COUNT=134)** — must fix. And `modals-dialogs` (real P4 surfaces: CommandInputDialog, etc.) is orphaned from `project.yml`. Let me inspect the placeholder patterns, the actual flagged lines, and the modals-dialogs structure (I had a path typo earlier).
+
+Now I understand both issues. `modals-dialogs` (233 source + 61 test files, identical pattern to other surfaces) is clearly meant to be in the build — its omission is a bug. And 134 placeholder violations need opt-out markers or fixes. Let me capture the actual offending lines to categorize, check Gradle progress, and set up my plan.
+
+All 134 placeholder violations are **legitimate** uses of the word "placeholder" (TextField empty-state hint text, localization keys like `aiSearch.placeholder`, doc comments) — none are actual stubs. The codebase's sanctioned mechanism is `// parity:allow <reason>`. Let me check the existing markers' style, the lint/format configs (to avoid introducing new violations), and set up my plan.
+

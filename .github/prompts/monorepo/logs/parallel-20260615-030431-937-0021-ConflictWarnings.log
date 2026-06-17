@@ -1,0 +1,68 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The `ConflictWarnings.*` files already exist in `feature-views/`. Let me examine the current state and the established patterns.
+
+The implementation already exists and is comprehensive. Let me verify the supporting infrastructure: tooling availability, ledger state, log file, and the design-token dependencies it references.
+
+Tooling is available (Xcode, swiftlint, pwsh). Two prompt tracks exist. Let me understand how completed *page* prompts were satisfied vs. the existing feature-views implementation.
+
+Page prompts live under `apps/apple/Sources/Features/{Domain}/`. Let me read the manifest record, the gate contract, and how ConflictWarnings is referenced in the Automations module.
+
+Now I understand the page-track convention. Let me read the gate contract, project layout, and a complete page exemplar to use as a template.
+
+XcodeGen drives the project from `apps/apple/project.yml`. The real page convention is `apps/apple/Sources/Features/{Domain}/`. Let me read the project config and the ApiPlayground exemplar (page + model + route registration).
+
+Both `Sources/` and `TeslaSync/feature-views/` compile into the same `TeslaSync` module. Let me read the page exemplar (ApiPlayground), the route system, and how Automations already references ConflictWarnings.
+
+Let me examine the route system and how Automations already references ConflictWarnings.
+
+The existing `AutomationBuilderPage.Editors.swift` already integrates the feature-views `ConflictWarnings`. `ActionBuilder` is the closest analog — a builder sub-component that has both a feature-view AND a page-track route registration. Let me study that pattern.
+
+The `ActionBuilder` unit (also `(unrouted)`) is the exact precedent: registered as a `NavigationDestination` via a `PageLink` value, not a top-level `AppRoute`. Let me study its page + model to mirror the convention, and check the string catalog.
+
+I have a clear template now (`ActionBuilder` page-track). Let me check tooling availability, whether the string already exists in the catalog, how ActionBuilder's destination is wired, and the ledger row format.
+
+Key findings: `automations.builder.conflict` already exists in the catalog; `actionBuilderDestination` is unwired infrastructure (correct for unrouted units); xcodegen/swiftformat available but `Shared.xcframework` is absent (KMP toolchain). Let me verify the existing string value, the ledger format for an unrouted page, and a test exemplar.
+
+Let me read the ActionBuilder ledger rows (exact unrouted-page format), its evidence log structure, and the existing string entry.
+
+The catalog keys are `translation.`-prefixed. Let me verify how the existing ActionBuilder page keys resolve to understand the lookup convention.
+
+The web key resolves via the `translation.`-prefixed catalog entry, but the page-track convention (ActionBuilder/ApiPlayground) uses non-prefixed `LocalizedStringKey` lookups — so I'll add non-prefixed entries. Let me confirm the shared-component/token signatures I'll depend on, and the test exemplar.
+
+Tokens confirmed. Let me read the ApiPlayground model + a page-track test to mirror exactly, then I have full context to implement.
+
+I have the full pattern. Let me verify no symbol collisions for my planned page-track types, read the swiftlint config, and inspect the xcstrings entry format to mirror.
+
+Let me confirm `AutomationConflict` has a single definition before reusing it.
+
+Single `AutomationConflict` definition confirmed — safe to reuse. Let me verify a couple of shared catalog keys exist, then I'll start implementing.
+
+I have complete context. Let me set up a plan and todos, then implement.
+
+Now implementing. Starting with the model:
+
+Now let me inspect the raw xcstrings formatting to insert the 8 keys surgically (avoiding a whole-file reformat).
+
+The format uses 4-space indent with ` : ` separators. JSON key order is insignificant, so I'll insert the 8 keys right after the `"strings"` opening via a safe Python script, then validate.
+
+Strings inserted and validated. Let me update progress and run swiftformat + swiftlint on the new files.
+
+swiftformat applied changes to 2 files. Let me verify with `--lint` and run swiftlint --strict.
+
+swiftformat clean. Now swiftlint --strict on the new files:
+
+swiftlint clean (0 violations). Now the placeholder scan on my files:
+
+`-Path` takes a single subtree. Let me scan the Automations directories and confirm my files are clean.
+
+Placeholder gate green. Now I need to verify compilation. The full `xcodebuild` needs the absent `Shared.xcframework` (KMP). Let me check the staging script and whether the KMP toolchain is feasible here.
+
+Building `Shared.xcframework` needs Gradle + Kotlin/Native. Let me kick that off in the background (it gates a real `xcodebuild`) while I do isolated type-checking + a model harness in the foreground.
+
+While that builds, let me do an isolated Swift 6 type-check of the model + the reused P4 adapter (Foundation/Observation only — no SwiftUI dependency).
+
+Model + adapter type-check passes under Swift 6 strict concurrency. The xcframework build finished — let me check its result.
+
+The gradle build got far (downloaded Kotlin/Native, many tasks cached) but didn't finish staging. Let me run it synchronously to completion now that the heavy download is cached.
+

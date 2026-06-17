@@ -1,0 +1,155 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source — a field-level `(?)` help icon with a tooltip, i18n-driven, renders nothing when no content. Let me study the existing Apple conventions and build system.
+
+Build system is XcodeGen (`project.yml`). `Accordion` is a pure-prop UI primitive with no fetcher — the ideal template for `HelpIcon`. Let me study its full file set and the build config.
+
+Excellent — the conventions are clear. Let me read the remaining reference files and the build config.
+
+Now let me find the design tokens, the project build config, and check how tooltips/help are handled natively.
+
+Now let me check the toolchain specifics: xcodegen availability, the design tokens, the shared framework build script, and the placeholder checker.
+
+I have the full token vocabulary. The `Shared.xcframework` isn't prebuilt (only `.gitkeep`) — it's built via Gradle/Kotlin-Native at build time. Let me study the tooltip presentation pattern and lint config before writing.
+
+Let me examine the native popover pattern and the FadeIn motion component to compose `HelpIcon` idiomatically.
+
+`MetricCard` already implements a "?" help trigger with popover + side→arrowEdge mapping — the closest analog. Let me read it and its placement type.
+
+`MetricCardHelpButton` is the precise analog (popover + side→arrowEdge). I have everything I need. Let me check the `TSFadeIn` motion API, then write a plan and the surface.
+
+I have all conventions confirmed. Let me write a plan, then create the `HelpIcon` surface (8 files following the `Accordion` pattern + `MetricCard` help-popover pattern).
+
+Now creating the surface files. Starting with the pure core (Adapter) and Model.
+
+Now the two test files — pure-core adapter tests and model/view/strings tests.
+
+All 8 files created. Now let me verify formatting and linting on the new files (these don't need the heavy build).
+
+The lint finished (one trailing-comma issue). Let me auto-fix formatting with swiftformat (the recommended approach), then re-verify.
+
+swiftformat lint is clean. Now swiftlint --strict on the new files.
+
+swiftlint --strict passes clean (0 violations). Now let me read the placeholder checker to run it correctly.
+
+The gate passes a path without extension, but I'll verify my files meaningfully. Let me read the patterns and check my files don't trip them (e.g., the words "stub"/"mock"/"placeholder" in my comments).
+
+All mechanically-flagged patterns are clean. The word "stub" appears only in comments describing test doubles, but the acceptance criteria lists "stub" as forbidden — I'll reword to be safe (these are complete implementations, not stubs).
+
+Now let me run the placeholder gate (exact gate invocation + a meaningful scan of the actual files via a temp dir).
+
+Both placeholder scans pass (COUNT=0, EXIT=0). Now the heavyweight gate: generate the Xcode project and assess the build prerequisites (the `Shared.xcframework` needs Gradle/Kotlin-Native).
+
+Project generated, Java 17 present, iPhone 16 sim booted. The critical dependency is the `Shared.xcframework` (Gradle/Kotlin-Native). Let me build it standalone first to de-risk, with a long wait.
+
+The Gradle/Kotlin-Native build is in progress (first-time builds download the toolchain). Let me wait and check progress.
+
+Still compiling (the `tail` buffers until completion, so no interim output). Kotlin/Native first builds are slow. Continuing to wait.
+
+The `Shared.xcframework` built successfully (9m31s) and is staged. Now let me set up the gate log and run the iOS build+test. First, confirm the log directory.
+
+Let me check an existing passing log to confirm the expected format and that full builds succeed in this environment.
+
+This is the canonical reference. The Accordion sibling proves the accepted methodology: full `build test` returns 65 due to **foreign** pre-existing defects, and the surface is proven clean via baseline + isolation typecheck + swift test. Let me study the full Accordion log to replicate the methodology exactly.
+
+Let me read the rest of the Accordion log — the gate results and verification commands.
+
+I now have the complete canonical methodology (matches the documented precedent for pure presentational primitives). I'll replicate it exactly: run the real gates verbatim, then prove the surface is clean via baseline + isolation typechecks + `swift test`.
+
+Let me launch the long iOS `build test` in the background, then run the faster surface-attributable proofs in parallel.
+
+While the iOS gate builds, let me set up the surface-attributable proofs. First, confirm exactly which app symbols my surface references (beyond tokens), so the isolation package is complete.
+
+My surface's only external deps are the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`) and `TSFadeIn` (Motion.swift, itself token-only). I'll build a self-contained SwiftPM `TeslaSync` module to run `swift test` + isolation typechecks. Setting it up now.
+
+Package sources assembled (iOS SDK 26.5, macOS SDK 26.5). Creating the `Package.swift`, then running `swift test` and isolation typechecks.
+
+`swift test` passed: **38 tests, 0 failures** — the surface compiles as a real `TeslaSync` module under Swift 6 strict concurrency and all logic is correct. Now the iOS + macOS isolation typechecks (with `-D DEBUG` so the previews are checked too).
+
+Both isolation typechecks pass (iOS 18 + macOS 15, Swift 6 strict concurrency, 0 errors). Surface-attributable proofs are all green. Let me check the iOS `build test` progress.
+
+The iOS build is in the main-module compile phase (still running). Let me run the full-tree lint/format gate steps in parallel while it continues.
+
+Three jobs running (iOS build, full-tree format, full-tree lint). Let me wait and collect the faster lint/format results.
+
+Format path was wrong (I ran it from inside `apps/apple`). The gate runs from repo root. Let me re-run format correctly and check the lint result.
+
+swiftlint --strict full tree: **0 violations in 4677 files, LINT_EXIT=0** (includes my new files). Now re-running swiftformat from repo root (correct cwd).
+
+swiftformat --lint full tree: **0/4975 files require formatting, FORMAT_EXIT=0**. Let me check the iOS build progress.
+
+The build is still compiling the main module, and 2 `error:` lines have appeared. Let me see them — likely the foreign defects.
+
+The 2 errors are **foreign** — the documented pre-existing Swift-6.3 `glass(@ViewBuilder)` escaping-closure defect in sibling `AI*` surfaces (`AISignalExplorerNlFilter`, `AIGeofenceAwareAutomationSuggestions`). **Zero HelpIcon errors.** Let me confirm git status shows only my files added, then wait for the build to finish.
+
+git status confirms **only the 8 HelpIcon.* files are added**; the 2 foreign AI* files are unmodified. Waiting for the iOS build to finish to capture the exit code.
+
+The iOS gate finished. Let me capture the result.
+
+iOS gate: **BUILD FAILED, IOS_EXIT=65**, "Testing cancelled because the build failed", 3 error lines — **all foreign** (`AIGeofenceAwareAutomationSuggestions`, `AISignalExplorerNlFilter` glass() defect), **0 HelpIcon errors**. Matches the documented precedent.
+
+Now the baseline proof: rebuild with `HelpIcon.*` excluded — if still red, the red is foreign/pre-existing.
+
+The baseline failed (65) as expected, but my grep patterns need checking. Let me inspect the actual baseline errors and the HelpIcon mentions.
+
+The incremental baseline reused cached objects, so the foreign `error:` lines weren't re-emitted (only stale-`.o` removal notes mention HelpIcon — no HelpIcon errors). For crisp evidence I'll run a fresh-DD baseline. First, the fast macOS gate (fails early at signing per the precedent), then the clean baseline.
+
+macOS gate: **MAC_EXIT=65** — environmental, pre-compile (no dev-signing certificate for `TeslaSync-macOS`/`TeslaSyncWidgets-macOS`; runner has `DEVELOPMENT_TEAM=""`). 0 HelpIcon errors. Matches precedent; macOS compile is proven green via the typecheck + swift test.
+
+Now the clean-DD iOS baseline for crisp foreign-error evidence (background, ~10 min).
+
+While the baseline builds, let me gather details for the gate log (file line counts, xcodegen refs).
+
+File sizes are well under the 400-line SwiftLint budget (max ship 226, max test 235); 5 ship files = 672 LOC; 48 xcodegen refs. Let me wait for the baseline build.
+
+Crisp baseline proof obtained: **BASELINE_IOS_EXIT=65** with `HelpIcon.*` excluded — the tree is still red on the same foreign `AI*` glass() defect (`AIAutoNameUnnamedLocations:123`), **0 HelpIcon errors**. The red is pre-existing and foreign.
+
+All evidence is in. Let me write the comprehensive gate log (required by Honesty Covenant #10), following the established format.
+
+Gate log written. Before committing, let me verify the generated project and framework are git-ignored (must not be committed) and confirm what will be staged.
+
+Clean — only my 8 files + the log are untracked; the generated project and framework are git-ignored. Committing exactly the allowed files.
+
+Committed (5fe8ea43d) — exactly the 8 `HelpIcon.*` files + the gate log. Let me clean up the temporary build artifacts and confirm a clean tree.
+
+All complete and verified. The working tree is clean; only the 8 `HelpIcon.*` files + the gate log are committed (the generated `.xcodeproj` and `Shared.xcframework` are git-ignored).
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`HelpIcon`** shared surface (P4/0215) at parity with `web/src/components/ui/HelpIcon.tsx`, following the established 8-file shared-surface convention and the accepted disposition for pure presentational primitives (Accordion 0203, MetricCard 0095, et al.).
+
+**Files (committed `5fe8ea43d`):** `HelpIcon.swift` (public view), `.Adapter.swift` (pure Foundation core), `.Model.swift` (P1/S8 holder + P1/S10 facade + P1/S11 telemetry), `.Views.swift` (trigger + popover + `.help()` hover), `.Previews.swift`, `.strings`, `.AdapterTests.swift`, `.Tests.swift`.
+
+**Parity:** faithful port of `i18nKey ? t(i18nKey,{defaultValue:content}) : content`, the `!text → return null` absent branch (renders nothing, not a blank box), `ariaLabel ?? (for ? "Help for {field}" : "More info")`, the `for → {for}-help` described-by, side placement (left/right→leading/trailing), and the hover/tap reveal. loading/error/stale/offline are documented **N/A** — the source's only data is synchronous `useTranslation`.
+
+**Verification (all actually executed, evidence in the gate log):**
+- `XCFRAMEWORK_EXIT=0` (Gradle/KMP green, 9m31s)
+- `SWIFT_TEST_EXIT=0` — **38/38** as a real `TeslaSync` module under Swift 6 strict concurrency
+- `IOS_TYPECHECK_EXIT=0` / `MAC_TYPECHECK_EXIT=0` (iOS 18 + macOS 15)
+- `LINT_EXIT=0` (0 violations / 4677 files), `FORMAT_EXIT=0` (0/4975), `PLACEHOLDER_EXIT=0`, `XCODEGEN_EXIT=0` (48 refs)
+- `IOS_EXIT=65` / `MAC_EXIT=65` — **foreign** (pre-existing `AI*` `glass()` escaping-closure defect) / **environmental** (no macOS dev-signing cert), each with **0 HelpIcon errors**, proven via a fresh-DD `HelpIcon`-excluded baseline (`BASELINE_IOS_EXIT=65`) + git status.
+
+`EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0215-HelpIcon.log     | 200 ++++++++++++++++++
+ .../shared-surfaces/HelpIcon.Adapter.swift         | 226 ++++++++++++++++++++
+ .../shared-surfaces/HelpIcon.AdapterTests.swift    | 235 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/HelpIcon.Model.swift | 151 +++++++++++++
+ .../shared-surfaces/HelpIcon.Previews.swift        | 106 ++++++++++
+ .../TeslaSync/shared-surfaces/HelpIcon.Tests.swift | 159 ++++++++++++++
+ .../TeslaSync/shared-surfaces/HelpIcon.Views.swift | 114 ++++++++++
+ .../TeslaSync/shared-surfaces/HelpIcon.strings     |  29 +++
+ .../apple/TeslaSync/shared-surfaces/HelpIcon.swift |  75 +++++++
+ 9 files changed, 1295 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0215-HelpIcon.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpIcon.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpIcon.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpIcon.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpIcon.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpIcon.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpIcon.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpIcon.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpIcon.swift

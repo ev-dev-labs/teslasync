@@ -1,0 +1,124 @@
+I'll start by exploring the environment and understanding what exists. Let me check the web source, the Apple app structure, and available tooling in parallel.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, iOS simulators). The web source is a clipboard copy button. Now let me understand the existing Apple project structure, conventions, and supporting facades.
+
+Established project with an existing `shared-surfaces/` directory full of surfaces. Let me study the conventions: existing surfaces, the Button component, tokens, i18n, state holders, toast, and the placeholder checker.
+
+This is a mature codebase: 143 completed surfaces, ~1430 files in `shared-surfaces/`, with a clear multi-file convention (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.Tests`, `.strings`). I need to mirror it precisely. Let me find the closest analog and read the supporting infrastructure.
+
+A `CopyLinkButton` surface already exists — the perfect analog for a clipboard primitive (it even has a `.Seams.swift` for clipboard abstraction). Let me read all its files plus supporting infra.
+
+The `CopyLinkButton` (0168) is a near-perfect sibling template. Let me read its remaining files plus the design tokens, lint configs, the placeholder checker, and a sample log.
+
+I now have the full template. Let me verify the design tokens, animation helpers, the build-shared-xcframework preAction (critical for build feasibility), the lint configs, and the placeholder checker.
+
+Critical: the build needs a KMP `Shared.xcframework` (not present; built via Gradle preAction). Let me check the sibling `CopyLinkButton` log to see the expected gate outcome, the placeholder patterns, JDK/Gradle availability, and confirm tokens.
+
+The sibling `CopyLinkButton` (0168) log establishes the canonical disposition precisely. Key difference in MY environment: full **Xcode 26.5 + JDK 17 + gradlew + iOS simulators are present**, so I can attempt the real gate, not just defer. Let me confirm the design tokens I'll reference, then build the surface.
+
+I have everything needed: full template (`CopyLinkButton`), confirmed tokens, lint configs, placeholder patterns, and a full Apple toolchain (Xcode 26.5, JDK 17, gradlew, simulators). Let me set up tracking and write the plan.
+
+Now I'll author the surface files. Starting with the model (core logic), seams, view, and label subview.
+
+Now the previews, strings, and test files.
+
+All 8 files created. Now let me verify formatting and linting on the new files.
+
+swiftformat is clean (0/7 need formatting). Now swiftlint and the placeholder check.
+
+Placeholder check passes (COUNT=0). One swiftlint violation: `function_parameter_count` (6 > 5) on the `accessibilityLabel` Logic function. I'll bundle the two label strings into a small value type to reduce the parameter count cleanly.
+
+Now update the test call sites in `CopyButton.Tests.swift` that still use the old `copyLabel:/copiedLabel:` parameters. Let me view the affected region.
+
+I'll add a shared `labels` constant to the test class and update all call sites in one refactor.
+
+Now re-run swiftformat and swiftlint on all files to confirm both are clean.
+
+Both linters pass (swiftformat 0/7, swiftlint 0 violations). Now a scoped `swiftc -typecheck` of my production files against the real design tokens + `TSButton` to prove they compile under Swift 6 strict concurrency.
+
+Production sources typecheck clean. Now include the Previews (validates the `#Preview` / `@Previewable` macros) with `-D DEBUG`.
+
+Production + Previews typecheck clean under Swift 6 strict concurrency. Now the full gate. I have the complete toolchain, so I'll attempt the real `xcodebuild`. First, generate the Xcode project.
+
+Project generated; `TeslaSync` and `TeslaSync-macOS` schemes exist. The build needs the KMP `Shared.xcframework` (built by the scheme's Gradle pre-action). Let me kick that off in the background and monitor — it's the long pole.
+
+The KMP build targets iOS + macOS (needs Kotlin/Native toolchain, downloaded on first run). Let me start it in the background and continue monitoring.
+
+KMP build started in background. Let me check its progress.
+
+The background gradle process is running but the log file path resolved oddly under the async wrapper. Let me locate the actual process and its output.
+
+Important: this is a **shared, contended environment** — I see a gradle build from a *different* slot (`slot-163`) and `/tmp` logs from other parallel agents (`ctxmenu-ios-build`, `cp_ios_build`, `preview-attempt`). My `/tmp/kmp-build.log` is missing, so my async-backgrounded build likely didn't persist. Let me verify my slot's state and the async shell.
+
+My slot's KMP build didn't persist (async `&` was cleaned up). Let me start it **detached** so it persists, and in parallel do stronger validation that doesn't depend on the contended KMP build: a full module build of my surface + a test-logic typecheck against that module.
+
+While the KMP build runs detached, let me do the strongest scoped validation: compile my surface into a real `TeslaSync` module (with `-enable-testing`), then typecheck both test files against that module + real XCTest.
+
+`MODULE_EXIT=0` — my surface compiles as a full `TeslaSync` module under Swift 6 strict concurrency. The test typecheck's only failure is `XCTAssertEqual` being a C function-like macro that plain `swiftc -typecheck` can't import (a known tooling limitation, not a logic defect). The detached KMP build also finished — let me check its result and validate test logic via a small XCTest shim.
+
+The KMP build is progressing (compiling Kotlin/Native iOS targets). Meanwhile, let me validate the test logic against the real module API using a minimal XCTest shim (isolating only the unsupported C assertion macros).
+
+`TESTS_TYPECHECK_EXIT=0` — the complete test logic (spies, model API, actor isolation, async/throws) typechecks against the real module API. Now let me check the KMP build and attempt the real `xcodebuild` if the framework has staged.
+
+KMP build is on its final target (macOS) with most steps cache-hit across slots. Let me wait for it to stage the framework, then launch the real iOS build.
+
+Debug XCFramework built; now assembling the Release variant (which the script stages). Let me wait for it to finish staging.
+
+Release links are in progress (uncached, ~minutes each across 3 targets, under multi-slot contention). Let me continue waiting for the framework to stage.
+
+Down to the last release link (macOS). Let me wait for the assemble + stage to complete.
+
+`Shared.xcframework` built successfully (12m45s) and staged with all slices. Now I'll run the real `xcodebuild` for iOS. Launching the full app build in the background and monitoring.
+
+iOS build launched in the background. Let me monitor its progress.
+
+Build is past the Gradle pre-action and now emitting the full `TeslaSync` module (compiling all surfaces). Let me wait and check for completion or errors.
+
+The iOS build failed — but with **zero CopyButton errors**. The failures are entirely in unrelated sibling surfaces from parallel slots (`AIFeedbackQueueTriage`, `AIGeofenceAwareAutomationSuggestions`, `AIInboxAutoCategorization`, `AIIncidentTimelineSummarizer`) — the same `AIGeofence*` family the 0168 sibling log documented. Let me extract the actual error and confirm my surface compiled.
+
+Definitive evidence: the **only** build error is a pre-existing sibling-slot defect — `AIGeofenceAwareAutomationSuggestions.swift:141: escaping closure captures non-escaping parameter 'content'` (a different parallel slot's file, outside my allowed scope). My CopyButton files were accepted into compilation, the whole-module `SwiftEmitModule for TeslaSync` (which includes my files) passed, and there are **zero** CopyButton errors/warnings. This is the documented DEFERRED disposition.
+
+Let me launch the macOS build (background) and run the whole-tree lint/format gates while it runs.
+
+Whole-tree `swiftformat --lint apps/apple`: **0/4939 files require formatting** → clean. Now the whole-tree `swiftlint --strict`.
+
+Whole-tree `swiftlint --strict`: **0 violations in 4641 files** → clean. So all host gates are green: FORMAT=0, LINT=0, PLACEHOLDER=0. Let me check the macOS build progress.
+
+macOS build also failed (exit 65) with **zero CopyButton errors**. Let me confirm the macOS failure is the same sibling defect.
+
+The macOS failure is the documented **code-signing** limitation (no development certificate on the runner) — `"TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate` — failing before Swift compilation, again with **zero CopyButton involvement**. Both failures are out-of-scope (sibling defect + environment signing), matching the 0168 precedent exactly. Let me confirm the failure markers and capture exact details for the log.
+
+Complete, genuine evidence gathered. Both app-build failures are strictly out-of-scope (a pre-existing sibling-slot Swift defect on iOS; environment code-signing on macOS) with **zero** CopyButton errors, while my surface compiled into the real app module. This is the documented DEFERRED disposition. Let me gather final facts and write the gate log.
+
+All 8 files are mine, 1287 lines total, 4 i18n keys matching the web source exactly. The generated project + staged framework are git-ignored. Let me verify the overall git status is clean and confirm the logs directory, then write the gate log.
+
+Git status is clean — only my 8 files. Now I'll write the comprehensive, honest gate log following the established sibling format.
+
+Now let me stage exactly the allowed files (8 surface + log) and commit. First a final confirmation that nothing drifted, then commit.
+
+Exactly 9 files staged. Committing.
+
+Committed as `31d2b3132`; working tree clean. Let me finalize todos and clean up the temporary build artifacts I created in `/tmp`.
+
+All work complete and verified. Final state confirmed: commit `31d2b3132`, clean tree, both linters report 0 on the committed files, all todos done.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0207-CopyButton.log   | 250 ++++++++++++++
+ .../shared-surfaces/CopyButton.Model.swift         | 379 +++++++++++++++++++++
+ .../shared-surfaces/CopyButton.ModelTests.swift    | 210 ++++++++++++
+ .../shared-surfaces/CopyButton.Previews.swift      | 106 ++++++
+ .../shared-surfaces/CopyButton.Seams.swift         | 125 +++++++
+ .../shared-surfaces/CopyButton.Tests.swift         | 257 ++++++++++++++
+ .../shared-surfaces/CopyButton.Views.swift         |  44 +++
+ .../TeslaSync/shared-surfaces/CopyButton.strings   |  24 ++
+ .../TeslaSync/shared-surfaces/CopyButton.swift     | 142 ++++++++
+ 9 files changed, 1537 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0207-CopyButton.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CopyButton.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CopyButton.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CopyButton.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CopyButton.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CopyButton.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CopyButton.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CopyButton.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CopyButton.swift

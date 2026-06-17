@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and the web source component, and checking the Apple toolchain capability.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the existing Apple app structure and conventions from prior feature-views.
+
+Excellent — `CommandTile` and `InputCommandTile` are already implemented as Apple surfaces and are direct siblings of `ToggleCommandTile`. Let me study them as templates.
+
+Now let me study the existing Apple `CommandTile` and `InputCommandTile` implementations thoroughly — these are the closest templates.
+
+Now let me examine the design tokens, project configuration, and lint rules to ensure my implementation conforms.
+
+Let me examine the `VehicleState` type and how the parent wires toggle state, loading, and lastStatus.
+
+Let me check for naming collisions across the module before designing my types (each surface owns independent types).
+
+I have a thorough understanding now. Let me verify there are no symbol collisions module-wide and set up tracking.
+
+Confirmed — surfaces fully prefix their own types. Let me verify the build setup (xcodegen, prebuilt Shared.xcframework) to confirm the gate can run here.
+
+The build's scheme preAction builds a KMP `Shared.xcframework` via Gradle. Let me check whether that toolchain is available and how prior surface gates resolved.
+
+Let me review the sibling `CommandTile` gate log to see the established build outcome on this runner.
+
+This precedent is very informative. The runner builds `Shared.xcframework` via Gradle, drives Xcode via `DEVELOPER_DIR`, and the full-app `xcodebuild build test` hits pre-existing repo-wide blockers (co-located XCTest collision on iOS, dev-signing on macOS) — so prior surfaces verify host-green and document the deferral. Let me confirm the host-test path and read the pending-verifications doc.
+
+I now fully understand the accepted methodology. Let me read the remaining gate sections and the helper scripts so I replicate them faithfully.
+
+I have the complete, accepted methodology. Now I'll author the surface. Let me mark progress and write the Adapter (pure projection core) first.
+
+Now the Model — seams, state holder, telemetry, i18n facade.
+
+Now the View entry and the composed subviews.
+
+Now the i18n strings catalog and the previews.
+
+Now the comprehensive test suite.
+
+All 7 files written. Now let me verify with an isolated SwiftPM build + test harness (the accepted host-green method), using the real token closure.
+
+Badges only depends on Tokens. Let me build the isolated SwiftPM harness with the real token closure and run my tests.
+
+The first run aborted before creating the package. Let me redo the full setup with the correct path.
+
+Three real errors in Previews (arg order + ViewBuilder `return`). Let me fix them.
+
+Let me re-sync the fixed file and rebuild + run tests.
+
+Build is clean. Now run the test suite.
+
+All 33 tests pass (14 adapter + 19 model) under Swift 6. Now the dual-SDK typechecks, lint, and format.
+
+Both SDK typechecks clean. Now swiftlint, swiftformat, and the placeholder gate.
+
+Lint found structural violations (file/type length, a 121-char line, trailing comma). Let me fix these properly: split the oversized test file, trim Model.swift under 400, and fix the comma. First, current line counts and the offending line.
+
+Best fix: extract the in-memory seams into a `Fakes` file (drops Model under 400), split the test file, and fix the comma. Let me view exact boundaries first.
+
+Model.swift is now 308 lines. Now create the Fakes file with the in-memory seams.
+
+Now fix the Previews trailing comma.
+
+Now split the test file. Remove the oversized one and recreate as adapter-only + a new model-tests file.
+
+Now the model-tests file (two classes to satisfy type-body length) with shared factories.
+
+Now run swiftformat (write) to normalize, then re-lint and re-verify lengths.
+
+Only ModelTests at 406 > 400. Let me trim its header comment.
+
+Need 3 more lines off. Let me condense the header further.
+
+One over. Let me trim one more line.
+
+Now run the full verification batch: lint, harness build+test, and dual-SDK typechecks.
+
+Lint clean, 35 tests green. Now re-run dual-SDK typechecks (now including Fakes), the placeholder gate, and a manual stub grep.
+
+Now the official placeholder gate (ADR-011) against a scan dir holding the surface files.
+
+All seven host gates are green (build, 35 tests, both SDK typechecks, swiftlint, swiftformat, placeholder=0). Now the full-app xcodebuild gate. First, generate the project and confirm my files are enumerated.
+
+Project generates cleanly; all 9 surface files are enumerated. Now I need `Shared.xcframework` (KMP/Gradle) before xcodebuild can run. Let me build it — this is the long pole (~9 min).
+
+Gradle build is running (expected ~9 min). Let me wait for it.
+
+`Shared.xcframework` staged (BUILD SUCCESSFUL in 7m26s). Now the iOS xcodebuild build+test gate, capturing the real exit code.
+
+IOS_EXIT=65. Let me identify the real errors and confirm zero are from my surface.
+
+Confirmed: **0 ToggleCommandTile errors**. The 284 errors are all pre-existing collisions in *other* surfaces (e.g., `SafetyHistoryWidget` — ambiguous `SafetyModel`, ViewBuilder `return` bugs). Let me characterize the blast radius and run the macOS gate.
+
+Both gates fail only on pre-existing, unrelated issues with **zero ToggleCommandTile errors**. Let me capture precise evidence for the honesty log.
+
+Precise evidence captured. Both failures are pre-existing and unrelated:
+- **iOS (65):** compile errors only in *other* surfaces (Charge*/Safety*/DrivingCoach*/FleetStats* widgets); ToggleCommandTile compiled cleanly (0 errors).
+- **macOS (65):** all 4 errors are dev-signing entitlements; 0 compile errors, 0 ToggleCommandTile errors.
+
+Let me confirm git state and that generated artifacts are ignored.
+
+Clean — only my 9 files are untracked; generated artifacts are ignored. Let me compute the i18n referenced-vs-declared check for the log.
+
+The mismatch is just quote-stripping in the comparison. Let me normalize and confirm the sets are identical.
+
+i18n keys: 13 referenced == 13 declared, exact match. Now let me write the gate log with accurate final stats.
+
+Now I'll write the comprehensive, honest gate log.
+
+Now clean up temp artifacts and commit the allowed files.
+
+Exactly the 9 surface files + log are staged. Now commit.
+
+Committed as `9d8ea6e52`. Let me finalize tracking and do one last integrity check.
+
+The task is complete. The commit contains exactly the 9 surface files + the gate log, ending `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0260-ToggleCommandTile.log | 263 ++++++++++++++
+ .../feature-views/ToggleCommandTile.Adapter.swift  | 333 +++++++++++++++++
+ .../feature-views/ToggleCommandTile.Fakes.swift    | 116 ++++++
+ .../feature-views/ToggleCommandTile.Model.swift    | 308 ++++++++++++++++
+ .../ToggleCommandTile.ModelTests.swift             | 400 +++++++++++++++++++++
+ .../feature-views/ToggleCommandTile.Previews.swift | 204 +++++++++++
+ .../feature-views/ToggleCommandTile.Tests.swift    | 203 +++++++++++
+ .../feature-views/ToggleCommandTile.Views.swift    | 298 +++++++++++++++
+ .../feature-views/ToggleCommandTile.strings        |  39 ++
+ .../feature-views/ToggleCommandTile.swift          |  66 ++++
+ 10 files changed, 2230 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0260-ToggleCommandTile.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToggleCommandTile.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToggleCommandTile.Fakes.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToggleCommandTile.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToggleCommandTile.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToggleCommandTile.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToggleCommandTile.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToggleCommandTile.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToggleCommandTile.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToggleCommandTile.swift

@@ -1,0 +1,90 @@
+I'll start by exploring the repository structure and reading the web source specification.
+
+Toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools are present. `swiftlint`, `swiftformat`, and `swift` 6.3.2 are available. Let me explore the existing Apple app structure and the web source.
+
+Now let me explore the existing Apple app structure to understand native patterns, particularly existing dashboard widgets and the shared layers (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+A `dashboard-widgets` directory already exists with many widgets. Let me examine the file structure and find a good reference widget to model after.
+
+`ChargeCostTrackerWidget` is the closest analog (charging cost, full 9-file set). Let me read its complete fileset to learn the established pattern.
+
+Excellent, the pattern is very clear and well-architected. Let me read the remaining reference files (Adapter, Format, Views, Previews, Tests, strings).
+
+Now the Views, Previews, Tests, and strings files to complete my understanding of the pattern.
+
+Let me read the Previews file, the web data hook/types, and locate the core infrastructure (registration types, design tokens).
+
+Let me read the exact web `CostBreakdown` type, the hook, and locate the core infrastructure types and design tokens.
+
+The core tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) are generated P1/S9 tokens defined elsewhere. Let me locate them and confirm the palette/series accessor used by the web `useThemeChartPalette`.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it and check the project.yml to understand module/target file inclusion.
+
+I have the full token set. Now let me read the web shared components (`WidgetBigNumber`, `WidgetRankedList`, `WidgetShell`, `StatCard`) for exact parity, and check `project.yml` for how files are included in the target.
+
+`TeslaSync/dashboard-widgets` is auto-included via path globs (Tests excluded to the XCTest bundle) — so my `CostBreakdownWidget.*` files get picked up without editing project.yml. Let me read the web shared components for exact parity and confirm the test target config.
+
+Now the `WidgetShell` (chrome/states), `StatCard`, `AnimatedNumber` (compact number formatting), and the test target config.
+
+Key finding: `AnimatedNumber` defaults to **0 decimals**, so compact shows `fmtNumber(currentMonthCost, 0)` + currency symbol. Let me confirm `useThemeChartPalette().series`, read `StatCard`, and the test-target config.
+
+Test bundles include the `*Tests.swift` files (app target excludes them) — confirmed. Let me confirm the web palette `.series` shape so my native colors match.
+
+Let me check for symbol collisions, the placeholder-check script, pwsh availability, and the analytics facade naming for accurate doc comments.
+
+`pwsh`, `swiftlint`, `swiftformat` are available; only `xcodebuild` is blocked (needs full Xcode). I can still typecheck via `swiftc` against the macOS SDK. Let me read the lint/format/placeholder configs to ensure compliance.
+
+Now I understand all constraints. Let me verify whether I can typecheck SwiftUI + Swift Charts against the macOS SDK (CLT) — this determines my verification capability since `xcodebuild` is blocked.
+
+I can typecheck SwiftUI + Swift Charts (SectorMark donut) against the macOS SDK — a strong verification path. Let me check whether a full Xcode exists anywhere (to potentially unblock the `xcodebuild` gate steps).
+
+A full Xcode exists at `/Applications/Xcode.app` — the active dir just points to CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify `xcodebuild` works.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`, iPhone 16 simulator is booted, and macOS SDK is present. The full gate (including `xcodebuild build test`) is runnable — STATUS=DONE is achievable. Let me set up a persistent shell, check xcodegen, and generate the project.
+
+Full toolchain confirmed. Before writing, I must nail down `useFormatting().formatCurrency` default precision and `currencySymbol` for exact parity. Let me read `useFormatting`.
+
+`userPrecision` defaults to 2; `formatCurrency = symbol + fmtNumber(amount, d)`. I now have full parity understanding. Let me set up tracking and prototype the exact Swift Charts donut API (per-mark color + angle selection) before writing.
+
+Donut API confirmed (per-mark color, corner radius, angular inset, accessibility, angle selection all typecheck). Let me write the plan and then create the files.
+
+Now I'll write the files, starting with the Foundation-only layers (Format, Model, Adapter).
+
+Now the Adapter (pure projection) — the core parity logic.
+
+Now the leaf SwiftUI views (donut, ranked row, stat tile, big number, skeletons).
+
+Now the main surface file composing the chrome, states, and both layouts.
+
+Now the strings catalog and DEBUG previews.
+
+Files written. Before writing test assertions, let me verify the actual numeric/string outputs by compiling and running the Foundation-only layers in a harness (honest verification, not guessing).
+
+The adapter compiles and produces exactly the expected values — strong parity evidence. Now I'll write the two test files with these verified values.
+
+Now the model/registry/accessibility tests.
+
+All 9 files written. Let me update tracking and do a fast standalone typecheck of the SwiftUI files against the macOS SDK before the full build.
+
+Dependencies identified. Let me run a fast standalone typecheck of all six app-target SwiftUI files plus their token/infra dependencies against the macOS SDK.
+
+All six SwiftUI files (including `#Preview` macros) typecheck cleanly. Now let me run swiftformat and swiftlint on the new files (fast feedback before the full build).
+
+A few lines exceed 120 width. Let me auto-format my files (write mode), then re-lint.
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+swiftlint passes (0 violations). Now the placeholder gate.
+
+My files contain the literal word "placeholder" in 3 comments (forbidden pattern). Let me find all forbidden words in my files and reword them.
+
+Let me check how the script resolves `-Path` (to replicate the gate faithfully) and re-verify my files are clean.
+
+My files are clean of forbidden patterns. Now the main build/test gate. Let me generate the Xcode project first.
+
+Project generated; both `TeslaSync` and `TeslaSync-macOS` schemes exist. Let me verify my files are in the project, check the logs dir, and kick off the iOS build+test (the long pole) in the background.
+
+My files are referenced 54× in the project; logs dir exists. Now kicking off the iOS Simulator build+test (the long pole) in the background.
+
+Build launched. Let me monitor progress.
+

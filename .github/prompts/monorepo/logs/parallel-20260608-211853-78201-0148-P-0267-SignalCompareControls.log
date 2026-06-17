@@ -1,0 +1,104 @@
+I'll start by exploring the task requirements: the web source component, the existing Apple app structure, and the available toolchain.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+Now let me examine the existing feature-views directory, dashboard-widgets (as examples), and the project.yml build config.
+
+This is a large established monorepo. Each surface follows a pattern (`.swift`, `.Model.swift`, `.Previews.swift`, `.strings`, tests). Let me study an existing feature-view example end-to-end and the shared facade layer (state-holders, i18n, tokens, diagnostics).
+
+Now I understand the file naming. Let me study the AccordionSection example completely plus the shared facade and design token layers.
+
+Excellent established pattern. Let me read the remaining AccordionSection files, design tokens, and shared facade in parallel.
+
+Let me examine the design tokens and find the shared component equivalents (Button, Input, GlassPanel, HelpTooltip, FadeIn).
+
+Let me read the shared component APIs I'll need: Buttons, Fields/Inputs, Overlays (HelpTooltip), Cards (GlassPanel), Motion, and design tokens.
+
+Now let me read the HelpTooltip (Overlays), GlassPanel (Cards/TSMaterial), Motion, and design tokens.
+
+Let me read the design tokens, Typography, Feedback states, and check the diagnostics/telemetry contract.
+
+Let me read the design tokens, Typography, and confirm the telemetry pattern across feature-views.
+
+Let me find the closest analog feature-views (controls with date pickers, presets, search, chips) to match current conventions.
+
+`NotificationFilterBar` is a near-perfect analog (filter bar with presets, date controls, chips). Let me study it thoroughly.
+
+`NotificationFilterBar` is the data-bound variant; `AccordionSection` is the pure-controls variant. Since the web `SignalCompareControls` is explicitly "Pure controls (no data fetching)", the AccordionSection precedent applies. Let me read the remaining analog files and check the build toolchain state.
+
+I have a thorough grasp of conventions. Now the critical question for the gate: can the full xcodebuild run? Let me check the build toolchain state (xcodegen, Shared.xcframework script, simulators, check-placeholders tool).
+
+iPhone 16 simulator is available and booted, xcodegen is present, but the full app build needs `Shared.xcframework` built via Gradle/KMP. Let me assess the shared core and read the pending-verifications doc and placeholder checker.
+
+The `macos-pending-verifications.md` reveals the established precedent: every prior P4 feature-view verified the **surface in isolation** (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, lint/format/placeholder clean, `xcodegen generate`), while the **full-app `xcodebuild`** is blocked by pre-existing parallel-merge collisions + KMP Gradle timeout. My surface (like `DrivingTips`) needs no KMP `Shared`. Let me read the placeholder checker, find any shared flow-layout, and study the catalog/test patterns.
+
+Key constraint: the placeholder checker forbids the word "Placeholder" in `.swift` files (case-insensitive) — I'll need a `// parity:allow` marker for the web `filterPlaceholder` i18n key (`.strings` files aren't scanned). Let me read the lint configs, find any shared flow-layout, and study the catalog/test patterns.
+
+I now have all conventions. No shared flow-layout exists, so I'll implement a small `Layout` in my own Views file. Let me set up a plan and todos, then write the surface.
+
+Now I'll write the surface. Starting with the Core (pure, dependency-free logic — catalogs, presets, date helpers, state).
+
+Now the Seams file (telemetry, i18n facade, change sink, accessibility).
+
+Now the Model (the @Observable state holder).
+
+Now the Views file (subviews + flow layout). Updating todos as I go.
+
+Now the main view that composes everything.
+
+Now the strings catalog, then previews.
+
+Now the Previews covering every render branch.
+
+Now the test files. Updating todos.
+
+Now the main Tests (state holder, telemetry, change sink, accessibility, per-state projection).
+
+All 9 surface files are written. Now let me verify by building an isolated SwiftPM harness (named `TeslaSync` so `@testable import TeslaSync` resolves) containing the surface plus its exact shared-component dependencies, then run the tests under Swift 6.
+
+Two fixes needed: a `@MainActor` annotation on the preview factory, and removing an unnecessary `nonisolated(unsafe)` on the `DateFormatter` (Sendable). Let me apply both.
+
+Clean build (0 warnings/errors). Now run the test suite.
+
+All **43 tests pass** under Swift 6 strict concurrency. Now let me prove the surface type-checks against **both** the iOS 18 simulator SDK and the macOS 15 SDK (the cross-platform evidence prior prompts used).
+
+Both SDKs type-check clean (EXIT=0). Now the lint/format/placeholder gates, scoped to my surface files for an honest reading (the full-tree run also includes pre-existing files from other surfaces).
+
+Several lint/format issues to fix. Let me address the semantic ones (rename short type `ID`→`Identifier`, fix `TSButton` multi-closure calls, simplify `windowsSetCount`, replace test force-unwraps with `XCTUnwrap`), then let swiftformat auto-fix the pure formatting.
+
+Now fix the two `TSButton` multi-closure calls in Views.swift and the `.ID` references in the test files.
+
+Now fix the test files — `.ID`→`.Identifier` in ModelTests and the force-unwraps in Tests.
+
+Now let me run swiftformat in auto-fix mode on the surface files, then re-verify lint/format are clean.
+
+Both clean (LINT_EXIT=0, FORMAT_EXIT=0). Now re-sync all surface files to the harness and rebuild + retest to confirm the renames/reformats didn't break anything.
+
+Build + all 43 tests green. Now let me check the critical placeholder concern — after swiftformat wrapped property bodies, I need to ensure the `filterPlaceholder` key line and its `// parity:allow` marker are on the **same line**.
+
+Line 113's `filterPlaceholder` reference lost its same-line marker after wrapping, and Views.swift:194 has "placeholder" in a doc comment — both would trip the checker. Let me fix both (the `.strings` file isn't scanned, but the `.swift` files are).
+
+Now re-verify lint/format are still clean, grep for all forbidden patterns, and run the actual placeholder checker against a temp copy of the surface files.
+
+One "Placeholder" match remains — the web i18n key on line 112 — now correctly carrying its `// parity:allow` marker on the same line. Let me run the actual placeholder checker against a temp copy to confirm it's counted as ALLOWED, and re-sync+rebuild the harness.
+
+Placeholder gate clean (PLACEHOLDER_COUNT=0, ALLOWED=1, EXIT=0). Now `xcodegen generate` to confirm my files are enumerated into the project, then attempt the full gate.
+
+All 9 files enumerated, xcodegen EXIT=0. Now let me verify the pre-existing collisions the macos-pending precedent describes actually exist in this checkout (to honestly attribute any full-build block), and confirm my surface imports no KMP `Shared`.
+
+My surface imports no KMP `Shared` (Foundation/SwiftUI/Observation/OSLog only) and is green in isolation. `DashboardWidgetSize` is defined once here. The real full-build blocker is the KMP `Shared.xcframework` (the `Frameworks/` dir holds only `.gitkeep`, and the scheme pre-action must build it via Gradle). Let me attempt the actual gate honestly, starting with the Gradle staging step under a bounded timeout.
+
+Gradle 8.14.5 works. Let me attempt the KMP `Shared.xcframework` staging (the scheme pre-action / long-pole step) in the background under a bounded window, and monitor it.
+
+While the KMP framework stages, let me monitor progress.
+
+The KMP framework is compiling (Kotlin/Native for iosArm64, iosSimulatorArm64, macosArm64). Let me continue monitoring.
+
+Good progress — the DEBUG XCFramework built; now the RELEASE Kotlin/Native link (the long-pole step prior runs couldn't finish). Let me keep monitoring.
+
+The RELEASE link is advancing further than prior runs (iosArm64 + iosSimulatorArm64 done). Let me continue monitoring for the macOS link + final assembly + staging copy.
+
+On the final `linkReleaseFrameworkMacosArm64` step. Let me wait for it to assemble and stage.
+
+**Shared.xcframework built successfully and staged** — further than any prior prompt reached (they all timed out here). Now I can attempt the real gate. Let me start the iOS-Simulator `build` for the full app (verifying my surface integrates into the real target), in the background.
+

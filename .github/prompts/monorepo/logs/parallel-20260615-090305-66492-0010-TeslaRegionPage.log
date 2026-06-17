@@ -1,0 +1,8 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page is a thin wrapper around `RegionSettings`. Let me explore the apple project structure and the RegionSettings component.
+
+Let me explore the actual apple project structure more carefully and check the toolchain.
+
+Full toolchain is available (xcodebuild, swiftlint, xcodegen, swift). Not blocked. Let me explore existing Swift patterns.
+

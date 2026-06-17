@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source specification and explore the Apple app structure.
+
+Now let me explore the Apple app structure and find the supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+Let me explore the Apple TeslaSync source structure to understand conventions.
+
+`misc-surfaces/TourLauncher` is the clearest template. Let me read all its files plus the core facade infrastructure.
+
+Let me read the remaining TourLauncher files to fully understand the conventions.
+
+Let me read the remaining TourLauncher files: Views, Previews, Tests, ModelTests, and strings.
+
+Now let me read the test files, previews, and the design/component infrastructure.
+
+Now let me examine the design tokens and shared UI components available.
+
+Let me find the core token definitions and key shared components.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the Theme, Buttons, Cards, and Motion components.
+
+Let me check the prompts/logs directory, the project.yml structure, and whether xcode tooling is available.
+
+Xcode tooling is available. Let me check the modals-dialogs prompt siblings and any existing log/surface precedent.
+
+Let me check git state and the test-target section of project.yml.
+
+I now understand the pattern: TourLauncher (the sibling `misc-surfaces/0001`) created its own surface directory without touching `project.yml`. Let me verify the build prerequisites — especially the `Shared.xcframework` dependency and whether the directory gets wired in.
+
+Let me examine the shared-framework build script and whether the KMP toolchain is available here.
+
+The build needs a KMP-built `Shared.xcframework` (absent) and `project.yml` doesn't register surface dirs — matching the TourLauncher precedent where the surface ships its own files only. Let me read the web UI components and native Typography/Overlays to write faithful parity code.
+
+Let me read the actual prompt file, the methodology, and confirm what's been done.
+
+Let me check how the predecessor (TourLauncher) handled the same gate — its log is the key precedent.
+
+This is the key precedent. The TourLauncher predecessor established the sanctioned disposition: author the surface, verify it independently (isolated SwiftPM build/test + iOS/macOS SDK typecheck + lint/format/placeholder green), and report the full-app xcodebuild as DEFERRED (env-blocked by unrelated siblings). Let me read the linter configs to comply exactly.
+
+All tooling is present (Java 17, pwsh, booted iPhone 16 sim, lint/format). Let me read the glass-panel material modifier and set up my plan, then start authoring.
+
+I have everything needed. Let me check for symbol collisions before authoring (the predecessor did this), then set up my plan.
+
+There's an existing atomic `TSAddAnnotationPopover` component. Let me read it to understand the relationship and avoid collisions.
+
+I have full understanding now. The existing `TSAddAnnotationPopover` is an out-of-scope atomic chart component; my surface is the standalone modal-dialog at `modals-dialogs/AddAnnotationPopover.*`, named `AddAnnotationPopover` (no collision). Let me set up the plan and todos.
+
+Now let me create the directory and author the Adapter (pure logic core).
+
+Now the Seams file (telemetry, controller, source, i18n facade, accessibility).
+
+Now the Model (state holder).
+
+Now the view root.
+
+Now the Views file (header, form fields, category pills, footer).
+
+I used `FlowLayout` for wrapping pills — let me check if it exists in the codebase or if I need to provide it.
+
+No shared `FlowLayout` exists — each surface defines its own prefixed `Layout`. Let me read an existing one to match the pattern.
+
+I'll define my own prefixed `AddAnnotationFlowLayout`. Let me update the Views file.
+
+Let me add the `AddAnnotationFlowLayout` definition. Let me view the current category-pill region to place it correctly.
+
+Now the States file (loading/empty/error/inline/chip/banner).
+
+Now the Previews file.
+
+Now the adapter/projection/date/a11y Tests file.
+
+Now the ModelTests file.
+
+Now the strings catalog.
+
+All 10 files created. Let me check line counts and run swiftformat/swiftlint on the surface.
+
+swiftformat auto-fixes most. Let me apply formatting to the surface, then re-lint.
+
+swiftformat passes. Let me verify the auto-applied changes to the test force-unwrap and run swiftlint on the surface.
+
+swiftlint reports 0 violations. Let me confirm my files are actually being linted (positive control, like the predecessor) by running on explicit files and testing with a deliberate violation.
+
+My 9 files lint clean under --strict. Let me run the placeholder check (against the real directory to avoid a vacuous pass) and inspect the script.
+
+The gate flags the literal word "Placeholder" — but these are legitimate text-field *prompt* usages (the web `placeholder=` concept), not stubs. Let me inspect the exact lines and the pattern file.
+
+These are legitimate text-field prompts (the web `placeholder` concept) and the web-mandated i18n keys `annotation.labelPlaceholder`/`descPlaceholder`, not stubs. The gate offers a `// parity:allow <reason>` marker for exactly this. Let me find every `placeholder` occurrence in my .swift files first.
+
+These are the web `placeholder` concept (SwiftUI `prompt`) and the web-mandated i18n keys. I'll rename my param to the SwiftUI-idiomatic `prompt` (removes the gratuitous matches) and add `// parity:allow` markers on the two lines that must reference the web keys.
+
+Let me re-run format, lint, and the placeholder gate on the surface.
+
+The marker must be on the *same line* as the match. Let me view the current lines and restructure so the key literal carries a trailing marker.
+
+All three surface gates are green: swiftformat 0/9, swiftlint 0 violations, placeholder COUNT=0 (2 legitimate web-key opt-outs). Now the core verification — an isolated SwiftPM build+test of the pure logic + model + tests. Let me set up a temp harness.
+
+Components + Design are Shared-free. Let me build an isolated SwiftPM harness for the logic + model + tests (31 tests).
+
+The isolated Swift 6 build caught a real strict-concurrency bug (static non-Sendable formatters) — which would also fail the real app build. Let me fix it by creating formatters locally.
+
+OSLog can't concatenate two message literals. Let me fix the controller log to a single interpolated message.
+
+39 tests ran with 1 failure. Let me find which one failed.
+
+The test caught a real parity detail: the web `toDateInputValue` accepts any *shape-valid* `YYYY-MM-DD` string verbatim when `Date` parsing fails (its own comment says so), so `"2024-13-45"` → `"2024-13-45"`, not `""`. My implementation correctly mirrors the web; my test assertion was wrong. Let me fix the test to assert true web parity.
+
+Another parity edge: `"2024/05/18"` is actually parseable (both JS and `DateFormatter` accept it) — not a clean "empty" case, and it's locale-dependent. Let me use unambiguously unparseable garbage for the empty assertion.
+
+All 40 isolated tests pass under Swift 6 strict concurrency. Now the SDK typecheck of the full SwiftUI view layer against the real design system, for both iOS 18 and macOS 15.
+
+iOS 18 typecheck passes clean. Now macOS 15.
+
+Both SDK typechecks pass clean. Let me run a placeholder-gate positive control (prove it scans my files) and generate the Xcode project, then attempt the full-app gate.
+
+Positive control confirms the gate genuinely scans my files (TODO probe → COUNT=1/EXIT=1; clean after removal). The project generates but — per the methodology — `modals-dialogs` is not registered (0 refs), so the full-app build won't include my files. Let me run the full-app iOS gate verbatim in the background to capture this runner's real outcome.
+
+The iOS build (with the ~10-min KMP framework pre-action) is running in the background. While it runs, let me verify i18n key completeness — every key referenced in code must exist in the strings catalog.
+
+All 27 i18n keys referenced in code are defined in the catalog (empty diff). Let me confirm no hardcoded English bypasses the facade, then check the build progress.
+
+All `Text()` calls route through the facade; the only literals are web-default fallbacks (sanctioned), test inputs, and preview names. The KMP `Shared.xcframework` built successfully and is linking. Let me do a final review of the post-edit Views file while the app compile proceeds.
+
+The form composition is coherent and matches the web. Let me check the iOS build progress.
+
+The KMP framework is assembling all release variants (the slow ~10-min phase); no errors, still pre-app-compile. Let me wait for it to reach the app compile phase.
+
+iOS full-app gate finished with `IOS_EXIT=65` (matching the predecessor). Let me confirm the failures are pre-existing siblings, not my surface.
+
+Confirmed — 108 errors, **0 in modals-dialogs**. All are pre-existing parallel-merge duplicate-type collisions (`RecentDrivesModel`/`StateTimeline*` "ambiguous for type lookup") in unrelated sibling surfaces, exactly as documented in `apps/macos-pending-verifications.md`. The KMP framework is now cached, so the macOS gate should fail fast — let me run it verbatim too.
+
+macOS gate also `MAC_EXIT=65` (fast fail, 8s). Let me capture the cause and confirm 0 errors in my surface.
+
+Both full-app gates are env-blocked by pre-existing, unrelated conditions (iOS: sibling duplicate-type collisions; macOS: dev-signing), with **0 errors in my surface** — the established DEFERRED disposition. Let me get final line counts and write the gate log.
+
+All files ≤360 lines (under the 400 strict cap), max line 115 (under 120). Now let me write the honest gate log.
+
+Now let me clean up temp artifacts, do a final verification pass, and check git status before committing.
+
+All final gates green; git shows only my surface dir + the log (xcodeproj/xcframework correctly ignored). Let me commit with the prompt's message.
+
+Committed cleanly. Let me update the plan to reflect completion.
+
+The task is complete and verified. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ ...le-modals-dialogs-0002-AddAnnotationPopover.log | 245 ++++++++++++++
+ .../AddAnnotationPopover.Adapter.swift             | 353 ++++++++++++++++++++
+ .../AddAnnotationPopover.Model.swift               | 207 ++++++++++++
+ .../AddAnnotationPopover.ModelTests.swift          | 235 ++++++++++++++
+ .../AddAnnotationPopover.Previews.swift            |  83 +++++
+ .../AddAnnotationPopover.Seams.swift               | 184 +++++++++++
+ .../AddAnnotationPopover.States.swift              | 183 +++++++++++
+ .../AddAnnotationPopover.Tests.swift               | 236 ++++++++++++++
+ .../AddAnnotationPopover.Views.swift               | 360 +++++++++++++++++++++
+ .../modals-dialogs/AddAnnotationPopover.strings    |  62 ++++
+ .../modals-dialogs/AddAnnotationPopover.swift      |  89 +++++
+ 11 files changed, 2237 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0002-AddAnnotationPopover.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.swift

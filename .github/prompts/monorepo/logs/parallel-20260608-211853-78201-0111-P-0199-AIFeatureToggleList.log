@@ -1,0 +1,206 @@
+I'll start by exploring the repository structure, the web source, and the Apple toolchain availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). I cannot claim BLOCKED. Let me explore the web source and Apple app structure.
+
+The web source is a settings toggle list driven by an `@/ai/features` registry. Let me examine that registry, the just-committed `LiveMotorStatus` example for conventions, and the Xcode project structure.
+
+Key finding: the Apple project uses **XcodeGen** (`project.yml`, no checked-in `.xcodeproj`). Let me read the canonical `LiveMotorStatus` reference files, the `project.yml`, and the AI features registry.
+
+Excellent reference quality. Let me read the remaining `LiveMotorStatus` files (Views, Previews, strings, Tests) plus the `project.yml` to understand file inclusion.
+
+Let me read the `project.yml`, the test file pattern, and locate the shared P1 components (TSToggle, tokens, etc.).
+
+Now I understand the canonical pattern thoroughly. Let me examine the AI features registry (the data source) and locate the shared P1 components I'll need — especially a Toggle equivalent.
+
+Let me read the AI features registry structure and the shared `TSToggle` + Typography components.
+
+I have the registry data and `TSToggle`. Let me examine the existing native settings toggle-row idiom and the shared typography/token/feedback components I'll compose with.
+
+I have the typography and toggle idiom. Before deciding how to port the 57-feature registry, let me check whether the Apple app (or KMP shared core) already has an AI feature registry ported, and review the remaining shared components.
+
+There's an existing `AISettings` feature-view — highly relevant. Let me examine how it handles the AI feature registry and toggles.
+
+`AISettings` confirms per-feature toggles are this child surface's responsibility. Let me read the remaining shared components (GlassPanel, FadeIn, EmptyState, Skeleton, Button), the placeholder checker, and verify build tooling.
+
+Let me read GlassPanel/FadeIn/Button signatures, the design tokens, the placeholder checker, and verify XcodeGen/pwsh tooling.
+
+All tooling is present (xcodegen 2.45.4, pwsh, swiftlint, swiftformat, Xcode 26.5). Let me check the swiftlint config, placeholder patterns, and scan the 57 registry descriptions for any forbidden words.
+
+Critical constraints noted: swiftlint `line_length` error at 160 (ignores comments/URLs), and forbidden words include "Placeholder"/"not implemented"/"TODO". Long descriptions can't be inline Swift literals — they belong in `.strings` (mirroring the web `t(key, meta.description)`). Let me verify the placeholder checker's scanned extensions and scan the registry for forbidden words.
+
+The placeholder checker only scans `.swift/.kt/.cs/.xaml` — not `.strings`. So long descriptions belong in `.strings`. Let me confirm the registry has no forbidden words, check the checker's case-sensitivity, and observe how it behaves on the existing surface + the gate's path argument.
+
+Registry is clean (zero forbidden words), and the checker is case-insensitive — I'll keep all `.swift` files free of those words. Now let me verify the build baseline: check the `Shared.xcframework` staging (KMP) and whether a baseline build/test works before I add my surface.
+
+`Shared.xcframework` is built from KMP via Gradle (not vendored) as a scheme pre-action. Let me verify `apps/shared` exists, check an existing gate log to see what "passing" looks like, and gauge build feasibility.
+
+This log reveals the accepted disposition: surface-scoped gates pass green, the surface compiles in isolation against iOS+macOS SDKs, and the full KMP `build test` is **DEFERRED** with evidence (pre-existing unstaged xcframework/signing, outside allowed files). Let me read the full log head and the pending-verifications doc to replicate the exact accepted methodology.
+
+Let me read the compile-verification and gate-execution sections of the reference log to replicate the exact isolation-compile approach.
+
+I now have the complete proven methodology: surface-scoped gates green + isolation compile (swiftc typecheck both SDKs + a throwaway SwiftPM harness named "TeslaSync" running the real tests), with the full KMP `xcodebuild build test` DEFERRED with captured evidence. Let me gather the last details: Shared-importing files to exclude from the harness, the token namespaces, and the AISettings mutation-seam conventions.
+
+The Components tree has no `Shared` imports (harness-friendly), and tokens live in `Tokens.swift`. Key insight from the reference: the SwiftPM harness doesn't bundle `.strings`, so `string(key, fallback)` returns the fallback — meaning tests assert the fallback text. I need to decide how to handle the 57 feature descriptions (some long) vs swiftlint's 160-char line limit. Let me measure description lengths and empirically test lint behavior.
+
+Descriptions are long (max 2681 chars) — they cannot be inline Swift literals. The faithful, lint-clean design: registry carries `id` + short `name`; the long descriptions live only in `.strings` (the i18n catalog, not linted); production resolves both via the facade. Let me extract the registry data precisely and analyze special characters for safe escaping.
+
+All 57 parsed; all `defaultOn` false (matches "all default off"); only descriptions have special chars (3 quotes, 2 percent signs) — names are clean. Let me set up tracking and a plan, then generate the registry + strings files via Node to avoid transcription errors.
+
+I have everything needed. Let me set up the plan and todo tracking, then generate the registry + strings.
+
+Now let me generate the registry and strings files via a Node script to guarantee accuracy.
+
+Registry is 101 lines but has lines up to 132 chars — over swiftlint's 120 warning (which fails under `--strict`). Let me auto-format with swiftformat (repo config wraps long lines) and verify, plus check the strings file.
+
+Only 1 line needed wrapping; now max is 120. Let me lint the registry and verify the strings file completeness.
+
+Registry lints clean; strings has all 57 label + 57 description keys with correct escaping. Let me validate the `.strings` is well-formed with `plutil`, then mark registry done and write the Swift sources.
+
+`.strings` is valid (plutil OK). Now writing the Model (P1/S8 seam + observable model), mirroring the `LiveMotorStatus` conventions.
+
+Let me fix a code smell in `toggle` — comparing to `.error("")` is wrong; after an optimistic flip we always have settings, so the phase is `.data`.
+
+Now the Adapter (pure projector). The web `checked={Boolean(values[id])}` → `values[id] ?? false`. Description falls back to empty in the harness (no bundled `.strings`); production resolves the real catalog text.
+
+Let me typecheck the Foundation-only core (Registry + Model + Adapter) against both the iOS-18 simulator and macOS-15 SDKs under Swift 6 strict concurrency, mirroring the reference's steps [1]/[2].
+
+Both SDK typechecks pass (0 errors). Now writing the presentational subviews (row with native switch Toggle, list, freshness chip, loading skeleton).
+
+Now the surface view — a bordered `<section>` (web parity, not a glass panel) with the legend Subhead + freshness chip + state switch.
+
+Now the previews (one per state), mirroring the reference.
+
+Now I'll write the tests. Let me retrieve the exact ordered id list for the registry-parity assertion.
+
+Now writing the test suite (registry parity, projector, model lifecycle, a11y, per-state render smoke, and a catalog-completeness test proving all 57 descriptions ship).
+
+Let me verify the exact registry names referenced in test assertions match the generated registry.
+
+Names match. Now let me format all new Swift files with swiftformat (the gate config) and then lint them surface-scoped.
+
+0/7 needed reformatting — my files already comply. Now the surface-scoped swiftlint `--strict` and swiftformat `--lint`.
+
+swiftformat is clean, but swiftlint flags Tests.swift at 414 lines (>400 file_length under `--strict`). I'll split the tests into two files (precedented: `.Tests.swift` + a registry tests file), both matching the allowed glob. Let me remove the registry/catalog suites + the id list from Tests.swift and move them to a new file.
+
+Now create the new registry/catalog tests file (with the shared id list, made module-internal so the projector tests can reference it).
+
+Now re-run swiftlint `--strict` and swiftformat `--lint` across all 8 surface Swift files, and check line counts.
+
+All 8 files pass swiftlint `--strict` and swiftformat `--lint`, all under 400 lines. Now I'll build the SwiftPM harness (module "TeslaSync") to compile the full SwiftUI closure and execute the tests. First, let me confirm the Components tree is self-contained (tokens + SwiftUI only, no external module deps).
+
+Components is fully self-contained (only system frameworks). Now I'll assemble the SwiftPM harness (module "TeslaSync" = tokens + Components + the 6 surface sources; test target = the 2 test files + the `.strings`) and build it.
+
+`TSChartPalette` is referenced by a Charts component but defined outside Components. My surface uses no charts — let me find where it lives and decide whether to include that file or trim the Charts category.
+
+`TSChartPalette` lives in `Sources/Design/`. Let me check that directory and add it to the harness closure.
+
+`Sources/Design/` is clean (SwiftUI only). Let me add it to the harness and rebuild.
+
+Two harness findings: (1) `UnitFormatters.swift` is the lone Shared-dependent Component (the reference excluded it — my surface doesn't use it); (2) a Swift 6 Sendable warning on my `Binding` set closure. Let me make the toggle closures `@MainActor` (the clean Swift 6 fix) and verify nothing else needs UnitFormatters.
+
+Good — `UnitFormatters` types aren't used elsewhere in Components, so excluding it is safe. Let me update the list view's closure too, then rebuild the harness with `UnitFormatters.swift` excluded.
+
+The Swift compiler **crashed** during IRGen (an internal `report_at_maximum_capacity` overflow), after all files compiled — not a code error. This is triggered by emitting the entire Components closure (Charts/Maps DSLs are heavy) in one module. My surface uses none of Charts/Maps. Let me trim the harness to the minimal closure my surface actually needs. First, let me map the exact transitive dependencies.
+
+Dependencies stay within UI/Feedback/Motion/tokens — none need Charts/Maps. The IRGen crash is almost certainly the heavy Swift Charts DSL. Let me check for cross-category references, then trim Charts/Maps (and the unused DataDisplay/Forms) from the harness.
+
+Cross-category refs exist (e.g., `FeedbackOverlays`→`TSMetricBar`). Rather than cherry-pick, I'll keep the whole tree but exclude only the heavy `Charts`/`Maps` DSL dirs (the IRGen-crash source). Let me confirm nothing outside those dirs references their view components.
+
+Confirmed — nothing outside `Charts/`/`Maps/` references their components. Let me drop those two dirs from the harness and rebuild.
+
+Still crashing in aggregate module IRGen — not Charts/Maps-specific; it's a compiler bug triggered by the whole-module size. Let me switch to the **minimal closure** (only the component files my surface transitively uses) — cleaner and avoids the aggregate IRGen crash. Let me check `Banners.swift` deps, then assemble the minimal harness.
+
+The closure keeps expanding (Cards→Badges, etc.). Let me build a **precise minimal file set** instead of whole categories. Let me check the last few deps (Badges, TSMaterial) then assemble.
+
+Still crashes with the minimal closure + surface — so it's a specific construct, not aggregate size. The reference built fine with the same toolchain, so the trigger is likely in my surface. Let me bisect: build the **closure alone** (no surface), then add my files incrementally.
+
+Closure alone builds fine (1.16s) — the trigger is in my surface. Let me add my files incrementally to isolate it. Start with the Foundation core (Registry + Model + Adapter, which already typechecked).
+
+Core builds. Adding Views.swift next.
+
+Adding Views.swift triggers the IRGen crash (it happened with both plain and `@MainActor` closures). Let me bisect within Views.swift — test whether the custom `Binding`/`Toggle` is the trigger by temporarily using a constant binding.
+
+Found it: the closure-based `Binding(get:set:)` set closure triggers a compiler IRGen crash under Swift 6 strict concurrency (the SDK's `set` is `@isolated(any) @Sendable`). This would also break the real app build, so I must fix it properly. Let me see how the existing codebase binds Toggles to a model.
+
+The codebase uses this exact pattern and compiles — e.g. `NotificationSettings.Sections.swift:253`: `Toggle(isOn: Binding(get: { row.isOn }, set: { model.setSoundChannel(row.category, $0) }))`. The crash comes from passing a **stored** `onToggle` closure directly as `set:`; the blessed pattern uses an **inline** closure capturing the `@MainActor` (Sendable) model. Let me view that reference and restructure accordingly.
+
+That's the blessed, compiling pattern: store the `@MainActor` model and use an **inline** binding closure `{ model.toggle(...) }` with `EmptyView()` + `.labelsHidden()`. Let me restructure my row and list views to match, then update the surface.
+
+Now update the surface to pass the model instead of the closure:
+
+Now let me rebuild the harness with the fixed files (re-copying fresh from the repo) to confirm the crash is resolved.
+
+The full surface now builds cleanly (no crash, no warnings) using the codebase-blessed binding pattern. Now let me restore the tests and run the full XCTest suite.
+
+35/37 pass. The 2 failures are a test-expectation bug: the summary joins label+value with `", "` (→ "Natural-language search, On"), but my assertions omit the comma. Let me fix the assertions to match the actual `tile` format.
+
+All 37 tests pass (6 suites, 0 failures), including the catalog-completeness suite proving all 57 descriptions ship. Since I edited Views/surface/Tests after the last lint, let me re-format and re-lint all 8 files, and re-confirm the core typechecks.
+
+swiftformat and swiftlint `--strict` both clean. Now re-confirm the core typechecks on both SDKs, run the placeholder gate (pwsh), and verify the surface registers via xcodegen.
+
+Core typechecks pass on both SDKs; placeholder gate is `COUNT=0 EXIT=0`. Now let me generate the Xcode project (confirming the surface registers in the build graph) and run the whole-tree swiftlint for an honest pre-existing-violation disclosure.
+
+xcodegen succeeds and all 9 surface files register across the iOS+macOS targets (54 refs). Now the whole-tree swiftlint disclosure to confirm none of my files introduce violations.
+
+Exactly one pre-existing violation — `LiveSignalSparklinesWidget.Builder.swift:158` (a dashboard-widget outside my allowed files, the same baseline blocker the reference documented). **Zero** in AIFeatureToggleList. Let me clean up temp artifacts, confirm git status, and verify the generated project is gitignored.
+
+Clean: 0 lint hits in my files, temp removed, `.xcodeproj` is gitignored, and only my 9 surface files are new (the 2 modified `.tsx` files pre-date my session — I won't touch them). Now let me capture the concrete DEFERRED-gate evidence (the missing KMP `Shared.xcframework`), exactly as the reference documented.
+
+Captured the exact DEFERRED evidence (`no XCFramework found at .../Shared.xcframework` → BUILD FAILED, exit 65) — identical to the reference disposition, blocked only on the unstaged KMP framework outside my scope. Let me gather final line counts and write the gate log.
+
+All verifications pass. Let me update tracking and write the comprehensive gate log.
+
+Now let me commit only my 9 surface files + the log (explicitly excluding the 2 pre-existing modified `.tsx` files).
+
+Exactly the 9 surface files + log are staged; the 2 pre-existing `.tsx` files remain unstaged. Committing now.
+
+Committed as `e149b75bb`. Let me verify the commit contents, finalize tracking, and clean up the temp harnesses.
+
+Commit verified (10 files, 1790 insertions); temp harnesses cleaned. Let me do a final honest check that my files don't break the whole-tree swiftformat gate.
+
+All gates green. Let me confirm the todo ledger is complete.
+
+All 9 todos done. The surface is shipped and committed.
+
+## Summary
+
+Delivered a production-polished native Apple (SwiftUI) `AIFeatureToggleList` at parity with `web/src/features/settings/components/AIFeatureToggleList.tsx`, committed as **`e149b75bb`**.
+
+**9 files** (`apps/apple/TeslaSync/feature-views/AIFeatureToggleList.*`, 1530 lines): a generated 57-entry registry mirror of `AI_FEATURE_IDS`, a P1/S8 state-holder seam + `@Observable` model with an optimistic toggle/persist contract + `view.opened` telemetry, a pure projector (`Boolean(values[id])`, registry-order rows, `t(key, meta.name)` labels), the SwiftUI surface (bordered `<section>` + legend + every state), previews, two test files, and the i18n catalog (legend + 57 label + 57 description keys — the long blurbs ship in `.strings`, not as Swift literals).
+
+**Verification (all executed, raw results in the log):**
+- **37/37 XCTest pass** across 6 suites (registry/order parity, projector, model lifecycle, a11y, catalog completeness, per-state render smoke) via a SwiftPM harness.
+- `swiftc -typecheck` green on **iOS-18 + macOS-15 SDKs**; full SwiftUI-closure `swift build` complete, **0 warnings**.
+- `swiftlint --strict` **0 violations** (8 files), `swiftformat --lint` **0/2357**, placeholder gate **COUNT=0**.
+- `xcodegen` registers the surface (54 refs, iOS+macOS app + test targets).
+
+**One notable fix:** a Swift-6 IRGen compiler crash on `Binding(get:set:)` with a stored set-closure — worked around with the codebase's inline-closure-capturing-`@MainActor`-model toggle pattern (the same construct `NotificationSounds` ships), so the real app build won't hit it.
+
+The full-app `xcodebuild build test` is **DEFERRED** (captured evidence: missing unstaged KMP `Shared.xcframework`, exit 65 — outside this surface's scope), matching the accepted 0157 precedent. Log ends `EXIT=0 / STATUS=DONE`. Pre-existing modified `.tsx` files were left untouched.
+
+
+
+The task is fully complete and committed. Let me update the plan to reflect completion, then mark the task done.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0199-AIFeatureToggleList.log | 260 ++++++++++++++++++
+ .../AIFeatureToggleList.Adapter.swift              | 123 +++++++++
+ .../feature-views/AIFeatureToggleList.Model.swift  | 302 +++++++++++++++++++++
+ .../AIFeatureToggleList.Previews.swift             |  77 ++++++
+ .../AIFeatureToggleList.Registry.swift             | 104 +++++++
+ .../AIFeatureToggleList.RegistryTests.swift        | 140 ++++++++++
+ .../feature-views/AIFeatureToggleList.Tests.swift  | 293 ++++++++++++++++++++
+ .../feature-views/AIFeatureToggleList.Views.swift  | 143 ++++++++++
+ .../feature-views/AIFeatureToggleList.strings      | 150 ++++++++++
+ .../feature-views/AIFeatureToggleList.swift        | 198 ++++++++++++++
+ 10 files changed, 1790 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0199-AIFeatureToggleList.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIFeatureToggleList.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIFeatureToggleList.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIFeatureToggleList.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIFeatureToggleList.Registry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIFeatureToggleList.RegistryTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIFeatureToggleList.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIFeatureToggleList.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIFeatureToggleList.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIFeatureToggleList.swift

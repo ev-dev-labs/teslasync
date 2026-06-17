@@ -1,0 +1,181 @@
+I'll start by exploring the repository structure and checking the capabilities required for this task.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me examine the web source and the existing Apple app structure.
+
+Let me read the web source, look at existing native widgets in the target directory for patterns, and the registry.
+
+Now I understand the web source. Let me examine the native widget file-structure pattern and find a native maps-based widget to use as a reference.
+
+`LocationMapWidget` is the closest reference (maps widget using MapKit). Let me read its complete file set.
+
+Let me read the rest of the LocationMapWidget set plus the LocationFavoritesWidget (list-based maps widget) to understand both map and list patterns.
+
+Let me examine the list-based widget pattern, the shared design tokens/components, the build config, and the geofence schema.
+
+Let me locate the shared infrastructure: design tokens, registration type, geo/skeleton/marker helpers, unit formatting, and the build config.
+
+Let me read the test target config, the widget infrastructure types, and the shared map/geo/token helpers.
+
+There's already a `TSGeofence` type. Let me read the MapView component, the design tokens, and find how native widgets format distance with user unit preferences.
+
+Let me examine how native widgets handle distance units (key for the radius formatting) and check the design tokens.
+
+Let me read the RangeEstimate adapter (distance conversion/formatting parity) and the design tokens.
+
+Let me read the design tokens and the shared Badge/Feedback components I'll need.
+
+Let me check the geofence schema, the build setup (xcodegen/scheme), and surface-2 token usage.
+
+Now let me assess build feasibility — the critical risk. Let me check the Shared.xcframework, the build script, and simulator availability.
+
+Key findings: iPhone 16 sim is available, but `Shared.xcframework` must be built via Gradle (KMP). Let me check how prior widget surfaces' gates were logged to understand the expected verification path.
+
+This is the key precedent. The established methodology: author for real, prove via a standalone `swift test` harness (compiling the actual widget files against Shared-free deps), do full iOS/macOS app builds (needs Gradle-built `Shared.xcframework`), and defer the UI `test` portions. Let me kick off the long-pole Gradle framework build in the background while I write code.
+
+Java, gradlew, and Xcode are ready. Let me start the Shared.xcframework build in the background with an isolated Gradle home (per the 0060 precedent), then write code while it runs.
+
+Let me verify the geofence data shape from the hook and types, then I'll write the widget.
+
+Verified the data shapes. The Gradle build is running in the background. Let me create a session todo list and start writing the widget files.
+
+Gradle is running. Now the main surface view.
+
+Now the map + list subviews file.
+
+Now the Previews file.
+
+Now the comprehensive test suite.
+
+Now the i18n strings catalog.
+
+All 7 files written. Let me verify i18n key parity, then format/lint. Let me also check Gradle progress.
+
+All 18 keys match (plus mapA11y/markerA11y in both). Now let me auto-format my files, then lint.
+
+Untracked files don't show in diff. Let me run the actual gate commands: `swiftformat --lint` and `swiftlint --strict`.
+
+Three swiftlint issues: a short identifier and two files >400 lines. Let me inspect the exact project.yml test-target globbing (affects how I split test files) before fixing.
+
+project.yml now globs my `*Tests.swift` into the test bundles and non-test files into the app — so the real Xcode `build test` compiles my widget and tests. Let me check exact line counts and fix the 3 lint issues.
+
+swiftformat gate passes (0/2015). Now fixing the 3 swiftlint issues. Let me view the Model sections to extract.
+
+Now applying fixes: rename `a`, move strings/accessibility to a new file, and split tests.
+
+Now create the new strings/accessibility file and update the Model header.
+
+Update Model header, then split the test file. Let me find the test class boundaries.
+
+Cleanest to split by recreating. Let me remove the test file and create the two split files.
+
+Now re-format and re-lint all Geofence files. Let me also check Gradle progress.
+
+All 8 files lint clean (≤357 lines each). Gradle still building. Let me run the full-tree lint gates and inspect the placeholder script while Gradle finishes.
+
+The full `swiftlint --strict` gate surfaced a **pre-existing** violation in `LiveSignalSparklinesWidget.Builder.swift` — not my file and outside my allowed scope. Let me confirm it's pre-existing and re-verify my files + formatting + placeholder gate.
+
+Confirmed pre-existing and outside my allowed files. Let me get the complete violation list (to prove none are mine) and re-confirm the formatting gate.
+
+Exactly one pre-existing violation tree-wide, in a non-allowed file. Zero in mine. Let me re-confirm the format gate and run the placeholder gate.
+
+Format gate passes (0/2017), placeholder gate passes (COUNT=0). Let me check the Gradle build.
+
+Gradle output is buffered until completion. Let me generate the Xcode project (independent of the framework) while Gradle finishes.
+
+Project generated with the right schemes. Let me verify my files were picked up into the targets, then wait for Gradle.
+
+All 9 files are in the project. Now let me wait for the Gradle framework build to complete.
+
+It's been ~12 min. Let me check whether Gradle is actively progressing or stuck.
+
+Gradle is actively progressing (Kotlin/Native release linking in progress; debug XCFramework already assembled). Let me keep waiting.
+
+Gradle is mid release-link (slow under multi-slot contention). My logic is implemented; let me launch a background code review while I wait, and update todos.
+
+Gradle build completed. Let me verify it succeeded and staged the framework.
+
+**Gradle BUILD SUCCESSFUL** (24m54s under contention; both debug + release XCFrameworks written). Now let me stage the framework and run the iOS build. I'll reuse the warm Gradle home so the xcodebuild pre-action is fast.
+
+Framework staged. Now the iOS app build (compiles my widget in the real app). This takes a few minutes.
+
+iOS build running. Let me wait for it to progress.
+
+iOS build reported 5 failures. Let me extract the actual errors and check whether any are in my files.
+
+Zero errors in GeofenceWidget — all 5 failures are pre-existing type-collisions in `ChargeSessionChartWidget` and `ChargeStatusLiveWidget`. Let me prove these are pre-existing (committed) and independent of my work.
+
+I've reviewed the web source against all six native files and verified the shared symbols (`TSGeo.isValid/boundingRegion`, `TSTone.color`, `DashboardWidgetRegistration.clamp`, `DashboardWidgetSize`, conversion factors, `fmtNumber`) actually exist and match the signatures used.
+
+## Findings
+
+The numeric pipeline is a faithful port: haversine, `hasCoords` (OR), `inside = distance <= radius`, `currentZone = first(inside && enabled)`, `fmtRadius`, the `cols<=1` compact split, `showMap = hasCoords && rows>=3`, the disabled/inside/outside badge logic, the empty state, and `resolvePhase` (loading/empty/error/content) all line up with the spec. Conversion factors (`1000` / `1609.344` / `0.3048`) and the 1‑decimal grouped formatting match `convertDistanceFromSI` + `fmtNumber`. No Swift‑6 concurrency defects: `@MainActor` isolation on the model/source/protocol is consistent, `onUpdate` is `@MainActor`-typed, `resolvePhase` is correctly `nonisolated` + pure, and all the value types are `Sendable`. MapKit/`ContentUnavailableView` API usage is valid.
+
+One genuine—but low‑severity—parity deviation:
+
+## Issue: `displayName` trims/empties names that the web source preserves
+**File:** apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Adapter.swift:251-256
+**Severity:** Low
+**Problem:** The web spec coalesces *only* null/undefined: `name: g.name ?? '—'`. A present-but-empty (`""`) or whitespace-only (`"   "`) name is rendered verbatim on the web. The Swift `displayName` additionally trims whitespace and maps empty/whitespace-only strings to `"—"`:
+```swift
+guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+    return "—"
+}
+return trimmed
+```
+So for `name == ""` or `"  "`, the native widget shows `—` while the web shows an empty (or space) label, and the native widget also strips leading/trailing spaces from otherwise-valid names. This propagates to the row label, the compact badge, and the VoiceOver summary.
+**Evidence:** Direct comparison of GeofenceWidget.tsx:90 (`g.name ?? '—'`) against the adapter. Only triggers for empty/whitespace names; non-empty names are unaffected, which is why it's edge-case.
+**Suggested fix:** To match the spec exactly, fall back only on `nil`: `name: fence.name ?? "—"` (drop the trim/empty handling). If the trimming is a deliberate UX improvement, that's defensible — but it is a deviation from the parity target you asked me to enforce.
+
+## Non-issues worth noting (intentional, not bugs)
+- **Map framing:** native fits vehicle + all fences (`TSGeo.boundingRegion`) where web just centers at zoom 12. Behavioral enhancement, not a correctness defect.
+- **Error/connectivity branches:** native promotes error to a first-class phase with retry and adds a stale/offline banner; the doc comments call these out as deliberate, mandated additions.
+- **`enabled ?? true` and locale default (`en_US`):** these are realized at the source/DTO boundary (DTO `enabled` default; `units.localeIdentifier`), so parity depends on the production `GeofenceSource` wiring, which is outside these files.
+
+No critical bugs, no compile errors, and no concurrency races found.**Definitively pre-existing**: `ChargeSessionDTO`/`ChargeStateDTO` are each defined in two committed Charge-widget files (collision from commit `7d8b9e473`, prompt P-0020) — all 5 build failures are these Charge collisions, **zero in Geofence**, and no Geofence type exists outside my files. The baseline app target is already broken, independent of my work and outside my allowed scope.
+
+Per the 0060 precedent, let me prove my code compiles + tests pass via a standalone `swift test` harness. First, identify the Shared-free deps my code needs.
+
+The code review finished. Let me read it, then build the test harness.
+
+No critical bugs found. The one low-severity item — my `displayName` trims/empties names while the web does nil-only `?? '—'` — is a real parity deviation worth fixing to honor the spec. Let me align it exactly, update the test, and inspect a dep file for the harness.
+
+Let me view the current test text (swiftformat may have reflowed it).
+
+Now let me build the standalone `swift test` harness (0060 precedent). Let me check the minimal deps' transitive needs first.
+
+Skeletons pulls in `TSCard`. Let me assemble the harness with a reasonable dep closure and let the compiler guide iteration.
+
+My GeofenceWidget files compile cleanly — only the transitive `Cards.swift` needs `TSText`/`TSButton`/`TSPanelTitle`/`TSCaption`. Let me add Typography + Buttons and rebuild.
+
+Harness builds clean. Now run the tests.
+
+**All 37 tests pass (0 failures)** — compiled from my actual GeofenceWidget source files against verbatim Shared-free deps under Swift 6 + complete strict concurrency. Let me run the literal macOS gate command (to capture its real result) while I write the gate log.
+
+Let me re-verify formatting/lint on my last edits (Adapter + Tests) and check the macOS build progress.
+
+My edits are clean (swiftlint EXIT=0, swiftformat 0/2). The macOS build finished — let me check its result.
+
+The macOS log shows a different failure mode. Let me examine it closely.
+
+The macOS `build test` failed at **code-signing** (entitlements need a development certificate — a headless-environment limitation, exactly the ADR-012/0060 note), not at compilation. Let me confirm whether macOS compiled the widgets (Geofence/Charge) before the signing stage.
+
+macOS bailed at the **signing/planning stage before any compilation** (0 compile lines; only entitlement-signing errors) — a headless-environment limitation matching ADR-012/0060. 
+
+Summary of gate reality (all reds are pre-existing & outside my allowed `GeofenceWidget.*` scope):
+- **swift test harness: 37/37 GREEN** (my actual files, Swift 6 strict concurrency)
+- iOS app build: pre-existing `Charge*` type collisions (0019/0020/0021); **zero Geofence errors**
+- macOS build test: pre-existing code-signing env limitation
+- swiftformat/placeholder/my-file swiftlint: GREEN; bare swiftlint: 1 pre-existing nit in `LiveSignalSparklinesWidget`
+
+Let me capture exact final numbers for the log.
+
+All format gates green (0/2017). I have all the data. Now let me write the honest, evidence-backed gate log.
+
+Log written. Now let me verify git status (ensure only my files + log are committed; the generated `.xcodeproj`/framework are git-ignored), then commit.
+
+Working tree is clean — exactly my 9 files + the log; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Let me commit.
+
+Commit succeeded. Let me verify it and clean up temp artifacts.
+
+The GeofenceWidget surface is fully delivered, verified in isolation, and committed. Final state is consistent and honest.
+

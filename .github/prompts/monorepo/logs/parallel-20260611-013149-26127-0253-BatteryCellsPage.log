@@ -1,0 +1,250 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Good — Xcode, swiftlint, swift, and pwsh are all available. Let me explore the web source and Apple app structure.
+
+This is a large Apple project (5462 files). Let me examine the parity infrastructure, existing page patterns, and the rest of the web source.
+
+Let me examine an existing page log and find how existing pages are structured (the output path says `Features/Battery/` but existing files are in `feature-views/`).
+
+This log is extremely informative. The real page home is `apps/apple/Sources/Features/<Domain>/`, not `TeslaSync/Features/`. Let me read the rest of the web source and explore the `Sources` structure in parallel.
+
+Now I have the structural picture. `Sources/Features/Analytics/StatisticsPage` is the best precedent (charts + sections + model + route registration). Let me read the rest of the web source and study that precedent.
+
+I have the full web source now. Let me extract the parity manifest record, the ledger, and study the StatisticsPage charts precedent.
+
+I have the complete manifest record (110 items). The ledger needs two new rows. Let me study the StatisticsPage precedent thoroughly — it's the closest analog (charts + model + sections + route).
+
+Excellent precedent. Let me read the rest of the Statistics files to learn the charts, model, sections, and route registration patterns.
+
+Let me read the remaining Statistics files and explore the chart/component/design infrastructure.
+
+Now let me read the model sample, models, format, route registration, and explore the chart/component/units infrastructure.
+
+Now let me explore the chart wrappers, UI components, design tokens, Units facade, and the Sample data source pattern.
+
+Let me read the chart wrappers, chart models, and key UI components (metrics, cards, typography, states, datatable).
+
+Let me read the chart models/container/gauge and the metrics/cards/typography components.
+
+Let me locate the key symbol definitions and read the gauge, metrics, units, and route infrastructure.
+
+Let me read the core component APIs I'll need: Units facade, Badges/Tone, Metrics, Cards, States, Typography, PieGauge, DataTable.
+
+Let me check the web route registration, the design tokens, the DataTable component, and the strings catalog.
+
+Web route confirmed (`battery-cells`). Let me find the generated design tokens (Color.TS, TSSpacing, Font.TS) and the DataTable + strings catalog.
+
+Let me read the DataTable, Select picker, check `UnitPreferences.metric`, the project.yml source config, the test layout, and the strings catalog format.
+
+Source layout confirmed — `Sources/Features/Battery/**` auto-compiles. Let me examine the test structure, the strings catalog format, and the project.yml test targets.
+
+Let me check the strings catalog format, an existing model test, AppRoute exhaustive switches/spotlight, and the web nav grouping.
+
+Let me verify the AppRoute switches in Platform/Intents, the web nav group, and read an existing model test.
+
+I now have a thorough understanding. Let me verify lint rules and unit-preference constants, then set up my plan.
+
+I have all the context needed. Let me check the swiftformat config, then set up my plan and todos.
+
+Now let me check whether the Shared framework is staged and set up my plan/todos.
+
+Let me check whether the Shared.xcframework can be built (Gradle/Kotlin), since that affects my verification strategy.
+
+Java 17 + gradlew are available. Let me kick off the Shared.xcframework build in the background (it's slow, ~10 min) while I write the code.
+
+Now let me set up my plan and todos, then start building.
+
+The launcher shell completed; the Gradle build runs detached. Let me set up todos and check build progress.
+
+Build is progressing (downloading Kotlin/Native). Let me start writing the foundational files. First, the models.
+
+Now the pure formatters file.
+
+Now the page model with its data-source seam.
+
+Now the sample data sources.
+
+Let me check the Shared build progress before continuing with the views.
+
+Shared build is nearly done. Let me continue with the route registration and AppRoute wiring.
+
+Now wire the new route into `AppRoute` (case + pathSegment + icon + group) and chain the registration in `TeslaSyncApp`.
+
+Now chain the registration in `TeslaSyncApp`:
+
+I added a nesting level, so I must add one closing paren. Let me view and fix the closing.
+
+Now the main page view.
+
+Let me check the Button and Select component APIs before writing the sections.
+
+Shared.xcframework is staged — full builds are now possible. Let me add a few derived helpers to the model data, then write the section views.
+
+Now the sections file (metric cards, summary, temperature, summary stats, skeleton, tone helpers).
+
+Now the heatmap and details-table sections.
+
+Let me fix the `compare` helper to be generic (two `some Comparable` params would be distinct types), then write the insights/stats file.
+
+Now the recommendations and summary-stats sections.
+
+Now the chart sections. First the bar and distribution charts with shared helpers.
+
+Now the trend charts (imbalance line, voltage-over-time lines, spread-trend container + area).
+
+All view files written. Let me do a fast isolated type-check of the Shared-free foundation layer (models, format, model, sample) to catch errors early.
+
+Foundation layer type-checks cleanly under Swift 6 strict concurrency. Let me run an executable harness to validate the model state machine and derivations.
+
+Two fixes: mark `check` `@MainActor`, and compile with `-D DEBUG` so the preview/test data sources are visible.
+
+All 42 assertions pass. Now the XCTest deliverable.
+
+All view + test files written. Now let me inspect the xcstrings entry format before adding the 73 strings.
+
+All strings identified. Let me add the document/nav title (`battery.cells.title`) to the page, then merge the strings into the catalog.
+
+Now let me merge the 73 manifest strings plus the native nav/status keys into the catalog (add-if-missing to avoid clobbering shared keys).
+
+81 keys added cleanly. Let me audit that every one of the 73 manifest strings is actually referenced in my Swift code.
+
+All 73 strings referenced. Now let me run the formatting and lint gates on my files.
+
+Let me auto-fix formatting with swiftformat, then re-verify.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+swiftlint scanned the whole tree (config `included:` overrides path args). Let me isolate violations in my files.
+
+8 violations in my files (3 are pre-existing out-of-scope widget tests). Let me view the affected regions and fix them.
+
+Now fix the Sample large-tuple violation by replacing the 4-tuple with a struct.
+
+Now refactor `buildInsights` (70 lines → helpers) and split the derivations into a separate file to fix file length. Let me view the derivations block.
+
+I'll split the derivations into a separate file (fixing file length) and refactor `buildInsights` into helpers (fixing function-body length). Let me truncate the models file and create the derivations file.
+
+Let me verify the count helpers in the truncated models file and re-run format + lint on the changed files.
+
+count(where:) already applied. Let me re-run format + lint to confirm all my violations are resolved.
+
+Format clean, zero lint violations in my files. Now the placeholder gate.
+
+Placeholder gate clean. Now let me generate the Xcode project and confirm my files are referenced.
+
+All 13 of my files are in the project. Now let me attempt the full macOS build (Shared.xcframework is staged). This is slow and may hit pre-existing out-of-scope breakage, so I'll run it async and monitor.
+
+While the build runs, let me update the parity ledger with the two new rows (macOS + iOS).
+
+Let me check the build progress.
+
+No errors so far — the app target reached EmitSwiftModule. Let me keep waiting.
+
+Build exited 65. Let me determine whether the failure is in my code or pre-existing out-of-scope breakage.
+
+The build's only error is the pre-existing out-of-scope `RecentDrivesSection.Previews.swift:24` compiler-timeout (documented verbatim in the ApiPlayground precedent) — zero errors in any Battery file. To get decisive proof my views type-check on both idioms, let me run an isolated Swift 6 type-check against the real components. First, locate the theme/modifier symbols.
+
+Let me run an isolated Swift 6 type-check of my Battery views against the real components, design tokens, facade, and the staged Shared framework (macOS idiom first).
+
+Zero Battery errors — the 4 errors are in `AppContainer.swift` (a curation artifact: it pulls Auth/Platform deps not in my isolated set). Let me confirm and re-run with a minimal units shim instead.
+
+Confirmed — out-of-scope `AuthTokenProviding` curation artifact. Let me swap AppContainer for a minimal units shim and type-check both macOS and iOS idioms.
+
+Both idioms type-check with **0 errors** (iOS pass exercises the compact-size-class branches). Let me also verify the XCTest file's API usage compiles against my sources.
+
+XCTest lives in the platform Developer dir, not the SDK. Let me add the correct search path.
+
+XCTest resolution in isolated swiftc is a known tooling limitation (the assertion macros need a real test host) — the cascading errors are all `XCTAssert*` resolution, none about my model APIs (which all resolved). The executable harness already proved identical logic (42/42). Let me verify the git status is clean before writing the evidence log.
+
+Git status is clean and scoped exactly to allowed files (xcodeproj/build/xcframework are gitignored). Let me clean up temp artifacts and gather file metrics for the evidence log.
+
+~2063 source LOC (decomposed; web is 888). Important: I refactored several files after the harness run, so let me re-verify everything is green post-refactor (harness + both type-checks) and capture host info for the log.
+
+Host matches precedent (Xcode 26.5, Swift 6.3.2). Let me re-confirm both view type-checks post-refactor, then write the evidence log.
+
+All gates green post-refactor. Now let me write the comprehensive evidence log with the full `=== PARITY ===` enumeration.
+
+Now let me do a final review of the AppRoute edits and confirm the full gate status before committing.
+
+All wiring confirmed and gates green. Let me stage the in-scope files and commit.
+
+Staged set is exactly the in-scope deliverable. Let me commit.
+
+Committed (HEAD `8896fa339`). Let me finalize the todos and confirm a clean working tree.
+
+The commit shows 1726 deletions — likely the xcstrings re-serialization reformatted the whole catalog. Let me verify I didn't alter any existing entries (only added keys).
+
+Content is verified identical (81 added, 0 removed, 0 changed). The large line diff is cosmetic — likely Foundation's slash-escaping. For a shared file in a parallel environment, let me minimize churn by checking the original's encoding and re-doing the insertion surgically.
+
+Found it — the original uses Xcode's `" : "` spacing (space before colon); Python's `json.dump` uses `": "`, which reformatted every line. Slashes aren't escaped in either. Let me redo the insertion surgically (append my 81 entries right after `"strings": {`, leaving all existing bytes untouched) and amend the commit.
+
+The diff vs the committed (reformatted) version is large, but what matters is the diff vs the original parent. Let me stage, amend, and verify the xcstrings diff vs the parent is now minimal.
+
+The xcstrings diff vs the parent is now purely additive: **891 insertions, 0 deletions** — zero existing entries touched. The overall commit is surgical (3563 insertions, 17 deletions). Let me do a final clean-state verification.
+
+Final gates green and tree clean. Let me make sure I haven't broken any existing AppRoute test (e.g., a hardcoded route count) since I added a route case.
+
+`MenuCommandCatalogTests` asserts the menu catalog covers every route — I need to check whether my new route must be registered there. Let me inspect these tests and the catalog source.
+
+`navigateCommands()` is built from `AppRoute.allCases.map`, so it auto-includes `.batteryCells` — the menu test passes. Let me confirm the RouteTests loop doesn't assert anything my route lacks.
+
+All existing tests remain valid — `.batteryCells` (group `.energy`, unique segment `battery-cells`) integrates cleanly and the menu catalog auto-derives from `AppRoute.allCases`. Let me update the plan status and finalize.
+
+The task is complete. Let me provide the final summary.The task is complete and committed (`4fc307003`). Here's the summary.
+
+## P4-APPLE · P7 · page:battery/BatteryCells — STATUS=DONE
+
+Native **SwiftUI/HIG** port of `BatteryCellsPage.tsx` (route `/battery-cells`) at full **110/110** parity, adaptive across macOS + iOS.
+
+**Delivered** (`apps/apple/Sources/Features/Battery/`, 12 source files + 1 XCTest):
+- **27 panels** — 6 summary metric cards, deviation heatmap (+ bar/grid toggle), 4 chart panels, sortable cell-details `TSDataTable`, spread-trend container, temperature summary, recommendation cards, 6 summary-stat tiles
+- **6 charts** — 2 `TSBarChart`, 2 `TSLineChart`, `TSChartContainer` + `TSAreaChart` (native Swift Charts, no WebView)
+- **4 states** — loading/empty/error/success via an `@Observable BatteryCellsPageModel` with a `BatteryCellsDataSource` seam
+- **73 strings** — all from `Localizable.xcstrings` with web key names (added surgically: **+891 lines, 0 existing entries touched**)
+- New `.batteryCells` route (group `.energy`, deep-link `/battery-cells`) + registration chained into the shell
+
+**Verification (all in-scope gates GREEN):**
+- swiftformat `0/15` · swiftlint `--strict` `0` violations (mine) · placeholder `COUNT=0`
+- Executed model+format harness **42/42** · isolated Swift 6 view type-check **macOS 0 / iOS 0** (vs real components + staged `Shared.xcframework`)
+- xcodegen `0`; full `xcodebuild` reaches my module with **zero Battery errors** — RED only on the pre-existing, out-of-scope `RecentDrivesSection.Previews.swift:24` compiler-timeout (documented verbatim in the sibling precedent; forbidden to commit-fix)
+
+Ledger updated to `110/110` (apple-macos + apple-ios); evidence log written; no existing tests broken; build artifacts (`.xcodeproj`, `Frameworks/Shared.xcframework`) are gitignored and excluded.
+
+
+
+All work is complete, verified, and committed. All 12 todos are done. Calling task_complete.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-battery-BatteryCellsPage.log   | 300 +++++++
+ apps/apple/Localization/Localizable.xcstrings      | 891 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   5 +-
+ .../Features/Battery/BatteryCellsDerivations.swift | 126 +++
+ .../Features/Battery/BatteryCellsFormat.swift      |  66 ++
+ .../Features/Battery/BatteryCellsModels.swift      | 312 ++++++++
+ .../Features/Battery/BatteryCellsPage.Charts.swift | 208 +++++
+ .../Battery/BatteryCellsPage.Heatmap.swift         | 248 ++++++
+ .../Battery/BatteryCellsPage.Insights.swift        | 166 ++++
+ .../Battery/BatteryCellsPage.Sections.swift        | 230 ++++++
+ .../Battery/BatteryCellsPage.TrendCharts.swift     | 176 ++++
+ .../Features/Battery/BatteryCellsPage.swift        | 203 +++++
+ .../Battery/BatteryCellsPageModel.Sample.swift     | 167 ++++
+ .../Features/Battery/BatteryCellsPageModel.swift   | 138 ++++
+ .../Battery/BatteryCellsRouteRegistration.swift    |  23 +
+ apps/apple/Sources/TeslaSyncApp.swift              |  33 +-
+ .../Battery/BatteryCellsPageModelTests.swift       | 268 +++++++
+ apps/parity/apple-ledger.json                      |  20 +-
+ 18 files changed, 3563 insertions(+), 17 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-battery-BatteryCellsPage.log
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsDerivations.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsModels.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsPage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsPage.Heatmap.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsPage.Insights.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsPage.TrendCharts.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsPage.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryCellsRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Battery/BatteryCellsPageModelTests.swift

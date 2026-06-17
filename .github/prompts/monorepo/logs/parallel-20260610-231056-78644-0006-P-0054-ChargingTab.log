@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the Apple app scaffolding and toolchain availability.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat). Let me read the web source spec and explore the Apple app structure.
+
+Toolchain confirmed available. This is a substantial parity task. Let me read the project config, the related web sources, and discover the existing Apple architecture (state-holders, tokens, i18n, existing feature-views) to model after.
+
+Let me find PIE_COLORS, the FleetAnalytics types, the existing feature-views directory, and a reference feature-view to model after.
+
+The pattern is clear — `BatteryTab.*` is the ideal reference (an analytics tab). Let me read the full BatteryTab fileset to learn the exact conventions for state-holders, tokens, i18n, telemetry, charts, and tests.
+
+Excellent, the pattern is rich. Let me read the remaining BatteryTab files (Adapter, Charts, Views, Previews, strings, Tests) to fully internalize conventions before writing ChargingTab.
+
+Now the charts, previews, strings, and tests files to complete my understanding of conventions.
+
+I have the full BatteryTab template. Now let me examine the shared chart/UI tokens and components I'll reuse (palette, gradient, formatters, panels, empty state, etc.).
+
+Now let me confirm scope (ChargingDetailSection is a separate web component → separate surface) and read the shared native components I'll use plus `useFormatting`.
+
+ChargingDetailSection (P-0053) is a separate, already-built surface — so my ChargingTab scope is exactly the summary cards + 3 charts (matching the extracted i18n keys). Let me read `useFormatting`, the design tokens, and the sibling ChargingDetailSection fileset for currency + charging-data conventions.
+
+ChargingDetailSection is the ideal sibling (same `charging_analytics` data + currency). Let me read its Adapter, Charts, Views, main, strings, and Tests to mirror conventions precisely.
+
+The conventions are clear. Let me read the remaining ChargingDetailSection chrome/tests + the design tokens + the shared chart/UI/feedback components I'll reuse (PieGauge, BarCharts, Metrics, States, Skeletons, Cards).
+
+Let me read the design tokens and the exact shared component APIs (chart pie/bar, cards, metrics, states, skeletons, motion, typography) so I use correct symbols.
+
+`TSPieChart` (donut, `.ratio(0.6)` innerRadius + legend) is available for Charger Types. Let me confirm the palette parity and the exact APIs of the remaining shared symbols (tokens, cards, metrics, states, skeletons, motion, fade).
+
+Palette parity confirmed (`chartCategorical` = Okabe-Ito CB-safe = web `CHART_COLORS`). Now the remaining shared component APIs.
+
+I have all component APIs. Now the critical feasibility check: can the gate actually build/test here? Let me check `.tsGlassPanel()`, xcodegen, the .xcodeproj, the Shared.xcframework build script, pwsh, and the placeholder checker.
+
+xcodegen + pwsh are available; .xcodeproj must be generated. Let me check the Shared.xcframework situation and the build script.
+
+All shared APIs confirmed. Two more web specifics to reproduce exactly (`fmtInt`/`fmtNumber` undefined handling and `safe`), then I'll check build feasibility and write the files.
+
+I now have everything needed. Let me set up a plan and todos, then write the 8 ChargingTab files modeled on BatteryTab + ChargingDetailSection.
+
+Now writing the Model file (seams: telemetry, formatting, state-holder, DTOs, model, in-memory source, surface, strings facade):
+
+Now the Adapter (pure projection core: numeric guard, DTOs, metric/chart projections, accessibility):
+
+Now the main surface view (`ChargingTab.swift`) + the string `Text`/`label` facade bridge:
+
+Now the Views file (freshness chip, connectivity banner, panel shell, metric cards/grid, loading + error states):
+
+Now the Charts file (donut, distribution bars, hourly composed dual-axis) — the most involved:
+
+Now the strings (i18n) file:
+
+Now the Previews file:
+
+Now the Tests file (adapter + model + accessibility), then I'll run static checks:
+
+All 8 files written. Now running the fast static checks (swiftformat, swiftlint, placeholder gate) on the new files:
+
+swiftformat wants its own normalization (numeric grouping + multiline property bodies) — let me apply it via the tool itself, then re-lint:
+
+swiftformat clean. Now swiftlint --strict on the new files:
+
+swiftlint flags 5 issues: two file-length (Adapter 564, Tests 403), one long function body (`metrics`), two high param counts. Let me get exact line counts to plan a clean split.
+
+I'll split the Adapter into three files (Adapter + Data + Accessibility) to satisfy `file_length`, and refactor `metrics` (body length) + `statMetric`/`hourlySummary` (param counts). Recreating the files:
+
+Now the Accessibility file (with the labels struct to cut `hourlySummary`'s parameter count):
+
+Now update the two `hourlySummary` callers (Charts + Tests) to the new labels-based signature, and trim the Tests header to stay under 400 lines:
+
+Tests is 401 — need to trim 2+ lines. Let me condense the header comment:
+
+Now re-run swiftformat + swiftlint on all 9 ChargingTab swift files:
+
+All static checks pass: **swiftformat --lint 0/9**, **swiftlint --strict 0 violations**, all files <400 lines. Now the placeholder gate — let me check how it resolves the `-Path` argument:
+
+The gate's `-Path .../ChargingTab` resolves to a non-existent dir (vacuous pass), so to honestly verify I'll run the placeholder scan against each actual ChargingTab file plus the literal gate path:
+
+Placeholder gate clean (0 in all files). Now the heavy gate. Let me generate the Xcode project, check available simulators, and inspect the KMP shared-core build feasibility:
+
+Project generated (ChargingTab files included), iPhone 16 simulator booted, KMP shared dir present. The heavy step is building the KMP `Shared.xcframework`. Let me build it (this can be slow — Kotlin/Native):
+
+The KMP `Shared.xcframework` built and staged successfully (8m59s) — the full build is feasible. Now running the actual gate: iOS `build test` (compiles the whole app incl. ChargingTab + runs all unit tests). This is long; capturing to a log:
+
+Build succeeded; tests ran with 3 failures. Let me identify which tests failed (mine or pre-existing):
+
+The 3 failures are **not** in my code — they're pre-existing compile errors in four unrelated surfaces' `.Previews.swift` files (RecentDrivesListWidget, RecentDrivesSection, StateTimeline, StateTimelineWidget): `cannot infer contextual base in reference to member 'failed'`. Let me confirm these are pre-existing (not caused by my changes) and inspect one:
+
+Confirmed: I only added ChargingTab files — the 4 failing files (RecentDrives*/StateTimeline*) are pre-existing tracked files I didn't touch, and **no ChargingTab errors appear in the build**. Let me inspect one failing file + its model to confirm this is a pre-existing defect unrelated to my work:
+
+The `update(status: RecentDrivesLoadStatus = .loaded, …)` signature and `RecentDrivesLoadStatus.failed(String)` are well-formed — that call should compile, so these are pre-existing failures (4 unrelated surfaces, all on `.failed`, none of my types involved). Let me get definitive proof by temporarily removing my untracked files and rebuilding-for-testing:
+
+Project now has 0 ChargingTab references. Rebuilding-for-testing **without** my files — if the same 4 errors persist, they're definitively pre-existing:
+
+**Definitive proof:** with my files removed, `build-for-testing` still fails with the identical 3 failures (5 `.failed` errors in the same 4 sibling preview files), BASELINE_EXIT=65. The breakage is **100% pre-existing and unrelated to ChargingTab**. Let me restore my files and regenerate:
+
+Files restored (60 refs). Now I'll prove my unit tests **pass** by running the Foundation-only logic (Model/Adapter/Data/Accessibility + Tests) in an isolated SwiftPM package — these are the adapter + state-holder + a11y tests the acceptance requires:
+
+**All 29 ChargingTab unit tests pass** (0 failures) in isolation — adapter, state-holder, formatting, and accessibility logic verified. Now, to avoid assuming the macOS result, let me run the macOS gate step too (same shared app target):
+
+macOS also exits 65 with **0 ChargingTab errors** (my code compiles clean on macOS too). Let me see what the 1 macOS failure is:
+
+The macOS failure is a **code-signing/entitlements** limitation (dev certificate not available in this environment) — again **0 ChargingTab errors**. So both gate steps fail for reasons external to my surface: iOS = pre-existing sibling-file breakage, macOS = dev-signing capability.
+
+Let me gather exact evidence snippets, then write the comprehensive honest gate log:
+
+The baseline (without my files) shows the **same and additional** pre-existing contextual-base errors across those four files — conclusive proof they're broken independent of ChargingTab. I have all evidence. Writing the comprehensive, honest gate log:
+
+Let me confirm my SwiftUI files were actually compiled in the full build (not skipped), do a final lint pass post-restore, and clean up temp artifacts:
+
+The per-file grep didn't match — let me check whether my SwiftUI files actually got compiled in those builds (this matters for verifying the SwiftUI code, which the isolated test didn't cover):
+
+EmitSwiftModule for the app target succeeded and `ChargingTab.strings` was validated — but to be rigorous (not assume) about my SwiftUI files incl. Previews, let me do a definitive verification: temporarily move only the 4 pre-existing-broken sibling preview files aside, then build the iOS app target and confirm my whole surface compiles green. (These moves are local verification only — I restore them after.)
+
+Removing those 4 files surfaced **27 failures** — this worktree has extensive pre-existing breakage across many sibling surfaces. Let me confirm whether **any** are in ChargingTab:
+
+`chargingtab_errors=0`. The root cause is now precise: the **RecentDrives* surface has duplicate/ambiguous type definitions** (`'RecentDrivesConnection' is ambiguous for type lookup`, etc.) — pre-existing parallel-work breakage that poisons the shared app target. My ChargingTab surface has zero errors. Let me restore the moved files and regenerate to leave the tree as I found it:
+
+Tree restored — only ChargingTab files + the log are new. Let me sharpen the log's root-cause section with this definitive evidence, then clean up temp artifacts:
+
+Let me clean up temporary build artifacts and update tracking:
+
+Let me do a final confirmation of the log's terminal lines and overall file integrity before finalizing:
+
+The deliverable is complete and verified to the maximum extent the environment allows. Final state confirmed: log ends `EXIT=65 / STATUS=BLOCKED` (honest), all 10 files present and <400 lines, full i18n key parity.
+

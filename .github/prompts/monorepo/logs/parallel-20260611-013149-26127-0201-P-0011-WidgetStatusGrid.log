@@ -1,0 +1,180 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and explore the Apple project structure.
+
+Both web source and native widget-primitives directory exist with prior examples. Let me read the web source and the closest existing native examples to learn the established pattern.
+
+The web `WidgetStatusGrid` is a **pure presentational** component (no data hooks): renders an `EmptyState` when `cells` is empty, otherwise a status grid. Let me study the closest existing native primitive (`WidgetComparisonCard`, also presentational) to follow the established conventions exactly.
+
+Now let me read the remaining `WidgetComparisonCard` files (Adapter, strings, Previews, Tests, AdapterTests) and the project.yml to understand file inclusion and the supporting types.
+
+Let me read the tests, project.yml, and find the shared design tokens and any native `EmptyState` equivalent.
+
+Now let me read `project.yml` and locate the shared design tokens (`TSSpacing`, `Color.TS`, `Font.TS`) plus any native `EmptyState` equivalent referenced by the web `@/components/feedback`.
+
+The build auto-discovers `.swift` files under `TeslaSync/widget-primitives` (path-based). Tests route to the XCTest bundles. Now let me find the design tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSRadius`) and check for xcodegen + a native EmptyState.
+
+I now have all design tokens. Let me check for a native shared `EmptyState` (the web uses `@/components/feedback`'s `EmptyState`) and confirm the xcodegen/build flow, plus check the check-placeholders script.
+
+No shared native `EmptyState` struct exists in widget-primitives; they build their own. Let me check the native feedback `States.swift` (the real native peer of `@/components/feedback`), the placeholder patterns, and the simpler `WidgetChartSummary` example.
+
+I have the patterns. Let me read the lint configs and the `WidgetChartSummary` model/layout + `WidgetEventFeed.States` to mirror conventions precisely before writing.
+
+I have everything needed. Let me set up tracking, check the log directory, and establish tooling baselines (xcodegen, swiftlint, swiftformat) while I design the files.
+
+Tooling works. Let me check a prior gate log to understand expected format and whether xcodebuild succeeded on this runner previously.
+
+This is the key precedent: the full-app `xcodebuild` is red only for **pre-existing/environmental** reasons (macOS dev-signing + other agents' files), and surfaces are verified via isolated SPM test + per-SDK typecheck + lint + format + placeholder, with the full build deferred to the P99 gate. Let me read the middle of the log to extract the exact verification commands used.
+
+I now fully understand the established, honest verification methodology (surface-scoped: SPM isolated test + dual-SDK typecheck + lint + format + placeholder; full-app `xcodebuild` is pre-existing-red and deferred to the P99 gate). Let me write a brief plan, then create the files.
+
+Shared.xcframework isn't staged (8min KMP build) and full `xcodebuild` is pre-existing-red per precedent. iPhone 16 simulator is booted. Let me write all source files now, starting with the pure-core Adapter.
+
+Now the Views file (status chip, width-measuring grid, empty leaf).
+
+Now the public `WidgetStatusGrid` view.
+
+Now the i18n strings catalog and the DEBUG previews.
+
+Now the two test files — pure-core `AdapterTests` and `Tests` (model/view/strings).
+
+All 8 files created. Let me update tracking and run swiftformat (auto-fix) then swiftlint on the new files.
+
+Format passes. Now swiftlint --strict on the new files.
+
+swiftlint clean (0 violations). Before the placeholder gate, let me self-check my files for any forbidden placeholder tokens (the patterns are matched in comments too) and review what swiftformat rewrapped.
+
+Clean. Now run the placeholder gate (both the literal gate path and the real directory, scoped to swift).
+
+Now the real-directory scan (scoped to swift) to make the zero meaningful across the surface files.
+
+Placeholder gate passes. Now the meaningful surface-scoped verification: an isolated SwiftPM harness to **compile + run the tests** (full surface incl. SwiftUI views), then dual-SDK typecheck. Let me build the harness.
+
+Now build and run the isolated test suite.
+
+All 35 isolated tests pass (full surface incl. SwiftUI views, Swift 6 strict concurrency). Now the dual-SDK typecheck against the **real iOS 18 + macOS 15 SDKs**.
+
+Both SDK typechecks pass (0 errors). Now `xcodegen generate` to confirm the project generates and enumerates the new files.
+
+xcodegen succeeded. Let me verify all 8 files are enumerated in the generated project (app + test targets).
+
+All 8 files enumerated (48 refs, matching precedent). Now the full-app `xcodebuild` gate. Per precedent it's pre-existing-red (needs the 8-min KMP `Shared.xcframework` + has other-agents' compile errors + macOS signing). Let me check what's feasible here and whether the pre-existing error files still exist.
+
+Confirmed: the two pre-existing error files still exist (outside my scope), 0 codesigning identities, but the KMP toolchain IS present. To match the precedent's evidence rigor (prove **zero WidgetStatusGrid errors** in the real app build), I'll stage `Shared.xcframework` then run the real iOS `xcodebuild`. Let me read the rest of the build script and kick it off in the background.
+
+Working tree only has my 8 new files. Let me stage `Shared.xcframework` (the ~8-min KMP build) in the background while I prepare the gate log.
+
+The KMP build is running. Let me confirm it started cleanly, then monitor while drafting the log.
+
+The KMP build is actively compiling (downloading Kotlin/Native, building iOS targets). I'll wait for it to complete — it's the long pole (~8min). Let me poll periodically.
+
+Build is near completion (debug XCFramework done, now linking release). Let me wait for it to finish staging.
+
+Release iOS framework still linking (slower due to optimization). Let me wait for completion.
+
+Progressing through release variants (now iOS simulator). Let me wait for staging to complete.
+
+Now on the final variant (macOS release). Let me wait for the release XCFramework assembly + staging to finish.
+
+`Shared.xcframework` staged (ios-arm64 + simulator + macos-arm64), KMP BUILD SUCCESSFUL in 13m59s. Now the real iOS `xcodebuild` gate for the booted iPhone 16 simulator, capturing full output.
+
+iOS build is compiling the TeslaSync module (framework linked, surfaces compiling). Let me wait for it to reach the module-emit phase and complete.
+
+iOS build finished `IOS_EXIT=65` (matching precedent). Let me analyze the errors — confirming they're pre-existing and that **zero** are in WidgetStatusGrid.
+
+Critical finding — the full build surfaced **real, surface-introduced errors**: my `StatusKind` collides with an existing type (`invalid redeclaration of 'StatusKind'` → ambiguous lookups → Equatable synthesis fails → Previews fail). This is NOT pre-existing; I must fix it. Let me find the existing `StatusKind`/`StatusCell` declarations.
+
+Found it: an existing `public enum StatusKind` lives in `feature-views/helpers.Adapter.swift:31` (another surface). My new `StatusKind` collides. The other types (`StatusCell`, `StatusGridColumns`, `StatusGridCell`) are unique — the `StatusCell`/`StatusGridCell` Equatable failures are just fallout from the ambiguous `StatusKind`. The scope-correct fix: rename my enum to a unique, surface-scoped name. Let me inspect the existing enum and confirm my candidate name is free.
+
+The existing `StatusKind` is a genuinely different enum (`success/warning/danger/neutral`, another surface's helper) — I must not reuse it. `StatusCellKind` is free. Let me rename my enum to `StatusCellKind` across all 7 Swift files, and proactively check my other non-prefixed public type names for collisions to avoid another failed build.
+
+BSD `sed` doesn't support `\b` — the rename was a no-op (good that I verified!). The proactive collision check confirms my other type names are unique. Let me redo the rename with `perl`.
+
+Rename succeeded (Previews uses inferred `.ok` so needs no spelling). Let me re-run format + lint on the updated files.
+
+Format + lint still clean. Now re-sync the harness, re-run the isolated tests, and re-run the dual-SDK typechecks.
+
+35 tests pass. Now re-run the dual-SDK typechecks, then the critical iOS `xcodebuild` re-run to confirm my errors are gone.
+
+Typechecks pass. Now the critical re-run of the iOS `xcodebuild` (incremental) to confirm my errors are resolved.
+
+Module-emit phase reached, **0 WidgetStatusGrid errors** so far. Let me wait for the build to complete (it'll fail at the pre-existing errors).
+
+BUILD FAILED with **0 WidgetStatusGrid errors**. Let me confirm the failing errors are exactly the pre-existing/unrelated ones.
+
+0 `error:` lines but BUILD FAILED — let me see the actual failure reason (likely the build was interrupted or failed differently in the incremental pass).
+
+A swift-frontend **IRGen crash** (`report_fatal_error`), not a type error — and notably build1's only errors were my 33 (the precedent's AIGeofence/RecentDrives errors are already gone). The module type-checked/emitted fine; the crash is in code generation. Let me find what triggered it.
+
+The IRGen crash is on `feature-views/AppearanceSettings.Controls.swift` — **not my file**. It's a swift-frontend code-gen crash that only manifests now that the module type-checks past my (fixed) files. Let me confirm both reported failures and that none involve WidgetStatusGrid.
+
+Now fully clear. Both build2 failures are in **other agents' surfaces** — `shared-surfaces/AISignalExplorerNlFilter.swift` (escaping-closure error, same pre-existing class as the precedent) and `feature-views/AppearanceSettings.Controls.swift` (swift-frontend IRGen crash). **Zero** WidgetStatusGrid errors; the 19 mentions are benign compile-action lines. My fix is confirmed. Let me capture the macOS build evidence (expected signing-red) to match precedent rigor.
+
+macOS actually **compiled and produced TeslaSync.app** (got past the iOS crash — different optimization), reaching the test phase: `** TEST FAILED **` (1 failure), 0 WidgetStatusGrid errors. I must verify the test failure isn't mine. Let me investigate.
+
+macOS failure confirmed as the **pre-existing dev-signing wall** (`entitlements require signing with a development certificate`, 0 identities) — identical to the precedent, zero WidgetStatusGrid involvement. The macOS app target compiled my surface cleanly. Let me capture exit codes and run the **tree-wide** format/lint (the actual gate commands).
+
+MAC_EXIT=65 (failed in ~14s — i.e., at the early signing/entitlements validation). Let me confirm whether macOS compiled anything before failing, so the log is precise.
+
+macOS fails fast at the signing/entitlements validation **before any compilation** (0 SwiftCompile, only the 2 dev-cert entitlement errors) — exactly the precedent, 0 WidgetStatusGrid involvement. Now the tree-wide gate commands (`swiftformat --lint apps/apple`, `swiftlint --strict`).
+
+Tree-wide format clean (0/5124). Now tree-wide `swiftlint --strict`.
+
+Tree-wide swiftlint found 3 violations — I must locate them (my scoped files were clean). Let me identify them.
+
+The 3 tree-wide swiftlint violations are **pre-existing, in `WidgetChartSummary.Tests.swift`** (surface 0002 — single-char `a`/`b`/`c` test vars), **outside my allowed-files scope** (`WidgetStatusGrid.*`). My surface has **0** violations. Per the prompt's strict allowed-files constraint and "don't fix unrelated pre-existing issues", I won't touch that file — I'll document it.
+
+All evidence gathered. Let me update tracking and write the comprehensive gate log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Log written. Let me do a final review of the renamed sections to ensure they read cleanly, then commit.
+
+The rename is clean and coherent across all files. Now let me stage exactly my 8 surface files + the log (the `.xcodeproj` and `Shared.xcframework` are gitignored) and commit.
+
+Exactly the 8 surface files + log staged, nothing else. Committing.
+
+Committed (`b3abe8e49`, 9 files, 1464 insertions). Let me clean up temp artifacts and confirm the working tree is clean.
+
+All gates verified and the work is committed. 
+
+## Summary
+
+Shipped **`WidgetStatusGrid`** — a native, Apple-idiomatic SwiftUI port of `web/src/features/dashboard/widgets/shared/WidgetStatusGrid.tsx`, at full parity, on branch `auto/20260611-013149-26127/201` (commit `b3abe8e49`).
+
+**8 files** (`apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.*`):
+- `Adapter` (pure core: `StatusCellKind`, `StatusCell`, `StatusGridColumns`, Input, `StatusGridCell`, Projection, Projector, responsive `Layout`), `Model` (P1/S10 i18n facade + P1/S11 telemetry + P1/S8 `@Observable`), `Views` (tone-tinted chip with corner status dot + width-measuring grid + empty leaf), `.swift` (public view), `Previews`, `.strings`, plus `Tests` + `AdapterTests`.
+- Faithfully reproduces every real branch: populated grid, container-query column collapse (2/3/4-up), `compact` (2 cols, value suppressed), and the empty leaf. Tokens-only (no Tailwind/hex), VoiceOver restates status as a spoken word, min-44 targets, i18n via facade (0 dead keys).
+
+**Verification (all surface-scoped + host-runnable gates green):**
+- swiftformat `0/7` (tree `0/5124`); swiftlint `--strict` **0 surface violations**; placeholder gate `0`.
+- Isolated SwiftPM **35/35 tests** (full IRGen + execution, Swift 6 strict concurrency); dual-SDK typecheck **iOS 18 + macOS 15 = 0 errors**; `xcodegen` OK (48 refs).
+
+**Integrity (honesty covenant):** The first full `xcodebuild` caught a **real** bug — my `StatusKind` collided with an existing enum in another surface. I fixed it (renamed to `StatusCellKind`), re-ran every gate, and the re-build shows **0 WidgetStatusGrid errors**. The full-app build remains RED only for **pre-existing/unrelated** reasons (macOS dev-signing with 0 identities; two other agents' files: an escaping-closure error + a swift-frontend IRGen crash; 3 pre-existing lint violations in `WidgetChartSummary.Tests.swift`) — all outside the allowed-files scope and deferred to the P99 acceptance gate, as recorded in the gate log.
+
+`EXIT=0 / STATUS=DONE`
+
+
+
+The task is fully complete and verified — all 9 todos done, committed, working tree clean.
+
+Merge made by the 'ort' strategy.
+ ...ple-widget-primitives-0011-WidgetStatusGrid.log | 176 ++++++++++++++
+ .../WidgetStatusGrid.Adapter.swift                 | 264 +++++++++++++++++++++
+ .../WidgetStatusGrid.AdapterTests.swift            | 241 +++++++++++++++++++
+ .../widget-primitives/WidgetStatusGrid.Model.swift | 165 +++++++++++++
+ .../WidgetStatusGrid.Previews.swift                |  94 ++++++++
+ .../widget-primitives/WidgetStatusGrid.Tests.swift | 197 +++++++++++++++
+ .../widget-primitives/WidgetStatusGrid.Views.swift | 208 ++++++++++++++++
+ .../widget-primitives/WidgetStatusGrid.strings     |  39 +++
+ .../widget-primitives/WidgetStatusGrid.swift       |  80 +++++++
+ 9 files changed, 1464 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-widget-primitives-0011-WidgetStatusGrid.log
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.Model.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.Views.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.strings
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.swift

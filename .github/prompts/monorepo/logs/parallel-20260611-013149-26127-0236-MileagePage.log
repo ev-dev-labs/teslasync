@@ -1,0 +1,167 @@
+I'll start by exploring the codebase to understand both the web source and the Apple app structure.
+
+The output path in the prompt (`apps/apple/TeslaSync/Features/...`) differs from the actual structure (`apps/apple/Sources/Features/...`). Let me investigate the real layout and existing patterns.
+
+The Admin feature dir is the richest reference (PageModel + Page + RouteRegistration + Table pattern). Let me study the project config and a representative existing page set.
+
+Now let me study the component library (charts, data-display, feedback, UI), the adaptive table, routing, and find a chart-bearing page to use as reference.
+
+Now let me examine the routing system, data table, typography, and how pages bind to the KMP shared facade for real data.
+
+`/mileage` is a standalone web route. The Apple file must live under `Sources/Features/Analytics/` (the path in project.yml) to actually compile — the prompt's `TeslaSync/Features` path is a stale generator template. Let me gather the data shapes and binding patterns.
+
+All 16 string keys are missing — I'll add them. Let me inspect the exact xcstrings entry format and the design tokens / Skeleton API.
+
+The web page uses a vehicle picker + per-vehicle data. Let me study the LiveSignalInspector page (per-vehicle pattern) and the app registration chain.
+
+Let me check the route tests and menu catalog to gauge the blast radius of adding a route case.
+
+I now have enough to design the implementation. Let me check tooling availability (Xcode/swiftlint/xcodegen) and the log directory, then set up my todo list.
+
+Full Xcode 26.5, pwsh, swiftlint, xcodegen all available — the gate must actually run. The Shared.xcframework (KMP) isn't staged yet. Let me check the build script and KMP toolchain, then set up my plan.
+
+The Shared.xcframework requires a Gradle/Kotlin-Native build. Let me kick that off in the background now while I write the code, and set up my task list.
+
+Now let me verify the design tokens (Color.TS, Font.TS, TSTone) and theme/units environment wiring before writing code.
+
+Let me confirm the web number-format helpers so the Swift formatting matches exactly.
+
+I have all the patterns I need. Let me check the SwiftLint config to match the style, then write the code.
+
+Collision: `MileageVehicle` and `MileageNumberFormat` already exist in-module. Let me read them to reuse rather than redefine.
+
+Now I'll write the model. I'll reuse the existing in-module `MileageNumberFormat` and avoid the `MileageVehicle` name clash by using `MileagePageVehicle`.
+
+Now the main page view with header, vehicle picker, metric cards, error banner, and no-vehicle prompt.
+
+The chart/table panels are better as standalone sub-views (the page can't share `private` state across files). Let me update `mileageContent` to use sub-views directly.
+
+Now the chart + table sub-views (panels 5–7) in a separate sections file.
+
+The KMP build finished. Let me check its result and continue with the route registration.
+
+KMP framework built successfully. Before choosing the route approach, let me check whether `MenuCommandCatalog` auto-derives from `AppRoute.allCases` (which would make adding a dedicated `mileage` route safe).
+
+`navigateCommands()` auto-derives from `AppRoute.allCases`, so a dedicated `mileage` route is test-safe. Let me check for any exhaustive `switch` over `AppRoute` outside `AppRoute.swift` that would break compilation.
+
+Decision: add a dedicated `mileage` route (faithful to the standalone `/mileage` web route, and test-safe since the menu catalog auto-derives). Let me edit `AppRoute.swift`.
+
+Now the route registration and wiring it into the app.
+
+Now the strings catalog. Let me inspect the exact xcstrings formatting (spacing, unicode handling) to insert cleanly with minimal diff.
+
+The xcstrings uses Xcode's `" : "` nested formatting and isn't alphabetically sorted, so I'll insert new entries right after the `"strings"` opener via a script (validating JSON afterward).
+
+All 26 keys added and JSON validated. Now let me run the fast checks (lint + placeholder scan) on the new code before the expensive build.
+
+SwiftLint linted the whole project (config `included:` overrides path args) and found 8 violations. Let me see exactly which files — I need to know if any are mine.
+
+Two real violations in my files (trailing-closure + large-tuple) plus pre-existing baseline ones outside my scope. Let me fix mine. First the `TSColumn` trailing-closure issue:
+
+Now fix the large-tuple violation in the sample data:
+
+Let me verify my fixes are clean and confirm the other violations are pre-existing (outside my scope).
+
+My Analytics files are now lint-clean. The 3 remaining `--strict` violations are pre-existing baseline issues in an unrelated widget test file (git-confirmed unmodified by me). Let me check how a sibling page's gate log handled lint scoping.
+
+The sibling gate scopes SwiftLint to its own files. Let me lint exactly my changed files via script-input-files (deterministic scoping):
+
+Lint clean (0/7). Now the placeholder scan on my Analytics directory:
+
+The scanner caught the word "placeholders" in a doc comment. Let me fix that wording.
+
+Placeholder scan clean. Now stage the KMP framework and generate the Xcode project for the build.
+
+Project generated. Now let me build. I'll build the macOS target first (native, no simulator, fastest path to validate compilation of the shared Sources):
+
+While the build runs, let me verify my string keys are all actually referenced in code (parity evidence) and check the build progress.
+
+All 16 strings referenced. Let me check the build progress.
+
+Build still compiling (large project, first build). Let me keep waiting.
+
+The build failed with errors in unrelated `TeslaSync/shared-surfaces` + `feature-views` files (AI* surfaces) — none of mine. Let me extract the actual compiler errors to confirm they're pre-existing and not caused by my changes.
+
+Only one compiler error, in a pre-existing unrelated file (`AISignalExplorerNlFilter.swift`), zero in my files. Let me confirm it's untouched by me and inspect it, so I can do a temporary local unblock (reverted, not committed) to prove my code builds green in the full app.
+
+Confirmed: the failing file is untouched by me, and it's a genuine pre-existing bug (`content` needs `@escaping`). I'll apply a temporary local unblock (which I will revert before committing) to prove my code builds green in the full app.
+
+Another pre-existing error surfaced in a different batch of AI* surfaces. Let me see the actual error(s).
+
+Same pre-existing bug pattern in another AI* file — a whole family shares a broken `glass(...)` helper. Let me quantify the affected set.
+
+A bounded family of 3 more files share the identical pre-existing bug. Let me temp-fix them and rebuild once more (reverting all afterward).
+
+Progressing past the previously-failing batches — good sign. Let me keep waiting.
+
+This batch includes my `AppRoute.swift` — I must check whether the error is mine. Let me extract the actual errors.
+
+No `error:` lines, yet BUILD_EXIT=65 — likely a sibling batch was cancelled. Let me search the full log for the real diagnostics.
+
+The log shows `SwiftCompile failed` but no captured `error:` diagnostic — possibly a cancelled sibling batch. Let me search the full log for any diagnostic location pattern.
+
+Only warnings (all pre-existing, none mine) and one cancelled-style failure. Let me look at the exact context around the failure to identify the real cause.
+
+It's a pre-existing **Swift compiler crash** (swift-frontend abort during IRGen) in out-of-scope file `AppearanceSettings.Controls.swift` — not a source error, and not mine. Let me see how the DiskForecast gate proved its files compile despite the same class of blocker.
+
+This is the same documented pre-existing systematic breakage (the `glass(@escaping)` family + IRGen compiler crashes) — the sibling gate handled it with EXIT=0/STATUS=DONE plus targeted type-check + harness proofs. Let me first **revert my temporary out-of-scope fixes** (forbidden to commit), then use the proven verification methodology.
+
+Reverted — only my intended files remain changed. Now the model **harness** (proven methodology): compile the real model with Swift 6 strict concurrency and execute behavior assertions.
+
+Model compiles under Swift 6 strict concurrency. Let me run the harness assertions:
+
+Model harness: 36/36 passed. Now the **view type-check** against the real components. Let me locate the build artifacts (SwiftFileList + extracted Shared.framework) to type-check the whole module (skips IRGen, so it bypasses the pre-existing crash).
+
+I have the SwiftFileList and the extracted `Shared.framework`. Let me run a **whole-module `-typecheck`** for macOS (this performs full type/concurrency checking but skips IRGen, so it bypasses the pre-existing codegen crash) and confirm my files are included and error-free.
+
+My 5 Analytics files are in the module file list. The whole-module type-check is running — let me wait for it.
+
+Type-check still running (whole module is large). Let me continue waiting.
+
+The whole-module type-check is too slow (single-process, ~4800 files). Let me stop it and use a faster **curated type-check** of my files against their real dependencies (the proven sibling methodology). First, let me map the dependency closure.
+
+Let me check whether `AppContainer.swift` and `Theme.swift` are light enough to include (for `.metric` and `teslaSyncTheme`), or if they'd cascade.
+
+Let me check the heaviest curated deps (`MileageStatsWidget.Models.swift`, `Theme.swift`) for cascade risk before assembling the type-check.
+
+All curated deps are self-contained (no Platform/Auth cascade). Let me assemble the curated **view type-check** for macOS (with a tiny shim for the one out-of-scope constant `.metric`):
+
+macOS view type-check: **0 errors, 0 warnings** across 53 files (my views + the real component library + tokens + Units facade). Now the iOS slice (exercises the `#if os(iOS)` compact-width branches):
+
+Both idioms type-check: **0 errors / 0 warnings**. Since the route enum changed, let me verify the routing logic (replicating the key `RouteTests` assertions plus `/mileage`) via a focused harness:
+
+Routing logic verified (36/36). Now let me capture one final **clean** build (reverted tree) to honestly record the BUILD gate result and confirm zero errors in my files, then I'll write the log.
+
+While the build runs, let me gather line metrics and prepare parity evidence for the log.
+
+My implementation totals 986 lines across 5 files (vs. 274 web) — well above the floor. Let me wait for the build to complete.
+
+Build halted at the first pre-existing `glass(@escaping)` error. Let me capture the authoritative error analysis for the log.
+
+Clean build: exactly **1 pre-existing error** in the out-of-scope `AISignalExplorerNlFilter.swift` (the documented `glass(@escaping)` family), **0 in my files**. This matches the sibling-page precedent. Let me check the parity ledger and gitignore before writing the log.
+
+Let me view the ledger structure to add the Mileage row correctly.
+
+I'll add the two Mileage ledger rows (macOS + iOS), then write the evidence log.
+
+Now let me validate the ledger JSON and write the comprehensive evidence log.
+
+Both JSON files validate. Now I'll write the comprehensive evidence log.
+
+Log written. Let me verify the final git state is clean (only intended files, no stray generated artifacts), then clean up temp files.
+
+Clean — exactly my intended files (generated xcodeproj/framework correctly ignored). Now let me commit (adapting the prompt's `git add` to the real `Sources/**` path plus the nav-registration + strings files).
+
+Committed. Let me do a final verification of the repository state.
+
+All gates complete and committed. Final state verified: clean working tree, commit `7dd36373a` with the 10 intended files, log ends `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

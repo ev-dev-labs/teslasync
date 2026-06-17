@@ -1,0 +1,30 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+Xcode 26.5, swiftlint, and Swift 6.3.2 are all available — the gate won't be blocked. Let me explore the web sub-components and the Apple app structure.
+
+The actual structure uses `apps/apple/Sources/Features/Admin`, not `apps/apple/TeslaSync/Features/Admin`. Let me examine the existing Admin feature, the Xcode project, and the web sub-components.
+
+Now let me understand the project structure — the `project.yml` (XcodeGen), the `TeslaSync` directory, and the web sub-components.
+
+Let me study the existing patterns deeply — the LiveSignalInspector page set (closest analog), the remaining web sub-components, and route registration.
+
+I now understand the web page fully. Let me study the Apple infrastructure: design tokens, shared components, routing, sample data pattern, and how production data sources bind.
+
+Let me examine the routing system, design tokens, and shared component library.
+
+Now let me find the route composition root, the design tokens, and key shared components I'll reuse.
+
+Let me read the composition root, design tokens, and the core components I'll use.
+
+Let me read the generated design tokens and the core UI components (cards, buttons, typography, feedback, badges, datatable, metrics, overlays).
+
+Let me read the component APIs I'll need: cards, buttons, typography, feedback states/banners, badges, datatable, metrics, overlays.
+
+Let me read buttons, badges/tone, typography, metrics (StatCard/KVList), and overlays.
+
+Let me read typography, metrics (StatCard/KVList), overlays, and the DataTable component.
+
+Let me read overlays, the DataTable, a sibling table page for convention, and the TimeStamp surface.
+
+
+Authorization error, you may need to run /login (Request ID: FE5E:A1BEC:30C4726:38F14FA:6A2ED393)

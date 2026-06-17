@@ -1,0 +1,234 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+This is a large, mature monorepo with an established native pattern (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Previews.swift`, `.strings`, `.Tests.swift` per surface). The web source is a debounced search input backed by localStorage history — NOT an API-fetch component. Let me study the existing conventions and the searchHistory lib.
+
+Now I understand the web source fully. Let me study the native architecture: the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics) and an existing search surface pattern.
+
+The infrastructure is in `apps/apple/Sources/SharedFacade`. Let me explore it and the build config.
+
+The full app build needs XcodeGen + a KMP `Shared.xcframework` (Frameworks only has `.gitkeep`). Let me check the toolchain and deeply study the closest analog surface (`AINLSearch`) plus the shared infrastructure.
+
+AINLSearch is a heavy AI surface. Let me find a simpler presentational analog and read the core infrastructure. Let me also verify tooling (pwsh, simulators).
+
+`Accordion` is the ideal presentational template (UI primitive like SearchInput). Let me read all its files plus the key infrastructure in parallel.
+
+This is exactly the template I need. The Accordion adapter's "faithful-parity note" shows the established pattern for presentational primitives with no fetcher — reproduce only real branches, document why loading/error/stale/offline don't apply. SearchInput is the same case (localStorage-backed, no network). Let me read the remaining Accordion files + design tokens + native Inputs.
+
+Now let me read the design tokens, test conventions, and native Inputs to complete my understanding.
+
+Let me verify the design token symbols I'll reference exist (these come from the generated `DesignTokens` group).
+
+I have all design tokens. Let me check the lint budget and whether an existing search-history/UserDefaults store exists to reuse (DRY), plus how a data-bound search surface structures its store.
+
+`InstallPrompt.Stores.swift` is a UserDefaults-backed store seam — the ideal analog for the localStorage history. Let me read it to mirror the persistence convention.
+
+I have all conventions. Let me check build feasibility (the KMP `Shared.xcframework` pre-action) and TextField/FocusState conventions before writing.
+
+`TagInput` is a text-input surface — ideal TextField/FocusState reference. Let me read it and the KMP build situation.
+
+I now have all conventions. Let me kick off the long-pole KMP framework build in the background (needed for the full gate), set up tracking, and write the plan.
+
+KMP build is progressing (downloading Kotlin/Native, using build cache). Let me set up tracking and write the plan while it builds.
+
+Now writing the Foundation-only core (Adapter, History, Stores).
+
+Now the Model (Strings facade P1/S10, Telemetry P1/S11, `@Observable` state-holder P1/S8).
+
+Now let me add the hover-highlight method (web `onMouseEnter`) to the model, then write the View, Views, and Previews.
+
+Let me check the KMP build progress, then write the Previews and strings catalog.
+
+The KMP `Shared.xcframework` built successfully (ios-arm64, simulator, macos-arm64 all staged) — the full gate is runnable. Now the Previews and strings catalog.
+
+Now the test files. I'll split tests across `AdapterTests` (pure projector + engine), `StoreTests` (persistence), and `Tests` (model + views + strings) to respect the 400-line lint budget.
+
+Now the main `Tests.swift` covering the model state-holder, strings/a11y, motion, and view composition.
+
+All 11 files written. Let me update tracking and run a fast standalone typecheck (Swift 6 mode) against the design tokens before the heavy build.
+
+All files within budget. Now a fast Swift 6 typecheck of the production files against the tokens.
+
+`UserDefaults` isn't `Sendable`. It's documented thread-safe, so `@unchecked Sendable` is the correct, justified fix.
+
+Production files typecheck cleanly in Swift 6 mode. Now format + lint my files to match the repo config.
+
+swiftformat passes now. Let me re-typecheck (files changed) and run swiftlint --strict on my files.
+
+Typecheck passes. Three swiftlint issues — two are a swiftformat/swiftlint brace conflict on multiline signatures. Let me inspect and fix with canonical before-first wrapping.
+
+Confirmed swiftformat/swiftlint brace conflict. I'll rewrite the two signatures with before-first wrapping (canonical repo style) and fix the Data→String conversion.
+
+Both formatters pass clean. Let me re-typecheck and run the placeholder gate on the surface dir.
+
+Both pass. Let me verify the placeholder scan actually covered my files (the gate path is a prefix, not a dir) and confirm no forbidden markers directly.
+
+The matches are all the legitimate `placeholder` API parameter (the web prop), except one doc comment starts with capital "Placeholder" — which is a forbidden stub token. Let me verify the gate's scan behavior and the exact capitalized occurrences.
+
+The matcher is **case-insensitive** and substring-based, so the pattern "Placeholder" would also match the legitimate lowercase `placeholder` web-prop name. Let me check how existing surfaces handle this — whether they avoid the word or use opt-outs.
+
+The repo convention is `// parity:allow <reason>` for legitimate web-prop `placeholder` references (see EditableText, Combobox). Let me get ground truth by scanning only my files in an isolated dir.
+
+Let me see exactly how sibling surfaces (Combobox, EditableText) handle every `placeholder` line — whether all occurrences carry the marker or they limit the word's footprint.
+
+The convention is clear: siblings (Combobox, EditableText, TagInput) name the native field `prompt`/`hint` — NOT `placeholder` — and reference the web prop once in a doc comment with `// parity:allow web prop name`. Let me refactor my API from `placeholder` → `prompt` (idiomatic SwiftUI, matches TagInput) and mark the few remaining web-prop references.
+
+Now the Model doc comment, the main View, Views, Previews, and Tests.
+
+Now the Views (field prop), Previews, and Tests:
+
+Line 37 contains `placeholder` without a same-line marker. Let me drop it from the illustrative JSX list (line 40 documents the mapping).
+
+Now re-verify everything: placeholder scan (isolated copy), typecheck, swiftformat, swiftlint.
+
+Placeholder scan clean (0 violations, 3 allowed), typecheck passes. Re-running formatters after the edits.
+
+Everything clean: swiftformat 0, swiftlint 0, placeholders 0, typecheck 0. Now the full gate. First generate the Xcode project, then build the iOS target to validate my code compiles within the real app module.
+
+Project generated with TeslaSync (iOS) and TeslaSync-macOS schemes. Now the heavy step — building the full iOS app (1840+ surfaces incl. mine). Starting it in the background.
+
+Build is compiling. Let me check progress.
+
+My SearchInput files compiled with 0 errors — the build is progressing through linking. Let me wait for it to finish.
+
+The build failed (exit 65) in a batch of `A*` files (AnomalyInlineRow, AppContainer, AppearanceSettings…) — none are mine; my SearchInput files compiled cleanly. Let me extract the actual errors to determine if they're pre-existing or caused by my change.
+
+No `error:` lines at all — suggests a compiler crash or OOM kill (shared machine), or jobs cancelled by a sibling. Let me search for crash/kill indicators.
+
+Found "Command SwiftCompile failed with a nonzero exit code" with NO `error:` diagnostic — classic compiler OOM/kill on a parallel whole-module batch. Let me see the context around it.
+
+My SearchInput files compiled cleanly; the failure is in unrelated core `A*` files with NO diagnostic — the signature of a compiler OOM/kill under heavy parallelism on a shared machine. Let me check memory and retry incrementally with reduced parallelism (the prior compile outputs are cached).
+
+64GB/20-core machine but **39 swift-frontend/gradle processes running** and heavy pageouts — this is a shared machine with other parallel build slots contending for memory. That explains the diagnostic-less compiler kill. My code compiled fine. Let me retry incrementally with reduced parallelism (cached outputs remain).
+
+Incremental build reused caches and is now at module emission/link with 0 errors. Let me wait for completion.
+
+Still emitting the (huge) module, 0 errors. Let me continue waiting.
+
+Build2 is now past the previously-failing `A*` batch (now compiling `V*` files) with 0 errors — confirming the earlier failure was environmental contention. Nearly done. Let me wait for link/sign.
+
+Healthy progress (1737 compiles, 0 errors) across many surfaces. The module is large; let me keep waiting for link.
+
+Near-full clean recompile in progress (2116 compiles, 0 errors), confirming the earlier failure was environmental. Let me keep waiting for link/success.
+
+Failed again at the **exact same `A*` batch** with 0 `error:` lines. A consistent same-batch failure needs deeper inspection — let me search the full log for ANY diagnostic, crash trace, or symbol collision (e.g., a pre-existing `SearchInput` symbol).
+
+The compiler **crashed** (`swift-frontend` `report_fatal_error` / "Please submit a bug report" / Stack dump) on the `A*` batch — an internal compiler error, not a code error, in files I didn't touch. Let me read the crash backtrace to identify the trigger.
+
+The crashing job's primary files are ALL pre-existing (`AnomalyInlineRow`, `AppContainer`, `AppShell`, `AppSettings`, `AppearanceSettings`) — none are mine, and my files compiled in a separate batch. Let me read the crash stack frames to characterize the compiler bug.
+
+Definitive diagnosis: the crash is an **IRGen `SmallVector` capacity overflow in `SyncCallEmission::setArgs`** (frames 8–11) — a known swift-frontend (Swift 6.3.2) compiler bug emitting a huge SwiftUI view call, triggered by **pre-existing** complex files (`AppShell`/`AppSettingsView`/`AppearanceSettings`). The crash region has **0 SearchInput references**, and my files compiled cleanly in their own batch.
+
+Since the app target itself can't finish building on this toolchain, I'll (A) verify my surface + tests in isolation via a standalone SwiftPM module, and (B) confirm the crash is pre-existing by rebuilding without my files. Starting with (A):
+
+Package laid out. Now build + run my tests in isolation (Swift 6 mode, matching the app's strict concurrency):
+
+All 8 production files compiled cleanly in Swift 6 mode — but the standalone build caught a real bug in ONE test: capturing a mutable `var clock` in a `@Sendable` closure (illegal in Swift 6). This would also fail the app's test target. Let me fix it with a thread-safe clock in the repo file, then re-verify.
+
+Now re-sync to the package and re-run the full test suite:
+
+**All 61 tests pass, 0 failures** in Swift 6 strict-concurrency mode. The standalone build caught and I fixed a real concurrency bug. Let me re-lint the edited test file, then run the crash-attribution build (without my files).
+
+swiftformat/swiftlint still clean. Now the definitive crash-attribution test: move my files out, regenerate, and rebuild — expecting the identical IRGen crash to prove it's pre-existing.
+
+Files removed, project regenerated clean. Now build without my files and watch for the identical crash (I'll stop early once confirmed).
+
+While the attribution build runs (separate DD), let me restore my deliverable files to the repo and check the gate log directory.
+
+My files are restored. The gate log dir `.github/prompts/monorepo/logs/` doesn't exist yet (I'm allowed to create the log file). Let me check the prompts structure and poll the attribution build.
+
+The `logs` dir exists. Let me check existing P4 shared-surface logs to match the convention, while the attribution build warms up.
+
+Existing logs show prior surfaces ran the full gate. Crucially, I should check whether they ended DONE or BLOCKED — this tells me if the full build is expected to pass. Let me check several, and poll the attribution build.
+
+This is decisive. The existing logs confirm my exact situation is the **established, accepted pattern**:
+- **0004 AIAlertTuningSuggestions**: "pre-existing, environmental swift-frontend IRGenRequest crash in unrelated other-surface codegen" → EXIT=0 STATUS=DONE
+- **0003 VisuallyHidden**: verified via `SWIFT_TEST_EXIT=0` + `TYPECHECK_IOS/MAC_EXIT=0` (my exact methodology)
+- **0001**: macOS exit 65 = code-signing, DEFERRED
+- Distribution: **181 DONE vs 4 BLOCKED**
+
+Let me read the precedent log (0004, same crash) to match the exact format, and check the attribution build.
+
+Excellent precedent. Let me read its GATES section to match exactly how the crash + verification + EXIT/STATUS are documented.
+
+The precedent (0004) is a perfect match — same IRGen crash in overlapping files (`AppSettings*`/`AppearanceSettings.*`), verified via isolated SwiftPM build+tests, reported DEFERRED, EXIT=0/STATUS=DONE. Let me poll my attribution build and run the iOS-SDK typecheck to complete the methodology.
+
+iOS typecheck passes (0), matching macOS. Attribution build is compiling (no crash yet — still early). Let me run whole-tree swiftformat/swiftlint (matching precedent methodology) while it continues.
+
+Whole-tree swiftformat shows 1 **pre-existing** drift in `RecentDrivesSection.Previews.swift` (not mine — my files are 0/10 clean). Let me confirm and run whole-tree swiftlint + poll the attribution build.
+
+Confirmed: the format drift is in `RecentDrivesSection.Previews.swift` — not mine, pre-existing. Let me run whole-tree swiftlint and keep polling the attribution build.
+
+Whole-tree swiftlint: 3 violations in 5146 files. Let me confirm none are mine.
+
+All 3 whole-tree lint violations are pre-existing in `WidgetChartSummary.Tests.swift` (not mine). My surface files: 0 violations. Let me check the attribution build for the crash reproduction.
+
+Attribution build is slow under contention (still type-checking, no crash yet). The crash-is-pre-existing evidence is already overwhelming (exact backtrace, 0 SearchInput refs, matching precedent 0004). Let me give it a few more minutes while I prepare the log.
+
+The attribution build (WITHOUT my files) also failed with **ATTR_EXIT=65**. Let me confirm it's the identical IRGen crash — definitive proof the crash is pre-existing and independent of my surface.
+
+**DEFINITIVE PROOF**: with my SearchInput files entirely removed, the build reproduces the **identical** crash — `IRGenRequest(IR Generation for "AppearanceSettings.Controls.swift")` → `SmallVectorBase<unsigned int>::grow_pod` → `SyncCallEmission::setArgs` — 0 source errors, 0 SearchInput references. The crash is a pre-existing swift-frontend bug in a file I never touched, matching accepted precedent 0004.
+
+Let me verify my files are restored, clean up the heavy attribution artifacts, and update tracking.
+
+All 11 files present, project regenerated. Now let me write the comprehensive gate log following the accepted precedent format, with all my verification evidence.
+
+Log written. Now a final verification pass on the exact committed state (re-sync package from the final repo files, re-run all per-surface gates + the 61 tests), then commit.
+
+Per-surface gates all green. Final isolated build + test run on the exact committed sources:
+
+Final state fully green: **Build complete, 61/61 tests pass, 0 failures**, plus swiftformat/swiftlint/placeholder all clean. Now commit (only my 11 files + the log).
+
+All 11 files + the log are untracked; nothing else staged. Committing exactly these per the prompt's instructions:
+
+Committed (HEAD `25b85b661`). Let me verify the commit contents/trailer and clean up temp artifacts.
+
+All committed cleanly: 12 files, 2499 insertions, trailer present, temps cleaned. Let me finalize tracking and confirm the project artifact stays gitignored.
+
+All todos complete, `.xcodeproj` correctly gitignored, working tree clean. The task is fully done and verified.
+
+## Summary
+
+Shipped a production-polished, native Apple SwiftUI **`SearchInput`** shared surface (P4/0158) at parity with `web/src/components/forms/SearchInput.tsx` + `lib/searchHistory.ts`.
+
+**11 files** committed (`25b85b661`, 2499 insertions) under `apps/apple/TeslaSync/shared-surfaces/SearchInput.*`:
+- `Adapter` (pure projector), `History` (searchHistory.ts engine parity), `Stores` (UserDefaults+in-memory, same `teslasync:search-history:v1` envelope), `Model` (@Observable state-holder + i18n facade + once-only `view.opened` telemetry), `swift`/`Views`/`Previews` (debounced field + floated recent-searches dropdown), `strings`, and 3 test files.
+
+**Parity:** every REAL web branch reproduced — debounce emit, clear→'', history-less vs scoped, the 5-condition dropdown rule, populated dropdown, per-row select/remove + clear-all, Arrow/Enter/Escape, blur-commit, hover-highlight, controlled-value re-sync. The 4 web `t()` keys are reproduced verbatim. The absent loading/error/stale/offline states are documented (localStorage-backed = no fetch) per the accepted presentational-primitive precedent.
+
+**Verification (all green on the committed state):**
+- swiftformat `0/10`, swiftlint `0 violations`, placeholder `COUNT=0`
+- Isolated SwiftPM **Swift 6 strict-concurrency build + 61/61 tests pass** (this caught & I fixed a real `@Sendable`-capture bug)
+- iOS-18 **and** macOS-15 SDK type-checks: `0 errors`; my files also compiled clean inside the real app module
+
+**Full-app `xcodebuild` (DEFERRED, reported honestly as red):** `IOS_EXIT=65` from a **pre-existing swift-frontend IRGen crash** (`SmallVector`/`SyncCallEmission` overflow) in `AppearanceSettings.Controls.swift` — **proven independent** of my surface by rebuilding with all my files removed, which reproduced the identical crash (`ATTR_EXIT=65`, 0 SearchInput refs). This matches accepted precedent `0004`. macOS deferred on the same blocker.
+
+Gate log written; **EXIT=0 / STATUS=DONE**.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0158-SearchInput.log  | 251 +++++++++++++++
+ .../shared-surfaces/SearchInput.Adapter.swift      | 243 ++++++++++++++
+ .../shared-surfaces/SearchInput.AdapterTests.swift | 248 +++++++++++++++
+ .../shared-surfaces/SearchInput.History.swift      | 101 ++++++
+ .../shared-surfaces/SearchInput.Model.swift        | 354 +++++++++++++++++++++
+ .../shared-surfaces/SearchInput.Previews.swift     |  98 ++++++
+ .../shared-surfaces/SearchInput.StoreTests.swift   | 153 +++++++++
+ .../shared-surfaces/SearchInput.Stores.swift       | 217 +++++++++++++
+ .../shared-surfaces/SearchInput.Tests.swift        | 330 +++++++++++++++++++
+ .../shared-surfaces/SearchInput.Views.swift        | 321 +++++++++++++++++++
+ .../TeslaSync/shared-surfaces/SearchInput.strings  |  50 +++
+ .../TeslaSync/shared-surfaces/SearchInput.swift    | 133 ++++++++
+ 12 files changed, 2499 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0158-SearchInput.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.History.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.StoreTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.Stores.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SearchInput.swift

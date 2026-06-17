@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and checking capabilities, since this task requires macOS + Xcode + simulators.
+
+Full macOS + Xcode 26.5 + simulators + swiftlint + swiftformat are available. The gate can run. Let me explore the Apple app structure and dependencies.
+
+This is a large, mature Apple app with existing UITest targets. Let me read the predecessor log, existing UI tests, and app entry points to understand the harness.
+
+The predecessor P9-0001 passed with 23,105 unit tests. There's a reference P9-0002 log from a sibling run. Let me read it plus the existing UI tests and demo views.
+
+Now I have a clear picture. This is a fresh slot with only the 4 pre-existing UI test files — I need to author the P9-0002 deliverable. The reference log shows a sibling run was BLOCKED on macOS signing + host saturation. Let me probe the current environment capability and app structure to determine if I can achieve a real green gate.
+
+Host load is now **low** (1-min load 4.57 on 20 cores, ~34GB free) — unlike the saturated sibling run, I may be able to actually run the UI tests green. macOS still shows 0 signing identities (the known blocker, workable via `CODE_SIGNING_ALLOWED=NO` as P9-0001 proved). Let me deeply understand the app's navigation, components, and existing demo harness.
+
+The real shell is `AppShell` (split vs tab). `ContentView` is a P0 leftover. Some P7 pages ARE registered here (FleetCompare, Statistics, BatteryCells...). Let me find RootView, the demo views, AuthCoordinator bootstrap, the parity ledger, and the Components tree.
+
+The harness pattern is clear: real in-app surfaces shown under launch args, using real components. Now let me read the parity ledger (the page source-of-truth) and the key components I'll showcase in a gallery.
+
+I now have the full page inventory (30 P7 units, all `done`). Let me examine how pages are registered and whether they expose a fixture seam for state injection, by reading the registry mechanism and a representative page (FleetCompare) + its model.
+
+Let me read a representative page end-to-end (FleetCompare) — page view, model, route registration, and sample — to find the state-injection seam.
+
+Now I fully understand the architecture: pages are `@Observable` models with an injected **data-source seam** and explicit state machines (`.loading/.empty/.error/.ready`), plus sample doubles (`Sample*`, `SingleVehicle*`, `Failing*`) used in previews. This is the exact seam for deterministic page-state UI tests. Let me inventory the doubles across all 30 pages to design a parametrized harness.
+
+This is a large, well-structured task. The architecture is highly testable: 30 real pages with consistent data-source-double seams (`Sample*`/`Empty*`/`Failing*`) and explicit state machines. Let me set up a plan and todos, then establish the build baseline early (it's a 4000+ file app) while I author code.
+
+The base is at the DriveScore commit — P9-0001/0002 are NOT in this slot's history (fresh slot). Line 127 already shows the wrapped-closure form, so the IRGen issue may not reproduce. I'll verify empirically. Let me kick off the KMP shared-framework build (the long pole, needs Gradle) in the background while I read the remaining components.
+
+TSButton is a single SwiftUI Button (identifier propagates) and TSChartContainer has a built-in accessible summary + empty overlay. Let me read the remaining components I'll use in the gallery to get exact public APIs.
+
+I have enough to author the gallery. Let me read the last batch of component APIs (Cards, Typography, Metrics, Inputs, MapView, Motion, a chart) and check the KMP build progress.
+
+The KMP build is compiling (cold Gradle/konan — several minutes). I have comprehensive component knowledge now. Let me read the last few APIs (Typography, Metrics, a chart, Inputs) to author accurately.
+
+I have full component knowledge. Before authoring, let me check the lint/format/placeholder gate configs (to avoid violations) and how localization works.
+
+Key gate constraints: `--strict` makes the 120-col line limit an **error** (every line ≤120), and the placeholder gate flags the literal word "placeholder"/"TODO"/etc. (I'll avoid them entirely — use "sample"/"fixture"). Let me read the placeholder script precisely and confirm the theme/chart token APIs.
+
+Placeholder gate is **case-insensitive** and "common" words apply to all files. I'll avoid the substrings TODO/FIXME/XXX/"placeholder"/"coming soon"/"not implemented"/"lorem ipsum" everywhere. `--strict` ⇒ every line ≤120 cols. Let me confirm the chart models + design tokens, then start authoring.
+
+I have everything needed — these tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSChartPalette`, etc.) are used throughout the components I've read, so I'll use them identically. Let me check the KMP build progress.
+
+KMP build is mid-compile (cold Kotlin/Native — several min). I'll author while it builds. Let me get exact constructors for the page harness catalog: the bespoke route registrations + a full double→protocol map.
+
+I now have a complete page→doubles map: 12 pages have full success/empty/error doubles, the rest (admin/bespoke) have success doubles via their registrations. Let me read the command palette (for shell IDs) and check the KMP build, then start authoring.
+
+KMP framework built and staged (7m13s). Let me generate the Xcode project and kick off a **baseline** iOS build-for-testing of the existing code in the background (free information on whether the predecessor tree compiles), while I author my code.
+
+Project generated, all targets present. Let me kick off the **baseline** iOS build-for-testing (existing code, no changes) in the background to establish whether the predecessor tree compiles on this toolchain.
+
+Now I'll author the code while the baseline builds. Starting with additive accessibility identifiers on the shared state components (so all 30 pages' states are uniformly queryable). These are surgical, additive changes.
+
+Now the shell identifiers. Let me add additive accessibility identifiers to `AppShell.swift` (sidebar, rows, tabs, more-list, command palette, pending pages) and the command palette internals.
+
+Now the pending-page identifier on `RouteHost`, then the command palette internals.
+
+The baseline build completed. Let me confirm the existing tree compiles cleanly (meaning no pre-existing IRGen issues to fix).
+
+The baseline build revealed a **pre-existing** compile failure (in `globalShortcuts.Previews.swift` etc.) — these are predecessor P7 files I haven't touched. Per covenant rule 7 (no predecessor bypass), I must fix them genuinely. Let me find the actual errors.
+
+A pre-existing bug: explicit `return` inside `#Preview` ViewBuilder bodies. Let me see the whole file to fix all occurrences correctly.
+
+Let me see all errors in the log and count the `return staged` occurrences to fix them correctly.
+
+Only 2 errors reported (compiler aborted the file), but all 10 `return staged(` in that file share the same `@Previewable`+`return` anti-pattern. Let me check if this pattern is widespread across other preview files before fixing.
+
+8 preview files share this `@Previewable`+`return` pattern. Let me inspect the exact `return` usage across them to design a uniform, safe fix.
+
+Only Input.Previews.swift actually errors — the other 7 compile. Result-builder "return" errors are often misleading proxies for a type error *inside* the closure. Lines 88/101 use `error:`/`hint:` params. Let me check `InputField`'s actual initializer.
+
+`error:`/`hint:` are valid params. The difference: line 101 adds `hint:` to an otherwise-working call. Likely the no-icon/suffix convenience init omits `error:`/`hint:`. Let me view the full init(s).
+
+`hint:` is the only differentiator between the failing previews (88, 101) and the passing ones — yet `hint:` is a valid param. This smells like a misleading result-builder diagnostic masking a type-inference issue. Let me find all `InputField` inits/extensions.
+
+Let me empirically test whether `@Previewable`+`return` is the actual issue with a minimal standalone reproducer (fast).
+
+The standalone reproducer with `return` compiles fine (EXIT=0) — so `return` is a **misleading** diagnostic. The real bug: lines 88/101 pass `placeholder:` *after* `error:`/`hint:`, but the init declares `placeholder` (param 5) *before* `error`(6)/`hint`(7). Swift requires declaration order. Let me view the rest of the file to catch all out-of-order calls.
+
+Confirmed — line 136's preview uses `hint:` *without* a trailing `placeholder:` (in-order) and didn't error. Only lines 88/101 are out-of-order. Let me fix both by moving `placeholder:` before `error:`/`hint:`.
+
+Pre-existing bug fixed (out-of-order args, not `return`). Now let me get exact constructors for the 5 automations sub-surface pages + confirm the routed page models, so my page-harness catalog compiles deterministically.
+
+I now have all the `.make(...)` factories for the automations sub-surfaces. Let me get the exact route each registration registers to (for `view(for:)` extraction), then I'll write the catalog.
+
+I now have the complete page→route→doubles map for all 30 pages. Let me author the harness. Starting with the launch-arg parser and page-state harness.
+
+Now the page-state harness + catalog (the 30-page builder). I'll use a generic helper to keep it compact and respect swiftlint's function-length limits.
+
+Now the component gallery. Let me confirm the exact public APIs for the form/picker/toggle components I'll use, then write the gallery.
+
+I have all form/picker APIs. Now let me write the component gallery (root + state switcher) and its sections.
+
+Let me check the `TSMapAnnotation` init for the maps sample data, then write the gallery sections.
+
+Now the gallery sections + sample data file.
+
+Now let me wire the harness surfaces into `TeslaSyncApp.swift` (following the existing `-uiTestLiveDemo`/`-uiTestPushDemo` pattern) and the deep-link initial route.
+
+Before writing the page-state tests, let me verify which of the 12 full-state pages render the *shared* `TSEmptyState`/`TSErrorDisplay` (so the `ts.state.*` marker assertions are reliable).
+
+Error states use shared components in all 12 pages. Empty: 9 confirmed in the main page file. Let me check the 3 outliers (TrueCost, Powershare, AutomationsList) across their sub-files.
+
+All 12 full-state pages use shared `TSEmptyState` + `TSErrorDisplay` (the 3 outliers in sub-files). Now let me write the test suites. Starting with shared support + page-state + gallery tests.
+
+Now the navigation shell and accessibility test suites.
+
+All code authored. Now let me format my files with swiftformat (edit mode), then run swiftlint, regenerate the project, and build.
+
+swiftformat reformatted 6 files. Let me run the three CPU gates (swiftlint --strict, swiftformat --lint, placeholder) to catch violations in my code, and check the diff of reformatted files.
+
+Three fixable swiftlint violations. Let me view the affected sections (line numbers shifted after formatting) and fix them.
+
+Let me fix the three swiftlint violations. First viewing the current builder functions to rewrite them cleanly.
+
+I'll recreate `PageStateHarness.swift` cleanly with a `doubleFor` helper (≤5 params, low complexity) and split builder functions. Let me also fix the gallery's trailing-closure issue.
+
+Let me re-format and re-lint my files to confirm the violations are resolved.
+
+swiftlint passes on my new code (EXIT=0). Now let me regenerate the project and build-for-testing (iOS) to catch any compile errors in the harness + tests.
+
+The build is running. Let me proactively verify the `GlanceRouteRegistration` signature (it had an `onOpenApp` param) to catch a potential missing-default issue.
+
+Both have defaults — my calls are fine. Let me monitor the build.
+
+Still compiling (shared-component edits trigger a wide rebuild). Let me check the log file for any errors so far while it continues.
+
+No errors — the app module (including my Dev harness) compiled. It's now emitting the module + will compile test bundles. Let me wait for completion.
+
+Build failed at module emit. Let me find the actual error.
+
+Three Swift 6 strict-concurrency errors: `static let` of non-`Sendable` types. Let me convert those three to computed `static var`.
+
+`CLLocationCoordinate2D`/`[Double]` are Sendable (unflagged). Let me format/lint the gallery and rebuild (incremental should be faster now).
+
+Rebuild running. Let me wait and monitor (incremental should compile faster now, then build the test bundles).
+
+No errors, at module emit (the concurrency fix should clear it now). Let me wait for test-bundle compilation.
+

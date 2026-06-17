@@ -1,8 +1,8 @@
 //
-//  FormField.Views.swift
-//  TeslaSync — P4 shared surface · 0154 · FormField (Apple)
+//  FormFieldShared.Views.swift
+//  TeslaSync — P4 shared surface · 0154 · FormFieldShared (Apple)
 //
-//  The presentational subviews composed by `FormField`: the label row (web
+//  The presentational subviews composed by `FormFieldShared`: the label row (web
 //  `<label>` + the required asterisk) and the single inline message row (web's
 //  `error ? <p role="alert"> : hint ? <p> : null`). Both consume the shared P1/S9
 //  tokens and the P1/S10 facade — no Tailwind ports, no raw hex, no networking.

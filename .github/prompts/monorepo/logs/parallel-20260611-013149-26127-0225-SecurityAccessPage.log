@@ -1,0 +1,184 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page is more complex than the manifest suggests. Let me explore the Apple app structure, the sub-components, and check the toolchain.
+
+Toolchain is available. Let me explore the Apple app structure and an existing page for reference patterns.
+
+Key finding: the project uses XcodeGen, and Admin pages actually live in `Sources/Features/Admin/` (not `TeslaSync/Features/Admin`, which isn't a compiled source root). I'll follow the real on-disk convention. Let me study existing Admin pages as templates.
+
+Now I understand the page architecture. Let me read the web sub-components, types, hooks, and the Apple shared facade/localization/routing in parallel.
+
+Now let me explore the Apple-side infrastructure: routing, shared facade, component library, design tokens, and localization.
+
+Major discovery — the security sub-components already exist as native SwiftUI in `TeslaSync/feature-views/` (the P3 layer this page depends on). My job is the page that composes them. Let me study these.
+
+The codebase is very mature — these security components already exist as P3 parity units. I need to determine their exact web-source mapping and public APIs before composing. Let me read the main view files and their headers.
+
+These are exact parities of the admin security-access sub-components, each with a Model + Source seam. Let me check `SecurityPanel`, how pages compose leaf views, and the routing/shell mechanics.
+
+No page composes these leaf views yet — my page will be the composition root. Let me understand route registration wiring and the parser to place `/security-access` correctly.
+
+Routing is chained in `TeslaSyncApp.swift`. The web `/security-access` has no matching route case. Let me read the full `AppRoute.swift` and assess the blast radius of adding a route.
+
+Routing addition is safe (only uniqueness is tested). The catalog is 4.6MB. Let me check which required strings already exist and how admin-page strings are structured in the catalog.
+
+The catalog lives in `Localization/`. Required page strings are absent; I'll add them. Components self-localize via their own tables. Let me read the construction patterns (Previews) for the remaining components, check component string tables, digital-twin availability, and the xcstrings JSON structure.
+
+I now have all sub-component construction APIs. Let me verify the shared component library, design tokens, digital-twin availability, and component string tables.
+
+`VehicleTwin` exists natively (perfect for GlassPanel2). Let me read the shared component APIs and VehicleTwin.
+
+Let me read the remaining component APIs (typography, states, motion, tone) and the VehicleTwin surface.
+
+Let me assess `VehicleTwin` model wiring complexity and read the design tokens and the web twin-state mapping.
+
+`VehicleTwin` has a clean in-memory source seam. Let me read its state contract, the web twin-state mapping, and the xcstrings JSON structure.
+
+`VehicleTwinState` mapping is needed for the real twin. Let me find that type, the web mapping, and verify the catalog's raw formatting (sorting/indent) for safe edits.
+
+`VehicleTwinState` is clean and constructible. Now I must resolve the output-path conflict: existing admin pages live in `Sources/Features/Admin/`, but the prompt references `TeslaSync/Features/Admin`. Let me check the real gate tooling and parity ledger.
+
+The ledger confirms rich implementations (DiskForecast covered 32). Let me read the gate README and a prior page's log to lock the real paths and gate commands.
+
+README confirms allowed files are `apps/apple/**` — so `Sources/Features/Admin/` (the real admin-pages root) is correct. Let me verify the build toolchain and read the placeholder patterns + test pattern.
+
+Two risks surfaced: the `Shared.xcframework` is missing (KMP dependency), and the placeholder scanner. Let me inspect the framework build script and the placeholder scanner.
+
+The placeholder scanner is **case-insensitive** — I must avoid `.placeholder`/"Placeholder" in code (use `TSSkeleton`/`ProgressView` for loading). Bigger risk: `Shared.xcframework` needs Gradle+Kotlin/Native. Let me assess buildability.
+
+This clarifies the environment: full-app `xcodebuild` is consistently macOS-pending due to the KMP `Shared.xcframework` Kotlin/Native long-pole + pre-existing parallel-merge collisions + signing. Surfaces are verified via isolated typecheck + lint + format + placeholder + xcodegen. Let me check how the completed sibling PAGE logs (DiskForecast) ended and their gate approach.
+
+This is the definitive template: output to `Sources/Features/Admin/`, verify via lint/format/placeholder/typecheck/tests, and the full `xcodebuild` is deferred (macOS-pending) when blocked only by the KMP framework long-pole + pre-existing collisions. Let me start staging the framework in the background and extract exact component APIs.
+
+I now have all enum cases. Let me extract the exact init signatures for the remaining input/event types in one batch.
+
+I have all component APIs. Let me check the framework build progress and read the statistics-view lifecycle + the test pattern, then start writing.
+
+I have all APIs needed. Let me set up the plan and todos, then write the implementation.
+
+Now I'll write the page model with the data seam, ported helpers, and sub-model factories.
+
+Model written. Let me check the framework build progress, then write the page view.
+
+Gradle still compiling (Kotlin/Native long pole). I'll make the vehicle selector genuinely functional by making the data source vehicle-aware, then write the view.
+
+Let me confirm the remaining sub-component view init signatures, then write the page.
+
+The framework build completed. Let me confirm it, then write the page view.
+
+Gradle succeeded but didn't stage (I ran it directly). Let me stage the framework to `Frameworks/`.
+
+Framework staged (ios-arm64, simulator, macos-arm64). Now the page view.
+
+Page written. Now let me add the `.securityAccess` route and read the app wiring.
+
+Now let me inspect the exact xcstrings byte format so I can insert keys surgically without reformatting the 4.6MB file.
+
+Got the exact format. Let me add the 14 localization keys via a surgical insertion script that preserves Xcode's format.
+
+All 14 keys added and the catalog re-validated. Let me update todos and write the model tests.
+
+Now let me run the in-scope gates: swiftformat, swiftlint, placeholder scan, and generate the Xcode project.
+
+Placeholder scan clean (COUNT=0). swiftformat wants auto-fixable changes in my files. Let me apply them and re-lint.
+
+swiftformat clean (0/6). Now swiftlint --strict on my files.
+
+Two swiftlint issues: file too long (829 > 400) and a brace-spacing nit. Let me view the brace area, then split the file into focused units (matching the repo's multi-file pattern).
+
+swiftformat's brace-wrapping conflicts with swiftlint's `opening_brace`, and the file exceeds 400 lines. Let me read the current file to split it into focused units and fix the brace.
+
+I have the full content. Let me split into 3 files (each <400 lines) and fix the brace via a token set. First remove the oversized file.
+
+Split into 3 files. Let me re-run swiftformat and swiftlint on all my files.
+
+swiftformat 0/8, swiftlint 0 violations. Now placeholder scan + generate the Xcode project.
+
+Placeholder COUNT=0, xcodegen enumerates SecurityAccess (36 refs). Now let me run the full iOS build (framework is staged). First, find a simulator and start the build in the background.
+
+iPhone 17 Pro is booted. Let me start the full iOS build in the background (framework already staged).
+
+Build running. Meanwhile, let me update the parity ledger. Let me inspect its tail format first.
+
+Let me check the build progress.
+
+Build failed (exit 65) — expected per the sibling pattern. The critical question: are any errors in MY files? Let me analyze.
+
+0 compile errors but exit 65. Let me see what actually failed.
+
+No `error:` lines but BUILD FAILED with 2 cascading batch-compile failures — likely a primary failure cancelling siblings. Let me find the real diagnostic and confirm my files aren't the cause.
+
+Let me pinpoint the real diagnostic and whether my files were even reached.
+
+A Swift compiler crash (stack dump), not a diagnostic. Let me see which file/expression triggered it.
+
+The stack dump is one huge line. Let me extract the crash's source-location context.
+
+The build failed on a **Swift compiler IRGen crash** (not a diagnostic), in a batch of other agents' files (AppearanceSettings.Controls, AppShell, …). 0 `error:` lines anywhere. Let me confirm whether my files were compiled before the crash and check their context.
+
+My files (lines 11856-11860) are listed in a scheduled SwiftCompile batch. Let me view that batch's context to see if it compiled cleanly.
+
+My batch was scheduled but the build was aborted by the IRGen crash in other batches — I can't conclude my files type-checked from this run. Let me do a decisive **whole-module `swiftc -typecheck`** (which skips IRGen, so no crash, and reports any type error in my files). First, extract the real compiler flags + file list.
+
+I have the module's `SwiftFileList` and driver flags. Let me run a whole-module `-typecheck` (skips the crashing IRGen phase) to decisively prove my files type-check in context. Extracting the command first.
+
+Argv assembled with correct iOS-18 / Swift 6 flags. Let me confirm the file list includes my files, then run the whole-module typecheck (background).
+
+File list confirmed (includes my 5 files, 3894 entries). Let me run the whole-module typecheck in the background.
+
+Typecheck running. While it works, let me draft the evidence log. Let me check progress shortly.
+
+No errors so far (43k lines are warnings/notes). Let me wait for completion.
+
+143k lines, still 0 errors. Let me wait for it to finish.
+
+It's progressing (273k+ warning lines, 0 errors) but the warning volume makes it very slow. Let me re-run with warnings suppressed for a fast, errors-only result.
+
+No leftover processes. Now the fast errors-only whole-module typecheck.
+
+Let me wait for the errors-only typecheck.
+
+The 81k lines are `-frontend-parseable-output` JSON job metadata (0 errors/warnings/notes). Let me wait for completion and the exit code.
+
+Still progressing, 0 errors (two independent runs now). Let me wait for it to finish.
+
+The full typecheck is too slow to be practical. Let me switch to a fast, decisive **primary-file** typecheck (fully checks only my 5 files in full module context).
+
+Argv ready (5 primaries + 3889 context files). Let me run the targeted typecheck.
+
+The driver doesn't accept frontend-only `-primary-file`. Let me run a clean whole-module `-wmo -typecheck` (single job, errors-only output).
+
+Decisive result: the WMO typecheck found **exactly 1 error, in a pre-existing sibling file** (`RecentDrivesSection.Previews.swift` — an "expression too complex" timeout, another agent's surface listed in macos-pending). **Zero errors in any of my files.** Let me confirm completeness by excluding that one pre-existing-broken file and re-running.
+
+**Decisive: WMO2_EXIT 0 — zero type-check errors across the entire module (including all my files) under iOS-18 / Swift 6 strict concurrency**, once the single pre-existing broken sibling file is excluded.
+
+Now let me run my model/logic tests as an executable harness (the sibling "executed harness" evidence). I'll compile the real logic with minimal stand-ins for the few output types.
+
+Now the test main, then assemble and run the harness.
+
+Just a visibility mismatch (public logic returning internal stand-ins). Let me make the stand-ins public and rebuild.
+
+**Logic harness: 40/40 passed.** I now have complete in-scope evidence. Let me verify git ignores the generated artifacts, then write the evidence log and update the ledger.
+
+All generated artifacts are git-ignored; my changes are clean and scoped. Now let me write the evidence log.
+
+Now let me add the two ledger rows (apple-macos + apple-ios).
+
+Ledger updated. Let me do a final validation (ledger JSON + swiftlint on the two edited app files) before committing.
+
+All green in-scope. Let me update todos and commit the scoped changes.
+
+Commit succeeded. Let me confirm it and clean up temp artifacts.
+
+All done and committed cleanly (`da94d1fda`, 11 files, 1846 insertions). Temp artifacts cleaned. Let me confirm the todo state is fully closed.
+
+All 7 todos done. Task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

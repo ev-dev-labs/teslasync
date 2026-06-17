@@ -1,0 +1,92 @@
+I'll start by exploring the codebase structure and reading the web source that serves as the specification.
+
+Swift tooling is available. Let me read the web source spec and explore the Apple app structure in parallel.
+
+`xcodebuild` requires full Xcode but only Command Line Tools are active. Let me check if Xcode is installed anywhere and explore the existing Apple widget structure to understand established patterns.
+
+Xcode IS installed at `/Applications/Xcode.app` — just not selected. Let me try overriding with `DEVELOPER_DIR` and examine the existing widget file structure.
+
+Xcode 26.5 works via `DEVELOPER_DIR`. Now let me study an existing gauge-based widget (the web uses `WidgetGaugeHero`) and find the native shared gauge component. Let me examine `DriveScoreGaugeWidget` and search for shared gauge primitives.
+
+`RegenEfficiencyWidget` (energy + gauge hero) is the closest analog. Let me read its full file set and find the shared GaugeHero native component.
+
+No shared `WidgetShell`/`GaugeHero` native struct — widgets are self-contained. `RegenEfficiencyWidget` is the canonical analog. Let me read its complete file set.
+
+Excellent reference pattern. Let me read the remaining RegenEfficiencyWidget files to understand the projection, components, tokens, i18n facade, and tests.
+
+Let me read the Previews, Tests, strings, and find the shared `DashboardWidgetRegistration`/tokens definitions.
+
+The shared types aren't in dashboard-widgets. Let me locate `DashboardWidgetRegistration`, `DashboardWidgetSize`, and the design tokens across the whole Apple app.
+
+There appear to be two widget systems. Let me read `project.yml` to understand the build target structure and find where the shared types/tokens for `TeslaSync/dashboard-widgets/` are defined.
+
+Now I understand the build structure. Both `Sources/` and `TeslaSync/dashboard-widgets/` compile into the same target. Let me read the shared infra, tokens, test patterns, and the web data hook/types in parallel.
+
+I have the full reference pattern. Now let me read the web data hook/types, the `WidgetGaugeHero` shared component, the lint config, and the FormatTests.
+
+Let me read the web data type, the gauge hero component, lint configs, and the placeholder checker.
+
+Let me confirm the `SleepEfficiencyData` type, `fmtNumber` behavior, the `RadialGauge` rendering, and check for any existing Sleep widget files.
+
+`SleepEfficiencyData` must be an alias. Let me find its definition and read the full `RadialGauge`.
+
+Let me read the canonical `SleepEfficiencyData` type definition.
+
+I have the data model. Let me confirm the registry entry keys/description and quickly verify the `TSSkeleton` signature and key tokens exist.
+
+Registry confirmed. Let me set up tracking, write a plan, and do a final collision check before writing the files.
+
+Registry and tokens confirmed, no collisions. Let me write the plan and check the available color tokens (for the indigo Moon icon) before authoring files.
+
+All tokens confirmed (`accent` for the Moon icon, `statusSuccess/Warning/Danger` for the zone). I have full clarity. Let me write the plan and author the 8 files.
+
+Now let me author the source files, starting with the Support layer (i18n facade, formatting, zone, projection, a11y).
+
+Now the Model file (telemetry seam, state-holder seam, DTOs, observable model).
+
+Now the Components file (gauge ring, stat tile with unit suffix, freshness chip, refresh button).
+
+Now the main view file (chrome, states, content bodies, registration).
+
+Now the Previews file.
+
+Now the test files — adapter/model/registry/a11y, plus a format/zone file.
+
+Now the FormatTests file (zone thresholds + number formatting).
+
+Now the strings catalog.
+
+All 8 files written. Let me refine `SleepStatTile` to avoid deprecated `Text.foregroundColor` concatenation — using a baseline-aligned HStack instead (cleaner and non-deprecated).
+
+All 8 files authored. Let me normalize formatting with swiftformat (write mode) on my files, then verify with lint.
+
+My files are already swiftformat-clean (0/7 reformatted). Now let me run swiftlint --strict and swiftformat --lint on my files to confirm.
+
+Both lint checks pass with 0 violations on my files. Now I need to prepare for the `xcodebuild` gate. Let me check the project generation state (XcodeGen, existing `.xcodeproj`, the Shared.xcframework dependency).
+
+`Shared.xcframework` (KMP core) isn't built yet — the app targets depend on it. Let me read the staging script and the gitkeep note to understand what building it requires.
+
+There's a KMP `apps/shared` core built via Gradle/Kotlin-Native that the app targets link. Let me check the toolchain (JDK, gradlew) and start generating the project.
+
+JDK 17 and gradlew available. Let me generate the Xcode project, then kick off the KMP framework build (slow) in the background.
+
+Project generated. Now let me build the KMP `Shared.xcframework` (the slow Gradle/Kotlin-Native step) in the background.
+
+KMP first build is downloading toolchain/dependencies and compiling — expected to be slow. Let me keep waiting.
+
+Still compiling (Kotlin/Native first build downloads a large toolchain). Let me continue waiting.
+
+`Shared.xcframework` built and staged (`SHARED_EXIT=0`). Now the iOS build+test. Let me verify the log directory exists and run the iOS gate, capturing full output.
+
+Now the iOS build+test (compiles the full app — this is slow). Let me run it capturing full output to a temp file.
+
+Build failed (`IOS_EXIT=65`), but the errors reference `SafetyModel`/`SafetyUpdate` ambiguity and other widgets (KioskOverlay, LayoutManager) — none are my types. Let me determine whether these are pre-existing baseline errors or caused by my files.
+
+Confirmed: 0 of the 284 errors are in my files — they're all in other widgets (ChargeStatusLiveWidget, SafetyFeaturesWidget, DrivingCoachWidget, etc.). Let me verify these are pre-existing baseline failures I didn't touch and that aren't caused by my types leaking.
+
+Confirmed: I only added 8 untracked files; all 284 errors are in **committed baseline sibling widgets** I'm not allowed to touch. The app baseline is already red. Let me inspect the root-cause errors to document accurately, then build a verification harness to positively prove my code compiles and my test logic passes.
+
+**Root cause proven**: the baseline is red because sibling widgets define **duplicate types** in the single app module — `SafetyModel`/`SafetyUpdate` defined twice (SafetyHistoryWidget + SafetyFeaturesWidget), `ChargeSessionDTO` ambiguous — cascading into the `.loaded`/`.live` inference errors. This is the exact pitfall `DashboardWidgetInfra.swift` documents. None of it is my code. 
+
+Let me build an isolated harness to positively prove my surface compiles and my test logic passes. First, check my dependency files are self-contained.
+

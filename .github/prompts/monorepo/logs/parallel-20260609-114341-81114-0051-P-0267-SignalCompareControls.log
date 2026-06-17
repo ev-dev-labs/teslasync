@@ -1,0 +1,194 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me check the web source, the Apple app structure, and the available tooling in parallel.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me explore the existing Apple app structure and the shared infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P4 core).
+
+The structure is clear: XcodeGen-based, co-located surface files in `feature-views/` with `.swift`, `.strings`, `.Previews.swift`, `Tests.swift` suffixes. Let me examine existing feature-views to find the established pattern and the shared infrastructure.
+
+2112 files. Clear convention: `{Name}.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me find a close reference (a pure-controls/input surface) and study the shared infrastructure (i18n facade, tokens, telemetry, state holders).
+
+`NotificationFilterBar` and `CommandSearch` are close analogs (filter bar with chips, search). Let me read a complete reference set plus check for any existing Signal* surfaces and the i18n/telemetry/token infrastructure.
+
+Existing siblings exist: `SignalChartPanel`, `SignalHistoryTable`, `LiveSignalsTable` — same signals domain, with `.Localization.swift` files. Let me read the closest sibling set completely to learn the exact conventions (i18n, telemetry, tokens, tests).
+
+Now I understand the facade pattern. `NotificationFilterBar` is the closest analog (pure controls: chips + search). Let me read it completely plus the model/telemetry/preview/test conventions and locate the shared atomic components and diagnostics surface.
+
+Excellent — the conventions are now clear (TS tokens, TSGlassPanel/TSFadeIn/TSSkeleton atoms, `{Surface}Strings` facade, `@Observable` model with `phase`/`connection`, `{Surface}Surface.slug` diagnostics). Let me read the state-holder base, the model/adapter/seams of the analog, and the diagnostics surface definition.
+
+Let me read the remaining analog files (model, adapter, seams, previews, tests, strings) to fully internalize the state-holder binding, telemetry emission, and test conventions.
+
+I now have the full architectural pattern. Let me verify the tooling config, locate the atomic components, read the analog's adapter/tests, and check the build setup (xcodegen, placeholder checker).
+
+I have the complete pattern including tests, lint (120 warn/160 err), and format (maxwidth 120, before-first wrapping, self remove, testable-bottom imports). Now let me confirm the atomic components/tokens exist and check the build setup (xcodegen, project generation, placeholder checker).
+
+xcodegen isn't installed and no `.xcodeproj` exists yet. Let me assess the full build feasibility: check for the prebuilt Shared.xcframework, the KMP/Gradle setup, xcodegen installability, pwsh for the placeholder check, and locate the design tokens.
+
+Good — `xcodegen` and `pwsh` ARE available; the KMP `Shared.xcframework` must be built via Gradle (the long pole, needed by `xcodebuild`). Let me kick off that framework build in the background now while I read the tokens, atoms, and verification docs.
+
+Tokens confirmed. Let me read the remaining atoms (Button, Motion/FadeIn, Skeleton, Typography) and check the framework build progress.
+
+Atoms confirmed: `TSButton` (variant/size + label closure), `TSFadeIn(delay:)`, `TSSkeleton(width:height:cornerRadius:)`. Let me check the framework build progress and find the remaining UI atoms I need (text field for search, help tooltip, badge/chip, typography).
+
+The Gradle build is progressing with a warm cache (`FROM-CACHE`, `compileKotlinIosArm64 FROM-CACHE`) — good sign it'll complete. Let me read the input field, tooltip, typography, and badge atoms.
+
+Let me read the Overlays (for a tooltip/popover atom matching web `HelpTooltip`) and Badges atoms, then I'll have everything to write the surface.
+
+I now have every atom, token, and convention confirmed. The Gradle framework build is running with a warm cache in the background. Let me write a plan file and start creating the surface. First, let me record the plan and todos.
+
+Baseline tooling is clean. Now I'll create the surface files, starting with the pure-logic Core (categories, presets, datetime helpers, enums, slug).
+
+Now the Adapter (pure projection: phase resolution, preset application, category toggle, signal filtering, and the server-query projection the pages consume).
+
+Now the Seams file (telemetry, change sink, source protocol, in-memory source, update snapshot) — Foundation/OSLog only.
+
+Now the Localization facade (named string accessors with English fallbacks + accessibility builder) — Foundation only. The long help strings use concatenation to respect the 120-col limit.
+
+Now the Model — the `@Observable` state holder (P1/S8) that emits `view.opened` (P1/S11) and routes every control intent through the change sink.
+
+Now the interactive Controls (window datetime field with help tooltip, preset row, search field, category chips) plus a self-contained flow layout for the wrapping rows.
+
+Now the Views file: content orchestrator, responsive windows grid, filter row, freshness chip, connectivity banner, and the loading/empty/error states.
+
+Now the main view file (phase switch, fade-in glass panel, lifecycle, accessibility, surface slug, optional top slot).
+
+Let me check the framework build progress, then write the previews and strings catalog.
+
+Framework build is at the linking stage (nearly done). Now the strings catalog with all parity keys plus the native state-envelope keys.
+
+Now the test files. First the adapter/projection/datetime/category/accessibility unit tests with deterministic timezone injection.
+
+Now the model behavior tests with spies (lifecycle, telemetry-once, control intents, preset, freshness auto-refresh, adoption).
+
+All 11 files written. Let me check the framework build, then auto-format my files and lint them.
+
+Framework built successfully (12m) and staged. SwiftFormat now passes on all 11 files. Let me run swiftlint --strict on them.
+
+swiftlint --strict: **0 violations**. Framework staged. Now let me generate the Xcode project and start the iOS build+test (the long pole — compiles 2100+ surfaces). I'll set up the gate log too.
+
+Project generated; my files are wired into all targets (72 refs). Now let me start the iOS build+test (long pole) and monitor early output for compile errors.
+
+While the iOS build runs, let me verify the placeholder check passes and the log directory exists.
+
+Placeholder check passes (0 placeholders). Let me check the iOS build progress for any early compile errors.
+
+Multiple xcodebuild processes are running — some are from other parallel agents sharing this machine (the `/tmp/*.log` files and the `-scheme TeslaSync-macOS` process aren't mine). My iOS build (PID 61917, `-project TeslaSync.xcodeproj`) is running. Let me locate its actual log via lsof.
+
+My iOS build **compiled successfully** — it's now in the test phase (the `.xcresult` shows `TeslaSyncTests`/`TeslaSyncUITests` being scheduled). The build log is at `/private/tmp/ios-buildtest.log` (1.8MB). Note: async sessions appear namespace-isolated for `/tmp`. Let me verify I can read the build outcome and check for my surface compiling cleanly.
+
+Confirmed: async sessions have an isolated `/tmp`, but `DerivedData` (under `$HOME`) is shared. Importantly, my iOS **build phase already succeeded** (it reached the test scheduling phase), proving my surface compiles in the iOS app + test targets. The iOS test run is in progress in the `iosbt` session. Let me wait for it to complete.
+
+iOS exited 65 (build succeeded → test phase failure). I need to see what failed — mine or pre-existing. Let me read the log from within the `iosbt` namespace.
+
+The async `/tmp` overlay is ephemeral — the log vanished. I'll re-run as sync to a shared path. DerivedData is warm, so first let me validate MY tests specifically (fast, `test-without-building`) to confirm my surface is green, then assess the full-suite exit-65.
+
+My targeted test run failed (exit 65, "TEST EXECUTE FAILED"). Let me read the actual error — could be an assertion failure or a simulator/launch issue.
+
+That's not a test-logic failure — it's an environment/contention issue: "Simulator device failed to install the application. Missing bundle ID" and "xcrun: error: unable to find utility simctl". The shared `iPhone 16` simulator is contended by other parallel agents. Let me diagnose the toolchain and app bundle, then use a dedicated simulator.
+
+Root cause: the app bundle's `Info.plist` is missing (incomplete app product) — and the earlier "simctl not found" was transient. The shared `iPhone 16` sim is contended by other slots (they made their own: `slot2-iphone16`, `BGW-slot9-sim`). Let me create a dedicated simulator and do an incremental rebuild to complete the app bundle.
+
+The device ID is `A680DF80-...` (the warning leaked into the capture). Let me clean that up, boot it, then run the incremental rebuild to complete the app bundle.
+
+The incremental build failed fast (~72s) — that's a real compile/config error, not contention. Let me read the actual errors.
+
+A `SwiftCompile` batch failed but with no `: error:` lines — that pattern suggests a compiler crash/kill (contention/OOM), not a source error. Let me inspect the failure context and look for crash/kill signatures.
+
+The Swift compiler itself **crashed** during IRGen (a `swift-frontend` backtrace). I need to find which source file/construct triggered it. Let me extract the crash's "while generating" context.
+
+Let me pinpoint the crashing file — check whether my surface is even in the failing batch and find the "Stack dump" source location.
+
+Critical finding: the build failure is a **Swift compiler IRGen crash in `AppearanceSettings.Controls.swift` — a pre-existing file, NOT my surface** (crash signature `@$sSbScA_pSgIeAghyg_...TR` is a reabstraction-thunk crash typical of compiler instability under heavy parallel load). My `SignalCompare*` files appear only as normal compile tasks with no errors. The same file built fine in the earlier run, indicating a transient/contention crash. Let me retry the incremental build with bounded jobs to reduce memory pressure.
+
+The retry is still compiling after 5 minutes (a good sign — no fast crash). Let me wait for it to finish.
+
+Still building. Let me peek at progress via the shared log file while it continues.
+
+No crashes this time — it's compiling the U/V-range files now (past `AppearanceSettings`), confirming the earlier crash was transient. Let me wait for completion.
+
+The crash reproduced deterministically on the **same pre-existing file** `AppearanceSettings.Controls.swift` (a sibling surface I'm forbidden to touch) — a Swift compiler IRGen crash on a `(Bool, (any Actor)?) async -> Bool` reabstraction thunk. This is a baseline/toolchain issue independent of my surface. Let me confirm it's pre-existing/unmodified and check for documented known issues.
+
+Decisive facts: my 12 files are all **untracked/new** (git confirms), while `AppearanceSettings.Controls.swift` is a **committed file from a different P4 prompt** (commit `0dd623aa3`). The locked toolchain is **Xcode 26 / Swift 6.0.1**, but the runner has **Swift 6.3.2** — a newer toolchain crashing a pre-existing file's IRGen. Before concluding, let me check whether the locked Xcode 26.0 toolchain is available (an in-scope way to build with the pinned compiler).
+
+Only Swift 6.3.2 is available (no locked Xcode 26.0). The blocker is confirmed: a newer-than-locked toolchain crashing a pre-existing committed file's IRGen. Let me run the whole-tree lint/format gate steps (with my files present), then do the decisive baseline-independence proof.
+
+Important: `swiftformat --lint` passes on the whole tree (0/2864), but `swiftlint --strict` (whole-tree) is red on **`LiveSignalSparklinesWidget.Builder.swift`** — *another* pre-existing sibling file, not mine. So the baseline tree already has pre-existing red issues in sibling surfaces. Now the decisive proof: build with my files **removed** to confirm the IRGen crash is baseline-independent.
+
+My files are removed (0 refs in project). Now build the baseline — if it still crashes on `AppearanceSettings.Controls.swift`, the blocker is conclusively independent of my surface.
+
+Baseline build (no my files) still compiling, no crash yet at B/C range. Let me wait for it to hit `AppearanceSettings` (A-range) or finish.
+
+**Conclusive proof**: with my 12 files entirely removed, the baseline build **still fails with the identical IRGen crash on `AppearanceSettings.Controls.swift`** (EXIT 65). The blocker is 100% pre-existing and independent of my surface. Let me restore my files and regenerate the project.
+
+My files are restored (72 refs). The blocker is conclusively pre-existing. Now let me get **positive proof my surface itself compiles** — by type-checking the whole module (which skips the IRGen phase that crashes on the unrelated file). Let me extract the compiler invocation to reuse its exact flags.
+
+Let me get the full compiler invocation to reconstruct a type-check-only command (skips the crashing IRGen phase).
+
+I have the exact compiler flags. Let me type-check the **whole module** (with my files) using `-typecheck`, which runs full semantic analysis but skips the IRGen phase that crashes on the unrelated file. A clean exit proves my surface is type-correct. Let me build the file list and run it.
+
+File list ready (2318 files incl. my 9 non-test files). Now run the whole-module type-check (skips the crashing IRGen phase).
+
+Type-check still running (2318 files, whole-module). Let me wait for it.
+
+**Decisive positive proof: `TYPECHECK_EXIT=0`** — the whole module (all 2318 files including my 9 source files) type-checks cleanly under Swift 6 / strict-concurrency=complete. My surface is semantically correct; only the unrelated IRGen phase crashes. Let me verify the macOS framework slice and confirm the two pre-existing problem files are committed (not mine), then run the macOS gate step.
+
+Confirmed: both problem files are committed & unmodified (one from commit `1ce15b48b` "fix 7 pre-existing unit-test failures (P4 baseline)"), macOS slice exists. Let me run the macOS gate step (captures the real result) while I begin assembling the official log.
+
+macOS gate step is running in the background. While it builds, let me record progress in the plan and prepare. Let me wait for the macOS result.
+
+macOS build also **FAILED** (same blocker expected). The macbt session completed. Let me read its result and confirm the crash file.
+
+The macOS failure is a **different pre-existing environmental blocker** (fast, 19s): *"TeslaSync-macOS has entitlements that require signing with a development certificate"* — no code-signing identity on this runner. This is unrelated to my surface. The repo even has an `apps/macos-pending-verifications.md` doc — let me check it for the documented known issue.
+
+This is the key document. It establishes the **official sanctioned protocol** for exactly my situation: 8 prior P4 feature-view surfaces are all recorded as "surface verified green; full-app `xcodebuild build test` blocked by **pre-existing, unrelated** issues (parallel-merge collisions, the `opening_brace` error in `LiveSignalSparklinesWidget.Builder.swift`, macOS dev-signing); deferred to the macOS acceptance gate." Let me read a prior surface's log to match the exact STATUS/commit convention.
+
+This is the **decisive precedent**: the prior surface (ScheduledExportsPanel) concluded **`EXIT=0 / STATUS=DONE`** with the exact rule — all *surface-scoped host-runnable gates green* (FORMAT/LINT/iOS+macOS typecheck/swift test/placeholder/xcodegen), with the full-app `xcodebuild build test` **deferred** (recorded in `macos-pending-verifications.md`) because it's blocked by pre-existing, surface-independent issues. My situation is identical. I need two more surface gates to match: **macOS typecheck** and **isolated surface tests**. Let me start the macOS typecheck.
+
+Now let me build an isolated SwiftPM package (in the session dir) to run my surface's unit tests — matching the precedent's `SWIFT_TEST_EXIT=0`. I'll scaffold it with a minimal atom shim + the real design tokens + my source/test files.
+
+Now let me write the `Package.swift` and the minimal atom shim (signature-faithful) for the isolated test package.
+
+Now let me run the isolated surface tests and check the macOS typecheck result.
+
+**All 33 surface tests pass (`SWIFT_TEST_EXIT=0`)** under Swift 6 strict concurrency. Let me check the macOS typecheck result.
+
+macOS typecheck still running (whole-module, 2318 files). Let me wait for it.
+
+**`MAC_TYPECHECK_EXIT=0`** — whole module type-checks cleanly on macOS too. All surface-acceptance gates are now GREEN, exactly matching the established precedent. Let me update my plan and write the official gate log.
+
+Now let me write the official gate log with full, transparent evidence.
+
+Log written. Now final pre-commit verification: confirm git status, ensure generated artifacts (xcodeproj, staged xcframework) are gitignored, and re-confirm my surface files are lint/format clean.
+
+Git state is exactly right: 12 untracked surface files + 1 log; the generated `.xcodeproj` and staged `Shared.xcframework` are git-ignored; **no tracked file was modified** (I honored the prompt's allowed-files scope). All surface-acceptance gates are green and the full-app deferral is fully documented — matching the precedent's `STATUS=DONE`. Let me commit the surface + log.
+
+Committed as `f4705c609` with exactly the 12 surface files + log. Let me clean up the dedicated simulator I created and do a final sanity check.
+
+All clean: dedicated simulator deleted, working tree clean, 12 surface files committed at `f4705c609`. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...le-feature-views-0267-SignalCompareControls.log | 158 +++++++++++
+ .../SignalCompareControls.Adapter.swift            | 108 ++++++++
+ .../SignalCompareControls.Controls.swift           | 270 ++++++++++++++++++
+ .../feature-views/SignalCompareControls.Core.swift | 258 ++++++++++++++++++
+ .../SignalCompareControls.Localization.swift       | 160 +++++++++++
+ .../SignalCompareControls.Model.swift              | 194 +++++++++++++
+ .../SignalCompareControls.ModelTests.swift         | 221 +++++++++++++++
+ .../SignalCompareControls.Previews.swift           | 129 +++++++++
+ .../SignalCompareControls.Seams.swift              | 143 ++++++++++
+ .../SignalCompareControls.Tests.swift              | 229 ++++++++++++++++
+ .../SignalCompareControls.Views.swift              | 302 +++++++++++++++++++++
+ .../feature-views/SignalCompareControls.strings    |  74 +++++
+ .../feature-views/SignalCompareControls.swift      |  75 +++++
+ 13 files changed, 2321 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0267-SignalCompareControls.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.Core.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.Localization.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCompareControls.swift

@@ -1,0 +1,142 @@
+I'll start by exploring the environment and understanding the repository structure, then read the web source that serves as the specification.
+
+Good — full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Let me explore the Apple app structure and read the web source spec.
+
+The `feature-views` directory already exists with an established pattern (`.Adapter`, `.Model`, `.Previews`, etc.). Let me examine the existing pattern and check if AppearanceSettings already exists.
+
+A clear, established pattern exists. `GeneralSettings` and `AdvancedSettings` are the closest analogues. Let me study the complete `GeneralSettings.*` set as my template, plus the rest of the web source.
+
+Now I have the full web source. Let me study the `AdvancedSettings` set closely (it has `.Projection` + `.States` matching the prompt's state requirements), reading all its files in parallel.
+
+Excellent pattern. Let me read the remaining `AdvancedSettings` files to fully internalize the architecture.
+
+Now let me read the test pattern and locate the shared component library (TSButton, TSToggle, TSIconBox, tokens) plus the GeneralSettings toggle/field patterns which AppearanceSettings needs heavily.
+
+The shared components aren't in the local search path. Let me locate them across the Apple tree.
+
+The core tokens (TSSpacing, Color.TS, Font.TS) must be generated elsewhere. Let me locate them and read the key shared components.
+
+Key finding: tokens live in `apps/design/generated/apple`, and the build needs XcodeGen + a KMP `Shared.xcframework`. Let me check build capability and read the design tokens.
+
+Let me check the `macos-pending-verifications.md` note and the KMP toolchain availability, since the build depends on a Gradle-built `Shared.xcframework`.
+
+This is crucial context. The established precedent (`macos-pending-verifications.md`) shows every prior P4 surface verifies the surface **in isolation** (SwiftPM build + tests + swiftlint + swiftformat + placeholder + `swiftc -typecheck`), while the full-app `xcodebuild` is deferred to the acceptance gate due to pre-existing parallel-merge collisions. Let me examine the isolation tooling and remaining shared components.
+
+Let me examine the `AppSettingsState`/settings types (to avoid collisions and understand the settings shape), check for a native ThemePicker, and study GeneralSettings view patterns for toggle/segmented rows.
+
+`AppSettingsState` is owned by GeneralSettings — I'll define my own `AppearanceSettings`-prefixed seam types (matching the self-contained per-surface pattern) to avoid collisions. Let me read the web hooks to mirror exact storage keys/shapes, plus GeneralSettings.Models for the settings field names.
+
+I now have all storage keys, shapes, and palette values. Let me read GeneralSettings.Models and GeneralSettings.Views to mirror the settings-source seam idiom and toggle/choice row visuals, then I'll start building.
+
+I have deep understanding now. Let me quickly check the GeneralSettings field/toggle idioms and the shell wrapper, then start building.
+
+I have a thorough understanding of the architecture. Let me check for an existing native ThemePicker counterpart and any celebration-prefs types that could collide, then create a plan.
+
+A native `TSThemePicker` exists. Let me read it and the segmented picker so I compose the theme section correctly.
+
+I now have a complete understanding of the architecture, conventions, data shapes, and available shared components. Let me set up tracking and a plan, then build.
+
+Now I'll build the surface. Starting with the Foundation-only core (Models, Projection, Adapter) — these mirror the AdvancedSettings pattern with `Appearance`-prefixed types to avoid collisions.
+
+Now the Model — the `@Observable` state holder, store/telemetry seams (P1/S8/S11), toast type, and the UserDefaults + in-memory stores.
+
+Now the stores file (UserDefaults parity + in-memory for tests/previews):
+
+Now the state-envelope views (loading skeleton, empty, error):
+
+Now the presentational chrome (Views.swift) — the largest presentation file with the section header, freshness chip, choice cards, glyphs, toggle rows, density preview, sidebar silhouettes, swatches, and toast:
+
+Now the composed view with all 9 sections, plus the choice-grid helper and bindings:
+
+Now the previews and the comprehensive test suite:
+
+Now the i18n strings catalog with every key the surface resolves:
+
+All 11 files created. Let me verify — first check tooling configs and run formatting/lint on the new files.
+
+Tooling is available. Let me auto-format my new files to the repo's SwiftFormat config, then lint.
+
+SwiftFormat is clean. SwiftLint found violations (file/type/function length, long lines, trailing closures). Let me check file sizes and the flagged lines, then reorganize to satisfy the limits.
+
+Clear plan: 3 files exceed 400 lines and need splitting. Let me view the current (post-format) boundaries to extract sections cleanly.
+
+Let me create the Localization file (moving copy + facade out of Models) with a split `copy()` builder to satisfy the function-length rule:
+
+Now trim Models.swift to remove the moved sections:
+
+Now split Views.swift — move the choice card + glyphs into a new Components file. Let me view that range:
+
+Views.swift now 294 lines. Now I'll rewrite the main view file (minimal: struct + body + phase + header + bindings) and create a Sections extension file. Let me remove and recreate:
+
+Now the Sections extension file with all 9 content regions (fixing the trailing-closure and long-line issues):
+
+Now re-format all files and re-run swiftlint:
+
+All files now under 400 lines. Let me run swiftlint --strict on the full set:
+
+Three fix categories left: large tuples, one long line, and trailing-closure on TSButton. Let me view the exact spots:
+
+I'll rewrite Localization.swift with array-based helpers (no large tuples):
+
+Now fix the Sections.swift trailing-closure and long-line issues:
+
+The tours edit applied; the celebration edit didn't match. Let me view the current state:
+
+SwiftFormat and SwiftLint are both clean (0 violations). Now the placeholder check:
+
+Placeholder check passes (0 found). Now the key isolated verification. Let me find the dependencies my surface needs (the `.tsGlassPanel()` modifier, and confirm Components are self-contained) to build an isolation harness.
+
+`tsGlassPanel` is in `Sources/Design/`, and Components are self-contained (only system frameworks + design tokens). Let me build an isolated SwiftPM harness in the session workspace.
+
+The full Components copy pulled in files (DataDisplay) that depend on an app-level `Units` type I don't use. Let me include only the specific components my surface needs.
+
+Build succeeds under Swift 6 strict concurrency. Now run the test suite:
+
+All 26 tests pass under Swift 6 strict concurrency. Now `swiftc -typecheck` against both the iOS 18 and macOS 15 SDKs (including DEBUG previews):
+
+Both SDK typechecks pass (0 errors). Now confirm `xcodegen generate` enumerates the new files:
+
+`xcodegen generate` succeeds and all 14 files are enumerated (Tests → test target, rest → app target, strings → resources). Now I'll honestly assess the full `xcodebuild` gate. First, the build needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native pre-action). Let me check feasibility of that prerequisite.
+
+Network is available and Java 17 is present, so the KMP framework build may be feasible. Let me attempt it in the background (it downloads Gradle + Kotlin/Native, so it's slow), and monitor.
+
+Let me wait for the KMP build to progress while I prepare the gate log.
+
+Let me verify the Gradle build is actively progressing (not deadlocked) by checking process state and caches:
+
+The build is actively progressing — Kotlin/Native is compiling via clang++ (the `~/.konan` toolchain is present from a prior run). Let me continue waiting for it to finish.
+
+It's compiling all native targets (iosArm64, iosSimulatorArm64, macosArm64) — 83 active compile processes. Let me keep waiting.
+
+The KMP `Shared.xcframework` built successfully (13m14s). Let me stage it and attempt the full `xcodebuild` to capture honest evidence of whether my surface compiles in the real app target.
+
+Framework staged (ios-arm64-simulator, macos-arm64 present). Now I'll attempt the full app build on iPhone 17 (iPhone 16 isn't available on this runner). Running async since it compiles ~200 surfaces.
+
+The full build failed (7 failures). Critical question: are any failures in **my** files? Let me analyze the build log.
+
+Zero AppearanceSettings errors. The 7 failures are all pre-existing parallel-merge collisions in unrelated `Charge*` widgets (`ChargeSessionDTO`/`ChargeStatusProjection` "ambiguous for type lookup" — types redeclared across surfaces). Let me confirm the failing file set and that my surface compiled.
+
+All 7 failures are pre-existing parallel-merge collisions in **other, out-of-scope** surfaces (`Charge*`/`Safety*`/`FleetStats*` dashboard-widgets + `TimestampTool`) — "ambiguous for type lookup" type redeclarations. **Zero** AppearanceSettings errors: my surface compiled cleanly in the real iOS app target. Let me confirm the lone TimestampTool error is also pre-existing/unrelated.
+
+Confirmed: the TimestampTool error is a pre-existing main-actor isolation issue (I never touched that file). My git changes are **only** the 14 AppearanceSettings.* files. The 2 modified web files are pre-existing (not mine — I'll exclude them). Let me run the macOS build for genuine evidence (not assume), and set up the log directory.
+
+The xcodeproj and Shared.xcframework are confirmed git-ignored. The macOS build is running. Let me wait for it.
+
+macOS build also fails (7 failures, same pre-existing collisions). Let me confirm zero AppearanceSettings errors on macOS too:
+
+macOS build: 0 AppearanceSettings errors — all failures are the same pre-existing dashboard-widget collisions. My surface is green on **both** platforms. Now let me generate the honest gate log by re-running the surface-scoped gates live and embedding the build evidence.
+
+Now append the isolated build/test + dual-SDK typecheck (re-run live), then the full-build evidence and verdict:
+
+Now append the full-app build evidence and the final verdict:
+
+The log is complete and honest (EXIT=65, STATUS=BLOCKED — full build blocked by pre-existing out-of-scope collisions; surface green everywhere). Note: `macos-pending-verifications.md` is outside my allowed files, so I won't modify it. Let me verify git state and that the log isn't ignored, then commit only my files + log.
+
+Clean state: only my 14 files + the log are untracked; the 2 web mods are pre-existing (I'll leave them). Let me stage precisely and commit.
+
+All 14 files + log staged; no web files. Committing with the prompt's message (the surface is green; the log transparently records the pre-existing out-of-scope blocker):
+
+Committed: 15 files, 3480 insertions (no web/xcodeproj/framework leakage). Let me finalize todos, do a last clean re-lint of the committed files, and tidy temp files.
+
+All final checks pass: **swiftformat --lint 0/13**, **swiftlint --strict 0 violations**, working tree clean (only the 2 pre-existing web mods remain — correctly untouched), temp logs cleaned. The task is complete.
+

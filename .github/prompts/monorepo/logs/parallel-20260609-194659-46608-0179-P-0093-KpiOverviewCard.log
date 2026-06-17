@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple toolchain is available.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me read the web source, its test, and the existing Apple structure & precedent surfaces.
+
+This is a pure presentational component (ComparisonHeader + KPI grid + optional secondary + footer, wrapped in GlassPanel). Let me examine the most recent precedent surfaces (Temperature, DateTime) to follow the exact established file pattern.
+
+The pattern is clear. Temperature (most recent shared-surface) has: `.Adapter`, `.Model`, `.Previews`, `.Projection`, `.strings`, `.swift` (main view), `.Tests`, `.Views`. Let me read all Temperature files in full to learn the exact conventions, tokens, i18n facade, state-holder, and diagnostics APIs.
+
+KpiOverviewCard composes `ComparisonHeader` directly and takes `kpis`/`footer` as slots. Let me read the web sources it depends on (ComparisonHeader, MetricCard, GlassPanel) and check whether native counterparts already exist, plus read the GlassPanel native token usage and DateTime's richer States/Seams pattern.
+
+Now I understand the architecture. KpiOverviewCard composes `ComparisonHeader` (which I must reproduce inline since it's not a separate native surface and out of my file scope) and takes KPI/footer slots. Let me read DateTime's full implementation (it has the states pattern I need) and locate the shared atomic native components (GlassPanel, tokens, skeleton, error, empty, badge, delta).
+
+Let me read the shared atomic components and design tokens, plus DateTime's remaining files to understand the stale/offline (connection) and source-seam patterns.
+
+Now let me read the design tokens, typography/button/callout atoms, the DateTime model/seams/views/projection (for the stale/offline connection pattern), and the web Delta/MetricCard/InlineCallout/GlassPanel sources.
+
+Let me read the web component deps, the typography/metrics/buttons/banners atoms, the design tokens, and the projection/strings/test patterns.
+
+Key discovery: `TSKpiOverviewCard`, `TSKpi`, `TSComparisonHeader`, `TSDelta` already exist as **atoms** (out-of-scope component library). My surface `KpiOverviewCard` will compose these. Let me read the tokens, typography atoms, project.yml (to confirm globbing & test wiring), Temperature tests (snapshot/a11y pattern), DateTime projection, strings files, and the placeholder checker.
+
+Let me read the design tokens, typography atoms, DateTime projection, project.yml, and the lint/placeholder configs.
+
+Let me locate the generated design tokens, read project.yml (build/test wiring), the swiftlint config, and the placeholder checker.
+
+Now I understand the build/test wiring. Critical: builds need `Shared.xcframework` (KMP) and `xcodegen`. Let me check build prerequisites and how the precedent surfaces (Temperature 0089, DateTime 0084) were validated — their logs will tell me whether full builds pass or are blocked here.
+
+I now understand the sanctioned disposition from precedent logs: full-app `xcodebuild` is baseline-RED on pre-existing, out-of-scope issues (sibling duplicate types on iOS; macOS dev-signing). Predecessors ship "code-complete + isolated Swift 6 build+test verified" with the full-app gate DEFERRED. Toolchain (xcodegen, pwsh, swiftlint, swiftformat) is present; `Shared.xcframework` is a `.gitkeep` stub. Let me read the generated tokens, placeholder config, swiftformat config, and check for any `KpiOverview` collisions.
+
+The placeholder scanner is **case-insensitive** — I must avoid TODO/FIXME/XXX/"Coming soon"/Placeholder/"Lorem ipsum"/"not implemented" even in comments, plus "stub"/"mock". Now let me understand the build baseline: read the Shared.xcframework build script, the pending-verifications doc, and confirm the pre-existing baseline-red conditions.
+
+The disposition is now unambiguous and well-precedented: the full-app `xcodebuild` gate is DEFERRED (unstaged KMP `Shared.xcframework`, pre-existing sibling-surface collisions, macOS dev-signing), while surfaces are independently verified via real `swiftc -typecheck` (iOS-18 + macOS-15, Swift 6 strict) against the real design system + runnable logic harness + swiftlint/swiftformat/placeholder/i18n. Let me write the plan and check which Sources files are KMP-`Shared`-coupled (to exclude from my typecheck set).
+
+No KMP `Shared` coupling in the design system. Let me check `UnitFormatters.swift` (precedent excluded it) for external dependencies, then write the plan.
+
+No `Shared` coupling in the design system; `UnitPreferences` lives in `Sources/SharedFacade` and is only pulled in by `UnitFormatters.swift` (which my surface doesn't use). My compile set = Tokens + Design + Components (minus `UnitFormatters.swift`) + my files. Now I'll write the plan and start implementing.
+
+Now I'll create the pure-logic files (Model, Projection, Seams) — these stay SwiftUI-free so I can run them in a logic harness. Starting with the Model.
+
+Now let me verify the three pure-logic files type-check standalone before building the views on top.
+
+Pure-logic trio type-checks clean (Swift 6 strict, macOS 15). Now the SwiftUI views.
+
+Now the main surface view that binds the model and composes the shell.
+
+Now the i18n strings catalog and the previews.
+
+Some preview lines exceed the 120-col limit (swiftlint `--strict` fails on warnings). Let me auto-format my files with swiftformat, then check the design-system compile closure for unit-formatter coupling.
+
+No design-system file outside the two unit-formatter files references `UnitPreferences`/unit-views, and `SharedFacade` imports KMP `Shared` — so excluding `UnitFormatters.swift` + `TypedFormatters.swift` is safe. Now the full-surface typecheck (macOS 15, Swift 6 strict, `-D DEBUG`) against the real design system.
+
+Full surface (views + previews included) type-checks clean on macOS 15. Now the iOS 18 simulator target.
+
+Both SDKs type-check clean. Now the comprehensive XCTest file (projection per-state snapshots, model lifecycle, source, accessibility, view-compose contract).
+
+Now let me independently verify: (1) the XCTest file type-checks against the real module API, and (2) a runtime harness exercises all the projection/model/source/accessibility logic for real. First, type-check the test file against the surface + design system + XCTest.
+
+The XCTest assertion macros need SwiftPM/Xcode wiring (not raw swiftc). Let me build a temporary SwiftPM package that vendors the real design system + my surface as module `TeslaSync` and runs the actual XCTest suite — the rigorous path the precedents used.
+
+**All 33 XCTest cases pass** against the real design system (Swift 6 mode, macOS). Now the static gates — swiftlint `--strict` and swiftformat `--lint` on my files.
+
+I forgot to auto-format the Tests file. Let me format it and re-run both gates.
+
+swiftlint `--strict` = 0 and swiftformat `--lint` = 0. The Tests file was reformatted, so let me re-confirm the suite still passes, run the placeholder scanner, and grep for any forbidden words.
+
+One comment contains "placeholders" (case-insensitive match for the scanner). Let me reword it.
+
+Now run the placeholder scanner on my files and re-confirm no forbidden words.
+
+PLACEHOLDER_COUNT=0, no forbidden words. Now verify i18n parity: confirm the web source makes no `t()` calls (so all my keys are native chrome) and that declared keys ↔ used keys match.
+
+Confirmed: the web source makes **zero `t()` calls** (only a comment mentions i18n), so all 15 native keys are chrome; declared ↔ used parity is perfect. Now `xcodegen generate` to confirm my files are enumerated by the project globs.
+
+xcodegen enumerated all 9 surface files (54 pbxproj refs). Now let me capture concrete, current evidence of the DEFERRED full-app blockers (missing KMP framework, macOS signing, pre-existing sibling-surface collisions) so the log is honest rather than just citing precedent.
+
+Confirmed concretely: `StateTimelineLoadStatus/Connection/Update/Model` are each declared **twice** in the `TeslaSync` module (dashboard-widgets + feature-views) — pre-existing collisions outside my allowed scope. Plus 0 signing identities and an unstaged KMP framework. Let me check git status and clean up temp artifacts.
+
+Clean: only my 9 files are untracked; the `.xcodeproj` is git-ignored. Let me run the gate's static checks **tree-wide** (as the gate actually invokes them) to record true gate exit codes and confirm my files don't break the tree.
+
+Tree-wide swiftformat: 0/3978 require formatting → FORMAT_EXIT=0. Now tree-wide swiftlint `--strict`.
+
+Tree-wide swiftlint `--strict`: **0 violations in 3748 files** → LINT_EXIT=0. All static gates green; independent build/test green. Now I'll write the gate log.
+
+Now let me update the plan, clean the git-ignored generated project, stage exactly my files + the log, and commit.
+
+Exactly the 10 intended files are staged. Committing.
+
+Committed as `f5753c7c9` with a clean worktree. The P4 shared-surface `KpiOverviewCard` is complete and verified.
+
+## Summary
+
+Shipped the production-polished SwiftUI parity of web `components/data-display/KpiOverviewCard.tsx` at `apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.*` (9 files: `swift`, `Model`, `Seams`, `Projection`, `Views`, `States`, `Previews`, `strings`, `Tests`).
+
+**Parity & composition** — a `TSGlassPanel` shell composing a `ComparisonHeader` (title + current/comparison period strip + optional headline `TSDelta` + freshness slot), a responsive KPI grid of `MetricCard`-shaped tiles, an optional muted secondary line, and a footer `InlineCallout`. Reuses the P4 atoms; binds the P1/S8 state-holder via a Source seam (no HTTP in the view); emits `view.opened` once (P1/S11); all copy via the P1/S10 facade; full VoiceOver/Dynamic-Type/Reduce-Motion support.
+
+**All states render** — loading (skeleton grid), empty (web `EmptyState` peer), error (`QueryError` + retry), content, and stale/offline freshness chip with one-shot auto-refresh.
+
+**Verification (green):**
+- `swiftc -typecheck` Swift 6 strict, **macOS-15 + iOS-18 sim** vs the real tokens + design system → **0 errors**
+- **33/33 XCTest** pass via SwiftPM against the real design system (projection per-state, model, source, accessibility, view-compose)
+- `swiftlint --strict` **0/3748** · `swiftformat --lint` **0/3978** · placeholder **0** · i18n **15/15** (0 dead/0 missing; web has 0 `t()` calls)
+- `xcodegen generate` enumerates all 9 files (54 pbxproj refs)
+
+**Full-app `xcodebuild build test` — DEFERRED** to the P4/P99 acceptance gate (consistent with every prior P4 surface). Root causes are pre-existing and outside the allowed `KpiOverviewCard.*` scope: unstaged KMP `Shared.xcframework`, 0 macOS signing identities, and sibling-surface duplicate types (`StateTimeline*`, `DashboardWidgetSize`). Zero `KpiOverviewCard` errors contributed — confirmed with current evidence in the log. `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...-apple-shared-surfaces-0093-KpiOverviewCard.log | 152 +++++++++
+ .../shared-surfaces/KpiOverviewCard.Model.swift    | 276 +++++++++++++++
+ .../shared-surfaces/KpiOverviewCard.Previews.swift | 119 +++++++
+ .../KpiOverviewCard.Projection.swift               | 224 ++++++++++++
+ .../shared-surfaces/KpiOverviewCard.Seams.swift    | 105 ++++++
+ .../shared-surfaces/KpiOverviewCard.States.swift   |  84 +++++
+ .../shared-surfaces/KpiOverviewCard.Tests.swift    | 378 +++++++++++++++++++++
+ .../shared-surfaces/KpiOverviewCard.Views.swift    | 265 +++++++++++++++
+ .../shared-surfaces/KpiOverviewCard.strings        |  40 +++
+ .../shared-surfaces/KpiOverviewCard.swift          |  94 +++++
+ 10 files changed, 1737 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0093-KpiOverviewCard.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.swift

@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure and checking runner capabilities, since this task requires Apple/Swift tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Not blocked. Let me explore the Apple app structure and the web source.
+
+The web source is clear: a three-way Table/Compact/Comfortable radiogroup selector. The `shared-surfaces` directory exists with many entries. Let me study the established native pattern and locate the P1 infra (state holders, tokens, i18n, diagnostics).
+
+A clear multi-file pattern per surface. `ActiveFilterChips` is the closest analog (small interactive control, no charts/maps). Let me study it in full.
+
+Excellent — I now understand the multi-file pattern thoroughly. Let me read the rest of the AdapterTests and examine the design tokens (P1/S9), project build setup, and i18n facade.
+
+Key finding: `Shared.xcframework` is only a `.gitkeep` placeholder (not built). Let me investigate the test target config, the shared framework build process, simulators, and the placeholder checker — these determine whether the gate can pass.
+
+Found the shared framework build script and a booted iPhone 16 sim. The `Shared.xcframework` must be built (KMP/Gradle). Let me assess feasibility.
+
+The pre-build Run Script auto-builds the framework, and dozens of `TeslaSync-*` DerivedData dirs confirm the full build pipeline has run repeatedly here. Building is feasible. Let me read the design tokens, lint config, and confirm the prebuild phase before writing code.
+
+I have all the design tokens, lint rules (file ≤400 lines for `--strict`), and confirmed the prebuild auto-builds the framework. Let me check for name collisions and confirm SwiftUI idioms (arrow-key handling, `.isSelected` trait) used elsewhere before writing.
+
+No collisions. Let me study the two best idiom references: `PlaybackControls.swift` (arrow-key + focusable) and `MetricSwitcherChart.Views.swift` (segmented selection styling + a11y).
+
+I have a thorough understanding of the conventions. Let me set up tracking, write a plan, and launch baseline lint/format checks in the background while I write the code.
+
+Let me check the baseline format result and start writing the Adapter (pure core) file.
+
+Baseline format is clean (0/4679 need formatting). Now writing the pure core Adapter.
+
+Now the Model (facade + telemetry seam + observable state-holder).
+
+Both baselines clean (lint: 0 violations, format: 0 need formatting). Writing the Model now.
+
+Now let me verify the exact focus idiom used in this codebase before writing the Views file.
+
+Let me refine the Adapter's identifier helpers to return deterministic resolved values (cleaner for the view + UI tests), then write the Views file.
+
+Now the public View file.
+
+Now the Previews and strings files.
+
+Now the two test files (pure-core adapter tests + model/view/strings tests).
+
+All 8 files written. Let me verify formatting and linting on the new files before the slow build.
+
+Mechanical formatting fixes needed. Let me autoformat my files (repo's own config) and re-verify.
+
+Both pass now. Let me confirm the autoformat changes are sensible.
+
+Format and lint clean; all files well under the 400-line limit. Now generate the Xcode project (which globs my new files in).
+
+Project generated and all 8 files referenced. Now the long pole: building the KMP `Shared.xcframework` (Gradle). Let me build it standalone first to warm the cache and surface any issues cleanly.
+
+Gradle build still running (expected for KMP/Native). Let me keep waiting.
+
+Still building (output is buffered through `tail`, so no incremental view). KMP/Native first builds are lengthy. Continuing to wait.
+
+`Shared.xcframework` built successfully (7m17s) and staged — the Gradle cache is now warm. Let me examine the gate log directory and a passing sibling log to reproduce the gate faithfully.
+
+There's a P4 sibling log. Let me read it to mirror the exact gate invocation, CWD, and log format.
+
+This is the key disposition reference. The accepted bar (user-approved peer disposition): surface-level gates green (swiftformat 0, swiftlint 0, placeholders 0, strict-concurrency type-check, executed `swift test` of the shipped XCTest files against real tokens), with the repo-wide `xcodebuild` deferred when RED only on pre-existing sibling defects.
+
+I'll gather real evidence on all fronts. First, launch the full iOS `xcodebuild build test` (Gradle now warm) in the background, capturing output to a file.
+
+While that runs, a critical compile concern: `horizontalSizeClass` may not be available on macOS. Let me check how sibling surfaces (which compile for the macOS target) handle it.
+
+Confirmed: `horizontalSizeClass` is **not** available on macOS — siblings guard it with `#if os(iOS)`. My `DensityToggle.swift` uses it unguarded, which would break the macOS build. This is a real defect in my file I must fix. The in-flight iOS build is valid (iOS has the API); I'll let it finish, then apply the guard. Let me check the iOS build progress.
+
+The build process is running (PID 27091) but the log file is missing — likely a redirect/namespace quirk in the async launcher. Let me locate where it's actually writing.
+
+That running process (PID 27091) writes to `ts-ios-gate.log` — it's **another user's** build (shared environment), not mine. Let me retrieve my launcher's output and list all xcodebuild processes.
+
+Two real issues in my files for the macOS target: `horizontalSizeClass` (and the preview's `.environment(\.horizontalSizeClass,...)`) are iOS-only. Also, the environment is **shared** with another agent running iOS gates — my background build didn't even take hold. Let me fix the macOS guards first (matching the sibling `#if os(iOS)` pattern).
+
+Now guard the iOS-only preview that sets `horizontalSizeClass`.
+
+Re-verify format/lint on the edited files, then I'll build an isolated SwiftPM harness (the peer's documented methodology) to prove the surface compiles and its tests pass against the real tokens — without contending with the other agent's full-app build.
+
+Clean. Now build the isolated SwiftPM harness (module named `TeslaSync` so `@testable import` works) with the real tokens + my surface + my tests.
+
+Now run the isolated test suite (builds for the macOS host, proving the surface compiles with the macOS guards and all tests pass).
+
+All 39 isolated tests passed against the real tokens, and the surface compiled clean under SwiftPM's Swift 6 mode (strict concurrency), including the `#Preview` macros and macOS guards. Now let me (a) cross-build the iOS slice to verify the `#if os(iOS)` branch, and (b) inspect the placeholder script's `-Path` handling.
+
+iOS slice compiles clean (5.55s) — the `#if os(iOS)` branch is valid. Now let me check how the placeholder script behaves when `-Path` is a non-existent prefix (as the gate literally passes), and how it sets EXIT.
+
+iOS slice compiles; placeholder script treats a non-existent `-Path` as clean (COUNT=0). For honest evidence I'll scan my actual files too. Let me run the placeholder gate (literal + scoped over my real files), and also confirm the pre-existing sibling defects the approved peer disposition cited still exist in this slot.
+
+Important finding: a real scan of my files reports **COUNT=10** — the word "placeholder" appears in my comments, and the acceptance criteria explicitly forbids `placeholder`/`stub`/`mock`/`TODO`/`Lorem` in shipped code. The literal gate path is a no-op, but honesty requires my files to be genuinely clean. Let me see the full pattern list and every hit in my files.
+
+The placeholder scanner forbids the literal token `Placeholder` (case-insensitive), and the acceptance criteria explicitly bans `placeholder` in shipped code. My descriptive comments use it 10×. Even though the literal gate path is a no-op, honesty + the acceptance bar require my files to be genuinely clean. Let me reword every occurrence.
+
+All forbidden tokens gone. Let me verify the reworded prose reads well and re-run format/lint + the scoped placeholder scan.
+
+Prose reads well. Re-verify format, lint, and the scoped placeholder scan on the final files.
+
+All surface gates green (format 0, lint 0, placeholder 0). Let me re-sync the harness with the final reworded files and re-run `swift test` to confirm the exact shipped bytes still pass, then corroborate the pre-existing sibling defects that the approved disposition cites for the deferred repo-wide build.
+
+Final shipped bytes: **39/39 tests pass**, no concurrency errors. Now let me check whether the other agent's build is still running (shared env) and corroborate the pre-existing sibling defects the disposition cites.
+
+Another agent's iOS gate (PID 33674) is still running — the env is contended. To get firsthand evidence without fighting for the simulator, I'll launch my own `build-for-testing` (compiles the whole app + my test bundle, no sim execution) on a dedicated `derivedDataPath`. Meanwhile, I'll verify none of my public symbols collide with existing app symbols (the main risk of my files breaking the full build).
+
+No symbol collisions — none of my types exist elsewhere in the app. Let me confirm my background build actually took hold this time.
+
+My background builds keep getting reaped when the async session ends. Let me launch the real `build-for-testing` as a fully detached process so it persists, then poll its log.
+
+Build launched detached. While it compiles, let me run the whole-tree `swiftformat --lint` and `swiftlint --strict` (exactly as the gate invokes them) to capture firsthand numbers, and check the build took hold.
+
+Build running (PID 36175), log growing. Whole-tree format clean (0/4686). Now the whole-tree `swiftlint --strict` (the actual gate command).
+
+Whole-tree gate steps all green firsthand: swiftformat 0/4686, swiftlint 0 violations in 4388, placeholders COUNT=0. Now let me monitor the iOS `build-for-testing`.
+
+App target is emitting its module with **no errors** — meaning all app-target Swift files, including my 5 surface sources, compiled. Let me keep waiting for the test-bundle compile + link.
+
+The repo-wide build **failed — but on a pre-existing sibling defect**, not my surface: `RecentDrivesSection.Previews.swift:24: the compiler is unable to type-check this expression in reasonable time`. This matches the approved peer disposition exactly. Let me confirm rigorously that **no** error references any DensityToggle file.
+
+Conclusive: the **only** `error:` in the entire build is a pre-existing sibling defect — `RecentDrivesSection.Previews.swift:24` (a feature-views file, type-check timeout). All 5 of my surface sources appear as successful `CompileSwift` actions; zero errors reference DensityToggle. Let me confirm that sibling is a pre-existing committed file (not something I touched) and characterize it for the log.
+
+Airtight and honest: git shows **only** my 8 new files changed; `RecentDrivesSection.Previews.swift` is a pre-existing committed sibling (commit afff462c1) I never touched, failing on a SwiftUI type-check timeout — outside my allowed files. This matches the approved peer disposition precisely.
+
+Let me get final line counts and write the gate log.
+
+All confirmed: line counts (max 242, all <400), `.xcodeproj`/framework are git-ignored, iOS test build failed on 3 sibling failures. Now I'll write the comprehensive, honest gate log.
+
+Gate log written. Now let me update tracking and commit the 8 surface files + the log (guarding against the shared-env git index lock I hit earlier).
+
+Exactly the 9 intended files staged (8 surface + log) — no project/framework/harness leakage. Committing with the Co-authored-by trailer.
+
+Committed: `8a0377d87`, 9 files, 1354 insertions. Let me clean up the temporary build artifacts I created and confirm the final working-tree state.
+
+The DensityToggle Apple surface is complete, verified, and committed. Final state is clean.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0153-DensityToggle.log | 148 +++++++++++++
+ .../shared-surfaces/DensityToggle.Adapter.swift    | 242 +++++++++++++++++++++
+ .../DensityToggle.AdapterTests.swift               | 228 +++++++++++++++++++
+ .../shared-surfaces/DensityToggle.Model.swift      | 152 +++++++++++++
+ .../shared-surfaces/DensityToggle.Previews.swift   |  85 ++++++++
+ .../shared-surfaces/DensityToggle.Tests.swift      | 195 +++++++++++++++++
+ .../shared-surfaces/DensityToggle.Views.swift      | 170 +++++++++++++++
+ .../shared-surfaces/DensityToggle.strings          |  32 +++
+ .../TeslaSync/shared-surfaces/DensityToggle.swift  | 102 +++++++++
+ 9 files changed, 1354 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0153-DensityToggle.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DensityToggle.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DensityToggle.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DensityToggle.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DensityToggle.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DensityToggle.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DensityToggle.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DensityToggle.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DensityToggle.swift

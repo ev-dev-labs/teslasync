@@ -1,0 +1,210 @@
+I'll start by exploring the repository structure and reading the web source, then check the Apple toolchain availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Web source exists. Let me read the web source and explore the Apple app conventions.
+
+This is a behavioral component that renders `null` — it manages scroll position restoration across navigation. Let me study the established pattern from the predecessor `CopyLinkButton` and look for similar behavioral/listener surfaces.
+
+There's a prior ScrollRestoration log from an earlier run. Let me read the CopyLinkButton template files (immediate predecessor) and the prior log to understand the established conventions.
+
+Now let me read the rest of the CopyLinkButton template files and explore the shared navigation/state-holder facade that the native app uses.
+
+Now I have the full template. Let me explore the shared facade (P1/S8 state holders), design tokens, and read the prior ScrollRestoration log to understand navigation primitives available.
+
+The prior log reveals a proven 10-file architecture and notes the full `xcodebuild` scheme gate was deferred due to pre-existing app-target blockers. I must verify current state myself and not fabricate. Let me explore the design tokens, state-holder facade, routing, and build setup.
+
+Paths corrected — core sources live in `apps/apple/Sources/`. Frameworks has only `.gitkeep` (Shared.xcframework not staged, confirming the prior log's blocker). Let me locate the design tokens and state-holder primitives.
+
+Let me locate the core token definitions (TSSpacing, Color.TS, Font.TS, TSMotion, TSRadius) and read the state-holder primitives plus project.yml.
+
+The state holders depend on `import Shared` (the KMP framework), which isn't staged — confirming the full app-target build blocker. Let me locate where the design tokens (TSSpacing, Color.TS, Font.TS, TSMotion) are actually defined, since CopyLinkButton references them.
+
+The main-app design tokens aren't in `apps/apple/Sources`. Let me find where `Tokens.swift` lives (the prior log referenced it) and understand the project.yml target composition.
+
+Now I understand the architecture: design tokens come from `apps/design/generated/apple/Tokens.swift`, and the full `xcodebuild` scheme needs `Shared.xcframework` (built via a Kotlin/Native pre-action) plus code signing. Let me read the token vocabulary, the framework build script, check tooling, and examine a close analog (`ReloadPrompt` — also a `components/layout` utility).
+
+I have the full token vocabulary. `xcodegen` is available but `Shared.xcframework` needs a Kotlin/Native Gradle build. Let me kick that build off in the background (it's the long pole for the real gate) while I read the remaining reference files.
+
+`BreadcrumbOverridesContext` is the closest analog — another `components/layout` non-visual provider. Let me study it plus the feedback/badge components I'll compose with.
+
+Now let me study the `BreadcrumbOverridesContext` analog in depth — it's the established pattern for a non-visual `components/layout` provider surface.
+
+Let me read the analog's Views (how a non-visual surface renders states) and strings, check the badge/chip components, and check the Gradle build progress.
+
+Excellent — I now understand how a non-visual surface renders all states (via a DEBUG inspector + status view) and structures its strings. Let me read the analog's Adapter + Model (store/seam/telemetry conventions) and the Badge/Button components I'll compose with.
+
+I have a complete understanding of the conventions now. Let me check the Gradle build progress and read the Button/Badge components I'll compose with.
+
+I now have a thorough understanding of all conventions. Let me check the swiftlint config (to respect its rules while writing) and the Button component signature, then write my plan.
+
+I have all conventions. Let me check the Gradle build and write my plan.
+
+Gradle is still running (long pole). Let me set up tracking and write the plan while it builds.
+
+Now implementing. Starting with the Foundation-only Adapter (the testable core).
+
+Now the pure Projection (restore decision logic).
+
+Now the Model — the i18n facade (P1/S10), telemetry seam (P1/S11), source seam (P1/S8 — useLocation + useNavigationType), and the `@Observable` coordinator.
+
+Let me check the Gradle build progress, then continue with the Chrome (phase styles + chip + banner).
+
+Gradle's still compiling silently. Continuing with the Chrome (phase styles, status chip, degraded banner).
+
+Now the Views — the status view that renders every phase, plus the `.scrollRestoration` modifier using iOS 18 / macOS 15 `ScrollPosition` + `onScrollGeometryChange`.
+
+Gradle completed. Let me verify the Shared.xcframework was built and staged — this may unblock the real `xcodebuild` gate.
+
+Gradle succeeded (built `Shared.xcframework`), but the staging step (which the build script does after Gradle) hasn't run since I invoked Gradle directly. Let me view the rest of the staging script and stage the framework.
+
+Gradle succeeded — the real gate is achievable. Let me run the staging script (Gradle is cached now) in the background and continue writing the remaining files.
+
+Now the transparent companion (`ScrollRestoration.swift`) — the web `return null` peer that drives the navigation seam.
+
+Let me verify the framework is staged, then continue with the strings catalog.
+
+Framework staged with all three slices (ios-arm64, ios-arm64-simulator, macos-arm64) — the real gate is now achievable. Let me write the strings catalog.
+
+Now the Previews (every phase + a live scroll/navigate demo).
+
+Now the test suites. First the AdapterTests (key/action/store/throttle).
+
+Now the main Tests file (projection / model / phase / telemetry / a11y / strings).
+
+All 10 files written. Now verification. Let me run swiftlint, swiftformat, and the placeholder check on the new files in parallel.
+
+Two line-length violations to fix in Tests.swift. Let me view and fix them.
+
+Let me read the swiftformat result and fix both long lines.
+
+swiftformat found auto-fixable issues (unused args, comment spacing, line wrapping). The established workflow (per prior log) is to auto-format once, then re-verify. Let me auto-format the new files.
+
+Now re-verify both linters are clean on the new files.
+
+Both linters clean (0 violations, 0 formatting). Let me check the placeholder script's interface and run it as the gate specifies.
+
+The gate's literal `-Path .../ScrollRestoration` isn't a directory, so the script would no-op (false clean). To verify meaningfully, let me check how it resolves paths, then run the self-test and scan the actual directory.
+
+The patterns file resolves via `$PSScriptRoot`, so I can run from repo root. Let me run the self-test plus a scan of the shared-surfaces directory, filtering for my files.
+
+Placeholder gate clean (self-test passes; 0 violations in my files). Now the real gate. Let me generate the Xcode project and confirm my files are enumerated, then check the simulator.
+
+Project generated (60 references to my files — matches expected), iPhone 16 simulator booted, framework staged. Now the real gate. Let me start the iOS build+test in the background (large app, will take a while).
+
+While the iOS build runs, let me proactively check whether the codebase already uses these iOS 18 scroll APIs (to confirm the closure-isolation pattern compiles under Swift 6 strict concurrency).
+
+No existing usage — my surface is the first. The build will be the authoritative check. Let me monitor its progress.
+
+Let me check the build log file directly for compilation progress.
+
+The build is type-checking the app module. Let me check what that 1 error is.
+
+That error is in `AISuggestNewGeofences.swift` — a pre-existing sibling file, NOT my surface. Let me confirm I haven't touched it and let the build finish to capture the full picture.
+
+Confirmed: the only error is in a **pre-existing, unmodified sibling file** (`AISuggestNewGeofences.swift`) — my 10 ScrollRestoration files are the only things I added. This is exactly the pre-existing app-target blocker the prior log documented. Let me wait for the build to finish to capture the definitive error set.
+
+The build finished. Let me get the definitive error/failure summary and the actual xcodebuild result from the full log.
+
+Definitive result: **3 pre-existing compile errors**, all the identical `@escaping`-closure bug in unrelated sibling AI surfaces (`AISuggestNewGeofences`, `AISignalExplorerNlFilter`, `AIGeofenceAwareAutomationSuggestions`). **Zero errors in ScrollRestoration.** Let me see the "Testing failed" details.
+
+"Testing cancelled because the build failed" — the 4 failures are the 3 pre-existing `@escaping` errors + cancellation. No test ran; **my surface has 0 errors**. 
+
+To get a genuine green signal for my surface, I'll temporarily patch the 3 unrelated pre-existing files (identical trivial fix), rebuild incrementally, run the full suite so my tests execute, then revert them via git so only ScrollRestoration files are committed. Let me view the 3 broken lines.
+
+I'll apply the identical temporary fix to all 3 pre-existing files (verification-only — reverted before commit), then rebuild incrementally and run the full suite.
+
+Temporary fix applied to the 3 unrelated files. Now rebuild + test incrementally (warm derived data).
+
+Incremental build+test running. Let me wait and monitor.
+
+Let me check the incremental build log progress.
+
+The temp fix cleared the 3 siblings, and the real gate surfaced a genuine error in **my** code: `ScrollRestorationPhaseStyle` is declared `Sendable` but holds a non-Sendable `TSTone`. Let me get the complete error list, then fix.
+
+Only that one error in my code. Let me stop the build, remove the unnecessary `Sendable` conformance from the descriptor, and rebuild.
+
+Let me view the exact text in Chrome.swift to fix the match.
+
+Fixed. Rebuild + test incrementally (temp sibling fix still in place).
+
+Let me wait for the build to progress.
+
+No errors. Compiling cleanly. Let me wait for the test phase.
+
+BUILD FAILED but no `error:` lines — likely a link/sign/test-host issue. Let me find the cause.
+
+"(2 failures)" but **no `error:` lines at all** — likely cancelled/crashed batches (possibly stale state from the build I stopped mid-run). Let me find the true cause.
+
+There's a "Failed frontend command" at line 12510. Let me see it — this is the true cause.
+
+It's a **pre-existing compiler IR-gen crash on `AppearanceSettings.Controls.swift`** (not my code) — triggered by corrupted incremental state from the gate2 build I killed mid-compile (that file compiled fine in the clean gate1). I need a clean build for a reliable result. Let me run a clean build+test with fresh derived data (temp sibling fix still in place).
+
+Clean build+test running (full rebuild — will take a while). Let me wait and monitor.
+
+The clean build is still running. Let me check its progress.
+
+Even the clean build hit the same "Failed frontend command" (compiler IR-gen crash) — it was masked in gate1 by the earlier type-check errors. Let me confirm which file crashes (and that it's not mine).
+
+Definitive diagnosis: the clean build's whole-module **type-check succeeded** (0 errors — all my files type-check against the real iOS 18 SDK under Swift 6 strict concurrency), then the compiler **crashed during IR-gen of a pre-existing, unrelated file** (`AppearanceSettings.Controls.swift` — an async-closure reabstraction-thunk crash, masked in gate1 by the earlier type errors). This is a pre-existing blocker outside my scope and not fixable without rewriting unrelated feature code.
+
+Let me revert the temporary sibling edits and verify my surface + tests via an isolated SwiftPM harness (proving macOS compile + test execution) plus explicit iOS 18/macOS 15 typechecks. First, revert and inspect the Button dependency.
+
+Reverted — only my 10 files remain changed. The whole-module type-check passing already proves my surface compiles against the real iOS 18 SDK. Now let me build an isolated SwiftPM harness (module `TeslaSync`) to compile my surface on macOS and **run my tests green**, independent of the unrelated app-wide compiler crash. Dependencies are minimal (Tokens, TSDesign, Badges, Buttons — all self-contained).
+
+Harness files in place. Let me create the `Package.swift` (Swift 6 mode, macOS 15) and run build + tests.
+
+Isolated harness **builds clean** (Swift 6, macOS 15) — including the `ScrollPosition`/`onScrollGeometryChange` APIs. Now run the tests.
+
+**All 46 tests pass, 0 failures** (Swift 6 mode). Now let me add explicit real-SDK typechecks against both the iOS 18 simulator and macOS 15 SDKs (compiling my surface + deps with `-D DEBUG` so previews are checked too).
+
+Comprehensive verification of my surface is green:
+- swiftlint `--strict`: **0 violations** · swiftformat `--lint`: **0** · placeholders: **0**
+- iOS 18 sim real-SDK typecheck: **EXIT=0** · macOS 15 typecheck: **EXIT=0**
+- whole-app-module type-check (real xcodebuild): **0 ScrollRestoration errors**
+- isolated SwiftPM build: **EXIT=0** · tests: **46 passed, 0 failures**
+
+Let me kick off the macOS xcodebuild in the background (to capture its real result, not assume), then write the gate log while it runs.
+
+The macOS build is running. Let me verify (from the clean iOS log) that my files actually compiled past type-check, and check the macOS build's early progress.
+
+The macOS build finished. Let me capture its result.
+
+Complete picture captured. The macOS build is blocked even earlier — by **code-signing** (no development certificate on host, ADR-012), before compilation; **0 ScrollRestoration errors**. iOS is blocked by the pre-existing `AppearanceSettings.Controls.swift` compiler crash. Both blockers are pre-existing, unrelated, and outside my allowed-files scope.
+
+Let me update my plan and write the comprehensive, honest gate log.
+
+Now a final confirmation pass: re-lint the final files (my Chrome.swift edit landed after the first lint), confirm only my 10 files are changed, and check that generated artifacts are git-ignored.
+
+All clean: swiftlint 0, swiftformat 0, exactly my 10 files + the log untracked, generated project + framework git-ignored. Let me commit the surface + log.
+
+All 11 files staged. Let me commit.
+
+Committed at `2cf486371`. Let me verify the tree is clean and clean up temp build artifacts.
+
+Working tree clean, temp artifacts removed. Let me fix the two todo records (they were committed/verified but a earlier SQL syntax error left them un-updated).
+
+The ScrollRestoration shared surface is complete, verified, and committed. Final summary:
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0173-ScrollRestoration.log | 206 +++++++++++++++
+ .../ScrollRestoration.Adapter.swift                | 213 +++++++++++++++
+ .../ScrollRestoration.AdapterTests.swift           | 170 ++++++++++++
+ .../shared-surfaces/ScrollRestoration.Chrome.swift | 176 +++++++++++++
+ .../shared-surfaces/ScrollRestoration.Model.swift  | 269 +++++++++++++++++++
+ .../ScrollRestoration.Previews.swift               | 131 +++++++++
+ .../ScrollRestoration.Projection.swift             | 119 +++++++++
+ .../shared-surfaces/ScrollRestoration.Tests.swift  | 292 +++++++++++++++++++++
+ .../shared-surfaces/ScrollRestoration.Views.swift  | 176 +++++++++++++
+ .../shared-surfaces/ScrollRestoration.strings      |  51 ++++
+ .../shared-surfaces/ScrollRestoration.swift        |  79 ++++++
+ 11 files changed, 1882 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0173-ScrollRestoration.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.swift

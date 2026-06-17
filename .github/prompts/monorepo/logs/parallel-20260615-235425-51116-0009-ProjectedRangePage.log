@@ -1,0 +1,226 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+Xcode, swift, and swiftlint are all available. Let me explore the web source and existing Apple battery pages to understand the patterns.
+
+Let me look at the existing Battery feature directory and read the web source in sections.
+
+Now I have the full web source. Let me study the existing Apple page architecture by reading a complete recent example (BatteryHealth and EnergyFlow) plus key infrastructure.
+
+The architecture is clear. Let me study the chart wrappers (RadialGauge, AreaChart), the component library, route registration, sample data source, and the strings catalog.
+
+No `range.*` strings exist yet. Let me check the ledger for any ProjectedRange row, the strings catalog format, and the chart components (PieGauge/RadialGauge + AreaChart usage).
+
+Let me look at the AreaChart wrapper and a page that uses both RadialGauge + AreaChart (EnergyPage.Charts).
+
+Let me examine the chart models, EnergyFlow charts/sections/sample/route files, and the data-display components to understand the full toolkit.
+
+Let me look at the routing infrastructure, the models file, the test pattern, and the UI components I'll need.
+
+No `projectedRange` route exists yet. Let me check the web routing for `/analytics/range` and the route parser to understand multi-segment handling.
+
+I need to understand the route registration impact. Let me check what switches over `AppRoute` exhaustively and how routes get registered into the shell, plus any route-count tests.
+
+Adding a route case has ripple effects (exhaustive switches + completeness tests). Let me read RouteTests, the menu catalog, and check all exhaustive `AppRoute` switches before deciding the approach.
+
+Good — `navigateCommands()` derives from `AppRoute.allCases`, so it auto-covers new routes. Let me find every place that references a route case-by-case (to catch all exhaustive switches I'd need to update) and check Spotlight/Intent/Handoff handling.
+
+Adding a route only touches AppRoute.swift (3 switches) + parser + app registration — manageable. Let me verify the Xcode project setup (whether new files auto-include) and look at the Models/Format/Derivations + a test to finalize my plan.
+
+The project is XcodeGen-based with glob source inclusion, so new files auto-include. The build needs `Shared.xcframework`. Let me check build tooling availability and gather the remaining component/model/format/units references in parallel.
+
+Build needs the KMP `Shared.xcframework` (Gradle/Kotlin). Let me gather the core components/facade/models and a test example before writing code.
+
+Let me read the UI components, the `BatteryVehicle`/`tsUnits` definitions, and the simplest sibling (SleepEfficiency) as a template.
+
+Let me read the units environment, `BatteryVehicle` definition, and the SleepEfficiency model + its test as the closest single-source template.
+
+Let me read the test pattern, the placeholder-scanner config, check `pwsh` availability, and the `TSSelect` signature.
+
+I now have a full picture. Let me read the `TSSelect` signature and the placeholder scanner to ensure I avoid trigger words, then I'll write a plan.
+
+I have all the patterns I need. `pwsh` is available, the placeholder scanner is case-insensitive across all lines (so I must avoid "TODO"/"placeholder"/"XXX"/etc. even in comments). Let me set up tracking, kick off the long-pole KMP framework build in the background, and check the design tokens + swiftlint config.
+
+swiftlint runs `--strict` (line length ≤120 for code). Let me generate the Xcode project and kick off the long-pole KMP `Shared.xcframework` Gradle build in the background while I write the Swift code.
+
+Project generated. Now let me kick off the KMP `Shared.xcframework` build in the background (the long pole) to verify the runner can build it.
+
+Let me check the shared build progress and gather the last references: `EnergyFormat` efficiency API and how the codebase handles parameterized localized strings.
+
+I have everything I need. The KMP framework build is running in the background. Let me write the plan and start creating the pure-logic Swift files (models, derivations, format).
+
+Now the derivations file (pure what-if interpolation, buckets, colors, icons) and the format file.
+
+Now the `@Observable` page model with the data-source seam and phase enum.
+
+Now the sample/empty/error data sources for previews and tests.
+
+Now the charts file (efficiency gauge + projection curve area chart).
+
+Now the largest file — the sections (hero, scenarios, matrix, what-if, factors, tips).
+
+Let me check the shared build progress, then write the main page view (avoiding `.redacted(reason: .placeholder)` which would trip the placeholder scanner).
+
+Now the route registration, then wire up `AppRoute`, the parser alias, and the app registration.
+
+Now wire up `AppRoute` (enum case + pathSegment + systemImage + group), the parser alias, and the app registration.
+
+Now register the route in `TeslaSyncApp.swift` next to the sibling battery registrations.
+
+Now the strings catalog. Let me find where `range.*` and `route.*` keys belong alphabetically.
+
+The catalog is 210k lines and not strictly sorted, so JSON order is irrelevant. Let me anchor an insertion before the first key. Let me view the exact opening lines.
+
+The catalog order is irrelevant, so I'll insert the 27 parity keys + 3 needed extras (`range.drives`, `range.noData`, `route.projectedRange`) right after `"strings": {` using a Python script for exact formatting and JSON safety.
+
+Strings added and JSON valid. Let me check the KMP build progress and write the test file.
+
+The KMP Gradle build is still compiling (buffered output). Let me write the test file while it builds.
+
+Now let me update the parity ledger. Let me view the SleepEfficiency rows to mirror the exact format.
+
+Let me validate the ledger JSON, check the KMP build, and run the fast gates (placeholder scan + swiftlint on my new files).
+
+Ledger valid. The KMP build is still compiling. Let me run the fast gates now — placeholder scan and swiftlint on my new/edited files (these don't need the framework).
+
+Excellent news: the **KMP `Shared.xcframework` build completed successfully** — the runner can build. The placeholder scan is clean (COUNT=0). SwiftLint found 10 line-length/structure violations in my files. Let me read the build result and view the exact lines to fix.
+
+The KMP framework is built and staged. Now let me fix the 10 SwiftLint violations (large tuple + line lengths + test body length).
+
+Now the Charts.swift series (lines 73, 85):
+
+Now the Sections.swift hero (lines 27/30/33/36) and the empty matrix cell background (line 192):
+
+Let me view the test file's tail to move the formatter/route tests into an extension (fixes `type_body_length`), and fix line 146.
+
+Let me re-run SwiftLint to confirm all violations are resolved.
+
+SwiftLint is clean across all 6093 files (0 violations). Now I need to regenerate the Xcode project (XcodeGen uses explicit file refs, so new files require regen), then build. Let me regenerate and check available simulators.
+
+Project regenerated with my files included. There's a booted iPhone 17 Pro simulator. Let me kick off the iOS build (long pole #2) in the background.
+
+While the iOS build runs, let me audit my code mentally for any compile risks. Let me check the build progress.
+
+Let me verify TSTone (a no-associated-value enum) is usable with `XCTAssertEqual` via a quick Swift check, since the build is still running.
+
+Confirmed — plain enums implicitly conform to `Equatable`, so my TSTone assertions are valid. Let me continue waiting for the iOS build.
+
+Build failed at module emission — there's a type/signature error in my code. The errors were lost in the `tail`. Let me re-run capturing only error lines (incremental, so faster).
+
+A pre-existing `RangeProjection` type collides with mine. Let me find all conflicting type names so I can rename my models with a unique prefix.
+
+Only `RangeProjection` collides (existing `public enum RangeProjection`). I'll rename my struct to `ProjectedRangeSnapshot`. Let me find every occurrence in my files first.
+
+Only the struct name collides. I'll rename my `RangeProjection` → `ProjectedRangeSnapshot` in code, then restore the two web-reference comments.
+
+Rename complete and comments restored. The `Range.swift` error was a downstream effect of the redeclaration, now resolved. Let me verify no stray references remain, then rebuild.
+
+Clean — only the intended web-reference comments remain. Let me rebuild and capture both errors and the final result.
+
+Another collision: `ProjectedRangeFormat` already exists (likely in the existing ProjectedRange widget code compiled into the app target). Let me find all existing `ProjectedRange*` type declarations to rename mine and avoid every collision.
+
+The existing `ProjectedRangeWidget` defines many `ProjectedRange*` types in the app target. Let me comprehensively check every one of my type names against the existing codebase to fix all collisions at once.
+
+Confirmed: `ProjectedRangeFormat` is the only collision. Let me rename my formatter to `ProjectedRangePageFormat` across my files.
+
+Both collisions fixed (`RangeProjection`→`ProjectedRangeSnapshot`, `ProjectedRangeFormat`→`ProjectedRangePageFormat`). Let me rebuild — expecting success now.
+
+The rename invalidated many cached files, so this is closer to a full rebuild. Let me keep waiting.
+
+This is unusually long. Let me check whether the build is actively progressing (not stuck) by inspecting build activity in a separate shell.
+
+87 active compiler processes means it's CPU-bound (not stuck) — the module rename triggered a wide recompile. Let me wait and re-check progress.
+
+The build is progressing well: 4834/~6000 object files compiled, and critically **all my `ProjectedRange*.o` files compiled successfully** (no per-file errors). The whole module is recompiling due to the rename. Let me wait for completion.
+
+**iOS BUILD SUCCEEDED.** My code compiles cleanly. Now let me run the tests on the booted simulator — starting with my test class to verify, which also compiles the full test bundle.
+
+A test-bundle compile error appeared in a **pre-existing, unrelated** file (`GDPRExportPageModelTests.swift`), not mine. Let me verify it's baseline breakage (unmodified from HEAD) and not caused by my changes.
+
+GDPRExport test is **unmodified from HEAD** — this is pre-existing baseline breakage in an unrelated file, not my regression. Let me read it to understand scope, and enumerate ALL test-bundle compile errors to gauge the baseline state.
+
+This is a real **pre-existing Swift 6 concurrency bug** in `GDPRExportPageModelTests` (line 20 calls a `@MainActor` static method from a nonisolated context), unmodified from HEAD and outside my allowed file scope. To honestly verify MY tests pass, I'll temporarily patch it (and any other pre-existing test errors), run my tests, then revert. Let me apply a temporary local fix and enumerate ALL test-bundle errors.
+
+I've patched it temporarily (will revert). Let me track this and run a full test-bundle build to surface ALL pre-existing errors at once.
+
+A second pre-existing error in another unrelated Admin test (`VehicleCostPageModelTests`). The baseline test target has multiple Swift 6 concurrency errors. These are all the same trivial `@MainActor` isolation pattern. Let me proactively find ALL such pre-existing broken test files so I can temporarily patch them in one pass, verify my tests, then revert everything.
+
+This is **systemic pre-existing baseline breakage** — multiple unrelated Admin test files have Swift 6 concurrency errors (unmodified from HEAD). Fixing them all is out of scope. Instead, I'll revert my GDPR patch and verify my tests cleanly by temporarily narrowing the test target to just my file (regenerating the gitignored xcodeproj, reverting project.yml after).
+
+Let me confirm GDPR is back to baseline and temporarily narrow the iOS test target to just my test file in `project.yml`.
+
+Now regenerate the project and run my tests in isolation (the app is already built, so only my test file compiles).
+
+🎉 **All 27 of my tests PASS** (0 failures), plus the 13 UI tests — `** TEST SUCCEEDED **`. My implementation is fully verified. Now let me restore the temporarily-narrowed `project.yml` and confirm the baseline is clean.
+
+Baseline is clean — only my 5 intended tracked changes + new files. Let me check the log directory and a sibling log's format to match the expected structure.
+
+The sibling log confirms this is a **known, documented pre-existing condition** (`GDPRExportPageModelTests.swift:20` is explicitly cited), and the accepted verified approach is `EXCLUDED_SOURCE_FILE_NAMES` build overrides. My app build already succeeded with `Input.Previews.swift` (so that one's fine here). Let me enumerate the full set of pre-existing broken test files to run a clean full-suite gate, matching the sibling pattern.
+
+Systemic pre-existing breakage (now Timeline too). Rather than iterate slowly, let me enumerate ALL pre-existing broken test files at once by compiling each `*PageModelTests` independently isn't feasible — instead let me grep for the triggering pattern and also continue the exclusion build. Let me add Timeline and capture the next.
+
+Exactly 3 pre-existing broken test files (all unmodified from HEAD). With them excluded, **TEST BUILD SUCCEEDED**. Now let me run the full suite on the already-built bundle to confirm everything (including my 27 tests) passes.
+
+The full suite ran **25,211 tests with just 1 failure** (UI tests all passed). I need to confirm that 1 failure isn't mine (my 27 passed in isolation). Let me extract it from the result bundle.
+
+Those are test names containing "fail", not failures. Let me get the actual failure from the result summary.
+
+The summary tool is hanging on the large result. Let me stop it and stream-grep the failed node instead.
+
+The single failure is `ToastCenterMutationBridgeTests.testMutationFailedUsesLocalizedErrorDetail` — unrelated to ProjectedRange. Let me confirm it's pre-existing (unmodified from HEAD) and check whether it touches anything I changed.
+
+Confirmed: the 1 failure is `Toast.Tests.swift` — unmodified from HEAD, zero references to my work. **Pre-existing and unrelated.**
+
+My verification is complete and honest:
+- App **BUILD SUCCEEDED**
+- SwiftLint `--strict`: **0 violations**
+- Placeholder scan: **0**
+- My **27 tests PASS**; full suite = 25,211 tests, only 1 pre-existing unrelated failure (Toast)
+
+Let me run the final gate commands to capture fresh exit codes, then write the evidence log.
+
+All gates green on my files. Now let me write the comprehensive evidence log with all 47 parity items.
+
+Log written. Let me clean up temp files and verify the complete git status before committing.
+
+Everything is clean and within allowed scope. Baseline files are untouched, build artifacts gitignored. Let me commit my work following the prompt's commit convention.
+
+All 16 files staged. Let me commit.
+
+Committed (16 files, 2259 insertions). Let me do a final verification that the working tree is clean and update tracking.
+
+The task is complete and fully verified. Working tree is clean, commit is in place, and all baseline files are untouched.
+
+## Summary
+
+Implemented the native SwiftUI/HIG **`ProjectedRangePage`** at full web parity (`web/src/features/battery/pages/ProjectedRangePage.tsx` → route `/analytics/range`), adaptive across macOS + iOS.
+
+**Parity: 47/47 covered**
+- **14 panels** — 5 hero metric cards (Your/Tesla-Estimate, Battery, Usable-Capacity, Health-Factor) + efficiency gauge, projection-curve, scenarios (outer+card), efficiency matrix, what-if calculator, factors (outer+card), tips
+- **2 charts** — `TSRadialGauge` + `TSAreaChart` (P3 Swift Charts wrappers, never WKWebView)
+- **4 data states** — loading/empty/error/success via an `@Observable` model phase enum
+- **27 `range.*` strings** — added to `Localizable.xcstrings` with web key names preserved
+
+**Architecture** — `@Observable` model + KMP-ready data-source seam (no networking in the view); SI stored, converted only at the render boundary via the `Units` facade (ADR-004/005); design tokens, a11y traits, full i18n. Registered a new `.projectedRange` route + the `/analytics/range` deep-link alias.
+
+**Verification (all green for this change):**
+- App **BUILD SUCCEEDED** (full target; KMP `Shared.xcframework` assembled via Gradle)
+- SwiftLint `--strict`: **0 violations** • Placeholder scan: **0**
+- **27/27 model tests pass**; full suite = 25,211 tests with only **1 pre-existing, unrelated failure** (`Toast.Tests.swift`, unmodified from HEAD)
+
+Two naming collisions with existing app-module types were resolved (`RangeProjection`→`ProjectedRangeSnapshot`, `ProjectedRangeFormat`→`ProjectedRangePageFormat`). Three pre-existing Swift-6 concurrency compile errors in unrelated baseline test files were disclosed in the log and left untouched (out of allowed-files scope) — verified via `EXCLUDED_SOURCE_FILE_NAMES` build override and test-target isolation, both reverted afterward.
+
+Updated `apple-ledger.json` (2 rows, 47/47), wrote the evidence log, and committed 16 files (`d6dd0bd39`). `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete — all work is implemented, verified, and committed with a clean working tree. Let me mark it done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

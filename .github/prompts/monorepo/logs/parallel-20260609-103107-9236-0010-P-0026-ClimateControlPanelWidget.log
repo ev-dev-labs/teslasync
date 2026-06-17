@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the available Apple toolchain.
+
+Key finding: only Command Line Tools is installed (not full Xcode), so `xcodebuild`/simulator won't work — but `swift`, `swiftlint`, `swiftformat` are available. Let me explore the existing Apple app structure to understand the established native patterns.
+
+Large existing widget library. Let me check for any existing Climate files and find a close sibling pattern to follow.
+
+`ClimateControlPanelWidget` doesn't exist yet. Closest sibling is `ClimateHistoryWidget` (same domain). Let me study the established multi-file pattern and the shared infrastructure (state holders, tokens, i18n, widget shell).
+
+Let me read the closest sibling (`ClimateHistoryWidget`) end-to-end plus the shared facade infrastructure.
+
+Now I understand the multi-file pattern. Let me read the remaining sibling reference files, the shared facade, design tokens, registry infra, and build configs.
+
+Let me locate the shared design tokens, registration types, and read the build/lint configs plus the web registry/hook/type definitions.
+
+Now let me read the web-side spec details: registry, WidgetShell, types, the climate hook + ClimateState type.
+
+Let me probe deeper capabilities: full Xcode presence, pwsh, simulators, and whether the Swift toolchain can compile SwiftUI/Charts/XCTest standalone.
+
+Major discovery: **Xcode.app exists** in /Applications (just not selected), and `pwsh` is available. Let me verify whether full Xcode works via `DEVELOPER_DIR` override, and check the heavyweight build prerequisites (Shared.xcframework, xcodegen).
+
+Full **Xcode 26.5 works** via `DEVELOPER_DIR`, iPhone 16 sim is booted, xcodegen present. The blocker is the missing `Shared.xcframework` (KMP core). Let me inspect the build script and whether the KMP toolchain exists.
+
+Let me check how sibling widget prompts resolved their gates (the logs are the precedent for DONE vs BLOCKED).
+
+The sibling precedent is clear and detailed. Let me read the full 0027 log to understand the exact verification approach and the known pre-existing blocker.
+
+This is the exact blueprint. Let me read the remainder of the precedent log and check whether the KMP toolchain and the known pre-existing blocker exist in this slot.
+
+I have the full precedent blueprint. The KMP toolchain is present. Let me confirm the pre-existing duplicate-symbol collision and study a non-chart "live latest panel" sibling to match idioms (my widget has no chart).
+
+I have the complete, proven blueprint from the sibling. The KMP toolchain (konan) and full Xcode are present. Let me create a plan, kick off the ~17-min `Shared.xcframework` build in the background, and verify Java availability.
+
+Java 17 present. Note: in this slot, `ChargingProjection` in feature-views is only in a `.Tests.swift` (different target) — so the app-target collision the precedent hit may not exist here. I'll capture the real build honestly. Let me kick off the `Shared.xcframework` build in the background now and check for other collisions.
+
+`ChargingDetailSection.Adapter.swift` exists in the app target. Let me start the Gradle `Shared.xcframework` build in the background now (it's the long pole), then confirm the collision while it runs.
+
+Gradle build is running (downloading Kotlin/Native, sharing daemons with other parallel slots). Notably, `ChargingDetailSection.Adapter.swift` does NOT declare `ChargingProjection` in this slot — so the precedent's specific collision may not apply here. I'll capture the real build honestly. Now let me write the plan and start authoring the surface.
+
+Now I'll author the surface, starting with the Foundation-only pure-domain Projection file.
+
+Important catch: the sibling `ClimateHistoryWidget` already declares generic types like `ClimateTemperatureUnit`, `ClimateTempConvert`, `ClimateLoadStatus`, `ClimateConnection` in the same app module. To avoid duplicate-symbol collisions, all my public types must be uniquely prefixed. Let me rename the Projection types to `ClimatePanel*`.
+
+Renames clean. Now the Model file (state-holder seam, telemetry, i18n facade, accessibility) — all `ClimatePanel`-prefixed.
+
+Now the Content sub-views (Compact/Full/MetricCell/chips/HVAC badge), porting the web composition with SF Symbols and design tokens.
+
+I referenced a `ClimatePanelFlowRow` wrapping layout (parity for `flex-wrap`). Let me implement it as a `Layout` and append it to the Content file.
+
+Now the main surface View file — glass shell, header, freshness/refresh, and state routing.
+
+Now the DEBUG previews for every state (compact + full, °C + °F).
+
+Now the i18n `.strings` catalog (all source keys + registry + native chrome + a11y).
+
+Now the comprehensive XCTest suite (adapter + model + registry + a11y + format).
+
+All 7 surface files are written. Let me check the background build progress and start formatting/linting my files.
+
+Shared build is nearly done (linking macOS framework). Let me format my files with the repo's swiftformat config, then verify the lint gate.
+
+Format gate passes. Now swiftlint --strict on the surface files.
+
+Surface lint + format both clean. Now GATE 1: typecheck the surface against the real component-library closure. Let me locate the closure files and confirm none import `Shared`.
+
+None import `Shared`. Running GATE 1 — typecheck the surface against the real component closure (Swift 6, strict concurrency, macOS SDK; platform-agnostic SwiftUI covers iOS).
+
+GATE 1 passes (TYPECHECK_EXIT=0). Now GATE 2 — set up a throwaway SwiftPM package (module `TeslaSync`) with the surface + closure and **execute** the XCTest suite.
+
+Package laid out. Now executing the XCTest suite with the Xcode toolchain.
+
+The XCTest suite **executed** (37 tests) — 2 failures, both in my **test expectations**, not the code: `decimal(4.25, 1)` rounds half-up to `"4.3"` (away from zero). I must confirm what the web's `toLocaleString` actually produces to keep parity honest.
+
+Confirmed: web `toLocaleString` gives `4.25 → "4.3"` (half away from zero). My **code is web-faithful**; the two failing assertions were wrong. Let me fix the test expectations (and add a parity-locking rounding case).
+
+Now re-format/lint the edited Tests file, sync it to the package, and re-run the suite.
+
+All 38 tests pass (GATE 2 green). Let me check the framework build and run the placeholder gate (GATE 5).
+
+Shared.xcframework built (8m 4s) and staged. Placeholder gate clean. Now GATE 6: xcodegen generate, then the real xcodebuild.
+
+All 7 files wired in (42 refs). Now the real xcodebuild for iOS (target-direct to skip the redundant gradle pre-action; framework already staged). This compiles the whole app (~700 widget files), so it'll take a while.
+
+Build is active (53 swift-frontend processes compiling in parallel); xcodebuild is buffering output. Let me wait for it to progress.
+
+Heavy compilation ongoing (81 swift-frontend processes; whole-module build, output buffered until phase end). Let me continue waiting.
+
+Zero log output after 7 min with 106 swift-frontend processes suggests heavy cross-slot CPU contention (many parallel slots building). Let me verify my build is actually progressing by checking its process and build artifacts.
+
+This is a heavily shared runner — dozens of parallel slots each running full `xcodebuild` (many multi-GB DerivedData dirs; other agents building ChargeHistory/BatteryHealth). Let me stop the slow find and reassess my build's status precisely.
+
+My background build died because the **sync** bash session was torn down (taking the child with it) — not an OOM. The `.strings` validates independently (plutil OK). Let me relaunch the real xcodebuild as a **detached async** process so it survives, then poll.
+
+Launched detached. Let me verify it survived this time and is producing output.
+
+The detached iOS build survived and is now in `SwiftEmitModule` for the **whole TeslaSync app module** — meaning whole-module typecheck of all ~700 files (including my surface) is passing so far (no duplicate-symbol collision in this slot). Let me wait for completion.
+
+No errors so far; whole-module typecheck passed and it's emitting/compiling the app module under heavy load. Let me keep waiting for the final result.
+
+Both arches passing whole-module typecheck with **0 errors** — now emitting arm64 module. The build is healthy, just slow under load. Let me continue waiting for the final link + result.
+
+Both arches passed whole-module typecheck (0 errors); now generating object code per file (final stretch before link). Let me wait for the final result.
+
+Steady progress through object compilation (now at LiveVehicleState), still 0 errors. It's slow under heavy load. Let me wait a longer stretch for completion.
+
+iOS build reached **link** stage — all Swift compiled (whole-module typecheck passed both arches, 0 compile errors), but the **linker** failed. Let me extract the exact linker diagnostic to attribute it honestly.
+
+Root cause: the staged `Shared.xcframework` has only an **arm64** simulator slice, but my invocation defaulted to building **both** arm64 + x86_64 — so x86_64 linking fails (arm64 compiled + would link fine). This is an invocation/arch detail, not a code defect. Let me rebuild arm64-only (matching the gate's `iPhone 16` destination); cached arm64 objects make this fast.
+
+🎉 **iOS BUILD SUCCEEDED** with 0 errors — the entire TeslaSync app (700+ files incl. my surface) compiled, linked, and produced `TeslaSync.app`. (The xcframework has only arm64 slices, confirming the earlier x86_64 link failure was purely arch-mismatch.) Now the macOS build.
+
+macOS build launched detached. It's a fresh whole-module compile (~13-15 min under load). Let me poll periodically.
+
+macOS build healthy (widgets extension linked, main app module emitting, 0 errors). Let me wait for completion.
+

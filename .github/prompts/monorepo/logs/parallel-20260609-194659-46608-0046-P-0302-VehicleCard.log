@@ -1,0 +1,185 @@
+I'll start by exploring the repository structure and checking tool availability, since this task has a hard capability requirement (SwiftUI/Xcode on the runner).
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me explore the existing structure.
+
+Now I understand the web source. Let me examine the existing native structure — check if VehicleCard exists, and study established patterns from sibling feature-views.
+
+Clear file convention exists (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). VehicleCard doesn't exist yet. Let me study a closely-related exemplar in full and locate the shared P1 infrastructure (state holders, tokens, i18n, diagnostics).
+
+Let me read the AlertCard exemplar in full and explore the SharedFacade (state holders, tokens, i18n).
+
+The AlertCard exemplar is very instructive. Let me read its remaining files and explore the shared infrastructure (Design tokens, Components, SharedFacade, Live).
+
+Excellent, the pattern is rich and clear. Now let me explore the design tokens, shared components, and find native counterparts for StatusBadge, ProgressRing, TeslaCarViz, plus the vehicle state holders (S8).
+
+Now let me read the key token/component definitions and the units facade + state holder model in parallel.
+
+Let me study how a vehicle-binding feature-view works, the container/holder access, and the build config.
+
+The two patterns are clear (pure-presentational+adapter like AlertCard, vs. model-bound like LiveVehicleState). Since web `VehicleCard` calls `useVehicleState`, let me examine the model-bound mechanics and container wiring before deciding.
+
+The `LiveVehicleState` Source-seam pattern is ideal — view binds a model through a protocol seam (P1/S8) with an in-memory source for tests/previews, never touching KMP symbols directly. I'll follow it. Now let me read the web helper logic I must reproduce faithfully, plus the native component APIs I'll map to.
+
+Confirmed i18n keys under `vehicles.card.*`. Now let me read the remaining native component APIs and the design token definitions (TSSpacing, TSRadius, Color.TS, Font.TS).
+
+Found the generated tokens at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the remaining component APIs.
+
+Now I have the full token API. Let me read the remaining shared components, the test/preview conventions, and the build config in parallel.
+
+Let me read the test/preview/strings conventions and the build config.
+
+Let me verify the build config picks up new feature-view files automatically and confirm scheme/target names.
+
+Key finding: the project uses **XcodeGen** (git-ignored `.xcodeproj`) and a pre-build step that stages `Shared.xcframework` (KMP). Let me check the full toolchain availability before writing code.
+
+All tooling is present (xcodegen 2.45.4, pwsh, Gradle wrapper). The `Shared.xcframework` must be built via Gradle (the long pole). Let me check Java/Gradle and a sibling gate log, then kick off the framework build in the background while I write code.
+
+The sibling AlertCard log reveals the accepted methodology: `LINT/FORMAT/PLACEHOLDER=0` are hard gates; the full `build test` returns 65 due to **pre-existing repo-wide** app-target/dup-type/signing issues (not the surface), documented as DEFERRED with "0 surface errors" evidence. Let me read the full sibling log to reproduce the exact accepted methodology and evidence format.
+
+This is the gold-standard methodology to reproduce: hard gates (swiftlint/swiftformat/placeholder = 0) plus a real isolated whole-module compile (0 surface errors) and isolated `swift test`, with the full-app `build test` 65 documented as DEFERRED (pre-existing repo-wide issues). Let me read the lint configs, then kick off the long-pole Gradle framework build in the background while I write code.
+
+Now I understand the conventions, lint rules (file ≤400 lines, func ≤50, cyclomatic ≤10, line ≤120), and the proven verification methodology. The Gradle framework build is running in the background. Let me check the placeholder-scanner patterns to avoid flagged tokens, then start writing.
+
+Forbidden tokens: `TODO/FIXME/XXX/"Coming soon"/"Placeholder"/"Lorem ipsum"/"not implemented"` and swift `fatalError("not.../unimpl"`, `Text("TODO`. I'll avoid the literal word "placeholder" and "stub"/"mock" entirely. Let me write a session plan and start creating the files.
+
+Web `StatusBadge` renders the raw status capitalized; I'll localize it via `vehicle.state.*` keys (proper i18n, capitalized fallback). Now writing the Model file (slug, telemetry seam, i18n facade, input value types, enums, actions).
+
+Now the Adapter — the pure projection core (status derivation, battery tone, model parsing, units seam, data projection, freshness, accessibility). No SwiftUI, no I/O.
+
+Let me fix the redundant ternary in `TeslaModelKey.systemImage` (both branches identical — would be silly and lint-risky).
+
+Now the Store file — the P1/S8 binding: `VehicleCardSource` protocol seam, the `@Observable` model, and the in-memory source for previews/tests (mirroring `LiveVehicleStateModel`).
+
+Let me quickly check the background Gradle framework build progress, then continue with the Views file.
+
+Gradle is still building (expected — it's the long pole). Let me write the Views file (subviews) while it compiles.
+
+The Gradle build finished. Let me confirm the xcframework was produced, then continue with the main view file.
+
+`Shared.xcframework` built successfully with all 3 slices (ios-arm64, ios-arm64-simulator, macos-arm64). Now let me expose the raw `vehicle` on the model (needed for `onDelete`), then write the main view.
+
+Now the main view that binds the model and renders every state (loading/empty/error/content) with the gradient strip and freshness chip.
+
+Now the previews — one per state/branch (loading, empty, error, content online, charging, no-live-state, stale, offline).
+
+Now the test suite — adapter projections, status/battery/model derivations, units formatting, freshness, accessibility, phase resolution, and the model binding + telemetry.
+
+All 9 files written. Let me create a brief plan file, check line counts, and run the formatter/linter on my files.
+
+All files are under 400 lines. Let me check that odd grep match (likely a false positive), run the authoritative placeholder gate, and auto-format my files.
+
+The authoritative placeholder gate passes (COUNT=0). The grep self-match was `tOdo` inside `testOdometer` — a false positive. Let me confirm why the gate ignores it and rename the method to be bulletproof, then auto-format.
+
+Default `-Language=all`, so `.swift` IS scanned with substring (non-word-boundary) `TODO`. Let me empirically resolve whether `tOdo` matches, to be certain the gate isn't a false pass.
+
+Now it's clear: the gate path `.../VehicleCard` isn't a real directory (files are `VehicleCard.*` in `feature-views/`), so the literal gate command scans 0 files — a vacuous pass. Like the sibling, I must do a **genuine** temp-copy scan. And that genuine scan WOULD flag `tOdo` inside `testOdometerGroupsDigits` (substring match of `TODO`). Let me rename it and verify a real scan is clean.
+
+Renamed. Now let me auto-format my files (so `--lint` passes), then run a genuine placeholder scan on a temp copy, and swiftlint --strict on my files.
+
+Formatting clean (0/7 require formatting). Now swiftlint --strict on my files plus a genuine placeholder scan on a temp copy.
+
+All three host-runnable gates pass on my files: **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0** (genuine 8-file scan). Now the substantive verification. Let me first run an isolated SwiftPM harness (`swift test`) of the surface logic against the REAL generated tokens + REAL TSTone — this gives fast feedback before the heavy full-app build.
+
+The harness caught a real Swift 6 issue: `TSTone` (a public enum in `Badges.swift`, not my file) is **not Sendable**, so my `Sendable` projection structs can't store it. This would also fail the app target (strict concurrency complete). The sibling AlertCard avoided this by never storing `TSTone`. Let me confirm TSTone isn't Sendable anywhere and see how siblings handle it.
+
+Some siblings DO store `TSTone` — let me check whether those enclosing structs are declared `Sendable` (which would reveal the idiomatic fix).
+
+Confirmed: the idiomatic pattern (e.g. `BackendToolStatus`) stores `TSTone` in **`Equatable`-only** structs (not `Sendable`) — they're MainActor-only. My two projection structs are the only ones storing `TSTone`, so I'll drop `Sendable` from them (keeping `Equatable`). They never cross an isolation boundary. Let me fix and re-run the harness.
+
+Now re-sync the harness and re-run `swift test`.
+
+Isolated `swift test`: **34 tests, 0 failures** against the real tokens + real TSTone under Swift 6 strict concurrency. The surface logic is sound. Now let me re-verify lint/format on the edited Adapter, stage the framework, and generate the Xcode project.
+
+Adapter clean, framework staged, xcodeproj generated. Now the key proof — S1: compile the **real iOS app target** (my view files included, `*Tests.swift` excluded) against the real component library + KMP framework, then grep for any `VehicleCard` errors. Starting it in the background.
+
+The iOS S1 build is running in the background. While it compiles, let me confirm git status shows only my intended files and review the formatter's changes.
+
+Clean — only my 8 `VehicleCard.*` files are new; the generated `.xcodeproj` and staged framework are git-ignored. Let me monitor the iOS build progress.
+
+The iOS S1 build finished. Let me read the result and grep for any VehicleCard errors.
+
+iOS S1: BUILD FAILED (exit 65) with 108 errors but **0 in VehicleCard**. Let me confirm the errors are all pre-existing/unrelated files (not my surface).
+
+Confirmed: all 108 errors are **pre-existing duplicate-type collisions** in unrelated sibling files (`RecentDrivesListWidget`, `StateTimelineWidget`, `StateTimeline`, `RecentDrivesSection`) — `RecentDrivesModel`/`RecentDrivesLoadStatus` etc. ambiguous. **0 are in VehicleCard.** Let me verify my own public type names don't collide with existing types elsewhere (which could introduce new ambiguity).
+
+No collisions — all my public type names are unique. My surface adds **0 errors** to the iOS app target; the 108 failures are pre-existing dup-types in unrelated siblings. Now the macOS S1 compile (cross-platform proof), running in the background.
+
+That was the earlier leftover sleep. While the macOS build runs, let me capture the **full-tree** swiftlint/swiftformat results (the gate runs tree-wide), isolating that my files contribute 0 — matching the sibling's honest reporting.
+
+Full-tree swiftlint **--strict: 0 violations in 3166 files (LINT_EXIT=0)** — the whole tree is clean. Now the full-tree swiftformat check.
+
+Full-tree swiftformat **--lint: 0/3170 require formatting (FORMAT_EXIT=0)**. The macOS S1 build finished — let me read its result.
+
+macOS S1: BUILD FAILED (65), **0 VehicleCard errors** — same pre-existing dup-type collisions (RecentDrives/StateTimeline), doubled (app+widget targets). Both platforms: my surface compiles cleanly.
+
+Now I'll run the **literal gate** `build test` commands to capture the official exit codes. iOS first (reusing build artifacts).
+
+Let me run the macOS gate in parallel (Mac Studio has ample cores, separate derived-data paths).
+
+Both gate builds are running in the background. Let me wait for them to complete.
+
+Both gates done. iOS gate: **IOS_EXIT=65**. Let me read the macOS exit and characterize both failures (confirming 0 VehicleCard errors + first-failure cause).
+
+All results are in and match the accepted sibling disposition exactly:
+- **LINT_EXIT=0** (3166 files), **FORMAT_EXIT=0** (3170 files), **PLACEHOLDER_EXIT=0** (genuine 8-file scan)
+- **IOS_EXIT=65** / **MAC_EXIT=65** — both DEFERRED, **0 VehicleCard errors** (iOS: pre-existing `RecentDrives*`/`StateTimeline*` dup-types; macOS: dev-signing not provisioned)
+- S1 iOS+macOS compiles: **0 VehicleCard errors**; S2 isolated `swift test`: **34/34**
+
+Let me get final line counts and write the gate log.
+
+All files under 400 lines; tools confirmed (SwiftLint 0.63.3, SwiftFormat 0.61.1, pwsh 7.6.2, Xcode 26.5). Now let me write the gate log.
+
+The log is written. Let me clean up temp artifacts, verify git status is clean (only my files), and stage the commit.
+
+Git status shows exactly the 8 `VehicleCard.*` files plus the log. Now committing per the prompt's commit spec.
+
+Committed. Let me verify the commit landed cleanly.
+
+Commit `87815bbf8` landed (9 files, 2036 insertions); working tree clean. Let me mark the plan complete.
+
+All work is complete and verified. 
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`VehicleCard`** SwiftUI surface at parity with `web/src/features/vehicles/components/VehicleCard.tsx`, committed as `87815bbf8` (8 `VehicleCard.*` files + gate log, 2036 insertions).
+
+**Architecture** (mirrors the sanctioned sibling pattern — `AlertCard` 0179 / `LiveVehicleState` 0044):
+- **Model** — surface slug, P1/S11 telemetry seam, P1/S10 i18n facade, SI input value types, load/connection/phase enums, actions.
+- **Adapter** — pure ports of `deriveVehicleStatus`, `batteryColor` thresholds, `parseModelKey`, a `useUnits` formatting seam, the data projection, freshness chip, and VoiceOver summaries.
+- **Store** — `VehicleCardSource` (P1/S8 seam, production-wired over `useVehicles` + `useVehicleState`), `@Observable` model, in-memory source.
+- **View/Views** — gradient strip, car viz, battery Gauge, info header, wrapping stats row, actions, freshness chip; every state renders (loading/empty/error/content + stale/offline + awaiting-state).
+
+**Verification (honest, on this runner):**
+| Gate | Result |
+|---|---|
+| swiftlint --strict | **0** (3166 files) |
+| swiftformat --lint | **0** (3170 files) |
+| check-placeholders (genuine 8-file scan) | **0** |
+| iOS/macOS whole-module compile (S1) | **0 VehicleCard errors** |
+| isolated `swift test` (S2) | **34/34 passed** |
+| `xcodebuild build test` iOS/macOS | **65 — DEFERRED** |
+
+The `build test` 65s are **pre-existing, unrelated**: parallel-generated `RecentDrives*`/`StateTimeline*` duplicate-type collisions (iOS) and unprovisioned macOS dev-signing (macOS) — both outside the allowed files, with **0 errors attributable to VehicleCard** (proven via real iOS+macOS compiles against the freshly Gradle-built `Shared.xcframework`). This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition.
+
+**Log ends:** `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0302-VehicleCard.log    | 179 ++++++++++
+ .../feature-views/VehicleCard.Adapter.swift        | 349 +++++++++++++++++++
+ .../feature-views/VehicleCard.Model.swift          | 250 ++++++++++++++
+ .../feature-views/VehicleCard.Previews.swift       | 130 +++++++
+ .../feature-views/VehicleCard.Store.swift          | 168 +++++++++
+ .../feature-views/VehicleCard.Tests.swift          | 383 +++++++++++++++++++++
+ .../feature-views/VehicleCard.Views.swift          | 357 +++++++++++++++++++
+ .../TeslaSync/feature-views/VehicleCard.strings    |  53 +++
+ .../TeslaSync/feature-views/VehicleCard.swift      | 167 +++++++++
+ 9 files changed, 2036 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0302-VehicleCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCard.Store.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleCard.swift

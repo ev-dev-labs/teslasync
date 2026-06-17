@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple toolchain (SwiftUI, Swift Charts, MapKit, xcodebuild).
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source and understand existing native conventions.
+
+Now let me study existing native conventions. Let me look for already-ported status-bar segments and the most recent NotionSidebar surface to understand the file structure pattern.
+
+`VersionSegment` is the closest structural analog (a status-bar segment) and `LiveIndicator` shares the exact same `useLiveConnection` data source. Both are critical references. Let me read them.
+
+Let me find the shared `LiveConnection*` core types and read the key reference files (VersionSegment view/model, StatusBar segments, LiveIndicator projection).
+
+Excellent — the `LiveConnection*` core types are public and reusable. Now let me read the Views (tone→Color, icon→SF Symbol), relative time, strings, and navigation patterns.
+
+Now let me find the design tokens (Color.TS, Font.TS, TSSpacing), the navigation core (for `/signal-diff` link), and the VersionSegment model/states/strings patterns.
+
+There's already a `StatusBarLiveView` in the StatusBar composite (0182) — my task is the standalone `LiveTelemetrySegment` surface (0180), analogous to how `VersionSegment` is standalone. Let me find the token definitions and read the StatusBar VM + navigation wiring.
+
+Only `WatchDesignTokens.swift` defines these tokens. I need to understand the project/target structure. Let me read project.yml and check how shared-surfaces are compiled.
+
+Now I understand the build structure: tokens come from `../design/generated/apple`, shared-surfaces compile into the app target, XcodeGen generates the project. Let me verify tokens exist, check the toolchain, and read the StatusBar VM + spinner + navigation wiring.
+
+Tokens and xcodegen confirmed. Let me read the StatusBar resolve/VM/navigation and VersionSegment chrome + test patterns.
+
+Now let me read the StatusBar live VM, the navigation mechanism (`openLiveExplorer`), the spinning symbol, and VersionSegment's chrome/states/strings/previews + a test file.
+
+Navigation uses injected command closures (route string carried in VM). Let me read the spinning symbol, the AppRoute enum, a navigation seam example, and VersionSegment's chrome/states/strings/previews.
+
+I have a thorough understanding now. Let me read the test conventions, previews, the placeholder checker, and confirm remaining tokens before writing code.
+
+Let me read the model/a11y test conventions and the placeholder checker, and confirm the remaining tokens.
+
+Let me read the placeholder checker patterns and the AppRoute to finalize the navigation approach.
+
+I have all patterns confirmed. Key constraints: line length ≤120, swiftformat `before-first` wrapping, `@testable import` at bottom, no forbidden words ("placeholder"/"TODO"/etc.), navigation via NotificationCenter (VersionSegment precedent), reuse public `LiveConnection*` types. Let me set up tracking and write the plan.
+
+Now I'll write the surface files. Starting with the projection core and age formatter.
+
+Tokens confirmed. Now writing the projection core.
+
+Now the test files. First the pure projection + age tests.
+
+All 10 files created. Now let me verify — starting with fast local lint/format checks on my files.
+
+swiftformat clean. Now swiftlint on the new files.
+
+swiftlint clean (0 violations). Now the placeholder check and xcodegen generation.
+
+Placeholder check and xcodegen pass. Before the heavy build, let me check the Shared.xcframework staging dependency.
+
+The build needs a KMP/Gradle-built `Shared.xcframework`. Let me check how sibling surface gate logs resolved this and whether the toolchain builds here.
+
+This clarifies the established disposition. Critically, my environment has **full Xcode 26.5** (not just CommandLineTools), so I can attempt the real build. Let me check the KMP/Java toolchain and known pre-existing sibling breakage, then kick off the Shared.xcframework build in the background while I run a standalone logic harness.
+
+Java 17 + gradlew available; the previously-cited broken sibling files don't exist in this slot. Let me kick off the Shared.xcframework build in the background and meanwhile run a standalone logic harness to runtime-prove my projection/age parity.
+
+The gradle build is running in the background. Now let me build a standalone logic harness to runtime-prove the projection/age web-parity. I'll provide a shim for the shared `LiveConnection*` types and compile my real Projection + Age sources.
+
+Now compile and run the harness with the real Projection + Age sources:
+
+45/45 web-parity assertions pass against the real sources. Let me check the KMP Shared.xcframework build progress.
+
+KMP build still running (first-run Kotlin/Native compile is slow). Let me wait for it.
+
+KMP Shared.xcframework built successfully. Let me stage it and launch the full iOS build+test (this will be long for a cold full-app build), capturing output to analyze per-file.
+
+Framework staged. Now launching the full iOS build (gate command), capturing to a log for per-file error analysis. Cold full-app build will take a while.
+
+The iOS build is running. Let me monitor its progress.
+
+Build actively compiling the app module, no errors yet. Let me continue waiting.
+
+App module reached `EmitSwiftModule` with zero errors — the entire module (including my files) compiled cleanly. Let me wait for the build to finish linking.
+
+No errors; still emitting modules for dependent targets. Let me wait for final completion.
+
+Process alive, object-compilation phase underway (CPU-heavy, low log output), 0 errors. Let me wait longer for linking to complete.
+
+The iOS build failed (exit 65, 2 failures), but the failing batch is the "A*" files (AnomalyInlineRow, ApiPlayground, App*, AppearanceSettings) — not mine. I must find the exact error lines to be certain. Let me extract them.
+
+No `error:` diagnostic at all despite "2 failures" — that suggests a compiler crash/kill (possibly resource contention; another xcodebuild was running). Let me investigate the failure nature.
+
+Found it — line 18466: **the Swift compiler (`swift-frontend`) crashed** ("Please submit a bug report... Stack dump"). This is a compiler crash during codegen, not a code error. The whole-module type-check (`EmitSwiftModule`) had already succeeded. Let me examine the crash to confirm it's unrelated to my files.
+
+This is definitive: a **`swift-frontend` 6.3.2 compiler crash** ("Please submit a bug report... Stack dump") during codegen of an unrelated sibling batch (`AnomalyInlineRow.*`, `ApiPlayground*`, `App*`, `AppearanceSettings.*`) — **none are my files**. Crucially, the whole-module type-check (`EmitSwiftModule`) had already succeeded, proving my code type-checks within the real app module. Let me confirm zero references to my files in the crash and check for competing processes, then retry incrementally (the crash may be resource contention from a concurrent build).
+
+Confirmed: **zero** crash/error references to my files; the whole-module type-check succeeded; exactly 1 compiler crash (sibling `A*` batch). Notably, **10 concurrent xcodebuild processes** are running in this shared environment — heavy memory pressure can aggravate `swift-frontend` crashes. Let me retry incrementally (warm DerivedData) to see if it's transient.
+
+Incremental retry running. Let me wait and monitor.
+
+No crash yet on retry. Let me wait for it to pass the object-compilation phase where it crashed before.
+
+The retry crashed on the **exact same `A*` sibling batch** — confirming it's a **deterministic `swift-frontend` compiler bug** in sibling files, not transient contention. Let me confirm the retry crash signature and that my files remain uninvolved.
+
+Definitive: the retry crash is a **Swift IRGen compiler bug** — `report_fatal_error` in `IRGenSILFunction::visitFullApplySite` while emitting a reabstraction thunk for an **async/actor optional closure** (`@$sSbScA_pSgIeAghyg_...TR`). My surface uses no async/actor closures (`onOpen` is plain `() -> Void`). Zero involvement of my files; whole-module type-check passed. Let me verify my files' object code was emitted (proving they pass codegen) and check whether the iOS-simulator slice of my surface compiles in isolation.
+
+**Conclusive proof**: all 7 of my surface source files emitted `.o` object code on the real iOS-simulator arm64 target — meaning my files passed **both type-checking AND IR codegen** (the exact phase that crashed for the sibling batch). The crash is entirely sibling-scoped.
+
+Let me start the macOS build to capture its real exit, and meanwhile begin writing the comprehensive gate log.
+
+macOS build running. Let me monitor it (cold build under heavy load).
+
+macOS build also failed (MAC_EXIT=65). Let me verify the cause — same IRGen crash, codesigning, or something else.
+
+macOS failed for a **different, environment-only reason**: missing development code-signing certificate (`"TeslaSync-macOS" has entitlements that require signing with a development certificate`) — a host capability gap, not a code issue (it stopped before compiling Swift). Let me retry macOS with code signing disabled to get a real compilation result for my files.
+
+Let me monitor the macOS compile (signing disabled).
+
+macOS (signing disabled) progressed to compilation and hit the **same IRGen compiler crash**. Let me confirm it's the same sibling crash and locate my macOS object files.
+
+Confirmed on **both platforms**: identical sibling IRGen crash (`@$sSbScA_pSgIeAghyg_...TR` async-closure thunk in the `A*` batch), whole-module type-check succeeded, zero involvement of my files. macOS also has the separate environment code-signing gap. Both blockers are entirely outside my surface.
+
+Now let me re-capture fresh scoped gate exits and write the comprehensive log.
+
+All scoped gates green. Now let me write the comprehensive, honest gate log.
+
+Log written. Now let me verify the git state — confirm only my allowed files + log are staged, and the generated project/framework are gitignored.
+
+Clean state: exactly my 10 source files + 1 log (untracked); the generated `.xcodeproj` and `Shared.xcframework` are gitignored; project references my files (60 refs). Let me clean up temp files, check for commit hooks, and commit.
+
+No active git hook (the `.pre-commit-config.yaml` isn't installed as a hook), so a normal commit is safe. Let me mark the final todo done and commit.
+
+Exactly 11 allowed files staged. Committing with the prescribed message and trailer.
+
+Committed `85f6e7ea1`, working tree clean. Let me do a final verification of the commit contents and todo status.
+
+All complete. Let me clean up my temporary build artifacts (shared environment courtesy) and finalize.
+
+The surface is shipped and committed. Working tree is clean.
+
+Merge made by the 'ort' strategy.
+ ...e-shared-surfaces-0180-LiveTelemetrySegment.log | 125 +++++++++++
+ .../shared-surfaces/LiveTelemetrySegment.Age.swift |  62 ++++++
+ .../LiveTelemetrySegment.Model.swift               | 129 ++++++++++++
+ .../LiveTelemetrySegment.Previews.swift            |  88 ++++++++
+ .../LiveTelemetrySegment.Projection.swift          | 203 ++++++++++++++++++
+ .../LiveTelemetrySegment.ProjectionTests.swift     | 174 ++++++++++++++++
+ .../LiveTelemetrySegment.Seams.swift               | 115 ++++++++++
+ .../LiveTelemetrySegment.Tests.swift               | 231 +++++++++++++++++++++
+ .../LiveTelemetrySegment.Views.swift               | 110 ++++++++++
+ .../shared-surfaces/LiveTelemetrySegment.strings   |  34 +++
+ .../shared-surfaces/LiveTelemetrySegment.swift     |  87 ++++++++
+ 11 files changed, 1358 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0180-LiveTelemetrySegment.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.Age.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.ProjectionTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.swift

@@ -1,0 +1,139 @@
+I'll start by exploring the repository structure, locating the web source component, and checking platform capabilities.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+There's an existing `AIAnomalyExplanations.*` surface (also an AI panel) to use as the pattern. Let me read the web dependencies and the existing Swift implementation in parallel.
+
+The web source is structurally near-identical to `AIAnomalyExplanations`. That existing Swift surface is my template. Let me read all 10 of its files to learn the exact pattern.
+
+Excellent, very thorough pattern. Let me read the remaining template files: Projection, Views, Chrome, Previews, strings, and the two test files.
+
+Now the test files, previews, strings catalog, and the shared design tokens referenced (TSSpacing, Color.TS, etc.).
+
+Let me read the previews, strings catalog, project.yml, and locate the shared design tokens.
+
+project.yml is at `apps/apple/`. Let me read it and locate the shared design tokens.
+
+Project uses XcodeGen. Let me check for xcodegen, the Shared.xcframework dependency, the build script, and the design tokens — these determine whether the gate can run at all.
+
+Key finding: `Shared.xcframework` doesn't exist and must be built via Gradle/KMP (a scheme pre-action). Let me assess the KMP toolchain, read the design tokens, and check the pending-verifications doc and existing logs.
+
+KMP toolchain looks present (Java 17, gradlew). Let me check existing shared-surface logs to understand the realistic gate outcome, and test whether the Gradle xcframework build actually works here.
+
+Let me read the predecessor log (0005-AIAnomalyExplanations) to learn the expected log format and realistic gate outcome.
+
+Predecessor (0005) achieved EXIT=0/STATUS=DONE: per-surface gates green + isolated Swift 6 build/tests, with the full-app xcodebuild **deferred** on the pre-existing KMP `Shared.xcframework` blocker. Note `shared-surfaces` is now wired into project.yml. Let me kick off the KMP Gradle build to test viability, and read the shared component signatures I'll use.
+
+The KMP Gradle build is still running in the background (no output yet after 240s) — I'll let it continue. I now have everything needed: the exact pattern (10 files), component signatures, tokens, and the web parity details. 
+
+Key parity differences for this surface vs. the Anomaly template:
+- URL: `/ai/climate/temperature-impact/narrate`; body is just `{ vehicle_id }` (no `days`)
+- `canStart = isFinite(vehicleId) && vehicleId > 0` (not just non-null)
+- `vehicleId?: string | number` → needs a faithful parse seam
+- New i18n keys/strings
+
+Let me set up tracking and the plan.
+
+The Gradle probe finished — let me read its result.
+
+KMP build timed out at 240s (EXIT=124) — same blocker the predecessor hit. Let me restart it detached with a longer budget and progress logging, then write the surface code in parallel while it runs.
+
+KMP build restarted detached. Now writing the surface. Starting with the foundational Adapter (pure Foundation core), Model, and Projection.
+
+Adapter written. The detached launcher returned (Gradle continues writing to the log). Let me write the Model and Projection, then check KMP progress.
+
+Core logic done. Let me update todos, check the swiftlint config (to respect line limits/rules), and check KMP build progress.
+
+KMP build is progressing well — it pulled the Kotlin/Native 2.4.0 toolchain and is now linking frameworks. I'll let it continue. SwiftLint: code lines ≤120 (strict), comments exempt. SwiftFormat mirrors the Anomaly style. Let me write Views, Chrome, and the main view.
+
+Now the strings catalog, previews, and the two test files.
+
+All 10 files written. Now let me run the linters and formatters on the new files, and check KMP build progress.
+
+SwiftFormat wants a switch-expression assignment in `resolve`. Let me fix that.
+
+Re-running swiftformat plus swiftlint --strict on the new files, and checking KMP progress.
+
+Outstanding progress:
+- **swiftformat: 0/9 require formatting** ✓
+- **swiftlint --strict: 0 violations** ✓
+- **KMP `Shared.xcframework` BUILD SUCCESSFUL** ✓ — the full xcodebuild gate is now viable.
+
+Let me verify prerequisites (pwsh, placeholder script, simulator, no forbidden tokens) and stage the framework.
+
+All prerequisites present (pwsh 7.6.2, placeholder script, iPhone 16 booted, no forbidden tokens). Let me look at the placeholder script and run it, plus stage the framework and generate the Xcode project.
+
+The placeholder script scans a directory recursively. The gate's `-Path .../AICabinTemperatureImpactNarrative` (no extension) won't match a real dir, so it'd pass vacuously — I'll additionally run a *meaningful* scan over exactly my files. Let me read the patterns and stage the framework + generate the project.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now a meaningful placeholder scan over exactly my files, plus generating the Xcode project.
+
+Meaningful placeholder scan over all 9 of my files: **PLACEHOLDER_COUNT=0** ✓. Xcode project generated ✓. Let me confirm my files are wired into the project, then launch the iOS build+test.
+
+All 9 files wired into the project; both schemes present. Now launching the iOS Simulator build+test (the heavy gate step) in the background with logging, and I'll monitor.
+
+Let me monitor the build log for progress and early errors.
+
+The iOS build failed (EXIT=65) — but the errors are **pre-existing and unrelated** (`RecentDrivesModel`/`RecentDrivesConnection`/etc. "ambiguous for type lookup" — duplicate type names across dashboard-widgets and feature-views). My `.strings` compiled fine; my files have zero errors. Let me confirm none of the errors are in my files.
+
+Confirmed: **0 errors in my files**. All 108 errors are pre-existing duplicate-type ambiguities in unrelated surfaces (`RecentDrives*` across dashboard-widgets/feature-views, `StateTimeline*` likewise) — outside my allowed files. This is exactly the predecessor's documented "pre-existing, unrelated blocker" on the full-app gate.
+
+I must still independently verify my surface compiles and my tests pass. Let me build an isolated Swift 6 strict-concurrency package (module named `TeslaSync` so `@testable import` works) with the real tokens + the shared components I use + my surface, and run my tests.
+
+Now the component shim (exact real definitions of TSButton/TSSkeleton/TSFadeIn) and the Package manifest.
+
+Now running the isolated Swift 6 strict-concurrency build + my full test suite.
+
+**Isolated Swift 6 build + 79 tests: 0 failures, EXIT=0** ✓ My surface compiles and all tests pass under the app's exact concurrency rules.
+
+Now let me substantiate that the full-app failure is genuinely pre-existing and unrelated: confirm my change only adds my files, and that the ambiguous types are defined in other (non-mine) files.
+
+Conclusive proof this is pre-existing and unrelated:
+- My change adds **only** my 10 `AICabinTemperatureImpactNarrative.*` files (all untracked, nothing else modified).
+- The ambiguous types are each defined in **two non-mine files** (e.g. `RecentDrivesModel` in both `dashboard-widgets/RecentDrivesListWidget.Model.swift` and `feature-views/RecentDrivesSection.Model.swift`). My surface uses a unique `CabinTempNarrative*` prefix and defines none of them.
+
+Let me capture the macOS gate's (identical) failure and the tree-wide linter results for the log.
+
+Tree-wide swiftformat: **0/3492 files require formatting, EXIT=0** ✓. Now the tree-wide swiftlint and checking the macOS gate progress.
+
+Tree-wide swiftlint --strict: **0 violations in 3262 files, EXIT=0** ✓. Both repo-wide lint gates are green. Let me check the macOS build gate.
+
+The macOS gate fails for a **different** pre-existing reason: code-signing — `"TeslaSync-macOS" has entitlements that require signing with a development certificate` (no signing identity on this runner; `DEVELOPMENT_TEAM` is empty). It never reached Swift compilation (0 `SwiftCompile`), and 0 errors in my files. Also unrelated to my surface.
+
+Complete evidence picture gathered. Let me verify gitignore covers build artifacts, then write the log.
+
+Both generated artifacts (`.xcodeproj`, staged `Shared.xcframework`) are gitignored — they won't be committed. 
+
+I have the complete evidence picture. Let me write the comprehensive gate log.
+
+Log written. Now let me clean up temp artifacts, stage exactly my files + the log, verify the staged set, and commit.
+
+Clean — exactly my 10 surface files + the log, nothing else. Committing now.
+
+Committed (75c3d984b). Let me finalize the todo and confirm a clean tree.
+
+All 11 files committed (10 surface files + the log). Task complete.
+
+Merge made by the 'ort' strategy.
+ ...aces-0009-AICabinTemperatureImpactNarrative.log | 215 ++++++++++++
+ ...AICabinTemperatureImpactNarrative.Adapter.swift | 387 +++++++++++++++++++++
+ ...inTemperatureImpactNarrative.AdapterTests.swift | 349 +++++++++++++++++++
+ .../AICabinTemperatureImpactNarrative.Chrome.swift | 158 +++++++++
+ .../AICabinTemperatureImpactNarrative.Model.swift  | 369 ++++++++++++++++++++
+ ...ICabinTemperatureImpactNarrative.Previews.swift | 126 +++++++
+ ...abinTemperatureImpactNarrative.Projection.swift | 130 +++++++
+ .../AICabinTemperatureImpactNarrative.Tests.swift  | 363 +++++++++++++++++++
+ .../AICabinTemperatureImpactNarrative.Views.swift  | 238 +++++++++++++
+ .../AICabinTemperatureImpactNarrative.strings      |  46 +++
+ .../AICabinTemperatureImpactNarrative.swift        | 121 +++++++
+ 11 files changed, 2502 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0009-AICabinTemperatureImpactNarrative.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.swift

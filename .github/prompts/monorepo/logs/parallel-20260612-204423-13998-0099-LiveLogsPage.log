@@ -1,0 +1,28 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the actual source structure and key reference files.
+
+Now let me explore the actual Admin features directory, check tooling availability, and the parity manifest.
+
+Xcode tooling is available, so the gate is not blocked. The real admin pages live in `Sources/Features/Admin/`. Let me study the closest analog (LiveSignalInspector — live + admin) and supporting infrastructure.
+
+Excellent reference. Now let me study the route registration, the live SSE table component, sample model, and the shared components/SSE infrastructure.
+
+There's already a `Sources/Live/LiveLog.swift` and live-stream infrastructure. Let me examine these.
+
+Now let me find the web i18n strings, the Localizable.xcstrings, the AppRoute enum, and how routes are aggregated.
+
+Let me extract the public APIs of the shared components I'll use.
+
+Let me confirm the manifest records, the parameterized xcstrings format, and study the canonical live-table model pattern.
+
+Let me check build feasibility (KMP framework, project generation, placeholder scanner, pwsh).
+
+I have a complete understanding. Let me set up a plan, kick off the heavy KMP framework build in the background, and start implementing.
+
+Java 17 and Gradle wrapper are present. Let me kick off the KMP `Shared.xcframework` build in the background (the long pole) while I implement.
+
+The KMP build is running. Let me check the rest of `TSDataTable` internals to decide table approach, and peek at the existing `LiveSignalTail`.
+
+The KMP build is still compiling. Let me start writing the implementation. First, the model with the log-stream source seam:
+

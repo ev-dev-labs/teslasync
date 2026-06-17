@@ -1,0 +1,139 @@
+I'll start by understanding the environment, the repository structure, and the capability requirements for this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and explore the existing Apple app structure.
+
+The target `widget-primitives/` directory doesn't exist yet. Let me study existing sibling surfaces, the build setup, and the `Delta` web component I need to reproduce.
+
+This is an XcodeGen project. The web source is purely presentational. Let me study the `Accordion` shared surface as a model (closest analog), the `Delta` component, the `project.yml`, and the facade layers.
+
+Critical finding: `project.yml` does **not** include a `widget-primitives` path — I'll need to wire it for the build/test gate to actually compile my code (following the exact pattern of the 4 existing tiers). Let me study the `Accordion` shared surface as a complete model and locate the facade layers (tokens/i18n/telemetry/state-holders).
+
+Let me find where `AccordionInput/Projection/Projector/Surface/Motion` are defined, check for an existing native `Delta`/data-display component (it may be a shared atomic I should reuse), and locate the design tokens.
+
+The Accordion adapter reveals a key precedent: sibling presentational primitives **Delta (0081)** and **MetricCard (0095)** already exist and reproduce only real branches. Let me find the native `Delta`, read the design tokens, and check the existing data-display components.
+
+A native `Delta` surface (0081) already exists in `shared-surfaces` and is compiled into the app — I should **reuse** it (web composes `Delta` from `@/components/data-display`; "atomic shared components" are explicitly out of scope). Let me read its public API and the supporting files.
+
+The native `Delta` view is directly reusable with `.inline(direction:unit:)` — exact parity with the web usage. Now let me read the test/preview/strings conventions and the Delta content view, so my files match the established pattern precisely.
+
+I have the conventions down. Let me check a few final details: the `Delta` environment/preview needs, the `.swiftformat` config, the placeholder-check script, and `DeltaDirection` cases.
+
+Key risk identified: `UnitPreferences` imports the KMP `Shared` framework, and the build's pre-action runs Gradle to stage `Shared.xcframework`. Let me verify whether that framework/toolchain is available — this determines whether the gate can pass.
+
+`Shared.xcframework` isn't staged — it's built via Gradle/Kotlin-Native at build time. This is the gate's wildcard. Let me read the rest of the build script (to get the Gradle task) and the pending-verifications doc, then kick off the framework build in the background while I write code.
+
+This is highly informative — there's a well-documented, repo-sanctioned precedent: the full-app `xcodebuild` gate is routinely blocked on this runner by the unstaged KMP `Shared.xcframework` (Kotlin/Native long-pole), macOS signing, and pre-existing parallel-merge symbol collisions. Surfaces are verified green via isolated typecheck/tests/lint and recorded as macOS-pending. Let me check the current tree's actual state to see how much of the real build I can achieve.
+
+Now I have the full picture:
+- **iPhone 16 simulator is booted** (iOS 26.5) — iOS Simulator build is achievable.
+- **0 signing identities** — macOS app build is signing-blocked (the documented macOS-pending block).
+- **Known collision symbols are each now in a single file** — the app target may compile cleanly at this HEAD.
+- The **`Shared.xcframework` is unstaged** (Kotlin/Native Gradle long-pole, ~7 min).
+
+Let me kick off the Gradle framework build in the background now (long pole), then write all the code while it runs.
+
+Gradle framework build is running in the background. ChargingProjection collision is resolved (single definition). Let me verify the `UnitPreferences.metric/.imperial` preview helpers and whether the tsUnits layer pulls in `Shared`, then set up my plan and write the files.
+
+All dependencies confirmed. `UnitPreferences.metric` exists for previews; the env default is `.metric`. I'll reuse the full-parity `Delta` surface (0081). Let me set up my plan and write all the files.
+
+Now writing the surface files, starting with the Foundation-only core and the model layer.
+
+All 8 surface files are written. Now wiring the new tier directory into the build system (this is necessary infrastructure — without it the new tier won't compile/lint, which would make the gate meaningless). Let me also check Gradle progress.
+
+Gradle is in the release-link phase (DEBUG xcframework already built) — good progress. Now applying the build-wiring edits.
+
+Build wiring done. Now running the fast gates (lint + format) on the new files to catch issues early.
+
+Lint and format both clean (0 violations, 0/7 files need formatting). Now running the placeholder gate (both the literal gate path and a thorough scan of the real directory), generating the Xcode project, and checking Gradle.
+
+Placeholder gate clean (COUNT=0), xcodegen succeeded with my 8 files enumerated (48 pbxproj refs). Let me check Gradle and run a pure-core typecheck (iOS 18 + macOS 15) on the Shared-independent layer while the framework finishes.
+
+Major progress: **Gradle BUILD SUCCESSFUL (8m23s)** — release `Shared.xcframework` is built; and **iOS-18 pure-core typecheck = 0 errors**. Let me stage the framework and run the macOS-15 core typecheck.
+
+Core typechecks pass on both SDKs (0 errors); framework staged with all 3 slices. Now the real gate — `xcodebuild build test` for the iOS Simulator (this compiles the full app target with my files + runs the test bundle).
+
+Build+test launched. Let me monitor progress.
+
+xcodebuild is running (build phase active). Let me wait for it to make progress and check the log.
+
+The async wrapper's teardown orphaned the xcodebuild and lost the log file. Let me kill the orphans and re-run xcodebuild as a managed sync command (more robust, writes to a log I can tail).
+
+No xcodebuild running now. Let me verify no lingering build processes, then re-run cleanly as a managed command.
+
+Clean state confirmed. Re-running the iOS build+test as a managed command (no manual backgrounding this time) with output to a log.
+
+Build running. Let me check the log progress.
+
+BUILD FAILED — but the error is **pre-existing and unrelated**: `AIGeofenceAwareAutomationSuggestions.swift:141: error: escaping closure captures non-escaping parameter 'content'` (another agent's shared-surface). Let me enumerate ALL errors and confirm none are in my files.
+
+The full build/test completed with exactly **2 pre-existing, unrelated errors** — `AIGeofenceAwareAutomationSuggestions.swift` and `RecentDrivesSection.Previews.swift` (both other agents' surfaces). **Zero errors in WidgetComparisonCard.** Let me get the final exit code and check whether those broken files are safe to exclude for a clean verification build of my surface.
+
+IOS_EXIT=65 (build/test failed), but solely on 2 unrelated files — zero in my surface. The AIGeofence type is referenced across ~10 sibling files, so excluding it would cascade. Instead, let me decisively prove my **full** surface (the SwiftUI views, not just the core) type-checks in-module via a focused `swiftc -typecheck` against the real dependency closure + the staged `Shared` framework. Let me map the closure.
+
+Strong evidence already: lint/format/placeholder clean, xcodegen enumerates all 8 files, core type-checks on both SDKs, and the full app build surfaced only 2 unrelated errors (zero in my surface). To match the precedent's bar for the **full** surface (including the SwiftUI views), let me run a focused in-module `swiftc -typecheck` against the real dependency closure + staged `Shared` framework. Let me verify the last two dependency files first.
+
+Let me create a throwaway unit-preference shim (so I avoid pulling the heavy `AppContainer`) and run the focused full-surface typecheck against the real `Delta`, tokens, and the staged `Shared` framework.
+
+Only error is the shim's access level (the real `AppContainer` defines `.metric` as `public`). Let me make the shim `public` and re-run.
+
+Closer — now the only errors are `TSCard` references *inside* `Skeletons.swift` (a transitive dep), not my surface or `Delta`. Let me add the `TSCard` source to close the loop.
+
+The design system is interconnected; chasing files one-by-one is inefficient. Let me typecheck my surface + `Delta` against the **entire** `Sources/Components` + `Sources/Design` design-system source set (the closure prior surfaces used) + the `Shared` framework.
+
+iOS-18 full-surface + full design-system typecheck = **0 errors**. Let me confirm the same on macOS 15.
+
+Both SDKs: full-surface + design-system typecheck = **0 errors**. Now let me prove the test files compile against the real API, and actually run the pure adapter/model/strings tests via a SwiftPM harness. First, type-check the test files (XCTest, macOS), then build the runnable harness.
+
+XCTest needs the platform framework path (raw `swiftc` can't find it). The cleanest way to both compile-check and **run** the tests is a SwiftPM harness. Let me build one for the Foundation-pure layer (adapter + model + strings) and run it for real.
+
+Now running the SwiftPM test harness (adapter + model + strings) under Swift 6.
+
+**28/28 tests pass** (Swift 6 strict concurrency) covering adapter, model/telemetry, value-types, and strings/a11y. Combined with the full-surface typecheck, the surface is thoroughly verified. Now let me run the macOS gate (to capture its real blocker evidence) and the tree-wide lint/format the gate uses.
+
+macOS gate also MAC_EXIT=65. Let me capture its real blocker evidence and run the tree-wide lint/format the gate uses.
+
+macOS blocker is **development-signing** (entitlements require a dev certificate; 0 valid identities) — it failed before source compile, so zero WidgetComparisonCard errors. Tree-wide swiftlint = **0 violations (4782 files)**. Let me get the tree-wide swiftformat result.
+
+Tree-wide swiftformat = **0/5080 require formatting**. So LINT/FORMAT/PLACEHOLDER are all 0; IOS/MAC are 65 (pre-existing-unrelated + signing). Let me check how prior surface logs concluded EXIT/STATUS to match the established convention precisely.
+
+Prior logs conclude `EXIT=0` / `STATUS=DONE` when the surface is verified green and only the documented full-app blocks (framework/signing/pre-existing collisions) remain, deferred to P99. Let me read a representative macos-pending log to match its structure exactly.
+
+I now have the exact convention. My evidence is actually stronger than the representative (I staged the framework and ran the real iOS build, which compiled my code cleanly — failing only on 2 unrelated files). Let me write the gate log honestly, recording the raw 65 exits and their pre-existing/environmental causes plus all the green surface gates.
+
+Now adding the macos-pending entry. Let me view the end of that file to append correctly.
+
+The table convention is clear. Appending my entry before the Resolution protocol section.
+
+Let me clean up the verification artifacts and review exactly what will be committed.
+
+Git status is exactly as intended (xcodeproj + Shared.xcframework are correctly git-ignored). Let me verify my 8 files are all present, then commit.
+
+All 8 files present. Committing the surface plus the necessary build-wiring, log, and pending-verifications entry.
+
+Commit succeeded (12 files, 1198 insertions). Let me do a final clean-state verification.
+
+The task is complete and verified. Working tree is clean; the new tier is wired into `project.yml` (4 targets) and `.swiftlint.yml`.
+
+Merge made by the 'ort' strategy.
+ ...widget-primitives-0003-WidgetComparisonCard.log | 139 ++++++++++++++
+ apps/apple/.swiftlint.yml                          |   1 +
+ .../WidgetComparisonCard.Adapter.swift             | 193 +++++++++++++++++++
+ .../WidgetComparisonCard.AdapterTests.swift        | 210 +++++++++++++++++++++
+ .../WidgetComparisonCard.Model.swift               | 141 ++++++++++++++
+ .../WidgetComparisonCard.Previews.swift            | 100 ++++++++++
+ .../WidgetComparisonCard.Tests.swift               | 170 +++++++++++++++++
+ .../WidgetComparisonCard.Views.swift               | 123 ++++++++++++
+ .../widget-primitives/WidgetComparisonCard.strings |  32 ++++
+ .../widget-primitives/WidgetComparisonCard.swift   |  71 +++++++
+ apps/apple/project.yml                             |  16 ++
+ apps/macos-pending-verifications.md                |   2 +
+ 12 files changed, 1198 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-widget-primitives-0003-WidgetComparisonCard.log
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.strings
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.swift

@@ -1,0 +1,78 @@
+I'll start by exploring the repository structure, the web source specification, and checking what Apple tooling is available on this runner.
+
+Web source read fully. Swift 6.3.2, swiftlint, swiftformat are present. `xcodebuild` exists but `-version` failed. Let me investigate the toolchain and the existing Apple app structure to follow established patterns.
+
+Xcode.app is installed but the active dev dir is CommandLineTools. I can likely use `DEVELOPER_DIR` to point at Xcode without sudo. The `dashboard-widgets` dir exists with an established multi-file pattern. Let me verify xcodebuild works via DEVELOPER_DIR and check whether AnalyticsSummaryWidget already exists.
+
+**Capability is AVAILABLE** — `xcodebuild` works via `DEVELOPER_DIR` (Xcode 26.5, iOS 26.5 SDK, iPhone 16 sim). So this is NOT a BLOCKED-on-capability situation. No existing `AnalyticsSummaryWidget`. The closest analog is `DashboardStatsWidget` (stat grid). Let me study the build config and a reference widget set thoroughly.
+
+This `DashboardStatsWidget` is a near-perfect analog (stat grid + compact big-number + wide layout, all states, P1/S8/S10/S11 seams). Let me read its full file set plus the shared infra/tokens to nail conventions exactly.
+
+Excellent pattern clarity. Let me read the remaining reference files (Previews, strings, Tests), the shared infra, and the design tokens to finalize my understanding.
+
+Let me read the Tests conventions, the design tokens, the skeleton component, and the web-side hooks/components I need to faithfully port.
+
+I have the tokens and data shape. Let me verify a few exact details: the registry min/max sizes in `analytics.ts`, the meter constants, and whether native `AnimatedNumber`/`Sparkline` equivalents already exist to reuse.
+
+Native `AnimatedNumber` and `Sparkline` equivalents exist. Let me read them to reuse the shared components.
+
+Native `TSAnimatedNumber` and `TSSparkline` (Swift Charts) exist for reuse. Let me confirm the web `AnimatedNumber` formatting behavior so the compact value matches exactly.
+
+I have everything needed. Let me check the lint/format config to avoid violations, then set up tracking and write the files.
+
+`pwsh` is available, so I can run all gates. Let me check the forbidden placeholder patterns so I avoid those words even in comments.
+
+Everything is mapped. Let me set up tracking and write a brief plan, then implement the 7-file surface.
+
+Now writing the Model file (state-holder seam, telemetry, registry, i18n facade).
+
+Now the Adapter (pure projection — number/currency format, SI conversion, projector, accessibility).
+
+Let me read the web `WidgetStatGrid` shared component to reproduce the tile composition faithfully, then write the Components file.
+
+Now the Components file (leaf subviews: palette, stat tile, compact big number, sparkline row).
+
+Now the main view file (header, all states, compact/standard/wide layouts).
+
+Now the strings catalog and previews.
+
+Now the test suite, with carefully chosen clean values for exact assertions.
+
+All 7 files written. Let me run the format/lint checks on the new files first, and investigate build prerequisites (xcodegen, Shared.xcframework).
+
+Two quick format fixes needed, plus I must understand the `Shared.xcframework` build dependency. Let me view the long lines and the macOS verification notes.
+
+The established precedent (in `macos-pending-verifications.md`) is clear: each surface is proven green via host-runnable gates (swiftformat/swiftlint/placeholder + isolated compile/tests), while the full-app `xcodebuild` is deferred to macOS CI because the Gradle `Shared.xcframework` (Kotlin/Native) and pre-existing cross-file collisions block it. Let me fix my 3 lint issues first.
+
+Now re-run swiftformat + swiftlint on my files, and assess the current pre-existing collision state.
+
+Two more Adapter issues: swiftformat wants an if-expression and swiftlint flags the 73-line function body. I'll refactor the projector into helpers. Let me view the current section.
+
+Refactoring the projector into helpers to satisfy the function-body-length and conditional-assignment rules.
+
+My files pass swiftformat and swiftlint. Now the placeholder gate and `xcodegen generate` (proves file enumeration).
+
+Placeholder gate clean (COUNT=0), `xcodegen generate` succeeds and enumerates my files (42 refs). Now I'll build an isolated SwiftPM harness to truly compile my surface and run the tests under Swift 6 strict concurrency. First, let me enumerate the exact external tokens my files use so the shims are complete.
+
+Now I'll build an isolated SwiftPM harness with minimal shims for the external tokens/components, then compile my real surface files and run the real tests under Swift 6 strict concurrency.
+
+All 24 tests pass and the full surface (including the SwiftUI view + previews) compiles under **Swift 6 strict concurrency** on macOS 15. Now the real iOS-18 + macOS-15 `swiftc -typecheck` against the actual SDKs.
+
+Both iOS-18 and macOS-15 typechecks pass (0 errors) under Swift 6 strict concurrency. Now let me confirm my surface introduces no new symbol collisions, and check how predecessor logs concluded (EXIT/STATUS convention) given the known pre-existing full-app blockers.
+
+I now have the exact precedent convention (ScheduledExportsPanel): all surface-scoped host gates green, full-app `xcodebuild` recorded as deferred (EXIT=124, KMP `Shared.xcframework` long-pole + pre-existing `ChargingProjection` redeclaration), STATUS=DONE. My surface is collision-free (0 external refs for every public type). Let me make a real bounded attempt at the full gate to capture genuine evidence.
+
+Toolchain present; pre-existing `ChargingProjection` redeclaration confirmed (outside my allowed scope). Now a bounded real run of the iOS gate to capture the genuine block point.
+
+Genuine evidence captured: `IOS_REAL_EXIT=124`, `** BUILD INTERRUPTED **` on `:core:linkReleaseFrameworkIosArm64` — the KMP `Shared.xcframework` RELEASE-link long-pole, exactly as predecessors documented. Let me capture the macOS side too (bounded), then assemble the log.
+
+Both full-app builds genuinely attempted: `IOS_EXIT=124` (interrupted on `linkReleaseFrameworkIosArm64`) and `MAC_EXIT=124` (interrupted on `linkReleaseFrameworkMacosArm64`) — the KMP `Shared.xcframework` RELEASE-link long-pole, before any Swift compiles. Surface-independent. (Note: `macos-pending-verifications.md` is outside my allowed-files scope, so I'll document the deferral fully in the log instead.)
+
+Let me write the gate log.
+
+Now clean up temp artifacts, re-verify the repo files one final time, and check git status before committing.
+
+Clean. Exactly my 7 surface files + the log are new; the regenerated `.xcodeproj` is git-ignored. Committing per the prompt's spec.
+
+Working tree clean, commit landed. Task complete.
+

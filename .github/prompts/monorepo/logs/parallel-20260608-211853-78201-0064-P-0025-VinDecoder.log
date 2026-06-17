@@ -1,0 +1,120 @@
+I'll start by exploring the task requirements: reading the web source spec, understanding the Apple app structure, and checking runner capabilities.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Let me read the web source spec and explore the Apple app structure.
+
+This is a large established codebase with a clear file pattern. Let me check if VinDecoder already exists, find the VIN constants, and study a similar ported tool's pattern.
+
+`JwtDecoder` is the closest analog (a decoder tool that parses input into structured fields). Let me study its complete file set plus the VIN constants and web components.
+
+Now let me read the rest of the VIN constants and all the JwtDecoder Swift files to fully understand the established pattern.
+
+Now let me read the remaining JwtDecoder files (Adapter, Previews, strings, Tests) to complete my understanding of the pattern.
+
+This `JwtDecoder` is a near-perfect analog. Now I need the web i18n values, project file-inclusion mechanism, shared tokens, and a single-line input component (VinDecoder uses `Input`, not `Textarea`). Let me explore in parallel.
+
+project.yml is at `apps/apple/project.yml`. Let me read it and the i18n values.
+
+Let me get the exact i18n values and the feature-views excludes config.
+
+Let me check the i18n config (keySeparator behavior) and search thoroughly for the devtools VIN label keys, since they affect the exact English strings I must reproduce.
+
+The web's `devtools.utils.vin_*` label keys aren't in the catalog (web renders raw keys) — I'll provide proper English fallbacks in my native catalog, following the JwtDecoder precedent. Now let me find the shared design tokens and components, and study a single-line-input tool (VinDecoder uses `Input`, not `Textarea`).
+
+Let me read the shared components (Fields, Cards, Utility) and design tokens, plus the Base64Tool.Views for the input-field reference pattern.
+
+Excellent — there's a shared `TSTextField` and `TSGlassPanel`. Let me read the design tokens, the TSGlassPanel definition, the test-target config, and the Base64Tool model pattern.
+
+I have a clear pattern. Let me verify exact token names (Color.TS, Font.TS members), the TSGlassPanel signature, and the test-target config to ensure my files compile and are picked up.
+
+Let me confirm the test-target include pattern and the exact Color.TS members.
+
+All tokens and targets confirmed. Let me read the lint/format configs and the placeholder checker, and check the build tooling (xcodegen, existing project, Shared.xcframework).
+
+Critical finding: `Shared.xcframework` is absent (only a `.gitkeep`), and there's no pre-generated `.xcodeproj`. The full app build depends on that framework. Let me investigate whether a baseline build is even possible and how the framework is normally provided.
+
+Building the Shared.xcframework requires a Kotlin Multiplatform Gradle build (heavy). Let me probe whether that toolchain is even available, then write the code while assessing.
+
+Java 17 + Gradle + iPhone 16 simulator are all present, so the full build may be feasible. Let me kick off the heavy KMP shared-framework build in the background while I write the code.
+
+The pattern is clear. Before writing, let me check the placeholder-checker's forbidden tokens and peek at the background build.
+
+The placeholder checker is case-insensitive and forbids "Placeholder", "TODO", "XXX", "not implemented", etc. anywhere — I'll keep all my code/comments clear of those. The shared framework build finished; let me confirm it produced the xcframework.
+
+The Gradle build is still finishing the release framework (the script copies the release variant). Let me wait for the nohup'd build to complete and stage the framework.
+
+The nohup'd build was terminated when its session ended (before staging completed). Most work is now cached, so let me re-run it synchronously to finish and stage the framework.
+
+Release linking is slow (Kotlin/Native). Let me continue waiting.
+
+Framework staged successfully. Now I'll write all six VinDecoder files following the JwtDecoder pattern with verified tokens. Let me set up tracking and create the files.
+
+All six files created. Now let me auto-format my files and run the lint gates.
+
+swiftformat normalized 3 files. Now let me run the lint gates: swiftlint --strict, swiftformat --lint, and the placeholder scan.
+
+All three lint gates pass on my files (swiftformat 0 changes, swiftlint 0 violations, no placeholder hits). Now let me generate the Xcode project and independently verify the decode logic compiles/runs standalone while preparing the full build.
+
+xcodegen generated the project. The standalone check just needs the entry file named `main.swift`. Let me fix and re-run.
+
+The decode logic is verified correct against the web source (all parity assertions pass). Now the full iOS build+test gate. This is heavy — let me start it and capture to a log.
+
+The build produced a lot of output. Let me inspect the saved log for the actual result and any errors.
+
+Build failed, but the errors appear to be pre-existing "ambiguous type lookup" issues in `dashboard-widgets/` (Charge* types) — directories I never touched. Let me confirm none are in my VinDecoder files and that I introduced no type-name collisions.
+
+Confirmed: **0 errors in any VinDecoder file**; all 76 errors are pre-existing "ambiguous type" (duplicate-definition) failures in `dashboard-widgets/` (Charge*/FleetStats* types) — directories outside my allowed scope. Let me characterize the pre-existing duplicates and independently type-check my SwiftUI view against correctly-typed token/component signatures.
+
+The duplicates are confirmed pre-existing (each Charge* type defined in 2 dashboard-widgets files). My standalone type-check flagged a strict-concurrency error on the `init` default-arg — but this is the **exact** pattern JwtDecoder uses, so I need to confirm the app target's actual Swift settings to know if it's a real issue or a false positive from my stricter standalone invocation.
+
+The app target builds with **Swift 6.0 + `SWIFT_STRICT_CONCURRENCY = complete`**, so that concurrency error is real under those settings. Since JwtDecoder uses the identical default-arg init pattern, let me reproduce both under the exact app flags to learn the correct convention, and validate a `@MainActor` fix.
+
+JwtDecoder passes under the exact app flags — meaning my earlier error came from omitting `-swift-version 6` (Swift 6 mode applies `View` MainActor-isolation inference). Let me re-check VinDecoder with the exact app flags.
+
+VinDecoder type-checks **cleanly under the exact app flags** (Swift 6 + strict-concurrency=complete) — my earlier error was a false alarm from omitting `-swift-version 6`. Let me also verify the Tests file's API usage compiles, then run the macOS gate for a faithful log.
+
+XCTest needs the platform framework search path. Let me add it.
+
+Good — the only remaining errors are XCTest assertion functions not found (an artifact of ad-hoc `swiftc`, not real). Crucially there are **no type errors against my own types**, proving the test's API usage is correct. Let me confirm no other error types exist.
+
+Comprehensive verification complete: only XCTest-runtime-scope artifacts remain — my test API usage is correct. Now let me run the macOS gate for a faithful log (same source → same pre-existing dashboard-widgets failure expected).
+
+The macOS gate failed at **code-signing** (no development certificate in this environment) — before compiling. To get faithful macOS *compile* evidence within the real project, let me re-run with signing disabled (build-only), which should reach the same pre-existing dashboard-widgets errors.
+
+Confirmed on both platforms: **0 errors in VinDecoder**; all compile failures are pre-existing duplicate-type definitions in `dashboard-widgets/` (outside my allowed scope), plus macOS needs a dev-signing certificate (absent here). Let me check the logs dir, a sibling log's format, and pwsh availability.
+
+pwsh 7.6.2 is available — I can run the exact placeholder gate. Let me run the full-project lint gates (as the gate does) plus the real placeholder scan to capture honest results.
+
+swiftformat (full): **PASS** (0/2112 need formatting). swiftlint (full): red — but the violation shown is in `dashboard-widgets` again. Let me confirm no VinDecoder violations in the full run, and run the placeholder gate (exact + meaningful).
+
+All checks that isolate my surface pass; the only red is pre-existing (`dashboard-widgets` duplicate types + macOS signing). Let me view a sibling log to match the expected format before writing mine.
+
+The sibling Base64Tool log reveals the established precedent: **"code-complete + DEFERRED Xcode gate"** (ADR-012), and notably that the surface's XCTests are run via **SwiftPM on the host**. Let me run my real tests in isolation via SwiftPM to get genuine pass evidence (independent of the broken dashboard-widgets).
+
+**All 13 XCTests pass via SwiftPM (0 failures)** — real execution. I now have complete evidence. Let me gather final facts (line counts, git info) and write the gate log following the sibling precedent.
+
+All facts gathered. Now let me write the comprehensive, honest gate log.
+
+Now let me verify git status before committing — I must stage only my VinDecoder files + the log, not the generated project, framework, or pre-existing web changes.
+
+Clean — the generated project and framework are git-ignored, and I'll exclude the unrelated pre-existing web changes. Let me stage only my files + log and commit.
+
+Committed as `8d329110a` with only my 6 files + the log. Let me update tracking, clean up temp artifacts, and do a final sanity check.
+
+Task complete. Everything is committed cleanly; only the two pre-existing (unrelated) web files remain unstaged as they were before I started.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0025-VinDecoder.log     | 178 ++++++++++++++
+ .../feature-views/VinDecoder.Adapter.swift         | 188 +++++++++++++++
+ .../TeslaSync/feature-views/VinDecoder.Model.swift | 117 +++++++++
+ .../feature-views/VinDecoder.Previews.swift        |  47 ++++
+ .../TeslaSync/feature-views/VinDecoder.Tests.swift | 181 ++++++++++++++
+ .../TeslaSync/feature-views/VinDecoder.strings     |  36 +++
+ .../apple/TeslaSync/feature-views/VinDecoder.swift | 266 +++++++++++++++++++++
+ 7 files changed, 1013 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0025-VinDecoder.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/VinDecoder.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VinDecoder.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VinDecoder.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VinDecoder.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VinDecoder.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/VinDecoder.swift

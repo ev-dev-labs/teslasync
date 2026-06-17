@@ -1,0 +1,236 @@
+I'll start by exploring the repository structure and understanding what exists before making any changes.
+
+The Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). I cannot claim BLOCKED on platform capability — I must build this for real. Let me read the web source and explore the Apple app structure.
+
+The `shared-surfaces` directory exists with 1615 entries — there's an established pattern. Let me find existing AI surfaces to use as the template, check if `AIChargingDiagnosis` already exists, and read the web `useAiStream` hook.
+
+Each surface follows a multi-file Swift pattern. Let me find the closest structural twin to `AIChargingDiagnosis` (an AI feature using `useAiStream` + `AIFeatureCard` + `withAiFeature` with a single optional id param, no charts). Let me compare candidate web sources and inspect a complete Apple implementation.
+
+`AIDriveCoaching` is the perfect structural twin — identical web structure (single optional id, empty-body POST, no charts/maps). I'll mirror its 10-file Apple pattern exactly. Let me read all of its files.
+
+Excellent, well-structured pattern. Let me read the remaining 7 files of the twin.
+
+Let me read the final files: Chrome, Previews, strings, Tests, AdapterTests.
+
+Now the two test files to complete the picture.
+
+I now have the complete twin pattern. Before writing, I must understand the build system — whether `xcodebuild -scheme TeslaSync` actually compiles these shared-surface files, and where the shared tokens (TSSpacing, Color.TS, TSButton, etc.) live. Let me inspect the project config.
+
+The project config is at `apps/apple/project.yml`. Critically, there's an existing log for the twin (AIDriveCoaching, 0017) — that's the gold reference for what a passing gate looks like. Let me read both, check for an existing 0011 log, and locate the shared tokens.
+
+Critical findings: shared-surfaces IS compiled into both app targets and test bundles, so my files will build. The scheme has a `Stage Shared.xcframework` preAction (KMP Kotlin build) — a risk. Let me read the twin's passing gate log (the gold reference) and check the Shared.xcframework + build script.
+
+This twin log is the gold reference. Key takeaways: the full `xcodebuild build test` is **known to fail on a pre-existing, unrelated cross-surface type collision** (`RecentDrivesModel`/`StateTimelineModel`) — accepted as DEFERRED with STATUS=DONE. The established proof methodology is dual-SDK `swiftc -typecheck` + executed simulator parity + lint/format/placeholder/xcodegen. Let me verify the current state: the Frameworks dir, whether that collision still exists, and where the shared tokens live.
+
+Now I understand the landscape. The `Shared.xcframework` isn't staged (only `.gitkeep`) and the pre-existing `RecentDrivesModel`/`StateTimelineModel` collision is still present — so the full-app build will fail on unrelated code exactly as the twin documented. Let me confirm the collision details and read the token/component files to plan a rigorous surface-scoped typecheck.
+
+Tokens.swift has every token I need, and Components don't import `Shared`. Let me verify the exact `TSButton`/`TSSkeleton`/`TSFadeIn` APIs and their imports so my surface-scoped typecheck is a closed set.
+
+All deps are self-contained SwiftUI. Let me confirm the exact `TSButton.init` signature, then I'll start authoring the surface.
+
+`TSButton` matches the twin's usage. I have everything needed. Let me check the lint/format configs (to avoid violations) and set up my todo tracking, then author the 10 files.
+
+Configs are clear (line length ≤120 under `--strict`, swiftformat maxwidth 120). I'll mirror the twin via copy + precise identifier/path renames, then hand-edit all prose/i18n, then format and lint. Let me copy the 10 files to the new names and apply the safe identifier renames.
+
+Now apply the safe identifier and path renames via perl (word-boundary aware).
+
+Identifier renames are clean. Now let me find all residual prose/comment references that need adapting to charging-diagnosis semantics.
+
+That's substantial prose. Let me view the post-rename functional files (strings, Projection, the main swift) to fix the critical i18n/assertions first, then handle comments.
+
+Now I'll fix the i18n strings to match the web source exactly. Let me update the strings file and the Projection fallbacks.
+
+Now the Projection prose and fallbacks (with line-length-safe wrapping).
+
+Now let me find all remaining prose references across the other files with line numbers to target them precisely.
+
+Let me view the main surface file and the Adapter header to make precise edits.
+
+Now the Chrome file (offline banner + loading a11y fallback).
+
+Now the Views comment and the Model file comments. Let me view the Model sections that need prose fixes.
+
+Now the Adapter header/parity notes and the Views comment. Let me view the Adapter's documentation block.
+
+Now the Views comment and the Previews file (sample data + prose). Let me view the Previews.
+
+Now the test files — their assertions must match the new strings. Let me find all prose/assertion references in both test files.
+
+Let me view the test file headers and the reducer test to fix all assertions accurately.
+
+Now I'll fix the AdapterTests (header, method names, fixtures) and reducer test.
+
+Now the main Tests.swift assertions. Let me view the key sections.
+
+Let me do a comprehensive residual sweep across all 10 files.
+
+Two test-method names still reference "Drive" (the others are legitimate verbs "drives the SSE"/"Drive it"). Let me view and rename them.
+
+All prose is adapted. Now let me canonicalize formatting with swiftformat (which auto-wraps long lines), then verify with `--lint` and `swiftlint --strict`.
+
+swiftformat reformatted 3 files. Now verify `--lint` is clean and run `swiftlint --strict` on the surface files.
+
+Surface passes `swiftformat --lint` (0/9) and `swiftlint --strict` (0 violations). Now let me verify the i18n catalog is complete — every key referenced in code is defined in `.strings` and vice versa (the "used-vs-defined diff = 0" criterion).
+
+My reference extraction missed multi-line and descriptor-built keys. Let me extract all key-shaped literals anywhere in the Swift sources and re-diff.
+
+**i18n diff = 0** (20 referenced == 20 defined, 0 missing, 0 orphan). Now the dual-SDK `swiftc -typecheck` proof. Let me typecheck the surface + its real token/component dependencies for the macOS 15 SDK first.
+
+Skeletons.swift drags in `TSCard`. Including individual component files cascades. Let me find which `Sources/**` subdirectories import `Shared` (those need the xcframework) so I can include a self-contained foundation subset.
+
+`Sources/Components/` is Shared-free (only system frameworks). `TSCard` lives there. Let me typecheck the surface against the full self-contained Components tree + Tokens, for the macOS 15 SDK.
+
+Components references `TSChartPalette` (likely in Sources/Design). Let me locate it and add the Design layer.
+
+Design is 2 files, Shared-free. Let me add it and re-run the macOS typecheck.
+
+Components cascades into the Platform units layer. Rather than pull the whole foundation, let me include only the specific component files my surface uses plus their direct deps (`TSCard` via Cards.swift). Let me check Cards.swift's dependencies and try a minimal closed set.
+
+The foundation is interconnected. Let me include the full Shared-free foundation (all Sources dirs except the 5 that import `Shared`). Let me enumerate the dirs first.
+
+Shared-free foundation: Components, Design, Platform (the UI+units layer). Let me typecheck the surface against Tokens + Design + Platform + Components for macOS.
+
+`UnitPreferences`/`Units` aren't in Platform. Let me locate them.
+
+`UnitPreferences`/`Units` live in SharedFacade (needs the Shared framework), but my surface doesn't use units. The whole-Components include is what drags `UnitFormatters.swift`. Let me build the minimal transitive closure of MY actual usage. Let me locate `TSText`/`TSBadge` and their deps.
+
+Let me try the closure: Tokens + Buttons + Motion + Skeletons + Cards + Typography + Badges + surface.
+
+Almost — `tsGlassPanel` modifier is defined elsewhere. Let me find and add it.
+
+`tsGlassPanel` is in Sources/Design/TSMaterial.swift. Let me add the Design files (2) to the closure.
+
+**macOS 15 typecheck: EXIT=0.** Now the iOS 18 simulator SDK with the same closure.
+
+Both SDKs: **typecheck EXIT=0**. Now let me typecheck the two XCTest files in-module (sources + tests as one module, with XCTest available).
+
+The XCTest symbols aren't resolving (cascading the rest). Let me diagnose whether it's the XCTest path or the self-import, with a minimal probe and an unfiltered error view.
+
+`XCTestCase` resolves but the `XCTAssert*` free functions don't under the macOS XCTest overlay in `-typecheck` mode — a host toolchain quirk. The twin used the iphonesimulator SDK for the test typecheck. Let me retry there.
+
+The `XCTAssert*` functions won't resolve in `-typecheck` mode (an Xcode‑26 host quirk — `XCTestCase` resolves but the Swift assertion overlay needs full linking). The cascading enum errors are all downstream of that, not real type errors. Let me check if an `XCTestSwiftSupport` module is needed.
+
+That's the missing piece — the `XCTest.swiftmodule` overlay lives in `Developer/usr/lib`. Adding `-I` resolves it (probe now passes). Let me re-run the in-module test typecheck with the correct search paths for both SDKs.
+
+Both test typechecks pass on both SDKs. Now the **executed runtime parity proof** — compile the Foundation-only Adapter with a harness and run it on the iPhone 16 simulator. Let me check the simulator and write the harness.
+
+iPhone 16 is booted. Let me write a Foundation harness exercising the Adapter's logic and run it on the simulator.
+
+Now compile the harness + Adapter for the iOS simulator and execute it on the booted iPhone 16.
+
+**All 34 runtime assertions passed on the iPhone 16 simulator (RUN_EXIT=0).** Let me also execute the localized Projection (the i18n boundary) at runtime — compiling Adapter + Model + Projection.
+
+The multi-file build requires the entry file be named `main.swift`. Let me fix that and re-run.
+
+Model references the view's `surfaceSlug` (SwiftUI side). For the console harness I'll add a tiny stand-in with the same value to link the Foundation core, then execute the Projection.
+
+**Projection runtime parity passed too (20 assertions, RUN_EXIT=0).** Now let me run `xcodegen generate` (confirm files enumerate into targets) and the whole-tree `swiftformat --lint` + `swiftlint --strict` gate steps.
+
+All 10 files enumerated (60 pbxproj refs). Now the whole-tree format and lint gate steps (the exact gate commands).
+
+The whole-tree `swiftformat --lint` is red on a **pre-existing** violation in `feature-views/RecentDrivesSection.Previews.swift` (lines 27-28) — a file outside my allowed scope, in the same surface family the twin flagged. Let me confirm it's pre-existing (untouched by me) and check the baseline at HEAD.
+
+Confirmed: the `redundantType` violation is **pre-existing at HEAD** in `RecentDrivesSection.Previews.swift` (a file outside my allowed scope — I only created the 10 AIChargingDiagnosis files). Now the whole-tree `swiftlint --strict` gate and placeholder check.
+
+Whole-tree `swiftlint --strict`: 3 violations across 4940 files. My 9 files already passed surface-scoped (0 violations). Let me identify the 3 to confirm they're pre-existing/out-of-scope.
+
+The 3 swiftlint violations are all in `widget-primitives/WidgetChartSummary.Tests.swift` (pre-existing identifier-name issues, outside my scope). My 9 files linted clean. Now the placeholder gate + a manual stub-word scan of my files.
+
+All clean. Let me inspect the placeholder script's parameters, then run it both as the gate specifies and as a real scan of my files.
+
+Let me run the placeholder gate — the literal gate command, the `-SelfTest`, and a real scan of my 10 files copied to a temp dir.
+
+**Placeholder gate: COUNT=0 / EXIT=0** (and `-SelfTest` PASS proves it genuinely detects stubs). All surface-scoped gates are green. Now the full xcodebuild — the twin deferred it on a pre-existing cross-surface type collision. Let me check whether building the required `Shared.xcframework` is feasible here, and verify the collision is independent of my surface.
+
+My surface's public types are all unique (no collision risk), and `gradlew` exists. Let me probe whether the KMP framework build is feasible (Java/Gradle present) and concretely demonstrate the pre-existing collision is independent of my surface.
+
+Java 17 is present and `gradlew` exists, so the framework build is feasible. Notably, the `RecentDrivesModel`/`StateTimelineModel` collision now shows only **one** declaration each — it may have been resolved on this branch. I shouldn't assume the build fails. Let me kick off the real KMP framework build in the background while I verify the current collision state.
+
+Framework build running in the background. Let me investigate the current collision state — what the dashboard-widget Model files actually declare now.
+
+The collision is **resolved on this branch** — dashboard-widgets now use `RDList*`/`STW*` prefixes, and a global scan finds **zero duplicate public top-level type names**. So the full build may actually pass here (better than the twin's situation). Let me monitor the framework build.
+
+Framework build still compiling (Kotlin/Native first-run is slow). Let me keep waiting.
+
+Still building (~5 min in; Kotlin/Native first build downloads the compiler + deps). Continuing to wait.
+
+Framework built successfully (8m12s). Let me stage it and launch the real `xcodebuild build test` for the iOS simulator (the authoritative gate step), with `JAVA_HOME` exported so the scheme's gradle pre-action works.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the authoritative gate step — `xcodebuild build test` for the iPhone 16 simulator. Launching async with logging.
+
+Build+test running. Let me monitor progress.
+
+Let me check the build log directly for progress.
+
+Excellent — 0 errors, the app target is emitting its module (all my source files compiled into it), and `AIChargingDiagnosis.strings` was validated and copied. The build is healthy. Let me keep monitoring.
+
+Still 0 errors — app target built, now configuring/building the test bundles. Continuing to monitor.
+
+No errors; it's doing the testability rebuild of the app target (slow). Let me keep waiting.
+
+"BUILD FAILED" appeared but with 0 `error:` lines — likely a linker/signing/test-host issue. Let me find the actual failure reason.
+
+The build failed in a `SwiftCompile` command, but no `error:` matched — let me find the exact failing file and diagnostic.
+
+Let me view the log context around the two failure points.
+
+No `error:` anywhere, but `SwiftCompile`/`Failed frontend command` — this is a **compiler crash** (swift-frontend exited nonzero without a diagnostic) during the app target's batch compile. Let me identify the `-primary-file`(s) in the crashing invocation to see if my surface is implicated.
+
+The crash is in a batch starting at `AnnouncerRegion` — my `AIChargingDiagnosis.*` files (alphabetically earlier) are **not** in the failing batch; they compiled in a prior batch. This is a compiler crash (no diagnostic) in unrelated files. Let me extract the actual crash output preceding the failure.
+
+The crash is definitive: a **swift-frontend IRGen crash** (`report_at_maximum_capacity` → `report_fatal_error` in `SmallVectorBase<unsigned int>::grow_pod`) while emitting IR for **`feature-views/AppearanceSettings.Controls.swift`** — a pre-existing file outside my scope. This is an IRGen-phase compiler crash (only runs in full builds, not `-typecheck`), unrelated to my surface. Let me prove it's pre-existing by rebuilding without my 10 files.
+
+My files are removed (backed up) and the project regenerated without them. Now build the app target — if it still crashes on `AppearanceSettings.Controls.swift`, the crash is definitively pre-existing.
+
+Baseline build running. While it compiles, let me restore my files and regenerate the project so the working tree is intact (the baseline build uses its own derived data and the moved-out state was only needed for project generation, which already completed).
+
+The baseline build is compiling against its own generated project. I'll wait for it to reach the crash point before restoring my files. Let me monitor.
+
+Still compiling (no crash yet — IRGen comes later). Let me keep waiting.
+
+Baseline still in the whole-module compile phase (sparse output). Let me wait further.
+
+Baseline still in the slow IRGen phase (~11 min). The crash surfaces late in compilation. Let me continue waiting.
+
+The baseline build (**without my surface**) also failed with "(2 failures)" on the same `AppearanceSettings.Controls.swift` batch. Let me confirm it's the identical IRGen crash.
+
+**Definitively proven pre-existing:** the build fails identically **without** my surface (0 `AIChargingDiagnosis` refs) — same `report_at_maximum_capacity` IRGen crash, same `AppearanceSettings.Controls.swift`, same SIL thunk. My surface is fully exonerated. Now let me restore my files and verify integrity.
+
+Files restored and integrity-verified (byte-identical), project regenerated (60 refs). Let me confirm git status shows only my files as committable (framework + xcodeproj are gitignored).
+
+Git shows only my 10 files; build artifacts are gitignored; surface still clean. I have a complete, honest picture. Let me gather file line counts, then write the gate log.
+
+All files are well-sized (largest 365 ≤400 house limit), max code line 119 ≤120. I have a complete, honest evidence set. Let me write the gate log.
+
+The gate log is written. Let me update todos and commit the 10 surface files + the log (specific paths only; the framework/xcodeproj are gitignored).
+
+Exactly 11 files staged (10 surface + log), no artifacts. Let me commit.
+
+Committed (72c216ffe): 11 files, 2449 insertions. Let me do a final clean-state verification and todo check.
+
+All todos complete, working tree clean, committed. Task done.
+
+Merge made by the 'ort' strategy.
+ ...le-shared-surfaces-0011-AIChargingDiagnosis.log | 275 ++++++++++++++++
+ .../AIChargingDiagnosis.Adapter.swift              | 349 ++++++++++++++++++++
+ .../AIChargingDiagnosis.AdapterTests.swift         | 295 +++++++++++++++++
+ .../AIChargingDiagnosis.Chrome.swift               | 169 ++++++++++
+ .../AIChargingDiagnosis.Model.swift                | 365 +++++++++++++++++++++
+ .../AIChargingDiagnosis.Previews.swift             | 119 +++++++
+ .../AIChargingDiagnosis.Projection.swift           | 124 +++++++
+ .../AIChargingDiagnosis.Tests.swift                | 350 ++++++++++++++++++++
+ .../AIChargingDiagnosis.Views.swift                | 238 ++++++++++++++
+ .../shared-surfaces/AIChargingDiagnosis.strings    |  44 +++
+ .../shared-surfaces/AIChargingDiagnosis.swift      | 121 +++++++
+ 11 files changed, 2449 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0011-AIChargingDiagnosis.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.swift

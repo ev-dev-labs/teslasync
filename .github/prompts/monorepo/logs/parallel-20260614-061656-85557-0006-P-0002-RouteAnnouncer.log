@@ -1,0 +1,195 @@
+I'll start by exploring the repository structure to understand what exists, find the web source, and check whether the Apple toolchain is available.
+
+Apple toolchain is available (Swift 6.3.2, xcodebuild, swiftlint, swiftformat). Now let me read the web source and explore the Apple app structure.
+
+Now let me examine the Windows reference implementation and the Apple app structure in depth to understand conventions.
+
+The shared-surfaces directory is large (2267 entries). Let me understand the per-surface file convention by examining one complete example and checking whether RouteAnnouncer already exists.
+
+Let me read a full example surface (Accordion) and look for any existing announcer/a11y-style surfaces plus the project config to understand how files are included.
+
+Excellent — there are sibling a11y surfaces: `AnnouncerRegion`, `VisuallyHidden`, and `SkipToContent`. The web `RouteAnnouncer` wraps `VisuallyHidden` with a polite live region. Let me read these references plus the project config.
+
+The most relevant references are `VisuallyHidden` (which the web source literally wraps) and `SkipToContent` (sibling invisible a11y surface). Let me read those plus the project config and theme tokens.
+
+Now I see the dominant pattern: `AnnouncerRegion` (0001) and `VisuallyHidden` (0003) are sibling a11y surfaces that render a visible inspector binding to a P1/S8 source, with full loading/empty/error/data + stale/offline states and real VoiceOver voicing. `RouteAnnouncer` is 0002 — right between them — so it must mirror their structure. Let me read the rest of the VisuallyHidden file set plus build config and theme tokens.
+
+Now let me examine the test framework, previews, strings format, and the build configuration (project.yml + theme token definitions).
+
+I now have the full architecture template. Let me verify the build tooling: whether the Xcode project is generated (XcodeGen), scheme names, and what's available on this runner.
+
+Tooling is fully available (xcodegen, pwsh, xcodebuild, swiftlint, swiftformat). XcodeGen globs the `shared-surfaces/` dir, so my files auto-include. Let me check the KMP framework dependency and test-target config, then gauge build feasibility.
+
+5503 Swift files and the build needs `Shared.xcframework` (KMP) staged via a preAction script. Let me check that script and whether the KMP/Gradle toolchain exists — this determines build feasibility.
+
+The KMP shared module is at `apps/shared` (I checked the wrong path). Let me inspect it and the pending-verifications doc to understand build feasibility.
+
+The KMP `Shared.xcframework` isn't prebuilt and must be built via Gradle/Kotlin-Native — the project documents this exact situation in `apps/macos-pending-verifications.md` (deferred to macOS CI). I'm on a real macOS host, so I'll attempt the real build but time-box it. First, let me generate the project, probe the KMP build, and confirm the shared component APIs I'll use.
+
+Let me confirm the exact shared-component APIs and design tokens, and generate the Xcode project.
+
+I have all the component APIs and tokens I need. Let me generate the Xcode project and probe the KMP build (both in the background) while I write the surface code.
+
+I have everything I need. Both background jobs are running. Let me write the surface code now, starting with the Foundation-only core (Adapter). My design mirrors the sibling a11y surfaces (`AnnouncerRegion` 0001, `VisuallyHidden` 0003) but specializes for the web `RouteAnnouncer`'s real behaviors: the first-render guard (initial page not re-announced), the deferred title read, the empty-title region clear, and the zero-width-space rotation that lets two same-title routes both announce.
+
+xcodegen finished. Let me check its output and the KMP probe status, then continue with the Model file.
+
+xcodeproj created, and there's network access (gradle.org returned 200), so the KMP build may succeed — it's still running. Let me continue writing the Model file while it builds.
+
+Now the Seams file — the navigator (native `useLocation` port), the P1/S8 source protocol, live + in-memory sources, and the real accessibility presenter.
+
+Now the main view. Let me check the KMP build progress, then write `RouteAnnouncer.swift`.
+
+KMP still downloading/building. Let me continue with the main view.
+
+Now the presentational subviews.
+
+Now the states chrome (loading/empty/error, freshness chip, history).
+
+Let me check the KMP build, then write the strings file and previews.
+
+KMP build still going (Kotlin/Native first-build downloads are large). Let me write the strings file, previews, and tests while it runs.
+
+Now the previews.
+
+Now the test files — adapter/projection tests first.
+
+The KMP build finished. Let me check whether the `Shared.xcframework` was produced successfully.
+
+KMP build **succeeded** — `Shared.xcframework` was produced, so the full `xcodebuild` gate is feasible on this runner (no BLOCKED needed). Now let me finish the model/seam tests.
+
+All 10 files are written and the KMP framework is built. Now let me run the fast host-runnable gates (swiftformat, swiftlint, placeholder check) on my files. First let me check the placeholder script's path handling and the lint configs.
+
+swiftformat flagged a `wrapPropertyBodies` issue. The cleanest fix is to run swiftformat (write mode) on my files to apply the project's canonical formatting, then re-lint. Let me look at the flagged lines and auto-format.
+
+Let me verify the auto-format result and check the placeholder script's path-handling, then run all three host gates.
+
+Auto-format fixed it. The placeholder script treats a non-existent literal path as clean — so I'll verify my files honestly by checking the actual forbidden patterns. Let me read the pattern list and run the gates.
+
+swiftformat passes. Now let me honestly verify my files contain none of the forbidden placeholder/stub patterns, then run swiftlint.
+
+No forbidden markers. Now swiftlint --strict on my files.
+
+One line-length violation (170 > 160) in the empty-state message. Let me fix it.
+
+Let me re-format and re-lint to confirm both gates pass on my files.
+
+Both lint gates pass on my files (FORMAT_EXIT=0, LINT_EXIT=0, 0 violations). 
+
+Now the full `xcodebuild` gate. Critical: I generated the project *before* creating my files, so I must regenerate so XcodeGen picks them up. Let me regenerate, check simulators, and stage the freshly-built xcframework.
+
+Everything's ready: project regenerated (RouteAnnouncer referenced 60× in pbxproj), iPhone 16 simulator booted, xcframework staged. Now let me run the full iOS build+test gate. This compiles 5500+ files so it'll take a while — I'll run it in the background and monitor.
+
+The iOS gate is building (5500+ files, will take a while). While it runs, let me proactively check for a real risk: all surfaces compile into one `TeslaSync` module, so my public type names must be globally unique. Most are `RouteAnnouncer`-prefixed, but `RouteChange` and `RouteAnnouncement` are not — let me verify no collisions exist.
+
+Good — only my files define those types; no collisions. Let me monitor the iOS build progress.
+
+Build is progressing well — emitting the TeslaSync module, 0 errors so far. This is a large compile; let me wait and continue monitoring.
+
+The main `TeslaSync` module (including my RouteAnnouncer files) emitted successfully with 0 errors — so my code compiles. It's now building extensions and will proceed to link, build the test bundle, and run tests. Let me keep waiting.
+
+The log seems stalled at 5852 lines — likely block-buffering when redirected to a file. Let me check whether xcodebuild is actually still running and the file is growing.
+
+Confirmed: 76 swift-frontend processes are actively compiling the large app target — xcodebuild is just block-buffering output to the file. The build is genuinely working. Let me wait in a larger increment.
+
+The iOS gate completed. Let me read the result.
+
+Exit 65 — a failure. Let me find the actual cause in the log.
+
+Not a code failure — it's **"No space left on device"**. The disk filled during the 5500-file build (DerivedData + KMP caches). My main module emitted with 0 compile errors before the disk ran out. Let me check disk usage and free space.
+
+The disk is **100% full** (898Gi used of 926Gi, only 121Mi free) — this is a shared host. Let me see what's reclaimable from my own build artifacts.
+
+Disk space recovered to **78Gi free** — the earlier exhaustion was a transient peak on this shared host (my build's scratch + others). My code compiled with 0 errors before it hit the wall. Let me re-stage the framework and retry the full iOS gate, monitoring disk this time.
+
+The retry is running. Let me wait and monitor both build progress and disk space.
+
+Disk now has 199Gi free, 0 errors, 60 compilers active. The build is healthy this time. Let me continue waiting for it to reach the test phase.
+
+My `RouteAnnouncer.strings` is being bundled and validated successfully (UTF-8, no errors). Still compiling the large app target with plenty of disk. Let me keep waiting for the link + test phases.
+
+Log flushed to 16k lines, still 0 errors, 489Gi free, compilers winding down (48). Getting closer to link + test. Let me continue.
+
+Main app compiled; now linking extensions and compiling test bundles (including my test files). 0 errors, 489Gi+ free. Let me wait for the test execution to complete.
+
+The build failed — but the error is **pre-existing and not in my code**: a duplicate test class `RecentActivityFeedProjectionTests` in `feature-views/RecentActivity.Tests.swift` (another surface I'm not allowed to touch). My RouteAnnouncer files compiled cleanly. Let me verify this is pre-existing and understand the collision.
+
+Confirmed: this is a **pre-existing, committed collision** — `RecentActivityFeedProjectionTests` is declared in two tracked files (`shared-surfaces/RecentActivityFeed.Tests.swift:106` and `feature-views/RecentActivity.Tests.swift:103`), both outside my allowed scope. My changes are fully isolated (only `RouteAnnouncer.*` are new). The repo's test target is red at HEAD independent of my work.
+
+Let me check how prior surface gates and the pending-verifications doc handle this, and whether it's already tracked.
+
+This is the well-documented **parallel-merge collision** pattern: `apps/macos-pending-verifications.md` shows many surfaces (PowertrainPanel, VehicleHeader, withAiFeature, etc.) blocked by the identical class of pre-existing cross-surface duplicate (`RecentDrives*`/`StateTimeline*`), recorded as `STATUS=BLOCKED` / macOS-pending. My `RecentActivityFeedProjectionTests` duplicate (RecentActivity vs RecentActivityFeed, both committed) is the same pattern — and per convention I must NOT touch those out-of-scope files.
+
+Following the precedent, let me gather rigorous evidence: confirm the iOS app target compiled my surface with zero errors, check the collision scope, then prove my tests pass via a local-only neutralization (reverted, never committed).
+
+Definitive evidence gathered:
+- **iOS app target compiled my surface with ZERO errors** — all 7 `RouteAnnouncer.*` source files compiled into the real app module.
+- The **only** error in the entire run is a single pre-existing collision: `RecentActivityFeedProjectionTests` declared in two committed, out-of-scope files.
+
+Per the documented convention I won't commit any change to those files. But to prove my tests pass, I'll do a **local-only** neutralization (reverted afterward), run my tests, and separately build the macOS target for cross-platform evidence. Let me start both.
+
+Local neutralization in place (single out-of-scope line, will revert). Now let me launch the iOS filtered test run and the macOS cross-platform build concurrently.
+
+Both running. Let me wait and monitor — iOS tests should finish first (cache reuse), macOS is a fresh compile.
+
+The iOS test failed only due to a DerivedData lock conflict from running concurrently with the macOS build (shared build.db) — not a code issue. The macOS build is healthy (0 errors, 68 compilers). Let me let macOS finish first, then re-run iOS tests alone.
+
+macOS build progressing (0 errors, 48 compilers). Let me keep waiting for it to finish.
+
+macOS module emitting with 0 errors — my surface compiles on macOS too. Almost done. Let me wait for the final result.
+
+macOS still linking (0 errors). Let me wait for the macbuild shell to complete directly.
+
+macOS app module already emitted (my surface compiled, 0 errors); now finishing widget extensions. Let me wait for BUILD SUCCEEDED.
+
+macOS build **SUCCEEDED** (MAC_BUILD_EXIT=0, 0 errors, 0 RouteAnnouncer errors) — my surface compiles and links on macOS-15 too. Now let me re-run the iOS tests alone (no concurrent build → no DB lock).
+
+iOS tests running alone. Let me wait for them to compile the test bundle and execute.
+
+**All 45 RouteAnnouncer tests PASSED on iOS Simulator** (`** TEST SUCCEEDED **`, IOS_TEST_EXIT=0). Combined with the macOS build success and 0 compile errors on both platforms, my surface is fully verified. Let me capture the per-suite results, then revert the local neutralization.
+
+All 10 RouteAnnouncer suites passed (45 tests, 0 failures) and the local neutralization is reverted. Let me confirm the tree is clean and assemble the gate log with fresh static-gate runs.
+
+Tree is clean — only my 10 files. Now let me build the gate log with fresh static-gate runs (swiftformat, swiftlint, placeholder on my actual files).
+
+Static gates all clean (FORMAT_EXIT=0, LINT_EXIT=0, PLACEHOLDER_COUNT=0). Now let me append the build/test evidence and the honest analysis + final EXIT/STATUS to the gate log.
+
+Now the final analysis, acceptance checklist, and EXIT/STATUS.
+
+The gate log is complete (147 lines), ending with `EXIT=65 / STATUS=BLOCKED` and full evidence. Now let me stage exactly my 10 surface files + the log (not the gitignored xcodeproj/framework) and verify before committing.
+
+All 10 surface files + the log are staged, no build artifacts. Let me commit.
+
+Committed as `1d075ab8f`. Let me do a final verification of the commit contents and that the pre-existing files remain untouched.
+
+The "WARNING" is a false positive — grep matched the commit *message* text (which describes the blocker), not a changed file. Let me confirm with file-names-only.
+
+Confirmed: the commit contains exactly the 10 `RouteAnnouncer.*` files + the gate log, and the pre-existing collision files are untouched (0 diff). Let me clean up temp logs.
+
+The RouteAnnouncer Apple surface is complete, verified, and committed. Final state confirmed.
+
+## Summary
+
+I shipped a production-polished native Apple (SwiftUI) `RouteAnnouncer` surface at parity with the web source `components/a11y/RouteAnnouncer.tsx`, committed as `1d075ab8f` (10 files, 2,195 lines).
+
+**Architecture** (mirrors sibling a11y surfaces `AnnouncerRegion` 0001 / `VisuallyHidden` 0003):
+- `RouteAnnouncer.Adapter.swift` — Foundation-only core: surface slug, i18n seam, the `RouteAnnouncerProjector` reproducing the web utility's **four real behaviours verbatim** — first-render guard (landing page not re-announced), deferred title read (`DEFAULT_ANNOUNCE_DELAY_MS=100`), empty-title region clear, and the zero-width-space rotation that lets two same-title routes both announce.
+- `Model` (P1/S8 `@Observable` state-holder + P1/S11 `view.opened` telemetry + P1/S10 i18n facade), `Seams` (native `useLocation` navigator + polite `AccessibilityNotification` presenter), `Views`/`States` (all states: loading/empty/error/data + stale/offline), `Previews`, `Tests`/`ModelTests` (45 tests), `.strings`.
+
+**Verification (all green in isolation):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | `0/9` (FORMAT_EXIT=0) |
+| swiftlint --strict | `0 violations` (LINT_EXIT=0) |
+| placeholder gate | `PLACEHOLDER_COUNT=0` |
+| KMP `Shared.xcframework` | assembled live + staged |
+| **iOS-18** app build | RouteAnnouncer **0 errors** |
+| **macOS-15** app build | `MAC_BUILD_EXIT=0`, 0 errors |
+| RouteAnnouncer XCTest (iOS Sim) | **45/45 pass** |
+
+**Status: BLOCKED (EXIT=65)** — but *not* by my code. The combined `xcodebuild build test` gate fails to compile the test bundle solely because of a **pre-existing, committed, out-of-scope duplicate** XCTestCase `RecentActivityFeedProjectionTests` (in `feature-views/RecentActivity.Tests.swift:103` + `shared-surfaces/RecentActivityFeed.Tests.swift:106`) — the same parallel-merge-collision class already tracked in `apps/macos-pending-verifications.md`. Per the prompt's scope ("Out of Scope: other surfaces") I did not touch those files; it defers to the P99 acceptance gate. I proved my 45 tests pass by temporarily de-duping that collision locally, then **reverted** it (the commit contains only my 10 `RouteAnnouncer.*` files + the gate log; both collision files verified untouched).
+
+
+
+The task is fully complete and verified. I've implemented, tested, and committed the surface; the only gate non-zero is a documented pre-existing collision outside my allowed scope, which I'm forbidden to fix.
+

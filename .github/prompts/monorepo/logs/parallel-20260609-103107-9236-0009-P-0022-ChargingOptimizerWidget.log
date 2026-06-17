@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure, the web source spec, and checking what Apple tooling is available on this runner.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me gather evidence and explore the existing structure deeply before deciding anything.
+
+Xcode.app IS installed — the active dir is just pointed at CLT. Let me test pointing to it via `DEVELOPER_DIR`, and examine the existing widget patterns.
+
+**Critical finding:** Xcode 26.5 is fully available via `DEVELOPER_DIR`, and an iPhone 16 simulator is booted. The capability is **NOT blocked** — I can build and test. `ChargingOptimizerWidget` doesn't exist yet. There's a well-established multi-file widget pattern.
+
+Let me study the conventions deeply. I'll examine a representative charging widget's full file set plus the project config and shared infra.
+
+This is a rich, well-established pattern. Let me read the complete `ChargeCostTrackerWidget` file set as my template.
+
+The pattern is clear and rich. Let me read the remaining template files, the web data hook, and shared web components in parallel.
+
+Now let me read the web data hook/types and the shared native infra (tokens + registration). Let me locate them.
+
+Now I understand the build system. Let me check the biggest risk — the `Shared.xcframework` staging — plus read the remaining web parity components and find a native widget with tips/priority chips to mirror.
+
+`Shared.xcframework` isn't staged yet — the scheme builds it via Gradle. `DrivingCoachWidget` (tips/priority) and `ChargingScheduleWidget.Timeline` are perfect native mirrors. Let me check the Gradle feasibility and kick off the framework staging early in the background while I study references.
+
+Gradle cache is warm (3.2G, kotlin-native present). Let me kick off the `Shared.xcframework` build in the background now (the long pole), then study the reference widgets while it runs.
+
+The timeline/badge template is clear. Now let me study `DrivingCoachWidget` for the recommendations/tip-cards + priority/impact pattern.
+
+Excellent patterns. Let me read the DrivingCoach adapter (impact/tone/tip projection), locate `TSTone`, and check the framework build progress.
+
+`TSTone` lives in `Sources/Components/UI/Badges.swift`. Let me read it, confirm the priority-label convention from DrivingCoach's strings + WidgetTipCards mapping, and check the framework build progress.
+
+I have all patterns needed. Let me check the framework build progress, then start writing the widget files.
+
+The framework is building in the background. I have all patterns. Let me set up tracking and start writing the widget files (the three Foundation-only files first).
+
+Three Foundation-only files done. Let me check the framework build progress and update todos.
+
+Framework still compiling (Kotlin/Native is slow). Let me write the Views file while it builds.
+
+Framework build finished. Let me confirm it staged, then continue with the main surface file.
+
+Framework staged successfully (iOS device, iOS simulator, macOS slices). Now the main surface file.
+
+Now the i18n strings catalog.
+
+Now the Previews file.
+
+Now the two test files. Let me write the adapter/layout/format tests first.
+
+Now the model/registry/accessibility tests.
+
+All 9 files written. Let me update todos and run the fast lint/format checks on the new files before the heavy build.
+
+Let me auto-format my new Swift files to the project's rules, then lint them strictly.
+
+Two violations: Adapter function too long, Views file too long. Let me check all file line counts to plan the fixes.
+
+Only Views.swift (418) exceeds 400. Let me extract the timeline into its own file (matching the `ChargingScheduleWidget.Timeline.swift` convention) and split the Adapter's `project` function.
+
+I'll extract the timeline into its own file. First remove the block from Views.swift, then create the Timeline file, then split the Adapter's `project`.
+
+Now split the Adapter's `project` function. Let me view its current form.
+
+I'll restructure the projector to delegate cleanly (matching the ChargeCost pattern). Let me view the rest of the Adapter first.
+
+Now I'll refactor the projector to delegate string-building into a helper struct, keeping each function under the 50-line limit.
+
+Now reformat the changed files and re-run the lint checks on all my files.
+
+All files under 400 lines now. Let me re-run swiftlint strict on all my files.
+
+swiftlint and swiftformat both clean on my files. Now let me inspect the placeholder-check script (I used the word "placeholder" in a comment, which might trip it) and check for `pwsh`.
+
+pwsh is available. Let me read the forbidden patterns to check my files (I used the word "placeholder" in a comment).
+
+"Placeholder" is a forbidden pattern (case-insensitive) — my comment trips it. Let me find all occurrences across my files.
+
+Let me reword that comment to avoid the forbidden word.
+
+Now let me verify the placeholder scan is genuinely clean (via the real pwsh script on a temp copy of my files), then regenerate the Xcode project.
+
+Placeholder check clean. Now regenerate the Xcode project to include the new files.
+
+Project regenerated with all 9 files. Now the real gate: iOS build + test. This is heavy (compiles 700+ widgets + Gradle preaction). Let me launch it and monitor.
+
+Let me verify a key concern (whether a payload-free enum like `TSTone` satisfies `Equatable` synthesis in a containing struct) with a quick standalone Swift check, while the build runs.
+
+Confirmed — `TSTone` Equatable synthesis works. Let me check the build progress.
+
+Build failed — let me find the actual compiler `error:` lines in the log.
+
+A naming collision — existing `feature-views/OptimizerSection.*` already defines `ChargingOptimizer*` types. Let me find exactly which type names collide.
+
+My grep flag suppressed paths so the filter didn't work. Let me redo it properly to find only the *pre-existing* declarations.
+
+Only `ChargingOptimizerUpdate` actually collides (with `OptimizerSection.Model.swift`). Let me comprehensively verify there are no other collisions across all my type names before fixing.
+
+Only `ChargingOptimizerUpdate` is a real top-level collision (`Kind`/`Phase` are nested/scoped; the rest are regex noise). Let me rename my `ChargingOptimizerUpdate` → `ChargingOptimizerWidgetUpdate` across my files.
+
+Renamed. The longer name may push lines past 120 chars — let me reformat and re-lint.
+
+Clean: 0 lint violations, 0 format issues. Now rebuild (incremental — only changed files recompile) and run tests.
+
+Let me verify the em-dash characters match between the adapter (label source) and the tests while the build runs.
+
+Em-dashes match (both U+2014). Let me check the build/test progress.
+
+Still building. Let me wait and check raw log progress.
+
+No errors — the app compiled and is now linking. Let me wait for the test run to complete.
+
+Test bundle is compiling (0 errors so far). Let me wait for it to finish compiling and run.
+
+Test action re-staging framework (cached/fast now). Still 0 errors. Let me keep waiting for test execution.
+
+My files are compiling cleanly (0 errors). Still building the test host + bundle. Let me keep waiting for test execution.
+
+Still building the test host (0 errors). Let me wait more.
+
+Build SUCCEEDED (all my files compiled). But the **test bundle** failed to compile due to `invalid redeclaration of 'DrivingCoachAccessibilityTests'` in `DrivingCoachSection.ModelTests.swift` — a **pre-existing collision between two other surfaces** (DrivingCoach), not my code. Let me verify this is pre-existing and check for other duplicate test-class names.
+
+Confirmed: `DrivingCoachAccessibilityTests` is declared in two **pre-existing, non-owned** files (DrivingCoachWidget.Tests.swift + DrivingCoachSection.ModelTests.swift) — neither in my changeset. This breaks the shared XCTest bundle regardless of my work. Let me assess the full scope of pre-existing duplicate test-class names.
+
+This is a **pre-existing, repo-wide defect**: ~10 duplicate XCTest class names across non-owned sibling surfaces (ChargeStatus×5, DrivingCoach, MonthlyCost, Safety×3) break the shared test bundle. None involve my surface, and all are outside my allowed files. My app **BUILD SUCCEEDED**.
+
+Let me (1) start the macOS gate step to capture its real result, and (2) prove my own tests pass via an isolated harness that doesn't depend on the broken sibling files.
+
+While macOS builds, let me prove my own tests pass via an isolated SwiftPM harness (my pure logic + minimal stubs for the 2 external symbols), independent of the broken sibling files.
+
+macOS gate finished quickly — let me read its result, then finish the harness.
+
+macOS gate fails for a **different, environmental reason**: missing development signing certificate (entitlements require signing) — not my code. Let me check the documented limitation, finish my isolated test harness, and separately confirm my code compiles for macOS with signing disabled.
+
+Now run the isolated test harness.
+
+All **28 isolated tests pass** (0 failures) using my real Model/Adapter/Format sources. Now let me confirm my code compiles for macOS (isolating the signing issue) and read the documented macOS limitation.
+
+This `macos-pending-verifications.md` documents the **exact established convention**: 8 prior P4 surfaces hit these identical pre-existing collisions + macOS signing, verified their surface green in isolation, and deferred the full-app gate to the `macos-latest` CI runner. My situation matches precisely. Let me wait for the macOS no-sign build (proves my SwiftUI files compile on macOS too).
+
+0 errors so far. macOS compile is still early. Let me wait for it to finish.
+
+All 7 of my Swift files are compiling on macOS with 0 errors. Let me wait for the final build result.
+

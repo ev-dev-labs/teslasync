@@ -1,0 +1,215 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5, swiftlint, swift 6.3.2, and pwsh are all available — the gate won't be blocked. Let me explore the web source and Apple app structure in parallel.
+
+`Features/` doesn't exist yet but admin page logs do. Let me understand the actual project layout and find where existing pages live.
+
+Now I understand the layout better. Existing pages live in `Sources/Features/Admin/`, not `TeslaSync/Features/`. Let me study the reference admin page implementation and its log to understand the exact conventions and gate contract.
+
+Excellent — the reference log gives me the exact methodology, path reconciliation, and gate contract. Now let me study the web analytics sub-components, the data hook, and the reference Swift implementation. Let me also extract the exact parity manifest record.
+
+Now let me read all the web analytics sub-components and the data hook to understand the full content and data shape I must reproduce.
+
+Let me read the remaining tabs, the data type, and the hook to fully understand the data shape.
+
+This is a rich page. Let me read the data type, the hook, the remaining web sub-components, and the reference Swift implementation in parallel.
+
+Now let me read the FleetAnalytics type, the reference model/registration, and the remaining web sub-components.
+
+Let me read the remaining web sub-components and the StatsSummary type.
+
+I now have the complete web page picture. Let me examine the Apple infrastructure: shared facade/KMP core access, existing data-driven page models, chart components, design tokens, and routing.
+
+Rich component library exists. Let me read the chart wrappers, key UI components, and the shared facade/data patterns in parallel.
+
+The chart wrappers are clear. Now the critical question: how do existing data-driven page models get their data — via the KMP core client or a sample-provider seam? Let me read the admin model patterns and the shared facade.
+
+The pattern is clear: a data-source seam protocol + Sample default provider (production binds the KMP core). Let me read the remaining components I'll use: tokens, metrics, tabs, cards, typography, states/skeletons, pie/radar charts, units facade, and routing.
+
+Let me read the typography, states/skeletons, tokens, pie/radar charts, units facade, range picker, and routing files.
+
+Let me read the tokens, pie/radar charts, units facade, range picker, routing, and check the string catalog format.
+
+Let me check the build infrastructure (Shared framework, xcodegen) and read the routing, tokens, formatters, and string catalog.
+
+Shared.xcframework isn't staged (needs Gradle), no analytics strings exist yet. Let me read the routing, tokens, formatters, and assess the Shared build feasibility.
+
+`AppRoute.analytics` already exists. Let me read the app wiring (TeslaSyncApp, RouteHostRegistry), the formatters, and check for Shared-free conversion utilities.
+
+No P2/P3 component imports `Shared` — so the isolated type-check methodology works. Let me read the Shared-free conversion utility (MeasurementSystem) and the formatter components to decide my units approach.
+
+Let me kick off the Shared framework build in the background (it's slow and may need network), and meanwhile read the design tokens and remaining formatters.
+
+Gradle works (8.14.5, Kotlin 2.0.21). Let me kick off the Shared.xcframework build in the background — it's the long pole — and continue reading the design helpers and routing while it runs.
+
+Let me read the theme modifier, range picker, lint configs, a reference test, and locate `TSTone`/`TSIconBox`/freshness components.
+
+The detached build finished quickly — let me check whether the Shared framework built or failed, and locate the `TSTone`/`TSIconBox` definitions.
+
+The detached build was killed when its session ended. Let me restart it properly as a long-running background process, and read the last few components (TSIconBox, range picker, freshness) plus the string-catalog format.
+
+Now let me read the range-picker filter component and inspect the string-catalog JSON structure so I can add keys correctly.
+
+Let me check the Shared build status and gather the complete set of i18n keys used across the web analytics page and sub-components.
+
+The Shared.xcframework built successfully (debug variant). Let me stage it, generate the Xcode project, and kick off a baseline build in the background to assess the current full-build state — while I write the implementation. Let me also set up my plan and todos.
+
+Project generated and Shared staged. Let me kick off a baseline macOS build in the background to learn the current full-build state, then set up my plan while it compiles.
+
+Let me write the plan, mark exploration done, and start building the model.
+
+The baseline build finished quickly — let me check whether it's green or hit the out-of-scope breakage.
+
+The detached log vanished. Let me run the baseline build as a managed async process and continue building code while it compiles.
+
+Let me confirm the `StatsSummary` shape, then write the model.
+
+StatsSummary confirmed. Since `swiftlint --strict` promotes warnings to errors (default `file_length` = 400), I'll split into focused files. Let me confirm the file-length threshold against existing shipped files.
+
+File length isn't a hard blocker (1210-line files ship clean), but I'll keep files focused anyway. Now let me write the value types.
+
+Now the charging + battery value types.
+
+The baseline build finished. Let me read its result — this tells me if the full build is green or hits out-of-scope breakage.
+
+BUILD FAILED with 0 `error:` lines — matches the reference's out-of-scope breakage. Let me find the actual failure cause.
+
+Critical finding: the baseline build only failed on the **x86_64** slice (my staged Shared.xcframework is arm64-only). 0 source `error:` lines — the arm64 compile was progressing. The full build may actually be **green on arm64**. Let me re-run restricted to arm64 in the background while I continue writing code.
+
+While the arm64 build runs, let me write the display-boundary formatter (Shared-free SI converters mirroring the golden-vector engine).
+
+Now the model core with the data-source seam, state/range/tab enums, and load logic.
+
+The arm64 baseline finished. Let me check whether the full app actually builds green on arm64.
+
+Confirmed: the full build is RED due to the **same pre-existing, out-of-scope breakage** the reference documented (`AISuggestNewGeofences.swift:129` `glass` helper `@escaping`/non-escaping bug — not my code). This locks in the established isolated-verification methodology. Let me capture the out-of-scope error inventory for honest reporting.
+
+Confirmed out-of-scope: the only build error is in `shared-surfaces/AISuggestNewGeofences.swift` (the `glass`-helper bug class), zero in my files. The proven isolated-verification path applies. Let me map which component files are Shared-free so I can assemble an authoritative isolated type-check set.
+
+Only `UnitFormatters.swift` is Shared-coupled — my Shared-free isolated type-check set is clean. Let me write the pure derivations + presentation types.
+
+Now the sample data provider (rich snapshot so every section renders).
+
+Now the shared view components for the page (metric grid, panels, leaderboard, chart builders).
+
+Now the chart-builder helpers.
+
+Now the main page view (header, hero gauges, tabs, state router).
+
+Now reusable chart view wrappers, then the four tabs. Let me write the chart views.
+
+Let me add a responsive two-column helper, then write the Overview tab.
+
+Let me add a grouped multi-bar chart view, then write the Overview tab.
+
+Let me check the deep-link URL format for the Quick Links section.
+
+Now the Overview tab.
+
+Now the Driving tab.
+
+Now the Charging tab.
+
+Now the Battery tab.
+
+Now the route registration, mirroring the established pattern.
+
+Let me wire the analytics route into the app's route-host chain.
+
+Now the model tests.
+
+Core implementation done. Let me update progress and run formatting/lint on my files to catch issues early.
+
+swiftformat flagged auto-fixable style (wrap bodies, number grouping). Let me apply the fixes.
+
+swiftformat clean. Now swiftlint --strict on my files.
+
+swiftlint scanned the whole repo (config `included:` overrides path args). Let me isolate violations in my files using a scoped config.
+
+11 real violations in my files: `empty_count` false-positives on `StatsSummary.count` (an Int field, not a collection) and one long line. Let me view the exact spots and fix by renaming the field to `sampleCount` and wrapping the line.
+
+Now let me update the `StatsSummary` usages in sample data and the stat guards in the tabs.
+
+Let me re-run format + scoped lint to confirm clean.
+
+Format + lint are clean (0 violations). Now the authoritative isolated type-check: compile my view + model against the real Shared-free P2/P3 components for macOS. Let me locate `TSClipboard` first (used by a chart component) and assemble the set.
+
+TSClipboard is in `Components/UI/Utility.swift` (included); components are self-contained. Let me run the macOS isolated type-check against the real components.
+
+macOS type-check passes (0 errors) against the real components. Now the iOS target (exercises the `#if os(iOS)` compact branches).
+
+Both idioms type-check clean (0 errors). Now the executed model harness — compile the SwiftUI-free model/derivation/format logic and run real assertions.
+
+The harness file needs to be `main.swift` (or `@main`). Let me make `Harness` the `@main` entry.
+
+Outstanding: harness 28/28, macOS+iOS type-check 0, format+lint 0. Now the strings. Let me extract every `analytics.*` key my Swift code references.
+
+124 keys to add. Let me inspect the exact xcstrings formatting so my additions produce a minimal diff.
+
+The format uses Xcode's `" : "` style. Re-dumping would churn the whole 4.6MB file, so I'll insert my entries as a text block at the top of the `strings` object. Let me write the keys with their English values (matching web defaults).
+
+All 124 keys mapped, none pre-existing. Let me insert them and validate the JSON.
+
+Let me create the insertion script as a file (cleaner than heredoc) and run it.
+
+Strings added cleanly (+124, JSON valid). My error-state Retry button (a parity item) uses the shared `action.retry` key, which is currently missing — let me add it so every visible string on my page resolves, then verify the diff is minimal.
+
+xcstrings diff is additions-only (1375 insertions, 0 deletions). Let me run the placeholder scan gate.
+
+Placeholder scan clean (0). Let me type-check the XCTest file against my model API to ensure it's valid (the test bundle can't build via xcodebuild due to the out-of-scope breakage, but I can verify the test compiles).
+
+Those errors are just XCTest framework resolution in my ad-hoc compile (not my code). Let me retry with the correct XCTest search paths.
+
+One real issue in the test (XCTest's `accuracy` overload rejects an optional). Let me view and fix it.
+
+Let me re-verify the test type-checks cleanly.
+
+Test type-checks clean (0 errors). Let me run format + lint on the test file (the chain stopped early).
+
+All isolated checks green: format 0, lint 0, macOS/iOS/test type-checks 0, harness 28/28, placeholders 0. Now let me regenerate the project (to include my new files) and run the full xcodebuild to honestly document its state.
+
+My files are in the project (24 refs + 6 test refs). Let me run the full arm64 build to document its state and confirm zero errors in my files.
+
+The full build reached my files and shows **1 error in `AnalyticsChargingModels.swift`** — likely a type-name collision with existing app types (my isolated check couldn't see those). Let me find it.
+
+Real problem: my generic type names (`ChargingAnalytics`, `MonthlyChargePoint`, …) collide with existing app types in the single `TeslaSync` module — breaking sibling files too. My isolated check couldn't see those. Let me find every collision so I can rename my types.
+
+3 confirmed collisions so far. Let me get the definitive, comprehensive list by checking every top-level type I declare against the rest of the app.
+
+Comprehensive check: exactly 3 collisions across all 59 of my types. Let me rename those 3 to `Fleet`-prefixed unique names across my files.
+
+BSD `sed` doesn't support `\b` — the renames silently didn't apply. Let me redo with BSD word boundaries.
+
+Renames applied (0 bare collisions left). Let me re-verify format, lint, and re-run the harness.
+
+Format/lint/harness all green after rename. Now the decisive re-run of the full build — confirming my files compile within it and only out-of-scope errors remain.
+
+The full build now shows **0 errors in my files** — the collision is fixed, and the build is RED **only** on the pre-existing out-of-scope `AISuggestNewGeofences.swift` (`glass`-helper bug — forbidden to fix). My files compile within the full build and I broke no siblings. Let me verify git status to ensure I commit only intended files.
+
+Clean git status — only intended changes. Let me update the parity ledger with the two analytics rows.
+
+Let me validate the ledger JSON, then write the evidence log.
+
+Ledger valid (2 rows, 9/9). Let me gather evidence data (file LOC, symbol locations) for the log.
+
+Substantial, complete implementation: 15 source files, 2801 LOC, 25 panels, all 8 chart types via P3 wrappers. Let me write the evidence log.
+
+Let me update progress, do a final verification pass, and clean up temp files.
+
+All final checks green. Let me stage the intended files and commit.
+
+All 20 intended files staged, no ignored artifacts. Committing.
+
+Committed cleanly (20 files, 4619 insertions). Let me update the plan and confirm the working tree is clean.
+
+Everything is committed and the working tree is clean. Let me mark the final todo done and record completion in the plan.
+
+All todos done. The task is complete and committed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

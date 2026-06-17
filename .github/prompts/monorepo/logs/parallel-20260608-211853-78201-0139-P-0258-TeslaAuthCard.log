@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure to understand what exists and what the task requires.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, iPhone 16 simulator booted). Not blocked. Let me read the web source and recent native reference implementations.
+
+Web source is a pure presentational card. There's an extensive multi-file pattern per surface. Let me examine the closest recent analogs (FrontendErrorsCard, HealthProbesSection — same web dir, most recent commits) and check for any existing TeslaAuthCard files.
+
+No existing TeslaAuthCard files — I'm building from scratch. FrontendErrorsCard is the closest analog (same web dir, a Card). Let me read its full implementation as the template, plus its web source.
+
+The pattern is clear and thorough. Let me read the remaining FrontendErrorsCard files (Projection, Views, Chrome, Previews, strings, Tests) and the project.yml to understand build inclusion.
+
+Now the supporting files plus the build wiring and shared tokens.
+
+I have the full pattern. Now let me examine the build wiring (project.yml), shared design tokens (P1/S9), and how `.strings` files are handled, plus a surface that has a navigation CTA (since TeslaAuthCard has a Link).
+
+Build auto-globs `feature-views/*.swift` into apps and `*Tests.swift` into test bundles. Now let me read the shared token/component definitions I'll consume (TSTone, TSButton, Color.TS, Font.TS, TSSpacing, TSRadius) and check a surface with a nav CTA for the link pattern.
+
+Navigation CTA pattern is an injected `onNavigate`/`onManage` closure (default no-op), per `VehicleHero`. No `.teslaAccount` AppRoute exists, and AppRoute.swift is out of scope — so I'll inject a closure. Now let me check the build prerequisites (xcodegen, generated project, Shared.xcframework) since these determine whether the gate can run.
+
+The build needs a KMP `Shared.xcframework` via Gradle (Kotlin/Native). Let me check how prior sibling surfaces were verified — their gate logs and the pending-verifications doc — to understand the realistic gate outcome in this environment.
+
+This is the key precedent. The established methodology for these P4 surfaces in this shared environment: full `xcodebuild build test` is **deferred** to a macos-latest P99 runner (KMP `Shared.xcframework` Gradle prerequisite + empty signing team + host saturation — and these surfaces don't import `Shared`). The surface is instead proven green via host-runnable checks: `xcodegen generate`, real iOS-18 + macOS-15 `swiftc -typecheck`, isolated SwiftPM `swift test`, swiftlint, swiftformat, placeholders. I'll follow this exact precedent. Let me confirm the two remaining shared deps are self-contained.
+
+Let me create a plan file and todos, then write all the surface files.
+
+Now the main view, previews, and strings:
+
+Now the two test files — pure-logic adapter tests and projection/model tests:
+
+All 10 files created. Let me verify formatting first — run swiftformat lint on the new files, then auto-format if needed.
+
+swiftformat wants minor auto-fixes (brace wrap, redundant returns in switch expressions). Let me auto-format in place, then re-lint.
+
+Formatting clean. Let me check the auto-edited `presentation` accessor compiles as a switch expression, and run swiftlint.
+
+The `opening_brace` (swiftlint) and `wrapMultilineStatementBraces` (swiftformat) rules conflict on multi-line `if`. The sibling code avoids this with single-line conditions. Mine fits in 120 cols on one line — let me collapse it.
+
+Surface files pass swiftlint --strict and swiftformat. Now the compile proof. Let me check the shared Components layer is `Shared`-free (so I can typecheck against real SDKs without the KMP framework) and locate `TSCard`.
+
+Components are `Shared`-free (only system frameworks). I'll typecheck Tokens + the whole shared Components design layer + my surface against the real iOS 18 and macOS 15 SDKs (with `-D DEBUG` so previews compile too).
+
+`mapfile` isn't in macOS bash 3.2. Let me use `find` substitution directly (paths have no spaces).
+
+Full Components pulls in `TSChartPalette` (defined outside Components). I'll narrow to the minimal design-layer set my surface actually needs. Let me locate `TSChartPalette` and check `Cards.swift`/`Skeletons.swift` deps.
+
+`TSChartPalette` lives in `Sources/Design/TSDesign.swift`. Let me compile the minimal design layer (Tokens + Design + the 5 component files my surface uses) + surface.
+
+`Cards` previews use `TSText` (Typography). The earlier full-Components failure was only `TSChartPalette` — now provided by `Design`. Let me compile the complete design system (Tokens + Design + all Components) + surface; it should be self-contained.
+
+Full Components has app-level deps (`UnitPreferences`). Let me use the precise minimal closure my surface needs: Tokens + the UI primitives (Badges/Buttons/Cards/Typography/Skeletons/Motion).
+
+`Cards` uses `.tsGlassPanel` from the Design material layer. Adding TSDesign + TSMaterial:
+
+iOS 18 typecheck passes (exit 0, no errors). Now macOS 15:
+
+Both SDKs typecheck clean (incl. previews via `-D DEBUG`). Now I'll build an isolated SwiftPM harness to actually **run** the XCTest suite (real surface + real tests), mirroring the sibling methodology.
+
+Two argument-order mistakes in the test file (`now` precedes `errorMessage` in the init). The `.error` failure is a cascade from that. Let me fix both.
+
+39 tests ran, 1 failure. Let me find which one.
+
+My test's expected epoch was wrong (`1_750_000_000` ≠ `2025-06-15T12:00:00Z`). The parser is correct. Let me fix the assertion to compare against Foundation's canonical parse instead of a hardcoded epoch.
+
+All 39 tests pass. I edited the test files, so let me re-format/lint them, run `xcodegen generate` to confirm enumeration into targets, and check the placeholder tooling.
+
+Clean lint/format, `pwsh` is available, and the placeholder script is at `apps/tools/check-placeholders.ps1`. Let me read its interface, run `xcodegen generate`, and run the placeholder check.
+
+`xcodegen generate` succeeds and all 10 files are enumerated (60 refs, 6/file). Now the placeholder gate — I'll run the literal gate path and a meaningful scoped scan of my surface.
+
+All green: format/lint clean, both SDKs typecheck, 39/39 tests pass, xcodegen enumerates all 10 files, placeholder count 0. Let me confirm the generated `.xcodeproj` is git-ignored and review what will be committed.
+
+The `.xcodeproj` is ignored and only my 10 files are new (pre-existing `web/` changes are unrelated and will stay unstaged). Let me run the two tree-wide gate steps (swiftformat/swiftlint as the gate writes them) to record real outcomes honestly for the log.
+
+Tree-wide swiftformat clean (0/2530). Now tree-wide swiftlint --strict (gate step 3):
+
+Tree-wide swiftlint shows exactly **1 pre-existing violation** — the same unrelated `LiveSignalSparklinesWidget.Builder.swift:158` `opening_brace` the sibling 0244 log documented (another agent's surface, outside my allowed-files scope). My 9 files contribute 0. Let me grab the exact HEAD/branch and write the honest gate log.
+
+Updating todos and writing the gate log:
+
+Now stage exactly my surface files + the log (not the pre-existing `web/` changes) and commit:
+
+Exactly my 10 files + the log are staged; pre-existing `web/` changes remain unstaged. Committing:
+
+Commit `96459524a` created. Let me do a final integrity check and clean up the temp harness.
+
+All todos done. The TeslaAuthCard Apple surface is complete, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0258-TeslaAuthCard.log  | 148 ++++++++++
+ .../feature-views/TeslaAuthCard.Adapter.swift      | 240 +++++++++++++++++
+ .../feature-views/TeslaAuthCard.AdapterTests.swift | 204 ++++++++++++++
+ .../feature-views/TeslaAuthCard.Chrome.swift       | 153 +++++++++++
+ .../feature-views/TeslaAuthCard.Model.swift        | 299 +++++++++++++++++++++
+ .../feature-views/TeslaAuthCard.Previews.swift     | 114 ++++++++
+ .../feature-views/TeslaAuthCard.Projection.swift   | 144 ++++++++++
+ .../feature-views/TeslaAuthCard.Tests.swift        | 287 ++++++++++++++++++++
+ .../feature-views/TeslaAuthCard.Views.swift        | 154 +++++++++++
+ .../TeslaSync/feature-views/TeslaAuthCard.strings  |  54 ++++
+ .../TeslaSync/feature-views/TeslaAuthCard.swift    | 109 ++++++++
+ 11 files changed, 1906 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0258-TeslaAuthCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaAuthCard.swift

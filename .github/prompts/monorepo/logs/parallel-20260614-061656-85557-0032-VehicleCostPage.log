@@ -1,0 +1,151 @@
+I'll start by exploring the repository structure to understand the task — the web source page, the existing Apple app structure, and supporting infrastructure.
+
+Now let me explore the Apple app structure, the existing Admin features, the parity ledger, and supporting files.
+
+The actual structure differs from the prompt. Let me explore the real `Sources/Features` directory and find existing Admin pages.
+
+The canonical path is `apps/apple/Sources/Features/Admin/`. `DiskForecast` and `SlowQueries` look like the closest table-based observability analogs. Let me read those plus the backend handler, web hook, and types.
+
+Now let me read the backend handler for vehicle-cost and the closest Apple analogs (DiskForecast — also a table-based observability page with totals).
+
+`DiskForecastPage` is a near-perfect template. Let me read its companion files (Table, Model, RouteRegistration) plus the backend handler, and SlowQueries (which has a selector like VehicleCost's window dropdown).
+
+Let me examine SlowQueries (has a selector like VehicleCost's window dropdown), the string catalog, and the parity ledger/manifest entries.
+
+Let me read the SlowQueries model/models/sample, the xcstrings diskForecast section, and find the test files.
+
+Let me find the test patterns, parity ledger/manifest entries, and the web date/number format utilities.
+
+Let me read the test patterns, the xcstrings format for diskForecast keys, and the web format utilities.
+
+Let me inspect the xcstrings format, route registration composition, and the project build config.
+
+The project globs `Sources/` so new files auto-include. Now let me find the `AppRoute` enum, the registry composition point, and the apple-ledger structure.
+
+Now I understand the routing. I need to add a `.vehicleCost` route case, parser alias, and registration. Let me find the composition root where registrations are combined and any route-coverage tests.
+
+`route.diskForecast` is missing because DiskForecast reused `.admin`; SlowQueries added its own `.slowQueries` case. I'll mirror SlowQueries. But adding an `AppRoute` case risks breaking `allCases` tests. Let me check those.
+
+Now let me check tool availability for the gate (xcodebuild/swift/swiftlint/pwsh), find any other exhaustive `AppRoute` switches I'd need to update, and locate the gate scripts.
+
+Swift toolchain, swiftlint, swiftformat, pwsh all available. Let me verify whether an `.xcodeproj` exists (or xcodegen is needed) and check for exhaustive `AppRoute` case-switches that would need updating.
+
+xcodegen is available (no `.xcodeproj` yet — it's generated). No external exhaustive route switches. Now let me verify the exact APIs of the shared components/tokens I'll use (TSMetricCard, TSCaption, TSAlertBanner, etc.).
+
+Let me confirm the typography component signatures, `TSTone`, and the `Color.TS`/`Font.TS` token names.
+
+I have all the patterns. Let me set up tracking, view the registration site in `TeslaSyncApp.swift`, and the ledger structure.
+
+Let me look at the DiskForecast evidence log (to model the log format) and the placeholder script's rules.
+
+The DiskForecast log shows the precedent: full `xcodebuild` is RED due to a pre-existing out-of-scope shared-surfaces error, so verification was done via isolated Swift type-checks + a model harness. Let me read the middle (PARITY section + verification commands).
+
+The DiskForecast log gives me the exact verification methodology and confirms full `xcodebuild` is pre-blocked by an out-of-scope shared-surfaces bug. Before writing, let me check how existing Apple pages format relative timestamps (VehicleCost's `last_seen` uses web `formatRelative`), to follow the established convention.
+
+There's an established `relative(_ iso:now:)` convention in `AuditLogModels.swift`. Let me read it to match exactly.
+
+I have everything I need. The established convention (`AuditLogFormat.relative`) ports the web relative tokens directly as formatter output. Let me set up tracking and start implementing.
+
+Now I'll create the model file, modeled on DiskForecast (totals) + SlowQueries (selector) + AuditLogFormat (relative).
+
+Now the page file (chrome, states, totals cards, window picker), modeled on DiskForecast + SlowQueries.
+
+Now the adaptive table file, modeled on `DiskForecastPage.Table.swift`.
+
+Now the route registration, modeled on `SlowQueriesRouteRegistration`.
+
+Now wire the navigation: add the `.vehicleCost` route case, parser alias, and app registration.
+
+Now add the string catalog keys. Let me first check the raw formatting of the xcstrings file to preserve its style.
+
+The xcstrings uses Xcode's ` : ` style. I'll insert keys via targeted text insertion to preserve all existing bytes. Let me find the sorted neighbors for my new keys.
+
+The `admin.vehicleCost.*` block sorts right after `admin.subsystem.unavailableTitle`, and `route.vehicleCost` after `route.trips`. Let me insert via a Python script that preserves all existing bytes.
+
+The admin insert worked but `route.trips` marker wasn't found (file wasn't written — write is after both). Let me inspect the raw `route.trips` entry.
+
+The `route.*` cluster uses a different style (`":"` no leading space, multilingual). Let me check how `route.slowQueries` (the sibling that was added) is formatted to replicate exactly.
+
+`route.slowQueries` was appended last (en-only, ` : ` style) — the newer sibling convention. I'll place `route.vehicleCost` right after it. Let me rewrite the insertion script.
+
+All 29 keys added (total 8764). Let me validate the JSON and the inserted block, then write the test.
+
+Strings are valid and well-formatted. Now the test file, modeled on `DiskForecastPageModelTests`.
+
+Now update the parity ledger. Let me check the round-trip format first, then append the two rows.
+
+Round-trip is byte-identical with `ensure_ascii=False`. Let me append the two VehicleCost rows after the DiskForecast pair.
+
+Ledger updated (33/33 both platforms). Now run the verification gates. Starting with swiftformat lint on my files.
+
+swiftformat wants computed-property bodies wrapped (the repo's `wrapPropertyBodies` rule). Let me apply swiftformat (the ecosystem tool) to auto-fix my files.
+
+swiftformat passes (0/8). swiftlint flags: short var names in the test, and `VehicleCostPageModel.swift` now exceeds 400 lines (file_length). Let me split the model file into `VehicleCostModels.swift` + `VehicleCostPageModel.swift` (mirroring SlowQueries' Models/PageModel split) and fix the test names. First, view the formatted model file.
+
+I'll split the file programmatically to avoid transcription errors. Let me view the boundary regions first.
+
+The model file is 446 lines (limit 400). I'll split it into `VehicleCostModels.swift` (types + formatters) and `VehicleCostPageModel.swift` (the `@Observable` class), mirroring SlowQueries. Let me do this programmatically.
+
+Both files now under 400 lines. Now fix the test's short variable names flagged by swiftlint.
+
+Now re-run swiftformat + swiftlint on the full set (including the new split file), plus the placeholder scan.
+
+swiftformat and swiftlint both clean. Now the placeholder scan via pwsh.
+
+Placeholder scan clean (COUNT=0). Now the authoritative compile+run verification. First, the model-logic harness (model deps are Foundation/Observation only). Let me set it up.
+
+`AISuggestNewGeofences.swift:129` now has `@escaping` (the bug the DiskForecast log cited may be fixed at this HEAD). I won't assume the full build's state — I'll prove my files via harness + isolated type-check, then assess the full build. Let me write and run the model harness.
+
+The only errors are in my harness's global counters (not the model code — that compiled). Let me make them `@MainActor` and rerun.
+
+Harness passes (37/37, exit 0). Now the isolated view type-check against the real tokens + components on macOS + iOS. Let me locate the exact dependency files (the set the DiskForecast log used).
+
+Let me attempt a comprehensive isolated type-check: my 5 files against the real shared library (Tokens + Design + Theme + Components + App route types). First, gather the file set.
+
+Components is a self-contained shared library (no `AppRoute` refs). Let me run the isolated view type-check (my 5 files + the real UI/Feedback/DataDisplay/Design/Tokens/Theme/route layers) for macOS.
+
+macOS type-check passes (0 errors). Now the iOS type-check, which exercises the `#if os(iOS)` compact branches in the Page and Table.
+
+Both isolated type-checks pass (macOS + iOS, 0 errors). Let me confirm the project generates with my files referenced, and check whether the KMP `Shared.xcframework` is staged (needed for a full build).
+
+xcodegen succeeds; my files are referenced 36× across all targets. The KMP `Shared.xcframework` isn't staged (a full build needs the ~7‑min Gradle step — same as the DiskForecast precedent). Let me check whether that step is feasible here, and kick it off in the background while I write the evidence log.
+
+The KMP toolchain is present. Let me kick off the `Shared.xcframework` build in the background (≈7 min) and write the evidence log meanwhile.
+
+The xcframework build is running. Let me gather git status and line counts for the log while it builds.
+
+Native implementation is 935 LOC shipping (+247 test) vs web's 202 — well above the parity threshold. Let me check the xcframework build progress.
+
+Still building. Let me write the evidence log now (finalizing the full-build line once the xcframework completes).
+
+Log drafted with a placeholder for the full-build result. Let me check the xcframework build progress.
+
+The xcframework build is at ~6 min (≈7 min expected). Let me wait for it to finish.
+
+The `Shared.xcframework` built and staged (exit 0). Now I can attempt a real `xcodebuild`. Let me list schemes, then build the macOS target.
+
+Building the macOS scheme (no signing). This compiles the whole app, so I'll run it in the background and monitor.
+
+The macOS build failed (exit 65) in out-of-scope `TeslaSync/widget-primitives/*` files — not mine. Let me extract the actual errors and confirm zero diagnostics reference my files.
+
+Exactly 2 pre-existing, out-of-scope errors in `TeslaSync/shared-surfaces/Input.Previews.swift` (a `return` in a `ViewBuilder`) — zero in my files. Let me confirm it's untouched by me and view the lines.
+
+Confirmed pre-existing and out-of-scope (untouched by me; my changes are fully isolated). The `Shared.xcframework` built clean and only those 2 `Input.Previews.swift` errors block the app target. Let me finalize the full-build section of the log honestly.
+
+Let me mark todos complete and do a final verification pass (re-lint the final state, confirm build artifacts are git-ignored, clean up temp files).
+
+All final gates green; build artifacts are git-ignored. Let me do a final review of the complete change set and clean up temp files.
+
+Everything is in order. Following the DiskForecast/SlowQueries precedent (commit with the out-of-scope build red transparently documented, since fixing `Input.Previews.swift` is forbidden by the allowed-files scope), let me stage the exact change set and commit.
+
+Committed as `7263cc9de`. Let me confirm the working tree is clean (only git-ignored build artifacts remain).
+
+Task complete. The working tree is clean and the change set is committed as `7263cc9de`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

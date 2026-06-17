@@ -1,0 +1,80 @@
+I'll start by exploring the repository structure to understand the task and what exists.
+
+Xcode tooling is available. Let me explore the web source, the Apple app structure, and the parity manifest in parallel.
+
+Now let me explore the Apple app's Features/Admin directory and supporting structure to understand the existing patterns.
+
+The actual source files live under `apps/apple/Sources/Features/Admin/`. Let me read `project.yml` and several existing admin page implementations to learn the exact patterns.
+
+The `DiskForecastPage` is an ideal model. Note the actual source path is `apps/apple/Sources/Features/Admin/` (the generated prompt's `TeslaSync/Features/Admin/` path isn't in `project.yml`'s source list). Let me examine a page with an input field, the route registration, an existing model test, and locate the design-token components and string catalog.
+
+Let me locate the design-token components, route host registry, string catalog, parity ledger, and the web hook/types that back this page.
+
+Let me read the component APIs and the route registry/AppRoute definitions.
+
+Now let me read the remaining component APIs, the route registry, and design tokens.
+
+Let me read the Fields/Buttons components, route registry, design tokens, and the web hook/types backing this page.
+
+Let me read the routing system and design tokens to understand registration and styling.
+
+Let me check how route registrations are composed in the app and review the route tests.
+
+Now let me read the design tokens, web hook/types backing the page, the string catalog format, the parity ledger, and check the placeholder tooling.
+
+Let me read the web `PageContainer` (to mirror query-driven loading/error) and the ApiPlayground model/sample to confirm the seam conventions.
+
+Let me check the web `formatBytes` and date formatters for faithful porting, plus confirm the `.Sample.swift` convention and an existing model test for an input-driven page.
+
+Let me check the `.Sample.swift` split convention and locate the theme modifier.
+
+Let me verify no existing GDPR symbols clash, confirm the logs dir, and check the xcstrings JSON tail formatting before writing.
+
+Let me read an existing log to match the expected format (especially the PARITY section).
+
+This DiskForecast log is a precise template. It reveals the full `xcodebuild` is blocked by pre-existing out-of-scope breakage in `shared-surfaces`. Let me verify the current state of tooling and that breakage before choosing my verification strategy.
+
+At the current HEAD that specific blocker is fixed. Tooling is all present. Building the Shared.xcframework is the long pole (~7 min), so let me kick it off in the background now while I write code. First let me check the build script.
+
+Java and gradlew are present. Let me kick off the Shared.xcframework build in the background (long pole), set up my todo tracking, and start writing code in parallel.
+
+Let me write `plan.md` and check whether a shared copy-button/clipboard component exists (web uses `CopyButton`).
+
+`TSCopyButton` exists. Let me read its API and check the xcframework build progress.
+
+All component APIs confirmed; xcframework build is progressing. Let me write the plan and start creating files.
+
+Now let me create the model file.
+
+Now the sample data source (matching the sibling `.Sample.swift` convention).
+
+Now the main page view with all 8 panels, 3 banners, states, adaptivity, and a11y.
+
+Now the route registration and the `AppRoute`/parser/app-shell wiring.
+
+Now wire the route into `AppRoute`, the parser, and the app shell:
+
+Now the parser alias and the app-shell registry chain:
+
+Now let me add the 30 string keys. First, let me inspect the exact xcstrings formatting (indentation, unicode escaping, key ordering) to match it precisely.
+
+The file uses Xcode's `" : "` separator style, literal (non-escaped) em-dashes, and is NOT alphabetically sorted — so I'll append the 30 keys textually right before `"strings"` closes (zero existing lines touched). Let me find the closing structure.
+
+The `"strings"` object closes at line 192187. I'll append the 30 keys there via a precise Python insertion (verbatim web defaults, matching Xcode format, zero existing lines modified).
+
+30 keys added cleanly. Let me verify the diff touches only additions and check the xcframework build progress.
+
+xcstrings diff is clean (330 additions, 0 deletions). The xcframework is in its final stages. Let me write the model tests now.
+
+Now update the parity ledger and check the xcframework build status.
+
+Ledger updated. Let me verify the ledger diff is clean, then start the fast gates (swiftformat, swiftlint, placeholder) which don't need the xcframework.
+
+Ledger is clean. Now let me run the fast gates (swiftformat, swiftlint, placeholder) on my files. First locate the lint configs.
+
+Configs found. Let me run swiftformat and swiftlint on my files (from `apps/apple` so configs apply).
+
+Two fixable issues. Let me view the exact spots and fix them.
+
+Now auto-fix the deep-nesting wrap in `TeslaSyncApp.swift` with swiftformat, then re-lint everything:
+

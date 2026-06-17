@@ -1,0 +1,140 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the runner capabilities and read the web source.
+
+Apple toolchain is fully available (xcodebuild, swift, swiftlint, swiftformat, pwsh). This won't be BLOCKED — I need to build the real native surface. Let me explore the Apple app structure and supporting web sources.
+
+Substantial established codebase with a strict per-surface file pattern. Critically, I notice `project.yml` lists `dashboard-widgets`, `feature-views`, `misc-surfaces` as sources — but NOT `modals-dialogs`. Let me investigate this carefully.
+
+Important findings: previous modal surfaces were committed but `project.yml` does NOT reference `modals-dialogs`. xcodegen is installed, xcodeproj is generated (git-ignored). Let me examine prior gate logs to understand how previous surfaces passed.
+
+Now I understand the established pattern and disposition. The `modals-dialogs` tier is intentionally unwired from `project.yml` (owned by a separate P4-core/P99 gate), and prior surfaces verify independently. My allowed files are `KioskSettingsModal.*` + the log. Let me study the closest analog — `SignalConfigModal` (a config modal with form controls) — in depth.
+
+Excellent, rich established pattern. Let me read the rest of the SignalConfigModal files plus the shared design-system/i18n/telemetry seams.
+
+Now let me find the shared design system tokens/components and study how simpler non-fetching modals (ConfirmDialog, SessionExpiredModal) handle the mandatory states. Let me also see the Projection/Adapter/Previews/Tests patterns.
+
+Let me understand the exact independent-verification approach used by prior surfaces, and study the design tokens + a simpler static modal (ConfirmDialog) for state structure.
+
+Now I fully understand the verification methodology (swiftformat/swiftlint on surface files, dual-SDK `swiftc -typecheck` against real design tokens + TSButton, isolated SwiftPM `swift test`, then the official xcodebuild gate reported honestly). Let me read the design tokens and remaining structural patterns (Adapter, Projection, Rows, Previews, Tests) plus a simpler modal.
+
+The tokens are at `apps/design/generated/apple/`. Let me read the tokens plus the Previews/Rows/Tests patterns.
+
+Now I have the design tokens. Let me read the test patterns, the Rows composition, the lint configs, and a simpler modal scaffold (ConfirmDialog) to complete my understanding.
+
+I have a thorough grasp of the pattern. Let me read the lint configs, the projection Tests pattern, and a simpler modal scaffold (ConfirmDialog) to finalize my mental model.
+
+Let me check the `TSButton` API, the projection Tests pattern, and whether there's a reusable modal scaffold (Modal.swift base).
+
+I now have a complete understanding of the architecture and conventions. Let me quickly confirm the web shared components (Slider, Toggle, Select, FormSection, Modal size) for faithful parity, then set up my plan.
+
+I have complete context. Let me set up my plan and todo tracking, then implement.
+
+Now I'll author the surface. Starting with the pure core (Adapter).
+
+Let me verify line lengths in the Seams logger calls — `--strict` treats the 120 warning as an error. Let me check and fix.
+
+Two lines exceed the limit. Let me fix them.
+
+Now the state holder (Model).
+
+Now the entry view.
+
+Now the form sections and shared control primitives.
+
+Now the Transparency section, live preview swatch, and hint banner.
+
+Now the Previews, strings catalog, and tests. Let me first scan all authored files for any line-length issues.
+
+Now the previews (one per state).
+
+Let me remove the unused accessibility helper to avoid dead code, then write the strings catalog.
+
+Now the projection + accessibility tests.
+
+Now the state-holder tests.
+
+All 12 files authored. Now let me verify: line lengths, file sizes, and that every i18n key referenced in Swift exists in the strings catalog.
+
+All lines ≤120, all files <400, i18n bijection is exact (no missing/unused keys). Now let me run swiftformat and swiftlint on the surface files.
+
+swiftformat clean (0/11 require formatting). Now swiftlint --strict.
+
+swiftlint clean (0 violations, 11 files). Now the dual-SDK `swiftc -typecheck` against the real design tokens + TSButton. Let me get the SDK paths.
+
+iOS 18 simulator typecheck against real tokens + TSButton.
+
+Typecheck passes (exit 0) but emits two Swift 6 Sendable warnings on the binding helpers. The prior surfaces report "0 warnings" — let me eliminate them by inlining the bindings (matching the established pattern) instead of forwarding closure params.
+
+Let me re-run the iOS typecheck to confirm the warnings are gone.
+
+Clean now (0 errors, 0 warnings). Now the macOS 15 typecheck.
+
+Both SDK typechecks clean. Now the isolated SwiftPM build + test of the pure-logic modules (Adapter/Projection/Seams/Model) with the two test files.
+
+All 39 tests pass under Swift 6 (20 projection + 4 accessibility + 15 model). Now let me prove the tier-unwired claim (generate the Xcode project, grep pbxproj for modals-dialogs refs) and then run the official xcodebuild gate honestly.
+
+Confirmed: 0 refs — tier is unwired (owned by the P4 gate, outside my allowed files). Now let me run the official xcodebuild gate honestly. First, check the simulator + Shared.xcframework state.
+
+iPhone 16 sim is booted (not a blocker), but `Frameworks/` holds only `.gitkeep` — the KMP `Shared.xcframework` (an app-target dependency via the scheme's pre-build Gradle Run Script) is unstaged. Let me run the official iOS gate and capture the real outcome.
+
+Let me wait and inspect the gate progress and process state.
+
+The earlier background build didn't persist (sync session was discarded). Let me launch the gate as a detached async process writing to a stable log, then poll it with bounded observation.
+
+While the iOS gate runs, let me check the macOS signing situation (the prior surfaces deferred macOS on signing) and gather host facts for the log.
+
+Signing: 0 valid identities (macOS gate will defer on signing, matching prior surfaces). Let me poll the iOS gate progress.
+
+The KMP toolchain IS available on this runner — Gradle is actively building (debug `Shared.xcframework` written, now linking release). So the full-app build may proceed past framework staging. My surface is unwired (won't compile either way). Let me keep waiting for the real outcome.
+
+The KMP framework build (release Kotlin/Native links) is the documented long pole and still running. My surface is already verified green + unwired. Let me continue waiting for the full-app gate to reach a terminal state to report it honestly.
+
+The iOS gate finished: **IOS_GATE_EXIT=65 (RED)**. Importantly, the KMP `Shared.xcframework` built successfully and xcodebuild compiled the wired app sources — failing on **pre-existing, unrelated sibling collisions** (`StateTimelineWidget`/`StateTimelineModel` ambiguous type lookup). Let me prove zero errors are in my surface and enumerate the failing files honestly.
+
+**Proven**: 108 errors, ALL in pre-existing unrelated siblings (`RecentDrives*`/`StateTimeline*` — parallel-merge duplicate-type collisions). **Zero** in any KioskSettingsModal file (my surface is unwired — 0 pbxproj refs). This matches the documented disposition. Now let me run the placeholder check and forbidden-token scan, then the macOS gate.
+
+Placeholder check: `PLACEHOLDER_COUNT=0, EXIT=0`. No forbidden tokens in shipped files. Now the macOS gate (the shared framework is now cached, so it should reach Swift compile faster). Launching it detached.
+
+While the macOS gate runs, let me poll it for the real terminal state.
+
+The macOS gate completed. Let me read its result directly.
+
+Both full-app gates are RED for **pre-existing, surface-independent** reasons (iOS: 108 parallel-merge collisions in unrelated `RecentDrives*`/`StateTimeline*` siblings; macOS: code-signing — 0 dev certs on runner), with **0 errors in any KioskSettingsModal file** (surface unwired). This is the exact documented disposition of all 9 prior modals-dialogs siblings. Now let me write the gate log.
+
+Now let me verify git status (ensuring the generated xcodeproj is ignored and only allowed files are touched), clean up the temp SPM package, then commit.
+
+Clean — exactly my 12 surface files + the log are untracked; the generated `.xcodeproj` is git-ignored. Let me stage and commit.
+
+Committed `f51501a65` with all 12 surface files + the gate log. Let me do a final verification of the working tree and finalize.
+
+Working tree is clean; the commit contains exactly the 12 surface files + the gate log (2,817 insertions). Let me tidy the temp gate logs.
+
+The KioskSettingsModal Apple surface is complete, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...pple-modals-dialogs-0025-KioskSettingsModal.log | 221 +++++++++++++
+ .../KioskSettingsModal.Adapter.swift               | 259 ++++++++++++++++
+ .../modals-dialogs/KioskSettingsModal.Model.swift  | 303 ++++++++++++++++++
+ .../KioskSettingsModal.ModelTests.swift            | 300 ++++++++++++++++++
+ .../KioskSettingsModal.Previews.swift              | 107 +++++++
+ .../KioskSettingsModal.Projection.swift            | 167 ++++++++++
+ .../modals-dialogs/KioskSettingsModal.Seams.swift  | 214 +++++++++++++
+ .../KioskSettingsModal.Sections.swift              | 341 +++++++++++++++++++++
+ .../modals-dialogs/KioskSettingsModal.States.swift | 312 +++++++++++++++++++
+ .../modals-dialogs/KioskSettingsModal.Tests.swift  | 232 ++++++++++++++
+ .../KioskSettingsModal.Transparency.swift          | 188 ++++++++++++
+ .../modals-dialogs/KioskSettingsModal.strings      |  98 ++++++
+ .../modals-dialogs/KioskSettingsModal.swift        |  75 +++++
+ 13 files changed, 2817 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0025-KioskSettingsModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.Sections.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.Transparency.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.swift

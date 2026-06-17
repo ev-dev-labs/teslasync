@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure and understanding what exists, plus checking the Apple toolchain availability since this task has a hard capability requirement.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat) and the web source exists. Let me read the web source and explore the existing Apple app structure.
+
+Now let me read the web `useBackgroundJobs` hook and explore the Apple app's structure, especially existing shared surfaces and the supporting infrastructure (state holders, tokens, i18n).
+
+The `shared-surfaces` directory is large and established. Let me find sibling status-bar segments (especially ones from the same web status-bar folder) to use as the exact pattern template.
+
+`VersionSegment` is the direct sibling template — a full multi-file surface. Let me read its complete file set to learn the exact established pattern.
+
+Rich established multi-file pattern. Let me read the remaining VersionSegment files (Projection, Seams, Views, Adapter, Previews, Probes, strings, Polling) to fully internalize the architecture.
+
+Let me read the remaining VersionSegment files (Adapter/value types, Modal, Previews, Probes, Polling, strings) and the test files to complete my understanding.
+
+Let me read the test files, Previews, Probes, Polling, and strings, plus locate the shared token/component definitions (TSSpacing, Color.TS, TSButton, tsModal, TSSkeleton).
+
+Let me read the remaining VersionSegment files (Probes, Polling, Previews, strings, PollingTests) and locate the shared design-token/component infrastructure.
+
+Now let me locate the shared design tokens and components, view the strings file format, and check `project.yml` for how files are included.
+
+`project.yml` is at `apps/apple/`. Let me view it and locate the token/component definitions across the whole Apple tree.
+
+Let me read the test-target section of `project.yml`, the design tokens, and the key shared UI components.
+
+Test files in `shared-surfaces/` auto-wire into both test bundles. Now let me find the design tokens (`../design/generated/apple` = `apps/design/...`) and read the key shared components.
+
+Let me read the design tokens and shared components at their correct paths (`apps/apple/Sources/...`).
+
+Let me read the remaining shared components (Buttons, Skeletons, Typography, Feedback), the SwiftLint config, and the placeholder-check script.
+
+Let me read the SwiftLint config, Typography component, and inventory the Feedback/UI components (EmptyState, Badge, Spinner, StatusBadge).
+
+Rich component library available. Let me read the Feedback `States.swift` (EmptyState, ErrorDisplay, Spinner) and check the freshness indicator, badge, plus the placeholder-check script and swiftformat config.
+
+Let me read the placeholder patterns + Badge/FreshnessIndicator, and critically assess whether the full Xcode build can run (xcframework, xcodegen, .xcodeproj, simulators, pwsh).
+
+Critical finding: `Frameworks/Shared.xcframework` is absent (only `.gitkeep`) — both app targets depend on it. Let me check how sibling surfaces' gates concluded and read the pending-verifications doc to understand the accepted verification path.
+
+The established disposition is clear: every sibling ships complete code, runs host-runnable gates green (swiftc typecheck iOS+macOS, swift test harness, xcodegen, swiftlint, swiftformat, placeholders), and DEFERS the full app-scheme `xcodebuild` (missing `Shared.xcframework` + sibling collisions) with evidence → EXIT=0/STATUS=DONE. Let me read two full sibling logs to replicate the exact methodology.
+
+I now fully understand the established methodology. Let me verify a few component APIs and check whether the components are self-contained (no Shared-framework imports), then I'll write the surface.
+
+I have a complete understanding of the architecture, tokens, components, and the established "code-complete + host-gates-green + DEFERRED app-scheme xcodebuild" disposition. Let me set up a plan and todos, then build the surface.
+
+Now writing the surface. Starting with the pure Adapter core.
+
+Now the Seams (source, mutation observer, custom-job registry, poller).
+
+Now the production Polling source + export probe.
+
+Now the main view, presentational views, states, previews, and strings.
+
+Now the test files. Starting with the pure-core AdapterTests.
+
+Now the ModelTests (state-holder + view composition + strings facade).
+
+Now the PollingTests (seams + production source orchestration).
+
+All 12 surface files written. Let me verify line counts (SwiftLint file budget) and run swiftformat first.
+
+One code line at 121 chars. Let me fix it and run swiftformat.
+
+swiftformat clean. Now SwiftLint --strict scoped to my surface files (SwiftLint is the line-length authority — the em-dash may be miscounted by awk).
+
+SwiftLint --strict clean (0 violations). Now check-placeholders (pwsh) and xcodegen. Let me check the script's parameters first.
+
+check-placeholders via pwsh — running the exact gate path, then xcodegen generate.
+
+Placeholder gate clean. Now xcodegen generate (proves the spec wires my files).
+
+xcodegen wired 72 refs. Now let me assemble the SwiftPM test harness. First, verify the design-system component files are self-contained (no Shared/app imports) so the harness can compile the full surface.
+
+Components import only system frameworks (good). Let me inspect the transitive deps of the components my surface uses (Skeletons→Cards/Typography, Design) to assemble a clean harness.
+
+Components are self-contained (system frameworks only). Let me build a SwiftPM harness (module `TeslaSync`) with the real design tokens + the transitively-needed components + my full surface + tests, compiled under Swift 6 strict concurrency.
+
+Now run the harness tests under Swift 6 strict concurrency.
+
+Two fixes needed: (1) my `ISO8601DateFormatter` static violates Swift 6 strict-concurrency (a real fix needed for the app too), and (2) the harness needs Badges/Buttons for the components' DEBUG previews. Let me fix the formatter and expand the harness.
+
+All 50 harness tests pass under Swift 6 strict concurrency. Now the final gate: isolated `swiftc -typecheck` of the whole surface + real design system on the iOS-18 and macOS-15 SDKs.
+
+iOS-18 typecheck clean (0 errors). Now macOS-15 SDK.
+
+Both isolated typechecks pass (0 errors). All host-runnable gates are green. Now let me honestly verify the full app-scheme `xcodebuild` situation: confirm the missing xcframework, the documented sibling collisions, and that my surface introduces no duplicate public symbols.
+
+My surface's public types are all unique (declared once). The xcframework is absent. Let me confirm the sibling collision spans both feature-views and dashboard-widgets, and check whether the KMP xcframework build is feasible here.
+
+dashboard-widgets doesn't carry those specific duplicates in this slot, so I won't claim that. The certain blocker is the absent `Shared.xcframework`. The covenant requires actually running the app-scheme build — let me launch the real iOS `xcodebuild build test` (async, to capture the true exit even if slow) and the macOS one.
+
+The iOS xcodebuild completed. Let me read its result.
+
+The project has a Gradle pre-action that builds the KMP `Shared.xcframework` on the fly — it's currently compiling Kotlin/Native (`linkDebugFrameworkIosArm64`). So the build is genuinely progressing, not failing on the missing framework. Let me let it run and poll.
+
+The Gradle pre-action successfully built `Shared.xcframework`. Now xcodebuild proceeds to compile the full app + test bundle. Let me keep polling.
+
+Gradle is assembling all xcframework slices (debug+release, multiple targets) — slow but progressing with 0 errors. Let me continue waiting for the app compile + test phase.
+
+The Gradle pre-action is assembling every XCFramework slice (iOS/macOS/watchOS, debug+release) — a very slow, environment-level KMP cost; the Swift app compile hasn't started yet, with 0 errors. My surface is already independently proven (isolated typecheck 0 errors on both SDKs + 50 tests green). Let me give the build more time to reach the app-compile/test phase.
+
+The Swift app is now compiling cleanly — 1629 compile steps, module emitting, **0 errors** (0 from my surface). This may actually pass. Let me wait for the final result (link + test run).
+
+iOS app-scheme build finished: **IOS_EXIT=65 (TEST FAILED)** — the failing `SwiftCompile` batches are all in **other** files (AnomalyInlineRow, ApiPlayground, AppContainer, AppSettings, AppearanceSettings…); **0 errors mention BackgroundWorkSegment**. Let me extract the actual diagnostics to cite the real root cause.
+
+No `error:` diagnostics anywhere in the log despite `SwiftCompile failed` — this suggests a compiler crash/kill (resource contention on the huge whole-module batch), not a source error. Let me examine the actual failure context.
+
+Confirmed: the failure is a **swift-frontend compiler crash in IRGen** (stack trace, not a source error) — a toolchain/resource issue on the massive whole-module app target, unrelated to any surface. Let me capture the crash signature cleanly.
+
+**Definitive root cause**: the iOS build failed with a **swift-frontend IRGen crash** reproducibly on a *sibling* file — `feature-views/AppearanceSettings.Controls.swift` (emitting IR for a reabstraction thunk) — in BOTH failing batches. **No crash referenced BackgroundWorkSegment; 0 errors attributable to my surface.** This is the documented DEFERRED disposition. Let me launch the macOS build (shares the same Sources → same sibling crash and/or signing) and verify git drift while it runs.
+
+Git drift is clean — only my 12 surface files (xcframework + xcodeproj are gitignored). The macOS build is running (will hit the same sibling crash and/or signing). Let me gather final file metrics and begin writing the comprehensive gate log while macOS builds.
+
+Let me check macOS build progress, then write the log.
+
+macOS build finished quickly (warm caches): **MAC_EXIT=65**. Let me capture its root cause and confirm my surface is clean.
+
+macOS root cause is **code-signing** (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` entitlements require a dev certificate — none on this runner), no IRGen crash, **0 surface errors**. Both app-scheme failures are environmental/sibling, unrelated to my surface. Let me get the exact per-suite test breakdown for the log.
+
+All 50 harness tests green across 11 suites. I have complete, honest evidence for every gate. Now let me write the comprehensive gate log.
+
+The log is written. Critically, I edited `Seams.swift` (the formatter fix) *after* the initial format/lint runs — let me re-verify swiftformat + swiftlint are still clean on the final files before committing.
+
+Both clean (FORMAT_EXIT=0, LINT_EXIT=0) after the Seams edit. Everything matches the log. Let me commit exactly the surface files + the log.
+
+All 13 in-scope files staged. Committing.
+
+Committed (`6c69e64a6`), tree clean. Let me confirm the log ends per covenant rule 10 and clean up temp artifacts.
+
+Everything is complete and verified. The log ends with `EXIT=0` / `STATUS=DONE`, temp artifacts are cleaned, and the working tree is clean.
+
+All 7 todos done. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...-shared-surfaces-0177-BackgroundWorkSegment.log | 275 +++++++++++++++++++
+ .../BackgroundWorkSegment.Adapter.swift            | 262 ++++++++++++++++++
+ .../BackgroundWorkSegment.AdapterTests.swift       | 174 ++++++++++++
+ .../BackgroundWorkSegment.Model.swift              | 162 +++++++++++
+ .../BackgroundWorkSegment.ModelTests.swift         | 241 +++++++++++++++++
+ .../BackgroundWorkSegment.Polling.swift            | 295 +++++++++++++++++++++
+ .../BackgroundWorkSegment.PollingTests.swift       | 218 +++++++++++++++
+ .../BackgroundWorkSegment.Previews.swift           |  96 +++++++
+ .../BackgroundWorkSegment.Seams.swift              | 246 +++++++++++++++++
+ .../BackgroundWorkSegment.States.swift             | 103 +++++++
+ .../BackgroundWorkSegment.Views.swift              | 226 ++++++++++++++++
+ .../shared-surfaces/BackgroundWorkSegment.strings  |  51 ++++
+ .../shared-surfaces/BackgroundWorkSegment.swift    | 103 +++++++
+ 13 files changed, 2452 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0177-BackgroundWorkSegment.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.Polling.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.PollingTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.swift

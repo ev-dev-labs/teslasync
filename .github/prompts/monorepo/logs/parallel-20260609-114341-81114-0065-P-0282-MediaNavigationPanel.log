@@ -1,0 +1,68 @@
+I'll start by exploring the repository structure and verifying the platform capabilities required for this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, simulators). Let me explore the Apple app structure and the web source.
+
+Now let me explore the Apple Sources structure, particularly the feature-views directory and supporting infrastructure.
+
+The feature-views directory is large (2228 entries). Let me look for existing telemetry panels and the target file pattern.
+
+The established pattern is a 7-file panel bundle (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me read a complete representative example to learn the conventions.
+
+Excellent — clear, thorough pattern. Let me read the remaining files of this exemplar plus the shared tokens.
+
+Now I understand the pattern thoroughly. Let me find the shared P1/S9 tokens, the `Badge` equivalent, and how native panels handle units/distance conversion (since this panel uses `useUnits`).
+
+Let me locate the actual definitions of shared tokens/components and study a widget that does distance conversion.
+
+`TSSpacing`/`Color.TS` resolve via `WatchDesignTokens.swift`, but feature-views are in the main target. I need to understand target membership. Let me read the project config and design tokens.
+
+Design tokens live in `../design/generated/apple`. Let me read them to learn the exact available token names.
+
+Now I have the full token vocabulary. Let me study the Badge component, the native units-conversion pattern, and the web API types.
+
+`TSBadge` takes a `LocalizedStringKey` — but `playback_status` is dynamic API data, so I'll need a verbatim pill. Now let me understand the native units-conversion approach and the web conversion semantics.
+
+Let me see how a sibling native widget handles SI distance conversion and where the native unit-preference/state-holder comes from.
+
+Let me verify the web number formatters, check the build tooling (xcodegen, Shared.xcframework), and confirm there's no existing project baseline.
+
+Key finding: no `Shared.xcframework` is staged yet, and the scheme runs `Scripts/build-shared-xcframework.sh` as a pre-action. Let me inspect that script — building the KMP framework could be a capability blocker.
+
+The scheme pre-builds a KMP `Shared.xcframework` via Gradle. Let me assess whether that toolchain is runnable here — this determines if the full `xcodebuild` gate can pass.
+
+Java 17 + Gradle wrapper are present. Let me kick off the KMP `Shared.xcframework` build in the background (it's the long pole) while I write the source files.
+
+Let me start the KMP framework build in the background and monitor while I write code.
+
+While the framework builds, let me read the remaining shared components I'll use (Motion, Skeleton, Button, Feedback states).
+
+Gradle is actively compiling Kotlin/Native (downloaded the distribution, linking simulator framework) — the full build path is feasible. Let me check for symbol collisions and a shared flow layout before writing, and create a plan + todos.
+
+There are shared `TSQueryError` and `TSEmptyState` peers. Let me read their full signatures to use them idiomatically.
+
+All clear — no symbol collisions, and I'll mirror the AcDc sibling pattern (per-surface string table + self-rolled chrome using shared `TSGlassPanel`/`TSButton`/`TSSkeleton`/`TSFadeIn`). Let me set up tracking and write the plan.
+
+Now I'll write the source files, starting with the pure adapter.
+
+Now the views. Let me check the framework build progress, then write the subviews.
+
+The `/tmp` log was clobbered by a sibling slot (shows slot-63). Let me check my slot-65 state specifically and use a unique log path.
+
+My slot-65 framework build is still running (waiting on the shared daemon). Let me read the lint/format configs so I write in-style, then continue with the views.
+
+Configs read (4-space, maxwidth 120, before-first wrapping, `--self remove`, identifier_name min 2). Now the views file.
+
+Now the main panel shell file.
+
+Now the previews and strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files written. Let me format & lint my files and check the framework build.
+
+Framework is staged in slot-65. Let me auto-fix formatting on my files, then re-lint.
+
+swiftformat passes. Let me run swiftlint --strict on the new files and review what auto-format changed.
+
+Two `file_length` violations (limit 400): Views (512) and Tests (428). The sibling pattern splits into multiple `MediaNavigationPanel.*` files. Let me view the boundaries and split cleanly.
+

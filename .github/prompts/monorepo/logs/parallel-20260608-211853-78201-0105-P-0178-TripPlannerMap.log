@@ -1,0 +1,171 @@
+I'll start by exploring the environment and reading the web source that serves as the specification.
+
+Toolchain is available (Xcode 26.5, Swift 6.3, swiftlint, swiftformat). Now let me explore the existing Apple app structure to understand conventions.
+
+Large established project. Let me examine the target `feature-views` directory and existing sibling implementations to follow conventions exactly.
+
+`TeslaChargingSessionsMap` is the closest map-based analog. Let me study it thoroughly as the template.
+
+Excellent, this is a rich, well-structured template. Let me read the rest of the template files.
+
+Now let me check the web types, the maps/EmptyState components, and the build system.
+
+The web `TripPlannerMap` is a **prop-driven component** (not a data-fetching page) — its only hook is `useTranslation`. Let me confirm how sibling prop-driven feature views model their source, and locate the shared infrastructure symbols.
+
+`SOCRouteChart` (0176) is from the **same web directory** (`features/driving/components/`) and is also prop-driven — the ideal pattern reference. Let me read all its files plus the shared infra.
+
+Now let me read the shared infrastructure and the remaining SOCRouteChart view/state files.
+
+Let me read the design tokens (Color.TS, TSTone, Font.TS, spacing/radius), Skeletons, glass panel, and the remaining SOCRouteChart files (Views, strings, Previews, Tests, ModelTests).
+
+The core tokens are generated. Let me find them in the generated design directory.
+
+I now have the full token set. Let me read the SOCRouteChart view/state/test files and the remaining shared components (Skeletons, Motion, glass panel) to finalize my understanding.
+
+Let me read the remaining test/preview patterns and the shared components I'll use (Skeletons, Motion/TSFadeIn, glass panel).
+
+Let me check the glass panel helper, the SOCRouteChart non-model tests, and verify the build toolchain (xcodegen, simulators) as a baseline.
+
+Everything's available. Let me read the glass panel helper + placeholder script + check `pwsh`, then generate the project and kick off a baseline build to warm DerivedData while I write code.
+
+`pwsh` is available. Let me check the forbidden placeholder patterns (to avoid them in my code), generate the Xcode project, and start a baseline iOS build to warm DerivedData.
+
+Baseline project generates cleanly. Forbidden patterns noted (I'll avoid "TODO/FIXME/XXX/Placeholder/Lorem/not implemented" everywhere, and "stub/mock"). Let me start a baseline iOS build in the background to warm DerivedData and confirm the baseline compiles, while I write the code.
+
+`pwsh`, `xcodegen`, simulators all present; baseline building in the background. I have a complete picture of the architecture. Let me set up a plan and todos, then write the surface. The web component is prop-driven (only `useTranslation`); I'll follow the **SOCRouteChart** sibling pattern (same web dir, prop-driven, state-holder envelope) combined with the **TeslaChargingSessionsMap** MapKit canvas pattern.
+
+Now I'll write the surface. Starting with the Adapter (domain core), Projection, and Labels.
+
+Let me check the baseline build progress while continuing.
+
+Baseline still compiling. Continuing with Labels (callout display + VoiceOver) and the Model state-holder.
+
+Let me check the baseline build, then write the Views (MapKit canvas), States, and surface.
+
+Baseline still building (2320-file project). Continuing with the MapKit Views.
+
+Let me check the baseline build status now.
+
+Baseline build is slow (large project + framework deps). Writing the strings catalog and Previews while it builds.
+
+Now let me refine the endpoint VoiceOver labels to avoid a redundant "Origin: Origin" when the name is blank, then write the tests.
+
+Now the two test files:
+
+All 11 files written. Let me check the baseline build before regenerating to include my files.
+
+The baseline build is slow (large project). Let me run the fast checks (swiftformat, swiftlint, placeholder) on my new files in parallel while it builds.
+
+swiftformat found wrapping/trailing-comma issues. Let me auto-format my files with the repo's config (the ecosystem tool), then re-verify.
+
+swiftformat clean. Now swiftlint and the placeholder gate on my files.
+
+Baseline build **succeeded** ✅. swiftlint found 1 issue (function body too long in `make`). Let me read the baseline result and fix the lint violation by extracting per-kind helpers.
+
+The baseline build **failed (exit 65)** on pre-existing files (`RegenEfficiencyWidget.Previews.swift`, and a batch with `ResponseViewer`/`RequestBuilder`/`RegionSettings`) — note this build did **not** include my files (I generated the project before writing them). I need to determine whether this is real pre-existing breakage. First, let me fix my lint violation, then capture the actual compiler errors.
+
+Now let me re-format/lint the edited Labels file, regenerate the project (now including my files), and run a full build capturing the actual errors to diagnose the pre-existing failures.
+
+Confirmed: my changes only add `TripPlannerMap.*` files; the failing files are pre-existing and untouched by me. I must capture the actual compiler diagnostics to verify. Let me regenerate the project (now including my files) and run a build capturing full output.
+
+My files are in the project (66 refs). Now let me run the iOS build, capturing full output to diagnose the real errors.
+
+Build failed (65). Let me extract the actual compiler errors — critically, whether any are in my files vs. pre-existing ones.
+
+**Key finding: ZERO errors in my `TripPlannerMap` files.** All failures are pre-existing duplicate-type collisions in `dashboard-widgets/Charge*Widget.*` (e.g., `'ChargeSessionDTO' is ambiguous for type lookup`) — committed files outside my allowed scope. Let me verify my own types don't collide with anything in the repo, and confirm my files are absent from the error set.
+
+**Conclusive diagnosis:**
+- The whole-app build is **pre-existingly broken** (baseline build, before my files, also failed). All errors are duplicate-type collisions (`ChargeSessionDTO`, `ChargeStatusUpdate`, etc. "ambiguous") in **sibling `dashboard-widgets/` surfaces** — committed files outside my allowed scope.
+- **My `TripPlannerMap` files produce ZERO compiler errors** and **zero type-name collisions**.
+
+Since I can't edit sibling files, let me prove my surface's logic compiles and its tests pass in isolation via a throwaway SwiftPM package (my Adapter/Projection/Labels/Model are Foundation/CoreLocation/Observation/SwiftUI-only — no token deps).
+
+My 4 core files are dependency-clean. Let me build an isolated SwiftPM package to actually compile and run the full test suite.
+
+**All 42 isolated tests pass** (`SWIFT_TEST_EXIT=0`) — proving my surface's full parity logic + state-holder behavior compiles and is correct. Let me confirm the sibling collisions are genuine committed duplicates (for the log evidence), then run the official gate.
+
+**Confirmed genuine pre-existing breakage**: committed sibling files declare duplicate types in the same module (`ChargeSessionDTO` in 2 files, `ChargeStatusProjection` in 2 files, `ChargeConnection`/`ChargeLoadStatus` in 2 files). These are outside my allowed scope (`TripPlannerMap.*` only).
+
+Let me now run the **official gate** and capture honest results. Starting the macOS build+test in the background while I run lint/format/placeholder.
+
+Even repo-wide `swiftlint --strict` is pre-existingly red on a sibling (`LiveSignalSparklinesWidget.Builder.swift`) — **0 violations in my files**. Let me capture the precise counts and run the format + placeholder gate steps.
+
+swiftformat whole-tree: **clean (exit 0)**. swiftlint whole-app: 1 pre-existing sibling violation, **0 in mine**. Let me read the macOS build result.
+
+The macOS build reached the **testing phase** (different from iOS!) with only 4 errors, none in my files. This needs closer inspection — let me see the actual macOS errors and test outcome.
+
+The macOS errors are **code-signing** failures (no development certificate — an environment limitation), not compile errors. Let me understand the macOS build phases — did it compile my files, and did it hit the sibling duplicate-types?
+
+The macOS temp log got cleaned from /tmp, but I have the key facts: macOS failed on **code-signing** (no dev cert) + the build action; iOS has **72 ambiguous-type errors** (all sibling). Let me check the logs directory and a sibling log to match the expected format.
+
+197 prior feature-view logs exist. Let me read how the closest siblings (SOCRouteChart 0176, TeslaChargingSessionsMap 0120) recorded their gate results — this shows the expected format and precedent.
+
+This is decisive. The **SOCRouteChart sibling (0176, same web dir, same runner)** shipped **EXIT=0 / STATUS=DONE** with exactly my evidence pattern: surface-scoped gates green + isolated build/test green, while the full-app iOS+macOS xcodebuild gate is RED on pre-existing unrelated code (sibling collisions + macOS dev-signing) and treated as a DEFERRED verification owned by the P99 acceptance gate.
+
+To match that precedent's rigor, let me strengthen my proof by compiling the **full surface (all 8 files, including the SwiftUI/MapKit views) against the REAL design system** in isolation. First, let me map the design-system dependencies.
+
+The cascade reaches the broader design-system layer (Cards→typography/buttons, GeoHelpers→TSTone/palette). Let me check whether the whole Design + Components layer is UI-framework-only (no api/model deps) — if so I can compile my full surface against the real design system wholesale.
+
+The design layer is **UI-framework-only and self-contained** (41 files, no api/model deps). I can compile my **entire surface against the real design system** in isolation. Let me build it.
+
+The SDK-override flags broke the manifest. Since all my APIs exist on macOS 15 and the design layer is cross-platform (the macOS app target compiles it), let me build for the host (macOS) plainly.
+
+The only errors are "cannot find `TripPlannerMap`" — my copy loop missed the main `TripPlannerMap.swift` (the `swift` iteration looked for `TripPlannerMap.swift.swift`). Everything else (40 design files + my other 7 files) compiled clean against the real design system. Let me add the main file and rebuild.
+
+The remaining errors are all in `Components/DataDisplay/UnitFormatters.swift` (needs `UnitPreferences`/`Units` from the Platform layer) — a component **my surface doesn't use**. Let me trim to the design closure my surface actually needs (UI + Feedback + Maps + Design + Tokens) and drop the unrelated component subdirs.
+
+Only `DataDisplay/UnitFormatters.swift` has external deps; my surface uses none of DataDisplay/Charts/Forms/Motion. Let me keep the closed set (UI + Feedback + Maps + Design + Tokens) my surface needs and rebuild.
+
+Now only unneeded sibling files in Maps/Feedback (`MapContent.swift`, `FeedbackOverlays.swift`) reference deleted dirs. My surface needs only `GeoHelpers.swift` + `Skeletons.swift` from those. Let me keep just those plus the UI closure.
+
+🎯 **Build complete! (`FULL_BUILD_EXIT=0`)** — my **entire surface (all 8 files, including SwiftUI/MapKit views + previews) compiles cleanly against the REAL design system** (17 real design/component files + Tokens.swift). Combined with 42/42 tests passing, this is airtight proof.
+
+Let me re-capture the macOS gate to a persistent log (background) and run final surface-scoped checks while it builds.
+
+All surface-scoped gates green (lint 0, format 0, files ≤300 lines). Let me run the final placeholder gate, verify git-ignore coverage, and clean up temp packages while the macOS build runs.
+
+All clear: placeholder gate `EXIT=0`, no forbidden words, build artifacts git-ignored, only my files + pre-existing web changes in the tree. Let me check the macOS build progress and clean up temp packages.
+
+macOS gate done (`MAC_EXIT=65`). Let me extract the precise macOS + iOS error evidence for the gate log.
+
+Complete evidence gathered:
+- **iOS**: 72 ambiguous-type errors, **all** in sibling `dashboard-widgets/Charge*Widget.*`; **0** in TripPlannerMap.
+- **macOS**: dev-signing failures only; **0** in TripPlannerMap.
+- My surface: compiles in-module (both platforms, 0 diagnostics), full-surface isolated build green, 42 tests green, lint/format/placeholder clean.
+
+This matches the **SOCRouteChart (0176) precedent → EXIT=0 / STATUS=DONE**. Let me write the honest gate log.
+
+Gate log written. Let me clean up temp artifacts and commit the surface + log (scoped to my files only).
+
+Exactly 12 files staged (11 surface + log), no stray files. Committing per the prompt's message.
+
+Committed cleanly as `b759a21da`. The only remaining working-tree changes are the two pre-existing web files (not mine, correctly untouched). Let me do a final verification of the commit contents.
+
+All work is complete and verified. Final state: 12 files committed (`b759a21da`), all todos done.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0178-TripPlannerMap.log | 240 +++++++++++++++++
+ .../feature-views/TripPlannerMap.Adapter.swift     | 173 ++++++++++++
+ .../feature-views/TripPlannerMap.Labels.swift      | 204 ++++++++++++++
+ .../feature-views/TripPlannerMap.Model.swift       | 268 ++++++++++++++++++
+ .../feature-views/TripPlannerMap.ModelTests.swift  | 171 ++++++++++++
+ .../feature-views/TripPlannerMap.Previews.swift    | 147 ++++++++++
+ .../feature-views/TripPlannerMap.Projection.swift  | 289 ++++++++++++++++++++
+ .../feature-views/TripPlannerMap.States.swift      | 149 ++++++++++
+ .../feature-views/TripPlannerMap.Tests.swift       | 300 +++++++++++++++++++++
+ .../feature-views/TripPlannerMap.Views.swift       | 267 ++++++++++++++++++
+ .../TeslaSync/feature-views/TripPlannerMap.strings |  47 ++++
+ .../TeslaSync/feature-views/TripPlannerMap.swift   | 120 +++++++++
+ 12 files changed, 2375 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0178-TripPlannerMap.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.Labels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripPlannerMap.swift

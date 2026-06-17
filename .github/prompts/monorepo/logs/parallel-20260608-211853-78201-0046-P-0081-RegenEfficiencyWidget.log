@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Apple toolchain is available. Let me explore the web source and Apple app structure.
+
+Now let me explore the Apple app structure in depth.
+
+This is a substantial existing Apple app. Let me study the project structure and the most similar existing widgets (gauge-based) to follow established patterns.
+
+The closest analog is `BatteryRadialGaugeWidget`. Note the canonical new-surface location is `TeslaSync/dashboard-widgets/`. Let me examine that directory and the full BatteryRadialGauge pattern (model, projection, content, tests).
+
+The canonical pattern uses dot-naming (`Widget.Model.swift`, `Widget.Adapter.swift`, etc.) in `TeslaSync/dashboard-widgets/`. Let me see the full list and find a gauge-hero analog plus shared infra.
+
+Let me read the web-side contract (shell, gauge-hero, hooks, types, units, registry) to nail the exact data shape.
+
+Now I have the web data contract. Let me study the closest native analog — `RouteEfficiencyWidget` (driving-analytics category) — as a full template, plus the shared container to find the driving store.
+
+This "Source seam" pattern (sibling 0082) is my template. RegenEfficiency is gauge-based though, so I need the native gauge. Let me read the gauge widget (`MotorPerformanceWidget`), the native gauge component, design tokens, and the rest of the RouteEfficiency template.
+
+Let me locate the design tokens, the registration type, and check how production sources bind to the KMP shared core (to follow the right pattern within my allowed files).
+
+Confirmed: the `Source` seam pattern is canonical for this batch (production wiring is a host concern, outside widget files). Let me read the foundational infra/tokens and the gauge widget's model/support.
+
+I now fully understand the canonical pattern (0067 Motor, 0082 Route are exact siblings). Let me read the design tokens and the gauge widget's view + projection to complete my reference set.
+
+The MotorPerformanceWidget (0067) is my best analog — gauge-based, same `isCompact = cols <= 1`, with units. RegenEfficiency formats energy + power. Let me study the web energy/power formatters and a native widget that mirrors them.
+
+Now I have the full unit contract (energy→kWh ÷1000, power→kW ÷1000, precision 1, '—' fallback). Let me read the web RadialGauge, the design tokens, and the sibling test/preview/strings files to finalize my reference set.
+
+I have the complete test pattern. Let me read the design tokens and the sibling previews/strings/format-tests to finalize exact API names.
+
+Let me confirm the exact token APIs exist (colors, fonts, spacing, radius, motion, skeleton).
+
+I have a complete reference set. Let me verify the lint config and build tooling before writing code.
+
+Lint budget is line ≤120 (strict). `xcodegen` is available but no `.xcodeproj` and no `Shared.xcframework` (needs KMP/Gradle). Let me check build capabilities and the help-tooltip idiom, then write code.
+
+iPhone 16 sim is booted, gradle+java exist. Let me check the help-popover idiom in VampireDrainWidget to mirror it.
+
+Everything's confirmed: iPhone 16 sim (iOS 26.5, runs 18.0 target), help-popover idiom clear. Let me check for type-name collisions, then set up tracking and write the files.
+
+No collisions, all tokens exist. Let me set up tracking and write the files.
+
+Now writing the files, starting with the pure support layer.
+
+Now the Model file (Source seam + observable model + i18n facade).
+
+Now the Components file (gauge ring, stat tile, freshness chip, refresh button).
+
+Now the main View file with all states and the compact/full layouts.
+
+Now the Previews, strings, and the two test files.
+
+All 8 files created. Now let me verify lint/format cleanliness on the new files.
+
+Three auto-fixable formatting issues (number grouping, trailing comma). Let me auto-fix with swiftformat then re-verify.
+
+swiftformat passes. Let me verify the auto-formatted numeric literals didn't change semantics, then run swiftlint.
+
+swiftlint and swiftformat pass cleanly on the new files (0 violations). Now let me verify the whole tree still lints clean (the gate runs tree-wide), then tackle the build.
+
+Tree-wide swiftformat clean. Now tree-wide swiftlint --strict (the gate command).
+
+One tree-wide violation (not in my scoped run). Let me identify it.
+
+The violation is in `LiveSignalSparklinesWidget.Builder.swift` — a different widget, not my allowed files. Let me confirm it's pre-existing and not introduced by me.
+
+Confirmed: the violation is **pre-existing** in `LiveSignalSparklinesWidget.Builder.swift` (a different P4 surface, outside my allowed `RegenEfficiencyWidget.*` scope) and unmodified by me. It's a multi-line-`if` brace style that swiftformat produces/accepts. Let me characterize it (tool-version baseline) and confirm the pattern is repo-wide.
+
+My widget uses zero lone-brace lines (clean). The pre-existing violation is in another surface, outside scope. Now the substantive gate: let me attempt the build. First generate the project.
+
+Project generated; my 8 files are wired into the app + test targets (48 refs). The build's bottleneck is the KMP `Shared.xcframework` (Gradle/Kotlin-Native pre-action). Let me probe its feasibility, running async so I can monitor.
+
+KMP toolchain (`~/.konan`, 1.6G) and Gradle cache are present, Java 17 installed — the build is feasible. Let me build the Shared.xcframework.
+
+KMP build is compiling (expected — Kotlin/Native is slow). Let me keep waiting.
+
+Still linking (Kotlin/Native multi-arch is slow). Let me continue waiting.
+
+It's been ~11 min. Let me check whether it's actively progressing (CPU + artifacts) in a separate shell.
+
+It's actively progressing (clang++ at ~100% on multiple cores; the `debug` XCFramework variants are assembled, now building `release`). Let me continue waiting.
+
+Still building the release variants. Let me keep waiting.
+
+KMP `Shared.xcframework` built successfully (15m50s, both debug+release). Let me stage it and run the iOS build+test gate.
+
+Framework staged. Now the iOS build+test gate (async, monitored — this compiles 2000+ files so it's slow).
+
+iOS build+test running in background. Let me monitor progress.
+
+The iOS build failed with `'ChargeStatusProjection' is ambiguous for type lookup` and similar — duplicate type definitions in sibling widgets, not mine. Let me confirm my files are error-free and identify the root cause precisely.
+
+Zero errors in my files — all failures are pre-existing duplicate-type collisions in `ChargeStatusWidget` vs `ChargeStatusLiveWidget` (sibling surfaces). Let me confirm these duplicates are pre-existing and outside my scope.
+
+Definitively confirmed: `ChargeStatusProjection`, `ChargeUnitPrefs` (and peers) are **defined twice** — in both `ChargeStatusWidget.*` and `ChargeStatusLiveWidget.*` (sibling surfaces from other slots), committed at HEAD, unmodified by me. This breaks the shared app module's compile regardless of my widget. Let me scan the full scope of pre-existing duplicate-symbol collisions to characterize the baseline.
+
+All 13 duplicates are `Charge*`/`Charging*` collisions between sibling charging surfaces — none related to my widget. My files import only SwiftUI/Foundation/Observation/OSLog (no KMP `Shared`). To rigorously prove my widget compiles AND my tests pass against the real SDK + Shared framework, I'll do a verification build with the colliding sibling duplicates temporarily excluded (non-destructive; restored after). Let me find the exact duplicate-definer file set.
+
+The pre-existing collisions span `ChargeStatusLiveWidget.*` ↔ `ChargeStatusWidget.*` (plus two more pairs). To prove my widget + tests actually compile/pass against the real SDK, I'll do a verification build with the colliding siblings temporarily excluded. Let me first confirm nothing external references them (to avoid cascade), then check token file self-containment.
+
+No external references — safe. I'll do a **verification build** with the two colliding `ChargeStatus*` surfaces temporarily relocated (non-destructive; restored after), to prove my widget + tests compile and pass against the real SDK + Shared framework. Let me relocate them and regenerate.
+
+12 files relocated, project regenerated. Now the iOS verification build + my test classes (builds full app, proving my widget compiles in-module; runs my tests).
+
+Verification build running. Let me monitor (full app compile takes time).
+
+**iOS verification: BUILD + TEST SUCCEEDED — all 28 of my tests passed, 0 failures.** This proves my widget compiles in-module against the real iOS SDK + KMP Shared framework and all logic is correct. Now let me run the macOS verification (exclusions still active), then restore everything.
+
+macOS verification running. Meanwhile, let me check the placeholder-check tooling (the gate's `check-placeholders.ps1`).
+
+`pwsh` is available. Let me run the placeholder gate while macOS builds. I'll test the exact gate invocation and a robust per-file scan.
+
+Placeholder gate passes (COUNT=0, EXIT=0). The macOS verification just completed — let me read its result.
+
+macOS failed at **code-signing** (no development certificate for the macOS app/widget entitlements) — an environment/provisioning limitation, not a code issue; it never reached compiling my sources. Let me retry macOS with signing disabled to isolate code correctness.
+
+macOS rebuild running. Let me check the logs directory and a sibling log format while it builds.
+
+The 0082 RouteEfficiency sibling log confirms the same disposition (surface-scoped gates green; full xcodebuild deferred due to **out-of-scope sibling type collisions + macOS signing**). I have stronger evidence (actual iOS build+28 tests green). Let me check the macOS signing-disabled verification.
+
+macOS still compiling. Let me wait for it to finish.
+
+**macOS verification: TEST SUCCEEDED — 28/28 my tests pass** (signing disabled isolates the env-only signing limitation). Both platforms now proven green for my surface. Let me restore the temporarily-relocated sibling files and confirm the tree is intact.
+
+Tree is intact — only my 8 new files are added, zero modifications/deletions to siblings. Let me regenerate the project for cleanliness and write the honest log.
+
+Full tree restored. Now let me write the comprehensive, honest log with all real exit codes.
+
+Log written. Now final surface-gate confirmation on the restored tree, then commit only my allowed files + log.
+
+All surface gates green; build artifacts are git-ignored. Let me commit my 8 files + the log.
+
+Exactly 9 files staged (8 widget files + log), nothing else. Committing.
+
+Commit created (9 files, 1710 insertions). Let me do a final tree-integrity check and clean up temp files.
+
+Working tree is clean, siblings intact, temp files cleaned. Let me finalize the todo tracking.
+
+All work complete and verified. Here's the final summary.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0081-RegenEfficiencyWidget.log | 174 +++++++++++
+ .../RegenEfficiencyWidget.Components.swift         | 189 ++++++++++++
+ .../RegenEfficiencyWidget.FormatTests.swift        |  65 ++++
+ .../RegenEfficiencyWidget.Model.swift              | 244 +++++++++++++++
+ .../RegenEfficiencyWidget.Previews.swift           | 129 ++++++++
+ .../RegenEfficiencyWidget.Support.swift            | 267 +++++++++++++++++
+ .../RegenEfficiencyWidget.Tests.swift              | 267 +++++++++++++++++
+ .../RegenEfficiencyWidget.strings                  |  44 +++
+ .../dashboard-widgets/RegenEfficiencyWidget.swift  | 331 +++++++++++++++++++++
+ 9 files changed, 1710 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0081-RegenEfficiencyWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RegenEfficiencyWidget.Components.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RegenEfficiencyWidget.FormatTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RegenEfficiencyWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RegenEfficiencyWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RegenEfficiencyWidget.Support.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RegenEfficiencyWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RegenEfficiencyWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RegenEfficiencyWidget.swift

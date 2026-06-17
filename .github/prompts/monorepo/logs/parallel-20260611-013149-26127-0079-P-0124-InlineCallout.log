@@ -1,0 +1,163 @@
+I'll start by exploring the repository structure and verifying the capability requirements before making any changes.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Capability requirement met. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply — I need to understand the existing shared-surfaces, P1/S9 tokens, P1/S10 i18n facade, P1/S11 diagnostics, and the build setup.
+
+The structure uses XcodeGen with co-located `*Tests.swift`. There's a large existing `shared-surfaces` directory. Let me examine the conventions: find an analogous presentational surface, the i18n facade, design tokens, and the telemetry contract.
+
+I now understand the file convention. Each surface has `.swift`, `.Model.swift`, `.Views.swift`, `.States.swift`, `.Seams.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, and sometimes `.strings`. `AlertBanner` is the explicit web sibling of `InlineCallout`. Let me study its full set plus the design tokens.
+
+AlertBanner is data-bound (notice bus + connectivity). InlineCallout is declared "pure presentational." I need to see how the codebase handled other *presentational* primitives to follow the established convention correctly. Let me find analogous presentational surfaces and read the rest of the AlertBanner set plus tokens.
+
+Good — there are pure-presentational precedents (`Delta`, `Avatar`, `AnimatedNumber`, etc.). Let me check the parity manifest for any InlineCallout spec and study a representative presentational primitive (`Delta`) end-to-end.
+
+No manifest entry. `Delta` is the ideal pure-presentational template. Let me read its full set to learn exactly how presentational primitives handle states, telemetry, i18n, projection, and tests.
+
+Excellent — `Delta` confirms the convention for a pure-presentational primitive: real web branches only (loading/empty/value), Model with once-only `view.opened`, i18n facade via `NSLocalizedString(tableName:)`, token-driven chrome, plus Projection/Adapter/Views/Previews/Tests. Let me read the rest of the pattern: Projection, Adapter, AdapterTests, Tests, Previews, strings, plus the design tokens and the shared `TS*` primitives.
+
+The `Delta.Adapter.swift` header gives me the exact sanctioned precedent: pure-presentational surfaces reproduce only the web source's REAL branches (no fabricated error/stale/offline), citing siblings MetricCard 0095 and BatteryDelta 0077. InlineCallout follows the same rule. Now let me read the test/preview/strings conventions and the design tokens.
+
+Tests use XCTest. Now let me read the design tokens and locate the shared `TS*` primitives (colors, fonts, spacing, radius, and any Badge/Chip/Skeleton) so my chrome is token-driven.
+
+I have the full token set (`statusInfo/Success/Warning/Danger`, spacing, radius). Let me read the shared primitives to understand `TSButton`/`TSBadge` signatures and conventions, then check how existing surfaces render tappable Link/Button rows with accessibility traits.
+
+`TSTone` already provides the exact `info/success/warning/danger` → token color mapping I need — I'll reuse it (DRY). Now let me check the build prerequisites (Shared.xcframework, simulator), find a surface that renders a tappable Link/Button action for accessibility parity, and review the placeholder patterns.
+
+`Shared.xcframework` is absent (only `.gitkeep`); the app targets depend on it via a build preAction. This is the critical capability question. Let me read the build script, the KMP shared module setup, and the `macos-pending-verifications.md` doc which likely documents the runner's build constraints.
+
+This is the decisive context. The `macos-pending-verifications.md` establishes the repository-sanctioned precedent: the **full-app `xcodebuild build test` gate cannot run on this runner** — blocked by (1) the unstaged KMP `Shared.xcframework` (needs Kotlin/Native + a multi-minute Gradle long-pole that times out; `kotlin` isn't even on PATH), (2) `0 valid code-signing identities`, and (3) pre-existing parallel-merge collisions in *other agents'* surfaces. Every sibling surface verified itself **in isolation** (swiftc -typecheck on both SDKs, isolated tests, lint/format/placeholder clean) and recorded the full-app gate as **macOS-pending**.
+
+Let me read the rest of that doc's format, the lint/format/placeholder configs, and how an action-bearing presentational surface (MetricCard) renders a tappable+accessible affordance.
+
+Now I have the full picture. Let me confirm tooling specifics: the placeholder checker logic, whether `pwsh` exists to run the gate verbatim, the simulator list, and how a presentational surface (`MetricCard`) renders an accessible tappable action.
+
+`pwsh` is available, iPhone 16 simulator exists and is booted, and SDKs are iOS 26.5 / macOS 26.5 (deployment-target typecheck to iOS 18 / macOS 15). `MetricCard.Views` confirms the `Link`/`Button`+`.accessibilityAddTraits` patterns and the `tint.opacity(0.1)` fill / `0.25` ring chrome I need.
+
+Let me read two sibling logs in this exact prompt family (`shared-surfaces` 0062/0051) to mirror their EXIT/STATUS convention and evidence structure, and confirm the logs directory.
+
+I have the sanctioned disposition precedent: sibling shared-surfaces verify the surface green in isolation (swiftc -typecheck on both SDKs, executed harness, swiftlint/swiftformat/placeholder clean, xcodegen enumerates) and record the full-app `xcodebuild` red (IOS_EXIT=65 pre-existing collisions, MAC_EXIT=65 = 0 signing identities) as DEFERRED → `EXIT=0 / STATUS=DONE` with a macos-pending row. I'll follow exactly that.
+
+Let me confirm the last few primitives (`TSAnimation`) and verify no `InlineCallout` symbol collisions, then write my plan.
+
+There's already an atomic `TSInlineCallout` in `Sources/Components/Feedback/Banners.swift` (component-library, out of scope to modify) and `KpiOverviewCard` already models a web `<InlineCallout>` footer. These are key references. Let me read them to align my surface with established team modeling.
+
+`KpiOverviewFooterView` is the canonical team rendering of web `<InlineCallout>` — exact SF Symbols per tone, Button-vs-static-row, and a11y wiring. I'll align with it and add the full P4 surface scaffolding (model, telemetry, projection, link mode, severity a11y, previews, tests). Let me read its chrome tail + the a11y label composition + callout model, then write my plan.
+
+I now have the complete, authoritative reference. Let me check how the sibling composes the InlineCallout accessibility label (for consistency), then write my plan and begin implementation.
+
+Confirmed — the sibling composes the exact `"{severityWord}: {message}"` a11y label via a strings-facade key with a capitalized fallback. My design is validated by established convention. Let me record the plan and todos, then implement.
+
+Now I'll implement the surface. Starting with the four core files (Adapter, Model, Views, surface).
+
+Core files written. Let me inspect the design-system dependencies (`TSDesign.swift` for `TSAnimation`) so I can assemble a correct isolated typecheck set.
+
+`TSAnimation` (TSDesign.swift) and `TSTone` (Badges.swift) each only need the generated Tokens. My isolated compile set is: Tokens.swift + TSDesign.swift + Badges.swift + my 4 files. Let me typecheck against the iOS 18 and macOS 15 targets under Swift 6 strict concurrency.
+
+The resolve typealias needs `@Sendable` under Swift 6. Let me check how the siblings declared theirs to mirror exactly.
+
+Confirmed convention — the typealias must be `@Sendable`. Let me fix it to match the siblings exactly.
+
+Let me re-run both the iOS 18 and macOS 15 typechecks.
+
+Both SDKs typecheck clean (0 errors/warnings, Swift 6 strict concurrency). Now the remaining files: Previews, the two XCTest files, and the strings catalog.
+
+All 8 files created. Now let me typecheck including the Previews (under `-D DEBUG`) on the iOS target.
+
+Previews typecheck clean on iOS 18. Now let me set up an isolated SwiftPM package to actually **build and run** the shipped test logic (the "isolated SwiftPM build + N/N tests" verification the precedent uses).
+
+All 27 tests pass via isolated SwiftPM build (Swift 6 language mode). Now the lint/format/placeholder gates on my files.
+
+swiftformat clean. swiftlint flags 2 `multiple_closures_with_trailing_closure` — I need to pass `content:` explicitly where `onActivate:` is also passed. Let me fix both call sites.
+
+Both fixed. Let me re-run the full isolated verification suite: swiftlint, swiftformat, both typechecks, placeholder scan, and a forbidden-word grep.
+
+swiftlint 0, swiftformat 0/7, both typechecks 0, no forbidden words. Let me re-run the SwiftPM tests (Tests.swift changed) and the placeholder gate.
+
+27/27 tests pass; placeholder gate clean (count=0). Now let me run `xcodegen generate` to confirm the 8 files are enumerated, then attempt the real build to capture the deferred-gate evidence.
+
+`xcodegen generate` succeeds and enumerates all 8 files. Now let me capture the deferred-gate evidence: attempt the real `xcodebuild` (which depends on the absent KMP `Shared.xcframework`) and re-confirm signing identities.
+
+Confirmed the environmental block exactly as documented: `Shared.xcframework` absent, 0 signing identities, iOS build fails at **framework resolution** (exit 65) *before any Swift compiles* — zero InlineCallout errors. Let me check whether assembling the KMP framework is even feasible here (to optionally get the stronger in-module-compile evidence the most recent siblings captured).
+
+Java 17, gradlew, and network are all available — so the KMP framework *might* assemble (the most recent siblings got it building in ~7-8 min). Let me attempt it in the background to optionally capture the stronger in-module-compile evidence, while I prepare the log and pending-doc row in parallel.
+
+While Gradle assembles the framework, let me verify the test/app target membership split in the generated project (the globs should route `*Tests.swift` to the test targets).
+
+Membership is correct — each file has 2 target memberships (×2 pbxproj references = 4): non-test → both app targets, `*Tests.swift` → both test targets (per the project.yml globs), `.strings` → app resources. Let me check Gradle progress.
+
+Gradle is downloading the Kotlin/Native toolchain and building (7-8 min typical). Let me continue waiting.
+
+Gradle succeeded (`BUILD SUCCESSFUL in 7m 55s`) — the strongest evidence path is now available. Let me stage the framework and run the in-module iOS app-target compile to prove zero InlineCallout errors.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the in-module iOS app-target compile.
+
+The in-module build is compiling. Let me wait for it.
+
+In-module build failed (exit 65) — let me confirm the failures are pre-existing/unrelated and that InlineCallout has zero errors.
+
+Decisive result: the in-module iOS compile produces **0 InlineCallout errors** — the single build failure is a *pre-existing, unrelated* error in another agent's surface (`AISuggestNewGeofences.swift:129`, itself already tracked as macOS-pending). Let me capture the exact evidence lines and check for any InlineCallout warnings.
+
+Conclusive: **0 InlineCallout errors, 0 warnings** in-module; all 5 app-target files compiled; the sole failure is a pre-existing error in another agent's `AISuggestNewGeofences.swift` (commit `d30ee02f9`), plus 0 signing identities on macOS. Let me check git state before writing the log and committing.
+
+Clean state — only my 8 files are new; framework and xcodeproj are gitignored. Let me run the macOS in-module compile too (for both-SDK in-module evidence) while I draft the pending-doc row.
+
+Let me append the macOS-pending verification row while the macOS build runs.
+
+Now let me read the macOS in-module build result.
+
+Both iOS **and** macOS in-module compiles confirm **0 InlineCallout errors / 0 warnings**; the sole blocker on each is the same pre-existing `AISuggestNewGeofences.swift:129` error. Now let me write the evidence log.
+
+Log written. Let me update todos, clean up temp artifacts, and stage the deliverables for commit.
+
+All deliverables staged cleanly (8 surface files + log + pending-doc row), no gitignored artifacts. Committing.
+
+Committed as `16ebd594f`; tree clean (only gitignored build artifacts remain). Let me run one final seal-check of the gate trio on the committed files before declaring done.
+
+swiftlint 0, swiftformat 0/7, commit has all 10 files. The dir-wide placeholder count of 33 is from *other* surfaces — let me confirm zero are InlineCallout (my scoped scan earlier was 0).
+
+The dir-wide PowerShell scan is slow; my scoped scan already returned 0 for my files. Let me stop it and confirm via a fast direct grep of the placeholder patterns on my committed files.
+
+`GREP_EXIT=1` (no matches) — placeholder gate definitively clean (the earlier hang was transient system contention from the Gradle daemon). The earlier scoped `check-placeholders.ps1` also returned `PLACEHOLDER_COUNT=0`.
+
+All work is complete, verified, and committed. Final summary:
+
+## ✅ P4 · Shared surface · 0124 — InlineCallout (Apple) — STATUS=DONE
+
+Shipped the native SwiftUI parity of `web/src/components/feedback/InlineCallout.tsx` at `apps/apple/TeslaSync/shared-surfaces/InlineCallout.*` (8 files, committed `16ebd594f`).
+
+**Faithful parity (pure presentational — no fabricated states):** 4 severity variants (info/success/warning/danger) × 3 wrapper interactions (status `<div role="status">` / link `<a href>` / button `<button onClick>`, href-preferred), optional leading icon + trailing label/chevron, the web body-colour split (info/success → secondary; warning/danger → tinted). Bound through `InlineCalloutModel` (P1/S8), token-driven chrome (P1/S9), i18n facade (P1/S10), once-only `view.opened` (P1/S11). Reuses `TSTone`; aligns with the team's canonical `KpiOverviewFooterView` render. No loading/error/stale/offline chrome invented (the source has none — same rule as Delta/MetricCard/BatteryDelta).
+
+**Surface-attributable verification — all green on this host:**
+- `swiftc -typecheck` iOS 18 = 0, macOS 15 = 0 (Swift 6, `-strict-concurrency=complete`)
+- isolated SwiftPM `swift test` = **27/27**
+- `swiftlint --strict` 0/7 · `swiftformat --lint` 0/7 · placeholder `COUNT=0`
+- `xcodegen generate` enumerates all 8 files (48 pbxproj refs)
+- i18n: 0 web `t()` keys (anonymous surface) + 4 native severity-a11y keys via the facade
+- **In-module compile** (KMP `Shared.xcframework` assembled live via Gradle `BUILD SUCCESSFUL in 7m 55s` + staged): **0 InlineCallout errors / 0 warnings on both iOS and macOS** app targets.
+
+**Full-app `xcodebuild build test` gate — DEFERRED (macOS-pending), not failed by this code:** the only build error is a **pre-existing, unrelated** issue in another agent's surface (`AISuggestNewGeofences.swift:129`, commit `d30ee02f9`); the macOS scheme additionally needs the **0 code-signing identities** this runner lacks. Both are owned by `p4-apple/P99-0001-apple-acceptance-gate` on a signed `macos-latest` runner — recorded in `apps/macos-pending-verifications.md`. Evidence log ends `EXIT=0 / STATUS=DONE`.
+
+This is the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0124-InlineCallout.log | 108 +++++++++++
+ .../shared-surfaces/InlineCallout.Adapter.swift    | 209 +++++++++++++++++++++
+ .../InlineCallout.AdapterTests.swift               | 148 +++++++++++++++
+ .../shared-surfaces/InlineCallout.Model.swift      | 137 ++++++++++++++
+ .../shared-surfaces/InlineCallout.Previews.swift   |  72 +++++++
+ .../shared-surfaces/InlineCallout.Tests.swift      | 188 ++++++++++++++++++
+ .../shared-surfaces/InlineCallout.Views.swift      | 176 +++++++++++++++++
+ .../shared-surfaces/InlineCallout.strings          |  26 +++
+ .../TeslaSync/shared-surfaces/InlineCallout.swift  | 115 ++++++++++++
+ apps/macos-pending-verifications.md                |   2 +
+ 10 files changed, 1181 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0124-InlineCallout.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InlineCallout.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InlineCallout.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InlineCallout.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InlineCallout.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InlineCallout.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InlineCallout.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InlineCallout.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InlineCallout.swift

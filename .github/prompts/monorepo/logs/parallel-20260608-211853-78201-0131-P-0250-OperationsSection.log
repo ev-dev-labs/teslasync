@@ -1,0 +1,155 @@
+I'll start by exploring the repository structure to understand what exists and what I'm working with.
+
+Apple toolchain is available. Let me read the web source and explore the Apple app structure.
+
+This is a large established codebase with a clear per-surface pattern. Let me study the conventions, dependencies, and find a structurally similar sibling.
+
+There's an `AuditPanel` sibling (handles audit logs) and notification-related views. Let me examine the web `status` folder for sibling sections and study the closest native sibling's full file set.
+
+`InfrastructureSection`, `DataPipelineSection`, and `BackendStatusSection` are ported siblings using the same `AccordionSection` accordion pattern. Let me study the closest one (`InfrastructureSection`) completely — both web source and native port — to learn the exact web→native mapping.
+
+Excellent architecture. Let me read the remaining reference files and the shared infrastructure (tokens, i18n facade, table rendering).
+
+Now let me find the i18n facade definition, design tokens, and shared component library (the `TS*` components, `MetricCard`, `RadialGauge`, table rendering, `EmptyState`).
+
+Let me examine the shared component library and design tokens that the surfaces consume.
+
+Now let me read the specific shared components I'll need for OperationsSection: metrics, gauge, table, badge, empty-state, and the design tokens.
+
+The shared gauge (`TSRadialGauge`), metric card (`TSMetricCard`), and table (`TSDataTable`) exist. Now let me read the web API/types to get exact data shapes, plus the remaining native shared components and tokens.
+
+I now have all data shapes. Let me study `DataPipelineSection` (the closest sibling — a live-query surface with a table) and the shared components in parallel.
+
+This `DataPipelineSection` is the ideal template — live queries, accordion, metric cards, gauge, table, empty state, and all states. Let me read its remaining files plus the shared components.
+
+The pattern is crystal clear now. Let me read the remaining shared component APIs (table, badge, empty-state, skeleton, cards, typography) and design tokens to get exact signatures, plus the test conventions.
+
+Let me read the design tokens, remaining shared components (cards, typography, skeletons, buttons, chart palette), and the test/strings/preview conventions.
+
+Let me read the design tokens and the remaining shared components plus the test conventions.
+
+I have the full pattern. Let me verify the last few shared component signatures (cards, typography, skeleton, button, motion) before writing.
+
+I have the complete pattern. Let me check the lint/format configs and the i18n string-linter, then set up my todo tracking.
+
+Key findings: `xcodegen` is available but `.xcodeproj` must be generated; there's a PowerShell placeholder gate; and prior sibling/attempt logs exist. Let me inspect the sibling's passing gate log and check toolchain specifics.
+
+This sibling log is the key: the full `xcodebuild` is **deferred to P99** (blocked by unstaged `Shared.xcframework`, test-target wiring, and signing — all pre-existing), and the accepted host-runnable proof is real-SDK typecheck (iOS+macOS) + XCTest + lint/format/placeholder. Let me read the full sibling log to replicate the exact commands.
+
+I now fully understand the accepted methodology from the passing sibling gate: the full-app `xcodebuild` is **deferred to P99** (pre-existing `Shared.xcframework`/signing/test-wiring blockers), and the host-runnable proof is real-SDK typecheck (iOS+macOS) + isolated `swift test` + lint/format/placeholder + `xcodegen generate`. Let me set up tracking and verify the shared components are import-isolated.
+
+Shared components are import-isolated (only system frameworks) and swiftlint scoping works. I'll replicate the sibling's accepted methodology. Let me write the plan and start creating files.
+
+Now let me create the Adapter file (pure models, formatters, status classification, success-rate, a11y).
+
+Now the Model file (telemetry, connection, input, resolved/projection, source, observable model, strings facade).
+
+Now the main accordion view.
+
+Now the Views file (subviews, sections, states).
+
+Now the Tables file (notification + audit `TSDataTable`s).
+
+Now the strings catalog, previews, and tests.
+
+Now the comprehensive test suite.
+
+All 8 files created. Now let me run the gates, starting with format and lint.
+
+Two long lines in Tests.swift. Let me view and fix them.
+
+Let me auto-format with swiftformat (the ecosystem tool) then re-lint.
+
+Format passes. Now swiftlint --strict on the surface files.
+
+File-length: Tests is 420 > 400 limit. Let me trim the header comment and tighten to get under 400.
+
+Need 8 more lines off. Let me condense the formatter tests by merging closely-related cases.
+
+One line over. Let me view the tail and remove a single blank line.
+
+Format and lint pass (0/0). Now the placeholder gate. Let me inspect the script's parameters.
+
+The script scans a directory recursively. I'll scan exactly my surface files via a temp dir, plus run the self-test (as the sibling did). Let me also check the pattern file to be safe.
+
+Self-test passes. Now let me scan exactly my surface files (via temp dir) and double-check for any pattern hits.
+
+Placeholder gate passes (COUNT=0). Now the real-SDK typechecks. Let me assemble the file set (surface + shared Components + Design + Tokens) and typecheck against the iOS 18 SDK.
+
+Components reference `Units` (from another Sources subdir), so they're not standalone. Let me locate `Units`/`MeasurementSystem` and find which Sources files depend on the `Shared` framework (those can't be typechecked without it).
+
+`Units` lives in a `Shared`-importing file. My surface doesn't use `UnitFormatters`. Let me find exactly which Components reference `Units` (or other Shared-only symbols) so I can typecheck my surface against only its real dependencies.
+
+Only `UnitFormatters.swift` references the `Shared`-backed `Units` type, and my surface doesn't use it. Let me typecheck my surface against the real shared library (excluding that one Shared-dependent file).
+
+iOS 18 typecheck passes. Now macOS 15.
+
+Both typechecks pass (iOS 18 + macOS 15, Swift 6 strict concurrency). Now the isolated `swift test`. Let me set up a temporary SwiftPM package binding the real shared components + my surface + tests.
+
+Now run `swift test` in the isolated package.
+
+All 37 tests pass (TEST_EXIT=0). Now `xcodegen generate` to confirm the new files wire into the project spec.
+
+All gates green: format, lint, placeholder, iOS+macOS typecheck, 37 tests, xcodegen. Let me capture the deterministic evidence that the deferred full-app build is blocked only by the pre-existing framework gap (not my code), and clean up the temp package.
+
+Deterministic evidence confirms the deferred build is blocked solely by the pre-existing missing `Shared.xcframework`, not my code. Let me gather toolchain versions and write the gate log.
+
+All gates green. Now let me write the gate log following the accepted sibling format.
+
+All gates green and log written. Let me verify git status before committing (ensure only my 8 files + log, and the generated `.xcodeproj` is ignored).
+
+Clean — exactly my 8 files + the log (the generated `.xcodeproj` is git-ignored). Committing now.
+
+Committed. Let me do a final clean-tree confirmation and mark complete.
+
+Complete. All work is committed and the working tree is clean.
+
+## Summary
+
+Shipped a production-polished native SwiftUI **`OperationsSection`** at parity with `web/src/features/system/components/status/OperationsSection.tsx`, following the established feature-view pattern (verified against the passing sibling `DataPipelineSection` 0242).
+
+**8 files** (`apps/apple/TeslaSync/feature-views/OperationsSection.*`):
+- **Adapter** — pure models, status classification (web `getStatusIcon`/`statusTextClass`), number/int/percent/date formatters (ports of `numberFormat.ts`/`dateFormat.ts`), success-rate + a11y builders
+- **Model** — P1/S11 telemetry seam, connectivity axis, input/resolved/projection, P1/S8 source seam, `@Observable` model (stale auto-refresh), P1/S10 strings facade
+- **swift/Views/Tables** — accordion chrome, delivery block (4 metric cards + success radial gauge + recent-notifications table/empty), audit block (table/empty), loading/error/freshness chrome
+- **Previews / strings / Tests** — 7 state previews, full i18n catalog, 8 suites / 37 tests
+
+**Every state renders** (loading/ready/empty/error/stale/offline); 3 polling queries bind through the P1/S8 seam (no view networking); `view.opened` telemetry emitted.
+
+**Gates (all host-runnable green):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | FORMAT_EXIT=0 |
+| swiftlint --strict | LINT_EXIT=0 |
+| check-placeholders (pwsh) | COUNT=0, PLACEHOLDER_EXIT=0 |
+| swiftc -typecheck iOS 18 (real SDK, Swift 6, strict concurrency) | IOS_TYPECHECK_EXIT=0 |
+| swiftc -typecheck macOS 15 | MAC_TYPECHECK_EXIT=0 |
+| swift test (isolated pkg vs real shared Components/Tokens) | 37/37, TEST_EXIT=0 |
+| xcodegen generate | XCODEGEN_EXIT=0 |
+
+The full-app `xcodebuild build test` is **honestly deferred to P99** (blocked solely by the pre-existing unstaged `Shared.xcframework` — proven by a deterministic single-target build emitting exactly that one framework error, not my code), matching the accepted sibling methodology. Log ends `EXIT=0 / STATUS=DONE`. Committed as `3859bc914`.
+
+
+
+The task is fully complete — all 10 todos done, all gates green, committed with a clean working tree. Marking complete.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0250-OperationsSection.log | 121 +++++++
+ .../feature-views/OperationsSection.Adapter.swift  | 268 ++++++++++++++
+ .../feature-views/OperationsSection.Model.swift    | 319 ++++++++++++++++
+ .../feature-views/OperationsSection.Previews.swift | 148 ++++++++
+ .../feature-views/OperationsSection.Tables.swift   | 186 ++++++++++
+ .../feature-views/OperationsSection.Tests.swift    | 399 +++++++++++++++++++++
+ .../feature-views/OperationsSection.Views.swift    | 335 +++++++++++++++++
+ .../feature-views/OperationsSection.strings        |  63 ++++
+ .../feature-views/OperationsSection.swift          | 171 +++++++++
+ 9 files changed, 2010 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0250-OperationsSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/OperationsSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OperationsSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OperationsSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OperationsSection.Tables.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OperationsSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OperationsSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OperationsSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/OperationsSection.swift

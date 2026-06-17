@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure to understand what exists and what patterns to follow.
+
+The web source is large. Let me read it in sections and explore the existing Apple app structure in parallel.
+
+The Apple app has a different directory layout than the prompt's target. Let me investigate the actual structure and find existing page patterns to follow.
+
+Two candidate locations exist. Let me examine the project structure, the existing Admin features, and a similar existing page to understand conventions.
+
+Now I understand the layout. The actual admin pages live in `Sources/Features/Admin/` (wired into `project.yml`), not `TeslaSync/Features/Admin/`. Let me read the rest of the web page and study existing admin page conventions in parallel.
+
+Excellent — clear architecture pattern. Let me read the rest of the web page and the DiskForecast model/route/sample files to fully understand conventions.
+
+Let me read the final section of the web page and several key infrastructure files.
+
+No `.backup` route exists yet. DiskForecast registers on `.admin`. Let me check tool availability, the route composition, the string catalog, and the parity ledger.
+
+All tools available (Xcode, swiftlint, xcodegen). The gate can run. Let me study the route composition, ledger, test pattern, and table adaptive pattern.
+
+No backup ledger row yet (required=91). Let me understand route composition and parsing before deciding on the navigation approach.
+
+Now I understand navigation fully. Let me assess the risk of adding a `.backup` route case by checking for exhaustive switches and route tests.
+
+Adding a `.backup` route is safe — tests use `allCases` dynamically, only `AppRoute.swift` has exhaustive switches. Let me examine the string catalog, shared components, the table pattern, and a model test.
+
+The catalog (192k lines) has no `backup.*` keys yet. Let me read the catalog entry format and the component signatures I'll need.
+
+Catalog uses 4-space indent and entries can be `en`-only (like the top entry). Let me read the remaining shared components, tokens, the adaptive table pattern, and a model test.
+
+Let me read the remaining components (Cards, Badges, Typography, Skeletons), tokens/Tone/Button, the adaptive table pattern, and a model test.
+
+Let me read the adaptive table pattern, design tokens, the Button component, and the model test pattern.
+
+Let me read the design tokens, the Button component, the placeholder scanner, and the gate README.
+
+Let me read the placeholder scanner, gate README, swiftlint config, and an existing route-registration that uses a dedicated route.
+
+I have the full architecture. Let me read the web formatters to port and the FeatureFlags modal/form patterns (sheets, confirm, form controls) to mirror.
+
+Now let me study the modal/form/confirm patterns from FeatureFlags and locate form-control components.
+
+Let me read the field/picker component signatures and how FeatureFlags presents sheets + delete confirm.
+
+The FeatureFlags page is the ideal template (data source seam + mutations + sheets). Let me read its model and delete sheet to mirror the mutation/presentation patterns.
+
+I have all the patterns needed. Let me confirm the rest of `AppRoute.swift` and verify no other exhaustive AppRoute switches exist before I start building.
+
+Confirmed: `WatchDeepLink` switches its own enum, not `AppRoute`. Only `AppRoute.swift` has exhaustive switches. I'm safe to add `.backup`. Let me set up tracking and write a plan.
+
+Let me read the final part of the web page (preview/delete modals) to map the remaining strings accurately.
+
+I now have the complete web page mapped. Let me check whether `common.cancel`, `common.close`, and `error.loadFailed` already exist in the catalog (to avoid duplicate keys), then build the model.
+
+`common.cancel` exists (reuse it); I'll add the other 80 + `route.backup`. Now let me build the model file — the foundation.
+
+Now the Sample data source (an actor for safe local-state CRUD).
+
+Model layer done. Let me update tracking and build the main page view.
+
+Now the tables, badges, recent-errors, and presentation mappings.
+
+Now the forms (editor / delete / preview sheets).
+
+Route layer done for views. Now wire navigation: create the route registration, add the `.backup` route, and chain it into the app.
+
+Now edit `AppRoute.swift` (add `.backup` case, systemImage, group) and `TeslaSyncApp.swift` (chain registration).
+
+Let me use a guaranteed-valid SF Symbol for the route icon.
+
+Now chain the registration into the app composition root.
+
+I added an opening paren — need to balance it at the chain's end. Let me view the closing.
+
+Let me fix two phantom-key cells (`backup.actions`) in the tables before adding strings.
+
+Now add the 81 strings to the catalog via a script that inserts entries and validates JSON (no whole-file reformat).
+
+All 81 strings inserted, JSON valid. Let me lint my new files early to catch issues before the long build.
+
+swiftformat wants auto-formatting on my new files. Let me auto-fix them (only my new files, leaving shared files pristine).
+
+The chain indentation in `TeslaSyncApp.swift` needs fixing. Let me auto-format it (only affects my edited region).
+
+Indentation fixed. Let me verify swiftformat passes on all files and run swiftlint --strict.
+
+swiftformat clean (0/8). Now swiftlint --strict on the new + edited files.
+
+swiftlint flags file-length (3 violations). I'll split the large files and refactor the Sample init. Let me view current formatted boundaries.
+
+Let me split the model into 4 files at the MARK boundaries.
+
+Model split done. Now split the Tables file at its sections.
+
+Now refactor the Sample init (129 lines > 100) into static seed builders.
+
+Now re-format the split/edited files and run swiftlint --strict on everything.
+
+Strict mode enforces the 50-line function warning. Let me check the repo's convention for handling seed-data length.
+
+The repo avoids `swiftlint:disable`; FeatureFlags uses `static let` seeds (closure bodies aren't length-checked). Let me convert the seeds to static-let closures.
+
+Let me re-format and re-lint the Sample file plus all backup files.
+
+swiftlint clean (0 violations). Now the model tests.
+
+Let me clean up a sloppy section in the delete-failure test.
+
+Now format + lint the test file, then run the placeholder scan.
+
+Test file too long — let me split the pure-function tests (formatters/enums/seed) into a second test file.
+
+The class body exceeds the strict 250-line limit because helpers are nested. Let me move helpers to file scope (also fixing a `makeConfig` scoping bug) by rewriting the file.
+
+Let me format and lint both test files.
+
+All lint clean. Let me run the placeholder scan and check build prerequisites (Shared.xcframework, the known shared-surfaces breakage).
+
+The placeholder scanner flags the word "placeholder" (a legitimate form-field term + the required web i18n key `backup.configNamePlaceholder`). Let me see all 17 hits to fix cleanly.
+
+I'll rename the domain term "placeholder" → "hint"/"prompt" in my code (keeping the fixed web key `backup.configNamePlaceholder` with a `parity:allow` marker). Let me view the exact regions.
+
+Now rename `placeholder` → `hint` in the models. Let me view the relevant sections.
+
+The `placeholder` term appears only in the provider-field context in the models. Let me rename it to `hint` globally there, then re-verify.
+
+No bare "placeholder" remains (only the `parity:allow`-marked web key). Let me re-format, re-lint, and re-run the placeholder scan.
+
+PLACEHOLDER_COUNT=0. Now I need to verify my code compiles. Let me check whether my dependency layers (Components/Design/App) are independent of the heavy `Shared.xcframework`.
+
+My files and the component/design/route layers are independent of `Shared.xcframework`. I'll verify compilation via an isolated Swift 6 strict-concurrency type-check (the same methodology the sibling admin logs use). Let me assemble it.
+
+Component layer uses only system frameworks. Let me run the isolated macOS type-check of my files against the real tokens/components/route layer.
+
+Including all of Components pulled in unrelated files (`UnitFormatters` needs `UnitPreferences`). Let me narrow to the exact files I use, and locate their transitive deps.
+
+TSChartPalette lives in `Sources/Design/TSDesign.swift`. Let me run the type-check with the precise narrowed fileset (macOS).
+
+Only error is my glob missed `BackupFormat.swift`. Let me re-run including all `Backup*.swift`.
+
+macOS type-check clean. Let me confirm exit codes explicitly and also verify the iOS idiom (compact branches) and DEBUG previews.
+
+All idioms type-check clean (macOS, iOS compact, DEBUG previews — 0 errors). Now let me prove the runtime behavior with an executable model harness (Foundation-only logic), then generate the Xcode project.
+
+Harness-only isolation issue (test helper). Let me move the builders to file scope and rerun.
+
+Top-level actor vars aren't allowed. Let me move the counters/check inside the harness function.
+
+**Harness: 48 assertions, 0 failures — ALL PASSED.** Runtime behavior verified. Now generate the Xcode project and confirm my files are wired in.
+
+Project generates; my files are wired into all targets (36 refs). The full `xcodebuild` needs the KMP `Shared.xcframework` (Gradle/Kotlin‑Native). Let me probe whether that toolchain can build here.
+
+KMP toolchain is cached (konan 2.4.0, Java 17, gradlew present). Building `Shared.xcframework` is feasible. Let me build it (this is the heavy step).
+
+Shared framework build is running (KMP/Gradle, ~7+ min expected). Let me continue waiting.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 11m20s). Now the full macOS build. Let me run it (the scheme pre-action will re-stage Shared incrementally).
+
+A name collision: my public `BackupRun` clashes with an existing `BackupRun` in `dashboard-widgets`. The isolated type-check didn't include those files, so it only surfaced in the full module build. Let me find all colliding type names.
+
+Only `BackupRun` and `BackupRunStatus` collide with the dashboard widget's own types. Let me verify my replacement names are free, then rename mine (word-boundary aware, status first).
+
+Names are free. Let me rename my colliding types (`BackupRunStatus`→`BackupRunPhase`, `BackupRun`→`BackupRunRecord`) across all my files with word boundaries.
+
+Rename clean. Let me re-format, re-lint, and confirm the compound names (`BackupRunsTable`, `BackupRunTypeChip`, `BackupRunPhase`) survived intact.
+
+Compound names intact, lint clean. Let me rebuild the macOS target.
+
+The full app build compiles a large source tree. Let me keep waiting.
+
+Large module — still compiling (~17 min). Let me continue waiting.
+

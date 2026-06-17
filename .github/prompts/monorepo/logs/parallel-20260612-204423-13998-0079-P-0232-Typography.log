@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and checking the capability requirements for this Apple/SwiftUI task.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Let me explore the Apple app structure and the web source.
+
+Let me read the web Typography source (the spec) and examine existing native shared-surfaces for conventions.
+
+The web `Typography` is a pure presentational typography primitive system. Let me check if a native Typography already exists and study a representative existing surface (Accordion) to learn the conventions.
+
+Typography native doesn't exist yet. Let me read the web tokens spec (the data source for Typography) and a complete reference surface (Accordion) to learn conventions.
+
+Let me read the web tokens.ts (Typography's actual data spec) and the remaining Accordion reference files.
+
+Now I understand the rigorous pattern. Typography is a **pure presentational primitive** (like Accordion) — no data fetch, so no loading/error/stale/offline states; it reproduces the real branches (the type roles/variants). Let me find the native token system (P1/S9), i18n, and telemetry infrastructure.
+
+There's an existing `Sources/Components/UI/Typography.swift` and the `Theme.swift` token system. Let me read both, plus the Design directory.
+
+There's an existing design-system Typography in `Sources/`. The shared-surface is a separate P4 parity artifact. Let me read the token system (Theme.swift, TSDesign.swift) and project.yml to understand targets.
+
+The tokens are generated. Let me find the generated Tokens.swift and project.yml to understand available tokens and target membership.
+
+Now I have the token system. Let me check `project.yml` for target/source membership and whether new shared-surface files are auto-included, plus check for `pwsh` (the gate is PowerShell).
+
+Key findings: shared-surfaces are glob-included (new `Typography.*.swift` auto-compile; `*Tests.swift` route to test bundles), and `pwsh`, `xcodegen`, `check-placeholders.ps1` are all available. Let me read the remaining Accordion reference files and check build feasibility (Shared.xcframework).
+
+Let me read the remaining Accordion test/preview files and the placeholder checker + pending-verifications doc to understand the full template and build expectations.
+
+Let me read the placeholder patterns, swiftlint/swiftformat configs, and find a pure-presentational sibling surface (cited precedents: Delta, MetricCard, InlineCallout, StaggerItem) to match the exact stateless pattern.
+
+Critical: the word "Placeholder" (and TODO/FIXME/XXX/"Coming soon"/"Lorem ipsum"/"not implemented") is forbidden by the checker in ALL `.swift` files. I'll avoid those everywhere. VisuallyHidden (sibling 0003) is the closest pure-presentational analog. Let me read it fully as the template.
+
+VisuallyHidden invented an inspector with data states (it has a live announcer feed). Typography, like Accordion, is purely presentational — Accordion's "reproduce only real branches" is the correct template. Let me confirm the stateless pattern with StaggerItem (0194) and InlineCallout, then build.
+
+I now have the complete pattern. Let me check the pending-verifications doc (build feasibility evidence), scan for native name collisions, and inspect the KMP shared build dependency.
+
+No name collisions. The pending-verifications doc confirms the full KMP+Xcode gate is a deferred CI verification (Kotlin/Native toolchain), while host-runnable gates (swiftlint/swiftformat/placeholders) are green locally. I have a complete picture. Let me set up the plan and todos, then build.
+
+Now I'll build the surface. Starting with the Foundation-only core (Adapter + Projection).
+
+Now the projection (pure resolver) — the data adapter the acceptance asks for.
+
+Now the Model (i18n facade + telemetry seam + `@Observable` state-holder).
+
+Now the SwiftUI rendering layer (style→modifier mapping, styled text, empty leaf, section container).
+
+Two lines in `TypographyEmptyText` would exceed 120 cols. Let me refactor with stored style constants.
+
+Now the gallery specimen rows.
+
+Now the public surface + the two core parity components.
+
+Now the 11 convenience wrappers.
+
+Now the i18n strings and the previews.
+
+Now the tests — pure-core adapter tests first.
+
+I introduced a `.init(for:)` shorthand that the `explicit_init` lint rule forbids, and some role-assert lines would exceed 120 cols. Let me refactor the test helpers to take the role directly.
+
+Now the model/view/strings tests.
+
+All 10 files created. Now let me verify. First, run SwiftFormat to normalize my files (using the repo config).
+
+SwiftFormat found 3 auto-fixable issues. Let me apply formatting (write mode) and review the changes.
+
+New files are untracked, so no diff. Let me verify the two fixes directly and re-run the format lint.
+
+SwiftFormat passes (0/10). Now SwiftLint `--strict` on my files.
+
+One issue: the 13-case `style(for:)` switch trips `cyclomatic_complexity` (13 > 10) under `--strict`. A pure lookup table as a static dictionary is cleaner than a `swiftlint:disable`. Let me refactor.
+
+`mk` referenced before declaration is fine in Swift. Let me re-format (the trailing comma may need adjusting) and re-run both linters.
+
+SwiftLint `--strict`: **0 violations**. SwiftFormat: **0/10**. Now the placeholder gate — I'll scan my actual files via a temp dir (the gate's literal `Typography` path matches no directory, so this is the honest scan).
+
+The placeholder checker's `XXX` pattern matches my `xxxl` enum case (three x's). I'll rename the multi-step sizes to a numeric-suffix scheme (`xs2`/`xl2`/`xl3`) to avoid the triple-x. Let me find all references.
+
+I'll rename `xxs`/`xxl`/`xxxl` → `xs2`/`xl2`/`xl3` (consistent numeric suffix, no triple-x). Order matters in sed since `xxxl` contains `xxl`.
+
+All references updated cleanly. Let me re-run all three host gates to confirm green.
+
+Placeholders clean (COUNT=0), SwiftFormat clean. Re-running SwiftLint after the rename, then the isolated type-check.
+
+SwiftLint `--strict`: **0 violations**. Now the isolated Swift 6 type-check — I'll build a `TeslaSync` module from the design tokens + my source files (strict concurrency), then type-check the tests against it with `@testable`.
+
+Step 1 passed — all production sources compile under Swift 6 strict concurrency. Now type-check the tests against the module.
+
+The errors are exclusively the XCTest `XCTAssert*` C macros (function-like macros unavailable under raw `swiftc` — an isolated-toolchain limitation, not my code). Crucially, no errors reference my symbols — `@testable import` resolved them all. Let me confirm by filtering out the macro noise.
+
+All remaining errors are downstream of the unresolved `XCTAssertEqual` macro (contextual-base inference for the expected-value literal) — not real issues. To be certain the real test build will pass, let me confirm `Font.Weight` and `AccessibilityHeadingLevel` are `Equatable` (a standalone check needing no XCTest).
+
+Both types are `Equatable` — the real test target will compile. My isolated Swift 6 verification confirms all production sources and test references are sound. Now let me attempt the actual `xcodebuild` gate. First, generate the project.
+
+Project generated. Let me confirm my files are members and assess the KMP `Shared.xcframework` build dependency (the scheme pre-action).
+
+My files are members (72 refs), iPhone 16 sim is booted, java present. The full gate needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native pre-action). Let me attempt building it — this is the critical gating dependency.
+
+The KMP toolchain **works** here — it downloaded Kotlin/Native, compiled, and built the debug XCFramework; my 240s timeout only cut off the release link (most Kotlin tasks are now cached). Let me finish building `Shared.xcframework` (warm daemon should be faster).
+
+`Shared.xcframework` built and staged. Now the real `xcodebuild`. Let me first build the full iOS app (proves my surface integrates), streaming to a log.
+
+Build started in background. Let me monitor its progress.
+
+Real integration error: my `Typography.swift` basename collides with the existing design-system `Sources/Components/UI/Typography.swift` (Swift requires unique filenames per target). Let me see how other surfaces with a same-named Sources file handle this.
+
+Found it: `Typography.swift` is the only collision — the design system pluralizes its files (Badges/Buttons/Cards) to avoid clashing with singular shared-surface names, but `Typography` stayed singular in both. Since I can't modify the out-of-scope Sources file, I'll rename my main file to `Typography.Surface.swift` (still matches the allowed `Typography.*`).
+
+Let me fix the file's header comment to match its new name, then regenerate and rebuild.
+
+Renamed file passes lint. Project regenerated. Rebuilding the iOS app (this compiles the full app + my surface).
+
+Build is compiling (grep only surfaces errors/results). Let me check progress via the raw log while it continues.
+
+Compiling steadily, 0 errors so far. Let me continue waiting for the build to finish.
+
+Build failed. Let me extract the actual errors and determine if they're mine.
+
+The swift-frontend **crashed** (compiler abort), not a type error. Let me find which file/expression triggered it.
+
+The crash is a swift-frontend compiler abort inside a batch of **pre-existing** C/D-named files (CronParser, Currency, CostSummaryCards…) — not my Typography files. Let me capture the exact crash reason and the source frame to confirm it's not mine.
+
+The crash is an **IRGen compiler abort** on `AppearanceSettings.Controls.swift` — a pre-existing feature-view file I never touched (failing on a `@MainActor` closure reabstraction thunk, a known Swift 6 toolchain bug class). Let me confirm it's unrelated to my change and prove it's pre-existing by rebuilding without my files.
+
+Confirmed: the crash file is pre-existing (untouched by me); my changes are exclusively the Typography files. The crashing symbol is an `@isolated(any)`/`@MainActor` closure reabstraction thunk — a known Swift 6 IRGen toolchain bug. Let me prove it's independent of my change by rebuilding **without** my files.
+
+Control build running (without my files). Let me wait for it to reach the same crash point.
+
+Control build (without my files) **also failed**. Let me confirm it's the identical pre-existing IRGen crash.
+
+**Proven**: the control build (without my files) crashes at the identical location — `AppearanceSettings.Controls.swift` IRGen, same SIL thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`. The build failure is a pre-existing Swift 6 toolchain crash, fully independent of my surface. Let me restore my files and regenerate.
+
+All 11 files restored (72 refs). Now let me run the final consolidated host gates and gather metrics for the log.
+
+All host gates green (swiftformat 0/10, swiftlint 0 violations, 1619 lines across 10 files, largest 235 — all under budget). Let me re-run the isolated Swift 6 build (with renamed file) and placeholders to capture fresh output for the log.
+
+All controllable gates are green: **swiftformat 0/10**, **swiftlint --strict 0 violations**, **placeholders COUNT=0**, **isolated Swift 6 strict-concurrency build EXIT=0**. The full xcodebuild is blocked by a proven pre-existing toolchain crash. Let me write the gate log.
+
+Now let me verify the commit scope is clean (gitignored build artifacts excluded), then commit.
+
+Clean scope — only the 11 Typography files + log; build artifacts are gitignored. Committing now.
+
+Committed cleanly (HEAD `821c82d84`, 12 files). Let me finalize todos and clean up temp files.
+
+The Typography P4 shared surface is complete and committed. Final summary:
+

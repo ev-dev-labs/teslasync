@@ -1,0 +1,228 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+Now let me explore the Apple app structure, parity manifest, and existing patterns.
+
+The real convention is `Sources/Features/<Domain>/`. Let me examine the existing charging features and a reference "done" page pattern.
+
+A `PowersharePage` already exists in Charging as a reference. Let me study this complete pattern (page, model, sections, route registration).
+
+The `Sources` root is at `apps/apple/Sources`. Let me read the reference Powershare page files there.
+
+Excellent reference pattern. Let me read the remaining Powershare files plus the models, sections, and sample data source.
+
+Now let me understand the routing system, chart wrappers, SI converters, and an existing charging-sessions data source.
+
+Let me check existing energy/kWh usage, the Currency equivalent, and a categorical bar chart example.
+
+Let me examine the charging data layer (KMP repo + any existing session data source), the Currency formatter, and how route registrations are composed.
+
+The Battery `EnergyPage` loads charging sessions — the closest analog. Let me study its models, data source, and derivations, plus the KMP charging models.
+
+All 11 `charging.heatmap.*` keys may already exist. Let me verify exactly which keys are present.
+
+Two namespaces exist. The native keys (e.g. `charging.heatmap.title`) don't exist yet — only `translation.*` mirrors do. Let me grab exact en values and find a clean insertion point.
+
+Let me confirm the exact component signatures and design tokens I'll use, plus remaining string values.
+
+Let me read how the sibling EnergyPage renders bar charts, plus confirm `TSSelect`, `TSChartPalette`, `TSIconBox`, and typography signatures.
+
+Let me read the final pieces: typography, currency, palette, design tokens, and a model-test example.
+
+Let me find how route registrations are composed into the app shell and review a test pattern.
+
+I have the full architecture. Let me record a plan, then inspect the gate scripts, swiftlint config, test target config, and an existing log format.
+
+Let me read the Powershare log (format reference), the placeholder patterns, swiftlint config, and the test target config.
+
+The Powershare log is the perfect template. Let me confirm the build prerequisites: Shared.xcframework existence, test target/scheme config, and the swift placeholder patterns.
+
+`Shared.xcframework` is missing (only `.gitkeep`) and there's no `.xcodeproj` yet. Let me check the framework build script and JDK/Gradle availability, plus the project.yml dependency wiring.
+
+JDK 17, gradlew, and the build script are all present. The Shared.xcframework build is the long pole (~7 min) — let me read the script and start it in the background now while I implement.
+
+Starting the Shared.xcframework build now (the ~7-min long pole) so it's ready for the gate while I implement.
+
+While that builds, let me read the test target/scheme config in project.yml.
+
+Let me check the framework build progress and find the test target config.
+
+The gradle build is progressing (linking, mostly cached). Let me verify whether sibling feature pages import Swift Charts directly and double-check PageContainer's error handling.
+
+Let me check MiniCharts and the data-display Metrics for a horizontal/categorical bar option before choosing the chart approach.
+
+The gradle build is progressing. Let me verify the shared unit-pref labels (for kWh/min forced conversion at the display boundary) before coding.
+
+Both `kWh` and `min` labels exist. Let me confirm `UnitPreferences.metric` so I can build forced-unit prefs safely.
+
+The gradle build should be nearly done. Let me confirm the framework is staged, then start implementing.
+
+The gradle build is finishing the release framework. Let me start implementing now — beginning with the models + pure derivations.
+
+Now the Format helpers. Let me first verify the web `fmtInt`/`fmtNumber` semantics so I match precisely.
+
+`fmtInt` is `fmtNumber(v, 0)`. Now the Format helpers (pure, SI stays out — conversion prefs only).
+
+Let me check how sibling apple pages handle the web `RangePicker` header control and whether a shared range filter exists.
+
+A `TSRangePicker` exists and sibling pages use range state. Let me read the picker signature and how SleepEfficiency wires the range.
+
+The apple `TSRangePicker` is a numeric slider, not the web's date-range preset picker. Let me see how SleepEfficiency (a sibling with range state) reproduces the web `RangePicker`.
+
+SleepEfficiency models the web `RangePicker` as a preset enum + `TSSelect`. Let me read that pattern and the web's range presets to mirror them.
+
+Let me find the web range presets to mirror, and confirm the `SleepRange` enum shape.
+
+The web shows presets Today / 7d / 30d / MTD / YTD / All (default All). Let me grab their exact labels to mirror.
+
+The web reuses shared `date.preset.*` i18n keys. Let me check if those already exist in the apple catalog so I can reuse them.
+
+Now the PageModel + DataSource seam, with the range-preset enum (mirroring the SleepEfficiency sibling).
+
+Now the sample/empty/failing data sources with representative sessions (clustered for a clear favorite + multiple locations).
+
+Let me check the framework build status, then continue with the view layer.
+
+The framework is still linking (almost done). Let me write the main Page view while it finishes.
+
+Now let me check the swiftlint config to avoid violations, then check the framework build.
+
+swiftlint: code lines ≤120 (comments ignored), `--strict`. The framework is on the final macOS link. Now the Sections file (the bulk of the UI).
+
+Now the native Swift Charts horizontal bar chart for the locations panel.
+
+Now the route registration, mirroring the Powershare sibling.
+
+Now wiring the route into `AppRoute` (case + path + icon + group). Let me make these edits.
+
+Now wire the registration into the app shell, and check the framework build + any other exhaustive `AppRoute` switches.
+
+Framework is staged (149M). Let me check `WatchDeepLink.swift` for an exhaustive `AppRoute` switch that my new case might break.
+
+`WatchDeepLink` is its own enum — unaffected. Let me confirm no other exhaustive `AppRoute` switch exists by checking where the sibling `.powershare` appears in switches.
+
+No other exhaustive switches — only `AppRoute.swift`, fully updated. Now let me add the native string keys. I'll generate the exact JSON block first.
+
+Now let me insert that block after the `common.noData` entry and validate the JSON.
+
+Strings inserted and JSON valid (23 keys). Let me update progress and write the test suite.
+
+Now let me run the fast gates first — swiftlint and the placeholder scan on the new files.
+
+Several lint issues to fix: line lengths, `empty_count`, and test type-body-length. Let me view the exact lines.
+
+Let me fix the model line-lengths and add a lint-safe `hasCharging` helper.
+
+Now fix the heatmap cell (`empty_count` + line length) by using `hasCharging` and a shared label.
+
+Now fix `Sample.swift` long lines by wrapping the session rows and the two data-source signatures via a script.
+
+Now let me split the test file (type-body-length) into two classes and fix the long lines. Let me remove and recreate.
+
+Now let me re-run swiftlint on all the new/edited files.
+
+swiftlint clean (0 violations). Now the placeholder scan, then I'll generate the project and build.
+
+Placeholder scan clean (EXIT=0). Now let me generate the Xcode project and start the macOS build.
+
+Project generated. Let me check the Xcode toolchain version and the documented pre-existing environment constraints before building.
+
+Xcode 26.5 / Swift 6.3.2 — matches the Powershare log's toolchain (so the documented pre-existing `Input.Previews.swift` issue applies). Let me build the macOS target, isolating that pre-existing file.
+
+The macOS build is compiling (6400+ Swift files, clean build). Let me wait and check progress.
+
+No errors yet; it's in the module-emit phase. Let me keep waiting for the build to finish.
+
+Module emitted with no errors (my code type-checks). It's now in the object-compile phase. Let me keep waiting.
+
+Still compiling, no errors. Let me continue waiting for the link phase.
+
+Still compiling cleanly. Let me keep waiting for completion.
+
+Progressing well through compilation (no errors). Let me continue waiting for the link phase.
+
+Still compiling cleanly (21.8k log lines, 0 errors). Let me continue waiting.
+
+Now linking (compile done, 0 errors). Let me wait for the final result.
+
+**macOS BUILD SUCCEEDED** (exit 0, zero errors). Let me confirm my files compiled, then run the tests.
+
+All 8 source files compiled, 0 errors. Now let me run my test classes on the macOS test target.
+
+A pre-existing test file (`TimelinePageModelTests.swift`) has a Swift 6.3 main-actor isolation error — unrelated to my change. Let me confirm my files are the only ones I changed, then find all such pre-existing broken test files in one pass.
+
+Confirmed — only my files changed; `TimelinePageModelTests.swift` is pre-existing. Let me find all such pre-existing broken test files in one `build-for-testing` pass.
+
+Another pre-existing one: `VehicleCostPageModelTests.swift`. Let me confirm it's the same out-of-scope category and keep iterating.
+
+Confirmed pre-existing (same Swift 6.3 isolation category, unmodified by me). These surface one per build. Let me auto-discover all pre-existing broken test files with a loop (guarding against ever excluding my own files).
+
+Test bundle compiles with 4 pre-existing files isolated. Now let me run my two test classes.
+
+**TEST SUCCEEDED** — 26/26 passed (16 derivations + 10 model), 0 failures. Now let me build the iOS target to verify the adaptive `#if os(iOS)` branch compiles. Let me check available simulators first.
+
+`iPhone 17 Pro` is available. Let me build the iOS target to verify the adaptive `#if os(iOS)` compact branch compiles.
+
+iOS build is compiling (long, like macOS). While it runs, let me prepare the ledger update. Let me inspect the ledger structure and the Powershare rows.
+
+I'll add two ledger rows (macOS + iOS). Let me check the raw formatting around the Powershare rows for a clean targeted insert.
+
+Ledger updated (2 rows, 24/24). iOS build is at the link phase with 0 errors. Let me wait for it to finish.
+
+Still linking (0 errors). Let me wait for the iOS build to complete.
+
+The main app target is now compiling (0 errors). Let me continue waiting.
+
+**iOS BUILD SUCCEEDED** (exit 0). Both platforms build clean. Let me confirm my files compiled for iOS and run the full repo swiftlint to match the gate evidence.
+
+All 8 files compiled for iOS too (0 errors). Let me update progress and check the full swiftlint.
+
+Full swiftlint: **0 violations in 6109 files**. All gates pass. Now let me write the evidence log.
+
+Log written. Let me verify final git state, confirm the generated project is gitignored, and re-validate the xcstrings JSON.
+
+Git state is exactly my intended changes; the generated project is gitignored; xcstrings valid. Let me commit per the prompt's final step (real paths, specific files only).
+
+Committed (e7a2302e4). Let me finalize: update todos, clean up temp files, and do a final sanity check.
+
+All gates green and the work is committed with a clean tree. The task is complete.
+
+**Summary of verification:**
+- **PARITY: 24/24** — 7 panels, 1 chart, 4 states, 12 strings, each with file::symbol evidence in the log
+- **LINT: 0 violations** in 6109 files (`swiftlint --strict`)
+- **PLACEHOLDER: 0** (EXIT=0)
+- **BUILD: macOS ✅ + iOS ✅** — all 8 source files compiled, 0 diagnostics attributable to this change
+- **TEST: 26/26 passed**
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../apple-page-charging-ChargingHeatmapPage.log    | 209 ++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 253 +++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   7 +-
+ .../Features/Charging/ChargingHeatmapFormat.swift  |  62 ++++
+ .../Features/Charging/ChargingHeatmapModels.swift  | 328 +++++++++++++++++++
+ .../Charging/ChargingHeatmapPage.Charts.swift      |  72 +++++
+ .../Charging/ChargingHeatmapPage.Sections.swift    | 360 +++++++++++++++++++++
+ .../Features/Charging/ChargingHeatmapPage.swift    | 185 +++++++++++
+ .../Charging/ChargingHeatmapPageModel.Sample.swift | 116 +++++++
+ .../Charging/ChargingHeatmapPageModel.swift        | 179 ++++++++++
+ .../ChargingHeatmapRouteRegistration.swift         |  22 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Charging/ChargingHeatmapDerivationsTests.swift | 189 +++++++++++
+ .../Charging/ChargingHeatmapPageModelTests.swift   | 160 +++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 15 files changed, 2159 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-charging-ChargingHeatmapPage.log
+ create mode 100644 apps/apple/Sources/Features/Charging/ChargingHeatmapFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/ChargingHeatmapModels.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/ChargingHeatmapPage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/ChargingHeatmapPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/ChargingHeatmapPage.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/ChargingHeatmapPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/ChargingHeatmapPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/ChargingHeatmapRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Charging/ChargingHeatmapDerivationsTests.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Charging/ChargingHeatmapPageModelTests.swift
+[dedupe] no duplicate top-level types

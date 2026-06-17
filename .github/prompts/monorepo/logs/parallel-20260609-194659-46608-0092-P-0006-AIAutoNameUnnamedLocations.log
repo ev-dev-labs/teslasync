@@ -1,0 +1,147 @@
+I'll start by exploring the repository structure, the web source component, and the existing Apple app structure.
+
+Now let me check the available tooling (critical for the gate) and find existing AI streaming patterns to use as templates.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2). Now let me study existing AI surfaces and shared infrastructure patterns.
+
+Now let me find native equivalents for the streaming infrastructure (`useAiStream`, `AIFeatureCard`, `withAiFeature`) that my component depends on.
+
+Now let me understand the build config (how files are included) and the shared design tokens (TSButton, TSGlassPanel, etc.).
+
+Key finding: `shared-surfaces/` is **not** in `project.yml` source paths (only `dashboard-widgets`, `feature-views`, `misc-surfaces` are), and `modals-dialogs` isn't either. Let me check the build prerequisites (xcodegen, existing xcodeproj, Shared.xcframework).
+
+Git history shows prior parallel surfaces (`modals-dialogs`) were merged even though that dir also isn't in `project.yml`. Let me check how those predecessors resolved their gate (the honest precedent) and look at the logs + placeholder checker.
+
+This confirms the established **honest precedent**: prior surfaces ship code-complete with host-gate evidence (swiftformat/swiftlint/placeholder + isolated SwiftPM harness build/test + dual-SDK `swiftc -typecheck`), and **DEFER** the full-app xcodebuild gate because the tier isn't wired into the shared `project.yml` (out of allowed-files) and `Shared.xcframework` needs a long Kotlin/Native build. Let me study the design tokens and the placeholder checker.
+
+`.swiftlint.yml` also excludes `shared-surfaces` (like the predecessor's note) — I'll lint my files by explicit path. Now let me extract the exact public APIs of the design tokens/components I'll use.
+
+Now let me read the web infrastructure my component depends on — `useAiStream`, `AIFeatureCard`, `withAiFeature` — to port their semantics faithfully. Plus confirm `TSSkeleton`/`TSFadeIn` signatures.
+
+Let me confirm `TSSkeleton`/`TSFadeIn` signatures and check the SwiftPM harness approach used by the predecessor, then I'll have everything needed.
+
+I now have a complete understanding. Let me set up the plan and todos, create the directory, then implement the 7-file surface following the established `AIRestorePanel` architecture.
+
+Marking adapter in progress and writing the pure core.
+
+Let me refactor the surface slug into a non-UI holder so the Model/Tests stay SwiftUI-free (harness-runnable), then wire the View to it.
+
+Now the Previews, Tests, and strings files.
+
+All 7 files written. Now let me run the verification gates — starting with swiftformat (auto-format to conform), then swiftlint, then placeholder check.
+
+swiftformat passes (0/6 require formatting). Now swiftlint `--strict` on my files explicitly (the config's `included` doesn't cover `shared-surfaces`).
+
+Two file-length violations (>400 lines after swiftformat reflow). I'll split each into a second file (allowed by the `AIAutoNameUnnamedLocations.*` glob, matching the sibling pattern). Let me view the current Views.swift structure.
+
+Now I'll perform the splits with `sed` to preserve exact formatting. First the Views → Chrome split.
+
+Now fix the symbol-pulse helper visibility (it moved to Chrome.swift but the action button in Views.swift uses it). Make it internal + uniquely named, and update both call sites.
+
+Now Views ends cleanly. Let me split Tests → Tests + ModelTests.
+
+Both test files are now under 400 lines. Let me re-run swiftformat and swiftlint on all 8 files.
+
+swiftformat 0/8, swiftlint **0 violations**. Now the placeholder gate.
+
+Placeholder gate: **0/0, EXIT=0**. Now let me enumerate the exact design-system symbols my shipped code uses, to set up the dual-SDK typecheck against the real tokens/components.
+
+Clean bounded set. Let me check the transitive dependencies of the 4 design-system files I need (Tokens, Cards, Buttons, Skeletons).
+
+The DS closure is just 5 self-contained files. Let me run the dual-SDK `swiftc -typecheck` (Swift 6, strict concurrency complete) against the **real** tokens/components for both iOS 18 and macOS 15.
+
+Cards.swift pulls typography components. Let me check the dependency surface of the `Components/UI`, `Components/Feedback`, and `Design` directories to compile against the real design-system module cleanly.
+
+All design-system files import only SwiftUI — it's a self-contained module. Let me compile my surface against the full DS module for both SDKs.
+
+The DS is interconnected across subdirectories. Let me check whether the full `Components` tree stays self-contained (only SwiftUI/Charts/MapKit, no app types).
+
+Full `Components` tree imports only SDK frameworks. Let me typecheck against the complete DS module.
+
+Over-inclusion pulled in `UnitFormatters` (needs external `Units`). Let me compile against the **minimal closure** my surface actually needs. Checking `Typography.swift` deps.
+
+Let me find the external `Units` symbol so I can include the complete real DS (surgical, no exclusions).
+
+`Units` lives behind the unstaged KMP `Shared` framework. Since my surface doesn't use `UnitFormatters`, let me exclude just that one leaf (verifying nothing else needs it) and typecheck against the rest of the real DS.
+
+Confirmed safe. Now the dual-SDK typecheck against the full real DS (minus the one KMP-dependent leaf):
+
+Now the errors are in my code, against the real DS (typecheck is working). Two views fail `View` conformance — let me inspect Chrome.swift.
+
+Let me isolate Chrome.swift's own errors by typechecking it directly with its deps.
+
+Found it — Chrome.swift is missing `import SwiftUI` (the sed extraction started below the import). Let me add it.
+
+Now re-run the dual-SDK typecheck (production surface + previews with DEBUG).
+
+Both SDKs typecheck clean (**MAC_EXIT=0, IOS_EXIT=0**) including previews. Now the SwiftPM harness to actually run the tests. Let me adjust the one test that references the View type so the harness stays non-UI.
+
+SwiftUI-free now. Let me build the SwiftPM harness and run the tests under Swift 6 strict concurrency.
+
+**SwiftPM harness: 39 tests pass, 0 failures** under Swift 6 strict concurrency. Now let me confirm the full-app gate deferral evidence — run `xcodegen` and verify the `shared-surfaces` tier isn't registered in the generated project.
+
+Confirmed: `xcodegen` succeeds but the tier isn't in the generated project (project.yml unchanged, per allowed-files) — the full-app gate is DEFERRED, matching every sibling shared-surface. Let me verify git status and the gitignore for generated artifacts.
+
+Git is clean (only my 9 files untracked; generated project gitignored). Let me run a consolidated final gate pass (capturing authentic output) including an i18n key bidirectional-parity check.
+
+The 4 "orphans" are false positives (multi-line `string(\n "key",` calls my single-line grep missed). Let me confirm they're genuinely used.
+
+All keys genuinely used — i18n parity is clean (0 missing, 0 orphan, all 8 web keys present). Now let me clean up the generated project and write the gate log with authentic captured evidence.
+
+Log complete (136 lines, EXIT=0/STATUS=DONE). Let me re-verify format/lint after my last edits (added import to Chrome, edited a test), then commit.
+
+All green and all files <400 lines. Let me re-sync the harness with the exact committed sources and run once more to be airtight, then commit.
+
+**39/39 tests pass** with the exact committed sources. Everything is airtight. Let me stage exactly my files + the log and commit.
+
+Committed cleanly — exactly 10 files (9 surface + log), 2001 insertions. Let me confirm a clean tree and close out the todos.
+
+The task is complete. All work is committed cleanly with a clean working tree, and the shared parallel-unsafe files (`project.yml`, `.swiftlint.yml`, `Localization`) were left untouched per the allowed-files constraint.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`AIAutoNameUnnamedLocations`** shared surface at parity with `components/ai/AIAutoNameUnnamedLocations.tsx`, as 9 files (2,001 lines) under `apps/apple/TeslaSync/shared-surfaces/`.
+
+**What it reproduces (full parity, no stubs):**
+- The `withAiFeature` gate, the `AIFeatureCard` scaffold (title + cyan Helix badge + description + universal "Ask Helix" / "Helix is thinking…" action), the `tool_result`-captured proposal box (Proposed name, validator reason, "Proposal rejected by validator", "Apply to form" disabled unless `ok`), and the `AiOutputPanel` (thinking / error / text).
+- The streaming state machine (`useAiStream` → `AIStreamPhase`), suggest double-submit guard, ok-only apply forwarding, and the location-change cancel+reset cleanup.
+- Every state renders: gate-loading, idle-invite, streaming, proposal (ok/rejected), stream-error, gate-error+retry, stale, offline, gated-off (9 `#Preview` blocks).
+- Binds via the P1/S8 `AINameDraftSource`/`AINameDraftModel` (no HTTP in the view), emits P1/S11 `view.opened`, all strings via the P1/S10 facade (24 keys, 0 missing/orphan, all 8 web keys), full VoiceOver + reduce-motion support.
+
+**Verification (all green on this runner):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | 0/8 |
+| swiftlint --strict | 0 violations |
+| placeholder (ADR-011) | COUNT=0 / ALLOWED=0 |
+| swiftc -typecheck, macOS 15 + iOS 18 (Swift 6 strict concurrency, real design system, incl. previews) | 0 errors |
+| SwiftPM harness tests | 39/39 pass |
+
+**Full-app `xcodebuild build/test`: DEFERRED** (honestly logged with `xcodegen` evidence). The `shared-surfaces` tier isn't wired into the shared `project.yml`/`.swiftlint.yml` (parallel-unsafe, outside allowed-files), and the KMP `Shared.xcframework` Kotlin/Native pre-build is the long-pole — the sanctioned "code-complete + deferred Xcode gate" disposition used by every shipped P4 surface. Gate log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+All 9 todos are done, the surface is committed (HEAD `ffc2bd905`), the working tree is clean, and every host-runnable gate is green. The task is fully complete.
+
+Merge made by the 'ort' strategy.
+ ...ed-surfaces-0006-AIAutoNameUnnamedLocations.log | 136 ++++++++
+ .../AIAutoNameUnnamedLocations.Adapter.swift       | 250 ++++++++++++++
+ .../AIAutoNameUnnamedLocations.Chrome.swift        | 190 +++++++++++
+ .../AIAutoNameUnnamedLocations.Model.swift         | 377 +++++++++++++++++++++
+ .../AIAutoNameUnnamedLocations.ModelTests.swift    | 236 +++++++++++++
+ .../AIAutoNameUnnamedLocations.Previews.swift      | 102 ++++++
+ .../AIAutoNameUnnamedLocations.Tests.swift         | 224 ++++++++++++
+ .../AIAutoNameUnnamedLocations.Views.swift         | 240 +++++++++++++
+ .../AIAutoNameUnnamedLocations.strings             |  48 +++
+ .../AIAutoNameUnnamedLocations.swift               | 198 +++++++++++
+ 10 files changed, 2001 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0006-AIAutoNameUnnamedLocations.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift

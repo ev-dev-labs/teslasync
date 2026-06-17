@@ -1,0 +1,156 @@
+I'll start by understanding the task: create a native Apple (SwiftUI) version of the `PowerProfileChart` web component. First, let me check the environment capabilities and explore the existing structure.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). No BLOCKED path — I must build this for real. Let me explore the existing Apple app structure and the web types.
+
+There's an established `feature-views` directory with a multi-file pattern (`.Adapter`, `.Model`, `.Previews`). Let me find a similar chart-based example and check what already exists for PowerProfileChart and sibling drive-detail charts.
+
+`BatteryLevelChart` is the closest analog (time-series area chart from drive-detail). Let me read its entire file set as my template, plus check whether it shares the same web source family.
+
+Excellent architecture. Let me read the rest of the BatteryLevelChart set plus the shared infrastructure (charts components, design tokens, motion).
+
+Let me read the Tests file, the design tokens, motion infrastructure, project.yml, and find any existing time-series area/line chart from the same drive-detail family.
+
+`ElevationChart` is the closest sibling — an area chart over the same drive-detail `ChartDataPoint` time series. Let me read its complete set plus the design tokens and chart components.
+
+ElevationChart is my primary template (area chart, same `ChartDataPoint`). Let me read its full set and locate the design token / shared component definitions.
+
+Let me read the remaining ElevationChart files (Model, Chart, Views, Previews, Tests, strings) and locate the shared token/component definitions.
+
+Let me read the final ElevationChart files and locate the shared design tokens and chart-series colors.
+
+Now let me locate the design tokens, read the ElevationChart tests, check project.yml globbing, and verify how the web computes `power`/`powerMax`/`avgPower` units.
+
+`project.yml` globs the `feature-views` directory, so new files are auto-included. Let me confirm the web `power` units precisely and find where `Color.TS`/`Font.TS`/`TSSpacing` are defined.
+
+Now I understand: per-sample `power` is **kW**, drive aggregate is `avgPowerW` (Watts/SI). Let me read the Theme tokens, the rest of the stats computation, and the ElevationChart test structure.
+
+Let me confirm the exact token palette (chart series colors, fonts, spacing, radius, motion) from the generated tokens and component files.
+
+All tokens confirmed. Key mapping: web power amber `#f59e0b` → `Color.TS.chartSeriesEnergy`; regen cyan → `Color.TS.chartSeriesRegen`. Let me confirm the exact font/spacing/radius enum members and the TSFadeIn/TSSkeleton signatures before writing.
+
+All tokens confirmed. Let me check the web `fmtNumber`/`fmtInt` defaults to format the "Avg" stat correctly, then I'll write the plan and implementation.
+
+Confirmed: `fmtInt`=0 decimals, `fmtNumber`=2 decimals (global precision). I have everything. Let me check lint configs, then write the plan and implement.
+
+Now let me assess baseline buildability — this determines whether `EXIT=0` is achievable. Let me check for xcodegen, an existing `.xcodeproj`, and the Shared.xcframework.
+
+Critical: `Frameworks/Shared.xcframework` is only a `.gitkeep` placeholder — the prebuilt binary dependency is absent. This affects the full `xcodebuild`. Let me investigate whether it can be produced before concluding anything.
+
+There's a `build-shared-xcframework.sh` script (Kotlin Multiplatform shared core). Let me read it and the contract to assess whether I can produce the xcframework.
+
+There's a Gradle/Kotlin-Multiplatform build for `Shared.xcframework` (required to link the full app). I'll kick it off in the background while I write the deliverable, and check `pwsh` availability. Let me set up tracking and start the long build now.
+
+`pwsh` and Java 17 are present; no Android SDK (the KMP module has an `androidMain` set). Let me check the Gradle config and kick off the xcframework build in the background.
+
+The KMP `:core` module applies the Android plugin (needs an Android SDK at config time) — absent here. I'll kick off the real Gradle build in the background to capture concrete evidence, then write the deliverable while it runs.
+
+Background Gradle build is running. Now I'll write the deliverable. Starting with the value types and the projection adapter.
+
+The launcher returned (nohup backgrounded the real process). Let me peek at the build log, then continue writing the adapter.
+
+The Gradle build is genuinely progressing (downloading Kotlin/Native, compiling iOS targets from cache) — promising. Continuing with the projection adapter.
+
+Now the state-holder, seams, telemetry, and i18n facade.
+
+Now the Swift Charts trace (area + zero baseline + synced cursor). Let me also check the Gradle build progress.
+
+Gradle is succeeding — it built the debug xcframework and is now linking release. Continuing with the chart trace.
+
+Now the chrome (header, freshness chip, banner, stat row, and loading/empty/error states).
+
+Now the composable view that switches over phases.
+
+Now the i18n strings catalog.
+
+Now the previews covering every state.
+
+Now the test suite (adapter + state holder + accessibility), mirroring the ElevationChart coverage.
+
+All 9 files written. Let me verify the test-target wiring, check the Gradle build, and run swiftformat/swiftlint on the new files.
+
+The Gradle build is linking the release framework now. Let me inspect how co-located `*Tests.swift` get into the test bundle.
+
+The tests auto-glob into both XCTest bundles — no project.yml edits needed. Let me format and lint my new files while the release framework finishes linking.
+
+Only the `numberFormatting` rule flags my numeric literals. Let me auto-format the files with swiftformat (the intended fix), then re-lint.
+
+swiftformat passes. Let me verify the numeric values weren't altered (only digit grouping) and run swiftlint.
+
+swiftformat and swiftlint both clean (0 violations) on all 8 files; numeric values intact (only digit-grouping cosmetics). Let me check the Gradle release build and do a standalone typecheck of the pure core.
+
+Pure core typechecks cleanly (exit 0). Release framework still linking. Let me record the plan, generate the Xcode project, and wait for Gradle.
+
+Let me generate the Xcode project and check the Gradle build.
+
+xcodegen succeeded. Gradle is linking the macOS release framework now. Let me wait for it to finish staging.
+
+Kotlin/Native's LLVM linker and Xcode `ld`/`clang` are actively running (~40-59% CPU) — the release link is genuinely in progress (LLVM writes output only at the end). Let me keep waiting on the poll loop.
+
+`BUILD SUCCESSFUL in 12m 42s` — the release `Shared.xcframework` is ready. Let me stage it and launch the iOS build+test gate.
+
+Staged with `ios-arm64`, `ios-arm64-simulator`, `macos-arm64` slices. Now the iOS build+test (the long pole). Let me launch it and capture full output.
+
+The app **built** (all files compiled, including mine), but testing reported 3 failures (IOS_EXIT=65). Let me find which tests failed.
+
+These errors are in unrelated `dashboard-widgets` files (`ChargeSessionChartWidget`, `ChargeStatusLiveWidget`, `ChargeStatusWidget`) — "ambiguous for type lookup" on `Charge*` types, none of which my `Power*` files define. This looks like a pre-existing latent collision surfaced now that the real `Shared.xcframework` exists. Let me confirm my files are clean and understand the build/test result precisely.
+
+My files DO collide: `PowerSample` is ambiguous — the KMP `Shared` framework (now present) also exports a `PowerSample`. The sibling surfaces avoid this by fully prefixing their types (`ElevationSample`, `BatteryStartLevelBucket`). My bare `Power*` names collide. Let me confirm exactly which of my types clash with `Shared`.
+
+The collision is with an existing surface: `PowerOutputChart.Adapter.swift` already defines `public struct PowerSample`. My duplicate breaks it. Let me check whether the `dashboard-widgets` `Charge*` ambiguities are pre-existing duplicates (which would block the gate regardless), and whether `PowerPoint`/`PowerStats` are unique.
+
+Now it's clear. The `Charge*` ambiguities are **pre-existing duplicate declarations across baseline sibling widgets** (`ChargeStatusLiveWidget` vs `ChargeStatusWidget` vs `ChargeSessionChartWidget`, committed by other P4 prompts) — outside my allowed files. My only self-inflicted collision is `PowerSample` vs the existing `PowerOutputChart`. Let me gather definitive evidence about the pre-existing breakage and its target.
+
+Let me look at the raw error structure to extract the precise picture.
+
+The log likely contains binary/control characters (xcodebuild output) — grep treats it as binary. Let me force text mode with `-a`.
+
+The log uses embedded `\r`/control chars confusing line-based grep. Let me normalize line endings and re-analyze.
+
+The log shows cross-slot contamination (slot-87 paths in my log) — this is a shared environment with DerivedData collisions between parallel agents building the same "TeslaSync" project. I'll isolate my build with a dedicated `-derivedDataPath`. But first, my real bug: `PowerSample` collides with the existing `PowerOutputChart`. Let me check all my bare `Power*` names against the module and confirm no `PowerProfile*` exists elsewhere.
+
+Confirmed: `PowerOutputChart` owns the bare `PowerSample`; my `PowerPoint`/`PowerStats` are unique but I'll prefix all three for safety and convention. Renaming `PowerSample→PowerProfileSample`, `PowerPoint→PowerProfilePoint`, `PowerStats→PowerProfileStats` across my 8 files.
+
+No bare tokens remain. Let me re-lint my files, then run an **isolated** build (dedicated `-derivedDataPath`) to escape the cross-slot DerivedData contamination and get the true result.
+
+swiftformat + swiftlint clean after rename. Now an isolated build (dedicated DerivedData) to get the true compile result for my surface.
+
+Isolated build still fails, but **zero errors reference my files** — my surface compiles clean. Let me see what's actually failing in the isolated build.
+
+The isolated build confirms it: **111 errors, all in pre-existing sibling surfaces** (`Charge*` widgets, `Safety*` widgets, `FleetStatsBar`) — duplicate type declarations from other parallel P4 prompts. **Zero errors in my files.** Let me confirm these are baseline (not from my Shared.xcframework or my edits) and verify the duplicates are committed.
+
+Definitively confirmed: the duplicate declarations are in **committed baseline** sibling surfaces (HEAD `837eaa7a4`, a parallel-merge), the `Shared` framework exports none of them, and **my files have zero errors**. The shared app target is pre-broken by other prompts' surfaces — outside my allowed files (`PowerProfileChart.*`).
+
+Let me kick off the macOS gate in the background and run the fast gate steps + runtime proof of my adapter in parallel.
+
+Placeholder gate on my surface: `PLACEHOLDER_COUNT=0, EXIT=0`. Now a runtime proof of my adapter logic (compiling the pure core + assertions) plus the whole-tree lint/format gate steps.
+
+Let me run the runtime adapter proof while the whole-tree format-lint continues.
+
+The runtime harness needs to be named `main.swift` for top-level code. Let me fix that and read the format-lint result.
+
+**Runtime adapter assertions: 16/16 PASS** (RUNTIME_EXIT=0) — my projection + a11y logic is proven correct. **Whole-tree swiftformat --lint: 0/2246 require formatting (FORMAT_EXIT=0)**. Now the whole-tree swiftlint and a macOS build check.
+
+Two things to resolve: locate the single whole-tree swiftlint violation (confirm not mine), and the macOS build log is missing (background launch issue). Let me check both.
+
+The single swiftlint violation is pre-existing (`LiveSignalSparklinesWidget.Builder.swift:158`, another surface) — not mine; my 8 files lint clean. The macOS background launch failed to create its log. Let me run the exact gate commands faithfully: iOS `build test` (isolated, cached — should be fast), then macOS.
+
+iOS gate faithfully reproduced: `IOS_EXIT=65`, 0 errors in my files. Now the macOS gate command.
+
+Both gate builds faithfully reproduced: `IOS_EXIT=65`, `MAC_EXIT=65`, **0 errors in my files** in either. All blockers are pre-existing sibling-surface collisions. Let me collect precise evidence for the log.
+
+I have complete, precise evidence. All blockers are pre-existing duplicate type declarations in `dashboard-widgets` siblings (different directory, other prompts' surfaces) — never my `feature-views/PowerProfileChart.*`. Let me grab a few representative raw error lines for the log, then write it.
+
+I have everything. Let me write the comprehensive, honest gate log.
+
+Now let me verify git state and stage exactly my files + the log (avoiding the generated project, the git-ignored xcframework, and pre-existing unrelated web edits).
+
+Generated project + xcframework are git-ignored; the two modified web files are pre-existing (not mine). I'll stage only my 9 surface files + the log. Let me stage and verify the exact set before committing.
+
+Exactly my 9 files + the log are staged. Committing with an honest message documenting the BLOCKED gate.
+
+Committed (b471a3a7e): 10 files, 1850 insertions. Let me update tracking, clean up temp artifacts, and confirm no stray build processes remain.
+
+This is a heavily contended shared host — the process list shows other slots (98/103/105) running their own builds; none are mine (my runs completed). My scratch is cleaned; I won't touch other agents' processes. Let me do a final integrity check.
+
+Everything is in order: surface complete and committed (b471a3a7e), log finalized with a single `EXIT=65 / STATUS=BLOCKED` footer, working tree clean of my artifacts. This is the correct, honest terminal state — the deliverable is done and verified to the maximum extent the shared app target allows, and the gate red is fully external and out of scope.
+

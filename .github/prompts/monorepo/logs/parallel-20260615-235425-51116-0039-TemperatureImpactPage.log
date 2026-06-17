@@ -1,0 +1,314 @@
+I'll start by exploring the codebase to understand the task — the web source page, the Apple app structure, and existing patterns.
+
+Xcode toolchain is available. Let me explore the Apple app structure, existing feature pages, and supporting infrastructure.
+
+The structure differs from the prompt's assumed paths. Let me examine the actual source layout and existing feature views to understand the real patterns.
+
+There's a rich existing structure. Let me look at how existing parity pages are built (Analytics feature is closest), the parity ledger, and navigation registration.
+
+Now I understand the real pattern: `Sources/Features/{Domain}/{Name}Page.swift` + `.Model`, `.Sections`, `Format`, `RouteRegistration`. The prompt's `TeslaSync/Features/Maps` path is templated. Let me find where sibling `maps` pages landed and read the manifest record for this unit.
+
+The web `maps` pages map into existing Apple feature dirs. Let me locate the maps siblings (Geofences, Locations, MapOverview, NavigationRoute) in the Apple app and inspect the closest analog, `RouteEfficiencyPage`, which is also a chart-only analytics page.
+
+Let me read the full `project.yml` to understand which paths compile, plus the closest analog page (`RouteEfficiencyPage`) and its route registration to mirror the real conventions.
+
+Excellent — `RouteEfficiencyPage` is the perfect template. Let me study its full file set (Model, Sample, Sections, Charts, Panels, Chrome, Format) and the component library wrappers I'll need (charts, data-display, UI, tokens).
+
+Let me read the RouteEfficiency Sections/Charts/Panels/Chrome files plus the Units facade and key component wrappers (charts, MetricCard, GlassPanel, Badge, EmptyState).
+
+Let me view these files via the saved output and read the chart wrappers and tokens in parallel.
+
+Now let me read the chart component wrappers (to find scatter/line equivalents), the Chrome file (skeleton), the Units facade, and MetricCard. These determine exactly which APIs I can call.
+
+Let me read the chart wrappers (Scatter, Line, models, container) and the Units facade to nail the exact APIs.
+
+Now the Units facade, MetricCard, Badge, EmptyState, and the typography/token APIs. Let me find the temperature conversion and these component signatures.
+
+Let me read the `tsUnits` environment key, the data-display components (MetricCard), feedback (EmptyState/ErrorDisplay), UI (GlassPanel/Badge), and design tokens in one batch.
+
+`TSMetricCard(title:value:caption:)` exists. Now let me read the design tokens, typography, badges/tones, states, banners, and the metric primitives to finalize the API surface.
+
+Tokens like `TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`, `TSTone` are generated elsewhere. Let me locate them and read typography, badges, states, banners, and metric primitives.
+
+Let me read Banners, the metric primitives (AnimatedNumber/MetricBar), the route parser, and a routed registration example.
+
+Let me read the metric primitives, the route parser, and how `RouteEfficiency` is actually wired into navigation/deep-linking.
+
+Now let me examine the navigation wiring — the route parser, the AppRoute enum, and where `routeEfficiencyDestination` is attached.
+
+`routeEfficiencyDestination` is a factory + deep-link alias pattern (not attached to the shell). Let me read the `AppRoute` enum to pick the right host alias and confirm the registration approach.
+
+There's an `AppRoute.maps` host. Let me see how routes map to page views (the host registry) and how `.maps`/secondary pages are currently rendered, to wire registration correctly.
+
+Let me see how registrations populate the registry (AppShell) and a concrete example, plus whether `.maps` is hosted yet.
+
+Now I understand the full architecture. Key finding: the prompt's literal path `TeslaSync/Features/Maps/` is **not compiled** (project.yml only builds `Sources/**` + specific `TeslaSync/*` dirs, and no `TeslaSync/Features` exists). To produce real, compiling, working code (honesty covenant), I'll place files under `Sources/Features/Maps/` matching the real `Sources/Features/{Domain}/` convention. Let me verify the build toolchain and gate contract.
+
+Need `xcodegen generate` first. Let me read the gate contract (p4-apple README), the placeholder scanner, an existing completion log for format, and check for `pwsh`.
+
+This confirms my decision: the gate scans `apps/apple/Sources/Features/{Domain}` (RouteEfficiency used `Sources/Features/Driving`), **not** `TeslaSync/Features`. I'll use `Sources/Features/Maps/`. Let me read the full gate contract and log format.
+
+Allowed scope is `apps/apple/**` — my `Sources/Features/Maps/` placement is compliant. Let me read the full RouteEfficiency log to mirror its structure, then start building.
+
+The RouteEfficiency log explicitly documents the **same** path reconciliation (`Sources/` is the only compiled hand-written group; `TeslaSync/Features` is an allowed-files alias). My approach matches the established precedent exactly. Let me read the PARITY log section, the test files to mirror, and check existing strings.
+
+Key discovery: xcstrings stores web-imported keys as `translation.tempImpact.*`, but SwiftUI `Text("tempImpact.title")` needs **bare** keys. Let me verify how RouteEfficiency's bare keys are stored and check which bare keys I need already exist.
+
+`routeEfficiency.title` is a bare key (added by RE work); no bare `tempImpact.*` or `temperature.title` exist yet, but `common.noData` and `error.loadFailed` do. I must add 20 bare keys. Let me read the xcstrings entry format and the existing translation values, plus how other pages handle interpolated localized strings.
+
+The catalog uses positional specifiers (`%1$@`). Let me extract all existing English `tempImpact.*` values to reuse verbatim, and confirm the `String(format: String(localized:))` interpolation pattern is used elsewhere.
+
+All English values confirmed (they match the web defaults). Let me check the interpolation pattern used elsewhere and read the RouteEfficiency tests to mirror the test structure.
+
+The `String(format: String(localized:), …)` pattern is established. Let me read the RouteEfficiency tests to mirror, then I have everything to build.
+
+I have a complete understanding of all patterns. Let me set up a plan/todos and kick off the baseline build (xcodegen + xcframework check) in the background while I write code.
+
+`Shared.xcframework` is missing (only `.gitkeep`) — the build needs it. Let me check whether it can be built (gradle/JDK) or is cached, and look for build scripts.
+
+Java 17 + gradlew + a `build-shared-xcframework.sh` script exist. Let me read the script and launch the xcframework build in the background while I write the page code.
+
+The script builds the xcframework via Gradle (wired as an Xcode pre-build phase). The first Kotlin/Native build is the long pole — let me launch it now in the background, then write all the code while it compiles.
+
+While that builds, let me generate the Xcode project and set up my plan/todos.
+
+Let me check both the xcodegen result and the xcframework build status.
+
+Project generated; xcframework still compiling in the background. Let me verify the web `fmtNumber` default precision and the temp conversion helper so my Format matches exactly, then write the code.
+
+`_globalPrecision = 2` confirmed; my Format will use `prefs.precision ?? 2`. The xcframework is linking now. Let me set up tracking and write the implementation. Starting with the model, sample, and format files.
+
+Now let me write the model, sample, and format files.
+
+Model, format, and sample done. Let me check the xcframework build and write the main page view.
+
+Release framework is linking now — almost staged. Let me write the page view, panels, charts, and chrome. First, verify the `TSSelect` signature I'll reuse.
+
+Now writing the main page view, panels, charts, and chrome together.
+
+Page view done. Let me check for a shared flow/wrap layout helper (for the badges) and verify the xcframework finished staging.
+
+The xcframework release variant is still linking. No shared flow layout exists — I'll add a scoped one. Let me write the Panels file (summary cards + optimal analysis + tips).
+
+Now the Charts file (scatter + line) — verifying all 22 strings get used across the surface.
+
+Now the Chrome (skeleton) and route registration files.
+
+Now the AppRouteParser alias edit and check the xcframework status.
+
+The log file vanished — let me check whether the xcframework finished staging and whether the gradle process is still running.
+
+The gradle release build is still compiling (long pole). Meanwhile, I'll do build-independent work: add the xcstrings keys and write tests. Let me inspect the xcstrings top structure to insert keys cleanly.
+
+`"strings": {` is at line 3. I'll insert the 20 bare keys right after it, matching the existing bare-key format, then validate JSON. Let me write a script to do this precisely.
+
+All 20 keys added and JSON validates. Now let me write the two test files mirroring the RouteEfficiency test patterns.
+
+Now the model state-machine + derivations tests.
+
+All source + test files written. Let me update todos and run SwiftLint + SwiftFormat on my new files (build-independent), then check the xcframework.
+
+SwiftLint linted the whole project (config has a global `included`). It found 3 serious violations — I need to see which files. Let me filter for actual violation lines.
+
+Found `empty_count` violation at `TemperatureImpactPageModel.swift:73` (`hasData { count > 0 }`). Let me wait for the full scoped lint to surface any other violations in my files before fixing.
+
+Confirmed: my only violation is the `empty_count` at line 73; the 2 others are pre-existing `AnomalyInlineRow` line-length issues (out of scope, already disclosed in the RouteEfficiency precedent). I'll rename `count` → `driveCount` in `TemperatureBucketStat` — lint-clean and clearer. Applying edits across the affected files.
+
+Now the Panels reference and the test files.
+
+Renames applied. Let me re-run SwiftLint (filtered to Maps) and SwiftFormat --lint on my files, and check the xcframework build.
+
+SwiftFormat wants auto-formatting on 2 files. The ecosystem tool is the right fix — let me run `swiftformat` in-place on my files, then re-verify with `--lint`.
+
+SwiftFormat passes now. Let me verify the auto-format changes are sensible (property bodies + Charts series).
+
+Formatting changes look correct. Let me re-run SwiftLint to confirm `empty_count` is resolved, and check on the xcframework build.
+
+Let me review my code for correctness while waiting. Let me check the SwiftLint result and xcframework progress.
+
+SwiftLint clean for Maps. Let me run the placeholder scan (gate uses `check-placeholders.ps1`) and check the xcframework.
+
+Placeholder scan passes (0 placeholders, 1 allowed redaction opt-out). Now let me check the xcframework build progress — it's the gate blocker.
+
+The xcframework is **built and staged** (ios-arm64, ios-arm64-simulator, macos-arm64). Now I can run the real build. Let me find an available simulator and launch the build.
+
+iPhone 16 simulator is available. Let me launch the build (single-arch arm64 for speed), logging to the persistent session dir so output survives.
+
+Build launched (compiling the whole app — will take a while). Let me review my formatted Charts and Panels files for any compile issues while it builds.
+
+Code looks correct. Let me monitor the build progress.
+
+Build process completed. Let me check the result.
+
+The build is still compiling (the detached *launcher* completed, but `xcodebuild` continues via nohup). Let me verify it's alive and wait for the final result.
+
+The main TeslaSync target is compiling now (the heavy step). Let me wait for it to finish.
+
+Compilation reached `EmitSwiftModule` for TeslaSync with no errors — good sign my files compiled. Let me wait for the final link result.
+
+No errors so far; still linking remaining targets. Let me wait for completion.
+
+The log tail looks stalled at `EmitSwiftModule`. Let me check whether it's actually progressing (log mtime + CPU) or hung.
+
+The build IS progressing — 8 `swift-frontend` processes actively compiling object files (~25% CPU each); xcodebuild just buffers file output. Let me wait longer for completion.
+
+Log output is buffered (mtime frozen but 58 active procs). Let me confirm real progress via CPU and compiled object-file count, rather than waiting blind.
+
+Key insight: `EmitSwiftModule` for the TeslaSync target already completed without error — that step type-checks the **entire module including my Maps files**, so my code compiles. The remaining 1886+ `.o` files are just codegen/linking. Let me wait for the final result.
+
+Progress continues (log flushed to 15:17, no errors). Let me see what phase it's in now.
+
+Healthy progress: object codegen in alphabetical batches (2892 `.o` files now, no errors). The module already type-checked. Let me wait for the link.
+
+4274 `.o` files (steady progress, no errors). Let me continue waiting for the link.
+
+Nearly 5000 `.o` files, some targets already linked, no errors. Let me keep waiting for the main target link.
+
+`** BUILD SUCCEEDED **` — the full app builds with my Maps files. Now let me run the test gate. First, let me identify the test target name and run `build-for-testing`.
+
+Unit test bundle is `TeslaSyncTests`. Let me run the test gate scoped to my two test classes (compiles the full test bundle, then runs my tests), reusing the build cache.
+
+Tests launched (compiling the test bundle). While that runs, let me prepare the ledger update — inspect the ledger schema and confirm there's no existing TemperatureImpact row.
+
+Let me check the test progress and re-inspect the ledger's maps rows.
+
+Tests are compiling the bundle (no errors yet). Ledger has 0 maps rows; I'll add 2. Let me check the ledger's raw formatting to insert cleanly, then wait for tests.
+
+Ledger uses append-order, 2-space indent; I'll append 2 rows after tests pass. Let me wait for the test bundle to compile and run.
+
+`TEST SUCCEEDED` but I see "Executed 0 tests" — I need to confirm my tests actually ran (not filtered to 0). Let me inspect the test log for my specific classes.
+
+Critical issue found: the test bundle executed **0 tests** — because I ran `xcodegen generate` *before* creating my Maps files, so the project doesn't reference them. The "BUILD SUCCEEDED" likely didn't include my code either. Let me verify.
+
+60 matches — but those may be the existing `AICabinTemperatureImpactNarrative*` files. Let me check for my specific filenames and whether synchronized groups are used.
+
+Output truncated. Let me definitively determine whether my source files were compiled — check for synchronized groups and my object files in the build.
+
+Confirmed the silent no-op: **no synchronized groups, and zero `.o` files for my Maps sources** — `xcodegen` was run before my files existed, so they were never compiled. I must regenerate the project and rebuild. This is exactly the dishonest-pass scenario I need to avoid. Let me regenerate.
+
+Now my source (24 refs) and test (12 refs) files are in the project. The earlier build was a no-op for my code — I must rebuild. Let me launch the combined build+test (reuses cache where possible) detached.
+
+Build+test running. Let me check whether it's an incremental build (just my files) or a full rebuild.
+
+The whole TeslaSync module is recompiling (adding files invalidated it) — healthy, no errors. This is the ~20 min cost again. Let me wait, checking for my files compiling and the test result.
+
+Real compile error surfaced (good — my files now compile): `TemperatureImpactFormat.swift:99` — the default param `bucketCount: Int = TemperatureImpactPageModel.bucketBoundsC.count` references a `@MainActor`-isolated static from a nonisolated context. The "(4 failures)" are build failures, not test runs. Fix: mark the bucket constants `nonisolated`. Let me view and edit.
+
+My files now compile (3 `.o` produced); only Format's default-param references a `@MainActor` static. I'll mark the bucket constants `nonisolated` (they're pure domain constants, correctly accessible everywhere). Let me also re-scan for any other concurrency issues to avoid another 20-min cycle.
+
+Fix applied. Since a full rebuild takes ~20 min, let me carefully re-read my view files (Panels, Charts, Page) in their formatted state to catch any remaining compile errors before rebuilding.
+
+View structs are `@MainActor`-inferred (matching the RouteEfficiency precedent), so model access is fine; the only real error was the Format default-param, now fixed. Let me re-verify format/lint on the changed model file and relaunch the build+test.
+
+Build+test relaunched. Let me confirm the format check passed and the build started compiling my files.
+
+Format clean; build compiling with no errors yet. While it builds (~20 min), let me draft the gate log so I can finalize quickly once tests pass. Let me check progress periodically.
+
+All 8 of my source `.o` files compiled with **zero errors** — my code is correct. The build is finishing the full app + test bundle. Let me wait for the test run to complete.
+
+App compiled (no errors); now the large `TeslaSyncTests` bundle is compiling. Let me confirm it's the test target and wait for the test run.
+
+Test bundle compiling (1196 `.o` so far, mine come later alphabetically). Let me wait for it to finish and run my tests.
+
+Compilation winding down (23 procs). Let me check the current phase and whether linking/test execution has started.
+
+The app is re-emitting its module with testability enabled (required for `@testable import`). This is the expected test-build path. Let me wait for the test bundle link and execution.
+
+This is unusually slow. Let me diagnose whether the test bundle is progressing or stuck.
+
+One `swift-frontend` at 90% CPU is doing the single-threaded whole-module emit (with `-enable-testing`) — slow for 6000 files but progressing (log is just buffered). My source compilation already succeeded earlier, so this is just the test-enabled re-emit. Let me wait for it to reach the test run.
+
+27 minutes frozen on module emit is abnormal — likely a stuck process, not just slow. Let me diagnose what the 24 procs actually are (compiler hang vs. a stuck prebuild script).
+
+False alarm — it's NOT stuck. There are ~20 **fresh** `swift-frontend` processes (only ~14s CPU each) actively compiling the test bundle at ~40% CPU each. The frozen log mtime is just xcodebuild's output buffering. Let me track real progress via the test `.o` count.
+
+Test `.o` count stuck at 1196 with 25 active procs — they must be recompiling the **app** target with `-enable-testing` (a different config than my earlier plain build). Let me confirm what's actually compiling now.
+
+App target fully recompiled with testing (6250 `.o`), test bundle at 1196 — but no new `.o` in 3 min despite 25 procs. Let me check whether those frontends are progressing (CPU time climbing) or hung.
+
+Confirmed progressing (PID 22078 climbed 2:35→2:55 CPU in 25s — it's the `TeslaSyncTests` whole-module emit, the long pole). No errors. The test target is just massive. Let me wait for it to finish compiling, link, and run my tests.
+
+~65 min on this test build is excessive. Let me verify it's genuinely progressing (not hung) before deciding whether to wait or pivot — check the long-pole process and test `.o` delta.
+
+It's the `TeslaSyncTests` whole-module emit (type-checking 2000+ test files against the `@testable` app module — single-threaded, no `.o` output, but PID 25355's CPU is climbing). It's progressing, just slow at this scale. Let me wait for emit→link→run, giving it full CPU.
+
+Procs jumped to 52 — the test bundle emit finished and it's now doing parallel codegen. My test `.o` should appear soon. Let me verify the count is climbing.
+
+Test `.o` stuck at 1196 with 52 active procs producing nothing — this build is pathologically slow in this environment (~80 min). Let me read the actual recent log content to understand the true phase rather than guessing.
+
+The log stopped at 15:52 (98KB) but 52 frontends are active — I may have **multiple competing xcodebuild invocations** (test2 and test3) thrashing the shared derived data. Let me check which xcodebuild processes are actually alive.
+
+This is a thrashing mess — multiple competing/orphaned `xcodebuild` processes (test3's output died at 15:52, but 5 xcodebuild parents + two sets of 20 frontends are now fighting over the shared derived data, so nothing completes). I'll kill them all and do a clean, targeted verification. Let me get the parent PIDs.
+
+Two competing `xcodebuild` trees (PIDs 26630 + 26891, with SwiftDriver coordinators 26663 + 26898) are thrashing the shared derived data — that's why nothing completes. Let me kill them and start clean.
+
+The kill wrapper needs explicit numeric PIDs. Let me kill them individually.
+
+Killed the parents; 40 orphaned frontends remain. Let me find and kill any remaining xcodebuild/XCBBuildService coordinators so they don't restart.
+
+No coordinators remain (40 orphaned frontends will drain). Let me wait for them to exit, then do a **fast targeted typecheck** of my test files against the already-built module (avoiding the 2000-file bundle recompile). Let me locate the built module and XCTest.
+
+Frontends drained; the testing-enabled `TeslaSync.swiftmodule` exists. Let me do a fast targeted typecheck of my test files against it (proving they compile without the 2000-file bundle rebuild). First, gather the SDK/XCTest/Shared paths.
+
+All paths found — and `TeslaSyncTests.swiftmodule` already emitted (so the bundle module compiled). Let me run a fast targeted typecheck of my 2 test files against the testing-enabled `TeslaSync` module to definitively confirm they compile.
+
+The targeted typecheck hit a **stale products module** (the thrashing left `/tmp/ts-dd` inconsistent — the products `TeslaSync.swiftmodule` predates my files), so it's not a real error in my tests. I need one clean, single build. The app is mostly built (6250 `.o`); a single non-duplicated `xcodebuild test` should reconcile and finish. Let me run exactly one, in the foreground.
+
+One controlled process now (no duplicates). Let me check whether it's reusing the cache and progressing toward the test run.
+
+Single clean run progressing, no errors. Let me wait for it to reach the test bundle and execute my tests.
+
+My test files **compiled successfully** (`TemperatureImpactPageModelTests.o` + `TemperatureImpactFormatTests.o`, zero errors). Now it just needs to link and run. Let me wait for the test results.
+
+The test run completed! Let me read the final result.
+
+`** TEST SUCCEEDED **` — **all 24 tests pass** (12 `TemperatureImpactFormatTests` + 12 `TemperatureImpactPageModelTests`, 0 failures), `XCODEBUILD_EXIT=0`. Full iOS gate is green. Let me kick off a macOS build to verify the macOS idiom too (separate derived data), then write the log and ledger while it runs.
+
+macOS build launched (separate derived data). Let me update todos and write the gate log while it builds.
+
+Let me write the evidence log with the real gate results.
+
+I included a macOS build result in the log — I must verify it before claiming it. Let me check the macOS build status.
+
+macOS build failed — but **not from my code**: it's a code-signing/entitlements error (no dev certificate in this environment), failing before compilation (0 macOS `.o` produced). I must correct that log line. Let me retry the macOS build with signing disabled (standard CI technique) to genuinely verify my code compiles for macOS. First, kill the lingering failed-build procs.
+
+Let me wait for orphans to drain, then relaunch the macOS build with signing disabled so compilation can proceed.
+
+macOS retry (signing disabled) launched. The log currently has an unverified macOS claim — let me correct it to the truthful interim state while the retry runs, and update the ledger.
+
+Now let me add the 2 ledger rows (append after the last row).
+
+Let me validate the ledger JSON and check the macOS build is compiling (not failing on signing again).
+
+Ledger valid (both rows 36/36). macOS build (signing disabled) is now genuinely compiling the macOS target — no signing or compile errors. Let me wait for it to compile my Maps files and finish.
+
+All 8 Maps `.o` files compiled cleanly for **macOS** too (zero errors) — the macOS idiom is verified. Let me wait for the full macOS `BUILD SUCCEEDED` to finalize the evidence.
+
+`** BUILD SUCCEEDED **` for macOS too. Both idioms verified. Let me finalize the macOS result in the log and commit.
+
+Both idioms verified. Let me do a final SwiftLint confirmation on Maps (after the `nonisolated` edit) and review what will be committed.
+
+Git status is exactly as expected (3 modified + log + 2 new dirs; `.xcodeproj` correctly ignored). Let me verify the xcstrings change is clean additions while the final lint runs.
+
+All diffs are clean additions. Let me get the final lint confirmation, then commit.
+
+`MAPS_LINT_CLEAN` confirmed. Everything is green. Let me commit the work.
+
+All 14 files staged (8 sources, 2 tests, 3 edits, 1 log). Let me commit.
+
+Let me verify the commit landed and the working tree is clean.
+
+Commit landed cleanly: `270530c78`, 14 files, 1961 insertions, working tree clean. Let me verify the log's final gate section is accurate and clean up temp build artifacts.
+
+The log is accurate and complete (EXIT=0, STATUS=DONE, no placeholders), and was committed in its final state. Let me clean up the temporary build artifacts.
+
+The task is complete and fully verified. Let me mark it done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: unexpected conflicting file apps/apple/Sources/App/AppRouteParser.swift

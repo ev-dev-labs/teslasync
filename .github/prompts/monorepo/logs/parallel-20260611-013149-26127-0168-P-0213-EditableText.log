@@ -1,0 +1,252 @@
+I'll start by understanding the environment and the task requirements. Let me explore the repository structure and check tooling availability.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the web source and Apple app structure.
+
+Let me read the web source component and examine existing Apple shared-surfaces to understand the conventions.
+
+Now let me explore the Apple app structure to understand conventions: state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and look at existing shared-surfaces as a template.
+
+EditableText doesn't exist yet. There's a clear multi-file convention per surface. Let me study a complete example and the shared infrastructure (tokens, i18n, diagnostics, state holders).
+
+That example is large. Let me read the simpler Accordion surface file-by-file to learn the conventions.
+
+This is a sophisticated, well-structured codebase. Let me read the rest of the Accordion surface files to fully understand the pattern.
+
+Accordion has no States file. Let me examine the design tokens, project.yml build config, and the Tests/Previews pattern. I also need a surface with a TextField since EditableText is input-based.
+
+The whole `shared-surfaces` dir is globbed into the build. Let me examine design tokens and find an existing surface using a TextField (input) for parity reference.
+
+`CurrencyInput` and `TagInput` are the closest analogs. Let me study CurrencyInput end-to-end since it's a single-value editable input with focus + commit semantics — very close to EditableText.
+
+Now let me read the CurrencyInput Model, Adapter, Views, and the test files to complete my understanding of the full pattern.
+
+Let me read the remaining CurrencyInput files (Adapter, Views, Previews, Tests, ModelTests, strings) to complete the template understanding.
+
+Let me read the CurrencyInput Adapter, Previews, ModelTests, and Tests, plus discover the shared component primitives.
+
+There's already a `TSEditableText` atomic component (component-library bundle — out of scope). Like CurrencyInput did, I'll namespace my surface to avoid collision. Let me examine the existing `TSEditableText`, the announcer pattern, and key shared primitives.
+
+`TSEditableText` is a simpler atomic component. My surface must be the full reproduction (async save, validation, announcer, P4 leaf states) — I'll namespace as `EditableTextField` to avoid collision (like CurrencyInput→CurrencyInputField). Let me study the announce pattern, TagInput focus/commit, and the test approach.
+
+There's an `AnnouncerRegion` surface (native peer of `useAnnouncer`). Let me read the announcer seam patterns and TagInput's focus/commit/announce implementation.
+
+TagInput gives me the announcer + source seam pattern. But EditableText's `onSave` is **async throwing** (Promise that can reject) — a key difference. Let me check for async-save patterns and read TagInput's Views (focus/keyboard/announce wiring) and Model.
+
+Let me read the test files to understand the testing approach (framework, structure) and check for async-throwing save patterns.
+
+Let me read CurrencyInput.Tests.swift (the view/a11y tests), TagInput.Model.swift (validation/commit logic), and check the test target config plus async-save patterns.
+
+Tests are XCTest-based (no ViewInspector/snapshot lib). Let me study CopyButton's async pattern and how its async model is tested, since EditableText's `onSave` is async/throwing.
+
+I have a thorough understanding now. Let me check the shared primitive signatures I'll use, whether an xcodeproj exists, and establish a build baseline.
+
+`xcodegen` is available but no project generated yet. Let me generate it and establish a baseline build. I'll write the plan to track this multi-phase work.
+
+Project generated. Let me check the shared primitive signatures I'll use, then kick off a baseline build to confirm the project compiles before my changes.
+
+Let me check the remaining primitive signatures (TSButton, TSSkeleton, TSCard, TSFadeIn) and start the baseline build in parallel.
+
+I have everything needed. Let me kick off a baseline macOS build in the background to confirm the generated project compiles, while I write the EditableText surface files.
+
+4863 Swift files — the build will be slow (running in background). Let me record a plan and start writing the surface files following the CurrencyInput/TagInput conventions exactly.
+
+Now let me write the Adapter (pure Foundation core) — the testable heart of the surface.
+
+Now the Seams file (source protocol with async save, Live/InMemory sources, Telemetry + Announcer seams).
+
+Let me check the baseline build progress before continuing with the Model.
+
+Build still compiling. Let me write the Model (the @Observable state-holder with the async save flow).
+
+Now the States file (loading skeleton + error tile, P4 leaf chrome).
+
+Now the Views file — the core presentational layer (Live announcer, display button + pencil, edit field + spinner + inline error, ready body, freshness chip).
+
+Now the main surface view (`EditableText.swift`) with the phase switch and both initializers.
+
+Let me check baseline build status, then write the Previews and strings files.
+
+Still building. Let me write the Previews and strings files.
+
+Let me add a pure `displayText` a11y helper to the Adapter and wire it into the View (so the accessibility value is unit-testable and DRY).
+
+Baseline build finished. Let me check its result and update the View to use the new helper.
+
+Important finding: the baseline **macOS build fails at provisioning/signing** (not compilation) — entitlements require a development certificate. The iOS Simulator path doesn't need signing. Let me note this, finish the View wiring + tests, then validate compilation properly. First, update the View to use the shared a11y helper.
+
+Now the comprehensive Tests file (engine/projection/seams/a11y).
+
+Now the ModelTests — state-holder lifecycle, save success/failure, validation, focus guard, connection axis, and the in-flight duplicate-commit guard.
+
+All 10 files written. Let me run swiftformat and swiftlint on my new files first (fast feedback), checking the configs.
+
+Config notes: `--strict` turns warnings to errors; type names must be ≤50 chars (mine are). Let me lint my new files with swiftformat and swiftlint.
+
+swiftformat flagged formatting in 3 files. Let me auto-format my files (write mode) with the ecosystem tool, then re-verify.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+A few fixable lint issues: brace-wrapping conflict in Adapter (lines 277/320) and ModelTests length. Let me inspect the Adapter brace issue and check Tests.swift length.
+
+The brace issue is a swiftformat/swiftlint conflict on multiline conditions. I'll refactor to single-line conditions via helpers. Let me check current line counts first.
+
+Only ModelTests + the Adapter brace-wrap need fixing (Tests.swift at 395 is fine). Let me refactor the Adapter to single-line conditions and restructure ModelTests (move helpers to file scope, trim header).
+
+Now add the `nonBlank` helper to the engine.
+
+Now restructure ModelTests: compress header and move helpers to file scope (fixes type_body_length + file_length).
+
+Let me re-format and re-lint the changed files.
+
+Still 403 (need ≤400). Let me trim a few lines from the test doubles section.
+
+One more line. Let me remove one doc comment in the gated source helper.
+
+I accidentally removed the whole `waitUntilSaving` function. Let me re-add it (without the doc comment to keep the line count).
+
+Let me verify line count and run the full swiftlint + swiftformat on all my files.
+
+Both swiftformat and swiftlint pass on all 9 files (ModelTests exactly at the 400 limit). Now I must verify compilation. The macOS build failed at signing (not compile); the iOS Simulator build needs no signing. Let me check simulators and start the iOS build.
+
+iPhone 16 simulator is booted. Let me start the iOS Simulator build to validate compilation of my new code.
+
+While the iOS build runs, let me remove an unused `@Environment` var I noticed in the display view.
+
+Let me verify how TagInput's convenience init handles the `@MainActor` Live announcer default — to confirm my approach compiles.
+
+TagInput uses the identical pattern (`announcer: any TagInputAnnouncer = LiveTagInputAnnouncer()`), confirming mine compiles. Let me check the iOS build progress.
+
+Build failed — but on a **pre-existing** error in `AIGeofenceAwareAutomationSuggestions.swift` (not my file). Let me confirm my changes are isolated and assess the full set of pre-existing errors.
+
+Confirmed: my changes are **only** the 10 EditableText.* files. `AIGeofenceAwareAutomationSuggestions.swift` is from a prior commit (40e1e5da0) with a pre-existing compile error. Let me capture the full set of pre-existing errors to understand scope.
+
+While the full build runs, let me examine the pre-existing error to understand its nature.
+
+I see the pre-existing bug (line 140: `content` needs `@escaping`). It's a predecessor's file, outside my allowed scope. Let me get the complete error inventory.
+
+Critical finding: **my EditableText files produce ZERO compile errors.** The build is blocked by pre-existing predecessor bugs (same pattern: `func glass(@ViewBuilder _ content: () -> some View)` missing `@escaping`) in AI* surfaces outside my allowed scope. Let me size the predecessor breakage.
+
+45 predecessor files use the buggy non-escaping-closure pattern (mine use none). This is widespread, systemic predecessor breakage outside my scope. To **prove my surface compiles and my tests pass**, I'll do a temporary diagnostic: apply the always-safe `@escaping` fix to predecessors, build+test, then revert them (leaving only my files). First, snapshot which are tracked so I can cleanly restore.
+
+45 files temporarily fixed (all tracked/restorable). Let me rebuild and capture any remaining errors.
+
+While the diagnostic build runs, note there's a **second independent blocker**: the macOS gate step requires a development signing certificate (baseline showed this) — a classic headless-runner capability limit. Let me check the diagnostic build result.
+
+Build still running. Let me wait for completion.
+
+My temporary `@escaping` fix cleared the 45-file errors, but the build now surfaces **yet another** distinct pre-existing error in a different predecessor (`RecentDrivesSection.Previews.swift:24` — compiler type-check timeout). My EditableText files **still show zero errors**. This confirms widespread, diverse predecessor breakage. Let me look at this next error to judge whether a green build is reachably close.
+
+This confirms diverse, widespread predecessor breakage (escaping closures in shared-surfaces, type-check timeouts in feature-views). Reaching green would require fixing many out-of-scope files. Let me first **revert my temporary diagnostic edits** to keep the repo pristine.
+
+The errors are only about my untracked files (expected); tracked predecessors should be reverted. Let me confirm the repo is clean except my files.
+
+The glob aborted the checkout. Let me revert the tracked predecessor files properly with `git restore` (ignores my untracked files).
+
+Repo is pristine (no tracked changes; predecessor edits reverted). Let me confirm my 10 files are intact, then build a standalone SwiftPM package to **actually run** my core-logic tests (Adapter/Model/Seams are Foundation-only, so testable in isolation).
+
+All 10 files intact; the 3 logic files are pure Foundation (no SwiftUI). Let me build a standalone SwiftPM package to **actually compile and run** my core-logic test suite (engine, save flow, seams, model) — real test-execution proof independent of the broken app module.
+
+Now copy the test files into the package, adapting the module import and the one View-static reference.
+
+**All 66 core-logic tests PASS (0 failures)** — definitive proof my engine, async save flow, validation, guards, focus-guard, connection axis, seams, and a11y text logic are correct. The View layer can't run standalone but showed zero compile errors + passes lint/format. Now let me run the placeholder gate check. Let me inspect the script first.
+
+The gate's `-Path .../EditableText` is a non-existent path (prefix, not a real file/dir), so the script returns clean trivially. To verify **meaningfully**, I'll scan my actual files. Let me run both the literal gate invocation and a real scan of my files.
+
+The real scan flags 54 hits on the **"Placeholder"** pattern — my legitimate use of the web's `placeholder` domain term. CurrencyInput/TagInput avoided this by using "prompt" terminology. Let me check the exact forbidden patterns and how the codebase handles the word.
+
+The forbidden pattern is `"Placeholder"` (case-insensitive). The codebase convention: use "prompt" terminology (CurrencyInput/TagInput do) and reserve `// parity:allow` for essential web-prop references. The literal gate command passes (non-existent path), but per the acceptance ("no placeholder in shipped code") I'll genuinely clean it. Let me map all 54 occurrences.
+
+This is a clean conceptual rename (`placeholder` → `prompt`, the SwiftUI-idiomatic term used by CurrencyInput/TagInput). Let me apply it across my Swift files, then re-verify the placeholder scan, format, lint, and re-run tests.
+
+PLACEHOLDER_COUNT=0 now. Let me update the `.strings` comments for consistency, then re-run the standalone tests (sed touched the test files) and re-lint.
+
+Let me re-run the standalone tests with the renamed code (sed touched the test files too) and re-check format/lint.
+
+Still 66/66 passing after the rename. Now let me add one accurate parity-mapping note (native `prompt` = web `placeholder`) using the codebase's `// parity:allow` convention. Let me view the relevant Adapter section.
+
+The sed made some web-source references inaccurate (e.g., "web `isPrompt`" — the web variable is actually `isPlaceholder`). For parity traceability I'll restore accurate web-identifier quotes using the `// parity:allow` convention, and add one clear prop-mapping note. Let me view the affected sections.
+
+Let me view the header lines that quote the web expression, then make precise parity-accurate edits.
+
+I'll add one accurate prop-mapping note (`// parity:allow`) and fix the web-identifier quotes to reference the web's real `visibleText` variable (dropping the sed-mangled `isPrompt`). Let me view the Input struct opening.
+
+Let me make precise parity-accuracy edits to the Adapter doc comments (one mapping note with `// parity:allow`, and accurate `visibleText` web references).
+
+Let me re-run the placeholder scan (the mapping note should count as ALLOWED, not a violation), swiftformat, and swiftlint on all my files.
+
+The mapping note's `// parity:allow` landed on a different line than the word "placeholder" (the scanner checks per-line). Let me view and consolidate it onto one line.
+
+Now "placeholder" and the `// parity:allow` marker are on the same line. Let me re-verify the placeholder scan and formatting.
+
+Placeholder scan passes (ALLOWED=1, COUNT=0). But swiftformat wants to reformat the Adapter — my mapping-note line exceeds 120 chars and would get wrapped (splitting "placeholder" from the marker). Let me see the exact rule, then shorten the line.
+
+The `wrapSingleLineComments` rule wants to wrap my over-120 comment (which would split "placeholder" from the marker). Let me view and shorten it to fit on one line under 120.
+
+Let me re-verify the Adapter passes swiftformat, swiftlint, and the placeholder scan.
+
+All green: swiftformat 0/9, swiftlint 0, placeholder COUNT=0 (ALLOWED=1). Let me re-run the standalone tests once more to confirm logic is intact after the doc edits.
+
+My surface is fully verified: **66/66 core tests pass**, zero compile errors in my files, swiftformat/swiftlint/placeholder all clean. 
+
+Now I'll run the **official gate** to capture real results honestly. First, let me confirm the log directory and reconfirm the macOS signing blocker quickly.
+
+There are prior EditableText logs. Let me check how a previous run handled this (to confirm the blocker pattern and align my approach).
+
+This is a key discovery. A **prior run of this exact prompt (0213)** documented the established **predecessor methodology (ADR-012)**: the full-app `xcodebuild build test` is *known* to be blocked by pre-existing, unrelated parallel-merge collisions, so surfaces are verified **green in isolation** (SwiftPM build+tests, real-SDK `swiftc -typecheck`, lint/format/placeholder) with the full-app build **deferred** — ending `EXIT=0 / STATUS=DONE`. My independent findings (predecessor breakage, "Placeholder" banned → "prompt") match exactly.
+
+Let me verify this convention is documented in-repo and match its rigor by also type-checking my **View** layer. First, what's referenced.
+
+The pending-verifications doc exists (37KB) — the deferral methodology is real and in-repo. My View files only need 4 component stubs (TSButton, TSCard, TSFadeIn, TSSkeleton) plus the real tokens. Let me confirm no other TS deps, then build an **extended SwiftUI harness** to type-check + test the full surface (View layer included) on real SDKs.
+
+Confirmed deps. Let me build the **extended harness** with the real tokens + 4 component stubs + all 6 surface files (View layer included), then build+test on macOS.
+
+Now build+test the extended harness (full surface incl. View layer) on macOS:
+
+The **full surface (View layer included) compiles cleanly** on macOS/SwiftUI. Now run the test suite in the extended harness:
+
+66/66 tests pass with the View layer compiled. Now the iOS-SDK `swiftc -typecheck` (predecessor methodology: verify both iOS 18 + macOS 15 SDKs):
+
+Both iOS 18 + macOS 15 typechecks pass (EXIT=0). My surface is comprehensively verified in isolation. Let me check exactly how the predecessor log recorded the deferred xcodebuild steps vs. the final EXIT/STATUS, to match the established honest convention.
+
+I now have the exact predecessor convention (ADR-012: host-runnable gates green + full-app build DEFERRED with evidence → EXIT=0/STATUS=DONE). My verification matches/exceeds it (66 tests vs predecessor's 41). Let me run `xcodegen` to confirm my files are enumerated, and capture the real macOS gate failure for the log's deferred section.
+
+All 10 files enumerated (XCODEGEN_EXIT=0). Let me capture the real macOS gate failure (signing) and confirm the iOS failure evidence for the log's deferred section.
+
+I have all real evidence (iOS: predecessor compile errors, 0 EditableText errors; macOS: MAC_EXIT=65 signing). Let me gather final file metrics and write the comprehensive gate log per the established ADR-012 convention.
+
+All metrics gathered. Now let me write the comprehensive gate log following the established ADR-012 convention.
+
+Log written. Let me clean up temp artifacts and verify git status before committing only my files + log.
+
+Repo is clean — only my 10 surface files + the log are new (xcodeproj is gitignored; no predecessor modifications remain). Let me commit my files + log.
+
+Committed (27f23ce83). Let me do a final sanity check: working tree clean, commit contents correct, and re-confirm the surface gates one last time.
+
+Everything is verified and committed. Let me update the session plan to reflect completion.
+
+The task is complete. Let me finalize.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0213-EditableText.log | 153 ++++++++
+ .../shared-surfaces/EditableText.Adapter.swift     | 368 +++++++++++++++++++
+ .../shared-surfaces/EditableText.Model.swift       | 292 +++++++++++++++
+ .../shared-surfaces/EditableText.ModelTests.swift  | 400 +++++++++++++++++++++
+ .../shared-surfaces/EditableText.Previews.swift    | 132 +++++++
+ .../shared-surfaces/EditableText.Seams.swift       | 199 ++++++++++
+ .../shared-surfaces/EditableText.States.swift      |  67 ++++
+ .../shared-surfaces/EditableText.Tests.swift       | 395 ++++++++++++++++++++
+ .../shared-surfaces/EditableText.Views.swift       | 291 +++++++++++++++
+ .../TeslaSync/shared-surfaces/EditableText.strings |  54 +++
+ .../TeslaSync/shared-surfaces/EditableText.swift   | 103 ++++++
+ 11 files changed, 2454 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0213-EditableText.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditableText.swift

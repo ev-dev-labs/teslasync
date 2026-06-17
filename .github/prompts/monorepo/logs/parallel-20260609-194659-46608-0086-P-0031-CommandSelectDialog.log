@@ -1,0 +1,8 @@
+I'll start by exploring the repository structure, the web source file, and checking the Apple toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me read the web source and explore the Apple app structure.
+
+Toolchain confirmed. Now let me explore the existing Apple structure — the `modals-dialogs` directory, an example surface pattern, and the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+
+Authorization error, you may need to run /login (Request ID: F2B3:2A0DEB:849BF08:8CEA9E8:6A298613)

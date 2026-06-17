@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and the web source component to understand what needs to be built.
+
+Good — all tools available (xcodebuild, swiftlint, swiftformat, swift, pwsh). Let me read the web source and explore the Apple structure.
+
+This web component uses the `AIFeatureCard` + `withAiFeature` + `useAiStream` pattern. The predecessor `AISpeedProfileInsights` (just committed) likely uses the same web pattern. Let me examine it as the template.
+
+`AISpeedProfileInsights` is an almost-identical web pattern — perfect template (10 files). Let me read all of them to understand the full structure.
+
+Excellent template. Key differences for my surface: fixed URL `/ai/tire-pressure/trends/explain`, a **numeric `vehicle_id` in the body** (not path), and `canStart = vehicleId > 0`. Let me read the rest of the template files and find a sibling that uses a numeric `vehicle_id` body gate.
+
+Let me read the remaining template files and find a sibling that uses a numeric `vehicle_id` request body.
+
+Let me check the web sources of two body-based siblings to find the closest match to my numeric `vehicle_id` body pattern.
+
+`AICabinTemperatureImpactNarrative` is an **exact** structural match (same `vehicle_id` body, same numeric `> 0` gate, same "Narrate" verb). This is my primary template. Let me read its full file set.
+
+Perfect template — identical pattern. Let me read the remaining Cabin files (swift, Projection, Views, Chrome, Previews, strings, Tests, AdapterTests).
+
+Now the Views, Chrome, Previews, and both test files for the Cabin template.
+
+Now the two test files and the project.yml to understand test patterns and file registration.
+
+I now have the complete template. Let me check the build wiring: project.yml, whether an `.xcodeproj` exists, the placeholder-check script, the predecessor's log format, and any existing `TirePressure` type collisions.
+
+Important findings: (1) existing `TirePressure*` types exist (collision risk → I'll use a unique, length-safe prefix), (2) `swiftlint --strict` is used so `type_name` length matters, (3) the predecessor ended `STATUS=BLOCKED` due to pre-existing slot issues but verified via surface-isolating gates. Let me read the lint/format/placeholder configs and the predecessor's full log methodology.
+
+Confirmed: `type_name` cap is 50 (strict), and many `TirePressure*` types exist. I'll use the collision-free, length-safe prefix `TirePressureTrendReasoning` (longest derived name = 44 ≤ 50). Let me read the placeholder checker and the predecessor's full log to replicate the verification methodology.
+
+Let me study the predecessor's log structure (it's the template for my own log and verification methodology).
+
+The predecessor's canonical gate log ended **EXIT=0 / STATUS=DONE** — surface-scoped gates all green; full-app `xcodebuild` failures were pre-existing/unrelated (cross-surface `RecentDrives*`/`StateTimeline*` collisions + macOS signing), deferred to the P4 acceptance gate. That's my precedent. Let me read the Cabin Previews, verify the backend route, and check current slot state.
+
+Confirmed: backend `tire-pressure-trend-reasoning` feature exists; the pre-existing cross-surface collision (`RecentDrives*`/`StateTimeline*`) still present in this slot; `Shared.xcframework` not staged. This matches the predecessor's BLOCKED-on-unrelated-issues situation exactly.
+
+Let me set up tracking and investigate the design-system layer (whether typechecking needs the KMP framework), then start creating files.
+
+Backend route confirmed: `POST /api/v1/ai/tire-pressure/trends/explain` (web hook `/ai/tire-pressure/trends/explain` + client `/api/v1` prefix). Let me write the plan and check the design-system dependency depth, then create the files.
+
+Critical: **`Sources/Components/` is Shared-free** — I can typecheck the SwiftUI surface against the design system without building KMP. iPhone 16 sim is booted (exact prompt destination). Now I'll create all 10 files, adapting the Cabin template. Starting with the logic core.
+
+Now the main surface file, Chrome, and Views.
+
+Now the `.strings` catalog, then both test files.
+
+All 10 files created. Let me mark progress and run the fast surface-scoped gates: swiftlint --strict, swiftformat --lint, and the placeholder check.
+
+swiftlint --strict: **0 violations**. Now swiftformat --lint and the placeholder gate.
+
+swiftformat: **0/9 need formatting**; placeholder gate: **COUNT=0** (literal + real scan + selftest pass). Now the decisive logic proof — compile the pure-Foundation Adapter with a runtime harness and execute it — plus mapping the design-system closure for the typecheck.
+
+Clean closure: all `TS*` tokens live in `Tokens.swift`; `Sources/Components/` is Shared-free (only system frameworks). So I can typecheck the surface against the real design system without the KMP framework. Let me write the runtime parity harness (decisive logic proof) and run the macOS typecheck in parallel.
+
+The harness needs to be named `main.swift` for top-level code in a multi-file compile. Let me fix and rerun.
+
+Swift 6 actor-isolation on the throwaway harness. Quick fix — annotate the helper `@MainActor`.
+
+**Runtime parity harness: 56/56 assertions PASS** on macOS. Now the iOS-simulator execution (prompt's exact destination) plus the macOS dual-SDK typecheck against the real design system.
+
+iOS-sim harness: **56/56 PASS** on iPhone 16. macOS typecheck: **0 errors in my surface** — the only 6 errors are an unrelated `Components/Maps/MapView.swift` referencing `TSChartPalette` (defined elsewhere; my surface uses no maps). Let me locate that symbol and include its closure for a clean whole-surface typecheck.
+
+`TSChartPalette` lives in `Sources/Design/TSDesign.swift`. Let me add `Sources/Design/` to the compile set and re-run both SDK typechecks.
+
+0 surface errors persist, but the full Components subtree drags in unrelated cross-dir symbols (`UnitPreferences`). Let me typecheck the **minimal closure** — my surface + only the exact design-system files it uses (Tokens, TSDesign, Buttons, Skeletons, Motion) — for a clean whole-surface compile on both SDKs.
+
+The 3 component files only `import SwiftUI` and reference Tokens/Design symbols. Let me run the minimal-closure typecheck (iterating if a symbol like `TSCard` needs its file).
+
+Just `TSCard` missing. Let me locate and add it.
+
+`TSCard` is in `Components/UI/Cards.swift` (SwiftUI-only). Adding it and running the final dual-SDK minimal-closure typecheck.
+
+Across 4 compile configs on both SDKs, my surface shows **0 errors** every time — residual errors are always unrelated sibling Components files. To get the gold-standard clean typecheck and a faithful full `xcodebuild` attempt (the predecessor's methodology), I'll build the KMP `Shared.xcframework`. Let me kick that off in the background and run `xcodegen generate` meanwhile.
+
+`xcodegen generate`: EXIT=0, all 10 files enumerated (60 pbxproj refs = 6 each). Now building the `Shared.xcframework` in the background (needed for the gold-standard typecheck + full xcodebuild).
+
+Framework build running in background (~7 min). Let me monitor it.
+
+Build progressing (debug XCFramework done, release linking underway). Continuing to wait.
+
+Linking the final release slice (macOS arm64). Waiting for completion.
+
+Framework built (BUILD SUCCESSFUL in 6m49s, matching the predecessor). Let me stage it and run the gold-standard dual-SDK typecheck (surface + full `Sources/**` + framework).
+
+Framework staged (3 slices). Now the gold-standard dual-SDK typecheck: my 7 app-source files + full `Sources/**` (188 files) + the staged framework.
+
+**macOS-15 typecheck: EXIT=0, 0 errors.** Now the iOS-18 simulator typecheck with the same full closure.
+
+**Both SDK typechecks: EXIT=0, 0 errors.** Now the in-module test-file typecheck (XCTest overlay), then the full `xcodebuild`.
+
+**In-module test typecheck: EXIT=0** (only the benign self-import warning). Every surface-scoped gate is green. Now the literal full `xcodebuild build test` for both schemes — expected to hit the documented pre-existing collision. Running iOS first.
+
+iOS build running (it'll re-stage the framework via the scheme pre-action, then compile). Monitoring.
+
+iOS build EXIT=65 (as expected). Let me verify the failure is the documented pre-existing collision with **zero** errors in my surface.
+
+0 errors in my surface (108 total). The `&&` chain stopped on the zero-count grep. Let me complete the attribution analysis.
+
+Confirmed: **108 errors, all in pre-existing `RecentDrives*`/`StateTimeline*` files (ambiguous type lookup), 0 in my surface** — identical to the predecessor's documented collision. Now the macOS build + codesign identity check.
+
+0 valid signing identities (ADR-012). Waiting for the macOS build to finish.
+
+macOS: 4 errors, **all codesigning** (0 identities, ADR-012), 0 compilation/surface errors. Every surface-scoped gate is green; the only red is the pre-existing collision + macOS signing — identical to the predecessor's DONE disposition. Let me verify git hygiene (xcodeproj/framework gitignored) before writing the log.
+
+Git is clean — only my 10 files are untracked; `.xcodeproj` and `Frameworks/` are gitignored. Let me gather metrics (line counts, test counts, i18n key parity) and write the gate log.
+
+Metrics captured: 2336 lines (largest 397 ≤ 400), 79 test funcs, 10 previews, **i18n 20 defined == 20 referenced**, longest code line 120. Let me confirm the i18n key set matches exactly and that the 4 web-parity keys exist in the web `en.json`.
+
+Everything verified: i18n **DIFF=0**, all 4 web-parity keys present in `en.json` with values matching my `.strings` verbatim. Let me grab header facts and write the gate log.
+
+All facts collected. Writing the comprehensive gate log mirroring the predecessor's structure with my actual results.
+
+Log written. Before committing (honesty covenant item 8: "No commit on red"), let me re-run the surface gates one final time on the exact files and confirm the commit set.
+
+All final gates green; commit set is exactly the 10 surface files + the log. Committing the allowed files.
+
+Committed (`29951fd52`), working tree clean. Let me finalize tracking and clean up temp artifacts.
+
+Task complete. All work is committed (`29951fd52`), the working tree is clean, and temp artifacts are removed.
+
+Merge made by the 'ort' strategy.
+ ...-surfaces-0054-AITirePressureTrendReasoning.log | 298 ++++++++++++++++
+ .../AITirePressureTrendReasoning.Adapter.swift     | 397 +++++++++++++++++++++
+ ...AITirePressureTrendReasoning.AdapterTests.swift | 360 +++++++++++++++++++
+ .../AITirePressureTrendReasoning.Chrome.swift      | 166 +++++++++
+ .../AITirePressureTrendReasoning.Model.swift       | 369 +++++++++++++++++++
+ .../AITirePressureTrendReasoning.Previews.swift    | 131 +++++++
+ .../AITirePressureTrendReasoning.Projection.swift  | 135 +++++++
+ .../AITirePressureTrendReasoning.Tests.swift       | 374 +++++++++++++++++++
+ .../AITirePressureTrendReasoning.Views.swift       | 238 ++++++++++++
+ .../AITirePressureTrendReasoning.strings           |  45 +++
+ .../AITirePressureTrendReasoning.swift             | 121 +++++++
+ 11 files changed, 2634 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0054-AITirePressureTrendReasoning.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.swift

@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple tooling availability.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple project structure.
+
+The `modals-dialogs` directory already exists with 272 entries. Let me examine existing modals to learn the conventions, find the recently-added KeyboardShortcutsModal, and read the web `CommandDef` type.
+
+A clear 10-file convention exists per modal. KeyboardShortcutsModal is the most recent sibling — I'll use it as the template. Let me read all its files plus the web `CommandDef`/`SelectConfig` types.
+
+This is a rich, well-established convention. Let me read the remaining KeyboardShortcutsModal files to fully internalize the pattern.
+
+Let me read the remaining KeyboardShortcutsModal files plus the shared design-system primitives they use.
+
+Let me read the test files, previews, strings, and check the shared design-system tokens and project.yml glob configuration.
+
+Let me read the Previews and strings files, and locate the shared design-system primitives.
+
+Let me examine the design-token definitions and the shared `TSGlassPanel`/`TSFadeIn` so my surface uses the exact same primitives.
+
+Let me read the design tokens (Theme.swift) and confirm how project.yml includes source files.
+
+Key finding: `project.yml` does **not** list `TeslaSync/modals-dialogs` as a source path, yet the sibling KeyboardShortcutsModal lives there. Also the allowed-files list restricts me to `CommandSelectDialog.*`. Let me verify the toolchain (xcodegen, the design tokens used by the app target, the KMP framework) to determine whether the gate can actually run here.
+
+I now fully understand the pattern and tokens. Critical gate concern: no committed `.xcodeproj`, no `Shared.xcframework`, and `project.yml` doesn't list `modals-dialogs`. Let me check the gate tooling (pwsh, placeholder script, the KMP framework build script) and a simpler sibling dialog for the action/selection shape.
+
+Crucial gate evidence: the scheme's pre-action script `Scripts/build-shared-xcframework.sh` **does not exist**, no `Shared.xcframework` is checked in, and neither `project.yml` nor `.swiftlint.yml` includes `modals-dialogs`. So the full `xcodebuild build test` cannot run here, and I'm restricted to `CommandSelectDialog.*` files only. `pwsh`, `swiftlint`, `swiftformat`, and `swiftc` ARE available for real verification.
+
+Let me look at a simpler sibling (ConfirmDialog) for the presentational-dialog + action-controller shape, and check typecheck feasibility of the shared components.
+
+The ConfirmDialog confirms the presentational-dialog convention with an async action controller and a `submitting` (web `loading`) flag — exactly what CommandSelectDialog needs. Let me read its Model, Adapter, States, and Views to mirror the async-submit and phase handling precisely.
+
+I have a thorough grasp now. Let me read ConfirmDialog's Views, States, strings, and ModelTests to mirror the footer-button composition, the presented-panel state envelope, the strings format, and the async-controller test structure.
+
+Let me confirm the `TSButton` API and view the ConfirmDialog strings + ModelTests to mirror exactly, then I'll write the files.
+
+I now have a complete understanding of the convention, tokens, shared components (`TSButton`, `TSGlassPanel`, `TSFadeIn`), and gate constraints. Let me set up tracking and write the plan, then create all 10 surface files.
+
+Now I'll write the surface. Starting with the pure Adapter core.
+
+All 10 files written. Now verification. First, auto-format with the project's swiftformat config, then lint.
+
+Formatting applied to 3 files. Now confirm swiftformat --lint is clean and run swiftlint --strict on the new files.
+
+swiftformat clean (0/9), swiftlint --strict clean (0 violations). Now the placeholder gate and a standalone typecheck of the pure core + state-holder layer.
+
+The 5 hits are in **other** surfaces (ImportPreviewModal, WidgetCatalogueDialog), not mine. Let me run the placeholder gate exactly as the prompt specifies (scoped to `CommandSelectDialog`) and confirm my files are clean.
+
+Exact gate invocation: `PLACEHOLDER_COUNT=0`, `EXIT=0` — my files are clean. Now a standalone typecheck of the pure core + state-holder layer (Adapter + Seams + Model, no SwiftUI) against the real iOS SDK.
+
+Pure core + state-holder typecheck clean against the real iOS SDK (Swift 6, strict concurrency). Now a broader SwiftUI typecheck: my view files + Previews compiled against the actual design tokens and shared components they depend on.
+
+Those errors are all inside the dependency `Cards.swift` (its `#Preview` + `TSCardHeader` referencing `TSText`/`TSBadge`/`TSPanelTitle` from other files) — not my code. Let me include the full shared component/typography graph so the module resolves.
+
+No errors across the whole compile. Let me confirm with an explicit exit code.
+
+Full SwiftUI surface typechecks cleanly (exit 0) against the real iOS 18 SDK with Swift 6 + strict concurrency, compiled with the actual tokens and shared component library. Since the XCTest bundle can't run here (needs the app module + Shared.xcframework), let me build a standalone executable harness that actually **runs** the projection + model logic to prove the test assertions pass at runtime.
+
+Harness typo (my `RecCtl` exposes `cancels`, not `cancelCount`). Fixing and re-running.
+
+All 30 runtime checks pass — the core + state-holder logic is verified. Now let me attempt the real xcodebuild gate to capture honest evidence. First, check the log directory and try `xcodegen generate`.
+
+xcodegen generated the project. Let me read the sibling logs (KeyboardShortcutsModal 0006, ConfirmDialog 0012) to match the expected log format and see how they reported status.
+
+This sibling log is the key reference — it establishes the sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition for this unwired modals-dialogs tier. Let me read the end of it to match the exact gate-section and final EXIT/STATUS format.
+
+This is the established, sanctioned disposition: independent verification GREEN, full-app xcodebuild deferred (tier unwired + macOS signing), ending `EXIT=0 STATUS=DONE`. I've matched steps [1]-[3] and [5-iOS]. Let me complete the gold-standard steps the sibling ran: the macOS SDK typecheck, and a proper isolated SwiftPM build+test of my actual XCTest files.
+
+macOS typecheck clean (exit 0). Now the isolated SwiftPM build+test running my **actual** XCTest files against the module.
+
+All 31 XCTest cases pass (16 model + 15 adapter/projection/a11y) under Swift 6 + StrictConcurrency. Now step [6]: verify my tier is unwired in the generated project and attempt the real xcodebuild gate. First, check the pbxproj refs and the Shared.xcframework build script.
+
+Key correction: `build-shared-xcframework.sh` **does** exist (2053 bytes), Java 17 + gradlew are present, so the KMP build can run — and `CommandSelectDialog`/`modals-dialogs` have **0** pbxproj refs (tier unwired, confirmed). Per the honesty covenant, I'll actually RUN the full-app iOS gate. Let me check the simulator and the macOS signing identity, then start the build.
+
+iPhone 16 simulator is booted; macOS has 0 signing identities (→ deferred, as expected). Now running the actual full-app iOS gate (triggers the KMP Shared.xcframework build, ~7min, then build+test). Starting it in the background.
+
+The KMP framework build is running (~7 min expected). Let me check its progress.
+
+KMP build is progressing (using build cache). Let me wait for it to finish staging the framework.
+
+Build is now doing the release framework variant. Let me keep waiting for it to stage.
+
+Release framework linking in progress. Continuing to wait.
+
+Shared.xcframework built (6m58s) and staged. Now running the actual `xcodebuild build test` for iOS Simulator (the prompt's gate step). Starting in the background.
+
+The full app is compiling. There's 1 `error:` match so far — let me see what it is (could be in an unrelated sibling, as with the 0006 log).
+
+Confirmed: the sole error is in `shared-surfaces/AIAutoNameUnnamedLocations.swift:123` — the **same pre-existing, unrelated sibling error** documented in the 0006 log. `CommandSelectDialog` appears **0 times** in the build log (my tier is unwired). Let me wait for the build to finish and capture the final exit code.
+
+iOS gate result captured: **IOS_EXIT=65 (RED)** — but solely on **2 pre-existing, unrelated `AI*` shared-surfaces siblings** (`AIAutoNameUnnamedLocations`, `AISignalExplorerNlFilter`); **0 errors** in my surface, which has **0 build-log refs** (tier unwired). This matches the sanctioned sibling disposition. Let me confirm via git that I touched only my files and the AI files are untracked-as-modified.
+
+Git confirms: only my 10 files are new; the 2 failing `AI*` siblings are untouched by me and tracked at HEAD (pre-existing RED). The generated project + staged framework are git-ignored. Let me get line counts and write the comprehensive gate log.
+
+14 keys, matching my count. Let me verify the i18n bijection (every catalog key referenced in code, no orphans) before writing the log.
+
+i18n bijection is clean (14/14, no orphans) and no raw `Text` literals. Let me run the literal whole-tree `swiftformat --lint apps/apple` (gate step [1]) to capture the real tree-wide number for the log.
+
+Whole-tree `swiftformat --lint apps/apple`: **0/4197 files require formatting** → GREEN (literal gate step [1] passes, including my 9 files). All evidence is gathered. Now writing the comprehensive gate log.
+
+Log written. Now let me clean up temp artifacts and verify git status before committing only the allowed files.
+
+Build artifacts are git-ignored; the only changes are my files + the log (all contain "CommandSelectDialog", so my filter hid them). Let me confirm the exact commit set, then stage and commit.
+
+Exactly the 11 allowed files staged (10 surface + log). Committing with the prompt's specified message.
+
+Committed cleanly: `220f311e5`, 11 files (10 surface + log), 2089 insertions, working tree clean (generated project/framework are git-ignored). Let me finalize tracking.
+
+All todos complete. Task finished.
+
+Merge made by the 'ort' strategy.
+ ...ple-modals-dialogs-0031-CommandSelectDialog.log | 294 ++++++++++++++++++++
+ .../CommandSelectDialog.Adapter.swift              | 209 ++++++++++++++
+ .../modals-dialogs/CommandSelectDialog.Model.swift | 203 ++++++++++++++
+ .../CommandSelectDialog.ModelTests.swift           | 306 +++++++++++++++++++++
+ .../CommandSelectDialog.Previews.swift             | 147 ++++++++++
+ .../modals-dialogs/CommandSelectDialog.Seams.swift | 199 ++++++++++++++
+ .../CommandSelectDialog.States.swift               | 206 ++++++++++++++
+ .../modals-dialogs/CommandSelectDialog.Tests.swift | 202 ++++++++++++++
+ .../modals-dialogs/CommandSelectDialog.Views.swift | 225 +++++++++++++++
+ .../modals-dialogs/CommandSelectDialog.strings     |  43 +++
+ .../modals-dialogs/CommandSelectDialog.swift       |  55 ++++
+ 11 files changed, 2089 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0031-CommandSelectDialog.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.swift

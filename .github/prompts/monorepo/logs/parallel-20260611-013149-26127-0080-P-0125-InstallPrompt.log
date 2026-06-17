@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, pwsh). Let me read the web source and understand the Apple app structure.
+
+Now let me study the existing patterns. Let me look at an example surface's full file set and the structure conventions.
+
+There's a clear 9-file pattern per surface. Let me study a complete example plus banner-like surfaces (closest to InstallPrompt) in parallel.
+
+Let me read the rest of the example set and a closely-matching banner surface (BrowserCompatBanner) which likely shares the dismiss-persistence pattern.
+
+BrowserCompatBanner is the closest match (capability-detection banner with dismiss persistence). Let me read its full file set.
+
+Excellent — BrowserCompatBanner is a near-perfect template (UserDefaults dismissal store + capability probe). Let me read its remaining files and the shared tokens/components.
+
+Let me read the remaining example files and the shared token/component library plus the build config.
+
+Now let me find the shared token/component definitions and the build config to confirm APIs and how files are included.
+
+Let me read the project.yml details (excludes + test targets), placeholder patterns, and the shared component/token APIs.
+
+Let me read the test-target config and the shared component/token APIs I'll be using.
+
+Let me read the remaining shared components and design tokens in parallel.
+
+Let me read the design tokens and the Banners component, plus confirm the log path and any parity manifest.
+
+Let me read the full Tokens.swift to confirm color/font/tone APIs.
+
+Let me confirm the `TSTone` enum, check for an existing native broadcast/cross-scene facility, and understand the build entry point (XcodeGen vs existing .xcodeproj).
+
+`TSTone` confirmed. `DraftRestorePrompt` uses cross-scene NotificationCenter — the closest analogue to the web `broadcast`/`subscribe`. Let me read it, then kick off baseline project generation.
+
+I have a thorough understanding of the architecture. Let me set up tracking, then generate the Xcode project and start a baseline build to confirm green before I add code.
+
+Project generated. Let me check simulator availability and the Shared.xcframework prerequisite, then start a baseline build.
+
+The Shared.xcframework is a Gradle/KMP artifact (only a .gitkeep present). Let me check the known build state and whether the baseline can compile at all.
+
+Critical finding: the full-app `xcodebuild` gate is blocked by pre-existing environmental issues (KMP `Shared.xcframework` Kotlin/Native long-pole, no codesign identity, parallel-merge collisions in *other* surfaces) — documented in `macos-pending-verifications.md`. Let me read predecessor logs to mirror the exact accepted verification convention.
+
+Let me read the BrowserCompatBanner (0114) gate log — my closest template — to mirror its exact verification structure and final STATUS.
+
+This is the established, accepted methodology. Predecessors verify the surface in isolation (swiftlint/swiftformat/placeholder + isolated Swift 6 build & tests + real-module typecheck on both SDKs) and defer the full-app `xcodebuild` to the macOS CI gate, since it's blocked by pre-existing unrelated issues. Let me kick off the long-pole Gradle framework build in the background, write the plan, and check component dependencies.
+
+Components only import system frameworks — an isolated Swift 6 harness is viable. Let me check the lint/format configs, then write the plan and all surface files.
+
+All clear. Components are system-framework-only, so an isolated Swift 6 harness will work. Let me write the plan and the core files (Adapter, Model, Seams).
+
+Let me check how (if at all) existing surfaces wire live `NotificationCenter` observers in a Swift-6-safe way before I implement the cross-scene broadcast seam.
+
+There's a canonical Swift-6-safe observer pattern in `AchievementUnlockListener.Seams.swift`. Let me read it.
+
+The canonical pattern is `MainActor.assumeIsolated` inside an observer block. Let me check `AiLimitBanner.Seams.swift` — it may show the exact NotificationCenter/closure capture approach.
+
+Got the canonical pattern. Now writing the Seams file (source protocol, installability probe, 14-day dismissal store, cross-scene broadcast, default + in-memory sources, `.live()` factory).
+
+Let me do an early Swift 6 typecheck of the three Foundation-only files to catch concurrency issues before continuing.
+
+One concurrency error: `deinit` (nonisolated) references a main-actor static. Fix by marking the notification name `nonisolated`.
+
+Core compiles clean under Swift 6. Now the view layer: States, Views, main view, Previews.
+
+The Gradle framework build finished. Let me check its result while continuing with the view files.
+
+Excellent — the `Shared.xcframework` built successfully (8m32s). It's not staged yet. Let me stage it (enables a real full-app build attempt) and continue with the remaining files.
+
+Framework staged (iOS + simulator + macOS slices). Now the main view and previews.
+
+Now the strings catalog and the two test files.
+
+Now the two test files — adapter/projection/accessibility, then model/seams.
+
+Let me clean up the messy `testStopUnsubscribes` test before verifying.
+
+All 10 files written. Now the per-surface gates: format, lint, placeholder check.
+
+`swiftformat --lint` clean. `swiftlint --strict` flags one issue: `Seams.swift` is 410 lines (>400 limit). I'll split the dismissal-store + broadcast seams into a new `InstallPrompt.Stores.swift`. Let me view the exact block to move.
+
+I'll extract those two sections into a new `InstallPrompt.Stores.swift` and remove them from `Seams.swift`.
+
+Now remove that block from `Seams.swift` (lines 110–278) and verify the seam.
+
+Seams.swift is now 241 lines. Let me update its header to reference the new file, then re-run format + lint + placeholder.
+
+Now re-run the full per-surface gate trio (format, lint, placeholder) across all surface files.
+
+Format clean. Now swiftlint --strict and the placeholder gate.
+
+All three per-surface gates are green (format 0/10, lint 0 violations, placeholder COUNT=0). Now the deeper verification. Let me kick off the real full-app iOS `build test` in the background (framework is staged), then build an isolated Swift 6 test harness in parallel.
+
+Project enumerates the files (66 refs). Now starting the real full-app iOS build in the background (build-only, signing off, to evidence the surface compiles in the real module), then I'll build the isolated test harness.
+
+Let me inspect the `Sources/` layout to scope the isolated harness correctly (design system only).
+
+Confirmed: only `UnitFormatters.swift` couples to SharedFacade. Harness scope = Tokens + Components (minus UnitFormatters) + Design + my surface. Let me build it.
+
+Harness build hit an error (and the iOS build finished). Let me see the harness error and the iOS build result.
+
+The iOS full-app build failed with exactly **1 error, zero in InstallPrompt files**. And the harness caught a real Swift 6 data-race issue in my `Stores.swift:141` (sending non-Sendable `note` into the MainActor closure). Let me see the iOS build's single error and fix my code.
+
+The single iOS error is in **`AISuggestNewGeofences.swift`** — a pre-existing, unrelated sibling surface (named in the predecessor logs), **zero InstallPrompt errors**. My harness, under the strictest Swift 6 concurrency, correctly caught a real data-race in my `Stores.swift`. Let me fix it (keep the `@objc` method main-actor isolated instead of crossing isolation).
+
+App target is Swift 6.0 + strict-concurrency **complete** — exactly what my harness enforces, confirming the fix was necessary. Harness now builds clean. Let me run the tests.
+
+All **56 tests pass, 0 failures** under Swift 6 strict-concurrency complete. Now a per-SDK iOS typecheck (harness was macOS) to prove cross-platform compilation of the surface against the real design system.
+
+iOS 18 typecheck: **0 errors**. Let me run the macOS 15 typecheck for symmetry and kick off the real macOS full-app build in the background for honest evidence.
+
+macOS 15 typecheck: **0 errors**. Let me check the commit scope (gitignore) and the macOS build progress while it runs.
+
+Commit scope is clean (only the 11 `InstallPrompt.*` files untracked; xcodeproj + framework gitignored). Let me wait for the macOS build, then write the log.
+
+macOS build also failed (exit 65) on the **same pre-existing `AISuggestNewGeofences.swift` sibling defect**, zero InstallPrompt errors. Let me capture the exact error set from both builds for the log.
+
+Both full-app builds confirm: the **only** error is the pre-existing `AISuggestNewGeofences.swift` sibling defect — **0 InstallPrompt errors** across iOS + macOS. I have complete evidence. Let me generate the canonical gate log, re-running the fast gates live into it for reproducibility.
+
+Let me verify the [1]–[3] gate results captured correctly, then append the Honesty Covenant + disposition.
+
+All gates captured green. Now appending the Honesty Covenant, acceptance-criteria mapping, and disposition.
+
+Log complete (158 lines, `EXIT=0 / STATUS=DONE`). Now commit only the allowed files (the 11 `InstallPrompt.*` files + the log).
+
+Exactly the 11 surface files + log staged. Committing.
+
+Committed as `b4d9f0809`, tree clean. Let me finalize todos and clean up temp artifacts.
+
+Task complete. All todos done, tree clean, temp artifacts removed.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0125-InstallPrompt.log | 158 +++++++++
+ .../shared-surfaces/InstallPrompt.Adapter.swift    | 104 ++++++
+ .../shared-surfaces/InstallPrompt.Model.swift      | 257 ++++++++++++++
+ .../shared-surfaces/InstallPrompt.ModelTests.swift | 373 +++++++++++++++++++++
+ .../shared-surfaces/InstallPrompt.Previews.swift   |  60 ++++
+ .../shared-surfaces/InstallPrompt.Seams.swift      | 239 +++++++++++++
+ .../shared-surfaces/InstallPrompt.States.swift     | 149 ++++++++
+ .../shared-surfaces/InstallPrompt.Stores.swift     | 180 ++++++++++
+ .../shared-surfaces/InstallPrompt.Tests.swift      | 207 ++++++++++++
+ .../shared-surfaces/InstallPrompt.Views.swift      | 164 +++++++++
+ .../shared-surfaces/InstallPrompt.strings          |  38 +++
+ .../TeslaSync/shared-surfaces/InstallPrompt.swift  | 105 ++++++
+ 12 files changed, 2034 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0125-InstallPrompt.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.Stores.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/InstallPrompt.swift

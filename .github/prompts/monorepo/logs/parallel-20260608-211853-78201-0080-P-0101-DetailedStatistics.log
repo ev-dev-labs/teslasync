@@ -1,0 +1,158 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the key prerequisites in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source and understand the existing Apple project structure.
+
+There's an established `feature-views` pattern with multiple files per surface. Let me check if `DetailedStatistics` already exists and study the sibling `AcDcStatsPanel` (same web folder) as a reference template.
+
+`DetailedStatistics` doesn't exist yet. `QuickMetrics` is the closest match (a stat grid). Let me read the complete QuickMetrics file set to learn the exact pattern I must follow.
+
+Excellent pattern detail. Let me read the remaining QuickMetrics files (Adapter, Previews, strings, Tests) to complete my understanding of the pattern.
+
+Now let me read the test pattern, the web helper types (ChargingStats/EnhancedStats), formatDuration, and the project.yml to understand build wiring.
+
+Now I understand the `DetailedStatistics` data shape. Let me examine the web `formatDuration`, `fmtWithUnit`, `Currency`/`AnimatedNumber` components, and the native design tokens (especially for the `purple-300` tone).
+
+Now let me confirm the `formatDurationMinutes` parity and locate the native design tokens — especially whether there's a `purple`/accent color for the "Avg Power" tile.
+
+The tokens live in `TeslaSyncWatchShared/WatchDesignTokens.swift`. Let me read the `project.yml` to understand how targets include sources (critical: whether new feature-views files are auto-included) and read the token definitions.
+
+Critical findings: the app targets include the whole `feature-views` directory (so new files auto-included), and the project uses XcodeGen. Let me verify build feasibility — whether the `.xcodeproj` exists, xcodegen is available, and the Shared.xcframework build step works.
+
+No `.xcodeproj` yet (need `xcodegen generate`), and `Shared.xcframework` isn't staged — its build requires the KMP/Gradle toolchain. Let me check whether predecessor surfaces actually built/passed and understand the documented build situation.
+
+This is the key insight. Predecessors (QuickMetrics, etc.) reached `STATUS=DONE` by verifying the surface in isolation (SwiftPM build + tests, real SDK typecheck, swiftlint/swiftformat/placeholder, xcodegen enumerate) and **deferring** the full-app `xcodebuild` (blocked by pre-existing, unrelated collisions + KMP framework). My environment is more capable (full Xcode 26.5 + simulators). Let me examine the real app design tokens and confirm the pre-existing collision claim.
+
+Let me read the full Tokens.swift to learn the exact palette, spacing, radius, typography, and motion tokens.
+
+Found it: `Color.TS.chartSeriesPower` is the purple power-series token — the perfect semantic native match for the web "Avg Power" `text-purple-300` tile. Now let me confirm the shared component signatures (`TSFadeIn`, `TSSkeleton`) and verify SDKs + the pre-existing collision claim.
+
+Confirmed: iOS Simulator 26.5 SDK (deploys back to iOS 18 ✓), `TSFadeIn`/`TSSkeleton` signatures verified, and `Color.TS.chartSeriesPower` is the purple power token. `DetailedStatistics` has a titled header with a TrendingUp icon — let me check the sibling `AcDcStatsPanel` panel/title idiom to match house style.
+
+`AcDcStatsPanel` uses `TSGlassPanel` + a header (icon + title + freshness chip + refresh). Since `DetailedStatistics` has a titled header with the TrendingUp icon, I'll follow this richer idiom. Let me confirm `TSGlassPanel` exists and check the placeholder-check tool referenced by the gate.
+
+`pwsh` is available (I can run the real placeholder gate), and `TSGlassPanel` is confirmed. The acceptance criteria forbids "placeholder/stub/mock/TODO/Lorem" even in comments — let me read the actual checker to know exactly what it flags and how it scans.
+
+I now have everything needed. Key facts: app targets auto-include `feature-views/*` (non-test) and test bundles auto-include `*Tests.swift`; tokens via `Color.TS`/`Font.TS`/`TSSpacing`; `Color.TS.chartSeriesPower` = purple power token; `TSGlassPanel`/`TSFadeIn`/`TSSkeleton` confirmed; `pwsh` available for the real placeholder gate; SDK iOS 26.5 deploys to iOS 18 ✓. Predecessors reached STATUS=DONE by verifying the surface in isolation + deferring the full-app xcodebuild (pre-existing collisions + KMP).
+
+Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure adapter core.
+
+Adapter done. Now the Model (state holder, telemetry seam, source seam, i18n facade).
+
+Now the presentational chrome (Views).
+
+Now the main view composing header + states.
+
+Now the Previews and strings files.
+
+Now the test suite (adapter format + projection parity, model lifecycle, accessibility).
+
+All 7 files created. Now the verification phase. Let me read the lint/format configs, then run swiftformat/swiftlint/placeholder gates on the new files.
+
+Config is clear (maxwidth 120, strict treats warnings as errors). Let me autoformat my new files first, then lint them to confirm clean.
+
+2 files got minor formatting adjustments. Let me confirm the format lint is clean and run swiftlint --strict on the new files, plus the real placeholder gate.
+
+swiftformat clean. swiftlint flagged one `function_body_length` violation — the projection `metrics(...)` function is too long (the 6-tile literal). I'll decompose it into small per-tile builders (cleaner anyway). Let me view the exact block and refactor.
+
+Now re-run format + lint on the new files, plus the real placeholder gate.
+
+Placeholder gate clean (COUNT=0). The decomposition pushed the Adapter to 423 lines (>400 `file_length` limit). I'll move the Accessibility helpers into their own `DetailedStatistics.Accessibility.swift` file (consistent with the multi-file convention). Let me view the tail to extract it precisely.
+
+I'll extract the Accessibility section into its own file and remove it from the Adapter.
+
+Now re-run format + lint across all 7 new files to confirm fully clean.
+
+swiftformat (0/7) and swiftlint --strict (0 violations) both clean. Now for the authoritative compile + test verification, I'll build an isolated SwiftPM harness with my surface + the real token/shared-component dependencies. Let me inspect what `TSGlassPanel` and `TSSkeleton` transitively require.
+
+Dependency tree is small and clean (Tokens → TSMaterial → Cards; Skeletons → Tokens). Let me run a real `swiftc -typecheck` of the full surface against the iOS 18 simulator SDK under Swift 6 strict concurrency (matching the project's build settings).
+
+The errors are all inside `Cards.swift`'s own `#Preview`/`TSCardHeader` referencing sibling components — not my surface. Pulling real component files drags in the whole module. The clean, faithful isolation: real `Tokens.swift` + signature-exact shims for the two container components (`TSGlassPanel`, `TSSkeleton` — I already verified their real signatures) + my full surface incl. previews. Let me set that up and typecheck against both SDKs.
+
+I rebuilt the harness; the iOS 18 typecheck passes (EXIT=0) under Swift 6 strict concurrency. Now the macOS 15 SDK pass.
+
+Both iOS 18 and macOS 15 typechecks pass under Swift 6 strict concurrency. Now I'll execute the tests for real via an isolated SwiftPM package (module named `TeslaSync` so `@testable import` resolves), using the real surface files + real tokens + the faithful shims.
+
+All 31 tests pass (10 model, 7 projection, 9 format, 4 accessibility, +1 Swift Testing runner) — web-parity values confirmed (`$612.00`, `$0.143`, `48.60 kW`, `46m`, `Top Charger (12×) AC/Home`). Now let me confirm the project generates and enumerates the new files, then attempt the full xcodebuild for real evidence.
+
+Project generates cleanly; all 8 files enumerated (app targets + test bundles). Now let me attempt the real full `xcodebuild build test` to capture honest evidence of where it stands. First a quick check of the KMP/Gradle prerequisite, then launch the build.
+
+java 17 present; `DashboardWidgetSize` now defined once (historical collision resolved). The Shared.xcframework still needs a Gradle/Kotlin-Native build (the scheme's pre-action). Let me attempt the real build pipeline, starting with the Shared.xcframework assembly, and monitor.
+
+The Gradle/KMP assembly didn't finish in 4 min (the documented long-pole that the repo defers to CI). Let me probe whether it's a network-dependency issue (fast signal) via an offline attempt, and start a longer background build in parallel.
+
+Good — the KMP toolchain is actually cached (Gradle 8.14.5 + Kotlin/Native 2.4.0 present) and `./gradlew help` runs fine. The `:core:assembleSharedXCFramework` task is just genuinely slow (multi-arch Kotlin/Native compile). Since it's feasible here, I'll run it to completion in the background and then do the real xcodebuild. Let me launch it detached with logging.
+
+While the framework builds, let me verify it's progressing and capture the exact gate outputs for the log.
+
+Gradle finished. Let me check the result and whether the framework was produced.
+
+This environment is shared with other parallel slots (I can see a `slot-88` Gradle wrapper) — heavy CPU contention is slowing the multi-arch Kotlin/Native release link, but my build IS progressing (konan is compiling the release framework). The framework build is feasible, just slow. Let me run it to completion synchronously (debug arches are already UP-TO-DATE, so it resumes the release links) and capture the definitive result.
+
+Still building (contention from parallel slots). Let me continue waiting.
+
+`BUILD SUCCESSFUL` — Shared.xcframework produced. Now let me stage it (the script's copy step is fast now that Gradle is UP-TO-DATE), then run the real `xcodebuild` for the iOS scheme.
+
+Shared.xcframework staged. Now the real iOS app build. Let me run `xcodebuild build` for the TeslaSync scheme (iPhone 16 simulator), capturing output to grep for my surface and any errors.
+
+The grep pattern errored (the `**` literal). Let me inspect the actual build log directly.
+
+The broken grep severed the pipe early (only 1 line captured). Let me re-run the build cleanly, logging to file, then inspect.
+
+The iOS build reports "27 failures" (compiling many other feature-views). The critical check: are any failures in **my** `DetailedStatistics` files, or all in pre-existing unrelated surfaces? Let me extract the actual errors.
+
+Confirmed: **zero errors in DetailedStatistics**. All 350 errors / 27 failed files are pre-existing unrelated surfaces (`ChargeStatusLiveWidget`, `ChargeStatusWidget`, `SafetyFeaturesWidget`, `SafetyHistoryWidget`, `ChargeSessionChartWidget`, `FleetStatsBarWidget`) — the documented parallel-merge collisions. Let me capture representative error samples and verify my surface's own object compiled, then check the macOS build similarly.
+
+Decisive result: the full-app build fails only on **27 pre-existing, unrelated files** (ambiguous-type / invalid-redeclaration parallel-merge collisions in `ChargeStatusWidget`, `ChargeStatusLiveWidget`, `ChargeSessionChartWidget`, `SafetyFeaturesWidget`, `SafetyHistoryWidget`, `FleetStatsBarWidget`) — **zero** in `DetailedStatistics`. This matches the documented peer precedent. Now let me write the authoritative gate log, running the surface gates fresh to capture real output.
+
+Now append the placeholder gate and both-SDK typechecks.
+
+Now append the test execution, xcodegen enumeration, and the full-app build evidence.
+
+Now append xcodegen enumeration and the full-app build evidence, then the conclusion.
+
+Let me view the final sections of the log to confirm completeness.
+
+The [7/8]/[8/8] block didn't append — the `DS_ERRS=$(grep -ci ...)` returned exit 1 (zero matches), and the `&&` chain short-circuited. That zero-match is actually the good news (0 DetailedStatistics errors). Let me re-append correctly.
+
+The log is complete and honest. Now let me verify git status (ensure generated artifacts are ignored) before committing only the surface files + log.
+
+The generated `.xcodeproj` and `Frameworks` are git-ignored (won't commit). Two unrelated `web/...admin` files are dirty from outside my task — I'll exclude them and commit only my 8 surface files + the log.
+
+Only my 9 files are staged. Now commit with the prescribed message.
+
+Commit `7c20a811` created (9 files, 1711 insertions). One refinement for full reduce-motion correctness (acceptance criterion 6): the header refresh spinner should also respect Reduce Motion. Let me gate it.
+
+Re-verify the changed view file (format, lint, both-SDK typecheck) before amending.
+
+Format/lint clean, iOS typecheck passes. Waiting for the macOS typecheck to finish.
+
+Both SDK typechecks pass after the reduce-motion refinement; format/lint still clean. Let me amend the commit to include the refined view.
+
+Amended commit `6a3b2028` (9 files, 1713 insertions) with the reduce-motion gate. Let me update tracking and clean up scratch artifacts.
+
+Task complete. Let me do a final confirmation of the committed surface's structure.
+
+Task complete and verified. Committed as `6a3b2028`.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0101-DetailedStatistics.log | 124 +++++++
+ .../DetailedStatistics.Accessibility.swift         |  52 +++
+ .../feature-views/DetailedStatistics.Adapter.swift | 382 ++++++++++++++++++++
+ .../feature-views/DetailedStatistics.Model.swift   | 253 ++++++++++++++
+ .../DetailedStatistics.Previews.swift              | 102 ++++++
+ .../feature-views/DetailedStatistics.Tests.swift   | 388 +++++++++++++++++++++
+ .../feature-views/DetailedStatistics.Views.swift   | 261 ++++++++++++++
+ .../feature-views/DetailedStatistics.strings       |  42 +++
+ .../feature-views/DetailedStatistics.swift         | 109 ++++++
+ 9 files changed, 1713 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0101-DetailedStatistics.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DetailedStatistics.Accessibility.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DetailedStatistics.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DetailedStatistics.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DetailedStatistics.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DetailedStatistics.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DetailedStatistics.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DetailedStatistics.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DetailedStatistics.swift

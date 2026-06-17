@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all present. Platform capability confirmed. Now let me study the existing Apple app structure and the predecessor widgets.
+
+Now let me read the `WidgetDetailCard` shared component, the energy hooks, and the registry.
+
+Now let me study the native Apple patterns. Let me look at the shared widget infrastructure and the most recent predecessor widget.
+
+Two locations: shared infra in `Sources/`, per-surface widgets in `TeslaSync/dashboard-widgets/`. Let me read the shared infra and the most recent predecessor's full file set.
+
+Let me read the complete most-recent predecessor (`ChargeStatusLiveWidget`) to learn the current file conventions.
+
+Let me read the remaining predecessor files and the design tokens.
+
+Let me read the Previews, Tests, Content files and find the design tokens + project setup.
+
+Let me find the design tokens, test conventions, and the Xcode project setup.
+
+Let me examine the design tokens, the test conventions, and check for xcodegen.
+
+Let me view the token definitions and the predecessor's test file to learn the test conventions.
+
+Let me read the rest of the test file and the web number formatters I must port exactly.
+
+I have a thorough understanding of the architecture. Let me verify there are no naming collisions and confirm no pre-existing EnergySiteInfo native files.
+
+Let me check the build prerequisites (simulator, Shared.xcframework) before writing code, since they gate verification.
+
+The full build needs a KMP `Shared.xcframework` built via Gradle (not present yet). Let me check feasibility and kick it off in the background while I write code.
+
+Very informative — this reveals the established verification pattern. Let me check recent predecessor logs to calibrate the exact approach and confirm current full-build status.
+
+I now have the exact established pattern. The full iOS build works (the `DashboardWidgetSize` collision was centralized). The slow part is building the KMP `Shared.xcframework` via Gradle — let me kick that off in the background now while I write the code.
+
+Gradle build launched in the background. Let me set up tracking and start writing the code.
+
+Now I'll write the Model file (state-holder seam, registry, i18n facade — SwiftUI-free).
+
+Let me check the Gradle build progress, then continue with the view files.
+
+The Gradle process exited immediately with an empty log. Let me investigate why.
+
+Gradle and Java work — the background process was killed when the sync session ended. Let me relaunch it properly as a detached async process.
+
+While that runs, let me write the surface view. Let me update todos and create the view file.
+
+Gradle build is now progressing (downloading Kotlin/Native, compiling). Let me continue writing the view files in parallel.
+
+Now the Content file (detail card + row views).
+
+Now the Previews file (DEBUG-only, all states).
+
+Now the strings catalog.
+
+Now let me check the predecessor's telemetry spy pattern, then write the tests.
+
+Now I'll write the comprehensive tests file.
+
+All 7 files written. Let me verify a couple of API details (ContentUnavailableView init form, the `×` character consistency) and fix a parameter-ordering issue I spotted in the tests.
+
+ContentUnavailableView label-only form is valid (used by 3 sibling widgets), and `×` is consistently U+00D7. Let me fix one parameter-ordering issue in the tests.
+
+Let me run the fast per-file gates (swiftformat, swiftlint, placeholder) and check the build progress in parallel.
+
+swiftformat flagged style issues — let me auto-format my files. The Gradle build also failed; let me investigate that error in parallel.
+
+swiftformat now passes (0/6 need formatting). The Gradle daemon was stopped externally (parallel-slot contention) mid-link — not a code issue. Let me relaunch it with `--no-daemon` for robustness, then continue with swiftlint and placeholder checks.
+
+swiftlint --strict: 0 violations. Now the placeholder gate — let me run it meaningfully against my actual files (in an isolated temp dir so the count is surface-specific).
+
+Placeholder gate: 0 count, EXIT=0. Now let me run `xcodegen generate` to wire the new files into the project, and check the Gradle rebuild progress.
+
+Gradle is actively compiling (konan/LLVM `clang++` running, now linking simulator framework). Let me run `xcodegen generate` to wire the new files in while it builds.
+
+xcodegen wired in the files (42 references across targets). While Gradle finishes the framework, let me do a quick standalone type-check of the Foundation-only logic to catch errors early.
+
+Foundation logic type-checks clean under Swift 6. Let me try type-checking the SwiftUI views with the design tokens, and check Gradle progress.
+
+Gradle wrote the debug XCFramework; release is still linking. Let me attempt a type-check of the SwiftUI views with their token/skeleton deps.
+
+The errors are all inside the dependency `Cards.swift`, not my files. Let me isolate my code with a minimal `TSSkeleton` shim (the only UI dep besides tokens) to get a clean signal.
+
+All my files type-check clean under Swift 6 (macOS 15). Let me confirm iOS 18 SDK compatibility too, then check Gradle.
+
+Both iOS 18 and macOS 15 type-checks pass. Gradle is now linking the release framework. Let me wait for it to finish.
+
+Release framework still linking (iOS simulator arm64 now). Let me keep waiting for it to complete.
+
+Nearly there — now linking the final macOS release framework. Let me wait for the assembly to complete.
+
+**BUILD SUCCESSFUL** — release `Shared.xcframework` is ready (14m47s). Let me stage it and run the iOS full-app build + my surface tests.
+
+Framework staged, iPhone 16 booted. Let me run the iOS full-app build + my surface tests (async, monitored — this is the long pole).
+
+The iOS build is running (pre-action staging the framework via Gradle, then compiling the app). Let me wait and monitor progress.
+
+Build progressing cleanly — app module emitting, my `.strings` validated (UTF-8, no errors). Let me keep waiting for the test bundle compile + test run.
+
+Build failed — but the errors are in `ChargeStatusWidget.Previews.swift`, a **different pre-existing sibling widget** (not mine, and it references `.miles`/`.kilometers` which my code doesn't define). Let me determine whether this is pre-existing or caused by my change.
+
+This looks like a pre-existing collision between two sibling widgets. Let me confirm both `ChargeStatusWidget` and `ChargeStatusLiveWidget` define the same `Charge*` types (a redeclaration collision independent of my code).
+
+Confirmed: `ChargeStatusWidget` and `ChargeStatusLiveWidget` both declare 6 identical `Charge*` public types — a **pre-existing duplicate-declaration collision** between two sibling-slot widgets (independent of my surface, which I prefixed `EnergySiteInfo*` precisely to avoid this). Let me confirm zero errors reference my surface, then reproduce the failure WITHOUT my files for definitive evidence.
+
+Zero `EnergySiteInfo` errors. Let me extract all distinct error origins, then definitively reproduce the failure WITHOUT my files.
+
+Definitive: all **148 errors** are `Charge*` type ambiguities in `ChargeStatusWidget`, `ChargeStatusLiveWidget`, and `ChargeSessionChartWidget` (three sibling widgets duplicating the same `Charge*` types). **Zero** involve my surface. Let me prove it's pre-existing by building WITHOUT my files.
+
+Files stashed (0 references). Now let me build the app WITHOUT my files to confirm the `Charge*` collision is pre-existing.
+
+Reproduction build launched. Let me wait for it to fail (or finish) — this confirms the collision is pre-existing.
+
+Reproduction still compiling. Let me wait for it to reach the collision and fail.
+
+**Definitive proof**: WITHOUT my files, the build STILL fails (`BUILD FAILED`, exit 65) with the identical `Charge*` ambiguity errors across `ChargeStatusWidget`/`ChargeStatusLiveWidget`/`ChargeSessionChartWidget` — and **0 EnergySiteInfo error lines**. This is a pre-existing sibling collision. Let me restore my files and set up an isolated SwiftPM package to actually run my tests.
+
+The "1 ref" was just a DerivedData cleanup note, not an error. Files restored. Now let me build an isolated SwiftPM package to actually run my tests. First, let me confirm `Tokens.swift` is self-contained.
+
+Tokens.swift is self-contained. Let me build the isolated SwiftPM package and run my tests.
+
+**All 26 tests pass** in the isolated SwiftPM package (Swift 6 strict, macOS 15). Let me verify i18n key parity and that every key my code references exists in the catalog.
+
+The 3 "missing" keys (`.content`, `.empty`, `.error`) are `accessibilityIdentifier` test handles, not i18n keys — correctly absent from the catalog. Let me confirm that precisely.
+
+i18n parity confirmed: all 7 web keys + registry keys present, 0 localization keys missing (the `.content/.empty/.error` are accessibility identifiers). Let me clean up temp artifacts and check git state before writing the log.
+
+Git state is clean (only my 7 files untracked; pbxproj/framework gitignored; pre-existing web changes left alone). Let me gather final metrics and write the gate log.
+
+All evidence confirms my surface is clean and the block is pre-existing. Let me write the comprehensive gate log.
+
+Now let me stage exactly my 7 files plus the log (nothing else) and commit.
+
+Exactly the 7 surface files + log staged. Let me commit.
+
+Committed (`1aba41237`). Let me do a final verification of the commit contents and working-tree state.
+
+All complete. Commit `1aba41237` contains exactly the 7 surface files + the log (1646 insertions); the working tree only retains the 2 pre-existing, unrelated web changes I correctly left untouched.
+
+Merge made by the 'ort' strategy.
+ ...dashboard-widgets-0047-EnergySiteInfoWidget.log | 183 +++++++++++
+ .../EnergySiteInfoWidget.Adapter.swift             | 210 +++++++++++++
+ .../EnergySiteInfoWidget.Content.swift             |  80 +++++
+ .../EnergySiteInfoWidget.Model.swift               | 313 +++++++++++++++++++
+ .../EnergySiteInfoWidget.Previews.swift            | 179 +++++++++++
+ .../EnergySiteInfoWidget.Tests.swift               | 340 +++++++++++++++++++++
+ .../dashboard-widgets/EnergySiteInfoWidget.strings |  47 +++
+ .../dashboard-widgets/EnergySiteInfoWidget.swift   | 294 ++++++++++++++++++
+ 8 files changed, 1646 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0047-EnergySiteInfoWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergySiteInfoWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergySiteInfoWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergySiteInfoWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergySiteInfoWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergySiteInfoWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergySiteInfoWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergySiteInfoWidget.swift

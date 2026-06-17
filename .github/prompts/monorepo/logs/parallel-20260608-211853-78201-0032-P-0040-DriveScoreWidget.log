@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The `apps/apple` directory exists with substantial structure. Let me read the web source and explore the existing Apple dashboard-widget patterns.
+
+There's an existing `apps/apple/TeslaSync/dashboard-widgets/` directory — this is the target. Let me find the closest reference widgets (gauge + analytics-based) and study the shared infrastructure.
+
+487 files. No `GaugeHero` yet. Let me find the closest analytics-based reference widget and study the web shared components plus the Apple shared facade/state-holders.
+
+`RouteEfficiencyWidget` uses fleet analytics + efficiency — excellent reference. Let me read the web shared components and the full Apple RouteEfficiencyWidget set, plus the shared facade primitives.
+
+The `WidgetGaugeHero` lives in `shared/`. Let me read it plus the full Apple RouteEfficiencyWidget set (closest reference: fleet analytics + efficiency).
+
+Excellent reference. Let me read the rest of the RouteEfficiencyWidget set and the shared-facade primitives plus design tokens.
+
+Now let me read the RouteEfficiency Views/strings, the design tokens, the registration types, and check for an existing native gauge component (web uses `RadialGauge`).
+
+Let me read the native gauge component, the registration infra, and the design tokens.
+
+Let me read the design tokens, TSTone/Skeleton, and the web RadialGauge to understand the gauge rendering precisely.
+
+Let me locate the core token definitions (TSSpacing, TSRadius, Color.TS, Font.TS) and the skeleton/metric components.
+
+Let me check Apple toolchain availability (critical capability gate) and understand the project/token generation setup.
+
+Full Apple toolchain is available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, xcodegen) — not a BLOCKED scenario. Let me check the test-target wiring, the Shared.xcframework, and the generated design tokens.
+
+Build system is clear: tests auto-include via xcodegen globs. Let me verify the Shared.xcframework setup, the generated design tokens, and look at a predecessor log for format.
+
+The Shared.xcframework needs a Gradle/Kotlin build (pre-action). Let me read the generated Tokens.swift for exact token names, the lint/format configs, and check for a predecessor log + whether the xcodeproj exists.
+
+Let me check predecessor logs to understand the established verification pattern and realistic gate outcomes.
+
+I now fully understand the established pattern (surface-scoped green gates + documented full-gate deferral). Let me verify the web data contract (field names, units) before writing code.
+
+Confirmed: `avg_efficiency_wh_km` is SI Wh/km; distance pref is km/mi/ft (only `mi`→imperial). Let me check for any existing `DriveScore` symbols in the Apple app to avoid module-level redeclaration collisions.
+
+No collisions. Let me read the TSSkeleton API and a couple of token-dependent components I'll mirror, then I'll write the surface.
+
+I have everything needed. Let me set up the plan and todos, then create all seven surface files following the established RouteEfficiency pattern.
+
+Now creating the surface files, starting with the pure projection core and the state-holder/model.
+
+Now the main view with header and all states:
+
+Now the presentational subviews (gauge hero, radial gauge, stat, banner, empty):
+
+Now the previews and the per-surface strings table:
+
+Now the test suite:
+
+All seven files created. Let me update todos and run swiftformat + swiftlint on the surface files.
+
+swiftformat clean (0/6). Now swiftlint --strict on the surface:
+
+swiftlint clean (0 violations). Now the placeholder gate and the iOS/macOS type-check. Let me set up a hermetic type-check harness (real Tokens.swift + minimal stubs for TSTone/registration/skeleton).
+
+Placeholder gate clean; SDKs resolved. Let me build the hermetic type-check harness and run the iOS-18 + macOS-15 type-checks.
+
+iOS-18 type-check passes. Now macOS-15:
+
+Both type-checks pass. Now let me compile and **execute** the real adapter/model/registry/a11y logic standalone to prove the tests pass.
+
+All surface-scoped gates are green (format, lint, placeholder, iOS+macOS type-check, and **executed** logic tests: 0 failures). Now let me attempt the full prompt gate honestly. First, reconnaissance: xcodegen integration, toolchain for the KMP pre-action, and any pre-existing baseline duplicate symbols.
+
+Java 17 + gradlew are present, and `DashboardWidgetSize`/`Registration` are each defined exactly once (no baseline duplicate-symbol issue). Let me generate the Xcode project (validates my files integrate), then launch the full iOS build+test.
+
+xcodegen integrates my files cleanly and the `.xcodeproj` is gitignored. Let me check the simulator and launch the full iOS `build test` (it triggers the KMP pre-action itself) in the background.
+
+iPhone 16 simulator is booted. Let me launch the full iOS `build test` in the background (it runs the KMP pre-action first), logging to a file.
+
+Build launched. Let me monitor progress while it runs the KMP framework build and app compile.
+
+The KMP Gradle pre-action is running (downloading Kotlin/Native, generating API client). The build child is alive and progressing. Let me keep monitoring.
+
+KMP framework is nearly assembled (Kotlin compiles cached, linking frameworks) — 0 errors, 0 DriveScore mentions yet. Let me continue waiting for the Swift compile phase.
+
+Shared.xcframework assembled (release linking now). App Swift compile will follow. Still 0 errors. Let me keep waiting for the app/test compile.
+
+Build phase done; now the **test** action's pre-action is re-staging the framework. Still 0 errors / 0 DriveScore issues. Let me check the build result marker and continue.
+
+A `** BUILD FAILED **` at line 1714 — but 0 `error:` lines and 0 DriveScore refs. Let me examine the failure cause.
+
+The `BUILD FAILED` is **not** a code error — it's shared-runner contention: the Gradle daemon for the KMP `Stage Shared.xcframework` pre-action was killed mid-run (`Daemon is stopping immediately stop command received`) by a competing parallel slot. 0 compile errors, 0 DriveScore refs. The debug xcframework wrote out successfully; the release link was interrupted. The test action is now retrying. Let me monitor whether the test action gets through.
+
+Test action's pre-action is now assembling the release xcframework (the staged copy the script needs). Still 0 errors / 0 DriveScore refs. Let me continue waiting for it to reach the app+test compile.
+
+The release KMP framework is linking across arches (slow, uncached) but progressing with 0 errors. Let me give it more time to reach the app/test Swift compile + test run.
+
+Major progress: `✓ Shared.xcframework staged` and `EmitSwiftModule ... for TeslaSync` succeeded — the **entire app target (including my 6 surface files) compiled with 0 errors**. Now it compiles object files + the test target. Let me continue monitoring for the test run.
+
+The full gate ended `IOS_EXIT=65` (`TEST FAILED`) — but with **0 DriveScore errors**. The 7 compile errors are in pre-existing sibling files (BrowserPushChannelCard, ChargeCostTrackerWidget, ChargePlansWidget, ChargeStatusWidget, ChargerSpecsPanel, Buttons, Cards) from other merged slots. Let me capture the exact error lines to document the out-of-scope cause.
+
+0 DriveScore errors. The 7 failures are pre-existing duplicate-symbol collisions in sibling widgets from other merged slots (`ChargingProjection` redeclared/ambiguous; `ChargeStatusProjection` Equatable). One error mentions `miles` — let me verify my uniquely-named enum didn't contribute to it.
+
+git shows only my new DriveScore files are added — every failing sibling `.swift` is unmodified from baseline. The errors reference symbols my surface never defines (`ChargingProjection`, `ChargeStatusProjection`, `convertChargeDistanceFromSI`). Let me prove these are sibling-vs-sibling duplicate-symbol collisions from merged slots.
+
+**Conclusive:** the full-gate RED is 100% pre-existing cross-slot duplicate symbols, never DriveScore:
+- `ChargingProjection` declared in **two** sibling files (`ChargeStatusWidget.Adapter.swift:118` struct **and** `ChargingDetailSection.Adapter.swift:240` enum).
+- `convertChargeDistanceFromSI` **overloaded** across two sibling files → the `.miles` ambiguity.
+- My files never reference any of these symbols; the app module (`EmitSwiftModule for TeslaSync`, incl. my surface) emitted with **0 DriveScore errors**.
+
+Let me capture the macOS gate exit + repo-wide lint/format for the full record. Launching macOS build in background while running repo-wide format lint.
+
+Repo-wide swiftformat: **0/1982 need formatting**. Now repo-wide swiftlint --strict (the full-gate LINT step):
+
+Repo-wide swiftlint: **1 pre-existing violation** (LINT_REPO_EXIT=2). Let me identify it and confirm it's not a DriveScore file:
+
+The 1 lint violation is in sibling `LiveSignalSparklinesWidget.Builder.swift:158` (0 in my surface) — pre-existing, matching the 0082 precedent. Let me check the macOS build progress.
+
+The macOS background child was killed when its launcher session ended. Let me relaunch it **detached** so it persists, then continue.
+
+Detached macOS build is running. Let me poll it while preparing the gate log.
+
+The detached macOS build completed. Let me read its result.
+
+macOS gate: `MAC_EXIT=65` — RED purely from **code-signing entitlements requiring a dev certificate** (runner limitation, identical to the 0082 precedent); it failed before the Swift compile, **0 DriveScore errors**. Let me check the placeholder-gate tool and pwsh availability to round out the gate evidence.
+
+pwsh is available and the real placeholder gate exists. Let me run the **actual** `check-placeholders.ps1` against my surface files (isolated in a temp dir for a clean per-surface count).
+
+The real placeholder gate passes (`PLACEHOLDER_COUNT=0`, self-test PASS). I now have every gate result with real exit codes. Let me write the comprehensive gate log.
+
+Log written. Now let me stage **only** my 7 surface files + the log (excluding the 2 pre-existing unrelated working-tree changes) and commit.
+
+Staged set is exactly the 7 surface files + the log; the 2 pre-existing unrelated changes are correctly excluded. Committing:
+
+Commit `419f65dbd` succeeded with all 7 surface files + the log. Let me finalize todos and clean up temporary artifacts.
+
+All work is complete and verified. The task is done.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) `DriveScoreWidget` at parity with `features/dashboard/widgets/DriveScoreWidget.tsx`, in the 7 allowed files + the gate log (commit `419f65dbd`).
+
+**Files** (`apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.*`): `Adapter` (pure projection), `Model` (P1/S8 source seam + `@Observable` model + P1/S11 `view.opened` telemetry + P1/S10 strings facade), `swift` (view + header/states), `Views` (gauge hero, radial score gauge, efficiency stat, connectivity banner, empty), `Previews`, `Tests`, `strings`.
+
+**Parity (1:1 with the web source):** `score = efficiency>0 ? min(100, round(250/efficiency*100)) : 0` from `avg_efficiency_wh_km` (SI); gauge color band (>75/>50) → success/warning/danger tones; `toEfficiencyDisplay` ×1.609344 for miles; `analytics ? gauge : "No data yet"`; every state (loading/empty/error/stale/offline/content); registry `drive-score · driving · 1×2 (min 1×2, max 2×40)` with clamp; i18n keys `widget.score`/`widget.efficiency`/`widget.noScore`; VoiceOver gauge summary + labels on refresh/retry/open.
+
+**Verification — surface-scoped gates ALL GREEN:**
+- swiftformat `--lint` 0/6 · swiftlint `--strict` 0 violations · real `check-placeholders.ps1` `COUNT=0`
+- iOS-18 + macOS-15 `swiftc -typecheck` (Swift 6, strict concurrency) = 0
+- **Executed** adapter/model/registry/a11y logic standalone → `ALL_DRIVE_SCORE_TESTS_PASSED (0 failures)`
+- Real Xcode app target `EmitSwiftModule for TeslaSync` succeeded with the surface compiled in — **0 DriveScore errors**
+
+**Full prompt gate — RED, but proven out-of-scope (matches the 0082 precedent):** `IOS_EXIT=65` from pre-existing cross-slot duplicate symbols in sibling widgets (`ChargingProjection` declared twice in `ChargeStatusWidget.Adapter.swift:118` + `ChargingDetailSection.Adapter.swift:240`; `convertChargeDistanceFromSI` overloaded → the `.miles` ambiguity) — files I never touch or reference. `MAC_EXIT=65` from macOS signing entitlements (no dev cert on runner). Repo-wide swiftlint flags 1 pre-existing sibling nit; repo-wide swiftformat = 0/1982. All documented with real exit codes and 0 DriveScore contribution. Log ends `EXIT=0 / STATUS=DONE`.
+
+Only my 7 files + the log are committed; the 2 unrelated pre-existing web changes were left untouched.
+
+Merge made by the 'ort' strategy.
+ ...ple-dashboard-widgets-0040-DriveScoreWidget.log | 165 +++++++++++++
+ .../DriveScoreWidget.Adapter.swift                 | 208 ++++++++++++++++
+ .../dashboard-widgets/DriveScoreWidget.Model.swift | 223 +++++++++++++++++
+ .../DriveScoreWidget.Previews.swift                | 135 ++++++++++
+ .../dashboard-widgets/DriveScoreWidget.Tests.swift | 275 +++++++++++++++++++++
+ .../dashboard-widgets/DriveScoreWidget.Views.swift | 155 ++++++++++++
+ .../dashboard-widgets/DriveScoreWidget.strings     |  47 ++++
+ .../dashboard-widgets/DriveScoreWidget.swift       | 230 +++++++++++++++++
+ 8 files changed, 1438 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0040-DriveScoreWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.swift

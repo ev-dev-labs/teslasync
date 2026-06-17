@@ -1,0 +1,284 @@
+I'll start by exploring the repository structure to understand what exists and what I'm working with.
+
+Good — `apps/` exists and Xcode tooling (`xcodebuild`, `swift`, `swiftlint`) is available. Let me explore the Apple app structure and the web source in parallel.
+
+The Apple project structure differs significantly from the prompt (no `Features/Battery/`, but a `feature-views/` with 2653 component files). Let me investigate the actual conventions, parity manifest/ledger, and whether EnergyFlow already exists.
+
+Now I understand — real pages live in `apps/apple/Sources/Features/{Domain}/`. Let me examine the Battery folder, the project build config, the gate contract, and a reference page.
+
+Now I understand the multi-file page convention. Let me study the reference `SleepEfficiencyPage` set thoroughly (closest analog — Battery domain, charts + table + sections + model), plus the project config and gate contract.
+
+Excellent — this is a clean, well-structured pattern. Let me read the rest of the reference page files to fully understand sections, charts, table, models, format, sample data, and route registration.
+
+Now let me read the remaining reference files (models, format, table, sample, route registration) and the rest of the web source plus the energy hook.
+
+Let me read the sample data source, route registration, and find the chart wrappers (RadialGauge/AreaChart), Units facade, plus the rest of the web source.
+
+Let me read the final section of the web page and the energy hook in parallel.
+
+Now let me find the `EnergyFlowData` type, the chart wrappers (RadialGauge, AreaChart), and the Units facade.
+
+Let me find the Units facade, `UnitPreferences`, and how existing pages format distance/energy. Let me also check the `TSChartPalette` and a page using distance/energy formatting.
+
+Let me read the Units facade to understand the SI converters, and the BatteryDegradationFormat for the energy/distance formatting patterns.
+
+Now let me examine the localization catalog and how strings are registered, plus the BatteryDegradation format pattern (sibling page with metric cards + distance/energy).
+
+The catalog is huge (5.1MB) and already has energy keys. Let me check the build config, gate contract, route system, and precisely which of the 44 strings already exist.
+
+Key finding: XcodeGen globs `Sources/` by directory, so new files auto-register. I need to add an `.energyFlow` route. Let me read `AppRoute.swift`, find where route registrations are aggregated, check existing page tests, and verify string coverage.
+
+Now let me assess the blast radius of adding an `AppRoute` case (exhaustive switches) and read the app registration area. Let me find every place `.sleepEfficiency` is handled.
+
+Blast radius is minimal (3 switches in `AppRoute.swift` only). Let me confirm the route parser is generic, find existing page tests, read the gate contract, and check string coverage.
+
+Parser is generic (`/energy-flow` will auto-resolve). Tests live in `Tests/Unit/Features/Battery/`. Let me read the gate README, the reference test, and the placeholder scanner.
+
+Let me read the gate contract, the reference log format, the placeholder scanner, and check for `pwsh`.
+
+I have the full precedent now (the SleepEfficiency log even documents the exact path-resolution + environment isolation). All tooling (`pwsh`, `xcodegen`, `xcodebuild`, `swiftlint`) is present. Let me check the build prerequisites (Shared.xcframework, Xcode version) and the placeholder patterns + swiftlint config.
+
+`Shared.xcframework` isn't staged (needs a ~14-min KMP build) and we're on Xcode 26.5 (same as precedent). Let me inspect the framework build script and kick it off in the background while I write code.
+
+Java 17 + gradlew present. Let me kick off the Shared.xcframework build in the background now (it's the long pole) while I write the code.
+
+The framework build is running in the background. Let me set up a plan and todos, then start writing the code. Let me first check the design tokens and a couple of UI component signatures I'll need (TSCard, TSStatCard/metric components, TSBadge, TSSectionTitle/TSPanelTitle/TSSubhead, TSEmptyState, BatteryVehicle, BatterySeverity, BatteryChartLegend).
+
+The framework build launcher returned (nohup backgrounded it). Let me check its progress and read the key design token + component definitions I'll use.
+
+Framework build is progressing (compiling Kotlin/Native). Let me read the core design token + component APIs I'll use.
+
+Let me read the design tokens/palette, the chart legend, and verify the remaining component signatures (TSCard, TSGlassPanel, TSEmptyState, TSErrorDisplay, TSDataTable, TSSelect, BatterySeverity.tone). Also the web CHART_COLORS mapping.
+
+I now have the full palette mapping (web `CHART_COLORS` index = Swift `TSChartPalette.color(at:)`). Let me read the final component APIs and tokens I need.
+
+Let me grab the final component signatures (TSGlassPanel, TSCard, TSEmptyState, TSErrorDisplay, TSDataTable/TSColumn, TSSelect) and check build progress.
+
+Build is linking frameworks (progressing well). Let me read the final component API details.
+
+Let me verify the `TSSelect` API, the `tsUnits` environment, and the route registry's `register`/`registeredRoutes` API — then I'll start writing.
+
+I have all component APIs. Let me quickly study the sibling `BatteryDegradationPage` charts/sections — it's the closest structural analog (6 metric cards + time-series area/bar charts) — to mirror the date-axis charting idiom.
+
+I now have the complete idiom (numeric-x charts + first/last date caption + shared `BatteryChartLegend`). Let me verify the backend routes exist (for accurate data-source binding), check `BatteryAxisCaption`, and confirm build progress, then write the plan.
+
+Backend routes confirmed (`/energy`, `/energy/flow`). Framework build is linking the release variant (nearly done). Let me set up the plan/todos and precisely check which of the 44 required strings already exist in the catalog.
+
+I need to add 38 required + ~12 extra keys. Let me inspect the xcstrings entry format and verify sibling route keys exist (to mirror them).
+
+I have everything needed. Let me write the plan and set up todos, then build out all files.
+
+Now I'll write the code. Starting with the models file.
+
+Let me verify the web `useUnits` formatDistance/formatEnergy return shape (value-only vs value+unit) so the metric cards match exactly.
+
+Let me check `lib/unitConversion.ts` `formatDistance`/`formatEnergy` to settle whether they include the unit label.
+
+Confirmed: both `formatDistance`/`formatEnergy` include the unit label (Swift `Units.*` bridge to the same KMP functions). Now writing the format file.
+
+Framework build check + writing the page model.
+
+Writing the sample data sources (Sample/Empty/EmptySections/Failing).
+
+Writing the main page view.
+
+Now the diagram section (Section 1, panels 1–8 + RadialGauge). This is the most complex section.
+
+Now Section 2 (summary metric cards) + Section 5 (Efficiency Metrics).
+
+Now the charts file (Section 3 area chart + Section 4 bar charts + loading skeleton).
+
+Let me fix an inconsistency — make `EnergyDailyUsageSection` take `units` as a parameter (like the sibling chart sections) instead of mixing `@Environment`.
+
+Now the history table (Section 6, panel 22).
+
+Now route wiring. Let me check the framework build and add the `.energyFlow` route case + registration.
+
+Now let me wire the route. Adding the `.energyFlow` case to `AppRoute` (enum + 3 switches) and the registration.
+
+Now let me add the strings to the catalog. First, let me check the file's formatting style so I preserve it exactly.
+
+The catalog uses Xcode's specific style (` : ` separators inside `strings`, sorted keys). To avoid a massive reformatting diff, I'll insert new entries textually rather than re-serializing. Let me write a careful script.
+
+Strings added (51 keys), JSON validates. Let me confirm all 44 required strings are present and the diff is localized (not a full reformat).
+
+All 44 required strings present; the diff is purely additive (561 insertions, 0 deletions — no reformat drift). Now writing the tests.
+
+Tests written. Let me check the framework build status and prepare the ledger update.
+
+Framework build is still linking (it builds debug+release × arm64+simulator). Let me update the ledger while it finishes.
+
+Let me verify the ledger diff is clean (just the 2 new rows).
+
+The em dash got escaped to `\u2014`. Let me fix that by re-writing with `ensure_ascii=False`.
+
+Ledger is clean now (18 insertions, 0 deletions). Let me check the framework build.
+
+Framework is linking the macOS variant now. While it finishes, let me run SwiftLint on my new files to catch issues early.
+
+A few lint fixes needed: 3 long lines in Charts, 1 long test line, and the test class body exceeds 250 lines (needs splitting into extensions). Let me view and fix the long lines.
+
+Now fix the test file. Let me view the long line and the structure to split into extensions.
+
+Now split the test class into extensions to satisfy `type_body_length`. Let me insert class-close + extension-open at two points.
+
+Test methods in extensions may not be discovered by XCTest — let me verify whether the codebase uses that pattern before relying on it.
+
+The codebase widely uses extension-based test methods (FeedbackQueue, RbacMatrix, etc.), so my split follows the established pattern. Let me re-lint the fixed files.
+
+Both pass. Let me run SwiftLint across all my new + edited Swift files together to confirm clean.
+
+One pre-existing long line on the enum declaration I touched. Let me view and reflow it to stay under 120.
+
+Line 29 is a pre-existing 123-char line (the sleep PR made it long). Since I'm editing this declaration anyway, I'll reflow it under 120 and merge `energyFlow` in.
+
+All my files lint clean. Let me check the framework build and run the placeholder scan.
+
+The scan flagged the word "placeholder" in a comment. Let me find and reword it.
+
+Placeholder scan passes (COUNT=0). Now I need the framework to finish. Let me wait for the Gradle build to complete.
+
+Shared.xcframework is staged (BUILD SUCCESSFUL). Now let me generate the Xcode project and build.
+
+Project generated. Now let me build the macOS app target. I'll run a clean build to see the real state (the precedent disclosed 2 pre-existing Xcode-26.5-incompatible files).
+
+Build failed on code-signing (no dev certificate in this environment). Let me disable signing (standard for headless builds) and rebuild.
+
+The build is compiling (good — signing is no longer blocking). Let me wait for it to complete.
+
+Build failed in pre-existing widget/feature-view files (not mine). Let me extract the actual error diagnostics and confirm none are in my EnergyFlow files.
+
+A name collision I introduced: my `EnergyDailyEntry` clashes with a pre-existing `EnergyStatsWidget` type in the same module. Let me find all collisions with my new public types.
+
+Two collisions: `EnergyDailyEntry` and `EnergyFlowArrow` both clash with pre-existing widget types. I'll rename mine. Let me find all usages in my files.
+
+The widget owns both types. I'll rename mine: `EnergyDailyEntry` → `EnergyFlowDailyEntry` and `EnergyFlowArrow` → `EnergyFlowDiagramArrow`.
+
+Renamed cleanly. Before the expensive rebuild, let me comprehensively check ALL my declared types against the codebase for any other collisions.
+
+Another collision: `EnergyFlowFormat`. Let me wait for the full check to complete.
+
+One more: `EnergyFlowFormat` collides with the widget. Let me rename it to `EnergyFlowDisplayFormat` (and the file) across my files.
+
+Let me fix the doc-comment reference and regenerate the project (file was renamed).
+
+The rename pushed a line over 120. Let me view and fix it.
+
+Lint clean. Now rebuild the macOS app (collisions resolved). This compiles the full app (~several minutes).
+
+Still compiling. Let me check the build log file directly for progress and any errors.
+
+0 errors, and it's at the module-emit phase (near the end). Let me wait for completion.
+
+Module emit in progress (large module, 0 errors). Let me continue waiting for the build to finish.
+
+Module emitted, now compiling object files (T's in progress, 0 errors). Let me wait for completion.
+
+Still compiling object files (0 errors). Let me wait longer for completion.
+
+Healthy progress (20K log lines, 0 errors, compiling object files). Let me keep waiting for completion.
+
+**`** BUILD SUCCEEDED **`** — the full macOS app compiles cleanly with my EnergyFlow page (0 errors). Now let me run the tests, targeting my test class.
+
+The test **bundle build** failed — but on a pre-existing, unrelated test file (a `utcDayKey` main-actor isolation error, same class of Xcode-26.5 issue the precedent disclosed), not my code. Let me pinpoint the offending file(s).
+
+A single pre-existing failure: `Tests/Unit/Features/Analytics/TimelinePageModelTests.swift:318` (`utcDayKey` main-actor isolation — an Xcode-26.5 strictness issue in an unmodified file outside my scope). Let me confirm it's untouched by me, then isolate it to run my tests (the precedent's documented approach).
+
+Confirmed pre-existing and unmodified by me. Let me isolate it (build-setting override, no source edits — the precedent's documented method) and re-run my tests.
+
+A second pre-existing failure surfaced (`GDPRExportPageModelTests.swift` — the exact file the precedent disclosed). These are a class of pre-existing Xcode-26.5 strict-concurrency failures in unrelated test files. Let me check the documented pending-verifications and find them all at once rather than one-by-one.
+
+This is a documented, pre-existing condition: `macos-pending-verifications.md` confirms the full macOS `build test` is expected-RED across many prior prompts (co-located `*.Tests.swift`, strict-concurrency, signing), with surfaces verified in isolation. My page **compiles green into the app** already. Now I'll isolate the pre-existing broken test files to run my tests. Let me proactively find all of them at once.
+
+The patterns vary. Let me iterate efficiently — exclude the two known broken files and run; incremental compilation makes subsequent passes faster.
+
+A third: `VehicleCostPageModelTests.swift` (`main actor-isolated default value` — same pre-existing class). Let me find ALL such broken test files at once by checking which `*ModelTests` lack `@MainActor` (the marker that makes mine safe).
+
+Let me inspect `VehicleCostPageModelTests` directly to understand the exact pre-existing pattern and find siblings.
+
+These are scattered pre-existing strict-concurrency failures (`@MainActor`-isolated defaults in nested stub structs) — not greppable, and excluding one-by-one is slow. A cleaner approach: exclude **all** test files except mine via `EXCLUDED`/`INCLUDED` build settings, so only my test compiles against the real app module. This verifies my surface in isolation (the documented norm) in one pass.
+
+**`** TEST SUCCEEDED **` — all 27 EnergyFlowPageModelTests pass (0 failures), compiled against the real app module + Shared.xcframework. Now let me run the full `swiftlint --strict` (gate requirement) to confirm my files add zero tree-wide violations.
+
+The full `swiftlint --strict` gate passes: **0 violations, 0 serious in 6045 files** (the EnergyFlow matches are just progress lines). Every gate is green. Let me capture final numbers and write the evidence log.
+
+All gates green and changes complete (10 source + 1 test + 4 edits). Now let me write the evidence log with the full `=== PARITY ===` enumeration (74 items) and gate results.
+
+The evidence log is written. Let me finalize: update tracking, verify the working tree, and commit only my intended files (the generated `.xcodeproj` and `Shared.xcframework` are gitignored).
+
+Working tree is clean — only my intended files (generated `.xcodeproj` + `Shared.xcframework` are gitignored). Let me commit.
+
+All 16 files staged. Let me commit.
+
+Committed (`d7087decb`, 16 files). Let me verify the final state and clean up temp files.
+
+Let me do a final todo check and confirm the commit landed.
+
+All todos done; commit `d7087decb` landed; log ends `EXIT=0 / STATUS=DONE`. 
+
+One rigor gap: the macOS build doesn't exercise my `#if os(iOS)` branches (horizontalSizeClass). Since the prompt requires iOS parity too, let me validate the iOS target compiles my new code (app build, no signing needed for simulator).
+
+iOS build is compiling. Let me check progress and watch for any errors in my files.
+
+No errors yet (iOS build compiling, 6600+ log lines). Let me wait for it to finish.
+
+Still compiling (0 errors). Let me continue waiting for the iOS build.
+
+Progressing through object compilation (0 errors). Let me keep waiting.
+
+Still compiling (19.6K log lines, 0 errors). Let me continue waiting for completion.
+
+Still compiling (23.8K lines, 0 errors, now at "I" — my "E" files already compiled clean in the iOS target). Let me wait for the final result.
+
+Near the end of the alphabet ("T", 0 errors). Let me wait for the build to finish.
+
+Still linking object files (0 errors). Let me wait for the final build result.
+
+App target compiled (0 errors); now building the widgets extension dependency. Let me wait for final completion.
+
+The iOS build's Swift compilation succeeded with **0 errors** across all slices, but the final **link failed for the x86_64 simulator slice** — because the vendored `Shared.xcframework` only ships `ios-arm64-simulator` (not x86_64). That's an environment artifact, not my code. Let me confirm and rebuild restricted to the arm64 slice the framework provides.
+
+The single error is a **linker** failure (clang Ld) for x86_64 — not a Swift compile error. All Swift compilation (arm64 **and** x86_64) succeeded with 0 errors; the link fails only because `Shared.xcframework` lacks the x86_64 simulator slice. Let me rebuild restricted to the arm64 slice the framework provides (arm64 objects are cached, so this is mostly a re-link).
+
+**`** BUILD SUCCEEDED **` for iOS Simulator (arm64) too. Both targets compile + link cleanly with all my `#if os(iOS)` adaptive branches. Let me record the iOS verification in the log and amend the commit.
+
+Let me amend the commit with the updated log and clean up temp files.
+
+Both targets build, all gates green, committed (`bfe944ad8`), tree clean. Let me do a final verification of the commit contents.
+
+All complete and verified. The task is done.
+
+## Summary
+
+Implemented a native **SwiftUI/HIG** `EnergyFlowPage` at full web parity (`web/src/features/battery/pages/EnergyFlowPage.tsx` → route `/energy-flow`), adaptive across macOS + iOS.
+
+**Path resolution (no drift):** Implemented under the real compiled root `apps/apple/Sources/Features/Battery/` (the prompt's `apps/apple/TeslaSync/Features/Battery/` isn't a compiled source root — matching the documented SleepEfficiency predecessor decision).
+
+**Parity: 74/74** — 22 panels, 4 charts, 4 data states, 44 strings:
+- **Diagram** (panels 1–8): Grid → Battery **RadialGauge** SOC → Motor with Charging/Driving flow arrows + live DC/AC/HVAC/Accessories power tiles
+- **6 metric cards** (Total Energy/Charged, Distance, Efficiency, CO₂ Saved, Period)
+- **Daily Energy Usage** area chart + **Daily Distance**/**Daily Efficiency** bar charts (native Swift Charts)
+- **Efficiency Metrics** panel + **Daily Energy History** table
+- All bound through an `@Observable EnergyFlowPageModel` (no networking in the view); SI converts at the render boundary via the shared `Units` facade.
+
+**Verification (all actually run):**
+- `swiftlint --strict`: **0 violations** in 6045 files
+- `check-placeholders.ps1`: **PLACEHOLDER_COUNT=0**
+- macOS app `xcodebuild build`: **BUILD SUCCEEDED**
+- iOS-Simulator (arm64) `xcodebuild build`: **BUILD SUCCEEDED** (validates `#if os(iOS)` adaptive branches)
+- `xcodebuild test`: **27/27 EnergyFlowPageModelTests pass**
+
+**Disclosure:** A literal full `xcodebuild build test` is blocked only by pre-existing, out-of-scope, Xcode‑26.5‑incompatible co-located test files (`TimelinePageModelTests`, `GDPRExportPageModelTests`, `VehicleCostPageModelTests`, …) — a documented `macos-pending` condition — which I isolated via build-setting overrides (no source edits) and disclosed in the log. Zero diagnostics are attributable to this change.
+
+**Collision fix:** Renamed `EnergyDailyEntry`/`EnergyFlowArrow`/`EnergyFlowFormat` (which clashed with the existing energy widgets) to `EnergyFlowDailyEntry`/`EnergyFlowDiagramArrow`/`EnergyFlowDisplayFormat`.
+
+Updated `AppRoute` (+`.energyFlow`), `TeslaSyncApp` registration, `Localizable.xcstrings` (+51 keys, purely additive), and `apple-ledger.json` (+2 rows, covered==required==74). Evidence log written ending `EXIT=0 / STATUS=DONE`. Committed as `bfe944ad8` (16 files).
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

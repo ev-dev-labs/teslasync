@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Tooling is available. Let me explore the existing Apple app structure deeply to understand the patterns.
+
+Many feature-views exist (1647 files). Let me study the established pattern by examining a complete example and finding notification-related views.
+
+There's a near-perfect analog: `NotificationGroupRow`. Let me study its complete file set to learn the exact conventions.
+
+Excellent, this is a highly consistent architecture. Let me read the remaining files in the analog set to fully understand the pattern.
+
+Let me read the remaining analog files plus the shared design tokens.
+
+Let me read the analog previews/tests/strings and locate the shared design tokens.
+
+Let me read the design tokens, motion/skeleton components, and the analog test files.
+
+Let me locate the actual token definitions and read the ModelTests + motion/skeleton helpers.
+
+The tokens aren't in Sources/. Let me search the whole Apple tree and shared packages.
+
+`TSDesign.swift` references tokens defined elsewhere (likely generated). Let me check `project.yml` to understand how files/tests are included in the target — critical for my new files to compile.
+
+Now I understand the build wiring: feature-views are auto-included by glob, tokens come from `../design/generated/apple`. Let me study the drill-through logic (which `NotificationRow` uniquely needs) and the web types.
+
+Now let me verify the design tokens exist, read the motion/skeleton component signatures, and check tooling availability (xcodegen, pwsh, simulators).
+
+All tooling is present (xcodegen, pwsh, swiftlint/format, iPhone 16 simulator booted). Let me check the build prerequisites: the shared xcframework script, placeholder checker, and whether the xcodeproj needs generating.
+
+Key risk identified: `Shared.xcframework` is missing and the build pre-action requires a Kotlin/Native Gradle build. Let me assess whether that's feasible here.
+
+This is the critical context. The `macos-pending-verifications.md` documents the established precedent: the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 8-15×, co-located test imports, signing), while each surface is verified green in isolation. Let me read the lint/format configs and locate `TSCard` before writing.
+
+All constraints are clear. Let me set up the plan and todo tracking, then check `TSCard`'s dependencies for later isolated verification.
+
+Dependencies mapped. Let me create the plan and todos, then write the surface files.
+
+Now I'll write the surface files. Starting with the pure core: Adapter, Drillthrough, Copy.
+
+Now the Source seam (inputs, snapshots, actions, protocol, in-memory implementation).
+
+Now the Model (i18n facade, telemetry seam, observable state holder).
+
+The drill-through is a distinct navigable element, so I'll route it through the seam like other side-effects. Let me add `openContext`/`openDrillthrough` to Source and Model.
+
+Now the Views file (severity badge, selection toggle, body, action cluster, drill link).
+
+Now the Chrome (state envelope: freshness chip, banner, loading/empty/error, toast).
+
+Now the main composed View.
+
+Now the Previews (one per state).
+
+Now the i18n strings catalog.
+
+Now the pure-projection Tests file.
+
+Now the observable Model tests.
+
+All 12 files written. Now verification — starting with swiftformat (lint), swiftlint, and the placeholder gate on my files.
+
+swiftformat clean (0/11 require formatting). Now swiftlint --strict on my files.
+
+swiftlint clean (0 violations). Let me check how `check-placeholders.ps1` consumes `-Path`, since the gate passes a path prefix (`.../NotificationRow`) but my files are `NotificationRow.*` in feature-views.
+
+The gate's `-Path .../NotificationRow` isn't a real directory (my files are `NotificationRow.*`), so the script would scan nothing. I'll run it meaningfully against my actual files (temp copy) AND grep-verify, then run the exact gate command for fidelity.
+
+My files are placeholder-clean and contain no forbidden tokens. Now the critical check: does my Swift code compile and do the tests pass? Let me set up an isolated SwiftPM build. First, verify the token file is self-contained.
+
+Tokens are self-contained. Let me build an isolated SwiftPM package to compile my surface and run the tests under Swift 6 strict concurrency.
+
+My surface compiles cleanly under Swift 6. Now run the tests.
+
+All 38 tests pass under Swift 6. Now the cross-platform SDK typecheck (iOS 18 + macOS 15), matching the precedent's verification method.
+
+Clean typecheck on both SDKs under Swift 6 strict concurrency. Now the full gate. First, `xcodegen generate` to enumerate my files into the project.
+
+Project generated; all 11 NotificationRow Swift files enumerated. Let me confirm the documented pre-existing collisions exist (unrelated to my surface), then attempt the Gradle framework + xcodebuild.
+
+In this slot the collisions are NOT present (each symbol defined once) — the full build is more feasible here. Let me attempt the Gradle `Shared.xcframework` assembly (the build pre-action).
+
+Network + JDK available, so the KMP framework is buildable. Let me run the Gradle assembly async and monitor (first run downloads the toolchain, so it takes a while).
+
+Let me monitor the Gradle build progress.
+
+The launcher's background process didn't persist (async session child). Let me check state and relaunch the Gradle build as a detached process so it survives.
+
+Many Gradle daemons from parallel slots are contending for this shared host. The wrapper dist is cached. Let me relaunch the assembly as a detached process that survives, with logging.
+
+Gradle assembly relaunched detached. While it compiles the Kotlin/Native targets, let me monitor progress.
+
+Kotlin/Native compiles are cache-warm (from parallel slots); release frameworks are linking now. Let me check completion and staging.
+
+Release linking (the heavy, uncached step) is in progress under host contention. Let me wait further.
+
+iosArm64 release linked; iosSimulatorArm64 in progress, then macosArm64. Let me wait for completion and staging.
+
+Last target (macosArm64) linking now. Let me wait for the final assemble + staging.
+
+Gradle BUILD SUCCESSFUL — release `Shared.xcframework` built. It needs staging to `apps/apple/Frameworks/`. Let me stage it and launch the iOS Simulator build (signing-free).
+
+Framework staged (iOS + macOS slices). Now the iOS Simulator app build (signing-free). Launching detached with logging.
+
+iOS build failed — but with **0 NotificationRow errors**. The 226 errors are all in OTHER surfaces (HighlightCard, DrivingTab, InboxBody, …). Let me extract the distinct failing files to confirm my surface is clean and document the pre-existing blockers.
+
+Definitive: **NotificationRow has ZERO errors** in the full app compile. All 226 errors are pre-existing "ambiguous type lookup" duplicate-symbol collisions in unrelated `dashboard-widgets/*` surfaces (ChargeStatus*, Safety*, FleetStatsBar*) — the exact parallel-merge collision pattern from `macos-pending-verifications.md`. Let me confirm these duplicates are pre-existing and untouched by me.
+
+Airtight: the duplicates (`ChargeStatusProjection`, `ChargeConnection`) are each defined in two dashboard-widget files I never touched. Now let me capture the repo-wide swiftformat/swiftlint gate results (and confirm my files aren't in any violations) to finalize the honest log.
+
+Repo-wide swiftformat is fully clean (0/2360). swiftlint has exactly 1 pre-existing violation — and **0 in NotificationRow**. Let me identify that one violation to document it's not mine.
+
+The single swiftlint violation is the **pre-existing** `LiveSignalSparklinesWidget.Builder.swift` opening_brace error — the exact one named in `macos-pending-verifications.md`, not mine. I now have complete, honest evidence. Let me verify the log dir and that build artifacts are git-ignored, then write the gate log.
+
+Only my 12 files are untracked; build artifacts are git-ignored. Let me launch the macOS gate build (time-boxed, to capture its real first failure) while I assemble the log.
+
+While that runs, let me re-confirm the exact iOS failure facts for the log (counts straight from the real build log).
+
+All 17 failing files are in `dashboard-widgets/` — zero elsewhere. The macOS build finished; let me check its result.
+
+The macOS build failed on **development-signing** (the documented blocker), 0 NotificationRow errors. I now have complete, honest evidence. Let me write the gate log.
+
+The honest gate log is written. Now let me commit the surface + log (the prompt's commit step), staging exactly my files.
+
+All 12 surface files + the log staged (exactly the allowed files). Committing.
+
+Committed cleanly (13 files, 2547 insertions). Let me update tracking and clean up temporary build artifacts.
+
+Cleanup complete. The two `web/src/features/admin/*` modifications are pre-existing slot changes (unrelated to my Apple task — never touched by me). My commit contains exactly the 12 NotificationRow files + the log. Let me do a final verification.
+
+All 15 todos complete; the surface is committed and the log terminates with `EXIT=1` / `STATUS=BLOCKED`. The task is finished.
+

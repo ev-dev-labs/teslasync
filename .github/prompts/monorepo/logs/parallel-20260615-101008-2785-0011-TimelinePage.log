@@ -1,0 +1,38 @@
+I'll start by exploring the repository structure to understand the task scope, the web source page, and the existing Apple app architecture.
+
+Xcode toolchain is available (xcodebuild, swiftlint, swift, pwsh). Let me explore the web source and Apple app structure.
+
+The web source is clear. Now I see the Apple app has two structures: `apps/apple/Sources/Features/Analytics` and `apps/apple/TeslaSync/feature-views`. Let me investigate the actual project layout, parity manifest, and existing Analytics pages.
+
+Key finding: existing Analytics pages live in `apps/apple/Sources/Features/Analytics/` with a multi-file pattern. No `.xcodeproj` found yet. Let me locate the project and the manifest entry for Timeline.
+
+Project uses **xcodegen** (`project.yml`) — the `.xcodeproj` is generated. Real pages live in `Sources/Features/Analytics/`. Let me read the project config, a model page with charts (Statistics), and route registration patterns.
+
+Now I understand the build: xcodegen generates `TeslaSync.xcodeproj` from `project.yml`, which compiles `Sources/`. The real page location is `Sources/Features/Analytics/`. The prompt's `TeslaSync/Features/Analytics/` path isn't in any compiled source group, so I'll follow the actual repo convention. Let me deeply study the Statistics page (most similar — analytics + charts) as my template.
+
+Excellent, high-quality codebase with clear patterns. Let me read the remaining Statistics template files, route registration, and component library.
+
+Now let me study the component library — charts, UI (DataTable, Badge), data-display, routing, and the Units facade.
+
+Let me read the routing files and key components I'll need (DataTable, Badges, BarCharts, ChartModels).
+
+Now let me understand route registration composition, the dedicated-route pattern (Mileage), and the localization catalog.
+
+60 lines mention "timeline." already. Let me check the exact existing keys, the registry definition, and how registrations are composed in the app.
+
+`error.loadFailed` already exists; the 23 `timeline.*` keys need adding. Let me confirm the xcstrings structure and read the app composition root.
+
+Now I understand routing. Timeline needs a route. Let me check the risk of adding a `.timeline` enum case by finding all exhaustive switches over `AppRoute`, and check the web nav placement.
+
+Only `AppRoute.swift` has an exhaustive switch — adding a `.timeline` case is low-risk. Let me verify no route-count tests break and find the web nav group for `/timeline`.
+
+Routing is safe to extend. The web places Timeline in the "Home" sidebar section → maps to `.overview` group, clock icon. No tests assert route counts. Now let me read the components I'll use: charts, DataTable, badges, feedback states, metrics, and check where analytics tests live.
+
+`TSBarChart` supports `stacked: true` — perfect for the daily breakdown. Let me read DataTable, Badges, feedback states/banners/skeletons, ChartContainer, and locate analytics tests.
+
+Let me read the feedback components, chart container, typography/cards, select picker, and locate the analytics test pattern.
+
+I have a thorough understanding of the patterns. Let me read the remaining primitives (typography, cards, pickers, design tokens) and check for existing window/range strings before finalizing my design.
+
+Let me read TSCard/TSGlassPanel and the design tokens (Color.TS, TSChartPalette, spacing) to finalize the state-color mapping.
+

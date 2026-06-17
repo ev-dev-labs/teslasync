@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure and reading the web source component that needs to be ported to native Apple.
+
+`AIGeofenceAwareAutomationSuggestions` is the closest analog (uses `Textarea` + `useAiStream`). Let me study it thoroughly along with its web source.
+
+Let me read all files of this analog surface to fully understand the pattern.
+
+Now let me examine the design tokens (P1/S9) and shared components, plus the verification harness setup.
+
+Let me set up a plan and kick off the heavyweight build infrastructure check in the background while I write code.
+
+Java 17 is available. Let me pre-build the Shared.xcframework in the background (it's the slow Gradle/Kotlin-Native step) while I write the surface code.
+
+I have a complete understanding of the pattern. Let me check the lint/format configs and the AiOutputPanel web component, then write the plan.
+
+I now have a complete understanding. Let me create the plan and start writing the surface files following the established pattern (adapted for the simpler Q&A surface).
+
+Now writing the surface files. Starting with the Adapter (projection core) and Logic:
+
+Let me check the background Gradle build progress while continuing with the main view.
+
+Gradle build is nearly done. Continuing with the main view:
+
+Shared.xcframework is staged. Now the Previews and strings files:
+
+Now the test files. First the adapter/logic/accessibility/strings tests:
+
+All 11 files written. Now let me run the fast checks — format, lint, placeholders:
+
+Zero changes needed — already formatted. Now swiftlint, swiftformat --lint, and placeholder check:
+
+Both pass with 0 violations. Now the placeholder check and full-repo lint:
+
+Placeholder + full lint pass. Now full format lint, then generate the Xcode project:
+
+All static checks pass (lint 0, format 0, placeholders 0). Now generating the Xcode project and building:
+
+Project generated. Now the iOS build+test (heavy step) — running in the background:
+
+The backgrounded build was killed when the async session ended. Let me relaunch it as a detached process that persists:
+
+Build is compiling properly (Gradle preaction done, Swift module emitting). Let me wait and monitor for completion and any errors:
+
+Build failed — but **all errors are in pre-existing `RecentDrives*` files, none in my `AILifetimeStatsQA` files**. Let me confirm these are pre-existing (not caused by my change):
+
+Confirmed — only my 11 files are new; `RecentDrives*` is pre-existing and untouched. Let me investigate the duplicate-declaration root cause:
+
+Root cause found: **two pre-existing surfaces collide** — `RecentDrivesListWidget` (dashboard-widgets) and `RecentDrivesSection` (feature-views) both declare `public RecentDrivesModel`/`RecentDrivesConnection`/`RecentDrivesLoadStatus`/`RecentDrivesModelTests`. This is unrelated to my task and outside my allowed files. My files are uniquely prefixed and cannot cause it.
+
+To prove my surface compiles and its tests pass, let me temporarily de-conflict (without committing) and run a focused build+test. First, check cross-references:
+
+No external references — the collision is self-contained between the two surfaces. Let me get the complete error picture to confirm everything failing is unrelated to my surface:
+
+Two pre-existing collision pairs (RecentDrives + StateTimeline), 162 errors, **all in dashboard-widgets ↔ feature-views surfaces — zero in my files**. To prove my surface builds, I'll temporarily de-conflict (one side of each pair) without committing. Let me check which side is safe to move aside:
+
+No external references — all four surfaces are standalone (awaiting integration, like mine). Safe to temporarily move one side of each pair. Let me do the temporary de-conflict (dashboard-widgets side):
+
+17 files parked. Now regenerate and rebuild+test (focused on my surface's tests):
+
+Build+test launched. Let me monitor it (incremental, should be faster with warm DerivedData):
+
+Another pre-existing error surfaced in a different unrelated surface (`AIAutoNameUnnamedLocations.swift` — not mine). This combined slot has multiple pre-existing breakages. Let me get the full magnitude:
+
+Down to a **single** pre-existing error in another standalone surface (`AIAutoNameUnnamedLocations`, surface 0002) — **zero in mine**. Let me confirm it's a genuine pre-existing bug and unreferenced, then park it too:
+
+The failing pre-existing line is the **exact `glass` helper pattern I copied from the analog** — `@ViewBuilder _ content: () -> some View` passed into `TSGlassPanel`'s `@escaping` init. My file has the identical pattern, so it would hit the same error once compiled. Let me examine `TSGlassPanel`'s signatures to fix my file correctly:
+
+Confirmed: `TSGlassPanel.init` is `@escaping`, so the non-escaping `glass` helper (copied from the analog) is a genuine latent bug. **My file has the identical pattern and must be fixed.** Let me check how widespread this broken pattern is across the pre-existing surfaces:
+
+Only 3 surfaces have this latent bug: mine (copied from the analog), plus the analog (0020) and 0002 — all pre-existing-pattern. I'll **fix my file** (my scope) with the correct `@escaping` generic form, then temporarily park the 2 other broken AI surfaces + the collision pairs to verify my surface builds. First, fix my file:
+
+Let me verify the `@escaping () -> some View` form is valid Swift with a quick isolated check before the full rebuild:
+
+My fix type-checks cleanly. Let me re-lint my changed file, then park the 2 other pre-existing-broken AI surfaces and rebuild:
+
+Fixed file passes lint. Now rebuild+test (focused on my surface's tests):
+
+More pre-existing breakage — the kept `RecentDrivesSection` side (feature-views) has its own internal bugs (redeclaration, type mismatch, type-check timeout). Both sides of these pairs are independently broken. **Still zero errors in my surface.** Let me park both feature-view sides too and rebuild:
+
+Build failed but no `error:` lines captured — let me see the actual failure reason:
+
+Let me pinpoint the real failure — it progressed to linking app extensions:
+
+No standard `error:` lines despite "(2 failures)" — suggests a compiler crash or non-standard diagnostic. Let me dig deeper:
+
+A **Swift compiler crash** (segfault, not a normal error). Let me identify which file triggers it:
+
+The compiler crash is in a batch of pre-existing files (batch-mode lists all sources). The combined-slot baseline has cascading unrelated breakages (collisions + latent bugs + a compiler segfault) — all outside my scope. **My surface has had zero errors throughout.**
+
+Rather than endless whack-a-mole through a broken baseline, I'll verify my surface in isolation via a SwiftPM harness (the approach the analog tests explicitly reference). Let me check my view layer's component dependencies first:
+
+The component cascade is bounded to the design system. Let me check if `Sources/Components` + `Sources/Design` are self-contained (no app/surface deps), so I can compile my full surface (incl. views) in an isolated harness:
+
+The design system is fully self-contained (only system frameworks, no UIKit). Since the macOS gate already compiles these surfaces for macOS, I'll build an **isolated SwiftPM harness** (module named `TeslaSync` so `@testable import TeslaSync` works unchanged) containing the real design system + my surface + my tests. This authoritatively verifies my surface compiles and all tests pass, isolated from the broken baseline:
+
+Now create the Package manifest and run the harness:
+
+**All 8 of my surface files compiled successfully** in the isolated harness. The only failure is a design-system file I copied (`UnitFormatters`/`TypedFormatters`) referencing a `Units` type that lives outside Components/Design — unrelated to my surface. Let me trim those unused design-system files from the harness:
+
+Only `UnitFormatters.swift` needs the external `Units` facade, and my surface doesn't use it. Let me remove it from the harness and re-run:
+
+🎉 **The isolated harness BUILT and all 44 tests PASSED (0 failures)** — proving all 8 of my surface source files compile against the real design system (macOS, same as the macOS gate) and every test passes. Let me capture the per-suite breakdown for the gate log:
+
+All **5 test suites pass — 44 tests, 0 failures**: Accessibility (6), Logic (7), Model (22), Request (8), Strings (1). My surface is fully verified. Now let me restore all parked baseline files and confirm the working tree only contains my 11 new files:
+
+Working tree is clean — only my 11 new files, no modifications to any baseline file. Now let me prepare the gate log. Let me check the expected log location and any sibling log format:
+
+Sibling logs exist. Let me examine the analog's (0020) log to match the expected format:
+
+This is the key insight — every shipped sibling surface follows a **sanctioned disposition**: host-runnable gates (lint/format/placeholder/typecheck/harness) PASS, and the full-app xcodebuild is DEFERRED to the P4 acceptance runner because the shared infra is parallel-unsafe. Let me see how the sibling log closes (section [7] + final STATUS):
+
+Now I fully understand the sanctioned disposition used by every shipped P4 shared-surface. My situation matches it. Let me run the remaining sibling-convention evidence — the **dual-SDK (iOS 18 + macOS 15) Swift 6 typecheck** of my exact sources against the real design system, plus the **i18n parity** check:
+
+iOS 18 typecheck: **0 errors**. Now the macOS typecheck and i18n parity:
+
+macOS 15 typecheck: **0 errors**. i18n parity: **24 keys, 0 missing, 0 orphan**. All host-runnable gates are green. Let me verify the precise facts for the deferred-build section of the log:
+
+All facts confirmed. Let me capture runner info and re-run the host gates fresh on the final restored tree for exact raw output to paste into the log:
+
+All host gates green on the final sources. Now let me write the comprehensive, honest gate log:
+
+Now let me clean up temp artifacts, regenerate the project to reflect the restored tree, and verify the final git status:
+
+Final tree is clean — exactly my 11 surface files + the gate log, nothing else modified. Let me commit as the prompt specifies:
+
+Commit succeeded — 12 files, 2085 insertions. Let me do a final verification that the working tree is clean and nothing else drifted:
+
+Everything is clean and committed. Let me update the plan file to reflect completion:
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0024-AILifetimeStatsQA.log | 189 +++++++++++++
+ .../AILifetimeStatsQA.Adapter.swift                |  92 +++++++
+ .../shared-surfaces/AILifetimeStatsQA.Chrome.swift | 195 ++++++++++++++
+ .../shared-surfaces/AILifetimeStatsQA.Logic.swift  | 170 ++++++++++++
+ .../shared-surfaces/AILifetimeStatsQA.Model.swift  | 291 +++++++++++++++++++++
+ .../AILifetimeStatsQA.ModelTests.swift             | 263 +++++++++++++++++++
+ .../AILifetimeStatsQA.Previews.swift               | 114 ++++++++
+ .../shared-surfaces/AILifetimeStatsQA.Source.swift |  86 ++++++
+ .../shared-surfaces/AILifetimeStatsQA.Tests.swift  | 211 +++++++++++++++
+ .../shared-surfaces/AILifetimeStatsQA.Views.swift  | 223 ++++++++++++++++
+ .../shared-surfaces/AILifetimeStatsQA.strings      |  47 ++++
+ .../shared-surfaces/AILifetimeStatsQA.swift        | 204 +++++++++++++++
+ 12 files changed, 2085 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0024-AILifetimeStatsQA.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.swift

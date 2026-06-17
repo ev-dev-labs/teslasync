@@ -1,0 +1,1696 @@
+I'll start by exploring the codebase to understand the web source page and the existing Apple app structure.
+
+Now let me explore the Apple app structure to understand the conventions.
+
+Good — full toolchain is available (Xcode 26.5, xcodegen, swiftlint, swift 6.3.2). Pages live in `feature-views/` with a multi-file pattern. Let me study a complete reference page and the shared infrastructure.
+
+Key findings: no central `Localizable.xcstrings` — each surface has its own `.strings` file; pages live in `feature-views/`. Let me study the reference page anatomy and navigation registration.
+
+Now I understand the page anatomy. Let me study the ViewModel/Adapter pattern, localization system, and find chart-using pages.
+
+This is a large, sophisticated codebase with an elaborate per-page multi-file pattern. Let me dispatch parallel explore agents to map the exact APIs I need while I read key reference files directly.
+
+I'll investigate the TeslaSync Apple app architecture systematically. Let me start by exploring the structure and examining key files.I'll search the repository systematically for these components and design tokens. Let me start by exploring the directory structure and then locate each component.I'll read the specified files and search for other localization examples to understand the exact pattern.Now let me search for all the TS components and design tokens:Now let me find the AlertStudioPage files:Now let me search for simpler examples. Let me try to find simpler localization patterns:Now let me read the critical files:Let me search more specifically for TS-prefixed components and check the design directory:Perfect! Let me read `SignalCompareControls.Localization.swift` as a simpler comparison example:Now let me search for vehicle loading patterns and check how the core is imported:Let me check what's actually in the apps directory:Now let me check if there's a corresponding `.strings` file for SignalCompareControls and read an example of how a smaller surface is structured:Let me look for the app's main structure and how core is imported:Let me search for model definitions and imports in AlertStudioPage.Adapter.Logic:Let me read the strings files and also check what the simpler Copy file structure looks like:Good! Let me search for the components across the Sources directory and shared-surfaces:Perfect! Now let me read these component files and the design tokens:NowLet me find the let me look at the Model.Types to see the full vehicle definition: RDText type definition to understand the pattern:Let me look at AlertStudioPage for the view.opened pattern and the Previews:Now let me get the remaining components:Now let me check UpdateAvailableCallout.Copy.swift to see another example:Now let me look at the Previews and Tests:Let me search for the remaining components - FadeIn, MetricCard, DataTable, and charts:Let me search for how the read models are wired and where the core is actually used (looking for Shared, repository patterns):Let me get the remaining components:Now let me check the design token files:Let me look at the Models file:Let me look at how AlertStudioPage actually uses the localizer in its views:Let me search for the token definitions more directly:Now let me search for the Source protocols and how they're implemented with the core:Perfect! Let me get the generated tokens:Let me look at AlertStudioPage.Sources.swift for concrete implementations:Now let me find a real example of a chart usage:Perfect! Now I have the complete picture. Let me provide you with the exhaustive analysis:
+
+---
+
+## **COMPLETE i18n LOCALIZATION PATTERN ANALYSIS**
+
+### **1. ASText Type Definition**
+
+**File**: `AlertStudioPage.Model.swift`, lines 87-95
+
+```swift
+/// A localizable string descriptor — the web `t(key, fallback)` pair. Kept as a value
+/// so the catalog key and its English default never drift apart.
+public struct ASText: Sendable, Equatable {
+    publicLet me continue reading the Sources file to see the mutator and then search for analytics/period-stats: let key: String
+    public let fallback: String
+
+    public init(_ key: String, _ fallback: String) {
+        self.key = key
+        self.fallback = fallback
+    }
+}
+```
+
+**Key fields:**
+- `key: String` — the i18n lookup key (e.g., `"notifications.alertStudio.title"`)
+- `fallback: String` — the English default from web source
+- **No args field** — `ASText` is simpler; interpolation is handled separately via `ASLocalizer.format()`
+
+**Comparison**: The more complex surfaces (`RedisDiagnosticEmptyState`, `UpdateAvailableCallout`) use an extended pattern with `args`:
+
+```swift
+// From RedisDiagnosticEmptyState.Adapter.swift, lines 126-141
+public struct RDText: Sendable, Equatable {
+    public let key: String
+    public let fallback: String
+    public let args: [String: String]  // ← Interpolation tokens stored here
+
+    public init(_ key: String, _ fallback: String, args: [String: String] = [:]) {
+        self.key = key
+        self.fallback = fallback
+        self.args = args
+    }
+
+    /// Localizes the key (with the English fallback) and applies `{{name}}` substitution.
+    public func resolved(_ localize: (String, String) -> String) -> String {
+        RDInterpolate.apply(localize(key, fallback), args)
+    }
+}
+```
+
+---
+
+### **2. ASLocalizer Protocol & Implementation**
+
+**File**: `AlertStudioPage.Model.swift`, lines 100-125
+
+```swift
+/// A thin localization seam so the pure projections stay testable: production passes
+/// the `ASStrings` facade (real catalog + English fallback); tests pass `echo`
+/// (returns the fallback / interpolates it directly).
+public struct ASLocalizer: Sendable {
+    public let string: @Sendable (ASText) -> String
+    public let format: @Sendable (ASText, String, String) -> String
+
+    public init(
+        string: @escaping @Sendable (ASText) -> String,
+        format: @escaping @Sendable (ASText, String, String) -> String
+    ) {
+        self.string = string
+        self.format = format
+    }
+
+    /// Production localizer backed by the surface's `.strings` table.
+    public static let bundle = ASLocalizer(
+        string: ASStrings.string,
+        format: ASStrings.format
+    )
+
+    /// Bundle-free localizer for previews/tests: yields the English fallback.
+    public static let echo = ASLocalizer(
+        string: { $0.fallback },
+        format: { text, token, value in
+            text.fallback.replacingOccurrences(of: "{{\(token)}}", with: value)
+        }
+    )
+}
+```
+
+**Method signatures:**
+- `string: @Sendable (ASText) -> String` — resolves a descriptor to its localized string
+- `format: @Sendable (ASText, String, String) -> String` — resolves then substitutes a single `{{token}}`
+- **Two static instances**: `.bundle` (production, uses `NSLocalizedString`) and `.echo` (tests, returns fallback)
+
+---
+
+### **3. ASStrings Facade (Resolver Against .strings Table)**
+
+**File**: `AlertStudioPage.Model.swift`, lines 67-83
+
+```swift
+public enum ASStrings {
+    public static let table = "AlertStudioPage"
+
+    public static func string(_ key: String, _ fallback: String) -> String {
+        NSLocalizedString(key, tableName: table, bundle: .main, value: fallback, comment: "")
+    }
+
+    /// Resolves an `ASText` descriptor (web `t(key, fallback)`).
+    public static func string(_ text: ASText) -> String {
+        string(text.key, text.fallback)
+    }
+
+    /// Resolves then substitutes a single `{{token}}` (web i18next interpolation).
+    public static func format(_ text: ASText, _ token: String, _ value: String) -> String {
+        string(text).replacingOccurrences(of: "{{\(token)}}", with: value)
+    }
+}
+```
+
+**Key details:**
+- `Let me search for how pages actually connect to the KMP core and look for HTTP client patterns:table = "AlertStudioPage"` — **table name is derived from the surface name** (not a generic "Localizable")
+- `NSLocalizedString(key, tableName: table, bundle: .main, value: fallback, comment: "")` — standard lookup with fallback
+- Overloaded `string(_:)` that accepts `ASText` directly
+- `format(_:_:_:)` — resolves the string first, then applies **single-token** interpolation using `replacingOccurrences`
+
+---
+
+### **4. ASCopy Enum: Text Descriptors with Key + Default**
+
+**File**: `AlertStudioPage.Copy.swift`, lines 16-220
+
+**6 real examples showing the pattern:**
+
+```swift
+public enum ASCopy {
+    // MARK: Page chrome
+    public static let title = ASText("notifications.alertStudio.title", "Alert Studio")
+    
+    public static let subtitle = ASText(
+        "notifications.alertStudio.subtitle",
+        "Create custom rules from Fleet Telemetry signals"
+    )
+    
+    public static let untitled = ASText("notifications.alertStudio.rules.untitled", "Untitled")
+
+    // MARK: Page actions
+    public static let actionsTemplates = ASText("notifications.alertStudio.actions.templates", "Templates")
+    
+    public static let actionsNewRule = ASText("notifications.alertStudio.actions.newRule", "New Rule")
+    
+    public static let actionsSaving = ASText("notifications.alertStudio.actions.saving", "Saving...")
+}
+```
+
+**Static descriptors are pure pairs**: `key` + `fallback` (English literal from web).
+
+---
+
+### **5. Interpolation Pattern: {{token}} Substitution**
+
+**File**: `AlertStudioPage.Copy.swift` + `AlertStudioPage.Copy.More.swift`
+
+**Example descriptors with interpolation:**
+
+```swift
+// From AlertStudioPage.Copy.swift, line 41
+public static let templatesHeader = ASText(
+    "notifications.alertStudio.templates.header",
+    "Rule Templates - {{count}} pre-built rules"
+)
+
+// From AlertStudioPage.Copy.swift, line 62
+public static let rulesCountMany = ASText("notifications.alertStudio.rules.countMany", "{{count}} rules")
+
+// From AlertStudioPage.Copy.swift, line 77
+public static let rulesNoMatches = ASText(
+    "notifications.alertStudio.rules.noMatches",
+    "No rules match \"{{search}}\""
+)
+
+// From AlertStudioPage.Copy.More.swift, line 40
+public static let behaviorRecommendBanner = ASText(
+    "notifications.alertStudio.editor.alertBehavior.recommendBanner",
+    "Recommended for \"{{op}}\" comparisons: {{recommended}}."
+)
+
+// From AlertStudioPage.Copy.More.swift, line 181
+public static let signalOptionLabel = ASText(
+    "notifications.alertStudio.signals.optionLabel",
+    "{{name}} - {{type}} - {{category}}"
+)
+```
+
+**Call site resolution** (from `AlertStudioPage.ViewModel.swift`, line 300):
+
+```swift
+/// Example: resolving with ONE token
+return localize.format(ASCopy.rulesCountLet me search for where read models get their sources/adapters in production:Many, "count", String(count))
+
+// Usage at call site (AlertStudioPage.swift, line 100):
+viewModel.localize.key(ASCopy.formsUnsavedTitle)
+// Simplified extension: viewModel.localize.key(_ text: ASText, _ token: String, _ value: String)
+```
+
+**Extension for SwiftUI bridge** (from `AlertStudioPage.swift`, lines 31-41):
+
+```swift
+extension ASLocalizer {
+    /// Resolves a descriptor to a verbatim-rendering `LocalizedStringKey`.
+    func key(_ text: ASText) -> LocalizedStringKey {
+        ASView.key(string(text))
+    }
+
+    /// Resolves a one-token interpolation to a verbatim-rendering `LocalizedStringKey`.
+    func key(_ text: ASText, _ token: String, _ value: String) -> LocalizedStringKey {
+        ASView.key(format(text, token, value))
+    }
+}
+```
+
+---
+
+### **6. .strings File Format**
+
+**File**: `AlertStudioPage.strings`, full structure:
+
+```
+/*
+  AlertStudioPage.strings
+  TeslaSync — P4 feature view · 0192 · AlertStudioPage (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "AlertStudioPage").
+  Every key the native AlertStudioPage resolves lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its strings without editing
+  the shared catalog.
+
+  The web i18next `{{token}}` interpolation is preserved verbatim (the native
+  localizer substitutes `{{token}}`). The first groups are the EXACT static keys
+  extracted from web/src/features/notifications/pages/AlertStudioPage.tsx; the trailing
+  generated block covers the per-template / per-category keys the web builds from
+  `templateKey(name)`, each falling back to the curated English exactly as the web
+  `t(key, tpl.name)` call does.
+*/
+
+/* --- Page chrome --- */
+"notifications.alertStudio.title" = "Alert Studio";
+"notifications.alertStudio.subtitle" =Let me look for a dependency injection or composition root file: "Create custom rules from Fleet Telemetry signals";
+"notifications.alertStudio.rules.untitled" = "Untitled";
+
+/* --- Page actions --- */
+"notifications.alertStudio.actions.templates" = "Templates";
+"notifications.alertStudio.actions.newRule" = "New Rule";
+"notifications.alertStudio.actions.saving" = "Saving...";
+
+/* --- Templates panel --- */
+"notifications.alertStudio.templates.header" = "Rule Templates - {{count}} pre-built rules";
+"notifications.alertStudio.templates.searchPlaceholder" = "Search templates...";
+
+/* --- Rules panel --- */
+"notifications.alertStudio.rules.countMany" = "{{count}} rules";
+"notifications.alertStudio.rules.noMatches" = "No rulesPerfect! Now I have all the information needed. Let me compile the comprehensive answer:
+
+## **Complete Component & Design Token Reference for TeslaSync Apple SwiftUI** match \"{{search}}\"";
+```
+
+**Key conventions:**
+- Header comment block: surface name, source file reference, usage notes
+- Dot-separated hierarchical keys: `domain.surface.component.field`
+- `{{token}}` interpolation preserved verbatim in the value
+- Comment sections with `/* --- Title --- */` for organization
+- One
+
+### **1. `TSGlassPanel` (glass card container)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple key-value pair per line: `"key" = "value";`
+
+---
+
+### **7. Shared Base Types: Do You Reuse?**
+
+**Answer: NO — each surface defines its own.**
+
+Three patterns observed:
+
+1. **AlertStudioPage** (complex, multi-part):
+   - `ASText` (simple pair)
+   - `ASStrings` (resolver)
+   - `ASLocal/Sources/Components/UI/Cards.swift`
+
+```swift
+public init(@ViewBuilder content: @escaping () -> Content)
+// Usage:
+TSGlassPanel {
+    TSText("panel.body")
+}
+```
+
+---
+
+### **2. Typography Components**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/UI/izer` (seTypography.swift`
+
+-am **`TSPage)Title`** –
+   - `ASCopy` ( Primarycatalog page)
+
+2. **R title (edilargestsD rolei,agnostic usingEm `Fontpty.StateTS** (moderate.display):
+   - `R`)
+  D```swift
+  publicText init(_` (pair text +: Local argsizedStringKey))
+   - `RDInter
+  //polate Usage:
+  TSPageTitle("` (multipage.title")
+  ```-token resolver
+
+- **`T)
+   - `RediSSectionTitle`** – SectionsDiagnostic title withinC a page (`opyFont.TS.section` (catalog)`)
+  ```swift
+  public
+   -  init(_ text: LocalizedStringKey*()
+  // Usage:
+  NoTSSectionTitle("section.title dedicate")
+  ```
+
+- **`d StringsTSPanelTitle`** – Title for a panel/ enumcard (`;Font.TS.panel`) uses `
+  ```swift
+  public init(_RDText. text: LocalizedStringKey)resolve
+  // Usage:
+  TSPd(anelTitle("titleloc")
+  ```
+
+-alize: **`TSHe)` directlyading)*
+
+3. **Update`** – Heading withAv configailableCallurable levelout (** (simple):
+   - `hUA1/Text` (pair +h2/h3)
+   args)
+   - `UAInter```swift
+  public init(_ textpolate` (multi-token resolver: LocalizedStringKey, level:)
+   - `UpdateAvail Levelabl = .h1)
+  //eCopy` (catalog)
+    Usage:
+  TSHeading("- *(No dedicated Strings enumheading", level: .h2))*
+  ```
+
+- **`TS
+
+**PatternText:**`** – Body Surfaces define their own **Text copy struct with** (prefix = surface abbreviation) + their own **Copy enum** optional. The smaller ` variantLocalizer` struct
+  ```swift
+  public init is(_ text: LocalizedStringKey, ** variant:identical Variant = .body across) all surfaces** // variant (: .bodycan, .small be
+  // Usage:
+  TSText reused),("body but the text. descriptorcopy names", variant: .small)
+   vary```
+
+- **`TSCap.
+
+---tion`** – De
+
+### **8. Local-emphasized captionizer Construction text (` &Font.TS.caption`) Injection
+  ```swift
+  public init(_**
+
+**In text: LocalizedStringKey) 
+  // Usage:
+  TSCapViewModel Inittion("caption.**text (from")
+  ```
+
+- `AlertStudioPage.ViewModel **`TSSubhea.swift`, lines 135d`** – Secondary-156):
+
+```swift
+public heading init( /
+    rulesModel: AS subRulesModel,
+    channhead (`Font.TS.boelsdySmModel: ASChannelsModel,`,
+    me semtricsModel: ASMetricsibold)
+  ```swiftModel,
+    vehicles
+  public init(_ text: Localize: [ASVehicle]dStringKey) = [],
+    ai
+  ```Vehicle
+
+- **`TSLabel`**ID – Fiel: Intd/64label? text ( = nil,
+    mutuppatorercased, `: anyFont.TS.label`) Alert
+  ```swift
+  public init(_StudioM text: LocalizedStringKey)utator =
+  ```
+
+- **`TSMet OSricLogLabel`** – LabelAl underertStudioMutator(), a
+     metric valuedraft
+  ```swift
+  public init(_Store text: LocalizedStringKey): any Alert
+  ```
+
+- **`TSMetStudioDraftStore = ASricValue`** – LargeIn numericMemoryD metricraftStore(), value (
+    localize: ASLocalizer = .monobundle digits,)
+  ```swift
+  public   init(_ value// : String← Default)
+  ```
+
+- **`:TSError productionText bundle resolver`** –
+    dates Inline: any error/ AlertStudioDatevalidationFor text (matting = Defaultred,Al `ColorertStudioDateFormatting(),.TS.status
+    telDemetry: any AlertStudioTanger`)
+  ```swift
+  elemetry = OSpublic init(_ text: LocalizedStringLogAlertStudioTelemetKey)
+  ```
+
+- **ry(),`TSHel
+    initialperRText`** – Helper text shownule underSearch form: String = "",
+    url controlsSearch
+  ```swift
+  public initS(_ text: LocalizedStringKey)ink
+  ```
+
+- **`TS: @Codeescaping @`** –Main Inline monActor (String) -> Voiospaced code/value chip
+  ```swift
+  public initLet(_ value me check: String)
+  // the project Usage:
+  TSCode("vehicle structure directly_:id")
+  ```
+
+---
+
+### **3. `TSButton` (variants, sizes)**
+**File:** `/Users/atd =ulgupta/Documents/repos/. { _ in }
+) {teslasync-parallel/20
+    //260614-231658-97646 .../slot-21/apps/apple
+    /Sources/Components/UI/self.localize = localizeButtons.swift`
+
+**
+    //Variants:**
+- ` ...
+}
+```
+
+**Inprimary` – Production Filled with** `Color.TS.accent (view` instant (defaultiation):)
+- `secondary` –
+```swift
+let Outlined with border view
+- `ghostModel = AlertStudioViewModel(
+    rulesModel: rulesModel,
+    // ... other params omitted, localize defaults to .bundle
+)
+```
+
+**In Tests/Previews**:
+```swift
+let viewModel = AlertStudioViewModel(` – Transparent, accent text
+- `destructive` – Filled with `Color.TS.statusDanger` (red)
+
+**Sizes:**
+- `small` – minHeight: 28
+- `medium` – minHeight: 36 (default)
+- `large` – minHeight: 44
+
+```swift
+public init(
+    variant: TSButtonVariant = .primary,
+    size: TSButtonSize = .medium,
+    isLoading: Bool = false,
+    action: @escaping () -> Void,
+    @ViewBuilder label: @escaping () -> Label
+    rulesModel: rulesModel,
+    localize: .echo,  // Bundle-free, returns fallback
+    // ...
+)
+```
+
+---
+
+### **9. For PeriodComparePage — Complete Template**
+
+Create these three files:
+
+#### **PeriodComparePage.Model.swift** (P1/S10 localization seam)
+)
+
+// Convenience Text label version:
+public init(
+    _ title: LocalizedStringKey,
+    variant: TSButtonVariant = .primary,
+    size: TSButtonSize = .medium,
+    isLoading: Bool = false,
+    action: @escaping () -> Void
+)
+
+// Usage:
+TSButton("button.primary") {}
+TSButton("button.secondary", variant: .secondary, size: .large) {}
+```
+
+---
+
+### **4. `TSBadge` (variants/sizes)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel
+```swift
+import Foundation
+
+// MARK: - Localization facade (P1/S10) — web `t(key, default)`
+
+public enum PCStrings {
+    public static let table = "PeriodComparePage"
+
+    public static func string(_ key: String, _ fallback: String) -> String {
+        NSLocalizedString(key, tableName: table, bundle: .main, value: fallback, comment: "")
+    }
+
+    public static func string(_ text/20260614-231658-97646/slot-21/apps/apple/Sources/Components/UI/Badges.swift`
+
+Compact tinted label with tone (semantic color):
+```swift
+public init(_ text: LocalizedStringKey, tone: TSTone = .neutral)
+// TSTone cases: neutral, accent, success, warning, danger, info
+
+// Usage:
+TSBadge("badge.neutral")
+TSBadge("badge.warning", tone: .warning)
+```
+
+**: PCText) -> String {
+        string(text.key, text.fallback)
+    }
+
+    public static func format(_ text: PCText, _ token: String, _ value: String) -> String {
+        string(text).replacingOccurrences(of: "{{\(token)}}", with: value)
+    }
+}
+
+public struct PCText: Sendable, Equatable {
+    public let key: String
+    public let fallback: String
+
+    public init(_ key: String, _ fallback: String) {
+        self.key = key
+        self.fallback = fallback
+    }
+}
+
+public struct PCLocalizer: Sendable {
+    public letRelated badge components:**
+- **`TSStatusPill`** – Status label with leading state dot
+  ```swift
+  public init(_ text: LocalizedStringKey, tone: TSTone = .neutral)
+  ```
+- **`TSIconBox`** – Rounded tinted container for SF string Symbol: @
+  ```swift
+  public init(Sendable (PCText) -> Stringsystem
+    publicName let format: @Sendable (: String, tone: TSTonePCText, String, = .accent String) -> String
+
+    public init)
+  //(
+        string: @esc Usage:
+  TSIconBox(aping @Sendable (PCText) -> String,
+        format: @escaping @Sendable (PCText, String, String) -> String
+    ) {
+        self.string = string
+        self.format = format
+    }
+
+    public static let bundle = PCLocalizer(
+        string: PCStrings.string,
+        format: PCStrings.format
+    )
+
+    public static let echo = PCLocalizer(
+        string: { $0.fallback },
+        format: { text, token, value in
+            text.fallback.replacingOccurrences(of: "{{\(token)}}", with: value)
+        }
+    )
+}
+```
+
+#### **PeriodComparePage.Copy.swift** (i18n descriptors)
+```swift
+import Foundation
+
+public enum PCCopy {
+    // MARK: Page chrome
+    public static let title = PCText("periodCompare.title", "Compare Periods")
+    public static let subtitle = PCText(
+        "periodCompare.subtitle",
+        "Analyze metrics across different time windows"
+    )
+
+    // MARK: Period selection
+    public static let periodAsystemName: "bolt.fill", tone: .warning)
+  ```
+
+---
+
+### **5. `TSSkeleton`**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/Feedback/Skeletons.swift`
+
+Redacted shimmer skeleton block (respects Reduce Motion):
+```swift
+public init(width: CGFloat? = nil, height: CGFloat = 14Label = PCText("periodCompare.periodA.label", "Period A")
+    public static let periodBLabel = PCText("periodCompare.periodB.label", "Period B")
+    public static let comparableMetrics = PCText(
+        "periodCompare.metrics.count",
+        "{{count}} comparable metrics"
+    )
+
+    // MARK: Errors / empty states
+    public static let errorTitle = PCText("periodCompare.error.title", "Couldn't load comparison")
+    public static let em, cornerRadius: CGFloat = TSRadius.sm)
+
+// Usage:
+TSSkeleton()
+TSSkeleton(width: 120, height: 24)
+
+// Composed skeletons:
+TSStatSkeleton()                           // Stat-card skeleton
+TSChartSkeleton(height: 180)               // Chart block skeleton
+TSPageHeaderSkeleton()                     // Page header skeleton
+TSStatGridSkeleton(count: 4)               // Grid of stat skeletons
+TSChartBlockSkeleton()                     // Titled chart block skeleton
+TSTableSkeleton(rows: 6)                   // Table skeleton
+TSPageLoadSkeleton()                       // Whole-page load skeleton
+```
+
+---
+
+### **6. `TSErrorDisplay`**
+**File:** `/UsersptyTitle = PCText("periodCompare.empty.title", "No data to compare")
+}
+```
+
+#### **PeriodComparePage.strings** (localization catalog)
+```
+/*
+  PeriodComparePage.strings
+  TeslaSync — P4 feature view · XXXX · PeriodComparePage (Apple)
+
+  The P1/S10 i/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/Feedback/States.swift`
+
+Error state with optional retry:
+```swift
+public init(
+    title: LocalizedStringKey = "error.title",
+    message: LocalizedStringKey? = nil,
+    onRetry: (() -> Void)? = nil
+)
+
+// Usage:
+TSErrorDisplay(title: "error.title", message: "error.message", onRetry: { /* retry logic */ })
+```
+
+**Related error18n catalog contribution for this surface (table "PeriodComparePage").
+  Every key the native PeriodComparePage resolves lives here with its English
+  fallback. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; kept perNow let me search for how pages wire with the core - let me look for where production implementations of the source protocols components:**
+- **`TSQuery areError:`** – Query failure state with retry
+  ```swift
+  public init(message: LocalizedStringKey? = nil, onRetry: @escaping () -> Void)
+  ```
+- **`TSErrorBoundary`** – Renders fallback when `hasError`
+  ```swift
+  public init(hasError: Bool, onRetry: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content)
+  ```
+- **`TSSection-surface so this surface owns its strings without
+  editing the shared catalog.
+*/
+
+/* --- Page chrome --- */
+"periodCompare.title" = "Compare Periods";
+"periodCompare.subtitle" = "Analyze metrics across different time windows";
+
+/* --- Period selection --- */
+"periodCompare.periodA.label" = "Period A";
+"periodCompare.periodB.label" = "Period B";
+"periodCompare.metrics.count" = "{{count}} comparable metrics";
+
+/* --- Errors / empty states --- */
+"periodCompare.error.title" = "Couldn't load comparison";
+"periodCompare.empty.title" = "No data to compare";
+```
+
+---
+
+**Summary**: The pattern is **consistent, repeatable, and type-safe**. Each surface owns its prefix (`AS`, `RD`, `UA`, `PC`), defining `*Text`, `*Strings`, `*Localizer`, and `*Copy` locally. The `Localizer` struct itself can be copied verbatim across surfaces.ErrorBoundary`** – Section-scoped error boundary
+- **`TSPageErrorBoundary`** – Full-page error boundary
+
+---
+
+### **7. `TSEmptyState`**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/Feedback/States.swift`
+
+Empty/no-content state over `ContentUnavailableView`:
+```swift
+public init(
+    title: LocalizedStringKey,
+    message: LocalizedStringKey? = nil,
+    systemImage: String = "tray",
+    @ViewBuilder actions: @escaping () -> Actions
+)
+
+// No-actions variant:
+public init(title: LocalizedStringKey, message: LocalizedStringKey? = nil, systemImage: String = "tray")
+
+// Usage:
+TSEmptyState(title: "sleep.noStateData", systemImage: "moon.zzz")
+```
+
+---
+
+### **8. `TSFadeIn`**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/Motion/Motion.swift`
+
+Fades + lifts content in on appear (honors Reduce Motion):
+```swift
+public init(delay: Double = 0, @ViewBuilder content: @escaping () -> Content)
+
+// Usage:
+TSFadeIn {
+    Text("Content")
+}
+
+TSFadeIn(delay: 0.1) {
+    Text("Staggered")
+}
+```
+
+**Related motion components:**
+- **`TSStaggerContainer`** – Container for staggered children
+- **`TSStaggerItem`** – One staggered child with index-based delay
+- **`TSRouteTransition`** – Crossfades content when identity changes
+- **`TSCarAnimation`** – Looping car glyph animation
+
+---
+
+### **9. MetricCard Equivalent – `TSMetricCard`**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/DataDisplay/Metrics.swift`
+
+Metric card with title, value, and supporting caption:
+```swift
+public init(title: LocalizedStringKey, value: String, caption: LocalizedStringKey? = nil)
+
+// Usage:
+TSMetricCard(title: "efficiency", value: "94%", caption: "caption.text")
+```
+
+**Related metric components:**
+- **`TSStatCard`** – Headline metric card with optional delta
+  ```swift
+  public init(
+      title: LocalizedStringKey,
+      value: String,
+      systemImage: String? = nil,
+      delta: Double? = nil,
+      deltaFormatted: String? = nil
+  )
+  // Usage:
+  TSStatCard(title: "efficiency", value: "94%", delta: 5.0, deltaFormatted: "+5.0%")
+  ```
+- **`TSUsageCard`** – Usage card with used/total bar
+  ```swift
+  public init(title: LocalizedStringKey, used: Double, total: Double, valueText: String)
+  ```
+- **`TSDelta`** – Up/down delta with sign-colored arrow
+  ```swift
+  public init(value: Double, formatted: String, invertColors: Bool = false)
+  ```
+- **`TSAnimatedNumber`** – Animated numeric value (honors Reduce Motion)
+  ```swift
+  public init(formatted: String)
+  ```
+- **`TSProgressRing`** – Circular progress ring
+  ```swift
+  public init(progress: Double, lineWidth: CGFloat = 8, colorIndex: Int = 0)
+  ```
+- **`TSMetricBar`** – Horizontal proportion bar
+  ```swift
+  public init(fraction: Double, tone: TSTone = .accent)
+  ```
+- **`TSInlineMetric`** – Inline "label: value" metric
+  ```swift
+  public init(label: LocalizedStringKey, value: String)
+  ```
+- **`TSKpiOverviewCard`** – Grid of KPI tiles
+  ```swift
+  public init(title: LocalizedStringKey, kpis: [TSKpi])
+  ```
+
+---
+
+### **10. Select/Picker/Dropdown Equivalent – `TSSelect`**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/UI/Pickers.swift`
+
+Dropdown select (native `Picker` with `.menu` style):
+```swift
+public init(
+    selection: Binding<ValueLet me now look at the Previews more fully to understand how view models are constructed:>,
+    options: [TSSelectOption<Value>],
+    label: LocalizedStringKey? = nil
+)
+
+// TSSelectOption init:
+public init(_ value: Value, _ title: LocalizedStringKey)
+
+// Usage:
+@State private var selected = "opt1"
+let options = [
+    TSSelectOption("opt1", "Option 1"),
+    TSSelectOption("opt2", "Option 2")
+]
+TSSelect(selection: $selected, options: options, label: "Choose")
+```
+
+**Related picker components:**
+- **`TSPickerMenu`** – Generic menu trigger (native `Menu`)
+  ```swift
+  public init(@ViewBuilder label: @escaping () -> Label, @ViewBuilder content: @escaping () -> Content)
+  ```
+- **`TSStepper`** – Integer stepper
+  ```swift
+  public init(_ label: LocalizedStringKey, value: Binding<Int>, in range: ClosedRange<Int>, step: Int = 1)
+  ```
+- **`TSDatePickerBridge`** – Date/time picker
+  ```swift
+  public init(_ label: LocalizedStringKey, date: Binding<Date>, components: DatePickerComponents = [.date])
+  ```
+- **`TSThemePicker`** – Appearance selector (segmented control)
+  ```swift
+  public init(selection: Binding<TSAppearance>)
+  ```
+
+---
+
+### **11. DataTable/Table Equivalent – `TSDataTable`**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/UI/DataTable.swift`
+
+Adaptive data table (grid on macOS/regular, card list on compact iPhone):
+```swift
+public init(
+    rows: [Row],
+    columns: [TSColumn<Row>],
+    selection: Binding<Set<Row.ID>> = .constant([]),
+    density: TSTableDensity = .standard
+)
+
+// Add expandable detail row:
+public func rowDetail(@ViewBuilder _ content: @escaping (Row) -> some View) -> TSDataTable
+
+// TSColumn init:
+public init(
+    id: String,
+    title: LocalizedStringKey,
+    comparator: ((Row, Row) -> ComparisonResult)? = nil,
+    @ViewBuilder cell: @escaping (Row) -> some View
+)
+
+// TSTableDensity enum:
+case compact, standard, comfortable
+
+// Usage:
+struct DataRow: Identifiable {
+    let id: String
+    let name: String
+}
+let columns = [
+    TSColumn(id: "name", title: "Name") { row in
+        Text(row.name)
+    }
+]
+TSDataTable(rows: data, columns: columns)
+    .rowDetail { row in
+        Text("Details for \(row.name)")
+    }
+```
+
+---
+
+### **12. AlertBanner/InfoBanner Equivalent – `TSAlertBanner`**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/Feedback/Banners.swift`
+
+Base banner: tinted, icon + message + optional trailing action + optional close:
+```swift
+public init(
+    tone: TSTone,
+    systemImage: String,
+    title: LocalizedStringKey,
+    message: LocalizedStringKey? = nil,
+    onDismiss: (() -> Void)? = nil,
+    @ViewBuilder action: @escaping () -> Action
+)
+
+// No-action variant:
+public init(
+    tone: TSTone,
+    systemImage: String,
+    title: LocalizedStringKey,
+    message: LocalizedStringKey? = nil,
+    onDismiss: (() -> Void)? = nil
+)
+
+// Usage:
+TSAlertBanner(
+    tone: .info,
+    systemImage: "info.circle",
+    title: "Info",
+    message: "Some info",
+    onDismiss: { /* close */ }
+) {
+    TSButton("action",Now size let me search: .small for navigation) {} and how
+}
+```
+
+** pagesSpecific are registered: banner presets:**
+- **`TSOfflineBanner`** – Offline connectivity (`warning`, `wifi.slash`)
+- **`TSLiveStaleDataBanner`** – Stale live-data (`warning`, `clock.badge.exclamationmark`)
+- **`TSTeslaReauthBanner`** – Tesla re-authentication with reconnect action (`danger`, `key.slash`)
+- **`TSRateLimitBanner`** – Rate-limit (`warning`, `hourglass`)
+- **`TSMaintenanceBanner`** – Maintenance window (`info`, `wrench.and.screwdriver`)
+- **`TSImpersonationBanner`** – Impersonation-active (`accent`, `person.crop.circle.badge.exclamationmark`)
+- **`TSDraftRecoveryBanner`** – Draft-recovery with restore/discard
+- **`TSEditConflictBanner`** – Edit-conflict with reload action
+- **`TSTimeMachineBanner`** – Historical/time-machine viewing (`accent`, `clock.arrow.circlepath`)
+- **`TSCookieConsentBanner`** – Cookie-consent (`neutral`, `checkmark.shield`)
+- **`TSBrowserCompatBanner`** – Browser/platform compatibility (`warning`, `exclamationmark.triangle`)
+
+**Related banner components:**
+- **`TSInlineCallout`** – Inline contextual note
+  ```swift
+  public init(tone: TSTone = .info, message: LocalizedStringKey)
+  ```
+
+---
+
+### **13. Bar Chart Wrapper Using Swift Charts – `TSBarChart`**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/Components/Charts/BarCharts.swift`
+
+Grouped or stacked bar chart:
+```swift
+public init(series: [TSChartSeries], hidden: Set<String> = [], stacked: Bool = false)
+
+// TSChartSeries init:
+public init(
+    id: String,
+    name: LocalizedStringKey,
+    nameText: String,
+    points: [TSChartPoint],
+    colorIndex: Int = 0
+)
+
+// TSChartPoint init:
+public init(x: Double, y: Double, id: String? = nil)
+```
+
+**Real example from SleepEfficiencyPage (grouped bars: Sentry On vs Sentry Off):**
+```swift
+// Two-series grouped bar chart:
+private var series: [TSChartSeries] {
+    let onPoints = sleep.comparisonBars.map { bar in
+        TSChartPoint(x: Double(bar.index), y: bar.sentryOn, id: "on-\(bar.index)")
+    }
+    let offPoints = sleep.comparisonBars.map { bar in
+        TSChartPoint(x: Double(bar.index), y: bar.sentryOff, id: "off-\(bar.index)")
+    }
+    return [
+        TSChartSeries(id: "on", name: "sleep.sentryOn", nameText: "Sentry On", points: onPoints, colorIndex: 1),
+        TSChartSeries(id: "off", name: "sleep.sentryOff", nameText: "Sentry Off", points: offPoints, colorIndex: 6)
+    ]
+}
+
+// Render:
+TSBarChart(series: series)
+    .frame(height: 200)
+```
+
+**Related chart components:**
+- **`TSComposedChart`** – Bars + line overlay
+  ```swift
+  public init(bars: TSChartSeries, line: TSChartSeries)
+  ```
+- **`TSScatterChart`** – Scatter plot
+  ```swift
+  public init(series: [TSChartSeries], hidden: Set<String> = [])
+  ```
+- **`TSLineChart`** – Multi-series line chart (not shown but referenced)
+- **`TSPieChart`** – Pie/donut chart
+- **`TSChartContainer`** – Frames a chart with title, export menu, accessible summary
+  ```swift
+  public init(
+      _ title: LocalizedStringKey,
+      summary: LocalizedStringKey? = nil,
+      isEmpty: Bool = false,
+      csv: String? = nil,
+      @ViewBuilder content: @escaping () -> Content
+  )
+  ```
+- **`TSChartLegend`** – Toggleable legend (toggle series hide/show)
+  ```swift
+  public init(series: [TSChartSeries], hidden: Binding<Set<String>>)
+  ```
+- **`TSChartFormat`** – Safe numeric helpers (axis labels, downsampling, toggling hidden)
+- **`TSRadialGauge`** – Circular progress ring
+- **`TSChartPalette`** – Brand chart palette accessor
+  ```swift
+  public static var categorical: [Now let me look for AlertStudioSurface definition and then search for other pages that load from the API:Color]
+  public static func color(at index: Int) -> Color
+  ```
+
+---
+
+## **DESIGN TOKENS**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/design/generated/apple/Tokens.swift`
+
+### **`TSSpacing` members (pixel values):**
+```swift
+public enum TSSpacing {
+    static let none: CGFloat = 0
+    static let xs: CGFloat = 4
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 16
+    static let xl: CGFloat = 20
+    static let x2xl: CGFloat = 24
+    static let x3xl: CGFloat = 32
+    static let x4xl: CGFloat = 48
+}
+```
+
+### **`TSRadius` members:**
+```swift
+public enum TSRadius {
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 16
+    static let pill: CGFloat = 9999  // For fully rounded ends (Capsule)
+}
+```
+
+### **`Color.TS` members – Semantic + Status:**
+```swift
+public extension Color {
+    enum TS {
+        // Background & surfaces
+        static let bg              // Light: #F8FAFD, Dark: #0A0A0F
+        static let surface         // Light: #FFFFFF, Dark: #0F101A
+        static let surfaceGlass    // Glass material at 95% / 4% opacity
+        
+        // Text colors
+        static let textPrimary     // Light: #0F170A, Dark: #FFFFFF
+        static let textSecondary   // Light: #1E29EB, Dark: #9CA3AF
+        static let textMuted       // Light: #646E8B, Dark: #8A95A6
+        
+        // Accent (brand cyan)
+        static let accent          // Light: #081B2F, Dark: #00F0FF
+        
+        // Decorative
+        static let border          // Light/Dark: black/white at 12% opacity
+        
+        // Status colors
+        static let statusSuccess   // Green: #14D66E (light) / #0FB880 (dark)
+        static let statusWarning   // Amber: #B45609 (light) / #F59E2B (dark)
+        static let statusDanger    // Red: #DC2626 (light) / #EF4444 (dark)
+        static let statusInfo      // Cyan: #081B2F (light) / #00F0FF (dark)
+        
+        // Chart palette (8-color categorical)
+        static let chartCategorical: [Color]  // Index-stable across platforms
+        
+        // Chart series colors
+        static let chartSeriesBattery       // Green
+        static let chartSeriesEnergy        // Amber/Yellow
+        static let chartSeriesSpeed         // Blue
+        static let chartSeriesRegen         // Cyan
+        static let chartSeriesTemperature   // Red
+        static let chartSeriesPower         // Purple
+    }
+}
+```
+
+### **`Font.TS` members (system fonts with weights):**
+```swift
+public extension Font {
+    enum TS {
+        static let display  // 30pt, bold (line height: 36, tracking: -0.5)
+        static let title    // 24pt, bold (line height: 32, tracking: -0.25)
+        static let section  // 18pt, semibold (line height: 28, tracking: -0.15)
+        static let panel    // 16pt, semibold (line height: 24, tracking: 0)
+        static let body     // 14pt, regular (line height: 20)
+        static let bodySm   // 12pt, regular (line height: 16)
+        static let caption  // 12pt, regular (line height: 16)
+        static let label    // 12pt, medium (line height: 16, tracking: 0.6)
+        
+        // Font families
+        static let fontFamilySans   = "Inter"
+        static let fontFamilyMLet me look at the AlertStudioPage.Model.swift file:ono   = "JetBrains Mono"
+    }
+}
+
+// Advanced typography metrics:
+public enum TSTypeMetrics {
+    static let displayLineHeight: CGFloat = 36
+    static let displayTracking: CGFloat = -0.50
+    // ... (all font metrics available)
+}
+```
+
+### **Motion Tokens (`TSMotion`):**
+```swift
+public enum TSMotion {
+    static let fastDuration: TimeInterval = 0.150
+    static let normalDuration: TimeInterval = 0.250
+    static let slowDuration: TimeInterval = 0.400
+    static let standardEasing = "cubic-bezier(0.2, 0, 0, 1)"
+    static let accelerateEasing = "cubic-bezier(0.3, 0, 1, 1)"
+    static let decelerateEasing = "cubic-bezier(0, 0, 0, 1)"
+}
+```
+
+### **Chart Palette Access:**
+```swift
+public enum TSChartPalette {
+    public static var categorical: [Color]
+    public static func color(at index: Int) -> Color  // Wraps & handles negatives
+}
+// 8-color series: Blue, Amber, Teal, Yellow, Light Blue, Orange, Purple, Gray
+```
+
+---
+
+**All components are in module `TeslaSync` (iOS target). Import via:**
+```swift
+import SwiftUI
+// All TS components are already available (no separate import needed once TeslaSync is linked)
+```Let me search for the test files to understand the mutation/mutator pattern:Let me look at the Models file to see the AlertStudioMutator protocol:Let me look at a different page that actually loads from the core - let me search for pages with vehicles or API calls:Let me check the FleetSummary.ViewModel.swift:Now let me look for how the concrete sources are instantiated by searching for the actual app-level composition:Let me look for the app-level Swift files and Xcode project configuration:Let me check the Sources directory:Now let me look at the app level routing and how sources are wired:Let me look at RouteHostRegistry:Let me now search for where pages are actually registered with the registry or instantiated:Let me check the TeslaSyncApp.swift entry point:Based on my investigation, let me compile the findings. Let me make one more targeted search to confirm the architecture:Let me look for the SharedFacade to see if there's a pattern for HTTP client or API access:Let me get the final key details on the Model type definitions and test setup:Perfect! Now I have enough information to provide a comprehensive answer. Let me compile the detailed report.
+
+---
+
+## COMPREHENSIVE TESYNC APPLE APP SWIFTUI ARCHITECTURE REPORT
+
+### 1. **AlertStudioPage @Observable ViewModel + Adapter Pattern**
+
+**File: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.ViewModel.swift` (lines 86-183)**
+
+```swift
+@MainActor
+@Observable
+public final class AlertStudioViewModel {
+    // Read models
+    public let rulesModel: ASRulesModel
+    public let channelsModel: ASChannelsModel
+    public let metricsModel: ASMetricsModel
+
+    /// Fleet vehicles (web `useVehicles` → `vehicles ?? []`).
+    public var vehicles: [ASVehicle]
+    public var aiVehicleID: Int64?
+
+    // Editor + dirty tracking
+    public internal(set) var editor: EditorState
+    var initialEditor: EditorState
+    public internal(set) var selectedID: Int64?
+    public internal(set) var formError: String?
+
+    // Seams
+    @ObservationIgnored let mutator: any AlertStudioMutator
+    @ObservationIgnored let draftStore: any AlertStudioDraftStore
+    @ObservationIgnored let localize: ASLocalizer
+    @ObservationIgnored let dates: any AlertStudioDateFormatting
+    @ObservationIgnored let telemetry: any AlertStudioTelemetry
+    @ObservationIgnored let urlSearchSink: @MainActor (String) -> Void
+
+    public init(
+        rulesModel: ASRulesModel,
+        channelsModel: ASChannelsModel,
+        metricsModel: ASMetricsModel,
+        vehicles: [ASVehicle] = [],
+        aiVehicleID: Int64? = nil,
+        mutator: any AlertStudioMutator = OSLogAlertStudioMutator(),
+        draftStore: any AlertStudioDraftStore = ASInMemoryDraftStore(),
+        localize: ASLocalizer = .bundle,
+        dates: any AlertStudioDateFormatting = DefaultAlertStudioDateFormatting(),
+        telemetry: any AlertStudioTelemetry = OSLogAlertStudioTelemetry(),
+        initialRuleSearch: String = "",
+        urlSearchSink: @escaping @MainActor (String) -> Void = { _ in }
+    )
+
+    // Lifecycle
+    public func start() {
+        rulesModel.start()
+        channelsModel.start()
+        metricsModel.start()
+        AlertStudioSurface.reportOpen(to: telemetry)
+    }
+
+    public func stop() {
+        rulesModel.stop()
+        channelsModel.stop()
+        metricsModel.stop()
+    }
+```
+
+**Key Details:**
+- **Declaration:** `@MainActor @Observable` final class (lines 87-88)
+- **Init:** Takes all read models + seams injected; defaults to in-memory/log sources
+- **Lifecycle methods:** `start()`, `stop()`; derive cached state (rules, channels, metrics)
+- **No KMP import:** NO `import Shared` — architecture keeps feature layer decoupled
+- **Async pattern:** Swift concurrency `Task` and `async/await` via the `mutator` seam (line 128)
+
+**Adapter:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Adapter.swift` (lines 47-277)
+
+```swift
+public enum AlertStudioAdapter {
+    // Operators / severity rank / normalizers
+    public static let numericOperatorOptions: [ASRuleOp] = [
+        .equal, .notEqual, .lessThan, .lessThanOrEqual, .greaterThan, .greaterThanOrEqual,
+        .changed, .between, .outside
+    ]
+    public static let customSignalCategory = "__custom__"
+    
+    public static func severityRank(_ severity: ASSeverity) -> Int {
+        switch severity { case .info: 1; case .warn: 2; case .critical: 3 }
+    }
+    
+    public static func normalizeSeverity(_ value: String?) -> ASSeverity { ... }
+    public static func normalizeTriggerMode(_ value: String?) -> ASTriggerMode { ... }
+    public static func isSnoozeActive(_ snoozedUntil: String?, now: Date = Date()) -> Bool { ... }
+    
+    // Template slug, numeric parsing
+    public static func templateKey(_ value: String) -> String { ... }
+    public static func valueToInput(_ value: Double?) -> String { ... }
+    public static func parseOptionalNumber(_ value: String) -> Double? { ... }
+}
+```
+
+**Pattern:** Pure enum with static functions — **no SwiftUI, no I/O** — every decision the web source carries is replicated here for XCTest coverage without a host.
+
+---
+
+### 2. **Vehicle Loading Pattern (Equivalent of `useVehicles`)**
+
+**Vehicle Model:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Model.Types.swift`
+
+```swift
+/// Minimal vehicle projection (web `Vehicle` → `{ id, display_name }`).
+public struct ASVehicle: Sendable, Equatable, Identifiable {
+    public let id: Int64
+    public let displayName: String
+
+    public init(id: Int64, displayName: String) {
+        self.id = id
+        self.displayName = displayName
+    }
+}
+```
+
+**Fields:** `id: Int64`, `displayName: String` (no `vin` in this surface; vehicles injected at init)
+
+**How vehicles are loaded:** 
+- **ViewModel init parameter** (line 139 of ViewModel.swift):
+  ```swift
+  public var vehicles: [ASVehicle]
+  ```
+- **Passed from the read models' snapshot** — the source (ASRulesSource, etc.) is responsible for populating vehicles from the KMP core
+- **In previews/tests:** Hardcoded sample data (AlertStudioPage.Previews.swift, lines 18-21):
+  ```swift
+  static let vehicles: [ASVehicle] = [
+      ASVehicle(id: 1, displayName: "Model 3"),
+      ASVehicle(id: 2, displayName: "Model Y")
+  ]
+  ```
+
+**Production source implementation:** NOT found in feature-views (kept seam-abstract). The production `ASRulesSource` conformer exists at the app level (Sources/), wired by dependency injection. Vehicles are fetched through the core and passed to the model.
+
+---
+
+### 3. **Analytics / Period-Stats API Calling Pattern**
+
+**Architecture:** No analytics/period-stats endpoint is called **directly** in AlertStudioPage. However, the pattern for calling typed HTTP endpoints through the KMP core is:
+
+**Generic HTTP Client Seam (implicit, no concrete example found in feature-views):**
+- Pages receive a **mutator seam** (AlertStudioMutator protocol) that performs all I/O
+- The mutator `async/await` methods return `Bool` for success
+
+**AlertStudioMutator Protocol:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Models.swift` (lines 161-177)
+
+```swift
+public protocol AlertStudioMutator: Sendable {
+    /// Create or update a rule (web `useSaveAlertRule`).
+    func save(_ input: ASAlertRuleInput) async -> Bool
+    func delete(id: Int64) async -> Bool
+    func toggle(id: Int64, enabled: Bool) async -> Bool
+    func test(_ request: ASAlertTestRequest) async -> Bool
+    func snooze(id: Int64, minutes: Int) async -> Bool
+    func bulkEnable(ids: [Int64]) async -> Bool
+    func bulkDisable(ids: [Int64]) async -> Bool
+}
+```
+
+**For a PeriodComparePage with analytics/period-stats:**
+- Create an analogous `PeriodCompareSource` protocol (like `ASRulesSource`)
+- Define a `PeriodStatsSnapshot` struct containing decoded stats (total_distance, total_drives, energy_used, avg_efficiency, total_cost, co2_saved)
+- Wrap in an `@Observable` model (like `ASRulesModel`)
+- In production app sources, the source's `start()` method calls the KMP core's HTTP client:
+  ```swift
+  // Pseudo-code for production implementation
+  let data = try await Shared.apiClient.get(
+      "/analytics/period-stats",
+      queryParams: ["vehicle_id": vehicleId, "days": daysParam]
+  ) as PeriodStats
+  ```
+- Production mutator calls `client.request` or similar; pages consume via the seam
+
+**No generated client found.** The core likely exposes a generic `request<T>(path: String, params: [String: String]) -> T` method.
+
+---
+
+### 4. **Diagnostics `view.opened` Event Pattern (P1/S11)**
+
+**Surface Slug Definition:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Model.swift` (lines 20-34)
+
+```swift
+/// Stable, non-identifying identity for the `AlertStudioPage` feature view.
+public enum AlertStudioSurface {
+    /// The diagnostics slug emitted with the `view.opened` event.
+    public static let slug = "AlertStudioPage"
+
+    /// Reports the surface becoming visible.
+    public static func reportOpen(to telemetry: any AlertStudioTelemetry) {
+        telemetry.viewOpened(surface: slug)
+    }
+}
+
+/// Diagnostics seam for the P1/S11 `view.opened` contract.
+public protocol AlertStudioTelemetry: Sendable {
+    func viewOpened(surface: String)
+}
+
+/// Default sink: emits a redaction-safe `view_opened` `os_log` event.
+public struct OSLogAlertStudioTelemetry: AlertStudioTelemetry {
+    public func viewOpened(surface: String) {
+        logger.info("view.opened surface=\(surface, privacy: .public)")
+    }
+}
+```
+
+**How it's emitted (ViewModel.swift, line 176):**
+```swift
+public func start() {
+    rulesModel.start()
+    channelsModel.start()
+    metricsModel.start()
+    AlertStudioSurface.reportOpen(to: telemetry)
+}
+```
+
+**In the view:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.swift`
+```swift
+.task { viewModel.start() }  // Emits when view appears
+.onDisappear { viewModel.stop() }
+```
+
+**Page's surfaceSlug property:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.swift`
+```swift
+public static let surfaceSlug = AlertStudioSurface.slug  // "AlertStudioPage"
+```
+
+---
+
+### 5. **Navigation Registration & Routing**
+
+**Finding:** AlertStudioPage is **NOT registered in the main app route registry**. It exists as a **parallel-surface feature** isolated in `feature-views/`.
+
+**App Shell Route Model:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/App/AppRoute.swift` (lines 27-67)
+
+```swift
+public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
+    case dashboard, glance, vehicles, charging, powershare, trips, energy, driving, analytics, maps
+    case fleetCompare, batteryCells, batteryDegradation, sleepEfficiency, tco
+    case vehicleSystems, automations, notifications, telemetry, diagnostics
+    case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
+    case gdprExport, rbacMatrix, users, dlqInspector, devTools
+    case liveSignals, schemaDrift, slowQueries, secretRotation, powerUser, system
+    case settings, onboarding, teslaOrders, explore, search, sharing, watch
+
+    public var path: String {
+        "/" + pathSegment
+    }
+}
+```
+
+**No `period-compare` or `notifications` (AlertStudioPage) route entry.** Navigation is handled by the `RouteHostRegistry`:
+
+**Registry Pattern:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/App/RouteHostRegistry.swift` (lines 6-22)
+
+```swift
+public struct AppRouteHostRegistry {
+    private var providers: [AppRoute: () -> AnyView] = [:]
+
+    public mutating func register(_ route: AppRoute, @ViewBuilder _ provider: @escaping () -> some View) {
+        providers[route] = { AnyView(provider()) }
+    }
+
+    public func view(for route: AppRoute) -> AnyView? {
+        providers[route]?()
+    }
+}
+```
+
+**Clarification:** AlertStudioPage is referenced **only in its own Previews.swift**. It is **not wired into the app shell** — the parallel-surface model leaves it standalone, testable, and independently previewable. No central registry entry is required for a new page unless the app's route enum is extended.
+
+**Consequence:** To add `PeriodComparePage` to the live app:
+1. Add `case periodCompare` to `AppRoute` enum
+2. Extend `RouteHostRegistry.register()` call at app bootstrap (typically in `TeslaSyncApp.swift` or a dependency injection container)
+3. Otherwise, the page can live entirely in `feature-views/` and be tested via its own Previews
+
+---
+
+### 6. **Previews / Test Pattern**
+
+**Previews:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Previews.swift` (lines 17-181)
+
+```swift
+enum AlertStudioSamples {
+    static let vehicles: [ASVehicle] = [
+        ASVehicle(id: 1, displayName: "Model 3"),
+        ASVehicle(id: 2, displayName: "Model Y")
+    ]
+
+    static let channels: [ASNotificationChannel] = [
+        ASNotificationChannel(id: 10, name: "Ops Discord", kind: "discord"),
+        ASNotificationChannel(id: 11, name: "On-call Slack", kind: "slack")
+    ]
+
+    static let metrics: [ASComputedMetricSummary] = [
+        ASComputedMetricSummary(id: "charging_cost", label: "Charging cost", ...),
+        ASComputedMetricSummary(id: "energy_used", label: "Energy used", ...)
+    ]
+
+    static let rules: [ASAlertRule] = [
+        ASAlertRule(id: 100, name: "Battery Low", ..., enabled: true, valueNum: 20, ...),
+        ...
+    ]
+
+    @MainActor
+    static func viewModel(
+        rules: ASListSnapshot<ASAlertRule>,
+        channels: ASListSnapshot<ASNotificationChannel> = .loaded(channels),
+        metrics: ASListSnapshot<ASComputedMetricSummary> = .loaded(metrics),
+        editor: EditorState? = nil
+    ) -> AlertStudioViewModel {
+        let model = AlertStudioViewModel(
+            rulesModel: ASRulesModel(preview: rules),
+            channelsModel: ASChannelsModel(preview: channels),
+            metricsModel: ASMetricsModel(preview: metrics),
+            vehicles: vehicles,
+            localize: .echo
+        )
+        if let editor { model.previewSetEditor(editor) }
+        return model
+    }
+}
+
+#if DEBUG
+    #Preview("Content") {
+        AlertStudioPage(viewModel: AlertStudioSamples.viewModel(rules: .loaded(AlertStudioSamples.rules)))
+    }
+    
+    #Preview("Loading") {
+        AlertStudioPage(viewModel: AlertStudioSamples.viewModel(rules: ASListSnapshot(status: .loading)))
+    }
+    
+    #Preview("Error") {
+        AlertStudioPage(
+            viewModel: AlertStudioSamples.viewModel(
+                rules: ASListSnapshot(status: .failed, error: .network(message: "500"))
+            )
+        )
+    }
+#endif
+```
+
+**Tests:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.ViewModelTests.swift` (lines 100-200)
+
+```swift
+@MainActor
+final class AlertStudioViewModelTests: XCTestCase {
+    private func makeViewModel(
+        mutator: any AlertStudioMutator = OSLogAlertStudioMutator()
+    ) -> AlertStudioViewModel {
+        AlertStudioViewModel(
+            rulesModel: ASRulesModel(preview: .loaded(AlertStudioSamples.rules)),
+            channelsModel: ASChannelsModel(preview: .loaded(AlertStudioSamples.channels)),
+            metricsModel: ASMetricsModel(preview: .loaded(AlertStudioSamples.metrics)),
+            vehicles: AlertStudioSamples.vehicles,
+            mutator: mutator,
+            localize: .echo
+        )
+    }
+
+    func testSelectRuleHydratesEditorWhenClean() {
+        let viewModel = makeViewModel()
+        viewModel.requestSelectRule(AlertStudioSamples.rules[1])
+        XCTAssertEqual(viewModel.selectedID, 101)
+        XCTAssertEqual(viewModel.editor.signalName, "Locked")
+    }
+
+    func testGuardedSwitchParksWhenDirty() {
+        let viewModel = makeViewModel()
+        viewModel.updateEditor { $0.name = "dirty" }
+        XCTAssertTrue(viewModel.isDirty)
+        viewModel.requestNewRule()
+        XCTAssertEqual(viewModel.pendingSwitch, .newRule)
+    }
+}
+```
+
+**Pattern:**
+- **Fake repository:** In-memory sources (`ASInMemoryRulesSource`, `ASInMemoryChannelsSource`, `ASInMemoryMetricsSource`) initialized with optional snapshots
+- **Localizer:** `.echo` (fallback strings, no bundle) instead of `.bundle` (real i18n)
+- **Telemetry:** `OSLogAlertStudioTelemetry()` (logs to os_log) or spy recorder in tests
+- **Mutator:** `OSLogAlertStudioMutator()` (logs intent, returns success) for previews; test-specific `ASRecordingMutator` to assert calls
+- **ASListSnapshot** state enum encodes loading/loaded/empty/failed + optional cached items
+
+---
+
+## SUMMARY TABLE FOR NEW `PeriodComparePage`
+
+| Aspect | Pattern |
+|--------|---------|
+| **ViewModel** | `@MainActor @Observable` final class, init takes read models + seams, `start()/stop()/refresh()` methods |
+| **Core Import** | **NO** `import Shared` — sources are app-level, feature-views stays decoupled |
+| **Async Handling** | Swift concurrency `async/await` via seam protocols (`async -> Bool` for mutations, callbacks for data updates) |
+| **State Model** | `@Observable` read-model(s) subscribing to source(s); `@ObservationIgnored` seams; derived computed properties |
+| **Vehicles** | `[Vehicle]` model injected at init; in production, loaded by source from KMP core, in previews hardcoded |
+| **Analytics/Period-Stats** | Analogous `PeriodCompareSource` protocol; fetched via core's HTTP client in `start()`, snapshot pushed via callback |
+| **Diagnostics** | `SurfaceSlug` enum, `reportOpen(to: telemetry)` in `start()`, emits `view.opened` with non-identifying slug string |
+| **Navigation** | Add to `AppRoute` enum only if integrating into main app; otherwise lives standalone in `feature-views/` |
+| **Previews** | In-memory sources, `.echo` localizer, sample fixture data, multiple state snapshots (loading/empty/error/content) |
+| **Tests** | `@MainActor` XCTest, `makeViewModel()` factory, fake mutators with spy recording, snapshot assertions |
+
+---
+
+**Files cited (absolute paths):**
+1. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.ViewModel.swift`
+2. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Adapter.swift`
+3. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Model.swift`
+4. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Models.swift`
+5. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Sources.swift`
+6. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Model.Types.swift`
+7. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.Previews.swift`
+8. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/TeslaSync/feature-views/AlertStudioPage.ViewModelTests.swift`
+9. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/App/AppRoute.swift`
+10. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/App/AppShell.swift`
+11. `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-231658-97646/slot-21/apps/apple/Sources/App/RouteHostRegistry.swift`I now have the localization, ViewModel, and navigation patterns. Let me read the component library report (saved to temp) for exact component APIs.
+
+The explore reports give a strong map. Before writing, I must verify exact signatures against the real component files to guarantee a clean build. Let me read the critical component sources directly.
+
+Tokens live in `Sources/Design/TSDesign.swift`. Let me extract exact public signatures from all the component files I'll use, plus the token definitions.
+
+Let me read the exact init bodies for the components with non-trivial signatures, plus the design tokens.
+
+Let me read the bar chart rendering (esp. x-axis labels), chart container, states, select, button text init, and the design tokens.
+
+Let me verify the design tokens, chart palette/axes, the test-target wiring, and whether the xcodeproj exists.
+
+I have all token and component APIs confirmed. Let me check the gate tooling (PowerShell, placeholder script), the test-target wiring, and read one full Previews + Tests example to mirror.
+
+Let me read the gate contract, placeholder scanner, an existing log for format, and the manifest record for this page.
+
+Critical discovery: completed sibling pages live in `apps/apple/Sources/Features/<Domain>/` using the central `Localizable.xcstrings` + `AppRoute` registration — not the `feature-views/` mega-dump. Let me examine the real convention used by completed P7 pages.
+
+This is the real, current convention. The Analytics domain already has completed sibling P7 compare pages. `FleetComparePage` is the ideal template — let me study it and its model/sections/charts/table/route in full.
+
+This `FleetComparePage` is a near-perfect template for my `PeriodComparePage`. Let me read its model, data source, domain types, and sample data to understand the data-binding pattern.
+
+Let me read the remaining template pieces: sample data sources, sections, charts, table, and format helpers.
+
+Let me read the chart/section/table views and locate the `Units` facade + `tsUnits` environment.
+
+Template is fully clear. Now let me lock down the `Units`/`tsUnits` facade, the `redacted` modifier, the routing wiring, and the xcstrings catalog.
+
+Let me read the routing files, the Units facade, the theme/redacted helpers, and check what currently renders `.analytics`.
+
+Now I understand routing. Let me confirm the parser structure, which route Statistics owns, any other exhaustive AppRoute switches, the Units facade, and the xcstrings format.
+
+Let me read the Units facade, the theme/tsUnits + redacted modifier, and confirm the xcstrings format.
+
+Let me locate the `tsUnits` environment key, read the redacted modifier + chart legend + status card patterns, check the xcstrings catalog, and find the analytics test pattern.
+
+Let me inspect the xcstrings JSON structure (without loading 5MB), read the unit presets, the test pattern, and the chart-legend/section patterns.
+
+xcstrings structure is clear. Let me check the exact raw formatting (indent, key sorting, separators) so my insertion matches Xcode's format and minimizes diff.
+
+Let me read the test pattern, the chart-legend definition, and the unit presets/default — the last pieces before implementing.
+
+I now have a complete, precise understanding of the established `Sources/Features/Analytics/` convention (via the `FleetComparePage` sibling). Let me set up tracking and write the plan, then implement.
+
+Let me confirm the unit presets and the chart-legend pattern, then start implementing.
+
+I have everything needed. Let me look at the `FleetCompareChartLegend` to mirror it, then begin creating files.
+
+All references confirmed. Now implementing the page. Starting with domain models.
+
+Now the format helper.
+
+Now the `@Observable` page model with the data-source seam.
+
+Now the sample/preview/test data sources.
+
+Now the bar chart section and legend.
+
+Now the comparison table panel.
+
+Now the metric cards grid + insights panel + the redaction modifier.
+
+Now the main page view.
+
+Page is done. Now route registration + the navigation wiring. Let me read the `TeslaSyncApp` registry context first, then make the edits.
+
+Now I'll add the 34 `compare.*` strings + `route.periodCompare` into the xcstrings catalog with a script that matches the existing format exactly.
+
+Strings added. Let me verify the insertion formatting, then write the model tests.
+
+Now the model + format unit tests.
+
+Let me confirm the `.imperial` preset values and the swiftlint config before running gates.
+
+`.imperial.distance == "mi"` confirmed. SwiftLint `--strict` turns the 120-col warning into an error (comments ignored). Let me scan my new files for long code lines, then run the gates.
+
+Two long signatures to wrap. Let me fix them.
+
+Now let me run SwiftLint (strict) on my new/edited files and the placeholder scanner.
+
+SwiftLint flags my 6-param test helper (inits are exempt, plain funcs aren't). Let me inline `PeriodCompareStats(...)` directly.
+
+SwiftLint clean. Now swiftformat lint + the placeholder scanner.
+
+Two fixes needed: a "Placeholder" word in a comment (flagged) and number grouping in tests. Let me check the flagged line and apply swiftformat.
+
+Now apply swiftformat to normalize formatting (incl. number grouping), then re-verify all three gates.
+
+Both swiftformat and swiftlint are clean. Let me confirm which file changed and re-run the placeholder scan.
+
+Placeholder scan passes. Now let me generate the Xcode project and check the build prerequisites (Shared.xcframework).
+
+Important finding: `Frameworks/` has only `.gitkeep` — the KMP `Shared.xcframework` is **not staged** in this environment, so the full app/test target cannot link (confirming the siblings' "full build not greenable here" note). I'll verify rigorously via a standalone type-check against exact stubs of the component library + a logic harness. Let me build that.
+
+All external symbols are ones I verified. Let me build a precise stub of the component library + facade and run a standalone `swiftc -typecheck` over all my page files (the rigorous "does-it-compile" check, since the real module can't link without the KMP framework).
+
+Stub bug (not my code) — `Color.accent` isn't a SwiftUI member. Let me fix the stub and re-run.
+
+Type-check passes (exit 0) for all 9 page files under Swift 6 strict + DEBUG against accurate stubs. Now let me run a **logic harness** to prove the model derivations/formatters are actually correct (the sibling "model harness").
+
+The harness file must be named `main.swift` for top-level code. Let me rename and re-run.
+
+The one failure is a harness bug (I reused the model after changing periodA to last7, so vehicle 2 + 7 days had no fixture). The real XCTest uses fresh models per case. Let me fix the harness to match and confirm.
+
+Logic harness **PASSES** (all assertions). All in-scope gates are green. Now let me update the parity ledger. Let me inspect its structure.
+
+The ledger has macOS + iOS rows per page. Let me check for an existing PeriodCompare row, then add/update both platform rows.
+
+No PeriodCompare rows yet. Let me check the ledger's formatting, then add the two platform rows (macOS + iOS).
+
+The ledger uses 2-space indent with ASCII escaping. Let me add the two PeriodCompare rows grouped with the other analytics rows.
+
+Ledger updated. Let me run a final consolidated verification pass to capture clean evidence for the log, then write the log.
+
+All gates green. Now let me write the comprehensive evidence log with the full `=== PARITY ===` section.
+
+Log written. Now cleanup, verify the git state, and confirm the generated `.xcodeproj` is ignored.
+
+Ledger diff is clean (18 insertions only). Let me verify the full git status and that the xcstrings diff is minimal (only my keys added).
+
+Git status is exactly as intended (385 insertions / 0 deletions in xcstrings — no existing entries touched). Let me confirm the three routing edits are precise, then commit.
+
+All routing edits are precise and minimal. Let me commit the work.
+
+Committed with a clean working tree. Let me finalize the tracking and do a last confirmation of the key gates + parity counts.
+
+All complete and verified:
+
+- **12/12 todos done**; working tree clean (committed `46978275c`).
+- **Parity: 44/44** — `PARITY_REQUIRED=44` / `PARITY_COVERED=44`, with all 44 items enumerated with file+symbol evidence.
+- **All in-scope gates green**; `EXIT=0` / `STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

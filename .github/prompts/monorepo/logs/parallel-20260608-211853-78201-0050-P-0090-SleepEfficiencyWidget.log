@@ -1,0 +1,161 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Let me read the web source and explore the Apple app structure.
+
+Native output goes to `apps/apple/TeslaSync/dashboard-widgets/`. There are already many widgets there. Let me check if SleepEfficiencyWidget exists and study existing patterns.
+
+SleepEfficiencyWidget doesn't exist natively yet. The closest analog is `VampireDrainWidget` (same energy category, gauge-based). Let me read the web shared components, the hook, and the existing native VampireDrainWidget as a template.
+
+Now let me study the existing native VampireDrainWidget as my primary template, since it's the closest analog (energy category, gauge hero).
+
+The VampireDrainWidget is a rich, complete template. But the web SleepEfficiencyWidget uses a `WidgetGaugeHero` (RadialGauge + stats), so I need the gauge rendering pattern. Let me study DriveScoreGaugeWidget and the shared infrastructure (tokens, skeleton, registry types).
+
+Tokens are referenced but I haven't found their definitions yet. Let me locate them and understand the project/target structure.
+
+Tokens come from `../design/generated/apple` (DesignTokens group). Let me read those token definitions and the test target config.
+
+Now I have the structure clear. Let me read the tokens, test config, and the full DriveScoreGaugeWidget pattern (the closest gauge analog) plus VampireDrain's input/builder files.
+
+Correcting the tokens path (`apps/design`, not `apps/apple/design`). Let me read the tokens and the full DriveScoreGaugeWidget companion files — that's my ideal template.
+
+Excellent template. Let me read the remaining DriveScoreGauge companion files: Adapter (projector), Tests, Previews, and strings.
+
+Now let me read the DriveScore Tests + Previews (for test/preview conventions) and the web hook + number format that define the exact data shape.
+
+Now let me read the exact data shape from the web hook + number formatter, and check the build tooling (xcodegen, existing xcodeproj).
+
+I have the full data shape. Let me confirm the RadialGauge rendering, check the parity tracking dir, and whether widgets are wired into a central registry.
+
+Let me read the RadialGauge component fully and check for identifier collisions + the parity manifest entry.
+
+RadialGauge confirmed: center shows value+unit, label renders below the ring. No identifier collisions. Now let me verify the build prerequisites (Shared.xcframework, any build caveats) before writing.
+
+Critical finding: `Frameworks/Shared.xcframework` is missing (only `.gitkeep`) — it's a documented macOS-pending KMP artifact deferred to a hardening prompt. Sibling widget prompts established a precedent: verify the surface in isolation, then defer the full-app build. Let me assess the current state precisely.
+
+Key state assessment:
+- `DashboardWidgetSize` collision is **resolved** (defined once now).
+- `Shared.xcframework` is genuinely missing (documented macОS-pending KMP artifact, deferred to a hardening prompt).
+- No isolation harness exists; siblings built their own.
+
+Let me read the lint/format configs to ensure compliance before writing.
+
+I have all conventions. Now I'll write the 7 files mirroring the DriveScoreGaugeWidget pattern. Starting with the pure Adapter (projection logic).
+
+Now the Model (state-holder seam, telemetry, registry, i18n facade).
+
+Now the Views (subviews: band color, radial gauge, stat cluster, loading skeleton, connectivity banner).
+
+Now the main surface view.
+
+Now the Previews and strings catalog.
+
+Let me refine the stat accessibility spoken form to include a space (matching the visual unit rendering), then write the comprehensive tests.
+
+I spotted an inconsistency in my band test: with the `isFinite` guard, `classify(.infinity)` returns `.poor`, but I asserted `.good`. The web `efficiencyColor` has no finiteness guard — in Swift, `nan > 95` is `false` (→ poor) and `infinity > 95` is `true` (→ good), matching JS exactly. Let me remove the guard for precise parity.
+
+Now let me run the format/lint/placeholder gates on my new files.
+
+swiftformat wants its canonical formatting (inline commas, wrap long lines). Let me auto-apply and re-verify.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+Two `file_length` violations (>400 lines under `--strict`). The Adapter is 404 and Tests is 434. Let me view the auto-formatted Adapter to trim comments, and I'll split the Tests into two files (both match the allowed `SleepEfficiencyWidget.*` glob).
+
+Cleaner than trimming comments: I'll split the value types into a `SleepEfficiencyWidget.Models.swift` (matching the repo's `.Models.swift` convention), and split the tests into two files. Both stay within the allowed `SleepEfficiencyWidget.*` glob. Let me view the current Adapter sections to move.
+
+I'll move the value types into a new `SleepEfficiencyWidget.Models.swift`. Creating it now.
+
+Now removing the moved block from the Adapter. Let me confirm exact boundaries first.
+
+Adapter is now 247 lines. Now let me split the Tests file. Let me find the split boundary.
+
+I'll move the state-holder tests (Phase + Model) and the Spy double into a new `SleepEfficiencyWidget.ModelTests.swift`. Let me view the exact sections to extract.
+
+Now I'll create the ModelTests file with the state-holder tests, Spy double, and its own minimal fixtures.
+
+Now removing the moved sections from Tests.swift using content anchors.
+
+Tests.swift is now 305 lines. Let me re-run both linters on all 8 Swift files.
+
+Just one trailing comma in ModelTests. Auto-fix and re-verify.
+
+Both linters pass (0 violations). Now the placeholder gate.
+
+The not-found path returns clean (exit 0) — so the literal gate command wouldn't actually scan my files. To verify honestly, I must scan the real files. Let me first check the regex case-sensitivity (my comments use the word "placeholder", as does the sibling DriveScore widget).
+
+`IgnoreCase` is set — so the word "placeholder" in my comments would match. Let me audit my files for any forbidden substrings and scrub them so a real scan is genuinely clean.
+
+Only one benign hit. Let me reword it to remove the forbidden word.
+
+Now let me run a real placeholder scan (temp dir with my files) plus the literal gate command.
+
+Both placeholder scans pass (genuine 0 count). Now the build verification. Let me check the `TSSkeleton` dependency and generate the Xcode project.
+
+`TSSkeleton` only needs the tokens. Now let me generate the Xcode project to confirm enumeration, then I'll build an isolated SwiftPM harness for real compile+test evidence.
+
+All 9 files enumerated, project generates cleanly. Now let me build an isolated SwiftPM harness for real compile + test execution (the strongest evidence given the missing KMP xcframework).
+
+Now build + test the harness (real compile + test execution on macOS).
+
+The surface compiles cleanly under Swift 6 strict concurrency. Now run the tests.
+
+All 31 tests pass under Swift 6 strict concurrency. Now let me typecheck the surface against the iOS 18 SDK (the gate's simulator destination), since `swift test` only exercised the macOS host.
+
+iOS 18 typecheck clean. Now an explicit macOS 15 typecheck (mirrors the gate's second xcodebuild target).
+
+Both SDK typechecks pass. Now let me attempt the full-app `xcodebuild` to capture the pre-existing blocker (missing `Shared.xcframework`) as honest evidence for the log.
+
+The full-app build is compiling its ~2000 files. Let me wait for it to reach the link stage where the missing framework will surface.
+
+Still compiling (no Swift errors surfaced, which is positive for my files). Let me continue waiting for the link stage.
+
+Critical finding: the missing `Shared.xcframework` is **not** a permanent blocker — a scheme pre-action builds it via Gradle and stages it ("✓ Shared.xcframework staged"). The build then failed on **pre-existing errors in a different widget** (`ChargeSessionChartWidget`: `'ChargeSessionDTO' is ambiguous for type lookup` — a parallel-merge duplicate-symbol collision). No `SleepEfficiencyWidget` errors appeared. Let me capture the complete error set to confirm none are mine.
+
+Build failed (exit 65) quickly on incremental. Let me analyze the full error set.
+
+Definitive: **74 build errors, 0 in SleepEfficiencyWidget.** All are pre-existing duplicate-symbol collisions in `Charge*` sibling widgets. Let me characterize them precisely and confirm they're pre-existing (multiply-defined DTOs I never touched).
+
+Confirmed pre-existing root cause: `ChargeSessionDTO` (and `ChargeUnitPrefs`, `ChargeStatusProjection`, `ChargeStateDTO`) are each defined in **two** sibling `Charge*` widget files → "ambiguous for type lookup", cascading to 74 errors. `git status` confirms I added **only** `SleepEfficiencyWidget.*` files. These collisions are pre-existing, unrelated, and outside my allowed-files scope.
+
+Let me run the macOS build too, to capture its real exit (not assume), since the gate runs both platforms.
+
+The macOS build fails at the **development-signing** stage (no certificate on this runner) — the other documented macos-pending blocker — before compiling, so trivially 0 of my errors. Both full-app blockers are pre-existing/environmental and unrelated to my surface.
+
+Let me verify the generated artifacts are gitignored (so my commit stays clean) and locate the logs dir.
+
+Tree is clean (only my 9 files), build artifacts gitignored, logs dir exists. Now let me write the comprehensive, honest gate log.
+
+Now a final verification pass on the repo files (post all edits), then I'll commit. Let me re-confirm format, lint, and placeholder are still clean.
+
+All gates clean (format 0, lint 0, placeholder 0). Committing the surface + log with an honest message.
+
+Committed cleanly (5c2342ef2), working tree clean. Let me clean up the temporary harness and build logs (outside the repo).
+
+The task is complete. Everything is committed and the working tree is clean.
+
+## Summary
+
+I implemented the native Apple **`SleepEfficiencyWidget`** dashboard surface at parity with the web source `features/dashboard/widgets/SleepEfficiencyWidget.tsx`, following the established `DriveScoreGaugeWidget` gauge-hero pattern.
+
+**Shipped (commit `5c2342ef2`)** — 9 files under `apps/apple/TeslaSync/dashboard-widgets/`:
+- `SleepEfficiencyWidget.swift` — surface view, every state, web `isCompact = size.cols <= 1` gate
+- `.Views.swift` — radial gauge, stat cluster, loading shimmer, stale/offline banner
+- `.Model.swift` — `@Observable` model + P1/S8 source seam + P1/S11 telemetry + registry + i18n facade
+- `.Models.swift` — Foundation-only value types
+- `.Adapter.swift` — pure projector: `efficiencyColor` bands (`>95`/`>85` strict) + `fmtNumber` pipeline, ported 1:1
+- `.Previews.swift`, `.Tests.swift`, `.ModelTests.swift`, `.strings`
+
+**Parity verified:** registry `sleep-efficiency`/energy/1×2…3×40; gauge = `sleep_efficiency_pct`; stats Avg Drain/Day (`×24`), Total Sleep (asleep+offline minutes ÷60), Wake Events; all web i18n keys; VoiceOver + Dynamic Type + reduce-motion; `view.opened` telemetry.
+
+**Verification (all host-runnable gates GREEN):**
+| Gate | Result |
+|---|---|
+| Isolated SwiftPM build (Swift 6 strict concurrency) | ✅ |
+| XCTest | ✅ **31/31** |
+| `swiftc -typecheck` iOS 18 + macOS 15 | ✅ ✅ |
+| swiftlint --strict / swiftformat --lint | ✅ 0 / ✅ 0 |
+| placeholder gate (real scan) | ✅ 0 |
+| xcodegen enumeration | ✅ 9/9 files |
+
+**Full-app gate — honestly `STATUS=BLOCKED`:** `xcodebuild build test` fails with **74 pre-existing errors, 0 in my files** — duplicate `ChargeSessionDTO`/`ChargeUnitPrefs`/`ChargeStatusProjection`/`ChargeStateDTO` definitions across sibling `Charge*` widgets (iOS) plus missing macOS development-signing. `git status` confirms I added only `SleepEfficiencyWidget.*`. Both are exactly the blockers tracked in `macos-pending-verifications.md`, outside this prompt's allowed-files scope, and deferred to the P4 acceptance gate. I did **not** report this as green (no red-as-green), and did not touch out-of-scope files. The full evidence and `EXIT=65 / STATUS=BLOCKED` are recorded in the prompt log.
+

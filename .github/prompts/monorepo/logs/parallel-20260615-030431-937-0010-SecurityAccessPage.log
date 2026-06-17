@@ -1,0 +1,222 @@
+I'll start by exploring the repository structure to understand the task scope, then examine the web source page and existing Apple app patterns.
+
+I see this is a parity task. The web source uses many sub-components but the manifest declares exactly 9 parity items (2 panels + 3 states + 4 strings). Let me explore the Apple app structure and a recently-completed reference page to follow established patterns.
+
+The actual structure uses `Sources/Features/Admin`, not `TeslaSync/Features/Admin`. Let me examine existing admin pages and the recently-completed reference page.
+
+This is now clear. The actual convention is `Sources/Features/Admin/`, and the GasPriceAutoPollPage is the immediate reference pattern. There are also existing shared Security feature-views. Let me study the reference pattern in depth.
+
+The GasPrice pattern is a thin page hosting a real shared surface. The web SecurityAccessPage hosts 8 sub-surfaces, several of which already exist as Apple feature-views (SecurityStatusCards, SecuritySection, SecurityStatistics, SecurityPanel). Let me examine these existing surfaces to host the real ones.
+
+Now I understand the hosting architecture. Let me examine the parity manifest for this unit, the ledger, the route system, the app composition, the design tokens, and check tooling availability.
+
+Full toolchain is available — the gate can actually run. Let me read the exact manifest records for this page, the panels, and the string-group.
+
+The page unit requires exactly 9 items mapping to a thin page (chrome + 2 GlassPanels + 3 states + 4 strings). Let me verify whether the 8 sub-components are separate parity units (out of scope) and read the web sub-components + helpers to reproduce faithfully.
+
+The 8 sub-components fold into the page unit (9 items), not separate units. Per the honesty covenant I must still reproduce all regions. Let me check whether the existing Apple Security surfaces match the admin page's components, and read the web sub-components.
+
+The existing Apple feature-views ARE parity ports of the admin page's security-access components (`SecurityStatusCards.swift`, `SecurityStatistics.swift`). Let me find which of the 8 web components already have Apple equivalents I can host.
+
+All 8 web sub-components already have shipped Apple feature-view ports. So SecurityAccessPage is a thin host page (like GasPriceAutoPollPage) that frames chrome + 2 GlassPanels + states and hosts the 8 real surfaces. Let me understand construction patterns, the digital twin, design tokens, and route infra.
+
+All 8 surfaces have shipped ports with InMemory sources + live Adapters, and none are composed into any page yet — this page is their first composition. There's also a `VehicleTwin` shared-surface for the digital twin. Let me read the Adapter files to learn the construction/wiring recipe.
+
+These "Adapters" are pure projection cores; the live/sample wiring is via each Model's source. Hosting all 8 means constructing 8 seeded models. Before committing to that, let me check what verification is actually runnable here by reading the reference log, the placeholder script, the route system, and design tokens.
+
+This is the definitive methodology template. Key takeaways: real path is `Sources/Features/Admin/`, tests in `Tests/Unit/Features/Admin/`, strings in `Localization/Localizable.xcstrings`; authoritative verification = isolated Swift 6 type-check + model harness (full xcodebuild is RED due to sandbox signing + pre-existing sibling errors). The page must host all 8 real surfaces. Let me create a plan and read each surface's construction recipe.
+
+Shared.xcframework isn't built (7-min Gradle). Per the reference log, the isolated type-check doesn't need it — surfaces are self-contained. Let me verify no surface imports Shared, and read all 8 Preview files (the exact construction recipes) plus the page-model state holder convention.
+
+None import Shared, so the type-check won't need the framework. Let me read the remaining 6 Preview recipes plus VehicleTwin.
+
+I have all 8 surface recipes. Now let me read the VehicleTwin (for GlassPanel2), the design tokens (TSGlassPanel/TSPageTitle/TSFadeIn/etc.), and find the AlertBanner equivalent.
+
+VehicleTwin needs a `VehicleTwinSurfaceModel`. Let me read its construction recipe, the key design-token component signatures, and check for VehicleSelect/RangePicker ports (the page's action filters).
+
+There are Apple ports for VehicleSelect and RangePicker too. A peer data-page with both filters (SleepEfficiencyPage) is the closest analog to SecurityAccess. Let me study how it composes chrome + filters + hosted surfaces, and read the remaining token signatures.
+
+`SleepEfficiencyPage` is the canonical filtered-data-page pattern (header with TSSelect filters + phase switch). For SecurityAccess I'll combine it with the GasPrice "host real surfaces" approach. Let me confirm PageContainer's `loading` semantics and read the route infra + remaining tokens.
+
+Now I understand the page phases precisely: web `PageContainer loading={isLoading}` is a hard spinner switch (hides children); `error={null}` so errors surface only via the inline AlertBanner. This maps cleanly. Let me read the route infra, composition, and remaining token/feedback components.
+
+I have the banner/feedback components. Now the route registry, app composition, glass panel variants, and token roles.
+
+Now the composition is clear (add `SecurityAccessRouteRegistration` to the chain). Let me read the glass panel variants and grep all token roles I need (Color.TS, Font.TS, TSSpacing, TSTone, TSSelect).
+
+Tokens located (TSSpacing/TSRadius/TSTone). Let me read TSSelect/TSFadeIn/TSSpinner signatures and check which strings already exist in the catalog.
+
+TSSelect/TSFadeIn/TSSpinner confirmed. The 4 page strings aren't in the catalog yet (surface strings use per-surface `.strings` tables). Let me inspect the catalog structure and check existing `route.*`/`error.loadFailed` conventions before editing.
+
+I now have all design tokens. Let me confirm the web filter components' i18n keys and the canonical string defaults before finalizing the design, then write a plan.
+
+SleepEfficiency reproduces the filters via `TSSelect` (not the shared surfaces) — the right precedent. Let me read its `SleepRange` enum and check which date-preset keys already exist in the catalog (to reuse, DRY), then I'll have everything to write.
+
+SleepEfficiency defines its own per-page range keys — I'll mirror that. I have a complete design now. Let me write the plan, set up todos, then grep the exact initializer signatures for all 9 surface models to avoid compile errors.
+
+All sources use `init(initial:? = nil)`. Let me read the exact Model init signatures to confirm parameters/defaults, then I'll write the implementation.
+
+I now have every initializer signature confirmed. Let me check lint/format config, then write the plan and implement.
+
+I have everything needed: all surface initializers, design tokens, route infra, lint rules (line ≤120 warn/160 err, swiftformat maxwidth 120 wrap-before-first), and the test pattern. Let me write the plan and set up tracking.
+
+Now implementing. Starting with the AppRoute case.
+
+AppRoute updated. Now the core model file.
+
+Now let me verify the few VehicleTwin value-type enums (size/window/turn) before writing the sample factory, since those weren't fully visible.
+
+`.small` exists; the preview literals compile verbatim. Now the sample factory, split into short per-surface helpers (to respect function_body_length).
+
+Now the page view.
+
+Now the route registration.
+
+Now wire it into the app composition.
+
+Now the strings catalog. Let me view the exact opening lines to insert correctly.
+
+Let me validate the catalog JSON and confirm the keys.
+
+All 11 keys valid. Now the unit tests.
+
+Now the verification gate. Starting with swiftformat and swiftlint on my files.
+
+swiftformat clean (0/7). Now swiftlint --strict.
+
+One `type_body_length` violation in the Sample enum (269 > 250). Let me split the shared fixtures into a same-file extension.
+
+Re-running swiftformat + swiftlint on all files after the split.
+
+Both clean (swiftformat 0/7, swiftlint 0). Now the placeholder scan.
+
+Placeholder scan clean (COUNT=0). Now the authoritative check: the isolated Swift 6 type-check of my page against the 9 real surfaces. First, let me map the dependency closure (imports + cross-component usage) of the surfaces.
+
+Surfaces import only system frameworks (+ Charts for SentryModeChart); none import Shared. Let me confirm Sources/Components + Sources/Design are leaf (system-only imports) so I can assemble a clean closed type-check set.
+
+Components/Design are leaf modules (system-only imports). Let me verify the VehicleTwin's transitive types are self-contained before assembling the closed type-check set.
+
+Let me precisely locate where `DigitalTwinWidgetTwinDoorStates` and the window-state enum are *defined* (vs used).
+
+VehicleTwin depends on `dashboard-widgets/DigitalTwinWidget.Models.swift`. The transitive closure is deep, so I'll use the full xcodebuild (compiles the whole module correctly) as the authoritative proof, and run a focused isolated type-check in parallel. Let me kick off the Shared.xcframework Gradle build (needed for the app build) in the background now.
+
+Let me start the Gradle xcframework build in the background (for the later full build) and simultaneously check whether `DigitalTwinWidget.Models.swift` is self-contained for the isolated type-check.
+
+`DigitalTwinWidget.Models.swift` is self-contained (Foundation only). Now let me assemble the closed type-check set and run the macOS Swift 6 strict-concurrency check.
+
+Errors are NOT in my files — they're in `Components/DataDisplay/UnitFormatters.swift`, which depends on `UnitPreferences`/`Units` defined outside the slice. My security surfaces don't use unit conversion. Let me locate those types (include if small) and note the Gradle build finished.
+
+`Units` lives in `SharedFacade`; my surfaces don't use it. The Gradle xcframework build finished (exit 0). Let me identify any non-leaf Components files to exclude from the slice, then retry.
+
+Only `UnitFormatters.swift` is non-leaf. Excluding it, let me retry the macOS type-check.
+
+Now only 8 errors, all from `VehicleTwin.Views.swift` needing `VehicleTwinView` (the shared Canvas illustration). Let me find where it's defined.
+
+`VehicleTwinView` is in `dashboard-widgets/DigitalTwinWidget.Twin.swift` (Foundation+SwiftUI only). Let me add it and retry.
+
+More twin helpers (`TwinPalette`, `DigitalTwinStrings`, `DigitalTwinAccessibility`) live in sibling `DigitalTwinWidget.*` files. Let me check those are self-contained and include them all.
+
+All 6 DigitalTwinWidget files are system-import only. Let me find which holds `DigitalTwinStrings`/`DigitalTwinAccessibility`, then include the minimal twin-illustration set.
+
+`TwinPalette`→Palette.swift, `DigitalTwinStrings`/`DigitalTwinAccessibility`→Model.swift. Let me include all 6 DigitalTwinWidget files and retry.
+
+Found it — a brace-glob bug (`VehicleTwin.{swift,...}.swift` produced `VehicleTwin.swift.swift`, dropping the main file). Fixing to explicit paths and re-running — the slice should now close.
+
+Excellent progress — the slice is closed except `DigitalTwinWidget.Model.swift` (the widget's own model) needing `DashboardWidgetSize`/`DigitalTwinWidget` widget-infra. Let me locate `DashboardWidgetSize` and include it to fully close the proof.
+
+`DashboardWidgetSize` is leaf (`Sources/DashboardWidgets/DashboardWidgetInfra.swift`, Foundation only). Let me check what the widget Model needs from `DigitalTwinWidget` and that entry's deps.
+
+Both are leaf (Foundation/SwiftUI only). Adding `DashboardWidgetInfra.swift` + `DigitalTwinWidget.swift` to close the slice.
+
+**macOS type-check PASSES: 0 errors, 0 warnings (98 files)** — my page compiles against all 9 real surfaces under Swift 6 strict concurrency. Now the iOS target.
+
+**Both isolated type-checks PASS (macOS 0/0, iOS 0/0).** Now the executed model harness — a headless run asserting the model's parity behavior. Let me write and run it against the real model layer.
+
+Now compile and run the harness (real model layer + 98-file set + main.swift) as a macOS executable.
+
+Top-level statements require the file be named `main.swift`. Let me rename and recompile.
+
+**Model harness: 30/30 assertions PASSED** (executed against the real model layer). Now let me guard against name collisions with the wider app and verify the xcframework state before attempting the full build.
+
+No real collisions (the "2" for `SecurityAccessPageModel` is the substring match on `SecurityAccessPageModelTests`). The Shared.xcframework built (debug+release). Now let me run the supplementary full build: generate the project and compile the whole module against the real framework.
+
+Project generated; my files referenced 6× each (both apps + both test bundles). Now the full macOS build against the real framework. Let me list schemes and start the build.
+
+Starting the full macOS build (CODE_SIGNING_ALLOWED=NO) in the background to compile the whole module against the real framework.
+
+While the build runs, let me update the parity ledger. Let me inspect its tail to append the two rows.
+
+Let me append the two ledger rows (9/9 done, both platforms).
+
+Ledger updated (9/9, both platforms). Let me check the build progress.
+
+Build still running. Let me check the partial log for any compile errors in my files so far.
+
+Build is in the whole-module emit phase for TeslaSync-macOS with no errors so far. Let me draft the evidence log while it completes.
+
+Let me check the build, then write the log.
+
+No errors in my files; the build has progressed past the main app to TeslaSyncWidgets, indicating the TeslaSync-macOS module (with my files) compiled. Let me wait for completion.
+
+Zero errors across the entire build so far (the pre-existing sibling error the gas log noted appears already resolved). Let me wait for the final result.
+
+The whole-module emit for TeslaSync-macOS already passed (full-module type-check green, including my files); now it's doing per-file object compilation, still 0 errors. Let me wait for completion while drafting the log.
+
+Still compiling (0 errors, 19.6k log lines). Let me continue waiting.
+
+The build finished. Let me confirm the result.
+
+BUILD FAILED with exactly 1 error, and my files all compiled. Let me identify that single error.
+
+The single error is the **same pre-existing, out-of-scope sibling** the GasPrice log documented: `Sources/Features/Driving/DriveScorePage.Panels.swift:25` (a `String(localized:)` misuse) — not my code. My files all compiled green. Let me confirm I didn't touch that file.
+
+All changes are in-scope; the sibling error file is untouched (forbidden to fix, covenant #6/#7). Now let me write the comprehensive evidence log.
+
+I have all verification data. Now writing the comprehensive evidence log.
+
+Log written. Let me do a final lint/format re-verification, confirm the generated project is git-ignored, then commit.
+
+All green: swiftformat 0/7, swiftlint 0, xcodeproj git-ignored, and git status shows exactly my intended changes. Let me clean up temp artifacts and commit.
+
+All 10 intended files staged. Committing.
+
+Commit succeeded. Let me verify the final state.
+
+Commit complete (HEAD `b15436b91`), working tree clean. Let me finalize the todos.
+
+All todos complete. The task is done and verified.
+
+## Summary
+
+Shipped a native **SwiftUI/HIG `SecurityAccessPage`** at full web parity (route `/security-access`), committed as `b15436b91`.
+
+**Approach:** The web page is a `PageContainer` framing 8 sub-surfaces + 2 GlassPanels. All 8 sub-components already ship as Apple feature-views, so — following the GasPrice/SleepEfficiency precedents — the page **hosts the 8 real surfaces** + the real `VehicleTwin` (no stubs), adding only the PageContainer chrome, the 2 GlassPanels, and the error banner, bound through an `@Observable SecurityAccessPageModel`.
+
+**Parity (9/9 covered):**
+- **2 panels** — GlassPanel1 (red "may not be secure" alert, gated `!isSecure && latest`), GlassPanel2 (digital twin, gated `latest`)
+- **3 states** — loading (centered spinner, body hidden), error (inline `error.loadFailed` banner, body not blanked), success
+- **4 strings** — `admin.security.title/subtitle/alert`, `error.loadFailed`, web key names verbatim in `Localizable.xcstrings`
+
+`isSecure` derives from the **real** `SecurityCardsLogic`. Added the `.securityAccess` route + registration + composition wiring, ledger rows (9/9, both platforms), and the evidence log.
+
+**Verification (all real exit codes):**
+- swiftformat `0/7` · swiftlint --strict `0` · placeholders `0`
+- **Isolated Swift 6 strict-concurrency type-check vs the 9 real surfaces: macOS `0/0`, iOS `0/0`** (98 files)
+- **Executed model harness: `30/30` assertions PASSED**
+- Shared.xcframework built green; full `xcodebuild` compiled my files clean — its **sole** error is the pre-existing, out-of-scope `DriveScorePage.Panels.swift` sibling (untouched, forbidden to commit-fix), identical to the GasPrice precedent.
+
+`PARITY_COVERED=9` · `EXIT=0` · `STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all work is committed (`b15436b91`), the working tree is clean, and all verification gates passed. Marking complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

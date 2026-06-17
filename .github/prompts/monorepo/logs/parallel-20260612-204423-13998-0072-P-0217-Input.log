@@ -1,0 +1,140 @@
+I'll start by understanding the task requirements, the web source, and what's available on this runner.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the existing Apple app structure.
+
+The `shared-surfaces` directory already exists with many components following a multi-file pattern (`.Adapter`, `.Model`, `.Previews`, `.AdapterTests`). Let me check if `Input.*` already exists and study an existing reference component closely.
+
+`Input.*` doesn't exist yet. The web `Input.tsx` composes `Label` and `HelpIcon` — both already exist as native surfaces. These are the ideal reference since they're the closest analogs. Let me read the full `Label.*` set (8 files) and the `HelpIcon` main files to learn the exact conventions.
+
+Now let me read the remaining reference files (Previews, Tests, strings) plus HelpIcon, and locate the design tokens (`Font.TS`, `Color.TS`, `TSSpacing`).
+
+Excellent — I now understand the 8-file convention precisely. Since web `Input` composes `Label` + `HelpIcon`, the native `Input` should compose the existing `FormLabel` and `HelpIcon` surfaces. Let me read the `HelpIcon` public API and locate the design tokens.
+
+Now let me read the design tokens file and the `HelpIcon.Views.swift` to understand the full token vocabulary (surface, border, focus, text colors) I'll need for the text field chrome.
+
+The token definitions are generated elsewhere. Let me locate the exact token vocabulary (`Color.TS.*`, `Font.TS.*`, `TSSpacing.*`, `TSFadeIn`).
+
+The tokens live in `Sources/Theme.swift`. Let me read it to confirm the exact token names available.
+
+The tokens are generated. I need to find them to know the available vocabulary and how the build is set up. Let me inspect `project.yml`, the `Scripts` folder, and search the whole repo for the generated token files.
+
+Found generated tokens at `apps/design/generated/apple/Tokens.swift`. Let me read it for the exact vocabulary, check the `build-shared-xcframework.sh` script, and verify `xcodegen`/simulator availability.
+
+I have the token vocabulary. Now let me confirm the token namespace declarations, the lint configs, the placeholder checker, and whether the heavy KMP/Gradle build dependency is feasible.
+
+pwsh, gradlew, and the placeholder checker are all present, but `Shared.xcframework` is NOT prebuilt — the build pre-action must build it via Gradle/KMP. Let me check the `Frameworks/` dir, the pending-verifications doc, and a recent gate log to understand the established build/STATUS precedent on this runner.
+
+Key insight: the full `xcodebuild build test` is very heavy (a prior gate timed out at 35 min), and `Shared.xcframework` must be built fresh via Gradle/KMP. Let me kick off that KMP framework build in the background now (it's independent of my code), confirm the `Font.TS` namespace, and find any sibling surface that renders an actual `TextField` for interaction/a11y/test parity.
+
+There are highly relevant interactive siblings (`SearchInput`, `CurrencyInput`, `FormField`, `UnitInput`). Let me study how they render a `TextField` with token chrome, focus state, and accessibility — this is the interaction/a11y idiom my `Input` must follow.
+
+I now fully understand the `TextField` chrome idiom and the **critical precedent**: pure presentational primitives (Label 0218, HelpIcon 0215) faithfully reproduce only the web source's REAL branches and explicitly document why fetch-states (loading/stale/offline) don't apply — inventing them would violate parity. Let me check for naming collisions before designing the `Input` type family.
+
+No collisions. I'll name the public view `FormInput` (mirroring the `FormLabel` sibling), with an `Input*` type family and slug `"Input"`. Before writing, let me check the KMP/Gradle build progress (it gates the heavy `xcodebuild` step) and create a plan + todos.
+
+The KMP/Gradle build is still compiling (first builds are slow). I'll let it run in the background and write the surface now. Starting with the Foundation-only adapter core.
+
+Let me check the KMP/Gradle build progress while I continue with the strings and previews.
+
+KMP framework build succeeded. Let me confirm its output and auto-format my new files (only the `Input.*` files, to respect the allowed-files constraint).
+
+KMP framework is built and staged (12 min). `swiftformat` reformatted 3 files. Now let me verify my files pass `swiftformat --lint` and `swiftlint --strict` in isolation before the full build.
+
+`swiftformat` lint passes. `swiftlint --strict` flags one violation: `Input.Adapter.swift` is 416 lines (limit 400). I'll split the `InputProjection` value type into its own `Input.Projection.swift` file (consistent with the codebase's multi-file surfaces) to bring the adapter under the limit. Let me locate the exact block.
+
+I'll move `InputProjection` into its own `Input.Projection.swift` file (matching the codebase's multi-file surfaces) and remove it from the adapter.
+
+Now let me re-run both lint checks on all the `Input.*` Swift files (now including `Input.Projection.swift`).
+
+All files now under the limit and `swiftformat`-clean. Let me run `swiftlint --strict` on all 8 files.
+
+`swiftlint --strict`: 0 violations. `swiftformat`: clean. Now the placeholder check — but note the web `Input` legitimately has a `placeholder` prop (used throughout my code). Let me read the checker to understand its patterns before running it.
+
+Let me read the actual forbidden patterns — critical since my code uses the legitimate `placeholder` prop term.
+
+The `common` patterns include `"Placeholder"` (case-insensitive) — a potential false-positive since `Input` legitimately has a `placeholder` prop. Let me check whether shipped sibling surfaces use the word "placeholder" or avoid it (SwiftUI idiom is `prompt`), to decide the cleanest approach.
+
+The established convention (per `SearchInput`): surface the web `placeholder` as SwiftUI `prompt`, and annotate any residual doc-comment mention of the web prop with `// parity:allow web prop name`. The `common` pattern `Placeholder` is a real recursive-scan concern. Let me find every occurrence in my files and rename the concept to `prompt`.
+
+I'll rename the concept to `prompt` (SwiftUI idiom) across all files, keeping one short annotated mention of the web prop name. Starting with the core files.
+
+Now the previews and tests — every `placeholder` there should become `prompt` (no web-prop references to preserve). I'll use `sed` for those three files, then verify.
+
+Only the single annotated line remains. Now let me re-format, verify the annotation didn't get wrapped, and re-run both linters.
+
+swiftformat made no changes (annotation intact). Let me wait for the lint results.
+
+All lint/format checks are green (0 violations). Now the placeholder gate (with self-test + a real scan of my files) and `xcodegen generate` to prepare the Xcode project.
+
+Placeholder gate is clean (self-test passes; my files scan clean with 1 allowed). `xcodegen` generated the project. Now the heavy step — let me build the iOS app to verify my code compiles and integrates. I'll stream output to a log and monitor.
+
+The iOS build is running in the background. Let me wait and check progress.
+
+Let me check the raw build log to see actual progress.
+
+Build is compiling the full `TeslaSync` module (which includes my files) — 0 errors so far. Let me keep waiting.
+
+Still type-checking the full module (0 errors). This is the slow whole-module phase. Let me wait longer.
+
+Extensions are linking and the app is in final module emission — still 0 errors. Let me wait for completion.
+
+Multiple module-emission passes for the large app target — still 0 errors. Let me continue waiting.
+
+The log has been static at the `EmitSwiftModule` step — this is the expensive whole-module type-check of thousands of files. Let me confirm the compiler is actively working (not stuck).
+
+Compiler is healthy: the whole-module type-check passed (no errors) and parallel per-file compilation is now running (multiple `swift-frontend` jobs, CPU 100%). My code is type-correct. Let me wait for linking/completion.
+
+Per-file compilation is now streaming (18k log lines, 0 errors). Let me wait for my `Input` files to compile and the final link.
+
+Build failed. Let me find the actual error in the full log.
+
+There's a `swift-frontend` compiler crash (fatal error in IRGen), not a normal type error. Let me examine the crash context to find the triggering source.
+
+The failure is a **Swift compiler crash (IRGen `report_at_maximum_capacity`)** while generating code for `AppearanceSettings.Controls.swift` — a file unrelated to my surface, which I never modified. The whole-module **type-check passed** (my files are type-correct); this is a codegen crash, possibly resource-contention-related (I saw several concurrent `xcodebuild` processes). Let me re-run incrementally (reusing DerivedData) to see if it's deterministic.
+
+**Decisive finding.** `apps/macos-pending-verifications.md` and four prior surface logs document this **exact crash** — same mangled function `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, same file `AppearanceSettings.Controls.swift` — as a **known, pre-existing, out-of-scope** swift-frontend IRGen capacity crash at the monorepo's ~5000-file whole-module scale, occurring AFTER type-check. Git confirms I only ADDED `Input.*` files (modified nothing). The established resolution: defer the full-app `build test` to the `macos-latest` acceptance gate; mark the surface macOS-pending with evidence.
+
+Let me build an executed harness proving my pure adapter logic runs correctly, plus dual-SDK type-checks, while the incremental rebuild confirms the deterministic crash.
+
+Now let me compile and execute the harness against my Foundation-only adapter sources (Swift 6, strict concurrency).
+
+Swift 6 actor-isolation nit in the harness. Let me fix it (mark the helper `@MainActor`).
+
+The executed harness passes **37/37** assertions under Swift 6 strict concurrency — my pure adapter/projection logic is correct. Now let me run dual-SDK (iOS 18 + macOS 15) type-checks of the Foundation core, and check the incremental rebuild status.
+
+Foundation core type-checks **0 errors on both iOS 18 and macOS 15**. The incremental rebuild is still running (0 errors). Let me wait for it to reproduce the documented crash.
+
+**Confirmed deterministic.** The incremental rebuild reproduced the **identical** crash — same file (`AppearanceSettings.Controls.swift`), same mangled function (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR`), 0 `error:` diagnostics. This matches the documented pre-existing IRGen capacity crash exactly. Now let me capture the macOS leg evidence (signing + build).
+
+Confirmed: **0 valid codesigning identities** on this runner (matches the documented macOS gate prerequisite gap). Let me wait for the macOS build to surface its failure point.
+
+macOS fails at the **development-signing entitlements gate before compiling** (0 valid identities) — pre-existing, out-of-scope, and documented. Both legs are blocked for pre-existing reasons. Let me capture exact exit codes for the log via clean re-runs (iOS incremental is cached/fast; macOS fails fast at signing).
+
+Both exit-capture builds are running. Let me update tracking and wait for the macOS build (fails fast at signing).
+
+macOS build: **exit 65** (signing entitlements gate). Let me wait for the iOS exit code.
+
+The iOS incremental build is still recompiling. Let me gather context facts (file scale, crash excerpt) while it finishes.
+
+File scale confirmed: **5,209 `.swift` files** in the app module — matching the documented whole-module IRGen capacity crash scale. The iOS exit-capture build is still running. Let me wait for it.
+
+The third iOS run is doing a full module recompile (slow) — but I already have **two** deterministic `BUILD FAILED` transcripts, and `xcodebuild` build-failure = exit 65 (confirmed by the macOS run). I'll let it finish in the background and write the log now with the corroborated evidence. Let me write the gate log.
+
+Log written. Let me confirm the iOS build's exact exit code to validate the `65` I recorded.
+
+The third build is doing a slow full-module recompile and hasn't reached the crash yet. My recorded `IOS_EXIT=65` is already corroborated by two `BUILD FAILED` transcripts plus the macOS leg directly returning 65. Let me give it one more interval to capture the literal number, then finalize.
+
+Now it's into per-file compilation (11.7k lines) — the IRGen crash phase is near. Let me wait for it to fail and capture the exit code.
+
+**`IOS_BUILD_EXIT=65` confirmed** by direct capture — matching the value in my log. Let me verify this third run failed for the same crash (not a new error).
+
+The third run confirms **`IOS_BUILD_EXIT=65`**, BUILD FAILED in the same documented `AppearanceSettings`/`Audit*` batch, **0 `error:` diagnostics**, 0 Input-file errors — identical pre-existing crash. My log's exit codes are now directly verified. Let me do a final consolidated verification of the exact files to be committed and inspect git state.
+
+All final checks green; `.xcodeproj` is git-ignored. Let me clean up temp artifacts and commit the surface + log (explicitly staging only my `Input.*` files + the log).
+
+Exactly the 9 surface files + log are staged. Now the commit.
+
+Commit `b0cf7f388` created — 10 files, 1668 insertions. Let me finalize tracking and confirm a clean tree.
+
+All todos complete; tree is clean; log ends `EXIT=65 / STATUS=BLOCKED` with verified evidence. Task finished.
+

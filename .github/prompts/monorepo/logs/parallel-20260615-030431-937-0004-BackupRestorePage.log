@@ -1,0 +1,313 @@
+I'll start by exploring the repository structure to understand the task scope, the web source, and the existing Apple app architecture.
+
+Let me read the web source in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web source and explore the Apple app structure in parallel.
+
+Let me continue reading the web source and explore the Apple app structure more deeply.
+
+Let me finish reading the web source and explore the Apple `feature-views` directory and project config.
+
+Let me read the rest of the web source and explore the Apple project structure and conventions.
+
+I now understand the full web source (947 lines, 6 panels: 4 metric cards + Configurations + History, plus modals). Let me investigate the Apple project conventions, tooling availability, and parity infrastructure.
+
+All tools are available (xcodebuild, swiftlint, swift, pwsh, xcodegen). Let me read the project config and parity infrastructure.
+
+Key insight: other admin pages already exist (AuditLog, DevTools, DiskForecast, etc. have logs). Let me find how those were implemented to follow the established convention, and read the parity manifest record + ledger.
+
+The admin page logs exist but no Swift files — let me check a prior admin page log to understand the expected outcome/convention, and whether "Page" surfaces exist anywhere.
+
+The DiskForecast log reveals the real convention: pages live in `apps/apple/Sources/Features/Admin/`, not `TeslaSync/Features/Admin/`. Let me read the full reference log and explore the Sources directory.
+
+Now I understand the structure. Admin pages live in `Sources/Features/Admin/` with a clear multi-file pattern. Let me study the closest references (DiskForecast — most recent, APIKeys & FeatureFlags — CRUD with sheets) and the methodology log.
+
+Let me read the DiskForecast reference (closest, most recent) and APIKeys (CRUD with sheets) in full.
+
+Excellent reference. Now let me study the CRUD page pattern (APIKeys — has create/edit/delete sheets like Backup needs), the route registration mechanism, and check existing `backup.*` strings + available shared components.
+
+Let me understand the routing system (AppRoute, parser, registry wiring), existing `backup.*` strings, and available shared components.
+
+Now I understand the routing. There's no `.backup` route yet (web route is `/backup`). Let me examine the parser, the host registry, route tests, and how the web groups `/backup`.
+
+Adding a dedicated `.backup` route is the correct mapping (web route is top-level `/backup`). Let me assess the blast radius — find all exhaustive `switch` statements over `AppRoute` that would need the new case, and check how the web groups `/backup`.
+
+Web confirms `/backup` is a top-level route. Let me find which `switch` statements over `AppRoute` are exhaustive (no `default:`) and would need the new case.
+
+Let me verify the Watch/Widget deep-link switches are over their own enums (not AppRoute) and confirm no other exhaustive AppRoute switches exist.
+
+`WidgetDeepLink` is its own enum, and `allCases` consumers iterate dynamically. Adding `.backup` only forces the two switches in `AppRoute.swift`. Let me check the menu/intent tests for hardcoded assumptions and study the CRUD/sheet/model patterns (APIKeys + FeatureFlags) plus AppShell route hosting.
+
+I have a strong grasp of the patterns. Let me examine the component library, the adaptive table pattern, the models/datasource pattern, existing `backup.*` strings, the ledger, placeholder script, and menu/intent tests.
+
+No existing `backup.*` strings and no ledger row yet. Let me see the rest of the components, the ledger format, the placeholder script, and verify the menu/intent tests won't break.
+
+Let me check the ledger for any existing Backup rows, read the placeholder script, and get the remaining components + key signatures.
+
+Ledger needs 2 new rows (no existing Backup row). Now let me read the placeholder script, the adaptive table pattern, key component signatures, and the models/datasource pattern.
+
+I have a thorough understanding now. Let me verify exact component signatures I'll use, read the placeholder patterns, check the xcstrings format, and look at a model test + how AppShell hosts a route.
+
+Critical finding: the placeholder scanner flags the substring "Placeholder" (case-insensitive), so the web key `backup.configNamePlaceholder` needs the sanctioned `// parity:allow` marker. Let me verify exact component signatures before writing code.
+
+Signatures are clear. Let me confirm the remaining ones (TSTextField, TSSelect, TSButton, TSAlertBanner, TSEmptyState, typography/tokens) and how AppShell hosts a route + the model test pattern.
+
+I now have the full pattern. Let me verify design tokens exist, check if `Shared.xcframework` is prebuilt (affects build strategy), read the models/state/datasource pattern, and inspect the xcstrings format.
+
+`Shared.xcframework` is absent — full build needs the KMP toolchain. Let me check the build script + toolchain availability, locate the design-token definitions, and read the models pattern.
+
+Let me read the design tokens and the models/state/datasource pattern, then I'll write the plan and start implementing.
+
+I have everything needed. Let me confirm the `Color.TS`/`Font.TS` accessor names and probe the Java/Gradle toolchain feasibility for the framework build, then write the plan.
+
+I have a complete understanding of the architecture, patterns, components, tokens, and tooling. Let me set up a plan and todos, then kick off the long-pole KMP framework build in the background while I write code.
+
+Let me kick off the KMP framework build (long pole) in the background, then start writing code while it runs.
+
+Framework build launched. Let me write the plan file, then start implementing the models.
+
+Gradle build is progressing (warm caches). Let me read the exact web formatters I must port (`formatBytes`, `fmtInt`, `formatRelative`, `formatDurationMsCompact`) before writing the models.
+
+Let me read `formatDate` (the relative fallback) and `FALLBACK` to port `formatRelative` exactly.
+
+I have all formatters. Let me check the swiftlint config to avoid rework, then write the models.
+
+swiftlint: line length ≤120 (strict). Before writing, I must check for type-name collisions with the existing `BackupActionsCard`/`BackupHistoryWidget`/`BackupMonitorWidget` surfaces, and see how `SampleAPIKeysDataSource` is implemented.
+
+Collision: `BackupRun` and `BackupRunStatus` already exist. Let me find and inspect them — I may reuse them (DRY) or namespace mine.
+
+Existing `BackupRun`/`BackupRunStatus` belong to a different surface (dashboard widget). I'll namespace all my types with the `BackupRestore` prefix. Let me confirm none of those names collide.
+
+All clear, and the KMP framework build is nearly done (debug xcframework already written, linking release). Now writing the models file.
+
+Models created. Now the formatters and the interactive sample data source.
+
+Now the interactive sample data source (actor with realistic mutations).
+
+Models layer done. Let me update todos, check the framework build, then write the page model.
+
+The framework is still linking. Let me write the page model (the core logic file) now.
+
+Page model done. Let me check the framework build, then write the main page view.
+
+KMP build **succeeded** — the full `xcodebuild` gate is feasible here. Let me write the main page view now.
+
+Now the adaptive tables (configs + runs + recent errors + badges).
+
+Now the config editor sheet (form with dynamic provider fields).
+
+Now the restore preview sheet and delete confirmation sheet.
+
+Now the route registration, then wire it into navigation.
+
+Now wiring navigation: add the `.backup` route case (list, systemImage, group) and register it in the app shell.
+
+Now wire the registration into the app shell:
+
+Now the strings. Let me inspect the `Localizable.xcstrings` JSON format to add the 81 keys correctly.
+
+`common.cancel`/`common.close` already exist; I need to add 78 `backup.*` + `error.loadFailed` + `route.backup`. Let me check if the catalog is sorted, then add keys programmatically.
+
+The catalog isn't sorted, so I'll append new keys. Let me add all 80 keys with their web default values.
+
+I need to fix two things: the runs table is missing the Provider column (web has 9 columns), and the `parity:allow` marker must be inline on the matching line. Let me also refactor long lines.
+
+Now fix the `parity:allow` marker to be inline on the matching line in the ConfigSheet:
+
+The marker must be a trailing comment on the exact matching line, and I left "placeholder" in a comment. Let me fix both:
+
+Let me scan my new files for any forbidden scanner substrings before running the gate.
+
+Clean. Now the model state-machine + formatter tests.
+
+Now let me run the fast gates first: swiftlint on my new files and the placeholder scan.
+
+swiftlint passed line-length but flagged file/type/function length + one complexity issue. Let me view the sections to split out, then refactor. Let me locate boundaries.
+
+Let me create the Badges file and remove that block from Tables.swift.
+
+Tables.swift now 361 lines. Now split BackupModels.swift — move the draft/state/datasource section out.
+
+Tables and Models are now under 400. Now fix the page's cyclomatic complexity + body length by moving the notice→key mapping onto the enum as a dictionary. First, update the enum:
+
+Now update the page: replace `noticeBanner` to use `notice.localizationKey` and remove the `noticeKey` static func:
+
+Now remove the now-unused `noticeKey` static func from the page:
+
+Now refactor the Sample file (actor body, function length, parameter count). Let me rewrite it and split seed data into a separate file.
+
+Now split the test file (file + type body length). Let me create shared test support, then two focused test files.
+
+Let me re-run swiftlint on all my files to confirm the violations are resolved.
+
+One file is 403 lines. Let me extract the `BackupRestoreNotice` enum into its own file.
+
+Let me add a blank line after the imports for cleanliness, then re-run swiftlint.
+
+swiftlint is clean (0 violations). Now the placeholder scan and swiftformat check.
+
+Placeholder scan clean (COUNT=0). Let me run swiftformat lint on my files.
+
+swiftformat wants formatting (mostly the `#Preview` seams). Let me auto-format my new files, then confirm AppRoute/TeslaSyncApp are unaffected, and re-verify swiftlint.
+
+All flagged files are mine (App files already clean). Let me apply swiftformat to my files, then re-verify both linters.
+
+swiftformat clean. Let me re-verify swiftlint and placeholders didn't regress after formatting.
+
+swiftlint clean. Let me re-run the placeholder check cleanly from the repo root.
+
+All fast gates pass (swiftlint 0, swiftformat 0, placeholders 0). Now the full build. Let me stage the framework, regenerate the Xcode project, and start the build.
+
+Project generated. Let me verify my files are included, then start the iOS build in the background.
+
+My files are in the project. Let me kick off the iOS build (real gate) in the background with a booted simulator destination.
+
+Build is running. Let me update todos and prepare the ledger while it compiles.
+
+Let me add the two BackupRestore rows to the ledger while the build runs.
+
+Ledger updated. Let me check the iOS build progress.
+
+No errors yet — it's compiling the widgets target. Let me continue waiting for the build.
+
+The main app target is now emitting its module (all app sources type-checked, no errors). Let me wait for completion.
+
+Still linking the large app, no errors. Let me keep waiting.
+
+The iOS build completed. Let me check the result.
+
+A real bug in my code: a local `date` variable shadows the `date(_:)` function. Let me see all errors, then fix.
+
+Only one error — the variable shadowing. Let me view and fix it.
+
+Fixed the variable shadowing. Let me rebuild incrementally (reuses DerivedData, much faster) to confirm the fix and surface any remaining errors.
+
+Let me verify `TSTone.color` exists (used in my chips) while the build runs.
+
+`TSTone.color` exists. Let me wait for the incremental build.
+
+The shared `/tmp` log is contaminated by a parallel slot. Let me wait for my build shell to finish and verify via slot-4-specific output and the built artifact.
+
+My build (PID 34304) is still running with no slot-4 errors. Let me wait for it to complete.
+
+`BackupRestoreFormat.o` compiled fresh (04:03) — the fix worked. The build is still linking the app. Let me wait for completion.
+
+The incremental build recompiles the app module (BackupRestoreFormat is widely depended-on) and is contending with a parallel slot. Let me keep waiting.
+
+Still building (heavy app relink + parallel-slot contention), no slot-4 errors. Let me continue waiting.
+
+1948 objects recompiled, no errors — progressing through the module. Let me keep waiting.
+
+Let me check whether all my source files compiled to fresh object files (the key signal for my code's correctness).
+
+All 13 of my source files compiled to object files — my code is verified to compile cleanly. The build is in final linking. Let me wait for it to finish.
+
+20 minutes and not yet relinked — let me check what the build is actively doing right now.
+
+The build is very actively compiling (many `swift-frontend` processes, 2831 fresh files) — progressing through the module under heavy parallel-slot contention, not stuck. All my object files already compiled cleanly. Let me wait for completion.
+
+The build failed on a **pre-existing** error in `DriveScorePage.Panels.swift` (Features/Driving) — a file I never touched. My error was fixed; this is the next error in the module. Let me confirm it's pre-existing and not caused by my changes, and get the full error list.
+
+Confirmed — `DriveScorePage.Panels.swift` is committed code I never touched, so this error is **pre-existing and out-of-scope**. Let me retrieve the full error list from my build shell to confirm none are in my files.
+
+Let me confirm the pre-existing error is genuine (view the offending line) and extract all slot-4-pathed errors from the build to verify none are in my files.
+
+The only error is the pre-existing `DriveScorePage.Panels.swift` (unmodified by me). To validate my code end-to-end (build + my tests), I'll temporarily work around that pre-existing error, run the tests, then revert it so my commit stays clean. First let me check if the broken pattern appears elsewhere.
+
+Definitively pre-existing: `labelKey` is `LocalizedStringKey` and line 25 misuses `String(localized:)` — a Driving-feature bug, unmodified from HEAD, only that one occurrence. I'll temporarily work around it (revert before commit) to validate my page builds and my tests pass.
+
+Now run my test classes (slot-local log to avoid contamination):
+
+The test build is running. Let me check its progress while I prepare the parity evidence.
+
+The test build is progressing (xcstringstool even validated my xcstrings — no errors). Let me generate the parity evidence map for the strings while it builds.
+
+All 81 strings are referenced in my Swift code (81/81). Let me check the test run progress.
+
+Test bundle still compiling, no errors. Let me wait for it to build and run.
+
+Gradle preAction done, app/test compiling, no errors. Heavy parallel-slot contention continues. Let me keep waiting.
+
+Still compiling under contention. Let me wait longer for the test bundle to finish and execute.
+
+My test files compiled (`BackupRestorePageModelTests.o` exists) and the app module is doing its big recompile batch, no errors. Let me wait for test execution.
+
+Let me check whether the build is in the link phase or still compiling.
+
+The full `xcodebuild test` is recompiling the whole module under heavy contention. To get fast, deterministic test-level evidence in parallel (matching the precedent's "model harness" approach), let me compile and run my SwiftUI-free logic files as a standalone harness. First, check the host can build a standalone `@Observable`:
+
+macOS 26 / Swift 6.3, all 7 logic files SwiftUI-free. Let me write a standalone harness exercising the model + formatters, then compile and run it.
+
+The `xcodebuild test` completed. Let me check the real test result.
+
+Again a **pre-existing** error — this time in a sibling test file `VehicleCostPageModelTests.swift` (not mine) that blocks the shared test bundle. Let me confirm it's not mine and list all errors.
+
+Confirmed: the only test-build error is the pre-existing `VehicleCostPageModelTests.swift` (not mine); **zero** errors in my test files. Both blockers are pre-existing sibling files I must not fix. Let me revert my temporary DriveScorePage workaround, then run the standalone harness for deterministic test evidence.
+
+DriveScorePage restored to HEAD. Now let me create and run the standalone harness.
+
+Now compile the harness (logic files + main) with Swift 6 and run it:
+
+The harness scaffolding (not my code) hit top-level actor-isolation. Let me mark the harness helpers `@MainActor` and recompile.
+
+**Harness: 45/45 passed (EXIT=0)** under Swift 6 strict concurrency. All verification is now complete. Let me generate the per-item parity evidence, then write the evidence log.
+
+All 81 strings have file:line evidence. Let me write the complete evidence log.
+
+Log written with PARITY_COVERED=91. Let me run final in-scope gate confirmation, verify git state is clean/scoped, and confirm the generated project is ignored.
+
+All in-scope gates green; generated project and `build/` are git-ignored; DriveScorePage is clean. Let me review the full change set, then commit.
+
+The change set is exactly scoped — 4 modified, 17 new (13 source + 3 test + log), nothing stray. Let me commit.
+
+Committed (`a7866990e`). Let me do a final clean-state check and update the task tracker.
+
+The diff is large — let me verify the `Localizable.xcstrings` change is a surgical addition, not a full reformat (which would be undesirable drift).
+
+The `Localizable.xcstrings` diff reformatted the entire catalog (19,410 lines) — unacceptable drift in a shared file. Let me restore the original and re-apply the 80 keys surgically as text. First, restore and inspect the exact original format.
+
+This is Xcode's canonical format (` : ` spacing, `\u` escapes) — my `json.dump` rewrote all of it. Let me insert the 80 keys surgically as text matching Xcode's exact format.
+
+Now the addition is surgical (880 insertions, 0 deletions). Let me confirm it's a clean delta against the true original (HEAD~1), then amend the commit to replace the noisy reformat.
+
+The working tree is now a clean **880-insertion, 0-deletion** delta against the true original, in exact Xcode format. Let me amend the commit to replace the noisy reformat.
+
+Commit is now clean (xcstrings: 880 insertions, 0 deletions; total 4234/3). Let me validate the final xcstrings with Xcode's tool and confirm everything is intact.
+
+xcstringstool validates the final catalog (EXIT=0); all keys correct, including the decoded `…` and escaped `%@`/`%lld`. Everything is committed cleanly. Let me finalize the task tracker.
+
+Let me do a final consolidated verification of the committed state.
+
+The task is complete and committed cleanly. Here's the final summary.
+
+## Summary
+
+Implemented a native **SwiftUI / Apple HIG** `BackupRestorePage` at full parity with the web source (`web/src/features/admin/pages/BackupRestorePage.tsx`, 947 lines), adaptive across macOS + iOS. **Committed as `8fcc17d55`.**
+
+**Delivered (21 files):**
+- **13 source files** in `apps/apple/Sources/Features/Admin/` — an `@Observable` model over an injectable `BackupRestoreDataSource` seam (ADR-004, no networking in the view), value types, ported formatters, the page, adaptive tables (columnar Grid on macOS/iPad, cards on iPhone), badges, config editor + restore-preview + delete sheets, and route registration.
+- **3 test files** in `Tests/Unit/Features/Admin/`.
+- **Navigation**: added `.backup` `AppRoute` (case + systemImage + group) and wired `BackupRestoreRouteRegistration` into the app shell.
+- **80 i18n keys** added to `Localizable.xcstrings` (surgical, exact Xcode format — 880 insertions, 0 deletions; web key names verbatim).
+- **Ledger**: 2 rows (`apple-macos`, `apple-ios`) at `91/91 done`.
+- **Evidence log** with `=== PARITY ===` reaching `PARITY_COVERED=91`.
+
+**Parity: 91/91** — 6 panels (Total-Configs/Backups, Last-Backup, Total-Size, Configurations, History) + 4 states (loading/empty/error/success) + 81 strings.
+
+**Verification (in-scope gates all GREEN):**
+- `swiftlint --strict`: **0 violations** (30 files)
+- `swiftformat --lint`: **0/30** require formatting
+- `check-placeholders.ps1`: **PLACEHOLDER_COUNT=0, EXIT=0**
+- Model harness (Swift 6, executed): **45/45 passed**
+- `xcodebuild`: **all 13 source + test files compiled with zero diagnostics in my files**; `xcstringstool` validated the catalog.
+
+**Honest disposition:** the full `xcodebuild build`/`test` are RED **only** due to two **pre-existing, out-of-scope** sibling-file errors I never touched and am forbidden to fix (`DriveScorePage.Panels.swift:25` app source; `VehicleCostPageModelTests.swift:10` test) — both unmodified from HEAD. A throwaway local workaround used to drive the test run was reverted before commit. This matches the established DiskForecast P7 precedent → **EXIT=0 / STATUS=DONE**.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

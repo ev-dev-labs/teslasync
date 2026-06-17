@@ -1,0 +1,106 @@
+I'll start by exploring the repository structure and understanding what's available, then read the web source component.
+
+Good — we're on macOS with Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, and iOS simulators all available. Platform capability is present. Let me read the web source and explore the Apple app structure.
+
+The web source is a compact, stateless playback-speed control: a ghost button showing `{speed}x` + chevron, tap cycles to next speed, right-click cycles backward, with helper functions `REPLAY_SPEEDS`, `shiftSpeed`, `nextSpeed`. Let me explore the existing Apple app structure thoroughly.
+
+A well-established pattern exists (61 surfaces). Each surface has `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`, and often `.Projection.swift`/`.Chrome.swift`/`.AdapterTests.swift`/`.ModelTests.swift`. Let me find a simple sibling to use as the exact template and confirm no PlaybackSpeedMenu exists yet.
+
+`ChartExportMenu` is the ideal template — it's a menu control like mine, simple, and has no data adapter/projection (matching my no-data-fetch case). Let me read its complete file set.
+
+Let me read these files individually to see their full contents.
+
+Excellent template. Let me read the remaining ChartExportMenu files (Views, Previews, Tests, ModelTests, strings).
+
+Now I fully understand the pattern. Let me examine the design tokens (P1/S9), how the Xcode project includes files, the native Button equivalent, and any existing replay/trip-replay native code.
+
+Key findings: the project uses **xcodegen** (`project.yml`), and there's an existing `Sources/Components/DataDisplay/Playback.swift`. Let me read the project config, the existing Playback code (critical for `ReplaySpeed` parity), and the design tokens.
+
+Critical insight: there's an existing atomic `TSPlaybackSpeedMenu` in `Sources/Components/DataDisplay/Playback.swift`, but it's the **component-library** version (explicitly Out of Scope) and uses a non-matching `[0.5,1,2,4]` Double model. My task is the **shared surface** with full web parity (`REPLAY_SPEEDS=[1,10,25,50,100]`, `shiftSpeed`/`nextSpeed`). Let me read the design tokens and check for type collisions.
+
+No collisions. The design tokens come from `../design/generated/apple`. Let me inspect what `Color.TS.*` and `Font.TS.*` tokens are actually available (especially a mono font, since the web uses `font-mono`).
+
+I now have the full token set and conventions. Let me verify the build tooling: xcodegen availability, whether the `.xcodeproj` exists, the check-placeholders script, and whether PowerShell (`pwsh`) is available for the gate.
+
+All tooling present. Let me read the placeholder checker, lint/format configs, and the Shared.xcframework build dependency (full build needs it).
+
+Key finding: the full app build requires a KMP `Shared.xcframework` (Gradle/Kotlin-Native), and `Frameworks/` only has `.gitkeep`. Let me read the pending-verifications doc, the placeholder patterns, and check Gradle feasibility to plan an honest verification strategy.
+
+Java 17 + Gradle wrapper are present. Forbidden patterns are case-insensitive (`TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` + Swift stubs) — I'll avoid all of these including the word "placeholder" in comments. Let me read the build/gate guidance in the pending-verifications doc.
+
+I now have the full picture. The established precedent (60+ prior surfaces) is clear: per-surface host-runnable gates (isolated SwiftPM build+tests, real iOS-18/macOS-15 `swiftc -typecheck`, swiftlint --strict, swiftformat --lint, placeholder gate, i18n parity, xcodegen) must be green; the full-app `xcodebuild build test` is universally **macOS-pending** (blocked by pre-existing parallel-merge collisions + KMP `Shared.xcframework` link long-pole + dev-signing — all unrelated to the surface).
+
+Let me set up tracking and the plan.
+
+Design is locked. Now writing the seven surface files following the ChartExportMenu convention exactly. Let me create them.
+
+All seven files created. Let me update tracking and begin verification — first swiftformat (auto-format my files), then swiftlint, then placeholder gate.
+
+swiftformat made no changes (already clean). Now let me run swiftformat --lint, swiftlint --strict, and the placeholder gate against my actual files.
+
+swiftformat --lint: 0/6 require formatting. swiftlint --strict: **0 violations**. Now the placeholder gate against my actual files.
+
+Placeholder gate: **PLACEHOLDER_COUNT=0**. Now the strongest proof — an isolated SwiftPM package that compiles my surface + the real design tokens under Swift 6 strict concurrency and runs the tests.
+
+**Isolated SwiftPM: 24/24 tests passed** under Swift 6 strict concurrency. Now `swiftc -typecheck` against both real SDKs (iOS-18 simulator + macOS-15) at proper deployment targets.
+
+Both SDK typechecks: **0 errors / 0 warnings**. Now `xcodegen generate` to confirm the project enumerates my files.
+
+All host-runnable per-surface gates are green and **all 7 files are enumerated** by xcodegen. Before running the full-app gate (which the precedent shows is macOS-pending), let me check how sibling surface logs terminate, to match the house convention for EXIT/STATUS.
+
+Let me read the ChartExportMenu (0066) sibling log — my template surface — to match its terminal EXIT/STATUS convention exactly.
+
+That's the definitive house convention: full-app `xcodebuild` IOS_EXIT/MAC_EXIT are recorded with their **real** values but annotated DEFERRED (pre-existing sibling collisions + signing; surface 0 errors), while surface-scoped gates are 0 and the log terminates `EXIT=0 / STATUS=DONE`. I must actually run xcodebuild to capture real exits. Let me confirm schemes, then launch the iOS scheme build+test in the background (the Kotlin/Native long pole).
+
+Schemes and simulator confirmed. Launching the iOS scheme `build test` in the background (it runs the Kotlin/Native `Shared.xcframework` pre-action — the long pole). I'll capture real exit codes while running the fast exact-gate commands.
+
+The iOS build is running its Kotlin/Native `:core:assembleSharedXCFramework` pre-action (the long pole; I can see parallel-slot Gradle contention too, exactly as the precedent documents). While it builds, let me capture the authoritative placeholder-gate result using the **real** `check-placeholders.ps1` script against an isolated copy of my files.
+
+Official placeholder script: **PLACEHOLDER_COUNT=0, EXIT=0** (and its self-test passes, so the scanner genuinely works). Let me verify i18n parity authoritatively and check iOS build progress.
+
+i18n parity confirmed: **1/1 web key** (`replay.controls.speed`), 0 missing, 0 dead. The iOS build is linking the Kotlin/Native framework slices. Let me wait and poll.
+
+DEBUG `Shared.xcframework` assembled; now on `:core:linkReleaseFrameworkIosArm64` (the RELEASE Kotlin/Native link — the documented long pole). Still running. Let me continue polling.
+
+The Gradle pre-action finished and the **real app-target Swift compile** (`swiftc -module-name TeslaSync ... -target arm64-apple-ios18.0-simulator -swift-version 6`) is now underway — compiling all merged surfaces including mine. Still 0 PlaybackSpeedMenu mentions. Let me continue polling.
+
+iOS build finished: **IOS_EXIT=65**. The errors are the documented pre-existing parallel-merge collisions in **other** agents' surfaces (`RecentDrivesModel`/`RecentDrivesUpdate`/`RecentDrivesLoadStatus`/`RecentDrivesConnection` ambiguous across `RecentDrivesListWidget.*` + `RecentDrivesSection.*`). Let me confirm the 3 `PlaybackSpeedMenu` mentions are benign (not errors).
+
+**Definitive:** ZERO `PlaybackSpeedMenu` errors/warnings. The 3 mentions are all benign — my `.strings` is copied + validated into the app bundle (`CopyStringsFile` succeeded, UTF-8). All 30 errors are pre-existing parallel-merge collisions in other agents' `RecentDrives*` / `StateTimeline*` surfaces — exactly the documented blockers. Now launching the macOS scheme build+test to capture MAC_EXIT (Kotlin now cached).
+
+macOS build finished: **MAC_EXIT=65**. Let me confirm zero PlaybackSpeedMenu errors there too, and enumerate the offending files.
+
+macOS shows ZERO PlaybackSpeedMenu errors and—interestingly—ad-hoc codesigning succeeded with no `.swift: error:` lines, yet ended `** TEST FAILED **` (MAC_EXIT=65). Let me characterize the macOS failure precisely for an honest log.
+
+macOS failure fully characterized: exactly **4 errors, all macOS development-signing** (`entitlements require signing with a development certificate`) at the target gate *before* app Swift compilation — zero compile/ambiguity errors, zero PlaybackSpeedMenu errors. This matches the ChartExportMenu precedent exactly. Let me confirm 0 codesigning identities (evidence) and that the generated project is git-ignored.
+
+All evidence confirmed: **0 valid codesigning identities**, generated `.xcodeproj` is git-ignored, and only my 7 files are new. Let me gather the iOS status markers/totals to quote, then write the comprehensive log.
+
+All evidence gathered. iOS: 108 compile errors across **10 sibling-slot files** (`RecentDrives*`/`StateTimeline*`), zero PlaybackSpeedMenu. Now writing the comprehensive gate log following the house convention.
+
+Log written. Let me clean up temp harnesses, check for pre-commit hooks (to avoid surprises from unrelated tree state), and update tracking before committing.
+
+No git hooks active — safe to commit. Updating tracking and committing the 7 surface files + log.
+
+Committed as `0712a4ad7`. Let me do a final integrity check: confirm a clean tree (only the git-ignored generated project remains) and re-confirm the committed surface still passes lint/format.
+
+All verified. Let me finalize tracking.
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0097-PlaybackSpeedMenu.log | 237 +++++++++++++++++++++
+ .../shared-surfaces/PlaybackSpeedMenu.Model.swift  | 199 +++++++++++++++++
+ .../PlaybackSpeedMenu.ModelTests.swift             | 112 ++++++++++
+ .../PlaybackSpeedMenu.Previews.swift               |  53 +++++
+ .../shared-surfaces/PlaybackSpeedMenu.Tests.swift  | 108 ++++++++++
+ .../shared-surfaces/PlaybackSpeedMenu.Views.swift  |  68 ++++++
+ .../shared-surfaces/PlaybackSpeedMenu.strings      |  17 ++
+ .../shared-surfaces/PlaybackSpeedMenu.swift        |  68 ++++++
+ 8 files changed, 862 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0097-PlaybackSpeedMenu.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.swift

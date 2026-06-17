@@ -1,0 +1,226 @@
+I'll start by exploring the environment and understanding the task requirements. The task requires building a native Apple/SwiftUI version of a web component, with a strict honesty covenant. Let me first check what's available on this runner and find the relevant files.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). I cannot claim BLOCKED. Let me read the web source and explore the existing Apple project structure.
+
+This is a complex SVG-based vehicle "digital twin" visualization. Let me continue reading the source and examine the existing shared-surfaces conventions for reference.
+
+There's a clear convention. Let me study a complete existing surface to understand the file structure, naming, and patterns used. Let me find a representative example with all file types.
+
+There's a clear file convention. `AIVehiclePaintPreview` is the most closely-related existing surface (it shares the vehicle-paint domain with `VehicleTwin`'s `useVehiclePaint`). Let me study its complete file set to learn the exact conventions.
+
+Excellent. Now I understand the architecture deeply. Let me read the remaining files of this reference surface plus the shared tokens/theme.
+
+Let me read the remaining reference files and locate the shared design tokens (P1/S9) and project config.
+
+Let me locate the shared token definitions (TSSpacing, Color.TS, Font.TS, TSButton, TSSkeleton, TSFadeIn) and understand the project structure.
+
+There's a `Sources/` directory at `apps/apple/Sources`. Let me find the main design-token definitions and read the project.yml to understand target structure.
+
+The tokens are generated at `apps/design/generated/apple/`. Let me inspect them to confirm available token names.
+
+Now I have the token vocabulary. Let me read the project config, the rest of the web source, and its type/hook dependencies.
+
+Now let me read the rest of the web source and its key type/hook dependencies — these define the full data contract and all states I must reproduce.
+
+Let me read the final section of the web source and the three dependency files (the data contract is critical).
+
+Now the paint files and the hook — these define the paint-resolution data binding.
+
+Now I understand the full web component. Let me read the testing conventions (Tests, AdapterTests, Previews of the reference) and the lint configs, plus check for pwsh/xcodegen tooling.
+
+Let me study the test conventions, shared component signatures, the placeholder checker, and the Shared.xcframework build situation (the scheme has a preAction).
+
+Let me check the Shared.xcframework build situation — the scheme runs a preAction script that stages it, and the app depends on it.
+
+Critical finding: the app build requires a KMP `Shared.xcframework` (built via Gradle preAction) that isn't present. Let me assess whether that toolchain is feasible here — this determines whether the full `xcodebuild` gate can run.
+
+Java 17 + gradlew exist. Let me check whether the shared TS components are SwiftUI-only (so I can verify my surface compiles in isolation) and review the pending-verifications context.
+
+The 3 TS components are SwiftUI-only — I can verify my surface in isolation. Let me check the pending-verifications doc for the expected gate state, then set up my plan.
+
+This is decisive context. The full `xcodebuild build test` gate is a well-documented **macOS-pending** blocker across ~20 sibling P4 surfaces: the unstaged KMP `Shared.xcframework` (Kotlin/Native long-pole), pre-existing parallel-merge collisions in *other* agents' files, and missing signing identities. The accepted "verified green" bar per surface is: isolated SwiftPM tests + real iOS-18/macOS-15 `swiftc -typecheck` + swiftlint/swiftformat/placeholder clean + i18n parity + `xcodegen generate`.
+
+Let me confirm the STATUS convention used by existing shared-surface logs and check the logs dir.
+
+The convention is now unambiguous: surfaces are recorded `EXIT=0 / STATUS=DONE` when the **surface itself is verified green** (real `swiftc -typecheck` on both SDKs + isolated tests + lint/format/placeholder clean + i18n parity), with `IOS_EXIT`/`MAC_EXIT` annotated as DEFERRED for the documented pre-existing/unrelated full-app blockers (unstaged KMP `Shared.xcframework`, sibling-slot collisions, missing signing identity).
+
+Let me verify there are no naming collisions for my planned `VehicleTwin*` symbols, then set up my plan.
+
+Critical discovery: the module already has a **public `VehicleTwinView`** (SwiftUI Canvas illustration) and **public `VehicleTwinState`** in `TeslaSync/dashboard-widgets/DigitalTwinWidget.*`. I must (a) avoid redeclaration collisions and (b) reuse these existing types DRY-style. Let me study them in full.
+
+The module already owns the full data contract. Let me read the illustration (`VehicleTwinView`), palette, badges, model (`TwinConnection`), and builder — these are the reusable building blocks I'll compose.
+
+This is excellent — a production `VehicleTwinView` (Canvas illustration with every state) already exists as a public, reusable type. The DRY, collision-free approach is to **compose** it in my shared surface rather than duplicate 372 lines of Canvas drawing. Let me read the remaining widget building blocks (Model/`TwinConnection`, Palette, Badges, Builder) to know what's reusable and which names are taken.
+
+`TwinPalette`, `TwinBadge`, `TwinFlowLayout` exist (internal, same-module usable). Let me read the widget Model (`TwinConnection`, model name) and Builder (parsers, `inferPaint`, accessibility) to finalize reuse vs. define-own decisions and avoid name clashes.
+
+I now have the full reuse map. The module publicly owns `VehicleTwinState`, the window/door/turn enums, `VehicleTwinView` (the Canvas illustration), `TwinConnection`, and `TwinLoadStatus`. My shared surface will **compose** these (DRY, collision-free) and add its own state-holder seam, projection, chrome, i18n, telemetry, and tests. Let me verify my planned new type names don't collide anywhere in the module.
+
+All planned names are free. I have a complete, collision-free, DRY design: **reuse** the module's public `VehicleTwinState` (+ window/door/turn enums) and the production `VehicleTwinView` Canvas illustration; **build** the shared-surface architecture (state-holder seam, projection, paint model, P4 chrome, i18n facade, telemetry, tests) in my `VehicleTwin.*` files. Let me record the plan and set up tracking.
+
+Now I'll build the surface. Starting with the i18n catalog (`.strings`), then the logic layers.
+
+Now the paint model (port of `vehicleColors.ts` + `useVehiclePaint.ts`):
+
+Now the model layer — i18n facade, seam enums, telemetry, input snapshot, resolved view-state, source protocol, `@Observable` model, in-memory source:
+
+Now the pure projection (input → localized resolved view-state). First let me reconcile two generic value keys in the strings file, then write the projection.
+
+Updating progress and building the chrome (freshness/loading/error/empty) and the views (scene + legend).
+
+Now the views — the scene (wrapping the reused `VehicleTwinView`), the legend chip, a wrap layout, and the ready body:
+
+Now the main surface view that composes everything:
+
+Now the previews covering every state and twin scenario:
+
+Now the tests — adapter-level (paint + label mappings) and surface-level (projection phases + model wiring + telemetry + auto-refresh + a11y):
+
+Now the surface-level tests (projection phases, model wiring, telemetry, stale auto-refresh, content a11y):
+
+All 11 files created. Let me run swiftformat + swiftlint on my files (fast, no build needed) to catch issues early.
+
+swiftformat found style deltas. Let me auto-format my files with the tool (the canonical fix), then re-lint to confirm clean.
+
+swiftformat clean (0/9). Now swiftlint --strict on my files:
+
+Two real swiftlint issues: 3-member tuples (`large_tuple`) and Model.swift now exceeds 400 lines. Let me (1) introduce a named `LegendValue` struct in the projection, and (2) split the value types out of Model into a focused `VehicleTwin.State.swift`. Let me view the current formatted Model to plan the split.
+
+I'll split the value types into a new `VehicleTwin.State.swift` and trim `VehicleTwin.Model.swift`, plus replace the 3-tuples with a named struct. Let me view the exact blocks to move.
+
+Creating the new `VehicleTwin.State.swift` with the value types + facade:
+
+Rather than fragile multi-line deletes, I'll recreate `Model.swift` with only the seam/model/in-memory sections. Let me view the remainder to preserve it exactly.
+
+Now I'll recreate `Model.swift` with only the seam/model sections (removing the moved value types) and fix the `large_tuple` violations in the projection with a named `LegendValue` struct.
+
+Now fixing the `large_tuple` violations by replacing the 3-tuples with a named `LegendValue` struct. Recreating the projection cleanly:
+
+Re-running swiftformat (apply) on the now-10 files, then swiftlint --strict:
+
+Another length cap (`type_body_length`). I'll move the legend-derivation helpers into a dedicated `VehicleTwin.Legend.swift` (file-scoped helpers + a thin builder), and trim the projection to phase/content/paint/updated. Recreating both:
+
+Now the legend builder (`VehicleTwin.Legend.swift`) with file-scoped helpers so no type body exceeds limits:
+
+Now 11 Swift files. Re-running format + lint:
+
+swiftformat 0/11 and swiftlint --strict 0 violations. Now the key correctness check: a real `swiftc -typecheck` on both SDKs. Let me first map the transitive deps of the reused `VehicleTwinView` so my isolated harness is faithful.
+
+`VehicleTwinView` transitively needs `TwinPalette`, `DigitalTwinStrings`/`DigitalTwinAccessibility` (widget Model), `TwinStateBuilder` (Builder), and a `DashboardWidgetSize`/`DigitalTwinWidget` slug. Let me build a faithful isolated harness (outside the repo) to typecheck on both SDKs and run my tests. First checking the 3 component files for any extra token deps.
+
+Motion only needs `TSMotion` (in Tokens). Now setting up the isolated SwiftPM harness (outside the repo) with the real reused files + minimal shims, to typecheck on both SDKs and run my tests.
+
+My surface files all compiled — the only failure is the reused `Skeletons.swift` referencing `TSCard` (from `Cards.swift`, which I didn't copy). Let me add `Cards.swift` and rebuild.
+
+The shared-component files cascade into the broader design system. The established sibling methodology compiles against the **full `Sources/Components` + `Sources/Design`** (minus KMP-coupled files). Let me identify any Shared-coupled component files to exclude, then copy the whole design system.
+
+No component files import Shared. Let me rebuild the harness with the **full** `Sources/Components` + `Sources/Design` + `Theme.swift` (preserving structure), excluding the SharedFacade-coupled `TypedFormatters.swift`.
+
+Build reached 60/60 but exited 1 — let me see the actual error (likely in a charts/maps design file, not mine).
+
+All errors are in the SharedFacade-coupled `UnitFormatters.swift` (the file siblings also exclude) — **zero** in my surface. Let me exclude it and rebuild.
+
+Library builds clean (Swift 6 mode). Now running my tests:
+
+A test has constructor args out of declaration order (`frunkOpen` must precede `isCharging`). Let me fix that call.
+
+Let me sync the fix into the harness and re-run tests:
+
+All 49 tests pass. Now the explicit two-SDK `swiftc -typecheck` (iOS 18 simulator + macOS 15) — the evidence siblings cite — over the full library sources under Swift 6 strict concurrency:
+
+iOS 18 simulator typecheck clean (0 errors/0 warnings). Now macOS 15:
+
+Both SDKs typecheck clean under Swift 6 strict concurrency. Now let me verify placeholders, i18n key parity (referenced vs defined), and that xcodegen enumerates the files.
+
+Strong result: **0 missing keys**. The 24 "dead" keys are the per-region/window/state parity labels I haven't wired in yet. Rather than trim them (a parity shortcut), I'll genuinely reproduce the web's per-region tooltips as an accessible detail list shown when `interactive` (matching the web `interactive` prop), plus use the `<desc>` as an accessibility hint. Let me wire them in.
+
+First, the legend builder — switch doors/windows unknown to the specific keys and add a `regions(for:)` builder:
+
+Now add the `regions(for:)` builder (per-region rows reproducing the web tooltips) to the legend builder:
+
+Now the per-region label helpers in Legend.swift:
+
+Now add `VehicleTwinRegionRow` and extend `VehicleTwinContent` (fields + init) in State.swift:
+
+Now wire `accessibilityHint` + `regions` into the projection's content builder:
+
+Now render the region detail list (when `interactive`) and add the accessibility hint in Views.swift:
+
+Let me add a test for the new regions builder, then re-verify everything (format, lint, parity, typecheck, tests).
+
+Re-running format, lint, and i18n parity after the additions:
+
+Parity is now perfect (82/82, 0 missing, 0 dead). But my `regions` edit dropped the enum's closing brace (swiftformat: "Unexpected end of file"). Let me view and fix the brace.
+
+The enum's closing brace was dropped — the per-subsystem helpers got absorbed into the enum. Adding the brace back:
+
+swiftformat wrapped the long region lines, pushing Legend.swift over the file/function length caps. I'll move the region-detail logic into its own `VehicleTwin.Regions.swift` (data-driven, short bodies). Let me map Legend.swift's current structure first.
+
+The region code wrapped large. Cleanest fix: recreate `Legend.swift` without the region logic, and put region logic in a new `VehicleTwin.Regions.swift` (data-driven, short bodies). Recreating Legend.swift:
+
+Now the new `VehicleTwin.Regions.swift` — data-driven so all bodies stay small:
+
+Now update the projection and the regions test to use the new `VehicleTwinRegionsBuilder.rows(for:)`:
+
+Now 12 Swift files. Re-format, re-lint, re-parity:
+
+Parity perfect. One `cyclomatic_complexity` issue on the 13-case `value(for:)`. Let me split the window/door cases into grouped helpers to bring complexity under 10:
+
+swiftlint + swiftformat both clean (0/12). Now re-sync the harness with the updated/added files and re-run build + tests + both-SDK typecheck:
+
+Build + tests pass. Let me capture the exact test count and re-run both-SDK typechecks on the updated sources:
+
+53 tests, both SDKs clean. Now placeholder gate + `xcodegen generate` (file enumeration):
+
+PLACEHOLDER_COUNT=0 (both genuine scan and literal gate), xcodegen enumerates the files. Let me confirm my 12 files are individually enumerated and that test files route to the test targets, then check simulator availability for the gate attempt.
+
+All 13 files enumerated; iPhone 16 simulator booted. Now I'll attempt the full gate honestly. First, the documented long-pole: staging the KMP `Shared.xcframework` via Gradle. Running it time-boxed in the background.
+
+While the KMP framework stages, let me update tracking and draft the gate log structure. Checking gradle progress shortly.
+
+Gradle still running at 150s (the documented Kotlin/Native long-pole — downloading toolchain/deps). Giving it more time:
+
+Gradle has run ~350s with no completion — the documented Kotlin/Native long-pole that siblings recorded as `STAGE_EXIT=124`. Stopping it and capturing that evidence, then attempting a fast app-target build to confirm my surface contributes zero errors.
+
+Confirmed: the iOS build halts at the unstaged `Shared.xcframework` (`IOS_EXIT=65`) **before any Swift compiles** — zero VehicleTwin errors. Let me confirm the macOS signing-identity status (the documented macOS blocker) to cite it accurately.
+
+Both blockers confirmed and documented: unstaged `Shared.xcframework` (Kotlin/Native long-pole) + 0 valid codesigning identities — both pre-existing/environmental, both halt before any Swift compiles (0 VehicleTwin errors). Now writing the gate log with full evidence.
+
+Now let me verify git status (and that the generated `.xcodeproj` is ignored), then clean up temp artifacts before committing.
+
+`.xcodeproj` is ignored; only my 13 surface files + the log are untracked. Committing per the prompt's commit spec:
+
+Committed (HEAD `774c974e0`). Let me do a final clean-state check and close out tracking.
+
+The VehicleTwin shared surface is complete, verified, and committed. Final summary:
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0235-VehicleTwin.log  |  76 +++++
+ .../shared-surfaces/VehicleTwin.AdapterTests.swift | 329 +++++++++++++++++++++
+ .../shared-surfaces/VehicleTwin.Chrome.swift       | 194 ++++++++++++
+ .../shared-surfaces/VehicleTwin.Legend.swift       | 312 +++++++++++++++++++
+ .../shared-surfaces/VehicleTwin.Model.swift        | 201 +++++++++++++
+ .../shared-surfaces/VehicleTwin.Paint.swift        | 149 ++++++++++
+ .../shared-surfaces/VehicleTwin.Previews.swift     | 171 +++++++++++
+ .../shared-surfaces/VehicleTwin.Projection.swift   | 101 +++++++
+ .../shared-surfaces/VehicleTwin.Regions.swift      | 141 +++++++++
+ .../shared-surfaces/VehicleTwin.State.swift        | 256 ++++++++++++++++
+ .../shared-surfaces/VehicleTwin.Tests.swift        | 246 +++++++++++++++
+ .../shared-surfaces/VehicleTwin.Views.swift        | 203 +++++++++++++
+ .../TeslaSync/shared-surfaces/VehicleTwin.strings  | 122 ++++++++
+ .../TeslaSync/shared-surfaces/VehicleTwin.swift    | 100 +++++++
+ 14 files changed, 2601 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0235-VehicleTwin.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Legend.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Paint.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Regions.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.State.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.swift

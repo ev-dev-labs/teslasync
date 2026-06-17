@@ -1,0 +1,33 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Let me explore the web components, types, hooks, and existing Apple app structure in parallel.
+
+Let me read the web components and explore the Apple app structure.
+
+Now let me explore the Apple app structure to understand existing patterns and conventions.
+
+This is a large existing codebase with a different directory layout than the prompt's idealized path. Let me investigate the actual structure, existing patterns, tooling, and parity manifest.
+
+All tooling is available, and XRay **components** already exist in `feature-views/`. The page composition is what's missing. Let me examine the ledger, project config, existing XRay components, and nav registration.
+
+The ledger has no IngestXRay row yet. Let me read the ledger format, an existing page (`AlertStudioPage`), and the nav registration that already references XRay.
+
+Now I understand the structure. Nav already registers `/admin/ingest-xray`, XRay components exist in `feature-views/`, and pages like `AlertStudioPage` live there too. Let me read the gate contract, an existing completed page log for format, and the existing XRay component APIs.
+
+Let me read a completed page log for the exact format, the gate contract, and the P1/S8 IngestXRay state holder prompt.
+
+Critical insight: the FleetAPI log reveals sibling pages live under `apps/apple/Sources/Features/Admin/` (not `TeslaSync/feature-views/`), and the full `xcodebuild` is out-of-scope (KMP `Shared.xcframework` unavailable) — siblings use isolated `swiftc -typecheck` + a runnable model harness. Let me verify the actual `Sources/` structure and the FleetAPI sibling.
+
+The canonical app is `apps/apple/Sources/` (clean P1-P7 structure); `TeslaSync/feature-views/` is a separate legacy tree. Sibling admin pages (FleetAPI, ApiPlayground, etc.) are my templates. Let me study the FleetAPI sibling end-to-end, routing, the most-similar LiveSignalInspector, and the component/facade APIs.
+
+Excellent pattern clarity. Let me read the FleetAPI view, sample source, the route enum, the app wiring, and the most-similar LiveSignalInspector page.
+
+`LiveSignalInspectorPage` is the near-perfect template (vehicle picker + "select vehicle" prompt + embedded P3 table, dual data source). Let me read its model, the route enum, and the component/charts library APIs.
+
+Now let me read the design tokens and the key component APIs I'll compose (charts, table, statcard, glass panel, states, pickers, typography).
+
+Let me read the chart models/container, the DataTable and StatCard, and locate the token definitions (TSSpacing, Color.TS, Font.TS, TSRadius).
+
+Let me extract the exact public APIs of the components I'll compose (GlassPanel, StatCard, EmptyState, ErrorDisplay, Skeleton, Badge, Button, FadeIn, Spinner, typography, relative timestamps).
+
+I have the component APIs. Now let me read the routing layer, the route registration + sample-source pattern, the localization catalog format, a sibling test, and relative-time helpers.

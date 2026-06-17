@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure to understand both the web source page and the existing Apple app architecture.
+
+Now let me explore the web components, hooks, types, and the Apple app structure in parallel.
+
+Let me read the web components in detail and explore the Apple app structure.
+
+Now let me explore the Apple app structure to understand existing patterns.
+
+The TeslaSync directory has a different structure than the prompt's target path. Let me explore it thoroughly.
+
+This is a large existing codebase. Let me look at the parity manifest and existing page patterns to understand conventions.
+
+Existing XRay components exist (P3 component library). Let me examine them and find the manifest record for this page.
+
+Let me examine the existing XRay component Swift files to understand their APIs.
+
+Let me look at the models, the remaining components, the project config, and find existing page examples.
+
+Critical finding: the project uses XcodeGen, and `Features/Admin/` is NOT in the build sources — existing pages live in `feature-views/`. Let me check toolchain availability and study the closest precedent (AlertStudioPage) plus navigation registration.
+
+Xcode 26.5, swift 6.3.2, swiftlint, xcodegen all available — the gate is NOT blocked. Now let me resolve the directory discrepancy by checking how prior admin pages were placed and check their logs.
+
+The real convention is `apps/apple/Sources/Features/Admin/` (the prompt's `TeslaSync/Features/Admin` path is slightly off; `Sources/` is the actual build path). DLQInspectorPage is the perfect precedent. Let me study it and the navigation registration.
+
+This is now clear. Convention: `Sources/Features/Admin/<Page>.swift` + `<Page>Model.swift` + `<Page>RouteRegistration.swift` + tests. Let me study the DLQInspector precedent and the XRay P3 component types in detail.
+
+Let me examine the DLQ model, the route enum, route parser, and the XRay component models that define the shared types.
+
+Now I understand the self-contained page convention. Let me examine the shared component library, the route system, the existing XRay types, and find a page that uses Swift Charts + a picker as a template.
+
+Now let me read the full route files, the chart wrapper, a chart-using page, and the existing IngestXRay types.
+
+Let me read the chart series types, the IngestXRay enums/types, a chart page example, and the route host registry.
+
+Let me read the fields table model, bucket chart model, chart models, and the key shared UI components.
+
+I have all the shared value types. Now let me read the shared UI components, the value-kind/relative-time helpers, and the DLQ data-source/sample pattern to mirror.
+
+Let me read the fields adapter (value-kind/relative-time helpers), DLQ models/sample pattern, route registry, typography, and metrics components.
+
+Let me check the bucket chart types, the sample data-source pattern, route registry, typography/metrics components, and whether Shared.xcframework is staged.
+
+Shared.xcframework isn't staged and xcstrings is 4.9MB — I'll need care. Let me check the build script feasibility, pwsh/placeholder tooling, the test pattern, and typography/metrics components.
+
+`pwsh` is available. The Shared.xcframework needs a Gradle/Kotlin-Native build — that's the long pole, so I'll kick it off in the background now while I write code. Let me also locate the test file and read typography/metrics.
+
+Let me read the test pattern, typography, and metrics components while the framework builds.
+
+Let me check the gradle build progress — the wrapper shell returned but I need to verify the actual build is progressing.
+
+The gradle build is progressing (compiling Kotlin/Native). Let me set up my plan and todos, then check the chart conventions and remaining components.
+
+Let me check the select/picker rendering approach and confirm design-token members.
+
+Excellent — the feature-views provide reusable presentational pieces (`XRayControlSelect`, `XRayControlsLayout`, `XRayFieldsTableView`). Let me read the header strip and bucket chart views to confirm the full set of reusable P3 pieces.
+
+Let me read the bucket chart's models and chart view to confirm the last reusable pieces.
+
+I now have the complete picture. The page (P7) will compose the P3 presentational sub-views with one central-state model — exactly matching the web page's structure. Let me set up tracking and check which strings already exist in the catalog.
+
+No `admin.xray.*` keys exist yet. Let me verify generic catalog keys and confirm a few components exist, then record my plan.
+
+All generic keys exist. Let me read the route parser and ledger format, then record my plan and start writing.
+
+I have everything I need. Let me record the plan and todos, then build the implementation.
+
+Setting up the models first.
+
+Let me verify skeleton component signatures and check gradle progress before writing the views.
+
+Gradle build succeeded (8m19s). Let me write the page view and its sections, then stage the framework.
+
+Now the route registration and navigation wiring.
+
+Now the navigation wiring edits across the three App files:
+
+Let me check route-title key convention and any route-exhaustiveness tests before finalizing strings.
+
+Let me inspect the exact catalog opening bytes so I can do a precise textual insertion that keeps the rest byte-for-byte unchanged.
+
+Catalog format confirmed. Let me insert the page keys with a precise textual insertion (keeping the rest byte-for-byte unchanged) via Python.
+
+The anchor whitespace differs. Let me make the insertion robust by locating `"strings"` then the following brace.
+
+11 keys added, catalog still valid JSON. Let me verify the diff is minimal, then write the tests.
+
+Catalog diff is clean (121 insertions, 0 deletions). Now let me check the swiftlint config limits, then write the tests.
+
+Now the model tests, mirroring the DLQ test style (split across an extension to respect body-length limits).
+
+Now let me verify. First, lint my new files, run the placeholder scan, and stage the framework in parallel.
+
+Framework staged. My Sources files lint clean; 5 long lines in the test file need wrapping. Let me view and fix them.
+
+Let me wrap the 5 long lines using a helper.
+
+Now let me re-lint, run the placeholder scan, and check swiftformat.
+
+swiftlint clean (0 violations). Let me run the placeholder check from repo root and swiftformat lint.
+
+Placeholder scan clean (COUNT=0). swiftformat wants auto-formatting on 2 files — let me apply it, then re-verify both linters.
+
+Both formatters pass (0 violations). Now let me regenerate the Xcode project and run the build.
+
+Project regenerated with my files. Now let me build the full app (macOS scheme — no simulator/signing needed) to verify compilation. This is heavy, so I'll run it in the background.
+
+The build is running. Let me monitor it while I prepare the evidence log.
+
+The build is progressing with 0 errors. Let me verify the xcodebuild process is still alive and check the log.
+
+Build is alive and compiling with 0 errors. Let me wait for it to finish.
+
+Still compiling (module emit phase, 0 errors). Let me continue waiting.
+
+Module emitted successfully — whole-module type-check passed (including my files, 0 errors). Now finishing object compilation + linking. Let me wait for the final result.
+
+Per-file object compilation continuing (0 errors, whole-module type-check already passed). Let me keep waiting.
+
+**BUILD SUCCEEDED** (EXIT=0, 0 errors) — the full macOS app compiled cleanly with my files. Now let me run my model tests.
+
+Tests are building/running. Let me wait for the result.
+
+Test bundle build failed with a compile error. Let me find it.
+
+The error is in a **pre-existing** test file (`GDPRExportPageModelTests.swift`) — not mine — a Swift-6 actor-isolation break that blocks the whole test target from building. Let me confirm I didn't touch it and check the scope of this inherited break.
+
+Confirmed: the break is solely in the pre-existing `GDPRExportPageModelTests.swift` (from commit `3a3340bd1`), untouched by me. To get honest pass/fail evidence for my tests, I'll temporarily sideline that one broken file (not committing the change), run my tests, then restore it.
+
+Tests running with the broken file sidelined. Let me wait for results.
+
+Another pre-existing test-target error surfaced. Let me find it.
+
+Another inherited pre-existing break (`VehicleCostPageModelTests.swift`). These are Swift-6 concurrency breaks in sibling P7 admin test files, not mine. Let me find ALL of them upfront so I can sideline them in one batch, run my tests, and restore.
+
+All admin test classes have @MainActor, so the break is a different construct. Let me inspect the exact broken lines to grep for all occurrences.
+
+Let me harvest the complete set of inherited-broken test files from both prior build logs at once.
+
+Only 2 broken files surfaced so far. Let me sideline VehicleCost too and rebuild-for-testing to check for more, then run my tests.
+
+**TEST BUILD SUCCEEDED** — exactly 2 inherited-broken files. Now let me run my tests against the built bundle.
+
+My tests ran (19 executed, 1 failure). Let me find the failing assertion.
+
+The model is correct (new column → descending, per `useSortToggle`); my test assertion was wrong. Let me fix the test to verify both toggle directions.
+
+Let me re-lint the test file and re-run the tests.
+
+**TEST SUCCEEDED — 19 tests, 0 failures.** Now let me restore the 2 sidelined pre-existing files and verify the repo state is clean.
+
+Clean in-scope state — only my files changed; the 2 pre-existing files restored unmodified. Let me do a final consolidated lint/format/JSON check on all touched files.
+
+All formatters green and catalog valid. Let me run the final placeholder scan and gather parity evidence (file + symbol) for the log.
+
+All gates green for my scope (placeholder=0, lint=0, build succeeded, 19/19 tests pass). Now let me write the evidence log.
+
+Now let me update the apple-ledger.json with the two covered rows (macos + ios).
+
+Ledger updated cleanly (18 insertions). Let me do a final repo-state check, then commit.
+
+Repo state is clean and fully in scope. Let me commit.
+
+Commit succeeded (`93b8e3f52`). Let me finalize: mark todo done, verify a clean working tree, and clean up temp files.
+
+The task is complete. Let me provide the final summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

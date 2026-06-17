@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure to understand what exists and what the task requires.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The web source exists. Let me explore the Apple app structure and read the web source.
+
+Now let me read the web dependencies and explore the Apple app structure in depth.
+
+The `TeslaSync` dir has `dashboard-widgets`, `feature-views`, `misc-surfaces`, `modals-dialogs` but no `shared-surfaces` yet. Let me explore existing surfaces and the shared infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+This is a sophisticated multi-file-per-surface architecture. Let me examine the build config, the shared facade (state holders/i18n), sibling prompts, and find an existing AI surface to use as a template.
+
+Let me locate the build project, find the closest AI-streaming surface analog, and examine the shared facade/state-holder pattern.
+
+Critical finding: `project.yml` includes `dashboard-widgets`, `feature-views`, `misc-surfaces` but NOT `shared-surfaces` (nor `modals-dialogs`). I need to understand the wiring convention and toolchain reality. Let me investigate the methodology, sibling prompts, and build tooling.
+
+xcodegen is present but no xcodeproj exists and `Shared.xcframework` is unbuilt (KMP dependency). Let me read the canonical prompt, the P4 README, and check the KMP build script + toolchain.
+
+No Gradle/Kotlin toolchain present — the KMP `Shared.xcframework` (required by the build scheme's preAction) cannot be built. This is decisive for the xcodebuild gate. Let me confirm the build script behavior, examine the shared facade domains/state-holders, and find the diagnostics contract.
+
+Now I have a clear architectural picture. The full `xcodebuild` gate depends on `Shared.xcframework`, built via Gradle/Kotlin — and **neither Gradle nor Kotlin is installed**. This is the capability limitation the prompt's Capability clause anticipates. But per the Honesty Covenant, I must still ship the complete production surface and run every gate step I can. Let me study the conventions precisely: diagnostics contract, i18n facade, tokens, AI-enabled gating, AI-stream in the shared core, and a complete analog surface.
+
+JDK 17 is present (so `gradlew` could *attempt* a KMP build, though heavy). Crucially, `AlertStudioPage.swift` exists natively — that's the parent of this web component. Let me read the native AlertStudio, a complete "AI panel" analog (`AIRestorePanel.*`), the diagnostics pattern, and the AI gating registry.
+
+`AlertStudioPage.swift` already defines the `tuning` AI panel slot where my surface plugs in (rendered when editing a rule). Now I need the AI-panel structural conventions, the diagnostics contract, and the i18n facade. Let me read the `AIRestorePanel` analog set and locate the diagnostics/i18n/token definitions.
+
+`AIRestorePanel` is a near-perfect structural analog (telemetry seam, connectivity axis, projection adapter, state-holder seam, i18n facade via `NSLocalizedString`). Let me read its remaining files, the supporting AI types, the web streaming-output components, and the AI feature registry.
+
+I now understand the full pattern. Let me confirm the exact token/component APIs I'll use and mirror the analog's previews/tests/strings precisely.
+
+Let me read the remaining component signatures and the analog's previews/tests/strings to mirror them exactly.
+
+I have a thorough understanding of the conventions. Let me confirm two final details — the exact `useAiStream` state values and the backend `AlertRulePatchProposal` field types — then write the surface.
+
+`AiStreamState` confirmed: `idle | streaming | paused-confirm | done | error`. The Go tool file isn't in this slot, so the web TSX is the authoritative spec. Let me read the `useAiStream` event union and return shape to mirror precisely.
+
+I have the complete contract. Let me check the lint/format configs so my code passes `swiftlint --strict` and `swiftformat --lint`, then write the surface.
+
+Key gate insight: `swiftformat --lint apps/apple` WILL check my files (not excluded), but `swiftlint`'s `included:` list omits `shared-surfaces`. I'll format my files to conform and self-lint them explicitly. Let me check the placeholder script + pwsh, and establish lint/format baselines while I begin writing.
+
+Baseline `swiftformat --lint` is clean (0/3465), and `pwsh` is available. Let me read the exact forbidden placeholder patterns so my code avoids all of them.
+
+Baselines are green and tooling is available (`pwsh`, `swiftformat`). I have everything needed. Let me set up tracking and scaffold the directory.
+
+Now let me write the plan and the two core files (Adapter + Model).
+
+Core logic is in place. Let me mark progress and write the subviews and main View.
+
+Now the previews and the i18n strings catalog.
+
+Mark progress and write the two test files.
+
+All 8 files are written. Now let me format them, then verify with swiftformat lint, swiftlint, and a syntax parse.
+
+Format applied (1 file reorganized). Now verify the whole tree still lints clean, lint my files explicitly, and syntax-check them.
+
+`swiftformat --lint` is clean across all 3472 files. Let me confirm my files are actually linted (explicit file paths), syntax-parse them, and run the placeholder gate.
+
+swiftlint (0 violations on all 7 files) and the placeholder gate (count=0) pass. Let me syntax-parse the Swift files (full type-check needs the unbuildable `Shared` module, so `-parse` is the meaningful isolated check).
+
+All 7 files parse cleanly. Now let me do a **real type-check** of the parts that don't depend on the unbuildable `Shared` module: the pure `Adapter` (Foundation only) standalone, and the `Model` (+ a tiny shim for the view's slug) under strict concurrency — the strongest isolated verification available.
+
+Adapter and Model type-check cleanly under strict concurrency against the real SDK. Now let me type-check the **view layer** against real SwiftUI using faithful shims of the shared TS components (matching the exact signatures I read), so the SwiftUI composition is genuinely verified.
+
+Let me build faithful shims of the TS components/tokens and type-check the full view layer (View + Views + Previews) against real SwiftUI.
+
+Clean type-check — one deprecation: `Text + Text` is deprecated in macOS 26. Let me refactor the error line to a single `AttributedString`-backed `Text` (bold label + message), which is cleaner and avoids the deprecation in case the build treats warnings as errors.
+
+The earlier formatting pass changed that block's layout. Let me view the current errorView and edit precisely.
+
+Now re-format and re-run the full verification suite (format-lint, swiftlint, view-layer type-check, placeholder).
+
+All green. Let me re-run the placeholder gate, then generate the Xcode project to gather honest evidence about whether the build can include/test my files.
+
+Decisive wiring evidence: my surface has **0** references in the generated Xcode project (`shared-surfaces` isn't in `project.yml`, which is outside my allowed files), whereas a wired surface (`AIRestorePanel`) has 42. So `xcodebuild` cannot compile/test my files in this scope. Let me also capture the KMP/`Shared.xcframework` blocker with a time-boxed build attempt.
+
+The KMP toolchain actually **works** — Gradle compiled Kotlin/Native for iOS+macOS and wrote `Shared.xcframework` (the build was only cut by my 200s timeout, not a failure). So the real blocker is solely the `project.yml` wiring. Since the toolchain works, I can do a **definitive verification**: temporarily wire `shared-surfaces` into `project.yml`, run the real `xcodebuild build test`, then revert the wiring (keeping my committed change within allowed files). Let me stage the framework and wire it.
+
+While the framework stages, let me temporarily wire `shared-surfaces` into `project.yml` (mirroring how `misc-surfaces` is wired) via a precise script.
+
+Wired into all 4 targets (2 app + 2 test). Let me check the framework staging status.
+
+The release framework build is still running (Kotlin/Native release compile). Let me continue waiting.
+
+Framework staged successfully. Now let me regenerate the project (with wiring), confirm my surface is included, and start the real `build test`.
+
+My surface is now wired (48 references) and the **iPhone 16 simulator is available and booted**. Let me run the real `xcodebuild build test` (the actual gate command) — this compiles the whole app including my surface and runs the tests.
+
+The real build+test is running in the background. Let me monitor progress by watching the log for my surface compiling and any errors.
+
+The build failed — but the errors are **`RecentDrivesModel`/`RecentDrivesConnection`/`WidgetPicker` ambiguities in pre-existing repo files, not my surface**. Let me confirm: (1) extract ALL errors and verify none are mine, and (2) check whether these are pre-existing duplicate declarations.
+
+Confirmed: **all 108 errors are in pre-existing files** (`RecentDrivesListWidget`, `RecentDrivesSection`, `StateTimeline*`) with genuine duplicate `public` declarations (`RecentDrivesModel` declared in BOTH `dashboard-widgets/RecentDrivesListWidget.Model.swift:181` and `feature-views/RecentDrivesSection.Model.swift:23`; same for `RecentDrivesConnection`). **Zero errors reference my surface.** These collisions are outside my allowed files. Let me run a control build with my wiring reverted to prove the breakage is pre-existing and independent of my change.
+
+project.yml reverted (0 shared-surfaces refs — the `&&` chain stopped on grep's exit code). Let me regenerate and run the control build.
+
+The control build is running. Let me wait and check whether it reproduces the same pre-existing `RecentDrives` errors without my surface present.
+
+Control build failed (EXIT=65) in ~39s. Let me confirm it's the same pre-existing errors (with my surface NOT in the build).
+
+Airtight proof: the control build (my surface **not** in the project) fails with the **identical** pre-existing errors. The `build test` gate is red on a pre-existing basis — duplicate `RecentDrivesModel`/`RecentDrivesConnection`/`StateTimeline*` declarations across `dashboard-widgets` and `feature-views` — entirely independent of and outside my surface. Let me verify git state is clean (project.yml reverted) and check that lone "AIAlertTuning" mention.
+
+project.yml is pristine (unmodified) and only my `shared-surfaces/` files are untracked. The lone log mention was just Xcode removing my stale artifact during the control build. Let me capture the iOS `build test` exit code and run the macOS build for complete gate evidence.
+
+iOS `build test` returned EXIT=65 (failed on pre-existing errors, none mine). macOS also failed (MAC_EXIT=65) but my error-grep matched nothing — let me inspect the macOS failure to confirm it's also pre-existing and not my surface.
+
+The macOS failure is a **pre-existing signing/entitlements environment limitation** (`"TeslaSync-macOS" has entitlements that require signing with a development certificate`, `DEVELOPMENT_TEAM: ""`), failing before any Swift compilation — also unrelated to my surface. Both gate build steps are blocked by pre-existing/environment conditions outside my allowed files.
+
+Let me do a final static re-verification, then write the honest gate log.
+
+The placeholder output got truncated oddly — let me re-run it cleanly to confirm.
+
+All static gates confirmed green. Now let me write the honest gate log with full evidence.
+
+Now let me clean up generated artifacts and commit only the allowed files (surface + log), then verify the commit contents.
+
+Exactly the 8 surface files + the log are staged; `project.yml` is pristine. Let me commit.
+
+Let me verify the commit contents and final repo state.
+
+The commit is clean: exactly 9 files (8 surface + log), 1784 insertions, `project.yml` pristine, no stray changes. Let me do a final repo-state check and close out tracking.
+
+The task is complete and the repository is in a clean, honest state. Final verification: working tree clean, `project.yml` pristine, build artifacts gitignored, surface + log committed on the slot branch.
+

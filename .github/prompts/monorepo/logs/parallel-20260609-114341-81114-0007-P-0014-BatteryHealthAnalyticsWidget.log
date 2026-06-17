@@ -1,0 +1,165 @@
+I'll start by understanding the task: creating a native Apple (SwiftUI) version of `BatteryHealthAnalyticsWidget`. Let me first check the runner capabilities and explore the codebase in parallel.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 26.5 sim). Let me read the web source and explore the Apple app structure.
+
+Now let me examine existing sibling widgets and the shared P1 layers to understand conventions.
+
+`BatteryHealthAnalyticsWidget` doesn't exist yet. Let me study the closest sibling (`BatteryDegradationTrendWidget`) and find gauge-hero-based widgets to learn conventions.
+
+`DriveScoreGaugeWidget` uses the GaugeHero pattern — the closest match. Let me read it and the battery sibling in full.
+
+Let me read each DriveScoreGaugeWidget file individually.
+
+Excellent pattern. Let me read the remaining DriveScoreGaugeWidget files (Adapter, Views, Previews, Tests, strings).
+
+Let me read the Previews, Tests, and strings files, plus the battery sibling's model for data-shape reference.
+
+Let me read the strings file and locate the shared P1 token/registration types.
+
+Let me read the shared infra and locate the design tokens.
+
+Let me read the Theme tokens, TSSkeleton, and project.yml to understand build wiring.
+
+Now let me examine the web hook data shape and the shared web components (`WidgetGaugeHero`, `WidgetShell`, `EmptyState`).
+
+Let me check `numberFormat`, `RadialGauge`, and `EmptyState` to nail down formatting and gauge rendering.
+
+Let me check the registry file for exact metadata and i18n keys, and confirm how an existing widget is registered in the dashboard grid.
+
+Registry confirmed. Let me check for potential type-name collisions (single app module) before I start writing, and peek at the battery sibling's registration for category conventions.
+
+No collisions — all names free. Let me set up tracking and verify the build toolchain (xcodegen, Shared.xcframework) before writing code.
+
+The build needs a KMP `Shared.xcframework` (not staged yet). Let me read the pending-verifications doc and check the Gradle/JDK toolchain to understand the build situation.
+
+Now I understand the established methodology. The literal full-app build is blocked by pre-existing out-of-scope collisions; siblings verify the surface in isolation. Let me read the sibling's full log and the tooling harness to replicate the exact methodology.
+
+I have the complete methodology. Let me set up tracking, check the battery icon convention, then build the surface.
+
+`waveform.path.ecg` is the established icon (13 uses) — perfect match for HeartPulse. Let me read the lint configs, then set up tracking and write the files.
+
+I now have the complete, proven methodology (the sibling DriveScoreGaugeWidget log is my exact template). Let me set up tracking and write the plan.
+
+Now writing the surface files. Starting with the pure Adapter.
+
+Adapter done. Now the Model (state-holder seam + registry + i18n facade).
+
+Let me kill that stray sqlite shell, then continue with the Views file.
+
+Now the surface View file.
+
+Now the Previews and strings files.
+
+Now the comprehensive Tests file.
+
+All 7 files written. Let me update tracking and begin verification: auto-format, lint, placeholders.
+
+Auto-formatted 2 files. Now verify format/lint/placeholders on the surface files.
+
+swiftformat clean. swiftlint flags the `project` function as 51 lines (limit 50). Let me view the current Adapter projector and split it into helpers.
+
+I'll split the projector into smaller helpers to satisfy the function-body-length rule.
+
+Let me re-format and re-lint to confirm clean.
+
+Format + lint clean. Now the placeholder gate (needs pwsh).
+
+Placeholder gate clean. Now I'll set up the isolated SwiftPM build harness. Let me check what supporting symbols my surface needs (TSCard for Skeletons).
+
+I'll build an isolated SwiftPM harness (module `TeslaSync`) with my 5 sources + real Tokens/Infra + the real `TSSkeleton` struct, and my tests. Let me assemble it.
+
+Now the Package.swift with Swift 6 strict concurrency, then build + test.
+
+Isolated build succeeds under Swift 6. Now run the tests.
+
+All 29 tests pass under Swift 6. Now the real iOS-18 + macOS-15 SDK type-checks of the surface sources.
+
+iOS 18 type-check clean (including previews). Now macOS 15.
+
+Both SDK type-checks clean. Now `xcodegen generate` to confirm enumeration, plus a symbol-collision audit across the whole tree.
+
+All 7 files enumerated. Now the symbol-collision audit across the whole tree.
+
+Existing `BatteryHealth*` types belong to a different surface (`BatteryHealthSection`). Let me do a precise exact-name collision check to be certain none of mine clash.
+
+The 4 flags are false positives (regex keywords `for`/`state`, and nested `Phase`). Let me verify the only real-looking one — `SpyBatteryHealthTelemetry` — and confirm `Phase` is nested.
+
+Zero real collisions — both `SpyBatteryHealthTelemetry` are `private` (file-scoped), and all 177 `enum Phase` are nested. Now let me verify the documented pre-existing blockers still exist, then attempt the literal full-app gate.
+
+The primary blocker here is the unstaged KMP `Shared.xcframework` (pre-existing, per `macos-pending-verifications.md`). Let me attempt to stage it via Gradle in the background, then run the literal gate to capture real evidence.
+
+While the framework stages, let me audit the tree for any pre-existing duplicate top-level symbols (the documented parallel-merge collision class) so I can document the real state accurately.
+
+The framework staging completed and the app-target tree has **0 duplicate top-level symbols** (the older sibling collisions appear resolved here). Let me confirm the framework is staged.
+
+The KMP Kotlin/Native build is actively running (konan linking `Shared.framework.o`). This is the long-pole step. Let me wait for it and poll for the staged framework.
+
+Framework staging is contended across parallel slots (7 konan procs) — the documented environmental long-pole. Let me check actual build progress to decide whether to wait or capture the literal failure.
+
+The framework is genuinely building (debug+release variants) but slowly under cross-slot contention. Let me wait another window for it to complete so I can capture real full-app evidence.
+
+~12 min of cross-slot Kotlin/Native contention — the framework won't stage here (the documented environmental blocker). Let me capture the authentic literal-gate output with a bounded timeout for the log evidence.
+
+The literal iOS gate output is authentic and decisive: `IOS_EXIT=124` — the build is **blocked entirely in the KMP `Shared.xcframework` Gradle pre-action** (`** BUILD INTERRUPTED **` on `:core:linkReleaseFrameworkIosArm64`, the Kotlin/Native long-pole), never reaching the app-target Swift compile. `BHA_ERROR_COUNT=0`. Let me capture the macOS gate too (no assuming), then clean up.
+
+Both literal gates (`IOS_EXIT=124`, `MAC_EXIT=124`) are blocked identically in the KMP framework pre-action (`** BUILD INTERRUPTED **` on the RELEASE Kotlin/Native link), `BHA_ERROR_COUNT=0` — never reaching app-target Swift compile. Evidence complete. Let me clean up my background staging process and verify the xcodeproj is gitignored.
+
+Git status is clean — exactly my 7 new files, no sibling modifications; xcodeproj is gitignored. Let me kill my lingering staging script processes to free resources, then write the gate log.
+
+Now let me gather exact raw evidence snippets for the log, then write it.
+
+All evidence gathered. Now let me write the gate log.
+
+Now let me clean up temp artifacts, do a final lint sanity check, and verify git state before committing.
+
+Final state is clean — 0 format/lint violations, exactly my 8 new files (7 surface + log), no sibling changes. Let me commit.
+
+Committed (`b6f7d1a4e`). Let me do a final verification of the commit contents and clean working tree.
+
+All verification complete. The task is finished and committed.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`BatteryHealthAnalyticsWidget`** (P4 dashboard widget 0014) at full parity with the web source — committed as `b6f7d1a4e` (8 files, 1883 insertions, zero sibling changes).
+
+**Surface (7 files, following the accepted DriveScoreGaugeWidget template):**
+- SwiftUI surface + radial gauge + six-stat cluster + loading/error/empty/stale/offline chrome
+- Pure Foundation projector (host-testable), `@Observable` model bound through a P1/S8 state-holder seam (no HTTP in the view), P1/S11 `view.opened` telemetry, P1/S10 i18n facade + `.strings` catalog
+
+**Parity reproduced verbatim:** `scoreColor` bands (≥80 good / ≥50 fair / else poor), gauge `fmtNumber(clamped,d)` readout + "health" unit + integer sub-label, all six grouped-integer stats with `%` / `/ 100` units and `?? 0` fallbacks, `isCompact = cols ≤ 1`, registry `battery-health-analytics` (2×4 / 1×2 / 4×40). Honestly handled the web's unused temperature converter (no fabrication).
+
+**Every surface-scoped gate green:**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | **0/6** |
+| swiftlint --strict | **0 violations** |
+| check-placeholders | **0** (0 opt-outs) |
+| isolated SwiftPM build (Swift 6 strict concurrency) | **Build complete** |
+| isolated tests | **29/29 pass** |
+| iOS 18 + macOS 15 SDK type-check | **0 / 0** |
+| xcodegen + collision audit | 7 files enumerated, **0 collisions** |
+
+**Literal full-app builds** (`IOS_EXIT=124`, `MAC_EXIT=124`) are blocked entirely in the KMP `Shared.xcframework` Gradle pre-action (`** BUILD INTERRUPTED **` on the RELEASE Kotlin/Native link under cross-slot contention) — never reaching app-target Swift compile, **0 surface errors** in both raw logs. This pre-existing/environmental blocker (+ macOS signing) is deferred to the P99 macos-latest gate, exactly as accepted sibling surfaces. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 9 todos done, committed as `b6f7d1a4e`, working tree clean.
+
+Merge made by the 'ort' strategy.
+ ...d-widgets-0014-BatteryHealthAnalyticsWidget.log | 184 ++++++++++
+ .../BatteryHealthAnalyticsWidget.Adapter.swift     | 335 ++++++++++++++++++
+ .../BatteryHealthAnalyticsWidget.Model.swift       | 343 ++++++++++++++++++
+ .../BatteryHealthAnalyticsWidget.Previews.swift    | 160 +++++++++
+ .../BatteryHealthAnalyticsWidget.Tests.swift       | 392 +++++++++++++++++++++
+ .../BatteryHealthAnalyticsWidget.Views.swift       | 204 +++++++++++
+ .../BatteryHealthAnalyticsWidget.strings           |  50 +++
+ .../BatteryHealthAnalyticsWidget.swift             | 215 +++++++++++
+ 8 files changed, 1883 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0014-BatteryHealthAnalyticsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.swift

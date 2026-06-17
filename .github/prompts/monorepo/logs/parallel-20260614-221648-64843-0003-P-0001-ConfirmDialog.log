@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and understanding the prerequisites for this task.
+
+Apple toolchain is present (Darwin host, xcodebuild/swift/swiftlint/swiftformat). Let me read the web source and explore the Apple project structure.
+
+Now I understand the web source — it's the AI tool-use confirmation dialog (`AiConfirmDialog`). This is an established XcodeGen-based Apple monorepo project. Let me explore the structure deeply.
+
+The `modals-dialogs/` directory already exists with many surfaces. Critically, I need to check whether it's wired into the build, since I may be restricted to only `ConfirmDialog.*` files. Let me investigate.
+
+Critical finding: `ConfirmDialog.*` files **already exist** (10 files, ~90KB total) in `modals-dialogs/`. The surface appears already implemented. I need to assess whether these are complete production code or stubs, and verify parity with the AI web source. Let me read the existing implementation and check the log/build wiring.
+
+Major discovery: the existing native `ConfirmDialog.*` is parity for **`components/ui/ConfirmDialog.tsx`** (destructive-action dialog with typed-confirmation + "Don't ask again"), NOT my prompt's `components/ai/ConfirmDialog.tsx` (AI tool-approval with "Approve Helix action"). The file headers even self-identify as ordinal "0012". My prompt is "0001" for a different web component that collides on the same native filename. Let me investigate the intended mapping before acting.
+
+The existing `ConfirmDialog.*` is a complete, polished parity of `components/ui/ConfirmDialog.tsx` (ordinal 0012). My prompt (0001) targets the different `components/ai/ConfirmDialog.tsx` but collides on the same native filename. I must find the actual prompt files to understand the intended disambiguation — overwriting would destroy a completed sibling surface.
+
+There are distinct prompt files for both `P-0001-ConfirmDialog` (mine, AI) and `P-0012-ConfirmDialog` (ui, already done). Both apparently map to `ConfirmDialog.*`. Let me read both prompt files and the existing P-0001 logs to understand the intended native path and what happened previously.
+
+Now I have the full picture. This is a **generator collision**: both `components/ui/ConfirmDialog.tsx` (P-0012, destructive — currently on disk) and `components/ai/ConfirmDialog.tsx` (P-0001, my task — AI tool-approval) map to the same native path `ConfirmDialog.*`. The prior P-0001 run was overwritten by P-0012 in the merge, so the **AI surface is entirely missing** from HEAD. Overwriting would destroy the completed sibling (violates "No scope narrowing"/integrity). The web component is literally named `AiConfirmDialog`, and the repo uses descriptive prefixes (`CommandConfirmDialog`, `AcknowledgeAlertDialog`), so I'll ship the AI surface as `AiConfirmDialog.*` to preserve both.
+
+Let me verify current runner Xcode capability and study the 0012 template + shared infra.
+
+**Great news**: Full **Xcode 26.5 + iOS 26.5 simulator** are available now (prior run was CLT-only). However, `Shared.xcframework` is still absent and `modals-dialogs/` isn't wired into `project.yml`. Let me locate the shared infrastructure and read the rest of the 0012 template (my reference) so I can faithfully build the AI surface.
+
+Now I understand the 0012 architecture fully. Let me read the remaining template files (Views, Previews, tests) and the shared infra (tokens, Button, motion) to mirror them faithfully.
+
+Let me read the 0012 test files and confirm the exact shared-infra APIs (tokens, glass panel, button, motion).
+
+I now fully understand the 0012 architecture and conventions. Let me confirm the exact shared-infra APIs (tokens, glass panel, button, motion) before writing the AI surface.
+
+I have everything needed. Let me check the lint/format configs so my code passes `--strict`, then write a plan and implement.
+
+I now have complete understanding of the architecture, shared infra APIs, and lint/format configs. 
+
+**Situation summary**: This is a generator collision — `components/ui/ConfirmDialog.tsx` (P-0012, on disk) and my `components/ai/ConfirmDialog.tsx` (P-0001, the `AiConfirmDialog`) both map to `ConfirmDialog.*`. The AI surface is missing from HEAD. Overwriting would destroy the completed sibling. The web component is literally named `AiConfirmDialog`, and the repo uses descriptive prefixes, so I'll ship it as `AiConfirmDialog.*` (preserving both) and document the forced deviation in the log. Full Xcode 26.5 is available, so I can do real compilation + test verification.
+
+Let me set up tracking and the plan.
+
+Now implementing. Starting with the pure core (Adapter).
+
+Now the Seams (protocols, defaults, strings facade, accessibility).
+
+States (loading/empty/error/freshness/banner).
+
+Now the Model (@Observable view-model).
+
+Now the Views (panel, header, content, tool/args sections, footer).
+
+Now the View entry, Previews, and strings catalog.
+
+Now the Previews (one per state).
+
+Now the i18n strings catalog.
+
+Now the test suites (pure adapter/JSON/a11y + model state-holder).
+
+Now the model state-holder tests.
+
+All 10 files written. Now verification. First, format with the repo config, then typecheck. Let me discover the exact dependency files for a standalone compile.
+
+swiftformat applied (2 files reformatted). Now let me map the dependency closure for a standalone compile and check for any `Shared` framework imports that would block isolated compilation.
+
+Tokens, materials, and components are `Shared`-free, so they compile standalone. KMP `apps/shared` exists but building `Shared.xcframework` via Gradle (Kotlin/Native) is heavy and the app target also requires `modals-dialogs` to be wired into `project.yml` (outside allowed files). Let me verify my surface compiles against the **real** component APIs via `swiftc`, checking the whole Components+Design set is Shared-free first.
+
+My 6 production files typecheck **clean (EXIT=0)** against the real design tokens + real shared components under Swift 6 strict concurrency. Now let me actually **run** the test suites via a SwiftPM harness that compiles my surface together with the real shared component sources.
+
+The harness pulled in real `Cards.swift`'s own `#Preview` example which references `TSBadge` (a cascade outside my surface). Since I've **already proven real-API compatibility via the `swiftc` typecheck (EXIT=0)**, the harness only needs to *run* my logic. Let me give it real `Tokens.swift` plus minimal shims for the 3 components I use (matching the verified signatures), so the test run is clean and closed.
+
+**All 34 tests pass (0 failures)** via SwiftPM — real compile + run under Swift 6, including the JSON-stringify parity printer, the model state machine, accessibility, and telemetry slug. Now the lint/format/placeholder gates.
+
+swiftlint `--strict`: **0 violations in 9 files**. Now swiftformat lint + placeholder check.
+
+swiftformat lint clean (0/9), no forbidden markers. `pwsh` is present — let me run the **real** placeholder gate script on my files, then typecheck the Previews (the `#Preview` macro).
+
+Placeholder gate: **COUNT=0, EXIT=0**. Now let me verify the Previews file (the `#Preview` macro) compiles — full Xcode provides the macro plugin (the prior CLT-only run couldn't check this).
+
+Previews compile with the `#Preview` macro (**BUILD_EXIT=0**). My surface is fully verified: typecheck vs real components ✓, 34/34 tests pass ✓, previews compile ✓, swiftlint/swiftformat/placeholder all green ✓.
+
+Now let me honestly attempt the **real repo xcodebuild gate** and capture evidence. First, check the toolchain prerequisites (xcodegen, project, simulator, the KMP framework pre-action).
+
+All prerequisites except the KMP `Shared.xcframework` are present. Let me generate the project and attempt the real gate, capturing honest evidence.
+
+**Critical confirmation**: the generated Xcode project contains **0** references to `AiConfirmDialog`/`modals-dialogs` — the entire `modals-dialogs/` directory is absent from every target. So the documented gate `xcodebuild -scheme TeslaSync build test` cannot compile or test this surface (nor the existing 0012 sibling) regardless of the framework. Let me capture the actual xcodebuild failure evidence (bounded, since the scheme pre-action triggers a heavy KMP Gradle build).
+
+Still running at 240s — the scheme's pre-action is executing the heavy KMP Gradle build. Let me capture what process it's stuck on (evidence), then stop it.
+
+I have definitive evidence: the gate is stuck in the scheme's pre-action running a full **Kotlin/Native KMP build** (`build-shared-xcframework.sh` → Gradle `:core:assembleSharedXCFramework` → konan `clang++` compiling `Shared.framework.o`). Combined with the surface not being wired into the project (0 refs), the documented gate cannot exercise this surface in isolation. Let me stop it — letting it finish would (at best) build the app *without* my surface and is out of scope.
+
+Let me clean up the heavy KMP build processes the pre-action spawned (using specific PIDs).
+
+Build processes cleaned up. Let me sweep for any lingering konan children, then write the honest gate log.
+
+No lingering processes. Let me gather final metrics (line counts vs the 0012 sibling) for the log, then write it.
+
+Strong metrics: 1984 lines across 10 files (86% of the 0012 sibling's 2293, appropriately leaner — no typed-confirmation/silence/severity), 34 test functions across 7 suites (all passed), 9 previews. Now writing the honest gate log.
+
+Log written. Let me clean up build artifacts and verify the working tree before committing.
+
+Working tree contains exactly the 10 `AiConfirmDialog.*` files + the log (generated `.xcodeproj` removed). Committing.
+
+Committed cleanly; working tree is clean. Let me finalize tracking and do a last sanity check for stray artifacts.
+
+All work complete and verified. Final state confirmed: all todos done, working tree clean, no stray artifacts, log committed ending with `EXIT=1 / STATUS=BLOCKED`.
+

@@ -1,0 +1,248 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the existing Apple app conventions.
+
+Let me read the web source page and explore the Apple app structure in parallel.
+
+The web source is clear. Now let me understand the Apple app structure—it differs from the prompt's stated path. Let me find existing pages, the parity ledger entry, and Xcode project setup.
+
+The on-disk structure differs from the prompt. Let me examine the `Sources/Features/Driving` directory, an existing page for conventions, and the parity ledger entry.
+
+The real convention is `apps/apple/Sources/Features/Driving/` with decomposed page files. Let me check the ledger entry for TripPlanner and examine an existing page (Efficiency, smaller) as my template.
+
+No TripPlanner row yet—I'll add it. The actual page convention is `apps/apple/Sources/Features/Driving/`. Let me check the project setup, Xcode availability, and the gate contract.
+
+Xcode 26.5, swiftlint, swift, pwsh all available. Project uses XcodeGen with `Sources/` root—the prompt's `TeslaSync/Features/` path is a generator guess; real pages live in `Sources/Features/Driving/`. Let me read reference files and the gate contract.
+
+Excellent template. Now let me understand the route system, design tokens, shared components, and how the existing DriveScore page (which has StatCards) is built. Let me explore in parallel.
+
+`Localizable.xcstrings` is the central catalog at `apps/apple/Localization/`. Driving pages use it (no per-page `.strings`). I need to add a `.tripPlanner` route. Let me read the route system and find where registrations are aggregated.
+
+Now let me find all exhaustive `AppRoute` switches I'd need to update, check the web nav routing for trip-planner, and find a recently-added sibling route registration (SleepEfficiency) as a registration template.
+
+Let me check the build prerequisites (xcodegen, the KMP xcframework) and whether baseline builds, plus verify which `.efficiency` references are actual `AppRoute` switches.
+
+The KMP `Shared.xcframework` is absent (only `.gitkeep`). This likely blocks `xcodebuild`. Let me check the project's framework dependency, the pending-verifications doc, the gate contract, and build scripts.
+
+There's a `build-shared-xcframework.sh` pre-build script. Let me read it, the pending-verifications doc, and the gate contract to determine build feasibility.
+
+The build needs a Gradle-built KMP xcframework (currently absent). Let me find the gate README, kick off a background check of Gradle/JDK feasibility, and locate the shared UI components I'll need.
+
+JDK 17 + gradlew present. Let me read the existing EfficiencyPage log (for exact gate commands + PARITY section format) and the p4-apple README gate contract.
+
+This is the key reference. The precedent confirms: real path is `Sources/Features/Driving/`, scheme is `TeslaSync-macOS`, gates are swiftlint+swiftformat+placeholder+xcodebuild, and the Shared.xcframework is Gradle-built. Let me kick off the (slow) xcframework build in the background now and read the DriveScore log + Units facade + components in parallel.
+
+Let me read the Units facade and find the shared UI components I'll need (StatCard, GlassPanel, Button, Select, Slider, AlertBanner, TextField, ErrorDisplay, EmptyState).
+
+Now let me read the key component APIs (Cards, Buttons, Pickers, Sliders, Fields, Banners, States, Typography, Metrics) and the formatting facade so I call them correctly.
+
+Now the remaining components and the formatting facade. Let me read Buttons, Sliders, Pickers, Fields, Banners, States, Typography, and find `formatCurrency`.
+
+Let me read Fields, Banners, States, Typography, and locate the currency formatter.
+
+Let me find currency formatting, read Typography + Fields, and check the `TSTone` token. The web also needs an AddressInput (text field).
+
+Let me read the currency format pattern, Typography components, find the design tokens, and check the xcframework build progress.
+
+Let me read the web driving types + the `usePlanTrip` hook (exact request/response shape), the Efficiency data-source doubles pattern, the `TSTone` token cases, and check the build.
+
+Let me read the exact TripPlan type shapes, the hook, and the sample data-source pattern.
+
+I have the type shapes. Let me read the web currency formatter, the SleepEfficiency currency-symbol source, the `tsUnits` environment + theme helper, the Efficiency models file structure, and check the build.
+
+I have nearly everything. Let me read the Theme/`tsUnits` env and the `TSTone` token, then set up my plan and todos.
+
+Let me confirm the `tsUnits` environment key type and the generated `Color.TS`/`Font.TS` tokens, then begin writing.
+
+I have all component/token APIs confirmed. Let me set up my plan and todos, read the app registration + route parser, and check the build progress.
+
+The parser auto-resolves `trip-planner` via `pathSegment`. Let me find any other exhaustive `AppRoute` switches (to update when I add the case), read the registration block tail, and check the build.
+
+Now I understand the full design. Let me verify the xcstrings catalog format and how parameterized strings (like `vehicleBattery`/`weather.factor`) are handled in existing code, then check the build.
+
+The xcframework build completed. Let me confirm it staged correctly, then start writing code.
+
+Shared.xcframework built and staged—real `xcodebuild` is now possible. Let me write the plan, then create all the Swift files.
+
+Now creating the models file.
+
+I overcomplicated the speed option's title key. Let me fix it to return `LocalizedStringKey` directly (import SwiftUI, drop the typealias).
+
+Models done. Let me verify the `formatEnergy` precision pattern against existing usage before writing the formatter.
+
+Now creating the formatter.
+
+Now the page model.
+
+Let me add an `initialPhase` seed to the model init (enables loaded/error previews + tests), then build the sample data source.
+
+Now the sample/empty/failing data sources.
+
+Before writing the views, let me read the placeholder scanner to know what it flags (e.g., `.placeholder` redaction, "TODO", etc.).
+
+`Placeholder` (case-insensitive) is a forbidden word, so I'll avoid `.redacted(reason: .placeholder)` and use `ProgressView` for loading. Let me scan my new files for any forbidden words.
+
+Files are clean. Now creating the main page view (loading uses `ProgressView`, not redaction).
+
+Now the sections file (form panel + stat cards + disclaimer + feasibility + weather).
+
+Now the route registration + AppRoute/app wiring.
+
+Route wired. Now the strings. Let me check which keys already exist in the catalog (e.g., `common.free`, `route.vehicles`) to avoid duplicates.
+
+Important—`common.free`, `route.vehicles` may be missing, and I need `route.tripPlanner` for the sidebar title. Let me verify how `route.*` keys are stored.
+
+Most `route.*` keys exist (spacing differences); I need to add `common.free`, `route.tripPlanner`, and 29 `tripPlanner.*` keys. Let me extract exact special-character defaults from the web source.
+
+Now I'll add all 31 keys (`common.free`, `route.tripPlanner`, 29 `tripPlanner.*`) via a Python script that does a minimal textual insert and validates JSON—preserving Xcode's exact format.
+
+The anchor spacing differs. Let me inspect the exact opening bytes.
+
+Anchor uses no space before colon (`"strings": {`), while entries use `"key" : {`. Let me fix the anchor and re-run.
+
+All 31 keys inserted, JSON valid. Let me verify the formatting and special characters of a few entries.
+
+Strings done. Now tests—let me read existing test conventions, then write TripPlanner tests.
+
+Let me check the `UnitPreferences.metric` definition so my tests assert the right units.
+
+Now writing the two test files.
+
+Let me verify the `AppRouteHostRegistry` API (the `view(for:)` accessor I used in the test).
+
+All code written. Let me run the fast gates first—swiftlint, swiftformat, and the placeholder scan on the new files.
+
+swiftlint scanned the whole project (12 violations). I need to see if any are in my TripPlanner files. Let me filter the output.
+
+Four real violations in my files (the 2 `AnomalyInlineRow` ones are pre-existing/out-of-scope, per the Efficiency precedent). Let me fix: trailing-closure on the two `TSButton`s, and split the oversized `plan(for:)` helper + wrap the long line. Let me view the current Sample helper.
+
+Now fix the two `TSButton` trailing-closure violations—pass `label:` explicitly.
+
+Fixes applied. Let me re-run swiftlint (full scan, filtered) in the background and run swiftformat + the placeholder scan now.
+
+swiftformat found formatting issues. Let me auto-fix them (write mode) on my new files, then re-lint.
+
+Let me check the swiftlint result and review what swiftformat changed (the `//`→`///` doc-comment conversions).
+
+The background swiftlint ran on pre-format files. swiftformat reformatted afterward—let me verify the current state of the previously-flagged long line in Sample.swift.
+
+swiftformat already wrapped it. Let me run the placeholder scan, re-run swiftlint (background), and generate the Xcode project.
+
+Placeholder scan clean (`PLACEHOLDER_COUNT=0`; the 3 ALLOWED are pre-existing sibling files). Now let me generate the Xcode project and kick off the macOS build.
+
+Project generated with `TeslaSync-macOS` scheme. Let me check the swiftlint result, then start the macOS build (long-running, background).
+
+swiftlint clean for all my in-scope files (`AppRoute.swift`, `TeslaSyncApp.swift`, all `TripPlanner*`). Now the macOS build—this is long-running, so I'll start it in the background and monitor.
+
+Build running in background. While it compiles, let me prepare the ledger update—first checking the exact JSON format so my edit stays minimal.
+
+The launcher returned immediately; the actual build is still writing to the log. Let me check its progress.
+
+The macOS app target is now compiling (no errors yet, KMP pre-action already done). This is the long phase. Let me wait and monitor.
+
+At `EmitSwiftModule` (whole-module type-check), still 0 errors. Let me continue waiting.
+
+Still type-checking the whole module (0 errors). Let me verify the build is actively progressing and wait more.
+
+Build is actively working (86 compiler processes). Let me keep waiting for the module emit + compilation to finish.
+
+Module emit still in progress, 0 errors. Let me wait further and watch for either completion or the known out-of-scope type-check timeout.
+
+Module emit is taking long. Let me verify it's genuinely progressing (CPU-active, not stuck) rather than hung.
+
+Confirmed CPU-active (40%+ per process)—genuinely progressing, just heavily loaded. Let me keep waiting.
+
+Module emit completed (type-check passed, 0 errors)—now in the object-compile phase. The whole module type-checked cleanly, including all my files. Let me wait for compilation + linking to finish.
+
+Build failed with `BUILD_EXIT=65`, but the **sole** error is the pre-existing, out-of-scope type-check timeout in `Diagnostics/AnomalyDashboardModels.swift:185` — the exact file the Efficiency/DriveScore precedents documented. Critically, `EmitSwiftModule` completed (whole-module type-check passed). Let me verify zero errors in my files and that the file is untouched by me.
+
+Confirmed: the **only** build error is the pre-existing, out-of-scope `AnomalyDashboardModels.swift` type-check timeout (a file I never touched); **zero** errors in any of my files, and `EmitSwiftModule` (whole-module type-check) completed. This is the documented sibling precedent. 
+
+Since the test bundle can't run (blocked by that same out-of-scope file), let me build a logic harness compiling my **real** `TripPlannerModels.swift` + `TripPlannerFormat.swift` against stubs to prove the ported web logic runs correctly.
+
+The entry file must be lowercase `main.swift` for top-level code. Let me rename and recompile.
+
+The stub types must be `public` to match the real file's public API. Let me fix the stubs and recompile.
+
+Logic harness: **PASSED=24 FAILED=0** — the real ported logic runs correctly. Now let me verify my test files resolve the module API by type-checking them against the emitted `TeslaSync.swiftmodule`.
+
+The XCTest-overload noise mirrors the precedent's known limitation. Let me instead verify my test's API references cleanly with a non-XCTest `import TeslaSync` program touching every symbol my tests use.
+
+Excellent—the API-surface type-check passed with **zero errors**: every symbol my tests reference resolves against the emitted module. 
+
+The build's sole failure is the load-induced, pre-existing `AnomalyDashboardModels.swift` timeout. Since a fully green build is stronger, let me attempt one incremental rebuild (cached module; far less parallel load this time) while I prepare the ledger and log.
+
+Incremental rebuild running. Now let me update the ledger—adding the two `page:driving/TripPlanner` rows via validated textual insertion.
+
+Ledger updated (138→140 rows). Let me check the incremental rebuild progress.
+
+Ledger done. The incremental rebuild is in its Gradle pre-action stage. Let me wait for it while the PARITY mapping is ready.
+
+Incremental rebuild now in SwiftCompile (module cached), no errors yet. Let me wait for it to reach the previously-failing file and finish.
+
+Still compiling, no errors. Let me check whether the previously-failing file has been recompiled yet and wait for completion.
+
+`AnomalyDashboardModels` hasn't been re-attempted yet (build2 is recompiling a large batch). Since that timeout is fundamentally an expression-complexity limit (it will reproduce), and the precedent already establishes this pre-existing out-of-scope RED as DONE-acceptable, continuing to wait isn't productive. Let me check once more, then stop build2 if still grinding.
+
+Build2 is essentially redoing the full build (EmitSwiftModule again, 108 processes) and will reproduce the same out-of-scope timeout. That confirms it's an expression-complexity limit, not transient load. I'll stop it and finalize per the established precedent. Let me find the xcodebuild PID to stop it cleanly.
+
+I see now—the heavy load is from **multiple concurrent slot builds** in this shared environment (slots 29/30/32/33 all building), which is exactly the contention the precedent described. My build2 is PID 26394. Let me stop only my build2 (not other slots') and finalize.
+
+Build2 stopped; build1's documented result is intact. Let me confirm swiftformat is now clean on my files (post-fix), then write the evidence log.
+
+swiftformat is stuck on CPU contention from the concurrent slot builds. Let me stop it and verify with a bounded single-file check instead.
+
+swiftformat clean (`0/3 files require formatting`, FORMAT_EXIT=0). All gates verified. Now let me write the evidence log with the full `=== PARITY ===` section (41 items).
+
+Log written. Let me review the full git status before committing to ensure I add exactly the right files (and nothing generated/ignored).
+
+Git status is exactly as expected—no generated/ignored files. Let me stage the precise paths and commit.
+
+All 14 files staged (2,118 insertions). Let me commit.
+
+Committed cleanly (`38d6c8ef7`), working tree clean. Let me mark the task complete and clean up my temp artifacts.
+
+All todos complete, working tree clean, temp artifacts removed.
+
+## Summary
+
+Implemented the native SwiftUI **`TripPlannerPage`** at full web parity with `web/src/features/driving/pages/TripPlannerPage.tsx` (route `/trip-planner`), reaching **PARITY_COVERED=41/41** (8 panels + 3 states + 30 strings).
+
+**What shipped** (`apps/apple/Sources/Features/Driving/` — the live compiled group; the prompt's `TeslaSync/Features/Driving` is the allowed-files alias, reconciled per the Efficiency/DriveScore precedent):
+- `TripPlannerPage.swift` + `.Sections.swift` — chrome, **form (GlassPanel1)**, the six stat cards (**Distance/Total‑Time/Driving/Charging/Energy/Est‑Cost**), **Weather (GlassPanel8)**, plus the estimate disclaimer + not‑feasible warning.
+- `TripPlannerPageModel.swift` (`@Observable`) + `.Sample.swift` — the `usePlanTrip` mutation lifecycle (idle→planning→loaded/failed) over an injectable `TripPlannerDataSource` seam.
+- `TripPlannerModels.swift` (response shapes + `TripSpeedOption`), `TripPlannerFormat.swift` (SI boundary formatters), `TripPlannerRouteRegistration.swift`.
+- New `.tripPlanner` `AppRoute` (segment `trip-planner`, group `.vehicle`) wired in `TeslaSyncApp`; **31 keys** added to `Localizable.xcstrings`; 2 ledger rows; 2 test files.
+
+**Verification** (all evidence in the log):
+- swiftlint `--strict`: **0** in‑scope violations · swiftformat `--lint`: **0** files need formatting · placeholder scan: **PLACEHOLDER_COUNT=0**.
+- `xcodebuild` TeslaSync‑macOS: `EmitSwiftModule` (whole‑module type‑check) **completed clean for every TripPlanner/AppRoute/App file**. Build is RED (`exit 65`) **only** on the pre‑existing, out‑of‑scope `AnomalyDashboardModels.swift:185` type‑check timeout (git‑unmodified; surfaced under 5 concurrent slot builds) — the exact sibling‑DONE precedent.
+- Logic harness on the **real** format/model code: **PASSED=24 FAILED=0** · API‑surface type‑check of every test‑referenced symbol vs. the emitted module: **0 errors**.
+
+Committed as `38d6c8ef7`. Honesty covenant honored — the lone RED is fully disclosed as pre‑existing/out‑of‑scope, never painted green.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-driving-TripPlannerPage.log    | 192 ++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 341 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ .../Features/Driving/TripPlannerFormat.swift       |  79 +++++
+ .../Features/Driving/TripPlannerModels.swift       | 322 +++++++++++++++++++
+ .../Driving/TripPlannerPage.Sections.swift         | 318 +++++++++++++++++++
+ .../Sources/Features/Driving/TripPlannerPage.swift | 213 +++++++++++++
+ .../Driving/TripPlannerPageModel.Sample.swift      | 174 +++++++++++
+ .../Features/Driving/TripPlannerPageModel.swift    | 159 ++++++++++
+ .../Driving/TripPlannerRouteRegistration.swift     |  22 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Features/Driving/TripPlannerFormatTests.swift  |  86 ++++++
+ .../Driving/TripPlannerPageModelTests.swift        | 189 ++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 14 files changed, 2118 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-driving-TripPlannerPage.log
+ create mode 100644 apps/apple/Sources/Features/Driving/TripPlannerFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/TripPlannerModels.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/TripPlannerPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/TripPlannerPage.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/TripPlannerPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/TripPlannerPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/TripPlannerRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Driving/TripPlannerFormatTests.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Driving/TripPlannerPageModelTests.swift
+[dedupe] no duplicate top-level types

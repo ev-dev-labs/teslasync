@@ -1,0 +1,240 @@
+I'll start by exploring the repository structure to understand what exists and whether this task is actionable.
+
+Both the web source and `apps/apple` exist. Let me read the web source and explore the Apple app structure in parallel.
+
+The web source is clear. Now let me explore the Apple app structure systematically.
+
+There's a rich existing pattern with ~1893 files. Let me check if ConnectionSegment already exists and find similar status-bar surfaces to use as templates.
+
+`VersionSegment` is the closest analog (same status-bar segment family). Let me study its full file set as the template.
+
+Let me read the rest of the VersionSegment family plus the `useApiHealth` web hook and the StatusBar files to understand data binding and the freshness/connection axis.
+
+Now I understand the data model. Let me read the remaining VersionSegment files (Views, Adapter, Previews, Probes, Polling, strings) and the design tokens to understand all shared primitives.
+
+Let me read the Polling source, Previews, strings, Tests, and locate the P1/S9 design tokens.
+
+Let me locate the P1/S9 design tokens, the test pattern, and the Xcode/SwiftPM project structure.
+
+All build/test tools are present (Xcode 26.5, xcodegen, swiftlint, swiftformat) — this is buildable, not BLOCKED. Let me locate the token definitions and shared chrome primitives.
+
+The main-app tokens (`TSSpacing`, `Color.TS`, etc.) aren't in `Sources/` — likely generated. Let me inspect `project.yml`, the Scripts dir, and the design token source.
+
+Now let me verify the generated design tokens exist and inspect the build-shared script (potential blocker) plus the gate's check-placeholders script.
+
+The build infra is present (Java 17, gradlew, xcodegen). Tokens come from `design/generated/apple/Tokens.swift`. Let me read the tokens, the skeleton/nav primitives, and the VersionSegment test files to model mine precisely.
+
+Tokens and skeleton confirmed. Let me read the test patterns, the navigation/route system, and the existing StatusBar host to understand integration and the test framework.
+
+Key finding: `StatusBar` (surface 0182) already composes a `StatusBarConnectionView`. The standalone `ConnectionSegment` (0178) is its own surface — just like `VersionSegment` is standalone alongside StatusBar's version view. Let me read the StatusBar connection VM/resolve/copy to align my projection with the established logic.
+
+Let me read the StatusBar resolve logic, copy/i18n, and adapter to align my projection precisely with the established connection logic.
+
+This is the authoritative reference. Let me read the StatusBar adapter types (tone/health enums) and check for any global health type to avoid collisions.
+
+I have the full pattern. Let me confirm the navigation convention and Localization setup before writing.
+
+I have the complete pattern. Let me check the lint/format configs to respect their limits, then start writing.
+
+All constraints understood: SwiftLint `--strict` (≤120 cols for code, type names ≤50), SwiftFormat (maxwidth 120, before-first wrapping, `--self remove`, testable-bottom imports). I'll write the files then auto-format. Let me set up a todo list and write the first batch (pure core).
+
+Let me fix a no-op line in the muted suffix view.
+
+All 12 source files written. Now let me start the slow KMP `Shared.xcframework` build in the background while I run the fast lint/format checks on my files.
+
+swiftformat passes (0/11 need formatting). Now swiftlint `--strict` on my files.
+
+swiftlint `--strict` passes with 0 violations. Now let me check the placeholder gate script and run it.
+
+Now let me verify no placeholders in my files — both a direct grep and the actual gate script (scanning my real files, since the literal gate prefix-path matches nothing).
+
+All placeholder scans clean (COUNT=0) and the self-test passes. Let me check the background KMP framework build progress.
+
+Let me generate the Xcode project (independent of the framework) while the KMP build runs.
+
+Project generated with my files referenced. Let me wait for the KMP framework build to finish.
+
+Gradle is actively compiling the Kotlin/Native xcframework (konan toolchain present, build dir growing). This is the long pole. Let me keep waiting.
+
+The machine is shared with parallel slots (38 swift-frontend from other builds), slowing my Gradle build, but it's progressing (build dir growing, files being written). Let me continue waiting.
+
+The `Shared.xcframework` built (17m) and is staged. Now let me verify the simulator destination and start the iOS build+test gate.
+
+Framework staged, simulator ready. Let me create the log directory and start the iOS build+test gate (long-running, streamed to the log).
+
+iOS build+test launched in the background. Let me monitor progress via the log.
+
+Build is compiling the app's Swift module (includes my files), no errors yet. Let me keep monitoring.
+
+Build failed on a SwiftCompile. Let me find the actual error.
+
+The build hit a **swift-frontend IRGen crash** (`report_at_maximum_capacity` → `abort`), not a type error in my code — during whole-module IR generation of a reabstraction thunk. Let me demangle the thunk symbol to see what it involves, and check whether this reproduces or is load-related.
+
+Key findings: the crash is an **environmental swift-frontend IRGen crash** (`report_at_maximum_capacity` — an LLVM allocation failure under memory pressure), with **80 concurrent swift-frontend processes** from parallel slots. Crucially, the crash is in **IRGen of a SwiftUI `@isolated(any)` thunk** (in pre-existing `AppearanceSettings.Controls.swift`, not my code) — which means **Sema + SILGen for the whole module, including my files, already succeeded** (no type errors). This is resource exhaustion, not a code defect.
+
+Let me retry with reduced parallelism to lower peak memory.
+
+Retry launched with `-jobs 2`. Let me update todos and monitor.
+
+Progress: the **build succeeded** this time (no compiler crash) — confirming my code compiles. It proceeded to testing and a test failed. Let me find which test.
+
+The test failure was a **build-database lock** (`build.db is locked — two concurrent builds in the same location`) — my first (crashed) build and the retry collided on the same DerivedData. Let me check for lingering builds and clean up.
+
+The original `ios-build` shell is **still running** — that's what collided with the retry (both hitting the same build DB). Let me stop it, confirm no lingering builds, then run a single clean build+test.
+
+A lingering orphaned `swift-frontend` (PID 4002) from the stopped build still references my DerivedData. Let me terminate that specific PID and confirm the build area is clear.
+
+Build area clear (0 lingering processes). The retry already proved my code **compiles** (DerivedData is now warm/incremental). Let me run one clean iOS build+test into the gate log.
+
+The `-jobs 4` run hit the same memory-pressure IRGen crash, but the earlier `-jobs 2` run **built successfully** — confirming it's memory-driven (fewer parallel frontends = under the ceiling). Let me stop this run and re-run with `-jobs 2`, with no concurrent build to cause a DB lock.
+
+Four orphaned frontends remain from the stopped build. Let me terminate each by PID.
+
+Clear (0 orphans). Now the clean `-jobs 2` build+test (the proven-good config) into the gate log.
+
+iOS build+test running with `-jobs 2`. Let me monitor for the crash indicator and test progress.
+
+No crash with `-jobs 2` (0 indicators), build progressing cleanly. Let me keep waiting.
+
+Excellent — no crash with `-jobs 2`. The app module compiled past the IRGen stage, extensions are linking. Let me continue waiting for the test phase.
+
+Still healthy (0 crashes), recompiling for the test action. Let me keep waiting.
+
+Test-action recompile in progress, still no crash. Let me continue waiting for the test execution phase.
+
+My `ConnectionSegment.swift` compiled successfully in the test action (no errors). Build is healthy. Let me keep waiting for the test execution.
+
+Still compiling, no crash. Let me look at the current build activity to gauge how close we are to linking/testing.
+
+The test-action full recompile is the long pole (effectively a second full app compile at `-jobs 2`), still healthy. Let me wait in a larger increment.
+
+Build action succeeded (extensions linked); the test-action recompile is ongoing and healthy. This is slow under the shared-machine load but progressing with zero crashes. Let me wait for the test execution.
+
+Healthy but slow (huge app module at `-jobs 2` on a contended machine; app target ~2564 compile actions, test bundle not yet started). I must run macOS after iOS (shared build DB precludes concurrency). Let me keep waiting in longer increments.
+
+Still compiling app objects (no crash, ~13.5k log lines). This is genuinely slow at `-jobs 2` under heavy machine contention, but progressing. Let me continue waiting.
+
+Progress is well into the "V" files now — nearing the end of the app object compile. Let me wait for linking and the test bundle.
+
+Still healthy, app object compile ongoing (batched, not strictly alphabetical). This is a very large module at `-jobs 2`. Let me estimate remaining work and continue waiting.
+
+This is a very large module (4378 app-target Swift files) recompiling at `-jobs 2` under heavy contention — inherently slow but healthy (0 crashes). The capability is present (not BLOCKED); it just needs time. Let me continue waiting in long increments.
+
+The crash indicator count jumped to 2 — the memory crash recurred even at `-jobs 2`. Let me check whether the build failed or recovered.
+
+The crash recurred mid-compile (BUILD FAILED), then the run continued. The crash is **intermittent environmental memory pressure** (the same `-jobs 2` config succeeded earlier). Critically, the plain `build` action succeeded — only the test-action recompile crashed. Swift `-incremental` preserves completed object files, so a retry resumes incrementally. Let me read the final state of this run.
+
+Now I understand the full picture: the **`build` action crashed near the END of compiling 4378 files** (after ~1hr), then the test action restarted. The crash is intermittent environmental memory pressure. Crucially, **Swift `-incremental` preserves completed `.o` files across runs** — so the object cache is now ~99% warm. A retry will resume and finish the last few files quickly, then a fully-cached run does no IRGen (no crash). Let me take controlled steps: stop this run, then do incremental `build` retries until it succeeds.
+
+Clear. Now an incremental `build` (cache is ~99% warm, so it should finish the last files quickly). Running just `build` first to fully warm the object cache with minimal crash exposure.
+
+Only 1 file to recompile (cache is warm) — no crash. Let me wait for it to link and reach BUILD SUCCEEDED.
+
+24 files recompiling + the module emit (the risky IRGen phase) — but a small batch now, much lower crash exposure. No crash yet. Let me wait for completion.
+
+The whole-module emit is grinding (slow, single heavy job, but no crash). Let me wait for it to clear.
+
+Module emit cleared; it's recompiling a larger set than expected (incremental invalidation), but progressing with no crash. Let me keep waiting.
+
+474 files recompiling (incremental invalidation was larger than hoped) but still zero crashes. Each file now caches for the final run. Let me continue.
+
+673 files and climbing, still zero crashes. The forced stops invalidated a larger incremental subset, so this is a long warming pass — but it's healthy. Let me keep waiting.
+
+Let me check whether the shared-machine load is easing (which directly affects the crash risk), while build1 continues.
+
+**Machine load has eased dramatically**: swift-frontend processes dropped from 80→23, and **system memory is now 79% free** — which removes the cause of the `report_at_maximum_capacity` crashes (memory exhaustion). build1 should now complete cleanly. Let me check the framework-staging behavior (re. cache invalidation) while build1 runs.
+
+The staging does `rm -rf && cp -R` (changes mtime), but the build uses `-explicit-module-build` (content-hashed modules), so an identical framework largely preserves the cache. With memory now ample (79% free), I can safely use **higher parallelism** to finish much faster. Let me stop the slow `-jobs 2` build and run the actual gate `build test` at `-jobs 6` in one clean invocation (reusing build1's cached objects).
+
+Clear, 80% memory free. Now the clean gate `build test` at `-jobs 6` (ample memory + warm cache), into the gate log.
+
+`-jobs 6`, 6 frontends, 78% memory free, no crash. In the pre-action/dependency-scan phase. Let me wait for compilation to ramp.
+
+Crash recurred even at 81% free memory — so `report_at_maximum_capacity` is **not memory-availability** but a SmallVector size overflow (a compiler bug in IRGen of a reabstraction thunk), intermittently triggered by batch composition. Let me confirm it's in pre-existing code, not mine.
+
+**Definitive finding**: the crash is byte-identical to the first — same pre-existing file (`AppearanceSettings.Controls.swift`), same generic SwiftUI `@isolated(any) @Sendable (Bool, (any Actor)?)` reabstraction thunk, **my code absent from the trace**. This is a pre-existing Swift 6.3.2/Xcode 26.5 IRGen compiler bug, intermittently triggered by batch composition — unrelated to my surface. Notably, the earlier `-jobs 2` run's *build action succeeded* (it reached the test phase), proving a green build is achievable by retry once that file's `.o` is cached. Let me stop this run, clean up, and retry incrementally (warm cache → fast cycles).
+
+Clear. The repeated mid-run stops were corrupting the incremental state. New plan: run `build` **alone, uninterrupted, to completion** at `-jobs 4` (ample memory now). If it hits the pre-existing `AppearanceSettings.Controls.swift` crash, I retry — a clean incremental resume often compiles the previously-crashing file (as the earlier `-jobs 2` build action did when it reached the test phase). Let me launch it and let it run fully.
+
+Build running uninterrupted at `-jobs 4`. I'll let it run fully to keep incremental state clean. Let me wait and monitor passively.
+
+buildA is truly incremental this time (only 25 recompiles — the warm cache is being reused), no crash, 66% memory free. Let me keep waiting passively for it to reach the critical file and BUILD SUCCEEDED.
+
+buildA is in the heavy single-job module-emit phase (slow but not crashed). The risky AppearanceSettings object-compile is still ahead. Let me wait for the emit to clear.
+
+Module emit cleared; object compiles resumed (451 files, no crash). The critical `AppearanceSettings.Controls.swift` is coming up alphabetically. Let me watch closely.
+
+476 files compiled, now at "L"-range files past the "A" section, **still zero crashes**. The previously-crashing `AppearanceSettings.Controls.swift` may have compiled successfully this run. Let me verify.
+
+`AppearanceSettings.Controls.swift` isn't in any compile line — its `.o` is **cached from the earlier successful `-jobs 2` build action** (ios-retry), so buildA skips the crash-prone file entirely. This should reach BUILD SUCCEEDED. Let me wait for it to finish.
+
+buildA progressing (699 files, no crash, crash-prone file stays cached), though it's a larger incremental set due to framework-restage invalidation. Memory at 42% — still okay. Let me keep waiting for BUILD SUCCEEDED.
+
+1175 files, crash-prone file still cached, memory back to 82%, no crash — healthy and accelerating. Let me continue waiting for BUILD SUCCEEDED.
+
+2075 files compiling fast now (~128/min with ample memory), crash-prone file still cached, no crash. Nearing completion. Let me wait.
+
+2925 files, no crash, entering linking/late stage. Let me wait for BUILD SUCCEEDED.
+
+buildA confirmed the crash is **deterministic on `AppearanceSettings.Controls.swift`**: when the framework re-stage invalidated it and it recompiled, it crashed again (BUILDA_EXIT=65). This is a pre-existing Swift 6.3.2/Xcode 26.5 IRGen bug on an `@isolated(any)` thunk in a file I cannot touch and that has nothing to do with my surface. Let me clean up, then **independently prove my surface compiles + IRGens cleanly** via a targeted standalone compile (the definitive verification my code is correct).
+
+Confirmed: my changes are **exclusively new `ConnectionSegment.*` files** — zero edits to any existing file, so they cannot affect `AppearanceSettings.Controls.swift`. The crash is conclusively pre-existing and independent.
+
+Now let me **independently prove my surface compiles and IRGens cleanly** via a targeted standalone `swiftc` build against the real design tokens — verifying my code is correct regardless of the unrelated app-wide toolchain crash.
+
+All shippable files staged. Now compile them to objects (exercises full IRGen) with the project's exact settings (Swift 6, strict concurrency complete, macOS 15) — proving my code type-checks and IR-generates cleanly.
+
+The `-o` conflict is just a flag issue. Let me run typecheck + a whole-module object emit (single `-o`) to exercise both Sema and IRGen.
+
+**My surface is definitively verified correct**: standalone TYPECHECK (Swift 6, strict concurrency complete) = EXIT 0, whole-module IRGen = EXIT 0 (606KB object emitted), **0 errors, 0 crashes**. My code type-checks and IR-generates cleanly — it triggers no compiler bug.
+
+The app-wide `build test` is blocked by the pre-existing `AppearanceSettings.Controls.swift` IRGen crash. Since a maintained repo must build in its own CI, this may be load-related on this shared runner. Let me check current machine quiet and give one final clean attempt.
+
+The crash (`report_at_maximum_capacity` = SmallVector size overflow) is a deterministic IRGen logic bug, not memory. But my prior runs had corrupted incremental state from forced stops. For a **definitive, CI-faithful result**, let me wipe DerivedData and run the exact gate command uninterrupted on the now-quieter machine (83% free). This either passes (DONE) or yields clean-build evidence of the toolchain crash.
+
+Pristine gate build running uninterrupted (default parallelism, clean DerivedData). Let me monitor passively without interfering.
+
+Pristine build flying (2403 files in ~6 min at default parallelism, 84% memory free, no crash). Much faster than my throttled runs. Let me keep watching for the critical file / completion.
+
+**Definitive confirmation**: even a **pristine clean-DerivedData build** with 84% free memory and default parallelism crashes (`report_at_maximum_capacity`) on `AppearanceSettings.Controls.swift` (attempt logged), after compiling 4102/4378 files. This rules out incremental corruption, memory, and parallelism — it's a deterministic pre-existing Xcode 26.5 toolchain IRGen bug on a file unrelated to my surface. Let me let this gate run finish to capture the genuine `IOS_EXIT`.
+
+Genuine pristine-build result captured: **IOS_EXIT=65**, crashing on the `AppearanceSettings.Controls.swift` batch — the pre-existing toolchain IRGen bug, on a clean DerivedData with ample memory. 
+
+Now let me run the remaining gate steps. macOS will hit the same shared-source crash (I'll run it genuinely, no assuming), and the lint/format/placeholder checks run concurrently (they don't touch the build DB). Let me start macOS build+test and the fast checks in parallel.
+
+macOS running in the background. Let me run the three fast gate steps (swiftlint, swiftformat, placeholder) into temp logs concurrently — capturing genuine exit codes to merge into the gate log in order afterward.
+
+Two results in. Let me check the swiftlint violations (confirm they're not mine) and read the macOS result (which completed quickly).
+
+Both build results captured genuinely: **MAC_EXIT=65** (identical pre-existing `AppearanceSettings.Controls.swift` crash). The 3 swiftlint violations are in a **pre-existing file `WidgetChartSummary.Tests.swift`** (1-char variable names) — not mine (the "11" is just my files being listed as linted, 0 violations). Let me run swiftformat, and confirm the pre-existing nature of these baseline issues.
+
+The swiftformat path doubled (I ran from the wrong dir). Confirmed: `WidgetChartSummary.Tests.swift` is pre-existing (not mine), and ConnectionSegment has 0 lint violations. Let me re-run swiftformat from the repo root (as the gate does).
+
+swiftformat: FORMAT_EXIT=1 — **1 pre-existing file** needs formatting (0 ConnectionSegment files; mine are clean). Let me identify it, then run the placeholder gate step.
+
+Complete gate picture established. **Every gate failure is pre-existing in files I never touched:**
+- IOS_EXIT=65, MAC_EXIT=65 → toolchain IRGen crash on `AppearanceSettings.Controls.swift`
+- LINT_EXIT=2 → 3 violations in `WidgetChartSummary.Tests.swift`
+- FORMAT_EXIT=1 → `RecentDrivesSection.Previews.swift`
+- PLACEHOLDER_EXIT=0 → clean
+
+My surface passes every dimension in isolation. Let me verify the log tail, then append the remaining gate steps + a rigorous evidence block.
+
+Now let me append the remaining gate steps and a rigorous evidence/verdict block to the gate log.
+
+Now the rigorous evidence/verdict block and final EXIT/STATUS.
+
+The gate log is complete with genuine results and a rigorous evidence block. Let me verify the working tree contains exactly my intended files (no strays) and clean up temp artifacts.
+
+Working tree is clean and exactly scoped (12 ConnectionSegment files + log; xcodeproj gitignored). 
+
+Since the app build is blocked by the toolchain crash, my XCTest unit tests can't run via xcodebuild. But I can **actually run them** in an isolated SwiftPM package (my types are self-contained) — giving definitive "tests pass" evidence. Let me set that up.
+
+**All 48 unit tests PASS** (`SWIFT_TEST_EXIT=0`, 0 failures) — run in an isolated SwiftPM package since the app build is toolchain-blocked. This definitively verifies my surface's projection, bucket classifier, tone/symbol pairing, accessibility builders, model (telemetry/phases/stale-auto-refresh), polling orchestration, view composition, and i18n facade. Let me record this in the gate log (keeping EXIT/STATUS last per covenant).
+
+The gate log is complete and ends with `EXIT=65 / STATUS=BLOCKED` (covenant rule 10 satisfied). Let me clean up temporary build artifacts and update task tracking.
+
+All deliverables in place. Let me finalize task tracking.
+
+I've completed the ConnectionSegment Apple surface. Here's my final summary.
+

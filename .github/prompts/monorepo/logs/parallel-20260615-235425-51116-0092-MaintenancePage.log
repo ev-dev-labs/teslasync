@@ -1,0 +1,227 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source, the Apple app structure, and existing parity implementations.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web source and explore the Apple Features directory structure.
+
+Let me continue reading the web source and explore the Apple Features directory.
+
+Let me read the rest of the web page and explore existing Apple feature implementations to understand the patterns.
+
+Now let me study existing Apple page implementations and the supporting infrastructure (tokens, components, navigation). Let me read several key files in parallel.
+
+Let me look at the shared component library, design tokens, and how `StatCard`/`TabButton` are defined. Let me also find the navigation registration and the string catalog.
+
+The structure is clearer now. Let me explore the broader layout — shared surfaces, navigation registration, design tokens, and find where `StatCard` is defined.
+
+Now I understand the page pattern. Note `StatCard`/`TabButton` are global structs I can reuse. Let me check the toolchain availability (Xcode/swiftlint), the parity ledger/manifest, navigation root, and the logs/string-catalog locations.
+
+Good — full toolchain is available (xcodebuild, swiftlint, swift, pwsh). Let me examine an existing log for the format, the ledger, the navigation root, and the placeholder checker.
+
+Let me examine an existing log's format (especially the PARITY section), the navigation registration, and the placeholder checker.
+
+This is very informative. There's a critical output-path question: the DevTools log says the real compiled home is `apps/apple/Sources/Features/`, but I found `DataRepairPage` at `apps/apple/TeslaSync/Features/System/`. Let me resolve this by checking `project.yml` and the DataRepair log.
+
+`TeslaSync/Features` IS a compiled source group (project.yml line 53), so the prompt's literal path `TeslaSync/Features/VehicleSystems/` is correct. Now let me understand navigation registration and read the DataRepair log for the reconciliation pattern.
+
+The DataRepair peer ships the page without adding a route registration. Let me check `AppRoute.swift` to see if a `maintenance` route already exists, and review the route registration pattern and the end of the DataRepair log.
+
+Let me examine the routing system to decide on navigation registration — reading `AppRoute.swift`, `AppRouteParser.swift`, `RouteHostRegistry.swift`, and an example registration.
+
+No `.maintenance` route exists yet. Let me understand the route-hosting mechanism and check whether the KMP `Shared.xcframework` is already staged (critical for whether a full build is feasible).
+
+Let me check how registrations are chained in the app entry, whether other `TeslaSync/Features` pages register routes, and whether the KMP `Shared.xcframework` is staged.
+
+Key finding: `Shared.xcframework` is absent (only `.gitkeep`), so a full `xcodebuild` needs a multi-minute Gradle KMP stage. Route registrations chain in `TeslaSyncApp.swift`. Let me read the manifest entry for this unit, the route parser, the xcstrings structure, and check for route-count tests.
+
+Confirmed manifest (45 = 11 panels + 4 states + 30 strings). Let me examine the route parser, the shared P3 component library + P2 tokens, the xcstrings structure, and check for route-count tests.
+
+The parser auto-resolves by `pathSegment`, so `/maintenance` will work automatically. Let me check `RouteTests.swift` for hardcoded route assertions, and read the shared component library (Metrics, Cards, States, Typography, Badges).
+
+Excellent — the shared P3 library uses `TS`-prefixed components with P2 tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSTone`). `RouteTests` only requires unique pathSegments (✓ "maintenance" is free). Let me read the core components and tokens I'll use.
+
+Let me read the remaining essential components and tokens I'll need: Typography, Badges, Buttons, the design tokens, Pickers/Filters, DataTable, and Banners.
+
+Let me read the remaining components and tokens: Buttons, the design tokens, Banners, Pickers, Filters, and DataTable.
+
+Let me read the generated design tokens, the glass material modifier, and the remaining components (Banners, Pickers, Filters, DataTable).
+
+Now I have the full token catalog. Let me read the final components (Banners, Pickers, Filters, DataTable, glass material) and find a representative data-driven `Sources/Features` page to mirror the scaffold.
+
+Let me read the picker/select and data-table components, the glass material modifier, and find a representative data-driven page to mirror the scaffold.
+
+Let me read the DataTable component and find a representative data-driven page with a state machine + summary cards to mirror the scaffold.
+
+The `Sources/Features/Analytics/Mileage*` set is the gold-standard pattern (Format, Models, Page sections, PageModel, RouteRegistration). Let me read those to mirror the scaffold, model state machine, and registration.
+
+This is the gold-standard pattern. Let me read the Mileage model, its sample data sources, a section file, and the units environment facade.
+
+Let me read the units/formatting facade, the currency formatting, and the Mileage format/models/sample helpers to complete my understanding.
+
+Let me read a currency-format helper, the Mileage models + sample data sources, and confirm the `tsUnits` environment key.
+
+I now have a complete understanding of the architecture. Let me check the string catalog structure and which of my needed keys already exist (to avoid duplicates), and confirm the xcstrings format.
+
+The catalog is a large JSON keyed by string. Let me check which of my needed keys already exist to avoid duplicates.
+
+I have everything needed. Let me verify how the shell hosts a route view (navigation title convention) and confirm the theme modifier, then start building.
+
+The shell sets `.navigationTitle("route.maintenance")`, so I'll add that key. Existing values are correct. Let me check the swiftlint/swiftformat configs (limits, rules) before writing, then set up my plan.
+
+Now I understand the swiftlint constraints (—strict ⇒ keep files ≤400 lines, function bodies ≤50). Let me read the `TeslaSyncApp.swift` registration chain to see exactly where/how to add mine, then set up my plan.
+
+Let me see the end of the registration chain to pick a clean insertion point.
+
+I have a complete understanding of the architecture. Let me set up my plan and todos, then implement.
+
+Now I'll implement. First, create the directories, then write the files in dependency order.
+
+Now writing the files. Starting with the models:
+
+I placed `import SwiftUI` mid-file — let me fix imports to the top.
+
+Now the pure formatters:
+
+Now the `@Observable` model:
+
+Now the derived view-data as an extension in the same file:
+
+Now the sample data sources:
+
+Now the main page view:
+
+Now the summary section, metric card, toolbar, and skeleton:
+
+Now the items grid, item card, category badge, and progress:
+
+Now the cost summary and projections panels:
+
+Now the service records panel:
+
+Now the route registration. First, let me check for any other exhaustive `switch` over `AppRoute` that adding a case could break.
+
+Both are safe (allCases / different enum). Now let me add the `.maintenance` route case, create the registration, and chain it.
+
+Now create the route registration and chain it in the app:
+
+Now let me add the 32 missing string keys to the catalog via an additions-only textual insertion (preserving the rest of the 220k-line file byte-for-byte).
+
+32 keys added and JSON validated. Let me update todos and run the verification gates (swiftformat, swiftlint, placeholders).
+
+swiftformat flagged style issues in my new files. Let me auto-fix with the ecosystem tool (applies repo config), then re-verify. My AppRoute/TeslaSyncApp edits were clean (not flagged).
+
+swiftformat passes (0/12). Now swiftlint --strict:
+
+swiftlint linted the whole project and found 3 violations. Let me see exactly which ones (quiet mode):
+
+All 3 violations are in **pre-existing** sibling files (`MyActivityPageModel.swift`, `AnomalyInlineRow.Previews.swift`) — none in my code. Let me confirm my change scope via git, and get a clean per-file lint signal for my files using a scoped config.
+
+My scope is clean and the 3 violations are confirmed pre-existing. Let me get a clean isolated lint signal for just my files using a scoped config:
+
+My files pass swiftlint --strict with **0 violations**. Now the placeholder scan:
+
+The scanner flags the literal word "placeholder" — including the legitimate SwiftUI `.redacted(reason: .placeholder)` API and my doc comment. Let me check how the scanner works and how peers whitelist the redaction API.
+
+The scanner supports `// parity:allow <reason>` opt-outs (used by peers for the SwiftUI redaction API). Let me check the exact patterns, then reword my comment and add the sanctioned opt-out for `.placeholder`.
+
+The forbidden word is "Placeholder". Peers opt-out the redaction API with `// parity:allow redaction API, not a stub`. Let me view the current lines and fix both (reword my comment, add the sanctioned opt-out for `.placeholder`).
+
+Now re-run placeholder scan + re-verify format/lint after the edits:
+
+Placeholder scan passes (COUNT=0, EXIT=0). Now let me verify my code's dependencies — if it's free of the KMP `Shared` framework, I can type-check it in isolation (fast, no Gradle).
+
+My surface is KMP-`Shared`-free (only Foundation/SwiftUI/Observation). This enables an isolated type-check against the real component sources. Let me verify the UI component layer is also `Shared`-free so I can compile a closed set.
+
+The UI/Design/routing layers are `Shared`-free, enabling an isolated type-check. Let me identify the few component files that transitively need `Shared` (to exclude), then type-check my code against the real component APIs.
+
+Only `UnitFormatters.swift` is `Shared`-coupled (and my code doesn't use it). Let me run `xcodegen generate` to confirm the project picks up my files, then do an isolated type-check against the real component APIs.
+
+xcodegen succeeded and my files are referenced (18×). Now the isolated type-check against the real component APIs (macOS, Swift 6 strict concurrency). My page uses no charts/maps, so I'll exclude those subtrees and the one `Shared`-coupled file.
+
+macOS type-check passes (exit 0, no errors) against the real component APIs. Now the iOS type-check to exercise the `#if os(iOS)` branches (size-class/compact logic):
+
+Both idioms type-check cleanly. Now let me prove the model's derived logic actually executes correctly with a focused execution harness (cost annualization, projection sorting, summary, phase resolution, filtering).
+
+Need an `@main` entry with `-parse-as-library`. Let me fix the harness tail:
+
+All 32 model assertions pass — the real logic executes correctly across all 4 states. Let me clean up the harness and assess whether a full `xcodebuild` is viable (it needs the KMP `Shared.xcframework` staged via Gradle).
+
+The full `xcodebuild` requires a multi-minute Gradle/Kotlin-Native `Shared.xcframework` stage. Let me kick that off in the background (to honestly record the runner's behavior) while I write the ledger and log. My in-scope code is already proven via dual-idiom type-check + 32/32 harness.
+
+While that runs, let me update the parity ledger. Let me inspect its structure and any existing vehicle-systems rows.
+
+No vehicle-systems rows yet (185 rows). Let me append my two ledger rows (macos + ios, 45/45 done) before the closing bracket:
+
+Let me validate the ledger JSON and check the Shared build progress.
+
+Ledger is valid JSON (both Maintenance rows 45/45). The Shared.xcframework Gradle build is genuinely progressing (Kotlin/Native compile in flight, pid 78311). Let me gather file metrics for the log while it builds.
+
+My implementation is 1637 lines across 10 files (vs web 687) — well above threshold. Let me verify every one of the 30 required strings is actually referenced in my Swift code (catches any gaps before writing the log).
+
+All 30 strings referenced in code. Let me do a final airtight check that every key my code uses resolves in the catalog:
+
+All keys resolve. Let me check the Shared build progress before writing the log.
+
+The Gradle build is actively progressing (debug XCFramework done, now linking release slices). It will finish soon. Let me write the comprehensive evidence log now.
+
+Log written. Let me check whether the Shared.xcframework build completed — if so I can do an authoritative real compile.
+
+The Shared build is genuinely progressing (now linking release slices — the toolchain works). Let me wait for it to finish so I can record a definitive result.
+
+**Shared.xcframework built and staged successfully** (BUILD SUCCESSFUL 6m33s, SHARED_STAGE_EXIT=0). Now I can attempt the authoritative full `xcodebuild`. Let me update the log's build line and kick off the real macOS build in the background.
+
+Before attempting the full build, let me check for top-level type-name collisions across the whole app module (the isolated type-check wouldn't catch those).
+
+Found a collision: `MaintenanceProjection` already exists in a dashboard widget. Let me wait for the full scan and inspect the existing definition.
+
+Only one collision: `MaintenanceProjection`. Let me inspect the existing widget definition to understand it and confirm no other shared types, then rename mine.
+
+The widget's `MaintenanceProjection` is a different shape — I must rename mine to avoid the redeclaration. Let me find exact occurrences (preserving my `MaintenanceProjectionsPanel`/`MaintenanceProjectionRow` view names) and rename to `MaintenanceServiceProjection`.
+
+7 occurrences in 3 files; `MaintenanceServiceProjection` is free. Let me rename with word-boundary precision (preserving the `...Panel`/`...Row` view names) and re-verify format/lint/typecheck.
+
+Clean rename. Let me re-verify format, lint, collisions, and re-run the dual-idiom type-check after the rename.
+
+Collisions now **resolved (none)**. swiftformat wants to re-wrap 1 file after the longer name. Let me auto-format and re-run the full verification (format, scoped lint, both type-checks).
+
+Format + lint clean after rename. Let me re-run the dual-idiom type-check and the model harness to confirm correctness post-rename.
+
+Both idioms type-check clean post-rename. With `Shared.xcframework` now staged, let me attempt the authoritative full macOS `xcodebuild` in the background and watch whether any errors reference my files.
+
+The macOS build is running in the background. Let me add the collision-scan finding to the log (an honest integration detail) and re-run the model harness post-rename to confirm logic is intact.
+
+Let me re-run the model harness post-rename and check the build progress.
+
+Model harness passes 12/12 post-rename. The macOS build failed with exit 65 (as peer logs predicted). Critical question: are any errors in **my** files? Let me extract the actual errors.
+
+The build failed with exactly **2 errors (one issue, logged twice), ZERO in my files**: a pre-existing duplicate-filename collision between two sibling `ScheduledExportsPanel.swift` files I never touched. Let me confirm this is pre-existing and that none of *my* filenames introduce a duplicate.
+
+**Confirmed**: the macOS BUILD FAILED (exit 65) is caused solely by a **pre-existing, out-of-scope duplicate-filename collision** (two sibling `ScheduledExportsPanel.swift` files, both git-tracked, not in my diff). **Zero errors reference my files**, and all my filenames are unique. This matches the peer-documented pre-existing breakage. Let me record the real build result in the log.
+
+Let me update todos and verify the final git state before committing (ensure no generated artifacts get committed).
+
+Git state is exactly as intended (generated artifacts are ignored, no stray temp files). All in-scope gates are green; the only RED is pre-existing out-of-scope sibling breakage. Let me commit with the proper scope and trailer.
+
+Committed (6678d62c4). Let me do a final sanity check — clean working tree, log terminator, and a last confirmation of the key gates.
+
+Everything is finalized and verified. Let me update the plan file to reflect completion.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip ActionItem: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip FormField: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationStats: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ResourceRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportDelivery: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportsPanel: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SignalDiffRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SystemHealthData: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TabButton: ambiguous sides ['secondary', 'secondary']

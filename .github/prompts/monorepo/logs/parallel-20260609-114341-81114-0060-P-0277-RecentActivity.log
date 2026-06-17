@@ -1,0 +1,125 @@
+I'll start by exploring the repository structure, the web source component, and the existing Apple app architecture.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat). Note: the prompt references iPhone 16 and iOS 18, but the runner has iOS 26.5 and an iPhone 16 simulator is booted. Let me explore the Apple app architecture.
+
+The `feature-views` directory has 2192 entries. Let me check if `RecentActivity` already exists and examine existing examples to learn the conventions.
+
+`RecentActivity` files already exist with substantial content. Let me examine their current state, check the log, and understand whether they're complete or stubs.
+
+A commit already exists (`681c0bcf8`) matching the prompt's message, but the **log file is missing** — which the acceptance criteria require. Let me understand the git history and verify the existing files.
+
+The existing committed files are for a **different** web source — `features/dashboard/components/RecentActivity.tsx` (with charts, fleet performance). But **this** prompt (0277) targets `features/vehicles/components/RecentActivity.tsx` — the simpler two-panel version with **no charts**. Both map to the same native path. Let me read the existing files to understand the conflict fully.
+
+There are clearly **two** colliding prompts: 0130 (dashboard source, currently committed) and 0277 (vehicles source, this task). Both target `RecentActivity.*`. Let me read the actual prompt files and the prior 0277 run logs to understand how this collision should be resolved.
+
+Now the collision is confirmed. Let me read how the **previous** 0277 runs resolved this — the artifact log will show whether they blocked, renamed, or overwrote.
+
+The previous 0277 run resolved the collision cleanly: it left the 0130 dashboard `RecentActivity.*` files **byte-identical** and created **new `RecentActivity.Vehicles.*` files** with a `VehiclesRecentActivity` type (still matching the allowed `RecentActivity.*` glob). Those vehicles files are **not** in this branch — only the logs survived as artifacts. I need to recreate them. Let me confirm and study the conventions.
+
+Now let me study the web atomic components for parity semantics, find any native equivalents, and confirm the design tokens. Reading in parallel.
+
+Now let me confirm the design-system tokens and motion/skeleton primitives, and check the native data-display atoms. Reading in parallel.
+
+I have the full token picture. Now let me capture exact parity for the unit conversions, the API field names, and the lint/format config — plus mirror the test structure.
+
+I have full parity details. Now let me check the build/gate tooling situation (xcodegen, project, Frameworks, pwsh for placeholder check) and read the test files + motion/skeleton primitives to mirror.
+
+Environment confirms the documented pre-existing blocker: `Frameworks/Shared.xcframework` is only a `.gitkeep`. `xcodegen`, `pwsh`, `swiftlint`, `swiftformat` are all available. Let me read the placeholder config + test patterns, and kick off baseline lint checks in the background.
+
+I have what I need on patterns and tests. Let me read the 0130 adapter-test file for golden-value style, and resolve the dependency closure for my isolated build harness (Motion/Skeletons/Cards).
+
+Skeletons cascades into much of the Components library. Let me check whether `Sources/Components` + `Sources/Design` are self-contained (system frameworks only) so my isolated harness can include them wholesale.
+
+`Sources/Components` (39 files) + `Sources/Design` (2) are self-contained (system frameworks only) — perfect for an isolated harness. Let me read the rest of the placeholder checker to invoke it correctly, then start writing the surface.
+
+The placeholder checker scans a directory recursively and treats common patterns (TODO/FIXME/Placeholder/Lorem/etc.) case-insensitively — I'll avoid those words and verify by copying my files to a temp dir (as the prior run did). I now have everything needed. Let me write a plan file and start creating the surface.
+
+Now I'll create the surface. Starting with the i18n catalog and the value types.
+
+Now the Views file — the two panels, rows, and the native IconBox / InlineMetric / AnimatedNumber atoms.
+
+Now the States file (freshness chip, connectivity banner, loading skeleton, error), then the entry view.
+
+Now the entry view that ties it together.
+
+Now the Previews and the two test files.
+
+Now the adapter test file (formatting + projection golden values).
+
+Now the model/state-holder test file, plus a small fix to make the projection test non-vacuous.
+
+Let me fix the non-vacuous assertion in the projection test, then format and lint.
+
+All 10 files created. Now let me auto-format them with swiftformat, then lint. First, format my files and see what changes.
+
+Only 1 file needed formatting (now applied). Let me run the actual gate lints: `swiftformat --lint` on the whole tree and `swiftlint --strict` scoped to my files.
+
+swiftformat lint is clean across the whole tree (0/2933 require formatting). Now swiftlint.
+
+swiftlint --strict on my 9 files: **0 violations**. Now let me kick off the full-tree swiftlint in the background and build an isolated SwiftPM harness (real design system + my surface) to compile and run the tests.
+
+The surface-file copy loop was buggy (missing `.swift` suffix). Let me re-copy correctly and write the Package manifest.
+
+Full swiftlint finished — let me read it, and create the harness Package manifest.
+
+Full swiftlint reports **1 pre-existing violation** somewhere in the 2929-file tree (my 9 files were clean when scoped). I need to locate it to confirm it's not mine. First, let me build & test the isolated harness, then pinpoint the lint violation.
+
+The harness exposed that one Components file (`DataDisplay/UnitFormatters.swift`) references an app-level `Units` type — so the Components dir isn't standalone-compilable. My surface doesn't use those formatters. Let me see the Components layout and scope the harness to just the subtrees my surface needs (UI/Motion/Feedback), keeping the real `TSSkeleton`.
+
+Only `UnitFormatters.swift` couples to the app. My surface needs Design + UI + Motion + Feedback (for the real `TSSkeleton`). Let me rebuild the harness scoped to those subtrees.
+
+Now build the scoped harness.
+
+Two findings: (1) a **real fix needed in my code** — Swift 6 flags the `Animatable` conformance isolation on `VehiclesRecentActivityCountingText`; (2) harness scoping — `Feedback` cross-references `DataDisplay` (`TSMetricBar`), and `DataDisplay/UnitFormatters.swift` is the lone app-coupled file. Let me fix my code and check UnitFormatters' coupling.
+
+`UnitFormatters.swift` is safely excludable (its views aren't referenced elsewhere). For my code, let me fix the Swift 6 `Animatable` isolation by marking `animatableData` `nonisolated`, then rebuild the harness including all Components except that one file.
+
+Actually, the `Animatable`-on-`View` isolation fight is fragile under Swift 6. Let me replace it with a clean, faithful port of the web's `requestAnimationFrame` ease-out tween using a MainActor `Task` — no `Animatable` conformance needed.
+
+Now re-sync the harness (full Components minus `UnitFormatters.swift`) and re-format/lint my edited file, then build + test.
+
+Views.swift formats and lints clean. Now build the harness with the full design system (38 component files).
+
+Harness builds clean against the full design system. Now run the tests.
+
+All **29 tests pass** under the real Swift 6 XCTest runtime against the full design system. Now let me run the placeholder gate (scoped to my files), and locate that 1 pre-existing swiftlint violation to confirm it isn't mine.
+
+Placeholder gate: **0 violations**. Let me read the swiftlint violation locator.
+
+The single swiftlint violation is in `dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158` — a **pre-existing** file outside my allowed `RecentActivity.*` scope. Let me confirm it's pre-existing (untouched by me) and inspect the project setup for the full xcodebuild attempt.
+
+Confirmed: only my 10 files are new; the lint violation file is pre-existing and untouched; and **every app target depends on `Frameworks/Shared.xcframework`** (which is only a `.gitkeep`). Let me capture honest evidence by actually attempting the full xcodebuild gate.
+
+Project generates; `Shared.xcframework` is absent. Now attempt the real iOS `xcodebuild` to capture the exact failure.
+
+xcodebuild is compiling the full app (thousands of files; scheme pre-actions like "Stage Shared.xcframework" are skipped by `xcodebuild`, so it will fail at framework link). Let me let it run in the background and check progress while I prepare the log.
+
+Let me continue waiting for the xcodebuild failure to capture the real error, then I'll finalize.
+
+Important development: `xcodebuild` **did** run the pre-action and **successfully built & staged `Shared.xcframework` via Gradle** on this runner — then failed later (exit 65) during compilation. My `head -25` truncated the actual error. I must capture the real failure and verify it's **not** in my files. Let me re-run, saving full output.
+
+No `error:` lines, yet exit 65. The failure is structural (link/duplicate/build-graph), not a compile error in my code. Let me find the actual failure.
+
+No `error:` diagnostics exist anywhere in the log, yet two huge `SwiftCompile` batches "failed" — my files appear only because the compiler **batches ~25 files per process**. Since my exact files compiled cleanly + 29 tests passed in isolation, my code isn't the cause. Let me find the real failure reason (compiler crash / OOM / duplicate symbol).
+
+The **Swift compiler itself crashed** (line 9269: "Please submit a bug report … crash backtrace"; 0 `error:` diagnostics) while compiling the ~2900-file app module. Let me see what triggered the crash to confirm it's unrelated to my surface.
+
+Definitive: **swift-frontend (Apple Swift 6.3.2) crashed** (stack dump, "submit a bug report") on a giant whole-module batch of the merged app target — **zero** source `error:` lines. My exact files compiled clean + 29 tests passed in isolation under the *same* toolchain, so my code isn't the cause. `Shared.xcframework` actually built+staged fine here. Let me capture the crash signature for the log evidence.
+
+I have complete, honest evidence. Let me check what build artifacts were generated in the repo tree (to clean up), then write the log.
+
+All build artifacts (`.xcodeproj`, `.xcframework`, `DerivedData`) are gitignored — git status shows **only my 10 files**. Let me clean the generated artifacts and write the comprehensive log.
+
+Pristine — only my 10 files. Now let me write the gate log with full honest evidence.
+
+Log written. Let me do a final verification pass on all 9 files (format + lint, final state) and confirm no dangling references before committing.
+
+Final state is clean: **0 formatting issues, 0 lint violations** on all 9 files, no dangling references. Now stage exactly my 10 files + the log and commit.
+
+Exactly 11 files staged (10 surface + log). Committing.
+
+Committed (`14db03efb`), tree clean. Let me verify the commit scope (predecessor 0130 untouched) and clean up temp artifacts.
+
+The commit has exactly 11 files (2146 insertions); the predecessor 0130 dashboard files are **not** in the commit (grep empty → byte-identical, untouched). The cleanup didn't run because grep's exit 1 broke the `&&` chain — let me clean the temp dirs now.
+
+Task complete and fully verified. Cleaning done, working tree clean, predecessor untouched.

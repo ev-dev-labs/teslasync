@@ -1,0 +1,222 @@
+I'll start by reading the web source and exploring the Apple app structure and capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, pwsh, swift 6.3.2). Now let me explore the Apple app structure and dependencies.
+
+This is a mature, large Apple app. Let me examine the key directories and the project configuration.
+
+Large established app using XcodeGen + KMP `Shared.xcframework`. Let me find the native `useAnnouncer` equivalent, the i18n facade, diagnostics contract, and study a representative existing surface.
+
+Found `AnnouncerRegion` — the native equivalent of `useAnnouncer`, the exact data source for `VisuallyHidden`. Let me study it thoroughly as the closest predecessor.
+
+Excellent template. Let me read the remaining `AnnouncerRegion` files and the shared `AnnouncerMessage` type to understand the full architecture.
+
+Let me read the remaining template files (Views, States, Previews, Tests, ModelTests, strings) and the design tokens + placeholder checker.
+
+Let me read the test files, strings, design tokens, and the placeholder checker to complete my understanding.
+
+Let me read the Previews, strings, design tokens, shared components, and placeholder checker.
+
+Now let me read the design tokens, shared component APIs, swiftlint config, and the placeholder checker.
+
+Let me read the shared component APIs and locate the token definitions (Color.TS, Font.TS, TSSpacing, TSRadius).
+
+There's already a `TSSkipToContent` (web `SkipToContent`) component. Let me locate the token definitions and remaining component APIs.
+
+Let me read the generated Tokens and the Buttons/Motion/Typography components.
+
+Let me check the Motion component (`TSFadeIn`), the placeholder checker, and how an existing surface reuses the shared `Announcer`/`AnnouncerPriority`.
+
+I have the full architecture. Let me verify the cross-surface reuse pattern and check the critical build dependency (`Shared.xcframework`).
+
+Key insight: `ActiveFilterChips` defines its **own** announcer seam rather than reusing the global one — the repo convention is per-surface self-contained types. I'll follow that. Let me verify build feasibility (simulators, KMP toolchain) and that surfaces need no external registration.
+
+Environment is capable: iPhone 16 simulator booted, JDK 17 + gradlew present, no central registry needed. The KMP `Shared.xcframework` is the long pole — let me start building it in the background now while I write the surface.
+
+Environment confirmed capable. The KMP framework is building in the background. I understand the full architecture and conventions (per-surface self-contained types, `--self remove`, maxwidth 120, swiftlint `--strict`, forbidden placeholder words even in comments). Let me write a plan and then the surface files.
+
+Let me set up a plan and todos, then write the surface.
+
+Now writing the surface, starting with the pure core (Adapter).
+
+Now the Seams (the `useAnnouncer` port + sources + AT presenter).
+
+Now the Model (telemetry, presenter seam, connection, input, resolved, projection, `@Observable` model, i18n facade).
+
+Now the presentational Views — the richest file (mode cards, semantics chips, focusable skip-link reveal, history).
+
+Views.swift is 396 lines — too close to the swiftlint `file_length` 400 limit (strict mode fails on warnings). Let me relocate the history row/section to States.swift for safe margins.
+
+Now States.swift (loading/empty/error/freshness chrome + the recent-history log).
+
+Now the main surface view.
+
+I introduced a duplicate history section — `VisuallyHiddenDataView` already renders history internally. Let me simplify the surface's data case.
+
+Let me check the KMP build progress while I continue with previews, strings, and tests.
+
+KMP build still running. Continuing with previews, strings, and tests.
+
+Strings file — let me extract every i18n key I used to ensure the catalog is complete and exact.
+
+The glob missed `VisuallyHidden.swift` itself (`vh.title`, `vh.subtitle`). The full set is 28 keys. Let me write the catalog.
+
+Now the test files. First the adapter/projection/semantics/accessibility tests.
+
+Now the model/voicing/announcer/live-source tests.
+
+All 11 files written. Let me update todos and run static self-checks (line counts, long lines, forbidden words) while checking the KMP build.
+
+All files within limits: ≤329 lines, no long code lines, no forbidden words. Let me run swiftformat and swiftlint on my files, and check the KMP build.
+
+swiftformat wants switch-expression style (no `return`) in `VisuallyHiddenSemantics.resolve`. Let me fix that.
+
+Re-checking swiftformat and running swiftlint on my files; also checking KMP build progress.
+
+Both linters pass clean on my files (swiftformat 0/9, swiftlint 0 violations). Let me check the KMP build.
+
+swiftformat and swiftlint pass clean on all 9 source files. The KMP framework build is the long pole — let me wait for it.
+
+KMP framework built (13m56s) and staged. Now let me generate the Xcode project and compile the iOS app to verify my surface integrates.
+
+Project generated; my 60 file references are present. Now compiling the iOS app (KMP pre-action should be UP-TO-DATE now). Running async with monitoring.
+
+Build running. Let me review my code for SwiftUI correctness while it compiles, then check progress.
+
+Code looks correct. Let me monitor the iOS build progress.
+
+Let me peek at the build log to gauge progress.
+
+Good progress — past the KMP pre-action, now emitting the Swift module (where my code type-checks). No errors yet. Let me wait for completion.
+
+Still type-checking the module, no errors. Let me wait further for compilation to finish.
+
+Build failed (RC=65). Let me find the compile errors.
+
+The failed batch doesn't include my files, and there's no `error:` string. Let me search more carefully for the actual diagnostic (crash, redeclaration, ambiguity).
+
+No source `error:` diagnostics at all — that suggests a compiler crash or non-diagnostic failure. Let me look for crash indicators and the context around the failing batches.
+
+Let me view the log region just before the failure summary, where the real diagnostic usually appears.
+
+Only pre-existing warnings (in other files), no errors — and `SWIFT_TREAT_WARNINGS_AS_ERRORS=NO`. The "2 failures" with no diagnostic strongly suggests an OOM-killed compiler. Let me confirm.
+
+Load average is **52** on a shared machine — severe resource contention. The compiler was killed without a diagnostic (line 17386). Let me confirm the killed batch isn't my code.
+
+A swift-frontend **crash during IR generation** (stack dump, not a source error). Let me see the top of the crash trace to find what triggered it.
+
+Two swift-frontend **IRGen crashes** under load avg 52 on a shared machine — both on **pre-existing files** (`AppearanceSettings.Controls.swift`), not mine. My code is clean (lint/format pass, no `error:` anywhere). Let me confirm the first crash's file and then retry with constrained parallelism to dodge the contention-induced crash.
+
+Confirmed: **zero** VisuallyHidden files in any crash trace — both crashes are IRGen failures on pre-existing files (`AppearanceSettings.Controls.swift`, `AIAlertTuningSuggestions` batch) under load avg 52. This is environmental compiler instability. Let me retry incrementally with reduced parallelism (reusing derived data, so only the crashed batches recompile).
+
+Incremental retry running (only crashed batches recompile). Let me wait and monitor.
+
+Load is dropping (1-min avg 14.87). Let me check incremental build progress.
+
+Incremental build progressing, 0 crashes so far. Let me wait for it to finish.
+
+Still in whole-module emit (slow under load), 0 errors/crashes. Let me wait longer for it to finish.
+
+Build moved into the IRGen/SwiftCompile phase (where crashes occurred), still 0 errors — but load spiked to 75 again. The shared machine load is volatile. Let me keep waiting.
+
+Steady progress (7013 lines, 0 crashes), grinding through IRGen under load ~65. Let me wait for completion.
+
+10K+ lines, still 0 crashes, load easing to 39. Compiling steadily. Let me wait for completion.
+
+13.8K lines, still 0 crashes — past where build1 first crashed. Let me wait for it to finish linking.
+
+Another RC=65. Let me determine if it crashed again or hit a real error.
+
+Same crash reproduces **deterministically** on the same pre-existing file (`AppearanceSettings.Controls.swift`), 0 source errors, no VisuallyHidden file implicated. Before assuming environmental, let me check how prior shipped surfaces' logs handled this exact gate — that tells me if baseline builds clean on this runner.
+
+**Decisive finding:** Every prior shipped surface (0001, 0004, 0005, 0008, 0009, 0012…) hits the **identical** `IOS_EXIT=65` swift-frontend crash on this runner and concludes `STATUS=DONE` by proving the surface green in isolation while disclosing the full-app crash honestly. The crash on `AppearanceSettings.Controls.swift` is a known pre-existing runner/compiler issue. Let me read the AnnouncerRegion log to replicate the exact accepted verification harness.
+
+This is the established, accepted disposition: the full-app `xcodebuild` hits a known pre-existing swift-frontend IRGen crash on this runner; predecessors prove their surface green via whole-tree lint/format + a standalone SwiftPM test harness + isolated typecheck, disclose the `IOS_EXIT=65` honestly, and conclude `STATUS=DONE`. Crucially, the build wiring (project.yml, .swiftlint.yml) is already in place from 0001, so I touch only my files + the log.
+
+Let me run the whole-tree lint/format (background) and the placeholder check, and inspect the design-system files for a test harness.
+
+Two findings: (1) the broader `shared-surfaces` dir has 54 placeholder hits — all in **other** prompts' files (e.g. `RangePicker.Views.swift`); my gate's literal path scopes to my files only. (2) The design-system components import **only SwiftUI** — so a clean SwiftPM harness is feasible. Let me build a standalone test harness (Adapter+Model+Seams+tests) and launch the macOS build to capture `MAC_EXIT`.
+
+Harness scaffolded. Let me read the whole-tree swiftlint result and run the harness tests.
+
+**48/48 harness tests pass** (Swift 6, macOS 15) — `SWIFT_TEST_RC=0`. Whole-tree swiftlint shows 3 violations in 4940 files (my 9 files already proven clean — these are in other prompts' files). Let me read the macOS build result and identify those 3 violations.
+
+macOS failure root cause confirmed: **`"TeslaSync-macOS" has entitlements that require signing with a development certificate`** — the exact environmental code-signing limitation predecessors documented (0 source errors, my surface clean). 
+
+Now let me capture the whole-tree swiftformat + the 3 swiftlint violation locations (to confirm they're pre-existing/other-prompt), and run the gate's exact placeholder command.
+
+Placeholder check: gate command → `EXIT=0`, and my files scanned in isolation → `PLACEHOLDER_COUNT=0`. Let me read the captured swiftlint violations.
+
+The 3 swiftlint violations are all in `widget-primitives/WidgetChartSummary.Tests.swift` (variable names `a`/`b`/`c`) — another prompt's file, **0 in VisuallyHidden**. Let me run whole-tree swiftformat and check whether I can extend the harness to also build the View layer (design-system import scope).
+
+Design system imports are all SDK-only (SwiftUI/Charts/MapKit/CoreLocation) — no app-internal deps. Let me do the predecessor's [ISOLATED TYPECHECK]: type-check my 7 source files against the real design system on the macOS SDK.
+
+Isolated typecheck: **0 errors in my 7 files** against the real design system. The 26 total errors are in unrelated bulk-included components (charts/maps referencing app models I didn't include). Let me narrow to the exact primitives my surface needs for a fully-green typecheck, and read the whole-tree swiftformat result.
+
+- 26 typecheck errors all in ONE unused file (`UnitFormatters.swift`, not my dependency). - Whole-tree swiftformat: **1/5238** needs formatting, **0 in VisuallyHidden** (my files clean). Let me re-run the typecheck excluding that one unrelated file, on both SDKs, for a clean green.
+
+Both isolated typechecks fully green (macOS + iOS SDKs, 0 errors). Now, to make the "not my code" claim airtight (covenant rule 3), let me run a **baseline build with my files removed** — if the identical IRGen crash still occurs, it's definitively pre-existing. Running in background while I draft the gate log.
+
+Baseline state confirmed (0 VisuallyHidden refs). Let me run the baseline iOS build in the background.
+
+While the baseline build runs, let me confirm which single file swiftformat flags (to document it's not mine) and start drafting the gate log.
+
+The single swiftformat-flagged file is `feature-views/RecentDrivesSection.Previews.swift` (another prompt's file) — my files are clean. Let me monitor the baseline build (confirming the iOS crash is pre-existing).
+
+Baseline at module-emit phase, 0 crashes yet. Let me wait for it to reach the IRGen phase (where the crash occurs).
+
+Baseline now in IRGen phase (7K lines, 0 crashes, load easing to 27). Let me wait for it to reach the crash point or complete.
+
+Baseline at 10.6K lines, still 0 crashes — approaching where build1 crashed (~13K). Let me wait for the outcome.
+
+Baseline has passed build1's first crash line region (13.8K lines, still 0 crashes). Let me wait for it to finish.
+
+Baseline build (my files **removed**) **also fails with RC=65**. Let me confirm it's the same pre-existing IRGen crash — that's the definitive proof.
+
+**AIRTIGHT PROOF:** The baseline build with my files **entirely removed** fails with the **identical** crash — same `Stack dump`, same `AppearanceSettings.Controls.swift` IRGen crash, same failed batch, 0 source errors. The iOS crash is **definitively pre-existing/environmental**, independent of my surface. 
+
+Let me restore my files and regenerate.
+
+All 10 files restored; git status shows only my surface files as new. Let me verify the full git status is clean (no stray modifications) and update todos.
+
+Git is clean (only my 10 files; build wiring untouched). Now let me gather final data points (tool versions, HEAD) and write the gate log.
+
+All data confirmed. Baseline crash is the same file (`AppearanceSettings.Controls.swift`), same IRGen thunk, with my files absent — definitive. Now writing the gate log.
+
+Gate log written. Let me do a final clean-check on my surface files (post-restore) and verify line counts before committing.
+
+All clean: swiftlint 0 violations, swiftformat 0/9, all files <400 lines. One tiny doc fix — the strings file is 60 lines (I wrote 61). Let me correct the log, then commit.
+
+Now committing the surface and log.
+
+All 10 surface files + log staged (nothing else). Committing.
+
+Committed (HEAD `6f5c72d42`), tree clean. Let me finalize todos and clean up temp artifacts.
+
+Git tree is fully clean; commit complete. Let me confirm all todos are done.
+
+All 11 todos complete. The VisuallyHidden Apple shared surface is delivered, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-shared-surfaces-0003-VisuallyHidden.log | 285 ++++++++++++++++++
+ .../shared-surfaces/VisuallyHidden.Adapter.swift   | 268 +++++++++++++++++
+ .../shared-surfaces/VisuallyHidden.Model.swift     | 268 +++++++++++++++++
+ .../VisuallyHidden.ModelTests.swift                | 322 ++++++++++++++++++++
+ .../shared-surfaces/VisuallyHidden.Previews.swift  | 100 +++++++
+ .../shared-surfaces/VisuallyHidden.Seams.swift     | 219 ++++++++++++++
+ .../shared-surfaces/VisuallyHidden.States.swift    | 226 ++++++++++++++
+ .../shared-surfaces/VisuallyHidden.Tests.swift     | 249 ++++++++++++++++
+ .../shared-surfaces/VisuallyHidden.Views.swift     | 329 +++++++++++++++++++++
+ .../shared-surfaces/VisuallyHidden.strings         |  60 ++++
+ .../TeslaSync/shared-surfaces/VisuallyHidden.swift |  93 ++++++
+ 11 files changed, 2419 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0003-VisuallyHidden.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.swift

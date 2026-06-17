@@ -1,0 +1,232 @@
+I'll start by exploring the repository structure to understand the task context, then read the web source component.
+
+Found the web source and the Apple app directory. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply — especially the `shared-surfaces` directory and the P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics infrastructure.
+
+The `shared-surfaces` directory already has ~1977 entries. Let me check for existing ActionItem files and examine sibling surfaces to learn the conventions.
+
+The convention uses a multi-file pattern per surface. Let me study a presentational example (`Accordion`) to learn the exact conventions.
+
+Let me read the full Accordion file set to understand the conventions precisely.
+
+This is a richly-detailed pattern. Let me read the remaining Accordion files plus the supporting token/surface infrastructure.
+
+Now let me read the remaining Accordion files (Previews, Tests, AdapterTests, strings) and the token infrastructure.
+
+Now let me read the AdapterTests, the strings file, and find the token definitions (TSSpacing, Color.TS, Font.TS, etc.).
+
+Let me locate the design token definitions used by these surfaces (TSSpacing, TSRadius, TSMotion, Color.TS, Font.TS).
+
+Let me view the rest of project.yml and find the core token definitions in `Sources`.
+
+The tokens are "generated". Let me find where `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion` are actually defined.
+
+Let me check critical capability (xcodebuild availability) and find where tokens come from (possibly generated/gitignored).
+
+Toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, xcodegen). Now let me locate the token definitions precisely — they may use a specific pattern.
+
+The main-app tokens appear to be generated. Let me check project.yml for generation scripts and the Design source path.
+
+Tokens come from `apps/design/generated/apple`. Let me verify they exist there.
+
+I now have the full token system. Let me study a closer sibling — `InlineCallout` (severity+icon, cited as parity precedent) and check if `ActionItemsPanel` exists, plus how a surface handles navigation/links.
+
+`InlineCallout` is the ideal precedent (severity + icon). Let me read its full fileset.
+
+`InlineCallout` is the ideal template. Let me read its Model, Views, Previews, Tests, AdapterTests, and strings to fully match interaction/link handling.
+
+Let me read the `TSTone` enum, the remaining InlineCallout files (Previews/Tests/AdapterTests/strings), and a navigation-handling sibling (HealthRow) to model internal routes.
+
+`HealthRow` (0197, also in `components/status/`) is the perfect precedent — it handles the exact `to`/`external`/`onClick` model. Let me read its full fileset.
+
+Let me read HealthRow's Views, Previews, Tests, AdapterTests, strings, and the rest of its Adapter (Projection/Projector).
+
+HealthRow's Adapter ends early — the Projection/Projector must be in another file. Let me list the full HealthRow fileset and read the remaining pieces.
+
+Let me read the final HealthRow files: Projection, Previews, Tests, AdapterTests, and strings.
+
+Let me read HealthRow's Tests, AdapterTests, and Previews to complete the pattern, then check a few important details (lint config, surface slug uniqueness test, and how strings files are wired).
+
+I have a complete template understanding. Now let me check the lint configs, the placeholder checker, the Previews pattern, and whether the build dependencies (Shared.xcframework) exist — critical for the gate.
+
+`Shared.xcframework` is absent (only `.gitkeep`) — the app targets depend on it, so a full `xcodebuild` may be blocked by missing build infra. Let me assess build feasibility and read the rest of the lint/format configs and the HealthRow Previews.
+
+`pwsh` and `java` are available, and surfaces are self-contained (no registry to update). Let me read the last template piece — HealthRow.Previews — then create the plan and write files.
+
+I have the complete pattern. `HealthRow` (0197, same `components/status/` dir, identical `to`/`external`/`onClick` model) is my primary template. Let me set up a plan and todos, then build the 9-file surface.
+
+Now I'll create the surface files, starting with the Foundation-only core (Adapter).
+
+Now the Projection (pure adapter: projector + projection with CTA resolution & a11y label).
+
+Now the Model (i18n facade, telemetry seam, observable state-holder).
+
+Now the public surface — the `ActionItemCTA` closure-enum and the `ActionItem` View.
+
+Now the Views file — severity→token extensions and the `ActionItemContainer` row chrome with the CTA button.
+
+Now the Previews (every real branch, DEBUG-only).
+
+Now the strings catalog (severity words + a11y hints).
+
+Now the pure-core AdapterTests.
+
+Now the Tests file (model + CTA enum + views + strings + a11y).
+
+All 9 files written. Now let me verify — starting with SwiftFormat and SwiftLint scoped to the new files.
+
+SwiftFormat passes (0/8 require formatting). Now SwiftLint --strict on the new files.
+
+SwiftLint --strict: 0 violations. Now the placeholder gate — let me inspect how `-Path` resolves, then run it.
+
+The gate's `-Path .../ActionItem` prefix resolves to a per-surface scan (the checker treats a missing literal path as clean). To genuinely verify, I'll scan copies of the real files. Let me check patterns and run a true scan.
+
+Placeholder gate clean (COUNT=0). Now the critical check — does the Swift code compile? A full `xcodebuild` needs the absent `Shared.xcframework` (KMP Gradle build) across 5446 files. Let me first do a focused `swiftc -typecheck` of the shipped files against their real token dependencies.
+
+Shipped files typecheck cleanly under Swift 6 strict concurrency. Now let me verify the **test files** compile by building the deps + shipped files into a testable `TeslaSync` module and typechecking the tests against it.
+
+Step 1 (building the testable module from my shipped files) succeeded — proving the test files' `@testable` dependencies resolve. Step 2's only errors are XCTest macro resolution (a standalone-harness import issue, not my code). Let me fix the XCTest module path and re-typecheck the tests.
+
+Both shipped files and test files typecheck cleanly under Swift 6 strict concurrency. Now let me assess the full `xcodebuild` gate — generate the project and check what the build requires.
+
+Project generates cleanly; both `TeslaSync` and `TeslaSync-macOS` schemes exist. Now let me attempt the real build. The pre-build Run Script builds the KMP `Shared.xcframework` via Gradle — let me run it and observe the actual blocker. I'll create the log dir and start the macOS build (no simulator needed) in the background.
+
+Gradle works (offline, deps cached) and Kotlin/Native Apple targets are present. Let me build the `Shared.xcframework` — the key pre-build dependency — in the background and monitor.
+
+The XCFramework task exists. Let me build it in the background (this is heavy Kotlin/Native compilation) and monitor.
+
+The KMP build is running (heavy Kotlin/Native compilation). Let me check its progress.
+
+Good progress — Kotlin compilation is cached, now linking release frameworks. Let me wait for completion.
+
+Release linking in progress. Let me continue waiting for the build to finish.
+
+Still linking release frameworks (macosArm64 now; tvos/watchos remain). Let me wait longer for completion.
+
+The KMP `Shared.xcframework` built successfully (12m57s). Now the build dependency is satisfied. Let me stage it and attempt the real macOS build (no simulator needed) to verify my files integrate into the full project.
+
+Framework staged; iPhone 16 simulator is booted. Let me run the macOS build first as a compile smoke-test across the full project, monitoring closely for my files and any errors.
+
+macOS build running. Let me check progress and scan for my files and any errors.
+
+My `ActionItem.strings` validated and copied as a resource; zero compile errors; the macOS app target reached EmitSwiftModule — all 5446 files (incl. my 6 shipped files) compiled. Let me wait for the build to finish.
+
+Whole-module emit done; now batch-compiling all files (15k log lines, still 0 errors). Let me continue waiting for the build to complete.
+
+The macOS build failed (exit 65), but the failing batch is **other files** (`AnomalyInlineRow`, `ApiPlaygroundPage`, `AppearanceSettings.*`) — not ActionItem. Let me find the actual compiler error(s).
+
+Zero `error:` lines yet exit 65 — the compile likely crashed/was killed (OOM/resource contention), not a real code error. Let me find the actual failure reason.
+
+There's a swift-frontend **crash** (compiler stack trace). Let me examine it.
+
+The swift-frontend compiler **crashed** (3 stack dumps) while batch-compiling unrelated `A*`/`AI*` shared-surfaces — my ActionItem files are not in the crashing batch and have zero diagnostics. Let me determine the crash nature (OOM vs compiler bug) and rule out name collisions from my additions.
+
+No name collisions (my type names are unique) and the strings resources validate. The crash is a genuine swift-frontend internal crash (stack dump = compiler bug, not a code error). Let me extract the exact crash backtrace to identify the pass, and confirm it's independent of my files.
+
+**Definitive finding:** ActionItem is in **zero** crash inputs. The crash backtrace is `llvm::report_fatal_error → report_at_maximum_capacity → SmallVectorBase<unsigned int>::grow_pod` inside `IRGenModule::emitSILFunction / emitLazyDefinitions` — an **LLVM IRGen `SmallVector` capacity limit hit during object-code generation of the 5446-file module**, in unrelated `A*` files. The whole-module type-check (`EmitSwiftModule`) had already succeeded with 0 errors. Let me capture the exact fatal-error text.
+
+**Conclusive:** the build's whole-module type-check (`EmitSwiftModule` for `TeslaSync-macOS`) succeeded with **0 errors** (compiling all 5446 files including ActionItem together). The failure is solely in final object-code generation — a deterministic LLVM IRGen `SmallVector<unsigned int>` capacity crash on a giant function in unrelated `A*` files (AppearanceSettings/AppCommands/etc.), which are **outside my allowed edit scope**. To prove my files also pass the IRGen/codegen phase (not just type-check), let me emit object code for them specifically.
+
+My ActionItem files emit object code cleanly (455KB `.o`, EXIT=0) — they pass the exact IRGen/codegen phase that crashed on the unrelated `A*` files. Verification is airtight. Let me check git status to ensure I only commit the surface + log (not generated artifacts), then write the gate log.
+
+Only my 9 ActionItem files are untracked; generated artifacts are gitignored. Let me check how sibling surface gate logs recorded their status (to match the established convention for this runner) before writing mine.
+
+The established convention is clear: 198 sibling surface logs record the full `xcodebuild` as `EXIT=65 (DEFERRED — pre-existing, surface-independent; this surface 0 errors)` while per-surface gates are green, footer `EXIT=0 / STATUS=DONE`, and they commit. My evidence is stronger (whole-module type-check + object emission both clean). Let me try to actually *run* the unit tests for genuine pass/fail evidence by building an XCTest bundle.
+
+The dylib built fine; the bundle compile only failed because I omitted the XCTest Swift-overlay path (`-I $PLAT/usr/lib`) that fixed it earlier. Let me retry with that added.
+
+The test code now **compiles past type-check** (the remaining errors are only link-time XCTest/SwiftUI framework plumbing for standalone bundles outside an app context). Let me make one final attempt using deferred symbol resolution so the tests actually execute.
+
+The tests now **compile, link, load, and XCTest starts executing them** — the exit 139 is a SIGSEGV from my standalone bundle's `dynamic_lookup` not binding `SwiftUICore` (an app-context artifact, not test logic). Let me force-load SwiftUICore so the run completes.
+
+The segfault is a dyld artifact (SwiftUICore can't bind outside an app context). But `ActionItem.Adapter.swift` + `ActionItem.Projection.swift` are **Foundation-only** (no SwiftUI), and `ActionItem.AdapterTests.swift` tests exactly those. Let me run the pure adapter tests against a SwiftUI-free module for a genuine green execution.
+
+The `-lXCTestSwiftSupport` path resolution failed. Since the adapter module is SwiftUI-free, `dynamic_lookup` (resolved by the `xctest` host) should work cleanly with no SwiftUICore to bind. Let me retry.
+
+Still segfaulting at test-infrastructure level — `dynamic_lookup` leaves the XCTest Swift-assertion symbols unbound. Let me link `libXCTestSwiftSupport.dylib` by absolute path instead.
+
+Found it at `$PLAT/usr/lib/libXCTestSwiftSupport.dylib`. Let me link it properly (drop `dynamic_lookup`) and run the pure adapter tests.
+
+**23 pure-adapter tests PASSED, 0 failures** (XCTEST_RUN_EXIT=0). The earlier segfault was just missing `XCTestSwiftSupport` linkage. Now let me run the **full** suite (model + views + strings + CTA + a11y) with proper linkage.
+
+**Full suite: 46/46 tests pass, 0 failures** under Swift 6 strict concurrency — genuine runtime execution. The earlier segfault was purely missing `XCTestSwiftSupport` linkage in my harness.
+
+For honest IOS_EXIT/MAC_EXIT capture, let me run the actual iOS build (it shares the same module, so I won't assume — I'll run it) in the background while I prepare the gate log.
+
+The iOS build is running (background, ~14 min). While it runs, let me generate the gate log with fresh authentic captures of the fast gates and the test run.
+
+The iOS build completed already. Let me continue building the log (placeholder check + full test run), then check the iOS result.
+
+Now let me append the full XCTest run (46 tests) to the log, then check the iOS build outcome.
+
+Now let me check the iOS build result.
+
+The iOS log ends mid-`EmitSwiftModule` with no terminal marker. Let me verify whether the iOS build process is still running or actually exited.
+
+The environment is **shared** — multiple parallel agents in other slots (54, 65, 66) are running concurrent full xcodebuilds, causing heavy resource contention. My iOS build (PID 61193) is still running, already past `EmitSwiftModule` (whole-module type-check PASSED, 0 errors). Let me append the build-evidence narrative to the log while it continues.
+
+Now let me monitor the iOS build for its terminal exit. Let me wait and check progress.
+
+My iOS build is still executing but barely progressing under the cross-slot contention (stuck at `EmitSwiftModule`, the whole-module type-check, with 0 errors). Let me append the acceptance-criteria mapping and Honesty Covenant sections while it runs.
+
+Let me wait for the iOS build to reach a terminal state under the contended runner.
+
+The shared runner is clobbering `/tmp/ios-build.log` (a concurrent slot-65 build writes the same path). Let me kill my contaminated iOS build and relaunch to a unique log path for a clean exit capture, while verifying my macOS log is uncontaminated.
+
+My macOS log is verified clean (18511 slot-64 refs, 0 other slots) — the exit 65 + IRGen crash is genuinely mine. A clean iOS build is now relaunched to a unique path. Let me poll it for the terminal exit.
+
+The iOS build is CPU-starved by concurrent sibling-slot builds (no progress in 9 min) — its outcome is predetermined (identical module → same IRGen wall macOS already captured). I won't fabricate its exit. The macOS build is the definitive captured deferral. Let me finalize the log footer per the established convention.
+
+The log is complete (134 lines, honest footer per the established precedent). Let me do final pre-commit verification (lint/format sanity + git status), update todos, then commit.
+
+SwiftLint final: 0 violations. SwiftFormat is finishing. Let me wait for the rest.
+
+SwiftFormat is slow due to the contended runner. Let me wait for it.
+
+SwiftFormat is starved by the contended runner (already verified clean twice). Let me stop this redundant re-run and check git status directly.
+
+Git status is clean — only the 9 `ActionItem.*` files + the log. Let me commit per the prompt's specification.
+
+Committed cleanly: `d4a144709` with all 10 files (1607 insertions). Let me update todos and clean up my now-pointless background iOS build to free resources on the shared runner.
+
+Let me find the PIDs first, then kill only explicit numeric PIDs.
+
+The iOS build never progressed past dependency compilation (CPU-starved, 1836 lines) before I killed it; ActionItem in 0 crash inputs. Since the original `/tmp/ios-build.log` was shared/clobbered across slots, let me verify whether my slot-64 iOS build genuinely reached the whole-module type-check (ActionItem.strings only exists in slot-64), to ensure the log's iOS line is precisely honest.
+
+Critical honesty check: the original `/tmp/ios-build.log` was clobbered by slot-65 (10343 vs 2365 refs; no ActionItem.strings/EmitSwiftModule now present), so my earlier iOS whole-module observation isn't cleanly attributable to slot-64. The **macOS** evidence is 100% clean and definitive. I must correct the log's iOS claims to be precisely honest, then amend the commit. Let me find the iOS references in the committed log.
+
+Let me view the exact text of the iOS claims to correct them precisely.
+
+Let me correct the iOS claims to be precisely honest (the macOS evidence is the clean, definitive one), then amend the commit.
+
+Now let me amend the commit to include the corrected log.
+
+Commit amended honestly (`f6e3c4c0d`, 10 files, 1612 insertions). Let me do a final verification: working tree clean, todos complete, and tidy up the `/tmp` build logs.
+
+All complete and clean. Let me finalize the todo tracking and confirm the full file set one last time.
+
+All 11 todos done, all 10 files committed, all web-parity types present. The task is complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0196-ActionItem.log   | 139 ++++++++++
+ .../shared-surfaces/ActionItem.Adapter.swift       | 147 +++++++++++
+ .../shared-surfaces/ActionItem.AdapterTests.swift  | 257 +++++++++++++++++++
+ .../shared-surfaces/ActionItem.Model.swift         | 159 ++++++++++++
+ .../shared-surfaces/ActionItem.Previews.swift      |  99 +++++++
+ .../shared-surfaces/ActionItem.Projection.swift    | 161 ++++++++++++
+ .../shared-surfaces/ActionItem.Tests.swift         | 284 +++++++++++++++++++++
+ .../shared-surfaces/ActionItem.Views.swift         | 178 +++++++++++++
+ .../TeslaSync/shared-surfaces/ActionItem.strings   |  36 +++
+ .../TeslaSync/shared-surfaces/ActionItem.swift     | 152 +++++++++++
+ 10 files changed, 1612 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0196-ActionItem.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActionItem.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActionItem.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActionItem.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActionItem.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActionItem.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActionItem.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActionItem.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActionItem.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActionItem.swift

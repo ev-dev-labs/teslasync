@@ -237,7 +237,7 @@ extension TirePressureHistoryWidget {
             if model.connection != .live { connectivityBanner }
             statRow
             if !isCompact {
-                TirePressureHistoryChart(
+                TirePressureHistoryWidgetChart(
                     projection: model.projection,
                     showAxisTitles: isWide
                 )

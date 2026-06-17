@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me read the web dependencies and explore the Apple app structure in depth.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me examine the web dependencies and existing Apple shared surfaces to learn the established pattern.
+
+The Apple shared-surfaces follow a multi-file pattern per surface. Let me find the best template — a prompt-input AI feature like AIRAGHelp — and read the supporting infrastructure.
+
+`AILifetimeStatsQA`, `AINLSearch`, and `AINLDriveSearch` are the closest matches (prompt-input AI Q&A features). Let me compare their web sources to AIRAGHelp and inspect file sizes to pick the best template.
+
+`AINLSearch` (49 lines web) is structurally identical to `AIRAGHelp` (50 lines) — both are Textarea-input AI Q&A cards. I'll use it as my template. Let me read the full file set plus the web source.
+
+Excellent template. Let me read the remaining AINLSearch files to fully understand the pattern before replicating it.
+
+Let me read the remaining template files (Views, Previews, strings, tests) and verify the shared design tokens exist.
+
+Let me read the two test files and verify the shared design tokens (TSGlassPanel, TSButton, etc.) exist.
+
+Now let me verify the build system and shared design tokens. I need to understand how `shared-surfaces` files get compiled and whether there's a surface registry.
+
+The project uses XcodeGen (`project.yml`). Surfaces are standalone — not referenced elsewhere. Let me read the project config and verify the exact design-token APIs.
+
+Now I understand the full build structure. Let me verify the exact design-token APIs, confirm `rag-help` is a valid feature id, and check no AIRAGHelp Swift files exist yet.
+
+All confirmed: `rag-help` is a valid feature id, tokens exist, no pre-existing files. Let me check the SwiftLint rules and confirm the `RAGHelp` type prefix is collision-free.
+
+All prerequisites confirmed: `rag-help` is valid, `RAGHelp` prefix is collision-free, tokens exist, SwiftLint limits are 120/160 (comments/URLs ignored). Let me set up a plan and todos, then build the 11-file surface mirroring the AINLSearch template.
+
+Now I'll build the surface. Batch 1 — the foundation layer (Adapter, Logic, Model, Source):
+
+Batch 1 continued — the Model (state holder + telemetry + i18n facade) and the in-memory Source:
+
+Batch 1 done. Batch 2 — the presentational layer (Chrome + Views), with help-specific strings:
+
+Now the main view file:
+
+Now the Previews file:
+
+Now the i18n strings table:
+
+Now the two test files (state-holder wiring + adapter/logic/a11y/i18n):
+
+All 11 files created. Let me run fast local checks (SwiftLint, SwiftFormat, placeholder scan) on the new files before the full build gate.
+
+SwiftFormat passes. Now SwiftLint `--strict` on the new files:
+
+SwiftLint `--strict` passes with 0 violations. Now let me inspect the placeholder-check script (my code legitimately uses the word "placeholder" for the text-field hint, so I must confirm what it flags).
+
+`pwsh` is available. Let me read the forbidden-pattern list (my code uses the word "placeholder" legitimately), then run the real check against my files.
+
+The check flags the literal word "placeholder" — but my code uses it for the legitimate text-field placeholder (as does the web source's `placeholder` prop). Let me verify how the gold-standard AINLSearch template handles this and what the exact gate command actually scans.
+
+Confirmed: the gate's placeholder step passes (`EXIT=0`), and my "placeholder" usage is identical to the gold-standard AINLSearch template (standard text-field vocabulary from the web source's `placeholder` prop). Now let me assess the heavy build gate — check XcodeGen, the KMP `Shared.xcframework` dependency, and simulators.
+
+XcodeGen is available and the iPhone 16 simulator is booted, but `Shared.xcframework` (KMP core) is not prebuilt — the build's pre-action builds it via Gradle. Let me check whether the KMP/Gradle/JDK toolchain is available to run the full build gate.
+
+Java 17 + Gradle wrapper are present, so the KMP build may be feasible. Before committing to a very long full build, let me check how prior surface prompts (like the AINLSearch template, 0034) logged their gate results, and review the pending-verifications notes.
+
+There's a log for the AINLSearch template (0034) and what looks like a prior AIRAGHelp artifact log. Let me read both to learn the established STATUS convention and whether the full xcodebuild was actually run.
+
+This reveals the established, sanctioned verification recipe. Let me read the full AINLSearch log to extract the exact commands used (dual-SDK typecheck + SwiftPM module build), and check the pending-verifications doc.
+
+This is the complete, sanctioned blueprint. The established disposition is **STATUS=DONE** after: host gates (done) + a dual-SDK `swiftc -typecheck` against the real design system + a SwiftPM build/test of the real module + an attempted full xcodebuild (deferred to the acceptance runner for unrelated-surface/signing reasons). Let me reproduce this recipe faithfully. First, enumerate the design-system closure and find any KMP-bound leaves to exclude.
+
+The closure is exactly 41 files (Tokens.swift + 2 Design + 38 Components, excluding the KMP-bound `UnitFormatters.swift`) — matching the template's recipe. Let me build the SwiftPM harness: a real `TeslaSync` module from the design system + my 8 surface sources, with my 2 test files, then build and run the tests.
+
+49 source files (41 DS + 8 surface). Now the `Package.swift` and build/test:
+
+Module builds clean against the real design system. Now run the tests:
+
+All **39/39 tests pass** against the real module. Now the dual-SDK `swiftc -typecheck` (iOS 18 + macOS 15, Swift 6 strict concurrency, `-D DEBUG` incl. `#Preview`) of the exact shipped sources against the real design system:
+
+iOS 18 typecheck: 0 errors. Now macOS 15:
+
+Both SDKs: 0 errors. Now the i18n bidirectional parity check (`.strings` keys vs keys referenced in Swift):
+
+My regex only caught single-line calls — the "orphans" are keys used in multi-line calls. Let me re-extract robustly (keys matched by prefix grammar across all lines):
+
+The lone "orphan" is a regex artifact — `loadingA11y` contains digits my character class excluded. Let me fix and re-verify:
+
+Perfect i18n parity: 23 == 23, zero missing/orphan, all 5 web keys present. Let me run the honest placeholder "meaningful scan" + real-stub grep, and confirm the generated artifacts are gitignored before attempting the heavy full-app gate.
+
+The placeholder scan matches the gold-standard exactly (7 legitimate input-hint hits, zero real stubs). Let me check the gitignore situation for generated artifacts so I commit only my files:
+
+Clean: only my 11 files are new, and generated artifacts are gitignored. Now I'll attempt the full-app gate (the sanctioned ATTEMPT-and-document step). Starting the long-pole KMP `Shared.xcframework` Gradle build:
+
+Gradle KMP build is running (downloading Kotlin/Native toolchain + compiling for 3 Apple targets). Let me continue waiting.
+
+Gradle **BUILD SUCCESSFUL in 7m 40s**. Now stage the framework, generate the Xcode project, and confirm AIRAGHelp is wired in:
+
+All 11 files wired (66 refs, matching the AINLSearch precedent). Now attempt the full iOS app-target build (compiles all 700+ surfaces — per precedent it may fail on unrelated surfaces; I need to confirm 0 errors in AIRAGHelp.*):
+
+Exactly as the precedent predicted: **iOS build fails with 1 error — and it is ZERO in AIRAGHelp**. The lone error is the pre-existing non-`@escaping` bug in the unrelated `AIGeofenceAwareAutomationSuggestions.swift` (outside my allowed files). Let me confirm zero AIRAGHelp warnings too, then attempt the macOS build:
+
+Both platforms confirm **ZERO AIRAGHelp errors**; each build fails only on a pre-existing non-`@escaping` bug in an unrelated surface (iOS: `AIGeofenceAwareAutomationSuggestions`, macOS: `AISignalExplorerNlFilter`). Let me confirm zero AIRAGHelp diagnostics on macOS and that AIRAGHelp was genuinely part of the compiled sources:
+
+Let me confirm AIRAGHelp genuinely appears in the build (in the target's compile sources), and verify the failing files aren't mine — from the repo root:
+
+Everything confirmed: AIRAGHelp is in the compiled target (3 refs), zero AIRAGHelp diagnostics on both platforms, and my changeset is exactly the 11 files. The two build failures are pre-existing non-`@escaping` bugs in other agents' surfaces. Now let me capture the exact prescribed-gate output and clean up generated artifacts:
+
+All evidence collected, artifacts cleaned, git status is exactly my 11 files. Let me capture file line counts, then write the comprehensive gate log:
+
+Let me verify the backend feature-id and route exist (to cite accurately in the log, as the precedent did):
+
+All facts verified. Now I'll write the comprehensive gate log:
+
+Let me verify the specific line numbers I cited in the log are accurate (honesty covenant):
+
+One correction needed — the `@escaping` helper is at line 122, not 127. Let me fix the log:
+
+Line numbers verified and corrected. Now the final green re-check of the committed Swift files, then commit (only if green):
+
+Both gates green. Now commit the 11 surface files + the gate log:
+
+Committed cleanly (12 files, 2051 insertions). Let me do a final clean-tree verification and update todos:
+
+Working tree is clean (`.gitkeep` intact as a hidden file; no stray artifacts). The task is fully complete and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0042-AIRAGHelp.log    | 265 ++++++++++++++++++++
+ .../shared-surfaces/AIRAGHelp.Adapter.swift        |  69 ++++++
+ .../shared-surfaces/AIRAGHelp.Chrome.swift         | 195 +++++++++++++++
+ .../shared-surfaces/AIRAGHelp.Logic.swift          | 167 +++++++++++++
+ .../shared-surfaces/AIRAGHelp.Model.swift          | 273 +++++++++++++++++++++
+ .../shared-surfaces/AIRAGHelp.ModelTests.swift     | 232 +++++++++++++++++
+ .../shared-surfaces/AIRAGHelp.Previews.swift       | 112 +++++++++
+ .../shared-surfaces/AIRAGHelp.Source.swift         |  84 +++++++
+ .../shared-surfaces/AIRAGHelp.Tests.swift          | 193 +++++++++++++++
+ .../shared-surfaces/AIRAGHelp.Views.swift          | 211 ++++++++++++++++
+ .../TeslaSync/shared-surfaces/AIRAGHelp.strings    |  46 ++++
+ .../TeslaSync/shared-surfaces/AIRAGHelp.swift      | 204 +++++++++++++++
+ 12 files changed, 2051 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0042-AIRAGHelp.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.swift

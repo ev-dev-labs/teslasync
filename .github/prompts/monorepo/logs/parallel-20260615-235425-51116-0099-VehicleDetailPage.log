@@ -1,0 +1,171 @@
+I'll start by exploring the repository structure to understand the task scope and existing patterns.
+
+Xcode 26.5, SwiftLint, and Swift 6.3.2 are all available — full toolchain present, so the gate can run. Let me examine the web source and Apple app structure.
+
+Web source read. Note the manifest reduces this to a focused parity unit (1 panel, settings data source, 23 parity items). The `Features/Vehicles/` dir doesn't exist yet. Let me explore the existing Apple app structure to learn the established patterns.
+
+Two Feature locations exist. The target is `apps/apple/TeslaSync/Features/Vehicles/`. Let me study the recently-merged sibling pages (Trips, VehicleSystems) to mirror their exact structure and conventions.
+
+Let me read a complete recent example end-to-end to learn the page/model/route-registration/strings patterns. I'll examine GuardModePage and TeslaAccountPage (settings-related) plus the route registration pattern.
+
+Let me look at how data sources actually bind (GuardMode uses a DataSource pattern), the web `useVehicleSettings` hook shape, and the parity manifest record for VehicleDetail.
+
+Let me read `findEffectiveSetting`, the settings types, and the VehicleSettingsTab component to understand the full data shape and rendering for parity.
+
+Now let me examine the parity manifest record for VehicleDetail, the ledger entry, and a recent completed log to learn the exact `=== PARITY ===` format expected.
+
+Now I have the exact parity spec. Let me read the apple-ledger entry, a completed log for format, the full GuardModePage for token/state patterns, and find the string catalog.
+
+Let me study the GuardMode log format and the full GuardModePage source, and locate the string catalog.
+
+Key finding: there's no `.xcodeproj` and prior logs note the full `xcodebuild` link is blocked (Shared.xcframework absent). Let me read the full GuardMode log's environment check + gate methodology, and confirm tooling.
+
+I have the full methodology precedent. Let me verify the toolchain details and understand how the isolated type-check resolves shared components. Let me check several things in parallel.
+
+The precedent is clear: each parity page is **self-contained**, defining local HIG "furniture" (a `GlassPanel` stand-in) so the isolated Swift 6 type-check passes without the absent KMP framework. Let me read the local furniture and the string catalog format.
+
+Critical discovery: **all 19 `vehicles.detail.*` strings already exist** in the catalog. Let me fetch their exact English values to port verbatim, and inspect the route/navigation infrastructure to register `/vehicles/:id`.
+
+All 19 strings confirmed with exact values. Let me understand the route parser and how `/vehicles/:id` deep-links resolve, plus how the existing settings page model handles the data-source seam.
+
+The parser maps first segment → route; the detail page is a pushed `NavigationDestination` (mirror TripsReplay's typed Link). Let me confirm xcodegen auto-includes `TeslaSync/Features/**` and review the TripsReplayPage full structure for the scaffold pattern.
+
+TripsReplay uses the **shared design system** (`TSGlassPanel`, `Color.TS`, `Font.TS`, `TSSpacing`, `TSEmptyState`, `TSErrorDisplay`, `tsUnits`). Let me check how its log validated the build and what design tokens/components are available, to pick the most robust approach.
+
+I now fully understand the methodology. Two decisions to lock: (1) check for existing `VehicleDetail*` symbol collisions, (2) verify the shared design-system sources are KMP-free so I can reuse them and still type-check. Let me investigate both.
+
+No existing `VehicleDetailPage`/`VehicleDetailPageModel` type — names are free (only feature-view helpers like `LiveStateIndicators` exist). Design system is KMP-free. Let me read the shared design components I'll reuse and the existing settings model/facade.
+
+Let me read the full component APIs and locate the token/units definitions, then empirically test whether the design-system source subset type-checks standalone (KMP-free) — that determines my verification strategy.
+
+Let me read the remaining component APIs (States, tokens, text/title/badge) and the existing VehicleSettingsModel facade, then empirically test the design-system type-check.
+
+Let me read the design tokens, the StatCard/KVList components, the units facade, and the existing settings facade model.
+
+The existing `VehicleSettingsModel` facade imports `Shared` (KMP) — so I'll uniquely prefix my types and depend only on the KMP-free design system. My settings panel needs no SI conversion. Let me empirically verify the design-system subset type-checks standalone (baseline for my verification strategy).
+
+`UnitFormatters.swift` needs `UnitPreferences`. Let me locate it and check if it's KMP-free, then refine the verification set.
+
+`UnitPreferences`/`tsUnits` is KMP-backed. My settings panel needs no SI formatting, so I'll exclude KMP-dependent component files from my verification set. Let me find all KMP-touching files in the design dirs to build a clean baseline set.
+
+Only `UnitFormatters.swift` touches KMP. Let me re-run the baseline excluding it — this confirms my verification set.
+
+Design-system subset type-checks clean (EXIT=0) — my verification strategy is locked. Let me ground the page design in the actual web sub-components (header, quick links, helpers) before writing.
+
+Let me check how a sibling apple unit with `section.*Failed` strings handled binding them, to match the established pattern rather than invent UI.
+
+`DriveDetailPage` is the closest structural analog. Let me see exactly how it bound the `section.*Failed` strings and structured its sections.
+
+`DriveDetailPage` is the exact precedent: a `DriveDetailSectionID` enum + `DriveDetailSectionBoundary` reproducing every web `<SectionErrorBoundary>`, each `section.*Failed` string bound to a `boundary(.kind)` call site. I'll mirror this. First, let me resolve the catalog key format (`translation.` prefix?) since TripsReplay and GuardMode differ.
+
+Key resolution: `vehicles.detail.*` exists ONLY as `translation.`-prefixed keys, so I must use `translation.vehicles.detail.*` (GuardMode convention). Let me read the placeholder scanner and swiftlint config to avoid gate failures.
+
+Let me read the forbidden placeholder patterns to ensure my code avoids stub tokens, and confirm there's no root swiftlint config.
+
+I have all gate constraints. Note "Placeholder" is a forbidden token (so `.redacted(reason: .placeholder)` needs `// parity:allow`). Let me set up tracking and verify a few existing catalog keys I can reuse before writing.
+
+Good — many section names + `common.wakeUp`/`common.retry` already exist. Let me check existing settings/source label keys from the web `VehicleSettingsTab` to maximize reuse before adding any keys.
+
+The entire `vehicleSettings.*` i18n family (32 keys) already exists — source pills, key labels/help, title. I can build a faithful settings panel (GlassPanel1) reusing them with zero hardcoded English. I only need ~7 new section-navigator name keys. Now writing the Swift files.
+
+Now the sections file (boundary, header, settings panel = GlassPanel1, navigator, skeleton).
+
+Let me add an optional error message to the boundary, then write the root page.
+
+Now the route registration (mirrors TripsReplay's typed-link + destination pattern).
+
+All 6 Swift files written. Let me run the Swift 6 type-check (my files + the KMP-free design subset) and verify the `common.dismiss`/`common.loading` keys exist.
+
+All errors are access-control: my `public` API references internal types. Since everything compiles into one module, I'll make the page + route registration `internal` (drop `public`), resolving the cascade cleanly.
+
+Now re-run the type-check.
+
+Type-check passes (EXIT=0) for iOS. Let me verify the macOS target also compiles (adaptive requirement) and run SwiftLint + the placeholder scan.
+
+Two lint violations in my files. Let me fix: the dual-closure in the error case (pass `content:` explicitly) and remove the redundant synthesized init.
+
+Re-running the authoritative gate (default rules, my dir) and checking my files under the apple config.
+
+Default gate is clean (0 violations). Let me verify my files under the apple config's opt-in rules, re-run the type-check after edits, and run the placeholder scan.
+
+All gates green (type-check iOS+macOS EXIT=0, lint 0, placeholder 0). Now let me add the 7 new catalog keys and then validate every `translation.*` key my code references resolves.
+
+Let me verify the catalog edit produced a clean minimal diff (only the 7 keys) and is valid JSON.
+
+The `json.dump` reformatted/re-sorted the entire 60k-line file (Xcode uses `"key" : {` spacing and a different sort). That's an unacceptable diff. Let me revert and do a surgical, format-preserving text insertion instead.
+
+Let me inspect the exact byte-level format of the reverted file to match it precisely.
+
+Now I understand the exact format: inner entries use `" : "` spacing. Let me do a surgical text insertion of the 7 blocks right after `"strings": {`, preserving every existing byte.
+
+Let me confirm the catalog diff is now minimal (additions only) and validate that **every** `translation.*` key my Swift code references resolves in the catalog.
+
+Catalog diff is clean (+77/−0); all 56 keys resolve. Now the symbol-collision sweep across the module (Swift compiles `Sources` + `TeslaSync/Features` into one target, so duplicate type/func names would break the build).
+
+No collisions; `findEffectiveSetting` is free. Let me verify all 19 required parity strings are referenced and each section-boundary kind is instantiated at a call site.
+
+All 19 strings referenced. Let me confirm the boundary call sites (header + settings + the 14 navigator kinds) and the GlassPanel1/state evidence, then run a final consolidated gate for the log.
+
+Everything is wired (16 boundary kinds, GlassPanel1, all 4 states). Let me run the final consolidated gate and capture line counts for the log.
+
+All gates green. Let me update tracking and inspect the apple-ledger schema to add the VehicleDetail row correctly.
+
+Ledger schema is clear (two rows per unit: apple-macos + apple-ios). Let me gather precise line numbers for the log's binding evidence.
+
+I have all binding evidence. Let me write the parity log.
+
+Now let me add the two ledger rows (apple-macos + apple-ios), preserving the file's exact format.
+
+Let me verify the ledger diff is clean (just my 2 rows + the trailing comma).
+
+The `json.dump` escaped the em-dash in the `"ledger"` field (`—`→`\u2014`). Let me redo with `ensure_ascii=False` so only my 2 rows change.
+
+Ledger diff is clean (+18/−0, valid JSON). Let me run a final consolidated verification and confirm git status shows only the expected files before committing.
+
+Final gate is green and git status shows only the allowed files. Let me commit.
+
+Committed (`3e3d58689`). Let me do a final sanity check — clean working tree, log ends with EXIT/STATUS, and todos complete.
+
+All checks pass. The task is complete and committed.
+
+## Summary
+
+Implemented a native **SwiftUI / Apple HIG** parity of the web `VehicleDetailPage` (`/vehicles/:id`), adaptive across macOS + iOS, committed as `3e3d58689`.
+
+**6 new files** under `apps/apple/TeslaSync/Features/Vehicles/` (979 lines):
+- `VehicleDetailModels.swift` — wire-faithful settings types, `findEffectiveSetting`, and the `VehicleDetailSectionKind` boundary contract (16 cases)
+- `VehicleDetailDataSource.swift` — KMP seam (`useVehicleSettings`, `wakeVehicle`) + Sample/Empty/Failing impls
+- `VehicleDetailPageModel.swift` — `@MainActor @Observable` model (loading/empty/error/success, `effectiveName`, wake feedback)
+- `VehicleDetailSections.swift` — `SectionErrorBoundary` port, header+wake, **settings panel (GlassPanel1)**, section navigator, skeleton — built on the shared P2/P3 design system
+- `VehicleDetailPage.swift` — scaffold, state switch, the 16 boundary call sites, wake banner
+- `VehicleDetailRouteRegistration.swift` — `VehicleDetailLink` + `.vehicleDetailDestination()` deep link
+
+**Parity: `PARITY_COVERED=23 / 23`** — 1 panel (GlassPanel1, bound via `useVehicleSettings`+`findEffectiveSetting`), 3 states (loading/error/success, plus empty), and all 19 strings (16 `section.*Failed` boundary titles + `title`/`wakeSuccess`/`wakeFailed`), every key resolving from `Localizable.xcstrings` (+7 navigator-name keys added).
+
+**Gates (all green, real output):** placeholder `PLACEHOLDER_COUNT=0`; `swiftlint --strict` 0 violations/6 files; Swift 6 strict-concurrency type-check **iOS + macOS EXIT=0** (compiled against the real KMP-free design system); module-wide symbol-collision sweep clean. Ledger updated (`apple-macos`/`apple-ios` = done 23/23); log ends `EXIT=0 / STATUS=DONE`.
+
+**Note:** A full `xcodebuild` link is blocked in this slot — `Shared.xcframework` (KMP core) is absent (`.gitkeep` only) and the merged baseline carries pre-existing out-of-scope breakage — so I validated via the Swift 6 type-check on both platforms, matching the accepted precedent for the prior P7 apple parity pages.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip ActionItem: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip FormField: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationStats: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ResourceRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportDelivery: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportsPanel: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SignalDiffRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SystemHealthData: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TabButton: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureHistoryChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureReading: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

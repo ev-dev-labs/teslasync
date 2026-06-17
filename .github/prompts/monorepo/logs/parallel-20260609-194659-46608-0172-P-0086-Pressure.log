@@ -1,0 +1,113 @@
+I'll start by exploring the environment and the key files referenced in this task.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+The shared-surfaces directory already has many ported surfaces. Let me understand the existing patterns, especially for sibling `format/` components like Distance, Speed, Temperature.
+
+None of the sibling `format/` surfaces are ported yet — only complex AI surfaces. Let me read the web dependencies (to match conversion math exactly) and study an existing native surface's conventions.
+
+Now let me read the exact pressure conversion math and find the shared infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+Now I fully understand the web behavior. Let me study the native conventions: project structure, a simple display surface template, and the P1 infrastructure (state holders, tokens, i18n, diagnostics).
+
+`BatteryDelta` (0077) is the ideal template — a prop-driven display surface like Pressure (0086). Let me read all its companion files and the XcodeGen project config.
+
+Excellent template. Let me read the remaining BatteryDelta files and the project config to fully internalize the pattern.
+
+Now let me find the design tokens, the units state holder (native peer of `useUnits`), and the build config.
+
+Build uses globs for `shared-surfaces/`, so new files auto-include. Tokens come from `../design/generated/apple`. Let me find the design tokens and the native units/settings state holder (P1/S8 peer of `useUnits`).
+
+Found the key infra: `Sources/SharedFacade/Units+Facade.swift` (native `useUnits` peer) and `UnitFormatters.swift`. Let me read these plus the design tokens.
+
+Found the native units peer (`UnitPreferences` + `\.tsUnits` environment, and `Units.convertPressure`). Let me check how existing widgets wire units into their models, the `UnitPreferences.metric` default, and the design tokens.
+
+Let me read the `UnitPreferences.metric` default, an existing native pressure conversion (TirePressureHistoryWidget), and the lint configs.
+
+The TirePressureHistoryWidget is a perfect precedent — confirms exact conventions (`kpaPerPsi=6.894757`, `kpaPerBar=100`, `fromLabel` defaulting to bar, NumberFormatter-based formatting). Now let me check the lint configs and the build feasibility (xcodegen, Shared.xcframework).
+
+The TirePressureHistoryWidget confirms all conventions. Now let me probe build feasibility (JDK/Gradle for Shared.xcframework, simulators, gitignore) and check for symbol collisions before writing code.
+
+Environment is capable: JDK 17, gradlew present, iPhone 16 simulator booted, generated artifacts gitignored, no symbol collisions. The long pole is building `Shared.xcframework` (KMP/Gradle). Let me kick that off in the background now while I write the surface code.
+
+Environment confirmed capable. I've fully internalized the conventions from `BatteryDelta` (the prop-driven surface template) and `TirePressureHistoryWidget` (the exact pressure-conversion precedent). Let me record a brief plan and start writing the surface, beginning with the Foundation-only core.
+
+Gradle is building in the background. Let me write the surface files now. First, the Foundation-only core.
+
+Gradle build of `Shared.xcframework` completed. Let me confirm it and write the final test file.
+
+`Shared.xcframework` built successfully (the scheme's pre-action will stage it; Gradle is now cached). Let me write the final test file, then run the verification gate.
+
+All 9 files created. Now let me run the verification gate. First, auto-format my files with swiftformat, then lint.
+
+`pwsh` and the placeholder script are available. Let me run the fast static checks first (format-lint, swiftlint, placeholder) to catch issues before the heavy build.
+
+Format and lint pass clean on my files. Now the placeholder check and whole-tree lint (as the gate runs them).
+
+Placeholder check clean, whole-tree format clean. Now whole-tree `swiftlint --strict` (gate form).
+
+All static checks pass: format 0/3939, lint 0 violations in 3709 files, placeholder count 0. Now the heavy build/test. Let me generate the Xcode project and run the iOS build+test.
+
+Project generated. All static checks already pass. Now the two `xcodebuild` steps (the long pole). Let me set up the canonical log and run the full gate unattended via a script, so it runs the iOS + macOS build/test and appends the already-verified static checks.
+
+Logs dir exists. Let me stage the freshly-built `Shared.xcframework` (Gradle is cached now) so the build links it, then launch the full gate unattended.
+
+`Shared.xcframework` staged. Now let me write and launch the full gate script (iOS + macOS build/test + static checks) unattended, writing to the canonical log.
+
+Before the full (long) gate, let me run iOS `build-for-testing` first to fail fast on any compile errors in my new files (this also compiles the test targets).
+
+The build failed, but the listed files are pre-existing (not mine). The actual compiler errors scrolled past the `tail`. Let me capture the full error lines to determine the root cause.
+
+The errors are `'RecentDrivesModel' is ambiguous`, `'StateTimelineUpdate' is ambiguous`, etc. — duplicate type declarations, none of which are my `Pressure*` types. This looks like a pre-existing baseline issue. Let me confirm by checking for duplicate declarations and by building the baseline without my files.
+
+Confirmed: `RecentDrivesModel` is declared in **two** files (`RecentDrivesListWidget.Model.swift:181` and `RecentDrivesSection.Model.swift:23`), `StateTimelineUpdate` in two files — pre-existing duplicate-symbol defects in unrelated peer surfaces. 127 total errors, **0 in any Pressure file**. Let me rigorously prove this baseline fails identically without my files.
+
+**Definitive proof:** the baseline **without any Pressure files** also fails (`EXIT=65`, 54 errors) with the identical pre-existing duplicate-type errors (`RecentDrivesModel`, `StateTimelineUpdate`, etc.) in peer surfaces. My Pressure surface contributes **0 errors**. These duplicate `public` types live in `dashboard-widgets` + `feature-views` files owned by other prompts (explicitly out of scope).
+
+Let me restore my files and verify my surface compiles + its tests pass in isolation (since the full app target is blocked by these pre-existing peer defects).
+
+Files restored. The full app target is blocked solely by pre-existing peer duplicates. Now let me prove **my** surface compiles and its tests pass by building it in an isolated SwiftPM harness (faithful copies of my exact files + minimal shims for the 2 external symbols).
+
+**Isolated verification PASSED: 43 tests, 0 failures** — every Pressure file compiles under Swift 6 strict concurrency and all tests pass (the 4 web parity cases, conversion, formatting, model lifecycle, view composition, a11y, strings). My surface is correct and complete.
+
+Now let me run the actual gate to capture authoritative results in the canonical log.
+
+The gate is running (iOS + macOS builds take several minutes and will hit the pre-existing peer errors). Let me update tracking while it runs.
+
+Let me check the gate's progress.
+
+Both iOS and macOS builds completed (failed on the pre-existing peer errors, `MAC_EXIT=65`). The gate is now running the static checks. Let me wait for it to finish.
+
+Gate completed. Let me confirm all recorded exit codes.
+
+Gate results confirmed: `LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0` (all green); `IOS_EXIT=65`/`MAC_EXIT=65` from **pre-existing** duplicate types in peer surfaces (`RecentDrives*`, `StateTimeline*`) — **0 errors in any Pressure file**. Let me append a clear evidence/disposition section so the log ends authoritatively.
+
+The log now ends authoritatively with `EXIT=1` / `STATUS=BLOCKED` plus full evidence. Let me check git status to commit only my intended files (generated artifacts are gitignored).
+
+Clean: only my 9 Pressure files + the log are untracked (generated artifacts are correctly gitignored). The surface is complete and verified (isolated build + 43 tests pass; all static gates green); the umbrella gate is blocked solely by pre-existing, out-of-scope peer duplicates. Committing the deliverable + the honest BLOCKED log.
+
+Committed as `bf9b5b664`. Let me clean up temporary artifacts and do a final verification.
+
+Done. Here's the summary.
+
+## P4 · Shared surface · 0086 — `Pressure` (Apple)
+
+Shipped a production-polished, native Apple parity of `components/data-display/format/Pressure.tsx`, committed as `bf9b5b664`.
+
+**9 files** in `apps/apple/TeslaSync/shared-surfaces/` (following the `BatteryDelta` 0077 + `TirePressureHistoryWidget` precedents): `Pressure.swift`, `.Adapter`, `.Projection`, `.Model`, `.Views`, `.Previews`, `.strings`, `.Tests`, `.AdapterTests`.
+
+**Faithful to the web spec:** `bar`/`psi` → SI kPa → user unit (kPa/psi/bar) using the web factors (6.894757, 100); locale-aware formatting with the web `_globalPrecision` (2) fallback; bar-precedence; `{value} {unit}` output; raw-source `toFixed(2)` tooltip → `.help`; the two real branches only (populated / "—") — no fabricated loading/error/stale/offline. Binds the shared units holder via `@Environment(\.tsUnits)` (P1/S8), design tokens (P1/S9), a localized empty-state VoiceOver label (P1/S10), and once-only `view.opened` telemetry (P1/S11).
+
+**Verification (honest):**
+- ✅ `swiftlint --strict` (whole tree): **0 violations / 3709 files**
+- ✅ `swiftformat --lint apps/apple`: **0/3939**
+- ✅ placeholder check: **PLACEHOLDER_COUNT=0**
+- ✅ Isolated SwiftPM build of the exact shipped sources + both test files: **43 tests, 0 failures** (incl. the four web `Format.test.tsx` parity cases)
+- ✅ **0 compiler errors in any `Pressure.*` file**
+
+**⚠️ Umbrella gate BLOCKED (pre-existing, out of scope):** `xcodebuild build test` is red (`IOS_EXIT=65`/`MAC_EXIT=65`) because peer surfaces declare duplicate `public` types in the same app module (`RecentDrivesModel` in two files, `StateTimeline*` in two files). I proved this pre-exists my work: rebuilding the baseline with **all** Pressure files removed fails identically (EXIT=65, 54 errors, none in a Pressure file). Those files are owned by other prompts and outside this surface's allowed scope. Full evidence + `EXIT=1`/`STATUS=BLOCKED` are in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0086-Pressure.log`.
+
+
+
+The task is complete within my allowed scope. The Pressure surface is delivered, verified, and committed; the umbrella gate's only failure is pre-existing, out-of-scope peer breakage that I'm forbidden to touch. Let me finalize the plan and mark complete.
+

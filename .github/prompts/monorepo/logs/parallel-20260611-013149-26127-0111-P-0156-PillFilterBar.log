@@ -1,0 +1,161 @@
+I'll start by exploring the repository structure and reading the web source component, while checking what Apple tooling is available.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the existing Apple app structure to understand conventions.
+
+Let me look at existing shared-surfaces examples and the supporting infrastructure (state holders, tokens, i18n, telemetry).
+
+`ActiveFilterChips` is the closest analog (filter-related, `useId`-style). Let me read its complete file set as the canonical template.
+
+Excellent architecture. Let me read the remaining template files and the design tokens to understand all conventions.
+
+Let me read the tests and the design tokens (P1/S9) that these surfaces depend on.
+
+Let me read the design tokens and check the build infrastructure (xcodegen, log dir).
+
+I have the full pattern. Now let me check build feasibility (the KMP Shared.xcframework dependency) and the `fmtInt` helper before writing code.
+
+`Shared.xcframework` doesn't exist — it's built via KMP/Gradle. Let me check how sibling surfaces' gate logs resolved (DONE vs BLOCKED) and whether the KMP toolchain works here.
+
+This clarifies the workflow: full-app `xcodebuild` is DEFERRED (foreign sibling errors + macOS signing), and DONE is determined by surface-scoped gates (swiftc typecheck iOS+macOS, real isolated XCTest run, swiftlint/swiftformat/placeholder, xcodegen). Let me read the lint configs and find any sibling with a roving-tab/keyboard-nav pattern.
+
+`MetricSwitcherChart` and `ActiveFilterChips` are my key references. Let me check for symbol collisions (like the CurrencyInput→CurrencyInputField rename) and peek at how MetricSwitcherChart renders its selector.
+
+Key finding: a shared atomic `TSPillFilterBar` already exists in `Sources/Components/Forms/Filters.swift` (out of scope per prompt). My surface must be self-contained and avoid name collisions. Let me read that file to see its public symbols.
+
+All clear. The existing `TSPillFilterBar<Value>` (atomic, out of scope) uses `TS`-prefixed types; my surface uses `PillFilterBar*`/`PillItem` names — no collisions. The web component is purely presentational (only `useId`), so like the accepted sibling `ActiveFilterChips` (0147), I'll faithfully reproduce its real branches (pills/tabs variants, selected/disabled/icon/count, empty placeholder) rather than fabricate fetch-states. Let me write the plan and start building.
+
+Now I'll create the surface files. Starting with the Foundation-only Adapter (pure core).
+
+Now the Model (i18n facade, telemetry seam, `@Observable` state-holder).
+
+Now the Views layer (token-driven accent styling, pill/tab button, empty placeholder).
+
+Now the public surface View.
+
+Now the Previews covering every branch.
+
+Now the strings catalog contribution.
+
+Now the pure-core adapter tests.
+
+Now the model + view + strings tests.
+
+All 8 files created. Let me track progress and run the surface-scoped gates, starting with swiftformat (apply) and swiftlint on my files.
+
+swiftformat applied changes to 3 files. Let me verify formatting is now clean and run swiftlint on my files, plus check the diff didn't break anything.
+
+Format and lint both clean (0 violations). Let me verify the auto-formatter preserved my `switch` expressions correctly, then set up the SDK typecheck.
+
+Switch expressions intact. Now the SDK typecheck for iOS 18 and macOS 15 (Swift 6 mode = complete concurrency, matching project settings).
+
+iOS typecheck clean. Now macOS 15.
+
+Both typechecks clean. Now the real isolated XCTest run via a temporary SwiftPM package (module named `TeslaSync` so `@testable import` resolves).
+
+Now run the isolated test suite (Swift 6, strict concurrency).
+
+All 33 tests pass. Let me check pwsh availability and how check-placeholders resolves the prefix `-Path`, then run it and xcodegen.
+
+pwsh 7.6 is available. The placeholder gate also forbids the literal word "placeholder" in shipped code (per acceptance criteria). My comments currently use it — let me find every occurrence of forbidden stub-markers in my files and reword.
+
+Only "placeholder" (19×), no other markers. Let me locate each occurrence precisely.
+
+Only "placeholder" appears (19×). I'll reword all occurrences (it's on the acceptance forbidden list) across my files, compound phrases first then a catch-all.
+
+0 remaining. Re-running format/lint after the edits.
+
+Clean. Now the placeholder gate: self-test, a meaningful scan of my files (copied to a temp dir), and the literal prompt command.
+
+Placeholder gate clean (self-test PASS, my files genuinely 0 even on a real recursive scan). Let me re-confirm tests still pass after the edits and run xcodegen to validate target membership.
+
+33 tests still green. Now xcodegen to validate target membership.
+
+Surface-scoped gates all green (typecheck iOS+macOS, 33 tests, lint, format, placeholder, xcodegen membership). Now the full-app `xcodebuild` gate. Let me check the KMP toolchain (needed to stage `Shared.xcframework`) and the sanctioned deferral basis.
+
+JDK 17 is present and `gradlew` exists, so the KMP `Shared.xcframework` can be staged. I'll kick off that build in the background (it took ~9 min for siblings), then run the full `xcodebuild` gate. Meanwhile I'll prepare the log.
+
+The framework build is progressing (compiling Kotlin/Native iOS targets). While it builds, let me run the authoritative repo-wide `swiftlint --strict` and `swiftformat --lint apps/apple` (the literal gate commands) in the background to confirm I didn't break sibling lint either.
+
+Let me re-confirm my parity coverage is complete while the builds run, and check the framework progress.
+
+Repo-wide lint/format finished. Let me read those results.
+
+Authoritative repo-wide gates: `swiftlint --strict` = **0 violations in 4397 files**, `swiftformat --lint` = **0/4695 require formatting**. Both pass. Let me wait for the framework build to finish.
+
+Framework build nearly done (linking release targets). Let me wait for it to finish staging.
+
+Framework build completed. Let me verify it staged successfully.
+
+`Shared.xcframework` staged (XCFRAMEWORK_EXIT=0, ios-arm64 + simulator + macos-arm64). Now the authoritative full-app `xcodebuild`. Let me first run the iOS **build** to determine whether the app compiles (the key question is whether merged foreign siblings have pre-existing errors).
+
+App module compilation started (`EmitSwiftModule ... TeslaSync`). This is where any foreign sibling errors surface. Let me wait.
+
+iOS build finished. Let me read the result.
+
+iOS build failed (exit 65) with exactly **1 error**, and **0 PillFilterBar errors**. Let me identify the single foreign/environmental error.
+
+The sole error is in a **foreign sibling** (`AISuggestNewGeofences.swift:129`, outside my `PillFilterBar.*` glob) — the exact pre-existing defect the ActiveFilterChips/CurrencyInput logs documented. My surface has 0 errors. Let me run the macOS build (gate requires it) and confirm git shows only my files touched.
+
+Git confirms only my 8 `PillFilterBar.*` files are new; `AISuggestNewGeofences.swift` is unmodified (pre-existing foreign error). Let me check the macOS build status.
+
+macOS build: 2 errors, both **environmental dev-signing-certificate** errors (the documented runner limitation), 0 PillFilterBar errors. Both platforms DEFERRED for reasons outside my surface — matching the sanctioned precedent. Let me read the deferral basis doc to cite it accurately.
+
+The deferral basis is confirmed (sanctioned "code-complete + deferred macOS verification" per ADR-012 CI matrix). Let me run the literal gate command (`build test`) for iOS once with incremental derived data to capture the exact gate output, then compute file line counts.
+
+Files total 1312 lines (33 test functions = the 33 executed tests). Let me wait for the iOS `build test` gate to complete.
+
+The `build test` run uses parallel/batch compilation (error interleaved). Let me wait for it to fully complete and capture the final exit + the foreign error.
+
+Conclusive: the `build test` gate (IOS_EXIT=65) failed on a different foreign sibling (`AISignalExplorerNlFilter.swift`) — across both iOS runs the only blockers are foreign siblings (`AISuggestNewGeofences`, `AISignalExplorerNlFilter`), **never PillFilterBar (0 errors)**. Let me grab tool versions and write the gate log.
+
+Both foreign files confirmed unmodified. Let me extract the verbatim foreign/environmental error lines for the log.
+
+I have all evidence. Now let me write the comprehensive gate log.
+
+Log written. Let me update tracking, clean up temp artifacts, and verify git state before committing.
+
+Clean — exactly my 8 files + the log; generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Committing.
+
+Committed (e9b2e97d, 9 files). Let me do final cleanup and a closing verification.
+
+All gates resolved and committed. The task is complete.
+
+**Summary of what I delivered:**
+
+Built the native Apple parity of `components/forms/PillFilterBar.tsx` as a self-contained shared surface at `apps/apple/TeslaSync/shared-surfaces/PillFilterBar.*` (8 files, 1312 lines), following the accepted sibling architecture (ActiveFilterChips 0147 / CurrencyInput 0150):
+
+- **Adapter** (pure Foundation): slug, `PillItem`/`PillAccent`/`PillVariant`, projection, and the WAI‑ARIA Tabs keyboard math (Left/Right wrap skipping disabled, Home/End, `fmtInt`-parity count formatting).
+- **Model** (`@Observable @MainActor`, P1/S8): roving focus, guarded selection + arrow/Home/End routing through the page `onChange`, once‑only `view.opened` telemetry (P1/S11), i18n facade (P1/S10).
+- **Views/swift**: token-driven (P1/S9) pills + tabs variants (accent fill/ring/dot, underline), optional icon + locale count, `.isSelected` traits, friendly empty state (never a blank box).
+- Faithfully reproduced **only the source's real branches** — the pure presentational source has no fetch, so no fabricated loading/error/stale/offline (documented, matching accepted siblings).
+
+**Verification (all green / honestly reported):**
+- iOS 18 + macOS 15 `swiftc` typecheck: 0 errors
+- Isolated SwiftPM XCTest: **33/33 pass**
+- `swiftlint --strict`: 0 violations (4397 files); `swiftformat --lint`: 0/4695
+- placeholder gate: self-test PASS + 0 on real scan; xcodegen: 48 refs, correct membership
+- KMP `Shared.xcframework` staged
+- Full-app `xcodebuild` **DEFERRED (RED, verbatim)**: iOS exit 65 on pre-existing **foreign** siblings (`AISuggestNewGeofences`, `AISignalExplorerNlFilter` — git-proven unmodified, outside my glob), macOS exit 65 on the runner's missing dev-signing cert — **0 PillFilterBar errors** in either.
+
+Committed as `e9b2e97d` with the gate log. **EXIT=0 / STATUS=DONE.**
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0156-PillFilterBar.log | 164 +++++++++++
+ .../shared-surfaces/PillFilterBar.Adapter.swift    | 299 +++++++++++++++++++++
+ .../PillFilterBar.AdapterTests.swift               | 181 +++++++++++++
+ .../shared-surfaces/PillFilterBar.Model.swift      | 167 ++++++++++++
+ .../shared-surfaces/PillFilterBar.Previews.swift   | 118 ++++++++
+ .../shared-surfaces/PillFilterBar.Tests.swift      | 219 +++++++++++++++
+ .../shared-surfaces/PillFilterBar.Views.swift      | 172 ++++++++++++
+ .../shared-surfaces/PillFilterBar.strings          |  24 ++
+ .../TeslaSync/shared-surfaces/PillFilterBar.swift  | 132 +++++++++
+ 9 files changed, 1476 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0156-PillFilterBar.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PillFilterBar.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PillFilterBar.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PillFilterBar.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PillFilterBar.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PillFilterBar.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PillFilterBar.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PillFilterBar.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PillFilterBar.swift

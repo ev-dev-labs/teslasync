@@ -1,0 +1,140 @@
+I'll start by understanding the task: create a native Apple (SwiftUI) version of the `LiveStateIndicators` web component. Let me explore the repo structure, read the web source, and check tooling availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators, pwsh). This is NOT a BLOCKED scenario. Let me read the web source and explore the Apple app structure.
+
+Now let me read the web source and explore the Apple app structure in detail.
+
+The web source is a simple row of status badges (Speed, Locked, Sentry, Climate, Charging) using `useUnits().formatSpeed`. The `feature-views` directory already exists with ~2546 entries. Let me check if `LiveStateIndicators` already exists and study the established pattern from sibling files.
+
+The pattern is clear: each feature-view is split into `.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, and `.strings`. Let me read the rest of the AccordionSection family and locate the shared infrastructure (Badge, state-holders, i18n, tokens, telemetry, VehicleState, units).
+
+Now let me read the Previews and Tests examples and locate the shared infrastructure I must reuse (Badge, units formatter, VehicleState, state-holders, i18n, tokens).
+
+Excellent — the pattern is fully clear. Now let me find the shared infrastructure I must reuse. Let me search for the native Badge component, units formatter, VehicleState model, tokens, and state-holder patterns.
+
+Found the key infrastructure. The closest sibling is `VehicleStatePanel.*` — it uses `VehicleState`, units formatting, and Badge. There's also `LiveVehicleState.swift` (likely the shared state holder). Let me read the Badge component, units facade, and the VehicleStatePanel sibling family.
+
+`VehicleStatePanel` is my closest sibling (vehicle-detail + VehicleState). Let me read the Badge component, units facade, and the full VehicleStatePanel family plus the state-holder model pattern.
+
+Now let me read the state-holder model + adapter pattern (P1/S8) and confirm how the web `LiveStateIndicators` is consumed and what `VehicleState` contains.
+
+Let me read the remaining VehicleStatePanel files (Format, Views, strings, Tests, Previews) and the web `VehicleState` type + `useUnits` to confirm field names and speed units.
+
+Let me read the VehicleStatePanel Tests + Previews, and the web `VehicleState` type + `useUnits().formatSpeed` to confirm field names and that `speed` is SI m/s.
+
+I have the full pattern. Now let me confirm the web contract: the `VehicleState` type fields, `useUnits().formatSpeed`, the web `Badge` variants/props, and where `LiveStateIndicators` is consumed.
+
+Let me confirm `formatSpeed`'s SI contract and the data flow in `VehicleDetailPage` (how `state` is sourced — loading/error).
+
+Data flow confirmed: `VehicleDetailPage` owns loading (`!state`→Skeleton) and error (SectionErrorBoundary); `LiveStateIndicators` is a pure presentational leaf receiving `state: VehicleState`, with `speed` in SI m/s. This is exactly the sibling `VehicleStatePanel` pattern. Let me set up tracking and verify the remaining shared primitives (TSFadeIn, TSSkeleton, TSButton, tokens, and any flow layout).
+
+No shared flow layout exists — I'll implement a private one with the `Layout` protocol. Let me read the primitive signatures and design tokens.
+
+Let me locate the design token definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSAnimation/TSMotion, TSGlassPanel).
+
+I now have all token/primitive signatures. Let me read the lint/format configs (critical for file-length budget), the placeholder checker, the project.yml test target config, and the available simulators/schemes.
+
+Let me confirm the test targets include `*Tests.swift` from feature-views (not exclude), and check available simulators/runtimes.
+
+Tests auto-include from feature-views; `iPhone 16` sim is available; pwsh + placeholder checker present. Now let me check the build infra (xcodegen, the generated project, the Shared.xcframework) and the placeholder patterns I must avoid.
+
+`xcodegen` is available but no `.xcodeproj` yet, and critically **`Frameworks/Shared.xcframework` is missing** (only `.gitkeep`). The app imports `Shared` (KMP core). Let me find how the xcframework is produced (build scripts, KMP module) — siblings build green, so there must be a documented path.
+
+The build chain: Gradle builds `Shared.xcframework` (Java 17 ✓), then `xcodegen generate`, then `xcodebuild`. The xcframework build is heavy (Kotlin/Native), so I'll kick it off in the background now while I write the Swift files. Let me confirm the project.yml run-script wiring and the gradle task.
+
+I have everything needed. The xcframework targets iosSimulatorArm64 + macosArm64 (matches this Apple Silicon runner). Let me kick off the heavy Gradle xcframework build in the background now, then write the Swift files in parallel.
+
+The Gradle xcframework build is running in the background. Now I'll write the eight `LiveStateIndicators.*` files, following the established sibling pattern (`VehicleStatePanel`) precisely. Starting with the pure, dependency-free formatting + adapter cores.
+
+Now the presentational layer. I'll split the views into `.Views.swift` (badge, flow layout, data row) and `.Chrome.swift` (freshness chip, banner, loading/empty/error) to stay well within the swiftlint file-length budget, mirroring how the sibling split files.
+
+Now the main view that binds the model and switches over the phase, plus the surface slug.
+
+Let me check the background xcframework build progress while I continue writing the strings, previews, and tests.
+
+The build is downloading the Kotlin/Native toolchain (first run). Let me write the strings catalog, previews, and tests in parallel.
+
+The xcframework build completed. Let me confirm its output and write the comprehensive Tests file (adapter, format, projector, model+telemetry, accessibility).
+
+The `Shared.xcframework` built successfully and is staged. All nine `LiveStateIndicators.*` files are written. Now let me verify file lengths, auto-format my files to the repo's swiftformat config, and lint them before the full build.
+
+All files are well under the 400-line budget. One file needed formatting. Let me verify the whole-tree swiftformat lint and swiftlint pass (these are gate steps), and see what changed.
+
+swiftformat lint passes (0/4108 need formatting). Now swiftlint --strict (gate step):
+
+swiftlint --strict: **0 violations in 3878 files**. Now let me generate the Xcode project and run the iOS build + test (the heaviest gate step).
+
+Project generated; both `TeslaSync` and `TeslaSync-macOS` schemes exist. Now the heavy step — iOS build + test on iPhone 16. I'll run it capturing full output to a log, in the background.
+
+While the iOS build+test runs, let me verify the gate log directory and inspect a sibling log to match its format.
+
+Important: a sibling log shows the full-app xcodebuild gate is sometimes DEFERRED due to pre-existing cross-file issues, with the surface still verified independently. Let me read the sanctioned disposition doc while the build runs, and check build progress.
+
+This is the key context: the established repo convention (documented for many siblings) is that the full-app xcodebuild gate is **deferred** to the `macos-latest` P99 acceptance gate because of *pre-existing, unrelated* parallel-merge collisions (e.g., `StateTimeline*`, `DashboardWidgetSize`), while each surface is verified green independently. Let me read the rest of the doc and wait for my build to reveal the actual errors.
+
+iOS build returned EXIT=65 — as the doc predicted. The critical honesty check: I must confirm **zero** errors come from my `LiveStateIndicators` files and that all failures are the documented pre-existing collisions. Let me analyze the log.
+
+Confirmed: **162 errors, zero from `LiveStateIndicators`** — all are the documented pre-existing `StateTimeline*`/`RecentDrives*` redeclaration collisions across other agents' files (matches the `macos-pending-verifications.md` 0003/0301 entries verbatim, "iOS scheme 162"). Let me rigorously confirm zero surface errors, that the colliding files are pre-existing (not mine), and capture the exact error sample for the log.
+
+**Definitively confirmed**: zero `LiveStateIndicators` errors; all 162 errors are owned by pre-existing `StateTimelineWidget.swift` / `RecentDrivesListWidget.swift` (committed, untouched — git shows only my 9 files as new). This is the exact documented blocker.
+
+Now I'll produce independent surface verification like the siblings: isolated `swiftc -typecheck` against the real design system for **both** iOS-18 and macOS-15 SDKs.
+
+iOS-18 typecheck: **0 errors** (the `SR;` typo was harmless — separate statement). Now the macOS-15 typecheck, plus an executed logic harness for the test assertions.
+
+Both SDK typechecks pass: **iOS-18 = 0 errors, macOS-15 = 0 errors**. Now an executed logic harness to prove the test assertions actually pass (the XCTest bundle can't run because the app module is broken by the unrelated collisions).
+
+Only the harness driver's helpers tripped Swift 6 actor isolation (my source compiled cleanly). Let me mark the helper `@MainActor` and re-run.
+
+Executed harness: **43/43 assertions pass, 0 fail** — the adapter, format, projector, model, telemetry, accessibility, and strings logic all verified under Swift 6. Now I'll run the remaining gate steps for the official log: placeholder check, signing-identity probe (to document the macOS blocker), and the macOS build.
+
+Placeholder check clean (`PLACEHOLDER_COUNT=0`); **0 valid codesigning identities** (the documented macOS signing blocker). Now the macOS build+test to record `MAC_EXIT` honestly.
+
+While macOS builds, let me verify i18n parity (every web `t()` key has a matching catalog key, no dead keys) to include as evidence.
+
+The keys match perfectly (the diff is only a trailing-quote artifact in my `sed`). Let me re-verify cleanly and read the completed macOS build result.
+
+i18n parity is perfect (10/10, 0 missing, 0 dead). macOS build also `MAC_EXIT=65`. Let me confirm zero surface errors on macOS too and categorize.
+
+macOS: only 4 errors, **0 from `LiveStateIndicators`**. Let me see exactly what those 4 errors are (the `&&` chain stopped at the `grep -c` returning 0).
+
+macOS errors are all 4 development-signing entitlement errors (0 valid identities) — it failed at signing before compiling, **0 surface errors**. The full picture is now complete and matches the sanctioned sibling disposition exactly. Let me view a close sibling's log to mirror its format, then write mine.
+
+Let me see the rest of the sibling's log (gates section through EXIT/STATUS) to mirror the disposition exactly.
+
+I now have the exact format and the complete, honest evidence set. Let me compute final line counts and test totals, then write the official gate log.
+
+Let me run an explicit symbol-collision scan against the rest of the app module (the sibling did this; the full-app compile already implies it, but I'll confirm and cite it).
+
+0 collisions — all 21 public types are unique. I have the complete, honest evidence set. Now let me write the official gate log.
+
+Log written. Now let me clean up the generated project + temp artifacts and verify git only sees my intended files (the `.xcodeproj` and `Shared.xcframework` should be git-ignored).
+
+git status shows exactly my 9 surface files + the log (the generated `.xcodeproj` cleaned; `Shared.xcframework` ignored). Now committing the allowed scope with the prompt's message.
+
+Committed cleanly as `76f74b9f6` — exactly the 9 surface files + the log, working tree clean. Let me finalize the todo state and do a last confirmation.
+
+All 11 todos done; commit `76f74b9f6` contains exactly the 9 surface files + log (1609 insertions), working tree clean.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0292-LiveStateIndicators.log | 210 ++++++++++++++++
+ .../LiveStateIndicators.Adapter.swift              | 216 +++++++++++++++++
+ .../feature-views/LiveStateIndicators.Chrome.swift | 171 +++++++++++++
+ .../feature-views/LiveStateIndicators.Format.swift | 141 +++++++++++
+ .../feature-views/LiveStateIndicators.Model.swift  | 265 +++++++++++++++++++++
+ .../LiveStateIndicators.Previews.swift             |  95 ++++++++
+ .../feature-views/LiveStateIndicators.Tests.swift  | 256 ++++++++++++++++++++
+ .../feature-views/LiveStateIndicators.Views.swift  | 140 +++++++++++
+ .../feature-views/LiveStateIndicators.strings      |  42 ++++
+ .../feature-views/LiveStateIndicators.swift        |  73 ++++++
+ 10 files changed, 1609 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0292-LiveStateIndicators.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStateIndicators.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStateIndicators.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStateIndicators.Format.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStateIndicators.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStateIndicators.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStateIndicators.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStateIndicators.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStateIndicators.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStateIndicators.swift

@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure, the web source, and the existing Apple app conventions, plus checking what build tools are available.
+
+Tools are available. Let me read the web source and explore the Apple app structure in depth.
+
+Let me explore the existing feature-views directory, the dependent web files, and the Apple conventions.
+
+The `ChargingTab` renders `ChargingDetailSection` (a separate surface with its own prompt — its i18n keys are excluded from this prompt's list). Let me check existing files for `ChargingTab`/`ChargingDetailSection` and find a strong reference example to follow conventions.
+
+`ChargingDetailSection` already exists natively (separate prompt, done). Sibling tabs `BatteryTab`, `DrivingTab`, `OverviewTab` exist — perfect references. Let me see their full file sets.
+
+DrivingTab is the closest analog (metric cards + charts + detail section). Let me read its full file set plus how ChargingDetailSection is embedded.
+
+Excellent, strong conventions. Let me read the rest of DrivingTab (Charts, Views, Previews, strings, Tests), how ChargingDetailSection embeds, and verify the charging data shapes + formatting.
+
+Now let me read the Previews/strings/Tests, the sibling `ChargingDetailSection.swift`, and `BatteryTab` (which may include summary metric cards like ChargingTab needs).
+
+Let me read the `ChargingDetailSection` Model/Panels (for the `formatCurrency` seam + MetricCard parity + charging input shape) and `DrivingTab.Tests.swift`.
+
+Now let me check the build target structure, the shared tokens, web formatting helpers, and the charging analytics data shape + tests.
+
+Now let me check the build setup (project.yml), shared token definitions, and the web formatting helpers.
+
+Now let me locate the shared design tokens/components and the web PIE_COLORS palette.
+
+Let me grab the last reference pieces: `TSSkeleton`, `tsChartAxes`, and the dual-axis scale pattern.
+
+Now let me assess the build environment (xcodegen, Shared.xcframework, simulators) before writing code, since the gate depends on it.
+
+Build needs a Gradle-built `Shared.xcframework` (KMP). Let me check `pwsh`, the placeholder checker, and kick off the long KMP framework build in the background while I write code.
+
+All tooling present. Let me kick off the KMP `Shared.xcframework` build in the background (the long pole), then write the code while it runs.
+
+Let me set up a task plan and check the KMP build's initial progress.
+
+The KMP build succeeded (a shared Gradle daemon built it). Note the log referenced another slot — this is a shared environment. Let me verify my slot's framework output and stage it properly.
+
+KMP framework is staging in the background. Let me verify the exact web data shapes (`FleetAnalytics.charging_analytics`) before writing the Swift, then start writing.
+
+Confirmed all data shapes. Now writing the surface. Starting with the Model (state-holder + formatting + strings seams) and the pure Adapter.
+
+Staging still running. Let me write the code now — starting with the Model file.
+
+Let me check the framework staging status and read the web `MetricCard` to match its layout.
+
+Web `MetricCard`: label/value/subtitle on the left, tinted icon chip on the right. Now writing the chrome views.
+
+Now the three Swift Charts (donut, battery bars, hourly composed dual-axis).
+
+Staging finished. Let me verify the framework is in place, then write the main view.
+
+Framework staged successfully — the build dependency is satisfied. Now the main view, previews, strings, and tests.
+
+Now the test suite — adapter projection, model phases, accessibility, telemetry.
+
+All 8 files written. Let me run the fast linters on the new files first for quick feedback.
+
+Two minor style fixes needed. Let me fix the blank line between test imports and wrap the single-line property bodies.
+
+Now re-run both linters across the full `apps/apple` scope (as the gate does):
+
+swiftformat passes. One swiftlint issue: `categorySummary` has 6 params (max 5). Let me collapse the `total`+`formatInt` pair into a pre-formatted `totalText` string.
+
+Re-running both linters on the ChargingTab files to confirm clean:
+
+Both linters pass. Now let me inspect the placeholder checker — I used the word "placeholder" in code, which may be a banned token.
+
+Let me check the actual forbidden patterns — I used the word "placeholder" in code.
+
+The pattern set forbids "Placeholder" (case-insensitive). I must rename my `placeholder` constant and scrub the word. Let me fix that.
+
+Let me verify no forbidden tokens remain and run the placeholder scanner against my files via a temp dir (so it actually scans them).
+
+Scanner clean (COUNT=0). Now let me regenerate the Xcode project, confirm the iPhone 16 simulator exists, and re-confirm lint.
+
+Project generated, iPhone 16 booted, lint clean. Let me verify my files are wired into the targets and that the log directory exists.
+
+Files are wired in; logs dir exists. Let me run an iOS build first (build-only) to validate compilation before the full gate. This includes the Gradle pre-action.
+
+Fast failure (40s) — likely a compile error. Let me check the log.
+
+Build failed — but **all** errors are in pre-existing `dashboard-widgets/ChargeStatus*`/`ChargeSessionChartWidget` files ("ambiguous for type lookup" on `ChargeStateDTO`, `ChargeConnection`, etc.), **none** in my ChargingTab files. Let me determine whether this is a pre-existing baseline failure or something my work triggered.
+
+Confirmed: my 8 files are the **only** new files, and each ambiguous type (`ChargeStateDTO`, `ChargeConnection`, etc.) is **already declared twice** across pre-existing `dashboard-widgets` files — nothing I added. Let me inspect those declarations and prove the baseline fails without my files.
+
+This is a **pre-existing baseline breakage**: two sibling P4 widget surfaces (`ChargeStatusWidget`, `ChargeStatusLiveWidget`, committed in `e31612cd1`) each declare the same top-level public types (`ChargeStateDTO`, `ChargeConnection`, …) → "ambiguous" errors. It's entirely outside my allowed scope (`ChargingTab.*`). Let me confirm zero ChargingTab errors and check whether anything outside dashboard-widgets references those types.
+
+All 339 errors are in `dashboard-widgets/*` (many widget surfaces, not just Charge*) — **zero** in `feature-views/`. The dashboard-widgets area is broadly broken in this shared baseline. Let me check whether anything outside `dashboard-widgets` references those types, to design a clean verification that my ChargingTab actually compiles + tests pass.
+
+No external references to the broken widget symbols — `TeslaSync/dashboard-widgets` is self-contained. I'll run a **verification build** generating from a temp XcodeGen spec that excludes that broken directory (never touching the real `project.yml`), to prove ChargingTab compiles and its tests pass.
+
+The temp spec must live in `apps/apple` so relative paths resolve. Let me place it there and regenerate.
+
+Verification project ready (ChargingTab in, broken dashboard-widgets out). Now the iOS build+test — the key proof my surface compiles and its tests pass.
+
+158 errors now — all in a **pre-existing test file** `Tests/Unit/DashboardWidgets/DigitalTwinMiniWidgetTests.swift` (tests for the excluded widgets), **zero** in ChargingTab. Let me confirm the app target itself compiled and locate where these widget types live.
+
+The app target **TeslaSync built successfully** (I can see `TeslaSync.app` linking + `CopySwiftLibs`) — proving **ChargingTab compiles cleanly**. The 158 errors are a pre-existing test (`DigitalTwinMiniWidgetTests`) for a widget I excluded. Let me also exclude `Tests/Unit/DashboardWidgets` so the test target compiles and my ChargingTab tests actually run.
+
+Now run build+test, executing **only my ChargingTab test classes** (the test target now compiles since broken widget tests are excluded):
+
+Found a real bug in my **test file**: the global `let testFormatting` collides with the XCTest method `func testFormatting()`. Let me rename the global to `fixtureFormatting`.
+
+Only the test method remains. Let me re-run the ChargingTab test build (app is cached) and re-lint in parallel.
+
+**EXIT=0** — ChargingTab compiles and its tests pass on iOS. Let me confirm the test counts.
+
+All 5 ChargingTab suites pass — **22 tests, 0 failures, TEST SUCCEEDED** on iOS. Now the macOS half of the gate — build + run ChargingTab tests via the same verification spec.
+
+macOS failure is a **code-signing/entitlements** environment limitation (no dev certificate on this runner), not a compile error. Let me verify ChargingTab *compiles* on macOS by building for testing with signing disabled.
+
+macOS **build-for-testing EXIT=0** — ChargingTab + its tests compile on macOS too. Let me confirm clean and try running the macOS tests with signing disabled.
+
+Outstanding — ChargingTab compiles and all **22 tests pass on both iOS and macOS**. The unmodified full-app gate is blocked only by (1) pre-existing sibling `dashboard-widgets` breakage and (2) macOS code-signing. Let me clean up the temp spec, restore the real project, and run the repo-wide fast linters.
+
+swiftformat passes repo-wide. swiftlint has **1** violation repo-wide — let me find which file (mine or pre-existing).
+
+Repo-wide: swiftformat clean; the single swiftlint violation is pre-existing (`LiveSignalSparklinesWidget.Builder.swift`), **zero** in ChargingTab. 
+
+I now have the full, honest picture. Let me capture concise evidence excerpts, then write the gate log.
+
+The shared `/tmp` got clobbered by a parallel slot. Let me re-capture the literal-gate evidence into slot-local logs (real, unmodified project) to document the pre-existing blockers reliably.
+
+iOS literal gate reliably re-captured: **EXIT=65, 113 errors — all in `dashboard-widgets`, 0 in `feature-views`**. Now the macOS signing blocker.
+
+All evidence captured reliably. Let me write the gate log, then commit.
+
+Now let me verify what's ignored vs tracked, clean build artifacts, and stage exactly the allowed files.
+
+Only my 8 ChargingTab files + the log are untracked; build artifacts/xcodeproj/framework are git-ignored. Staging exactly the allowed files and committing.
+
+Committed as `724b2ffa7`, tree clean. Let me clean up the slot-local build artifacts and finalize.
+
+Task finalized. Working tree is clean; the 8 ChargingTab files + gate log are committed (`724b2ffa7`), and build artifacts/temp logs are cleaned up.
+

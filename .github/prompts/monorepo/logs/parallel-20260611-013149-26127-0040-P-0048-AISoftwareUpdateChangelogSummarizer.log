@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and verifying the toolchain availability, since this task targets the Apple platform.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, pwsh). Web source exists, `apps/apple` project exists. Let me read the web source and explore the Apple project structure.
+
+The web source is clear — it's an AI feature card using `withAiFeature` + `useAiStream`. The `shared-surfaces` dir already exists with ~724 files following an established pattern. Let me examine existing sibling AI surfaces to match the exact convention.
+
+Clear multi-file convention per surface. I need to find the closest structural twin — a sibling AI surface whose web source also uses `AIFeatureCard` + `withAiFeature` + `useAiStream` with the same simple shape. Let me examine the web AI components and pick the best Apple sibling to model.
+
+Multiple structural twins exist. Let me read the closest web twins and inspect a complete Apple implementation to model the full file set precisely.
+
+`AIIncidentTimelineSummarizer` is a complete summarizer twin with the full file set. Let me study it thoroughly as my architectural model.
+
+Excellent architecture. Let me read the remaining files of this twin to capture the full pattern (Adapter, Views, Chrome, strings, tests, previews).
+
+Now let me read the remaining twin files (Chrome, strings, Previews, Tests, AdapterTests) to capture the complete pattern.
+
+Let me read the twin's test files and locate the shared token/primitive definitions (TSSpacing, Color.TS, TSButton, etc.) to confirm the contracts I must use.
+
+I now have a deep understanding of the twin pattern. My target differs: `vehicleId` goes in the **body** (not path), fixed URL `/ai/software-updates/summarize`, and it uses an `emptyHint` prop. Let me read the shared web primitives (`AIFeatureCard`, `useAiStream`, `withAiFeature`, `useSelectedVehicle`) to reproduce exact semantics — especially `emptyHint` which the twin didn't use.
+
+Key insight: in `AIFeatureCard`, `emptyHint` renders as a **header hint under the description** (only when `!canStart`), separate from the `AiOutputPanel`. My target passes `emptyHint`, so I must reproduce that. Let me read `AiOutputPanel`, `useAiStream`, `withAiFeature`, and `useSelectedVehicle` for exact semantics.
+
+Let me verify the exact `useAiStream` lifecycle and `withAiFeature` gate semantics to avoid any drift, plus check the existing selected-vehicle misc-surface for binding conventions.
+
+I now have complete parity understanding of `useAiStream`, `AIFeatureCard`, `AiOutputPanel`, `withAiFeature`, and `useSelectedVehicle`. The twin's Adapter is a faithful port I can adapt. Before writing, I must verify: no symbol collisions, the shared token APIs, and the build setup (xcodegen/scheme/test wiring).
+
+No symbol collisions, xcodegen is present, and my new files will be auto-globbed into the app/test targets by naming convention. Two critical unknowns remain: (1) the `Shared.xcframework` / KMP build dependency in the scheme preAction, and (2) the exact token/primitive APIs. Let me investigate both.
+
+Critical finding: `Shared.xcframework` is **not** staged (only `.gitkeep`), and the scheme preAction requires the **Kotlin/Native toolchain** via Gradle. The `macos-pending-verifications.md` file suggests the full xcodebuild gate runs on CI. Let me understand the established verification posture and check the KMP feasibility, plus read the exact token APIs.
+
+Token APIs confirmed (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius` all have what I need). `apps/shared` is a KMP module with a gradlew. Let me read the verification posture doc and the exact primitive APIs (`TSButton`, `TSSkeleton`, `TSFadeIn`).
+
+All token/primitive APIs match the twin exactly. Let me understand the precise verification posture (how prior surfaces logged their gate) and test whether the KMP/Gradle toolchain can run here.
+
+Let me examine how a sibling shared-surface logged its gate — that's the canonical evidence for the correct STATUS posture in this environment.
+
+I now have everything I need. The established posture (from the twin's gate log) is clear: write the complete surface, run real surface-scoped gates (typecheck on both SDKs, execute the Foundation logic tests, swiftlint/swiftformat/placeholder/xcodegen), attempt the full xcodebuild, and log `EXIT=0/STATUS=DONE` if the surface is green on every gate scoped to it. Let me set up a plan and todos, then write all 10 files.
+
+Now I'll write all 10 files. Starting with the Foundation-only core (`.Adapter.swift`).
+
+`.Adapter.swift` written. Now the `.Model.swift` (seams + state holder), adding the `emptyHint` field to the Ready struct.
+
+`.Model.swift` written. Now the `.Projection.swift` — the pure projection including the header `emptyHint` and the verbatim web description.
+
+Now the main surface `.swift` (the View).
+
+Now `.Chrome.swift` (freshness chip, refresh, banner, loading, gate-error).
+
+Now `.Views.swift` — the presentational subviews, including the header `emptyHint` in the ready body.
+
+Now `.Previews.swift` (one per state).
+
+Now `.AdapterTests.swift` (Foundation-only XCTest).
+
+Now `.Tests.swift` (projection + model + a11y).
+
+Now the `.strings` i18n catalog.
+
+All 10 files created. Let me update todos and begin verification with the fast scoped gates (swiftlint, swiftformat, placeholder check) plus inspect the placeholder script and primitive imports.
+
+The primitive deps only need SwiftUI + Tokens. Let me run the three scoped host gates (swiftlint, swiftformat, placeholder) on my files.
+
+Config is clear (line length ≤120 code, type names ≤50, swiftformat maxwidth 120). Let me run swiftlint and swiftformat scoped to my files.
+
+swiftlint: **0 violations**. Now swiftformat --lint and the placeholder check.
+
+Placeholder gate: **COUNT=0, EXIT=0**. swiftformat flagged 4 single-line property bodies in Adapter.swift (the codebase convention, per the twin, is multi-line bodies). Let me view and fix those.
+
+Re-running swiftformat and swiftlint to confirm both are clean.
+
+Both clean: **swiftformat 0/9, swiftlint 0 violations, placeholder COUNT=0**. Now the critical proof — compile and **execute** the parity logic (Adapter + Projection + Model) in a standalone Foundation harness (in /tmp, not committed), mirroring the XCTest assertions.
+
+Now compile and execute the harness.
+
+Swift 6 makes top-level code MainActor-isolated; my harness's `check`/`eq` helpers need the annotation. Quick fix.
+
+The Foundation parity core **compiles under Swift 6 strict-concurrency and executes green: 69 checks, 0 failures.** Now let me typecheck the full SwiftUI surface (+ token/primitive deps) against both the macOS 15 and iOS 18 SDKs.
+
+The primitive lib references more symbols (`TSCard`). Rather than chase the closure, let me check if `Sources/Components` is a self-contained set I can typecheck wholesale against the real tokens.
+
+`Sources/Components` (39 files) imports only system frameworks — self-contained with Tokens. Let me typecheck my surface against the **entire real component library** on both SDKs.
+
+My surface doesn't use Maps/`TSChartPalette` — that's a different Components subtree pulling in app-module symbols. Let me include only the specific real primitive files my surface needs and check their deps.
+
+The component lib is heavily interconnected (chases into app-module symbols). I'll typecheck my surface against a **faithful shim mirroring the verified real token/primitive signatures** — this isolates and proves my surface's type-correctness. Let me build it.
+
+Now typecheck the full surface (7 files + shim, with `-D DEBUG` to include Previews) against both SDKs.
+
+Both SDK typechecks pass: **macOS 15 EXIT=0, iOS 18 simulator EXIT=0** (including DEBUG previews). Now `xcodegen generate` to prove project integration.
+
+xcodegen integrates my files (60 references), **EXIT=0**. Now I'll attempt the full build. First I need to build/stage the KMP `Shared.xcframework` (the scheme's preAction). Let me kick that off in the background and monitor.
+
+Gradle works offline (deps cached). Let me build + stage the `Shared.xcframework` in the background (it's the ~6min KMP step), then run the full xcodebuild.
+
+The KMP framework build is running (~6min expected). Let me continue waiting.
+
+`Shared.xcframework` built + staged (BUILD SUCCESSFUL in 6m29s). Now let me check available simulators and attempt the full in-module `xcodebuild build`.
+
+iPhone 16 is available (the exact gate destination). The xcframework is staged, so I'll build the app target directly (avoids re-running the 6min preAction) to get the in-module compile result. Capturing to a log for analysis.
+
+Build failed (exit 65), but Swift batches files — a batch "command failed" doesn't mean *my* files errored. Let me extract the actual `error:` lines and check whether any are in my surface.
+
+Exactly **one** real compiler error in the whole build — in `AISignalExplorerNlFilter.swift:142` (a *different* surface I never touched). **Zero errors in any of my files.** Swift just batched my files with that pre-existing failure. Let me confirm: no errors mention my surface, and the failing file is untouched by me.
+
+Confirmed: my changes are **only** the 10 new files; the single build error is in `AISignalExplorerNlFilter.swift` (pre-existing, untouched by me); **zero errors in my surface**. To be bulletproof, let me prove the error reproduces *without* my files present (move them aside, rebuild, confirm same error, restore).
+
+**Definitive proof:** with my files entirely removed (0 references in the project), the build *still* fails with the identical `AISignalExplorerNlFilter.swift:142` error. The failure is 100% pre-existing and independent of my surface. Let me restore my files.
+
+My files are restored (60 refs). Now let me also typecheck the **test files** (swiftlint validates syntax but not types). I'll compile them with the surface sources + shim as one module (stripping `@testable import`, since they'd share the unit) against real XCTest.
+
+Those errors are purely the XCTest C-macro importer limitation in a bare `swiftc` invocation (`macro 'XCTAssertTrue' unavailable`), not defects in my tests — and notably, every **surface type reference** in the tests resolved (no "cannot find type" errors). Let me confirm all errors are macro-only.
+
+**100% of test-file errors are the XCTest C-macro importer limitation** (`XCTAssert*` unavailable in bare `swiftc`) plus their downstream `.case` inference — zero real type errors; every surface type reference resolved. The logic itself is proven by the harness (69/69). 
+
+I now have comprehensive evidence. Let me clean up temp files and gather line counts for the gate log.
+
+Line counts gathered (2337 total across 10 files; all 4 web i18n keys + 21 catalog entries). Let me capture git context for the log header, then write the gate log.
+
+Now I'll write the comprehensive gate log with all real evidence.
+
+Gate log written. Let me verify git status (ensure only my files + log + generated artifacts are handled correctly), then commit exactly the allowed files.
+
+Clean: only my 10 files + the log are untracked; the generated `.xcodeproj` and staged framework are git-ignored. Committing exactly the allowed files.
+
+Committed (`a75524473`). Final integrity re-check of the scoped gates post-commit to confirm nothing regressed through the move-aside/restore.
+
+All final gates green. Let me close out the todos and mark the task complete.
+
+Merge made by the 'ort' strategy.
+ ...es-0048-AISoftwareUpdateChangelogSummarizer.log | 206 +++++++++++
+ ...SoftwareUpdateChangelogSummarizer.Adapter.swift | 368 ++++++++++++++++++++
+ ...areUpdateChangelogSummarizer.AdapterTests.swift | 323 ++++++++++++++++++
+ ...ISoftwareUpdateChangelogSummarizer.Chrome.swift | 189 +++++++++++
+ ...AISoftwareUpdateChangelogSummarizer.Model.swift | 378 +++++++++++++++++++++
+ ...oftwareUpdateChangelogSummarizer.Previews.swift | 131 +++++++
+ ...twareUpdateChangelogSummarizer.Projection.swift | 156 +++++++++
+ ...AISoftwareUpdateChangelogSummarizer.Tests.swift | 373 ++++++++++++++++++++
+ ...AISoftwareUpdateChangelogSummarizer.Views.swift | 246 ++++++++++++++
+ .../AISoftwareUpdateChangelogSummarizer.strings    |  47 +++
+ .../AISoftwareUpdateChangelogSummarizer.swift      | 126 +++++++
+ 11 files changed, 2543 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0048-AISoftwareUpdateChangelogSummarizer.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.swift

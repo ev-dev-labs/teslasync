@@ -25,7 +25,7 @@ public struct SystemHealthComponentData: Sendable, Equatable {
 
 /// The normalized `/system/health` payload the widget renders, mirroring the web
 /// `useSystemHealth` result (`status`, `components`, `databaseSize`).
-public struct SystemHealthData: Sendable, Equatable {
+public struct SystemHealthWidgetData: Sendable, Equatable {
     public var status: String
     public var components: [String: SystemHealthComponentData]
     public var databaseSize: String?
@@ -73,12 +73,12 @@ public struct SystemHealthRuntimeInfo: Sendable, Equatable {
 /// "has data" gate mirrors the web `hasData = health.data != null`, so the
 /// snapshot is considered renderable only when `health` is present.
 public struct SystemHealthSnapshot: Sendable, Equatable {
-    public var health: SystemHealthData?
+    public var health: SystemHealthWidgetData?
     public var dbStats: SystemHealthDBStats?
     public var runtime: SystemHealthRuntimeInfo?
 
     public init(
-        health: SystemHealthData? = nil,
+        health: SystemHealthWidgetData? = nil,
         dbStats: SystemHealthDBStats? = nil,
         runtime: SystemHealthRuntimeInfo? = nil
     ) {

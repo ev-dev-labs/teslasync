@@ -1,0 +1,44 @@
+I'll start by understanding the environment capabilities and the codebase structure, since this task requires the Apple toolchain.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 26.5 sims). Now let me read the web source and explore the existing Apple app structure.
+
+The web source is clear. The feature-views directory has 2228 entries—there must be established patterns. Let me find existing PowertrainPanel files and similar telemetry-panel siblings to learn the conventions.
+
+No PowertrainPanel exists yet. The closest siblings are `SpeedGearPanel`, `ThermalLoadPanel`, `AcDcStatsPanel`. Let me read these to learn the conventions (state-holder binding, tokens, i18n, diagnostics, states, tests).
+
+Clear pattern emerging. Each panel splits into View + Model + Strings + Surface. Since allowed files are `PowertrainPanel.*`, let me see how SpeedGearPanel splits its files and where its Model/Strings/Surface/shared bits live.
+
+This is the canonical structure. Let me deeply study SpeedGearPanel's Model, Adapter, Views, strings, and Tests — it's the closest analog (also a motor/telemetry panel with a shift-state badge and motor power).
+
+Now let me read SpeedGearPanel's Views, strings, Previews, both Tests files, and ThermalLoadPanel's Adapter (for temperature formatting parity, since PowertrainPanel uses `formatTemperature`).
+
+Let me read the web parity sources (formatTemperature, fmtNumber/fmtInt, MotorSnapshot type) and the SpeedGearPanel test/preview files plus the MetricCard native equivalent.
+
+Let me verify the `_globalPrecision` default and read the SpeedGearPanel test files to mirror the test structure.
+
+Token/component definitions aren't under those names there. Let me locate them across the Apple tree and read project.yml to understand target wiring.
+
+Let me read the shared component/token APIs I'll consume.
+
+`TSMetricCard` (web `MetricCard` counterpart) exists. Let me read the remaining shared components and the generated design tokens to get exact APIs.
+
+Now let me read the design tokens (`TSDesign.swift`), the generated `Color.TS`/`Font.TS`, and the remaining shared components (Cards, Buttons, Skeletons, Motion), plus check the Xcode project/xcodegen setup.
+
+Let me read the generated Tokens.swift (spacing/radius/motion) and the remaining components (Cards, Buttons, Skeletons, Motion).
+
+I now have the full token/component picture. Let me verify the typography helpers, button/skeleton/motion signatures, and check for any naming collisions with `Powertrain*` symbols.
+
+No symbol collisions. Let me check the lint/format configs and the typography component signatures, then I'll write the files.
+
+Let me confirm the macOS scheme name, pwsh availability, the logs dir, and the placeholder checker before writing code.
+
+`pwsh`, logs dir, placeholder checker, and both schemes (`TeslaSync`, `TeslaSync-macOS`) all present. Let me read the forbidden-pattern list so my code avoids stub markers, then start writing.
+
+I have a complete understanding of the architecture, tokens, components, web parity logic, build wiring, and gate. Let me set up tracking and write the plan.
+
+Now writing the pure projection core (Adapter).
+
+The Adapter holds the primitives. I'll put the projection + projector in a separate `PowertrainPanel.Projector.swift` (keeps both files under the 400-line strict limit).
+
+Now the state-holder model, telemetry seam, surface slug, and i18n facade.
+

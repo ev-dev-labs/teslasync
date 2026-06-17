@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure to understand the current state and verify what exists.
+
+Both the web source and `apps/apple` exist. Let me read the web source and explore the Apple app structure.
+
+The `shared-surfaces` dir has many existing surfaces following a pattern (Adapter, Model, Previews, View). Let me check tooling availability and the existing pattern.
+
+Tooling is fully available (Xcode 26.5, swiftlint, swiftformat, swift). The capability requirement is satisfied. `ImpersonationBanner` doesn't exist yet. Let me study the example surface pattern thoroughly — reading all 9 files of `AchievementUnlockedToast`.
+
+Excellent, very high-quality codebase. Let me read the remaining example files to fully internalize the pattern.
+
+Let me read the Views, Previews, and Tests, plus understand the shared design tokens.
+
+Let me read the Tests file and locate the shared design tokens and components.
+
+Now let me find the main app design tokens and understand the project structure for building.
+
+Now let me assess the build situation — this is critical for the gate. Let me check xcodegen, the Shared framework dependency, and any existing impersonation code.
+
+Found a closely related existing feature: `UserImpersonateButton.*` (same impersonation domain) and a `Banners.swift`. Also no `Shared.xcframework` present yet. Let me examine the web hook source, the existing impersonation Swift code, and the build dependency situation.
+
+The app targets depend on `Frameworks/Shared.xcframework` (KMP core), which isn't present — there's a staging script. Let me check whether the full build is feasible in this environment.
+
+KMP shared module exists with a `gradlew` wrapper and Java is present, so the full build *may* be feasible (though slow). Let me gather the impersonation domain references for parity and check the remaining tooling.
+
+I now fully understand the impersonation domain. Let me read the existing Swift impersonation code for naming/i18n consistency before writing.
+
+Let me read the existing banner component, the impersonation model pattern, and the shared component signatures I'll use.
+
+Let me confirm the exact signatures of the shared components and `TSTone` I'll use.
+
+I have everything needed. The KMP framework build is the long pole for the gate, so I'll kick it off in the background now while I write the surface code.
+
+Java 17 is available. Let me start the shared framework build in the background and begin writing the surface.
+
+Java 17 works and the gradle build is running. Let me check the lint configs, then set up my plan and write the surface files.
+
+Lint rules are clear (≤120 line length on code, type names ≤50). Gradle is downloading its distribution. Let me set up tracking and write the surface files, closely matching the established pattern.
+
+Now the pure Adapter core:
+
+Now the Model (state holder + projection + telemetry/i18n seams):
+
+Now the Seams (source protocol + production + in-memory). Let me also check the gradle progress.
+
+Gradle is still fetching its distribution. Let me continue with the surface View, States, and Views files.
+
+Now the States file (loading / empty / error chrome):
+
+Now the core Views file — the active security banner with the 1‑second countdown tick and the freshness chip:
+
+Now the i18n strings, then check gradle progress:
+
+KMP `Shared.xcframework` built successfully (7m48s, now cached). Let me stage it and write the remaining Previews + Tests files in parallel.
+
+Framework staged. Now the comprehensive Tests file:
+
+All 9 files written. Let me run the fast format/lint gates on my files first to catch issues before the long build.
+
+swiftformat wants 5-digit literals ungrouped (threshold 6). Since these are my files, let me auto-format them with swiftformat (write mode), then re-verify.
+
+Let me verify all 8 files explicitly with swiftformat and run swiftlint --strict on them.
+
+Both fast gates pass (0 format issues, 0 lint violations). Now generate the Xcode project and verify the simulator, then run the full build+test gate.
+
+Project generated, iPhone 16 simulator is booted. Now the long pole — the iOS build+test gate. Let me run it in the background and capture full output.
+
+The iOS build+test is running. While it builds, let me monitor progress. Let me wait for meaningful output.
+
+Name collision: my `ImpersonationMode`/`ImpersonationConnection` (and other bare `Impersonation*` types) clash with the sibling `UserImpersonateButton` surface's public types in the same module. Per the established convention (each surface uniquely prefixes its types with its slug), I must prefix all my types with `ImpersonationBanner`. Let me enumerate every identifier I introduced.
+
+Confirmed: `ImpersonationMode` and `ImpersonationConnection` collide with the sibling `UserImpersonateButton` surface. I'll prefix every type I introduced with `ImpersonationBanner` (the established per-surface uniqueness convention), using an explicit identifier list so comments referencing web types like `ImpersonationStatus` stay accurate.
+
+Only `ImpersonationStatus` remains (a web-type reference in comments). Let me confirm it's comment-only, then re-format (longer names may have pushed lines past 120) and re-lint.
+
+All comment-only — correct. Now re-format (longer names may exceed 120) and re-verify lint.
+
+Format and lint clean (0/8, 0 violations). Now re-run the iOS build+test gate.
+
+Build running. Let me wait for it to compile and test.
+
+A different error now, and crucially it's in files that aren't mine: `AIGeofenceAwareAutomationSuggestions.swift`, `AIInboxAutoCategorization.*`, etc. — "Escaping closure captures non-escaping parameter 'content'". My batch now compiles. Let me pinpoint the exact error location to determine if this is pre-existing.
+
+The errors are in `AIAutoNameUnnamedLocations.swift:123` and `AIGeofenceAwareAutomationSuggestions.swift:141` — neither is mine. Let me inspect the code and confirm these files are unmodified by me.
+
+Confirmed: only my 9 files are new; the AI* files are unmodified repo files. The error at `AIAutoNameUnnamedLocations.swift:122` is a non-`@escaping` `content` param captured by `TSGlassPanel` — a pre-existing bug in files outside my scope. Let me verify (a) my files produced zero errors, and (b) the baseline fails identically without my files.
+
+My files produced **zero** errors — the only error in the entire build is the pre-existing `content` capture bug in two AI* files. Let me confirm `TSGlassPanel` requires `@escaping` (proving the AI* code is independently broken), then definitively verify the baseline fails without my files.
+
+`TSGlassPanel` requires `@escaping content` — so the AI* files' non-`@escaping` `glass(...)` helper is an independent pre-existing bug. Now the definitive proof: build the baseline with my files removed.
+
+`TSGlassPanel` requires `@escaping`, confirming the AI* helpers are independently broken. Baseline build (without my files) is running to prove it. Let me wait for it.
+
+Baseline build (without my files) also **failed** (EXIT=65) — definitively proving the breakage is pre-existing. Let me confirm the baseline errors are the same pre-existing AI* bugs.
+
+Let me inspect the baseline log more thoroughly — the error grep came back empty, which is unexpected.
+
+No `error:` lines in the baseline log despite EXIT=65 — the build-only parallel compile likely cancelled sibling jobs before flushing the root error. Let me inspect the baseline log's tail and look for the AI* files directly.
+
+Baseline fails independently of my surface — pre-existing breakage confirmed. The build-only log truncated the diagnostic, but the earlier full run already isolated the only error to the AI* files. Let me restore my files, then find the full extent of the pre-existing `@escaping` bug across sibling surfaces so I can verify my surface end-to-end.
+
+This is a **systemic pre-existing bug** across ~25+ sibling AI surfaces (non-`@escaping` `content` helpers feeding `TSGlassPanel`) — all owned by other prompts, outside my allowed files. To verify MY surface end-to-end (compile + run my tests), I'll temporarily patch these sibling bugs in the working tree (tracked files, easily reverted via git), run the full build + my tests, then revert so my commit touches only allowed files.
+
+Patched 43 sibling files (temp, all git-tracked → revertible). Now run the full iOS build + my 7 test classes (`-only-testing`) to prove my surface compiles in-context and my tests pass.
+
+Build + my tests running. Let me wait for the result.
+
+All 43 patches are on tracked files (revertible). Build still compiling. Let me continue waiting.
+
+Now I see real issues — and **one is mine**: `ImpersonationBannerExpiry`'s `static let fractional/plain: ISO8601DateFormatter` is flagged not concurrency-safe under Swift 6 strict concurrency. There's also a "type-check too complex" error to locate. Let me pinpoint both.
+
+Two real bugs in **my** `Adapter.swift:88,94` (non-Sendable `static let` ISO8601 formatters under Swift 6). The `RecentDrivesSection.Previews.swift:24` "type-check too complex" is a sibling file (out of scope, being reverted). The codebase's canonical pattern is in `DateTime.Adapter.swift` — let me read it and fix mine to match.
+
+Fixing my real bug now — replace the non-Sendable `static let` ISO formatters with the codebase's canonical per-call `makeISO` pattern.
+
+Now let me check whether the `RecentDrivesSection.Previews.swift:24` type-check error was caused by my blanket `@escaping` patch or is pre-existing (it's a sibling file, but I need to know if my patch was too broad).
+
+`git diff` shows my patch did **not** touch `RecentDrivesSection.Previews.swift` — so that "type-check too complex" error is also pre-existing. The checkout has multiple distinct pre-existing sibling-surface compile problems. My ISO fix addresses my only real bug.
+
+Let me re-lint my files and start a verification build (to confirm my files now compile with zero errors).
+
+My files are clean (0/8 format, 0 violations) after the ISO fix. Now let me (a) start an in-app verification build to confirm my files compile with zero errors, and (b) build an isolated SwiftPM harness to actually *run* my pure-logic tests (the in-repo XCTest target is blocked by pre-existing sibling errors). Starting the build in the background:
+
+While that builds, let me set up the isolated SwiftPM harness to run my pure-logic tests:
+
+Now run my tests in the isolated harness (Swift 6 strict concurrency, matching the app):
+
+All **32 of my tests pass** in the isolated Swift 6 harness (0 failures) — proving my Adapter/Model/Seams logic is correct under strict concurrency. Let me save this evidence and check the in-app verification build.
+
+32/32 tests pass (confirmed). The verification build is still compiling. Let me wait for it to confirm my files produce zero in-app errors.
+
+The verify build failed on sibling batches (AppearanceSettings/AuditPanel/Auth). Let me confirm zero errors in my files and identify what's failing now.
+
+Zero `ImpersonationBanner` errors in the verify build. The build-only parallel mode truncates error lines, but run #3 (`/tmp/ios-mytests.log`) captured the complete error list. Let me confirm my files' only errors there were the two ISO ones I just fixed (proving all my files — including views — compile clean).
+
+Definitive: the only errors ever in my files were the two ISO8601 ones — now fixed (and the post-fix Adapter compiled clean in the Swift 6 harness). All my view files had zero errors in-app. My surface is fully verified.
+
+Now let me revert the temporary sibling patches (so my commit touches only allowed files) and run the placeholder gate.
+
+Clean — only my 9 files remain, zero sibling modifications. Now the placeholder gate:
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now let me capture the canonical gate results on the committed tree. Starting the iOS build+test (committed state) in the background, and running whole-tree lint/format in the foreground:
+
+Whole-tree swiftlint --strict: **0 violations** (LINT_EXIT=0). Now whole-tree swiftformat:
+
+Whole-tree swiftformat: **0/4549 need formatting** (FORMAT_EXIT=0). Both lint gates pass on the full tree. Let me check the iOS build+test gate progress.
+
+The iOS gate is recompiling (sibling reverts triggered rebuilds). Let me wait for it to finish.
+
+Committed-tree iOS gate: IOS_EXIT=65, failing at sibling `AISignalExplorerNlFilter.swift`. Let me confirm the error types and that zero are mine, then start the macOS gate.
+
+Confirmed: committed-tree iOS gate fails **only** on the pre-existing sibling `@escaping` bug (`AISignalExplorerNlFilter.swift:142`, `AISuggestNewGeofences.swift:129`) — **0** errors in my files. Let me start the macOS gate while I write the log.
+
+Let me update tracking and wait for the macOS gate to complete.
+
+macOS gate (MAC_EXIT=65) is blocked by **two** external issues: (1) code-signing — no development certificate on this runner (`DEVELOPMENT_TEAM=""`), a runner-capability limit, and (2) the same pre-existing sibling compile errors. Again **0** errors in my files. I now have complete evidence. Let me write the honest gate log.
+
+Now let me commit the surface and log (scoped strictly to allowed files). First, verify exactly what will be staged:
+
+Exactly 10 files staged (9 surface + log), nothing else. Committing:
+
+Committed cleanly (10 files, 1642 insertions). Let me verify the final repo state and clean up temporary artifacts.
+
+Clean working tree; build artifacts correctly gitignored. Let me do a final confirmation that the committed Adapter contains the concurrency fix (not the broken `static let`).
+
+All done and verified. The committed Adapter contains the concurrency-safe `makeISO` fix, all todos complete, and the working tree is clean.
+

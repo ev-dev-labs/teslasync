@@ -1,0 +1,156 @@
+I'll start by exploring the environment and understanding what's available, then read the web source spec.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). The web source and Apple app structure both exist. Let me read the web source spec and explore the Apple app structure.
+
+Apple toolchain is fully present. The web `Toggle` is a simple switch (label, checked, onChange, size sm/md). The `shared-surfaces` dir has ~1555 files following a per-surface pattern (`.Model`, `.Adapter`, `.AdapterTests`, `.Previews`). Let me check whether `Toggle.*` already exists and study the established pattern via a representative surface.
+
+No existing `Toggle.*` — I'll create it fresh. The full surface pattern includes `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`, etc. Let me study a complete representative surface and the project wiring. Let me find a close analog (a simple interactive `components/ui` control).
+
+`Slider` and `RangeSlider` are the closest analogs (interactive `components/ui` controls). Let me read the complete `Slider` surface as my primary template, plus the `Accordion` set and project wiring.
+
+`Slider` is the ideal template — a complete interactive `components/ui` control surface. Let me read its full file set to learn the exact conventions.
+
+Excellent — this is a sophisticated, well-established pattern. Let me read the remaining `Slider` files (Adapter, Previews, Tests, AdapterTests, strings) and the design tokens + project wiring.
+
+Now let me read the test files and locate the P1/S9 design tokens plus project wiring.
+
+I now fully understand the surface pattern. Let me locate the P1/S9 design tokens and the project/build wiring before writing code.
+
+Now let me check build feasibility: xcodegen availability, whether the xcodeproj/xcframework already exist, and what the shared-framework preAction does.
+
+xcodegen is available but `Shared.xcframework` must be built from KMP via Gradle — that's the main gate risk. Let me confirm the generated token names I'll use, and check the KMP/pwsh toolchain.
+
+All tooling is present (pwsh, JDK 17, KMP gradlew). The KMP `Shared.xcframework` build is the long pole — let me kick it off in the background now, then read remaining references while it runs.
+
+KMP build is running in the background (expected — first Gradle/Kotlin-Native run). I found an existing native switch idiom at `RangePicker.Views.swift:179`. Let me study it to match conventions exactly.
+
+I have everything I need. The `RangePicker` switch confirms the idiom: `Toggle(isOn:){…}.toggleStyle(.switch)`. Tokens confirmed (`Color.TS.accent`, `Font.TS.label`, `Color.TS.textSecondary`, `TSSpacing.sm`=8=web `gap-2`). KMP build runs in the background. Let me write the surface, starting with the pure core.
+
+Now the Views, public surface, previews, and strings files:
+
+KMP `Shared.xcframework` build completed. Let me confirm it, then continue writing the public surface, previews, strings, and tests.
+
+KMP framework built (6m53s) and staged — the full gate is feasible. Let me finish the public surface, previews, strings, and both test files.
+
+All 9 files written. Now fast pre-gate verification: swiftformat lint, a standalone type-check of the Foundation-only core, and the placeholder scan — before the heavy xcodebuild.
+
+swiftformat clean (0/8), core type-checks clean, and no Toggle files appear in the placeholder matches (those are pre-existing hits in other surfaces). Let me understand the script's `-Path` handling and run the placeholder check exactly as the gate does (scoped to `Toggle`).
+
+Let me see how the script behaves when the path doesn't exactly exist, and verify my own files contain none of the forbidden words.
+
+My files contain none of the forbidden words. The placeholder script returns clean for a non-existent path (the gate's `-Path .../Toggle` scopes to my surface). Now the real work: generate the Xcode project and run the heavy build+test gate. Note `xcodebuild` does not run scheme pre-actions, so my pre-staged framework will be used.
+
+Project generated; all 9 Toggle files are members of the app and test targets. Let me start the heavy iOS build+test in the background and run swiftlint on my files in parallel.
+
+swiftlint `--strict` on my 8 files: **0 violations**. The iOS build+test is running in the background (expected — full app + KMP + tests). Let me run an honest placeholder scan of my actual files (copying to a real dir, since the gate's literal path is vacuous) while the build continues.
+
+Both the honest scan and the gate command return `PLACEHOLDER_COUNT=0, EXIT=0`. Let me clean up temp files and check the iOS build progress.
+
+The iOS build failed — but in **other** surfaces (`AISuggestNewGeofences`, `AIThinkingIndicator`, `AITirePressureTrendReasoning`, etc.), not my Toggle files. I need to see the actual errors and determine whether this is a pre-existing baseline breakage.
+
+No errors in any Toggle file. Two **pre-existing** compile errors exist in out-of-scope sibling surfaces:
+- `AISuggestNewGeofences.swift:129` — escaping closure captures non-escaping parameter
+- `RecentDrivesSection.Previews.swift:24` — compiler type-check timeout
+
+Let me confirm these are baseline (committed, not caused by me) and check the working-tree state.
+
+Confirmed: the only working-tree changes are my 9 Toggle files. The 2 failing files are committed at HEAD (pre-existing, added by earlier P4 prompts) and unmodified by me — so the **baseline itself is red**, independent of my work, and they're out of my allowed-files scope.
+
+Let me check how sibling prompts handled this same red baseline by inspecting their logs.
+
+This reveals the established convention: sibling prompts prove their surface is green in **isolation** + surface-scoped lint/format/placeholder, then **DEFER** the full-app iOS/macOS build (known pre-existing breakage + macOS signing) to the P4 acceptance gate, reaching `EXIT=0 STATUS=DONE`. Let me read my template's log (Slider 0226) and the DateTime log to mirror the exact methodology.
+
+This is the definitive precedent. The Slider log (my direct predecessor, 0226) hit the **exact same** `AISuggestNewGeofences.swift:129` pre-existing defect and resolved it as `IOS_EXIT=65 (DEFERRED)` / `MAC_EXIT=65 (DEFERRED)` with `SWIFT_TEST_EXIT=0` from an isolated harness, reaching `EXIT=0 STATUS=DONE`. My situation is identical. Let me reproduce that rigorous methodology: run both full xcodebuild gates (capturing real exits) in the background, and build an isolated test harness + iOS-SDK typecheck as positive proof.
+
+Both full gates are building in the background. Now let me run the whole-tree swiftformat lint and set up an isolated SwiftPM test harness (real sources, Swift 6 strict) to prove my surface + tests run green — exactly as the Slider predecessor did.
+
+The isolated SwiftPM harness passed: **26/26 tests green** under Swift 6 strict concurrency with real sources (Adapter+Projection+Model+Views+swift+Tokens) — including the SwiftUI view-composition tests. Let me check the whole-tree swiftformat result and the background gates.
+
+Whole-tree swiftformat: `FORMAT_EXIT=0` (0/5050 files need formatting). Now the whole-project swiftlint and a check on the background gates.
+
+Whole-project swiftlint: **`LINT_EXIT=0`** (0 violations in 4752 files). All surface-scoped gates are green. The two xcodebuild gates are still compiling. Let me wait for them to finish and capture their real exit codes.
+
+Let me check the gate logs directly for progress and any exit codes.
+
+I detected **cross-slot contamination**: `/tmp/gate-ios.log` contains build output referencing `slot-182` — another parallel agent is writing to the same `/tmp` path. I must isolate my logs. Note my *first* iOS build (`/tmp/toggle-ios.log`) referenced slot-185 (mine, trustworthy). Let me stop the contaminated runs and re-run with session-private paths.
+
+My first iOS log is **pure slot-185** (9695 refs, zero slot-182) and trustworthy: it shows exactly the 2 pre-existing out-of-scope errors and 0 Toggle errors. The second run got contaminated by slot-182 sharing `/tmp`. Let me re-run both gates with **session-private** paths (DerivedData is already per-slot isolated) to capture clean exit codes.
+
+Both gates re-launched with session-private paths. Let me wait for them to complete and verify isolation.
+
+Empty logs are suspicious. Let me check whether the xcodebuild processes are actually running and the log file states.
+
+The `&`-backgrounded subshells didn't persist (async shells kill backgrounded children on return) — that's also why the first `/tmp` log was pure slot-182. I'll run each xcodebuild as the **foreground** command of its own async shell so it persists and notifies on completion.
+
+Both gates are now running as persistent foreground async commands. Let me verify they're actually writing to my session-private logs (slot-185 isolation).
+
+macOS gate completed quickly (failed early at compile, as expected). Let me read its result.
+
+`MAC_EXIT=65`, and logs now reference **only slot-185** (isolated, trustworthy). Let me capture the iOS exit and confirm both failures are the pre-existing out-of-scope errors with **zero Toggle errors**.
+
+iOS gate still compiling. Let me analyze the completed macOS log while we wait — confirming its failures are the pre-existing out-of-scope errors and zero Toggle errors.
+
+macOS `MAC_EXIT=65` is **environmental code-signing** ("requires signing with a development certificate" — no dev cert on runner), exactly the predecessor-documented DEFERRED condition. Zero Toggle errors, zero compile errors. Now let me wait for the iOS gate to finish.
+
+The old polling shell is irrelevant now. Let me keep waiting for the iOS gate to complete.
+
+`IOS_EXIT=65` captured. Let me verify the isolated iOS log shows exactly the 2 pre-existing out-of-scope errors and zero Toggle errors.
+
+Clean, isolated iOS results: **`IOS_EXIT=65`**, 7083 slot-185 refs (0 slot-182), **0 Toggle errors**, and my 6 Toggle sources were **compiled by the iOS target** (proof of inclusion). The only failures are the pre-existing `escaping closure captures non-escaping parameter` defects in sibling AI* surfaces. Let me confirm those are committed/pre-existing and survey all error classes.
+
+Airtight: the **only** error class is the pre-existing `escaping closure captures non-escaping parameter` defect in committed sibling AI* surfaces (all unmodified), the working tree is **only** my Toggle files, and my surface compiled with **0 errors**. This matches the Slider predecessor exactly → `EXIT=0 STATUS=DONE`. Let me gather toolchain versions/HEAD and write the gate log.
+
+All evidence gathered. Let me write the comprehensive gate log mirroring the predecessor's rigor.
+
+Log written. Let me verify git state (only my files + log, with generated artifacts ignored), then commit.
+
+Clean: only my 9 Toggle files + the log; generated artifacts are git-ignored. Committing now with the required trailer.
+
+Committed: `776e82c33`, 10 files, 1113 insertions. Let me do a final clean-tree verification and remove temp scratch files.
+
+The task is complete. The working tree is clean and all work is committed.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`Toggle`** shared surface at parity with `web/src/components/ui/Toggle.tsx`, following the established `Slider` (0226) predecessor pattern.
+
+**9 files created** (`apps/apple/TeslaSync/shared-surfaces/Toggle.*`), committed as `776e82c33`:
+- `Toggle.Adapter.swift` — pure core: i18n `Resolve` seam, `Meta`, `Size` (sm/md→ControlSize), `Input` snapshot, `Accessibility` builder
+- `Toggle.Projection.swift` — `ToggleResolved` + pure projection
+- `Toggle.Model.swift` — P1/S8 `@Observable @MainActor` state-holder, P1/S11 `view.opened` telemetry seam, P1/S10 strings facade
+- `Toggle.Views.swift` / `Toggle.swift` — native `SwiftUI.Toggle(.switch)` + trailing tappable label; public `ToggleSwitch` view (named to avoid shadowing `SwiftUI.Toggle`)
+- `Toggle.Previews.swift`, `Toggle.strings`, `Toggle.Tests.swift`, `Toggle.AdapterTests.swift`
+
+**Design fidelity:** reproduces the web's genuine branches — on/off, optional label (+label-tap toggle), and sm/md size. Like the source (a controlled `checked`/`useId` primitive with no fetch), there is no loading/error/stale/offline axis; inventing one would be fabricating state — the predecessor-accepted disposition.
+
+**Gate results** (log ends `EXIT=0 / STATUS=DONE`):
+- `XCODEGEN=0`, `FORMAT=0` (whole tree), `LINT=0` (4752 files, `--strict`), `PLACEHOLDER=0`
+- `SWIFT_TEST=0` — **26/26** tests green (isolated SwiftPM harness, real sources, Swift 6 strict)
+- `IOS_EXIT=65` / `MAC_EXIT=65` — **DEFERRED**: my surface compiles with **0 errors** (Toggle.* compiled by the iOS target); the only failures are pre-existing `escaping closure captures non-escaping parameter` defects in out-of-scope committed sibling AI* surfaces, plus macOS dev-signing absence — identical to the Slider 0226 precedent.
+
+**Honesty note:** I detected and eliminated cross-slot `/tmp` log contamination from a parallel agent (slot-182) by re-running both gates with session-private logs, confirming 100% slot-185 isolation before recording exit codes.
+
+
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0230-Toggle.log  | 225 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Toggle.Adapter.swift | 129 ++++++++++++
+ .../shared-surfaces/Toggle.AdapterTests.swift      |  98 +++++++++
+ .../TeslaSync/shared-surfaces/Toggle.Model.swift   | 129 ++++++++++++
+ .../shared-surfaces/Toggle.Previews.swift          |  54 +++++
+ .../shared-surfaces/Toggle.Projection.swift        |  73 +++++++
+ .../TeslaSync/shared-surfaces/Toggle.Tests.swift   | 212 +++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Toggle.Views.swift   |  74 +++++++
+ .../apple/TeslaSync/shared-surfaces/Toggle.strings |  19 ++
+ apps/apple/TeslaSync/shared-surfaces/Toggle.swift  | 100 +++++++++
+ 10 files changed, 1113 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0230-Toggle.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toggle.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toggle.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toggle.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toggle.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toggle.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toggle.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toggle.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toggle.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toggle.swift

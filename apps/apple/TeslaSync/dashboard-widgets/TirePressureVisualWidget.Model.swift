@@ -60,7 +60,7 @@ public enum TirePressureVisualWidgetConnection: Sendable, Equatable {
 /// production source maps the API's SI Pascals → kPa at the seam boundary). Any
 /// corner may be `nil` (web `front_left: number | null`), and each carries its
 /// own last-seen time (web `last_seen_time_fl…`).
-public struct TirePressureReading: Sendable, Equatable {
+public struct TirePressureWidgetReading: Sendable, Equatable {
     public var frontLeftKilopascals: Double?
     public var frontRightKilopascals: Double?
     public var rearLeftKilopascals: Double?
@@ -97,7 +97,7 @@ public struct TirePressureReading: Sendable, Equatable {
 public struct TirePressureUpdate: Sendable, Equatable {
     public var status: TirePressureVisualWidgetLoadStatus
     public var connection: TirePressureVisualWidgetConnection
-    public var reading: TirePressureReading?
+    public var reading: TirePressureWidgetReading?
     public var unit: TirePressureVisualWidgetUnit
     public var localeIdentifier: String?
     public var updatedAt: Date?
@@ -105,7 +105,7 @@ public struct TirePressureUpdate: Sendable, Equatable {
     public init(
         status: TirePressureVisualWidgetLoadStatus = .loading,
         connection: TirePressureVisualWidgetConnection = .live,
-        reading: TirePressureReading? = nil,
+        reading: TirePressureWidgetReading? = nil,
         unit: TirePressureVisualWidgetUnit = .bar,
         localeIdentifier: String? = nil,
         updatedAt: Date? = nil

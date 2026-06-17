@@ -1,0 +1,121 @@
+I'll start by exploring the environment and understanding what exists in the repository, then read the web source spec.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source spec and explore the Apple app structure.
+
+Now let me explore the Apple app structure to understand the existing architecture — feature-views, state holders, tokens, i18n, and any sibling panels already built.
+
+There's a large established `feature-views` directory (2340 files) with a clear multi-file pattern. Let me check whether PowertrainPanel already exists and find the most similar sibling panels to use as the template.
+
+`EnergyChargingPanel` is the ideal sibling template (same telemetry-panels family). Let me read all its files plus its web source to learn the exact web→native mapping pattern.
+
+Excellent — this is a comprehensive, well-architected pattern. Let me read the remaining EnergyChargingPanel files (Views, Previews, Tests, strings) plus its web source to complete my understanding.
+
+Now let me read the Tests file, the `MotorSnapshot` web type, the `formatTemperature` from useUnits, and locate the shared tokens/components definitions.
+
+Let me read the rest of MotorSnapshot, the `formatTemperature`/`fmtInt` web helpers, and locate the shared token/component definitions used by the panels.
+
+Let me get the temperature conversion details and locate the shared token/component definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSGlassPanel, TSMetricCard, etc.).
+
+Now let me locate the exact token and shared-component definitions in the Design/Components sources.
+
+The tokens come from `../design/generated/apple`. Let me read the generated tokens and the shared component APIs I'll use.
+
+Now let me read the shared component APIs (TSGlassPanel, TSMetricCard, TSSkeleton, TSButton, TSFadeIn) to use them correctly.
+
+Let me verify the button enums, check how the project builds (xcodegen?), and how `.Tests.swift` files in feature-views are wired into targets.
+
+Let me read the full project.yml target/test configuration to understand how `.Tests.swift` files map to test targets.
+
+Now I understand the full target wiring. Let me check the Shared.xcframework staging, swiftlint/swiftformat configs, and the placeholder checker before building a baseline.
+
+The build depends on a KMP Gradle-built `Shared.xcframework` (Frameworks/ is empty). Let me check the documented build state and whether the heavyweight prerequisites (pwsh, gradle/JDK, simulator) are actually available on this runner.
+
+This is highly informative. The full-app gate is documented as blocked by pre-existing/unrelated issues (KMP `Shared.xcframework` Kotlin/Native link timeout, macOS signing with 0 identities, and other agents' parallel-merge collisions). Every sibling surface follows a "verified green in isolation → macOS-pending" protocol. Let me read the sibling's log to replicate the exact accepted evidence format.
+
+Let me read the direct sibling gate log (EnergyChargingPanel) to replicate the exact accepted evidence format and verification approach.
+
+This is the exact, user-approved precedent: capability is present, all host-runnable gates run green, and the full-app `xcodebuild build test` is **deferred** (not claimed green) due to documented pre-existing/environmental blockers, ending `EXIT=0 / STATUS=DONE` with a macos-pending row. I'll replicate this faithfully for PowertrainPanel.
+
+Let me confirm a few web formatting details (resolvePrecision, formatNumber, global precision) before writing code.
+
+I have everything I need. Let me set up todos and write the 7 PowertrainPanel files following the EnergyChargingPanel pattern precisely.
+
+Now the Model file (state-holder seam, telemetry, projector, i18n facade):
+
+Now the main surface file:
+
+Now the Views file (data body, power bar, pill, cards, rows, and loading/empty/error chrome):
+
+Now the Previews and strings files:
+
+Now the Tests file:
+
+All 7 files written. Let me update todos and run swiftformat (auto-fix) then verify formatting/lint on the new files.
+
+swiftformat fixed 1 file. Now let me verify `--lint` is clean and run swiftlint --strict on the new files.
+
+swiftlint flags `file_length` (405 > 400) in the Adapter under `--strict`. Let me trim verbose comments to get comfortably under 400.
+
+swiftformat `0/6` and swiftlint `--strict` `0 violations`. Now the placeholder gate (ADR-011):
+
+Placeholder gate clean (`COUNT=0`). Now let me set up the isolated SwiftPM verification. First, map the shared-component closure's import graph and locate `.tsGlassPanel()`.
+
+Components/Design import only system frameworks (no KMP `Shared`), and `.tsGlassPanel()` lives in Design/TSMaterial.swift. My surface uses the exact same shared components as the sibling, so I'll replicate its proven closure (UI + DataDisplay[-UnitFormatters] + Feedback + Motion + Design + Tokens). Let me build the isolated SwiftPM harness in the session workspace.
+
+Now create `Package.swift` and run the isolated build + tests:
+
+Isolated build succeeds under Swift 6 strict concurrency. Now run the tests:
+
+All 26 tests pass. Now the cross-SDK `swiftc -typecheck` against the real iOS-18 and macOS-15 SDKs (compiling the surface + closure as one module, DEBUG to include previews):
+
+Both SDKs typecheck with **0 errors**. Now `xcodegen generate` to confirm the new files are enumerated into the project:
+
+All 8 host-runnable gates are green. Now let me gather honest evidence for the full-app gate deferral (matching the documented precedent): code-signing identities, timeout tooling, then attempt the actual scheme gate bounded.
+
+Confirmed blockers: `0 valid identities found` and `Shared.xcframework` not staged. `timeout` is available. Now let me run the **actual** prompt gate commands (bounded) to capture honest evidence. Starting the iOS scheme build+test — its pre-action triggers the KMP Gradle long-pole:
+
+Reproduced the documented long-pole exactly: `STAGE_EXIT=124` — the DEBUG XCFramework assembled, but the RELEASE Kotlin/Native link (`linkReleaseFrameworkIosSimulatorArm64`) is the long-pole. The DEBUG variant is now available. 
+
+First, a fast collision check — confirming none of my `Powertrain*` type names clash with existing app-target symbols:
+
+`COLLISIONS=0` — the surface is collision-free. Now let me stage the DEBUG framework and run a bounded real app-target compile (strongest evidence, matching the precedent), capturing any PowertrainPanel errors:
+
+Staged. Now run the bounded app-target compile (async, monitored):
+
+App-target compile returned 65 (build failure). Let me analyze: are any errors mine, and what are the actual (pre-existing) failures?
+
+This matches the documented precedent exactly: **0 PowertrainPanel errors**; all 26 failures are pre-existing, unrelated `StateTimeline*` collisions (another agent's surface). Let me capture sample evidence and confirm the totals, then restore `Frameworks/`:
+
+Decisive: **26 total errors, all pre-existing `StateTimeline*` collisions; 0 PowertrainPanel errors**; `Frameworks/` restored. This mirrors the documented precedent exactly. Let me verify the xcodeproj is git-ignored and check git status before writing the log.
+
+Clean scope — only my 7 files are new, and the generated xcodeproj is git-ignored. Now let me write the gate log following the accepted precedent with my real evidence:
+
+Now append the macos-pending row for 0283-PowertrainPanel, mirroring the sibling's row format:
+
+Now a final consolidated verification on the repo files (post-trim) before committing:
+
+All host gates green. Now commit the surface, log, and macos-pending row:
+
+Committed at `f5b8d7296`. Let me update todos and clean up temporary workspace artifacts:
+
+All work is complete and the working tree is clean. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0283-PowertrainPanel.log | 155 ++++++++
+ .../feature-views/PowertrainPanel.Adapter.swift    | 399 +++++++++++++++++++++
+ .../feature-views/PowertrainPanel.Model.swift      | 247 +++++++++++++
+ .../feature-views/PowertrainPanel.Previews.swift   | 105 ++++++
+ .../feature-views/PowertrainPanel.Tests.swift      | 295 +++++++++++++++
+ .../feature-views/PowertrainPanel.Views.swift      | 353 ++++++++++++++++++
+ .../feature-views/PowertrainPanel.strings          |  43 +++
+ .../TeslaSync/feature-views/PowertrainPanel.swift  | 151 ++++++++
+ apps/macos-pending-verifications.md                |   2 +
+ 9 files changed, 1750 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0283-PowertrainPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowertrainPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowertrainPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowertrainPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowertrainPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowertrainPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowertrainPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowertrainPanel.swift

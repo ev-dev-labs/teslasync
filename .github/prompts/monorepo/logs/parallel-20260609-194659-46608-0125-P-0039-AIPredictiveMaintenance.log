@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and checking the capabilities required for this task.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+Now let me understand the existing Apple app structure. The component is clear. Let me examine the full directory tree and existing shared surfaces.
+
+`AIPredictiveMaintenance` doesn't exist yet. `AIFeatureCard.swift` exists as a shared native component. Let me find the closest structural twin among existing surfaces. `AIBatteryHealthForecastNarrative` looks like a narrative AI feature with the full file set — let me compare its web source and study its native implementation as a template.
+
+`AIBatteryHealthForecastNarrative` is the closest twin (same web pattern: `withAiFeature` + `AIFeatureCard` + `useAiStream` + `vehicleId`). Let me study its complete native file set as the template, plus the AIFeatureCard supporting infrastructure.
+
+Let me read the complete `AIBatteryHealthForecastNarrative` native file set — this is my template.
+
+Excellent template. Let me read the remaining template files (Projection, Views, Chrome, Previews, Tests, AdapterTests, strings) to fully understand the pattern.
+
+Let me read the remaining template files (Chrome, Previews, Tests, AdapterTests, strings).
+
+Let me read the test files and check how the Xcode project includes these files (critical for whether new files are auto-discovered).
+
+There's a `project.yml` — this is an **XcodeGen** project. Let me examine it and check for xcodegen availability.
+
+Now I fully understand the build system: **XcodeGen** spec, where `shared-surfaces/` is a path-based source group — new files are auto-included on `xcodegen generate`. Co-located `*Tests.swift` go to the test bundles. The critical risk is the `Shared.xcframework` build dependency. Let me investigate the build feasibility and tooling.
+
+Critical finding: `Shared.xcframework` is **not present** and requires a Gradle/KMP build. `pwsh` is available. Let me assess the KMP build feasibility and confirm the design-token API my views will use.
+
+Java 17 + gradlew present, so the KMP build *may* be feasible (though heavy). Design tokens live in `Tokens.swift` + UI components. Let me confirm the exact token/component APIs I'll use, and check the placeholder checker + pending-verifications doc.
+
+All token/component APIs confirmed and match the template. Let me check the placeholder checker patterns and the pending-verifications doc for known build constraints.
+
+Let me understand the `-Path` semantics of the placeholder checker and the pending-verifications context (whether KMP builds are expected locally).
+
+This is the decisive context. The `macos-pending-verifications.md` documents the **established, accepted precedent** for all ~15 prior P4-apple surfaces: the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** issues outside my allowed files (the KMP `Shared.xcframework` Kotlin/Native link long-pole, other agents' symbol collisions like `StateTimeline*`/`DashboardWidgetSize`, macOS signing). Each surface is verified green **in isolation** (swiftc -typecheck iOS+macOS, SwiftPM test harness, swiftlint/swiftformat/placeholder, i18n parity, xcodegen enumeration), with the full-app gate deferred as "macOS-pending".
+
+I'll follow that exact precedent honestly. Let me set up tracking and confirm no type-name collisions.
+
+No collisions. Let me write the plan, then create the 10 surface files. Starting with the plan and the two pure-Foundation cores (Adapter + Model).
+
+Now creating the surface files. Starting with the Foundation-only Adapter (faithful port with the predictive-specific request body that clamps non-scope to 0).
+
+Now the Model (P1/S8 state-holder, P1/S10 strings facade, P1/S11 telemetry). I add a `headerEmptyHint` field to the ready type for the web `emptyHint` prop.
+
+Now the pure Projection (input → localized resolved view-state), including the header empty hint and the output panel branches.
+
+Now the presentational Views (badge, action button, thinking indicator, output panel, ready view with the header empty hint under the description).
+
+Now the Chrome (freshness chip, refresh, connectivity banner, loading, gate-error).
+
+Now the main public `AIPredictiveMaintenance.swift` view (gate + card chrome + content state switch).
+
+Now the Previews (one per state, DEBUG-only).
+
+Now the Tests (projection phases, ready content incl. header empty hint, output branches, model wiring/telemetry/freshness, accessibility).
+
+Now the AdapterTests (request body incl. the negative-clamp parity, SSE parse, reducer, output/action derivations).
+
+Now the i18n catalog (`.strings`) — all web parity keys + shared helix literals + native chrome.
+
+All 10 files created. Now the verification phase. Let me kick off the slow KMP `Shared.xcframework` build in the background (detached) so it has maximum time, while I run the fast surface-scoped gates: swiftlint, swiftformat, and the placeholder check.
+
+Now the fast surface-scoped gates — swiftlint, swiftformat, and the placeholder checker, run in parallel.
+
+All three fast gates are green: **swiftlint 0 violations, swiftformat 0/9, placeholder COUNT=0**. The background KMP build finished quickly — let me check its result, and inspect the component dependencies I'll need for an isolated typecheck.
+
+The component deps (`Buttons`, `Skeletons`, `Motion`) import only SwiftUI, and `Tokens.swift` is self-contained — a clean, small typecheck closure (no KMP/SharedFacade). The KMP release framework is the documented long-pole (didn't finish). Let me run the **real iOS-18 + macOS-15 `swiftc -typecheck`** under Swift 6 strict concurrency against the real tokens + components.
+
+`Skeletons.swift` references `TSCard` from `Cards.swift`. Let me include the full `Sources/Components` + `Sources/Design` closure (excluding any SharedFacade/Shared-coupled files) for a robust, faithful typecheck.
+
+None import Shared/SharedFacade. My surface only needs a small closure. Let me add `Cards.swift` and retry the iOS typecheck.
+
+The design-system files have interdependencies. Let me include the full `Sources/Components` + `Sources/Design` closure, and check whether the formatters pull in `Platform/MeasurementSystem`.
+
+No `Platform` coupling — the formatters are self-contained. Let me typecheck my surface against the **entire** `Sources/Components` + `Sources/Design` design system for iOS 18.
+
+As precedent documented, `UnitFormatters.swift` is the SharedFacade-coupled file (references `Units`). My surface doesn't use it — excluding it (exactly as precedent did) and retrying.
+
+**iOS 18 typecheck: 0 errors/0 warnings** under Swift 6 strict concurrency. Now the macOS 15 typecheck.
+
+**Both iOS 18 and macOS 15 typecheck: 0 errors/0 warnings** under Swift 6 strict concurrency. Now let me build an isolated SwiftPM harness that compiles the **real** surface sources + design system and **runs** the actual unit tests.
+
+Harness assembled with the real sources (48 files) + the two test files. Running `swift test`.
+
+**72/72 tests pass**, compiled against the real surface + design system under Swift 6 strict concurrency. This covers the adapter (request/SSE/reducer/derivations), the projection (all states + canStart + header hint + output branches), the model (wiring, `view.opened` telemetry deferred past the gate, stale auto-refresh, delegation), and accessibility.
+
+Now `xcodegen generate` to confirm the project enumerates my files, then attempt the full gate.
+
+xcodegen succeeded — all 10 files enumerated (60 refs across iOS/macOS app + test targets). Now let me gather precise blocker evidence and re-attempt the KMP framework build (warm daemon + cached compiles may let the release link finish this time).
+
+The log reveals the **DEBUG `Shared.xcframework` was successfully written**, but the process was cut off during the RELEASE Kotlin/Native link (the documented long-pole). Signing shows **`0 valid identities found`** — both blockers match precedent exactly. 
+
+Let me stage the DEBUG framework and run a **real app-target iOS compile** (with `CODE_SIGNING_ALLOWED=NO`) to prove my surface compiles in the actual app module — capturing the full log to grep for any surface errors.
+
+DEBUG framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now a real iOS app-target compile (bypassing the scheme pre-action that rebuilds the release framework), capturing full output.
+
+Build failed (exit 65) with 54 errors — but **zero in my surface**. Let me categorize the errors to confirm they're the documented pre-existing collisions, and verify my files actually compiled.
+
+All 54 errors are in **other agents' surfaces** — the documented pre-existing `StateTimeline*` and `RecentDrives*` ambiguous-redeclaration collisions. Zero are in my surface. Let me confirm my surface introduces no symbol collisions in the real module and verify the macOS app-target compile behaves identically.
+
+Zero surface errors, zero collisions in the real module (203 lines of the pre-existing `StateTimeline*`/`RecentDrives*` collisions cause all 54 errors). For symmetric evidence on the second platform the gate checks, let me run the macOS app-target compile too.
+
+Symmetric on macOS: exit 65, all 54 errors in the same pre-existing `StateTimeline*`/`RecentDrives*` surfaces, **0 in mine**. My surface is proven green in both real app targets; the full gate is blocked solely by factors outside my allowed files.
+
+Let me run the gate's exact tree-wide lint/format commands to honestly capture their state (confirming my files add 0), then check the full-scheme `build test` behavior briefly.
+
+Both tree-wide gate lint/format steps are **green** (`swiftlint --strict` 0 violations in 3456 files; `swiftformat --lint` 0/3686). Only the two `xcodebuild build test` steps are blocked — and solely by the pre-existing `StateTimeline*`/`RecentDrives*` collisions (other agents' files), the KMP release-framework long-pole, and `0` signing identities. Let me verify the log dir and current git state.
+
+The logs dir exists (451 prior `p4-apple` logs — confirming precedent), my 10 files are new/untracked, and the staged framework + generated `.xcodeproj` are both gitignored (won't be committed). Now let me write the gate log with full honest evidence.
+
+All 5 web parity keys present; 20 total i18n keys; 1530 non-test + 674 test LOC. Now writing the comprehensive gate log.
+
+Now cleanup the temp harness + staged framework, stage my files + log, and verify the staged set before committing.
+
+Exactly the 10 surface files + the log are staged — nothing else. Committing.
+
+Commit `3acd35e6d` succeeded — 11 files (10 surface + log), 2401 insertions, Co-authored-by trailer included. Final cleanliness check.
+
+Working tree clean, log ends `EXIT=1 / STATUS=BLOCKED`, all todos done.
+

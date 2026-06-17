@@ -1,0 +1,139 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+Xcode, swiftlint, and swift are all available. Let me explore the web source page and the existing Apple structure.
+
+Now I understand the web page. Let me explore the existing Apple Features structure to find reference implementations and understand the conventions.
+
+Let me examine the existing signal-related components I can reuse, the navigation registration, and an existing log file for format.
+
+`pwsh`, `xcodegen` are available. The `.xcodeproj` is generated. Let me check the build prerequisites, navigation registration, and an existing log format.
+
+Let me examine the navigation/routing system to understand registration.
+
+Let me examine the string catalog, swiftlint config, how registrations aggregate into the shell, and placeholder patterns.
+
+Let me read the placeholder checker and verify which keys already exist as top-level entries.
+
+I have the full picture on strings and gates. Let me decide navigation strategy by checking the shell composition, route tests, and whether `.telemetry`/SignalsWorkspace is already claimed.
+
+Let me view the composition root and the Explore registration (a similar standalone page) to mirror patterns exactly.
+
+I now have a complete understanding. Let me set up tracking and a plan, then implement.
+
+Let me check the selected-vehicle surface to wire `vehicleId` realistically before implementing.
+
+I have everything I need. Let me build the model first.
+
+Now the supporting views file. Let me write it carefully (line length ≤120, guard the `.placeholder` redaction marker).
+
+Now the main page view.
+
+I referenced `rangePresetLabel` — let me add it to the Copy enum.
+
+Now the route registration file, mirroring the established pattern.
+
+Now wire the registration into the composition root and add the deep-link alias.
+
+Now let me add the i18n keys to the string catalog, preserving the exact Xcode formatting to minimize diff.
+
+Let me verify the catalog edit and confirm all 15 required keys are present.
+
+All 15 keys present with correct formatting. Now let me run the verification gates: placeholder scan and swiftlint.
+
+Swiftlint linted the whole project via the config's `included` list. Let me scope it strictly to my 4 files to isolate any violations.
+
+One line-length violation (line 273, 124 chars). Let me view and fix it.
+
+File length is 401 (limit 400). I'll extract the `SignalExplorerCopy` enum into its own focused strings file — a clean, idiomatic split.
+
+Now I'll create the strings file and remove the enum from the Views file.
+
+Now remove the Copy enum from the Views file (lines 14–137).
+
+Views file is now 276 lines. Let me re-run swiftlint on all 5 Telemetry files.
+
+Swiftlint is clean on my files. Let me verify the exact gate-form command behavior from repo root (matching the prompt's invocation).
+
+Lint is green both ways. Now let me do a standalone `swiftc -typecheck` of the self-contained page files to verify they actually compile (the full xcodebuild needs the KMP framework).
+
+The 4 page files typecheck cleanly. Now let me validate the registration file against minimal stubs of the app-module nav types.
+
+All 5 files typecheck. Let me verify the two nav edits landed correctly.
+
+Lint, placeholder, and standalone typecheck all pass. Let me assess whether the full `xcodebuild` gate is feasible (it needs the KMP `Shared.xcframework` via Gradle).
+
+Java 17, gradlew, and the shared module are present, so I'll attempt the real build. First, generate the Xcode project and kick off the KMP framework assembly in the background.
+
+Project generated with all 5 files integrated (102 references). Let me start the KMP framework assembly in the background while I prepare the ledger and log.
+
+While that builds, let me check the ledger schema and structure to prepare the rows.
+
+Let me gather precise evidence (file:line) for the 20 parity items while the build runs.
+
+All 20 parity items have file:line evidence. Let me check the KMP build progress.
+
+The KMP build is progressing fast (cached toolchain) and already produced the debug xcframework. Let me wait for the release assembly to finish.
+
+Release frameworks are linking now. Let me wait for completion.
+
+Last link task (macOS release) is running. Let me wait for the final assembly.
+
+KMP framework assembled (GRADLE_EXIT=0). Now let me run the real `xcodebuild` for the macOS scheme (compiles all sources incl. my Telemetry files against the staged framework). Starting in background.
+
+Build running. Let me check progress after a bit.
+
+Build exited fast (10s, code 65) — likely a config/destination error, not a compile failure. Let me read the log.
+
+The build failed on a **pre-existing, unrelated** error — two files named `ScheduledExportsPanel.swift` in the same target (in `feature-views/` and `Features/System/`), neither created by me. Let me confirm this is pre-existing and not introduced by my changes.
+
+Confirmed pre-existing and unrelated (both files tracked at HEAD, not in my changeset). My changes are only the 3 modified files + the new `Features/Telemetry/`.
+
+To get an honest in-project build signal for *my* code despite this pre-existing blocker, I'll **temporarily** rename the duplicate (not committed), rebuild, then revert. Let me do that.
+
+No other duplicates. Let me regenerate and run the full macOS build in the background.
+
+Build running. Let me wait and monitor progress, watching for any errors in my files.
+
+Build failed again (different cause now). Let me check whether any errors are in my files vs. more pre-existing issues.
+
+The errors are pre-existing (ScheduledExports type ambiguity + design-token duplications surfacing now that the build type-checks). Let me confirm none originate in my files and pinpoint each error's source file.
+
+**Definitive: 0 errors in my files.** Every error is in pre-existing files (design tokens `lg/md/sm/xs`, `Typography.swift`, `*.Previews.swift`, the `ScheduledExportsPanel` type — all duplicated repo-wide). The assembled monorepo doesn't compile at HEAD, which is why every prior apple-page log skipped the build. Let me revert my temporary rename to restore a clean tree.
+
+Clean tree — only my intended changes. Now let me run a stronger `swiftc -c` (full object-code compile) of my page files for the build evidence.
+
+My 4 page files compile to object code cleanly (`EMIT_OBJ_EXIT=0`) — full SILGen/IRGen, not just type-checking. 
+
+Now let me add the ledger rows. Given the whole-project `xcodebuild` is blocked by pre-existing out-of-scope breakage, I'll record this honestly.
+
+Ledger updated. Now let me write the evidence log with the full `=== PARITY ===` section and honest gate results.
+
+The log is written. Let me run a final consolidated verification on the final file state and confirm the working tree contains only intended changes.
+
+Working tree is clean — only intended changes (the generated `.xcodeproj` and staged framework are gitignored). Let me confirm the xcstrings change is purely additive and finalize.
+
+All changes verified additive and minimal; temp logs cleaned. Let me update tracking and finalize.
+
+All work is complete and verified. Let me do a final self-review of the page body flow to ensure parity logic is coherent.
+
+The implementation is complete and coherent. Here's my final status.
+
+## Summary
+
+Implemented the native SwiftUI/HIG parity of `SignalExplorerPage` at full manifest parity (**20/20 items**), adaptive across macOS + iOS.
+
+**New files** (`apps/apple/TeslaSync/Features/Telemetry/`):
+- `SignalExplorerPage.swift` — View (header, GlassPanel1 controls, results region, previews)
+- `SignalExplorerPageModel.swift` — `@Observable` model + `AvailableSignalsSource` seam (P1/S8) binding `useSignals → /signals/{vehicleId}/available`, with 4 data states
+- `SignalExplorerPageViews.swift` — HIG panels: no‑vehicle, error banner, selector states (loading/empty/error/success), live badge, staleness chip, pick‑hint
+- `SignalExplorerStrings.swift` — localized copy facade
+- `SignalExplorerRouteRegistration.swift` — registers `.telemetry` host
+
+**Wiring**: `TeslaSyncApp.swift` (+1 registration), `AppRouteParser.swift` (+`/signal-explorer` alias), `Localizable.xcstrings` (+29 keys = 15 parity ports + 14 supporting), `apple-ledger.json` (+2 rows), evidence log.
+
+**Gate results (real):**
+- ✅ `PLACEHOLDER_EXIT=0` · ✅ `swiftlint --strict` 0 violations · ✅ `swiftc -typecheck` **and** `-c -wmo` object compile of all artifact files = 0 · ✅ KMP `Shared.xcframework` assembled
+- ❌ Whole‑app `xcodebuild` = **65**, blocked by **pre‑existing, out‑of‑scope** repo breakage (duplicate `ScheduledExportsPanel.swift` filename **and** type; duplicated design tokens/`Typography`/`Preview` macro across ~80 files). Proven via `git` that both duplicates are at HEAD and not in my changeset; **zero** build errors originate in `Features/Telemetry/`. These files are outside this prompt's allowed scope, so they can't be fixed here — which is why every prior apple‑page log skips this build.
+
+**Status: `EXIT=65 / STATUS=BLOCKED`.** Per the Honesty Covenant (no red‑as‑green, no commit on red) I did not paint the build green and did **not** create a git commit — all changes are in the working tree. The deliverable itself is complete and compile‑verified; flip both ledger rows to `done` once the pre‑existing repo‑wide build breakage (outside this scope) is resolved.
+

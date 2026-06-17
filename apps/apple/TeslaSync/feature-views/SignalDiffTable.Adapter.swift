@@ -164,8 +164,8 @@ public enum SignalDiffTableBuilder {
         pinned: Bool,
         decimals: Int = SignalDiffTableFormat.defaultDecimals,
         locale: Locale = SignalDiffTableFormat.defaultLocale
-    ) -> SignalDiffRow {
-        SignalDiffRow(
+    ) -> SignalDiffRowView {
+        SignalDiffRowView(
             name: entry.name,
             valueAText: SignalDiffTableFormat.formatRaw(entry.valueA, decimals: decimals, locale: locale),
             valueBText: SignalDiffTableFormat.formatRaw(entry.valueB, decimals: decimals, locale: locale),
@@ -200,10 +200,10 @@ public enum SignalDiffTableBuilder {
     /// priority, direction-independent), then by the active column/direction, with
     /// the signal name as a stable tiebreaker (and original order behind that).
     public static func sort(
-        _ rows: [SignalDiffRow],
+        _ rows: [SignalDiffRowView],
         key: SignalDiffSortKey,
         direction: SignalDiffSortDirection
-    ) -> [SignalDiffRow] {
+    ) -> [SignalDiffRowView] {
         let ascending = direction == .ascending
         return rows.enumerated().sorted { lhs, rhs in
             let lhsPin = lhs.element.pinned ? 0 : 1
@@ -220,8 +220,8 @@ public enum SignalDiffTableBuilder {
     }
 
     private static func compare(
-        _ lhs: SignalDiffRow,
-        _ rhs: SignalDiffRow,
+        _ lhs: SignalDiffRowView,
+        _ rhs: SignalDiffRowView,
         key: SignalDiffSortKey
     ) -> ComparisonResult {
         switch key {

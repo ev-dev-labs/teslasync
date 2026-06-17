@@ -1,0 +1,115 @@
+I'll start by exploring the repository structure to understand the current state and what this task requires.
+
+Found `apps/apple/` and the monorepo prompt structure. The critical gating factor is tool availability (macOS + Xcode + simulators + swiftlint + swiftformat). Let me check those in parallel with exploring the Apple app structure.
+
+The full toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh, simulators including iPhone 16 + iPads + macOS). **The gate CAN run — so BLOCKED is not an option.** There are already 4 UI test files. Let me deeply understand the project structure.
+
+Substantial project: 110 test files, 4 existing UI tests (221 lines). UI tests are shared between iOS (`TeslaSyncUITests`) and macOS (`TeslaSync-macOSUITests`) bundles. Let me read the existing UI tests and understand the fixture/launch-argument mechanism.
+
+Now I understand the launch-argument fixture pattern (`-uiTestAuthState`, `-uiTestLiveDemo`, `-uiTestPushDemo`). Let me find how these are wired in the app and understand the routing/parity structure.
+
+Let me read the methodology, the predecessor P9-0001 prompt, the parity structure, and the RootView to understand conventions and the page-rendering architecture.
+
+Let me learn from prior P9-0002 attempts and understand the parity ledger structure.
+
+Critical context: the most recent attempt (165536) was actively building and running UI tests ("17 passed / 12 failed") and iterating on accessibility-identifier surfacing. The earlier attempt (002645) was BLOCKED partly because "P7 pages absent" — but pages clearly exist now. Let me check whether prior harness files exist and establish the build baseline.
+
+The build depends on a KMP shared core built via Gradle (Kotlin/Native) — that's the long pole. Let me establish the baseline: generate the Xcode project and verify the shared-framework build toolchain.
+
+Java 17 + Gradle wrapper present. The Shared.xcframework is NOT prebuilt — building it via Kotlin/Native Gradle is the long pole. Let me kick that off async now while I continue exploring, and generate the Xcode project.
+
+Project generated. Shared framework building in background. Let me explore the app architecture — navigation shell, routing, page-model state pattern, and components.
+
+Now I understand the shell (`AppShell`: split for macOS/iPad, tabs for iPhone; `RouteHost` renders registered pages). Let me find `RootView`, the shared page-state scaffold, and a representative feature page + its page model.
+
+There's a shared `LoadableState.swift`. Let me read it, a representative page + page model, and RootView to understand the state pattern.
+
+Excellent — now I understand the architecture clearly. Pages use per-page models with loadable states (`.loading/.empty/.error/.loaded`), each injectable with preview data sources. Let me check the shared-framework build progress and read the full prior-attempt log to extract the accessibility-identifier surfacing learnings.
+
+This prior log is a goldmine of learnings. Key takeaways:
+- **Baseline was green** (iOS build + 13 UI tests, macOS unit tests). Shared.xcframework ~7min via Gradle then cached.
+- **`-uiTestAuthState authenticated`** routes into the real `AppShell`.
+- **Accessibility surfacing rule**: `.accessibilityIdentifier` works on leaf controls (buttons, plain `Text`/`VStack`) but NOT on wrapper components (`TSCard`/`TSEmptyState`/etc.) with `.background/.overlay`. Use identified `Text` leaf markers + positional tab taps.
+- **`\.accessibilityReduceMotion` is read-only** — can't inject; use Dynamic Type/appearance/locale.
+- **Placeholder gate** flagged pre-existing violations; `xxxLarge` trips the `XXX` pattern.
+
+Let me verify the CURRENT baseline of the static gates (independent of the framework build) and confirm the auth-state injection.
+
+swiftlint baseline is **clean (0 violations)**. Let me check swiftformat + placeholder baselines and the auth-state injection.
+
+Important baseline findings need careful analysis. My `tail` pipe masked the real exit codes. Let me read the placeholder script logic (COUNT=66 < ALLOWED=246 yet EXIT=1 is contradictory) and get true exit codes via pwsh exactly as the gate runs them.
+
+Now the placeholder gate is clear: **exit 1 whenever COUNT > 0** (the 246 is just opt-out count, not a budget). Baseline is RED: placeholder COUNT=66 and swiftformat has 9 files needing formatting. Both are pre-existing, within my allowed `apps/apple/**` scope. I must understand whether these are legitimate (opt-out-able) or genuine stubs. Let me gather complete data and check the build.
+
+The placeholder violations are clearly **legitimate word usage**, not stubs: `Input.swift`/`Input.Projection.swift`/etc. are an input component with **placeholder text** (a real API concept), and `VehicleHeroCard` TODOs. The gate's `// parity:allow <reason>` opt-out exists exactly for this. Let me verify by reading the actual flagged lines before deciding how to handle them.
+
+Now it's definitive: these are **false positives from substring matching** — `statOdometer`/`testOdometer…` contain "t**odo**meter" → matches "TODO", and `placeholder` is the input-field API. **None are stubs.** The `// parity:allow <reason>` opt-out is the designed, honest fix. Let me get the complete violation inventory and full swiftformat list to scope the mechanical cleanup.
+
+Complete inventory captured. **All 66 placeholder hits are false positives** (input `placeholder` API + `statOdometer` substring), and the 9 swiftformat files are mechanically auto-fixable. Both are pre-existing, from other prompts, but within my `apps/apple/**` scope. I'll deliver GREEN. Let me check the format config (for opt-out line-length safety) and build status.
+
+The Shared.xcframework built successfully (6m50s) and is staged. Config: swiftformat `--maxwidth 120`; swiftlint `line_length` ignores comments. Now let me warm the iOS build (confirming my environment compiles the app) in the background while I gather the component APIs I'll need for the harness.
+
+Let me map the public component APIs compactly so my gallery compiles first time.
+
+I have enough component API detail. The reliable strategy (per prior learnings) is identified `Text` leaf markers + leaf buttons alongside real components. Critical dependency: I need to confirm `-uiTestAuthState authenticated` routes into the real shell. Let me check the auth injection and the baseline build progress.
+
+`-uiTestAuthState authenticated` → authenticated coordinator → `AppShell`. I can drive the real shell. Now let me write the plan, set up tracking, and gather the exact init signatures for the components I'll instantiate.
+
+I now have all component APIs. Let me check the baseline build and read the command palette + settings surface to plan minimal accessibility-identifier additions for navigation tests.
+
+The command palette uses a `TextField("command.search")` and `Button` rows — I'll add stable identifiers there. Let me set up tracking and write the plan, then start implementing while the baseline build finishes.
+
+The baseline build is still compiling (large app). Let me confirm the exact design-token API (Font.TS / Color.TS / TSSpacing) so all my harness code compiles first time, and check Typography helpers.
+
+All tokens confirmed. Now I'll write the harness source files. Starting with the config parser + reliable marker primitive.
+
+I introduced `.xxxLarge` which contains "xxx" — that trips the placeholder gate's `XXX` pattern (a known trap). Let me remove it.
+
+Now let me verify the Forms, Maps, Badge, and AlertBanner component APIs so the gallery uses real components, and check the baseline build.
+
+Forms/badge/banner APIs confirmed. `TSButton` has one full init (I'll use the explicit `action:label:` form everywhere). Let me check the Maps API and the baseline build, then write the gallery.
+
+All component APIs confirmed. Now I'll write the ComponentGalleryView covering all 7 categories with reliable markers and accessible summaries.
+
+Let me verify the two slightly-uncertain APIs I used (`TSInlineBanner` name and `TSMetricCard` init).
+
+`TSInlineBanner` should be `TSInlineCallout`. Let me fix that.
+
+Now the page-state harness. Let me verify the stale/offline banner inits first, then write it.
+
+Stale/offline banners are parameterless. Now the page-state harness mirroring the real page scaffold (loading/empty/error+retry/success/stale).
+
+The iOS baseline build completed. Let me confirm it's green.
+
+Baseline `build-for-testing` failed (exit 65) in the **TeslaSyncTests unit bundle** module emission — I haven't added any test files yet, so this is either pre-existing or a name collision from my 3 new Sources files. Let me capture the actual error lines and check for collisions.
+
+The failure is **pre-existing** — `Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift` has 4 compile errors (actor isolation + a wrong `XCTAssertEqual`). It's a P9-0001 unit test, not mine (no collisions). But the gate's `build test` compiles all test bundles, so this blocks my UI tests from running. It's within `apps/apple/**`, so I'll fix it mechanically to unblock the gate. Let me inspect it.
+
+Committed P7 file `4f6bcb56e`, pre-existing Swift 6 strict-concurrency + a bad `XCTAssertEqual(Date, accuracy:)`. This blocks the whole `build test` gate. Within my allowed scope, so I'll fix it minimally. Let me read the full file to fix correctly and find all `zeroTotals` usages.
+
+Let me check whether `VehicleCostTotals` is `Sendable` (determines the minimal fix for the actor-isolation errors).
+
+`VehicleCostTotals` is `Sendable`, so the minimal fix is `nonisolated static let` plus correcting the `Date` accuracy comparison. Let me apply both.
+
+Fixes applied. Now let me wire the harness into the app entry point before rebuilding, so I validate my code and the pre-existing-error magnitude together.
+
+Now the navigation seams: bind the iPhone TabView selection (so deep links/palette switch tabs) and add stable identifiers to the palette button + command palette controls.
+
+Now let me rebuild to validate my code compiles, confirm the test fix, and assess whether more pre-existing test errors exist.
+
+While the build runs, let me write the XCUITest suites. First the shared support helpers.
+
+Now the navigation-shell and accessibility suites. Let me check the build, then write them.
+
+Let me check the build result.
+
+Build still compiling (core-file changes trigger broad recompilation). Let me wait.
+
+The fix worked — the build got **past the unit bundle** (VehicleCost fix succeeded) and failed only because my new `.swift` files aren't in the Xcode project yet. XcodeGen snapshots files at generation time, so I must regenerate. Let me regenerate and rebuild.
+
+New files are in the project. Now let me build-for-testing to validate my code compiles.
+
+Build compiling. Let me wait for the result.
+
+The build is taking long (large app + test bundles recompiling). Let me keep waiting.
+

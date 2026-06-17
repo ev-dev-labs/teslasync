@@ -1,0 +1,36 @@
+I'll start by exploring the environment, the web source, and the existing Apple app structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 17 simulators). Now let me explore the existing Apple app structure and the modals-dialogs directory.
+
+There's a clear 10-file-per-surface pattern. Let me study the closest analogs: `ConfirmDialog` (simplest dialog) and `ReauthDialog` (has input + validation), plus the existing CommandDef reference.
+
+The pattern is sophisticated and consistent. Let me read the rest of the ConfirmDialog exemplar files plus the input-bearing ReauthDialog to understand input/validation handling.
+
+Now let me read the remaining ConfirmDialog files (Previews, Tests, ModelTests, strings) and the input-bearing ReauthDialog, plus understand the build/project setup.
+
+Now let me examine the project setup, the input-bearing ReauthDialog (closest analog with validation), and the design tokens.
+
+Important finding: `project.yml` does **not** include `TeslaSync/modals-dialogs` in any target. Let me investigate the build/verification state, the Shared.xcframework dependency, and the native CommandDef usage before deciding on approach.
+
+The full `xcodebuild build test` gate is **macOS-pending for every prior surface** (KMP `Shared.xcframework` needs a 6-min Kotlin/Native build, `modals-dialogs` isn't wired into `project.yml`, and there are no signing identities). Prior agents verified each surface in **isolation** (SwiftPM build + tests + real `swiftc -typecheck` against the SDKs + swiftlint/swiftformat/placeholder gate) and documented the full gate as macOS-pending. I'll follow that exact methodology.
+
+Let me locate the design tokens and shared components, and read the native CommandDef analog.
+
+Now let me read the design tokens, the key shared components (TSButton/TSGlassPanel/TSFadeIn/Inputs), and the ReauthDialog field/validation files to nail exact APIs.
+
+Let me read TSGlassPanel/TSFadeIn signatures and the ReauthDialog input/validation/seam files to mirror the field+validation pattern precisely.
+
+Let me read the ReauthDialog Views/Seams (segmented input + source seam) and the placeholder checker to finalize my understanding.
+
+I have a complete understanding of the architecture. Let me probe the glass-panel modifier dependencies, then set up my plan and todos.
+
+`tsGlassPanel()` modifier depends only on `TSMaterial` + `Tokens` — a clean, minimal real dependency set. The placeholder gate is case-insensitive (I'll use "hint"/"prompt", never "placeholder"). Let me check for symbol collisions and write my plan.
+
+All clear. There's an existing `CommandInput` struct, so I'll prefix every type with `CommandInputDialog*`. Let me check the swiftlint config and create my plan + todos.
+
+SwiftLint enforces 120-col lines (strict), 50-char type names; `modals-dialogs` isn't in the lint `included` list (consistent with it being a not-yet-integrated tree), so I'll lint my files explicitly like prior agents did. Let me set up my plan and todos.
+
+Now I'll create the surface files, starting with the pure projection core (Adapter) and the seams.
+
+
+Authorization error, you may need to run /login (Request ID: F25A:303CD2:1D760C2:1ECE046:6A298683)

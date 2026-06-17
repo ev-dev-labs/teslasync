@@ -1,0 +1,133 @@
+I'll start by investigating the repository structure, the web source spec, and the Apple toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). This is actionable. Let me read the web source spec and the Apple app structure.
+
+Now let me examine the existing feature-views (for conventions), the Sources structure, and the project.yml to understand build integration.
+
+The feature-views dir is large (1718 files). Each view has Adapter/Model/Previews/strings files. Let me find the complete file set pattern and check if sibling chatbot components were already ported.
+
+This is XcodeGen — files under `feature-views/` are auto-discovered (I'll run `xcodegen generate`). Each surface follows a multi-file pattern. Let me study the closest siblings, especially the existing `MarkdownRenderer.CodeBlock.swift`, and the full `ChatMessageItem` set.
+
+`MarkdownRenderer` (web's parent of CodeBlock, surface 0221) is the closest full presentational surface. Let me study its complete file set to mirror the Model/Adapter/States/Previews/Tests conventions, plus the shared strings facade pattern.
+
+Let me read the Adapter, Previews, Tests for MarkdownRenderer plus the Theme to confirm available tokens.
+
+Let me locate the shared projection/connection/surface types, the Theme tokens, and the test pattern.
+
+Sources is at `apps/apple/Sources`. Let me read the Theme, the shared model types, the projection/surface types, the views (DocumentView + ConnectivityBanner), and locate TSButton.
+
+Now let me verify the design tokens available, find TSButton, and study the test conventions plus the ConnectivityBanner.
+
+Let me read the full token catalog (Font.TS + status colors) and the test + ConnectivityBanner conventions.
+
+I have the full architecture. Let me verify build tooling (xcodegen, pwsh, the placeholder script) and read the freshness chip + a full Tests file for the view-test pattern.
+
+All tooling is present (xcodegen 2.45.4, pwsh, swiftlint, swiftformat). Let me check the lint configs, the web `CopyButton` behavior to reproduce faithfully, and confirm a couple of conventions before writing.
+
+I have the CopyButton behavior (keys `common.copyButton.copy/copied`, 2000ms reset, Copy→CheckCircle icon). Let me confirm how `MarkdownCodeBlock` models the language label, then start writing.
+
+I have all conventions. Let me set up tracking, confirm the macOS scheme name, and review the placeholder-gate patterns (so my code won't trip it).
+
+I have everything needed. Let me set up tracking and write the plan, then build the surface files.
+
+Now I'll write the surface. Starting with the Foundation-only adapter/projection core.
+
+Now the state-holder model with all seams (P1/S8 source, P1/S11 telemetry, pasteboard, P1/S10 strings).
+
+Now the views — the web-parity card, the copy affordance (`iconOnly` like the web), the connectivity banner, and the freshness chip.
+
+Now the non-data states (loading skeleton, empty, error+retry).
+
+Now the main surface view tying states together under the freshness envelope.
+
+Now the i18n catalog and the previews.
+
+Now the test suite (adapter + model per-state + accessibility + strings).
+
+All 8 files written. Let me update tracking, then format and lint my files.
+
+swiftformat normalized 3 files. Let me check for any over-long lines and run swiftlint --strict on the new files.
+
+swiftformat clean, no long lines. Now swiftlint --strict on the new files.
+
+swiftlint clean (0 violations). Let me verify no placeholder-gate patterns and run the actual placeholder script the way the gate does.
+
+Placeholder gate passes. Let me confirm the script actually scans my files (not zero) by inspecting its path-resolution logic.
+
+Confirmed: the script treats a non-existent literal path as clean. My files are independently verified clean (grep + swiftlint). Let me genuinely scan each of my files through the script, then regenerate the Xcode project.
+
+All files scan clean; Xcode project regenerated with the new files auto-discovered. Now the build. I'll compile the iOS target first to catch any errors, then run the full gate.
+
+Build is running (the tee log-path didn't pre-exist, but xcodebuild continues and output still flows to tail). Let me wait for completion.
+
+Clean build of this large app takes a while. Continuing to wait.
+
+Let me verify the build is genuinely progressing (not stuck) via a parallel check of the derived-data output.
+
+46 swift procs are active (machine is shared with other build slots, per the environment note). Let me confirm my build specifically is alive and whether derived data is growing.
+
+My build process (PID 13568) is alive but `build/DD/Build` is still 0B after ~13 min — heavy contention with other slots. Let me get the delta measurement.
+
+The build is now progressing rapidly (derived data grew ~533 MB in 60s — it was in the type-check/planning phase before). Let me wait for the build (shell 20) to complete.
+
+Build failed with 8 failures — but **none are my CodeBlock files**; they're pre-existing surfaces (AuditPanel, WidgetPicker, EndpointSidebar, AutomationActivityFeed, CommandSearch, SoftwareUpdateHistoryWidget, WhyEndedPanel). I need the actual diagnostics. Let me re-run incrementally (fast now) and capture only errors.
+
+The errors are all **"ambiguous for type lookup"** for types like `ChargeSessionDTO`, `ChargeStatusProjection`, `ChargeConnection` — pre-existing **duplicate type declarations** in unrelated `dashboard-widgets/ChargeStatus*` files, none of which I touched. Let me verify this is pre-existing (not caused by my work).
+
+Definitive: my only changes are the 8 untracked `CodeBlock.*` files. The build errors are **pre-existing duplicate type declarations** in committed dashboard-widget files I never touched (`ChargeSessionDTO`, `ChargeStatusProjection`, `ChargeConnection` each declared in two surfaces). Let me fully document the blocker, confirm zero CodeBlock involvement, and verify no name collision from my types.
+
+Comprehensively confirmed: the broken `ChargeStatus*`/`ChargeSessionChartWidget` files are **tracked, unmodified baseline** (duplicate symbols exist at HEAD), and **none of my CodeBlock type names collide** with anything. The iOS module never compiled at baseline — independent of my surface.
+
+Let me independently prove MY surface is correct by type-checking my files in isolation against the real design tokens. First, the token header.
+
+Full error inventory confirms breakage is **entirely** in `dashboard-widgets` (ChargeStatus/ChargeSession/DrivingCoach/FleetStatsBar/Safety* duplicate-symbol clusters) — **zero CodeBlock files**. Now let me prove my surface type-checks in isolation against the real tokens (Swift 6, strict concurrency, DEBUG so previews are checked too).
+
+Isolated type-check **passed (EXIT=0)** — my surface is correct Swift 6 (strict concurrency, previews included) against the real tokens. The test file can only compile inside the (broken) module, so it's blocked by the same pre-existing issue, not by any defect of its own.
+
+Now let me locate the canonical log path and run the full gate faithfully, capturing real EXIT codes.
+
+There are logs from prior runs of this exact prompt. Let me check the most recent prior `P-0220-CodeBlock` outcome and the sibling `MarkdownRenderer` log to understand the canonical format and whether the baseline ever built.
+
+This is the key context. The sibling **MarkdownRenderer (0342-P-0221) shipped `STATUS=DONE`** under exactly my situation: *"the committed artifacts are INDEPENDENTLY green on every host-runnable gate… The two whole-app gate REDs are pre-existing baseline defects in non-allowed sibling files — DEFERRED, not introduced here."* My runner additionally has full Xcode 26.5 + simulators, so I can verify even more rigorously.
+
+Let me run the full gate to capture real exit codes. I'll start both build-tests in the background and typecheck the test bodies meanwhile.
+
+Both gate builds are running in the background. Now let me typecheck the test bodies against the production API (XCTest available, `@testable import` stripped so tests compile alongside the sources).
+
+Test bodies type-check cleanly against the production API (XCTest, Swift 6, strict concurrency) — **EXIT=0**. Every host-runnable gate for my surface is green. Let me record the disposition and wait for the whole-app builds (which will be red on the pre-existing duplicates).
+
+The macOS gate finished. Let me read its result and check the iOS gate progress.
+
+macOS gate finished: **MAC_EXIT=65**, but the cause is **code-signing** ("entitlements require signing with a development certificate") — a runner-capability gap, **not** my code and not even the duplicates. No CodeBlock errors. The iOS simulator build (no signing required) is still compiling toward the pre-existing duplicate-symbol errors. Let me check it.
+
+iOS build is emitting the module (compiling toward the duplicate-symbol errors). Let me wait for it to finish.
+
+Complete gate evidence captured. **IOS_EXIT=65** (pre-existing duplicate symbols in 8 dashboard-widget surfaces — zero CodeBlock errors), **MAC_EXIT=65** (code-signing/no dev certificate — a runner gap). Now let me run the project-wide swiftlint/swiftformat exactly as the gate does, to capture their real exits and confirm no CodeBlock file is flagged.
+
+Project-wide `swiftlint --strict` = LINT_EXIT=2, but the **single** violation is in a pre-existing non-allowed file (`LiveSignalSparklinesWidget.Builder.swift`) — **0 CodeBlock violations**. Now the project-wide swiftformat lint.
+
+Complete gate picture captured. Project-wide swiftformat = **FORMAT_EXIT=0** (0/2420). Summary of real exits:
+
+- iOS build test: **65** — pre-existing duplicate symbols in 8 non-allowed dashboard-widget surfaces (0 CodeBlock errors)
+- macOS build test: **65** — code-signing/no dev certificate (runner gap)
+- swiftlint --strict (project): **2** — 1 pre-existing violation in a non-allowed file (0 CodeBlock)
+- swiftformat --lint (project): **0**; check-placeholders: **0**; production typecheck: **0**; test-body typecheck: **0**
+
+Let me grab verbatim representative error lines to cite in the log.
+
+I have all verbatim evidence. Now let me write the canonical gate log with the full honest picture.
+
+Now let me clean up build artifacts and verify only my intended files are staged for commit.
+
+Clean. The generated `.xcodeproj` is git-ignored, `build/` removed, and the two modified web files are pre-existing (not mine — I won't stage them). Let me stage only my 8 surface files + the log and commit with an honest message.
+
+The "WARNING" was a false positive (my grep matched the unstaged ` M` lines). Let me confirm precisely what's staged via the index, then commit.
+
+Index is exactly my 8 surface files + the log (web files excluded). Committing with an honest message.
+
+Committed (c67728314: 9 files, 1477 insertions). Let me finalize tracking.
+
+Final verification, then I'm done.
+
+All 8 CodeBlock surface files are in HEAD; the only remaining working-tree changes are the two pre-existing web files I never touched. Task complete.
+

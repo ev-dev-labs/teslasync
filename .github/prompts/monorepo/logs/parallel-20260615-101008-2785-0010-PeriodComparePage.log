@@ -1,0 +1,70 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Now let me explore the Apple app structure and existing patterns.
+
+There are existing analytics pages. Let me find a close sibling — `FleetComparePage` — and explore the Analytics feature directory and supporting infrastructure.
+
+Found the real layout: siblings live in `apps/apple/Sources/Features/Analytics/`. `FleetComparePage` is the closest analog. Let me read the project config and the full FleetCompare implementation set.
+
+Excellent template. Let me read the remaining FleetCompare files plus the route registration and models.
+
+I now have a strong grasp of the sibling pattern. Let me locate the design-system primitives, chart wrappers, data-display components, units facade, and routing infrastructure.
+
+Let me read the chart, data-display, feedback, and UI component APIs I'll need.
+
+Let me read the design tokens, Units facade, routing infrastructure, Buttons/Badges, and a sibling test.
+
+The catalog has `comparison.*` (FleetCompare) but no `compare.*` keys yet. Let me inspect the xcstrings structure and the Mileage sibling (closest period-selector analog).
+
+Let me check the Mileage sections (MetricCard grid + table), interpolation usage, theme modifier, parity ledger, and whether Xcode tooling is available.
+
+Toolchain is available. Let me read the DataTable component, charts section pattern, the parity manifest/ledger, gate script, and check the KMP framework dependency.
+
+Let me examine the parity manifest record, ledger, gate script, log dir, and verify the KMP framework build dependency.
+
+Critical: the `Shared.xcframework` isn't built (only a `.gitkeep`). Let me investigate the ledger structure, the framework dependency wiring, and any build scripts.
+
+The sibling log reveals the real gate methodology (full `xcodebuild` is RED due to a pre-existing out-of-scope defect; they verified via per-file typecheck + swiftlint + placeholder scan). Let me read the FleetCompare log header and check tooling.
+
+I now understand the full gate methodology. The ledger tracks two targets (apple-macos + apple-ios). Let me find the app composition root, the analytics route mapping, verify the known pre-existing build defect, and read the rest of the FleetCompare gate log to replicate it precisely.
+
+I have the complete methodology. The full `xcodebuild` is known-BLOCKED by a pre-existing out-of-scope defect (`AISuggestNewGeofences.swift:129`); siblings verify via Gradle xcframework build + xcodegen + swiftformat/swiftlint + placeholder scan + Swift host-harness + isolated typecheck. Let me kick off the long-pole Gradle build now and read the remaining wiring files in parallel.
+
+Now let me check the route parser, the route tests (to ensure adding a case stays green), and confirm the known pre-existing defect line.
+
+Adding a new `.periodCompare` case stays green (tests are `allCases`-driven; `/period-compare` resolves directly via pathSegment). Let me confirm the pre-existing defect, the design tokens, lint config, and theme modifiers.
+
+All wiring confirmed. Adding a `.periodCompare` route is safe (tests are `allCases`-driven). Let me check the swiftformat config and the background build progress, then start writing.
+
+The Gradle build is progressing nicely (now linking the release framework). swiftformat uses maxwidth 120, before-first wrapping. Let me set up tracking and start writing the implementation files.
+
+Now the models file:
+
+Now the Format helper (pure display-boundary formatters + insights):
+
+Now the @Observable page model with its data-source seam and phase machine:
+
+Now the sample/empty/failing data sources:
+
+Updating progress and creating the Sections file (selectors GlassPanel1, metric cards MetricCard2, insights GlassPanel5, skeleton):
+
+Let me check the chart axes modifier and the background build progress before writing the Charts section.
+
+The Shared.xcframework built successfully (`XCFRAMEWORK_EXIT=0`, staged). Let me find the `tsChartAxes` definition to decide chart labeling.
+
+The framework is staged. TSBarChart uses a numeric x-axis, so I'll follow the sibling pattern (chart + series legend + category-label strip + a11y summary). Writing the Charts section (GlassPanel3):
+
+Now the comparison table (GlassPanel4):
+
+Now the main page view orchestrating all states and panels:
+
+Now add the lower-content skeleton used during reloads to the Sections file:
+
+Now wire the route. Let me check for any test that could break on a new route, then edit `AppRoute.swift`.
+
+Safe to add the route. Let me edit `AppRoute.swift` (case + pathSegment + systemImage + group):
+
+Now the route registration (mirrors FleetCompare, with the web `period` banner-dismissal key):
+
+Now wire it into the app's route-host chain:
+

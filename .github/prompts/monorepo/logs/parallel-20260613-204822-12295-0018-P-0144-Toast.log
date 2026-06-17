@@ -1,0 +1,136 @@
+I'll start by understanding the environment, capabilities, and existing structure before making changes.
+
+Good — full Apple toolchain present (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim booted). Now let me read the web source and explore the Apple app structure.
+
+Large mature codebase. Let me check for existing Toast files, the shared-surfaces patterns, and the P1 facade/design/diagnostics layers.
+
+Excellent — there's already an `AchievementUnlockedToast` surface (a toast!). That's the ideal template. Let me read it fully plus the facade/state-holder layer.
+
+Now the Adapter, Views, Previews, Tests, and the strings file — plus the design tokens these depend on.
+
+The pattern is clear. Now the Previews, Tests, strings, design tokens, and the web hooks (`useMotionPreference`, `useMutationToast`).
+
+Now the design tokens (P1/S9), project.yml build config, and the web hooks I must reproduce.
+
+Tokens live in `../design/generated/apple`. Let me read those plus the toast helper and test target config.
+
+Now the full token catalog, shared component signatures (TSCard/TSButton/TSEmptyState/TSSkeleton/Font.TS), and iOS deployment target.
+
+Deployment targets are iOS 18.0 / macOS 15.0 — matches. Let me confirm exact component signatures and check a11y announcement conventions.
+
+Let me check swiftlint config, whether an xcodeproj exists or xcodegen is needed, and a11y announcement conventions.
+
+Need xcodegen to generate the project. Let me study the `AnnouncerRegion` surface (the live-region/aria-live equivalent) for the announcement convention — directly relevant to Toast's `role=alert/status`.
+
+I have the full pattern, tokens, components, and the canonical aria-live announcement convention. Let me check the placeholder gate script and pwsh availability, then start building.
+
+pwsh is available. Let me read the forbidden placeholder patterns so I avoid them entirely.
+
+pwsh present. Critical: the word "Placeholder" (and TODO/FIXME/XXX/"not implemented") are forbidden substrings — I'll avoid them. Now let me check for existing `Toast`-named symbols to avoid redeclaration collisions.
+
+No bare `Toast*` core types exist — all are prefixed (`SettingsToast`, `CopyButtonToastIntent`). Let me do a precise collision check on my exact planned type names plus peek at FeedbackOverlays.
+
+No collisions confirmed. I have everything needed. Let me set up tracking and write the plan, then build all 9 files following the established `AchievementUnlockedToast` pattern.
+
+Now writing the files. Starting with the pure core (Adapter).
+
+Now the Seams file (sources).
+
+Now the States file (loading/empty/error chrome).
+
+Now the Views file (single toast, tint, aria-live announcement, freshness chip, metrics).
+
+Now the main surface file (`ToastStack` + provider/hooks + mutation reporter).
+
+Now the Previews and the strings file.
+
+Now the comprehensive test file.
+
+All 9 files written. Now let me format and lint my files before the heavier build. First swiftformat (in-place) and swiftlint on just the Toast files.
+
+swiftformat reports 0/8 changed — already compliant. Now swiftlint --strict on the new files.
+
+One violation: `Toast.Tests.swift` is 408 lines (limit 400). I'll split out the model tests into `Toast.ModelTests.swift` (matches the `Toast.*` allowlist and the `**/*Tests.swift` glob). Let me find the split boundary.
+
+I'll move the Model + Mutation-bridge test sections into a new `Toast.ModelTests.swift`. Creating it, then trimming the original.
+
+Now trim the model + mutation sections from the original `Toast.Tests.swift`.
+
+Let me update the `Toast.Tests.swift` header to remove the moved sections (avoid drift), then re-run swiftformat + swiftlint on both test files.
+
+Clean: swiftformat 0/2 need formatting, swiftlint 0 violations across all 9 files. Now generate the Xcode project and build/test.
+
+Project generated. Let me verify the log directory and kick off the iOS build (sanity-compile my code within the full app target).
+
+All files in place. Now the iOS build to surface any compile errors. This is a large project, so I'll run it async and monitor.
+
+The build is still running (my grep pattern errored but `tee` captured the full log). Let me wait for completion.
+
+The `tee`→`grep` pipe broke (invalid regex killed grep, stalling the log). Let me stop and re-run with a clean direct redirect to capture full output reliably.
+
+Build is progressing through the Kotlin/Native Shared XCFramework (heavy). 0 errors so far. Let me wait for completion.
+
+Still linking the Kotlin/Native frameworks (slow). Let me continue waiting.
+
+Build finished with EXIT=65 (failure). Let me find the actual errors.
+
+Build failed but with **0 `error:` lines** and cancelled batch jobs — that pattern suggests a compiler crash/cancellation, not a normal type error. Let me search for the real root-cause signal.
+
+A Swift compiler crash occurred. Let me examine the crash context to find the triggering file/construct.
+
+The log lines are extremely long. Let me view the crash window with truncated columns.
+
+The crash is in an **AppearanceSettings.*** batch — none of my Toast files. It's a `swift-frontend` compiler crash, likely pre-existing. Let me confirm the exact crashing location and whether my files are implicated.
+
+The crash batch lists the whole module (frame 3 is the full file list). Let me find the real `While type-checking` frames after the file list ends.
+
+The crash is an **IRGen compiler crash in `AppearanceSettings.Controls.swift`** (frame 4: `IRGenRequest(IR Generation for file ".../AppearanceSettings.Controls.swift")`, frame 5: emitting a reabstraction thunk) — not a Toast file. Let me check whether this is a documented pre-existing baseline issue.
+
+This is the **known, documented, pre-existing toolchain crash**. `apps/macos-pending-verifications.md` records the identical `swift-frontend` IRGen capacity crash (signature `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` in `AppearanceSettings.Controls.swift`) for prior surfaces (0079-DataFreshness, 0143-TimeMachineBanner, 0205-CommandPalette, 0007-WidgetGaugeHero) — each proven **surface-independent** via a baseline rebuild. I'll follow the same accepted methodology: prove my surface is green + the crash is surface-independent.
+
+Let me confirm zero Toast errors, check signing, run an isolated strict-concurrency typecheck of the core, and start the baseline (Toast-removed) rebuild.
+
+Confirmed: **zero Toast errors** in the build, **0 codesigning identities** (macOS gate precondition fails — same as documented prior surfaces), and the **pure core type-checks clean** under Swift 6 strict-concurrency. Now the decisive baseline proof: rebuild with Toast files removed and confirm the identical crash persists. Let me script it self-restoring.
+
+Baseline build running with all Toast files removed (0 remaining). Let me wait for the crash to reproduce.
+
+Baseline still compiling (no crash yet — it occurs at IRGen near the end). Let me wait.
+
+Baseline still compiling per-file IRGen (3574 jobs, EmitSwiftModule passed). The crash triggers at `AppearanceSettings.Controls.swift` IRGen. Let me keep waiting.
+
+Baseline (Toast removed) finished with **BASELINE_EXIT=65** and files restored. Let me confirm the crash signature is identical (proving surface-independence).
+
+**PROVEN surface-independent**: the baseline build with all 10 Toast files removed crashes **identically** — same `report_at_maximum_capacity`, same thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, same `AppearanceSettings.Controls.swift` IRGen, BASELINE_EXIT=65. Files restored (10/10).
+
+Let me start the macOS build (to capture its failure mode) async, then run the quick gates.
+
+Now the quick gates: swiftlint --strict, swiftformat --lint, and the placeholder check (literal gate command + a real scan of my files).
+
+swiftlint 0, grep clean, literal gate EXIT=0. Let me run a **real** placeholder scan over my actual files (copy to temp dir + run the script) and swiftformat --lint on all 9.
+
+All green: real placeholder scan PLACEHOLDER_COUNT=0, swiftformat 0/9. The macOS build finished — let me read its outcome.
+
+macOS failed fast (MAC_EXIT=65, ~22s — before compilation). Let me capture the exact reason.
+
+Confirmed: macOS fails at the **development-signing gate** ("entitlements require signing with a development certificate"; 0 valid identities) — pre-existing environment limit, before any Toast compilation. 
+
+I now have complete evidence. Let me verify xcodegen enumerated all 10 Toast files into the project, then write the official gate log.
+
+All 10 files enumerated in the project (114 pbxproj refs across targets). I have complete evidence. Let me write the official gate log.
+
+Now let me verify git status (only my files should be untracked), clean up scratch artifacts, and confirm the project files are gitignored.
+
+Git status is clean (only my 10 files + log). The non-test sources were proven to type-check in-module (EmitSwiftModule passed, 0 Toast errors), but the **test files** weren't compiled (the app IRGen crash precedes the test bundle). For honesty, let me type-check the test files against the real source APIs in isolation.
+
+The `@testable import TeslaSync` line can't resolve when compiled as one ad-hoc module. Let me strip it from the temp copies (the real files keep it) and re-run.
+
+Isolated test typecheck passed (0/0). For the strongest signal, let me **execute** the test logic via a minimal SwiftPM package (`swift test`) over the real core sources — matching the prior-art methodology.
+
+**36/36 tests PASS** via `swift test` against the real core sources — adapter, projection, state-holder, and mutation bridge all execute green. Let me add this evidence to the log.
+
+36/36 tests green and logged. Let me clean up scratch, verify final state, and commit.
+
+All clean. Staging the 10 Toast files + the gate log and committing.
+
+The Toast surface is complete and committed. Here's the final summary.
+

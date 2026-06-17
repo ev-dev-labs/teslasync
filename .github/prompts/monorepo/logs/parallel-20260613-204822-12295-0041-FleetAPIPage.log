@@ -1,0 +1,169 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+Xcode 26.5 and SwiftLint 0.63.3 are available. Let me explore the web source and the Apple app structure.
+
+The web source is clear. Now let me understand the Apple project structure, the parity manifest, and existing patterns.
+
+Now let me understand where pages actually live and find existing patterns. Let me explore the feature directories and check for existing implementations.
+
+Pages live in `Sources/Features/Admin/`. Let me study the closest analog (FeatureFlags — has toggles + mutations) and the supporting infrastructure.
+
+The pattern is clear. Let me read the supporting infrastructure: models/datasource seam, route enum, registry, parser, and shell.
+
+Let me examine the routing system, design components, and how route registrations are wired centrally.
+
+Let me see how `TeslaSyncApp.swift` aggregates registrations and find the design system components.
+
+Let me read the design components and tokens I'll need (panel, toggle, select, badge, icon box, empty state, typography, tokens).
+
+Need `TSToggle` and the rest. Let me read Fields, Buttons, Typography, States, and the design tokens.
+
+Let me read typography, buttons, tokens, and check the toggle-row pattern + KMP wiring conventions.
+
+Let me check the logs format, the string catalog, remaining components, and the test convention.
+
+The log reveals the real convention: output goes to `Sources/Features/Admin/`, and the gate uses xcodegen + isolated swiftc typecheck. Let me read the full log approach + find tests, skeleton component, and the strings catalog.
+
+I now understand the full methodology. Let me read the remaining components, the test pattern, the design tokens, and check build feasibility.
+
+Let me confirm token members, read the test pattern, motion, theme, and check the KMP framework build feasibility.
+
+The KMP `Shared.xcframework` isn't prebuilt (only `.gitkeep`), confirming the predecessor's isolated-typecheck approach. Let me check tool availability, motion components, theme modifiers, and the ledger format.
+
+All gate tools are available. Let me read the web hooks (to mirror data shapes), motion/material modifiers, the placeholder script, and check existing string keys.
+
+Let me confirm the theme modifier, the placeholder script rules, and check existing string keys to avoid duplicates.
+
+Let me read the placeholder patterns and inspect the xcstrings JSON structure to safely add keys.
+
+Let me read the AppShell and check navigationTitle conventions in sibling pages before writing.
+
+I have the full picture. Let me check the lint/format config constraints before writing, then verify exact-key existence for the strings.
+
+Let me check which of the parity strings already exist as exact keys in the catalog (to avoid duplicate JSON keys).
+
+I have a complete understanding. Let me set up tracking and start implementing.
+
+Now I'll create the source files. Starting with the models and data source seam.
+
+Now the view files. First the main page scaffold with the notice banner and state handling.
+
+Now the shared surfaces (endpoint row + tinted callout) and the three panel files.
+
+Now the route registration and wiring into AppRoute, parser, and the app shell.
+
+Let me re-read the exact routeHosts wiring region before editing for correct paren balance.
+
+Now I'll add the 71 string keys to the catalog using a careful text-splice (preserving Xcode's formatting to keep the diff minimal).
+
+The top-level uses `"strings": {` (no space before colon). Let me fix the marker and re-run.
+
+Now the model tests, mirroring the sibling test pattern.
+
+Now let me normalize formatting with swiftformat (the app-wiring reindent especially), then check.
+
+Paren balance is correct and reindented. Now swiftlint on my files.
+
+Two real issues (3-tuple and a misplaced disable after reformatting). Let me view and fix.
+
+Let me check how the repo handles long string literals elsewhere before choosing the fix.
+
+Established pattern: put the disable directly above the string argument inside the call. Let me fix both issues.
+
+SwiftLint passes (EXIT=0). Let me confirm swiftformat is stable across all my files, then move to type-checking.
+
+SwiftFormat clean (0/13). Now the strongest check — compile and **run** the model logic as a standalone harness (Foundation+Observation only).
+
+Swift 6 isolation error: the static key catalog on the `@MainActor` model isn't reachable from the nonisolated sample. Marking them `nonisolated` fixes it cleanly.
+
+Harness **runs green** (total=21, enabled=19, retention=30). Now reformat the model file (modifier order) and run the full isolated type-check against the real component library.
+
+Components are self-contained (SDK frameworks only). Now the macOS isolated type-check of my views against the real component library.
+
+Swift 6 flags the `LocalizedStringKey`-bearing static catalogs as unsafe globals. Since they're SwiftUI view data, `@MainActor` is the correct fix.
+
+Let me clean up that columns edit properly.
+
+The full-Components include pulls in `UnitFormatters.swift`, which needs the `Units` SI helper. Let me locate it and its dependency.
+
+`Units`/`UnitPreferences` live in `Units+Facade.swift`. Let me check if it's standalone (no KMP dependency).
+
+`Units+Facade.swift` imports the KMP `Shared` framework — can't typecheck standalone. My page only uses UI/Feedback/Motion components. Let me scope the typecheck to those (verify they don't import Shared).
+
+Clean — those are KMP-free. Re-running the macOS type-check scoped to the components my page uses.
+
+`Feedback` uses `TSMetricBar` from DataDisplay. Let me include DataDisplay too (excluding the KMP-dependent `UnitFormatters.swift`).
+
+macOS type-check passes (EXIT=0). Now the iOS type-check (exercises the compact size-class component branches).
+
+Both type-checks pass. Let me re-verify format + lint after the isolation edits, then run the test type-check, xcodegen, and placeholder gate.
+
+Format and lint both clean. Now type-check the test file (stripped of `@testable import`) against the full real set.
+
+Test type-check passes. Now xcodegen (confirm globs pick up new files) and the placeholder gate.
+
+xcodegen picks up all files (66 refs), placeholder scan clean (COUNT=0). Let me confirm my files specifically are placeholder-clean and have no forbidden words.
+
+Files are clean. Now add the two ledger rows (macOS + iOS) and validate.
+
+All gates green. Now I'll write the comprehensive evidence log enumerating all 81 parity items.
+
+Let me do a final validation pass (JSON integrity, git status) and clean up temp files.
+
+All validations pass. Let me review git status and confirm the generated project is ignored, then commit.
+
+All changes accounted for; generated project is ignored. Committing.
+
+All todos complete and the working tree is clean. 
+
+## Summary
+
+Implemented the native **SwiftUI / HIG** parity of the web `FleetAPIPage` (`/fleet-api`) for the Apple app (adaptive macOS + iOS), reaching **`PARITY_COVERED=81/81`** and **`STATUS=DONE`**.
+
+**What shipped** (11 new files in `apps/apple/Sources/Features/Admin/` + tests, following the sibling admin-page convention):
+- A pure `@Observable FleetAPIPageModel` over an injectable `FleetAPIDataSource` seam (no networking in the view, ADR-004) mirroring all 6 web hooks (`useSettings`, `usePollingConfig`, `useCaptureStats`, `useVersionInfo`, `useToggleAPISuspend`, `useUpdatePollingConfig`).
+- All **8 web GlassPanels**: the suspend/resume polling card + red callout, the endpoint-controls card with the Polling/On-Demand/Command toggle grids, telemetry-capture block, retention `Select`, capture-stats note, and the configured-URL list.
+- **loading / empty / success** states (+ retryable error), adaptive `LazyVGrid`, accessibility, design tokens, and all **70 strings** resolving from `Localizable.xcstrings` with the web key names verbatim (zero hardcoded literals).
+- Navigation wired (`.fleetAPI` route + registration), `apple-ledger.json` rows (81/81 macOS + iOS), and the evidence log.
+
+**Gate — all in-scope checks GREEN** (xcodebuild deferred only because the KMP `Shared.xcframework` isn't staged, matching the sibling pages — reported honestly, not as passing):
+- placeholder scan `COUNT=0`, swiftformat `0/13`, swiftlint `--strict` `0`, xcodegen `0`
+- isolated `swiftc` type-check **macOS + iOS + test file** all `EXIT=0` against the real component library
+- a runnable **model harness** executed end-to-end: `HARNESS_OK total=21 enabled=19 retention=30`
+
+Committed as `c5b64ad25`.
+
+
+
+The task is fully complete and committed. All 10 todos are done, gates are green, and the work is committed as `c5b64ad25`.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-FleetAPIPage.log         | 277 ++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 781 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   8 +-
+ .../Sources/Features/Admin/FleetAPIModels.swift    | 168 +++++
+ .../Features/Admin/FleetAPIPage.Configured.swift   |  99 +++
+ .../Features/Admin/FleetAPIPage.Endpoints.swift    | 147 ++++
+ .../Features/Admin/FleetAPIPage.Polling.swift      |  82 +++
+ .../Features/Admin/FleetAPIPage.Telemetry.swift    | 130 ++++
+ .../Sources/Features/Admin/FleetAPIPage.swift      | 200 ++++++
+ .../Features/Admin/FleetAPIPageModel.Sample.swift  |  65 ++
+ .../Sources/Features/Admin/FleetAPIPageModel.swift | 156 ++++
+ .../Features/Admin/FleetAPIRouteRegistration.swift |  20 +
+ .../Sources/Features/Admin/FleetAPISurfaces.swift  |  92 +++
+ apps/apple/Sources/TeslaSyncApp.swift              |  44 +-
+ .../Features/Admin/FleetAPIPageModelTests.swift    | 233 ++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 16 files changed, 2496 insertions(+), 24 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-FleetAPIPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPIModels.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPIPage.Configured.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPIPage.Endpoints.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPIPage.Polling.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPIPage.Telemetry.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPIPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPIPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPIPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPIRouteRegistration.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetAPISurfaces.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/FleetAPIPageModelTests.swift

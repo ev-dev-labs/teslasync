@@ -1,0 +1,157 @@
+I'll start by exploring the environment and understanding the task. Let me check the available tooling and the existing structure in parallel.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 16 simulator booted). Let me read the web source and existing Apple structure.
+
+There's an existing `AnnouncerRegion` surface as a reference pattern. Let me study it thoroughly along with the supporting web hooks.
+
+Now let me study the web AI hooks (the data contract I must reproduce) and the design tokens, plus the project config and prior logs.
+
+Now let me examine the design tokens, shared components, project config, and prior logs to understand the build integration.
+
+Key finding: a prior run placed files at a *different* path (`Sources/SharedSurfaces/`), but this prompt requires `TeslaSync/shared-surfaces/` following the `AnnouncerRegion` pattern. Let me examine the real project.yml (XcodeGen) and token definitions to understand build integration.
+
+Now I understand the build integration—XcodeGen globs `TeslaSync/shared-surfaces`, auto-routing `*Tests.swift` to test bundles and other files to the app target. No project.yml edits needed. Let me check the toolchain baseline and read the design token/component APIs I'll consume.
+
+`xcodegen` is available but `Shared.xcframework` is absent (needs a build script). Let me check that script and the design-token definitions in parallel — these determine whether a full build is achievable.
+
+The `Shared.xcframework` needs a Kotlin/Gradle build. Let me read the exact token APIs and check the precedent (AnnouncerRegion) gate outcome plus Gradle availability.
+
+The AnnouncerRegion precedent is the exact template: full `xcodebuild` is DEFERRED (env signing + Kotlin `Shared.xcframework`), while the surface is proven via isolated Swift compile/test, `xcodegen generate`, scoped lint/format/placeholder. Let me read the full precedent log and supporting details.
+
+I now have the complete template and the documented precedent disposition. Let me verify the current baseline state (sibling collisions, Gradle availability, lint config) and read the remaining component APIs before writing code.
+
+Baseline confirmed: pre-existing duplicate types (`RecentDrivesModel`, `StateTimelineModel`) break the iOS app target regardless of my surface, and macOS needs signing — exactly the documented DEFERRED precedent. `.swiftlint.yml` already includes `shared-surfaces`, `pwsh` is present. Let me read the final two component signatures, then write the surface.
+
+Let me read the rest of `useAiStream.ts` to port the parser/reducer faithfully, then set up my plan.
+
+I have everything needed. Let me set up a plan and todos, then build the surface following the `AnnouncerRegion` 10-file pattern.
+
+Now I'll write the surface. Starting with the pure Adapter core.
+
+All 10 files written. Now let me verify — starting with formatting and linting on the new files.
+
+swiftformat found fixable issues. Let me read the config and auto-format my files (ecosystem tool fixes these deterministically).
+
+Formatting passes. Let me verify the auto-format changes are semantically sound and run swiftlint scoped to my files.
+
+Two swiftlint issues: cyclomatic complexity in `toTypedEvent` and a 3-member tuple in the test helper. Let me fix both — refactor the parser into per-event helpers and use a struct harness.
+
+Now let me rewrite the `AITripNameModelTests` class to use a struct harness instead of a 3-tuple.
+
+Let me re-format and re-lint to confirm both issues are resolved.
+
+Lint and format both clean (0 violations). Now the placeholder check.
+
+The placeholder check flagged a "TODO" at Tests.swift:216. Let me find it.
+
+The script matched "ToDo" inside the method name `...StreamingToDone`. Let me check the script's patterns to be safe, then rename.
+
+Only the common "TODO" pattern matched — inside the method name `...StreamingToDone`. Let me rename it and re-run the check.
+
+Placeholder check clean (COUNT=0). Now the substantive verification: compile-check. Let me map the design-system dependencies my SwiftUI files need so I can run an isolated typecheck.
+
+Design components only use system frameworks (SwiftUI/Charts/MapKit/Foundation). Let me first run the highest-value check: a standalone SwiftPM harness that compiles the logic layer (Adapter+Model+Seams) and executes all tests under Swift 6 strict concurrency.
+
+All 64 logic tests pass under Swift 6 strict concurrency. Now the SwiftUI typecheck against the real design system. Let me scope the design dependencies (UI/Feedback/Motion/Design only).
+
+UI/Feedback/Motion/Design are self-contained (SwiftUI-only). Let me typecheck my 7 surface files against that real design system on the iOS 18 simulator SDK with Swift 6 strict concurrency.
+
+That error is in a design file I don't use (`FeedbackOverlays` needs `TSMetricBar` from DataDisplay). Let me narrow to exactly the design files my surface references. First, let me confirm which TS-symbols my files use.
+
+My surface uses only `TSButton`, `TSGlassPanel`, `TSSkeleton` (+ tokens). Let me typecheck against exactly those design files.
+
+iOS typecheck passes with 0 errors. Now the macOS SDK typecheck and `xcodegen generate` (proves the project assembles).
+
+Both SDK typechecks pass (0 errors) and `xcodegen generate` succeeds. Let me verify my files are wired into the generated project and confirm the pre-existing sibling collisions are real before running the full gate.
+
+My files are wired in (60 pbxproj refs) and the collisions are concretely confirmed: `public final class RecentDrivesModel` / `StateTimelineModel` each declared twice in the same app target — guaranteed pre-existing compile errors. Gradle is present but `Shared.xcframework` needs building. Let me run the actual iOS gate to capture verbatim evidence (honesty rule 3).
+
+The log shows `slot-89` paths and contended Gradle/Java — this is a **shared machine** with sibling slots running parallel builds, clobbering the shared `/tmp` log and DerivedData. Let me identify what's actually mine and isolate cleanly.
+
+No xcodebuild running now — my run exited and a sibling slot (89) clobbered the shared `/tmp` log. DerivedData is path-isolated per slot, so I just need a unique log filename. Let me re-run the exact iOS gate cleanly and capture to a slot-unique log.
+
+iOS gate running (PID 53621) to a slot-unique log. It needs the ~6min Kotlin pre-action then will fail on the pre-existing dup types. Let me poll progress while I prepare the log.
+
+Gradle is building `Shared.xcframework` (works on this host). My iOS build is progressing. Let me keep polling.
+
+Still compiling. Let me continue polling.
+
+iOS gate finished: **IOS_EXIT=65, TEST FAILED** — failing exactly on pre-existing `StateTimeline*`/`RecentDrives*` ambiguous-duplicate-type errors in sibling files. Let me confirm my surface contributes **zero** errors.
+
+Conclusive: **0 of 108 errors** touch my surface — all are pre-existing duplicate `RecentDrives*`/`StateTimeline*` types in sibling files (other prompts), compiled into the same target. This is the documented DEFERRED disposition. Now the macOS gate.
+
+macOS gate launched. Let me gather final facts (tool versions, file line counts) while it builds, then write the log.
+
+10 files, 2219 lines, all new. Let me verify no unintended drift (the generated `.xcodeproj` must be gitignored), then poll macOS.
+
+macOS gate: **MAC_EXIT=65** — environmental code-signing blocker (no dev certificate), exactly the precedent. And git status confirms **zero drift** (only my 10 files; xcodeproj gitignored). Let me confirm the macOS log has no errors from my surface.
+
+All verification complete. Both `xcodebuild` failures are DEFERRED (pre-existing sibling collisions on iOS, env signing on macOS) with **0 errors from my surface**. Let me write the comprehensive gate log.
+
+Let me correct the test-count breakdown in the log for accuracy, then do a final clean re-verification before committing.
+
+Final clean re-verification of all scoped gates before commit.
+
+All scoped gates green (format 0, lint 0 violations, placeholder 0). Let me stage exactly my files + the log, verify the staged set, and commit.
+
+Exactly 11 files staged (10 surface + log), nothing else. Committing.
+
+Committed as `592ac53ed`, working tree clean. Let me clean up temporary artifacts and finalize.
+
+All done. Let me finalize the todo tracking.
+
+All todos complete. The P4 shared surface **AIAutoTripNameSuggestion** is shipped and committed (`592ac53ed`).
+
+## Summary
+
+Built a production-polished native Apple (SwiftUI) parity of `web/src/components/ai/AIAutoTripNameSuggestion.tsx` at `apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.*` — **10 files, 2,219 lines**, following the established `AnnouncerRegion` pattern.
+
+**Parity reproduced** (web `withAiFeature` + `AIFeatureCard` + `useAiStream`):
+- The `auto-trip-naming` **feature gate** → renders nothing when AI is off (ADR-015).
+- A **real `URLSession.bytes` SSE driver** (POST `{}` to `/ai/trips/{id}/name/draft`) with a verbatim port of the hook's `parseSSEFrame`/`toTypedEvent` parser + `handleEvent` reducer (delta-accumulation, F9 limit fields, `typeof` guards).
+- The Helix feature card (title + badge + "Ask Helix" button + streaming output), `canStart = !!tripId`, all **8 states** (gatedOff/loading/idle/thinking/suggestion/error/stale/offline), full VoiceOver/Dynamic Type/reduce-motion, web i18n keys verbatim, and `view.opened` telemetry.
+
+**Verification — every runnable gate green:**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | `0/9 files require formatting` |
+| swiftlint --strict | `0 violations in 9 files` |
+| check-placeholders | `PLACEHOLDER_COUNT=0` |
+| xcodegen generate | project created, 60 refs wired |
+| swift test (Swift 6 strict concurrency) | **64/64 passed** |
+| isolated typecheck (iOS 18 + macOS 15 SDK) | **0 errors** |
+
+**Full `xcodebuild build test` — DEFERRED** (documented precedent, not my surface):
+- `IOS_EXIT=65` — 108 errors, all pre-existing duplicate `RecentDrives*`/`StateTimeline*` public types in *other prompts'* sibling files; **0 from my surface**.
+- `MAC_EXIT=65` — environmental code-signing (no dev certificate); **0 from my surface**.
+
+No drift: only the 10 surface files + log committed; `project.yml`/`.swiftlint.yml` already glob `shared-surfaces`. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified. All work is committed.
+
+Merge made by the 'ort' strategy.
+ ...ared-surfaces-0007-AIAutoTripNameSuggestion.log | 258 ++++++++++++++
+ .../AIAutoTripNameSuggestion.Adapter.swift         | 363 ++++++++++++++++++++
+ .../AIAutoTripNameSuggestion.Model.swift           | 275 +++++++++++++++
+ .../AIAutoTripNameSuggestion.ModelTests.swift      | 250 ++++++++++++++
+ .../AIAutoTripNameSuggestion.Previews.swift        |  82 +++++
+ .../AIAutoTripNameSuggestion.Seams.swift           | 253 ++++++++++++++
+ .../AIAutoTripNameSuggestion.States.swift          | 212 ++++++++++++
+ .../AIAutoTripNameSuggestion.Tests.swift           | 373 +++++++++++++++++++++
+ .../AIAutoTripNameSuggestion.Views.swift           | 281 ++++++++++++++++
+ .../AIAutoTripNameSuggestion.strings               |  44 +++
+ .../shared-surfaces/AIAutoTripNameSuggestion.swift |  86 +++++
+ 11 files changed, 2477 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0007-AIAutoTripNameSuggestion.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.swift

@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Not blocked. Let me study the existing Apple architecture and patterns.
+
+The `shared-surfaces` directory isn't yet registered in `project.yml`. Let me check for prior P4 shared-surface work and study the closest existing surface pattern (TourLauncher).
+
+The prompt maps to `P-0002-RouteAnnouncer`. Native output dir `shared-surfaces` doesn't exist yet and isn't in `project.yml`. Let me assess build feasibility (xcodegen, Shared.xcframework, prior logs).
+
+Now I understand the established pattern. Let me study a complete existing misc-surface (globalShortcuts — the simplest) and the shared infrastructure (facade/state-holders, tokens, i18n, telemetry).
+
+Now let me read the navigation/route infrastructure (the `useLocation` equivalent) and the remaining globalShortcuts files to mirror test/strings/adapter conventions.
+
+Excellent — `AppShell` already posts route announcements inline. Let me confirm exact design tokens, shared components, and the remaining globalShortcuts files (Adapter/Views/Tests) to mirror precisely.
+
+I have the full pattern now. Let me check component signatures, any existing a11y/live-region helper, and kick off the long-pole Shared.xcframework (Gradle) build in the background.
+
+JDK 17 + Gradle present. Let me start the long-pole Shared.xcframework build in the background while I write the surface.
+
+Let me check the placeholder checker rules, pwsh availability, and lint/format configs before writing — so my code passes the gate first time.
+
+Placeholder rules are clear (must avoid "Placeholder", "TODO", "stub", "mock", etc. in shipped files). pwsh is available. Now I'll create the surface directory and write the files, mirroring the established `globalShortcuts` architecture. Starting with the pure core (Adapter).
+
+Shared.xcframework build finished — let me confirm it staged successfully.
+
+Shared.xcframework staged (ios-arm64, simulator, macos-arm64). Now the remaining surface files — main view, live region, states, previews, strings.
+
+Now let me make the cancellable `@MainActor`-isolated (cleaner Swift 6 concurrency) and write the two test files.
+
+Now the model/state-holder tests with deterministic test doubles (spy telemetry, spy speaker, manual scheduler).
+
+All 9 surface files are written. Now I must register the new `shared-surfaces` directory in `project.yml` (4 targets) — without it the files won't compile or test. I'll mirror the `misc-surfaces` entries exactly.
+
+The new surface dir also needs to be in `.swiftlint.yml`'s `included:` list so the lint gate actually covers it. Adding it, then I'll auto-format and lint.
+
+swiftformat is clean. swiftlint found 1 violation across the whole tree — let me locate it.
+
+The lint violation is my test's 4-member tuple (`large_tuple`). I'll refactor `makeModel` to return a small struct instead. Rewriting the test file cleanly.
+
+Format clean, swiftlint 0 violations. Now regenerate the Xcode project and build.
+
+Project regenerated with the RouteAnnouncer files. Now building macOS (compiles the app target including the new surface). This is large, so I'll run it in the background.
+
+While macOS builds, let me run the placeholder gate on the surface.
+
+Placeholder gate passes. The macOS build finished — let me confirm the result.
+
+Build reached signing — failed on a code-signing/entitlements issue (environmental, not a code error). Let me check how predecessor logs invoked xcodebuild and whether my Swift compiled.
+
+The build failed at signing validation *before* compiling. Let me see the predecessor's exact macOS build/test invocation and signing approach.
+
+I need to disable/ad-hoc signing for this headless environment (standard CI practice). Running macOS build + my surface's tests in one shot with ad-hoc signing.
+
+Build is compiling the full macOS app (several minutes). Let me wait and monitor.
+
+Test phase failed — let me determine the cause (compile error, signing/launch, or test assertion).
+
+Same signing-validation error — my ad-hoc flags didn't bypass it. Let me check whether any code-signing identity exists in this environment, then choose the right approach.
+
+No signing identities exist — signing is impossible here, so I must disable it (the legitimate headless path). Re-running macOS build + surface tests with signing fully disabled.
+
+While macOS rebuilds, let me check iOS simulator availability (the gate targets "iPhone 16").
+
+iPhone 16 simulator is available and booted. Let me wait for the macOS build/test to finish.
+
+Signing is bypassed now — it's compiling. But there are SwiftCompile failures in unrelated `feature-views`/`dashboard-widgets` files. Let me see the actual error messages.
+
+These are pre-existing duplicate-type collisions in unrelated surfaces (`RecentDrivesModel`, `StateTimelineModel`, etc. — "ambiguous for type lookup"), not my code. Let me confirm none of my files error, and that these collisions predate my change.
+
+Confirmed: zero errors in my files, and the collisions are pre-existing duplicate type definitions in **other** surfaces (e.g., `RecentDrivesModel` defined in both a dashboard-widget and a feature-view — neither mine). My git changes are only the surface + project/lint config. The full app target is pre-broken independent of my work.
+
+Let me (a) kick off the real iOS build to document its state, and (b) build a high-fidelity isolated verification (my surface + the *real* `AppRoute` and design tokens) under Swift 6 strict concurrency to prove my code compiles and tests pass.
+
+The 3 `shared-surfaces` mentions are batch-listings, not errors. The colliding files aren't in my changeset. Let me confirm they're committed (pre-existing) and set up the isolated, high-fidelity verification package.
+
+All confirmed pre-existing. Now the high-fidelity isolated verification: compile my surface + the **real** `AppRoute` and design tokens under Swift 6 strict concurrency, and run my tests.
+
+All 32 tests pass under Swift 6 strict concurrency with the real `AppRoute` + design tokens. Now let me check the iOS build result.
+
+iOS shows the **identical** 8 pre-existing collisions, zero errors in my files. My isolated verification is green (32/32). Let me confirm the original committed `project.yml` already compiled both colliding dirs together (proving I didn't cause it), and run the full gate's `swiftformat --lint apps/apple`.
+
+Confirmed pre-existing (original `project.yml` compiles both colliding dirs together). Let me run `swiftformat --lint apps/apple` from the repo root as the gate does.
+
+Full gate's lint and format are clean (`swiftlint`: 0 violations / 3243 files; `swiftformat`: 0/3452). The only red is the pre-existing collision block on the xcodebuild gate. Let me write the honest log.
+
+The log is written. Now let me clean up the temp package, verify exactly what will be committed (only my surface + necessary wiring + log; the generated `.xcodeproj` and `.xcframework` must stay ignored), and commit.
+
+All clean — only my surface, log, and necessary wiring; generated artifacts are ignored. Committing.
+
+Committed. Let me verify the working tree is clean (only ignored build artifacts remain) and do a final confirmation of the deliverable.
+
+The task is complete to the maximum extent possible within scope. Here's the honest outcome.
+
+## Delivered: `RouteAnnouncer` Apple shared surface (P4 · 0002)
+
+I built a production-polished, native SwiftUI parity of `web/src/components/a11y/RouteAnnouncer.tsx` — an invisible, polite VoiceOver route-change announcer — as 9 files under `apps/apple/TeslaSync/shared-surfaces/`, mirroring the established `misc-surfaces` architecture (Adapter / Model / View / Views / States / Previews / strings / Tests / ModelTests).
+
+**Faithful web parity** (every source branch, no invented states):
+- `useLocation` → P1/S8 `RouteSource` seam (no HTTP in the view); `document.title` → localized `route.<id>` title
+- first-render suppression, empty-title → cleared region, and the `'\u200B'.repeat(counter % 4)` rotation so a repeated title still re-speaks
+- 100 ms settle timer + `clearTimeout` cancellation via injectable seams; `aria-live="polite"` → `AccessibilityNotification.Announcement`
+- its own dedicated region (not `useAnnouncer`) — exactly as the source documents. No loading/error/offline states because the source does no fetch (documented, not narrowed).
+- P1/S10 i18n facade (no English literals), P1/S11 `view.opened` telemetry, full VoiceOver labels.
+
+**Verification (all green in scope):**
+- `swiftlint --strict`: **0 violations** / 3243 files
+- `swiftformat --lint apps/apple`: **0/3452** need formatting
+- placeholder gate: **PLACEHOLDER_COUNT=0**
+- Isolated `swift test` (swift-tools 6.0, Swift 6 strict concurrency) against the **real** `AppRoute` + design tokens: **32/32 tests pass**
+- Built & staged the KMP `Shared.xcframework` (Gradle), generated the Xcode project, confirmed **zero compile errors in my files** on both iOS and macOS.
+
+## ⚠️ Honest status: full-app gate BLOCKED (pre-existing, out of scope)
+
+`xcodebuild -scheme TeslaSync[-macOS] build test` cannot link — **not** because of my code, but because **8 types are defined twice** by two *other, committed* surfaces (`RecentDrivesModel`/…/`StateTimelineModel`/… in `RecentDrivesListWidget` vs `RecentDrivesSection`, `StateTimelineWidget` vs `StateTimeline`). Proof: those files aren't in my changeset, and `HEAD`'s `project.yml` already compiled both dirs together before this surface existed. They're owned by the feature-views/dashboard-widgets prompts and explicitly Out of Scope, so I left them untouched rather than mask the failure (covenant: no red-as-green).
+
+The surface, log, and minimal wiring (`project.yml`, `.swiftlint.yml`) are committed (`57e9ab3fc`). The log ends with `EXIT=65 / STATUS=BLOCKED` with full evidence.
+
+
+
+All in-scope work is complete, verified, and committed. The remaining non-green item — the full-app `xcodebuild build test` — is blocked exclusively by pre-existing duplicate-type collisions in *other, committed* surfaces (`RecentDrives*`, `StateTimeline*`) that the prompt explicitly places **Out of Scope** and outside my **Allowed files**. Touching them would violate the prompt's scope and the honesty covenant (and risk cascading breakage across the generated monorepo), so the disciplined, honest terminal state is a complete + independently-verified surface with a transparent BLOCKED gate log.
+
+I verified everything achievable in scope: the surface compiles and its 32 tests pass under Swift 6 strict concurrency against the *real* `AppRoute` + design tokens; lint, format, and placeholder gates are all green; zero errors in my files on both iOS and macOS.
+

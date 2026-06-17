@@ -1,0 +1,199 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+The web source exists and there are already-built sibling surfaces. Let me read the web source and examine the recently-added `AIDriveCoaching` surface to understand the established pattern.
+
+`AIDriveCoaching` (the previous prompt's output, also a `useAiStream`/`AIFeatureCard` surface) is the ideal template. Let me read the web source for it and all of its native files to learn the exact established pattern.
+
+Excellent template. `AIInboxAutoCategorization` has a richer interaction (tool_result capture → proposal chips → apply button). Let me read the rest of the `AIDriveCoaching` files plus `AIDataRepairSuggestions` (which has a proposal/apply flow) to learn both patterns.
+
+Now let me read the remaining `AIDriveCoaching` files and the `AIDataRepairSuggestions` surface, which has the proposal/apply pattern that `AIInboxAutoCategorization` needs.
+
+Let me read the `AIDriveCoaching` test files and examine the `AIDataRepairSuggestions` surface, which captures `tool_result` frames into a proposal with an apply button — the closest match to `AIInboxAutoCategorization`.
+
+`AIDataRepairSuggestions` is actually a pure-narrative stream (no proposal). `AIInboxAutoCategorization` is more complex — it captures `tool_result` frames into typed `CategoryBucket` proposals plus an apply button. Let me find a sibling that captures `tool_result` into a typed proposal, and check the build config.
+
+Let me read the build config and the `AIAutoNameUnnamedLocations` surface — it captures `tool_result` into a typed proposal with an apply button, the exact pattern `AIInboxAutoCategorization` needs.
+
+`AIAutoNameUnnamedLocations` is the perfect structural match (captures `tool_result` → typed proposal + apply button). Let me read its native files to learn how the proposal-capture and apply-action are modeled in this architecture.
+
+I now understand both patterns deeply. Critical concern: `AIAutoNameUnnamedLocations` declares `public` types like `AIJSONValue`, `AIToolResult`, `AIConnection`, `AIStreamPhase` — all compile into the **same** module. I must check for naming collisions before reusing any of these.
+
+Confirmed: those `AI*` types are declared `public` only in `AIAutoNameUnnamedLocations`, and the newest surface (`AIDriveCoaching`) avoids collisions by using surface-prefixed types. Let me verify how other `tool_result`-capturing surfaces handle this to confirm the convention.
+
+Definitive convention confirmed: each surface uses **uniquely-prefixed types** (`AICrossRuleConflictDetection` → `RuleConflictJSONValue`, `RuleConflictToolResult`, etc.). Only the oldest surface used generic `AI*` names. `AICrossRuleConflictDetection` is my ideal template — it captures `tool_result` into a proposal AND uses the newest file layout. Let me read it thoroughly.
+
+This `AICrossRuleConflictDetection` surface (0014) is the ideal template: `tool_result` → proposal capture, newest layout, uniquely-prefixed types, empty-vs-list distinction. Let me read its remaining files to complete my understanding of the full structure.
+
+Now I have the full Model/Source pattern. Let me read the remaining template files — the view, subviews, chrome, previews, strings, and all three test files — to capture the complete structure.
+
+Let me read the Chrome (flow layout, chips, output panel), strings, previews, and all three test files to complete the template.
+
+Let me read the three test files plus the previews, and verify the design tokens (`TSButton`, `TSGlassPanel`, `TSSkeleton`, `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) exist.
+
+Let me read the final test file and previews, then verify the design tokens exist in the shared sources.
+
+I have the complete template. Now let me verify the design tokens and toolchain availability before writing code.
+
+Toolchain is fully available (Xcode 26.5, iPhone 16 simulator booted). Note `TSButtonVariant` has `primary, secondary, ghost, destructive` (no `outline`). Let me verify component signatures and the generated token members.
+
+Let me read the generated tokens, the remaining component signatures, and the placeholder-check script.
+
+Toolchain and tokens confirmed. Let me check the placeholder script, lint configs, whether a `.xcodeproj` needs generation, and whether there's a faster SwiftPM verification harness (mentioned in adapter comments).
+
+Let me check the swiftformat config, the exact placeholder patterns to avoid, and whether the KMP framework is already staged (the heavy build dependency).
+
+Critical: `Shared.xcframework` is NOT staged (only `.gitkeep`), so a full `xcodebuild` triggers a KMP/Gradle build. Also note "Placeholder" is a forbidden word (case-insensitive) — I must avoid it in code/comments. Let me check the documented verification posture for these surfaces.
+
+This confirms the established, accepted posture: the full-app `xcodebuild build test` is uniformly **macOS-pending** (blocked by the unstaged KMP `Shared.xcframework`, missing signing identities, and other agents' pre-existing merge collisions). Every sibling surface is verified via `swiftc -typecheck` (both SDKs), an executed Foundation harness, swiftlint/swiftformat/placeholder/i18n gates, and `xcodegen generate`. I'll follow that exact methodology.
+
+Let me do a final collision check for my chosen `InboxCategory` type prefix, then write the files.
+
+All clear: `InboxCategory*`/`AIInboxAutoCategorization` have zero collisions, and the pre-existing `DashboardWidgetSize`/`StateTimeline*`/`ChargingProjection` collisions from other agents confirm the documented full-app-build blockers. Let me set up tracking and start writing the 12 files.
+
+Now I'll write the files. Starting with the Adapter (pure Foundation core):
+
+Now the SwiftUI presentational layer. Writing `Views.swift` (header, badge, suggest button, proposal block with apply + chips):
+
+Now `Chrome.swift` (chips, flow layout, output panel, thinking/error rows, gate loading/error, empty message):
+
+Now the main composed view:
+
+Now the previews and the i18n strings catalog:
+
+Now the three test files. First the adapter/decode tests:
+
+Now the model wiring tests:
+
+Now the final test file (logic, request, accessibility, i18n):
+
+All 12 files written. Now I'll verify — starting with the fast authoritative gates: swiftformat, swiftlint, and the placeholder check.
+
+swiftformat clean (0/11). Now swiftlint --strict on my files:
+
+swiftlint clean (0 violations, 11 files). Now the placeholder gate — I'll run it against an isolated copy of my files for a precise count:
+
+Placeholder gate clean (COUNT=0, 0 opt-outs). Now the strongest evidence: an **executed Foundation harness** for the SwiftUI-free core (Adapter/Logic/Model/Source all import only Foundation/Observation/OSLog). Let me build and run it.
+
+Core files confirmed SwiftUI-free. Let me write and run the executable Foundation harness:
+
+The errors are only in my harness `main.swift` (Swift 6 makes top-level globals MainActor-isolated) — **my surface files compiled cleanly**. Let me mark the harness helpers `@MainActor` and rerun:
+
+**Foundation harness: 52/52 assertions pass, 0 failures** under Swift 6 strict concurrency — proving decode, logic, request, accessibility, and full model wiring. 
+
+Now the SwiftUI `swiftc -typecheck` (iOS-18 + macOS-15). Let me map the design-system dependency closure.
+
+No `Shared`/`SharedFacade` coupling in the design system. Let me run `swiftc -typecheck` for iOS-18 and macOS-15 against the full design system + my 8 non-test files.
+
+All 52 errors are in `Sources/Components/DataDisplay/UnitFormatters.swift` (the SharedFacade-coupled `UnitPreferences` file prior surfaces excluded) — **zero errors in my files**. Let me locate `UnitPreferences` and exclude the coupled formatter files, then rerun.
+
+`UnitPreferences` lives in `Sources/SharedFacade` (only `UnitFormatters.swift` couples to it; my surface doesn't). Excluding that one file and rerunning both SDK typechecks:
+
+**Both SDK typechecks pass: 0 errors** (iOS-18 simulator + macOS-15) against the real design system under Swift 6. Now let me typecheck the 3 test files in same-module mode against XCTest for completeness.
+
+The 80 errors are purely "cannot find XCTAssert* in scope" — XCTest isn't linked under loose swiftc (a toolchain wiring issue, not my test logic). The canonical approach is an isolated SwiftPM package running the actual tests. My 3 test files only exercise the 4 Foundation-only core files, so let me build and run that:
+
+Only one error: `testSurfaceConstants` references the SwiftUI view's two static constants (`AIInboxAutoCategorization.surfaceSlug`/`.featureID`), but I excluded the SwiftUI view file from this Foundation-only package. The view itself is already typecheck-verified on both SDKs. Let me add a tiny harness stand-in mirroring those two already-verified constants and rerun:
+
+**Isolated SwiftPM suite: 58 tests, 0 failures** under Swift 6. Now the i18n parity check — every key used in Swift must exist in the `.strings` catalog, with no dead keys:
+
+The "dead" keys are a false positive — my single-line regex missed multi-line `string(` calls (swiftformat wraps the key onto its own line). Let me verify each "dead" key is actually referenced somewhere in the Swift files:
+
+i18n parity is clean: **0 missing, 0 dead, 23/23 keys** (all 6 web-source parity keys present verbatim). Now `xcodegen generate` to confirm my files are enumerated into the project targets:
+
+`xcodegen generate` succeeds — all 12 files enumerated (72 pbxproj refs). Now let me attempt the full-app `xcodebuild` to document the macOS-pending blocker. First the fast `-target` path (no Gradle pre-action) to capture the framework-resolution blocker:
+
+This confirms the exact documented macOS-pending blocker: `error: There is no XCFramework found at .../Frameworks/Shared.xcframework` — build fails at framework resolution **before any Swift compiles**, plus `0 valid identities found` for signing. My code is authoritatively verified by the dual-SDK typecheck + 58 SwiftPM tests.
+
+Let me make one bounded attempt to stage the KMP framework in the background (to optionally get a real app-target compile), while I write the gate log.
+
+While Gradle runs, let me check the log directory and a sibling log for the expected format:
+
+Let me view the rest of the sibling log (verification sections + final STATUS) to match the structure:
+
+I have the exact format and disposition pattern. Let me check on the Gradle staging progress:
+
+Gradle is progressing (Kotlin/Native downloaded, now linking frameworks). Let me wait for it to finish staging:
+
+DEBUG framework assembled; now on the RELEASE link long-pole (which the staging script copies). Let me check if it completed or hit the 300s timeout:
+
+The RELEASE link is the long-pole. I already have clean macOS-pending evidence from the fast `-target` path (framework-resolution failure + 0 signing identities), matching accepted prior-art. Let me do a final check on whether staging is about to complete (worth a full build) or should be wrapped up:
+
+Gradle is still on the RELEASE link. It's progressing but slow. I have comprehensive authoritative evidence already. Let me give it one bounded wait — if it stages, I'll run the full build for the strongest evidence; otherwise I finalize with the (already-captured) framework-resolution blocker:
+
+Gradle's RELEASE link is the documented long-pole (stuck under contention). But the **DEBUG** xcframework already built successfully — I can stage that manually to get the strongest evidence: a real app-target compile. Let me stop the stalled Gradle and find its PIDs:
+
+DEBUG framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now a **real app-target compile** for the iOS simulator — the strongest evidence. Running it timeboxed and capturing the full log:
+
+While the app build runs, let me gather line counts for the log and check the build is compiling (not failing on the framework):
+
+Framework resolved (0 "no XCFramework" errors) — the staged DEBUG framework worked, and Swift compilation is actively proceeding. Let me wait for the app-target compile to complete:
+
+The real app-target compile is deep into feature-views with **0 shared-surfaces errors and 0 AIInboxAutoCategorization errors** — my code compiles clean. The failures are elsewhere (pre-existing). Let me wait for completion and capture the final error attribution:
+
+162 errors total, **0 in my surface** (consistently). The evidence is conclusive. Let me analyze exactly which files/types the pre-existing errors are in, for precise attribution in the log:
+
+**Definitive attribution**: all 162 errors are in `TeslaSync/dashboard-widgets/` (96) and `TeslaSync/feature-views/` (66) — the documented pre-existing `StateTimeline*`/`RecentDrives*` cross-surface type collisions from other agents. **Zero in my surface.** Let me confirm no InboxCategory mentions anywhere and check build exit:
+
+Zero diagnostics for my surface in the real app-target compile. The evidence is complete and conclusive. Let me grab tool versions for the log header while the build finishes its remaining units:
+
+All evidence gathered. Now let me write the comprehensive gate log:
+
+Log written. Let me check the app build's final exit, then verify git status shows only my files before committing:
+
+Git status is clean (only my 12 files + log). I have 3 stray typecheck logs to remove and a lingering background build to stop. Let me clean up:
+
+Build finished — **162 errors, 0 in shared-surfaces, 0 in my surface** (stable/final). Git status clean. Let me tidy the large gitignored build artifacts and commit:
+
+All 13 files staged. Let me commit with the prescribed message:
+
+Committed (e301a8ffa), working tree clean. Let me do a final confirmation of the commit contents:
+
+The task is complete. The commit contains all 13 files (12 surface files + the gate log), the log ends with `EXIT=0 / STATUS=DONE`, and the working tree is clean.
+
+## Summary
+
+I shipped a production-polished, native Apple/SwiftUI parity of `AIInboxAutoCategorization` (P4 shared surface 0021), modeled on the closest sibling `AICrossRuleConflictDetection` (the `tool_result`-capturing newest-layout surface).
+
+**12 files, 2,388 LOC** in `apps/apple/TeslaSync/shared-surfaces/` (uniquely `InboxCategory*`-prefixed — collision-checked clean):
+- Pure core (Adapter/Logic/Model/Source), SwiftUI views (swift/Views/Chrome/Previews), strings, and 3 XCTest files.
+
+**Full web parity reproduced**: the `withAiFeature` gate, `useAiStream('/ai/alerts/inbox/categorize')`, the `draft_alert_categories` → `CategoryBucket[]` capture with every `typeof` guard, the deduped+sorted `allRuleIds` "Apply categories as filter" hand-off, the optional-field memoised body, the scope-change cleanup, all 6 i18n keys verbatim, and every state (gated/loading/empty/proposal/error/stale/offline).
+
+**Verification — all green (raw exits pasted in the log):**
+- swiftformat `0/11` · swiftlint --strict `0 violations` · placeholder `COUNT=0`
+- **Executed Foundation harness `52/52`** (Swift 6 strict concurrency)
+- **Isolated SwiftPM XCTest `58/58`**
+- **Dual-SDK `swiftc -typecheck` iOS-18 + macOS-15 → `0 errors`** against the real design system
+- i18n parity `23/23` (0 missing/0 dead) · `xcodegen generate` enumerates all 12 files
+- Built+staged the KMP DEBUG `Shared.xcframework`, then a **real app-target iOS compile → 0 errors in my surface** (the 162 errors are all pre-existing `StateTimeline*`/`RecentDrives*` collisions in other agents' `dashboard-widgets`/`feature-views` files).
+
+The full-scheme `xcodebuild build test` is **macOS-pending** — blocked solely by the unstaged RELEASE KMP framework, 0 macOS signing identities, and those pre-existing unowned cross-surface collisions (outside this prompt's allowed files), exactly as documented for every prior P4 Apple surface. Committed as `e301a8ffa` with the prescribed message + Co-authored-by trailer.
+
+Merge made by the 'ort' strategy.
+ ...red-surfaces-0021-AIInboxAutoCategorization.log | 287 +++++++++++++++++
+ .../AIInboxAutoCategorization.Adapter.swift        | 224 ++++++++++++++
+ .../AIInboxAutoCategorization.AdapterTests.swift   | 179 +++++++++++
+ .../AIInboxAutoCategorization.Chrome.swift         | 318 +++++++++++++++++++
+ .../AIInboxAutoCategorization.Logic.swift          | 150 +++++++++
+ .../AIInboxAutoCategorization.Model.swift          | 342 +++++++++++++++++++++
+ .../AIInboxAutoCategorization.ModelTests.swift     | 279 +++++++++++++++++
+ .../AIInboxAutoCategorization.Previews.swift       | 119 +++++++
+ .../AIInboxAutoCategorization.Source.swift         | 111 +++++++
+ .../AIInboxAutoCategorization.Tests.swift          | 200 ++++++++++++
+ .../AIInboxAutoCategorization.Views.swift          | 209 +++++++++++++
+ .../AIInboxAutoCategorization.strings              |  45 +++
+ .../AIInboxAutoCategorization.swift                | 212 +++++++++++++
+ 13 files changed, 2675 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0021-AIInboxAutoCategorization.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.swift

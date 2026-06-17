@@ -1,0 +1,212 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple app and toolchain availability.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the existing Apple modals-dialogs directory, the web `useChangelog` hook, and the changelog types.
+
+Let me read the changelog hook, types, and examine the existing modal patterns (Modal base + a list-based reference).
+
+Now let me understand the shared architecture — SharedFacade (P1/S8), Design tokens (P1/S9), and read a complete list-based reference modal (WidgetCatalogueDialog).
+
+The architecture is clear now. Let me read the shared facade primitives, design tokens, and the rest of the WidgetCatalogueDialog reference set to fully understand the pattern.
+
+Now let me read the full WidgetCatalogueDialog reference set (Model, States, Views, Rows, strings, Tests) plus the project.yml to understand build wiring and design tokens.
+
+Let me read the remaining reference files (Catalog/data, Projection/logic, Rows, Previews, tests) and the design tokens + project build config.
+
+Let me read the Adapter (enum/type definitions), Rows, Previews, and both test files for the reference, plus design tokens and build config.
+
+Let me read the design tokens, check for a shared Badge component, and read the reference Previews + test files plus build config.
+
+There's a shared `TSBadge` with `TSTone`. Now let me locate the core token definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) and the TSButton API.
+
+The token definitions must be in the app module. Let me locate them precisely and check the project build config.
+
+Found the generated tokens at `apps/design/generated/apple/Tokens.swift` (P1/S9). Let me read it and the project build config.
+
+Now let me read the project build config, the reference test files, and check the placeholder-check script + tesla-pipeline instructions are irrelevant here. Reading test patterns and build wiring.
+
+I now understand the architecture fully. Critically, I notice `project.yml` does **not** list `TeslaSync/modals-dialogs` in any target's sources. Let me investigate build feasibility (xcodegen, Shared.xcframework, how modals-dialogs gets wired) and check prior sibling logs.
+
+Key findings: no `.xcodeproj` (needs `xcodegen generate`), `modals-dialogs` is **absent** from `project.yml`, and `Shared.xcframework` requires a full Gradle/KMP build. Let me check git baseline and prior sibling logs to understand the intended state.
+
+The established protocol is clear: sibling modals all completed `STATUS=DONE` with the full `xcodebuild` deferred to the P99 acceptance gate (needs Shared.xcframework + signed macos-latest runner). Let me read a full sibling log, the pending-verifications doc, and check the placeholder script + pwsh availability.
+
+I now fully understand the protocol: **code-complete + independently verified on this runner** (swiftformat, swiftlint, placeholders, isolated SwiftPM build+test, iOS/macOS SDK typecheck all GREEN), with the full-app `xcodebuild` documented as DEFERRED (environment-blocked: KMP framework, sibling-surface collisions, macOS signing, modals-dialogs not yet globbed in project.yml). Let me read the lint configs, a bounded-modal reference, the a11y test pattern, and the rest of the changelog data.
+
+Let me check shared feedback/panel components, the bounded-modal chrome reference, the a11y test pattern, and scan for any `Changelog` symbol collisions.
+
+There's an atomic `TSChangelogModal` in the component library (out of scope) — my surface is `ChangelogModal` with `Changelog*`-namespaced types, no collision. Let me read the a11y test pattern and the `TSGlassPanel`/`TSFadeIn` signatures, then start building.
+
+I have the full architecture. Let me read the middle of the changelog data to port the catalog faithfully, then set up my plan and todos.
+
+I now have all 6 releases (0.7.0, 0.6.0, 0.5.0, 0.4.0, 0.3.0, 0.1.0). Before authoring, let me read the placeholder-pattern rules (to avoid false positives in ported release-note copy) and confirm the `.swiftformat`/lint constraints I must satisfy.
+
+The "placeholders" word (case-insensitive match) appears once in the 0.3.0 release notes — I'll add a `// parity:allow` opt-out there. Now let me finalize the design-system inventory for my verification harness: confirm which component files my views need and which import the KMP `Shared` framework.
+
+None of the Components/Design files import `Shared` (grep exited 1 = no matches), so they're SwiftUI-only and compilable against the SDK without the KMP framework. Let me confirm the full import set across Components and read `TSMaterial.swift` + re-confirm `Badges.swift`.
+
+Everything is confirmed: the entire `Sources/Components` + `Sources/Design` tree is KMP-`Shared`-free (only SDK framework imports), so I can verify views via SwiftPM (macOS SDK) + iOS/macOS `swiftc -typecheck`. Let me set up the plan and todo tracking, then author the 12 surface files.
+
+Now I'll author the surface. Starting with the pure-logic core (Adapter, Projection) and the ported data (Catalog).
+
+The Catalog needs faithful porting of all 6 releases. Let me first extract every change-text line that contains embedded double-quotes (must be `\"`-escaped in Swift) to avoid build errors.
+
+I'll generate the Catalog data programmatically from the source file to guarantee fidelity (correct escaping of quotes/markdown/unicode), rather than hand-transcribing 189 lines. Let me write a one-shot generator.
+
+The extractor grabbed the `[]` in the `ChangelogEntry[]` type annotation. Let me fix it to find the array after the `=`.
+
+Generated cleanly (6 releases, 189 changes, max line 431). Let me confirm the 4 embedded-double-quote lines were properly `\"`-escaped.
+
+All 4 embedded quotes are correctly escaped. I'll rename the factory funcs to ≥2 chars (`chg`/`rel`) to satisfy `identifier_name` min-length under `--strict`, regenerate, then assemble the full Catalog file.
+
+I'll restructure the data to avoid swiftformat's nested-call wrapping: per-release `changesNNN` arrays + a compact `all` array. Let me update the generator and regenerate.
+
+Now let me regenerate and assemble the complete Catalog.swift file (header + factories + generated body + lookups):
+
+Catalog assembled (271 lines). Now the Seams (telemetry/actions/source/strings/a11y) and Model.
+
+Now the view layer: main view, States (chrome + leaf states), and Rows (collapsible entry/section/badge).
+
+Now the Rows file — collapsible entry row, change sections with colored dots, and the tone-styled release badge.
+
+Now the Previews and the i18n strings catalog.
+
+Now the test files — model coverage and projection/adapter/accessibility coverage.
+
+All 12 files authored. Now the verification phase. First, format my files with swiftformat, then lint-check them.
+
+swiftformat formatted 6 files. Now confirm `--lint` is clean, check file lengths (Catalog must stay <400), and run swiftlint on the surface files explicitly (the repo `included` list doesn't yet cover modals-dialogs).
+
+swiftformat clean, all files <400 lines (max 315). One swiftlint issue: a wrapped function signature in Tests.swift triggers `opening_brace`. Let me view and fix it.
+
+Let me make the whole signature fit on one line so swiftformat won't re-wrap it (which is what triggered the brace conflict).
+
+swiftformat and swiftlint both clean (0 violations). Now the placeholder gate. I'll scan exactly my surface files (copied to a temp dir so siblings aren't included), and run a positive-control probe to prove the scan works.
+
+The scanner correctly flags the word "placeholders" in my Seams.swift comments (case-insensitive). The Catalog opt-out worked (ALLOWED=1). Let me find and reword all "placeholder" occurrences in my comments.
+
+Now re-run the placeholder scan and add a positive-control probe to prove the scanner is actually inspecting my files.
+
+Placeholder gate passes (COUNT=0, EXIT=0; positive control proved the scan works). Now the isolated SwiftPM build+test of the logic + model + tests under Swift 6 strict concurrency. Let me set up a temp package.
+
+Swift 6 strict concurrency caught a real issue (the global localizer must be `@Sendable`) — exactly what this harness is for. Let me fix it.
+
+All 41 tests pass under Swift 6 strict concurrency. Now the iOS + macOS SDK typecheck of the full view layer against the real design system. Let me re-lint the edited Tests.swift, then run the typechecks.
+
+Real bug caught: `ChangelogEntryRow` has a private `body` property colliding with `View.body`. Let me rename it.
+
+Fixed the `body` collision. Let me re-run both iOS and macOS SDK typechecks.
+
+The errors are entirely in an unrelated sibling (`UnitFormatters.swift`, which depends on app-level `UnitPreferences`/`Units` types outside the design-system subset) — not my code. I should typecheck against only the design-system files my views actually use. Let me determine my real dependencies.
+
+My views depend only on tokens + `TSButton`. Let me typecheck against the minimal real design-system closure (Tokens.swift + Buttons.swift) on both SDKs.
+
+All runnable verification gates are GREEN:
+- **swiftformat --lint**: 0/11 require formatting
+- **swiftlint --strict**: 0 violations in 11 files
+- **check-placeholders**: COUNT=0 / EXIT=0 (1 allowed opt-out; positive control confirmed)
+- **isolated SwiftPM build+test**: 41 tests, 0 failures (Swift 6 strict concurrency)
+- **iOS-18 + macOS-15 SDK typecheck**: 0 errors on both
+
+Now the prompt's two full-app `xcodebuild` gate steps. Let me generate the project, confirm the modals-dialogs tier isn't wired into it (so the full-app build is unaffected by my surface), and check the KMP/JDK prerequisite.
+
+Confirmed: the generated project has **0** `modals-dialogs`/`ChangelogModal` references (vs 3 for `feature-views`) — so the full-app build neither includes nor is affected by my surface. JDK 17 + gradlew are present. Let me run the two gate `xcodebuild` steps verbatim to document their real exits. Starting the iOS build (triggers the KMP framework pre-action, ~several min) in the background.
+
+iPhone 16 sim is booted. Starting the iOS full-app `xcodebuild build test` (it will build the KMP `Shared.xcframework` first via the scheme pre-action). Running async with output captured.
+
+iOS build running in background (it's compiling the KMP `Shared.xcframework` first). Let me monitor progress while it builds.
+
+The iOS build finished. Let me read its exit code and inspect the log for any errors attributable to ChangelogModal.
+
+The log/marker are missing — the backgrounded subshell didn't persist. Let me check for any running xcodebuild and re-run robustly.
+
+The log exists (183KB) and many `swift-frontend` processes are active — the orphaned subshell is still running (reparented, not killed). KMP framework is done; it's now compiling the app target. Let me wait for completion.
+
+iOS build **failed** — and every failing file is a pre-existing sibling surface (`RecentDrivesSection.*`, `RecentDrivesWidget.*`, `RecentlyUnlockedAchievements.*`, `RecentlyViewedWidget.*`, `RedisDiagnosticEmptyState.*`), none in `ChangelogModal`. Let me get the exact exit code and full error attribution.
+
+Key finding: my `xcodebuild -scheme TeslaSync` (no `-project`) resolved to **slot-14's** project (shared Xcode state in this parallel-execution environment) — the staging log and DerivedData are all slot-14 paths, and the failures are pre-existing sibling surfaces. **0 ChangelogModal mentions** in the entire log. Let me re-run pinned explicitly to slot-16's project with isolated DerivedData for clean, honest evidence.
+
+The lone slot-14 error is a pre-existing "compiler unable to type-check in reasonable time" in `RecentDrivesSection.Previews.swift` — a sibling surface, not mine. Now I'll run the iOS gate **pinned to slot-16's project** with isolated DerivedData, capturing the real exit.
+
+Pinned slot-16 build still running at 7 min (KMP framework + app compile). Let me check its progress.
+
+KMP framework for slot-16 is linking (Kotlin/Native — the slow phase). The app compile hasn't started yet. Let me wait for the build to complete.
+
+Pinned slot-16 iOS build completed: **IOS_EXIT=65**. Let me attribute the failure precisely (confirm it's slot-16 + 0 ChangelogModal errors).
+
+Clean slot-16 evidence: **IOS_EXIT=65**, framework staged from slot-16 (9344 slot-16 refs, 0 slot-14), **1** total error — in a pre-existing sibling surface `shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift`, **0 in ChangelogModal**. Let me capture the exact error line and run the macOS gate.
+
+macOS gate done: **MAC_EXIT=65**. The iOS error is confirmed pre-existing (`AIGeofenceAwareAutomationSuggestions.swift` — escaping-closure issue in a sibling surface). Let me confirm the macOS failure is signing (not my code).
+
+Let me capture the exact macOS error lines (confirming signing, pre-compile, 0 ChangelogModal).
+
+Both full-app gate steps confirmed **environment-blocked** (matching the documented disposition): iOS = pre-existing sibling-surface compile error, macOS = development code-signing (pre-compile), **0 ChangelogModal errors** in either. Now let me run a final consolidated verification on the exact committed files (I edited Rows/Seams/Tests/strings after the earlier lint), then clean up.
+
+All green. Let me re-run the isolated test with the final files (to confirm the committed state) and verify git status shows only my intended files.
+
+Everything verified clean: 41 tests pass, git shows only my 12 files, and the generated project/framework are gitignored. Let me grab exact final line counts, then write the gate log.
+
+Final counts: 11 Swift files + strings = 2243 lines; max file 315 (≤400); max code line outside the Catalog data 119 (≤120); Catalog data lines up to 429 inside the `line_length`-disabled block. Now writing the gate log.
+
+Gate log written. Now let me clean up temp artifacts and commit the surface + log.
+
+All 13 files staged (12 surface + log), no stray artifacts. Committing.
+
+Commit `aecfd801b` created; working tree clean (generated project/framework are gitignored). Let me finalize the todo tracking and do a last sanity check on the commit contents.
+
+The task is complete. Commit `aecfd801b` contains exactly the 12 surface files + the gate log (2493 insertions).
+
+## Summary
+
+Shipped a production-polished, native Apple **`ChangelogModal`** surface at parity with `web/src/components/feedback/ChangelogModal.tsx`, following the established `modals-dialogs` architecture (mirror of `WidgetCatalogueDialog`).
+
+**12 files** under `apps/apple/TeslaSync/modals-dialogs/ChangelogModal.*`:
+- **Logic** (SwiftUI-free): `Adapter` (types), `Projection` (verbatim `compareVersions` port + selection/grouping), `Catalog` (all 6 releases / 189 change lines, generated from the source for fidelity), `Seams` (P1/S11 telemetry, action seam, P1/S8 source, P1/S10 i18n facade, a11y), `Model` (`@Observable`)
+- **Views**: `ChangelogModal.swift`, `States` (header/chips/banners + loading/empty/error), `Rows` (collapsible release entry + grouped sections + tone-styled badge), `Previews`
+- **i18n** `strings` + **tests** `ModelTests`/`Tests`
+
+**Parity**: first-visit vs since-last-visit subtitle, collapsible per-release entries (version + Latest/Stable/Beta badge + date, first-two open), changes grouped by Keep-a-Changelog category with colored dots, View-full (opens releases URL) / Got-it (markSeen) footer, `view.opened` telemetry. All 6 prompt states render (loading/empty/error/stale/offline/populated + inline-error).
+
+**Verification — all runnable gates GREEN** (raw output pasted in the log):
+- `swiftformat --lint`: 0/11 · `swiftlint --strict`: **0 violations** · `check-placeholders`: COUNT=0/EXIT=0 (positive-control proven)
+- Isolated SwiftPM build+test: **41/41 pass** under Swift 6 strict concurrency
+- iOS-18 + macOS-15 SDK typecheck of the full view layer + real design system: **0 errors**
+
+**Full-app `xcodebuild` — DEFERRED per `apps/macos-pending-verifications.md`** (ran pinned to slot-16): `IOS_EXIT=65` (KMP framework built+staged, then a *pre-existing* sibling-surface defect in `AIGeofenceAwareAutomationSuggestions.swift`), `MAC_EXIT=65` (dev code-signing, pre-compile). **0 errors in any ChangelogModal file**; the tier isn't globbed into `project.yml` yet (acceptance-gate's job), so the full-app build is provably unaffected.
+
+```
+EXIT=0
+STATUS=DONE
+```
+
+The Swift 6 isolated build and SDK typecheck caught two real defects during authoring (a non-`@Sendable` global localizer and a `body` property colliding with `View.body`), both fixed before commit.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-modals-dialogs-0003-ChangelogModal.log | 250 ++++++++++++++++
+ .../modals-dialogs/ChangelogModal.Adapter.swift    | 189 +++++++++++++
+ .../modals-dialogs/ChangelogModal.Catalog.swift    | 271 ++++++++++++++++++
+ .../modals-dialogs/ChangelogModal.Model.swift      | 227 +++++++++++++++
+ .../modals-dialogs/ChangelogModal.ModelTests.swift | 286 +++++++++++++++++++
+ .../modals-dialogs/ChangelogModal.Previews.swift   |  55 ++++
+ .../modals-dialogs/ChangelogModal.Projection.swift | 140 +++++++++
+ .../modals-dialogs/ChangelogModal.Rows.swift       | 178 ++++++++++++
+ .../modals-dialogs/ChangelogModal.Seams.swift      | 232 +++++++++++++++
+ .../modals-dialogs/ChangelogModal.States.swift     | 315 +++++++++++++++++++++
+ .../modals-dialogs/ChangelogModal.Tests.swift      | 211 ++++++++++++++
+ .../modals-dialogs/ChangelogModal.strings          |  57 ++++
+ .../TeslaSync/modals-dialogs/ChangelogModal.swift  |  82 ++++++
+ 13 files changed, 2493 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0003-ChangelogModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.Rows.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ChangelogModal.swift

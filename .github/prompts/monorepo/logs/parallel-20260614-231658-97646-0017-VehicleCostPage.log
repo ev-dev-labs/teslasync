@@ -1,0 +1,187 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Now let me explore the Apple app structure and existing patterns.
+
+The directory structure differs from the prompt. Let me investigate the actual layout and existing patterns.
+
+The repo uses a multi-file component pattern in `feature-views/`. Let me examine the parity config and find existing page examples to mirror.
+
+Existing admin pages are already done. Let me find their actual Swift files to mirror the exact convention.
+
+Found the real convention: `apps/apple/Sources/Features/Admin/`. `DiskForecastPage` is the closest analog (table-based admin observability). Let me study it in full.
+
+Excellent reference. Now let me read the test file, web sources/types, and shared component definitions.
+
+Now let me read the exact web formatters and check the shared SwiftUI components + string catalog.
+
+Let me check the toolchain availability, project config, string catalog, and remaining tokens/components.
+
+Toolchain is fully available (xcodebuild, swift 6.3.2, swiftlint, pwsh, xcodegen). The gate can run. Let me read the remaining tokens, components, route registry, and string catalog structure.
+
+Now let me read the DiskForecast log (to mirror the exact log format) and inspect the xcstrings structure for diskForecast entries.
+
+The DiskForecast log is an excellent template. Now let me inspect the exact xcstrings entry format, the app route chaining, and design tokens.
+
+The `admin.subsystem.unavailableTitle` key already exists. I need to add the `admin.vehicleCost.*` keys. Now let me examine route registration (how `.admin` is shared) and design tokens.
+
+Now let me understand the route parser (how `/admin/vehicle-cost` resolves and how siblings alias dedicated routes), plus the design tokens.
+
+Now I understand routing. I'll add a dedicated `.vehicleCost` route mirroring the SchemaDrift/SlowQueries/SecretRotation siblings. Let me verify the route-string convention, check for route tests, and read the design tokens + remaining components.
+
+RouteTests is safe (no count assertions; `vehicle-cost` segment is unique). Now let me read the design tokens and remaining typography/card/skeleton components.
+
+Let me verify `TSSkeleton`/`TSTone` signatures, the test target config, and the `teslaSyncTheme` modifier.
+
+I now have a complete understanding. Let me set up a plan and todos, then implement.
+
+Now I'll create the model file.
+
+The model is done. Let me check how a sibling page (SlowQueries) binds a selector to its `@Observable` model, to use the established pattern.
+
+The sibling uses `@Bindable` + `.onChange` to trigger reload. Let me read the full SlowQueries page + model to mirror precisely.
+
+The sibling pattern uses `@Bindable` + `.onChange` + a `reload()` that keeps rows visible. Let me refactor my model to match this exactly.
+
+Now the page view, mirroring the SlowQueries/DiskForecast structure.
+
+Now the adaptive table file.
+
+Now the route registration, mirroring the SchemaDrift sibling.
+
+Now wire the route into `AppRoute`, the parser, and the app. Let me make the navigation edits.
+
+Now the parser alias and the app chaining:
+
+Now the string catalog. Let me add the `admin.vehicleCost.*` keys (the `admin.subsystem.unavailableTitle` key already exists) and `route.vehicleCost`.
+
+Let me validate the catalog JSON and verify the new keys.
+
+Now the model tests, mirroring the sibling test conventions (pure logic, no catalog lookups).
+
+Now let me update progress and run the formatter/linter on the new files.
+
+SwiftFormat flagged number grouping and line wraps in 2 files. Let me auto-fix with the formatter.
+
+SwiftFormat passes (0/8). Now swiftlint --strict on the changed files.
+
+SwiftLint passes (0 violations). Now the placeholder scan.
+
+Placeholder scan clean. Let me check whether the Shared.xcframework is staged and whether the pre-existing out-of-scope build breakage (noted in the DiskForecast log) still exists.
+
+The pre-existing breakage looks resolved (`@escaping` added), but `Shared.xcframework` isn't staged (KMP build is heavy). My page uses an injectable seam with no KMP import, so I'll verify via the established isolated `swiftc -typecheck` methodology (as the DiskForecast log did). Let me check the component library is KMP-free and gather the dependency set.
+
+Component library is KMP-free. Let me run the isolated Swift 6 strict-concurrency type-check of my files against the real tokens + components (the methodology the DiskForecast log used), starting with macOS.
+
+The whole `DataDisplay` dir pulls in `UnitFormatters.swift` (needs `UnitPreferences`, unrelated to my page). Let me narrow to the specific component files my code needs.
+
+Found a real bug — ambiguous `number(0, ...)` call (matches both `Int64`/`Double` overloads). Let me fix it.
+
+macOS type-check passes. Now the iOS variant (exercises the `#if os(iOS)` compact branches).
+
+Both type-checks pass. Now let me run a model harness to prove runtime correctness (the model/formatters), since the full XCTest bundle needs the unstaged KMP framework.
+
+Real finding: bare integer literals are ambiguous across the `Int64`/`Double` overloads. Production code always passes typed values (type-check passed), but my test + harness use bare literals. Let me fix both.
+
+All 46 harness assertions pass. Let me re-verify format/lint after edits and confirm xcodegen includes the new files in the project.
+
+xcodegen succeeds; all 4 source files + the test are wired into the targets (9 refs each, matching the DiskForecast pattern). Let me confirm the `.xcodeproj` is git-ignored and assess whether the KMP `Shared.xcframework` can be staged for a real build.
+
+`.xcodeproj` is correctly git-ignored. The KMP toolchain (gradlew + java) is present, so let me attempt to stage `Shared.xcframework` in the background for a real build/test — strongest evidence. Meanwhile I'll prepare the ledger and log.
+
+Let me start the framework build in the background and proceed with the ledger and log while it runs.
+
+While the framework builds, let me update the apple-ledger. Let me inspect its structure and the sibling rows.
+
+I'll insert the two VehicleCost rows after the SlowQueries block (before Users).
+
+The framework build shell returned (it was the launcher). Let me validate the ledger JSON and check the build progress.
+
+Ledger valid (33/33 for both platforms). The KMP framework build is progressing with cache hits. Let me wait for it to complete so I can run the real build/test.
+
+The background build was likely orphaned when its launcher shell exited. Let me check the log end and relaunch it properly detached.
+
+The build was progressing (cache hits) but got SIGHUP'd. Let me relaunch it properly detached and wait.
+
+Framework build relaunched detached. Let me wait for it to complete and stage.
+
+The release-framework link tasks are running (the slow final stage). Let me wait for completion.
+
+The framework build completed. Let me check the result.
+
+The KMP `Shared.xcframework` release assembly failed (`xcodebuild exit 70`) — a P1 predecessor artifact issue, outside this page's scope. Let me capture the exact error for the log, then confirm the full app build is consequently blocked.
+
+A `Shared.xcframework` was actually produced in the Gradle build dir — the failure was only in the final `-create-xcframework` wrapper step (exit 70, typically "output already exists" from the earlier SIGHUP'd run). Let me inspect it and stage it if valid.
+
+The xcframework is complete and valid (Info.plist + 3 slices). The Gradle failure was just the `-create-xcframework` refusing to overwrite. Let me stage it and run the real build.
+
+Framework staged and git-ignored. Now I need to handle the pre-build Run Script phase (it rebuilds the framework and failed at `-create-xcframework`). Let me inspect the script's full logic and how it's wired.
+
+The pre-build script reruns Gradle, which conflicts when the output already exists. A clean successful Gradle run makes subsequent runs UP-TO-DATE (skipped). Let me clean the stale output and run it once cleanly.
+
+Clean Gradle run succeeded in 18s (the earlier failure was just "output exists"). Now subsequent runs are UP-TO-DATE. Let me pre-stage the framework and run the real macOS build in the background.
+
+Build running. Let me gather LOC counts and write the evidence log while it compiles.
+
+Log drafted with placeholders for the build result. Let me check the macOS build progress.
+
+The macOS build is in the Swift module-emit phase (compiling the whole app target including my files). Let me wait for it to finish.
+
+Build failed (exit 65, 4 errors). I must determine whether any errors are in MY files or pre-existing out-of-scope ones. Let me extract them.
+
+All 4 errors are in ONE pre-existing, out-of-scope file (`shared-surfaces/Input.Previews.swift` — a `#Preview` result-builder bug), NONE in my files. This mirrors the DiskForecast precedent. Let me confirm it's untouched by me and check whether it's DEBUG-gated (a Release build might exclude it for a fully green build).
+
+Confirmed: the broken file is untouched by me and is `#if DEBUG`-gated (a pre-existing `#Preview` result-builder incompatibility). A **Release** build excludes all `#if DEBUG` previews — so let me try a Release build of the full app for stronger green evidence.
+
+While the Release build runs, let me confirm the Debug build's module pass actually compiled my files (proving they're clean even within the full app, including previews).
+
+The WMO build uses a filelist (no per-file names in the log), but zero VehicleCost diagnostics confirms cleanliness. Let me positively confirm my files are in the target's compile filelist.
+
+Confirmed: all 4 source files are in the macOS app target's compile filelist (compiled as part of the full app, zero diagnostics). Now let me check the Release build.
+
+Release build also failed (1 error, none in my files) — a different out-of-scope issue. Let me identify it.
+
+The Release error is in another out-of-scope sibling (`Features/Driving/DriveScorePage.Panels.swift` — a `LocalizedStringKey` mismatch), also untouched by me. Both build configs fail only on pre-existing out-of-scope sibling files — exactly the DiskForecast precedent. Let me finalize the log's build section.
+
+Now finalize the covenant note and EXIT/STATUS.
+
+I accidentally removed the COMMIT section. Let me view the end of the log and restore it.
+
+I need to restore the COMMIT section between DISPOSITION and EXIT/STATUS.
+
+Let me run final verification (format/lint/JSON) and check the full git status for any stray artifacts from the build.
+
+Clean — only my intended files. Let me run a final swiftlint pass on all changed Swift files, then commit.
+
+All in-scope gates green. Let me update the todos and commit.
+
+All 11 intended files staged. Let me commit.
+
+Commit succeeded. Let me do a final verification of the commit and clean up temp files.
+
+All 11 files committed cleanly (1686 insertions), no remaining tracked changes, temp files removed. Let me confirm the todo ledger is complete.
+
+All 8 todos complete. The task is finished and committed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-VehicleCostPage.log      | 261 +++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 308 +++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Features/Admin/VehicleCostPage.Table.swift     | 160 +++++++++
+ .../Sources/Features/Admin/VehicleCostPage.swift   | 298 +++++++++++++++++
+ .../Features/Admin/VehicleCostPageModel.swift      | 370 +++++++++++++++++++++
+ .../Admin/VehicleCostRouteRegistration.swift       |  26 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Features/Admin/VehicleCostPageModelTests.swift | 239 +++++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 11 files changed, 1686 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-VehicleCostPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/VehicleCostPage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/VehicleCostPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/VehicleCostPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/VehicleCostRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift

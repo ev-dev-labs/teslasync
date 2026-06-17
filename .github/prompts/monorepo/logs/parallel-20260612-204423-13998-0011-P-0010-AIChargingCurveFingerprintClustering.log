@@ -1,0 +1,132 @@
+I'll start by exploring the environment and understanding what's available, then read the web source specification.
+
+Apple toolchain is fully available. Let me read the web source spec and explore the native structure.
+
+Now let me study the existing native patterns. Let me find AI surfaces that use the same hooks (`useAiStream`, `withAiFeature`) as my target, and read a complete reference set.
+
+I have a clear picture of the web spec. Let me find the closest existing native AI surface analog. My target is a simple "vehicleId → Explain button → stream" AIFeatureCard. Let me compare a few candidate web sources and their native file structures.
+
+These three surfaces are structurally identical to my target. Let me examine the complete native file set for `AIBatteryHealthForecastNarrative` as my template.
+
+All three share the canonical 10-file structure. Let me read the complete `AIBatteryHealthForecastNarrative` set as my template.
+
+Excellent, this is a clean, well-defined pattern. Let me read the remaining template files in parallel.
+
+Let me read the remaining template files: Chrome, Previews, strings, Tests, and AdapterTests.
+
+Now the test files to complete the pattern understanding.
+
+I now fully understand the 10-file pattern. Let me verify build inclusion (project.yml), the placeholder checker, that no target files exist yet, and the shared tokens used.
+
+Let me check the test target config, tooling availability (pwsh, xcodegen), and the shared tokens.
+
+All tooling present. Let me check the test target wiring and confirm shared tokens exist.
+
+All tokens and tooling confirmed. Let me verify my planned type prefix is collision-free (the whole `shared-surfaces` dir compiles into one module, and a prior commit fixed symbol collisions).
+
+`ChargingClusterFingerprint` prefix is collision-free. Now let me read the lint configs so my files match style exactly, then I'll write the plan and all 10 files.
+
+Configs read. Let me verify the `private extension View` symbol-effect helper pattern is safely duplicated across existing surfaces (file-private), then I'll set up the plan and write files.
+
+Everything verified. Let me set up the plan and todos, then create all 10 files.
+
+Now creating the files, starting with the Foundation-only core (Adapter, Model, Projection).
+
+All 10 files created. Let me run the fast checks first — swiftformat, swiftlint, and the placeholder gate on my new files.
+
+swiftformat passes. Now swiftlint --strict and the placeholder gate.
+
+swiftlint clean (0 violations); my files contain zero forbidden patterns (the 54 count is pre-existing in *other* files). Let me run the exact gate-scoped placeholder command to confirm my surface passes.
+
+Let me confirm the placeholder script actually scans my files (not silently scanning nothing) by inspecting its path-resolution logic.
+
+The exact gate command resolves to a clean result (and my independent grep confirms zero forbidden patterns in my files). Now the real gate: generate the Xcode project and build+test. Let me generate and check simulators.
+
+Project generated; iPhone 16 simulator is booted. Let me confirm my files were picked up by xcodegen and prepare the log directory.
+
+All 10 files are in the project. Now the real gate — building the full app + test bundle. Let me start the iOS `build-for-testing` (the compile phase of `build test`), which validates that my code compiles within the entire module. This is a cold build, so it will take several minutes.
+
+Cold build of a large module is still running. Let me continue waiting for it to complete.
+
+The build is first compiling the KMP shared-core `Shared.xcframework` via Gradle (a prerequisite). 0 errors so far. Let me keep waiting.
+
+Now in the Swift app-compile phase (whole-module emit) with 0 errors. Let me keep waiting for the app + test bundle compilation to finish.
+
+Still in whole-module emit for the app target (0 errors). This phase is slow for a large target. Continuing to wait.
+
+Build failed (exit 65, 2 failures). The reported batch doesn't contain my files, but I must find the actual `error:` lines. Let me extract them.
+
+A Swift compiler crash (`llvm::report_fatal_error`), not a type error. Let me examine the crash backtrace and what it was compiling.
+
+The crash is a **swift-frontend IRGen crash** while emitting a reabstraction thunk for `AppearanceSettings.Controls.swift` — a file I did not touch. Let me capture the full crash signature and the fatal-error reason.
+
+This is a **swift-frontend IRGen memory-exhaustion crash** (`report_at_maximum_capacity` → `SmallVectorBase::grow_pod` inside `IRGenerator::emitLazyDefinitions`/`SyncCallEmission::setArgs`), not a type error. Evidence it's environmental, not my code:
+- The whole-module **type-check phase completed** (`EmitSwiftModule` succeeded, 0 errors).
+- The crash is in the later **IRGen codegen** of a compiler-generated reabstraction thunk in unrelated files (`AppearanceSettings.Controls.swift`).
+- The cold build compiled all ~thousands of files at full parallelism (peak memory) in a shared, non-sandboxed box.
+
+A warm/incremental retry compiles far fewer files concurrently → much lower peak memory. Let me retry with capped parallelism.
+
+Warm retry progressing with 0 crashes (Gradle framework now cached). Let me keep waiting for the app + test bundle to finish compiling.
+
+Build progressing deep into compilation with 0 crashes. Let me continue waiting for completion.
+
+Still compiling app-target files (including my AI surface) with 0 crashes. Let me keep waiting.
+
+Steady progress, 0 crashes, app target still compiling. Let me wait longer this time.
+
+Large app target still compiling (many feature-views) with 0 crashes — the capped parallelism is holding memory in check. Let me continue waiting.
+
+Same batch failed **identically** on retry (deterministic, capped-parallelism didn't matter) — and my files are NOT in the failing batch. This points to a pre-existing IRGen crash in baseline files. I must verify rigorously and honestly whether the baseline itself crashes. Let me extract the exact failed `swift-frontend` command to reproduce it in isolation (fast), then test with vs. without my files in the module filelist.
+
+Conclusive, fast causation test available: the failing batch has **25 primary files (none mine)**; the module filelist has **3950 files (7 mine)**. I'll re-run the exact failed `swift-frontend` command (a) as-is and (b) with my 7 files removed from the filelist — same primary batch. This directly proves whether my surface causes the crash.
+
+Setup correct. Let me run version A (as-is) to confirm the crash reproduces in isolation.
+
+Version A faithfully reproduces the crash (exit 134/SIGABRT) in ~1 minute. Now version B — identical command but with my 7 files removed from the module filelist.
+
+**Conclusive proof: the crash is pre-existing in the baseline, not caused by my surface.**
+
+- **Version A** (3950 files, includes my 7): exit 134 (crash)
+- **Version B** (3943 files, my 7 removed, same 25 primaries — none mine): exit 134, **identical** IRGen crash signature
+
+Removing my files changes nothing. The `TeslaSync` app target at HEAD does not compile under Xcode 26.5 / Swift 6.3.2 due to a deterministic `swift-frontend` IRGen crash (`report_at_maximum_capacity` in `emitLazyDefinitions`) emitting a reabstraction thunk for pre-existing files (`AppearanceSettings.Controls.swift`).
+
+My surface already passed swiftformat, swiftlint --strict, the whole-module **type-check** (module emission succeeded → 0 type errors), and the placeholder gate. Let me now demonstrate my pure-logic is runtime-correct by compiling/running it standalone (Foundation-only), then start the macOS build to verify it shares the same baseline blocker (not assume it).
+
+`-O0` isn't a swiftc flag (default is `-Onone`). Let me recompile without it.
+
+All 21 standalone adapter-logic assertions PASS at runtime on Swift 6.3.2 — my core logic is correct, independent of the broken app module. Now let me verify (not assume) the macOS target shares the same baseline blocker. I'll start the macOS build-for-testing in the background.
+
+macOS build started in background. Let me update my todos and check on its progress while I plan the faithful gate-log execution.
+
+The macOS build failed in only 8 seconds — too fast for a compile crash. Let me check what actually failed.
+
+macOS is blocked by a **different** pre-existing issue: code-signing/entitlements (no development certificate in this environment — `DEVELOPMENT_TEAM` is empty), failing *before* any compilation. So both platforms are blocked by pre-existing, non-surface issues:
+- **iOS**: baseline `swift-frontend` IRGen crash (proven independent of my files)
+- **macOS**: missing development signing certificate (runner capability gap)
+
+Now let me produce the authentic official gate log by running the exact canonical gate commands. Starting with the log header and the iOS `build test`.
+
+The canonical iOS gate is running (will hit the deterministic crash). Let me wait for it.
+
+Crash already recorded in the log; xcodebuild is finishing. Let me wait for it to exit and write IOS_EXIT.
+
+Authentic iOS gate captured: **IOS_EXIT=65** (`BUILD FAILED` + the `report_at_maximum_capacity` IRGen crash + `TEST FAILED`). Now the remaining canonical gate steps: macOS `build test`, swiftlint, swiftformat, placeholders.
+
+macOS gate captured: **MAC_EXIT=65** (signing/entitlements — no dev certificate). Now the lint/format/placeholder gate steps, appended to the log.
+
+Lint and format pass (0/0). The placeholder check itself passed (`PLACEHOLDER_COUNT=0, EXIT=0`) but the `tee` to the log failed due to a relative-path issue after `cd`. Let me re-append the placeholder result with an absolute path and verify the log.
+
+All gate steps recorded: `IOS_EXIT=65`, `MAC_EXIT=65`, `LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_COUNT=0`. Now let me append the comprehensive BLOCKED evidence appendix (with the A/B causation proof) and finalize the log per rule 10.
+
+The official log is complete and ends with `EXIT=65` / `STATUS=BLOCKED` (rule 10 satisfied). Let me check git status before committing the surface + log.
+
+Git status is clean — exactly my 10 surface files + the log (the generated `.xcodeproj` is correctly git-ignored). Let me commit the complete surface with an honest, transparent BLOCKED message.
+
+Committed cleanly (commit `7bf5df4f3`, 11 files). Let me clean up temporary artifacts and finalize the todos.
+
+Everything is committed and the tree is clean. Let me do a final verification that the committed log's terminal lines and gate exit codes are intact.
+
+The work is complete and verified. Final state confirmed: the committed log carries all gate exit codes and ends with `EXIT=65` / `STATUS=BLOCKED` (rule 10), with the full causation proof and surface-scoped green checks recorded.
+

@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source spec and explore the Apple app structure in parallel.
+
+Let me look at reference feature views and the FSM types. First let me find the relevant files.
+
+The `FSMStateDiagram` feature view is highly relevant (same FSM domain). Let me study it plus a recent complete reference, and find the FSM types.
+
+Now let me study the reference implementations. I'll read the TemperatureGauges set (recent complete reference) and the FSMStateDiagram set (same FSM domain, has state-color logic).
+
+Excellent, very clear architecture. Let me read the remaining reference files (Views, States, Previews, strings, Tests) and the FSMStateDiagram files for FSM color logic.
+
+Now let me read the test/preview/strings references and the FSMStateDiagram color logic, plus locate the shared P1/S9 tokens and P4 core components.
+
+Let me find the shared token/component definitions and the FSMStateDiagram color logic.
+
+The tokens are in `apps/design/generated/apple/Tokens.swift`. Let me read it and the key shared components (TSTone/Badges, TSFadeIn/Motion, TSEmptyState/States, TSSkeleton, tsGlassPanel).
+
+Now let me read the shared components I'll use (Badges/TSTone, Buttons, Motion, States, Skeletons, Material) and the FSMStateDiagram color logic.
+
+Let me read the FSM color mapping (FSMStateDiagram), the glass panel material, and the web date-format helpers I must reproduce.
+
+Let me check `useDateFormat`, the FSM color→Color view mapping, the project.yml source globs, and the FSMStateDiagram model pattern.
+
+Let me find all definitions of the FSM registry/color types and the `FSMStateColor → Color` mapping to decide the cleanest reuse.
+
+Let me see the `FSMStateColor → Color` mapping and the size/shape of the registry data to finalize my reuse decision.
+
+I now have a thorough understanding of the architecture. Before writing code, let me verify the build toolchain availability (critical for DONE vs BLOCKED) and confirm the i18n string-table conventions.
+
+All tooling is present (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh). Let me check simulators, scheme names, and project generation state.
+
+Let me view the schemes/test-target config, then generate the project and run a baseline build to establish the starting state.
+
+Let me inspect the Shared.xcframework staging dependency (a potential build blocker) and check if it's already present.
+
+The full build depends on a KMP `Shared.xcframework` built via Gradle (the long pole). Let me check that toolchain and kick off the shared-framework build in the background while I write code.
+
+Java 17 and gradlew are present. Let me start the shared-framework build in the background while I write the surface code.
+
+All gate tooling is available and the shared-framework build is running in the background. Let me record a plan and check the lint configs before writing code.
+
+Let me set up tracking todos and run baseline lint + project generation in parallel (these don't need the framework).
+
+Baseline shows a pre-existing lint violation in a sibling widget file. Let me investigate the full baseline lint/format state before adding my code, so I can distinguish pre-existing issues from mine.
+
+There's exactly one pre-existing violation, in a sibling widget file (not my scope). Let me determine whether it's a real issue or a swiftlint-version artifact, and check how recently that file landed.
+
+Let me check the baseline `swiftformat --lint` state (the other gate lint step) and whether swiftformat/swiftlint conflict on that sibling construct.
+
+swiftformat is green tree-wide (0/2432). This confirms the sibling lint issue is a pre-existing **swiftlint-vs-swiftformat conflict** in another surface's file — not cleanly fixable and outside my allowed files. Key takeaway for my code: avoid multiline if/guard conditions where the brace wraps to its own line. Let me check the gradle build progress.
+
+The gradle build is still running. Let me write the surface files now, starting with the Model (state-holder seam, telemetry, i18n facade).
+
+Now I'll create the Model file (state-holder seam, telemetry, i18n facade, source).
+
+Model done. Now the Adapter (pure web-parity projector, relative-time port, time/date formatting, preset labels).
+
+Now the Views file (panel, freshness chip header row, the timeline track with positioned colored ticks, and the FSM color→token mapping owned by this surface).
+
+The KMP framework build finished. Let me verify it and stage the xcframework (the scheme's pre-action will also do this, but pre-staging de-risks the build).
+
+Release xcframework built successfully. Let me stage it (fast now—gradle is cached) while I continue writing the Views file.
+
+Now the Views file:
+
+Staging done. Let me write the States file (freshness chip, connectivity banner, loading skeleton, actionable empty state, error state) and verify the framework staged.
+
+Let me fix the empty-state message to avoid the deprecated `Text.foregroundColor` (using AttributedString runs instead), then write the main view.
+
+Now the main view file:
+
+Now the strings catalog and Previews:
+
+Now the three test files (model, adapter+a11y parity, per-state view render):
+
+All 10 files are written. Let me auto-format my files, then run the scoped lint checks.
+
+swiftformat is clean. swiftlint flagged one issue: the 11-case color `switch` exceeds cyclomatic complexity 10. Let me refactor `StateTimelinePalette` to a dictionary lookup (complexity 1) and re-lint.
+
+My files pass both linters cleanly. Now let me run the placeholder check, then generate the project and attempt the build/test gate.
+
+Placeholder check passes (0). Now let me generate the Xcode project and start the iOS build+test (the heavy gate step).
+
+Project generated. Now the heavy gate step. Let me first run `build-for-testing` for iOS (compiles app + test bundle, surfacing any compile errors fastest) before running the full test suite.
+
+The build failed — let me extract the actual compile errors from the log.
+
+The temp log didn't persist. Let me re-run (incremental, faster) and capture errors to the persistent session folder.
+
+All errors are in sibling `dashboard-widgets/Charge*` files (duplicate type declarations like `ChargeLoadStatus`, `ChargeSessionDTO` colliding across two charge widgets) — none in my StateTimeline files. Let me confirm my files are error-free and characterize this pre-existing baseline breakage.
+
+Critical finding: the build has **173 pre-existing errors** from duplicate type declarations across ~12 sibling surfaces. Notably, a committed sibling `dashboard-widgets/StateTimelineWidget` already declares `StateTimelineModel`, `StateTimelineUpdate`, `FSMTransitionInput`, etc. Let me characterize this pre-existing breakage precisely (which committed files declare the duplicates, independent of my untracked files).
+
+My files are untracked; the collisions are with **committed predecessors** `StateTimelineWidget` and `FSMTimelineChart`. Per covenant rule 7 (no predecessor bypass), my surface must coexist, not clobber them. Let me read the sibling `StateTimelineWidget` to understand its type footprint and the intended relationship before deciding how to namespace.
+
+This is decisive: the committed `StateTimelineWidget` surface squats the entire `StateTimeline*` type namespace (Model, Update, Connection, Source, Telemetry, Strings, Projection, Palette, Accessibility, etc.), and `FSMTimelineChart` owns `FSMTransitionInput`. Per covenant rule 7 (no predecessor bypass), my surface must **coexist**, not clobber them. I'll namespace my support types as `StateTimelineView*` (keeping the unique main view `StateTimeline`). Let me verify those names are free, then rename.
+
+The `-h` flag hid filenames so the exclusion didn't apply. Let me re-check with filenames to confirm those matches are only my own files.
+
+Confirmed both names are free. Now I'll rename my support types to the `StateTimelineView*` namespace (keeping the unique main view `StateTimeline`) so my surface coexists with the committed `StateTimelineWidget`/`FSMTimelineChart` predecessors.
+
+Rename applied — only the main view `StateTimeline` keeps the bare name. Let me verify the diagnostics slug and i18n table strings are still literally "StateTimeline" (required by the prompt), then re-format and lint.
+
+Slug/table literals correct, format clean. Now swiftlint, then rebuild iOS to confirm my surface no longer collides.
+
+Lint clean after rename. Let me rebuild iOS and confirm my surface no longer contributes errors (only pre-existing sibling collisions should remain).
+
+My surface is now **clean — zero errors in any StateTimeline file**, and the `StateTimelineWidget` predecessor is de-collided. Total errors dropped 173→142. Let me characterize the remaining 142 pre-existing errors to prove they're all in committed sibling files outside my scope.
+
+Definitive: **0 of the 142 remaining errors are in my files** — all are pre-existing duplicate-type collisions in committed sibling surfaces (Charge×2, Safety×2, DrivingCoach widget+section, FleetStats, ChargeSessionChart). My surface compiles cleanly within the module.
+
+Since the broken baseline blocks the app-target test run, let me prove my **adapter + model tests actually pass** by running them in an isolated SwiftPM package (my real test code, copied, not committed).
+
+All **35 adapter + model tests pass** in isolation — including the web-parity time formatting ("02:20 PM"/"02:30 PM"), relative-time ladder, projector tick maths, FSM color resolution, and the state-holder seam (select/widen/jump/stale-auto-refresh/telemetry).
+
+Let me run the macOS gate build (honest `MAC_EXIT`) in the background and meanwhile capture the remaining gate steps. First, let me confirm the log directory and start the macOS build.
+
+Let me update tracking and capture the remaining gate steps (tree-wide swiftlint, swiftformat, placeholder) while macOS builds.
+
+Tree swiftlint: 1 pre-existing violation (0 mine). The macOS build finished — let me read its result and run the final two gate steps (swiftformat tree, placeholder).
+
+macOS build is blocked by **code-signing** (no dev certificate in this environment; `DEVELOPMENT_TEAM=""`) — plus it shares the same collisions; 0 errors in my files. swiftformat tree = 0, placeholder = 0.
+
+Now let me run the authentic gate (exact commands) and write the official log. Starting the full gate run:
+
+IOS_EXIT=65 (authentic). Now appending the macOS and lint/format/placeholder gate steps to the official log:
+
+All gate steps recorded: IOS_EXIT=65, MAC_EXIT=65, LINT_EXIT=2, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0. Now let me compute the evidence and append the honest analysis to the log.
+
+Zero compile errors in my files across both iOS and macOS builds. Now let me append the honest root-cause analysis and final status to the official log.
+
+The official log is complete with honest evidence and STATUS=BLOCKED. Let me verify the working tree is clean (only my allowed files + generated/gitignored artifacts) and confirm i18n key completeness.
+
+Working tree is clean (only my 10 allowed files + the log are untracked; the xcodeproj is gitignored), and all 9 source i18n keys are present. Let me do a final readability check on the renamed main view and empty-state to confirm the namespace rename produced clean code.
+
+The renamed code reads cleanly and idiomatically. Everything is verified. Let me finalize tracking.
+
+The StateTimeline surface is complete and verified within its allowed-files scope. The full-app gate is blocked solely by pre-existing, out-of-scope baseline breakage. Per the Honesty Covenant I'm reporting this transparently rather than forcing a green-on-red claim.
+

@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Let me explore the web source and Apple app structure.
+
+Now let me explore the Apple app structure in detail to understand the existing architecture, state holders, tokens, i18n, and diagnostics.
+
+Let me examine an existing shared-surface as a reference pattern, and check whether VehicleMultiSelect already exists.
+
+The file convention is clear. Let me find a reference surface that uses the `useVehicles` hook and read the AchievementUnlockedToast set as a template.
+
+This is a sophisticated KMP-backed architecture. Let me read the complete AchievementUnlockedToast set and the Vehicles domain to understand the full pattern.
+
+Let me read the remaining reference files and explore the Vehicles domain binding pattern.
+
+Let me examine how surfaces consume a vehicles list and find the native Vehicle model type.
+
+The pattern is clear now. Let me read the remaining reference files (States, Views, strings, Previews, Tests) and the design tokens/project config to fully understand conventions.
+
+Let me locate the design tokens and shared components (TSCard, TSButton, TSBadge, etc.) and read the Views/Tests/Previews reference files plus project config.
+
+Let me read the Views (freshness chip), Tests, Previews reference files plus Button/Skeleton/Fields signatures.
+
+Let me read the Tests and Previews reference files plus the project.yml build configuration.
+
+Now let me understand the build configuration and test target setup.
+
+Let me check the critical build prerequisites: xcodegen, the Shared.xcframework, and the build script.
+
+The app links `Shared.xcframework`, which must be built via Gradle (Kotlin/Native). Let me verify that toolchain and the shared module.
+
+Java 17 and Gradle wrapper are present, so the KMP framework is buildable. The first Kotlin/Native build is the long pole — let me kick it off in the background now while I write code. First let me set up tracking and start the framework build.
+
+Gradle is functional. Let me kick off the `Shared.xcframework` build in the background (the long pole) while I write the surface code.
+
+Let me verify the background build started and read the web Vehicle type plus the i18n/diagnostics conventions.
+
+Framework build is compiling Kotlin/Native (some cached). The web `Vehicle` shape confirms the fields I need: `id`, `display_name`, `model`, `vin`. Now I'll write the surface. Starting with the pure Adapter core.
+
+Now the Model file (state holder + telemetry seam + projection). Let me also check the framework build progress.
+
+Framework build is nearly done (assembling release XCFramework). Writing the Model now.
+
+Now the Seams file (Source protocol + production + in-memory sources).
+
+Let me verify the framework build finished, then continue with the States and Views files.
+
+Build is still linking the release framework. Continuing with the States chrome file.
+
+I referenced a non-existent helper. Let me fix the retry button to use the closure-based `TSButton` with resolved text.
+
+Now the Views file — trigger, options sheet content, rows, summary chip, and freshness chip with cross-platform sheet sizing.
+
+Now the main surface view that composes everything.
+
+Now the strings catalog and previews. Let me check the framework build too.
+
+Shared.xcframework built and staged. Let me mark that done and write the strings catalog plus previews.
+
+Now the Previews file covering each state.
+
+Now the comprehensive test suite.
+
+All 9 surface files are written. Let me check formatting/lint configs and tool availability, then auto-format my files.
+
+pwsh is available too. Let me auto-format my new Swift files to match house style, then lint them.
+
+Only 1 file needed reformatting. Let me lint my files specifically and check the formatting passes.
+
+4 violations to fix. Let me inspect the specific spots and check all file line counts.
+
+Let me fix all four violations. First the Previews helper (typealias to shorten) and the Views trailing-closure issue.
+
+Now let me split the wire/hydrate section out of the Adapter into its own file to fix the file-length violation.
+
+Now let me split the Model tests into a separate file. Let me find the Model test section boundary.
+
+Now create the ModelTests file and trim the model section from Tests.swift.
+
+All files now ≤347 lines. Let me re-run lint and format checks on the full set.
+
+Clean: 0 format issues, 0 lint violations. Now let me generate the Xcode project and run a build.
+
+Project generated and `Shared.xcframework` is staged. Let me run the iOS build to validate compilation (backgrounded, monitoring).
+
+Build log is empty after 2 min — likely xcodebuild is in initial setup or the Gradle pre-action. Let me check process state and wait.
+
+No `xcodebuild` process visible and log is empty. Let me check the background job status directly.
+
+The sync session was discarded, killing the background build. I'll use async mode for the long build. Starting the iOS build+test now.
+
+Let me monitor the iOS build while it compiles.
+
+Build/test pipeline finished. Let me check the actual result and my test outcomes from the full log.
+
+Two errors: one is mine (Previews private-type), one is pre-existing in another surface I don't own. Let me fix mine and investigate the pre-existing one.
+
+Confirmed: I only added `VehicleMultiSelect.*` files. The `AIAutoNameUnnamedLocations` error is pre-existing (an `@escaping` capture of a non-escaping `@ViewBuilder` param — a Swift 6.3 strictness issue). Since the whole app target compiles as one module, I must quantify how many pre-existing errors block the build. Let me enumerate all app-target compile errors.
+
+Grep returned no errors. Let me confirm the build result directly.
+
+Build failed but with 0 compile errors. Let me find the actual failure reason at the end of the log.
+
+There's a **Swift compiler crash** (not a source error). Let me examine the crash context to identify the trigger.
+
+The build hits a Swift 6.3.2 **compiler crash** on a batch of files (none of them mine) plus a pre-existing source error in `AIAutoNameUnnamedLocations.swift`. Let me extract the exact crash trigger and check whether this is a pre-existing baseline failure independent of my work.
+
+The crash is decisive: `report_at_maximum_capacity` during **IR generation for `AppearanceSettings.Controls.swift`** (a reabstraction-thunk for a `(Bool, Actor?)` closure) — a Swift 6.3.2 compiler bug in a file I don't own, plus a separate pre-existing source error in `AIAutoNameUnnamedLocations.swift`. Neither is mine. Let me prove the baseline fails identically WITHOUT my files by temporarily removing them and rebuilding.
+
+Now build the baseline (without my files) to prove it fails identically.
+
+Baseline build is running. Meanwhile, let me set up an isolated SwiftPM package to verify my testable core (Adapter + Wire + Model + Seams) and run the full unit-test suite independently of the broken app module.
+
+Now run the isolated test suite for my core logic.
+
+49 tests ran, 1 failure. Let me find the failing assertion.
+
+The summary logic is correct (web parity: `count < total` is false when equal → "2 vehicles" count branch); my **test expectation** was wrong. Let me fix the test to exercise the partial branch properly (fleet of 3 → "2 of 3 vehicles") in both the canonical file and the isolation copy.
+
+All 49 isolated tests pass. Let me check the baseline build (without my files) result.
+
+Decisive: the baseline (WITHOUT my files) **also fails** — `AISuggestNewGeofences.swift:129` has the identical `glass(@ViewBuilder content:)` escaping-closure error. This is a **systemic pre-existing bug** across many surface files under Swift 6.3.2, plus the IRGen compiler crash in `AppearanceSettings.Controls.swift`. None are mine. Let me restore my files, quantify the systemic breakage, and verify placeholders.
+
+4+ files share the pre-existing `glass` escaping-closure bug (plus the IRGen crash) — all out-of-scope. My files are restored. The official gate uses pwsh (available). Let me verify the log directory and run the placeholder check on my surface.
+
+check-placeholders passes (0). Now let me run the **actual official gate** via pwsh (faithfully, adapting only the absent `iPhone 16` → `iPhone 17 Pro`), writing to the official log path. This authentically captures the real EXIT codes. I'll create the gate runner and launch it.
+
+The gate is running (will take ~15-20 min through two failing builds). Meanwhile, let me verify my shipped files contain no forbidden placeholder words per the acceptance criterion.
+
+Only match is the word "placeholders" in a `.strings` comment describing i18next tokens (the tool already scored it 0, but I'll reword to be unambiguous).
+
+My surface is verified clean (lint, format, placeholders, 49/49 isolated tests). The gate is running to capture authentic results. Let me monitor its progress.
+
+iOS build is failing as expected. The gate continues to macOS, lint, format, placeholders. Let me keep monitoring.
+
+Gate runner completed. Let me read all the captured EXIT codes from the official log.
+
+Gate captured: **IOS_EXIT=65, MAC_EXIT=65** (pre-existing build failures), **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0** (all green). Let me confirm none of the build errors are in my files, and capture the pre-existing error fingerprints.
+
+Confirmed: **zero errors in my files.** The build fails only on pre-existing out-of-scope files (the `glass(@ViewBuilder content:)` escaping-closure pattern under Swift 6.3.2 — reproduced in the baseline build without my files). Let me gather the supporting evidence and append an honest BLOCKED epilogue to the official log.
+
+All evidence confirmed. Now let me append a structured, honest BLOCKED epilogue to the official gate log (ending with `EXIT`/`STATUS` per the covenant).
+
+The official log now ends with `EXIT=65` / `STATUS=BLOCKED` per the covenant. Let me update tracking, verify the working-tree state, and clean up temp artifacts.
+
+Working tree is clean — only my 11 surface files + the official log are present (xcodeproj/build are gitignored).
+
+Now the commit decision. The Honesty Covenant rule **"8 No commit on red"** is binding, and the gate is red (`IOS_EXIT=65`, `MAC_EXIT=65`) due to pre-existing out-of-scope breakage. Committing would risk violating that binding rule, whereas not committing violates none. I'll therefore **not commit**, leaving the complete, verified surface + the honest `STATUS=BLOCKED` log in the working tree (the canonical artifact location). Let me clean up scratch artifacts.
+
+The surface is complete and the working tree is finalized. Let me do a final consolidated verification of my surface's green evidence before concluding.
+
+My surface is fully verified. Final state is complete. Here's the summary.
+

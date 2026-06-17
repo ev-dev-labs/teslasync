@@ -1,0 +1,176 @@
+I'll start by understanding the environment and locating the key files for this task.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). This is not a BLOCKED scenario. Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source. Let me explore the existing Apple app structure to learn the conventions I must follow.
+
+Complex monorepo with XcodeGen + KMP `Shared.xcframework`. Let me examine existing shared-surfaces to learn the exact conventions, and check xcodegen availability.
+
+xcodegen 2.45.4 is available. The shared-surfaces directory is large. Let me examine the complete file set for a couple of representative existing surfaces to learn the exact pattern.
+
+Now I understand the per-surface file pattern (Adapter, AdapterTests, Chrome, Model, Previews, Projection, strings, main, Tests, Views). Let me study a complete representative surface end-to-end to learn the exact conventions.
+
+Excellent architecture. Let me read the rest of this template surface (Projection, Views, Chrome, Adapter, Previews, strings, Tests) to fully internalize the conventions.
+
+Let me read the remaining template files and find how `useFormatting`/currency is handled natively plus the design token definitions.
+
+Let me read the test/strings/previews files and locate the design-token + shared-component definitions, plus find how `useFormatting` currency is handled natively.
+
+Let me read the strings/previews files and find the design tokens, shared components, and how currency formatting (`useFormatting`) is handled natively.
+
+There's a `Currency` surface for formatting. Let me examine it plus the design tokens and shared components.
+
+The `Currency` surface (0083) sets an important precedent: a purely presentational surface that uses `useFormatting` and explicitly does *not* synthesize loading/error/stale/offline chrome the web lacks. `InsightsEngine` is similar (presentational, takes resolved data + `useFormatting`). Let me study Currency's full disposition and AnimatedNumber to decide the honest state model, plus read the design tokens.
+
+Strong precedent established. Let me verify how `InsightsEngine` is consumed in the web (to understand the empty/null branch correctly) and read the design tokens + AnimatedNumber's empty disposition before finalizing the design.
+
+I have the full token set. The web component has no current parent importer (it's a `@ts-nocheck` legacy/orphan component, but it's THE spec). Now let me read the web helpers and types I must port faithfully: `trendColor`, `fmtNumber`, `formatCurrency`, and the data type fields.
+
+Key finding: `trendColor` inverts (up→red/BAD, down→green/GOOD) for the `!trendGood` case. Let me get the `COLOR` constants and verify the exact data-type field names I must port.
+
+The design tokens map 1:1 to the web severity/trend hex colors. The web component is a legacy `@ts-nocheck` orphan that references a mix of SI and legacy fields — I'll port its analysis logic verbatim as the spec. Let me verify the remaining data-type fields and the shared components (TSFadeIn, GlassPanel equivalent, section title) before writing.
+
+Let me read the `TSGlassPanel`, `TSCard`, `TSSectionTitle`, and `TSPanelTitle` component signatures, plus `TSButton`/`TSSkeleton`, so I use them correctly.
+
+Let me check the `.tsGlassPanel()` modifier, the swiftlint/swiftformat config, and the placeholder-checker to ensure compliance.
+
+Let me read the rest of the placeholder checker (how it resolves `-Path`) and the banned-pattern list, since my files share the `InsightsEngine` path prefix.
+
+Now let me assess the biggest risk to a green gate: whether the project generates and the `Shared.xcframework` dependency can be satisfied on this runner. Let me check.
+
+The `Shared.xcframework` isn't present and requires a Kotlin/Native Gradle build; the `.xcodeproj` is generated. This is the key gate risk. Let me check toolchain feasibility (Java/Gradle) and the documented verification story.
+
+Java 17 + gradlew are present, but `Sources/` imports the KMP `Shared` module, so the full app build needs the `Shared.xcframework` (Kotlin/Native Gradle build). I'll pursue a real green gate while building my code in parallel. Let me create a plan, generate the project, inspect the Kotlin source, and kick off the xcframework build in the background.
+
+Plan saved. Now let me inspect the Kotlin source, generate the Xcode project, and kick off the xcframework build in the background.
+
+`xcodegen generate` succeeded and the Kotlin source is real. Let me kick off the `Shared.xcframework` build in the background (it must download Gradle 8.14.5 + Kotlin/Native, so it'll be slow) while I write the surface code.
+
+The xcframework build is nearly done (release linking, heavily cache-assisted from a sibling slot). Let me write the surface files while it finishes. Starting with the pure-Foundation adapter (data model + number formatting).
+
+Now the analysis core — the verbatim port of the 8 web analysis functions.
+
+Let me check the xcframework build (it was nearly complete) and then continue with the Model file.
+
+`Shared.xcframework` built and staged (ios-arm64, simulator, macos-arm64) — the full gate is now feasible. Continuing with the Model (i18n facade + telemetry seam + state-holder).
+
+Now the projection — localizing each insight into a view-ready card (currency/locale formatting, tones, icons, a11y).
+
+Now the description-text builders (the localized interpolation) and accessibility helper, kept in a focused file.
+
+Now the main view and presentational subviews.
+
+Now the i18n catalog contribution (table `InsightsEngine`) with every key's web-English fallback.
+
+Now the previews (DEBUG) covering populated, empty, single-insight, and light/dark.
+
+Now the test suites. First the adapter/analysis + number-formatting tests (Foundation-only, branch coverage for all 8 analyses).
+
+Now the projection + model + accessibility tests.
+
+All 10 files written. Let me verify line counts, scan for banned placeholder patterns, then normalize with swiftformat.
+
+No banned patterns, but two files exceed swiftlint's `file_length` default (400 warning → error under `--strict`). Let me normalize with swiftformat first (may change counts), then check swiftlint's threshold and split if needed.
+
+swiftformat normalized 7 files. Two files still exceed the 400-line `file_length` warning (→ error under `--strict`). I'll split the result-vocabulary types out of `Analysis.swift` and split the test file. Let me view the current Analysis.swift boundaries.
+
+The vocabulary types occupy lines 21–125. I'll move them to a new `InsightsEngine.Insight.swift` and trim `Analysis.swift`. Let me view the rest of Analysis.swift to preserve it exactly.
+
+I'll recreate the two files cleanly. Let me view the full remaining analysis body to preserve it verbatim.
+
+I'll split cleanly: remove the vocabulary block from `Analysis.swift` and move it to a new `InsightsEngine.Insight.swift`. Recreating both for reliability.
+
+`Analysis.swift` split done. Before splitting the test file further, let me run swiftlint to get authoritative violations (including whether `file_length` counts comments).
+
+Authoritative violations: (1) `opening_brace` in Analysis (swiftformat put `{` on its own line for the wrapped `if`), (2) `function_parameter_count` — `costSavingsText` has 6 params, (3) `file_length` on AdapterTests (confirms comments count). Let me view the relevant sections to fix precisely.
+
+Now I'll fix all three. Let me view the two Copy.swift builders that use currency, then apply edits.
+
+Now applying the fixes. First, Projection.swift (add `InsightFormatting`, rework `card`/`description`):
+
+Now the Copy.swift builders (use `formatting`):
+
+Now fix the `opening_brace` in Analysis.swift by combining the two energy-based guards:
+
+Now split the 454-line test file. Removing and recreating as two balanced files (number+charging+efficiency+battery, and the rest).
+
+Re-running swiftformat in-place, then swiftlint --strict, and re-checking line counts.
+
+All files now under 400 lines (max 320). Now verifying with swiftlint --strict and swiftformat --lint.
+
+Clean: **0 swiftlint violations, 0 swiftformat issues**. Now regenerate the Xcode project (to pick up new files) and locate a simulator, then build.
+
+iPhone 16 simulator is available. Let me run the iOS build (compile check across the whole app + my files) in the background.
+
+iOS build started. Let me monitor it.
+
+Build failed — but the errors are all about `RecentDrives*` types being "ambiguous for type lookup" in `RecentDrivesListWidget` (dashboard-widgets) and `RecentDrivesSection` (feature-views) — **none are my InsightsEngine files**. Let me confirm this is a pre-existing collision unrelated to my changes.
+
+Confirmed: only my `InsightsEngine.*` files are new (git status), and `RecentDrivesModel`/`RecentDrivesConnection`/`RecentDrivesUpdate` are each defined in **two pre-existing files** (`RecentDrivesListWidget.Model.swift` and `RecentDrivesSection.*`). My files don't reference them. Let me confirm these are genuine module-level collisions (not `fileprivate` or `#if`-gated) and that my surface is absent from the errors.
+
+The collision is genuine: both files declare `public final class RecentDrivesModel` / `public enum RecentDrivesConnection` at module scope, no `#if` guards — a pre-existing redeclaration. Let me confirm none of the 54 errors point at my files.
+
+**Definitive findings:**
+- **0 errors reference my `InsightsEngine` files** — my surface compiles cleanly inside the app build, and my `.strings` file validates + copies successfully (UTF-8, no error).
+- The 54 build errors are ALL pre-existing duplicate-type collisions in unrelated surfaces: `RecentDrivesListWidget` vs `RecentDrivesSection` and `StateTimelineWidget` vs `StateTimeline` (both `public` types redeclared at module scope, no `#if` guards, committed baseline — outside my allowed scope of `InsightsEngine.*`).
+
+Since the XCTest host can't build (pre-existing breakage), let me prove my logic is correct at runtime via a standalone harness compiling my pure-logic files + assertions.
+
+Compiling the harness with my pure-logic files (proving runtime correctness independent of the broken app target):
+
+Top-level code requires the file be named `main.swift` when compiling multiple files. Let me rename and recompile.
+
+The standalone compiler caught a **real bug** that xcodebuild's batch skipped (its type-check batch was abandoned after the RecentDrives failure): adding `let locale = …` before the `switch` in `description(for:formatting:)` broke implicit-return eligibility. Excellent — this is exactly why thorough verification matters. Let me fix it by inlining `formatting.locale`.
+
+Fixed. Now reformat + relint, recompile the harness (with Swift 6 + strict concurrency to match project settings), and check `Motion.swift` deps for a view typecheck.
+
+swiftlint clean (0 violations), and **my 6 surface logic files compiled cleanly under Swift 6 + strict concurrency** — the only error is in my throwaway harness driver (`failures` actor isolation). Let me fix the harness and also typecheck the SwiftUI view files.
+
+All 27 behavioral assertions PASS, and the logic compiled under Swift 6 + strict concurrency. Now let me typecheck the SwiftUI view layer (Views, main view, Previews) against the tokens + `TSFadeIn`.
+
+The SwiftUI view layer typechecks cleanly (exit 0). Now let me typecheck the test files too (merging into the module, with the XCTest framework) for completeness.
+
+Let me verify my (somewhat generic) type names don't collide with any existing surface — important so I don't worsen the baseline. The full-app build compiled my files with 0 errors (implying no redeclaration), but I'll confirm explicitly.
+
+No collisions — my type names are unique; my surface doesn't worsen the baseline. Now let me run the **actual gate steps** to capture authoritative exit codes for the log. Starting the macOS build (background) and running the fast checks.
+
+While macOS builds, let me run the fast gate steps (whole-tree swiftlint, swiftformat, placeholder check) and capture real exit codes.
+
+swiftlint --strict (whole tree): **LINT_EXIT=0, 0 violations**. swiftformat --lint: **FORMAT_EXIT=0**. Both gate steps green. Let me check the macOS build result.
+
+macOS build also FAILED with 0 InsightsEngine errors. Let me confirm the macOS failure is the same pre-existing collision.
+
+macOS build also FAILED — for a *different* unrelated reason: code-signing (empty `DEVELOPMENT_TEAM` + entitlements) and cross-slot DerivedData contamination (note the `slot-180` path), with **0 InsightsEngine errors**. Both gate builds fail entirely outside my surface.
+
+Let me capture authoritative exit codes by running the actual gate build commands (incremental, so faster), then assemble the log.
+
+Gate runner is executing in the background. Let me check the logs directory for an existing log format to match conventions while it runs.
+
+The gate runner completed. Let me read the captured exit codes and examine an existing log's format.
+
+The macOS error now references `slot-160` (vs `slot-180` earlier) — **confirming cross-slot DerivedData contamination**: parallel slots share `~/Library/Developer/Xcode/DerivedData/TeslaSync-<hash>` (same project name), corrupting concurrent builds. Let me read the runner's output and check what completed.
+
+The environment is shared across parallel slots (`/tmp` and Xcode DerivedData collide — sibling builds reference `slot-160`/`slot-180`, and a sibling `xcodebuild` is running now). The duplicate-type root cause is source-level (verified by grep, build-independent), so it's solid. Let me run ONE isolated iOS build with a slot-local `-derivedDataPath` to get an uncontaminated, authoritative result, and view a sample log format meanwhile.
+
+Key insight from the sample DONE log: the convention allows `STATUS=DONE` when the **build succeeds** + surface tests pass + lint/format/placeholder are 0, with only environmental/pre-existing *test-execution* issues documented. But my case differs — the **build itself fails** on pre-existing collisions. Let me read the isolated iOS build result.
+
+The source-level duplicate declarations make the iOS app target's failure irrefutable (build-independent fact), and my first build reproduced it. Let me capture one authoritative, **isolated** iOS build exit code (slot-local DerivedData to avoid sibling contamination), running synchronously.
+
+**Authoritative isolated iOS result: `IOS_BUILD_EXIT=65` (BUILD FAILED), 0 InsightsEngine errors** — failing exclusively on pre-existing `RecentDrives*`/`StateTimeline*` duplicate types. Now an isolated macOS build for an authoritative `MAC_EXIT`, then cleanup.
+
+**Authoritative isolated results (uncontaminated, slot-178):**
+- `IOS_EXIT=65` — pre-existing duplicate types, 0 InsightsEngine errors
+- `MAC_EXIT=65` — code-signing (empty `DEVELOPMENT_TEAM`), fails before compilation, 0 InsightsEngine errors
+
+Let me clean up build artifacts and verify git status is clean except my files.
+
+git status is clean — only my 13 files (xcodeproj is gitignored). Let me capture the precise duplicate-declaration evidence (including StateTimeline) for the log.
+
+Both collision pairs confirmed with exact line evidence (162 errors across 10 unrelated files, 0 in InsightsEngine). Now writing the comprehensive, honest gate log.
+
+Log written. Let me do final housekeeping: verify git status, confirm no stray build dirs, and confirm the log is in place.
+
+Everything is in order. Let me update the plan to reflect the final outcome before reporting.
+
+I've completed the surface and verified it exhaustively. Here is my honest final report.
+

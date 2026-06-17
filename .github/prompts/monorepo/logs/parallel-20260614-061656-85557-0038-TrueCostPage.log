@@ -1,0 +1,191 @@
+I'll start by exploring the repository structure to understand the task, then examine the web source page and existing Apple app infrastructure.
+
+Now let me explore the Apple app structure, the parity manifest, and supporting infrastructure.
+
+The Apple app structure differs from the prompt's expected path. Let me explore it thoroughly.
+
+The actual structure uses `feature-views` rather than `Features/`. Let me find existing analytics pages to follow conventions, and check whether a TrueCost page already exists.
+
+This is a large, sophisticated codebase using a multi-file surface convention. Let me check tooling availability and examine reference implementations in parallel.
+
+Excellent — full Apple toolchain is available (Xcode 26.5, swiftlint, xcodegen, pwsh). The gate is NOT blocked. Let me study the conventions: an existing page, the cost-breakdown model, PageContainer, and ChartContainer.
+
+Let me study the page convention (AlertStudioPage), the cost widget's view/adapter/chart, ChartContainer, and PageContainer.
+
+Now I understand the convention deeply. Let me examine the chart infrastructure, design tokens, navigation, and the AITCONarration surface that the page composes.
+
+There's a `Sources/Features/Analytics/` directory with real feature pages. That's where TrueCostPage belongs. Let me explore it.
+
+This is the exact pattern. `StatisticsPage` and `FleetComparePage` are the templates. Let me study StatisticsPage in full — it's an analytics page with charts.
+
+Let me read the Statistics charts, sections, models, format, route registration, and sample — plus the FleetCompare charts for bar/area patterns.
+
+Now let me find the shared chart wrappers (TSAreaChart/TSBarChart/TSChartContainer), the Units facade, and the remaining Statistics files (Sections, Models, Format, Route, Sample).
+
+Let me read the chart component wrappers, the Units facade, and the AppRoute/navigation system.
+
+Let me read the Statistics Models, Format, Sections, Sample, plus the currency formatter and the AppRoute system.
+
+Let me read the Statistics Sections, Sample data source, the AppRoute system, and locate the strings catalog + parity ledger.
+
+Let me examine the route host registry, the ledger entry, and a completed analytics-page log for the expected format.
+
+Let me examine the completed StatisticsPage log (to model format/parity), the placeholder gate script, and where route registrations are composed.
+
+Let me read the rest of the StatisticsPage log — the gate transcript and the PARITY section format.
+
+I now understand the full pattern, including that the full `xcodebuild` is pre-existing RED (documented by siblings). Let me read the Statistics Sections (stat-card pattern), check AppRoute switch-exhaustiveness risk, and get the web CostBreakdown data shape.
+
+WatchDeepLink switches over its own enum — safe. Adding a `.tco` AppRoute case only touches AppRoute.swift + parser (navigation infra). Let me get the full web CostBreakdown type and the design-token component APIs.
+
+Let me read the exact component APIs I'll use: TSStatCard, States, Badges, Cards, Typography, PieGauge, and the units environment.
+
+Let me read the Statistics tests (to model mine) and check for AppRoute/parser tests that could be affected by a new route case.
+
+I have all the conventions. Let me confirm the chart palette colors (to pick EV-cyan vs gas-red indices), then I'll write the plan and start implementing.
+
+I have everything needed. Let me set up tracking and write the plan, then implement.
+
+Let me verify the web `formatCurrency` default precision and check which strings already exist in the catalog.
+
+Web `formatCurrency` = `currencySymbol + fmtNumber(amount, decimals)` (default precision 2, not locale-currency). I'll match that exactly. Now creating the foundation files.
+
+Foundation files done. Now the sections (hero cards + savings breakdown + skeleton + no-data panel).
+
+Now the three charts (cumulative-savings area, cost-per-km bar, monthly EV-vs-gas bar).
+
+Now the main page view with adaptive layout, phase switch, AI-narration composition slot, and previews.
+
+Now wiring navigation. Let me add the `.tco` route case and parser aliases.
+
+Now the route registration, modeled on the sibling.
+
+Now wire it into the app composition:
+
+Now the XCTest suite, modeled on the sibling.
+
+Foundation, sections, charts, page, route, nav, and tests are in place. Let me run the fast in-scope gates: swiftformat, swiftlint, and the placeholder scan.
+
+Only 3 long lines in the test file. Let me auto-format all my files with swiftformat (write mode), then re-lint.
+
+swiftformat clean. Now swiftlint --strict on the analytics dir and edited nav files.
+
+Now the placeholder scan. Let me check the script's interface, then run it on the real analytics path.
+
+The redaction line carries a `// parity:allow` marker (matching the sibling pattern). Let me run the placeholder gate on the real analytics path.
+
+Placeholder gate passes (COUNT=0). Now let me assess the build. First check whether the Shared.xcframework is staged and generate the project.
+
+Project generates cleanly with TrueCost files included. The `Shared.xcframework` isn't staged (a 10-min Gradle build) and the full app build is pre-existing RED on the `TeslaSync/*` AI-surface tree (documented by sibling DONE pages). Let me prove my code with a standalone logic harness that compiles and executes the real model + formatters, then attempt the in-scope type-check.
+
+Harness compiles. Let me run it.
+
+Harness passes 34/34 — the real model + formatters type-check and execute correctly. Now let me kick off the `Shared.xcframework` build in the background (needed for the whole-module type-check) while I do the strings, ledger, and log. First check the toolchain.
+
+JDK 17 + gradlew present. Let me kick off the `Shared.xcframework` build in the background (~10 min) and proceed with strings/ledger/log meanwhile.
+
+The background build is running. Now let me add the strings. First, let me understand the xcstrings catalog format.
+
+The background build finished quickly — let me check its result, and view the exact catalog entry format.
+
+The `xcfw` shell was just the launcher; the Gradle build continues under `nohup`. Let me check its real progress and confirm the catalog format used by sibling `statistics.*` keys.
+
+Gradle build is progressing (mostly cached). Now let me add the 33 catalog keys with a Python script that inserts a formatted block and validates JSON — matching the sibling's en-only entry style.
+
+Strings added and JSON-validated. Now the ledger rows — let me insert them after the Statistics rows and validate JSON.
+
+The `Shared.xcframework` build is still running (linking the release framework now). Let me verify the worktree's shared dir and wait for it to stage.
+
+`apps/shared` is a real dir but Gradle reported a `slot-37` output path — these parallel slots appear to share a Gradle build cache. Let me wait for the script to finish staging and verify the framework lands in slot-38.
+
+The parallel slots share a Gradle cache and a build is contending — staging in slot-38 is unreliable and I shouldn't disrupt other slots' shared daemon. Let me check whether any `Shared.xcframework` was produced on disk that I can point a type-check at.
+
+There's a freshly-built `Shared.xcframework` (with a `macos-arm64` slice) in slot-38's own build dir. Let me stage it and type-check the real `Sources/**` tree (my files + real components, excluding the broken `TeslaSync/*` tree) against it — no stub drift.
+
+Let me check the Shared module path and whether `Sources/**` is self-contained, then run a real type-check against the staged framework.
+
+`Sources/**` only references `TeslaSync/*` surfaces in comments — it's self-contained. Let me inspect the Shared module layout, then type-check all of `Sources/**` + design tokens against it.
+
+The Shared framework exposes a Clang modulemap (Kotlin/Native ObjC interop), so `-F` resolves `import Shared`. Let me type-check the whole `Sources/**` tree + design tokens for macOS against it.
+
+6 errors total, but none in my files. Let me see what the 6 errors are.
+
+All 6 errors are in one pre-existing file (`TeslaOrdersPage.swift`), which references `ActiveOrdersModel`/`ActiveOrdersSection` from the excluded `TeslaSync/*` tree — not a defect, just my exclusion. **Zero errors in my files.** Let me re-run excluding that one cross-coupled file to confirm a fully green type-check.
+
+All errors are pre-existing cross-tree couplings in Admin pages (`UsersPageModel`, `TeslaOrdersPage` referencing `TeslaSync/*` surfaces) — **none in my files**. swiftc's error-recovery surfaces more as files are removed. Let me do a focused type-check of my analytics dir + the real component/token/facade closure (excluding the admin pages and the app-composition file) to get a definitive green.
+
+Down to 4 errors (2 distinct) — `AuthTokenProviding` missing, referenced by the foundation file `AppContainer.swift`. Let me locate that type's dir and include it.
+
+The focused set just needs `AppContainer`'s dependencies satisfied (it's a kitchen-sink foundation file pulled in for `UnitPreferences.metric`). Let me see the Sources layout and add the foundation dirs.
+
+Foundation dirs are clean of cross-tree coupling. Let me add `Sources/Auth` (satisfies `AppContainer`) and re-run the focused type-check.
+
+Still whack-a-mole in foundation UI files (`RootView`→`AppShell`), unrelated to my work. The first full-Sources run remains the strongest evidence (0 errors in my files). Let me do one clean targeted check: exclude the Auth `UI/` shell files that pull in `AppShell`.
+
+**Clean GREEN: 0 errors** across 95 files — my 8 analytics files + my nav edits + the REAL component library, design tokens, and Shared framework, type-checked for macOS under Swift 6 strict concurrency. Now let me confirm the iOS-only branches (`#if os(iOS)` size-class code) type-check too.
+
+**Both macOS and iOS focused type-checks: 0 errors.** My files are fully type-correct against the real components on both platforms. Let me verify every parity string literal actually appears in my sources before writing the evidence log.
+
+All 32 parity strings are referenced in source. Let me write the evidence log and do a final catalog sanity check.
+
+All 33 catalog keys present. Now let me write the evidence log.
+
+Log written. Let me run a final consolidated verification of the in-scope gates and check git status to confirm only intended files changed.
+
+Clean change set — exactly the allowed scope (8 source files + 1 test + the log; 5 tracked edits to nav/strings/ledger), with the xcodeproj and staged framework git-ignored. Let me run a final consolidated pass of the fast gates and clean up temp artifacts.
+
+All final in-scope gates green: placeholders COUNT=0, swiftformat 0/12, swiftlint --strict 0. Let me clean up temporary artifacts.
+
+Clean final state — Frameworks restored to `.gitkeep`, only the intended change set remains. Let me mark tracking complete and commit the work (the prompt's final step), staging the real files.
+
+All 15 intended files staged. Now the commit, following the prompt's conventional-commit format.
+
+Commit succeeded (`060255d91`), working tree clean. Let me do a final verification of the todo ledger and the committed diffstat.
+
+Everything is complete and verified. All 13 todos done, commit clean.
+
+## Summary
+
+Implemented the native **SwiftUI / Apple HIG** parity of the web `TrueCostPage` (`/analytics/tco`) at full **51/51 parity** (9 panels + 6 charts + 4 states + 32 strings), adaptive across macOS + iOS.
+
+**Files (committed `060255d91`, 15 files, +2081):**
+- 8 new sources in `apps/apple/Sources/Features/Analytics/` — `TrueCostModels`, `TrueCostFormat`, `TrueCostPageModel` (+`.Sample`), `TrueCostPage` (+`.Sections`, `.Charts`), `TrueCostRouteRegistration` — following the sibling Statistics/FleetCompare pattern (the *real* build path; the prompt's `TeslaSync/Features/` path isn't a build input, documented in the log).
+- Navigation: new `.tco` `AppRoute` case + `/analytics/tco`/`/tco` parser aliases + app composition — reachable **without displacing** the sibling `.analytics`/Statistics host.
+- `+33` catalog keys (32 parity strings verbatim from web `t(key,default)` + `route.tco`); JSON validated.
+- `apple-ledger.json` `+2` rows (macOS/iOS → done 51/51); evidence log.
+- 24-case XCTest suite.
+
+**Verification (all in-scope gates GREEN):**
+- placeholders `COUNT=0`, swiftformat `0/12`, swiftlint `--strict 0`
+- **macOS + iOS** `swiftc -typecheck` (Swift 6, strict concurrency) of my files against the **real** component library + design tokens + `Shared.xcframework`: **0 errors each**
+- Logic harness executing the real model + formatters: **34/34**
+
+**Honest caveat:** the full `xcodebuild` triad is **not** taken to green here — it's pre-existing RED on the out-of-scope `TeslaSync/*` AI-surface tree (same as the sibling DONE pages) plus shared-Gradle-cache contention across the parallel slots. In-scope verification is comprehensive and green; `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-analytics-TrueCostPage.log     | 221 +++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 363 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   5 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   2 +
+ .../Features/Analytics/TrueCostFormat.swift        | 109 +++++++
+ .../Features/Analytics/TrueCostModels.swift        | 134 ++++++++
+ .../Features/Analytics/TrueCostPage.Charts.swift   | 230 +++++++++++++
+ .../Features/Analytics/TrueCostPage.Sections.swift | 291 +++++++++++++++++
+ .../Sources/Features/Analytics/TrueCostPage.swift  | 199 +++++++++++
+ .../Analytics/TrueCostPageModel.Sample.swift       | 136 ++++++++
+ .../Features/Analytics/TrueCostPageModel.swift     | 137 ++++++++
+ .../Analytics/TrueCostRouteRegistration.swift      |  21 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Analytics/TrueCostPageModelTests.swift         | 216 ++++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 15 files changed, 2081 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-analytics-TrueCostPage.log
+ create mode 100644 apps/apple/Sources/Features/Analytics/TrueCostFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/TrueCostModels.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/TrueCostPage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/TrueCostPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/TrueCostPage.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/TrueCostPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/TrueCostPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/TrueCostRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Analytics/TrueCostPageModelTests.swift

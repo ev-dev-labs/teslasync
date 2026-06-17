@@ -1,0 +1,46 @@
+I'll start by exploring the repository structure to understand the task context — the web source component and the existing Apple app architecture.
+
+Now let me explore the existing Apple app structure to understand the architecture, P1/S8 state holders, P1/S9 tokens, P1/S10 i18n facade, and P4 core.
+
+Let me look at the feature-views directory and existing similar panels to understand patterns.
+
+The `feature-views` directory exists with many panels following a multi-file convention (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`). Let me study the most related existing panel (ThermalLoadPanel — temperature domain) and a clean reference (EnergySummaryPanel) to learn the exact patterns.
+
+This pattern is excellent and thorough. Let me read the remaining ThermalLoadPanel files (Views, Previews, Tests) and the shared component/token references.
+
+Let me examine the Previews, the `.strings` i18n file format, design tokens, and the useUnits facade to understand the full toolkit.
+
+Now let me examine the design tokens, shared components (Cards/GlassPanel, MetricCard equivalent, Badges), the Units facade, and how project.yml includes files.
+
+Let me read the EnergySummaryPanel (uses units, takes a snapshot), the shared UI components, the instruction file, and project.yml to understand file inclusion and whether panels use the Units facade or reimplement.
+
+Now let me examine the web `ClimateSnapshot` type, the `useUnits` hook, and the native shared components (Cards/GlassPanel, data-display MetricCard, Badges, motion/skeleton) plus project.yml.
+
+Let me read the design tokens, Cards (GlassPanel/TSCard), Typography (TSMetricLabel/Value/Caption), Badges, Skeletons, Motion, and Buttons to learn exact APIs.
+
+Design tokens aren't in Sources — they must be generated or packaged. Let me check project.yml and the design token generation.
+
+Design tokens live in `apps/design/generated/apple`. Let me read those plus the remaining shared components (Badges, Skeletons, Motion, Buttons, Typography).
+
+Now let me read the Typography, Skeletons, Motion, and Buttons components to learn their exact APIs.
+
+Let me read Buttons, the lint configs, and check toolchain availability (xcodebuild/swiftlint/swiftformat) since the gate is critical.
+
+All tools are available (Xcode 26.5, swiftlint, swiftformat, xcodegen, pwsh) — this is buildable, not a BLOCKED scenario. Let me verify the exact web `formatTemperature` behavior (precision, empty display, symbol spacing) and the unit-conversion instructions to ensure faithful parity.
+
+I now have the full toolkit. Let me verify the web `MetricCard` visual, the placeholder-check tool, and the log directory before writing code.
+
+Let me read the placeholder-check tool to know exactly what tokens it flags, so my code/comments don't trip it.
+
+I have everything I need. All tools are available (Xcode 26.5, swiftlint, swiftformat, xcodegen, pwsh). Banned words in code: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented" — I'll avoid these. Let me set up tracking and write the plan.
+
+Now I'll write the Adapter (pure core). Marking the todo in progress.
+
+Now the Model file (state-holder seam, projection, telemetry, i18n facade).
+
+Now the main view `ClimatePanel.swift`.
+
+Now the Views file — the parity-critical subviews (temp tiles, setpoints, HVAC, fan meter, system badges with a flow layout, and loading/empty/error chrome).
+
+Now the Previews and strings files.
+

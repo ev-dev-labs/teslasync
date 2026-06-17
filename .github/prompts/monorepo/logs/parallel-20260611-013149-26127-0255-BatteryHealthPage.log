@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure to understand the current state of the codebase and the task requirements.
+
+Let me check for the Xcode toolchain availability and explore the apple project structure, since the gate depends on it.
+
+Xcode 26.5, Swift 6.3.2, swiftlint, and xcodegen are all available. Let me explore the apple project structure in depth.
+
+This is a large, mature project (5207 Swift files). Let me examine the existing conventions — particularly how feature pages are structured and whether a Battery page already exists.
+
+No existing `BatteryHealthPage`, but many battery component surfaces exist (`BatteryHealthSection`, `BatteryComparison`, `BatteryTab`, `AcDcStatsPanel`, etc.). The repo uses a multi-file per-surface convention. Let me examine the parity infrastructure, localization, navigation, and an existing page example.
+
+Pages live under `Sources/Features/<Domain>/` (e.g., `Sources/Features/Admin/`), and there's a single `Localizable.xcstrings` catalog. `pwsh` is available. Let me read the rest of the web page and examine the existing structure, parity infra, and a reference page.
+
+Existing completed pages: Admin, Analytics, Automations. Let me study a reference page (StatisticsPage — charts-heavy) and the parity log/ledger format used by predecessors.
+
+Excellent — the StatisticsPage log reveals the exact conventions and gate methodology. Let me study the reference page's full log header and its key source files.
+
+Now I fully understand the established methodology. Let me set up tracking and read the reference page implementation plus continue the web source. Let me check the Shared.xcframework state and read key reference files in parallel.
+
+Shared.xcframework is not staged (needed for full type-check). Let me check the build script and Java toolchain, and read the model/data-seam reference files.
+
+Java 17 + gradlew are present, so I can stage Shared.xcframework. It takes ~10 min, so let me start it in the background now while I continue studying the reference implementation.
+
+The Gradle build is running. Let me examine navigation routing (does `/battery` map to a route?), the Sample/Format/Sections/Charts reference files, and confirm available chart wrappers.
+
+`/battery` aliases to the `.energy` route. Let me inspect the routing files and registration chain to understand ownership (covenant #7).
+
+Key finding: `/battery` aliases to `.energy`, which is currently **unregistered** — so I register `BatteryHealthPage` for `.energy`, mirroring how Statistics took `.analytics`. Let me read the app composition and remaining reference files (Sample, Format, Sections, Charts).
+
+I now understand the model/format/route/sample patterns well. Let me read the Sections + Charts reference views, the Units facade, and continue the web source.
+
+I have a complete picture of the page conventions. Now let me read the web battery page body and confirm the available chart wrappers (AreaChart, ComposedChart, etc.) plus the Units facade.
+
+Let me read the chart component library and Units facade, and continue the web page.
+
+Let me read the remaining chart wrappers (Bar, Pie/Gauge, Container), check whether feature code may import Charts directly, and continue the web page.
+
+I now have the full chart toolkit (`TSRadialGauge`, `TSChartContainer`, `TSComposedChart`, `TSAreaChart`, `TSBarChart`, `TSPieChart`, `TSLineChart`). Let me continue reading the web page render body and check the build progress.
+
+Build is progressing (linking frameworks). Let me finish reading the web page.
+
+I've now read the entire web page. The 27-panel mapping aligns perfectly with document order (1=Hero, 2=MetricBars, 3-9=summary cards, 10=Thermal, 11-14=thermal cards, 15=Insights, 16-17=charts, 18=ChargeDist, 19-23=NewVsNow, 24=AC/DC, 25=ChargingStats, 26=QuickLinks, 27=Recommendations). Let me set up tracking and gather the last component details.
+
+`TSMetricBar`, `TSStatCard`, `TSCard`, `TSBadge`, `TSButton`, `TSIconBox`, `TSTone`, typography components, and `TSChartPalette` all exist. Let me read their exact signatures and the design tokens, then set up my plan.
+
+Let me read the typography, cards, buttons, and design-token signatures, plus check the build progress.
+
+The Gradle build is nearly done. Let me read the final component signatures (Button, Card/GlassPanel, EmptyState/ErrorDisplay) and the design tokens.
+
+I have all component signatures. Let me grab the design tokens, finish reading the error boundary, confirm the `tsUnits` env, and check the build completion.
+
+The Color.TS/Font.TS/spacing tokens are generated design tokens. Let me locate them, and the build is still finishing its last link step.
+
+I now have every component, token, and the full web source mapped. Let me set up my plan and task tracking, then verify the last couple of API signatures.
+
+Let me read the placeholder patterns to avoid tripping the scanner, then I'll start building.
+
+I have complete knowledge of the codebase patterns. Let me set up my plan and todo tracking, and confirm the build finished.
+
+Shared.xcframework is staged (build succeeded in 7m). Let me check the lint/format configs so my code matches house style, then start writing.
+
+Now I have complete style knowledge. Let me build the feature. Starting with the SI value-type models.
+
+Let me check the web number-format helpers so my formatters match, then write `BatteryFormat.swift`.
+
+Default precision is 2. Let me write `BatteryFormat.swift`.
+
+Now the insights/recommendations builder (web `buildInsights`/`buildRecommendations`).
+
+Now the `@Observable` model with the data-source seam and all web derivations.
+
+Now the sample/empty/failing data sources.
+
+Now the charts file (4 hero gauges + trend/range/distribution/breakdown chart sections).
+
+Now the sections file (all panels + skeleton). This is the largest file.
+
+Now the main adaptive page view.
+
+Now the route registration. Let me check the FleetCompare registration which passes `onNavigate`, to mirror that pattern.
+
+Now the route registration. Let me view the exact app composition lines to craft a precise edit.
+
+Now let me create the route registration and wire it into the app composition.
+
+Now the XCTest model tests.
+
+All feature files are written. Let me update progress and run swiftformat on the new files to match house style.
+
+My Battery files formatted cleanly. The App edit needs reindentation. Let me run swiftformat on that file and verify the diff stays localized to my edit.
+
+The App diff is localized to my route-host edit and properly reindented. Let me confirm format is clean and run swiftlint --strict.
+
+swiftformat is clean (0/11). Let me wait for swiftlint to finish.
+
+swiftlint linted the whole repo (config `included` overrode my paths) and found 24 pre-existing violations. I need to confirm none are in my files. Let me scope properly.
+
+Clear list of (all structural) lint violations in my files: file/type/function length and 2 long lines + 1 trailing-closure. The `WidgetChartSummary.Tests.swift` ones are pre-existing (not mine). Let me stop the re-run and fix mine by splitting files and functions.
+
+`sessionsVehicle1` ballooned to 66 lines after wrapping, and the Sections file is 709 lines — both exceed repo limits. These are all structural (length) violations. Let me view the current Sections file to split it accurately.
+
+I have the full content. Let me split the oversized Sections file into three files (fixing the 2 long lines and the trailing-closure issue), and slim the Sample + Insights files. Starting with the Sections split.
+
+Now let me refactor `BatteryInsights.swift` to split the long function, and add a `withID` helper.
+
+Now slim the Sample file (delegate to static helpers) and move fixtures to a separate file.
+
+Now split the oversized test file into a shared support file plus two test files. Let me remove the old one and create them.
+
+All files split. Let me re-format and re-lint, filtering for violations in my files only.
+
+swiftformat clean. Now swiftlint --strict, filtered to my files.
+

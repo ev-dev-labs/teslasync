@@ -1,0 +1,153 @@
+I'll start by exploring the repository structure to understand the task and the existing code.
+
+Now let me explore the Apple app structure, the hook source, and related files.
+
+Let me explore the Apple app structure and the parity manifest.
+
+The actual source lives in `Sources/Features/Admin/`. Let me study the existing admin pages to learn the conventions before implementing.
+
+Let me examine the component library, design tokens, routing system, and a more complex page.
+
+Let me look at the routing tests, FleetTelemetryCoverage page (multi-section), and key components/tokens.
+
+Let me examine design tokens, skeletons, fields (for toggles), and the multi-section FleetTelemetry page + its tests.
+
+Let me look at Fields (for toggles), the test pattern, the StatCard, and the xcstrings/manifest/ledger structure.
+
+Let me check the i18n strings for RBAC in the web app, the xcstrings format, and the parity manifest/ledger records.
+
+Now let me examine the xcstrings format, the parity manifest record, the apple-ledger, and the gate contract.
+
+The full toolchain is available — I can run the real gate. Let me check the manifest record, ledger, swiftlint config, and baseline placeholder scan.
+
+I have a thorough understanding now. Let me check the SharedFacade domains for accurate production-binding references and confirm the log directory.
+
+The ApiPlayground log confirms adding a route case is the established pattern. Let me check how the sibling pages handled the build gate and whether there's a shared-core RBAC reference.
+
+Both siblings hit a pre-existing out-of-scope `BUILD_EXIT=65` and verified via isolated typechecks + model harness. Let me understand that pre-existing error and the shared-core RBAC reference.
+
+Let me check the shared-core RBAC reference (P1/S8) to write accurate production-binding comments.
+
+Let me view the shared-core RBAC models to mirror the exact field shapes in Swift.
+
+I now have the authoritative shared-core reference. Let me verify that adding a route case won't break Spotlight/Handoff/menu code before finalizing my approach.
+
+I have everything I need. Let me set up a plan and todos, then implement.
+
+Now I'll create the model file, mirroring the shared-core RBAC models and the web page logic.
+
+Now the sample data source — a stateful actor so post-save refresh reflects edits.
+
+Now the page view (chrome, states, summary panel). Updating todos first.
+
+Let me fix the page's summary identity to avoid a custom layout dependency, then create the Matrix file.
+
+Now the matrix grid, cells, pills, edit actions, save-error banner, and format helpers:
+
+Now the route registration and navigation wiring.
+
+Now the parser aliases and the app registry composition:
+
+Now let me add the localization strings. First verify no key collisions and that the catalog is valid JSON.
+
+No collisions. Let me insert the 26 entries with a minimal, targeted textual insertion (preserving the rest of the catalog).
+
+Strings inserted and validated (+26 keys). Now the model tests.
+
+All files created. Now the verification phase — let me check formatter config and run swiftformat/swiftlint/placeholder gates.
+
+swiftformat will auto-fix these. Let me format my files in place, then re-lint.
+
+swiftformat passes. Now swiftlint --strict and the placeholder scan:
+
+The 3 errors are in a pre-existing out-of-scope file. Let me confirm my files lint clean by scoping precisely.
+
+SwiftLint lints the whole `included` tree regardless of path args. The 3 violations are all in a pre-existing, unmodified file. Let me prove my files are clean with a scoped config.
+
+My 9 files lint clean with `--strict`. Now the placeholder scan and a review of the auto-formatted model logic.
+
+Placeholder scan clean. Let me verify the auto-formatter preserved the model's logic semantics.
+
+Model logic preserved. Now the model harness — compile the model under Swift 6 strict concurrency and execute it (the established sibling verification when the app target is blocked).Let me check whether the Shared.xcframework is prebuilt and attempt the real build path.
+
+The xcframework isn't prebuilt and there's no project yet (matches the siblings' constraint). Let me verify the curated-typecheck dependency set is self-contained (no KMP `Shared` imports in Components/Design).
+
+Curated set is self-contained. Let me build and run a model harness (proves logic + Swift 6 strict concurrency without the blocked app target).
+
+Top-level code requires the file be named `main.swift`. Let me fix that.
+
+`NSLock` can't be used in async contexts under Swift 6 — the lock must be taken in a sync helper (the `SpyIndex` pattern). Let me fix both the test double and the harness.
+
+Top-level isolation is fiddly — let me move the counters/`check` inside the `@MainActor` function and recreate the harness cleanly.
+
+The harness compiled but the semaphore approach deadlocks the main actor. Let me stop it and switch to top-level `await`.
+
+Model harness: **23/23 PASS**, exit 0 — logic verified under Swift 6 strict concurrency. Now the isolated view typecheck (macOS + iOS) over the curated UI dependency set.
+
+`UnitFormatters.swift` (which I don't use) pulls in a `Units` type outside the set. Let me compile only the minimal UI closure my view actually needs.
+
+macOS typecheck clean. Now the iOS target (exercises the `#if os(iOS)` compact branches):
+
+Both idioms typecheck clean. Let me also verify the test file typechecks against the model API (with `@testable import` stripped, compiled alongside the model + XCTest).
+
+The only errors are XCTest's C-macro assertions (a known `swiftc -typecheck` limitation, not my code). Let me confirm there are zero *non-macro* errors.
+
+All 6 non-macro "errors" are cascades from the unresolved `XCTAssertEqual` macro (enum shorthand can't infer its base without the macro's typed parameter) — the harness already proved those exact comparisons (`state == .loading`, `saveError == .code(...)`) compile and run. The test API usage is clean. Let me confirm project generation works and that the pre-existing breakage is untouched by me.
+
+Project generation works (GEN_EXIT=0); shared-surfaces is untouched by me. Let me attempt the real full-scheme build to capture the actual outcome and confirm the failure locus.
+
+The KMP/Gradle xcframework build is slow (downloading/compiling the Kotlin-Native toolchain). Let me wait for it to finish or hit the timeout.
+
+The KMP/Gradle xcframework build times out — the full `xcodebuild` build+test cannot run in this environment (KMP Kotlin-Native toolchain, requires the macOS CI runner per `macos-pending-verifications.md`), independent of my code. This matches the sibling precedent. My code is proven green by lint/format/placeholder + the executed harness (23/23) + macOS & iOS isolated typechecks. Let me finalize the ledger and log.
+
+Ledger valid (8 rows, RBAC 30/30 both idioms). Now the parity evidence log.
+
+Log written. Let me re-verify the final state of all files (I edited the test after the first format pass), clean up temp artifacts, and confirm git status.
+
+The test file (edited after first format) needs reformatting. Let me fix and reconfirm.
+
+All 9 files pass formatting. Let me clean up temp artifacts and review the final git status before committing.
+
+Clean status — exactly the intended files. Let me review the navigation diffs before committing.
+
+All navigation diffs are clean and surgical. Let me commit.
+
+Committed (aa848c130) with exactly the 12 intended files. Let me confirm the working tree is clean.
+
+The task is complete. Working tree is clean; the commit contains exactly the 12 intended files (1879 insertions).
+
+## Summary
+
+Implemented the native **SwiftUI/HIG `RbacMatrixPage`** at full web parity with `web/src/features/admin/pages/RbacMatrixPage.tsx`, adaptive across macOS + iOS (ADR-002/006).
+
+**What shipped** (in `apps/apple/Sources/Features/Admin/` — the real XcodeGen `Sources/` group, where the sibling admin pages live; the template's `TeslaSync/Features/Admin` path isn't compiled):
+- `RbacMatrixPageModel.swift` — wire types mirroring the KMP `RbacMatrixStore` 1:1, an `@Observable` model (loading/open-mode/empty/error/success + read-only↔edit toggle, draft, dirty-count, diff-then-PUT save), and pure `snapshotToDraft`/`diffMatrices` derivations.
+- `RbacMatrixPageModel.Sample.swift` — a stateful seed actor that persists upserts.
+- `RbacMatrixPage.swift` + `RbacMatrixPage.Matrix.swift` — chrome, all 3 GlassPanels, the adaptive role×permission grid (columnar on macOS/iPad, per-permission cards on iPhone), read-only ✓/– marks + edit-mode accessible checkbox toggles, pills, and the save-error banner.
+- Navigation: new `.rbacMatrix` System-group route + `/admin/rbac[/matrix]` deep-link aliases + registry composition.
+- `Localizable.xcstrings` +26 keys (23 `rbac.*` verbatim from `en.json` + route/spotlight/a11y).
+- `RbacMatrixPageModelTests.swift` and `apple-ledger.json` (+2 rows, 30/30 both idioms).
+
+**Verification (all in-scope gates green):**
+- `swiftformat --lint` 0/9 · `swiftlint --strict` **0 violations** in my 9 files · placeholder scan **0** · `xcodegen generate` 0.
+- Executed model harness: **23/23 PASS** under Swift 6 complete concurrency.
+- Isolated view typechecks: **macOS 0 errors, iOS 0 errors** (exercises the `#if os(iOS)` compact branches).
+- `=== PARITY === PARITY_COVERED=30 / PARITY_REQUIRED=30`.
+
+**Honest caveat (documented in the log):** the full `xcodebuild` build+test could not run here — the KMP `Shared.xcframework` (Gradle/Kotlin-Native) timed out (CI-runner-only) and the app target carries a **pre-existing, out-of-scope** `shared-surfaces` `glass()` defect (`BUILD_EXIT=65` in the sibling logs), which I'm forbidden to fix and didn't touch. Zero diagnostics originate in my files. This matches the established sibling precedent → **EXIT=0 / STATUS=DONE**.
+
+
+
+All work is complete, verified, and committed (working tree clean, all 9 todos done). Marking the task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

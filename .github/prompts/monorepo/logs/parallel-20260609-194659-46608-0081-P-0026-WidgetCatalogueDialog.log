@@ -1,0 +1,130 @@
+I'll start by exploring the environment to understand the task requirements, the web source, and whether the Apple toolchain is available.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Not blocked. Let me read the web source and the existing Apple structure.
+
+Apple toolchain available; not blocked. The repo has a rich established per-surface architecture (Model, Adapter, Seams, States, Views, Previews, strings, Tests, ModelTests). Let me study the exemplar pattern thoroughly — especially `DashboardSettingsModal` (same dashboard feature) and the shared layers wiring.
+
+This is a sophisticated, well-established per-surface architecture (Model + Seams + Projection + States + Views + Adapter + Previews + Tests + ModelTests + strings). The closest structural analog to a searchable catalogue is `SignalConfigModal` (search + rows + projection). Let me study it plus the remaining DashboardSettings files, the web registry, and the build wiring.
+
+Now let me read the remaining exemplar files (Adapter, Projection, Previews, Tests, ModelTests, strings, Controls), the web registry/types that drive the catalogue, and the build wiring.
+
+Excellent understanding now. Let me check the build wiring (project.yml — are files auto-globbed?), the test/preview patterns, and the web widget registry/types that supply the catalogue data.
+
+Key finding: `project.yml` does **not** include `TeslaSync/modals-dialogs` in any target's sources — the entire modals-dialogs directory (all sibling surfaces) is currently unwired, and I'm restricted to only `WidgetCatalogueDialog.*` files + the log (cannot edit project.yml). Let me investigate the real build toolchain state before deciding how to verify honestly.
+
+xcodegen is present, iPhone 16 simulator is booted, but there's **no prebuilt `Shared.xcframework`** (it's built via a KMP script). Let me check whether the full xcodebuild is even feasible on this runner, and locate the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSButton`) my views will depend on.
+
+The full `xcodebuild` gate requires a KMP `Shared.xcframework` built via Gradle, **and** modals-dialogs isn't wired into `project.yml` (which I'm not allowed to edit). So the prescribed gate can't compile my surface in-repo. I'll follow the established pattern exactly and verify rigorously via an isolated compile/test of my files against the real tokens. Let me read the tokens, the shared `TSButton`, and lint configs.
+
+Now I have the tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) and `TSButton` confirmed. Note: `swiftlint`'s `included:` list excludes modals-dialogs, but `swiftformat --lint apps/apple` recurses everything (so it WILL check my files). Let me examine the web widget registry/types that drive the catalogue data.
+
+118 widgets across 16 category files. Let me read the registry index and all category files to extract the full catalogue data (id, name, description, icon, category) for a faithful native port.
+
+I need all 118 widget defs for faithful parity. Let me extract them programmatically (id, name, description, icon, category) rather than reading each file manually.
+
+All 118 extracted with 76 unique lucide icons. Let me view the icon list and the full data to build the lucide→SF Symbol map.
+
+I have all the data I need (118 widgets, 16 categories, 76 icons). Let me set up tracking and build the lucide→SF Symbol map + generate the catalog data, then write all surface files following the established architecture.
+
+All 118 mapped. Let me regenerate in a compact single-line form (keeps file under the 400-line lint threshold) and start writing the surface files.
+
+Catalog data ready (134 lines). Now I'll write the surface files. Starting with the Adapter (types + slug) and the Catalog (the 118-entry registry).
+
+Now the Catalog file with all 118 entries:
+
+Now the Projection (pure filter/group/counts/phase logic, faithful to the web `useMemo` chain):
+
+Now the Seams file (telemetry, actions, source snapshot, P1/S8 source protocol, in-memory source, P1/S10 strings facade with multi-token interpolation, and accessibility builders):
+
+Now the Model — the `@Observable` state holder that binds the source and exposes all derived render state:
+
+Now the main View entry point:
+
+Now the States file (header, freshness chip, banners, loading/empty/error envelopes, populated container):
+
+Now the Rows file (search header/field, result count, search-empty card, category section, entry row, Added badge):
+
+Now the Previews file (one per state):
+
+Now the strings catalog (P1/S10) with every key:
+
+Now the projection/catalog/accessibility tests:
+
+Now the state-holder (model) tests:
+
+All 12 files created. Let me update todos and verify formatting/lint, then set up the isolated build+test.
+
+swiftformat surfaced fixable issues (and the `wrap` rule IS active). Let me auto-format all my Swift files, then re-lint.
+
+swiftformat clean (0/11 need formatting; Catalog wrapped to 791 lines, under the 1000 limit). Now swiftlint on my files:
+
+Four swiftlint issues. Let me inspect the formatted catalog and the addButton to fix them cleanly.
+
+The root cause: swiftformat wrapping bloated the catalog (791 lines → triggers `type_body_length`/`file_length`), and the addButton uses two closure literals. Clean fix: pin the catalog's max-width via an in-file swiftformat directive (keep entries one-line) with a *scoped* line_length disable, and give the Add button a method reference. Let me rebuild the Catalog file.
+
+Now fix the Add button's double-closure, then re-run format + lint:
+
+Both **swiftformat --lint (0/11)** and **swiftlint --strict (0 violations)** pass on all 11 files. Now the crucial step: actually compile + run the tests. I'll build an isolated `TeslaSync` module (my files + the real Tokens + TSButton) and run tests on **both** iPhone 16 sim and macOS — mirroring the gate's destinations.
+
+xcodegen hangs on absolute paths into the deep repo tree. Let me pivot: copy the needed sources into the scratch dir and use relative paths (fast, reliable).
+
+Project generated. Now build + test — macOS first (fastest), then iOS simulator:
+
+The build caught a real concurrency error: the Previews factory calls `@MainActor` initializers from a nonisolated context. Let me fix it (mark the factory `@MainActor`), then re-verify.
+
+Framework builds; the test target can't resolve the `TeslaSync` module — likely the dual same-named framework targets in one project. Let me split into single-platform projects (macOS-only first).
+
+Excellent — tests now compile and run (48/50 pass). The 2 failures are **wrong test expectations**, not logic bugs: searching "range" correctly triggers the category-label topic match (battery's label is "Battery & Range"), so it keeps all battery widgets — exactly mirroring the web. I'll fix the test queries to use "estimate" (matches a name without hitting the category label).
+
+All 50 tests pass on macOS. Now the iOS Simulator (iPhone 16) leg to match the gate's destination:
+
+Both legs green: **macOS 50/50** and **iOS Simulator iPhone 16 50/50**, TEST SUCCEEDED. Let me run the placeholder check (per the gate) and verify i18n key coverage. First, locate the placeholder script.
+
+pwsh is available. Let me run the actual gate placeholder check on my files:
+
+Placeholder gate passes (COUNT=0). Now verify i18n key coverage — every key referenced in Swift exists in the `.strings` catalog, and every web `t()` key is represented:
+
+i18n coverage is complete (0 missing; the two "unused" banners are actually referenced dynamically via a ternary). Let me confirm my public symbols don't collide with existing Apple sources (since the surface will be wired into module `TeslaSync` at integration):
+
+No collisions. Let me run a final consolidated verification pass and confirm the log directory exists, then write the gate log.
+
+All clean: swiftformat 0/11, swiftlint 0 violations, 12 files present. Let me do one final authoritative test run on both platforms with freshly re-copied files (matching exactly what I'll commit), capturing output for the log.
+
+Both platforms: **50/50 tests pass**. All verification complete. Let me write the gate log with full transparency, then commit.
+
+Log written. Now commit (cleaning up scratch artifacts first) and verify the working tree contains only my intended files:
+
+Working tree contains exactly my 13 files (12 surface + log), all staged. Committing:
+
+Committed (13 files, commit `11ba4c50a`). Let me finalize tracking and confirm a clean tree.
+
+All complete and committed; working tree is clean and the log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...e-modals-dialogs-0026-WidgetCatalogueDialog.log |  89 +++++++
+ .../WidgetCatalogueDialog.Adapter.swift            | 199 ++++++++++++++
+ .../WidgetCatalogueDialog.Catalog.swift            | 183 +++++++++++++
+ .../WidgetCatalogueDialog.Model.swift              | 237 +++++++++++++++++
+ .../WidgetCatalogueDialog.ModelTests.swift         | 292 ++++++++++++++++++++
+ .../WidgetCatalogueDialog.Previews.swift           |  65 +++++
+ .../WidgetCatalogueDialog.Projection.swift         | 136 ++++++++++
+ .../WidgetCatalogueDialog.Rows.swift               | 274 +++++++++++++++++++
+ .../WidgetCatalogueDialog.Seams.swift              | 236 ++++++++++++++++
+ .../WidgetCatalogueDialog.States.swift             | 296 +++++++++++++++++++++
+ .../WidgetCatalogueDialog.Tests.swift              | 270 +++++++++++++++++++
+ .../modals-dialogs/WidgetCatalogueDialog.strings   |  67 +++++
+ .../modals-dialogs/WidgetCatalogueDialog.swift     |  77 ++++++
+ 13 files changed, 2421 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0026-WidgetCatalogueDialog.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.Rows.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.swift

@@ -1,0 +1,102 @@
+I'll start by understanding the task and exploring the repository structure. This is an Apple acceptance gate — I must run the gate (not fix code), record evidence, and commit a log with DONE or BLOCKED status based on actual results.
+
+Let me begin the PREFLIGHT phase.
+
+Environment has macOS, Xcode 26.5, swiftlint, swiftformat, pwsh, swift. Now let me check critical gate dependencies: the parity ledgers and the `check-parity-ledger.ps1` tool, which I did NOT see in the directory listings.
+
+Two gate dependencies appear missing: `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1`. Let me search exhaustively before concluding, and examine the P4 prompts/logs and predecessor status.
+
+Confirmed: `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1` are all absent from git tracking and disk. These are hard gate dependencies. Let me read the actual prompt file, check signing identities, the Xcode project setup, and predecessor logs before running the gate.
+
+Key blockers identified in preflight:
+- **Signing identities: "0 valid identities found"** → archive/sign cannot succeed (explicit capability requirement).
+- **`apple-macos-ledger.json` / `apple-ios-ledger.json` MISSING** → parity verification cannot pass.
+- **`check-parity-ledger.ps1` MISSING** → ledger gate tool absent.
+- No generated `.xcodeproj` (only `project.yml`; xcodegen 2.45.4 is available).
+
+Let me verify predecessor logs (P0..P9 + generated P7 pages), check the build flow, and the commit convention for blocked logs.
+
+Useful context: the repo convention includes committed BLOCKED logs (1092 of them), and a prior run of this exact P99 gate exists. Let me read that prior blocked log, verify predecessor P4 log statuses, and check the Shared.xcframework + TeslaSync source tree.
+
+This is decisive context — a prior run of this exact prompt reached **STATUS=BLOCKED / EXIT=70** and, per methodology Rule 8, committed only the log. Let me verify the current state myself (not assume): predecessor statuses, the methodology's blocked-commit rule, the xcframework, and the build script.
+
+Now I have the methodology rules clear. **Rule 8: on BLOCKED, commit ONLY the log** with message `chore(monorepo): BLOCKED <prompt> — <reason>`. Predecessor check already shows two missing logs: **p4-p9-0001 and p4-p9-0002 are absent** (Rule 7 violation). Let me read the xcframework build script, check Android SDK availability, and verify the P7 page-prompt log statuses.
+
+Decisive evidence now in hand. The verdict is clearly **BLOCKED** via multiple independent blockers:
+- **Rule 7 (predecessors):** p4-p9-0001 & p4-p9-0002 logs MISSING; P7 pages only **500/861 DONE**.
+- **Rule 3 (capability):** **0 signing identities**; **no Android SDK** (`ANDROID_HOME` empty, `~/Library/Android/sdk` absent) so `Shared.xcframework` can't be assembled.
+- **Parity:** `check-parity-ledger.ps1` + both ledger JSONs absent.
+
+I'll still run every runnable gate command for real (no skip-and-assume). Let me verify gitignore (avoid drift), then launch the host gates.
+
+SwiftLint: **0 violations in 3887 files (LINT_EXIT=0)** ✅. Gitignore confirms generated `.xcodeproj`/`.xcframework`/`build/` are ignored — no drift risk. Now the remaining host gates: SwiftFormat, placeholder scanner, and the two parity-ledger checks (expected to fail — script absent).
+
+Captured real RED evidence:
+- **SwiftFormat: 0/4117 (FORMAT_EXIT=0)** ✅
+- **Placeholder scanner: 93 found vs 44 allowed → PLACEHOLDER_EXIT=1** ❌ (RED in this slot)
+- **Both parity-ledger checks: script not found → MAC_LEDGER_EXIT=1, IOS_LEDGER_EXIT=1** ❌ (all 3 files confirmed absent)
+
+Now I'll faithfully attempt the xcodebuild gates. Let me characterize the placeholder failure for the log, generate the project, and check the Gradle cache (the xcframework build prerequisite).
+
+Project generated (`TeslaSync.xcodeproj`, gitignored). Gradle 8.14.5 + Kotlin/Native 2.4.0 caches **are** present, so the xcframework build could proceed — but `ANDROID_HOME` is empty (the `:core` module applies the Android library plugin). Placeholder hits are the literal word "placeholder" in comments (gate still exits 1 — RED; not my job to fix). Let me verify the Xcode toolchain and faithfully attempt the real xcframework build (prerequisite for all xcodebuild gates).
+
+Full Xcode 26.5 toolchain confirmed (xcrun → Xcode, not CommandLineTools), and Gradle/K-Native caches are present. To honor "no skip-and-assume," I'll faithfully build the `Shared.xcframework` (the prerequisite for all `xcodebuild` gates) and then run the real build/test/archive commands. Starting the xcframework build in the background.
+
+The `:core` module applies the Android library plugin with an `androidTarget()` — so Gradle configuration needs an Android SDK. Let me monitor the background build to capture the real outcome.
+
+The xcframework build is **progressing past Android configuration** (K/N compiles are cache-hits; now linking debug frameworks). The expensive release-linking of 3 targets remains (~20 min per the precedent). Let me record captured gate results in session state and wait for the build.
+
+Debug XCFramework done; now release-linking iOS-arm64, iOS-sim, macOS (the expensive phase). Let me continue waiting.
+
+`Shared.xcframework` built successfully (`BUILD SUCCESSFUL in 6m58s`, exit 0). Now I'll run the real `xcodebuild` gate commands. Starting iOS Simulator build/test in the background.
+
+iOS build/test running in background. Let me monitor progress.
+
+iOS build/test finished: **IOS_EXIT=65** (RED) with "BUILD FAILED"/"TEST FAILED" and 266 failures. Let me characterize the actual failures honestly before recording.
+
+iOS failure root cause: the **test action's build phase failed** — `SwiftCompile`/`SwiftEmitModule` returned nonzero, "Testing cancelled because the build failed" → **IOS_EXIT=65**. Notably zero `error:` diagnostics, suggesting a compiler crash/resource kill on this shared host. Let me confirm the signature and start the macOS build/test in parallel.
+
+The crash-signature grep was too broad (matched normal `swift-frontend` command lines). Let me run a precise search while the macOS build runs.
+
+iOS failure is a **Swift compiler crash** ("Please submit a bug report" banner → 255 cascade `SwiftCompile failed` lines) — a toolchain/shared-host crash, still RED (IOS_EXIT=65). The macOS build/test just finished. Let me read its result.
+
+macOS build/test: **MAC_EXIT=65, BUILD FAILED** — clean **signing failure** ("entitlements require signing with a development certificate") for `TeslaSync-macOS` + `TeslaSyncWidgets-macOS`. No compiler crash — this is the deterministic signing-capability blocker. Now the two archive steps (both expected to fail on signing). Running them in parallel.
+
+Both archive builds running. Let me wait and capture their results.
+
+Both archives failed deterministically on signing: **IOS_ARCHIVE_EXIT=65** ("requires a development team"), **MAC_ARCHIVE_EXIT=65** ("requires a development certificate") → no signed archives producible. All gate evidence is now captured. Let me record results, verify the working tree (Rule 9 — no drift), capture exact versions, and pin the iOS compiler-crash context.
+
+Working tree is **clean** (no drift, Rule 9 ✓), generated artifacts confirmed gitignored, HEAD unchanged. iOS crash pinned: **swift-frontend (Swift 6.3.2) crashed with a Stack dump** mid-compile. Host: macOS 26.5.1 (25F80) arm64. All evidence captured. Let me pull the final results and timestamp, then write the acceptance log.
+
+All confirmed: 4 xcodebuild gates = exit 65, lint/format green, placeholder + both ledgers + signing RED, two predecessor logs missing, P7 pages 500/861. Writing the acceptance log now.
+
+Log written (canonical path, ends with `EXIT=65` / `STATUS=BLOCKED`). Now committing **only the log** per Rule 8.
+
+Committed as `fb216922d` (only the log, COMMIT_EXIT=0). Let me verify the final state and clean up scratch files.
+
+The Apple acceptance gate (P4/P99/0001) has been executed faithfully and the honest verdict recorded and committed.
+
+## Result: `STATUS=BLOCKED` / `EXIT=65`
+
+I ran the gate for real — including building the KMP `Shared.xcframework` from source (BUILD SUCCESSFUL, 6m58s) so the `xcodebuild` halves were genuinely executed, not assumed.
+
+**Gate results (verbatim commands, real exit codes):**
+| Command | Exit | Outcome |
+|---|---|---|
+| SwiftLint `--strict` | 0 | 0 violations / 3887 files ✅ |
+| SwiftFormat `--lint` | 0 | 0/4117 need formatting ✅ |
+| iOS Sim `build test` | 65 | swift-frontend **compiler crash** → 255 cascade fails ❌ |
+| macOS `build test` | 65 | entitlements need a dev certificate ❌ |
+| Placeholder scanner | 1 | 93 markers > 44 allowed ❌ |
+| Parity ledger ×2 | 1/1 | checker + both ledgers **absent** ❌ |
+| iOS / macOS archive | 65/65 | no dev team / no dev cert — unsigned ❌ |
+
+**Five independent decisive blockers:**
+1. **Predecessors incomplete (Rule 7):** `p4-p9-0001` & `p4-p9-0002` logs missing; P7 pages only 500/861 DONE.
+2. **Parity unverifiable (Rule 5):** `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1` all absent (creating them is Out of Scope).
+3. **No signing identity:** 0 valid identities → macOS build + both archives fail; no signed archive producible.
+4. **Placeholder gate RED.**
+5. **iOS test-build RED** (toolchain crash on this shared host).
+
+**Compliance:** Per Rule 8 (BLOCKED → log-only), I committed **only** the log (`fb216922d`, 206 lines, ends `EXIT=65`/`STATUS=BLOCKED`). No code fixed, no scope narrowed, no parity faked, no delegation, no missing files created. Working tree is clean — generated `.xcodeproj`/`.xcframework`/Gradle outputs are all git-ignored (no drift).
+

@@ -1,0 +1,65 @@
+I'll start by exploring the repository structure and checking the environment capabilities for this Apple acceptance gate.
+
+Good progress. macOS, Xcode 26.5, SwiftLint, SwiftFormat, and simulators are all present. But I notice **0 valid signing identities** and the parity directory doesn't obviously show `apple-macos-ledger.json`/`apple-ios-ledger.json`. Let me investigate further.
+
+Key findings emerging. Let me read the actual prompt file, a prior run log, and the parity README to understand the expected structure.
+
+The picture is becoming clear. Prior runs ended `STATUS=BLOCKED`. Critical capability gaps confirmed: **0 signing identities**, missing `apple-macos-ledger.json`/`apple-ios-ledger.json`, and missing `check-parity-ledger.ps1`. Per the prompt's "Out of Scope", I must NOT create ledgers or fix signing. Let me check the Xcode project setup, schemes, and whether the canonical log already exists.
+
+Now I understand the setup: XcodeGen project (needs generation), a KMP `apps/shared` framework dependency, **0 signing identities**, and **missing** `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1`. Let me verify predecessor logs and the framework dependency before running the gate.
+
+Framework dependency confirmed (`Frameworks/Shared.xcframework`). Let me verify predecessor log STATUS, check the Frameworks dir, and the KMP build caches (shared across slots in HOME).
+
+Let me resolve the predecessor log naming (P7 pages and P9) before proceeding — rule 7 requires honest predecessor verification.
+
+Predecessor verification is now conclusive. Several predecessors are **NOT DONE**:
+- `p4-p9-0001-xctest-unit.log` & `p4-p9-0002-xcuitest-ui.log`: **missing** (canonical)
+- `p4-apple-dashboard-widgets-0001-AlertFeedWidget.log`: no terminal STATUS
+- 2 shared-surface page logs: **STATUS=BLOCKED**
+
+Combined with missing ledgers + 0 signing identities, the outcome will be BLOCKED. But I must still run the gate for genuine evidence. Let me set up the project and framework build mechanism.
+
+Found the framework build mechanism (`build-shared-xcframework.sh` → `assembleSharedXCFramework`). Let me set up tracking, generate the Xcode project, and kick off the framework build (the long pole) in the background.
+
+Project generated; both `TeslaSync` and `TeslaSync-macOS` schemes exist. Let me view the framework build script and start it in the background (long pole).
+
+Starting the framework build in the background (it's the long pole; KMP/Kotlin-Native compile).
+
+While the framework builds, I'll create the plan and start writing the canonical log's PREFLIGHT section. Let me capture exact preflight facts.
+
+The framework build is using cached compiles and progressing well. `.gitignore` (lines 379, 381) confirms generated `.xcodeproj` and `.xcframework` are ignored — tracked tree stays clean. Let me write the plan and the canonical log's PREFLIGHT section while the build finishes.
+
+Now I'll write the PREFLIGHT block to the canonical log, recomputing predecessor/artifact evidence live so it's genuine.
+
+Let me check the framework build progress.
+
+Framework debug XCFramework written; now linking release slices. While it finishes, let me write the pwsh gate runner. I'll faithfully mirror the prompt's gate, correcting only the documented cwd artifact (xcodebuild must run from `apps/apple` where the project lives, else it fails with exit 66 — a non-genuine artifact, not real build evidence).
+
+Let me wait for the framework build to finish before running the gate (the iOS build needs the staged framework).
+
+Release linking nearly done (iOS slices linked). Let me wait for it to finish staging the XCFramework.
+
+Framework built and staged successfully (`BUILD SUCCESSFUL in 7m 38s`). Let me record the build-prep result, verify the staged slices, then run the full gate.
+
+Framework staged with iOS device, iOS simulator, and macOS slices. Now running the full gate (iOS build+test is the long pole).
+
+iOS build+test is running (pre-action staging framework, then compiling). This is the long pole — letting it proceed.
+
+Gate finished. Let me read the results section from the log (the full xcodebuild output is 2.2MB).
+
+Gate aggregate: **AGG_EXIT=1 → BLOCKED**. Results: `IOS=65 MAC=65 LINT=0 FORMAT=0 PLACEHOLDER=1 MAC_LEDGER=127 IOS_LEDGER=127 IOS_ARCHIVE=65 MAC_ARCHIVE=65`. Note LINT now passes (prior run had 2). I must investigate the genuine cause of **IOS_EXIT=65** (prior runs passed iOS). Let me extract the real failure markers from each section.
+
+The iOS build **genuinely failed to compile** — real Swift errors (`'RecentDrivesModel' is ambiguous for type lookup`, etc.) in the app sources. This is a code defect, **Out of Scope to fix**. Let me confirm the failure markers and capture the genuine cause for each failing step (iOS build, macOS build, both archives, placeholder count).
+
+All failure causes confirmed and genuine. Let me get the placeholder count, then write the disposition.
+
+All evidence captured: **93 placeholders > 44 allowed**; **8 ambiguous types** (RecentDrives*/StateTimeline*) causing genuine iOS `** BUILD FAILED **`; result table clean. Now writing the disposition and final EXIT/STATUS.
+
+Log now ends with `EXIT=1` / `STATUS=BLOCKED`. Let me update tracking, clean up the temp gate script, and verify only the log is staged for commit.
+
+Verified: only the canonical log is untracked; generated `.xcodeproj`/`.xcframework` are gitignored (`!!`); temp script removed. Staging **only the log** and committing (BLOCKED → log-only, no code).
+
+Commit `e94c9d375` succeeded — exactly 1 file (the log, log-only as required). Let me do final verification: tree clean, log ends correctly, and the recorded results are internally consistent.
+
+Everything verified and internally consistent. Let me mark the plan done.
+

@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure, the web source widget, and checking the Apple toolchain availability.
+
+Xcode 26.5, swiftlint, swiftformat all available. Let me explore the existing Apple widget structure and reference patterns.
+
+No existing DoorWindow files. `SecurityStatusWidget` uses the same `useSecurityLatest` hook — ideal reference. Let me study it and the shared widget infrastructure.
+
+Let me read the complete `SecurityStatusWidget` (same hook) as the primary reference, plus find the shared widget shell/grid infra.
+
+Now the tests and shared infrastructure (tokens, registration types, registry).
+
+Now let me read the shared infra and design tokens, plus the web registry entry for `door-window-status`.
+
+Now let me locate the design tokens (TSSpacing, TSRadius, Color.TS, Font.TS) and understand the build setup (project.yml, xcodeproj).
+
+Let me read the design tokens, the test target config, lint configs, and confirm the web hook's field names.
+
+Let me read the exact test-target globbing and find the generated design tokens (token member names).
+
+Let me confirm `Font.TS` members, `TSSkeleton` API, and the web `SecurityEvent` field names for parity.
+
+Let me read the web `WidgetShell`, the shared `WidgetStatusGrid`/`StatusCell`, and the native `Badges.swift` to faithfully port chrome and compact badges.
+
+I have the full pattern. Let me verify the build environment: xcodegen, the Shared.xcframework, and any build scripts.
+
+Important: `Shared.xcframework` is just a `.gitkeep` placeholder. Let me understand the build dependency situation and check `pwsh` for the placeholder gate.
+
+This is the key context — prior P4 Apple surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) follow a proven pattern: isolated SwiftPM build + tests + swiftc typecheck + swiftlint/swiftformat/placeholder green, with the full-app `xcodebuild` deferred (pre-existing collisions + unstaged `Shared.xcframework`). Let me set up to replicate that verification. First, read the placeholder script and token dependencies.
+
+`TSSkeleton` is self-contained except `TSStatSkeleton` references `TSCard`. Let me check `TSCard`/`TSMaterial` to scope the isolated dependency set.
+
+Let me resolve the full dependency closure for the isolated harness (TSText, Cards, imports).
+
+I have everything needed. This follows a proven pattern (per `macos-pending-verifications.md`): ship the surface, verify via isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder, with full-app `xcodebuild` deferred. Let me set up tracking and create the plan.
+
+Now I'll write the Adapter (pure projection core).
+
+Now the Model file (seams + observable model + registration + i18n facade).
+
+Now the main view with header chrome + phase state machine + compact/full layouts.
+
+Now the presentational subviews.
+
+Now the previews and the strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files written. Now the verification phase — starting with swiftformat, swiftlint, and the placeholder check.
+
+swiftformat changed 2 files. Let me confirm lint-clean and check what changed, plus run swiftlint and the placeholder scan.
+
+swiftformat clean. swiftlint flags: file_length (Adapter 448, Tests 421 > 400) and statement_position (my `else if` ladder). Let me check exact line counts and fix both.
+
+Cleaner fix: split the over-long Adapter into parsing + projection files (matches the repo's multi-file surfaces) and switch the `else if` ladder to a data-driven matcher (resolves `statement_position`). Let me rebuild the Adapter and add a Projection file.
+
+Now the Projection file (cell projection + a11y + badge text).
+
+Now split the test file (421 lines) into adapter tests + model/registry/a11y tests.
+
+Now re-format and re-lint all 8 files, plus check line counts and run the placeholder scan.
+
+All files now ≤288 lines. Now the full lint + placeholder gate.
+
+swiftformat, swiftlint --strict, and placeholder scan all clean (0 violations). Now the key step: an isolated SwiftPM build + test run (the proven verification path). Let me assemble the harness with the real token/infra/component dependencies.
+
+My surface files compiled cleanly — the only errors are in the copied `Cards.swift` `#Preview` block (references `TSButton`, a sibling I didn't include). I'll strip the throwaway `#if DEBUG` preview blocks from the copied **dependency** files (not my surface) and rebuild.
+
+Build succeeds under Swift 6 strict concurrency. Now run the test suite.
+
+All **42 tests passed**, 0 failures, under Swift 6 strict concurrency. Now let me confirm dual-SDK typecheck (iOS 18 + macOS 15), matching the prior surfaces' verification.
+
+Both SDKs typecheck clean. Now confirm `xcodegen` enumerates my files, then capture the full-app `xcodebuild` blocker evidence.
+
+xcodegen enumerated all 8 files. Let me verify the `.strings` resource and test-target assignment, check available simulators, then capture the full-app build blocker.
+
+`.strings` and simulator are set. Now gather the deterministic blocker evidence (matching the documented deferral), then attempt a bounded full build.
+
+The binary `Shared.xcframework` is absent (produced only by the deferred Gradle Kotlin/Native build). Let me capture the actual `xcodebuild` failure to document the blocker concretely.
+
+The Gradle Kotlin/Native build is actually progressing on this macOS host (it reached `:core:linkDebugFrameworkIosArm64`). The full build may complete here rather than being blocked. Let me monitor it.
+
+The Gradle Kotlin/Native build is linking frameworks for all three slices. Let me continue monitoring as it moves to the app compile phase.
+
+The XCFramework is being assembled (debug done, release in progress). Let me keep waiting for Gradle to finish and the app compile to begin.
+
+Release-framework linking (Kotlin/Native) is the slow phase. Let me give it more time to finish and reach the app compile.
+
+`swift-frontend` is now actively compiling (65% CPU) alongside Gradle — the app build has begun. Let me wait for the framework to stage and the app sources (including my files) to compile.
+
+The build failed (exit 65) during the Gradle Kotlin/Native release-linking step. Let me read the exact failure cause.
+
+Root cause: the Gradle **"build daemon has been stopped: stop command received"** during the `Stage Shared.xcframework` pre-build step — the heavy Kotlin/Native KMP framework staging was interrupted (shared environment), before any app source compiled. This is exactly the step the repo's own `macos-pending-verifications.md` defers to a dedicated macOS CI runner. The `--no-daemon` flag directly addresses that failure cause, so let me make one robust attempt to stage the framework, then build the app.
+
+The async+`&` child was reaped when the session completed. Let me check current state and relaunch the Gradle build as a fully detached process.
+
+Debug framework built; the staging script needs the **release** xcframework. Let me launch the Gradle assemble as a fully detached process (survives session) with `--no-daemon` to avoid the daemon-stop issue.
+
+Detached Gradle is running and logging. Let me monitor its progress toward the release framework.
+
+Many tasks are now cached (UP-TO-DATE); it's re-linking the release simulator framework. Let me continue waiting.
+
+Steady progress (now linking the macOS release framework). The release XCFramework assembly is nearing completion. Let me wait for it to finish.
+
+**Gradle BUILD SUCCESSFUL (12m 9s)** — the release `Shared.xcframework` is now present. Let me stage it and run the full iOS `build test` gate (the cached Gradle pre-step should now be fast).
+
+Framework staged, and the app target is now compiling against it (Swift 6, iOS 18 simulator) — no errors so far. Let me wait for compilation, linking, and tests.
+
+My `.strings` is being copied into the app bundle — the app target compiled. Let me check for the build/test outcome.
+
+The full-app **build failed — but with zero errors in my surface**. The failures are pre-existing collisions in *unrelated* sibling surfaces (`ChargingProjection` invalid redeclaration, `ChargeCostTrackerWidget` ambiguous `miles`). My `DoorWindowStatusWidget.*` files compiled into the real iOS app target. Let me confirm zero errors are attributable to my files.
+
+**Definitive:** all 5 compiler errors are in unrelated sibling surfaces (`ChargeCostTrackerWidget`, `ChargingDetailSection` — `ChargingProjection` redeclaration), **zero in mine**, and my files compiled into the real iOS app target. Let me capture the macOS step (same shared sources) for the log, then finalize.
+
+While macOS builds, let me check the log directory and current git status.
+
+Good — staged framework and generated project are git-ignored; my 9 files are cleanly untracked. Let me check the macOS build outcome.
+
+**Both full-app failures are documented, unrelated blockers** — iOS: pre-existing collisions in *other* surfaces (zero in mine, my files compiled in-target); macOS: the documented development-signing/entitlements requirement (no signing identity on this runner). Neither implicates my code. Now let me write the gate log with honest, complete evidence.
+
+Now a final re-confirmation of the surface gates on the shipped files, then commit.
+
+All gates green (format 0/8, lint 0, placeholder 0). Committing the 9 surface files + the log.
+
+Exactly the 10 intended files are staged (9 surface + log). Committing.
+
+Committed as `554c56d26` (10 files, 1940 insertions). Let me clean up scratch artifacts and finalize tracking.
+
+Task complete. All 9 todos done, commit `554c56d26` clean, scratch cleaned up.
+
+Merge made by the 'ort' strategy.
+ ...shboard-widgets-0037-DoorWindowStatusWidget.log | 121 +++++++++
+ .../DoorWindowStatusWidget.Adapter.swift           | 288 +++++++++++++++++++++
+ .../DoorWindowStatusWidget.AdapterTests.swift      | 249 ++++++++++++++++++
+ .../DoorWindowStatusWidget.Model.swift             | 254 ++++++++++++++++++
+ .../DoorWindowStatusWidget.Previews.swift          | 147 +++++++++++
+ .../DoorWindowStatusWidget.Projection.swift        | 179 +++++++++++++
+ .../DoorWindowStatusWidget.Tests.swift             | 184 +++++++++++++
+ .../DoorWindowStatusWidget.Views.swift             | 212 +++++++++++++++
+ .../DoorWindowStatusWidget.strings                 |  56 ++++
+ .../dashboard-widgets/DoorWindowStatusWidget.swift | 250 ++++++++++++++++++
+ 10 files changed, 1940 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0037-DoorWindowStatusWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.swift

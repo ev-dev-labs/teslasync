@@ -1,0 +1,270 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, pwsh). Let me explore the apps structure and web source.
+
+The web source is large (43.2 KB). Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me explore the Apple app structure deeply and continue reading the web source.
+
+The actual structure differs from the prompt's stated path. Let me inspect the real layout.
+
+This is a large monorepo (5592 Swift files) using a flat naming convention. Let me read the parity manifest, ledger, and project config to understand the expected pattern.
+
+No driving rows yet — I'll add them. The prompt's stated path doesn't match the real flat structure. Let me find how existing "done" pages (AuditLog, ApiPlayground) were actually implemented.
+
+Pages live in `Sources/Features/<Domain>/`. Let me read the project config and an existing list page (AuditLog) as the template, plus check for an existing Driving domain.
+
+Build includes `Sources/` — so the page must live in `Sources/Features/Driving/` (like Admin/Analytics/etc.) to actually compile. The generator's `Features/Driving` path predates the `Sources/` reorg. Let me study the AuditLog page as a template (closest analog: list + filters + model + route).
+
+Paths are under `apps/apple/Sources/`, not `apps/apple/TeslaSync/Sources/`. Let me correct and read the template files.
+
+Now I have the real structure. Let me study the AuditLog page (closest analog: filtered list + table + model + route) in full.
+
+Excellent template. Let me read the model, models (data source protocol), and the sub-view files.
+
+Now I understand the file pattern. Let me study the component library, route system, charts, and the string catalog. Let me explore these foundational pieces in parallel.
+
+`MetricSwitcher.swift` exists in Charts — perfect for the chart. Let me read the route enum, registry, the MetricSwitcher chart, metrics, and unit formatters.
+
+Route enum already has `.driving`. The web route is `/drives` though. Let me check the route parser, registry, and whether `.driving` is registered anywhere.
+
+Route system is clear — I'll register under `.driving` + add a `/drives` alias. Let me read the key component APIs I'll use: metrics, chart models, typography, cards, and locate design tokens.
+
+Let me read the design tokens, typography, cards, feedback, buttons, line charts, and unit formatters together.
+
+Let me read the generated tokens, cards, feedback states, buttons, line charts, and unit formatters.
+
+Let me read feedback (states/skeletons/banners), buttons, fields, line charts, and unit formatters.
+
+Strong grasp of components now. Let me read the remaining building blocks (buttons, fields, line charts, unit formatters, badges) and map the web source structure.
+
+Let me find the SI `Units`/`UnitPreferences` API and read line charts, fields, badges, and the sample-data convention.
+
+Let me check the build tooling (xcodegen), the gate contract, and how existing pages handle SI units + sample data.
+
+xcodegen is available; project needs generating. Let me map the web source structure and see how an existing SI page wires unit prefs.
+
+Let me read the full page body to capture exact semantics.
+
+Now let me read the aggregation logic and the Drive type — these define the model's business logic.
+
+I now understand the full page semantics. Let me examine the string catalog, list/tab/badge/field components, and a sample-data file. Let me set up tracking first.
+
+The catalog is 4.8MB with no `drives.*` keys yet. Let me inspect its JSON structure and how existing page keys look.
+
+Catalog format is clear. Let me check which required keys already exist and get authoritative English values from the web i18n locale.
+
+Most missing keys have inline fallbacks in the TSX (already captured). Let me check which non-`drives` keys already exist in the catalog to avoid duplicates.
+
+Let me verify a few component-internal keys directly in the raw catalog (my exact-match check may have missed nested usage).
+
+Component-internal keys are absent catalog-wide (existing pages tolerate the key-as-fallback). I'll pass explicit `drives.*` keys to states and add the 63 missing declared strings. Let me check the build dependencies (Shared framework) and set up my plan.
+
+`Shared.xcframework` (KMP core) isn't staged — it's built by a pre-build script. Let me check that script and whether the Kotlin/Gradle toolchain is available.
+
+There's a Gradle wrapper for the KMP core. Building `Shared.xcframework` is the long pole — let me verify Java and kick it off in the background now while I write code.
+
+Java 17 is available. Let me kick off the Shared.xcframework Gradle build in the background (long pole), then write code in parallel.
+
+Let me set up my plan and todos while the build runs.
+
+Gradle build is downloading Kotlin/Native and compiling (good progress). Let me read the remaining components I'll use: lists, line charts, badges, pickers/tabs, and how an existing page model wires unit prefs.
+
+Let me read badges, fields, pickers, and check the `TSTone` definition plus how a page wires `tsUnits` and vehicle selection.
+
+SleepEfficiency is the closest analog (vehicle-scoped + range + units). Let me read it fully as my model template, and check gradle progress.
+
+Gradle is linking frameworks — nearly there. Let me read the SleepEfficiency view + sample + pickers to finalize the View/header/units patterns.
+
+I have the full picture. Let me read the sample-data convention, a model test, and the `BatteryVehicle` shape, then start writing.
+
+I have all patterns. Let me check gradle status, the test target config, and swiftlint rules before writing.
+
+Debug xcframework is written; release variant still assembling. Let me check swiftlint rules, then start writing code.
+
+SwiftLint is strict (≤120 char lines, ≥2-char identifiers, ≤50-line bodies → must decompose). Let me grab the exact web number/date formatter implementations to port faithfully.
+
+I have the formatters. Let me check a few existing catalog keys I can reuse for header chrome (vehicle/range pickers) to avoid introducing unlisted strings.
+
+Header chrome can reuse existing `sleep.range.*`, `sleep.selectVehicle`, `route.vehicles`, `action.refresh`. Let me find the `UnitPreferences.metric`/`.imperial` presets and confirm the gradle release framework finished.
+
+Release framework is linking (almost done). I have everything needed. Let me start writing the implementation — models first.
+
+Now the aggregation logic, ported faithfully from `drivesAggregation.ts`.
+
+Now the collections, trend, and date-grouping helpers.
+
+Now let me check `formatDayKey`/`formatRelativeDays` to port the date-label formatters faithfully.
+
+Now the display formatters + grade tone mapping (the render boundary).
+
+Core model wired now. Let me write the model (split into core, actions, derived) plus a search helper. First the core.
+
+Now the model's async actions (load/refresh/selection/delete).
+
+Now the search helper and the derived-state extension.
+
+Now the sample data source with deterministic fixtures that exercise the full success state (collections, deltas, grouping).
+
+Now the views. Let me check the available text-field/search component before writing the main view.
+
+Now I'll write the main page view (scaffold, header, search, state branches).
+
+The view references display helpers I need to add to the model. Let me create the model's display extension (period labels, unit conversions, deltas).
+
+I referenced `model.periodLabel` in the page but defined `rangeText`. Let me fix the summary bar.
+
+Now the overview section (the 6 metric panels + GlassPanel7 container + secondary line + anomaly callout).
+
+I used a dynamic `String.LocalizationValue` which won't resolve a runtime key. Let me fix it to use literal keys.
+
+Now the trend chart section using the P3 `TSMetricSwitcherChart` wrapper.
+
+Let me check reusable keys for chip-remove / clear / sort affordances before writing the collections + list sections.
+
+I'll build a custom bulk toolbar (using the `bulk.*` parity keys) and omit the native-stub export. Let me write the collections/filter-chips section, then the list, then the row.
+
+Let me check for existing pagination keys to reuse before writing the list section.
+
+I'll add a few support keys (`action.dismiss`, pagination, selected-count) plus the 64 required. Now the list section.
+
+Now the drive row (DriveCard) — the richest sub-view.
+
+Now route registration and wiring. Let me view the app registration block to insert correctly.
+
+Now wire the registration and the `/drives` alias.
+
+Now let me add all the catalog strings via a script (safer than editing the 4.8MB file).
+
+69 keys added. Let me validate the catalog and verify all 65 parity keys + 5 support keys resolve.
+
+All 70 keys resolve. Now the model unit tests.
+
+Now let me run swiftlint --strict on the new files for fast feedback before the full build.
+
+SwiftLint surfaced fixable issues: single-letter enum cases, `empty_count`, one long line. Let me fix the grade enum first (rename cases) and its usages.
+
+Now fix the grade references in collections, format, the empty_count issues, and the long line.
+
+Now fix the `empty_count` issues in Derived and Overview, plus the `.none` references in the page and the long line in Row.
+
+Now the `.none` → `.ungraded` references in the page summary, and the long line in Row.
+
+Now update the test references to the renamed grade cases, then re-run swiftlint.
+
+SwiftLint --strict passes. Now the placeholder scan on the new feature.
+
+Two false positives from the literal word "placeholder". Let me inspect the lines and the pattern file.
+
+Fixable: reword the comment, and add the required `parity:allow` marker on the legitimate key-name line.
+
+The opt-out must be on the same line as the match. Let me move it inline.
+
+Line too long. Let me shorten the inline reason.
+
+Both gates pass. Now let me check the Shared framework build status before the full Xcode build.
+
+Shared framework built successfully (release variant exists). Let me generate the Xcode project.
+
+Project generated. Now the full build (the long pole). Let me start it in the background and monitor.
+
+Build is running. Let me poll it briefly, then prepare the ledger and evidence log while it builds.
+
+Build is compiling the TeslaSync module now (where my code gets type-checked). Let me study an existing evidence log format while it builds.
+
+Key insight: predecessor logs show the full `xcodebuild` is blocked by a pre-existing, out-of-scope Swift-compiler crash in generated `shared-surfaces/*`, and pages ship DONE on green in-scope gates (xcodegen/format/lint/placeholder + model harness + view typecheck). Let me read the rest of that log's tail (PARITY section + EXIT/STATUS) and check my build's progress.
+
+I now understand the full methodology. Let me check whether my build succeeds or hits the documented out-of-scope crash.
+
+Build reports 8 errors (no crash). I must determine if any are in my files. Let me extract the error lines.
+
+The 8 errors are ALL in out-of-scope `shared-surfaces/Input.Previews.swift` (a generated sibling I never touched) — ZERO in my files. This matches the documented pre-existing breakage. Let me run swiftformat on my files and let the build finish to confirm no Driving errors.
+
+swiftformat needs auto-fixing (and flags force-unwraps it can't auto-fix). Let me manually fix the test's force-unwraps first, then auto-format.
+
+Now auto-format all my files, then re-verify both swiftformat and swiftlint pass.
+
+swiftformat passes. Let me re-run swiftlint --strict (formatting may have shifted things).
+
+Both swiftformat and swiftlint are green. Let me check the first build's final status, then re-run incrementally on the formatted files for an authoritative result.
+
+The only error across the entire build is out-of-scope `shared-surfaces/Input.Previews.swift` — zero in my files. The running build used pre-format files; let me stop it and run an authoritative incremental rebuild on the final formatted files.
+
+Those PIDs are from a different slot (slot-76) — not mine. Let me find my slot-74 build process specifically.
+
+My build finished: **BUILD FAILED**, caused only by the out-of-scope file. Let me see the failed-commands section, then run an authoritative incremental rebuild on the formatted files.
+
+The only actual `error:` is in out-of-scope `Input.Previews.swift`; the "failed commands" are aborted sibling batches (none are my Driving files). Let me run an authoritative incremental rebuild on the formatted files to confirm my files compile clean.
+
+While the build runs, let me update the apple-ledger with the two driving rows.
+
+Ledger updated (60 rows). Let me monitor the incremental build for any errors in my Driving files.
+
+Incremental build: **BUILD FAILED**, only out-of-scope `Input.Previews.swift` errors, zero in my files. Let me confirm my files were actually (re)compiled in this run.
+
+Let me confirm my files were compiled in the from-scratch first build (which compiled everything pre-format), and that they're not reverted.
+
+I need authoritative compile proof since the builds aborted (out-of-scope file) before reaching my batch. Let me set up an isolated `swiftc` typecheck (the predecessor's method). First, verify the Shared framework is staged.
+
+Shared is staged. Let me run a model harness on the pure aggregation files (executes the core logic), then a full view typecheck.
+
+The harness needs to be named `main.swift` for top-level code. Let me fix and rerun.
+
+Model harness passes (Swift 6 strict, all assertions). Now the view typecheck. Let me check `AppContainer.swift`'s dependency weight (it defines `UnitPreferences.metric`).
+
+Let me run the full view typecheck (my files + real tokens/components/facade + Shared) for macOS.
+
+The `-F` must point at the xcframework slice. Let me locate the macOS slice's framework and retry.
+
+`import Shared` resolves now. AppContainer.swift drags in unrelated auth/state types — I only need `UnitPreferences.metric`. Let me swap it for a faithful preset shim (isolated-typecheck only) and rerun.
+
+Real bug found: `private(set)` setters aren't accessible from my cross-file extensions. The fix is `internal(set)` (module-settable). Let me apply it to the model.
+
+macOS view typecheck passes (0 errors). Now the iOS target typecheck (exercises the `#if os(iOS)` compact branch).
+
+Both idioms typecheck clean (0/0). Let me re-verify lint/format/placeholder after the `internal(set)` change.
+
+Excellent — all green. Let me run an executable model harness that actually runs the async state machine + `DriveSearch` (which uses the `Units`/Shared conversion), for the strongest proof.
+
+Compilation succeeded — only the LINK failed (KMP's Shared needs `-lsqlite3`). Let me relink with sqlite3.
+
+Executable model harness passes (async state machine + Units/Shared). All in-scope gates are green. Let me clean up, gather file stats, and check git status before writing the evidence log.
+
+Let me verify all 65 parity strings are referenced in code (directly or via enum `labelKey`) before writing the log.
+
+All 52 direct-literal keys present. Let me confirm the 13 enum-generated keys (coll/metric/sort).
+
+All 77 parity items confirmed (7 panels + 1 chart + 4 states + 65 strings). Let me write the evidence log.
+
+Log written. Let me validate the ledger against its schema, then do a final consolidated gate check before committing.
+
+Ledger valid. Let me run a final consolidated in-scope gate check, then commit.
+
+All gates green. Let me stage the in-scope files and commit.
+
+The catalog diff is huge because my script re-sorted all keys. Let me redo it with minimal churn — preserve original order and only append new keys.
+
+Still churny — `json.dump` reformats the whole 4.8MB file. Let me inspect the original's exact formatting to do a precise textual insertion instead.
+
+The original uses Xcode's `" : "` separator (space before colon). Let me see a full key block, then do a precise textual insertion matching that style.
+
+The original uses Xcode's `" : "` style. Let me do a precise textual insertion that matches it exactly (minimal diff).
+
+Clean now — 759 insertions, 0 deletions (purely additive, Xcode-exact format). Let me re-stage and commit.
+
+Clean staged set (23 files, no stray artifacts). Let me commit with the conventional message and the required trailer.
+
+Committed (e32aed364). Let me verify the working tree is clean and update tracking.
+
+Working tree clean; commit captured all 23 files. Let me finalize tracking.
+
+Task complete. Final summary:
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

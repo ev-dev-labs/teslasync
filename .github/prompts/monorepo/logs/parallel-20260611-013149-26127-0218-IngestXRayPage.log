@@ -1,0 +1,227 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the key files in parallel.
+
+Xcode 26.5, Swift 6.3.2, and swiftlint are all available. Let me explore the web components, hooks, types, and the Apple app structure in parallel.
+
+The `Features/` directory doesn't exist yet in the Apple app. Let me explore the Apple app structure thoroughly and read the web components.
+
+Now let me understand the Apple app structure, project configuration, and existing conventions in detail.
+
+The repo uses a flat `feature-views/` structure, not `Features/Admin/`. Let me understand the project configuration and existing conventions before deciding on structure.
+
+The project uses XcodeGen with path-based source globbing — `Features/` is not currently a source path. Let me check tooling availability, the gate contract, localization approach, and find a representative existing "page" to use as a template.
+
+Key finding: existing `XRay*` component files already exist in `feature-views/`, and there's a full `AlertStudioPage.*` multi-file page to model. Let me examine the existing XRay components, the parity ledger, and how other completed pages were structured.
+
+Three admin pages are already completed. Let me examine where their files landed and read a completed log + page as the definitive template.
+
+This is the definitive template. Completed pages live in `apps/apple/Sources/Features/Admin/` (the `Sources/` path IS globbed by `project.yml`), and the existing `XRay*` components in `feature-views/` are the P3 layer I compose. Let me write a plan and read the predecessor page + existing XRay components.
+
+I now understand the predecessor patterns clearly. Let me examine the existing XRay P3 components to decide whether to compose them or build self-contained sections.
+
+The existing XRay components are full P3 components with `Source`/`Model`/projection seams, designed for page composition. The web page composes these 4, so my P7 page is the coordinator. Let me read the remaining components, shared types, and the navigation/route-registration wiring.
+
+Let me read the shared type definitions (adapters), the chart/table components, and the route-registration + navigation files.
+
+Now let me read the chart and fields-table components and their source protocols, plus the route-registration and navigation files, to design the page coordinator.
+
+I have the four component contracts. Let me read the bucket-chart/fields-table views, the bucket data types, the base design-system components, and the full navigation/route-registration wiring to finalize the page design.
+
+All four components are composable. The chart self-wraps as a card (GlassPanel3); controls/fields/no-vehicle get page-wrapped in `TSGlassPanel`. I'll compose them via a page coordinator. Let me baseline the build state and read the navigation/route wiring + base components.
+
+Shared.xcframework isn't staged (only `.gitkeep`), so full `xcodebuild` will be blocked at the framework dependency — confirming the predecessor's isolated-typecheck + model-harness methodology. Let me read the navigation files and locate base components.
+
+I need to add a dedicated `.ingestXRay` route (mirroring `.fleetTelemetryCoverage`) with an `/admin/ingest-xray` alias. Let me read the route parser, app shell/composition root, sibling registrations, and locate base components.
+
+Let me read the composition root, base components, and the predecessor test file to finalize all the contracts.
+
+Let me read typography/button components, the predecessor test harness, and confirm the design tokens.
+
+The test lives under `Tests/Unit/`. Let me read it plus the design tokens and button component to finalize all contracts.
+
+I have all contracts. Let me confirm the remaining tokens/theme modifier and the existing string-catalog format before writing.
+
+All tokens confirmed. Let me inspect the exact xcstrings entry structure to replicate the format precisely, then check the placeholder scanner and a sibling page registration.
+
+Decision: build a **self-contained page** (matching all three predecessors + the prompt's explicit "one `IngestXRayPageModel` with load()/refresh()"), reusing the existing pure P3 logic/types, and rendering with base P3 components + Swift Charts. This avoids chrome duplication from the self-contained child components and keeps the gate methodology identical to predecessors. Let me read the charts components, the chart renderer, and the fields adapter to reuse their pure logic.
+
+Rich pure logic to reuse (`XRayValueKind`, `XRayNumberFormat`, `XRayRelativeTime`, `XRayFieldsProjector`, `XRayBucketBar`). Let me read the `TSBarChart` + `TSStatCard` signatures and the bucket-bar projection to finalize the render plan.
+
+Let me read the chart model types, `TSStatCard`, and `TSChartContainer` to finalize the chart + header rendering.
+
+I now have every contract I need. Let me update my plan and write the implementation files, starting with the page model.
+
+Now let me write the page model:
+
+Now the sample data source:
+
+Now the main page view:
+
+Now the sections file with the sub-views (controls, header strip, chart, fields table):
+
+Now the route registration:
+
+Now wire the navigation. Edits to `AppRoute.swift`, `AppRouteParser.swift`, and `TeslaSyncApp.swift`:
+
+I need to make the report fetch explicitly awaitable (for testability) and trigger it from the view via `onChange`. Let me refactor the model's selection methods.
+
+Now wire the selection-change trigger in the view:
+
+Now the model tests:
+
+Now I'll add the ~49 strings to the catalog. First let me inspect the exact raw formatting of `Localizable.xcstrings` so my insertion matches (to avoid reformatting the 188K-line file).
+
+The xcstrings format uses space-before-colon for nested keys; `action.retry` isn't in the catalog. I'll use a self-contained `admin.xray.retry` key instead. Let me update the retry references and check for other shared-key usages.
+
+Now I'll add all the string-catalog keys. Let me write a script that inserts entries matching the file's exact formatting:
+
+50 keys added and JSON-validated. Now update the parity ledger, then start the gate. Let me add the two IngestXRay ledger rows:
+
+Ledger updated (8 rows). Now let me run the cheap gates first — swiftformat, swiftlint, placeholder scan — and generate the Xcode project.
+
+swiftformat flagged formatting in my new files (doc-comment style, unused args, indent). Let me auto-fix with swiftformat (the repo's formatter) on my new files, then re-lint everything.
+
+swiftformat passes (0/9). Now swiftlint --strict, the placeholder scan, and xcodegen generate:
+
+Two of my own violations (the `WidgetChartSummary` one is the pre-existing out-of-scope issue the predecessor documented). I'll fix: (1) split the 419-line Sections file (>400 limit), (2) remove the unused large-tuple property in the test. Let me locate the fields-table section to extract.
+
+Now remove the unused large-tuple property from the test:
+
+Both fixed. Let me re-format the new split file and re-run both linters on my exact files:
+
+swiftformat 0/7 and swiftlint --strict 0 on my exact files. Now the placeholder scan and project generation:
+
+Placeholder scan clean (the 1 ALLOWED is the predecessor's documented opt-out; my files = 0 violations), xcodegen succeeded (IngestXRay referenced 42× across targets). Now the core compile proof. The full `xcodebuild` is blocked (no `Shared.xcframework`), so I'll use the predecessor methodology: an executed model harness (runtime proof) + isolated typecheck. Let me write and run the model harness.
+
+Now compile and run the harness (macOS, Swift 6 strict concurrency):
+
+Model + reused adapters compile clean under Swift 6 strict concurrency. Now run the harness:
+
+46/46 assertions passed — model logic proven at runtime. Now the isolated view typecheck. Let me locate the component/token dependency files and check none import `Shared`.
+
+No design-system file imports `Shared`. Let me run the macOS view typecheck including the full design-system + my files. First check Components/Design imports are self-contained:
+
+Design-system is fully self-contained (only system frameworks). Now the macOS view typecheck:
+
+Only errors are in `UnitFormatters.swift` (references `Units`, the P1/S5 SI converters defined outside the design-system) — a file I don't depend on, pulled in by the broad glob. Let me locate `Units` and include its file (it's a legitimate P1/S5 dependency that real components use).
+
+`Units` lives in `SharedFacade` (imports `Shared`, unavailable) and `UnitFormatters.swift` isn't in my dependency graph (X-Ray counts are unit-agnostic). Let me exclude it and re-run macOS + iOS typechecks:
+
+macOS view typecheck clean (exit 0). Now the iOS variant (exercises the `#if os(iOS)` compact branch):
+
+Both view typechecks pass (0 errors, macOS + iOS). Now let me honestly capture the real `xcodebuild` state. First check the AISuggestNewGeofences predecessor blocker and whether the Shared framework can be built:
+
+Confirmed: `AISuggestNewGeofences.swift:129` still carries the documented `glass(@ViewBuilder …)` escaping-closure defect (pre-existing, out-of-scope), and `Shared.xcframework` isn't staged. Both block the full `xcodebuild` independent of my work. Let me check whether the Shared framework can be built so I can capture the real build state:
+
+Java is available and the framework builds via `apps/shared/gradlew`. Let me kick off the Shared.xcframework build in the background (it's the long pole) so I can capture the real `xcodebuild` state, while I draft the evidence log in parallel.
+
+The framework build is running in the background. Let me gather exact line numbers for the PARITY evidence while it builds.
+
+I have all parity line numbers. Let me verify the 5 required strings are in the catalog and check the framework build progress.
+
+All 5 required strings + `route.ingestXRay` confirmed; 49 `admin.xray.*` keys total. The framework build is still running (Gradle warming up). Let me write the evidence log now and finalize the build section once it completes.
+
+Log drafted with placeholders for the build result. Let me check the framework build progress.
+
+The build is warming up (Gradle/Kotlin-Native toolchain). Let me wait longer.
+
+The `Shared.xcframework` built successfully (6m40s) and is staged. Now I can run the real full-scheme `xcodebuild` to honestly capture its state. Let me run it (background, capturing to a log):
+
+xcodebuild is running. Let me wait and then analyze the build log.
+
+xcodebuild exited 65 (failed, as expected). Let me analyze the log — total errors, which files, and confirm none are mine:
+
+0 `error:` lines but exit 65 — the failure isn't a Swift compile error in the usual format. Let me inspect the actual failure reason:
+
+The build failed with 0 `error:` lines captured — suggesting a cancelled/killed batch job. Let me find the actual failing invocation around line 12271:
+
+A `swift-frontend` **crash** (IRGen segfault), not a diagnostic — that's why there were 0 `error:` lines. I must determine whether MY code triggers it. Let me find the crash's triggering context:
+
+Let me identify exactly which file/symbol triggered the IRGen crash:
+
+The crash is an IRGen segfault in `AppearanceSettings.Controls.swift` (a feature-views file I never touched) — `IngestXRay` appears in no crash filelist, and my edited `AppRoute`/`AppRouteParser` were in a sibling batch that got *cancelled* (not crashed). To definitively prove this is pre-existing and independent of my changes, let me build the baseline (my changes stashed).
+
+Only one crash site, in `AppearanceSettings.Controls.swift` — logically my AppRoute enum-case addition cannot alter an unrelated file's closure-thunk IR. But to be bulletproof for the honesty covenant, let me build the baseline with my changes stashed (after backing them up for safety).
+
+Working tree clean and changes backed up. Now regenerate and build the baseline:
+
+Baseline build running. Let me wait for it.
+
+Baseline excludes my files (0 refs) and also failed. Let me confirm it's the same `AppearanceSettings.Controls.swift` crash:
+
+The `grep -c` (0 matches → exit 1) short-circuited the `&&` chain, so the baseline build never ran. The project is already regenerated at baseline (0 IngestXRay refs). Let me run it directly:
+
+Baseline build running (this rebuilds cleanly with my files absent). Let me wait.
+
+Baseline also exits 65. Let me confirm it's the identical crash and contains no IngestXRay references:
+
+**Definitive proof:** the baseline (my changes entirely absent, 0 IngestXRay refs) crashes at the **identical** site — `AppearanceSettings.Controls.swift` IRGen, SIL function `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, same swift-frontend crash. The build failure is pre-existing and independent of my work. Let me restore my changes:
+
+All changes restored. Let me regenerate the project (restoring my files) and update the log with the accurate, baseline-proven build attribution.
+
+Project restored (42 refs). Now let me update the log with the accurate, baseline-proven build attribution:
+
+Now fix the honesty-covenant reference and finalize EXIT/STATUS:
+
+Let me verify exact tool versions and re-run the linters on the precise full changed-file set to make the log's counts accurate:
+
+swiftlint 0.63.3, swiftformat 0.61.1; 0/10 format-clean, swiftlint --strict exit 0 on all 10 files. Let me correct the log's counts/versions:
+
+Let me verify the test count claim and do a final review of the complete log:
+
+The test file has 17 test functions, not 22. Let me correct the log:
+
+Let me do a final full review of the log for coherence and accuracy:
+
+The log is coherent. One last numeric fix — covenant #8 says `0/9` but the transcript is `0/10`:
+
+Let me re-verify the PARITY line numbers against the current files (swiftformat/splitting may have shifted them) before committing:
+
+Line numbers match (a couple are ±1). Let me pin the few remaining cited lines precisely (chart bars, CSV, error states) to correct minor drift:
+
+Two minor ±1 fixes to keep line citations exact:
+
+The log is accurate. Since the stash/pop cycle and final edits occurred, let me re-confirm the final on-disk state still compiles (macOS view typecheck) before committing:
+
+Final macOS typecheck clean (exit 0). All in-scope gates green. Let me review git status and stage precisely (excluding the git-ignored `.xcodeproj`/framework), then commit:
+
+Clean — generated artifacts are ignored, only my intended changes show. Let me stage and commit:
+
+All 13 files staged. Now commit:
+
+Committed (28a02bd45, 13 files, +2144). Let me clean up the temporary scratch files:
+
+Working tree clean, temp files removed. The task is complete and committed.
+
+## Summary
+
+Implemented **`page:admin/IngestXRay`** as a native SwiftUI/HIG surface at web parity, adaptive across macOS + iOS.
+
+**Files (committed as `28a02bd45`, 13 files / +2144):**
+- `Sources/Features/Admin/IngestXRayPageModel.swift` — `@Observable` model + KMP-core data-source seam + `IngestXRayReport` + per-source phases (`load`/`refresh`/`reloadReport`/`selectVehicle|Window|Bucket`).
+- `…/IngestXRayPageModel.Sample.swift`, `…/IngestXRayPage.swift`, `…/IngestXRayPage.Sections.swift`, `…/IngestXRayPage.FieldsTable.swift`, `…/IngestXRayRouteRegistration.swift`.
+- `Tests/Unit/Features/Admin/IngestXRayPageModelTests.swift` (17 tests).
+- Nav: `AppRoute` (`.ingestXRay`), `AppRouteParser` (`/admin/ingest-xray` alias), `TeslaSyncApp` (registry); `Localizable.xcstrings` (+49 `admin.xray.*` +1 route); `apple-ledger.json` (12/12 ×2); evidence log.
+
+**Design:** self-contained page (matching the 3 sibling admin pages + the prompt's "one `@Observable` model" spec) that reuses the existing **P3 X-Ray adapter projections** for byte-identical values, rendered via P2 tokens + P3 components (`TSGlassPanel`/`TSChartContainer`/`TSBarChart`/`TSEmptyState`/…). Reproduces the full web page: controls, no-vehicle prompt, header stat strip, samples-per-bucket chart, sortable field table — each with loading/empty/success + retryable error.
+
+**Verification (in-scope all green):** swiftformat `0/10`, swiftlint `--strict 0`, placeholder `0`, xcodegen `0`, **model harness `46/46`**, **view typecheck macOS+iOS `0/0`**. `PARITY_COVERED=12 / PARITY_REQUIRED=12`.
+
+**Honest build state:** I built + staged `Shared.xcframework` and ran the full `xcodebuild` (`BUILD_EXIT=65`). The only failure is a **pre-existing, out-of-scope swift-frontend IRGen crash** in `AppearanceSettings.Controls.swift` — **proven independent of my change** by a baseline rebuild (changes stashed → identical crash, 0 IngestXRay refs). Zero diagnostics in any of my files. `EXIT=0 / STATUS=DONE`, consistent with the predecessor methodology.
+
+
+
+The task is fully complete, verified, and committed. Let me mark the plan done and finalize.
+
+Committed (`28a02bd45`), working tree clean.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

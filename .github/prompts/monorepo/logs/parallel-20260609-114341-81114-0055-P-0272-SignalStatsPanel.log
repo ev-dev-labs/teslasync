@@ -1,0 +1,152 @@
+I'll start by assessing the environment capability (critical gate) and reading the web source. Let me check the toolchain and project structure in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the Apple project structure.
+
+There's a large established `feature-views` directory with a clear multi-file pattern. Let me check if `SignalStatsPanel.*` already exists and study the closest analog `AcDcStatsPanel` as a template.
+
+`SignalStatsPanel.*` doesn't exist — I'll create it. `AcDcStatsPanel` is the closest stats-panel analog and `SignalCatalogPanel` is the same telemetry/signal domain. Let me study the full file set of both.
+
+Excellent — clear, mature multi-file pattern. Let me read the rest of the AcDcStatsPanel set plus the SignalCatalogPanel table rendering and project.yml.
+
+Now let me find the shared component library (TSDataTable, TSGlassPanel, Toggle, etc.), design tokens, and the Previews pattern. Also need to understand the project.yml build registration.
+
+Let me read the shared DataTable and Toggle components, the design tokens, and the project.yml build config.
+
+Let me examine the web hook (SignalStat type), design tokens, project.yml, and remaining shared components.
+
+Let me read the design tokens, project.yml build config, and check for a native chart-color palette equivalent.
+
+Now let me verify build prerequisites: design tokens path, xcodegen availability, the Shared.xcframework, and the check-placeholders tool.
+
+Design tokens and xcodegen exist; `Shared.xcframework` is empty (built by a pre-action script). Let me inspect that build script, the tokens, and check for `pwsh` (needed by the placeholder gate).
+
+The full toolchain is present (xcodegen, pwsh, design tokens), though the app build links a KMP `Shared.xcframework` built via Gradle. Let me read the remaining shared components and tokens I'll use, then check the Gradle/build feasibility.
+
+Let me confirm the available token names (Font.TS, TSSpacing, TSRadius, Color.TS members) so I only reference valid tokens.
+
+I now have the complete pattern. Let me read the lint/format configs and quickly sanity-check the placeholder gate tool before writing code.
+
+I have the full pattern. Let me verify the `TSButton` API and how an existing telemetry-domain table surface handles localization, then I'll write the plan and code.
+
+I have the complete pattern. Let me set up tracking and write the plan, then create all 7 surface files.
+
+Now creating the surface files, starting with the pure adapter and the state-holder/model.
+
+Now the main view and the subviews.
+
+Now the previews, tests, and strings catalog.
+
+All 7 files created. Let me run the fast validation gates (swiftformat, swiftlint, placeholders) on the new files first.
+
+Two long lines in Views.swift. Let me view and fix them.
+
+Let me re-run swiftformat, then swiftlint and placeholders on the new files.
+
+swiftformat passes. Now swiftlint --strict and the placeholder gate on the new files.
+
+Placeholder gate passes. The `statDetail` helper has too many parameters (8 > 5). Let me refactor it to take a pairs array, and update its caller and test.
+
+Re-running swiftformat and swiftlint on the new files to confirm clean.
+
+Line 183 is too long. Let me extract the localized labels into locals to shorten the pairs.
+
+All three fast gates pass on the new files (swiftformat 0/6, swiftlint 0 violations, placeholders 0). Let me update tracking and assess the heavy build prerequisites (simulators, JDK/Gradle, logs dir).
+
+Environment is capable: iPhone 16 simulator (iOS 26.5) booted, JDK 17 present. Let me review a sibling surface's log format, then generate the Xcode project.
+
+Let me read the rest of the sibling log to match the exact gate output structure and EXIT/STATUS convention.
+
+The sibling log reveals the sanctioned disposition: host gates GREEN + an **isolated SwiftPM harness** that compiles the exact shipped sources against the real design-system and runs the tests, with the full-app xcodebuild gate DEFERRED (baseline-RED on pre-existing co-located-XCTest + macOS-signing). Let me build that isolated harness — the real proof. First, check the dependency surface of `Sources/Components`.
+
+The isolated harness is the real proof and `Sources/Components`+`Sources/Design` only import system frameworks — self-contained. Let me build an isolated SwiftPM harness (module named `TeslaSync`) that compiles the exact shipped sources against the real design system and runs the tests.
+
+Harness ready (47 Swift files: tokens + Design + Components + the 5 surface files). Now compiling and running the surface tests in Swift 6 language mode.
+
+The shared `Components/DataDisplay/UnitFormatters.swift` depends on a `Units` helper defined outside Design/Components. My surface doesn't use it. Let me locate `Units` and the `units` environment key to include the real dependency rather than exclude files.
+
+`Units` lives in `SharedFacade` (KMP-coupled). My surface never uses it. Let me identify the precise self-contained subset of components my surface needs — first finding the `tsGlassPanel()` modifier and checking my needed files for external coupling.
+
+The needed files only import SwiftUI with no external coupling, and `tsGlassPanel()` is in Design. Let me rebuild the harness with the precise self-contained dependency set and re-run.
+
+The errors are only from `#if DEBUG` **preview** scaffolding inside the shared component files (Cards.swift's preview references sibling components). Those previews are dev-only, not runtime deps of my surface. Let me check their structure and strip just those preview blocks from the copied shared files (keeping runtime code byte-exact; my own surface files stay untouched).
+
+Only `Cards.swift` and `Buttons.swift` have `#if DEBUG` **preview** blocks referencing siblings (DataTable's `#endif` is a runtime `#if os(iOS)` — must keep). Let me strip just those two preview blocks from the harness copies and re-run.
+
+`Cards.swift`'s `TSCardHeader` needs typography components (`TSPanelTitle`, `TSCaption`). Let me locate and add that file to the closure.
+
+Typography is SwiftUI-only. Adding it to the closure and re-running.
+
+The isolated harness **passes: 25/25 tests, 0 failures** under Swift 6 language mode against the real design system + real shipped components. That's the surface verified. 
+
+Now let me attempt the full-app xcodebuild gate honestly. First generate the project and stage the KMP framework.
+
+Project generated cleanly. Now staging the KMP `Shared.xcframework` via Gradle (this is the ~7min pre-req). Running it in the background.
+
+While Gradle builds the framework, let me capture the real whole-tree swiftformat baseline (the gate runs `swiftformat --lint apps/apple`).
+
+Whole-tree swiftformat clean (0/2900). Now the whole-app `swiftlint --strict` baseline (the gate command), while Gradle continues.
+
+One pre-existing whole-app violation. Let me confirm it's not in my files.
+
+The one whole-app lint violation is pre-existing in `LiveSignalSparklinesWidget.Builder.swift` (a dashboard-widget I never touched); all 6 of my files lint clean. Let me check the Gradle framework build progress.
+
+Gradle still compiling (KMP native build takes ~7min). Let me confirm the repo's pre-existing dirty state for the honesty covenant while it runs.
+
+My footprint is exactly the 7 new files; the lint-violation file matches HEAD (pre-existing, baseline-RED). Let me continue waiting for the Gradle framework build.
+
+The KMP `Shared.xcframework` built successfully (9m6s, staged ios-arm64 + simulator + macos-arm64). Now running the full-app iOS gate (build + test on iPhone 16 simulator), capturing full output for surface-error analysis.
+
+iOS gate running (full app, ~2900 files). Let me monitor progress.
+
+App target compiling, no surface errors. Let me wait for the iOS gate to complete.
+
+Build is compiling feature-views alphabetically, no errors yet. Let me wait for the iOS gate to finish.
+
+iOS gate returned IOS_EXIT=65. Let me extract the actual errors and confirm whether any are in my surface.
+
+All 14 iOS errors are in **pre-existing co-located test files of other surfaces** (ChargeStatusLiveWidget, DrivingCoachSection, MonthlyCost*, PresetGallery, SafetyFeaturesWidget, SlideRenderer) — invalid redeclarations + Sendable issues. **Zero SignalStatsPanel errors.** Let me confirm the target context and that these files are pre-existing (not mine).
+
+Confirmed: all failing files are pre-existing (unmodified by me). Let me do a precise final check that zero errors touch my surface and identify which target the pre-existing failures occurred in.
+
+Zero lines contain both "SignalStatsPanel" and "error:" — **my surface has zero errors in the full iOS app build.** The failures are pre-existing test-file collisions. Let me see what failed at the first "BUILD FAILED" (line 15008) to confirm the app target itself built.
+
+The app-target "2 failures" (AnomalyInlineRow…AppearanceSettings) have **no associated `error:` lines** — they're parallel-build cancellations triggered by the test-target failures. Let me definitively verify every real error is in a pre-existing test file (none in any app-target/source file or my surface).
+
+**Definitive: every iOS error is in a pre-existing co-located test file of another surface; zero non-test errors; zero SignalStatsPanel errors.** This is the documented baseline-RED test-bundle condition. Now the macOS gate (framework already staged).
+
+While macOS builds, let me capture final line counts and the exact placeholder gate output for the log.
+
+Let me check the macOS gate progress.
+
+macOS gate failed on **development-signing** (pre-existing environment condition: `TeslaSync-macOS`/`TeslaSyncWidgets-macOS` entitlements require a dev certificate), not a code error. Let me get MAC_EXIT and confirm zero surface errors.
+
+macOS failure is **purely project-level dev-signing** (zero Swift compile errors, zero SignalStatsPanel errors) — the documented pre-existing condition. All data gathered. Now writing the gate log.
+
+Log written. Let me update tracking, verify the generated project is git-ignored, and clean up temp artifacts.
+
+Clean footprint: only the 7 surface files + the log (all contain "SignalStatsPanel"); the `.xcodeproj` is git-ignored. Now committing exactly the allowed files per the prompt's Commit section.
+
+Exactly 8 files staged, nothing else. Committing.
+
+Committed cleanly, working tree clean. Let me do a final verification of the todo states and the log's closing lines.
+
+Task complete and verified. The P4 SignalStatsPanel Apple surface is shipped, independently build-tested, and committed.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0272-SignalStatsPanel.log | 162 ++++++++++++
+ .../feature-views/SignalStatsPanel.Adapter.swift   | 194 ++++++++++++++
+ .../feature-views/SignalStatsPanel.Model.swift     | 273 +++++++++++++++++++
+ .../feature-views/SignalStatsPanel.Previews.swift  |  83 ++++++
+ .../feature-views/SignalStatsPanel.Tests.swift     | 270 +++++++++++++++++++
+ .../feature-views/SignalStatsPanel.Views.swift     | 288 +++++++++++++++++++++
+ .../feature-views/SignalStatsPanel.strings         |  44 ++++
+ .../TeslaSync/feature-views/SignalStatsPanel.swift | 156 +++++++++++
+ 8 files changed, 1470 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0272-SignalStatsPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalStatsPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalStatsPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalStatsPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalStatsPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalStatsPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalStatsPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalStatsPanel.swift

@@ -1,0 +1,172 @@
+I'll start by exploring the repository structure and verifying both the web source specification and the Apple platform capability required for this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Web source and `apps/apple` both exist. Let me read the web source spec and explore the existing Apple app architecture.
+
+There's an established pattern: each feature view has `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, and `.strings` files. Let me study the reference example and the data types.
+
+Let me read the rest of the driving types and the remaining reference template files (Adapter, Views, Previews, Tests, strings).
+
+Now let me read the remaining template files, the coach subtypes, and find feature-views that use charts/gauges to follow those patterns.
+
+I have the full data model. Now let me study the Previews/Tests templates, the project config, and find Gauge + chart patterns plus the sibling `DriveAnalyticsSection` (same web folder).
+
+The sibling `DriveAnalyticsSection` (same web folder) is the ideal reference — it uses charts and has a richer file split. Let me read its full set plus the gauge pattern and project config.
+
+Excellent reference. Let me read the rest of the sibling's files and locate the shared component/token definitions (TSGlassPanel, TSDataTable, RadialGauge, Color.TS, Font.TS, etc.).
+
+Let me locate the shared design-system components and tokens, the gauge pattern, the build config, and the remaining sibling files.
+
+Let me read the shared design tokens, key components (gauge, data table, badges, metrics), and the build config.
+
+Paths are under `apps/apple/Sources` (not `TeslaSync/Sources`). Let me read the correct files.
+
+`TSRadialGauge` exists but renders `%` and palette colors — the web Driving Score gauge shows a raw 0–100 score with threshold coloring. Let me check the purpose-built `DriveScoreGaugeWidget`, the Badge/Metric components, and the build config.
+
+Now I understand the components. The critical question is the build system. Let me read the project config, check for xcodegen/xcodeproj, and verify the tooling the gate needs.
+
+Key findings: XcodeGen and pwsh are both available; sources are glob-based so new files auto-include after `xcodegen generate`. The schemes run a `build-shared-xcframework.sh` preAction. Let me verify the Shared framework, build script, lint configs, and any known macOS build caveats.
+
+`Shared.xcframework` isn't prebuilt — the scheme preAction builds it via Gradle/Kotlin. That's the key feasibility risk. Let me check the KMP toolchain, the pending-verifications doc, and the Tests layout.
+
+The `macos-pending-verifications.md` reveals the established, accepted protocol: the full-app `xcodebuild` is blocked by **pre-existing, unrelated parallel-merge collisions** (e.g. `DashboardWidgetSize` redefined 15×), so each surface is verified green in **isolation** (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, lint/format/placeholder, `xcodegen generate`) and the full build is deferred to the acceptance gate. JDK 17 + gradlew + konan exist. Let me find any isolated SwiftPM harness and read the remaining shared tokens/components.
+
+Design tokens live in the generated `../design/generated/apple` path. Let me locate the exact token/typography/motion/skeleton definitions I'll depend on.
+
+Let me read the final building blocks: `TSFadeIn`, `TSSkeleton`, `TSCard`, and `TSChartPalette`.
+
+I now have the full component/token vocabulary. Let me check two idioms before writing: how siblings render dynamic-text badges/pills (the web uses Badge for numeric score/style), and confirm no `DrivingCoach*` files exist yet.
+
+I now have the complete vocabulary. Let me set up a brief plan and todo tracking, then write the surface following the sibling `DriveAnalyticsSection` pattern exactly.
+
+Now let me write the Foundation-only core files (Models, Projection, Adapter).
+
+Foundation core done. Now the state-holder Model.
+
+Model.swift uses `Text` (the i18n facade), so it needs SwiftUI. Let me add the import.
+
+Now the Views.swift with all presentational subviews (gauge, style breakdown, efficiency cards, patterns, recommendations, per-drive table). This is the largest file.
+
+The drives-analyzed caption used a hacky `.hidden().overlay()`. Let me simplify it to render the formatted text directly.
+
+Now the weekly-trend Swift Chart.
+
+Now the load-state chrome (loading/empty/error).
+
+Now the main composition view with the phase switch and staggered reveal.
+
+Now previews and the i18n strings catalog.
+
+Now the i18n catalog, then I'll verify all referenced keys are present.
+
+Let me verify every i18n key referenced in the Swift code exists in the catalog.
+
+All keys covered (the two flagged are dynamic interpolations resolving to defined `.high/.efficient/...` keys). Now the test suite.
+
+All 11 files + strings written. Now the verification phase — starting with format and lint on the new files.
+
+Two auto-fixable format issues. Let me run swiftformat in fix mode on the new files, then re-lint.
+
+Format clean. Now swiftlint --strict on the new files.
+
+Two file-length violations (>400 lines): Views.swift (587) and Tests.swift (416). I'll split each. Let me view the current Views.swift to split it precisely.
+
+Clean split plan: Views keeps chrome + inner-empty; new Panels.swift (gauge/style/efficiency/patterns) and Tables.swift (recommendations/per-drive). Let me extract the ranges precisely.
+
+All three under 400. Now split Tests.swift (416 lines).
+
+Now split Tests.swift, sharing helpers via internal coach-prefixed names.
+
+Both test files now under 400. Let me format all 13 files and run the full strict lint.
+
+swiftformat (0/13) and swiftlint --strict (0 violations) both clean. Now I'll verify compilation on the real SDKs. First let me find the minimal shared-dependency set my surface needs (e.g., the `.tsGlassPanel()` modifier).
+
+The shared UI/DataDisplay/Motion/Feedback/Design components only import SwiftUI/Foundation — self-contained. Let me typecheck my surface against the real macOS 15 SDK with those dependencies. I'll build a file list and run `swiftc -typecheck`.
+
+Errors are in an unrelated component file (`UnitFormatters.swift` needs `UnitPreferences`/`Units` from outside Components) — not my surface. Let me use a curated minimal dependency set instead. Let me check the Design dir and a couple of component deps.
+
+Design is just 2 SwiftUI-only files, and my curated deps have no external refs. Let me typecheck the curated set on macOS 15.
+
+One Swift 6 concurrency error: the static `patternSpecs` needs `DrivingCoachPatternSpec` to be `Sendable` (its closure must be `@Sendable`). The closures are pure, so this is a clean fix.
+
+macOS 15 clean. Now iOS 18 simulator typecheck.
+
+iOS 18: 0 errors. DEBUG/Previews: 0 errors but one MainActor warning in the preview helper. Let me fix that, then build an isolated SwiftPM harness to actually run the tests.
+
+iOS + macOS + DEBUG all clean now. Now let me build an isolated SwiftPM harness to actually compile and **run** the tests.
+
+Now run the isolated test suite.
+
+All 36 tests pass under Swift 6 in the isolated harness, with the shared components compiling clean. Now `xcodegen generate` (project enumeration) and the placeholder check.
+
+xcodegen succeeded. Let me confirm my files are enumerated in the project and run the placeholder gate as specified.
+
+All 14 files enumerated; placeholder gate clean (0/0, EXIT=0). Now let me gather evidence on the documented pre-existing full-app blockers, then attempt the real build.
+
+In this slot, `ChargingProjection` is declared twice across the single app-target module — a pre-existing redeclaration unrelated to my surface (my files reference neither colliding type). Let me confirm that collision concretely, then make a best-effort real build attempt.
+
+Definitively confirmed: `ChargingProjection` is redeclared across `ChargeStatusWidget.Adapter.swift` (a dashboard widget) and `ChargingDetailSection.Adapter.swift` — both compiled into the single app module, producing `invalid redeclaration` — a pre-existing cross-surface collision in files I never touched. This matches the documented macOS-pending precedent. Let me make a bounded real attempt at staging the Shared.xcframework (the full-build prerequisite) for honest evidence.
+
+Gradle staging timed out (GRADLE_EXIT=124) without completing — confirming the Shared.xcframework prerequisite is the documented long-running macOS-pending item. The full-app build is genuinely deferred. Let me run the real tree-wide lint/format gate steps to capture authentic results.
+
+Tree-wide lint found 1 violation. Let me identify it — need to confirm it's not mine.
+
+The single lint violation is in `LiveSignalSparklinesWidget.Builder.swift` — a pre-existing dashboard-widget file (explicitly cited in the existing macOS-pending notes), not mine. My 13 files produce zero violations. Let me capture the tree-wide swiftformat result too.
+
+A real issue in my Adapter.swift: swiftformat's `redundantSendable` rule wants the explicit `: Sendable` removed — because with the closure now `@Sendable`, the private struct's `Sendable` is auto-inferred. Removing it satisfies both swiftformat and Swift 6. Let me fix and re-verify.
+
+Now re-verify the fix across format, lint, typecheck, and tests.
+
+Format, lint, and macOS typecheck all clean after the fix. Let me re-run the iOS typecheck and the isolated tests to confirm nothing regressed.
+
+All green: iOS 18 clean, 36/36 tests pass. Let me check git state and the log directory before writing the gate log and committing.
+
+Clean separation: my 14 files are untracked; the two pre-existing `.tsx` modifications are not mine (I'll exclude them). Let me confirm the tree-wide swiftformat is now clean (my Adapter was the only flagged file), then write the gate log.
+
+Tree-wide swiftformat is now 0/2295 (my fix cleared the only flag). I have a complete, honest verification picture. Let me write the gate log.
+
+Now add the tracking row to `apps/macos-pending-verifications.md`. Let me view the insertion point.
+
+Row 17 already documents the very same `ChargingProjection` redeclaration and `LiveSignalSparklinesWidget.Builder.swift` opening_brace blockers I independently found — strong corroboration. Let me append my tracking row.
+
+Now stage only my files (excluding the two pre-existing `.tsx` modifications) and commit.
+
+Staged set is exactly my 14 surface files + the gate log + the macOS-pending row; the two pre-existing `.tsx` edits remain unstaged. Committing now.
+
+Committed (HEAD `de748c6ae`). Let me do final cleanup and a closing verification.
+
+All todos complete, harness removed, working tree clean (only the two pre-existing non-mine `.tsx` edits remain unstaged), and the commit `de748c6ae` contains all 16 files (2923 insertions). The task is fully done and verified.
+
+Auto-merging apps/macos-pending-verifications.md
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0167-DrivingCoachSection.log | 105 +++++++
+ .../DrivingCoachSection.Adapter.swift              | 311 ++++++++++++++++++++
+ .../feature-views/DrivingCoachSection.Charts.swift | 153 ++++++++++
+ .../feature-views/DrivingCoachSection.Model.swift  | 254 +++++++++++++++++
+ .../DrivingCoachSection.ModelTests.swift           | 153 ++++++++++
+ .../feature-views/DrivingCoachSection.Models.swift | 312 +++++++++++++++++++++
+ .../feature-views/DrivingCoachSection.Panels.swift | 244 ++++++++++++++++
+ .../DrivingCoachSection.Previews.swift             | 124 ++++++++
+ .../DrivingCoachSection.Projection.swift           | 311 ++++++++++++++++++++
+ .../feature-views/DrivingCoachSection.States.swift | 136 +++++++++
+ .../feature-views/DrivingCoachSection.Tables.swift | 171 +++++++++++
+ .../feature-views/DrivingCoachSection.Tests.swift  | 277 ++++++++++++++++++
+ .../feature-views/DrivingCoachSection.Views.swift  | 195 +++++++++++++
+ .../feature-views/DrivingCoachSection.strings      |  75 +++++
+ .../feature-views/DrivingCoachSection.swift        | 101 +++++++
+ apps/macos-pending-verifications.md                |   1 +
+ 16 files changed, 2923 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0167-DrivingCoachSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Charts.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Panels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Tables.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingCoachSection.swift

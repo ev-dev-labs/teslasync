@@ -1,0 +1,133 @@
+I'll start by exploring the repository structure and the web source page to understand what needs to be ported.
+
+The page is a thin wrapper that embeds `RegionSettings`. Let me explore that component and the Apple app structure in parallel.
+
+The page wraps `RegionSettings` which has a real API data source. Let me examine the parity manifest, the Apple app source structure, and an existing similar admin page for patterns.
+
+Key finding: `Features/Admin` doesn't exist yet, and `RegionSettings` was already implemented as a separate feature-view. Let me find the actual Apple source tree and existing RegionSettings Swift component.
+
+`RegionSettings` exists as a feature-view with a full set of files. Let me read the prior `TeslaRegionPage` log and the existing RegionSettings implementation to understand the established patterns.
+
+A prior attempt was BLOCKED. Note its referenced paths (`apps/apple/Sources/...`, `apps/apple/Localization/...`) may not match the current repo structure (which uses `TeslaSync/feature-views/`). Let me verify the actual current structure and build config.
+
+Both `Sources/` and `TeslaSync/` exist. Let me examine the build config, the `Sources/Features` structure, routing, and whether the prior attempt's files are present.
+
+The real compiled/linted root is `Sources/Features/Admin/` (all other admin pages live there). The prompt's `TeslaSync/Features/Admin/` path isn't a source root. Let me study existing admin page patterns and the RegionSettings model/adapter to build consistently.
+
+Excellent — `TeslaOrdersPage` is a near-identical precedent (thin wrapper hosting a shared section). Now let me study the routing system, an existing test, the RegionSettings views/strings, and design tokens.
+
+Now let me examine the route parser, shell, all exhaustive `AppRoute` switches, the design tokens used, and the parity ledger/manifest format.
+
+Now let me check the design tokens (`TSPageTitle`), the existing string catalog keys, and the parity manifest/ledger format.
+
+`region.*` keys don't exist in the main catalog yet — I'll add `region.title`, `region.subtitle`, and `route.teslaRegion`. Let me inspect the catalog JSON structure and the typography/token definitions.
+
+The catalog has mixed formatting (not strictly normalized), so surgical insertion is safe. Let me check the RegionSettings string table, settings-namespace key conventions, the typography token, and any localization completeness checks.
+
+The catalog uses namespace prefixes (`settings.*`, `translation.*`), but the manifest declares bare `region.title`/`region.subtitle` and the hosted `RegionSettings` surface uses bare keys too. Let me confirm the exact manifest record and ledger format.
+
+Manifest confirms bare keys `region.subtitle`, `region.title`. Now let me examine the apple-ledger format and the README gate contract.
+
+Let me read the rest of the README gate contract and check the local toolchain (Xcode, swiftlint, swift) availability.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, xcodegen) — I can run the real gate. Let me check `RouteTests.swift` for any `allCases` count assertions that a new enum case would break, and find the web sidebar label for `/tesla-region`.
+
+I have everything needed. Let me set up tracking, check the staged framework, and capture the exact catalog block for surgical insertion.
+
+The `Shared.xcframework` isn't staged (only `.gitkeep`), so a full build will need to build it first (~10 min per prior log). Let me set up tracking via SQL, re-extract the exact catalog block, and inspect the build script.
+
+`cat -A` isn't valid on BSD; I'll use Python for a precise, non-reformatting catalog insertion later. The build script needs the KMP `Shared.xcframework` (not staged). Let me start writing the deliverables — the page first.
+
+Now the route registration, following the `TeslaOrders` pattern.
+
+Now wire the route into `AppRoute.swift` (enum case + pathSegment + systemImage + group) and `TeslaSyncApp.swift`.
+
+Now the test, mirroring the `TeslaOrders` route test plus page-model coverage.
+
+Now the catalog — I'll insert the 3 entries surgically via Python (brace-matching after the `route.teslaOrders` block) to avoid reformatting the 194k-line file, then validate the JSON.
+
+Catalog updated and JSON validated (8717 strings, 3 added). Let me update tracking, verify the AppRoute edits and catalog diff, then run the fast gates.
+
+Catalog diff is clean (69 insertions, no reformatting). Now the fast gates — placeholder scan and SwiftLint on the new/changed files.
+
+Both fast gates are green: placeholder `COUNT=0 EXIT=0`, SwiftLint `0 violations`. Now let me run the broader Admin lint, check the KMP/Gradle toolchain, and kick off the `Shared.xcframework` build (the long pole) in the background.
+
+Broader SwiftLint is fully clean — **0 violations across 5723 files** (this snapshot is cleaner than the prior attempt's). Java 17 + KMP toolchain present. Let me start the `Shared.xcframework` build in the background (the long pole) while I prepare the ledger and log.
+
+While the framework builds, let me study a sibling page's evidence log (TeslaOrders, the closest analog) to match the house log format for a passing gate.
+
+The DONE sibling (TeslaOrders) establishes the accepted methodology: the full `xcodebuild` is RED only from **pre-existing, out-of-scope** breakage (proven by a base-build comparison + isolation harness), so it's still `STATUS=DONE`. Let me read its full gate transcript and reasoning to replicate the method precisely.
+
+I now have the full accepted methodology from the DONE sibling. Let me check on the framework build progress.
+
+The framework build is running (~10 min). Meanwhile, let me run the routing/nav harness now — it compiles the real `AppRoute`/`AppRouteParser`/`RouteHostRegistry` (with my edits) in isolation and proves the route logic, independent of the framework.
+
+Harness compiled clean under Swift 6. Let me run it.
+
+Harness passes **15/15** — route metadata, parser, group membership, and registry all correct. Let me run `swiftformat --lint` on my files and check the framework build.
+
+All in-scope gates green so far: `FORMAT_EXIT=0`, `LINT_EXIT=0`, `PLACEHOLDER COUNT=0`, `HARNESS 15/15`. Let me add the ledger rows (status pending final build confirmation) while the framework builds.
+
+Ledger validated (38 rows, both TeslaRegion rows present). The framework build continues (~9 min in). Let me keep waiting for it.
+
+Framework built and staged (`BUILD SUCCESSFUL in 7m 9s`, `XCFRAMEWORK_EXIT=0`). Now `xcodegen generate`, then the full `xcodebuild` build.
+
+`GEN_EXIT=0`; TeslaRegion referenced 18× in the project (iOS + macOS apps + both test bundles). Now the full macOS app build (capturing to a log for error analysis).
+
+Build is RED (`BUILD_EXIT=65`, 3 failures) — consistent with the prior pre-existing breakage. I must determine whether any failure references my files. Let me extract the actual error lines.
+
+The 3 failures are all in `TeslaSync/shared-surfaces/Input.Previews.swift` (a pre-existing, untouched P3 file) — a result-builder `return` error. **Zero errors reference my files.** Let me confirm my changed-file set, then run the rigorous base-state build to prove the breakage pre-exists.
+
+Confirmed: `Input.Previews.swift` is untouched by me — last committed by a different P4 sibling (`ed5f636e3`). My change set is purely additive. Now the rigorous base-state build: revert my compile-affecting changes, regenerate, rebuild — it should still fail identically.
+
+Base state clean (0 `teslaRegion` refs). Now regenerate and build the base state.
+
+Base state also RED (`BUILD_BASE_EXIT=65`). Let me confirm it's the same pre-existing errors, then restore my changes.
+
+Base build confirms the **identical** pre-existing errors (`Input.Previews.swift:88,:101`), proving the breakage pre-exists independent of my change. The final grep failed only due to a CWD path issue — let me verify my changes are fully restored from the repo root.
+
+Fully restored and project regenerated (18 TeslaRegion refs). The build's batch compiler failed early on `Input.Previews.swift` and may not have reached my files — so I need positive proof my files type-check in the real module. Let me extract xcodebuild's exact Swift compile flags to replay a whole-module type-check.
+
+My files weren't reached by the batch compiler (0 occurrences), confirming the early failure. Let me locate the compile flags and filelist separately.
+
+Found the app-target SwiftFileList and the driver command. The cleanest decisive proof is a **whole-module compile** (`SWIFT_COMPILATION_MODE=wholemodule`), which type-checks every file together — including mine — so any error in my files would surface. Let me run it.
+
+WMO build done (`EXIT=65`). Now the decisive check — extract every error and verify none reference my files (WMO type-checks all files together, so any error in mine would appear).
+
+**Decisive result:** the WMO whole-module type-check reports errors **only** in the pre-existing `Input.Previews.swift` — **zero** in my files, and `TeslaRegionPage.swift` was confirmed in the compiled module. Combined with the identical base-build failure, this proves the RED build is pre-existing and out-of-scope. Let me verify the generated artifacts are git-ignored, then write the evidence log.
+
+Generated artifacts are correctly git-ignored. Now let me write the evidence log with the full, honest gate transcript.
+
+Evidence log written. Let me update tracking, clean up temp artifacts, and do a final lint + status verification before committing.
+
+Final lint clean. Let me review the diffs of the edited tracked files and the full change set before committing.
+
+All diffs are surgical and correct. Let me stage the exact files and commit.
+
+Committed cleanly (`f728e580b`, 8 files, 657 insertions). Let me finalize tracking.
+
+All work complete and committed. 
+
+## Summary
+
+Implemented **`TeslaRegionPage`** — the native SwiftUI/HIG parity of web `TeslaRegionPage.tsx` (`/tesla-region`) — following the repo's established admin-page architecture (the directly-analogous `TeslaOrdersPage` precedent).
+
+**Delivered** (commit `f728e580b`, 8 files):
+- `Sources/Features/Admin/TeslaRegionPage.swift` — adaptive `View` + `@Observable TeslaRegionPageModel` owning the two parity strings and the embedded `RegionSettings` surface; 4 DEBUG previews.
+- `Sources/Features/Admin/TeslaRegionRouteRegistration.swift` — registers `.teslaRegion` with a seeded source (renders populated state).
+- `AppRoute.swift` (+`.teslaRegion`: `tesla-region` / `globe` / `.account`), `TeslaSyncApp.swift` (nav wiring).
+- `Localizable.xcstrings` — `region.title`, `region.subtitle`, `route.teslaRegion` (surgical 69-line insert, JSON re-validated).
+- Route/parse/model test; `apple-ledger.json` +2 rows; full evidence log.
+
+**Gate results (real commands):**
+- `XCFRAMEWORK_EXIT=0`, `GEN_EXIT=0`, `FORMAT_EXIT=0`, **`LINT_EXIT=0`** (0 violations / 5723 files), **placeholder `COUNT=0`**, **routing harness 15/15**, **`PARITY_COVERED==REQUIRED==2`**.
+- Full `xcodebuild`: **`BUILD_EXIT=65` (RED)** — but **only** from a pre-existing, out-of-scope result-builder error in untouched `shared-surfaces/Input.Previews.swift` (committed by a different P4 sibling `ed5f636e3`). Proven pre-existing via an identical-error **base-state build** and a **whole-module type-check showing ZERO errors in my files**.
+
+Per the accepted house methodology (all 9 sibling admin pages marked `done` on this exact basis), with every in-scope gate green: **EXIT=0 / STATUS=DONE**.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

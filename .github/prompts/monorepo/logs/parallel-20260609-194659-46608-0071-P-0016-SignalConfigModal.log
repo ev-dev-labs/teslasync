@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and understanding what's available for this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the existing native conventions.
+
+Now let me study the established native conventions. Since `SignalConfigModal` is presentational with rows, `NotificationBellPopover` (rows-based, no map/chart) is the closest analog. Let me study it fully plus the project structure.
+
+This is a sophisticated layered architecture. Let me study the remaining structure files of the closest analog plus the build registration.
+
+Let me examine the build registration, the Adapter pattern, the design tokens (P1/S9), and the test/strings/preview conventions.
+
+Let me find the project config and design tokens, and read the Adapter/Previews/Tests conventions.
+
+Critical finding: `project.yml` does NOT list `TeslaSync/modals-dialogs` as a build source, yet the prompt restricts me to only `modals-dialogs/SignalConfigModal.*` files. Let me check how predecessors handled the gate and whether the build tooling is available.
+
+The methodology is clear now: modals-dialogs is intentionally not-yet-wired into `project.yml` (deferred to a P99 integration gate). Predecessors verify via isolated SwiftPM build/test + dual-SDK typecheck + swiftformat/swiftlint/placeholder on their own files. Let me read the full predecessor logs to reproduce the exact methodology.
+
+Excellent — I now fully understand the established protocol. Let me read the design tokens (P1/S9), the lint/format configs, the placeholder script, and the Adapter/Previews/Tests conventions from a predecessor.
+
+Let me study the most presentational predecessor (`SessionExpiredModal`) to see how a near-static modal handles the state/source pattern, plus the previews/tests conventions and the placeholder script.
+
+The pattern is now crystal clear. Let me read the test/preview conventions, the placeholder script, the modal-composition view, and the exact verification harness from the GeofenceDrawer log.
+
+Let me read the shared native components I'll compose with, plus the Source-seam shape and a state-leaf styling reference.
+
+I have a thorough understanding now. Let me verify no symbol collisions and check the remaining test/seam conventions before writing.
+
+Interesting — there's an existing simplified inline mapping in `feature-views`. Let me read it to learn the team's native signal-config idioms and avoid any symbol collisions.
+
+I now have everything I need. The existing `FleetTelemetryFields` catalog (the verbatim `TELEMETRY_FIELDS` port) confirms the domain data, and my full atomic modal is the in-scope deliverable. Let me read the adapter/a11y test file format, then set up my plan and start building.
+
+I now have a complete understanding of the architecture, conventions, verification protocol, and the domain data. Let me set up my plan and task tracking, then build.
+
+Now I'll build the SwiftUI-free core. Starting with the Adapter (types + interval/preset catalog):
+
+Now the pure Projection layer (grouping, filtering, counts, phase, transforms, icons):
+
+Now the Seams (telemetry, actions, source/P1-S8, i18n facade, accessibility builders):
+
+Now the state holder — the `@MainActor @Observable` Model:
+
+Now let me validate the SwiftUI-free core compiles via an isolated SwiftPM harness before building the views.
+
+Core compiles cleanly under Swift 6. Let me update progress and build the SwiftUI view layer.
+
+Now the chrome views (header, footer, banners, populated container, leaf states):
+
+Now the master controls (presets, select-all, master interval, search):
+
+Now the category sections, signal rows, checkboxes, and interval pickers:
+
+Let me remove a potentially platform-specific menu style and then typecheck the views against the real tokens + shared components on both SDKs.
+
+iOS typecheck passes clean. Now macOS:
+
+Both SDKs typecheck clean. Let me write the Previews, strings catalog, and tests.
+
+Now the i18n strings catalog with every key the Swift code resolves:
+
+Now the projection + accessibility tests:
+
+Now the state-holder tests:
+
+Now let me run the full core + tests in the isolated SwiftPM harness:
+
+All 45 tests pass under Swift 6. Now the formatting/lint gates. Let me run swiftformat lint first:
+
+swiftformat wants auto-fixes (wrap property bodies, wrap long lines). Let me apply them with the ecosystem tool, then re-verify:
+
+swiftformat passes. Now swiftlint --strict on the surface files (tier scoped in via explicit paths):
+
+Two fixable lint categories: `inclusive_language` (rename "master") and `cyclomatic_complexity` (data-drive two switches). Let me view the exact blocks to refactor:
+
+Let me refactor the preset interval logic to data-driven rules (fixes cyclomatic complexity), and the icon map to a dictionary:
+
+Now rename the `master` identifiers (flagged by inclusive_language). Let me find all references:
+
+The `inclusive_language` rule flags identifiers only (not strings/comments), so I'll rename the `master*` declarations to `global*`/`controlBar` while keeping the web's "Master Interval" product copy for parity. Applying renames across files:
+
+Now re-run swiftformat and swiftlint after the refactors:
+
+Both clean. Now re-verify tests and dual-SDK typecheck (including Previews) after the edits:
+
+All green. Now let me check for forbidden placeholder patterns before running the gate script — I need to scan my Swift files:
+
+Confirmed — the only hit is `searchPlaceholder` (contains "Placeholder"). Renaming the key to avoid the forbidden pattern:
+
+Now let me run the placeholder gate and the i18n key parity / line-count checks:
+
+Placeholder gate passes (COUNT=0). Now let me verify i18n key parity (every code key resolves to a `.strings` entry) and line counts:
+
+Line counts all ≤400; i18n parity is exact (65=65, no missing/orphans). Now the xcodegen spec-validity + file-enumeration check:
+
+Real spec valid (exit 0); modals-dialogs refs = 0 confirms the tier isn't wired (the grep's 0-count caused the shell's exit 1, not xcodegen). Now the scratch spec to prove the surface enumerates cleanly once the tier is bootstrapped:
+
+All 12 surface files enumerate cleanly. Let me run the final symbol-collision audit, then attempt the full-app build to capture honest evidence of the deferred state:
+
+Working tree is clean (only the 12 new files). Now let me honestly reproduce the full-app gate evidence. First the environment facts the predecessors documented:
+
+iPhone 16 sim is available (booted); KMP `Shared.xcframework` is unstaged (only `.gitkeep`); the pre-existing `StateTimeline*` duplicate-type siblings exist in the *wired* tiers. Let me launch the actual full-app iOS build to capture honest live evidence of the deferred state:
+
+The build is still running after 5 minutes — consistent with the predecessors' "KMP Gradle assemble long-pole" finding. Let me capture live process evidence:
+
+Definitive evidence captured: the build (PID 44381) is pinned in the `build-shared-xcframework.sh` pre-build phase running the KMP Gradle assemble (PID 44391 → GradleDaemon 22107 at 99% CPU) — it never reaches Swift compilation of the app sources. This is the documented, surface-independent block. Let me stop it and clean up:
+
+Build cleaned up; working tree has only the 12 surface files. Let me run a final consolidated verification to capture fresh numbers for the log:
+
+All gates green: swiftformat 0/11, swiftlint 0 violations, 45 tests pass (Accessibility 5, Model 18, Preset 8, Projection 14). Now let me write the gate log:
+
+Log written. Let me update tracking, do a final pre-commit verification, and clean up temp artifacts:
+
+Working tree is exactly the log + 12 surface files; no shared files touched. Committing per the prompt's specification:
+
+Committed cleanly — working tree is clean. Let me finalize tracking:
+
+All 12 todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...apple-modals-dialogs-0016-SignalConfigModal.log | 256 ++++++++++++++
+ .../modals-dialogs/SignalConfigModal.Adapter.swift | 393 +++++++++++++++++++++
+ .../SignalConfigModal.Controls.swift               | 225 ++++++++++++
+ .../modals-dialogs/SignalConfigModal.Model.swift   | 298 ++++++++++++++++
+ .../SignalConfigModal.ModelTests.swift             | 308 ++++++++++++++++
+ .../SignalConfigModal.Previews.swift               | 118 +++++++
+ .../SignalConfigModal.Projection.swift             | 222 ++++++++++++
+ .../modals-dialogs/SignalConfigModal.Rows.swift    | 264 ++++++++++++++
+ .../modals-dialogs/SignalConfigModal.Seams.swift   | 246 +++++++++++++
+ .../modals-dialogs/SignalConfigModal.States.swift  | 388 ++++++++++++++++++++
+ .../modals-dialogs/SignalConfigModal.Tests.swift   | 319 +++++++++++++++++
+ .../modals-dialogs/SignalConfigModal.strings       |  94 +++++
+ .../modals-dialogs/SignalConfigModal.swift         |  76 ++++
+ 13 files changed, 3207 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0016-SignalConfigModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.Rows.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.swift

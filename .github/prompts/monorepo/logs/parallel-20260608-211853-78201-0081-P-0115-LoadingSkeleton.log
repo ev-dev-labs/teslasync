@@ -1,0 +1,125 @@
+I'll start by exploring the environment to understand the task constraints, the web source, and whether the Apple toolchain is available.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Now let me read the web source and explore the Apple app structure.
+
+Now let me explore the existing feature-views structure to understand patterns, and check for an existing LoadingSkeleton and similar examples.
+
+There's already an existing `LoadingSkeleton.*` implementation. Let me read all 7 files to assess their current state.
+
+The existing `LoadingSkeleton.*` files are for prompt **0088** (charging-curve variant), a *different* web source. My task is **0115** (cost-analysis variant). Same native filename — a collision. Let me investigate the scope of this before deciding how to proceed.
+
+The cost-analysis source differs structurally from charging-curve (header has a trailing button, cards have 3 lines, ends with a table not a footer-stat grid). The existing `LoadingSkeleton.*` (0088) is layout-parameterized (`LoadingSkeletonLayout.chargingCurve`), which suggests it was designed to be extended. Let me read the remaining existing files, the web `Skeleton`/`GlassPanel` components, and the native shared primitives to plan a faithful extension that doesn't regress 0088.
+
+Now I understand the existing 0088 design fully. Let me check the predecessor's gate log (to see if the build/test gate is actually achievable here), the `project.yml`, the native shared primitives, and the web `Skeleton` component semantics.
+
+The web `Skeleton` supports `width` (px or %), `rounded` (pill). The 0088 log reveals the **sanctioned disposition**: full-app `xcodebuild` gate is pre-existing RED (XCTest-in-app-target across peers + macOS signing, owned by P4/P99 acceptance gate), so surfaces ship "code-complete + isolated-verified" with lint/format/placeholder green. Let me read the native shared primitives I must build on.
+
+`TSSkeleton(width:height:cornerRadius:)` — width nil fills; no native percentage-width support, so I'll add a small fractional-width helper in my view file. Pill = large cornerRadius. Let me locate the design tokens (TSSpacing, TSRadius, Color.TS) and confirm how feature-view files get compiled (project.yml).
+
+`TSGlassPanel` has fixed `TSSpacing.lg` padding (so panel padding isn't variable — I'll follow the 0088 convention and not model it). I need the token *values* to map web spacing faithfully, and the `project.yml` to understand the build/test composition. Let me locate the token source (likely the shared framework) and read `project.yml`.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read the token values and the `project.yml`.
+
+Now I understand the full build composition. Token values: `TSSpacing` xs=4/sm=8/md=12/lg=16/xl=20/x2xl=24; `TSRadius` sm=8/pill=9999. The `project.yml` correctly excludes `*Tests.swift` from app targets. Let me see the 0088 log's *isolated verification* method (to replicate it), check `xcodegen` availability, and count how many `LoadingSkeleton.tsx` sources exist.
+
+Confirmed: exactly 2 `LoadingSkeleton.tsx` sources (charging-curve=0088, cost-analysis=0115) collide to one native file. The sanctioned 0088 verification = isolated SwiftPM harness (real design system) + iOS SDK typecheck + lint/format/placeholder green, with the full `xcodebuild` gate DEFERRED (needs 8-min KMP `Shared.xcframework` + signing). My approach: **generalize `LoadingSkeleton` to a region-array model serving both layouts** (preserves 0088, adds cost-analysis). Let me check `apps/tools` for existing harness/scripts and read the remaining design-system deps.
+
+pwsh, check-placeholders.ps1 all present. Let me read the lint/format configs, placeholder patterns, and the transitive design-system deps (TSMaterial, Typography) so my code passes the gates and the isolated harness compiles.
+
+Everything's clear: avoid the literal word "Placeholder"/"TODO"/etc. (0088 had to strip "placeholder" from comments). swiftformat: maxwidth 120, before-first wrapping, `--self remove`. Let me read the placeholder scanner and the remaining harness deps (Typography, Color.TS tokens), then start building.
+
+I now have full context. Let me set up tracking and verify the existing files are committed (so I can safely rewrite them), then check the harness deps.
+
+Files are committed (safe to rewrite; restorable via git). Let me set up a plan and todos, then implement the region-array generalization.
+
+Now I'll write the new region-array Model file.
+
+Now the Views file (region renderer + fractional-width skeleton + sub-views).
+
+Now the main view file.
+
+I need to fix a spacing-fidelity issue: the original 0088 mapped web gaps to platform tokens (gap-6→`TSSpacing.xl`=20, not raw 24). To preserve 0088 exactly while keeping the Model SwiftUI-free, I'll replace the raw-px `TSGap` with a semantic `SkeletonGridGap` enum resolved to tokens in the view. Let me rewrite the Model.
+
+Now update the Views to resolve `SkeletonGridGap` to platform tokens and replace the removed `TSGap` references.
+
+Now fix the root spacing in the main view to match 0088's token choice (`TSSpacing.xl` for `space-y-6`).
+
+Now the `.strings` file (both layouts' a11y labels).
+
+Now the Previews file (both layouts × appearances).
+
+Now the comprehensive Tests file covering both projections, columns, primitives, telemetry, and i18n.
+
+Let me align the Telemetry file's header comment (it still says "0088") for consistency, then format and lint everything.
+
+Now format and lint the surface files.
+
+swiftformat clean; swiftlint flags only `file_length` (Model is 452 > 400). I'll split the two layout projections into a new `LoadingSkeleton.Layouts.swift` (still within the `LoadingSkeleton.*` allowed scope, auto-included by the feature-views glob). Let me locate the exact block.
+
+I'll extract the two projections into a new `LoadingSkeleton.Layouts.swift` (matches the allowed `LoadingSkeleton.*` glob) and trim the Model.
+
+Now remove that block from the Model and re-lint the full set (now 7 swift files including Layouts).
+
+Clean cut. Now re-format and re-lint all 7 swift files (including the new Layouts file).
+
+swiftformat and swiftlint both clean (0 violations). Now the placeholder gate — I'll run the scanner self-test plus scan each shipped `.swift` file, and grep-sanity-check for banned words.
+
+Self-test passes; all 7 files have zero placeholder violations. swiftformat=0, swiftlint=0, placeholder=0. Now the core proof: an isolated SwiftPM harness to compile + run the tests against the real design system (replicating the sanctioned 0088 method). Let me locate the remaining transitive deps.
+
+All design files import only SwiftUI; `tsDynamicColor`/`Font.TS` live in `Tokens.swift`. I'll assemble an isolated SwiftPM harness (module `TeslaSync`) with the real design-system subset + my surface files, and run the XCTest suite.
+
+All 30 tests pass (`SWIFT_TEST_EXIT=0`) — the exact shipped surface compiled under Swift 6 strict concurrency against the real design system, both projections verified block-for-block. Now the iOS 18 SDK typecheck to exercise the `#if os(iOS)` `horizontalSizeClass` branch that the macOS build skips.
+
+iOS typecheck passes (`IOS_TYPECHECK_EXIT=0`). Now let me attempt the real full gate honestly. First I'll inspect the `Shared.xcframework` staging dependency (the known blocker) and check whether the KMP toolchain is even present, then run `xcodegen` + `xcodebuild`.
+
+KMP toolchain is partially present (JDK 17 + `apps/shared/gradlew`, no system gradle). The full gate needs the ~8-min Kotlin/Native `Shared.xcframework` build via the scheme pre-action. Let me verify generated artifacts are git-ignored, generate the project, and make a bounded honest attempt at the real gate.
+
+The `git check-ignore` short-circuited the chain (exit 1 = not ignored). Let me investigate the ignore rules and run xcodegen separately.
+
+The artifacts ARE git-ignored (`*.xcodeproj/`, `Frameworks/*.xcframework/`, `DerivedData/`, `build/`). The earlier check-ignore just short-circuited the chain. Let me generate the project, then attempt the real gate.
+
+Project generates (`XCODEGEN_EXIT=0`); all 7 LoadingSkeleton files are wired in (48 pbxproj refs). Now the full gate's prerequisite is the KMP `Shared.xcframework` (scheme pre-action). Let me probe the Kotlin/Native toolchain and start a bounded build attempt.
+
+Kotlin/Native prebuilt toolchain (2.4.0) and Gradle caches ARE warm, and `timeout` is available — the gate may be feasible. Let me build the `Shared.xcframework` (the gate prerequisite) with a hard timeout.
+
+The KMP build is running (expected ~8 min). Let me continue waiting.
+
+`Shared.xcframework` built and staged (`XCFRAMEWORK_EXIT=0`, 10m37s). Now I can attempt the real full-app gate. Let me run the exact iOS `xcodebuild ... build test`, capturing the real exit (the scheme pre-action will reuse the staged framework).
+
+iPhone 16 simulator is available and booted. Now running the exact iOS gate command (bounded), capturing the real exit and any errors.
+
+iOS gate is RED (`IOS_EXIT=65`) — but the failures are in **pre-existing peer surfaces** (`LegacyAlertStudioRedirect.*`, `LegacyNotificationsRedirect.*`, `LifetimeSummary.*`, `LineCharts.swift`), not my code. Let me confirm LoadingSkeleton is NOT implicated, then run the macOS gate.
+
+Confirmed: **zero** LoadingSkeleton error/warning lines — all 226 errors are in pre-existing peer surfaces (the `loaded`/`live`/`stale` ViewState enum + `SafetyModel` ambiguity in `LegacyAlertStudioRedirect`, `LifetimeSummary`, etc.). My surface is clean. Now the macOS gate for a real `MAC_EXIT`.
+
+Both full-app gates are RED for **pre-existing, repo-wide** reasons — iOS (`IOS_EXIT=65`): peer-surface compile errors (none in LoadingSkeleton); macOS (`MAC_EXIT=65`): development-signing on entitlements (`DEVELOPMENT_TEAM=""`). This is the exact sanctioned DEFERRED disposition. Let me confirm the deferral doc and check git status.
+
+The deferral doc confirms the exact sanctioned pattern (ToolCard, AlertMessageEditor, FSMTimelineChart… all "isolated-green + full-app gate DEFERRED to P99 on macos-latest"). `git status` is clean: only my 8 `LoadingSkeleton.*` files; build artifacts are git-ignored. Let me gather tool versions and key log facts, then write the gate log.
+
+All facts gathered. iOS failures are all peer widgets/surfaces (`ChargeStatusWidget`, `SafetyFeaturesWidget`, `LegacyAlertStudioRedirect`…); macOS = 8 dev-signing errors. None touch LoadingSkeleton. Let me write the gate log.
+
+Log written. Let me do a final clean verification pass on the exact committed bytes (re-lint, re-run the isolated test suite with freshly copied files) before committing.
+
+Final lint/format clean (0/7, 0 violations) and 30/30 tests pass. The re-copy loop mis-handled the base `LoadingSkeleton.swift` filename — let me verify the harness bytes are identical to the repo for an airtight guarantee.
+
+All 7 harness files are byte-identical to the repo — the 30/30 test run and iOS typecheck apply exactly to the committed bytes. Everything is verified. Let me stage only the allowed scope and commit.
+
+Staged set is exactly the allowed scope (8 `LoadingSkeleton.*` files + the log), no build artifacts. Committing now.
+
+Committed (`e5c1f9c9`, 9 files). Let me clean up temporary artifacts and confirm a pristine tree.
+
+The task is complete and verified. Let me record the final status.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0115-LoadingSkeleton.log | 162 +++++++++
+ .../feature-views/LoadingSkeleton.Layouts.swift    | 118 +++++++
+ .../feature-views/LoadingSkeleton.Model.swift      | 377 ++++++++++++++-------
+ .../feature-views/LoadingSkeleton.Previews.swift   |  38 ++-
+ .../feature-views/LoadingSkeleton.Telemetry.swift  |   2 +-
+ .../feature-views/LoadingSkeleton.Tests.swift      | 265 ++++++++++-----
+ .../feature-views/LoadingSkeleton.Views.swift      | 199 ++++++++++-
+ .../feature-views/LoadingSkeleton.strings          |  22 +-
+ .../TeslaSync/feature-views/LoadingSkeleton.swift  | 103 ++----
+ 9 files changed, 953 insertions(+), 333 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0115-LoadingSkeleton.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LoadingSkeleton.Layouts.swift

@@ -1,0 +1,188 @@
+I'll start by exploring the repository structure and understanding the web source page I need to port to SwiftUI.
+
+Now let me explore the Apple app structure and find similar existing pages to use as reference patterns.
+
+The closest analog is `FleetComparePage` (the web page even cross-links to it). Let me study the entire FleetCompare family as my primary reference.
+
+Excellent reference. Let me read the rest of the FleetCompare family and the route registration pattern.
+
+Now let me examine the shared components, design tokens, routing, and Units facade. Let me look at the relevant infrastructure in parallel.
+
+A `/period-compare` reference already exists in AnalyticsPage.Overview. Let me examine the routing system and how registrations are composed.
+
+Now let me find where route registrations are composed in the app shell and how the route host registry works.
+
+Let me locate exact APIs for the shared components I'll use, plus the Units facade and route parser.
+
+Let me read the remaining component definitions and the web MetricCard to finalize my metric-card approach.
+
+Let me check the web MetricCard rendering, locate the string catalog, and check for route-coverage tests.
+
+Let me check how the web `PageContainer` handles loading/error vs children, to faithfully map the state layout.
+
+Let me check tooling availability (Xcode/swiftlint), the test layout, and an existing model test pattern.
+
+Good — full toolchain is available, so I can run the real gate. Let me read the model test pattern, the chart legend/sections helper, and check the xcodegen/project state.
+
+The toolchain works and I need `xcodegen generate` before building. Let me verify a few remaining symbols and inspect the string catalog format.
+
+Let me inspect the full BarChart component, the chart legend, and the UnitPreferences presets to finalize the chart approach.
+
+Let me see how sibling analytics pages render categorical bar charts to match the established approach.
+
+I have a complete understanding of the pattern. Let me check the placeholder scanner, the parity ledger, design tokens, and the log directory before implementing.
+
+Let me read the FleetCompare log to mirror the exact log format expected by the gate.
+
+Now I understand the gate format and that the full build may hit pre-existing out-of-scope errors. Let me check whether the Shared.xcframework (KMP) is already staged and the build script.
+
+Let me check remaining toolchain bits (swiftformat, JDK/Gradle) and confirm the known pre-existing sibling defect, then start implementing.
+
+JDK 17, gradlew, swiftformat all present. The KMP `Shared.xcframework` isn't staged and is needed for a full build. Let me kick off that Gradle build in the background now while I implement.
+
+Let me set up a plan and todos, then start implementing the Swift files.
+
+The launcher returned (build continues via nohup). Let me set up todos and create the foundational model/format files.
+
+Foundational data layer is done. Now the main page view.
+
+Now the Sections file (metric cards + insights panel).
+
+Now the chart section (GlassPanel3).
+
+Now the comparison table (GlassPanel4).
+
+Now the route registration and navigation wiring.
+
+Strings: I'll splice the 34 `compare.*` keys plus `route.periodCompare` into the catalog with Xcode's exact formatting (minimal diff, no whole-file reformat).
+
+The file uses compact `": "` at top level but spaced `" : "` for nested entries — my block already matches the nested style. Let me fix the marker and re-run.
+
+35 keys added. Let me check the background xcframework build status and verify the catalog insertion looks correct.
+
+The KMP `Shared.xcframework` built successfully and is staged — I can run the full build/test. Now the model tests.
+
+All source files written. Now let me run the in-scope gates — first format and lint my files.
+
+Formatting clean. Now swiftlint --strict on my files and the placeholder scan.
+
+Placeholder scan is clean (0). swiftlint flagged single-char identifiers (`a`/`b`) and a trailing-closure issue in my files. Let me view the current text (post-format) and fix them.
+
+Now the banner trailing-closure fix in the page.
+
+Now the test identifiers. Let me view and fix the `a`/`b` locals.
+
+Let me re-run swiftlint and swiftformat to confirm my files are clean.
+
+Clean: swiftlint EXIT=0, swiftformat clean. Now let me verify the test target config and run xcodegen.
+
+Test target globs `Tests/Unit`, so my test file is included. Let me generate the project.
+
+Project generated (PeriodCompare referenced 132×). Let me check available schemes/destinations, then build.
+
+`TeslaSync-macOS` builds without a simulator. Let me build it (this compiles all sources incl. mine) — running with a long wait.
+
+Build exited 65. Let me check whether the errors are in my files or pre-existing.
+
+The only failures are code-signing/entitlements (no dev certificate in this headless env) — **zero compile errors** in any Swift file. Compilation succeeded; signing is an environment limitation. Let me confirm with a signing-disabled build to get a clean green.
+
+Build still compiling (signing-disabled invalidated the prior build). Let me wait for it.
+
+Let me peek at the build log progress without blocking.
+
+0 errors so far — still compiling the large source tree. Let me continue waiting.
+
+Still compiling the large app target with 0 errors. Let me keep waiting for completion.
+
+**BUILD SUCCEEDED (exit 0)** — all my files compile cleanly against the real components, tokens, Units facade, and routing. Now let me run my tests (targeted, signing disabled).
+
+The test bundle failed to compile. Let me find the actual error — it could be mine or a pre-existing sibling test.
+
+The test compile failure is in a **pre-existing, out-of-scope sibling test** (`VehicleCostPageModelTests.swift`), not my files. Let me confirm it's untouched by me and pre-existing, then run my tests via a temporary local workaround (reverted before commit).
+
+Confirmed pre-existing (committed in `4f6bcb56e`, unmodified by me). To actually run my tests, I'll temporarily move that broken sibling test out of the bundle, run mine, then restore it (no commit impact — `.xcodeproj` is gitignored).
+
+Another pre-existing broken test surfaced. Let me find it.
+
+More pre-existing broken Admin tests block the shared bundle. Rather than whack-a-mole, let me temporarily scope the macOS test target to just the Analytics tests via project.yml (reverted before commit), which compiles my tests against the real app module.
+
+I'll temporarily narrow the macOS test target to only my test file (cleanest isolation), back up project.yml first.
+
+**All 25 of my tests PASSED** (0 failures). Now let me restore the temporarily-moved sibling test and project.yml, then verify the working tree only has my intended changes.
+
+Restored cleanly. Let me regenerate the project to full config and review the complete set of changes.
+
+Working tree is exactly as intended. Now update the parity ledger (+2 rows). Let me check its exact format first.
+
+Round-trips exactly. Let me insert the two `PeriodCompare` rows after the FleetCompare rows.
+
+Ledger updated cleanly (+2 rows). Now let me write the evidence log with the full `=== PARITY ===` section.
+
+Log written. Before committing, let me verify the tracked-file diffs are minimal (swiftformat didn't touch unrelated lines) and confirm `.xcodeproj` is gitignored.
+
+All diffs are minimal and correct (swiftformat only reflowed the lines I edited; `.xcodeproj` is gitignored). Let me confirm the xcstrings diff is additions-only, then stage and commit.
+
+Clean: +385 lines, 0 deletions. Let me stage all intended files and commit.
+
+All 15 intended files staged (no `.xcodeproj`). Let me commit.
+
+Commit `071ee0418` created; working tree clean. Let me finalize the todos and do a last confirmation.
+
+The task is complete and verified. All work is committed cleanly.
+
+## Summary
+
+Implemented **`PeriodComparePage`** as a native SwiftUI/HIG surface at full web parity (`page:analytics/PeriodCompare`, route `/period-compare`), committed as `071ee0418`.
+
+**Parity: 44/44** (5 panels + 1 chart + 4 states + 34 strings) — enumerated with file+symbol evidence in the gate log.
+
+**Delivered (15 files, +2063 LOC):**
+- 9 source files (`Sources/Features/Analytics/PeriodCompare*`): `@Observable` model + data-source seam, SI formatters/derivations, adaptive page, metric-card grid, bar-chart section (P3 `TSBarChart`), comparison table, insights panel, sample sources, route registration
+- 25-case XCTest suite
+- Navigation: new `.periodCompare` AppRoute (Insights group, segment `period-compare`) + registration wired into the route host
+- 34 `compare.*` strings + `route.periodCompare` added to `Localizable.xcstrings` (web key names verbatim, incl. `{{pct}}`/`{{dir}}` insight tokens)
+- `apple-ledger.json` +2 rows (macOS/iOS → 44/44) + evidence log
+
+**Gate (real results):**
+- swiftformat `0/12` · swiftlint --strict `0` · placeholders `0`
+- Shared.xcframework built/staged · xcodegen `0`
+- `xcodebuild build` (macOS) → **BUILD SUCCEEDED**, 0 compile errors
+- `xcodebuild test` (my suites) → **25/25 passed**
+
+**Honest caveats (out of scope, reported not masked):** the *default signed* build returns 65 only because the headless host has no Apple dev certificate (env, not code — verified green with signing disabled); the full macOS test bundle is blocked by two **pre-existing** sibling tests (`VehicleCost`/`GDPRExport` PageModelTests, committed in prior PRs), so my tests were run in isolation and project state was restored (working tree clean).
+
+`EXIT=0 / STATUS=DONE`.
+
+
+
+All 15 todos are done, the work is committed (`071ee0418`), and everything is verified. The task is complete.
+
+Merge made by the 'ort' strategy.
+ .../apple-page-analytics-PeriodComparePage.log     | 187 ++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 385 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   8 +-
+ .../Features/Analytics/PeriodCompareFormat.swift   | 169 +++++++++
+ .../Features/Analytics/PeriodCompareModels.swift   | 169 +++++++++
+ .../Analytics/PeriodComparePage.Charts.swift       |  86 +++++
+ .../Analytics/PeriodComparePage.Sections.swift     | 113 ++++++
+ .../Analytics/PeriodComparePage.Table.swift        |  82 +++++
+ .../Features/Analytics/PeriodComparePage.swift     | 243 +++++++++++++
+ .../Analytics/PeriodComparePageModel.Sample.swift  |  89 +++++
+ .../Analytics/PeriodComparePageModel.swift         | 189 ++++++++++
+ .../Analytics/PeriodCompareRouteRegistration.swift |  35 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Analytics/PeriodComparePageModelTests.swift    | 291 ++++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 15 files changed, 2063 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-analytics-PeriodComparePage.log
+ create mode 100644 apps/apple/Sources/Features/Analytics/PeriodCompareFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/PeriodCompareModels.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/PeriodComparePage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/PeriodComparePage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/PeriodComparePage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/PeriodComparePage.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/PeriodComparePageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/PeriodComparePageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/PeriodCompareRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Analytics/PeriodComparePageModelTests.swift
+[dedupe] no duplicate top-level types

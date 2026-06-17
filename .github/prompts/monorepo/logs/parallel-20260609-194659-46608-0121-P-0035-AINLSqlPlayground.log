@@ -1,0 +1,140 @@
+I'll start by understanding the task environment — checking for the Apple toolchain, the web source, and the target directory structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Not blocked. Let me read the web source and explore the Apple app structure.
+
+The pattern is clear — each surface is split into multiple files (Adapter, Model, Projection, Views, Chrome, Previews, strings, Tests). I need to find the closest template: an AI surface using `useAiStream` + `AIFeatureCard` + `withAiFeature` + a text input. Let me explore the shared contracts and find sibling surfaces.
+
+Now I understand the `AIFeatureCard` contract. Let me find the closest already-built Apple template — an NL/prompt+stream+apply surface — and read the shared AI stream contract.
+
+`AINLDriveSearch` and `AILifetimeStatsQA` are the closest existing Apple ports (NL prompt + stream + apply). Let me read both web sources and the full `AINLDriveSearch` Apple implementation as my template.
+
+`AINLDriveSearch` is the ideal template — structurally identical (NL prompt + stream), and I'll add the "Apply" capture pattern from the SQL playground. Let me read all 11 of its files to mirror the architecture exactly.
+
+Excellent architecture clarity. Let me read the remaining template files: Logic, Views, Chrome, Previews, strings, and both test files.
+
+Let me read the remaining template files (Previews, strings, both Tests) plus the project.yml and shared token/component locations.
+
+I now fully understand the template architecture. `AINLSqlPlayground` needs the same structure plus the distinctive **draft-capture** (`tool_result` → typed `ReadonlySQLDraft`) and **"Apply to editor"** callback. Let me check how existing Apple surfaces capture typed `tool_result` payloads, confirm shared tokens/components, and how the build includes these files.
+
+`AIGeofenceAwareAutomationSuggestions` captures a typed `tool_result` envelope AND has an `onApply` pattern — the perfect secondary reference. Let me read it plus locate the actual token and component definitions.
+
+Now I understand the draft-capture + apply pattern. Let me read the Geofence Adapter (typed `tool_result` → draft decode), locate token definitions, the test-target config, and shared component signatures.
+
+Let me confirm the test-target structure, read the token definitions, shared component signatures, and the placeholder-check script.
+
+Test bundles include `**/*Tests.swift` from shared-surfaces — so my test files compile into the XCTest target. Let me read the generated tokens, the forbidden-pattern list, and the shared component signatures.
+
+The forbidden list includes `"Placeholder"` — but `AINLDriveSearch` ships with `placeholder`. I must verify the matching is case-sensitive. Let me read the matching logic, the full `Tokens.swift`, locate `TSSpacing`/`TSRadius`, and the component signatures.
+
+Let me confirm the regex case-sensitivity and locate the `TSSpacing`/`TSRadius`/`Font.TS` definitions.
+
+Critical: the regex is **case-insensitive**, and the forbidden list includes `"Placeholder"`. But the gate scans the literal path `.../AINLSqlPlayground` (no extension), which doesn't exist as a file/dir → scans nothing. Still, I'll write genuinely clean code and verify with a real scan. Let me check how existing surfaces handle "placeholder" and read the font/spacing token definitions.
+
+My scan path was wrong (double `apps/`). Let me re-run correctly from repo root to learn the real behavior, and confirm the token set is complete.
+
+A real per-file scan **does** flag "placeholder" (case-insensitive), and `EXIT=1`. The 22 shipped siblings only "pass" because the gate scans the literal path `.../AINLSqlPlayground` (no extension) which matches nothing. To be genuinely clean per the acceptance criterion, I'll mark unavoidable web-i18n-key lines with `// parity:allow`. Let me check the build tooling (xcodegen, existing project) and lint config.
+
+I have the full architecture. Let me read how `AIGeofenceAwareAutomationSuggestions` renders its captured draft + apply button and wires `onApply` in the main view — to mirror that for the SQL draft panel.
+
+Let me read the Geofence proposal-box view and its strings to match the captured-draft box + apply-button styling, then I'll build the SQL playground surface.
+
+I now have a complete understanding of the architecture, tokens, components, gate behavior, and the draft-capture+apply pattern. Let me create a plan and start building the 11-file surface.
+
+Now let me create the surface files. Starting with the Adapter (identity, JSON, ToolResult, draft decode, request projection).
+
+Now the Views file — Header, Helix badge, prompt field (with the `parity:allow` marker on the web i18n placeholder key), and the Draft SQL action button.
+
+Now the Chrome file — output panel, error/thinking rows, gate chrome, and the captured-draft panel (monospace SQL + rationale + referenced-table chips + Apply button).
+
+The Chrome file may exceed the 400-line SwiftLint limit due to the custom layout. Let me check and simplify the referenced-tables rendering to a cleaner, line-cheap wrapping text.
+
+The Chrome file is 421 lines — over the 400 limit. Let me replace the heavy custom layout with a clean wrapping monospace text.
+
+Now the main view file composing the surface, status row, and connectivity banner.
+
+Now the Previews file covering every state.
+
+Now the i18n strings file.
+
+Now the unit tests — adapter/decode, logic, accessibility, and i18n facade.
+
+Now the model behavior tests covering wiring, draft capture, apply, and freshness.
+
+All 11 files created. Let me verify line counts (≤400) and run the fast formatters/linters on the new files before the heavy build.
+
+All files under 400 lines. Now let me run swiftformat and swiftlint on the new files to catch issues early.
+
+Two trailing-comma fixes needed. Let me auto-format with swiftformat (write mode) on the new files, then re-lint.
+
+swiftformat passes. Let me verify the Source.swift change and run swiftlint on the new files.
+
+swiftlint and swiftformat both pass on the new files. Now let me verify the placeholder gate on my actual files (genuine clean check, not the literal-path loophole).
+
+The `parity:allow` marker must be on the **same line** as the matched word. Let me view and fix that line in Views.swift.
+
+The comment I added also contains the word "placeholder" — another match. Let me reword it.
+
+Now re-run swiftformat, swiftlint, and the placeholder scan on Views.swift to confirm all clean.
+
+All clean: placeholder COUNT=0, ALLOWED=1. Now let me generate the Xcode project (no `.xcodeproj` exists yet) so the new files are included, then start the iOS build+test.
+
+Project generated with my files included (66 references). Let me confirm the schemes/destination, then launch the iOS build+test.
+
+Both `TeslaSync` and `TeslaSync-macOS` schemes exist. Let me verify the prebuilt framework dependency exists, then launch the iOS build+test (this is the long step).
+
+The test targets depend on `Frameworks/Shared.xcframework`, which isn't present. Let me check the build script and docs for how it's produced.
+
+The framework is built by a Gradle/KMP pre-build script. Let me check whether it's wired into the build, and whether the Kotlin/Gradle toolchain is usable here.
+
+The app + test targets hard-depend on `Shared.xcframework`, built from Kotlin Multiplatform via a Gradle pre-build script. JDK 17 and gradlew are present. This KMP build is the critical feasibility question. Let me probe it directly (it downloads the Kotlin/Native toolchain on first run).
+
+The async child was torn down with its session. Let me run the KMP build in sync mode (which backgrounds after the wait and persists), capturing output to a log.
+
+The KMP/Gradle toolchain works (cached), and it's already produced the debug XCFramework — now finishing the release variant. Let me wait for completion.
+
+Release linking in progress. Let me continue waiting for the staging step to complete.
+
+`Shared.xcframework` built and staged successfully — the KMP toolchain is fully functional here. Now the main event: the iOS build + test gate.
+
+My grep filter had an invalid regex (`** `) that killed the pipe. Let me re-run with a clean filter.
+
+Build produced lots of output. Let me extract the key results — exit code, build/test status, errors, and my surface's test results — from the full log.
+
+Build failed — but the errors are in **other** surfaces (`RecentDrivesListWidget`, `RecentDrivesSection`, `StateTimeline`), not mine. They're "ambiguous for type lookup" (duplicate-symbol) errors. Let me confirm these are pre-existing (I only touched `AINLSqlPlayground.*`) and locate the duplicate declarations.
+
+Confirmed: I only added `AINLSqlPlayground.*` files (all untracked). The build failure is pre-existing duplicate-symbol collisions between **sibling** surfaces I didn't touch — e.g. `RecentDrivesModel` is declared in *both* `dashboard-widgets/RecentDrivesListWidget.Model.swift` and `feature-views/RecentDrivesSection.Model.swift`. Let me confirm zero errors are attributed to my files and enumerate all error-bearing files.
+
+**Definitive:** zero errors in any `AINLSqlPlayground` file. All 108 errors are in pre-existing, committed sibling surfaces (`RecentDrives*`, `StateTimeline*`) that collide with each other — outside my allowed scope. My surface is additive with unique names and cannot cause `RecentDrivesModel` ambiguity.
+
+To produce positive proof my surface compiles and its tests pass, I'll do a controlled, fully-reverted verification build. First let me gauge the blast radius of the colliding sibling surfaces.
+
+No external references to the colliding surfaces — they're self-contained, so I can do a clean, fully-reverted verification by temporarily moving one side of each collision aside. Let me set that up and run a build+test to prove my surface compiles and its tests pass.
+
+Now each colliding type has exactly one declaration. Let me regenerate and run the iOS build+test to verify my surface compiles and its tests pass.
+
+Now my `AINLSqlPlayground.*` files **compile in-module with zero errors** (they're in the SwiftCompile batch). The build now fails on yet another unrelated pre-existing sibling (`AIAutoNameUnnamedLocations.swift` — escaping-closure error). The tree has multiple pre-existing broken surfaces from other prompts. Let me restore the files I moved (keep the tree pristine) and regenerate.
+
+Tree restored and pristine. My surface compiles cleanly in-module — proven. Now let me build a standalone SwiftPM harness from my Foundation-only sources to get concrete "tests pass" evidence (the 4 non-UI sources are fully self-contained).
+
+Now run the harness tests.
+
+All **49 unit tests pass** (0 failures) — adapter/decode, logic, accessibility, i18n, and full model wiring (draft capture, apply, freshness, offline). Combined with the proven in-module compilation, my surface is verified.
+
+Now let me run the official gate to produce an honest log. Let me write a runner that executes each real gate step and appends surface-verification evidence + the pre-existing-blocker analysis.
+
+The official gate completed cleanly: `swiftlint --strict` **EXIT=0**, `swiftformat --lint` **EXIT=0**, `check-placeholders` **EXIT=0**. Only the two `xcodebuild build test` steps failed (EXIT=65) — purely from pre-existing compile errors. Let me confirm the build errors are all external (zero in my files) across both iOS and macOS.
+
+The full official gate confirms it: only **6 error lines**, **0 in any `AINLSqlPlayground` file**. iOS/macOS build failures are from a pre-existing sibling (`AIAutoNameUnnamedLocations.swift` escaping-closure) plus pre-existing macOS code-signing config. `swiftlint`, `swiftformat`, and `check-placeholders` all pass at EXIT=0.
+
+Let me gather the precise pre-existing-blocker evidence and append a thorough verification appendix to the log.
+
+Everything is confirmed. Let me append a thorough, honest verification appendix to the official gate log.
+
+The official gate log is complete and honest (`EXIT=65`, `STATUS=BLOCKED`). Now let me reconcile the commit decision and clean up.
+
+The Honesty Covenant rule 8 ("No commit on red") is binding, and the aggregate gate is red on the two `xcodebuild build test` steps — solely from pre-existing committed sibling surfaces outside my allowed-files scope. So I will **not** run the DONE-path commit (its template embeds `STATUS=DONE`, which would be false). I'll leave the verified work + honest log on disk. Let me clean up temp artifacts and verify the worktree state.
+
+Cleanup done. The worktree contains exactly the allowed artifacts — my 11 `AINLSqlPlayground.*` files plus the gate log (generated `TeslaSync.xcodeproj` and `Shared.xcframework` are gitignored build outputs).
+
+Let me record the final status in the plan file, then conclude.
+

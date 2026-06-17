@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Good — I'm on macOS with Xcode 26.5, swiftlint, swiftformat all available. Let me read the web source and related files.
+
+Now let me study the existing Apple app structure, the reference implementations (Windows/Android), and the project setup.
+
+The shared-surfaces directory already exists with many files. Let me examine its structure and find existing patterns to follow.
+
+The sibling `AnnouncerRegion.*` and `VisuallyHidden.*` surfaces already exist — these are the closest analogs to `RouteAnnouncer`. Let me study them as templates.
+
+Excellent template. Let me read the rest of the AnnouncerRegion files to fully understand the pattern.
+
+Let me read the remaining AnnouncerRegion files plus the design tokens and project configuration.
+
+Now let me read the test files and the project configuration to understand the build/test setup.
+
+Now let me examine the design tokens, shared components, the navigation/router source holder, and the build configuration.
+
+Let me see the test target config and the design token definitions.
+
+Let me check the design tokens, XcodeGen setup, and the navigation state-holder I'll bind to.
+
+XcodeGen is available; the `.xcodeproj` is generated on demand. Now let me read the shared components and the navigation/route source to bind `useLocation`.
+
+Let me view the exact `TSEmptyState`/`TSButton` initializers and explore the navigation/route source for the `useLocation` parity.
+
+I have the component signatures and the `AppRoute` navigation model (each route has `path` + `titleKey` — the `useLocation`/`document.title` parity). Let me check for naming collisions and existing scheduler/timer seam patterns before writing.
+
+No collisions. Let me study the `Toast` surface's scheduler seam — the established pattern for timed/deferred work — to mirror it correctly.
+
+The Toast scheduler seam is the exact pattern to mirror. Let me read the lint/format configs to ensure compliance, then start writing.
+
+I now have a complete understanding of the architecture. Let me set up a plan and todos, then implement.
+
+Now writing the files. Starting with the pure core adapter.
+
+Now the Seams file (telemetry, scheduler, presenter, i18n facade):
+
+Now the Source file (`RouteLocationPublisher` = native `useLocation`, plus source seam):
+
+Now the Model file — the state-holder with the deferred-read timing (the heart of the parity):
+
+Now the main View, States, and Views files:
+
+Now the Previews and strings files:
+
+Now the three test files. Starting with AdapterTests (pure core):
+
+Now the ModelTests — the 7 web behaviors plus seams:
+
+Let me fix the messy `testSameRouteReEmittedDoesNotReAnnounce` test:
+
+Now the third test file — per-state "snapshots", a11y labels, and view instantiation:
+
+The last assertion in `testStringsResolveToNonEmptyFallbacks` is malformed. Let me fix it:
+
+All 12 files written. Now let me format them with swiftformat (write mode), then lint-check.
+
+No formatting changes needed. Now swiftlint on my files:
+
+One `large_tuple` violation (3-member tuple in the test helper). Let me check all destructuring sites and fix via stored properties:
+
+Now update the helper to use stored properties:
+
+Removing the `tearDown` override (avoids actor-isolation mismatch; XCTest makes a fresh instance per test):
+
+swiftlint and swiftformat pass cleanly on all 11 files. Now let me check the placeholder gate behavior and patterns:
+
+The gate treats a non-directory path as "nothing to scan" (trivially clean). To genuinely verify my files, I'll scan them via a temp dir, and confirm the tool works via self-test:
+
+Placeholder gate clean (COUNT=0). Now generate the Xcode project:
+
+Project generated. Let me verify my files are included and check simulators/schemes:
+
+All 12 files are in the project; schemes and the iPhone 16 simulator exist. Now the build. Let me first do a build-only pass (faster compile-error feedback) before the full `build test`:
+
+Build is still compiling (large target). Let me check progress:
+
+Compilation in progress (Swift 6 mode), no errors yet. Let me continue waiting:
+
+Build failed (RC=65, 5 failures). Let me find the errors:
+
+Errors are in a **pre-existing** sibling file `Input.Previews.swift` (not mine). Let me confirm it's a baseline issue and inspect it:
+
+Confirmed pre-existing: `Input.Previews.swift` is tracked and unmodified by me. Let me assess how widespread this baseline issue is and check the expected toolchain:
+
+Key finding: locked baseline is Xcode 26 (I have 26.5). The break is the `@Previewable + return` combo. Let me get the complete error picture and confirm my files are clean:
+
+My files compiled **clean** (0 errors/warnings). The sole blocker is the pre-existing, out-of-scope `Input.Previews.swift` — an Xcode 26.5 toolchain incompatibility (`@Previewable`+`return` in a ViewBuilder) in the locked-Xcode-26.0 baseline. Let me view it to verify my surface via a temporary workaround:
+
+The same pattern exists in many sibling files (the build fast-failed after the first batch). Let me measure the full scope of this baseline/toolchain incompatibility:
+
+Exactly **8 pre-existing files** break under Xcode 26.5 (locked baseline is Xcode 26.0) — a runner/toolchain incompatibility, all out of my allowed scope. This is a `STATUS=BLOCKED` condition. But first I'll **prove my surface is correct** via a temporary, reverted workaround. Let me inspect the exact broken lines:
+
+SearchInput line 42 (`return model`) is in a helper — must be preserved. I'll apply a precise temporary workaround (only the `#Preview` ViewBuilder returns), build+test to prove my surface, then `git checkout` to revert these 8 baseline files. Recording them first:
+
+Temp workaround applied (only the valid `return model` helper remains). Now rebuild iOS (incremental, should be faster):
+
+Still failing (3 failures) — more broken files surfaced after the fast-fail. Let me find them:
+
+The baseline has **multiple** pre-existing compile errors under Xcode 26.5 (the `return` issue plus wrong `InputField` argument order in `Input.Previews.swift`) — confirming a toolchain incompatibility (locked Xcode 26.0). I'll revert my temporary baseline edits and verify my surface in isolation instead. Reverting first:
+
+Baseline fully restored. Now I'll verify my surface compiles and **all my tests pass** in an isolated SwiftPM package (module named `TeslaSync` so my `@testable import` works verbatim), bypassing the broken baseline:
+
+Now the Package manifest and component shims (matching the real signatures so my view code compiles verbatim):
+
+Now run the isolated build + tests under Swift 6 strict concurrency:
+
+**All 52 tests pass under Swift 6 strict concurrency**, and my entire surface (logic + views + previews) compiles clean in isolation. My surface is complete and correct.
+
+The full `xcodebuild` gate is blocked solely by pre-existing, out-of-scope baseline files that fail under the runner's Xcode 26.5 (locked baseline is Xcode 26.0). Let me run the remaining gate steps (lint/format on the full tree, as the gate specifies) and confirm the macOS target hits the same pre-existing wall:
+
+`swiftlint --strict` on all 5842 files: **0 violations**. `swiftformat --lint` flags **9 pre-existing baseline files** (not mine). Let me confirm none are mine:
+
+Confirmed: the 9 swiftformat-flagged files are all pre-existing baseline files (none mine). The baseline fails multiple gate steps under Xcode 26.5 independent of my work. Let me start the macOS build (shares the same broken source) in the background while I prepare the evidence log:
+
+While the macOS build runs, let me record findings and update the plan. Let me wait for the macOS build to hit the same pre-existing wall:
+
+The macOS build also failed (RC=65). Let me confirm it's the same pre-existing cause:
+
+macOS build is blocked by a **different** environmental gap — code-signing entitlements require a development certificate not present on this runner (0 RouteAnnouncer errors). Both `xcodebuild` targets are blocked by environment/pre-existing issues, never by my surface. Let me verify generated artifacts are gitignored before writing the log:
+
+Generated artifacts are gitignored. Now let me write the comprehensive, honest gate log with the evidence:
+
+Now I'll write the comprehensive gate log:
+
+Now let me clean up temporary artifacts and stage only my deliverables:
+
+All 12 files + log staged cleanly (generated artifacts correctly excluded). Now commit with an honest message:
+
+Committed (cf4322794): 13 files, 2258 insertions. Let me do a final verification of the repository state and todos:
+
+The task is complete to the maximum extent possible. Let me provide the final summary.
+

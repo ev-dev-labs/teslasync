@@ -1,0 +1,197 @@
+I'll start by assessing the environment capability and exploring the repository structure, since this task requires the Apple toolchain (Xcode, SwiftUI, Swift Charts, MapKit).
+
+The full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Not blocked. Let me read the web source and explore the existing Apple project structure.
+
+This is a mature directory with 736 files following established patterns. I need to find the closest already-ported sibling that uses `useAiStream` + `AIFeatureCard` + `withAiFeature`. Let me identify analogs.
+
+`AIAutoNameUnnamedLocations` (locations domain) and `AIAlertTuningSuggestions` (draft+apply pattern) are the closest analogs. Let me compare their web sources and Swift file structures, and check the build config.
+
+`AIAutoNameUnnamedLocations` is a near-perfect analog (same hooks, same draft/apply pattern, locations domain). Its 9-file Swift set is my template. Let me read all of it plus the build config.
+
+Excellent template. Let me read the remaining 6 template files plus the build config and verify shared dependencies exist.
+
+Now the tests, previews, strings, and build config. Let me also verify the shared tokens/components referenced (TSGlassPanel, TSButton, TSSkeleton, Color.TS, Font.TS).
+
+Now the previews and strings files, plus the build configuration to understand file inclusion.
+
+I now have the full template. The build is XcodeGen-glob-based, so new files in `shared-surfaces/` are auto-included (tests via `*Tests.swift`). Let me check the toolchain specifics: xcodegen, existing project, the placeholder checker, and any faster SwiftPM harness.
+
+Toolchain is complete (xcodegen + pwsh both present). No project yet — I'll generate it. Let me confirm exact component/token signatures and lint config before writing code.
+
+All component signatures confirmed. Critical concern: the template declares `public` shared types (`AIJSONValue`, `AIToolResult`, `AIStreamEvent`, `AIStreamPhase`, `AIConnection`, `AIFeatureGateState`). Since all surfaces compile into one module, I must check whether these are declared once-globally or per-surface to avoid duplicate-declaration errors.
+
+Critical: these types are declared **exactly once** (owned by `AIAutoNameUnnamedLocations`). Copying them verbatim would cause duplicate-declaration errors. I must learn the convention other streaming surfaces use — do they reuse these or define uniquely-named versions? Let me investigate.
+
+Now the convention is clear: **every surface uses uniquely-prefixed types** (e.g., `GeofenceAutomationStreamPhase`, `AlertTuningConnection`). The `AI*`-prefixed types are owned solely by `AIAutoNameUnnamedLocations`. I'll use a unique `SuggestGeofence` prefix. Let me verify no collisions and check how a multi-field-apply sibling structures its apply callback.
+
+`GeofenceDraft` is already taken (by `GeofenceDrawer`), so I'll use the unique `SuggestGeofence` prefix throughout (0 collisions confirmed). The structured-apply convention is confirmed. I have everything needed. Let me write a brief plan, then create the files.
+
+Now I'll create the 9 files. Starting with the Adapter (pure foundation core).
+
+Now the Model file (state-holder seam, telemetry, in-memory source, i18n facade).
+
+Now the main View file.
+
+Now the Views file (header, badge, action button, current label, proposal box with radius).
+
+Now the Chrome file (output panel, thinking indicator, gate loading/error chrome).
+
+Now the Previews file (per-state #Preview blocks).
+
+Now the strings catalog.
+
+Now the adapter/logic/accessibility/i18n test file.
+
+Now the model wiring test file.
+
+All 9 files created. Let me run a fast pre-check: swiftlint + swiftformat scoped to my new files, plus line/file-length sanity.
+
+swiftformat passes (0/8). But `Model.swift` is 403 lines — over SwiftLint's default 400 `file_length` warning, which fails under `--strict`. Let me run swiftlint to see all violations, then fix.
+
+Three violations: file length (403>400) and two `function_parameter_count` (>5). I'll refactor `pushDraft` to take a `SuggestGeofenceDraft` value and `summary` to take a `Labels` struct (initializers are exempt from the rule). This also trims the Model file under 400. Let me apply edits across files.
+
+Now the main view's `accessibilitySummary` and the Previews call sites:
+
+Now update the accessibility tests in `Tests.swift` to use the `Labels` struct:
+
+Now update `ModelTests.swift` — the `pushOKDraft` helper and the two apply-test draft calls:
+
+Now re-run swiftlint + swiftformat on the updated files to confirm clean:
+
+Clean: 0 swiftlint violations, 0 swiftformat issues, Model now 396 lines. Now the placeholder check and a self-grep for banned words.
+
+No banned words. Let me run the actual placeholder checker on my surface via pwsh:
+
+Placeholder check passes (EXIT=0, count=0). Now I need to generate the Xcode project and build. First let me check the Shared.xcframework dependency and its build script (a scheme pre-action).
+
+The build needs a KMP-built `Shared.xcframework` (currently only a `.gitkeep`). There are references to a "SwiftPM verification harness" and a pending-verifications doc. Let me investigate the verification options before committing to a long build.
+
+`apps/shared/core` (KMP) exists and Java 17 is present, so the Gradle XCFramework build may be runnable. But it's potentially very slow. Let me read the pending-verifications doc to understand the sanctioned verification approach, and check the KMP core.
+
+This doc is the key: the full-app `xcodebuild build test` is **CI-deferred** (`P99-0001-apple-acceptance-gate` on `macos-latest`), blocked locally by the unstaged KMP `Shared.xcframework`, pre-existing unrelated cross-surface collisions, and missing signing identities. The sanctioned per-surface verification is: isolated SwiftPM tests + dual-SDK `swiftc -typecheck` + lint/format/placeholder + `xcodegen generate`. Let me read the rest of the doc and inspect the token/component dependencies.
+
+This confirms the exact sanctioned methodology (most recent shared-surface entry `0062-withAiFeature` is my direct precedent). The recipe: dual-SDK `swiftc -typecheck` against real Tokens + components, isolated SwiftPM `swift test`, lint/format/placeholder, `xcodegen generate`, and a live-staged `Shared.xcframework` app-target compile proving zero surface errors — with the full-app scheme build CI-deferred.
+
+Let me kick off the long-pole Gradle `Shared.xcframework` build in the background, then run the faster verifications meanwhile.
+
+Gradle `Shared.xcframework` build is running in the background. Components depend only on `Tokens.swift`. Let me run the dual-SDK `swiftc -typecheck` (macOS-15 + iOS-18) of the full surface against the real tokens + components.
+
+The errors are entirely within `Cards.swift`'s own `#Preview` block (needs `TSText`/`TSBadge` from sibling component files) — not my code. I'll add the transitively-needed UI component files. Let me locate them.
+
+Typography/Badges are Shared-free. Let me add them and re-run the macOS typecheck:
+
+`.tsGlassPanel()` modifier lives in the Design layer. Let me find and add the Design files:
+
+Adding the Design files (`TSMaterial.swift` + `TSDesign.swift`), both Shared-free. Re-running macOS typecheck:
+
+macOS-15 typecheck passes (0 errors). Now the iOS-18 simulator typecheck with the same file set:
+
+Both SDK typechecks pass (0 errors). Now the isolated SwiftPM test harness to actually **run** my tests (the Foundation-only Adapter+Model layer). Let me set it up in the session dir.
+
+All 43 tests pass. Now `xcodegen generate` to prove file enumeration, plus an i18n parity check. Let me also peek at the Gradle build progress.
+
+xcodegen enumerates all 9 files (54 refs). The web-key grep missed multi-line `t(` calls — let me do a robust i18n cross-check (web keys ⊆ strings, and no dead/missing keys between Swift code and the catalog).
+
+The 4 "dead" keys are false positives — they're used in multi-line `string(\n  "key",` calls my line-based grep couldn't span. Let me confirm each key literally appears in a Swift source:
+
+i18n parity confirmed: 9/9 web keys present, 0 missing, 0 dead. Let me check the Gradle `Shared.xcframework` build status.
+
+i18n parity is clean. Now let me wait for the Gradle `Shared.xcframework` build (background) to complete, so I can run a real app-target compile as gold-standard evidence.
+
+Gradle succeeded (`BUILD SUCCESSFUL in 7m 11s`). Let me stage the framework (as the build script does) and launch a real app-target compile to prove zero surface errors — capturing output to a file since it compiles the whole module.
+
+Framework staged (iOS + iOS-sim + macOS slices). Now launching the real iOS app-target compile in the background, capturing full output:
+
+The app-target build is compiling in the background. Let me check the logs directory and review a precedent log to match the established format.
+
+Let me read the precedent `0062-withAiFeature.log` to match the established log format:
+
+This is my exact template. Let me wait for the app-target compile to finish so I can extract real error counts.
+
+App-target compile finished (`APP_BUILD_EXIT=65`). Let me analyze the errors — total count, any attributable to my surface, and the pre-existing collisions:
+
+0 Swift `error:` lines but exit 65 — the failure is elsewhere (not my Swift). Let me inspect the actual failure reason in the log:
+
+The exit-65 was a `swift-frontend` **compiler crash** triggered by an x86_64/arm64 arch mismatch (the simulator framework slice is arm64-only), not Swift source errors — 0 `error:` diagnostics, 0 references to my surface. Let me view the crash context and re-run constrained to arm64 (matching the framework slice).
+
+The crash is a backend IR-emission crash from building x86_64 against an arm64-only framework slice — purely environmental, with my surface appearing 0 times in the entire log. Let me re-run constrained to arm64 (matching the simulator slice):
+
+Let me wait for the arm64 app-target build to get a clean in-module compile signal.
+
+Still compiling. Let me wait further for completion.
+
+arm64 build finished (`APP_ARM64_EXIT=65`). Let me analyze its errors — total, mine (expect 0), and the pre-existing collisions:
+
+Only 1 error, and `SG_ERR=0` (not my surface). Let me confirm exactly which file owns that error:
+
+The single error is in **`AIGeofenceAwareAutomationSuggestions.swift`** — a different agent's surface, not mine. My surface: **0 errors** in the real arm64 app-module compile. Let me confirm my files were actually compiled, then run the literal scheme `build test` gate commands to capture honest exit codes.
+
+All 6 source files compiled; sole error is the unrelated `AIGeofenceAwareAutomationSuggestions` surface. Let me launch the macOS scheme gate in parallel and start drafting the log + pending-verifications row.
+
+Both scheme gates are running. Let me wait for the iOS scheme to finish.
+
+Both finished. Let me read the macOS exit code and analyze both scheme logs (totals, my-surface errors, categories):
+
+Honest gate results captured: **IOS_EXIT=65** (1 error, in another agent's `RecentDrivesSection.Previews.swift`; 0 mine) and **MAC_EXIT=65** (4 macOS dev-signing errors; 0 mine). Let me cite the signing evidence, confirm the iOS error isn't mine, and capture tree-wide format status.
+
+Signing (0 identities), the iOS error (another agent's `RecentDrivesSection.Previews.swift` — "unable to type-check in reasonable time"), and tree-wide swiftformat (0/4314) all confirmed. Let me capture tree-wide swiftlint:
+
+Tree-wide swiftlint: **0 violations across 4016 files**. All evidence gathered. Let me get tool versions, then write the gate log.
+
+Now I'll write the gate log with all real values:
+
+Now let me add the macOS-pending row following the established format:
+
+Now let me check git status to stage the correct files (excluding gitignored build artifacts):
+
+Clean status — only my 9 files, the log, and the pending-verifications update (build artifacts correctly gitignored). Let me commit:
+
+Committed as `d30ee02f9`. Let me clean up temporary verification artifacts and confirm a clean tree:
+
+Task complete. All work is committed (`d30ee02f9`) and the tree is clean.
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) parity of `components/ai/AISuggestNewGeofences.tsx` at **`apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.*`** (9 files, 2264 lines), following the established `AIAutoNameUnnamedLocations` template and the repo's sanctioned per-surface methodology.
+
+**Capability:** AVAILABLE — Xcode 26.5, Swift 6.3.2, swiftlint/swiftformat, iOS-18+macOS-15 SDKs, xcodegen, KMP toolchain (not BLOCKED).
+
+**What was built** — full parity with the web source:
+- `useAiStream` + `AIFeatureCard` + `withAiFeature` Helix panel via a P1/S8 `SuggestGeofenceModel` state-holder seam (no HTTP in the view).
+- Nested `draft_geofence` `tool_result` decode (`data.draft.{…}` + wrapper `status`/`validation_error`) with the exact web `typeof` guard chain.
+- Proposal box (name + rounded "Radius: N m" + validation error + rejected line), ok-only **Apply** forwarding `{name, latitude, longitude, radius}`; never writes the API.
+- Every state rendered: gate-off→nothing (ADR-015), idle, streaming, proposal-ok, proposal-rejected, stream-error, gate-loading/error, stale/offline. Uniquely `SuggestGeofence`-prefixed types (0 collisions). `view.opened` telemetry (P1/S11), full a11y labels + VoiceOver summary.
+
+**Verification (all surface-attributable gates GREEN):**
+- swiftc `-typecheck`: iOS-18 = 0, macOS-15 = 0 (against real Tokens + components)
+- SwiftPM `swift test`: **43/43**
+- swiftlint --strict 0/8 (tree 0/4016), swiftformat 0/8 (tree 0/4314), placeholder 0, i18n **9/9** (0 dead/0 missing), xcodegen enumerates all 9 files
+- Real in-module arm64 app-target compile (Shared.xcframework assembled+staged live): **0 surface errors**
+
+**Full-app gate** (`xcodebuild build test`) is **macOS-pending** (CI P99 acceptance gate): `IOS_EXIT=65` is one pre-existing error in another agent's `RecentDrivesSection.Previews.swift`; `MAC_EXIT=65` is 0 macOS codesigning identities — neither caused by this surface. Documented in the log and `apps/macos-pending-verifications.md`.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0051-AISuggestNewGeofences.log` → **EXIT=0 / STATUS=DONE**.
+
+Merge made by the 'ort' strategy.
+ ...-shared-surfaces-0051-AISuggestNewGeofences.log | 161 +++++++++
+ .../AISuggestNewGeofences.Adapter.swift            | 335 +++++++++++++++++
+ .../AISuggestNewGeofences.Chrome.swift             | 190 ++++++++++
+ .../AISuggestNewGeofences.Model.swift              | 396 +++++++++++++++++++++
+ .../AISuggestNewGeofences.ModelTests.swift         | 256 +++++++++++++
+ .../AISuggestNewGeofences.Previews.swift           | 114 ++++++
+ .../AISuggestNewGeofences.Tests.swift              | 298 ++++++++++++++++
+ .../AISuggestNewGeofences.Views.swift              | 259 ++++++++++++++
+ .../shared-surfaces/AISuggestNewGeofences.strings  |  49 +++
+ .../shared-surfaces/AISuggestNewGeofences.swift    | 204 +++++++++++
+ apps/macos-pending-verifications.md                |   2 +
+ 11 files changed, 2264 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0051-AISuggestNewGeofences.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift

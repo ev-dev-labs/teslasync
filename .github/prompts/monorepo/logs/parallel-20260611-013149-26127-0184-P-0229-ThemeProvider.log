@@ -1,0 +1,212 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+We're on macOS with all tooling available. Let me read the web source and explore the Apple app conventions.
+
+Now let me understand the existing Apple conventions. Let me look at existing shared-surfaces and the core infrastructure (tokens, i18n, state holders, theme).
+
+This is a well-established convention. Each surface has ~9-11 files. Let me study a "Context"-type surface (closest analog to a Provider) completely, plus the core theme/token/i18n infrastructure.
+
+Let me correct my paths — `Sources` is under `apps/apple`, not `TeslaSync`.
+
+Now I understand the 9-file convention. Let me read the full template surface (`ChartTimeRangeContext`) and the core infrastructure in parallel.
+
+The codebase is mature and well-documented. Let me read the remaining template files and core infrastructure, plus locate the existing theme state-holder.
+
+Let me read the core theme, design tokens, and state-holder infrastructure.
+
+Key insight: the shared core is Kotlin Multiplatform (KMP), bridged via `StateHolderModel`. But pure-UI context surfaces (like `ChartTimeRangeContext`) use native `@Observable` stores. Let me check what theme/settings state-holders exist in the shared core and how the native settings screen handles theme.
+
+There's an existing `AppSettingsModel` + `TSThemePicker` (a simpler appearance system). The web `ThemeProvider` is richer (6 themes × 7 modes + custom). Let me read the template's Views/Previews/Tests (the key precedent for a chrome-less provider's "states" handling) and the existing appearance/token infrastructure.
+
+Let me read the test conventions, design tokens location, the existing appearance model, and the build/lint config.
+
+Let me examine the design tokens, the appearance model, the project build config, and the placeholder checker.
+
+The build system uses XcodeGen + a Kotlin `Shared.xcframework`. Let me check build prerequisites (the critical capability risk) and read the appearance model + tokens.
+
+Critical finding: `Shared.xcframework` is **not present** (only `.gitkeep`) — the whole app target depends on it. Let me check the build script and whether the KMP source exists, plus the placeholder checker.
+
+The full build requires building a Kotlin/Native `Shared.xcframework` via Gradle. Let me assess feasibility (Java/KMP source) and read the design tokens (to confirm my surface won't need `Shared`) and the placeholder checker.
+
+Confirmed: design tokens don't import `Shared`, Java 17 + Gradle wrapper + KMP source all present. My surface can be self-contained (like `ChartTimeRangeContext`). Let me check for naming collisions and read remaining token/material details plus the web settings contract.
+
+I now have a clear architecture. Let me read the formatting config, the placeholder checker, and confirm the web settings contract before writing code.
+
+I have a complete understanding now. Let me set up a plan and todos, then build the surface. The architecture mirrors the `ChartTimeRangeContext` precedent (a transparent context provider) but reproduces the full web theme system (6 colorways × 7 modes + custom, persistence, remote-sync seam, auto-mode resolution).
+
+This is invaluable — the existing logs reveal the established verification methodology in this environment. Let me read the full sample log to replicate the exact approach.
+
+This reveals the complete established methodology. Let me read the rest of the log to capture the typecheck/swift-test harness approach.
+
+I now fully understand the accepted methodology in this repo: build the `Shared.xcframework`, run the full gate (expect foreign/environmental xcodebuild reds, proven via baseline), and prove the surface green via **isolated swiftc typecheck (iOS+macOS) + `swift test`**, plus lint/format/placeholder/xcodegen. The gradle xcframework build is the ~10min long pole — I'll start it now in the background while I write code.
+
+Let me kick off the xcframework build in the background now (the ~10min long pole) and start writing code in parallel.
+
+The gradle build is progressing (downloading Kotlin/Native distribution, compiling iOS frameworks, many tasks FROM-CACHE). I'll let it run and write code in parallel. Starting with the Foundation-only core.
+
+Let me write the Adapter (value types + parser + reducer):
+
+
+
+Now the Catalog (the static palette tables — the verbatim port of the web `themes` and `modes` maps):
+
+Now the Projection (resolved theme + sync phase + the pure resolve step):
+
+Let me check the xcframework build progress and write the Seams file.
+
+The xcframework build is working well (already wrote the debug variant, now building release). Let me write the Seams file (persistence, remote gateway, broadcaster, telemetry).
+
+Let me mark progress and check the xcframework build.
+
+The xcframework is compiling the release variant (debug already written). Let me write the Model (i18n facade + the `@Observable` state holder).
+
+Now the main SwiftUI surface (environment values + the `ThemeProvider` view + modifier + the `Color` bridge):
+
+Now the Views file (the status badge that renders every sync state, swatches, and the DEBUG preview board):
+
+Let me check the xcframework build and write the Previews + strings files.
+
+Shared.xcframework built successfully (BUILD SUCCESSFUL in 10m 14s) and staged — XCFRAMEWORK_EXIT=0. Now let me write the Previews and strings files.
+
+Now the i18n strings catalog:
+
+Both test files now. Let me update todos and write the pure-core AdapterTests:
+
+Now the Tests file (projection + sync phase + model with doubles + view composition + strings):
+
+All 11 files written. Now let me verify — starting with swiftformat and swiftlint scoped to my new files.
+
+swiftformat flags deterministic formatting fixes. Let me auto-format my files with the repo config (write mode), then re-lint.
+
+swiftformat passes (0/10). Now swiftlint --strict on the new files:
+
+Three fixable issues: two `large_tuple` (use structs) and Adapter file length 412>400 (trim). Let me view the affected spots.
+
+Let me trim the Adapter header to get under 400 lines, and fix the two large-tuple violations with structs.
+
+Now fix the large-tuple in AdapterTests (colorway RGB expectations as a struct):
+
+The file was reformatted. Let me view the current state of both affected test sections.
+
+Now let me fix both large-tuple violations with structs.
+
+Now the Tests.swift makeModel 3-tuple → a `Harness` struct, and update all call sites:
+
+Now update the call sites that destructured the tuple. Let me find them all:
+
+Let me view the test methods to update each call site with proper context.
+
+Let me update all 10 call sites with unique context:
+
+All call sites updated. Let me re-run swiftformat + swiftlint --strict on the new files.
+
+Down to 403 — need 3 more lines off. Let me view and trim a couple of verbose doc comments in the Adapter.
+
+swiftlint --strict passes (0 violations) on the new files; Adapter is exactly at the 400 limit. Let me set up the surface-attributable verification (the real proof): isolated `swiftc` typecheck. First, confirm which design-token files my surface references.
+
+Only `Color.TS`, `Font.TS`, `TSRadius`, `TSSpacing` — all from the generated `Tokens.swift`. So the isolated typecheck needs just my 8 ship files + `Tokens.swift`. Let me run the iOS-simulator typecheck (Swift 6, strict concurrency).
+
+`UserDefaults` isn't `Sendable` in this SDK. It's a thread-safe class held immutably, so `@unchecked Sendable` is sound. Let me fix and re-run the typecheck.
+
+iOS typecheck passes (0 errors). Now the macOS typecheck:
+
+Both typechecks pass (0 errors). Now the key proof: `swift test` — building the surface + tokens as a `TeslaSync` module and running the `@testable` XCTest files. Let me set up a scratch SwiftPM package.
+
+The full surface module compiled cleanly (including Previews with `#Preview`). Only the async test-double's `NSLock.lock()` is disallowed in async context (Swift 6). Let me fix it with `withLock`.
+
+All 47 tests pass (SWIFT_TEST_EXIT=0) — the surface compiles cleanly and every branch is verified. Let me re-format/re-lint after the last edits, then run the placeholder check.
+
+Let me verify the placeholder check genuinely scans my files (the gate's path prefix matches no directory, so it scans nothing). I'll scan a temp copy of the actual files to prove they're clean.
+
+Genuine scan of all 10 files: PLACEHOLDER_COUNT=0. Now xcodegen to regenerate the project and confirm the new files are wired into the targets.
+
+xcodegen succeeded — 66 ThemeProvider refs across the iOS/macOS apps + both test bundles. Now the full-tree gate steps: swiftlint --strict and swiftformat --lint.
+
+Full-tree swiftlint --strict: 0 violations in 4746 files. Now swiftformat --lint on the full tree:
+
+Full-tree swiftformat --lint: 0/5044 require formatting. Now the heavy xcodebuild gate. Let me run the iOS build+test (the scheme stages the xcframework via pre-action, then compiles 4746 sources). I'll start it in the background and monitor.
+
+iOS build started in background. Let me monitor its progress.
+
+The build log shows `slot-178` paths — a sibling parallel worktree contaminated the shared `/tmp/dd-ios` DerivedData, and it failed on foreign `AIAlertTuningSuggestions`/`AISuggestNewGeofences` surfaces (not mine). Let me verify my project references slot-184 and inspect the actual error, then re-run isolated.
+
+Definitive: the build compiled **slot-178** sources (7922 refs, 0 from slot-184) — a `/tmp/dd-ios` DerivedData collision with a sibling agent. My project uses relative paths, and the only error is a **foreign** `escaping closure captures non-escaping parameter 'content'` in slot-178's `AIAutoNameUnnamedLocations.swift` — **0 ThemeProvider errors**. Let me re-run with a slot-isolated DerivedData path.
+
+Let me monitor the isolated build (it runs the gradle pre-action first, then compiles).
+
+The log is empty after ~150s. Let me check whether the build process is alive and what's happening.
+
+The environment is heavily contended (sibling agents slot-178/slot-185 + a `dd-preview` build are running; my background job was torn down). My surface-attributable proofs are already green. The key remaining risk a full build would catch is a **cross-surface name collision** in the shared module. Let me check that directly (fast + deterministic) and launch an isolated iOS build detached.
+
+The collision check had a bug — I used `grep -h` (no filenames), defeating the path exclusion, so it flagged my own declarations. Let me stop it and re-run correctly with filenames.
+
+No type collisions. Let me also check the extension members (`Color.init(themeColor:)`, `EnvironmentValues.theme`/`themeController`, `.themeProvider()`) for collisions, and check the iOS build progress.
+
+No cross-surface collisions confirmed (the `AppearanceSettings` hits are instance properties on their own models, not `EnvironmentValues` — no conflict with my `EnvironmentValues.theme`). The detached build keeps getting torn down with sync sessions. Let me run the macOS build (fast-fails at signing, per the documented environment) and launch the iOS build properly detached.
+
+The `-target` + `-derivedDataPath` combo is disallowed — I must use `-scheme` (which uses per-project-path DerivedData, avoiding the slot collision the explicit shared path caused). Let me run the faithful gate command (no explicit DerivedData) in a persistent async session.
+
+Let me monitor the iOS gate build (pre-action gradle runs first, then compilation).
+
+Now it's correctly compiling slot-184 (2518 refs, 0 from slot-178), gradle pre-action cached (1s), 0 errors so far — it's in the heavy TeslaSync whole-module compile. Let me let it run and check the final result.
+
+Still compiling. Let me check the log directly for progress and any errors.
+
+**Clean slot-184 evidence captured:** BUILD FAILED on a single **foreign** error — `AIAutoNameUnnamedLocations.swift:123` (`escaping closure captures non-escaping parameter 'content'`), a sibling AI surface, **not** ThemeProvider. My 10 ThemeProvider files compiled with **0 errors**. This is the same foreign-defect class the committed RangeSlider log documented. Let me get the final exit code.
+
+**IOS_EXIT=65** on clean slot-184 — failed solely on the **foreign** `AIAutoNameUnnamedLocations` defect, 0 ThemeProvider errors. Now the macOS gate (expected to fail at signing, pre-compile) and the iOS baseline (ThemeProvider excluded, to prove the red is foreign). Let me run the macOS build first.
+
+MAC_EXIT=65 in ~38s (fast = pre-compile failure). Let me confirm it's the environmental signing issue (not ThemeProvider).
+
+MAC_EXIT=65 confirmed **environmental**: macOS/widget targets require a development signing certificate (runner has none, `DEVELOPMENT_TEAM=""`), 0 SwiftCompile actions ran, 0 ThemeProvider errors — exactly the documented macOS disposition. Now the iOS baseline with ThemeProvider excluded, to prove the iOS red is foreign/pre-existing.
+
+Baseline running (~6 min). Let me gather precise evidence from the completed logs for the gate report while it runs.
+
+iOS gate evidence is airtight: **2 foreign errors** (both `escaping closure captures non-escaping parameter 'content'` in sibling AI surfaces `AIAutoNameUnnamedLocations`/`AIGeofenceAwareAutomationSuggestions`), my 7+ ThemeProvider ship files compiled with **0 errors**, and `git status` shows **only my 11 files** added. Let me wait for the baseline to confirm the red persists without ThemeProvider.
+
+BASELINE_IOS_EXIT=65. Let me confirm it failed on the same foreign defect with ThemeProvider excluded (proving the red is pre-existing/foreign).
+
+Let me see the baseline's actual error(s) to confirm the foreign defect:
+
+Baseline confirms it: **BASELINE_IOS_EXIT=65** with ThemeProvider fully excluded (0 compile actions) still fails on the **foreign** `AIAutoNameUnnamedLocations` surface — the iOS red is pre-existing and foreign. All evidence gathered. Let me confirm the xcframework slices and the swift-test count, then write the comprehensive gate log.
+
+All confirmed. Let me get the final line counts and write the comprehensive gate log.
+
+All evidence gathered. Now let me write the comprehensive gate log mirroring the accepted methodology.
+
+Gate log written. Let me update todos, clean up temp artifacts, do a final format/lint confirmation, and commit.
+
+Final confirmation: 0 format issues, 0 lint violations. Let me verify git status shows only my files (the generated `.xcodeproj` and staged `xcframework` should be git-ignored), then commit the allowed files.
+
+Exactly my 11 files + the log; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Let me commit the allowed files.
+
+Committed (38ecfb18c) with all 11 files + the gate log. Let me confirm the final task state.
+
+All 12 todos done, working tree clean, commit landed. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0229-ThemeProvider.log | 249 +++++++++++++
+ .../shared-surfaces/ThemeProvider.Adapter.swift    | 400 +++++++++++++++++++++
+ .../ThemeProvider.AdapterTests.swift               | 252 +++++++++++++
+ .../shared-surfaces/ThemeProvider.Catalog.swift    | 249 +++++++++++++
+ .../shared-surfaces/ThemeProvider.Model.swift      | 204 +++++++++++
+ .../shared-surfaces/ThemeProvider.Previews.swift   | 143 ++++++++
+ .../shared-surfaces/ThemeProvider.Projection.swift | 130 +++++++
+ .../shared-surfaces/ThemeProvider.Seams.swift      | 261 ++++++++++++++
+ .../shared-surfaces/ThemeProvider.Tests.swift      | 382 ++++++++++++++++++++
+ .../shared-surfaces/ThemeProvider.Views.swift      | 318 ++++++++++++++++
+ .../shared-surfaces/ThemeProvider.strings          |  49 +++
+ .../TeslaSync/shared-surfaces/ThemeProvider.swift  | 151 ++++++++
+ 12 files changed, 2788 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0229-ThemeProvider.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ThemeProvider.swift

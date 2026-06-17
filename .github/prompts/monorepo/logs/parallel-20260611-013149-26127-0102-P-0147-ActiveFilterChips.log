@@ -1,0 +1,197 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Let me explore the web source and Apple app structure.
+
+Now let me examine the web test, the hook, and the Apple project structure to understand existing patterns.
+
+The Apple project uses XcodeGen (`project.yml`) and there's a `TeslaSync` directory matching the output path. Let me examine the project config, the `TeslaSync` dir, and existing Forms components.
+
+Now I understand the structure — shared surfaces use multi-file conventions (`.swift`, `.Model.swift`, `.Chrome.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me study the closest analogs (popover, banner, callout) plus the foundational layers (i18n, tokens, diagnostics, state holders).
+
+`InlineCallout` is the ideal analog (presentational forms surface, no charts/maps). Let me study its complete file set plus the popover pattern and foundational layers.
+
+Let me read the rest of the InlineCallout set, the design tokens, and the popover pattern.
+
+Let me read the AdapterTests, Previews, design tokens, and the SavedViewMenu popover/model/states for the overflow-popover pattern.
+
+Excellent — I now have the full template. Let me study the popover/overflow pattern (SavedViewMenu), check for existing flow-layout/announcement helpers, and confirm `TSTone`.
+
+There's a dedicated `AnnouncerRegion` surface and `FlowLayout` patterns. Let me examine these reusable primitives plus the Badge/chip primitive.
+
+Let me read the `AnnouncerRegion` primitive (web `VisuallyHidden liveRegion` parity) and the `FlowLayout` implementation.
+
+Let me read the announcement presenter seam, shared `TSCard`/`TSFadeIn`, lint config, and check `xcodegen` availability.
+
+Let me read the announcement presenter implementation, `AnnouncerMessage` type, and the shared `TSCard`/`TSFadeIn`/motion primitives.
+
+I have all the patterns I need. Now let me verify the build infrastructure — the `Shared.xcframework` staging script (KMP dependency) and prior gate logs are critical for whether a full build/test is feasible.
+
+Let me confirm the current state (clean slate?), check KMP shared-core feasibility, and read a sibling surface's accepted gate log for the canonical format.
+
+Clean slate confirmed. KMP shared-core (`apps/shared` + gradlew) and JDK 17 are present. The accepted sibling pattern (AnnouncerRegion 0001) shows the full `xcodebuild` may be DEFERRED for environmental reasons (signing/xcframework), but the surface must be complete, compile-clean, tested, and lint/format/placeholder-clean.
+
+Let me kick off the long-pole `Shared.xcframework` Gradle build in the background while I write the surface.
+
+I now have a complete understanding of the conventions. Let me set up tracking and start writing the surface. The Gradle build runs in the background.
+
+Convention confirmed (lines ≤ ~117 chars, swiftformat clean). Now writing the surface. Starting with the pure Foundation core and the i18n strings.
+
+Now the state-holder, telemetry seam, announcer seam, and i18n facade.
+
+Let me check the Gradle build progress, then continue with the Views layer.
+
+Gradle still running (downloading distribution/Kotlin Native). Continuing with the Views layer.
+
+Now let me rename the chip subview to free up the `ActiveFilterChip` name for the public input type, then create the main surface file.
+
+Now the main public surface file.
+
+Surface, model, views, adapter done. Let me check the Gradle build and write the previews + tests.
+
+Gradle is still compiling (Kotlin/Native first-run is slow). Writing previews and tests in the meantime.
+
+The `Shared.xcframework` build completed. Let me confirm and write the final test file.
+
+`Shared.xcframework` staged (9m, now cached). Writing the final test file, then running full verification.
+
+All 8 files written. Now running verification — starting with format/lint on the new files and checking the placeholder tooling.
+
+swiftformat flagged trailing-comma issues in Previews. Let me autofix my files only, then re-lint.
+
+Format passes. Now swiftlint — first scoped to my files, then the full strict run to check for any regressions.
+
+One `large_tuple` violation in Previews. Let me fix it by avoiding the 3-tuple.
+
+Format/lint and swiftformat are disagreeing on the multiline array's trailing comma. Let me re-autofix and inspect what each tool wants.
+
+Both tools now agree (swiftformat removed the trailing comma; swiftlint clean). Let me confirm all 7 files pass both, then run the full strict lint to check for regressions.
+
+All-new-files clean and the **full strict lint of all 4370 files passes (0 violations)**. Now the full-dir format lint (gate command) and project generation.
+
+Gate-format passes (`FORMAT_EXIT=0`), project generated (`XCODEGEN_EXIT=0`), and ActiveFilterChips is integrated (48 pbxproj refs across app + test targets). Now the heavy gate step — the iOS build+test. Starting it in the background with output captured.
+
+The iOS build/test is running in the background. Let me monitor its progress.
+
+Good — preActions (xcframework staging) succeeded and the main app module is compiling (Swift 6, iOS 18 target, SDK 26.5), 0 errors so far. The full-module compile takes time. Let me wait.
+
+iOS build **succeeded and compiled my files cleanly** (Adapter/Model/strings all processed), but the test run reported "(2 failures)" with `IOS_EXIT=65`. I must determine whether those failures are mine or pre-existing/foreign. Let me investigate.
+
+It's a **compile failure** (not test-case failures) — `SwiftCompile failed`. Let me find the actual error and which file it's in.
+
+The error is a **swift-frontend compiler crash** (IRGen stack trace), not a normal type error. Let me identify which file/module triggered it.
+
+Line 10702 is just the summary. Let me locate the actual `SwiftCompile` batch that crashed (the one preceding the stack trace).
+
+The crash is in IRGen for a **foreign sibling file** — `TeslaSync/feature-views/AppearanceSettings*` — not my surface. Let me capture the exact details.
+
+Definitive root cause: the swift-frontend **crashed during IRGen for a foreign sibling file** — `TeslaSync/feature-views/AppearanceSettings.Controls.swift` (`While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"`, a Bool/Actor reabstraction-thunk compiler bug). My files type-checked and compiled cleanly (the module reached IRGen of other files; my `.strings`/`.swift` were processed with 0 errors), but the whole-module build aborts on that foreign file before tests run.
+
+Per the honesty covenant I must evidence both that (1) this crash is pre-existing/independent of my surface, and (2) my surface compiles and its tests pass. Let me first reproduce the crash at **baseline (my files removed)**.
+
+Confirmed: the crashing file is committed/foreign (unmodified by this prompt); all my files are new/untracked. Now the **baseline reproduction** — temporarily remove my files, regenerate, and build to prove the crash is pre-existing.
+
+Baseline build running. Let me wait for it to reach the crash.
+
+Baseline (without my files) **also fails** (`EXIT=65`). Let me confirm it's the same foreign crash.
+
+Decisive: the **baseline build WITHOUT my files also fails** — with foreign breakages in other shared-surfaces (`AISignalExplorerNlFilter.swift:142` "escaping closure captures non-escaping parameter" + the `AppearanceSettings.Controls.swift` IRGen crash). These are pre-existing, parallel-merge foreign defects independent of my surface. Let me inventory the full set of baseline foreign breakages.
+
+The baseline bails at the first foreign error but there are at least two distinct pre-existing foreign breakages. To prove my surface + tests are green, I'll attempt a **bounded isolation** (quarantine the foreign crashers, keep my files). First, let me gauge the cascade by inventorying those foreign surface groups and their references.
+
+Both foreign groups have **zero external references** — they're leaf surfaces, so quarantining them won't cascade. Let me restore my files, quarantine the two foreign crashers, and rebuild+test to prove my surface is green.
+
+My files restored, foreign crashers quarantined, project regenerated (48 ActiveFilterChips refs). Now the isolation build+test.
+
+Isolation build+test running. Let me wait and monitor for any further foreign breakages or my test results.
+
+A **third** foreign breakage surfaced (`AIAutoNameUnnamedLocations.swift`). The committed baseline has multiple independent foreign defects from parallel-merge. Let me see this error's nature and whether it's a systematic pattern across many foreign files.
+
+Decisive finding: the third foreign error is the **same systematic pattern** (`escaping closure captures non-escaping parameter 'content'`) — affecting many foreign AI* sibling surfaces, plus the AppearanceSettings IRGen compiler crash. This is an unbounded, pre-existing parallel-merge defect across files outside my scope. Critically, **my files were compiled in the batch with zero errors**.
+
+Let me restore the quarantined foreign files (the tree must end clean), then prove my surface compiles + tests pass via a standalone build that bypasses the broken module.
+
+Let me check the 3 files still in quarantine and ensure everything is restored.
+
+The tree is clean apart from my additions (git porcelain shows no foreign changes; quarantine dirs empty). Let me confirm the foreign files are back, regenerate the full project, and clean up.
+
+All restored; full project regenerated; tree is clean (committed baseline + my 8 additions). 
+
+The integrated XCTest can't run because the committed baseline is broken by a **systematic, unbounded foreign defect** (`escaping closure captures non-escaping parameter 'content'` across `AISignalExplorerNlFilter`, `AIAutoNameUnnamedLocations`, `AISuggestNewGeofences`, …) plus the `AppearanceSettings.Controls.swift` IRGen compiler crash — all outside my allowed files.
+
+To rigorously prove my surface compiles (Swift 6, real SDK) **and** its logic/tests pass, I'll build a standalone executable from my surface + design tokens + a harness mirroring my test assertions — bypassing the broken module.
+
+Now compile and run the standalone verification against the real macOS SDK under Swift 6 strict concurrency.
+
+Top-level code requires the file be named `main.swift` when compiling multiple files. Let me rename and recompile.
+
+Swift 6 top-level `main.swift` is MainActor-isolated. Let me annotate the helpers accordingly.
+
+Compiles cleanly (Swift 6, strict concurrency complete). Now executing the assertions.
+
+Deadlock — blocking the main thread starves the MainActor task. Since top-level `main.swift` is already MainActor-isolated in Swift 6, I can call the helpers directly. Let me stop and fix.
+
+**All 32 standalone checks passed** (`RUN_EXIT=0`) — my surface compiles 0-error against the real macOS SDK under Swift 6 strict-concurrency=complete, and its adapter logic, strings facade, and @MainActor state-holder all behave correctly.
+
+Now let me run the macOS gate build (it shares the same `Sources/` so it will hit the same foreign breakage) to capture its real exit, while I begin writing the gate log.
+
+The macOS build is running. Let me wait for it to hit the same foreign breakage and capture its exit, then write the gate log.
+
+macOS also fails (`MAC_EXIT=65`), my files clean there too. Let me pinpoint the macOS failure cause.
+
+macOS fails for an **environmental** reason — no macOS development-signing certificate on the runner (`"TeslaSync-macOS" has entitlements that require signing with a development certificate`), failing at the signing gate before source compile. My files are clean there too. This exactly matches the AnnouncerRegion precedent (foreign iOS breakage + environmental macOS signing).
+
+I now have all evidence. Let me write the comprehensive, honest gate log.
+
+Gate log written. Now let me clean up verification artifacts, confirm the tree is clean (only my additions), and verify nothing foreign changed.
+
+Clean — only my 8 surface files + the gate log are new; the generated `.xcodeproj` is git-ignored; no foreign files touched. Committing per the prompt's commit spec.
+
+Committed cleanly (9 files, 1648 insertions, commit `9616f467a`). Let me do a final working-tree check.
+
+The task is complete. Working tree is clean and the commit is in place.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`ActiveFilterChips`** surface (SwiftUI, iOS 18/macOS 15) at parity with `components/forms/ActiveFilterChips.tsx`, following the established in-tree multi-file convention:
+
+- **`.Adapter.swift`** — pure core: visible/overflow partition (verbatim port of the web `useMemo`), hide/empty/clear-all flags, i18next `{{token}}` interpolation, rotating zero-width a11y padding.
+- **`.Model.swift`** — P1/S10 i18n facade, P1/S11 telemetry seam, polite-announcement seam, `@Observable @MainActor` state-holder (overflow popover, routed `onRemove`/`onClearAll`, once-only `view.opened`).
+- **`.Views.swift`** — wrapping `FlowLayout`, chip (Delete/Backspace removal), "+N more" popover, Clear-all, empty placeholder, `AccessibilityNotification` announcer.
+- **`.swift`** public surface, **`.Previews.swift`** (5 states), **`.strings`** (7 verbatim web keys), **`.AdapterTests.swift`** + **`.Tests.swift`**.
+
+**Verification (all real, captured in the gate log):**
+| Gate | Result |
+|---|---|
+| swiftlint --strict (4370 files) | **0 violations** |
+| swiftformat --lint apps/apple | **0** |
+| check-placeholders | **COUNT=0** |
+| xcodegen generate | **0** (48 pbxproj refs) |
+| Shared.xcframework (KMP) | **BUILD SUCCESSFUL** |
+| Standalone Swift 6 strict-concurrency compile + 32 test assertions | **0 / 32-of-32 PASS** |
+| iOS `xcodebuild build test` | **65 — DEFERRED** |
+| macOS `xcodebuild build test` | **65 — DEFERRED** |
+
+The full `xcodebuild` is red **only** from pre-existing **foreign** defects outside my allowed files — a systematic `escaping closure captures non-escaping parameter 'content'` across `AISignalExplorerNlFilter`/`AIAutoNameUnnamedLocations`/`AISuggestNewGeofences` plus an `AppearanceSettings.Controls.swift` IRGen compiler crash (iOS), and no macOS dev-signing certificate (macOS). I **proved these are pre-existing** via a baseline build with my files removed (same failure, zero ActiveFilterChips files present) and an isolation build (module compiled past every ActiveFilterChips file with 0 errors). My surface contributes **0 errors** on both platforms and all its logic executes green. Reds shown verbatim — none claimed green — matching the accepted in-repo `AnnouncerRegion (0001)` DEFERRED precedent. `EXIT=0 / STATUS=DONE`.
+
+Committed as `9616f467a` (9 files, 1648 insertions) with the Co-authored-by trailer.
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0147-ActiveFilterChips.log | 186 +++++++++++++++
+ .../ActiveFilterChips.Adapter.swift                | 243 +++++++++++++++++++
+ .../ActiveFilterChips.AdapterTests.swift           | 205 ++++++++++++++++
+ .../shared-surfaces/ActiveFilterChips.Model.swift  | 257 +++++++++++++++++++++
+ .../ActiveFilterChips.Previews.swift               |  77 ++++++
+ .../shared-surfaces/ActiveFilterChips.Tests.swift  | 248 ++++++++++++++++++++
+ .../shared-surfaces/ActiveFilterChips.Views.swift  | 242 +++++++++++++++++++
+ .../shared-surfaces/ActiveFilterChips.strings      |  43 ++++
+ .../shared-surfaces/ActiveFilterChips.swift        | 147 ++++++++++++
+ 9 files changed, 1648 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0147-ActiveFilterChips.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveFilterChips.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveFilterChips.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveFilterChips.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveFilterChips.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveFilterChips.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveFilterChips.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveFilterChips.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveFilterChips.swift

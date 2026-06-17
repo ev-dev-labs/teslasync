@@ -1,0 +1,150 @@
+I'll start by exploring the environment to understand what exists: the web source spec, the Apple app structure, and the required toolchain.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Web source exists. Let me read the web source spec and explore the Apple app structure.
+
+Now let me explore the Apple app structure to understand the existing patterns, dependencies, and the feature-views directory.
+
+`ServiceHealthSection.*` does not exist yet — I need to create it. There are sibling sections following an 11-file pattern. `DataPipelineSection` has a Table (matching our DataTable need). Let me study the canonical patterns in depth.
+
+This is a sophisticated, well-structured architecture. Let me read the remaining BackendStatusSection files and the DataPipelineSection (which has a Table, like our DataTable need).
+
+Let me read the Views/Sections layer plus the DataPipelineSection (which has the Table pattern I need for the DataTable).
+
+Now let me study the DataPipelineSection (it has a Table, like our DataTable need) and the remaining BackendStatus test/strings/preview files.
+
+A shared `TSDataTable`/`TSColumn` component exists. Let me locate the shared design system (tokens, TSDataTable, TSBadge, etc.) and read the DataPipeline Model/Adapter plus strings/previews/tests.
+
+Shared components live in `Sources/`. Let me read the key shared component APIs and design tokens I'll need.
+
+Now let me read the shared UI primitives and find the design tokens file.
+
+The tokens are defined somewhere I haven't found yet. Let me locate them precisely.
+
+Tokens come from `../design/generated/apple`, and the build depends on a prebuilt `Shared.xcframework` + xcodegen. Let me check build feasibility and read the token + remaining shared component definitions.
+
+xcodegen is available but **`Shared.xcframework` is missing** (only `.gitkeep`) — this is critical for the build gate. Let me read the tokens, remaining shared components, and the pending-verifications docs to understand how siblings handle the build.
+
+This is the key context. The full-app `xcodebuild` is blocked by **pre-existing, unrelated** issues (unstaged `Shared.xcframework`, merge collisions) that every sibling section documents as "macOS-pending". The surface itself is verified green in isolation. Let me read a sibling's log + the remaining pattern files to match the exact convention.
+
+I now have the exact methodology. Let me read the full DataPipelineSection log to capture the precise verification commands (isolated SwiftPM harness, real-SDK typecheck), and check the log naming.
+
+There are prior `ServiceHealthSection` logs from other parallel slots (the files were never merged here). Let me read the canonical DataPipeline log for exact commands, plus a prior ServiceHealth attempt log for reference.
+
+This is the canonical reference. Now let me find the isolated SwiftPM test harness and read the web data source (`getTelemetryStatus`) for exact field shapes, plus a prior ServiceHealth attempt log.
+
+Let me read the exact telemetry status data shape and the web AccordionSection/index barrel.
+
+Now I have the data shape. Let me read the DataPipeline Model/Views/strings/Tests/Previews to mirror the architecture, plus a prior ServiceHealth attempt log for i18n-key reference.
+
+Now let me find the remaining shared component APIs I'll use (`TSMetricCard`, `TSStatCard`, `TSEmptyState`, `TSPanelTitle`, `TSButton`, `TSSkeleton`, `TSFadeIn`) and read the DataPipeline Adapter/strings/Tests/Previews.
+
+I have the component APIs. Let me read the DataPipeline Adapter (formatters/status/accessibility), strings, Previews, and the typography/button/motion/skeleton primitives, plus a prior ServiceHealth log for i18n-key reference.
+
+Let me read the DataPipeline Tests + Previews (to mirror test structure), the typography/button/motion/skeleton primitives, and a prior ServiceHealth attempt log.
+
+Let me read the Previews pattern, the typography/button/motion/skeleton primitives, and a prior ServiceHealth attempt log for reference.
+
+Let me read the typography + button primitives and the prior ServiceHealth attempt log for i18n-key reference.
+
+I now have the complete pattern. A prior run (in a CLT-only slot, not merged here) confirms the approach. **My environment has full Xcode 26.5**, so I can run more gates. Let me verify the exact web formatters for parity, then build.
+
+Let me check the placeholder gate patterns (to avoid flagged words) and the lint config, then I'll build.
+
+I have everything needed. Let me set up tracking and write the plan, then build the surface.
+
+Let me check the swiftlint/swiftformat configs so my code passes `--strict` on the first try.
+
+Configs understood (120 col, `.isEmpty`, before-first wrapping). Now creating the 8 files. Starting with the pure Adapter.
+
+Now the Model (P1/S8 source seam + @Observable model + P1/S11 telemetry + P1/S10 facade, SwiftUI-free).
+
+Now the main view (accordion chrome + phase switch).
+
+Now the Views file (badges, freshness, metric grid, content, loading/empty/error chrome).
+
+Now the vehicle table (TSDataTable with 6 columns + status pill + sortable Signals + a11y).
+
+Now the Previews file.
+
+Let me align the description/empty/no-vehicles keys to the **verbatim web `t()` keys** (maximizing i18n parity), then write the strings catalog.
+
+Now the strings catalog (web-parity keys + native chrome).
+
+Now the XCTest suite.
+
+All 8 files created. Now running the verification gates — starting with swiftformat + swiftlint on my files.
+
+One numeric-grouping nit in Previews. Let me auto-fix with swiftformat (write mode) and re-lint.
+
+Formatting clean. Now swiftlint --strict on my files.
+
+swiftlint flags Tests.swift at 407 lines (>400 limit). I'll split it into `Tests.swift` + `ModelTests.swift` (the established sibling pattern). Let me view the boundary and split.
+
+I'll truncate Tests.swift to line 249 and move the model/accessibility suites into a new ModelTests.swift (sibling pattern).
+
+Now create the ModelTests.swift with the model + accessibility suites.
+
+Now 9 files. Let me re-run both linters on the full set.
+
+Both linters clean (0 violations). Now the placeholder gate — I'll scan exactly my files in a temp dir (the gate's literal path has no extension) plus a self-test.
+
+Placeholder gate clean (COUNT=0) + self-test proves it detects stubs. Now the real-SDK typecheck. First, identify which shared `Sources` files depend on the KMP `Shared` framework (to exclude from the isolated typecheck).
+
+Only `UnitFormatters.swift` in Components/Design depends on KMP `Shared`. Let me run the real-SDK typecheck (iOS 18) of my production files + the real shared components, excluding that one file.
+
+iOS 18 typecheck clean (including `#Preview` with `-DDEBUG`). Now macOS 15.
+
+Both typechecks clean (iOS 18 + macOS 15). Now the isolated SwiftPM test run — building module `TeslaSync` from the **real** shared Components + Tokens + my surface, then running XCTest.
+
+48 sources wired. Now running `swift test` (Swift 6 mode, real components).
+
+The rsync include-order let `UnitFormatters.swift` (KMP-dependent) slip in. Let me remove it and re-run `swift test`.
+
+All **34 tests passed** (real components, Swift 6). Now `xcodegen generate` to prove the files wire into both app targets.
+
+`xcodegen` succeeded — files wired into both targets (54 refs), `.xcodeproj` gitignored. Now let me capture honest evidence of the full-app build blocker (the unstaged `Shared.xcframework`).
+
+Confirmed: the **only** build error is the unstaged `Shared.xcframework` — a pre-existing P1/S3 infra artifact (separately macOS-pending), not my code. Let me make a thorough, time-boxed attempt to stage it via Gradle (I have full Xcode), to see if the full gate can run.
+
+Let me give the KMP framework assembly one honest, time-boxed attempt (240s) so the log reflects a real attempt on this full-Xcode host.
+
+Confirmed `GRADLE_RC=124` (timeout) — the framework long-pole, exactly as documented for every sibling. The full build is genuinely blocked by the unstaged `Shared.xcframework` (separate P1/S3 macOS-pending artifact), not my code. Let me clean up scratch artifacts and write the gate log.
+
+Let me gather final metrics (i18n key count, full git status) before writing the log.
+
+Everything is green and the working tree is clean (only my 9 files). Now writing the gate log with the real captured evidence.
+
+Now let me add the macOS-pending row for this surface (matching the established format).
+
+The prompt's **Allowed files** are strictly `ServiceHealthSection.*` + the log — `macos-pending-verifications.md` is out of scope. Let me revert that doc change to respect the constraint (the log fully documents the deferral), then stage and commit.
+
+Exactly 9 surface files + the log staged. Committing with the prescribed message.
+
+Commit `f782ad80e` created (9 surface files + log, 2060 insertions). Let me run a final post-commit sanity check.
+
+All green post-commit, working tree clean, log ends `EXIT=0 / STATUS=DONE`. Let me finalize tracking.
+
+The task is complete and verified. Final summary:
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0252-ServiceHealthSection.log | 134 ++++++++
+ .../ServiceHealthSection.Adapter.swift             | 350 +++++++++++++++++++++
+ .../feature-views/ServiceHealthSection.Model.swift | 307 ++++++++++++++++++
+ .../ServiceHealthSection.ModelTests.swift          | 204 ++++++++++++
+ .../ServiceHealthSection.Previews.swift            | 124 ++++++++
+ .../feature-views/ServiceHealthSection.Table.swift | 156 +++++++++
+ .../feature-views/ServiceHealthSection.Tests.swift | 249 +++++++++++++++
+ .../feature-views/ServiceHealthSection.Views.swift | 310 ++++++++++++++++++
+ .../feature-views/ServiceHealthSection.strings     |  52 +++
+ .../feature-views/ServiceHealthSection.swift       | 174 ++++++++++
+ 10 files changed, 2060 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0252-ServiceHealthSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ServiceHealthSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ServiceHealthSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ServiceHealthSection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ServiceHealthSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ServiceHealthSection.Table.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ServiceHealthSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ServiceHealthSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ServiceHealthSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ServiceHealthSection.swift

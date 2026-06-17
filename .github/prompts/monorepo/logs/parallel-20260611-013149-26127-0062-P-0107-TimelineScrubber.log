@@ -1,0 +1,164 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple app setup.
+
+Tooling is available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat). Let me examine an existing shared surface to learn the established pattern.
+
+`PlaybackControls.Scrubber.swift` is a near-identical sibling — the best reference. Let me study it and the full BatteryDelta set.
+
+`PlaybackControls` is the gold-standard analog (it even references TimelineScrubber). Let me read its full architecture plus a representative simpler surface.
+
+Excellent architecture. Let me read the remaining PlaybackControls files (Store/Views/States/Seams/Previews/strings/Tests) and the design tokens.
+
+Let me read the remaining PlaybackControls views/tests plus the BatteryDelta Adapter pattern and locate the design tokens.
+
+Let me locate the design tokens (P1/S9) and shared chrome, and study the test conventions plus the Adapter pattern.
+
+Tokens are generated elsewhere. Let me locate the exact definitions of the tokens and shared chrome I'll use.
+
+Let me check the GlassPanel component, the native Tooltip equivalent, and how the Xcode project is structured (to ensure new files get built).
+
+Now I understand the build setup (XcodeGen + Shared.xcframework). Let me verify the Tooltip API, the framework/build-script situation, and prior surface logs to calibrate build expectations.
+
+A prior `0107-TimelineScrubber` artifact log exists. Let me read it plus the sibling PlaybackControls log and the build script to calibrate expectations.
+
+The prior run reveals the sanctioned disposition: full `xcodebuild` is deferred (needs KMP `Shared.xcframework` + signing), and surfaces are verified via swiftlint/swiftformat/placeholder/`swiftc -typecheck`/SwiftPM tests/xcodegen. Let me read the lint configs and a sibling AdapterTests to match conventions exactly.
+
+`.swiftlint.yml` ends at line ~79 (defaults apply: file_length ≤400, line_length ≤120 under `--strict`). Let me trace the design-system dependency closure my surface will need (to build a typecheck/test harness) and confirm the Design/Components layer is KMP-free.
+
+Design/Components layer is KMP-free (only system frameworks) — so I can typecheck the surface against the real design system without the KMP framework. I have everything needed. Let me set up tracking and write a plan.
+
+Now I'll write the surface files. Starting with the Foundation-only core (Model, Adapter, Projection, Seams) in parallel.
+
+Now the interactive views. Marking view todos in progress and writing Views.swift.
+
+Now the public surface composition.
+
+Now previews, strings catalog, and the two test files.
+
+All 12 files written. Now verification. First format my files and check line/file lengths.
+
+All files ≤400 lines. One code line exceeds 120 chars — let me fix it by extracting a local.
+
+Now run the lint gates. Scoped first for fast feedback.
+
+Fixing the `void_function_in_ternary` violation in Previews.
+
+Scoped lint+format clean. Now the full gate-style runs. Let me kick off the full `swiftlint --strict` and `swiftformat --lint apps/apple` (slower, whole project) and inspect the placeholder checker.
+
+Let me read the placeholder patterns and run a *genuine* placeholder scan on my files (via a temp dir, since the gate's prefix path scans vacuously), then check the background lint.
+
+Genuine placeholder scan: **PLACEHOLDER_COUNT=0**. Let me check the full project swiftlint.
+
+Full `swiftlint --strict`: **EXIT=0**. Now the full `swiftformat --lint apps/apple` (background) and set up the typecheck against the real design system.
+
+None import the KMP `Shared` module. Let me typecheck my surface against the real design-system closure (macOS SDK, Swift 6 strict concurrency).
+
+Only error is an unrelated design-system file (`FeedbackOverlays.swift` → `TSMetricBar` in DataDisplay) that my surface doesn't use. Let me include the full Components tree so all cross-references resolve.
+
+The full Components tree pulls in app-level unit types (`UnitPreferences`) that need the KMP module. My surface doesn't use those. Let me compile the **minimal real dependency closure** my surface actually touches.
+
+Full `swiftformat --lint` finished — let me grab that result, and locate the missing `TSTone` type.
+
+Full `swiftformat --lint apps/apple`: **0/4449 require formatting, EXIT=0**. `TSTone` is in Badges.swift. Adding it to the closure.
+
+macOS typecheck (Swift 6 strict): **EXIT=0**. Now iOS SDK typecheck (core) and a macOS typecheck that *includes Previews* (`-D DEBUG`, exercises the `#Preview` macro), in parallel.
+
+Both iOS-18 and macOS typechecks (including Previews/`#Preview` macro): **EXIT=0**. Now let me actually *run* the XCTests via a SwiftPM harness against the real design system.
+
+35 tests ran, 1 failure. Let me find which one.
+
+A floating-point boundary issue in my test: `1000.0 + 0.05` isn't exactly representable, so `timeIntervalSince` yields slightly < 0.05. The production `>=` logic is correct (matches web `>= SCRUB_INTERVAL_MS`); the test over-specified a non-representable boundary. Fixing the test to use a value safely above the interval.
+
+All **35 tests pass** (SWIFT_TEST_EXIT=0). Now `xcodegen generate` to confirm the project enumerates the new files.
+
+xcodegen enumerates **all 12 files** (72 refs across app + test targets). Let me confirm the generated project is git-ignored, then attempt the full `xcodebuild` to capture honest evidence of the deferred KMP/signing dependency.
+
+Generated project is git-ignored; git status shows exactly my 12 files. Now let me attempt the full `xcodebuild` to capture honest evidence of the deferred KMP/signing blocker (the sanctioned disposition for P4 surfaces).
+
+The inner `&` detached the output. Let me run xcodebuild directly (async), teeing to a file so I can inspect the real failure.
+
+This runner actually has the KMP/Gradle toolchain — the `Shared.xcframework` preAction is building (not blocked). The full build may genuinely proceed. Let me let it continue and monitor.
+
+Gradle is in the heavy Kotlin/Native release-link phase. Since this runner can actually build it, a green full build is the strongest evidence — let me be patient and keep monitoring.
+
+Build failed (exit 65). I must determine the cause honestly — is it my code or an environment/pre-existing issue? Let me inspect the errors.
+
+Root cause is **not my code** — it's a concurrent-build DB lock: my first (improperly `&`-detached) xcodebuild was still running and held the DerivedData lock. Crucially, `✓ Shared.xcframework staged` — the KMP framework built fine, no TimelineScrubber/signing/module errors. Let me kill the stray build and re-run cleanly.
+
+Stray xcodebuild is PID 26335 (pipeline parent 26334). I'll kill those by PID (leaving the warm Gradle daemon), then re-run a single clean build/test.
+
+The `rm -rf` is unusually slow — possibly leftover compiler child processes holding files. Let me stop it and investigate.
+
+The `du` is slow on DerivedData and the grep matched unrelated daemons (no build children remain). Let me stop and avoid the slow delete entirely — I'll build into a fresh, dedicated `-derivedDataPath` to sidestep any lock.
+
+No build children remain. Let me run a single clean build into a dedicated `-derivedDataPath` (the `Shared.xcframework` is already staged, so Gradle will be fast). Building the full iOS app first to prove my files integrate.
+
+Build failed, but my files were compiling. Let me find the actual error in the full log.
+
+No `error:` lines captured — the "failed" commands are just *cancelled* parallel batches. The real error is elsewhere. Let me search the full log thoroughly.
+
+Still zero real `error:` lines — neither failing batch printed a compile error, which points to a compiler crash or external abort, not a source error. Let me check for crash/abort signals and whether any TimelineScrubber file is implicated.
+
+It's a **Swift compiler crash** (stack dump at line 9306), not a source error. I must determine which file triggered it — if mine, I'll work around it. Let me view the crash context.
+
+The crash is in an **unrelated batch** (`AppSettings/AppearanceSettings/AuditPanel…`) — no TimelineScrubber file in it. Let me view the stack dump to capture the crash signature.
+
+**Conclusive:** the build failure is a **swift-frontend compiler crash** (Apple Swift 6.3.2, "Please submit a bug report") while compiling a batch of **unrelated, pre-existing files** — the `-primary-file` set is `AppSettings.swift, AppearanceSettings.*, AuditPanel.*, AppleAuthSession.swift, AuthBiometricBridge.swift`. **No TimelineScrubber file is in the crashing set.** My files are fully verified independently (iOS+macOS typecheck + 35 tests + lint/format/placeholder/xcodegen).
+
+This is exactly the P4-sanctioned "full xcodebuild deferred" disposition, with a stronger documented reason (compiler crash in other code, not my surface, and out of my allowed-files scope to fix).
+
+Let me confirm the staged framework is git-ignored and re-verify my files, then write the gate log and clean up.
+
+All in-scope verifications are green and the staged framework is git-ignored. To make this bulletproof (Honesty Covenant: "no skip-and-assume"), I'll definitively prove the compiler crash is pre-existing and independent of my surface — by temporarily removing my 12 files, regenerating, and confirming the **same** `AppSettings` batch crash still occurs.
+
+Project regenerated with **0 TimelineScrubber refs**. Now build without my files and confirm the same crash reproduces.
+
+Build failed (exit 65) **even without my files present**. Let me confirm it's the same crash signature.
+
+Different failure this time (no crash, no my files). The full-app build is broken independent of my surface, but let me capture the actual repro failure reason.
+
+**Definitive proof.** With my files entirely absent, the full-app build still fails on a **pre-existing real error in another agent's surface**:
+```
+AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure captures non-escaping parameter 'content'
+```
+(plus the earlier flaky swift-frontend crash in the `AppSettings/AppearanceSettings/AuditPanel` batch). My TimelineScrubber surface is categorically **not** the cause — and those files are outside my allowed-files scope to fix. Let me restore my files and regenerate.
+
+Restored (72 refs). Let me capture final clean numbers for the log: re-run the harness tests and tally file lengths.
+
+**Final: 35/35 tests pass; all files ≤279 lines; 22 i18n keys.** Now writing the comprehensive, honest gate log.
+
+Log written. Now let me verify the full repo git status shows only my intended changes (build/Gradle artifacts must be ignored), and clean up temp build artifacts.
+
+Git scope is exactly right: the 12 surface files + the log (Gradle/build/.xcodeproj/staged-framework all ignored). Let me commit, then clean up temp build artifacts.
+
+Committed (`fe3edd06f`). Now clean up temp build artifacts (detached) and confirm the tree is clean.
+
+All 13 todos done, committed, working tree clean.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0107-TimelineScrubber.log | 128 ++++++++++
+ .../shared-surfaces/TimelineScrubber.Adapter.swift |  87 +++++++
+ .../shared-surfaces/TimelineScrubber.Chrome.swift  | 173 +++++++++++++
+ .../shared-surfaces/TimelineScrubber.Model.swift   | 200 +++++++++++++++
+ .../TimelineScrubber.ModelTests.swift              | 172 +++++++++++++
+ .../TimelineScrubber.Previews.swift                | 116 +++++++++
+ .../TimelineScrubber.Projection.swift              | 123 +++++++++
+ .../shared-surfaces/TimelineScrubber.Seams.swift   |  99 ++++++++
+ .../shared-surfaces/TimelineScrubber.Store.swift   |  98 ++++++++
+ .../shared-surfaces/TimelineScrubber.Tests.swift   | 195 ++++++++++++++
+ .../shared-surfaces/TimelineScrubber.Views.swift   | 279 +++++++++++++++++++++
+ .../shared-surfaces/TimelineScrubber.strings       |  45 ++++
+ .../shared-surfaces/TimelineScrubber.swift         | 114 +++++++++
+ 13 files changed, 1829 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0107-TimelineScrubber.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.Store.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.swift

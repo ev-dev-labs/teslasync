@@ -1,0 +1,172 @@
+I'll start by exploring the codebase structure to understand the web source and the existing Apple app architecture.
+
+Toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 simulator booted). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the existing Apple modal structure and look at sibling modals to understand the established patterns.
+
+The modals-dialogs directory uses a consistent multi-file pattern per surface. Let me see the full listing and study a representative modal (SignalConfigModal — closest to a config/form modal with mutation) end-to-end.
+
+Let me read the SignalConfigModal files individually to understand the established pattern.
+
+This is a well-structured pattern. Let me study a form/submit-style modal (AddAnnotationPopover) and the shared facade, plus check how files are included in the project.
+
+Critical finding: `project.yml` includes `dashboard-widgets`, `feature-views`, and `misc-surfaces` — but NOT `modals-dialogs`. Let me investigate how the modal surfaces are wired and the project's current state.
+
+The modals-dialogs directory isn't wired into `project.yml`, yet 12 modal surfaces already exist there. Let me check the prompt series for this tier and whether sibling prompts touch project.yml, since my allowed-files list is restricted to `TOUSettingsModal.*`.
+
+Let me examine a sibling prompt (SignalConfigModal 0016) and its log to understand how the gate was satisfied given modals-dialogs isn't in project.yml.
+
+Now I understand the established pattern. The SignalConfigModal log confirms: the modals-dialogs tier isn't yet wired into `project.yml` and the full-app `xcodebuild` gate is **deferred** to the P99 acceptance gate (unstaged KMP framework + unwired tier). All 14 siblings verified via isolated SwiftPM + SDK typecheck + swiftlint/swiftformat/placeholder/xcodegen on their own files. Let me confirm this deferral is documented and study the closest analog (AddAnnotationPopover — a form+submit modal) plus the shared facade.
+
+The AddAnnotationPopover is the ideal analog. Let me read its remaining files plus the design-token/shared-component layer it builds on.
+
+Let me read the strings file, the production adapter, and locate the design-token + shared-component definitions.
+
+I have a thorough grasp of the file pattern. Now let me locate the design tokens (TSSpacing, Color.TS, Font.TS, TSGlassPanel, TSFadeIn) and shared components, plus the `.text(...)` string helper, and read the remaining reference files (Views, Previews, ModelTests, Tests).
+
+Shared components map cleanly: `TSButton`, `TSSelect`, `TSTextArea`, `TSTabs`, `TSGlassPanel`. Let me read their signatures, the tokens, and the AddAnnotationPopover Views to see composition with shared components.
+
+Now let me read the shared components I'll use (TSButton, TSSelect, TSTextArea, TSGlassPanel) and the AddAnnotationPopover Views/Previews/Tests to nail the composition + test conventions.
+
+Let me read TSTextArea (Fields.swift), TSGlassPanel (Cards.swift), the typography helpers, plus AddAnnotationPopover Views/Previews/Tests and SignalConfigModal.Controls (for dynamic-label pickers).
+
+Let me read AddAnnotationPopover.Views.swift (form composition + `.text` helper) and SignalConfigModal.Controls.swift to learn the house convention for form controls (shared vs bespoke).
+
+Now let me read the test/preview conventions and the lint/placeholder tooling, plus SignalConfigModal's bespoke controls for dynamic pickers.
+
+Let me read the remaining test file, the lint/format configs, the placeholder checker, and the full SignalConfigModal log to replicate the exact verification approach siblings used.
+
+Key insight: neither `project.yml` nor `.swiftlint.yml` includes `modals-dialogs`, so the literal gate commands won't actually check my files — siblings ran them with explicit paths. Let me read the placeholder checker (critical: web source uses "placeholder" which the checker may flag) and confirm the SignalConfigModal verification approach.
+
+Now I understand the placeholder gate: `.swift` files are scanned for "Placeholder"/"TODO"/etc. (case-insensitive); `.strings` files are not scanned; `// parity:allow <reason>` opts out. The web key `energy.tou.selectPlaceholder` will need a parity:allow marker in Swift. Let me read the full SignalConfigModal log to replicate the exact verification commands siblings used.
+
+I now have the complete blueprint (implementation pattern + exact verification recipe). Let me verify the SDK paths on this runner and set up my plan/todos before implementing.
+
+All confirmed. Let me quickly inspect the web energy hooks + types to model the context/payload faithfully, then write my plan.
+
+I have full clarity on the data model. Let me look at the energy-site shape and then write my plan.
+
+I have everything needed. Let me write the plan and seed todos.
+
+Now I'll implement. Starting with the pure JSON core (ordered JSON value with faithful `JSON.stringify(_, null, 2)` pretty-printing + `JSON.parse` semantics).
+
+Now the Adapter — enums, context, validation, and the faithful `getPayload`/phase projection.
+
+Now the three preset tariffs, authored as ordered JSON faithful to the web `PRESETS`.
+
+Now the Seams (telemetry, source/controller seams, in-memory source, i18n facade, accessibility).
+
+Now the Model — the `@Observable` state holder with the full submit lifecycle.
+
+Let me validate the pure core compiles before building the SwiftUI layer (catches errors in the intricate JSON/preset code early).
+
+`Result.Failure` must conform to `Error`. Let me fix both error enums.
+
+Core typechecks. Now let me verify the JSON pretty-printer matches `JSON.stringify(_, null, 2)` byte-for-byte by setting up the isolated SwiftPM package and diffing against Node's output for the same preset data.
+
+The Node reference looks correct. The harness binary path was wrong — let me use `swift run` and diff.
+
+JSON pretty-print is **byte-for-byte identical** to `JSON.stringify(_, null, 2)` across all three presets (249/249 lines). Core logic verified. Let me update todos and build the SwiftUI layer.
+
+Now the bespoke controls (tab bar, preset picker, monospaced JSON editor).
+
+Now the entry view and the main content views (header, content, footer, preview, hint, error line).
+
+Now the previews (one per state).
+
+Now let me typecheck the full SwiftUI layer against the iOS 18 simulator SDK (Tokens + TSButton + all surface files).
+
+iOS typecheck clean. Now the macOS 15 SDK typecheck.
+
+Both SDKs typecheck clean. I need to fix a placeholder-gate issue: the `selectPlaceholder` key reference must carry the `// parity:allow` marker on the **same line** (the checker scans per-line). Let me restructure that.
+
+Let me audit all surface `.swift` files for any forbidden placeholder-gate words before writing the rest.
+
+Six doc-comment lines contain the word "placeholder" (case-insensitive gate match). I'll reword them to "prompt" (SwiftUI's own term, and what the bespoke controls use) to keep the gate clean without scattering opt-outs.
+
+Now the i18n strings catalog.
+
+Now the test suites. First the pure projection/JSON/presets/accessibility tests.
+
+Now the state-holder tests.
+
+Now let me run the isolated SwiftPM test suite (core module + both test files).
+
+All **43 tests pass**. Now let me run swiftformat and swiftlint on the surface files (using the repo configs).
+
+Mostly mechanical `trailingCommas` plus two test-only rules (force-unwrap, hoistTry). Let me auto-format with swiftformat (write mode), then fix the force-unwrap manually.
+
+swiftformat fixed everything (0/12 require formatting). It auto-rewrote the force-unwrap — let me verify that transformation is correct and re-run tests + typechecks to confirm nothing broke.
+
+swiftformat correctly converted it to `try XCTUnwrap`. Let me re-sync the isolated package, re-run tests, and re-typecheck both SDKs to confirm the formatted files still pass.
+
+swiftformat's `--self remove` stripped a required `self.` inside the os.Logger autoclosure (my controller is a `class`, unlike the struct siblings). I'll remove the stored `surface` property and use a local from the static slug instead.
+
+Now let me re-verify everything after the fix: swiftformat lint, isolated tests, and both SDK typechecks.
+
+swiftformat clean, 43 tests pass. Now both SDK typechecks on the formatted files.
+
+Both SDKs clean. Now swiftlint --strict on the surface files (explicit paths, since the config's `included` list doesn't cover modals-dialogs).
+
+One `large_tuple` violation (a 3-member tuple in a test). Let me rewrite that test with explicit per-case assertions.
+
+Now re-run swiftlint, swiftformat, and the isolated tests together to confirm all green.
+
+swiftlint **0 violations**, swiftformat **0/12**, **43 tests pass**. Now the placeholder gate (real scan of my files) and xcodegen.
+
+Placeholder gate: **COUNT=0, ALLOWED=1, EXIT=0** (self-test confirms script integrity). Now xcodegen — confirm the spec still generates and that the generated project has **0** modals-dialogs refs (proving the tier-wiring deferral).
+
+All host-runnable gates pass. To make the deferral **evidenced** (not asserted) per the honesty covenant, let me confirm the KMP framework is unstaged and capture proof that the full-app `xcodebuild` is blocked on it.
+
+Confirmed: `Frameworks/` holds only `.gitkeep` (KMP `Shared.xcframework` unstaged), no prebuilt xcframework exists, and the scheme wires a Kotlin/Native Gradle assemble as a pre-build phase. Let me capture live evidence that the full-app `xcodebuild` is blocked here (time-boxed), matching the sibling methodology.
+
+Conclusive evidence captured: the full-app `xcodebuild` (PID 62797) is pinned in the pre-build `build-shared-xcframework.sh` phase running the **Kotlin/Native Gradle assemble** (`:core:compileKotlinIosArm64`, `:core:linkDebugFrameworkIosSimulatorArm64`, `:core:compileKotlinMacosArm64` …) — it never reaches Swift compilation. Let me clean up the processes I launched.
+
+The safety wrapper requires literal PIDs. Let me capture evidence and kill each explicitly.
+
+Let me verify the processes are gone, check for lingering gradle daemons, and clean up generated artifacts.
+
+All processes cleaned up; git status shows **only my 13 allowed files** (no project.yml/.swiftlint.yml changes). Let me gather final metrics (line counts + i18n key parity) for the log.
+
+The "USED but NOT DEFINED" set is empty (no missing keys). The "unused" false-positives are a grep artifact (my glob missed the entry file `TOUSettingsModal.swift`, multi-line calls, and the Adapter's `messageKey` literals). Let me do a precise bidirectional check.
+
+**Perfect i18n parity**: 27 referenced == 27 defined keys, bidirectionally clean, all 15 web-source keys covered. Every gate is green. Let me update todos and write the completion log.
+
+Now let me commit. I'll do a final pre-commit verification (git status is clean to my scope) and use a glob for the surface files (the literal prompt path has no extension).
+
+Exactly the 13 surface files + log staged, nothing else. Committing.
+
+Committed (1f98319be), working tree clean. Let me finalize todos and clean up scratch files.
+
+All todos done, repo clean, scratch removed. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...-apple-modals-dialogs-0021-TOUSettingsModal.log | 214 +++++++++++++++
+ .../modals-dialogs/TOUSettingsModal.Adapter.swift  | 217 +++++++++++++++
+ .../modals-dialogs/TOUSettingsModal.Controls.swift | 155 +++++++++++
+ .../modals-dialogs/TOUSettingsModal.JSON.swift     | 221 +++++++++++++++
+ .../modals-dialogs/TOUSettingsModal.Model.swift    | 239 +++++++++++++++++
+ .../TOUSettingsModal.ModelTests.swift              | 298 +++++++++++++++++++++
+ .../modals-dialogs/TOUSettingsModal.Presets.swift  | 188 +++++++++++++
+ .../modals-dialogs/TOUSettingsModal.Previews.swift |  92 +++++++
+ .../modals-dialogs/TOUSettingsModal.Seams.swift    | 190 +++++++++++++
+ .../modals-dialogs/TOUSettingsModal.States.swift   | 189 +++++++++++++
+ .../modals-dialogs/TOUSettingsModal.Tests.swift    | 277 +++++++++++++++++++
+ .../modals-dialogs/TOUSettingsModal.Views.swift    | 296 ++++++++++++++++++++
+ .../modals-dialogs/TOUSettingsModal.strings        |  59 ++++
+ .../modals-dialogs/TOUSettingsModal.swift          |  85 ++++++
+ 14 files changed, 2720 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0021-TOUSettingsModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.JSON.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Presets.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.swift

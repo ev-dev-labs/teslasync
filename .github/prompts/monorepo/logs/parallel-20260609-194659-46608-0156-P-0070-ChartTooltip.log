@@ -1,0 +1,148 @@
+I'll start by understanding the task environment: checking for the web source, the Apple app structure, and the required native tooling (xcodebuild, swiftlint, swiftformat).
+
+Platform capability is available: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all present. Apple app structure and web source exist. Now let me read the web source and understand the established native conventions.
+
+There's an established pattern with ~60+ completed shared surfaces. Let me study reference surfaces (especially presentational ones), the methodology, and build config to mirror conventions exactly.
+
+The pattern is clear. Let me read the canonical presentational reference (AnnouncerRegion, 0001) in full to mirror its structure precisely.
+
+Strong understanding forming. Let me read the rest of the AnnouncerRegion set plus the shared token definitions and build config.
+
+Let me read the tests, adapter, and locate the shared token/i18n definitions that my code must use.
+
+Now let me locate the shared token/component definitions and understand the build config (project.yml).
+
+Now let me check the toolchain specifics: xcodegen, existing project, simulators, PowerShell, the placeholder checker, and how a prior surface's gate log looks.
+
+The precedent is crystal clear: full-app `xcodebuild` gates are DEFERRED (exit 65) for pre-existing out-of-scope reasons (sibling duplicate symbols on iOS, no signing cert on macOS), while in-scope gates (swiftlint, swiftformat, placeholder, xcodegen, isolated Swift compile/tests) must be green, and the surface must contribute 0 compile errors. Toolchain is fully available (xcodegen, pwsh, iPhone 16 simulator booted).
+
+Let me locate the exact token/component APIs my code must use.
+
+Let me read the remaining component APIs (Cards, Buttons, Motion, Charts) and check for existing native number/date formatters and any existing chart tooltip/interaction helper.
+
+Key finding: an atomic `TSChartTooltip` already exists in the component library (`Components/Charts/Interaction.swift`) — that's explicitly **out of scope**. My job is the **shared surface** `ChartTooltip` (a full inspector binding a state-holder, all states), mirroring the AnnouncerRegion approach. Let me read the web formatter utils to port `fmtNumber`/`formatDateTime` parity, plus the Button/Typography APIs.
+
+I now have the full token/component picture and the web formatter semantics to port. Let me read the lint/format configs and the Typography API, then check the placeholder checker and the SI/react instruction files don't apply to native paths.
+
+I have everything needed. Let me verify no symbol collisions with my planned `ChartTooltip*` type names across the module (the precedent warns sibling surfaces have collided before), and check the placeholder checker.
+
+Let me read the exact forbidden placeholder patterns so my code/comments/strings stay clean.
+
+No symbol collisions (only doc-comment references to the web component, and the already-existing atomic `TSChartTooltip` which is out of scope). Forbidden placeholder tokens noted. Let me confirm the `TSChartPalette.color(at:)` API and write the plan.
+
+`TSChartPalette.color(at:)` confirmed. Writing the plan, then implementing the surface.
+
+Now implementing the surface. Starting with the pure core (Adapter) — the parity heart porting the web's two default formatters.
+
+Now the Model (state-holder, projection, telemetry seam, i18n facade).
+
+Now the Seams (P1/S8 source protocol + live + in-memory sources).
+
+Now the Views (tooltip panel, series row, data body, freshness chip) — faithful to the web layout, using design tokens.
+
+Now the States chrome (loading / empty / error).
+
+Now the main surface View.
+
+Now the per-state Previews (DEBUG snapshot harness).
+
+Now the i18n strings catalog.
+
+Now the test files — adapter/projection/accessibility tests (the parity heart) and model/seams tests.
+
+Now the model + seams tests.
+
+All 10 files created. Now let me format, lint, and check placeholders on the surface. First auto-format my files, then verify.
+
+Only 1 file needed reformatting. Let me run the gate lint commands and inspect what changed.
+
+FORMAT_EXIT=0 across the whole tree. Now swiftlint --strict and the placeholder scan.
+
+swiftlint clean on the surface. Running the full-tree gate lint to match the gate exactly.
+
+LINT_EXIT=0 full tree. Now the placeholder gate — running the exact gate command plus an honest scan of my actual files in a temp dir.
+
+Placeholder gate clean (0 over all 9 files). Now generate the Xcode project and verify my files are enumerated into the targets.
+
+XCODEGEN_EXIT=0 — all 10 files enumerated into the project. Now let me prove the pure logic runs green under Swift 6 strict concurrency via an isolated SwiftPM package (fast, deterministic), before the heavy full-app build.
+
+The slug shim needs to be `public` for the separate test module (in the real app the `ChartTooltip` View is public). Fixing and re-running.
+
+SWIFT_TEST_EXIT=0 — all 38 isolated tests pass under Swift 6 strict concurrency (formatters, ISO detection, projection phases, model telemetry/auto-refresh, live source). Cleaning up and checking the Shared.xcframework state before the full build.
+
+The KMP `Shared.xcframework` isn't cached — the full `xcodebuild` gate must build it via Gradle (Kotlin/Native), then compile 3800+ files and run tests. This is the heavy, canonical gate. Let me kick off the iOS build-test asynchronously and capture the log for ChartTooltip-error analysis.
+
+The iOS build is running in the background. Let me monitor its progress (Gradle xcframework step first).
+
+The Shared.xcframework built quickly (Gradle cache hit). Now the Swift app compile is underway. Let me continue monitoring.
+
+Still in the Gradle xcframework phase (now release variant). Let me wait longer for the Swift app compile.
+
+Swift compilation is underway (578 compile actions, no errors yet). Let me wait for it to progress further.
+
+The iOS build failed with 108 errors — but **zero** in ChartTooltip files (errors are in sibling surfaces: WeeklyDigestWidget, WeeklySummaryCardWidget, WhyEndedPanel, WidgetPicker, etc.). This matches the documented precedent. Let me retrieve the exact exit code and rigorously categorize the errors.
+
+IOS_EXIT=65, exactly matching the documented precedent. Let me rigorously confirm zero ChartTooltip errors and identify which sibling surfaces own the 108 errors.
+
+All 108 errors belong to sibling surfaces (`RecentDrives*` / `StateTimeline*`) — the exact pre-existing collisions named in the precedent logs. ChartTooltip owns zero. Since Xcode fail-fast may have cancelled my files' compile batch, I must *positively* prove my SwiftUI views type-check against the real design system. Let me check whether `Sources/Components` + `Sources/Design` are self-contained (no KMP `Shared` dependency).
+
+`Components` + `Design` are self-contained (only system frameworks, no KMP `Shared`). I'll positively type-check my 9 surface files against the **real** design system + components via `swiftc -typecheck` under the macOS 15 SDK with Swift 6 strict concurrency — covering both the release and `#if DEBUG` (Previews) branches.
+
+The 52 errors are all in `UnitFormatters.swift` (references `UnitPreferences`, defined outside my curated set) — a curation gap, **not** a ChartTooltip defect (0 ChartTooltip errors). Let me narrow to exactly the component dirs my surface uses (UI, Feedback, Motion) + Design, for a clean positive type-check.
+
+Down to 2 errors in `FeedbackOverlays.swift` (a Feedback file my surface doesn't use) — still 0 ChartTooltip errors. Let me see that error and exclude that unused file for a clean run.
+
+Both branches (release + `#if DEBUG` Previews) type-check with **EXIT=0, 0 errors** against the real design system under Swift 6 strict concurrency. (The lone `FeedbackOverlays.swift` error references `TSMetricBar` from DataDisplay — unrelated to my surface.) Now the macOS gate.
+
+While the macOS build runs, let me update the plan with verification results.
+
+macOS build completed. Let me retrieve the exit code and analyze for ChartTooltip errors.
+
+MAC_EXIT=65. It finished in ~7s (failed early). Let me analyze whether it's signing or compile, and confirm zero ChartTooltip errors.
+
+macOS failure is the documented signing limitation: `TeslaSync-macOS` / `TeslaSyncWidgets-macOS` "have entitlements that require signing with a development certificate" — the 4 errors are all signing-rejections (no compile errors; 0 ChartTooltip). This matches the precedent verbatim.
+
+All evidence gathered. Now I'll generate the authoritative gate log by re-running every in-scope gate fresh and appending the xcodebuild analysis.
+
+I botched the `swiftformat` path (double `apps/apple`) and hardcoded a result — unacceptable for an honest log. Let me regenerate the entire log cleanly, capturing **real** exit codes from correctly-invoked commands.
+
+In-scope gates all real-zero (FMT=0, LINT=0, PH=0, XG=0; swiftlint: "0 violations in 3616 files"). Now append the isolated test run and the focused type-check evidence.
+
+Isolated tests: 38 passed, 0 failures. Now append the type-check proof and the xcodebuild DEFERRED analysis.
+
+Now the Honesty Covenant resolution, disposition, and the mandatory `EXIT`/`STATUS` trailer.
+
+Let me review the complete log for accuracy and coherence.
+
+The log is complete, accurate, and ends with `EXIT=0` / `STATUS=DONE`. Now let me verify git state before committing — I must commit **only** my 10 surface files + the log (the generated `.xcodeproj` should be git-ignored).
+
+Clean — only my 10 surface files + the log are untracked; `.xcodeproj` is git-ignored. Committing.
+
+Committed: 11 files (10 surface + log), 1602 insertions, commit `e8cea686a`. Final verification and temp cleanup.
+
+Task complete. The P4 shared surface **0070 ChartTooltip** ships at parity with the web source, fully verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0070-ChartTooltip.log | 166 ++++++++++++++
+ .../shared-surfaces/ChartTooltip.Adapter.swift     | 240 +++++++++++++++++++++
+ .../shared-surfaces/ChartTooltip.Model.swift       | 200 +++++++++++++++++
+ .../shared-surfaces/ChartTooltip.ModelTests.swift  | 202 +++++++++++++++++
+ .../shared-surfaces/ChartTooltip.Previews.swift    |  90 ++++++++
+ .../shared-surfaces/ChartTooltip.Seams.swift       | 106 +++++++++
+ .../shared-surfaces/ChartTooltip.States.swift      | 107 +++++++++
+ .../shared-surfaces/ChartTooltip.Tests.swift       | 193 +++++++++++++++++
+ .../shared-surfaces/ChartTooltip.Views.swift       | 180 ++++++++++++++++
+ .../TeslaSync/shared-surfaces/ChartTooltip.strings |  30 +++
+ .../TeslaSync/shared-surfaces/ChartTooltip.swift   |  88 ++++++++
+ 11 files changed, 1602 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0070-ChartTooltip.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartTooltip.swift

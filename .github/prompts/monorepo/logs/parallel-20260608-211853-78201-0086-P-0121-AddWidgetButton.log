@@ -1,0 +1,72 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+The web source is a simple presentational FAB. The only conditional is `if (isEditing) return null`. Now let me study existing conventions — where prior feature-views surfaces live, the i18n facade, design tokens, telemetry contract, and test patterns.
+
+Feature-views live at `apps/apple/TeslaSync/feature-views/` (1495 files). Let me study the two most-recent surfaces in depth to match conventions exactly.
+
+Now let me understand the i18n facade, telemetry types, design tokens, the shared Button, and how files are built (project.yml glob vs explicit).
+
+Let me read the rest of the gate log, the telemetry/token primitives, the i18n Text helper, and find the SwiftPM test harness and any simpler button-like surface precedent.
+
+Let me read the telemetry definition, design tokens, the web Button/Tooltip/Icons for visual parity, and survey for a presentational (non-data) surface precedent.
+
+`ToolCard` is the ideal precedent: a presentational surface that "owns no data." Let me study the ToolCard + HighlightCard family fully (telemetry, model, strings, tests) plus the design tokens.
+
+Now let me read the Model files (surface slug + presentation pattern), HighlightCard tests/previews, and the design tokens + shared components.
+
+Excellent — `HighlightCard` is the exact template. Now let me read the design tokens and confirm available `Color.TS`/`Font.TS`/`TSSpacing` members and shared components.
+
+Now I have all the tokens and patterns. Let me read the lint/format configs and set up my plan.
+
+I have the complete pattern. Let me verify no `AddWidgetButton.*` native files exist yet, then set up my plan.
+
+No collisions. Now I'll create the plan, todos, and all six surface files following the `HighlightCard`/`ToolCard` presentational precedent.
+
+All six files created. Now let me run the formatter and linter on the new surface files.
+
+Both flag one long line (the `.animation` modifier). Let me view and wrap it.
+
+Now let me re-run format/lint and set up the SwiftPM test harness in parallel.
+
+Format and lint are clean. My surface only depends on `Tokens.swift`. Let me build the isolated SwiftPM harness (the sanctioned host-runnable test gate) around the real surface files.
+
+All 12 tests pass against the real surface compiled in Swift 6 mode. Now let me prove the surface also type-checks against the **iOS 18 simulator SDK** and **macOS 15 SDK** (the cross-platform parity requirement), including the DEBUG previews.
+
+Both SDKs type-check clean, including previews. Now the placeholder gate plus the full-tree format/lint gates.
+
+Placeholder gate clean (COUNT=0) and full-tree swiftformat clean (0/2219). Now the full-app swiftlint to confirm no new violations in my files.
+
+The single whole-app violation is pre-existing in an unrelated dashboard-widget file — none in my surface. Now let me capture the Xcode-gate deferral evidence (the documented blockers) and confirm git scope.
+
+Confirmed: only my 6 files are new; `Frameworks/` has no `Shared.xcframework` (only `.gitkeep`) — the documented Xcode-gate blocker. Let me capture honest deferral evidence: generate the project, prove my files are wired in, and capture the fast-fail.
+
+All 6 files are wired into the targets (36 refs). Now capture the build fast-fail on the missing framework, then clean up the generated project.
+
+Confirmed the documented fast-fail (missing `Shared.xcframework`, exit 65) before any source compiles. Let me clean up generated/temp artifacts and confirm scope.
+
+Clean — generated project is git-ignored and removed; only my 6 files remain. Let me capture exact tool versions, then write the honest gate log.
+
+Now I'll write the gate log with all the real evidence.
+
+Now let me commit following the prompt's specification.
+
+Committed. Let me do a final verification that the tree is clean and the commit is well-formed.
+
+All gates green and the work is committed cleanly. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0121-AddWidgetButton.log | 239 +++++++++++++++++++++
+ .../feature-views/AddWidgetButton.Model.swift      | 123 +++++++++++
+ .../feature-views/AddWidgetButton.Previews.swift   |  56 +++++
+ .../feature-views/AddWidgetButton.Telemetry.swift  |  38 ++++
+ .../feature-views/AddWidgetButton.Tests.swift      | 134 ++++++++++++
+ .../feature-views/AddWidgetButton.strings          |  23 ++
+ .../TeslaSync/feature-views/AddWidgetButton.swift  | 127 +++++++++++
+ 7 files changed, 740 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0121-AddWidgetButton.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddWidgetButton.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddWidgetButton.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddWidgetButton.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddWidgetButton.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddWidgetButton.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddWidgetButton.swift

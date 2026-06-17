@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Toolchain is present. Let me read the web source spec and explore the Apple app structure.
+
+The web source is clear. Now let me examine the web dependencies and the existing Apple dashboard-widgets to find the established pattern to follow.
+
+`FleetStatsBarWidget` doesn't exist yet in Apple. Let me examine the existing Apple dashboard-widgets to learn the established conventions, and read the web dependencies.
+
+Now I understand the file convention (Adapter/Model/Previews/strings/swift/Tests). `LifetimeStatsWidget` is a close analog. Let me read it as the primary model, plus the web dependencies.
+
+`LifetimeStatsWidget` is the ideal template. Let me read its files individually.
+
+Now let me read the shared infrastructure (DashboardWidgetInfra, design tokens, shared components) and the web data hooks to nail the data contract.
+
+Found XcodeGen `project.yml`. Let me read it and check toolchain/token generation.
+
+Now let me assess build capability and read the design tokens + shared components I'll reference.
+
+`Shared.xcframework` is absent (only `.gitkeep`). Let me read the staging script (it gates every build) and the design tokens.
+
+The build needs a Gradle/Kotlin-built `Shared.xcframework`. Let me check how prior completed widgets handled the gate by inspecting existing logs, and verify the KMP toolchain.
+
+The predecessor (0055) reveals the approved disposition: **host gates green + Xcode scheme build/test DEFERRED** (KMP `Shared.xcframework` + target-registration are environmental, not code defects). Let me read the full 0055 log to model my process and log exactly, and verify the KMP toolchain state.
+
+Now I have the complete established pattern. Let me read the exact web data contract for parity and check the KMP toolchain feasibility.
+
+Registry confirmed (4×2 / 3×2 / 4×40). KMP toolchain (Java 17 + gradlew) is present. Let me read the exact web numeric pipeline and data hooks for parity.
+
+Let me read the web `StatCard` to confirm exactly how `value` and `trend`/`trendValue` render (critical parity detail — the items set `trendValue` but not `trend`).
+
+Let me confirm the native convention for rendering stat-tile supporting/trend values, to decide parity faithfully.
+
+`MileageStatsWidget` uses `WidgetStatGrid` + `trendValue` on web AND exists natively — the strongest precedent. Let me compare both.
+
+Decisive precedent: native `MileageStatTile` renders a trend chip **only when a direction is set**. FleetStatsBar sets `trendValue` but no `trend` direction, so the web renders **4 plain tiles** — that's strict parity. Let me confirm the Font tokens and skeleton components I'll use.
+
+I have everything needed. Let me kick off the KMP `Shared.xcframework` build in the background (it gates the real Xcode gate) while I write the widget code.
+
+KMP build running in background. Let me check the SwiftLint/SwiftFormat config so my files pass `--strict`, then write the code.
+
+Config understood (code lines ≤120, swiftformat `before-first` wrapping, `--self remove`, testable-bottom). Let me track work and write the Model file first.
+
+Model written. Now the parity-critical Adapter (pure projection — note the web feeds `total_distance_km` *directly* into `convertDistanceFromSI`, no `KM_TO_MI` pre-multiply, unlike LifetimeStats).
+
+Let me check the KMP build progress, then write the SwiftUI view.
+
+The KMP build was externally stopped ("stop command received") — Gradle daemon contention from sibling parallel slots sharing `apps/shared`. This is the known parallel-unsafe shared-infra situation behind the predecessors' deferral. Let me retry once in the background and continue writing the view.
+
+The framework build retries in the background. Let me fix the registry `nameKey` (registry display name is "Fleet Stats Bar", distinct from the shell title "Fleet Stats") and write the SwiftUI view.
+
+Now the Previews and Tests files.
+
+Tiles render plain (matching web). Before writing tests, I'll execute a host harness to capture the **exact** `NumberFormatter` output strings (no guessing). Let me check the framework build, then build/run the harness.
+
+Decisive evidence: the retry "succeeded" but Gradle (shared daemon across parallel worktrees) staged the framework into a **sibling slot** (`slot-567`), leaving my slot's `Shared.xcframework` **absent** — the parallel-unsafe shared-infra situation behind the predecessors' deferral. I'll rigorously run the host-executable gates and defer the Xcode scheme gate with this evidence (matching approved predecessor 0055). First, execute a host harness to capture exact formatter output.
+
+Top-level code is `@MainActor` under Swift 6 — I'll annotate the helpers and call directly.
+
+Harness is green (49/49) with exact strings captured. Let me verify the remaining rounding assertions before baking them into XCTest (no guessing).
+
+All values verified. Now I'll write the XCTest file with the exact verified strings.
+
+Now the i18n strings catalog.
+
+All 6 files written. Let me run SwiftFormat on my files, then verify with `--lint`, and run SwiftLint `--strict`.
+
+SwiftFormat: 0/5 files needed changes (already conformant). Now the full `--lint` over the dir and SwiftLint `--strict`.
+
+SwiftFormat lint clean (0/2008). Now SwiftLint `--strict`.
+
+One SwiftLint violation. Let me find it.
+
+That violation is in `LiveSignalSparklinesWidget.Builder.swift` — **not my file**. Let me confirm it's pre-existing/out-of-scope and that my files are clean.
+
+Confirmed: my 5 files lint **0 violations**; the single repo-wide violation is in `LiveSignalSparklinesWidget.Builder.swift`, **committed at base `1ce15b48b`** (pre-existing, outside my allowed scope — I won't modify it). Now the Swift 6 strict-concurrency typecheck of the full SwiftUI surface against the real design system. Let me find the minimal dependency set.
+
+Skeletons needs `TSCard` (more design deps). Let me compile my surface against the **full real design system** (Components + Design + tokens + infra), excluding only `Shared`-importing files (KMP). First, map the exclusions.
+
+Exactly 41 Components+Design files, none import `Shared` (matches the predecessor's curated set). Let me typecheck my surface against all of them + tokens + infra.
+
+All 52 errors are in `UnitFormatters.swift` (it depends on KMP `Shared` types `UnitPreferences`/`Units`) — the exact file predecessor 0055 excluded. **Zero errors in my files.** Let me exclude it and re-run.
+
+Typecheck is **clean (EXIT=0)** — the full SwiftUI surface compiles under Swift 6 strict concurrency against the real 40-file design system. Now the placeholder gate.
+
+Placeholder gate clean (COUNT=0). All host-runnable gates are green: **typecheck=0, harness 49/49, swiftformat=0, swiftlint(surface)=0, placeholder=0**. Now let me investigate the framework-staging anomaly (it staged to a sibling slot) and prove project wiring with `xcodegen`.
+
+`xcodegen generate` succeeded. Let me confirm my surface is wired into the app + test targets, then attempt to stage the framework into my slot.
+
+All 5 Swift files are wired into the generated Xcode project (36 refs across app + test targets). Let me do a final forbidden-word scan and decide on the Xcode gate.
+
+Clean — no forbidden words; 1416 lines total (complete, comparable to the LifetimeStats template). Let me make a bounded attempt to build the framework into **my** slot (isolated `--no-daemon` to avoid sibling-daemon anchoring) while I write the gate log.
+
+While the framework builds, let me poll it. I'll check progress.
+
+Good — with `--no-daemon` it's progressing in **my** slot (Kotlin/Native cached, now linking frameworks). Let me wait for it to finish and stage.
+
+It's now writing into **my** slot correctly (`slot-40/.../XCFrameworks/debug` done, release building). Let me wait for it to finish and stage.
+
+Release frameworks nearly done. Let me wait for final assembly + staging.
+
+`MY FRAMEWORK PRESENT`. Let me verify it's complete/valid and confirm staging.
+
+The framework appeared then **vanished** — concurrent sibling builds are racing on the path (`rm -rf`/`cp`). Let me check my build's actual completion state.
+
+Conclusive: my build process exited mid-release (interrupted again), `DEST` absent — **3 framework-build attempts, all defeated by parallel-slot Gradle contention** (stopped / cross-slot staged / interrupted + raced `rm -rf`). The Xcode scheme gate's hard `Shared.xcframework` dependency is environmentally non-deterministic here — exactly the documented predecessor block. Let me capture final scheme/capability evidence, then clean up.
+
+I have complete evidence (schemes + iPhone 16 sim present; app hard-depends on the absent `Shared.xcframework`). Let me update tracking, clean up generated/temp artifacts, and write the gate log.
+
+Clean — only my 6 files are untracked. Now I'll write the comprehensive gate log with the real results.
+
+Gate log written. Let me re-verify my files are still green (lint + format) before committing.
+
+Both green (0 violations, 0 reformatting). Let me reconfirm the executed harness (49/49) one final time before committing.
+
+Re-verified green (20/20). All host gates green and reconfirmed. Let me stage exactly my 6 files + the log and commit.
+
+Exactly 6 files + log staged (1599 insertions), nothing stray. Committing.
+
+Committed (`a13997d3a`). Let me do a final clean-state verification.
+
+Let me check what else is in the working tree (the Gradle build generated side-effect files).
+
+Working tree is clean (the earlier `clean=no` was a shell-escaping artifact; authoritative `git status --porcelain` = 0 lines). The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0050-FleetStatsBarWidget.log | 183 +++++++++++
+ .../FleetStatsBarWidget.Adapter.swift              | 215 +++++++++++++
+ .../FleetStatsBarWidget.Model.swift                | 339 ++++++++++++++++++++
+ .../FleetStatsBarWidget.Previews.swift             | 141 +++++++++
+ .../FleetStatsBarWidget.Tests.swift                | 323 +++++++++++++++++++
+ .../dashboard-widgets/FleetStatsBarWidget.strings  |  46 +++
+ .../dashboard-widgets/FleetStatsBarWidget.swift    | 352 +++++++++++++++++++++
+ 7 files changed, 1599 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0050-FleetStatsBarWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.swift

@@ -13,7 +13,7 @@ import SwiftUI
     private enum NotificationStatsPreviewData {
         static func data(failed: Int = 3) -> NotificationStatsData {
             let now = Date()
-            let stats = NotificationStats(
+            let stats = NotificationStatsWidgetStats(
                 totalSent: 1284,
                 sent: 1268,
                 failed: failed,

@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure to understand what exists, then read the web source specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The web source exists. Let me read the web source and explore the existing Apple app structure deeply.
+
+Large established codebase with existing patterns. Let me check if QuietHoursPanel already exists, examine the established feature-view file pattern, and read the web source.
+
+Now let me read the notifications hook (data types) and study the shared infrastructure + an existing feature-view pattern.
+
+The architecture uses a KMP `Shared` framework bridged via `StateHolderModel`. I need to mirror an existing feature-view exactly. Let me examine the project config and find the best reference panel (CRUD/form/toast/notifications).
+
+Key insight: feature-views are self-contained (0 import `Shared`) — Adapters are pure, views use local seams. Sources are glob-included via XcodeGen. Let me study a complete CRUD/settings reference set deeply.
+
+Let me read the complete AdvancedSettings reference set to learn the exact conventions.
+
+Excellent, this is a rich, consistent pattern. Let me read the remaining AdvancedSettings files to complete my understanding of the template.
+
+Let me read the remaining AdvancedSettings files plus the design tokens and key shared UI components.
+
+Let me read the Tests pattern, design tokens, and the shared UI components I'll need (GlassPanel, FadeIn, IconBox, Button, Badge, Toggle, Fields, Pickers).
+
+Let me examine the design tokens, key UI components, and find how an existing feature-view handles toasts for mutations.
+
+Let me read the AISettings view layer (save feedback/toast rendering), the Feedback components, and the UI primitives I'll need.
+
+Let me read the remaining UI primitives (Buttons, Badges, Fields, Pickers, Utility/IconBox, Typography) and the Toast/overlay feedback components.
+
+Now let me read the form/input components (Fields, Pickers, Sliders, Typography), find the Toggle/Toast components, and check the AISettings view/test/previews + a CRUD-with-delete reference.
+
+I have the full component vocabulary. Now the decisive question is whether the build/test gate can run here. Let me assess the build environment (xcodegen, Shared.xcframework, simulators, lint configs, placeholder checker).
+
+Environment is capable: xcodegen 2.45.4, iPhone 16 simulator booted, Java 17 + gradlew present, pwsh available. The heavy dependency is building `Shared.xcframework` (KMP). Let me read the build script and remaining references, then kick the framework build off in the background while I write code.
+
+Let me confirm the `TSSkeleton`/`TSInlineCallout` signatures and the save-lifecycle test pattern, then kick off the KMP framework build in the background.
+
+I have everything I need. Let me kick off the long-pole KMP `Shared.xcframework` build in the background now, then write code while it compiles.
+
+Let me check the framework build started cleanly and set up my todo tracking + plan.
+
+The launcher shell returned (nohup detached the build). Let me check the actual build log progress.
+
+The KMP framework is compiling (Kotlin/Native for iOS/macOS — this is the long pole). I'll let it run and write the surface now. Let me record a brief plan, then create the files.
+
+Now I'll create the pure Foundation core. Starting with `Models.swift`, `Projection.swift`, and `Adapter.swift`.
+
+Now the central `Model.swift` — the state-holder seam, telemetry, i18n facade, observable model with the full CRUD lifecycle, and the in-memory store.
+
+Core model layer is done. Let me check the framework build progress, then write the SwiftUI layers.
+
+Framework build still progressing (Gradle compiling release variant; debug variant already assembled). I'll keep writing. Now the SwiftUI `States.swift`:
+
+Now the substantial `Views.swift` (flow layout, chips, time bridge, header, freshness, banner, feedback callout, row, list, editor form):
+
+Now the top-level surface `QuietHoursPanel.swift`:
+
+Now the Previews covering every state:
+
+Now the i18n catalog. Then I'll scrub any forbidden placeholder/stub words.
+
+Let me check the placeholder-pattern rules so I can scrub any forbidden words from my code (I used "placeholder" in comments).
+
+Two "placeholder" mentions in comments. Let me scrub them:
+
+Now the comprehensive test suite (adapter parity, model lifecycle, per-state, accessibility):
+
+All 10 files written. Let me update tracking, verify string-key coverage, and check the framework build status.
+
+All 32 referenced keys are present in the catalog, and the release `Shared.xcframework` is built. Let me check which shared files import the KMP framework (to set up a fast isolated typecheck), and auto-format my files.
+
+Framework is staged. The Shared-importing files are confined to `SharedFacade`/`Live`/some `Dashboard` widgets — none under `Components`/`Design`. Let me run a fast isolated typecheck of my surface against the component library (excludes the heavy full build).
+
+Path fix — Tokens live under `../design/generated/apple`. Let me rerun:
+
+The errors are all in an unrelated `Components/DataDisplay/UnitFormatters.swift` (depends on `UnitPreferences` from the Shared-facade layer), not my code. Let me typecheck against just the minimal component set my surface actually uses.
+
+My production code typechecks clean (exit 0). Now let me validate the Tests file's types against my sources (stripping the module import for the ad-hoc compile):
+
+XCTest needs the platform framework search path. Let me add it:
+
+The XCTest C-macros aren't resolvable in an ad-hoc compile. Let me add a tiny XCTest shim so I can still typecheck my test code's API usage against the real types:
+
+Both production and test code typecheck clean. Now let me run the lint/format gates on my files and inspect how the placeholder checker resolves its path.
+
+swiftformat passes. swiftlint flags: 3 files exceed the 400-line limit (Views 654, Tests 621, Model 550) and 2 multiple-trailing-closure issues. The established convention is to split surfaces into more files. Let me inspect the flagged lines and plan the split.
+
+Existing files exceed 400 too (`WidgetPicker.Catalog.swift` is 1210). Let me see how they satisfy `--strict` (per-file disable vs split):
+
+The convention: data-`Catalog` files use a per-file disable, but composed surfaces are **split** into focused files (the dominant pattern). I'll split my 3 oversized files and fix the two trailing-closure calls. Starting with the Model split (Facade + Store + trimmed Model):
+
+Now the Views split — recreate `Views.swift` (primitives + header/freshness/banner/feedback) and add `Row.swift` + `Editor.swift`:
+
+Now the Editor form, fixing the two flagged trailing-closure buttons (pass `label:` explicitly):
+
+Now split the Tests into `AdapterTests.swift` (pure) + `Tests.swift` (model + a11y), sharing an internal fixture:
+
+All files split. Let me re-format, re-check line counts, and re-run swiftlint/swiftformat on all my files.
+
+All ≤400 lines now. Let me run the full lint/format/typecheck verification on the split files.
+
+swiftlint --strict: **0 violations**. swiftformat --lint: **0 require formatting**. Let me re-run the isolated typecheck on the split production + test files to confirm they still compile.
+
+Production + tests typecheck clean. Let me verify how the placeholder checker handles the gate's path argument and run it.
+
+The gate's literal path scans nothing if it's a prefix; for a meaningful check I'll run the checker against a temp dir of my actual files. Let me also run it exactly as the gate specifies.
+
+Placeholder checks pass (COUNT=0, EXIT=0). My surface passes all fast gates: **swiftlint --strict (0), swiftformat --lint (0), typecheck (prod+tests, 0), placeholder (0)**. Now the authoritative gate: generate the Xcode project and build. Let me generate first.
+
+Project generated; git shows only my 15 files on a clean base. Now let me launch the iOS app build (compiles the whole target + links the real `Shared.xcframework`) in the background and monitor.
+
+The build is compiling the app target (Shared framework linked via preAction, now in `EmitSwiftModule` for the whole module). Let me wait for it to complete.
+
+**BUILD SUCCEEDED** for the iOS app target — my code compiles and links against the real `Shared.xcframework`. Now let me run the test target. I'll build the full test bundle (integration proof for all test files) and run my surface's tests, logging to the session dir.
+
+The test bundle is compiling (includes all surfaces' `*Tests.swift`). Let me wait for it to finish and run my tests.
+
+The test **build** failed — but the errors are in pre-existing `PresetGallery.*Tests.swift` (Swift 6 concurrency), **not my files**. git confirmed only my files were added, so this is a base-repo breakage. Let me enumerate all pre-existing test compile errors to understand scope.
+
+Confirmed: exactly 2 pre-existing base-repo errors in `PresetGallery.*Tests.swift` (a non-`Sendable` global closure), zero in my files. This blocks the shared test bundle from compiling. To get **runtime** proof my tests pass, I'll temporarily relocate those 2 unrelated files, regenerate, run my tests, then restore. Starting:
+
+The app + test bundle is recompiling (without the relocated files). Let me wait for my tests to run.
+
+Still compiling the large test bundle. Let me continue waiting.
+
+Another pre-existing base breakage surfaced: `ChargeStatusLiveWidget.Tests.swift` has duplicate class declarations (also not my files). The base test bundle has multiple unrelated compile errors. Rather than discover them one slow build at a time, let me scan the whole test target for all blockers (duplicate class names + the non-Sendable pattern) cheaply.
+
+The base test target has **extensive pre-existing breakage** across many non-owned files (duplicate class names in ChargeStatus/Safety/DrivingCoach/MonthlyCost widgets + non-`Sendable` `passthroughLocalize` in ~9 files). My files have none. This is a base-repo condition outside my allowed scope. Let me identify the duplicate-pair files so I can relocate the full known blocker set once and get runtime proof of my tests.
+
+I have the duplicate-pair files. Let me do a thorough duplicate scan (catching all class-decl forms) so I relocate the complete blocker set in one pass, minimizing slow rebuilds.
+
+I've computed the complete known blocker set (11 files + the 2 PresetGallery already moved), none of them mine. Let me do one time-boxed attempt: relocate them all, run my tests for runtime proof, then restore everything.
+
+Build running (gradle preAction up-to-date). Let me wait for the test bundle to compile and my tests to execute.
+
+No new compile errors so far — still building the test bundle. Let me keep waiting.
+
+Still compiling the large test bundle (no errors). Let me check current activity and wait more.
+
+One error surfaced — let me see it.
+
+Another pre-existing non-`Sendable` helper (`echo`) in `SlideRenderer.FixturesTests.swift` — the base test target has a **systemic** pre-existing breakage (these localize helpers use many different names across surfaces). This is unbounded and entirely outside my owned files. I'll stop chasing runtime execution and restore the tree to pristine, then verify macOS build.
+
+Tree is pristine (only my files remain). Let me quantify the full scope of the systemic base breakage to make a final, evidence-based determination, and start the macOS build in parallel.
+
+The non-`Sendable` blocker uses heterogeneous names (`passthroughLocalize`, `echo`, …). Let me comprehensively size the full remaining blocker set, and start the macOS build in parallel.
+
+The broad grep over-counts (it includes instance properties like my own correct `private let fallback`); the real base errors are the global/static ones already confirmed by actual builds. The base test target is systemically broken by pre-existing non-owned files. I've established this conclusively. Let me wait for the macOS build to finish.
+
+macOS build still compiling (no errors). Let me wait for completion.
+
+**macOS BUILD SUCCEEDED** too — my surface compiles + links on both iOS and macOS with the real `Shared.xcframework`. Let me precisely identify the true global/static non-`Sendable` declarations (column-0 / static only) to size a final bounded attempt at running my tests.
+
+The precise set keeps missing some forms (the compiler-flagged `passthroughLocalize` files aren't all caught by greps), confirming the base test breakage is heterogeneous and systemic. I have conclusive, comprehensive evidence. Let me finalize: create the gate log directory and write the honest log.
+
+Let me check a sibling log's format and how prior runs handled the test step (same base).
+
+The sibling-log convention is clear: surfaces verified green by the gate's tools but with the whole-app `build test` blocked are reported `EXIT=1 / STATUS=BLOCKED` (e.g., ClimateControlPanelWidget). My case is actually stronger — the whole-app **build succeeds on both platforms**; only the full **test run** is blocked by pre-existing non-owned test files. Let me write the comprehensive, honest gate log.
+
+Log written. Let me update tracking, clean up temp artifacts, verify the tree is pristine, and commit the surface + log per the prompt.
+
+Pristine tree — exactly my 15 surface files + 1 log, `.xcodeproj` correctly gitignored. Let me commit the surface and log.
+
+Committed (16 files, 3185 insertions). Let me do a final verification that the working tree is clean and the base files I temporarily relocated during verification are fully intact.
+
+Working tree is clean, all temporarily-relocated base files are intact, and HEAD is my commit. Let me regenerate the (gitignored) Xcode project so the local workspace is consistent, then finish.
+
+Everything is consistent and committed. Here's the final summary.
+

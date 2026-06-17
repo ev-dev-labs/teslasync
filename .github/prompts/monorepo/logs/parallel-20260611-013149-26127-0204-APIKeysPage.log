@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+I have the web source. Now let me explore the Apple app structure and parity manifest.
+
+Now let me explore the existing Apple feature-views to understand conventions and find a similar admin page to mirror.
+
+`AlertStudioPage` is the model to follow. Let me study its full structure and the shared PageContainer.
+
+This is a sophisticated, well-decomposed architecture. Let me study the ViewModel, Adapter, Views, Sources, strings, and Tests of AlertStudioPage in parallel.
+
+Let me study the data-binding (Sources), strings format, Views, Tests, and Previews patterns.
+
+Let me examine the Copy descriptors, Views, Tests, Previews, and how production wiring + navigation registration works.
+
+Let me look at the Views, Models, Model.Types, Tests files, and find the shared component library + navigation registration.
+
+Let me locate the shared component library and understand production wiring + navigation registration.
+
+The shared library is in `apps/apple/Sources/`. Let me explore its structure and key component/token/navigation files.
+
+Let me read the design tokens and the key UI components I'll need.
+
+Now let me read the key UI components: Cards, Buttons, Badges, States, Skeletons, Fields, Pickers, Overlays, Typography.
+
+Found `TSCopyButton`, `TSMaskedValue`, `.tsModal()`, `TSSkeleton`. Let me read their exact APIs.
+
+Let me check available tooling (this determines the gate outcome) and read the navigation + remaining patterns.
+
+All tools are present. Let me verify the Xcode SDK works and gather the navigation, ledger, log format, placeholder script, and web admin types.
+
+Full Xcode 26.5 is available — the gate can pass. Let me gather navigation, ledger, logs, placeholder script, and web admin types.
+
+Let me read the project config, navigation registration, placeholder tooling, and ledger format.
+
+Key finding: the gate scans `TeslaSync/Features/Admin/` but project.yml only includes `feature-views/` etc. Let me read the nav shell/parser, placeholder tooling, web admin types, and wire-type pattern.
+
+Found the registration pattern (`SettingsRouteRegistration`). Let me read it, the app entry, and how the web `useAdmin` hooks shape API key data.
+
+Let me read the localization setup, web admin hooks/types, the wire-type pattern, and the placeholder/ledger tooling.
+
+Let me read the web `APIKey` type, the wire-type + tests patterns, placeholder tooling, and ledger/log formats.
+
+This is invaluable — the prior widget log documents the exact runner constraints. Let me read the test pattern, swiftlint rules, and check the Shared framework staging.
+
+Let me assess the critical path: the Shared.xcframework build feasibility and toolchain.
+
+Toolchain confirmed (Java 17, konan 2.4.0, warm caches). Let me check for symbol collisions and finalize understanding, then write the plan.
+
+No collisions. I have a complete understanding. Let me write the plan and set up tracking.
+
+Now I'll create the implementation. Starting with the foundational Model file.
+
+All source files created. Now the wiring. Let me view the exact project.yml regions to craft precise edits.
+
+Now I'll make all the wiring edits in parallel — project.yml (4 targets), swiftlint, parser, and app registration.
+
+Now the two test bundles:
+
+Now swiftlint included, the route parser alias, and the app registration:
+
+Now let me verify the wiring didn't break route tests and run the placeholder + swiftlint gates (fast checks first).
+
+Fast checks first — swiftlint and placeholder scan on the new files.
+
+The 3 violations are pre-existing (in `widget-primitives`, not my files). Let me test the exact gate invocation from repo root and figure out path scoping.
+
+SwiftLint passes (0 violations on my 12 files). Now the placeholder gate and swiftformat check:
+
+Placeholder gate clean (0). SwiftFormat wants formatting fixes — let me auto-format my files, then re-verify lint.
+
+Both swiftformat and swiftlint pass. Let me verify the formatter didn't alter semantics in the ViewModel doc-comment fix.
+
+Formatting is clean and semantics preserved. Now generate the Xcode project and start the build (Shared.xcframework will build via the scheme pre-action — this is slow).
+
+Project generated, all 4 targets include the files (78 refs). Now build the Shared.xcframework (slow Kotlin-native step). I'll run it async and monitor.
+
+While the Kotlin-native framework builds, let me check progress.
+
+Still compiling. Let me wait further.
+
+Kotlin/Native release builds for 3 slices are slow. Let me check build activity without disrupting it, then keep waiting.
+
+Build is actively progressing (LLVM compiling native objects, iOS sim slice done). Let me keep waiting.
+
+Still linking native slices. Let me continue waiting.
+
+Shared.xcframework built and staged. Now build the macOS app (compiles my files). Running async.
+
+Build failed at code-signing (entitlements need a dev cert) — not a compile error. The iOS Simulator build needs no signing. Let me find a simulator destination and build there (this compiles my files cleanly).
+
+iPhone 16 simulator available. Let me build the iOS Simulator app (no signing needed) — this compiles my files.
+
+Build failed during compile, but the output was truncated. Let me capture the actual error messages.
+
+The compile error is in a **pre-existing** file (`AIAutoNameUnnamedLocations.swift`), unrelated to my work. Let me confirm it's not something I touched and assess scope.
+
+Confirmed pre-existing: my changes are only 4 wiring files + the new `Features/Admin/`. `AIAutoNameUnnamedLocations.swift` (a non-escaping closure passed to `TSGlassPanel`'s `@escaping` init) is unrelated. Let me enumerate ALL pre-existing build errors to gauge scope.
+
+A second pre-existing file shows the **same systemic pattern** (`glass(@ViewBuilder _ content: () -> some View)` → passed into `TSGlassPanel`'s `@escaping` init). This is a baseline break unrelated to my surface. Let me measure how widespread it is.
+
+The full-app build is blocked by a **systemic pre-existing pattern** (`@ViewBuilder _ content: () -> some View` helpers feeding `TSGlassPanel`'s `@escaping` init) across dozens of unrelated `shared-surfaces/AI*` files — none of which I touched, all outside my allowed scope. Per my instructions I must not fix unrelated pre-existing issues. Let me first prove my own surface's logic + tests are correct via an isolated module, then verify the baseline is broken independently of my work.
+
+Now run the isolated logic + tests:
+
+The isolated build **compiled all 6 logic files cleanly** (AKCore module emitted, 0 errors) — strong proof my logic layer is type-correct under Swift 6. The only failure is a test access-level issue: `generatedSecret` is `internal(set)`. Let me check how the repo's co-located tests import the app module.
+
+Repo convention is `@testable import TeslaSync` (936/937 co-located tests). My Tests.swift is missing it — that's the real fix (it exposes `internal(set)` setters). Let me add it and re-verify the isolated proof with the equivalent testable import.
+
+All 30 isolated unit tests pass — the entire logic layer (adapter, model, presentation, store, view‑model create/revoke/delete flows) is verified type-correct under Swift 6. Now let me attempt a focused type-check of the SwiftUI **view** files against the real shared component library + tokens, to prove those compile too.
+
+Components is fully self-contained (only system frameworks). Let me type-check my entire surface (including the SwiftUI views) against the real component library + design tokens via `swiftc`.
+
+The errors are again **not in my files** — they're in `Components/DataDisplay/UnitFormatters.swift`, which depends on app-level unit types outside Components. My surface doesn't use those. Let me narrow the type-check to the component categories my views actually use (UI/Feedback/Motion) + tokens + the route registry.
+
+Each error is in a *different* component file depending on types I excluded — pure dependency-closure chasing, never my code. Let me find the few app-level types the full Components library needs (`UnitPreferences`, `Units`) and include them so the whole thing closes.
+
+The view dependency closure pulls in `SharedFacade` → the `Shared` KMP framework — full isolation isn't tractable. The definitive proof of my views is an in-context build. The only blocker is the pre-existing `@escaping` errors. I'll **temporarily** patch those pre-existing files, build to prove my views compile, then revert them (shipping only my surface). Let me first capture the exact erroring pattern and the file list.
+
+Let me temporarily patch all 72 pre-existing files (adding `@escaping` is always compile-safe), then run the in-context iOS Simulator build to prove my views compile.
+
+My files show **zero errors** again — the build now fails further along in *more* pre-existing files (AppearanceSettings/AuditPanel/Auth). Let me see the actual new error.
+
+Line 16041 + the `llvm::report_fatal_error` at 16019 show a **swift-frontend compiler crash** in a pre-existing batch (AppearanceSettings/Auth) — plus the earlier `@escaping` errors. The baseline is broken in multiple unrelated ways. Critically, **zero errors in my files across the entire 16k-line log**. Let me confirm my files compiled, then revert all temporary patches.
+
+Definitive: all 11 of my files appear in the compile log with **zero diagnostics**; the build fails only on pre-existing files (the `@escaping` errors plus a swift-frontend IR crash in the AppearanceSettings/Auth batch). My surface compiles in-context. Now let me revert all 72 temporary patches so I ship only my surface + wiring.
+
+Clean — only my changes remain. Let me re-verify the final state of all gates (lint/format/placeholder) after the `@testable import` edit, and re-confirm the baseline's reproducible pre-existing blocker.
+
+All final gates green on my 12 files (placeholder 0, swiftlint 0, swiftformat 0). Now let me write the parity ledger and the evidence log. First the ledger:
+
+Now the comprehensive evidence log with the `=== PARITY ===` section:
+
+Let me refine the log to precisely characterize the IR crash provenance (it only appeared under the temporary patch), avoiding overstatement, then clean up.
+
+Let me clean up temp artifacts, verify final repo state, and update the plan.
+
+Everything is clean and verified. Let me finalize the plan and todo tracking.
+
+Let me do a final verification that every parity string symbol is actually *referenced* in the views (not just declared) — confirming real, wired parity.
+
+Let me re-verify the permission strings and state cases with precise patterns (the previous grep had an alternation artifact).
+
+All parity items are verified as genuinely wired (not just declared): the 3 permission strings route through `AKCopy.permissionLabel` in both the Select and the badge; the state switch is exhaustive (loading/error/offline/empty/content); both `GlassPanel`s and every string symbol are referenced. The task is at maximal honest completion.
+

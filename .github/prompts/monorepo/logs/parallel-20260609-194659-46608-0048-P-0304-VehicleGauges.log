@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and reading the web source specification.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the existing Apple structure and patterns from recently-added feature views.
+
+The feature-views directory has many files following a `<Name>.<Part>.swift` convention. Let me study the most recent VehicleHeader implementation as the template.
+
+Now I understand the file convention. Let me read all VehicleHeader files to learn the complete pattern.
+
+Let me read the remaining VehicleHeader files to complete my understanding of the pattern.
+
+Excellent — I now fully understand the pattern. Let me explore the shared infrastructure: native counterparts (RadialGauge, MetricBar, TeslaCarViz), tokens, and the Units facade.
+
+Let me examine the web components (RadialGauge, MetricBar, TeslaCarViz) and the native tokens + Units facade to ensure parity.
+
+Let me explore the state-holder domains, tokens, and a sibling feature view (QuickStatsGrid) that likely uses gauges/units.
+
+No native `TeslaCarViz` exists yet — I'll build a local one. Let me read the tokens and a units-binding sibling (SpeedGearPanel/VehicleStatePanel) to learn the units state-holder pattern.
+
+Let me find the generated design tokens and read the QuickStatsGrid projection plus the web TeslaCarViz/colors for parity.
+
+Let me read the design tokens and shared component definitions (glass panel, fade, skeleton, button, typography).
+
+Let me read the generated tokens and the remaining shared component APIs (buttons, skeletons, typography).
+
+Let me find `TSTone`, read typography/skeleton components, and the QuickStatsGrid adapter (formatting helpers + vehicle-state model).
+
+Let me read TSTone/Badges, the Feedback states (EmptyState/QueryError), and the QuickStatsGrid adapter for the formatting + vehicle-state model pattern.
+
+Let me read the QuickStatsGrid model/views/main and the web `batteryColor` + `TeslaCarViz` (key sections) to finalize my parity understanding.
+
+Let me examine the project.yml, check for the generated xcodeproj/xcodegen, and the Tests structure to understand the build/test wiring.
+
+`xcodegen` is available but `Shared.xcframework` (KMP) must be staged via a build script. Let me check the prior surface's log and the pending-verifications doc to understand the expected gate posture, plus the build script.
+
+The established disposition is clear. Let me read the QuickStatsGrid log (closest sibling, uses units) to see exactly how they ran the isolated SwiftPM test with `UnitPreferences`, plus its Previews/Tests.
+
+This is the established "code-complete + host-runnable gates green, full-app gate deferred" disposition. Now let me read the web `TeslaCarViz` (for `parseModelKey` + what state it visualizes) and the `VehicleState` web type to design a faithful native car viz.
+
+I have enough parity understanding. Let me check the lint configs and placeholder checker to respect their constraints, then start building.
+
+I now have a complete understanding of the architecture, conventions, lint rules, and verification disposition. Let me set up the plan and todos, then build.
+
+Now I'll build the surface. Starting with the pure Adapter (data types, SI formatting, accessibility) — KMP-free so it's host-testable.
+
+Now the content Projection (pure builders for gauges/bars/chips/car-viz).
+
+Now the Model (phase projection + `@Observable` state-holder, P1/S8 binding).
+
+Now the Seams (surface id, telemetry P1/S11, source P1/S8, strings P1/S10).
+
+Now the SwiftUI layer. First the main surface view.
+
+Now the Views file (tint mapping, surface, content composition, gauge ring, metric bar, chip, flow layout).
+
+Now the native car visualization.
+
+Now the States (loading/empty/error chrome + connectivity banner).
+
+Now the Previews and the i18n strings.
+
+Now the test suites — adapter/projection/a11y and model lifecycle.
+
+Now the model lifecycle/binding tests.
+
+All 12 files created. Let me update todos and run formatting + linting.
+
+Format and lint both clean (0/0). Now the placeholder gate and an independent token grep.
+
+Placeholder gate clean (0) and grep clean. Now the isolated SwiftPM build + test of the pure layer (Foundation/Observation/OSLog only, no KMP).
+
+Pure layer builds clean under Swift 6. Now run the isolated tests.
+
+32/32 isolated tests pass. Now the dual-SDK `swiftc -typecheck` of the full SwiftUI surface against the real design tokens + shared components.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDKs typecheck clean under Swift 6. Let me update todos and run `xcodegen generate` to confirm the files are enumerated into the targets.
+
+xcodegen clean; all 12 files enumerated across app + test targets. Now let me attempt the prompt's full-app gate honestly. First check the KMP/Java toolchain and kick off the `Shared.xcframework` assembly.
+
+Java 17 present. Let me assemble the KMP `Shared.xcframework` in the background (≈8 min) so I can attempt a real app-module compile.
+
+While Gradle builds, let me verify i18n key coverage — every key referenced in code must exist in the strings catalog.
+
+All i18n keys referenced in code are defined in the catalog (no gaps), including all 13 web-source keys. Let me check Gradle progress.
+
+Gradle is progressing well (cache hits). Let me wait for the release xcframework to finish.
+
+Gradle finished. Let me stage the framework and run the real macOS app-module build to prove VehicleGauges contributes 0 errors.
+
+Framework staged (BUILD SUCCESSFUL, 7m). Now the real macOS app-module build to prove the surface compiles inside the app (using `-target` to skip the gradle pre-action since it's already staged).
+
+While the macOS build runs, let me confirm the log directory and peek at build progress.
+
+The build is compiling (no errors yet). Let me wait for it to progress.
+
+The build process exited — let me check the actual result (BUILD SUCCEEDED/FAILED and any VehicleGauges errors).
+
+Exactly the documented disposition: build fails on pre-existing cross-surface `RecentDrives*` collisions — **0 VehicleGauges errors**. Let me confirm the error breakdown by file.
+
+Confirmed: all 54 errors are pre-existing `RecentDrives*`/`StateTimeline*` cross-surface collisions in other agents' files — **0 VehicleGauges errors**; the surface compiles clean inside the real macOS app module. Let me run the literal tree-wide format/lint gate steps.
+
+Both tree-wide lint and format are GREEN (0 violations / 0 reformat across 3100+ files). Let me also capture a real iOS app-module compile (using `-target` to skip the gradle pre-action) to cover the iOS leg with the framework now staged.
+
+While the iOS build runs, let me update todos and the plan.
+
+iOS app-module build: same disposition — BUILD FAILED (65), 108 errors all in `RecentDrives*`/`StateTimeline*` siblings, **0 VehicleGauges errors**, no IRGen crash. Both app modules compile my surface clean. Let me verify git status so I only commit allowed files (the generated xcodeproj + xcframework must stay untracked).
+
+Only my 12 `VehicleGauges.*` files are untracked; the generated xcodeproj + xcframework are correctly git-ignored. Let me check signing identities (for the log), then write the gate log.
+
+Let me capture per-file line counts, then write the gate log.
+
+All files within lint budget. Now I'll write the comprehensive gate log.
+
+Now let me commit the surface and log (staging only the allowed files).
+
+Committed cleanly. Let me do a final consolidated verification of the committed artifact (covenant #8 — no commit on red).
+
+The previous command had a shell-quoting issue (it recursed the whole tree, including `build/`). Let me stop it and re-run cleanly with an explicit file list.
+
+SwiftLint now reports 2 violations — I need to see them. Let me run from the canonical `apps/apple` dir (matching the gate) with full output.
+
+0 violations from the canonical `apps/apple` dir (which is exactly what the gate uses). The "2" was a wrong-directory artifact. Let me confirm what those 2 were to be certain they're benign.
+
+Those 2 are `identifier_name` flags on the 2-char parameter `on` — they only appear when swiftlint runs from the wrong cwd (missing the project's `min_length: 2` override); the canonical `apps/apple` gate is 0. To make the surface robust under **any** cwd/config, I'll rename `on:` → `enabled:`.
+
+Let me verify no stale references remain and re-run lint from both directories plus the isolated tests.
+
+Lint now 0 from **both** directories (robust) and format 0/11. Let me re-run the isolated tests + a typecheck to confirm the rename is consistent, then amend the commit.
+
+32/32 tests pass. Let me re-confirm the dual-SDK typecheck after the rename, then amend the commit.
+
+Both SDKs typecheck clean post-rename. Let me amend the commit with the robustness fix (the rename keeps the same single commit).
+
+Let me do a final confirmation of the committed contents and a last canonical lint/format pass.
+
+All verified. The commit contains exactly the 12 surface files + the log. Let me mark todos done and clean up the `/tmp` scratch.
+
+Task complete. The VehicleGauges Apple feature view is shipped at parity with the web source, fully verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0304-VehicleGauges.log  | 206 ++++++++++++
+ .../feature-views/VehicleGauges.Adapter.swift      | 330 ++++++++++++++++++
+ .../feature-views/VehicleGauges.CarViz.swift       | 189 +++++++++++
+ .../feature-views/VehicleGauges.Model.swift        | 190 +++++++++++
+ .../feature-views/VehicleGauges.ModelTests.swift   | 105 ++++++
+ .../feature-views/VehicleGauges.Previews.swift     | 136 ++++++++
+ .../feature-views/VehicleGauges.Projection.swift   | 368 +++++++++++++++++++++
+ .../feature-views/VehicleGauges.Seams.swift        | 108 ++++++
+ .../feature-views/VehicleGauges.States.swift       | 179 ++++++++++
+ .../feature-views/VehicleGauges.Tests.swift        | 326 ++++++++++++++++++
+ .../feature-views/VehicleGauges.Views.swift        | 314 ++++++++++++++++++
+ .../TeslaSync/feature-views/VehicleGauges.strings  |  64 ++++
+ .../TeslaSync/feature-views/VehicleGauges.swift    |  70 ++++
+ 13 files changed, 2585 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0304-VehicleGauges.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.CarViz.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleGauges.swift

@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me understand the Apple app structure, project config, and existing patterns.
+
+This is an XcodeGen-based monorepo. Let me examine existing shared-surfaces patterns, the supporting infrastructure (state-holders, tokens, i18n), and build tooling.
+
+`AnnouncerRegion` is the closest analog (also an a11y surface). Let me read its complete file set as the canonical template.
+
+Let me read these files directly via view for clean output.
+
+Let me read the remaining AnnouncerRegion files to fully understand the pattern.
+
+Let me read the remaining template files plus locate shared token/component definitions.
+
+Now let me read the test files and locate the shared design tokens and components.
+
+I now understand the template fully. Let me locate the design tokens, shared components, focus-handling patterns, and assess build feasibility.
+
+Key facts: `pwsh` is available; the Apple build needs a KMP-built `Shared.xcframework` (only `.gitkeep` present) and `xcodegen` (no `.xcodeproj`). Let me verify build tooling feasibility and read the token/component APIs.
+
+All build tooling is present (xcodegen 2.45.4, gradlew + Java 17). Let me read the shared component APIs and the existing `@AccessibilityFocusState` usage pattern.
+
+Important finding: an **atomic** `TSSkipToContent` already exists in `Sources/Components/Feedback/States.swift` (out of scope per the prompt). My job is the full **shared surface** `SkipToContent`. Let me read the remaining component signatures and the focus-state idiom.
+
+I have all the component APIs. Let me check established `AccessibilityNotification` / focus patterns across the Apple tree to model the skip-focus seam correctly.
+
+Let me read the placeholder gate patterns and the rest of the checker to ensure compliance, plus confirm how `-Path` resolves.
+
+Now I understand the placeholder gate (must avoid `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented`). Let me check the documented build constraints on this runner before deciding DONE vs BLOCKED strategy.
+
+This is the key precedent: dozens of prior P4 Apple surfaces record the full-app `xcodebuild` gate as **macOS-pending/BLOCKED** (unstaged KMP `Shared.xcframework`, no signing identity, pre-existing cross-surface collisions), while proving each surface green in isolation (swiftc -typecheck both SDKs, swiftlint/swiftformat/placeholder clean, executed logic tests, xcodegen enumeration, i18n parity). Let me finish the doc and check for symbol collisions.
+
+No `Skip*` symbol collisions exist — my names are safe. The accepted methodology is clear (the `0124-InlineCallout` `components/feedback/*` row is my direct precedent). Let me set up tracking and gather the final reconnaissance for isolated verification.
+
+`Sources/Components/**` and `Sources/Design/**` are Shared-free (only `UnitFormatters.swift` is coupled, which I won't use). Let me confirm the dependency closure for `TSEmptyState`/`TSCard` before writing, so my isolated typecheck is clean.
+
+The component closure is all SwiftUI-only and Shared-free; SPM works. Before writing, let me read the lint/format configs to match their exact rules.
+
+Lint config understood (≤120 line length under `--strict`, swiftformat before-first wrapping, testable-bottom imports). No `Skip*` symbol collisions exist. Now I'll write the surface. Starting with the pure adapter core.
+
+Now I'll write the surface files, modeled on the `AnnouncerRegion` precedent. Starting with the pure adapter core.
+
+I have a bug in the focuser init (`onFocus = onFocus` self-assignment). Let me fix it.
+
+Now the states (loading/empty/error chrome), views, and the main surface file.
+
+Now the main surface file and the previews.
+
+Now the i18n catalog (including the verbatim web key `a11y.skipToContent`) and the two test files.
+
+All 10 files written. Let me run the formatter/linter on them and fix any issues.
+
+swiftformat clean (0/9). Now swiftlint --strict on the new files.
+
+swiftlint --strict: 0 violations. Now the placeholder gate — let me verify my files are genuinely clean (grep + the pwsh checker on a temp copy + the literal gate path + self-test).
+
+Clean. Now run the placeholder checker against my actual files (temp copy) and the literal gate path.
+
+Placeholder gate clean (`PLACEHOLDER_COUNT=0`). Now the core proof: `swiftc -typecheck` against the real generated `Tokens.swift` + the shared components, for iOS 18 under Swift 6 strict concurrency.
+
+iOS 18 typecheck: 0 errors. Now macOS 15.
+
+Both SDKs typecheck cleanly (0 errors). Now the gold-standard proof: an **executed** SwiftPM test run of all unit tests against the real surface + component closure.
+
+**39/39 tests pass (executed, 0 failures)** under Swift 6. Now `xcodegen generate` (file enumeration) and i18n parity verification.
+
+All 10 files enumerated by xcodegen (60 pbxproj refs). Now i18n parity — cross-check keys used in Swift vs defined in `.strings` vs the web source key.
+
+The "dead" keys are a false positive from my single-line grep (those keys are used in multi-line `string(\n "key", ...)` calls). Let me confirm each is genuinely referenced.
+
+i18n parity confirmed: 17 keys, 0 dead, 0 missing, web key `a11y.skipToContent` present. Now the full `xcodebuild` gate. First the instant platform blockers, then I'll attempt the KMP framework build to compile the surface in the real app module.
+
+Blockers confirmed (0 signing identities, unstaged `Shared.xcframework`). My surface is Shared-free. Let me attempt to assemble the KMP framework so I can compile the surface in the real app module (strongest evidence). This is a long Kotlin/Native build.
+
+Gradle (Kotlin/Native) is building — this is the documented 7–8 min long-pole. Let me wait for it.
+
+Still linking (Kotlin/Native). Continuing to wait.
+
+**Gradle BUILD SUCCESSFUL in 7m 23s** — the RELEASE `Shared.xcframework` was produced. Let me stage it and compile the surface inside the **real app module** (strongest evidence).
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now compile the iOS app target in the real module (this compiles the whole surface tree — several minutes).
+
+Compile failed (exit 65) but **zero `SkipToContent` errors** — only 3 total errors. Let me confirm they're pre-existing and unrelated to my surface.
+
+**Zero `SkipToContent` errors** in the real in-module compile. The only 3 errors are pre-existing/unrelated (`Spinner.Previews.swift` in slot-95, `AISignalExplorerNlFilter.swift:142` in slot-94 — the latter is already documented macOS-pending). Now let me run the **literal gate** command to capture its faithful exit code (Gradle is cached now).
+
+The literal gate is running (re-staging via Gradle pre-action + full compile). Let me wait.
+
+Literal iOS gate: **IOS_EXIT=65, 0 `SkipToContent` errors** — blocked only by 2 pre-existing errors in other agents' AI surfaces. Let me capture exact evidence and run the macOS in-module compile.
+
+Airtight evidence captured. Both full-app builds are blocked **only** by pre-existing unrelated errors in other agents' surfaces (+ macOS signing) — **zero `SkipToContent` errors** on both platforms, and the surface files are confirmed compiled in the real module. Let me verify gitignore status and the logs path before writing artifacts.
+
+This is the canonical format from my direct sibling (`0001-AnnouncerRegion`). Let me read its full structure to mirror it precisely.
+
+I have the canonical format. Note: `shared-surfaces` is already wired into `project.yml`/`.swiftlint.yml` (AnnouncerRegion added it as 0001), so I need **no** build-wiring changes. Let me capture the tree-wide lint/format numbers and per-file line counts for the log.
+
+Let me wait for the tree-wide swiftformat lint to finish.
+
+`shared-surfaces` already wired (no build-wiring change needed); tree-wide swiftformat clean (0/4635). Now tree-wide `swiftlint --strict` (the gate's LINT step).
+
+Tree-wide `swiftlint --strict`: **0 violations in 4337 files**. All host-runnable gates are green. Let me grab tool versions, then write the gate log.
+
+All gates green, iPhone 16 simulator present. Now I'll write the comprehensive gate log.
+
+Now I'll add the deferred-verification row to `macos-pending-verifications.md`, following the established convention.
+
+The prompt's allowed files + commit block cover only the surface files + log (not the pending-doc). To honor the allowed-files scope and avoid drift, I'll revert the pending-doc edit (the deferral is fully recorded in the committed log) and clean up temp artifacts.
+
+Working tree is clean — exactly the 10 surface files + the log (the generated `.xcodeproj` and staged framework are gitignored). Now commit per the prompt's commit block.
+
+Committed cleanly (`fc634ac19`), 11 files / 1763 insertions, working tree clean. Let me finalize tracking.
+
+Task complete. Final summary below.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0139-SkipToContent.log | 276 ++++++++++++++++++++
+ .../shared-surfaces/SkipToContent.Adapter.swift    |  88 +++++++
+ .../shared-surfaces/SkipToContent.Model.swift      | 219 ++++++++++++++++
+ .../shared-surfaces/SkipToContent.ModelTests.swift | 278 +++++++++++++++++++++
+ .../shared-surfaces/SkipToContent.Previews.swift   |  76 ++++++
+ .../shared-surfaces/SkipToContent.Seams.swift      | 248 ++++++++++++++++++
+ .../shared-surfaces/SkipToContent.States.swift     |  98 ++++++++
+ .../shared-surfaces/SkipToContent.Tests.swift      | 152 +++++++++++
+ .../shared-surfaces/SkipToContent.Views.swift      | 189 ++++++++++++++
+ .../shared-surfaces/SkipToContent.strings          |  44 ++++
+ .../TeslaSync/shared-surfaces/SkipToContent.swift  |  95 +++++++
+ 11 files changed, 1763 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0139-SkipToContent.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SkipToContent.swift

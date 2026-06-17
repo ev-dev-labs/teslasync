@@ -1,0 +1,149 @@
+I'll start by exploring the environment and the codebase to understand what's available and what I need to build.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source — it's a pure presentational SVG flow diagram. Let me explore the Apple app structure deeply to find existing patterns, state holders, tokens, i18n, and the widget-primitives directory.
+
+There's an existing `widget-primitives` directory with established patterns. `WidgetFlowDiagram.*` doesn't exist yet. `WidgetChartSummary` looks like the closest pure-presentational analog. Let me study the existing patterns in depth.
+
+`WidgetChartSummary` is the ideal template — a pure presentational primitive like `WidgetFlowDiagram`. Let me read its remaining files plus the design tokens and project config.
+
+Files auto-glob from the directory; `*Tests.swift` are excluded from the app target. Let me check the test-target config, design tokens, and xcodegen availability.
+
+Let me find the exact token definitions and the test target structure, plus look at the most geometric existing primitive (WidgetMapView) and the comparison card's Views pattern.
+
+Let me read the design tokens fully and find the AnimatedNumber + semantic color equivalents.
+
+Now I have the token palette. Let me examine the Adapter/projection pattern, the native AnimatedNumber/Canvas usage, and how an existing geometric primitive composes its files.
+
+Let me examine the native AnimatedNumber, EmptyState, the Canvas drawing pattern, and the MapView model/view split.
+
+Let me read the AnimatedNumber, the Canvas drawing pattern, the map projection types, and the feedback EmptyState.
+
+Paths are under `apps/apple/Sources`, not `TeslaSync/Sources`. Let me correct and read the key reference files.
+
+Let me read the full map adapter (projection/geometry/projector), its adapter tests, and the lint configs to match conventions exactly.
+
+Let me read the lint configs, the MapView SwiftUI tests/previews/strings, and check the gate tooling (pwsh, check-placeholders).
+
+Let me inspect the placeholder checker, MapView previews, the Shared framework dependency, and check for any prior log.
+
+Critical finding: `Shared.xcframework` is missing (only `.gitkeep`), and the app/test targets depend on it. Let me check how a completed sibling's gate log handled this.
+
+The sibling 0008 log gives me the exact "DONE" blueprint: the full `xcodebuild` gate is pre-blocked (missing KMP `Shared.xcframework` that takes ~11min to build, a pre-existing unrelated compile error, and no macOS signing identity), so siblings prove green via **host-runnable surface-scoped gates** (SwiftPM isolated+full build/test with real Tokens, dual-SDK typecheck, swiftlint/swiftformat, placeholder gate, collision check, xcodegen). I'll follow that precisely.
+
+Let me check real web usages (for faithful icons/positions/colors) and any native symbol collisions before writing.
+
+No collisions. Let me read the real web usages to capture faithful data shapes (icons, positions, color overrides) for previews/tests.
+
+I now have a complete, faithful picture: real callers use icons (BatteryCharging, Zap, Plug, Sun, Home, Battery), positions (all 5), `active` flags, and `color` overrides (cyan/amber/yellow/blue/emerald). Let me read the format config, then write the surface.
+
+Format config confirmed (`--maxwidth 120`), and pre-existing blockers verified (0 codesigning identities; AIGeofence file present). Let me locate `TSChartPalette` and confirm the chart color helper.
+
+Confirmed: `TSChartPalette.color(at:)` wraps/handles negatives — ideal for mapping the web `color` palette overrides to tokens. I have everything I need. Let me set up tracking and write the surface.
+
+Now writing the surface. Starting with the pure Foundation core (Adapter).
+
+Adapter core written. Now the Model (facade + telemetry + @Observable state-holder).
+
+Now the public SwiftUI surface.
+
+Now the Views — the empty leaf and the Canvas-based diagram (animated arrows + node chips + accessibility). Updating todos.
+
+Now the DEBUG previews using realistic energy/power-flow data.
+
+Now the pure-core adapter tests (geometry, projector, tones, accessibility, model, facade).
+
+Now the SwiftUI composition + per-state render tests.
+
+Now the i18n strings catalog.
+
+All 8 files created. Now the gate. First, auto-format my files and lint them.
+
+swiftformat clean (0/7 require formatting). Now swiftlint --strict on the surface.
+
+File length: Adapter is 503 lines, over the 400 limit. The sibling pattern splits large cores. I'll extract the geometry/projector/accessibility into a `WidgetFlowDiagram.Geometry.swift` file (within the `WidgetFlowDiagram.*` allowed glob). Let me find the split boundary.
+
+I'll extract the geometry/projector/accessibility (lines 301–503) into a new `WidgetFlowDiagram.Geometry.swift`. Let me read that section exactly.
+
+swiftlint flagged only file length (503 > 400). I'll split the geometry/projector/accessibility into a new `WidgetFlowDiagram.Geometry.swift` (within the allowed glob) and drop the now-unused `locale` plumbing from the projector (value text is formatted at the view layer). First, create the geometry file.
+
+Now truncate the Adapter to remove the moved geometry section (keep lines 1–299).
+
+Both under 400 now. Re-format and lint all 8 swift files together.
+
+swiftlint --strict: **0 violations in 8 files**. Now the placeholder gate (run against an isolated copy of just my files for a meaningful surface-scoped result, plus the literal gate path).
+
+Placeholder gate clean (0/0). Now I'll prove the surface compiles and its tests pass via a SwiftPM harness with the **real** design tokens (the full `xcodebuild` gate is pre-blocked by the missing KMP `Shared.xcframework`, a pre-existing unrelated compile error, and 0 codesigning identities — same as sibling 0008). Let me set up the harness.
+
+Full surface compiles clean (Swift 6, strict concurrency). Now run the tests.
+
+Two issues to fix in `AdapterTests.swift`: `testCaseCount()` collides with an XCTest selector, and the `WidgetFlowDiagram.surfaceSlug` (MainActor-isolated View static) shouldn't be referenced from the non-isolated adapter test (the MainActor `Tests.swift` already covers it). Fixing in the real surface file.
+
+Re-copy the fixed test file and re-run.
+
+**45/45 tests pass** (including the `ImageRenderer` per-state render smoke on macOS). Now dual-SDK typecheck (iOS 18 + macOS 15) against the real tokens — proving the SwiftUI views + previews compile on both platforms.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both dual-SDK typechecks clean. Now the symbol-collision check (the one risk isolation can't catch — a type-name clash in the shared `TeslaSync` module).
+
+No collisions. Now `xcodegen generate` to verify the project builds its file graph with my surface enumerated (the directory is already wired for both app + test targets).
+
+xcodegen succeeded with my files enumerated. Let me verify the two that my grep pattern missed (`.swift` main file and `.strings`).
+
+All 9 files enumerated across the 4 targets. Now let me confirm the pre-existing full-app `xcodebuild` blockers are real (for an honest deferral), and check whether the KMP framework toolchain is available to optionally build it.
+
+KMP toolchain is present, but the full-app `xcodebuild` gate is pre-blocked by three verified, surface-external causes — the missing `Shared.xcframework` (regenerable only via an ~11-min Gradle build), **0 valid codesigning identities** (macOS entitlements need a dev cert), and a confirmed pre-existing compile error in another agent's `AIGeofenceAwareAutomationSuggestions.swift` (the `@escaping`/`glass` helper at L141) — exactly the documented sibling-0008 situation deferred to the P99 acceptance gate. My surface is proven green by the full host-runnable, surface-scoped gate set. Let me gather final stats and clean up.
+
+Clean — only my 9 surface files staged, xcodeproj ignored & cleaned. Now I'll write the honest gate log.
+
+Log written. Let me re-verify format + lint on the final files (I edited `AdapterTests.swift` after the prior lint run).
+
+All final gates green: **swiftformat 0/8**, **swiftlint --strict 0 violations in 8 files**. Now committing per the prompt's scope (my 9 surface files + the log).
+
+Committed (`9699ea955`). Let me finalize tracking and confirm a clean tree.
+
+Done. The `WidgetFlowDiagram` Apple surface is shipped, verified green, and committed.
+
+## Summary
+
+Built a production-polished native Apple (SwiftUI) parity of `features/dashboard/widgets/shared/WidgetFlowDiagram.tsx` — a pure presentational flow-graph primitive — as **9 files (1,900 lines)** under `apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.*`, committed at `9699ea955`.
+
+**Faithful parity (real branches only):** empty leaf, populated graph, `compact` (radius 10/14 + top‑3 arrow slice + 3‑letter labels), `active` (web `dashFlow` marching‑ants via `TimelineView`+`Canvas`, Reduce‑Motion gated), and arrow tone (sign defaults → status tokens; `color?` override → brand chart palette — no Tailwind/hex). loading/error/stale/offline were intentionally **not** invented (the source has no fetch), matching sibling-primitive precedent and documented in code.
+
+**Architecture:** P1/S8 `@Observable` holder (no HTTP in view), P1/S9 tokens, P1/S10 `NSLocalizedString` facade (3 keys — `empty`, `accessibilityLabel` from the web `aria-label`, + native hint), P1/S11 once-only `view.opened` telemetry. SVG 100×100 viewBox → uniform-scale `xMidYMid meet`; Lucide icons → SF Symbols; VoiceOver container + per-node labels.
+
+**Gates (all executed, green):**
+- swiftformat --lint: **0/8** · swiftlint --strict: **0 violations/8 files**
+- placeholder gate: **0/0**
+- SwiftPM build + test against the **real** design tokens (Swift 6, strict concurrency): **45/45 tests pass** (incl. `ImageRenderer` per-state render smoke)
+- dual-SDK `swiftc -typecheck`: **iOS 18 = 0, macOS 15 = 0**
+- symbol-collision: **0** · xcodegen generate: **OK** (all 9 files enumerated across both apps + both test bundles)
+
+**Full-app `xcodebuild` deferred to P99** (not a surface/capability failure) for three verified, surface-external causes: absent KMP `Shared.xcframework`, **0 macOS codesigning identities**, and a pre-existing unrelated compile error in another agent's `AIGeofenceAwareAutomationSuggestions.swift` — consistent with sibling 0002/0003/0008.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-widget-primitives-0006-WidgetFlowDiagram.log` → `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...le-widget-primitives-0006-WidgetFlowDiagram.log | 191 +++++++++++
+ .../WidgetFlowDiagram.Adapter.swift                | 299 +++++++++++++++++
+ .../WidgetFlowDiagram.AdapterTests.swift           | 358 +++++++++++++++++++++
+ .../WidgetFlowDiagram.Geometry.swift               | 217 +++++++++++++
+ .../WidgetFlowDiagram.Model.swift                  | 132 ++++++++
+ .../WidgetFlowDiagram.Previews.swift               | 147 +++++++++
+ .../WidgetFlowDiagram.Tests.swift                  | 189 +++++++++++
+ .../WidgetFlowDiagram.Views.swift                  | 259 +++++++++++++++
+ .../widget-primitives/WidgetFlowDiagram.strings    |  24 ++
+ .../widget-primitives/WidgetFlowDiagram.swift      |  84 +++++
+ 10 files changed, 1900 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-widget-primitives-0006-WidgetFlowDiagram.log
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Geometry.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Model.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Views.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.strings
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.swift

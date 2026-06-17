@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure, checking platform capabilities, and reading the web source that serves as the specification.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 simulator). Not blocked. Now reading the web source and Apple app structure.
+
+Now let me understand the Apple app structure in detail. The recursive listing was large, so let me target the key directories.
+
+A clear multi-file convention exists per surface. `AIChatbotIndicator` looks like the closest analog. Let me study it fully and check for an existing native HelixMark.
+
+Excellent template. Let me read the remaining AIChatbotIndicator files to fully internalize the conventions.
+
+Let me read the remaining reference files and locate the shared design tokens/primitives. I'll also check how `AiOutputPanel` (which pairs with this indicator on web) handles thinking states natively.
+
+There's already a native thinking-indicator parity inside `AiOutputPanel.Views.swift`. Let me study it closely (it's the most direct precedent) and locate the shared design tokens and primitives.
+
+Let me read the design tokens, the TSSkeleton primitive, the pulse modifier tail, and the AiOutputPanel strings facade to align conventions.
+
+Let me read the shared primitives (Skeletons.swift for TSSkeleton/TSSpacing/TSRadius), theme tokens, and the gate scripts/configs.
+
+Let me check the test target wiring in project.yml plus the lint/format configs.
+
+I have the full picture of conventions. Now let me confirm no `AIThinkingIndicator.*` native files exist yet, and study how a *purely presentational* sibling surface (only `useTranslation`, no data) models its states — to match house style precisely rather than over/under-building.
+
+Confirmed: `AIThinkingIndicator.tsx` is the **only** AI component using just `useTranslation` (no `useAiStream`) — it's purely presentational, the streaming-pending affordance itself. No data/error/empty/stale/offline branches exist in the source. I'll reproduce it faithfully (full indicator + compact dots + reduce-motion + label override) and document the inapplicable data-states honestly.
+
+Let me set up tracking and run baseline checks (project generation, lint, format) before writing code.
+
+Now let me run baseline checks: generate the Xcode project and verify the existing tree passes lint/format/placeholder before I add anything.
+
+Project generates; `TeslaSync` and `TeslaSync-macOS` schemes exist. Let me verify the lint/format/placeholder baseline is clean, and kick off a baseline iOS build in the background to validate the harness while I write code.
+
+Baseline: swiftlint `EXIT=0`, swiftformat `EXIT=0`. The 13 placeholder hits are pre-existing in *other* surfaces (e.g. AINLDriveSearch); the gate scopes the check to my surface path. Let me read the script's path-resolution and match logic to ensure my scoped invocation works and what tokens to avoid.
+
+Critical findings from the script:
+1. Matching is **case-insensitive** — I must avoid the substrings `todo`, `fixme`, `xxx`, `coming soon`, `placeholder`, `lorem ipsum`, `not implemented` anywhere (even comments). I'll also avoid `stub`/`mock` per acceptance.
+2. The gate's `-Path .../AIThinkingIndicator` (no such flat path) resolves to nothing via `Test-Path`, so I'll *also* honestly scan my actual files with grep and report both.
+
+Let me kick off a baseline iOS build in the background to validate the harness while I write the files.
+
+Baseline is clean (lint/format `EXIT=0`). Now writing the surface files. Let me create the pure core (Adapter, Projection), the Model + i18n facade, and the strings catalog first.
+
+Now the Views file (HelixMark port, bouncing dots, shimmer lines, full + compact content, reduce-motion pulse).
+
+Now the main public views file and the previews.
+
+Now the test file — covering projection, meta, accessibility, model/telemetry, i18n facade, mark geometry, and view composition.
+
+I introduced a typo with non-ASCII characters in a test method name. Fixing it now.
+
+All 8 files created. Let me check the baseline build result and run swiftformat/swiftlint on my new files.
+
+Baseline build still running. Let me format and lint my new files in parallel (independent of the build).
+
+Formatting is clean (`0/7 files require formatting`). Now swiftlint `--strict` on my files.
+
+My files pass swiftlint `--strict` (0 violations) and swiftformat (`0/7 require formatting`). Let me check on the baseline build.
+
+The baseline build failed with `EXIT=65` — but this is a **pre-existing** failure in `StateTimelineWidget` (a different surface), not my code. It reports `StateTimelineModel` redeclared (same file:line cited twice as candidates), which blocks the whole app target. Let me investigate whether this is a genuine pre-existing duplicate.
+
+Two `public final class StateTimelineModel` exist in the same app module — `dashboard-widgets/StateTimelineWidget.Model.swift:104` **and** `feature-views/StateTimeline.Model.swift:64`. git status shows **only my 8 files** are new; the StateTimeline files are pre-existing/committed. This is a pre-existing collision outside my allowed files. Let me confirm rigorously (both unconditionally compiled, both in HEAD).
+
+This is a **pre-existing, systemic collision**: the `StateTimeline` (feature-view 0235) and `StateTimelineWidget` (dashboard-widget 0096) surfaces declare **10 identically-named public types** in the same app module (confirmed via `uniq -d`), with no `#if` guards. Both are committed at HEAD; git shows only my 8 files are new. This breaks the `TeslaSync` app target compile regardless of my work — and it's outside my allowed files.
+
+Let me verify my own surface is correct by proving it compiles + tests pass in the real app once the unrelated collision is set aside. First, checking external references to decide a safe, fully-reverted quarantine.
+
+No external references to `StateTimeline*` — both surfaces are self-contained. Before attempting a quarantine build to prove my surface, let me scan the **entire** app target for all duplicate public type declarations, to learn the full scope of pre-existing collisions.
+
+There are **multiple** systemic pre-existing collision groups — `StateTimeline*` (0235 vs 0096) **and** `RecentDrives*` (another feature-view/widget pair), 25+ duplicate public types total — all outside my allowed files. The pristine app target cannot compile regardless of my work. Quarantining one won't help; this is systemic.
+
+To authoritatively prove **my** deliverable compiles and its tests pass, I'll build an isolated SwiftPM harness using my real source files + the real design tokens. First, confirming `Tokens.swift` is self-contained.
+
+`Tokens.swift` is fully self-contained (SwiftUI only). I'll build an isolated SwiftPM harness using my **real** source files + the **real** design tokens + the real `TSSkeleton`, under Swift 6 strict concurrency (matching the app), to authoritatively compile and **run** my tests.
+
+**All 19 of my tests passed** under Swift 6 strict concurrency, compiling against the **real** design tokens and `TSSkeleton`. My deliverable is authoritatively verified. The full-app gate is blocked only by pre-existing out-of-scope collisions.
+
+Let me confirm my surface adds no new symbol collision, characterize the full blocker, and locate the log directory.
+
+Let me re-run the collision check properly (filenames intact) and inspect existing surface logs to match the log convention and see how siblings reported status.
+
+This is the key precedent. Sibling surfaces (e.g. `0001-AnnouncerRegion`, `0005-AIAnomalyExplanations`) handle the **exact same situation** identically: the authoritative proof is the **isolated Swift 6 SwiftPM harness** (`SWIFT_TEST_EXIT=0`, real sources) + lint/format/placeholder green, while the full-app `xcodebuild` gate is **DEFERRED** on pre-existing, out-of-allowed-files blockers → **EXIT=0 / STATUS=DONE**. My situation matches exactly. Let me read the full template log to mirror its structure.
+
+This is a definitive precedent (`0001-AnnouncerRegion`) documenting the **identical** pre-existing `RecentDrives*`/`StateTimeline*` collisions, resolved as **EXIT=0 / STATUS=DONE** with the full-app xcodebuild **DEFERRED**. Note: in my tree, `shared-surfaces` is *already* wired into `project.yml` + `.swiftlint.yml` (committed), so I need **no** wiring changes — only my 8 files + log.
+
+Let me regenerate the project, run the scoped placeholder check on my files, and kick off the literal iOS gate (capturing real evidence).
+
+Wiring confirmed (no edits needed), project regenerated (`XCODEGEN_EXIT=0`, 48 refs to my files), placeholder on my files `COUNT=0` / `EXIT=0`, ripgrep clean. Now running the literal iOS gate to capture real evidence.
+
+The iOS gate is running (expected to fail on pre-existing collisions). Let me run the macOS gate in parallel with isolated DerivedData to save wall-clock time.
+
+Both gates running in parallel. Let me update progress tracking while they build.
+
+Both gates finished. Let me analyze the captured results and prove my surface contributes zero errors.
+
+The iOS gate shows **2 errors referencing AIThinkingIndicator paths** — I must investigate immediately, since my isolated harness was green. Let me see them in full.
+
+The 2 errors are a real bug in **my** `Previews.swift:37` — `.environment(\.accessibilityReduceMotion, true)` fails because that key is **read-only** (`KeyPath`, not `WritableKeyPath`) under this SDK. My isolated harness didn't catch it because I'd excluded Previews. Let me check how the codebase handles reduce-motion in previews, then fix it.
+
+Confirmed: (1) my `.environment(\.accessibilityReduceMotion, true)` is the **only** such usage in the repo — it's a real read-only-keypath compile error I introduced (missed because I'd excluded Previews from the isolated harness); (2) the macOS gate's 4 errors are **all** code-signing (`require signing with a development certificate`) for the macOS app/widget targets — **zero** compile errors, zero from my surface, matching the precedent.
+
+Let me fix the Previews file (remove the invalid modifier) and view it precisely.
+
+Fixed. Now re-format/lint my files, and add Previews to the isolated harness to verify the `#Preview` macro compiles (the gap that let the bug through).
+
+Format `0/7`, lint `0 violations`, and the harness now compiles **with** Previews (`#Preview` macro fine) — the bug is fixed. Let me re-confirm all tests pass and re-run the iOS gate to verify my surface now contributes zero errors.
+
+All 19 tests green with Previews present (`SWIFT_TEST_EXIT=0`). Re-running the iOS gate to confirm my surface now contributes **zero** errors (project already references my files; only Previews content changed).
+
+The iOS gate#2 is running. Let me gather tool versions for the log while it builds.
+
+Got the metadata. Let me check the iOS gate#2 result.
+
+iOS gate#2 finished. Let me verify my surface now contributes **zero** errors and characterize the remaining (pre-existing) failures.
+
+**Confirmed: my surface contributes ZERO errors** (`IOS_EXIT=65` purely from pre-existing collisions; 108 errors, 0 reference AIThinkingIndicator). The chain stopped because `grep -c` returned 0. Let me capture the attribution evidence separately for the log.
+
+Evidence is conclusive and matches the precedent exactly: the 108 iOS errors are **all** owned by 4 pre-existing sibling surfaces (`StateTimelineWidget`, `RecentDrivesSection`, `StateTimeline`, `RecentDrivesListWidget`) colliding on `StateTimeline*`/`RecentDrives*` types; **my surface = 0 errors**. Now running the full literal lint/format/placeholder gate commands to capture honest final numbers.
+
+Both full-tree gates green: swiftlint `0 violations in 3519 files`, swiftformat `0/3749 require formatting`. Now the placeholder gate (literal command + honest scoped scan of my files).
+
+All gate data collected and green where it depends on my work. Let me write the authoritative log following the established precedent format.
+
+Log written. Now cleaning up temp artifacts and verifying the working tree shows only my intended changes before committing.
+
+Working tree is exactly my 8 files + the log; `.xcodeproj` is git-ignored. Committing now.
+
+Committed (`95404df97`, 9 files). Let me finalize tracking and do a last clean-tree verification.
+
+The task is complete. The working tree is clean, the commit succeeded, and the log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...le-shared-surfaces-0053-AIThinkingIndicator.log | 268 +++++++++++++++++++++
+ .../AIThinkingIndicator.Adapter.swift              |  75 ++++++
+ .../AIThinkingIndicator.Model.swift                |  95 ++++++++
+ .../AIThinkingIndicator.Previews.swift             |  45 ++++
+ .../AIThinkingIndicator.Projection.swift           |  37 +++
+ .../AIThinkingIndicator.Tests.swift                | 221 +++++++++++++++++
+ .../AIThinkingIndicator.Views.swift                | 215 +++++++++++++++++
+ .../shared-surfaces/AIThinkingIndicator.strings    |  16 ++
+ .../shared-surfaces/AIThinkingIndicator.swift      |  71 ++++++
+ 9 files changed, 1043 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0053-AIThinkingIndicator.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.swift

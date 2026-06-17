@@ -1,0 +1,179 @@
+I'll start by investigating the repository state — the web source, whether an Apple app structure exists, and whether the required Apple tooling is available. The Honesty Covenant requires real evidence, so let me gather it.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Prior shared-surface work exists (ElevationProfile, etc.). Let me explore the web source and the Apple app structure.
+
+Let me read the web `Range.tsx` source, its sibling `Distance.tsx` (likely similar pattern), the index, and explore the Apple app structure.
+
+Now let me read the web hooks this component depends on, and explore the Apple app's shared-surfaces and supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+Let me read the web `preferredRange` lib (core logic) and study the most recent predecessor surface (ElevationProfile) to learn the exact Apple file pattern.
+
+Web source is fully understood — `Range` is a distance formatter honoring km/mi preference + rated/ideal preference, with a companion label hook. Let me check whether sibling `format/*` surfaces (Distance, Speed, etc.) already exist in Apple to match the closest pattern, and read the ElevationProfile files.
+
+`Distance` is the closest analogue (distance formatter with unit prefs). Let me read all its files to learn the exact established pattern.
+
+Now let me read all the Distance surface files to learn the complete established pattern.
+
+Let me read the remaining Distance files: Adapter (formatting/env logic), Views, Previews, strings, and Tests.
+
+Excellent — the pattern is clear. Now I need the shared infrastructure: the `UnitPreferences` type, `\.tsUnits` environment, `.metric`/`.imperial`, tokens (`Color.TS`/`Font.TS`), and how `rangeType` (rated/ideal preference) is exposed natively. Let me also read the Distance tests.
+
+Let me read the `UnitPreferences` definition, the `tsUnits` environment, and how existing native widgets handle the rated/ideal `rangeType` preference (critical for parity with `usePreferredRange`).
+
+Let me read `AppContainer.swift` (the `tsUnits` env + metric/imperial), and find how the native side reads the rated/ideal `rangeType` preference selection.
+
+I need to find where the `\.tsUnits` environment key and `.tsUnits()` modifier are defined, plus the `Color.TS`/`Font.TS` tokens. The Range surface needs a `rangeType` (rated/ideal) preference too — let me see how it's exposed.
+
+The project globs `shared-surfaces` into all targets automatically. Now let me locate the `Color.TS`/`Font.TS` design tokens (referenced in previews) — they're likely in `design/generated/apple`.
+
+I have the tokens. Now let me confirm the i18n keys (`common.ratedRange`/`common.idealRange`), how an existing native widget localizes those labels, the Localization catalog layout, and the placeholder-check script.
+
+Let me confirm the `common` namespace context for those range keys and read the placeholder-check script to ensure I don't trip it.
+
+Let me read the placeholder patterns, the swiftlint/swiftformat configs, and check whether `pwsh` is available — all needed to produce gate-clean code.
+
+`pwsh` is available. Now the critical question for the gate: can the Apple project actually build here? Let me check for an `.xcodeproj`/xcodegen, the `Shared.xcframework`, and how predecessor prompts resolved their gate (DONE vs BLOCKED).
+
+No `.xcodeproj` (but `xcodegen` is present), and **`Frameworks/` has no `Shared.xcframework`** — the KMP dependency isn't built. That likely blocks `xcodebuild`. Let me read predecessor logs to see the established honest outcome.
+
+I now fully understand the **sanctioned disposition** from predecessor logs (Distance 0085, ProgressRing 0099): the full-app `xcodebuild` is baseline-RED on *pre-existing, unrelated* issues (sibling duplicate-type symbols on iOS; dev code-signing on macOS), so each surface proves itself GREEN via an **isolated Swift 6 SwiftPM build+test** against the real tokens, plus swiftlint/swiftformat/placeholder — then defers the xcodebuild gate with raw evidence.
+
+Let me verify the baseline RED conditions exist in *this* checkout (so my root-cause is real, not assumed) and check Gradle feasibility.
+
+The duplicate-symbol pairs differ in *this* checkout — so I must not assume; I'll capture the real build state later. First, the authoritative GREEN proof (per sanctioned methodology) is the isolated Swift 6 build+test. 
+
+One correctness detail: web `Range` uses `useUnits().formatDistance` (the lib `formatDistance`), **not** the manual path `Distance.tsx` uses. Let me read the exact `formatDistance` lib implementation for faithful parity.
+
+I now have complete parity knowledge. Key correctness points captured:
+- Web `Range` uses lib `formatDistance` (fallback precision **1**, no upper clamp, honors `emptyDisplay`), default `precision=0`.
+- `selectPreferredRange`: `rated` default; picks `rated_range`/`ideal_range` (SI m); label keys `common.ratedRange`/`common.idealRange`.
+- Two genuine render branches (value/empty) — no fetch/loading/error axis (sanctioned parity note, like Distance/ProgressRing). Plus the always-present rated/ideal **label** (`useRangeLabel`).
+
+The authoritative GREEN proof is the isolated Swift 6 SwiftPM build+test. Let me set up my plan/todos and write the surface.
+
+Now I'll write the surface. Starting with the core adapter:
+
+Now the projection layer:
+
+Now the model (state-holder, telemetry seam, i18n facade):
+
+`Range` collides with Swift's stdlib `Range` type. The web renames `Number`→`FormattedNumber` for the same reason, but kept `Range`. In Swift, a module-level `public struct Range` shadows `Swift.Range` for unqualified references **within the module** — which could introduce NEW errors in unrelated files (a covenant violation). Let me check whether the app module uses `Range<...>` unqualified anywhere.
+
+Confirmed: two files use `Range<Int>` unqualified. A module-level `public struct Range` would break them — **NEW errors caused by my surface**, which is unacceptable. I must name the public type differently while keeping the file `Range.*`. 
+
+But first I must verify NONE of my intended type names collide with the many existing `Range*` types in the module (RangeMetric, RangeStateDTO, RangeBarWidget…). Let me check all my type names for collisions.
+
+All 22 type names are collision-free. Only the bare `Range` clashes with `Swift.Range`, so I'll name the public view `RangeReadout` (documented, mirroring how the web renames `Number`→`FormattedNumber` to dodge the JS built-in). Now the main surface file with the `\.tsRangeType` environment, `RangeReadout`, and the `RangeLabel` companion:
+
+Now the presentational subviews:
+
+Now the previews:
+
+Now the i18n strings (the two source keys verbatim + the native a11y refinement):
+
+Now the adapter unit tests (formatting, selection, range-type, meta):
+
+Now the projection/model/views/a11y tests:
+
+All 9 files written. Let me update todos and run the formatter, linter, and placeholder gates on the surface files.
+
+Formatting and lint both clean (EXIT=0). Now the placeholder gate via `pwsh` — both the literal gate path and a real scoped scan of my files:
+
+Placeholder gate clean (EXIT=0). Now the **authoritative** verification — an isolated Swift 6 strict-concurrency SwiftPM build+test of the shipped surface against the REAL design tokens plus faithful copies of the in-module seams (`UnitPreferences`, `.metric/.imperial`, `\.tsUnits`). Let me build that harness.
+
+Now the faithful in-module seams (`UnitPreferences`, `.metric/.imperial`, `\.tsUnits`) copied verbatim from the real sources, plus the `Package.swift`:
+
+Now build + test the harness under Swift 6:
+
+Surface compiles clean under Swift 6 (incl. `#Preview` macros + `@Observable`). Now run the test suites:
+
+**Authoritative verification GREEN**: isolated Swift 6 build = 0, **38/38 tests pass** on the macOS SDK (arm64). Let me capture the per-suite breakdown, then assess the full-app `xcodebuild` gate (project wiring + Shared.xcframework dependency).
+
+All 38 tests broken down across 8 suites (Formatting 12, Projection 9, Model 5, Selection 4, Type 2, Meta 2, Accessibility 2, Views 2). The project needs a Gradle-built `Shared.xcframework` (absent; built by a prebuild script). Let me confirm `.xcodeproj`/xcframework are git-ignored, read the build script, and generate the project.
+
+`.xcodeproj`/xcframework are **not** git-ignored in this checkout — so I'll add only my specific files at commit time and clean up after. The full build triggers a Gradle Kotlin/Native xcframework build (prebuild script). Let me generate the project (proves my files integrate) and attempt the real iOS gate to capture the actual baseline.
+
+`xcodegen generate` succeeded and registered all Range.* files (48 target memberships). Now let me attempt the real iOS gate command — it triggers the Gradle xcframework prebuild, so I'll run it in the background and capture to a log.
+
+Gradle works (2s probe) and iPhone 16 sim is booted — the full gate is feasible. Let me run the real iOS gate command in the background (it triggers the Gradle xcframework prebuild + compiles the app), capturing to a log.
+
+Build process is running (PID 58798); xcodebuild buffers output. Let me wait for the Gradle prebuild + compilation to progress.
+
+The redirect log isn't materializing under the ephemeral sync sessions, though xcodebuild is running. Let me check actual build progress via the filesystem (xcframework output, DerivedData) and restart cleanly under the async tool for reliable monitoring.
+
+Gradle is actively building the Kotlin/Native xcframework (feasible here). But the orphaned xcodebuild has no readable log. To capture the real result honestly, I'll stop the orphan and re-run the gate under the async tool with a tee'd log I can monitor. Let me find and kill the orphan xcodebuild PIDs.
+
+Orphan stopped. Now I'll run the real iOS gate under the async tool (detached) with a tee'd log for reliable monitoring:
+
+The iOS gate is building (Gradle xcframework + full app compile — several minutes). Let me monitor progress.
+
+Gradle xcframework assembly is progressing (debug done, building release). Let me keep monitoring.
+
+Gradle is in the slow Kotlin/Native release-link phase (`linkReleaseFrameworkIosSimulatorArm64`) — CPU-heavy. Let me give it more time.
+
+Xcframework staged; the app is now compiling (`EmitSwiftModule` for TeslaSync). This is where any duplicate-symbol errors surface. Let me wait for the compile result.
+
+Already a key signal: the **1 error so far is in an unrelated sibling surface** (`AIGeofenceAwareAutomationSuggestions.swift`), **0 in Range.\***. xcodebuild (PID 73221) is still compiling. Let me read the async shell and keep monitoring to completion.
+
+**Definitive iOS result**: `** BUILD FAILED **` / `** TEST FAILED **`, with exactly **1 error — in a pre-existing unrelated sibling surface** (`AIGeofenceAwareAutomationSuggestions.swift`), **0 in Range.\***. Let me capture the exact error, confirm it's pre-existing (not mine) via git, stop the lingering process, then run the macOS gate.
+
+Confirmed: the lone iOS error is in `AIGeofenceAwareAutomationSuggestions.swift` (tracked in HEAD — pre-existing, not mine); my 9 Range.* files are the only additions and produced **0 errors**. Let me stop the lingering process and run the macOS gate.
+
+macOS gate now (xcframework cached, so faster). Running under async with a tee'd log:
+
+macOS also baseline-RED (4 errors, none in the `apps/apple/*.swift` pattern — likely signing/entitlements). Let me capture the exact 4 errors to root-cause.
+
+macOS baseline-RED on the **documented dev-signing blocker** (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` entitlements require a development certificate) — a runner-capability condition, **0 errors in Range.\***. Let me reconcile the iOS-vs-macOS difference honestly: did macOS actually compile my Range files (and the AIGeofence file)?
+
+macOS failed **early at signing** (entitlements need a dev certificate) — before compiling any sources — the documented unsigned-runner blocker; **0 Range errors**. Both gates are baseline-RED on pre-existing/environmental conditions outside my files. Let me capture the authoritative raw exit codes via an incremental re-run (DerivedData + xcframework now warm).
+
+While that runs, let me verify my final file set and re-confirm the cheap gates are still green on the exact committed files. Let me poll the exit-capture shell after a wait.
+
+iOS incremental still finishing (BUILD FAILED already present). Let me wait for both exit codes via the capture shell.
+
+Authoritative raw exits captured: **IOS_EXIT=65, MAC_EXIT=65**. Let me confirm the fresh logs show the same root causes and still 0 Range.* errors.
+
+Both gates baseline-RED (EXIT=65) on **pre-existing, tracked, unrelated files** (iOS: `AIGeofenceAwareAutomationSuggestions.swift` + `RecentDrivesSection.Previews.swift`; macOS: dev-signing) — **0 Range.\* errors in either**. Let me confirm those files are pre-existing and run the full-set lint gates exactly as the gate specifies.
+
+Both error files confirmed **pre-existing/tracked**. Full-set `swiftlint --strict` = **EXIT=0**. Now the full `swiftformat --lint apps/apple` gate:
+
+Full-tree `swiftformat --lint` = **EXIT=0 (0/4404)**. All cheap gates GREEN; only the full-app xcodebuild is baseline-RED on pre-existing/environmental conditions. I have complete evidence. Let me write the gate log.
+
+Now the gate log with the full honesty-covenant accounting:
+
+Now clean up build artifacts (generated `.xcodeproj`, staged xcframework) so the tree contains only my intended files. Let me inspect the full git status first.
+
+git status shows **only** my 9 Range.* files + the log — the generated `.xcodeproj`/xcframework are git-ignored. Let me confirm that and clean up the on-disk build artifacts to leave a tidy workspace.
+
+Tree is tidy — only the 9 Range.* files + the log are untracked (artifacts are git-ignored and removed). Let me stage exactly those and commit.
+
+All 10 files staged. Let me commit with the prescribed message.
+
+Committed (`f9a8ca508`, 10 files). Let me verify the working tree is clean and finalize todos.
+
+Working tree clean, artifacts removed, `.gitkeep` intact, all todos done. Let me clean up the throwaway build harness (session workspace) and verify the commit is intact.
+
+Task complete. The P4 shared surface **0087 — `Range` (Apple)** is shipped, verified, and committed (`f9a8ca508`), with a clean working tree.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0087-Range.log   | 155 ++++++++++++
+ .../TeslaSync/shared-surfaces/Range.Adapter.swift  | 273 +++++++++++++++++++++
+ .../shared-surfaces/Range.AdapterTests.swift       | 224 +++++++++++++++++
+ .../TeslaSync/shared-surfaces/Range.Model.swift    | 114 +++++++++
+ .../TeslaSync/shared-surfaces/Range.Previews.swift |  75 ++++++
+ .../shared-surfaces/Range.Projection.swift         | 153 ++++++++++++
+ .../TeslaSync/shared-surfaces/Range.Tests.swift    | 246 +++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Range.Views.swift    |  56 +++++
+ apps/apple/TeslaSync/shared-surfaces/Range.strings |  27 ++
+ apps/apple/TeslaSync/shared-surfaces/Range.swift   | 143 +++++++++++
+ 10 files changed, 1466 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0087-Range.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Range.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Range.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Range.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Range.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Range.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Range.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Range.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Range.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Range.swift

@@ -1,0 +1,106 @@
+I'll start by understanding the task: building a native Apple/SwiftUI version of the `StickyCompactHero` web component. First, let me assess the environment and capabilities.
+
+Environment is capable: macOS with Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, and pwsh all available. The web source and `apps/apple/` both exist. Let me read the web source (the spec) and explore the Apple app structure.
+
+Now let me read the `HeroStatus` type definition and explore the existing `shared-surfaces` to match conventions.
+
+The `shared-surfaces` dir is large. Let me find existing surface implementations to match conventions, check for any existing StickyCompactHero, and locate the core dependencies (state holders, tokens, i18n, diagnostics).
+
+Clear pattern: each surface is decomposed into `.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Seams`, `.Previews`, `.Tests`, `.strings`. No existing StickyCompactHero/StatusHero. Let me study a complete representative surface (`ActiveFilterChips` — also presentational) to learn the exact conventions.
+
+`ActiveFilterChips` is the ideal model — explicitly "purely presentational... no fetcher." Let me read its remaining files and the project config to understand build inclusion and the full file-set convention.
+
+Excellent. Now I understand the token system (`TSSpacing`, `Color.TS`, `Font.TS`). Let me read the remaining example files, find the token/color definitions (P1/S9), and check how `project.yml` includes source files.
+
+I have a thorough grasp of the conventions. `ActiveFilterChips` is the perfect template — a sibling presentational surface that explicitly documents the correct parity interpretation (reproduce only the source's REAL branches, never fabricate loading/error/stale/offline for a fetch-less component). Now let me locate the P1/S9 design tokens (`Color.TS`, `Font.TS`, `TSSpacing`) and the build config.
+
+Key finding: sources use **glob inclusion** (`path: TeslaSync/shared-surfaces`, excluding `*Tests.swift`), so my new files auto-include. Tokens come from `../design/generated/apple`. Let me inspect the generated tokens (P1/S9) and the test-target config.
+
+I now have the full token vocabulary and test-target wiring. Status colors map cleanly: `statusSuccess`/`statusWarning`/`statusDanger`/`statusInfo`/`textMuted`. Let me verify the build prerequisites (xcodeproj/xcodegen, Shared.xcframework), the placeholder checker, and lint config.
+
+Important: `Frameworks/Shared.xcframework` is absent (only `.gitkeep`), yet both app targets depend on it. This could block the full `xcodebuild build test`. Let me investigate whether the framework can be produced, read the placeholder checker, and the `.gitkeep` note.
+
+The placeholder checker forbids the literal word "Placeholder"/"TODO"/etc. (case-insensitive) in Swift — I'll avoid those words entirely. Critically, `Frameworks/Shared.xcframework` is built by a script and is git-ignored/absent. Let me assess whether building it (and thus the full app) is feasible here.
+
+KMP shared module exists (`apps/shared/gradlew`) but the framework must be Gradle-built with the Kotlin/Native toolchain. My surface code depends only on SwiftUI + the design tokens (not the KMP framework), so I can verify it in isolation regardless. Let me probe whether the full-app build chain (Java/Gradle/KMP) is even feasible here, then decide.
+
+Full chain is potentially feasible: Java 17 present, iPhone 16 simulator booted, KMP module has gradlew. The KMP framework build is the long pole (Gradle + Kotlin/Native download/compile). Let me kick it off in the background now so it builds while I write code, then I'll run the real gate against it.
+
+KMP framework build is running in the background. While it builds, I'll set up tracking and implement the surface. Let me record the plan and todos, and peek at the build.
+
+The KMP build is progressing nicely (many tasks `FROM-CACHE`, Kotlin/Native downloading). The full gate looks feasible. Let me write the plan and start implementing while it builds.
+
+Now implementing. Starting with the Foundation-only Adapter core.
+
+Adapter done. Now the Model (Strings facade + telemetry seam + `@Observable` state-holder).
+
+Model done. Let me check the KMP build progress, then write the Views.
+
+KMP build is nearly done (debug XCFramework written, release linking). Writing the Views now.
+
+Views done. Writing the public surface.
+
+Surface done. Let me check the KMP build and write the Previews + strings.
+
+Release frameworks linking. Writing Previews and the strings catalog.
+
+Writing the test files (pure-core AdapterTests + model/views/strings Tests).
+
+Writing the model/views/strings tests.
+
+All 8 files written. Let me check the KMP build and begin verification with an isolated `swiftc` typecheck of my sources + tokens (proves compilation independent of the full app).
+
+Release frameworks still linking. Meanwhile, let me run an isolated `swiftc` typecheck of my sources + tokens (macOS SDK, DEBUG on) — fast, and proves my code compiles regardless of the heavy app build. Also checking the project's Swift version.
+
+Isolated macOS typecheck **passed** under the app's exact settings (Swift 6.0, strict concurrency `complete`). Now the iOS-SDK typecheck, plus I'll set up an isolated SwiftPM harness to actually *run* my XCTest cases independent of the heavy app build.
+
+Both isolated typechecks pass (iOS + macOS, Swift 6, strict concurrency `complete`), and **`Shared.xcframework` built successfully** and is staged — the full app build is now unblocked. Let me run the fast, controlled gates scoped to my files first: swiftformat, swiftlint, placeholders.
+
+Formatting issues — let me auto-fix with the ecosystem tool (swiftformat), then review and re-verify.
+
+Let me review swiftformat's changes to the surface file (the `EmptyView` removal) and re-run both linters.
+
+swiftformat's changes are correct (the implicit empty false-branch still drives the transition via `.animation`). Re-verifying all scoped gates + re-typecheck.
+
+All scoped gates green (swiftformat 0/7, swiftlint 0 violations, macOS typecheck exit 0). Now the placeholder gate — I'll scan my actual files (via a temp copy) and grep for forbidden words.
+
+My files are fully clean (no forbidden words; PLACEHOLDER_COUNT=0). Now the full app gate. The framework is staged — let me generate the Xcode project, then build. Setting up a persistent build shell with `JAVA_HOME` (the pre-build script invokes Gradle).
+
+Project generated; both `TeslaSync` and `TeslaSync-macOS` schemes exist, and my globbed files are included. Now the heavy step: building the full iOS app (compiles all app sources incl. mine) for testing. Starting it in a persistent shell with `JAVA_HOME` set.
+
+iOS build running. Let me monitor it.
+
+The build failed — but the error is in a **pre-existing, unrelated sibling file** (`AIGeofenceAwareAutomationSuggestions.swift:141`), NOT my code. My code already passed isolated iOS+macOS Swift 6 typechecks. Let me assess the full scope of pre-existing breakage and confirm my files are untracked/new.
+
+Confirmed: the **only** build error is the pre-existing `AIGeofenceAwareAutomationSuggestions.swift:141` (a sibling file I didn't create/modify and which is outside my allowed-files scope). My files are all new and produce zero errors. Let me check whether that sibling is referenced elsewhere (cascade risk) and set up an isolated SwiftPM harness to actually *run* my tests in a real `TeslaSync` module.
+
+Cascade risk exists (`AINLAutomationBuilder` references that area), so I won't quarantine. Instead I'll run my tests in a clean isolated SwiftPM `TeslaSync` module — definitive proof my tests pass, without mutating the repo.
+
+**All 34 tests pass** in a real isolated `TeslaSync` Swift 6 module. My surface is now verified by: iOS+macOS typecheck (app settings), SwiftPM test run (34/34), swiftlint, swiftformat, placeholders. The aggregate app build is blocked solely by the pre-existing `AIGeofenceAwareAutomationSuggestions.swift` defect.
+
+To get real-target (not just isolated) evidence, let me check whether that broken sibling can be temporarily quarantined without cascade.
+
+Cascade-safe — the only references to that broken sibling are in **comments**. I'll temporarily quarantine it to obtain real-target build+test evidence for my surface, then restore it. Quarantining now and regenerating the project.
+
+Quarantined (11 files) and regenerated. Now re-running the iOS build-for-testing (incremental — derived data is warm).
+
+A **second** pre-existing sibling (`AISuggestNewGeofences.swift:129`) has the *identical* `@escaping`/`content` bug — this defect is widespread across sibling surfaces and clearly not mine. Quarantining further would be an out-of-scope swamp. Let me restore the quarantined file, regenerate, and quantify the pre-existing breakage for honest evidence.
+
+Restored and regenerated. Confirmed: my surface is clean (my Previews' `staged` helper calls `content()` inside a non-escaping `VStack` builder — which is why my isolated typecheck passed, unlike the buggy siblings that pass it to an escaping panel closure). The aggregate gate is blocked by widespread pre-existing defects. Let me confirm the tree is clean and capture the macOS aggregate result too (not assuming) while I write the log.
+
+Tree is clean (only my new files + the generated, gitignored `.xcodeproj` differ; the broken siblings are unmodified). The macOS build is running. Let me verify the log directory exists and peek at the macOS build.
+
+macOS aggregate build is **doubly blocked**: first by code-signing (no macOS development certificate in this headless runner — an environment capability gap), and it shares the same pre-existing sibling source. To avoid assuming the compile result, let me run the macOS build with signing disabled to capture the real compile-level outcome, while I write the log.
+
+Let me wait for the macOS compile-level result before finalizing the log.
+
+macOS confirms the aggregate is blocked too (signing cert gap on the true tree; with signing disabled it still fails on app-wide compile batches that include the same pre-existing broken siblings) — and crucially **zero StickyCompactHero errors on either platform**. I have complete, honest evidence. Writing the gate log now.
+
+Let me fix the literal `$(date)` in the log with the real timestamp, and review exactly what would be committed.
+
+Git sees exactly my 8 files + the log (everything else gitignored). My decision: commit the verified, in-scope-green deliverable + the honest log, with a transparent message. The surface passes every in-scope + isolated check; the aggregate gate's red is entirely external (pre-existing out-of-scope siblings + macOS signing), so committing introduces no red of my own and preserves the work — while the log records the true non-zero aggregate exits and STATUS=BLOCKED (no red-as-green).
+
+Committed: 9 files, 1451 insertions on branch `auto/20260611-013149-26127/156`. Let me finalize todos and clean up generated/temp artifacts (all gitignored — won't affect the commit).
+
+All todos done, committed, and the working tree is clean (generated/temp artifacts — all gitignored — removed). The deliverable is complete and verified; the only outstanding item is the aggregate gate, which is externally blocked and outside my allowed scope to fix.
+

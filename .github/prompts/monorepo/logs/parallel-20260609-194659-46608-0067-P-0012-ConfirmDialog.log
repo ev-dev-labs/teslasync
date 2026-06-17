@@ -1,0 +1,192 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me study the existing modal examples to understand the established patterns. I'll read the `SessionExpiringModal` set (the simplest) in full.
+
+Let me read the remaining SessionExpiringModal files and the shared infrastructure.
+
+Let me read the test files, previews, strings, and find the shared design-system primitives.
+
+Now let me find the shared design-system primitives and any text-field component (since ConfirmDialog needs a typed-confirmation input).
+
+The shared design system is in `apps/apple/Sources/`. Let me explore it and the key primitives.
+
+Let me read the web tokens (severity), and the native primitives: Inputs/Fields, Cards, Typography, Motion, and the generated tokens.
+
+Let me examine `AddAnnotationPopover` (closest to a form/presentational modal) and the typography/token primitives.
+
+The architecture is now clear. Let me read the typography primitives and the generated design tokens to confirm exact symbol names.
+
+Let me check the project config (target membership, test setup) and verify the build toolchain availability.
+
+Key finding: `modals-dialogs` is **not** yet wired into `project.yml` (neither are the sibling surfaces) — each parallel prompt drops files there for later integration. The toolchain is fully available. Let me check build feasibility and lint configs.
+
+Let me inspect the Shared.xcframework build script (the build pre-action) to gauge whether a full `xcodebuild` is feasible here.
+
+I have a complete picture now. Key facts:
+- Toolchain present (Xcode 26.5, swiftlint, swiftformat, xcodegen, pwsh).
+- `modals-dialogs/` is **not** wired into `project.yml` or `.swiftlint.yml` (sibling surfaces aren't either) — the P4 acceptance gate integrates them later. I'm restricted to `ConfirmDialog.*` files, so I'll match the established pattern exactly so it compiles/lints/tests cleanly once integrated.
+- `swiftformat --lint apps/apple` and `check-placeholders.ps1` *will* inspect my files; the full `xcodebuild` needs a heavy KMP/Gradle `Shared.xcframework` build.
+
+Let me set up tracking and kick off a baseline build probe while I write code.
+
+The iPhone 16 simulator is booted and git is clean. Let me kick off a baseline build probe (it triggers the heavy KMP `Shared.xcframework` Gradle build) in the background while I write the code.
+
+The build probe is running (KMP Gradle step). Let me read the web silence helper to faithfully port it, then start writing files.
+
+I have everything I need. The build probe is running in the background. Let me write the files, starting with the pure-Foundation **Adapter** (the testable projection core).
+
+Adapter written. Let me check the build probe progress, then write the Seams file.
+
+Build still running (KMP Gradle). Let me write the **Seams** file (telemetry, confirm/cancel controller, silence store, source, i18n facade, accessibility).
+
+The build probe is still running. Let me write the **Model** (the `@Observable` state holder).
+
+The build probe completed. Let me read its result — this tells me whether the gate's `xcodebuild` is viable here.
+
+The macOS build fails on **code-signing/entitlements** (no development certificate in this environment) — an environmental limitation, not a compile error, and it happens before compilation. iOS Simulator builds typically don't need signing. Let me probe the iOS Simulator build (the gate's primary target) in the background while I continue writing.
+
+The iOS Simulator build got past signing (with `CODE_SIGNING_ALLOWED=NO`) and the KMP framework, and compiled most of the app — but it **fails on pre-existing sibling files** (`VehicleGauges.Previews`, `TemperatureTrendChart`, `TemplateGallery`, `TeslaAccountSection`), none of which are mine. Let me capture the actual errors and check whether the design-system subset is self-contained.
+
+Critical finding: the pre-existing failures are **type-name collisions** across independently-generated parallel surfaces (e.g., `RecentDrivesLoadStatus`/`RecentDrivesModel` declared by both a widget and a section → "ambiguous for type lookup"), plus macOS signing. Both are outside my scope/allowed files. The design system imports only system frameworks (no `Shared`), so I can verify my surface in isolation.
+
+First, the #1 lesson: I must ensure **my type names don't collide** with any other surface. Let me check.
+
+One collision: `ConfirmSilenceStore` already exists in `PrivacySection.Model.swift`. Let me inspect it and check my related names.
+
+`ConfirmSilenceStore` (and the `UserDefaults`/`InMemory` variants) are already declared by `PrivacySection`/`AdvancedSettings`. I'll prefix mine with `ConfirmDialog` to be unique. Let me verify the new names plus all my view-struct names are collision-free.
+
+All clear. Let me rename my silence-store types to the unique `ConfirmDialog`-prefixed names in both Seams and Model.
+
+Now the **States** file (loading/empty/error/inline-error/freshness chip/connectivity banner).
+
+Now the **Views** file (panel, header, message panel, typed field, silence toggle, confirm button, footer).
+
+Now the main **ConfirmDialog.swift** view (top-level visibility switch).
+
+Now the **strings** catalog (all i18n keys).
+
+Now the **Previews** file (one per state).
+
+Now the **adapter/projection/accessibility tests** (pure, bundle-free).
+
+Now the **ModelTests** (state-holder coverage).
+
+All 11 files are written. Now the critical verification: since the full app can't compile in this environment (pre-existing cross-surface name collisions + macOS signing), I'll **type-check my surface in isolation** against the real design system. Let me update todos and run Pass 1 (shipping code).
+
+The error is in `Components/DataDisplay/UnitFormatters.swift` (depends on `UnitPreferences` defined outside Components) — **not my code**. Compiling *all* of Components pulls in files with external deps. Let me use a surgical dependency set instead. First let me check `TSMaterial` deps.
+
+`TSMaterial` only needs tokens. Let me run Pass 1 with a surgical dependency set.
+
+Pass 1 passes — my **shipping code type-checks cleanly** against the real design system (Swift 6, iOS 18 simulator SDK). Now let me verify the Previews and Tests. Let me get the XCTest framework path and check `Badges` (needed by a component preview).
+
+Both are self-contained. Let me run Pass 2 (Previews, with `DEBUG`) and Pass 3 (Tests, via a prebuilt testable module).
+
+Pass 2 passes (Previews compile under `DEBUG`). Now Pass 3 — the tests, via a prebuilt `-enable-testing` module.
+
+The Step B errors are purely an **XCTest toolchain-resolution artifact** of raw `swiftc` (the `XCTAssert*` C macros aren't found, which cascades) — not a defect in my tests. Step A proved my source builds as a testable module. Let me locate XCTest properly and retry for a clean test typecheck.
+
+Found them: `XCTest.swiftmodule` is in `Developer/usr/lib`. I was missing that `-I` path. Let me retry Step B.
+
+All three passes succeed — **shipping code, previews, and tests all type-check cleanly**. Now let me run the formatter, linter, and placeholder checks on my files.
+
+swiftformat found wrapping/indent issues (long lines in Model/Seams, and the `#if os(iOS)` block in Views). Let me auto-fix with the ecosystem tool, then re-verify compilation.
+
+Let me inspect the long lines (Seams:247, Model:147-154) and fix the `#if` block cleanly with a helper before auto-formatting.
+
+Let me fix the three structural spots, then auto-format.
+
+Now replace the inline `#if os(iOS)` modifier with a clean helper in Views.swift.
+
+Now let me run swiftformat in write mode to normalize, then re-lint to confirm clean.
+
+Format is clean (0/9 require formatting). Since I edited 3 files, let me re-run all compile passes and run swiftlint.
+
+All four compile checks pass (swiftc exit 0). Now swiftlint on my files.
+
+swiftlint flags only `ConfirmDialog.ModelTests.swift`: file too long (429>400) and class body too long (288>250). I'll split into two focused test classes and move shared helpers to file-private functions — keeping all tests. Let me rewrite it compactly.
+
+swiftlint is clean. swiftformat wants the compact `confirmCount`/`cancelCount` property bodies wrapped. Let me auto-fix and re-verify.
+
+Both formatters are clean and ModelTests is 392 lines. Let me re-typecheck the tests (changed) and run the placeholder gate.
+
+The placeholder checker flags the word "placeholder" — but in my code it refers to the **text-field placeholder** (a real UI concept), not a stub. Let me see how sibling surfaces handle this and check the exact matches.
+
+Siblings avoid the word "placeholder" entirely (the checker bans it as a stub marker). I'll rename my `placeholder` → `prompt` (SwiftUI's own term) and reword the comments. Let me find all occurrences in my files.
+
+Let me rename `placeholder` → `prompt` (SwiftUI's own term) across both files.
+
+Let me re-verify everything after the rename: no "placeholder" left, compile, format, lint, and placeholders.
+
+All four checks are clean. Now let me run the placeholder gate exactly as specified and confirm my files are clean.
+
+All surface-scoped checks pass: **shipping + previews + tests type-check**, swiftformat clean, swiftlint clean (0 violations), placeholders 0. 
+
+Now I'll run the actual gate `xcodebuild` steps to capture honest evidence for the log. Let me start the iOS `build test` (slow) in the background and run the macOS step meanwhile.
+
+iOS gate running. Let me capture the macOS gate step and the fast checks meanwhile.
+
+macOS gate fails with `MAC_EXIT=65` (code-signing — no dev cert). The iOS gate finished; let me read it.
+
+Confirmed: `IOS_EXIT=65` — **pre-existing cross-surface type collisions** (`RecentDrives*`, `StateTimeline*` declared by two sibling surfaces each) in `dashboard-widgets`/`feature-views` — not my files, not in my allowed scope. Let me capture the remaining gate steps (whole-tree swiftlint/swiftformat).
+
+Gate step results captured: `LINT_EXIT=0`, `FORMAT_EXIT=0` (whole tree, includes my files), `PLACEHOLDER_EXIT=0`; `IOS_EXIT=65` and `MAC_EXIT=65` both fail for **pre-existing/environmental** reasons. Let me check how sibling surfaces' logs recorded their status, to follow the established convention.
+
+There are direct-sibling logs with my exact naming convention (`p4-apple-modals-dialogs-0002/0005`). Let me read their tails to follow the precedent for STATUS and the commit convention.
+
+This is the authoritative precedent: both direct-sibling prompts (`AddAnnotationPopover` 0002, `JobProgressDrawer` 0005) reached **`EXIT=0 / STATUS=DONE`** with the full-app `xcodebuild` **DEFERRED** (same pre-existing `RecentDrives*`/`StateTimeline*` collisions + macOS signing), because every *surface-scoped* gate is green and the surface independently compiles + tests. My situation is identical.
+
+To match their rigor (they *ran* their tests + verified the macOS SDK), let me actually **run** my tests via an isolated SwiftPM package (covers macOS build + test execution).
+
+**43 tests pass, 0 failures** on the macOS host build (this also proves macOS compilation of the `#if os(iOS)` guard). My full verification matrix is complete. Let me clean up temp artifacts and confirm git only sees my files.
+
+Git is clean — only my 11 `ConfirmDialog.*` files are untracked; the generated `.xcodeproj` is ignored and no shared files were touched. Now let me write the comprehensive gate log following the sibling convention.
+
+Now let me commit the surface and log, following the prompt's commit step.
+
+Let me verify the commit landed cleanly.
+
+The commit is complete: **`f5a7add1a`** — 11 files, 2455 insertions, working tree clean, no shared files touched. All todos done.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`ConfirmDialog`** surface (P4 · 0012) at full parity with `web/src/components/ui/ConfirmDialog.tsx`, following the established sibling architecture exactly.
+
+**Delivered (11 files, `apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.*`):**
+- **Adapter** — pure projection core: `variantToSeverity`, `silenceHonored`, `typedMatches`/`confirmDisabled`, phase/visibility machine, caller-label fallbacks + `Type "X" to confirm` template.
+- **Seams** — telemetry (`view.opened`), confirm/cancel controller, the `lib/confirmSilence.ts` registry (`ConfirmDialogSilenceStore` + UserDefaults/InMemory), P1/S8 source, i18n facade, VoiceOver builders.
+- **Model** — `@Observable` state holder: typed/silence form state, in-flight `submitting`, silence auto-resolve, form reset, freshness auto-refresh.
+- **States/Views/ConfirmDialog.swift** — every state renders (loading/empty/error/inline-error/content + Live/Stale/Offline), severity-tinted message block, typed-confirmation field, "Don't ask again" toggle, danger/warning confirm button, full a11y + i18n.
+- **strings, Previews (9 states), Tests, ModelTests**.
+
+**Verification (every surface-scoped gate GREEN):**
+- iOS-18 SDK typecheck (shipping + previews + tests): **0 errors**
+- macOS host build + **ran 43/43 tests, 0 failures**
+- `swiftformat --lint`: **0/3275** · `swiftlint --strict`: **0 violations** · placeholders: **0** · `xcodegen`: OK
+- No type-name collisions (renamed silence types to `ConfirmDialog*`-prefixed after checking the module)
+
+**Deferred (surface-independent, per sibling precedent):** the full-app `xcodebuild build test` exits 65/65 — iOS aborts on **pre-existing** `RecentDrives*`/`StateTimeline*` duplicate-type collisions in *other* surfaces, macOS on dev-signing. Both are owned by the P4 acceptance gate, not this surface. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-modals-dialogs-0012-ConfirmDialog.log | 162 +++++++++
+ .../modals-dialogs/ConfirmDialog.Adapter.swift     | 259 ++++++++++++++
+ .../modals-dialogs/ConfirmDialog.Model.swift       | 317 +++++++++++++++++
+ .../modals-dialogs/ConfirmDialog.ModelTests.swift  | 392 +++++++++++++++++++++
+ .../modals-dialogs/ConfirmDialog.Previews.swift    | 131 +++++++
+ .../modals-dialogs/ConfirmDialog.Seams.swift       | 282 +++++++++++++++
+ .../modals-dialogs/ConfirmDialog.States.swift      | 201 +++++++++++
+ .../modals-dialogs/ConfirmDialog.Tests.swift       | 244 +++++++++++++
+ .../modals-dialogs/ConfirmDialog.Views.swift       | 368 +++++++++++++++++++
+ .../TeslaSync/modals-dialogs/ConfirmDialog.strings |  48 +++
+ .../TeslaSync/modals-dialogs/ConfirmDialog.swift   |  51 +++
+ 11 files changed, 2455 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0012-ConfirmDialog.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.swift

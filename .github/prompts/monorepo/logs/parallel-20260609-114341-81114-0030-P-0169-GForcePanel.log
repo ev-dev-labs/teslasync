@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+PedalUsage is in the same web feature dir and uses DriveDynamics. Let me study it as the canonical reference.
+
+Excellent reference. Let me read the rest of the PedalUsage file set and find the native StatCard equivalent.
+
+Now let me look at the web `StatCard` component and find the native equivalent, plus verify the shared tokens exist.
+
+I have everything I need. Let me set up tracking and write the plan, then create the 7-file surface following the canonical PedalUsage pattern.
+
+Now creating the surface files. Starting with the Model (state-holder, telemetry, i18n seams):
+
+Now the Adapter (pure projection core, SwiftUI-free):
+
+Let me check the full Font.TS set and the typography helpers to match StatCard typography precisely.
+
+Now the Views file (presentational chrome):
+
+Now the main view file:
+
+Now the Previews and strings files:
+
+Now the comprehensive test file:
+
+All 7 files created. Now let me check the gate toolchain availability on this runner.
+
+Full toolchain is available — no BLOCKED needed. Let me set up the gate log and iterate on format/lint for my new files first (fast), then build/test.
+
+Configs noted (maxwidth 120, `--self remove`, `before-first` wrapping; swiftlint strict). Let me format/lint my new files first to iterate quickly.
+
+Two issues: a `conditionalAssignment` and two long lines. Let me view and fix.
+
+swiftformat clean. Now swiftlint on my files:
+
+One violation: `function_parameter_count` (6 > 5). Mirror PedalUsage's spec-bundling approach. Let me refactor the projector.
+
+Both clean on my files. Now the placeholder check, then generate the project and build/test.
+
+Placeholder check passes. Now let me generate the Xcode project and inspect schemes.
+
+Need to generate the project with xcodegen. Let me check the test-target wiring then generate.
+
+A KMP `Shared.xcframework` build script exists but the framework isn't staged. Let me assess whether it's buildable here.
+
+KMP shared module is present. The xcframework builds via Gradle (heavy, possibly network-dependent). Let me verify the pre-build wiring and simulator, then attempt the real build.
+
+Pre-build script is wired and iPhone 16 simulator is booted. Let me first verify Gradle can build the KMP xcframework (the main risk) before the full build.
+
+The KMP build needs longer than 240s (cold Kotlin/Native toolchain download + compile). Let me run it in the background with logging and monitor.
+
+Kotlin/Native toolchain is already cached — build is feasible, just slow. Let me run it in the background with logging.
+
+Build running in background. Let me monitor it and meanwhile check for any symbol-name collisions with existing code.
+
+The background build completed. Let me check its result and verify no exact type-name collisions.
+
+The xcframework wasn't staged yet — let me check the full build log for the outcome.
+
+The build was nearly done (mostly cached) but the backgrounded process got cut off. Let me run it synchronously to completion — it should be fast now that tasks are cached.
+
+Kotlin/Native release linking is slow and output is buffered through the pipe. Let me continue waiting.
+
+Let me check progress from a separate shell without disturbing the running build.
+
+Build is progressing (release frameworks being linked) but slow due to shared-machine CPU contention with parallel slots. Let me keep waiting.
+
+Shared.xcframework is built and staged. Now let me set up the gate log and run the full Xcode build (compiles the entire app including my new files).
+
+Now the iOS build — this compiles the entire app including my new surface. Running it (long, with CPU contention from parallel slots):
+
+Build produced lots of output. Let me check the result and any errors.
+
+**BUILD SUCCEEDED** with zero errors — my GForcePanel files compiled cleanly into the app. Now let me run my surface's tests (scoped first for fast, definitive verification), reusing the built derived data.
+
+The test-bundle build failed — but the errors are in **other surfaces' pre-existing test files** (`MonthlyCostChart.Tests.swift`, `MonthlyCostTable.Tests.swift`), not mine. Since they share the `TeslaSyncTests` bundle, they block compilation of all tests. Let me confirm these are pre-existing and outside my scope.
+
+Confirmed: only my `GForcePanel.*` files are new; the `MonthlyCost*` test errors are pre-existing (committed at `defbf96f8`), untouched by me, and outside my allowed-files scope. Let me verify those errors are real pre-existing duplicates.
+
+Both `MonthlyCostAccessibilityTests` and `SpyMonthlyCostTelemetry` are duplicated across two pre-existing `MonthlyCost*` surface test files — a predecessor bug that breaks the shared `TeslaSyncTests` bundle and is outside my allowed-files scope. My tests can't execute in the bundle.
+
+To still prove **my** test logic is correct, let me compile my SwiftUI-free `Model` + `Adapter` standalone with `swiftc` and run my real assertions against them.
+
+Multi-file compilation requires the top-level-code file to be named `main.swift`. Let me fix that.
+
+The semaphore deadlocks the MainActor in a CLI tool. Let me stop it and use `MainActor.assumeIsolated` instead.
+
+**61/61 logic assertions pass** against the real Model + Adapter code. My surface logic is fully verified. The test *execution* in Xcode is blocked only by the pre-existing `MonthlyCost*` bundle errors.
+
+Now let me run the macOS build (cross-platform check) in the background while I run the whole-project lint/format gate steps.
+
+While macOS builds, let me run the whole-project format/lint gate steps.
+
+swiftformat passes for the entire project (0/2739 need formatting). The macOS build finished — let me check it, then run swiftlint.
+
+macOS build failed only on **code-signing** (no dev certificate on runner; `DEVELOPMENT_TEAM` is empty) — zero GForce errors. Let me retry macOS with signing disabled to confirm my code compiles there, and run swiftlint meanwhile.
+
+The single swiftlint violation is in `LiveSignalSparklinesWidget.Builder.swift` (a dashboard-widget) — pre-existing, not mine. My files have **0 violations**. Let me confirm these blockers are all pre-existing and check the macOS rebuild.
+
+Confirmed — all blockers are pre-existing (empty diffs); my change set is exactly the 7 `GForcePanel.*` files + log. The macOS rebuild (signing off) is still compiling. Let me wait for it.
+
+macOS build is actively compiling (GForcePanel included). Let me wait for completion.
+
+macOS **BUILD SUCCEEDED** (signing disabled) — my surface compiles on both iOS and macOS. The earlier macOS failure was purely missing dev-signing certificate (environment).
+
+Full picture is now clear. Let me assemble the comprehensive, honest gate log.
+
+All evidence captured. Now let me write the complete, honest gate log.
+
+The log is complete and honest. Before committing, let me verify the working tree contains only my intended files (the generated `.xcodeproj` is git-ignored).
+
+Clean — only my 7 files + log; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Let me commit with the prescribed message.
+
+Committed as `90ab4535f` (8 files, 1455 insertions). Let me update tracking and clean up temporary build artifacts.
+
+Task complete. Let me provide the final summary.
+

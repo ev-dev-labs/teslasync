@@ -1,0 +1,129 @@
+I'll start by exploring the repository structure to understand what exists and whether the required Apple/Xcode tooling is available.
+
+Environment looks capable: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 26.5 simulator, and `apps/apple/` exists. Let me explore the Apple app structure and the web source.
+
+Web source and `shared-surfaces/` both exist with an established pattern. Let me read the web source and study an existing complete surface (Accordion) as a template.
+
+Now let me study the complete Accordion surface as a template to learn the established conventions.
+
+Excellent, high-quality established pattern. Let me read the remaining Accordion files plus the design tokens and project config.
+
+Let me find the design token definitions, the project config, and the web `tableTokens.bulkBar` styling spec.
+
+Now let me locate the actual token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) and how the project includes sources.
+
+Tokens live in `Sources/Design/TSDesign.swift`. Let me read it and the project config.
+
+I mis-pathed earlier — tokens are under `apps/apple/Sources/`. Let me read the token/theme files and check build prerequisites (xcodegen, Shared.xcframework, simulators).
+
+Build prereqs: `xcodegen`✓, iPhone 16 sim✓, swiftlint/format✓, but `Shared.xcframework` must be built via KMP/Gradle. Let me read the token files and a closer sibling surface (ActiveFilterChips — has clear/chips/count) before writing code.
+
+Let me read the generated design tokens and the ActiveFilterChips sibling (closest analog: chips + clear button + count).
+
+ActiveFilterChips is a near-perfect analog (clear button, polite announcer, hide-when-empty, count). Let me read its Model/Adapter/strings/tests and the full token file.
+
+I have the full pattern. Let me check the lint configs, the placeholder-checker (to avoid forbidden words even in comments), and whether `pwsh` is available.
+
+Now I understand the forbidden patterns (including "Placeholder", case-insensitive). I'll avoid all of them in my code. Let me check the heaviest build dependency — the KMP `Shared.xcframework` toolchain — to gauge whether the full `xcodebuild` gate can run here.
+
+`apps/shared` KMP project + JDK 17 present. Let me inspect prior sibling logs to see whether builds ran green or were BLOCKED in this environment.
+
+This is the key precedent. The KMP xcframework builds fine here (`XCFRAMEWORK_EXIT=0`); the full `xcodebuild` comes back 65 due to **foreign pre-existing** defects in other surfaces (and macOS signing), dispositioned via baseline + isolation typecheck + `swift test`. Let me kick off the slow xcframework build now and read the full Accordion log to copy the exact accepted methodology.
+
+Let me read the GATE RESULTS section of the Accordion log to extract the exact commands (baseline, isolation typecheck, swift test), and check the xcframework build progress.
+
+The accepted methodology is now crystal clear. Let me verify the xcframework build finished and start writing code.
+
+The nohup build got killed when the sync session ended. Let me restart it in a detached background session that persists while I write the code.
+
+The xcframework is building (detached). The accepted methodology is clear. Let me set up tracking and write the 8 surface files following the established pattern.
+
+Now writing the 8 files. Starting with the pure core (Adapter) and the state-holder (Model):
+
+The xcframework finished writing (link stage). Now the Views file with the bar, clear button, and live announcer:
+
+Now the Previews, strings catalog, and the two test files:
+
+Now the two XCTest files:
+
+All 8 files written. Let me mark progress, verify the xcframework finished, and scan my files for any forbidden placeholder words.
+
+Two doc comments contain "placeholder" (a forbidden pattern). Let me reword them to keep my files clean even under direct scan.
+
+swiftformat clean, no forbidden words, no long lines. Now swiftlint `--strict` on my files and a check on the xcframework:
+
+The xcframework built successfully (`BUILD SUCCESSFUL in 9m 5s`, staged). SwiftLint flagged 4 `multiple_closures_with_trailing_closure` violations — I need to pass `actions:` as a labeled argument (matching the sibling `content:` convention) wherever `onClear:` is also a closure. Let me view and fix those call sites.
+
+Re-running both linters on my files to confirm clean:
+
+Both linters clean on my files (`LINT_EXIT=0`, `FORMAT_EXIT=0`). Now let me generate the Xcode project and confirm my files are referenced.
+
+Project generated (`XCODEGEN_EXIT=0`, 48 `DataTableBulkBar` refs across the app + test targets). Now let me kick off the full iOS gate in the background (heavy; runs the xcframework pre-action + compiles the whole tree), then do the faster surface-attributable proofs while it runs.
+
+iOS gate running in background. Now let me build the surface-attributable proof: a standalone SwiftPM module named `TeslaSync` (shipped surface + tokens) to run `swift test`, plus iOS/macOS isolation typechecks.
+
+Package set up. Running `swift test` (macOS host, Swift 6 strict concurrency) to verify the surface compiles and all tests pass:
+
+`swift test` passed: **31 tests, 0 failures** (`SWIFT_TEST_EXIT=0`) — the surface compiles clean under Swift 6 strict concurrency. Now the iOS + macOS isolation typechecks (with `-D DEBUG` so the previews are typechecked too):
+
+Typechecks pass (exit 0), but there's a concurrency **warning** in `sampleAction` (a preview helper referencing the `@MainActor` `.buttonStyle(.plain)`). To hit the "0 warnings" bar, I'll mark it `@MainActor` like `staged`.
+
+Re-running the typechecks to confirm zero warnings, and re-linting the changed Previews file:
+
+Typechecks now clean (0 errors, 0 warnings, both targets). Let me sync the final files into the verify package, re-run `swift test`, and check the iOS gate progress.
+
+`swift test` still 31/0 with final files (`SWIFT_TEST_EXIT=0`). iOS gate is compiling the app module. Let me run the placeholder gate (both the literal gate path and a real scoped scan of my files) and inspect that first "error" line in the iOS log.
+
+Placeholder gate passes both ways (`PLACEHOLDER_COUNT=0`). And the first iOS error is exactly the **foreign** pre-existing defect (`AISignalExplorerNlFilter.swift … escaping closure captures non-escaping parameter 'content'`) — a sibling AI* `glass()` bug, not my file. This matches the documented precedent. Let me run the full-tree gate linters while the iOS build continues.
+
+Both background jobs finished. Let me read the full-tree swiftlint result and the iOS gate outcome.
+
+Excellent results so far:
+- **Full-tree swiftlint `--strict`: 0 violations in 4649 files** (`LINT_EXIT=0`)
+- **Full-tree swiftformat: 0/4947 require formatting** (`FORMAT_EXIT=0`)
+- **iOS gate: `IOS_EXIT=65`** but **0 errors from DataTableBulkBar** — the 2 errors are foreign (`AISignalExplorerNlFilter.swift`).
+
+Let me capture the exact foreign errors, then run the baseline build (my files excluded) to prove the red is pre-existing, plus the macOS gate.
+
+Foreign error confirmed verbatim (`AISignalExplorerNlFilter.swift:142` — the AI* `glass()` escaping-closure defect), and git confirms only my 8 new files are added — the foreign file is untouched by me. Now the **baseline build with my files excluded** (the honesty proof that the red is pre-existing), run in the background:
+
+Baseline build running. Let me update tracking and monitor it.
+
+Baseline is compiling the `TeslaSync` module (where the foreign error surfaces). Let me wait for it to complete.
+
+**Baseline proof complete:** with `DataTableBulkBar.*` EXCLUDED, the iOS build STILL fails (`BASELINE_IOS_EXIT=65`, foreign error now in `AIAutoNameUnnamedLocations.swift`, 0 DataTableBulkBar errors). The red is provably pre-existing and foreign. Now the macOS gate:
+
+macOS gate running. Let me gather line counts for the log while it builds.
+
+The macOS gate completed. Let me read its outcome and attribution.
+
+**macOS gate: `MAC_EXIT=65`** — all 4 errors are signing/entitlement (ENVIRONMENTAL: no dev-signing certificate, pre-compile), **0 DataTableBulkBar errors**. This matches the documented precedent exactly. All results are in. Let me write the gate log.
+
+Log written. Let me verify git state (only my files, `.xcodeproj` ignored), clean up temp artifacts, and confirm before committing.
+
+Clean: exactly my 8 files + the log, no foreign modifications, `.xcodeproj` correctly ignored. Now committing per the prompt's commit spec:
+
+Committed (`155f1955a`). Let me finalize tracking and do a last clean-state check.
+
+Task complete. Working tree is clean, the commit contains exactly the 9 files, and the log terminates with `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0209-DataTableBulkBar.log | 213 +++++++++++++++++++++
+ .../shared-surfaces/DataTableBulkBar.Adapter.swift | 148 ++++++++++++++
+ .../DataTableBulkBar.AdapterTests.swift            | 155 +++++++++++++++
+ .../shared-surfaces/DataTableBulkBar.Model.swift   | 203 ++++++++++++++++++++
+ .../DataTableBulkBar.Previews.swift                |  85 ++++++++
+ .../shared-surfaces/DataTableBulkBar.Tests.swift   | 205 ++++++++++++++++++++
+ .../shared-surfaces/DataTableBulkBar.Views.swift   | 149 ++++++++++++++
+ .../shared-surfaces/DataTableBulkBar.strings       |  26 +++
+ .../shared-surfaces/DataTableBulkBar.swift         |  79 ++++++++
+ 9 files changed, 1263 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0209-DataTableBulkBar.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.swift

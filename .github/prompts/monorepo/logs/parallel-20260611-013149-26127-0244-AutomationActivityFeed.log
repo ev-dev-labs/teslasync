@@ -1,0 +1,190 @@
+I'll start by exploring the repository structure to understand the task fully.
+
+Now let me explore the Apple app structure and related artifacts.
+
+Let me explore the Apple app structure deeply to understand existing patterns.
+
+Now let me explore the existing Apple Features to understand the established patterns.
+
+There are many existing Swift files. Let me look at the `feature-views` directory and find a representative page example to follow the established patterns.
+
+I see the established file-splitting pattern. Let me check the ledger, an existing similar page, and the project structure.
+
+The prompt's stated path differs from the actual repo layout. Let me examine the real conventions: existing pages live in `Sources/Features/`, and there's an existing P3 component for AutomationActivityFeed. Let me read both.
+
+Let me check tooling availability and read the model + existing component + project config in parallel.
+
+Toolchain is fully available — the gate can run. Let me read the existing P3 component, the route infrastructure, and project config.
+
+A complete P3 component already exists. The P7 task is the navigable **page** that hosts it. Let me examine the project config, routing infrastructure, and the gate contract.
+
+Both `Sources/Features/` and `TeslaSync/feature-views/` compile into the same `TeslaSync` module. The prompt's `TeslaSync/Features/` path is NOT in the project — pages must go in `Sources/Features/`. Let me read the component's supporting files, design tokens, routing, and gate contract.
+
+The existing component is comprehensive. The page should compose it. Let me examine routing infrastructure, the strings catalog, and the gate contract.
+
+There's already an `automations` route. AutomationActivityFeed is unrouted. Let me read the registry, the component's strings, and the gate contract.
+
+Now let me locate the `Localizable.xcstrings` catalog and check how existing page strings (e.g. `playground.*`) are stored there.
+
+All 7 parity keys already exist in `Localizable.xcstrings` (with a `translation.` prefix). Let me understand how keys resolve and find the design-token primitives.
+
+All 7 parity keys exist only with a `translation.` prefix (the web-mirror namespace); SwiftUI pages use **plain** keys from `Localizable.xcstrings`. I'll build a self-contained page (matching the proven `ApiPlaygroundPage` convention) and add the 7 plain keys. Let me gather the remaining APIs: route composition, token primitives, and the gate contract.
+
+Let me check whether there's a separate routed Automations page (so I don't hijack the `.automations` route), and look at the gate contract + an existing test.
+
+`AutomationsList` owns `/automations`; AutomationActivityFeed is genuinely unrouted. Let me read the gate contract (p4-apple README), the shell's navigation host, and an existing page test to mirror.
+
+Let me read an existing page log to mirror the exact gate invocation and PARITY log format, plus an existing page test.
+
+This is very informative. Let me read the tail of the ApiPlayground log to see how STATUS was resolved given the pre-existing build breakage, and check the current repo state.
+
+I now have the full precedent (ApiPlayground: self-contained page in `Sources/Features/<Domain>/`, path reconciliation logged, gate run, DONE despite pre-existing out-of-scope build breakage). Let me write a plan, then examine the shell's navigation structure to correctly handle this **unrouted** unit.
+
+Let me examine the AppShell navigation structure to determine the safest navigation-registration approach for this unrouted unit.
+
+I'll build a self-contained page (matching the ApiPlayground precedent: own model, strings from `Localizable.xcstrings`), reusing only shared design tokens. Let me read the existing component's data shapes/previews to model representative data correctly, and confirm token APIs.
+
+I have enough architectural understanding. Let me create a plan file, then read the remaining specifics: placeholder scanner triggers, design-token APIs, and an existing test.
+
+Now let me read the design-token component APIs and an existing test to mirror exact signatures.
+
+Let me read the existing test structure, the typography components, and the ledger schema.
+
+I have all token APIs and the test pattern. Let me check the ledger schema/format and the analytics route-registration pattern before writing.
+
+Let me read the rest of the component's Adapter (stats/rows projection) and its Previews to mirror data shapes and formatting precisely.
+
+The component's adapter is fully pure (no string coupling) — ideal for reuse. Let me read its Previews to confirm sample-data scale (e.g., success_rate), then write the page.
+
+`successRate: 93` confirms 0–100 scale. I'll build a fully self-contained page (matching the ApiPlayground precedent), reusing only shared P2/P3 tokens/components. Let me verify the exact web formatting helpers for faithful porting.
+
+I have everything needed for faithful porting. Now I'll write the page. Let me set up todos and create the model file first.
+
+Now I'll create the page model:
+
+Now the page view (main file):
+
+Now the sub-views + render mappings:
+
+Now the navigation registration (NavigationDestination seam for the unrouted unit):
+
+Now the model tests:
+
+Now let me add the strings to the catalog. First, inspect the exact header format and verify keys don't already exist as plain.
+
+None exist yet. Let me insert the 16 keys (7 parity + 8 status labels for a11y + 1 loading a11y) right after the `"strings": {` line, matching the local formatting, then validate JSON.
+
+All 16 keys inserted; JSON validates (8328 strings). Now let me run the gate. First, swiftformat lint and swiftlint on the new files.
+
+swiftformat flagged style issues. Let me auto-fix with swiftformat, then re-lint.
+
+swiftformat clean. Now swiftlint --strict on the new files. Let me check the config first.
+
+swiftlint clean (0 violations). Now the placeholder scan:
+
+Placeholder scan clean. Now the isolated type-check (the key correctness proof). Let me locate the design-system dependency set.
+
+My files and their component dependencies only import SwiftUI. Let me run the isolated Swift 6 type-check against the real tokens/components (macOS), iterating on the dependency set.
+
+FeedbackOverlays (unused) pulls in extra deps — the ApiPlayground excluded it too. Let me use a targeted dependency set instead of whole dirs.
+
+Dependency-chasing is tedious; let me include the whole Components tree (+ Tokens + Theme) but first check for external imports that would break isolation.
+
+`tsGlassPanel` is in `Sources/Design/`; Components only use system frameworks. Let me type-check my files against the full Design + Components tree.
+
+The whole-tree pulls in unrelated files with external deps. Let me use a precise minimal dependency set (Design + only the components I use) and iterate.
+
+States.swift bundles `TSSectionError` → `TSInlineCallout`. Let me locate it and the remaining transitive deps, then converge.
+
+Let me include the whole Components tree minus the one file with external deps (UnitFormatters → UnitPreferences), which resolves the intra-Components references in one shot.
+
+macOS type-check passes (0 errors) against the real tokens + components. Now the iOS idiom (exercises the `#if os(iOS)` compact branch):
+
+Both idioms type-check clean. Now the executable model harness (the full XCTest bundle needs the app target, so I exercise the model logic standalone like the ApiPlayground precedent).
+
+Model harness: 29/29 passed under Swift 6 strict concurrency. Now let me verify project integration via xcodegen and assess the full build (checking the Shared.xcframework prerequisite).
+
+Project regenerated; my files are integrated (78 references across iOS/macOS app + test bundles). Let me assess whether the full build's Shared.xcframework prerequisite is buildable here.
+
+15 files import the KMP `Shared.xcframework` (built via Gradle). Let me check toolchain feasibility, then attempt the real build so I can capture an honest exit code.
+
+JDK 17 present — the xcframework build is feasible (~10 min). Let me kick it off in the background and prepare the ledger + log while it runs.
+
+While the xcframework builds, let me update the ledger. I'll add the two parity rows.
+
+The launcher returned. Let me check the actual xcframework build progress.
+
+The xcframework build is downloading Kotlin/Native + compiling (in progress). Let me gather file metrics and write the evidence log meanwhile.
+
+Let me verify every parity string key is actually referenced in my Swift code before writing the log.
+
+All 11 parity items confirmed in code. Let me check the xcframework build progress.
+
+The xcframework is assembling (debug written; staging pending). Let me wait for it to complete.
+
+Release-framework linking is underway (slow Kotlin/Native step). Let me continue waiting.
+
+Shared.xcframework built (7m14s) and staged. Now I can run the real full build. Let me launch `xcodebuild build` (macOS) in the background and monitor.
+
+While the build runs, let me write the evidence log with all verified results.
+
+The build finished. Let me check the result.
+
+Build is mid-compile (EmitSwiftModule for TeslaSync), 0 errors so far. Let me wait for completion.
+
+BUILD exit=65, but **zero errors in my files** and zero ` error: ` lines — consistent with the pre-existing compiler issue. Let me identify the actual failure cause to confirm it's out-of-scope.
+
+The failure is a **Swift compiler IR-emission crash** (toolchain bug — "Please submit a bug report / Stack dump / While emitting IR SIL function"), not a source error. Let me capture the precise crash context to document it.
+
+Confirmed: the build failure is a **pre-existing Swift compiler IRGen crash on a sibling file** (`AppearanceSettings.Controls.swift` in `feature-views/`) — zero errors in my files, which compiled cleanly. This is identical to the documented ApiPlayground precedent (BUILD_EXIT=65, out-of-scope, forbidden to fix). Let me finalize the log.
+
+Now let me finalize the disposition and EXIT/STATUS lines.
+
+Let me tighten covenant #1 to reflect the recorded build result, then do final verification.
+
+Let me do final verification: re-lint, validate JSON, and review the complete git status (ensuring only in-scope files are staged, and build artifacts are ignored).
+
+swiftformat clean, JSON valid, git status shows only in-scope changes. The 6 swiftlint violations appear when scanning all 9798 files (config `included:`); my 5 files were 0. Let me confirm those 6 are pre-existing/out-of-scope and that build artifacts are git-ignored.
+
+All confirmed: the 6 swiftlint violations are pre-existing/out-of-scope (none mine); build artifacts are git-ignored; no Kotlin drift. Let me add the transparency note about the whole-repo violations to the log, matching the precedent.
+
+All clean. Let me update todos, clean up temp artifacts, and commit the in-scope files.
+
+All 8 in-scope files staged, nothing extraneous. Let me commit.
+
+Commit succeeded (71ac2eb6f), tree clean. Let me do a final review of the log's key sections.
+
+The log is complete and coherent (PARITY 11/11, all in-scope gates green, BUILD_EXIT=65 transparently attributed to the pre-existing sibling compiler crash, EXIT=0/STATUS=DONE). Let me finalize todos and do a last sanity check on the commit contents.
+
+Everything is complete and verified. The task is done.
+
+## Summary
+
+I implemented **`page:automations/AutomationActivityFeed`** as a native SwiftUI/HIG page at full web parity, reaching **PARITY_COVERED=11/11** and committing on green in-scope gates.
+
+**What shipped** (`apps/apple/Sources/Features/Automations/`, the repo's real compiled page home — the prompt's `TeslaSync/Features/…` path doesn't exist in project.yml; reconciliation logged per covenant #9):
+- **`AutomationActivityFeedPageModel.swift`** — `@MainActor @Observable` model with typed `state` (loading/empty/success) + `load()`/`refresh()`, web-faithful ports (`formatDurationMs`/`fmtPercent`/`timeAgo`, statusConfig/typeMap, live-cap-5, stats>0 gate), over an injectable snapshot seam (no networking, ADR-004).
+- **`AutomationActivityFeedPage.swift` / `.Views.swift`** — the single GlassPanel1 with header (title + Live/Reconnecting chip + gated total/success/avg stats), live SSE rows, and the history list rendering all 3 web states; adaptive macOS/iPad row vs iPhone-compact stack; VoiceOver labels; built on P2 tokens + P3 components.
+- **`AutomationActivityFeedRouteRegistration.swift`** — a `NavigationDestination` seam (the unit is `(unrouted)`; `/automations` belongs to AutomationsList, so no top-level route was hijacked and the P4 shell was left untouched).
+- **Tests** + **16 plain `Localizable.xcstrings` keys** (7 parity + 8 status + 1 a11y) + **2 ledger rows** (apple-macos, apple-ios, done 11/11).
+
+**Gate results** (all in-scope green): swiftformat 0/5 · swiftlint --strict 0/5 · placeholder COUNT=0 · model harness 29/29 · isolated Swift 6 strict-concurrency type-check **macOS 0 / iOS 0** against the real tokens+components · xcframework built+staged · project integrates (78 pbxproj refs).
+
+**`BUILD_EXIT=65`** — the full `xcodebuild` scheme is RED **only** due to a pre-existing Swift compiler **IRGen crash on a sibling file** (`feature-views/AppearanceSettings.Controls.swift`), with **zero diagnostics in any of my files** (the whole module type-checked clean before the crash). This is the identical, transparently-documented disposition under which the sibling `ApiPlayground` page was accepted DONE — forbidden to commit-fix (covenant #6/#7), deferred to P99. Log ends `EXIT=0` / `STATUS=DONE`. Committed as `71ac2eb6f`.
+
+Merge made by the 'ort' strategy.
+ ...ple-page-automations-AutomationActivityFeed.log | 212 +++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 176 ++++++++++
+ .../AutomationActivityFeedPage.Views.swift         | 249 +++++++++++++
+ .../Automations/AutomationActivityFeedPage.swift   | 226 ++++++++++++
+ .../AutomationActivityFeedPageModel.swift          | 387 +++++++++++++++++++++
+ .../AutomationActivityFeedRouteRegistration.swift  |  38 ++
+ .../AutomationActivityFeedPageModelTests.swift     | 174 +++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 8 files changed, 1480 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-automations-AutomationActivityFeed.log
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationActivityFeedPage.Views.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationActivityFeedPage.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationActivityFeedPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationActivityFeedRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Automations/AutomationActivityFeedPageModelTests.swift

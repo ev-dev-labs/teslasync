@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and checking the prerequisites for this task.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and understand the existing Apple patterns.
+
+Now I understand the file pattern. Let me study a representative example and find surfaces that use the same hooks (`useIsCoarsePointer`, `useMotionPreference`).
+
+`TimelineScrubber` uses the same hooks and is likely a gesture primitive like SwipeRow — the ideal reference. Let me study it completely.
+
+Excellent — this is a high-quality, consistent pattern. Let me read the remaining reference files and find the shared infrastructure (tokens, i18n, the coarse-pointer/motion state holders, project config).
+
+Let me examine the design tokens, the web hooks, lint config, and find how primitive/wrapper surfaces handle states.
+
+Now the design tokens, feedback components, and how the native side determines coarse-pointer / touch capability.
+
+`RequiresAuth` and `SectionErrorBoundary` are content-wrappers like SwipeRow. Let me study how they're structured and whether wrappers implement the freshness/leaf states.
+
+`SectionErrorBoundary` is the perfect structural analog — a generic content wrapper that layers the leaf states. Let me study its complete file set to mirror conventions exactly.
+
+I now have a thorough understanding of the pattern. Let me check the build feasibility (xcodegen, the xcframework script, prior gate logs) before writing.
+
+I now have everything needed. The prior TimelineScrubber gate log documents the exact sanctioned verification path on this runner (full `xcodebuild` is blocked by *other* agents' surfaces; in-scope artifacts are verified via swiftlint/swiftformat/placeholder/xcodegen + curated `swiftc -typecheck` + SwiftPM tests). Let me verify the current blocker state and design-system imports, then write a plan.
+
+All prerequisites confirmed: design system has no KMP `import Shared` (standalone typecheck feasible), and the structural pattern is clear. Let me set up tracking and write the plan.
+
+Now I'll create the surface files. Starting with the pure adapter (geometry, tones, accessibility) — Foundation-only and fully unit-testable.
+
+Now the main surface view with the `SwipeAction` public type, the phase switch, and freshness composition.
+
+Now the interactive swipe content and action buttons — the core gesture parity.
+
+Now the leaf-state chrome and freshness components.
+
+Now the i18n catalog and the previews.
+
+Now the test files — pure logic tests and the @MainActor state-holder tests.
+
+Let me refine the interactive view to fix two real issues: GeometryReader's greedy vertical sizing (use the iOS 18 `onGeometryChange`) and the foreground background. Let me view then edit.
+
+All 10 files written. Let me track progress and start verification — auto-format my files first, then lint.
+
+swiftformat clean (0/9). Now swiftlint `--strict` on my files for fast signal.
+
+One lint issue — trailing closure with multiple closures on `onGeometryChange`. Fixing.
+
+My files are lint- and format-clean. Now the project-wide gate commands to capture true state. Running `swiftformat --lint apps/apple` and the full `swiftlint --strict`.
+
+Full format gate clean (0/4874). Now the full `swiftlint --strict`.
+
+Project-wide lint clean (0 violations / 4576 files) and format clean. Now the placeholder check (honest scan of real copies) and `xcodegen generate`.
+
+Placeholder clean (COUNT=0). Now `xcodegen generate` to confirm the files are enumerated into the targets.
+
+`xcodegen` enumerates all 10 files (60 refs across app + test targets). Now set up the typecheck. Let me determine the design-system dependency closure (what `import`s the components use).
+
+Design system (41 files) is self-contained (no KMP `Shared`). Let me typecheck my surface against the real design system for macOS 15 first.
+
+The errors are all in `Components/DataDisplay/UnitFormatters.swift` (references app-level `UnitPreferences`/`Units` outside the design layer) — not my files. I need the minimal curated closure my surface actually uses. Let me compile against just those primitives.
+
+Just need `TSBadge` (used by Cards). Let me locate and add it.
+
+Closure-chasing individual files is fragile. Let me include the full UI + Feedback + Motion + Design layers (excluding DataDisplay/Charts/Maps which pull app-level types) and compile.
+
+Only unused `FeedbackOverlays.swift` reaches into DataDisplay (`TSMetricBar`) — my surface doesn't use it. Excluding it from the closure.
+
+Design-system closure now compiles clean — the only errors are mine: two `static let` of non-`Sendable` `SwipeAction` (Swift 6 global-state rule). Converting to computed statics.
+
+Both SDKs typecheck clean (0 errors/warnings) against the real design system. Now the SwiftPM test harness for the pure logic. Let me build a temp package with the Foundation-only files + the test files.
+
+All 44 pure-logic tests pass. Now the heavy gate step: the full `xcodebuild build test`. First let me probe whether the KMP `Shared.xcframework` pre-build step (Gradle) works on this runner.
+
+Gradle/Kotlin toolchain works. Let me stage the KMP `Shared.xcframework` (Kotlin/Native release build — can take several minutes), running in the background.
+
+Staging the KMP framework. Let me monitor its progress.
+
+The KMP build produced the **debug** xcframework but the staging script expects **release** — a pre-existing infra path mismatch (out of my SwipeRow-only scope). Let me inspect slices, stage manually, and make a genuine bounded attempt at the real build.
+
+Debug xcframework has all needed slices (macos-arm64, ios-arm64, ios-arm64-simulator), staged. Now a genuine bounded build attempt — building the macOS target directly (bypasses the broken gradle pre-action, uses my staged framework). Running in background.
+
+Build running. Let me monitor progress and watch specifically for any SwipeRow-related errors.
+
+The `-derivedDataPath` needs `-scheme`. Dropping it for the target build (skips the broken gradle pre-action). Restarting.
+
+Build failed — but in **other agents' surfaces**, not mine. Let me confirm zero SwipeRow errors and capture the exact blocker as evidence.
+
+**Conclusive:** the ONLY build error is a pre-existing escaping-closure bug in another agent's surface (`AIAutoNameUnnamedLocations.swift:123`) — **zero** errors in any SwipeRow file. Let me verify git scope proves I didn't introduce/modify the failing file.
+
+Git scope is clean — only the 10 `SwipeRow.*` files are added; the failing `AIAutoNameUnnamedLocations.swift` is pre-existing and untouched by me. This matches the sanctioned predecessor disposition exactly. Let me gather final stats and write the honest gate log.
+
+All verifications complete. Writing the honest gate log.
+
+Gate log written. Let me update tracking, stage exactly the 10 files + the log, verify scope, and commit.
+
+Exactly 11 files staged (10 `SwipeRow.*` + the log), no stray artifacts. Committing.
+
+All steps complete and verified. 
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0189-SwipeRow.log     | 144 ++++++++++++
+ .../shared-surfaces/SwipeRow.Adapter.swift         | 178 ++++++++++++++
+ .../TeslaSync/shared-surfaces/SwipeRow.Model.swift | 260 +++++++++++++++++++++
+ .../shared-surfaces/SwipeRow.ModelTests.swift      | 171 ++++++++++++++
+ .../shared-surfaces/SwipeRow.Previews.swift        | 129 ++++++++++
+ .../TeslaSync/shared-surfaces/SwipeRow.Seams.swift | 136 +++++++++++
+ .../shared-surfaces/SwipeRow.States.swift          | 186 +++++++++++++++
+ .../TeslaSync/shared-surfaces/SwipeRow.Tests.swift | 257 ++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/SwipeRow.Views.swift | 227 ++++++++++++++++++
+ .../TeslaSync/shared-surfaces/SwipeRow.strings     |  32 +++
+ .../apple/TeslaSync/shared-surfaces/SwipeRow.swift | 186 +++++++++++++++
+ 11 files changed, 1906 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0189-SwipeRow.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SwipeRow.swift

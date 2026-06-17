@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure to understand the web source page and the Apple app conventions.
+
+Now let me explore the Apple app structure and supporting files in parallel.
+
+Let me explore the Apple Features directory, existing pages, the parity ledger, and hook details.
+
+Let me look deeper at the Apple project structure and find existing Feature pages to use as patterns.
+
+The actual structure differs from the prompt's assumptions. Let me investigate the real project layout, existing Swift patterns, and build config.
+
+There's already audit-related Swift code. Let me examine the existing patterns thoroughly before deciding the approach.
+
+Key finding: there's already a full `Sources/Features/Admin/AuditLogPage.swift` implementation (the page's old location). The web moved it to `notifications`. Let me study the existing Admin AuditLog implementation — it's the canonical template — plus the ledger and navigation.
+
+Paths are under `apps/apple/Sources/`. Let me read the existing Admin AuditLog page set with correct paths.
+
+This confirms the structure: the prompt targets a **new, simpler** page (`/notifications/audit`, `useAuditLogs → GET /system/audit`), distinct from the existing rich Admin audit page (`/admin/audit-log`). The real convention is `Sources/Features/<Domain>/`. Let me study the route registration pattern, the Sample data source, and existing Notifications/Features layout.
+
+No `Sources/Features/Notifications/` yet — I'll create it. Now let me understand the routing system, the table/filter sub-view patterns, and shared components.
+
+Now let me understand the routing system, shared search/chip components, and the string catalog. Let me search for these in parallel.
+
+Found the shared component library and existing string entries. Let me examine the components I'll use, the route system, and the xcstrings structure around the audit entries.
+
+The xcstrings uses a `translation.` prefix and already has `translation.admin.audit.*` entries (matching values but different key namespace than the web `audit.*`). I need to confirm the key convention. Let me check how the Admin page's keys are stored and the localization setup.
+
+Two key conventions exist: bare namespaced keys (`admin.auditLog.pageTitle`) used by Swift, and `translation.*` keys imported from web. The prompt wants web key names verbatim. Let me confirm how other pages handle literal English keys and read the components + route system I'll need.
+
+The shared components map cleanly to the web page (`TSActiveFilterChips`, `TSFilterBar`, `TSDataTable`, `TSEmptyState`, `TSErrorDisplay`). Plain-English LocalizedStringKeys are an established convention here. Now let me read the route system, search input, skeleton, and the test pattern.
+
+The `notifications` route exists, but `/notifications/audit` is a sub-route. Let me check the web routing to see how it's registered, plus read the test pattern and search-input component.
+
+The web nests `notifications/audit` as its own route. I'll add a dedicated `.notificationsAudit` AppRoute. Let me assess the blast radius of adding an enum case (exhaustive switches) and understand the registry composition.
+
+I now understand the architecture. Key decisions: the existing admin `AuditLogPage` type forces me to name the new one distinctly (`NotificationsAuditLogPage`) to avoid a Swift type collision, and I'll add a `.notificationsAudit` route. Let me verify toolchain availability, read the gate scripts, and the search-input/typography components.
+
+Toolchain is viable: `pwsh`, `swiftlint`, `xcodegen` available, and an iPhone simulator is booted. The `.xcodeproj` is generated. Let me check the baseline build feasibility (KMP framework + xcodegen) and read the remaining components/gate contract.
+
+Frameworks dir is empty (no `Shared.xcframework`). Let me read the existing admin AuditLog log to see the exact format and whether its build gate passed or was BLOCKED — this sets the realistic precedent — plus the gate README.
+
+Let me check the markers in the existing admin AuditLog log to understand the real gate outcomes and format.
+
+This is the key precedent: the admin log shipped `STATUS=DONE` with `LINT_EXIT=0` and `PARITY_COVERED==REQUIRED`, but `BUILD_EXIT!=0` due to a documented **pre-existing, out-of-scope** Swift-compiler crash. Let me read the full log to mirror its format and honesty approach.
+
+This is my authoritative template. The methodology is clear: ship to the real `Sources/Features/Notifications/`, add a `.notificationsAudit` route, run in-scope gates green (swiftlint/swiftformat/placeholder/isolated typecheck/model harness), and honestly document the full xcodebuild if blocked by the known pre-existing shared-surfaces crash. Let me read the remaining components I'll use.
+
+Let me locate the typography, cards, and button component signatures, and confirm `Color.TS`/`Font.TS`/theme entry points.
+
+I have all component APIs. Let me read the web `useFilteredList` semantics to port the search faithfully, confirm `formatDateTime`, and sweep my planned Swift type names for collisions.
+
+All names are collision-free. `useFilteredList` is a simple case-insensitive substring match across fields. Let me check the swiftlint budget, theme tokens (`Color.TS`/`Font.TS` members), and confirm a cyan/mono token for the Resource column.
+
+`Color.TS.accent` is cyan — perfect for the Resource column. Line length limit is 120 (strict). Now I must check which of the 12 web-key strings already exist in the catalog to avoid duplicate JSON keys. Let me write the plan and check key existence.
+
+None of the 13 keys exist — safe to add. Let me inspect the exact JSON entry format for bare-English keys (e.g., "All Locations") so my additions match the file's style precisely.
+
+All 13 keys are new and I'll match the bare-key JSON format. Let me read the registry mechanism and the `TeslaSyncApp` composition point before writing.
+
+I have the full registration picture. Let me check the placeholder scanner patterns and opt-out mechanism (the web key `audit.searchPlaceholder` contains "Placeholder"), then start implementing.
+
+The only placeholder flag risk is the `audit.searchPlaceholder` key literal (contains "Placeholder") — I'll add the `// parity:allow` opt-out. Let me verify no test asserts an exact `AppRoute` count/set before adding a case, then write the plan.
+
+Let me read `RouteTests.swift` to ensure my new route survives its round-trip/uniqueness assertions.
+
+No test asserts an exact route count — uniqueness and group-resolution both survive my additive `.notificationsAudit` case. I have everything needed. Let me set up the plan/todos and create the feature directories.
+
+Now let me create the plan and implement the model files.
+
+Now let me wire navigation: add the `.notificationsAudit` route case (enum + pathSegment + systemImage + group), the parser alias, and the app registration.
+
+Now let me add the 13 web-key strings to the catalog, matching the file's bare-key JSON style, inserted at the top of the `strings` object.
+
+Let me validate the xcstrings JSON and write the test file.
+
+All 13 keys valid with the ellipsis preserved. Now the test file.
+
+Now let me run the formatting and lint gates on my new and edited files.
+
+swiftformat wants the preview seam single-line bodies wrapped (matching the admin page style). Let me fix those.
+
+swiftformat passes. Let me wait for swiftlint.
+
+swiftlint scanned all 12565 files (config `included` scope) and found 4 serious violations. I need to identify whether they're in my files. Let me capture and filter.
+
+All violations are 2 pre-existing `line_length` issues in `AnomalyInlineRow.Previews.swift` — an unrelated, out-of-scope file. Zero in my files. Let me prove pre-existence (git) and get a clean scoped-lint signal on my files only.
+
+The `sed` mangled the YAML. Let me write a clean temp config and scoped-lint my files.
+
+My 9 files pass swiftlint --strict with **0 violations**. Now the placeholder scan on my real path.
+
+The opt-out comment must be on the **same line** as the match. My standalone comment line created an extra "Placeholder" occurrence; the code line itself wasn't marked. Let me put the marker as a trailing comment on the code line.
+
+Placeholder, format, and lint gates all green. Now the model harness — compile my `@Observable` model standalone under Swift 6 strict concurrency and run assertions (the predecessor's methodology).
+
+The harness file must be named `main.swift` for top-level code. Let me rename and recompile.
+
+Model harness passes under Swift 6 strict concurrency. Now let me generate the Xcode project and verify my files are wired in, then attempt the real build.
+
+Project generated; my files are wired into all targets (36 refs). Let me do the isolated view type-check (macOS + iOS) against the real tokens/components. First I'll map the component file set.
+
+Project generated and my files wired in. The curated-set typecheck has fragile cross-module deps, so the authoritative check is the real build. Let me run the full macOS `xcodebuild` (the predecessor's approach), capturing output to grep for my files vs. the known shared-surfaces crash.
+
+Build exited 65. Let me analyze the log: are the errors in my files, or the pre-existing shared-surfaces breakage?
+
+No source-level errors and none in my files. Let me find what actually caused exit 65 (crash vs. linker vs. other).
+
+The build failed at a **pre-build KMP step** — "Stage Shared.xcframework" (Gradle `:core:linkReleaseFrameworkIosArm64`, daemon stopped). That's out-of-scope infra (the P1 shared core), with **0 Swift source errors and 0 in my files** — the app target's Swift compile never even started. Let me prove my *view* code type-checks against the real components via an isolated typecheck. First, confirm UI/Forms/Feedback are SDK-only.
+
+UI/Forms/Feedback are SDK-only (SwiftUI). Let me run the isolated view type-check against the real tokens + components for macOS (with `-DDEBUG` to also check the previews).
+
+Only one error — `FeedbackOverlays.swift` (which I don't use) references `TSMetricBar` from DataDisplay. Let me exclude that file and re-run.
+
+macOS typecheck is clean (0 diagnostics). Now the iOS simulator typecheck (exercises the `#if os(iOS)` compact branch in `TSDataTable`).
+
+Both idioms type-check clean (0 diagnostics). Since the full `xcodebuild test` is blocked by the KMP Gradle staging step, let me prove the route wiring at runtime with a focused route harness (covers the `RouteTests` invariants + my new deep link).
+
+Route harness passes — the new route works and preserves all `RouteTests` invariants. The build blocker was the KMP Gradle staging (possibly transient daemon contention). Let me retry the build once to see if it's flaky or persistent.
+
+The retry is progressing past the quick-fail point (>7 min) — the KMP Gradle build may actually be running this time. Let me wait for it.
+
+The retry got further (KMP debug xcframework built, release framework links started) but was **OOM-killed** (exit 137) — confirming the blocker is the out-of-scope KMP `Shared.xcframework` Gradle staging in this resource-constrained shared environment, not my code (zero Swift errors in both attempts). My in-scope work is fully verified. Let me update the parity ledger; first I'll inspect its structure.
+
+Let me check the raw formatting of the ledger to insert rows matching its style.
+
+The ledger uses 2-space indentation. Let me append the two `page:notifications/AuditLog` rows (macOS + iOS) at the end of the rows array.
+
+Ledger valid (15/15 both idioms). Let me capture exact line numbers/symbols from my final page file for accurate PARITY evidence in the log.
+
+I have all evidence. Let me gather git status and tool versions for the log header.
+
+All in-scope changes confirmed; xcodeproj is git-ignored; no out-of-scope files touched. Now let me write the evidence log.
+
+Now let me run a final verification pass on all my files (format, lint, placeholder, typecheck) to confirm everything is green before committing.
+
+All final in-scope gates are green. Let me commit the in-scope changes (the generated xcodeproj is git-ignored).
+
+Staging is clean — exactly the 12 in-scope files. Let me commit.
+
+Committed (`bc1cf1867`, 12 files). Let me update todos and clean up temp files.
+
+Working tree is clean and all todos are done. The task is complete and verified.
+
+## Summary
+
+Implemented the native SwiftUI parity of the web `AuditLogPage` (`/notifications/audit`) for the Apple app (macOS + iOS/iPadOS), committed as `bc1cf1867`.
+
+**Delivered** (`apps/apple/Sources/Features/Notifications/` + tests):
+- `NotificationsAuditLogModels.swift` — `AuditLogEntry` (mirrors web type 1:1), state enum, data-source seam (web `useAuditLogs` → `GET /system/audit`), `AuditEntryFormat` (ported `formatDateTime` + `useFilteredList`).
+- `NotificationsAuditLogPageModel.swift` — `@MainActor @Observable` model (no networking in view, ADR-004).
+- `NotificationsAuditLogPage.swift` — `GlassPanel` "Recent Activity" with loading/empty/error/success states, `SearchInput` + active-filter chip, adaptive 4-column `DataTable` (Time/Action/Resource/Details).
+- Sample source, route registration, and a 154-line test.
+- Wired a `.notificationsAudit` route (+ parser alias + app registration), added 13 web-key strings to `Localizable.xcstrings`, updated `apple-ledger.json` (15/15 both idioms), and wrote the evidence log.
+
+**Gates (in-scope, all green):** xcodegen 0 · swiftformat 0/9 · swiftlint --strict 0 violations · placeholder 0 · Swift 6 model harness PASS · view typecheck macOS 0/0 + iOS 0/0 · route harness PASS · **PARITY_COVERED=15/15**.
+
+**Honest blocker:** the full `xcodebuild` cannot complete here — it fails at the out-of-scope KMP `Shared.xcframework` Gradle staging step (daemon stopped / OOM-killed under parallel-slot contention), with **zero Swift diagnostics and zero in my files**. This is documented in the log and deferred to its owner / the P99 gate, following the sibling admin-AuditLog precedent. `EXIT=0 / STATUS=DONE` on green in-scope gates.
+
+**Reconciliations recorded:** real path `Sources/Features/Notifications/` (prompt's `TeslaSync/Features/...` isn't a build group); type renamed `NotificationsAuditLogPage` (the admin `AuditLogPage` already exists).
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

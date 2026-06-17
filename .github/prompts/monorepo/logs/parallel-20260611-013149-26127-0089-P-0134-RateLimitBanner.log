@@ -1,0 +1,194 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+I have the web source. Now let me explore the Apple app structure and the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Not blocked. Let me explore the Apple app structure.
+
+There's a consistent multi-file pattern per surface. `AiLimitBanner` is the closest analog (a "limit banner"). Let me study it as the template.
+
+Excellent template. Let me read the remaining `AiLimitBanner` files to fully understand the pattern.
+
+Let me read the remaining template files and understand the shared infrastructure (tokens, components, project config).
+
+Now let me read the test files and locate the shared infrastructure (tokens, components, `AiLimitInfo`, project config).
+
+Let me locate the shared tokens/components, the `AiLimitInfo` model, project config, and how event-driven sources are modeled.
+
+Key finding: `AiLimitInfo` lives in a surface file, and `project.yml` uses path-based discovery. Let me read the test-target config, the design tokens, and key shared components.
+
+Now let me read the test-target config and the design tokens (P1/S9), plus check how event-driven/notification sources are modeled in the codebase.
+
+Test bundles auto-include co-located `*Tests.swift` via path globs — so no project.yml edits needed. Let me locate the token definitions precisely.
+
+Now let me read the shared components I'll compose with, and check for existing query-invalidation/event-bus seams.
+
+Let me read the `TSEmptyState` signature used by the template and check for query-invalidation/event seams used elsewhere.
+
+`InstallPrompt` is the established event-driven (NotificationCenter) banner pattern. Let me study its seams/stores to model RateLimitBanner's event source idiomatically.
+
+Let me read `InstallPrompt.Stores.swift` for the NotificationCenter broadcast seam pattern.
+
+I have the full pattern. Now let me check the build tooling: xcodegen, existing project, the placeholder checker, and pwsh.
+
+All tooling present. Let me check the `Shared.xcframework` dependency, read the placeholder checker, and the build script.
+
+`Shared.xcframework` is missing — a build dependency. Let me inspect the build script, the KMP shared package, and placeholder patterns.
+
+Critical: `Shared.xcframework` is missing (a build dependency). Building it needs Gradle/Kotlin-Native. Let me check the project.yml build phases, whether a sibling slot already built it, and start assembling it in the background.
+
+The scheme's preActions auto-build the framework via Gradle before build/test. Let me kick off the Gradle framework assembly now (background) to warm it while I write code, after checking the JDK.
+
+JDK 17 present. Let me start the Gradle framework assembly in the background to warm it while I write the surface code.
+
+Let me check the lint/format configs to respect their rules while I write.
+
+Lint budget: keep code lines ≤120 and files ≤400 lines. Let me verify no symbol collisions before writing, and set up tracking todos.
+
+Good — `RateLimitBanner` type name is free. Let me check the Gradle progress, then start writing the surface files.
+
+Gradle is warming up. Let me set up tracking and start writing the surface files (Adapter first).
+
+Adapter done. Now the Model (state-holder, projection, telemetry seam, i18n facade).
+
+Now the Seams file: the source protocol, the production NotificationCenter event source (web `document` events), a controlled/in-memory source, the ticker, and the query-invalidator seam.
+
+Let me check the Gradle build progress while continuing.
+
+Let me write the main view, states, presentational views, previews, and strings.
+
+Let me check Gradle progress and write the Previews and strings files.
+
+Shared.xcframework built and staged successfully (8m22s). Now let me finish the Previews, strings, and test files.
+
+Now the two test files (adapter/projection/a11y, then model/seams).
+
+All 10 files written. Let me format and lint my new Swift files for fast feedback before the heavy build.
+
+swiftformat clean. swiftlint flags one issue: `ModelTests.swift` is 430 lines (>400 file_length limit under `--strict`). I'll split the seam tests into a separate file. Let me view the boundary.
+
+I'll split the seam tests into a new file and remove them from ModelTests.
+
+Now remove the moved sections from ModelTests:
+
+Let me re-run lint/format on all my files (including the new SeamTests).
+
+swiftformat clean (0/10), swiftlint `--strict` clean (0 violations). Now let me generate the Xcode project and run the iOS build+test.
+
+Project generated with both schemes. Now the heavy step — iOS build+test (matches the gate). Running in the background and capturing output.
+
+Build is running. Let me monitor progress (this compiles the full app, so it'll take a while).
+
+Compiling the app module, 0 errors so far. Let me continue waiting.
+
+A **pre-existing** compile error surfaced in an unrelated file (`AIGeofenceAwareAutomationSuggestions.swift`). Let me get the full error list to assess scope.
+
+Exactly one error, in a **pre-existing, out-of-scope** file (`AIGeofenceAwareAutomationSuggestions.swift:141`) — zero errors in my RateLimitBanner files. Let me confirm it's pre-existing (not triggered by me) via git status and the source.
+
+Confirmed: the only working-tree changes are my 11 new files; `AIGeofenceAwareAutomationSuggestions.swift` is untouched baseline (HEAD). So this is a **pre-existing baseline compile error**, independent of my surface. Let me inspect it.
+
+The pre-existing error is a clear bug — `content` needs `@escaping` (line 140). To assess whether the baseline is "one fix away" from green (and to verify my surface compiles + its tests pass), I'll apply a **temporary** local patch, rebuild, then revert it. First, let me confirm the failed build's status.
+
+Official iOS gate: `IOS_EXIT=65` (build failed → tests cancelled) — caused solely by the pre-existing sibling error. Let me apply a **temporary** patch to verify the baseline is one-fix-away and that my surface compiles + tests pass.
+
+Build running with temp patch. Meanwhile, let me run the placeholder gate (independent of the build).
+
+The exact-gate passes, but a thorough scan flags the word "Placeholder" in a comment (Adapter.swift:77). I'll scrub forbidden words from all my files to be genuinely clean. Let me find every occurrence.
+
+Only one occurrence — a comment. Let me reword it.
+
+Let me re-verify the placeholder scan is clean and check the build progress.
+
+Placeholder scan clean. Let me wait for the patched iOS build+test to complete.
+
+App built successfully (now staging XCTest frameworks for the test run), 0 errors. Let me wait for the tests to execute.
+
+Patched build compiled but reports **3 test failures**. I must determine whether any are mine. Let me extract the failing tests.
+
+It's a **compile** failure in the test bundle, not test-case failures. Let me find the actual error messages.
+
+A **second** identical pre-existing bug (`AISignalExplorerNlFilter.swift:142`), same missing-`@escaping` pattern. This looks systemic. Let me quantify how widespread this baseline defect is.
+
+Not all 55 are errors — only those passing a non-escaping closure into an escaping context. Let me find the specific broken shape (the `glass(...) { TSGlassPanel {...} }` idiom) to gauge the true blast radius.
+
+This is a **systemic, baseline-wide pre-existing defect** (multiple sibling surfaces share an identical non-`@escaping` `@ViewBuilder` bug that the compiler surfaces one file at a time). The fixes are entirely outside my allowed scope. To still gather strong runtime evidence that *my* surface and its tests pass, I'll temporarily patch all instances of this exact pattern, run a green build+test, then revert all tracked-file edits (my new files are untracked, so safe). Let me find every occurrence of the broken idiom.
+
+This is a **baseline-wide pre-existing defect**: ~41 sibling files share the identical non-`@escaping` `@ViewBuilder` bug — the slot's HEAD does not compile under Xcode 26.5 / Swift 6.3.2, all outside my allowed scope. The official gate is therefore BLOCKED by predecessor code.
+
+To still prove my surface's tests pass at runtime, I'll apply a safe, blanket **temporary** `@escaping` patch to tracked files (never committed — reverted via `git checkout`), run a green build+test, then revert. My files are untracked so they're preserved.
+
+Transform applied cleanly (0 broken patterns remain; my 11 files untouched). Now let me run the full iOS build+test with the temporary patches.
+
+Build running. Let me wait for it to compile the patched files, the test bundle, and execute tests.
+
+0 errors, still compiling. Let me keep waiting.
+
+One more error appeared. Let me identify it.
+
+Another **distinct** pre-existing error class (a SwiftUI type-check timeout in `RecentDrivesSection.Previews.swift`) — confirming the baseline is broken in multiple independent ways under this toolchain. Let me stop this run and check whether my patch touched that file.
+
+Conclusive: `git diff` shows that file was **not** touched by my patch — it's a genuinely pre-existing, distinct error class (SwiftUI type-check timeout). The baseline is broken in multiple independent ways under this toolchain, all outside my `RateLimitBanner.*` scope, and fully fixing it (including type-check-timeout refactors across an unknown number of files) is unbounded and out of scope.
+
+I'll now revert ALL temporary tracked-file patches (my new files are untracked, so preserved) and verify the baseline is restored.
+
+Baseline restored; only my 11 files remain. The official gate is genuinely BLOCKED by the pre-existing baseline.
+
+Runtime test evidence is still valuable, so I'll make one final **bounded** attempt: re-apply the `@escaping` patch and temporarily neutralize the DEBUG-only `*.Previews.swift` files (where the type-check-timeout class lives; previews aren't needed for tests), keeping mine intact — then build+test once. All reverted before commit.
+
+Class-1 fully patched (0 remaining); 539 non-mine preview files neutralized; my Previews intact. Now the build+test run.
+
+Still failing — another error in a non-preview batch. Let me find it.
+
+A **swift-frontend compiler crash** (`llvm::report_fatal_error`) — a third distinct pre-existing failure class. Let me capture the crash context for the log.
+
+Definitive: a swift-frontend **IRGen compiler crash** on `AppearanceSettings.Controls.swift` — a third distinct pre-existing failure class. The baseline does not build under this toolchain (3 independent defect classes, all in sibling files outside my scope). The app target never links, so the test bundle can't run regardless of my (clean) surface.
+
+I've made a thorough, bounded, good-faith effort (4 full build attempts). The honest outcome is **STATUS=BLOCKED**. Let me revert all temporary patches and confirm a clean tree.
+
+Clean tree confirmed (only my 11 files; baseline restored). Now I'll capture the **official, unpatched** gate outputs. The first iOS run (`ios.log`, IOS_EXIT=65) already reflects this exact tree state. Let me run the macOS gate (background) and the compile-independent checks (swiftlint/swiftformat/placeholders) now.
+
+swiftlint `--strict` on the full tree (4304 files): **0 violations** → LINT_EXIT=0. macOS gate finished — let me read it and run the remaining checks.
+
+macOS is blocked by an **environment code-signing** limitation (`DEVELOPMENT_TEAM` empty; entitlements require a dev certificate) — again pre-existing, 0 RateLimitBanner errors. Let me run the remaining gate checks (swiftformat, placeholders).
+
+All compile-independent gate steps **pass**; only the two `xcodebuild build test` steps fail, due to pre-existing baseline defects (iOS) and an environment signing limitation (macOS), with zero errors from my files.
+
+**Official gate summary (my-commit tree state):**
+- `IOS_EXIT=65` — pre-existing baseline compile failures (sibling files)
+- `MAC_EXIT=65` — pre-existing env code-signing (`DEVELOPMENT_TEAM` empty)
+- `LINT_EXIT=0` — swiftlint `--strict`, 0/4304 violations
+- `FORMAT_EXIT=0` — swiftformat `--lint`, 0/4602
+- `PLACEHOLDER_EXIT=0`
+
+Let me write the evidence log.
+
+Let me confirm zero RateLimitBanner errors in the official unpatched iOS run, then write the evidence log.
+
+I have complete, verbatim evidence. Now let me write the comprehensive gate log.
+
+Log written. Let me do a final lint/format pass on my files, then stage exactly the allowed paths and commit.
+
+Exactly the 12 allowed files staged, nothing out-of-scope. Committing with the prescribed message plus a transparent note.
+
+Committed cleanly: HEAD `a96f5927c`, 12 files (2055 insertions), nothing out-of-scope. Let me update tracking and clean up temp files.
+
+Done. Here's the outcome.
+
+## RateLimitBanner (Apple, P4/0134) — shipped, statically green, gate BLOCKED by pre-existing baseline
+
+**Delivered** (committed `a96f5927c`, 12 files, only the allowed `RateLimitBanner.*` + the log):
+- Full SwiftUI parity of `components/feedback/RateLimitBanner.tsx` — rate-limit (429) & upstream-breaker (503) banner, live `{{n}}s` countdown, **Retry now** (disabled until the countdown elapses → invalidates queries) and **Dismiss**.
+- Every state rendered: loading, empty (web `return null` → friendly card), error, data (both kinds), stale, offline (+ one-shot auto-refresh).
+- Bound through shared seams (no HTTP in the view): P1/S8 state-holder (`NotificationCenter` event source + query-invalidator), P1/S9 tokens, P1/S10 i18n facade (all 4 web keys: `ratelimit.banner`, `upstream.banner`, `ratelimit.retry`, `common.dismiss`), P1/S11 `view.opened` telemetry. VoiceOver labels on every control; Dynamic Type; reduce-motion. Adapter/model/seam unit tests + 8 per-state previews.
+
+**Verification:**
+- ✅ `swiftlint --strict` 0 violations / 4304 files · ✅ `swiftformat --lint` 0/4602 · ✅ placeholder gate 0 · ✅ 0 compile errors from any RateLimitBanner file across 4 full builds · ✅ `Shared.xcframework` built via Gradle.
+- ❌ `IOS_EXIT=65`, `MAC_EXIT=65`.
+
+**Why the build/test steps are red — not my surface.** `git` confirms my 11 files are the only working-tree changes. The slot baseline (HEAD `40012201f`) does not compile under Xcode 26.5 / Swift 6.3.2 due to three pre-existing defect classes in **sibling** files (non-`@escaping` `@ViewBuilder` closures in ~41 files e.g. `AISignalExplorerNlFilter`/`AISuggestNewGeofences`; a SwiftUI type-check timeout in `RecentDrivesSection.Previews`; a swift-frontend IRGen crash on `AppearanceSettings.Controls`), plus a macOS dev-cert signing limitation. All are outside this prompt's allowed files, so I did not fix/commit them (and did not fake green).
+
+Per the Honesty Covenant, the gate log ends `EXIT=65` / **`STATUS=BLOCKED`** with full evidence (`.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0134-RateLimitBanner.log`). The surface itself is complete and clean; turning the gate green requires fixes to the out-of-scope sibling files and a signing identity for the macOS targets.
+
+
+
+The task is fully complete: the surface is implemented, statically verified green, committed within the allowed file scope, and the gate outcome is honestly documented as BLOCKED by pre-existing out-of-scope baseline defects. All 12 todos are done and the working tree is clean. Nothing further is actionable within scope.
+

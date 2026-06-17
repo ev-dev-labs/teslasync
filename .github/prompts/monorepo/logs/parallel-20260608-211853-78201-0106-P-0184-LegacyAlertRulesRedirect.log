@@ -1,0 +1,139 @@
+I'll start by exploring the repository structure to understand the task context — the web source component, the Apple app structure, and toolchain availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and sibling redirect components to understand the pattern.
+
+The web source is a simple redirect: `useLocation` → `Navigate to /notifications/rules{search} replace`. Now let me deeply explore the Apple app structure to understand conventions: feature-views directory, navigation, state-holders, i18n, tokens, and existing sibling redirects.
+
+There are 1626 files in feature-views (many already built). Let me find existing native Legacy redirect siblings — those are the closest templates — and check if my target already exists.
+
+The perfect template exists: `LegacyAlertStudioRedirect.*` is the identical pattern (`/alert-studio` → `/notifications/studio{search}`), just like my target (`/alert-rules` → `/notifications/rules{search}`). Let me read all 10 of its files to understand the full structure.
+
+Now let me read the remaining template files: States, Views, Projection, Previews, strings, and Tests.
+
+Let me read the final template files: strings, Previews, and Tests.
+
+Critical observation: `LegacyAlertStudioRedirect.Models.swift` defines **shared** `Redirect*` types (not prefixed). Since everything compiles into one `TeslaSync` module, I cannot redefine them. `LegacyNotificationsRedirect` has a different file layout (no `.Models.swift`) — it must reuse those shared types. Let me read it to learn the correct reuse pattern.
+
+Now I fully understand the pattern. Critical insight: `LegacyAlertStudioRedirect.Models.swift` defines **generic un-prefixed** `Redirect*` types, while `LegacyNotificationsRedirect` defines its **own fully-namespaced** types (`LegacyNotificationsLocation`, `ResolvedRedirect`, etc.). Since all files compile into ONE `TeslaSync` module, I must namespace my types to avoid duplicate-symbol collisions. Let me verify the build system, tokens, and tooling.
+
+`pwsh` and `xcodegen` are available — I can run the actual gate. The `project.yml` is at `apps/apple/project.yml`. Tokens aren't in the TeslaSync dir — let me locate them and read the project config.
+
+XcodeGen picks up `feature-views/` via glob — new files auto-included, no project.yml edit needed (good, since it's not in my allowed files). Tokens come from `apps/design/generated/apple`. Let me verify prerequisites: the Shared.xcframework, the build script, tokens, and the placeholder checker.
+
+`Shared.xcframework` is absent (only `.gitkeep`) — it's a KMP framework built by a preAction script. This is the key feasibility risk. Let me check the build script and whether the Kotlin/Gradle toolchain is available, plus confirm exact token names.
+
+Feasibility hinges on building the KMP `Shared.xcframework` via `gradlew`. Let me check Java availability and kick off that slow build in the background while I write the deliverable files.
+
+Java 17 is available. Let me kick off the slow KMP framework build in the background while I write the deliverable files.
+
+Java 17 + gradlew present; KMP build running in background. Let me set up tracking and verify the native `AppRoute` for accurate route decomposition while the build runs.
+
+Let me check the AppRoute definition to align the route decomposition accurately.
+
+Confirmed: `AppRoute.notifications.pathSegment == "notifications"`. Now I have everything needed. Let me write the 10 deliverable files, fully namespaced to avoid duplicate-symbol collisions. Starting with the Foundation-only value types.
+
+Now the state-holder Model file (telemetry seam, i18n facade, source seam, observable model, in-memory source).
+
+Now the main View, the presentational chrome (Views), and the phase-driven states (States).
+
+Now the strings catalog, Previews, and Tests. Let me also check the background gradle build progress.
+
+Gradle still running (downloading toolchain). Continuing with the strings catalog, Previews, and Tests files.
+
+Now the Tests file — the most thorough verification of behavior parity.
+
+All 10 files written. Let me verify completeness, check for any leftover "Studio" references, and do a quick standalone Swift typecheck of the Foundation-only files while gradle builds.
+
+Foundation-only typecheck passes, no leftover refs, all files present. Let me run swiftlint, swiftformat, the placeholder checker on my new files, and a syntax parse of the SwiftUI files while gradle continues.
+
+Two issues, both in Tests.swift around line 107 (my longer type names pushed past 120 chars). Let me view and fix.
+
+Let me re-run both linters on all files to confirm clean, and proactively scan for any other long lines from the longer type names.
+
+Both linters pass cleanly (0 violations, 0 formatting issues). Let me check the placeholder script and run it, plus check gradle progress.
+
+The gate's `-Path …/LegacyAlertRulesRedirect` (no extension) resolves to a non-existent literal path, so the scan is trivially clean. To genuinely verify, I'll scan a temp copy of my actual files AND reproduce the exact gate invocation.
+
+Placeholder check passes both ways (genuine + gate-style): COUNT=0, EXIT=0. Now let me generate the Xcode project and wait on the gradle KMP build.
+
+Xcode project generated; my files are referenced (60 entries across targets). Gradle KMP build still running (~2.5 min). Let me prepare the log directory and inspect a sibling log's format while gradle continues.
+
+No `0184-LegacyAlertRulesRedirect.log` exists yet (confirming the target is unbuilt). Let me read the sibling studio log to match the expected format exactly.
+
+The sibling log is highly informative. Critically, it shows the 2026-06-07 runner hit a pre-existing `XCTest` module failure because the app target globbed `*Tests.swift`. **But the current `project.yml` in this checkout already excludes `*Tests.swift` from app targets** — so that baseline defect is fixed here, meaning the real gate may actually pass. Let me aim for the full green gate. First, verify the toolchain context and run the dual-SDK typecheck (step [4]).
+
+KMP `Shared.xcframework` built successfully (11m 36s) — both debug and release. The toolchain context is good (xcode-select already points at Xcode 26.5, iPhone 16 sim booted). Let me stage the framework and run the dual-SDK typecheck of my surface.
+
+macOS typecheck passes. Now the iOS simulator SDK typecheck.
+
+Both SDK typechecks pass (EXIT=0) — my surface compiles against macOS 15 and iOS 18 SDKs under Swift 6 strict concurrency. Now the real xcodebuild gate. Since this checkout's `project.yml` excludes `*Tests.swift` from app targets, the prior XCTest baseline blocker is fixed. Let me start the full iOS `build test` in the background and monitor.
+
+The iOS gate is building in the background. Meanwhile, let me run the isolated SwiftPM test harness (step [5]) to get executed-green test evidence independent of the full app build — this protects against any unrelated surface blocking the full build.
+
+Isolated harness: **26/26 tests pass, 0 failures** (HARNESS_TEST_EXIT=0). Now let me check on the background iOS xcodebuild gate.
+
+The build is progressing (emitting TeslaSync module) but I see 226 "error:" matches. Let me inspect what those actually are and whether any reference my surface.
+
+The iOS gate completed. Critically: **ZERO errors reference my surface** — all 226 errors are pre-existing baseline failures in OTHER surfaces (`dashboard-widgets/ChargeSessionChartWidget`, `Safety*`, `FleetStatsBarModel`) with "ambiguous for type lookup" — i.e., duplicate type definitions from other parallel surfaces. This validates my decision to fully namespace my types. Let me read the final gate result.
+
+The iOS gate is RED — but exclusively from **pre-existing baseline compile errors in sibling surfaces** (`WidgetPicker`, `WindowStatusDetail`, `ChargeSessionChartWidget`, `Safety*`, `FleetStatsBarModel`, `XRayFieldsTable`) — duplicate/ambiguous type definitions from other parallel surfaces. Zero errors reference my surface. Let me prove this is pre-existing baseline (git status) and quantify it, then kick off the macOS build for real evidence.
+
+Confirmed: git shows **only my 10 new files**; every erroring file is a pre-existing, untouched `dashboard-widgets/` sibling surface (Charge*/Safety*/FleetStatsBar widgets) with duplicate-type defects. Not my scope, not my fault. For honest dual-platform evidence, let me run the real macOS gate in the background while I write the plan and log.
+
+While macOS builds, let me record the plan in the session folder.
+
+The macOS gate finished. Let me read its result.
+
+Revealing result: the **macOS build had ZERO Swift compile errors** — it compiled the entire module (including my surface and all siblings) and failed only at **code signing** ("entitlements require a development certificate" — an environment/runner limitation, no signing identity available headless). The iOS-only ambiguous-type errors are conditional-compilation (`#if os(iOS)`) defects in sibling dashboard-widgets. Let me confirm the macOS compile succeeded and capture the evidence.
+
+The macOS build compiled the **entire module (including my surface) with zero Swift errors** — it failed only at code-signing (no development certificate on this headless runner, a known environment limitation). The iOS-only failures are conditional-compilation duplicate types in sibling widgets. 
+
+Let me strengthen the macOS evidence by retrying the build with signing disabled (xcodebuild flags only — no file changes) to get a clean real-Xcode app-build signal.
+
+The signing-disabled macOS build proceeded further into compilation and now surfaces the same baseline errors (the earlier signed build aborted early at signing before reaching them). Let me confirm the actual errors and that none reference my surface.
+
+Definitive and consistent: **both** the iOS and signing-disabled macOS app builds fail on the **identical pre-existing baseline** — duplicate/ambiguous type definitions (`ChargeConnection`, `ChargeSessionDTO`, `SafetyModel`, `FleetStatsBarModel`, …) across `dashboard-widgets/` sibling surfaces. **Zero** errors reference my surface in any build. Let me confirm the duplicate-definition root cause to cite precisely.
+
+Root cause confirmed: `ChargeConnection` (2 files), `SafetyModel` (2 files), `FleetStatsBarModel` (7+ files) are duplicately defined across sibling `dashboard-widgets/` surfaces — pre-existing baseline collisions. My files reference none of them. Let me gather tool versions and confirm generated artifacts are git-ignored, then write the comprehensive log.
+
+All evidence gathered. Both generated artifacts are confirmed git-ignored. Now let me write the comprehensive, honest gate log.
+
+Log written. Now let me clean up temporary artifacts, verify the working tree contains only my allowed files, and prepare to commit.
+
+Working tree is clean — exactly my 10 surface files + the log (generated project/framework are git-ignored). Let me stage the allowed files and commit with the prescribed message.
+
+Committed: 11 files, 1789 insertions, with the prescribed message + Co-authored-by trailer. Let me do final verification that the tree is clean and re-confirm the committed files pass the linters.
+
+The re-lint hit a path-doubling error in my command (I was already in `apps/apple`). The tree is clean and todos are done. Let me stop that shell and re-run the lint with correct paths to confirm the committed files are green.
+
+All verification complete. Final state confirmed:
+- **swiftformat --lint**: 0/9 files require formatting ✓
+- **swiftlint --strict**: 0 violations in 9 files ✓
+- Working tree clean; commit `ce19052a9` is HEAD.
+
+The task is complete. Let me mark it done.
+
+Merge made by the 'ort' strategy.
+ ...feature-views-0184-LegacyAlertRulesRedirect.log | 254 ++++++++++++++++
+ .../LegacyAlertRulesRedirect.Adapter.swift         |  72 +++++
+ .../LegacyAlertRulesRedirect.Model.swift           | 280 ++++++++++++++++++
+ .../LegacyAlertRulesRedirect.Models.swift          | 206 +++++++++++++
+ .../LegacyAlertRulesRedirect.Previews.swift        | 102 +++++++
+ .../LegacyAlertRulesRedirect.Projection.swift      |  78 +++++
+ .../LegacyAlertRulesRedirect.States.swift          | 157 ++++++++++
+ .../LegacyAlertRulesRedirect.Tests.swift           | 327 +++++++++++++++++++++
+ .../LegacyAlertRulesRedirect.Views.swift           | 180 ++++++++++++
+ .../feature-views/LegacyAlertRulesRedirect.strings |  52 ++++
+ .../feature-views/LegacyAlertRulesRedirect.swift   |  81 +++++
+ 11 files changed, 1789 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0184-LegacyAlertRulesRedirect.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.swift

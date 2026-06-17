@@ -1,0 +1,96 @@
+I'll start by understanding the task environment — checking platform capabilities and exploring the repo structure.
+
+Xcode is not fully installed (only Command Line Tools), and `simctl` is unavailable — but `swift`, `swiftlint`, and `swiftformat` are present. Let me explore the Apple app structure and the web source before deciding on capability status.
+
+The `dashboard-widgets` directory already exists with 706 files — there's an established native pattern. Let me study an existing complete widget to follow the convention exactly.
+
+`SolarProductionWidget` (energy category, area chart) is the closest analog. Let me read its complete file set plus a stat-grid example to learn the full native pattern.
+
+Excellent pattern. Let me read the remaining SolarProduction files and locate the shared infrastructure (tokens, registration types, skeleton).
+
+Now let me read the remaining Solar files (Previews, strings, Tests) and locate the shared infrastructure types.
+
+Let me read the shared infra (registration types, design tokens, skeleton) and the Tests pattern.
+
+Now let me read the web data hooks (the exact data shape) and the design tokens. These are critical for parity.
+
+Let me locate the design token definitions more broadly.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me examine it.
+
+Let me read the skeleton component, the project config, the tools, and how existing widgets handle unit preferences (distance mi/km).
+
+Let me check the project.yml test wiring, the placeholder checker, the native units facade, and how an existing widget consumes distance/energy unit preferences.
+
+Let me see how existing native widgets consume unit preferences (distance/efficiency), to follow the established pattern.
+
+`DriveEfficiencyChartWidget` handles efficiency (Wh/mi vs Wh/km) — the exact unit logic I need. Let me study it.
+
+I have the full pattern. Let me verify StatCard unit rendering and the placeholder-check patterns, then set up a plan and todos.
+
+Let me check the `fmt` chart helper — it matters for how the chart plots energy values (Wh vs kWh).
+
+`fmt(v,1)` plots raw `energy_wh` (no /1000) while labeling "kWh" — a latent web inconsistency. I'll plot kWh to match the labeled unit and the SolarProduction precedent, documented explicitly. Let me check the lint/format configs and any host-compile gate.
+
+Let me check the test target wiring and host-compile gate, then I'll create the plan.
+
+I now understand the full architecture. Let me probe whether `swiftc` can typecheck SwiftUI + Charts against the Command Line Tools SDK — this determines my verification strategy.
+
+`swiftc -typecheck` of SwiftUI + Charts against the CLT SDK **succeeds** — I can verify compilation without full Xcode. Let me check for an existing swiftc host-gate script and locate `TSCard` (a transitive dep of the skeleton file).
+
+`pwsh` is available too, so I can run the real placeholder gate. Let me quickly check `AnimatedNumber` default precision (for the compact view) and `TSMaterial`/`Cards` deps, then start implementing.
+
+I have a complete understanding. Let me set up the plan and todos, then implement.
+
+Let me peek at an existing native stat-grid cell for house styling, then write all files.
+
+House style confirmed. Now writing all files. Starting with the pure value types and adapter.
+
+All 8 files created. Now the verification phase — starting with the `swiftc` typecheck of the production SwiftUI files against their real dependency closure.
+
+The errors are all in `Cards.swift` (a transitive dep, not my code). I'll use the real `Tokens.swift` + `DashboardWidgetInfra.swift` and a minimal `TSSkeleton` signature shim to avoid the Cards→everything explosion. Let me confirm `Tokens.swift` is self-contained.
+
+`Tokens.swift` is self-contained. Let me create a minimal real-signature `TSSkeleton` shim and typecheck my files against the real tokens + registration.
+
+Production files typecheck cleanly (`PROD_TYPECHECK_EXIT=0`). Now let me typecheck the Previews and the Tests file (with the `@testable` line stripped for standalone compile), and host-run the adapter logic for real runtime evidence.
+
+Two findings are tooling limits (not code bugs): `#Preview` macro and `XCTest` aren't bundled with Command Line Tools. Let me (a) probe XCTest, (b) validate the preview view bodies via a stub, and (c) host-run the adapter/model logic with real assertions.
+
+The macro/XCTest gaps are CLT toolchain limits, not code issues. Let me validate the preview bodies via the `main.swift` trick and host-run the full adapter/model logic with real assertions.
+
+The stub closure isolation differs from the real macro. Let me de-sugar each `#Preview` into a `@MainActor` function (matching the macro's main-actor body) so the view bodies typecheck faithfully.
+
+Preview bodies typecheck (`EXIT=0`) — only the `#Preview` macro expansion needs full Xcode. Now the **host-run** of the adapter/model logic with real runtime assertions.
+
+58 real assertions pass at runtime (`HOST_CHECKS_OK count=58`). Now `swiftformat --lint` and `swiftlint --strict` on the new files.
+
+`redundantReturn` in `resolvePhase` (the switch is the sole statement → implicit return applies). Let me fix those three `return`s.
+
+Now re-run swiftformat lint, swiftlint strict, and re-typecheck after the edit.
+
+Two `--strict` violations: `buildStats` body too long (56>50) and Tests file too long (412>400). Let me refactor `buildStats` into smaller functions and trim the Tests file.
+
+Now trim the Tests file (412→≤400). Let me shorten the header comment and remove one redundant test.
+
+Now re-run all checks (swiftformat, swiftlint, typecheck, host-run) after the edits.
+
+swiftformat and swiftlint --strict both pass. Now re-verify the typecheck and host-run after the `Model.swift` refactor.
+
+The Tests typecheck only failed because stripping `import XCTest` also dropped Foundation (`Date`). Let me map `import XCTest`→`import Foundation` in the harness and re-run.
+
+All compile/lint/format/host-run checks pass. Now the placeholder gate (`pwsh` is available).
+
+Placeholder gate passes. Let me verify my new public type names don't collide with existing symbols in the single app module (a real-build risk).
+
+No collisions. Now let me locate the correct log directory and check how sibling widget logs are structured.
+
+Let me view a sibling `p4-apple-dashboard-widgets` log to mirror the established log format.
+
+The sibling ran on a full-Xcode runner (DONE with an infra deferral). My runner lacks Xcode entirely — a true capability absence the prompt maps to `STATUS=BLOCKED`. Let me check for `BLOCKED` precedents and whether they committed.
+
+The grep false-matched the covenant boilerplate — all siblings actually ended `STATUS=DONE`, but they ran on **full-Xcode** runners. Mine is CLT-only. Before finalizing, let me probe whether SwiftPM's `swift test` can run real XCTest here — that would let me execute the actual test suite.
+
+`swift test` confirms **XCTest is unavailable** under Command Line Tools ("no such module 'XCTest'"). This is a definitive platform-capability absence. Let me clean up the probe artifacts and confirm my working-tree changes are scoped correctly.
+
+All 8 files are mine and match the allowed set. The 2 modified `web/` files are pre-existing (not mine — shared environment) and I'll exclude them. Now let me generate the honest gate log capturing real command output.
+

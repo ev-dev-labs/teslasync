@@ -1,0 +1,150 @@
+I'll start by exploring the environment and repository structure to understand what's available and what the task requires.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the repository structure.
+
+Both web source and Apple app structure exist. Let me read the web source and explore the Apple app structure.
+
+Web source understood. The `feature-views` directory has ~1996 entries — many existing examples to follow. Let me examine the conventions and check if NotificationRow already exists.
+
+`NotificationRow` doesn't exist yet — I need to create it. The sibling `NotificationGroupRow` is the closest analog (same feature, similar row component). Let me study its full file set to learn the exact conventions.
+
+Excellent, comprehensive conventions. Let me read the remaining sibling files to learn the full pattern — Views, Previews, Tests, ModelTests, Source, Chrome, Copy, and strings.
+
+Let me read the remaining sibling files: Chrome, Copy, Previews, Tests, ModelTests, and strings.
+
+Now the test files, previews, strings, and project configuration.
+
+Now the Previews and strings, plus project config and shared tokens to confirm what primitives exist.
+
+Let me read the project config and locate the shared design tokens (Color.TS, TSSpacing, Font.TS, TSFadeIn, TSSkeleton).
+
+Now let me examine the placeholder-check gate, the design tokens, the shared primitives I'll reuse, and build tooling feasibility.
+
+Let me read the shared motion/skeleton components and assess the xcodebuild feasibility (the KMP Shared.xcframework dependency is the key risk).
+
+Key finding: the app target links a KMP `Shared.xcframework` that isn't prebuilt (only `.gitkeep`), built via Gradle/Kotlin-Native. Let me assess build feasibility and whether the feature-views layer is source-independent of that framework.
+
+Feature-views are source-independent of the KMP `Shared` module (good — enables targeted compile checks). JDK 17 + gradlew present, so the full build is *potentially* feasible but heavy. Let me read the web helpers referenced by the source for exact parity, then start writing.
+
+I have full parity context. Let me check the lint/format configs so my code conforms on the first pass, then I'll create a tracking plan.
+
+I have everything needed. Let me set up a tracking plan and start writing the surface files, mirroring the proven sibling conventions exactly.
+
+Now I'll write the surface. Starting with the pure Foundation layers — Adapter, Copy, and Source.
+
+All 11 files written. Now verification. Let me run the fast checks first: swiftformat lint, placeholder gate, and swiftlint on my new files.
+
+swiftformat passes (0/10 need formatting). Now the placeholder gate and swiftlint on my files.
+
+Fast gates all green (swiftformat 0/10, placeholders 0, swiftlint 0). Now I need to verify compilation. The full `xcodebuild` needs the KMP `Shared.xcframework`. Let me first assess a faster targeted typecheck path and the Components dependency closure.
+
+`Sources/Components` (39 files) only imports SwiftUI/Charts/MapKit/CoreLocation/Foundation — no KMP `Shared`. So I can typecheck my code against the real design system without the framework. Let me run a targeted `swiftc -typecheck`.
+
+The errors are in `Sources/Components/Maps/MapView.swift` (missing `TSChartPalette`), not my code — my curated set is missing a dependency file. Let me locate it and close the gap.
+
+`TSChartPalette` is in `Sources/Design/TSDesign.swift`. Let me use a minimal, precise closure for my files instead of all of Components: my surfaces + the reused sibling + tokens + the three component files I actually use.
+
+The glob `NotificationRow.*.swift` missed the main `NotificationRow.swift` (single dot). Let me correct the globs to include the main view files.
+
+All remaining errors are inside `Sources/Components/UI/Cards.swift`'s preview (needs sibling component types) — none in my code. Let me include the full Components + Design closure for a clean compile.
+
+All errors remain in unrelated pre-existing files (Cards preview, `UnitFormatters` needing KMP `Units`/`UnitPreferences`) — never in my code. Let me build a clean closure by excluding the unrelated chart/map/units component files and compiling without DEBUG (drops previews) to get a green baseline.
+
+Only `UnitFormatters.swift` needs the KMP unit types. Excluding just that one file should yield a self-contained closure. Let me compile the full Components+Design (minus UnitFormatters) with both surfaces and `-DDEBUG` so my previews are checked too.
+
+Clean closure typecheck **passed (EXIT 0)** — my production code and previews compile against the real design system. Now let me validate the test files compile against my APIs (strip the `@testable import` and compile in-module with XCTest).
+
+XCTest needs the Developer framework search path. Let me add it and retry.
+
+The XCTest assert macros aren't resolvable in an ad-hoc `swiftc` typecheck (an overlay artifact, not a code problem) — notably, there are zero errors about my own test symbols. The authoritative test run needs the real build. Let me assess the KMP `Shared.xcframework` build feasibility (konan/gradle caches).
+
+Good — the Kotlin/Native toolchain is already cached (`~/.konan` has `kotlin-native-prebuilt-macos-aarch64-2.4.0`, `~/.gradle` is 3.2G). Building the `Shared.xcframework` is feasible. Let me start it in the background.
+
+While the KMP build runs, let me generate the Xcode project (needed for the gate).
+
+Project generated. Let me check the KMP build progress and confirm my files are wired into the project.
+
+All 10 files are wired into the project. The KMP build is still compiling. Let me wait for it.
+
+KMP native compilation is slow (multi-arch). Let me keep waiting.
+
+No incremental output (stdout buffered through `tail`). Let me verify it's actively progressing by inspecting the build directory in a separate shell.
+
+Progress confirmed — per-arch frameworks (iOS arm64, iOS simulator, macOS arm64) are built and the debug XCFramework is assembled; the release XCFramework is the final step. Let me wait for completion.
+
+Release build (optimized) still in progress — 60 native processes active. Let me continue waiting.
+
+KMP build **succeeded** (`BUILD SUCCESSFUL in 19m 56s`) — release `Shared.xcframework` produced. Let me stage it and check the simulator, then run the official gate.
+
+Framework staged; iPhone 16 simulator is booted. Let me set up the log and run the official gate — starting with the macOS build+test (fastest path to validate my code compiles and tests pass in the real module).
+
+Let me fix the command — the xcbeautify fallback could trigger a wasteful second build. Restarting cleanly.
+
+Let me monitor the macOS build progress.
+
+The macOS failure is a **code-signing/entitlements** environment issue (no development certificate) — not a compile error. Let me confirm my code compiled cleanly (signing happens after compilation) and check how far it got.
+
+**Zero Swift compile errors** — the full module (including my files + test bundle) compiled; macOS failed only at the codesign step (entitlements need a dev cert). The iOS Simulator path requires no signing, so it can actually run my tests. Let me run the iOS gate.
+
+Let me monitor the iOS build+test (the authoritative test run).
+
+iOS app target is compiling (no errors). Let me continue waiting for the test run.
+
+Still compiling the large app target, no errors. Let me keep waiting for the test execution phase.
+
+iOS finished with `IOS_EXIT=65` and "(3 failures)". Let me find the exact cause.
+
+The error is in a **pre-existing** test file `SlideRenderer.FixturesTests.swift:14` (a `static let echo` that isn't `@Sendable`) — not my code. Let me confirm it's pre-existing and check whether my files are implicated at all.
+
+Confirmed: `SlideRenderer.FixturesTests.swift` is **pre-existing and committed** (only my NotificationRow files are untracked). Its `static let echo` lacks `@Sendable`, breaking Swift 6 strict concurrency — independent of my code. Let me assess how widespread this pre-existing baseline breakage is.
+
+This is a **single pre-existing baseline breakage** outside my allowed files. To prove MY tests pass, I'll temporarily patch the sibling file as a local probe (not committed), run only my test classes, then revert. First the temporary probe edit:
+
+Now run only my test classes on iOS (bundle recompiles, app is cached).
+
+Let me monitor the targeted test run.
+
+App module re-emitted, no errors. Let me wait for the test bundle compile + execution.
+
+More pre-existing breakages surfaced (`PresetGallery.ModelTests.swift`, `PresetGallery.Tests.swift` — same non-`@Sendable` closure pattern). The baseline test bundle is broadly pre-existing-red. Let me quantify the full blast radius.
+
+Probe reverted. The baseline breakage spans ~103 sibling test files — a definitive pre-existing, repo-wide Swift 6 condition outside my scope. To still prove MY tests pass at runtime, I'll build an **isolated** XCTest bundle from only my sources + tests. Let me locate the XCTest overlay paths.
+
+XCTest overlay is at `.../Developer/usr/lib`. Let me build an isolated `.xctest` bundle from only my sources + tests and run it.
+
+Isolated bundle **compiled cleanly** (EXIT 0, XCTest linked). Now let me run it.
+
+**All 33 of my tests passed (0 failures, EXIT 0)** in the isolated bundle — definitive runtime proof. Let me run the remaining official gate steps (whole-tree lint/format as specified) to capture real results, and clean up temp artifacts.
+
+Whole-tree swiftformat passes (0/2757). swiftlint --strict found **1 pre-existing violation** somewhere. Let me identify it (my files were already verified clean).
+
+The single swiftlint violation is in pre-existing `LiveSignalSparklinesWidget.Builder.swift` — not mine (all 10 of my files linted clean). Every failing gate step is pre-existing/environmental and outside my allowed files. Let me write the comprehensive, honest gate log.
+
+The log is complete and honest. Let me verify git state before committing — ensure only my surface files + the log are staged (and that the generated project/framework artifacts are properly ignored).
+
+Git state is clean — only my 12 files (11 surface + log) are untracked, the probe is reverted, and the generated project/framework are gitignored. Let me commit the surface with an honest message.
+
+Commit succeeded (12 files, 2177 insertions). Let me finalize todos and clean up temp artifacts.
+
+The task is complete. Working tree is clean, all temp artifacts removed, and all todos done.
+
+## Summary
+
+I shipped the **`NotificationRow`** Apple feature view (P4 · 0191) — a production-polished SwiftUI parity of `features/notifications/components/NotificationRow.tsx` — as 11 files following the established sibling conventions exactly:
+
+**Surface** (`apps/apple/TeslaSync/feature-views/NotificationRow.*`): main view, `Adapter` (pure projections + action gating + phase resolver), `Copy`, `Source` (P1/S8 state-holder seam + in-memory source), `Model` (`@Observable` + i18n facade + telemetry), `Views`, `Chrome`, `Previews` (8 states), `strings`, and `Tests` + `ModelTests`.
+
+It reproduces the web data/composition, renders **every** state (loading/empty/error/stale/offline/content), binds via the shared state holder (no networking in the view), resolves all strings through the P1/S10 facade (including the 6 web-source keys), and labels every interactive element for VoiceOver.
+
+**Verification (surface — all green):**
+- `swiftc -typecheck` against the real design system: **EXIT 0**
+- Compiles in **both** iOS + macOS app targets: **0 Swift errors**
+- **33/33** surface tests pass via `xcrun xctest` (adapter + model + a11y + i18n)
+- `swiftformat --lint`: **0** · `check-placeholders`: **0** · `swiftlint --strict` on my 10 files: **0**
+
+**Gate: `EXIT=65` / `STATUS=BLOCKED`** (documented with evidence in the committed log). The verbatim multi-target `xcodebuild ... test` can't reach 0 due to conditions **outside this surface's allowed files**:
+1. **macOS code-signing** needs a development certificate not present on the runner (platform capability), and
+2. **~103 pre-existing sibling `*Tests.swift` files** fail Swift 6 strict concurrency (non-`@Sendable` closures, e.g. `SlideRenderer.FixturesTests`, `PresetGallery.Tests`), which blocks the **shared** XCTest bundle from compiling. One unrelated pre-existing `swiftlint` violation also exists in `LiveSignalSparklinesWidget.Builder.swift`.
+
+No `NotificationRow` file causes any failing step. I did **not** edit any out-of-scope file (a temporary local probe used to run my tests was reverted), and committed only the 11 surface files + the honest log.
+

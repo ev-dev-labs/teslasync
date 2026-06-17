@@ -1,0 +1,151 @@
+I'll start by exploring the repository structure and verifying the capabilities available on this runner.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me explore the web source and existing Apple app structure.
+
+Now I understand the web source — it's a modal form for logging incidents. Let me explore the existing Apple app structure to understand patterns (state holders, i18n, tokens, existing feature views).
+
+The project uses XcodeGen (`project.yml`) and the target dir is `apps/apple/TeslaSync/feature-views/`. Let me study the existing feature-view patterns and supporting infrastructure.
+
+Now I understand the build structure (XcodeGen, co-located tests, Shared.xcframework dependency). Let me check build tooling feasibility and find a good form-based example plus the shared infrastructure.
+
+Key findings: `xcodegen` is available, but `Shared.xcframework` doesn't exist (only `.gitkeep`) and there's no existing Incident state holder. Let me examine the build script and shared facade infrastructure.
+
+Build requires a KMP Gradle framework. Let me assess feasibility and study the state-holder pattern, plus check for precedent in the logs.
+
+214 feature-view logs exist — strong precedent. Let me examine a passing log to understand the gate, check the shared core, and find a close form template.
+
+The precedent is clear: surfaces type-check per-surface against iOS+macOS SDKs, run executed host harnesses, and DEFER full-scheme breakage caused by out-of-scope predecessor files. Let me read the full verification approach and study a close form template.
+
+Excellent — the verification harness is now crystal clear (per-surface SDK typecheck iOS+macOS, executed host harness, swiftformat/swiftlint/placeholder, xcodegen registration, full scheme DEFERRED on predecessor breakage). Let me study the gold-standard template and the closest form-with-mutation examples.
+
+The gold-standard pattern is clear. Now I need the async-form-with-mutation pattern. Let me study form surfaces with mutations plus the shared UI/Forms components available.
+
+`ComputedMetricEditor` is the closest analog (editor form with validation + save). Let me study it deeply along with the shared form/UI component APIs I'll need.
+
+Now let me study the async-mutation pattern (TOTP enrollment), the Toast feedback component, and the exact shared form/UI component APIs I'll call.
+
+Let me read the exact APIs of the UI components I'll compose with (fields, buttons, pickers, cards, typography, feedback, overlays).
+
+Now let me see how existing surfaces bridge the String-returning i18n facade to the `LocalizedStringKey`-taking components, plus the remaining component APIs (Buttons, Cards, Typography, Feedback, Overlays).
+
+Now I understand the i18n→SwiftUI bridge. Let me find `LocalizedText`, the Feedback components (toast/banner), and how mutation surfaces present success/error feedback, plus the editor adapter + types.
+
+`LocalizedText` is shared in the feature-views module. Let me locate it and study the closest mutation+toast template (BackupActionsCard) end to end.
+
+The mutation+toast pattern is clear. Let me read the adapter (toast projection), the view + views (toast rendering, composition), the `LocalizedText` definition, and the Banners/Buttons/Cards/Typography APIs.
+
+Let me read the remaining template pieces (BackupActionsCard Views/strings/Tests/Previews), the `LocalizedText` definition, and the Buttons/Cards/Typography/Motion APIs.
+
+I have the full template picture. Let me read the exact APIs for Buttons, Cards, Typography, and locate TSTone/TSFadeIn/TSSkeleton/TSMotion, plus the BackupActionsCard test/strings/previews structure and the placeholder checker.
+
+Let me read the Typography, Cards, Badges, and Motion APIs to finalize component signatures.
+
+I have all component APIs. Let me read the test/strings/previews templates, the Badges/Motion APIs, and the placeholder-check script.
+
+Let me read the Previews template, Badges/Motion APIs, the placeholder checker, and check for any reusable typecheck/harness tooling.
+
+Let me read the placeholder checker and extract the exact per-surface typecheck harness command from a same-area log (FleetApiSection, also in `system`).
+
+I now have everything needed. Let me kick off the long-pole KMP framework build in the background while I write code, and verify `ConditionBuilder.Types.swift` self-containment for the typecheck harness.
+
+The gradle KMP build is running in the background (compiling Kotlin/Native — warm cache). `ConditionBuilder.Types.swift` is Foundation-only and self-contained (defines the shared `LocalizedText`). I have all patterns. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the value types, the pure adapter, and the state-holder model.
+
+Types, Adapter, Model done. Let me check the framework build progress and continue with the views.
+
+The KMP framework is linking the release build now — the toolchain works. Let me write the view layer while it finishes.
+
+I referenced a focus enum — let me define it in the main view file and compose the full surface.
+
+Now the strings catalog, previews, and tests. Let me check the framework build and write these.
+
+Framework still linking the release build (Kotlin/Native is slow). Let me write the strings, previews, and tests meanwhile.
+
+All 8 files written. Let me fix one spotted issue (the `note` property needs a default for the memberwise init) and check the framework build.
+
+Framework is linking the simulator slice now. Let me format and lint my Swift files against the repo config while it finishes.
+
+swiftformat passes (0/7). Now swiftlint --strict on the surface files.
+
+swiftlint passes (0 violations). Now the placeholder gate — genuine coverage on copies plus the verbatim gate path.
+
+Placeholder gate passes (COUNT=0). Now the key compile evidence — the per-surface SDK typecheck. Let me assemble the design-system file set and check for non-SDK dependencies.
+
+Design system is SDK-only (41 files, exclude UnitFormatters → 40, matching precedent). Let me run the per-surface iOS 18 SDK typecheck against the real design system.
+
+iOS 18 typecheck passes with **0 errors**. Now macOS 15 SDK.
+
+Both SDKs typecheck clean (**0 errors**). Now the executed host harness for runtime-green evidence. Let me build a standalone driver from copies of the logic files.
+
+Two fixes needed: a `)?.` spacing parse error and redundant `await`s (top-level is already MainActor-isolated). Let me fix.
+
+Host harness executes **GREEN: 56/56 checks, 0 failures**. Let me update tracking, check the framework build, and run xcodegen.
+
+Framework built successfully (13m53s) and staged with all slices. Now `xcodegen generate` to register the files.
+
+All 7 files registered (48 refs across iOS+macOS app + test targets). Now the full scheme build — the long pole. Let me run it and capture output to a log.
+
+Build started in background. Let me monitor its progress.
+
+The full scheme build failed with 142 errors — but the failing targets are sibling surfaces (`LiveSignalsTable`, `LiveSignalsWidget`, `LiveTelemetry`, `Sources/Live/*`), not mine. Let me rigorously confirm **zero** errors originate in IncidentForm and catalog the predecessor breakage.
+
+**Zero errors in IncidentForm — confirmed.** All 142 errors are in out-of-scope sibling surfaces from parallel prompts (`ChargeStatusWidget`, `SafetyFeaturesWidget`, `DrivingCoachWidget`, etc.). Let me verify my files were actually compiled (not merely skipped) and sample the predecessor errors for honest documentation.
+
+Predecessor errors are duplicate-type collisions across parallel-authored siblings (`'ChargeSessionDTO' is ambiguous` + cascades) — outside my allowed files and unfixable by me. Let me confirm the IncidentForm references and kick off the macOS scheme build for a real exit code while I write the log.
+
+Definitive: my `IncidentForm.strings` was copied + validated into the bundle, and **zero** IncidentForm Swift errors. The 8 failing surfaces are all out-of-scope siblings, root-caused by a parallel-authored duplicate `ChargeSessionDTO` type. Let me confirm none of my public type names collide with existing module symbols.
+
+No symbol collisions — my surface is self-contained. The macOS build finished. Let me check its result.
+
+macOS build also failed — but again **0 IncidentForm errors** (only 2 total errors). Let me see exactly what those 2 are.
+
+The macOS failure is a **pre-existing environmental code-signing constraint** (empty `DEVELOPMENT_TEAM` + macOS entitlements need a dev certificate) — it fails before compiling, again **0 IncidentForm errors**. Let me confirm the iOS root cause (duplicate `ChargeSessionDTO` from parallel prompts) to document it precisely.
+
+Confirmed: `ChargeSessionDTO` is duplicated across two parallel-authored siblings (`ChargeStatusLiveWidget.Model.swift` + `ChargeSessionChartWidget.Models.swift`) — the root of all 142 iOS errors across 8 out-of-scope surfaces, which I'm forbidden to edit. All evidence gathered. Let me write the gate log.
+
+Log written. Now let me stage **only** my allowed files (IncidentForm.* + the log), being careful to exclude the generated project, the staged framework, and pre-existing unrelated changes.
+
+Clean: generated project + framework are git-ignored; the two `web/...admin` files are pre-existing changes (not mine). Let me stage exactly my files + log and commit.
+
+Exactly the 8 surface files + log are staged (pre-existing `web/...` changes excluded). Committing.
+
+Committed as `d0b492150` (9 files, 1879 insertions — only allowed files). Let me finalize: verify the working tree, confirm the log tail, and clean up temp artifacts.
+
+All complete and verified. The working tree shows only the two pre-existing `web/...admin` changes (correctly untouched), the log ends with `EXIT=0 / STATUS=DONE`, and temp artifacts are cleaned.
+
+## Summary
+
+Shipped a production-polished, native Apple SwiftUI parity of the web `IncidentForm` (manual incident-logging modal) at `apps/apple/TeslaSync/feature-views/IncidentForm.*` — committed as `d0b492150` (8 source files + gate log, 1879 lines), touching only allowed files.
+
+**Architecture** (mirrors the established 0241/0021 precedent): pure Foundation `Types` + `Adapter` (validation, create-body build, toast projection), a SwiftUI-free `@Observable` P1/S8 state holder binding the create through an `IncidentCreating` seam (no view I/O), P1/S11 `view.opened` telemetry, P1/S10 per-surface i18n facade, P1/S9 design tokens, full VoiceOver/Dynamic Type/Reduce-Motion a11y. Every web branch reproduced (trim<3 validation→toast+no-network, `initial_message`→nil, comma-split components, "Logging…"/disabled, success→`onClose()`+list-invalidation, error/offline toasts). All form states render — no hidden surfaces.
+
+**Gate evidence (real exit codes):**
+- ✅ `TYPECHECK_IOS_EXIT=0` and `TYPECHECK_MAC_EXIT=0` — surface compiles against the real design system on **both** iOS 18 + macOS 15 SDKs (Swift 6, strict concurrency), 0 errors/warnings
+- ✅ `HARNESS_EXIT=0` — executed host harness **56/56** checks green
+- ✅ swiftformat (0/7), swiftlint --strict (0 violations), placeholder gate (COUNT=0), xcodegen (registered; `.strings` validated UTF-8)
+- ✅ KMP `Shared.xcframework` built clean from source (13m53s)
+- ⏸️ Full `xcodebuild` schemes **RED with zero IncidentForm errors** — iOS on an out-of-scope duplicate `ChargeSessionDTO` from two *other* parallel prompts (forbidden to edit), macOS on an environmental code-signing gap. Both **DEFERRED** to their owners / P99 integration per the documented "code-complete + DEFERRED scheme" precedent.
+
+`EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0246-IncidentForm.log   | 226 +++++++++++++
+ .../feature-views/IncidentForm.Adapter.swift       | 287 +++++++++++++++++
+ .../feature-views/IncidentForm.Model.swift         | 355 +++++++++++++++++++++
+ .../feature-views/IncidentForm.Previews.swift      |  75 +++++
+ .../feature-views/IncidentForm.Tests.swift         | 322 +++++++++++++++++++
+ .../feature-views/IncidentForm.Types.swift         | 139 ++++++++
+ .../feature-views/IncidentForm.Views.swift         | 289 +++++++++++++++++
+ .../TeslaSync/feature-views/IncidentForm.strings   |  54 ++++
+ .../TeslaSync/feature-views/IncidentForm.swift     | 132 ++++++++
+ 9 files changed, 1879 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0246-IncidentForm.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentForm.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentForm.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentForm.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentForm.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentForm.Types.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentForm.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentForm.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/IncidentForm.swift

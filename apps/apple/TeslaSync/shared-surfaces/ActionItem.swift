@@ -1,9 +1,9 @@
 //
-//  ActionItem.swift
-//  TeslaSync — P4 shared surface · 0196 · ActionItem (Apple)
+//  ActionItemShared.swift
+//  TeslaSync — P4 shared surface · 0196 · ActionItemShared (Apple)
 //
 //  The SwiftUI surface — the public API of the single operator-task row, the parity of the web
-//  `<ActionItem severity title description cta />`. Like the web component it is driven entirely by its
+//  `<ActionItemShared severity title description cta />`. Like the web component it is driven entirely by its
 //  props; there is no data source, so there is nothing to wire. The view binds through ``ActionItemModel``
 //  (P1/S8) for the derived projection + the localized CTA VoiceOver hint + the once-only `view.opened`
 //  telemetry (P1/S11), composes the token-driven chrome via ``ActionItemContainer`` (P1/S9), and pushes
@@ -73,15 +73,15 @@ public enum ActionItemCTA {
     }
 }
 
-// MARK: - ActionItem (the shared surface)
+// MARK: - ActionItemShared (the shared surface)
 
-/// `ActionItem` — the SwiftUI parity of `components/status/ActionItem.tsx`: a single operator-task row
+/// `ActionItemShared` — the SwiftUI parity of `components/status/ActionItemShared.tsx`: a single operator-task row
 /// (a severity glyph, a title + optional description, and an optional CTA button) on a tinted, ringed
 /// surface whose colour encodes the severity. Stack these inside an `ActionItemsPanel` to surface things
 /// the operator should do (run a backup, re-auth, install an update). Renders the real branches of the
 /// web source — each severity, description present / absent, and the route / external-link / action /
 /// no CTA wrapper — with the web composition and tap semantics.
-public struct ActionItem: View {
+public struct ActionItemShared: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
     public static let surfaceSlug = ActionItemSurface.slug
 
@@ -92,7 +92,7 @@ public struct ActionItem: View {
 
     @State private var model: ActionItemModel
 
-    /// The prop-style initializer — the parity of the web `<ActionItem … />`. `severity` / `title` are
+    /// The prop-style initializer — the parity of the web `<ActionItemShared … />`. `severity` / `title` are
     /// required (matching the web required props); `description` defaults to omitted (web `undefined`),
     /// and `cta` defaults to no affordance (web no `cta`).
     public init(

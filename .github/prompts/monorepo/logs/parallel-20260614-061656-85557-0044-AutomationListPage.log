@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and related reference files.
+
+The real pages live under `Sources/Features/`. Let me study the closest sibling page (`AutomationsListPage`) and its model thoroughly.
+
+The pages live at `apps/apple/Sources/Features/Automations/` (the `TeslaSync` target's source root is `Sources/`). Let me study the sibling implementations and project config.
+
+Now let me understand the routing, shared components, data source samples, and the string catalog. Let me look at several key files in parallel.
+
+Let me check whether the Apple toolchain (xcodebuild, swiftlint, xcodegen) is available, and look at the test pattern + string catalog structure.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, xcodegen, pwsh) — the gate can run. Let me examine the project config, generator path mapping, and placeholder scanner.
+
+The build needs `Shared.xcframework` and a generated `.xcodeproj`. Let me read a completed sibling's evidence log to learn the exact gate commands and log format, plus the README gate contract and placeholder scanner.
+
+This is the key reference. I now understand the established disposition (in-scope gates green; full app build is pre-existing RED from an out-of-scope IRGen crash). Let me set up a todo plan and read the remaining reference files (test pattern, button/card/typography APIs, table/selection patterns).
+
+Let me read typography/card/skeleton component APIs, the web hooks/components I'm porting, and check for an existing Apple bulk toolbar or data table.
+
+There's an Apple `BulkActionsToolbar` (shared-surfaces) and a `DataTable` component. Let me read those plus the web hooks/types and remaining component APIs.
+
+Let me read the web `BulkActionToolbar`, the `Automation` type, and the remaining Apple component APIs (Typography, Cards, Skeletons, DataTable).
+
+I have all component APIs. Let me confirm design tokens, the theme modifier, app registration, and the accepted disposition doc.
+
+Let me check the swiftlint config and the glass material modifier so my code stays within lint budgets.
+
+I have a complete picture. Let me verify no symbol collisions exist for my new types, then start implementing.
+
+No collisions. Let me create the implementation files, starting with the models/data-source seam and the model.
+
+Now let me check which `common.*` and `bulk.*` keys already exist in the string catalog before writing the views (so I know what to add).
+
+The catalog has `common.cancel`/`common.ok` already. Let me inspect its JSON structure to add keys correctly.
+
+Catalog structure is clear. Now let me write the page view and the table/toolbar subviews.
+
+Now the navigation registration, mirroring the sibling sub-surface pattern.
+
+Now the model unit tests.
+
+Now let me add the string keys to the catalog. I'll insert a block before the existing `common.cancel` entry, matching Xcode's exact formatting. First, verify uniqueness.
+
+Anchor is unique and JSON is valid. Let me insert the 26 keys (22 required + 4 supporting) with Xcode-exact formatting.
+
+26 keys added; JSON valid (8795 keys). Let me verify the required keys, then update todos and start the gates.
+
+All 22 required keys present. Let me run the gates. Starting with the placeholder scan, swiftformat, and swiftlint on my files.
+
+Now let me run the placeholder scan, swiftformat lint, and swiftlint on my files.
+
+Placeholder scan clean. Now swiftformat lint and swiftlint on my files.
+
+swiftformat flagged auto-fixable issues. Let me apply formatting to my files (ecosystem tool), then re-verify.
+
+swiftformat clean now. Let me run swiftlint --strict on my files and review the auto-formatted loop changes.
+
+swiftlint flags `inclusive_language` for "master". I'll rename to "selectAll*". Let me view the affected regions post-format, then rename across all files.
+
+`inclusive_language` only flags identifiers, not comments. I'll rename the `master*` identifiers to `selectAll*` while keeping the web-term references in comments. Using perl for precise in-place identifier renames.
+
+All remaining `master` references are in comments. Let me re-run swiftlint and swiftformat on my files.
+
+swiftlint and swiftformat both clean. Now let me check the build prerequisites (Shared.xcframework) and generate the Xcode project.
+
+`Shared.xcframework` isn't staged and needs the Kotlin/Gradle toolchain (same as the accepted sibling). Let me read the disposition doc and check whether the Kotlin toolchain is usable here, then generate the project.
+
+The full toolchain is present here, so I'll attempt the authoritative path. Let me kick off the Kotlin/Gradle `Shared.xcframework` build in the background while I generate the Xcode project.
+
+Project generated. Let me confirm my files are enumerated and check the Gradle build progress.
+
+All 7 files are enumerated in the project. The Gradle build is actively compiling Kotlin/Native. Let me wait for it to finish staging the framework.
+
+The DEBUG framework is built; the RELEASE framework is linking now. Let me stop the noisy poller and wait for staging to complete.
+
+`Shared.xcframework` is staged. Now I'll run the authoritative `xcodebuild build` for the iOS scheme. This is large, so I'll run it in the background and monitor.
+
+Build started detached. Let me monitor its progress (large target, will take several minutes).
+
+Whole-module emit is underway (Sema passing). Let me keep waiting for the build to finish or error.
+
+BUILD FAILED, but the failing compile commands are all `widget-primitives/Widget*.swift` — not my files. Let me extract the actual error/crash details to confirm it's pre-existing and out-of-scope.
+
+The build failed only on pre-existing out-of-scope `*.Previews.swift` files (a newer-toolchain `return`-in-ViewBuilder error), not my files. Let me enumerate every erroring file and confirm none are mine.
+
+Only `Input.Previews.swift` (one out-of-scope file) errors — zero errors in my files, and whole-module Sema completed. Let me confirm my change scope and inspect the pre-existing error, then run an incremental probe to prove my files compile in the real target.
+
+Confirmed: my change scope is only my 7 files + the catalog. `Input.Previews.swift` is unmodified by me — the `return`-in-`#Preview` error is pre-existing committed code surfaced by Xcode 26.5. Let me run an incremental probe (temporarily neutralize that out-of-scope error, rebuild, then restore) to prove my files compile and link in the real iOS target.
+
+There are 10 `return staged(` in that one file, and the same `return`-in-`#Preview` pattern spans many out-of-scope `*.Previews.swift` files — a pre-existing, repo-wide Xcode 26.5 / Swift 6.3.2 incompatibility, none in my files. Let me verify the baseline reproduces this without my changes, and confirm my own previews use no `return`.
+
+My files are clean (all `return`s are valid guards/function bodies; my `#Preview`s use none). The pre-existing `return`-in-`#Preview` incompatibility spans 157 out-of-scope files — a repo-wide Xcode 26.5 issue independent of my change. Let me capture the exact compiler flags from the build and run a scoped typecheck of my surface against the real SDK, excluding the broken preview files.
+
+I have the exact build file list. Let me extract the real compiler invocation from the build log so I can run an authoritative scoped type-check of my surface against the real SDK + `Shared.xcframework`, excluding only the pre-existing broken preview files.
+
+My files aren't in that (stale) file list — my build used a different DerivedData. Let me find the file list that contains my files.
+
+Found my build's DerivedData. Let me locate the resolved `Shared.framework` slice and SDK, then construct a scoped type-check (full app sources minus the broken preview files) against the real iOS SDK.
+
+`Shared.framework` slice and `-swift-version 6` confirmed. Let me run the scoped type-check: the full app target sources minus the broken preview files, against the real iOS simulator SDK + `Shared.xcframework`.
+
+The `&&` chain broke on a `grep -c` (0 matches → exit 1) before swiftc ran. The filtered list is ready (3921 files, 6 mine). Let me run the type-check standalone.
+
+Type-check of 3921 files is running. Let me wait for it to complete.
+
+~19 min for the whole-program type-check is impractical. Let me stop it and run a fast, focused closure type-check (the sibling's accepted approach) instead.
+
+Closure is Shared-free. Let me assemble a focused dependency closure (my files + the model deps + Components + Design + tokens) and type-check it against the real iOS SDK.
+
+All 52 errors are in `Components/DataDisplay/UnitFormatters.swift` (KMP-coupled, references `UnitPreferences`) — the exact file the sibling excluded, and one my surface doesn't use. Let me find all KMP-coupled component files and exclude them, then re-run.
+
+Only `UnitFormatters.swift` is KMP-coupled, and my surface doesn't use it. Let me exclude it and re-run the focused type-check.
+
+The only errors are because my model reuses the sibling's `AutomationsListPhase` (fine in the real module, but it pulls the sibling's whole model file into my isolated closure). Better engineering: decouple by giving my surface its own phase enum. Let me refactor.
+
+Now my surface is self-contained. Let me re-run the focused iOS type-check.
+
+Focused iOS type-check passes: **0 errors**. Now the macOS idiom.
+
+Both iOS-18 and macOS-15 focused type-checks pass with **0 errors**. Now let me build and run an executable model harness (the model files are SwiftUI-free) to get runtime proof of the state machine, since the full XCTest run is blocked by the pre-existing preview breakage.
+
+Now compile and run the harness as a macOS executable.
+
+19/20 passed. The one "failure" is a harness-environment artifact: the bare executable has no `Localizable.xcstrings` bundle, so `String(localized:)` returns the key (no `%@`) and can't interpolate the name — not a logic bug (the catalog value `"Select automation %@"` is already verified). Let me fix that assertion to be bundle-independent and re-run.
+
+Harness: **21 passed, 0 failed**. Now let me verify the committed XCTest file itself type-checks against the module (compiled together with the model, with XCTest available).
+
+The errors are all `XCTAssert*`-not-found (XCTest module not wired into my ad-hoc standalone typecheck), which cascade into "cannot infer contextual base". Let me confirm there are zero NON-XCTest errors (which would mean my test code is otherwise type-correct), and try wiring XCTest properly.
+
+The XCTest file type-checks with **0 errors** once XCTest is properly wired, and all test errors before were purely XCTest-availability artifacts. Verification is comprehensive. Let me re-run the lint gates on my files (I edited 2 after the last pass), update todos.
+
+All clean (format 0/7, lint 0 violations, placeholder 0). I reformatted after the last typecheck, so let me re-confirm the focused iOS type-check on the final bytes and verify the generated project is gitignored.
+
+Final iOS type-check on committed bytes: **0 errors**; the generated project is gitignored. Now let me add the two ledger rows (apple-macos + apple-ios) and validate.
+
+Ledger valid (2 rows, 27/27 each). Let me gather final metrics, then write the evidence log.
+
+Now let me write the evidence log following the established format.
+
+Log written. Let me do a final review of the formatted view files, then commit.
+
+Files look clean and complete. Let me stage the scoped paths, verify the changeset contains nothing stray, then commit.
+
+All 10 intended files staged, nothing stray. Let me commit.
+
+Committed (`b719ee587`, 10 files, +1698). Let me update todos and clean up temporary artifacts.
+
+The task is complete and committed with a clean working tree. Let me do a final confirmation of the deliverable state.
+
+Task complete. I implemented the native SwiftUI **`AutomationListPage`** at full parity with `web/src/features/automations/pages/AutomationListPage.tsx`, adaptive across macOS + iOS.
+
+## What shipped (committed `b719ee587`)
+- **6 source files + 1 test** under `apps/apple/Sources/Features/Automations/` and `Tests/Unit/Features/Automations/`: an `@Observable AutomationListPageModel` over an injected `AutomationListDataSource` (methods mirror `useAutomations` / `useBulkAutomationsUpdate`), a self-contained `AutomationListModels`, sample/empty/failing sources, the page view, an adaptive table/bulk-toolbar, and a `NavigationDestination` route registration.
+- **26 catalog keys** added to `Localizable.xcstrings` (22 required + 4 supporting), additive.
+- **Ledger**: `page:automations/AutomationList` → apple-macos + apple-ios, **27/27** each.
+- **Evidence log** with the `=== PARITY ===` section enumerating all 27 items, `EXIT=0` / `STATUS=DONE`.
+
+## Verification (all in-scope gates green)
+- placeholder `0`, swiftformat `0/7`, swiftlint `--strict` `0 violations`
+- Real-SDK `swiftc -typecheck`: **iOS‑18 `0` errors**, **macOS‑15 `0` errors** (surface + real P2 tokens/P3 components)
+- XCTest file typecheck (macOS‑15) `0`; executed model harness **21/21**
+- `Shared.xcframework` built via Gradle and staged; `xcodegen` enumerates all 7 files
+
+## Honest disposition
+The full `xcodebuild build` is **RED** solely because of a **pre-existing, repo-wide** Xcode 26.5 / Swift 6.3.2 incompatibility — explicit `return` in `#Preview` `ViewBuilder` bodies across **157 out-of-scope `*.Previews.swift` files** (e.g. `Input.Previews.swift`), none of which I touched or am allowed to fix. **Zero errors reference any `AutomationList*` file**; whole-module Sema completed. This is the identical disposition under which the sibling automations pages were accepted DONE.
+
+
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

@@ -1,0 +1,158 @@
+I'll start by exploring the environment and understanding the task. Let me check tool availability and the codebase structure in parallel.
+
+All required tools are available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 simulator booted). Let me read the web source and explore the Apple app structure.
+
+The `feature-views` directory already exists with many files following a multi-file convention (`.Model.swift`, `.Previews.swift`, `.strings`). Let me study the conventions by examining a complete example and check whether LiveSignalTail already exists.
+
+LiveSignalTail doesn't exist yet. The convention is clear: `X.swift` (main view), `X.Model.swift`, `X.Views.swift`, `X.Previews.swift`, `X.Tests.swift`, `X.strings`. Let me study the complete AccordionSection example to learn the conventions thoroughly.
+
+Now let me read the rest of the AccordionSection set (Views, Previews, Tests, strings) and find the native shared component equivalents I'll need (GlassPanel, Badge, Button, StatCard, FreshnessIndicator, DataTable, FadeIn).
+
+Let me read the Tests file and explore the shared component library and Design tokens. I'll also look for a feature-view more similar to LiveSignalTail (with stats, tables, freshness, data states).
+
+Let me read the key shared components and tokens I'll need, and find a similar existing feature-view that uses tables/stats/freshness for reference.
+
+`TSFreshnessIndicator` takes `isStale: Bool, label: LocalizedStringKey`. Let me read the core shared components and tokens I'll need (material/tokens, DataTable, Badges, Buttons, Fields, Cards, Metrics, States, Motion).
+
+Let me read the remaining shared components and locate the design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSTone, TSMotion).
+
+Let me read the remaining components (Buttons, Fields, Cards, Metrics, Feedback States) and locate the design tokens.
+
+Let me read the metric/card components, the feedback States (EmptyState), and locate the design tokens.
+
+Now let me check the web StatCard/FreshnessIndicator components, the `SignalEntry` type, `formatTime`, and locate where the core tokens (TSSpacing, Color.TS, Font.TS, TSRadius, TSMotion) are defined.
+
+The core tokens are generated at build time. Let me examine `project.yml` (XcodeGen) to understand schemes, test targets, source globbing, and token generation.
+
+Now I understand the build wiring. The critical question is build feasibility (XcodeGen + Shared.xcframework). Let me verify the build toolchain.
+
+XcodeGen 2.45.4 is available but the project isn't generated yet, and `Shared.xcframework` must be built via Gradle (Kotlin/Native). This is the long pole. Let me verify the toolchain and existing build artifacts, then kick off the framework build early.
+
+Java 17 and gradlew are available; many prior DerivedData builds exist (so this has built before). The `Shared.xcframework` build is the long pole — let me kick it off in the background now while I write the implementation.
+
+The framework build is running in the background. Let me gather the remaining details: the web `SignalEntry` type, `StatCard`/`FreshnessIndicator` rendering, and study how an existing native feature-view (`ActiveSessionsSection`) handles the full state envelope + DataTable.
+
+`SignalEntry`: `id, timestamp, name, value, type('number'|'string'|'boolean')`. Let me read the web StatCard/FreshnessIndicator and study the ActiveSessionsSection native surface (main + States + Model) to mirror conventions for a richer surface.
+
+The web `FreshnessIndicator` has 4 statuses (fresh/stale/offline/unknown) with relative-age labels — this is pure projection logic, perfect for the host-free adapter test. Let me study the most analogous native surface (`ActiveSessionsSection`) in full to mirror the richer-surface conventions.
+
+`ActiveSessionsSection` is a data-bound surface (full envelope). `LiveSignalTail` is pure-render (only `useTranslation`, data via props), so I'll follow the AccordionSection precedent: faithfully reproduce the web's real states (waiting/no-match empties + per-row fresh/stale/offline freshness) with a host-free testable projection, documenting envelope rationale. Let me read the Model/Adapter/strings patterns and lint configs, and check the framework build.
+
+The framework build continues in the background. I need to confirm how richer surfaces feed localized strings into shared components (e.g., `TSDataTable` column titles which require `LocalizedStringKey`). Let me check actual usage patterns.
+
+Let me see exactly how `AcDcStatsPanel` localizes `TSColumn` titles and composes `TSDataTable`.
+
+I have the localization idiom: `LocalizedStringKey(Strings.string(key, fallback))`. Let me check `formatTime` behavior, the native typed formatters, and the framework build progress.
+
+`formatTime` = locale hour:minute. Now let me confirm the generated token names (Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion), check for a `SignalEntry` name collision, and check the framework build.
+
+All tokens confirmed (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`), no `SignalEntry` collision. The framework build continues (~10 min, Kotlin/Native first build). Let me set up a plan and todos, then write the implementation.
+
+Now writing the implementation files. Starting with the pure projection core.
+
+Now the Model (state holder + telemetry seam + i18n facade).
+
+Now the Views file (presentational subviews). This is the largest piece.
+
+The framework build completed. Let me confirm it staged, then continue with the main view.
+
+Shared.xcframework staged (ios-arm64, ios-arm64-simulator, macos-arm64) and now Gradle-cached for faster rebuilds. Let me write the main view, then previews/tests/strings.
+
+Now the i18n catalog contribution (strings) — web keys verbatim + native-only keys.
+
+Now the Previews exercising each state.
+
+Let me make the row accessibility label testable by factoring it into the Strings facade, then update the Views to use it.
+
+Now the comprehensive host-free test suite.
+
+All 7 files written. Let me run swiftformat and swiftlint on my files to catch style issues before the full build.
+
+swiftformat found auto-fixable style issues (wrap, property-body wrapping, trailing commas, redundant parens). Let me auto-format my files and re-verify.
+
+swiftformat passes cleanly. Now swiftlint on my files.
+
+4 swiftlint issues: file too long (split Views), large tuple, preview function length, and trailing-closure with multiple closures. Let me view the formatted Views file to plan the split and fixes.
+
+Let me view the exact blocks to relocate (streaming row, control bar, body) and the tuple to fix.
+
+Now I'll split the streaming row/control bar/body into a new `LiveSignalTail.Rows.swift`, fix the tuple, and fix the previews.
+
+Now let me remove the moved blocks from Views and fix the tuple. First, verify the boundaries.
+
+Views is now 287 lines. Now fix the large-tuple in the empty-state descriptor.
+
+Now fix the Previews (compact entry builder + non-trailing headerExtra closure). Let me view the formatted Previews first.
+
+Now fix the trailing-closure violation in the streaming preview.
+
+Now re-format all files and re-run swiftlint to confirm clean.
+
+One last violation: the nested helper's wrapped brace. Let me replace it with an enum static method (matching the lint-clean Tests `Fixture.entry` pattern).
+
+Re-verify lint/format and check the placeholder script exists.
+
+Reduce to 5 parameters (drop `now` param, use `Date.now` per call) to satisfy `function_parameter_count`.
+
+swiftformat 0/7, swiftlint 0 violations. Let me check the placeholder script's `-Path` semantics, then run it.
+
+The gate's placeholder `-Path` is a prefix (no such literal path) so the script scans nothing → EXIT=0. To genuinely verify my files, let me check the forbidden patterns and grep my files directly.
+
+The gate's placeholder command passes (EXIT=0). But the case-insensitive `Placeholder` pattern could match my legitimate `liveMonitor.filterPlaceholder` key if scanned directly. Let me audit my actual files for all forbidden patterns.
+
+Two legitimate "placeholder" hits: a doc comment and the required web i18n key. Let me reword the comment and isolate the key on a `parity:allow` line (the gate's intended mechanism for web-parity key names).
+
+Now re-verify format/lint and run the placeholder scanner against a temp copy of my files to confirm the opt-out is honored.
+
+The doc comment I added also contains "filterPlaceholder". Let me reword it (the opt-out line is correctly allowed).
+
+Both placeholder checks pass (gate EXIT=0; my files PLACEHOLDER_COUNT=0, ALLOWED=1). Now regenerate the Xcode project and start the iOS build.
+
+Project generated with LiveSignalTail included. Now the iOS build (scheme pre-action re-stages the cached framework). Let me build first to catch compile errors.
+
+Name collision: an existing `LiveSignalsTable` surface already defines `LiveSignalEntry` (and possibly `LiveSignalValueType`/`LiveSignalFreshness`). I missed it earlier. Let me check the existing surface's types so I can rename mine to be surface-local.
+
+Only `LiveSignalEntry` collides (the existing `LiveSignalsTable` surface owns it). My `LiveSignalValueType`/`LiveSignalFreshness` are unique. Let me rename my type to the surface-local `LiveSignalTailEntry` across my files, then reformat.
+
+Renamed cleanly. The cascade errors in `LiveSignalsTable` were from the ambiguity and should now resolve. Let me reformat/relint (longer name may affect wrapping), then rebuild.
+
+Clean. Now rebuild iOS (incremental, should be faster).
+
+Build failed but no `error:` lines surfaced. Let me inspect the full log.
+
+A Swift frontend compiler crash (`report_fatal_error`), not a normal type error. Let me find the crash context to see which construct triggered it.
+
+The crash is an LLVM `report_at_maximum_capacity` (allocation/resource exhaustion) during **IRGen of a pre-existing file** (`AppearanceSettings.Controls.swift`), not a type error in my code — likely transient memory pressure on this shared machine. Most files already compiled; let me retry the incremental build.
+
+Deterministic crash at the same pre-existing file (`AppearanceSettings.Controls.swift`) in a compiler-generated actor-isolated closure thunk — `report_at_maximum_capacity` is a runaway-growth compiler bug, not my type error. I must determine if HEAD crashes independently of my files. Let me temporarily remove my files, regenerate, and build.
+
+My files are stashed. Now build HEAD without them — if it crashes identically, the bug is pre-existing/toolchain-related.
+
+Decisive: HEAD **without my files** crashes identically — this is a **pre-existing Swift 6.3.2 (Xcode 26.5) IRGen compiler bug** in `AppearanceSettings.Controls.swift`, unrelated to my work. Let me restore my files and check the repo's pinned toolchain version.
+
+Confirmed: repo pins **Swift 6.0.1 / Xcode 26**, but this runner has **Swift 6.3.2 / Xcode 26.5**, which has a pre-existing IRGen crash on `@MainActor (Bool) -> Void` closure thunks in `AppearanceSettings.Controls.swift`. My files are restored. Let me prove my logic is correct by running my unit tests standalone (SwiftPM), bypassing the unrelated app-target crash.
+
+Excellent catch — the standalone build (strict concurrency) compiled my Adapter+Model cleanly but flagged a real bug in my Tests: a non-`@Sendable` static closure, which would also fail the app's `SWIFT_STRICT_CONCURRENCY: complete`. Let me fix it.
+
+All **37 unit tests pass** standalone under strict concurrency — my Adapter+Model logic is proven correct. The `@Sendable` fix was also needed for the app's `SWIFT_STRICT_CONCURRENCY: complete`. Let me re-lint, then give the real gate its best shot with a clean iOS build+test (ruling out any stale state behind the crash).
+
+Conclusive: even a **clean** iOS build+test crashes at the identical spot — and critically, **all 6 of my LiveSignalTail source files compiled with zero errors** and my `.strings` validated; only the out-of-scope `AppearanceSettings.Controls.swift` IRGen crashes. Let me capture the macOS gate result and verify the log directory.
+
+macOS fails on a **code-signing/entitlements** environmental issue (no dev certificate; `DEVELOPMENT_TEAM:""`) — another runner constraint, also out-of-scope to fix. Both gate platforms are environmentally blocked, and my 6 source files compiled with **0 errors**. Before concluding, let me check if the repo's pinned Swift 6.0.1 / Xcode 26.0 toolchain is available (which wouldn't have this 6.3.2 IRGen bug).
+
+Only the buggy Swift 6.3.2 toolchain is installed (repo pins 6.0.1, not present). The gate is environmentally un-passable through no fault of my code. Let me write the comprehensive, honest gate log with all evidence. First, gather exact evidence snippets.
+
+Now append the build/test evidence, the standalone test pass, and the BLOCKED determination.
+
+Let me review the complete gate log for accuracy.
+
+The log is thorough and accurate, but the `.strings` validation lines picked up unrelated files. Let me correct them to show the actual `LiveSignalTail.strings` validation.
+
+The log is accurate and complete. Let me clean up temp artifacts, verify the git working-tree state shows only my intended files, and finalize todos.
+
+The working tree contains exactly my 8 deliverable files + the log — clean scope, no unintended modifications. Let me finalize the todos.
+
+The deliverable is complete and verified to the maximum extent the runner allows. Let me do a final confirmation of the key evidence before summarizing.
+
+I've completed the implementation and verified it to the maximum extent this runner permits. Here is the honest final status.
+

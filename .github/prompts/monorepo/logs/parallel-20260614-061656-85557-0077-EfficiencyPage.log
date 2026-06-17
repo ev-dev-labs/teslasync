@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5 and swiftlint are available. Let me read the web source page and explore the Apple app structure.
+
+Let me read the rest of the web page and understand the Apple project layout.
+
+The Apple project has two trees. I need to understand the actual Xcode project layout. Let me read `project.yml` and explore the existing Features and parity files.
+
+Now let me understand the parity ledger, existing page conventions, and find a similar implemented page as a template.
+
+I now understand the structure: real pages live in `Sources/Features/{Domain}/` following a multi-file pattern (Page, PageModel, Sections, Charts, Table, Models, RouteRegistration, Format). `SleepEfficiencyPage` in Battery is an ideal template. Let me extract the manifest record and read the template files and the rest of the web page.
+
+Let me read the full SleepEfficiency template (most similar page) and check the ledger for any existing driving/Efficiency row.
+
+This is a clear template. Let me read the remaining template files (Model, Models, RouteRegistration, Format, Sample, Sections, Charts, Table) and the test.
+
+Let me read the remaining template files, the rest of the web page, and the test in parallel.
+
+Excellent template clarity. Now let me read the rest of the web page, the Table/Format/Sample/RouteRegistration/Test templates, and discover the chart wrappers + existing Driving models.
+
+Let me explore the chart wrappers, AppRoute, Units facade, existing Driving models, and read the Format/Sample/Test templates.
+
+Let me read the chart wrappers, AppRoute, the Units facade, and the Sample/Test templates.
+
+Let me read the remaining chart wrappers, see how `TSRadialGauge` is used elsewhere, and check the web RadialGauge component.
+
+Let me check the web RadialGauge, ChartContainer wrapper, Units facade, AppRoute, and how TSRadialGauge is used elsewhere.
+
+Let me read the AppRoute, Units facade, the Sample + Test templates, and the Statistics gauge idiom.
+
+`.driving` exists but `.efficiency` doesn't. I'll need to add it. Let me read the full AppRoute, the Units facade, the test template, and how registries are composed.
+
+Let me read the Units facade, the test template, find where route registrations are composed, and check the web nav grouping for `/efficiency`.
+
+Let me read the Units facade, the central RouteHostRegistry, the route parser, and check the web nav grouping.
+
+Let me find the `tsUnits` env, how registrations aggregate into the app, the BatteryVehicle model, and check the string catalog.
+
+Let me read the composition root (`TeslaSyncApp.swift`), the `tsUnits` env, BatteryVehicle, and the test template.
+
+I have a full architectural picture. Let me check the BatteryVehicle model, the test template, the route parser, and whether any tests/switches enforce route coverage (which adding `.efficiency` could affect).
+
+Key finding: a test asserts every `AppRoute` appears in the menu command catalog. Adding `.efficiency` requires updating that catalog too. Let me read the route tests, the menu catalog, the test template, and the AppShell rendering.
+
+`navigateCommands()` derives from `allCases`, so the menu test auto-covers `.efficiency`. I just need `route.efficiency` string + the two AppRoute switches. Let me read the AppShell rendering, check for other exhaustive route switches, and read the full test template.
+
+Now let me read the full test template to mirror it, and confirm the sidebar iterates routes per group.
+
+Let me read the web driving types/hook to nail down the exact data shapes, and grep the remaining component signatures I'll use.
+
+Let me resolve the unit semantics by reading the actual web converters.
+
+I now understand the data semantics (stats fields are SI despite legacy names). Let me count the web panels precisely and verify the remaining component APIs I'll use.
+
+Web has 9 GlassPanels + 4 ChartContainers = 13 panels. Mapping is clear. Let me read the exact APIs for EmptyState, MetricBar, DataTable, Select, Badge/IconBox, GlassPanel/Card.
+
+Let me read the DataTable, Select, Badge/IconBox/Tone, and GlassPanel/Card APIs.
+
+I have all component APIs. Let me read the design palette/tokens to map colors correctly (avoid hardcoded hex), then start implementing.
+
+I have the complete token system. Let me check the xcstrings entry format, then write the plan and begin implementing.
+
+The xcstrings format is clear. Let me get the canonical English values from the web i18n locale to ensure exact string parity.
+
+I have the canonical English values. Let me check which helper keys already exist (refresh, ranges, error) so I only add what's needed.
+
+Most shared-component helper keys aren't in the catalog (they fall back to the key literal at runtime — not a build error). Let me check the placeholder-scan script, PowerShell availability, the gate contract, and the log directory.
+
+pwsh is available. Let me read the placeholder patterns and the SleepEfficiency log as a template for my log format.
+
+The SleepEfficiency log is an exact template. Key facts: build needs `Shared.xcframework` (KMP, ~14 min), and 2 pre-existing files fail under Xcode 26.5. Let me check the build environment state and swiftlint config.
+
+Let me inspect the xcframework build script and KMP core availability, then kick off that slow build in the background while I write code.
+
+The KMP core + gradlew exist. The xcframework build (~14 min) is the long pole — let me kick it off in the background now, then write code while it builds.
+
+Build launched. Let me set up the plan and todos, then start implementing.
+
+Let me check the background build progress and set up my todos.
+
+Build is progressing (Kotlin/Native compiling). Let me write the foundation files. Starting with models.
+
+Now the format helpers. Let me write `EfficiencyFormat.swift`.
+
+Now the derivations. Let me write `EfficiencyDerivations.swift`.
+
+Let me check the build progress, then write the page model.
+
+Build nearly done (linking release frameworks). Let me write the page model.
+
+Now the sample data sources. Let me write `EfficiencyPageModel.Sample.swift`.
+
+Now the main page view. Let me write `EfficiencyPage.swift`.
+
+Let me update todos and write the Sections file (hero, stat cards, summary bars, insights, skeleton).
+
+Shared.xcframework is staged. Now let me write the Sections file.
+
+Now the charts. Let me write `EfficiencyPage.Charts.swift`.
+
+Now the temperature table. Let me write `EfficiencyPage.Table.swift`.
+
+Now the route registration and wiring. Let me create `EfficiencyRouteRegistration.swift` and edit `AppRoute.swift` + `TeslaSyncApp.swift`.
+
+Now let me add the i18n strings to the catalog via a script that preserves the JSON structure.
+
+51 strings added. Let me verify I didn't reformat the entire catalog (which would create a huge diff).
+
+That reformatted the whole file — bad. Let me restore and inspect the exact original format to insert surgically.
+
+Xcode's xcstrings uses a peculiar `" : "` format and keys aren't sorted. Let me insert surgically, preserving the exact format and existing order.
+
+Let me verify the diff is now small and format-correct.
+
+Now the test file. Let me write `EfficiencyPageModelTests.swift`.
+
+All source files written. Let me run swiftlint and the placeholder scan on the new files (fast checks).
+
+swiftlint found 14 violations. Let me see exactly which (filtering out progress noise).
+
+7 real issues (line lengths, empty_count on accumulator `.count`, and test body length). Let me view the exact lines and fix them.
+
+Let me fix the `empty_count` violations by renaming the accumulator counter, then fix the line lengths.
+
+Let me fix the Table line and the insights regen line, then re-check.
+
+Let me re-run swiftlint to see remaining violations after these fixes.
+
+Two left. Let me fix the insights line and split the test file. First, view the insights line.
+
+Now let me split the test file. Let me recreate the model test (trimmed) and add a separate derivations/format test file.
+
+Now the derivations/format test file with shared test data helpers.
+
+Let me re-run swiftlint to confirm all violations are resolved.
+
+swiftlint clean (0 violations). Now the placeholder scan.
+
+Placeholder scan clean. Now let me generate the Xcode project and build. First, xcodegen.
+
+Project generated. Now let me build the macOS target **without exclusions** first, to honestly capture the real error state and confirm my files compile cleanly.
+
+No compile errors — only code-signing (environment) errors, which appear at the final phase, confirming compilation succeeded. Let me rebuild with signing disabled to get a clean result.
+
+This confirms the SleepEfficiency log's finding: the build fails **only** on the pre-existing `Input.Previews.swift` (which I never touched). Let me confirm no errors are in my files and that this file is unmodified.
+
+Confirmed: the **only** compile error is in the pre-existing, unmodified `Input.Previews.swift`. My files compile cleanly. Let me build the app target isolating that pre-existing file to verify my code builds into the app.
+

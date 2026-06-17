@@ -1,0 +1,30 @@
+I'll start by exploring the repository structure to understand the current state of the Apple app and what's expected.
+
+macOS + Xcode 26.5 + Swift 6.3.2 + swiftlint + swiftformat are all available. Let me explore the Apple app structure in depth.
+
+Capability is met (macOS + Xcode + simulators). There's an existing Apple app with UI test targets already wired in `project.yml`. Let me read the existing UI tests, the harness, and tooling.
+
+Tooling is complete: pwsh, xcodegen, simulators (iPhone 16 + iPads booted). Existing UI tests use launch args (`-uiTestAuthState`, `-uiTestLiveDemo`, `-uiTestPushDemo`). Let me understand the harness wiring and the placeholder gate.
+
+The harness uses dedicated demo surfaces (`LiveDemoView`, `PushDemoView`) gated by launch args. Now let me understand prior art on this exact artifact and the parity structure. Let me look at the most recent P9-0002 log, the prompt directory, and the demo views.
+
+Critical finding: the most recent predecessor run ended **BLOCKED** (iOS app-target XCTest collision, macOS dev-cert signing, P7 pages absent). But HEAD has a fix commit since then, and many pages/surfaces now exist. I must establish the **current** baseline empirically — not assume. Let me check signing, read the methodology, and inspect the demo harness.
+
+Confirmed: **0 valid signing identities**. The auth harness uses `-uiTestAuthState`. Before deciding DONE vs BLOCKED, I must empirically test whether the gate can run. Let me read the methodology's capability/BLOCKED rules and check the framework build prerequisites.
+
+Key blocker signals: `Frameworks/` is empty (needs Gradle/Kotlin-Native to build `Shared.xcframework`), and 0 signing identities (macOS has hardened runtime + app-sandbox + app-groups entitlements). But I must run the gate empirically, not assume. Let me read the methodology gate rules and kick off the prerequisite framework build.
+
+Good — Java 17 + Kotlin/Native 2.4.0 toolchain already cached in `~/.konan`. The methodology confirms capability gaps → BLOCKED (log only). Let me kick off the long-pole `Shared.xcframework` build async, then author the real XCUITest coverage in parallel.
+
+While the framework builds, let me study the parity ledger, route registry, and page structure to plan comprehensive test coverage.
+
+The parity ledger has **11 done page units** (Admin: ApiPlayground, DiskForecast, FleetTelemetryCoverage, LiveSignalInspector, SchemaDrift, TeslaOrders; Analytics: FleetCompare, Statistics; Automations: AutomationActivityFeed, AutomationsList; Battery: BatteryCells). Let me understand the page→route→data-injection seam by reading the Battery feature and route registration.
+
+Now I understand the seam: each page has a `DataSource` protocol with Sample/Empty/Failing implementations, and a `phase` state machine (loading/empty/error/ready). Route registrations accept a `dataSource` param. I'll build a launch-arg-driven fixture host. Let me inventory all data sources and page models, and check the framework build.
+
+Framework still building. Let me map the component library (for a component gallery) and the route/deep-link system while waiting.
+
+Now I understand routes, aliases, deep links, and the 7 component categories. Let me check the framework build progress and read the macOS verification doc (it's referenced for the signing capability).
+
+This `macos-pending-verifications.md` is decisive context: it documents repo-wide that **macOS dev-signing is a known capability gap** (`0 valid identities found`), with full-app + macOS `build test` deferred to the P99 acceptance gate on a signed `macos-latest` runner. The prompt explicitly anticipates this: "if the gate can't run → STATUS=BLOCKED." But I must verify the **iOS** state empirically and still author real coverage. Let me read the page-model pattern and shell while the framework builds.
+

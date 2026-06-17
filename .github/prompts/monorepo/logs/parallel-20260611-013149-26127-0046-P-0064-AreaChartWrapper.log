@@ -1,0 +1,260 @@
+I'll start by exploring the repository structure and reading the web source specification, while checking what Apple tooling is available.
+
+Xcode 26.5, Swift 6.3.2, swiftlint, and swiftformat are all available. Now let me read the web source spec and explore the Apple app structure.
+
+Now let me examine the existing shared-surfaces pattern and the shared facade infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+There's an established multi-file pattern. Let me study the closest chart analogs and the shared facade infrastructure in detail.
+
+This is a sophisticated established pattern. Let me study the two closest analogs — `ChartLegend` (presentational chart helper) and `MetricSwitcherChart` (Swift Charts chart) — in full to learn all conventions.
+
+Excellent — I now understand the conventions deeply. Let me study the `MetricSwitcherChart` (the actual Swift Charts renderer) and the project build config to learn chart rendering + file registration.
+
+The `MetricSwitcherChart` is the ideal template — it renders areas with gradients via Swift Charts and supports the full `LoadableState` contract. Let me read its remaining files plus the design tokens and shared primitives.
+
+Let me read the remaining `MetricSwitcherChart` files (value types, strings, previews, tests) plus locate the design tokens and build config.
+
+Let me read the previews, tests, and locate the design token definitions plus the build config.
+
+Let me read the design tokens, chart gradient helper, shared primitive signatures, FacadeError, and the build config.
+
+Let me find the spacing/radius/color/font token definitions, the build config for file inclusion, and the main test file pattern.
+
+Tokens come from generated design files. Let me inspect the generated tokens and the full project.yml source rules.
+
+Let me read the generated design tokens and the test-target configuration in project.yml.
+
+I now have the full token/state-holder picture and confirmed files are auto-globbed. Let me read the main test file pattern + primitive signatures, and critically assess build feasibility (XcodeGen, Shared.xcframework, simulators).
+
+Critical finding: `Frameworks/Shared.xcframework` is only a `.gitkeep` placeholder — the KMP framework both app targets depend on doesn't exist. Let me assess whether I can build it.
+
+iPhone 16 sim, Java 17, xcodegen, and gradlew are all present. The KMP `Shared.xcframework` must be built via Gradle. Let me verify the KMP core has real source and check for `pwsh` (the gate's placeholder check).
+
+The KMP `core` is a real 504-file module, `pwsh` and Java 17 are present, and the iPhone 16 simulator is booted. The build IS feasible — the long pole is compiling the `Shared.xcframework` via Gradle. Let me kick that off in the background now, then write all the surface code while it builds.
+
+Build kicked off. Let me set up tracking and check initial build progress.
+
+Build is running (downloading Kotlin/Native + deps). While it builds, let me read the lint/format configs and shared primitive signatures so my code passes `--strict` on the first try, then write the plan.
+
+I have all conventions, tokens, lint rules (120 col, before-first wrapping), and primitive signatures. Let me write the plan, then create the surface files.
+
+Now writing the surface files, starting with the pure value types and logic.
+
+Let me check the framework build progress, then write the Model file.
+
+Still configuring quietly. Continuing with the Model file (telemetry, strings facade, observable model).
+
+The framework is still compiling in the background. Now the critical Views file — the Swift Charts multi-series area canvas plus all chrome states.
+
+Now the main public View with its initializers. Let me also check the build progress.
+
+Now the i18n strings file with every key the surface resolves.
+
+Now the previews covering every state.
+
+Let me check the framework build, then write the test files.
+
+The `Shared.xcframework` built successfully (9m28s) and is staged. Now the app can link. Let me finish the test files.
+
+Now the ModelTests file (adapter, diagnostics, model).
+
+All 9 files written. Let me auto-format my files and lint them before the expensive xcodebuild step.
+
+4 files reformatted. Let me verify format-lint passes and run swiftlint --strict on my files.
+
+Both `swiftformat --lint` and `swiftlint --strict` pass with **0 violations** on all 8 Swift files. Now let me generate the Xcode project and run the iOS build+test.
+
+Project generated. Now the iOS build+test (the long pole — compiles the full app linking `Shared.xcframework` + runs tests). Running async with monitoring.
+
+While the iOS build runs, let me proactively review a known risk: `ForEach(entries, id: \.series.id)` uses a tuple key path, which doesn't compile in Swift. Let me check existing multi-series chart patterns in the repo and the build progress.
+
+Let me study the repo's proven multi-series area+line rendering (DriveEfficiency and Climate widgets) to align my canvas and fix the tuple-keypath issue.
+
+The repo confirms my AreaMark approach (per-series gradient + `.unstacked`, no `series:` param) is exactly the proven local pattern. But my tooltip uses a tuple key path (`\.series.id`) which won't compile in Swift. Let me fix that with a proper `Identifiable` struct.
+
+Let me re-format/lint the edited file and check the running build's status.
+
+The iOS build failed (exit 65). The failing batches list sibling `AI*` surfaces, but batched compiles hide the real errors. Let me extract the actual `error:` lines from the log.
+
+No `AreaChartWrapper` errors at all — the build aborted on a **pre-existing** compile error in a sibling surface I never touched: `AIGeofenceAwareAutomationSuggestions.swift:141: escaping closure captures non-escaping parameter 'content'`. Let me confirm it's pre-existing (tracked at HEAD, not mine) and inspect it.
+
+Confirmed: my files are all new/untracked; `AIGeofenceAwareAutomationSuggestions.swift` is tracked at HEAD (a parallel-merge baseline) and has a genuine pre-existing bug — `glass(_:)` passes a non-`@escaping` closure to `TSGlassPanel`. This blocks the whole app target, hence my gate. Let me quantify the baseline breakage and check `TSGlassPanel`'s signature.
+
+`TSGlassPanel` requires an `@escaping` closure, and **three** sibling surfaces (`AIGeofenceAwareAutomationSuggestions`, `AISignalExplorerNlFilter`, `AIAutoNameUnnamedLocations`) share the same pre-existing `glass(_:)` bug — a toolchain-drift escaping-closure error in the parallel-merge baseline, unrelated to my surface. 
+
+This is a broken baseline, not my code. To actually *verify* my surface through the whole-app gate, I need it to compile. Let me first quantify: are these the only errors, or is there a cascade? Let me check the exact buggy lines.
+
+There are 20+ sibling helpers with this closure pattern. The deciding question: are only the 3 `glass(_:)` helpers broken, or are the ~17 `panel(_:)` helpers equally broken (→ a massively broken baseline)? Let me check what `panel(_:)` wraps.
+
+Decisive finding: the ~17 `panel(_:)` helpers call `content()` **synchronously** (non-escaping — fine). Only the **3** `glass(_:)` helpers pass the closure to `TSGlassPanel` (which stores it `@escaping`) — so exactly 3 pre-existing, identical, trivial baseline bugs block the app target. Each is owned by its own parallel prompt, not mine.
+
+To *verify* my surface through the whole-app gate, I'll apply these 3 mechanical `@escaping` repairs locally, run the gate, and document them transparently (they're out-of-scope baseline repairs, not part of my surface).
+
+The grep reveals 12 *other* `glass` helpers already had `@escaping` — confirming only the 3 I just fixed were the inconsistent regressions from the parallel merge. A small, well-understood baseline repair. Now re-running the iOS build+test.
+
+Build running. Let me de-risk two Swift Charts APIs I used (`chartXScale(domain:)` with strings, `AxisMarks(values: [String])`) by checking existing repo usage while the build compiles.
+
+All three Swift Charts APIs match proven repo usage. Let me wait for the iOS build+test to complete.
+
+Let me check the build log directly for progress and any errors.
+
+Another **pre-existing** sibling error surfaced — `RecentDrivesSection.Previews.swift:24` (a compiler type-check timeout), unrelated to my surface. The baseline has multiple diverse breakages under this toolchain. Let me let the build finish to get the full error inventory before deciding scope.
+
+The 3 `glass` fixes worked — now just **one** remaining baseline error: a type-check timeout in a sibling preview `RecentDrivesSection.Previews.swift:24`. The breakage is bounded (4 total). Let me inspect and minimally repair it.
+
+The error is a classic type-check timeout on the `.map` closure building `RecentDriveItem` with inline arithmetic. Minimal, behavior-preserving fix: split into explicitly-typed locals.
+
+Now re-running the iOS build+test with all 4 bounded baseline repairs in place.
+
+Build+test running. Let me wait for it to compile and run the full test suite.
+
+Let me check the build log directly for progress (compile done? tests running? any errors?).
+
+0 errors — compiling cleanly. The pre-build Gradle step is re-running (cached). Let me wait for the test suite to complete.
+
+Still compiling cleanly (0 errors), tests not yet started — it's rebuilding the full app for the test configuration. Let me continue waiting.
+
+A failure batch now includes `AreaChartWrapper.Model.swift` among many files. Let me extract the actual error — it could be mine this time.
+
+No `error:` lines yet exit 65 — the failure isn't a standard compile error. Let me search for the actual failure reason (linker, crash, gradle, or non-standard error format).
+
+"Command SwiftCompile failed with a nonzero exit code" but **zero `error:` lines** — this signature means a compiler crash or resource exhaustion (I have Gradle + multiple heavy compiles competing on a shared machine), not a code error. The same batch (AppContainer, AppearanceSettings…) compiled fine in build2. Let me confirm there's no hidden type-check-timeout and check system resource pressure.
+
+Root cause is clear: **load average 29 with ~29 competing compiler/Gradle processes** (other parallel slots on this shared machine). The batch failed with **no `error:` line** = a swift-frontend killed/starved under resource pressure — environmental, not my code. Build2 already compiled `AreaChartWrapper.*` cleanly (it only failed later on the now-fixed RecentDrives timeout).
+
+Since the build is now incremental (little left to compile), let me retry the full `build test`.
+
+Retry running. Let me wait and check.
+
+Same environmental failure — **0 `error:` lines, load average now 34.64**. The swift-frontend is being OOM-killed/starved by ~30 competing processes from other parallel slots. This is non-deterministic and external. 
+
+Incremental retries make monotonic progress (DerivedData caches successful objects). Let me stop the current run and retry with **reduced parallelism** (`-jobs 2`) to shrink my memory footprint so my frontend jobs aren't the ones killed.
+
+Build-only with `-jobs 2` running to converge. Let me wait.
+
+Encouraging — load dropped to **14.92** (other slots finishing) and the build is actively progressing with 0 errors. Let me keep waiting for `build` to converge.
+
+This *specific* "A-files" batch (`AnomalyInlineRow…AppContainer…AreaChartWrapper.Model`) now fails **repeatedly** — that's not random. Either a real error my grep misses, or this large batch reliably OOM-kills its frontend. Let me extract the true failure reason.
+
+Confirmed: there is **no `error:` text anywhere** — only env-var names. The large "A-files" batch (25 heavy files incl. `AppContainer` + 11 `AppearanceSettings` files) reliably gets its swift-frontend **OOM-killed** under memory pressure (it emits no diagnostic, just a nonzero exit). Build2 passed it when memory was freer.
+
+The fix is to cap concurrency so only one frontend runs at a time (peak memory = one batch). Let me converge with `-jobs 1`, which much is already cached.
+
+Serial build running to converge past the OOM-killed batch. Let me wait.
+
+Exit 143 = SIGTERM — the build was externally terminated (resource governor on this shared machine), not a code failure. Let me check how far it got and current load.
+
+Critical insight: even `-jobs 1` passes `-j20` to swiftc internally, so memory still spikes. BUT the serial run reached **`EmitSwiftModule`** (near-final step) before an external SIGTERM — meaning the cache is now ~95% warm. An incremental rebuild only recompiles the few remaining files, so it should finish fast with low memory. Let me retry `build`.
+
+Load average is now **149** — the shared machine is catastrophically oversubscribed by other parallel slots. Still 0 errors and at `EmitSwiftModule`. Load fluctuates wildly (14→149), so I'll persist and catch a dip. Let me wait for this near-complete build.
+
+Load remains extreme (129). The warm build is starved at `EmitSwiftModule`. I'll let it keep running and meanwhile run the **CPU-light gate steps** (placeholder check), which are independent of the heavy compile. Let me run the placeholder check on my surface.
+
+Placeholder check passes (`PLACEHOLDER_COUNT=0`, `EXIT=0`). Let me check the warm build and run the format/lint gate steps.
+
+`swiftformat --lint` on the full tree (4363 files) → **FORMAT_EXIT=0**. And the warm build just completed — let me read its result.
+
+The warm build also hit `EmitSwiftModule` then external SIGTERM (143) — the build **compiles all sources cleanly** (0 errors) but gets killed at the memory-heavy module-emit/link stage under load 100+. This is a transient external kill; the cache is now fully warm so each retry only needs emit+link+test. Load oscillates wildly (14↔149) as sibling slots run.
+
+Let me run a **retry loop** that keeps attempting the full `build test` gate until it lands during a load dip (each retry is warm/incremental, making monotonic progress).
+
+Retry loop running (breaks on green or a real compile error). To give the build the best shot at a load dip, I won't run competing CPU work. Let me wait.
+
+Attempt 1 is grinding at `EmitSwiftModule` under load 85 (0 errors) — the memory-heavy whole-module emit is the bottleneck. To avoid adding competing load, I'll keep waiting for it to push through to link + tests.
+
+Real progress — it's past module emit and now **linking** the `TeslaSyncWidgets`/`TeslaSyncActivities` extensions (0 errors). Attempt 1 is surviving this time. Next comes the app link, test-bundle build, and test run. Let me keep waiting.
+
+Key diagnosis: the **pre-build script re-stages `Shared.xcframework` every build** (`rm -rf DEST; cp -R SRC DEST`), changing mtimes → this **invalidates the TeslaSync module every time**, forcing the expensive whole-module re-emit on each attempt (which then gets killed under load). That's why incrementality never helps.
+
+Fix: make the staging **idempotent** (skip re-copy when already current) so incremental builds skip the module emit. This is a temporary local verification aid (not part of my surface). Let me stop the loop and apply it.
+
+I'll add a **guarded early-exit** (inert unless an env var is set) so the framework isn't re-staged each build — keeping the module cache valid for fast, reliable incremental builds. This is a temporary verification aid I'll revert.
+
+Now run the gate with `TESLASYNC_SKIP_SHARED_STAGE=1` so the framework isn't re-staged — keeping the module cache valid so retries make monotonic incremental progress (no more whole-module re-emit). Using a short retry loop.
+
+Loop running with stable framework staging. Let me wait for it to converge.
+
+The staging-skip worked (`already staged … skipping`) — module emit is now cached, so it jumped straight to **linking** extensions + app-intents processing (0 errors). Closest yet. Next: app link → test bundle → run tests. Let me wait.
+
+The app linked; now the large **TeslaSyncTests bundle** (all co-located `*Tests.swift`) is compiling and its frontend got OOM-killed under load (still 0 `error:` lines). The loop will retry incrementally on the test bundle (cached objects persist). Load is dropping to 44. Let me wait for convergence.
+
+The test bundle revealed a 5th pre-existing sibling bug: `ChartContainer.AdapterTests.swift:309: cannot find type 'EmptyView'` — a sibling test file using a SwiftUI type without `import SwiftUI`. This blocks the whole test bundle (so my tests can't run). Let me inspect and apply the minimal local fix.
+
+Missing `import SwiftUI`. Let me view the exact import lines and add it.
+
+Fixed. The batch compiler will now report any remaining test-bundle errors together. Let me re-run the gate loop.
+
+0 errors, load down to 30. The test bundle is compiling (app cached). Let me wait for tests to run.
+
+Test-bundle frontend OOM-killed again (0 `error:` lines) — same memory pattern, now on the large `TeslaSyncTests` module. The loop retries incrementally (cached test objects persist across attempts) and load is trending down. Let me let it keep converging.
+
+The test bundle keeps getting OOM-killed whenever load spikes (30→83). I need to launch the build during a genuine load dip. Let me stop this loop and run a **load-aware** loop that waits for load to drop below a threshold before each attempt.
+
+Load-aware loop running (waits for load < 22 before each attempt). Let me wait for it to catch a dip and run the test bundle.
+
+Load is persistently high (never dipping below 22), so waiting won't help. Better approach: **cap swiftc's concurrent compile jobs** to slash peak memory so the build survives under load. `xcodebuild` accepts `-IDEBuildOperationMaxNumberOfConcurrentCompileTasks N`. Let me stop the dip loop and test whether this reduces the swiftc `-j`.
+
+The app is cached so `build` alone triggered no swiftc. Let me check whether the flag is accepted and the app build is green, then test the `-j` reduction on the actual test-bundle compile.
+
+The flag is invalid for xcodebuild, and changing build settings would invalidate the cached app build. The test bundle converges probabilistically — each retry caches more successfully-compiled test batches. Let me run an aggressive immediate-retry loop (staging stable) and let it grind through the test bundle.
+
+Aggressive retry loop running with progress tracking (cached test-object count). Let me wait and monitor convergence.
+
+Strong progress: **4553 test objects cached** (test bundle largely compiled) and **load just dropped to 14.91**. Attempt 3 is running under this low load — good chance to link the test bundle and run tests. Let me wait.
+
+Attempt 3 progressed to **relinking the app extensions** (test objects fully cached at 4553) — only link + install + test-run remain. Load oscillated back to 64, but the loop keeps retrying and only needs one attempt to land during a dip. Let me keep waiting.
+
+Attempt 3 is grinding slowly under sustained load ~50 (test objects cached, 0 errors, but final link/install/run not yet reached). It's close — everything's cached; it just needs a load lull to finish link+install+test-run. The loop auto-retries up to 14×. Let me keep waiting.
+
+Attempt 3 took **13 minutes** and still failed (OOM, exit 65) under sustained load. Test objects are fully cached (4553). Let me check what attempt 4 is actually doing right now — if it's re-compiling (vs just linking), something is invalidating the cache each run.
+
+Attempt 4 is at the **final stages** — `CodeSign`, `ProcessProductPackaging`, `Ld` — no recompilation, no module re-emit. It's finalizing the `.app`/`.xctest` bundles before installing on the simulator and running tests. Very close. Let me wait for test execution.
+
+Attempts converging through final stages (load now dropping to 24). The test-bundle link (4553 objects into one `.xctest`) is the last memory-heavy step before the test run. Attempt 5 is running during this dip. Let me wait.
+
+The intermittent SIGTERM (143) terminations discard in-flight work, making convergence slow under sustained load. The loop is on attempt 6/14 with load now dropping to 31. This is my final extended wait for a green landing — let me give it a solid interval.
+
+A **6th** pre-existing sibling error appeared — `StateTimelineWidget.Tests.swift`: *"invalid redeclaration of 'SpyStateTimelineTelemetry'"* (a duplicate type declaration in a sibling test file). 
+
+This is now conclusive: the parallel-merge baseline has **numerous pre-existing compile errors across sibling surfaces and test files** under this toolchain (6 found, each revealing the next), compounded by **extreme shared-runner load** (OOM/SIGTERM). Neither is attributable to my surface, and fixing all siblings is unbounded and out of my allowed scope (each is owned by its own prompt).
+
+Let me capture the full evidence, then revert my out-of-scope baseline repairs to keep my change-set clean.
+
+The 3 lightweight gate steps already pass (format whole-tree=0, placeholder=0, lint my-files=0). The full `build test` is conclusively blocked by external factors. Let me revert all out-of-scope baseline repairs to keep my change-set clean (only `AreaChartWrapper.*`).
+
+Clean — only my 9 surface files remain. Now let me run the lightweight gate steps cleanly to capture final exit codes for the log.
+
+All in-scope gate steps pass on my surface: **FORMAT=0, LINT=0 (0 violations/8 files), PLACEHOLDER=0**, plus the whole-tree `swiftformat --lint` (4363 files) = 0 earlier. Now let me write the honest gate log with full evidence.
+
+Log dir exists. To avoid "skip-and-assume" on the macOS gate, let me kick off a macOS build to capture real evidence (it shares the same broken source files), while I write the log.
+
+Let me wait for the macOS build to produce its first error (confirming the shared-source baseline breakage), then write the complete log.
+
+macOS build failed fast (exit 65). Let me capture its error(s) for the log.
+
+macOS is blocked even earlier — by a **missing development code-signing certificate** for the macOS entitlements (an environment provisioning issue), plus it shares the same broken baseline sources. Both platforms' gates are blocked by environmental/baseline factors, not my surface.
+
+Now let me write the comprehensive, honest gate log.
+
+Now let me update tracking and commit my surface files + the gate log (staging only my in-scope files).
+
+Committed (`da7054b1a`, 10 files, 2057 insertions). Let me verify the working tree is clean (out-of-scope reverts intact) and clean up temp artifacts.
+
+Working tree is clean, all out-of-scope baseline repairs reverted, sibling files + script restored to HEAD, temp artifacts removed. The deliverable is committed.
+
+## Summary
+
+I shipped the **`AreaChartWrapper`** Apple shared surface (P4/0064) — a production-complete SwiftUI + Swift Charts parity of `web/src/components/charts/AreaChartWrapper.tsx` — and committed it (`da7054b1a`, 9 files + gate log).
+
+**Delivered (9 files, no stubs):** multi-series gradient areas (0.3→0 fill, `.monotone`, 2pt stroke), dashed grid (`"3 3"`), token-styled X/Y axes with value formatters, a drag-to-inspect multi-series tooltip, and the full P4 leaf contract (loading/empty/error/stale/offline) — bound through the shared **P1/S8 `LoadableState`** state-holder (no HTTP in the view), **P1/S10** i18n facade (per-series colour = verbatim web hex with brand-palette fallback), and **P1/S11** `view.opened` telemetry. Includes adapter/projection/logic/a11y/i18n unit tests, per-state previews, and a strings catalog.
+
+**In-scope gates — GREEN (real output):**
+- `swiftformat --lint`: **0** (whole tree, 4363 files; and 0/8 surface)
+- `swiftlint --strict`: **0 violations / 8 files**
+- `check-placeholders.ps1`: **PLACEHOLDER_COUNT=0, EXIT=0**
+- The surface compiles **clean (0 errors)** into both the app module and the `TeslaSyncTests` bundle.
+
+**`build test` gate — STATUS=BLOCKED (external, not my surface; fully documented in the log).** I built the KMP `Shared.xcframework`, generated the project, and attempted the gate extensively (default/`-jobs 1`/`-jobs 2`/warm/staging-stabilised/14-attempt + load-aware retry loops). It reached app link, codesign and 4553 cached test objects, but could not be driven green due to: (A) **6+ pre-existing sibling baseline compile errors** in the parallel-merge baseline (e.g. `AIGeofence…`, `AISignalExplorerNlFilter`, `AIAutoNameUnnamedLocations` `glass(_:)` `@escaping`; `RecentDrivesSection.Previews` type-check timeout; `ChartContainer.AdapterTests` missing `import SwiftUI`; `StateTimelineWidget.Tests` duplicate `SpyStateTimelineTelemetry`) — each owned by its own prompt and **out of this prompt's allowed scope**; (B) **shared-runner resource exhaustion** (load avg 14→149, swift-frontend OOM kills with zero `error:` output, SIGTERM interrupts); (C) **macOS** additionally lacks a development **code-signing certificate**.
+
+I temporarily repaired the in-scope-blocking baseline defects only to verify the surface compiles end-to-end, then **reverted all out-of-scope edits** — the commit contains **only `AreaChartWrapper.*` + the log**. Per the honesty covenant, the gate is reported as **BLOCKED (EXIT=1)**, not red-as-green.
+

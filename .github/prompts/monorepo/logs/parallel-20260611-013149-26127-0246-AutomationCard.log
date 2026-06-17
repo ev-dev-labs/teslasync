@@ -1,0 +1,179 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the apple app structure and existing patterns.
+
+The `Features` directory doesn't exist yet. Let me explore the existing apple structure and the parity manifest more deeply.
+
+Let me look at the project configuration, an existing feature page, and the parity manifest to understand patterns.
+
+The output path is `TeslaSync/Features/Automations/` but existing features live under `Sources/Features/`. Let me check tooling availability and the parity manifest/ledger.
+
+Xcode 26.5, swiftlint, xcodegen, and pwsh are all available — the gate is NOT blocked. Let me examine the parity manifest record, ledger, and gate contract.
+
+Let me find the actual prompt file and read the p4-apple gate contract and placeholder script.
+
+There's an existing `feature-views` AutomationCard log and directory. Let me check for prior implementations and read the actual prompt file.
+
+There's an existing predecessor implementation in `feature-views/`. Let me read it and compare with how the "done" admin/analytics pages were structured and located.
+
+Let me read the existing AutomationCard implementation thoroughly to understand established patterns.
+
+This is a thorough predecessor. Let me read the remaining parts and the gate contract (README + placeholder script).
+
+Let me examine how the existing DONE admin pages are structured (model, route registration, localization) and what output path their prompt declared.
+
+Now let me check the admin prompt's declared output path vs actual location, the route registration pattern, and the string catalog.
+
+Key finding: the admin prompt declared `TeslaSync/Features/Admin/` but the actual code lives in `Sources/Features/Admin/`. Let me read a predecessor log to see exactly how they handled the path, gate, and PARITY section.
+
+This predecessor log is the gold-standard template. Let me read the AutomationCard Adapter (localization resolution), its strings file, and check whether `translation.automations.*` keys already exist in the main catalog.
+
+All 19 required strings exist in `Localizable.xcstrings` as `translation.automations.*`. The ideal approach: host the existing `AutomationCard` feature-view from a new page, injecting a catalog-backed localizer so strings resolve from `Localizable.xcstrings`. Let me inspect the actual catalog values for these keys.
+
+All 19 strings exist in `Localizable.xcstrings`. The cleanest approach: a new page hosting the shipped `AutomationCard` feature-view, injecting a catalog-backed localizer so strings resolve from `Localizable.xcstrings`. Let me examine the navigation architecture.
+
+There's already an `.automations` route. AutomationCard is an unrouted detail card. Let me read the route host registry, app shell, and `TeslaSyncApp` to see how to register a value-based navigation destination.
+
+There's already an `.automations` route. AutomationCard is an unrouted detail card. Let me examine `AppShell.swift` and search for existing `navigationDestination` value-based patterns.
+
+Now I understand the architecture. Let me verify design tokens, component APIs, test structure, swiftlint config, and whether the Shared.xcframework is already staged (its build takes ~9 min).
+
+The Shared.xcframework isn't staged and takes ~9 min to build. Let me start that in the background now, then continue writing code while it builds.
+
+Let me launch the Shared.xcframework build in the background (it's the long pole at ~9 min), then continue writing code while it builds.
+
+Build is running in the background. Let me examine the design tokens, the existing test patterns, and the `.teslaSyncTheme()` helper while it builds.
+
+The launcher returned (the nohup build continues). Let me check build progress and read the token/component/test patterns I need.
+
+I have the patterns I need. Let me read the `ActiveOrdersModel` (to mirror the `@Observable` + source-seam pattern), the existing AutomationCard tests, `.teslaSyncTheme()`, and `AppRouteParser`.
+
+Let me read the `ActiveOrdersModel` class and source seam to mirror the `@Observable` pattern precisely.
+
+I have all the patterns. Let me check the concurrency idiom used in the codebase for bridging `@MainActor` models to action closures, then set up my plan.
+
+Both `MainActor.assumeIsolated` and `Task { @MainActor }` idioms exist. The xcframework build is nearly done (linking release). Let me set up my plan and todos, then implement.
+
+The word "attach" tripped the SQL filter. Let me reword.
+
+The xcframework is nearly built. Let me create the implementation files. Starting with the model + catalog localizer.
+
+Now let me wire the destination into the shell's `RouteHost` (navigation registration).
+
+Now the unit tests.
+
+Let me check the xcframework build status and run swiftformat/swiftlint on my new files.
+
+The shared `/tmp` log is interleaving with a concurrent slot. My build stages to slot-246's Frameworks regardless. Let me run swiftformat/swiftlint on my files (these don't need the xcframework) while the build finishes.
+
+swiftformat flagged formatting in my new files (AppShell is clean). Let me auto-format my new files.
+
+swiftformat passes now. Let me verify it didn't break the shadowing semantics in my `with()` helper and init.
+
+Formatting is semantically correct. Now swiftlint --strict on my files.
+
+swiftlint linted the whole project (6 violations). Let me see exactly which violations and whether any are in my files.
+
+The violations are all in the pre-existing `WidgetChartSummary.Tests.swift`. Let me confirm none are in my files.
+
+swiftlint: my files are clean; the 6 violations are all in the pre-existing untouched `WidgetChartSummary.Tests.swift` (exactly as the predecessor log documented). Let me check the xcframework build status.
+
+The Shared.xcframework is staged. Let me verify all slices (incl. macos-arm64) and check build completion.
+
+All 3 slices staged, build successful. Now let me generate the Xcode project (my files auto-included via the `Sources`/`Tests` groups) and start the build.
+
+My files are referenced 24× in the project. Now let me build. To skip the slow scheme pre-action (which rebuilds the xcframework), I'll build the macOS target directly. Launching in the background with monitoring.
+
+The launcher returned; the nohup'd xcodebuild is now compiling the main `TeslaSync-macOS` app target (where my files live). Let me poll the build log for the result.
+
+Build still running — it's now at `EmitSwiftModule` for the app target (Sema passed). Let me keep polling.
+
+Build FAILED — but the error is in a pre-existing out-of-scope file (`shared-surfaces/AISuggestNewGeofences.swift`), exactly the class the predecessor logs documented. Let me capture all errors and confirm none are mine.
+
+Confirmed: the only error is in the pre-existing, **untouched** (`git status` clean) `AISuggestNewGeofences.swift`; zero errors in my files. Let me verify the app-target Swift module emitted (whole-module typecheck passed including my files), then run a BASE-STATE build to prove the breakage pre-exists my change.
+
+App-target Swift module emitted cleanly for **both** arm64 and x86_64 (whole-module typecheck passed, including my files). The lone failure is the pre-existing `AISuggestNewGeofences.swift`. Now let me run a BASE-STATE build (my changes reverted) to prove the breakage pre-exists — as an atomic script that auto-restores.
+
+The base build is running with auto-restore. While it runs, let me update the ledger (not touched by the base script).
+
+Let me validate the ledger JSON against its schema.
+
+Ledger is valid (my 2 rows conform: apple-macos + apple-ios, 21/21). Let me check the BASE-build result.
+
+The BASE build is running (my files confirmed removed: 0 refs). Let me wait for it to complete.
+
+BASE build proves pre-existence: `BASE_BUILD_EXIT=65` with the **same** `AISuggestNewGeofences.swift` error, my changes reverted. My files restored (24 refs, AppShell line present). Now let me run the placeholder gate and verify the restore.
+
+Placeholders: 0, EXIT=0 for both dirs. Restore confirmed. Now let me run a standalone harness exercising my pure logic at runtime (mirroring the predecessor's executed-evidence approach, complementing the whole-module typecheck).
+
+The harness itself missed `@escaping` (my real `make()` correctly has `@escaping @Sendable`). Let me fix the harness.
+
+Harness: 13/13 assertions passed. All in-scope gates are green; the only RED is pre-existing/out-of-scope (proven at BASE). Let me gather final facts for the log (git status, tool versions, line counts).
+
+All gates green in-scope. Let me update todos and write the comprehensive evidence log.
+
+All 19 strings verified in the catalog. Now let me write the comprehensive evidence log.
+
+Let me verify a subtlety: the hosted card's kebab menu uses `LocalizedStringKey(item.labelKey)` (bare keys like `automations.testRun`) directly, bypassing my injected localizer. I need to confirm how those resolve from the catalog.
+
+Important finding: the hosted card renders some strings (kebab menu, status badge, empty/error chrome) via `LocalizedStringKey(bareKey)` directly — bypassing my localizer — and those bare keys are NOT in the catalog. Let me enumerate ALL such direct `LocalizedStringKey` usages in the feature-view to handle them correctly.
+
+The hosted card renders 5 of my parity menu strings (plus status/chrome) via direct `LocalizedStringKey(bareKey)`, and those bare keys aren't in the catalog. Per the `AutomationCard.strings` header ("these fold into Localizable.xcstrings at integration time"), I'll fold the needed bare keys into the catalog (an allowed file). Let me inspect the xcstrings format first.
+
+The format is clear (extractionState "manual", en/ar/he locales). Let me fold the 12 bare keys the hosted card renders directly, with values matching `AutomationCard.strings` exactly.
+
+Let me verify I didn't cause a massive reorder of the catalog (the file may not have been pre-sorted).
+
+I corrupted the formatting (Python's JSON style differs from Xcode's ` : ` separator), causing a whole-file diff. Let me revert and inspect the exact Xcode format.
+
+`cat -A` is unavailable; I see the format now: top-level uses `": "` but entries use `" : "` (Xcode style), keys sorted, locales `ar,en,he`. A full re-serialize corrupts it. Instead I'll do a **purely additive textual insert** of the 12 entries (no existing line touched), then validate.
+
+Purely additive: 276 insertions, 0 deletions. Let me verify the inserted block format and validate with `plutil`.
+
+`plutil` doesn't recognize the `.xcstrings` extension (Python `json.load` already confirmed validity). Let me verify the original file behaves identically with plutil and validate via a `.json` copy.
+
+Confirmed: the original fails `plutil` identically (an `.xcstrings`/BOM quirk, not my edit); Python validates it as JSON; diff is 276/0 additive. Let me check for BOM integrity and try the real strings-catalog compiler.
+
+No BOM, structure intact. Let me run `xcstringstool compile` properly (with output dir) to prove the catalog compiles.
+
+`xcstringstool compile` succeeded (EXIT=0) — the catalog is valid and my folded keys resolve (`automations.testRun` => "Test Run"). So all 19 parity strings now resolve from `Localizable.xcstrings`. I must update the log to reflect the catalog fold. Let me update the relevant sections.
+
+Now let me update the PARITY summary, covenant #9, and the COMMIT section.
+
+Let me update todos and do a final verification pass (lint/format clean, log tail correct, full diff review) before committing.
+
+swiftformat 0/5, swiftlint 0 in my files. The log-tail path was wrong (relative to `apps/apple`). Let me verify the log tail and review the complete diff from repo root.
+
+All green: log ends `EXIT=0`/`STATUS=DONE`, `PARITY_COVERED=21/21`. Let me confirm the generated project/framework are gitignored, then commit the exact in-scope files.
+
+All clean. Committing the exact in-scope files.
+
+Commit succeeded (`a838f854f`, 8 files, 1228 insertions, with Co-authored-by trailer). Let me verify a clean working tree and clean up temp files.
+
+All todos complete, working tree clean, temp files removed. The task is finished and verified.
+
+## Summary
+
+Delivered the **P4-APPLE · P7 · `page:automations/AutomationCard`** parity unit as native SwiftUI/HIG, committed as `a838f854f`.
+
+**What shipped** (`apps/apple/Sources/Features/Automations/`, reconciled from the prompt's non-compiled `TeslaSync/Features/...` path per the established sibling-page convention):
+- **`AutomationCardModel.swift`** — `@MainActor @Observable` model: typed `AutomationCardState`, `load()`/`refresh()`, and web-parity toggle/re-enable/delete/pin mutations; plus `AutomationCardCatalogLocalizer` binding web keys → `translation.<key>` in `Localizable.xcstrings`.
+- **`AutomationCardPage.swift`** — adaptive page hosting the already-shipped `AutomationCard` feature view (DRY, no predecessor bypass) bound to the model.
+- **`AutomationCardRouteRegistration.swift`** — value-based `AutomationCardRoute` deep-link `.navigationDestination` (web route is *unrouted*), wired onto the shell's `RouteHost`.
+- **Tests** + **12 bare keys folded** into `Localizable.xcstrings` (additive 276/0) so the card's direct-`LocalizedStringKey` menu/status/chrome resolve from the catalog.
+
+**Parity:** `PARITY_COVERED == PARITY_REQUIRED == 21` (1 panel + success state + 19 strings, all sourced from `Localizable.xcstrings` with web key names). Ledger updated (`apple-macos` + `apple-ios`, 21/21).
+
+**Gates (real evidence in the log):** swiftformat 0/5 · swiftlint 0 in my files · check-placeholders 0 · `xcstringstool compile` EXIT=0 · app-target **whole-module type-check passed (EmitSwiftModule, both arches, incl. my files)** · standalone logic harness 13/13. The full `xcodebuild` is RED **only** from a pre-existing, untouched, out-of-scope file (`shared-surfaces/AISuggestNewGeofences.swift:129`) — **proven pre-existing by a BASE-state build** (same error with my changes reverted), exactly as prior P7 sibling logs documented. Log ends `EXIT=0` / `STATUS=DONE`.
+
+
+
+The task is fully complete and verified — the commit is in place, all gates evaluated, and the working tree is clean. Let me do one final confirmation before marking complete.
+
+Confirmed: commit `a838f854f` in place, working tree clean, ledger shows both platforms done at 21/21.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

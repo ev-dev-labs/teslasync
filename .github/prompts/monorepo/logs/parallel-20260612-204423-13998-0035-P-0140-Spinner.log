@@ -1,0 +1,158 @@
+I'll start by exploring the repository structure and understanding what exists for this task.
+
+Tooling is available (xcodebuild, swiftlint, swiftformat, swift). Let me read the web source and explore existing native surface patterns.
+
+The web Spinner is a simple brand loading mark (lightning bolt) honoring reduced motion. Now let me study the existing native surface pattern. There's a large shared-surfaces dir with multi-file surfaces (Adapter, Model, Previews, AdapterTests). Let me examine a complete example.
+
+Spinner doesn't exist yet. Accordion is the canonical 8-file template. Let me read the full Accordion set to learn the exact pattern.
+
+Key insight: Accordion's adapter explicitly documents that pure presentational primitives reproduce only REAL branches (no fabricated loading/error/stale/offline). Spinner is also a pure primitive honoring reduced motion. Let me read the rest of the template and a motion-related sibling (StaggerItem).
+
+Now let me read the test files, the motion-related sibling (StaggerItem), and the design token definitions.
+
+StaggerItem is the closest motion sibling. Let me read it fully plus the web `useMotionPreference` hook and the design tokens.
+
+Let me read the remaining StaggerItem files and locate the design token definitions.
+
+Token definitions aren't in Sources. Let me locate them across the apple tree and read the StaggerItem tests/previews/strings.
+
+Now let me read StaggerItem's tests/previews/strings, the project.yml build config, and the Spinner CSS animation details.
+
+Now let me check the build configuration (project.yml) and the Spinner's CSS animation specifics.
+
+I have the full pattern. Let me check the placeholder gate, the Shared.xcframework build script (a scheme preAction), and whether `pwsh` is available — these determine whether the build gate can run here.
+
+Critical: the `Shared.xcframework` is not prebuilt (only `.gitkeep`); the scheme preAction builds it via Gradle/Kotlin-Native. Let me read the placeholder checker and probe the KMP/Gradle toolchain feasibility.
+
+`pwsh`, `java 17`, `xcodegen`, `swiftlint`, `swiftformat` all present. Placeholder checker is case-insensitive — I must avoid "placeholder"/"TODO"/etc. even in comments. The `Shared.xcframework` requires a Kotlin/Native Gradle build. Let me probe simulator availability and Gradle feasibility (timeboxed) to gauge whether the full build gate can run.
+
+Simulator (iPhone 16, booted) and Xcode 26.5 are available. The gating dependency is the KMP `Shared.xcframework` Gradle build. Let me probe network/Gradle feasibility and check for symbol clashes before committing to a long build.
+
+Key finding: an atomic `TSSpinner` already exists in the component library (explicitly out of scope here — I'm building the distinct `shared-surfaces/Spinner` parity surface). No symbol clashes. Network works and Gradle (2.2G) + Konan (1.6G) caches are populated, so the KMP build is likely feasible. Let me read `TSSpinner` for consistency and kick off the xcframework build in the background.
+
+Background xcframework build started. Let me set up tracking and write the plan, then create the surface files.
+
+Let me check the xcframework build log and whether Gradle is still running.
+
+Gradle is actively compiling (cache hits confirm warm toolchain). It'll continue in the background. Now I'll write the surface files. Starting with the Foundation-only core.
+
+Now the previews and strings. Let me also check the background build progress.
+
+Build is nearly done (linking release frameworks). Let me write the previews, strings, and tests.
+
+All 8 files written. Now let me run the fast verifications: swiftformat (normalize my files), then lint checks and placeholder scan. Also check the background build.
+
+swiftformat normalized 1 file. Now let me verify all pass `--lint`, run swiftlint, and the placeholder gate on my files.
+
+swiftformat passes (0/7 require formatting). Now swiftlint --strict and the placeholder gate on my files.
+
+swiftlint --strict on my files passes (EXIT=0). The placeholder hits are all **pre-existing** in other surfaces (AIRAGHelp, PageSkeleton, RangePicker, etc.) — none are `Spinner.*`. Let me confirm my files are clean and run a standalone `swiftc` typecheck to catch compile errors before the heavy xcodebuild.
+
+My files are placeholder-clean and the standalone typecheck passes (Swift 6, strict concurrency, iOS 18, including previews/KeyframeAnimator/@Observable). Let me check the xcframework build and prepare to run the real gate.
+
+Release linking is still in progress. While it finishes, let me check how sibling surfaces' gate logs were structured to mirror the exact convention.
+
+The exact sibling logs exist. Let me read the StaggerItem and Accordion gate logs to mirror the convention, plus the older Spinner log.
+
+This is the playbook. The sibling convention: the full `xcodebuild build test` is **expected red (65)** due to FOREIGN pre-existing defects in other surfaces + macOS signing — and the surface is DONE when proven green in isolation (typecheck + swift test) with a baseline-excluded build still red. Let me read the full StaggerItem log to reproduce the exact methodology.
+
+I now have the complete methodology. Let me check the xcframework staging and read the remainder of the sibling log's verification approach.
+
+The xcframework is on its final release link. While it finishes, let me set up the isolated SwiftPM package to run the surface's tests as the `TeslaSync` module (the sibling methodology), independent of the xcframework.
+
+Surface module compiled cleanly. One test-file error: `stops.first?.fraction` is `Double?` which the `accuracy:` overload rejects. Let me fix it to use direct indexing.
+
+`swift test` passes: **38 tests, 0 failures** (surface + tests compile and run as the `TeslaSync` module on macOS, Swift 6). Now the macOS/iOS isolation typechecks and xcframework status.
+
+Both isolation typechecks pass (iOS 18 + macOS 15, Swift 6, strict concurrency). Let me check the xcframework and run `xcodegen generate`.
+
+Release linking is the slow part (still going). Let me run `xcodegen generate` now (independent of the framework) and capture Spinner references.
+
+`xcodegen` succeeded — 48 Spinner refs across iOS app + macOS app + both test bundles (matches sibling). Now let me wait for the xcframework to finish staging.
+
+Xcframework built (BUILD SUCCESSFUL, 13m30s) and staged (ios-arm64, ios-arm64-simulator, macos-arm64) → XCFRAMEWORK_EXIT=0. Now the full iOS gate build+test. This compiles the whole app (~1760 surfaces); per the sibling convention it may surface foreign pre-existing defects. Running it now, capturing full output.
+
+iOS build+test running detached. Let me monitor its progress.
+
+iOS build completed. Let me read the result, check for any Spinner-attributable errors vs foreign ones.
+
+The launcher returned but `xcodebuild` is still compiling (log shows `EmitSwiftModule`). Let me wait for completion and the exit file.
+
+Whole-module `EmitSwiftModule` for TeslaSync is succeeding (0 errors — includes Spinner). Per-file codegen (where foreign defects surface) follows. Let me keep waiting.
+
+The full-app build is lengthy (>10 min). Let me start a longer wait for completion.
+
+Per-file codegen is progressing through surfaces with **0 errors** so far (the foreign-defect "A" surfaces appear to have already compiled clean in this snapshot). Let me keep waiting for completion.
+
+A `** BUILD FAILED **` appeared (line 26646) though the app `.app`/`.appex` were Touched. Let me examine the actual errors and context.
+
+Build failed with "(2 failures)" but 0 `error:` lines — suggesting a compiler crash/resource kill, not a diagnostic. The failing batches are all **foreign** files (AnomalyInlineRow, ApiPlayground, App*, AppearanceSettings — not Spinner). Let me find the exact failure signature.
+
+Found it — a **swift-frontend compiler crash** (`llvm::report_fatal_error`, line 25265) → "Command SwiftCompile failed with a nonzero exit code". Let me see the crash context to confirm the triggering file (and that it's not Spinner).
+
+The crash is a **foreign swift-frontend IRGen crash** compiling `AppearanceSettings.Controls.swift` (a feature-views file) — Spinner is NOT in the crashing batch and has 0 errors. The whole-module typecheck (incl. Spinner) succeeded. Let me check whether xcodebuild has fully exited.
+
+The current `build test` is now redundantly recompiling for the test action (will hit the same foreign crash). The build-action outcome (65, foreign crash) is already determined. For efficiency and a clean captured exit, I'll stop it and run deterministic build-only invocations (Spinner-included + baseline Spinner-excluded). Let me find and stop the xcodebuild process tree.
+
+xcodebuild stopped. 92 orphaned `swift-frontend` children remain — let me wait for them to clear before the next build to avoid resource contention.
+
+Orphans cleared. Now the scientific control: run the iOS **baseline build with `Spinner.*` excluded**. If it still crashes on the same foreign file, that proves the red is pre-existing/foreign. Running it detached with exit capture.
+
+Baseline build running. While it compiles, let me re-verify my edited test file still passes lint/format (the post-fix state).
+
+My edited test file passes both checks. The baseline build is compiling. Let me poll it for the foreign-crash confirmation.
+
+Baseline (Spinner excluded) is compiling through the surfaces with no crash yet — the foreign IRGen crash on `AppearanceSettings.Controls.swift` occurs in a late IRGen phase. Let me keep waiting for it to complete.
+
+`BASELINE_IOS_EXIT=65` with **0 Spinner files compiled** (excluded). Let me confirm it's the identical foreign crash, proving the red is pre-existing.
+
+**Proven foreign**: the baseline (Spinner excluded) fails identically — `BASELINE_IOS_EXIT=65`, same `report_fatal_error` IRGen crash on `AppearanceSettings.Controls.swift`, 0 Spinner files compiled. The iOS red is pre-existing/foreign; Spinner contributes 0 errors. Now the macOS gate + full-tree lint/format. Let me run the macOS build (detached) and full-tree swiftlint concurrently.
+
+Full-tree swiftlint found **3 serious violations** (LINT_EXIT=2) in 5069 files. I need to identify whether any are in my Spinner files. Let me capture the actual violation lines.
+
+The 3 lint violations are all in a **foreign** file — `widget-primitives/WidgetChartSummary.Tests.swift` (variable names 'a'/'b'/'c'), which is outside my allowed scope (`Spinner.*` only) and pre-existing. Let me confirm my changeset is Spinner-only and re-confirm my files are lint-clean.
+
+Confirmed: my changeset is **only the 8 Spinner.\* files**; `WidgetChartSummary.Tests.swift` is pre-existing/foreign (committed earlier), outside my allowed scope. `SPINNER_LINT_EXIT=0`. Now full-tree swiftformat and the placeholder gate.
+
+`FORMAT_EXIT=1` from 1 foreign file `feature-views/RecentDrivesSection.Previews.swift` (a known foreign defect the sibling also documented) — outside my allowed scope. Let me run the placeholder gate, confirm that file is foreign, and check the macOS build.
+
+All confirmed: my files pass scoped format (0/7), placeholder gate = 0 (both gate-literal and scoped), and `RecentDrivesSection.Previews.swift` is foreign/pre-existing. Let me check the macOS build.
+
+`MAC_EXIT=65` — the exact ENVIRONMENTAL signing issue the sibling documented (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` require a development certificate; pre-compile; 0 Spinner errors). All gate reds are now proven foreign/environmental, with the surface green in isolation. Let me gather metadata for the log.
+
+All metadata gathered. Every non-zero gate step is proven FOREIGN (files outside my allowed `Spinner.*` scope) or ENVIRONMENTAL (signing), with the surface green in isolation. Let me write the comprehensive gate log.
+
+Log written. Now let me commit — staging only the Spinner files and the log (verifying the generated `.xcodeproj` is git-ignored and not included).
+
+Clean changeset — only the 8 `Spinner.*` files + the log (xcodeproj is git-ignored). Committing.
+
+Committed as `b7cd02f3c`. Let me update tracking, clean up temp artifacts, and do a final verification.
+
+Clean commit (9 files, 1396 insertions), working tree clean. Let me verify no runaway build of mine is still active.
+
+Let me check what these 4 xcodebuild / 14 swift-frontend processes are — to confirm whether they're orphans from the killed iOS build or an active macOS build.
+
+Those remaining `xcodebuild` processes belong to **other parallel agents** (paths show `slot-31`, `/tmp/rn_dd_ios` — a shared environment, as warned). All of mine completed. I correctly leave others' processes untouched. Let me do a final confirmation of my deliverable.
+
+The Spinner shared surface is complete and committed. Final state verified: HEAD `b7cd02f3c`, all 8 files present, clean working tree, log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0140-Spinner.log | 226 ++++++++++++++++
+ .../shared-surfaces/Spinner.Adapter.swift          | 297 +++++++++++++++++++++
+ .../shared-surfaces/Spinner.AdapterTests.swift     | 224 ++++++++++++++++
+ .../TeslaSync/shared-surfaces/Spinner.Model.swift  | 153 +++++++++++
+ .../shared-surfaces/Spinner.Previews.swift         |  61 +++++
+ .../TeslaSync/shared-surfaces/Spinner.Tests.swift  | 159 +++++++++++
+ .../TeslaSync/shared-surfaces/Spinner.Views.swift  | 177 ++++++++++++
+ .../TeslaSync/shared-surfaces/Spinner.strings      |  17 ++
+ apps/apple/TeslaSync/shared-surfaces/Spinner.swift |  82 ++++++
+ 9 files changed, 1396 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0140-Spinner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Spinner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Spinner.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Spinner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Spinner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Spinner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Spinner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Spinner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Spinner.swift

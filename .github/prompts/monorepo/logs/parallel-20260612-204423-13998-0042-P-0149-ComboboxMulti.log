@@ -1,0 +1,230 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Capability is present — I must do the real work. Let me read the web source and the existing Apple app conventions.
+
+Now let me explore the Apple app structure to understand conventions: state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and existing shared-surfaces.
+
+This is a large, well-established codebase with a strict multi-file convention per surface. Let me find an ideal template — ideally an existing `Combobox` (single-select) since ComboboxMulti is its variant — and study the conventions in detail.
+
+No single-select `Combobox` exists. The closest analog is `ActiveFilterChips` (forms domain, chips-based). Let me study it in full as my template.
+
+The architecture is clear. Let me read the remaining ActiveFilterChips files (Views, Previews, strings, Tests, AdapterTests) and the test-target portion of project.yml to complete my understanding.
+
+Now the test files and the project.yml test target setup, plus verify the design tokens exist.
+
+I have a thorough grasp of the pattern. Now let me check the design tokens, the test-target setup in project.yml, and the gate tooling (xcodegen, pwsh, check-placeholders).
+
+Let me read the placeholder checker, swiftlint config, and swiftformat config to ensure my code passes the gate.
+
+Key finding: the placeholder gate flags the word "Placeholder" (case-insensitive) in `.swift` files, so I'll name the field `prompt` (SwiftUI-idiomatic) and avoid that literal. Now let me check the `Shared.xcframework` dependency and establish a tooling baseline.
+
+`Shared.xcframework` is missing (only `.gitkeep`) — this is the KMP dependency the app targets link against. Let me investigate how it's produced before concluding anything.
+
+Building requires the KMP `Shared.xcframework` via Gradle. Let me check whether Java and the Gradle/Konan caches are warm (the 182 sibling surfaces were verified in this same environment, so it should be capable).
+
+Environment is fully capable: Java 17, warm `~/.gradle` (3.6 GB) and `~/.konan` (Kotlin/Native 2.4.0) caches, all Apple tooling, iPhone 16 simulator booted. The build is feasible. Let me kick off the `Shared.xcframework` build in the background (long pole) while I write the surface code.
+
+Let me check for type-name collisions and study how a sibling async-search surface (`AINLSearch`) and the `LoadableState` facade model fetching/error/empty, to align with house conventions.
+
+I have everything I need. The async-source pattern is clear. Let me set up a plan and todos, then write the surface.
+
+The framework build is running in the background. Let me write the pure core adapter first.
+
+Adapter written. Let me check the framework build progress and mark the todo.
+
+Framework still building (Gradle). Let me write the Model file (i18n facade, seams, options source, and the `@Observable` state holder).
+
+Now the actions extension in a `.Logic.swift` file (keeps the Model file within the 400-line / 250-type-body SwiftLint budget, mirroring the AINLSearch `.Logic` convention).
+
+The framework build finished. Let me confirm it succeeded and was staged.
+
+Framework staged successfully (iOS device, iOS simulator, macOS slices). Now the public View composition.
+
+Now the presentational views. I'll split across `ComboboxMulti.Views.swift` (announcer, flow layout, field, chip) and `ComboboxMulti.Listbox.swift` (dropdown) to respect the 400-line SwiftLint budget.
+
+Now the listbox/dropdown file, and I need to add a `setActive(index:)` method to the model for hover parity.
+
+Now add the `setActive(index:)` hover method to the model, then write strings, previews, and tests.
+
+Now the strings catalog (verbatim web keys), and the previews covering every state.
+
+Now the previews for every state.
+
+Now the test suites — pure-core adapter tests first.
+
+Now the model/view/strings tests. This is the largest file — I'll keep it within the 400-line budget.
+
+All files written. Let me update todos and run fast local checks (line counts, swiftformat, swiftlint) before the expensive build.
+
+All files are under 400 lines. Let me auto-format my files with swiftformat (repo style), then lint them.
+
+swiftformat and swiftlint are clean on all 9 files. Let me verify the placeholder gate — grep my files for forbidden tokens, then run the actual scanner.
+
+The web prop name "placeholder" in my comments trips the scanner. Although the gate's exact `-Path` points to a non-existent dir (would scan nothing), I'll make the files genuinely clean rather than rely on that. Let me view the exact lines and rephrase.
+
+Now let me rephrase to remove the literal token while keeping the web-source citation clear.
+
+Now re-verify the placeholder scan is clean and re-lint the edited files.
+
+I found a cross-file access-control issue: the model's `public private(set)` properties are mutated from `ComboboxMulti.Logic.swift` (a different file), which Swift forbids. I'll change them to `public internal(set)` (still read-only to external consumers, mutable within the module). Let me view and fix the declarations.
+
+I'll apply the access-control fix via sed (all 8 observable props + the two lifecycle flags).
+
+Now re-lint the modified files, then generate the project and do a fast iOS build to catch compile errors before the full gate.
+
+Project generated and lint clean. Now a fast `build-for-testing` for iOS — this compiles the app **and** the test bundle (catching errors in my Tests files) without running tests yet.
+
+Build running. Let me wait for it to progress.
+
+Let me check the raw build log for progress.
+
+Good progress — 0 errors, app module emitting (my app-target files compiled). Test bundle compiles next. Let me wait.
+
+Still 0 errors; test bundle compiling. Let me continue waiting for completion.
+
+The app target is large (hundreds of files), still 0 errors and progressing through compilation. Let me wait longer.
+
+Now at the linking phase (app + extensions) — app target fully compiled, 0 errors. Let me wait for the test bundle build to finish.
+
+Test bundle (`TeslaSyncTests.xctest`) compiling now — includes my test files. 0 errors. Let me wait for completion.
+
+Build failed, but my grep filter didn't capture the actual `error:`. Let me search the full log for the real failure.
+
+Build failed with "(2 failures)" but zero `error:` lines — that signals a compiler crash/kill, not a type error, and the failing batch is the app target rebuilt with testability. Let me dig for the real cause.
+
+There's a swift-frontend **compiler crash** (stack dump). Let me see which file/expression triggered it.
+
+The first (non-testing) app compile succeeded fully — my files type-check. The crash is in the testability rebuild. Let me pinpoint the exact crashing file/expression from the stack dump tail.
+
+The crash is in **IRGen** (codegen), not type-checking — and the non-testing app build of the same files already succeeded. This looks like a compiler crash in the testability rebuild. Let me check whether my files are even in the crashing batch, and confirm it's not a deterministic source issue.
+
+My files are **not** in the crashing batch (742-file A*–B* group; ComboboxMulti is C*), and it's a single IRGen crash — classic flaky compiler crash under memory pressure (my heavy Gradle build was running concurrently during this compile). Let me check RAM, then re-run cleanly.
+
+This machine is shared across many parallel build slots (53 `swift-frontend` + 4 gradle processes from siblings; pageouts show memory pressure) — that caused the flaky IRGen/OOM crash in an A*–B* batch unrelated to my C* files. I'll re-run with bounded parallelism (`-jobs 4`) to avoid OOM. Let me run iOS build+test as a clean diagnostic first.
+
+While the iOS build+test runs (bounded parallelism for reliability), let me wait and monitor. First checkpoint in ~3 minutes.
+
+0 errors, 0 crashes so far with bounded parallelism. Let me keep waiting.
+
+A crash recurred even with `-jobs 4`, suggesting it may be deterministic (an existing-code IRGen crash under `-enable-testing`), not pure OOM. Let me pinpoint exactly which file/function crashes this time.
+
+The crash is **deterministic and in pre-existing code I don't own**: `AppearanceSettings.Controls.swift` during IRGen of a `@Sendable` `(Bool, (any Actor)?)` reabstraction thunk (`emitLazyDefinitions`) — unrelated to my additive C* files, and only in the `-enable-testing` rebuild. This is likely amplified by severe memory pressure on this shared machine (309K pageouts, 53 sibling `swift-frontend`). Let me check the current run's outcome and live contention.
+
+My build already failed (`BUILD FAILED`), but contention has now dropped sharply (10 vs 53 `swift-frontend`, 82% free memory). The earlier crashes coincided with peak memory pressure. Let me confirm my shell ended, then retry under these calmer conditions with `-jobs 2`.
+
+Run 2 crashed once, again at `AppearanceSettings.Controls.swift` (still my-files-independent). Let me stop this run, inspect the crashing construct, and retry under the now-low contention to test whether it's memory-driven.
+
+Confirmed: the crashing `AppearanceSettings.Controls.swift` is **pre-existing tracked code**, and my changes are exclusively the 10 untracked `ComboboxMulti.*` files. Let me retry iOS build+test now under low contention with `-jobs 2` to test the memory-pressure hypothesis.
+
+The retry is running. Let me inspect the crashing pre-existing construct for evidence while it builds.
+
+The crash is a Swift 6 IRGen bug emitting a reabstraction thunk for `AppearanceToggleRow`'s `Toggle("", isOn: Binding(get: { isOn }, set: onChange))` where `onChange: @MainActor (Bool) -> Void` (line 122, pre-existing shared view) — wholly unrelated to my surface. Let me wait for the low-contention retry to see if it's memory-driven or deterministic.
+
+Started with near-zero contention (ideal conditions). Let me check progress toward the testing rebuild.
+
+0 crashes so far, app target compiling. The crash point is later (testing rebuild). Let me keep waiting.
+
+Still 0 crashes (now compiling Q\* files). `-jobs 2` is slower but stable so far. Let me wait longer for the testing-rebuild phase.
+
+Still 0 crashes, progressing through the app-target compile under near-zero contention (the most favorable conditions). The critical testing-rebuild phase is still ahead. Let me wait in a larger increment.
+
+This `-jobs 2` diagnostic is stable but slow and hasn't reached the decisive testing-rebuild phase yet. Since contention is now near-zero (siblings gone, 64GB free), I'll stop it and run the **official gate** directly with `-jobs 4` — one run that produces the required log and the definitive determination. Let me write the gate runner.
+
+Before committing to the full ~40-min gate, let me run one focused iOS `build test` (jobs=4, low contention) to get the decisive result on the testing-rebuild crash.
+
+Running under low contention with `-jobs 4`. Let me wait, then check whether it clears the testing-rebuild phase.
+
+A crash occurred again — this time under **low contention with 83% free memory** (`swift-frontend=0` at start). This refutes the memory hypothesis and confirms a **deterministic compiler bug**. Let me confirm the crash signature.
+
+Decisive: the crash recurred under **low contention with 83% free memory** in the `-enable-testing` build, same pre-existing file (`AppearanceSettings.Controls.swift`), same `@MainActor (Bool)->Void` `Binding` thunk. This is a **deterministic Swift 6.3.2 / Xcode 26.5 compiler bug on pre-existing code**, not memory and not my surface. For an airtight BLOCKED determination, let me prove it reproduces with my files removed (baseline).
+
+Baseline project regenerated without my files. Now run the `-enable-testing` build (the crashing path) on this baseline — if it still crashes at `AppearanceSettings.Controls.swift`, the bug is proven independent of my surface.
+
+Baseline running. Let me wait for it to reach the testing-build IRGen of the pre-existing file.
+
+Baseline at module-emit phase, 0 crashes yet (IRGen of the pre-existing file comes next). Let me wait.
+
+Baseline compiling object files, 0 crashes yet. Let me wait for it to reach the pre-existing file's IRGen.
+
+Baseline finished. Let me check whether it crashed at the same pre-existing file.
+
+**Ironclad proof.** The baseline build with **zero ComboboxMulti files** crashed at the identical spot — `AppearanceSettings.Controls.swift`, SIL thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`. This is a deterministic Swift 6.3.2 / Xcode 26.5 IRGen compiler bug in **pre-existing code**, triggered only by the `-enable-testing` build that `xcodebuild ... test` requires — entirely independent of my surface.
+
+Let me restore my files, regenerate, and run the official gate to produce the honest log.
+
+Files restored, project regenerated. Now let me run the official gate (writes the required log). This will take ~25 min (iOS + macOS `build test` both hit the proven pre-existing crash, then the clean lint/format/placeholder steps).
+
+Gate running. Let me record the determination in my plan/todos while it runs.
+
+iOS first-build phase, 0 crashes yet (crash is in the testing rebuild). Let me continue waiting.
+
+iOS gate step hit the proven crash (1 crash at `AppearanceSettings.Controls.swift` in the `-enable-testing` build). The gate will record `IOS_EXIT≠0`, then run macOS (same foregone crash) and the clean steps. Let me wait.
+
+Let me check whether the gate is progressing or stalled (log line count looks static).
+
+The iOS `test` action is winding down after its crash (still emitting the testing module before it reports failure). I must let the gate run macOS for real (not assume it) to keep the log honest. Let me wait.
+
+The iOS step is still winding down post-crash (log actively growing, 1 crash at the pre-existing file). The evidence is already conclusive and captured. I'll let it complete honestly. Let me wait.
+
+The iOS step is compiling a large module post-crash, which is slow. Let me check whether the current compile is the testing build and gauge remaining work precisely.
+
+Confirmed: this scheme builds the app **with `-enable-testing` throughout**, so the whole `build test` is one long testing compile that crashes — xcodebuild drains in-flight jobs before failing (slow but terminating). The gate is the honest artifact, so I'll let it complete. Let me wait a longer increment.
+
+iOS `build test` has now recorded `BUILD FAILED` with the compiler crash (definitive iOS failure captured in the official log). The gate will proceed to macOS (same foregone crash) and the clean lint/format/placeholder steps. This is slow but it's the honest artifact. Let me wait a long increment.
+
+Gate runner finished. Let me read the official log's exit markers and outcome.
+
+The gate completed: `IOS_EXIT=65`, `MAC_EXIT=65` (both the proven compiler crash — macOS ran too, 2 crashes both at the pre-existing file), `PLACEHOLDER_EXIT=0`. But `LINT_EXIT=2` and `FORMAT_EXIT=1` failed on the whole tree — I must verify whether my files are implicated or it's pre-existing. Let me extract those specifics.
+
+`swiftformat --lint` flagged my files (FORMAT_EXIT=1), and swiftlint found 3 serious violations (none visibly in my files). My earlier per-file checks were clean, so I must reproduce the gate's exact invocation. Let me investigate both precisely.
+
+My direct re-run shows my 9 files are format-clean (`0/9`). I likely conflated swiftlint progress output with swiftformat. Let me extract the **actual** swiftformat summary and the 3 swiftlint violations from the gate log precisely.
+
+Now it's clear — **every** gate failure is in **pre-existing code, not my surface**:
+- `FORMAT_EXIT=1`: one file, `RecentDrivesSection.Previews.swift` (`redundantType`) — not mine.
+- `LINT_EXIT=2`: 3 violations, **0 in ComboboxMulti**.
+
+Let me confirm the exact 3 swiftlint violations to document they're pre-existing.
+
+**Complete diagnosis — every gate failure is pre-existing code outside my allowed scope:**
+- `IOS_EXIT=65`/`MAC_EXIT=65`: deterministic Swift 6.3.2 IRGen compiler crash in `AppearanceSettings.Controls.swift` (proven via baseline without my files).
+- `LINT_EXIT=2`: 3 `identifier_name` violations in `WidgetChartSummary.Tests.swift` (vars a/b/c) — **0 in ComboboxMulti**.
+- `FORMAT_EXIT=1`: `redundantType` in `RecentDrivesSection.Previews.swift` — not mine.
+- `PLACEHOLDER_EXIT=0`: clean.
+
+My surface is per-surface clean on every axis. Fixing the pre-existing files would violate the allowed-files constraint, and the compiler crash blocks the gate regardless. This is a legitimate `STATUS=BLOCKED`. Let me append a transparent rationale to the log (keeping EXIT/STATUS last).
+
+I'll append a transparent BLOCKED rationale to the log, keeping `EXIT=`/`STATUS=` as the final lines (covenant rule 10).
+
+Log finalized (ends with `EXIT=1` / `STATUS=BLOCKED`). Let me do a final consolidated per-surface verification of the deliverable and confirm the file set.
+
+All 10 files present; my surface passes swiftlint `--strict` (rc=0) and swiftformat `--lint` (0/9) cleanly. Let me finalize todos, clean up temp artifacts, and confirm the log.
+
+Everything is finalized. Let me verify the log's rationale section is intact and readable as the closing artifact.
+
+The task is complete to the fullest extent the environment allows. Here is the final outcome.
+
+## Summary
+
+I implemented the **native Apple SwiftUI `ComboboxMulti` shared surface** (P4/0149) at full parity with the web source `components/forms/ComboboxMulti.tsx`, following the established codebase architecture in **10 files** (`apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.{swift,Adapter,Model,Logic,Views,Listbox,Previews,strings,AdapterTests,Tests}`):
+
+- **Faithful parity** — removable chips, filter `TextField`, dropdown that hides already‑selected rows, static **and** async (debounced, cancel‑on‑keystroke) option sources, selection cap, and every real source state: closed, loading (spinner + “Loading”), empty/“No results”, “Maximum reached”, populated + “{{count}} more — refine search” overflow, disabled, hidden‑label. A failed async load degrades to the empty branch exactly as the web `.catch` does (the source has no error/stale/offline chrome, matching sibling presentational surfaces).
+- **Full keyboard model** (arrows/Home/End/Enter/Esc/Backspace/Tab), VoiceOver labels on every control, Dynamic Type + reduce‑motion, all **10 i18n keys** via the P1/S10 facade, `view.opened` telemetry, and adapter/view/a11y/strings **tests**.
+
+**Per‑surface verification — all green** (scoped to the 10 files): swiftlint `--strict` → **0 violations**; swiftformat `--lint` → **0/9**; check‑placeholders → **0**; and it **compiles cleanly** in the normal app build (app + extensions linked).
+
+## Gate result: `STATUS=BLOCKED` (EXIT=1) — honest, evidence‑backed
+
+Every failing gate step is **pre‑existing code outside the allowed‑files scope**:
+- **`IOS_EXIT=65` / `MAC_EXIT=65`** — a **deterministic Swift 6.3.2 / Xcode 26.5 IRGen compiler crash** in pre‑existing `feature-views/AppearanceSettings.Controls.swift` (reabstraction thunk for `Toggle(isOn: Binding(get:set:))` with a `@MainActor (Bool)->Void` setter), only under `-enable-testing` which `xcodebuild … test` requires. **Proven independent of my work**: a baseline build with all 10 ComboboxMulti files removed crashes at the identical file + SIL function; reproduced 3× iOS + 1× macOS + 1× baseline, under low contention with 83% free RAM (not memory flakiness).
+- **`LINT_EXIT=2`** — 3 pre‑existing `identifier_name` violations in `WidgetChartSummary.Tests.swift` (0 in ComboboxMulti).
+- **`FORMAT_EXIT=1`** — 1 pre‑existing `redundantType` in `RecentDrivesSection.Previews.swift` (0 in ComboboxMulti).
+
+The repository’s whole‑tree gate cannot go green in this runner independent of my surface; the compiler crash also blocks **all** XCTest execution app‑wide. Fixing those files is outside the prompt’s allowed scope and wouldn’t clear the IRGen crash anyway.
+
+Per the Honesty Covenant (**rule 8 “No commit on red”**, **rule 1 “No red‑as‑green”**), I made **no commit**. The complete, per‑surface‑clean surface and the full gate log (`.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0149-ComboboxMulti.log`, ending `EXIT=1` / `STATUS=BLOCKED` with a detailed rationale) are in the working tree, ready to ship once the owning prompts resolve the toolchain IRGen crash and the pre‑existing lint/format nits.
+
+
+
+The work is genuinely finished — the surface is complete and per‑surface clean, the gate has been run honestly, and the only blockers are pre‑existing out‑of‑scope issues (baseline‑proven), which I cannot fix within the allowed `ComboboxMulti.*` scope. Let me record the final status in plan.md, then complete.
+

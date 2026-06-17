@@ -1,0 +1,188 @@
+I'll start by exploring the repository structure to understand what exists, especially the web source and the Apple app structure.
+
+Predecessors have built similar surfaces. Let me read the web source and study the existing Apple shared-surfaces pattern.
+
+I have the web source. Now let me study the Apple app structure and existing shared surfaces.
+
+`InlineCallout` is the most recent predecessor with a full file set. Let me read all of its files to learn the exact pattern.
+
+Excellent pattern. Let me read the remaining InlineCallout files to complete my understanding.
+
+Now the tests and strings files, plus the shared token/i18n infrastructure they depend on.
+
+Now I need the `useVersionWatcher` hook (the data source) and the shared design-token/i18n infrastructure. Let me also find an Apple surface that binds to an actual data hook (with loading/error/stale/offline states) for reference.
+
+`useVersionWatcher` polls `/system/version` — so this surface has a real data source (unlike the presentational InlineCallout). I need to find the shared state-holder/cache/live infrastructure (P4 core) and a data-binding surface for reference. Let me locate the token definitions and core layer.
+
+This is the P4 core (`SharedFacade` = P1/S8 state-holders + facade). Let me read the key infrastructure files and find an existing data-binding surface to use as a template.
+
+The KMP `Shared` core has only a `VehicleSettings` domain holder — no version domain. The InlineCallout precedent is fully self-contained (own `@Observable` model + telemetry seam + `NSLocalizedString` facade), not wired to KMP. But NewVersionBanner has a real fetcher. Let me find how a sibling surface that binds an actual data hook was built.
+
+There's a `PollingEngine` primitive — directly relevant since `useVersionWatcher` polls. Let me read it plus a recent data-bound banner (`DraftRestorePrompt`) that uses `LoadableState`.
+
+`AiLimitBanner` is the ideal template — a dismissible banner that fetches via a seam and has states. Let me read its full source set.
+
+`AiLimitBanner` is the exact template: data-bound dismissible banner with loading/empty/error/data + stale/offline freshness chip, all seams injectable. Let me read its remaining files plus the design tokens.
+
+Now the Views (data card, freshness chip, button usage), Previews, strings, and the design tokens.
+
+I have the full pattern. Now let me confirm the shared component/token APIs and how the Xcode project picks up new files (critical for the build).
+
+Design tokens are generated elsewhere. Let me locate them and read the shared component signatures I'll use, plus check the Xcode project structure.
+
+It's an XcodeGen project (`project.yml`). Files are picked up by directory globs — no manual pbxproj editing. Let me read `project.yml` and locate the generated design tokens.
+
+Tokens are generated to `apps/design/generated/apple/Tokens.swift`. Let me read the project.yml and the tokens file.
+
+Now I understand the build fully (XcodeGen, files auto-discovered by directory). Let me check the toolchain availability (critical for the gate) and read the token definitions + component signatures in parallel.
+
+Full toolchain is present (Xcode 26.5, iPhone 16 booted, swiftlint, swiftformat, xcodegen, pwsh). Tokens confirmed. Now let me check the predecessor's gate log, whether `Shared.xcframework` builds, and read the component signatures.
+
+The established disposition is clear: predecessors verify per-surface (xcodegen + swiftc typecheck + swift test + lint + format + placeholder) and the full `xcodebuild build test` is deferred due to a pre-existing unrelated error + macOS signing. Let me read the exact component signatures I'll use and the AiLimitBanner test/preview conventions.
+
+Component signatures confirmed. Let me read AiLimitBanner's model tests and previews (data-bound conventions), and check the current module build state.
+
+I now have the complete pattern. Let me check the lint/format configs, the placeholder script, and the current module build state before writing code.
+
+I have everything I need: the complete pattern (data-bound dismissible banner = `AiLimitBanner`), all component/token signatures, lint/format configs, the placeholder gate rules, and a confirmed toolchain. Let me set up a plan and todos, then build the surface.
+
+Now I'll write the surface. Starting with the pure core (Adapter), Model, and Seams.
+
+Now the state chrome (loading/empty/error), the banner card + freshness chip views, and the public surface.
+
+Now the previews and the i18n strings catalog.
+
+All source files written. Now the test files. Let me update todos and write the pure-core adapter tests and the model/seams tests.
+
+All 11 files written. Let me verify line counts (SwiftLint file_length budget) and run the per-surface verification gate.
+
+Line counts are healthy and no forbidden words. Now let me run swiftformat, swiftlint, and the placeholder gate on the new files.
+
+One `hoistAwait` formatting issue. Let me look at it and fix.
+
+swiftformat=0, swiftlint --strict=0. Now the placeholder gate and xcodegen file enumeration.
+
+placeholder=0, xcodegen=0 (72 NewVersionBanner refs → all files enumerated into app + test targets). Now the build. Let me inspect the Shared.xcframework build script and check the current module state.
+
+Java 17 + gradlew present; xcframework not prebuilt. The InlineCallout predecessor built it live to compile in-module. Let me build the Shared.xcframework (long pole) in the background.
+
+While the xcframework builds, let me re-examine my previews for a Swift 6 `@MainActor` issue I introduced with the `staged` autoclosure helper. Let me fix it to match the proven sibling pattern.
+
+Let me replace the previews file cleanly.
+
+Let me check the xcframework build progress.
+
+While Gradle runs, let me fix an unused `@Environment` property I left in the card view.
+
+Format/lint clean. Let me check the Gradle xcframework build progress.
+
+Gradle is downloading the Kotlin/Native toolchain (output buffered by `tail`). While it runs, let me check the current module's known pre-existing error state and the documented disposition.
+
+The disposition is now crystal clear. Crucially, my surface is **Shared-free** (only Foundation/SwiftUI/Observation/OSLog) — like InlineCallout — so I can verify it via `swiftc -typecheck` against the real SDK + an isolated SwiftPM `swift test`, independent of the xcframework. Let me identify the exact dependency closure while Gradle builds.
+
+My surface's components pull a wide barrel closure. Let me check whether `Sources/Components` + `Sources/Design` are self-contained (Shared-free) so I can build one isolated SwiftPM harness that executes all my tests.
+
+`Sources/Components` + `Sources/Design` are Shared-free. Let me check all their imports/subdirs to build a clean isolated `swift test` harness (the predecessors' approach).
+
+The `Components`/`Design` tree is fully self-contained (only Charts/CoreLocation/Foundation/MapKit/SwiftUI). I'll build an isolated Swift 6 SwiftPM harness to **execute** my tests — exactly the predecessors' approach.
+
+My surface files compiled successfully — the only errors are in `UnitFormatters.swift` (a `DataDisplay` component I don't use, which references the `Units` facade). Let me remove out-of-closure files and rebuild.
+
+Only `UnitFormatters.swift` needs the facade. Removing it from the harness and running the tests.
+
+61 tests ran, 1 failure. Let me find which test failed.
+
+The failing test reveals a telemetry-semantics choice: my model re-emits `view.opened` after stop/start, but the test asserts once-per-instance (the more robust InlineCallout convention — idempotent across appear/disappear churn). Let me adopt that convention with a `didEmitOpen` guard.
+
+Now let me sync the harness and re-run the tests, plus re-lint the edited Model.
+
+All **61/61 tests pass** under Swift 6, compiled against the real tokens + real shared components. Now the SDK-level typecheck (iOS 18 + macOS 15) and the xcframework status.
+
+iOS 18: 0 NewVersionBanner issues. Let me confirm the overall typecheck is clean and run the macOS 15 typecheck.
+
+Both SDKs typecheck **0 errors / 0 warnings** under Swift 6 strict concurrency. Let me check the xcframework build.
+
+Let me verify the Gradle build is progressing (not stuck) by checking its output artifacts and process.
+
+Gradle is actively compiling the Kotlin/Native frameworks (iosSimulatorArm64 done, building more). Strong verification already in hand. Let me update tracking and wait for the xcframework to assemble.
+
+The `Shared.xcframework` is staged (BUILD SUCCESSFUL, 15m52s). Now I can run the real gate including the in-module compile. Let me run the iOS scheme build+test exactly as the gate specifies, capturing output.
+
+The iOS gate is running (full module build + tests + the Gradle preAction). Let me wait for it to complete.
+
+Module is emitting with 0 errors so far — promising. Let me continue waiting for the build+test to finish.
+
+Exactly the sanctioned disposition: **IOS_EXIT=65, but NVB_ERROR_COUNT=0** — my surface compiles cleanly in the real iOS-simulator app module. The only 2 errors are pre-existing, unrelated (`AISuggestNewGeofences:129`, `AIGeofenceAwareAutomationSuggestions:141` — other agents' surfaces). Let me run the macOS gate.
+
+The macOS gate is running. Let me wait for it.
+
+macOS: **MAC_EXIT=65, NVB_ERROR_COUNT=0**, and `0 valid identities found` (the documented signing blocker). Let me confirm the macOS failure cause precisely.
+
+macOS is blocked by **development signing** (`0 valid identities`, entitlements require a dev certificate) — the documented host limitation, with **0 NewVersionBanner errors**. Let me confirm how far macOS compilation got and capture the full picture for the log.
+
+macOS scheme build aborts at **signing** before compiling the app target (0 identities — host limitation). To get the macOS in-module compile proof (like iOS), let me compile the macOS app target with signing disabled.
+
+macOS in-module: **0 NewVersionBanner errors**. Let me confirm the failing errors are the same pre-existing ones and that my surface compiled.
+
+Let me find what actually failed in the macOS in-module build (EXIT=65 but my error grep found nothing).
+
+The macOS in-module build fails in the shared module (pre-existing cross-surface issues) with **0 NewVersionBanner errors**; the authoritative macOS compile proof is the clean `swiftc -typecheck` (0/0). Now let me run the remaining gate steps tree-wide exactly as specified (swiftlint, swiftformat, placeholder).
+
+Tree-wide **swiftlint=0/4295** and **swiftformat=0/4593**. All gate steps captured. Let me verify git state (ensure build artifacts aren't tracked) before writing the log and committing.
+
+Git is clean — only my 12 files are new; all build artifacts (xcframework, xcodeproj, gradle build) are gitignored. Let me clean up temp artifacts and write the gate log.
+
+Now let me write the comprehensive, honest gate log.
+
+The log is written and ends with `EXIT=0` / `STATUS=DONE`. Let me update tracking and commit only my files + the log.
+
+Exactly 13 files staged (my 12 + the log), no build artifacts. Committing.
+
+Committed as `6c63c9f4f`. Let me do a final verification of the committed contents and tree state.
+
+The surface is shipped, verified, and committed. 
+
+## Summary
+
+Built **`NewVersionBanner`** — the production SwiftUI parity of `web/src/components/feedback/NewVersionBanner.tsx` — as 12 files under `apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.*`, following the established P4 data-bound-banner architecture (the `AiLimitBanner` sibling pattern).
+
+**Architecture (Shared-free; P1/S8 state-holder, P1/S10 i18n, P1/S11 telemetry, P1/S9 tokens):**
+- Pure adapter (slug, 5-min poll cadence, watcher snapshot + `newVersionAvailable` rule, projector, dismissal-reset rule, a11y builder), `@Observable` model, injectable seams (source / `VersionProbe` / poller / dismissal store), a polling source that mirrors `useVersionWatcher` (boot baseline → poll → `latest != boot`), state chrome, the Sparkles banner card + freshness chip, public surface, previews, strings, and 3 test files.
+- **Faithful parity:** per-version dismissal (web `sessionStorage` → app-session store), reset-on-new-version, host-wired `onReload` (web `window.location.reload()`), and all states — loading / empty (up-to-date or dismissed) / error / available + stale/offline freshness chip with one-shot auto-refresh.
+
+**Verification (honest, all green for this surface):**
+- `swiftc -typecheck` iOS 18 + macOS 15 = **0 errors / 0 warnings** (Swift 6, `-strict-concurrency=complete`, against real tokens + real components)
+- Isolated SwiftPM `swift test` = **61/61 passing**
+- `swiftlint --strict` = 0/4295 · `swiftformat --lint` = 0/4593 · placeholder gate = 0 · `xcodegen` enumerates all 12 files
+- iOS in-module compile (real module, KMP `Shared.xcframework` built live this run) = **0 NewVersionBanner errors**
+
+**Full-app `xcodebuild build test` (IOS_EXIT=65 / MAC_EXIT=65) is DEFERRED, not failed by this code** — blocked solely by 2 pre-existing unrelated errors in other agents' surfaces (`AISuggestNewGeofences:129`, `AIGeofenceAwareAutomationSuggestions:141`) and 0 macOS signing identities on this host, per the repo's documented disposition. Committed as `6c63c9f4f` (12 files + log) with the co-author trailer; log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0129-NewVersionBanner.log | 178 +++++++++++++
+ .../shared-surfaces/NewVersionBanner.Adapter.swift | 221 ++++++++++++++++
+ .../NewVersionBanner.AdapterTests.swift            | 193 ++++++++++++++
+ .../shared-surfaces/NewVersionBanner.Model.swift   | 166 ++++++++++++
+ .../NewVersionBanner.ModelTests.swift              | 277 +++++++++++++++++++++
+ .../shared-surfaces/NewVersionBanner.Polling.swift | 150 +++++++++++
+ .../NewVersionBanner.PollingTests.swift            | 206 +++++++++++++++
+ .../NewVersionBanner.Previews.swift                |  78 ++++++
+ .../shared-surfaces/NewVersionBanner.Seams.swift   | 194 +++++++++++++++
+ .../shared-surfaces/NewVersionBanner.States.swift  | 107 ++++++++
+ .../shared-surfaces/NewVersionBanner.Views.swift   | 156 ++++++++++++
+ .../shared-surfaces/NewVersionBanner.strings       |  38 +++
+ .../shared-surfaces/NewVersionBanner.swift         | 100 ++++++++
+ 13 files changed, 2064 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0129-NewVersionBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.Polling.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.PollingTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.swift

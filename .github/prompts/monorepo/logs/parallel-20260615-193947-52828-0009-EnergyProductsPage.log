@@ -1,0 +1,164 @@
+I'll start by exploring the repository structure to understand the task scope, then read the web source and existing Apple app structure.
+
+Xcode 26.5, swiftlint, swift 6.3.2, and pwsh are all available — the gate is runnable. Let me explore the Apple app structure and the web source.
+
+Now let me explore the existing Apple app structure to understand the patterns, project config, and existing pages.
+
+This is a large, well-structured task. Let me find the established patterns: existing page implementations, navigation, the KMP shared core, and the parity ledger entry.
+
+Key finding: there's an existing `Sources/Features/Battery` (compiled via `project.yml`) plus the prompt's target `TeslaSync/Features/Battery`. Let me examine the existing Battery feature, the navigation/App layer, and the ledger entry.
+
+The established convention is `Sources/Features/Battery/` (3 pages there already), but the prompt targets `TeslaSync/Features/Battery/`. Let me resolve this by checking the ledger's recorded paths and the route-registration pattern.
+
+Let me check the sibling pages' build logs (ground truth of what passing predecessors did) and the gate tooling to resolve the path convention definitively.
+
+Let me read the BatteryCells sibling log — it's the ground-truth template for path, gate, and PARITY-section format I must mirror.
+
+The sibling log confirms the reconciliation: ship at `apps/apple/Sources/Features/Battery/**` (the prompt's `TeslaSync/Features/Battery` doesn't exist/compile), strings in `Localization/Localizable.xcstrings`, route case in `AppRoute.swift`, registration chained in `TeslaSyncApp.swift`. Delegation is forbidden, so I'll implement directly. Let me study a complete sibling page end-to-end.
+
+Clear pattern established. Now let me learn the shared component APIs, the sample-data pattern, route chaining, and the web energy types.
+
+Let me extract the exact manifest record for EnergyProducts to map panels precisely, and read the remaining patterns (sections, tests, app chaining, hooks).
+
+Panel mapping confirmed: GlassPanel4 = site card, GlassPanel12 = loading skeleton, GlassPanel13 = empty state. Now let me read the hooks, the sibling Sections + Tests + App chaining, and the TOU modal scope.
+
+Let me read the sibling log's PARITY section (the exact evidence format required) and the Localizable.xcstrings structure.
+
+The PARITY evidence format is clear. Let me read the sibling Sections + Tests files, the route parser, design tokens, and the string catalog structure to finalize my implementation plan.
+
+I have all the patterns and tokens. Let me verify a few integration points: route enumeration in tests/spotlight (to avoid missing-key test failures), the exact `TSEmptyState` API, the registry mechanics, and the theme helper.
+
+Important: `systemImage` and `group` switches in AppRoute have no `default`, and `pathSegment` needs an explicit case. Let me read RouteTests, SpotlightIndexer, and find any other exhaustive switches over AppRoute that adding a case would require updating.
+
+Found another exhaustive switch in `WatchDeepLink.swift`. Let me check it and the Spotlight tests to ensure I handle every required site.
+
+`WatchDeepLink` is its own enum — no impact. Only the two AppRoute switches need the new case. Let me check the theme helper, the Shared.xcframework staging, and whether a prebuilt framework exists (affects how I verify the build).
+
+Shared.xcframework isn't staged (needs Gradle/KMP). Let me locate the theme helper and check whether the KMP toolchain can build, then kick off the xcframework build in the background while I write code.
+
+Java 17 + gradlew available. Let me kick off the Shared.xcframework build in the background now, and locate the theme helper definition.
+
+The Gradle build is actively running (compiling Kotlin/Native). I have all patterns. Let me read the proven number-formatter and a page that has a header action button, then write the implementation.
+
+I have complete context. Let me set up tracking and write the implementation. First the plan and todos.
+
+I need to fix a Swift parsing risk: `try await` with a ternary doesn't bind as intended. Let me rewrite both fetch bodies with explicit if/else.
+
+I left a broken placeholder in the first sample site. Let me fix it with the complete Powerwall battery site.
+
+The sections file needs a wrapping badges row. Let me check for an existing flow/wrap layout helper and confirm a couple component signatures before writing it.
+
+Let me look at the existing `Layout` implementation to mirror a proven flow-layout approach for the badge row.
+
+There's a proven `CoverageFlowLayout`. Let me read it to replicate a lint-clean flow layout for the badges.
+
+Proven flow layout found. Let me verify `TSAnimatedNumber` renders arbitrary (non-numeric) strings, since `TSStatCard` uses it for values like "Powerwall" and "82.4%".
+
+`TSAnimatedNumber` renders any string verbatim — good. Now let me write the full Sections file (summary, site card, site-info section with the radial gauge + TOU, skeleton, empty, and the flow layout).
+
+Now I need the `EnergySiteInfoSection` (referenced by the card) with the radial gauge, stat cards, components, and TOU. Let me first check a couple of existing catalog keys I want to reuse (done/close), then write the SiteInfo file.
+
+`action.close`/`action.retry` exist; `error.title` appears missing (I'll add it with the strings). Let me write the site-info section file with the radial gauge, rated stats, components, and TOU.
+
+Now the route registration, AppRoute case, and app chaining.
+
+Now the model tests, mirroring the sibling test structure.
+
+Now the strings. Let me first check the exact serialization format of the catalog and whether `error.title` / `chart.gauge.percent` exist, so my edit matches Xcode's format and stays minimal.
+
+Let me check what error/gauge keys actually exist so my error state and gauge render correctly without depending on missing shared keys.
+
+Now I'll add all the catalog keys with a targeted insertion that matches Xcode's format and only adds missing keys. Let me write and run the script.
+
+All 52 keys added (10043→10095), JSON validated. Let me check the xcframework build and start running the gates.
+
+Excellent — the **Shared.xcframework build SUCCEEDED** (15m), so I can run a real `xcodebuild`. swiftformat found auto-fixable issues in my new files. Let me apply formatting, then re-lint.
+
+swiftformat passes (0/9). Now let me run swiftlint (strict) and the placeholder gate on my files.
+
+Placeholder gate passes (0 violations). Two swiftlint `multiple_closures_with_trailing_closure` errors on my `TSButton` icon buttons. Let me view and fix both.
+
+Fixed both. Let me re-run swiftformat and swiftlint on the affected files to confirm clean.
+
+Both clean. Let me confirm all 9 files pass swiftlint and regenerate the Xcode project (gitignored) so it picks up the new files.
+
+All 9 files pass swiftlint (0 violations); project regenerated with my files referenced. Now the real build. Let me run the iOS scheme build (simulator destination to avoid signing).
+
+iOS 26.5 simulator available. Let me start the iOS build (scheme pre-action will re-stage the now-cached xcframework). I'll run it in the background and monitor.
+
+Build is running. While it compiles, let me verify my files survived auto-formatting correctly (especially the `try await` ternary) and review the sample.
+
+The `try await` ternary survived formatting. Let me check the build status (the notification likely refers to the backgrounding wrapper, not the build itself).
+
+Build is compiling the main target now (where my files are). While it runs, let me update the parity ledger. Let me view the exact insertion context.
+
+Ledger is valid with both EnergyProducts rows (51/51). Let me check the build progress.
+
+Ledger valid (108 total rows). Build is deep into the main target. While it compiles, let me confirm raw `Button` in a toolbar is an accepted sibling pattern (swiftlint already passed it).
+
+Raw `Button` is an established sibling pattern (20 uses) — my toolbar usage is consistent. Let me wait for the build result.
+
+Real conflict found: a pre-existing `EnergySiteInfoModel` exists in `TeslaSync/dashboard-widgets/`. My types collide. Let me find ALL colliding type names so I can namespace mine.
+
+Only one collision: `EnergySiteInfoModel` (a pre-existing widget type). All my other types are unique. Let me rename mine to `EnergyProductsSiteInfoModel` across my files.
+
+Let me rename `EnergySiteInfoModel` → `EnergyProductsSiteInfoModel` across my files (the token is unique, won't touch `EnergySiteInfoSection`/`Snapshot`/`Phase`).
+
+Clean rename. Let me re-run swiftformat and swiftlint on the renamed files (the longer name could affect line length), then rebuild.
+
+0 violations. Let me rebuild (incremental — should be faster now).
+
+Rebuild running. Let me monitor it.
+
+No errors yet, build still compiling (52 procs). Let me wait for it to finish.
+
+The `/tmp` log vanished (shared environment cleaning `/tmp`). Let me find and stop the orphaned build, then re-run with the log in the session folder (safe from `/tmp` cleanup).
+
+Two competing xcodebuild processes are running (the failed first build lingered). Let me stop both and restart one clean build with the log in the session folder (safe from `/tmp` cleanup).
+
+Both top-level builds stopped; 46 orphaned compiler children are draining. Let me wait for them to exit, then start a clean build with the log in the session folder.
+
+Those remaining processes are likely other parallel slots (shared environment) — not mine. My two builds are stopped. Let me start a clean build with the log in the session folder (safe from `/tmp` cleanup).
+
+Build running with a safe log path. Let me monitor it (incremental from cached DerivedData, but sharing the machine with other slots).
+
+Still compiling, no errors. Let me wait longer (shared machine is slowing it).
+
+Build is deep in the module with no errors. Let me write the evidence log while it finishes (I'll fill in the final build/test numbers once known).
+
+Log drafted with build/test placeholders. Let me check the build result.
+
+Build reached `EmitSwiftModule` (all sources, including mine, type-checked and compiled with zero errors). Let me wait for the final link + result.
+
+The build has been on `EmitSwiftModule` for 5+ minutes (heavy machine contention from parallel slots). Let me check whether the compiler is actively working or stalled.
+
+Machine load is **62** (4 parallel slots competing, 46 compiler processes). My build IS progressing (procs in R state, burning CPU) but slowly. It already reached `EmitSwiftModule` with zero errors — meaning every source file including mine type-checked. Let me wait for it to finish linking.
+
+The build compiles both arch slices (arm64 + x86_64) — the x86_64 slice already reached `EmitSwiftModule` (full module type-checked, 0 errors), proving my code compiles. It's now finishing arm64 under heavy load. Let me wait for the final result.
+
+Load is now **84** (worsening contention from parallel slots). My build is green so far (0 errors across 19k+ log lines; module already emitted) but the full fat-binary link is slow. It's progressing — let me wait with a longer interval to reduce overhead.
+
+Both arch modules now emitted (full type-check complete for both, 0 errors across 27.5k lines) — compilation is definitively verified. Only the mechanical link remains, but load is now **106**. Let me wait for the link to finish.
+
+Now in the link/codesign phase (0 errors, 31.9k lines). The final link is grinding under load ~90. Let me wait for it to complete.
+
+The full link is throttled by load **125** from competing slots. Compilation is definitively verified (both arch modules emitted, 0 errors across 36k lines). The build continues in the background. Meanwhile, let me get an **executed** test result via a fast standalone harness of my pure logic (mirroring the sibling's model harness), independent of the slow xcodebuild.
+
+Now let me compile and run this harness against my real source files (with a minimal `TSTone` stub so they build outside the app module) to get an executed test result.
+
+Just a stub-visibility issue (real `TSTone` is `public`). Let me make the stub public and recompile.
+
+Swift 6 flags the harness's global counters. Let me make them `@MainActor` and recompile.
+
+**35/35 checks pass** (executed, swift-6 strict-concurrency, exit 0) — covering every model/format assertion. Let me check if the full xcodebuild finished while the harness ran.
+
+Compilation is verified for **both** arch slices (module emission complete, 0 errors across 36k+ lines) and my files also compile standalone under swift-6 strict concurrency. The fat-binary link is still grinding under contention. Let me record the definitive harness test result in the log now, then keep waiting for the link to print SUCCEEDED.
+
+Test logic recorded (35/35, definitive). The fat-binary link is still finalizing under contention. Let me give it one solid wait to capture the literal `BUILD SUCCEEDED`.
+
+~60 min in, the fat-binary link is still grinding under load 113 (external slots), though green (0 errors across 41k lines). I won't risk killing it (could hit another slot or force a recompile). Let me verify my repo changes are exactly as intended while the build finalizes.
+
+My repo changes are exactly as intended (4 modified, 9 new + log). The build is progressing (36k→41k lines), just slow under external load. Let me wait for it to complete.
+
+BUILD FAILED with 1 error in the **link** phase (compile was 0 errors). Let me see the actual error — under load 143 this may be a resource-induced crash rather than a code error.
+

@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure, reading the web source spec, and checking platform tooling availability.
+
+Apple toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, pwsh). There's an existing `widget-primitives` dir with reference implementations. Let me read the web source and study existing patterns.
+
+This is a pure presentational primitive: a list of tip cards (title, optional impact badge, description) with an empty state. Let me study the closest existing reference primitive (`WidgetComparisonCard`) thoroughly to match conventions, plus the i18n/states patterns.
+
+Now let me read the test/preview conventions and find the design tokens (P1/S9), the native `Badge` equivalent, and the `EmptyState`/feedback peer that the web source uses.
+
+Excellent — I now understand the full file pattern. Let me locate the design tokens (P1/S9) and the native shared components the web source maps to: `Badge` (from `@/components/ui`) and `EmptyState` (from `@/components/feedback`), plus how `Delta` (0081) is referenced.
+
+`TSBadge` (web `Badge`) and `TSTone` (success/warning/neutral) exist. Let me read the design tokens, the native `EmptyState`, and how a sibling surface (`Delta`, `WidgetEventFeed`) renders dynamic badge text verbatim.
+
+Let me read how `WidgetEventFeed` structures its states (it has a `States.swift`), and locate the actual token definitions for `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`.
+
+Token definitions aren't surfacing via grep — they may be generated. Let me locate them and read how `WidgetEventFeed.swift` wires states + `TSEmptyState`.
+
+Design tokens are generated into `apps/design/generated/apple`. Let me read the available token names, how `WidgetEventFeed.swift` composes states with `TSEmptyState`, and the test-target wiring in `project.yml`.
+
+Now I understand the architecture. `WidgetTipCards.tsx` is a pure presentational primitive — exactly analogous to `WidgetComparisonCard` (props-driven, no fetch). The established repo convention for such primitives reproduces only the real branches (populated + empty) with a documented faithful-parity note. Let me read the remaining config: test-target wiring, lint/format configs, the placeholder checker, and the Tokens namespace structure.
+
+I have the full token vocabulary. Let me read the test-target wiring and the placeholder checker to ensure my files comply, then confirm no `WidgetTipCards.*` already exists.
+
+Let me read the forbidden-pattern list and check whether the Xcode project is generated (xcodegen) so I can actually build/test.
+
+Forbidden patterns noted: I'll avoid `TODO/FIXME/XXX/Placeholder/Lorem ipsum/not implemented` and use `Spy`/`sample` naming. xcodegen is available but no `.xcodeproj` exists yet. Let me check the `Shared.xcframework` dependency and generate the project.
+
+`Shared.xcframework` is absent (only `.gitkeep`) — all app targets depend on it. Let me check the build script and how sibling widget-primitive prompts handled the gate (DONE vs BLOCKED).
+
+This is the key precedent. The sibling `WidgetComparisonCard` (0003) established the exact methodology: platform capability is **available**, the full-app `xcodebuild` gate is RED only for **pre-existing/unrelated reasons** (missing KMP `Shared.xcframework`, macOS dev-signing, other agents' merged compile errors), and the surface is verified GREEN via host-runnable surface-scoped gates (swiftformat, swiftlint, placeholder, isolated SwiftPM tests, dual-SDK type-check, xcodegen). I'll follow this precisely.
+
+Let me set up tracking and write the plan.
+
+Now I'll write all 8 files. Starting with the Foundation-only Adapter and the Model.
+
+Now the strings catalog and previews.
+
+Now the two test files — the pure adapter tests and the model/views/strings tests.
+
+All 8 files created. Now verification. First, auto-format my files with swiftformat and lint them.
+
+1/7 files needed a tweak. Let me verify the lint passes and run swiftlint on the new files.
+
+swiftlint flagged one issue: swiftformat wrapped the long `staged` signature, which trips the `opening_brace` rule. I'll shorten the signature (drop the `height` param) and apply heights at each call site, matching the sibling pattern.
+
+swiftformat + swiftlint both clean (0 violations). Now the placeholder gate — the literal gate path plus the real files.
+
+Placeholder gate clean. Now the isolated SwiftPM package to actually **run** the Foundation-pure layer (Adapter + Model + Strings + telemetry) under XCTest. Let me set it up in the session workspace.
+
+All 32 isolated tests pass. Now the dual-SDK `swiftc -typecheck` of the full SwiftUI surface against the real design system. Let me first scope the dependency set (imports used across `Sources/Components`).
+
+Only system framework imports (SwiftUI, Charts, MapKit, CoreLocation, Foundation) — so the surface + `Sources/Components` (39) + `Sources/Design` (2) + Tokens compile as one self-contained module. Let me run the dual-SDK type-check (surface first).
+
+The errors are all in `Sources/Components/DataDisplay/UnitFormatters.swift` (a design-system file needing the units facade) — not in my code. Let me locate and add the units facade files.
+
+`UnitFormatters.swift` pulls in `Shared` (the absent KMP xcframework) via the units facade. My surface uses none of that — only `TSBadge`, `TSEmptyState`, tokens. Let me identify the `Shared`-dependent design files and exclude them (my surface doesn't touch them).
+
+Only `UnitFormatters.swift` needs the absent KMP `Shared` framework, and my surface doesn't use it. Let me re-run the type-check excluding that one file.
+
+macOS type-check: **0 errors**. Now the iOS 18 simulator target.
+
+Both SDKs: **0 errors** for the full surface. Now type-check the **test files** against the real API (compiled in-module, XCTest on the framework path).
+
+The `import XCTest` resolved but the assertion functions live in the separate `XCTestSwiftSupport` module (in `Developer/usr/lib`). Let me add that search path and retry.
+
+Test files type-check clean against the real API (macOS). Now the same for the iOS 18 simulator.
+
+Both SDKs: **0 errors** for the full surface + test files. Now `xcodegen generate` to confirm the project wiring enumerates my 8 files.
+
+xcodegen succeeded. Let me verify all 8 files are enumerated in the generated project (app targets + test bundles).
+
+All 8 files enumerated in the project (48 refs across app + test targets). The generated `.xcodeproj` is git-ignored (`apps/apple/**/*.xcodeproj/`). 
+
+For maximum honesty about the full-app gate, let me attempt the actual `xcodebuild` command to capture the **real** environmental failure on this runner (rather than assume it). First a quick check of the KMP pre-build dependency.
+
+`Shared.xcframework` absent, schemes present. Let me run the actual gate's iOS `xcodebuild` command (bounded) to capture the real environmental failure rather than assume it.
+
+The KMP gradle pre-build is actually working on this runner (staging `Shared.xcframework` from cache). The full app build is proceeding. Let me continue waiting for the real outcome.
+
+No errors yet — still in the KMP native-link phase (the long pole; predecessor saw ~8min for gradle alone). The full app build is genuinely proceeding on this runner. Let me keep waiting to capture the real outcome.
+
+Past the KMP build (`BUILD SUCCESSFUL in 7m44s`, framework staged). The app is now in the Swift module-emit/type-check phase (58 compile tasks, no errors yet). This is where the predecessor hit pre-existing unrelated errors. Let me keep watching.
+
+**BUILD FAILED** — with exactly **1 error**, in another agent's pre-existing merged file (`AIAutoNameUnnamedLocations.swift:123` — `escaping closure captures non-escaping parameter 'content'`), during the shared `TeslaSync` module emit. **Zero WidgetTipCards errors** — identical in nature to the predecessor's finding. Let me confirm the exit code.
+
+iOS gate done: **IOS_EXIT=65**, but the **only** compile error is in another agent's pre-existing file (`AIAutoNameUnnamedLocations.swift:123` — `escaping closure captures non-escaping parameter 'content'`) — **zero WidgetTipCards errors**, matching the predecessor's finding exactly. Let me confirm the complete distinct-error list and check macOS signing.
+
+Conclusive: **iOS build has exactly ONE error, in another agent's pre-existing file; ZERO WidgetTipCards errors.** macOS has **0 codesigning identities** (environmental, matching predecessor). All build artifacts (`.xcodeproj`, staged `Shared.xcframework`, DerivedData) are git-ignored. Let me capture tree-wide lint/format state and tool versions for the log.
+
+Tree-wide swiftformat is clean (0/5131). Tree-wide swiftlint shows 3 violations — I need to confirm they're **not** in my files. Let me capture which files.
+
+The 3 tree-wide swiftlint violations are **all in a sibling surface** (`WidgetChartSummary.Tests.swift`, prompt 0002 — single-letter var names) — **zero in WidgetTipCards**. Let me capture the real macOS gate outcome too (should fail fast at signing with 0 identities).
+
+**macOS gate also captured: MAC_EXIT=65** — fails fast at the **signing phase** (`entitlements require signing with a development certificate`, 0 identities) **before any Swift compiles** — zero WidgetTipCards errors. Both gate failures are pre-existing/environmental, exactly matching the predecessor. Now writing the comprehensive log.
+
+Let me fix a garbled parenthetical in the log's gate [6] note.
+
+Now let me clean up generated build artifacts and confirm `git status` shows only my intended files.
+
+`git status` shows exactly my 8 files + the log, no artifacts. Committing.
+
+Committed (`e402367c9`). Let me finalize tracking and do a last clean-tree check.
+
+Task complete. All work committed cleanly (9 files, 1325 insertions; working tree clean).
+
+Merge made by the 'ort' strategy.
+ ...apple-widget-primitives-0012-WidgetTipCards.log | 166 +++++++++++++++
+ .../widget-primitives/WidgetTipCards.Adapter.swift | 218 ++++++++++++++++++++
+ .../WidgetTipCards.AdapterTests.swift              | 226 +++++++++++++++++++++
+ .../widget-primitives/WidgetTipCards.Model.swift   | 155 ++++++++++++++
+ .../WidgetTipCards.Previews.swift                  |  96 +++++++++
+ .../widget-primitives/WidgetTipCards.Tests.swift   | 195 ++++++++++++++++++
+ .../widget-primitives/WidgetTipCards.Views.swift   | 140 +++++++++++++
+ .../widget-primitives/WidgetTipCards.strings       |  44 ++++
+ .../widget-primitives/WidgetTipCards.swift         |  85 ++++++++
+ 9 files changed, 1325 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-widget-primitives-0012-WidgetTipCards.log
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetTipCards.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetTipCards.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetTipCards.Model.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetTipCards.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetTipCards.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetTipCards.Views.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetTipCards.strings
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetTipCards.swift

@@ -1,0 +1,88 @@
+I'll start by understanding the task: create a native Apple (SwiftUI) version of `LiveStatusPill`. First, let me check the capability requirements and read the web source in parallel.
+
+All tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simctl). There's an existing Apple app. Let me read the web source and explore the Apple app structure in parallel.
+
+Now let me understand the existing patterns. Let me look at the `StatusLiveState` type, the SSE hook, and existing feature-view examples to follow conventions.
+
+The build uses XcodeGen + a KMP `Shared.xcframework`. Let me check build prerequisites and study a complete simple example set to match conventions exactly.
+
+XcodeGen is available but `Shared.xcframework` must be built via Gradle/Kotlin. Let me study the full reference example and the shared facades (i18n, tokens, diagnostics, state-holder base) in parallel, and check `pwsh`.
+
+Patterns are clear now. Let me read the design tokens, the adapter/previews/tests for the reference, and find shared components like `TSFadeIn`/`TSSkeleton`.
+
+Let me find the design token definitions, shared components (`TSFadeIn`, `TSSkeleton`, any existing pill/badge), and read the test conventions.
+
+Let me read the token definitions and existing shared Badge/Motion/Skeleton components to reuse where possible.
+
+There's an existing `TSStatusPill`/`TSTone` atomic, but per scope I build a dedicated feature-view. Let me confirm exact token names and the Motion/Skeleton signatures.
+
+Let me check the P1/S8 shared facade layer — particularly any existing live-connection state holder I should align with.
+
+I have the full picture of conventions and tokens. Let me read the lint configs and the `.States.swift` pattern before writing.
+
+Let me confirm the full spacing/type tokens and verify no existing LiveStatusPill Swift files.
+
+There are prior-attempt logs for this exact surface. Let me read them to learn what was tried and any known blockers (especially the Gradle/xcframework build).
+
+Prior logs reveal key facts: the Gradle `Shared.xcframework` builds fine on a full-Xcode runner, and this runner has full Xcode 26.5 + simulator. Let me read the deferral protocol and check Java/Gradle before deciding disposition.
+
+I now have the complete picture, including the sanctioned disposition protocol. Java 17 + gradlew are present. Let me check the TimelineView idiom and create a tracking plan, then write the surface.
+
+I have everything needed. Let me set up todo tracking and create the 7 surface files following the established SummaryStatsRow/AchievementBadge conventions.
+
+All 7 files created. Now let me run the scoped gates (swiftformat lint, swiftlint strict, placeholder check) on my files.
+
+swiftformat flagged one numeric-grouping issue. Let me auto-fix with swiftformat write mode, then re-verify.
+
+swiftformat clean. Now swiftlint --strict and the placeholder check on my files.
+
+Scoped gates all green: **swiftformat 0/6**, **swiftlint 0 violations**, **placeholder COUNT=0**. Now let me build an isolated SwiftPM harness to compile + run the tests under Swift 6.
+
+Real code is correct — the harness stub just needs `public` (the real `LiveConnectionState` is public). Let me fix the stub and rebuild.
+
+Harness compiles clean under Swift 6. Now run the tests.
+
+All 20 tests pass under Swift 6. Now a real iOS-18 + macOS-15 SDK typecheck against the actual SDKs.
+
+Surface is fully green on every scoped gate (format, lint, placeholder, Swift-6 build, 20/20 tests, iOS-18 + macOS-15 SDK typecheck). Now the authoritative full-app gate. First, `xcodegen generate` to confirm project integration.
+
+Project generated; all 7 files integrated (42 pbxproj references, tests in the test bundle). Now the authoritative gate needs the KMP `Shared.xcframework`. Let me attempt to build it via Gradle (the documented long-pole) — timeboxed, in the background.
+
+Gradle is in its first-run Kotlin/Native compilation (the documented long-pole). Let me keep waiting.
+
+Still compiling (~10 min in). Kotlin/Native first-run downloads its compiler and builds native toolchains — this is the documented long-pole. Let me continue waiting.
+
+~15 min in. The Kotlin/Native build is genuinely long on first run. Let me give it more time while it continues.
+
+20 min in. Let me check in a separate session whether Gradle is genuinely progressing (Kotlin/Native downloads, build outputs, CPU).
+
+Confirmed genuine progress: Kotlin/Native (konan 2.4.0 + llvm-21) is actively compiling the **release** frameworks (`iosArm64/iosSimulatorArm64/macosArm64/releaseFramework` dirs exist; debug xcframework already staged). The release link is the long-pole. Let me keep waiting.
+
+Gradle **BUILD SUCCESSFUL in 20m** — release `Shared.xcframework` written. Now stage it for the Apple build and verify.**Gradle BUILD SUCCESSFUL in 20m** — the release `Shared.xcframework` is now built (GRADLE_EXIT=0). Let me stage it and attempt the real Xcode build.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the real iOS build with my surface integrated. Capturing to a log for grep.
+
+iOS build failed (exit 65) — but the failing batch is `AnomalyInlineRow`/`AppearanceSettings`, not my files. Let me find the actual errors and confirm none are mine.
+
+`error:` grep is empty yet build shows "(2 failures)" — likely a compiler crash, not a diagnostic. **Zero LiveStatusPill errors.** Let me find the real failure cause.
+
+Confirmed: the failure is a **Swift compiler crash** ("Please submit a bug report" / "Stack dump"), not a source error — **zero `error:` diagnostics, zero LiveStatusPill errors**. Let me identify the crashing construct.
+
+Definitive diagnosis: the iOS build dies in a **Swift 6.3.2 compiler crash during IR Generation of `AppearanceSettings.Controls.swift`** — a pre-existing sibling file I never touched. **Zero `error:` diagnostics, zero LiveStatusPill files on any failure line.** Let me prove my surface survives IRGen (emit-object, not just typecheck) on the exact crashing toolchain.
+
+Need `-wmo` for a single object. Let me rerun the IRGen/codegen check.
+
+**Decisive:** my surface emits valid Mach-O objects through full IRGen/codegen on **iOS 18 (exit 0)** and **macOS 15 (exit 0)** under Swift 6 strict — i.e., it survives the exact phase that crashes on the pre-existing sibling file. Now the macOS gate build, to capture its real exit honestly.
+
+Both full-app builds fail **identically at exit 65** on the same pre-existing Swift 6.3.2 **IRGen compiler crash in `AppearanceSettings.Controls.swift`** (a file I never touched): `diag_errors=0`, `irgen_crash=1`, `lsp_on_fail=0`. Let me confirm my change scope via git and capture crash evidence for the log.
+
+Everything confirmed: only my 7 files are new; the crashing `AppearanceSettings.Controls.swift` is tracked & **unchanged by me**; the backtrace shows a genuine `swift-frontend` IRGen `abort`; the xcodeproj/xcframework are git-ignored. Now let me write the comprehensive gate log.
+
+Log written. Now let me check for commit hooks, then commit the 7 files + log (xcodeproj/framework are git-ignored).
+
+No active hooks (worktree). Let me commit the surface and log.
+
+Committed (`6af0e9d4a`) — exactly the 7 surface files + log. Let me clean up temp artifacts and verify the final tree state.
+
+Task complete. Here's the honest summary.
+

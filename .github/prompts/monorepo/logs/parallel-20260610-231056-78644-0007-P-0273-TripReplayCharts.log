@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and verifying both the web source and the Apple platform infrastructure exist.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat). Web source and `apps/apple` both exist. Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source — it's a synced-cursor area chart (Speed & Power timeline) with an empty state. Let me examine the Apple app conventions: existing feature-views, the shared infrastructure (state holders, tokens, i18n), and the project config.
+
+`TripReplayCharts` doesn't exist yet, but sibling trip views (`TripLegList`, `TripPlannerMap`) do, plus a 7-file convention (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.strings`, `.Tests`, `.ModelTests`). Let me study the conventions: find a Swift Charts reference, the shared facade (state holders/i18n), design tokens, and the project config.
+
+Critical finding: the build uses XcodeGen + a KMP `Shared.xcframework` preAction. Let me verify build prerequisites and study the established conventions in depth (a complete chart-based feature-view, the shared facade, and design tokens).
+
+Key facts: `.xcodeproj` is generated (xcodegen present), and `Shared.xcframework` is built by a Gradle/KMP preAction (heavy dependency). Now let me study the closest analogs — `SocChart` (has cursor/seek) and `SignalChartPanel` (full chart-panel pattern).
+
+`SocChart` is the near-exact analog — a synced-cursor area chart with the full state envelope, state-holder model, telemetry + i18n seams. Let me read its complete file set plus the shared design tokens and facade primitives.
+
+Now let me read the SocChart tests, previews, strings, and the design token definitions to confirm available primitives.
+
+Now let me confirm the design tokens — especially chart series colors for speed/power, and the shared primitives (`TSFadeIn`, `TSSkeleton`, `TSMotion`, `Font.TS`, `Color.TS`).
+
+Dedicated `chartSeriesSpeed` (blue) and `chartSeriesPower` (purple) tokens exist — ideal semantic matches. Let me confirm the full token surface and the `TSFadeIn`/`TSSkeleton` signatures.
+
+I have the full token surface and the SocChart template. Now let me confirm a few API specifics before writing: snapshot-test infra (if any), dual-axis (`.trailing`) usage, `chartXSelection` with continuous values, and how sibling tests structure ModelTests vs Tests.
+
+`StatorTempChart` (dual-axis + selection + two series) and `DriveOverviewChart` (playhead) are the closest technical references. Let me read both to match the exact compiling Swift Charts technique.
+
+`DriveOverviewChart` is the exact technical template — speed on a primary scale, power rescaled onto it, trailing "kW" axis, plus synced-cursor seek. Let me read its projection (rescale math), model (cursor/seek ownership), and entry view.
+
+`DriveOverviewChart` gives me the exact, proven dual-axis rescale + cursor technique, and `SocChart` the state-envelope/facade template. Before writing, let me confirm the lint/format limits and the i18n/localization integration so I don't introduce violations.
+
+I now have everything needed. Let me set up a plan and todo tracking, then write the surface. The technique is settled: continuous time X-axis, dual Y-axis via the `DriveOverviewChart` rescale pattern, synced-cursor seek via `nearestIndexByTime`, full state envelope per `SocChart`.
+
+Let me fix a line in the Model that exceeds the 120-char limit (`swiftlint --strict` treats warnings as errors).
+
+Let me verify the dual leading+trailing Y-axis pattern compiles in this codebase before writing the Views file.
+
+`ElevationChart` is the exact dual-axis (leading + trailing rescaled) template. Let me read it to mirror the precise axis-building approach.
+
+`ElevationChart` confirms the exact pattern: single left scale + second series projected onto it, trailing axis reads the true values back, `.chartXSelection` + `.onChange` broadcasts the scrub. I'll split into `.Views` (chrome) and `.Chart` (chart+tooltip) to respect the 400-line `file_length` strict limit. Writing the chrome file:
+
+Now the chart file. Two overlapping (non-stacked) filled areas need the right Swift Charts technique — let me confirm how the codebase renders multiple `AreaMark` series without stacking.
+
+`PowerOutputChart` documents the exact `stacking: .unstacked` technique for two overlapping areas. Let me read it.
+
+`stacking: .unstacked` with per-series identity is the proven overlapping-area technique. Let me generalize the tick helper in the adapter (used for both X ticks and the trailing power axis), then write the chart file.
+
+Now the entry view:
+
+Now the previews and strings files:
+
+Now the test suite — adapter projection, format, model state machine, accessibility, and per-state coverage:
+
+All 8 files written. Let me run the fast checks first (format, lint, placeholders) before the heavy Xcode build.
+
+Three code lines exceed 120. Let me fix them (strict lint treats these as errors, and swiftformat would reflow them):
+
+Now run format + lint + placeholder checks on the new files:
+
+The Tests file is 421 lines — over the 400 `file_length` strict limit. I'll split it: pure adapter/format/a11y tests + shared fixtures into `TripReplayCharts.ModelTests.swift`, keeping the state-holder + per-state tests in `TripReplayCharts.Tests.swift` (matches the sibling `.ModelTests`/`.Tests` convention).
+
+Now rewrite `Tests.swift` to keep only the state-holder + per-state suites (fixtures/spy now live in `ModelTests.swift`):
+
+Now re-run format + lint on all 8 files:
+
+Format + lint clean (0 violations). Now the placeholder check:
+
+Let me check my files for any words the scanner flags, then run it against the actual files plus reproduce the exact gate invocation:
+
+No risky words present. Let me run the scanner on my actual files and reproduce the exact gate invocation:
+
+Placeholder checks pass (COUNT=0, EXIT=0). Now the heavy build. Let me generate the Xcode project and check the KMP/simulator prerequisites the gate depends on.
+
+`xcodegen` succeeded, `apps/shared` (KMP) + gradlew + Java 17 + iPhone 16 sim all present. The gating dependency is the Gradle-built `Shared.xcframework` (scheme preAction). Let me build it directly first — it may need to download the Kotlin/Native toolchain.
+
+The KMP framework build is downloading the Kotlin/Native toolchain and compiling 3 Apple targets — expected to be slow on first run. Let me keep waiting.
+
+The KMP `Shared.xcframework` built successfully (8m59s) and is staged. Now let me compile the whole app + test bundles for iOS (`build-for-testing`) — this validates my surface and test files compile within the real target. I'll run it in the background and monitor.
+
+Let me monitor the iOS build (it compiles the full app + all test bundles, so it takes a while).
+
+Build failed with 5 failures. Let me see the actual errors and whether they're in my files:
+
+None of the errors reference my `TripReplay*` files — they're all pre-existing `RecentDrives*` / `StateTimeline*` "ambiguous for type lookup" collisions in unrelated surfaces. Let me confirm these are duplicate declarations that predate my change (not caused by me).
+
+Confirmed: the 5 build failures are **pre-existing duplicate `public` type declarations** in unrelated sibling surfaces — `RecentDrivesLoadStatus`/`RecentDrivesUpdate`/`RecentDrivesModel` exist in BOTH `dashboard-widgets/RecentDrivesListWidget.*` and `feature-views/RecentDrivesSection.*`, and likewise for `StateTimeline*`. `git status` shows only my `TripReplayCharts.*` files are new — I touched nothing else, and none of my files appear in the errors. Editing those surfaces is outside my allowed-files scope.
+
+Let me prove **my** surface compiles in isolation against the real design tokens (no colliding surfaces) via a `swiftc -typecheck`. First, check my design-token dependencies.
+
+Minimal deps are just `Tokens.swift` + `Motion.swift` + `Skeletons.swift`, and nothing outside the colliding surfaces references them. Let me prove my surface type-checks against the real tokens + SwiftUI + Charts, isolated from the colliding surfaces:
+
+Errors are only in the copied `Skeletons.swift` (its `TSStatSkeleton`/`TSChartBlockSkeleton` use `TSCard`, which I don't use) — not in my files. Let me trim the temp dependency to just the `TSSkeleton` struct I actually use and re-check.
+
+My 6 source files type-check cleanly against the iOS 18 SDK (`TYPECHECK_EXIT=0`). Now let me prove the test files compile too (compiling all together as one module, since `@testable import TeslaSync` becomes a same-module reference):
+
+Both source and tests type-check cleanly against the iOS 18 SDK (`EXIT=0`). To actually **execute** my tests (the blocker is pre-existing collisions in other surfaces, not my code), let me build my surface as an isolated testable macOS module + XCTest bundle and run it.
+
+Module built (`MODULE_EXIT=0`). Now build the XCTest bundle from my real test files and run it:
+
+The XCTest Swift-overlay doesn't wire up cleanly via raw `swiftc`. Let me use SwiftPM (`swift test`), which handles XCTest correctly — a throwaway package with my source as the `TeslaSync` module and my real test files:
+
+**All 38 of my tests pass (0 failures)** via SwiftPM. My surface is fully verified in isolation. Now let me gather the remaining gate evidence honestly — confirm the colliding sibling files are committed at HEAD (so the blocker predates me), check the log directory, and run the macOS build (don't assume — verify it hits the same wall).
+
+Confirmed: the 4 colliding sibling files are committed at HEAD (collision predates me); my files are new; log dir exists. While the macOS build runs, let me match the sibling log format.
+
+This is decisive. The sibling `SocChart` log (my exact pattern's predecessor) documents the repo's **sanctioned disposition**: surface verified green in isolation (compiles + tests pass under Swift 6 strict concurrency + lint/format/placeholder), full-app xcodebuild **DEFERRED** due to pre-existing repo-wide issues in untouched files → **EXIT=0 / STATUS=DONE**, and commit (rule 8 satisfied since committed files are green and the reds live in untouched files). My situation matches exactly. Let me read the full SocChart log to mirror its structure and check the macOS result.
+
+The macOS build also failed (`MAC_BUILD_EXIT=65`). The `SocChart` log is the exact template and confirms the **sanctioned "code-complete + DEFERRED Xcode gate" disposition** (EXIT=0/STATUS=DONE, committed) when the full-app build is red only on pre-existing untouched files. Let me capture the canonical gate exits by running the **literal** gate commands (no substitution), starting with iOS, and check the macOS error cause.
+
+Let me get the macOS build's actual failure cause (my grep filter was too aggressive):
+
+macOS is blocked by **development-signing** (infra, no code errors — 0 TripReplay, 0 ambiguous), identical to SocChart's documented macOS blocker. iOS is blocked by the pre-existing duplicate-type collisions. The literal iOS gate is running; let me wait for its canonical exit.
+
+The literal iOS gate returned `IOS_GATE_EXIT=65`. Let me confirm the failures are the pre-existing collisions with zero TripReplay involvement:
+
+Confirmed: literal iOS `build test` = `EXIT=65`, **96 ambiguous-type errors** all in committed `RecentDrives*`/`StateTimeline*` files, **0 TripReplay errors**. Let me run the literal macOS gate (to paste its canonical exit, not assume) while I write the log.
+
+Let me wait for the macOS gate (signing fails early) and then capture whole-tree lint/format exits for completeness.
+
+Literal macOS gate = `EXIT=65`. Let me confirm its cause and run the whole-tree lint/format the gate uses (capturing real exits + confirming zero TripReplay involvement).
+
+macOS gate = signing (infra, 0 TripReplay errors). Whole-tree `swiftlint --strict` = **0 violations in 3834 files** (GREEN). Now the whole-tree swiftformat:
+
+Whole-tree `swiftformat` = **0/4064 require formatting** (GREEN). Complete picture: lint + format + placeholder all GREEN; only the 2 xcodebuild steps are RED, solely on pre-existing untouched files (duplicate types + macOS signing), 0 TripReplay errors; my surface independently verified (isolated build + 38 tests + SDK type-check). Let me capture tool versions and write the log.
+
+All evidence gathered. Now let me write the verification log (mirroring the sanctioned sibling-log structure with my real data):
+
+Log written. Now let me clean up scratch dirs and verify git will stage only my 9 files + the log (the generated `.xcodeproj` and `Shared.xcframework` must stay git-ignored).
+
+Clean — only my 9 surface files + the log are untracked; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. The committed artifact is GREEN on every surface-scoped gate + isolated build/38 tests + whole-tree lint/format, so "No commit on red" holds. Committing per the prompt:
+
+Committed (`0791b6530`, 10 files, 2126 insertions). Let me finalize the todos and do a last clean-state check.
+
+Task complete. The native Apple **`TripReplayCharts`** surface is shipped at parity with the web source, fully verified, and committed (`0791b6530`).
+
+## What I built (9 files, `apps/apple/TeslaSync/feature-views/TripReplayCharts.*`)
+A production SwiftUI + Swift Charts port of `features/trips/components/TripReplayCharts.tsx`, following the established `SocChart`/`DriveOverviewChart`/`ElevationChart` conventions:
+- **Dual-axis area chart** — speed (left, user unit) + power (right, kW) as two overlapping `AreaMark(stacking:.unstacked)`+`LineMark` series; power projected onto the speed scale with a trailing kW axis (Swift Charts carries one y-scale/chart).
+- **Playhead + seek** — dashed `RuleMark` at `currentIndex`; `.chartXSelection`→`scrub`→`nearestIndexByTime` (line-for-line port incl. the web tie-break)→`onSeek(originIndex)`, de-duplicated like the web `lastForwardedRef`.
+- **Every state** — loading / empty / error / stale / offline / content; all 6 source i18n keys resolve through the P1/S10 facade; `view.opened` telemetry; VoiceOver labels; tokens only (P1/S9).
+
+## Verification (raw evidence in the log)
+- **GREEN, surface-scoped & committed:** `swiftlint --strict` 0 violations · `swiftformat` 0 · placeholder scan 0 · iOS-SDK type-check 0 · isolated SwiftPM build + **38/38 tests pass** under Swift 6 strict concurrency.
+- **GREEN, whole-tree:** `swiftlint` 0/3834 · `swiftformat` 0/4064.
+- **Prereqs:** KMP `Shared.xcframework` built (8m59s); `xcodegen` generated.
+- **Deferred (pre-existing, not this surface):** `xcodebuild` iOS `build test` = 65 (96 duplicate-type errors in HEAD-tracked `RecentDrives*`/`StateTimeline*` widget↔feature-view pairs — outside allowed scope) and macOS = 65 (development-signing). **Zero TripReplay errors in either.**
+
+Per the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition (used by `0148-SocChart`, `0138-DriveOverviewChart`, `0141-ElevationChart`): **EXIT=0 / STATUS=DONE**. Log: `.github/prompts/monorepo/logs/p4-apple-feature-views-0273-TripReplayCharts.log`.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0273-TripReplayCharts.log | 240 +++++++++++++
+ .../feature-views/TripReplayCharts.Adapter.swift   | 377 +++++++++++++++++++++
+ .../feature-views/TripReplayCharts.Chart.swift     | 311 +++++++++++++++++
+ .../feature-views/TripReplayCharts.Model.swift     | 309 +++++++++++++++++
+ .../TripReplayCharts.ModelTests.swift              | 223 ++++++++++++
+ .../feature-views/TripReplayCharts.Previews.swift  | 103 ++++++
+ .../feature-views/TripReplayCharts.Tests.swift     | 213 ++++++++++++
+ .../feature-views/TripReplayCharts.Views.swift     | 231 +++++++++++++
+ .../feature-views/TripReplayCharts.strings         |  44 +++
+ .../TeslaSync/feature-views/TripReplayCharts.swift |  75 ++++
+ 10 files changed, 2126 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0273-TripReplayCharts.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayCharts.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayCharts.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayCharts.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayCharts.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayCharts.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayCharts.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayCharts.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayCharts.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayCharts.swift

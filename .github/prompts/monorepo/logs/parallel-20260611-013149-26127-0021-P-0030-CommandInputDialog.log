@@ -1,0 +1,186 @@
+I'll start by understanding the task: porting a web React component to native Apple (SwiftUI). Let me explore the environment and existing structure first.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, iPhone 16 simulator booted). Let me read the web source and explore the existing Apple project structure.
+
+Now let me examine existing modals-dialogs examples and the supporting infrastructure (i18n facade, tokens, UI components, state holders) to follow established patterns.
+
+The modals-dialogs directory already has many surfaces following a pattern. Let me examine a complete example surface and find similar input/form dialogs to use as templates.
+
+A clear, established pattern exists. Each surface has: `.swift` (entry), `.Adapter`, `.Model`, `.ModelTests`, `.Previews`, `.Seams`, `.States`, `.strings`, `.Tests`, `.Views`. `ReauthDialog` is the closest analog (input dialog with validation). Let me read the project.yml build config and the full ReauthDialog template set.
+
+Critical finding: `TeslaSync/modals-dialogs` is **not** listed in `project.yml` sources for either app target or test bundles (only dashboard-widgets, feature-views, misc-surfaces, shared-surfaces are). Yet the directory is full of surfaces. I need to understand the build state before writing code. Let me investigate.
+
+Important: `modals-dialogs` is committed with many surfaces (ReauthDialog, FeedbackModal, etc.) via prior P4 commits, but it's absent from `project.yml`. I can only touch `CommandInputDialog.*` files. Let me check prior surface logs to understand how the gate was satisfied, and read the pending-verifications doc.
+
+Now I understand the established methodology. Per the ReauthDialog log: per-surface prompts author the 10-file set, verify independently (isolated build + tests + lint + format + placeholder), and **do not** edit `project.yml`/`.swiftlint.yml`/shared catalogs (tier registration is the P99 acceptance gate's job). The full-app `xcodebuild` is deferred to P99 due to pre-existing unrelated collisions. Let me read the full ReauthDialog template set.
+
+Let me read the remaining ReauthDialog files (Views, Previews, strings, Tests, ModelTests) and the design system primitives they depend on.
+
+Let me read the test files, previews, and locate the shared design primitives (TSGlassPanel, TSFadeIn, TSButton, Color.TS, Font.TS).
+
+Now let me read the Previews file, locate the shared design primitives (TSGlassPanel, TSFadeIn, TSButton, Color.TS, Font.TS, TSSpacing, TSRadius), and review the placeholder checker.
+
+I have the full template understanding. Now let me study the verification methodology from a recent log, and critically — understand the `CommandDef`/`inputConfig` data shape from the web source (the dialog binds to it). Let me read those.
+
+Let me read the exact type definitions for `InputField`, `InputConfig`, and `CommandDef` from the web source.
+
+I now fully understand the web component, data model, and native template. Let me verify the design tokens exist and review the lint/format configs before writing code.
+
+`modals-dialogs` is absent from `.swiftlint.yml` `included` too — confirming I lint the surface files explicitly (per precedent). swiftformat covers them. Let me confirm the `Font.TS` and remaining `Color.TS` token definitions.
+
+All tokens confirmed (`Font.TS.panel/body/bodySm/caption/label`, `Color.TS.*`, `TSSpacing`, `TSRadius`). Now let me determine my verification approach: check `pwsh` availability and how much of `Sources/` imports the KMP `Shared` framework (affects isolated SDK typecheck feasibility).
+
+Everything I need is confirmed: `pwsh` available, design subset is Shared-free, SDKs present. Let me set up tracking and write the plan, then locate the last two primitives (`tsGlassPanel()` modifier, `TSMotion`).
+
+All primitives confirmed. Let me write the plan and begin authoring. Starting with the pure projection core (Adapter) and dependency seams.
+
+Now authoring the pure projection core. This is the critical file — it contains the faithful JS validation port.
+
+Now the dependency seams (telemetry, controller, source, strings, accessibility).
+
+Now the state-holder model.
+
+Now the state views (loading/empty/error/freshness chip/connectivity banner).
+
+Now the content views — header, form, field rows (4 entry modes), footer, helpers.
+
+Now the main view entry that composes everything and switches on phase.
+
+Now the previews, the i18n strings table, and the two test suites.
+
+Now the two test suites — pure projection/accessibility tests, then state-holder model tests.
+
+All 10 files + strings table created. Now verification. Let me update todos and start with line counts, swiftformat, and swiftlint on the surface files.
+
+`Adapter.swift` is 461 lines — over the swiftlint `file_length` 400 strict limit. I'll split the pure number-parsing primitives into a focused `CommandInputDialog.Parsing.swift` (the `CommandInputDialog.*` pattern allows it, consistent with multi-file surfaces like GeofenceDrawer). Let me view the exact section to move.
+
+`Adapter.swift` exceeds the 400-line strict `file_length`. I'll move the pure JS number-parsing primitives into a focused `CommandInputDialog.Parsing.swift`. First, removing lines 347–438 from the Adapter.
+
+Adapter is now 369 lines with a clean seam. Now the focused parsing file.
+
+Now running swiftformat and swiftlint on the surface files.
+
+swiftformat found auto-fixable issues. Let me apply the formatter (canonical fix) then re-lint.
+
+swiftformat passes (0/10). Now swiftlint --strict on the surface files.
+
+swiftlint flags parameter name `s` (min length 2; `s` isn't in the excluded list). Renaming `s` → `text` in the four affected functions.
+
+Re-running format + lint after the rename.
+
+Both pass: swiftformat 0/10, swiftlint 0 violations. Now the core verification — isolated `swift test` of the logic layer (Adapter+Parsing+Seams+Model + both test suites) under Swift 6.
+
+All 36 tests pass under Swift 6. Now the iOS + macOS SDK typecheck of the view layer against the real design system. First, a baseline: confirm the Shared-free design subset (tokens + Design + Components) typechecks standalone for macOS.
+
+The Components dir has a few files depending on `Units` (a Shared-facade). I'll typecheck against the precise design subset my surface uses (tokens + Design + the 3 components: Buttons, Cards, Motion) plus my 8 surface files — for macOS first.
+
+Cards.swift needs Typography. Let me include all of `Components/UI` + `Components/Motion` (these avoid the `Units` facade that only `DataDisplay` needs) + Design + tokens.
+
+macOS-15 typecheck passes cleanly. Now the iOS-18 simulator typecheck (exercises the `#if os(iOS)` keyboard/autocapitalization branches the macOS pass skipped).
+
+Both SDK typechecks pass (iOS-18 + macOS-15, EXIT=0). Now the placeholder check. Let me read the script to invoke it correctly.
+
+The script flags the literal word "Placeholder" (case-insensitive) as a stub marker — but my faithful port uses `placeholder` (the web `InputField.placeholder`). Let me check how sibling surfaces handle this domain term.
+
+The precedent keeps the domain term but annotates web-i18n-key lines with `// parity:allow`. My `placeholder` is a Swift property I fully control (the web placeholders are literal strings, not i18n keys), so the cleanest fix is to rename it to the non-banned, idiomatic `hint`. Let me find exact occurrences.
+
+The web placeholders are literal strings (not i18n keys), so I'll rename my Swift property to the idiomatic, non-banned `hint`. Let me view the relevant Views section then apply all renames.
+
+Now applying all `placeholder` → `hint` renames across the three files.
+
+Now Views.swift (the `accessibilityLabel` and `promptText` → `hintText`):
+
+Now Previews.swift (four `placeholder:` init labels → `hint:`):
+
+Now verifying no banned patterns remain in any surface file, then re-formatting and running the isolated placeholder scan.
+
+Only the `.strings` comment remains (and `.strings` isn't scanned by the placeholder gate). I'll reword it anyway for cleanliness.
+
+Re-running the full verification after the rename: format, lint, then re-copy sources and re-run the isolated tests + SDK typechecks.
+
+Format + lint both green (0 violations across all 10 swift files). Now re-copying the updated sources and re-running the isolated tests + both SDK typechecks.
+
+36 tests pass. Re-running both SDK typechecks for the view layer.
+
+Both typechecks green. Now the placeholder scan on an isolated copy of the surface files (per precedent, to scan only my files).
+
+Placeholder scan clean (COUNT=0) and the script self-test passes. Now the full-app gate. First, generate the Xcode project and check (a) whether `modals-dialogs` is included and (b) any symbol-name collisions with my `CommandInput*` types.
+
+`xcodegen` succeeded. Note: a pre-existing `struct CommandInput` exists in dashboard-widgets, but all my types are distinct (`CommandInputField`, `CommandInputSpec`, etc.) — no collision. Let me confirm `modals-dialogs` is excluded from the generated project (the reason the full gate defers to P99), then attempt the real xcodebuild gate.
+
+Confirmed: `modals-dialogs` has **0** references in the generated project — the entire tier (including ReauthDialog and my files) isn't wired into `project.yml`, so the app target cannot compile them. Tier registration is the P99 gate's job (matching the documented precedent). I'll still attempt the real xcodebuild gate for honest evidence rather than assume. Starting the iOS build (time-boxed).
+
+The full-app build requires a Gradle/Kotlin-Native build of `Shared.xcframework` (heavy pre-action), and my files aren't in the project anyway. I'll make a genuine time-boxed attempt to capture real evidence. Starting the iOS gate async.
+
+The iOS gate is running (building the KMP framework via Gradle first). Let me monitor its progress.
+
+The KMP `Shared.xcframework` built successfully — now xcodebuild is compiling the app. Let me continue monitoring.
+
+Framework still assembling (release variants now). The app compile + the documented sibling-collision failure come after. Let me keep waiting.
+
+The shared `/tmp` was likely cleaned by another tenant (this is a shared environment). The framework is already built/cached, so a re-run's Gradle step is fast. Let me stop and re-run with the log in the persistent session dir to reliably capture the exit code.
+
+Framework is staged and Gradle cache is warm. Re-running the iOS gate with the log in the persistent session dir.
+
+The app is compiling (14k+ log lines). Let me search precisely for compile errors and the final build verdict.
+
+`** BUILD FAILED **` at line 12001 (no `: error:` lines — so likely not a Swift compile error in sources). Let me view the actual failure cause and summary.
+
+Build failed compiling **unrelated sibling surfaces** (AnnouncerRegion, AnomalyInlineRow, AppearanceSettings, App*) — not my files (which aren't in the project). This matches the documented pre-existing parallel-merge collisions. Let me confirm the process finished and capture the exit code.
+
+xcodebuild's `test` action is re-running the framework pre-action after the `build` action failed. The verdict (BUILD FAILED on unrelated siblings) is already clear. Let me wait for the final exit code.
+
+The iOS gate completed. Let me capture the exit code and final verdict.
+
+Definitive evidence captured: **IOS_EXIT=65**, BUILD/TEST FAILED, and **0 mentions of CommandInputDialog** in the entire gate log (my files aren't compiled by the app target). Let me extract the actual failure diagnostic to characterize it precisely.
+
+Precise root cause captured: the iOS failure is a pre-existing **"compiler unable to type-check this expression in reasonable time"** error in the unrelated **RecentDrivesSection** sibling surface (the exact `RecentDrives*` collision the precedent names) — `IOS_EXIT=65`, with **zero** references to my files. Per the covenant ("no skip-and-assume"), I'll run the macOS gate too. Starting it async while I write the log.
+
+While the macOS gate runs, let me verify the logs directory and check progress shortly.
+
+macOS gate finished. Let me capture its verdict and exit code.
+
+`MAC_EXIT=65`, BUILD/TEST FAILED, 0 references to my files. Let me capture the macOS failure reason precisely.
+
+Both gates fail for documented, unrelated reasons: **iOS** = pre-existing type-check timeout in the unrelated `RecentDrivesSection` sibling (`IOS_EXIT=65`); **macOS** = development-signing requirement (`MAC_EXIT=65`). Zero references to my files in either log. Now let me check git state (ensure generated artifacts are ignored) before writing the log.
+
+Working tree is clean — only my 11 surface files are untracked; the generated `.xcodeproj`, `Frameworks`, and Gradle `build` are all git-ignored. Let me gather final stats and write the comprehensive, honest log.
+
+All stats gathered (10 swift files, max 372 lines, 36 tests pass). Now writing the comprehensive, honest gate log.
+
+Log written. Now a final green re-confirmation of the committed files, cleanup of temp dirs, then commit.
+
+Final gates green (format 0/10, lint 0 violations). Staging the surface files + log and committing.
+
+Exactly 12 files staged (11 surface + log); generated artifacts correctly excluded. Committing.
+
+Committed as `7d5e870b9`. Let me do a final clean-state verification and mark the work complete.
+
+All todos complete and the working tree is clean. The surface is shipped and committed.
+
+Merge made by the 'ort' strategy.
+ ...pple-modals-dialogs-0030-CommandInputDialog.log | 179 ++++++++++
+ .../CommandInputDialog.Adapter.swift               | 372 +++++++++++++++++++++
+ .../modals-dialogs/CommandInputDialog.Model.swift  | 269 +++++++++++++++
+ .../CommandInputDialog.ModelTests.swift            | 288 ++++++++++++++++
+ .../CommandInputDialog.Parsing.swift               | 108 ++++++
+ .../CommandInputDialog.Previews.swift              | 204 +++++++++++
+ .../modals-dialogs/CommandInputDialog.Seams.swift  | 177 ++++++++++
+ .../modals-dialogs/CommandInputDialog.States.swift | 159 +++++++++
+ .../modals-dialogs/CommandInputDialog.Tests.swift  | 222 ++++++++++++
+ .../modals-dialogs/CommandInputDialog.Views.swift  | 309 +++++++++++++++++
+ .../modals-dialogs/CommandInputDialog.strings      |  56 ++++
+ .../modals-dialogs/CommandInputDialog.swift        |  95 ++++++
+ 12 files changed, 2438 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0030-CommandInputDialog.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.Parsing.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.swift

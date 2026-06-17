@@ -1,0 +1,179 @@
+I'll start by exploring the repository structure to understand the task and existing setup.
+
+Let me explore the apple app structure in detail.
+
+Pages actually live in `apps/apple/Sources/Features/Admin/`. Let me study the established pattern from existing admin pages.
+
+This is the established pattern. `ApiLogsPage` is the closest analog (filters + paginated table + row detail). Let me study it fully.
+
+Now let me understand the impact of adding an `AppRoute` case and how route titles/strings are catalogued.
+
+Adding an `AppRoute` case ripples into several files. Let me map every place a route case must appear, using `.apiLogs`/`.auditLog` as the reference.
+
+Now let me examine the localization catalog conventions and the existing feedback-related strings.
+
+All feedback keys already exist (with `translation.` prefix). Let me verify the three `common.*` keys and check the value/format of a couple keys.
+
+All 38 strings already exist in the catalog. Let me examine the design-system components and the mutation/format patterns.
+
+I have a thorough understanding of the pattern. Let me verify a few remaining details before building.
+
+pwsh and the placeholder scanner are available — I can run the real gate. Let me review the scanner and theme modifier.
+
+I have everything needed. Let me check the exact xcstrings entry structure for a route key and a spotlight description to replicate.
+
+I now have a complete understanding. Let me set up a plan and todos, then build.
+
+Now I'll build the implementation. Starting with the models and formatters.
+
+Now the main page view with previews.
+
+Let me verify the catalog keys I referenced actually exist (especially `translation.common.loading`).
+
+Now the filters row.
+
+Now the table + pagination.
+
+Now the expandable row with badges.
+
+Now the expansion detail (body, metadata, JSON disclosures, action bar).
+
+Now the navigation wiring. Let me update todos and create the route registration.
+
+Now wire the route into `AppRoute`, the parser, and the app registry.
+
+Now add the route title + Spotlight description strings to the catalog.
+
+Now the model tests, then I'll generate the project and build.
+
+Let me add a route-registration test mirroring the sibling pattern, then generate the project.
+
+Now let me run the placeholder scanner and lint the new files before the full build.
+
+Placeholder scan clean (COUNT=0) and swiftlint --strict passes (exit 0). Now generate the Xcode project.
+
+The KMP `Shared.xcframework` isn't built here. Let me check how the sibling pages' gates handled this — the existing logs are the source of truth.
+
+The sibling gate log confirms the canonical disposition: the full `xcodebuild` is **BLOCKED** by the absent KMP `Shared.xcframework` (environment gap), and verification is done via isolated strict-concurrency type-checks + an executed model harness. Let me check if I can build the Shared framework, then verify my code the same way.
+
+There's an `apps/shared` KMP module with a Gradle wrapper. Building `Shared.xcframework` would enable a true full build. Let me attempt it in the background while I verify my code via an isolated model harness (the in-scope verification the sibling gate used).
+
+While Gradle runs, let me verify my model logic with an executed harness (compiles the pure logic files + runs assertions). First, create the harness.
+
+Harness compiled clean under Swift 6 strict-concurrency. Now run it.
+
+All 31 harness assertions pass. Let me check the Gradle build progress and also type-check the logic files for the iOS target.
+
+The Gradle build is progressing well (Kotlin compilation cached, now linking release frameworks). Let me wait for it to finish.
+
+Release frameworks are linking (slower, optimized). Let me continue waiting.
+
+macOS release framework is linking — the last step. Let me wait for completion.
+
+Gradle build succeeded. Let me verify the release XCFramework exists and stage it, then run the full build.
+
+The release XCFramework built successfully. Let me stage it and find a simulator for the build.
+
+Framework staged. Now run the full iOS build (the canonical `TeslaSync` scheme). This compiles all sources and links the freshly-built `Shared.xcframework`.
+
+While the iOS build runs, let me prepare the ledger update. Let me inspect the ledger structure.
+
+The ledger needs two rows added. Let me add them (covered=required=43).
+
+Ledger valid. The iOS build passed Shared-module resolution and is compiling the whole Swift module (Swift 6, iOS 18 sim). Let me wait for it.
+
+Zero errors/warnings, and it's now linking (Swift module compiled — including my files and previews). Let me wait for completion.
+
+Build exited 65. Let me find the actual failure.
+
+The failure is in a **pre-existing sibling file** (`DriveScorePage.Panels.swift`), not my code. Let me confirm scope and count all errors.
+
+Confirmed: exactly **one** error, in pre-existing sibling `DriveScorePage.Panels.swift:25` (a `String(localized:)`/`LocalizedStringKey` mismatch under the current toolchain), unmodified by me and out of scope. Zero errors in any Feedback file.
+
+To prove my views + previews compile and link in the full app, I'll apply a **throwaway** patch to that one pre-existing line, rebuild, then revert it (my committed change touches zero sibling files).
+
+Incremental rebuild running. Let me wait for it.
+
+Zero errors. Let me wait for the build to finish.
+
+Module recompiling (the patch invalidated the whole app module), still 0 errors. Let me wait.
+
+Still building, 0 errors. Let me wait for the final result.
+
+The build is alive and actively compiling (56 compiler processes, new objects being produced). It's a large module recompile. Let me wait.
+
+Still compiling cleanly (0 errors). The throwaway patch forced a full module + extensions rebuild. Let me continue waiting.
+
+Build still progressing (0 errors) but slow, likely CPU contention from parallel slots. Let me wait more.
+
+Heavy system contention (99 compiler processes across parallel slots), but my build is progressing with 0 errors. Let me keep waiting.
+
+3.2MB of clean compile output (0 errors). The contention is heavy but it's advancing. Let me wait a longer interval.
+
+The main app module (largest target) is still compiling under heavy contention, 0 errors. Let me wait another interval.
+
+Now 1 error after the patch. Let me see what it is.
+
+The error references **slot-4** (a parallel agent's tree), not my slot-5. This suggests shared DerivedData across slots. Let me investigate.
+
+Let me determine whether my slot-5 build's DerivedData is being shared with slot-4 (concurrent parallel agent).
+
+My DerivedData is correctly slot-5's, but **5 parallel agents** (slot-3/4/5/8) are building concurrently (load avg ~90). The slot-4 path in my log is suspicious. Let me see the exact context.
+
+The shared `/tmp/ios-build2.log` filename collided with a **parallel agent in slot-4** writing to the same path — the slot-4 paths and that BUILD FAILED are slot-4's output interleaved into my log, not mine. (Build #1's log was clean slot-5-only.) Let me stop this and re-run with a session-isolated log.
+
+Patch present, no stray builds. Re-running with a session-isolated log path (no cross-slot collision).
+
+While the isolated build runs, let me check progress periodically.
+
+Clean isolation now (slot-5 only, 0 errors). Build still in progress. Let me wait.
+
+Still compiling cleanly under heavy multi-slot load. Let me wait longer.
+
+520+ files compiled, 0 errors, still in the main target under heavy load. Let me wait further.
+
+Steady progress — 2925 files compiled, 0 errors. Nearly through the main module. Let me wait for link.
+
+Large monorepo app target (feature-views alone has 2653 files) — 4888 compiled, 0 errors. Let me keep waiting.
+
+Load is dropping (~35, other slots finishing) — 7399 files compiled, 0 errors. Should accelerate now. Let me wait.
+
+9421 files compiled, 0 errors — essentially the whole app. Link should follow soon. Let me wait.
+
+Build #3 finished exit 65 with 0 compiler errors throughout. Let me find the actual failure in the clean, isolated log.
+
+The link fails only because the KMP `Shared.xcframework` I built has **arm64 simulator** but no **x86_64** slice, and `generic/platform=iOS Simulator` links all arches. My code compiled 100% clean (0 Swift errors across 9400+ files). Let me rebuild arm64-only (targeting the booted Apple-Silicon simulator) — incremental, should link fast.
+
+Build #4 succeeded in 11s (exit 0) — arm64 objects were cached, only the arm64 link remained. Let me confirm.
+
+**iOS BUILD SUCCEEDED** — full app (including my FeedbackQueue page) compiled and code-signed, linking the KMP framework. Now run my test classes within the real module.
+
+Test exited 65 in 11s — likely a test-bundle build issue. Let me check.
+
+My FeedbackQueue tests have **zero** errors. The test *bundle* build is blocked by pre-existing, unrelated sibling-test errors (`VehicleCostPageModelTests.swift`) plus the DriveScore source error — under the new Xcode 26.5 toolchain. My executed harness already proves the model logic (31/31). Let me make one bounded attempt to actually run my XCTests by temporarily patching those pre-existing sibling errors. First inspect them.
+
+Patching the pre-existing `VehicleCostPageModelTests` errors (main-actor isolation + Date/accuracy) is non-trivial and risks an unbounded cascade across other sibling test files under the new toolchain — out of scope. My model harness already executes all my test assertions (31/31), which is the canonical verification the sibling gate used. Let me revert the throwaway DriveScore patch so my changeset touches zero sibling files.
+
+Reverted cleanly. Let me confirm my full changeset is exactly the intended files.
+
+Changeset is exactly correct: 5 modified (catalog, route enum, parser, app registry, ledger) + 13 new (10 feature + 3 test) files, **zero sibling files**. Let me re-run the in-scope gates on the final state and confirm generated artifacts are git-ignored.
+
+All in-scope gates are green and the changeset is clean. Now let me write the comprehensive evidence log with the 43-item `=== PARITY ===` section.
+
+Let me verify the log's required markers and update todo status.
+
+Log is complete (PARITY_COVERED=43, EXIT=0, STATUS=DONE). Let me clean up temp files, stage the exact changeset, and commit.
+
+All 19 intended files staged (zero siblings, zero generated artifacts). Now commit.
+
+Committed cleanly (`e61adf984`). Let me do a final verification of the commit contents and todo status.
+
+Everything is verified and committed. The task is complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

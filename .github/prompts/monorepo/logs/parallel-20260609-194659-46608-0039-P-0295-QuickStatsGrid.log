@@ -1,0 +1,210 @@
+I'll start by exploring the environment and the codebase to understand what infrastructure exists.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and understand the existing Apple app conventions.
+
+This is a large, established monorepo with 2399 files already in `feature-views`. Let me study the existing conventions by examining a comparable surface and the shared infrastructure.
+
+`QuickStatsGrid` doesn't exist yet — building fresh. Let me study a complete exemplar (`AcDcStatsPanel`) and the file-type conventions.
+
+Excellent — sophisticated, consistent convention. Let me read the rest of the exemplar set and locate the shared infrastructure (tokens, MetricCard equivalent, units facade, vehicle models).
+
+Now let me read the remaining exemplar files and locate the shared infrastructure (MetricCard equivalent, units facade, vehicle models, tokens).
+
+Now I understand the full convention. Let me find the shared infrastructure: the native MetricCard equivalent, the units facade, vehicle models, and design tokens. Let me also read the web `useUnits` and the `VehicleState`/`VehicleStatus` types.
+
+Let me explore the Sources tree to find the shared component library, units facade, design tokens, and vehicle models.
+
+`TSMetricCard` exists but lacks icon/color/subtitle that the web `MetricCard` uses. Let me read the web `MetricCard`, the units facade, design tokens, and find a feature-view that already uses units for reference.
+
+Let me read the web `VehicleState` type, the web `MetricCard`, and find the native `Units`/`UnitPreferences` definitions — these determine correct unit parity.
+
+Now let me read the native `Units` facade and design tokens, and find how existing feature-views bind unit preferences.
+
+The `Units` facade is KMP-`Shared`-backed. Let me study how an existing vehicle-detail feature-view (`DrivingTab`) and `LiveTelemetryPanels` bind unit preferences through the adapter/model, to mirror the exact pattern.
+
+Key finding: the established pattern keeps SI→display conversion **local and pure** in the adapter (mirroring `web/src/lib/unitConversion.ts`), not routed through the KMP `Units` facade, so tests run without the Kotlin runtime. Let me read the web conversion/formatting libs for exact parity.
+
+Let me read the exact web conversion + formatting logic for distance, speed, temperature, and the precision/number formatting helpers.
+
+I now have full parity knowledge of the web formatters. Let me read `DrivingTab.Model.swift` to see how unit preferences are sourced into the model, then I'll have everything needed.
+
+Let me confirm the `UnitPreferences` presets, the design tokens (colors), and the web neon color mapping.
+
+I now have the full token palette. Let me confirm the exact signatures of the shared UI components I'll compose with (`TSGlassPanel`, `TSCard`, `TSIconBox`, `TSMetricLabel`, `TSMetricValue`, `TSCaption`, `TSSkeleton`, `TSButton`, `TSFadeIn`, `TSTone`).
+
+Let me read the exact definitions of `TSIconBox`, `TSMetricLabel/Value/Caption`, `TSEmptyState`, `TSQueryError`, and `TSButton`.
+
+Let me find `TSIconBox`, the `TSButton` init, and check the lint/format configs, the placeholder script, and whether `pwsh`/`xcodegen` are available.
+
+`pwsh` and `xcodegen` are both available. Now let me check the critical build dependency — the KMP `Shared.xcframework` (needed by the app target) and the simulator availability.
+
+Key risk identified: `Shared.xcframework` must be built via Gradle (KMP). iPhone 16 sim exists (booted). Let me verify the KMP toolchain and kick off the framework build in the background while I write code.
+
+Java 17 + Gradle wrapper present. Let me kick off the `Shared.xcframework` build in the background (the long pole) while I write the surface code.
+
+Let me check the `TSTone` enum (color options) to finalize the tile's icon-box color mapping.
+
+I have everything I need. Let me set up tracking and write the plan, then create the 7 surface files.
+
+Now I'll write the surface files. Starting with the pure Adapter (Foundation-only, parity-pinned formatters + projection).
+
+Now the Model file (state-holder seam, telemetry, connection, projection, strings).
+
+Now the main view and the subviews (Views) file.
+
+The `Shared.xcframework` build completed. Let me verify it, then continue with the remaining files (Previews, strings, Tests).
+
+The `Shared.xcframework` is staged in slot-39 (the build's own preAction will re-stage correctly under `xcodebuild`). Let me quickly verify it's valid, then continue with the remaining files.
+
+Framework is valid — slot-39 is self-contained. Now the Previews, strings, and Tests files.
+
+Now the comprehensive test file (adapter formatters + projection + model wiring + a11y).
+
+All 7 files written. Let me lint and format-check my files early to iterate fast before the full build.
+
+SwiftFormat passes. Now SwiftLint strict on my files.
+
+Two file-length violations (>400 lines). I'll split the Adapter (move tile projection into a new `Projection.swift`) and split the Tests (move model tests into `ModelTests.swift`) — both established patterns. Let me view the boundaries.
+
+I'll split by recreating cleanly. Let me view the exact projection block to preserve it precisely.
+
+I'll split using `sed` to preserve exact bytes. Creating `Projection.swift` from the tile block and trimming the Adapter.
+
+Clean split. Now let me assemble both files.
+
+Both files now under 400 lines. Let me fix the Adapter header comment and split the Tests file. First, the boundaries.
+
+Now I'll fix the Adapter header comment and split the Tests file into `Tests.swift` + `ModelTests.swift`.
+
+Both test files now under 400 lines. Let me re-run swiftformat and swiftlint on all 8 files.
+
+Format and lint both clean (0 violations). Now the placeholder gate, run exactly as the gate specifies.
+
+Placeholder gate passes. Now let me generate the Xcode project.
+
+Project generated. The full `build test` runs the entire 271-surface suite, so let me first verify my code **compiles** in the real app target (iOS), then run my specific tests. Starting the iOS build.
+
+Build failed (exit 65). Let me check the errors.
+
+My QuickStatsGrid files have **zero** errors — but the build is failing on pre-existing `StateTimeline` "ambiguous type" errors, and crucially the error paths reference **both `slot-37` and `slot-39`**. The build is compiling files from a sibling worktree. Let me investigate this contamination.
+
+My code compiles with **0 errors** — the failure is entirely pre-existing `StateTimeline` "ambiguous type" errors, and the build is somehow pulling in `slot-37` files even though the pbxproj doesn't reference them. Let me find the contamination source.
+
+slot-37 source files are being fed into slot-39's compile (2276 refs) causing the ambiguity — but the pbxproj is clean. Let me find the exact mechanism.
+
+The log was polluted by a **concurrent sibling-slot build** (slot-37 lines + shared `/tmp/dd-teslasync` DerivedData interleaved into the shared `/tmp` logfile). I need an isolated build with an in-repo log and unique DerivedData. First let me check whether slot-39 itself has a genuine duplicate `StateTimelineUpdate` definition.
+
+Slot-39 has `StateTimelineUpdate` defined twice (dashboard-widgets + feature-views). Let me check whether this is a genuine baseline state or uncommitted sibling-agent contamination via `git status`, and read the definition context.
+
+Only my 9 files are untracked — the `StateTimelineUpdate` duplication is in the committed baseline. Let me read both definition sites (with `#if` context) to see if they actually conflict within slot-39, then run an isolated build.
+
+This is a **genuine pre-existing baseline collision**: two different committed surfaces — `StateTimeline` (feature view 0235) and `StateTimelineWidget` (dashboard widget 0096) — both define top-level `public struct StateTimelineUpdate`, `StateTimelineLoadStatus`, `StateTimelineConnection` in the same app module. This breaks the full build independent of my work. Let me run an isolated build (in-repo log, unique DerivedData) to assess the full scope of baseline collisions.
+
+Let me analyze the clean in-repo log — which surfaces have errors, and whether any are mine.
+
+No slot-37 pollution in the clean log. Let me see the actual errors (the `grep -c` returning 0 short-circuited the chain).
+
+Definitive: **0 errors in my surface** — all 26 errors are the pre-existing `StateTimeline` (0235) vs `StateTimelineWidget` (0096) type-name collision (4 duplicate public types), entirely outside my scope. To prove my surface compiles and its tests pass in the real app, I'll do a fully-reversible isolation. First, let me confirm removing those files won't cascade into a registry.
+
+No external references — the colliding surfaces are self-contained. I'll temporarily relocate the 9 `StateTimelineWidget.*` files (resolving the duplicate definitions while leaving the `StateTimeline` feature view intact), then build+run my tests to prove my surface is correct. Fully reversible.
+
+Exactly one definition of each type now. Let me build and run my QuickStatsGrid test classes (isolated DerivedData, in-repo log).
+
+Still exit 65. Let me check whether it's a compile error elsewhere or in my code.
+
+0 compile errors. Let me check the actual test outcome and the failure reason (my regex was malformed).
+
+The compiler **crashed** (two "submit a bug report" backtraces, exit 65 with zero `error:` lines). Let me inspect the crash context.
+
+The crash is a `swift-frontend` abort while batch-compiling the entire 2126-file module — not tied to my code. Let me see the actual crash frames (deterministic type-checker bug vs. resource/OOM kill), and whether sibling slots are competing for resources.
+
+Root cause found: the whole-module build crashes in **`swift-frontend` IRGen on `AppearanceSettings.Controls.swift`** (`report_at_maximum_capacity` in a reabstraction thunk — a pre-existing compiler bug in *another* surface), compounded by a sibling slot-37 build (3048 procs) thrashing the machine. Both are outside my scope. 
+
+Let me restore the moved files and assess whether I can build a minimal isolated target to actually run my tests.
+
+Repo is clean (only my 9 files). Critically, **`Sources/` is self-contained** (zero references to sibling surfaces), so I can build an isolated framework target to actually run my tests — avoiding the other surfaces' collision and compiler crash. First, let me validate my test assertions' numeric values with a dependency-free Foundation script (the highest-risk part).
+
+All assertion values confirmed against real Foundation. Now let me set up the isolated framework target to compile + run my actual tests. First, find the `@main` entry points to exclude from a framework build.
+
+`@main` is only in `Sources/TeslaSyncApp.swift`. I'll build an isolated framework target (module `TeslaSync`) with all of `Sources/` minus that entry point, plus my surface — then run my tests against it.
+
+Let me generate the verify project and build the isolated framework (compile check first).
+
+Isolated framework **compiles cleanly (0 errors)** — my surface + its real dependencies are valid. Now let me run the actual tests.
+
+**All 39 tests pass** — `** TEST SUCCEEDED **` (Accessibility 3, Conversion 4, Model 9, NumberFormat 5, Projection 5, QuantityFormat 6, Tiles 7). My surface is verified on iOS. Now let me verify the macOS side (the gate also runs macOS build+test). Let me add macOS targets to the verify spec.
+
+The macOS **framework** error is only `@testable import TeslaSync` module resolution in the test bundle — a verify-project wiring quirk, not my code. Let me confirm my surface itself compiles on macOS (framework-only build).
+
+The macOS framework compiles my surface fine — the only error is the test bundle's `@testable import TeslaSync` resolution, caused by two targets sharing module name `TeslaSync` in one project. Let me use a clean macOS-only verify project.
+
+0 compile errors on macOS (surface + tests compile), but the test run failed. Let me see why — an assertion failure or runtime issue.
+
+macOS **compiles with 0 errors** (surface + tests). The macOS failure is purely a hostless-test-bundle framework-loading issue in my throwaway project (`Failed to create a bundle instance`), not a code defect. Let me fix it by embedding the frameworks into the test bundle.
+
+Hostless macOS XCTest bundles are finicky. Let me give it a proper macOS test-host app (which embeds the frameworks), matching how the real `TeslaSync-macOS` gate hosts its tests.
+
+The build/packaging succeeds (frameworks embedded correctly) but the macOS test-runner fails to launch. Let me see the precise reason.
+
+The macOS failure is "**test runner hung before establishing connection**" after a 346s timeout — a classic unsigned-host-app / resource-starvation harness issue (a sibling slot's 3048-process build was thrashing the machine), not a code defect. Let me check current machine load and retry once with ad-hoc signing.
+
+Good — the sibling-slot build finished (load dropping: 1.87/4.76/11.77, no competing procs). The macOS test retry is running with ad-hoc signing. Let me wait for it.
+
+The macOS test-runner can't establish connection even with low load and ad-hoc signing — a GUI-hosted-XCTest harness limitation in this automation context, not a code defect. My evidence is conclusive: surface compiles on **both** platforms (0 errors), all **39 iOS tests pass**, and the logic is platform-agnostic.
+
+Let me now capture the authoritative full-target gate result for the record. Regenerating the real project and running the macOS gate (isolated DD to avoid sibling pollution).
+
+The macOS gate runs in the background. Meanwhile, let me capture the authoritative lint/format/placeholder exits for the log.
+
+All three pass (LINT=0, FORMAT=0, PLACEHOLDER=0). Let me check the macOS gate progress and gather evidence excerpts for the log.
+
+The macOS gate finished. Let me confirm its result and capture the macOS evidence.
+
+The macOS gate aborted because my verify `.xcodeproj` files made the project ambiguous. Let me remove them and re-run the real macOS gate (explicit `-project`).
+
+The real macOS gate is building (will fail on the same StateTimeline collision present in the macOS target). While it runs, let me gather the exact evidence excerpts I'll cite. Let me wait and collect.
+
+I have all evidence. Let me wait for the macOS full-target gate to complete and capture its result.
+
+macOS gate: **BUILD FAILED** (4 errors), testing cancelled. Let me see the exact macOS errors (the StateTimeline grep came up empty — could be a different error surfaced first).
+
+The macOS gate fails at **code-signing** (`entitlements require signing with a development certificate`) — an environment limitation (no dev cert / empty `DEVELOPMENT_TEAM`), independent of code. This matches the repo's `macos-pending-verifications.md`. Let me confirm that documented precedent.
+
+The repo's `macos-pending-verifications.md` confirms the operational model: *"the code is written, committed, and all host-runnable gates are green"* — macOS app-level verification is deferred to CI (signing/toolchain). My surface meets that bar. Let me clean up the throwaway verification scaffolding and confirm the tree state.
+
+Tree is clean (only my 9 files; `build/` and `.xcodeproj` gitignored). Let me capture the authoritative iOS full-target gate result (to match the macOS one) while I write the log.
+
+While the iOS gate runs, let me write the comprehensive, honest gate log.
+
+Let me confirm the iOS full-target gate result to validate the log's evidence.
+
+iOS full-target gate confirmed: **BUILD FAILED** on the pre-existing StateTimeline collision, **0 QuickStats errors** — exactly as documented. All log evidence is validated by authoritative runs. Let me stage the deliverable and verify precisely what will be committed.
+
+Staged set is exactly the 9 surface files + the log. Committing with the prescribed message.
+
+Commit succeeded (`da8b2df5b`, 10 files, 1841 insertions). Let me clean up temporary build artifacts and do a final verification of the tree state.
+
+Working tree is clean and the 9 surface files are committed. Let me finalize my task tracking.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0295-QuickStatsGrid.log | 158 +++++++++++
+ .../feature-views/QuickStatsGrid.Adapter.swift     | 219 +++++++++++++++
+ .../feature-views/QuickStatsGrid.Model.swift       | 271 ++++++++++++++++++
+ .../feature-views/QuickStatsGrid.ModelTests.swift  | 139 ++++++++++
+ .../feature-views/QuickStatsGrid.Previews.swift    | 105 +++++++
+ .../feature-views/QuickStatsGrid.Projection.swift  | 241 ++++++++++++++++
+ .../feature-views/QuickStatsGrid.Tests.swift       | 303 +++++++++++++++++++++
+ .../feature-views/QuickStatsGrid.Views.swift       | 296 ++++++++++++++++++++
+ .../TeslaSync/feature-views/QuickStatsGrid.strings |  42 +++
+ .../TeslaSync/feature-views/QuickStatsGrid.swift   |  67 +++++
+ 10 files changed, 1841 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0295-QuickStatsGrid.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickStatsGrid.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickStatsGrid.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickStatsGrid.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickStatsGrid.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickStatsGrid.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickStatsGrid.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickStatsGrid.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickStatsGrid.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickStatsGrid.swift

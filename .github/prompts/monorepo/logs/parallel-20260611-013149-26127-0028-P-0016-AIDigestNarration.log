@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Tools are available. Let me read the web source and explore the Apple app structure.
+
+There's a large existing shared-surfaces directory. Let me check if AIDigestNarration already exists and read the key web dependencies.
+
+Now let me read the `useAiStream` hook, `AiOutputPanel`, and examine the established native patterns from an analogous narration surface.
+
+`AIYearReviewNarration` and `AICostForecastNarration` are near-identical analogs with a consistent 10-file structure. Let me read the web hook/panel files and the analogous web sources, plus the native files for `AIYearReviewNarration`.
+
+The web `AIDigestNarration` is structurally identical to `AIYearReviewNarration`. Let me study the full established native 10-file pattern from `AIYearReviewNarration`.
+
+Excellent, very thorough pattern. Let me read the remaining native files: Projection, Chrome, Views, Adapter, and the strings/tests files.
+
+Let me read the remaining files: Views, Adapter, Previews, and strings.
+
+Now let me read the Previews, strings, and both test files to complete my understanding of the pattern.
+
+Now the two test files to complete the picture.
+
+I now have a complete understanding of the established 10-file pattern. Let me verify the shared tokens exist, check the project.yml build configuration, and confirm no symbol collisions for the `DigestNarration` prefix.
+
+Let me examine the project.yml build/exclude config and test target setup in detail.
+
+The build auto-globs all shared-surfaces files. Let me check the toolchain (xcodegen, pwsh, simulators) and the lint configs before authoring.
+
+Toolchain is fully present (xcodegen, pwsh, swiftlint, swiftformat, booted iPhone 16 sim). I'll clone the proven `AIYearReviewNarration` pattern with precise substitutions. Let me verify the specific design tokens I'll depend on, and set up my task tracking.
+
+Tokens confirmed (the analog compiles against them; I'll copy verbatim). Let me set up tracking and author the files.
+
+Now I'll author all 10 files. Starting with the Adapter (Foundation core), Model, and Projection.
+
+Now the Views, main view, and Previews files.
+
+Now the strings catalog and both test files.
+
+All 10 files created. Let me run the fast style checks (swiftformat, swiftlint) scoped to my files first, then move to the full build.
+
+swiftformat is clean. Now swiftlint on the new files.
+
+Both style checks pass (0 violations). Let me run the placeholder check and generate the Xcode project.
+
+Placeholder check clean, project generated. Let me confirm schemes, then start the iOS build+test (this compiles the whole app, so it'll take a while).
+
+Both schemes exist. Let me set up the log file and start the iOS build+test (async, monitored).
+
+Let me check a sibling log (the analog 0013 AICostForecastNarration) to match the expected log format.
+
+The analog log reveals the established methodology: the full `build test` is expected to fail with `IOS_EXIT=65` (pre-existing cross-surface duplicate-type ambiguity in *other* surfaces) and `MAC_EXIT=65` (runner has no macOS signing cert) — both DEFERRED to the P4 acceptance gate. Surface correctness is proven via surface-scoped typecheck + pure-core build/run. Let me start the real iOS build+test now (long pole) and investigate the baseline in parallel.
+
+`Shared.xcframework` is missing — the app target depends on it, so a full `xcodebuild build` can't link. Let me inspect the Frameworks dir and any staging script.
+
+The project wires `build-shared-xcframework.sh` as a pre-build phase, so `xcodebuild` will try to build the KMP framework via Gradle automatically. Let me run the real iOS `build test` gate now (long pole) in the background, then investigate in parallel.
+
+Pre-build script confirmed. Starting the real iOS `build test` gate now (background, teeing to the log).
+
+The iOS build is running (KMP framework + full app compile — this will take a while). While it runs, I'll build the strongest isolation signal: a standalone pure-core build+run of the Foundation-only Adapter logic. Let me write a driver that exercises every adapter contract.
+
+Now compile the Foundation-only core (Adapter + driver) standalone and run it.
+
+Pure-core check passes: **CHECKS=54 FAILURES=0**. Let me record that, check the iOS build progress, and inspect the shared-component dependencies to assemble a surface-scoped typecheck.
+
+The iOS build runs quietly (output goes to the log). Let me inspect the shared-component dependencies to assemble a surface-scoped typecheck, and peek at build-log progress.
+
+Let me confirm the exact init signatures I depend on, and check whether `Sources/Components` is self-contained.
+
+My `TSButton`/`TSSkeleton`/`TSFadeIn` usages all match their inits exactly (verbatim from the analog). Let me check the iOS build's progress via the log.
+
+The KMP framework is building (Gradle cache hit) and staging successfully — the full build is genuinely progressing. Let me let it continue and check back.
+
+The build is working through the KMP release framework link (slow, quiet phase). Let me wait further.
+
+Genuine progress through Kotlin/Native release framework links (slow). Let me continue waiting.
+
+The iOS full build failed with `IOS_EXIT=65`, but the error is a **pre-existing cross-surface** issue: `Escaping closure captures non-escaping parameter 'content'` in the `AppSettingsView/AppShell/AppearanceSettings/AuditPanel/Auth*` batch — **none of which are my files**. This matches exactly what the analog log documented. Let me verify zero errors reference my surface, then prove my files compile via a surface-scoped typecheck.
+
+Definitive: the **only** compile error is `AIGeofenceAwareAutomationSuggestions.swift:141` (a *different*, pre-existing surface) — **zero** errors reference my files, and my surface was compiled (14 references). Since the module build aborted on that unrelated error, I'll prove my files compile in isolation. Let me locate the component dependency closure.
+
+Let me check whether `Sources/Components` and the design tokens are self-contained (no `Shared` framework or cross-module imports) so I can assemble a clean isolated typecheck.
+
+`Sources/Components` + tokens are self-contained (no `Shared` import); my surface imports only system frameworks. I'll typecheck my surface against the **real** tokens + shared components on both SDKs. Running the iOS-simulator typecheck:
+
+The typecheck failed only on `TSChartPalette` — referenced by `Components/Maps/MapView.swift`, an unrelated component my surface never uses. My hand-assembled set was missing that symbol's source. Let me locate it and include the missing dependency.
+
+`TSChartPalette` lives in `Sources/Design/TSDesign.swift`. The Components library depends on `Sources/Design` too. Let me add it and re-run the iOS-sim typecheck.
+
+The full Components dir drags in `UnitFormatters`/`Maps` which depend on `Sources/Platform` — an unrelated cascade. I'll scope precisely to the components my surface actually uses. Let me verify the minimal closure (Buttons, Skeletons, Cards, Motion + Tokens).
+
+Clean — those 4 components only import SwiftUI with no platform deps. Now the precise surface-scoped typecheck (real tokens + the real components my surface uses) for iOS-sim:
+
+Only `Cards.swift` now needs typography/glass helpers (`tsGlassPanel`, `TSPanelTitle`, `TSCaption`). Let me locate those and confirm `Sources/Design` is self-contained, then include it.
+
+`tsGlassPanel` is in `Sources/Design/TSMaterial.swift`; `TSPanelTitle`/`TSCaption` in `Components/UI/Typography.swift`; `Sources/Design` has no platform deps. Let me run the typecheck with this complete closure.
+
+**IOS_TYPECHECK_EXIT=0** — my surface typechecks against the real tokens + components on iOS. Now the macOS SDK typecheck.
+
+Both SDK typechecks pass (**IOS=0, MAC=0**). Now let me validate the two XCTest files by type-checking their assertions against my real types (compiling them in-module with the surface, against the macOS SDK + XCTest).
+
+The errors are all `XCTest` symbol-resolution (the framework isn't importable via plain `swiftc -F` for the Swift overlay) plus inference cascades from it — not my code. To genuinely type-check the test bodies against my real types, I'll compile them with a tiny XCTest shim (standard technique) so only the assert functions are stubbed.
+
+Both errors are artifacts of my import-stripping (Tests.swift lost `Foundation` — which XCTest normally provides — causing the `Locale` error and inference cascade), not real test bugs. Let me restore `Foundation` in the stripped copies and re-run.
+
+**TESTS_TYPECHECK_EXIT=0** — the test bodies type-check against my real production types. Now let me capture the macOS full-gate result honestly (it'll hit the same pre-existing cross-surface error). Starting macOS `build test`:
+
+While the macOS build runs, let me update tracking and verify the pre-existing error truly predates my work (exists on a clean checkout of the analog area).
+
+Confirmed: only my 11 files are new; the offending `AIGeofenceAwareAutomationSuggestions.swift` (a different surface, line ~140 `@ViewBuilder _ content: () -> some View` captured by an escaping closure) is untouched by me — a genuine pre-existing cross-surface bug outside my allowed scope. Let me wait for the macOS build.
+
+macOS also failed (`MAC_EXIT=65`) — but on **codesigning** (`entitlements require a development certificate` for `TeslaSync-macOS`/`TeslaSyncWidgets-macOS`), the exact runner-signing limitation (ADR-012) the analog documented. Let me confirm the macOS section had zero errors in my files and check whether the pre-existing AIGeofenceAware compile error also appeared.
+
+macOS compiled **all** surfaces successfully (my files compiled in-module) and failed only at codesigning (ADR-012 runner limitation); zero errors reference my files on either platform. Let me confirm my files were compiled in the macOS build, then write the final log summary.
+
+Clarification: "BUILD SUCCESSFUL in 1s" was Gradle's (cached framework); the macOS `xcodebuild` failed at the **provisioning/codesigning preflight** (no dev cert, ADR-012) before Swift compilation — so macOS in-module compile of my files didn't run, and macOS correctness rests on the isolated `MAC_TYPECHECK_EXIT=0`. Let me write the honest final log summary.
+
+The log is complete and honest. Let me clean up temp artifacts, update tracking, and verify the commit will include exactly my files.
+
+Exactly my 11 files; the generated project is git-ignored. Committing now.
+
+Committed as `b00bd8957` with exactly the 11 files. Let me do a final working-tree check.
+
+Task complete. The working tree is clean and the commit contains exactly the 10 surface files plus the gate log.
+
+## Summary
+
+Shipped the native Apple (SwiftUI) parity of `AIDigestNarration` — the Helix weekly-digest narration card — as a production-polished P4 shared surface at `apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.*`, following the established 10-file pattern (Adapter, Model, Projection, Chrome, Views, main view, Previews, strings, AdapterTests, Tests).
+
+**Parity with `web/src/components/ai/AIDigestNarration.tsx`:**
+- `withAiFeature('digest-narration')` gate → `.gated` phase (renders nothing off-mode; no `view.opened` emitted).
+- `useAiStream({ url:'/ai/digests/weekly/narrate', body:{ vehicle_id: vehicleId ?? 0, week_offset_weeks: 0 } })` reproduced as a pure request + SSE-parse + delta-accumulating reducer.
+- `canStart = vehicleId != null` (0 passes; nil disables), Ask-Helix label flip, and all `AiOutputPanel` branches (empty / thinking / prose / error).
+- All 4 web i18n keys present (`analytics.weeklyDigest.aiNarration.{title,description,generateButton,badge}`) plus shared Helix + P4 chrome keys; no hardcoded English.
+- P4 leaf states: loading / retryable error / live / stale (one-shot auto-refresh) / offline; VoiceOver labels on every interactive element; Reduce-Motion-aware.
+
+**Verification (all isolated signals green):**
+- `swiftformat --lint` = 0, `swiftlint --strict` = 0 violations, placeholder check = 0, `xcodegen` = 0.
+- iOS-sim **and** macOS surface typechecks against the **real** P1/S9 tokens + shared components = 0 errors.
+- XCTest test bodies type-checked against real surface types = 0.
+- Standalone pure-core build+run of the Foundation adapter logic: **CHECKS=54 FAILURES=0**.
+
+**Deferred (documented in log, outside allowed-files scope):** `IOS_EXIT=65` is a pre-existing escaping-closure compile error in a *different* surface (`AIGeofenceAwareAutomationSuggestions.swift:141`); `MAC_EXIT=65` is the runner's missing macOS signing certificate (ADR-012). Zero errors reference any `AIDigestNarration.*` file. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0016-AIDigestNarration.log | 22357 +++++++++++++++++++
+ .../AIDigestNarration.Adapter.swift                |   356 +
+ .../AIDigestNarration.AdapterTests.swift           |   321 +
+ .../shared-surfaces/AIDigestNarration.Chrome.swift |   187 +
+ .../shared-surfaces/AIDigestNarration.Model.swift  |   367 +
+ .../AIDigestNarration.Previews.swift               |   130 +
+ .../AIDigestNarration.Projection.swift             |   133 +
+ .../shared-surfaces/AIDigestNarration.Tests.swift  |   354 +
+ .../shared-surfaces/AIDigestNarration.Views.swift  |   238 +
+ .../shared-surfaces/AIDigestNarration.strings      |    45 +
+ .../shared-surfaces/AIDigestNarration.swift        |   124 +
+ 11 files changed, 24612 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0016-AIDigestNarration.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.swift

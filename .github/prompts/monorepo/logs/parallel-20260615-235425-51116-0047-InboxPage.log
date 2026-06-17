@@ -1,0 +1,288 @@
+I'll start by exploring the repository structure to understand the task, then examine the web source page and the Apple app architecture.
+
+Let me examine the web source page and the Apple app structure in parallel.
+
+The web `InboxPage` delegates to a shared `<InboxBody/>`. Let me read that component and explore the Apple app's existing structure and patterns.
+
+Let me find the actual Apple app structure and existing page implementations.
+
+The Apple app structure differs from the prompt's expected path. Let me investigate where Swift files actually live and how recent parity pages were implemented.
+
+Now I understand the actual structure: `apps/apple/Sources/Features/{Domain}/`. Let me examine the most recent successful page (TripPlanner) and a notifications-related page, plus the parity manifest and ledger.
+
+There's an existing `Notifications` directory with the `AuditLog` page as the closest precedent (same domain, recently merged). Let me read all its files and the parity manifest record for Inbox.
+
+Excellent precedent. Let me read the remaining AuditLog files and the parity manifest record for Inbox to understand the exact requirements.
+
+This is the key precedent. Now let me read the parity manifest record for Inbox, the full InboxBody, and the supporting web components/types to understand the complete scope.
+
+The parity unit is scoped to `InboxPage.tsx` only (the shell), with data sources `useAlertRules` + `useVehicles`. Let me check whether `InboxBody` is a separate parity unit and what already exists, so I scope the body correctly.
+
+No separate `InboxBody` parity unit exists, and there's no `Archived` page unit — the scope is the `InboxPage` shell (4 items) plus a faithful, non-stub inbox body. Let me read the full `InboxBody`, `NotificationRow`, the hooks, and types to design a faithful port.
+
+Let me read the rest of `InboxBody` (the render/JSX), the filter bar, and the data types/hooks.
+
+Now let me read the data types, the notifications hooks, and the remaining render section, plus check what shared Apple components exist.
+
+Let me read the notifications hooks (for API endpoints), the AppRoute, the existing AuditLog log format, and discover available shared Apple components.
+
+The reconciliation pattern is clear. Let me read the notification log/mutation endpoints, the route registration files, and the rest of the AuditLog log (GATES + PARITY format).
+
+Let me read the route parser, app registration, the rest of the AuditLog log (GATES/PARITY format), and the remaining mutation endpoints.
+
+Let me check the app registration, the existing `.notifications` registration, the web routing for `/notifications`, and the GATES/PARITY log format.
+
+Let me see the rest of the route registrations, what `.notifications` currently renders, and the GATES/PARITY log format from the AuditLog precedent.
+
+I now have the full pattern. Let me set up a plan and locate the exact shared component APIs I'll use (tokens, panels, buttons, badges, empty/skeleton, search, segmented controls).
+
+Let me efficiently map the public component APIs I'll use by grepping their signatures, then read the key ones in detail.
+
+Let me read the Forms components, design tokens, and segmented/picker controls.
+
+Let me read the design tokens (Color.TS, Font.TS, TSSpacing, TSRadius) and the search input.
+
+Let me check the severity status indicators, the existing test structure, the theme modifier, and the xcstrings format.
+
+Let me read the existing test file for structure, the theme modifier, and audit which string keys already exist in the catalog (to reuse vs. add).
+
+Let me check the registry API, the `AlertRuleSeverity` type, and audit which string keys already exist in the catalog.
+
+I have the components mapped. Let me read the `TSGlassPanel`/`TSCard` internals, the theme modifier, the project.yml source paths, and the TripPlanner page (for header-with-actions + navigation seam patterns).
+
+Let me check the test target path, the TripPlanner route-registration (navigation seam), and whether `copyLink` is implemented anywhere in the Apple app.
+
+I now have everything I need. Let me check the SwiftLint config limits, then write the plan and start implementing.
+
+SwiftLint `--strict` enforces line ≤120, file ≤400, type body ≤250. I'll split across focused files. Let me write the plan and mark exploration done.
+
+Exploration complete. Now I'll build the logic layer. Let me update todos and create the Models file.
+
+Now the Format helpers (pure, harness-testable) — day grouping, timestamp, and client-side filtering ported from `InboxBody`.
+
+Now the `@Observable` page model. I'll split it across the core file and an actions extension to respect SwiftLint length limits.
+
+Now the actions extension (selection, optimistic mutations, filter setters).
+
+I need to fix access control: the actions extension lives in a separate file, so `private(set)`/`private` won't be reachable. Let me correct the setter visibility and the data-source reference.
+
+Now fix the Actions file to use `dataSource` directly and drop the redundant payload indirection:
+
+Now the sample data source with a realistic seed spanning today/yesterday/older for day-grouping.
+
+Let me validate the logic layer with an isolated Swift 6 harness before building the views.
+
+Argument order issue. Let me reorder the `ago` helper so `days` precedes `hours`:
+
+Logic layer compiles clean under Swift 6 and the harness passes (rows=7, 3 day sections, all mutations/filters verified). Now the SwiftUI views.
+
+Now the filter bar, chips, bulk toolbar, and list header sections.
+
+Now the row view plus the severity/read-filter display extensions.
+
+Now the day list, skeleton, and error views.
+
+Now the route registration and navigation wiring. Let me create the registration file and update `AppRoute`, `AppRouteParser`, and `TeslaSyncApp`.
+
+Now wire the route into `AppRoute`, `AppRouteParser`, and `TeslaSyncApp`:
+
+Now let me audit every string key my views reference (mine + shared-component dependencies) to determine exactly which to add.
+
+Let me verify the exact JSON key format and whether component-owned keys exist in any form.
+
+Let me check key existence authoritatively via Python JSON parsing.
+
+Most keys are new. I'll add my 38 page keys plus 5 shared-component keys my page surfaces (which are missing catalog-wide). Let me first verify the exact file anchor format, then insert via a safe text-insertion script.
+
+The format is clear (string entries use `" : "`). Let me insert all keys via a safe text-insertion script that preserves the rest of the file byte-for-byte.
+
+43 keys added, JSON valid (11113 total). Now let me set up the view type-check. First, check what the component/design/theme layers import (to build a Shared-free curated compile set).
+
+Components/Design/Theme are Shared-free (only SwiftUI/Charts/MapKit/Foundation). I'll type-check my view files against the real component library on macOS + iOS.
+
+The curated set pulled in `UnitFormatters.swift` which depends on `UnitPreferences` (defined outside the set). Let me locate that dependency and add it.
+
+`UnitFormatters.swift` transitively needs `Shared`. I don't use it — let me exclude Shared-dependent component files and re-run.
+
+Only `UnitFormatters.swift` needs Shared. Let me re-run the macOS type-check excluding it.
+
+macOS type-check passes (0 errors) including previews. Now the iOS type-check (exercises the compact-size-class branch).
+
+Both platform type-checks pass (0 errors). Now let me write the unit tests.
+
+Let me run a route harness to verify parsing, path, group, uniqueness, and registry hosting against the real `AppRoute`/`AppRouteParser`/`RouteHostRegistry`.
+
+Route harness passes (75 routes). Let me verify the day-grouping test scenario is timezone-robust by running it through the real model.
+
+Top-level code requires `main.swift`. Let me rename and rerun.
+
+Day grouping verified (3 sections, LA timezone). Now the formal gates — swiftformat and swiftlint on my files.
+
+swiftformat wants auto-fixable formatting (wrap single-line bodies). Let me apply it to my files, then re-lint.
+
+swiftformat clean. Now swiftlint --strict on my files:
+
+One lint issue: `filter` has 7 parameters (max 5). Let me bundle the filter inputs into a criteria struct.
+
+Now re-run swiftformat, swiftlint, and the logic harness after the refactor.
+
+swiftformat + swiftlint --strict both clean (0 violations). Let me re-verify compilation after the refactor (logic harness + macOS type-check) and check the placeholder tooling.
+
+Logic harness passes post-refactor; pwsh + placeholder script available. Let me inspect the placeholder script, then run it on my directories.
+
+Let me check the placeholder patterns (the AuditLog precedent had to opt-out a `*Placeholder` i18n key).
+
+The `searchPlaceholder` key trips the `Placeholder` pattern. I'll add the established opt-out marker (same as the AuditLog precedent), then run the scan.
+
+Scan passes (COUNT=0, EXIT=0). `ALLOWED=2` is unexpected — I added one marker. Let me confirm there's no second hidden pattern match being silently suppressed.
+
+Both opt-outs are valid (mine + the sibling AuditLog's). All gates green so far. Since I refactored `Format`/`PageModel` after the last type-check, let me re-run both platform type-checks to confirm.
+
+Both platform type-checks pass. Now let me attempt the full build to honestly characterize whether it's blocked on the documented KMP staging step. First, regenerate the project (xcodegen picks up my new files automatically).
+
+Project regenerated; my files are referenced (66×) including the test bundle. Let me attempt the build to characterize the blocker. First, list schemes.
+
+Let me attempt the macOS build, capturing the log to characterize how far it gets (the precedent documented an out-of-scope KMP staging block).
+
+While the build runs, let me prepare the ledger update. Let me view the ledger's AuditLog rows to mirror the format.
+
+The launcher returned; the build runs in a detached subshell. Let me check the build log progress while I prepare the ledger.
+
+It's in the KMP `:core:` Gradle phase (building Shared.xcframework) — the documented out-of-scope staging step, no errors in my files. Let me update the ledger while it runs.
+
+Ledger valid. The build is deep in KMP `:core:` framework linking. Let me wait for it to resolve (complete or hit the documented blocker).
+
+The debug `Shared.xcframework` was written successfully (further than the precedent's attempt 1); now on release-framework linking. Let me keep waiting.
+
+Release-framework linking is progressing (iOS arm64 + simulator done, now macOS arm64) — this is the heavy stage the precedent OOM'd on. Let me continue waiting.
+
+The build progressed past KMP staging (Shared.xcframework built!) and compiled the app target — but failed (EXIT=65) on **pre-existing widget files** unrelated to my change. Let me confirm none of the errors are in my files.
+
+I introduced a **name collision**: `NotificationLogItem` already exists in `TeslaSync/feature-views/` (OperationsSection). This is my bug. Let me sweep all my public type names for collisions.
+
+Two collisions found (`NotificationLogItem`, `NotificationSeverity`). Let me wait for the full sweep.
+
+There's already an `InboxBody` component family in `TeslaSync/feature-views/`. Let me examine it — my page may be able to reuse it, or at minimum I must avoid the name collisions.
+
+There's a **complete existing `InboxBody` native component** (P3 layer) built by a sibling — my page should compose it, not duplicate it. This is the correct architecture (web `InboxPage` hosts `<InboxBody>`). Let me examine its API.
+
+The existing `InboxBody` + `InboxBodyModel` is the complete faithful body. My page should compose it. Let me read the model constructor, adapter/source seam, and previews to learn the wiring.
+
+This is the correct architecture to reuse. Let me read the model's initializer, the production adapter, and the previews to learn how to construct `InboxBodyModel`.
+
+Now I understand the construction pattern. Let me read the model's full init + public API and the production adapter to know what source/actions to inject in my route registration.
+
+Let me read the production adapter and check whether `InboxBody` is already hosted anywhere in the app (route/registration).
+
+The existing `InboxBody` component is the canonical P3 port — my duplication was wrong (violates DRY and caused the collisions). I'll pivot to **compose** `InboxBody`. Let me confirm it's committed, check if it's already hosted, and review its string keys.
+
+InboxBody is committed (`570cb3060`) and not yet hosted — my page will be its first host (exactly the P7→P3 design). Let me check its public action API and string keys before rewriting.
+
+The component is self-sufficient (own string table + fallbacks); my page only needs chrome strings. Let me pivot: delete my duplicate body implementation and compose `InboxBody` instead.
+
+Now let me write the new composing page, the sample source/actions, and the registration.
+
+The old file still exists. Let me replace it.
+
+Now the sample source/actions + seed that the route default and previews use:
+
+Now the route registration:
+
+Now rewrite the tests to cover the composing page, route, and sample factory.
+
+Now let me reconcile the catalog: the composed `InboxBody` uses its own string table, so most of my added keys are now unused. Let me remove all but the 6 chrome keys my page actually references.
+
+37 keys removed (total back to 11076). Let me format + lint the rewritten files.
+
+Both clean. Let me run the placeholder scan and regenerate the project (files added/removed).
+
+Placeholder + project regen clean. Now the full macOS build (Shared.xcframework is cached from the prior run, so this should be faster). Let me run it.
+
+Build running. Let me wait and monitor.
+
+Past KMP staging — now compiling/emitting the app module (0 errors, none in my files). Let me keep waiting for completion.
+
+Two real errors, both mine: the `public` registration's default argument references the `internal` `NotificationsInboxSample.makeModel`. Let me make the sample factory public.
+
+The enclosing enum must also be public. Let me make it public.
+
+Both fixes applied. Let me rebuild (xcframework cached) to confirm a clean app-target compile.
+
+Build running. Let me wait for it.
+
+Still compiling, 0 errors so far. Let me continue waiting.
+
+Log is buffered mid-compile (large app target). Let me verify the build is active and wait more.
+
+69 compiler processes active — build is healthy, just buffered. Let me wait longer.
+
+13,721 lines, 0 errors — well past the prior failure point. Build still finalizing. Let me wait for completion.
+
+17,692 lines, still 0 errors, compiling embedded targets. Let me wait more for completion.
+
+Steady progress, 0 errors at 19,882 lines (well past where the buggy build failed). Let me wait for the definitive result.
+
+Build healthy at 21,964 lines / 0 errors but very long (shared-host contention). Let me wait once more for the final status.
+
+🎉 **BUILD SUCCEEDED** (EXIT=0, 0 errors) — the full macOS app target compiles with my changes. Now let me run my unit tests (targeted) to verify they pass.
+
+While tests run, let me check the logs directory and the test progress.
+
+All 9 unit tests passed (TEST_EXIT=0). Now let me verify the iOS side. Let me check if the `InboxBody` component is Shared-free so I can run a focused iOS type-check of my current files in-context.
+
+Tests: 9 executed, 0 failures. InboxBody is Shared-free. Let me kick off the iOS build (definitive iOS check) in the background while I write the evidence log.
+
+Let me capture the in-scope file changes for the log, then write the evidence log.
+
+Let me get exact line citations for the parity evidence, then write the log.
+
+Now let me write the comprehensive evidence log.
+
+The log has a placeholder for the iOS build result. Let me check the iOS build progress.
+
+iOS build compiling cleanly (0 errors). Let me wait for it to finish to record the definitive result.
+
+iOS build progressing (6,208 lines, 0 errors). Let me keep waiting.
+
+iOS build FAILED (EXIT=65) but with 0 compile errors — likely a link/packaging issue, not my Swift. Let me find the actual cause.
+
+The iOS failures are `"couldn't be saved in the folder"` — filesystem/disk I/O errors writing temp compile output, **not** source errors (0 compile errors). Likely disk pressure from the dual macOS+iOS builds. Let me check disk and clean up.
+
+Disk isn't full (183Gi free) and there are **zero** `.swift` source errors — the failures are transient `swbuild.tmp` I/O saves under host contention while building dual archs (arm64+x86_64). Let me retry the iOS build for a single arch to reduce I/O pressure.
+
+Single-arch iOS build running. Let me wait for the result.
+
+Single-arch iOS build progressing with 0 source errors AND 0 I/O errors this time. Let me wait for completion.
+
+Single-arch iOS build failed (EXIT=65) but with 0 source errors and 0 I/O-save errors — a different cause. Let me find it.
+
+The iOS failures are XCBuild infrastructure errors (`build.db: disk I/O error`, transient temp-file saves) under shared-host contention — **0 `.swift` source errors** in both attempts, and the identical shared `Sources/` compiled+linked clean in the SUCCEEDED macOS build. Let me nail down the iOS-specific branch with a fast isolated type-check of my files + the composed `InboxBody` (which is Shared-free).
+
+All Shared-free. Let me run the iOS isolated type-check of my files + the composed `InboxBody` surface against the real components/tokens.
+
+**iOS isolated type-check PASSED (0 errors)** — my page + the composed `InboxBody` surface compile clean for iOS (the `#if os(iOS)` compact branch exercised; only a pre-existing warning in a sibling file). Both platforms now verified. Let me finalize the log's iOS section.
+
+Both platforms verified. Let me do a final lint/format/placeholder pass on the finalized files (the sample file changed for access control) before committing.
+
+All final gates green. Let me verify git status (confirm the xcodeproj is ignored and only intended files change) before committing.
+
+Clean status, xcodeproj ignored. Let me update todos, clean temp files, and commit.
+
+All intended files staged. Let me commit.
+
+Committed (`37d0e6f91`). Let me do a final verification of the repo state and todos.
+
+Task complete and verified. Final state: working tree clean, all todos done, committed as `37d0e6f91`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

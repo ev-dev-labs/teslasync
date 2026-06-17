@@ -1,0 +1,146 @@
+I'll start by exploring the environment: checking the web source, the existing Apple app structure, and the toolchain availability.
+
+Toolchain is available. Let me read the web source and explore the existing Apple app structure.
+
+There's an established multi-file pattern. Let me study a complete example and the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+`EventHistoryTable` and `LiveSignalsTable` are the closest analogs. Let me read the complete `EventHistoryTable` set and explore the shared `Sources/` infrastructure.
+
+Let me read these files individually.
+
+Excellent, very detailed pattern. Let me read the remaining EventHistoryTable files and the signal-specific LiveSignalsTable.
+
+Now let me read the remaining files (Previews, Tests, strings) and find the shared component definitions (TSDataTable, TSPagination, tokens).
+
+The `Sources/` dir is at `apps/apple/Sources`. Let me find the shared component definitions.
+
+Now let me find the Pagination component, the Design tokens, and read the web `SignalQueryControls` (which defines `SignalLogEntry` and `formatValue`).
+
+Now I understand the web side. Let me read the Design tokens and the web color palette, and locate the remaining shared components.
+
+`TSChartPalette.color(at:)` is the native equivalent of `CHART_COLORS[idx % len]`. Let me locate the token and component definitions.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it and the TSTone/Badge/GlassPanel/Skeleton/Card/Typography definitions.
+
+Now I have the full token set. Let me read the component definitions I'll use: Badges (TSTone/TSBadge), Typography (TSText/TSCode/mono), Cards (TSCard/TSGlassPanel), Motion (TSFadeIn), Skeletons (TSSkeleton).
+
+Let me read the Cards, Motion, Skeletons, and Feedback (EmptyState) components.
+
+Let me read the test pattern and the project.yml build config, plus find the native EmptyState equivalent.
+
+Let me check the web Pagination indexing, the native EmptyState, and how the sibling LiveSignalsTable handles states (signals-specific).
+
+Stale/offline ARE used by many sibling surfaces. Let me study that pattern (AcDcStatsPanel), the signal-specific LiveSignalsTable, and the native EmptyState API to match the richer convention.
+
+This is the richer "P4 leaf contract" with the connection axis (live/stale/offline). Let me read how AcDcStatsPanel renders the chip/banner so I match it.
+
+I now have the full P4-leaf pattern. Let me read the connection-axis test structure, the lint/format configs, the strings convention, and the native EmptyState API.
+
+Let me see the connection-axis (stale auto-refresh) test to mirror it.
+
+I have the full pattern. Let me confirm the exact `fmtInt` and `formatDateTime` behaviors for parity, then start writing.
+
+I have a complete understanding of the conventions. Let me set up tracking and check build-tool availability while I start writing.
+
+xcodegen and the simulator are available; the Shared.xcframework needs building. Let me inspect that build script (it's the gate's pre-action).
+
+The full gate needs a KMP/Gradle-built `Shared.xcframework`. Let me kick that off in the background (it's the long pole) while I write the surface code.
+
+Java 17 and gradlew are present. Let me start the Shared.xcframework build in the background, then write the surface code while it runs.
+
+Now let me set up tracking and write the plan while the KMP build runs.
+
+Now let me write the Adapter (pure projection core).
+
+Now the Model (state holder with the connection axis).
+
+Let me check the KMP build progress, then continue with the main view.
+
+KMP build still running (fetching toolchain). Continuing with the main view.
+
+Now the subviews (cells, table, pagination bridge, states).
+
+Now the Previews and strings catalog.
+
+Let me check the KMP build, then write the tests.
+
+KMP build still warming up (downloading toolchain). Writing the tests now.
+
+All 7 files written. Let me run the fast deterministic checks (swiftformat, swiftlint, placeholder scan) on my files, and check the KMP build.
+
+swiftformat wants a few long lines wrapped. Let me view them, then auto-format with the ecosystem tool.
+
+These are just slightly-over-120 lines. Let me auto-format with swiftformat (the ecosystem tool the gate uses), then re-lint.
+
+swiftformat passes. Now swiftlint --strict on the new files, and let me verify the auto-formatted sections.
+
+swiftlint passes (0 violations). Let me verify the auto-formatted sections look correct, run the placeholder check, and check the KMP build.
+
+All three fast checks pass (format 0/6, lint 0 violations, placeholders 0). Let me check the KMP build progress.
+
+KMP `Shared.xcframework` built successfully (8m31s). The full gate is now feasible. Let me set up the log, generate the Xcode project, and start the iOS build+test.
+
+Project generated and framework staged with all slices. Now let me start the heavy iOS build+test in the background, capturing full output.
+
+Let me monitor the iOS build startup and run the global swiftformat/swiftlint gate steps in parallel.
+
+The iOS build failed with 426 errors across many **unrelated** files (CostHeatmap, WeatherAtCarWidget, LiveTelemetry, etc.). This looks systemic, not from my surface. Let me determine the root cause and whether any error is from my files.
+
+Confirmed: **0 errors from my files.** The 426 errors are all pre-existing cross-surface type-name collisions (`SafetyModel`, `ChargeStateDTO`, ambiguous `.loaded`/`.live` cases) from compiling all 1879 sibling feature-views into one module — unrelated to SignalHistoryTable. 
+
+Let me rigorously prove MY surface compiles by type-checking it in isolation against the real shared components (which don't collide).
+
+**Isolated type-check PASSED (0 errors)** — definitive proof my surface compiles cleanly against the real shared components on iOS 18 / Swift 6. Let me capture the iOS gate exit code, launch the macOS build, and run the global lint/format gate steps.
+
+IOS exit = 65 (build failed on pre-existing collisions). Let me launch the macOS build in the background and run the global format/lint gate steps in the foreground.
+
+Global swiftformat: **PASS** (0/2565 require formatting). The macOS build finished — let me read its result and run the global swiftlint.
+
+macOS exit = 65 (same systemic collisions). Let me confirm 0 of my files erred there too, and run the global swiftlint.
+
+Two things to resolve: the global swiftlint found **1 violation** (need to locate it), and the 6 "SignalHistoryTable" mentions need checking. Let me investigate.
+
+The single global swiftlint violation is in a **pre-existing** file (`LiveSignalSparklinesWidget.Builder.swift`), not mine — the 6 "SignalHistoryTable" lines are just progress output. Let me check how sibling surfaces' gate logs recorded this same situation to follow the established convention.
+
+This clarifies the sanctioned convention decisively. All 225 sibling logs use the **"code-complete + DEFERRED Xcode gate" disposition (ADR-012)**: host gates green + isolated real-toolchain surface build/test green + zero surface-attributable errors → **EXIT=0 / STATUS=DONE**, with the full-app xcodebuild DEFERRED to the signed CI runner (it's baseline-RED on pre-existing sibling conditions). My surface meets every condition. 
+
+To back the "tests pass" claim like siblings, let me actually execute my surface's XCTest in isolation (my Adapter+Model are pure Foundation/Observation — no SwiftUI deps).
+
+**All 26 XCTest cases pass** (0 failures, Swift 6 strict mode). My surface is fully verified in isolation. This is the exact sanctioned "code-complete + DEFERRED Xcode gate" disposition. Let me capture the macOS error breakdown for the log, then write the comprehensive gate log.
+
+Let me capture the exact macOS errors (only 4 — it failed early at signing).
+
+Complete, precise picture confirmed:
+- **iOS**: 568 errors, all cross-surface duplicate-symbol collisions from compiling 1879 sibling surfaces into one module; **0 from my files**.
+- **macOS**: 4 errors, all development-signing/entitlements (no cert in slot); **0 from my files**, 0 compile errors.
+
+Both are the exact pre-existing/environmental conditions the sibling logs document. Now let me write the comprehensive gate log.
+
+Now let me clean up temp artifacts and verify git state before committing (ensuring the generated xcodeproj/framework aren't accidentally included).
+
+Clean state: the generated project/framework are git-ignored, my 7 files + log are untracked, and the only other dirty files are pre-existing unrelated ones (which I won't touch). Let me stage **only** my files and commit.
+
+Clean commit: exactly 8 files (7 surface + log), 1,832 insertions, no unrelated/generated files. Let me do a final state check and clean up temp artifacts.
+
+All complete. Let me mark the final todo done.
+
+Task complete. The SignalHistoryTable Apple surface is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0269-SignalHistoryTable.log | 130 +++++++
+ .../feature-views/SignalHistoryTable.Adapter.swift | 372 +++++++++++++++++++++
+ .../feature-views/SignalHistoryTable.Model.swift   | 328 ++++++++++++++++++
+ .../SignalHistoryTable.Previews.swift              | 110 ++++++
+ .../feature-views/SignalHistoryTable.Tests.swift   | 371 ++++++++++++++++++++
+ .../feature-views/SignalHistoryTable.Views.swift   | 300 +++++++++++++++++
+ .../feature-views/SignalHistoryTable.strings       |  48 +++
+ .../feature-views/SignalHistoryTable.swift         | 173 ++++++++++
+ 8 files changed, 1832 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0269-SignalHistoryTable.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalHistoryTable.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalHistoryTable.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalHistoryTable.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalHistoryTable.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalHistoryTable.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalHistoryTable.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalHistoryTable.swift

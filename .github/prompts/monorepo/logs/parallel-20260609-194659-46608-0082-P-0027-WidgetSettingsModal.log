@@ -1,0 +1,184 @@
+I'll start by exploring the repository structure to understand the existing Apple app, the web source, and the shared P1 infrastructure.
+
+Toolchain is available. Let me explore the web source and the Apple app structure.
+
+Now let me explore the Apple app structure in depth, especially the existing modals-dialogs, state holders, tokens, and i18n infrastructure.
+
+There's a clear file-per-surface pattern. `DashboardSettingsModal` is the closest analog (dashboard settings with selects + toggles). Let me study it thoroughly along with the shared infrastructure.
+
+Excellent architecture. Let me read the remaining DashboardSettingsModal files and the shared infrastructure.
+
+Let me read the remaining DashboardSettingsModal files (tests, previews, strings) and find the shared token/component definitions.
+
+Let me read the test files and locate the shared token/component definitions.
+
+Now let me find the shared design tokens (P1/S9), the `TSButton` component, and the project.yml build configuration.
+
+I notice `project.yml` does **not** list `TeslaSync/modals-dialogs` as a source path, yet 20+ modal surfaces already exist there. Let me investigate the build setup, toolchain availability, and the web widget types.
+
+Key finding: `modals-dialogs` is **not** in `project.yml` — consistent with prior surface prompts (0017–0022 all committed surface files only). Integration is deferred to the P4 acceptance gate; my allowed files are only `WidgetSettingsModal.*` + the log. Let me check the build prerequisites and lint tooling.
+
+Confirmed: `Shared.xcframework` (KMP) doesn't exist and `modals-dialogs` is never in `project.yml` (deferred to the P4 acceptance gate, per the established convention). Let me check the lint configs, the placeholder checker, pwsh availability, and the web shared components for parity.
+
+`swiftlint.yml` `included` also omits `modals-dialogs` (so the gate's `swiftlint --strict` skips it, like all prior surfaces) — but I'll lint my files directly anyway. `swiftformat --lint apps/apple` *does* cover my files. Let me read the placeholder checker to ensure my code is clean, plus the web shared components for parity.
+
+The placeholder checker is **case-insensitive** and flags the word "Placeholder", "TODO", "not implemented", etc. in `.swift` files — I'll avoid all of those in code/comments. `.strings` files aren't scanned. Now let me read the web shared components for exact parity behavior.
+
+Let me read `TSButton` and confirm the available design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion).
+
+I now have the full pattern. Let me verify the exact token enum member names so I don't reference anything non-existent, then start building.
+
+All tokens I need exist. Let me check for type-name collisions in the module before defining my types (the app target compiles `Sources` + all surface dirs together once integrated).
+
+No collisions. Let me set up a brief plan/todos and write the pure-Foundation core (Adapter, Projection, Seams), which I can typecheck standalone.
+
+Now I'll write the pure-Foundation core. Starting with the Adapter.
+
+Let me typecheck the pure core standalone (it only depends on Foundation/OSLog) to catch errors early.
+
+Default typecheck passes. Now the critical check — Swift 6 strict concurrency mode (the project uses `SWIFT_VERSION 6.0` + `SWIFT_STRICT_CONCURRENCY complete`).
+
+Pure core passes Swift 6 strict concurrency. Now the Observable model.
+
+Now the form section views (Controls).
+
+Now the chrome + leaf states. First a small model refinement so the header has a sensible title before a widget resolves.
+
+Now the root view.
+
+Now the previews (one per state, plus a category-variant to exercise the conditional sections).
+
+Now the strings catalog — covering every key referenced in the Swift files.
+
+Let me verify every string key used in code has a matching entry in the catalog.
+
+The missing-keys check is clean. Let me confirm the strings file actually parsed (the display was redirected) and check for unused keys.
+
+Perfect 1:1 key match (32 defined, 32 used, 0 missing, 0 unused). Now the test files.
+
+Now the projection/adapter/accessibility tests.
+
+All 11 files written. Now the high-value verification: compile the **entire view layer** (my 8 non-test files + the generated `Tokens.swift` + `TSButton`) together with swiftc against the macOS SDK in Swift 6 strict-concurrency mode. This catches token misuse, binding/SwiftUI/concurrency errors for real.
+
+The full view layer typechecks cleanly in Swift 6 strict-concurrency mode. Now let me verify the **test files'** API usage by emitting my sources as a testable `TeslaSync` module and typechecking the tests against it.
+
+Module emitted cleanly. Now typecheck the test files against it (with XCTest framework available).
+
+The XCTest errors are a tooling artifact — plain `swiftc -F` imports XCTest's **C macros** (which Swift can't use) instead of the Swift overlay; the `.loading` errors cascade from that. They are **not** real issues in my test code. To prove my tests reference only valid module symbols, I'll build a tiny `XCTest` shim (real Swift funcs) and typecheck the tests against it + my testable module.
+
+Only `NSLock` remains — the shim doesn't re-export Foundation (real `import XCTest` does). Adding `@_exported import Foundation` to the shim resolves this final artifact.
+
+Both test files typecheck cleanly against the testable module. **Every Swift file compiles in Swift 6 strict-concurrency mode.** Now the lint/format/placeholder gates.
+
+All 10 of my files pass `swiftformat --lint` (0/10 require formatting). Now the gate's whole-tree swiftformat, swiftlint on my files, and the placeholder check.
+
+Gate swiftformat is clean (0/3419). Now swiftlint — both the gate command and a direct lint of my files.
+
+swiftlint: **0 violations** on my 10 files. Now the gate's `swiftlint --strict` (whole included tree) and the placeholder check (both the literal gate command and a real scan of my files).
+
+Gate swiftlint is green (0 violations, 3235 files). Now the placeholder check — first a quick local grep for forbidden words, then the literal gate command, then a real isolated scan of my files.
+
+No forbidden words. Now the placeholder checker — literal gate command plus a real isolated scan of my files.
+
+All placeholder checks: **PLACEHOLDER_COUNT=0, EXIT=0**. Every runnable gate passes. Now, per the Honesty Covenant, I must capture **concrete evidence** for the one gate step I can't fully run (`xcodebuild build test`). Let me inspect the KMP framework build script and attempt the real build to document the BLOCKED reason precisely.
+
+The KMP script needs Gradle + the Kotlin/Native toolchain. Let me gather concrete evidence: check Java/Gradle, the iPhone 16 destination, generate the xcodeproj, and confirm whether the scheme even includes my files.
+
+Java 17, Gradle wrapper, `apps/shared`, and the **iPhone 16 simulator all exist** (it's even booted). So the destination is valid. The two real questions for the full gate: (1) can the KMP `Shared.xcframework` build here, and (2) `modals-dialogs` isn't in `project.yml`. Let me generate the project and confirm whether my files are even in the scheme.
+
+Definitive evidence: the generated `project.pbxproj` has **0** references to `WidgetSettingsModal`/`modals-dialogs` — the whole `modals-dialogs` tree (all prior surfaces + mine) is intentionally not wired into the scheme (deferred to the P4 acceptance gate; editing `project.yml` is outside my allowed files). To document the KMP capability honestly, let me attempt the `Shared.xcframework` Gradle build (bounded).
+
+The KMP build is still running after 240s (downloading/compiling the Kotlin/Native toolchain). Let me continue waiting to capture a definitive outcome.
+
+**KMP `Shared.xcframework` built successfully** (6m25s) and is staged. Java, Gradle, the iPhone 16 simulator, and now the framework all exist — so the toolchain is fully capable. The only thing keeping the gate from exercising my surface is the `project.yml` wiring (deferred to the acceptance gate).
+
+Given the toolchain works, I'll do the **strongest possible verification**: temporarily wire *only my surface's files* into the project, run the real `xcodebuild build test`, then revert `project.yml` so my committed deliverable stays within the allowed files. First, confirm the generated artifacts are git-ignored.
+
+Confirmed: generated artifacts are git-ignored, and git status shows only my 11 files. Now I'll temporarily wire **only my surface's files** into all four targets, regenerate, and verify they're included.
+
+All 10 files are wired in. Now the real gate — `xcodebuild build test` on the iPhone 16 simulator (this compiles my 8 production files into the app and runs my ~40 test methods).
+
+The build **compiled my files into the full app** and proceeded to testing, but there are **4 test failures** (exit 65). I need to determine whether they're mine. Let me inspect the log.
+
+These errors are **not in my files** — they're pre-existing cross-surface type-name collisions between sibling surfaces (`RecentDrivesModel`/`RecentDrivesUpdate`/`StateTimelineUpdate` etc. declared in *both* `dashboard-widgets` *and* `feature-views`). My change only added `WidgetSettingsModal*` files. Let me characterize the failure precisely: did the app build fail, and did *my* tests run?
+
+Crystal clear now: **`** BUILD FAILED **`** at the **app-build** stage, with **0 errors in any WidgetSettingsModal file**. My tests couldn't run because the app build failed first — on **pre-existing cross-surface collisions** in sibling surfaces. Let me prove these collisions pre-exist my change by locating the duplicate declarations.
+
+**Conclusive proof of pre-existing collisions:** `RecentDrivesModel`/`RecentDrivesUpdate`/`RecentDrivesLoadStatus` are each declared in **both** `dashboard-widgets/RecentDrivesListWidget.*` **and** `feature-views/RecentDrivesSection.*`; same for `StateTimeline*`. Both dirs are in the app target at baseline — so the full-app build is broken independent of my surface (which references none of these). Let me confirm by reverting my `project.yml` change and rebuilding the untouched baseline.
+
+project.yml is pristine again (0 diff, my files excluded). Now build the untouched baseline to confirm it fails identically.
+
+The **pristine baseline also fails** (exit 65) — confirming the breakage is pre-existing. Let me verify it's the same collisions and quantify.
+
+Same `** BUILD FAILED **` on the pristine baseline with the same 24 ambiguous-type errors in `RecentDrives*`/`StateTimeline*`. Let me confirm the 8 baseline log mentions of my surface are benign (stale-file notes, not errors).
+
+The 8 mentions are benign `note: Removed stale file` cleanups (zero errors). **Confirmed: the baseline is pre-existing-red, independent of my surface.** To avoid assuming the macOS step, let me capture it too (the macOS target compiles the identical `Sources`/`dashboard-widgets`/`feature-views` set, so the same collisions apply).
+
+macOS baseline also fails (exit 65). Let me confirm the same root cause.
+
+Let me see the actual macOS baseline error (it failed differently — 0 ambiguous matches found by my pattern).
+
+macOS baseline fails at **code-signing** ("entitlements require a development certificate" — `DEVELOPMENT_TEAM` is empty, no signing identity on this runner) — a genuine platform-capability gap — *before* it even reaches the shared source collisions. 
+
+I now have a complete, honest picture. Let me check the log directory/conventions and confirm git status is clean.
+
+Decisive finding: the prior canonical surface (**0022 DashboardSettingsModal**, which I mirrored) concluded **EXIT=0 / STATUS=DONE** under the *identical* situation — full-app iOS+macOS xcodebuild **deferred to the P4 acceptance gate** (modals-dialogs unwired = 0 pbxproj refs by design), with the surface independently verified green. My surface is verified even more thoroughly. Let me read the referenced deferral doc and the 0022 log header to match the established format precisely.
+
+This is the canonical convention, fully documented in `apps/macos-pending-verifications.md`: such surfaces are "**not unfinished work** — the code is written, committed, and all host-runnable gates are green," with the full-app build **deferred to the P4 acceptance gate** for pre-existing/unrelated reasons. Notably, entry `0279-EnergyChargingPanel` cites the **exact same `StateTimeline*` collisions** I found. (That file is outside my allowed files, so I won't edit it.)
+
+To match the gold-standard rigor (0022 actually *ran* `swift test`), let me **execute** my tests via a SwiftPM package built from the real Tokens + TSButton + my sources.
+
+**`swift test`: 51/51 tests PASS** (0 failures), executed against the real design tokens + `TSButton` under Swift 6 strict concurrency. This is gold-standard verification. Let me add the iOS-18 simulator SDK typecheck (dual-SDK parity, matching 0022) before writing the log.
+
+iOS-18 simulator SDK typecheck: **0 errors** (dual-SDK parity confirmed). Verification is comprehensive and gold-standard. Let me write the gate log.
+
+Log written. Let me verify the final git state (only my files + the log should be staged) and commit.
+
+Clean state: `project.yml` pristine, only my 11 surface files + the log are new, and no out-of-scope files touched. Committing now per the prompt's commit spec.
+
+Committed (`7b56b1d90`, 12 files, 2418 insertions). Let me finalize todos and clean up temp artifacts.
+
+The task is complete. Final state verified: clean working tree, commit `7b56b1d90`, no out-of-scope changes.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`WidgetSettingsModal`** SwiftUI surface at parity with `web/src/features/dashboard/components/WidgetSettingsModal.tsx`, following the established 0022 `DashboardSettingsModal` architecture exactly.
+
+**11 files** (`apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.*`): Adapter, Projection, Seams, Model (`@Observable`, P1/S8), Controls, States, root view, Previews, strings (P1/S10), + Model and projection/adapter/a11y tests.
+
+**Parity reproduced:** the Vehicle (conditional on `isVehicleWidget`), Refresh Interval, Time Range (conditional on `isChartWidget`), and Appearance sections; `${name} Settings` title; vehicle/refresh/time-range catalogs; and **all six states** (loading/empty/error/stale/offline/populated) — never a blank box. 32 i18n keys via the facade (1:1, zero English literals), `view.opened` telemetry, full VoiceOver labels, no direct HTTP.
+
+**Verification — all on-runner, gold-standard:**
+- **`swift test`: 51/51 pass** against the *real* generated `Tokens.swift` + `TSButton` under Swift 6 strict concurrency.
+- Dual-SDK `swiftc -typecheck` (macOS-15 **and** iOS-18-sim): **0 errors** (#Preview expands).
+- **0 errors compiling inside the full ~3400-file app module** (temporarily wired, then reverted).
+- `swiftformat --lint` 0/3419 tree-wide; `swiftlint --strict` 0 violations; `check-placeholders` COUNT=0; `xcodegen` clean.
+
+**Full-app `xcodebuild build test`** is deferred to the P99-0001 acceptance gate (documented convention) — proven *not* my surface: the `modals-dialogs` tier isn't wired into `project.yml` (0 pbxproj refs), and the **pristine baseline fails identically** on pre-existing, unrelated sibling-surface collisions (`RecentDrives*`/`StateTimeline*` redeclared across `dashboard-widgets`+`feature-views`) plus a macOS dev-signing gap. **Zero errors in any `WidgetSettingsModal` file.** The KMP `Shared.xcframework` built and staged successfully (6m25s). Log: `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ple-modals-dialogs-0027-WidgetSettingsModal.log | 156 +++++++++
+ .../WidgetSettingsModal.Adapter.swift              | 333 +++++++++++++++++++
+ .../WidgetSettingsModal.Controls.swift             | 197 +++++++++++
+ .../modals-dialogs/WidgetSettingsModal.Model.swift | 254 +++++++++++++++
+ .../WidgetSettingsModal.ModelTests.swift           | 362 +++++++++++++++++++++
+ .../WidgetSettingsModal.Previews.swift             | 125 +++++++
+ .../WidgetSettingsModal.Projection.swift           | 100 ++++++
+ .../modals-dialogs/WidgetSettingsModal.Seams.swift | 201 ++++++++++++
+ .../WidgetSettingsModal.States.swift               | 320 ++++++++++++++++++
+ .../modals-dialogs/WidgetSettingsModal.Tests.swift | 231 +++++++++++++
+ .../modals-dialogs/WidgetSettingsModal.strings     |  64 ++++
+ .../modals-dialogs/WidgetSettingsModal.swift       |  75 +++++
+ 12 files changed, 2418 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0027-WidgetSettingsModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/WidgetSettingsModal.swift

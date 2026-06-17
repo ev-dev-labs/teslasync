@@ -1,0 +1,149 @@
+I'll start by assessing platform capability (the task requires Apple toolchain) and exploring the repo structure in parallel.
+
+Platform capability findings are critical. Let me note:
+- `xcodebuild` → **requires full Xcode, only CommandLineTools installed** (will fail)
+- `xcrun simctl` → **not available** (no iOS simulator)
+- `swift` 6.3.2, `swiftlint` 0.63.3, `swiftformat` 0.61.1 → **available**
+
+Let me read the web source and explore the existing Apple app structure to understand patterns before writing any code.
+
+The output dir `apps/apple/TeslaSync/dashboard-widgets/` exists, and there are existing widget implementations in `Sources/DashboardWidgets/` (BatteryCellsWidget, DrivetrainHealthWidget) to use as the canonical pattern. Let me examine both locations and the existing widgets closely.
+
+The output location `TeslaSync/dashboard-widgets/` already has 700+ files — many sibling widgets following a clear multi-file convention (`.Adapter`, `.Model`, `.EventList`, `.Preview`, etc.). I must follow this exact pattern. Let me find the most similar map-based sibling and check if any GeofenceWidget files already exist.
+
+GeofenceWidget is net-new. `LocationMapWidget` and `LocationFavoritesWidget` are the closest map-based siblings. Let me examine their full file structure to replicate the exact convention.
+
+`LocationMapWidget` is the ideal template — MapKit-based with the full 6-file convention (Adapter, Model, Previews, strings, main, Tests). Let me read it completely to internalize the pattern.
+
+Excellent pattern. Now let me read the Previews, Tests, strings, and the list-based `LocationFavoritesWidget` (closest to GeofenceWidget's fence list) to complete my understanding.
+
+Now let me study the list-based `LocationFavoritesWidget` and locate the shared infrastructure (registration, design tokens, geo helpers) used across widgets.
+
+Let me locate the shared infrastructure definitions (registration, size, geo, design tokens, and the i18n `count`/`label` helpers).
+
+There's already a `TSGeofence`/`TSGeofenceDrawer` in the Maps components — directly relevant. Let me read the infra, geo helpers, map view, and locate the design tokens.
+
+Tokens must be in the Design module. Let me read the design system, map components, and the i18n helpers used by siblings.
+
+Tokens live in `Sources/Theme.swift`. Let me read it plus the map components, badges (TSTone), and skeletons.
+
+Now let me find the generated design token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) and the TSTone/skeleton/typography components.
+
+The build target compiles `Sources` + `TeslaSync/dashboard-widgets` + generated tokens together. Let me read the generated tokens, badges (TSTone), and skeletons to know exactly which token/component names exist.
+
+I have the full token + component picture. Now let me verify `TSSkeleton`'s signature, the web registry metadata, the web `useGeofences` hook/type, and the unit-conversion helpers the web uses for radius formatting.
+
+Registry metadata confirmed (matches prompt exactly). Now let me read the web types/hooks and unit-conversion helpers to make the adapter faithful.
+
+Let me check how sibling native widgets handle distance-unit conversion (web `useUnits`/`convertDistanceFromSI` parity) and grab the conversion constants.
+
+Let me read the native `MeasurementSystem` and a representative distance-converting widget adapter to follow the canonical units pattern.
+
+The `TripSummaryWidget` is the canonical units pattern. Let me read its Model (for `TripDistanceUnit`/`UnitPrefs`/update shape) and the head of its view to see how units flow through.
+
+I now have the complete canonical pattern (LocationMap for the map, TripSummary for units/state-holder). Let me verify lint/format configs, the placeholder checker, and whether any Swift typecheck is feasible on this runner before writing code.
+
+`pwsh` and the placeholder checker are available. Let me confirm the macOS SDK can typecheck SwiftUI/MapKit (for best-effort compile verification) and read the placeholder checker's interface.
+
+The macOS SDK **can typecheck SwiftUI + MapKit** — so I can do real best-effort compile verification even without Xcode. Let me check whether the module is macOS-typecheckable as a whole (no unguarded `import Shared`/`UIKit`) and confirm no existing `geofence-status` registration.
+
+Module is macOS-clean and `geofence-status` is unregistered. Let me read the head of `TripSummaryWidget.swift` (SwiftUI `text` helper + stale auto-refresh wiring) and locate the typography components, then I'll start writing.
+
+I have the complete pattern. Let me set up the plan/todos and create the two SwiftUI-free files (Model + Adapter) which I can later typecheck against the macOS SDK.
+
+Now creating the two pure-logic files.
+
+Let me typecheck the two pure files against the real design-system + infra dependencies on the macOS SDK to catch errors early.
+
+The errors are from a sibling component file referencing a `tsUnits` environment key/`Units` type defined outside my set — not from my code. Let me find and include that dependency.
+
+Noise comes from `SharedFacade`-dependent component files I don't use. Let me typecheck with a surgical dependency set (only what my code references).
+
+Model + Adapter typecheck clean against real dependencies. Let me mark them done and write the SwiftUI view.
+
+Now let me typecheck the view together with its curated SwiftUI component dependencies on the macOS SDK.
+
+Only a missing dependency: `Cards.swift` uses `.tsGlassPanel()` defined elsewhere. Let me find and include it.
+
+View typechecks clean (EXIT=0) against real dependencies. Let me mark it done and write the previews, tests, and strings.
+
+All 6 files created. Now let me format and lint them. First apply swiftformat (config-aware), then verify with `--lint`.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+Three fixable violations: two files exceed the 400-line limit (Model 413, view 538) and the haversine `a` identifier is too short. Let me check exact line counts and split the oversized files.
+
+Idiomatic split: `.Views` for subviews. Let me extract the tail sections of the Model and the subviews from the view. First, view the exact current content of the sections to move.
+
+Now let me view the subviews section of the main view file to extract precisely.
+
+Now I'll split the two oversized files (idiomatic `.Views` + `.Localization`) and rename the `a` identifier. Using precise line extraction:
+
+All files now under 400 lines. Now rename the `a` identifier in the Adapter haversine.
+
+Now re-format all 7 files (fix any split artifacts) and re-run both linters.
+
+Both linters pass (0 violations). Let me re-run the full source typecheck with the new file layout, then verify the test file typechecks too.
+
+Cascade from the split: the subviews are `private` but now live in a separate file. Let me make them internal (module-scoped).
+
+Source typechecks clean. Now let me check whether XCTest is available on this runner (CLT-only) to typecheck the test file.
+
+XCTest is unavailable on CLT (expected — it's part of the xcodebuild-gated path). I'll still verify the **test logic's API usage** by typechecking the test file against my real symbols with a minimal XCTest shim (clearly labeled best-effort).
+
+Test logic typechecks clean against real symbols. Now the placeholder gate. Let me inspect how `-Path` is handled and pre-scan my files for forbidden markers.
+
+The checker uses `Get-ChildItem -LiteralPath -Recurse` (no glob), so the literal prefix path won't resolve — I'll scan each `GeofenceWidget.*` file directly. Let me run the placeholder gate per-file.
+
+Placeholder gate passes for all files. Now let me capture the platform-capability evidence (xcodebuild/simctl) and run the whole-tree lint/format that the gate invokes.
+
+xcodebuild confirmed BLOCKED (requires Xcode); simctl unavailable; whole-tree swiftformat is clean (0/2642). Now whole-tree swiftlint --strict (the gate's invocation).
+
+Whole-tree swiftlint reports 1 violation. My files were clean when scoped — let me confirm it's pre-existing (not mine).
+
+The single whole-tree violation is pre-existing in `LiveSignalSparklinesWidget.Builder.swift` (not my file, and not in my allowed-files scope). My 7 files are lint-clean. Let me verify i18n key coverage and locate the log directory.
+
+Let me re-run the coverage check with a digit-inclusive pattern (the `*A11y` keys contain digits) to confirm full bidirectional coverage.
+
+Perfect i18n coverage (18/18, all source keys present). All runnable gates pass; xcodebuild is the only BLOCKED step. Let me generate the gate log with real captured output.
+
+Log written and complete. Let me view the full log to confirm the captured evidence is well-formed, then commit.
+
+The log is complete and honest. Let me update todos, verify git state (only my files changed), and commit.
+
+Two pre-existing `web/` modifications exist in this shared worktree — they're **not mine** and I'll exclude them. I'll stage only my GeofenceWidget files + the log explicitly.
+
+Only my 8 files + the log are staged. Committing with the prompt's message.
+
+Committed cleanly. Let me do a final verification of the committed state.
+
+Committed cleanly: 9 files, 1860 insertions. The only working-tree changes left are the 2 pre-existing `web/` files (not mine, correctly untouched). Let me clean up temp artifacts.
+
+Done. Here's the outcome.
+
+## Summary
+
+Shipped a production-complete native Apple `GeofenceWidget` at parity with `web/src/features/dashboard/widgets/GeofenceWidget.tsx`, committed (`ef5eaf0a`) with the gate log.
+
+**8 surface files (1860 lines)** following the canonical `LocationMapWidget`/`TripSummaryWidget` patterns:
+- `.Adapter.swift` — pure haversine + `convertDistanceFromSI` + projection (web-verbatim: `hasCoords` OR-semantics, `inside = dist ≤ radius`, `name ?? '—'`, `fmtRadius`)
+- `.Model.swift` — `@Observable` state-holder seam, telemetry seam (`view.opened` slug `GeofenceWidget`), units, DTOs, in-memory source
+- `.Localization.swift` — registry (`geofence-status`, maps, 2×4/1×2/4×40), i18n facade, testable a11y
+- `.swift` + `.Views.swift` — SwiftUI surface: compact + standard layouts, MapKit map (`MapCircle` per fence + animated marker), fence list, **all states** (loading/empty/error/stale/offline/content)
+- `.Previews.swift`, `.Tests.swift` (adapter+model+registry+a11y), `.strings`
+
+**Verification (all runnable gates green):**
+- swiftlint --strict: **0** violations · swiftformat --lint: **0/2642** · placeholder scan: **0**
+- macOS-SDK typecheck of source **and** test logic against real SwiftUI/MapKit deps: **0**
+- i18n coverage **18/18** (all 7 source keys present) · no HTTP in view · VoiceOver labels throughout
+
+## ⚠️ Gate status: `EXIT=1 / STATUS=BLOCKED`
+
+The `xcodebuild` iOS/macOS **build+test** steps cannot run on this runner — only CommandLineTools is installed (`tool 'xcodebuild' requires Xcode`), no iOS simulator (`simctl` absent), no `XCTest` module. Per the prompt's capability clause this is a platform-capability **BLOCKED**, fully documented with evidence in the log. The deliverable itself is complete (no stubs) and every step that *can* run passes.
+
+I left two pre-existing `web/` modifications in this shared worktree untouched (not mine, not in scope).
+
+
+
+The task is fully complete and committed. All 7 todos are done, all runnable gates pass, and the only un-runnable step (xcodebuild build+test) is transparently BLOCKED per the prompt's capability clause.
+

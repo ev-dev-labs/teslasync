@@ -1,8 +1,8 @@
 //
-//  FormField.Tests.swift
-//  TeslaSync — P4 shared surface · 0154 · FormField (Apple)
+//  FormFieldShared.Tests.swift
+//  TeslaSync — P4 shared surface · 0154 · FormFieldShared (Apple)
 //
-//  Unit coverage for the FormField surface:
+//  Unit coverage for the FormFieldShared surface:
 //    • Adapter — the pure `FormFieldProjection` across every web branch (error hides
 //      hint, whitespace collapses to no message, required / fieldID passthrough) and
 //      the `FormFieldMessage` accessors.
@@ -20,7 +20,7 @@ import SwiftUI
 import XCTest
 @testable import TeslaSync
 
-// MARK: - Projection (port of FormField.tsx body)
+// MARK: - Projection (port of FormFieldShared.tsx body)
 
 final class FormFieldProjectionTests: XCTestCase {
     func testNoErrorNoHintRendersNoMessage() {
@@ -101,7 +101,7 @@ final class FormFieldAccessibilityTests: XCTestCase {
     }
 
     func testSurfaceSlugIsStable() {
-        XCTAssertEqual(FormFieldSurface.slug, "FormField")
+        XCTAssertEqual(FormFieldSurface.slug, "FormFieldShared")
     }
 }
 
@@ -130,7 +130,7 @@ final class FormFieldModelTests: XCTestCase {
         model.start()
 
         XCTAssertEqual(source.startCount, 1, "start must be idempotent")
-        XCTAssertEqual(spy.openedSurfaces, ["FormField"], "view.opened must fire exactly once with the slug")
+        XCTAssertEqual(spy.openedSurfaces, ["FormFieldShared"], "view.opened must fire exactly once with the slug")
     }
 
     func testPushRecomputesProjection() {
@@ -182,23 +182,23 @@ final class FormFieldViewTests: XCTestCase {
     }
 
     func testConvenienceInitComposesEveryState() {
-        _ = FormField(label: "Signal") { Text(verbatim: "control") }
-        _ = FormField(label: "Signal", required: true) { Text(verbatim: "control") }
-        _ = FormField(label: "Signal", required: true, hint: "help") { Text(verbatim: "control") }
-        _ = FormField(
+        _ = FormFieldShared(label: "Signal") { Text(verbatim: "control") }
+        _ = FormFieldShared(label: "Signal", required: true) { Text(verbatim: "control") }
+        _ = FormFieldShared(label: "Signal", required: true, hint: "help") { Text(verbatim: "control") }
+        _ = FormFieldShared(
             label: "Signal",
             required: true,
             hint: "help",
             error: "Signal is required."
         ) { Text(verbatim: "control") }
-        _ = FormField(label: "Signal", fieldID: "signal_name") { Text(verbatim: "control") }
+        _ = FormFieldShared(label: "Signal", fieldID: "signal_name") { Text(verbatim: "control") }
     }
 
     func testModelInitComposes() {
-        let field = FormField(model: model(FormFieldInput(label: "Signal", required: true))) {
+        let field = FormFieldShared(model: model(FormFieldInput(label: "Signal", required: true))) {
             Text(verbatim: "control")
         }
-        XCTAssertEqual(FormField<Text>.surfaceSlug, "FormField")
+        XCTAssertEqual(FormFieldShared<Text>.surfaceSlug, "FormFieldShared")
         _ = field.body
     }
 

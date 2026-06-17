@@ -1,0 +1,113 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim). Now let me study the existing Apple app structure and patterns.
+
+Large established pattern (2347 files). Let me check for any existing TirePressure files and find a close analog to use as the reference pattern.
+
+Found `TirePressureSection.*` (same data domain) and the web telemetry panels. Let me read the helpers, the existing TirePressureSection implementation, and the API type.
+
+`TirePressureSection` is the perfect reference — same data domain. Let me read all its files to learn the established conventions.
+
+Excellent, this is a rich, well-established pattern. Let me read the remaining reference files to fully understand the conventions.
+
+Now let me read the Previews, strings, and Tests reference files, plus locate the shared design tokens.
+
+I have the full pattern now. Let me verify the shared design tokens and project structure before writing code.
+
+Let me locate the Xcode project (gate uses `-scheme TeslaSync`) and the canonical design token definitions.
+
+Project uses XcodeGen (`project.yml`). Let me read the design tokens, project config, and check the build setup.
+
+XcodeGen handles file globbing for `feature-views/`, so new files are auto-included. `pwsh` and `xcodegen` are available. Let me read the design tokens and confirm the Shared framework + baseline build setup.
+
+Shared.xcframework isn't present — it's built by a pre-action script. Let me examine that script and the generated design tokens path, since these are critical for the build to succeed.
+
+Build needs Gradle (KMP shared core) + full Xcode — available. Let me verify all the design tokens I'll use exist, and check for known build caveats.
+
+Let me read the Tokens.swift structure to confirm the namespaces (TSSpacing, TSRadius, Font.TS).
+
+All tokens confirmed. Now let me read the `TSFadeIn`/`TSSkeleton` APIs and the web `useUnits().formatPressure` to nail formatting parity.
+
+Let me see how the parent sources `tireData` to model the state-holder semantics correctly.
+
+I have full parity details (pressure precision=1, `—` empty, bands in Pa, status logic). Let me check lint configs and kick off the slow Gradle shared-framework build in the background to validate the toolchain early.
+
+I need to understand the placeholder checker's case-sensitivity and how it resolves `-Path` (since the gate passes a path prefix, not a directory). Let me read the rest.
+
+Key insight: the placeholder checker is case-insensitive and the prompt forbids the words "placeholder/stub/mock/TODO" in shipped code — I'll avoid all of them. Let me check for symbol collisions, start the slow Gradle build early, and generate the Xcode project.
+
+There's an existing `LiveTirePressurePanel` (same web source, composite surface) — a useful second reference. No symbol collisions with my `TPPanel` prefix. Let me start the Gradle build to validate the toolchain and read that reference in parallel.
+
+I have the full picture. Note: the existing `LiveTirePressurePanel` uses *stale* bar thresholds; my surface will use the **current** canonical Pa thresholds from `helpers.ts` (the actual spec). Let me check the Gradle build progress.
+
+Gradle is building. I'll write the surface files while it runs. Let me set up tracking and the plan.
+
+Now writing the surface files, starting with the pure Adapter core.
+
+Let me check the Gradle build and continue with the Model (state-holder seam).
+
+Now the Views (presentational chrome) — header, tiles, status chip, and all states.
+
+Now the main view, plus checking the Gradle build.
+
+Writing the previews, strings catalog, and tests in parallel.
+
+Now the comprehensive test suite (XCTest).
+
+The Gradle shared-framework build completed. Let me verify it staged correctly and run the fast lint checks on my new files first.
+
+Gradle build succeeded (6m53s) and the framework is staged — toolchain works end-to-end. Now let me auto-format my files per repo config, then lint them for fast feedback before the expensive Xcode build.
+
+Already conformant (0/7 reformatted). Now lint-verify with both tools on my files.
+
+Both linters pass clean (0 violations) on all 7 files. Now I must regenerate the Xcode project (so the new files are included) and run the build+test gate. Let me regenerate and start the iOS build+test.
+
+Project regenerated with my files included. Now starting the iOS build+test (this runs the Gradle pre-action + compiles the full app + tests). I'll monitor it.
+
+iOS build+test is running (includes Gradle pre-action + full app compile + test execution). Let me review my code once more for Swift 6 strict-concurrency issues while it builds, then check progress.
+
+Build failed (exit 65), but the failing batch lists `SummaryStats*`/`SystemHealth*` files — not mine. I need the actual `error:` lines to diagnose whether this is mine or pre-existing. Let me extract them.
+
+All errors are pre-existing `StateTimeline*` type-ambiguity collisions between two *other* surfaces (`feature-views/StateTimeline.*` and `dashboard-widgets/StateTimelineWidget.*`) — none reference my files. Let me confirm my files are clean and determine the git baseline state.
+
+My 8 files are the only untracked changes and compiled with **zero errors**. The `StateTimeline*` collision is pre-existing in committed HEAD (`7870636f4`), caused by two *other* merged surfaces declaring duplicate type names. Let me inspect the exact collision.
+
+My 8 files compiled with **zero errors**; the build is blocked solely by a pre-existing, committed duplicate-type collision between two *other* surfaces (`StateTimeline.*` feature-view and `StateTimelineWidget.*` dashboard-widget), both declaring `StateTimelineModel/Update/Connection/LoadStatus`. This is explicitly "Out of Scope" for my prompt. Before deciding how to report, let me assess the blocker's blast radius for due diligence.
+
+Definitively confirmed: two parallel-merged surfaces (`57117c5cd` StateTimeline + `2737a7bb5` StateTimelineWidget) independently declared the same public type names → pre-existing module-level collision in committed HEAD. This is explicitly **Out of Scope** for my prompt ("Other surfaces ... each has its own prompt") and outside my **Allowed files**. My surface compiles with zero errors.
+
+Per the honesty covenant (no red-as-green, no commit on red) I won't touch other surfaces or fake a pass. Let me run the remaining gate steps for real evidence. Starting the macOS build (same blocker expected) in the background and the fast lint steps now.
+
+`swiftlint --strict` on all 3084 files → **0 violations** (LINT_EXIT=0). Now swiftformat --lint (full gate scope) and the placeholder check.
+
+swiftformat (FORMAT_EXIT=0) and placeholders (PLACEHOLDER_EXIT=0) both pass. The macOS build finished — let me read its result (same blocker expected) and verify my files honestly contain no forbidden patterns when actually scanned.
+
+Two findings: (1) macOS build also failed (MAC_EXIT=65) with **0** TirePressurePanel errors — same external blocker. (2) My honest scan caught the word "placeholder" in a comment in `TirePressurePanel.Views.swift:264` — the acceptance criteria forbids it. Let me fix that and confirm the macOS errors are the StateTimeline collision.
+
+Let me view the actual macOS error lines and re-scan my files to confirm they're clean after the fix.
+
+The macOS failure is actually a *code-signing* error (no development certificate in this environment — `DEVELOPMENT_TEAM` empty + hardened runtime + entitlements), a separate pre-existing environment limitation. My files re-scan **CLEAN**. Let me fully characterize the macOS log (does it also hit the StateTimeline collision?) before assembling the evidence.
+
+Now I have a precise, honest picture of both blockers:
+- **iOS**: fails only in `StateTimeline.*` / `StateTimelineWidget.*` (pre-existing out-of-scope duplicate-type collision). My files: 0 errors.
+- **macOS**: fails at code-signing (`entitlements require a development certificate`) — an environment capability gap (no signing identity), before compile.
+
+My non-test files already compiled cleanly inside the iOS app target. Since XCTest execution is blocked by the external collision, let me produce real runnable proof of my pure core logic in isolation, and re-verify lint after my edit.
+
+Lint clean after edit. Let me create the harness directory and run the standalone parity proof against my real Adapter + Projector files.
+
+**30/30 core parity checks PASSED**, compiled from my real Adapter + Projector files — real runnable proof of the logic (conversion, bands, overall status, projection, phase, formatting, a11y) since XCTest execution is blocked by the external collision.
+
+Let me gather the precise raw error excerpts to embed authentically in the gate log.
+
+I have a complete, authentic evidence package. Now assembling the gate log with real outputs and a precise BLOCKED analysis.
+
+Gate log written with full authentic evidence. Let me verify the final repo state is exactly my allowed files, clean up temp artifacts, and confirm the log integrity.
+
+Everything is finalized and clean:
+- **Repo state**: only my 8 `TirePressurePanel.*` files + the gate log are changed (all untracked); the generated `.xcodeproj` is git-ignored; no other surface touched.
+- **Temp artifacts** cleaned up.
+- **Log** ends `EXIT=1 / STATUS=BLOCKED`.
+
+Per the honesty covenant (rule 8 — *no commit on red*), I am **not** committing while the full-app gate is red, and I did **not** modify the out-of-scope surfaces.
+

@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure to understand what exists and verify the capability requirements for this task.
+
+Web source exists and there's an `apps/apple` directory. Let me explore the Apple app structure and check build tooling availability in parallel.
+
+Output was large. Let me read the web source in sections and check the apple structure more precisely.
+
+Let me continue reading the web source and examine existing shared-surfaces siblings to learn the conventions.
+
+Let me finish reading the web source and check whether a Lightbox already exists, plus look at the most analogous sibling (Accordion — also a `components/ui` surface).
+
+Let me finish reading the web source and study the Accordion sibling (the closest `components/ui` analog) fully.
+
+The Accordion is an ideal analog. Let me read its remaining files and locate the shared tokens/infrastructure (TSRadius, Color.TS, surface slug pattern).
+
+Now let me read the remaining Accordion files and locate the shared token definitions (TSRadius, TSSpacing, TSMotion, Color.TS, Font.TS).
+
+Let me read the remaining test files and locate the actual token/theme definitions (P1/S9 core).
+
+Let me find where the design tokens are actually defined across the whole apple tree.
+
+Let me check the build tool availability precisely — this is the capability gate.
+
+All tools available (Xcode 26.5, Swift 6.3.2). The capability requirement is met. Now let me locate the token definitions across the entire tree and understand the project structure.
+
+The real iOS/macOS tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me verify it defines everything I need and view the project.yml to understand the build.
+
+Now I have the full token vocabulary. Let me examine the project.yml build config to understand how sources/strings are included and which schemes exist.
+
+Now I understand the build wiring (glob-based source inclusion — new files auto-included; `*Tests.swift` route to test bundles). Let me check lint configs, a sibling with interpolated strings, build feasibility (simulators, Shared.xcframework, pwsh), and the pending-verifications doc.
+
+Let me read the placeholder checker, find a sibling with interpolated strings, and assess build feasibility (simulators, Shared.xcframework, generated project).
+
+Let me check the forbidden swift patterns and study how a sibling handles interpolated strings (ChartContainer — a charts UI surface).
+
+Let me see the String(format:) convention in a Model facade and how integers are interpolated.
+
+Excellent precedents found. Let me read the Delta surface (the canonical pure-presentational primitive with `{{current}}`-style interpolation) to nail the `String(format:)` facade idiom.
+
+I have all conventions. Let me assess build feasibility (simulators, Shared.xcframework, generated project, KMP staging script) before authoring.
+
+I now have all conventions. Let me do a final convention check (AsyncImage/gesture/keyboard idioms in siblings) and assess KMP build feasibility, then start authoring.
+
+A sibling (Avatar) uses AsyncImage. Let me read the full check output, Avatar's AsyncImage idiom, and the build-stance doc.
+
+This is the key precedent. The repo documents that the full-app `xcodebuild build test` is consistently **macOS-pending/BLOCKED** in this environment due to (1) the unstaged KMP `Shared.xcframework` (Kotlin/Native long-pole), (2) pre-existing parallel-merge collisions from *other* agents' surfaces, and (3) absent code-signing identities — all unrelated to a single surface. The sanctioned per-surface proof is isolated `swiftc -typecheck` (iOS18 + macOS15) + tests + lint/format/placeholder/i18n/xcodegen. Let me look at an existing surface log to copy the exact verification harness.
+
+I have everything I need. The repository's own `macos-pending-verifications.md` establishes the precedent: the full-app `xcodebuild build test` is consistently macOS-pending in this environment (unstaged KMP `Shared.xcframework`, other agents' pre-existing merge collisions, no signing identities), and each surface is proven green via isolated `swiftc -typecheck` (iOS18 + macOS15) + SwiftPM tests + lint/format/placeholder/i18n/xcodegen.
+
+Let me set up tracking and write the plan.
+
+Now authoring the surface. Starting with the pure Foundation core.
+
+Now the Model (i18n facade + telemetry seam + observable state-holder).
+
+Now the Views file (subviews — token-driven, no Tailwind ports).
+
+Now the public surface View (presentation switch, overlay, keyboard, modal a11y).
+
+Now the i18n strings catalog.
+
+Now the pure-core unit tests.
+
+Now the Model/Motion/Views/Strings tests.
+
+Now the DEBUG previews.
+
+All 8 files created. Let me mark the preview helper `@MainActor` (it constructs/mutates the MainActor model), then run the verification harness.
+
+Now the key correctness check — `swiftc -typecheck` (macOS 15, Swift 6 strict concurrency) against the real generated Tokens.
+
+macOS typecheck clean (0 errors/warnings). Now iOS 18 simulator.
+
+Both SDK typechecks are clean (0/0). Now executing the full XCTest suite via a self-contained SwiftPM harness (the sanctioned per-surface proof).
+
+All **49 tests pass, 0 failures** on the macOS host. Now lint, format, placeholder, i18n parity, and xcodegen checks.
+
+Four fixable issues: file_length (split Views), trailing commas, redundant `@ViewBuilder`, inline-loop/wrap formatting. Let me view the tail of Views to extract the three chrome structs into a new `Lightbox.Chrome.swift`.
+
+Creating `Lightbox.Chrome.swift` and removing those structs from Views to satisfy file_length.
+
+Now remove those three structs from Views.swift and fix the redundant `@ViewBuilder` in Lightbox.swift.
+
+Now remove the three chrome structs from Views.swift. Let me view the current boundary first.
+
+Views is now 330 lines. Running swiftformat in write mode to auto-fix the remaining formatting, then re-linting.
+
+swiftformat clean. Re-running swiftlint --strict on all 8 Swift files.
+
+swiftlint --strict: **0 violations**. Re-verifying typecheck (now including Chrome.swift) on both SDKs after the split/format.
+
+Both SDK typechecks still clean. Re-syncing the harness with the updated/split files and re-running the suite, plus placeholder + i18n + xcodegen checks.
+
+49 tests pass with the split. Now placeholder gate, i18n parity, and xcodegen enumeration.
+
+One word "placeholder" in a doc comment trips the scanner. Let me find and reword it.
+
+Re-running the placeholder scan after the reword, plus a direct grep for any forbidden token across all 8 files.
+
+Placeholder gate clean (COUNT=0). Now `xcodegen generate` to confirm the new files are enumerated in the project.
+
+Surface is green across every isolated gate. Now gathering the platform-capability evidence for the full `xcodebuild` gate (signing identities, the unstaged KMP framework, and pre-existing cross-surface symbol collisions from other agents).
+
+The three sanctioned platform blockers are all confirmed: **0 codesigning identities**, **no staged `Shared.xcframework`** (KMP Kotlin/Native long-pole), and **pre-existing cross-surface symbol collisions** from other agents (`ChargingProjection`, `StateTimeline*`). Per the Honesty Covenant I must still *run* the real gate rather than assume — launching the actual `xcodebuild` gate, time-boxed.
+
+Gradle is actively building (DEBUG `Shared.xcframework` already produced; the RELEASE assemble + Kotlin/Native link is the long-pole). Continuing to monitor the real gate.
+
+The RELEASE Kotlin/Native link tasks are now executing (the documented long-pole). It's genuinely progressing, so I'll let it run to capture the real outcome rather than assume.
+
+The KMP `Shared.xcframework` built and staged this run — the gate has progressed into the real app-target Swift compile (`SwiftEmitModule … TeslaSync`). Letting it run to capture the genuine compile result.
+
+A real compile error surfaced — but in **another agent's** surface (`AISuggestNewGeofences.swift:129` — "escaping closure captures non-escaping parameter") — and **zero Lightbox errors**. This is the documented pre-existing cross-surface block. Let me wait for the build to terminate.
+
+iOS gate exited 65 (build failure). Let me confirm the failure summary and that all errors are non-Lightbox.
+
+**Definitive:** the iOS full-app gate failed (`** BUILD FAILED **`, EXIT=65) due to a **single unrelated error in another agent's surface** (`AISuggestNewGeofences.swift`) — **zero Lightbox errors**. Running the macOS gate too (not assuming), then I'll write the log.
+
+While the macOS gate runs, re-verifying lint/format are still clean after the comment reword.
+
+Lint/format still clean (0/8, 0/8). The macOS gate finished — reading its result.
+
+Both full-app legs are red for **platform/cross-surface** reasons with **zero Lightbox errors**: iOS = another agent's `AISuggestNewGeofences.swift` compile error; macOS = missing development code-signing certificate (0 identities). The KMP framework built + staged successfully this run. Let me capture the exact error lines for the log.
+
+All evidence captured. Updating tracking and writing the gate log.
+
+Now committing. Let me check git status to stage only the allowed files (Lightbox.* + the log), avoiding build artifacts.
+
+Only my 9 Lightbox files + the log are untracked (build artifacts are git-ignored). Committing the allowed files.
+
+Committed (`d05247e6a`). Cleaning up temp artifacts and confirming a clean tree.
+
+Task complete. Summary below.
+
+## P4 · Shared surface · 0219 — `Lightbox` (Apple) — shipped
+
+Authored a production-polished SwiftUI parity of `web/src/components/ui/Lightbox.tsx` as **9 files** (within the allowed `Lightbox.*` glob), following the established Accordion/Delta/Avatar surface pattern:
+
+- **Adapter** (pure core: slug, zoom constants, `LightboxImage`/`Input`/`Projection`/`Projector`), **Model** (i18n facade + telemetry seam + neighbour-prefetch seam + `@Observable` state-holder), **Views** + **Chrome** (backdrop, top bar, zoomable/pannable image stage with skeleton + load-error + prev/next, zoom control bar, empty/error leaves), **swift** (public View: presentation switch, full-bleed overlay, web keyboard map ←/→/Home/End/Esc + `+`/`-`/`0`, modal VoiceOver), **Previews**, **strings**, and two **test** files.
+- All **real** web branches reproduced (hidden / empty / loading / loaded / error / single‑vs‑multi nav / zoomed / caption); as a pure presentational primitive it correctly omits fabricated data‑stale/offline chrome (documented, matching siblings). **i18n: 8/8** verbatim web keys.
+
+### Verification — every host-runnable per-surface gate GREEN
+- `swiftc -typecheck` **macOS 15** & **iOS 18 sim**, Swift 6 strict concurrency, vs real generated `Tokens.swift`: **0 errors / 0 warnings**
+- `swift test` (SwiftPM, macOS host): **49/49 pass**
+- `swiftlint --strict`: **0/8** · `swiftformat --lint`: **0/8** · check-placeholders: **0** · `xcodegen generate`: enumerates all 9 files
+
+### Full-app gate — ran (not assumed); STATUS=BLOCKED (platform/cross-surface)
+- **iOS** `xcodebuild build test`: the KMP `Shared.xcframework` **assembled + staged this run** and the app compiled until **one unrelated error in another agent's surface** (`AISuggestNewGeofences.swift:129`) — **zero Lightbox errors** (`EXIT=65`).
+- **macOS**: failed at **code-signing** (`0 valid identities`) — **zero Lightbox errors** (`EXIT=65`).
+
+These are exactly the sanctioned `apps/macos-pending-verifications.md` blockers, deferred to the `P99` acceptance gate on `macos-latest`. Per the Honesty Covenant the log ends `EXIT=65 / STATUS=BLOCKED` (no red dressed as green). Committed as `d05247e6a` (Lightbox.* + log only; build artifacts git-ignored).
+
+
+

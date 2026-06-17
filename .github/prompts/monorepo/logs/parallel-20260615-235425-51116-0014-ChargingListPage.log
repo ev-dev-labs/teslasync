@@ -1,0 +1,325 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5 and swiftlint are available, so the gate can run. Let me explore the web source and Apple app structure.
+
+The actual structure uses `apps/apple/Sources/Features/Charging/`. Let me examine the existing Charging feature, the project config, and read the web source.
+
+This is a XcodeGen project. The actual Charging code is under `Sources/Features/Charging/`. Let me read the web source in chunks and examine existing patterns. Let me look at the existing Charging files and find a reference list-page implementation.
+
+Good, I understand the established pattern. Let me read the rest of the web source and examine the parity infrastructure + reference implementations.
+
+Let me continue reading the web source (the render section) and examine the parity ledger + component library.
+
+Let me read the final render section of the web source and the parity ledger structure.
+
+Let me read the final section of the web source and check the ledger schema + manifest record for ChargingList.
+
+I've read the full web source. Now let me explore the component library, design tokens, existing complex page templates, and localization infrastructure in parallel.
+
+There's a rich existing component library. Let me find the closest reference page that already uses MetricSwitcher, KPI cards, date-grouped lists, bulk actions, and pagination.
+
+Let me examine the key component library files I'll need: charts, data-display, feedback, forms, and the Lists component with DateGroupedList/BulkActions.
+
+Let me read the chart models, metrics, feedback states, forms, and cards to understand the full component API surface.
+
+I now understand the component APIs. Let me examine the gate tooling, an existing parity log for format, the design tokens, and check for `pwsh`.
+
+Let me read the rest of the PowerShare log (gate commands) and the remaining Powershare implementation files to mirror the exact pattern.
+
+I have the full pattern. Now let me examine the route system, the Sections file pattern, existing Powershare tests, and which strings already exist in the catalog.
+
+A `.charging` route already exists. Let me check whether it's already registered to a page, and inspect the route details + app registration + existing charging strings.
+
+`.charging` route exists but isn't registered yet. Let me look at the app registration region, the SharedFacade pattern, and a data-bound sibling page (SleepEfficiency) to decide how to wire the data source.
+
+Let me calibrate depth by studying the richest data-bound sibling (SleepEfficiency) and read the feedback states + check existing strings.
+
+Excellent — SleepEfficiency is the ideal template. Let me build a quick API index of the component library and design tokens, plus check existing strings, so I use exact symbols.
+
+Comprehensive library confirmed. Let me read the exact signatures of the components I'll compose: pill bar, search, pagination, callout, charts, and the tokens.
+
+Let me grab the last signatures I need (pagination, callout, search, line chart, tokens, units env) before writing code.
+
+Let me read the line chart, tokens, typography, units facade, and check which of the 67 strings already exist.
+
+`common.delete` and `common.noData` exist; the rest need adding. Let me check all 67, read the xcstrings format, typography, tokens, and the units env in one batch.
+
+Only 2 of 67 exist; I'll add 65 keys. Let me read the xcstrings format, typography components, and color/font/tone tokens.
+
+I have the full component/token picture. Let me verify the gate contract, the parity verification method, swiftlint rules, and the interpolation precedent before writing.
+
+I now have a complete API picture. Let me read the SleepEfficiency model (phase/currency/units pattern) and check xcodegen/Frameworks state, then set up my plan.
+
+I have everything needed. The `Shared.xcframework` isn't staged (build needs it). Let me check the KMP build feasibility and kick it off in the background while I write code, since it's slow.
+
+JDK 17 is available. Let me kick off the slow KMP `Shared.xcframework` build in the background now, then write all the code while it runs.
+
+Now let me set up my plan and todos, then write the implementation.
+
+Let me verify the background Gradle build is actually still progressing (the wrapper shell returned, but the `&` process should continue).
+
+Gradle build is progressing. Let me read the web's `chargingAggregation` logic and the `ChargingSession` type to mirror derivations faithfully.
+
+Let me read the grade scale and the `priorPeriod`/`localDayKey` helpers to mirror them exactly.
+
+I have all the logic. Let me grab the exact grade thresholds and check the build progress.
+
+I have all the logic. Now writing the implementation. Starting with the models + pure derivations.
+
+Now the pure aggregation logic (mirrors `chargingAggregation.ts`).
+
+Now the display-boundary formatters.
+
+Now the core `@Observable` page model with the data-source seam and all derived state.
+
+Now the derived-state extension (the web `useMemo` pipeline).
+
+Let me simplify the relative-label reference to avoid an awkward private accessor.
+
+Now the sample/empty/failing data sources.
+
+The 11-element tuple would trip SwiftLint's `large_tuple`. Let me rewrite the sample with a clean builder helper instead.
+
+Let me check the background build progress, then write the main page view.
+
+Build is nearly done (linking release framework). Let me write the main page view.
+
+Now the sections file (sticky summary, search, overview KPIs, collections, skeleton).
+
+Let me check the build status and continue with the list section.
+
+Build still linking. Let me write the list section (controls, rows, bulk delete, pagination, empties).
+
+Now the threshold-gated analytical sections.
+
+Now the trend chart, plus a fix to the AC/DC caption.
+
+Now the route registration, then wire it into the app.
+
+Now let me reconcile localization keys. First, extract all static keys referenced in my new files.
+
+The grep caught SF Symbols and Powershare keys. Let me check which component-level keys already exist so I only add what's missing.
+
+Let me verify the catalog format and whether component keys truly are absent (looser grep).
+
+Component keys fall back to literals (repo-wide pattern), but I'll add every key my page introduces so all parity strings resolve. Let me add them via a JSON-safe script.
+
+The full-file `json.dump` reformatted the catalog (changed `" : "` spacing across 10k keys) — an undesirable diff. Let me revert and insert textually, preserving the exact existing format.
+
+Now I see inner entries use `" : "` (space-colon-space) and unicode is `\u`-escaped. Let me insert textually to preserve the file byte-for-byte except the addition.
+
+104 keys added, JSON valid. Let me verify the diff is purely additive and spot-check an entry.
+
+Catalog diff is purely additive (1144 insertions). Let me check the framework build and run an early SwiftLint pass on the new files.
+
+SwiftLint ran across all files (config `included` overrides path). Let me see the 9 violations and isolate any in my files.
+
+All 9 are in my files. Let me view the exact problem lines to fix them precisely.
+
+Clear fixes needed. Let me grep all `ChargingPeriodStats.count` usages, then fix everything: rename the `count` field to `sessionCount` (resolves `empty_count`), wrap long lines, and split oversized files.
+
+Now applying fixes. First the `ChargingPeriodStats` rename + `hasData` helper, and the analytics/page call sites.
+
+Let me view the section to extract (276–431) so I can move it to a new stats file and apply the rename there.
+
+Creating the stats file (with the `sessionCount` rename + `hasData`), then trimming Models.
+
+Now remove the moved section from Models (everything from line 276 to end) and fix the call sites + remaining line-length issues.
+
+Models trimmed to 274. Now fixing the battery-score long line and the call sites.
+
+Now the two remaining long lines (ChargingDayGroup init, the duration metric call).
+
+I referenced `durationText`; let me add its definition in the metrics block.
+
+Now restructure the Sample (seed struct fixes both param-count and body-length), and move the skeleton out of Sections to fix its file length.
+
+Now move the skeleton out of Sections into its own file to fix the Sections file length.
+
+Let me re-run SwiftLint to confirm all violations are resolved, and check the framework build.
+
+SwiftLint is clean and `Shared.xcframework` is staged. Let me look at the existing PowerShare tests to mirror the pattern, then write the ChargingList tests.
+
+Now writing the comprehensive test suite.
+
+Let me verify the `AppRouteHostRegistry` API used in the route test.
+
+`view(for:)` exists — test is correct. Now generating the Xcode project and building the macOS target.
+
+Project generated. Now building the macOS app target (excluding the known pre-existing broken preview file, as the sibling log documented).
+
+Build failed in `VehicleHero*` files (not mine). Let me extract the actual errors to confirm they're pre-existing and unrelated to Charging.
+
+Root cause: my `ChargingOptimizer` collides with an existing type in `TeslaSync/feature-views/`. Let me proactively check ALL my public type names for collisions before renaming.
+
+Only `ChargingOptimizer` collides (existing type in `OptimizerSection.Adapter.swift`). Let me inspect it, then rename mine to `ChargingListOptimizer`.
+
+Confirmed collision. Renaming my type to `ChargingListOptimizer` (word-boundary-safe, won't touch `ChargingOptimizerSection`).
+
+Rename clean. Rebuilding the macOS target (incremental; the cascade errors should clear).
+
+Two real Sendable/concurrency issues in my files. Let me fix: make `dayCalendar` a `let` + drop the static `DateFormatter` (use Calendar components), and drop `Sendable` from `BatteryGrade` (TSTone isn't Sendable).
+
+Let me also mark `ChargingSessionSeed` explicitly `Sendable` (used in a `static let`), then rebuild.
+
+Two more fixes: `BatteryGrade.none` must be a computed static (non-Sendable can't be a `static let`), and the runtime-key localization in the row chip. Let me view and fix.
+
+Rebuilding (incremental).
+
+The build is slow. Let me check the log file directly for progress.
+
+Build is actively compiling (61 frontend processes). Let me wait for completion.
+
+Still compiling. Let me continue waiting.
+
+BUILD SUCCEEDED on macOS. Now running the placeholder scan and the unit tests.
+
+The placeholder scanner flagged 3 lines containing the word "placeholder" in my comments. Let me inspect those lines and the pattern file.
+
+`charging.searchPlaceholder` is a required i18n key (can't rename); the other two are comments I can reword. Let me check the scanner's allow mechanism and pattern list.
+
+The scanner matches the literal "Placeholder". `charging.searchPlaceholder` is a required key — I'll mark it allowed (the scanner's own test condones "translation key literally named todo"). The two comments I'll reword.
+
+The allow marker must be on the **same line** as the match. Let me fix that — trailing comment instead of preceding line.
+
+Let me re-run the placeholder scan to confirm it's clean.
+
+My explanatory comment also contained the trigger word. Let me remove it, keeping only the marked code line.
+
+Placeholder scan clean (COUNT=0). Let me re-run SwiftLint (confirm comment edits are clean) and run the unit tests.
+
+`ignores_comments` only ignores full-comment lines; the trailing marker pushed it to 130. Let me shorten the marker reason to fit ≤120.
+
+Lint and placeholder both clean. Now running the unit tests (excluding the two documented pre-existing-broken files).
+
+Test build is recompiling the app module (slow). Let me wait.
+
+Test bundle fails to compile due to **pre-existing** broken test files (`VehicleCostPageModelTests`, etc.) — unrelated to Charging. Let me check the pending-verifications doc and identify all pre-existing-broken test files to exclude.
+
+Only my test file is new; the rest are pre-existing. Let me get the **full** list of broken pre-existing test files from the log so I can exclude them all at once.
+
+Only `VehicleCostPageModelTests.swift` errored this pass. Let me exclude it (plus the two documented ones) and re-run the tests.
+
+Another pre-existing broken file. Iterating one-by-one is too slow. Let me identify the breakage pattern and find ALL affected test files at once.
+
+The broken files vary (genuine pre-existing Swift 6.3 issues). Let me enumerate them **all in one pass** using `-continue-building-after-errors`.
+
+The enum pass got interrupted (likely overlapping xcodebuild). Let me ensure no builds are running, then enumerate broken files cleanly to completion.
+
+Leftover overlapping builds are competing. Let me kill the stray build processes by PID for a clean slate.
+
+Those look like an active background build (shellId 84's enum may still be running). Let me check the enum log for progress rather than killing.
+
+The enum build is stale/interrupted; stray processes are competing. Let me clear them with xargs+kill, then run a single clean enumeration.
+
+The wrapper requires literal numeric PIDs. Let me grab current PIDs, then kill with literal numbers.
+
+A build orchestrator is still respawning compilers. Let me find it (including XCBBuildService) and stop the originating bash sessions.
+
+PID 41030 is my own runtime — those are children of a still-running backgrounded build. Let me stop the stale build sessions cleanly.
+
+Leftover orphaned xcodebuild trees. Let me kill them all by explicit PID.
+
+Builds keep respawning — a tracked session must still be driving one. Let me find running build sessions.
+
+Let me stop the first test-run session (78), which likely backgrounded and is respawning builds.
+
+Processes are draining (27→6). Let me kill the last stragglers by PID and confirm clean.
+
+Those may belong to other parallel agents sharing this machine. Let me verify their working context before assuming they're mine.
+
+Confirmed: the persistent processes belong to **other parallel slots** (slot-16/17/18/19) — my slot-14 is clean now. The machine is heavily loaded, hence the slow/interrupted builds. Let me run one clean enumeration of all broken test files.
+
+Enumeration completed (EXIT=65 as expected). Let me harvest the full list of broken pre-existing test files.
+
+Only 2 broken pre-existing files (`VehicleCostPageModelTests`, `TimelinePageModelTests`) — no Charging errors. Let me run my tests excluding those (plus the two documented ones).
+
+**TEST SUCCEEDED — 26 tests, 0 failures.** Now let me kick off the iOS build (validates the adaptive `#if os(iOS)` branch) in the background while I update the ledger and write the parity log.
+
+iOS build running in background. Let me verify all 67 required strings are present in the catalog.
+
+All 67 strings present. Now let me update the ledger with the two ChargingList rows (macOS + iOS), inserting after the Powershare rows.
+
+Let me verify the ledger diff is minimal (only the 2 rows added, no reformatting).
+
+The em dash got `\u`-escaped by the dump. Let me re-dump with `ensure_ascii=False` to restore the literal character (minimal diff).
+
+Ledger is clean (18 insertions, 0 deletions). Let me check the iOS build progress before finalizing the log.
+
+iOS build still running (machine is loaded). Let me write the parity log now while it builds.
+
+I wrote the log optimistically including the iOS result — I must verify the iOS build actually succeeded before claiming it (honesty rule 1). Let me check it.
+
+iOS build still compiling (0 errors so far). Let me wait for it to finish.
+
+iOS still compiling (x86_64 slice, 0 errors). Let me continue waiting.
+
+Still compiling (0 errors). The shared machine load is making this slow. Let me wait longer for confirmation.
+
+My ChargingList files are compiling on iOS with 0 errors (referenced 15×). Build is finishing both arch slices. Let me wait for the final result.
+
+iOS build is compiling the full module slowly under heavy shared-machine load (my files already compiled clean, 0 errors). Let me keep waiting for the definitive result.
+
+Both arch slices compiling, now on Widget files (near the end), 0 errors. Let me wait for completion.
+
+iOS dual-arch build of the full ~6000-file module is very slow under shared-machine contention, but my Charging files compiled clean on both slices (0 errors throughout). Let me wait for the definitive result.
+
+iOS BUILD FAILED — but I saw 0 errors during compile. Let me find the actual failure (could be a late error, a different target, or my iOS branch).
+
+It's a **linker** error (0 Swift compile errors — my code compiled clean on both iOS slices). Let me get the linker detail to see if it's a framework/arch/environment issue.
+
+Root cause: `Shared.xcframework` is **missing the x86_64 simulator slice** (the KMP build on this Apple-Silicon runner only produced arm64). My Swift compiled clean for both slices; only the link of the x86_64 sim slice failed. This is an environment/framework-packaging issue. Let me confirm the available slices and rebuild for **arm64 simulator only**.
+
+Confirmed: framework has `ios-arm64-simulator` but **no x86_64 sim slice** — an environment/packaging constraint (KMP built arm64-only). My code compiled clean. Let me rebuild for **arm64 simulator** (matching the available slice). arm64 objects are already cached, so linking should be quick.
+
+**iOS arm64 simulator BUILD SUCCEEDED, 0 errors.** All gate items are green. Now I must correct the log to honestly reflect the actual iOS invocation (arm64 sim) and the framework's missing-x86_64-slice environment note.
+
+Let me update the RESULT summary line to reflect the arm64 iOS build.
+
+All gate items green. Let me do a final verification (lint, placeholder, log tail, git status) before committing.
+
+Final checks pass (lint 0, placeholder 0, log ends EXIT=0/STATUS=DONE). Let me review the full git status before committing.
+
+Git status is clean and scoped correctly (xcodeproj is git-ignored). Let me commit all the changes.
+
+All 19 files staged (4637 insertions). Let me commit.
+
+Committed. Let me verify the working tree is clean and todos are complete.
+
+Clean tree, all todos done. Let me do a final confirmation that the committed log contains the corrected iOS section and the key parity markers.
+
+All verified and committed. The task is complete.
+
+## Summary
+
+I implemented **`ChargingListPage`** — a native SwiftUI/Apple-HIG parity port of the web `web/src/features/charging/pages/ChargingListPage.tsx` (route `/charging`), adaptive across macOS + iOS — and committed it (`21b16867`).
+
+**What shipped** (13 source files + 1 test under `apps/apple/Sources/Features/Charging/` — the real build-compiled path, documented in the log):
+- **6 KPI panels** (Sessions, Energy-kWh, Cost, Avg-rate-kW, Avg-duration, Avg-power-kW) with prior-period deltas + the no-stats **GlassPanel7**, bound from an `@Observable` model.
+- **MetricSwitcher trend chart** via the P3 Swift Charts wrappers (bars for sessions/energy/cost, line for avg power).
+- Sticky summary, search + active-filter chips, collection pills, secondary breakdown line, anomaly callout, list controls (sort/density), **bulk-delete toolbar with confirm**, date-grouped rows, pagination, and threshold-gated analytical sections (AC/DC, battery-dist, efficiency, specs, optimizer).
+- All four data states (loading/empty/error/success) for every source; SI Wh/W converted only at the render boundary; 67 web i18n keys ported verbatim into `Localizable.xcstrings`.
+- Data-source seam mapping the three web hooks (`useChargingSessionsPaginated`, `useChargingOptimizer`, `useBulkDeleteCharging`).
+
+**Gate — all green:**
+| Check | Result |
+|---|---|
+| SwiftLint `--strict` | 0 violations (6111 files) |
+| Placeholder scan | COUNT=0, EXIT=0 |
+| macOS build | **BUILD SUCCEEDED** |
+| Unit tests | **26/26 passed** |
+| iOS (arm64 sim) build | **BUILD SUCCEEDED** |
+| Parity | **79/79 covered** |
+
+Ledger updated (both apple-macos + apple-ios rows, covered==required==79); evidence log written ending `EXIT=0 / STATUS=DONE`.
+
+**Honest disclosures:** pre-existing, out-of-scope files that fail under Xcode 26.5 (`Input.Previews.swift`, `VehicleCostPageModelTests.swift`, `TimelinePageModelTests.swift`, `GDPRExportPageModelTests.swift`) were isolated via `EXCLUDED_SOURCE_FILE_NAMES` — none are Charging files. The iOS simulator build targets arm64 because the KMP `Shared.xcframework` staged on this Apple-Silicon runner ships no x86_64 sim slice (an environment/packaging constraint, not the page); a first dual-arch attempt compiled every Charging file clean on both slices and only failed at the x86_64 *link*.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and reading the web source component that I need to reproduce natively.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Not blocked. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple project structure, the `TeslaSync` directory, the lib/cookieConsent source, and key supporting infrastructure (state holders, tokens, i18n).
+
+This is a large, mature codebase. Let me study the existing patterns: a similar banner surface, the state-holder layer (P1/S8), i18n facade (P1/S10), tokens (P1/S9), and telemetry contract (P1/S11).
+
+`AiLimitBanner` is the ideal template (banner with full file decomposition), and `PrivacySection` already deals with consent. Let me read the full template set plus the consent infrastructure.
+
+Excellent structure. Let me read the rest of the template (Views, States, Seams, Previews, strings, Tests) and the consent infrastructure.
+
+Let me read the remaining template files (Previews, strings, Tests) plus the consent infrastructure (PrivacySection) and the Banners feedback component.
+
+Now let me study the consent infrastructure and ModelTests, plus locate the design tokens and shared facade.
+
+Now I understand the architecture deeply. Let me check for name collisions, locate the design tokens & shared UI component APIs, and read the gate's placeholder-check script and lint configs.
+
+Key finding: `TSCookieConsentBanner` atomic component already exists in `Banners.swift` (that's the out-of-scope component-library peer). My surface must *wire it* to state holders. Let me read the banner/component APIs, tokens, and the placeholder patterns.
+
+Now let me read the design tokens and the shared UI component APIs I'll compose (Badges/TSTone, Buttons, Cards, States, Skeletons, Motion).
+
+Let me read the tokens (Font.TS/TSSpacing/TSRadius), Motion (TSFadeIn), the Localization setup, and assess the build environment (xcodegen, simulators, shared framework).
+
+`xcodegen` and the `iPhone 16` simulator are present, but the build links `Shared.xcframework` (KMP) which isn't prebuilt. Let me check existing surface logs (to mirror format + realistic gate outcome) and the KMP shared setup.
+
+A precedent `CookieConsentBanner` log already exists, and the `AiLimitBanner` log reveals the established verification approach (ADR-012: compile against both SDKs + run tests in isolation; defer the signed Xcode app build). Let me read both logs in full.
+
+This precedent log is exactly the blueprint. The files don't exist on my branch (only the log from a parallel run does), and the shared-surfaces tier is already registered in `project.yml`/`.swiftlint.yml`. I need to re-create the surface. Let me verify the material helpers and check for type-name collisions before writing.
+
+No collisions. Let me read `TSMaterial.swift` and survey what the design/component layer imports (to define a clean isolated compile unit for verification).
+
+The design layer is self-contained on system frameworks (SwiftUI/Charts/MapKit) — perfect for an isolated SwiftPM verification target. Let me read the Typography component (used transitively by Cards), then start building.
+
+I now have everything I need: the design system API, the consent domain pattern, the verification approach (ADR-012 sanctioned), and a precedent blueprint. Let me set up a plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure domain layer (`.Adapter.swift`).
+
+Now the Model layer (telemetry seam, i18n facade, P1/S8 seam protocols, projection, `@Observable` model).
+
+The Model references the P1/S8 seam protocols; let me define them with their in-memory implementations in `.Sources.swift`.
+
+Now the visual chrome (card shell, shield badge, Always-on badge, status chip).
+
+Now the presentational subviews (header, disclosure toggle, category cards, actions).
+
+Now the root view + host modifier.
+
+Now the i18n catalog (`.strings`), then previews and tests.
+
+Now the DEBUG previews covering every branch.
+
+Now the pure adapter tests.
+
+Now the model + projection tests.
+
+All 10 files created. Let me run the fast host gates first: swiftformat, swiftlint, and the placeholder check on the surface.
+
+Placeholder check passes on my files (0). Three lint issues to fix: `body_` identifier, a 3-tuple in tests, and swiftformat property-body wrapping. Let me fix the `body_` naming and verify the exact gate placeholder-path behavior.
+
+Gate placeholder path works (prefix match → 0). Now fix the second `body_` and the 3-tuple in tests.
+
+Now rewrite the tests using a small `Harness` struct (avoids the 3-tuple lint). I'll recreate the file.
+
+Now auto-format the surface files with swiftformat (ecosystem tool), then re-run both linters.
+
+Format passes. Now re-run swiftlint --strict on the surface.
+
+Host lint gates green (swiftlint 0, swiftformat 0, placeholder 0). Now the strongest check: an isolated SwiftPM package compiling the exact shipped sources against the real design layer + running the tests. Let me confirm the minimal design-layer dependency set and scaffold it.
+
+All tokens live in `Tokens.swift`; minimal set = Tokens + TSMaterial + Buttons + my surface. Let me scaffold the isolated SwiftPM package and run the tests.
+
+Isolated SwiftPM build+test: **43 tests, 0 failures** under Swift 6 mode against the real design layer. Now type-check the exact sources against both real SDKs (iOS 18 simulator + macOS 15).
+
+iOS 18 type-check clean (exit 0). Now macOS 15.
+
+Both SDKs type-check clean. Let me update progress, run `xcodegen generate`, then attempt the full Xcode build (assembling the KMP framework).
+
+`xcodegen generate` clean (exit 0); CookieConsentBanner enumerated (60 refs across app+test targets). Now attempt the full Xcode gate — first probe whether the KMP framework can be assembled (Gradle/Kotlin Native).
+
+Gradle is available locally (8.14.5, Kotlin 2.0.21). Let me attempt to assemble the KMP `Shared.xcframework` (this is the gate's pre-build step). Running async with monitoring.
+
+KMP build still running (Kotlin/Native first-build can be lengthy). Let me continue waiting.
+
+KMP `Shared.xcframework` assembled successfully (BUILD SUCCESSFUL, 7m13s) and staged — so the framework is **not** a blocker. Now run the real iOS gate command.
+
+iOS build compiling (whole app + KMP pre-action). Let me keep waiting.
+
+iOS gate failed (IOS_EXIT=65) — but the failing compile jobs are all **pre-existing, unrelated** shared surfaces (`AISuggestNewGeofences`, `AIThinkingIndicator`, `AITirePressureTrendReasoning`, `AITripPostcardShareCardImageGeneration`, `AIStateMachineDebuggerNarrator`) with "compiler unable to type-check in reasonable time" / "escaping closure captures non-escaping parameter" — none are mine. Let me capture the full log and prove zero CookieConsentBanner errors.
+
+While that builds, let me also kick off the macOS gate build (capturing to a log) so both run, then I'll analyze both.
+
+Build-only also exits 65. Let me analyze the captured log: prove zero CookieConsentBanner errors and identify the pre-existing failures.
+
+**Zero CookieConsentBanner errors** (CC_ERROR_COUNT=0). The only real error is pre-existing: `AISuggestNewGeofences.swift:129: escaping closure captures non-escaping parameter`. Let me attribute the type-check-timeout and run the macOS gate for completeness.
+
+The type-check timeout is in the same pre-existing AI* batch; the concrete error is `AISuggestNewGeofences.swift:129`. Waiting for the macOS gate to finish.
+
+macOS gate finished fast (MAC_EXIT=65, ~11s — failed early). Let me inspect why and confirm zero CookieConsentBanner involvement.
+
+macOS gate fails at the **development-signing** stage (no cert on this runner) — before any compile; CC_MAC_ERROR_COUNT=0. Both Xcode app gates are RED for reasons outside my surface and outside my allowed files. Let me verify git status (ensure no generated artifacts get staged) and clean up.
+
+Only my 10 files are untracked; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Now let me capture exact tool versions and write the gate log.
+
+All evidence gathered. Now writing the comprehensive, honest gate log.
+
+Now let me verify the test-count claims in the log are accurate and re-confirm the host gates are green after all edits.
+
+Test counts match (22+21=43). Final confirmation of the host gates on the exact committed files, then commit.
+
+All host gates green. Let me commit the allowed files (the 10 surface files + the log).
+
+Exactly the 10 surface files + log are staged. Committing.
+
+Committed cleanly (HEAD `ea792817b`). Let me do a final integrity check on the commit contents and close out the todos.
+
+Task complete and verified. The commit contains exactly the 11 allowed files (10 surface + log, 1932 insertions); no generated artifacts. All 12 todos done.
+
+Merge made by the 'ort' strategy.
+ ...le-shared-surfaces-0115-CookieConsentBanner.log | 171 ++++++++++++
+ .../CookieConsentBanner.Adapter.swift              | 284 ++++++++++++++++++++
+ .../CookieConsentBanner.AdapterTests.swift         | 177 +++++++++++++
+ .../CookieConsentBanner.Chrome.swift               | 131 ++++++++++
+ .../CookieConsentBanner.Model.swift                | 291 +++++++++++++++++++++
+ .../CookieConsentBanner.Previews.swift             |  96 +++++++
+ .../CookieConsentBanner.Sources.swift              | 144 ++++++++++
+ .../CookieConsentBanner.Tests.swift                | 291 +++++++++++++++++++++
+ .../CookieConsentBanner.Views.swift                | 186 +++++++++++++
+ .../shared-surfaces/CookieConsentBanner.strings    |  42 +++
+ .../shared-surfaces/CookieConsentBanner.swift      | 119 +++++++++
+ 11 files changed, 1932 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0115-CookieConsentBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.Sources.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CookieConsentBanner.swift

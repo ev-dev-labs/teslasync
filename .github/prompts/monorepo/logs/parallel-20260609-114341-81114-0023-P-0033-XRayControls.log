@@ -1,0 +1,162 @@
+I'll start by exploring the environment and reading the key files. Let me check the platform capability and the web source in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). The web source is a controls bar with vehicle/window/bucket selectors, where buckets ≥ the window are disabled. There's an existing `feature-views` directory with a strong established pattern.
+
+Let me understand the project structure and conventions.
+
+Excellent — there are already-built siblings `XRayHeader.*` and `XRayFieldsTable.*` from the **same** web feature directory (`features/admin/components/ingest-xray/`). These are my canonical references. Let me study them deeply along with the project config.
+
+This is a mature, well-established pattern. `XRayControls` is a controls bar (selectors), but the prompt still requires all live-state surfaces. Let me read the rest of the sibling files and find the shared types (`IngestXRayWindow`, `IngestXRayBucket`, `Vehicle`, design tokens).
+
+Key findings: `IngestXRayWindow`, `IngestXRaySummary` already exist in `XRayHeader.Adapter.swift` (same target — I'll reuse them). `IngestXRayBucket` doesn't exist yet — I'll define it in my own adapter. Now I need to find the shared design tokens (`TSSpacing`, `Color.TS`, etc.), shared UI components, a Select/Picker equivalent, and the `Vehicle` type.
+
+Now let me read the shared UI components I'll need (Pickers for the Select equivalent, Cards, Badges, Skeletons), the design tokens, and the remaining sibling files (strings, tests).
+
+`TSSelect` (menu-backed Picker) is the `Select` equivalent, but it has no per-option disable support — and the web bucket selector disables buckets ≥ the window. I'll need a `Menu`-based control for that. Let me read the remaining shared primitives, the test pattern, and a sibling "controls" surface for composition reference.
+
+Let me read the remaining design tokens/components and check a "controls" sibling plus the gate tooling (placeholder script, pwsh availability).
+
+All gate tooling is present (pwsh, xcodegen, swiftlint, swiftformat, check-placeholders.ps1). The xcodeproj needs generating. Let me read the remaining primitives, the placeholder checker, lint config, and a controls-bar sibling for composition reference.
+
+Let me read the placeholder checker, the Typography primitives, and a controls-bar sibling (NotificationFilterBar) for composition idioms.
+
+Let me read the forbidden-pattern list and the typography/button signatures to finalize my API usage.
+
+I have a thorough understanding of the established pattern. Let me verify build feasibility (the `Shared.xcframework` dependency and whether a build already exists) before writing code.
+
+Important: `Shared.xcframework` is absent (only `.gitkeep`) — the build pre-action builds it from KMP via Gradle, requiring the Kotlin/Native toolchain. Let me check whether that toolchain (Java/Gradle/`apps/shared`) is available, which determines whether the full `xcodebuild build test` gate can run.
+
+Java 17 + Gradle wrapper + KMP module are present, so the `Shared.xcframework` can be built (it's the long pole). Let me kick that off in the background now, set up my plan/todos, while I write the surface code.
+
+The framework build is running in the background. Let me quickly confirm the parent page's initial window/bucket defaults for accurate parity, then write the adapter.
+
+Confirmed parity defaults from `IngestXRayPage.tsx`: `vehicleId=null`, `windowSel='1h'`, `bucketSel='1m'`, and the exact `WINDOW_SECS`/`BUCKET_SECS` + `>=` disable rule. Now writing the adapter (pure projection core).
+
+Now the state-holder model (P1/S8 seam + telemetry + i18n facade), mirroring the sibling but with the vehicle list as the loadable and operator selection setters.
+
+The KMP framework is still building (downloading Kotlin/Native toolchain). Continuing with the presentational subviews.
+
+Now the main view with the phase orchestration.
+
+Now the i18n catalog and previews. Let me also check the framework build progress.
+
+Now the test suite (adapter + model + accessibility). Let me check the framework build status in parallel.
+
+All 7 surface files are written. Let me run the style gates (swiftformat, swiftlint) on my files — fast and authoritative — formatting first, then verifying.
+
+swiftformat normalized one file and now all pass `--lint`. Let me run swiftlint `--strict` on my files and see what changed in the reformatted one.
+
+swiftlint `--strict`: **0 violations** in all 6 files. Now let me scan my files for forbidden placeholder/stub patterns (I suspect a doc comment uses the word "placeholder").
+
+One doc comment contains the forbidden word "placeholder". Let me reword it.
+
+Let me verify with the actual placeholder checker (on a temp copy of my files) and re-confirm the grep is clean, while checking the build.
+
+Placeholder gate clean on my files (PLACEHOLDER_COUNT=0). The KMP framework is still building. Let me get fast syntax signal on my files via parse-only checks (no dependencies needed) while the framework finishes.
+
+All 6 files parse cleanly. The full gate needs the `Shared.xcframework`. Let me wait on the KMP build (it downloads the Kotlin/Native toolchain on first run).
+
+The KMP `Shared.xcframework` built successfully (BUILD SUCCESSFUL, EXIT=0). Now let me stage it, generate the Xcode project, and start the build.
+
+Framework staged, `TeslaSync.xcodeproj` generated. Now the authoritative compile: building the iOS app target (this compiles my surface in-context alongside the full app). This is a large first build, so I'll let it run.
+
+The iOS build is compiling the full app target in the background. Let me poll it (first builds of this size take a while).
+
+Build is progressing (intermediates being generated; `-quiet` suppresses normal output). Let me continue waiting.
+
+**iOS BUILD SUCCEEDED (IOS_BUILD_EXIT=0)** — the full app target compiled with my surface; the only output is pre-existing warnings in unrelated files (none in XRayControls). Now running my tests (builds the test bundle, runs only my 3 test classes).
+
+While the test bundle builds, let me run the repo-wide `swiftformat --lint` gate (fast, matches the gate exactly).
+
+`swiftformat --lint apps/apple`: **0/2707 files require formatting, FORMAT_EXIT=0**. Let me check the iOS test progress.
+
+The test bundle (compiling all co-located tests repo-wide) is still building. Let me gauge progress and continue waiting.
+
+App target is recompiling with testability enabled (then the test bundle). This takes time. Let me wait.
+
+The iOS test bundle failed to **compile** — but the errors are in **`PresetGallery.ModelTests.swift` / `PresetGallery.Tests.swift`** (a different surface I never touched), not in my files. These look pre-existing. Let me confirm they're pre-existing and unrelated to my work.
+
+Confirmed: only my 7 `XRayControls.*` files are new — I never touched PresetGallery. The errors are **pre-existing**: `PresetGallery` uses a *file-scope* `private let passthroughLocalize: (String, String) -> String` which Swift 6 strict concurrency rejects as non-Sendable. My tests use *instance-level* localizers (like the proven `XRayHeader` sibling), so they're unaffected — but PresetGallery's errors abort the whole shared test bundle.
+
+This pre-existing breakage is out of my allowed scope (only `XRayControls.*`). To verify my tests honestly, I'll temporarily move the broken sibling test files aside, run my tests, then restore them exactly (shipping no change). Let me enumerate all such pre-existing offenders.
+
+Only those 2 `PresetGallery` test files carry the pre-existing offender pattern. I'll temporarily relocate them, regenerate the project, run my tests, then restore (shipping zero change to them).
+
+Now running my tests (app target is cached; just the test bundle recompiles without the broken files).
+
+Let me wait for the test run.
+
+Test bundle still compiling. Let me continue waiting.
+
+Another pre-existing breakage in a *different* sibling: `ChargeStatusLiveWidget.Tests.swift` has duplicate test-class declarations (`invalid redeclaration of 'ChargeStatusAdapterTests'`, etc.). The shared test target is pre-existingly broken in multiple sibling surfaces. Let me enumerate ALL such pre-existing offenders (duplicate classes + file-scope closures) so I can isolate in one batch.
+
+Multiple sibling surfaces have duplicate test classes (ChargeStatus, DrivingCoach, MonthlyCost, Safety). Let me pinpoint the specific offending files so I can isolate just those (lighter than moving everything).
+
+The shared test target is pre-existingly broken across many sibling surfaces (duplicate class names between different widgets/sections, plus PresetGallery's closure-lets) — none of it mine. The robust isolation is to temporarily set aside **all** co-located test files except my own, run my tests, then restore everything exactly. Let me do that.
+
+The moves succeeded (294 + 121 sibling tests set aside; only my test remains), but the `ls` non-match broke the `&&` chain so `xcodegen` didn't run. Let me regenerate and run my tests.
+
+Test bundle now contains only Tests/Unit + my tests. Let me wait for results.
+
+Let me check what phase the test run is in.
+
+Regenerating invalidated the build cache, so the app target is fully recompiling (my XRayControls files are compiling now). Then it'll build the small test bundle and run. Let me wait.
+
+**All 35 of my tests PASS** — `XRayControlsAdapterTests` (15), `XRayControlsBucketTests` (6), `XRayControlsModelTests` (14). The full unit bundle ran **450 tests, 0 failures**. The trailing `TEST FAILED`/exit 65 is an environmental `simctl`-not-found hiccup in the separate UITest phase (after all unit tests passed) — unrelated to my surface.
+
+Now the critical cleanup: restore all 415 temporarily-moved sibling test files and confirm the tree is clean.
+
+Tree is clean — only my 7 files remain new; all 415 sibling tests restored. Now let me run the repo-wide `swiftlint --strict` gate and regenerate the project for the macOS leg.
+
+swiftlint found 1 violation across 2703 files. My files passed earlier with 0 — let me confirm this violation is pre-existing (not mine).
+
+The single swiftlint violation is in `LiveSignalSparklinesWidget.Builder.swift` (a sibling widget) — **not my files** (mine: 0 violations). It's pre-existing and outside my allowed scope.
+
+Now the macOS leg: let me compile the macOS app target to prove my surface builds cross-platform.
+
+While the macOS build runs, let me update my todos and confirm the log directory.
+
+The macOS build completed. Let me read its result and review a sibling's log format for consistency.
+
+The sibling `XRayHeader` log is illuminating: the **macOS signing failure is a known pre-existing runner limitation** (no dev certificate) — `"ZERO XRayHeader / feature-views errors"`, and the accepted disposition is `STATUS=DONE` with xcodebuild legs documented. My evidence is *stronger* (feature-views is now wired, so my iOS build **succeeded** and my tests **executed** 450/450 in-target). Let me get definitive macOS compile evidence by rebuilding with signing disabled (bypasses the cert blocker).
+
+Let me wait for the macOS build (it reuses the prior cache, so signing-skipped packaging should be quick).
+
+The earlier macOS attempt failed fast at pre-build signing validation (13s, no compilation), so this signing-disabled run is a full from-scratch macOS compile. Let me wait.
+
+Still compiling macOS. Let me check progress and keep waiting.
+
+macOS compilation is well underway (1918 objects compiled, only pre-existing warnings). Let me wait for completion.
+
+**macOS BUILD SUCCEEDED (MAC_BUILD2_EXIT=0)** with signing disabled — my surface compiles cleanly on macOS too. Let me confirm no errors and gather final evidence counts before writing the log.
+
+macOS compiles cleanly (0 errors, EXIT=0). All evidence gathered. Implementation is substantial (1462 lines total — comparable to the sibling). Now writing the comprehensive gate log with real, captured exit codes.
+
+Log written. Now final verification (re-confirm my files lint/format clean after the comment edit), clean temp artifacts, and confirm the tree shows only my intended files.
+
+Final state is clean: swiftformat **0/6**, swiftlint **0 violations**, temp artifacts removed, and `git status` shows exactly my 7 surface files + the log (xcodeproj/build are gitignored). Let me commit using the prompt's specified message.
+
+Committed (`20c8b3a88`) with exactly my 7 files + the log. Let me do a final sanity sweep — confirm the tree is clean, the 415 relocated sibling tests are fully restored & unmodified, and no temp dirs linger.
+
+All clean: working tree has no uncommitted changes, the 415 temporarily-relocated sibling tests are restored byte-for-byte (git sees no sibling modifications), no temp dirs linger, and sibling test counts are intact (fv=295 incl. mine, dw=121).
+
+The XRayControls Apple surface is complete, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0033-XRayControls.log   | 195 ++++++++++++
+ .../feature-views/XRayControls.Adapter.swift       | 215 +++++++++++++
+ .../feature-views/XRayControls.Model.swift         | 303 +++++++++++++++++++
+ .../feature-views/XRayControls.Previews.swift      | 137 +++++++++
+ .../feature-views/XRayControls.Tests.swift         | 333 +++++++++++++++++++++
+ .../feature-views/XRayControls.Views.swift         | 285 ++++++++++++++++++
+ .../TeslaSync/feature-views/XRayControls.strings   |  52 ++++
+ .../TeslaSync/feature-views/XRayControls.swift     | 137 +++++++++
+ 8 files changed, 1657 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0033-XRayControls.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayControls.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayControls.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayControls.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayControls.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayControls.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayControls.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/XRayControls.swift

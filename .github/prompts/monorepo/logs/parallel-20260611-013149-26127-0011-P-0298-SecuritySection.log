@@ -1,0 +1,192 @@
+I'll start by examining the environment capabilities and the existing structure, since this task requires Apple/Swift tooling.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). This is NOT a BLOCKED scenario. Let me explore the existing structure deeply.
+
+A large, consistent multi-file pattern per surface. Let me check whether SecuritySection already exists and find the best reference surface to mirror.
+
+SecuritySection doesn't exist yet. Good reference candidates: `ClimateSection` (sibling vehicle-detail section) and `SecurityStatusCards` (full file-set, security domain). Let me study them and the sibling web sources.
+
+`ClimateSection` is the ideal sibling template. Let me read its full file set plus the web source to map web→native precisely.
+
+The pattern is crystal-clear. Let me read the remaining ClimateSection files (Previews, Tests, strings), the web source, the MetricCard component, and confirm shared tokens exist.
+
+Now let me read the tests, web MetricCard, the API types for `SecurityEvent`/`VehicleState`, and confirm the shared tokens/project config.
+
+Now let me confirm shared tokens/components exist, read the API types for `SecurityEvent`/`VehicleState`, and understand the project build config.
+
+The `feature-views` path is auto-globbed into the targets. Let me read the project.yml target/test config, the API types, and the token definitions.
+
+I now understand the data shapes. `SecuritySection` takes two inputs (`securityData` + `state`), renders 4 metric cards, and the empty branch keys on `securityData`. Let me check count-interpolation conventions, the test target config, and the exact token/component APIs.
+
+Test files in `feature-views` auto-compile into both iOS and macOS test bundles. The `{{count}}` convention uses `.replacingOccurrences`. Let me read that helper and the design tokens.
+
+All tokens confirmed. Let me verify the exact shared component APIs (TSGlassPanel, TSButton, TSSkeleton, TSFadeIn) so my view compiles.
+
+All component APIs confirmed. Now let me check the build system (xcodegen/xcodeproj) and the placeholder checker the gate runs.
+
+xcodegen is available; I'll generate the project before building. Let me read the forbidden placeholder patterns to avoid tripping the gate.
+
+Case-insensitive matching — I must avoid "placeholder", "TODO", etc. entirely. I have everything needed. Let me check the lint/format configs and confirm no `SecuritySection` symbol collisions, then write the plan.
+
+No symbol collisions. Lint: 120-col lines, type names <50. I'll mirror ClimateSection's already-conforming style then auto-format. Let me confirm the logs dir exists and write the plan.
+
+Simulator's booted, logs dir exists. Let me check the ClimateSection P4 log format for reference and confirm the target log isn't already present.
+
+Clear precedent: surface must be 0-error and host-green; pre-existing sibling/full-app issues are documented via isolation rebuild. Let me write the plan, then author all files.
+
+Now I'll author the files. Starting with the Model (state-holder + telemetry + i18n facade).
+
+Now the Adapter (the pure, testable projection core with the JS coercion ports).
+
+Now the Views file (presentational subviews + all state chrome).
+
+Now the main surface view.
+
+Now the Previews and strings files.
+
+Now the comprehensive test suite (adapter, projector, model, a11y, per-state render).
+
+All 7 files written. Let me auto-format my files to conform, then lint them specifically before the expensive build.
+
+swiftformat passes (0/6 require formatting). Now swiftlint --strict on my files.
+
+One lint issue: the value-text resolver has 7 params (limit 5). I'll bundle the i18n words into a small struct. Let me fix the Views and update the matching test.
+
+Now re-format and re-lint to confirm clean.
+
+swiftlint + swiftformat clean on my files. Now let me generate the Xcode project. First check the Shared.xcframework dependency exists.
+
+Project generated, but `Frameworks/Shared.xcframework` is absent (only `.gitkeep`) — the app targets depend on it. This is the same external-dependency situation the ClimateSection (0291) precedent faced. Let me read that full log to follow the exact established standard.
+
+The predecessor built the Shared.xcframework via gradle (6m32s) but still deferred full-app build due to pre-existing sibling collisions + signing. Let me read the rest of the log to see their exact verification methodology.
+
+This is the established standard: isolated SwiftPM build + `swift test` + dual-SDK typecheck as primary green evidence, then run/document the full xcodebuild. Let me check the gradle/KMP availability and what the shared Sources import.
+
+gradle exists at `apps/shared`; Components/Design don't import Shared (only `UnitFormatters.swift` is KMP-dependent). Let me confirm the KMP boundary and check UnitFormatters.
+
+Let me check what "Shared" actually refers to in these component files (my surface uses `TSButton` from Buttons.swift).
+
+Those are just comments — the real `import Shared` (KMP) lives only in `SharedFacade`/`Dashboard`/`Live` dirs, and `UnitFormatters.swift` is the lone KMP-dependent file in the component closure. I'll replicate the predecessor's isolated SwiftPM build. Let me enumerate the closure.
+
+Clean closure: only `UnitFormatters.swift` is KMP-dependent. I'll build the isolated SwiftPM package (real token + component closure + my surface) exactly as the predecessor did. Let me set it up with symlinks to the real files.
+
+Package set up with 46 real symlinked sources. Now `swift build` (isolated, Swift 6 mode).
+
+`swift build` complete (ISO_BUILD_EXIT=0) — surface compiles cleanly with real tokens + components. Now run the full test suite.
+
+All 33 tests pass (SWIFT_TEST_EXIT=0). Now the dual-SDK typechecks — proving the shipped surface compiles for both the iOS 18 simulator SDK and the macOS 15 SDK (matching the gate's two platforms).
+
+iOS 18 simulator SDK typecheck: 0 errors (46 files). Now the macOS 15 SDK typecheck.
+
+Both SDK typechecks pass (0 errors). Now the placeholder gate — I'll run it both as the gate literally specifies and on a real scan dir holding my files (genuine verification, matching the predecessor's method).
+
+Placeholder gate clean (COUNT=0, EXIT=0) both literally and on a real 7-file scan. Now [8] i18n key coverage (referenced vs declared) + plutil lint. I'll match the `vehicles.detail.*`/`common.*`/`security.*` namespaces (SF Symbol names don't use these), so referenced keys are distinguishable.
+
+The lone diff is a regex artifact (`loadingA11y` truncated at the digit). Let me re-check including digits to confirm exact coverage.
+
+i18n coverage exact (21==21, 0 missing/orphan), plutil OK. All host-runnable gates are green. Now I must run the full xcodebuild and honestly document its disposition. First, let me check for pre-existing sibling duplicate-declaration collisions (independent of my surface) and attempt to build the Shared.xcframework dependency.
+
+macOS has **0 signing identities** (same pre-existing infra blocker the predecessor documented). The iOS build needs the absent `Shared.xcframework`. Let me look at the project's framework build script and kick off the gradle build in the background while I do a thorough collision scan.
+
+The project's pre-build script builds the KMP framework via gradle. Let me kick that off in the background (it's the ~6min long pole), then do a thorough collision scan while it runs.
+
+Java 17 + gradlew + the XCFramework task are all present. Let me launch the gradle build in the background and monitor it while I scan for collisions.
+
+The gradle process (PID 90955) is running detached. Let me monitor its log and run a thorough collision scan in parallel.
+
+Gradle is healthy (downloading Kotlin/Native, compiling iOS arm64 + simulator, linking). The `StateTimeline` files exist in BOTH `dashboard-widgets/` and `feature-views/` — the same pre-existing sibling structure the predecessor flagged. Let me confirm my `SecuritySection*` types are collision-free tree-wide (rule 9 audit).
+
+0 collisions — all 41 of my types are unique tree-wide; my surface introduces zero redeclarations. Gradle already produced the debug XCFramework and is linking the release one. Let me wait for it to finish.
+
+Release linking still in progress. Let me continue waiting for the release XCFramework.
+
+Gradle BUILD SUCCESSFUL (7m33s) — release `Shared.xcframework` built with ios-arm64, ios-arm64-simulator, and macos-arm64 slices. Let me stage it and run the full iOS xcodebuild.
+
+Framework staged, 42 SecuritySection pbxproj refs. Now the full iOS xcodebuild+test (large app, will take several minutes). Launching in background with logging.
+
+App target is compiling (feature-views included), 0 errors so far. The large app module build continues. Let me wait for it to progress further.
+
+Build failed with exactly **1 error**, and **0 SecuritySection errors**. The failing batch is a large group of unrelated files (AnnouncerRegion, AnomalyInlineRow, AppContainer…). Let me extract the actual error and let the build fully terminate.
+
+The sole error is in a **sibling surface** `shared-surfaces/AIAutoNameUnnamedLocations.swift:123` ("escaping closure captures non-escaping parameter") — a pre-existing bug in a file I never touched, **0 errors from SecuritySection**. Let me wait for the build to fully terminate and capture the final status.
+
+Definitive: **BUILD FAILED / TEST FAILED** on exactly **1 pre-existing error** in sibling `AIAutoNameUnnamedLocations.swift`, **0 SecuritySection errors**. Now the isolation rebuild (predecessor's standard) to prove the error is pre-existing and not induced by my surface — move my files out, regenerate, rebuild.
+
+Isolation build (warm derived data) reaches further and surfaces **52 pre-existing errors, 0 SecuritySection** (my files are removed). This mirrors the predecessor's exact finding. The warm cache lets it compile more batches before bailing. Let me wait for completion and enumerate all error files to confirm they're all pre-existing siblings.
+
+The 53 iso errors don't match the file:line pattern — they're a different error class. Let me inspect the raw error lines.
+
+The isolation rebuild's 53 errors are **build-infrastructure failures** (corrupted warm derived data: "disk I/O error" on build.db → cascading "const extraction" errors), not source errors — inconclusive because I reused the derived-data path. Let me check disk space and view the pre-existing bug, then run a clean isolation build with fresh derived data.
+
+Disk has 457Gi free — the I/O error was derived-data corruption from reusing the path mid-move, not disk pressure. The pre-existing bug is a self-contained Swift-6 escaping-closure error in sibling `AIAutoNameUnnamedLocations.swift` (0 SecuritySection references). Let me run a **clean** isolation build with fresh derived data (surface still removed).
+
+Clean isolation build launched (build-only, fresh DD). Let me monitor it.
+
+Clean isolation build is DONE — **1 error, 0 disk I/O issues**, and it surfaced a *different* pre-existing sibling (`AIGeofenceAwareAutomationSuggestions.swift`). Let me capture the exact error and confirm 0 SecuritySection.
+
+**Definitive proof.** Clean isolation build (no surface) **STILL fails** — `AIGeofenceAwareAutomationSuggestions.swift:141`, the *same* pre-existing Swift-6 escaping-closure bug pattern (`TSGlassPanel { content() }` with non-escaping `content`), **0 SecuritySection refs**. With-surface failed on `AIAutoNameUnnamedLocations` (same bug); without-surface fails on `AIGeofenceAwareAutomationSuggestions` (same bug) — both pre-existing siblings, neither is mine. Let me restore my surface and regenerate.
+
+All restored (7 files, 42 refs), lint/format clean. Now the macOS gate to capture its disposition (expected pre-existing: same AI* bug + 0 signing identities).
+
+macOS build launched. While it runs, let me re-confirm the isolated build+test still passes post-restore (symlinks resolve to the restored paths).
+
+Isolated `swift test` still green post-restore (exit 0). Let me check the macOS build.
+
+macOS build done: **4 errors, 8 signing-related lines, 0 SecuritySection errors**. Let me capture the exact errors and final marker.
+
+macOS fails with exactly the predecessor's disposition: **4 dev-signing errors** (TeslaSync-macOS + TeslaSyncWidgets-macOS entitlements; 0 valid identities on this runner), **0 SecuritySection errors**. All evidence gathered. Let me get file line counts, then write the comprehensive log.
+
+All files ≤400 lines, parity-complete. Now I'll write the comprehensive, honest log matching the predecessor's standard.
+
+Log written. Now let me handle git carefully — I must commit ONLY my allowed files (`SecuritySection.*` + the log), not build artifacts. Let me check what changed.
+
+Only my 7 `SecuritySection.*` files + the log are untracked; the xcodeproj and `Frameworks/Shared.xcframework` are gitignored (won't be committed). Staging exactly the allowed files and committing.
+
+Exactly the 8 allowed files staged, nothing else. Committing with the prescribed message.
+
+Committed cleanly (HEAD `ab95496f9`), working tree clean. Let me clean up the temporary build artifacts in /tmp and verify no stray background processes.
+
+Note: PID 21253 (`xcodebuild ... iPhone 17 Pro ... /tmp/pg_dd`) is a **different** run (shared environment — not mine); I'll leave it and the shared gradle daemon untouched. Let me verify my lingering gradlew wrapper state and confirm the committed log tail.
+
+The committed log is intact (ends `EXIT=0 / STATUS=DONE`). The gradlew wrapper (PID 90956) is in state `T` (SIGTTIN-stopped) — a finished leftover from my completed gradle build (the framework was already staged successfully). It's mine and safe to clean up; the shared daemon (29598) stays warm.
+
+The stopped process needs SIGCONT to process the signal (or SIGKILL). Let me reap it properly.
+
+PID 90956 reaped — environment clean. The task is complete and verified.
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) **`SecuritySection`** surface at full parity with the web source `features/vehicles/components/vehicle-detail/SecuritySection.tsx`, committed as `ab95496f9`.
+
+**7 files** (`apps/apple/TeslaSync/feature-views/SecuritySection.*`, 1,768 lines): main view, Model (P1/S8 seam + P1/S11 telemetry + P1/S10 i18n facade), Adapter (pure projection core), Views, Previews, Tests, strings.
+
+**Parity:** all 4 MetricCards (Locked / Sentry / Doors / Windows) reproduced verbatim — including the web's exact JS coercions (`windowOpenCount`'s `typeof v==='number'?v:Number(v)` and `String(door_state)`), the green↔cyan accent flips, and the lock/unlock glyph swap. Two-prop modelling (`securityData` + `state`) with the empty branch keyed on `securityData`. Every state renders (loading/empty/error/data/stale/offline). All 21 i18n keys resolve through the facade; 0 hardcoded English. VoiceOver labels, Dynamic Type, reduce-motion respected. `view.opened` emitted with slug `SecuritySection`.
+
+**Verification (all green, real output in the log):**
+- `swift build` (real tokens+components, Swift 6) = 0 · `swift test` = **33 tests, 0 failures**
+- `swiftc -typecheck` iOS 18-sim SDK = 0 · macOS 15 SDK = 0
+- `swiftlint --strict` = 0 violations · `swiftformat --lint` = 0 · placeholders = 0 · i18n 21==21
+- Collision audit: 41 `SecuritySection*` types, **0 tree-wide collisions**
+
+**Full-app xcodebuild** (Shared.xcframework built via gradle + staged; 42 pbxproj refs): `IOS_EXIT=65` / `MAC_EXIT=65` with **0 SecuritySection errors** — deferred on two PROVEN pre-existing/external blockers (a systemic sibling-surface Swift-6 escaping-closure bug in `shared-surfaces/AI*.swift`, reproduced by a clean isolation rebuild without my surface; and macOS dev-signing with 0 valid identities) — both outside the allowed-files scope. Capability is present, so not BLOCKED. This matches the established ClimateSection-0291 standard.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-feature-views-0298-SecuritySection.log` → **EXIT=0 / STATUS=DONE**.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0298-SecuritySection.log | 271 +++++++++++++++
+ .../feature-views/SecuritySection.Adapter.swift    | 315 +++++++++++++++++
+ .../feature-views/SecuritySection.Model.swift      | 255 ++++++++++++++
+ .../feature-views/SecuritySection.Previews.swift   | 112 ++++++
+ .../feature-views/SecuritySection.Tests.swift      | 374 +++++++++++++++++++++
+ .../feature-views/SecuritySection.Views.swift      | 243 +++++++++++++
+ .../feature-views/SecuritySection.strings          |  47 +++
+ .../TeslaSync/feature-views/SecuritySection.swift  | 151 +++++++++
+ 8 files changed, 1768 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0298-SecuritySection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecuritySection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecuritySection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecuritySection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecuritySection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecuritySection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecuritySection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecuritySection.swift

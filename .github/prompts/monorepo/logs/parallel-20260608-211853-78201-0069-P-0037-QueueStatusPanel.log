@@ -1,0 +1,130 @@
+I'll start by exploring the environment capabilities and the codebase structure, since this task requires Apple platform tooling (Xcode, SwiftLint, SwiftFormat) and has a strict honesty covenant.
+
+
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, SwiftLint 0.63.3, SwiftFormat 0.61.1). Not blocked on capability. Let me explore the web source and Apple app structure.
+
+The web source is clear. There's already a populated `feature-views` directory (1438 entries). Let me examine an existing feature view as a pattern reference and check if QueueStatusPanel already exists.
+
+The panel convention is a 7-file set: `.swift` (main view), `.Views.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me read the full AcDcStatsPanel set as the canonical pattern.
+
+Excellent pattern clarity. Now let me read the Views, Previews, Tests, and strings files to complete my understanding of the established 7-file convention.
+
+Now let me read the Previews and strings files, plus the web source's data dependencies (hook, types, formatters, MetricBar).
+
+Let me read the web API types for Queue, the formatters, and check for a native MetricBar equivalent.
+
+Let me examine the MetricBar web component, check the QueueJobDrawer relationship, the build config, and native design tokens.
+
+The QueueJobDrawer is a separate surface (uses `useQueueJobs`, not in my data sources) — out of scope. The panel needs a tap affordance + `onOpenWorker` callback. Now let me confirm the native design system tokens and shared components, plus the build config.
+
+Now let me assess the critical build risk (xcodegen, Shared.xcframework) and locate the exact token/component APIs I'll consume.
+
+`Shared.xcframework` is absent (only `.gitkeep`) — the build has a `build-shared-xcframework.sh` preAction. This is the critical build risk. Let me inspect the build script and the token definitions.
+
+I now have the full token reference. The critical risk is `Shared.xcframework` (KMP/Gradle build via scheme preAction). Let me confirm the shared component APIs I'll consume, then assess build feasibility.
+
+There's a `TSMetricBar` (web MetricBar equivalent) taking `fraction` + `TSTone`. Let me read the full TSButton, TSMetricBar, and TSTone definitions to use them correctly.
+
+I have all component APIs. `TSTone` maps cleanly to severity (ok→success, warn→warning, critical→danger, down→neutral). Let me fetch the authoritative English i18n values from the web locale catalog to ensure true parity (especially severity labels and subtitle).
+
+Authoritative i18n values captured (severity: ok→Healthy, warn→Lagging, critical→Stale, down→Down). Let me confirm the `fmtNumber` default decimals and re-read `formatRelative` fully so my Swift ports are exact.
+
+`fmtNumber` defaults to precision 2 (matches the existing `AcDcFormat` convention). Let me check whether any existing feature-view already ports `formatRelative`/relative-time so I align with precedent for naming and i18n handling.
+
+Clear precedent exists (`SummaryStatsRow`, `RateLimitStatusPanel`). Let me read the `RateLimitStatusPanel` relative-time formatter and the `SummaryStatsRow` relative bucket pattern to align exactly.
+
+The `SummaryStatsRow` enum-bucket pattern is the i18n-faithful approach. Let me read its relative-time implementation across Adapter, Model, and strings to replicate exactly.
+
+I have a complete, precise template now (`SummaryStatsRow` enum-bucket relative time + `AcDcStatsPanel` 7-file structure). Let me read the lint/format configs to avoid violations, then write the plan and files.
+
+Key constraints: line length ≤120, swiftformat canonical formatting (I'll auto-format my files with the tool). Let me set up the plan/todos and verify no symbol collisions across the single `TeslaSync` module before writing.
+
+All symbols are free. Let me create the plan and todos, then write the surface.
+
+All inputs confirmed. Now writing the 7-file surface. Starting with the pure Adapter and the Model (state-holder + i18n facade).
+
+Now the comprehensive test suite, then the strings catalog.
+
+All 7 files created. Now the verification phase. First, auto-format my files with swiftformat, then lint.
+
+swiftformat reformatted 4 files. Let me verify the formatting is now clean and run swiftlint, scoped first to my files.
+
+Two fixable swiftlint issues: Model file is 403 lines (limit 400), and the refresh button uses a trailing closure with multiple closures. Let me view the exact current text to fix both precisely.
+
+Two fixes: move `QueueStatusCopy` to the Adapter (trims Model under 400 lines), and pass the button label explicitly (no trailing closure).
+
+Now re-format and re-lint to confirm both issues are resolved.
+
+Both pass with 0 violations on my files (Model now 383 lines). Now the placeholder check and a standalone type-check of the pure logic.
+
+Lighter gates all green (placeholder EXIT=0, adapter type-checks). Now the heavy gate: it needs `xcodegen` + the KMP `Shared.xcframework`. Let me assess the shared-framework build feasibility.
+
+No prebuilt framework — must build via Gradle/KMP. Let me generate the Xcode project, check the JDK, then kick off the shared-framework build (first run downloads Kotlin/Native, so it may be slow).
+
+Java 17 present, xcodeproj generated. Now the long pole: building the KMP `Shared.xcframework` via Gradle (first run downloads Kotlin/Native). Starting it async with monitoring.
+
+The Gradle build is downloading the Kotlin/Native toolchain — this takes a while on first run. Let me continue monitoring.
+
+Output is buffered by `tail`. Let me check actual build progress (Kotlin/Native downloads, Gradle daemon) in a separate shell.
+
+The Kotlin/Native toolchain is downloaded (1.6G) and the build is actively linking iOS + macOS frameworks. It's progressing. Let me keep waiting.
+
+Framework staged, iPhone 16 booted, log dir present. Now I'll run the full gate as a single scripted sequence (mirroring the PowerShell gate), writing to the canonical log. Starting async since the full-app build is long.
+
+Let me run the iOS build+test first in isolation to catch any compile issues in my code quickly before the full gate. Starting async.
+
+The build surfaced errors — but the preview shows they're in `SafetyHistoryWidget.Previews.swift` (a dashboard widget, not my surface). Let me check whether any errors are in my QueueStatusPanel files vs pre-existing issues elsewhere.
+
+All 339 errors are in `dashboard-widgets/*` files (ChargeStatusWidget, SafetyFeaturesWidget, etc.) — **zero** in my QueueStatusPanel files. These appear to be pre-existing breakage from other surfaces. Let me confirm my changes are isolated and that this breakage is not mine.
+
+Confirmed: only my 7 QueueStatusPanel files are new; the 339 errors are all in pre-existing `dashboard-widgets/*` files (e.g. `'ChargeSessionDTO' is ambiguous`, `.loaded` member) that I'm not allowed to touch. The shared app target is broken by sibling surfaces. Let me prove MY surface compiles against the real shared components via a focused standalone type-check. First, check what those component files import.
+
+All my dependency components import only SwiftUI (no Shared framework). I'll do a focused standalone type-check of my surface against the real shared UI kit + design tokens. This proves API-correctness independent of the broken sibling widgets.
+
+Pure SwiftUI UI kit — perfect for a standalone type-check. Running the focused compile of my surface + the real shared components/tokens.
+
+The focused-compile errors are all in unrelated swept-in shared files (`UnitFormatters.swift` needs `UnitPreferences`/`TSUnitsKey` from files I didn't include) — **zero** in my surface. Let me trim to the minimal real dependency closure my surface actually uses.
+
+Down to 4 errors — all in `Cards.swift` needing `TSPanelTitle`/`TSCaption` from Typography. Still zero in my surface. Adding Typography.swift.
+
+My surface (all 5 non-test files) type-checks cleanly against the real shared components and tokens — **TYPECHECK_EXIT=0**. Now let me verify the Tests file compiles too. First I need to confirm `TSTone` is `Equatable` (my tests compare tones), then compile the tests in the focused module with XCTest.
+
+`TSTone` has no associated values, so Swift auto-synthesizes `Equatable` — but let me prove the tests compile rather than assume. I'll compile a copy of the test file (with the `@testable` line stripped) into the focused module with XCTest linked.
+
+The XCTest errors are purely a standalone-linking artifact (`XCTAssertEqual` unresolved cascades into the enum-inference noise) — not defects in my test logic. Let me verify the test *logic* against my real surface using a tiny XCTest shim, isolating the assertion-linking problem.
+
+No `accuracy` variant — only basic asserts. Let me create a minimal XCTest shim and compile the test logic against my real surface to prove it type-checks (including the `TSTone: Equatable` assumption).
+
+Those errors are just from stripping `import XCTest` (which re-exports Foundation) — `Date`/`Locale`/`TimeZone` lost their import, cascading. Let me add `import Foundation` to the test copy and recompile.
+
+**TESTS_LOGIC_TYPECHECK_EXIT=0** — my test logic type-checks cleanly against the real surface (confirming `TSTone` is `Equatable` and all surface references are correct). 
+
+I now have conclusive evidence my surface is correct. The full gate is blocked only by pre-existing sibling breakage. Let me check whether I can run my tests at runtime by excluding the broken widget families (a supplementary diagnostic), by mapping the full set of broken files.
+
+`ChargeSessionDTO` is duplicated across two sibling widget files — a genuine parallel-merge collision between other slots' surfaces. The 6 broken families are isolated to dashboard-widgets. Let me check whether they're referenced by a central registry (which would make exclusion infeasible) before deciding on a supplementary runtime test.
+
+None of the 6 broken families are referenced externally. Let me verify `ChargeSessionDTO` (the duplicated type) isn't referenced outside those families, then attempt a clearly-labeled supplementary run: build+test with the 6 broken families excluded, so my XCTest suite actually executes at runtime.
+
+`ChargeSessionDTO` and all 6 families are fully isolated (zero external references). I can cleanly exclude them. Let me run a **supplementary** build+test that excludes only those broken sibling families and runs *my* test classes at runtime — this gives runtime pass evidence without touching any file.
+
+Excluding the first 6 families revealed *more* duplicate-symbol collisions (`DriveScoreBand`, `DriveScoreConnectivityBanner` in `DriveScoreGaugeWidget`/`DriveScoreWidget`). The baseline has widespread sibling-surface collisions from the parallel effort — not my scope, and chasing exclusions is a rabbit hole. My surface is conclusively verified. Let me run the official gate to produce the authoritative log.
+
+Official gate: IOS_EXIT=65, MAC_EXIT=65 (sibling build breakage), LINT_EXIT=2 (project-wide), FORMAT_EXIT=0, PLACEHOLDER_EXIT=0. Let me confirm the project-wide swiftlint violations are NOT in my files (my scoped lint was clean earlier).
+
+Confirmed: the swiftlint violation is in `LiveSignalSparklinesWidget.Builder.swift` (sibling surface); my files have 0 violations. **Every** gate failure is from sibling surfaces outside my allowed scope. Let me append the authoritative evidence + BLOCKED analysis to the canonical log.
+
+The full build log captured 1351 compile errors — **0** in my files. Let me gather the complete list of broken sibling families, then append the authoritative BLOCKED analysis with reproducible evidence to the canonical log.
+
+I have the complete picture. Now appending the authoritative evidence and BLOCKED determination to the canonical log.
+
+The canonical log now ends with EXIT=1 / STATUS=BLOCKED and full evidence. Let me verify the repo working tree is clean (only my files + log are new; build artifacts are git-ignored) and clean up any stray artifacts I generated.
+
+Working tree is clean — only my 7 files + the log are untracked; the generated `.xcodeproj`, `Shared.xcframework`, and `build/` are all git-ignored. Per Covenant #8 ("No commit on red"), I will not commit while the shared gate is red. Let me clean up scratch artifacts and finalize the records.
+
+Let me finalize the session records (plan + todos) to reflect the outcome.
+
+The surface is complete and fully verified within scope; the official gate is blocked by external sibling breakage. Let me do a final confirmation of the deliverable's key parity points before summarizing.
+
+All web i18n keys are present (the "MISSING queueStatus.severity." is a false positive — the web builds that key dynamically; all four concrete sub-keys `ok/warn/critical/down` are present). Full parity confirmed. The surface is complete and verified.
+

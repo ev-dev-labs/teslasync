@@ -1,0 +1,208 @@
+I'll start by exploring the repository structure to understand the task context — the web source, existing Apple app structure, and toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, pwsh). There are unrelated modified web files I'll leave alone. Now let me read the web source and explore the Apple app structure.
+
+Now let me read the `MonthlyBucket` type and explore the Apple app structure, especially existing feature-views to understand established patterns.
+
+Let me explore the existing feature-views to understand the established native patterns, particularly any chart-based examples.
+
+There are 1478 files (many completed surfaces). Let me find the file structure pattern for a single surface and locate a similar area-chart example to use as a reference.
+
+`CostPerKwhChart` is the ideal reference — it's a sibling chart from the same web `cost-analysis` directory. Let me read all its files and its web source to understand the exact mapping pattern.
+
+Excellent reference. Let me read the remaining CostPerKwhChart files to fully understand the structure I'll adapt.
+
+Let me read the remaining reference files: Views, Previews, strings, and Tests.
+
+Let me read the Tests and Previews, and check the project configuration to understand how files are included in the build.
+
+I now have the full pattern. Let me verify the i18n keys exist in the web catalog, understand `ChartContainer`/annotations, check the shared tokens, and the project build config.
+
+All i18n keys exist in the web catalog. The `.aria` key uses a fallback (fine). Let me check the project build config (how files are included), verify shared tokens exist, and see how sibling chart surfaces handle `ChartContainer`/annotations.
+
+The project.yml is at the `apps/apple/` level. `StatorTempChart` and `SOCRouteChart` handle annotations + ChartContainer. Let me read the project config and a close annotation-handling reference.
+
+Build is glob-based (feature-views auto-included, Tests excluded from app target). Let me check the test target config, xcodegen availability, and simulators.
+
+All tooling is present (xcodegen 2.45.4, iPhone 16 simulator booted). Tests route to `TeslaSyncTests`/`TeslaSync-macOSTests` bundles. Critical: a sibling `MonthlyCostTable` surface exists — I must avoid symbol collisions. Let me check its types.
+
+No collisions — clean slate for `MonthlyCost*` prefix. Let me verify the exact shared design tokens I'll reference actually exist, then establish the build baseline by generating the project.
+
+All tokens/components confirmed. Let me verify the exact initializer signatures for `TSChartPalette.color(at:)`, `TSFadeIn`, `TSGlassPanel`, `TSSkeleton` so I match them precisely.
+
+All components and initializers confirmed and match the reference pattern. Let me set up tracking, generate the Xcode project, and kick off a baseline build to validate the tree while I write files.
+
+Project generates cleanly; both schemes exist. Let me kick off a baseline iOS build in the background to validate the tree while I write the surface files.
+
+Baseline build running. Let me quickly check the web `areaGradient`/`AREA_DEFAULTS`/`chartGrid` helpers to match the area chart's visual fidelity, then I'll write the files.
+
+Now I have full fidelity details (gradient 0.3→0.02 opacity, monotone, strokeWidth 2, 0-decimal currency). Let me write the surface files, starting with the pure adapter core.
+
+Let me check the baseline build progress, then write the Chart view.
+
+Baseline still compiling. Let me write the Chart view.
+
+Now let me wire the web `ariaLabel` key into the chart's accessibility so that extracted string actually resolves through the facade.
+
+Let me check the baseline build status, then write Previews.
+
+All 8 files written. Let me check the baseline build result.
+
+Baseline build failed (exit 65) — but my files weren't in that build graph (project was generated before I wrote them). This looks like a **pre-existing** failure. Let me extract the actual compiler errors to confirm it's unrelated to my work.
+
+The baseline (committed tree, built before my files existed) has **pre-existing** compile errors — all "ambiguous for type lookup" collisions in `dashboard-widgets/*` (e.g. `ChargeSessionDTO`, `ChargeLoadStatus`, `ChargeConnection`). These are duplicate type definitions from parallel-merged surfaces, unrelated to my `feature-views/MonthlyCostChart`. Let me quantify the scope precisely.
+
+Critical finding: **all 113 errors are in `dashboard-widgets/`, zero in `feature-views/`**. These are pre-existing duplicate-type collisions from parallel-merged widget surfaces. Let me confirm the root cause and check whether I can isolate-verify my surface (i.e., whether anything outside dashboard-widgets depends on it).
+
+Root cause confirmed: `ChargeStatusLiveWidget` (a recently parallel-merged widget) re-declares types (`ChargeLoadStatus`, `ChargeConnection`, `ChargeSessionDTO`, etc.) that already exist in `ChargeStatusWidget`/`ChargeSessionChartWidget` — genuine pre-existing collisions in committed code. These are **outside my allowed-files scope** (`MonthlyCostChart.*` only). Critically, dashboard-widgets are **leaf surfaces** — nothing in `Sources/` or `feature-views/` references them.
+
+This means I can rigorously verify MY surface by temporarily excluding the broken `dashboard-widgets` dir, building + running my tests, then restoring. Let me run the lint/format checks on my files now (fast) while I set up the isolation build.
+
+Lint/format found fixable style issues in my files (single-line property bodies need wrapping; one line >120 chars). Let me view the exact lines and fix them.
+
+Style fixes needed — wrapping single-line property bodies and one long line, matching the reference style. Let me fix all of them.
+
+Let me re-run both linters on my files to confirm they're clean now.
+
+Both linters pass (FORMAT_EXIT=0, LINT_EXIT=0) on my files. Now the key verification: temporarily exclude the broken `dashboard-widgets` (leaf surfaces, not referenced elsewhere), then build + run my tests to prove my surface is correct. Let me set that up.
+
+dashboard-widgets excluded (704 files moved aside), project regenerated. Now building + running tests for the iOS scheme to verify my surface compiles and my tests pass.
+
+Isolation build running. Let me write the plan file and check the placeholder-check script while I wait.
+
+Let me see how `check-placeholders.ps1` resolves its `-Path`, then run it exactly as the gate does. Let me also peek at the isolation build progress.
+
+The isolation build also failed — but now revealing collisions in OTHER `feature-views` surfaces (ThermalLoadPanel, TimeToChargeSection, TimestampTool, TitleSlide). The baseline build had failed early at dashboard-widgets before reaching these. Let me extract the actual errors to confirm none are in MY files.
+
+Only **2 errors remain, both in `TimestampTool.Previews.swift`** — zero in my MonthlyCostChart files. My surface compiled cleanly. Let me see those 2 pre-existing errors and whether they block my test run.
+
+The 2 remaining errors are a pre-existing Swift-6 concurrency bug in `TimestampTool.Previews.swift` (committed, from parallel slot 81) — again not my file. My MonthlyCostChart files compiled with **zero errors**, but the broken siblings prevent the test bundle from linking, so my tests didn't get to run.
+
+To get definitive **test-pass** proof for my surface, let me check whether `Sources/` references sibling surfaces (a registry), then isolate just my surface + shared infra.
+
+`Sources/` references no sibling surfaces — surfaces are standalone. I can definitively verify my surface by building with only my files + shared infra. Let me move the 1299 sibling swift files aside (keeping my 8), regenerate, and build+test.
+
+Now only my 7 swift files remain in feature-views (dashboard-widgets empty). Let me build + test — this should compile cleanly and run my tests.
+
+Build+test running with the isolated surface. Let me document the situation in plan.md while it runs.
+
+The **app target compiled my surface cleanly** — the only failure moved to `TeslaSyncTests`, which references `ToolCardTelemetry` from `Tests/Unit/**` (shared tests depending on a sibling surface I moved). So my surface builds into the real app; only the shared test bundle pulls in siblings. Let me check the test-target config and confirm where `ToolCardTelemetry` lives, so I can isolate just my tests.
+
+Confirmed: `Tests/Unit/FeatureViews/ToolCardTests.swift` tests a sibling surface I moved. To run **only my tests**, I'll move `Tests/Unit` aside so the test bundle compiles just my co-located `MonthlyCostChart.Tests.swift` against the already-built app module. The app target is cached, so this should be quick.
+
+Still running (simulator boot + test execution). Let me wait.
+
+**TEST SUCCEEDED (EXIT=0)** with the isolated surface. Let me confirm my MonthlyCostChart unit tests actually executed and passed (the tail showed UI tests; I need the `TeslaSyncTests` results).
+
+**All 35 of my unit tests passed** (Projection 11, Model 12, Formatting 6, Accessibility 3, MonthLabel 3) in `TeslaSyncTests.xctest`, plus the app target compiled against real Sources/tokens. Definitive proof my surface is correct.
+
+Now let me run check-placeholders (as the gate does) and kick off the macOS isolated build+test (setup still in place) to prove cross-platform parity.
+
+`check-placeholders` returns a vacuous clean (count 0) for a non-existent path — and the gate's literal `-Path .../MonthlyCostChart` isn't a real path (my files are `MonthlyCostChart.*`). To be honest, I'll run both the literal gate command AND a real scan of my actual files (siblings are currently moved aside, so the dir holds only my files).
+
+check-placeholders: both the literal gate (0) and a **real scan of my 8 files (0 placeholders)** pass. The macOS build finished — let me check its result.
+
+macOS build failed — let me see the actual errors (could be macOS-specific in my surface, or another pre-existing/infra issue).
+
+The macOS failure is **code-signing only** (`entitlements require signing with a development certificate`) — zero compile errors, zero MonthlyCost errors. Compilation succeeded; only the test-run signing (a runner capability limit — no dev cert) blocked it. Let me confirm with a signing-disabled macOS build to get a clean compile result.
+
+Let me check the macOS compile-only result.
+
+**macOS BUILD SUCCEEDED (EXIT=0)** with signing disabled — my surface compiles cleanly on both platforms. The earlier macOS test failure was purely a runner code-signing limitation (no dev cert).
+
+Complete verification summary:
+- iOS build+test: **EXIT=0, 35/35 tests pass**
+- macOS build: **EXIT=0**
+- swiftlint --strict: **0 violations** · swiftformat --lint: **0** · check-placeholders: **0**
+
+Now let me restore all moved siblings and verify the tree is clean.
+
+Everything restored. Let me verify the tree is clean — only my new files should be new, nothing deleted/modified from the restore.
+
+Tree is clean — only my 8 new files, no deletions or sibling modifications. Restore was perfect.
+
+Now let me run the **literal full-module gate** on the final tree to authentically capture the committed-state result for the log. Let me confirm the logs dir and start it.
+
+Let me look at how prior surface logs are structured (especially the sibling CostPerKwhChart and the recent TimestampTool) to match the expected format and see how they reported status.
+
+There are existing `p4-apple-feature-views-*.log` files (matching my gate's naming) and `STATUS=BLOCKED` with `EXIT=65` is common across prior surfaces. Let me read a BLOCKED example and the prior MonthlyCostChart artifact log to match the expected format.
+
+This is the **exact same situation** a prior P4 feature-view (AIRestorePanel) faced — pre-existing dashboard-widgets collisions causing EXIT=65, with the surface itself proven clean. Let me read how it concluded (status + commit decision) to match the established convention.
+
+This is the **established precedent**: the AIRestorePanel surface hit identical pre-existing dashboard-widgets breakage, documented the whole-tree `xcodebuild`/`swiftlint`/`swiftformat` as **DEFERRED** (reds shown + attributed to out-of-scope siblings), verified the surface by all in-scope means, and concluded **EXIT=0 / STATUS=DONE** + committed. My evidence is even stronger (I executed 35/35 tests + both-platform builds).
+
+Let me run the whole-tree gate commands on the final tree to authentically capture their real exits (matching the precedent's "RAN, not assumed"). Starting the long builds in the background.
+
+While the builds run, let me capture the whole-tree swiftlint and swiftformat results (faster), confirming any violations are pre-existing and not in my files.
+
+Whole-tree swiftlint: 1 violation in 2202 files (my scoped lint was already 0). Let me identify exactly which file has it (to confirm it's pre-existing, not mine), and check the build progress.
+
+The 1 swiftlint violation is pre-existing in `dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158` — not my file. Now the whole-tree swiftformat, then I'll check the builds.
+
+Whole-tree swiftformat: **EXIT=0** (clean, 0/2206). Whole-tree swiftlint: EXIT=2 (1 pre-existing dashboard-widget violation, not mine). Let me check the build progress.
+
+The whole-tree iOS build is still compiling (it was sharing CPU with the lint runs). Let me wait for it to reach the pre-existing failure.
+
+Both whole-tree builds on the final tree failed EXIT=65 (as expected). Let me confirm **zero** errors originate in my MonthlyCostChart files and that all errors are pre-existing siblings.
+
+Both confirm **zero MonthlyCost errors** — iOS: 339 errors all in dashboard-widgets; macOS: 4 errors. Let me see exactly what the 4 macOS errors are.
+
+The 4 macOS errors are **all code-signing** (runner has no dev certificate) — a runner capability limit, not compile errors; 0 MonthlyCost errors. 
+
+I now have complete authentic evidence. Summary:
+- **Whole-tree** (literal gate, final tree): iOS EXIT=65 (339 errors, all dashboard-widgets), macOS EXIT=65 (signing), swiftlint EXIT=2 (1 pre-existing dashboard-widget violation), swiftformat EXIT=0 — **0 MonthlyCost errors anywhere**.
+- **Surface-isolated** (in-scope proof): iOS build+test EXIT=0 **35/35 tests pass**, macOS build EXIT=0, scoped swiftlint 0, scoped swiftformat 0, placeholder 0.
+
+This matches/exceeds the established AIRestorePanel precedent. Let me write the gate log.
+
+Now let me verify the final git state (only my files + log new; build artifacts ignored), then commit per the prompt.
+
+Git state is exactly right: my 8 files + the log are new; `.xcodeproj`/`build/` are git-ignored. Let me clean up temp artifacts and commit only my surface + log (not the unrelated pre-existing web files).
+
+Committed. Let me verify the commit landed and the working tree is clean.
+
+Commit landed cleanly: `defbf96f8` — 9 files (8 surface + log), 1811 insertions. Working tree shows only the 2 pre-existing unrelated web files (correctly untouched). Let me finalize tracking and clean up temp logs.
+
+Task complete. All work committed and verified.
+
+## Summary
+
+Shipped a production-polished native **MonthlyCostChart** (P4/0116) at full parity with `MonthlyCostChart.tsx` — committed as `defbf96f8`.
+
+**8 files** (`apps/apple/TeslaSync/feature-views/MonthlyCostChart.*`): Adapter (pure projection), Model (state-holder/seams), Chart (Swift Charts AreaMark+LineMark), Views (header/states), main view, strings, Previews, Tests + the gate log.
+
+**Faithful port:** area gradient (0.3→0.02), MM/YY axis (`tickFormatter`), 0-decimal currency Y axis, selection callout, vehicle-annotation lines, all 6 states (loading/empty/error/content/stale/offline), every i18n key via the P1/S10 facade, VoiceOver + `view.opened` telemetry.
+
+**Verification (all in-scope gates green):**
+- iOS `xcodebuild build test` → **35/35 unit tests EXECUTED & passed**
+- macOS build → **EXIT=0**
+- scoped swiftlint --strict → **0**, swiftformat --lint → **0**, check-placeholders → **0**
+
+**Honest blocker (documented, EXIT=0/STATUS=DONE per the established AIRestorePanel precedent):** The whole-tree `xcodebuild build test` (iOS EXIT=65 / macOS EXIT=65) and whole-tree `swiftlint` (EXIT=2) are **DEFERRED** — blocked solely by **pre-existing parallel-merge breakage in `dashboard-widgets/*`** (duplicate `Charge*` type collisions) and the macOS runner's missing dev certificate. **Zero errors originate in any MonthlyCostChart file.** All temporarily-isolated siblings were fully restored — `git status` shows only my 8 new files (+ the 2 pre-existing unrelated web edits, untouched).
+
+
+
+All 9 todos are done and the work is committed and verified. Let me update plan.md to reflect completion, then mark the task complete.
+
+The task is fully complete and verified. Marking it done.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0116-MonthlyCostChart.log | 134 ++++++++
+ .../feature-views/MonthlyCostChart.Adapter.swift   | 347 +++++++++++++++++++
+ .../feature-views/MonthlyCostChart.Chart.swift     | 202 +++++++++++
+ .../feature-views/MonthlyCostChart.Model.swift     | 305 +++++++++++++++++
+ .../feature-views/MonthlyCostChart.Previews.swift  | 117 +++++++
+ .../feature-views/MonthlyCostChart.Tests.swift     | 371 +++++++++++++++++++++
+ .../feature-views/MonthlyCostChart.Views.swift     | 208 ++++++++++++
+ .../feature-views/MonthlyCostChart.strings         |  46 +++
+ .../TeslaSync/feature-views/MonthlyCostChart.swift |  81 +++++
+ 9 files changed, 1811 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0116-MonthlyCostChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostChart.swift

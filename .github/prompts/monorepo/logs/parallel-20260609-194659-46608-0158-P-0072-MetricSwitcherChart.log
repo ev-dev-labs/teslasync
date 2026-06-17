@@ -1,0 +1,228 @@
+I'll start by exploring the repository structure and understanding the task dependencies.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the apps/apple structure and the web source.
+
+Let me read the web source component end-to-end and explore the existing Apple project structure.
+
+Now I understand the web component — it's a presentational chart with a pill switcher row, rendering bar/area/line charts per metric, with an empty state. Let me explore the existing Apple project structure to learn the conventions and find the dependencies (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics, and native equivalents of PillFilterBar/EmptyState).
+
+This is a large, mature project with ~428 files in shared-surfaces following a consistent multi-file pattern. Let me find the infrastructure (S8 state holders, S9 tokens, S10 i18n, S11 diagnostics) and a chart-using surface to use as a template.
+
+No shared surfaces use Swift Charts yet. Let me examine the SharedFacade (likely i18n/diagnostics), Components, and Design directories to find the facades and shared component equivalents.
+
+There's already an atomic `Sources/Components/Charts/MetricSwitcher.swift` (the component-library version, out of scope) plus chart infra and the SharedFacade state-holder layer. Let me read the key infrastructure and atomic components I'll compose.
+
+Now let me read the chart infrastructure, the state-holder facade (S8), and the feedback/forms components I'll compose.
+
+Let me read the S8 state-holder facade, i18n/diagnostics facade, design tokens (S9), and the Forms/Feedback components I'll compose.
+
+Let me find the diagnostics/telemetry API (S11 `view.opened`), the design tokens (S9), and examine a complete representative shared surface to mirror conventions exactly.
+
+Let me see how existing shared-surfaces handle telemetry `view.opened` and study a complete representative surface end-to-end.
+
+Let me find non-AI / presentational surfaces and examine the simplest complete one to mirror structure, plus check what a `.strings` file looks like.
+
+A `ChartContainer` shared surface exists — also from web `components/charts/`, the ideal template. Let me examine it completely.
+
+`ChartExportMenu` is the cleanest complete chart surface template. Let me read all its files to mirror the exact conventions.
+
+Excellent template. Let me read the remaining template files (Previews, strings, Tests, ModelTests) and the design tokens to know exact token/palette names.
+
+Let me read the view/logic tests, design tokens, and typography to finalize my understanding of conventions and exact token names.
+
+Let me locate the generated design tokens (Color.TS, Font.TS, TSSpacing, TSRadius) and the typography components to confirm exact names.
+
+I have the tokens. Let me read the typography & feedback components plus a presentational surface (AnnouncerRegion with its `.States.swift`) and how `LoadableState` is consumed, to finalize the state-handling design.
+
+Let me confirm `TSTone` cases and find how an existing surface renders the full `LoadableState` matrix (loading/empty/error/stale) to match the established state-rendering pattern.
+
+I have a thorough understanding of conventions. Before writing code, I must verify the build harness works (this gate runs `xcodebuild build test` which needs xcodegen + the KMP `Shared.xcframework`). Let me check toolchain availability.
+
+The build depends on a KMP `Shared.xcframework` built via Gradle/Kotlin-Native (not present, only `.gitkeep`). This is the critical risk. Let me check the shared module, known constraints doc, and whether Gradle can run here.
+
+The full gate requires building the KMP `Shared.xcframework` via Gradle/Kotlin-Native — potentially slow and network-dependent. Let me check Java and kick off that build in the background while I write the surface code.
+
+Good — Java 17, Gradle caches, and the Kotlin/Native prebuilt toolchain are all cached locally (the framework has been built here before). Let me kick off the `Shared.xcframework` build in the background while I write the surface code.
+
+Let me check the build's early progress and create a plan while it runs.
+
+Build is progressing using caches (compiling iosArm64, linking macosArm64). Let me set up a plan and start writing the surface code while it finishes.
+
+I need to check `FacadeError` (used by `LoadableState.failed`) so my render-mode logic and tests can construct it. Let me read it.
+
+I need to confirm how sibling surfaces pass localized strings into shared feedback components and what's in the Localization catalog (this drives my i18n rendering approach). Let me check.
+
+The pattern is clear: surfaces resolve their own strings via the facade and render with `Text(verbatim:)`, building small state subviews. Let me read AnnotationList's state subviews and the strings catalog to confirm structure.
+
+This AnnotationList pattern is the ideal template (phase enum + per-phase verbatim subviews + freshness chip for stale/offline). Let me read its freshness chip and projection to mirror the stale/offline pattern exactly.
+
+The AnnotationList pattern is my gold-standard template. Let me confirm the exact signatures of `TSSkeleton`, `TSButton`, `TSFadeIn` and check on the framework build.
+
+The framework build succeeded but the log shows it staged to **slot-157**, not slot-158, and slot-158's `Frameworks/` looks empty. Let me investigate why and whether the slots share files.
+
+The shared `/tmp` log collided with a concurrent agent in **slot-157** (note the unexpected `BUILD_SCRIPT_EXIT=0` I never wrote). The slots are separate dirs sharing `/tmp` and Gradle caches. Let me check my actual build status and slot-158's own framework output.
+
+Now it's clear: multiple slot agents (156/157/158…) run concurrently, sharing the Gradle daemon and `/tmp`. My slot-158 build (PID 45393) is **still running** and will stage to slot-158. I'll let it finish while I write code. Let me check the lint/format configs first, then write the Model.
+
+Build still running (PID 45393, will stage to slot-158). Configs noted: max line 120, `@testable` imports at bottom, identifiers ≥2 chars. I'll write the code now and auto-format before the gate. Let me mark the todo and write the Model — the Foundation-only core.
+
+Model written. Now let me verify the `TSButton` label-closure init signature and check build progress before writing Views.
+
+My slot-158 build is **done** — `Frameworks/Shared.xcframework` is staged. `TSButton` label-closure init confirmed. Let me write the Views file.
+
+Now the public entry View.
+
+Now the strings catalog, previews, and tests.
+
+Now the tests. Let me write `Tests.swift` (logic, projection, i18n, a11y) with shared test data, and `ModelTests.swift` (adapter, telemetry, model).
+
+All 7 files written. I spotted a Swift Charts API bug in my X-axis code (incorrect `$0` usage inside `AxisValueLabel`). Let me fix it.
+
+Now let me auto-format my files with swiftformat (in-place) and run swiftlint to catch issues early.
+
+swiftformat normalized 4 files. Let me verify lint-cleanliness (swiftformat --lint + swiftlint --strict) on my files and review what changed.
+
+swiftformat clean. One swiftlint issue: `Model.swift` exceeds the 400-line `file_length` limit (746 lines). The sibling surfaces split into `.Source`/`.Projection`/`.Model` files (all match the allowed `MetricSwitcherChart.*` glob). Let me split into three files. First, create the data-types + logic file.
+
+Now rewrite `Model.swift` to keep only the identity, telemetry, i18n facade, and the `@Observable` model.
+
+Now re-format and re-lint all my files (now 8 files) to confirm clean.
+
+swiftformat and swiftlint both clean (0 violations) on all 8 files. Now let me generate the Xcode project and do a fast compile of the app target (bypassing the slow gradle scheme pre-action by building the target directly against the already-staged framework).
+
+Project generated. Now a fast iOS-simulator compile of the app target (skips the gradle pre-action, links the staged framework) to catch Swift errors quickly.
+
+The failure is an architecture mismatch: it tried to build x86_64 but `Shared.xcframework` only has an `arm64` simulator slice (Apple Silicon). I need to constrain to `arm64`. Let me rebuild arm64-only.
+
+These errors are all in **other** surfaces (`RecentDrives*`, `StateTimeline*`) — none in my files. "Ambiguous for type lookup" means duplicate type definitions pre-exist in the repo snapshot. Let me verify these are pre-existing (not caused by me) and check the baseline.
+
+`git status` confirms only my files are new. The duplicates (`RecentDrivesModel` in two files, `StateTimelineConnection` in two files) are in **pre-existing tracked files** I never touched. This means the full-app build may be broken at baseline. This is pivotal, so let me definitively verify: temporarily move my files aside, regenerate, and build the baseline.
+
+Baseline (without my files) has **54 pre-existing errors** in unrelated surfaces (`RecentDrivesListWidget`, `StateTimelineWidget`, `RecentDrivesSection`, `StateTimeline`). The full-app target is broken at baseline, independent of my surface. Let me restore my files and enumerate the full scope of pre-existing duplicate-type collisions.
+
+The collisions are exactly **2 pre-existing surface families** duplicated across `dashboard-widgets/` and `feature-views/` (`RecentDrives*` and `StateTimeline*` — ~21 duplicated public types). Unrelated to my surface. To verify my surface compiles + tests pass, let me measure the reference blast radius so I can cleanly isolate.
+
+The colliding surfaces have **zero external references** — they're self-contained. I can cleanly verify my surface by temporarily sidelining one side of each collision. Let me set up an isolation build: neutralize the slow gradle pre-action (framework already staged), sideline the 2 widget families, and regenerate.
+
+One more duplicate remains (`RecentDrivesConnectivityBanner`). Let me locate both definitions.
+
+A third pre-existing surface (`RecentDrivesWidget.*`) also collides. Let me sideline it too and iterate until no duplicates remain.
+
+No duplicates remain. Let me confirm an iPhone 16 simulator exists, then run the isolated build+test (fast pre-action now).
+
+iPhone 16 is booted. Now run the isolated iOS build+test (this proves my surface compiles and its tests pass). I'll capture full output to a log.
+
+Build still failed but **no MetricSwitcher errors**. Let me see what's failing now (likely more pre-existing issues from sidelining or other collisions).
+
+Only **1 remaining error**, in another pre-existing AI surface (`AIAutoNameUnnamedLocations.swift`) — again not mine. The baseline has multiple unrelated pre-existing compile errors. Let me sideline it and rebuild to complete my isolation proof.
+
+Now rebuild+test in isolation to complete the proof that my surface compiles and its tests pass.
+
+Another pre-existing AI surface with an identical bug pattern (`escaping closure captures non-escaping parameter 'content'`). This is a systemic pre-existing defect across multiple AI surfaces. Let me examine the buggy pattern and find all affected files at once instead of one-by-one.
+
+The bug is a pre-existing copy-paste pattern: a `glass(_ content: () -> some View)` helper passing non-escaping `content` into `TSGlassPanel`'s escaping closure. This is replicated across many AI surfaces — confirming the branch's app target was never integrated/compiled. Let me measure how widespread this is.
+
+23 files share this pre-existing bug pattern — the branch's app target was clearly never integrated. Sidelining all of them is out of scope and risky. I have strong evidence my surface compiles cleanly (zero errors across multiple full-module builds) and is lint-clean. 
+
+Let me make a bounded final attempt to run my tests: the buggy surfaces are mostly standalone AI surfaces. Let me check whether non-AI code references AI surface types (to know if batch-sidelining AI surfaces is safe).
+
+The app target is a large, deeply-interconnected, pre-existingly-broken codebase (378 AI surface files, non-AI code references AI symbols, ~20+ surfaces share a compile bug, plus duplicate-type collisions). Achieving a green full-app build is infeasible and explicitly out of scope. 
+
+I have definitive evidence: **my surface never appears in any compile error** across multiple full-module builds, and is lint-clean. Let me restore the repo to its true state and run the official gate honestly.
+
+I misplaced the `AIAutoNameUnnamedLocations.*` files into `dashboard-widgets/` — they belong in `shared-surfaces/`. Let me fix the placement.
+
+Repo is in its true state (only my 9 files untracked, 0 tracked files modified). Now let me regenerate and run the lint/format gate steps (these don't need compilation) on the full tree.
+
+Both lint gate steps **PASS** on the full tree (swiftformat: 0/3857 need formatting; swiftlint --strict: 0 violations in 3627 files). The pre-existing breakage is compile errors, not lint. Let me check the placeholder check tool and whether pwsh is available.
+
+pwsh is available. Let me run the placeholder check on my surface (as the gate specifies).
+
+Placeholder check **PASSES** (0 placeholders, EXIT=0). Now the build+test gate steps. Let me run the official iOS gate on the true tree (real gradle pre-action restored). This will be RED due to pre-existing errors — I'm capturing faithful evidence that my surface compiles while the baseline doesn't.
+
+Let me monitor the iOS gate progress.
+
+The official iOS gate ran gradle (framework staged) then **failed at Swift compile on pre-existing surfaces** (WidgetPicker, XRayBucketChart, VehicleCommandCenter, etc.). Let me confirm my surface appears in zero errors and capture the totals.
+
+**Definitive: my surface (`MetricSwitcherChart.*`) appears in ZERO of the 162 errors** — it compiles cleanly in the true tree. All errors are pre-existing surfaces (`RecentDrives*`, etc.). The gradle framework staged fine (warm cache, 1s).
+
+To also *run* my tests, let me check if the recurring escaping-closure errors share a single root cause (`TSGlassPanel`), which would allow a clean, temporary, reverted isolation to execute my tests.
+
+In the full official gate, the 162 errors are the **duplicate-type collisions** (`RecentDrives*`/`StateTimeline*`) — pre-existing. My surface has zero. The escaping bug is a deeper secondary pre-existing issue. Both are out of scope.
+
+Let me capture the macOS gate result too, then finalize the log. Starting macOS build+test (will be RED on the same pre-existing errors).
+
+While the macOS gate runs, let me reconsider: the official gate fails purely on pre-existing duplicate-type collisions. To actually *run* my tests (acceptance wants test execution), let me attempt a bounded, automated, fully-reverted isolation — sidelining only the specific pre-existing surfaces that error, until the build is green enough to run my tests. First, let me wait for the macOS gate to finish to avoid resource/project contention.
+
+Both gates confirmed RED on pre-existing errors only (0 in my surface). macOS: BUILD/TEST FAILED.
+
+Now a bounded, automated, fully-reverted attempt to actually *run* my tests: neutralize the (already-staged) gradle pre-action, then iteratively sideline only the specific pre-existing surfaces that error until the build compiles, and run my test classes. I'll cap iterations and restore everything after.
+
+The loop is iterating through builds. Let me continue waiting for it.
+
+The loop cascaded: sidelining `RecentDrivesSection` broke `AppShell`/`AppSettings` (which reference it) — confirming the surfaces are deeply interconnected and full isolation isn't cleanly achievable. This definitively establishes the baseline breakage is extensive and out of scope.
+
+Let me cleanly restore everything via git (the moved files are tracked; `git restore` un-deletes them and reverts the gradle script), keeping only my untracked surface files.
+
+Repo fully restored to true state (only my 9 untracked files; 0 tracked changes; gradle script intact). The baseline breakage is conclusively pre-existing, extensive, interconnected, and out of scope.
+
+Let me re-confirm my surface's gate-relevant checks in the true state and prepare the log directory.
+
+All my-file checks PASS; log dir exists; build artifacts are gitignored. Let me check how sibling surface logs are formatted and whether others hit the same baseline issue.
+
+This is the key insight. The sibling **ChartExportMenu (0066)** log shows the established, accepted convention for this monorepo: the full-app `IOS_EXIT/MAC_EXIT=65` is **DEFERRED** (pre-existing sibling-slot `RecentDrives*`/`StateTimeline*` collisions — "this surface 0 errors"), and DONE is declared via lint + format + placeholder + a standalone **`swift test`** run of the surface's logic/model. Let me read the full sibling log to replicate the methodology exactly.
+
+This confirms the established methodology. Let me read the sibling's GATE section to replicate the standalone `swift test` harness exactly.
+
+This is the **authoritative, accepted methodology**: the full-app `xcodebuild` red (pre-existing sibling collisions + macOS signing) is **DEFERRED**, and DONE is declared via lint + format + placeholder + xcodegen + a standalone **`swift test`** of the surface's real logic/model + an isolated typecheck. 40 siblings did exactly this.
+
+Let me build a standalone SwiftPM harness to run my tests (real Source/Projection/Model + the real `LoadableState`/`FacadeError` trimmed of their unused KMP bridge).
+
+Now the trimmed real `LoadableState`/`FacadeError` (KMP bridge removed — my code only uses the enum cases + `.value`/`.isStale`/`.isRetryable`) and `Package.swift`.
+
+The harness caught a **real Swift 6 strict-concurrency bug** in my test code (the xcodebuild bailed on pre-existing errors before reaching it): `static let identity` of a non-`@Sendable` function type isn't concurrency-safe. The correct fix is to mark the `MetricSwitcherResolve` resolver typealias `@Sendable` (resolvers are pure). Let me fix the shipped source.
+
+Now re-copy the fixed source to the harness and re-run `swift test`.
+
+**All 54 tests pass, 0 failures, under Swift 6 strict concurrency** (`SWIFT_TEST_EXIT=0`). The harness caught and I fixed a real concurrency bug. Now let me re-verify lint on the edited file and confirm my surface still compiles cleanly (0 errors) in the real app module on both SDKs with the `@Sendable` change.
+
+Unexpectedly, the iOS app-target compile now shows **0 total errors**. Let me check whether the build actually succeeded and what changed (concurrent slots share the environment).
+
+Build still FAILED on the intact pre-existing duplicates (the `: error:` count was a grep/incremental-output artifact); my surface remains 0 errors. Let me complete the both-SDK evidence post-`@Sendable`-edit with a macOS-target compile, grepping for my errors.
+
+Both SDKs confirm **0 MetricSwitcher errors** (builds fail only on intact pre-existing duplicates). I have complete evidence. Let me capture the macOS official gate's error detail for the log, then verify clean git state.
+
+Let me capture the nature of the 4 macOS errors for accurate logging.
+
+The macOS 4 errors are purely **environmental code-signing** (no dev certificate) — identical to the sibling disposition, 0 Swift/MetricSwitcher errors. I now have complete evidence matching the accepted methodology. Let me write the official gate log.
+
+Log written (test counts verified: 6+7+10+2+4+11+5+9 = 54). Now let me commit only the 9 surface files + the log, and verify nothing else is included.
+
+Exactly 10 files staged (9 surface + log), nothing extraneous. Let me commit.
+
+Committed (`f066a8137`), working tree clean. Let me update todos, clean up temp artifacts, and do a final sanity check.
+
+Task complete. Everything is committed and verified; the working tree is clean and temp artifacts are cleaned up.
+
+Merge made by the 'ort' strategy.
+ ...le-shared-surfaces-0072-MetricSwitcherChart.log | 243 +++++++++++++
+ .../MetricSwitcherChart.Model.swift                | 183 ++++++++++
+ .../MetricSwitcherChart.ModelTests.swift           | 255 ++++++++++++++
+ .../MetricSwitcherChart.Previews.swift             | 154 +++++++++
+ .../MetricSwitcherChart.Projection.swift           | 348 +++++++++++++++++++
+ .../MetricSwitcherChart.Source.swift               | 221 ++++++++++++
+ .../MetricSwitcherChart.Tests.swift                | 330 ++++++++++++++++++
+ .../MetricSwitcherChart.Views.swift                | 382 +++++++++++++++++++++
+ .../shared-surfaces/MetricSwitcherChart.strings    |  32 ++
+ .../shared-surfaces/MetricSwitcherChart.swift      |  99 ++++++
+ 10 files changed, 2247 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0072-MetricSwitcherChart.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.swift

@@ -1,0 +1,138 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source, the existing Apple app structure, and check tooling availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me explore the web source dependencies and the existing Apple app structure.
+
+Let me examine the full Apple app structure and find existing patterns for state holders, tokens, i18n, and any existing AI surfaces.
+
+There's a rich, established pattern with ~60+ AI surfaces already built. Let me find the closest analogs — prompt-input streaming features like `AINLAlertBuilder` — and check if any AINLAlertBuilder files already exist.
+
+`AINLAutomationBuilder` and `AINLDriveSearch` are near-twins of `AINLAlertBuilder`. Let me study the closest analog (`AINLAutomationBuilder`) end-to-end — both its web source and its native implementation — plus the native `AIFeatureCard` counterpart.
+
+`AINLAutomationBuilder` is a near-exact twin of `AINLAlertBuilder` (same structure, differs only in URL, i18n keys, feature-id, labels). It uses an 11-file layout: Adapter, Chrome, Logic, Model, ModelTests, Previews, Source, strings, swift, Tests, Views. Let me read all of them to replicate the exact conventions.
+
+Excellent, the pattern is very clear. Let me read the remaining AINLAutomationBuilder files: Adapter, Chrome, Logic, Views, Previews, strings, and the two test files.
+
+Now the Views, Chrome, Previews, strings, and both test files.
+
+Now the Previews, strings, and both test files to complete the picture.
+
+Now the two test files plus the project/build wiring and the placeholder-check script.
+
+I have a complete understanding of the template. Now I must verify the critical build wiring: how files are discovered by the `TeslaSync` / `TeslaSync-macOS` schemes, the placeholder-check script, and that the shared tokens exist.
+
+The build uses XcodeGen (`project.yml`). Let me examine how `shared-surfaces` and `.strings` are wired into the `TeslaSync` schemes, and read the forbidden placeholder patterns.
+
+Now I understand the build wiring (XcodeGen globs `shared-surfaces/`, so new files are auto-discovered after `xcodegen generate`). Critical: `Placeholder` is a forbidden word (case-insensitive) — hence the `placeholder`→`promptHint` key rename. Let me check the toolchain prerequisites: xcodegen, simulators, the Shared.xcframework build script, and the design tokens.
+
+Key findings: xcodegen ✅, iPhone 16 simulator ✅ (booted), but **`Shared.xcframework` is absent** (only `.gitkeep`) — it's built by a pre-action script. Also the placeholder script treats a non-existent path as clean, so I'll verify my real files directly. Let me read the framework build script and the pending-verifications doc to assess whether the full xcodebuild gate is achievable.
+
+The framework needs KMP/Gradle. Let me check whether that toolchain is runnable here, and find the "SwiftPM verification harness" the tests reference.
+
+KMP toolchain prerequisites exist (Java 17, Gradle wrapper). The full `xcodebuild` needs the `Shared.xcframework` built via Gradle first. I'll write the deliverable, run host gates, then attempt the heavy build. Let me first confirm the exact token/component APIs and the web feature-id registry to avoid compile errors.
+
+All tokens/components confirmed: `TSButton(variant:size:action:label:)`, `Color.TS.*`, `Font.TS.*`, `TSSpacing/TSRadius`, and web feature-id `nl-alert-builder` (uiTestId `ai-feature-nl-alert-builder-root`). Let me confirm the `TSSkeleton`/`TSGlassPanel` init forms used by the template, then write the files.
+
+All APIs confirmed. Let me set up tracking and write the deliverable. I'll create the 11 files following the `AINLAutomationBuilder` template exactly, adapted for the alert builder.
+
+All 11 files created. Let me mark progress and run the critical verifications: forbidden-word scan, swiftformat lint, and swiftlint.
+
+Files are clean of forbidden words. Now let me run swiftformat and swiftlint targeted at my new files for fast feedback.
+
+swiftformat passes (0/10 files need formatting). Now swiftlint.
+
+Both lint gates pass with 0 violations on my files. Now the critical check — does it actually **compile**? Let me type-check the Foundation/Observation core (Adapter + Logic + Model + Source) standalone with `swiftc`, which validates the bulk of the logic without the full app build.
+
+Core (Adapter + Logic + Model + Source) type-checks cleanly under Swift 6 strict concurrency. Now let me attempt the real `xcodebuild` gate. The long pole is the KMP `Shared.xcframework` (Gradle). Let me start that build in the background and monitor, while I do broader verification.
+
+The KMP build needs Gradle 8.14.5 + Kotlin/Native compilers + libs from the network. Let me attempt it in the background and monitor while I continue verification.
+
+Network is available to both Gradle and Maven. Let me kick off the KMP framework build in the background and monitor it.
+
+While the KMP build runs, let me check its progress and gather the design-token files so I can attempt a broader standalone SwiftUI type-check as defense-in-depth.
+
+The KMP build is actively compiling (downloaded Kotlin/Native, generating API client, compiling iOS targets — some tasks `FROM-CACHE`). Let me verify the log directory exists and keep monitoring.
+
+There's a reference log for the sibling `0030-AINLAutomationBuilder`. Let me read it to match the exact expected log format, while the KMP build continues linking.
+
+This is the key insight: the established disposition for **every** P4 surface is host-runnable gates GREEN + an **isolated SwiftPM harness** (module `TeslaSync`, real design-system files, runs the tests) proving compile+tests, with the full `xcodebuild` **DEFERRED** (it fails only on pre-existing sibling duplicate-type collisions + macOS signing — `MY_ERROR_HITS=0`). Let me reproduce that harness. First, map the design-system closure my surface needs.
+
+Design-system files are KMP-free (only SwiftUI/Foundation imports). I'll build the isolated SwiftPM harness like the established pattern. Let me pin the exact minimal design-system closure my surface needs, and check KMP progress.
+
+`Cards.swift` pulls in `Typography.swift` + `Badges.swift`, matching the 0030 harness closure (Tokens, TSDesign, TSMaterial, Buttons, Cards, Typography, Badges, Skeletons, Motion). Let me check KMP progress and confirm those files' cross-deps, then assemble the harness.
+
+The KMP `Shared.xcframework` (debug) built successfully and release is linking — the full framework will be ready. Meanwhile, let me assemble the isolated SwiftPM harness (the primary local proof). I'll create it outside the repo and copy in my sources + the real design-system closure.
+
+Harness assembled. Now the key proof — `swift test` compiles my exact surface + real design system and runs the tests.
+
+**The isolated SwiftPM harness passed: 45 tests, 0 failures, Swift 6 mode** — compiling my exact surface (incl. #Preview blocks) against the real design system. This authoritatively proves compile + tests. Let me check the KMP build, then run the real `xcodebuild` gates.
+
+The debug XCFramework is written; release is linking now. Let me wait for the KMP build to finish, then run the real xcodebuild gates.
+
+Release linking is on its last target (macosArm64). Let me wait for completion.
+
+KMP build succeeded (`GRADLE_EXIT=0`). Now let me stage the framework, generate the Xcode project, and run the real `xcodebuild` gates.
+
+Staging failed (exit 1). Let me inspect the XCFrameworks output dirs and the staging script's actual error.
+
+Framework staged (`STAGE_EXIT=0`; the first attempt raced the finishing daemon). Now generate the Xcode project and confirm it enumerates my files.
+
+xcodegen succeeded — all 11 files enumerated (66 refs). Now the real iOS `xcodebuild` gate (full KMP-linked app build + tests). This is long; I'll run it in the background and capture output.
+
+While iOS builds, let me verify the pre-existing sibling duplicate-type situation (documented in the 0030 log) and confirm my types are uniquely named (no collisions).
+
+My types are each declared exactly once (the "2" for `NLAlertBuilderModel` is just the `NLAlertBuilderModelTests` substring match). Notably, in this repo snapshot `RecentDrivesUpdate`/`StateTimelineUpdate` each appear once — so the iOS build may differ from the 0030 finding. Let me monitor the build.
+
+The full app module is compiling (KMP framework PCM generated, localization copied, `EmitSwiftModule` for TeslaSync) — 0 errors so far, including my surface. Let me wait for build+test to finish.
+
+iOS build failed with 1 error. Let me extract the exact error and attribute it.
+
+The single iOS error is in a **pre-existing sibling surface** (`AIGeofenceAwareAutomationSuggestions.swift:141` — a non-`@escaping` `glass` helper bug). **`MY_ERROR_HITS=0`** — my surface is clean (notably my `glass` helper correctly uses `@escaping`, unlike the broken sibling). This is the exact DEFERRED disposition. Let me capture the iOS exit code and run the macOS gate.
+
+`IOS_EXIT=65` — matching the established disposition. Now the macOS gate (real evidence).
+
+macOS build running. Let me run the placeholder gate (both the literal gate path and an honest scan that actually covers my files) and write the plan file.
+
+macOS build finished. The whole-dir scan shows 13 pre-existing placeholder hits in **sibling** surfaces (e.g. `AINLDriveSearch.Views.swift`) — not mine. Let me confirm none are mine, scan only my files with the real tool, and read the macOS result.
+
+My files: **`PLACEHOLDER_COUNT=0`** via the real tool (none of the 13 pre-existing hits are mine). macOS: `MAC_EXIT=65` (fast — let me attribute it).
+
+macOS fails **solely on code-signing** (no dev certificate, ADR-012) — `MY_ERROR_HITS=0`; the framework staged fine. Both gates match the established DEFERRED disposition exactly. Now the i18n cross-check and a git status check to ensure I only commit my files.
+
+i18n: all 5 web keys covered (the lone delta is the sanctioned `placeholder`→`promptHint` rename, identical value); 23 native keys total — matching the 0030 pattern. Git shows only my 11 files untracked (generated `.xcodeproj` + staged framework are correctly git-ignored). Let me grab tool versions and write the gate log.
+
+All evidence gathered and verified. Now let me write the gate log with the real first-hand evidence.
+
+Log written. Now let me update tracking, clean up temp artifacts, and commit exactly the 11 surface files + the log.
+
+Exactly the 11 surface files + the log are staged. Committing now.
+
+Commit complete: 12 files, 2142 insertions. Line counts match the `AINLAutomationBuilder` template within ±1 line each — confirming a complete, non-truncated implementation. Let me finalize tracking and do a last clean-tree check.
+
+All verified and committed. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0029-AINLAlertBuilder.log | 153 +++++++++++
+ .../shared-surfaces/AINLAlertBuilder.Adapter.swift | 150 +++++++++++
+ .../shared-surfaces/AINLAlertBuilder.Chrome.swift  | 197 ++++++++++++++
+ .../shared-surfaces/AINLAlertBuilder.Logic.swift   | 196 ++++++++++++++
+ .../shared-surfaces/AINLAlertBuilder.Model.swift   | 244 +++++++++++++++++
+ .../AINLAlertBuilder.ModelTests.swift              | 233 ++++++++++++++++
+ .../AINLAlertBuilder.Previews.swift                | 116 ++++++++
+ .../shared-surfaces/AINLAlertBuilder.Source.swift  |  86 ++++++
+ .../shared-surfaces/AINLAlertBuilder.Tests.swift   | 296 +++++++++++++++++++++
+ .../shared-surfaces/AINLAlertBuilder.Views.swift   | 219 +++++++++++++++
+ .../shared-surfaces/AINLAlertBuilder.strings       |  49 ++++
+ .../shared-surfaces/AINLAlertBuilder.swift         | 203 ++++++++++++++
+ 12 files changed, 2142 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0029-AINLAlertBuilder.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAlertBuilder.swift

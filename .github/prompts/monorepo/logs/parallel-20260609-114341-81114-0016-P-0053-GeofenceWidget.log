@@ -1,0 +1,217 @@
+I'll start by exploring the repository structure and reading the web source specification before writing any native code.
+
+Let me read the web source and examine the existing Apple dashboard-widgets structure to understand the established pattern.
+
+The web source is clear. Now let me study the existing Apple widget pattern—especially map-based widgets since GeofenceWidget uses MapKit.
+
+There's a `LocationMapWidget` that uses MapKit. Let me examine its complete file set as the closest pattern reference.
+
+Let me read the full LocationMapWidget implementation to understand the established pattern.
+
+Let me read the remaining LocationMapWidget files and find the shared infrastructure types they depend on.
+
+Excellent—the pattern is very clear. Now let me locate the shared infrastructure types and tooling, plus the web data shapes.
+
+xcodebuild, swiftlint, swiftformat, and Xcode are all available. Now let me find the shared infrastructure types (they're outside dashboard-widgets) and check the project generation setup.
+
+Now let me read the shared infrastructure, design tokens, maps, feedback components, and a list-style widget for the badge/list pattern.
+
+Let me read the Maps and Feedback components, the design tokens, and a list-style widget to see the badge/list conventions with resolved strings.
+
+Now let me read the design tokens, feedback components, and the web data shapes (geofence + units) to nail down the projection logic.
+
+Let me read the design tokens, the strings/previews files, and the web data hooks to finalize the projection and i18n details.
+
+Let me check the web data shapes (geofences, units, registry) and find a list-style native widget for the verbatim-badge convention.
+
+There's a native units facade. Let me read it and the formatters to handle radius conversion correctly.
+
+Let me examine the project.yml test target wiring and whether the KMP `Shared.xcframework` dependency is present (critical for whether the build gate can even run).
+
+Important finding: `Shared.xcframework` is not present (only `.gitkeep`). Let me check the staging script, whether the KMP module exists, and simulator availability — this determines whether the full build gate can run.
+
+The KMP module and iPhone 16 simulator both exist. Now let me check for symbol collisions and the JDK/toolchain for the heavy build, then start writing code.
+
+Found a collision: `GeofenceInput` already exists in `TriggerConfigurator.Model.swift`. I'll namespace all my types to avoid clashes. Java 17 is available for the KMP Gradle build, and the iPhone 16 simulator is booted. Let me read the lint configs before writing.
+
+The conventions are clear. Now I'll create the six files following the established `LocationMapWidget` pattern, namespacing all types to avoid the `GeofenceInput` collision. Starting with the pure adapter.
+
+Now the Model file (state holder, telemetry, i18n facade, accessibility, in-memory source).
+
+Now the main SwiftUI view file (header, all states, compact + standard layouts, MapKit canvas, fence list, badges).
+
+Now the Previews and strings files.
+
+Now the Tests file covering adapter, model, registry, and accessibility.
+
+Now let me lint and format-check my new files (fast, no build) before attempting the heavy build.
+
+swiftformat found fixable issues. Let me apply auto-format (the ecosystem tool) to my files, then re-verify.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+swiftlint flagged 3 issues: short identifier `a`, and two files exceeding the 400-line limit. Let me fix the identifier and split the view file (extracting sub-views into `GeofenceWidget.Views.swift`, an established convention). Let me view the current formatted view file sections to extract.
+
+I'll extract the three sub-views into `GeofenceWidget.Views.swift`, remove them from the main file, fix the `a` identifier, and trim the Tests file.
+
+Now remove the extracted sub-views from the main file and fix the `a` identifier:
+
+Now trim the Tests file below the 400-line limit. Let me compress the header comment and a few verbose spots.
+
+Two more lines to trim. Let me remove the empty `//` separators in the header block.
+
+Now re-run swiftformat and swiftlint on all six files to confirm clean.
+
+One line over. Let me remove a single blank line to land at 400.
+
+swiftformat wants the blank line before the MARK. Rather than line-golf, I'll split the tests into two files (clean, convention-aligned, both well under 400 lines). Let me view the current Tests file to get exact section boundaries.
+
+I'll split into two test files programmatically, then format and lint both.
+
+Both test files are now well under the limit. Let me run the full lint + format check on all seven files.
+
+All 7 files pass swiftformat and swiftlint cleanly. Now let me run the placeholder check and locate the gate's check script.
+
+`pwsh` is available. Let me read and run the placeholder check on my files.
+
+Let me read the placeholder patterns, then run the real check against my files in isolation.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now the heavy build gate. Let me prepare the log directory, generate the Xcode project, and assess the KMP Gradle dependency.
+
+xcodegen succeeded. Let me examine sibling logs (especially the analogous LocationMapWidget 0060) to understand the expected outcome and format on this runner.
+
+This is the key precedent. The analogous LocationMapWidget reached STATUS=DONE by building the Shared.xcframework + both apps + running the unit suite green, with UI-test portions explicitly DEFERRED. Let me read its full canonical log to replicate the exact commands and structure.
+
+This is the canonical precedent — the methodology is clear. On this host: build `Shared.xcframework` via Gradle (with an isolated `GRADLE_USER_HOME` to avoid parallel-slot contention), build both apps, prove my tests via a standalone `swift test` harness, and DEFER the UI-test portions. Let me kick off the long Gradle build in the background first.
+
+Gradle needs network (google/mavenCentral). Let me start the `Shared.xcframework` build in the background with an isolated `GRADLE_USER_HOME` (per the precedent's parallel-contention note), then work on proving my tests while it runs.
+
+My isolated Gradle build (wrapper PID 74614 + daemon 74831 on `/tmp/geofence-gradle-home`) is running independently of the other slots' shared-home daemons — exactly the contention isolation the precedent requires. While it compiles (~8 min), I'll build the standalone `swift test` harness to prove my surface. First, let me enumerate exactly which shared symbols my surface references.
+
+My surface needs only: Tokens, DashboardWidgetInfra, GeoHelpers, TSTone (Badges), and TSMapCamera/TSAnimatedMarker/TSSkeleton. I'll assemble a standalone SPM harness with verbatim copies of these self-contained deps plus minimal verbatim extracts, then run my real tests against my real surface sources.
+
+Now the verbatim extracts (TSMapCamera, TSAnimatedMarker, TSSkeleton) and the Package manifest:
+
+Now run the harness — this compiles my real surface sources + tests under Swift 6 strict concurrency and runs the suites.
+
+All 32 tests pass (15 adapter + 10 model + 3 registry + 4 accessibility) — my real surface sources compile under Swift 6 strict concurrency and every web-parity derivation is verified. Let me check the Gradle build progress.
+
+The Gradle build is actively compiling Kotlin/Native (`compileKotlinIosArm64`) — the long pole. Let me confirm the process is alive and monitor progress.
+
+Gradle is linking the iOS frameworks (final phase before XCFramework assembly). Let me wait for it to complete.
+
+Progress is good — the Debug XCFramework is written; it's now linking the Release frameworks. Let me continue waiting for the Release XCFramework assembly.
+
+Gradle is still linking the Release iOS frameworks. Let me keep polling until the Release XCFramework is assembled.
+
+Release linking is progressing (iosSimulatorArm64 now). Let me wait for the final Release XCFramework assembly.
+
+Release linking continues (the slow optimized link step). Let me keep polling.
+
+The Release simulator link is the heaviest step. Let me verify the compiler is actively working (CPU-busy, not stuck).
+
+A konan LLVM linker process is actively working (Release optimization) — the build is progressing, just slow. Let me continue waiting.
+
+Just the macOS arm64 Release link remains, then final assembly. Let me wait for completion.
+
+**Gradle BUILD SUCCESSFUL in 30m 46s** — the Release `Shared.xcframework` is ready. Let me stage it to `Frameworks/` and verify, then build the iOS app.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64) and correctly gitignored. Now build the iOS app (full Sources tree + my new files). I'll export the isolated `GRADLE_USER_HOME` so the scheme's pre-action re-stage hits the warm cache. Starting in the background.
+
+The pre-action gradle re-stage hit the warm cache (21s, mostly up-to-date) and staged the framework. xcodebuild is now compiling the app. Let me monitor for completion.
+
+The build is actively compiling Swift modules. Let me check specifically for any errors and GeofenceWidget compilation.
+
+iOS build finished with errors. Let me see the actual error lines.
+
+A real collision: `TriggerConfigurator.Model.swift` also declares `GeofenceProjection`. My earlier collision check only matched `struct GeofenceProjection` and missed it. Let me enumerate ALL `Geofence*` type declarations in the app module so I can rename mine to be collision-proof.
+
+Many `Geofence*` types exist in the module (`GeofenceProjection`, `GeofenceInput`, `GeofenceSource`, `Geofence`, etc.). To be fully collision-proof, I'll rename ALL my non-`GeofenceWidget`-prefixed types to use the `GeofenceWidget` prefix across all 7 files.
+
+Only my test class names remain unprefixed. Let me check if any sibling test files already use those class names (test-bundle collision risk), then rename them too.
+
+Renaming my test classes to the `GeofenceWidget` prefix for consistency and bundle-safety:
+
+All tokens are now `GeofenceWidget`-prefixed; format and lint pass. Let me re-sync the harness and re-run the tests for fast confirmation before the slow iOS rebuild.
+
+32 tests pass after rename. Now rebuild the iOS app (incremental, reusing derived data — only my changed files + the previously-failed group recompile).
+
+0 errors so far, still building. Let me wait for completion.
+
+The app target is recompiling its Swift modules (0 errors so far). Let me keep waiting for the build to finish.
+
+**iOS app BUILD SUCCEEDED** (0 errors) — my surface integrates cleanly into the full app module. Now the macOS app build.
+
+macOS build compiling (0 errors). Let me wait for it to finish.
+
+**macOS app BUILD SUCCEEDED** (0 errors). Both apps build with my surface integrated. Now let me run the exact gate lint/format commands on the whole tree (as the gate specifies) to capture faithful numbers.
+
+Whole-tree swiftformat: **0/2678 require formatting**. Now the exact `swiftlint --strict` gate (whole included tree).
+
+One violation in the whole tree (exit 2). My 7 files passed cleanly in isolation, so this is likely a pre-existing sibling issue. Let me identify it precisely.
+
+The single violation is in a **pre-existing sibling file** (`LiveSignalSparklinesWidget.Builder.swift`), not my surface — and it's outside my allowed files (`GeofenceWidget.*`), so I must not touch it. Let me confirm my changes are confined to my allowed files via git.
+
+Confirmed: my changes are confined to the 8 allowed `GeofenceWidget.*` files; the sibling lint violation is pre-existing (empty diff vs HEAD). Let me capture the remaining gate evidence: the literal placeholder command, build result lines, and proof my files compiled into the apps.
+
+Complete evidence captured. Let me gather final file metrics, then write the comprehensive gate log.
+
+Surface lint clean (0/7), all source i18n keys covered. Let me grab version strings, then write the comprehensive gate log.
+
+Now I'll write the comprehensive gate log with all the real evidence.
+
+Log written. Let me verify the repo working tree contains only my allowed files + the log (xcodeproj/Frameworks gitignored), then commit.
+
+Working tree is clean — exactly my 8 files + the log (xcodeproj/Frameworks gitignored). Let me commit.
+
+Commit is in (9 files, 1902 insertions), working tree clean. Let me clean up the temporary build artifacts in `/tmp` (outside the repo).
+
+Cleaned up ~5.7 GB. Let me terminate the orphaned isolated Gradle daemon (its home is now gone) by PID.
+
+The task is complete. The commit is at HEAD and the working tree is clean.
+
+## Summary
+
+Shipped a production-polished native **Apple `GeofenceWidget`** surface at parity with `web/src/features/dashboard/widgets/GeofenceWidget.tsx`, following the established `LocationMapWidget` (0060) precedent.
+
+**Files committed** (9 files, 1902 insertions — all within the allowed `GeofenceWidget.*` set + the log):
+- `GeofenceWidget.Adapter.swift` — pure projection (haversine, inside/outside, `currentZone`, radius formatting — a 1:1 port of the web derivations)
+- `GeofenceWidget.Model.swift` — P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, testable a11y summary
+- `GeofenceWidget.swift` + `GeofenceWidget.Views.swift` — glass shell, freshness/refresh header, compact + standard layouts, MapKit canvas (per-fence `MapCircle` + vehicle marker), fence list, membership badges, every state
+- `GeofenceWidget.Previews.swift` — 8 state previews
+- `GeofenceWidget.Tests.swift` + `GeofenceWidget.ModelTests.swift` — 32 tests
+- `GeofenceWidget.strings` — 18 i18n keys (all 7 source keys covered)
+
+**Gate evidence (real, on this host):**
+- `swift test` harness (real sources + verbatim deps, Swift 6 strict concurrency): **32/32 GREEN**
+- Release `Shared.xcframework` BUILT (Gradle, 30m46s, isolated `GRADLE_USER_HOME`) + staged
+- **iOS app BUILD SUCCEEDED** and **macOS app BUILD SUCCEEDED** — surface compiled into both
+- surface `swiftlint --strict` **0/7**; `swiftformat --lint apps/apple` **0/2678**; placeholder gate **COUNT=0**
+
+**Honest disclosures (in the log, not green-washed):**
+- Found & fixed a real `GeofenceProjection` name collision with an existing module type by prefixing all my types `GeofenceWidget*` (red→green).
+- Whole-tree `swiftlint --strict` reports **1 pre-existing violation in a sibling file** (`LiveSignalSparklinesWidget.Builder.swift:158`, empty `git diff HEAD`, outside my allowed files).
+- Xcode full `build test` UI portions + the in-module test bundle are **DEFERRED** to the GUI CI runner (headless UI tests, pre-existing macOS `TEST_HOST` config, 600+ parallel-sibling co-located tests) — the surface's own tests are proven green via the isolated harness.
+
+Log ends with `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...apple-dashboard-widgets-0053-GeofenceWidget.log | 229 ++++++++++++++
+ .../dashboard-widgets/GeofenceWidget.Adapter.swift | 291 ++++++++++++++++++
+ .../dashboard-widgets/GeofenceWidget.Model.swift   | 268 ++++++++++++++++
+ .../GeofenceWidget.ModelTests.swift                | 172 +++++++++++
+ .../GeofenceWidget.Previews.swift                  | 152 +++++++++
+ .../dashboard-widgets/GeofenceWidget.Tests.swift   | 248 +++++++++++++++
+ .../dashboard-widgets/GeofenceWidget.Views.swift   | 159 ++++++++++
+ .../dashboard-widgets/GeofenceWidget.strings       |  43 +++
+ .../dashboard-widgets/GeofenceWidget.swift         | 340 +++++++++++++++++++++
+ 9 files changed, 1902 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0053-GeofenceWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.swift

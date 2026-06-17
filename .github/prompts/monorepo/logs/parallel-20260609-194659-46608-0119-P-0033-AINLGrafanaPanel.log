@@ -1,0 +1,148 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source spec and the existing Apple app structure.
+
+Now let me examine the existing shared-surfaces to understand the established native pattern, especially other AI panels.
+
+No AINL surfaces built yet. Let me study the `AIFeatureCard` native dependency and find an interactive stream-based reference surface.
+
+The `AIFeatureCard` scaffold is rich. Let me read its supporting types and find an existing surface that uses an input slot + children (the closest structural analog).
+
+`inputSlot:` is only used within AIFeatureCard's own files. Let me see how other surfaces are actually structured — do they reuse the shared card or self-contain?
+
+Key insight: each surface is **self-contained** — it reproduces the AIFeatureCard chrome inline using P1/S9 tokens rather than depending on surface 0018's symbols. `AILifetimeStatsQA` is the ideal reference (interactive prompt→stream→tool-result, same pattern). Let me read its full file set.
+
+Let me read the rest of the reference surface: Views (has the Textarea-equivalent question field), Logic, Source, Adapter, Chrome.
+
+Let me read the test/preview structure and locate the P1/S9 design tokens.
+
+Let me locate the exact token/primitive definitions and the strings file format, plus check the project structure for how files are included.
+
+Found them: tokens generated at `apps/design/generated/apple/Tokens.swift`, primitives in `Sources/Components`. Let me read the exact APIs I'll consume.
+
+Let me check `TSGlassPanel`, the project build config, JSON-parsing references, and the Go DTO for the draft shape.
+
+This adapter is the ideal parsing template. Let me read the Go DTO + handler for exact wire shape, the CrossRule Model (how tool-result data is carried/decoded), and the feature registry entry.
+
+Let me confirm the tool-result wire envelope (Go handler), the JSON decode glue, the feature registry entry, and the CrossRule test structure.
+
+Confirmed: feature id `nl-grafana-panel`, testID `ai-feature-nl-grafana-panel-root`, tool `draft_grafana_panel`. Let me verify the tool-output envelope shape and read CrossRule's view + adapter tests for the typed-envelope + parent-callback + test patterns.
+
+Wire shape confirmed: `ev.data = {draft, status, validation_error?, source}`, accept only `status=="ok"`. Now let me read CrossRule's view + both test files, and the project build config.
+
+I now understand the full pattern. Let me check the build setup (project.yml, xcodegen, schemes) and the SwiftPM test harness referenced in the tests.
+
+Let me assess build feasibility: xcodegen, the Shared.xcframework dependency, existing project, and simulators.
+
+`xcodegen` is present, but `Shared.xcframework` is NOT prebuilt — the build pre-action compiles a KMP framework via Gradle/Kotlin. Let me check build feasibility and read the remaining CrossRule reference (view composition + parent-callback button + source + logic).
+
+Java 17 + gradlew present. Let me read the final CrossRule reference files (Logic, Source, Views, Previews, strings) to nail the typed-envelope + parent-callback parity, then I'll write the surface.
+
+Let me read the final reference pieces (CrossRule Views = typed-list + per-row action buttons, Previews, strings) before writing.
+
+I now have everything needed. Let me verify token members and check for symbol collisions before writing, and set up a plan.
+
+No collisions; tokens confirmed. Let me check the handler's request prompt cap (to mirror like Lifetime did), then write the plan and start creating files.
+
+Backend caps prompt at 1200 chars. I have full context. Let me read the lint/format configs to match house style exactly, then start writing.
+
+Let me check the exact forbidden placeholder patterns (the word "placeholder" appears in reference code, so patterns must be specific) and how `-Path` resolves.
+
+Critical finding: the placeholder gate is **case-insensitive substring** — it flags lowercase "placeholder" (6 hits in the reference surface!). Since my prompt's gate scans only my files, I must avoid the substring "placeholder" (and todo/fixme/xxx/etc.) entirely. Let me confirm the matcher semantics.
+
+Confirmed: case-insensitive regex substring match. Let me see how `-Path` is resolved (the gate passes a path *prefix* `.../AINLGrafanaPanel`, not a dir).
+
+Confirmed gate semantics. I'll keep my files free of all forbidden substrings (including "placeholder" → use "examplePrompt"). Let me kick off the heavy build prep in the background while I write code: generate the Xcode project and start the KMP framework build.
+
+Project generated; KMP framework building in background. Now I'll write the surface. Let me create the plan, todos, and the Foundation-only Adapter file.
+
+Adapter done. Now the Logic file (phases, pure button logic, accessibility seam).
+
+Let me check the KMP build progress, then continue with the main view.
+
+Gradle still building (first-run Kotlin/Native). Continuing with the SwiftUI view files.
+
+Now the Views file (header, badge, prompt field, draft button, apply row).
+
+Now the Chrome file (draft summary, output panel, gate states, pulse helper).
+
+Now the Previews and strings files.
+
+The KMP framework build completed. Let me confirm it produced the xcframework, then continue writing the strings and tests.
+
+Gradle succeeded (xcframework built, release + debug). It needs staging to `apps/apple/Frameworks/`. Let me run the staging script in the background and write the strings file.
+
+Now the three test files. Let me write the AdapterTests (JSON + parse walk + request).
+
+Framework staged. Now writing the test files.
+
+Now the ModelTests (state-holder wiring).
+
+All 12 files written. Now the verification phase. Let me run swiftformat --lint and a forbidden-substring scan on my files first (fast), and regenerate the project to include the new files.
+
+Mostly mechanical format fixes (auto-fixable), plus two real items: force-unwraps in tests, and two comments containing the substring "placeholder". Let me view the test region to fix the force-unwraps precisely.
+
+Let me fix the force-unwraps (use the typed `encodedFields` helpers) and reword the two comments containing the substring "placeholder".
+
+Now auto-fix formatting with swiftformat (write mode) on my files, then re-verify lint + substring scan.
+
+SwiftFormat clean, no forbidden substrings. Now swiftlint --strict on my files.
+
+SwiftLint flags `w`/`h` property names (min length 2; only `x`/`y` are excluded). I'll rename the `GrafanaPanelGridPos` properties to `width`/`height` (JSON keys stay `w`/`h`). Let me find all call sites.
+
+I'll rename `w`/`h` → `width`/`height` across all call sites (JSON keys stay `w`/`h`).
+
+Re-running swiftlint + swiftformat lint to confirm both pass after the rename.
+
+Both lint gates pass (0 violations, 0 formatting). Now the build. Let me regenerate the project (to include new files) and start the iOS app build in the background.
+
+Project regenerated with my files (72 references). Now starting the iOS build in the background.
+
+iOS build running in background. Meanwhile, let me run the placeholder gate (independent + fast) — both the prompt's literal invocation and a real per-file scan for honest evidence.
+
+Placeholder gate clean (0 count via both the literal invocation and a real per-file scan of all 11 files). Let me check the iOS build progress.
+
+Build failed (exit 65, 3 failures). Let me find the actual errors — and whether they're in my files or pre-existing.
+
+The 3 build failures are **not** in my files — they're pre-existing type-name collisions in unrelated surfaces (`RecentDrives*`, `StateTimeline*`). Let me confirm these are duplicate declarations across other surfaces (not caused by my additive changes).
+
+Confirmed: the 3 build failures are **pre-existing, out-of-scope** duplicate-symbol collisions between sibling surfaces — `RecentDrivesModel` is declared in BOTH `dashboard-widgets/RecentDrivesListWidget.Model.swift:181` and `feature-views/RecentDrivesSection.Model.swift:23` (same for `RecentDrivesConnection`, `StateTimelineConnection`). I touched none of those files (all my files are new/untracked). The whole-app target cannot compile due to these collisions made by other surfaces.
+
+Let me prove **my** surface compiles against the real shared infra in isolation. First, let me map the dependency closure of the primitives I use.
+
+My surface only depends on `TSGlassPanel`/`TSButton`/`TSSkeleton` + tokens. Let me prove my surface type-checks against the **real** shared infra in isolation (excluding the broken sibling surfaces). Setting up an isolated compile.
+
+The remaining errors are all in `Cards.swift` (it pulls in more of the component library: `TSPanelTitle`, `tsGlassPanel()`, etc.) — not my code. Rather than drag in the whole component library, let me shim the 3 primitives I use with signatures copied verbatim from the real sources, and compile my surface against the **real tokens** + those exact-signature shims (with DEBUG, so Previews is validated too).
+
+Excellent — the isolated typecheck caught a **real bug in my code**: `GrafanaPanelDrafterModel` has both a `draft` property and a `draft()` method (invalid redeclaration). Let me rename the method to `requestDraft()` (web `handleDraft`). Finding all call sites.
+
+A genuine bug the isolated compile surfaced. Renaming the method `draft()` → `requestDraft()` (the property `draft` stays). Applying with sed across the 3 files, then re-checking.
+
+Renamed. Re-running the isolated typecheck with the fix.
+
+My surface type-checks cleanly (EXIT=0) against real tokens + faithful primitive shims for iOS 18 / Swift 6. Now let me validate the 3 test files by building my surface as a testable `TeslaSync` module and type-checking the tests against it.
+
+Module build succeeded (my surface compiles as a testable `TeslaSync` module). The test-file errors are only the XCTest **C macros** (`XCTAssertEqual` etc.) which bare `swiftc` can't import ("function like macros not supported") — an importer limitation, not my code; all my symbol references resolved. 
+
+Let me run the macOS build too (to document the same pre-existing blocker is platform-independent) and prepare the log directory.
+
+While macOS builds, let me get the strongest possible test evidence: actually **run** my unit tests in an isolated SwiftPM package (which provides the proper XCTest Swift module, unlike bare swiftc). This executes my tests for real without touching the pre-broken app target.
+
+Now running the tests for real via `swift test`:
+
+All **59 unit tests pass** (0 failures) via `swift test`. Now let me check the macOS build result (expected: same pre-existing blocker).
+
+macOS build also fails (exit 65). Let me confirm it's the same pre-existing collisions and that none are in my files.
+
+Both iOS and macOS builds fail **identically** on the same pre-existing collisions (`RecentDrives*`, `StateTimeline*` declared in two sibling surfaces each) — zero errors in my files. Let me confirm my hook URL matches the backend router (acceptance criterion), then write the gate log.
+
+Hook URL confirmed: my path `/ai/power/grafana-panel/draft` matches the registered backend route (`ai_routes.go:738`, `g.Wrap("nl-grafana-panel", …)`). The collision files are both git-tracked and unmodified by me — the whole-app break is pre-existing in the committed tree.
+
+Now writing the comprehensive, honest gate log.
+
+Gate log written. Now let me update todos, verify the repo working tree contains only my intended additions, and clean up temp artifacts.
+
+Working tree is clean (only my 12 files + log; no tracked files touched). Important: I must re-confirm format/lint are still green **after** the `requestDraft` rename (which I did after the earlier lint pass). Re-verifying now.
+
+All surface-scoped gates confirmed GREEN on the final code (swiftformat 0/11, swiftlint 0 violations, no forbidden substrings). The deliverable is complete and verified; the work is consistent with the gate log.
+

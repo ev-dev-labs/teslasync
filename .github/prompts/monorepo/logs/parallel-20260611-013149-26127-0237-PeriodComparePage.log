@@ -1,0 +1,1630 @@
+I'll start by exploring the codebase to understand the task. Let me look at the web source page, the Apple app structure, and related artifacts.
+
+Let me explore the Apple Features directory and find an existing analytics page to use as a reference pattern.
+
+The structure differs from the prompt. Let me explore the actual layout to understand the conventions.
+
+The actual structure uses `feature-views/` not `Features/Analytics/`. Let me understand the project layout, build config, and find a comparable existing page.
+
+Let me check tooling availability (critical for the gate) and explore the `Sources` directory for navigation/page structure.
+
+Full toolchain is present (xcodebuild, xcodegen, swiftlint, pwsh, Xcode selected) — so the gate can actually run. The real convention is `Sources/Features/<Domain>/`. Let me study existing feature pages, navigation, and the facade layer.
+
+Clear pattern: `<Name>Page.swift` + `<Name>PageModel.swift` + `<Name>RouteRegistration.swift`. Let me study a complete example plus the facade/routing core.
+
+Excellent — clear pattern established. Let me read the routing core, facade layer, and dispatch an explore agent to inventory the component library in parallel.
+
+I'll investigate this SwiftUI project systematically. Let me start by exploring the structure and then finding each component category.Let me search for the specific components you mentioned and explore each category in parallel:Now let me examine the key component files in detail:Perfect! Now let me compile the comprehensive inventory. Based on my investigation, here's your complete component and design token inventory for the TeslaSync Apple app:
+
+---
+
+## **1. CHARTS** 
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-237/apps/apple/Sources/Components/Charts/BarCharts.swift`
+
+### **Grouped/Side-by-Side Bar Chart**
+```swift
+public struct TSBarChart: View {
+    public init(series: [TSChartSeries], hidden: Set<String> = [], stacked: Bool = false)
+}
+```
+- **Data model:** `TSChartSeries` (id, name, nameText, points: [TSChartPoint], colorIndex)
+- **Point model:** `TSChartPoint(x: Double, y: Double, id: String?)`
+- **Usage:** Set `stacked: false` for grouped bars (Period A vs Period B side-by-side)
+
+### **Composed Chart (Bars + Line Overlay)**
+```swift
+public struct TSComposedChart: View {
+    public init(bars: TSChartSeries, line: TSChartSeries)
+}
+```
+
+### **Scatter Chart**
+```swift
+public struct TSScatterChart: View {
+    public init(series: [TSChartSeries], hidden: Set<String> = [])
+}
+```
+
+### **Chart Container (Title + Legend + Empty State)**
+**File:** `Charts/ChartContainer.swift`
+```swift
+public struct TSChartContainer<Content: View>: View {
+    public init(
+        _ title: LocalizedStringKey,
+        summary: LocalizedStringKey? = nil,
+        isEmpty: Bool = false,
+        csv: String? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    )
+}
+```
+
+### **Chart Legend (Toggleable Series)**
+```swift
+public struct TSChartLegend: View {
+    public init(series: [TSChartSeries], hidden: Binding<Set<String>>)
+}
+```
+
+### **Data Models**
+**File:** `Charts/ChartModels.swift`
+```swift
+public struct TSChartSeries: Identifiable {
+    public init(
+        id: String,
+        name: LocalizedStringKey,
+        nameText: String,
+        points: [TSChartPoint],
+        colorIndex: Int = 0
+    )
+    public var color: Color { TSChartPalette.color(at: colorIndex) }
+}
+
+public struct TSChartPoint: Identifiable {
+    public init(x: Double, y: Double, id: String? = nil)
+}
+```
+
+---
+
+## **2. DATA DISPLAY**
+**File:** `Components/DataDisplay/Metrics.swift`
+
+### **Metric Card (Label + Value + Caption)**
+```swift
+public struct TSMetricCard: View {
+    public init(title: LocalizedStringKey, value: String, caption: LocalizedStringKey? = nil)
+}
+```
+
+### **Stat Card (With Optional Delta + Icon)**
+```swift
+public struct TSStatCard: View {
+    public init(
+        title: LocalizedStringKey,
+        value: String,
+        systemImage: String? = nil,
+        delta: Double? = nil,
+        deltaFormatted: String? = nil
+    )
+}
+```
+
+### **Delta Badge (Up/Down Arrow + Formatted Value)**
+```swift
+public struct TSDelta: View {
+    public init(value: Double, formatted: String, invertColors: Bool = false)
+}
+```
+- **Color logic:** positive (green) / negative (red) / zero (muted)
+
+### **Animated Number**
+```swift
+public struct TSAnimatedNumber: View {
+    public init(formatted: String)
+}
+```
+
+### **Key/Value List**
+```swift
+public struct TSKVList: View {
+    public init(rows: [TSKVRow])
+}
+
+public struct TSKVRow: Identifiable {
+    public init(id: String, key: LocalizedStringKey, value: String)
+}
+```
+
+### **Usage Card (Progress Bar)**
+```swift
+public struct TSUsageCard: View {
+    public init(title: LocalizedStringKey, used: Double, total: Double, valueText: String)
+}
+```
+
+### **Comparison Header (Two Values + Delta)**
+```swift
+public struct TSComparisonHeader: View {
+    public init(
+        leadingLabel: LocalizedStringKey,
+        leadingValue: String,
+        trailingLabel: LocalizedStringKey,
+        trailingValue: String,
+        delta: Double,
+        deltaFormatted: String
+    )
+}
+```
+
+### **KPI Overview Card (Grid of Metrics)**
+```swift
+public struct TSKpiOverviewCard: View {
+    public init(title: LocalizedStringKey, kpis: [TSKpi])
+}
+
+public struct TSKpi: Identifiable {
+    public init(id: String, label: LocalizedStringKey, value: String)
+}
+```
+
+### **Unit Formatters (SI + User Prefs)**
+**File:** `DataDisplay/UnitFormatters.swift`
+```swift
+public struct TSDistance: View { public init(_ meters: Double?) }
+public struct TSSpeed: View { public init(_ metersPerSecond: Double?) }
+public struct TSTemperature: View { public init(_ celsius: Double?) }
+public struct TSPressure: View { public init(_ kpa: Double?) }
+public struct TSEnergy: View { public init(_ wattHours: Double?) }
+public struct TSPower: View { public init(_ watts: Double?) }
+public struct TSDuration: View { public init(_ seconds: Double?) }
+```
+
+---
+
+## **3. UI COMPONENTS**
+**File:** `Components/UI/`
+
+### **Data Table (Adaptive: Columnar Grid / Card List)**
+**File:** `UI/DataTable.swift`
+```swift
+public struct TSDataTable<Row: Identifiable>: View {
+    public init(
+        rows: [Row],
+        columns: [TSColumn<Row>],
+        selection: Binding<Set<Row.ID>> = .constant([]),
+        density: TSTableDensity = .standard
+    )
+    public func rowDetail(@ViewBuilder _ content: @escaping (Row) -> some View) -> TSDataTable
+}
+
+public struct TSColumn<Row: Identifiable>: Identifiable {
+    public init(
+        id: String,
+        title: LocalizedStringKey,
+        comparator: ((Row, Row) -> ComparisonResult)? = nil,
+        @ViewBuilder cell: @escaping (Row) -> some View
+    )
+}
+
+public enum TSTableDensity {
+    case compact, standard, comfortable
+}
+```
+
+### **Select / Dropdown Picker**
+**File:** `UI/Pickers.swift`
+```swift
+public struct TSSelect<Value: Hashable>: View {
+    public init(
+        selection: Binding<Value>,
+        options: [TSSelectOption<Value>],
+        label: LocalizedStringKey? = nil
+    )
+}
+
+public struct TSSelectOption<Value: Hashable>: Identifiable {
+    public init(_ value: Value, _ title: LocalizedStringKey)
+}
+```
+
+### **Menu/Dropdown (Generic)**
+```swift
+public struct TSPickerMenu<Label: View, Content: View>: View {
+    public init(
+        @ViewBuilder label: @escaping () -> Label,
+        @ViewBuilder content: @escaping () -> Content
+    )
+}
+```
+
+### **Badge (Tinted Pill)**
+**File:** `UI/Badges.swift`
+```swift
+public struct TSBadge: View {
+    public init(_ text: LocalizedStringKey, tone: TSTone = .neutral)
+}
+
+public enum TSTone {
+    case neutral, accent, success, warning, danger, info
+    public var color: Color { ... }
+}
+```
+
+### **Status Pill (Dot + Label)**
+```swift
+public struct TSStatusPill: View {
+    public init(_ text: LocalizedStringKey, tone: TSTone = .neutral)
+}
+```
+
+### **Icon Box (Rounded Tinted Container)**
+```swift
+public struct TSIconBox: View {
+    public init(systemName: String, tone: TSTone = .accent)
+}
+```
+
+### **Glass Panel (Frosted Surface)**
+**File:** `UI/Cards.swift`
+```swift
+public struct TSGlassPanel<Content: View>: View {
+    public init(@ViewBuilder content: @escaping () -> Content)
+}
+```
+
+### **Card (Solid Elevated Surface)**
+```swift
+public struct TSCard<Content: View>: View {
+    public init(@ViewBuilder content: @escaping () -> Content)
+}
+
+public struct TSCardHeader<Trailing: View>: View {
+    public init(
+        _ title: LocalizedStringKey,
+        subtitle: LocalizedStringKey? = nil,
+        @ViewBuilder trailing: @escaping () -> Trailing
+    )
+}
+
+public struct TSCardFooter<Content: View>: View {
+    public init(@ViewBuilder content: @escaping () -> Content)
+}
+```
+
+---
+
+## **4. FEEDBACK COMPONENTS**
+**File:** `Components/Feedback/`
+
+### **Empty State**
+**File:** `Feedback/States.swift`
+```swift
+public struct TSEmptyState<Actions: View>: View {
+    public init(
+        title: LocalizedStringKey,
+        message: LocalizedStringKey? = nil,
+        systemImage: String = "tray",
+        @ViewBuilder actions: @escaping () -> Actions
+    )
+}
+
+public extension TSEmptyState where Actions == EmptyView {
+    init(title: LocalizedStringKey, message: LocalizedStringKey? = nil, systemImage: String = "tray")
+}
+```
+
+### **Error Display (With Optional Retry)**
+```swift
+public struct TSErrorDisplay: View {
+    public init(
+        title: LocalizedStringKey = "error.title",
+        message: LocalizedStringKey? = nil,
+        onRetry: (() -> Void)? = nil
+    )
+}
+```
+
+### **Query Error**
+```swift
+public struct TSQueryError: View {
+    public init(message: LocalizedStringKey? = nil, onRetry: @escaping () -> Void)
+}
+```
+
+### **Error Boundary**
+```swift
+public struct TSErrorBoundary<Content: View>: View {
+    public init(hasError: Bool, onRetry: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content)
+}
+```
+
+### **Spinner (Inline Loading)**
+```swift
+public struct TSSpinner: View {
+    public init(label: LocalizedStringKey? = nil)
+}
+```
+
+### **Page Loader (Centered)**
+```swift
+public struct TSPageLoader: View {
+    public init(label: LocalizedStringKey = "loading")
+}
+```
+
+### **Skeleton (Shimmer Placeholder)**
+**File:** `Feedback/Skeletons.swift`
+```swift
+public struct TSSkeleton: View {
+    public init(width: CGFloat? = nil, height: CGFloat = 14, cornerRadius: CGFloat = TSRadius.sm)
+}
+
+public struct TSStatSkeleton: View { public init() }
+public struct TSChartSkeleton: View { public init(height: CGFloat = 180) }
+public struct TSPageHeaderSkeleton: View { public init() }
+public struct TSStatGridSkeleton: View { public init(count: Int = 4) }
+public struct TSChartBlockSkeleton: View { public init() }
+public struct TSTableSkeleton: View { public init(rows: Int = 6) }
+public struct TSPageLoadSkeleton: View { public init() }
+```
+
+### **Alert Banner (Tinted + Icon + Message + Action)**
+**File:** `Feedback/Banners.swift`
+```swift
+public struct TSAlertBanner<Action: View>: View {
+    public init(
+        tone: TSTone,
+        systemImage: String,
+        title: LocalizedStringKey,
+        message: LocalizedStringKey? = nil,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder action: @escaping () -> Action
+    )
+}
+
+public extension TSAlertBanner where Action == EmptyView {
+    init(
+        tone: TSTone,
+        systemImage: String,
+        title: LocalizedStringKey,
+        message: LocalizedStringKey? = nil,
+        onDismiss: (() -> Void)? = nil
+    )
+}
+```
+
+### **Preset Banners**
+```swift
+public struct TSOfflineBanner: View { public init() }
+public struct TSLiveStaleDataBanner: View { public init() }
+public struct TSTeslaReauthBanner: View { public init(onReconnect: @escaping () -> Void) }
+public struct TSRateLimitBanner: View { public init() }
+public struct TSMaintenanceBanner: View { public init() }
+public struct TSImpersonationBanner: View { public init(onExit: @escaping () -> Void) }
+public struct TSDraftRecoveryBanner: View { public init(onRestore: @escaping () -> Void) }
+// ... and more (TSEditConflictBanner, TSTimeMachineBanner, etc.)
+```
+
+### **Inline Callout**
+```swift
+public struct TSInlineCallout: View {
+    public init(tone: TSTone = .info, message: LocalizedStringKey)
+}
+```
+
+---
+
+## **5. TYPOGRAPHY / LAYOUT**
+**File:** `Components/UI/Typography.swift`
+
+### **Page Title (Largest Heading)**
+```swift
+public struct TSPageTitle: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+### **Section Title**
+```swift
+public struct TSSectionTitle: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+### **Panel Title (Card/Section)**
+```swift
+public struct TSPanelTitle: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+### **Heading (With Level)**
+```swift
+public struct TSHeading: View {
+    public enum Level { case h1, h2, h3 }
+    public init(_ text: LocalizedStringKey, level: Level = .h1)
+}
+```
+
+### **Subhead (Secondary Heading)**
+```swift
+public struct TSSubhead: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+### **Body Text**
+```swift
+public struct TSText: View {
+    public enum Variant { case body, small }
+    public init(_ text: LocalizedStringKey, variant: Variant = .body)
+}
+```
+
+### **Caption (Muted Text)**
+```swift
+public struct TSCaption: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+### **Label (Uppercased, Tracking)**
+```swift
+public struct TSLabel: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+### **Helper Text (Under Form Controls)**
+```swift
+public struct TSHelperText: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+### **Error Text**
+```swift
+public struct TSErrorText: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+### **Metric Value (Large Numeric, Monospaced)**
+```swift
+public struct TSMetricValue: View {
+    public init(_ value: String)
+}
+```
+
+### **Metric Label (Under Metric)**
+```swift
+public struct TSMetricLabel: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+### **Code (Monospaced Chip)**
+```swift
+public struct TSCode: View {
+    public init(_ value: String)
+}
+```
+
+---
+
+## **6. MOTION**
+**File:** `Components/Motion/Motion.swift`
+
+### **FadeIn (With Delay + Reduce Motion Honor)**
+```swift
+public struct TSFadeIn<Content: View>: View {
+    public init(delay: Double = 0, @ViewBuilder content: @escaping () -> Content)
+}
+```
+
+### **Stagger Container**
+```swift
+public struct TSStaggerContainer<Content: View>: View {
+    public init(spacing: CGFloat = TSSpacing.md, @ViewBuilder content: @escaping () -> Content)
+}
+```
+
+### **Stagger Item (Auto-Delayed Child)**
+```swift
+public struct TSStaggerItem<Content: View>: View {
+    public init(index: Int, @ViewBuilder content: @escaping () -> Content)
+}
+```
+
+### **Route Transition (Crossfade on ID Change)**
+```swift
+public struct TSRouteTransition<Content: View>: View {
+    public init(id: AnyHashable, @ViewBuilder content: @escaping () -> Content)
+}
+```
+
+### **Car Animation (Looping Glyph)**
+```swift
+public struct TSCarAnimation: View {
+    public init()
+}
+```
+
+---
+
+## **7. DESIGN TOKENS**
+**File:** `apps/design/generated/apple/Tokens.swift`
+
+### **Spacing**
+```swift
+public enum TSSpacing {
+    public static let none: CGFloat = 0
+    public static let xs: CGFloat = 4      // extra-small
+    public static let sm: CGFloat = 8      // small
+    public static let md: CGFloat = 12     // medium
+    public static let lg: CGFloat = 16     // large
+    public static let xl: CGFloat = 20     // extra-large
+    public static let x2xl: CGFloat = 24   // 2x-large
+    public static let x3xl: CGFloat = 32   // 3x-large
+    public static let x4xl: CGFloat = 48   // 4x-large
+}
+```
+
+### **Radius**
+```swift
+public enum TSRadius {
+    public static let sm: CGFloat = 8
+    public static let md: CGFloat = 12
+    public static let lg: CGFloat = 16
+    public static let pill: CGFloat = 9999
+}
+```
+
+### **Colors**
+**File:** `Tokens.swift` (lines 57–138)
+```swift
+public extension Color {
+    enum TS {
+        // Semantic surfaces
+        static let bg: Color              // page background
+        static let surface: Color         // card/panel surface
+        static let surfaceGlass: Color   // frosted glass
+        
+        // Text
+        static let textPrimary: Color     // headings/body
+        static let textSecondary: Color  // secondary content
+        static let textMuted: Color      // disabled/hints
+        
+        // Accent
+        static let accent: Color         // primary brand color
+        static let border: Color         // dividers/strokes
+        
+        // Status
+        static let statusSuccess: Color   // green
+        static let statusWarning: Color   // orange
+        static let statusDanger: Color    // red
+        static let statusInfo: Color      // cyan
+        
+        // Chart palette (index-stable across platforms)
+        static let chartCategorical: [Color]       // [blue, orange, teal, yellow, cyan, brown, magenta, gray]
+        static let chartSeriesBattery: Color       // teal
+        static let chartSeriesEnergy: Color        // orange
+        static let chartSeriesSpeed: Color         // blue
+        static let chartSeriesRegen: Color         // cyan
+        static let chartSeriesTemperature: Color   // red
+        static let chartSeriesPower: Color         // purple
+    }
+}
+```
+
+### **Fonts**
+```swift
+public extension Font {
+    enum TS {
+        static let display: Font   // 30pt, bold (page title)
+        static let title: Font     // 24pt, bold (section)
+        static let section: Font   // 18pt, semibold
+        static let panel: Font     // 16pt, semibold
+        static let body: Font      // 14pt, regular
+        static let bodySm: Font    // 12pt, regular
+        static let caption: Font   // 12pt, regular (small text)
+        static let label: Font     // 12pt, medium (uppercased)
+        
+        static let fontFamilySans = "Inter"
+        static let fontFamilyMono = "JetBrains Mono"
+    }
+}
+```
+
+### **Type Metrics (Line Height, Tracking)**
+```swift
+public enum TSTypeMetrics {
+    public static let displayLineHeight: CGFloat = 36
+    public static let displayTracking: CGFloat = -0.50
+    public static let titleLineHeight: CGFloat = 32
+    public static let titleTracking: CGFloat = -0.25
+    public static let sectionLineHeight: CGFloat = 28
+    public static let sectionTracking: CGFloat = -0.15
+    public static let panelLineHeight: CGFloat = 24
+    public static let panelTracking: CGFloat = 0.00
+    // ... and more
+}
+```
+
+### **Motion Timings**
+```swift
+public enum TSMotion {
+    public static let fastDuration: TimeInterval = 0.150
+    public static let normalDuration: TimeInterval = 0.250
+    public static let slowDuration: TimeInterval = 0.400
+}
+```
+
+### **Chart Palette Accessor**
+**File:** `Design/TSDesign.swift`
+```swift
+public enum TSChartPalette {
+    public static var categorical: [Color] { Color.TS.chartCategorical }
+    public static func color(at index: Int) -> Color { ... }  // wraps with modulo
+}
+```
+
+### **Animation Helpers**
+```swift
+public enum TSAnimation {
+    public static func fast(reduceMotion: Bool) -> Animation?
+    public static func standard(reduceMotion: Bool) -> Animation?
+    public static func slow(reduceMotion: Bool) -> Animation?
+}
+```
+
+---
+
+## **8. SI CONVERTERS & UNITS**
+**File:** `SharedFacade/Units+Facade.swift`
+
+### **Unit Preferences (User's Display Prefs)**
+```swift
+public struct UnitPreferences: Equatable, Sendable {
+    public var distance: String      // "km", "mi"
+    public var speed: String         // "km/h", "mph"
+    public var temperature: String   // "°C", "°F"
+    public var pressure: String      // "kPa", "psi"
+    public var energy: String        // "Wh", "kWh"
+    public var duration: String      // "h", "min"
+    public var power: String         // "W", "kW"
+    public var locale: String?
+    public var precision: Int?
+    public var emptyDisplay: String?
+    
+    public init(
+        distance: String,
+        speed: String,
+        temperature: String,
+        pressure: String,
+        energy: String,
+        duration: String,
+        power: String,
+        locale: String? = nil,
+        precision: Int? = nil,
+        emptyDisplay: String? = nil
+    )
+}
+
+public static let metric = UnitPreferences(
+    distance: "km", speed: "km/h", temperature: "°C", pressure: "kPa",
+    energy: "Wh", duration: "h", power: "W", locale: "en-US"
+)
+
+public static let imperial = UnitPreferences(
+    distance: "mi", speed: "mph", temperature: "°F", pressure: "psi",
+    energy: "kWh", duration: "min", power: "kW", locale: "en-US"
+)
+```
+
+### **SI Conversion + Formatting Functions**
+```swift
+public enum Units {
+    // Conversion functions (return Double in user's unit)
+    public static func convertDistance(_ meters: Double, _ prefs: UnitPreferences) -> Double
+    public static func convertSpeed(_ mps: Double, _ prefs: UnitPreferences) -> Double
+    public static func convertTemperature(_ celsius: Double, _ prefs: UnitPreferences) -> Double
+    public static func convertPressure(_ kpa: Double, _ prefs: UnitPreferences) -> Double
+    public static func convertEnergy(_ wh: Double, _ prefs: UnitPreferences) -> Double
+    public static func convertDuration(_ seconds: Double, _ prefs: UnitPreferences) -> Double
+    public static func convertPower(_ watts: Double, _ prefs: UnitPreferences) -> Double
+    
+    // Formatting functions (return formatted String with unit suffix)
+    public static func formatDistance(_ meters: Double?, _ prefs: UnitPreferences) -> String
+    public static func formatSpeed(_ mps: Double?, _ prefs: UnitPreferences) -> String
+    public static func formatTemperature(_ celsius: Double?, _ prefs: UnitPreferences) -> String
+    public static func formatPressure(_ kpa: Double?, _ prefs: UnitPreferences) -> String
+    public static func formatEnergy(_ wh: Double?, _ prefs: UnitPreferences) -> String
+    public static func formatDuration(_ seconds: Double?, _ prefs: UnitPreferences) -> String
+    public static func formatPower(_ watts: Double?, _ prefs: UnitPreferences) -> String
+}
+```
+
+### **Environment Injection (View Extension)**
+```swift
+public extension EnvironmentValues {
+    var tsUnits: UnitPreferences {
+        get { self[TSUnitsKey.self] }
+        set { self[TSUnitsKey.self] = newValue }
+    }
+}
+
+public extension View {
+    func tsUnits(_ preferences: UnitPreferences) -> some View {
+        environment(\.tsUnits, preferences)
+    }
+}
+```
+
+**Example usage:**
+```swift
+Text(verbatim: Units.formatDistance(1000, unitPrefs))  // "1.0 km" or "0.6 mi"
+TSDistance(1000)  // respects .tsUnits environment
+```
+
+---
+
+## **9. FACADE / VEHICLES DATA SOURCE**
+
+### **AppContainer (Dependency Injection Root)**
+**File:** `SharedFacade/AppContainer.swift`
+```swift
+@MainActor
+@Observable
+public final class AppContainer {
+    public var unitPreferences: UnitPreferences
+    public init(unitPreferences: UnitPreferences = .metric)
+    
+    @ObservationIgnored public private(set) var auth: (any AuthTokenProviding & AuthChallengeHandling)?
+    public func connectAuth(_ provider: any AuthTokenProviding & AuthChallengeHandling)
+    
+    public var platformName: String  // "iOS" / "macOS"
+    
+    // Adapts KMP StateFlow to @Observable model
+    public func model<State>(
+        from flow: Shared.Kotlinx_coroutines_coreStateFlow,
+        transform: @escaping (Any) -> State?
+    ) -> StateHolderModel<State>
+    
+    // Adapts StateFlow<Resource<T>> to LoadableState
+    public func loadable<Value>(
+        from flow: Shared.Kotlinx_coroutines_coreStateFlow,
+        as _: Value.Type = Value.self,
+        map: @escaping (Any) -> Value?
+    ) -> StateHolderModel<LoadableState<Value>>
+}
+```
+
+### **StateHolderModel (Observable Adapter)**
+**File:** `SharedFacade/StateHolderModel.swift`
+```swift
+@MainActor
+@Observable
+public final class StateHolderModel<State> {
+    public private(set) var state: State?
+    
+    public init(
+        flow: Shared.Kotlinx_coroutines_coreStateFlow,
+        transform: @escaping (Any) -> State?
+    )
+    
+    public func start()    // Begin collecting from KMP StateFlow
+    public func stop()     // Stop & close subscription
+}
+```
+
+### **LoadableState (Cache-Then-Network Projection)**
+**File:** `SharedFacade/LoadableState.swift`
+```swift
+public enum LoadableState<Value> {
+    case idle
+    case loading(cached: Value?, stale: Bool)
+    case loaded(Value, stale: Bool)
+    case empty(stale: Bool)
+    case failed(FacadeError, cached: Value?, stale: Bool)
+    
+    public var value: Value?              // Latest displayable value
+    public var isLoading: Bool             // Spinner check
+    public var isStale: Bool               // Data freshness
+    public var error: FacadeError?         // Error if failed
+    
+    static func from(
+        _ resource: Shared.Resource,
+        transform: (Any) -> Value?
+    ) -> LoadableState
+}
+```
+
+### **Vehicle Selection (P4 Surface Example)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-237/apps/apple/TeslaSync/shared-surfaces/VehicleSelect.Model.swift`
+
+```swift
+@MainActor
+@Observable
+public final class VehicleSelectModel {
+    public var vehicles: [/* vehicle data from Shared.kt */]
+    public var selectedId: Int?
+    public var phase: VehicleSelectPhase  // .loading, .content, .empty, .error(msg)
+    public var connection: VehicleSelectConnection  // .live, .stale, .offline
+    
+    public init(
+        source: any VehicleSelectSource,
+        onSelect: @escaping @MainActor (Int?) -> Void = { _ in },
+        telemetry: any VehicleSelectTelemetry = OSLogVehicleSelectTelemetry(),
+        localize: @escaping VehicleSelectResolve = VehicleSelectStrings.string
+    )
+    
+    public var projection: VehicleSelectProjection
+    public var ariaLabel: String
+    public var selectedVehicleName: String?
+    
+    public func start()     // Begin; emits view.opened once
+    public func stop()      // Mark inactive
+    public func refresh()   // Re-request fleet
+}
+```
+
+**Key pattern:** The vehicle source is injected; the model owns state machine logic (loading, error, retry, auto-refresh on stale). The host supplies `onSelect` callback that routes changes back (equivalent of web `setVehicleId`). Vehicles list comes from KMP-core's repository layer via `Shared.VehicleHolder`.
+
+---
+
+## **10. DataTable ADAPTIVE PATTERN**
+**File:** `Features/Admin/DiskForecastPage.Table.swift` (Concrete Example)
+
+This demonstrates the adaptive table pattern:
+
+```swift
+struct DiskForecastTable: View {
+    let rows: [DiskForecastHypertable]
+    
+    #if os(iOS)
+        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
+    
+    private var isCompact: Bool {
+        #if os(iOS)
+            horizontalSizeClass == .compact
+        #else
+            false
+        #endif
+    }
+    
+    var body: some View {
+        if isCompact {
+            // iPhone: card list
+            VStack(spacing: TSSpacing.md) {
+                ForEach(rows) { row in hypertableCard(row) }
+            }
+        } else {
+            // macOS/iPad: columnar Grid
+            Grid(alignment: .topLeading, horizontalSpacing: TSSpacing.lg, verticalSpacing: TSSpacing.sm) {
+                GridRow { header(...) header(...) ... }
+                Divider()...
+                ForEach(rows) { row in GridRow { cell(...) cell(...) ... } }
+            }
+        }
+    }
+    
+    private func hypertableCard(_ row: DiskForecastHypertable) -> some View {
+        TSCard {
+            VStack(alignment: .leading, spacing: TSSpacing.sm) {
+                // Reuse cell builders as stacked label/value pairs
+            }
+        }
+    }
+}
+```
+
+**Pattern:** Extract cell builders (nameCell, numericCell) as reusable functions, then use them in both Grid (horizontal) and Card (stacked vertical) layouts. This keeps code D---
+
+## **10. DataTable ADAPTIVE PATTERN (Continued)**
+
+**Pattern:** Extract cell builders (nameCell, numericCell) as reusable functions, then use them in both Grid (horizontal) and Card (stacked vertical) layouts. This keeps code DRY:
+
+```swift
+private func nameCell(_ row: DiskForecastHypertable) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+        Text(verbatim: row.hypertableName)
+            .font(Font.TS.bodySm)
+            .fontWeight(.medium)
+            .foregroundStyle(Color.TS.textPrimary)
+        Text(verbatim: Self.chunkCountText(row.chunkCount))
+            .font(Font.TS.caption)
+            .foregroundStyle(Color.TS.textMuted)
+    }
+}
+
+private func numericCell(_ value: String) -> some View {
+    Text(verbatim: value)
+        .font(Font.TS.bodySm)
+        .monospacedDigit()
+        .foregroundStyle(Color.TS.textPrimary)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+}
+
+// Compact variant for cards (labels + values stacked)
+private func labeledRow(_ label: LocalizedStringKey, _ value: String) -> some View {
+    HStack(alignment: .firstTextBaseline) {
+        Text(label).font(Font.TS.caption).foregroundStyle(Color.TS.textMuted)
+        Spacer(minLength: TSSpacing.md)
+        Text(verbatim: value)
+            .font(Font.TS.bodySm)
+            .monospacedDigit()
+            .foregroundStyle(Color.TS.textPrimary)
+    }
+}
+```
+
+**For your PeriodComparePage**, replicate this by:
+1. Define your comparison row struct (e.g., `PeriodComparisonRow` with metric name, periodA, periodB, delta)
+2. Create reusable cell builders for each column
+3. Wrap in `if isCompact { cards } else { grid }` based on horizontalSizeClass
+
+---
+
+## **CONCRETE USAGE EXAMPLES FOR YOUR PERI0DCOMPAREPAGE**
+
+### **Example 1: Grouped Bar Chart (Period A vs B)**
+
+```swift
+import SwiftUI
+import Shared
+
+struct PeriodComparePage: View {
+    @Environment(\.tsUnits) var units: UnitPreferences
+    @State private var periodAData: [String: Double] = [:]
+    @State private var periodBData: [String: Double] = [:]
+    
+    let metrics = ["Energy", "Distance", "Duration", "Avg Speed", "Charging Time", "Efficiency"]
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: TSSpacing.lg) {
+                TSPageTitle("period.compare.title")
+                
+                // Bar chart: grouped bars for Period A vs Period B
+                TSChartContainer("period.compare.chart") {
+                    TSBarChart(
+                        series: [
+                            TSChartSeries(
+                                id: "periodA",
+                                name: "period.a",
+                                nameText: "Period A",
+                                points: metrics.enumerated().map { idx, name in
+                                    TSChartPoint(
+                                        x: Double(idx),
+                                        y: periodAData[name] ?? 0,
+                                        id: "A-\(name)"
+                                    )
+                                },
+                                colorIndex: 0  // First color from palette
+                            ),
+                            TSChartSeries(
+                                id: "periodB",
+                                name: "period.b",
+                                nameText: "Period B",
+                                points: metrics.enumerated().map { idx, name in
+                                    TSChartPoint(
+                                        x: Double(idx),
+                                        y: periodBData[name] ?? 0,
+                                        id: "B-\(name)"
+                                    )
+                                },
+                                colorIndex: 1  // Second color from palette
+                            )
+                        ],
+                        stacked: false  // Side-by-side grouped bars
+                    )
+                }
+                
+                // Metrics comparison cards (6 KPIs)
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: TSSpacing.md), count: 2),
+                    spacing: TSSpacing.md
+                ) {
+                    ForEach(metrics, id: \.self) { metric in
+                        metricComparisonCard(metric)
+                    }
+                }
+                
+                // Comparison table
+                comparisonTable
+            }
+            .padding(TSSpacing.lg)
+        }
+        .tsUnits(units)
+    }
+    
+    @ViewBuilder
+    private func metricComparisonCard(_ metric: String) -> some View {
+        let valueA = periodAData[metric] ?? 0
+        let valueB = periodBData[metric] ?? 0
+        let delta = valueB - valueA
+        let deltaPercent = valueA > 0 ? (delta / valueA) * 100 : 0
+        
+        TSCard {
+            VStack(alignment: .leading, spacing: TSSpacing.sm) {
+                TSMetricLabel(LocalizedStringKey(metric))
+                
+                HStack(alignment: .firstTextBaseline, spacing: TSSpacing.sm) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        TSMetricValue(String(format: "%.1f", valueA))
+                        TSCaption("period.a")
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        TSMetricValue(String(format: "%.1f", valueB))
+                        TSCaption("period.b")
+                    }
+                }
+                
+                // Delta badge
+                TSDelta(
+                    value: delta,
+                    formatted: String(format: "%+.1f%%", deltaPercent)
+                )
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var comparisonTable: some View {
+        TSCard {
+            VStack(alignment: .leading, spacing: TSSpacing.md) {
+                TSPanelTitle("period.compare.table")
+                
+                #if os(iOS)
+                    @Environment(\.horizontalSizeClass) var sizeClass
+                #endif
+                
+                let isCompact = false  // Your sizeClass check
+                
+                if isCompact {
+                    compactTableCards
+                } else {
+                    regularTable
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var regularTable: some View {
+        Grid(alignment: .topLeading, horizontalSpacing: TSSpacing.lg, verticalSpacing: TSSpacing.sm) {
+            GridRow {
+                Text("Metric").font(Font.TS.label).foregroundStyle(Color.TS.textSecondary)
+                Text("Period A").font(Font.TS.label).foregroundStyle(Color.TS.textSecondary)
+                Text("Period B").font(Font.TS.label).foregroundStyle(Color.TS.textSecondary)
+                Text("Change").font(Font.TS.label).foregroundStyle(Color.TS.textSecondary)
+            }
+            Divider().overlay(Color.TS.border)
+            
+            ForEach(metrics, id: \.self) { metric in
+                let valueA = periodAData[metric] ?? 0
+                let valueB = periodBData[metric] ?? 0
+                let delta = valueB - valueA
+                
+                GridRow {
+                    Text(metric).font(Font.TS.bodySm).foregroundStyle(Color.TS.textPrimary)
+                    Text(String(format: "%.1f", valueA))
+                        .font(Font.TS.bodySm)
+                        .monospacedDigit()
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    Text(String(format: "%.1f", valueB))
+                        .font(Font.TS.bodySm)
+                        .monospacedDigit()
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    Text(String(format: "%+.1f", delta))
+                        .font(Font.TS.bodySm)
+                        .monospacedDigit()
+                        .foregroundStyle(delta >= 0 ? Color.TS.statusSuccess : Color.TS.statusDanger)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+                Divider().overlay(Color.TS.border.opacity(0.5))
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var compactTableCards: some View {
+        VStack(spacing: TSSpacing.md) {
+            ForEach(metrics, id: \.self) { metric in
+                let valueA = periodAData[metric] ?? 0
+                let valueB = periodBData[metric] ?? 0
+                let delta = valueB - valueA
+                
+                TSCard {
+                    VStack(alignment: .leading, spacing: TSSpacing.sm) {
+                        TSMetricLabel(LocalizedStringKey(metric))
+                        HStack {
+                            Text("A: \(String(format: "%.1f", valueA))")
+                                .font(Font.TS.bodySm)
+                            Spacer()
+                            Text("B: \(String(format: "%.1f", valueB))")
+                                .font(Font.TS.bodySm)
+                        }
+                        TSDelta(
+                            value: delta,
+                            formatted: String(format: "%+.1f", delta)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+---
+
+### **Example 2: Using TSDataTable for Comparison**
+
+```swift
+struct ComparisonRow: Identifiable {
+    let id: String
+    let metricName: String
+    let valueA: Double
+    let valueB: Double
+    var delta: Double { valueB - valueA }
+}
+
+struct PeriodCompareWithDataTable: View {
+    @State private var rows: [ComparisonRow] = []
+    @State private var selection: Set<String> = []
+    
+    var body: some View {
+        VStack {
+            TSDataTable(
+                rows: rows,
+                columns: [
+                    TSColumn(
+                        id: "metric",
+                        title: "Metric",
+                        comparator: { $0.metricName < $1.metricName ? .orderedAscending : .orderedDescending }
+                    ) { row in
+                        Text(row.metricName)
+                    },
+                    
+                    TSColumn(
+                        id: "valueA",
+                        title: "Period A",
+                        comparator: { $0.valueA < $1.valueA ? .orderedAscending : .orderedDescending }
+                    ) { row in
+                        Text(String(format: "%.2f", row.valueA)).monospacedDigit()
+                    },
+                    
+                    TSColumn(
+                        id: "valueB",
+                        title: "Period B",
+                        comparator: { $0.valueB < $1.valueB ? .orderedAscending : .orderedDescending }
+                    ) { row in
+                        Text(String(format: "%.2f", row.valueB)).monospacedDigit()
+                    },
+                    
+                    TSColumn(
+                        id: "delta",
+                        title: "Change",
+                        comparator: { $0.delta < $1.delta ? .orderedAscending : .orderedDescending }
+                    ) { row in
+                        TSDelta(
+                            value: row.delta,
+                            formatted: String(format: "%+.2f", row.delta)
+                        )
+                    }
+                ],
+                selection: $selection,
+                density: .standard
+            )
+        }
+        .padding(TSSpacing.lg)
+    }
+}
+```
+
+---
+
+### **Example 3: Loading + Error States**
+
+```swift
+@MainActor
+@Observable
+class PeriodComparePageModel {
+    var comparisonState: LoadableState<PeriodComparison> = .idle
+    private let container: AppContainer
+    
+    init(container: AppContainer) {
+        self.container = container
+    }
+    
+    func loadComparison(periodAId: String, periodBId: String) async {
+        // Simulate KMP facade call:
+        // comparisonState = await container.loadable(from: analyticsHolder.getComparison(...))
+    }
+}
+
+struct PeriodCompareWithState: View {
+    @State var model: PeriodComparePageModel
+    
+    var body: some View {
+        switch model.comparisonState {
+        case .idle:
+            TSPageLoader()
+                .onAppear { Task { await model.loadComparison(...) } }
+        
+        case .loading(let cached, let stale):
+            if let cached {
+                // Show cached data with spinner overlay
+                PeriodCompareContent(data: cached)
+                    .redacted(reason: .placeholder)
+                    .overlay(alignment: .topTrailing) {
+                        TSSpinner(label: "Refreshing...")
+                    }
+            } else {
+                TSPageLoader(label: "loading.comparison")
+            }
+        
+        case .loaded(let data, let stale):
+            VStack {
+                if stale {
+                    TSLiveStaleDataBanner()
+                }
+                PeriodCompareContent(data: data)
+            }
+        
+        case .empty:
+            TSEmptyState(
+                title: "period.compare.empty",
+                message: "period.compare.emptyMessage",
+                systemImage: "chart.xyaxis.line"
+            )
+        
+        case .failed(let error, let cached, let stale):
+            VStack(spacing: TSSpacing.md) {
+                if let cached {
+                    PeriodCompareContent(data: cached)
+                        .opacity(0.5)
+                }
+                TSErrorDisplay(
+                    title: "period.compare.error",
+                    message: error.userMessage,
+                    onRetry: {
+                        Task { await model.loadComparison(...) }
+                    }
+                )
+            }
+        }
+    }
+}
+```
+
+---
+
+### **Example 4: Using Environment for Unit Prefs**
+
+```swift
+struct PeriodCompareContent: View {
+    let data: PeriodComparison
+    @Environment(\.tsUnits) var units
+    
+    var body: some View {
+        VStack(spacing: TSSpacing.lg) {
+            // Distance comparison (SI meters → formatted)
+            TSComparisonHeader(
+                leadingLabel: "Distance (A)",
+                leadingValue: Units.formatDistance(data.distanceMetersA, units),
+                trailingLabel: "Distance (B)",
+                trailingValue: Units.formatDistance(data.distanceMetersBv units),
+                delta: Units.convertDistance(data.distanceMetersBv units) -
+                       Units.convertDistance(data.distanceMetersA, units),
+                deltaFormatted: String(format: "%+.1f%%",
+                    ((Units.convertDistance(data.distanceMetersBv units) -
+                      Units.convertDistance(data.distanceMetersA, units)) /
+                     Units.convertDistance(data.distanceMetersA, units)) * 100
+                )
+            )
+            
+            // Or use the view components directly (they read from environment)
+            HStack {
+                VStack(alignment: .leading) {
+                    TSMetricLabel("energy.a")
+                    TSEnergy(data.energyWhA)
+                }
+                Spacer()
+                VStack(alignment: .leading) {
+                    TSMetricLabel("energy.b")
+                    TSEnergy(data.energyWhB)
+                }
+            }
+        }
+        .tsUnits(units)  // Inject prefs for child components
+    }
+}
+
+// Usage at page level:
+PeriodCompareContent(data: comparison)
+    .tsUnits(appContainer.unitPreferences)  // Set active prefs
+```
+
+---
+
+## **SUMMARY CHECKLIST FOR YOUR PERI0DCOMPAREPAGE**
+
+✅ **Charts:** `TSBarChart` (grouped, `stacked: false`) with `TSChartSeries` + `TSChartPoint`  
+✅ **Data Display:** `TSMetricCard`, `TSStatCard`, `TSDelta`, `TSComparisonHeader`  
+✅ **UI:** `TSDataTable` (or Grid for adaptive layout), `TSCard`, `TSBadge`, `TSButton`  
+✅ **Typography:** `TSPageTitle`, `TSPanelTitle`, `TSMetricLabel`, `TSMetricValue`  
+✅ **Feedback:** `TSEmptyState`, `TSErrorDisplay`, `TSPageLoader`, `TSLiveStaleDataBanner`  
+✅ **Motion:** `TSFadeIn` for staggered metric reveals  
+✅ **Design Tokens:** `TSSpacing`, `TSRadius`, `Color.TS` (success/danger for deltas), `Font.TS`, `TSChartPalette.color(at: index)`  
+✅ **Units:** `Units.formatDistance(meters, prefs)`, `Units.convertDistance()`, `@Environment(\.tsUnits)`, `TSDistance` view component  
+✅ **LoadableState:** `.idle`, `.loading(cached, stale)`, `.loaded(value, stale)`, `.empty(stale)`, `.failed(error, cached, stale)`  
+✅ **Adaptive Table:** Check `horizontalSizeClass == .compact` → swap Grid for stacked card list (see `DiskForecastPage.Table.swift`)
+
+---
+
+## **FILE REFERENCE QUICK LOOKUP**
+
+| Component | File Path |
+|-----------|-----------|
+| **TSBarChart, TSComposedChart, TSScatterChart** | `Components/Charts/BarCharts.swift` |
+| **TSChartSeries, TSChartPoint, TSChartFormat** | `Components/Charts/ChartModels.swift` |
+| **TSChartContainer, TSChartLegend** | `Components/Charts/ChartContainer.swift` |
+| **TSMetricCard, TSStatCard, TSDelta, TSComparisonHeader** | `Components/DataDisplay/Metrics.swift` |
+| **TSDistance, TSSpeed, TSTemperature** (formatters) | `Components/DataDisplay/UnitFormatters.swift` |
+| **TSDataTable, TSColumn, TSTableDensity** | `Components/UI/DataTable.swift` |
+| **TSSelect, TSSelectOption, TSStepper, TSDatePickerBridge** | `Components/UI/Pickers.swift` |
+| **TSBadge, TSStatusPill, TSIconBox, TSTone** | `Components/UI/Badges.swift` |
+| **TSCard, TSGlassPanel, TSCardHeader, TSCardFooter** | `Components/UI/Cards.swift` |
+| **TSPageTitle, TSSectionTitle, TSPanelTitle, TSHeading** | `Components/UI/Typography.swift` |
+| **TSEmptyState, TSErrorDisplay, TSQueryError, TSErrorBoundary** | `Components/Feedback/States.swift` |
+| **TSSkeleton, TSStatSkeleton, TSChartSkeleton** | `Components/Feedback/Skeletons.swift` |
+| **TSAlertBanner, TSInlineCallout, preset banners** | `Components/Feedback/Banners.swift` |
+| **TSFadeIn, TSStaggerContainer, TSStaggerItem, TSRouteTransition** | `Components/Motion/Motion.swift` |
+| **TSSpacing, TSRadius, Color.TS, Font.TS, TSMotion** | `Design/generated/apple/Tokens.swift` |
+| **TSChartPalette, TSAnimation** | `Design/TSDesign.swift` |
+| **Units (conversion + formatting), UnitPreferences** | `SharedFacade/Units+Facade.swift` |
+| **AppContainer** | `SharedFacade/AppContainer.swift` |
+| **StateHolderModel** | `SharedFacade/StateHolderModel.swift` |
+| **LoadableState** | `SharedFacade/LoadableState.swift` |
+| **VehicleSelectModel** (pattern example) | `TeslaSync/shared-surfaces/VehicleSelect.Model.swift` |
+| **Adaptive table pattern** | `Features/Admin/DiskForecastPage.Table.swift` |
+
+All file paths prepend: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-237/apps/apple/Sources/`The explore agent's usage examples are approximations — I must verify exact signatures from source. Let me list the actual component files and read the key ones.
+
+Let me check how `TSBarChart` is used elsewhere (categorical x-axis), read the axes helper, and the key data-display/UI/feedback components.
+
+The `TSBarChart` uses numeric x — I need to see how existing grouped/categorical comparison bar charts are built. Let me read the closest analog plus the core UI/data-display/facade components.
+
+Now the facade (vehicle fetching), units, and remaining UI primitives. Let me read the facade core, units, pickers, cards, typography, badges, feedback, motion, and the adaptive table pattern.
+
+Now let me understand how vehicles are modeled/fetched and read the remaining UI primitives. Let me search for existing Vehicle models/data sources and read the key UI files.
+
+Found the `VehicleSelect` surface and the data-source seam pattern. Now let me read the remaining primitives: pickers, cards, typography, badges, feedback, motion, design tokens, the adaptive table, and the AI narration surface.
+
+Let me read badges, feedback, motion, design tokens, the adaptive table pattern, and the AI narration surface.
+
+Let me read badges/buttons, design tokens, the adaptive table pattern, and check existing `compare.*` strings in the catalog.
+
+No existing `compare.*` keys — I'll add all 34. Let me read the design tokens, button signature, the xcstrings format, AI narration surface, and how route registrations are composed into the shell.
+
+Let me verify Color.TS/Font.TS members, read the motion (FadeIn) + button signatures, and find where route registrations are composed into the shell.
+
+Let me find where route registrations are composed into the app and check the analytics route's current state.
+
+Now I understand the composition. Let me verify `Font.TS` definitions, the xcstrings format, and existing test patterns (RouteTests + a page model test).
+
+Let me check the RouteTests (may enumerate registered routes) and the placeholder-scan script that the gate runs.
+
+I have nearly everything. Let me verify the web `fmtNumber` and `MetricCard` to port their exact behavior, plus check the `VehicleSelectVehicle`/Vehicle type and the web `useVehicles` shape.
+
+Let me confirm the global precision default and the `Vehicle` type shape, then I'll start building.
+
+Got everything I need. `fmtNumber` defaults to 2 decimals. Now let me assess the build prerequisites (xcframework, generated project) since the gate must actually build.
+
+The build needs a Gradle-built KMP `Shared.xcframework` (the long pole). Let me verify the shared module exists and kick off the framework build + project generation in the background while I implement.
+
+Java 17 + gradlew present. Let me start the KMP framework build in the background (long pole) and generate the Xcode project while I implement.
+
+Project generated; KMP build running. Let me set up tracking and verify a couple of shared string keys exist, then start implementing.
+
+`route.analytics` exists; `error.title`/`action.retry`/`chart.bar` are missing shared keys (SwiftUI falls back to the key). I'll add `error.title`+`action.retry` and override the chart a11y label. Let me start the KMP build check and write the model.
+
+KMP build in progress. Let me write the model file (the core domain + state holder).
+
+Now the strings helper for the interpolated insights + direction words. Let me create it.
+
+Let me move `metricLabel` into the strings helper (shared by chart + table) and write the adaptive table.
+
+Now the adaptive comparison table:
+
+Let me fix the badge to render dynamic text verbatim, and check the `TSIconBox` signature before writing the cards.
+
+`TSIconBox` uses a fixed `TSTone`. I'll use a palette-tinted icon (dynamic computed color — the allowed exception) for per-metric variety. Writing the cards companion:
+
+Now the main page view. Let me write it with header, banner, selectors, and the state-driven results region plus previews.
+
+KMP build finished. Let me verify the framework built and continue with the route registration.
+
+Framework built successfully (macos-arm64 + ios). Now the route registration, app wiring, and deep-link alias.
+
+I added one opening paren for `PeriodCompareRouteRegistration.registry(` — I need to balance with one more closing paren. Let me view and fix.
+
+Now add the `/period-compare` deep-link alias to the route parser:
+
+Now I'll add the 34 `compare.*` strings plus the two shared keys (`error.title`, `action.retry`) to the catalog. Let me generate a correctly-formatted block matching the existing xcstrings style.
+
+Let me fix the colon spacing to match Xcode's xcstrings style (space before colon) and check the diff size.
+
+The full-file re-sort created a massive 246K-line diff — unacceptable. Let me revert and do a surgical text insertion instead.
+
+Original has a mixed format (no-space for top-level, space-before-colon for nested). I'll do a byte-preserving raw-text insertion of my 36 entries right after `"strings": {`.
+
+Clean 396-line diff. Now the model unit tests, mirroring the sibling page tests:
+
+Now let me stage the framework, regenerate the project to include the new files, and run SwiftLint on the new feature.
+
+SwiftLint scanned the whole project (config-driven). Let me isolate violations in my new files.
+
+SwiftLint flags two things in my files: `file_length` (model is 553 lines, limit 400) and single-char `a`/`b` identifiers. Let me split the model file and rename identifiers. I'll recreate as two files.
+
+Now the model class file with renamed identifiers (no single-char names):
+
+Now fix the single-char binding in the test and re-run SwiftLint on my files:
+
+SwiftLint appears to lint project-wide regardless of path (config-driven). Let me check the config and whether there are pre-existing violations outside my files that would fail the gate.
+
+SwiftLint uses config `included` (project-wide). Let me confirm the WidgetChartSummary violations are pre-existing (not mine) and verify my files are clean in a scoped run.
+
+Confirmed: the 3 `a/b/c` violations in `WidgetChartSummary.Tests.swift` are **pre-existing at HEAD** (not mine). Let me determine SwiftLint's actual scoping and confirm my code adds zero violations.
+
+Project-wide strict now has exactly **3 pre-existing violations** in an unrelated widget test — my code adds zero. Let me check the actual gate contract (the prompt references `p4-apple/README.md`) to see how lint is really scoped.
+
+The authoritative CI gate (`.github/workflows/apps-apple.yml`) runs project-wide `swiftlint --strict` plus SwiftFormat `--lint`. Let me see the full lint step and check SwiftFormat.
+
+SwiftFormat `--lint` also runs in the gate, and my hand-written files need formatting (e.g., wrap single-line bodies — the project style). Let me auto-format my files, then re-verify.
+
+Formatting clean. Let me re-run SwiftLint project-wide to confirm my files stay clean (formatting can change line counts) and verify only the 3 pre-existing remain.
+
+All my files are clean and under 400 lines. Only the 3 pre-existing `WidgetChartSummary.Tests.swift` violations remain — and they block a green project-wide `swiftlint --strict` (the authoritative CI gate). I'll resolve them with a trivial, behavior-preserving rename to unblock the shared strict-lint gate.
+
+WidgetChartSummary resolved. I split the model into a new file after the last project generation, so I must regenerate. Let me regenerate and run the full lint gate (SwiftLint + SwiftFormat, project-wide).
+
+SwiftLint `--strict` is green (exit 0). Now SwiftFormat `--lint .` project-wide:
+
+Both lint tools pass project-wide (exit 0). Now the build. Let me run the macOS build (matches the CI gate) — this compiles the full app, so it'll take a while.
+
+Build running. Let me update progress tracking and prepare the gate log. Let me check the logs directory and an example log format.
+
+Build completed. Let me verify the result.
+
+Build failed only at the **code-signing** step (no development team in this environment) — not compilation. Let me confirm there were zero Swift compile errors, then rebuild with signing disabled (as CI environments do).
+
+Let me get a precise count of non-signing errors and rebuild with signing disabled.
+
+Zero compile errors — only signing failed. Let me rebuild with signing disabled (standard for CI without a team) to get a clean BUILD SUCCEEDED.
+
+Build running. Let me study the sibling DiskForecast gate log to mirror its exact structure while the build runs.
+
+The sibling log shows the exact format (and notes a pre-existing shared-surfaces build break others hit). My first build reached the signing phase — suggesting it compiled cleanly. Let me check the signing-disabled build result and the parity ledger.
+
+Build still running. Let me inspect the parity ledger I need to update.
+
+I'll add two ledger rows (macos + ios) for `page:analytics/PeriodCompare`. Let me view the ledger's end and check the build.
+
+Build2 finished with failures. Let me see the actual errors — critical to know if they're mine or pre-existing.
+
+A real collision I introduced: my `ComparisonMetric` clashes with a **pre-existing** `ComparisonMetric` in `widget-primitives`. I must rename my types. Let me find ALL collisions between my new type names and the existing codebase.
+
+Only **one** collision: my `ComparisonMetric` vs the pre-existing widget one. All my other type names are unique. I'll rename mine to `PeriodComparisonMetric` across my files only.
+
+Rename successful — no bare `ComparisonMetric` remains in my files. Let me re-verify lint/format (the longer name may affect line lengths), then rebuild.
+
+Clean after rename. Now rebuild with signing disabled — the collision (which I caused) should be resolved, unbreaking the widget files too.
+
+Build running. Let me run the placeholder-scan gate on my feature (and the test dir) while it compiles.
+
+The placeholder scan flags the word "placeholder" in a comment. Let me find and reword all such occurrences in my files.
+
+Let me re-run the placeholder scan to confirm clean and check the build progress.
+
+Placeholder scan clean. Let me wait for the build to finish.
+
+Build3 ended with failures. Let me extract the actual errors and check ownership.
+
+The widget errors persist — likely stale incremental cache, or another `ComparisonMetric` definition. Let me count all definitions in the codebase now.
+
+Conflicting signals — let me look at the actual current state of the definition.
+
+Found it: macOS BSD `sed`/`grep` don't support `\b`, so the earlier rename was a **no-op** (and the confirmation grep falsely reported clean). The collision is still present. Let me redo the rename with a portable pattern and verify directly.
+
+The rename is now real. Let me confirm only the widget's `ComparisonMetric` remains repo-wide, and re-verify lint/format on my files.
+
+Single definition now; my files clean. Let me rebuild (the widget ambiguity should be resolved since I caused it).
+
+Build running. Let me add the two parity ledger rows for `page:analytics/PeriodCompare`.
+
+Ledger valid. Let me wait for the build to complete.
+
+0 errors so far. Let me keep waiting for the build.
+
+Build4 ended with 3 failures while compiling AI shared-surfaces. Let me extract the errors and check if they're mine or the pre-existing shared-surfaces breakage the sibling log documented.
+
+The only build error is a **pre-existing, out-of-scope** shared-surfaces bug (`AISignalExplorerNlFilter.swift:142` — the documented `glass`/escaping-closure class from the sibling logs). My collision fix worked — zero errors in my files. Let me verify it's pre-existing and unmodified by me.
+
+Confirmed pre-existing and unmodified: at HEAD, `glass(@ViewBuilder _ content: () -> some View)` passes a non-escaping closure to `TSGlassPanel` (which needs `@escaping`) — the documented systematic bug across many AI shared-surfaces. The full build is blocked by this baseline breakage, not my code (build4: zero errors in my files).
+
+Following the sibling-log methodology, let me build an executed harness to prove my model's runtime logic (real model + thin `Units` stub, since my model depends on the KMP facade).
+
+Now the harness assertions covering the real model's runtime behavior:
+
+Now compile and run the harness under Swift 6 strict concurrency:
+
+The harness surfaced a real Swift 6 strict-concurrency issue in my `UserDefaultsCompareBannerStore` (a `Sendable` struct holding non-`Sendable` `UserDefaults`) — the macOS toolchain SDK is stricter than the app's iOS SDK. Let me fix it properly (store a Sendable suite name instead), then re-run.
+
+Good — my Sendable fix worked (no more `UserDefaults` error). The remaining errors are harness-only (global mutation from nonisolated `check`). Let me fix the harness and re-run.
+
+Harness: **SWIFTC_EXIT=0, 32/32 assertions passed** under Swift 6 strict concurrency — my model logic is proven correct (and my Sendable fix is validated against the stricter macOS SDK). Let me re-verify lint/format/placeholder on the changed file, then run a final app build to confirm the view files too.
+
+All green (format 0/8, lint clean, placeholder 0). Let me run the final app build to capture the authoritative build-gate state and confirm the view files compile too.
+
+Build5 (iOS target) running. Let me check the macOS counterpart consideration — my view files have `#if os(iOS)`/`#else` branches, so I'll also verify the macOS target. Let me wait for build5 first.
+
+Let me confirm build5's errors are only the pre-existing one, with zero in my files (including the view files).
+
+build5: **only** the pre-existing `AISignalExplorerNlFilter` error, **zero in my files**. Let me confirm my files were actually compiled (not just cached) in this build.
+
+build5 type-checked my files in the full iOS graph with zero errors (no `.o` is emitted because the module-level compile bails on the pre-existing error — expected). Let me close the macOS view-branch gap by building the macOS scheme, and draft the gate log meanwhile.
+
+I realize the sibling methodology scopes lint to in-scope files and does **not** edit predecessor files (covenant #7). My WidgetChartSummary edit violates that. Let me revert it and rely on file-scoped linting (which I verified clean), matching the established approach.
+
+Scoped SwiftLint: **0 violations in 9 files**. Let me confirm scoped SwiftFormat too and check the macOS build.
+
+Scoped SwiftFormat: 0/9. macOS build still compiling. Let me gather my final diff stats for the log while it runs.
+
+My diff is confined to allowed scope (xcstrings, nav registration ×2, ledger, the feature + tests); WidgetChartSummary reverted. Let me wait for the macOS build to complete.
+
+macOS build done. Let me confirm errors are only pre-existing, with zero in my files (proving the macOS view branch).
+
+Zero `error:` lines in the macOS build, yet "2 failures" — let me see what those failures are.
+
+Let me find the actual macOS compile error (around line 10922).
+
+The macOS build hit a **swift-frontend compiler crash** (`report_fatal_error`), not a source diagnostic — inconclusive and likely the giant module + pre-existing bug. Let me confirm the crash isn't attributable to my files, then do a focused isolated macOS type-check of my views.
+
+The macOS crash is a compiler fatal-error in the giant module (not my files — only a shared-surface `.strings` resource even mentions "PeriodCompare"). Let me prove the macOS view branch via a focused isolated type-check against the real component/facade layer + Shared.
+
+The `Shared` module path was wrong — the xcframework nests per-platform frameworks. Let me point `-F` at the macOS slice and re-run.
+
+Shared resolves now; the only remaining errors are missing `AuthTokenProviding` (an Auth-layer dep `AppContainer` needs) — still **zero in my files**. Let me include the Auth sources and re-run.
+
+Now only `Sources/Auth/UI/RootView.swift` (which pulls in `AppShell`) errors — not a dependency of my views. Let me exclude the Auth UI subdir and re-run.
+
+**`TYPECHECK_MACOS_EXIT=0`** — isolated macOS type-check of my views + real components/facade/Shared passes with zero errors, proving the macOS `#else` branch. Let me run the iOS isolated type-check too (exercises the `#if os(iOS)` `horizontalSizeClass` branch).
+
+**Both isolated type-checks pass: `TYPECHECK_MACOS_EXIT=0` and `TYPECHECK_IOS_EXIT=0`** — my files compile cleanly on both platforms under Swift 6 strict concurrency. I now have comprehensive proof. Let me gather host/version info and write the gate log.
+
+Log written. Let me verify the final git state (ensure git-ignored build artifacts won't be committed) and run a final scoped lint/format/placeholder confirmation before committing.
+
+Git state is exactly as intended (only allowed files; build artifacts git-ignored). Let me run a final consolidated verification of all in-scope gates, then commit.
+
+All in-scope gates green: SwiftLint 0/9, SwiftFormat 0/9, placeholder 0, 34 strings, 2 ledger rows. Let me clean up temp files and commit.
+
+All intended files staged, nothing extraneous. Let me commit.
+
+Committed (`208108fc3`). Let me do a final verification that the working tree is clean and update tracking.
+
+The task is complete. The working tree is clean and the commit (`208108fc3`) contains exactly the 14 intended files.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

@@ -1,0 +1,26 @@
+I'll start by understanding the environment and the task requirements. Let me explore in parallel: the web source, the Apple app structure, and available tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The web source and `apps/apple` structure both exist. Let me read the web source and explore the existing Apple app conventions in depth.
+
+Apple toolchain confirmed. The web source is a small pure-presentational tile. Now I must learn the existing Apple conventions exactly — state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and the established feature-view + test patterns. Let me explore the Apple app tree.
+
+This is a large, mature monorepo (~1950 feature-view files) with a strict file-set convention per surface: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. I need to find the closest presentational analog and learn the P1/S8–S11 facades. Let me read a small presentational exemplar end-to-end and locate the facades.
+
+`AccordionSection` is the ideal template — it's the repo's canonical **pure-presentational** surface (no data hooks), and its files explicitly document that faithful parity means reproducing ONLY the web source's real render states, not fabricating data envelopes. That resolves the states question for `InfoTile` (also pure-presentational). Let me read its Tests + Previews, and locate the P1/S9 design tokens + glass-panel/fade modifiers.
+
+Clear convention captured. Now let me read the actual design tokens and the glass-panel/material modifiers so `InfoTile` uses them precisely, and check the SharedFacade + Localization layout.
+
+Let me read the generated design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) so `InfoTile` references only symbols that exist.
+
+I have the full token set. Two key findings: (1) `InfoTile`'s real surface-owned strings are the boolean `'Yes'/'No'` literals (web line 19) — these must route through i18n; `label`/`value`/`sub` are caller-supplied like AccordionSection. (2) It's pure-presentational, so faithful parity = reproduce its real branches (bool→Yes/No, value, optional sub, color, truncation+tooltip), not fabricated data envelopes. Let me confirm web usage, the logs dir, lint config, and check for any closer Apple tile analog.
+
+Key findings: real usage lives in `TelemetryGrid.tsx`, and there are 233 sibling P4 logs to match format against. Let me check whether `InfoTile.*` already exists, read the real usage, confirm no existing 0280 log, and sample a sibling log's format.
+
+No existing `InfoTile.*` or 0280 log — clean slate. Real usage (`TelemetryGrid.tsx`) confirms the value/color/sub shapes. The sibling 0236 log reveals the house disposition for the heavy full-app gate (pre-existing sibling/env reds are documented; the surface must be independently green). Let me probe the build environment and kick off baseline lint/format checks.
+
+xcodegen 2.45.4 present (no `.xcodeproj` yet — must generate), iPhone 16 sim booted, iOS Sim SDK 26.5. Let me read the KMP framework build script and start a scoped-compile harness plan while the lint baseline runs.
+
+swiftformat baseline is **clean (0/2617 need formatting)** — so keeping my files formatted keeps that gate green. `Shared.xcframework` is absent (needs a Gradle/Kotlin-Native build). Let me read the swiftlint baseline.
+
+Baseline established: **swiftformat clean (0/2617)**; **swiftlint has 1 pre-existing error** in an unrelated `dashboard-widgets` file (outside my allowed set) — exactly as the sibling log documented. My job: add zero new lint/format violations and a surface that compiles against the real SDKs. Let me check for type-name collisions and the sim runtime, then write the plan.
+

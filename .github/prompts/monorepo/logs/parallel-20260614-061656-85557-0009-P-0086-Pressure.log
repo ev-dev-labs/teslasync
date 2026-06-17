@@ -1,0 +1,123 @@
+I'll start by exploring the environment and understanding what's available, then read the web source specification.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh) — so BLOCKED is not justified. Now let me understand the web source semantics and existing Apple app structure.
+
+Now I understand the web source semantics. Let me find sibling `format/*` surfaces already built in the Apple app to match the established pattern, and grab the remaining web constants.
+
+`Distance.*` is the exact sibling pattern (both come from `components/data-display/format/*.tsx`). This is my template. Let me read all 8 Distance files plus the web Distance source to learn the precise translation conventions.
+
+Excellent template. Let me read the remaining Distance files plus the `UnitPreferences`/`tsUnits` definitions and the web Distance source for parity reference.
+
+I have the full 8-file template. Now let me locate the shared infrastructure types (`UnitPreferences`, `.metric`/`.imperial`, `\.tsUnits`, `Color.TS`/`Font.TS`) and confirm how `project.yml` includes sources.
+
+The `shared-surfaces` dir is globbed into both app targets. Let me read the infra type definitions and the project.yml excludes/test-target wiring.
+
+All infra confirmed. Now let me check the test-target wiring in project.yml and scan for any `Pressure*` symbol collisions (the recent git log shows dedupe fixes for collisions).
+
+No collisions, and test wiring confirmed (`*Tests.swift` in shared-surfaces → `TeslaSyncTests`/`TeslaSync-macOSTests`). Let me verify the web Distance source for exact parity mapping, check xcodegen/project generation, and review the sibling Distance gate log.
+
+Web Distance confirms exact 1:1 parity mapping. xcodegen 2.45.4 available; no `.xcodeproj` yet (must generate). Let me review the sibling Distance gate log and lint configs to match conventions.
+
+This is the key precedent. The sibling Distance gate shows the full-app `xcodebuild` is **baseline-RED from pre-existing duplicate types in unrelated surfaces** (other slots' work) + macOS signing — the sanctioned disposition is "code-complete + isolated Swift build/test verification + deferred Xcode gate". Let me read the full Distance log to replicate its exact verification method.
+
+I now have the complete sanctioned playbook from the sibling Distance 0085 surface. The full-app `xcodebuild` is baseline-RED from other slots' duplicate types + macOS signing; the accepted disposition is **code-complete + isolated Swift 6 build/test + lint/format/placeholder green + deferred Xcode gate**. I'll replicate that, running every command myself.
+
+Let me set up tracking and start writing the 8 `Pressure.*` files mirroring Distance precisely.
+
+Now the test file — I'll compute exact expected values carefully so it's green. Let me write `Pressure.Tests.swift`.
+
+All 8 files created. Let me run formatting/lint checks on the new files and verify the design tokens exist for the isolated build.
+
+Tokens confirmed (`Color.TS.bg`, `Color.TS.textPrimary`, `Font.TS.title`). Let me wait for swiftformat.
+
+swiftformat: 0/7 files. Now swiftlint --strict on the new files.
+
+swiftlint: 0 violations. Now the critical independent verification — isolated Swift 6 build+test. Let me inspect the real `Tokens.swift` to decide whether to copy it or shim the few symbols the previews need.
+
+`Tokens.swift` is self-contained. I'll build an isolated SwiftPM package named `TeslaSync` (so `@testable import TeslaSync` works) with the 6 source files + a faithful seam shim (`UnitPreferences`, `.metric/.imperial`, `\.tsUnits`) + the real `Tokens.swift`, then run the real `Pressure.Tests.swift` against it.
+
+Now run the isolated Swift 6 build + test.
+
+Build clean under Swift 6 (including `#Preview` macros). Now run the tests.
+
+**All 35 tests pass** under Swift 6 strict-concurrency (`arm64-apple-macos`), with the real `Tokens.swift` and faithful seams. The surface is proven correct. Now let me run the full gate: generate the Xcode project, then attempt the iOS/macOS builds and document the result honestly.
+
+Project generated (`.xcodeproj` is git-ignored). Let me check the `Shared.xcframework` dependency presence and list schemes before attempting the build.
+
+Key finding: `Frameworks/` has only `.gitkeep` — the **`Shared.xcframework` (KMP/Gradle build artifact) is absent** on this runner, so `import Shared` in the app's `SharedFacade` cannot resolve. This is an additional environment-level baseline blocker (beyond the duplicate-types issue from the Distance log). Let me verify the placeholder script and simulator, then run the actual gate commands to capture real evidence.
+
+iPhone 16 sim is booted; placeholder script is pwsh. `import Shared` is used across the app Sources, confirming the absent `Shared.xcframework` blocks the full build. Let me now run the actual gate commands, capturing real output. Starting with the iOS build.
+
+The log is still buffering (xcodebuild is in early build-graph/prep phase). Let me wait for it.
+
+The build log is buffering with no flush yet — a full 12-target build is slow and is guaranteed to fail on the absent `Shared.xcframework`. Let me give it more time to reach the failure and flush output.
+
+~11 minutes with fully-buffered output. Rather than wait indefinitely for a guaranteed link failure, let me run the lint/format/placeholder gate steps (which don't need the framework) in parallel while the build continues, then re-approach the build with unbuffered IO. First, let me check on the build once more.
+
+13 minutes with no flush. Let me stop this buffered run and re-launch with `NSUnbufferedIO=YES` so output streams to the log, letting me capture the real root-cause error quickly.
+
+While it builds unbuffered, let me poll the log for the first real error.
+
+Important discovery: the scheme has a **Gradle pre-action that assembles `Shared.xcframework` on demand** ("Assembling Shared.xcframework via Gradle… `:core:assembleSharedDebugXCFramework UP-TO-DATE`"). So the framework resolves and the full app is genuinely compiling now (currently churning through the `shared-surfaces` module where my `Pressure.*` lives). Let me run the lightweight placeholder gate while the build progresses, then poll.
+
+Placeholder literal-path gate: `PLACEHOLDER_COUNT=0`. Let me also run a real scoped scan of the actual shipped `Pressure.*` files (mirroring the Distance log), then check build progress.
+
+Placeholder: 0 across all 8 files. Now let me check the iOS build progress.
+
+No real compile errors so far (the "duplicate" matches were false positives from `-no_deduplicate` linker flags). Crucially: the **Gradle `Shared.xcframework` assembled successfully**, and the `TeslaSyncWidgets`/`TeslaSyncActivities` extensions already compiled AND linked. The main `TeslaSync` target is now compiling the `shared-surfaces` module (where my `Pressure.*` lives). This build may actually go green. Let me let it run and poll.
+
+Major progress — the `TeslaSync` target reached **`EmitSwiftModule`**, meaning all 2600+ Swift files (including my `Pressure.*`) **type-checked and compiled cleanly** with zero errors. Now it links and builds the test bundle. Let me keep polling.
+
+The `TeslaSync` module emission (2600 files) is a long step. Let me wait more (with corrected grep).
+
+Log is at 17,590 lines, no errors — now compiling object files for the `TeslaSync` target's `Sources/Features/...` (post module-emit). Build is healthy and progressing. Let me continue polling.
+
+Build is steadily compiling with **zero errors** (now in `Sources/Notifications/UI/`). It's a large target so this takes time. Let me continue waiting for build completion and the test phase.
+
+Real outcome captured. The **app `** BUILD SUCCEEDED **`** (line 24578) — my `Pressure.*` compiles cleanly in the full iOS app. The failure is the **test-bundle compilation** hitting a pre-existing duplicate-type in an unrelated surface (`RecentActivity.Tests.swift` — another slot's work). Let me extract the exact errors and confirm zero `Pressure` errors.
+
+The iOS evidence is definitive: **`** BUILD SUCCEEDED **`** for the full app, **0 errors/warnings in any `Pressure.*` file**, and the sole failure is a **pre-existing duplicate-type in `RecentActivity.Tests.swift` (unrelated feature-views surface, another slot)** that breaks the shared test-bundle compile. Let me capture the full failure context and start the macOS gate + remaining lint/format gates.
+
+Definitive iOS evidence captured:
+- **`** BUILD SUCCEEDED **`** — full iOS app compiled, with `Pressure.Adapter/Model/Previews/Projection/Views/swift` (lines 18912-18928) and `Pressure.Tests.swift` (line 28441) all compiling.
+- **0 `Pressure.*` errors/warnings** in 28,764 lines.
+- Sole failure: pre-existing duplicate test class `RecentActivityFeedProjectionTests` colliding between two **other slots'** surfaces (`RecentActivity.Tests.swift` ↔ `RecentActivityFeed.Tests.swift`), breaking the shared test bundle → `IOS_EXIT=65`.
+
+Now let me launch the macOS gate (background) and run the full swiftformat/swiftlint gates.
+
+Full swiftformat: the **only** offender is a pre-existing wrap violation in another slot's `VersionSegment.AdapterTests.swift:275-276` — my `Pressure.*` already passed (0/7). The macOS build finished fast; let me read its result.
+
+macOS gate matches the Distance precedent exactly: `** BUILD FAILED **` on **development-signing** (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` entitlements need a dev certificate — an environment condition per `macos-pending-verifications.md`), with **0 `Pressure` errors**, `MAC_EXIT=65`. Now the final gate command — full `swiftlint --strict`.
+
+**`swiftlint --strict`: 0 violations in 5631 files** (`LINT_EXIT=0`). All gate evidence is now collected. Let me confirm the RED gates are pre-existing baseline (other slots' committed files, not mine) via `git status`, then write the gate log.
+
+Confirmed: `git status` shows **only my 8 `Pressure.*` files** as new; all three RED-gate files are tracked at HEAD = **pre-existing baseline from other slots**, untouched by me. This satisfies the Honesty Covenant. Now let me write the comprehensive gate log with the real captured outputs.
+
+Log written. Now let me commit per the prompt's commit block (using explicit `Pressure.*` paths since a bare `Pressure` pathspec matches nothing), then clean up temp artifacts.
+
+All 8 files + log staged (nothing extraneous). Now commit.
+
+Committed: `b90d856e1`, tree clean. Let me clean up temp artifacts and finalize tracking.
+
+Task complete. Everything is committed and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0086-Pressure.log     | 166 ++++++++++
+ .../shared-surfaces/Pressure.Adapter.swift         | 231 +++++++++++++
+ .../TeslaSync/shared-surfaces/Pressure.Model.swift | 111 +++++++
+ .../shared-surfaces/Pressure.Previews.swift        |  72 +++++
+ .../shared-surfaces/Pressure.Projection.swift      | 113 +++++++
+ .../TeslaSync/shared-surfaces/Pressure.Tests.swift | 360 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Pressure.Views.swift |  44 +++
+ .../TeslaSync/shared-surfaces/Pressure.strings     |  20 ++
+ .../apple/TeslaSync/shared-surfaces/Pressure.swift |  89 +++++
+ 9 files changed, 1206 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0086-Pressure.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Pressure.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Pressure.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Pressure.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Pressure.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Pressure.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Pressure.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Pressure.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Pressure.swift

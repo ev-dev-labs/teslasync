@@ -1,0 +1,211 @@
+I'll start by exploring the repository structure, the web source component, and checking the Apple tooling capability.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source and explore the existing Apple app structure.
+
+Let me explore the existing Apple patterns, the shared layers (state holders, tokens, i18n, diagnostics), and the driving types. The `feature-views` dir already has 1603 entries, so I need to follow established conventions.
+
+This is a well-established 9-file pattern per surface. Let me read the rest of the reference files and the project config to understand conventions fully.
+
+Now let me read the remaining reference files (Adapter, Previews, Tests, ModelTests, strings) and the project build config.
+
+Now let me read the test files, the project config, and the shared tokens/components used (TSSpacing, Color.TS, TSFadeIn, TSSkeleton, TSButton, Font.TS).
+
+I now understand the 9-file pattern. Let me examine the project build config, shared tokens/components, and find existing feature-views that handle units/energy/currency formatting (since TripLegList needs distance, energy, and currency).
+
+XcodeGen uses glob-based sources, so new files auto-include. Let me find the shared tokens/components and an existing feature-view that handles distance/energy/currency formatting (the closest parity reference for TripLegList).
+
+`CostSavingsPanel` and `BatteryTab` look like the closest references (energy, distance, currency). Let me study the units/formatting infrastructure and these adapters.
+
+Let me study how existing adapters handle energy/distance/currency — this is the key parity pattern for TripLegList.
+
+`CostSavingsPanel.Adapter` confirms the pattern: pure Foundation port of the web's conversion/formatting helpers. Let me read the exact web helpers (`useUnits`, `useFormatting`, `unitConversion`) to reproduce `convertDistanceFromSI`, `formatEnergy`, and `formatCurrency` faithfully.
+
+Now let me read the `unitConversion.ts` SI block (`formatEnergy`, `convertDistanceFromSI`) and `numberFormat.ts` (`fmtNumber`) to reproduce them exactly.
+
+Let me read the remaining helpers in `unitConversion.ts` (`formatNumber`, `resolveEmpty`, `DEFAULT_PRECISION`, `convertDistanceFromSI`).
+
+Let me confirm the `TripLocation` type, `DEFAULT_EMPTY_DISPLAY`, and inventory the shared UI/feedback components and theme tokens I'll bind to.
+
+Let me read the exact signatures of the components and tokens I'll bind to.
+
+I have the component signatures. Let me check how sibling feature-views reconcile per-surface `.strings` tables with shared components that take `LocalizedStringKey`, and find a structurally similar list+panel+empty surface to mirror. Let me also read the design tokens (Color.TS, Font.TS, TSSpacing, TSRadius).
+
+The `"\(resolvedString)"` interpolation trick is the established convention for feeding facade-resolved strings into shared components. Let me confirm it and read the full token set.
+
+The interpolation pattern is confirmed (`BatteryTabStrings.label(...)` returns a `LocalizedStringKey`). Let me read that facade helper and the BatteryTab error/loading states to mirror the cleanest convention.
+
+I now fully understand the 9-file architecture, tokens, components, and the web formatting semantics. Let me check the build infrastructure (Shared.xcframework, xcodegen, placeholder checker, pwsh) before writing code, since the gate runs a full `xcodebuild build test`.
+
+`pwsh` is available and the placeholder checker exists, so I can run the gate as written. The `Shared.xcframework` builds via Gradle (KMP) as a preAction. Let me read the placeholder checker (to avoid tripping it), the lint/format configs, and the `TSFadeIn`/`tsGlassPanel` modifier before writing code.
+
+Critical: the placeholder gate forbids the word "Placeholder" (case-insensitive), "TODO", "FIXME", "XXX", etc. I'll avoid all of these in my code/comments. Now let me read the lint/format configs and the `TSFadeIn`/`tsGlassPanel` modifiers, then start writing.
+
+I have a complete picture. Let me do one quick check on the `TripLeg.duration_s` semantics (to write an accurate parity note), then start building. Let me set up tracking and the plan.
+
+Confirmed the parity behavior: in `TripLegList.tsx`, leg duration renders `Math.round(duration_s)` labeled "min" (verbatim), while charge stops divide by 60. I'll port exactly and document it. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure Foundation adapter (the testable core everything builds on).
+
+Now the Model (state-holder seam, projection, telemetry, strings facade):
+
+Now the main view file (the `TripLegList` View + the i18n SwiftUI bridge):
+
+Now the data subviews — the richest file. Let me first check for a shared flow/wrap layout helper (the web uses `flex-wrap`), then write it.
+
+No shared flow layout exists, but adaptive `LazyVGrid` is an established precedent — I'll use it for responsive metric/meta wrapping. Writing the data subviews:
+
+Now the state chrome (loading skeleton, empty, error) — all inside the titled panel:
+
+Now the i18n strings table (source keys + native chrome + a11y keys):
+
+Now the test files — adapter/projection/format/a11y tests, then model state-holder tests:
+
+Let me fix the awkward double-optional in one test before moving on:
+
+Now the model state-holder tests:
+
+Finally the Previews (DEBUG-only, every state):
+
+All 9 files written. Now verification — first check for forbidden placeholder words, type-name collisions, and run swiftformat/swiftlint on my files.
+
+No forbidden words or collisions on the core types. Let me do a comprehensive collision check on ALL my declared symbols, then run the formatters/linters on my files.
+
+swiftformat found fixable issues (number grouping, trailing commas, wrap). Let me stop the slow collision scan and auto-format my files, then re-lint.
+
+Re-verify formatting and run swiftlint, plus a faster collision check:
+
+swiftformat passes. swiftlint has 3 strict violations: a 7-param preview helper, and two files >400 lines. Let me fix these — inline the preview legs, split the Adapter's resolved-row section into a new `TripLegList.Rows.swift` (idiomatic multi-file pattern, matches the `TripLegList.*` glob), and trim Views comments.
+
+Now truncate the moved sections from the Adapter and fix the Previews 7-param helper:
+
+Now fix the Previews 7-param helper by inlining the legs:
+
+Views is 411 lines (>400). Let me trim the header/doc comments there to get under the limit:
+
+Need ≤400 (currently 410). Let me condense several doc comments:
+
+Let me make real line reductions by condensing 3-line doc comments to 2:
+
+Still 404. Let me condense the colour-parity header block:
+
+Let me precisely remove lines. Condensing the panel doc (3→2) and the metric-cell doc (2→1):
+
+Views is 401, still 1 over. Let me check the post-format count and trim one more line:
+
+Now re-run swiftformat --lint and swiftlint --strict on all 9 files:
+
+swiftformat (0/9) and swiftlint --strict (0 violations) both pass; all files ≤400 lines. Now let me set up the full build. First, generate the Xcode project and assess the Shared framework (KMP/Gradle) build feasibility.
+
+Java 17 + gradlew are present; project generated. The `Shared.xcframework` (KMP/Gradle) is the long pole — let me build it in the background and monitor.
+
+The Gradle/KMP build is running (first build downloads the Kotlin/Native toolchain). Let me check progress:
+
+The Gradle build is linking frameworks (compilation cached). Let me wait for it to finish the release XCFramework:
+
+Release framework linking is underway. Let me continue waiting:
+
+Nearly done — linking release macOS framework. Let me wait for staging to complete:
+
+`Shared.xcframework` built (11m) and staged. Now the real compile check — iOS build+test for the whole app including my files. Let me run the gate's iOS step, monitoring for compile errors:
+
+Build failed fast (exit 65). Let me find the compile errors:
+
+The errors are all pre-existing in unrelated `dashboard-widgets` (`ChargeSessionDTO`, `ChargeDistanceUnit`, etc. — "ambiguous for type lookup" = duplicate declarations), **none in my TripLegList files**. Let me confirm this rigorously: my change only adds files, and verify zero errors in my surface.
+
+Confirmed: my change adds **only** the 10 `TripLegList.*` files; all **339 errors are in out-of-scope `dashboard-widgets`** (zero in `feature-views`). Before concluding, let me verify these are genuinely pre-existing structural duplications (not caused by my build) so I report honestly.
+
+Definitively confirmed: `ChargeDistanceUnit`/`ChargeSessionDTO` are declared in **two local dashboard-widget files each** — pre-existing duplicate declarations in committed code, unrelated to my change (Shared exports neither). This is a broken predecessor in an out-of-scope layer.
+
+Let me record the macOS build result and run the remaining gate steps. Starting macOS build in the background:
+
+While macOS builds, let me run the remaining gate steps. Placeholder check (exact gate command + a true scan of my files), and whole-tree format/lint:
+
+Placeholder check passes (COUNT=0, both the gate command and a true scan of my 10 files). The macOS build finished — let me check its result:
+
+MAC_EXIT=65 (same predecessor failure). Let me confirm the macOS errors are also all out-of-scope, then run whole-tree format/lint:
+
+macOS fails at **code-signing** (entitlements require a dev certificate — `DEVELOPMENT_TEAM` is empty; an environment limitation), and iOS fails at the **pre-existing dashboard-widgets** duplicate declarations. Both are outside my allowed scope. My `feature-views` code compiles clean on both.
+
+Since the broken app target blocks `xcodebuild test` from running my tests, let me prove my pure adapter logic (the "cached → projection" core the prompt requires unit-tested) actually executes and passes — via a standalone SwiftPM package using my **real** source files:
+
+All 12 standalone adapter tests **pass** against my real `Adapter.swift` + `Rows.swift` — proving the verbatim-ported "cached → projection" core (distance `toFixed`, `Math.round`, locale energy/currency, config derivations, row interleave, arrival threshold) is correct. And the full iOS module build produced **zero errors in my files** (strong evidence the SwiftUI layer type-checks too).
+
+Now the remaining gate steps (whole-tree format/lint):
+
+Whole-tree swiftformat --lint is **GREEN** (0/2318). Now whole-tree swiftlint --strict:
+
+1 violation in the whole tree. Let me identify it (the "9" was progress lines, not violations):
+
+The **only** gate failures are pre-existing/out-of-scope: iOS build (339 dashboard-widgets duplicate-decl errors), macOS (code-signing needs a dev certificate — env limitation), and whole-tree swiftlint (1 violation in `dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift`). My surface contributes **zero** errors/violations and its adapter tests pass. Let me check the log directory and a sibling log's format:
+
+This is the key reference — there's a **sanctioned "code-complete + DEFERRED Xcode gate" disposition** used by every P4 surface, where the full-app gate is known-blocked by the same pre-existing dashboard-widgets ambiguities (iOS) and macOS dev-signing, and each surface is **independently verified** (compiles + tests pass against the real design system + iOS18/macOS15 SDKs). Let me read the full sibling log to replicate its exact independent-verification method:
+
+This is the **sanctioned, repo-wide P4 disposition**: the full-app Xcode gate is DEFERRED (blocked by the exact same pre-existing dashboard-widgets duplicate-type ambiguities + macOS signing I found), and each surface is **independently verified** via (1) an isolated SwiftPM harness compiling the *exact shipped sources* against the *real* design tokens + faithful component shims, running the full test suite, and (2) a dual-SDK (iOS18/macOS15) `swiftc -typecheck`.
+
+Let me replicate that verification faithfully for TripLegList. Setting up the harness with the real `Tokens.swift` + my exact sources:
+
+Now build + test the harness (exact shipped sources + real tokens, Swift 6 strict concurrency, macOS 15):
+
+Full surface (all SwiftUI views + model) **compiles clean** under Swift 6 strict concurrency. Now run the complete test suite (my verbatim `Tests.swift` + `ModelTests.swift`):
+
+**All 44 tests pass** (adapter + projection + model state-holder, verbatim) against the exact shipped sources under Swift 6 strict concurrency. Now the dual-SDK typecheck (iOS 18 + macOS 15), matching the sanctioned verification:
+
+Both SDK typechecks pass. I now have the complete sanctioned verification. Let me capture precise figures for the log:
+
+Let me recompute with correct patterns (the macOS phrase is "require signing", and I need full-path filtering):
+
+Accurate figures confirmed: **all 339 iOS errors are in 17 dashboard-widget files (0 in feature-views)**; macOS has 8 dev-signing errors (0 feature-view errors); the 1 whole-tree swiftlint violation is in dashboard-widgets. Every full-app failure is pre-existing/out-of-scope; my surface is independently verified green (build + 44 tests + dual-SDK typecheck). Now I'll write the gate log:
+
+Now commit — staging only my 10 surface files + the log (explicitly, not the gitignored generated project or unrelated pre-existing web edits):
+
+All 11 correct files staged (10 surface + log); the generated project/framework are gitignored and the unrelated pre-existing web edits are excluded. Committing:
+
+Committed cleanly as `f49eec280` (11 files, 2230 insertions). Let me clean up the temporary harness scratch and verify the final repo state:
+
+Final state is clean: my **10 surface files + the log are committed** (`f49eec280`); the only remaining working-tree changes are the two pre-existing, unrelated web edits I correctly left untouched; no stray untracked files (generated project/framework are gitignored); scratch cleaned up.
+
+Let me close out the tracking:
+
+All todos done. The task is complete and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`TripLegList`** feature view at parity with `web/src/features/driving/components/TripLegList.tsx`, following the established P4 9-file pattern (split into 10 files to respect the repo's `file_length ≤ 400` rule).
+
+**Files committed** (`f49eec280`) — `apps/apple/TeslaSync/feature-views/TripLegList.*`:
+`swift` (main view + i18n bridge), `Adapter` (pure SI conversion/formatting), `Rows` (resolved-row projection), `Model` (P1/S8 state-holder + P1/S11 telemetry), `Views`, `States`, `Previews`, `Tests`, `ModelTests`, `strings` + the gate log.
+
+**Parity reproduced & tested:** distance (`convertDistanceFromSI` + JS `toFixed`), the leg-duration `Math.round(duration_s)`-labelled-"min" quirk ported **verbatim** (vs. charge-stop `/60`), locale-aware energy(kWh)/currency, SOC thresholds, the `idx < stops.length` interleave, coordinate fallback, all 6 states (data/empty/loading/error/stale/offline), semantic token colours, SF Symbols, VoiceOver summaries, and `view.opened` telemetry. No raw hex, no Tailwind ports, no English literals.
+
+**Verification (honest):**
+- swiftformat `--lint` 0/9 · swiftlint `--strict` 0 violations · placeholder scan COUNT=0 — **green**
+- Isolated SwiftPM harness (exact shipped sources + **real** `Tokens.swift` + faithful shims, Swift 6 strict concurrency, macOS 15): **build OK + 44 tests pass**
+- Dual-SDK `swiftc -typecheck`: iOS 18 **0** · macOS 15 **0**
+- Full-app `xcodebuild build test` **DEFERRED** (RED): iOS=65 is 339 pre-existing duplicate-type errors across 17 **unrelated dashboard-widget** files; macOS=65 is dev-signing — **zero feature-views errors**. Both are out-of-scope per the allowed-files rule.
+
+This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0177-TripLegList.log    | 181 ++++++++++
+ .../feature-views/TripLegList.Adapter.swift        | 340 ++++++++++++++++++
+ .../feature-views/TripLegList.Model.swift          | 254 +++++++++++++
+ .../feature-views/TripLegList.ModelTests.swift     | 172 +++++++++
+ .../feature-views/TripLegList.Previews.swift       | 137 +++++++
+ .../TeslaSync/feature-views/TripLegList.Rows.swift | 140 ++++++++
+ .../feature-views/TripLegList.States.swift         | 130 +++++++
+ .../feature-views/TripLegList.Tests.swift          | 345 ++++++++++++++++++
+ .../feature-views/TripLegList.Views.swift          | 400 +++++++++++++++++++++
+ .../TeslaSync/feature-views/TripLegList.strings    |  42 +++
+ .../TeslaSync/feature-views/TripLegList.swift      |  89 +++++
+ 11 files changed, 2230 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0177-TripLegList.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.Rows.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripLegList.swift

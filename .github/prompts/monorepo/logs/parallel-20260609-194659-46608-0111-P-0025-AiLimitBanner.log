@@ -1,0 +1,168 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check capabilities and the existing structure.
+
+Good — Xcode 26.5, Swift 6.3.2, swiftlint, and swiftformat are all available. Let me read the web source and explore the existing Apple structure.
+
+Now I understand the web source. It's a pure presentational banner. Let me study the existing Apple conventions by examining a complete surface and the shared infrastructure.
+
+Let me study a complete example end-to-end to learn the established patterns. I'll read the AICostForecastNarration set and AnnouncerRegion (a banner-like chrome surface).
+
+Let me read the rest of the AnnouncerRegion files and find the shared token/infrastructure definitions.
+
+Excellent — this is a sophisticated, well-established pattern. Let me find the shared P1/S9 tokens and P4 core infrastructure, plus the remaining AnnouncerRegion files.
+
+The P4 component library has `Banners.swift` (AlertBanner peer) and `Buttons.swift` (Button peer). Let me read those plus locate the design tokens.
+
+Let me find where the generated design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSTone`, `TSButton`) live.
+
+Now let me read the test/preview/strings conventions, the shared feedback/card/motion components, and the project.yml build config.
+
+Let me check project.yml for build/test config and read the view-test conventions plus shared component APIs.
+
+Now let me understand the `AiLimitInfo` data contract and check the build toolchain reality (xcodegen, xcframework, prior logs).
+
+Let me examine prior gate logs to understand the established build/test reality (especially the KMP `Shared.xcframework` dependency).
+
+The established disposition is clear: build the surface, verify it's clean in isolation, run lint/format/placeholder, and record `xcodebuild` results honestly (predecessors hit pre-existing sibling collisions + macOS signing → DEFERRED). Let me check the current build reality before writing code.
+
+Important finding: an `AiLimitInfo` struct **already exists** in `AIAutoTripNameSuggestion.Adapter.swift` (same `TeslaSync` module). I must not redeclare it. Let me read it to decide whether to reuse it or namespace my banner's type.
+
+Key decision: a public `AiLimitInfo` (exact web shape: reason/retryAfterS/bannerLevel/baselineAvailable/message) already exists in the module. I'll **reuse** it (DRY + avoids a duplicate-symbol collision) rather than redeclare. Let me verify my planned symbol names are collision-free and confirm shared-component signatures.
+
+All names are collision-free. Let me read the exact `TSEmptyState`/`QueryError` peer signatures and study the AICostForecastNarration surface (which has a connection/freshness axis like I'll need).
+
+I have enough understanding of the model pattern. Let me read the AICostForecastNarration main view (it has the connection/refresh chrome closest to my needs) to match the surface composition exactly.
+
+I now have a complete understanding of the architecture. Let me set up a plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure Foundation Adapter (the reason taxonomy is the heart of the web component).
+
+Now let me write the Adapter (pure Foundation core with the reason taxonomy):
+
+Now the Model (telemetry seam, projection, `@Observable` state-holder with countdown):
+
+Now the Seams (source + ticker, including the production controlled source mirroring the web's parent-controlled prop):
+
+Now the main view:
+
+Now the Views (the banner via `TSAlertBanner` + `TSButton`, with interactive controls kept individually accessible, plus the freshness chip):
+
+Now the States chrome (loading / empty / error):
+
+Now the i18n strings table (web parity keys + native chrome):
+
+Now the Previews (every state + severity variants):
+
+Now the adapter + projection tests:
+
+Now the model + seams tests:
+
+All 10 files are written. Let me update todos and start verification with the fast checks (format/lint/placeholder), and review the lint/format configs.
+
+Now let me run the fast checks (swiftformat, swiftlint, placeholders) on my new files:
+
+Two fixable issues in the Tests file (force-try and trailing comma). Let me locate and fix them:
+
+Let me auto-format in-place to fix the trailing comma, then re-lint all files:
+
+SwiftFormat passes. Now swiftlint --strict on my files:
+
+One swiftlint issue: the merged taxonomy function is too long. I'll split it into `title(for:)` + `description(for:)` — which also better mirrors the web's two separate functions (`titleForReason`/`descriptionForReason`):
+
+Re-running both format and lint to confirm clean:
+
+The descriptions are long (must stay ≤120 chars/line under `--strict`), so a switch body is unavoidably long. I'll convert the taxonomy to a static lookup table (collection literals don't count toward function-body length) with alias normalization mirroring the web's grouped `case` labels:
+
+The in-place format changed the text. Let me view the current taxonomy section:
+
+The in-place formatter expanded the tuples. I'll rewrite the Adapter cleanly with the table-based taxonomy. Let me recreate the file:
+
+Both tools agree: remove the trailing comma in the table literal. Let me auto-format in-place then re-verify:
+
+Format and lint are clean (0 violations). Now the placeholder check — let me find the script and run it:
+
+pwsh is available. Let me run the placeholder check exactly as the gate specifies:
+
+Format, lint, and placeholder checks all pass. Now let me validate compilation. First, generate the project and do a fast focused type-check of my files before committing to the long xcframework build. Let me check the dependency surface:
+
+Components/Design only depend on system frameworks — so I can do a fast, focused type-check of my SwiftUI code in isolation. Let me kick off the long xcframework build in the background while I type-check:
+
+Now the focused type-check while Gradle builds:
+
+Good — the only error is in a component-library file (`TSMetricBar` from DataDisplay, which I didn't include). Let me add the full component library:
+
+The noise is from unused component files referencing domain types. Let me type-check against the **exact** components my surface uses:
+
+Zero errors in my surface files (the "MY_SURFACE_ERRORS_ONLY" section is empty). The remaining noise is transitive component deps (`TSPanelTitle`/`TSCaption` from Typography). Let me add those to get a fully clean compile and confirm:
+
+**Zero errors** — my surface compiles cleanly against the real shared components, tokens, and `AiLimitInfo` under Swift 6 strict mode. Now let me actually *run* the tests via an isolated SwiftPM harness (copies — originals keep `@testable import TeslaSync`):
+
+Running the tests surfaced two real Swift 6 issues (exactly why executing matters). The `deinit` can't touch the actor-isolated `Timer`. Let me fix it with `nonisolated(unsafe)` (the Previews error is a knock-on from this compile failure):
+
+Re-sync the harness and re-run the tests:
+
+The Previews ternary `retry ? {} : nil` defeats the type-checker — a real bug that would also fail the app build. Let me hoist to explicitly-typed handlers:
+
+It's specifically the empty-closure literal in a ternary with an `@MainActor` type — a known inference limitation. Let me use a `guard`-based helper (closure in `return` position infers cleanly):
+
+51 tests run, 1 failure. Let me find the failing test:
+
+Genuine bug: the description ends with `.`, so joining with `". "` produced a double period. Let me fix `bannerLabel` to avoid double terminal punctuation:
+
+All **51 tests pass**. I edited 3 files after the last lint — let me re-verify format/lint and re-confirm the clean type-check:
+
+All fast checks pass after the fixes. Let me check the background xcframework build status:
+
+The xcframework built and is staged. Now let me run the real gate: generate the project, then `xcodebuild build test`. First, xcodegen:
+
+Project generated with my files included (60 references). The xcframework preAction needs `xcodebuild` to find it; let me run the real iOS gate, capturing output for analysis:
+
+The iOS build/test is running in the background. Let me wait and monitor its progress:
+
+162 errors so far — matching the predecessor's pre-existing collisions. Let me confirm none are in my surface while the build finishes:
+
+The iOS build completed. Confirmed: **0 errors in my surface** — all 162 are pre-existing `RecentDrives*`/`StateTimeline*` ambiguous-type collisions in sibling surfaces (owned by other prompts). Let me get the final exit and tail:
+
+IOS_EXIT=65 — build failed exclusively on pre-existing sibling collisions (all 216 errors in `RecentDrives*`/`StateTimeline*` files owned by other prompts; **0 in AiLimitBanner**). This matches the predecessor's DEFERRED disposition. Now let me run the macOS gate to capture its real result:
+
+While the macOS build runs, let me gather evidence for the log (line counts, test breakdown):
+
+The macOS build finished. Let me get its result and finalize the test count:
+
+macOS: MAC_EXIT=65 — failed at code-signing (no dev certificate), 0 errors in AiLimitBanner. This exactly matches the predecessor's environmental DEFERRED. I have all evidence. Let me verify the working tree state before writing the log:
+
+Working tree is clean — only my 10 files (project + xcframework are gitignored). Let me clean up the temp harness and write the gate log:
+
+Now let me write the gate log following the established format:
+
+Let me commit the surface and log:
+
+Let me verify the commit landed cleanly:
+
+Commit landed cleanly (HEAD `e87b0e776`, 11 files, 2237 insertions, working tree clean). Let me mark todos complete:
+
+All todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0025-AiLimitBanner.log | 188 ++++++++++
+ .../shared-surfaces/AiLimitBanner.Adapter.swift    | 236 +++++++++++++
+ .../shared-surfaces/AiLimitBanner.Model.swift      | 338 ++++++++++++++++++
+ .../shared-surfaces/AiLimitBanner.ModelTests.swift | 381 +++++++++++++++++++++
+ .../shared-surfaces/AiLimitBanner.Previews.swift   | 132 +++++++
+ .../shared-surfaces/AiLimitBanner.Seams.swift      | 191 +++++++++++
+ .../shared-surfaces/AiLimitBanner.States.swift     | 107 ++++++
+ .../shared-surfaces/AiLimitBanner.Tests.swift      | 341 ++++++++++++++++++
+ .../shared-surfaces/AiLimitBanner.Views.swift      | 173 ++++++++++
+ .../shared-surfaces/AiLimitBanner.strings          |  57 +++
+ .../TeslaSync/shared-surfaces/AiLimitBanner.swift  |  93 +++++
+ 11 files changed, 2237 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0025-AiLimitBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiLimitBanner.swift

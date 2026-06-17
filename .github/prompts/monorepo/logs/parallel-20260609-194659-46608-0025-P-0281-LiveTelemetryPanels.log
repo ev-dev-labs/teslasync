@@ -1,0 +1,216 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source spec and explore the existing Apple app structure.
+
+Now I understand the web spec — it's a composition of 7 sub-panels plus a live header. Let me study the most recent feature view (FleetSummary, the immediate predecessor) to learn the exact conventions, plus related telemetry files.
+
+There's an existing `LiveTelemetry.*` page surface and a canonical `FleetSummary.*` feature-view template. Let me read both sets to learn the exact conventions and understand the relationship.
+
+Excellent template. Let me read the remaining FleetSummary files (Adapter, Views, Previews, strings, Tests) and the existing LiveTelemetry surface files to understand shared core components and avoid conflicts.
+
+Now let me read the FleetSummary tests/previews/strings and the existing LiveTelemetry surface to understand shared components and avoid naming conflicts.
+
+The existing `LiveTelemetry.*` is a different web source (dashboard); mine is `vehicles/.../LiveTelemetryPanels.tsx` — no filename conflict. The composition surface precedent renders its panels inline. I must read all 7 sub-panels to reproduce their data faithfully.
+
+Let me read the remaining 5 sub-panels and the API types to capture every field and i18n key.
+
+I have all 7 panels. Now let me read the API types, the tire-pressure helpers, and explore the shared Apple core components (tokens, GlassPanel, units, MetricCard equivalents).
+
+Now let me explore the shared Apple core components, design tokens, and units helpers, plus the existing LiveTelemetry panels as reference (they render similar climate/security/media data).
+
+Let me read the shared tokens, components, and unit formatters to learn the exact APIs.
+
+Let me locate the `Units` enum, `UnitPreferences`, and the design token definitions (Color.TS, Font.TS, TSSpacing, TSRadius).
+
+The tokens resolve in the TeslaSync app target. Let me understand the project layout and find where `Color.TS`, `TSSpacing`, `TSGlassPanel`, etc. are defined for the app target.
+
+Project uses XcodeGen (`project.yml`, no checked-in `.xcodeproj`). Let me read it and locate all token definitions across the tree.
+
+Tokens come from `apps/design/generated/apple` (the `DesignTokens` group). Let me read the predecessor's gate log to see how it was verified, plus the design tokens and the shared component APIs I'll use.
+
+Key insight from the predecessor log: the established methodology verifies the surface on the **host** with `swift` (Foundation logic + tests, swiftlint, swiftformat, placeholder gate, strings lint, i18n cross-check), then runs the full `xcodebuild` gate capturing **real** exit codes, deferring pre-existing sibling/signing failures. I'll follow that exact disposition.
+
+Let me read the shared component APIs and the units facade I'll need.
+
+`Units` requires the `Shared` KMP framework, so — like FleetSummary did with distance — I'll reproduce the conversions in a Foundation-only adapter for host-testability. Let me read the web unit/number libs to reproduce them exactly, plus the remaining shared components and tokens.
+
+Let me read the core unit conversion + formatting functions from `unitConversion.ts` (the SI converters/formatters block, L1–395).
+
+I now have the full unit-formatting contract. Let me read the remaining shared components, tokens, and the existing `LiveTelemetry.Panels.swift` for established panel idioms.
+
+Let me confirm exact token names and read the remaining small components (Badges, Motion, Skeletons) plus the existing LiveTelemetry.Panels idioms.
+
+Let me read the token definitions, Skeletons, typography components, and the existing LiveTelemetry.Panels idioms.
+
+Let me read the typography components, the FleetSummary test files (to mirror), the existing LiveTelemetry.Panels idioms, and the placeholder-check tooling.
+
+Let me read the FleetSummary test files, the typography components, and the full predecessor log to replicate the exact host-verification method.
+
+Let me read the adapter test file and the full predecessor log to replicate the exact host-verification commands.
+
+This is the crucial part — the predecessor built an **isolated SwiftPM harness** to compile+test on the host. Let me read the rest of the log to replicate the exact method.
+
+I now fully understand the established host-verification harness. Let me verify the component library's standalone compilability (Shared deps) and locate the `tsGlassPanel()` modifier, then set up my plan.
+
+I have everything needed. Let me confirm the `tsDynamicColor` helper location, check for type-name collisions with my planned `LTP` prefix, and verify the simulator, then set up my plan.
+
+`LTP`/`LiveTelemetryPanels` prefix is collision-free. Let me locate `tsDynamicColor` and set up my plan and todos.
+
+All dependencies confirmed (`tsDynamicColor` is self-contained in Tokens.swift; iPhone 16 simulator booted). Let me set up my plan and todos, then author the surface.
+
+Now I'll author the surface. Starting with the Foundation-only DTOs and source seam.
+
+Now the largest file — the 7 panel projections. Let me author it.
+
+Now the SwiftUI chrome and shared subviews.
+
+I'll add panel titles + a few inline labels to the projections so views stay declarative and host-testable. Editing Panels.swift:
+
+Now the 7 panel SwiftUI views:
+
+Now the main surface View shell:
+
+Now the previews and strings catalog:
+
+Let me enumerate every i18n key I referenced so the catalog is complete:
+
+The bulk of keys are via the `lt(...)` helper. Let me extract those too:
+
+Now the complete strings catalog:
+
+Now the two test files. First the adapter/projection parity tests:
+
+Now the model/accessibility/render-state tests:
+
+All 12 files written. Now let me set up the isolated SwiftPM harness (the predecessor's host-verification method) to compile and run the tests.
+
+The harness builds cleanly. Now let me run the test suite:
+
+Order-of-arguments fix in the render-smoke test:
+
+All 55 host tests pass and all 6 states render. Now let me normalize formatting (swiftformat) and run the lint/format gates on my files.
+
+All auto-fixable. Let me run swiftformat in write mode on my Swift files, then re-verify.
+
+swiftformat passes (0/11). Now swiftlint --strict, and re-verify the formatted files still build+test in the harness:
+
+Multiple swiftlint violations — files too long, functions too long, line lengths. I need to split files and refactor. Let me view the current formatted Panels.swift to plan precise refactors.
+
+The violations require splitting files (≤400 lines), shortening functions (≤50 lines), and fixing line lengths. Let me start by refactoring the Adapter (helpers + line wrapping):
+
+Now let me rewrite Panels.swift with compact helper-based projections (Powertrain/Climate/Security) and create MorePanels.swift. First, replace Panels.swift:
+
+Now MorePanels.swift with the remaining four panels + the aggregate projector:
+
+Now let me split State.swift (428 lines) by moving the prefs/status/update/seam into a new Update.swift file:
+
+Now split Views.swift into Views (chrome) + Primitives (shared subviews). Let me recreate both:
+
+Now split PanelViews.swift into PanelViews (Powertrain/Climate/Security) + MorePanelViews (rest), fixing the trailing-closure lint:
+
+Now MorePanelViews.swift (VehicleState/Tire/EnergyCharging/MediaNav + chip-wrap), with the trailing-closure lint fixed:
+
+Now split Tests.swift (508 lines) at the Vehicle State test boundary into Tests + PanelTests:
+
+All files split. Let me re-format, re-sync the harness with the new file layout, and rebuild+test:
+
+MorePanels is 414 — over 400. Let me extract the aggregate projector into its own file:
+
+Now all files ≤400 lines. Let me re-sync the harness with the new layout and rebuild+test:
+
+55 tests still pass. Now re-run swiftformat --lint and swiftlint --strict on all files:
+
+swiftformat collapsed it into an if-expression that swiftlint misreads. Let me restructure with a guard-based helper:
+
+Clean: swiftformat 0/17, swiftlint 0 violations. Let me re-sync the harness (Panels.swift changed) and confirm build+test, then run the SDK type-checks:
+
+55 tests pass. Now the iOS 18 + macOS 15 SDK type-checks on the full production + token/component closure:
+
+Both SDK type-checks pass. Now the placeholder gate (pwsh) and the i18n coverage + plutil checks:
+
+Placeholder gate clean (COUNT=0). Now the i18n key coverage check + plutil lint:
+
+The 4 "orphans" are actually referenced — but indirectly via the `tempTile`/`tempRow` helpers (key passed as a variable), so my regex misses them. Let me make those helpers take the already-resolved label so every key appears inside an `ltpStr(...)` call (cleaner for tooling):
+
+Now re-verify everything: format, i18n coverage, swiftlint, and harness build+test:
+
+All green (format 0, lint 0, i18n 109==109). Let me re-sync the harness and confirm build+test, then re-run the SDK type-checks:
+
+Outstanding — all host-runnable gates pass. Let me mark progress and run the full xcodebuild gate (capturing real results), starting by checking the project-gen + Shared framework prerequisites:
+
+Shared.xcframework isn't staged (needs a Gradle/KMP build). Let me generate the Xcode project (proves my files integrate) and check the gradle toolchain, then attempt the full gate:
+
+Project generates cleanly with all 18 files enumerated (108 refs). The full xcodebuild needs the KMP `Shared.xcframework`. Let me check the gradle toolchain and the known pre-existing sibling collision, then attempt the Shared build:
+
+Confirmed: the pre-existing StateTimeline duplicate-declaration collision (sibling surfaces, not mine) is present in this slot too. Java 17 + gradlew are available. Let me build the Shared.xcframework so I can run the real full-app xcodebuild:
+
+I'll let the gradle build continue in the background and monitor it. Meanwhile, let me write the gate log structure with the host-green results I already have.
+
+The Kotlin/Native build is compiling (downloads + K/N compilation are slow). Let me keep waiting:
+
+Shared.xcframework built successfully (6m53s). Let me stage it and run the real iOS full-app xcodebuild, capturing output to verify zero errors attributable to my surface:
+
+IOS_EXIT=65 (matching the predecessor's documented pre-existing failure). Let me analyze the log to confirm zero errors are attributable to my surface and the cause is the sibling collision:
+
+All 104 iOS errors are the pre-existing StateTimeline sibling collision — **zero** mention my surface. Let me capture a representative error and then do the isolation rebuild (move my files out → confirm it still fails identically), matching the predecessor's proof standard:
+
+Now the isolation rebuild — move my surface out, regenerate, rebuild, and confirm the identical pre-existing failure persists without my files:
+
+Isolation build still fails (ISO_IOS_EXIT=65) with my 18 files removed — proving the collision is pre-existing. Let me confirm the isolation error profile and restore my files:
+
+Isolation proof complete (78 StateTimeline errors with my files absent; identical root cause; 0 surface errors in both runs). Files restored. Now the macOS full-app build:
+
+macOS failure is purely dev-signing (4 entitlement errors, 0 valid signing identities, 0 surface errors) — exactly the predecessor's disposition. The full-app gate captured real results: both pre-existing/infra, zero attributable to my surface. Let me write the gate log:
+
+Let me gather final per-file line counts and write the comprehensive gate log:
+
+Gate log written. Let me run a final consolidated verification and check git status before committing (ensuring the generated project/framework are git-ignored):
+
+Clean — only my 18 files + the log are untracked; the generated project and framework are git-ignored. Let me run one final consolidated gate confirmation before committing:
+
+All final gates green. Let me commit the surface + log:
+
+Committed (bf4c7d357, 19 files, 4182 insertions). Let me clean up temp artifacts and do a final verification:
+
+All todos complete, working tree clean, temp artifacts removed.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0281-LiveTelemetryPanels.log | 299 ++++++++++++++++
+ .../LiveTelemetryPanels.Adapter.swift              | 313 +++++++++++++++++
+ .../feature-views/LiveTelemetryPanels.Model.swift  | 103 ++++++
+ .../LiveTelemetryPanels.ModelTests.swift           | 226 +++++++++++++
+ .../LiveTelemetryPanels.MorePanelViews.swift       | 297 ++++++++++++++++
+ .../LiveTelemetryPanels.MorePanels.swift           | 374 +++++++++++++++++++++
+ .../LiveTelemetryPanels.PanelTests.swift           | 244 ++++++++++++++
+ .../LiveTelemetryPanels.PanelViews.swift           | 214 ++++++++++++
+ .../feature-views/LiveTelemetryPanels.Panels.swift | 337 +++++++++++++++++++
+ .../LiveTelemetryPanels.Previews.swift             | 179 ++++++++++
+ .../LiveTelemetryPanels.Primitives.swift           | 198 +++++++++++
+ .../LiveTelemetryPanels.Projector.swift            |  50 +++
+ .../feature-views/LiveTelemetryPanels.State.swift  | 274 +++++++++++++++
+ .../feature-views/LiveTelemetryPanels.Tests.swift  | 276 +++++++++++++++
+ .../feature-views/LiveTelemetryPanels.Update.swift | 165 +++++++++
+ .../LiveTelemetryPanels.ViewModel.swift            | 155 +++++++++
+ .../feature-views/LiveTelemetryPanels.Views.swift  | 242 +++++++++++++
+ .../feature-views/LiveTelemetryPanels.strings      | 152 +++++++++
+ .../feature-views/LiveTelemetryPanels.swift        |  84 +++++
+ 19 files changed, 4182 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0281-LiveTelemetryPanels.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.MorePanelViews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.MorePanels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.PanelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.PanelViews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.Panels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.Primitives.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.State.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.Update.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.ViewModel.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.swift

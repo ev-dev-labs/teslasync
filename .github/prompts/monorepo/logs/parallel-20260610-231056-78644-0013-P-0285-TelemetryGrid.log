@@ -1,0 +1,158 @@
+I'll start by understanding the task: create a native Apple (SwiftUI) version of `TelemetryGrid` matching the web source. First, let me check the environment capability and explore the existing structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the existing Apple app patterns.
+
+Now let me explore the existing Apple app structure to understand conventions, the target directory, and the shared P1 layers (state holders, tokens, i18n, diagnostics).
+
+This is a large, mature codebase. Let me find a close exemplar (grid of tiles bound to vehicle state) and the shared P1 infrastructure. Let me look at candidate exemplars and the supporting layers.
+
+QuickMetrics is the closest exemplar (grid of metrics from vehicle state). Let me read its full file set plus the shared facade layers.
+
+Excellent exemplar. Let me read the rest of QuickMetrics (Model, Adapter, strings, Previews, Tests) and the core shared infrastructure.
+
+Now I understand the file pattern thoroughly. Let me read the design tokens, motion, units facade, state-holder infra, and the VehicleStatePanel exemplar (which also consumes `VehicleState` — the same prop TelemetryGrid uses).
+
+VehicleStatePanel also consumes `VehicleState` and formats distance/speed/temp — it's the most relevant exemplar. Let me read its full set plus locate the design tokens and the `VehicleState` type.
+
+The `VehicleStatePanel` (same web dir, prompt 0287) re-implements SI conversion purely in a `.Format.swift` — that's the precedent I'll follow. Let me read the web formatting semantics, the `VehicleState` type, the rest of VehicleStatePanel, and locate the design tokens.
+
+Now let me read the exact web `unitConversion.ts` formatters, the rest of VehicleStatePanel, and locate the design token definitions.
+
+Now I understand the build topology. Design tokens live in `apps/design/generated/apple`. Let me read those tokens and assess build feasibility (xcodegen, the Shared.xcframework script).
+
+`xcodegen` is installed; no project yet (I'll generate it). The Shared.xcframework builds via Gradle. Let me read the design tokens and the remaining VehicleStatePanel files (Model, View, Views, strings, Previews, Tests).
+
+I have the full architecture now. Let me read the VehicleStatePanel view, views, strings, previews, and tests to nail the chrome and test structure.
+
+Let me read the strings, previews, tests for VehicleStatePanel plus confirm the shared component signatures (TSGlassPanel, TSButton, TSSkeleton) and the test framework used.
+
+Tests use XCTest. Now let me read the exact web `unitConversion.ts` formatters to port faithfully, confirm the shared component signatures, check for any existing TelemetryGrid files, and inspect the placeholder checker.
+
+I now have a thorough understanding. Let me read the linter configs, the placeholder checker, confirm `pwsh` availability, and the tail of `useUnits.ts` (to confirm how precision is passed).
+
+Both `pwsh` and tooling are available. Let me read the forbidden-pattern list (to keep my code/comments clean) and confirm the shared component signatures I'll use.
+
+I have complete context. Both `pwsh` and all tooling are present. Let me set up a plan and todos, then write the 8 artifact files following the established sibling pattern (VehicleStatePanel/0287, same web dir).
+
+Now I'll write the artifact files. Starting with the pure formatting core:
+
+Now the projection core (Adapter):
+
+Now the Model (source seam, observable model, telemetry, i18n facade):
+
+Now the main view and the presentational subviews:
+
+Now the strings (i18n catalog) and previews:
+
+Now the comprehensive XCTest suite:
+
+I spotted a bug in my test: `formatSpeed(nil)` returns just the sentinel `—`, not `— km/h`. Let me fix that assertion.
+
+All 8 files written. Let me update todos and run the fast linters on the new files first (swiftformat + swiftlint) before the heavy build.
+
+swiftformat will auto-fix these. Let me apply it to my files, then re-lint to confirm clean.
+
+swiftformat clean. Now swiftlint --strict on the new files:
+
+swiftlint clean (0 violations). Now the placeholder check on my files:
+
+Placeholder gate clean. Now the heavy build. Let me generate the Xcode project, then assess the Shared.xcframework (Gradle) build.
+
+Project generated with `TeslaSync` and `TeslaSync-macOS` schemes. The long pole is the `Shared.xcframework` (Gradle/Kotlin Native). Let me assess the shared build environment.
+
+Java 17 is present; the framework isn't built yet. Let me build the `Shared.xcframework` via Gradle (the long pole — first run downloads the Kotlin/Native toolchain). I'll run it async and monitor.
+
+Gradle build started in background. Let me monitor its progress.
+
+Output is buffered by `tail` until completion. Let me check progress independently (Kotlin/Native toolchain download + daemon activity).
+
+Good — Gradle is actively compiling Kotlin/Native for `iosSimulatorArm64`, `iosArm64`, and `macosArm64` (daemon at high CPU, build dirs appearing). The toolchain is already cached. Let me continue waiting for the release XCFramework assembly.
+
+The `Shared.xcframework` built and staged successfully (9m). Now let me verify the simulator and log dir, then run the iOS build+test.
+
+Everything is in place: "iPhone 16" simulator (booted), log dir, all framework slices. Let me initialize the official log and run the iOS build+test (longest step) in the background.
+
+iOS build+test running. Let me monitor progress via the log file.
+
+iOS build failed (exit 65), but the named batch is other files (TimeOfUseAnalysis, etc.). I need the actual compiler `error:` lines — the batch summary is misleading. Let me extract them.
+
+These errors are all in **other** surfaces (`RecentDrives*`, `StateTimeline*`) — "ambiguous for type lookup", i.e. duplicate type names across sibling files in the single module. None are my `Telemetry*` types. Let me confirm these are pre-existing baseline breakage, not caused by my change.
+
+Only my 8 files + the log are untracked — everything else is committed at HEAD. So these `RecentDrives*`/`StateTimeline*` ambiguity errors are pre-existing baseline breakage. Let me confirm the duplicate declarations exist in committed sibling files.
+
+Confirmed: `RecentDrivesConnection`, `RecentDrivesModel`, `StateTimelineConnection` etc. are each declared in **two committed files** (a `dashboard-widgets/*Widget` and a `feature-views/*Section`), all in the single `TeslaSync` module — a pre-existing baseline collision, independent of my untracked files. Let me quantify the full scope of this baseline breakage.
+
+The baseline breakage is small and bounded: exactly 8 duplicate types across 2 widget/section families (`RecentDrives*`, `StateTimeline*`), all in committed out-of-scope files. Critically, **zero** errors reference my TelemetryGrid files. 
+
+To definitively prove my surface compiles and its tests pass against the real module, I'll do a temporary, fully-reverted local resolution of those 2 pre-existing collisions, build+test, then restore the out-of-scope files exactly via git. First let me map the colliding files and their references.
+
+References are confined within each family (widget-copy vs section-copy), and there are even duplicate **test class names** (`RecentDrivesModelTests` ×2) — so the baseline app *and* test targets are broken by parallel-slot contamination, far outside my allowed files. 
+
+Rather than untangle that, I'll verify my surface cleanly in isolation: a temporary xcodegen target compiling only `Sources/` + my TelemetryGrid files + the Shared framework (module name `TeslaSync`), with a test target of just my tests. First, confirm `Sources/` is self-contained (doesn't depend on sibling surfaces).
+
+`Sources/` is fully surface-independent. I'll create a temporary isolated verification target: `Sources/` + my 6 TelemetryGrid source files compiled as module `TeslaSync`, plus a test bundle of just my tests — no contaminated siblings. This proves my surface compiles and tests pass against the real shared infra + Shared.xcframework.
+
+Verify project generated. Now let me build+test the isolated surface on the simulator.
+
+The app target (my 6 source files + Sources) compiled — only my **test file** failed. Let me see the actual error.
+
+The isolated verify caught a real issue in my **test file**: under Swift 6 strict concurrency, the global `fallbackLocalizer` closure must be `@Sendable`. (The app target — my 6 source files — compiled cleanly.) Let me fix it.
+
+Now let me re-run the isolated build+test (app target is cached; only the test recompiles + runs).
+
+**TEST SUCCEEDED** — my surface compiles and all tests pass against the real shared infra. Let me confirm the test count and check for any warnings in my files.
+
+All **28 tests pass, 0 failures, 0 warnings**. My surface is verified on iOS. Let me re-lint the edited test file, then run an isolated **macOS** verify too (the gate builds macOS, and parity requires macOS 15).
+
+Test file is clean. Now regenerate the verify project and run the isolated **macOS** build+test.
+
+macOS build+test also **SUCCEEDED**. My surface is verified green on both iOS and macOS. Let me confirm the macOS test count, clean up the temporary verify artifacts, and run the remaining gate steps (full-tree lint/format/placeholder).
+
+macOS: 28 tests, 0 failures. Temp artifacts cleaned; git shows only my files. Now the remaining full-tree gate steps (swiftlint --strict, swiftformat --lint) to record real exits.
+
+Full-project swiftlint --strict passes (0 violations, 3850 files). Now swiftformat --lint on the whole apps/apple:
+
+swiftformat --lint passes (0/4080). Both full-tree style gates are green. Now let me run the full **macOS** scheme build+test to record the real `MAC_EXIT` and confirm its failure set is the same out-of-scope baseline collisions (my files already verified macOS-clean in isolation).
+
+macOS full build running. Let me wait for it to complete.
+
+macOS full build also failed (MAC_EXIT=65). Let me confirm the failure set is the same out-of-scope collisions with zero references to my files.
+
+Conclusive: **zero** diagnostics from my files in both full builds; the sole blocker is 8 pre-existing ambiguous types in 2 out-of-scope sibling families. Let me append the remaining gate results and a thorough summary to the log.
+
+The log is finalized (EXIT=65, STATUS=BLOCKED) with complete evidence. Let me do a final integrity check: confirm only my in-scope files are untracked and no out-of-scope files were modified.
+
+Everything is clean — no tracked files modified, only my 8 deliverables + the log untracked, temp artifacts removed. Let me update the plan/todos and record the final state.
+
+I've completed and verified the TelemetryGrid surface. Here's the honest final state.
+
+## Summary
+
+I shipped a production-polished, native Apple SwiftUI parity of `TelemetryGrid.tsx` — **8 files** in `apps/apple/TeslaSync/feature-views/`, following the exact architecture of the sibling `VehicleStatePanel/0287` (same web directory):
+
+- **`.Format.swift`** — pure SI ports of `formatDistance`/`formatSpeed`/`formatTemperature` + `fmtInt`/`fmtNumber` (km·mi / km/h·mph / °C·°F, locale grouping, half-up rounding, per-quantity precision, no-space temp rule).
+- **`.Adapter.swift`** — pure projection: the six tiles (Battery, Speed, Inside, Odometer, Charger, Sentry) with exact value/tone/sub branches + accessibility.
+- **`.Model.swift`** — P1/S8 source seam, `@Observable` model, P1/S11 `view.opened`, P1/S10 facade, stale auto-refresh.
+- **`.swift` / `.Views.swift`** — bare responsive grid (matching web; chip/banner only when not live), InfoTile glass cards, loading/empty/error chrome, all token-driven (P1/S9), no Tailwind ports, no raw hex.
+- **`.Previews.swift`** (7 states), **`.strings`** (i18n), **`.Tests.swift`** (28 XCTest cases).
+
+### Verification (all run, real output)
+- **Isolated iOS build+test**: `BUILD SUCCEEDED` / `TEST SUCCEEDED` — **28 tests, 0 failures**.
+- **Isolated macOS build+test**: `BUILD SUCCEEDED` / `TEST SUCCEEDED` — **28 tests, 0 failures**.
+- `swiftlint --strict`: **0 violations** (3850 files). `swiftformat --lint apps/apple`: **0/4080**. `check-placeholders`: **0**.
+- My files produce **zero** compiler diagnostics in the full iOS *and* macOS builds.
+
+I built the `Shared.xcframework` via Gradle, ran `xcodegen`, and verified the surface in isolation (only `Sources/` + the TelemetryGrid files compiled as module `TeslaSync` against the real framework) — a throwaway spec I generated, ran, and removed.
+
+### ⚠️ STATUS = BLOCKED (full-scheme gate)
+The full `xcodebuild -scheme TeslaSync[/-macOS] build test` fails (`IOS_EXIT=65`, `MAC_EXIT=65`) — **before TelemetryGrid is reached** — due to **pre-existing, committed, out-of-scope** duplicate public type declarations in sibling surfaces sharing the single app module:
+- `RecentDrivesListWidget.*` **vs** `RecentDrivesSection.*` and `StateTimelineWidget.*` **vs** `StateTimeline.*` each declare the same 4 type names → 8 `"… is ambiguous for type lookup"` errors (+ duplicate `XCTestCase` names).
+
+These are committed at HEAD; the only untracked files in the slot are my 8 deliverables + the log. They are **explicitly out of scope** ("Other surfaces in the same feature") and **outside the prompt's allowed files** (`TelemetryGrid.*` + the log), so I cannot fix them without violating scope.
+
+Per the Honesty Covenant (rule 1 "no red-as-green", rule 8 "no commit on red"), I did **not** commit, set `STATUS=BLOCKED` in the gate log (`.github/prompts/monorepo/logs/p4-apple-feature-views-0285-TelemetryGrid.log`, ending `EXIT=65 / STATUS=BLOCKED`), and left no out-of-scope files modified. The surface itself is complete and proven green on both platforms; the commit can proceed once the pre-existing sibling collisions are resolved upstream.
+
+
+
+I've completed all work achievable within the prompt's hard constraints, and verified it thoroughly. There is no in-scope action that can change the remaining blocker (it lives entirely in committed, out-of-scope sibling files I'm forbidden to modify), so continuing would not change the outcome.
+

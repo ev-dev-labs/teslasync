@@ -1,0 +1,77 @@
+I'll start by exploring the repository structure to understand what exists and run the preflight checks for this Apple acceptance gate.
+
+Environment is macOS arm64 with Xcode 26.5, swiftlint, swiftformat, pwsh, and swift all present. Now let me examine the prompt structure, parity ledgers, and predecessor logs more carefully. I noticed the required `apple-macos-ledger.json` / `apple-ios-ledger.json` and `check-parity-ledger.ps1` may be missing.
+
+Critical preflight findings emerging. Let me read the actual on-disk prompt, the p4-apple directory, and the methodology to understand predecessor/log conventions.
+
+Now I understand the gate fully. Let me investigate predecessors, log naming conventions, the build tooling (xcodegen/xcodeproj), signing identities, and simulators — all in parallel.
+
+I now have the full picture. Critical blockers are emerging: **0 signing identities**, **missing parity ledgers**, **missing `check-parity-ledger.ps1`**, and **no generated `.xcodeproj`**. Let me verify predecessor logs comprehensively and confirm the blockers before running the actual gate. First, let me understand the prompt→log naming and check P9 logs.
+
+Major findings confirmed. The canonical P9 predecessor logs (`p4-p9-0001`, `p4-p9-0002`) are **absent** (only timestamped `artifact-/parallel-/prompt-` variants exist). There are **879 predecessor prompts** to verify. Let me run a comprehensive predecessor-log sweep and confirm the project schemes/gitignore.
+
+Schemes `TeslaSync` and `TeslaSync-macOS` exist, and `.xcodeproj`/DerivedData are gitignored (safe to generate for the build gate). Let me wait for the predecessor sweep to finish.
+
+The predecessor sweep is decisive: **only 15 of 878** predecessor prompts have canonical `STATUS=DONE` logs — **863 are missing** (including P9 unit/UI test logs). Combined with 0 signing identities, missing ledgers, and missing parity tool, this gate is clearly BLOCKED. But per the Honesty Covenant ("no skip-and-assume"), I must still *run* the actual gate commands and record real evidence. Let me set up the log and run the fast gates, plus generate the project for build attempts.
+
+All blockers confirmed: missing parity tool, both Apple ledgers absent, no prebuilt xcframework, 0 signing identities. Now I'll build the acceptance log with real preflight data and run the actual gate commands. Let me capture remaining tool versions and write the log preamble.
+
+Now I'll create the acceptance log with the PREFLIGHT, SURVEY, and REASONING sections populated with real evidence.
+
+Now I'll run the actual gate commands and append real output. Starting with the fast, definitive sub-gates: SwiftLint, SwiftFormat, the placeholder scanner, and the two ledger checks.
+
+Fast gates done. SwiftLint/SwiftFormat pass (0), but placeholder scanner returned 1 and both ledger checks returned 64 (missing tool). Let me inspect the actual output captured.
+
+Placeholder scanner found **79 placeholders vs. 25 allowed (EXIT=1)** — another real blocker — and both ledger checks fail (exit 64, tool missing). Now for the build/test/archive sub-gates. Let me check the xcframework dependency, then generate the project and attempt the builds.
+
+`Frameworks/Shared.xcframework` is a required dependency but only `.gitkeep` is present — the Apple build's pre-build Run Script builds it via Gradle/KMP. Let me generate the Xcode project and confirm schemes, then attempt the build/test/archive gates (capturing real exits).
+
+Project generates cleanly; `TeslaSync` and `TeslaSync-macOS` schemes are present. Now the build/test/archive sub-gates. These trigger the pre-build Gradle/KMP xcframework staging and (for archives) signing. I'll run them bounded so they can't hang indefinitely, capturing real exit codes. Starting with the iOS Simulator build/test.
+
+iOS build/test failed fast with `IOS_EXIT=66`. Let me see the captured failure reason.
+
+The `IOS_EXIT=66` was a harness error — I ran `xcodebuild` from the repo root, but the project lives in `apps/apple/`. The gate intends cwd=`apps/apple`. I must correct this for an honest result. Let me relabel that bad attempt and re-run correctly.
+
+Now the corrected iOS build/test run from `apps/apple` (proper cwd). This will trigger the Gradle/KMP xcframework staging — bounded so it can't hang.
+
+Build is running (likely Gradle/KMP toolchain). Let me peek at progress while it continues.
+
+Good — the build is progressing: Gradle/KMP toolchain is cached, `Shared.xcframework` is staging successfully, now compiling the Swift app + tests. Let me continue waiting.
+
+Build is actively compiling the Swift app module (~7.5 min elapsed, bound 20 min). Let me keep waiting.
+
+Corrected iOS build/test returned `IOS_EXIT=65` — a real build/test failure. Let me extract the actual errors.
+
+Confirmed real failure: `** BUILD FAILED **` / `** TEST FAILED **` — `Command SwiftCompile failed with a nonzero exit code`, `IOS_EXIT=65`. Let me extract the concrete compiler diagnostic, then run the remaining gate commands (macOS build/test + both archives).
+
+No source-level `error:` diagnostic was emitted — consistent with a swift-frontend crash/kill during batch compilation of the ~879 files. Either way it's a real RED (exit 65). Let me check for crash/kill indicators, then launch the remaining three gate commands (macOS build/test + both archives) in the background.
+
+No crash text was captured (consistent with an OOM-killed swift-frontend). The verdict stands: iOS build/test = RED. Now launching the remaining three gate commands (macOS build/test, iOS archive, macOS archive), bounded and sequential, from `apps/apple`.
+
+These three builds will take a while. Let me wait and monitor progress.
+
+All three remaining gate commands returned **exit 65** (RED): `MAC_EXIT=65`, `IOS_ARCHIVE_EXIT=65`, `MAC_ARCHIVE_EXIT=65`. Let me confirm each failure reason (compile vs. signing) for accurate recording.
+
+Concrete reasons captured:
+- **macOS build/test** → `** BUILD FAILED **` / `** TEST FAILED **` (SwiftCompile).
+- **iOS archive** → `** ARCHIVE FAILED **`: *"Signing for 'TeslaSync' requires a development team"* — the exact consequence of 0 signing identities.
+- **macOS archive** → `** ARCHIVE FAILED **`.
+
+Let me confirm the macOS archive reason and view the iOS archive signing block for the record.
+
+Both archives fail on signing (iOS: *"requires a development team"*; macOS: *"entitlements require a development certificate"*) — direct proof the archive/sign requirement is unmet. The log also notes the staged `Shared.xcframework` is missing `x86_64` for macOS. I now have complete, honest evidence for every sub-gate. Let me append the PARITY + GATE SUMMARY + footer.
+
+Footer is `EXIT=1` / `STATUS=BLOCKED`. Now let me verify git status — only the log should be a tracked change; generated project/build artifacts must be gitignored (Rule 9).
+
+Clean: the **only** non-ignored change is the log; the generated `.xcodeproj`, `Shared.xcframework`, and Gradle `build/` are all gitignored (Rule 9 satisfied). Now I'll commit **only the log** with a BLOCKED message per the methodology's commit discipline.
+
+Commit succeeded (`COMMIT_EXIT=0`, 1 file changed — only the log). To complete the methodology's mandatory `=== COMMIT ===` section, let me append it and amend (still log-only).
+
+Working tree is clean — the amended commit contains **only** the log (1 file). Let me do a final integrity check of the log (Rule 10 footer + recorded exits), then tidy the generated build artifacts I created.
+
+The mandatory sections are all present, the committed file is in sync, and the runner's `^EXIT=`/`^STATUS=BLOCKED` patterns will match. However, Rule 10 says the log must **end** with EXIT/STATUS — but I appended the COMMIT section after it. Let me reorder so the footer is last. Let me view the exact tail.
+
+The log now correctly ends with `EXIT=1` / `STATUS=BLOCKED` (Rule 10), git is clean, and only the log is committed. Now let me tidy the gitignored build artifacts I generated for the gate (xcodeproj, staged xcframework, DerivedData, Gradle build), restoring the tree to its pre-gate state.
+
+Done. The Apple acceptance gate (P4/P99) was executed faithfully on this macOS runner, real evidence recorded, and the result is honestly **STATUS=BLOCKED**. Working tree is fully clean; only the acceptance log was committed (Rule 8).
+

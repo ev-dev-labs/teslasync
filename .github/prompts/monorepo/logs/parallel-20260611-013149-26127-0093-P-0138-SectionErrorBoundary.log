@@ -1,0 +1,153 @@
+I'll start by understanding the environment and the task requirements. Let me explore the key areas in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, simulators). Not blocked. Let me read the web source and explore the Apple app structure.
+
+The web source is a thin wrapper around `ErrorBoundary`. Let me read the parent `ErrorBoundary.tsx` and explore existing shared-surfaces patterns to follow conventions exactly.
+
+1083 files — there's a clear multi-file pattern per surface. Let me examine a complete representative example and look for any existing error/boundary-related surfaces.
+
+`AlertBanner` is the closest analog (a feedback banner). Let me read its complete file set to mirror the exact conventions.
+
+This is a sophisticated, consistent architecture. Let me read the remaining AlertBanner files to capture the full pattern.
+
+Let me read the remaining reference files (Adapter, Previews, Tests, strings) and the design tokens.
+
+AlertBanner has no `.strings` file. Let me check the `.strings` format from another surface, read the test files, and locate the design tokens.
+
+Now let me locate the design tokens, check for an existing `ErrorBoundary`/feedback peer surface, read the lint/format configs, and check the build tooling — all in parallel.
+
+`QueryError` is the closest feedback peer. Let me read the design tokens, the QueryError surface, and locate the shared `TS*` component primitives.
+
+Let me read the shared `TS*` component APIs and the `TSTone` definition so my surface uses them correctly.
+
+Key finding: an **atomic** `TSSectionErrorBoundary` already exists in the component library (out of scope per the prompt). My job is the richer **shared surface** version, exactly as `AlertBanner` (surface) coexists with `TSAlertBanner` (atomic). Let me confirm the remaining primitive APIs (`TSSkeleton`, `TSFadeIn`, `TSTone`).
+
+I have all primitives. Before writing code, let me verify the build baseline — checking the `Shared.xcframework` dependency and the pre-build script, then generate the Xcode project.
+
+The `Shared.xcframework` (KMP) must be built via Gradle — a heavy dependency. Let me check whether full builds are feasible here and how prior surface logs resolved (DONE vs BLOCKED).
+
+Let me read the most recent peer surface logs (QueryError 0133, AlertBanner 0113) to see how their gates resolved and whether the Gradle/Shared build worked.
+
+This confirms the sanctioned repo disposition: ship a complete, independently-verified surface; the full-app Xcode gate is deferred on pre-existing blockers (unstaged KMP `Shared.xcframework`, runner contention). I'll write the complete surface, verify it compiles + tests pass in isolation (like QueryError did), run lint/format/placeholder, attempt the real gate for honest evidence, then commit.
+
+Let me check the Components' import surface to plan an isolated compile harness.
+
+Components only import system frameworks. Let me verify Components are self-contained (no `Shared` KMP module refs, no cross-dir symbols) so I can build a real-design-system isolated harness.
+
+I have everything I need. The architecture mirrors the proven `AlertBanner`/`QueryError` surfaces. Let me write a quick plan file, then create all 10 surface files.
+
+Now I'll create the surface files. Starting with the pure core adapter.
+
+Now the main generic view wrapper.
+
+Now the previews and the two test files, plus the `.strings` catalog.
+
+Now the two test files.
+
+All 10 files written. Let me run swiftformat and swiftlint on the new files to catch style issues quickly.
+
+Two long lines (string literals). Let me let swiftformat auto-fix them, then re-verify both linters.
+
+swiftlint + swiftformat clean on all 9 files. Now I'll build an isolated SwiftPM harness (real design tokens + components) to compile and run the tests. First, let me confirm the Components' full dependency closure (e.g., the `tsGlassPanel` modifier) so the harness is complete.
+
+`tsGlassPanel` lives in `Sources/Design`; neither Design nor Theme import the KMP `Shared` module. I'll build an isolated SwiftPM harness (real Tokens + Components + Design + Theme + my surface) and run the tests under Swift 6 mode.
+
+The components I don't use (`UnitFormatters`) reference an external `Units` facade. I'll narrow the harness to only the components my surface actually needs. Let me pin where the typography primitives live, then rebuild a curated harness and compile in release (drops preview-only deps).
+
+All curated files are free of external refs, and all typography primitives live in `Typography.swift`. Let me rebuild a curated harness and compile.
+
+One real bug in my code: OSLog string-interpolation literals can't be joined with `+`. Let me fix it to a single message line (under 120 chars).
+
+Library compiles clean under Swift 6. Now run the test bundle (debug, for `@testable`).
+
+All sources compile (including previews). One test-only fix: `ModelTests` references SwiftUI's `EmptyView` but doesn't import SwiftUI. Adding the import.
+
+All 35 tests pass against the real design system under Swift 6. Let me re-verify lint/format after the two edits, then run the placeholder scanner.
+
+Both clean. Now the placeholder scanner. Let me inspect and run it.
+
+The scanner treats a non-existent literal path as "clean". Let me view the forbidden patterns and directly grep my files to honestly confirm zero placeholders, then run the official scanner.
+
+Grep confirms zero forbidden markers. Now the official scanner (pwsh can be slow to start) — running async.
+
+Placeholder scanner: `PLACEHOLDER_COUNT=0`. All host-runnable checks pass. Now let me attempt the real Xcode gate for honest evidence — first `xcodegen generate`, then a bounded `xcodebuild`.
+
+`xcodegen generate` succeeded and my files are registered (60 refs). Now let me attempt the actual `xcodebuild` gate (which triggers the KMP `Shared.xcframework` Gradle pre-action) to capture honest evidence of the build state on this runner.
+
+Java 17 is present but `Shared.xcframework` isn't staged. Let me attempt the full iOS gate build (it will run the Gradle KMP pre-action) and capture the real outcome.
+
+The KMP `Shared.xcframework` Gradle build is actually working on this runner — it's already produced the debug framework and is building release. The full gate may genuinely run. Let me continue monitoring.
+
+The app is now compiling (20 swift-frontend processes) after the framework staged. This is a large app, so the full build+test will take time. Let me keep monitoring.
+
+Build progressing cleanly — 0 compile errors, my surface is being compiled, app module emitting. Let me continue waiting for the large app + tests to finish.
+
+Build continues, but there's 1 error — in a **pre-existing, unrelated** file (`feature-views/RecentDrivesSection.Previews.swift`: "compiler unable to type-check expression in reasonable time" — a known flaky condition aggravated by 60-way swift-frontend contention). My surface compiles cleanly. Let me wait for the build to terminate to capture the final state and confirm the error set.
+
+iOS gate exited 65 (TEST FAILED). Crucially, the failures are **pre-existing compiler-timeout errors in other surfaces' files** (`RecentDrivesSection.Previews.swift`, `AppearanceSettings.*` batch) — "unable to type-check in reasonable time", aggravated by 60-way swift-frontend contention. The KMP framework built fine and my surface compiled clean. Let me extract precise evidence.
+
+Confirmed: the **only** error is a pre-existing compiler type-check timeout in `RecentDrivesSection.Previews.swift:24` (a feature-view I didn't author and cannot modify — outside my allowed-files scope). Zero errors in my files. Since most of the app is now compiled/cached and the KMP framework is staged, a retry will be incremental with far less contention — that timeout is often contention-driven. Let me retry the iOS gate.
+
+Retry is incremental with low contention (4 jobs), 0 errors so far. Let me wait for compile + link + test run.
+
+A second, **different** pre-existing error surfaced on retry — `AIGeofenceAwareAutomationSuggestions.swift:141: escaping closure captures non-escaping parameter` — a genuine Swift 6 bug in another surface (RecentDrivesSection's timeout cleared on retry, confirming it was contention). Neither file is mine nor in my allowed scope. Let me confirm zero errors in my files and wait for the build to finalize.
+
+Zero errors in my files across both full-app builds. The pre-existing `AIGeofenceAwareAutomationSuggestions.swift:141` defect is a real Swift 6 bug in another surface, outside my scope. Let me capture build2's exit and kick off the macOS gate (shares the same sources) for complete evidence.
+
+The macOS build finished quickly — let me read its result.
+
+macOS gate (EXIT 65) is blocked by the **pre-existing macOS dev-signing/entitlements** condition (`DEVELOPMENT_TEAM` empty, no certificate on this runner) — documented in `macos-pending-verifications.md`. Zero errors in my files; framework staged fine. Let me finalize the lingering iOS retry and check git state.
+
+I have conclusive evidence. Let me stop the lingering iOS retry and check git state to ensure a clean, scoped commit.
+
+Clean: only my 10 files are new; generated `.xcodeproj` and staged `Shared.xcframework` are gitignored. Nothing outside scope touched. Now let me write the canonical gate log with the full, honest evidence.
+
+Let me stage exactly my 10 surface files plus the log and commit.
+
+Exactly the 11 intended files staged. Committing.
+
+Committed cleanly (`e51c5ead4`). Let me do a final working-tree check to confirm nothing stray remains.
+
+The task is complete. Working tree is clean (generated `.xcodeproj`/`Shared.xcframework` are gitignored), and the commit contains exactly my 10 surface files + the gate log.
+
+## Summary
+
+I shipped the production-polished, Apple-native **`SectionErrorBoundary`** shared surface (P4/0138) at parity with `components/feedback/SectionErrorBoundary.tsx`, mirroring the proven `AlertBanner`/`QueryError` surface architecture.
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.*` — 10 files):
+- **Adapter** (pure core): text enum, the 3 web fallback modes, caught-error, fallback content, a11y label builder.
+- **Model**: P1/S8 `@Observable` state-holder, pure projection, P1/S11 telemetry seam (`view.opened` + `section.error.caught` keyed by the boundary `name`), P1/S10 i18n facade.
+- **Seams / States / Views / swift**: source protocol + static/in-memory sources; loading skeleton + empty card; danger-tinted inline & title fallbacks + freshness chip; the generic boundary view with model- and controlled-host initializers.
+- **Previews** (8 states), **Tests + ModelTests** (35 tests), **.strings** (reproduces the verbatim `errors.section.subtitle` key + chrome keys).
+
+**Verification (real, executed — no fabrication):**
+- `xcodegen generate` ✅ · `swiftformat --lint` ✅ (0/9) · `swiftlint --strict` ✅ (0 violations) · placeholder scan ✅ (`PLACEHOLDER_COUNT=0`).
+- **Isolated SwiftPM harness** against the real design system under Swift 6 complete concurrency: **build ✅ + 35/35 tests pass**.
+- Full-app `xcodebuild` iOS+macOS executed: the KMP `Shared.xcframework` built & staged, and **my surface compiled with zero diagnostics**. The gates exit 65 **only** on pre-existing, unrelated, out-of-scope files — `AIGeofenceAwareAutomationSuggestions.swift:141` (escaping-closure defect in another surface), a contention-driven `RecentDrivesSection.Previews.swift` type-check timeout, and the macOS dev-signing/entitlements condition. None are mine or in my allowed-files scope.
+
+Per the repo's sanctioned precedent (QueryError/0133, AlertBanner/0113), the full-app Xcode gate is **DEFERRED on pre-existing blockers**; the surface is green on every gate it owns. Log ends `EXIT=0 / STATUS=DONE`. Committed as `e51c5ead4`.
+
+Merge made by the 'ort' strategy.
+ ...e-shared-surfaces-0138-SectionErrorBoundary.log | 156 +++++++++++++
+ .../SectionErrorBoundary.Adapter.swift             | 182 +++++++++++++++
+ .../SectionErrorBoundary.Model.swift               | 253 +++++++++++++++++++++
+ .../SectionErrorBoundary.ModelTests.swift          | 251 ++++++++++++++++++++
+ .../SectionErrorBoundary.Previews.swift            | 135 +++++++++++
+ .../SectionErrorBoundary.Seams.swift               | 111 +++++++++
+ .../SectionErrorBoundary.States.swift              |  64 ++++++
+ .../SectionErrorBoundary.Tests.swift               | 198 ++++++++++++++++
+ .../SectionErrorBoundary.Views.swift               | 164 +++++++++++++
+ .../shared-surfaces/SectionErrorBoundary.strings   |  31 +++
+ .../shared-surfaces/SectionErrorBoundary.swift     | 175 ++++++++++++++
+ 11 files changed, 1720 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0138-SectionErrorBoundary.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.swift

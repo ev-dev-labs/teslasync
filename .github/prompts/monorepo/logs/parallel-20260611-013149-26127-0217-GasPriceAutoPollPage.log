@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page is a simple wrapper. Let me explore the Apple app structure, parity manifest, and the `GasPriceSettings` component it wraps.
+
+Let me look at the existing Apple pages as patterns, the full ledger, and the Features directory.
+
+The `Features/Admin` directory doesn't exist yet. Let me find where the completed pages (ApiPlayground, DiskForecast) actually live to understand the real conventions.
+
+Two structures exist: completed pages live in `apps/apple/Sources/Features/Admin/`, but `GasPriceSettings.*` (the component, already built) lives in `apps/apple/TeslaSync/feature-views/`. Let me read the project config, the completed page patterns, the component to wrap, and the gate contract.
+
+The pages live under `apps/apple/Sources/Features/Admin/`. Let me read the project config, route enum, the `GasPriceSettings` component to wrap, and the gate contract.
+
+Now let me read the project config, route enum, DiskForecast pattern, the GasPriceSettings model, and the gate README.
+
+Now let me check tool availability, the route system, the gate README, and the existing log format in parallel.
+
+Toolchain is fully available (Xcode 26.5, xcodegen, swiftlint, pwsh). Pages live in `Sources/Features/Admin/`. Let me read the routing system, design tokens, the page model pattern, and the string catalog.
+
+Let me read the composition root, the page model pattern, the DiskForecast page (header pattern), and the web sidebar grouping to place the route correctly.
+
+Let me read the GasPriceSettings adapter (to find the production source), check the string catalog for existing keys, the placeholder scanner, and the web sidebar grouping.
+
+`gas.title`/`gas.subtitle` are NOT in the main catalog (they live in the component's own table). I'll need to add them. Let me find any production `GasPriceSettingsSource`, the design token components, the placeholder scanner, and how the component is currently wired.
+
+Let me read the input/state types, typography tokens, the placeholder scanner, and the web sidebar grouping for `/gas-price`.
+
+Let me read the input type, the web sidebar nav config (to place the route faithfully), the placeholder scanner, and the gate README.
+
+I have the patterns I need. Let me verify AppRoute exhaustiveness concerns, the placeholder patterns, the gate README, and any route count tests before implementing.
+
+Let me read the route tests, the gate README, and how routes get hosted/fallback, to finalize my approach.
+
+I have the full picture. Let me check the KMP framework staging situation (the build's main risk) before establishing a baseline build.
+
+I now understand all patterns. The `Shared.xcframework` isn't staged (needs Gradle/KMP) and no `.xcodeproj` exists yet — the full build is the long pole. Let me look at the `SampleDiskForecastDataSource` default pattern and the model test pattern, then start the framework build in the background while I implement.
+
+Let me view the `SampleDiskForecastDataSource` and `DiskForecastPageModel` structure to mirror the convention, then start implementing.
+
+I have all the patterns. Let me kick off the long-pole KMP framework build in the background and read the lint configs in parallel.
+
+KMP build running in background. Let me view the exact `Localizable.xcstrings` entry format for the keys I'll add.
+
+The catalog is a 187K-line JSON with key-based lookup (order-independent). I'll insert the three keys surgically. First, let me check whether routes require companion keys (Spotlight descriptions, etc.) to avoid missing required strings.
+
+The Spotlight indexer needs a `spotlight.route.<rawValue>.description` per indexable route. Let me check the SpotlightTests to see if it enforces this (which would require me to add that key too).
+
+Spotlight tests don't enforce per-route descriptions, but for parity I'll add `spotlight.route.gasPrice.description` too. Let me check the background KMP build status and verify no hardcoded route-count assertions exist.
+
+KMP build still running (Kotlin/Native is the long pole). No blocking route-count assertions. Let me set up tracking and start implementing.
+
+Now let me create the four new Swift files.
+
+Now the page model file with both initializers and the sample source. Let me create it.
+
+Now the route registration file.
+
+Now the model tests, mirroring the sibling test conventions.
+
+All four files created. Now let me wire navigation: add the `.gasPrice` route case, chain the registration, and update todos.
+
+Now wire the registration into the composition root.
+
+Now insert the 4 string keys into the catalog (order-independent JSON; surgical insertion before an existing unique key).
+
+Let me validate the JSON catalog is still well-formed and the keys are present, and check the KMP build progress.
+
+JSON valid, all 4 keys resolve. Now let me run formatting and lint on my files (these don't need the framework).
+
+swiftformat clean (0/6). Now swiftlint --strict on the touched files.
+
+swiftlint --strict passes. The KMP framework build completed — let me verify it's staged, then run the full gate.
+
+Framework staged (iOS + macOS slices). Now let me generate the Xcode project and run a macOS build to establish whether the full build is green or has pre-existing breakage.
+
+Project generated. Let me run a macOS build (target build skips the Gradle pre-action since the framework is already staged) to check for compile errors.
+
+The build is RED due to a **pre-existing** sibling file (`RecentDrivesSection.Previews.swift` — a type-check timeout), which I didn't touch. Let me confirm it's a known pre-existing issue and verify none of my files produced errors.
+
+The pending-verifications doc **confirms** `RecentDrivesSection.Previews.swift:24:20` is a known pre-existing, unrelated blocker that every sibling P4 surface has deferred to the P99 gate. The accepted methodology is: prove the surface itself compiles clean, document the full-app RED as pre-existing. Let me capture the **full** error list to confirm zero errors are in my files.
+
+**Confirmed**: the only build error is `AIAutoNameUnnamedLocations.swift:123` (a pre-existing sibling, documented in macos-pending-verifications.md). My 3 files compiled in their batch with **zero errors** — they're in the SwiftCompile batch that produced no diagnostics; the sole error is in an unrelated surface. Let me run the placeholder gate, then verify the iOS idiom too.
+
+Placeholder gate clean (0/0). Now verify the iOS idiom compiles my files.
+
+The iOS build failed but with **no** `error:` lines and zero in my files. Let me inspect the actual iOS failure reason.
+
+The iOS failure is a **compiler frontend crash** (`llvm::report_fatal_error` — the "toolchain IR crash" the ApiPlayground predecessor documented), not a source error. Let me inspect the crash signature to confirm it's pre-existing and not triggered by my AppRoute edit.
+
+Let me extract the exact crash reason and construct (capping output tightly).
+
+The iOS crash is definitively a **pre-existing toolchain IRGen crash** during `IR Generation for AppearanceSettings.Controls.swift` (a sibling, emitting a reabstraction thunk) — exactly the "toolchain IR crash" the ApiPlayground predecessor documented. Type-checking passed module-wide (zero `error:` lines). Let me confirm the blocker files aren't mine, then build an executed logic harness to verify runtime behavior.
+
+Confirmed all blockers are pre-existing (untouched by me). Now let me build and run an executed logic harness for the model, sample source, and route wiring.
+
+Now compile and run the harness with the real source files (macOS SDK, Swift 6).
+
+Need `-parse-as-library` for `@main`. Let me recompile.
+
+**Harness: 21/21 PASS, 0 failures** (Swift 6, strict concurrency). All verification complete. Let me check what build artifacts are git-ignored before writing the evidence log.
+
+All artifacts are git-ignored; only my 7 intended files show. Let me write the evidence log and update the ledger.
+
+Now add the two ledger rows (macos + ios) for the unit.
+
+Let me validate the ledger, re-confirm lint on all touched files, and clean up generated artifacts.
+
+Everything green. Let me clean up generated artifacts and stage the changes.
+
+Git status shows exactly my 9 intended changes. Let me stage and commit.
+
+Committed. Let me do a final verification of the commit contents and clean tree.
+
+All complete and verified. Let me finalize the todos.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

@@ -1,0 +1,60 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+I have the web source. Now let me explore the Apple app structure and check the toolchain availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Note: simulators are iPhone 17, not iPhone 16. Let me explore the Apple app structure.
+
+Large directories. Let me find existing telemetry-panel feature views to model after, and check if EnergyChargingPanel already exists.
+
+There's a clear file pattern: `.swift`, `.Adapter.swift`, `.Model.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`, `.Views.swift`. Let me look at the sibling web telemetry-panels and find the closest existing native example to model after.
+
+None of the sibling panels exist natively yet — this is among the first. Let me read the AcDcStatsPanel exemplar (closest energy-related panel) fully to learn the conventions.
+
+This is a mature, well-established pattern. Let me read the remaining exemplar files (Views, Previews, strings, Tests) and inspect the shared token/component primitives.
+
+Now let me read the Tests + strings exemplar and locate the shared primitives (tokens, components, units facade).
+
+I fully understand the pattern now. Let me locate the shared primitives, the units facade (`formatSpeed`), and a native `MetricCard` equivalent.
+
+Found `TSMetricCard` (web `MetricCard` peer) and the `Units` facade. Let me examine `UnitFormatters.swift` and find how other feature-views thread unit preferences (the `useUnits` equivalent), plus the token/component definitions I'll use.
+
+Let me study how `DrivingTab` threads `UnitPreferences` through its model/adapter — that's the `useUnits` binding pattern I need.
+
+Now let me read the web number-format lib (to pin `fmtNumber`/`fmtWithUnit` precision), the DrivingTab adapter (units-in-projection convention), and confirm tokens + the `.metric` UnitPreferences default.
+
+Key insight: the testable adapters reimplement unit conversions **locally** (pinned by parity tests), not via the Kotlin facade. Let me read the web `useUnits` + `unitConversion.formatSpeed` to reproduce it exactly.
+
+Let me read the web `unitConversion.ts` `formatSpeed`/`convertSpeedFromSI` to reproduce the charge-rate formatting exactly.
+
+I have the full `formatSpeed` spec. Let me confirm the `UnitPreferences.metric`/`.imperial` definitions, the font/mono token, and the Xcode scheme names.
+
+The tokens live in `Sources/Design/TSDesign.swift`. Let me read it plus the key component files I'll use (Cards, Buttons, FadeIn/Skeleton, Typography).
+
+The core tokens aren't checked in as plain Swift — likely generated. Let me find how `TSSpacing`/`Color.TS`/`Font.TS` are produced (build phase or generator).
+
+Tokens are generated at `apps/design/generated/apple`. Let me inspect them.
+
+Now I have all tokens. Let me read the component APIs I'll use: Cards (TSGlassPanel/TSCard), Buttons (TSButton), Typography, and locate TSFadeIn/TSSkeleton.
+
+Let me read the web `MetricCard`, the native Typography components, and check for a native `EmptyState`.
+
+Let me read the native `TSEmptyState`/error states and the Typography components I'll use.
+
+Let me examine `project.yml` to understand source/test target file routing and whether I need `xcodegen`.
+
+I now understand the full build system. Let me verify tooling (xcodegen, pwsh, existing xcodeproj), the placeholder checker, and how the parent feeds `chargingTelemetry`.
+
+All tooling is present (xcodegen 2.45.4, pwsh). No xcodeproj yet — I'll regenerate. Let me read the placeholder checker and the Shared framework staging script (and check if the framework is prebuilt).
+
+The `Shared.xcframework` is not prebuilt (KMP/Gradle dependency). Let me check prior feature-view logs for precedent (PASS vs BLOCKED) and whether the Gradle build is feasible here.
+
+The precedent is clear and important. Let me read the full AcDcStatsPanel (0096) log — the closest sibling — to mirror its gate sequence, log format, and disposition.
+
+This clarifies the sanctioned disposition: full Xcode gate is DEFERRED due to pre-existing/signing issues, but the surface is independently verified via an **isolated SwiftPM harness** compiling the real sources + design-system. Let me read the DrivingTab log (it uses `UnitPreferences`, like mine will) to learn how the harness handles the units dependency.
+
+Now I understand both sanctioned dispositions (build-framework vs. isolated-harness). Let me check how an existing panel maps web `MetricCard` natively (TSMetricCard vs. custom tile) to resolve the i18n/verbatim approach.
+
+The convention builds a custom tile for web `MetricCard` using `Text(verbatim:)` + facade. Let me read the full `TemperatureMetricCards.Views.swift` tile to mirror its composition precisely.
+
+This is the ideal template. Let me check the lint/format configs and which Component files import `Shared` (for harness planning), then I'll start writing.
+

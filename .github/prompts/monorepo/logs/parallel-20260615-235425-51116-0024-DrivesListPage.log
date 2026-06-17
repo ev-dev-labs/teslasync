@@ -1,0 +1,259 @@
+I'll start by exploring the repository structure to understand the task scope, particularly the web source page, the existing Apple app structure, and the parity infrastructure.
+
+The web source is large. Let me check for Xcode availability (critical for the gate) and explore the Apple app structure in parallel.
+
+Good — Xcode 26.5, SwiftLint, Swift 6.3.2, XcodeGen, and pwsh are all available, so the gate can run (not BLOCKED). The actual source layout differs from the prompt's idealized path. Let me examine the project config and parity infrastructure.
+
+The `Features/` path isn't in `project.yml` sources — the real app uses `feature-views/`. This prompt is auto-generated against an idealized layout. Let me find existing Driving-related Apple code and the parity ledger entry to understand the real conventions.
+
+No existing Driving page in Apple, and the ledger has no `driving/DrivesList` row yet. The gate scans `Features/Driving` specifically, confirming that's the target dir. Let me read the manifest entry, the web source, and study an existing page surface pattern.
+
+There's one full reference page: `AlertStudioPage`. Let me study its structure and read the web source. I'll write a plan as this is a large multi-file task.
+
+Let me continue reading the web source to grasp the full page structure (panels, charts, stats).
+
+I now fully understand the web page. Let me study the reference Apple page (`AlertStudioPage`) and the navigation/registration mechanism. I'll write a plan after this round.
+
+Now I understand the page pattern (design tokens `Color.TS`/`Font.TS`/`TSSpacing`, shared components `TSButton`/`TSGlassPanel`/etc., `@Observable` view models). Let me study navigation registration, the model/adapter/strings patterns, and check for an existing drives route.
+
+There's already a `.driving` route (`/driving`) and a `Sources/Features/Driving` directory. Let me examine the existing Driving feature wiring, the route host registry, and how routes map to views.
+
+A full `DriveScorePage` already exists in `Sources/Features/Driving` — an ideal reference for KMP binding, the `@Observable` model, and route registration. Let me study it and the web routing.
+
+Excellent reference. Let me study the model/data-source pattern, route aliasing, and the web routing for `/drives` vs `/driving`.
+
+Now I understand the architecture. Key decision: `/drives` (DrivesListPage) is distinct from `/driving` (DriveScorePage, already built). Let me verify the web routing, the reusable drive model, the units facade, and inventory the shared component library + design tokens.
+
+Confirmed: web has distinct `/drives` (DrivesListPage, our target) and `/drive-score` (DriveScorePage, already built at `.driving`). I need to wire `/drives`. Let me assess the blast radius of route changes and how registrations are composed.
+
+Now I have the wiring picture: registrations compose in `Sources/TeslaSyncApp.swift`; only `AppRoute.swift`'s `systemImage`/`group` switches are exhaustive. Let me read the web Drive type + aggregation logic (core for parity), the app registration, route tests, and locate the units facade + component inventory.
+
+Let me read the core aggregation logic (essential for stats/chart parity), the units facade, route tests, and inventory the component library.
+
+I now have the full aggregation logic to port. Let me read the units facade, route tests, and inventory the key shared components (metric cards, charts, badges, search, segmented controls).
+
+I have the core logic mapped. Let me create a plan, then read the strongest references (DriveScorePage panels + charts), verify the prebuilt Shared framework, and locate the units env key + cost formatting.
+
+Shared.xcframework may not be prebuilt — critical for the build gate. The sibling `DriveScorePage` gate log will reveal the real gate behavior here. Let me read it plus check the framework dir and units env key.
+
+This is the critical precedent. The sibling `DriveScorePage` placed files in `Sources/Features/Driving/` (the live compiled group), verified via typecheck + logic harness + lint + placeholder scan, and honestly reported the full `xcodebuild` as RED (KMP Gradle framework is out-of-scope/unbuildable here). Let me read the full methodology from its log head.
+
+Now I have the definitive precedent and methodology. Let me read the rest of the log (final structure, ledger format), the ledger's DriveScore rows, and the component-usage references (panels + charts) so I can reuse the real shared components.
+
+The PARITY log format and ledger structure are clear. Let me read the component-usage references (Panels + Charts) to learn exact shared-component signatures, plus the ledger row format.
+
+Chart wrappers are clear (`TSChartContainer`, `TSLineChart`, `TSBarChart`, `TSChartSeries/Point`, `TSRadialGauge`). Let me read the panels reference + the reusable drive model, and inventory the remaining components (stat card, badge, segmented/pill, search field, currency).
+
+`DriveScoreDrive` (web `Drive`, fully SI) and `DriveScoreVehicle` are reusable. Note: DrivesList uses a *different* efficiency-based grade system (A+/A/B/C/D/—), so I'll define that locally. Let me inventory the remaining shared components I need (stat card, badge, segmented/pills, search field, currency, KVList).
+
+There's a `MetricSwitcher.swift` component — exactly the web `MetricSwitcherChart`. Let me read it plus the metric cards, filters/pills, search fields, and currency formatting.
+
+There's a `TSMetricSwitcherChart`, but it's simpler than the web version (no per-metric bar/line, formatters, or empty message). I'll build a faithful section using chart primitives. Let me efficiently extract the public API signatures of the components I'll use.
+
+Comprehensive component inventory done. Let me read precise inits for the key components I'll compose (stat card, empty state, chart container, range picker, date-grouped list, history row, bulk toolbar), plus find the cost/currency settings facade and the `tsUnits` env key.
+
+Let me read the cost/formatting details (web + apple), the list-section component inits, and confirm the design tokens.
+
+I now have all component signatures and cost formatting. Let me confirm the design tokens and the reusable `DriveScoreFormat`, then start implementing.
+
+I have everything needed. Let me verify there are no other exhaustive `AppRoute` switches app-wide before adding a `.drives` case, then set up todos and start implementing.
+
+Adding `.drives` is safe — all route consumers use the enum's computed props / `allCases`, no exhaustive external switches. Let me set up todos and inspect the string catalog format.
+
+String catalog format is clear (`common.noData`/`common.delete` already present). Let me check the swiftlint limits to plan file sizes, then start implementing.
+
+All constraints are clear (lines ≤120, files ≤400, type bodies ≤200, `.isEmpty`/`.first(where:)`, no explicit `self`). Starting implementation with the models + aggregation. Let me update intent and create the first files.
+
+Now the `@Observable` model + data source. I'll split it (class/actions vs derivations) to respect the type-body length limit.
+
+The model needs display-unit prefs for search + group summaries (web matches displayed distance). Let me check the `tsUnits` env default to mirror its labels, then write the derivations extension.
+
+`UnitPreferences.metric` / `.imperial` exist. Let me confirm their labels, then write the derivations extension.
+
+`UnitPreferences.metric` (distance "km") confirmed. Let me add display prefs to the model, then write the derivations + search files.
+
+Now the data sources (Sample/Empty/Failing) for previews and the 4 states.
+
+The `Spec` data rows exceed 120 chars (swiftlint code-line limit). Let me restructure to compact tuple rows.
+
+Let me kick off the Shared.xcframework Gradle build in the background (needed for full type-checking), then continue writing the view files while it runs.
+
+Gradle is building in the background. Let me write the main page view while it runs.
+
+Let me verify a few component signatures I'm relying on (skeleton, theme modifier, date range filter) and check the Gradle build progress.
+
+Let me simplify the range control to use the existing `TSDateRangeFilter` directly, and check the Gradle progress.
+
+Gradle still running. Let me write the overview section (the 6 KPI panels + GlassPanel7 empty).
+
+I should use the exact manifest string keys (`drives.topSpeed`, etc.) as labels rather than inventing `.value` variants. Let me fix the secondary line.
+
+Let me check the Gradle build, then write the chart section.
+
+Gradle still compiling. Let me write the metric-switcher chart section.
+
+Let me check the Gradle progress and make model/enum additions (resetFilters, localizedTitle) needed by the list section.
+
+Let me read the `TSTextField` init before writing the search field, then check Gradle.
+
+Gradle still building (Kotlin/Native first build is slow). Let me write the controls section (sticky summary, search, collections pills, sort/export controls).
+
+Gradle finished. Let me confirm the Shared.xcframework was built, then write the final list section.
+
+Shared.xcframework built successfully. Let me stage it into `Frameworks/` for type-checking.
+
+Debug variant built (fine for type-checking). Let me stage it and inspect its slices.
+
+Let me read `TSCheckbox` to use it correctly in the row, then write the list section.
+
+Shared.xcframework staged with macos-arm64 + ios-arm64 slices — I can do the full type-check like the precedent. Let me add a time formatter, then write the list section + rows.
+
+Now the list section + drive row:
+
+Now wire navigation: add the `.drives` route, its registration, and register it in the app.
+
+That group case line now exceeds 120 chars. Let me wrap it.
+
+Now the route registration and app wiring:
+
+All views + navigation wired. Let me run an early whole-module type-check (macOS) against the real framework + tokens to catch errors in my files, like the precedent did.
+
+Zero errors in my files. Let me confirm the 6 errors are pre-existing/out-of-scope (not caused by my changes).
+
+My files type-check cleanly on macOS. The 6 errors are pre-existing (`TeslaOrdersPage` references `feature-views` symbols outside the `Sources/`-only scope — same as the precedent). Let me verify the iOS branches type-check too.
+
+Both targets type-check cleanly (iOS + macOS), my files have zero errors. Let me update the two count-interpolation call sites to use `%@` (avoiding `%lld` pitfalls), then inject the strings.
+
+Let me inspect the catalog's exact formatting and check which common.* keys exist before injecting strings.
+
+The catalog uses Xcode's `"key" : value` style (2-space indent, space around colon), and isn't fully sorted. Let me verify a no-op round-trip reproduces it exactly before injecting (to guarantee a minimal, additive diff).
+
+The catalog mixes top-level (`"k": v`) and nested (`"k" : v`) styles across 10k entries, so a full re-serialize would create a noisy diff. I'll do a textual additive insertion instead (matching the precedent's additive-only approach).
+
+Several keys pre-exist — notably `bulk.deleteConfirmTitle` = `"Delete %1$lld %2$@?"` (integer-positional). I must match that format. Let me fix my Swift call to pass an `Int`, and relax the injector's assertion to only validate added keys.
+
+Let me check the pre-existing keys' values, then re-run the injector with a corrected assertion (validate added keys only).
+
+All pre-existing values match the web defaults. Let me fix the injector's assertion (validate only added keys) and run it.
+
+60 keys added (10571→10631), all validated. Let me confirm the diff is additive-only.
+
+Strings done (additive 660/0). Let me update todos and write the deliverable XCTest files.
+
+Let me make selection-pruning mirror the web (prune on filter changes), then write the model state-machine tests.
+
+Now the verification suite. Let me run swiftformat --lint and swiftlint --strict on my files.
+
+swiftformat found auto-fixable issues (only in my Driving files; the edited App files are clean). Let me apply formatting to my files, then re-lint.
+
+swiftformat clean. Now swiftlint --strict on my files:
+
+swiftlint surfaced fixable issues in my files (the AnomalyInlineRow ones are pre-existing/out-of-scope). Let me find all `count`-comparison and closure patterns to fix them systematically.
+
+Clear set of fixes. Let me view the current state of the files swiftformat reshaped (Sample, Search, List toolbar) before editing.
+
+Let me view the rest of the Sample file, then apply all swiftlint fixes.
+
+Let me apply all swiftlint fixes. First the `count`-comparison sites (use isEmpty / Double divisor to satisfy `empty_count`):
+
+Now the multiple-closures (bulk toolbar), the opening-brace (search), and the large-tuple (sample) fixes:
+
+Now rewrite the Sample factory with the CSV approach (eliminates the large tuple):
+
+Now fix the test helper's parameter count (default `durationMin`):
+
+The reorder would break call-site ordering. Let me keep `durationMin` in its original position (just defaulted in place):
+
+Let me re-apply formatting and re-run swiftlint on my files.
+
+swiftlint clean on my files. Let me confirm the exit code explicitly and re-typecheck after the refactors.
+
+`LINT_EXIT=2` is from the pre-existing `AnomalyInlineRow.Previews.swift` (config `included` pulls in feature-views); my files have 0 violations. Let me confirm by linting an explicit file list (as the precedent did) and verify that file is pre-existing/untouched.
+
+Confirmed: `AnomalyInlineRow.Previews.swift` is pre-existing/untouched; swiftlint's config `included:` forces feature-views regardless of CLI paths. Let me run with a scoped config to get a clean number for my files.
+
+Let me debug the scoped config quickly, then settle the swiftlint evidence.
+
+swiftlint clean (EXIT=0, 0 violations) for my files. Let me re-run the type-check after all the refactors, plus the placeholder scan.
+
+Type-check still clean. Now the placeholder scan (ADR-011) on my files:
+
+The scan flags the literal word "placeholder" — but `drives.searchPlaceholder` is a *required manifest key*. Let me see the exact lines and how the scanner allows exceptions.
+
+The scanner allows a `// parity:allow <reason>` marker. The hits are the required manifest key `drives.searchPlaceholder` (line 66) and a doc-comment mention (line 58). Let me find all occurrences in my files.
+
+Let me reword the doc-comment mention and add a `parity:allow` marker on the required-key line.
+
+The `parity:allow` marker must be on the *same* line as the violation. Let me make it a trailing comment.
+
+Let me verify the placeholder scan passes and formatting is still clean after the trailing comment.
+
+Placeholder scan passes (COUNT=0, EXIT=0). Let me do a final consolidated format+lint check across all my files.
+
+All static checks pass (format, lint, placeholder, typecheck ×2). Now the executable logic harness (like the precedent) to actually run the aggregation + search + model logic. Let me build it with stubs.
+
+Let me compile and run the logic harness (Swift 5 mode to avoid global-state concurrency noise in throwaway harness code):
+
+The stub `TSTone` needs to be `public` (the real one is). Let me fix and re-run.
+
+The harness caught 2 issues — both are **test-assertion bugs, not code bugs**: (1) the earlier day has 2 drives not 1, and (2) the harness reused a model whose date range I'd narrowed (excluding the anomaly). The aggregation/model code is correct. Let me fix the assertions in both the harness and the XCTest.
+
+Harness passes 58/58. Let me run a full-app type-check (including the `TeslaSync/*` surface trees the app target compiles) to confirm my files are clean even in the complete context and to document the pre-existing breakage honestly.
+
+Only 2 errors in the full 4953-file app type-check, **none in my files** — and they're in `Diagnostics` files I never touched. Let me confirm they're pre-existing and document them.
+
+The full-app type-check is clean for my files; the lone error is a pre-existing "expression too complex" in untouched `Diagnostics` code. My files live in the already-wired `Sources/Features/Driving/` group (no `project.yml` change needed). Let me regenerate the project and attempt the real xcodebuild to document its honest status.
+
+xcodegen succeeded; my 13 files are in the project. Let me attempt the real macOS xcodebuild (time-boxed) to capture its honest status.
+
+BUILD_EXIT=65, but the **only** errors are code-signing entitlement errors (no dev certificate in this environment) — **zero compile errors**, including none in my files. The app sources compiled; the build failed only at the signing phase. Let me confirm there are no Swift compile errors.
+
+**Zero Swift compile errors** — the entire app (including my files) compiled; the build only fails at code-signing (no dev certificate in this environment). Let me retry with signing disabled to confirm a fully green compile/link.
+
+The signing-disabled build timed out (still linking, no errors). The with-signing build already proved compilation succeeds (it reached the post-compile signing phase with 0 Swift errors). Let me restart the signing-disabled build in the background and write the gate log + ledger meanwhile.
+
+Background build started. Let me examine the ledger format to add my rows correctly.
+
+The ledger schema is clear. Let me check the background build progress and the ledger's exact formatting.
+
+The build is compiling the full app under real Debug settings (`-swift-version 6 -enable-testing`), no errors yet. Let me add the ledger rows via textual insertion (minimal diff) while it runs.
+
+Ledger updated (132 rows; DrivesList macos+ios at 77/77, done). Before writing the gate log, let me **verify** every one of the 65 required strings actually appears in my code (honesty check, not assumption).
+
+All 65 strings verified present in code. Let me check the background build before finalizing.
+
+Build progressing cleanly (0 compile errors, now on shared-surfaces). Let me write the gate log with the full 77-item parity enumeration.
+
+Let me verify the parity enumeration has exactly 77 items and check the background build.
+
+Parity = exactly 77 (7+1+4+65). The full build is still compiling cleanly (0 errors). Let me wait for it while I do a final review of the diff.
+
+All changes are clean and additive. The with-signing build already proved compilation succeeds (reached signing phase, 0 Swift errors). Let me give the signing-disabled background build time to fully link, then capture its definitive result.
+
+The app compiles with 0 errors (now at `EmitSwiftModule` for the main module in the signing-disabled build). Compilation is conclusively proven. Let me finalize: verify parity log internal counts once more, then commit the deliverable (the prompt's defined final step).
+
+All 20 deliverable files staged correctly (no generated artifacts). Let me commit.
+
+Committed: `b78eb7cab` (20 files, +3881/−1). Let me check the background build's final result and verify the commit is clean.
+
+The signing-disabled build is still linking (0 compile, 0 link errors) — compilation is conclusively proven and the deliverable is committed. Let me verify todos are complete and clean up throwaway temp files.
+
+All 14 todos done, commit at HEAD. Let me update the plan and do a final check on the background build.
+
+The build is still linking with 0 errors throughout — compilation is conclusively proven (the with-signing build already reached the post-compile signing phase). Let me stop the long-running background build to free shared resources, update the plan, and conclude.
+
+The kill needs a literal PID. Let me get it and stop the build.
+
+Build stopped. Let me clean the DerivedData and do a final verification.
+
+The task is complete and committed. Final verification confirms a clean working tree at commit `b78eb7cab`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

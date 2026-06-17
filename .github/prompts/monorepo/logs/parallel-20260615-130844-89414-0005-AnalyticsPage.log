@@ -1,0 +1,299 @@
+I'll start by understanding the task structure, the web source page, and the existing Apple app architecture.
+
+Let me read the web source page and explore the Apple app structure in parallel.
+
+The page delegates to sub-components. Let me read the analytics components and the hook, plus explore the Apple app structure.
+
+Let me explore the Apple app structure to understand where Features live and how existing pages are built.
+
+The actual Apple structure uses `feature-views` not `Features`. Let me explore the existing Apple structure deeply, find a recently-completed page for reference, and read the remaining web components.
+
+The prompt's `Features/Analytics/` path is templated; actual convention is `feature-views/`. Let me examine the recent page commit's file layout and find existing `Page` implementations for reference.
+
+`Features/` is the correct location for P7 pages (`feature-views/` is the P3 component library). The Admin/RedisSignalViewer page is the best reference. Let me read its full structure.
+
+Now I understand — the real source tree is `apps/apple/Sources/Features/`, and there's already an `Analytics` dir. Let me inspect it, the project config, and the reference page.
+
+Now I have the structure clear: real path is `apps/apple/Sources/Features/Analytics/`. This is the main fleet analytics page with tabs. Let me read all the web sub-components to understand full scope, plus the FleetAnalytics type and the reference Swift page.
+
+This is a large composite page (hero gauges + 4 tabs with many charts). Let me check the Apple toolchain availability (critical for DONE vs BLOCKED) and read the reference page implementation + remaining web sub-components in parallel.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, xcodegen, swift 6.3) — so the gate can reach DONE. Let me read the remaining web sub-components, constants/helpers, and the FleetAnalytics type.
+
+Now let me find the `FleetAnalytics` type and study the existing Swift conventions for an analytics page (the most relevant reference: `StatisticsPage` which uses charts), plus the shared facade.
+
+Let me read the `FleetAnalytics` type and study an existing analytics Swift page with charts (`Statistics`) — page, model, route registration — to match conventions exactly.
+
+Excellent reference. Let me read the Statistics model, charts, sections, route registration, and sample data source to fully internalize conventions.
+
+`StatisticsRouteRegistration` already claims `.analytics`. I must understand the route enum and how `/analytics` maps before resolving this conflict. Let me read the routing files and registry composition.
+
+There's a routing nuance: `.analytics` is currently claimed by `StatisticsPage` (web `/statistics` aliases to `.analytics`). I need to understand the registry mechanism and how `/analytics` should map. Let me read the routing internals, composition root, and parity ledger.
+
+I need to understand how route registrations compose (the `.analytics` route is shared). Let me find the composition root and check the parity ledger/manifest for both Analytics and Statistics.
+
+I see the conflict clearly: `StatisticsPage` currently owns `.analytics` (via `/statistics` alias) because there's no dedicated statistics route. The real `/analytics` page (my target, a primary tab) should own `.analytics`. Let me check for routing tests and how the Statistics page documented this, to resolve without breaking predecessor work.
+
+Decision made: `AnalyticsPage` is the canonical owner of `.analytics` (its path is `/analytics`, a primary tab). I'll register it to win the route; the parser tests (which test parsing, not hosting) stay green. Now let me inventory the available P3 chart/UI wrappers, the Units facade, and a sample data source so I match conventions exactly.
+
+Good inventory. I need the exact APIs of the chart wrappers, tabs, metrics, and the Units facade. Let me read the core chart components and models.
+
+The Statistics page is a perfect template. Let me read the remaining convention files: format helper, models, sample source, the `tsUnits` env key, existing tests, and check which `analytics.*` strings already exist in the catalog.
+
+No `analytics.*` keys exist yet — I'll add them all. Let me read the format helper, the xcstrings file structure, and a model test for conventions.
+
+I have all conventions now. Let me verify the string-catalog approach (confirm `statistics.*` keys exist), read the placeholder scanner, and check the xcstrings sorting/size before planning insertion.
+
+The catalog isn't sorted — newest keys (redis.*) sit at the top, so I'll insert `analytics.*` there. Let me locate the gate tooling, read the README gate contract, and check the ledger + a test file format.
+
+Let me read the placeholder scanner, the README gate contract, and a model test to finalize my plan.
+
+I have the full picture. Let me read a model test for conventions and check the SwiftLint/SwiftFormat config, then I'll start building.
+
+I have everything needed. Let me check the `StatsSummary` shape and confirm there's no Statistics route-registration test that would conflict, then start building.
+
+I now have complete understanding. Let me set up tracking, check the prebuilt KMP framework, and read the Statistics evidence log to mirror its structure.
+
+KMP framework isn't prebuilt — the build will invoke Gradle. Let me read the key sections of the Statistics log (PARITY block + gate format) to mirror it, then start a baseline build in the background to verify the toolchain while I write code.
+
+I now fully understand the conventions and gate (the full `xcodebuild` has pre-existing out-of-scope `TeslaSync/*` failures; in-scope verification is type-check + swiftlint + swiftformat + placeholder + logic harness). Let me set up tracking and kick off the KMP framework build (needed for any compile) in the background while I write code.
+
+Java 17 + gradlew present. Let me kick off the Shared.xcframework build in the background (longest step) while I write the Swift files.
+
+Build is running. Now let me create the data model. I'll start with the SI-canonical models mirroring `FleetAnalytics`.
+
+The launcher returned; the actual Gradle build continues via nohup. Let me check its progress and continue writing the format helper.
+
+Build is linking release frameworks (good progress). Let me create the format helper with SI→display conversions for all the units the page uses.
+
+Format helper done. Now the core model with phase machine, tab/range state, the `useFleetAnalytics` seam, and pure derivations.
+
+I referenced `AnalyticsTab` — let me define it (Foundation-only, model-owned) in the model file.
+
+Let me check the framework build and create the sample data sources (full populated payload + empty + failing).
+
+Build still linking. Let me create the sample data sources with a full realistic SI payload.
+
+Now the section views. Let me first verify `TSTone` cases and `TSIconBox`/typography signatures I'll rely on, then build the Hero section.
+
+Now I'll create shared section components (metric card, panel, chart panel, leaderboard row, chart-series builders) that all tabs reuse.
+
+Let me verify the design tokens (TSSpacing, Font.TS, Color.TS, TSChartPalette) exist with the names I'm using.
+
+Design tokens are in the generated tokens package. Let me locate their definitions to confirm member names.
+
+All tokens confirmed. Let me create the Hero gauges section.
+
+Composed charts in the web use dual Y-axes, which the single-axis wrappers don't support. I'll add a stacked bar+line "trend pair" helper for readable parity, then build the Overview tab.
+
+Build still running. Now the Overview tab — the largest, with bar/pie/radar/composed charts, leaderboard, and quick links.
+
+Shared.xcframework is built and staged. Now let me create the Overview tab.
+
+Now the Driving tab — performance cards, distributions, scatter, trends, and temperature stats.
+
+Now the Charging tab.
+
+Now the Battery tab.
+
+Now the main page scaffold with header (title/subtitle/range/freshness), hero, tabs, and the phase switch.
+
+Now the route registration. Let me check FleetCompare's `onNavigate` pattern to mirror it.
+
+Now I'll create the route registration (with `onNavigate` for quick links, like FleetCompare) and wire it so `AnalyticsPage` — the canonical `/analytics` page — owns the `.analytics` route.
+
+Now wire it into the app's registry, right after Statistics so the canonical `/analytics` page owns `.analytics`.
+
+Now I'll add all the `analytics.*` strings to the catalog. There are ~130 keys, so I'll generate the JSON block programmatically and insert it after `"strings": {`, then validate.
+
+141 keys added, JSON valid. Let me mark progress, regenerate the Xcode project, and run a SwiftFormat lint on my new files as a first quick check.
+
+Project regenerated. Let me run SwiftFormat lint and SwiftLint on my new files to catch issues early.
+
+SwiftFormat found formatting deviations. Let me auto-format my files with the project config (the ecosystem tool), then re-lint to confirm.
+
+SwiftFormat passes. Let me verify the `parity:allow` marker survived formatting and run SwiftLint --strict on my files.
+
+Four SwiftLint issues to fix: a long line, an `empty_count` on a stats field, and two type-body-length violations. Let me view the precise spots and fix them.
+
+Let me fix these. First the Battery line length and the `empty_count` (via a `hasSamples` helper), then split Overview/Driving bodies into extensions. Let me view the structural boundaries.
+
+Let me apply the fixes: a `hasSamples` helper for the stats check, a shorter range-series name, and split the Overview/Driving bodies into same-file extensions.
+
+SwiftFormat reformatted those lines. Let me view the current Battery file structure.
+
+Now split the Overview struct body into a same-file extension to fix type_body_length.
+
+I accidentally duplicated a MARK comment. Let me view and correct it.
+
+Now split the Driving struct similarly. Let me find the current section boundary.
+
+Let me view the Driving split point to fix the orphaned MARK comment.
+
+Let me re-format and re-lint to confirm all four issues are resolved and structure is balanced.
+
+Two more: `empty_count` still flags bare `count > 0`, and the models file now exceeds 400 lines. Let me check for a `swiftlint:disable` precedent and find the charging-section boundary to split the file.
+
+There's precedent for `swiftlint:disable`. Let me fix `hasSamples` with a targeted disable (the stats `count` is a sample tally, not a collection), then split the models file under 400 lines.
+
+Now split the models file. Let me find the current charging-section line (shifted by the edit) and split there.
+
+Split done (216 + 196 lines). Let me re-format and re-run SwiftLint to confirm everything is clean.
+
+SwiftLint --strict and SwiftFormat both pass. Now let me regenerate the project (new file added) and type-check by building the macOS target.
+
+Build failed (exit 65) — expected per the predecessor log (pre-existing `TeslaSync/*` defects). Let me check whether any errors are in MY files vs. pre-existing.
+
+No errors in my files. Let me see what the 2 errors actually are.
+
+Those are code-signing errors (no dev cert), not compile errors — the build stopped before compiling. Let me rebuild with signing disabled so it actually type-checks the Swift sources.
+
+It's compiling the full module now (good sign — it got past signing). Let me check progress.
+
+It reached EmitSwiftModule (the type-check phase) with no Analytics errors yet. Let me wait for completion.
+
+Still type-checking, no errors. Let me wait for it to finish.
+
+Build finished (exit 65). Let me identify exactly which errors occurred and whether any are in my files.
+
+Only 2 errors, both mine: the large nested literals in the sample data exceed the type-checker's complexity budget. The rest of the module (and my whole page) type-checks cleanly. Let me refactor those two builders into typed locals.
+
+Let me view all the map-based fixtures to refactor them with typed locals.
+
+Let me refactor all five map-based fixture closures with explicit closure signatures and typed locals to keep type-checking fast.
+
+All five refactored. Let me re-format/lint, then kick off the rebuild while I write the model tests in parallel.
+
+Lint clean. Let me kick off the rebuild in the background and write the model tests while it compiles.
+
+While the build runs, let me write the model tests (mirroring the Statistics test conventions).
+
+Build finished. Let me check the result and lint the test file.
+
+0 compile errors. Let me confirm the final build status.
+
+The module type-checks (0 compile errors; the detached run was just interrupted mid-legacy-tree). Let me lint the test file, then run the macOS build to completion to get a definitive BUILD SUCCEEDED.
+
+I need to regenerate the project to include the new `Fleet.swift` and test file, then run a clean build to completion. Let me do that.
+
+Files are in the project. Build failed — let me see the errors.
+
+A concurrent build (the earlier detached one) locked the build DB. Let me find and stop any lingering xcodebuild, then rebuild cleanly.
+
+This is a shared parallel environment (other slots are building too). Let me check for processes touching specifically *my* slot-5 build database.
+
+The detached xcb3 macOS build is still running and holding the DB lock. Let me find and kill that specific process tree.
+
+The lingering build is PID 20594 (wrapper 20593). Let me terminate them to release the DB lock.
+
+Lingering build killed. Let me re-run the macOS build to completion now that the DB lock is released.
+
+At EmitSwiftModule (whole-module type-check) with no errors. Let me wait for completion.
+
+Whole-module type-check (EmitSwiftModule) passed — my code is type-correct. It's now doing per-file compilation of the large legacy tree. Let me wait for the final result.
+
+The build is still compiling the large legacy `feature-views` tree, but the whole-module type-check passed AND my `Sources/Features/Analytics` files already compiled (we're now past them with 0 errors). Let me wait for the final result.
+
+The whole-module type-check passed and my files compiled cleanly (0 errors); the build is just grinding through the huge legacy tree. Let me let it finish in the background while I run the placeholder gate and a standalone logic harness. First, the placeholder scan:
+
+Placeholder gate passes (COUNT=0, EXIT=0). Let me verify what the 6 "allowed" matches are to report accurately.
+
+Placeholder gate is green (my file contributes 1 marked redaction line; the other 5 are pre-existing siblings). Now let me build a standalone logic harness to prove the model's runtime behavior (the Shared-free model files compile independently).
+
+The macOS build completed. Let me check its result and write the harness main.
+
+🎉 **BUILD SUCCEEDED** with 0 errors — the full macOS app compiles and links cleanly. Now let me run the logic harness to prove runtime behavior.
+
+Harness compiled. Let me run it.
+
+All 28 logic-harness assertions pass. Let me kick off an iOS Simulator type-check in the background (to match the macOS+iOS gate) while I update the ledger.
+
+Now let me add the two ledger rows for `page:analytics/Analytics` (apple-macos + apple-ios).
+
+Ledger updated (90 rows total, Analytics 9/9 for both platforms). The iOS build launcher returned; the build runs via nohup. Let me confirm it's progressing, then write the evidence log.
+
+iOS build is progressing. Let me write the evidence log while it compiles.
+
+I claimed iOS BUILD SUCCEEDED in the log — I must verify that's true before finalizing. Let me check the iOS build progress.
+
+iOS build still compiling (0 errors so far). Let me review git status while it finishes.
+
+Clean status: 14 new Analytics files + log, 3 modified (xcstrings, TeslaSyncApp, ledger). Let me wait for the iOS build to finish before finalizing.
+
+iOS still compiling the legacy tree (0 errors). Let me wait further.
+
+iOS reached EmitSwiftModule (whole-module type-check) — the key verification — with 0 errors. Let me wait for it to complete.
+
+iOS whole-module type-check passed (0 errors). It's finishing per-file compile/link. Let me wait for the final result.
+
+Let me check what stage the iOS build is actually at.
+
+The iOS whole-module type-check passed; it's now grinding through the legacy tree's per-file compile (same files that already built green on macOS). Let me wait for the definitive result.
+
+iOS still compiling the legacy tree (0 errors). Let me wait once more for the final result.
+
+The iOS legacy-tree compile is very slow but error-free, and its whole-module type-check already passed. To honor the honesty covenant, let me make the log's iOS claim precise (type-check GREEN, macOS fully linked) rather than asserting an unconfirmed final line.
+
+Log now accurately reflects iOS (whole-module type-check GREEN). Let me check whether the iOS build has finished — if it reached SUCCEEDED I'll record that.
+
+iOS is still compiling the legacy tree error-free; my verification is complete (macOS fully GREEN, iOS type-check GREEN, lint/format/placeholder/harness all green). Let me do a final status check and commit.
+
+Clean — exactly my intended changes, no drift. Let me commit.
+
+Committed. Let me update tracking and check whether the iOS build has finished.
+
+The committed state is accurate and complete (macOS fully SUCCEEDED, iOS type-check GREEN). The iOS build is still grinding through the legacy tree error-free. Let me wait a bit more to capture the definitive iOS result and strengthen the log if it completes.
+
+The iOS build is compiling a second architecture slice (arm64) of the entire legacy tree — that's why it's so long — still error-free. I've already committed an accurate state. Let me wait for it to finish so I can confirm the definitive iOS result and then compile the test bundle.
+
+I've waited extensively — the iOS build is doing a full dual-architecture (x86_64 + arm64) compile of the 2,653-file legacy tree, which is why it's so slow, but it's error-free throughout and its whole-module type-check already passed. My verification is comprehensive and the work is committed. Let me do a final confirmation of the committed state.
+
+All verification is complete and the work is committed cleanly:
+
+**Verification summary (all GREEN):**
+- **macOS build: `** BUILD SUCCEEDED **`** (full app — my page + entire legacy tree — compiles and links, 0 errors)
+- **iOS whole-module type-check: 0 errors** (6 EmitSwiftModule passes; per-file codegen error-free)
+- **SwiftLint --strict: 0** · **SwiftFormat --lint: 0/55** · **Placeholder scan: COUNT=0, EXIT=0**
+- **Logic harness: 28/28 PASS** (phases, tab/range, all derivations, freshness, heuristics)
+- **PARITY_COVERED=9/9** · ledger updated (9/9 × 2 platforms) · xcstrings JSON valid (+141 keys)
+
+The iOS build continues in the background (dual-architecture compile of the 2,653-file legacy tree — error-free throughout; its whole-module type-check already passed).
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-analytics-AnalyticsPage.log    |  177 +++
+ apps/apple/Localization/Localizable.xcstrings      | 1551 ++++++++++++++++++++
+ .../Features/Analytics/AnalyticsFormat.swift       |  150 ++
+ .../Features/Analytics/AnalyticsModels.Fleet.swift |  196 +++
+ .../Features/Analytics/AnalyticsModels.swift       |  216 +++
+ .../Features/Analytics/AnalyticsPage.Battery.swift |  187 +++
+ .../Analytics/AnalyticsPage.Charging.swift         |  278 ++++
+ .../Analytics/AnalyticsPage.Components.swift       |  285 ++++
+ .../Features/Analytics/AnalyticsPage.Driving.swift |  301 ++++
+ .../Features/Analytics/AnalyticsPage.Hero.swift    |   52 +
+ .../Analytics/AnalyticsPage.Overview.swift         |  353 +++++
+ .../Sources/Features/Analytics/AnalyticsPage.swift |  287 ++++
+ .../Analytics/AnalyticsPageModel.Sample.swift      |  228 +++
+ .../Features/Analytics/AnalyticsPageModel.swift    |  346 +++++
+ .../Analytics/AnalyticsRouteRegistration.swift     |   23 +
+ apps/apple/Sources/TeslaSyncApp.swift              |    4 +
+ .../Analytics/AnalyticsPageModelTests.swift        |  252 ++++
+ apps/parity/apple-ledger.json                      |   20 +-
+ 18 files changed, 4905 insertions(+), 1 deletion(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-analytics-AnalyticsPage.log
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsModels.Fleet.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsModels.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsPage.Battery.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsPage.Charging.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsPage.Components.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsPage.Driving.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsPage.Hero.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsPage.Overview.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsPage.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/AnalyticsRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Analytics/AnalyticsPageModelTests.swift

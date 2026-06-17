@@ -1,0 +1,113 @@
+I'll start by exploring the task requirements: reading the web source, understanding the existing Apple app structure, and checking available tooling.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the existing patterns: project structure, an existing feature-view, the shared facade (state holders), design tokens, and i18n.
+
+The native target is `apps/apple/TeslaSync/feature-views/`, and `ToolCard` is the existing example (also telemetry-related). Let me read it and its test thoroughly as the pattern to follow.
+
+`ToolCard` is data-less, but `EnergyChargingPanel` consumes data and must render loading/empty/error/stale/offline. The Dashboard widgets are the data-bound pattern. Let me read the shared facade, units facade, design tokens, key components, and a data-bound widget example.
+
+Now let me study the data-bound widget pattern (BatteryRadialGauge) and the shared components I'll reuse (GlassPanel, MetricCard, EmptyState, Typography, design tokens).
+
+Now let me find how `ChargingTelemetry` is sourced on web, the available stores in AppContainer, the Content view pattern, and the components I'll reuse.
+
+Let me understand the build system (xcodegen, Shared.xcframework) and where `VehiclesStore` / charging feeds are defined.
+
+`VehiclesStore`, `Vehicle`, `VehicleStateEnvelope`, `Resource` are all Kotlin types from the `Shared.xcframework`, built from `apps/shared` via Gradle/Kotlin-Native. Let me assess buildability and read the pending-verifications note.
+
+The `macos-pending-verifications.md` reveals the established protocol: each feature-view is verified **in isolation** (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder clean, `xcodegen generate`), then the full-app `xcodebuild build test` is deferred to the macOS acceptance gate (blocked by pre-existing parallel-merge collisions + unstaged Kotlin/Native `Shared.xcframework` + signing). Several surfaces are deliberately **Shared-free** for independent verification.
+
+Let me read the components I'll reuse and the design tokens.
+
+Let me read the unit formatters (KMP-free `useUnits` equivalents), the web formatting helpers to reproduce exactly, the Localization setup, and the design tokens.
+
+Let me check the design tokens, the Localization (i18n) setup, the units golden-vector test, and the placeholder checker, to finalize my approach for the charge-rate (speed) formatting.
+
+Several recent Shared-free feature-views exist with a `.Localization.swift` companion. Let me study the most representative one (`SignalCatalogPanel`) end-to-end, plus the design tokens and placeholder checker.
+
+This repo has a rich, consistent multi-file feature-view convention. `AcDcStatsPanel` (a charging-stats panel) is the closest analog. Let me study its full file set as my template, plus a `.Localization.swift`/`.strings` example and the design tokens.
+
+`AcDcStatsPanel` is the gold-standard template (Shared-free charging panel with the exact P4 leaf-contract states). Let me read its Views/strings/Tests, the web `formatSpeed` source to reproduce exactly, and the design tokens.
+
+Let me read the web speed conversion/formatting (to reproduce exactly), the AcDc tests + previews pattern, and the design tokens.
+
+Let me grab the web speed constants/precision/formatNumber, confirm no existing EnergyChargingPanel, read the design tokens, and the AcDc previews pattern.
+
+I have the full pattern. Let me read the typography component signatures, badges, motion, skeletons, and the design tokens to finalize exact APIs.
+
+Let me confirm the exact design-token names and the Badge/Motion/FadeIn APIs.
+
+I have everything needed. Let me set up tracking and check how prior surface logs end (to match the exact reporting protocol).
+
+The established disposition is clear: ship the surface code-complete, prove all host-runnable gates green on both SDKs, DEFER the full-app Xcode gate (no signing identities + absent Shared.xcframework), record a macOS-pending row, end log `EXIT=0 / STATUS=DONE`. All my dependency components are Shared-free. Let me confirm the `TSButton` / `tsGlassPanel()` APIs, then write the code.
+
+All APIs confirmed. Writing the plan, then the surface files following the `AcDcStatsPanel` convention.
+
+Now writing the surface files, starting with the pure Adapter.
+
+Now the comprehensive test file.
+
+All 7 files written. Let me update tracking and run the quick gates first (swiftformat, swiftlint, placeholder).
+
+swiftformat will auto-fix these (number grouping + wrapping). Let me apply it to my files, then re-lint.
+
+swiftformat clean. Now swiftlint --strict and the placeholder gate.
+
+swiftlint --strict: 0 violations. Placeholder: COUNT=0. Let me verify all 6 source files for placeholders, then set up the isolated SwiftPM build + cross-SDK typecheck.
+
+All gates green so far (swiftformat, swiftlint --strict, placeholder COUNT=0). Now setting up isolated verification. Let me find which shared component/design files import `Shared` (to exclude from the harness).
+
+No component/design files import `Shared` — only `UnitFormatters.swift` references the SharedFacade. The components are self-contained. Let me build an isolated SwiftPM harness (module `TeslaSync`) with the minimal component closure + my surface, then `swift build && swift test`.
+
+Closure is portable. Let me build the isolated SwiftPM harness.
+
+Isolated build compiles clean. Now run the tests.
+
+All 22 tests pass. Now the cross-SDK `swiftc -typecheck` (iOS-18 + macOS-15, Swift 6, DEBUG so previews are checked too), matching the established protocol.
+
+iOS-18 typecheck: 0 errors. Now macOS-15.
+
+Both cross-SDK typechecks: 0 errors. Now `xcodegen generate` to confirm file enumeration, plus capture the DEFER evidence (signing identities + absent Shared.xcframework).
+
+`xcodegen generate`: success — all 7 files enumerated (42 refs across iOS/macOS app + test bundles). DEFER evidence captured: **0 signing identities**, **Frameworks/ is `.gitkeep`-only** (Shared.xcframework absent). Now a bounded attempt of the actual Xcode gate to demonstrate the blocker honestly.
+
+Notably, the Kotlin/Native compile is now cached — Gradle produced the DEBUG `Shared.xcframework` in <90s. Let me stage it via the repo's pre-build script, then attempt a bounded `xcodebuild build` to produce concrete evidence of whether any errors are in my surface vs. the documented pre-existing collisions.
+
+Reproduced the documented blocker exactly: **STAGE_EXIT=124** — the RELEASE `Shared.xcframework` Kotlin/Native link is the long-pole (the scheme's pre-build action), matching the prior-surface findings. The DEBUG variant did build though. Let me stage it and attempt a bounded real app-target compile (signing disabled, no scheme pre-action) to get concrete "zero errors in my surface" evidence.
+
+**Zero `EnergyChargingPanel` errors** in the real app-target compile (debug `Shared.xcframework` staged, signing off). All 26 errors are pre-existing, unrelated parallel-merge collisions in **other agents' surfaces** (`StateTimeline*` ambiguous-type redeclarations). This is exactly the documented disposition. Let me capture the distinct blocker files for the log.
+
+All 26 errors are in another agent's `StateTimeline*` surface (pre-existing redeclaration collisions); **ECP_ISSUES=0** — my surface compiled clean in the real app-target module. Frameworks restored to `.gitkeep`-only. 
+
+Now writing the gate log with all the real evidence.
+
+Now appending the macOS-pending row. Let me view the exact anchor.
+
+Now let me verify git status and confirm the generated `.xcodeproj` and build artifacts are ignored before committing.
+
+Clean status — only my 7 files, the log, and the macos-pending doc; the generated `.xcodeproj` is git-ignored. Let me clean up the temp harness and commit.
+
+All 9 changes staged correctly. Committing.
+
+Committed (`9e4dae60b`). Let me finalize tracking and confirm a clean working tree.
+
+Task complete. The working tree is clean (the generated `.xcodeproj` is git-ignored); the commit contains exactly the 7 surface files + log + the macOS-pending row (1,516 insertions).
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0279-EnergyChargingPanel.log | 143 +++++++++
+ .../EnergyChargingPanel.Adapter.swift              | 322 +++++++++++++++++++++
+ .../feature-views/EnergyChargingPanel.Model.swift  | 247 ++++++++++++++++
+ .../EnergyChargingPanel.Previews.swift             |  97 +++++++
+ .../feature-views/EnergyChargingPanel.Tests.swift  | 251 ++++++++++++++++
+ .../feature-views/EnergyChargingPanel.Views.swift  | 262 +++++++++++++++++
+ .../feature-views/EnergyChargingPanel.strings      |  40 +++
+ .../feature-views/EnergyChargingPanel.swift        | 153 ++++++++++
+ apps/macos-pending-verifications.md                |   1 +
+ 9 files changed, 1516 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0279-EnergyChargingPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergyChargingPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergyChargingPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergyChargingPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergyChargingPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergyChargingPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergyChargingPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergyChargingPanel.swift

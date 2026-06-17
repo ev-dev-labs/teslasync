@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure and understanding what exists for both the web source and the Apple native infrastructure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and explore the Apple app structure.
+
+There's a rich existing multi-file pattern per surface. Let me find a fully-implemented sibling AI surface using the exact same web pattern (`useAiStream` + `AIFeatureCard` + `withAiFeature`) to use as the canonical template, and check if my target already partially exists.
+
+Target uses the canonical pattern (`withAiFeature` + `AIFeatureCard` + `useAiStream`), and doesn't exist yet in Swift. Let me read the web dependencies and find the simplest fully-implemented Swift sibling that matches this exact pattern.
+
+`AIChargingDiagnosis` is a near-perfect sibling (same `withAiFeature` + `AIFeatureCard` + `useAiStream` + `vehicleId`/`sessionId` pattern) and is fully implemented in Swift. I'll use it as my canonical template. Let me read its complete file set.
+
+Excellent template. Let me read the remaining sibling files (Projection, Views, Chrome, Previews, strings, Tests, AdapterTests) to fully internalize the pattern.
+
+Now the test files, previews, and strings to complete my understanding of the template.
+
+Now let me read the web hooks for exact parity, the template's previews/strings, and find a sibling that uses `vehicle_id` in the **body** (my target's shape) rather than path.
+
+`AICabinTemperatureImpactNarrative` is a structurally identical twin to my target (same `vehicleId` numeric coercion, `vehicle_id` body, static URL, `numericVehicleId > 0` gate). If it has a Swift implementation, it's my ideal template. Let me check and read its key files.
+
+The ideal twin has a complete Swift implementation. Let me read all its files to replicate the exact `vehicle_id`-body request shape and numeric>0 gate.
+
+The twin's Adapter handles the exact `vehicle_id`-body + numeric>0 gate my target needs. Let me read its remaining files (Model, Projection, Views, Chrome, Previews, strings, Tests, AdapterTests).
+
+Now the final twin files: Views, Chrome, Previews, strings, Tests, AdapterTests.
+
+Now the twin's Previews, strings, Tests, and AdapterTests to complete the picture.
+
+I now have the complete twin template. My target maps almost 1:1 to `AICabinTemperatureImpactNarrative` (identical `vehicle_id`-body + numeric>0 gate). I need to pick a unique type prefix and confirm the build setup. Let me check for collisions, the build's source inclusion model, and the shared tokens.
+
+Build uses XcodeGen glob inclusion — new files in `shared-surfaces/` are auto-picked-up (app target globs non-test files; test files go to XCTest bundles). Prefix `ChargingClusterFingerprint` has no collisions. Let me confirm the test-target source config and that the shared tokens exist.
+
+Test bundles glob-include `shared-surfaces/**/*Tests.swift`, and the app target globs non-test files — so no `project.yml` edits are needed (matches the "allowed files" constraint). Shared tokens/components exist. Let me check the build tooling (xcodegen, existing project, schemes) and the lint/placeholder configs.
+
+All tooling present (xcodegen 2.45.4, schemes TeslaSync/TeslaSync-macOS, no project generated yet). Let me read the placeholder patterns and `-Path` handling so my code won't trip the gate, then start writing files.
+
+Matching is **case-insensitive**, and a non-existent `-Path` returns clean(0). So I must avoid words like "placeholder/todo/fixme/not implemented" in my files, and I'll additionally run a real scan of my actual files for honesty. Let me verify the twin is clean of those patterns, check that `.xcodeproj` is gitignored, list simulators, and generate the project.
+
+iPhone 16 simulator exists (even booted). `.xcodeproj` isn't gitignored, so I'll generate it for building but won't commit it. Let me read the lint/format configs (to respect line-length etc.) and pick a collision-free, concise type prefix.
+
+Configs are favorable: `line_length` ignores comments (error at 160), `type_name` max 50, swiftformat maxwidth 120. All candidate prefixes are collision-free. I'll use prefix `ClusterFingerprint` (concise like the twin's `CabinTempNarrative`, safe for line lengths, unique). Now I'll write the 10 files, mirroring the compiling twin with my target's contract. Starting with the core files.
+
+Now the Views and Chrome presentational files.
+
+Now the Previews and strings files.
+
+Now the two test files, adapting the twin's assertions to my target's contract (URL, strings, em-dash-safe substrings).
+
+All 10 files created. Let me verify them and run the fast gates (swiftformat, swiftlint, placeholder scan) scoped to my files.
+
+swiftformat: 0/9 files require formatting. Now swiftlint --strict and the placeholder scan on my files.
+
+All fast gates green on my files: **swiftformat 0/9**, **swiftlint 0 violations**, **placeholder COUNT=0**. Now the real build+test gate. Let me generate the Xcode project with xcodegen.
+
+Project generated in 10s. Let me confirm my files are wired into the app + test targets, check the log directory, then kick off the iOS build+test.
+
+All 10 files are wired into the project; log directory exists. Now I'll kick off the real iOS `build test` in the background (this is a large monorepo, so it may take a while). I'll capture output to a log and monitor.
+
+iOS build+test is running in the background. Let me monitor its progress.
+
+The build pulls in a Kotlin Multiplatform shared core via Gradle (cached) before the Swift compile — progressing with no errors yet. Let me keep monitoring.
+
+A build failure appeared. Let me find the actual error.
+
+The failure is **not in my code** — it's the Gradle/Kotlin-Multiplatform `Stage Shared.xcframework` pre-action: the Gradle daemon crashed (likely OOM) during `:core:linkReleaseFrameworkIosArm64`, before any Swift app source compiled. Let me check system memory and Gradle config to give it a better chance on retry.
+
+64 GB RAM but heavy swap pressure (shared machine) — the Gradle daemon was OOM-killed during Kotlin/Native release linking (`org.gradle.jvmargs=-Xmx3g`). This is environmental, not my code. Let me inspect the staging script so I can pre-build the framework with controlled memory (`--no-daemon`), avoiding the daemon crash.
+
+The staging script runs `gradlew :core:assembleSharedXCFramework` (release, all Apple slices) with default parallelism — the memory spike OOM-killed the daemon. I'll pre-build it directly with serialized workers (`--max-workers=1`) and more heap so it completes and caches; then xcodebuild's pre-action finds it UP-TO-DATE and skips the heavy link.
+
+Serialized workers are working — release linking is now progressing past the earlier crash point (`linkReleaseFrameworkIosSimulatorArm64` running). Let me wait for it to finish.
+
+~27 GB RAM free now — the serialized build is healthy. Let me continue waiting for the assemble to complete.
+
+`BUILD SUCCESSFUL` — the release `Shared.xcframework` is now built and cached (`assembleSharedXCFramework` UP-TO-DATE). Re-running the iOS `build test` should now sail past staging and compile the Swift app + run tests. Let me kick it off.
+
+iOS build+test re-running with the framework cached. Let me monitor — first confirming staging passes and Swift compilation begins.
+
+Staging now succeeds (`✓ Shared.xcframework staged`), but a new error: `build.db is locked — two concurrent builds`. My first (failed) iOS build shell may still be alive, colliding on the same derivedData. Let me check running shells/processes.
+
+Root cause: my **first** iOS build (`iosbuild`, still running) recovered once the framework got cached and is now compiling Swift — but my **second** build collided on the same derivedData DB (`database is locked`). I need a single clean invocation. Let me stop the lingering first build and verify no xcodebuild processes remain.
+
+Multiple orphaned build processes remain from my concurrent attempts. I must only kill ones that are mine (shared machine). Let me inspect each xcodebuild PID's full command line to confirm they reference my slot's derivedData before killing.
+
+PIDs 61494 (`/tmp/dd-ios`) and 60943 (`-only-testing`) are **other slots'/agents' processes** — not mine (shared machine). I must not touch them. Let me precisely identify only MY processes (those referencing `slot-9/.../build/DD-ios`).
+
+Clear now: the only process touching my `slot-9` derivedData is orphaned swift-frontend **PID 63608** (from my stopped first build). PID 60943 is slot-1, 61494 is `/tmp/dd-ios` — other agents. I'll kill only my orphan, clear the stale lock, and run one clean build.
+
+Clean now — no slot-9 build processes remain, stale lock removed. The Gradle framework is cached so staging will be quick. Let me launch a single clean `build test` (incremental on DD-ios) and monitor.
+
+Single clean iOS build+test launched. Let me monitor — watching for staging success, then Swift compilation, and any errors in my files.
+
+Strong signal: staging passed, my `.strings` validated as UTF-8 into the bundle, and the app module reached `EmitSwiftModule` (whole-module type-check succeeded). Compilation is proceeding with no errors. Let me continue monitoring.
+
+A `BUILD FAILED` appeared during the app compile phase (after the module already type-checked). Let me find the actual `error:` line — it may be a resource/process issue or stale-DD corruption, not my code.
+
+No `error:` lines and none referencing my files — a `BUILD FAILED` with no diagnostic typically means a swift-frontend was killed (OOM/contention on the shared box). Let me find the failing command and check if the run is still progressing.
+
+The failure is `Command SwiftCompile failed with a nonzero exit code` (line 14971) — a frontend job that died without a source `error:`, the classic signature of an OOM/signal kill under the shared machine's memory pressure. Let me view the context to confirm which file and that it's a crash, not my code.
+
+Definitive: this is a **swift-frontend internal crash** — `report_at_maximum_capacity` / `llvm::report_fatal_error` in **IRGen** while compiling `AnnouncerRegion.swift`/`AnomalyInlineRow` (**not my files**). It's an LLVM out-of-memory abort under the shared machine's memory contention, not a source error (my module already type-checked). I'll reduce compiler concurrency (`-jobs`) to lower peak memory. First, stop the current run cleanly.
+
+
+
+20 cores → xcodebuild spawns ~20 parallel frontends, exhausting memory under contention. ~20 orphaned frontends (all mine — slot-9 DD-ios path) remain from the stopped run. Let me kill exactly those (identified by my unique path), wait, and clear the lock.
+
+The safety wrapper requires literal numeric PIDs. Let me re-list current PIDs, then kill with explicit numbers.
+
+Most frontends already exited; only PID 68327 remains. Let me kill it explicitly and clear the lock.
+
+Clean slate confirmed. Now I'll re-run `build test` with `-jobs 6` to cap concurrent frontends (down from 20 cores' worth) and avoid the compiler OOM, reusing DD-ios incrementally.
+
+Build+test re-running with reduced concurrency. Let me monitor for progress past the prior crash point and toward test execution.
+
+Progressing past the prior crash point — at `EmitSwiftModule` again, no crash, no errors. Reduced concurrency is working. Let me continue waiting for the app build, test build, and test run.
+
+Still compiling the app target steadily at `-jobs 6` with no crashes. Let me keep waiting for it to reach the test bundle and test execution.
+
+Same LLVM `report_at_maximum_capacity` IRGen crash even at `-jobs 6`. I need to know whether it's deterministic on a specific (unrelated) file or varies. Let me identify exactly which file crashed this time.
+
+Both runs failed on the **identical** batch (`AnnouncerRegion.swift, AnomalyInlineRow.*`) — this is a **deterministic** swift-frontend IRGen crash in pre-existing synthetic files (not mine), under the beta Xcode 26.5 / Swift 6.3.2 toolchain. Let me capture the precise crash header for evidence.
+
+Conclusive evidence: the crash is in **pre-existing** files (`AnomalyInlineRow.*` / `AnnouncerRegion.swift`, committed at 22:03 in `8d7cbb277`, before my 22:12+ files) — a deterministic **swift-frontend IRGen compiler crash** (`report_at_maximum_capacity` on a reabstraction thunk) under the beta Xcode 26.5 / Swift 6.3.2 toolchain. My files type-check (module `EmitSwiftModule` succeeded) and are never implicated. Let me check whether a stable Xcode toolchain exists that avoids this compiler bug.
+
+Definitive root cause confirmed: `report_at_maximum_capacity` fires when an LLVM `SmallVector<unsigned int>` (32-bit size) is asked to grow past `UINT32_MAX` during IRGen of a reabstraction thunk — a **deterministic compiler bug** (not memory), on **pre-existing** files (`AnomalyInlineRow`/`AnnouncerRegion`), under the only installed toolchain (beta Xcode 26.5). It's outside my allowed-files scope and unfixable by me.
+
+Let me capture the remaining gate steps honestly (global swiftformat/swiftlint/placeholder) and kick off the macOS build to record its real result rather than assume.
+
+Whole-tree swiftformat flags **1/5728** files (pre-existing, not mine — my 9 files passed). Placeholder gate (verbatim) = 0. Let me identify that pre-existing unformatted file to confirm it isn't mine, then run global swiftlint and start the macOS build.
+
+Confirmed: the 1 swiftformat issue is pre-existing in `RecentDrivesSection.Previews.swift` (redundantType) — **not mine** (my files explicitly clean). The repo's global gate was already red before my change (pre-existing format issue + the compiler crash), under the beta toolchain.
+
+Let me kick off the macOS build (to capture its real result, not assume) and run the global swiftlint gate meanwhile.
+
+My files re-confirmed swiftlint-clean (0 violations). macOS build running in background. Now the global swiftlint gate to capture its real state.
+
+Global swiftlint shows 3 pre-existing violations (my files appear only as progress lines, not violations — already proven clean). The macOS build finished — let me read its result and confirm the 3 lint violations aren't mine.
+
+Confirmed again: the 3 swiftlint violations are pre-existing in `WidgetChartSummary.Tests.swift` (not mine). macOS build also failed (exit 65). Let me confirm macOS failed on the same pre-existing crash, not my code.
+
+The macOS build failed for a **different pre-existing reason** — code-signing/entitlements (no signing team/provisioning on this runner), not a compile error (zero crashes, no my-file references). Let me capture the full entitlements message for evidence.
+
+Complete evidence gathered. Every gate failure is **pre-existing or environmental**, in files outside my allowed scope; my surface is clean on every isolatable check. Notably, `AnomalyInlineRow` (the file crashing the compiler) was itself already committed in this repo — so committing surfaces despite the repo-wide environmental red is the established norm here.
+
+Let me write the comprehensive, honest gate log.
+
+
+
+Now let me commit precisely the allowed files (surface + log), being careful to exclude generated build artifacts. First, let me inspect git status.
+
+Only my 10 surface files are untracked under `apps/apple` (the generated `.xcodeproj`/`build/`/`Frameworks` are gitignored). Let me stage exactly my surface files + the log and verify the staged set before committing.
+
+Exactly 11 files staged (10 surface + 1 log), no generated artifacts. Committing with the prompt's message.
+
+Committed (HEAD `adf252d85`, 11 files). Now let me clean up the heavy generated build artifacts (DerivedData, temp logs) per good hygiene on the shared machine, and verify the git tree is clean.
+
+Clean: no stray tracked changes, artifacts removed, commit intact (11 files, 2398 insertions). Let me do a final git status confirmation.
+
+Working tree is fully clean; commit `adf252d85` on branch `auto/20260613-204822-12295/9` contains exactly the 11 allowed files. The stale `iosfinal2` notification was the already-analyzed `-jobs 6` run.
+
+The task is complete to the maximum extent this runner allows. Final summary:
+

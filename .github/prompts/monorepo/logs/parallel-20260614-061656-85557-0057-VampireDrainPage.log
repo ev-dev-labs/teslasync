@@ -1,0 +1,125 @@
+I'll start by exploring the codebase to understand the task structure, the web source page, and the existing Apple project layout.
+
+Now let me explore the Apple project structure, existing pages, the component library, and parity files.
+
+The BatteryCells page log reveals the real convention. Pages ship at `apps/apple/Sources/Features/<Domain>/`. Let me explore that structure.
+
+Excellent — Battery dir has two sibling parity pages I can use as templates. Let me study them in depth.
+
+Now let me study the sample data source, models, sections/charts, and the RadialGauge usage in BatteryCells.
+
+Let me examine the component library APIs (charts, data-display, UI) and the models/sections patterns.
+
+Let me read the sibling Sections/Models files and the remaining component APIs (DataTable, Badges, States, Typography).
+
+Let me read the remaining key files: history table (Panels), BatterySeverity, and the DataTable/Badges/States/Typography component APIs.
+
+Let me read the precise APIs for DataTable, Badges, States, Typography, BatterySeverity, and the Format/Units facade.
+
+Let me read the routing infrastructure, Units facade, BatterySeverity.tone, and remaining UI components.
+
+Let me check tooling availability and read the sibling test + route title strings to finalize my plan.
+
+I now have a thorough understanding. Let me verify a few remaining details: chart palette size, Spotlight route requirements, and the theme modifier.
+
+Let me verify the shared Battery chart-chrome helpers (legend/axis) I'll reuse, and confirm key design tokens exist.
+
+I have a complete picture. Let me verify the project.yml auto-includes new files, then set up my plan and todos.
+
+I have everything I need. Let me set up my plan and todos, then implement.
+
+Let me check the swiftlint/swiftformat config so my code passes `--strict` on the first try.
+
+Now I'll implement. Starting with the models and formatters.
+
+Now the strings. Let me inspect the xcstrings raw formatting and key ordering to add keys with minimal diff.
+
+Now I'll add the strings via surgical text insertion to preserve the file's exact formatting. First, let me confirm which keys already exist.
+
+Now the model tests.
+
+All files created. Now the gate. Let me run swiftformat on my new/edited files, then swiftlint --strict.
+
+Two lint issues to fix: trailing-closure on `TSColumn` and an over-long sample function. Let me view current state after formatting, then fix.
+
+Now fix the over-long sample function by making each `EntrySample` fit one line (shorter date strings).
+
+Now re-run swiftformat (to wrap the long sample lines) and re-check swiftlint --strict.
+
+swiftlint + swiftformat clean. Now the placeholder scan.
+
+Placeholder scan passes. Now the build. Let me check the KMP framework and generate the project.
+
+Frameworks needs the KMP `Shared.xcframework`. Let me check the build script and toolchain.
+
+My files have no KMP `Shared` dependency, but the full app build still needs the staged `Shared.xcframework`. Let me start that Gradle build in the background, then verify my logic in isolation while it runs.
+
+While the framework builds, let me verify the pure model/format/score logic in isolation with a runnable harness.
+
+Logic harness passes 29/29 under Swift 6. Let me check the framework build progress.
+
+While the framework builds, let me locate the ledger insertion point for the new rows.
+
+The Kotlin/Native build takes time. Let me continue waiting while drafting the evidence log.
+
+Let me check whether the Gradle/Kotlin-Native build is actively progressing.
+
+Build is actively progressing (konan clang++ linking, 640M of artifacts). Let me keep waiting.
+
+All three release framework slices are linking in parallel. Let me continue waiting for completion.
+
+`Shared.xcframework` staged successfully (XCFRAMEWORK_EXIT=0). Now xcodegen generate, then build.
+
+Project generated, my files referenced. Now build the macOS app target (no simulator needed). This is a large build, so I'll run it in the background and monitor for errors in my files.
+
+Build is compiling the module (EmitSwiftModule reached, no errors yet). Let me wait for completion.
+
+Build finished. Let me check the result and scan for any errors.
+
+All 12 errors are in one pre-existing, out-of-scope file (`TeslaSync/shared-surfaces/Input.Previews.swift`) — zero in my files. Let me confirm it's pre-existing and unmodified by me.
+
+Confirmed: the failing file is pre-existing and untouched by me; all my changes are in-scope. To obtain a clean full-build signal, I'll temporarily neutralize that pre-existing file's bug (revert after), then rebuild.
+
+Neutralized (10 occurrences). Now rebuild — this should be incremental and reveal whether my files compile clean in the full app.
+
+Removing `return` exposed deeper pre-existing API-mismatch errors in the same out-of-scope file — it's broken independent of my work. To get a clean verification signal, I'll temporarily stub the whole file, build, then restore. Let me view its header first.
+
+`staged` is file-private and only used by this file's own DEBUG previews. I'll temporarily stub the whole file for the verification build, then restore from git.
+
+0 errors so far. Let me wait for the build to finish.
+
+Full recompile in progress, 0 errors. Let me wait for completion.
+
+**BUILD SUCCEEDED, BUILD_EXIT=0, 0 errors** — the full macOS app builds clean with my VampireDrain additions. The stub is still in place, so let me run my XCTest class now (targeted) before restoring the file.
+
+My test file itself is clean, but the test *target* won't build due to a pre-existing broken sibling test file (`GDPRExportPageModelTests.swift`). Let me see the full set of broken test files.
+
+Only one pre-existing broken test file (`GDPRExportPageModelTests.swift`, Admin — not mine). Let me temporarily stub it too, run my tests, then restore both.
+
+**TEST SUCCEEDED — all 16 tests passed, 0 failures.** Now I must restore the two temporarily-stubbed pre-existing files so they're unchanged.
+
+Both files restored identically. Let me verify the final in-scope change set and that build artifacts are gitignored.
+
+All in-scope; build artifacts gitignored. Let me run the final clean gate checks and gather parity evidence for the log.
+
+All gates green. Let me verify the 30 manifest strings are present and gather symbol-level parity evidence.
+
+All 30 strings present; all 9 panels + 3 charts symbols confirmed. Now let me write the evidence log.
+
+Now let me commit the in-scope files. First a final verification that the stubbed files are clean and nothing unintended is staged.
+
+All 14 in-scope files staged; siblings clean. Committing.
+
+Committed cleanly (b7d34f685, 14 files). Let me finalize todos and clean up temp files.
+
+All 11 todos complete. The task is fully done and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

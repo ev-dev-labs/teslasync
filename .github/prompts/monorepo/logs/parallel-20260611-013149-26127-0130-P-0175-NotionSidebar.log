@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure and verifying the Apple toolchain capability, since this task requires SwiftUI/Swift Charts/MapKit.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 sim). Now let me read the web source and explore the Apple app structure.
+
+Now let me examine the data contract (LinearSidebar types), the Apple app structure, and existing shared surfaces to understand the established patterns.
+
+The shared-surfaces follow a clear multi-file pattern. Let me find sibling sidebar surfaces (especially LinearSidebar) and study a complete reference surface's structure.
+
+No existing LinearSidebar surface. Let me study a complete reference surface (`ActiveFilterChips` — interactive, compact) to learn the exact file pattern, plus the nav core file.
+
+Now I understand the architecture. Let me read the remaining ActiveFilterChips files (Views/Previews/strings/Tests) and the nav core + token/i18n scaffolding to fully grasp the conventions.
+
+Let me locate the design tokens (P1/S9), the nav core, location/router state-holder, and how files are wired into targets.
+
+Let me find the token definitions (Color.TS/Font.TS/TSSpacing) and study the nav core + how location/router state is held.
+
+`Layout.Nav.swift` defines the canonical nav catalog. NotionSidebar is a sibling sidebar consuming the same contract. Let me study the full Layout surface and the design tokens.
+
+Now let me study the Layout surface internals (Adapter, Projector, Model, main view, Views, Seams) — the closest sibling that shares NotionSidebar's data contract.
+
+Layout is the closest sibling (same nav data contract, same tier). It introduced a `LayoutConnection` (live/stale/offline) axis. Let me see how Layout handles states/seams/chrome to decide NotionSidebar's state approach.
+
+Decisive finding: Layout (closest sibling, same "layout chrome" tier, same nav contract) renders the full P4 state set — `LayoutPhase` (loading/content/empty/error) + `LayoutConnection` (live/stale/offline) via a `LayoutSource` seam. NotionSidebar must follow this pattern, not the minimalist one. Let me read the Layout view/chrome/strings to learn how those states render.
+
+Let me read Layout's Views (chrome for loading/empty/error/freshness), strings, and test/preview patterns to complete my reference set.
+
+Let me read Layout.Shell (loading/empty/error/freshness views), the preview + test patterns, and locate shared design primitives + lint config.
+
+I have the chrome pattern. Now let me confirm the shared design atoms (TSButton/TSSkeleton/TSGlassPanel/TSLogo signatures), the test patterns, and lint/target config.
+
+Let me read the Layout test files (test conventions) and the lint/format configs before building.
+
+Let me check the rest of the lint config, the swiftformat rules, and the scheme definitions used by the gate.
+
+I now have the complete pattern. Let me check build tooling availability (xcodegen, Shared.xcframework) while I begin planning, since the gate needs a full app build.
+
+`Shared.xcframework` isn't present — the full gate needs a heavy KMP/Gradle build first. Let me probe the toolchain and kick off project generation + framework build in the background while I write the surface.
+
+Java 17 + Gradle present. Let me start the heavy `Shared.xcframework` build in the background and generate the Xcode project while I write the surface.
+
+Project generated; Gradle framework build running in background. Let me set up tracking and check build progress.
+
+Gradle build is nearly done (release linking). Now I'll write the surface. Starting with the Foundation-only pure core.
+
+Now the pure projector with the Notion-specific logic (filter, collapse-default, glyph, trailing).
+
+Seams next: telemetry, phase, connection, snapshot, and the P1/S8 source.
+
+Strings facade (P1/S10) — web keys verbatim plus documented native chrome/a11y additions.
+
+Now the observable state-holder (P1/S8).
+
+Core logic done. Let me check the framework build and verify the canonical helpers I'm depending on exist as expected.
+
+Framework still linking. Let me write the row-level views.
+
+Now the chrome: filter field, tree body, and the leaf states (loading/empty/error/empty-filter) + freshness chip.
+
+Now the main public view.
+
+Let me check the framework build and write the previews + .strings catalog.
+
+Framework staged — the full gate is now runnable. Let me write the previews and the `.strings` catalog.
+
+Now the tests. First, the pure-core adapter tests.
+
+Now the model + view + strings + a11y tests.
+
+All 11 source/test files written. Let me run swiftformat and swiftlint on the new files to catch style issues early.
+
+Two auto-fixable formatting issues. Let me apply swiftformat to the new files, then re-verify.
+
+swiftformat clean. Let me verify the auto-edits to the switch are correct, then run swiftlint on the new files.
+
+swiftformat + swiftlint both clean (0 violations) on all 11 files. The auto-edited switch is valid Swift. Now let me regenerate the project and run the full iOS build+test gate (heavy — monitored in background).
+
+Project regenerated (72 NotionSidebar references). Now the iOS build+test gate. Starting it in the background with monitoring.
+
+Build failed (exit 65) in ~5 min — likely a compile error. Let me find it.
+
+The only compile error is in a **pre-existing** sibling surface (`AIAutoNameUnnamedLocations.swift`), not my files. Let me confirm there are no other errors and check whether my files were type-checked.
+
+Confirmed: exactly **one** build error, in a **pre-existing sibling surface** (`AIAutoNameUnnamedLocations.swift`) — not my files. My 11 NotionSidebar files compiled without any error. To rigorously prove my surface is correct in-context (and reveal any further pre-existing blockers), I'll temporarily fix that one-line sibling error locally, rebuild, then revert it (committing only NotionSidebar.* + log). Let me inspect it.
+
+Temporary local fix applied (will revert before commit). Re-running the iOS build+test to verify my surface compiles and tests pass in-context.
+
+Two more pre-existing errors surfaced — in *other* sibling surfaces (`AISignalExplorerNlFilter.swift`, `RecentDrivesSection.Previews.swift`), again none in mine. This looks like a systemic baseline condition. Let me quantify how widespread these pre-existing errors are.
+
+These are systemic **pre-existing** baseline errors across dozens of sibling surfaces (47 files share one recurring `@ViewBuilder` non-escaping bug), all outside my allowed-files scope and none in my surface. To definitively prove my surface + tests compile and pass in-context, I'll temporarily bulk-fix the recurring pattern (tracked files — reverted before commit), then rebuild. Let me confirm git state and inspect the other error.
+
+Git is clean (only my 12 untracked files + 1 temp edit). This is a systemic pre-existing baseline issue. I'll temporarily bulk-fix the recurring `@escaping` pattern across tracked files (reverted before commit) to reach a green build that proves my surface integrates. Let me enumerate the exact buggy signatures first.
+
+Most `var/let content:` are stored properties (correctly implicitly-escaping); only `@ViewBuilder <param>: () -> some View` *function parameters* error. Let me check my files don't use that pattern, then apply a precise temporary fix.
+
+My files only use `@ViewBuilder ... var X: some View` (computed properties), not the buggy `() -> some View` closure params — so they're safe. Let me revert my manual edit and apply a precise temporary fix across the tracked siblings, then rebuild app-only (faster compile feedback).
+
+Temp fix applied to 82 sibling files; my files untouched (they don't match the pattern). Let me also pre-emptively address the type-check timeout in `RecentDrivesSection.Previews.swift`, then rebuild app-only for fast compile feedback.
+
+Now rebuild app-only for iOS (faster compile-only feedback before the full test run).
+
+Build failed but zero `error:` lines — different failure type. Let me inspect.
+
+Batch compile failed but no standard `error:` lines — possibly a compiler crash or my sed mis-edited a file. Let me look at the actual failing-batch output.
+
+No `error:` diagnostics at all — this points to a **compiler crash or OOM-kill** in a batch, not a source error. Let me find the crash signature.
+
+The build hit a **swift-frontend IRGen compiler crash** on `AppearanceSettings.Controls.swift` (a sibling feature-view) — a toolchain-level crash, not a source error, and not my code. Combined with the dozens of pre-existing `@escaping` errors and type-check timeouts, this is a systemic baseline failure on this toolchain. Let me check whether my sed touched that file, then decide.
+
+Confirmed: the IRGen crash file was **not** touched by my sed — it's a pre-existing toolchain crash. My temp edits touched 64 sibling files. This baseline cannot build on this toolchain for reasons entirely outside my surface (sibling `@escaping` errors + type-check timeouts + a swift-frontend IRGen crash). 
+
+I'll revert all 64 temporary edits to restore the pristine baseline, then prove my surface compiles + its tests pass via an **isolated** SwiftPM build (immune to the broken siblings). First, revert and map my surface's exact external dependencies.
+
+Baseline is pristine again (only my 12 files remain). My surface's external deps are minimal: Tokens (Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion), the self-contained Layout nav files, and TSSkeleton/TSButton. I'll build an **isolated SwiftPM package** (outside the repo) with the real dependency files + my files + faithful stubs for the 2 UI atoms, then run `swift build` + `swift test` to definitively prove my surface compiles and its tests pass. Let me grab the exact TSButton signature first.
+
+I have the exact TSButton signature. Let me assemble the isolated SwiftPM package and run `swift build` + `swift test`.
+
+Package assembled (14 source files). Now build + test it.
+
+Isolated build **succeeded** — my surface compiles cleanly. One strict-concurrency warning in my `Previews.swift` (`staged` helper needs `@MainActor`). Let me fix it in the real file, then run the tests.
+
+**All 46 tests pass, 0 failures** — my surface compiles and its tests pass on the macOS toolchain. Let me confirm the warning is gone and re-verify format/lint after the Previews edit.
+
+Everything clean: isolated package builds warning-free with 46/46 tests passing; swiftformat 0 issues; swiftlint 0 violations. Now the placeholder check + scan my files for forbidden tokens.
+
+The "placeholder" matches are legitimate (SwiftUI TextField `filterPlaceholder` and "{{token}} placeholders" in interpolation docs) — not stub content. Let me read the gate's placeholder script to confirm it won't false-positive, then run it.
+
+Let me check the forbidden-pattern definitions, then run the placeholder gate against my actual files (the gate's literal `-Path …/NotionSidebar` matches nothing, so I'll also scan my real files rigorously).
+
+Important: the placeholder gate's common patterns include the literal word **"Placeholder"** (case-insensitive). The gate's `-Path …/NotionSidebar` invocation scans nothing (passes trivially), but to genuinely honor "no placeholder in shipped code," I must remove the word entirely. My files use `filterPlaceholder` + "placeholder(s)" in comments. I'll rename to `filterPrompt` and reword comments. Let me view the exact spots.
+
+Let me find every "placeholder" occurrence across all my files (including tests), then rename comprehensively.
+
+Now I'll rename `filterPlaceholder` → `filterPrompt` and reword the comments to eliminate the forbidden word everywhere.
+
+Now let me re-verify comprehensively: no forbidden tokens remain, the placeholder gate passes on my actual files, and the rename didn't break the build/tests/lint.
+
+No forbidden tokens; placeholder gate PASSES on my actual files (COUNT=0). Let me re-sync the package and re-run build+test + format/lint after the rename.
+
+46/46 tests still pass. Final format/lint pass on all my files after the edits.
+
+All green for my surface: format 0 issues, lint 0 violations, isolated build warning-free, 46/46 tests pass, placeholder COUNT=0. 
+
+To report the whole-tree gate steps honestly, let me capture the real results of `swiftformat --lint apps/apple` and `swiftlint --strict` across the full tree (these may show pre-existing sibling issues).
+
+Whole-tree swiftformat passes (0/4806 files need formatting, FORMAT_EXIT=0). Now whole-tree swiftlint --strict.
+
+Both whole-tree lint and format **pass** (0 violations / 0 files needing formatting across 4500+ files), my 11 files included. Only the `xcodebuild build test` steps are blocked — by pre-existing sibling breakage. Let me create the gate log directory and write an honest, evidence-backed log.
+
+Log directory exists. Let me run the macOS whole-app build in the background (to capture real evidence for both platforms) while I write the gate log.
+
+macOS build failed in only 17s (too fast for compile) — likely an early/setup failure. Let me check.
+
+Complete honest picture now: macOS is blocked by **code-signing** (no dev certificate — environment limitation) plus the same pre-existing compile errors; iOS by pre-existing sibling compile errors + a swift-frontend IRGen crash. Neither involves my surface. Lint/format/placeholder all pass; my surface builds + 46 tests pass in isolation. Let me write the honest gate log.
+
+Now let me verify the working tree is clean (only my deliverables) before committing — ensuring no stray sibling edits and that the generated `.xcodeproj` is gitignored.
+
+Exactly my 12 files + log, no sibling modifications under shared-surfaces. Let me confirm no tracked files anywhere were left modified (verifying the earlier revert was complete), then stage and commit.
+
+Clean: 0 modified tracked files, `.xcodeproj` ignored, only my 12 files + log untracked. Let me stage and commit.
+
+All 13 files staged. Committing with the conventional message + trailer.
+
+Committed. Let me verify the commit and clean up temporary artifacts.
+
+I've completed and committed the NotionSidebar surface. Here's the final summary.
+

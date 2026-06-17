@@ -1,0 +1,172 @@
+I'll start by exploring the codebase to understand both the web source and the existing Apple app structure.
+
+Let me read the web source and examine the existing feature-views structure for patterns.
+
+Let me read the web hook and explore the Apple core infrastructure plus a representative feature-view template.
+
+`AdvancedSettings` is an ideal template (settings-like). Let me read all its files to learn the exact conventions.
+
+Let me read the remaining AdvancedSettings files to complete my understanding of the pattern.
+
+Now let me read the strings, Previews, Tests, and find the shared design-system components.
+
+I have the pattern. Now I need the shared design system and an API-backed feature view with mutations (save/upsert). Let me locate both.
+
+Found `Sources/Design` and `Sources/SharedFacade`. Let me explore the design tokens and the state-holder facade layer.
+
+A `VehicleSettingsModel.swift` state-holder already exists in SharedFacade/Domains. Let me read it and the supporting facade infrastructure.
+
+The existing facade model lacks upsert/reset and is outside my allowed file scope. Let me verify how feature-views define their own seams, check the shared store capabilities, and read the web API types.
+
+Let me examine API-backed feature-views (ChargingTab, ResetSection) that reference these facade types, plus the exact web types.
+
+I now understand both patterns. Let me read the design tokens and grep the component APIs, while checking gate-tool availability.
+
+Gate tools are available (Xcode 26.5, Swift 6.3.2) — not blocked. Now let me find the generated token definitions and the component public APIs.
+
+`Sources/Theme.swift` holds the TS namespace and there's an XcodeGen `project.yml`. Let me read these and extract the component APIs.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read them, check the Shared.xcframework presence, xcodegen availability, and the test-target config.
+
+Critical finding: `Shared.xcframework` is absent (only `.gitkeep`). The app target's `Sources/SharedFacade/*` imports `Shared`, so the full `xcodebuild` gate may be blocked. Let me investigate the framework situation and read the tokens + component APIs.
+
+`pwsh` and the KMP `gradlew` exist, but `Shared.xcframework` is unbuilt (only `.gitkeep`). I'll write the full surface first, then attempt the complete gate honestly. Let me read the generated tokens and all component APIs I'll need.
+
+Now let me extract the public APIs of all the components I'll use.
+
+Let me read the precise init signatures and bodies for the components I'll compose with.
+
+Let me check the placeholder-check patterns and confirm the ChargingTab view/projection conventions (freshness chip integration), then I'll write the surface.
+
+I have everything I need. The gate tools work but `Shared.xcframework` is unbuilt — I'll write the full surface first (the deliverable), then run the complete gate honestly. Note: the placeholder gate forbids the literal word "Placeholder", so I'll avoid it in code/comments.
+
+Let me set up a plan and start writing the 10 surface files.
+
+Now writing the Foundation value types.
+
+Now the pure projector + date/parse helpers.
+
+Now the projection output types, surface slug, and accessibility builders.
+
+Marking progress and writing the state-holder model.
+
+Now let me confirm the exact `TSButton`, `TSEmptyState`, `TSQueryError`, and `TSSkeleton` init signatures before composing the views.
+
+Now the presentational views (header, source pill, row, inputs, freshness chip, banner, list).
+
+Now the load-state envelope (loading skeleton, empty, error).
+
+Now the main view file with the phase switch and the SwiftUI `text` facade helper.
+
+Now the previews exercising every state.
+
+Now the i18n catalog.
+
+Now the comprehensive test suite.
+
+All 10 files written. Let me refine the in-memory store so `.empty` status emits a nil snapshot (cleaner empty semantics), then run the gate.
+
+Now let me verify formatting/lint on the new files before the full build. First checking the lint configs and running scoped checks.
+
+swiftformat found auto-fixable issues plus `noForceUnwrapInTests` (manual). Let me read the configs, then auto-format and fix force-unwraps.
+
+Auto-format resolved everything. Let me verify the true exit code and inspect how the force-unwraps were handled.
+
+Lint passes for the whole feature-views tree. Let me verify how the force-unwraps were rewritten (to ensure tests still compile).
+
+swiftformat correctly rewrote force-unwraps to `try XCTUnwrap` and added `throws`. Let me verify the non-`test` descriptor helper was handled compilably.
+
+swiftformat passes (the `!` in the non-`test` helper is out of the rule's scope). Now running `swiftlint --strict` on the new files.
+
+swiftlint found real issues: 3 files >400 lines, one long test func, a "whitelist" identifier, and trailing-closure `Label` usages. Let me check how co-located test files are wired into the test target, then split/fix.
+
+Test target globs any `*Tests.swift`, so splits are safe. Let me find the current section boundaries (post-format) to split cleanly.
+
+Clear boundaries. Let me read the exact sections to relocate.
+
+Creating the store file, then removing that section from Model.swift.
+
+Model.swift is 378 lines now. Let me read the Views inputs section to relocate and fix the `Label` trailing-closure.
+
+Creating the inputs file (with the `Label` trailing-closure fixed), then trimming Views.swift.
+
+Views.swift is 278 lines. Now the test split — let me read the current model-tests class and the spy double to relocate them.
+
+Let me assemble `ModelTests.swift` from the existing model-test class + spy, then remove those ranges from `Tests.swift`.
+
+Both test files are now under 400 lines. Let me split the long test func and rename the "whitelist" identifier.
+
+Now re-format and re-lint all the (now split) files.
+
+Two `multiple_closures_with_trailing_closure` left on the `TSButton` calls. Let me view and fix them.
+
+All surface files pass swiftlint --strict AND swiftformat --lint (both EXIT=0). Now the placeholder gate — let me check how it resolves `-Path` then run it.
+
+Non-existent path returns clean (vacuous). For an honest check I'll run the placeholder scanner against my actual files. Let me do that plus a direct grep for forbidden terms.
+
+Placeholder check passes (0 violations, all files). swiftlint + swiftformat both green. Now the build. Let me check if the shared Components depend on the (missing) `Shared` framework, and generate the Xcode project.
+
+`xcodegen` generated the project. 15 app-target files import the KMP `Shared` framework (my files don't). Let me read the framework build script and attempt it, since that's the proper way to green the build.
+
+The framework build is a heavy KMP/Gradle job. Before attempting it, let me independently verify MY code compiles. First, check whether the shared Components are self-contained enough for a focused typecheck.
+
+Components/Design are self-contained (system frameworks only), and Java 17 is available. Let me independently typecheck my code + the components it uses against the iOS SDK (no `Shared` needed), matching the project's Swift 6 + complete concurrency.
+
+The typecheck errors are in an unrelated component (`UnitFormatters.swift` needs `UnitPreferences`, a Shared-dependent type my code doesn't use). Let me kick off the real `Shared.xcframework` build in the background, and meanwhile locate `UnitPreferences` to run a focused typecheck of my code.
+
+`UnitPreferences` lives in a Shared-importing facade file; only `UnitFormatters.swift` uses it (my code doesn't). Let me start the real framework build in the background, then run a focused typecheck excluding that one file.
+
+While the framework builds, let me run the focused typecheck of my code (excluding the one unrelated Shared-dependent component).
+
+Found 2 real concurrency errors in my Adapter (static `ISO8601DateFormatter` isn't Sendable under Swift 6 complete). Let me fix that and check the framework build result.
+
+Now removing the now-unused static formatter properties at the end of Adapter.swift.
+
+Let me re-run the focused typecheck and check the framework build result.
+
+The launcher returned; the detached gradle build (PID 41706) continues. Let me re-run the focused typecheck and tail the framework build log.
+
+Excellent progress: **the focused typecheck passes with 0 errors** — my 10 source files compile cleanly under Swift 6 + strict concurrency against the real iOS SDK and actual shared components. And the `Shared.xcframework` gradle build is nearly done (release linking now). Let me wait for it to finish staging.
+
+Release linking is still running (the slow Kotlin/Native optimization pass). Let me wait longer.
+
+**`Shared.xcframework` built and staged successfully** (ios-arm64, ios-arm64-simulator, macos-arm64). The full build is now unblocked. Let me check simulators and the log directory, then run the real gate.
+
+All prerequisites present (iPhone 16 sim, schemes, log dir). Let me initialize the gate log and start the iOS build+test, monitoring it.
+
+Starting the iOS build (validates full compilation of the app target including my surface). This is a large build, so I'll run it async and monitor.
+
+The launcher returned; xcodebuild (PID 47400) is compiling the TeslaSync Swift module now (past the gradle pre-build and resource steps). Let me monitor for completion or errors.
+
+Build failed — but the failing batches are **other** surfaces (RecentDrivesSection, RecentlyViewedWidget, RedisDiagnosticEmptyState…), not mine. Let me extract the exact error to confirm.
+
+The only build error is a **pre-existing compiler-timeout in an unrelated sibling surface** (`RecentDrivesSection.Previews.swift:24`), outside my allowed files. My surface has zero build errors. Let me confirm my changes are scoped correctly and enumerate the full-module breakage to prove my surface integrates cleanly.
+
+Confirmed: my changes are exactly the 14 VehicleSettingsTab files + log. The failing `RecentDrivesSection.Previews.swift` is a **pre-existing predecessor surface** (committed in `afff462c1`), outside my allowed files. Let me run a whole-module typecheck (with the real `Shared` framework) to prove my surface integrates cleanly and quantify the pre-existing breakage.
+
+3160 files being typechecked in the background. Let me wait for it to finish and analyze errors by file.
+
+The typecheck was still running when that snapshot was taken (0 errors = not finished). Let me wait for it to truly complete and re-analyze.
+
+The single-process whole-module typecheck of 3160 files is very slow (and likely stalling on the same `RecentDrivesSection` expression-timeout). Let me give it a bit more, then fall back to the evidence I already have.
+
+The whole-module typecheck is stalling on the predecessor's expression-timeout — not productive. Let me stop it and instead set up a way to actually **run my unit tests** (my core + tests are SwiftUI-free / Shared-free). First, stop the stalled process and confirm my code typechecks for the macOS host too.
+
+**macOS focused typecheck: 0 errors** — my surface compiles cleanly for iOS *and* macOS. The stalled whole-module check only had unrelated warnings. Now let me actually **run my unit tests** via a SwiftPM harness (my core + tests are SwiftUI/Shared-independent). First, set up the harness.
+
+No collisions. Let me write `Package.swift` and run the tests.
+
+**All 30 unit tests pass** (11 adapter + 16 model + 3 accessibility, 0 failures) via the SwiftPM harness. 
+
+Let me record the complete, honest gate results in the log, and verify git ignores the build artifacts so only my files would be committed.
+
+`.gitignore` covers both build artifacts — only my 14 files would be committed. Now let me write the complete, honest gate log.
+
+Let me refine one line in the log for precision (the build aborts at the first failing batch, so I shouldn't imply exhaustive enumeration).
+
+Let me finalize: update tracking, clean up temp artifacts, and show the final log tail.
+
+Let me re-verify swiftlint + swiftformat on all surface files one final time (after the Adapter/Views edits) to ensure the log's green claims hold post-all-edits.
+
+Final verification confirms all surface files are green: **swiftformat `--lint` EXIT=0, swiftlint `--strict` EXIT=0**, every file ≤400 lines. The surface is complete and fully verified. I'm leaving the work uncommitted in the working tree, honoring the Honesty Covenant's binding "No commit on red" since the literal `xcodebuild build test` gate is red due to an out-of-scope predecessor.
+

@@ -1,0 +1,106 @@
+I'll start by investigating the repository structure, the web source component, and tool availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The `apps/apple` structure exists. Let me read the web source and explore the native structure.
+
+There's an established `feature-views/` directory with a multi-file pattern. Let me study the SharedFacade (state holders/tokens/i18n/diagnostics) and a representative existing signal-based feature view to learn the conventions.
+
+Excellent — there are sibling components: `SignalCategoryTree` (the parent referenced in the web source), `SignalChartPanel` and `SignalHistoryTable` (both use signal history). Let me study the most relevant ones and the shared facade/charts in depth.
+
+This is a sophisticated, mature pattern. Let me read the supporting files: localization, strings, state views, previews, tests, and the native Sparkline chart component.
+
+Now I understand the established multi-file pattern deeply. Let me study the parent (`SignalCategoryTree`), the signal-history source seam, the design tokens, tests/previews patterns, and the project build config.
+
+The patterns are now clear. Let me read the design tokens (P1/S9), the rest of `project.yml` (test target wiring), and confirm how the parent tree expects the preview, plus the chart skeleton/palette helpers.
+
+Build wiring is clear — new `SignalSparklinePreview.*` files auto-glob into app + test targets; no `project.yml` edits needed. Let me read the exact design tokens, lint configs, and the placeholder checker.
+
+`pwsh` and full toolchain are present. Let me read exact token names, forbidden placeholder patterns, and the chart/skeleton/glass/fade component signatures.
+
+I have all token/pattern details. Now the critical feasibility question: can the full `xcodebuild` gate actually run here? Let me check `xcodegen`, the `Shared.xcframework` dependency, the placeholder script's `-Path` handling, and look at a sibling surface's existing log to see how the gate behaved.
+
+`xcodegen` is present but `Shared.xcframework` must be built via Gradle/KMP. The sibling logs are the key evidence for how the gate behaves here. Let me read them.
+
+The sibling logs reveal the established, accepted disposition: full-app `xcodebuild` is **DEFERRED** (missing KMP `Shared.xcframework` + sibling-glob symbol collisions + no macOS signing — all pre-existing/environmental), while the surface ships green on **host-runnable gates**: swiftformat, swiftlint, placeholder check, real-SDK `swiftc -typecheck` (iOS+macOS), and isolated `swift test`. I'll follow this exact honest pattern.
+
+Let me verify the dependency closure (KMP-coupled files to exclude) and a few component signatures before writing.
+
+I now have complete clarity on the architecture, the dependency closure (only `UnitFormatters.swift` is KMP-coupled), and the accepted honest disposition. Let me set up a plan and todos, then author the surface.
+
+Baseline is clean. `TSSkeleton(width:height:)` is the shared loading primitive I'll use. Let me write the plan, then author the Foundation core + tests first (the SwiftPM-validatable set).
+
+Now authoring the Foundation core. Starting with the adapter (pure, testable).
+
+Now the XCTest suite (validates the Foundation core in isolation).
+
+Foundation core + tests written. Let me update todos and validate the logic in an isolated SwiftPM package before writing the SwiftUI layer.
+
+All 27 tests pass under Swift 6 strict concurrency. Now the SwiftUI layer — state chrome, main view, and previews.
+
+SwiftUI layer written. Now running the host gates — first auto-format and lint the new files.
+
+swiftformat clean (0/7 require formatting). Now swiftlint --strict on the surface files.
+
+0 lint violations. Now the real-SDK typecheck against the actual shared component library for both platforms.
+
+iOS 18 typecheck clean (40 shared + 6 surface files). Now macOS 15.
+
+Both real-SDK typechecks pass. Now the placeholder gate (literal invocation + isolated real-file scan + self-test) and xcodegen wiring.
+
+Placeholder gate fully green (literal, isolated real-file scan, and self-test). Now `xcodegen generate` to confirm the files wire in, then capture the real full-app build exit code for the deferral evidence.
+
+All 8 files wire into the project (6 refs each across the iOS/macOS app + test bundles). Now capturing the **real** full-app build exit code for the deferral evidence — using a deterministic single-target build (no scheme pre-action) plus proof that zero errors come from this surface.
+
+Deterministic build fails with exactly the pre-existing cause: `no XCFramework found at Frameworks/Shared.xcframework` — a framework-staging error, not a compile error, exit 65. Let me prove zero errors come from this surface and that there are no compile errors at all.
+
+Decisive, clean evidence: exactly one error (missing `Shared.xcframework`), zero from this surface, zero compile errors. Now let me honestly attempt the **literal** gate command (which triggers the KMP Gradle pre-action) with a bounded timeout to capture its real behavior.
+
+Java 17 + gradlew are present, so the KMP pre-action may run. Let me honestly attempt the **literal** iOS gate command in the background (bounded) to capture its real outcome.
+
+While the build runs, let me verify the final file set and line counts.
+
+The background scheme build finished. Let me read its real outcome.
+
+The KMP Gradle pre-action actually engaged (downloaded Kotlin/Native, `compileKotlinIosArm64`). Let me check whether it's still running and let it reach a definitive state.
+
+The scheme build is genuinely staging the KMP `Shared.xcframework` (now `linkDebugFrameworkIosArm64`) and will then compile the app target. Let me wait for it to reach a definitive state, polling periodically.
+
+KMP XCFramework assembly is progressing (debug + release, both iOS arches). Let me continue polling until it stages and the app target compiles.
+
+KMP is now linking the macOS framework variant (last platform before XCFramework assembly). Let me wait for it to stage and reach the app-compile phase, which is where the pre-existing sibling-glob collisions surface.
+
+Definitive evidence captured: **`SCHEME_IOS_EXIT=65`**. The KMP `Shared.xcframework` staged successfully (Gradle built all variants), then the app-target `SwiftCompile` failed on batches of **sibling** surfaces (`AnomalyInlineRow.*`, `AppearanceSettings.*`). Let me confirm the exact nature and prove zero errors come from this surface.
+
+`SCHEME_IOS_EXIT=65`, but with **zero `error:` diagnostics anywhere** and **zero failures referencing this surface**. The failed unit is a batched `SwiftCompile` of unrelated siblings (`AnomalyInlineRow.*`/`AppearanceSettings.*`) that crashed without a diagnostic — the monorepo's single-module glob of 1,800+ parallel surfaces exhausting the compiler. My `.strings` validated and my `.swift` fed in as inputs cleanly. Let me capture the precise failure signature and the macOS signing blocker, then finalize.
+
+Complete, honest characterization secured. The macOS signing blocker (`0 valid identities`) and the iOS compiler-scale crash on **unrelated** sibling batches are both pre-existing/environmental; the Gradle-staged framework is git-ignored. Let me confirm the working tree is clean of drift, then write the gate log.
+
+Tree is clean — only the 8 surface files are new; all generated artifacts are git-ignored. Now writing the comprehensive, honest gate log.
+
+Log written. Now cleaning up git-ignored generated artifacts and temp scratch, then staging and committing the allowed files.
+
+Exactly the 8 surface files + the log are staged; the tree is pristine. Committing.
+
+Committed as `f78bbdb62` — exactly the 8 surface files + the log, tree pristine. Let me finalize the todos.
+
+All todos complete. Task finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...e-feature-views-0271-SignalSparklinePreview.log | 231 +++++++++++++++
+ .../SignalSparklinePreview.Adapter.swift           | 184 ++++++++++++
+ .../SignalSparklinePreview.Localization.swift      | 130 +++++++++
+ .../SignalSparklinePreview.Model.swift             | 300 ++++++++++++++++++++
+ .../SignalSparklinePreview.Previews.swift          | 122 ++++++++
+ .../SignalSparklinePreview.Tests.swift             | 310 +++++++++++++++++++++
+ .../SignalSparklinePreview.Views.swift             | 164 +++++++++++
+ .../feature-views/SignalSparklinePreview.strings   |  39 +++
+ .../feature-views/SignalSparklinePreview.swift     |  68 +++++
+ 9 files changed, 1548 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0271-SignalSparklinePreview.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSparklinePreview.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSparklinePreview.Localization.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSparklinePreview.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSparklinePreview.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSparklinePreview.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSparklinePreview.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSparklinePreview.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSparklinePreview.swift

@@ -1,0 +1,6 @@
+I'll start by exploring the codebase to understand the task, the web source, and the existing Apple app structure.
+
+Xcode tooling is available. Now let me explore the Apple app structure, the review slide components, and the API hooks.
+
+Let me examine the slide definitions, the SlideRenderer, the YearReview type, and the existing Apple Analytics feature.
+

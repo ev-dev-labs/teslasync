@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple/Xcode tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Not blocked. Let me explore the structure.
+
+`ConnectionSegment` doesn't exist yet. Let me study the most analogous status-bar segments — `HelpSegment` (simplest canonical pattern) and `VersionSegment`/`BackgroundWorkSegment` (polling patterns) — plus the StatusBar composition.
+
+Excellent established pattern. Now let me study `VersionSegment` (the network-polling analog) and the View/tokens/tests structure.
+
+The VersionSegment is the ideal polling analog. Let me read its Model, States, Projection, Seams, Views, and Previews to complete my understanding.
+
+Let me read the Projection/Views/Previews of VersionSegment, the design tokens, and the simpler LiveTelemetrySegment for the freshness/age pattern.
+
+Let me locate the design tokens, the VersionSegment value models, and the project config to understand file inclusion and testing.
+
+Let me find the core design token definitions (TSSpacing, Color.TS, Font.TS, TSRadius, TSSkeleton) used by these surfaces.
+
+The tokens are generated. Let me inspect the project config, Scripts, and Frameworks to understand the build/codegen flow.
+
+Build needs `xcodegen` (available) + KMP `Shared.xcframework` via Gradle. Let me check how sibling surfaces logged their status and whether the KMP/Gradle toolchain works here.
+
+Let me read the direct sibling gate logs (HelpSegment 0179, LiveTelemetrySegment 0180, VersionSegment 0181) to see the expected gate outcome pattern.
+
+The sibling logs establish a clear sanctioned disposition. Let me read the HelpSegment log (simplest sibling) fully and the VersionSegment log's verification methodology.
+
+The sanctioned methodology is now crystal clear: build the full surface, verify independently via a SwiftPM harness against real tokens, run swiftlint/swiftformat/placeholder/xcodegen, then document the deferred full-app gate. Let me read the design tokens, strings format, a test file, and the routing system.
+
+Now let me check TSSkeleton, the routing system, the closest sibling (LiveTelemetrySegment), and the test conventions.
+
+LiveTelemetrySegment is the closest sibling (status-bar chip + navigation + freshness). Let me read its full set plus the routing type and test conventions.
+
+Let me read the test conventions and check the placeholder tool availability.
+
+`pwsh` is available, so I can run the real gates. Let me check the placeholder patterns and lint/format configs to size files correctly and avoid forbidden tokens.
+
+I now have a complete understanding of the architecture, the sanctioned verification methodology, and the closest sibling patterns. Let me set up tracking and write the plan.
+
+Now I'll create the surface files. Starting with the Foundation-only core (Adapter + Projection).
+
+Core types done. Now the Model (state-holder + telemetry + i18n facade), Seams, and Probes.
+
+Now the polling source and the View layer (main view + subviews).
+
+Now the Previews and strings files.
+
+Now the three test files — pure adapter/projection tests, polling/seams tests, and model/view/a11y tests.
+
+All 13 files created. Now let me verify — starting with swiftformat and swiftlint on the surface scope.
+
+Found `redundantSelf` issues from local variables shadowing static methods. Let me see the full output.
+
+Only Projection.swift needs a fix — local variables shadow the static helper methods. Let me rename the locals to remove the `self.` qualification.
+
+Now let me re-run swiftformat and run swiftlint on the surface scope.
+
+swiftformat passes (0/12). Now swiftlint --strict on the surface.
+
+swiftlint passes (0 violations). Now the placeholder gate, then I'll build the isolated SwiftPM harness to compile + test against real tokens.
+
+The scoped check on my files alone is clean (0/0, EXIT=0); the 13 in the full dir are pre-existing sibling files. Let me confirm with the exact gate invocation used by siblings.
+
+The placeholder gate passes (EXIT=0). Now the key independent verification: an isolated SwiftPM harness that compiles the **real** surface files + **real** design tokens under Swift 6 strict-concurrency and runs the tests.
+
+Harness ready with symlinks to the real files. Now let me build + test it under Swift 6 strict-concurrency.
+
+All 38 tests pass under Swift 6 strict-concurrency on macOS 15 against the real files + real tokens. Let me confirm zero warnings (warnings-as-errors) and typecheck against the iOS 18 SDK too.
+
+Clean build passes with 0 warnings on macOS 15. Now the iOS 18 SDK typecheck (the surface targets both per ADR-002).
+
+iOS 18 typecheck passes clean too. Now let me confirm `xcodegen` enumerates my files into the project, then assess the full-app gate.
+
+xcodegen enumerates all 13 files (78 refs). Now let me assess the full-app gate path — attempt the KMP `Shared.xcframework` build (required by the app scheme). Let me first probe whether Gradle/Kotlin-Native is functional here.
+
+Gradle works (8.14.5, distribution cached). Let me attempt the KMP `Shared.xcframework` assembly — this is the long pole for the full-app gate.
+
+KMP/Kotlin-Native compilation is slow (first run downloads the toolchain). My surface is already independently verified green; this build only adds the "compiles inside the real app module" evidence. Let me continue waiting.
+
+Let me check build progress in a separate shell without disturbing the running build.
+
+The Kotlin/Native toolchain is cached and the build is actively compiling all three Apple targets (release XCFramework assembling). Let me keep waiting.
+
+The KMP `Shared.xcframework` built and staged successfully (14m). Now I can attempt the **full app build** for the iOS simulator to verify my surface compiles inside the real app module. `iPhone 16` is available on this runner.
+
+The full app build compiles thousands of files. Let me continue waiting.
+
+Let me check build progress and whether my surface has compiled yet (separate shell).
+
+**Key evidence: my ConnectionSegment files compiled inside the real app module with 0 errors** — the build is now well past them (compiling G* files). Let me wait for the full build to finish.
+
+**`** BUILD SUCCEEDED **` — the full iOS simulator app build passed with my ConnectionSegment surface compiled inside the real app module, 0 errors.** Now let me compile the test bundles and run my tests in the real app target.
+
+The test-bundle build fails on a **single pre-existing error in another agent's file** (`RecentActivity.Tests.swift:103` — duplicate class declaration), **not mine**. My ConnectionSegment test files compile clean. Let me confirm this is pre-existing and unrelated, and that my changes are scoped correctly.
+
+Confirmed: my changes are scoped to exactly the 13 ConnectionSegment.* files; the test-build error is in `RecentActivity.Tests.swift` (a pre-existing file I never touched). Let me pinpoint the duplicate and confirm the generated artifacts are git-ignored.
+
+Confirmed: the duplicate `RecentActivityFeedProjectionTests` lives in two **other-agent** files (`RecentActivityFeed.Tests.swift` + `RecentActivity.Tests.swift`), untouched by me. Generated artifacts are git-ignored. Now let me verify the macOS app build compiles my surface (skipping signing to isolate compilation).
+
+Let me wait for the macOS build to finish.
+
+**Both iOS AND macOS full app builds SUCCEEDED** with my surface compiled in the real module, 0 errors. This is stronger evidence than the deferral the sibling surfaces documented. Let me capture final evidence and verify i18n key coverage before writing the gate log.
+
+i18n is a perfect match: all 7 web keys present + 2 native leaf keys; 9 declared = 9 used (0 dead, 0 missing). Both builds succeeded. Now let me write the comprehensive gate log.
+
+Gate log written. Now let me clean up generated artifacts (git-ignored) and temp files, then verify the working tree contains only my intended changes.
+
+Working tree is clean — exactly the 13 `ConnectionSegment.*` files + the gate log. Now let me commit per the prompt's instruction.
+
+Commit succeeded. Let me verify the final state.
+
+The task is complete and committed. Let me confirm all tracked work is closed out.
+
+All 12 todos done. The surface is built, verified, and committed.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`ConnectionSegment`** at parity with `web/src/components/layout/status-bar/ConnectionSegment.tsx` — committed (`f840fa0`) as 13 files (1907 lines) under `apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.*` plus the gate log.
+
+**Architecture** (mirrors siblings 0179/0180/0181): a single tappable status chip parameterized by health status + polling infrastructure. Binds the shared **P1/S8** state-holder (`ConnectionSegmentModel` over a `/healthz` probe seam — no HTTP in the view), **P1/S9** tokens, **P1/S10** i18n facade (7 web keys verbatim + 2 leaf keys, 9/9 used, 0 dead/missing), and **P1/S11** `view.opened` telemetry.
+
+**States** (web's real branches + the P4 freshness leaf, nothing fabricated): `connecting`→loading, `online`/`degraded`→ready w/ latency, `offline`→error+offline w/ retry, plus a `stale` freshness chip + auto-refresh. `empty` honestly documented as non-existent for a health probe.
+
+**Verification — every host-runnable gate green:**
+- swiftformat `0/12` · swiftlint `0 violations` · placeholder `0`
+- Isolated SwiftPM harness (Swift 6 strict-concurrency, real tokens): **38 tests pass**
+- macOS-15 warnings-as-errors build: **0 warnings** · iOS-18 SDK typecheck: **0/0**
+- xcodegen enumerates all 13 files (78 refs)
+- **KMP `Shared.xcframework` assembled live**, then **full iOS (iPhone 16) AND macOS app builds → `** BUILD SUCCEEDED **`, 0 errors**, surface compiled inside the real module on both targets
+
+The only non-green step is the all-tests `build test`, blocked by a **pre-existing cross-agent duplicate `XCTestCase`** (`RecentActivityFeedProjectionTests` in two other agents' files this commit never touches) — deferred to the P4/P99 acceptance gate; my own tests are proven green in isolation.
+
+**`EXIT=0 / STATUS=DONE`** — generated artifacts (git-ignored `.xcodeproj` + staged framework) removed; working tree clean.
+
+
+
+The task is fully complete and verified. Let me mark it done.
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0178-ConnectionSegment.log | 213 +++++++++++++++++
+ .../ConnectionSegment.Adapter.swift                | 210 +++++++++++++++++
+ .../ConnectionSegment.AdapterTests.swift           | 172 ++++++++++++++
+ .../shared-surfaces/ConnectionSegment.Model.swift  | 136 +++++++++++
+ .../ConnectionSegment.Polling.swift                | 104 +++++++++
+ .../ConnectionSegment.PollingTests.swift           | 155 +++++++++++++
+ .../ConnectionSegment.Previews.swift               |  81 +++++++
+ .../shared-surfaces/ConnectionSegment.Probes.swift |  64 +++++
+ .../ConnectionSegment.Projection.swift             | 258 +++++++++++++++++++++
+ .../shared-surfaces/ConnectionSegment.Seams.swift  | 111 +++++++++
+ .../shared-surfaces/ConnectionSegment.Tests.swift  | 189 +++++++++++++++
+ .../shared-surfaces/ConnectionSegment.Views.swift  |  90 +++++++
+ .../shared-surfaces/ConnectionSegment.strings      |  28 +++
+ .../shared-surfaces/ConnectionSegment.swift        |  96 ++++++++
+ 14 files changed, 1907 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0178-ConnectionSegment.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.Polling.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.PollingTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.Probes.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.swift

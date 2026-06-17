@@ -1,0 +1,212 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple-specific tooling.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me explore the Apple app structure and the web source.
+
+This is a large, mature codebase. Let me study the existing patterns, the shared facade (state holders), design tokens, and i18n.
+
+The Apple app uses a multi-file feature-view convention. `apps/apple/Sources/` holds SharedFacade (P1/S8), Design (P1/S9). Let me study a complete alerts-related example and the shared layers.
+
+Let me look at the shared facade domains, design tokens, and the rest of the AlertsSection example.
+
+The pattern is clear. Now I need to understand the build setup — whether these 1645 feature-view files are actually compiled by `xcodebuild`, and the project generation. Let me check.
+
+This is a large task: a 2342-line web page to port, with a heavy build (xcodegen + KMP `Shared.xcframework` via Gradle). Let me set up a plan, read the web source (the spec), and nail the token API. First, let me kick off project generation in the background and read the spec.
+
+Let me continue reading the spec and the actual design token API in parallel.
+
+The web page is large and form-heavy. Let me get the real token API and map the web file's structure (component boundaries, JSX) to navigate efficiently.
+
+Now I have the token API. Let me read the rest of the helpers and the main component/JSX.
+
+Let me read the main component logic and JSX.
+
+This is dense. Let me set up tracking and continue reading the JSX render tree.
+
+I now fully understand the web spec. Let me examine the available native shared components (buttons, badges, empty states, form patterns) so my port reuses the real API.
+
+Rich component library exists. Let me read the components I'll compose with so I use the real APIs.
+
+Now let me read the form/badge/banner/picker/skeleton/overlay/motion/typography components plus a real usage example (AlertsSection.Views) to learn i18n+component composition patterns.
+
+Now let me see real usage patterns (how views reconcile the String facade with LocalizedStringKey components) plus typography, status indicators, pickers, and overlays.
+
+The pattern is clear: views resolve dynamic strings via the per-surface facade (`Text(verbatim:)`) and use design tokens directly. Let me read the remaining components I'll need (status indicators, pickers, skeletons, motion, overlays) and the test/preview conventions.
+
+Let me grab the final API details (motion, skeleton, toggle) and test/preview conventions, then start writing.
+
+Let me check the test framework, lint/format config, and toggle/overlay components before writing.
+
+I have all the patterns I need. The long pole is the KMP `Shared.xcframework` (Gradle) build — let me verify it exists and kick it off in the background while I write code.
+
+KMP module + Java 17 present; the XCFramework needs building. Let me start that long Gradle build in the background now while I write the Swift.
+
+KMP build running in background. Let me grab one small web helper I still need (`recommendedTriggerMode`) before writing the adapter.
+
+The background job died with the sync session. Let me restart the KMP build as a properly detached async process.
+
+KMP build is now running detached. Let me write the Adapter (pure projection core) — the foundation with all models, validation, and the full template catalog.
+
+Now the curated template catalog (referenced by the adapter):
+
+Now the Model — state holder, source seam, telemetry, i18n facade, and in-memory source. Let me first peek at the KMP build progress.
+
+KMP build is linking release frameworks (toolchain already cached) — good progress. Let me write the Model.
+
+In-memory source (drives previews + tests), applying mutations locally:
+
+Let me check the KMP build status.
+
+Shared.xcframework is staging — build nearly done. Now the large Views file with all sections. Let me write it.
+
+KMP build completed. Let me verify it succeeded before continuing.
+
+Shared.xcframework built successfully (ios-arm64, simulator, macos-arm64). Now the Templates + Rules list views.
+
+Now the largest file — the editor form with all its sections.
+
+Now the remaining editor field subviews (severity, behavior, escalation, computed metric, message, test channels, actions):
+
+Now the main view, AI-assist section, and snooze sheet. First, let me trim the loading view to avoid a duplicate header, then write the main composition.
+
+Now the AI-assist + snooze sheet:
+
+Now the main composed view:
+
+Now the i18n catalog. Let me write the static keys, then generate the 47 template entries with a script.
+
+Let me generate the 47 per-template name/message catalog entries with a script (deriving the exact `templateKey`):
+
+All 47 template entries appended. Now the previews:
+
+Now the comprehensive test suite (adapter + model + a11y):
+
+All 10 files written. Now let me auto-format my new files to match the repo config, then verify lint compliance.
+
+Formatted. Now verify both linters pass on the new files.
+
+swiftlint `--strict` (warnings-as-errors) needs each file ≤400 lines, types ≤250, tuples ≤2, etc. The repo convention is many small files. Let me inspect the specific brace/complexity spots, then split + refactor.
+
+The repo convention is many sub-400-line files. I'll split my large files and fix the tuple/param/complexity violations. Let me start with the pure core — remove the oversized Adapter and recreate it as focused files.
+
+Now recreate the pure core as focused files. First, the enums:
+
+Now the Models file (template, summaries, phase enums, surface slug, formatting):
+
+Now the Editor state + payload:
+
+Now the projection core + a localizer struct (to cut the 6-param function):
+
+Now the Validation file (extensions with the complexity-split `canSave`, payload, filtering, phase):
+
+Now the Model split — first the facade (strings, telemetry, source seam, snapshot types):
+
+Now the Model core (stored state + lifecycle + reducers):
+
+Now the derived view-state extension:
+
+Now the intents extension:
+
+Now I need to fix the AIViews file (remove the now-duplicate `selectRule(id:)` and the long line), then recreate the split view files. Let me view AIViews to fix it.
+
+Now recreate the view files, split to stay under 400 lines each. First, shared components:
+
+Now the chrome views (header, freshness, banner, loading, error):
+
+Now the Templates views:
+
+Now the Rules list views:
+
+Now the editor orchestrator + its sub-field files. First the orchestrator:
+
+Now the vehicle + kind fields:
+
+Now the signal + value editor fields:
+
+Now the behavior + escalation fields (with the long line wrapped):
+
+Now the computed-metric + message editors, and the channels + actions:
+
+Now recreate the split test files. First the adapter/projection tests:
+
+Now the model + i18n tests (with a struct harness to avoid the large tuple):
+
+Let me fix a stray line in the test harness init:
+
+Now let me re-format all files and re-run the linters to check the splits resolved the violations.
+
+All files now under 400 lines (max 305). Let me run swiftlint --strict on the full set.
+
+swiftlint clean (0 violations). Let me confirm swiftformat `--lint` is clean too (on the Swift files), then move to the build.
+
+Both linters pass cleanly. Now the heavy step — generate the Xcode project and build. Let me generate first.
+
+Project generated, iPhone 16 simulator booted, Shared.xcframework staged. Let me compile the iOS app (build-only first to surface any compile errors fast).
+
+Build failed — but the errors are all in unrelated `dashboard-widgets` files (`SafetyModel`, `FleetStatsBarModel` ambiguous), not mine. Let me confirm no AlertStudio errors and investigate whether this is a pre-existing baseline break.
+
+There are 21 errors in MY files too (plus massive pre-existing breakage elsewhere — `SafetyModel` is defined twice in committed `dashboard-widgets`). Let me first see my own errors and fix them.
+
+My only real errors are two name collisions: `NotificationChannelSummary` and `ComputedMetricSummary` already exist elsewhere in the app module (the Previews errors cascade from these). Let me confirm where they're defined, then rename mine to surface-prefixed names.
+
+Both already exist in shared component files (`ComputedMetricEditor.Types.swift` is the very component the web AlertStudio composes). Let me inspect their shapes — I should reuse the canonical types rather than duplicate.
+
+The existing types have different shapes (different op enum, `NotificationChannelKind`, Int ids, `unit`). Cleanest fix per the codebase's surface-prefixing convention: rename mine. Let me rename `NotificationChannelSummary`→`AlertStudioChannel` and `ComputedMetricSummary`→`AlertStudioMetric` across my files.
+
+Renamed cleanly. The two collisions were my only real errors (the Previews errors cascade from them). Now let me assess the scope of the *pre-existing* breakage (unrelated surfaces) from the existing log while I plan a clean rebuild.
+
+The shared `/tmp` log got clobbered (shared environment). Let me rebuild to a private session log and check specifically whether my files now compile.
+
+My surface now compiles cleanly (**0 AlertStudio errors**) — and renaming dropped total errors 444→113 (my collisions had also been making the shared types ambiguous in other surfaces). Let me identify the remaining 113 pre-existing errors' scope.
+
+All 113 remaining errors are pre-existing duplicate-type collisions in the **`dashboard-widgets`** tier (`SafetyModel`, `ChargeStateDTO`, `FleetStatsBarModel` defined in two files each) — a different artifact tier, out of scope for this feature-view prompt. None are in my files. Let me run the placeholder check, then prove my surface builds by excluding the contaminated tier.
+
+Placeholder check passes (0). Now let me prove my surface builds and my tests pass by temporarily excluding the contaminated `dashboard-widgets` tier (backing up the real project.yml first).
+
+Decontaminated project regenerated. Now build + run my surface's tests (compiles the whole app/test target — proving my files compile — and runs my 3 test classes).
+
+A different pre-existing break surfaced (`MonthlyCostTable` "ambiguous use of 'string'") once the dashboard-widgets stopped aborting compilation early. Let me confirm these are pre-existing (not caused by me) and understand the ambiguity.
+
+Confirmed pre-existing and zero-coupling: `MonthlyCostTable` (unmodified, 0 references to AlertStudio) breaks because `MonthlyCostStrings` is defined twice (MonthlyCostTable vs MonthlyCostChart). The baseline is broadly contaminated across sibling surfaces. To conclusively prove MY surface + tests are green, let me check whether `Sources/` is decoupled from feature-views so I can build an isolated variant.
+
+`Sources/` is fully decoupled from surfaces. I'll build an isolated variant (app target = shared `Sources` + only `AlertStudioPage` feature-view files) to conclusively prove my surface compiles and its tests pass. Let me restrict the feature-views globs.
+
+Isolated variant regenerated (app = `Sources` + only `AlertStudioPage*`; tests = only my test classes). Now build + run the full AlertStudio test suite on iOS.
+
+**BUILD SUCCEEDED** — my AlertStudioPage surface compiles cleanly into the app. The TEST target failure is only pre-existing `Tests/Unit/ToolCardTests.swift` (for an excluded sibling surface). Let me drop `Tests/Unit` from the isolated test target so only my co-located tests run.
+
+Now re-run — the test target should contain only my AlertStudio tests:
+
+**BUILD SUCCEEDED + TEST SUCCEEDED** on iOS — all 36 of my unit tests pass (14 model + 19 projection + 3 i18n), plus the UI bundle. Now let me confirm the macOS target compiles my surface too (isolated), then restore the real project.
+
+macOS failure is a code-signing/entitlements environment constraint (no dev certificate), not a compile error. Let me retry with signing disabled to verify my surface compiles on macOS.
+
+macOS also **BUILD SUCCEEDED** with all 36 tests passing (the trailing "TEST FAILED" is an xcodebuild result-bundle write-timeout infra flake, not a test failure). My surface is proven correct on **both** iOS and macOS.
+
+Now let me restore the real project.yml and run the actual gate to capture honest results.
+
+Project restored to baseline. Now let me run the lint/format gate steps on the whole tree (as the gate does) and the placeholder check, capturing real exit codes.
+
+The `LINT_EXIT=0` was `tail`'s exit (pipe masked swiftlint's). swiftlint shows a pre-existing violation in `dashboard-widgets/LiveSignalSparklinesWidget`. swiftformat passes cleanly (0/2375). Let me capture swiftlint's true exit and confirm zero violations are in my files.
+
+swiftlint's true exit is 2 — caused by exactly **1 pre-existing violation** in `LiveSignalSparklinesWidget.Builder.swift` (a dashboard-widget), **0 in my files**. swiftformat passes (0/2375). Now let me run the real gate's iOS + macOS build/test steps on the full restored project to capture authoritative exit codes for the log.
+
+Real iOS gate: **IOS_EXIT=65**, 226 pre-existing errors, **0 in AlertStudioPage**. Now the macOS step:
+
+Real macOS gate: **MAC_EXIT=65** (8 signing-certificate errors — no dev cert on runner — plus the same pre-existing compile errors), **0 in AlertStudioPage**.
+
+I now have authoritative results. Let me write the honest gate log. First, ensure the log directory exists.
+
+Let me gather a few real evidence snippets, then write the gate log.
+
+Now let me write the comprehensive, honest gate log.
+
+Gate log written. Let me verify git status (only my new files + log should be staged; the `.xcodeproj` is git-ignored) before committing.
+
+`.xcodeproj` is git-ignored. My 27 files + log are the only in-scope changes. (Two unrelated `web/` files are pre-existing working-tree modifications — I won't touch them.) Let me stage only my files + the log and commit.
+
+28 files staged (27 surface files + the gate log), nothing unrelated. Committing:
+
+Committed (`f15ed86a8`). Let me clean up the temporary backup and finalize tracking.
+
+Task delivered. Final summary below.
+

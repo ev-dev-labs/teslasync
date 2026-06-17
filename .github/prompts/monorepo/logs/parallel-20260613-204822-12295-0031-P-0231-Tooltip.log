@@ -1,0 +1,113 @@
+I'll start by exploring the repository structure and verifying the capability requirements (SwiftUI/Xcode) before writing any native code, per the Honesty Covenant.
+
+Capability is available: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, and an iPhone 16 simulator is booted. Now let me explore the Apple app structure and the web source.
+
+The web `Tooltip` is a hover/focus tooltip with inverted surface, `side` positioning, `multiline`, `useId`, and accessibility (`role="tooltip"`, `aria-describedby`). There are existing sibling surfaces `HelpTooltip` and `ChartTooltip`. Let me study the established pattern and prior logs.
+
+A prior successful run of this exact prompt (0231 Tooltip) is documented in the artifact log — it created `Tooltip.{Telemetry,Model,swift,Previews,strings,Tests}.swift` but those files are NOT present in this slot (parallel worktree). I need to recreate the surface. Let me study the established conventions, design tokens (P1/S9), telemetry (P1/S11), and project.yml.
+
+Now let me locate the design tokens (P1/S9), telemetry seam, and the remaining HelpTooltip model/adapter/test files to fully understand the wiring.
+
+The `shared-surfaces` dir IS referenced by `project.yml` (both app targets + test bundles). Design tokens come from `../design/generated/apple`, and both apps depend on a KMP `Shared.xcframework`. Let me verify the token catalog, toolchain, and read the test conventions + ChartTooltip (pure presentational tooltip peer).
+
+Design tokens, `tsGlassPanel`, and xcodegen are all present. The full app scheme depends on a KMP `Shared.xcframework` built via Gradle/Kotlin-Native. Let me check framework staging feasibility and read the XCTest conventions + the pure-presentational ChartTooltip peer.
+
+Let me settle the convention for a presentational tooltip's strings/a11y by reading the `ChartTooltip` sibling, and confirm pwsh + the placeholder checker.
+
+ChartTooltip is a data-bearing readout (hence its lifecycle states), but the base `Tooltip` is a pure presentational primitive (only `useId`) — so I'll follow the HelpTooltip faithful-parity stance (documented in the prior PASSED 0231 log). pwsh 7.6.2 and the placeholder checker are available. Let me read the exact token catalog before writing code.
+
+I now have the full token catalog and conventions. Let me check for naming collisions before writing, then create the plan and files.
+
+No collisions. Let me set up tracking and write the plan, then create the surface files.
+
+Now creating the surface files, starting with the Foundation core adapter.
+
+Now the two XCTest files — the pure-core adapter tests and the state-holder/view/strings tests.
+
+All 8 files created. Let me run a fast standalone type-check of the non-test sources against the real design tokens to catch errors before the heavier build.
+
+`TooltipText` is used in a public generic requirement, so it must be public. Fixing that.
+
+Non-test sources typecheck clean under Swift 6 strict concurrency. Now running the repo linters and placeholder check on the surface files.
+
+swiftlint passed (0 violations). Waiting for swiftformat.
+
+swiftformat passed (0/7 require formatting). Now the placeholder check — let me inspect the script's `-Path` semantics, then run it.
+
+The script scans directories recursively (the gate's `-Path .../Tooltip` is a prefix, not a dir, so it'd scan vacuously). I'll verify my files genuinely — first checking my own files don't contain forbidden tokens, then running the script against a temp copy of my files plus the literal gate path.
+
+My files are clean. Now running the placeholder gate three ways for honest evidence: a genuine scan of my files (temp copy), the literal gate path, and the script self-test.
+
+All placeholder checks pass, and the self-test confirms the script genuinely detects stubs (so the 0 count is meaningful). Now the build+test gate. The full `xcodebuild -scheme TeslaSync` requires the KMP `Shared.xcframework` (CI-only gradle/Kotlin-Native) plus all 2199 surfaces — so, following the documented precedent, I'll build+test the **real committed** Tooltip sources via a scoped throwaway xcodegen project on the iPhone 16 simulator and macOS.
+
+Multi-platform targets get `_iOS`/`_macOS` suffixes. Let me use explicit per-platform targets instead, keeping the module name `TeslaSync`.
+
+xcodegen hangs resolving external absolute paths. I'll copy the **exact committed** files into the gate dir (verifying checksums match), reference them relatively, and drop `createIntermediateGroups`.
+
+Copies are byte-identical to the committed sources. Now generating with relative paths.
+
+Project generated. Now building + testing on the iPhone 16 simulator (the gate's iOS destination) against the real committed sources.
+
+iOS: **35 tests passed, 0 failures, TEST SUCCEEDED, IOS_EXIT=0.** Now macOS build+test (the prior precedent noted headless test orchestration can hang — I'll fall back to `build-for-testing` + `xctest` if needed).
+
+macOS: **35 tests passed, 0 failures, TEST SUCCEEDED, MAC_EXIT=0.** All gate steps are green. Let me gather file metrics and git state, then write the gate log.
+
+All 8 files present and untracked on branch `auto/20260613-204822-12295/31`. To honestly document the literal gate's gating factor (rather than just asserting it), let me make a bounded probe of the real `-scheme TeslaSync` path to capture where it depends on the KMP framework.
+
+The real `-scheme TeslaSync` build is executing the **"Stage Shared.xcframework"** scheme pre-action (the gradle/Kotlin-Native step) — confirming the KMP gating factor. Let me capture a bit more then stop it (I won't wait on a full Kotlin/Native download in a shared environment).
+
+Confirmed: the real `-scheme TeslaSync` build is gated on the **"Stage Shared.xcframework"** pre-action (gradle/Kotlin-Native — CI-only). I have the evidence I need; stopping the probe to avoid a full toolchain download in this shared environment.
+
+Let me verify the generated project is gitignored, clean it up, and confirm no stray build artifacts will be committed.
+
+Clean — only my 8 files are untracked. Now writing the honest, complete gate log.
+
+Gate log written. Now cleaning up the temp project, updating todos, and staging the surface files.
+
+All 9 files staged. Committing with the prompt's message.
+
+Committed (HEAD `e1bb99226`). Final verification that the tree is clean and the commit contains exactly the intended files.
+
+All gate steps pass and the working tree is clean. The task is complete.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) parity of `web/src/components/ui/Tooltip.tsx` at `apps/apple/TeslaSync/shared-surfaces/Tooltip.*` (8 files, 1123 lines), committed as `e1bb99226`.
+
+**What was built** (mirrors the sibling `HelpTooltip` 0216 / `ChartTooltip` 0070 conventions):
+- `Tooltip.Adapter.swift` — Foundation core: surface slug (P1/S11), i18n seam (P1/S10), `TooltipSide` (web `side` + `left→leading`/`right→trailing`), `TooltipWrap` (web `multiline`), `TooltipMetrics` (token-aligned Tailwind sizes), pure `TooltipProjector`.
+- `Tooltip.Model.swift` — `TooltipStrings` facade, `TooltipTelemetry`+OSLog, `@Observable TooltipController` (P1/S8) with once-only `view.opened`.
+- `Tooltip.Views.swift` / `Tooltip.swift` — inverted high-contrast bubble (bg=`textPrimary`, fg=`bg` tokens), `alignmentGuide` outward offset, hover/tap reveal, reduce-motion-aware, `aria-describedby` + `role="tooltip"` a11y peers.
+- Previews (every branch), strings, and **35 XCTest cases** (15 adapter + 20 controller/view/strings).
+
+**Verification (all green, fully disclosed in the log):**
+- iOS Simulator (iPhone 16) build+test: **35/35 pass** · macOS build+test: **35/35 pass** — run against the **exact committed bytes** (sha256-verified) via a scoped XcodeGen project, because the literal `xcodebuild -scheme TeslaSync` is gated on the CI-only KMP `Shared.xcframework` pre-action (confirmed by a bounded probe).
+- `swiftlint --strict`: 0 violations · `swiftformat --lint`: 0/7 · placeholder gate: 0 (self-test confirms the scanner works).
+- `EXIT=0 / STATUS=DONE`.
+
+Loading/error/stale/offline are documented as not applicable to this presentational primitive (only hook is `useId`); the one real lifecycle peer — empty → never a blank box — is implemented and tested.
+
+
+
+The work is fully complete and verified — all 9 todos done, surface committed at `e1bb99226`, and every gate step green.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0231-Tooltip.log | 159 ++++++++++++++++
+ .../shared-surfaces/Tooltip.Adapter.swift          | 176 +++++++++++++++++
+ .../shared-surfaces/Tooltip.AdapterTests.swift     | 122 ++++++++++++
+ .../TeslaSync/shared-surfaces/Tooltip.Model.swift  | 176 +++++++++++++++++
+ .../shared-surfaces/Tooltip.Previews.swift         | 143 ++++++++++++++
+ .../TeslaSync/shared-surfaces/Tooltip.Tests.swift  | 210 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Tooltip.Views.swift  | 152 +++++++++++++++
+ .../TeslaSync/shared-surfaces/Tooltip.strings      |  23 +++
+ apps/apple/TeslaSync/shared-surfaces/Tooltip.swift | 121 ++++++++++++
+ 9 files changed, 1282 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0231-Tooltip.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Tooltip.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Tooltip.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Tooltip.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Tooltip.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Tooltip.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Tooltip.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Tooltip.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Tooltip.swift

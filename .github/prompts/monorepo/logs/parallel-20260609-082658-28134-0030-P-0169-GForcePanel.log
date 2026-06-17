@@ -1,0 +1,6 @@
+I'll start by exploring the repository structure to understand the task, the web source, and the existing Apple app architecture.
+
+The web source is clear. Now let me explore the Apple app structure thoroughly.
+
+No `.xcodeproj` at depth 2. Let me check deeper and look for existing GForcePanel files plus a good reference panel.
+

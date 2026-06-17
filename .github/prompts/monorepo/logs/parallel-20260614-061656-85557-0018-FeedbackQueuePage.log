@@ -1,0 +1,183 @@
+I'll start by exploring the repository structure to understand the task scope—the web source page, the existing Apple app structure, and supporting infrastructure.
+
+The web source is clear. Now let me explore the Apple app structure, existing feature pages for patterns, the parity manifest/ledger, and the API types.
+
+Note: the prompt's output path says `TeslaSync/Features/Admin/` but actual sources live under `TeslaSync/Sources/Features/`. Let me find where existing admin pages live and follow that convention.
+
+The real convention is `Sources/Features/Admin/` (the prompt path is a generator template). AuditLogPage is the closest analog (list + filters + paging). Let me study it thoroughly.
+
+The files are under `apps/apple/Sources/`, not `apps/apple/TeslaSync/Sources/`. Let me correct the paths.
+
+Excellent pattern. Let me read the supporting AuditLog files (models, filters, table, sample), plus the web feedback hook/types and how routes register.
+
+Strong, consistent pattern. Now let me look at the sample data source, the production KMP binding, the web feedback hook/types, the route enum, and the string catalog.
+
+Let me read the full feedback type definitions and look at how a production data source binds to the KMP shared core.
+
+Now let me understand the routing system and where route registrations are composed into the app shell.
+
+Let me read the route parser, host registry, and the app composition root.
+
+Now I have the routing picture. Let me inventory the component library and design tokens so I use the correct shared component APIs.
+
+Let me read the exact APIs of the components I'll use: Pickers, Buttons, Badges, Fields, Utility (masked value), States, Skeletons, People, Typography, Cards, and the design tokens.
+
+Let me confirm the design tokens, the string catalog location/format, the banner API, and the test pattern.
+
+Let me check the badge helpers, design tokens, xcstrings format, and whether xcodegen/project exist for building.
+
+I have all component/token details. Now let me check the gate scripts, the README gate contract, an existing log for format, and whether pwsh is available.
+
+Critical insight from the predecessor's log: the full `xcodebuild` scheme is RED due to a **pre-existing, out-of-scope compiler crash** in `TeslaSync/shared-surfaces`, so verification was done via isolated type-checks + a model harness. Let me confirm tooling, placeholder patterns, and generate the project to establish a baseline.
+
+All defaults confirmed (web relies on inline `t(key, default)` values). Now let me generate the Xcode project and establish a baseline build state, since the predecessor reported a pre-existing out-of-scope compiler crash.
+
+Project generated. There are iOS (`TeslaSync`) and macOS (`TeslaSync-macOS`) app + test targets. Let me launch a baseline build in the background to learn the ground-truth pre-existing state while I write code.
+
+While that builds, let me set up tracking and write the plan.
+
+Baseline build is running. Let me start writing the implementation — first the value types, mirroring the AuditLog pattern.
+
+Now the Observable page model with the data-source seam.
+
+Let me check the baseline build progress, then continue with the sample data source.
+
+Build still compiling. Continuing with the sample data source.
+
+Let me refactor the model's filter setters to support immediate Picker binding, then write the page view.
+
+Build still going. Let me write the main page view.
+
+Build still running. Now the table + expansion file (the bulk of the parity surface).
+
+Now let me check the baseline build result.
+
+Build still running (output buffered through `tail`). Let me continue with the route registration and the routing edits.
+
+Now wire the new route into `AppRoute`, the parser, and the app composition root.
+
+Now wire into the app composition root. Let me view the exact block to edit precisely.
+
+swiftformat is available. Let me make the wrap edit (functionally), then auto-format to fix indentation.
+
+The chain is correctly re-indented by swiftformat. Let me check the baseline build now.
+
+The full baseline build is slow (the large shared-surfaces module). Let me proceed with the string catalog. First, analyze the catalog: which keys already exist, and its exact format/sort, so I add keys cleanly.
+
+The catalog isn't plainly sorted and uses ` : ` separators. None of my 41 keys exist. Safest path: insert new entries verbatim without touching existing ones. Let me inspect how the predecessor's keys (`admin.auditLog.*`, `route.auditLog`) are formatted to match exactly.
+
+Format confirmed. Let me insert all 41 entries verbatim after the `"strings" : {` opener, leaving existing entries byte-identical, then validate the JSON.
+
+The `"strings"` opener uses `": "` (top-level), while entries use ` : `. Let me fix the marker and re-run.
+
+41 entries inserted, JSON valid (8654 → 8695). Let me check the baseline build now.
+
+Baseline still building. Let me write the model tests while it runs.
+
+Let me check the baseline build (it's been running a while).
+
+The full build is very slow (16+ min, likely the heavy shared-surfaces batch the predecessor flagged). Let me run the fast in-scope gates now — they don't depend on the full build. Start with swiftformat lint and the placeholder scan on my files.
+
+Placeholder scan: **EXIT=0, COUNT=0**. Let me wait for the swiftformat lint result.
+
+swiftformat found fixable style issues in 3 files. Let me auto-format my files, then re-lint to confirm clean.
+
+3 files reformatted. Let me re-lint (swiftformat + swiftlint strict) on my files to confirm clean.
+
+swiftformat lint: **0/10 require formatting**. Now swiftlint --strict on my files.
+
+swiftlint flagged 7 issues: trailing-closure style (2), line-length in the app chain (4), and file-length in the Table (1). Let me view the exact spots to fix them precisely.
+
+The registry pyramid is maxed out — adding any nesting level overflows 120 chars. The clean fix is to flatten it into a helper. Let me view the enclosing type and properties.
+
+`selection` and `settingsModel` are accessible `@State`. Let me view the closing of the environment block to replace the whole pyramid with a flat helper.
+
+Let me flatten the pyramid via a Python replacement (reliable for the 44-line block) and insert a helper computed property.
+
+The flattened helper looks good (max line 105). The baseline build just completed — let me read its result, and verify the environment line.
+
+The baseline build confirms the **pre-existing out-of-scope crash**: the failing batch is dominated by `TeslaSync/shared-surfaces/*` files (TeslaCarViz, TeslaReauthBanner, ThemePicker) — exactly what the predecessor documented. My `Features/Admin` files aren't in the failure. But TeslaSyncApp.swift is batched with shared-surfaces, so I'll verify my code via curated isolated type-check. First, let me finish the lint fixes. Fixing the two trailing-closure issues:
+
+Now split the large expansion struct into its own file to fix `file_length`. Let me find its boundaries.
+
+Table.swift is now 252 lines, Expansion.swift 212 — both under 400. Let me re-run swiftformat + swiftlint on the complete final set.
+
+Both lint gates are **clean (0 violations)**. Now I need to verify compilation. The full build crashes on pre-existing out-of-scope shared-surfaces, so I'll (a) run the full build to a log to confirm my files have zero diagnostics, and (b) run a model harness for behavioral proof. First, regenerate the project to include the new file and start the full build.
+
+Project regenerated; `Shared.xcframework` is present. Let me start the full macOS build to a log file (background), then build a model harness for fast behavioral proof.
+
+Full build started to a log. Now let me build a model harness (real logic files + a `TSTone` shim) to prove the core logic compiles under Swift 6 and behaves correctly.
+
+The temp path collided with an existing file. Let me use a fresh directory.
+
+Now compile and run the harness under Swift 6 (strict concurrency) against the real logic files.
+
+The harness caught a **real Swift 6 bug**: `FeedbackQuery.init`'s default `limit: Int = FeedbackQueuePageModel.pageSize` references a `@MainActor`-isolated static from a nonisolated context — this would fail the real build too. Let me fix it by moving the canonical constant to the nonisolated `FeedbackQuery`. (The TSTone error is just a shim artifact — real `TSTone` is public.)
+
+Now make the shim's `TSTone` public (matching the real module) and recompile the harness.
+
+**Harness: `HARNESS_OK ALL PASSED`** under Swift 6 strict concurrency — and it caught a real actor-isolation bug, now fixed. Let me re-lint the two changed files and probe whether `Sources/` references the crashing surface types (to design a clean view type-check).
+
+Let me check the re-lint result and peek at the running build log for any diagnostics in my files.
+
+Re-lint clean (0/2, 0 violations). The running build is stale (pre-fix). Let me stop it and instead do a curated `swiftc -typecheck` of the view files against the **real** component/token/route sources — this definitively verifies the views without the shared-surfaces crash.
+
+All errors are in `UnitFormatters.swift` (a dep I pulled in that needs `SharedFacade`/KMP `Units`) — **zero errors in my files**. The curated set cascaded. Let me instead type-check the whole self-contained `Sources/` tree against the real KMP `Shared` framework. First, confirm `Sources/` doesn't reference the crashing surfaces.
+
+The 5 matches are all TS-prefixed local components (`TSThemePicker`, `TSTeslaReauthBanner`), not the crashing surfaces — so `Sources/` is self-contained against the KMP `Shared` framework. Let me type-check the **entire `Sources/` tree** (includes all my files in real context) for macOS.
+
+Excellent — **6 errors total, all in the sibling `TeslaOrdersPage.swift`** (which references surface-module types I excluded); **zero in my files**. Let me confirm no other files error, then re-run cleanly excluding that pre-existing cross-dependency, for both macOS and iOS.
+
+Confirmed — only `TeslaOrdersPage.swift` (sibling, surface-coupled) errors. Let me run a clean type-check excluding that pre-existing cross-dependency, for **both** macOS and iOS (exercising my `#if os(iOS)` compact branches).
+
+Same pattern — only sibling surface-coupled pages (`LiveSignalInspector*`) error; **my files stay clean**. Let me enumerate all surface-coupled siblings and exclude them for one final clean pass.
+
+Let me inspect the `AppSettingsView`/`LoadableState` errors (likely cascades) before the final exclusion pass.
+
+True error locations are **only** `LiveSignalInspectorPage`/`Model` and `TeslaOrdersPage` (pre-existing surface-coupled siblings). My files: zero errors in every run. Final clean pass excluding those 3 siblings, for macOS + iOS:
+
+One more cascade: `LiveSignalInspectorRouteRegistration` references the excluded page + surface factories. Excluding it too for the final pass:
+
+Same pattern — `TeslaOrdersRouteRegistration` (references its excluded page). Excluding the full set of pre-existing surface-coupled siblings for the definitive pass:
+
+My 7 files are confirmed in the compile set with zero diagnostics across all runs. The remaining errors are the `LiveSignalInspector*`/`TeslaOrders*` families (surface-coupled). Excluding both families entirely for the definitive 0-error proof:
+
+The macOS pass is down to 2 errors (iOS still running). Let me inspect the 2 macOS errors directly while iOS finishes.
+
+The 2 macOS errors are `TeslaSyncApp.swift` failing to find the two registration files **I excluded** — an artifact proving my code correctly references them, not a real bug. My 7 files + AppRoute + AppRouteParser remain at zero errors. Let me wait for the iOS run, then do the strongest possible check: type-check the **entire app** (Sources + all TeslaSync surfaces) to see if it even crashes in `-typecheck` mode.
+
+Both idioms: only 2 errors, both being `TeslaSyncApp.swift` referencing the registration files I excluded — pure exclusion artifacts confirming my references are correct. Now the strongest check: type-check the **entire app target** (Sources + all 5 TeslaSync surface dirs) for macOS — to see if my code integrates and whether the pre-existing crash is real.
+
+4533 files (the "mega-codebase") — this is the heavy compile the predecessor flagged; it'll run a while or crash. My per-file evidence is already conclusive. While it runs, let me update the ledger and tracking. First, inspect the ledger schema and an existing admin row.
+
+Let me view the tail of the ledger to insert the two rows with minimal diff.
+
+Ledger valid (34 rows, FeedbackQueue 43/43 for both idioms). Let me check the whole-app type-check progress.
+
+The whole-app check is still grinding (4533 files). My per-file evidence is already conclusive. Let me verify string coverage — confirm every required key is actually referenced in my Swift code and present in the catalog (for the PARITY section integrity).
+
+All 38 keys confirmed: present in catalog and referenced in code (the 6 category/status keys via `labelKey` in Models, the rest as literals). Let me check the whole-app type-check.
+
+All 38 strings verified in both code and catalog. The whole-app check is still grinding (supplementary). My per-file evidence is conclusive. Let me write the evidence log now.
+
+Let me check the whole-app type-check result.
+
+The whole-app type-check (4533 files) is impractically slow and is supplementary — my per-file evidence is conclusive. Let me stop it and do final verification: git status, confirm the generated project isn't staged, and a final lint sweep.
+
+All changes are exactly the intended files; the generated `.xcodeproj` is git-ignored (won't be committed). Let me do one final combined lint sweep on all touched files, then commit.
+
+Final lint clean (**0/11 format, 0 violations**). Now staging exactly the intended files and committing.
+
+Committed as `4355f0d9c`. Let me update tracking and clean up temp artifacts.
+
+All work is committed and the working tree is clean. Task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

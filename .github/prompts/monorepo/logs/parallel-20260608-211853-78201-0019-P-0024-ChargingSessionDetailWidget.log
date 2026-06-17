@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure and checking whether the Apple toolchain and required dependencies are available.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me explore the existing Apple app structure and the web source.
+
+Now let me explore the Apple app's existing dashboard-widgets directory and supporting infrastructure (state holders, tokens, i18n).
+
+A large set of existing widgets exists. Let me check for any existing ChargingSession widget, understand the project.yml build configuration, and identify the most complete reference widget to model after.
+
+Key finding: build uses XcodeGen with glob-based source paths, so new files in `dashboard-widgets/` are auto-included. Let me study the most relevant reference widgets and shared infrastructure. `SuperchargerHistoryWidget` is charging-related; chart widgets use `.Chart.swift`. Let me read complete reference sets.
+
+PowerFlowHistoryWidget is the closest analog (power curve over time, multi-file). Let me read its complete set plus the chart pattern from MotorHistoryWidget.
+
+Excellent reference. Let me read the rest of the PowerFlowHistoryWidget file set and the shared scaffolding it depends on.
+
+Let me read the remaining PowerFlow files (Previews, Tests, strings) and locate the shared scaffolding (registration, tokens, skeleton).
+
+Now let me locate the shared scaffolding (registration, tokens, skeleton) and check the web charging data types for SI field shapes.
+
+Now I have the charging data shapes (SI-canonical: `total_energy_added_wh`, `peak_power_w`, telemetry power in watts, soc percent). Let me read the design tokens and skeleton component.
+
+Let me find the exact token definitions (TSSpacing, TSRadius, Color.TS.*, Font.TS.*) to ensure I reference valid members.
+
+I have all tokens. Now let me check the dual-axis chart convention (web uses power kW + SoC % on two axes) and the test target wiring in project.yml.
+
+Let me read the exact test target source configuration to confirm how co-located `*Tests.swift` files are included.
+
+Test wiring confirmed (co-located `*Tests.swift` auto-included via `includes`). I have a complete picture. Let me check build tooling (xcodegen, pwsh, placeholder script, lint configs) and establish a baseline.
+
+Important: `Shared.xcframework` is absent (only `.gitkeep`). The build depends on it. Let me investigate how it's produced and whether the project can build at all.
+
+A Gradle-based script builds `Shared.xcframework`. Let me read it and check whether the KMP/Java toolchain is available — this determines whether the full app can build.
+
+Java 17 + Gradle wrapper present; the xcframework builds via KMP. Let me confirm the pre-build wiring, read lint configs, and verify the canonical registry metadata — then I'll kick off the slow Gradle build in the background while I author.
+
+Pre-build script is wired into the project, so `xcodebuild` will build the xcframework automatically. The KMP build is the long pole — let me kick it off in the background now (warms the Gradle daemon + downloads Kotlin/Native while I author), and locate the registry file.
+
+Registry metadata confirmed. The KMP build progressed (mostly FROM-CACHE) and exited — let me verify it succeeded and staged the xcframework.
+
+The background job didn't finish staging (likely truncated when its launching session ended). Let me run it synchronously to completion — most tasks are now cached, so it should be quicker.
+
+The KMP build is compiling Kotlin/Native (slow first run). I'll author the surface while it runs. First, let me check for any type-name collisions with the existing `ChargingSessionCard` feature-view and other widgets in the shared module.
+
+No `ChargingSessionDetail*` collisions exist (only `Charger*`/`Charge*` from other widgets), so I'll use the full `ChargingSessionDetail` prefix. Let me check the background build progress, then begin authoring.
+
+The KMP `Shared.xcframework` built successfully (iOS arm64 + iOS-sim arm64 + macOS arm64 slices) and is staged. The environment is fully capable. Let me verify the staged slices, then author the surface.
+
+Confirmed `convertEnergyFromSI(wh, 'kWh') = wh/1000`. Environment fully capable. Now I'll author the surface — 7 files mirroring the established PowerFlow pattern. Starting with the state-holder/telemetry/i18n seam.
+
+Now the projection core (Adapter): charger classification, point/summary projection, the dual-axis scale, formatters, latest-session selector, and a11y.
+
+Now the presentational subviews — the dual-axis chart (power kW area + SoC % line), stat row, legend, empty state, compact big-number view, and charger chip.
+
+Now the main View — header, freshness chip, all phases (loading/error/content/empty), and the compact vs standard/wide layouts.
+
+Now the previews (one per state) and the i18n strings catalog.
+
+Now the comprehensive test suite — adapter projection, charger classification, formatters, model phases, registry parity, and accessibility.
+
+All 7 files authored. Let me verify i18n key consistency (code vs strings), then auto-format and lint my files.
+
+Keys match 1:1. Let me confirm with a diff, then auto-format and strict-lint my files.
+
+Keys match. swiftformat normalized my files. Now strict-lint my files and confirm format compliance.
+
+My files pass strict lint and format checks (0 violations). Now let me generate the Xcode project and run the iOS build+test gate.
+
+Project generated with `TeslaSync` and `TeslaSync-macOS` schemes. Now the main event — the iOS build+test gate. Let me verify the log directory and start the iOS build+test in the background.
+
+The iOS build+test is running. Let me examine an existing P4 log to mirror the expected format while the build runs.
+
+The precedent reveals known runner constraints (CoreSimulator crashes under contention; missing macOS signing identity). Let me read the PowerFlow log (0073) — the exact pattern I mirrored — to follow its gate-evidence framing precisely.
+
+Critical insight: the current repo is further along than the PowerFlow precedent — `dashboard-widgets` is now registered in `project.yml`/`.swiftlint.yml`, and I've staged `Shared.xcframework`. So unlike the precedent's "DEFERRED" disposition, I can get real build+test evidence. Let me check the iOS build progress.
+
+Build is compiling the full `TeslaSync` module against the iOS 18 simulator SDK with `Shared.xcframework` linked — no errors so far. Let me continue waiting.
+
+The `TeslaSync` app module compiled cleanly (no errors), my widget's swift files built into the app, and `ChargingSessionDetailWidget.strings` was validated and copied into the bundle. Now it's building extensions/test bundle. Let me keep waiting for the test phase.
+
+Build process is alive, last at "EmitSwiftModule for TeslaSync" — a long single step (large module, heavily-contended 40-slot runner). Output is buffered. Let me wait further.
+
+11+ minutes with zero log growth while the process stays alive — that smells like a stall, not just buffering. Let me check whether the compiler is actually burning CPU (slow) or blocked (deadlocked) on the contended shared runner.
+
+This is a heavily oversubscribed shared runner — **load average 199**, 146 concurrent `swift-frontend` processes from ~40 parallel slots. My build IS progressing (CPU-active) but extremely slowly. Per the established precedent (0073/0035 logs), the Xcode app build/test is environmentally constrained here. Let me get fast, definitive macOS+iOS SDK compile evidence of my code via direct `swiftc -typecheck` (single invocations) while the full build grinds.
+
+macOS 15 SDK typecheck passes (EXIT=0). Now the iOS 18 simulator SDK typecheck.
+
+Both SDK typechecks pass (EXIT=0) — my surface compiles against iOS 18 **and** macOS 15 under Swift 6 strict concurrency. Now let me execute the test suite deterministically via a host XCTest harness (no simulator), mirroring the accepted precedent. Setting up a SwiftPM package:
+
+Now run the host XCTest suite (no simulator) — the authoritative test-execution evidence.
+
+The harness test target choked on `-default-isolation MainActor` conflicting with `XCTestCase`'s nonisolated inits (a harness-only artifact). Fix: apply that flag only to the production target, not the test target. The tests are already explicitly `@MainActor`.
+
+**28/28 tests pass** on the host (0 failures), executing the real surface sources — `Adapter` (16), `Model` (9), `Registry` (2), `Accessibility` (1). Authoritative, deterministic, simulator-free. Let me check the iOS xcodebuild progress and run the placeholder gate.
+
+Two milestones: **iOS BUILD SUCCEEDED** (the full app built my widget against the iOS 18 SDK), and **placeholder gate EXIT=0** (COUNT=0). The build process is now in the `test` phase on the simulator. Let me monitor the test run.
+
+My widget's files individually compiled into the real `TeslaSync` app target (lines 7041–7057, no errors), iOS **BUILD SUCCEEDED**, and the run is now in the test-bundle compile/run phase (grinding under load 199). Let me check available code-signing identities (relevant for the macOS gate) while iOS continues.
+
+Confirmed **0 valid signing identities** — exactly the precedent's documented macOS constraint (the macOS app's hardened-runtime + entitlements can't be signed here; iOS-sim doesn't need it, which is why it built). My `MAC_TYPECHECK_EXIT=0` already proves macOS-SDK correctness. Let me let the iOS test phase progress and check back.
+
+The iOS test-phase build is grinding on `EmitSwiftModule` under load ~139 (9+ min, CPU-bound, not deadlocked). I have definitive evidence already (iOS BUILD SUCCEEDED + 28/28 host tests + both-SDK typechecks). Let me attempt the macOS gate in parallel (separate DerivedData to avoid lock conflicts) to capture authentic evidence of the signing wall, while iOS continues.
+
+Both gate builds are running in the background. Let me wait and then check progress on both.
+
+Definitive macOS result: **BUILD/TEST FAILED** solely due to the environmental signing wall — `"TeslaSync-macOS" has entitlements that require signing with a development certificate` (the 0-identity runner; matches the documented precedent). Not a code defect — my macOS-15 SDK typecheck is green. iOS progressed past the stall (BUILD SUCCEEDED, now prepping test bundles). Let me capture the macOS exit code and keep monitoring iOS.
+
+MAC_EXIT=65 — and the **only** errors are signing/entitlements (zero compile errors); my surface itself is clean on macOS (corroborated by the green macOS typecheck). Now let me give the iOS simulator test run a chance to finish.
+
+The iOS simulator test run is **actively executing and passing** (many suites "0 failures", `view.opened` diagnostics firing — no simulator crash). Let me find my widget's test results specifically and wait for the final result.
+
+**My widget's tests pass on the real iOS 18 simulator too: 28 passed, 0 failed** (ChargingSessionDetailAdapter/Model/Registry/Accessibility suites all green). So I now have both host AND simulator execution green. The overall run continues through remaining app suites. Let me wait for the final iOS result.
+
+**IOS_EXIT=0** — the full iOS `xcodebuild build test` (BUILD + simulator TEST) passed end-to-end. Let me confirm the final iOS TEST result and run the full-tree swiftlint/swiftformat gate commands as specified.
+
+iOS gate fully green: **TEST SUCCEEDED**, 0 failed cases anywhere, my 28 cases passed on-device. But the full-tree `swiftlint --strict` surfaced **1 pre-existing violation in a different widget** (`LiveSignalSparklinesWidget.Builder.swift:158` — not my file; my 6 files lint clean). Let me confirm scope: verify only my files changed, that this violation is pre-existing, and check full-tree swiftformat.
+
+Confirmed: my changes are confined to the 7 `ChargingSessionDetailWidget.*` files (the 2 modified web files pre-existed in the worktree, untouched by me; xcodeproj/xcframework are gitignored artifacts). The `LiveSignalSparklinesWidget.Builder.swift` violation is **pre-existing** (unmodified by me, present at HEAD) — a sibling surface outside my allowed files. Let me wait for the swiftformat run.
+
+**FORMAT_EXIT=0** — full-tree swiftformat clean (0/1921 require formatting). Let me get the precise full swiftlint violation list to document honestly (confirm the only violation is the pre-existing non-scope one, and none are mine).
+
+Definitive: the entire tree has exactly **1** swiftlint violation — the pre-existing `LiveSignalSparklinesWidget.Builder.swift:158` (sibling surface, unmodified by me); **my files have 0**. I now have the complete authentic gate picture. Let me gather final metrics (line counts, iOS total test count) for the log.
+
+Final metrics in hand: my 7 files total 1823 lines (each ≤352, within the ≤400 house norm); the iOS unit bundle ran **6616 tests, 0 failures** (including my 28). Let me grab the base SHA and write the comprehensive, honest gate log.
+
+Gate log written. Now let me clean up temp artifacts and stage exactly my 7 files + the log for commit (excluding the pre-existing web changes and gitignored build artifacts).
+
+Exactly 8 files staged (my 7 + the log) — no pre-existing web changes, no gitignored artifacts. Committing.
+
+Committed (HEAD `b42fa18c1`). Let me do a final verification of the commit contents and confirm no stray background processes remain.
+
+The commit is clean: 8 files (my 7 surface files + the log), 2085 insertions. My `dashboard-widgets` files are all committed; the only remaining worktree changes are the 2 pre-existing `web/` files (never touched by me) and the gitignored `.xcodeproj`. The other `xcodebuild` PIDs belong to sibling parallel slots (different `-only-testing`/derivedData flags) — not mine to touch; my own builds completed. Let me confirm no managed shells are still running.
+
+All managed shells completed (exit 0); no lingering processes of mine. Let me remove the remaining `/tmp` scratch logs (outside the repo) for hygiene, then finalize.
+
+The task is complete and verified. Final state is clean — all my files are committed (HEAD `b42fa18c1`), scratch artifacts removed, no stray processes of mine.
+
+Merge made by the 'ort' strategy.
+ ...rd-widgets-0024-ChargingSessionDetailWidget.log | 262 +++++++++++++++
+ .../ChargingSessionDetailWidget.Adapter.swift      | 278 ++++++++++++++++
+ .../ChargingSessionDetailWidget.Model.swift        | 283 +++++++++++++++++
+ .../ChargingSessionDetailWidget.Previews.swift     | 178 +++++++++++
+ .../ChargingSessionDetailWidget.Tests.swift        | 341 ++++++++++++++++++++
+ .../ChargingSessionDetailWidget.Views.swift        | 352 +++++++++++++++++++++
+ .../ChargingSessionDetailWidget.strings            |  63 ++++
+ .../ChargingSessionDetailWidget.swift              | 328 +++++++++++++++++++
+ 8 files changed, 2085 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0024-ChargingSessionDetailWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.swift

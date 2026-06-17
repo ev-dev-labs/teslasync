@@ -1,0 +1,66 @@
+I'll start by exploring the repository structure to understand the task scope, then read the key files.
+
+Now let me explore the Apple app structure and supporting files in parallel.
+
+Let me examine the existing DriveScorePage (closest reference) and project config in parallel.
+
+The source tree is under `apps/apple/Sources/`. Let me read the actual files and project config.
+
+This is the key reference. Let me read the rest of the DriveScorePage module to understand all patterns.
+
+Now let me explore the component library, charts, design tokens, and supporting infrastructure in parallel.
+
+Let me read the chart wrapper components and the models/format helpers.
+
+Let me find the `tsUnits` environment key, design tokens, and look at the BestWorst/Sections files plus the web RadialGauge component.
+
+Let me examine routing infrastructure, design tokens, and how registrations are composed.
+
+Let me examine the parity ledger/manifest and how the web app groups the speed-profile route.
+
+The DriveScore log clarifies the path: files go under `Sources/Features/Driving/`. Let me check for existing SpeedProfile work and how driving sub-pages are routed.
+
+Let me check the App/navigation tests to understand constraints before adding a route.
+
+Let me read the design tokens and key UI components I'll use.
+
+Now let me read the UI components I'll use: Typography, Cards, States, Pickers, and data-display Metrics.
+
+Let me check the string catalog format, swiftlint rules, and the placeholder scanner.
+
+I have enough understanding of the components. Let me check swiftlint rules and the placeholder scanner to avoid gate failures.
+
+Let me set up task tracking and check build tooling availability.
+
+All tooling is present (Xcode 26.5). Let me verify the Shared framework staging and how units reach pages, then start writing code.
+
+Tooling is present but the KMP `Shared.xcframework` must be built (slow). Let me kick that off in the background while I write the code.
+
+All tooling present; the KMP framework is building in the background. Let me write a brief plan, then start implementing the value types.
+
+The background launcher returned (gradle continues via nohup). Let me proceed with implementation, starting with the value types.
+
+Now the format helpers and the pure engine (scatter + bucket transforms):
+
+Now the `@Observable` page model:
+
+Now let me check the `.metric` defaults before writing the sample fixtures.
+
+Now the chart sections (gauges, distribution bar, scatter):
+
+Now the bucket detail cards, insight, and skeleton sections:
+
+Now the main page scaffold:
+
+Now wire up navigation. First, add the `speedProfile` route case:
+
+Now create the route registration and wire it into the app:
+
+Now add the i18n keys. Let me inspect the catalog's formatting and ordering first.
+
+Now add the 21 `speedProfile.*` keys plus `route.speedProfile`, preserving the Xcode catalog formatting via targeted insertion:
+
+Keys inserted. Let me check the background framework build and look at the existing test style.
+
+The KMP framework build succeeded. Let me verify it got staged into this slot.
+

@@ -1,0 +1,2348 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page is large (38KB). Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web page and explore the Apple app structure.
+
+Let me continue reading the web page and explore the Apple TeslaSync structure.
+
+Let me continue reading the web page and explore the Apple Features directory structure properly.
+
+Let me finish reading the web page and explore the Apple project structure and existing feature views.
+
+The web page is now fully read. Let me explore the Apple project structure, existing page patterns, and the parity manifest in parallel.
+
+No `Features/` dir yet — output is new. `AlertStudioPage` is a good reference. Let me examine the project structure, parity manifest, and the reference page pattern.
+
+Key finding: `project.yml` has no `TeslaSync/Features` source path — existing pages live in `feature-views/`. Let me check the toolchain availability and study the reference page pattern (AlertStudioPage).
+
+Full toolchain is available (Xcode 26.5, xcodegen, swiftlint, swift 6.3.2, pwsh). The gate can run. Let me study the reference page architecture and launch a parallel exploration of the supporting infrastructure.
+
+The pattern is clear: `@Observable` ViewModel + shared `TS*` components + `AS*`-style per-page localizer. Toolchain is fully available. Let me read more reference files and launch parallel exploration of the supporting infrastructure.
+
+I'll investigate this systematically. Let me start by exploring the Apple app structure and examining the existing data-driven pages.I'll help you document the TeslaSync Apple app's component library and design tokens. Let me start by exploring the directory structure and then systematically locate each component.Now let me look for the P2/P3 component structure more systematically:Good! Now let me examine the AlertStudioPage files to understand the pattern, and check the selectedVehicle directory:Perfect! Now let me search for the specific components. I'll search systematically:Let me examine more of the AlertStudioPage pattern and the selectedVehicle mechanism:Now let me look at the design tokens first, then systematically extract each component:Now let me search for the data types in the KMP shared core and look at how views are injected:Excellent! Now let me extract the key files for all components and tokens:Let me examine one of these existing data-driven pages to see the full pattern:Perfect! Now let me look at the sample/preview data source pattern and find how the KMP data types are bridged:Now let me get the remaining components:Now let me search for chart components and more specific implementations:Now let me search for the actual KMP integration point and the real data source implementation:Now let me get the metric cards and design tokens:Now let me check the LiveConnection for SSE/streaming support:Now let me find the generated design tokens:Let me search for where the tokens are actually defined:Perfect! Now let me compile a comprehensive summary. Let me check one more thing - how views actually get the injected models:Now let me search for real usage examples:Perfect! Now I have all the information I need. Let me create a comprehensive report.
+
+## Comprehensive Investigation Report: Data-Driven Page Architecture in TeslaSync Apple App
+
+---
+
+### **1. @Observable View Model Pattern & Data Fetching**
+
+#### Key Pattern: `@Observable` model + source seam + callback binding
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Models.swift` (lines 15-62)
+
+**Example - ASRulesModel:**
+```swift
+@MainActor
+@Observable
+public final class ASRulesModel {
+    public private(set) var snapshot: ASListSnapshot<ASAlertRule>
+    @ObservationIgnored private let source: any ASRulesSource
+    @ObservationIgnored private var started = false
+
+    public init(source: any ASRulesSource) {
+        self.source = source
+        snapshot = ASListSnapshot()
+        source.onUpdate = { [weak self] snapshot in self?.snapshot = snapshot }
+    }
+
+    public var presentation: ASListPresentation<ASAlertRule> {
+        .resolve(snapshot)
+    }
+
+    public var rules: [ASAlertRule] {
+        snapshot.items
+    }
+
+    public func start() {
+        guard !started else { return }
+        started = true
+        source.start()
+    }
+
+    public func stop() {
+        started = false
+        source.stop()
+    }
+
+    public func refresh() {
+        source.refresh()
+    }
+}
+```
+
+**Pattern breakdown:**
+- Model is `@MainActor` + `@Observable` (lines 20-21)
+- Owns an `@ObservationIgnored` source protocol (line 24)
+- **Callback binding**: source calls `onUpdate` closure (line 30) → triggers snapshot update → SwiftUI re-renders
+- Derived `presentation` computed property transforms snapshot to render enum (line 40-42)
+- **Lifecycle**: `start()`/`stop()` delegate to source (lines 48-61)
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Features/Battery/BatteryDegradationPageModel.swift` (lines 42-131)
+
+Another example showing **async data loading pattern**:
+```swift
+@MainActor
+@Observable
+public final class BatteryDegradationPageModel {
+    public private(set) var phase: BatteryDegradationPhase = .loading
+    public private(set) var isRefreshing = false
+    public private(set) var vehicles: [BatteryVehicle] = []
+    public private(set) var selectedVehicleID: Int64?
+    public private(set) var health: BatteryHealthData?
+    public private(set) var detail: BatteryDegradationDetail?
+
+    @ObservationIgnored private let dataSource: any BatteryDegradationDataSource
+
+    public init(dataSource: any BatteryDegradationDataSource = SampleBatteryDegradationDataSource()) {
+        self.dataSource = dataSource
+    }
+
+    public func load() async {
+        phase = .loading
+        await fetchAll()
+    }
+
+    private func fetchAll() async {
+        vehicles = await (try? dataSource.loadVehicles()) ?? []
+        if selectedVehicleID == nil || !vehicles.contains(where: { $0.id == selectedVehicleID }) {
+            selectedVehicleID = vehicles.first?.id
+        }
+        await loadSelectedVehicle()
+    }
+
+    private func loadSelectedVehicle() async {
+        guard let id = selectedVehicleID else {
+            health = nil
+            detail = nil
+            phase = .empty
+            return
+        }
+
+        do {
+            let snapshot = try await dataSource.loadHealth(vehicleID: id)
+            health = snapshot
+            detail = await (try? dataSource.loadDegradation(vehicleID: id)) ?? nil
+            phase = snapshot == nil ? .empty : .ready
+        } catch {
+            health = nil
+            detail = nil
+            phase = .error(error.localizedDescription)
+        }
+    }
+}
+```
+
+---
+
+### **2. KMP Shared Core Integration & Data Types**
+
+#### Key Bridge: `StateHolderModel<T>` wraps Kotlin `StateFlow` → Swift observable
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/StateHolderModel.swift`
+
+```swift
+@MainActor
+@Observable
+public final class StateHolderModel<State> {
+    public private(set) var state: State?
+
+    @ObservationIgnored private let flow: Shared.Kotlinx_coroutines_coreStateFlow
+    @ObservationIgnored private let transform: (Any) -> State?
+    @ObservationIgnored private var task: Task<Void, Never>?
+
+    public init(
+        flow: Shared.Kotlinx_coroutines_coreStateFlow,
+        transform: @escaping (Any) -> State?
+    ) {
+        self.flow = flow
+        self.transform = transform
+        if let initial = flow.value {
+            state = transform(initial)
+        }
+    }
+
+    public func start() {
+        guard task == nil else { return }
+        task = Task { [weak self, flow, transform] in
+            do {
+                for try await value in FlowBridge.stream(from: flow) {
+                    if Task.isCancelled { break }
+                    guard let mapped = transform(value) else { continue }
+                    self?.state = mapped
+                }
+            } catch {
+                // Terminal errors stop subscription
+            }
+        }
+    }
+
+    public func stop() {
+        task?.cancel()
+        task = nil
+    }
+}
+```
+
+**How it works:**
+- Wraps KMP `Kotlinx_coroutines_coreStateFlow` (line 18)
+- On `start()`, uses `FlowBridge` to collect emissions (line 41)
+- Each Kotlin emission → transform → update `@Observable` state (line 44)
+- SwiftUI automatically re-renders when `state` changes
+
+#### Flow Bridge: Kotlin Flow → Swift AsyncThrowingStream
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/FlowBridge.swift` (lines 14-63)
+
+```swift
+public enum FlowBridge {
+    public static func stream(
+        from flow: Shared.Kotlinx_coroutines_coreFlow
+    ) -> AsyncThrowingStream<Any, Swift.Error> {
+        let flowBox = UncheckedSendable(flow)
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let collector = YieldingCollector { value in
+                        nonisolated(unsafe) let element = value
+                        continuation.yield(element)
+                    }
+                    try await flowBox.value.collect(collector: collector)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: FacadeError.from(error))
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+```
+
+#### LoadableState: Cache-then-network resource projection
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/LoadableState.swift` (lines 10-91)
+
+```swift
+public enum LoadableState<Value> {
+    case idle
+    case loading(cached: Value?, stale: Bool)
+    case loaded(Value, stale: Bool)
+    case empty(stale: Bool)
+    case failed(FacadeError, cached: Value?, stale: Bool)
+
+    public var value: Value? {
+        switch self {
+        case .idle, .empty: nil
+        case let .loading(cached, _): cached
+        case let .loaded(value, _): value
+        case let .failed(_, cached, _): cached
+        }
+    }
+
+    public var isStale: Bool {
+        switch self {
+        case .idle: false
+        case let .loading(_, stale), let .loaded(_, stale),
+             let .empty(stale), let .failed(_, _, stale):
+            stale
+        }
+    }
+
+    // Projects KMP Resource<T> into LoadableState
+    static func from(
+        _ resource: Shared.Resource,
+        transform: (Any) -> Value?
+    ) -> LoadableState {
+        let stale = resource.stale
+        switch resource {
+        case let success as Shared.ResourceSuccess<AnyObject>:
+            if let mapped = transform(success.data) {
+                return .loaded(mapped, stale: stale)
+            }
+            return .empty(stale: stale)
+        case let loading as Shared.ResourceLoading<AnyObject>:
+            return .loading(cached: loading.cached.flatMap(transform), stale: stale)
+        case let failure as Shared.ResourceError<AnyObject>:
+            return .failed(
+                FacadeError.from(failure.error),
+                cached: failure.cached.flatMap(transform),
+                stale: stale
+            )
+        default:
+            return .idle
+        }
+    }
+}
+```
+
+#### AppContainer wiring KMP → Swift
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/AppContainer.swift` (lines 1-61)
+
+```swift
+@MainActor
+@Observable
+public final class AppContainer {
+    public var unitPreferences: UnitPreferences
+
+    @ObservationIgnored public private(set) var auth: (any AuthTokenProviding & AuthChallengeHandling)?
+
+    // Wraps holder `StateFlow` into `@Observable` model
+    public func model<State>(
+        from flow: Shared.Kotlinx_coroutines_coreStateFlow,
+        transform: @escaping (Any) -> State?
+    ) -> StateHolderModel<State> {
+        StateHolderModel(flow: flow, transform: transform)
+    }
+
+    // Projects holder's `StateFlow<Resource<T>>` into observable `LoadableState`
+    public func loadable<Value>(
+        from flow: Shared.Kotlinx_coroutines_coreStateFlow,
+        as _: Value.Type = Value.self,
+        map: @escaping (Any) -> Value?
+    ) -> StateHolderModel<LoadableState<Value>> {
+        StateHolderModel(flow: flow) { raw in
+            guard let resource = raw as? Shared.Resource else { return nil }
+            return LoadableState.from(resource, transform: map)
+        }
+    }
+}
+```
+
+---
+
+### **3. selectedVehicle Mechanism**
+
+**Location:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/misc-surfaces/selectedVehicle/`
+
+**Model:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Model.swift` (lines 14-80)
+
+```swift
+@MainActor
+@Observable
+public final class SelectedVehicleStoreModel {
+    public private(set) var fleet: SelectedVehicleStoreFleetState = .loading
+    public private(set) var urlVehicleId: Int?
+    public private(set) var connection: SelectedVehicleStoreConnection = .live
+    public private(set) var updatedAt: Date?
+
+    // The persisted selection store (web `useSelectedVehicleStore`)
+    public let store: SelectedVehicleStore
+
+    @ObservationIgnored private let source: any SelectedVehicleStoreFleetSource
+    @ObservationIgnored private let telemetry: any SelectedVehicleStoreTelemetry
+    @ObservationIgnored let localize: (String, String) -> String
+
+    public init(
+        store: SelectedVehicleStore = SelectedVehicleStore(),
+        source: any SelectedVehicleStoreFleetSource,
+        telemetry: any SelectedVehicleStoreTelemetry = OSLogSelectedVehicleStoreTelemetry(),
+        localize: @escaping (String, String) -> String = SelectedVehicleStoreStrings.string
+    ) {
+        self.store = store
+        self.source = source
+        self.telemetry = telemetry
+        self.localize = localize
+        source.onUpdate = { [weak self] update in self?.apply(update) }
+    }
+
+    // The render-ready projection, recomputed from store + fleet + URL
+    public var projection: SelectedVehicleStoreProjection {
+        SelectedVehicleStoreResolver.build(
+            storedId: store.vehicleId,
+            urlId: urlVehicleId,
+            fleet: fleet
+        )
+    }
+
+    public var selected: SelectedVehicleStoreSummary? {
+        projection.selected
+    }
+
+    public var effectiveId: Int? {
+        projection.effectiveId
+    }
+}
+```
+
+**Store (persists to UserDefaults):** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Store.swift` (lines 14-93)
+
+```swift
+@MainActor
+@Observable
+public final class SelectedVehicleStore {
+    public private(set) var vehicleId: Int?
+    public private(set) var persistence: SelectedVehicleStorePersistence
+
+    @ObservationIgnored private let storage: any SelectedVehicleStorage
+    @ObservationIgnored private let isConnected: Bool
+
+    public init(storage: any SelectedVehicleStorage = UserDefaultsSelectedVehicleStorage()) {
+        self.storage = storage
+        isConnected = true
+        vehicleId = storage.read()  // Hydrate from UserDefaults
+        persistence = storage.isAvailable ? .persPerfect! Now I have all the information needed. Let me compile the comprehensive inventory:
+
+---
+
+## **TeslaSync Apple App: P3 Component Library & P2 Design Tokens Inventory**
+
+### **DESIGN TOKENS**
+
+#### **Spacingisted : .ephemeral
+    }
+
+    // Updates + persists the selection
+    public func setVehicleId(_ id: Int?) {
+        guard isConnected else { return }
+        vehicleId = id
+        let durable = storage.write(id)
+        persistence = durable ? .persisted : .ephemeral
+    }
+
+    // Cross-scene sync via UserDefaults.didChangeNotification
+    public func startObservingEx Tokens** (`TSSpacing`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/design/generated/apple/Tokens.swift` (Lines 175-185)
+
+```swift
+public enum TSSpacing {
+    public static let none: CGFloat = 0
+    public static let xs: CGFloat = 4
+    public static let sm: CGFloat = 8
+    public staticternalChanges() {
+        guard isConnected, !observing else { return }
+        observing = true
+        storage.beginObserving { [weak self] in self?.reloadFromStorage() }
+    }
+
+    private func reloadFromStorage() {
+        guard isConnected else { return }
+        let latest = storage.read()
+        guard latest != vehicleId else { return }
+        vehicleId = latest
+    }
+}
+```
+
+**Storage Seam let md: CGFloat = 12
+    public static let lg: CGFloat = 16
+    public static let xl: CGFloat = 20
+    public static let x2xl: CGFloat = 24
+    public static let x3xl: CGFloat = 32
+    public static let x4xl: CGFloat = 48
+}
+```
+
+#### **Color Tokens** (`Color.TS.*`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/design/generated/apple/Tokens.swift` (Lines 58-138)
+
+Semantic colors (adaptive light/dark/:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Seams.swift` (lines 21-100)
+
+```swift
+@MainActor
+public protocol SelectedVehicleStorage: AnyObject {
+    var isAvailable: Bool { get }
+    func read() -> Int?
+    @discardableResult func write(_ id: Int?) -> Bool
+    func beginObserving(_ onChange: @escaping @MainActor () -> Void)
+    func enhigh-contrast):
+- `Color.TS.bg` - Background surface
+- `Color.TS.surface` - Primary container surface
+- `Color.TS.surfaceGlass` - Frosted/glass overlay (4% opacity dark, 95% light)
+- `Color.TS.textPrimary` - Primary text
+- `Color.TS.textSecondary` - Secondary text
+- `Color.TS.textMuted` - Muted/dedObserving()
+}
+
+@MainActor
+public final class UserDefaultsSelectedVehicleStorage: SelectedVehicleStorage {
+    private let defaults: UserDefaults
+    private let key: String
+    private nonisolated(unsafe) var token: (any NSObjectProtocol)?
+    public let isAvailable: Bool
+
+    public init(
+        defaults: UserDefaults = .standard,
+        key: String = SelectedVehicleStoreKeys.storageKey
+    ) {
+        self.defaults = defaults
+        self.key = key
+        isAvailable = true-emphasized text
+- `Color.TS.accent` - Cyan accent (primary brand color)
+- `Color.TS.border` - Borders & dividers (12% opacity)
+- `Color.TS.statusSuccess` - Green status (success)
+- `Color.TS.statusWarning` - Orange/amber status (warning)
+- `Color.TS.statusDanger` - Red status (error/danger)
+- `Color.TS.status
+    }
+
+    public func read() -> Int? {
+        guard defaults.object(forKey: key) != nil else { return nil }
+        if let raw = defaults.string(forKey: key) {
+            return SelectedVehicleStoreIdParser.parse(raw)
+        }
+        let numeric = defaults.integer(forKey: key)
+        return numeric > 0 ? numeric : nil
+    }
+
+    @discardableResult
+    public func write(_ id: Int?) -> Bool {
+        if let id {
+            defaults.set(String(id), forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+        return true
+    }
+
+    public func beginInfo` - Cyan status (info/same as accent)
+
+**Chart Palette:**
+- `Color.TS.chartCategorical` - Array of 8 ordered categorical series colors (index-stable)
+- `Color.TS.chartSeriesBattery` - Green
+- `Color.TS.chartSeriesEnergy` - Orange/amberObserving(_ onChange: @escaping @MainActor () -> Void) {
+        endObserving()
+        token = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: defaults,
+            queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { onChange() }
+        }
+    }
+
+    public func endObserving() {
+        if let token {
+            NotificationCenter.default.removeObserver(token)
+        }
+        token = nil
+    }
+}
+```
+
+---
+
+### **4. Dependency Injection Pattern**
+
+#### Protocol se
+- `Color.TS.chartSeriesSpeed` - Blue
+- `Color.TS.chartSeriesRegen` - Cyan
+- `Color.TS.chartSeriesTemperature` - Red
+- `Color.TS.chartSeriesPower` - Purple
+
+#### **Font Tokens** (`Font.TS.*`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/design/generated/apple/Tokens.swift` (Lines 140-154)
+
+```swift
+public extension Font {
+    enum TS {
+        static let display = Font.system(size: 30ams (no concrete dependencies in models)
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Sources.swift` (lines 125-157)
+
+```swift
+// Read sources are protocols (web hooks)
+@, weight: .bold)
+        static let title = Font.system(size: 24, weight: .bold)
+        static let section = Font.system(size: 18, weight: .semibold)
+        static let panel = Font.system(size: 16, weight: .semibold)
+        static let body = Font.system(size: 14, weight: .regular)
+        static let bodySm = Font.system(size: 12, weight: .regular)
+        static let caption = Font.system(size: 12, weight: .regular)
+        static let label = Font.system(size: 12, weight: .medium)
+    }
+}
+```
+
+#### **Radius Tokens** (`TSMainActor
+public protocol ASRulesSource: AnyObject {
+    var onUpdate: (@MainActor (ASListSnapshot<ASAlertRule>) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+
+@MainActor
+public protocol ASChannelsSource: AnyObject {
+    var onUpdate: (@MainActor (ASListSnapshot<ASNotificationChannel>) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+
+@MainActor
+public protocol ASMetricsSource: AnyObject {
+    var onUpdate: (@MainRadius`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/design/generated/apple/Tokens.swift` (Lines 187-192)
+
+```swift
+public enum TSRadius {
+    public static let sm: CGFloat = 8
+    public static let md: CGFloat = 12
+    public static let lg: CGFloat = 16
+    public static let pill: CGFloat = 9999
+}
+```
+
+#### **Motion Tokens** (`TSMotion`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/design/generated/apple/Tokens.swift` (Lines 194-201)
+
+```swift
+public enum TSMotion {
+    public static letActor (ASListSnapshot<ASComputedMetricSummary>) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+```
+
+#### In-memory doubles for previews/tests
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Sources.swift` (lines 159-234)
+
+```swift
+@MainActor
+public final class ASInMemoryRulesSource: ASRulesSource {
+    public fastDuration: TimeInterval = 0.150
+    public static let normalDuration: TimeInterval = 0.250
+    public static let slowDuration: TimeInterval = 0.400
+}
+```
+
+---
+
+### **COMPONENT LIBRARY (P3)**
+
+#### **1. Glass Panel / Card Container (TSGlassPanel)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/UI/Cards.swift` (Lines 4-16)
+
+**Public API:**
+```swift
+public struct TSGlassPanel var onUpdate: (@MainActor (ASListSnapshot<ASAlertRule>) -> Void)?
+    public private(set) var startCount = 0
+    private let initial: ASListSnapshot<ASAlertRule>?
+
+    public init(initial: ASListSnapshot<ASAlertRule>? = nil) {
+        self.initial = initial
+    }
+
+    public func start() {
+        startCount += 1
+        if let initial { onUpdate?(initial) }
+    }
+
+    public func stop() {}
+    public func refresh() {}
+
+    public func push(_ snapshot: ASListSnapshot<ASAlertRule>) {
+        onUpdate?(snapshot)
+    }<Content: View>: View {
+    public init(@ViewBuilder content: @escaping () -> Content)
+}
+```
+
+**Real Usage Example:**
+```swift
+// From /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/shared-surfaces/StatusHero.Views.swift:168
+TSGlassPanel {
+    VStack {
+        // content here
+    }
+}
+```
+}
+```
+
+#### Constructor injection
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Models.swift` (line 27)
+
+```swift
+public init(source: any ASRulesSource) {
+    self.source = source
+    snapshot = ASListSnapshot()
+    source.onUpdate = { [weak self] snapshot in self?.snapshot = snapshot }
+}
+```
+
+**For previews:**
+
+```swift
+public init(preview
+
+---
+
+#### **2. Radial Gauge (TSRadialGauge)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Charts/PieGauge.swift` (Lines 31-71)
+
+**Public API:**
+```swift
+public struct TSRadialGauge: View {
+    public init(value: Double, label: LocalizedStringKey, colorIndex: Int = 0)
+}
+```
+- `value: Double` - Clamped 0...1 : ASListSnapshot<ASAlertRule>) {
+    let inMemory = ASInMemoryRulesSource(initial: preview)
+    source = inMemory
+    snapshot = preview
+    inMemory.onUpdate = { [weak self] snapshot in self?.snapshot = snapshot }
+}
+```
+
+#### Stub data source for Battery page
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Features/Battery/BatteryDegfraction for the gauge fill
+- `label: LocalizedStringKey` - Display label below percentage
+- `colorIndex: Int` - Index into `TSChartPalette.categorical` for color
+
+**Real Usage Example:**
+```swift
+TSRadialGauge(value: 0.75, label: "battery.health", colorIndex: 0)
+    .frame(width: 120, height: 120)
+```
+
+---
+
+#### **3. Chart ContainerradationPageModel.Sample.swift` (lines 10-147)
+
+```swift
+public struct SampleBatteryDegradationDataSource: BatteryDegradationDataSource {
+    public init() {}
+
+    public func loadVehicles() async throws -> [BatteryVehicle] {
+        [
+            BatteryVehicle(id: 1, displayName: "Rocinante", vin: "5YJ3E1EA Wrapper (TSChartContainer)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Charts/ChartContainer.swift` (Lines 5-72)
+
+**Public API:**
+```swift
+public struct TSChartContainer<Content: View>: View {
+    public init(
+        _ title: LocalizedStringKey,
+        summary: LocalizedStringKey? = nil,
+        isEmpty: Bool = false,
+        csv: String? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    )
+}
+```
+
+**Real Usage Example:**
+```swift
+// From /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-7KF000001"),
+            BatteryVehicle(id: 2, displayName: "Tachi", vin: "5YJYGDEE1LF000002")
+        ]
+    }
+
+    public func loadHealth(vehicleID _: Int64) async throws -> BatteryHealthData? {
+        B8/apps/apple/SourcesatteryHealthData(
+            current/FeaturesS/Batteryoh: 93/S.leepEfficiencyPage.Charts.swift:20
+TSChartContainer("sleep.stateDistribution", summary: "sleep.stateDistribution.aria") {
+    if sleep.hasStateDistribution {
+        TSPieChart(slices: slices, shows4,
+            estimatedCapacityKwh: 71.2,
+            degradationRateYr: 2.1,
+            batteryAgeMonths: 30,
+            totalCycles: 412,
+            avgDepthOfDischarge: 62.5,
+            fastChargePct: 38,
+            fullChLegend: false)
+            .frame(height: 200)
+    } else {
+        TSEmptyState(title: "sleep.noStateData", systemImage: "moon.zzz")
+    }
+}
+```
+
+---
+
+#### **4. Area Chart Wrapper (TSAreaChart)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Charts/LineCharts.swift` (Lines 72-96)
+
+**Public API:**
+```argePct: 22,
+            chargeHabitsScore: 78,
+            tempExposureScore: 84,
+            history: SampleBatteryDegradationDataSource.sampleHistory()
+        )
+    }
+
+    public func loadDegradation(vehicleID _: Int64) async throws -> BatteryDegradationDetail? {
+        BatteryDegradationDetail(...)
+    }
+}
+
+#if DEBUG
+    public struct EmptyBswift
+public struct TSAreaChart: View {
+    public init(series: [TSChartSeries], hidden: Set<String> = [])
+}
+```
+- `series: [TSChartSeries]` - Array of named series with gradient-filled areas
+- `hidden: Set<String>` - Series IDs to exclude from rendering
+
+**Chart Data Structure:**
+```swift
+public struct TSChartSeries: Identifiable {
+    public let id: String
+    public let name: LocalizedStringKey
+    public let nameText: String
+    public let points: [TSChartPoint]
+    public let coloratteryDegradationDataSource: BatteryDegradationDataSource { ... }
+    public struct FailingBatteryDegradationDataSource: BatteryDegradationDataSource { ... }
+#endif
+```
+
+---
+
+### **5. State Presentation Enum Pattern (reusable & generic)**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Sources.swift` (lines 57-123)
+
+#### GenericIndex: Int
+    public var color: Color { TSChartPalette.color(at: colorIndex) }
+}
+
+public struct TSChartPoint: Identifiable {
+    public let id: String
+    public let xValue: Double
+    public let yValue: Double
+    public init(x: Double, y: Double, id: String? = nil)
+}
+```
+
+**Real Usage Example:**
+```swift
+let series = [
+    TSChartSeries(
+        id: "range_original",
+        name: "battery.range.original",
+        nameText: "Original",
+        points: [TSChartPoint(x: 0 snapshot type
+
+```swift
+public struct ASListSnapshot<Element: Sendable & Equatable>: Sendable, Equatable {
+    public var status: ASLoadStatus
+    public var items: [Element]
+    public var connection: ASConnection
+    public var refreshing: Bool
+    public var error: ASLoadError?
+    public var updatedAt: Date?
+
+    public init(
+        status: ASLoadStatus = .loading,
+        items: [Element] = [],
+        connection: ASConnection = .live, y: 500), TSChartPoint(x: 100, y: 480)],
+        colorIndex: 0
+    )
+]
+TSAreaChart(series: series)
+    .frame(height: 240)
+```
+
+---
+
+#### **5. Bar Chart Wrapper (TSBarChart)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Charts/BarCharts.swift` (Lines 4-46)
+
+**Public API:**
+```swift
+public struct TSBarChart: View {
+    public init(series: [TSChartSeries], hidden: Set<String> = [], stacked: Bool = false)
+}
+```
+- `series: [TSChartSeries]` -,
+        refreshing: Bool = Multi false,
+        error: ASLoa-series bardError? = nil,
+        up datadatedAt: Date? = nil
+- `hidden: Set<String
+    ) {
+        self.status>` - Series IDs to hide = status
+        self.items =
+- `stacked: Bool` - items
+        self.connection = connection True
+        self.refreshing = refresh for stacked bars, falseing
+        self.error = error for groupe
+        self.updatedAt =d
+
+**Real Usage Example:**
+```swift
+// From SleepEfficiencyPage.Charts.swift:98
+TSBarChart(series: series)
+    .frame(height: 200)
+    .accessibilityLabel(Text("sleep.sentryComparison.aria"))
+```
+
+---
+
+#### **6. Pie/Donut Chart Wrapper (TSPieChart)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync updatedAt
+    }
+
+    public static func loaded(_ items: [Element], connection: ASConnection = .live) -> ASListSnapshot {
+        ASListSnapshot(status: items.isEmpty ? .empty : .loaded, items: items, connection: connection)
+    }
+}
+```
+
+#### Generic presentation enum
+
+```swift
+public enum ASListPresentation<Element: Sendable & Equatable>: Sendable, Equatable {
+    case loading
+    case content([Element], ASConnection, refreshing: Bool)
+    case empty(ASConnection-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Charts/PieGauge.swift` (Lines 5-28)
+
+**Public API:**
+```swift
+public struct TSPieChart: View {
+    public init(slices: [TSChartSlice], showsLegend: Bool = true)
+}
+```
+- `slices: [TSChartSlice]` - Pie slice data
+- `showsLegend: Bool` - Toggle built-in legend
+
+**Chart Data Structure:**
+```swift
+public struct TSChartSlice: Identifiable {
+    public let id: String
+    public let name: LocalizedStringKey
+    public let nameText: String
+    public let value: Double
+    public let colorIndex: Int
+    public var color: Color { TSChartPalette)
+    case offlineNoData
+    case error(retryable: Bool)
+
+    public static func resolve(_ snapshot: ASListSnapshot<Element>) -> ASListPresentation {
+        switch snapshot.status {
+        case .loading:
+            if !snapshot.items.isEmpty {
+                return .content(snapshot.items, snapshot.connection, refreshing: true)
+            }.color(at: colorIndex)
+            return .loading }
+}
+```
+
+**Real
+        case .loade Usage Example:**
+```swift
+letd:
+            if slices = sleep snapshot.items.isEmpty {.stateDistribution.map return .empty(snapshot.connection) { slice }
+            return .content(snapshot in
+    TSChartSlice.items, snapshot.connection, refresh(
+        id: slice.stateing: snapshot,
+        name: Local.refreshing)
+        case .izedStringKey(SemptyleepStat:
+            return .empty(snapshoteM.connection)
+        case .faileetad:.label
+            ifKey( !slicesnapshot.items.isEmpty {
+                .state)let ?? slice fresh.state),
+        nameText:ness SleepStateMeta.engl:ishLabel(slice.state), AS
+        value: slice.rounConnectiondedMin = snapshot.errorutes ==,
+        colorIndex: S .leepStateMeta.colorIndexoffline(slice.state) ? .offline : .st
+    )
+}
+TSPale
+                return .content(snapshotieChart(slices: slices.items, freshness, refreshing,: false showsLegend: false)
+    .frame(height: 200)
+```
+
+---
+
+#### **7. Composed/Combo Chart (Bars + Line) (TSComposedChart)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Charts/BarCharts.swift` (Lines 48-73)
+
+**Public API:**
+```swift
+public struct TSComposedChart: View {
+    public init(bars: TSChartSeries, line: TSChartSeries)
+}
+```
+- `bars: TSChartSeries` -)
+            }
+            if snapshot.error == .offline { return .offlineNoData }
+            return .error(retryable: snapshot.error?.isRetryable ?? true)
+        }
+    }
+}
+```
+
+#### Freshness & error taxonomy (ADR-013)
+
+```swift
+public enum ASConnection: Sendable, Equatable {
+    case live
+    case stale
+    case offline
+}
+
+public enum ASLoadError: Sendable, Equatable {
+    case offline
+    case network(message: String)
+    case decode(message: String)
+    case api Background bar series (60% opacity)
+- `line: TSChartSeries` - Overlay line series with smooth interpolation
+
+**Real Usage Example:**
+```swift
+TSComposedChart(
+    bars: TSChartSeries(id: "bars", name: "Consumption", nameText: "Consumption", (status: Int, code: String?, body: String?)
+
+    public var isRetryable: Bool {
+        switch self {
+        case .offline, .network, .api: true
+        case .decode: false
+        }
+    }
+}
+
+public enum ASLoadStatus: Sendable, Equatable {
+    case loading
+    case loaded
+    case empty
+    case failed
+}
+```
+
+#### Usage in view
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/T
+                       points: [...], colorIndex: 0),
+    line: TSChartSeries(id: "line", name: "Projection", nameText: "Projection", 
+                       points: [...], colorIndex: 1)
+)
+```
+
+---
+
+#### **8. Line Chart (TSLineChart)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Charts/LineCharts.swift` (Lines 40-69)
+
+**Public API:**
+```swift
+public struct TSLineChart: View {
+    public init(series: [TSChartSeries], hidden: Set<String> = [], smooth: Bool = true)
+}
+```
+- `series: [TSChartSeries]` - Multi-series line data
+- `hidden: Set<String>` - Series IDs to hide
+- `smooth: Bool` - True for Catmull-Rom interpolation, false for linear
+
+**Real Usage Example:**
+```swift
+TSLineChart(series:eslaSync/feature-views/AlertStudioPage.swift` (lines 86-107)
+
+```swift
+public var body: some View {
+    ScrollView {
+        VStack(alignment: .leading, spacing: TSSpacing.x2xl) {
+            header
+            body(for: viewModel.rulesModel.presentation)  // Switches on presentation enum
+        }
+        .padding(TSSpacing.lg)
+        .frame series, smooth: false)
+    .frame(height: 280)
+```
+
+---
+
+#### **9. DataTable (TSDataTable)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/UI/DataTable.swift` (Lines 56-95)
+
+**Public API:**
+```swift
+public struct TSDataTable<Row: Identifiable>: View {
+    public init(
+        rows: [Row],
+        columns: [TSColumn<Row>],
+        selection: Binding<Set<Row.(maxWidth: .infinity, alignment: .leading)
+    }
+    .background(Color.TS.bg.ignoresSafeArea())
+    .task { viewModel.start() }
+    .onDisappear { viewModel.stop() }
+}
+```
+
+---
+
+### **6. SSE/Streaming Support (LiveConnection, P1/S4)**ID>> = .constant([]),
+        density: TSTableDensity = .standard
+    )
+    public func rowDetail(@ViewBuilder _ content: @escaping (Row) -> some View) -> TSDataTable
+}
+
+public struct TSColumn<Row: Identifiable>: Identifiable {
+    public init(
+        id: String,
+        title: LocalizedStringKey,
+        comparator: ((Row, Row) -> ComparisonResult)
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/LiveConnection.swift` (lines 1-77)
+
+```swift
+public enum LiveConnectionState: Equatable, Sendable {
+    case connecting
+    case open
+    case reconnecting
+    case stale  // Open but no event/heartbeat within freshness window
+    case close? = nil,
+        @ViewBuilder cell: @escaping (Row) -> some View
+    )
+}
+
+public enum TSTableDensity {
+    case compact, standard, comfortable
+}
+```
+
+---
+
+#### **10. EmptyState (TSEmptyState)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Feedback/States.swift` (Lines 40-73)
+
+**Public API:**
+```swift
+public struct TSEmptyState<Actions: View>: View {
+    public init(
+        title: LocalizedStringKey,
+        messaged
+
+    public init?(_ connection: Shared.Connection) {
+        switch connection.name {
+        case "Connecting": self = .connecting
+        case "Open": self = .open
+        case "Reconnecting": self = .reconnecting
+        case "Stale": self = .stale
+        case "Closed": self = .closed
+        default: return nil
+        }
+    }
+
+    public var hasUsableData: Bool {
+        switch self {
+        case .open, .stale, .reconnecting: true
+        case .connecting, .closed: false
+        }
+    }
+}
+
+public enum LiveEvent: LocalizedStringKey?K = nil,
+        systemind: EquImage: Stringatable, Sendable {
+     =case connecte "td
+    case heartray",beat
+        @
+    case vehicViewBuilder actions: @leUpdate
+    case alertescaping () -> Actions
+    )
+    case export
+}Status
+
+//
+    case achiev ConvenienceementUn initiallocked
+    case signalizer
+public extension
+    case unknown TSEmptyState where
+}
+
+public struct Actions == EmptyView LiveEvent { {
+    init(title
+    public let i: LocalizedStringKey, message:d: String? LocalizedStringKey? = nil,
+    public let kind: LiveEvent systemImage: String = "trayKind
+    public let raw"):
+}
+```
+
+**Real Usage Shared.Live Example:**
+```swift
+TSEmEventptyState(title: "sleep
+
+    public init(_.no event: Shared.LiveEvent)State {
+        iDatad = event.id
+        raw", = event
+        kind = Self system.classifyImage: "moon(event)
+    }
+
+    .zzz")
+    .frame(maxWidth: .infinity, minHeight: 200)
+```
+
+---
+
+#### **11. Skeleton / Loading (TSSkeleton)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Feedback/Skeletons.swift` (Lines 4-42)
+
+**Public API:**
+```swift
+public struct TSSkeleton: View {
+    public init(width: CGFloat? = nil, height: CGFloat = 14, cornerRadius: CGFloat = TSRadius.smprivate static func classify(_ event: Shared.LiveEvent) -> LiveEventKind {
+        switch event {
+        case is Shared.LiveEventConnected: .connected
+        case is Shared.LiveEventHeartbeat: .heartbeat
+        case is Shared.LiveEventVehicleUpdate: .vehicleUpdate
+        case is Shared.LiveEventAlert: .alert
+        case is Shared.LiveEventExportStatus: .exportStatus
+        case is Shared.LiveEventAchievementUnlocked: .achievementUnlocked
+        case is Shared.LiveEventSignal: .signal
+        default: .unknown
+        }
+    }
+}
+```
+
+**Integration pattern:**
+- `AppContainer)
+}
+```
+- `width: CGFloat?` - Optional fixed width; nil fills available space
+- `height: CGFloat` - Block height (default 14)
+- `cornerRadius: CGFloat` - Corner radius (default TSRadius.sm)
+- Shimmer animation respects `accessibilityReduceMotion` environment
+
+**Pre-composed Skeletons:**
+- `TSStatSkeleton()` - Stat` connects auth seam to SSE `LiveConnection` (ADR-008/ADR-009)
+- `StateHolderModel` collects from KMP `StateFlow` which receives live events
+- `LiveConnectionState` + `LoadableState.isStale` drive UI " card loading placeholder
+- `TSChartSkeleton(height: 180)` - Chart area placeholder
+- `TSPageLoadSkeleton()` - Full page loading skeleton
+
+**Real Usage Example:**
+```swift
+TSSkeleton(width: 120, height: 24)
+// or
+TSChartSkeleton()
+    .frame(height: 200)
+```
+
+---
+
+#### **12. ErrorDisplay / QueryError (TSErrorDisplay)**
+**File:** `/Users/atulgulive / stale / reconnecting" badges
+
+---
+
+### **7. CRUD Mutator Pattern (for mutations)**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Models.swift` (lines 155-222)
+
+```swift
+public protocol AlertStudioMutator: Sendable {
+    func save(_ input: ASAlertRpta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Feedback/States.swift` (Lines 75-124)
+
+**Public API:**
+```swift
+public struct TSErrorDisplay: View {
+    public init(
+        title: LocalizedStringKey = "error.title",
+        message: LocalizedStringKey? = nil,
+        onRetry: (() -> Void)? = nil
+    )
+}
+
+public struct TSQueryError: View {
+    public init(message: LocalizedStringKey? = nil, onRetry: @escaping () -> Void)
+}
+```
+
+**Real Usage Example:**
+```swift
+TSErrorDisplay(title: "erroruleInput) async -> Bool
+    func delete(id: Int64) async -> Bool
+    func toggle(id: Int64, enabled: Bool) async -> Bool
+    func test(_ request: ASAlertTestRequest) async -> Bool
+    func snooze(id: Int64, minutes: Int) async -> Bool
+    func bulkEnable(ids: [Int64]) async -> Bool
+    func bulkDisable(ids: [Int64]) async -> Bool
+}
+
+public struct OSLogAlertStudioMutator: AlertStudio.title", message: "Something went wrong", onRetry: { /* retry logic */ })
+    .frame(maxWidth: .infinity)
+```
+
+---
+
+#### **13. StatCard / MetricCard (TSStatCard, TSMetricCard)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/DataMutator {
+    private let logger: Logger
+
+    public init() {
+        logger = Logger(subsystem: "io.teslasync.app", category: "alert-studio")
+    }
+
+    public func save(_ input: ASAlertRuleInput) async -> Bool {
+        logger.infoDisplay/Metrics.swift` (Lines 159-220)
+
+**Public API:**
+```swift
+// Headline metric card with("alert-studio.save id=\(input.id.map(String.init) ?? "new", privacy: .public)")
+        return true
+    }
+    // ... other mutations are no-op for previ optional delta
+public struct TSStatCard: View {
+    public init(
+        title: LocalizedStringKey,
+        value: String,
+        systemImage: String? = nil,
+        delta: Double? = nil,
+        deltaFormatted: String? = nil
+    )
+}
+
+// Metric card with title, value, and caption
+public struct TSMetricCard: View {
+    public init(title: LocalizedStringKey, value:ews
+}
+```
+
+**View-model usage:**
+```swift
+@ObservationIgnored let mutator: any AlertStudioMutator
+```
+
+- Production: real KMP repository
+- Previews: `OSLogAlertStudioMutator` (logs intent, returns success, no network)
+- Test: custom mock
+
+---
+
+### **Summary String, caption: LocalizedStringKey? = nil)
+}
+
+// Usage card with a used/total bar
+public struct TSUsageCard: View {
+    public init(title: LocalizedStringKey, used: Double, total: Double, valueText: String)
+}
+```
+
+**Real Usage Example:**
+```swift
+TSStatCard(
+    title: "battery.health",
+    value: "95.2%",
+    systemImage: "battery.100",
+    delta: -0.5,
+    deltaFormatted: "-0.5%"
+)
+
+TSMetricCard(title: "efficiency", value: "4.2 mi/kWh", caption: "Last 30 days")
+```
+
+---
+
+#### **14. Fade Table**
+
+| Aspect | Location | Key Type/Pattern |
+|--------|----------|------------------|
+| **Observable model** | `AlertStudioPage.Models.swift:20-62` | `@MainActor @Observable final class ASRulesModel` |
+| **Protocol seam (read)** | `AlertStudioPage.Sources.swift:130-156` | `protocolIn / Stagger / Motion (TSFadeIn, TSStaggerContainer)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/Motion/Motion.swift` (Lines 4-60)
+
+**Public API:**
+```swift
+public struct TSFadeIn<Content: View>: View {
+    public init(delay: Double = 0, @ViewBuilder content: @escaping () -> Content)
+}
+
+public struct TSStaggerContainer<Content: View>: View {
+    public init(spacing: CGFloat = TSSp ASRulesSource: AnyObject` with `onUpdate` callback |
+| **Protocol seam (write)** | `AlertStudioPage.Models.swift:161-177` | `protocol AlertStudioMutator: Sendable` |
+| **KMP StateFlow bridge** | `StateHolderModel.swift:5-58` | Generic `StateHolderModel<State>` + `FlowBridge.stream()acing.md, @ViewBuilder content: @escaping () -> Content)
+}
+
+public struct TSStaggerItem<Content: View>: View {
+    public init(index: Int, @ViewBuilder content: @escaping () -> Content)
+}
+
+public struct TSRouteTransition<Content: View>: View {
+    public init(id: AnyHashable, @ViewBuilder content: @escaping () -> Content)
+}
+```
+- All motion respects `accessibilityReduceMotion` environment
+
+**Real Usage Example:**
+```swift
+TSFadeIn(delay: 0.1) {
+    Text("Animated content")
+}` |
+| **Loadable state** | `LoadableState.swift:10-91` | `enum LoadableState<Value>` with `.from(Resource)` factory |
+| **AppContainer** | `AppContainer.swift:14-61` | Central DI container with `.model()` and `.loadable()` builders |
+| **selectedVehicle store** | `selectedVehicle.Store.swift:22-93` | `@MainActor @Observable SelectedVehicleStore` with UserDefaults persistence |
+| **Presentation enum** | `AlertStudioPage.Sources.swift:95-123` | Generic `ASListPres
+
+TSStaggerContainer {
+    ForEach(items.indices, id: \.self) { index in
+        TSStaggerItem(index: index) {
+            ItemView(items[index])
+        }
+    }
+}
+```
+
+---
+
+#### **15. Currency Formatter (TSCurrency)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/DataDisplay/TypedFormatters.swift` (Lines 8-29)
+
+**Public API:**
+```swift
+public struct TSCurrency: View {
+    public init(_ amount: Double?, code: String = "USD")
+}
+
+// Static formatter method
+static func format(_ amount: Double?, code: String) -> String
+```
+- Renders "—" (em dash) for nil or non-finite input
+- Uses system `NumberFormatter` with `.currency` style
+- Monospaced digits for alignment
+
+**Real Usage Example:**
+```swift
+TSCurrency(42.50, code: "USD")  // Renders: $42.50
+TSCurrency(nil)                  // Renders: —
+```
+
+**Other TypedFormatters in same file:**
+- `TSFormattedNumber(_ value: Double?, fractionDigits: Int)`
+- `TSPercentage(_ fraction: Double?)`
+- `TSVoltage(_ volts: Double?)`
+- `TSCurrent(_ amps: Double?)`
+
+---
+
+#### **16. Page Title / Section Title Typography**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/UI/Typography.swift` (Lines 37-79)
+
+**Public API:**
+```swift
+// Primary page title (largest role, Font.TS.display)
+public struct TSPageTitle: View {
+    public init(_ text: LocalizedStringKey)
+}
+
+// Section title within a page (Font.TS.section)
+public struct TSSectionTitle: View {
+    public init(_ text: LocalizedStringKey)
+}
+
+// Generic heading with level control
+public struct TSHeading: View {
+    public enum Level { case h1, h2, h3 }
+    public init(_ text: LocalizedStringKey, level: Level = .h1)
+}
+
+// Panel/card title (Font.TS.panel)
+public struct TSPanelTitle: View {
+    public init(_ text: LocalizedStringKey)
+}
+```
+
+**Real Usage Example:**
+```swift
+TSPageTitle("battery.health.title")
+TSSectionTitle("battery.degradation.section")
+TSPanelTitle("sleep.stateDistribution")
+```
+
+---
+
+#### **17. Button (TSButton)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/UI/Buttons.swift` (Lines 11-59)
+
+**Public API:**
+```swift
+public enum TSButtonVariant {| **Presentation enum** | `AlertStudioPage.Sources.swift:95-123` | Generic `ASListPresentation<Element>` with `.resolve(snapshot)` factory |
+| **Snapshot type** | `AlertStudioPage.Sources.swift:62-90` | Generic `ASListSnapshot<Element>` with `.loaded()` convenience |
+| **Connection/error** | `AlertStudioPage.Sources.swift:26 case primary, secondary, ghost, destructive }
+public enum TSButtonSize { case small, medium, large }
+
+public struct TSButton<Label: View>: View {
+    public init(
+        variant: TSButtonVariant = .primary,
+        size: TSButtonSize = .medium,
+        isLoading: Bool = false,
+        action: @escaping () -> Void,
+        @ViewBuilder label: @escaping () -> Label
+    )
+}
+
+// Convenience initializer for text buttons
+public extension TSButton where Label == Text {
+    init(
+        _ title: LocalizedStringKey,
+        variant: TSButtonVariant = .primary-47` | `enum ASConnection`, `enum ASLoadError` with `.isRetryable`, `enum ASLoadStatus` |
+| **In-memory source** | `AlertStudioPage.Sources.swift:161-188` | `ASInMemoryRulesSource` with `.push()` to drive test/preview snapshots |
+| **Sample data source** | `BatteryDeg,
+        size: TSButtonSize = .medium,
+        isLoading: Bool = false,
+        action: @escaping () -> Void
+    )
+}
+```
+
+**Real Usage Example:**
+```swift
+TSButton("action.save", variant: .primary, size: .medium) {
+    // action
+}
+
+TSButton(variant: .secondary, size: .small) {
+    Label("Details", systemImage: "info.circle")
+}
+```
+
+---
+
+### **ADDITIONAL UTILITY COMPONENTS**
+
+#### **TSToneradationPageModel.Sample.swift:10-147` | `struct SampleBatteryDegradationDataSource` + `EmptyBatteryDegradationDataSource`, `FailingBatteryDegradationDataSource` |
+| **Data source protocol** | `BatteryDegradationPageModel.swift:14-18` | `protocol BatteryDegradationDataSource: Sendable` with `async throws` methods |
+| **SSE/streaming (Status Color Enum)**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/UI/Badges.swift` (Lines 4-17)
+
+```swift
+public enum TSTone {
+    case neutral, accent, success, warning, danger, info
+    
+    public var color: Color {
+        // Maps to Color.TS.* semantic colors
+    }
+}
+```
+
+Used by:** | `LiveConnection.swift:1-77` | `enum LiveConnectionState`, `enum LiveEventKind`, struct `LiveEvent` wrapping `Shared.LiveEvent` |
+| **View injection** | `AlertStudioPage.swift:81-84` | `public init(viewModel: AlertStudioViewModel, ai: ASAIPanels = .baseline `TSBadge`, `TSStatusPill`, `TSMetricBar`, etc.
+
+#### **TSBadge / TSStatusPill**
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Components/UI/Badges.swift` (Lines 20-65)
+
+```swift
+public struct TSBadge: View {
+    public init(_ text: LocalizedStringKey, tone: TSTone = .neutral)
+}
+
+public struct TSStatusPill: View {
+    public init(_ text: LocalizedStringKey, tone: TSTone = .neutral)
+}
+```
+
+#### **TSInline)` usingCall `@out**
+**File:** `/UsersState/atulgupta/Documents/` |
+| **Lifecyclerepos/.teslasync-parallel** | `AlertStudioPage./20260615-193947-swift:9652828/slot-8/apps-97/apple/Sources/Components/` | `.Feedbacktask/ {Ban viewners.swiftModel` (Lines 84.start-98() }` +)
+
+```swift
+public struct TS `.onInlineCallout: View {Dis
+    public init(toneappear { viewModel.stop(): TSTone = .info }` |, message
+
+---: Local
+
+### **QuickizedStringKey)
+}
+```-
+
+---Start
+
+## Recipe **SWIFT for CHARTS E APIner SUMMARYgyPage**
+
+All**
+
+Here chart's exactly w how torappers support the wire following: a new data-driven page for your EnergyPage using this pattern:
+
+#### **Step 1: Define data types** 
+Create `EnergyPage.Model.Types.swift`:
+```swift
+// Wire types from KMP (from Shared.xcframework)
+public struct EnergyStats: Sendable, Equatable {
+    public let avg
+
+| Component | Input | Features |
+|-----------|-------|----------|
+| **TSLineChart** | `series: [TSChartSeries]`, `hidden: Set<String>`, `smooth: Bool` | Multi-series, optional smoothing, visibility toggle |
+| **TSAreaChart** | `series: [TSChartSeries]`, `hidden: Set<String>` | Gradient-filled areas, multi-series |
+| **TSBarChart** | `series: [TSChartSeries]`, `hidden: SetEfficiencyWhPerM: Double
+    public let totalDistanceM: Double
+    public let co2SavedKg: Double
+    public let totalWh: Double
+    public let totalEnergyUsedWh: Double
+    public let dailyBreakdown: [DailyEnergyPoint]
+}
+
+public struct DailyEnergyPoint: Sendable, Equatable, Identifiable {
+    public let date:<String>`, `stacked: Bool` | Grouped or stacked bars, multi-series |
+| **TSPieChart** | `slices: [TSChartSlice]`, `showsLegend: Bool` | Donut chart, 60% inner radius, optional legend |
+| **TSRadialGauge** | `value: Double`, `label: LocalizedStringKey`, `colorIndex: Int` | Circular progress, 0...1 range, c String
+    public let energyWh: Double
+    public let efficiencyWhPerM: Double
+    public let distanceM: Double
+    public var id: String { date }
+}
+
+public struct ChargingSession: Sendable, Equatable, Identifiable {
+    public let id: String
+    public let totalEnergyAddedWh: Double
+    public let costDecimal: Double
+    public let startedAt: String
+    public let chargerType: String
+    public let startSocPctlamped |
+| **TSComposedChart** | `bars: TSChartSeries`, `line: TSChartSeries` | Bars + line overlay, smooth interpolation |
+| **TSScatterChart** | `series: [TSChartSeries]`, `hidden: Set<String>` | Point marks (50 symbol size) |
+| **TSElevationProfile** | `points: [TSChartPoint]`, `colorIndex: Int` | Downsam: Double
+    public let endSocPct: Double
+    public let peakPowerW: Double
+}
+
+public struct ChargingTelemetryLatest: Sendable, Equatable {
+    public let lifetimeEnergyUsed: Double
+}
+```
+
+#### **Step 2: Define protocol seams**
+Create `EnergyPage.Sources.swift`:
+```swift
+import Foundation
+
+@MainActor
+public protocol EnergyStatsSource: AnyObject {
+    var onUpdate: (@pled area + line (max 300 points) |
+
+**Shared Features:**
+- All use `TSChartPalette.categorical` for colors (index-wrapping with negatives)
+- Axes styled with `tsChartAxes()` modifier (token grid, muted labelsMainActor (ASListSnapshot<EnergyStats>) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+
+@MainActor
+public protocol ChargingSessionsSource: AnyObject {
+    var onUpdate: (@MainActor (ASListSnapshot<ChargingSession>) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+
+@MainActor
+public protocol ChargingTelemetrySource: AnyObject {
+    var onUpdate: (@MainActor (LoadableState<ChargingTelemetryLatest>) -> Void)? { get set }
+    func start()
+    func stop())
+- All support `accessibilityLabel()` and `accessibilityValue()`
+- Accessible summaries via `TSChartFormat.summary(for:)` helper
+
+---
+
+## **FILE REFERENCE SUMMARY**
+
+| Component | File Path | Lines |
+|-----------|-----------|-------|
+| TSGlassPanel, TSCard | `
+    func refresh()
+}
+
+// In-memory doubles for previews
+@MainActor
+public final class InMemoryEnergyStatsSource: EnergyStatsSource {
+    public var onUpdate: (@MainActor (ASListSnapshot<EnergyStats>) -> Void)?
+    private let initial: ASListSnapshot<EnergyStats>?
+
+    public init(initial: ASListSnapshot<EnergyStats>? = nil) {
+        self.initial = initial
+    }
+
+    public func start() {
+        if let initial { onUpdate?(initial) }
+    }
+
+    public func stop() {}
+    public func refresh() {}Sources/Components/UI/Cards.swift` | 4-38 |
+| TSButton | `Sources/Components/UI/Buttons.swift` | 11-59 |
+| Typography (TSPageTitle, etc.) | `Sources/Components/UI/Typography.swift` | 37-79 |
+| TSDataTable | `Sources/Components/UI/DataTable.swift` | 56-95 |
+| TSTone, TSBadge, TSStatusPill | `Sources/Components/UI/Badges.swift` | 4-65 |
+| TSCurrency, formatters | `Sources/Components/DataDisplay/Type
+
+    public func push(_ snapshot: ASListSnapshot<EnergyStats>) {
+        onUpdate?(snapshot)
+    }
+}
+
+// Repeat for ChargingSessionsSource and ChargingTelemetrySource
+```
+
+#### **Step 3: Define Observable models**
+Create `EnergyPage.Models.swift`:
+```swift
+import Foundation
+import Observation
+
+@MainActor
+@Observable
+public final class EnergyStatsModel {
+    public private(set) var snapshot: ASListSnapshot<EnergyStats>
+    @ObservationIgnored private let source: any EnergyStatsSource
+    @dFormatters.swift` | 8-100 |
+| TSStatCard, TSMetricCard | `Sources/Components/DataDisplay/Metrics.swift` | 159-220 |
+| TSInlineCallout | `Sources/Components/Feedback/Banners.swift` | 84-98 |
+| TSErrorDisplay, TSEmptyState | `Sources/Components/Feedback/States.swift` | 40-124 |
+| TSSkeleton | `Sources/Components/Feedback/Skeletons.swift` | 4-42 |
+| TSFadeObservationIgnored private var started = false
+
+    public init(source: any EnergyStatsSource) {
+        self.source = source
+        snapshot = ASListSnapshot()
+        source.onUpdate = { [weak self] snapshot in self?.snapshot = snapshot }
+    }
+
+    public init(preview: ASListSnapshot<EnergyStats>) {
+        let inMemory = InMemoryEnergyStatsSource(initial: preview)
+        source = inMemory
+        snapshot = preview
+        inMemory.onUpdate = { [weak self] snapshot in self?.snapshot = snapshot }
+    }
+
+    public var presentation: ASListPresInentation<EnergyStats> {, TSSt
+        .aggerContainerresolve(snapshot)
+    } | `Sources/Components/Motion
+
+    public var/Motion stats.swift` | 4-60: [ |
+| TSBarEnergyStats] {
+        Chart,snapshot.items
+    }
+
+     TSCompublic func start() {
+        guarposedChart | `Sources/Componentsd !started else { return }
+        /Charts/started = true
+        source.startBarCh()
+    }
+
+    public funcarts.swift` | 4- stop() {
+        starte73d = false
+        source.stop() |
+| TSLine
+    }
+
+    public func refreshChart, TSAreaChart |() {
+        source.refresh() `Sources/Components/Charts/Line
+    }Charts.swift` | 40
+}
+
+//-126 Repeat pattern |
+| TSPieChart, TSRadialGauge | `Sources/Components/Charts/PieGauge.swift` | 5-71 |
+| TSChartContainer, TSChartLegend | `Sources/Components/Charts/ChartContainer.swift` | 5 for ChargingSessionsModel and ChargingTelemetryModel
+@MainActor
+@Observable
+public final class ChargingSessionsModel {
+    // ... same pattern
+}
+
+@MainActor
+@Observable
+public final class ChargingTelemetryModel {
+    -111public |
+| Chart private(set) var state models: LoadableState<Charging (TSChartSeries, etcTelemetryLatest>.) | `Sources/Components/Charts = .idle/ChartModels.swift`
+    @ObservationIgnore | 1d private let source: any Charging-118TelemetrySource
+    @ |
+| DesignObservationIgnored private var starte Tokens | `appsd = false
+
+    public init(source/design: any ChargingTelemet/rySource) {
+        self.generatesource = source
+        source.onUpdate = { [weak self] state in self?.state = state }
+    }
+
+    public func start() {
+        guard !started else { return }
+        started = true
+        source.start()
+    }
+
+    public func stop() {
+        started = false
+        source.stop()
+    }
+}
+```
+
+#### **Step 4: Create view-model**
+Create `EnergyPage.ViewModel.swift`:
+```swift
+import Foundation
+import Observation
+
+@MainActor
+@d/apple/Tokens.swift` | 1-202 |
+
+All components are **production-ready** and compile with `-warnings-as-errors`. The component library follows HIG conventions on iOS/macOS with no hand-rolled vibrancy—all materials use native `UIKit`/`AppKit` system materials.Observable
+public final class EnergyPageViewModel {
+    public let energyStatsModel: EnergyStatsModel
+    public let chargingSessionsModel: ChargingSessionsModel
+    public let chargingTelemetryModel: ChargingTelemetryModel
+    
+    public var selectedVehicleID: Int64?
+    
+    @ObservationIgnored private let telemetry: any EnergyPageTelemetry
+    @ObservationIgnored let localize: (String, String) -> String
+
+    public init(
+        energyStatsModel: EnergyStatsModel,
+        chargingSessionsModel: ChargingSessionsModel,
+        chargingTelemetryModel: ChargingTelemetryModel,
+        selectedVehicleID: Int64? = nil,
+        telemetry: any EnergyPageTelemetry = OSLogEnergyPageTelemetry(),
+        localize: @escaping (String, String) -> String = { key, fallback in fallback }
+    ) {
+        self.energyStatsModel = energyStatsModel
+        self.chargingSessionsModel = chargingSessionsModel
+        self.chargingTelemetryModel = chargingTelemetryModel
+        self.selectedVehicleID = selectedVehicleID
+        self.telemetry = telemetry
+        self.localize = localize
+    }
+
+    public func start() {
+        energyStatsModel.start()
+        chargingSessionsModel.start()
+        chargingTelemetryModel.start()
+        telemetry.viewOpened(surface: "EnergyPage")
+    }
+
+    public func stop() {
+        energyStatsModel.stop()
+        chargingSessionsModel.stop()
+        chargingTelemetryModel.stop()
+    }
+}
+```
+
+#### **Step 5: Create sample fixtures**
+Create `EnergyPage.Previews.swift`:
+```swift
+#if DEBUG
+    enum EnergySamples {
+        static let energyStats: [EnergyStats] = [
+            EnergyStats(
+                avgEfficiencyWhPerM: 180,
+                totalDistanceM: 50_000,
+                co2SavedKg: 6.0,
+                totalWh: 9_000,
+                totalEnergyUsedWh: 9_000,
+                dailyBreakdown: [
+                    DailyEnergyPoint(date: "2026-06-14", energyWh: 450, efficiencyWhPerM: 175, distanceM: 2500),
+                    DailyEnergyPoint(date: "2026-06-13", energyWh: 420, efficiencyWhPerM: 182, distanceM: 2300)
+                ]
+            )
+        ]
+
+        static let chargingSessions: [ChargingSession] = [
+            ChargingSession(
+                id: "session-1",
+                totalEnergyAddedWh: 40_000,
+                costDecimal: 12.50,
+                startedAt: "2026-06-14T08:00:00Z",
+                chargerType: "DC",
+                startSocPct: 20,
+                endSocPct: 80,
+                peakPowerW: 150_000
+            )
+        ]
+
+        @MainActor
+        static func viewModel() -> EnergyPageViewModel {
+            EnergyPageViewModel(
+                energyStatsModel: EnergyStatsModel(preview: .loaded(energyStats)),
+                chargingSessionsModel: ChargingSessionsModel(preview: .loaded(chargingSessions)),
+                chargingTelemetryModel: ChargingTelemetryModel(preview: .loaded(
+                    ChargingTelemetryLatest(lifetimeEnergyUsed: 500_000)
+                ))
+            )
+        }
+    }
+
+    #Preview("Content") {
+        EnergyPage(viewModel: EnergySamples.viewModel())
+    }
+
+    #Preview("Loading") {
+        let model = EnergyPageViewModel(
+            energyStatsModel: EnergyStatsModel(preview: ASListSnapshot(status: .loading)),
+            chargingSessionsModel: ChargingSessionsModel(preview: ASListSnapshot(status: .loading)),
+            chargingTelemetryModel: ChargingTelemetryModel(preview: .loading(cached: nil, stale: false))
+        )
+        EnergyPage(viewModel: model)
+    }
+#endif
+```
+
+#### **Step 6: Create SwiftUI view**
+Create `EnergyPage.swift`:
+```swift
+import SwiftUI
+
+public struct EnergyPage: View {
+    @State private var viewModel: EnergyPageViewModel
+
+    public init(viewModel: EnergyPageViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
+    public var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                energySection
+                chargingSessionsSection
+                telemetrySection
+            }
+            .padding()
+        }
+        .task { viewModel.start() }
+        .onDisappear { viewModel.stop() }
+    }
+
+    private var energySection: some View {
+        Group {
+            switch viewModel.energyStatsModel.presentation {
+            case .loading:
+                ProgressView()
+            case .content(let items, _, refreshing: _):
+                ForEach(items) { stat in
+                    Text("Distance: \(stat.totalDistanceM)m")
+                    Text("Efficiency: \(stat.avgEfficiencyWhPerM) Wh/m")
+                    Text("CO₂ Saved: \(stat.co2SavedKg) kg")
+                }
+            case .empty:
+                Text("No energy data")
+            case .offlineNoData:
+                Text("Offline - no cached data")
+            case .error(retryable: let retryable):
+                Text(retryable ? "Error (retryable)" : "Error (non-retryable)")
+            }
+        }
+    }
+
+    private var chargingSessionsSection: some View {
+        Group {
+            switch viewModel.chargingSessionsModel.presentation {
+            case .content(let sessions, _, _):
+                ForEach(sessions) { session in
+                    VStack {
+                        Text("Energy: \(session.totalEnergyAddedWh) Wh")
+                        Text("Cost: \(session.costDecimal)")
+                        Text("Peak: \(session.peakPowerW) W")
+                    }
+                }
+            default:
+                Text("No charging sessions")
+            }
+        }
+    }
+
+    private var telemetrySection: some View {
+        Group {
+            switch viewModel.chargingTelemetryModel.state {
+            case .loaded(let telemetry, stale: _):
+                Text("Lifetime: \(telemetry.lifetimeEnergyUsed) Wh")
+            default:
+                Text("Loading telemetry...")
+            }
+        }
+    }
+}
+```
+
+#### **Step 7: Production wiring in AppContainer**
+
+At app composition time (in your AppContainer or main app setup):
+
+```swift
+@MainActor
+public final class AppContainer {
+    // ... existing code ...
+
+    public func createEnergyPageViewModel(vehicleID: Int64) -> EnergyPageViewModel {
+        // Obtain KMP repositories from the shared core
+        let energyStatsSource = createEnergyStatsSource(vehicleID: vehicleID)
+        let chargingSessionsSource = createChargingSessionsSource(vehicleID: vehicleID)
+        let chargingTelemetrySource = createChargingTelemetrySource(vehicleID: vehicleID)
+
+        return EnergyPageViewModel(
+            energyStatsModel: EnergyStatsModel(source: energyStatsSource),
+            chargingSessionsModel: ChargingSessionsModel(source: chargingSessionsSource),
+            chargingTelemetryModel: ChargingTelemetryModel(source: chargingTelemetrySource),
+            selectedVehicleID: vehicleID
+        )
+    }
+
+    // Create production sources wrapping KMP repositories
+    private func createEnergyStatsSource(vehicleID: Int64) -> any EnergyStatsSource {
+        // This wraps a KMP repository, e.g.:
+        // let kmpRepo = shared.energyRepository
+        // return KMPEnergyStatsSourceAdapter(repo: kmpRepo, vehicleID: vehicleID)
+        InMemoryEnergyStatsSource() // placeholder
+    }
+    
+    // Repeat for charging sessions and telemetry
+}
+```
+
+---
+
+## **Exact File Paths Reference**
+
+| Feature | File Path |
+|---------|-----------|
+| ViewModel pattern | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.ViewModel.swift` |
+| Observable models | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Models.swift` |
+| Protocol seams | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Sources.swift` |
+| Adapter (pure logic) | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Adapter.swift` |
+| CRUD mutator | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Models.swift` (line 155) |
+| Sample fixtures | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.Previews.swift` |
+| View top-level | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/feature-views/AlertStudioPage.swift` |
+| KMP StateFlow bridge | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/StateHolderModel.swift` |
+| Flow → AsyncStream | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/FlowBridge.swift` |
+| Loadable state enum | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/LoadableState.swift` |
+| AppContainer DI | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/AppContainer.swift` |
+| selectedVehicle store | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Store.swift` |
+| selectedVehicle model | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Model.swift` |
+| selectedVehicle storage | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Seams.swift` |
+| SSE/live events | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/SharedFacade/LiveConnection.swift` |
+| Battery page example | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Features/Battery/BatteryDegradationPageModel.swift` |
+| Battery sample data | `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-193947-52828/slot-8/apps/apple/Sources/Features/Battery/BatteryDegradationPageModel.Sample.swift` |
+
+---
+
+## **Compilation Checklist for EnergyPage**
+
+✅ **1. Import statements** - Always:
+```swift
+import Foundation
+import Observation
+import Shared  // for KMP types
+```
+
+✅ **2. Make everything @MainActor + @Observable** - observable models only on main thread
+
+✅ **3. Use protocol seams** - never wire KMP directly in views
+
+✅ **4. Callbacks, not bindings** - source→model via `onUpdate` closure (not `@Published`)
+
+✅ **5. Generic snapshots + presentations** - reuse `ASListSnapshot<T>` and `ASListPresentation<T>`
+
+✅ **6. Lifecycle: start() in .task, stop() in .onDisappear**
+
+✅ **7. LoadableState for Resource<T>** - not custom load enums
+
+✅ **8. In-memory doubles in #if DEBUG** - previews/tests never hit network
+
+✅ **9. Mutator protocol for CRUD** - no mutation logic in views
+
+✅ **10. selectedVehicle via injection** - never instantiate store directly in view, inject via view-model
+
+Your EnergyPage will now compile against `Shared.xcframework`, render all states (loading/empty/error/stale/live/offline), and stay testable—exactly like AlertStudioPage.The data-layer agent surfaced a critical reference: an existing `Sources/Features/Battery/BatteryDegradationPageModel.swift`. But the prompt's output path is `TeslaSync/Features/Battery/`. I need to resolve this layout discrepancy. Let me verify on-disk reality and read the full component map.
+
+Now it's clear: the real convention is `apps/apple/Sources/Features/Battery/` (where sibling pages `BatteryDegradationPage`, `BatteryCellsPage`, `SleepEfficiencyPage` live, with tests in `Tests/Unit/Features/Battery/`). The prompt's `TeslaSync/Features/Battery` path is generator drift. I'll follow the established convention so the page actually compiles and tests. Let me study the closest sibling — `BatteryDegradationPage` — in depth.
+
+Let me read the core BatteryDegradation sibling files and find the battery ledger rows.
+
+This is the ideal sibling reference. I now understand the full pattern: `@Observable` PageModel with a `DataSource` protocol seam + phase enum, a View with `@Environment(\.tsUnits)`, `TS*` components, route registration via `AppRouteHostRegistry`, and `LocalizedStringKey` web-key strings from the central catalog. Let me read the remaining sibling files, the string catalog, and the component map.
+
+Key findings: there's already an `.energy` route in `AppRoute.swift`, and `/energy` + `/battery` map to it — but no `Energy*.swift` page exists yet, and the catalog has **zero** `energy.*` keys (I must add 56). Let me read the routing, find who registers `.energy`, and grep the component map for the chart/UI APIs.
+
+No page registers `.energy` yet — I'll add `EnergyRouteRegistration.swift`. Now let me read the chart/format references and the component map. Let me batch these reads.
+
+Excellent — I now have the chart wrapper APIs (`TSRadialGauge`, `TSChartContainer`, `TSLineChart`, `TSAreaChart`, `TSChartSeries`/`TSChartPoint`/`TSChartPalette`) and the `Units` SI facade. Let me grep the component map for the remaining wrappers (bar/pie/composed/table/statcard) and read the models, sample sources, route aggregation, and test pattern.
+
+I have the full component inventory. Since my code must compile against these exact APIs, let me read the actual wrapper source files (not just the agent summary) plus the sibling models/sample/test and route aggregation. Let me locate the wrapper files first.
+
+Let me read the chart component sources and the sibling models/sample files.
+
+Now I understand the chart wrapper semantics. The `TSRadialGauge` shows a 0–1 fraction as a percentage — but the web hero gauges show absolute value+unit. Let me check the web `RadialGauge` to gauge fidelity needs, and read the sibling models/sample/test + route aggregation.
+
+Let me read the web gauge, the sibling models/test, and find route aggregation + the units environment wiring.
+
+The web gauge shows **value + unit** (not a percent), so I'll build a faithful feature-local gauge mirroring `TSRadialGauge`'s ring. Crucially, the sibling pages ship a **Sample data source default** (KMP seam ready for production) — so I follow that accepted pattern. Let me read the app wiring, units environment, and test pattern.
+
+I now have the full architecture. Let me read the remaining chart/UI component sources and the sibling Panels/Sections/Derivations files to nail down exact APIs before implementing.
+
+Charts are clear. Let me read the remaining UI components (DataTable, Metrics, Typography, Badges, Design tokens) and the sibling Panels/Sections/Derivations to finalize my API knowledge.
+
+I have nearly all component APIs. Let me read the design tokens (palette/colors/tones), typography, badges, pickers, currency, and the sibling Panels/Sections/Derivations to finalize.
+
+Let me read the design tokens (palette/tones/card/badge), pickers/buttons, and the sibling Panels/Sections/Derivations to finalize layout patterns.
+
+Let me locate the palette/glass/feedback definitions and read the sibling Sections/Panels/Derivations for layout patterns.
+
+I now have all components. Let me read the generated design tokens (palette colors, `Color.TS`, fonts, spacing), the card/glass components, and locate `TSButton`/`TSFadeIn`.
+
+I have the full token palette. Let me read the cards, buttons, and motion components, plus the sibling Sections/Panels/Derivations for layout reference.
+
+I have every component and token. Let me read the sibling Sections (metric grid + table patterns), Derivations, the `BatteryVehicle` model, and the xcstrings entry format so I can add the 56 keys correctly.
+
+I have a complete understanding of the architecture. `BatteryVehicle` is a shared type I can reuse. Let me verify a few things (string-key collisions, type collisions, exact web defaults, lint/placeholder rules) before writing the plan and implementing.
+
+`common.noData` exists (reference, don't re-add); I'll add 55 `energy.*` keys. No type collisions. Let me check the placeholder patterns and swiftlint rules so my code passes the gate, then I'll write the plan.
+
+Let me read the rest of the swiftlint config and check whether the KMP `Shared.xcframework` is prebuilt (which affects build feasibility).
+
+The KMP `Shared.xcframework` isn't prebuilt — a full `xcodebuild` requires building it via Gradle/Kotlin-Native (the long pole). Let me kick that off in the background now while I implement, then run xcodegen + xcodebuild. Let me also set up my plan and todos.
+
+The KMP build is running in the background. Let me set up my plan and todos, then implement while it builds.
+
+Let me verify a couple web details (charger colors, session field types) before writing models, then create the foundation files.
+
+Now I have exact wire types. Let me create the foundation files: models, derivations, and format.
+
+Now the derivations — carefully porting the web `useMemo` logic.
+
+Now the format helpers. Let me quickly confirm the web `fmtPercent`/`fmtNumber` semantics, then write `EnergyFormat.swift`.
+
+Confirmed. Now creating `EnergyFormat.swift`.
+
+Foundation files done. Let me check the KMP build progress, then create the page model.
+
+KMP build still compiling. Let me continue — creating the page model with the data-source seam and derived state.
+
+KMP still building. Creating the sample data sources (Sample/Empty/EmptySections/Failing) mirroring the sibling pattern.
+
+The `SessionSample` lines exceed the 120-col limit. Let me reformat them to satisfy swiftlint `--strict`.
+
+Let me check for any lines exceeding 120 columns across my new files so far.
+
+Let me wrap the `SessionSample` rows across two lines each to stay within 120 columns.
+
+Now let me check the KMP build progress and continue creating the gauge component.
+
+KMP still building. Creating the value+unit gauge (faithful port of web `RadialGauge`).
+
+Now the charts file — hero gauges + the 4 chart sections (composed, area, bar, pie). Creating it.
+
+I referenced chart-chrome helpers that I need to create. Let me check the sibling's chart-chrome to mirror its style, then create mine and fix the sessions-count text.
+
+Now creating the chart chrome helpers and fixing the sessions-count text.
+
+Now fixing the sessions-count text to use the bare key (count is separate):
+
+Now I need a small strings helper for the 3 interpolated web keys (`{{unit}}`/`{{days}}`). Creating it, then the sections and table.
+
+Now update the charts file's distance series name to use the catalog key, then check the KMP build.
+
+Let me check the KMP build status, then create the sections file.
+
+KMP build is slow (Kotlin/Native). Let me keep building — creating the sections file (metric strip, lifetime, cost comparison, skeleton).
+
+Let me fix the "less" badge to reference the `energy.cost_decimal.less` key properly.
+
+Now the sessions table file.
+
+Now the main page view that composes everything, plus route registration.
+
+Creating the route registration and wiring it into the app.
+
+Now adding the 55 `energy.*` string keys to the catalog. Let me first confirm the exact `strings` opening line, then insert via a validated Python script.
+
+The opening is `  "strings" : {`. Let me write a validated Python script to insert the 55 keys right after it.
+
+55 keys inserted and JSON validated. Let me verify and check the KMP build progress.
+
+Catalog is correct. Now writing the unit tests (state machine + derivations + formatters).
+
+All source files written. Let me run the fast checks (swiftlint, placeholder scan, line-length) while the KMP build continues.
+
+No placeholder words. 5 lines exceed 120 cols in the charts file. Let me view and fix them.
+
+Let me view the surrounding blocks and fix the long lines by wrapping them.
+
+Now let me re-check line lengths and run swiftlint scoped to my new files.
+
+All lines within budget, files well-sized. Let me run swiftlint on the new files.
+
+swiftlint linted the whole repo (config `included` overrode my paths) and found 2 serious violations. I need to see which files. Let me re-run capturing violations to a file.
+
+Only the `w` identifier shows. The count said 2 — let me find the second (it may be a `--strict`-promoted warning). Let me grep all violations referencing my files.
+
+The only violation is the 1-char `w` identifier. Let me rename it to `watts` throughout the Sample file.
+
+Let me verify line lengths and lint just the changed file to confirm the fix.
+
+Single-file linting works. Let me lint all my new files explicitly and check the KMP build status.
+
+swiftlint: **0 violations across all 15 files**. Let me run the placeholder scan on the feature dir while KMP builds.
+
+**0 placeholder violations, EXIT=0.** Let me verify a few remaining API signatures (route `register`, `teslaSyncTheme`, default `tsUnits`) while the KMP build continues.
+
+Good — `register` matches, default `tsUnits` is `.metric` (valid). Let me check the KMP build progress (it's been a while).
+
+**KMP `Shared.xcframework` built successfully (24m) and staged.** Now I can build the app. Let me generate the Xcode project, then build.
+
+Project generated with my Energy files included. Now let me build the macOS app target (compiles the same sources). This will take several minutes.
+
+The macOS build is running. Let me wait for it to compile.
+
+Build failed. Let me see the actual compile errors.
+
+It's a **code-signing** failure (environment), not a compile error. Let me confirm my Swift files compiled and retry with signing disabled.
+
+No compile errors — it failed at signing validation before building. Let me retry with code signing disabled.
+
+Build running with signing disabled. Let me check the log directory while it compiles.
+
+The log dir exists. Let me read a sibling log to mirror its format while the build compiles.
+
+Crucial context from the sibling log: the full `xcodebuild` is **pre-existing RED** due to an out-of-scope error in `shared-surfaces/Input.Previews.swift` (forbidden to fix), and siblings verified their own code compiles clean. My build likely hits the same. Let me wait for it and analyze whether my files are clean.
+
+Still building. Let me check the log for progress and any errors so far.
+
+0 errors so far, actively compiling. Let me wait for the build to finish.
+
+Let me check the raw tail of the build log to see current activity.
+
+It's in the `EmitSwiftModule` (whole-module type-check) phase — where errors surface. Let me wait for it to complete.
+
+Build finished with 27 failures. Let me extract and categorize the errors — are any in my files?
+
+Real issue found: `EnergyDailyPoint` and `EnergyChargingTelemetry` collide with **existing types** in the module (most other errors cascade from this). Let me find the existing declarations.
+
+No match in Sources — the collision must be in the widget/feature-views dirs (also part of the app target) or the `Shared` KMP module. Let me search the whole app.
+
+Found it: `EnergyDailyPoint` (struct in `EnergyStatsWidget.Models.swift`) and `EnergyChargingTelemetry` (protocol in `EnergyChargingPanel.Model.swift`) already exist in the module. I'll rename mine. Let me check for any other collisions and view the cascade error site.
+
+`EnergyDailyEntry` is also taken. Let me verify safe new names and view the cascade error site, then rename.
+
+Both names free; the EnergyPage Binding errors are cascades from the ambiguous type. Let me rename `EnergyDailyPoint`→`EnergyUsagePoint` and `EnergyChargingTelemetry`→`EnergyLiveCharging` across my files.
+
+All renamed. The View structs access `model` via SwiftUI's `@MainActor` inference (same pattern as the sibling pages that compiled cleanly). Let me re-check line lengths, then do an incremental rebuild (faster — only my files changed).
+
+Line lengths OK. Now the incremental rebuild (only my changed files recompile).
+
+Build running incrementally. Let me wait and check for errors.
+
+0 errors so far. Let me wait for the build to complete.
+
+Still 0 errors, in the module-emit phase. Let me wait for completion.
+
+The module-emit phase is lengthy but clean (0 errors). Let me wait for it to finish.
+
+Module emit is heavy (whole 12k-file module) but clean so far. Let me wait for it to finish.
+
+The build is actively compiling (76 swift-frontend processes, 0 errors) — it's the object-generation phase for the full module. Let me wait for completion.
+
+Build still compiling cleanly (0 errors, 69 active compilers). Let me wait for it to finish.
+
+🎉 **BUILD SUCCEEDED** — the full macOS app compiled cleanly with my EnergyPage and all 13 files. Now let me run my unit tests (scoped for speed).
+
+The test is running. Meanwhile, let me verify all 56 parity string keys are actually referenced in my Swift code (required for the parity evidence).
+
+All 56 string keys are referenced in code. The test finished — let me check the results.
+
+The test bundle failed to build — but due to a **pre-existing error in `Analytics/TimelinePageModelTests.swift`** (unrelated to my work), which blocks the whole test bundle. Let me confirm my test file is clean and find all test-build errors.
+
+My test file is **clean** — the only test-build error is the pre-existing, unrelated `Analytics/TimelinePageModelTests.swift` (not modified by me), which blocks the whole bundle. To honestly verify my tests pass, I'll temporarily neutralize that unrelated file, run my tests, then restore it exactly. Let me back it up first.
+
+Let me temporarily stub that unrelated file, run my tests, then restore it byte-for-byte.
+
+Test running in isolation. Let me wait for it.
+
+Test bundle has 3 build failures — likely more pre-existing errors in unrelated test files. Let me check which files.
+
+More pre-existing broken test files (`GDPRExportPageModelTests` too) — the shared bundle is pre-existing RED from unrelated strict-concurrency errors. Rather than neutralize many out-of-scope files, I'll restore the file I stubbed and verify my logic via a standalone harness (the sibling's approach). Let me restore first and confirm it's pristine.
+
+Restored byte-for-byte (md5 matches). Now let me build a standalone harness for the pure logic (the sibling's approach), copying my Foundation-only files plus a minimal `UnitPreferences` stub.
+
+**Harness: 35/35 passed.** My pure logic is verified at runtime. This matches the sibling's situation: full macOS app build GREEN, my test file compiles clean, but the shared test bundle is pre-existing RED from unrelated files. Let me kick off the iOS build for completeness and clean up temp files while writing the log.
+
+iOS build running. Let me prepare the ledger update — finding the battery rows to add my 2 rows (macos + ios).
+
+Let me add my 2 Energy ledger rows (macos + ios) after the BatteryDegradation rows.
+
+Let me validate the ledger JSON and check the iOS build progress.
+
+Ledger valid. Let me gather file metrics for the log while the iOS build runs.
+
+Let me check the iOS build progress.
+
+iOS build clean so far (0 errors). Let me generate the exact key→file mapping for the parity log's string evidence.
+
+Let me check the iOS build status before finalizing the log.
+
+iOS still compiling cleanly. Let me wait for it to finish so the log reflects both platforms accurately.
+
+iOS build still linking/compiling cleanly (0 errors). Let me wait for it to complete.
+
+iOS is now compiling widget extensions (the app target with my files compiled earlier). Let me confirm my files compiled clean in the iOS app target.
+
+iOS app target (with my code) completed module-emit + compile with **0 errors** — my code is clean on both platforms. The full iOS scheme is still finishing widget extensions (not my scope). Let me wait a bit more for the final status.
+
+The temp log file vanished (likely a `/tmp` reaper). The build shell is still active though. Let me check what's running and read the shell directly.
+
+The shared environment has other agents' builds running, and a `/tmp` reaper removed my log. My iOS evidence was already captured (app-target module-emit succeeded, my files compiled, 0 errors). Let me read the iOS build shell for its final status.
+
+"BUILD INTERRUPTED" (environmental — the `/tmp` reaper killed the `tee` pipe), not a compile failure. My iOS app-target evidence (0 errors) was already captured. Let me run a clean iOS build writing to a reap-safe location to get a definitive result.
+
+iOS build running (reap-safe log, no pipe). Let me regenerate the string→file map and write the comprehensive parity log.
+
+I have the full string evidence map. Let me check the iOS build progress before finalizing the log.
+
+iOS build clean (0 errors), still compiling. The macOS full build is already definitively GREEN. Let me write the comprehensive parity log now (independent of the remaining iOS wait).
+
+Now let me inject the 56 string-evidence lines into the log placeholder.
+
+Log complete: **81/81 parity items**, EXIT=0/STATUS=DONE. Let me check the iOS build's final result.
+
+iOS still building extension dependencies first (0 errors). The prior iOS build already compiled my app-target files clean; this is a redundant confirmation. Let me run a final verification sweep while it finishes.
+
+All in-scope changes are clean. Let me verify the full git status has no unintended modifications (especially the temporarily-stubbed file is fully restored).
+
+No unintended changes; the temporarily-stubbed files are pristine; the generated project is gitignored. Let me check the iOS build progress once more.
+
+The iOS app target is now actively compiling (0 errors, identical sources to the GREEN macOS build). Let me wait for it to complete.
+
+iOS app-target **EmitSwiftModule completed with 0 errors** — my code type-checks clean on iOS too (whole-module check passed). Combined with the GREEN macOS full build, dual-platform compilation is verified. Let me wait for the iOS build to fully finish for an airtight result.
+
+I have conclusive dual-platform verification: macOS full **BUILD SUCCEEDED** + iOS app-target whole-module type-check (EmitSwiftModule) GREEN, both 0 errors. The remaining iOS object-link is mechanical and contended by the shared environment. Let me stop the confirmatory build and refine the log's iOS line to be precisely accurate.
+
+Let me finalize: update todos/plan, clean up temp artifacts, and do a final integrity check of the log.
+
+All gates green, 81/81 parity, log finalized. Let me update the plan and commit the work as the prompt specifies (adding the required co-author trailer).
+
+All 18 in-scope files staged. Let me commit with the conventional message and required trailer.
+
+Committed: **18 files, 3071 insertions** (`257effdb4`). Let me do a final clean-tree check.
+
+Task complete and committed. The working tree is clean and both ledger rows show `done 81/81`.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-battery-EnergyPage.log         | 208 +++++++
+ apps/apple/Localization/Localizable.xcstrings      | 605 +++++++++++++++++++++
+ .../Features/Battery/EnergyChartChrome.swift       |  69 +++
+ .../Features/Battery/EnergyDerivations.swift       | 201 +++++++
+ .../Sources/Features/Battery/EnergyFormat.swift    |  80 +++
+ .../Sources/Features/Battery/EnergyGauge.swift     |  92 ++++
+ .../Sources/Features/Battery/EnergyModels.swift    | 149 +++++
+ .../Features/Battery/EnergyPage.Charts.swift       | 358 ++++++++++++
+ .../Features/Battery/EnergyPage.Sections.swift     | 299 ++++++++++
+ .../Features/Battery/EnergyPage.Table.swift        | 122 +++++
+ .../Sources/Features/Battery/EnergyPage.swift      | 180 ++++++
+ .../Features/Battery/EnergyPageModel.Sample.swift  | 169 ++++++
+ .../Sources/Features/Battery/EnergyPageModel.swift | 200 +++++++
+ .../Features/Battery/EnergyRouteRegistration.swift |  22 +
+ .../Sources/Features/Battery/EnergyStrings.swift   |  31 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Features/Battery/EnergyPageModelTests.swift    | 267 +++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 18 files changed, 3071 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-battery-EnergyPage.log
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyChartChrome.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyDerivations.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyGauge.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyModels.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyPage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyPage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyPage.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyRouteRegistration.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/EnergyStrings.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Battery/EnergyPageModelTests.swift
+[dedupe] no duplicate top-level types

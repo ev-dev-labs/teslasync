@@ -1,0 +1,184 @@
+I'll start by exploring the repository structure and reading the web source, while checking the Apple toolchain availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me read all 6 segment files and study existing Apple shared-surface patterns to learn the conventions.
+
+Now I understand the web source fully. Let me study the Apple app conventions — the SharedFacade (P1/S8), Design tokens (P1/S9), i18n (P1/S10), telemetry (P1/S11), and a complete representative shared-surface implementation.
+
+LinearSidebar is the perfect analog (layout chrome). Let me read its complete file set to learn the exact conventions.
+
+Excellent reference. Let me read the rest of the LinearSidebar set to fully internalize the conventions.
+
+This uses XcodeGen. Let me read the project config, Design tokens, the LiveConnection state holder, and check the build tooling.
+
+Let me examine the design tokens, the state-holder facade (especially LiveConnection for the live segment), and build tooling.
+
+Let me check the KMP framework build script, the README, existing StatusBar files, and the logs directory.
+
+A prior StatusBar attempt log exists. Let me read it, the actual prompt, the README, and the LinearSidebar gate log to understand build expectations.
+
+The prior artifact (from a different slot) is hugely informative: it built 13 files covering the full bar + all 6 segments, and the full `xcodebuild` was blocked only by pre-existing `dashboard-widgets` sibling breakage. Let me verify the build feasibility in this slot before deciding strategy.
+
+Environment is capable: full Xcode, pwsh, gradlew, placeholder tool all present. The KMP `Shared.xcframework` is the long pole (~14 min last time). Let me kick it off in the background now while I write code, and check simulator availability.
+
+Environment is fully capable and the `Shared.xcframework` build is running in the background. I have a deep understanding of the pattern now. Let me set up tracking and start writing the surface. I'll follow the proven in-slot `LinearSidebar` architecture and the prior accepted 13-file precedent (full bar + all 6 segments).
+
+Now I'll write the Foundation-only core. Starting with the Adapter (value types, formatters, interpolation) and the Copy (i18n facade).
+
+The core types are in place. Now the projection layer — I'll split it into segment view-models, container types, and the resolve logic to respect the strict file/function length limits. Writing the segment view-models first.
+
+Now the container types: prefs, phase, connectivity, the input snapshot, and the full presentation.
+
+Now the projection logic — the faithful port of each segment's per-render decisions.
+
+The version segment logic is substantial — I'll give it its own resolve file to keep functions small.
+
+Core projection is complete. Updating progress and writing the state-holder seams (prefs store) and the observable model.
+
+Let me check the framework build progress and quickly type-check the Foundation-only core in isolation to catch errors early.
+
+Both milestones hit: **`Shared.xcframework` built successfully** (10m35s, now staged) and the **Foundation-only core type-checks clean under Swift 6**. The full gate is now feasible. Updating progress and writing the views.
+
+Now the segment views. Writing the connection/live/help segments plus shared tone styling first.
+
+Now the vehicle and background popovers.
+
+Now the version segment with its About sheet, and the shared states chrome (spinner, state chips, loading skeleton).
+
+Now the shared states chrome — the spinner, the offline/stale/error chips, and the loading skeleton.
+
+Core + views written. Let me type-check all production files together against the design tokens under Swift 6 strict concurrency to catch issues before tests.
+
+Full production surface type-checks clean on macOS under Swift 6 strict concurrency. Verifying iOS 18 SDK too, then continuing with samples/previews/tests.
+
+Both SDKs pass clean. Now the DEBUG samples + inspector staging every branch.
+
+Now the previews for every branch and the key pieces.
+
+Let me type-check the DEBUG files (samples + previews, including `#Preview` macros) together with production code.
+
+Everything compiles including `#Preview` macros. Now the tests — pure adapter/formatter coverage first.
+
+Now the projection tests covering every segment branch and the container states.
+
+Now the model/view/a11y/i18n tests.
+
+Finally, the i18n catalog. Writing all keys to exactly match the code's fallbacks.
+
+All 13 source files written. Let me verify the i18n keys in code exactly match the strings catalog (1:1), then run the linters.
+
+Key parity confirmed — all 55 catalog keys are referenced; the only extra (`any.key`) is the intentional absent-key test probe. Now running the linters and placeholder check on my files.
+
+swiftlint passes. swiftformat wants my one-line methods wrapped — let me auto-format with the ecosystem tool, then re-verify both linters and re-type-check.
+
+swiftformat passes now, but it reformatted something in Samples.swift that swiftlint flags. Let me inspect and fix it so both pass.
+
+swiftformat wrapped a long signature so the brace dropped to its own line, which swiftlint dislikes. Shortening the return type to `Self` keeps it on one line.
+
+Re-verifying both linters, the placeholder check, line counts, and re-type-checking after formatting.
+
+All three host gates pass (swiftlint 0, swiftformat 0, placeholder 0); largest file is 321 lines. Re-type-checking after formatting and generating the Xcode project for the full build.
+
+Type-check still clean; project generated. Let me confirm my files are wired into the project, then launch the full iOS `build test` (the long pole) in the background.
+
+All 18 Swift files + strings are wired into the project. Launching the full iOS `build test` (the gate's long pole) in the background.
+
+The iOS build+test is running in the background. While it builds, let me capture the whole-tree linter results (the gate's other steps) and confirm my files add no violations.
+
+Whole-tree swiftlint passes with **0 violations** — this slot is clean (no pre-existing sibling lint debt). Let me check the iOS build status.
+
+iOS build is actively compiling the app module (gradle pre-action already done). Let me capture the whole-tree swiftformat result while it builds.
+
+Whole-tree swiftformat passes too (0/4841 require formatting). Both whole-tree linters are green. Let me check the iOS build progress.
+
+iOS build is in the whole-module emit phase (0 errors so far). This is the slow part for a module this size. Let me wait and re-check.
+
+iOS finished: `IOS_EXIT=65`, 2 errors, "(3 failures)" — but **zero in StatusBar files**. Let me identify exactly what failed (sibling vs mine).
+
+Build failed on **2 pre-existing sibling errors** outside my scope (`AIAutoNameUnnamedLocations.swift`, `AISignalExplorerNlFilter.swift` — "escaping closure captures non-escaping parameter") — **zero errors in any StatusBar file**. Let me confirm scope via git and that these siblings are untouched by me.
+
+Confirmed: **only my 19 StatusBar files are new; the 2 build errors are pre-existing siblings I'm forbidden to touch; zero errors/warnings in any StatusBar file.** This matches the documented predecessor disposition exactly.
+
+Let me (1) kick off the macOS `build test` to capture its evidence, and (2) build an executable harness to actually *run* my surface logic (since the app target can't link due to the sibling errors).
+
+Now let me write and **execute** a logic harness over the real Adapter/Projection/Model (the app target can't link due to the sibling errors, so this proves my surface logic actually runs correctly).
+
+Let me compile and run the execution harness, and check the macOS build progress.
+
+Executed logic harness: **62/62 passed, exit 0** — the real Adapter/Projection/Model logic runs correctly. Let me check the macOS build.
+
+macOS build also failed (`BUILD FAILED`, 4 errors, 0 in StatusBar). Let me confirm the exact errors and the final exit code.
+
+macOS failed on **code-signing entitlements** (an environment limitation — no dev certificate), not a compile error; 0 StatusBar errors. Let me re-run the macOS build with signing disabled to capture the real in-module compile evidence (matching the predecessor's approach), and clean up the harness.
+
+While the macOS (no-signing) build runs, let me capture the precise iOS failure breakdown for accurate logging.
+
+macOS (no-signing) build finished. Let me check its result.
+
+macOS build got past signing and is now compiling the Swift module. Let me wait for it to reach the (expected) sibling errors.
+
+macOS (no-signing) also blocked by the **same sibling error** (`AISignalExplorerNlFilter.swift:142`), 0 StatusBar errors. Now let me strengthen test evidence: build my surface as a testable `TeslaSync` module and type-check the XCTest files against it (the app target can't link due to siblings). Also capturing tool versions.
+
+The module emits cleanly (`MODULE_EXIT=0` — all my production+DEBUG files compile as a testable module). The test "errors" are only the XCTest C-macros (unavailable to standalone `swiftc`) — all *my* symbols resolved. Let me shim XCTest to verify the test files' logic type-checks (matching the predecessor's approach).
+
+Only Foundation types are unresolved now — my shim XCTest needs to re-export Foundation (the real one does). All *my* surface symbols resolve. Fixing the shim and re-checking.
+
+All XCTest suites type-check clean against the real surface module (`TESTS_TYPECHECK_EXIT=0`). Comprehensive evidence gathered. Let me capture tool versions, clean temp artifacts, and update tracking.
+
+Scope confirmed: exactly 19 StatusBar files, nothing else. Now writing the comprehensive, honest gate log.
+
+Now committing per the prompt's Commit section (using the file glob since my files are `StatusBar.*`).
+
+`StatusBar.swift` (single-dot main view) wasn't matched by the glob — adding it explicitly.
+
+All 20 artifacts staged (18 `.swift` + `.strings` + log). Committing.
+
+Committed as `abc1700aa`, working tree clean. Let me do a final post-commit verification of the in-scope gates and close out tracking.
+
+All in-scope gates green post-commit. Marking tracking complete.
+
+The StatusBar surface is complete, verified, and committed. Final summary below.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0182-StatusBar.log    | 177 ++++++++++++
+ .../shared-surfaces/StatusBar.Adapter.swift        | 281 ++++++++++++++++++
+ .../shared-surfaces/StatusBar.AdapterTests.swift   | 177 ++++++++++++
+ .../TeslaSync/shared-surfaces/StatusBar.Copy.swift |  34 +++
+ .../shared-surfaces/StatusBar.Model.swift          | 251 ++++++++++++++++
+ .../shared-surfaces/StatusBar.Popovers.swift       | 244 ++++++++++++++++
+ .../shared-surfaces/StatusBar.Prefs.swift          |  80 +++++
+ .../shared-surfaces/StatusBar.Previews.swift       |  80 +++++
+ .../shared-surfaces/StatusBar.Projection.swift     | 220 ++++++++++++++
+ .../StatusBar.ProjectionTests.swift                | 210 ++++++++++++++
+ .../shared-surfaces/StatusBar.Resolve.swift        | 266 +++++++++++++++++
+ .../shared-surfaces/StatusBar.ResolveVersion.swift | 150 ++++++++++
+ .../shared-surfaces/StatusBar.Samples.swift        | 205 +++++++++++++
+ .../shared-surfaces/StatusBar.SegmentModels.swift  | 321 +++++++++++++++++++++
+ .../shared-surfaces/StatusBar.Segments.swift       | 242 ++++++++++++++++
+ .../shared-surfaces/StatusBar.States.swift         | 171 +++++++++++
+ .../shared-surfaces/StatusBar.Tests.swift          | 263 +++++++++++++++++
+ .../shared-surfaces/StatusBar.Version.swift        | 219 ++++++++++++++
+ .../TeslaSync/shared-surfaces/StatusBar.strings    |  86 ++++++
+ .../TeslaSync/shared-surfaces/StatusBar.swift      | 175 +++++++++++
+ 20 files changed, 3852 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0182-StatusBar.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Copy.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Popovers.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Prefs.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.ProjectionTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Resolve.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.ResolveVersion.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Samples.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.SegmentModels.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Segments.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.Version.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StatusBar.swift

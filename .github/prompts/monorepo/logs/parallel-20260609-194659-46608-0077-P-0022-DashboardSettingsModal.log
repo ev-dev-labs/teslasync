@@ -1,0 +1,137 @@
+I'll start by exploring the environment, reading the web source, and checking the existing Apple app structure and build tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me explore the existing Apple app structure.
+
+Let me check for existing DashboardSettingsModal files, the project build setup, and study the closest template (SignalConfigModal).
+
+Project uses XcodeGen (`project.yml`). Let me read the project config, build scripts, swiftlint config, and study the SignalConfigModal template (closest analog).
+
+Important finding: `project.yml` does **not** list `TeslaSync/modals-dialogs` in any target's sources. Let me verify how existing modal work was built/tested by reading a prior log and checking for xcodegen + generated project.
+
+The workflow is now clear: the `modals-dialogs` tier is intentionally **not yet wired into project.yml** (deferred to the P99 acceptance gate). Predecessors verify per-surface via swiftformat, swiftlint, placeholder scan, xcodegen, and isolated SwiftPM/swiftc typechecks against both SDKs. Let me study the closest analog (SignalConfigModal) and the shared seams.
+
+Now let me read the Model and States patterns, plus the design tokens (P1/S9) that everything binds to.
+
+Now let me examine the design tokens (P1/S9), shared TSButton, and the projection/tests/strings/previews patterns.
+
+Let me read the web types, the Adapter (enums/surface slug), Previews, and a tests file to complete my understanding of the pattern.
+
+Let me check the test patterns, the placeholder checker, and whether pwsh is available.
+
+I have a thorough understanding of the pattern. Let me check the swiftformat config and establish a baseline before writing.
+
+Baseline is clean. Now I'll set up tracking and start building. Let me write the plan and todos.
+
+Now I'll write the surface files. Starting with the dependency-free Adapter (domain layer).
+
+Now the main view entry point.
+
+Now the States file (chrome + leaf states).
+
+Now the Controls file (the four form sections + emoji grid).
+
+Now the Previews and the strings catalog.
+
+Now the strings catalog. First let me align the emoji array exactly with the web source (plain ⚡ and ⭐).
+
+Now the test files — state-holder coverage and projection/accessibility coverage.
+
+All 11 files written. Let me run the per-surface gates. Starting with swiftformat and swiftlint scoped to my files.
+
+The `.strings` "unsupported file type" is expected (swiftformat skips it during dir scans). But there's a real `docComments` error at Model.swift:39. Let me inspect.
+
+The `docComments` rule trips on the multi-line initializer directly under a `//` comment (the precedent uses single-line declarations). I'll move the empty draft to a static factory in the Adapter and reference it as a single-line declaration.
+
+Now re-run swiftformat (Swift files only) and swiftlint scoped, plus the placeholder gate.
+
+The `docComments` rule flags a `//` comment before a **single** public declaration (it wants `///`); the multi-var groups are fine. The `draft` group has one var. Converting it to a proper doc comment.
+
+swiftformat + swiftlint both green on the surface. Now the placeholder gate and i18n key-parity check.
+
+Placeholder gate clean (COUNT=0). Now verify i18n key parity between code and the strings table.
+
+i18n keys fully resolved: the 5 "orphans" are the `dashSettings.refresh{value}` keys built by interpolation in the Adapter (all 6 defined, all used at runtime). No drift.
+
+Now the critical step — actually compiling and running the tests. Since `modals-dialogs/` isn't wired into `project.yml` (deferred to P99), I'll build an isolated SwiftPM package with the real design tokens + shared `TSButton`, then `swift build` + `swift test`, and a separate iOS-SDK `swiftc -typecheck`.
+
+Now the package manifest with Swift 6 strict concurrency (matching the project), then build + test.
+
+Build complete under Swift 6 strict concurrency (view layer + core + state holder against the real design tokens). Now run the tests.
+
+All **41 tests pass**, 0 failures, Swift 6 strict concurrency on macOS 15. Now the iOS-18 SDK typecheck of the view layer (the app ships iOS 18 too).
+
+iOS 18 SDK typecheck: 0 errors. Now verify I haven't disturbed the baseline — full `swiftformat --lint apps/apple`, `xcodegen generate`, and full `swiftlint --strict`. First let me check gitignore handling for the generated project.
+
+The `.xcodeproj/` pattern is ignored (check-ignore returns empty only because the dir doesn't exist yet). Let me run `xcodegen generate` and the full `swiftformat --lint apps/apple` gate.
+
+xcodegen green; generated project is git-ignored. Now the full `swiftformat --lint apps/apple` gate and full `swiftlint --strict`.
+
+Full swiftformat clean (0/3370). Now the full `swiftlint --strict` gate.
+
+Full swiftlint clean (0 violations, 3235 files). Every surface-scoped gate is green. Now let me honestly assess the full-app `xcodebuild` gate by checking the KMP `Shared.xcframework` prerequisite and the build script.
+
+Confirmed: `Shared.xcframework` is absent (only `.gitkeep`) — the scheme's pre-build phase builds it via KMP/Gradle. Let me get hard evidence that `modals-dialogs` is unwired by checking the freshly generated project for my files.
+
+Hard evidence: the freshly generated `project.pbxproj` references `DashboardSettingsModal` **0 times** and any `modals-dialogs` file **0 times** (vs. `feature-views` 3 times). The tier is unwired by design (P99 wires it). Let me confirm the scheme exists, then make a bounded, honest attempt at the full-app gate to capture its real blocker.
+
+Scheme exists. Now a bounded, honest attempt at the full-app iOS build to capture its real blocker (the KMP `Shared.xcframework` pre-build).
+
+It's running — almost certainly the KMP Gradle pre-build long-pole. Let me capture evidence of what it's doing, then stop it.
+
+Decisive evidence captured. The live process tree shows the full-app build is blocked in the **KMP Kotlin/Native long-pole** (`gradlew :core:assembleSharedXCFramework` under `build-shared-xcframework.sh`), not in my code — and my files aren't in the project anyway (0 references). This is the exact pre-existing, out-of-scope blocker. Stopping the build and cleaning up.
+
+Clean working tree — only my 11 surface files are untracked. Let me confirm the pending-verifications doc that governs the deferred full-app gate, then write the log.
+
+The pending-verifications doc confirms the deferred-verification model (code committed, host-runnable gates green, full-app build deferred to the CI matrix). Now I'll write the log with the real gate results.
+
+Log written. Now stage the surface files + log and commit (using an explicit glob since the bare path has no literal match).
+
+All 11 surface files + the log are staged (final format/lint guard green). Committing.
+
+Committed (`d0a8b9317`, 12 files, 2333 insertions). Let me finalize tracking and confirm a clean tree.
+
+All work is complete and verified. The task is done.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of the web `DashboardSettingsModal` as **11 files** under `apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.*`, committed as `d0a8b9317` along with the log.
+
+**Surface (faithful to the web source):** all four sections — Identity (name field + 16-emoji 8-column icon grid), Vehicle Filter (scope picker with "All Vehicles" sentinel), Auto-Refresh (6 cadences), Display (two switches) — over a pinned header + footer. The presentational web modal is widened with **every required state**: loading / empty (dashboard not found) / error (retry) / populated, plus stale + offline freshness on the fleet vehicle list — never a blank box. `handleSave`'s rename/icon/update deltas are ported exactly.
+
+**Architecture:** binds through the P1/S8 source seam (no HTTP in the view), P1/S9 generated design tokens, the P1/S10 per-surface i18n table (36 keys; web `dashSettings.*`/`common.*` names preserved), P1/S11 `view.opened` telemetry, and the P4-core shared `TSButton`. No edits to `project.yml`/lint configs/shared catalog (parallel-unsafe, outside scope).
+
+**Gates — all executed on this runner, raw exits in the log:**
+- swiftformat `0` (scoped + full `0/3370`), swiftlint `--strict` `0 violations` (scoped + full `3235` files)
+- placeholder `COUNT=0`, xcodegen `generate` OK
+- isolated SwiftPM **build + 41/41 tests pass** (Swift 6 strict concurrency, macOS 15, real design system)
+- iOS 18 simulator SDK `swiftc -typecheck` `0 errors`
+- i18n key parity clean
+
+**Honestly deferred:** the full-app `xcodebuild build test` is deferred to the P4/ADR-012 acceptance gate — hard evidence shows the `modals-dialogs` tier is unwired in `project.yml` (0 pbxproj references) and the KMP `Shared.xcframework` is unstaged (live process tree caught the `gradlew :core:assembleSharedXCFramework` long-pole). Not a defect in this surface, which compiles with 0 errors. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...-modals-dialogs-0022-DashboardSettingsModal.log | 157 ++++++++++
+ .../DashboardSettingsModal.Adapter.swift           | 266 +++++++++++++++++
+ .../DashboardSettingsModal.Controls.swift          | 287 ++++++++++++++++++
+ .../DashboardSettingsModal.Model.swift             | 224 ++++++++++++++
+ .../DashboardSettingsModal.ModelTests.swift        | 328 +++++++++++++++++++++
+ .../DashboardSettingsModal.Previews.swift          | 107 +++++++
+ .../DashboardSettingsModal.Projection.swift        |  87 ++++++
+ .../DashboardSettingsModal.Seams.swift             | 209 +++++++++++++
+ .../DashboardSettingsModal.States.swift            | 310 +++++++++++++++++++
+ .../DashboardSettingsModal.Tests.swift             | 217 ++++++++++++++
+ .../modals-dialogs/DashboardSettingsModal.strings  |  66 +++++
+ .../modals-dialogs/DashboardSettingsModal.swift    |  75 +++++
+ 12 files changed, 2333 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0022-DashboardSettingsModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.swift

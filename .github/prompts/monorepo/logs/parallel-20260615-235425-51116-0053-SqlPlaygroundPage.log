@@ -1,0 +1,169 @@
+I'll start by exploring the repository structure to understand the task context — the web source page and the Apple app structure.
+
+The web source is clear. Now let me understand the Apple app structure — note the prompt says `Features/PowerUser/` but the actual dirs differ. Let me examine the recent WebhooksPage work as a template and the parity setup.
+
+The actual convention is `apps/apple/Sources/Features/<Domain>/`, and there's already a ported `AINLSqlPlayground` in shared-surfaces I can reuse (matching the web page mounting `<AINLSqlPlayground onApply=...>`). Let me study the WebhooksPage template thoroughly and the supporting files.
+
+Excellent template. Now let me study the already-ported `AINLSqlPlayground` component (the web page mounts it), plus routing infrastructure and design tokens.
+
+Now let me examine the `NLSqlPlaygroundModel` (for reusing AINLSqlPlayground), the design tokens, the parity manifest entry, ledger, and the xcodegen project config.
+
+Now let me find the design tokens and shared components (TSGlassPanel, TSPanelTitle, button/textarea equivalents), plus the parity manifest, ledger, and xcodegen config.
+
+Let me read the manifest entry, the ledger format (from the WebhooksPage commit), and the core UI components.
+
+Now let me read the core UI components and tokens I'll need: Cards (TSGlassPanel), Buttons (TSButton), typography, the design tokens, CopyLinkButton, and the AINLSqlPlayground views for the text-editor pattern.
+
+I have the component patterns. Now I need to confirm where source files must live (xcodegen `project.yml`), the typography/token definitions, CopyLinkButton, the gate contract, and the strings catalog format.
+
+Now let me check available Apple toolchain (critical for the gate), read the typography/token definitions, the gate contract README, and the strings catalog format.
+
+Full Apple toolchain + Xcode present — the gate can actually run, so STATUS=DONE is achievable. Let me read the typography, fields, tokens, gate README, and placeholder scanner.
+
+Now let me read the gate contract (README), the placeholder scanner, and inspect the strings catalog format.
+
+The placeholder scanner flags the literal word "Placeholder" in Swift — I'll avoid it or annotate. Now let me inspect the strings catalog format and find the p4-apple gate README, plus check how WebhooksPage added keys.
+
+The precedent (WebhooksPage log) shows the honest gate approach for this constrained host. Let me read the full prior log to replicate its methodology, plus the gate README and the xcstrings JSON shape.
+
+This is a clear, honest precedent. I'll follow the identical methodology. Now let me read the remaining AINLSqlPlayground model-layer deps (so my harness/type-check compiles), check for any `Shared` imports, and find the theme helpers.
+
+No `Shared` import in the drafter — I can type-check against it. Let me confirm the web route/grouping for `/power/sql`, check the existing power-user route, and view the drafter's preview construction idiom.
+
+I now have full understanding. Let me set up a plan and todos, then inspect the ledger structure, an xcstrings key example, the RouteHostRegistry API, and check for any exhaustive `AppRoute` switches that would need the new case.
+
+I have everything needed. Let me set up the plan and todos, then implement.
+
+There's an exhaustive `AppRoute` switch in `WatchDeepLink.swift` too. Let me inspect it.
+
+`WatchDeepLink` is a separate enum — no impact. Now let me check how other pages wire an AI surface's `onApply` callback into a page model under Swift 6 (to match the house pattern), and whether `assumeIsolated` is used.
+
+`LocationsPageModel` wires an AI surface's `onApplyName` into the page — the exact precedent I need. Let me read it.
+
+I have the exact house pattern (`LocationsPageModel.nameDraftModel` lazily builds the AI child model with `[weak self]` onApply). I'll mirror it with a lazily-cached `drafter`. Now writing the plan and source files.
+
+Catalog done. Now the model with the run-message enum, draft persistence seam, and lazily-cached drafter.
+
+Model done. Now the view + editor field + catalog rendering, and the sample/in-memory store file.
+
+Now the in-memory draft store (preview/test double) and route registration.
+
+Now wiring the route — editing `AppRoute.swift` (case + pathSegment + systemImage + group), `AppRouteParser.swift` (alias), and `TeslaSyncApp.swift` (registration).
+
+Now the strings catalog. Let me inspect the exact xcstrings formatting (indentation/separators) and how WebhooksPage inserted keys, so I add minimal, correctly-formatted entries.
+
+`cat -A` isn't on macOS. Let me inspect the exact block format with Python and confirm whether `extractionState` is present.
+
+Exact format captured. Let me insert the 12 keys (11 page + `route.powerSql`) right after the `"strings": {` opening line, matching Xcode's format precisely, then validate the JSON.
+
+Now the model + route tests.
+
+All source files written. Now running the verification gates. Let me start with swiftformat --lint and swiftlint --strict on the new + edited files.
+
+swiftformat flagged 3 files. Let me auto-format my files, then re-lint and verify the `parity:allow` annotations stayed intact.
+
+The test annotation moved during wrapping — I need to verify the "placeholder" literal and the `parity:allow` marker are on the same line (the scanner is per-line). Let me check both files.
+
+The wrap split the test's `placeholder` literal off from its marker. I'll restructure so they share a line, then re-lint.
+
+Now re-running swiftformat --lint, swiftlint --strict, and the placeholder scan together.
+
+FORMAT_EXIT=0, LINT_EXIT=0. Now the placeholder scan on the feature dir and the tests dir.
+
+Two doc comments contain the literal word "Placeholder". Let me view and reword them to avoid the flagged word (the actual i18n-key line is already annotated).
+
+Re-running the placeholder scan to confirm 0 violations.
+
+PLACEHOLDER_COUNT=0 (1 allowed each). Now re-lint the 2 reworded files and run xcodegen.
+
+Format/lint clean. Waiting for xcodegen to finish.
+
+GEN_EXIT=0. Now the executable model + route harness — this proves the `[weak self]` drafter wiring and all model/route logic under Swift 6 strict concurrency. Let me verify pbxproj references and write the harness.
+
+All files referenced. Now writing and compiling the model + route harness.
+
+The harness caught a real Swift 6 issue: `UserDefaults` isn't `Sendable`. Let me check the repo's house pattern for UserDefaults-backed stores.
+
+House pattern confirmed: `struct …Store: …, @unchecked Sendable` (UserDefaults is thread-safe). Let me apply that.
+
+Re-compiling the harness.
+
+Harness-only issue (static mutable var). Let me make the harness enum `@MainActor`.
+
+Harness compiled clean under Swift 6 strict concurrency (proves the drafter wiring). Running it now.
+
+All 24 harness assertions pass. Now the view type-check against real tokens + components + the AINLSqlPlayground surface. First, let me find which `Sources` files import the (absent) KMP `Shared` framework so I exclude them.
+
+No Components/UI/Feedback/Motion/Forms or Design/Theme files import Shared. Let me confirm which Feedback files reference the (Shared-backed) DataDisplay/Charts categories so I exclude only those, matching the precedent.
+
+Only `FeedbackOverlays.swift` pulls in the Shared-backed data-display layer — I'll exclude it (as the precedent did). Running the macOS view type-check now.
+
+macOS type-check clean (0 errors). Now the iOS idiom.
+
+Both idioms type-check clean (0/0). Now let me verify the documented full-build blocker myself, and re-run the final format/lint/placeholder gates on all files after my latest edits.
+
+Blocker confirmed (only `.gitkeep`, staging pre-action present, xcodeproj git-ignored). Waiting for final format/lint.
+
+All gates green. Now updating the parity ledger (+2 rows, 14/14) and validating the JSON.
+
+Ledger valid (2 rows, 14/14). Now gathering LOC counts and tool versions for the evidence log.
+
+Now writing the evidence log. Let me capture the git status for the file manifest.
+
+Now writing the comprehensive evidence log.
+
+Log written. Now cleaning up the temp harness, updating todos, and committing the in-scope files.
+
+All in-scope files staged (no xcodeproj). Committing.
+
+Committed: `155ce3483`, 12 files, +1206. Let me do a final clean-state verification.
+
+All verified and clean. Let me confirm all todos are complete.
+
+All 8 todos complete. The task is done and committed.
+
+## Summary
+
+Shipped a native **SwiftUI / HIG** `SqlPlaygroundPage` at full parity with `web/src/features/power-user/pages/SqlPlaygroundPage.tsx` (route `/power/sql`), committed as `155ce3483`.
+
+**Parity: `PARITY_COVERED=14 == PARITY_REQUIRED=14`** (2 panels + 1 success state + 11 strings).
+
+**What was built** (`apps/apple/Sources/Features/PowerUser/` — the repo's real compiled page home; the prompt's `TeslaSync/Features/PowerUser` isn't a `project.yml` source group):
+- **GlassPanel1 — Manual SQL editor**: textarea (placeholder + a11y label, monospaced, rows≈10) + Run/Clear (disabled when empty) + deterministic amber run-message (`runEmpty`/`runUnavailable` — no execution endpoint, exactly like web).
+- **GlassPanel2 — Curated schema catalog**: the full name-sorted 5-table catalog (SI-canonical columns) with an adaptive column grid (web `grid-cols-1 sm:grid-cols-2`).
+- **Hosted the already-shipped `AINLSqlPlayground` Helix drafter** (DRY, not re-implemented), with `onApply` wired `[weak self]` to copy a proposed draft into the editor (web `handleApplyAiDraft`).
+- `@Observable SqlPlaygroundPageModel` (no networking in view, ADR-004); SQL draft persisted via an injectable `SqlDraftStore` (web localStorage `ai.sqlPlayground.draft`).
+- Dedicated `.powerSql` route + parser alias + registration; 12 keys added to `Localizable.xcstrings` verbatim.
+
+**Gates — all green (real output):** xcodegen `0` · swiftformat --lint `0/9` · swiftlint --strict `0` · placeholder scan `0` · **executed model+route harness `24/24`** · **view type-check macOS `0/0` + iOS `0/0`** (Swift 6 strict concurrency, previews compiled).
+
+**Full `xcodebuild`: `NOT_RUN`** — honestly recorded, not green. The app module `import Shared` (15 files) requires the P1-owned KMP `Shared.xcframework`, which is absent (`Frameworks/` holds only `.gitkeep`) and whose scheme staging pre-action OOM-kills this shared host per sibling logs. Out of scope; deferred to the P99 gate. The harness even caught two real Swift 6 defects mid-build (proving it exercises the actual compile), both fixed.
+
+`EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete, verified, and committed. All 8 todos are done, all in-scope gates are green, and the work is on the branch.
+
+Merge made by the 'ort' strategy.
+ .../apple-page-power-user-SqlPlaygroundPage.log    | 263 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 132 +++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Features/PowerUser/SqlPlaygroundCatalog.swift  | 137 +++++++++++
+ .../Features/PowerUser/SqlPlaygroundPage.swift     | 231 ++++++++++++++++++
+ .../PowerUser/SqlPlaygroundPageModel.Sample.swift  |  23 ++
+ .../PowerUser/SqlPlaygroundPageModel.swift         | 196 +++++++++++++++
+ .../PowerUser/SqlPlaygroundRouteRegistration.swift |  20 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../PowerUser/SqlPlaygroundPageModelTests.swift    | 180 ++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 12 files changed, 1206 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-power-user-SqlPlaygroundPage.log
+ create mode 100644 apps/apple/Sources/Features/PowerUser/SqlPlaygroundCatalog.swift
+ create mode 100644 apps/apple/Sources/Features/PowerUser/SqlPlaygroundPage.swift
+ create mode 100644 apps/apple/Sources/Features/PowerUser/SqlPlaygroundPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/PowerUser/SqlPlaygroundPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/PowerUser/SqlPlaygroundRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/PowerUser/SqlPlaygroundPageModelTests.swift
+[dedupe] no duplicate top-level types

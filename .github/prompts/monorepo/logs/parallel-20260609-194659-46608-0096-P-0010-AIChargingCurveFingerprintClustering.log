@@ -1,0 +1,109 @@
+I'll start by exploring the repository structure to understand the task context — both the web source and the native Apple side.
+
+Let me read the web source and explore the Apple app structure.
+
+Now let me read the shared web components it depends on, and explore the Apple app structure in depth.
+
+`AIAnomalyExplanations` is the closest existing AI shared-surface analog. Let me study it as the template, and check toolchain availability in parallel.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, xcodegen, pwsh) — so this is NOT a BLOCKED scenario. Let me read the rest of the template files.
+
+Let me read both test files to complete the picture of the pattern.
+
+I now fully understand the template pattern (10 files). Let me verify the shared tokens exist, confirm the web `useAiStream` parity, and understand the build/test wiring.
+
+Now let me check the design tokens, the Shared.xcframework dependency, and the gate scripts — these determine whether a full build is feasible.
+
+Important finding: the build needs `Shared.xcframework` (KMP/Gradle), which isn't prebuilt. Let me check the KMP toolchain availability and read the design tokens + component signatures I must use.
+
+All design tokens confirmed (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`). Java 17 + Gradle present but no prebuilt `Shared.xcframework`. Let me read the shared component signatures I'll reuse, then write the surface.
+
+I have everything I need to understand the pattern. Let me pre-warm the KMP `Shared.xcframework` build (the slow gate dependency, independent of my files) in the background while I check for naming collisions.
+
+No collisions — `ChargingClusters*` prefix is safe. Let me set up tracking and start writing the 10 surface files. First, a quick check on the KMP build progress.
+
+KMP build is running. Let me write the plan and create all 10 surface files while it builds.
+
+KMP build still running (downloading toolchain). Continuing with the Views file.
+
+Now the strings catalog, Previews, and both test files.
+
+All 10 files are written and the KMP build finished. Let me verify the framework and run the fast checks (swiftformat, swiftlint, placeholders) on my files.
+
+KMP `Shared.xcframework` built successfully (6m48s). Let me stage it, inspect the gate configs/scripts, and check for an existing reference gate log.
+
+Now I understand the gate precisely. Let me stage the framework, scan my files for forbidden patterns, and run swiftformat/swiftlint on my new files for fast feedback.
+
+Framework staged, no forbidden patterns. Now swiftformat and swiftlint on my files.
+
+swiftformat wants a few long lines in AdapterTests wrapped. Let me auto-format my files to match the project config exactly, then re-verify.
+
+Both linters pass on my files (0 violations, 0 formatting issues). Now the heavy step: generate the Xcode project and check available simulators.
+
+Project generated; "iPhone 16" simulator exists and is booted. Let me first validate compilation with an iOS `build` (faster feedback than full `build test`), running in the background.
+
+The iOS build failed — but **every** error is in unrelated surfaces (`RecentDrivesListWidget`, `RecentDrivesSection`, `StateTimeline*`), none in my files. These are "ambiguous for type lookup" errors. Let me determine whether this is pre-existing baseline breakage independent of my surface.
+
+This is now clear. The build failure is **pre-existing baseline breakage** in out-of-scope sibling surfaces: `RecentDrivesModel`, `RecentDrivesConnection`, `StateTimelineConnection` are each declared **twice** (in `dashboard-widgets/` and `feature-views/`), causing "ambiguous for type lookup". Git status confirms I only added my 10 files. The precedent logs also end `STATUS=BLOCKED` when the full xcodebuild can't complete.
+
+Let me (1) prove the breakage is independent of my files by building with my files removed, and (2) build an isolation harness to actually run my tests. Starting both.
+
+Baseline build running. Let me check whether the Components directory is self-contained (so I can use the real components in an isolation harness).
+
+Components are self-contained (only system frameworks). Let me check `Cards.swift` (the one transitive dep) before building the harness.
+
+Baseline build (my files removed) finished. Let me read that proof, then check that Components is fully self-contained for the harness.
+
+**Proof complete:** With my files removed, the build still fails with `EXIT=65` and the identical `RecentDrives*`/`StateTimeline*` ambiguity errors — **zero** references to my surface. The breakage is 100% pre-existing and out of scope (each type declared twice in committed sibling files I'm forbidden to edit).
+
+My files are restored. Now let me build a clean isolation harness to actually run my tests. Let me map the minimal real-dependency closure.
+
+The design-system dependency closure spiders widely. Rather than chase it, I'll use two clean, zero-mutation verifications: (1) a minimal SwiftPM harness to actually **run** all my logic/a11y tests, and (2) a `swiftc -typecheck` of my view files against the real components. Starting with the test harness.
+
+**All 75 of my tests pass** (0 failures) in the isolation harness — proving the Adapter/Projection/Model logic, the `>0` canStart rule, SSE/reducer/output/action, and model wiring/telemetry/freshness all work.
+
+Now goal 2: verify my SwiftUI view files compile against the real components via `swiftc -typecheck`.
+
+`mapfile` isn't available in this bash; the design files weren't included. Let me fix the file collection.
+
+Zero errors in my files — the 52 errors are all in design-system files (their broader `Sources/` closure wasn't included). Let me confirm none are mine and identify where they live.
+
+Definitive: **all** typecheck errors are in `Sources/Components/DataDisplay` (referencing an out-of-scope `Units` helper I didn't include) — **zero** in my surface. My SwiftUI views compile cleanly against the real components.
+
+Now let me run the actual gate commands and assemble the honest log. Starting the two xcodebuild `build test` steps (they'll fail on the pre-existing sibling breakage).
+
+The gate runner is executing (two `build test` runs + linters + placeholders + harness). Let me wait and monitor.
+
+The gate runner finished. Let me read the captured exit codes and the full log.
+
+The gate ran. Captured results: **IOS_EXIT=65, MAC_EXIT=65** (both with **0 errors in my files**, all 108 errors in pre-existing siblings), **LINT_EXIT=0** (0 violations/3262 files), **FORMAT_EXIT=0**, **PLACEHOLDER_EXIT=0**, and my **75 tests pass**. Let me append the pre-existing-breakage proof and the SUMMARY/STATUS footer to the log.
+
+Log finalized (138 lines, `EXIT=65 / STATUS=BLOCKED` with full evidence). Now let me verify git status shows only my intended files (no build-artifact leakage) before committing.
+
+Git status is clean — only my 10 surface files + the log; all build artifacts are gitignored. Let me commit the deliverable per the prompt's Commit step, with an honest body noting the BLOCKED xcodebuild status.
+
+Commit succeeded: **11 files, 2314 insertions** on branch `auto/20260609-194659-46608/96`. Let me do a final clean-state verification.
+
+The task is complete. Working tree is clean, all 10 surface files + the gate log are committed, and the log honestly ends `EXIT=65 / STATUS=BLOCKED`.
+
+## Summary
+
+I shipped a production-grade, native Apple SwiftUI implementation of **`AIChargingCurveFingerprintClustering`** at parity with `web/src/components/ai/AIChargingCurveFingerprintClustering.tsx`, following the established `AIAnomalyExplanations` shared-surface template (10-file decomposition, unique `ChargingClusters*` namespace).
+
+**Files (committed, `15dec3cef`):** `.swift` (View+gate+chrome), `.Model.swift` (P1/S8 state-holder, P1/S10 i18n facade, P1/S11 telemetry), `.Projection.swift`, `.Adapter.swift` (request/SSE/reducer/output/action), `.Views.swift`, `.Chrome.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`, `.AdapterTests.swift`.
+
+**Parity captured faithfully:** `withAiFeature` gate → renders nothing when off; `AIFeatureCard` (title "Explain the charging-curve cluster fingerprints", description, "Explain clusters" button, "Helix" badge); `AiOutputPanel` streaming branches; POST `/ai/charging/curves/clusters/explain` with a **`vehicle_id`-only body** (no `days`, unlike anomaly); and the stricter **`numericVehicleId > 0`** canStart rule. All states render: gated/loading/error/ready + empty/no-vehicle/thinking/prose/stream-error + live/stale/offline. Full VoiceOver labels, Dynamic Type, Reduce Motion, and `view.opened` telemetry.
+
+**Verification (all green where runnable):**
+- `swiftlint --strict`: **0 violations** (surface + full 3262-file run)
+- `swiftformat --lint`: **0** (surface + full `apps/apple`)
+- placeholder scan: **PLACEHOLDER_COUNT=0**
+- **75/75** surface unit + a11y tests **pass** (isolated SwiftPM XCTest run)
+- My SwiftUI views **typecheck against the real design system** — 0 errors in my files
+
+**Why STATUS=BLOCKED (honest):** The two `xcodebuild build test` steps return `EXIT=65` because the shared app target is **pre-broken by out-of-scope duplicate type declarations in sibling surfaces** (`RecentDrivesModel`, `StateTimelineConnection`, etc., each declared twice in `dashboard-widgets/` + `feature-views/`). I proved this is independent of my work: rebuilding with my 10 files removed produces the **identical** `EXIT=65` and the same sibling errors, with **zero** errors ever referencing my surface. My prompt's allowed files are this surface + the log only, so I cannot fix those collisions. This matches the precedent BLOCKED convention; once the sibling collision is resolved, both xcodebuild steps are expected to go green.
+
+
+
+All work is finished and verified — the surface is fully implemented, all surface-scoped gates are green (swiftlint 0, swiftformat 0, placeholders 0, 75/75 tests pass, views typecheck clean), the deliverable is committed, and the honest gate log ends `EXIT=65 / STATUS=BLOCKED` with conclusive evidence. The working tree is clean and all todos are done.
+

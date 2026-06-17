@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and the key files referenced in this task.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Not blocked. Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source — a pure presentational component. Let me explore the existing Apple conventions: how surfaces are structured, the state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), telemetry (P1/S11), and the project build config.
+
+Key finding: `project.yml` does **not** list `TeslaSync/widget-primitives` as a source path — only `dashboard-widgets`, `feature-views`, `misc-surfaces`, `shared-surfaces`. I need to understand how the build is generated and how new directories get registered. Let me investigate the toolchain state, git history, and read a complete reference surface.
+
+Excellent — this is the key precedent. The **VisuallyHidden** commit shows the established pattern: build wiring (project.yml + .swiftlint.yml) is an *additive, required* change so the gate sees the new directory. Let me read the complete Toggle reference surface (a presentational primitive like mine) and the swiftlint config.
+
+The Toggle surface (a pure-presentational primitive like mine) is the ideal template. Let me read its remaining files plus locate the design tokens and shared component equivalents.
+
+Now let me read the test conventions and locate the design tokens and shared-component equivalents (Badge, EmptyState) that my surface needs.
+
+Now let me locate the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`) and check for any shared Badge/EmptyState patterns I should match visually.
+
+Found native shared components: `Components/UI/Badges.swift` (TSTone) maps to web `Badge`. Let me read the design tokens and the shared Badge + EmptyState components I'll compose with.
+
+`TSBadge` (web `Badge`) and `EmptyState` in `States.swift` (web `@/components/feedback`) are the native counterparts. Let me read the token file (correct path), the EmptyState component, and check how dynamic text is passed to TSBadge.
+
+I now have the full design system. Let me read the web `EmptyState` (to match visual treatment), the swiftlint config, the placeholder-check script, and the check-placeholders tooling so I satisfy the gate exactly.
+
+I now have a complete understanding of the conventions, tokens, shared components, gate, and the placeholder rules (note: the literal word "Placeholder"/"not implemented" is banned, so I'll avoid those substrings entirely). Let me set up tracking, check for type-name collisions, and validate the toolchain by generating the baseline project.
+
+All matches are in comments (each widget has its own private variant like `EnergySiteInfoDetailCard`). Let me confirm there are no actual `WidgetDetail*` type definitions, then kick off a baseline build in the background while I write the files.
+
+Names are free and xcodegen works. Let me check the simulator availability and the `Shared.xcframework` build pre-action (the gate depends on it), then start a baseline build in the background while I write the files.
+
+iPhone 16 simulator is booted. But `Shared.xcframework` doesn't exist yet — the gate's pre-action builds it via Gradle/Kotlin-Native. Let me check that toolchain and start building the framework in the background (it's independent of my code, so it's productive parallel work).
+
+Java 17 + Gradle present. Let me start building `Shared.xcframework` in the background (it's independent of my code — productive parallel work) while I write the surface files.
+
+Java 17 + Gradle present; the `Shared.xcframework` build is compiling in the background. Now let me write the surface. Starting with the pure Adapter core.
+
+Now the Projection (pure resolve logic):
+
+Now the Model (telemetry seam, i18n facade, state-holder):
+
+Now the main public View:
+
+Now the presentational subviews (the visual parity layer) with the `variant → TSTone` mapping:
+
+Now the Previews and the strings catalog:
+
+Mark progress and write the test files. First the pure-core adapter tests:
+
+Now the projection/model/view/telemetry/a11y tests:
+
+All 9 surface files written. Now let me wire the build — add `TeslaSync/widget-primitives` to both app targets, both test bundles in `project.yml`, and to `.swiftlint.yml` (matching the VisuallyHidden precedent).
+
+Now the two test-bundle `includes` blocks and the swiftlint config:
+
+Let me verify the wiring and check the background framework build progress.
+
+Wiring is correct (4 project.yml entries + swiftlint). The framework build is linking release slices. While it finishes, let me run a **fast isolated typecheck** of my surface against its real dependencies (design tokens + shared Badge) under Swift 6 strict concurrency — high-signal correctness feedback without waiting on the full module.
+
+Isolated typecheck passes with **EXIT=0** under Swift 6 strict concurrency (including Previews). Now let me auto-format my files to the project style, then lint them.
+
+Clean: **swiftformat --lint 0/8 need formatting**, **swiftlint --strict 0 violations across 4795 files** (the full project now includes my surface). Now the placeholder gate, then regenerate the project to include the new directory.
+
+All fast gates green: typecheck, swiftformat, swiftlint (0 violations), **check-placeholders EXIT=0**. The Gradle framework build is nearly done (linking macOS slices). Let me regenerate the xcodeproj to include the new directory and wait for the framework to finish.
+
+The project now includes my files (54 references). Let me wait for the framework build to finish before running the full gate.
+
+**Gradle BUILD SUCCESSFUL** (10m). The release `Shared.xcframework` exists. Let me stage it into `Frameworks/` and confirm the gate log directory, then launch the full iOS `build test` gate.
+
+Framework staged (all 3 slices). Now the full gate. Launching the iOS `build test` (the slow step — 4795 files, Debug config) in the background.
+
+While the iOS gate builds, let me record a brief plan/status file and then monitor the build.
+
+The launcher returned; let me check whether the detached xcodebuild is still running and how far the build has progressed.
+
+The iOS build is actively compiling the main module in Debug `-Onone` incremental batch mode (the robust path — not WMO, so it avoids the IRGen-capacity risk the precedent hit). It survived as a detached process. Let me wait and poll.
+
+Build still compiling the main module, 0 errors so far, nothing referencing WidgetDetail. Continuing to wait.
+
+Build finished (1 error reported, none referencing WidgetDetail). Let me read the exact exit code, the error, and the test results.
+
+iOS gate **failed (exit 65)** — but the sole compile error is a **pre-existing type-check timeout in `RecentDrivesSection.Previews.swift` (feature-views)**, not my surface. This is exactly the out-of-scope sibling breakage the prior precedent documented. Let me rigorously confirm attribution, check my change set, and kick off the macOS gate in parallel.
+
+Attribution is conclusive: the **only** error in the entire build is `RecentDrivesSection.Previews.swift` (feature-views) — my change set is solely `widget-primitives/` + the two wiring files, and zero errors/warnings reference my surface. Let me launch the macOS gate (shares feature-views, so expected to hit the same pre-existing error) and, in parallel, build a standalone harness to **execute** my adapter/projection/model assertions (since the module's XCTest can't run while that sibling file is broken).
+
+The harness needs to be top-level `main.swift` (can't mix `@main` with top-level statements). Let me rewrite it and compile/run against the real surface sources for macOS.
+
+Now compile and run the harness against the real surface sources (macOS), producing executed evidence of the test assertions:
+
+Concurrency nit in the harness (main-actor global). Let me mark the helper `@MainActor` and recompile:
+
+**Harness: all 34 assertions PASS** (`HARNESS_RESULT=ALL_PASS`) — executed evidence that the adapter/projection/model logic is correct, run against the real surface sources. Let me confirm the blocking file is byte-identical to HEAD (proving pre-existing) and poll the macOS gate.
+
+Confirmed: the blocking file is **byte-identical to HEAD** (empty diff) and exists at HEAD — definitively pre-existing and outside my change. The macOS gate is still running. Let me wait for it to finish and read the precise result.
+
+macOS still building. Let me continue waiting.
+
+macOS shows BUILD FAILED + TEST FAILED but my error-regex caught nothing — let me look at the actual macOS failure context directly.
+
+Now the macOS picture is clear and **distinct** from iOS: it fails at **code-signing** (`entitlements require signing with a development certificate`) — a pre-existing environmental capability blocker (no dev cert), failing *before* Swift compilation. The precedent cited this exact issue. Notably my surface **already compiled cleanly for the macOS target** in the harness build (`COMPILE_EXIT=0`). Let me confirm the macOS gate's final exit code.
+
+The macOS gate is hung in test-action wrap-up, but the result is already conclusive: **8× code-signing entitlement errors** (the pre-existing dev-certificate blocker), no widget-primitives errors. Let me check the process state and investigate the cross-slot DerivedData reference I noticed.
+
+macOS exited (BUILD FAILED / TEST FAILED = exit 65). My iOS gate correctly used slot-194 (11,287 refs); the macOS signing stage referenced a sibling slot's derived-data — environmental parallel-harness noise, and irrelevant since macOS failed *before* compilation. My surface's macOS compilation is independently proven by the harness (macOS SDK, EXIT=0).
+
+I now have complete, honest evidence. Let me write the gate log.
+
+Let me clean up temp artifacts and review the exact git change set before committing.
+
+git status is exactly as intended (xcodeproj + framework are gitignored). Let me confirm the 9 surface files and commit with explicit paths.
+
+All 9 files present. Committing with explicit paths and an honest body documenting verification, the BLOCKED gate, and the required build wiring.
+
+Committed as `7af7ed3ec` (12 files, 1273 insertions). Let me verify the working tree is clean and finalize tracking.
+
+Working tree is clean (only the gitignored `.xcodeproj`/`.xcframework` remain). Task complete.
+

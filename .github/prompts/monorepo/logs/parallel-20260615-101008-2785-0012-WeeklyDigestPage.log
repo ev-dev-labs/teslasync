@@ -1,0 +1,32 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the web sub-components, the Apple app structure, and parity infrastructure in parallel.
+
+Now let me check tooling availability and examine the established analytics page pattern (FleetCompare) to follow conventions.
+
+Full toolchain is available (Xcode 26.5, xcodegen, swiftlint, swiftformat, pwsh). Let me examine the manifest record, ledger entry, web sub-components, and an existing analytics page pattern.
+
+The FleetCompare log confirms the real path is `Sources/Features/Analytics/`. Let me read the full gate execution from that log, find the simplest comparable page, and examine the component library and navigation files.
+
+I now understand the established methodology. Let me verify the pre-existing build break, examine the component library, navigation files, and web sub-components in parallel.
+
+Build break confirmed. Now let me read all web sub-components and study a simpler analytics page (Mileage) as the Swift template.
+
+I have the complete web page picture. Now let me study the Swift conventions: the Mileage analytics page (simpler template), component library, and navigation wiring.
+
+Let me read the complete Mileage page set as my primary template.
+
+Excellent template. Let me read the remaining Mileage files, its tests, and the navigation wiring.
+
+The Mileage template is comprehensive. Now let me study navigation wiring and grep the component APIs I'll need.
+
+No `.weeklyDigest` route exists yet — I'll add it. Let me read the route parser, registry, tests, and app composition to wire it correctly.
+
+Now let me check for exhaustive switches over AppRoute and grep the component API signatures I'll need.
+
+Let me read the precise component signatures I'll use: cards, badges, metrics, typography, charts, design tokens, and the units facade.
+
+Let me read the remaining component APIs, design tokens, units facade, and currency/energy formatting patterns.
+
+Let me read the chart models, design tokens, units facade, and the FleetCompare formatter (for currency/energy patterns).
+

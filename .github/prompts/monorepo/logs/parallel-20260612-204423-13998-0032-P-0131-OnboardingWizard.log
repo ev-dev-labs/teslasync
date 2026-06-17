@@ -1,0 +1,275 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the repository structure, the web source, and whether the Apple toolchain is available.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and explore the Apple app structure.
+
+Now I understand the web source — a 4-step onboarding modal with progress dots, per-step icon/color, skip/next buttons, localStorage persistence, and cross-tab broadcast sync. Let me explore the Apple app structure to learn the established patterns.
+
+Shared-surfaces exists with a `.Adapter` / `.Model` / `.Previews` / `.AdapterTests` naming pattern. Let me check for any existing OnboardingWizard files and find a complete reference surface to follow.
+
+OnboardingWizard doesn't exist yet. Let me examine a complete reference surface to learn the exact file structure, and find one that's also a presentational/feedback modal.
+
+The canonical surface = 8 files: `.swift` (view), `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.AdapterTests.swift`, `.Tests.swift`. Let me read the complete Accordion set to learn the exact patterns for model, adapter, theming, i18n, telemetry, and tests.
+
+Excellent — this confirms the key precedent: Accordion (and siblings Delta, MetricCard, InlineCallout, ActiveFilterChips, StaggerItem) are **pure presentational primitives** that reproduce only the source's REAL branches, NOT inventing loading/error/stale/offline. OnboardingWizard is the same. Let me read the remaining Accordion files and the shared tokens/i18n infrastructure.
+
+Now let me read the test files and locate the shared P1/S9 token definitions and test target structure.
+
+Let me locate the P1/S9 token definitions and understand the project structure for the build/test targets.
+
+Tokens live elsewhere (a shared core). Let me find where `TSSpacing`/`Color.TS`/`Font.TS` are defined and review the project.yml target config.
+
+The main-app tokens aren't where I expected. Let me examine `project.yml` to understand targets, source roots, and dependencies (P4 core may be a separate module/package).
+
+Now I understand: files are auto-globbed into targets, tokens come from `../design/generated/apple`, and XcodeGen builds from `project.yml`. Let me verify the tokens available, check xcodegen, and find precedent for persistence (localStorage→UserDefaults) and broadcast/subscribe patterns.
+
+Let me read the full Tokens.swift to know the exact token API, and find precedent for UserDefaults/persistence and cross-window broadcast patterns.
+
+I have the full token API. Now let me find precedent in existing surfaces for the patterns OnboardingWizard needs: timed reveal (1500ms delay), UserDefaults persistence (localStorage parity), cross-window broadcast (broadcast/subscribe parity), and present-on-visible telemetry.
+
+`InstallPrompt` is the ideal analog — a dismissable first-run prompt with UserDefaults persistence + NotificationCenter broadcast, exactly like OnboardingWizard's localStorage + broadcast. Let me read its full implementation to follow the established seam patterns.
+
+InstallPrompt is a perfect analog with Seams/Stores/States files. Let me read its complete implementation plus the web source it mirrors.
+
+This is a comprehensive template. Let me read the remaining InstallPrompt files (Model, View, States, main, tests, strings) and the web InstallPrompt source to complete my understanding of the full pattern.
+
+I now have the full InstallPrompt pattern. The key architectural question is states: OnboardingWizard's web source is **pure presentational** (no fetch — gated only by localStorage + a timer), like Accordion. Let me confirm the blessed precedent for pure-presentational surfaces by reading a close sibling, check for any modal/stepper precedent, and read the remaining InstallPrompt files (States/Views/tests) for rendering style.
+
+Confirmed: **22 sibling surfaces** follow the pure-presentational precedent (InlineCallout 0124 being the direct feedback sibling). OnboardingWizard's web source is the same — a localStorage gate + timer + step state, no fetch. I'll model its REAL states (hidden / presented-per-step / completed) with a P1/S8 source seam like InstallPrompt, without fabricating network states. Let me read the remaining reference files and the shared component APIs I'll need.
+
+I have the test patterns. Now let me confirm exact APIs of the shared components I'll use (`TSButton`, `TSFadeIn`, `TSCard`, `TSEmptyState`, `TSSkeleton`) and study how an existing modal surface renders its backdrop/overlay chrome, plus the remaining InstallPrompt preview/strings/test files.
+
+Shared components live in `apps/apple/Sources/Components/`. Let me read their exact APIs and the remaining reference files.
+
+I have all the shared component APIs. Let me check the modal-overlay convention (backdrop/scrim) and read the InstallPrompt strings + view tests to finalize patterns before writing.
+
+I now have the complete pattern. Let me check the lint/format budgets and the placeholder-check script to ensure my code passes the gate, then I'll write the surface.
+
+Let me read the forbidden-pattern list and establish the cheap-gate baseline, while kicking off a baseline build in the background.
+
+Forbidden words noted (avoid "TODO", "FIXME", "XXX", "Placeholder", "not implemented", etc.). Let me kick off a baseline build in the background and run the cheap gates to establish a clean starting point.
+
+Project generated. Let me list schemes/simulators, start a baseline macOS build in the background, and run the cheap gates in parallel.
+
+iPhone 16 simulator is booted, schemes exist, reference files are format-clean. Let me start a baseline macOS build in the background to confirm HEAD compiles green, then write the surface while it runs.
+
+Baseline macOS build is running in the background. iPhone 16 sim is booted. I have the complete pattern. Let me set up tracking and write the surface. Starting with the Foundation core (Adapter, Seams, Model).
+
+Adapter written. Now the Seams (persistence gate + broadcast + reveal scheduler + source) — closely mirroring InstallPrompt's seam pattern.
+
+Now the Model (telemetry, input, observable state-holder, i18n facade).
+
+Core trio done. Let me update tracking and check the baseline build progress.
+
+Baseline still building. Let me write the subviews (scrim, card, progress dots, step content, actions, empty leaf, accent→token mapping).
+
+Now let me add an `initialStep` seam to the model (for previews/tests to seed a step), then write the main view.
+
+Let me check the baseline build status before continuing with previews, strings, and tests.
+
+Still building. Let me write the previews and strings files.
+
+Now the pure-core adapter tests.
+
+Core + adapter tests written. Let me check the baseline build status and verify file line counts (SwiftLint default file-length limit is 400 under `--strict`).
+
+Baseline build finished. Let me confirm it's green, then write the remaining two test files.
+
+Baseline macOS build fails at HEAD due to a **code-signing certificate requirement** (pre-existing, environmental — not my code; macOS simulator/device signing isn't provisioned on this runner). The iOS Simulator leg (primary) doesn't need signing. I'll verify iOS fully and gather macOS evidence with signing bypassed. Let me finish the two remaining test files first.
+
+Now the seams tests (completion store, broadcast, reveal scheduler, source).
+
+All 10 files written. Let me update tracking, then format and lint my files.
+
+3 files reformatted. Let me verify swiftformat --lint and swiftlint --strict are clean on my files, and check what reformatting changed.
+
+swiftformat clean. SwiftLint flagged one issue: a 4-member tuple in `makeSource` (max 2). Let me refactor it to a small struct.
+
+swiftformat already reformatted that block. Let me view the current state.
+
+Let me re-format and re-lint to confirm clean.
+
+swiftlint and swiftformat both clean on my files. Now let me regenerate the project (to include the new files) and run the iOS Simulator build+test — the primary gate.
+
+My files are in the project. Now the primary gate: iOS Simulator build+test. This will take a while — running it now.
+
+iOS build+test is running in the background. Let me wait for it to progress.
+
+Still compiling (large project, first iOS build). Let me keep waiting.
+
+Root cause found: **`OnboardingStep` already exists in the module** — a name collision (likely from `OnboardingChecklistWidget`). All the cascading errors stem from this ambiguity breaking my `steps:` initializer. Let me find all existing `Onboarding`-prefixed types to identify every collision.
+
+This is a serious name-collision problem: the module already has `OnboardingStep`, `OnboardingProjector`, `OnboardingConstants`, `OnboardingCompletionStore`, `OnboardingMotion`, and many more (from the existing `OnboardingGate`/`OnboardingChecklist` surfaces). My generic `Onboarding*` names clash. I must namespace all my types to `OnboardingWizard*`. Let me first audit every capital-`Onboarding` occurrence in string literals/comments so a prefix rename won't corrupt user-facing strings.
+
+Clear plan: the only user-facing string with capital "Onboarding" is the completion-leaf message (Views.swift:212). I'll reword it, then do a safe prefix rename `Onboarding`→`OnboardingWizard` (negative lookahead avoids doubling existing `OnboardingWizard*` names). First, let me confirm no existing `OnboardingWizard*` identifiers exist to collide with my new prefix.
+
+Confirmed: `OnboardingWizard*` prefix is collision-free; the bare types come from existing surfaces (e.g., `FleetApiSection.Models.swift`, `OnboardingGate`, `OnboardingChecklist`). Let me reword the one user-facing string, then run the safe prefix rename.
+
+Now the safe prefix rename across all 9 Swift files (negative lookahead prevents doubling existing `OnboardingWizard*` names):
+
+Rename is clean — no leftover bare names, literals preserved. Let me verify no accidental `WizardWizard` doubling, check the i18n keys stayed lowercase, then reformat and relint.
+
+No doubling, keys intact, names within limits. The `Wizard` insertion may push some lines past 120 chars — let me reformat and relint.
+
+swiftformat and swiftlint both clean after the rename. Now let me rebuild + test on iOS Simulator.
+
+iOS build+test #2 is running. While it builds, let me verify the cheap gate legs (whole-tree swiftformat lint + placeholder check) and confirm how the placeholder script handles my path.
+
+Placeholder check passes (COUNT=0, EXIT=0). Let me check on the iOS build progress.
+
+Still building/testing. Let me continue waiting.
+
+Large test bundle compile + full suite run takes time. Let me wait longer.
+
+Let me peek at the build log directly to see current progress.
+
+Good progress — the app module compiled and emitted successfully (my files compile cleanly!). Now it's building resources and the test bundle. Let me keep waiting.
+
+No errors so far; still compiling the app target. Let me wait longer.
+
+Test bundle is now compiling; still 0 errors. The full suite build+run is slow on this large project. Let me keep waiting.
+
+The log tail looks static — let me check whether it's still actively progressing (file growth, last compile tasks).
+
+The build isn't hung — 92 parallel Swift compiler processes are churning through the large test bundle (xcodebuild buffers output during heavy parallel compiles). The machine is saturated, so it's slow. Let me wait for completion.
+
+iOS build+test finished (exit 1). Let me examine the result — whether it's a compile failure or test failures.
+
+BUILD FAILED but with 0 compile errors. Let me find the actual failure reason at the end of the log.
+
+The cause is `** BUILD INTERRUPTED **` — not a code error (0 compile errors; the app module emitted successfully). The massive test bundle (hundreds of `*Tests.swift`) spawned 92 parallel Swift processes and exhausted machine resources. The app target already compiled cleanly. Let me retry with capped parallelism (`-jobs 6`) to avoid the OOM interruption, and wait without concurrent load.
+
+iOS build+test #3 (capped jobs) is running. I'll wait without adding concurrent load to avoid another interruption.
+
+Still compiling with capped jobs (more stable). Let me keep waiting.
+
+Let me check progress in the raw log (light check).
+
+App module compiled (0 errors); test bundle next. Let me keep waiting.
+
+Test bundle now compiling (0 errors, log growing steadily). Let me continue waiting.
+
+Still compiling the large test bundle (0 errors, linking starting). Let me keep waiting.
+
+A possible interruption/failure marker appeared while the shell still runs. Let me inspect it.
+
+"BUILD FAILED" at line 20971, yet processes still run and 0 `error:` lines. Let me see the failure context around that line.
+
+I see it now — the failure is in `AnomalyInlineRow.*` (NOT my files), and line 16386 says "Command SwiftCompile failed with a nonzero exit code" with **no `error:` line** — a hallmark of a swift-frontend **crash (OOM)**. The path `.teslasync-parallel/.../slot-32` indicates many parallel build slots contend for this machine. Let me confirm the crash nature.
+
+Decisive finding: this is a **swift-frontend compiler crash** ("Please submit a bug report... Stack dump") in **pre-existing files** (`AppShell.swift`, `AppearanceSettings.*`), not my code. Critically, `EmitSwiftModule for TeslaSync` **succeeded** — meaning the whole module (including my files) **type-checks correctly**; the crash is in backend codegen of a pre-existing batch, on this heavily-contended 32-slot parallel machine. Let me classify the crash and check the crashing batch's filelist for my files.
+
+The crash backtrace is conclusive: `abort` → `report_fatal_error` → **`report_at_maximum_capacity`** → `SmallVectorBase::grow_pod` during `IRGenSILFunction::visitFullApplySite`/`emitLazyDefinitions`. This is the **Swift compiler's IR generator hitting an LLVM capacity limit** while emitting a pre-existing batch — a toolchain/resource limit, not a source error (the module type-checked: `EmitSwiftModule` succeeded). Let me read the final result and check whether my files are even in the crashing batch.
+
+Final result: **TEST FAILED / IOS_EXIT=65** — caused by `Command SwiftCompile failed` in the **`AnomalyInlineRow.*` batch** (a pre-existing surface, not mine). This is the LLVM IRGen capacity crash. My files type-check (module emitted) and aren't in the crashing batch.
+
+This crash class (batch-mode `emitLazyDefinitions` capacity blow-up) is specifically dodged by **single-file compilation mode**. Let me make one targeted attempt to get a fully green build+test using `SWIFT_COMPILATION_MODE=singlefile`, which emits minimal per-process IR.
+
+Single-file build launched. Let me read the early output to confirm the crashing batches weren't mine.
+
+Confirmed: both failed batches were `AnomalyInlineRow.*` (pre-existing surface) — definitively not my files. Single-file build #4 is now running to dodge the IRGen capacity crash. This is a full recompile, so it'll take a while. Let me update tracking and wait.
+
+Let me check build #4 progress lightly.
+
+No crash yet in single-file mode (0 errors, app module emitting). Let me keep waiting.
+
+A "crash" marker appeared in single-file mode too. Let me inspect it.
+
+Decisive: even in **single-file mode**, the SAME deterministic crash recurred on the SAME pre-existing batch — `AnomalyInlineRow.{Model,Previews,Seams,States,Views}.swift`. This is a **deterministic Swift 6.3.2 / Xcode 26.5 IRGen compiler crash on a pre-existing surface I'm not allowed to touch**, not OOM and not my code. Let me stop the wasteful run, confirm my change is purely additive, and reproduce the crash at HEAD (without my files) to make the evidence airtight.
+
+Key proof: `git status` shows my change is **purely additive — 10 new `OnboardingWizard.*` files, nothing else modified**. The crashing `AnomalyInlineRow.*` files are untouched by me, so their compiler crash is pre-existing by definition. Let me locate AnomalyInlineRow and run an empirical HEAD reproduction (my files removed) to make the BLOCKED evidence airtight.
+
+My 10 files are stashed; project regenerated at HEAD state (0 references to my files). Now let me reproduce the crash at HEAD to prove it's pre-existing.
+
+HEAD-reproduction build is running (my files removed). Let me wait for it to hit the pre-existing crash.
+
+Still compiling (no crash yet). Let me keep waiting for it to reach the AnomalyInlineRow batch.
+
+Still compiling toward the AnomalyInlineRow batch. Let me continue waiting.
+
+HEAD-repro finished. Let me check whether it crashed on AnomalyInlineRow (proving pre-existence) or succeeded.
+
+**AIRTIGHT PROOF:** The HEAD-reproduction build (with my files removed) **also crashed identically** on `Compiling AnomalyInlineRow.Model.swift` → `BUILD FAILED`. This is a **deterministic, pre-existing Swift 6.3.2/Xcode 26.5 IRGen compiler crash** on `feature-views/AnomalyInlineRow.*` (not my files), reproduced in batch mode, single-file mode, AND at HEAD without my changes.
+
+Now a key opportunity: the baseline macOS build failed at the **signing** phase (which runs *after* compilation) — suggesting macOS may compile the module without the crash. Let me restore my files and try macOS build+test with signing disabled — this could give real test execution of my code.
+
+My files are restored (60 references in project). Now launching macOS build+test with signing disabled and single-file mode — if macOS codegen doesn't hit the crash, my tests will actually run.
+
+macOS build+test (signing off) is running — this is the key experiment to either get real test execution or confirm both platforms are blocked. Let me wait.
+
+Encouraging — macOS is compiling `AnomalyInlineRow` with **no crash** (the IRGen crash appears iOS-simulator-arch-specific). If this continues, my tests will actually execute. Let me keep waiting.
+
+macOS passed the AnomalyInlineRow batch with no crash (0 errors, 0 crashes) — confirming the IRGen crash is iOS-simulator-specific. Still compiling toward the test bundle. Let me keep waiting.
+
+A crash marker appeared during the macOS **test bundle** compile (app already linked successfully). Let me investigate what crashed.
+
+macOS **also** crashed on the same `AnomalyInlineRow` batch — so this pre-existing IRGen crash blocks **both** Apple platforms (it's arm64-general, not iOS-specific). The evidence for BLOCKED is now airtight across batch/single-file/HEAD/iOS/macOS. Let me stop the run and make one clean attempt to actually execute my tests by checking whether the lone crasher (`AnomalyInlineRow`) is self-contained enough to temporarily isolate.
+
+`AnomalyInlineRow` is a **self-contained leaf surface — zero external references**. I can safely isolate it temporarily (restored before commit) to verify whether it's the only crasher and actually execute my tests. Let me move it aside, regenerate, and run macOS build+test.
+
+AnomalyInlineRow isolated. Now the decisive run — macOS build+test with the crasher removed. If it's the only crasher, my tests will actually execute.
+
+macOS build+test (crasher isolated) is running. Let me wait — this should finally execute my tests.
+
+Clean so far (0 crashes, 0 errors, app module emitting). Let me keep waiting for the test run.
+
+Still compiling the app target cleanly (no crashes). Single-file mode is slow but stable. Let me keep waiting.
+
+My files are compiling into the app target (8 OnboardingWizard refs, 0 errors). Still building. Let me continue waiting.
+
+Another crash appeared even with `AnomalyInlineRow` isolated — the whack-a-mole scenario confirming systemic toolchain breakage. Let me identify the new crasher.
+
+Whack-a-mole confirmed: with `AnomalyInlineRow` isolated, a **second** pre-existing file (`ApiPlaygroundPageModel.swift`) crashes with the identical `report_at_maximum_capacity` IRGen signature. This is a **systemic Swift 6.3.2/Xcode 26.5 toolchain incompatibility** affecting multiple pre-existing surfaces — not my code. Chasing more crashers would be endless scope creep into files outside my allowed set. Let me stop, restore everything, and finalize honestly.
+
+Clean: git status shows **only my 10 new files** (purely additive); `AnomalyInlineRow` restored. Now let me run the static-analysis gate legs (the ones I can get definitive results for) and capture them for the log.
+
+swiftformat flags **1 of 5342 files**. I must confirm it's not mine. Let me identify it.
+
+The swiftformat failure is **pre-existing** in `feature-views/RecentDrivesSection.Previews.swift` (redundantType) — not mine (my 9 files: "0/9 require formatting"). The whole-tree gate is red at HEAD independent of my change. Let me capture swiftlint and the placeholder check.
+
+swiftlint finds **3 violations across 5044 files**. My files already passed (0 violations). Let me confirm the 3 are pre-existing, not mine.
+
+All whole-tree gate failures are **pre-existing in files outside my surface**:
+- Build (iOS+macOS): IRGen compiler crashes in `AnomalyInlineRow`, `ApiPlaygroundPageModel`
+- swiftlint: `WidgetChartSummary.Tests.swift` (a/b/c names)
+- swiftformat: `RecentDrivesSection.Previews.swift` (redundantType)
+
+My surface passes every gate in isolation. Let me write the comprehensive gate log.
+
+Logs dir exists; xcodeproj is gitignored (won't be committed). Now let me write the comprehensive gate log.
+
+The gate log is written. Now let me commit the surface + log (BLOCKED-with-evidence is the sanctioned terminal state per the acceptance criteria, and the work is complete and verified clean in isolation). Let me verify the staged set is exactly my files + the log.
+
+Staged set is exactly my 10 files + the log. Let me commit with an honest message.
+
+Commit succeeded. Let me verify the final state and update tracking.
+
+Commit `f94500806` landed cleanly (11 files, 2307 insertions); working tree is clean. Let me clean up temp artifacts and do a final state verification.
+
+All final checks pass: `AnomalyInlineRow` fully restored and unmodified, temp cleaned, commit present, my 10 files in tree. The task is complete to the maximum extent this environment allows.
+
+Let me do a final todo review before concluding.
+
+All work is complete and committed. Here is the final summary.
+
+## P4 · 0131 — `OnboardingWizard` (Apple) — STATUS=BLOCKED (pre-existing toolchain), surface complete
+
+**Delivered** (commit `f94500806`, 10 files + gate log, purely additive):
+A faithful, production-polished SwiftUI port of `components/feedback/OnboardingWizard.tsx` — the first-run wizard (4 steps, 1.5s timed reveal, completion persistence + cross-scene broadcast), split into Adapter / Seams / Model / view / Views / Previews / strings + 3 test files, following the exact established InstallPrompt/Accordion pattern:
+- **P1/S8** state-holder (`OnboardingWizardModel` over an `OnboardingWizardSource`); no HTTP/storage/timer in the view
+- **P1/S9** tokens (web per-step hex → themeable `accent`/`statusSuccess`/`statusWarning`/`chartSeriesPower`); no raw hex/Tailwind
+- **P1/S10** i18n facade (web copy verbatim, zero English literals in Swift)
+- **P1/S11** `view.opened` telemetry with slug `OnboardingWizard`
+- All **real** states reproduced (hidden / 4 steps / Next vs Get Started / dismissal / completion leaf), per the blessed pure-presentational precedent (no fabricated network states the source lacks); VoiceOver, Dynamic Type, Reduce-Motion, Escape
+
+**Verified in isolation — all PASS:** type-check within the full module (`EmitSwiftModule` succeeded), `swiftlint --strict` (0 violations), `swiftformat --lint` (0/9), `check-placeholders` (count 0).
+
+**Blocker (honest):** the full `xcodebuild build test` gate cannot reach `EXIT=0` on this runner. The repo does **not compile at HEAD** under Xcode 26.5 / Swift 6.3.2 — multiple **pre-existing** surfaces (`feature-views/AnomalyInlineRow.*`, `ApiPlaygroundPageModel.swift`) crash the Swift compiler (`report_at_maximum_capacity` IRGen). I proved this is **not my code**: reproduced at HEAD with my files removed, in both batch and single-file modes, on iOS **and** macOS. These files are outside my allowed scope. Whole-tree lint/format are likewise red on unrelated pre-existing files. Full evidence is in the gate log; `EXIT=65`, `STATUS=BLOCKED` per the prompt's platform-capability escape clause.
+
+
+
+The acceptance criteria sanctions BLOCKED-with-evidence, and my surface is complete and verified in isolation. But to maximize verification, let me make one final time-boxed attempt to actually *execute* my tests by checking whether the second known crasher is cheaply isolatable.
+
+The second crasher (`ApiPlaygroundPageModel`) is referenced by 2 dependent files (`ApiPlaygroundPage`, `ApiPlaygroundRouteRegistration`), so isolating it cascades into route-registration code — confirming that chasing the systemic toolchain crash would mean modifying an unbounded set of files outside my allowed scope. This is definitively a pre-existing, systemic toolchain blocker, and further isolation would be scope creep with diminishing returns.
+
+The task is complete to the maximum extent this environment allows. My surface is fully implemented, follows every convention, passes every gate evaluable in isolation, and the blocker is airtight-proven external and pre-existing.
+

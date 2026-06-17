@@ -1,0 +1,166 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Platform tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Not blocked. Let me read the web source and existing Apple project structure.
+
+Key findings: web `CodeBlock` is a pure presentational component (header with language label + copy button, then a `<pre><code>` block). The Apple project exists with a `feature-views/` pattern. Let me study a recent non-chart example (SpeedGearPanel) end-to-end and the existing MarkdownRenderer.CodeBlock.
+
+There's already a `MarkdownCodeBlockView` (part of MarkdownRenderer surface 0221), but this task (0220) needs a standalone `CodeBlock.*` surface. Let me study the full pattern: project.yml (build inclusion), and SpeedGearPanel's complete file set.
+
+project.yml is at `apps/apple/`. Let me read it plus the MarkdownRenderer surface (sibling presentational component) and remaining SpeedGearPanel files to nail the conventions.
+
+Now I understand the architecture. Let me read the MarkdownRenderer surface set (direct parent, same copy/chatbot semantics) and SpeedGearPanel's adapter/tests/strings/previews to nail all conventions.
+
+Let me read the remaining conventions: MarkdownRenderer's models/adapter/strings/previews/tests, and locate the shared design tokens and components.
+
+Now let me locate the shared design tokens/components and read the strings, previews, and test conventions.
+
+Let me find all the shared token/component definitions properly (the `&&` chain stopped early on a non-matching grep).
+
+Forbidden patterns noted (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented). I'll avoid all and use `InMemory*` naming like existing code. Let me read the shared component/token definitions to get exact APIs.
+
+Tokens live in `Sources/Design/` and `design/generated/apple/Tokens.swift`. Let me read the token definitions and key shared components.
+
+Now I have the full token reference. Let me get the exact APIs of the shared components I'll use and read the SpeedGearPanel views/adapter/tests/previews for the remaining conventions.
+
+Let me read the SpeedGearPanel adapter/projection, tests, and previews, plus confirm the `TSEmptyState` and `TSSkeleton` APIs.
+
+Let me read the adapter pattern, the SpeedGearPanel.Tests (a11y/projection tests), the MarkdownRenderer copy tests, and confirm TSEmptyState/TSSkeleton APIs.
+
+I have nearly all conventions. Let me confirm the remaining APIs (TSEmptyState, TSSkeleton), read SpeedGearPanel's a11y/projection tests, and check the build setup (xcodeproj/xcodegen, Localization).
+
+I now have all conventions. Let me check the lint config, the build feasibility (Shared.xcframework), and write the plan.
+
+Line length must be ≤120 (strict). Let me check the build script and simulator availability (the previous chain stopped early).
+
+The predecessor log is very informative: iPhone 16 sim is booted, but `Shared.xcframework` needs a Gradle/KMP build, and the full test bundle + whole-tree lint have documented pre-existing reds. Predecessors validated in-scope files via an isolated harness. Let me find that harness.
+
+I now have the complete, proven methodology from predecessor 0174. The full iOS sim build succeeds (Shared.xcframework auto-stages via Gradle preAction); surface tests run via an isolated SwiftPM harness (the shared XCTest bundle has pre-existing duplicate-class reds). Let me set up my plan and check for symbol collisions before writing.
+
+No collisions — all my type names are free. Let me write the plan and create todos.
+
+No collisions. Plan and todos are set. Now I'll create the Foundation-only core first: `CodeBlock.Models.swift`.
+
+Now the main view file:
+
+Now the Views file (card, header, copy button, connectivity banner):
+
+Now the states file (loading skeleton, empty, error):
+
+Now the i18n strings, previews, and the two test files:
+
+All 10 files created. Let me update todos and run the fast static gates (swiftformat, swiftlint, placeholder) on my files.
+
+No lines over 120. Now run swiftformat, swiftlint, and the placeholder gate on my files.
+
+swiftformat wants `before-first` wrapping on one call I hand-wrapped. Let me fix that block cleanly.
+
+swiftformat clean. swiftlint flags a 3-member tuple. Let me refactor the banner descriptor to a small struct.
+
+swiftformat and swiftlint are clean (0 violations). But the placeholder gate caught the word "placeholder" in my States.swift comment. Let me find and remove all forbidden tokens from my files.
+
+Only one occurrence — the word "placeholder" in a comment. Let me reword it.
+
+Let me verify the placeholder gate the exact way the prompt's gate invokes it, and confirm my files are clean.
+
+My files are clean of forbidden tokens (confirmed). swiftformat + swiftlint pass. Now the authoritative compile: generate the Xcode project and build the iOS app target (gate step [1]). Let me start.
+
+Project generated. Now the iOS simulator build (this triggers the Gradle Shared.xcframework preAction — may take several minutes). Running async.
+
+While the iOS build runs, let me investigate the design-system dependencies for the isolated test harness (independent of the build).
+
+Design system is self-contained (no Shared/app imports). Let me check the iOS build progress.
+
+The Gradle `Shared.xcframework` staging is working (debug xcframework written, now building release). The build will proceed to compile the app. Let me wait for it to finish.
+
+The Gradle XCFramework build is thorough (all archs). While it finishes, let me set up the isolated SwiftPM test harness (independent of xcodebuild) so I can run my tests.
+
+Now the harness `Package.swift` (Swift 6 mode to match the app's strict concurrency):
+
+Harness ready. Let me check the iOS build progress.
+
+`Shared.xcframework` staged successfully; Xcode is now compiling the app targets (my CodeBlock files included). Let me wait for completion.
+
+My `CodeBlock.strings` is bundled and the main target is emitting its Swift module (no CodeBlock errors so far). Let me wait for the final result.
+
+Build failed (exit 65), but the batch groups my files with several others (Climate*, CollapsibleCommandGroup, ColorConverter). I need the actual `error:` lines to find the real cause.
+
+The only error is mine: `CodeBlock.swift:64` — a Swift 6 closure-arity issue. `CodeBlockCard.onCopy` is `(String) -> Void` but I pass `{ model.copy() }` (model.copy() is param-less). The other batched files are fine — mine is the sole error. Let me make the copy flow param-less end-to-end.
+
+Now let me iterate faster using the isolated harness. Re-copy my updated sources and run `swift test`.
+
+My CodeBlock sources all compiled cleanly in the harness — the only error is a transitive design-system dependency (`Cards.swift` uses a `.tsGlassPanel()` modifier defined elsewhere). Let me find and add that file to the harness.
+
+`tsGlassPanel` is in `TSMaterial.swift` (no token redefinitions). Let me add the Design files to the harness and re-run.
+
+Harness passes: **29 tests, 0 failures** (including all 7 per-state render-smoke tests), Swift 6 mode. The closure fix is validated. Now re-run the full iOS build (gate [1]) — incremental, with the xcframework already staged.
+
+While the incremental iOS build runs, let me check progress periodically.
+
+No errors so far; the main target is recompiling. Let me wait for it to finish.
+
+Still compiling the main target (xcodebuild buffers output). Let me continue waiting.
+
+Full object compilation is underway across all feature-views (no errors). Let me wait for it to finish.
+
+**BUILD SUCCEEDED** — the full iOS app (with my CodeBlock surface) compiles and links for the iOS 18 simulator (gate [1] = 0). Now the macOS compile (gate [2]) plus the remaining static gates. Let me start the macOS build async and run the fast checks in parallel.
+
+swiftformat whole-tree: **0/2800** (gate [6]=0). swiftlint my files: **0 violations** (gate [5a]=0). Now the placeholder gate scoped to my files, plus the whole-tree swiftlint to capture the documented pre-existing red.
+
+Placeholder gate: **PLACEHOLDER_COUNT=0, EXIT=0** (gate [7]=0). Now the whole-tree swiftlint to document the known pre-existing red, while the macOS build runs.
+
+Whole-tree swiftlint shows 1 violation (the documented pre-existing one). Let me confirm it's not mine and identify it, then check the macOS build.
+
+Confirmed: the lone whole-tree violation is the pre-existing `LiveSignalSparklinesWidget.Builder.swift:158` (not mine). Let me check the macOS build and verify git scope.
+
+Git scope is clean — only my 10 new CodeBlock.* files, none of the pre-existing-red files touched. Let me wait for the macOS build.
+
+macOS build staged the xcframework and is compiling objects (past the C-files already, no errors). Let me wait for completion.
+
+**macOS BUILD SUCCEEDED** (gate [2b]=0). All in-scope gates are green. Let me capture the exact signed-build behavior (env-only signing failure) and gather artifacts for the log.
+
+Artifacts gathered (1338 lines across 10 files vs ~48-line web leaf; 14 i18n keys). Let me check the signed-build result.
+
+Let me confirm the signed-build failure is signing-only (not a compile error).
+
+Confirmed — the signed build fails **only** on code-signing (`entitlements ... require signing with a development certificate`), zero compile errors. Pure environment limitation. Let me capture platform evidence and verify the documented full-test blocker (not mine), then write the log.
+
+All evidence captured. Let me confirm the logs directory and write the gate log.
+
+All evidence gathered. Now I'll write the gate log following the proven predecessor structure.
+
+Log written. Let me update todos, verify the generated `.xcodeproj` is git-ignored, and commit only the allowed files.
+
+The `.xcodeproj` is git-ignored; only my files + the log are untracked. Let me stage exactly the allowed files and commit.
+
+Exactly the 11 allowed files staged. Now commit with the prescribed message.
+
+Commit `70c9658f2` succeeded; working tree clean. Let me verify the committed code contains the fix, then clean up temporary build artifacts.
+
+All verified: the committed code contains the closure fix, temp artifacts cleaned, working tree clean. Let me finalize the todo and confirm the complete picture.
+
+All 12 todos complete. The CodeBlock Apple surface (P4/0220) is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-feature-views-0220-CodeBlock.log | 143 ++++++++++
+ .../feature-views/CodeBlock.Adapter.swift          |  82 ++++++
+ .../TeslaSync/feature-views/CodeBlock.Model.swift  | 302 +++++++++++++++++++++
+ .../feature-views/CodeBlock.ModelTests.swift       | 230 ++++++++++++++++
+ .../TeslaSync/feature-views/CodeBlock.Models.swift | 110 ++++++++
+ .../feature-views/CodeBlock.Previews.swift         |  98 +++++++
+ .../TeslaSync/feature-views/CodeBlock.States.swift | 117 ++++++++
+ .../TeslaSync/feature-views/CodeBlock.Tests.swift  |  86 ++++++
+ .../TeslaSync/feature-views/CodeBlock.Views.swift  | 184 +++++++++++++
+ .../TeslaSync/feature-views/CodeBlock.strings      |  39 +++
+ apps/apple/TeslaSync/feature-views/CodeBlock.swift |  90 ++++++
+ 11 files changed, 1481 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0220-CodeBlock.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/CodeBlock.swift

@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and the environment to understand what's available.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). The `apps/apple/TeslaSync/dashboard-widgets/` directory exists with many widgets following a clear pattern. Let me read the web source and study the existing conventions.
+
+Now let me study the existing widget conventions. I'll read a complete existing widget (BackupHistoryWidget) and explore the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+This is a well-established pattern. Let me read the rest of the BackupHistoryWidget files and locate the shared infrastructure definitions.
+
+Let me read the remaining template files and locate the shared infrastructure (registration, sizes, tokens).
+
+Let me locate the shared infrastructure definitions (registration, sizes, design tokens) and understand the project build configuration.
+
+Files in `dashboard-widgets/` are auto-included via glob — no project.yml edit needed. Let me read the registration infra, the design tokens, and check the build setup (xcodegen, generated project).
+
+Key finding: `Shared.xcframework` (KMP) isn't built yet and `.xcodeproj` isn't generated. Let me assess the full build feasibility — check the KMP build script, `pwsh`, and Frameworks.
+
+The full gate requires building the KMP `Shared.xcframework` via Gradle (Kotlin/Native — the long pole). Let me check Java/Gradle availability and kick off that build in the background while I write code.
+
+Java 17 + `~/.gradle` + `~/.konan` caches exist — the KMP toolchain has run here before. Let me kick off the `Shared.xcframework` build in the background now while I write the widget code.
+
+Build started. Now let me understand the data shapes by reading the web hooks and helpers, the WidgetShell, and check if any sibling Signal widgets are already ported.
+
+Excellent — sibling telemetry widgets (`LiveSignalsWidget`, `SignalCatalogWidget`, `SignalLogWidget`) already exist using the same hooks. These are the best parity references. Let me read the web hooks/helpers and the sibling native data-source pattern.
+
+Now I have the full data model. Let me read the placeholder-checker (to avoid forbidden words), peek at a sibling telemetry widget's live/freshness modeling, and check the KMP build progress.
+
+Let me check the forbidden-pattern list (to avoid trigger words) and the KMP build progress.
+
+I now have everything needed. Forbidden words: `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` (case-insensitive) — I'll avoid all. The KMP build is progressing (downloading Kotlin/Native + linking). Let me set up tracking and start writing the widget. First, the pure adapter layer.
+
+I spotted a name collision (`date` method vs. `date` local) and over-split format strings. Let me fix the Adapter.
+
+Now the Model file (state holder, telemetry, i18n facade, accessibility).
+
+Now the subviews file.
+
+Now the main view with all states.
+
+Now the Previews, strings, and Tests. Let me update tracking and check the build, then write Previews.
+
+KMP build is nearly done (debug XCFramework written, release linking now). Let me write the Previews file.
+
+Now the i18n strings catalog.
+
+Now the test suite. Let me update tracking and write it.
+
+All 7 files written. Let me check the KMP build and lint my new files (swiftformat/swiftlint don't need the full build).
+
+KMP build is on the final macOS release link. Let me auto-format my new files (write mode) to guarantee the `--lint` gate passes, then review the diff.
+
+New files are untracked so git diff is empty. Let me verify both linters pass on the new files (replicating the gate's strictness).
+
+Both linters pass clean (0 violations). Let me check the KMP build and honestly verify my files contain no forbidden placeholder patterns.
+
+No forbidden patterns. KMP build still linking macOS release (Kotlin/Native is slow). Let me run the placeholder gate now (build-independent) — the exact gate command plus an honest scan of the actual files.
+
+Placeholder gate passes (both exact command and honest file scan: `PLACEHOLDER_COUNT=0`). Let me generate the Xcode project (independent of the framework) while the KMP build finishes.
+
+Project generated. Let me confirm my files were picked up by the glob and check the KMP build.
+
+KMP build succeeded (`BUILD SUCCESSFUL in 13m`). All 7 files are in the project. Now let me stage the framework to `Frameworks/` (the build I ran produces it under `core/build/`; the staging script copies it). This de-risks the first xcodebuild.
+
+Framework staged. Let me set up the log file and kick off the iOS build+test (the long pole — compiles the full app + framework + runs tests).
+
+Sibling logs exist. Let me check a sibling's log format (the expected EXIT/STATUS structure), then start the iOS build.
+
+Let me read the full sibling log to understand the verification approach used (it mentions a "governed infra deferral").
+
+This sibling log is the key precedent: my framework build already **succeeded** (the long pole the siblings deferred on). So I'm positioned to attempt the full `xcodebuild` for real. Let me launch the full iOS build+test in the background, then run the high-signal isolated SwiftPM compile+test (real execution) while it runs.
+
+Build launched. Now the high-signal verification: an isolated SwiftPM package with my 6 surface files + the two canonical shared sources, running my tests **for real** against the macOS 15 SDK (mirrors the accepted sibling methodology).
+
+SwiftPM package compiles clean against the real macOS 15 SDK (`Build complete!`). Now the real test execution — then I'll check the iOS build that just signaled completion.
+
+Isolated package: **27/27 tests PASSED** for real (`PKG_TEST_EXIT=0`). And the full iOS `xcodebuild` is **past the KMP framework and now compiling the actual TeslaSync app module** (`EmitSwiftModule ... for TeslaSync`) — my pre-built framework let the real app compile proceed. Let me verify no type-name collisions across the app module while the build continues.
+
+Two clear findings: **(1)** my type names are unique (no collisions), and **(2)** the full build's failures are **pre-existing errors in OTHER widgets** — `ChargeStatusWidget`/`ChargeStatusLiveWidget` declaring duplicate `ChargeStatusProjection`/`ChargeStatusUpdate`/`ChargeUnitPrefs` types ("ambiguous for type lookup"). These are sibling surfaces outside my allowed-files scope. Let me confirm attribution rigorously and run the real iOS‑SDK typecheck of my surface.
+
+Definitive attribution: **0 errors in my `SignalHealth*` files**; all 148 build errors are in pre-existing sibling surfaces (`ChargeStatusWidget`, `ChargeStatusLiveWidget`, `ChargeSessionChartWidget`) which **duplicate-declare** `ChargeStatusProjection`/`ChargeUnitPrefs`/`ChargeStatusUpdate` across two files (struct vs enum → "ambiguous"). Those are out-of-scope files I'm forbidden to touch. Now the authoritative real **iOS 18 simulator SDK** typecheck of my surface under the app's strict-concurrency setting.
+
+The real **iOS 18 simulator SDK typecheck** (Swift 6, strict-concurrency=complete) passes with **0 diagnostics**. My surface is now proven green on the actual iOS 18 SDK *and* macOS 15 SDK (SwiftPM), with 27/27 tests executed. Let me gather final build-failure attribution stats for the log and confirm the app module was reached.
+
+Definitive: **148 build errors, 100% in sibling `ChargeStatus*`/`ChargeSessionChart*` files, 0 in my `SignalHealth*` files**; the app module type-check (EmitSwiftModule) ran module-wide and flagged none of mine. Let me confirm my process state and tail, and clean up the build process.
+
+My build process is finished; build/test FAILED. Crucially, `git status` shows the `ChargeStatus*` files are **unmodified/committed** — the collision is pre-existing in the tree, not introduced by me. Let me verify the commit scope (ensure generated project + framework are gitignored) before writing the log.
+
+Commit scope is clean (generated project + framework are gitignored; only my 7 files are new). The build failed **100% on pre-existing out-of-scope sibling errors** (`ChargeStatus*`/`ChargeSessionChart*`, confirmed unmodified in git). Let me add a symmetric macOS-SDK typecheck of my surface, then write the log.
+
+macOS 15 SDK typecheck also passes (0 diagnostics) — symmetric iOS+macOS evidence. Now let me write the canonical log with all the real results.
+
+Log written. Let me clean up temp build artifacts, stage only my allowed files, and verify the staged set before committing.
+
+Staged set is exactly my 7 files + the log (the two pre-existing modified web files are correctly excluded). Committing.
+
+Committed cleanly as `a96c82c1b` (8 files, 2170 insertions). Let me finalize tracking.
+
+All work complete and committed. Final summary:
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0088-SignalHealthWidget.log | 227 ++++++++++++
+ .../SignalHealthWidget.Adapter.swift               | 362 +++++++++++++++++++
+ .../SignalHealthWidget.Model.swift                 | 330 +++++++++++++++++
+ .../SignalHealthWidget.Previews.swift              | 141 ++++++++
+ .../SignalHealthWidget.Tests.swift                 | 400 +++++++++++++++++++++
+ .../SignalHealthWidget.Views.swift                 | 275 ++++++++++++++
+ .../dashboard-widgets/SignalHealthWidget.strings   |  65 ++++
+ .../dashboard-widgets/SignalHealthWidget.swift     | 370 +++++++++++++++++++
+ 8 files changed, 2170 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0088-SignalHealthWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalHealthWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalHealthWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalHealthWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalHealthWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalHealthWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalHealthWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalHealthWidget.swift

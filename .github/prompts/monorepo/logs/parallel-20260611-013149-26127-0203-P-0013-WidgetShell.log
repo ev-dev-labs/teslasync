@@ -1,0 +1,145 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple toolchain and source files are present.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Web source exists. Let me read the web source and explore the existing Apple app structure.
+
+The web source is a presentational shell. Now let me explore the existing Apple app structure to understand patterns, existing primitives, design tokens, i18n facade, and shared components.
+
+Existing primitives follow a multi-file pattern (`.swift`, `.Model`, `.Views`, `.Previews`, `.strings`, `.Tests`). Let me study the conventions: an existing primitive end-to-end, plus the shared components (feedback, data-display, UI), design tokens, i18n facade, and telemetry contract.
+
+Let me read a complete existing primitive and the key shared components to learn the exact conventions.
+
+Now let me read the Model/telemetry pattern, the test pattern, and the key shared components I'll compose with (Skeletons, QueryError States, DataFreshness, HelpTooltip/PinButton, design tokens).
+
+Let me read the Adapter (where Surface/Input/Projection/Projector live) and the shared components I'll compose with: design tokens, Skeletons, States (QueryError), StatusIndicators (DataFreshness), Overlays (HelpTooltip/PinButton).
+
+Design tokens are generated externally. Let me locate the token definitions and read the shared components I need to compose with (Skeleton, QueryError, DataFreshness, HelpTooltip/PinButton).
+
+Now let me read the design tokens, the DataFreshness equivalent (StatusIndicators), the HelpTooltip/PinButton (Overlays), and Typography.
+
+Now let me read the native HelpTooltip/PinButton (Overlays), Typography, Badges (TSTone/TSBadge), and the web freshness components to faithfully reproduce the freshness state machine.
+
+Let me read the web freshness state machine, the native Typography/Badges/Cards, the web types.ts, and check whether a PinButton native peer exists.
+
+I have the component vocabulary. Now let me verify the build toolchain (xcodegen, pwsh, the shared-framework build step, existing xcodeproj) and read the lint config + a state-rich primitive for patterns.
+
+Key risk identified: no prebuilt `Shared.xcframework` (Gradle/Kotlin build needed at build time) and no `.xcodeproj` yet. Let me check the swiftformat config, the placeholder checker, the known-build-state doc, simulator availability, and a state-rich primitive's structure.
+
+`iPhone 16` simulator, pwsh, and xcodegen are all available. Let me read the placeholder checker, check the KMP/Gradle feasibility (the long pole), and the known macOS build status.
+
+JDK 17 + gradlew present, so the KMP build may be feasible. Let me read the prior WidgetShell artifact log (context on previous attempts) and the known macOS build status, then kick off the long-pole Shared.xcframework build in the background.
+
+The Gradle KMP build is progressing (using cache). Critical insight: the prior WidgetShell attempt was blocked because `widget-primitives` wasn't in `project.yml` — but it **is now** wired in. Let me read the remaining API signatures I need and confirm how the web shell is consumed, then start building.
+
+I now have a complete understanding. Let me record a plan and start building the surface. The KMP framework is building in the background.
+
+Now I'll build the surface. Starting with the Foundation-only Adapter (core types, freshness state machine, relative-time, projector):
+
+Now the Model (strings facade, telemetry seam, observable state-holder with the pulse timer):
+
+Now the public View. Let me also check the background KMP build progress.
+
+The KMP framework built successfully (`xcframework successfully written out`). Now the view composition files. First the chrome (layout, header, help, pin):
+
+Now the states file: the freshness chip (DataFreshness peer), loading chrome, and error leaf:
+
+Now the i18n strings catalog and the previews:
+
+Now the previews covering every branch:
+
+Now the two test files — pure adapter tests and the model/view/a11y tests:
+
+All 8 files written. Let me verify the KMP framework staged, then format/lint/placeholder-check my files.
+
+KMP framework built (BUILD SUCCESSFUL) and staged into slot-203. Let me verify its slices and run the lint/format/placeholder trio:
+
+swiftformat clean tree-wide (0/5132). Now swiftlint (scoped to widget-primitives) and the placeholder gate:
+
+Placeholder gate clean. The 21 swiftlint violations are across the whole 4834-file tree (config `included:` overrides the path arg). I need to confirm none are in my files:
+
+18 of the 21 are mine — all fixable: `multiple_closures_with_trailing_closure` (passing `onRefresh:`/`actions:` closures alongside a trailing `content`), one `opening_brace`, and short `f` identifiers. Let me view the exact spots:
+
+Clear: passing `onRefresh:`/`actions:` closures alongside a trailing `content` closure triggers the rule. Fix = explicit `content:` label. Let me view the remaining regions then fix all occurrences:
+
+I'll rewrite the Previews cleanly with explicit `content:` labels (where other closures are present), and fix the Tests helper + view calls and the `f` identifiers. Let me recreate the Previews file:
+
+Now fix the Tests file (the wrapped `fresh` helper brace conflict + multiple-closure calls + inline freshness) and the `f` identifiers in AdapterTests. Let me view current Tests state:
+
+Now I'll fix the Tests file (replace the wrapped helper, use explicit `content:`, inline flagged freshness) and rename the short `f` identifiers in AdapterTests:
+
+Now the `f` identifiers in AdapterTests:
+
+Now re-format and re-lint to confirm my files are clean:
+
+My files are swiftlint-clean (0 violations); the 3 remaining are pre-existing (other agents'). Now let me generate the Xcode project and confirm my files are enumerated:
+
+Project generated; WidgetShell referenced 54× (app + macOS + both test targets + strings resource). Let me launch the real iOS build in the background (matches the gate) and, in parallel, find `TSButtonStyle` to set up a fast isolated typecheck:
+
+The iOS build is running in the background. Let me set up a fast isolated typecheck. First, let me see the rest of `Buttons.swift` (a real dependency) to know what to include:
+
+`Buttons.swift` only depends on tokens. Let me run a fast isolated Swift 6 strict-concurrency typecheck of the shipped surface against the real `Tokens.swift` + `Buttons.swift` on the macOS 15 SDK, and peek at the iOS build progress:
+
+macOS-15 typecheck clean. Now the iOS-18 simulator typecheck:
+
+Both isolated typechecks pass (iOS-18 + macOS-15, Swift 6 strict concurrency, 0 errors). The full build failed — but it's referencing **slot-178** paths (`AIAlertTuningSuggestions`, other agents' surfaces), indicating cross-slot DerivedData contamination from parallel builds. Let me inspect the actual error and check for any WidgetShell errors:
+
+Confirmed: the failure is in **slot-178's** `AIAutoNameUnnamedLocations.swift` (another agent's surface) with **zero WidgetShell mentions** — cross-slot DerivedData contamination (all slots build an identically-named `TeslaSync` project into shared DerivedData). Let me isolate DerivedData per-slot and check whether slot-203's own tree has that pre-existing bug:
+
+Confirmed via git: only my 9 WidgetShell files are new; everything else is the committed merged baseline. slot-203's own `AIAutoNameUnnamedLocations.swift` has the same `glass(@ViewBuilder _ content:)` → `TSGlassPanel { content() }` pattern that errored. Let me verify `TSGlassPanel` is escaping (confirming a pre-existing, unrelated error) and launch an **isolated-DerivedData** build to get slot-203's true result:
+
+Decisive: `TSGlassPanel.init` takes `@escaping` content, so slot-203's committed `AIAutoNameUnnamedLocations.swift` (another agent's surface) has a genuine pre-existing escaping-closure compile error — unrelated to WidgetShell. The isolated build is running. Meanwhile, let me verify my public types don't collide with any existing symbols:
+
+No symbol collisions — all 23 public types are unique. Let me check the isolated build's progress:
+
+Two full builds are running concurrently (contending). The first (shared-DerivedData) is contaminated by slot-178 — let me kill it and let only the isolated build proceed:
+
+The running xcodebuild processes are **other slots'** builds (`tipcards`, `-jobs 1`) — the host is saturated by 5+ concurrent identically-named "TeslaSync" builds, and my background build got starved. Let me relaunch the isolated build as a fully detached process (robust against session/contention) and write the gate log while it runs:
+
+Build running detached. Let me check progress and gather slot-203-specific evidence of the pre-existing (non-WidgetShell) blocker — the `@escaping`-closure anti-pattern in other agents' surfaces:
+
+The isolated build is now correctly compiling **slot-203's own** project (no cross-slot paths), 0 errors so far, deep into the Swift module phase. Let me let it continue and check back:
+
+The build has stalled at `EmitSwiftModule` (whole-module type-check of 2600+ files) for 3+ minutes with no progress — the host is thrashing under 5+ concurrent slot builds. Let me check if it's alive/working or hung:
+
+The isolated build is **alive and progressing** — many `swift-frontend -c` compile jobs against `DerivedData-slot203`, 0 errors, past the module type-check phase. The earlier `AIAutoNameUnnamedLocations` error was slot-178 contamination via shared DerivedData, not slot-203. Host load is 52 (extreme parallel-slot contention), so it's slow. Let me give it a longer window:
+
+The detached isolated build completed. Let me read its result:
+
+Definitive slot-203 result: **BUILD FAILED with exactly 1 error — `AISuggestNewGeofences.swift:129` (`escaping closure captures non-escaping parameter`)**, a pre-existing, unrelated error in another agent's merged surface (one of the 4 `glass(@ViewBuilder _ content:)` surfaces). **Zero WidgetShell errors** — my surface compiled cleanly in the real app target.
+
+Since the test target can't run (app build blocked by that out-of-scope error), let me execute the pure adapter logic via a standalone harness to prove the unit tests pass:
+
+Top-level code requires the file be named `main.swift` when compiling multiple files. Let me rename and rerun:
+
+**All 38 adapter logic assertions PASS** (`ADAPTER_RUNNER: ALL PASS`). I now have complete evidence. Let me clean up temp artifacts and confirm the repo only has my intended new files:
+
+Clean — only my 9 files are new. Let me capture exact tool versions, then write the gate log:
+
+Now I'll write the comprehensive, honest gate log:
+
+Now let me do a final pre-commit verification (format + scoped lint on my files) and confirm the staged framework won't be committed:
+
+Both clean (swiftformat 0/8, swiftlint 0 violations/8 files). Let me commit the surface + log:
+
+Exactly the 9 surface files + log staged (no artifacts). Committing:
+
+Committed (HEAD `914530744`). Let me verify a clean working tree and confirm no build artifacts leaked into git:
+
+Working tree is clean; the staged `Shared.xcframework` is correctly gitignored (only `.gitkeep` tracked). The commit contains exactly the 9 surface files + log (2009 insertions). Let me tidy up the temp build logs I created:
+
+Task complete. Here's the honest, verified outcome.
+
+## WidgetShell (Apple, P4 · 0013) — shipped & committed (`914530744`)
+
+Built the native SwiftUI parity of `features/dashboard/widgets/WidgetShell.tsx` — the presentational widget‑chrome primitive — as **9 files** under `apps/apple/TeslaSync/widget-primitives/WidgetShell.*` (2,009 insertions), plus the gate log.
+
+**Parity (every real branch, no fabricated states):** `loading` skeleton + `error` query‑error short‑circuits; the titled header (icon + uppercase muted title + HelpTooltip / freshness chip + PinButton + actions) and the title‑less freshness overlay; the padded/`noPadding` content area; the `justUpdated` success‑glow pulse; and the `DataFreshness` four‑state chip (fresh/fetching/stale/error→`wifi.slash` offline) with the `DataFreshnessAuto` `forceStaleAfter` override. Binds via an `@Observable` model (P1/S8), strings via the i18n facade (P1/S10), once‑only `view.opened` telemetry (P1/S11); fully token‑driven (P1/S9); VoiceOver/Dynamic‑Type/Reduce‑Motion throughout.
+
+**Verification — all in‑scope gate steps GREEN (raw evidence in the log):**
+- swiftformat `--lint`: **0** (tree‑wide 0/5132) · swiftlint `--strict` scoped: **0 violations / 8 files**
+- placeholder gate: **PLACEHOLDER_COUNT=0** · xcodegen: **54 refs** (both app + both test targets)
+- `swiftc -typecheck` vs the real `Tokens.swift`+`Buttons.swift`, **Swift 6 `-strict-concurrency=complete`**: iOS‑18 **0/0**, macOS‑15 **0/0**
+- adapter logic harness: **38/38 PASS** · symbol‑collision scan: **0**
+- Real slot‑203 iOS app‑target build: **0 WidgetShell errors**
+
+**Full‑app `xcodebuild build test` gate: `STATUS=BLOCKED` (out‑of‑scope).** An isolated‑DerivedData build proved slot‑203 fails on exactly one pre‑existing error in **another agent's** merged file — `AISuggestNewGeofences.swift:129` (`escaping closure captures non-escaping parameter`, shared by 3 sibling `AI*` surfaces). It's outside this prompt's allowed files (`WidgetShell.*` + log), so fixing it would violate scope. The macOS scheme compiles the same shared sources (+ dev‑signing), and the host is saturated by 5+ parallel‑slot builds (load ~52). This is the documented macos‑pending precedent; deferred to the `macos-latest` acceptance gate. The Honesty Covenant is upheld — no red reported as green.
+

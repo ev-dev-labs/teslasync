@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Good — all tools are available (Xcode 26.5, swift, swiftlint, swiftformat). Not blocked on platform capability. Let me read the web source and explore the Apple app structure.
+
+The web source is a **pure presentational component** — a single operator task row with severity-driven styling (info/warn/error) and an optional CTA (internal link, external link, or button). No data fetching. Let me study the existing Apple conventions before writing native code.
+
+Each surface is a multi-file bundle (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.Seams`, `.strings`, `.Tests`). Let me study the closest analogues — `AiLimitBanner` (severity-driven presentational) and `ActiveFilterChips` — and check for a related `ActionItemsPanel`.
+
+No existing ActionItem. Let me read the complete `AiLimitBanner` bundle (closest analogue — severity-driven presentational banner) to learn all conventions.
+
+Excellent — this reveals the full convention. Let me read the remaining `AiLimitBanner` bundle files and locate the shared P1/S9 design tokens and components (`TSButton`, `TSTone`, `Color.TS`, etc.).
+
+The pattern is crystal clear now. `AiLimitBanner` is the canonical controlled-presentational precedent — it implements the full P4 leaf contract (loading/empty/error/data + stale/offline) via a controlled source seam. I'll mirror this for `ActionItem`. Let me read the shared tokens/components I'll depend on, plus the Previews/Tests and `project.yml`.
+
+Files are auto-included via globs (no `project.yml` edit needed). Let me read the rest of `project.yml` (test targets + `.strings` handling) and the shared token/component definitions I'll use.
+
+Let me read the test target config and the remaining shared components/tokens I'll use.
+
+Now let me read the remaining shared components and the design tokens, and assess build tooling (xcodegen, Shared.xcframework).
+
+`TSTone` has `.info/.warning/.danger/.accent/.neutral` with a `.color`. Tokens live in generated `Tokens.swift`. xcodegen is available, but **`Shared.xcframework` is absent** (only `.gitkeep`) and there's no `.xcodeproj`. Let me read the tokens + remaining components and check the KMP build script / toolchain.
+
+I have all token APIs. Now let me confirm `TSTone`, check the KMP build script/toolchain feasibility, and see how other surfaces handle navigation/external links (the web CTA uses route `Link`, external `<a>`, or `onClick`).
+
+`TSTone` confirmed (`info/warning/danger`). KMP toolchain isn't on PATH but `../../apps/shared/gradlew` exists (full `xcodebuild` needs it + network). `GuardedLink` is the key precedent for link/route/external CTAs — let me read it plus `InlineCallout` (which has an action).
+
+`GuardedLink` confirms the navigation pattern: a `navigator` seam + `onActivate` enum. ActionItem's CTA maps cleanly (route → navigator, external → `openURL`, onClick → action). Let me read `GuardedLink`'s Model, Seams, States, and Tests to nail the navigator + activation + test conventions, and confirm the i18n typealias convention.
+
+Now let me read the test conventions, States file, and the lint config so my code passes `swiftlint --strict` and `swiftformat --lint`.
+
+Let me read `GuardedLink`'s Model, Adapter, and States to finalize the model structure, the adapter convention, and the leaf-state chrome.
+
+I now have the complete architecture. Let me check the placeholder-check script's exact rules and scan for any symbol-name collisions in the single `TeslaSync` module before writing.
+
+I have the complete design. Let me verify a few build-strategy facts: whether the shared Components import the KMP `Shared` module (affects standalone compile), the `TSEmptyState` no-action convenience, and `pwsh` availability.
+
+All confirmed: Components are SwiftUI-only (no KMP `Shared`), `TSEmptyState` has the no-action convenience, and `pwsh` is available for the real placeholder gate. Let me record a plan, set up todos, and kick off project generation while I write the files.
+
+Project generates cleanly and Components are self-contained (no KMP dependency) — so I can type-check my surface against the *real* tokens/components. Now writing the surface. Starting with the pure core, model, and seams.
+
+All 9 files created. Now verification — formatting first, then lint, type-check, and the placeholder gate.
+
+Two test lines exceed 120 chars. Let me fix them by extracting the hint values first.
+
+Now run SwiftFormat (in place) on my files, then verify with `--lint`, and run `swiftlint --strict`.
+
+SwiftFormat is clean (0/8 require formatting). Now `swiftlint --strict`.
+
+SwiftLint `--strict`: **0 violations**. Now the strongest compile check available without the KMP framework — type-check my surface against the *real* tokens + components using the iOS SDK.
+
+The errors are in an unrelated `Components/Maps` file referencing `TSChartPalette` (defined elsewhere) — not my code. Let me locate that symbol and add its file so the whole Components set resolves.
+
+The full-Components type-check pulls in the units/platform layer (transitive deps). Let me (1) kick off the KMP `Shared.xcframework` build in the background to enable the real `xcodebuild` gate, and (2) meanwhile assemble a *closed* subset that type-checks my surface against the real components it actually uses.
+
+Gradle 8.14.5 + Kotlin 2.0.21 + JDK 17 are present and working. Let me start the real `Shared.xcframework` build in the background (for the full `xcodebuild` gate), and check whether the `UI`/`Feedback`/`Motion`/`Forms` component subdirs are free of the units/platform layer so I can form a closed type-check.
+
+`UI`/`Feedback`/`Motion`/`Forms` are free of the units/chart layer. The only problem file was `DataDisplay/UnitFormatters.swift`. Let me check the gradle build status and run the type-check excluding just that units-dependent file.
+
+Only my code errors now: `Seams.swift` uses `Logger` (from `OSLog`) without importing it. That also confirms my surface otherwise type-checks against the real tokens/components — including the Swift 6 `@MainActor` View init. Adding the import:
+
+Re-running the curated type-check to confirm zero errors:
+
+Zero errors, zero warnings in my surface — it type-checks cleanly under Swift 6 strict concurrency against the real tokens/components. Now validating the **test** file's symbol references (compiled in-module + XCTest):
+
+All 192 errors are solely `cannot find 'XCTAssertEqual'` — the standalone `swiftc` isn't loading the XCTest module; **none** reference my surface symbols. To isolate whether my test code uses the surface API correctly, I'll recompile with a tiny XCTest shim:
+
+The errors are Foundation/XCTest symbols (`URL`, `NSLock`, `XCTUnwrap`) — unresolved only because I stripped `import XCTest` (which transitively provides Foundation). Let me confirm I'm not actually misusing `XCTUnwrap` in the real file, then add `import Foundation` + shim those symbols:
+
+Surprising — my test now contains `try XCTUnwrap(...)` where I wrote `URL(...)!`. Let me view the actual file to see what happened and whether methods are marked `throws`:
+
+SwiftFormat's XCTest rule auto-upgraded my force-unwraps to `try XCTUnwrap(...)` and added `throws` to those methods — that's valid and *more* robust. My shim just lacked `Foundation` + `XCTUnwrap`. Fixing the shim to match real XCTest signatures (throwing autoclosures):
+
+Right — each file needs its own `import Foundation`; the real test gets it transitively via `import XCTest` (the existing `GuardedLink.Tests` relies on the same for `NSLock`). Let me swap `import XCTest`→`import Foundation` in the check copy so the shim provides XCTest symbols and Foundation provides `URL`/`NSLock`:
+
+Just 2 real issues — my shim marked the `XCTAssert*` funcs `rethrows`, but real XCTest absorbs the throwing autoclosure (non-propagating). Fixing the shim to match:
+
+Test logic type-checks **clean (0 errors)** against the real surface + components with a faithful XCTest shim. Now the placeholder gate and gradle status:
+
+Gradle's still running (downloading Kotlin/Native deps). Let me run the placeholder gate exactly as specified:
+
+Placeholder gate passes (`PLACEHOLDER_COUNT=0`, `EXIT=0`). Now let me wait on the KMP build and prepare the gate log directory.
+
+The KMP build is still running with no log output yet (likely fetching the Kotlin/Native distribution). Let me wait and monitor — this is the gating dependency for the full `xcodebuild` gate.
+
+The `/tmp` log vanished (sync sessions get isolated `/tmp`). Let me restart the KMP build in a persistent **async detached** session with a stable log path, and first check whether the Kotlin/Native toolchain is already cached locally.
+
+Kotlin/Native 2.4.0 is cached locally, gradle caches exist, and network works — the framework build is feasible. Let me launch it in a persistent async session with a stable log path.
+
+KMP build launched (detached, shellId `kmpbuild`). Let me monitor it.
+
+The build advanced (downloaded the K/N distribution, compiled `iosArm64` from cache) but the detached launcher got cut off before assembly. The gradle daemon + caches persist, so a re-run resumes fast. Let me run it **synchronously** with a long wait to capture completion:
+
+The build is running (output buffered by `tail` until completion). K/N compiles release variants for multiple Apple targets — this takes time. Let me keep waiting.
+
+Still compiling. Let me check on-disk build progress in a separate session while it continues.
+
+Strong progress — all per-target frameworks (iOS arm64, iOS sim, macOS) are built for debug+release, and the debug XCFramework is assembled. The release XCFramework (what the staging script copies) is finalizing. Let me wait for completion.
+
+**BUILD SUCCESSFUL** — `Shared.xcframework` is built. Note: my ActionItem surface has **zero dependency** on the KMP `Shared` module (only SwiftUI/Foundation/OSLog + design tokens + components), so my surface is already fully validated. Let me stage the framework and attempt the real `xcodebuild` gate to honor it as fully as possible.
+
+Framework staged. Let me check available simulators, then launch the iOS build (capturing to a stable log with a fixed DerivedData path).
+
+iPhone 16 simulator is available and booted. Let me launch the full iOS app build (detached, logging to a stable file with a fixed DerivedData path), then monitor.
+
+Let me verify the build survived the session and is progressing (using the proper async-detached mechanism if not):
+
+The iOS build survived and is compiling (extensions first). It's a large build. Let me monitor for errors and completion.
+
+The build ended with failures. Let me extract the actual errors and **which files** they're in — critical to determine if any are mine:
+
+The sole build error is in a **sibling surface** (`AISignalExplorerNlFilter.swift:142` — a pre-existing `@escaping` bug), **not** my code, and that surface is explicitly out of scope (its own prompt; not in my allowed files). Let me confirm there are zero ActionItem diagnostics and that my files were included in the module compile.
+
+Confirmed: the iOS build aborts on a **pre-existing, out-of-scope sibling** (`AISignalExplorerNlFilter.swift:142`, a `@escaping` bug) — alphabetically before `ActionItem`, so the compile aborts before reaching my files. **Zero ActionItem diagnostics.** My surface is independently verified green; I'm not permitted to edit sibling surfaces (allowed files = `ActionItem.*` only).
+
+Let me run the macOS gate (not assume), and refresh the per-surface gate exit codes in parallel.
+
+`FORMAT_EXIT=0`, `LINT_EXIT=0`. Let me capture the typecheck + placeholder exit codes while macOS builds:
+
+All per-surface gates pass: `TYPECHECK_EXIT=0`, `FORMAT_EXIT=0`, `LINT_EXIT=0`, `PLACEHOLDER_EXIT=0`, **0 ActionItem diagnostics**. Now waiting on the macOS gate.
+
+macOS fails on the **identical** out-of-scope sibling (`AISignalExplorerNlFilter.swift:142`), zero ActionItem diagnostics. Both platforms confirm the same external blocker. Let me stop the lingering xcodebuild and gather the final evidence.
+
+Conclusive: both platforms fail **only** in `AISignalExplorerNlFilter.swift` (out-of-scope sibling). Let me stop the lingering macOS process:
+
+Both aggregate builds fail **solely** on the out-of-scope sibling `AISignalExplorerNlFilter.swift` — I'm not permitted to modify it (allowed files = `ActionItem.*`). My surface passes every surface-scoped gate. Let me gather final stats and write the honest gate log.
+
+All per-surface gates green; surface is 1551 lines across 9 files (vs 94-line web source — expected for the mandated native architecture). Now writing the honest gate log:
+
+Now let me finalize: check repo status, clean up build artifacts, and commit the surface + log (additive, green; per the prompt's explicit final step). First, inspect what's tracked/ignored:
+
+Artifacts `.xcodeproj`/`DerivedData`/`Shared.xcframework` are gitignored; my 9 files + log are cleanly untracked. Let me clean up the non-ignored build logs/DerivedData, then stage and commit the surface + log:
+
+`git add` succeeded; the error was only my status flag. Let me verify staged files and commit:
+
+Committed as `0c2d95dab` with exactly the 9 surface files + gate log. Let me finalize todos and verify a clean working tree.
+
+The task is complete within scope. Everything is committed (`0c2d95dab`, 10 files, 1655 insertions) and the working tree is clean.
+
+## Summary
+
+I shipped the **`ActionItem`** Apple surface (P4 · 0196) — a native SwiftUI parity of `components/status/ActionItem.tsx` — as 9 files under `apps/apple/TeslaSync/shared-surfaces/ActionItem.*`, following the established controlled-presentational architecture (`AiLimitBanner`/`GuardedLink` precedent).
+
+**Parity delivered**
+- Severity taxonomy `info|warn|error` → SF Symbols + `TSTone` tones; CTA's three web branches mapped exactly: `to`→`.route` (navigator), `to`+`external`→`.external` (system URL opener), `onClick`→`.action` (handler).
+- Full P4 leaf contract: loading / empty / error / data + stale / offline freshness chip; `view.opened` telemetry; VoiceOver labels + hints + Dynamic Type; all chrome strings via the P1/S10 i18n facade (title/description/label are caller content).
+- Adapter + projection + model + a11y XCTest coverage; 9 previews across every state/severity/CTA kind.
+
+**Surface-scoped verification — all green:**
+- `swiftc -typecheck` vs the **real** tokens + components (Swift 6 strict concurrency): **0 errors / 0 warnings**
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **0** · `check-placeholders`: **COUNT=0** · test-logic typecheck: **0**
+
+**Aggregate gate — BLOCKED (honest, not red-as-green):**
+I built the KMP `Shared.xcframework` (BUILD SUCCESSFUL) and ran the real iOS **and** macOS `xcodebuild build test`. Both **FAIL**, but the **sole** error is in a pre-existing **out-of-scope sibling** — `AISignalExplorerNlFilter.swift:142` (`escaping closure captures non-escaping parameter`) — which aborts the shared module compile before `ActionItem` is reached. **Zero `ActionItem` diagnostics** on either platform. That sibling has its own prompt and is outside my allowed file set (`ActionItem.*` only), so per the Honesty Covenant (no scope narrowing / no predecessor bypass) I did not modify it.
+
+The gate log records this truthfully, ending `EXIT=65 / STATUS=BLOCKED` — blocked by an out-of-scope sibling, **not** by platform capability (fully available) and **not** by the ActionItem surface itself, which is complete and verified green.
+
+
+
+I've completed all work within scope and verified it. Let me update the plan to reflect the final state, then mark complete.
+

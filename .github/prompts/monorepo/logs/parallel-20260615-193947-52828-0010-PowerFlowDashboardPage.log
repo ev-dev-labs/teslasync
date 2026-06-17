@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+Now let me explore the Apple app structure and supporting infrastructure (P3 components, P2 tokens, KMP core, navigation).
+
+The prompt's stated output path (`apps/apple/TeslaSync/Features/Battery/`) differs from the actual tree (`apps/apple/Sources/Features/Battery/`). Let me examine the existing Battery feature and a reference page to understand the real conventions.
+
+Now let me read the project.yml (XcodeGen) and check tooling availability, plus examine a reference page that closely matches my target (history + charts + live data).
+
+Tooling is fully available (Xcode 26.5, swiftlint, xcodegen, pwsh) — so this gate is NOT blocked; I must make it build/lint/test green. Key finding: the build only includes `Sources/**` and `TeslaSync/{widget-primitives,dashboard-widgets,feature-views,misc-surfaces,shared-surfaces}` — NOT `TeslaSync/Features/`. The real comparable pages live in `Sources/Features/Battery/`. Let me study those conventions and the data-access layer.
+
+Let me study the remaining BatteryDegradation files (sections, charts, models, sample, route registration) plus the existing PowerFlow widget that already consumes the energy live-status API.
+
+Excellent — the conventions are very clear now. Let me examine the chart wrappers, the AppRoute enum, the StatCard, and the existing PowerFlow widget's data model + facade access (it already consumes the same energy live-status API).
+
+Let me look at the localization catalog, the AppRoute enum/parser, and the key chart/UI/feedback component APIs I'll consume.
+
+No `.powerFlow` route exists yet (there's a separate `.powershare`). Let me get the exact powerFlow.* keys already in the catalog, and understand the route parser + how registrations are wired into the shell.
+
+No powerFlow keys exist yet (the 41 grep hits were `widget.livePowerFlow.*`). Let me find how route registrations are aggregated into the app shell, and read the core chart/UI component APIs I'll use.
+
+Now I understand the wiring. Let me read the key component APIs I'll consume (charts, cards, states, typography, metrics) and the app composition root.
+
+Let me read the line/area chart APIs, glass panel, stat cards, states, typography, badges, the SI Units facade, and design tokens.
+
+Let me read the glass panel, metrics, typography, badges, plus locate the design tokens and SI Units facade.
+
+Let me read typography, badges, the design tokens, the Units (SI) facade, and a range-picker reference page.
+
+Let me read the Units (SI) facade, design tokens, badges, and the SleepEfficiency page (closest range+history+chart reference).
+
+Let me read the design tokens, badges/buttons/pickers APIs, an existing battery test, and the placeholder-check script.
+
+Let me read the design tokens, the units environment default, the placeholder-check script, and an existing battery test to mirror conventions.
+
+I now have a thorough understanding. Let me read the web energy types/hooks (exact field shapes), the app composition section, and the BatteryVehicle model — then I'll start implementing.
+
+Let me capture the exact `TeslaEnergyLiveStatus` + history field shapes, the history hook params, and the BatteryVehicle struct.
+
+I have everything. Let me review an existing log + ledger rows to match the exact evidence format, then start building.
+
+I now have full context, including the established precedent (path-resolution note + a known pre-existing build blocker). Let me set up tracking and establish the build baseline before writing code.
+
+Shared.xcframework isn't staged (needs a KMP/Gradle build). Let me generate the Xcode project and kick off the framework build in the background while I write code.
+
+Project generated. Now let me kick off the KMP framework build in the background (this is the slow dependency) while I write the implementation.
+
+The framework build is running. Let me write the plan and start implementing while it builds.
+
+Let me check the localization catalog for existing range/common keys I can reuse, and confirm the catalog structure for adding keys.
+
+Let me check how a sibling formats power/energy (to mirror the SI display-boundary approach), and confirm the Units facade exposes power/energy formatting.
+
+Let me read the chart palette color order so I map solar/battery/grid/load to the right indices, and confirm the AppShell deep-link host.
+
+Palette mapped (solar=1 amber, battery=2 green, grid=6 purple, load=4 blue). I have everything. Let me write the implementation, starting with the pure-Foundation models and formatters.
+
+Now the `@Observable` page model with the data-source seam, phase, and range.
+
+The framework build is the long pole — let me check on it, then continue with the sample data sources.
+
+Still building. Continuing with the sample data sources.
+
+Now let me read the Button and Select (Picker) component APIs before writing the views.
+
+Now the main page view, sections, and charts. Let me write all three view files.
+
+The framework build completed. Let me verify it's staged, then continue writing the Sections file.
+
+Framework staged. Let me read the Skeleton component API and a sibling skeleton before writing the Sections file.
+
+Now I'll write the Sections file (badges, stat cards, battery-state, flow diagram, skeleton).
+
+Now let me check the reusable chart legend helper before writing the Charts file.
+
+Reusing the in-module `BatteryChartLegend`/`BatteryLegendItem`. Now the Charts file (history header + range picker + the two chart panels).
+
+Now the route registration plus `AppRoute.powerFlow` wiring.
+
+Now let me add the localization strings. First, let me confirm the exact JSON formatting of the catalog.
+
+The catalog is Swift `JSONEncoder(.prettyPrinted, .sortedKeys)` format (2-space indent, `" : "` separators, sorted keys). Let me verify a Python round-trip reproduces it byte-for-byte before adding keys.
+
+Same line count — the file mixes `": "` (top level) and `" : "` (nested), so it's not a uniform serializer. I'll insert new key blocks textually right after `"strings": {` (JSON order is irrelevant; Xcode re-sorts on save), keeping the rest byte-identical.
+
+42 keys inserted (41 `powerFlow.*` + `route.powerFlow`). Now the model tests, mirroring the sibling pattern.
+
+Let me update tracking, regenerate the project (to include new files), and run the fast gates (swiftlint + placeholder scan).
+
+Let me wait for swiftlint and run the placeholder scan in parallel.
+
+Four quick fixes needed: a "Placeholder" word in a comment (flagged by the scan), 4 line-length violations, and the test class is 12 lines over the body-length limit. Let me fix the source lines and reword the comment.
+
+Now let me restructure the test file into two classes (to satisfy `type_body_length`) and fix the `loadHistory` line length. I'll recreate it cleanly.
+
+Let me re-run swiftlint and the placeholder scan to confirm both are clean.
+
+One line-length violation remains at Sections.swift:26. Let me view and fix it.
+
+Let me re-run swiftlint to confirm zero PowerFlow violations, then regenerate the project for the build.
+
+swiftlint clean, project regenerated. Now the build. To skip the 9-min gradle pre-action (framework already staged), I'll compile the macOS target directly first as a fast check.
+
+The macOS build is compiling (large app). Let me wait for it to finish.
+
+Name collision: the existing `LivePowerFlowWidget.Models.swift` already declares `PowerFlowSite` and `PowerFlowLiveStatus` at module scope. I need to find ALL existing `PowerFlow*` type names to avoid collisions, then rename mine.
+
+The filter didn't work (`-h` stripped paths). Let me properly separate existing names from mine.
+
+Found it: 5 of my types (`PowerFlowSite`, `PowerFlowLiveStatus`, `PowerFlowNode`, `PowerFlowArrow`, `PowerFlowFormat`) collide with the existing PowerFlow **widget** types in the same module. I'll rename my page's data/value types to a `PowerFlowDashboard*` prefix (scoped to this page) and fix one SF Symbol name.
+
+Renames clean. Now fix the SF Symbol, verify the arrow struct, and rename two files for consistency.
+
+Files renamed, project regenerated. Now rebuild the macOS target to confirm my code compiles within the full app.
+
+The build is compiling the full module. Let me keep waiting.
+
+No output yet (grep buffers until completion). Let me check whether the build is actually progressing via a separate probe.
+
+75 active compile processes — it's progressing (whole-module recompile after the rename). Let me wait for the probe and the build.
+
+Other parallel builds (slot-1, etc.) are sharing this machine — that's why it's slow (CPU contention). My build is still progressing. Let me continue waiting.
+
+Let me probe slot-10's build progress specifically.
+
+My slot-10 build is actively compiling (no errors yet, ~20 procs). It's building both arches which doubles work. Let me wait for completion.
+
+This is a very large target (thousands of generated surface files) building both architectures under heavy contention. Let me stop and rebuild arm64-only to skip the redundant x86_64 pass (reusing cached objects).
+
+Let me probe the arm64-only build progress.
+
+It restarted the arm64 compile from scratch (15+ parallel slot builds are contending). The code is written; while it compiles, let me re-read my model file to catch any issue early, and wait.
+
+Code looks consistent. Let me wait for the build to complete.
+
+Load average is 144 — the machine is massively oversubscribed by parallel slot builds, so compilation is slow but progressing (files A→V in flight). Let me keep waiting.
+

@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source spec and explore the existing Apple app structure.
+
+Now I understand the web spec. Let me explore the existing Apple app structure, particularly existing feature-views to follow established patterns.
+
+There are many existing feature-views. Let me check for any existing RecentActivity files and examine the most recent similar surfaces (RecentDrives, BatteryRangePanel) as templates.
+
+RecentActivity files already exist. Let me read all of them to understand the current implementation state and check the log file.
+
+The existing files implement a **different** web source: `features/dashboard/components/RecentActivity.tsx` (prompt 0130, three panels with a chart). My prompt (0277) specifies `features/vehicles/components/RecentActivity.tsx` (two panels, no chart). This is a naming collision. Let me investigate how prior collisions were deduped.
+
+Both web sources exist and are genuinely different components. The existing Swift files implement the **dashboard** version (prompt 0130). Let me check whether a vehicles-version surface already exists under a different name, and understand the collision-resolution naming convention.
+
+There are two distinct prompts: **0130** (dashboard, already on disk) and **0277** (vehicles, my task). Previous 0277 attempt logs exist. Let me read them to understand prior resolution and check the canonical gate log status.
+
+Now I understand. The prior 0277 precedent: ship the vehicles surface as `RecentActivity.Vehicles.*` with a `VehiclesRecentActivity` type namespace to avoid colliding with the dashboard `RecentActivity*` types (0130), keeping 0130 byte-identical. That work isn't in this branch's baseline though. Let me check the build tooling reality and the canonical 0130 gate log.
+
+Now the picture is complete. Key facts:
+- The `.xcodeproj` is git-ignored, generated via `xcodegen` (available). The **full-app xcodebuild gate is deferred** in all prior runs because it needs a KMP `Shared.xcframework` Gradle pre-action + macOS signing — pre-existing infra blockers.
+- Established methodology: namespace the vehicles surface as `RecentActivity.Vehicles.*` / `VehiclesRecentActivity*` (avoiding collision with the 0130 dashboard types), verify via swiftformat/swiftlint/placeholder + an isolated SwiftPM compile+test against the real shared infra.
+
+Let me read the rest of the dashboard 0130 files (my closest template) to learn the exact shared primitives and conventions.
+
+Let me read the adapter (formatting/projection conventions), strings, tests, and previews from the 0130 template, plus locate the shared design-token definitions.
+
+Let me read the 0130 test/preview conventions and locate the shared design system primitives and any native counterparts for IconBox/InlineMetric/AnimatedNumber/TimeStamp.
+
+Let me locate the exact definitions of the design tokens and shared primitives I'll use.
+
+Now I have the full token vocabulary. Let me read the native data-display/UI components (potential IconBox/InlineMetric/AnimatedNumber/TimeStamp counterparts) plus Motion and Skeletons.
+
+Native counterparts exist: `TSIconBox`, `TSAnimatedNumber`, `TSInlineMetric`, `TSFadeIn`, `TSSkeleton`. Let me read the web shared components for exact prop parity plus the conversion helpers, and the native `TSIconBox` API.
+
+Let me read the web conversion/format helpers and `useUnits` to confirm exact constants and the `unitPrefs` shape, plus check the lint/format configs and test conventions.
+
+All parity facts confirmed. Let me read the 0130 test files (conventions), the lint/format configs, and the `TSTone` enum before building.
+
+I have everything needed. Let me read the placeholder-check script to understand `-Path` handling, then write a plan and start building.
+
+I now have a thorough understanding. Let me verify the `TSGlassPanel`, `TSFadeIn`, and `TSSkeleton` APIs before writing, and set up my plan/todos.
+
+I have full understanding of all conventions and APIs. Let me record a plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure value types.
+
+Now the pure projection/format/a11y adapter — the core testable logic.
+
+Now the panels, rows, and per-list empties.
+
+Now the surface-envelope chrome: freshness chip, connectivity banner, loading skeleton, error+retry.
+
+Now the main entry view with the responsive two-panel layout.
+
+Now the i18n strings catalog.
+
+Now the previews — one per state.
+
+Now the adapter unit tests (cached → projection).
+
+Now the model state-machine + accessibility tests.
+
+All 10 files created. Now let me format and lint my files.
+
+One line-length violation. Let me view and fix it.
+
+Now re-format and re-lint to confirm everything is clean.
+
+swiftformat **0/9 require formatting**, swiftlint --strict **0 violations**. Now the placeholder gate — a genuine scan of my files (the literal gate path doesn't exist, so I'll scan copies to truly verify) plus the self-test control.
+
+Placeholder gate is genuinely clean (COUNT=0) with a passing self-test control. Now I need to functionally verify the surface compiles and tests pass against the **real** shared infrastructure. Let me first assess the full-gate feasibility (xcodegen + the Shared.xcframework prerequisite).
+
+Confirmed: `Shared.xcframework` is absent and requires the KMP/Kotlin-Native + Gradle toolchain (a documented P4-integration-runner blocker), and the app/test schemes depend on it via a pre-action. This is exactly why every prior P4 run deferred the full xcodebuild gate. I'll prove my surface via the precedented isolated SwiftPM build + XCTest against the **real** design system, then do a bounded real-gate probe for the log. First, let me map the shared-component dependency closure.
+
+`.tsGlassPanel()` lives in `Sources/Design/TSMaterial.swift`; the components I use only import SwiftUI. Let me check the cross-references to assemble a closed isolated-build set.
+
+The dependency closure of the real components (Cards→TSButton/TSText/Typography, etc.) is broad, so the faithful approach is to compile my surface against the **real** `Sources/Components` + `Sources/Design` + generated tokens as one module (exactly as in the app). Let me set up the isolated SwiftPM harness and let the compiler confirm the closure.
+
+No external references detected — the design system layer looks self-contained. Let me build the isolated harness.
+
+Now let me compile the isolated package against the real design system.
+
+Build reached the final compile steps but exited 1. Let me see the actual errors.
+
+The errors are in `Components/DataDisplay/UnitFormatters.swift` — an app-coupled file (needs `UnitPreferences`/`Units`) that my surface doesn't use. The Components dir isn't fully self-contained. Let me carve the precise closure my surface needs instead of the whole dir.
+
+Minimal closure is self-contained (Cards, Badges, Buttons, Typography, Motion, Skeletons + TSDesign/TSMaterial + Tokens — none reference app types). Let me rebuild the harness with just that closure.
+
+Build complete (Swift 6 strict). Now let me run the tests.
+
+**36 tests pass, 0 failures** against the real design system under Swift 6 strict concurrency, and the `#Preview` macro compiled. Now let me attempt the real full xcodebuild gate to document its actual result. First, generate the project.
+
+Project generates cleanly and the iPhone 16 simulator is available. Now let me attempt the actual iOS build-for-testing (this triggers the `Shared.xcframework` Gradle pre-action). I'll run it bounded and capture the real result.
+
+Java 17 + gradlew are present, so the `Shared.xcframework` Gradle pre-action *may* run. Let me make a bounded real attempt at the iOS scheme build-for-testing (runs the pre-action) and capture the actual outcome.
+
+Excellent — the `Shared.xcframework` Gradle pre-action actually **succeeded** (build cache was warm), and the app is now compiling. The full gate may be runnable after all. Let me monitor the build progress.
+
+Build still progressing through the Gradle framework assembly (0 errors so far). Let me continue monitoring.
+
+Still in the Gradle release-framework linking phase (0 errors). Let me keep waiting for it to reach the app compile.
+
+The full iOS build-for-testing **failed (exit 65)** — but the failure is in pre-existing `TeslaSync/shared-surfaces/AIAnomalyExplanations.*` / `AIAutoNameUnnamedLocations.swift`, **outside my allowed scope**. Let me extract the exact compiler error to document it's not my code, and confirm my files compiled.
+
+The full-app build failed **only** on a pre-existing, out-of-scope defect: `shared-surfaces/AIAutoNameUnnamedLocations.swift:123` (escaping closure captures non-escaping `content`) — **zero** errors implicate my files, and that file is outside my allowed scope (`feature-views/RecentActivity.*`). Let me confirm the git state (only my files changed; the broken file is untouched) and launch the macOS build to capture its result too.
+
+Confirmed: the failure is a genuine **pre-existing** defect at HEAD in `shared-surfaces/AIAutoNameUnnamedLocations.swift` (untouched by me, outside my allowed scope), and my changes add only `RecentActivity.Vehicles.*`. Let me run the macOS gate too (it compiles the same shared-surfaces sources) to capture its real result, while I prepare the log.
+
+While the macOS build runs, let me capture tool versions and re-confirm the per-surface gates cleanly for the log.
+
+The macOS build is still compiling in the background. Let me monitor it.
+
+The macOS build also failed (exit 65), with **no** RecentActivity.Vehicles errors. Let me capture the exact macOS error to confirm it's the same pre-existing out-of-scope defect.
+
+Both full-app gates are blocked by non-mine issues: iOS by the **pre-existing** `shared-surfaces/AIAutoNameUnnamedLocations.swift` compile error, macOS by **code-signing** (empty `DEVELOPMENT_TEAM` — a runner/platform limitation). Zero RecentActivity.Vehicles errors in either. Let me capture the whole-tree lint/format gate steps (as the gate defines them) for an honest log.
+
+Whole-tree swiftformat passes (0/4126 require formatting). Now the whole-tree swiftlint --strict gate step.
+
+All host-runnable gate steps pass whole-tree: **swiftformat 0/4126, swiftlint 0 violations in 3896 files, placeholder COUNT=0, isolated build + 36 tests green**. Only the two full-app build steps are red — both for non-mine reasons. Let me write the comprehensive gate log.
+
+Now let me clean up ephemeral build artifacts and commit exactly my files + the log.
+
+Only my 10 files + the log are new; generated project and framework are git-ignored. Staging and committing.
+
+Committed as `f0a1c19e4`, tree clean. Let me update todo state, do a final full git-status check for any stray gradle artifacts, and clean up temp build dirs.
+
+The task is complete. Final state verified: working tree fully clean, all 11 files committed, temp artifacts cleaned.
+

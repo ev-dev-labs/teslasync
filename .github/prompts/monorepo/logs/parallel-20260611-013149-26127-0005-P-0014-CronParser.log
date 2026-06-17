@@ -1,0 +1,114 @@
+I'll start by exploring the environment and understanding what exists.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the Apple app structure.
+
+Now let me read the helpers, ToolCard, formatDateTime, and explore the existing Apple app structure to understand conventions.
+
+The `feature-views` directory already exists with ~2565 files following a pattern (`.Model.swift`, `.Previews.swift`, `.strings`, `.swift`). Let me read the web helpers and check for an existing CronParser plus a template.
+
+Web source is fully understood. Now let me check the `formatDateTime` lib and find existing devtools tools already ported to Apple as templates.
+
+Existing ported tools (`Base64Tool`, `HashCalculator`, `JsonFormatter`, `HttpStatusTool`, `ColorConverter`) are perfect templates — same web ToolCard pattern, pure client-side compute. Let me read a complete one to learn all conventions.
+
+`Base64Tool` is the closest analog (text input → computed output). Let me read all its files plus HashCalculator's model/engine to learn the full pattern.
+
+Now I understand the conventions deeply. Let me read the Previews/strings/Tests of Base64Tool, the HashCalculator (Engine + list output pattern), and verify how files are included in the Xcode project.
+
+Let me see HashCalculator's main view (it uses a single-line Input like CronParser), locate the shared `TSTextField`/`TSBadge` components, and confirm project file inclusion.
+
+Let me read the shared components (`TSTextField`, `TSBadge`, `TSButton`), the project.yml, the token definitions, and the web `formatDateTime`.
+
+Now let me confirm the `TSButton` signature, `TSGlassPanel`/`TSCopyButton`, token definitions, and whether `xcodegen` is available and a project exists.
+
+Let me read the token definitions and the remaining shared components (`TSGlassPanel`, `TSCopyButton`, `TSLabel`).
+
+I now have all conventions. Let me check the gate tooling (pwsh, simulators, placeholder script, log dir) before writing code.
+
+Everything's available (pwsh, iPhone 16 booted, placeholder script). Let me check the placeholder script's banned tokens and an existing log's format.
+
+Key precedent: existing surfaces (Base64Tool, HashCalculator) ship "code-complete + DEFERRED Xcode app build" — they verify via swiftlint, swiftformat, placeholder check, and strong `swiftc` typechecks against the real SDKs, deferring full `xcodebuild` (needs KMP `Shared.xcframework` + signing). Let me confirm that ceiling and read the HashCalculator Model/strings/Previews to mirror exactly.
+
+Confirmed: `Shared.xcframework` is an empty `.gitkeep` placeholder, so the full `xcodebuild` gate requires the KMP/Gradle framework (unbuildable here) — matching the documented "code-complete + DEFERRED Xcode build" precedent. Let me read the banned-pattern list so my code doesn't trip the placeholder gate, then start writing.
+
+I have the complete picture. `Shared.xcframework` is empty (KMP/Gradle-built), so the full `xcodebuild` gate is environmentally blocked — matching the documented precedent for these surfaces. Let me verify no symbol collisions, then write the plan and files.
+
+I have everything I need. Let me create a plan and the 7 surface files following the established Base64Tool/HashCalculator conventions exactly.
+
+Now I'll create all 7 surface files.
+
+All 7 files created. Now let me run the host-runnable gates. First, swiftformat (fix my files), then lint.
+
+The gate runs from repo root. Let me run swiftformat lint and swiftlint correctly from their proper directories.
+
+swiftformat lint passes (EXIT=0). Now swiftlint --strict.
+
+swiftlint passes for my files. Let me run the full-project `swiftlint --strict` (as the gate does) to confirm no cross-file regressions.
+
+swiftlint strict passes project-wide (0 violations). Now the placeholder gate — I'll run it meaningfully against my files (in a temp dir) plus the literal gate command, and grep for banned tokens.
+
+Placeholder gate clean (COUNT=0). Now the strongest verification available: execute the pure adapter logic and typecheck the SwiftUI layer against the real SDKs. Let me locate the glass-panel modifier and component dependencies first.
+
+Components and Design only import SwiftUI — so a curated compile unit (tokens + Design + Components/UI + my files) is self-contained. Let me strong-typecheck the SwiftUI layer against the **iOS 18 simulator SDK** under Swift 6 strict concurrency.
+
+Good catch from the typecheck — the Foundation API is `date(byAdding:value:to:)`, not `of:`. Let me fix both occurrences.
+
+Fixed. Re-running the iOS 18 typecheck.
+
+iOS 18 typecheck passes. Now the **macOS 15 SDK** typecheck.
+
+Both SDKs typecheck clean under Swift 6 strict concurrency. Now the highest-value proof: **execute the pure cron logic** in a host harness, asserting parity with the web helper's outputs.
+
+That's only a Swift-6 top-level-`var` actor quirk in my *harness* `main.swift` (not the adapter — which already typechecked clean at Swift 6 on both SDKs). I'll execute the harness at `-swift-version 5` to validate runtime behavior.
+
+**All 38 cron-logic assertions pass, executed natively** (sample output `Jan 2, 2026 at 12:00 AM`). Now let me document the actual `xcodebuild` disposition with real evidence. First, confirm the generated project is git-ignored, then generate it.
+
+The generated `.xcodeproj` is git-ignored (line 379); only my 7 files are untracked. Now let me attempt the real `xcodebuild` to capture concrete evidence of its disposition (bounded so it can't hang indefinitely).
+
+The build is silent after ~5 min — consistent with the KMP `Shared.xcframework` Gradle pre-action. Let me confirm what process is actually running.
+
+This is concrete evidence: `xcodebuild` is executing the KMP `:core:assembleSharedXCFramework` Gradle pre-action (the `Shared.xcframework` staging) — the documented long-pole. A parallel agent (slot-4) is contending for the shared Gradle daemon too. Let me wait longer and check if it progresses to compiling app sources.
+
+After ~9 minutes, my build's log is still 0 bytes and no `Shared.xcframework` exists — `xcodebuild` is serialized behind the shared/contended KMP Gradle daemon (slot-4 is building it too). This definitively confirms the documented long-pole. Per the 0011/0015 precedent I'll DEFER the Xcode gate with this concrete evidence and stop my contending build. Let me find and stop only my own `xcodebuild` (not the shared daemon or slot-4).
+
+Multiple parallel agents (slot-4, slot-6) are contending for the shared Gradle daemon. Let me check my own background build shell's state directly.
+
+My `xcodebuild` shows no active binary and a 0-byte log after ~9 min — it's blocked waiting on the shared single Gradle daemon that the other slots hold. Let me stop my background build cleanly and confirm state.
+
+Confirmed: build cleanly stopped, shared daemon untouched, 7 files intact, no leftover slot-5 procs. I have all evidence. Let me remove the git-ignored generated project, then run a consolidated host-gate capture into the log file.
+
+Now let me run and capture all host-runnable gates into the log.
+
+Gates 1-3 green. Now the strong SDK typechecks and the executed harness.
+
+Both SDK typechecks green. Now re-run the executed adapter harness and append to the log.
+
+All 6 host gates green (38/38 executed). Now let me append the xcodebuild disposition, parity/states summary, honesty covenant, and the EXIT/STATUS footer.
+
+The log is complete (156 lines). Let me review it in full for coherence, then verify the final state and commit.
+
+Log is coherent. Now let me verify final git state and commit exactly the allowed files.
+
+Clean — only the 7 CronParser files and the log. Committing exactly the allowed files.
+
+Committed (8 files, 1391 insertions). Let me do a final clean-state verification.
+
+Task complete. The working tree is clean, the commit is in place, and the gate log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0014-CronParser.log     | 156 ++++++++++
+ .../feature-views/CronParser.Adapter.swift         | 314 +++++++++++++++++++
+ .../TeslaSync/feature-views/CronParser.Model.swift | 147 +++++++++
+ .../feature-views/CronParser.Previews.swift        |  67 ++++
+ .../TeslaSync/feature-views/CronParser.Tests.swift | 339 +++++++++++++++++++++
+ .../TeslaSync/feature-views/CronParser.Views.swift | 255 ++++++++++++++++
+ .../TeslaSync/feature-views/CronParser.strings     |  57 ++++
+ .../apple/TeslaSync/feature-views/CronParser.swift |  56 ++++
+ 8 files changed, 1391 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0014-CronParser.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/CronParser.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CronParser.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CronParser.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CronParser.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CronParser.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CronParser.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/CronParser.swift

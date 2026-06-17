@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and understanding the task scope. Let me look at the key files in parallel.
+
+The web source is clear. Now let me explore the existing Apple Admin pages to understand the established patterns.
+
+The `Features/Admin` directory doesn't exist yet. Let me find where the existing admin page sources actually live and understand the project layout.
+
+The real admin pages live in `apps/apple/Sources/Features/Admin/`. The prompt's literal `TeslaSync/Features/...` path is a generator artifact that isn't in the build's source roots. I'll follow the actual compiled convention. Let me study the established patterns thoroughly.
+
+Excellent. The `AuditLogPage` is the closest analog (filters + pagination + expandable table + masked email). Let me study its supporting files, route registration, sample data source, and the design-token components.
+
+Now let me examine the models, sample data source, route system, and the shared UI components I'll need.
+
+Let me examine the routing system, how registrations are aggregated, and locate the design-token components and string catalog.
+
+Let me see how route registrations are composed into the app and what RouteTests enforces, plus locate the string catalog and design tokens.
+
+Now let me locate the shared component definitions and design tokens to confirm their exact signatures.
+
+Let me check the toolchain availability and read a sample log to match the required format.
+
+The toolchain is fully available (xcodebuild, swift 6.3.2, swiftlint, xcodegen, pwsh). Let me read the parity ledger, MaskVariant adapter, web UserCell, and swiftlint config.
+
+I now have the full picture. Let me inspect the xcstrings JSON structure to add keys correctly, and confirm route-title keys exist.
+
+All 39 keys are missing (I'll add them plus a placeholder key). Let me verify a few integration points and check for symbol clashes before writing.
+
+A `FeedbackCategory` enum already exists in the feedback modal. Let me inspect it to decide whether to reuse it.
+
+All clear. There's an existing `FeedbackCategory` enum (bug/feature/other, matching web) I'll reuse for DRY. I'll namespace my new types under `FeedbackQueue*`. Let me set up the plan and todos, then build.
+
+Now I'll create the source files. Starting with the models.
+
+Now the table + expansion + row editor file.
+
+Now the expanded detail + row editor.
+
+Now the main page view with previews.
+
+Now the filter row view.
+
+Now the route registration, then the tests.
+
+Now wiring: AppRoute, AppRouteParser, and TeslaSyncApp.
+
+Now add the strings to the catalog. Let me first inspect its exact formatting to produce a clean diff.
+
+The catalog uses Xcode's `" : "` spacing style. I'll insert new keys as a formatted block to keep the diff minimal and valid.
+
+Now the model tests.
+
+Now update the parity ledger. Let me check the existing row format for both platforms.
+
+All files created and wired. Now let me verify — starting with fast checks (swiftlint, swiftformat, placeholder scan) and checking build prerequisites.
+
+swiftlint passes (0). The KMP `Shared.xcframework` isn't pre-staged. Let me run the format + placeholder checks and investigate the build setup.
+
+swiftformat wants formatting fixes. Let me auto-apply it to my files, then re-verify.
+
+Both format and lint pass. Let me verify the auto-formatted regions look correct.
+
+Format + lint are green. The strongest proof is a real build. Let me check whether the KMP framework can be built (Java/Gradle) before deciding the verification path.
+
+Java 17 is available. Let me kick off the KMP framework build in the background (it took ~7min in the reference) while I prepare the isolated type-check as a parallel fallback.
+
+While that builds, let me map the dependency closure for the fallback isolated type-check.
+
+Gradle is downloading/building. Let me prepare the isolated type-check in parallel (I'll need it as in-scope proof regardless). First, SDK paths and a first compile pass for macOS.
+
+The dependency closure now compiles — these are real errors in my code: `pageSize` is MainActor-isolated but used as a default in nonisolated value-type inits. Fix: mark it `nonisolated`.
+
+macOS isolated type-check passes (0 errors) against the real dependency closure. Now the iOS idiom.
+
+Both idioms type-check clean (0/0) against the real shipped components. Let me re-verify lint/format after the edit and run a headless model harness.
+
+Now compile and run the headless model harness.
+
+The harness file must be named `main.swift` for top-level code. Let me fix and re-run cleanly.
+
+Model harness: all 20 assertions pass. Let me check the Gradle build progress and run the placeholder scan.
+
+Placeholder scan flagged the `githubUrlPlaceholder` i18n key name (a substring match, not a stub). Let me check the scanner's allow mechanism and the flagged line.
+
+The scanner honors `// parity:allow <reason>` markers (as the sibling AuditLog does). Let me annotate the i18n key line.
+
+The marker must be on the same line as the match. Let me fix it inline.
+
+Placeholder scan passes (0 violations). Let me check the Gradle framework build progress.
+
+Gradle is still fetching/building (no output yet after ~10min). Let me verify the test file type-checks while that continues, by compiling it same-module against its real dependencies.
+
+The XCTest macros aren't resolvable via isolated `swiftc` (a known limitation — the macros need the XCTest bundle build); the test's logic is fully covered by the executed harness. Let me run `xcodegen generate` (proves my files are wired into the project) and check Gradle.
+
+`xcodegen` succeeded — my files are referenced 6× each (iOS + macOS apps + both test bundles), proving they're wired into the build. Let me check Gradle's progress.
+
+Gradle succeeded — `Shared.xcframework` is built. Let me stage it and run a real `xcodebuild` for the macOS app (compiles my files in the full app), with signing disabled.
+
+Now run the real `xcodebuild`. Let me confirm the scheme name and start the macOS build (full app compile, ~many minutes).
+
+Now the full macOS app build (compiles my files within the ~8k-file tree). Starting it in the background.
+
+Build running. Let me check whether the pre-existing sibling error noted in reference logs still exists.
+
+The reference's pre-existing sibling error appears already fixed (`labelText` now). Let me monitor the build.
+
+Build is in the Swift module-emission phase (compiling the app including my files), no errors yet. Let me wait for completion.
+
+Build failed at module emission. Let me find the actual error(s).
+
+The full-app build caught a real issue my isolated check missed: `FeedbackCategory` isn't in the app target's compile scope. Let me verify whether `modals-dialogs` is a compiled source path.
+
+Root cause: `TeslaSync/modals-dialogs` is **not** a compiled source path, so `FeedbackCategory` isn't in the app target (my isolated check wrongly included it). The fix is to make my feature self-contained with its own `FeedbackQueueCategory` enum. Let me view exact occurrences and refactor.
+
+Now refactoring to a self-contained `FeedbackQueueCategory`. Making all edits:
+
+Now the Badges, Filters, and Model files:
+
+Let me verify no bare `FeedbackCategory` remains and re-run the isolated type-check (now without the uncompiled modal dep).
+
+No bare `FeedbackCategory` type refs remain (only my own `FeedbackCategoryBadge`); isolated check passes. Let me re-apply format and lint, then rebuild.
+
+Format + lint green. Now re-run the full macOS build (ground truth).
+
+Build running. Let me wait and monitor.
+
+No errors; arm64 module emission passed (previously failed there), now on x86_64. Let me wait for completion.
+
+Whole-module type-check (x86_64) in progress, no errors. Let me wait for it to finish.
+
+Whole-module type-check passed for both arm64 and x86_64 (no errors) — my code is type-correct in the full app. Now in the per-file codegen phase. Let me wait for the final result.
+
+My files are compiling in the codegen phase with no errors. Let me wait for the final link/result.
+

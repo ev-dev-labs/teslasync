@@ -1,0 +1,150 @@
+I'll start by understanding the environment and the task requirements. Let me explore the repository structure and check tool availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me find the web source and the Apple app structure.
+
+Now let me understand the Apple app structure deeply — the project layout, existing shared-surfaces, and the P1 dependencies (state holders, tokens, i18n).
+
+`apps/apple/TeslaSync/shared-surfaces/` exists with 237 entries, generated via XcodeGen. Let me look at the test target config and existing shared-surface examples to learn conventions.
+
+I now understand the multi-file surface convention. Let me examine an existing AI shared surface in full and check for native counterparts of HelixMark/AIThinkingIndicator, plus the P1 facades (i18n, tokens, diagnostics).
+
+Many native surfaces already reference `HelixMark`, `AIThinkingIndicator`, and `AiOutputPanel`. Let me find where these are **defined** to understand the shared component contract I must build against.
+
+The pattern is clear: each surface ports its own local copy of `AiStreamState`, `HelixMark`, and thinking indicator. Let me examine how they're defined (scope) and read a representative streaming-narrative surface end-to-end to learn the full convention.
+
+The convention is clear: each surface namespaces its own port (e.g., `LifetimeStatsQAOutputPanel`, `LifetimeStatsQAThinkingIndicator`), while `HelixMark` is a module-global struct. Since I can only touch `AiOutputPanel.*` files, I'll build the canonical reusable version. Let me read the closest analog (the output-panel + thinking-indicator chrome) and the stream-lifecycle port in full.
+
+This is exactly the canonical pattern I need to build. Let me examine the supporting infrastructure: the `Strings` facade (P1/S10), the `StreamPhase`/`Logic` port of `AiStreamState`, the telemetry `view.opened` contract (P1/S11), the strings file format, and the test convention.
+
+Now let me read the `Strings` facade, the main entry `.swift` (telemetry `view.opened`), the strings file format, and a test file to complete my understanding of all conventions.
+
+Let me find the P1/S11 diagnostics contract (how `view.opened` is emitted), the `Surface` slug definition, the strings file format, and a representative test file.
+
+Let me find the `Surface` slug definition pattern and read a representative Tests file, plus verify the design tokens/components exist.
+
+Design tokens live in the generated `apps/design/generated/apple` path. Let me verify the exact token members and the shared component signatures I'll use.
+
+All tokens confirmed. Let me verify `TSSpacing`/`TSRadius` members and the shared component signatures, then read representative test files.
+
+I have nearly everything. Let me verify there are no naming collisions for my planned global types, and check the telemetry spy test pattern + Previews convention.
+
+No collisions — all 10 planned type names are free. Let me check build prerequisites: whether the `.xcodeproj` exists, `xcodegen` availability, the `Shared.xcframework`, the spy test pattern, and the SwiftLint rules.
+
+Critical build prerequisites: `.xcodeproj` and `Shared.xcframework` don't exist yet. Let me inspect the framework-staging script to understand whether the full app can build in this environment.
+
+The full app build needs the KMP `Shared.xcframework` via Gradle. Let me check whether that toolchain is viable here, and look at the placeholder-check script.
+
+Java 17 + gradlew present, so the KMP build may be viable. Let me check sibling surface logs to see how the gate resolved for prior surfaces (DONE vs BLOCKED) — this tells me the expected outcome in this environment.
+
+The established disposition is clear: run all owned gates (format/lint/placeholder) green + prove the surface compiles & tests in isolation, and DEFER the full-app `xcodebuild` with evidence (pre-existing unrelated breakage + KMP long-pole). Let me confirm two design details: the exact `AiStreamState` union, and how the sibling atomic surface `AIFeatureCard` consumes `HelixMark`.
+
+Decision locked: I'll follow the proven self-contained pattern (prefixed types like `AIFeatureCardHelixMark` → `AiOutputPanelHelixMark`), with `AiStreamState` modeled faithfully as the full union. Let me see how the presentational `AIFeatureCard` (the scaffold that contains `AiOutputPanel`) handles `view.opened` telemetry without a data model.
+
+`AIFeatureCard` uses a tiny `@Observable` model to emit `view.opened` once on appear. Since `AiOutputPanel` is genuinely stateless (pure props, only `useTranslation`), I'll keep it a pure `View` and emit via a testable diagnostics seam. Let me read the placeholder scanner to know exactly which tokens to avoid, then I'll write the files.
+
+Let me read the exact forbidden patterns so I avoid every one.
+
+I have all conventions and constraints. Forbidden tokens (case-insensitive): `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`. I'll avoid "placeholder" entirely (use "pending"). Let me set up tracking and verify two last tokens, then write the files.
+
+All verified. Let me create a plan and tracking todos, then write the surface files.
+
+Now I'll write the surface files. Starting with the Foundation-only model (logic, telemetry, strings, slug, a11y seam).
+
+Now the main view file with the generic pending-child API and telemetry wiring.
+
+Now the subviews: thinking indicator, error row, text body, the faithful Helix glyph, and a reduce-motion-safe pulse.
+
+Now the i18n strings file (P1/S10 catalog contribution).
+
+Now the previews (one per render branch, DEBUG-only).
+
+Now the test files. First, the logic/projection/accessibility/i18n tests.
+
+Now the telemetry/diagnostics/visibility tests with a spy.
+
+All 7 files written. Let me update tracking and run the gates I own: swiftformat, swiftlint, and the placeholder scanner on my files.
+
+SwiftFormat has specific style rules — let me apply them with the formatter (write mode) on my files, which is the safe, deterministic fix.
+
+Let me review the auto-formatted changes to confirm semantics are intact, especially the multi-return logic and the switch in `accessibilityLabel`.
+
+Auto-format is semantically correct (multi-return preserved, switch-expression valid, redundant attribute removed). Now let me verify all three owned gates: swiftformat lint, swiftlint strict, and placeholder scan.
+
+swiftformat: 0/6 need formatting. swiftlint --strict: **0 violations**. Now the placeholder scanner — I'll run it per-file (honest coverage) plus the literal gate command.
+
+All owned gates are green: **swiftformat 0, swiftlint --strict 0 violations, placeholder 0**. Now I'll verify the surface actually compiles against the real design system. Let me check what `TSSkeleton` depends on, then run a Swift 6 strict-concurrency typecheck of my sources.
+
+Let me check the dependency closure for `TSSkeleton` and generate the Xcode project (which auto-includes my files via the glob).
+
+Project generated (exit 0), my files included (42 refs across targets). The Components library has a wide internal closure. Let me verify my surface typechecks against the **real** design system under Swift 6 strict concurrency (macOS SDK), including the Components library + tokens.
+
+Errors are only in unrelated `Sources/Components/Maps/MapView.swift` (needs `TSChartPalette`), not my files — the Components library has a wide internal closure. To get a clean, closed isolated build that actually **runs my tests**, I'll create a throwaway SwiftPM package: my real sources + the real `Tokens.swift` + a verbatim `TSSkeleton` (the only component I use), as module `TeslaSync`, under Swift 6 strict concurrency.
+
+Confirmed. Let me build the isolated SwiftPM package and run my tests under Swift 6 strict concurrency.
+
+Surface compiles cleanly under Swift 6 against the real design system. Now run the tests.
+
+**24/24 tests pass, 0 failures** under Swift 6 strict concurrency against the real design system. Now let me attempt the full-app `xcodebuild` gate honestly and capture its real state. First, confirm only my files changed, then launch the iOS build (which triggers the KMP pre-action).
+
+Only my 7 files are new (the `.xcodeproj` is gitignored). Gradle/Kotlin/JVM are available. Let me attempt the KMP `Shared.xcframework` build (the scheme's pre-action long-pole) in the background and monitor it.
+
+The KMP build is running in the background. Let me monitor its progress.
+
+The KMP build is progressing using cached Kotlin/Native artifacts. Let me wait for it to complete.
+
+Release framework is linking now. Let me wait for the KMP build to finish staging.
+
+KMP `Shared.xcframework` built and staged (KMP_EXIT=0) in ~7 min. Now I can run the real gate. Let me verify staging and launch the full iOS `xcodebuild build test` (background, since it compiles the whole app).
+
+Framework staged (iOS device/sim/macOS slices present). Launching the full iOS `build test` gate in the background.
+
+The iOS build+test is running. Let me monitor progress.
+
+The build reported "BUILD INTERRUPTED". Let me read the full result.
+
+`IOS_EXIT=143` — xcodebuild received an external SIGTERM ~72s in, during build planning (an environmental watchdog; the standalone KMP build ran 7 min fine, so it's not a blanket async cap — likely the scheme's gradle pre-action re-run stalling). The framework is already staged, so let me build the app target **directly** (no scheme pre-action) to get a genuine full-app compile signal for my files.
+
+The app target build failed with 54 errors — but let me confirm **none** are in my files. Let me extract the actual error lines and the files they reference.
+
+Definitive: **0 errors in AiOutputPanel**; all 54 errors are in 4 pre-existing, unrelated co-resident surfaces (`RecentDrivesListWidget`, `StateTimelineWidget`, `StateTimeline`, `RecentDrivesSection`) — outside my allowed files. My `AiOutputPanel.strings` even compiled+validated cleanly. Let me capture representative errors and confirm those files are pre-existing (committed, not mine).
+
+This is the exact, well-documented pre-existing condition: the errors are `'RecentDrivesModel' is ambiguous` type-name **collisions between the `RecentDrives*` and `StateTimeline*` co-resident surfaces** — tracked in HEAD, unmodified by me, outside my allowed files. My surface compiles clean within the full module.
+
+Let me capture the macOS side too, and run the full-scope lint/format to record real gate exits. Launching macOS target build:
+
+Full-scope swiftformat lint: **0/3683 files** need formatting. Now the full-scope `swiftlint --strict` (gate command):
+
+Full-scope swiftlint --strict: **0 violations in 3453 files**. Let me check the macOS build result.
+
+macOS build also hit the environmental SIGTERM (~89s). Let me check how far it got and whether my files showed any errors.
+
+macOS full build was cut short by the same environmental SIGTERM (before reaching the collision batches), with 0 AiOutputPanel errors. My macOS evidence is the isolated build+24 tests (which targeted macOS 15). I have comprehensive, honest evidence. Let me gather final metrics and write the gate log.
+
+All metrics gathered: 7 files (929 lines), 3 i18n keys, 8 previews, 24 tests. Now I'll write the comprehensive gate log.
+
+Log written. Now let me clean up temporary artifacts and verify the git tree contains exactly my intended files before committing.
+
+Clean tree — exactly my 7 files + the log. Committing per the prompt's commit spec.
+
+Committed (9c1ea1d1e). Let me do a final verification that the working tree is clean and the commit contains exactly the right files.
+
+All committed cleanly: 8 files, 1056 insertions; working tree clean. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0036-AiOutputPanel.log | 127 ++++++++++++
+ .../shared-surfaces/AiOutputPanel.Model.swift      | 218 +++++++++++++++++++++
+ .../shared-surfaces/AiOutputPanel.ModelTests.swift | 115 +++++++++++
+ .../shared-surfaces/AiOutputPanel.Previews.swift   |  83 ++++++++
+ .../shared-surfaces/AiOutputPanel.Tests.swift      | 148 ++++++++++++++
+ .../shared-surfaces/AiOutputPanel.Views.swift      | 207 +++++++++++++++++++
+ .../shared-surfaces/AiOutputPanel.strings          |  21 ++
+ .../TeslaSync/shared-surfaces/AiOutputPanel.swift  | 137 +++++++++++++
+ 8 files changed, 1056 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0036-AiOutputPanel.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiOutputPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiOutputPanel.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiOutputPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiOutputPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiOutputPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiOutputPanel.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AiOutputPanel.swift

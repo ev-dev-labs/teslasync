@@ -1,0 +1,150 @@
+I'll start by exploring the environment and the repository structure to understand the task. Let me check key things in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available. Let me investigate the project structure (SPM vs xcodeproj) and read the web source plus existing widget patterns.
+
+I have the web spec and registry. Now let me study the existing Apple widget patterns (BatteryCells is the closest multi-file analog), the shared infra, the stated output path, and the project build config.
+
+Two widget directories exist. The stated output path is `apps/apple/TeslaSync/dashboard-widgets/` (706 files — the canonical location). Let me find the closest analog (a "latest snapshot" status widget) and understand the full file pattern, shared facade, tokens, and i18n.
+
+`ClimateControlPanelWidget` is not yet implemented (only `ClimateHistoryWidget` exists for the climate domain). The closest structural analog is `SecurityStatusWidget` (latest-snapshot panel, no chart: `.swift/.Adapter/.Model/.Views/.Previews/.strings/.Tests`). Let me read the full SecurityStatusWidget set plus ClimateHistoryWidget.Model for the climate-domain binding.
+
+Excellent template. Let me read the rest of the SecurityStatusWidget fileset and the ClimateHistoryWidget.Model (for climate-domain data binding conventions).
+
+Now the Previews, strings, Tests, and the ClimateHistory files (for climate-domain + temperature-unit conventions).
+
+Now the ClimateHistory files (climate domain + temperature-unit handling) and the build config. These tell me how units/temperature are handled natively and how widgets get compiled.
+
+I now understand the full pattern. Let me verify design tokens, how other widgets handle temperature units (reuse vs per-surface), the build config, and the placeholder checker — these determine collision-safety and how my files get compiled/tested.
+
+Confirmed: each surface defines its **own** temperature-unit type (per-surface ownership) — I'll do the same to avoid module collisions. Let me read the design tokens, the rest of project.yml (test targets), and the closest climate-domain reference (WeatherAtCarWidget).
+
+`WeatherAtCarWidget` confirms the exact climate-domain conventions (per-surface temp unit, Foundation-only model, `UnitPrefs`, `Surface` enum). Now let me confirm the design tokens, the web climate data shape, the test-target config, and the gate tooling availability.
+
+Let me confirm the exact web `ClimateSnapshot` shape, the spacing/radius/skeleton token signatures (for a faithful standalone type-check harness), the test-target wiring, and gate tooling availability.
+
+All gate tooling is available **except** `xcodebuild` (needs full Xcode; CLT-only). Critically, the web `ClimateSnapshot` exposes the legacy compat fields the web widget reads (`inside_temp`, `hvac_power`, `seat_heater_*`, etc.) — my DTO must mirror exactly those. Let me confirm the test-bundle wiring and probe whether `swiftc` can typecheck SwiftUI/`@Observable` under CLT (determines my verification strategy).
+
+Confirmed: test bundle includes only `*Tests.swift` (auto-wired), and **`swiftc -typecheck` of SwiftUI + `@Observable` works under CLT against the macOS SDK** — so I can genuinely compile-verify my code despite `xcodebuild` being unavailable. Let me read the exact web number/temp formatters for faithful parity, then start building.
+
+I have everything needed. `swiftc` can type-check SwiftUI under CLT, so I'll genuinely compile-verify despite `xcodebuild` being unavailable. Let me set up tracking and confirm the log directory.
+
+Logs dir exists. I must avoid the words `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` in shipped code. Let me set up tracking and the plan, then build the 7 files.
+
+Now I'll build the files. Starting with the Foundation-only Model.
+
+Now the pure Adapter (projection + formatters + accessibility summary).
+
+Now the SwiftUI surface view with header + all states.
+
+Let me check the full `Font.TS` token set before composing the views (to pick faithful, token-based fonts for the metric/compact values).
+
+`Font.TS` confirmed (`body`=14, `section`=18). Now the presentational subviews.
+
+Now the i18n strings catalog.
+
+Now the DEBUG previews covering every state.
+
+Now the comprehensive XCTest suite (adapter parity, model phases, telemetry, registry, accessibility).
+
+All 7 files created. Now the verification phase — first a faithful type-check harness. Let me probe `#Preview`/`ContentUnavailableView` support, then build a shim matching the real token/infra signatures.
+
+`#Preview` needs an Xcode-only macro plugin (same class of limitation as `xcodebuild`), but everything else type-checks. Let me build a faithful shim and type-check the 4 production files, then handle previews via a transform.
+
+Now type-check the 4 production files against the shim:
+
+Production files type-check clean. Now verify the Previews bodies by transforming `#Preview` into typecheckable functions:
+
+The awk broke on a preview name containing `)`. Let me replace the whole `#Preview` line instead:
+
+All 9 preview bodies type-check. Now a standalone harness that **executes** the parity logic (projector + model + resolvePhase) with assertions mirroring the tests:
+
+Top-level expressions require the file be named `main.swift`. Let me rename and rerun:
+
+The harness top-level isn't MainActor-isolated under Swift 6. Wrapping the model-wiring in `MainActor.assumeIsolated` (we're on the main thread at startup):
+
+Harness builds and **all parity assertions pass** — genuine execution evidence. Now run SwiftLint (strict), SwiftFormat (lint), and the placeholder gate on my files.
+
+12 lint violations to fix (trailing commas, short name `p`, a 4-member tuple, line length). Let me view the exact spots and fix them.
+
+Now I'll fix all 12 violations: convert the 4-tuple to a struct (Adapter), remove 4 trailing commas, and rename `p`→`result` in the tests.
+
+Now the test `p`→`result` renames and the trailing comma:
+
+Re-run SwiftLint, plus re-verify the type-check and harness still pass after the Adapter refactor:
+
+SwiftLint clean, type-check clean, harness passes. Now SwiftFormat lint and understanding the placeholder script's `-Path` handling.
+
+SwiftFormat clean. The placeholder script uses `-LiteralPath` (no prefix globbing), so I'll scan a temp dir containing exactly my surface's files for a meaningful result. Also generating the Xcode project to validate file membership:
+
+Placeholder gate clean (0 violations). Now validate the Xcode project still generates with the new files (confirms build/test target membership):
+
+Project generates cleanly. Let me confirm my files are actually wired into the targets, then clean up the git-ignored generated project:
+
+All checks pass and all 7 files are wired into the iOS/macOS app + test targets. Now I'll generate the honest gate log — running the real `xcodebuild` gate (to capture the capability-gap evidence) plus all the alternative verifications I *can* run.
+
+Now append the lint/format/placeholder/xcodegen results and the summary:
+
+Log is complete and honest (`EXIT=1`, `STATUS=BLOCKED` with capability evidence; all runnable checks pass). Let me confirm git status shows only allowed files, then commit.
+
+Two pre-existing unrelated web changes exist (not mine) — I'll stage **only** my 7 files + the log, exactly as the prompt's commit step specifies. Let me clean up temp artifacts, stage precisely, and commit.
+
+Staged set is exactly correct (7 files + log); the two pre-existing web changes remain unstaged. Committing:
+
+Committed: 8 files, 1957 insertions. Before finalizing, let me quickly check whether a full Xcode.app exists anywhere — if so, I could run the real gate and upgrade BLOCKED→DONE.
+
+`/Applications/Xcode.app` exists! I have no sudo, but I can override per-process with `DEVELOPER_DIR` (no sudo needed). Let me verify that unlocks `xcodebuild` and simulators:
+
+Xcode 26.5 with an iPhone 16 simulator is fully available via `DEVELOPER_DIR` — I can run the **real** gate. Let me check the `Shared.xcframework` dependency is present and the schemes exist before building:
+
+`Shared.xcframework` (the KMP core) isn't built — `Frameworks/` only has a `.gitkeep`. The full app target can't link without it. Let me check whether building it is feasible on this runner:
+
+The KMP `apps/shared` module + `gradlew` exist, so I can attempt to build `Shared.xcframework` and run the real gate. This is a heavy Kotlin/Native build — let me kick it off in the background and monitor, while strengthening evidence with a real-SDK type-check in parallel.
+
+While the KMP build runs, let me strengthen evidence by type-checking my surface against the **real iOS 26.5 simulator SDK and macOS 26.5 SDK** (Xcode 26.5 toolchain). Recreating shims:
+
+My surface type-checks clean against both real SDKs (iOS 26.5 + macOS 26.5). Let me check the KMP build progress:
+
+The KMP build is actively progressing (Kotlin/Native linking iOS frameworks, many tasks cached). Let me wait for it to finish staging the xcframework:
+
+Release frameworks are linking now (the slower optimized pass). Let me wait for the release xcframework to assemble and stage:
+
+Still linking release frameworks (macOS now — the last arch). Let me continue polling:
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL — ios-arm64, ios-arm64-simulator, macos-arm64). Now I can run the **real** gate. Let me regenerate the project and build the macOS app (whole-app integration compile incl. my files):
+
+macOS failed on **code signing** (environment, not my code — entitlements need a dev certificate). iOS Simulator doesn't require signing, so that's the better path for a real build+test. Let me run the iOS Simulator `build-for-testing` (compiles the whole app + test bundle including my surface):
+
+The iOS build failed — but on **pre-existing sibling files**, not mine: `SafetyFeaturesWidget.Model.swift` and `SafetyHistoryWidget.Model.swift` both declare `public final class SafetyModel` (a duplicate-symbol collision in the shared module). This is exactly the collision class my uniquely-prefixed `ClimatePanel*` types avoid. Let me confirm it's pre-existing and unrelated to me:
+
+Confirmed: the `SafetyModel` duplicate is **pre-existing** (two committed Safety files declare it; I never touched them) — it breaks the whole-app build independent of my work, and is outside my allowed scope to fix. My uniquely-prefixed types avoid this collision entirely.
+
+To get real XCTest-execution evidence for my surface in isolation, I'll build a throwaway SwiftPM package with my actual source + tests and run `swift test`:
+
+A **real Swift 6 strict-concurrency error** surfaced that plain `swiftc -typecheck` missed (SwiftPM uses full `complete` concurrency, matching the app's `SWIFT_STRICT_CONCURRENCY: complete`): my `seatPositions` static array holds a non-Sendable closure. Excellent catch — this would fail the app build too. Let me fix it with a Sendable `KeyPath` instead of a closure:
+
+Re-syncing the fixed source into the package and re-running `swift test` (full strict-concurrency, real XCTest):
+
+`KeyPath` isn't `Sendable` in this toolchain either. The bulletproof fix: a fully-`Sendable` static table (strings only) plus a pure `switch` for the level — no closures, key paths, or large tuples. Let me apply that:
+
+Re-syncing and re-running `swift test` under full strict concurrency:
+
+**All 34 XCTest cases pass** under the real Xcode 26.5 toolchain with full Swift 6 strict concurrency. The strict-concurrency build also caught a genuine `Sendable` bug my earlier checks missed — now fixed. I must re-lint and amend my commit. Let me re-verify lint/format on the changed Adapter:
+
+SwiftFormat wants a tweak in the changed Adapter. Let me apply it and inspect the change:
+
+SwiftFormat removed the now-redundant explicit `: Sendable` (the struct is implicitly `Sendable` — all-`String` members). I must re-verify the strict-concurrency build still passes with implicit synthesis. Re-syncing and re-running `swift test` + both linters:
+
+Clean across the board (swift test EXIT=0, lint=0, format=0). Let me capture the explicit XCTest count for the record:
+
+Confirmed: **34 tests, 0 failures** under real Xcode 26.5 + strict concurrency. Now let me rewrite the log with the complete, honest real-toolchain evidence and assess the final verdict:
+
+Log written and `Shared.xcframework` is gitignored. Let me review the final log for correctness:
+
+The log is honest and complete. Now I'll amend my commit to include the strict-concurrency `Sendable` fix (Adapter) and the updated log:
+
+Amended cleanly (8 files, 1976 insertions; working tree clean apart from the 2 pre-existing web files). Final confirmation + cleanup:
+
+All clean — only the 2 pre-existing web files remain (untouched by me), no build artifacts tracked, temp removed. Let me mark tracking complete.
+
+All work complete and verified. Here's the final summary.
+

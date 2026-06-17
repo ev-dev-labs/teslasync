@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source, the existing Apple app structure, and related files in parallel.
+
+Let me read the web source page and explore the Apple app structure.
+
+This is a substantial parity task. Let me examine the hook source, the parity manifest entry, the ledger, and the README gate contract.
+
+Let me read the full manifest entry, the useWatch hook, and the apple-ledger structure.
+
+Now let me understand the Apple app structure. Let me look at the ledger format, an existing reference page with commands (GuardMode), and the core directories.
+
+The watch row isn't in the ledger yet — I'll need to add it. Let me study the GuardMode feature (most similar — commands + status), the route registration pattern, and the project structure.
+
+Let me examine the data source pattern, models, design tokens, and SI converters in the Apple codebase.
+
+Let me examine the SI converters facade, design tokens, project.yml, and find the navigation registration and string catalog.
+
+Let me check toolchain availability (critical for DONE vs BLOCKED) and locate the project config.
+
+Xcode, swiftlint, swift, and pwsh are all present. No `.xcodeproj` yet — it's XcodeGen-based. Let me check the gate contract, project.yml, and build setup.
+
+Let me read the p4-apple README gate contract and the project.yml structure.
+
+Now let me check the critical build dependency — the `Shared.xcframework` and its build script — plus the test directory structure and existing nav wiring.
+
+Let me check the shared core build feasibility and any pending-verification notes.
+
+Java 17 is available, so the KMP build is feasible but will be the long pole. Let me kick off the shared xcframework build in the background now while I write the Swift implementation.
+
+While that builds, let me examine the test structure, nav wiring, and string catalog format.
+
+The async wrapper returned (nohup keeps building). Let me check the actual gradle progress and continue exploring nav/route wiring.
+
+The shared build is progressing (downloading Kotlin/Native, some cache hits). Let me examine the routing enum and how existing Features pages register into navigation.
+
+The `.watch` route already exists. `GuardModePage` isn't route-registered (reached contextually). Let me find how routed pages register with `AppRouteHostRegistry` — examining an existing routed page (ApiPlayground, which is `done` in the ledger).
+
+Let me study the route registration pattern (both the `TeslaSync/Features` one and an `Sources/Features` one) and check build progress.
+
+Build is assembling frameworks. Let me see how `AppShell` composes all the route registrations into one registry.
+
+`TeslaSyncApp.swift` chains all registrations. Let me view it to find where to add the Watch registration.
+
+I now understand the registration pattern. Let me check the build progress, the string catalog format, an existing page-model test, and how the Units facade is consumed in a page.
+
+Release framework still linking. Let me see how pages obtain `UnitPreferences` and check the swiftlint config.
+
+Let me find how `UnitPreferences` flows into a page view (the environment source) so I wire it correctly.
+
+Now let me find the `tsUnits` environment key and the design-token/component catalog (TS* components).
+
+Let me read the core component and token files to learn the available building blocks.
+
+Let me read the typography, buttons, badge, and unit-formatter components, plus check build progress.
+
+Release framework still linking. Let me read the design-token palette and the Button/Badge component APIs.
+
+Let me check the Badge API, any radial-gauge chart component, and the full spacing/radius/font token set.
+
+Let me read the Badge, PieGauge, and remaining token definitions (Font.TS ramp).
+
+I now have a complete picture of the component library, tokens, and patterns. Let me check build progress and glance at the routed-page constructor pattern (SignalsWorkspacePage) before writing.
+
+The release build is on its final (macOS) link stage. I have everything needed. Let me set up tracking and write the plan, then create all the Swift files.
+
+Let me quickly verify the backend WatchSummary JSON types for wire fidelity, then start creating files.
+
+Wire types confirmed. Now creating the Swift files. Starting with the models.
+
+Now the data-source seam with a sample implementation.
+
+Models and data source done. Let me check the build progress, then write the page model.
+
+Shared.xcframework built and staged — the long pole is done. Now writing the page model.
+
+Page model done. Before writing the views, let me check what the placeholder scanner flags so I don't trip it.
+
+Let me read the exact forbidden patterns so my views don't trip the scanner.
+
+Critical: the scanner flags the word "Placeholder" case-insensitively, so I'll avoid `.redacted(reason: .placeholder)`. Let me verify the string-key convention used by feature pages in this directory before writing the views.
+
+Confirmed: `watch.*` bare keys are consistent with sibling pages (search.*, dataExport.*, teslaAccount.*). Reused keys exist. Now writing the views and page scaffold.
+
+Now the main page scaffold with all four data states and the adaptive layout.
+
+Now the route registration file and wiring it into the app shell.
+
+Now the test suite in the standard `Tests/Unit/Features/Watch/` location (compiled into both test bundles).
+
+Now let me inspect the exact xcstrings formatting so my catalog edit is faithful, and mark progress.
+
+I understand the exact xcstrings format now (mixed colon style, `\u` escaping, insertion-ordered). I'll append my keys textually to preserve formatting. Let me add all 35 keys.
+
+Some keys already exist. Let me check which of my keys exist and their current values to stay consistent.
+
+Those 5 pre-existing `watch.*` keys belong to the watchOS companion app (different surface, e.g. "Open TeslaSync on your iPhone to sync"). To avoid semantic collisions, I'll namespace my page keys as `watchFace.*`. Let me rename in code, then insert.
+
+Rename clean — 35 `watchFace.*` keys, route/symbol intact. Now inserting them into the catalog.
+
+All 35 keys inserted and JSON validates. Let me verify complete coverage: every `watchFace.*` key used in code exists in the catalog.
+
+All keys covered. Now updating the parity ledger. Let me check its schema and structure.
+
+All artifacts written. Now running the gate — starting with the fast checks (swiftlint + placeholder scan) before the slow build. Let me lint from `apps/apple` so the tuned config applies.
+
+The `--config` made it lint all 6360 files. Let me scope strictly to my files to isolate violations.
+
+SwiftLint's `included` config scans all files, but only one violation is mine: the test file line 202 (121 chars). The other 3 are pre-existing in unrelated files. Let me check the repo-root config situation and fix my line.
+
+No root config, so the gate lints my feature files with default rules from repo root. Let me fix the long test line and check my feature files under default rules (as the gate runs).
+
+Now let me run swiftlint exactly as the gate does (from repo root) to confirm my feature files are clean.
+
+Gate-faithful swiftlint passes (0 violations in my 6 feature files). Now the test file and the placeholder scan.
+
+Lint (feature + test) and placeholder scan all pass with 0 violations. Now regenerating the Xcode project and starting the build.
+
+Project regenerated with watch files included. Now the build. I'll build for iOS Simulator (the `TeslaSync` scheme = apple-ios). Let me start it and monitor.
+

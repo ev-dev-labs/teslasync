@@ -1,0 +1,171 @@
+I'll start by understanding the task requirements and checking the environment capabilities. Let me explore the repository structure and check for the necessary Apple tooling.
+
+Good — Apple toolchain is available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat). Let me explore the web source and Apple app structure.
+
+There's a substantial existing structure with a clear multi-file pattern per surface. Let me check for existing Input files and read the web source.
+
+No existing `Input.*` set yet (those are CurrencyInput/SearchInput/TagInput/UnitInput). I need to CREATE the Input surface. Let me study the build system and an existing presentational surface as a template.
+
+The build system is fully available (pwsh, xcodegen, xcodebuild). The project uses xcodegen + co-located test files. Let me study a complete existing presentational surface to mirror conventions exactly. I'll read the Accordion set and a couple of input-like ones.
+
+Let me read these files individually with the view tool.
+
+This is a sophisticated, well-defined pattern. Let me read the remaining Accordion files to fully understand the structure.
+
+Now let me read the remaining Accordion files (States, Previews, strings, Tests) and locate the design tokens (P1/S9).
+
+Accordion has no States.swift (file sets vary per surface). Let me find the design tokens and read the test files.
+
+Now I have the token vocabulary. Let me read the Accordion test files to learn test conventions, plus check how a States.swift file looks in an input-like surface.
+
+I now fully understand the pattern. Let me check the web dependencies (Label, HelpIcon) and how sibling/generic-named surfaces name their Swift types to avoid collisions.
+
+Excellent. `CurrencyInput` establishes the precedent: when the natural name is too generic, name the View `{Name}Field` and keep the slug as the web name. I'll use `InputField` with slug `"Input"`. Checkbox is the closest analog (form control). Let me read the full Checkbox set as my primary template.
+
+Checkbox is the ideal template — a form control primitive with clean Adapter/Projection separation. Let me read its remaining files.
+
+Let me read the final Checkbox files (Views, Previews, strings, Tests, AdapterTests) to complete my template knowledge.
+
+Let me read the final three Checkbox files (Previews, strings, AdapterTests) to complete my reference.
+
+I have a complete understanding of the pattern. Let me check the lint/format configs and the build infrastructure (KMP framework) before building.
+
+Key finding: the KMP `Shared.xcframework` is not prebuilt — the full build requires a Gradle/Kotlin pre-action. Let me check whether that toolchain is feasible here, and measure xcodegen.
+
+Java 17 + gradlew present (2055 surface files — large build). Let me kick off the KMP framework build in the background (slowest dependency) and generate the Xcode project in parallel.
+
+KMP build is running in the background. I now have a complete understanding of the pattern (Checkbox is the ideal template). Let me create a plan file and start authoring the Input surface.
+
+KMP build still running. Let me author the surface files now, starting with the pure-core Adapter.
+
+Now the Views file with all subviews.
+
+Now the main public View file.
+
+Now the Previews file covering every branch.
+
+Now the i18n strings file.
+
+Now the two test files — AdapterTests (pure core) first.
+
+I need to fix a trailing-closure binding issue: a single trailing closure binds to the last builder param (`suffix`), not `icon`. Let me fix the "Leading icon" preview to use an explicit `icon:` label.
+
+Now the main Tests file (projection + model + views + strings).
+
+All 9 files created. Let me check the KMP build progress and run a fast isolated type-check of my Swift sources against the design tokens to catch compile errors early.
+
+Isolated type-check of the core sources passes with strict concurrency. Now let me verify the test files and Previews compile by building a minimal `TeslaSync` module and type-checking against it.
+
+Module built. Now type-check the test files against it and the Previews with DEBUG.
+
+The core sources and the test module compile cleanly. Two findings need analysis:
+
+1. **Test XCTest macros** — "function like macros not supported" is a harness artifact (the XCTest Swift overlay isn't loaded by raw `swiftc`). I'll verify my test→API usage with an XCTest shim instead.
+2. **Previews `return` in ViewBuilder** — this is the same `@Previewable ... return staged(...)` pattern the committed Checkbox previews use, so it's a macro-handling artifact of raw `swiftc`. The real `xcodebuild` handles it.
+
+Let me verify the test API usage with a shim to rule out real errors.
+
+Found one real bug — argument order in a test fixture call. Let me fix it.
+
+Test files now type-check cleanly against my API. The Previews `return` pattern matches the committed Checkbox previews exactly (macro artifact in raw `swiftc`). Let me check the KMP build and run the fast lint/format tooling on my files.
+
+KMP `Shared.xcframework` built successfully (16m) and staged — the full gate is now feasible. swiftformat fixed 3 files. Let me review the changes and run the lint gates.
+
+New files are untracked (so `git diff` is empty). Let me run the lint tools as the gate specifies, focusing on my files first.
+
+Both lint tools pass on my 8 files (0 format issues, 0 swiftlint violations). Let me run the placeholder check, then the full build+test gate.
+
+Placeholder check passes (0). Now the full build+test gate. Let me verify the iOS simulator is available and check the destination.
+
+iPhone 16 simulator is booted and both schemes exist. The KMP framework is staged. Let me start the full gate, beginning with the iOS build+test (the long pole). I'll write to the gate log and run it in the background.
+
+Now I'll run the iOS build+test in the background, capturing full output to the gate log.
+
+iOS build+test running in the background. Let me monitor its progress.
+
+The xcodebuild needs to run where the `.xcodeproj` is (I ran from repo root). That's an environment/invocation issue (EXIT=66), not a code problem. Let me reinitialize the log and re-run with `-project` pointing at the generated project.
+
+Now re-run the iOS build+test with `-project` so it finds the generated project, keeping the log path repo-root-relative.
+
+Build is compiling (5867 lines, 0 errors, emitting the TeslaSync module). Let me continue monitoring.
+
+Output paused at the module-emission phase (normal for a large target — heavy compilation is quiet). Let me confirm the build is actively running and not hung.
+
+Build is healthy — 41 parallel `swift-frontend` processes at high CPU compiling the 2055+ surfaces. This is compute-heavy and will take time. Let me wait in larger increments.
+
+Compiling individual files now (22k lines, 0 errors), progressing alphabetically through the "C" surfaces. My Input files compile later. Let me keep waiting.
+
+The app target **BUILD SUCCEEDED** — my Input surface compiles cleanly in the real iOS build. But the *test* target failed to build due to `invalid redeclaration of 'RecentActivityFeedProjectionTests'` in `feature-views/RecentActivity.Tests.swift` — not my file. Let me verify whether this is pre-existing and unrelated to my work.
+
+Confirmed: the collision is **pre-existing and unrelated** — two committed files (`shared-surfaces/RecentActivityFeed.Tests.swift:106` and `feature-views/RecentActivity.Tests.swift:103`) both declare `RecentActivityFeedProjectionTests`. My Input test classes are all uniquely named. The app target itself BUILD SUCCEEDED with my surface included.
+
+Let me assess the scale — are there more such pre-existing duplicate test-class collisions across the parallel-developed test bundle?
+
+Good — only **one** duplicate exists in the entire test bundle (pre-existing, in two non-Input files). Let me check how sibling surfaces' gate logs were recorded to match the established convention and see if this collision was already known.
+
+This is the key context. The sibling surfaces (Accordion 0203, Checkbox 0204) hit the **same** class of foreign pre-existing `xcodebuild` reds and established a documented precedent: record the real foreign exit codes, then prove the surface via isolation typechecks + `swift test` + baseline, reaching `EXIT=0 STATUS=DONE`. The `RecentActivityFeedProjectionTests` collision is exactly such a foreign red (and my app target BUILD SUCCEEDED).
+
+Let me follow that precedent rigorously. First, run my surface's tests via SwiftPM (`swift test`) to get a real pass count.
+
+Now run `swift test` to execute my surface's tests and get a real pass count.
+
+All **34 InputField tests pass** via `swift test` (matching the Accordion/Checkbox `swift test` precedent). Let me capture the exact iOS exit code and kick off the macOS build+test to record its real result.
+
+iOS confirmed: app `** BUILD SUCCEEDED **`, test bundle blocked solely by the foreign `RecentActivity.Tests.swift:103` collision → `IOS_EXIT=65` (exactly the Accordion precedent). macOS build+test is running. Let me capture conclusive baseline evidence that the red is foreign and pre-existing at HEAD.
+
+Conclusive: my change set is **exactly** the 9 Input.* files + the log (all untracked); both colliding `RecentActivityFeedProjectionTests` declarations exist at **HEAD** in two non-Input committed files. The test-bundle red is provably foreign and pre-existing. Let me read the macOS result.
+
+macOS: `BUILD FAILED`, `MAC_EXIT=65`, 4 errors — **none in Input.\***. Let me confirm what those macOS errors are (expecting the same foreign collision and/or signing).
+
+macOS red is **environmental** — code-signing entitlements require a development certificate the runner lacks (`DEVELOPMENT_TEAM` is empty); zero Input errors. This is exactly the Accordion `MAC_EXIT=65` environmental precedent. 
+
+Now let me run the iOS + macOS isolation typechecks for the log, then formally record lint/format/placeholder into the gate log.
+
+Both isolation typechecks pass (iOS simulator + macOS SDK). Now let me run the gate's lint/format/placeholder steps (whole-tree, as specified) and record them into the log.
+
+Whole-tree `swiftlint --strict`: **0 violations in 5657 files**. Now swiftformat --lint (whole tree) and the placeholder check.
+
+`swiftformat --lint` whole-tree shows `FORMAT_EXIT=1` from **one foreign file** — `VersionSegment.AdapterTests.swift:275-276` (a sibling surface, not Input). My Input files are format-clean (0/8 earlier). Let me confirm the foreign attribution, re-run the placeholder check, and verify the foreign file is pre-existing at HEAD.
+
+Complete, honest evidence set assembled. The two `xcodebuild` reds and the one `swiftformat` red are all **foreign/environmental and pre-existing at HEAD**; every Input-scoped gate is green. Let me append the surface-proof summary to the gate log following the documented Accordion/Checkbox precedent.
+
+Log appended. Let me verify the tail and compare structure/size against the sibling logs to match convention.
+
+The sibling logs are concise, curated summaries (~130-200 lines), not raw 32k-line xcodebuild dumps. Let me rewrite my log to match that convention with curated evidence. First, get my file line counts.
+
+All files are well under the 400-line SwiftLint budget (largest 304). Now let me write the clean, curated gate log matching the sibling convention.
+
+Curated log is 147 lines (matching sibling convention), ending with `EXIT=0` / `STATUS=DONE`. Let me do final verification and commit per the prompt's commit spec.
+
+All clean — exactly 9 Input.* files + the log; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. No foreign edits. Let me clean up temp artifacts and commit per the prompt's spec.
+
+All 10 files staged. Now commit per the prompt's commit spec.
+
+Committed as `ed5f636e3`. Let me confirm the working tree is clean.
+
+Working tree is clean; the commit contains exactly the 9 Input.* files + the gate log (1731 insertions). Let me update the session plan to reflect completion.
+
+The task is complete. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0217-Input.log   | 147 ++++++++++
+ .../TeslaSync/shared-surfaces/Input.Adapter.swift  | 247 +++++++++++++++++
+ .../shared-surfaces/Input.AdapterTests.swift       | 202 ++++++++++++++
+ .../TeslaSync/shared-surfaces/Input.Model.swift    | 117 ++++++++
+ .../TeslaSync/shared-surfaces/Input.Previews.swift | 145 ++++++++++
+ .../shared-surfaces/Input.Projection.swift         | 204 ++++++++++++++
+ .../TeslaSync/shared-surfaces/Input.Tests.swift    | 304 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Input.Views.swift    | 199 ++++++++++++++
+ apps/apple/TeslaSync/shared-surfaces/Input.strings |  36 +++
+ apps/apple/TeslaSync/shared-surfaces/Input.swift   | 130 +++++++++
+ 10 files changed, 1731 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0217-Input.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Input.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Input.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Input.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Input.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Input.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Input.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Input.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Input.swift

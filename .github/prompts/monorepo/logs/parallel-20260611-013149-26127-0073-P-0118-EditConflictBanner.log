@@ -1,0 +1,104 @@
+I'll start by exploring the environment, reading the web source, and checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, simulators). Not a BLOCKED scenario. Let me read the web source and explore the Apple project structure.
+
+Apple toolchain is fully available. Now let me study existing shared-surfaces to match established patterns, and read the `useEditLease` hook.
+
+Now I understand the data model. Let me study the established surface contract by reading a complete reference surface (`AchievementUnlockedToast` — a banner/toast, the closest analog) and the shared infrastructure (state holders, i18n, tokens, diagnostics).
+
+Let me read the rest of the reference surface and the shared infrastructure it depends on.
+
+Strong understanding of the pattern now. Let me read the tests/views and locate the shared primitives (TSCard, TSButton, TSBadge, etc.), the web `AlertBanner`, and check for an existing native AlertBanner peer.
+
+Now let me locate the shared P1/S9 design primitives and read the reference tests + adapter.
+
+Let me read the shared primitives' APIs (tokens, Button, EmptyState, Badge, Skeleton, Card).
+
+Let me read the design tokens, Card, Badge, Skeleton, and find TSInlineCallout (a likely AlertBanner peer).
+
+Found `Banners.swift` — the likely AlertBanner peer. Let me read it, the tokens, badges, and skeletons.
+
+The atomic `TSAlertBanner` + `TSEditConflictBanner` preset already exist in `Banners.swift` (the out-of-scope component-library bundle). My job is the full P4 **shared surface** that composes them with a `useEditLease` state-holder. Let me read the tokens, `TSTone`, badges, and skeletons.
+
+Let me read `TSTone`/`TSBadge`, the production Adapter pattern, and verify the gate tooling (check-placeholders, logs dir).
+
+I have a thorough understanding of the surface contract now. Before writing code, let me verify the build toolchain is actually runnable (xcodegen, the Shared.xcframework, placeholder checker, logs dir) so I design correctly.
+
+The full gate depends on a KMP `Shared.xcframework` (currently just `.gitkeep`) built via Gradle/Kotlin-Native. Let me check whether that toolchain is feasible here, and inspect a prior shared-surface log to see the expected gate behavior.
+
+This is the key insight — the predecessor-accepted disposition. The full-app `xcodebuild` is DEFERRED (sibling-slot symbol collisions + no signing identity on runner), but the surface is verified clean via `xcodegen`, `swiftlint`, `swiftformat`, placeholder check, and a **`swift test` SwiftPM harness**. Let me find that harness and the parity setup.
+
+The AnnouncerRegion log is the gold-standard playbook. Let me extract the exact verification commands they used (especially how `swift test` ran without a Package.swift).
+
+I now have the complete predecessor-accepted playbook. Let me kick off the slow KMP framework build in the background (needed for the full `xcodebuild` gate), and read the lint/format configs so my code conforms.
+
+The placeholder checker is **case-insensitive** — I must avoid the substrings "placeholder", "not implemented", "TODO", "FIXME", "XXX", "Lorem ipsum" anywhere in my `.swift` files (even comments). The Gradle build already returned — let me check whether it actually succeeded (6.5min expected, so likely failed fast).
+
+The placeholder checker is case-insensitive — I'll avoid all banned substrings. The Gradle build is genuinely still running in its own process tree (downloading Kotlin/Native). Let me write the plan, then build the surface. I'll start with the harness-testable logic trio (Adapter, Model, Seams).
+
+Now the Adapter — the pure Foundation core porting the `useEditLease` election/claim logic, copy selection, and a11y.
+
+Now the Seams — the P1/S8 source protocol plus the production (controlled) and in-memory sources, with the peer-grant/release election wiring.
+
+Now the Model — telemetry, connectivity axis, the `EditConflictUpdate` snapshot, the pure projection, the `@Observable` model, and the i18n facade.
+
+SwiftUI layer now — the per-state chrome (loading skeleton, friendly empty, error tile).
+
+The conflict banner view (reproducing the warning `AlertBanner` treatment + the shared `TSButton` take-over affordance + switch hint) and the freshness chip.
+
+The surface entry point — binds the model, switches on phase, renders the freshness chip, manages lifecycle.
+
+Previews for every state.
+
+The i18n catalog — web keys (verbatim fallbacks) plus the native leaf-chrome keys.
+
+Now the comprehensive test suite — election, claim, copy, a11y, projection, and model coverage.
+
+All 9 files created. Let me run the fast gates — swiftformat lint and swiftlint on the new surface files.
+
+swiftlint is clean (0 violations). swiftformat wants a few property bodies wrapped — let me auto-fix with swiftformat, then re-verify both.
+
+Format and lint both clean (0/8 need formatting, 0 violations). Now the placeholder check (real scan of my files) and `xcodegen generate`.
+
+The real scan caught the word "placeholder" in two Adapter comments (case-insensitive match). Let me find and replace all occurrences across my files.
+
+Fixed. Let me re-verify placeholders and check the Gradle build progress.
+
+Placeholder check clean (0), and the **Gradle `Shared.xcframework` build SUCCEEDED** (8m25s, staged with ios-arm64 + simulator + macos slices) — so the full `xcodebuild` gate is now runnable. First, let me build the standalone SwiftPM harness to compile+run the logic layer (Adapter+Model+Seams+Tests) under Swift 6 strict concurrency.
+
+Excellent — the SwiftPM harness compiled and ran **34/34 tests green** under Swift 6 language mode + `-strict-concurrency=complete` (`SWIFT_TEST_EXIT=0`). Now let me verify the SwiftUI layer typechecks against the real design system. First, let me scope the dependency set by checking what the design-system files import.
+
+Design system is self-contained (only system frameworks, no KMP `Shared`). I can isolate-typecheck my SwiftUI files against it on both SDKs. Let me run the iOS-SDK typecheck.
+
+The errors are all in a sibling design-system file (`UnitFormatters.swift` needs `UnitPreferences`/`Units` from elsewhere) — none in my files. Let me find those missing types so I can complete a clean isolated typecheck.
+
+`SharedFacade` pulls in the KMP `Shared` module, so the clean swiftc island is UI + Feedback + Design + tokens + my files. Let me typecheck that closed set (the atoms my surface actually uses).
+
+One remaining error, again in a sibling file (`FeedbackOverlays.swift` needs `TSMetricBar` from DataDisplay) — not used by my surface and not mine. Let me prune that file from the island and re-check.
+
+A real bug in my code: `EditConflictBannerView` has a stored `body: String` that collides with SwiftUI's `var body: some View`. Let me rename it to `message` (matching `TSAlertBanner`'s naming).
+
+Now update the two call sites (surface + previews).
+
+Re-running the typecheck on both SDKs now that the `body` collision is fixed.
+
+Both SDKs typecheck clean (no error lines). Let me re-verify format + lint after the rename edits.
+
+Format + lint still clean. Now the actual `xcodebuild` gate (framework is staged). Let me run the iOS gate command, capturing to a log, in the background.
+
+While the iOS build runs, let me gather evidence about the pre-existing sibling-surface collisions the precedent documented (to know whether they still exist in this tree).
+
+The known `RecentDrives*`/`StateTimeline*` collisions are gone (1 declaration each) — the tree may compile cleanly now. Let me read the iOS build result.
+
+The notification was just the async wrapper returning — `xcodebuild` is still compiling the `TeslaSync` module. Let me wait and poll for completion.
+
+Build is progressing through the `TeslaSync` target (compiling feature-views/dashboard-widgets) with no errors in my files. It's a large module compile followed by a full test-suite run. Let me keep polling.
+
+Build failed with **0 errors in my files**. Let me identify the actual failure cause (sibling surfaces or environmental).
+
+No Swift compile `error:` lines at all — the failure isn't a compile error. Let me pinpoint the actual failed build command.
+
+The failing compile batch is an `A*` batch (AnnouncerRegion/AnomalyInlineRow/AppShell/AppearanceSettings/etc.) — not my `E*` files. But no `error:` lines were found, which is unusual. Let me inspect the actual diagnostic around the failure.
+
+The failure is a **swift-frontend compiler crash during IR/SIL emission** (`While emitting IR SIL function …`), not a source error. Let me confirm how many crashes occurred and whether any failing batch contains my files.
+Authorization error, you may need to run /login (Request ID: D8F0:1E21CB:3C4A4:41010:6A2B0486)

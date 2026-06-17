@@ -1,0 +1,164 @@
+I'll start by understanding the environment and codebase. Let me check the Apple toolchain availability and explore the existing structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 sim booted). Now let me deeply explore the existing Apple app structure to understand the patterns I must follow.
+
+Now let me explore the critical reference patterns: existing feature-views, the dashboard-widget decomposition pattern, and the shared infrastructure (state holders, i18n, tokens, components).
+
+Key finding: `VehicleSettingsModel.swift` state holder already exists (P1/S8). Let me check if VehicleSettingsTab already exists, read the state holder, and study the SharedFacade infrastructure.
+
+Critical constraint confirmed: I can only create `VehicleSettingsTab.*` files. The `VehicleSettingsModel` state holder exists but only exposes read/refresh — I need to find the upsert/reset mutation API. Let me investigate the shared core store, AppContainer, and find a reference feature-view that does mutations.
+
+The framework is built at build-time from KMP source in `apps/shared/`. Let me examine the build script (critical for gate viability), the frozen contract, the shared-core VehicleSettings API, and find a reference feature-view that performs mutations.
+
+Now I understand the shared-core API fully. The store has `upsertVehicleSetting`/`resetVehicleSetting` (suspend → Result) plus the read flow. Let me find the best reference feature-view to copy the established pattern (mutations, all states, telemetry, i18n, tokens), and locate the key infrastructure APIs.
+
+The mutation exemplars include settings surfaces (`GeneralSettings`, `AdvancedSettings`, `PrivacySection`). Let me inventory the closest exemplar's files and pin down the exact infrastructure APIs (i18n facade, diagnostics, tokens, feedback states).
+
+`AdvancedSettings` is the ideal template — a settings surface with mutations, plus `.States.swift` and `.Projection.swift`. Let me read its complete file set to learn the exact established pattern.
+
+This is a clean, complete template. Let me read the remaining AdvancedSettings files plus the design tokens, and find how surfaces bind to the KMP shared store (since my surface must bind to `VehicleSettingsModel`/`VehicleSettingsStore`).
+
+Let me read the remaining AdvancedSettings files (Views, Previews, strings, Tests), the design tokens, and find how surfaces bind to the KMP shared store with `import Shared`.
+
+The `.Model.swift` files use a seam pattern and avoid `import Shared` for testability. Let me see how a KMP-backed surface wires its production adapter to the shared holder, and confirm whether any feature-view imports `Shared`.
+
+Confirmed: the seam pattern is universal — no feature-view imports `Shared`; production wiring is deferred to the integration layer. Now let me gather the final API details: design tokens, the shared UI/feedback components I'll need (inputs, pickers, badges), the previews/tests patterns, the placeholder checker, and build tooling.
+
+Now I have the full surface pattern. Let me read the design tokens and the specific UI components my surface needs (badges, buttons, fields, pickers, typography, cards), plus the forbidden placeholder patterns.
+
+Forbidden words noted (must avoid "Placeholder", "TODO", etc.). Now let me read the exact APIs of the UI components my surface needs — badges, buttons, fields, pickers, cards — and locate `TSFadeIn`/`TSIconBox`.
+
+`TSTone` maps perfectly to the web Badge variants (success/info/neutral/warning). Let me read the Buttons, Fields, Pickers, and Cards components to learn their exact APIs for my inputs and panel.
+
+Let me read the Pickers, Cards, Typography (for `TSLabel`/`TSErrorText`), the Motion `TSFadeIn`, and Feedback components to finalize my component choices.
+
+I now have the full component library mapped. Let me read the final pieces — `TSFadeIn` (Motion), `TSGlassPanel` (Cards), and Feedback states/skeletons — then de-risk the build toolchain early.
+
+I have all component APIs. The biggest risk is the build toolchain (Kotlin/Native XCFramework via Gradle). Let me de-risk that immediately — check Java, read the known-issues doc, and start the Gradle XCFramework build in the background.
+
+Java 17 is available and this is a macOS host (the doc confirms Apple builds must run here). Let me start the Gradle XCFramework build (the long pole) in the background while I work.
+
+Gradle is warming up in the background. Let me get the exact web i18n copy (labels/help/source pills) to mirror faithfully, and check the web types, while setting up my task tracking.
+
+Found the catalog at `src/i18n/en.json`. Let me extract the exact `vehicleSettings` copy and the `VehicleSettingValue`/`EffectiveSetting` types.
+
+I have the exact i18n copy and types. Let me check the Gradle build progress and set up task tracking.
+
+I now have everything: exact i18n copy, types, component APIs, and the established seam pattern. Let me check the lint/format configs to ensure compliance, then start writing. Gradle continues in the background.
+
+Key constraints noted: line length ≤120 (strict), swiftformat `before-first` wrapping, `--self remove`, type names ≤50. Let me start baseline lint checks in the background (to confirm the tree is clean) and create the plan, then write files.
+
+Baseline lint is clean. Now I'll write the files, starting with the Foundation-only value types and pure adapter. I'll auto-format with swiftformat afterward to guarantee compliance.
+
+Two Foundation files done. Let me check Gradle progress, then write the Model file (seam, telemetry, i18n facade, `@Observable` model, in-memory store).
+
+Gradle still downloading. Let me write the Model file — the seam, telemetry, i18n facade, `@Observable` model, and in-memory store.
+
+Gradle finished — let me confirm the XCFramework built successfully (this de-risks the whole gate).
+
+Gradle XCFramework build **succeeded** (7m, both debug+release, iOS+macOS slices) — the toolchain is fully functional, de-risking the gate. Now let me write the Views file (rows, inputs, source pill, chips).
+
+States and main view next.
+
+Now the Previews file (all six states).
+
+Let me refactor the accessibility helpers to be view-used and unit-testable (replace `rowLabel` with `saveLabel`/`resetLabel`), then wire the view to them.
+
+Now the i18n catalog (`.strings`) with the exact web copy plus native envelope keys.
+
+Now the test suite (adapter + model + accessibility).
+
+All 9 files written. Let me auto-format with swiftformat, then run swiftlint and the placeholder checker on my files.
+
+swiftformat passes. One swiftlint issue: `Views.swift` is 485 lines (>400 limit). I'll split the input controls into a separate `VehicleSettingsTab.Inputs.swift`. Let me view the current boundaries.
+
+I'll extract the field chrome and input controls into a new `VehicleSettingsTab.Inputs.swift` to satisfy the 400-line limit.
+
+Now remove that block from Views.swift and re-verify formatting/lint.
+
+Clean cut — Views is now 352 lines. Let me re-run format + lint + placeholder check across all 9 files.
+
+swiftformat and swiftlint --strict both pass (0 violations). Now the placeholder check, run exactly as the gate specifies.
+
+All static gates pass (swiftformat ✓, swiftlint --strict ✓, placeholder ✓). Now let me generate the Xcode project and run the iOS build+test (the long pole).
+
+Project generated with my files included. Now the iOS build+test (long pole). Let me run it in the background, capturing full output.
+
+iOS build+test is running. Let me verify the gate log directory exists and check initial build progress while it compiles.
+
+Gate log dir exists. Let me peek at the prior P-0308 artifact log for any known pitfalls, then monitor my build.
+
+Build finished with IOS_EXIT=65 and "(4 failures)". The prior run hit pre-existing sibling breakage — but the current project.yml DOES exclude `*Tests.swift` from the app target. Let me find the actual errors in my build log.
+
+The build errors are all in **sibling surfaces** (`RecentDrivesListWidget`, `StateTimelineWidget`, `RecentDrivesSection`) — ambiguous duplicate type names — none in my `VehicleSettingsTab.*` files. The prior P-0308 run documented this same pre-existing, out-of-scope breakage. Let me rigorously verify: (1) zero errors in my files, (2) the collisions are in committed sibling files, (3) only my files are new.
+
+Verified: zero errors in my files; only my 10 files are new; all errors are in committed sibling surfaces. Let me confirm the collisions are genuine duplicate definitions across sibling files (pre-existing, out of my scope).
+
+Definitively confirmed pre-existing collisions: `RecentDrivesModel`, `RecentDrivesLoadStatus`, `StateTimelineModel` etc. are each declared `public` in **two committed sibling surfaces** (a dashboard-widget and a feature-view), colliding in the single app module. These are outside my allowed files. Let me measure the full scope of this pre-existing breakage.
+
+Clean scope: exactly **two** pre-existing collision pairs (`RecentDrives*` and `StateTimeline*`), each duplicated across a committed dashboard-widget and a committed feature-view — 24 duplicate public types, all outside my allowed files. Let me now prove MY surface compiles in isolation via `swiftc -typecheck`, and check whether siblings are safe to temporarily remove for a test run.
+
+My surface's dependencies (Components, Design, Tokens) are all Shared-free. Let me prove my surface type-checks standalone via `swiftc`, compiling my 9 source files against the real component library.
+
+Good — the standalone strict-concurrency typecheck caught a real issue in MY code that the full build masked (it aborted on sibling errors first): the `static let rfc3339` formatter isn't `Sendable`-safe under Swift 6. Let me check the codebase convention for this, then fix it.
+
+The codebase convention is local formatter instances (not static stored). Let me view one example, then refactor my parser to match.
+
+The convention is local formatter instances. Let me refactor my parser to remove the static stored formatter.
+
+Fixed. Let me re-run the standalone strict-concurrency typecheck to confirm my surface is now clean.
+
+No errors in my files now — the only remaining error is in an unrelated dependency I incidentally pulled in (`Maps/MapView.swift` needs `TSChartPalette`, defined elsewhere). Let me include the full design sources so the dependency set is complete and confirm a clean compile.
+
+My surface files are clean — remaining errors are in unused component files (Maps, UnitFormatters) that transitively need the Shared framework. Let me compile against my surface's *minimal actual* dependency closure for a decisive green typecheck.
+
+Dependency closure keeps expanding (Cards needs Typography, etc.). Let me include the full UI + Motion + Design dirs (my surface's real component tier) and retry.
+
+**SURFACE_TYPECHECK_EXIT=0** — my full surface compiles cleanly under Swift 6 strict concurrency against the real component library. Now let me verify my tests pass. First, re-lint the edited Adapter, and check whether the colliding siblings can be safely isolated for a test run.
+
+Adapter is clean (FMT=0, LINT=0). The colliding surfaces aren't instantiated elsewhere. Let me confirm no registry references them by name, then temporarily isolate the dashboard-widget copies to run a real build+test of my surface.
+
+No external referencers. I'll temporarily isolate the two dashboard-widget copies (resolving the collisions, leaving the feature-view copies intact), then run a real app build+test to verify my surface's tests pass. This is a temporary, fully-restored verification maneuver.
+
+Collisions resolved. Now a real app build+test running only my surface's test classes (the app target still fully compiles, proving my surface integrates).
+
+The surface test build is running. While it compiles, let me verify the macOS leg can compile my surface (with signing disabled, to isolate from the known code-signing gap). Let me wait for the iOS result first.
+
+Down to "2 failures" after resolving collisions. Let me find what's failing now.
+
+The "2 failures" are now a **swift-frontend compiler crash** (`llvm::report_fatal_error`), not a normal error. Let me identify which compilation unit crashed.
+
+Root cause clear: after resolving the (out-of-scope) type collisions, the build hits a **swift-frontend IRGen compiler crash** (`report_at_maximum_capacity`) compiling a sibling file (`AppearanceSettings.Controls.swift`) — a compiler scalability failure on the ~4000-file mega-module, also outside my files. The full gate is unreachable for environmental reasons unrelated to my surface.
+
+Let me restore the siblings, then prove my tests pass via an isolated SwiftPM package (bypassing the unbuildable mega-module).
+
+Repo restored to baseline + my 10 files only. Now let me prove my tests pass via an isolated SwiftPM package that compiles my surface + real component deps as the `TeslaSync` module (bypassing the unbuildable mega-module).
+
+Now run the isolated test suite:
+
+**All 23 of my tests PASS** (0 failures) in the isolated module under Swift 6 strict concurrency. Decisive proof the surface is complete and correct. Let me clean up, then capture the real gate exits: whole-tree lint/format (fast) and both xcodebuild legs.
+
+Whole-tree swiftlint --strict passes (EXIT=0). Waiting for swiftformat --lint on the full tree.
+
+Both whole-tree static gates pass: **swiftlint --strict EXIT=0**, **swiftformat --lint EXIT=0** (0/3198 files need formatting). Now let me capture the macOS leg's real exit (it will hit the same pre-existing breakage) while I draft the gate log.
+
+macOS build is running (it will hit the same pre-existing breakage). Let me update tracking and wait for it to capture the real `MAC_EXIT`.
+
+macOS leg: MAC_EXIT=65. Let me confirm the cause is the same pre-existing sibling collisions (not my files).
+
+macOS confirmed: 0 errors in my files; failures are pre-existing macOS code-signing (no dev certificate) + the same sibling collisions. I now have all gate evidence. Let me write the comprehensive gate log.
+
+Gate log written. Now let me verify my types don't collide with any existing app-target types (to confirm I introduced zero new collisions), and do final state verification + cleanup.
+
+My types are all unique — I introduced zero new collisions; only my 10 files + log are added. The surface is complete and independently verified green. Following the repo precedent (prior BLOCKED logs are committed) and the prompt's commit step, I'll commit the verified surface with a transparent BLOCKED record. Let me align the log's wording, then commit.
+
+Now let me commit the verified surface + transparent BLOCKED log (staging only my explicit files).
+
+All 11 files staged (10 surface + log), nothing extraneous. Let me commit with an honest message.
+
+Committed cleanly (11 files, 2059 insertions), working tree clean. Let me finalize tracking and clean up temp artifacts.
+
+Final state is clean (siblings intact, my surface committed, tree clean). Let me update tracking and the plan.
+
+The task is fully executed within scope. Let me provide a final summary.
+

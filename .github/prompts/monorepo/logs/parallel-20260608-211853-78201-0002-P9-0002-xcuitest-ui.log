@@ -1,0 +1,141 @@
+I'll start by exploring the repository structure and understanding the current state of the Apple app, plus checking whether the required tooling (Xcode, simulators) is available.
+
+Good — macOS with Xcode 26.5, swiftlint, swiftformat, and simulators (including iPhone 16) are all available. The gate is runnable. Let me explore the Apple app structure.
+
+This is an XcodeGen-based project (has `project.yml`, no `.xcodeproj`). Let me examine the project configuration, test structure, and check for XcodeGen.
+
+Existing UI tests live in `Tests/UI/` (shared by both iOS `TeslaSyncUITests` and macOS `TeslaSync-macOSUITests` bundles). Let me read the existing UI tests and understand the app's launch-argument/fixture harness, routes, and page structure.
+
+Now let me understand the launch-argument harness, the app's routing, page structure, and fixture mechanism. Let me search for where these test hooks are wired up.
+
+Let me read the main app entry point (the harness), the routing, and the App directory structure.
+
+Let me read the routing, shell, and root view to understand navigation structure and what's testable.
+
+Let me examine the route host registry, the auth root view, and what pages are actually registered (the P7 parity units this depends on).
+
+Let me inventory the parity ledgers, settings registration, the placeholder-check gate, the log location, and confirm tooling like `pwsh`.
+
+`pwsh` is available. There are prior run logs for this exact prompt. Let me read the most recent prior P9-0002 artifact log, the predecessor P9-0001 prompt, and the parity manifest to understand outcomes and structure.
+
+Prior runs were BLOCKED, but on different branches with merge collisions. Per the honesty covenant (no skip-and-assume), I must measure the *current* tree state. Let me check the canonical logs, git history, the Shared.xcframework state, and the parity manifest.
+
+Key finding: this branch has **"P4 baseline" repair commits** (`1d816167c repair full-app build to green on iOS + macOS`, swiftlint/swiftformat clean, unit-test fixes) — so the prior blockers B1/B3/B4 are likely resolved here. The `Shared.xcframework` still needs building (~7 min). Let me inspect the build script and kick it off in the background while I continue inventory.
+
+Java 17 + gradlew are present. Let me kick off the Shared.xcframework build now (long-running ~7min) in the background, then continue inventory while it runs.
+
+While the framework builds, let me study the existing harness surfaces and components in detail.
+
+The harness pattern is clear: launch args select real demo surfaces with `.accessibilityIdentifier`. Let me check the framework build progress and examine what the "P4 baseline repair" commit changed (especially around macOS signing) plus the LoadableState/feedback infra that powers page states.
+
+Baseline repair commit confirms B1 (test files in app target) is resolved and "iOS + macOS app targets BUILD SUCCEEDED". Framework build still compiling. Let me study the page-state infrastructure (LoadableState, feedback components) and settings registration while waiting.
+
+I now understand the page-state contract. Let me read the `LoadableState` model plus the exact component APIs I'll compose into galleries/harness, and check the framework build progress.
+
+Framework is nearly staged (release link in progress). I have the core component APIs. Let me grab a compact public-API surface for all component categories at once, plus check Banner/Badge tones and chart APIs, and verify framework staging.
+
+Let me get the remaining component APIs (Charts, DataDisplay, Feedback, Motion) and key enum cases, then confirm framework staging.
+
+I have a comprehensive component API surface. Let me read the few remaining files I'll compose (Metrics, Banners, Skeletons, Motion, ChartContainer, ChartModels, Forms) and set up my plan/todos. Framework still linking the release slice.
+
+I have the full component API surface. Let me check the framework build and set up my plan and todos.
+
+Framework still assembling. Let me set up my plan and todos, then start writing the harness code (I have all APIs needed) while the build finishes.
+
+Let me check the framework build and read the theme modifier, auth bootstrap (for a signed-in harness state), and localization setup.
+
+The framework is still linking (Gradle daemon is shared across parallel slots, causing interleaved output). Let me read the auth bootstrap to understand state injection while I wait.
+
+Auth bootstrap supports an `authenticated` state. I'll build a dedicated harness root with a fixture route registry for full determinism. Let me check the framework build and the localization catalog structure (to keep strings i18n-clean like the existing demos).
+
+Existing demo views use un-catalogued `LocalizedStringKey` literals — that's the accepted harness pattern. I'll follow it and reuse existing keys where possible. Let me check the placeholder gate patterns so my harness avoids flagged words, and re-check the framework.
+
+Placeholder gate flags "Placeholder", "TODO", "FIXME", "XXX", "not implemented" (case-insensitive) — I'll keep my harness clean of those words. The gate scans all of `apps/apple`, so I'll measure pre-existing violations in baseline. Let me wait for the framework to finish.
+
+The build is on the final macOS link step. Let me read the remaining APIs I need (ChartModels, ChartContainer, Forms) before writing the harness, and re-check the framework.
+
+I have all APIs. Let me write the harness. Starting with the configuration and environment overrides.
+
+Now the harness root and fixtures.
+
+Now the page-state harness, which drives the real `AppShell` with a fixture route registry so navigation + route hosting + all five states are exercised through real infrastructure.
+
+I referenced `TSSkeleton` — let me verify its exact API plus the Feedback/Skeletons and Overlays APIs before writing the gallery.
+
+The page-state harness is written. Before the gallery, let me read the exact inits for the interactive components I'll compose (Fields, Pickers/Select, Sliders, Disclosure/Accordion, MapView, Forms inputs).
+
+Let me grab the final inits I need (map annotation/geofence, accordion) then write the gallery.
+
+I have all APIs. Now writing the component gallery (all categories, real components, accessibility identifiers + VoiceOver labels).
+
+Now wire the harness into the app entry point.
+
+Harness wired in. Let me check the framework build and the `assembleSharedXCFramework` (release) completion.
+
+The framework is staged in slot-2 (the `/tmp` log is shared with a concurrent slot-19 agent running the same task, hence the interleaved paths). Let me verify slot-2's framework is valid, then regenerate the project and build.
+
+Framework is valid (ios + ios-sim + macos slices). Let me set up the full Xcode, regenerate the project, and do a fast app-target build to validate the harness compiles before writing tests.
+
+Project generated and Xcode is already the full install. Let me build the iOS app target directly (skipping scheme pre-actions for speed) to validate the harness compiles.
+
+Compile error in the harness. Let me get the specific diagnostics.
+
+`accessibilityReduceMotion` is read-only in this SDK. I'll force reduced motion via a transaction that disables animations instead.
+
+iOS app target builds with the harness. Let me check the actual localized strings for nav labels (so tests can trigger navigation deterministically) and then write the XCUITests.
+
+Route labels are localized ("Charging", etc.); `tab.more`/`action.retry` aren't (I use IDs there). Let me check the command palette and the real settings view for testable hooks before writing flow tests.
+
+I'll add two test-affordance identifiers to the shared command palette (low-risk, aids deterministic flow tests), then write the XCUITests.
+
+Now the component gallery XCUITests.
+
+Now the page-state XCUITests (all five states + retry recovery + offline).
+
+Let me add a label-based tap helper for navigation, then write the navigation/flow and accessibility test suites.
+
+Now the accessibility suite (Dynamic Type, appearance, reduced motion, locale/RTL, VoiceOver labels).
+
+Let me regenerate the project (to include new test files) and build-for-testing on iOS to validate everything compiles together.
+
+The build is still running (output is grep-buffered, so I'll see results at completion). Let me wait.
+
+17 minutes is unusually long. Let me check what's happening in a separate shell without disrupting the build.
+
+The machine is heavily contended (109 swift-frontend procs + another slot's Kotlin/Native build), but my build is progressing (`.build-ios` is 1.1G and growing). Let me keep waiting.
+
+Build progressed and correctly staged the framework. One Swift 6 concurrency error in `tapLabel` (NSPredicate sending). Let me view and fix it.
+
+The `XCUIElementQuery.matching(predicate)` trips Swift 6 region isolation. Let me inline the predicate and isolate the helper to the main actor.
+
+`tapLabel` is now main-actor isolated. Let me rebuild-for-testing (incremental — the app target is already compiled, so this should be quick).
+
+9 minutes for incremental is the machine contention. Let me check progress.
+
+Build is actively compiling object files (including the full unit-test bundle). Let me stop the stuck inspector and keep waiting on the build.
+
+Still compiling under heavy machine load. Let me continue waiting.
+
+21 minutes — let me verify it's still progressing and not stuck.
+
+Build finished. Let me read the result.
+
+iOS test build succeeded. Let me run the UI tests on iPhone 16 to validate them (using `-only-testing` for fast iteration; the final gate run will be unmodified).
+
+The shared iPhone 16 simulator is being hijacked by other parallel slots (note the `slot-15` paths and `simctl` errors), making the run flaky. Also, my one clear failure was a container-level accessibility id (`gallery.root`) that SwiftUI may not surface. Let me create a dedicated simulator and harden the harness to anchor on reliably-queryable elements. First, the simulator:
+
+Dedicated sim created (`3CC1245D-...`). Let me confirm how container-level identifiers behave by checking the existing passing tests' anchors (`push.banner`, `live.staleBanner`).
+
+Confirmed: `push.banner` (a passing test's anchor) uses `.accessibilityElement(children: .combine)` + identifier on a container — that's the proven pattern. Pure container identifiers (like my `gallery.root` on `NavigationStack`) aren't reliably queryable. Let me rewrite the gallery and page-state harness to anchor on leaf controls and `.combine`-grouped containers, then update the tests.
+
+Now harden the page-state scaffold's accessibility (combine non-interactive containers; keep interactive leaves direct).
+
+Now update the test files to anchor on the hardened (leaf + combined) elements. Rewriting the gallery, page-state, navigation, and accessibility suites.
+
+Test files rewritten with reliable anchors. Let me regenerate, boot the dedicated simulator, and build-for-testing incrementally.
+
+Test build succeeded. Let me run my new UI suites on the dedicated simulator (isolated from other slots) to validate them.
+
+9 minutes for ~25 UI tests under load — let me keep waiting.
+
+Clear signal from the isolated run: the **gallery surface works** (7/8 + accessibility gallery tests pass), but **everything inside the page-state harness's `AppShell` fails** to expose identifiers (only the combined `page.loading` is found). I need to see the actual accessibility tree. Let me add a diagnostic dump and run just one page-state test.

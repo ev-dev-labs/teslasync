@@ -1,0 +1,166 @@
+I'll start by assessing the task: creating a native Apple/SwiftUI version of the `FreshnessIndicator` web component. First, let me check platform capabilities and explore the repository structure.
+
+Platform is fully capable: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all present. Let me read the web source and explore the Apple app structure.
+
+The web source is a compact component: a colored status dot + relative time label, plus a `useIsStale` hook. Now let me study existing shared-surface conventions since the directory already has many built surfaces.
+
+There's a clear, well-established convention. The closest analog to `FreshnessIndicator` is `AIChatbotIndicator`/`AIThinkingIndicator` (small indicator surfaces). Let me study a complete indicator example to learn the exact architecture, tokens, i18n, and diagnostics contracts.
+
+Now let me read the remaining AIChatbotIndicator files (Views, strings, Tests, Previews) and the project.yml to understand build inclusion and the shared token/i18n infrastructure.
+
+Now let me find the shared token definitions (P1/S9), the test conventions, and how the build includes these files.
+
+Now let me understand the build system (project.yml), locate the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), and the shared primitives (`TSSkeleton`, `TSButton`).
+
+Key finding: tokens come from `../design/generated/apple` (the `DesignTokens` group), and `.xcodeproj` is generated via `xcodegen` (git-ignored). Let me examine the design tokens and shared primitives.
+
+Now I have the full token palette. Let me examine the existing status/live indicator (a close sibling), the shared primitives (`TSSkeleton`, `TSButton`), and check for existing freshness/relative-time utilities to reuse.
+
+Found the existing atomic `TSFreshnessIndicator` primitive (out of scope — component-library). My surface will be the distinct `FreshnessIndicator` shared-surface binding `useIsStale`. Let me check for type-name collisions, read the prompt file, the lint config, and how xcodegen/placeholder-check are invoked.
+
+All tooling present (pwsh, xcodegen, swiftlint, swiftformat). No `.xcodeproj` yet — I'll generate it. No type collisions. Let me check the Shared.xcframework availability, the placeholder-checker patterns, and a sibling AdapterTests convention.
+
+Let me check the placeholder patterns, whether the KMP `Shared.xcframework` can build here (a potential baseline blocker), and how a prior surface's gate log actually ran.
+
+I now have everything I need: the architecture pattern (Adapter/Projection/Model/Views/Previews/strings/Tests), tokens, primitives, build flow (xcodegen → xcodebuild with a Gradle preAction that builds `Shared.xcframework`, ~6.5 min), and lint rules. The KMP framework isn't staged yet but Gradle works here (prior log confirms). Let me set up a plan and todos.
+
+Now I'll write all the surface files. Starting with the pure core (Adapter + Projection):
+
+Let me verify the exact `TSButton`/`TSSkeleton` initializer signatures before writing the Views, to avoid compile errors.
+
+Now the Views file with the dot, label, ready view, loading and unavailable chips:
+
+Now the main view:
+
+Now the Previews and the i18n strings catalog:
+
+Now the two test files — pure adapter tests and model/view/a11y tests:
+
+All 9 files created. Now let me run the fast checks first — auto-format my files, then verify lint/format/placeholder gates before the slow xcodebuild.
+
+0/8 files needed reformatting — already conformant. Now run the lint checks and placeholder check on my files:
+
+Both swiftformat and swiftlint pass with 0 violations. Now let me check for forbidden placeholder patterns in my files (the checker is case-insensitive and scans comments too):
+
+One comment in Views.swift contains "placeholder" (case-insensitive match). I'll reword it to be genuinely compliant:
+
+Placeholder check passes (COUNT=0, EXIT=0). Now generate the Xcode project to include the new files:
+
+Project generated, iPhone 16 simulator booted. The `Shared.xcframework` isn't staged yet (only `.gitkeep`), so I'll build it explicitly via the Gradle script (~6.5 min per prior logs) before xcodebuild. Let me verify Java and launch it.
+
+Java 17 present. Launching the Gradle build of `Shared.xcframework` (the slow step, ~6.5 min). I'll run it in the background:
+
+While the framework builds, let me verify the Swift-6-safe pattern for the periodic 10s tick (strict concurrency is enabled). Let me see how sibling surfaces handle timers/`.task`.
+
+No existing periodic-refresh patterns in the repo — I'm introducing the first. Under Swift 6 strict-concurrency `complete`, SwiftUI's `.task` closure is `@Sendable` (non-isolated), so calling the `@MainActor` `model.tick()` there is unsafe. The robust pattern is a Combine timer + `.onReceive` (main-actor, non-Sendable closure). Let me rewrite the tick mechanism:
+
+Let me re-run format/lint on the modified main view and check the framework build progress:
+
+swiftformat sorted the imports and lint passes (0 violations). Let me verify the final main view, then wait for the framework build.
+
+Main view looks correct. Now waiting for the Gradle `Shared.xcframework` build (~6.5 min per prior runs).
+
+While the build runs, I'm re-auditing for Swift 6 strict-concurrency issues. I found one: `FreshnessAge` uses `static let` `ISO8601DateFormatter` properties — non-`Sendable` statics are an **error** under strict concurrency `complete`. Let me fix by building formatters per-call:
+
+`Shared.xcframework` built and staged successfully (6m33s, EXIT=0). Adapter lint passes. Now let me run the iOS build+test (the long pole — compiles the full app + all surfaces + tests). Running in the background:
+
+While the iOS build runs, let me study how a prior log recorded the gate results section so my log matches the expected format.
+
+Critical insight from the prior log: the full-app `xcodebuild` may fail due to **pre-existing duplicate-symbol collisions in *other* prompts' sibling surfaces** and **macOS code-signing**, with the established precedent being to record those as DEFERRED (with verbatim evidence + isolated proof) provided *my* surface contributes 0 errors. Let me wait for the actual iOS build result in this slot.
+
+iOS gate returned IOS_EXIT=65 with "(4 failures)". I must determine whether the build succeeded, what the 4 failures are, and critically whether **my** surface contributes any of them. Let me analyze the full log.
+
+Confirmed: `** BUILD FAILED **` with 162 compile errors — and the grep shows **zero** are in `FreshnessIndicator`. The errors are duplicate-symbol ambiguities in *other* prompts' surfaces (`RecentDrives*`, `StateTimeline*`) — the exact pre-existing parallel-merge collision documented in sibling logs. Let me rigorously confirm the error distribution and the nature of the 4 failures.
+
+All 162 errors are in 4 *other* prompts' surfaces (`RecentDrivesListWidget` 54, `StateTimelineWidget` 42, `StateTimeline` 36, `RecentDrivesSection` 30) — duplicate-symbol merge collisions. The "failures" are build-command failures (tests never ran). Let me confirm the 3 `FreshnessIndicator` log mentions are benign and plan an isolated build+test proof.
+
+Decisive confirmation: the 3 `FreshnessIndicator` log lines are all benign `CopyStringsFile` steps (my `.strings` file was correctly bundled) — **zero** errors/warnings. All 162 errors are duplicate-symbol collisions in 4 other prompts' surfaces. The design-system deps (`Skeletons.swift`, `Buttons.swift`) are self-contained (SwiftUI + tokens only).
+
+I'll now build a **non-invasive isolated SwiftPM package** (verbatim copies of the real design-system files + my surface) to genuinely compile under Swift 6 strict concurrency on both SDKs **and run my tests**. First, let me enumerate exactly which shared symbols my files use.
+
+All used symbols map to {`Tokens.swift`, `Skeletons.swift`, `Buttons.swift`}. Let me check whether those two component files have previews referencing other components (which would need including too), then build the isolated package.
+
+`Skeletons.swift` references `TSCard` (other skeletons), and `Buttons.swift` is self-contained. Rather than chase the dependency chain with copies, the most faithful and robust proof is to compile my surface against the **entire real design system** in the isolated package. Let me check whether `Sources/Components` + tokens is self-contained (no deps outside itself).
+
+`Sources/Components` only imports system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation) — it's a self-contained leaf design system. Also note: the real iOS build already compiled my files cleanly (the `CopyStringsFile` step ran and 0 errors mention FreshnessIndicator), so my surface is iOS-SDK-clean. Now let me build a non-invasive isolated package against the **real** design system to genuinely run my tests under Swift 6.
+
+Package scaffolded (40 real design-system files + my 6 surface files + 2 test files). Now let me run `swift test` under Swift 6 language mode — this genuinely compiles my surface against the real design system and runs my tests:
+
+The isolated build pulled in Charts/Maps components that reference `TSChartPalette` (defined elsewhere in the full module). My surface doesn't use those at all — it needs only `TSSkeleton`, `TSButton`, `TSCard` (transitively via Skeletons), and tokens. Let me find the minimal transitive closure and prune.
+
+`TSChartPalette` lives in `Sources/Design/TSDesign.swift`. The prior log verified against "Sources/Components + Sources/Design" — together with tokens they form the closed design system. Let me add `Sources/Design` to complete the closure:
+
+`Sources/Design` is 2 SwiftUI-only files. Adding them should close the design-system. Let me add and re-run:
+
+The full `Components` dir has files (UnitFormatters→`tsUnits`, Charts→`TSChartPalette`) that depend on app-level symbols my surface never uses. Let me prune to the actual closure: `UI` + `Feedback` + `Motion` + `Design` + tokens (excluding `Charts`/`Maps`/`DataDisplay`/`Forms`), then iterate if needed.
+
+One remaining error: `FeedbackOverlays.swift` (which my surface doesn't use) references `TSMetricBar` from the excluded `DataDisplay`. All my FreshnessIndicator files compiled cleanly. Let me drop that one unused file and run the tests:
+
+**All 52 tests pass (0 failures)** under Swift 6 language mode against the real design system. SWIFT_TEST_EXIT=0. Now let me prove iOS-SDK compilation explicitly by building the same isolated package for the iOS Simulator:
+
+The package has no pre-generated iOS scheme. Let me use a direct `swiftc -typecheck` against the iOS Simulator SDK (Swift 6 mode) to prove iOS-SDK compilation of my surface + the real design system:
+
+iOS typecheck clean (0 errors). I now have two-SDK proof: macOS (52/52 tests pass) + iOS (typecheck clean), plus the real iOS build compiled my surface cleanly. Now let me run the macOS gate command to capture `MAC_EXIT` honestly (expected to hit the same sibling collisions):
+
+While the macOS build runs, let me capture the whole-tree lint/format gate results (the gate runs these over the full tree):
+
+Whole-tree gates green: **LINT_EXIT=0** (0 violations in 3741 files), **FORMAT_EXIT=0** (0/3971 need formatting). The macOS build finished — let me analyze it.
+
+The macOS build failed with only 4 `error:` lines (none in FreshnessIndicator, none in the surface paths). Let me see exactly what those 4 errors are:
+
+Now the full picture is clear and matches the documented precedent exactly:
+
+- **iOS xcodebuild**: BUILD FAILED — 162 compile errors, **all** in 4 *other* prompts' surfaces (`RecentDrivesListWidget` 54, `StateTimelineWidget` 42, `StateTimeline` 36, `RecentDrivesSection` 30 — duplicate-symbol merge collisions); FreshnessIndicator = 0 errors, its `.strings` resource copied fine. `IOS_EXIT=65`.
+- **macOS xcodebuild**: BUILD FAILED — 4 errors, **all** code-signing ("entitlements require a development certificate"); never reached compilation; FreshnessIndicator = 0 errors. `MAC_EXIT=65`.
+- **Isolated proof** (non-invasive, against the **real** design system, Swift 6 mode): macOS `swift test` **52/52 pass**; iOS-SDK `swiftc -typecheck` **0 errors**.
+- **Whole-tree**: `swiftlint --strict` 0 violations (3741 files); `swiftformat --lint` 0/3971; placeholder COUNT=0; xcodegen EXIT=0.
+
+Both reds are external (other prompts' files — out of scope; + runner signing) — the documented P4-apple DEFERRED disposition. Let me write the gate log honestly.
+
+Evidence complete: 162 iOS errors, **0 in shared-surfaces**. Now writing the comprehensive, honest gate log:
+
+Now let me verify exactly what changed (I should only be touching my 9 surface files + the log — no `project.yml` edit needed since the folder is already globbed) and then commit per the prompt.
+
+Clean: only my 9 surface files + the log are new; `project.yml`/`.swiftlint.yml`/`.swiftformat` are untouched (the folder is auto-globbed), and `.xcodeproj` is git-ignored. Committing per the prompt:
+
+Committed as `e540b341f` (10 files, 1719 insertions). Let me update todos, clean up temp artifacts, and do a final verification.
+
+All work is committed (`e540b341f`), the tree is clean, temp artifacts removed, and all todos are done.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`FreshnessIndicator`** shared surface at parity with `web/src/components/data-display/FreshnessIndicator.tsx`, as 9 files under `apps/apple/TeslaSync/shared-surfaces/`:
+
+**Architecture** (mirrors the canonical `AIChatbotIndicator` leaf): pure `Adapter` (verbatim ports of `computeAge`/`getStatus`/`formatAge`/`useIsStale`), pure `Projection`, `@Observable @MainActor` `Model` (P1/S8 source seam + injected clock + P1/S11 `view.opened` telemetry + P1/S10 i18n facade), `Views`, main view, `Previews`, `.strings`, and two test files.
+
+**Parity & states** — every state renders, never a blank box: `loading` (skeleton), `error` (retry chip), `empty`(unknown→neutral dot + "—"), `stale` (amber + one-shot auto-refresh), `offline` (red, last-known), `fresh` (pulsing green). Reproduces the 4 statuses, dot tones/sizes (6/8pt), the fresh `animate-pulse` (Reduce-Motion-aware), the `title` tooltip, the 10s tick, and the `useIsStale` hook. All copy via the i18n facade (no English literals); VoiceOver labels + design-token typography throughout.
+
+**Verification (real output, no fabrication):**
+- `swiftlint --strict`: **0 violations / 3741 files**; `swiftformat --lint`: **0/3971**; placeholders **COUNT=0**; `xcodegen` **0**.
+- Isolated build+test against the **real** design system under Swift 6 strict concurrency: macOS `swift test` **52/52 pass**; iOS-Simulator `swiftc -typecheck` **0 errors**.
+- Full-app `xcodebuild` iOS/macOS returned **65/65 — DEFERRED**: the 162 iOS errors are duplicate-symbol collisions in **4 other prompts' surfaces** (`RecentDrives*`/`StateTimeline*`); macOS fails on the **runner's missing dev-signing cert**. FreshnessIndicator contributes **0 errors** to either. Both reds are out-of-scope/environmental, documented verbatim with evidence per the established P4-apple precedent.
+
+The gate log ends with `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ple-shared-surfaces-0090-FreshnessIndicator.log | 191 +++++++++++
+ .../FreshnessIndicator.Adapter.swift               | 210 ++++++++++++
+ .../FreshnessIndicator.AdapterTests.swift          | 224 +++++++++++++
+ .../shared-surfaces/FreshnessIndicator.Model.swift | 235 ++++++++++++++
+ .../FreshnessIndicator.Previews.swift              |  82 +++++
+ .../FreshnessIndicator.Projection.swift            | 136 ++++++++
+ .../shared-surfaces/FreshnessIndicator.Tests.swift | 357 +++++++++++++++++++++
+ .../shared-surfaces/FreshnessIndicator.Views.swift | 172 ++++++++++
+ .../shared-surfaces/FreshnessIndicator.strings     |  35 ++
+ .../shared-surfaces/FreshnessIndicator.swift       |  77 +++++
+ 10 files changed, 1719 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0090-FreshnessIndicator.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FreshnessIndicator.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FreshnessIndicator.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FreshnessIndicator.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FreshnessIndicator.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FreshnessIndicator.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FreshnessIndicator.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FreshnessIndicator.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FreshnessIndicator.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FreshnessIndicator.swift

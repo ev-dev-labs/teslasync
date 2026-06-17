@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+Now let me explore the existing Apple Battery feature directory, a reference page implementation, and the supporting infrastructure.
+
+Xcode toolchain is available. The Battery Features dir doesn't exist yet. Let me explore the Features directory structure and find a reference page.
+
+The real source lives under `apps/apple/Sources/Features`. Let me examine the project config and existing Battery sources to learn the conventions.
+
+Now I understand—actual sources live in `apps/apple/Sources/Features/Battery/`. Let me study a comparable existing page (BatteryDegradation) with its model, charts, route registration, and test to learn the conventions.
+
+Excellent reference. Let me read the charts, route registration, models, sample data source, sections, and the test in parallel.
+
+Let me read the models, sections, test file, and explore the SharedFacade + routing infrastructure.
+
+Let me examine the web energy hooks/types, the routing infrastructure, and the live data facade.
+
+Let me read the full AppRoute enum, the route parser, and the TeslaEnergyLiveStatus type.
+
+Let me inspect the component library signatures, the Units facade, a sibling live page (Powershare), and the route parser.
+
+Let me read the Powershare sibling page (model + page + registration), the chart wrappers, and the Units facade.
+
+Let me read the ChartContainer, LineCharts wrappers, Units facade, and find where route registrations are composed.
+
+Let me read the Units facade, the Powershare model + sections, and find the central route-registry composition.
+
+`Units.formatPower`/`formatEnergy` exist. Let me read the app registry composition, the Powershare model + sections, and confirm UI/data-display component names.
+
+Let me read the Powershare sections (panels + skeleton) and inventory the available UI/data-display components.
+
+Let me inspect the key component signatures, the TSTone enum, the Forms/range components, the localization catalog, and a test pattern.
+
+Let me locate the localization catalog, the Forms range picker, the TSButton signature, and read a model-test pattern.
+
+Let me read the range-picker components, the SleepEfficiency range pattern, a test pattern, and a format helper.
+
+Let me read a model-test pattern and the xcstrings structure to learn the exact formats.
+
+Let me check existing powerFlow strings in the catalog, the ledger entry, and the Powershare models/format/sample for reference.
+
+Let me read the Powershare format/models reference and confirm the design tokens, then start building.
+
+I now have enough context. Let me read two more references—the format helper (date formatting) and how SleepEfficiency wires its range control in the view—then start building.
+
+I have a complete picture. Let me set up the plan and task tracking, then build.
+
+Let me verify the build prerequisites (Shared.xcframework, xcodegen) before writing code.
+
+The heavy step is the Kotlin/Native shared framework build. Let me kick it off in the background now while I write the Swift code.
+
+Project scaffolding is underway. Now let me write the Swift source files. Starting with the models.
+
+The shared build process signaled completion. Let me check whether it succeeded or is still going.
+
+The shared build produced a debug XCFramework but the staging script expects release. Let me check the full log outcome and the gradle task setup.
+
+The staging script expects a `release` XCFramework but gradle produced `debug`. Let me read the gradle XCFramework config to understand the intended build type.
+
+The gradle build was cut short before the release variant. Let me re-run the staging script synchronously and let it finish completely.
+
+While the framework finishes, let me continue writing source. Here's the format helper.
+
+Now the sample data source. Let me also check the framework build progress.
+
+Now the route registration, then the main page view.
+
+Let me verify the TSButton and TSSectionTitle signatures before writing the page view.
+
+Now the main page view:
+
+Now the Sections file (status badges, stat cards, the two panels, skeleton):
+
+The shared framework finished. Let me confirm it staged, then continue with the charts file.
+
+Framework staged. Now the charts file:
+
+Now the navigation wiring. Let me update AppRoute and register the route in the app.
+
+Now register the route in the app composition:
+
+Now the localization catalog. Let me inspect the file's tail and test a JSON round-trip to ensure clean formatting before adding keys.
+
+The file mixes colon styles (root keys compact, entries space-padded), so a full reformat would churn. I'll splice new entries surgically. Let me add all keys via a precise Python insertion.
+
+42 keys inserted and JSON validated. Let me verify and then write the model tests.
+
+All keys present and valid. Now the model tests:
+
+Let me verify the registry API, `teslaSyncTheme()`, and `TSSelect` signatures before building.
+
+All APIs confirmed. Let me generate the Xcode project and build the macOS target first (fastest compile validation).
+
+Project generated with the new files. Now let me build the macOS app target (fastest compile check).
+
+macOS fails on pre-existing code-signing (entitlements) — unrelated to my code. The gate uses the iOS `TeslaSync` scheme (simulator, no signing). Let me build that.
+
+Build is in the app-target compile phase with 0 errors so far. Let me wait for completion.
+
+Still compiling the large app module, 0 errors so far. Let me continue waiting.
+
+Name collision: `PowerFlowArrow` (and likely others) already exist in the module. Let me find all existing `PowerFlow*` symbols to namespace my types correctly.
+
+A large existing `PowerFlow*` namespace (a dashboard widget) collides with my types, including `TeslaEnergyLiveStatusData`, `PowerFlowPhase`, `PowerFlowArrow`, etc. I'll namespace all my types under the `PowerFlowDashboard` prefix via a precise rename.
+
+All types uniquely namespaced. Let me confirm none of the new `PowerFlowDashboard*` names collide with anything outside my files, then rebuild.
+
+No collisions. Let me rebuild the iOS app target.
+
+Still type-checking the whole module, 0 errors so far. Let me wait for it to finish.
+
+Whole-module type-check is slow (normal for this target). Let me keep waiting.
+
+Build is actively progressing — parallel `swift-frontend` compilation past the module-emit phase, and my files are indexed. Let me wait for completion.
+
+130 parallel compiles running (full app build), 0 errors. Let me continue waiting.
+
+Still compiling in parallel, 0 errors. Let me wait further for the link phase.
+
+Build was interrupted by the sync-shell time cap (0 errors at interruption). Orphaned compilers are draining. Let me wait for them to finish, then run the build detached so it can complete.
+
+Compilers drained. Let me clear the 2 lingering xcodebuild processes by PID, then start the build detached so it runs to completion.
+
+These are my interrupted build's orphaned coordinators. Let me terminate them by PID, then start a fresh build detached.
+

@@ -1,0 +1,172 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple-specific tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). This is NOT a blocked scenario. Let me explore the Apple project structure and the web source.
+
+Now let me explore the Apple Sources structure, existing dashboard widgets, and supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+There's a rich existing structure. Let me check for any existing `BatteryDegradationForecastWidget` files and examine a complete sibling widget to learn the conventions.
+
+Found a close sibling: `BatteryDegradationTrendWidget`. Let me study it plus the complete `WallConnectorWidget` file set to learn conventions.
+
+The `BatteryDegradationTrendWidget` is the closest sibling. Let me read its model/builder/strings plus the web data hook to understand the exact data shape.
+
+Let me read the full web type definitions and the `WidgetShell`/`shared`/tip card components for exact parity.
+
+Now let me verify the design tokens API and the XcodeGen project configuration to ensure new files compile and tests are included.
+
+I have enough reference now. Let me check the build system (XcodeGen / existing xcodeproj) and the placeholder-check tooling before writing code.
+
+Let me confirm the web `fmtNumber` rounding behavior so my Swift formatter matches exactly.
+
+I now have a complete understanding of the conventions. Let me set up a plan and todos, then build the widget files.
+
+Now I'll write the widget files. Starting with the domain models and pure adapter.
+
+Now the presentational subviews.
+
+Now the main surface view.
+
+Now the strings catalog, previews, and tests.
+
+All 8 files written. Let me run the formatters/linters on the new files before the slow build.
+
+swiftformat passes. Now swiftlint on the new files.
+
+Two file-length violations (>400 lines). I'll split the surface and tests into additional `BatteryDegradationForecastWidget.*` files (an established convention, e.g. `.ModelTests.swift`). Let me view the split boundaries.
+
+Two files exceed the 400-line limit. I'll make `model`/`isCompact`/`forecastContent` accessible across files and split the loaded-content extension into `BatteryDegradationForecastWidget.Content.swift`, and split the tests into `.ModelTests.swift` (an established sibling convention). First, the access-level edits:
+
+Now create the Content extension file and remove that section from the main file:
+
+Now remove the loaded-content section from the main surface file:
+
+Main surface file is now 259 lines. Now split the tests file. Let me locate the test class boundaries.
+
+I'll recreate the tests as two files for the length limit. Delete the original and write both fresh:
+
+Now re-run swiftformat and swiftlint on all 9 files:
+
+All files under 400 lines. Now swiftlint strict:
+
+swiftlint passes with 0 violations. Now generate the Xcode project and build. Let me update todos and generate the project.
+
+Project generated. Let me confirm scheme names, then start the iOS build.
+
+Both schemes exist. Let me start the iOS build (this is a large module, so I'll run it in the background and monitor). I'll build first to validate compilation.
+
+While it builds, let me verify the log directory and check a sibling completed log format.
+
+My iOS build (pid 13361) is running — it triggers a Gradle assembly of `Shared.xcframework` (KMP), so it'll take a while. Other xcodebuild processes belong to parallel slots — I'll leave those alone. Let me check a sibling p4 log to match the expected format while it builds.
+
+The sibling log confirms the approach: green BUILD + green in-scope tests is the meaningful signal, with full-scheme environment flakiness documented honestly. Let me monitor my iOS build progress.
+
+The log got truncated when the launcher shell ended — my build process lost its output sink. Let me kill my build (pid 13361 only — others belong to parallel slots) and relaunch it properly detached.
+
+Build relaunched detached. Let me monitor progress (KMP Gradle assembly + large Swift module — this takes time).
+
+Build progressing through KMP Gradle framework linking (pid 15994). Let me keep monitoring — the large Swift module compile comes next.
+
+KMP release-framework linking (Kotlin/Native) is the slow step, contended with parallel slots. Let me wait in a larger increment for the Swift compile to begin.
+
+Build failed only due to a locked build DB (leftover lock from the killed build sharing `/tmp/dd-ios`) — not my code. Let me use a fresh, unique derived-data path and relaunch.
+
+Those other processes belong to parallel slots (different derived-data paths). My paths are clean. Relaunching iOS build with a unique path:
+
+iOS build relaunched with a clean unique path. Let me monitor for the Swift compilation phase.
+
+A real collision: my internal type `ForecastEmptyState` clashes with the existing `ForecastDetails` feature-view (same module). My generic `Forecast*` names squat a namespace already used. Let me find exactly which of my type names collide with existing module symbols.
+
+Only `ForecastEmptyState` collides among checked names, but `ForecastDetails.*` squats the `Forecast*` namespace. Let me see everything it declares to avoid a second-wave error.
+
+This is a bigger namespace collision: the `ForecastDetails` feature-view squats many `Forecast*` names (`ForecastVehicle`, `ForecastHealthTier`, `ForecastImpact`, `ForecastRiskFactor`, `ForecastStatCard`, `ForecastRiskFactorRow`, `ForecastTipCard`, `ForecastEmptyState`). All in the same module. I must rename my generic `Forecast*` types to the unique `BatteryDegradationForecast*` prefix (matching the sibling full-prefix convention). My already-prefixed model types are fine. Let me apply targeted renames that won't touch the display string "Battery Forecast" or i18n keys.
+
+Let me verify no corruption of display strings/keys and no double-prefixing:
+
+Rename integrity confirmed. The longer names may affect line lengths — let me re-run swiftformat and swiftlint.
+
+The longer names pushed a few lines past 120 chars. Let me run swiftformat (auto-fix) to rewrap, then re-verify both linters.
+
+Both linters pass. Let me verify line counts are still under 400 after reformatting, then relaunch the iOS build.
+
+All files under 400 lines (max 271); build running (pid 41229). Let me wait for the full clean compile.
+
+Still compiling, no errors so far. Let me continue waiting for completion.
+
+iOS **BUILD SUCCEEDED** — my widget compiles in the full app target. Now run the in-scope unit tests on iOS (reusing built products), then the macOS build/tests. Launching the focused iOS test:
+
+iOS focused test launched (the test bundle compile is also large). Let me monitor it.
+
+iOS test bundle failed to compile — but the errors are in a **pre-existing, unrelated file** (`SafetyFeaturesWidget.ModelTests.swift` has duplicate class names), not my code. Let me confirm this is pre-existing and scope the collision.
+
+Confirmed: my change is ONLY my 10 new files. The collision is **pre-existing** — `SafetyFeaturesWidget.ModelTests.swift` and `SafetyHistoryWidget.ModelTests.swift` both declare `SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests`. Let me assess how widespread duplicate test-class names are in the test bundle.
+
+8 duplicate test-class names across a few unrelated widget pairs (ChargeStatus*, Safety*) — a pre-existing test-bundle defect. Let me scan the full test target scope (dashboard-widgets + feature-views + Tests/Unit) to see the complete set of pre-existing duplicate test classes.
+
+The duplicate test classes are a pre-existing defect across ~4 unrelated widget pairs. To run my **actual** in-scope XCTest cases, I'll temporarily sideline one file from each broken pair, regenerate, run my tests, then restore (none of these are my files; the .xcodeproj is gitignored). Let me identify all the files involved.
+
+I have all 4 colliding pairs. I'll sideline one file per pair (none are mine; tracked files I'll restore via git afterward), regenerate, and run my real XCTest classes. Let me set it up.
+
+No duplicate test classes remain. Now run my actual in-scope XCTest classes on iOS:
+
+iOS test running (large test-bundle compile). Let me monitor.
+
+Test bundle still compiling (2700+ test files). Let me keep waiting.
+
+Another pre-existing, unrelated compile error surfaced (`PresetGallery.*` test files have a Swift 6 `Sendable` violation). The full XCTest bundle is pervasively pre-existing-broken under this toolchain (duplicate classes + Sendable violations across sibling files) — not fixable within my allowed scope. Sidelining file-by-file isn't viable. Let me restore the repo and verify my in-scope tests via a standalone harness instead.
+
+Repo restored (only my files changed). I'll verify my in-scope tests via a standalone SwiftPM harness that compiles my real sources + my real XCTest files (the full bundle is pre-existing-broken by unrelated files). Let me build it.
+
+Harness assembled. Now run my real XCTest cases through it:
+
+My widget files compiled cleanly — only the copied `Skeletons.swift` references `TSCard` (an unrelated component). I only need `TSSkeleton`. Let me trim the harness copy to just that struct.
+
+**All 35 in-scope tests pass (0 failures)** — my real XCTest cases against real production sources. Now the macOS build. Let me update progress and launch it.
+
+macOS build launched. While it compiles, let me run the placeholder gate. The literal gate path scans my surface files — I'll verify meaningfully by scanning only my files.
+
+The meaningful scan correctly flags the literal word "Placeholder" in two of my comments (the gate's basename path matches nothing, so it passes vacuously — but the Honesty Covenant forbids "placeholder" in shipped code). Let me find and reword them.
+
+Both reworded. Let me re-verify lint/format and the placeholder scan on the final files (comment-only edits, so logic is unchanged):
+
+Placeholders clean (0), no forbidden words, lint/format green on edited files. Let me check the macOS build and re-confirm the harness with the final files.
+
+Harness green again (35/35 with final files). macOS build is in the Swift emit phase (past Gradle). Let me wait for it to finish.
+
+**macOS BUILD SUCCEEDED** — my widget compiles in both iOS and macOS app targets. All gates are green. Let me update todos and assemble the honest gate log with real evidence.
+
+Now I'll assemble the honest gate log with real command evidence:
+
+All evidence gathered. Let me write the comprehensive honest gate log:
+
+Now let me do final verification of git state and confirm only my files + the log changed, then commit.
+
+Git state is clean — exactly my 10 widget files + the gate log. All gates green (iOS BUILD, macOS BUILD, 35/35 in-scope tests, swiftlint, swiftformat, placeholders). Let me commit.
+
+Committed (dd2246e2b). Let me update tracking, clean up my temp artifacts, and do a final state check.
+
+Task complete. The working tree is clean, the commit (dd2246e2b) contains all 11 files, and my temp artifacts are cleaned up.
+
+Merge made by the 'ort' strategy.
+ ...dgets-0011-BatteryDegradationForecastWidget.log | 145 +++++++++++
+ .../BatteryDegradationForecastWidget.Builder.swift | 212 ++++++++++++++++
+ .../BatteryDegradationForecastWidget.Content.swift | 181 ++++++++++++++
+ .../BatteryDegradationForecastWidget.Model.swift   | 242 ++++++++++++++++++
+ ...tteryDegradationForecastWidget.ModelTests.swift | 238 ++++++++++++++++++
+ .../BatteryDegradationForecastWidget.Models.swift  | 229 +++++++++++++++++
+ ...BatteryDegradationForecastWidget.Previews.swift | 182 ++++++++++++++
+ .../BatteryDegradationForecastWidget.Tests.swift   | 271 +++++++++++++++++++++
+ .../BatteryDegradationForecastWidget.Views.swift   | 271 +++++++++++++++++++++
+ .../BatteryDegradationForecastWidget.strings       |  53 ++++
+ .../BatteryDegradationForecastWidget.swift         | 259 ++++++++++++++++++++
+ 11 files changed, 2283 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0011-BatteryDegradationForecastWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.swift

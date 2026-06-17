@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure to understand the web source page and the Apple app architecture.
+
+Now let me explore the Apple app structure and existing patterns.
+
+The actual Swift sources live under `apps/apple/Sources/Features/`. Let me examine the existing Driving feature pages to follow the established pattern.
+
+No existing Apple RouteEfficiencyPage. Related widgets/suggestions exist. Let me study the closest page patterns — DriveScorePage (same dir) and the Analytics pages.
+
+Let me study the Analytics FleetCompare page set (closest analog — analytics endpoint, charts, table) and the supporting model/sample/registration files.
+
+Now let me examine the component library, design tokens, and supporting FleetCompare files (sections, models, format, sample).
+
+Let me read the core component files and the supporting FleetCompare model/format/sample files, plus the design tokens.
+
+Let me read the design tokens, Units facade, typography, cards, pickers, and the FleetCompare model/format/sample files.
+
+Now let me examine the model structs, sample data sources, the date range control, and check how production KMP binding works.
+
+Let me look at the web types/hooks and the Apple route/typography/card/range-control infrastructure.
+
+Now let me examine the routing infrastructure, the date-range control, typography/cards, and the DriveScore models + how vehicles are sourced.
+
+Let me look at the route host registry and how registrations are composed app-wide.
+
+The established pattern is dedicated `AppRoute` cases for secondary pages (`batteryCells`, `tco`, etc.). Let me read the DriveScore models, the range control, typography/cards/pickers, and locate the string catalog.
+
+29 `routeEfficiency.` occurrences already exist in the catalog. Let me check exactly which keys are present, find the range control definition, and get web i18n defaults.
+
+The catalog keys carry a `translation.` prefix for `routeEfficiency.*`, but `common.noData` is unprefixed. Let me investigate how sibling pages reference strings versus how they're stored.
+
+Confirmed: the unprefixed `routeEfficiency.*` keys (the form Swift references) are missing. Let me read the catalog structure and the web-derived defaults to add them correctly.
+
+Now let me read the DriveScore range control + model, and the typography/cards/pickers components.
+
+Let me read the cards/pickers components, design tokens, and check for existing sibling tests + tooling availability.
+
+Tooling is available. Let me read the test pattern, design tokens, the picker, and the placeholder-check script.
+
+Let me find the `UnitPreferences.metric/.imperial` statics, the `Font.TS`/`Color.TS` token names, the `TSSelect` signature, and the placeholder-check script.
+
+Let me read the placeholder-check script, the gate contract, an existing apple log for format, and the ledger.
+
+Let me view the ledger structure around the DriveScore entry and check for any RouteEfficiency row, plus how the Shared framework builds.
+
+Xcode 26.5 is present but the `Shared.xcframework` (KMP core) isn't staged. Let me view the DriveScore ledger rows to replicate, and check the shared-framework build script + Kotlin toolchain availability.
+
+There's a `gradlew` for the KMP core. Let me kick off the `Shared.xcframework` build in the background now so it's ready for the gate while I write code.
+
+Let me set up tracking and check whether modifying the `AppRoute` enum would break any existing tests (count assertions, sidebar snapshots).
+
+`MenuCommandCatalogTests` asserts the menu catalog's navigate routes equal *all* `AppRoute`s. Adding a route requires updating that catalog. Let me inspect it.
+
+All clear — `navigateCommands()` derives from `allCases`, so adding a route is safe (just need `group` + `systemImage` cases + a `route.routeEfficiency` string). Let me write the plan and start building.
+
+Now I'll create the Swift files. Starting with the value models and the data-source seam.
+
+Now the format helpers. Let me confirm the web `fmtNumber`/`fmtInt` decimal behavior to match exactly.
+
+Now the `@Observable` page model.
+
+Now the sample/empty/failing data sources.
+
+Now the main page view with header + phase switch.
+
+Let me verify the `tsChartAxes`/`teslaSyncTheme` modifiers exist before writing the charts section.
+
+Gradle is linking frameworks — nearly done. Let me write the comparison chart section.
+
+Let me check existing generic date/filter strings for the range control's accessibility label.
+
+No generic date key exists; I'll add one supporting a11y string. Now the sections file (summary, route cards, metrics, range control, skeleton).
+
+Gradle finished. Let me verify the framework built and then write the route registration.
+
+Shared.xcframework built successfully — the full build can link now. Let me write the route registration and wire navigation.
+
+Now let me wire the `.routeEfficiency` route into the `AppRoute` enum and the app composition.
+
+Now add the registration to the app composition (near the other driving registration).
+
+Now the strings. Let me view anchor entries to match the exact unprefixed format and pick insertion points.
+
+The format is clear. I'll add all 20 new keys via a Python script (safer for JSON validity) and validate.
+
+20 keys added and JSON valid — but that rewrote/reordered the entire catalog (noisy, non-surgical). Let me revert and do a surgical text insertion instead.
+
+Now a surgical text insertion preserving original formatting.
+
+Let me verify the catalog diff is minimal and the keys are present in the Swift-referenced form.
+
+Now the model unit tests, mirroring the sibling test pattern.
+
+Now let me run the verification gate. First, let me check the swiftlint config and scan for long lines before running the tools.
+
+`line_length` warning is 120 (strict → error). Two code lines exceed it. Let me fix them.
+
+Let me re-scan all my files for any remaining lines over 120 chars.
+
+Now let me run swiftlint and the placeholder check on the Driving directory.
+
+Three swiftlint issues to fix: sample function-body length, Sections file length, and the test helper's parameter count. Let me fix all three.
+
+Let me extract the skeleton to a new file and remove it from Sections.
+
+Now fix the sample function-body length (move routes to a static let) and the test helper param count.
+
+Now fix the test helper's parameter count and its call sites.
+
+Now update the remaining `route(...)` call sites in the test to the tuple form.
+

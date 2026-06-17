@@ -1,0 +1,162 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page is a thin wrapper around `GasPriceSettings`. Let me explore the Apple app structure, the parity manifest, existing pages, and check for Xcode.
+
+Xcode 26.5, swiftlint, swift, and pwsh are all available — the gate **can** run. The web page renders the full `GasPriceSettings` surface (toggle, interval select, price cards, poll button). Let me study existing Apple pages, the component library, navigation, and the ledger to match established patterns.
+
+No `Features/` dir yet, but the ledger shows completed admin pages. Let me locate where existing pages actually live and study a similar one.
+
+A `GasPriceSettings` component already exists in `feature-views/`, plus there's an `AlertStudioPage.swift` to model the page pattern. The actual structure is flat (not `Features/Admin/`). Let me study the existing component, the page example, navigation, and the build config.
+
+Now I understand the architecture. `GasPriceSettings` is a fully-built P3 component; my page wraps it in a `PageContainer` (web parity). The page's 2 parity strings are `gas.title`/`gas.subtitle`. Let me study the component's model construction, the strings/test conventions, navigation, and the build config.
+
+`project.yml` is one level up. Let me read it and locate the `PageContainer` parity component, navigation registration, the string catalog, the production adapter, and the test convention.
+
+The build globs `feature-views/` etc.—there's **no** `Features/` dir in the build, so I'll follow the established convention and place the page in `feature-views/` alongside `AlertStudioPage` and `GasPriceSettings`. `PageContainer` exists as a shared surface. Let me study `PageContainer`'s API, the page strings pattern, the route registry, and the master catalog.
+
+`PageContainer` has a clean controlled init `PageContainer(title:subtitle:){ content }` — exact web parity. Now let me understand routing/registration, how a page declares strings, the page test pattern, and the production model adapter.
+
+Now let me understand how routes map to views (the app shell), whether there's a production model factory, and confirm the web route grouping.
+
+There's a `RouteHostRegistry.swift` — the central route→view mapping. Let me read it to see how pages are registered and how production models are built.
+
+Let me see where the registry is populated, whether existing "done" pages have real files, and what a typical page commit touches.
+
+The established pattern is clear: each page has a `RouteRegistration.swift` in `Sources/Features/<Domain>/`. Admin pages live under `Sources/Features/Admin/`. Let me study the most recent admin analog (DevTools) end-to-end: its registration, page view, model, tests, strings, and the composition root.
+
+The admin-page convention is clear: page+model+registration in `Sources/Features/Admin/`, strings in the master `Localizable.xcstrings`, route in `AppRoute.swift`, tests in `Tests/Unit/Features/Admin/`. Let me read the DevTools exemplar files, the composition root, and check the catalog for existing gas keys.
+
+Complete picture now. Let me read the composition root, the test pattern, the web sidebar grouping, and the lint config to avoid violations.
+
+Now I understand the composition root and test pattern. Two open questions: how to group the route, and how production registrations build a model when a child surface needs a data source. Let me check how a data-driven admin page (AuditLog/FleetAPI) wires its production source, and find the lint config.
+
+The convention uses a `dataSource`/source param defaulting to a Sample. Let me read the DevTools log (to replicate the exact gate + log format + PARITY section), the lint config, the placeholder scanner, and the gate contract.
+
+I now have the full exemplar (DevTools log) showing the proven methodology: the full app `xcodebuild` is RED at HEAD due to pre-existing out-of-scope sibling breakage, so in-scope correctness is proven via isolated Swift 6 strict-concurrency type-checks + executed harnesses. Let me verify the current environment state and check whether any page uses the `PageContainer` shared surface.
+
+Key findings: Shared.xcframework is NOT cached (Gradle build needed, ~10min), and **no** existing page uses the `PageContainer` shared surface — every page (incl. DevTools, whose web source also uses `<PageContainer>`) hand-rolls the header via `TSPageTitle` + `Text`. I'll follow that precedent exactly, with a bound `@Observable` model holding the 2 parity strings. Let me check `TSPageTitle`, the route parser, route tests, and a peer page's wrapping idiom.
+
+Now let me read the remaining GasPriceSettings API files (to host it correctly) and confirm the design-tokens location and the placeholder scanner before writing code.
+
+Let me read the placeholder scanner, the catalog structure, the ledger tail, the manifest entry for this unit, and find any other exhaustive `AppRoute` switches I'd need to update.
+
+Manifest confirms `requiredCount: 2` (gas.subtitle, gas.title). Let me check `WatchDeepLink.swift` (it switches over a route and is compiled into the Watch target) and the swift placeholder patterns to avoid violations.
+
+I have a complete understanding. Let me set up tracking and inspect the catalog structure before writing code.
+
+The catalog is a large JSON map (not strictly sorted). I'll insert my 3 keys textually right after `"strings" : {` for an additions-only diff. Let me check the swiftformat config, then write the code.
+
+Config confirmed. Now writing the page model, view, and registration.
+
+Now wiring the route into `AppRoute.swift` (enum case + pathSegment + systemImage + group).
+
+Now chaining the registration in the composition root.
+
+Now the model tests. Let me check the existing test's telemetry/spy pattern to match Sendable-safe conventions.
+
+The spy pattern is clear (`@unchecked Sendable` final class). Writing the model tests.
+
+Now inserting the 3 catalog keys (additions-only, right after `"strings"`).
+
+Let me validate the catalog JSON and update progress.
+
+Catalog valid (9462 keys). Now running the fast gates on my files: swiftformat, swiftlint, placeholder scan.
+
+swiftformat clean (0/6). Now swiftlint --strict and the placeholder scan.
+
+swiftlint clean (0 violations). Now the placeholder scan.
+
+All fast gates pass: swiftformat 0/6, swiftlint 0 violations, placeholder COUNT=0. Now the integration proof. Let me check whether my dependency closure (GasPriceSettings + components + tokens) is free of the KMP `Shared` framework, which determines if I can do a fast isolated type-check.
+
+GasPriceSettings and its components are `Shared`-free and live in `Sources/Components/**` (not the broken `shared-surfaces`). Let me map the full closure: locate `Color.TS`/`Font.TS`/`teslaSyncTheme`, and confirm `Sources/Components/**` and tokens/theme are `Shared`-free.
+
+The closure is fully `Shared`-free. Let me read `GasPriceSettings.Views.swift` to enumerate its exact component usage, then assemble the type-check.
+
+`GasPriceSettings` uses `TSButton`, `TSGlassPanel`, `TSIconBox`, `TSSkeleton`, `TSFadeIn` + tokens. Let me run an isolated Swift 6 strict-concurrency type-check of my page integrated with the real GasPriceSettings surface + components + tokens (macOS), iterating on any missing files.
+
+macOS type-check passes (0 errors, Swift 6 strict concurrency, 22 files including the real `GasPriceSettings`). Now the iOS idiom.
+
+Both idioms type-check clean (macOS + iOS, 0 errors). Now an executed model harness to prove the `@Observable` logic at runtime (headless), mirroring the DevTools methodology.
+
+Model harness passes 6/6. Now let me confirm the build system picks up my files (xcodegen) and verify the documented sibling-breakage status, then attempt the full build.
+
+xcodegen confirms all 4 files are wired into the iOS+macOS app and test targets (6 refs each). Let me inspect the framework-staging script and attempt the full build to verify the in-scope integration and honestly capture the sibling-build status.
+
+The full build needs the Kotlin/Native toolchain (Gradle) to stage `Shared.xcframework`. Let me attempt it in the background and monitor — this verifies whether the app target builds or is blocked by the documented out-of-scope sibling breakage.
+
+Gradle is staging the framework (downloading toolchain). While it runs, let me update the ledger.
+
+Ledger valid (74 rows, 2/2 done). Gradle is still staging the Kotlin/Native toolchain. Let me continue waiting.
+
+Gradle staged `Shared.xcframework` successfully (7m16s). Now the real gate — let me run the full `xcodebuild` for the macOS scheme. This compiles the whole app including my page; I'll capture whether it's green or blocked by the documented sibling breakage.
+
+Build failed (EXIT=65), as the DevTools log predicted. I must verify the failure is **not** in my files. Let me triage the errors.
+
+The failure is **codesigning only** (no development certificate in this sandbox) — there are **zero Swift compile errors**, meaning the app (including my page) compiled. Let me confirm no swift errors anywhere and re-run with signing disabled to get a clean build result.
+
+Zero Swift compile errors — the whole app compiled. The only failure is codesigning (no dev cert in sandbox). Let me confirm my files compiled and re-run with signing disabled for a true green build.
+
+Let me check whether compilation actually occurred or it bailed at signing validation first, then re-run with signing fully disabled.
+
+The build bailed at signing validation before compiling. Let me re-run with code signing disabled to force actual compilation of the full app (framework is now cached, so the pre-action is fast).
+
+Now it's actually compiling Swift. Let me check the final result.
+
+Build failed with exactly **1** Swift error — in `DriveScorePage.Panels.swift` (an out-of-scope Driving sibling), **not** my files. Let me confirm the exact error and that it's pre-existing (unrelated to my change).
+
+Confirmed: the **single** build error is a pre-existing, out-of-scope defect in `DriveScorePage.Panels.swift` (a `String(localized:)` API misuse) — **not** in any of my files, and DriveScore is not in my diff. Let me confirm my files were compiled by the full build and view the sibling error to document it precisely.
+
+Definitive triage: the full app build produced **exactly one** Swift error — `DriveScorePage.Panels.swift:25` calling `String(localized: model.overallTrend.labelKey)` (a `LocalizedStringKey`→`LocalizationValue` misuse) — a pre-existing, out-of-scope Driving-page defect not in my diff. My files have zero errors and are independently proven by the dual-idiom isolated type-check + harness. Per the DevTools precedent (covenant #6/#7/#8), out-of-scope sibling RED is deferred to its owner. Let me write the evidence log.
+
+Let me fix a stray non-ASCII typo in the log.
+
+Now let me verify the working tree is clean of artifacts and re-confirm the gates before committing.
+
+Clean tree — only my intended changes. Let me do a final review of the edits and a last gate pass before committing.
+
+Both edits are correct and surgical. Final pre-commit gate pass + JSON validation.
+
+All gates green. Committing the change.
+
+Committed. Let me finalize tracking and confirm a clean tree.
+
+Task complete and verified. The working tree is clean and the commit (`ce4237985`) contains exactly the 9 intended files.
+
+## Summary
+
+Shipped a native SwiftUI/HIG **`GasPriceAutoPollPage`** at web parity (route `/gas-price`, P7 admin).
+
+**What it does:** A thin page that frames the real, already-shipped `GasPriceSettings` surface with the web `PageContainer` title + subtitle, bound through an `@Observable GasPriceAutoPollPageModel` (no networking in the view, ADR-004). It resolves the two parity strings (`gas.title`, `gas.subtitle`) from `Localizable.xcstrings` and renders them from the bound model, emits the P1/S11 `view.opened` diagnostics on appear (native peer of `usePageTitle`), and is adaptive across macOS + iOS.
+
+**Files (9):** page view + `@Observable` model + route registration (`Sources/Features/Admin/`), unit tests (`Tests/Unit/Features/Admin/`), `AppRoute` (`.gasPrice` case → `gas-price`/`fuelpump.fill`/`.account`), `TeslaSyncApp` composition wiring, `Localizable.xcstrings` (+3 keys, web names), `apple-ledger.json` (+2 rows, 2/2 done), and the evidence log.
+
+**Verification (all real, in-scope green):**
+- swiftformat `0/6` · swiftlint --strict `0 violations` · placeholder scan `COUNT=0`
+- Isolated Swift 6 strict-concurrency type-check against the **real** `GasPriceSettings` surface + TS components + tokens — **macOS 0/0** and **iOS 0/0**
+- Executed model harness **6/6** (parity strings, hosting, telemetry idempotence)
+- `Shared.xcframework` staged green (Gradle 7m16s); xcodegen wired all 4 files into both app + test targets
+- Full-app `xcodebuild`: compiled with **exactly one** error — a pre-existing, out-of-scope `DriveScorePage.Panels.swift` defect (not my diff; forbidden to fix per covenant #6/#7), **zero errors in any of my files**
+- `PARITY_COVERED=2` · log `EXIT=0 / STATUS=DONE`
+
+The output-path reconciliation (idealized `TeslaSync/Features/Admin/**` → real compiled home `Sources/Features/Admin/**`) follows the committed DevTools/System precedent and is recorded in the log.
+
+
+
+The task is fully complete and verified — all 8 todos done, working tree clean, commit landed.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-GasPriceAutoPollPage.log | 197 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  33 ++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ .../Features/Admin/GasPriceAutoPollPage.swift      | 112 ++++++++++++
+ .../Features/Admin/GasPriceAutoPollPageModel.swift | 106 +++++++++++
+ .../Admin/GasPriceAutoPollRouteRegistration.swift  |  50 ++++++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Admin/GasPriceAutoPollPageModelTests.swift     | 102 +++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 9 files changed, 623 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-GasPriceAutoPollPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/GasPriceAutoPollPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/GasPriceAutoPollPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/GasPriceAutoPollRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/GasPriceAutoPollPageModelTests.swift

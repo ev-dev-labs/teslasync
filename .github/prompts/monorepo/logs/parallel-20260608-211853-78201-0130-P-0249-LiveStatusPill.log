@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure, reading the web source component, and assessing the Apple toolchain availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 17 simulators). Now let me explore the existing Apple app structure and dependencies.
+
+There's a substantial existing Apple app. Let me examine the project structure, the existing feature-views pattern, and the Live/SSE infrastructure this component depends on.
+
+Now let me examine the existing feature-views to understand the established pattern I must follow.
+
+`LiveStatusPill` doesn't exist yet. `BatteryPill` is the closest analog. Let me study its complete file set as the canonical pattern.
+
+`BatteryPill` is the ideal template — a presentational pill. Let me read its complete file set to learn the exact conventions.
+
+Excellent pattern. Let me read the remaining BatteryPill files (Telemetry, strings, Previews, Tests) to complete my understanding.
+
+Now I understand the pattern thoroughly. Let me confirm the `StatusLiveState` type, inspect the design tokens available, and see how the pill is consumed.
+
+Confirmed: `StatusLiveState = 'live' | 'reconnecting' | 'offline'`. Let me inspect the available design tokens.
+
+Let me read the full token definitions and the GlassPanel component to know exactly what's available.
+
+Now let me understand the chip/capsule chrome (the web uses a `rounded-full ... ring-1` pill, not a glass panel) and locate shared UI primitives.
+
+Let me check the shared Badges component and an existing live-related chip to match house style for tinted capsule chips.
+
+There's a clear house style: `TSTone` + tinted-capsule chip (`opacity(0.15)` bg + `opacity(0.3)` ring) matching the web exactly. Now let me see how sibling surfaces handle parametric/relative-time localized strings.
+
+Two idioms exist. Let me see how `AiUsageCard` consumes its `%@s ago` relative-time keys in Swift to follow the cleanest established approach.
+
+The `AiUsageCard` idiom maps perfectly onto my relative-time need. Let me read its Strings helper, relative bucketing, and projection in detail.
+
+I have everything needed. Let me check the swiftlint/swiftformat config and the i18n facade/test conventions to ensure lint-clean output, then write a plan.
+
+Let me confirm `TimelineView` and live-region accessibility idioms are used elsewhere in the codebase to match house conventions.
+
+All idioms are established. Let me view a live-sibling's pulse pattern, the placeholder-checker's flagged tokens, and check PowerShell availability for the gate.
+
+I have the exact house pulse idiom. Let me check the placeholder-patterns.json to ensure my code/comments avoid flagged words.
+
+I have the complete house pattern (pulse, tokens, i18n facade, telemetry, tests). `pwsh` is available for the exact gate. Let me set up tracking and verify the log directory, then write the 6 surface files.
+
+Git is clean, log dir exists, and I've confirmed every idiom. Let me set up tracking and write the plan, then create all six surface files.
+
+Now I'll create all six surface files following the established BatteryPill + AiUsageCard conventions.
+
+Now the test file with thorough host-free coverage of every branch:
+
+All 6 files created. Let me canonicalize formatting on my files and run the linters before the heavy Xcode build.
+
+The codebase enforces `wrapPropertyBodies`/`wrapFunctionBodies` (single-line bodies must be wrapped). Let me run swiftformat in auto-fix mode to canonicalize my files, then re-verify.
+
+Format clean. Let me verify the auto-fix changes look correct and run swiftlint --strict on my files.
+
+Changes look clean. Now swiftlint --strict on my files:
+
+swiftlint clean. Let me run the placeholder gate on my surface directory, then generate the Xcode project and build/test.
+
+Placeholder gate passes. Now let me assess the Xcode project generation and the shared-framework build dependency before running the build.
+
+The build needs `xcodegen` (project is git-ignored) plus a KMP `Shared.xcframework` built via Gradle (scheme pre-action). Let me generate the project and assess the Kotlin/Gradle toolchain — the long pole.
+
+Project generated; Java 17 + Gradle wrapper present. Now the long pole — building the KMP `Shared.xcframework`. Let me kick it off (it's the scheme pre-action) and monitor.
+
+KMP first-build is downloading the Kotlin/Native toolchain and compiling — this takes a while. Let me continue waiting.
+
+Still compiling (KMP/Native multi-target builds are slow on first run). Let me keep waiting.
+
+`Shared.xcframework` built and staged (8m51s). Now the Gradle cache is warm so the build pre-action will be fast. Let me compile the iOS app + test bundle (`build-for-testing`) to catch any compile errors in the real targets. Substituting `iPhone 17` (runner has no iPhone 16).
+
+Good — an `iPhone 16` simulator IS available (and booted), so I'll use the exact gate destination. My grep had an invalid regex (`**`) which broke the pipe (exit 65 was the SIGPIPE artifact, not a real build result). Let me re-run writing to a log file.
+
+Build failed with 4 failures. Let me extract the actual error lines.
+
+The 4 failures are all in **pre-existing, unrelated** dashboard-widget files (`ChargeSessionChartWidget.*`, `ChargeStatusLiveWidget.*`) — "ambiguous for type lookup" on `Charge*` types. None are my files; my types don't collide with any `Charge*` name. Let me confirm the root cause is pre-existing (independent of my change).
+
+Root cause confirmed and it's **pre-existing, outside my scope**: `ChargeSessionDTO` is declared in two committed sibling files (`ChargeStatusLiveWidget.Model.swift` + `ChargeSessionChartWidget.Models.swift`), and `ChargeStatusProjection` in two more — duplicate top-level types → "ambiguous". `git status` shows I only added `LiveStatusPill.*`. My allowed files are `LiveStatusPill.*` + the log only, so I cannot fix siblings. Let me confirm the duplicates and check the known-issues doc.
+
+Ironclad confirmation: `public struct ChargeSessionDTO` is declared in **two committed sibling files** (lines 126 and 22) — a pre-existing duplicate-type collision in the app target, entirely outside my surface. My files are the only additions and are referenced by nothing that fails.
+
+Let me rigorously verify MY surface compiles and its tests pass, in isolation, via a throwaway SwiftPM package (module named `TeslaSync` so the test's `@testable import` resolves).
+
+**All 21 of my unit tests pass** and my full surface (View + Model + Telemetry + Previews) compiles cleanly in isolation. My surface logic is verified correct and complete.
+
+Now let me capture the real gate output. First the baseline proof: temporarily remove my files, regenerate, and confirm the build fails **identically** (proving the breakage is pre-existing). Then restore.
+
+**Ironclad proof: the baseline (HEAD-equivalent, my files removed) fails with 284 errors** — the identical `ChargeSessionDTO` ambiguity. The app target does not compile independent of my surface; the full-scheme gate was never passable in this slot. Let me restore my files and regenerate.
+
+My files are restored. Now let me run the real gate's two `xcodebuild ... build test` commands (iPhone 16 is available) to capture honest EXIT codes.
+
+iOS gate: EXIT=65, **zero LiveStatusPill errors** (all in pre-existing `Charge*` files). Now the macOS gate plus the lint/format/placeholder steps.
+
+macOS gate: EXIT=65 (pre-existing `Charge*` ambiguities + unrelated macOS signing-entitlement errors), **zero LiveStatusPill errors**. Now the lint/format/placeholder gate steps (full-tree, as the gate runs them).
+
+swiftformat full-tree: **EXIT=0 (clean)**. Placeholder: **EXIT=0**. swiftlint `--strict` exited 2 on **1 violation** — but the "5 LiveStatusPill" matches are just per-file "Linting…" progress lines, not violations. Let me confirm that 1 violation is pre-existing, not mine.
+
+Everything is now conclusively characterized. Let me verify git cleanliness (build artifacts should be git-ignored) and gather final numbers, then write the honest gate log.
+
+Git is clean (only my 6 files; project + framework are git-ignored). All evidence gathered. Let me write the comprehensive, honest gate log.
+
+Log written. Let me update tracking, clean up throwaway artifacts, and confirm the final repository state.
+
+All deliverables are persisted and the repository state is clean (only my 6 surface files + the log; the generated `.xcodeproj` and KMP framework are git-ignored).
+
+I'm deliberately **not** creating a git commit: Honesty Covenant rule 8 ("No commit on red") is binding, and the full-scheme gate exits non-zero — solely from pre-existing, out-of-scope breakage. All files are persisted on disk and ready to commit once the external blocker is cleared.
+

@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure to understand the task context and verify dependencies.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 sim). Now let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure in depth — TeslaSync sources, shared-surfaces, state holders, tokens, i18n, and existing patterns.
+
+A clear multi-file pattern exists per surface. Let me examine a complete example surface and check whether sibling status-bar segments were already ported (to mirror conventions exactly).
+
+No siblings ported yet. Let me read the full example surface to learn the exact conventions for all 9 file types.
+
+Excellent — the architecture is clear and sophisticated. Let me read the remaining example files (Adapter, States, Views, Previews, Tests, strings) to capture all conventions.
+
+Now the Adapter (production binding to P1/S8), Previews, Tests, and strings files.
+
+I have the full pattern. Now I need the P1/S9 tokens, shared components, and critically the P1/S8 state holders for vehicles/selectedVehicle/vehicleState/units. Let me locate them.
+
+The SharedFacade is the P1/S8 layer. Let me read its core files and check the existing `selectedVehicle` misc-surface, plus find vehicle/units state holders.
+
+A `selectedVehicle` surface already ports `useSelectedVehicle` — exactly my dependency. Let me read it in full plus the Units facade.
+
+Now let me read the selectedVehicle Seams/Store/Views, the Units facade, and the web units/vehicle-state hooks to understand binding + conversion.
+
+Let me read the web units/vehicle-state hooks for exact conversion + field names, plus the native design tokens and shared components I'll consume.
+
+The tokens picture is incomplete — `TSSpacing`/`TSRadius`/`Font.TS` only appear in WatchShared, yet shared-surfaces reference them. I must understand target membership. Let me read project.yml.
+
+Key finding: design tokens live in `apps/design/generated/apple` (the `DesignTokens` group). Let me inspect them and check build prerequisites (xcodegen, Shared.xcframework, the xcframework build script).
+
+`xcodegen` is present, but `.xcodeproj` and `Shared.xcframework` must be generated/built. The xcframework build is the key risk. Let me read the build script, the tokens, and check for the KMP shared source.
+
+I have all tokens. Now the critical feasibility check: the gate's xcframework preAction needs a KMP/Gradle build. Let me verify `apps/shared`, gradle, the placeholder checker, and the swiftlint/format configs.
+
+All prerequisites exist (KMP shared, Java 17, pwsh, swiftlint/swiftformat). The KMP xcframework build is the long pole. Let me generate the Xcode project and kick off the xcframework build in the background while I write code.
+
+Project generated. Now kicking off the KMP xcframework build in the background to assess feasibility and warm the daemon.
+
+KMP build running in background. Let me read the shared component signatures I'll use (TSSkeleton, TSButton, TSEmptyState) and confirm no naming collisions for my `ActiveVehicleSegment*` types.
+
+No collisions; component signatures clear. Let me set up a plan and todos, and peek at the KMP build progress.
+
+Build still initializing (downloading deps). Let me write the plan and start authoring the surface files.
+
+KMP build is downloading dependencies. I'll author the surface now. Starting with the pure adapter.
+
+Now the Seams file (P1/S8 source seam, telemetry, i18n facade).
+
+Now the Model (state holder). Let me also peek at the KMP build.
+
+KMP build still compiling silently (normal for first run). Continuing with the presentational Views and chrome States.
+
+KMP build finished. Let me confirm the xcframework was staged.
+
+KMP build succeeded (release xcframework produced, compile now cached). The platform capability is available — I can run the full gate. Let me stage the framework and continue with the States chrome.
+
+Framework staged. Now the States chrome (loading/empty/error/freshness).
+
+Now the public surface entry view.
+
+Now the strings catalog (web `statusBar.vehicle.*` keys + P4 chrome).
+
+Now the Previews (every state).
+
+Now the comprehensive tests (adapter, projection, model).
+
+All 9 files written. Let me run fast local checks first: host-compile the pure adapter, then swiftformat/swiftlint on the new files.
+
+Adapter type-checks; swiftformat clean. Now swiftlint --strict on the new files.
+
+swiftlint clean. Let me check the placeholder script's `-Path` semantics, then run it as the gate does.
+
+Placeholder scanner takes a directory and recurses. The gate's literal `-Path .../ActiveVehicleSegment` isn't a folder (my files are flat `ActiveVehicleSegment.*`), so it would pass vacuously. To get *meaningful* evidence, I'll scan a temp copy of my files, plus run the scanner self-test.
+
+Self-test passes and my files scan clean (PLACEHOLDER_COUNT=0). Now regenerate the project to include the new files and verify the iPhone 16 simulator is available.
+
+Project regenerated with my files; "iPhone 16" simulator is booted. Now the heavy gate — iOS build + test. Let me start it (the scheme pre-action will stage the now-cached xcframework).
+
+Build running. Let me check progress in the log.
+
+A compile error appeared — but in a **sibling** file `AISuggestNewGeofences.swift` (not mine). Let me let the build finish and gather all errors to confirm none are in my files.
+
+iOS build failed (`IOS_EXIT=65`) — but on a **sibling** surface (`AISuggestNewGeofences.swift`), not my files. Tests never ran because the shared app target won't compile. Let me extract every error and confirm none are mine, and check git provenance.
+
+Exactly one compile error, in a sibling surface (`AISuggestNewGeofences.swift:129`) — **zero** in my files. The shared app target is pre-existingly broken, which blocks `build test`. Let me confirm provenance (git) and inspect that sibling error.
+
+Definitive: `AISuggestNewGeofences.swift` is a **pre-existing**, committed sibling surface (`d30ee02f9`, ~13h before my session), unmodified by me; its own `glass(_ content:)` helper has an escaping-closure bug. My 9 files are all new/untracked with zero errors. The shared app target is pre-existingly broken, blocking `build test`.
+
+Let me kick off the macOS gate (for an honest exit code) and, in parallel, prepare a high-fidelity isolated compile of my whole surface against the real design tokens.
+
+My only external dependencies are the real design tokens (all members verified present) plus `TSSkeleton`. Let me do a high-fidelity isolated compile of my entire surface against the real `Tokens.swift` for the iOS simulator SDK, including the real `TSSkeleton` source.
+
+The macOS gate finished. Let me read its result, then run the isolated full-surface typecheck (real tokens + a faithful `TSSkeleton` shim, since the real one pulls in a large component chain).
+
+macOS also failed (`MAC_EXIT=65`), in ~9s. Let me confirm it's the same sibling error, then run a strict-concurrency isolated typecheck of my whole surface against the real tokens.
+
+Isolated full-surface typecheck passed under **Swift 6 + strict-concurrency=complete** (`EXIT=0`). Let me capture the macOS error line for the log (its run was short/cached).
+
+The macOS failure is actually a **code-signing/entitlements** error (no development certificate on this runner) — a distinct environment/platform-capability block on the macOS target, on top of the iOS sibling-compile block. Both gates are red for reasons entirely outside my surface and allowed scope.
+
+Let me run the remaining gate steps (full-tree swiftlint + swiftformat) to capture their real exit codes for an honest log.
+
+swiftformat --lint whole tree: `FORMAT_EXIT=0` (4803 files clean). Now the full-tree `swiftlint --strict` gate step.
+
+swiftlint --strict whole tree: `LINT_EXIT=0` (0 violations, 4505 files). Let me also prove my surface compiles for the **macOS** SDK (the prompt requires macOS 15 parity) via an isolated strict-concurrency typecheck, and verify my test file's references type-check.
+
+macOS-SDK isolated typecheck: `EXIT=0` (my surface compiles for macOS 15 too). The test-file check only failed on the `XCTest` module search path. Let me retry with the correct simulator platform frameworks path.
+
+Test-file references type-check too (`EXIT=0`). I now have complete evidence. Let me capture the exact authentic error excerpts and freshly re-run the lightweight verification steps to record their exit codes, then assemble the gate log.
+
+I have complete, authentic evidence. Now I'll write the canonical gate log with real exit codes, verbatim failing excerpts, and the blocking analysis.
+
+Gate log written (`STATUS=BLOCKED`, `EXIT=65`). Let me update the plan, close out todos, and confirm the working-tree state.
+
+Reviewing my tests for correctness (since the app target can't run them yet, they must be provably correct by inspection), I found one assertion that contradicts my implementation: `jsRound(.infinity)` returns `0` (non-finite guard), not `Int.max`. Let me fix that test to match the implementation and add a proper finite-overflow case.
+
+Let me re-verify the edited test file type-checks, lints, and formats cleanly.
+
+Edited test file is clean (lint 0, format 0, typecheck 0). Let me confirm the complete working-tree state is exactly my deliverables (no stray/generated artifacts tracked).
+
+The working tree contains exactly my 10 deliverables (9 surface files + the gate log), all new/untracked; the generated `.xcodeproj` and staged `Shared.xcframework` are correctly git-ignored, and no tracked sibling files were modified.
+
+I've completed everything within scope and reached the terminal state the acceptance criteria permit. Final assessment:
+

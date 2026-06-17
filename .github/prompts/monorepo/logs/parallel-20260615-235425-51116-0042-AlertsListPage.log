@@ -1,0 +1,295 @@
+I'll start by exploring the repository structure to understand the task and what infrastructure already exists.
+
+Let me read the web source page and explore the Apple app structure in detail.
+
+Let me read the web source in chunks and explore the Apple app's existing structure for templates.
+
+The Apple app uses `feature-views/` not `Features/`. Let me investigate the actual conventions, the parity manifest, the ledger, and look for any existing notifications/alerts work.
+
+Important discovery: pages live in `feature-views/` (multi-file pattern), not `Features/`. Let me check whether `AlertsListPage` already exists, find the ledger row, and study a completed page as a template.
+
+This is a NEW page (not in ledger, not in feature-views). Pages use a multi-file pattern in `feature-views/`. Let me extract the exact manifest record and study the closest existing page template (AlertStudioPage) plus a simpler complete page.
+
+Confirmed: 52 required items. Now let me study the existing page conventions — file structure, a completed page template, and the log/gate format.
+
+The real convention is `Sources/Features/<Domain>/`. The `feature-views/` dir is a separate legacy set. Let me study the canonical AuditLogPage template (completed P7, 57 items) and supporting infrastructure.
+
+Two source roots exist. The canonical P7 pages are in `apps/apple/Sources/Features/`. Let me read the actual files and the project.yml to understand which dirs are compiled.
+
+Now I understand the real structure. Let me read the build spec (`project.yml`), navigation registration, the supporting AuditLogPage files, and locate design tokens + shared components + the string catalog.
+
+The build compiles `Sources/` recursively. My page goes in `apps/apple/Sources/Features/Notifications/`. Let me find navigation registration, the shared component/token library, and the test pattern.
+
+Now let me read the routing infrastructure, a registration example, and inventory the component library.
+
+The `notifications` route exists; I'll add an `alerts` sub-route. Let me read the rest of the web source, routing internals, the sample data source pattern, and the key component APIs.
+
+Let me read the rest of the web source and check how registrations are assembled plus the route parser tests.
+
+Let me read the final web section, the app registration assembly, and the AppRouteParser tests.
+
+I now have the full web page. Let me read the web data shapes/components and the key Swift component APIs in parallel.
+
+Now let me inventory the Swift component APIs I'll use. Reading charts, metrics, cards, feedback, and forms components.
+
+Let me read the chart models, metrics, cards, feedback, badges, tabs, and forms components.
+
+Excellent component coverage. Let me read the remaining UI primitives, feedback, forms, typography, and design tokens.
+
+Let me read the precise inits for EmptyState/ErrorDisplay/AlertBanner/RangePicker and locate the design tokens.
+
+Let me read the design tokens and find real usage examples of the charts/stat cards in existing pages.
+
+Charging list is the closest analog (list + stats + charts). Let me study it and confirm the design token surface.
+
+I have the full token surface. Now let me study the ChargingList page template (closest analog) — main view, sections, charts, list, model, registration.
+
+Let me read the overview sections, list/pagination, model, sample data source, and route registration from the ChargingList template.
+
+This template is comprehensive. Let me read the model, sample data source, route registration, list/pagination, a test example, and check the strings catalog format.
+
+Let me check the strings catalog format (and existing keys), a test example, and the theme modifier.
+
+Let me precisely determine which of the 36 strings already exist, and read a test example + theme modifier.
+
+Let me read a model-test example and theme modifier, and check the Swift/Xcode toolchain availability (which determines the gate outcome).
+
+Full toolchain available (Xcode 26.5, xcodegen, swiftlint) — the gate can run. Let me check the gate harness (placeholder script, README contract, pwsh) and whether the project needs generating.
+
+pwsh is available — I can run the real gate. Let me find the p4-apple gate contract and the project schemes/test targets.
+
+Let me read the test target config, then set up a task plan and kick off project generation.
+
+Project generates cleanly and a simulator is booted. Let me verify the KMP framework exists and kick off a baseline build in the background while I write code.
+
+The KMP `Shared.xcframework` is git-ignored and must be built. Let me check the build script and whether the KMP toolchain is available — this determines if the build gate can run.
+
+The KMP toolchain (Gradle + Java) is present, and the xcframework builds via a pre-build script phase. Let me kick off a baseline build in the background to validate the harness, then write code while it runs.
+
+While the baseline builds, let me inventory the overlay/field/picker components I'll need for dialogs and the range selector.
+
+Baseline build finished. Let me check the result.
+
+Baseline is still compiling the KMP framework — I'll write code while it runs. Let me read the precise inits for the controls I'll use (Button, Tabs, Select, Pagination, fields).
+
+I have all the APIs I need. The baseline is still building the KMP framework. Let me start writing the page. First, the domain models and pure aggregation logic.
+
+Now the pure aggregation + formatting logic (mirrors the web `useMemo` pipeline, fully testable).
+
+Let me check baseline build progress, then write the model.
+
+Framework built; the app is now compiling. Let me write the page model with the data source seam and mutations.
+
+Let me fix two issues in the model: the muddled acknowledge optimistic update and the awkward typealias.
+
+Now the sample data source and preview seams.
+
+Let me check the baseline build result before continuing.
+
+Build still compiling (release framework slice). Let me write the main page view while it finishes.
+
+Now the overview section (6 KPI cards + secondary line + critical callout, or no-data panel).
+
+Now the charts section (7-day stacked trend bar + alerts-by-type donut with legend).
+
+Now the watching (pinned rules) panel and the filter bar with status tabs + active chips.
+
+Now the list section, alert row, and loading skeleton.
+
+Now the acknowledge dialog, detail timeline sheet, and action toast.
+
+Now the route registration, then wiring into AppRoute/parser/app.
+
+Wiring `.alerts` into AppRoute, the parser, and the app registry.
+
+Let me check the route tests before changing the `/alerts` alias, then update the parser.
+
+No test references it. Updating the parser aliases.
+
+Now register the route in the app shell.
+
+Now the strings. Let me inspect the xcstrings tail/structure to match its exact formatting when I add keys.
+
+The file is 218K lines with Xcode's exact formatting — I'll insert entries surgically rather than reformat. Let me add all needed keys via a script that skips existing ones and validates JSON.
+
+55 keys added and JSON validated. Now the model tests.
+
+Let me simplify the test stub to avoid a scoping nuance with the free helper.
+
+Now let me regenerate the project, read the SwiftLint config (the gate uses `--strict`), and lint my new files.
+
+SwiftLint enforces 120-col lines and several opt-in rules under `--strict`. Let me lint my new files to catch violations early.
+
+SwiftLint lints the whole `included` set. Let me extract the actual violations and filter to my files.
+
+All 20 violations are in my files — fixable style/structure issues. Let me view the specific spots and fix them.
+
+Now fix the `typeIcon` complexity by converting the switch to a dictionary lookup.
+
+Now fix the trailing comma in Charts series array and the Sample file. Let me view those spots.
+
+The Sample `loadAlerts` is also too long — I'll split it into two arrays and drop the trailing commas. Let me view its full extent.
+
+Now remove the remaining trailing commas (Charts series, Sample rules/pins/events).
+
+Now fix the multiple-trailing-closure violations: add an explicit `@ViewBuilder` init to `AlertsSheetChrome` and use labeled `content:` at call sites.
+
+I need to close the changed closures with `})`. Let me view the affected regions.
+
+Now the test file: 6 trailing commas + type body too long. Let me view it and refactor (remove commas, split into an extension).
+
+Let me rewrite the test file cleanly (no trailing commas, split into an extension to satisfy type-body-length).
+
+Let me harden the sheet presentation (two `.sheet(isPresented:)` on one view is fragile) by switching to a single `.sheet(item:)`.
+
+Let me re-run SwiftLint and confirm my files are now clean.
+
+Two more trailing commas in the split arrays. Let me fix them and check all 4 violations.
+
+The other 2 violations are pre-existing in an unrelated legacy file (`AnomalyInlineRow.Previews.swift`) — not mine. Let me fix my 2 remaining trailing commas, then test a scoped lint.
+
+Let me confirm the AnomalyInlineRow violations are pre-existing (unmodified by me) and test whether SwiftLint scopes to explicit file paths.
+
+The `--quiet` suppressed progress. Let me test whether explicit **file** paths scope the lint (vs. dirs which didn't).
+
+Explicit file paths scope the lint. Let me lint all my changed files explicitly and confirm zero violations.
+
+All 15 of my files lint clean. Let me run swiftformat on my files, regenerate the project, and kick off the incremental build.
+
+SwiftFormat wants my files formatted (the repo runs it in CI). Let me auto-format my files, then re-verify SwiftLint stays clean.
+
+7 files reformatted. Let me re-verify both SwiftLint and SwiftFormat are clean on my files.
+
+Both clean. Now the critical build. Let me regenerate the project and run the incremental build.
+
+Project regenerated with my files referenced. Now kicking off the build (iOS scheme, booted simulator).
+
+Build failed (exit 65). Let me find the compile errors.
+
+A stale baseline build still holds the DB lock. Let me find and stop the leftover xcodebuild processes.
+
+The original detached baseline build is still running and holding the lock. Let me stop all stale build processes.
+
+No stale processes remain. Let me rebuild.
+
+Build is compiling. Let me check progress.
+
+Compiling cleanly so far (module emitting). Let me wait for completion.
+
+Still compiling with 0 errors. Let me wait for completion.
+
+Module emission succeeded (type-checking passed) with 0 errors — now doing full codegen. Let me wait for completion.
+
+Build SUCCEEDED (exit 0). Let me confirm and run the placeholder gate, then the tests.
+
+The placeholder scanner flags the literal "Placeholder" in the i18n key `alerts.searchPlaceholder` — the established pattern (ChargingList) uses a `// parity:allow i18n key` opt-out. Let me find all such occurrences.
+
+Adding the `// parity:allow` opt-out (matching the ChargingList pattern) for the legitimate i18n key.
+
+Let me re-run the placeholder scan to confirm it's clean.
+
+Placeholder gate clean. Now let me run the test suite for my model. First, my test class specifically to validate the logic.
+
+Test bundle compiling. Let me check progress.
+
+Still rebuilding the app module (0 errors). Let me wait for the test run.
+
+Still recompiling the app with testing enabled (0 errors). Let me continue waiting.
+
+Test run exited 65. Let me check whether it's a compile error or a test failure.
+
+The test bundle built and ran (24 tests) — 3 failures, all my own wrong assertions: `mixedAlerts` has 2 unread (ids 1,3), not 3. The model is correct. Let me fix the test expectations.
+
+Fixed the wrong unread expectations (fixture has 2 unread). Let me re-run my test class (only the test file changed, so this should be faster).
+
+Tests passed (exit 0). Let me confirm the results.
+
+All 24 tests pass — **TEST SUCCEEDED**. iOS build + lint + format + placeholder + tests are all green. Since I'm claiming both macOS and iOS ledger rows, let me verify the macOS build too while I write the ledger and evidence log.
+
+macOS build running. Now let me update the parity ledger. First, let me confirm the ledger row schema.
+
+macOS build launched. Let me add the two ledger rows for `page:notifications/AlertsList`.
+
+Let me verify the ledger diff is clean (only my 2 rows added).
+
+Clean ledger diff (+18 lines, just my 2 rows). Let me check the macOS build progress.
+
+macOS build failed with 2 errors. Let me see them.
+
+The macOS failure is a code-signing/entitlements issue (empty `DEVELOPMENT_TEAM`), not a code error. Let me clean leftover processes and rebuild macOS with signing disabled to validate compilation.
+
+Let me check macOS build progress, then write the evidence log while it finishes.
+
+macOS module emitting (type-checking) with 0 errors. Let me check the logs dir and an existing log's format while it finishes.
+
+The sibling log confirms `Sources/Features/` is the real path. Let me view an existing log's PARITY section to match the format exactly.
+
+I have the exact format. Let me check the macOS build result before finalizing the log.
+
+Still type-checking macOS (0 errors). Let me wait for it to finish.
+
+macOS module type-checking passed (0 errors) — now in codegen. Let me wait for it to finish.
+
+The shell exited 1 but no error/marker captured. Let me inspect the full macOS log tail.
+
+The macOS build type-checked my code cleanly (module emission, 0 errors) but the long full-app codegen got interrupted by the environment. Let me clean up and resume the macOS build from cache (should be fast now).
+
+Let me check the resume build progress.
+
+Let me write the evidence log while the macOS build finishes. Creating it with all confirmed results and the full 52-item PARITY section.
+
+Log written. Let me check the macOS build result.
+
+macOS build reached the linking phase (all Swift compiled, 0 errors). Let me wait for the final result.
+
+Still linking (0 errors). Let me wait for the final macOS build result.
+
+Still compiling the main macOS app target (0 errors). Let me wait for completion.
+
+macOS build finished with exit 0. Let me confirm the success marker.
+
+Both platforms build clean. Let me update the log's macOS section to reflect the full BUILD SUCCEEDED.
+
+Both platforms green. Let me do a final lint/format check on the files I touched after the last clean run, then review git status.
+
+Clean. Let me review the full set of changes before committing.
+
+All changes are present and clean (the git-ignored `.xcodeproj` correctly doesn't appear, and no unintended files from the KMP codegen). Let me commit the work.
+
+Committed. Let me do a final clean-state verification.
+
+All green and committed; working tree clean. Let me finalize the task tracking.
+
+All tasks complete and verified. Let me clean up the temporary build logs.
+
+Task complete. Here's the summary.
+
+## P7 · notifications/AlertsList — SwiftUI/HIG parity ✅
+
+Implemented the native SwiftUI version of the web `AlertsListPage` (route `/notifications/alerts`) at full parity — **52/52 parity items**, adaptive across macOS + iOS.
+
+**Delivered** (`apps/apple/Sources/Features/Notifications/`, 11 files + 1 test):
+- `@Observable AlertsListPageModel` over an injectable `AlertsListDataSource` seam porting all 7 web hooks; pure `AlertsListAggregation` reproduces the web `useMemo` pipeline.
+- 10 panels (6 KPI tiles with prior-period deltas + no-data panel, 7-day stacked **TSBarChart** trend, by-type **TSPieChart** donut, pinned "Watching" rules), filter bar (search + status tabs + chips), paginated alert rows with mark-read/acknowledge/reopen, acknowledge dialog + audit-timeline sheet. `loading/empty/error/success` for every source.
+- Navigation: `AppRoute.alerts` + `/notifications/alerts` & `/alerts` aliases + registration.
+- 36 web i18n keys added to `Localizable.xcstrings` (zero hardcoded literals).
+
+**Verification (all green, actual output):**
+- iOS `xcodebuild build`: `** BUILD SUCCEEDED **` (0 errors)
+- macOS `xcodebuild build`: `** BUILD SUCCEEDED **` (0 errors; signing-only env gap)
+- `swiftlint --strict`: 0 violations / 15 files · `swiftformat --lint`: 0/15
+- placeholder scan: `EXIT=0` · tests: `Executed 24 tests, 0 failures` `** TEST SUCCEEDED **`
+
+**Decision noted:** the prompt's nominal `apps/apple/TeslaSync/Features/…` path isn't compiled; I used `apps/apple/Sources/Features/Notifications/` — the only hand-written group built by `project.yml`, matching all 75 sibling P7 pages.
+
+`apple-ledger.json` rows set 52/52 done (macOS + iOS); evidence log written with `EXIT=0 / STATUS=DONE`. Committed as `c6535f2e0`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

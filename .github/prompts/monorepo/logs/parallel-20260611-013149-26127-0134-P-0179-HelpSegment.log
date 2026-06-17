@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure to understand the task context — the web source, the Apple app structure, and the runner capabilities.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Now let me explore the web source and Apple app structure.
+
+The Apple structure exists with an established multi-file pattern per surface. Let me read the web source and check whether HelpSegment already exists natively.
+
+Now I understand the web source: a static status-bar segment with 3 action buttons (shortcuts, tour, report bug), an `iconOnly` prop, and 7 i18n keys. No data fetching. Let me study the established native pattern from a sibling surface and the build system.
+
+The project uses XcodeGen (`project.yml`). Let me examine the build config, the i18n/diagnostics/model infrastructure, and find the simplest action-only surface to use as the closest template (HelpSegment has no data fetching).
+
+Project uses XcodeGen with file-system synchronized sources (no manual pbxproj edits needed). Let me study the supporting infrastructure (i18n facade, diagnostics, tokens, atomic components) and the Model/Seams pattern.
+
+This is a rich, established architecture. HelpSegment is unusual — it has **no data fetching** (only `useTranslation` + action dispatchers). I need to find how other no-data/action-only surfaces handled the state contract. Let me find the closest analog.
+
+Let me study the closest analogs — action-only surfaces with no data fetching (`CopyLinkButton`, `SkipToContent`, `DensityToggle`) — to see how they handled the state contract.
+
+`SkipToContent` is the ideal template — a no-data accessibility action surface with the full file set. Let me read its web source and complete native implementation.
+
+The `SkipToContent` pattern is exactly the template I need — even a no-data action surface gets the full leaf contract (Source→Input→Projection→Model with loading/empty/error/data + stale/offline, and actions routed through a coordinator seam). Let me read the remaining files to nail every detail.
+
+Excellent — I now understand the full architecture. Let me read the remaining template files (Views, Previews, strings, Tests, ModelTests) to capture the complete conventions including the freshness chip and test patterns.
+
+Now the test patterns and the shared token/component APIs. Let me read the tests and locate the design tokens and atomic components.
+
+I have the complete pattern. Now let me confirm the design token and atomic component APIs (`TSSpacing`, `Color.TS`, `Font.TS`, `TSCard`, `TSButton`, `TSEmptyState`, `TSSkeleton`, `TSFadeIn`) and check for a tooltip equivalent.
+
+Let me check the `TSButton` API, motion components, and whether a tooltip primitive exists.
+
+Let me check the lint config, placeholder checker, tooltip/badge primitives, and project-generation tooling.
+
+I now have all the architecture knowledge. The critical feasibility question is the `Shared.xcframework` build (KMP) that the scheme requires. Let me check that and prior gate logs for baseline evidence.
+
+Critical: `Shared.xcframework` doesn't exist (built via Gradle/Kotlin-Native in a scheme preAction). Let me read prior gate logs to learn the established baseline outcome.
+
+I now understand the established baseline precedent clearly: capability is satisfied; `Shared.xcframework` is built live via Gradle (~7–15 min); prior surfaces logged `IOS_EXIT=65`/`MAC_EXIT=65` due to **pre-existing defects in other surfaces** (`AISignalExplorerNlFilter`, `AISuggestNewGeofences`, `RecentDrivesSection` + no macOS signing cert), while the shipped surface itself compiled clean → `EXIT=0/STATUS=DONE`.
+
+Let me start the long-pole Gradle framework build in the background now, then write code while it runs.
+
+Java 17 and gradlew are present. The named pre-existing defect files differ in this slot — I'll discover the actual baseline during the build. Let me start the long-pole Gradle framework build in the background and verify the actual surface file layout.
+
+The Gradle build is running in the background. Let me check the swiftformat config so my files pass `--lint` on the first try, then start writing the surface.
+
+Gradle launched detached (writing to `/tmp/gradle-shared-build.log`). The swiftformat config is clear (maxwidth 120, `--self remove`, before-first wrapping). Let me confirm Gradle is progressing, then write the surface files.
+
+Gradle is progressing quickly (daemon warm/cached). Let me check completion while I begin writing the surface files.
+
+Gradle is now linking the release framework (a few more minutes). Let me write the surface files while it finishes, starting with the pure core (Adapter).
+
+Now the main surface view tying it together:
+
+Now the previews (DEBUG-only, one per state plus the icon-only presentation):
+
+Now the i18n catalog (web keys verbatim + native chrome):
+
+Now the test suites — adapter + projection coverage:
+
+Now the model + seams test suite:
+
+All 10 files are written. Let me check Gradle progress and run swiftformat/swiftlint on my files.
+
+Gradle succeeded (7m6s, release xcframework built). Let me stage the framework and run swiftformat/swiftlint on my files in parallel.
+
+swiftformat normalized the files (1 needed a tweak). Let me verify `--lint` is clean and run `swiftlint --strict` on my files.
+
+Both clean: `swiftformat --lint` 0/9, `swiftlint --strict` 0 violations. Let me generate the Xcode project and verify no placeholder patterns.
+
+Project generated, 60 HelpSegment references registered, no forbidden patterns. Let me verify the iPhone 16 simulator exists, then launch the iOS build+test (the long pole) in the background.
+
+iPhone 16 simulator is booted. Let me launch the iOS build+test (long pole) in the background, capturing full output for error analysis.
+
+Launched. Let me monitor progress (this is the long pole — full app + tests).
+
+The log file is missing — the background job may not have persisted. Let me check the session state and whether xcodebuild is actually running.
+
+xcodebuild is running (pid 31620, 142s elapsed). The earlier check likely raced file creation. Let me re-check now.
+
+Found it — my `&`-backgrounded subshell was reaped (no xcodebuild running). Note: this is a **shared environment** (other slots' build logs exist in `/tmp` from concurrent runs). Let me relaunch xcodebuild as the *foreground* command of an async session (robust) with a unique log name.
+
+Real build now running (pid 33742, compiling the TeslaSync module). Let me wait and poll the log.
+
+iOS build+test finished. Crucially: **0 HelpSegment errors**. Let me retrieve the exit code and analyze all errors/failures in the log.
+
+`IOS_EXIT=65` — matching the established precedent. Let me analyze the full error set to confirm it's pre-existing defects in *other* surfaces, not HelpSegment.
+
+Clear, honest result — identical to the documented baseline: **only 2 pre-existing compile errors, both in OTHER surfaces** (`AISuggestNewGeofences.swift:129`, `RecentDrivesSection.Previews.swift:24`); **HelpSegment compiles clean (0 errors)**. The `BUILD FAILED`→`IOS_EXIT=65` is caused entirely by those unrelated defects, which also blocks the test bundle from running.
+
+To genuinely verify my tests pass (not just assume), I'll apply **temporary, uncommitted** local fixes to those 2 files, run the gate, then restore them so only HelpSegment.* is committed. Let me inspect the defects.
+
+I understand both pre-existing defects. Before applying temporary fixes, let me find *all* surfaces with the same `@escaping`-missing pattern (the compiler stops early, so more may be hidden) so I can unblock the test bundle in one pass.
+
+There are 20+ surfaces with that closure pattern, but only 2 actually errored — this is a large, partially-broken shared baseline. Fixing the whole app is out of scope (allowed files = `HelpSegment.*`). 
+
+The established precedent (132 prior logs) defers such pre-existing cross-surface defects. But to genuinely verify my **tests pass**, I'll temporarily fix just the erroring files, run the gate, then revert them (commit only `HelpSegment.*`). Let me apply minimal temporary fixes.
+
+Temporary fixes applied. Now let me rebuild and run **only my HelpSegment tests** (the full app/test bundle must still compile, verifying everything builds, while my tests execute to prove they pass).
+
+Confirmed: fixing those revealed a **cascade** of the same pre-existing `@escaping` defect across many other surfaces (`AIAutoNameUnnamedLocations.swift:123` now). Fixing 20+ unrelated surfaces is out of scope (allowed files = `HelpSegment.*`). This validates the precedent: these are pre-existing cross-surface defects, deferred and documented.
+
+Let me revert my temporary fixes to restore the true baseline, then verify only `HelpSegment.*` files are my changes.
+
+Baseline restored — only my 10 `HelpSegment.*` files are new. Now let me launch the macOS build+test (long pole) in the background, then run lint/format and set up a standalone harness to verify my test logic passes.
+
+FORMAT_EXIT=0 tree-wide (0/4832 files). The macOS build returned quickly — let me check its result and run swiftlint tree-wide in parallel.
+
+macOS `MAC_EXIT=65` is a **code-signing** failure (no dev certificate on runner) — exactly the documented pre-existing infra limitation, not a compile error (0 HelpSegment errors on macOS too).
+
+Let me run swiftlint tree-wide in the background and set up a standalone SwiftPM harness to genuinely verify my test logic passes (the broken baseline blocks the in-app test bundle).
+
+Harness created and swiftlint finished. Let me check the lint result and run the standalone tests.
+
+The standalone harness **caught a real latent bug** the broken baseline had masked: my `testResolverKeysAreRequestedNotJustFallbacks` mutates a captured `var` inside the `@Sendable` `HelpResolve` closure — rejected under Swift 6 strict concurrency. (My source files compiled cleanly; only this test had the issue.) This would fail the test bundle once the baseline builds. Let me fix it with a lock-guarded recorder.
+
+Now let me re-sync the harness with the fixed test file and re-run the standalone tests.
+
+**All 30 standalone tests pass (0 failures)** and the test code is now Swift 6 strict-concurrency clean. The harness proved its worth by catching a latent bug the broken baseline masked.
+
+Let me re-format/lint my edited files and run the remaining gates (tree-wide swiftlint, placeholder check).
+
+My 9 files: `swiftformat --lint` 0/9, `swiftlint --strict` 0 violations. Now the placeholder gate and the authoritative tree-wide swiftlint. Let me run them.
+
+Let me verify the placeholder scan actually inspected my files (the gate path isn't a literal directory) — I need to confirm it's a meaningful pass, not a vacuous one.
+
+The gate's placeholder path is a file-*prefix* (not a literal directory), so the script treats it as "nothing to scan" (line 132–135) — a vacuous pass. The precedent logs had the same quirk. For a **meaningful** check, let me scan a temp copy of my actual `.swift` files.
+
+Meaningful scan over all 9 of my `.swift` files: **PLACEHOLDER_COUNT=0**. Now let me run the authoritative tree-wide `swiftlint --strict` (the earlier background run was flaky) and re-run the canonical iOS gate in parallel for a current, pristine log.
+
+LINT_EXIT=0 tree-wide (0 violations, 4534 files). While the canonical iOS rebuild runs, let me confirm the build artifacts are git-ignored so my commit stays scoped to `HelpSegment.*`.
+
+Build artifacts are git-ignored; git status shows exactly my 10 `HelpSegment.*` files. Let me wait for the canonical iOS rebuild to finish.
+
+The canonical iOS rebuild surfaced a pre-existing defect first in a different file this run (`AISignalExplorerNlFilter.swift:142` — same `@escaping` cascade class), still **0 HelpSegment errors**. Let me get the final exit code.
+
+`IOS_FINAL_EXIT=65` confirmed on the final tree (pre-existing `@escaping` cascade; HelpSegment 0 errors). 
+
+All evidence gathered. Let me write the comprehensive, honest gate log.
+
+Log written. Let me clean up the temp harness, stage exactly my files + the log, and commit.
+
+Exactly 11 files staged (10 `HelpSegment.*` + the log); no stray edits to tracked files. Let me commit with the prompt's message.
+
+Committed `fc881a470` (11 files, 1647 insertions). Let me do a final clean-tree verification.
+
+Working tree is clean (only git-ignored build artifacts remain). Task complete.
+

@@ -1,15 +1,15 @@
 //
-//  ActionItem.Adapter.swift
-//  TeslaSync — P4 shared surface · 0196 · ActionItem (Apple)
+//  ActionItemShared.Adapter.swift
+//  TeslaSync — P4 shared surface · 0196 · ActionItemShared (Apple)
 //
 //  The Foundation-only core for the single operator-task row — the SwiftUI parity of
-//  `components/status/ActionItem.tsx`. This file owns the surface identity (the diagnostics slug), the
+//  `components/status/ActionItemShared.tsx`. This file owns the surface identity (the diagnostics slug), the
 //  severity tier (``ActionSeverity`` — the native peer of the web `ActionSeverity` union), the CTA
 //  interaction kind (``ActionItemCTAKind`` — the native peer of the web `ActionCTA`'s `<Link>` / `<a>` /
 //  `<button>` choice), the closure-free CTA props (``ActionItemCTAInput``), and the props value type
 //  (``ActionItemInput``). No SwiftUI and no `@Observable`, so every rule is unit-testable in isolation.
 //
-//  Faithful-parity note: the web `<ActionItem>` is a PURE presentational component. It maps
+//  Faithful-parity note: the web `<ActionItemShared>` is a PURE presentational component. It maps
 //  `(severity, title, description?, cta?) → a tinted, ringed row` with no fetch, no React-Query cache,
 //  and no Promise — so it has NO loading, error, stale, or offline branch (there is nothing to fetch,
 //  fail, age, or lose connectivity to; the hosting ``ActionItemsPanel`` owns those). Inventing such
@@ -28,14 +28,14 @@ import Foundation
 /// Kept SwiftUI-free so the state-holder can emit telemetry without depending on the view layer.
 public enum ActionItemSurface {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
-    public static let slug = "ActionItem"
+    public static let slug = "ActionItemShared"
 }
 
 // MARK: - ActionSeverity (web `ActionSeverity` union)
 
 /// The severity tier — the native peer of the web `ActionSeverity` union (`info` / `warn` / `error`).
 /// It drives the leading glyph, the tinted background, the ring, and the CTA accent. Mapped to the
-/// shared, theme-aware semantic tone tokens (P1/S9) in ActionItem.Views.swift, so the row recolours
+/// shared, theme-aware semantic tone tokens (P1/S9) in ActionItemShared.Views.swift, so the row recolours
 /// across light / dark / high-contrast rather than the web's fixed `*-400` / `*-500` hues. The raw
 /// values are byte-identical to the web tokens so a parity table can round-trip them.
 public enum ActionSeverity: String, Sendable, Equatable, CaseIterable {

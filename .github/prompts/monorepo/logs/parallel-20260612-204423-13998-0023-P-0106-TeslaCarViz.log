@@ -1,0 +1,184 @@
+I'll start by investigating the environment and the task requirements. The key question is whether the Apple toolchain is available, since the prompt explicitly says "If unavailable on the runner → STATUS=BLOCKED with API evidence."
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simctl). So I am **not** blocked on capability — I need to do the real work. Let me read the web source and understand the existing Apple app architecture.
+
+Now I see `apps/apple/TeslaSync/shared-surfaces` exists. Let me read the web source in full and examine existing shared-surfaces conventions.
+
+The shared-surfaces dir has 1664 files following a multi-file pattern per surface. Let me understand the exact convention by examining a complete existing surface and finish reading the web source.
+
+This is a complex prop-driven SVG visualization. Let me read the rest of the web source and understand the build system (how 1664 files get compiled) plus a complete reference surface.
+
+Let me finish the web source and read the build config (XcodeGen `project.yml`).
+
+Now I understand the build system (XcodeGen + globbed `shared-surfaces`, co-located tests, `Shared.xcframework` dependency). Before writing code, I must verify the build prerequisites — this determines whether the gate can pass. Let me check xcodegen, the Shared.xcframework, the framework build script, simulators, and a prior surface log.
+
+Key findings: `xcodegen` is present, `iPhone 16` simulator exists (booted), but `Shared.xcframework` is **not** prebuilt (needs Gradle/KMP). A prior surface author shipped with the full-scheme build RED due to pre-existing out-of-scope breakage, declaring DONE on isolated type-checks. Let me study the established conventions precisely — the Accordion reference surface plus the diagnostics/i18n/token facades.
+
+Excellent — Accordion is an ideal template (also pure presentational, prop-driven, no fetcher). Let me read its remaining files to capture the full convention.
+
+Let me read the remaining reference files (Previews, strings, tests) and locate the design-token definitions plus any precedent for Canvas/Path-based drawing (since TeslaCarViz is an SVG illustration).
+
+Let me read the view/model test file and locate the design-token definitions, color helpers (battery/bool colors), theme facade, and any Canvas/Path drawing precedent.
+
+Let me read the design tokens, the existing battery-color helper, the native theme/colorScheme handling, and a Canvas drawing precedent.
+
+Let me read the generated design tokens, the web color helpers, the native theme/colorScheme approach, and a Canvas drawing precedent.
+
+Let me read the rest of the web color helpers and a Canvas/Path drawing precedent to match conventions.
+
+I now have the full pattern (`AIThinkingIndicator` is a perfect SVG→`Shape` precedent). Note the correct web `batteryColor` thresholds: `>60` green, `>25` amber, else red; `boolColor(active)` = green/amber. Let me check the lint/format/placeholder configs so my code passes the gate cleanly.
+
+I have everything I need: the multi-file surface convention, the SVG→`Shape` precedent, design tokens, lint/format/placeholder rules, and correct color semantics. The long pole is building `Shared.xcframework` (KMP/Gradle). Let me set up tracking, kick off the framework build in the background, and verify the shared module exists.
+
+Good — `apps/shared` (KMP) exists, Java 17 present, git baseline clean. Let me kick off the `Shared.xcframework` build in the background (it's the long pole) while I write the surface code.
+
+Framework build is running in the background. Let me write the surface code now, starting with the Foundation-only adapter core.
+
+The framework build completed. Let me confirm it staged successfully.
+
+The framework build **failed** at `:core:linkDebugFrameworkMacosArm64`. This is critical — the app targets link against `Shared.xcframework`. Let me capture the actual error.
+
+While the framework build error is being captured, let me write the surface code (independent of the framework outcome). Starting with the Foundation-only adapter.
+
+Let me check the framework build error and continue writing the Model file (strings facade, telemetry seam, state-holder).
+
+Adapter written. Let me write the Model file (i18n facade, telemetry seam, `@Observable` state-holder).
+
+Let me check the framework build error before writing the views.
+
+Let me check the full SwiftLint config — under `--strict`, warnings fail, so I must respect file/function/type length limits before writing the large Views file.
+
+SwiftLint uses **default** length rules (file ≤400, type body ≤250, function ≤50) — and `--strict` makes warnings fail. I'll split drawing across multiple `TeslaCarViz.*` files. First, the framework error result and my files' line counts.
+
+The framework **built successfully** on the second run (the first failure was transient — likely a cold Gradle daemon). The direct gradle run didn't stage it, so let me re-run the staging script (now cached). Also, my Adapter is 495 lines — over the 400 `file_length` limit — so I'll split it. Let me stage the framework and split in parallel.
+
+Framework staged successfully — the full gate is now feasible. Now let me split the over-long Adapter into a `Catalog` + `Adapter` pair (both under the 400-line limit).
+
+Now the rendering layer. I'll split across several `TeslaCarViz.*` files to respect the 400-line/50-line lint limits. Starting with the palette and the SVG geometry (metrics + path parser + silhouette data).
+
+Now the drawing layer. Let me write the animation helper, GraphicsContext helpers, and the structural drawing (shadow, body, detail, wheels).
+
+Now the state-decoration drawing (lights, battery, lock, charging, climate, Sentry, speed lines).
+
+Now the SwiftUI composition (ambient glow, the Canvas illustration, status row) in Views, then the public view + mini.
+
+Now the public surface views (`TeslaCarViz` + `TeslaCarMini`).
+
+Now the i18n strings file, previews, and the two test files.
+
+Now the SwiftUI-side tests (state-holder, strings, palette, geometry, animation, view composition).
+
+Now the previews, then I'll format, lint, and compile.
+
+All 11 files written. Now let me auto-format, check line counts, and lint my files.
+
+All files under 400 lines and swiftformat-clean. Now swiftlint `--strict` on my files.
+
+10 lint violations to fix. Let me view the exact current text around the flagged Shapes lines (post-format) before editing.
+
+Now I'll fix all 10 violations. Starting with Shapes (tuple→struct, extract command-advance, simplify separator check to fix the brace conflict).
+
+Now fix Draw.swift `drawWheel` (8 params) by introducing a `WheelSpec`.
+
+Now add the `WheelSpec` struct. Let me view the section just before `CarStructure`.
+
+Now the bigger refactor: split `CarDecorations` into two files and replace long interpolated path strings with direct `Path` construction. Let me recreate DrawState and add a DrawLive file.
+
+Now update Views.swift: route the moved decorations to `CarLiveDecorations` and fix the mini renderer's parameter count.
+
+Now update the `TeslaCarMini` caller in the main file to use the new spec.
+
+Now re-run swiftformat + swiftlint on all my files to confirm clean.
+
+All my files pass swiftformat `--lint` and swiftlint `--strict` (0 violations). Now the placeholder check + project generation, then the build.
+
+pwsh is available, placeholder grep is clean, and the project generated. Now the critical step — does the whole app compile with my files? Let me run the macOS build (compiles all sources incl. mine) and capture errors.
+
+Important finding: the macOS build failed **only on code-signing/entitlements** (`DEVELOPMENT_TEAM` empty + hardened runtime) — there are **zero compile errors** and **zero TeslaCarViz diagnostics**, so my code compiled and linked cleanly. The iOS Simulator build needs no signing. Let me run the primary iOS `build test` gate (compiles everything + runs my tests).
+
+iOS gate returned 65. Let me diagnose — compile errors, test failures, or environment issues?
+
+Real compile errors in `CarAnim` (Draw.swift) — `truncatingRemainder` argument label. Let me inspect.
+
+Genuine bug: I used `truncatingRemainder(dividing:)` — the correct label is `dividingBy:`. (The macOS build bailed at the signing check before ever compiling shared-surfaces, so only the iOS compile caught it.) Let me fix all occurrences.
+
+Fixed (line 78 is now 115 chars, within limits). Let me re-verify lint and rebuild iOS `build test`.
+
+Build+test still running (full app compile + test suite). Let me wait for completion.
+
+Still 65. Let me check whether remaining errors are in my files or pre-existing.
+
+No compile errors anywhere now. Let me find the actual failure cause (linker, test assertion, or other).
+
+Let me look at the end of the log and any test-phase failures directly.
+
+The failing `SwiftCompile` is a **batch of sibling files** (`AppRoute`, `AppShell`, `AppearanceSettings.*`, …) — **none of mine** — and it failed with **zero `error:` diagnostics**, the signature of a compiler crash/timeout. This matches the pre-existing "sibling compiler-timeout" a prior surface author documented. Let me characterize it and then rigorously verify it's not caused by my files.
+
+There's an actual **compiler crash** (Stack dump). I must identify whether it's in my code or a sibling. Let me extract the crash context.
+
+The crash is in **`AppearanceSettings.Controls.swift`** during IR generation (`While emitting IR SIL function …`) — a sibling file I never touched, in target `TeslaSync`. This is the pre-existing, out-of-scope compiler crash. Let me confirm my files aren't implicated, run the real placeholder gate, then rigorously prove it's pre-existing by building without my files.
+
+Placeholder gate passes (EXIT=0). The **only** IRGen crash target is `AppearanceSettings.Controls.swift` — a sibling I never touched. Now the rigorous proof: build the app **without my files** and confirm the identical crash persists (pre-existing). The script restores my files afterward.
+
+**Conclusive proof:** with my files **entirely removed**, the baseline build **still fails (exit 65) with the identical crash** in `AppearanceSettings.Controls.swift` (3 crash dumps). The IRGen compiler crash is 100% **pre-existing and out-of-scope** — I'm forbidden from editing that file. My files are restored.
+
+Since the full-scheme test run is blocked by that sibling crash, let me **execute my tests in isolation** by compiling the real surface sources (+ design tokens) into a standalone harness.
+
+Now compile the harness against the **real** surface sources + design tokens and execute it.
+
+Good news — the **only** compile error is that top-level code must live in `main.swift` (all real source files compiled cleanly under Swift 6). Let me rename and rerun.
+
+I omitted `DrawState.swift` (defines `CarDecorations`) from the compile list. Adding it.
+
+Now the **only** errors are in my harness file's globals (main-actor isolation) — every real surface source compiled cleanly. Let me fix the harness and run.
+
+The harness compiled cleanly against the **real** Swift-6 sources and executed: **120 passed, 0 failed**. That executes my adapter, projector, bands, status dots, projection geometry, SVG parser, metrics, animation, strings facade, and state-holder telemetry — plus all 25 view constructions.
+
+Now let me capture the whole-tree lint gate steps (which run on all of `apps/apple`) for the log.
+
+The whole-tree lints show pre-existing violations (1 format, 3 lint) across 5286/4988 files. Let me confirm none are in my files.
+
+Confirmed: **all** gate reds are pre-existing in sibling files I'm forbidden to touch — `RecentDrivesSection.Previews.swift` (swiftformat) and `WidgetChartSummary.Tests.swift` (swiftlint a/b/c) — and **zero** violations in any TeslaCarViz file. Combined with the proven pre-existing IRGen crash, every red is external.
+
+Let me write the comprehensive, honest gate log.
+
+Log written. Let me verify git status (ensure only my files + log are new, and the generated `.xcodeproj`/DerivedData aren't tracked) before committing.
+
+Git status is clean — only my 14 surface files + the log are new; the generated `.xcodeproj` and `Shared.xcframework` are correctly gitignored. Let me commit.
+
+Committed (15 files, `88dd7f4b0`). Let me verify the working tree is clean and clean up the temporary `/tmp` artifacts.
+
+Task complete. Committed `88dd7f4b0`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0106-TeslaCarViz.log  | 221 +++++++++++++++
+ .../shared-surfaces/TeslaCarViz.Adapter.swift      | 299 +++++++++++++++++++++
+ .../shared-surfaces/TeslaCarViz.AdapterTests.swift | 220 +++++++++++++++
+ .../shared-surfaces/TeslaCarViz.Catalog.swift      | 186 +++++++++++++
+ .../shared-surfaces/TeslaCarViz.Draw.swift         | 287 ++++++++++++++++++++
+ .../shared-surfaces/TeslaCarViz.DrawLive.swift     | 175 ++++++++++++
+ .../shared-surfaces/TeslaCarViz.DrawState.swift    | 166 ++++++++++++
+ .../shared-surfaces/TeslaCarViz.Model.swift        | 195 ++++++++++++++
+ .../shared-surfaces/TeslaCarViz.Palette.swift      | 172 ++++++++++++
+ .../shared-surfaces/TeslaCarViz.Previews.swift     |  92 +++++++
+ .../shared-surfaces/TeslaCarViz.Shapes.swift       | 246 +++++++++++++++++
+ .../shared-surfaces/TeslaCarViz.Tests.swift        | 246 +++++++++++++++++
+ .../shared-surfaces/TeslaCarViz.Views.swift        | 197 ++++++++++++++
+ .../TeslaSync/shared-surfaces/TeslaCarViz.strings  |  63 +++++
+ .../TeslaSync/shared-surfaces/TeslaCarViz.swift    | 115 ++++++++
+ 15 files changed, 2880 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0106-TeslaCarViz.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.Draw.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.DrawLive.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.DrawState.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.Palette.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.Shapes.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaCarViz.swift

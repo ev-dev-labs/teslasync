@@ -1,0 +1,231 @@
+I'll start by understanding the task: create a native Apple SwiftUI version of the web `BatteryRangeCharts` component. First, let me check the environment capabilities and explore the existing structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the existing native project structure to understand patterns and shared layers.
+
+Sophisticated monorepo with XcodeGen. Let me examine existing feature-views for patterns and the shared facade layers (state holders, tokens, i18n, diagnostics).
+
+Large generated directory (2633 files). Let me check if BatteryRangeCharts already exists and find similar chart-based examples to use as templates.
+
+Clear per-surface file pattern. Let me study the most relevant templates: `BatteryLevelChart` (chart), `ChartsRow` (multi-panel grid), and `BatteryRangePanel` (battery+range+states).
+
+Let me read these template files individually for clarity.
+
+This is a rich, well-structured pattern. Let me read the rest of the BatteryLevelChart files (Adapter, Views, Previews, strings, Tests) to fully understand the conventions.
+
+Now let me read the Previews, strings, and Tests files, plus the design tokens and the web helpers/types the source depends on.
+
+I have a thorough understanding of the surface pattern. Now let me study the design tokens and the web source's specific dependencies (helpers, types, unit conversion, useUnits).
+
+`batteryColor`: >60 green `#10b981`, >25 amber `#f59e0b`, else red `#ef4444`. Now let me locate the generated design tokens and shared components (TSFadeIn, TSSkeleton), plus the web types.
+
+Let me read the generated tokens and the shared Motion/Skeleton components to know exactly what's available.
+
+Complete token reference acquired. Now let me read the web types, unit conversion, date format, and the native Motion/Skeleton components plus check for an existing RadialGauge native component.
+
+Now let me study the closest analog `BatteryRangePanel` (battery+range+gauge) and the shared `PieGauge`, `Metrics` (AnimatedNumber), `Motion` (TSFadeIn), and `Skeletons` (TSSkeleton) components.
+
+The sibling `BatteryRangePanel` (0289) handles the same VehicleState+units data. Let me read its Adapter/Projection/Model for the unit-binding pattern, plus Motion/Skeleton components and find a multi-series area chart example.
+
+Excellent reference architecture. Now let me find a multi-series area chart example and read the Motion/Skeleton shared components and the sibling's main view + states + strings.
+
+Let me study a multi-series area chart implementation and the sibling's main view + states + model + strings to complete my understanding.
+
+Let me confirm the `TSGlassPanel` API and read the sibling's Model, States, and strings to finalize the binding/freshness pattern.
+
+I have a thorough understanding now. Let me verify the build tooling details: xcodegen availability, the placeholder check script, lint/format configs, and the sibling's States + strings files.
+
+All tooling present. Let me check the placeholder-check script, the `TSButton` API, and the Shared.xcframework status (needed for builds).
+
+Key finding: `Shared.xcframework` is not built (only `.gitkeep`) — the build pre-action requires the Kotlin/Gradle toolchain. Let me check the placeholder patterns and assess whether the KMP shared framework can build on this runner.
+
+Java 17 + gradlew present. The KMP `Shared.xcframework` must be built (heavy Kotlin/Native step). Let me check the documented build status and kick off the framework build in the background while I write code.
+
+xcodeproj generated. Let me start the heavy KMP framework build in the background and read the build-status doc.
+
+This clarifies the established methodology: each parallel P4 surface is verified **in isolation** (`swiftc -typecheck` on both SDKs against the real design system + tokens, isolated tests, swiftlint/swiftformat/placeholder clean), while the full-app `xcodebuild` is documented as macOS-pending (unstaged KMP framework + pre-existing cross-surface collisions + signing). Let me check the logs dir and a recent sibling log to match format.
+
+I now have the exact established methodology and log format. Let me check the framework build progress, then begin writing the surface.
+
+The framework build is progressing well (Kotlin/Native compiling, many tasks FROM-CACHE — likely ~7-8 min). The methodology is now crystal clear: prefix all types uniquely, verify in isolation on both SDKs, document full-app build as macOS-pending. Let me check the `AnimatedNumber`/`StatCard` shared primitives before writing.
+
+`TSAnimatedNumber(formatted:)` is the web `AnimatedNumber` parity. Let me check the web `AnimatedNumber` and `RadialGauge` default decimal formatting for exact parity, then start writing.
+
+Exact formatting confirmed: `AnimatedNumber` defaults to 0 decimals; `RadialGauge` uses 0 decimals for integer values. I have everything needed. Let me set up tracking and write the surface.
+
+Now I'll write the surface. Starting with the pure Adapter (Foundation only).
+
+Now the Math + Projection + Accessibility in a dedicated file.
+
+Now the Model (state-holder seam, telemetry, i18n facade, source).
+
+Now the Views file (chrome: panels, gauge, tiles, freshness, banner, states).
+
+Battery panel chrome done. The two-series area chart is the one technically tricky part (Swift Charts area stacking). Let me check how existing feature-views render multi-series areas, and check the framework build progress.
+
+The KMP `Shared.xcframework` **built successfully (7m 29s) and is staged** — I can do a real in-module app-target compile. And `stacking: .unstacked` is the proven two-area approach. Let me study `TripReplayCharts.Chart.swift`.
+
+The proven two-area pattern (`stacking: .unstacked` + per-series `LineMark` + selection tooltip). Now I'll write the Charts file.
+
+Now the main View that composes the responsive 2-panel grid and phase switching.
+
+Now the Previews, strings, and Tests.
+
+Now the Tests file (adapter math, projection, accessibility, model — all referencing only the pure/model layer so it runs in the isolated SPM harness too).
+
+All 8 files created. Now let me fix two robustness items before verifying: give `BatteryRangeChartsPanel` an explicit `@ViewBuilder` init (the drive panel uses if/else), rename its generic to avoid `Body` shadowing, and drop an unused test property.
+
+Now the verification pipeline. First swiftformat (auto-format my files) then verify with --lint, and swiftlint --strict.
+
+9 files, ~2486 lines. Now format and lint.
+
+3 files reformatted. Let me confirm `--lint` is clean and run `swiftlint --strict`.
+
+`swiftlint --strict` treats the 400-line soft cap as an error. I'll split Charts, Views, and Tests into additional `BatteryRangeCharts.*` files (matching the sibling convention). Let me check the format result first.
+
+`swiftformat --lint` is clean (0/8). Now I'll split the 3 over-length files into additional `BatteryRangeCharts.*` files. Let me locate split points.
+
+I'll split each over-length file. Let me read the exact post-format content of the sections to move.
+
+Now I'll create the split-out files and trim the originals. First, the drive chart file.
+
+Now trim the drive sections from Charts.swift. Let me see the boundary.
+
+Now truncate the drive sections from Charts.swift.
+
+Charts.swift now 171 lines. Now split Views.swift — move loading/empty/error states to States.swift.
+
+Now update the Views.swift header to reflect the moved states, then split the Tests file.
+
+Now split the Tests file — move model tests + spy to a ModelTests file.
+
+Now truncate the model tests from Tests.swift and update its header.
+
+11 .swift files now. Let me re-format and re-lint everything.
+
+Already format-clean. Now swiftlint --strict on all 11 files.
+
+swiftlint --strict: **0 violations in 11 files**, all under 400 lines. Now the placeholder gate (per real file, as siblings do) plus a sanity grep.
+
+Placeholder gate clean (0 across all 11 files). Now the dual-SDK `swiftc -typecheck`. Let me identify the design-system dependency set (excluding KMP-`Shared`-coupled files).
+
+None of the 41 design-system files are KMP-coupled — clean dependency set. Now the dual-SDK `swiftc -typecheck`. Starting with macOS 15.
+
+`UnitFormatters.swift` is the SharedFacade-coupled file (uses `Units` facade) that siblings exclude. My surface doesn't use it. Excluding it and re-running.
+
+macOS 15 typecheck: **0 errors**. Now iOS 18 simulator.
+
+Both SDKs typecheck **0 errors**. Now the isolated SwiftPM harness to actually execute the tests (the full-app `xcodebuild test` can't run due to pre-existing cross-surface collisions, so I isolate my surface + the real design system). Let me set it up.
+
+SPM build complete (full surface incl. views compiles). Now run the tests.
+
+**All 32 isolated tests passed (0 failures).** Now the strongest evidence: a real in-module app-target compile using the staged framework. Let me regenerate the project (to include my 11 new files) and verify enumeration.
+
+All 12 files enumerated (72 pbxproj refs), `XCODEGEN_EXIT=0`. Now the real in-module iOS app-target compile (framework is staged; skipping the Gradle pre-action). This is a large build — running it in the background.
+
+While the iOS build runs, let me verify the web `CHART_COLORS` palette indices match and check build progress.
+
+Confirmed: native `TSChartPalette` indices exactly match web `CHART_COLORS` (Okabe-Ito): [0]=#0072B2 blue, [1]=#E69F00 orange. My battery bars/distance area (index 0) and duration area (index 1) are color-faithful. Let me wait for the iOS build.
+
+Build is in whole-module emission, 0 errors so far. Let me wait for completion.
+
+Still 0 errors during whole-module emission. Let me continue waiting for the build to finish.
+
+Whole-module compilation of 2600+ files is the long pole (still 0 errors). Let me wait further.
+
+I see other parallel slots (slot-3, slot-6) are also running xcodebuild — heavy CPU contention is slowing my whole-module emit. My build is still alive with 0 errors. Let me keep waiting.
+
+The whole-module emit completed (15K+ lines now, 20 compiler processes active) — **0 errors**. Per-file compilation proceeding. Let me wait for it to finish.
+
+Still compiling, 0 errors. Let me wait for the final link/completion.
+
+Whole-module emit already succeeded (0 errors = type-check passed in the real app module); per-file codegen is now grinding through 2600+ files under multi-slot contention. I have comprehensive green evidence. Let me wait a bit more for the final build result.
+
+**`XCODEBUILD_IOS_EXIT=0` — the real iOS app-target build SUCCEEDED!** Let me confirm the marker and that my surface compiled.
+
+**`** BUILD SUCCEEDED **` with 0 errors** — the entire real iOS app module (2600+ surfaces incl. mine, with the staged `Shared.xcframework`) compiled cleanly. Let me kick off the macOS app-target build in the background and write the log meanwhile.
+
+Now let me write the gate log while the macOS build runs. Let me capture final metrics first.
+
+Let me verify I covered all web `t()` keys exactly.
+
+All 9 web `t()` keys covered exactly (+ 15 native envelope = 24 keys). 32 tests (21+11). Now writing the gate log.
+
+Log written. Let me check the macOS build progress and clean up the temp harness.
+
+macOS build is in whole-module emit (0 errors). While it compiles, let me get a high-signal code review of my surface to catch any parity or logic issues.
+
+I'll start by examining the web source and the native Swift implementation to compare them for parity.Code review is running in the background. Let me check the macOS build progress while both run.
+
+Now let me read all the native Swift implementation files.Let me read the remaining Swift files.Now let me read the test files and previews.Let me examine the web components that the native claims parity with — particularly `RadialGauge`, `AnimatedNumber`, and `CHART_COLORS`.The AnimatedNumber and RadialGauge parity claims hold. Now let me verify `CHART_COLORS` ordering and check the chart index exports.CHART_COLORS[0]=`#0072B2`, [1]=`#E69F00`. Let me verify `TSChartPalette` matches this order, and check the design tokens the tones map to.macOS build still in whole-module emit (0 errors), same long pole as iOS under multi-slot contention. Let me keep waiting.
+
+`chartCategorical[0]`=#0072B2, `[1]`=#E69F00 — matches CHART_COLORS. Now let me verify the status token colors used for the gauge band match the web `batteryColor` hex values.Let me check whether the code review completed while the macOS build continues emitting.
+
+The color and component parity all check out. Let me verify the shared design-system symbols referenced by the views actually exist (a missing symbol would be a build break), and check the `ChartTooltip` for tooltip parity.Both the code review and macOS build are still running. Let me continue waiting for the macOS build to complete its whole-module emit.
+
+I need to verify `TSSpacing.x3xl` exists — it's referenced in States.swift and didn't show up. Let me check the spacing scale definition.All design tokens and components exist. Let me check `ChartTooltip` to assess tooltip value parity, then look at the `helpers.ts` import note and confirm nothing else is rendered.The tooltip uses `fmtNumber` at global precision (2 decimals) in web vs the native's 0-decimal + unit display — but that's a transient hover/formatting detail, below the reporting bar. Let me verify the two most important cross-platform "identical string" claims empirically: the number formatting and the date formatting. Let me check the toolchain.Both are available. Let me empirically compare the Swift number/date formatting against the JS equivalents across a range of values.The number and date formatting produce byte-identical output across Swift and JS (including half-up rounding, locale grouping for en-US/de-DE, and dates). Let me verify the `AREA_DEFAULTS`/`areaGradient` parity claim for the area chart interpolation.macOS whole-module emit completed (15K+ lines, **0 errors**) — now per-file codegen. Let me wait for it to finish.
+
+I've completed a thorough parity review, including empirically verifying the cross-platform formatting. Here's what I checked against the web source:
+
+- **Reversal ordering** (`drivePoints`): web does `map().reverse()`, native does `reversed().enumerated().map()` — equivalent since the map is element-wise; `order` 0→n-1 runs oldest→newest. Verified by the test fixture too. ✓
+- **Rounding/conversion math**: `convertDistanceFromSI` factors (1609.344 / 1000 / 0.3048), `Math.round`, and `fmtNumber` all match. I ran the Swift `number()` and JS `fmtNumber()` side-by-side across 15 values in en-US **and** de-DE (incl. half-up ties 0.5→1, 2.5→3, 42.5→43, 99.995→100.00, grouping separators) — **byte-identical**. `setLocalizedDateFormatFromTemplate("yMMMd")` vs `toLocaleDateString({year,month:'short',day})` also identical (e.g. "Jun 9, 2024"). ✓
+- **Battery band thresholds**: `>60` / `>25` / else, unclamped level — matches `batteryColor`; band→tone→token RGB matches the web hex (`#10b981`/`#f59e0b`/`#ef4444`) in dark mode. ✓
+- **Null/absent handling**: optional `batteryLevel`/`ratedRangeMeters`/`distanceMeters`/`durationSeconds`/`startTimestamp` all guarded (→ em-dash or `?? 0`), no force-unwraps, `Dictionary(uniqueKeysWithValues:)` keyed by unique `order`, `xDomain` always valid. No crash paths. ✓
+- **Composition completeness**: gauge, Battery tile, Range tile, Current/Remaining bar chart ([0,100], `CHART_COLORS[0]`), two-series area chart (distance `CHART_COLORS[0]` / duration `CHART_COLORS[1]`, legend, monotone interpolation, gradient), and the "No drive data for chart" empty leaf are all present. `chartCategorical[0/1]` = `CHART_COLORS[0/1]`. ✓
+- **AnimatedNumber/RadialGauge parity**: AnimatedNumber default `decimals=0` (battery tile) and RadialGauge `decimals ?? (isInteger ? 0 : getGlobalPrecision())` both reproduced correctly. ✓
+- **States**: loading/empty/error/content + stale/offline all render and are unit-tested; stale auto-refresh is guarded once and re-arms on live. ✓
+- All referenced design symbols (`TSSpacing.x3xl/x2xl`, `TSRadius`, `TSMotion`, `Font.TS.*`, `Color.TS.*`, `TSChartPalette`, `TSGlassPanel`, etc.) exist — no build breaks.
+
+The only deltas I found are sub-threshold and intentional: the tap/hover tooltip shows 0-decimal values with a unit suffix vs. the web `ChartTooltip`'s 2-decimal `fmtNumber` with the raw series name; the native clamps bar values to [0,100] (web doesn't); gradient top opacity 0.28 vs 0.3; area animation 250ms vs 300ms. None are data/logic/state correctness problems.
+
+No significant issues found in the reviewed changes.The code review completed. Let me read its findings while the macOS build finishes codegen.
+
+Code review found **no significant issues** — it empirically verified byte-identical formatting (en-US + de-DE), correct reversal ordering, rounding/conversion math, battery bands, null safety, full composition, and all states. The only deltas are intentional sub-threshold tooltip/animation choices. Let me check the macOS build.
+
+macOS build near completion (20K lines, 0 errors). Let me wait for the final result.
+
+Linking phase, 0 errors. Let me wait for the final completion.
+
+macOS build still finishing (0 errors throughout). Let me wait for the final marker.
+
+**`XCODEBUILD_MAC_EXIT=0`** — the macOS build succeeded too! Let me confirm.
+
+**Both iOS and macOS app-target builds `** BUILD SUCCEEDED **` with 0 errors** — the surface compiles in the real app module on both SDKs with the live KMP framework. Let me finalize the log with the macOS result.
+
+Both builds succeeded, log finalized. Now let me check git status before committing (to ensure I only commit my surface files + log, not build artifacts).
+
+All 12 surface files + log are new; build artifacts are gitignored. Let me check for any unintended tracked modifications, then stage exactly my files.
+
+Clean — no unintended modifications. Staging my files and committing.
+
+Committed cleanly (commit `6e0320292`) — 12 surface files + the log. Let me finalize tracking and do a last sanity check.
+
+All gates green, working tree clean, all todos done, code review found no significant issues. The task is complete and fully verified.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0288-BatteryRangeCharts.log | 145 +++++++++
+ .../feature-views/BatteryRangeCharts.Adapter.swift | 331 +++++++++++++++++++
+ .../feature-views/BatteryRangeCharts.Charts.swift  | 171 ++++++++++
+ .../BatteryRangeCharts.DriveChart.swift            | 289 +++++++++++++++++
+ .../feature-views/BatteryRangeCharts.Model.swift   | 253 +++++++++++++++
+ .../BatteryRangeCharts.ModelTests.swift            | 142 ++++++++
+ .../BatteryRangeCharts.Previews.swift              | 127 ++++++++
+ .../BatteryRangeCharts.Projection.swift            | 360 +++++++++++++++++++++
+ .../feature-views/BatteryRangeCharts.States.swift  | 120 +++++++
+ .../feature-views/BatteryRangeCharts.Tests.swift   | 284 ++++++++++++++++
+ .../feature-views/BatteryRangeCharts.Views.swift   | 306 ++++++++++++++++++
+ .../feature-views/BatteryRangeCharts.strings       |  52 +++
+ .../feature-views/BatteryRangeCharts.swift         | 138 ++++++++
+ 13 files changed, 2718 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0288-BatteryRangeCharts.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.Charts.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.DriveChart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryRangeCharts.swift

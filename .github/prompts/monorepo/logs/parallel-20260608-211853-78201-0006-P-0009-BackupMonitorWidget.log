@@ -1,0 +1,158 @@
+I'll start by understanding the environment and the existing structure. Let me check key things in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 26.5 simulators including iPhone 16 booted). Capability is met — not blocked. Let me read the web source and explore the native structure.
+
+Apple toolchain confirmed. Now let me study existing dashboard-widget surfaces to learn the established patterns (state holders, tokens, i18n, telemetry).
+
+There are 419 files (many widgets already built). Let me find a good reference widget — ideally one that uses an admin/list data source and no charts, plus look at the saved listing.
+
+Clear convention established. Let me study a structurally-similar reference widget (history/list with status badges) and the shared infrastructure layers. `SoftwareUpdateHistoryWidget` and `UptimeMonitorWidget` (system category) look closest.
+
+`SoftwareUpdateHistoryWidget` is the closest analog (history list + status). Let me read its full implementation and find the web backup hook + registry definition.
+
+Excellent reference. Let me read the supporting files of `SoftwareUpdateHistoryWidget` and the web backup hook/types in parallel.
+
+Now let me read the remaining reference files (Feed, Previews, strings, Tests) plus the web hook, BackupRun type, and registry entry.
+
+Let me read the reference test files and the web data layer (hook, BackupRun type, registry entry) in parallel.
+
+Now the web data layer and shared native infra. Let me read these in parallel.
+
+Now let me locate the shared native infrastructure (registration, tokens, skeleton, and any StatCard/Badge equivalents).
+
+Let me read the core infra files: the widget registration, skeleton, metrics (StatCard), and badge components.
+
+I have the full pattern. Now let me verify build feasibility (xcodegen, pwsh, the Shared.xcframework prestep, placeholder checker) and confirm token names — these determine whether the gate can actually run.
+
+Key finding: the `xcodebuild` scheme has a pre-action that builds the KMP `Shared.xcframework` via Gradle (not yet present — only `.gitkeep`). That's the main feasibility risk. Let me check for a lighter "swiftc host gate", the KMP toolchain, and lint config.
+
+KMP toolchain is present. Let me check how a sibling's gate actually ran (full xcodebuild outcome) by inspecting an existing `p4-apple-dashboard-widgets-*` log.
+
+This reveals the accepted disposition: **code-complete + host-gates green, with the Xcode `build test` ATTEMPTED→DEFERRED** (Shared.xcframework unstaged + no codesign identities). Let me read the full sibling log to replicate their exact host-gate commands.
+
+This is the exact accepted methodology (code-complete + host gates green + Xcode `build test` attempted→deferred with evidence). I'll reproduce it faithfully. Let me confirm the precise token names and the `TSSkeleton` signature, then write the surface.
+
+All tokens confirmed. Let me check two color hex values to pick the closest match to the web's `emerald-400` icon, then I'll write the surface.
+
+`statusSuccess` (emerald green) is the right match for the web `emerald-400` icon. I now have everything. Let me set up tracking and start writing the surface, beginning with the pure projection layer.
+
+Now the pure projection/adapter layer:
+
+Now the state-holder model, telemetry, i18n facade, registry, and accessibility:
+
+Now the native subviews (Feed):
+
+Now the main widget view — header, state switch, and compact/standard/wide layouts:
+
+Now the previews and the strings catalog:
+
+Now the two XCTest files — adapter coverage and model/registry/a11y coverage:
+
+All 8 files written. Now the verification phase — let me build the `swiftc -typecheck` closure. First I'll identify the real library files my surface transitively needs (and confirm none import the KMP `Shared` framework).
+
+No `Shared` imports in the design/component layer — good, the curated closure will compile standalone. Let me check `Cards.swift` deps, then run the typecheck iteratively.
+
+Let me run the `swiftc -typecheck` against the real library closure, iterating as needed.
+
+Cards.swift pulls the broader design system. Let me include the full Shared-free component+design layer (like the sibling's closure) and confirm none import `Shared`.
+
+None import `Shared`. Let me typecheck my surface against the full component+design layer.
+
+Over-inclusion pulled `UnitFormatters` (needs `UnitPreferences`). Let me use the minimal real closure (just what `TSSkeleton`→`TSCard` transitively needs), matching the sibling's curated set.
+
+`TYPECHECK_EXIT=0` — the surface compiles cleanly against the real library under Swift 6 / macOS 15. Now let me (a) confirm the `#if DEBUG` previews also typecheck, and (b) build & **run** an adapter+model harness that executes the real projection/model logic.
+
+Both compile clean. Now let me build and **run** an adapter+model harness that executes the real projection and state-holder logic (not just typecheck).
+
+I need to include `DashboardWidgetInfra.swift` in the harness compile (Model references it). Let me add it.
+
+The view's static props alias `BackupMonitorSurface` (which lives in the SwiftUI-free Model). Let me point the harness at `BackupMonitorSurface` to keep it pure, then rerun.
+
+**95/95 checks passed** — adapter + model logic verified by execution. Now swiftlint, swiftformat, and the placeholder gate on the new files.
+
+swiftlint is clean (0 violations). swiftformat flags 2 spots. Let me inspect the `unusedArguments` one before deciding how to fix (it may touch a public signature).
+
+The `now:` parameter on `recentRows` is genuinely unused (rows show absolute time, not relative). I'll remove it and update callers — the correct fix — then auto-format the wrap issues.
+
+Now update the `recentRows` callers in Tests.swift, then auto-format and re-verify everything.
+
+swiftformat 0/7, swiftlint 0 violations. Let me re-run the Swift 6 typecheck after the edits, update+rerun the harness, and run the placeholder gate.
+
+The 24 violations are pre-existing in **other** widgets (YearReview, etc.) — the broad directory scan isn't my scope. Let me scan only my new files to prove they're clean (and confirm none of the 24 are mine).
+
+All my files: **PLACEHOLDER_COUNT=0**. None of the broad 24 are mine. Now the Xcode step — I'll attempt it for real. Note the current `project.yml` app target *does* glob `TeslaSync/dashboard-widgets`, so my files become target members automatically on regen. Let me generate the project and verify membership.
+
+All 7 files are target members (48 refs); schemes resolve. Now let me attempt the real iOS gate command. Its scheme pre-action builds the KMP `Shared.xcframework` via Gradle — I'll run it bounded and capture genuine evidence.
+
+0 codesigning identities; `Shared.xcframework` unstaged. Let me attempt the exact iOS gate command, bounded with `gtimeout`, to capture the genuine blocker.
+
+The bounded build is running (Gradle staging the KMP framework). It's hard-capped at 300s. Let me wait for it.
+
+Still running (Gradle building the KMP framework). It's capped at 300s — let me continue waiting for the bounded result.
+
+The Gradle KMP build was genuinely progressing (downloaded Kotlin/Native, compiled iosArm64/iosSimulatorArm64/macosArm64, linking) — it was just bounded-killed at 300s mid-staging, not failed. Let me try to push it through: stage the `Shared.xcframework` directly (cache now warm), then re-run the real build+test. First, the rest of the staging script.
+
+Let me stage the framework directly (Gradle cache is now warm), bounded at 540s.
+
+I'll let the framework build run. Let me wait for it.
+
+Still building (Kotlin/Native linking is slow on first run). Continuing to wait within the bounded window.
+
+Approaching the 540s cap. Let me wait for the bounded result.
+
+The build was bounded-killed again — now clearly because `assembleSharedXCFramework` does a **multi-platform Kotlin/Native RELEASE** assembly (8 targets) that exceeds the window; the DEBUG per-target frameworks are already cached/UP-TO-DATE. Let me check whether a usable XCFramework output exists so I can stage it and do a real app-target compile/link (bypassing the slow scheme pre-action).
+
+A DEBUG `Shared.xcframework` (ios-arm64, ios-arm64-simulator, macos-arm64) is already built. Let me stage it and do a **real app-target compile/link** for the iOS simulator (bypassing the slow scheme pre-action) — genuine evidence the full app target including my surface builds against the real KMP framework.
+
+I'll let the app-target build run (bounded 500s). Waiting for it.
+
+Compiling the full app target (hundreds of files) against the staged framework. Continuing to wait.
+
+Nearing the 500s cap. Let me wait for the final result.
+
+Bounded-killed at 500s again (the full app target + 2 embedded extensions is large), but **zero `error:` lines** and my `BackupMonitorWidget.strings` was validated and copied into the app bundle. Let me confirm my Swift sources compiled and there were no errors.
+
+**Zero errors**, and it reached `SwiftEmitModule`/`EmitSwiftModule` for the TeslaSync target — meaning the whole app module (including all my surface files, linked against the real KMP framework) type-checked cleanly. It was slow only because it built **both** arm64+x86_64 slices. Let me retry arm64-only (native, cache now warm) to get a clean BUILD SUCCEEDED.
+
+Waiting for the arm64-only build (warm cache, bounded 420s).
+
+Zero errors again; the target's Swift module emitted (full type-check passed) — it's now in per-file object compilation + copying ~30 locales. The cache is very warm now (module emitted, PCMs built). One final, longer bounded attempt to cross BUILD SUCCEEDED.
+
+I'll let this final build attempt run. Waiting.
+
+Decisive evidence gathered: across four real Xcode app-target builds, **0 compile errors**, and `EmitSwiftModule` for the TeslaSync target completed (the whole app module — including all my surface files — type-checks against the real KMP `Shared.xcframework`). It only misses "BUILD SUCCEEDED" because the app's hundreds of files + 2 extensions exceed the bounded window — an infra/time constraint, not a code defect. Let me clean up generated artifacts and check git status.
+
+The `build/` dir is git-ignored (a leftover race on rm). Note: the 2 modified `web/...` files are **pre-existing** working-tree changes (I never touched web/) — I'll leave them untouched. Let me finish cleanup and verify the tree is clean apart from my files.
+
+Clean tree — only my 8 files untracked. Let me gather line counts and the base commit, then write the gate log.
+
+All 11 source i18n keys present; every file ≤367 lines (under the 400 limit). Now let me write the gate log with the real evidence.
+
+Now commit exactly my 8 files + the log (not the pre-existing web changes), using the prompt's message with the required trailer.
+
+Committed cleanly as `aeb1ac88e` — exactly the 8 surface files + the log; the 2 modified `web/*` files are pre-existing and untouched. Let me finalize tracking.
+
+All todos complete. Let me do a final confirmation that the committed surface is intact and lint-clean (post-commit sanity).
+
+Task complete. Committed as `aeb1ac88e` (9 files, 2068 insertions); post-commit swiftlint clean; log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0009-BackupMonitorWidget.log | 189 +++++++++++
+ .../BackupMonitorWidget.Feed.swift                 | 241 ++++++++++++++
+ .../BackupMonitorWidget.Model.swift                | 286 ++++++++++++++++
+ .../BackupMonitorWidget.ModelTests.swift           | 232 +++++++++++++
+ .../BackupMonitorWidget.Previews.swift             | 136 ++++++++
+ .../BackupMonitorWidget.Projection.swift           | 332 +++++++++++++++++++
+ .../BackupMonitorWidget.Tests.swift                | 227 +++++++++++++
+ .../dashboard-widgets/BackupMonitorWidget.strings  |  58 ++++
+ .../dashboard-widgets/BackupMonitorWidget.swift    | 367 +++++++++++++++++++++
+ 9 files changed, 2068 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0009-BackupMonitorWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BackupMonitorWidget.Feed.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BackupMonitorWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BackupMonitorWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BackupMonitorWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BackupMonitorWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BackupMonitorWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BackupMonitorWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/BackupMonitorWidget.swift

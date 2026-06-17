@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure to understand what exists and where things are located.
+
+Good — Apple toolchain is available (xcodebuild, swift, swiftlint, swiftformat) and both the web source and `apps/apple` exist. Let me read the web source and examine the existing native patterns.
+
+The web source is clear. Now let me study the existing native patterns — especially the most recently merged `ColorConverter` feature view as a template.
+
+Now I understand the file layout (one feature view = multiple `Name.*.swift` + `.strings` files in a flat dir). Let me study the `ColorConverter` set as the canonical template.
+
+Excellent template. Let me read the remaining ColorConverter files and the shared token/component definitions.
+
+Now let me find the shared P1 tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) and shared components (`TSGlassPanel`, motion equivalents) so I use the correct APIs.
+
+The design tokens are "generated". Let me locate the actual token definitions to learn the available color/spacing/font API.
+
+Design tokens live in `apps/design/generated/apple`. Let me examine them to learn the exact color/spacing/font/radius API.
+
+Now I have the full token API. Let me read the shared components I'll use: `TSGlassPanel` (Cards), motion (`FadeIn`/`Stagger*`), and Typography.
+
+Let me read the `TSGlassPanel` definition and check for naming collisions (`HealthStatus`, `Recommendation`) plus study a second template — `AccordionSection` (a pure presentational view).
+
+Key finding: sibling surfaces from the **same** web directory (`HealthOverview`, `HealthGaugeGrid`) are already ported and namespace their types (e.g., `HealthOverviewHealthStatus`). These are my closest templates. Let me read the `HealthOverview` set in full.
+
+This is the gold-standard template: `HealthOverview` (0155) is the immediately-preceding sibling from the same web directory, and it implements the **full state-holder seam** with all five states. Let me read its remaining files to mirror the pattern exactly.
+
+Let me read the remaining `HealthOverview` files (States, Previews, Tests, strings) to complete my template understanding.
+
+Let me read the `HealthOverview` Tests and strings, and verify the shared component signatures I'll reuse (`TSTone`, `TSEmptyState`, `TSSkeleton`, `TSAlertBanner`).
+
+The tests reference a separate `HealthOverview.ViewTests.swift`. Let me read it and verify the shared component signatures (`TSTone`, `TSEmptyState`, `TSSkeleton`, `TSAlertBanner`) plus how `project.yml` includes feature-view + test files.
+
+I have the complete pattern. Let me verify how `project.yml` globs sources/tests (so my new files compile) and check the toolchain (xcodegen, simulators).
+
+I now have the complete pattern (9-file split mirroring `HealthOverview`). Let me set up tracking, read the lint configs, and check the toolchain in parallel.
+
+`xcodegen`, `pwsh`, `swiftlint`, `swiftformat` are available, but `Shared.xcframework` is absent (only `.gitkeep`) — it's built by a preAction script. Let me check whether that script needs a Kotlin toolchain (a potential environmental blocker for the full `xcodebuild`).
+
+The `Shared.xcframework` needs a full Kotlin/Native + Gradle build. Let me check whether that toolchain is viable here, and confirm two remaining shared-component signatures before writing.
+
+Java 17 + `gradlew` are present but the XCFramework isn't prebuilt. The KMP build is the long pole, so I'll kick it off in the background now while I write the surface code.
+
+Toolchain confirmed and background build running. I have everything needed. Let me write the 9 files, starting with the pure core (`Adapter`) and the state-holder seam (`Model`).
+
+Now the main view and the content views:
+
+Now the previews, strings catalog, and the two test files:
+
+Background XCFramework build is nearly done (Kotlin came from cache). Let me write the remaining 4 files and recheck the build.
+
+All 9 files written. Let me verify the XCFramework build finished + staged, then run swiftformat autofix on my new files.
+
+The background build is still linking the release slice (the `ps` reading was misleading — `nohup` kept it alive). Let me autofix formatting on my new Swift files while it finishes.
+
+No formatting changes needed — my files already comply. Now let me run the lint, format-check, and placeholder checks on my files.
+
+swiftformat passes. swiftlint flags one issue: `recommendations(for:)` exceeds the 50-line function-body limit. Let me refactor it into static tip arrays (shorter function body, same logic/order).
+
+Now re-run format autofix + lint on the Adapter to confirm the refactor is clean:
+
+Adapter is clean. Let me re-validate all 8 files together and check the XCFramework build status.
+
+All 8 files pass lint + format cleanly. Framework still linking release slices. Let me run `xcodegen generate`, inspect the placeholder script, and run it — while the framework finishes.
+
+Now let me view the placeholder patterns, run a genuine placeholder scan on a temp copy of my files, run `xcodegen generate`, and recheck the framework.
+
+Placeholder scan: `PLACEHOLDER_COUNT=0`. Now `xcodegen generate` and recheck the framework:
+
+xcodegen succeeded — the project now includes my files. The release XCFramework is still linking. Let me wait for it to finish staging.
+
+XCFramework staged (`BUILD SUCCESSFUL`). Now let me check simulators and launch the iOS build+test (the gate's main step).
+
+Everything's ready: iPhone 16 sim is booted, Xcode 26.5, framework staged. Let me launch the iOS build+test (the heavy gate step) in the background and monitor.
+
+iOS build launched. Let me check the gate log directory and a sibling log to match the expected format while the build runs.
+
+The iOS build wrapper returned (the `&` detached the actual xcodebuild). Let me verify the build is still running and view the sibling `HealthOverview` gate log to match its exact format.
+
+iOS build is RUNNING and progressing (now building extensions). Let me view the sibling gate log's structure (head + tail).
+
+This sibling log reveals the **sanctioned disposition**: the full-app xcodebuild gate is RED for *pre-existing, unrelated* reasons (dashboard-widget duplicate-type collisions, co-located XCTest-in-app-target, macOS signing), and each surface is independently verified via an **isolated Swift 6 build+test against the real design system**. I'll reproduce that: prove the full-app RED isn't my code, and build an isolated harness proving my surface compiles + tests pass. Let me investigate dependencies while the iOS build runs.
+
+`Sources/Components` + `Sources/Design` import only system frameworks — a self-contained design system. I'll build an isolated SwiftPM package (real tokens + components + my surface) and run `swift test`, exactly like the sibling's independent verification. Let me check the iOS build progress and set up the isolated package.
+
+The app module is compiling my files (0 errors so far). Let me set up the isolated SwiftPM package (real tokens + design system + my surface) in a temp dir and run `swift test`.
+
+`UnitFormatters.swift` depends on an external `Units` type (from the KMP layer) — and my surface doesn't use it. Let me rebuild the package with only the shared files my surface actually needs (minimal allowlist).
+
+Just the `#Preview` in shared `Cards.swift` needs `TSButton`. Let me add `Buttons.swift` and rebuild.
+
+`States.swift` uses `TSInlineCallout`. Let me locate and add its defining file.
+
+Isolated package compiles cleanly against the real design system. Now let me run the tests (`swift test`):
+
+All **28 tests pass** (0 failures) under Swift 6 strict concurrency against the real design system — including the 8 per-state view-render smoke tests. Now let me check the full-app iOS build (the gate's evidence step).
+
+iOS build still running with 0 errors. Let me wait for it to complete (poll with a longer wait).
+
+Let me check the build progress directly in a separate session while the poll continues.
+
+Still emitting the app module (~2000 files, 0 errors). Let me continue waiting for the full-app build to finish.
+
+The full-app build is deep in whole-module emission of the ~2000-file app target (0 errors). This is the heavy step the sanctioned methodology defers. Let me give it a bounded additional wait to capture a definitive exit code.
+
+The poll is still blocking. Let me run a quick diagnostic in a separate session to see if the build is genuinely progressing or stuck.
+
+Progress — the build moved into per-file compilation and **14 errors** have now appeared. Let me check whether any are in my files (attribution is critical).
+
+**Definitive evidence**: all 14 errors are in *other* surfaces' aggregated test files (`ChargeStatusLiveWidget.Tests`, `SafetyFeaturesWidget.ModelTests`, `MonthlyCost*`, `PresetGallery*`, `SlideRenderer*` — duplicate type redeclarations + pre-existing concurrency issues). **Zero in HealthRecommendations.** This is exactly the pre-existing aggregated-test-bundle collision the sanctioned methodology defers. Let me wait for the build to emit its final exit code.
+
+The full-app iOS result is captured: `** BUILD SUCCEEDED **` (app target, including my files), then the **test-bundle** compile failed on those 14 pre-existing collisions → `IOS_EXIT=65`. Let me read the poll shell's final output and verify cleanup.
+
+Fully confirmed: app target `** BUILD SUCCEEDED **`; the aggregated `TeslaSyncTests` bundle `** TEST FAILED **` on 14 pre-existing duplicate-type/Sendable errors in *other* surfaces — `IOS_EXIT=65`, zero in my files. Per the covenant ("no skip-and-assume"), let me run the macOS gate too. I'll start it in the background and write the gate log while it runs.
+
+macOS build launched. Let me gather exact toolchain versions for the log and confirm the macOS build is progressing.
+
+The macOS build failed fast (`MAC_EXIT=65`). Let me read its log to attribute the failure honestly.
+
+Both full-app gates are RED for **pre-existing, non-code reasons**: iOS = 14 duplicate-type/Sendable errors in *other* surfaces' aggregated test bundle (app target itself `BUILD SUCCEEDED`); macOS = development-signing requirement for entitlements (no dev cert on this runner). **Zero errors in HealthRecommendations** in either. This matches the sanctioned disposition exactly. Let me write the comprehensive gate log.
+
+All evidence gathered. Let me write the comprehensive, honest gate log.
+
+Now let me verify git status — only my 9 files + the log should be tracked; generated artifacts must be git-ignored.
+
+Git is clean — only my 9 files + the log are untracked; generated artifacts are git-ignored. Let me do one final lint/format verification on all files, then commit.
+
+Final gates green. Let me clean up temp artifacts and commit.
+
+Commit succeeded. Let me verify the commit contents and trailer.
+
+Commit verified: 10 files, 1676 insertions, co-author trailer present. Let me confirm no heavy build processes are lingering and finalize.
+
+44 build workers are lingering (orphans from the finished iOS build). Let me check whether they're active or winding down before deciding to clean them up.
+
+The lingering frontends have **living parents (71733/71770)** and young runtimes — they started *after* my builds exited (both wrote their exit codes). This is a shared multi-slot environment ("slot-29"). Let me confirm they're not mine before leaving them alone.
+
+Those running `xcodebuild` processes belong to **another concurrent slot** (parents are `SWBBuildService` ~4 min old; this is a shared multi-slot environment). My own builds exited cleanly (`IOS_EXIT=65`/`MAC_EXIT=65` both recorded). I won't touch other sessions' processes. Let me finalize.
+
+All todos done, working tree clean, commit in place. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...le-feature-views-0156-HealthRecommendations.log | 216 ++++++++++++++++
+ .../HealthRecommendations.Adapter.swift            | 262 +++++++++++++++++++
+ .../HealthRecommendations.Model.swift              | 288 +++++++++++++++++++++
+ .../HealthRecommendations.Previews.swift           |  74 ++++++
+ .../HealthRecommendations.States.swift             | 183 +++++++++++++
+ .../HealthRecommendations.Tests.swift              | 275 ++++++++++++++++++++
+ .../HealthRecommendations.ViewTests.swift          |  72 ++++++
+ .../HealthRecommendations.Views.swift              | 149 +++++++++++
+ .../feature-views/HealthRecommendations.strings    |  49 ++++
+ .../feature-views/HealthRecommendations.swift      | 108 ++++++++
+ 10 files changed, 1676 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0156-HealthRecommendations.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthRecommendations.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthRecommendations.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthRecommendations.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthRecommendations.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthRecommendations.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthRecommendations.ViewTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthRecommendations.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthRecommendations.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthRecommendations.swift

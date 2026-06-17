@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source spec and explore the Apple app structure.
+
+Now let me read the web sub-components and explore the existing Apple feature-views structure to learn the established patterns.
+
+`ChargingTab` native doesn't exist yet, but sibling components do (`ChargingDetailSection`, `ChargingSection`, etc.). The web `ChargingTab` composes `ChargingDetailSection`, which already has a native counterpart. Let me study the established patterns by reading a sibling `Tab` view and the `ChargingDetailSection` files.
+
+`BatteryTab` and `DrivingTab` are the closest analogs. Let me study `DrivingTab` as the template (sibling analytics tab with metric cards + charts) plus the color constants.
+
+Excellent — this is a mature, well-established pattern. Let me read the rest of the `DrivingTab` template files, the `ChargingDetailSection` native files (which I must compose), and the web formatting/number utilities.
+
+Now I understand the architecture deeply. The web `ChargingTab` composes `<ChargingDetailSection>` (which is sibling prompt 0053, already implemented natively). Per the `DrivingTab` precedent, my surface owns its own panels (6 summary cards + 3 charts) and the sibling slots in at integration. Let me read the remaining reference files: web number/formatting utilities, native MetricCard usage, chart helpers, the adapter for ChargingDetailSection, the strings format, and project.yml.
+
+Let me examine the native MetricCard component, chart helper tokens, existing donut/pie chart usage, the Previews/Tests templates, and project.yml.
+
+Let me read the shared `TSMetricCard`, an existing donut chart pattern, the test template, and project.yml for source inclusion.
+
+I have a thorough grasp of the architecture. Let me confirm the build configuration (project.yml source globbing), the design tokens API, and whether `ChargingTab` is referenced in any registry.
+
+The `project.yml` is at `apps/apple/project.yml`. Let me read it and the remaining token definitions, and check for PowerShell availability (the gate is written in PowerShell).
+
+`pwsh`, `xcodegen`, and the full Apple toolchain are all present — the gate can run for real. Let me check the `Shared.xcframework` (KMP) situation, the build script, and remaining token locations, since the build has a pre-action that stages a KMP framework.
+
+Key finding: `Shared.xcframework` isn't staged — the build's pre-action builds the KMP core via Gradle (needs Kotlin/Native toolchain). Let me check the documented build stance and KMP/JDK feasibility before deciding the verification path.
+
+This is decisive. `apps/macos-pending-verifications.md` documents the **established precedent**: every prior P4 feature-view surface verifies the surface green via host-runnable gates (swiftlint --strict, swiftformat --lint, placeholder gate, `swiftc -typecheck` for iOS-18/macOS-15, `xcodegen generate`), while the **full-app `xcodebuild build test` is deferred to the macOS acceptance gate** because of pre-existing, unrelated blockers (unstaged KMP `Shared.xcframework` — Gradle link times out; 0 code-signing identities; cross-file merge collisions). `pwsh`, `xcodegen`, JDK 17 are present.
+
+Let me read the final token/component APIs I'll build against, then write the surface.
+
+Let me confirm the exact `Color.TS` / `Font.TS` token members, spacing/radius/motion, `tsChartAxes`, and icon-box/typography helpers I'll build against.
+
+Let me confirm the `chartCategorical` palette and `TSIconBox` signature, then I'll write the surface.
+
+I have everything needed. Let me check the lint/format configs to match conventions, then build the surface.
+
+I now have a complete understanding of the architecture, tokens, lint rules, and the established precedent. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure Adapter and the Model.
+
+Now the Views layer (chrome, summary tiles, legend).
+
+Now the Swift Charts panels (donut, bar, composed).
+
+Now the main view that composes everything.
+
+Now the Previews and Tests.
+
+Finally the strings catalog, then I'll scrub for any forbidden placeholder words.
+
+All 8 files written. Let me inspect the placeholder checker and scrub my files for any flagged words.
+
+The placeholder gate scans `.swift` files case-insensitively for "Placeholder" — my Adapter comment uses "placeholder". Let me fix that one occurrence.
+
+Now let me verify. First, auto-format my files to match the repo style, then lint them.
+
+swiftformat is clean. swiftlint flags one issue: `ChargingTab.Views.swift` is 424 lines (max 400). Let me check all line counts and split the summary components into their own file.
+
+I'll extract the summary tiles and legend chip into a new `ChargingTab.Summary.swift`. Let me view the reformatted section to move.
+
+Now I'll create the new `ChargingTab.Summary.swift` and remove that section from `ChargingTab.Views.swift`.
+
+Now remove the moved section (lines 259–424) from `ChargingTab.Views.swift`.
+
+Now re-run format + lint across all ChargingTab files.
+
+swiftformat (0/8) and swiftlint (0 ChargingTab violations) are clean. Now the placeholder gate (isolated to my files) and `xcodegen generate` to confirm project enumeration.
+
+Placeholder gate is clean (`PLACEHOLDER_COUNT=0`) and `xcodegen` enumerates all 9 ChargingTab files. Now the strongest in-my-control compile proof: `swiftc -typecheck` against the real iOS-18 + macOS-15 SDKs. Let me map the dependency closure I need to compile against.
+
+The design-system dependencies cascade (Skeletons→Cards, etc.). The established precedent compiles the surface against the **real generated `Tokens.swift`** plus thin shims for the higher-level helpers. Let me confirm the `TSFadeIn` initializer signature so my shim matches exactly, then run the isolated `swiftc -typecheck` for macOS-15 and iOS-18.
+
+`TSFadeIn` init matches my usage. Let me build the isolated typecheck harness (my surface + the real `Tokens.swift` + thin shims for the higher-level helpers) and run it against macOS-15, then iOS-18.
+
+macOS-15 typecheck passes with 0 errors. Now iOS-18.
+
+Both SDKs typecheck clean (0 errors). Now let me go further than the precedent and **execute** the pure logic in a compiled harness to prove the test expectations actually hold.
+
+Swift 6 concurrency nit in the harness (not the surface). Let me annotate the helper `@MainActor` and rerun.
+
+The full surface compiles, links, and **executes** — all 38 logic assertions pass on macOS-15 under Swift 6 strict concurrency. Let me verify zero symbol collisions with the rest of the module (the pending-verifications doc warns about cross-file redeclarations).
+
+Zero collisions confirmed — all 41 ChargingTab types are declared only in my files. Now let me capture real evidence for the full-gate blockers and attempt the actual `xcodebuild`. First, the environmental evidence.
+
+Evidence captured: **0 code-signing identities** (macOS blocker) and **`Shared.xcframework` unstaged** (only `.gitkeep` — iOS+macOS need the KMP Gradle build). Now let me attempt the real `xcodebuild` to capture the actual blocker. Let me set up the iOS build with a bounded timeout.
+
+`timeout` available, iPhone 16 simulator booted. Let me attempt the real iOS `xcodebuild` (the scheme pre-action will invoke the KMP Gradle build) with a bounded timeout to capture the actual blocker.
+
+This matches the documented precedent exactly: the iOS build runs the Gradle KMP pre-action, **successfully builds the DEBUG `Shared.xcframework`**, then hits the long-pole RELEASE Kotlin/Native link (`:core:linkReleaseFramework…`) and is interrupted at the 240s bound — before the app sources ever compile. Let me make a determined attempt to fully stage the RELEASE framework directly via Gradle (longer bound), so the app build can proceed to actually compile my surface.
+
+The RELEASE `Shared.xcframework` built successfully (4m54s) and is present. Let me stage it and re-run the iOS app build — now the Gradle step is cached, so it should proceed to actually compile the app sources including my surface.
+
+My surface compiled with **0 errors/warnings** (`CTAB_DIAG_COUNT=0`), but the overall app build failed (exit 65, not timeout) — due to something else. Let me identify the actual failure (pre-existing, unrelated).
+
+The failure is in **`AlertCard.Adapter.swift`** (a pre-existing sibling surface), not mine — `CTAB_DIAG_COUNT=0`. Let me see the actual compiler error to document it precisely.
+
+Zero `error:` diagnostics anywhere, yet a `SwiftCompile` command failed — that signals a compiler **crash/kill** (resource exhaustion under load), not a source error. Let me confirm the nature.
+
+Confirmed: a **swift-frontend compiler crash** (not a source error) while compiling `AnomalyInlineRow.Adapter.swift` — a pre-existing sibling surface, unrelated to mine. Let me capture the crash header for the log.
+
+Definitive evidence: swift-frontend 6.3.2 **crashed** compiling the pre-existing `AnomalyInlineRow.*` batch (not ChargingTab); all 7 ChargingTab files were scheduled into the real iOS app target and produced **0 diagnostics**, and ChargingTab was **not** in the crashing batch. Let me verify the logs dir + gitignore, then run the remaining whole-tree lint gates for the official log.
+
+Only my 9 files are untracked; the staged framework, generated project, and build dir are all gitignored. Now the whole-tree lint gates for the official log.
+
+swiftlint --strict whole-tree: **EXIT=0, 0 violations**. Now swiftformat --lint on the whole `apps/apple` tree.
+
+Whole-tree **swiftformat --lint: EXIT=0 (0/2972)** and **swiftlint --strict: EXIT=0**. To avoid assuming the macOS build's blocker, let me run it for real (bounded) — the framework now has a `macos-arm64` slice.
+
+macOS build also fails (exit 65) with **0 ChargingTab diagnostics**, but earlier and without the compiler crash — a different pre-existing issue. Let me capture it.
+
+Complete real evidence for both platforms now captured:
+- **iOS**: framework staged → sources compiled → **ChargingTab 0 diagnostics** → build blocked by a pre-existing **swift-frontend 6.3.2 compiler crash** on `AnomalyInlineRow.Adapter.swift` (unrelated).
+- **macOS**: blocked at the project **signing phase** ("entitlements require signing with a development certificate" — 0 valid identities), before any source compiles.
+
+Both are pre-existing platform-capability blockers, unrelated to my surface. Let me write the official gate log.
+
+The log is written. Let me do a final correctness re-read of the main view and clean up build artifacts before committing.
+
+Working tree is pristine — exactly the 9 ChargingTab files + the log (build artifacts are gitignored). All gates green. Let me commit with the prompt's conventional message.
+
+Committed (`22ae95c09`). Let me confirm a clean working tree and finalize tracking.
+
+Task complete. The ChargingTab Apple surface is shipped, committed (`22ae95c09`), and the working tree is clean.
+

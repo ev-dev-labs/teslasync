@@ -1,0 +1,232 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+This is a parity task to port a web "Developer Tools" page to native SwiftUI. Let me explore the existing Apple app structure, the parity manifest, and the web sub-components in parallel.
+
+The `Features/Admin` directory doesn't exist yet. Let me examine the manifest record, the ledger, and the existing Apple app's structure to understand conventions.
+
+The ledger shows sibling admin pages already "done", but the directory layout differs from the prompt's stated path. Let me find where existing admin pages actually live and study a comparable one (TeslaOrders has requiredCount 2, like DevTools).
+
+The actual path convention is `apps/apple/Sources/Features/Admin/` (the prompt's `TeslaSync/Features/Admin` is a generator template). Let me study the existing sibling pages — TeslaOrders (requiredCount 2, simplest match) and ApiPlayground — plus route registration and the string catalog.
+
+Now let me examine the routing infrastructure, app composition, the string catalog, and the web sub-components to understand parity content.
+
+Let me read the routing files, app composition, and the web sub-components for parity content.
+
+Let me verify whether the devtools sub-sections are separate parity units, check the web route, and read the app composition + string catalog.
+
+Key findings: the devtools sub-sections are NOT separate parity units (manifest scopes this unit to `DevToolsPage.tsx` only, requiredCount=2), and `devtools.title`/`devtools.subtitle` already exist in the catalog. Let me read the section sources, the existing string values, and the app composition to determine the right depth.
+
+The sections are substantial interactive tools. Let me read all the web section sources, shared sub-components, and constants to precisely size the parity scope before deciding implementation depth.
+
+Let me read the remaining sections, constants, helpers, and the tools subdirectory to fully capture the content I must reproduce.
+
+I now understand the full scope: DevToolsPage is a tabbed shell hosting 5 sections (Fleet API, Telemetry Health, Infrastructure, 15 client utilities, Reference links). Let me read the constants, helpers, FleetApiSection structure, and a few representative tools, plus check which strings already exist in the catalog.
+
+This is a large feature. Before committing to implementation, I need to establish baseline build feasibility, the placeholder scanner rules, the P2/P3 token & component APIs, and how the Xcode project includes files. Let me gather these in parallel.
+
+Critical: new `.swift` files under `Sources/` are auto-included by XcodeGen. Let me check xcodegen availability and read the token + component library APIs I'll use.
+
+xcodegen is available and `.xcodeproj` is generated on demand. Let me read the token palette and the shared component library APIs.
+
+Let me read the full token palette and the key component APIs (Typography, Cards, Tabs, States, Skeletons, Fields, Buttons, Badges).
+
+Let me read the remaining component APIs: Cards, States, Skeletons, Tabs, Fields, Buttons, Badges.
+
+Let me read Buttons, Fields, Badges, Skeletons, the SchemaDrift model (pattern reference), a sibling test, and the app composition.
+
+I have the full component vocabulary. Let me read the app composition, the SchemaDrift model (state-machine pattern), TSSkeleton, and a sibling test to finalize conventions.
+
+I now have the full component vocabulary and patterns. Let me set up tracking, check which devtools strings already exist, verify the KMP framework dependency, and kick off a baseline project generation to understand build feasibility.
+
+The KMP `Shared.xcframework` is absent (only `.gitkeep`), so a full `xcodebuild` scheme build cannot link regardless of my code — matching the sibling ApiPlayground's documented RED. I'll mirror their verification approach (isolated type-checks + model test harness) and be fully honest in the log. Let me enumerate existing reusable strings.
+
+Let me read the swiftlint rules and a sibling test to ensure compliant code, then I'll write the plan.
+
+I have everything needed. Let me verify the localization key prefix convention (the catalog uses `translation.` prefixes) before writing code, then create the plan.
+
+Convention confirmed: catalog uses `translation.devtools.*` (matching the existing required keys) and `route.<rawValue>` for nav titles. Let me check for any route-completeness test and view an existing route entry format, then I'll write the plan.
+
+I have complete understanding. Let me write the plan and set up task tracking.
+
+Now I'll implement. First, let me confirm the swiftlint baseline on the Admin dir (to learn effective rules like file/function length) and confirm xcodegen works on a clean tree.
+
+Important finding: swiftlint's `included:` config lints the **whole project** regardless of the path arg, and there are **3 pre-existing violations** (3 serious). Let me identify them so I can prove they're not from my work and document the baseline.
+
+The pre-existing violations are in `widget-primitives/WidgetChartSummary.Tests.swift` (not my scope) — baseline lint is RED independent of my work, like the full build. I'll prove my files add zero violations. Now let me read the large FleetApiSection structure so my Fleet API tab is faithful to its major regions.
+
+I have full clarity on structure now. Let me build the testable pure-logic core first (Foundation/CryptoKit only — fully isolatable and unit-testable).
+
+Now the static reference data tables (Foundation-only, isolatable):
+
+Let me add the cron logic to the util file:
+
+Now let me type-check the pure-logic core in isolation — my first verification checkpoint.
+
+`Result`'s failure must be an `Error`. I'll introduce a small generic outcome type instead.
+
+Pure-logic core type-checks clean under Swift 6 strict concurrency. Let me verify the computations actually work with a quick executable harness before building the UI layer.
+
+Multi-file builds need the entry file named `main.swift`. Let me fix and rerun.
+
+37/37 pure-logic assertions pass — computations verified correct. Now the `@Observable` model layer (tab state + injectable seams + per-tool run model).
+
+Now the telemetry-health `@Observable` model + its types and sample source (Foundation/Observation only, also isolatable):
+
+Let me decouple the card type from app-only types (so the model layer stays isolatable) by defining a local tone enum and the card struct in the model file.
+
+Now let me isolate type-check the full model layer (all four files) under Swift 6 strict concurrency:
+
+`LocalizedStringKey` isn't `Sendable`. Since cards are only used on `MainActor`, I'll drop `Sendable` from the card struct.
+
+Model layer type-checks clean. Now let me verify the async `@Observable` state machines (health + run models) with an executable harness using stub sources.
+
+Same multi-file rule — the entry file must be `main.swift`. Let me rename and rerun.
+
+20/20 model assertions pass. Both pure-logic and model layers are verified. Now the UI layer. Let me update todos and build the shared components + result panel.
+
+Now the UI catalog data (infrastructure/fleet cards, reference links, onboarding steps):
+
+Now the Fleet API, Infrastructure, and Reference section views:
+
+Let me add a small display-time formatter to the util core (reusing the ISO parser), then build the telemetry section.
+
+Let me check the `TSSkeleton` API before writing the telemetry section.
+
+`TSTableSkeleton(rows:)` fits the loading state. Now the Telemetry Health section:
+
+Now the Utilities section — the search grid, expandable card, tool registry, and shared output helpers:
+
+Now the 15 utility tool views (split across two files). First batch (VIN, JWT, timestamp, base64, URL, JSON, UUID, hash):
+
+Now the second batch of tools (bytes, color, cron, HTTP status, Tesla API ref, regex, unix permissions):
+
+Now the page shell that ties the tabs to the sections:
+
+Now the route registration and the navigation wiring (AppRoute case, parser, app composition):
+
+Now wire the route into `AppRoute` and the app composition:
+
+Now wire it into the app's route-host composition:
+
+Both UI and route layers are written. Let me update tracking and write the tests.
+
+Now the pure-logic test file and the route-registration test:
+
+Now the big localization task. Let me extract every `translation.*` key I referenced so I can inject them all into the catalog.
+
+All keys enumerated (~146 concrete keys). Let me inject them into the catalog idempotently via a script (textual insert to avoid reformatting the 191k-line file), with English values ported from the web.
+
+159 keys added, 14 reused existing ones. Let me verify the format-string keys (`filteredBy`, `affectedCount`) have compatible values, since those feed `String(format:)`.
+
+The pre-existing `filteredBy` value is just `"Filtered"` (no format specifier) — the web appends the VIN outside the translation. Let me fix my helper to match exactly.
+
+Now let me lint my new files. swiftlint lints the whole tree, so I'll filter to my files to verify zero new violations.
+
+A handful of fixable lint issues: 8 long lines, one 3-tuple, and the util enum body exceeds 250 lines. Let me view the exact long lines, then fix all.
+
+Let me fix all line lengths, the 3-tuple, and move cron to an extension file (to satisfy `type_body_length`). First the straightforward line-length edits:
+
+Now the unix-permission tiles (3 long lines):
+
+Now fix the 3-tuple and move cron to an extension. Let me view the current util file sections:
+
+Now fix the tuple (return `[Int]`) and extract cron into an extension file:
+
+Cron extracted. Let me re-type-check the model layer and re-run the harnesses (now including the cron extension):
+
+Type-check clean and both harnesses still pass. Let me re-run swiftlint on my files to confirm all violations are resolved:
+
+All my files pass swiftlint `--strict`. Now the placeholder scan on my actual Admin source dir:
+
+The scanner flags the literal substring "placeholder" — but these are my i18n **keys** for input-field prompt text (`...vin.placeholder`), not stubs. Let me check the exact pattern to choose the cleanest fix.
+
+The scanner treats "Placeholder" as a stub marker, matching my input-field key names. Cleanest fix: rename the `.placeholder` key segment to `.hint` in both code and catalog. Let me find every occurrence first.
+
+The sibling admin files use the codebase's sanctioned `// parity:allow i18n key name, not a stub` marker for exactly this case. I'll follow that established convention on my 14 input-field key lines:
+
+ToolsA got 6 markers but has 7 placeholder keys. Let me find the one that didn't match:
+
+The regex missed `base64.placeholder` (digits break `[a-zA-Z.]*`). Let me fix that one line:
+
+`PLACEHOLDER_COUNT=0`, scan passes. Now let me regenerate the Xcode project (to include the new files) and re-confirm swiftlint, then attempt a build to surface any compile issues in the view layer.
+
+Project regenerated with my files included, and swiftlint is clean. The full target can't link (missing KMP framework), so for the view layer I'll do a high-fidelity isolated type-check: compile my feature files against the **real** component library + tokens + routing files. Let me first confirm those don't depend on the missing KMP module.
+
+No KMP dependency in the component library. Let me type-check my feature files against the **real** components + tokens + routing — the highest-fidelity verification possible without the KMP framework:
+
+Those errors are in the **Maps** component (which my feature doesn't use) referencing `TSChartPalette`. Let me exclude Maps/Charts (unused by DevTools) and re-check just the components my feature actually needs:
+
+`tsGlassPanel()` and `TSChartPalette` live in `Sources/Design/`. Let me include that dir:
+
+Whack-a-mole with unrelated components. Let me include just the categories my feature uses (UI + Feedback + Design) plus tokens/routing:
+
+Let me pin the exact component files my feature needs (not whole dirs):
+
+`TSInlineCallout` is in `Feedback/Banners.swift`. Let me add it:
+
+Now I'm getting real errors in **my** code (good — deps fully resolve now): the UI catalog `static let`s hold non-`Sendable` `LocalizedStringKey` data. Since they're UI-layer and only read on the main actor, I'll isolate the catalog to `@MainActor`:
+
+The entire DevTools feature type-checks cleanly under Swift 6 strict concurrency against the **real** component library, tokens, and routing. Let me re-confirm swiftlint after the edits, then attempt the actual `xcodebuild` to document its failure mode honestly.
+
+swiftlint clean. Now let me attempt the actual `xcodebuild` to capture and document its failure mode for the honesty log:
+
+Destination specifier didn't match. Let me check the available schemes/destinations and build the way the gate specifies (no explicit destination):
+
+There's a dedicated `TeslaSync-macOS` scheme. Let me build it to capture the missing-framework error (proving the RED is structural, not from my code):
+
+The scheme has a Gradle pre-action that **assembles** the KMP `Shared.xcframework` on demand — so a full build IS feasible (just slow). The framework was staged. Let me run a complete build to a log file to get a definitive result.
+
+While the build runs, let me check its progress and verify the generated project includes my files.
+
+The build completed. Let me read its result.
+
+No errors and no terminal status line yet — let me inspect the full tail and confirm whether the build process finished.
+
+My `xcodebuild` (PID 94166) is still compiling the KMP framework via Gradle (slow — building release frameworks for all platforms), and I can see another user's build sharing this machine. The build is progressing; I'll let it continue. Meanwhile, my verification is already strong. Let me confirm project inclusion and prepare the ledger.
+
+All 14 source + 3 test files are in the project. Let me update tracking and add the ledger rows while the build runs.
+
+Ledger valid (2 DevTools rows, 2/2 each). The build is still assembling KMP release frameworks via Gradle (slow, shared machine). Let me write the evidence log while it runs, then finalize with the build result. First, the `=== PARITY ===` section and verification record.
+
+Log drafted with placeholders for the build result. Let me check on the build progress.
+
+The build is still in the Kotlin/Native release-framework phase (legitimately slow, no errors). Let me wait a longer increment.
+
+"** BUILD INTERRUPTED **" mid-Gradle (Kotlin/Native release-framework link) — never reached Swift compilation (0 SwiftCompile tasks), on this shared, contended machine. That's an environment limit, not a code defect. The debug `Shared.xcframework` is already built, so an iOS-simulator debug build can reuse it and skip the slow release link. Let me launch that in the background while I finalize, and check it before completing.
+
+The iOS build is running detached (will reuse the already-built debug framework and proceed to Swift compilation). Let me verify the repo's git status shows only intended changes while it builds.
+
+Git status is exactly as intended (nav + catalog + ledger modified; feature files + log added; generated `.xcodeproj` ignored). The iOS build shell signaled completion — let me check its result.
+
+The iOS build reached Swift compilation (78 compile tasks; the main `TeslaSync` module — including my files — started compiling under `-swift-version 6`). Let me check whether it finished, was interrupted, or errored.
+
+Swift compiler subprocesses are actively running (no errors yet) — the build is mid-compilation of the `TeslaSync` module. Let me wait for it to reach a terminal state.
+
+Build failed at SwiftCompile — I must verify whether it's my code or pre-existing/sibling breakage. Let me extract the actual error diagnostics.
+
+No `error:` diagnostics — suggests a compiler crash, not a code error. Let me look for crash/abort signatures and the failing file.
+
+Let me examine the "Failed frontend command" context and the failed-commands summary:
+
+Definitive finding: the build RED is a **swift-frontend IRGen compiler crash** (`report_fatal_error` / `report_at_maximum_capacity` in `IRGenSILFunction::visitFullApplySite`) — **zero source diagnostics**. The crashing batch compiles sibling/app files (`AnomalyInlineRow`, `ApiPlayground*`, `AppCommand*`), not DevTools. This is the identical pre-existing toolchain crash the sibling ApiPlayground log documents (and a concurrent unrelated build on this shared machine hits the same `report_at_maximum_capacity`). Let me confirm no DevTools file is in the failing batch.
+
+Confirmed: zero DevTools files in the failing batch, zero diagnostics in my code, crash is `llvm::report_fatal_error` in IRGen. This is the documented pre-existing toolchain crash, identical to the sibling ApiPlayground page and a concurrent unrelated build. Let me finalize the evidence log honestly (disclosing the RED, not green-washing it).
+
+The build RED is fully diagnosed as a pre-existing, out-of-scope toolchain IRGen crash (zero DevTools diagnostics, identical to the sibling page and a concurrent unrelated build). The log is finalized with an honest, non-green-washed disposition. Let me do final verification and clean up temp artifacts.
+
+Let me check whether the sibling parity prompts actually produced commits on this branch (to decide the commit step consistently with the established pattern).
+
+The established branch pattern is clear: every sibling P7 parity unit is committed (`feat(apps/apple): XPage at web parity`), and all committed through the identical out-of-scope toolchain crash with their own gates green — exactly my situation. My unit's own gates (parity, lint, placeholder, type-check, 57 tests) are all green. I'll commit following the prompt's Commit section with the actual paths.
+
+All 22 intended files staged (no generated artifacts). Let me commit:
+
+All 8 todos complete. The work is implemented, verified, ledgered, logged, and committed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

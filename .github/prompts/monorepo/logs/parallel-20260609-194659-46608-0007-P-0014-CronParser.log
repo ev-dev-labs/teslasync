@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure to understand what exists and what's available.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Let me read the web source and explore the Apple project structure.
+
+The web source is a self-contained devtool. Let me read the helpers it uses and find existing sibling feature-views to mirror the established native pattern.
+
+Sibling devtools are already ported (Base64Tool, ByteSizeConverter, ColorConverter). Let me check if CronParser already exists and examine the helpers + a close template (Base64Tool — also has presets-like simple structure).
+
+CronParser doesn't exist yet. `ByteSizeConverter` is the closest analog (self-contained converter, no API). Let me read its complete file set as the template, plus the project.yml.
+
+Now the Adapter, Views, Previews, Tests, and strings files for the template.
+
+`ByteSizeConverter` has no `.Views.swift` — the set is `.swift / .Model / .Adapter / .Previews / .Tests / .strings`. Let me read the rest, plus the build wiring and design tokens.
+
+Now let me examine the build wiring (project.yml), the design tokens, the web `formatDateTime`, and how presets/badges render in a sibling that uses them.
+
+Tokens live in the generated design package. Let me locate the token definitions and read the full web date formatter for parity.
+
+Tokens are all in one generated file. Let me read it, and find how presets/badges are rendered by a sibling that uses Button/Badge.
+
+Let me locate the shared native components (TSGlassPanel, any button/badge) and check the web ICON_COLOR_MAP for the green icon mapping.
+
+Let me read the shared component APIs (TSGlassPanel, TSButton, TSBadge, Fields) and check whether sibling devtools use them.
+
+Now let me see how sibling devtools handle preset buttons and list badges — checking which are ported and their conventions.
+
+All 14 siblings are ported and the family DOES use shared `TSButton`/`TSBadge`/`TSIconBox`. `TimestampTool` is the closest analog (date-oriented, uses presets). Let me read it in full as the primary reference.
+
+Excellent — `TimestampTool` is a near-perfect template (green clock icon, ghost preset button, date formatting). Let me read its Adapter, Previews, strings, and Tests to mirror the date-formatting and test conventions.
+
+Now let me check the test wiring, look for a flow/wrap layout helper for the presets, read the Tests template, and confirm the log dir + placeholder script.
+
+Let me read the Tests template and check for a reusable flow-layout pattern (for the wrapping presets).
+
+I have the full pattern. Let me verify the web i18n fallbacks by checking `en.json` for the exact keys the source uses.
+
+Let me verify these are exact JSON keys (i18next uses the literal phrase as key) and check en.json structure.
+
+I now have everything needed. Let me verify there are no symbol collisions for my planned `Cron*` type names before writing.
+
+There's an existing `CronExpression` in `TriggerConfigurator.Adapter.swift`. Let me inspect it to avoid collision and pick distinct names.
+
+`CronExpression` is taken — I'll namespace mine as `CronInput` and other distinct `Cron*` names. Now I have a complete picture. Let me record a brief plan and start writing the six files.
+
+Now writing the adapter (pure logic — the core port of `describeCron`, `getNextCronRuns`, `formatDateTime`).
+
+Now the Model (state holder + i18n facade + telemetry seam).
+
+Now the main SwiftUI view. Let me first check the SwiftLint/SwiftFormat configs to comply with `--strict`.
+
+Configs noted (line length ≤120 for code, swiftformat before-first wrapping). Now the main view file.
+
+Now the Previews and the strings catalog.
+
+Now the Tests file with adapter parity oracles, schedule instants, model phases, telemetry, and accessibility.
+
+All six files created. Let me normalize formatting with swiftformat, then do a fast standalone type-check of the SwiftUI-free adapter+model before the slow xcodebuild.
+
+Three swiftlint issues to fix: file length (>400), a 6-param function, and a brace-spacing nit. Let me inspect the flagged lines.
+
+Three fixes needed. Let me fix the adapter (param count + brace), then split the view file to get under 400 lines.
+
+Now update the model's two `runs(...)` call sites to the 4-param signature.
+
+Now update the two test call sites for the new `runs(...)` signature.
+
+Now fix the file-length: split helper views into `CronParser.Views.swift`. Let me view the section to move.
+
+I'll move lines 230–402 (the helper views + flow layout) into a new `CronParser.Views.swift`, making the cross-file-referenced ones internal.
+
+Now create `CronParser.Views.swift` with those helper views (internal where cross-referenced, `CronRunBadge` stays private to its file).
+
+Now re-run swiftformat + swiftlint on all six Swift files.
+
+swiftformat and swiftlint both pass clean. Now I need to prepare the Xcode project. Let me check how the project is generated (XcodeGen) and whether the toolchain is present.
+
+No committed `.xcodeproj` — XcodeGen generates it (v2.45.4 available). Let me find the established build flow.
+
+The full gate needs XcodeGen + a Gradle-built `Shared.xcframework` (KMP). Before the slow path, let me fast-validate my numeric oracles by running the pure adapter standalone.
+
+All 21 adapter oracles PASS. Pure logic is validated. Let me clean up and assess the full-build prerequisites (KMP `Shared.xcframework`, Gradle).
+
+`Shared.xcframework` isn't prebuilt — the build's pre-action assembles it via Gradle/Kotlin-Native. Let me check the documented gate expectations and prerequisites (Java, simulators).
+
+This is the established repo pattern: the full-app `xcodebuild build test` is **known-blocked** by pre-existing, unrelated issues (unstaged KMP `Shared.xcframework`, parallel-merge collisions, dev-signing), and surfaces are verified via isolated SwiftPM build/tests + real iOS-18/macOS-15 `swiftc -typecheck` + lint/format/placeholder gates. Java 17 and an iPhone 16 sim are present. Let me follow that precedent rigorously. First, check the component dep closure and gitignore.
+
+`.xcodeproj/` is gitignored (safe to generate). `TSGlassPanel` uses a `.tsGlassPanel()` modifier — let me find it and the minimal real-deps closure for an iOS-18/macOS-15 typecheck of the view.
+
+`TSMaterial.swift`, `Buttons.swift` are self-contained (SwiftUI + Tokens). Let me check `Cards.swift`'s external symbol closure, then run the isolated SwiftPM tests (executes the test suite) in parallel.
+
+`Cards.swift` pulls in Typography/Badges. Let me (1) verify Typography.swift is self-contained and (2) set up + run an isolated SwiftPM package that actually executes my XCTest suite (Adapter+Model+Tests are SwiftUI-free).
+
+All **30 XCTests pass** under Swift 6 in the isolated `TeslaSync` module, and Typography.swift is self-contained. Now the real iOS-18 + macOS-15 `swiftc -typecheck` of the view against the **real** Tokens + components.
+
+iOS-18 typecheck: **0 errors**. Now macOS-15.
+
+Both typechecks: **0 errors** on iOS-18 and macOS-15 (Swift 6 strict concurrency, real tokens/components). Now coexistence check (no cross-surface symbol collisions), the placeholder script semantics, and `xcodegen generate`.
+
+Coexistence is collision-free and no forbidden placeholder words appear in my files. Now `xcodegen generate` (confirms enumeration + needed for the gate) and a real placeholder scan of my files.
+
+`xcodegen` enumerated all 7 CronParser files. Now the placeholder gate — both the literal gate invocation and a real scan of my files.
+
+Placeholder gate: **PLACEHOLDER_COUNT=0** (and the self-test confirms the scanner actually detects stubs, so the 0 is meaningful). Now I'll attempt the real `xcodebuild` gate. Per the documented precedent this triggers the long-pole KMP/Gradle `Shared.xcframework` pre-action. Let me attempt it and capture first-hand evidence.
+
+Signing: **0 valid identities** (confirms the macOS-signing block per precedent). The iOS build is still running (likely the KMP/Gradle pre-action). Let me check progress.
+
+Real progress — the DEBUG `Shared.xcframework` was assembled and it's now on `:core:linkReleaseFrameworkIosSimulatorArm64` (the documented Kotlin/Native long-pole). Let me keep waiting on the build.
+
+The KMP `Shared.xcframework` is now staged and the build has moved into compiling the **TeslaSync app target itself** (`EmitSwiftModule for TeslaSync`) — my files are in this compile. Let me continue waiting for build/test completion or the documented pre-existing collisions.
+
+IOS_EXIT=65 — the build failed in **batches of other files** (AnomalyInlineRow, AppCommands, AppearanceSettings…), not CronParser. This matches the documented precedent. Let me extract the actual `error:` lines to confirm they're pre-existing and CronParser-free.
+
+Zero `error:` lines yet 2 SwiftCompile failures — likely a redeclaration/crash surfaced differently or batches were cancelled. Let me search the log more broadly for the root cause.
+
+Let me pull the authoritative error list from the `.xcresult` bundle.
+
+The xcresult shows only the generic "SwiftCompile failed" (no source-level diagnostic) — indicating a compiler crash/kill, not a source error in my files. Let me confirm the documented pre-existing collisions exist in the tree and look for crash signatures.
+
+A `swift-frontend` **crash** (Stack dump at line 8701), not a source error. Let me view the crash detail to confirm it's unrelated to CronParser.
+
+Confirmed: it's a **Swift 6.3.2 `swift-frontend` compiler crash** while batch-compiling **unrelated files** (AnomalyInlineRow, AppCommands, AppearanceSettings) — **no CronParser file in the crashing batch**. Let me capture the crash's semantic frame for the evidence log.
+
+Decisive evidence: the failure is a **`swift-frontend` IRGen crash** (`report_fatal_error` → `report_at_maximum_capacity`, a toolchain resource-capacity limit) in an **unrelated batch** (AnomalyInlineRow/AppCommands/AppearanceSettings), and **CronParser appears nowhere in the log with any error/warning/crash**. This matches the documented precedent. Let me launch the macOS gate (same two-step structure) in the background while I assemble the evidence log.
+
+macOS gate is building in the background. Let me verify i18n parity (every web `t()` key has a catalog entry) while it runs.
+
+i18n parity is complete (all 10 web keys + all native-chrome keys). The macOS gate launcher returned (nohup); the build runs detached. Let me check its progress.
+
+The macOS gate finished fast (framework was warm). Let me classify its failure and confirm CronParser is clean.
+
+macOS gate is blocked at **dev-signing** (entitlements require a development certificate; 0 valid identities) — it failed before compilation. **CronParser is clean in both logs.** Both blockers are pre-existing/unrelated platform-capability issues (iOS: toolchain IRGen crash on unrelated files; macOS: code-signing), matching the documented precedent. Let me gather final stats and the fast-gate exit codes for the log.
+
+All host-runnable gates are green; both full-app gates are blocked by unrelated platform-capability issues. Let me write the comprehensive evidence log.
+
+The evidence log is written. Now let me clean up temp artifacts and review git status before committing only my allowed files.
+
+Git is clean — only my 7 CronParser files + the log are untracked; the generated `.xcodeproj` and staged `Shared.xcframework` are gitignored (won't be committed). Let me stage exactly the allowed files and commit.
+
+Exactly the 8 allowed files are staged. Now the commit.
+
+Commit `9f325e416` created (8 files, 1725 insertions). Let me do a final clean-tree verification.
+
+The task is complete. Working tree is clean and everything is committed at `9f325e416`.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) port of the **CronParser** devtools surface at parity with `web/src/features/admin/components/devtools/tools/CronParser.tsx`, following the established sibling pattern (ByteSizeConverter 0012, TimestampTool 0021).
+
+**Delivered (`apps/apple/TeslaSync/feature-views/CronParser.*`, 7 files, 1506 lines):**
+- **Adapter** — pure ports of `describeCron`, `getNextCronRuns` (with the exact `matchField` `* / , -` precedence quirks), `formatDateTime`, field-splitting, and presets.
+- **Model** — `@Observable` state holder (P1/S8), i18n facade (P1/S10), `view.opened` telemetry seam (P1/S11).
+- **View + Views** — ToolCard header (green `timer` icon), expression `Input`, wrapping ghost preset buttons, the green Description panel, and the Next-Runs list (info-tone numbered chip + mono dates). Every state renders (empty / content-with-runs / content-no-runs) — never a blank box.
+- **Previews, Tests, strings catalog.**
+
+**Verification — surface GREEN:**
+- swiftformat `--lint` 0/6 · swiftlint `--strict` 0 violations · placeholder gate `PLACEHOLDER_COUNT=0` (+ self-test proves the scanner)
+- Foundation adapter harness **21/21** web-parity oracles · isolated SwiftPM XCTest **30/30** under Swift 6
+- Real **iOS-18 + macOS-15 `swiftc -typecheck` = 0 errors** against the real `Tokens.swift` + real shared components
+- `xcodegen generate` enumerates all 7 files · collision-free · all 10 web i18n keys present · a11y labels on every interactive element
+
+**Full-app `xcodebuild build test` — BLOCKED (pre-existing, unrelated, captured first-hand):**
+- iOS: KMP `Shared.xcframework` built+staged and the whole module type-checked, then a **Swift 6.3.2 `swift-frontend` IRGen crash** (`report_at_maximum_capacity`) on an **unrelated** batch (AnomalyInlineRow/AppCommands/AppearanceSettings). **Zero CronParser diagnostics** anywhere.
+- macOS: **dev-signing** (`0 valid identities`).
+
+These are exactly the blocks `apps/macos-pending-verifications.md` defers to the macOS acceptance gate. Evidence is in `.github/prompts/monorepo/logs/p4-apple-feature-views-0014-CronParser.log`, ending `EXIT=65` / `STATUS=BLOCKED` with platform-capability evidence (the sanctioned terminal state).
+

@@ -1,0 +1,200 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me explore the existing Apple app structure and the web source.
+
+Now let me find the existing feature-views, the recently-added ByteSizeConverter reference, and the shared infrastructure (state holders, tokens, i18n, telemetry).
+
+Large established pattern exists. PresetGallery is in the automations domain — let me study the closest references (ActionBuilder, same domain) and a data-bound surface with all states, plus the shared facade/state-holder layer.
+
+No existing AutomationPreset in Apple code — feature views port the data shapes themselves. Let me study the shared facade infrastructure and a data-bound surface end-to-end.
+
+Sophisticated KMP-backed facade. I need to understand how data-bound feature views obtain their state holder and how the project compiles files. Let me check the project/build setup and read a complete data-bound example end-to-end.
+
+Build is XcodeGen (`project.yml`). The view pattern is clear: a `View` bound to a `Model` (P1/S8), switching over `phase`, using P1/S9 tokens (`TSSpacing`, `Color.TS`), with a `surfaceSlug` for P1/S11. Let me read the full ActiveSessionsSection set + project.yml + tokens.
+
+Excellent — I now understand the architecture deeply. Let me check buildability (xcodegen, the KMP Shared.xcframework, the build script) and how prior surfaces' gate logs concluded (DONE vs BLOCKED), plus the navigation seam.
+
+Critical insight from the precedent: the full `xcodebuild` scheme gate fails for **out-of-scope** reasons (pre-existing predecessor compile errors + macOS signing gap), and the covenant forbids editing predecessor files. The established bar is: complete parity surface, compiles clean within the app target (zero surface-owned errors), swiftlint/swiftformat/placeholder green, logic tests execute. Let me gather the full reference set.
+
+The template architecture is now clear. Let me read the remaining ActiveSessions files (States/Views/Previews/strings/Tests), the web automation types, and locate the design tokens, shared components, and navigation seam.
+
+Let me read the Views + Tests files, find the `.text` localization helper convention, the design tokens, navigation pattern, and the web automation types.
+
+Let me read the Views file (with the `.text` helper + card-list content), the design tokens, the motion components (TSFadeIn/Stagger), the navigation pattern, and the web automation types.
+
+Let me read the design tokens, motion components, web automation types, and the navigation/route pattern.
+
+Now the web automation types and the navigation seam pattern (the Install action navigates).
+
+`ChargingSessionCard` is the closest analog — a card whose action navigates with an id (`open(id:)`). Let me read its navigation seam pattern plus the web trigger/action input types and the full `AutomationPreset` shape.
+
+I have the full pattern. Before writing, let me check the placeholder checker, swiftlint config, and the shared-framework build script to ensure my files will pass the gates.
+
+Let me see the forbidden placeholder patterns and the rest of the swiftlint rules, then check the shared-framework build script.
+
+Forbidden words noted (avoid "TODO", "FIXME", "Placeholder", "Coming soon", "not implemented"). Line length ≤120 for code. Let me check the shared-framework build script to plan verification.
+
+Building the KMP framework needs Gradle + Kotlin/Native (heavy). Let me check available native shared components (Skeleton, EmptyState, GlassPanel, Badge) so I can reuse them for parity, and confirm whether the framework is cached.
+
+Native shared components exist and map 1:1 to the web ones (`TSGlassPanel`, `TSButton`, `TSBadge`, `TSEmptyState`, `TSSkeleton`). Let me read their signatures so I compose them correctly.
+
+`TSBadge`/`TSButton` take `LocalizedStringKey`, but our copy resolves through the P1/S10 facade (returns `String`). Let me check how existing card surfaces reconcile this (inline vs shared component) and read `TSIconBox` + `TSEmptyState`/`TSSkeleton`.
+
+The convention is clear: `TSBadge(LocalizedStringKey(resolvedString), tone:)`, `TSButton(variant:size:action:){label}`, `TSIconBox`, `TSGlassPanel`, `TSEmptyState`. Let me read `TSSkeleton` and `TSIconBox` signatures, then I'll write the surface.
+
+I have everything needed. Let me set up tracking and check the swiftformat config, then write the surface.
+
+Now I'll set up tracking and start building the surface. Creating the plan, todos, and the pure adapter core.
+
+Let me verify the trailing-comma convention before writing more, to minimize swiftformat rework.
+
+Convention is no trailing comma on the last element. Let me fix the Adapter.
+
+Now the Seams file (telemetry, strings facade, navigator, source).
+
+Now the States file (loading skeleton grid, empty, error, freshness chip, banner).
+
+Now the Views file (grid layout + content + PresetCard).
+
+Now the main view, and removing the redundant a11y container from Content (the main view owns the summary).
+
+Now the Previews and strings files.
+
+Now the Tests file. Let me first check how the existing ModelTests spies on the Sendable seams (telemetry/mutation) to mirror the concurrency-safe pattern.
+
+The precedent splits pure tests (`*.Tests.swift`) from state-holder tests (`*.ModelTests.swift`), both matching `PresetGallery.*`. Let me write both.
+
+Now the state-holder ModelTests file.
+
+All 10 files written. Let me run the fast surface-scoped gates: swiftformat, swiftlint, and the placeholder checker.
+
+Only two over-width lines. Let me let swiftformat auto-format the files (ecosystem tool), then re-verify.
+
+swiftformat passes. Now swiftlint --strict and the placeholder checker on my files.
+
+Placeholder check passes (COUNT=0). One swiftlint issue: the Install button uses an action closure literal + trailing label closure. Let me view the current (formatted) installButton and fix it to pass `label:` explicitly.
+
+Let me re-verify both swiftlint and swiftformat pass on all files.
+
+All three fast gates pass: **swiftformat 0/9**, **swiftlint --strict 0 violations**, **placeholders COUNT=0**. Now I need to prove the surface compiles in the app target. The long pole is the KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me kick that off in the background and meanwhile do a fast targeted type-check.
+
+My surface and its direct dependencies don't import `Shared` — promising for a targeted type-check. Let me check the KMP build status (the notification fired suspiciously fast).
+
+The KMP framework build is genuinely running in the background (Kotlin/Native compiling, many tasks FROM-CACHE). While it builds, let me get fast authoritative signal on the parity-critical pure core by compiling and executing the Adapter logic standalone (Foundation-only).
+
+No output — `swift` with multiple files didn't execute `main.swift`'s top-level. Let me compile to a binary with `swiftc` and run it.
+
+The pure core compiles clean and **all 19 parity assertions PASS** — exact match to the web source's data, labels, icons, and phase logic. Let me check the KMP framework build progress.
+
+KMP build is in the linking phase (Kotlin compiles all FROM-CACHE). Let me wait for it to finish staging the framework.
+
+Release framework linking in progress. Let me wait more.
+
+Release framework still linking per-arch. Let me continue waiting for it to stage.
+
+Framework built (9m37s) and staged. Now let me generate the Xcode project and build the iOS app target to prove the surface compiles.
+
+Project generated. Now let me build the iOS app target to prove the surface compiles. Running the build (framework is staged/cached) and capturing the log.
+
+Build started. Let me wait and monitor progress.
+
+Build still running (xcodebuild active). Output is buffered. Let me wait longer.
+
+6 minutes with an empty log is unusual. Let me inspect what the build is actually doing (pre-action gradle vs Swift compile).
+
+Multiple parallel slots are contending (several `build-shared-xcframework.sh` + gradle running). My app build IS compiling Swift (9 `swift-frontend` processes active). Output is buffered. Let me stop the diagnostic and wait for completion.
+
+Let me check the log file state and whether the redirect survived the async teardown.
+
+The async redirect was lost (no log file), and there's heavy cross-slot contention (22 `swift-frontend`). Let me identify and stop the orphaned build for my slot, then run a clean **synchronous** build with proper logging.
+
+My build died with the async teardown; the 2 running xcodebuilds are other slots' gate runs. Let me run a clean **synchronous** app-target build (framework already staged, skipping the gradle pre-action), logging to a file that will persist.
+
+Exit 64 (usage error) immediately. Let me see why.
+
+`-derivedDataPath` needs `-scheme`. Let me drop it and build the target with default DerivedData (still skips the gradle pre-action).
+
+Build exited 65 (a compile error). Let me check whether any error is in my surface vs. pre-existing predecessor code.
+
+All compile errors are in **pre-existing predecessor `dashboard-widgets/ChargeStatus*`/`ChargeSessionChartWidget*` files** (`'ChargeSessionDTO' is ambiguous` type-lookup defects) — **zero PresetGallery errors**. Let me confirm my files were actually compiled and that every error is out-of-scope.
+
+**Decisive result:** all **113 errors are in out-of-scope predecessor `dashboard-widgets/` files** (`ChargeSessionDTO`/`ChargeStatusDTO` type-ambiguity defects — forbidden to edit by covenant #7). **Zero PresetGallery diagnostics**, and the build processed `PresetGallery.strings` (validated UTF-8). For an ironclad proof, let me rebuild with the known-broken predecessor widgets excluded at build-time (no source edits) to confirm my surface + feature-views compile clean.
+
+Build 2 surfaces `'PresetGalleryPhase' is ambiguous` and `invalid redeclaration of 'PresetGalleryLoadingState'` — my type names appear to collide with an existing declaration in the module. Let me hunt the duplicate.
+
+Root cause found: the pre-existing **`AlertMessageEditor`** surface already declares module-scope `PresetGalleryPhase` and `PresetGalleryLoadingState` (its own alert-preset gallery). My identically-named types collide. Build 1's "zero errors" was a false-green — masked because the dashboard-widget failure aborted compilation early. **This is a real surface defect I must fix by namespacing.** Let me enumerate every `PresetGallery*` symbol AlertMessageEditor declares.
+
+The real fix: my types must not collide with `AlertMessageEditor`'s `PresetGallery*` types. Let me precisely identify every one of my declared symbols that collides with anything else in the module.
+
+The scan is matching private nested `Descriptor` helpers (file-scoped, false positives). Let me stop it and run a precise **module-scope** collision check for the prefix I plan to use.
+
+`Automation*` prefix is fully free (the `AutomationTriggerKind` hits are just comments). The slug/table string literals `"PresetGallery"` must be preserved. Let me get the precise set of my **top-level** types that collide (excluding private nested helpers like `Descriptor`).
+
+Precise collision set confirmed: exactly **5 top-level types** clash with `AlertMessageEditor` (`PresetGalleryPhase`, `PresetGalleryProjection`, `PresetGalleryEmptyState`, `PresetGalleryErrorState`, `PresetGalleryLoadingState`). Build 1's "0 errors" was a false-green masked by the earlier dashboard-widget failure. For a clean, consistent, collision-proof result I'll rename my whole surface namespace to `AutomationPresetGallery*`/`AutomationPresetCard*`, preserving the `"PresetGallery"` slug/table literals and web/file references. Let me first map the literals/refs to protect.
+
+All `PresetGallery.<word>` hits are filename/web-path refs (none are type-member access). Clean protection set. Let me check `PresetCard` occurrences too, then run the rename.
+
+Clear plan: backticked refs (`` `PresetCard` ``, `` `PresetGallery` ``) are web-component references to preserve; the `"PresetGallery"` literals (slug/table/test) and `PresetGallery.<file>` paths must stay. Everything else is a code identifier to rename. Let me run a precise Python rename.
+
+Rename applied, slug/table literals preserved. Let me verify the declarations renamed correctly, the test slug assertion is intact, and headers/web-refs survived.
+
+Rename is clean — all types now `AutomationPresetGallery*`, slug/table/test literals preserved as `"PresetGallery"`, headers/web-refs intact, zero remaining collisions. Let me reformat (longer names may exceed width), then re-lint.
+
+Both lint gates pass post-rename. Now the decisive check: rebuild with the broken predecessor widgets excluded — if my surface is clean, the collisions are gone and it should compile. Also re-verifying placeholders.
+
+Placeholders pass. Build3 (post-rename, widgets excluded) still exit 65 — let me see whether any error is now in my surface or all elsewhere.
+
+**My surface is vindicated: zero PresetGallery/AutomationPresetGallery errors.** The remaining 11 errors are yet more out-of-scope predecessor `dashboard-widgets/DriveScore*` defects (same `ambiguous`/`redeclaration` class). The dashboard-widgets dir has systemic pre-existing breakage. For an ironclad "my surface compiles" proof, let me exclude the entire broken predecessor `dashboard-widgets` group and confirm a clean compile. First, checking for basename collisions with feature-views.
+
+597 dashboard-widget files with systemic pre-existing breakage (clearly a concurrent predecessor refactor) — excluding them all is impractical and they're forbidden to edit. My evidence is already conclusive: **zero surface errors across two build configs**. Let me run the authoritative full iOS build post-rename (no exclusions) to confirm the entire feature-views layer — including my surface — compiles, with only predecessor dashboard-widgets failing.
+
+**Conclusive: full iOS build post-rename → 113 errors ALL in `dashboard-widgets/` (6 broken predecessor families); `feature-views/` errors = 0.** The entire feature-views layer including my surface compiles clean on iOS. Now the macOS side for ADR-002 dual-platform parity.
+
+Cross-platform confirmed: macOS also shows **feature-views = 0 errors, 113 errors all in predecessor `dashboard-widgets/`**. Now let me capture the real tree-wide lint results (the gate runs these over all of `apps/apple`) to honestly document surface-clean vs predecessor noise.
+
+Tree-wide swiftformat passes (0/2182 files). Now tree-wide swiftlint --strict (the gate's lint step).
+
+Tree-wide swiftlint: 1 serious violation in 2178 files. The "9 PresetGallery lines" are likely just per-file "Linting..." progress lines. Let me confirm the single violation is NOT in my surface.
+
+The single tree-wide swiftlint violation is in predecessor `dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift` (out of scope) — **all 9 of my files linted with 0 violations**. Now let me run the *exact* official gate command (iOS scheme `build test`) once to capture an authentic gate result for the log, and clean up scratch files.
+
+Official iOS scheme gate confirmed: **IOS_EXIT=65, 226 errors ALL in predecessor `dashboard-widgets/`, feature-views = 0, PresetGallery = 0** (framework pre-action staged successfully). Now the official macOS scheme gate for authenticity.
+
+macOS scheme fails on a **runner code-signing gap** (entitlements need a dev cert — exactly the precedent's noted macOS gap), not a compile defect; my `-target` macOS compile already showed feature-views=0. I now have the complete authentic gate picture. Let me write the official log.
+
+Log written. Now let me verify git state precisely before committing — I must add only my `PresetGallery.*` files + the log, not the pre-existing unrelated `web/` changes or gitignored build artifacts.
+
+All clean: my 10 `PresetGallery.*` files + the log are untracked; `.xcodeproj`/`Shared.xcframework` are gitignored; the 2 modified `web/` files are pre-existing (not mine). Let me stage exactly my files + the log and commit.
+
+Exactly my 10 files + the log staged (pre-existing `web/` changes excluded). Committing.
+
+Committed as `402e9958e`; working tree shows only the pre-existing unrelated `web/` changes. Let me finalize todos and clean up scratch logs.
+
+All done. Let me do a final todo check and confirm the surface files are committed.
+
+All 10 todos done. Task complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0085-PresetGallery.log  | 172 +++++++++++++++
+ .../feature-views/PresetGallery.Adapter.swift      | 239 +++++++++++++++++++++
+ .../feature-views/PresetGallery.Model.swift        | 160 ++++++++++++++
+ .../feature-views/PresetGallery.ModelTests.swift   | 198 +++++++++++++++++
+ .../feature-views/PresetGallery.Previews.swift     | 126 +++++++++++
+ .../feature-views/PresetGallery.Seams.swift        | 149 +++++++++++++
+ .../feature-views/PresetGallery.States.swift       | 192 +++++++++++++++++
+ .../feature-views/PresetGallery.Tests.swift        | 197 +++++++++++++++++
+ .../feature-views/PresetGallery.Views.swift        | 113 ++++++++++
+ .../TeslaSync/feature-views/PresetGallery.strings  |  50 +++++
+ .../TeslaSync/feature-views/PresetGallery.swift    |  64 ++++++
+ 11 files changed, 1660 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0085-PresetGallery.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/PresetGallery.swift

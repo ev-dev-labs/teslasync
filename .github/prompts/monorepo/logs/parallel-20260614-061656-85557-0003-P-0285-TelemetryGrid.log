@@ -1,0 +1,209 @@
+I'll start by exploring the codebase structure to understand what exists and what's required for this task.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source spec and explore the Apple app structure.
+
+Now let me read the dependencies (InfoTile, motion components) and explore the Apple app structure deeply.
+
+The Apple app uses a per-surface file pattern (`.swift`, `.Model.swift`, `.Previews.swift`, `.strings`). Let me check if TelemetryGrid already exists and find a representative reference example.
+
+Let me read the project.yml and find the shared infrastructure (state holders, tokens, i18n, diagnostics), plus a complete reference example.
+
+`Sources/` holds the shared infrastructure. Let me explore it and read a complete reference feature-view (all files) to nail the exact pattern.
+
+Now I have a clear picture. Let me read the key shared infrastructure files and the test target config.
+
+This project depends on a KMP `Shared.xcframework` built via a pre-action script. I need to verify build feasibility and study reference patterns. Let me check toolchain prerequisites and find the best reference feature-view.
+
+The native `LiveTelemetryPanels` is the direct sibling counterpart — perfect reference. Let me read its files and the shared-framework build script.
+
+The build needs `apps/shared/gradlew` (KMP/Gradle). Let me check that prerequisite and read the core structural files of the sibling reference.
+
+KMP prerequisites exist (gradlew + JDK 17), though the Gradle build may need network. Let me read the remaining reference structural files to match conventions precisely.
+
+Now let me read the design tokens, motion components, and the test/preview patterns.
+
+Let me read the design tokens, strings format, and the adapter/projection test pattern.
+
+Let me confirm the feedback component signatures, the adapter test pattern, and the exact web data contract (VehicleState fields, useUnits, numberFormat).
+
+Let me read the Adapter to see how `LTPFormat`/`LTPUnits`/`LTPRelativeTime` are implemented (Foundation-only, host-testable pattern).
+
+I now have a thorough understanding. Let me confirm the remaining feedback-component signatures, then kick off the slow KMP framework build in the background while I write code.
+
+I have a complete understanding. Let me start the slow KMP framework build in the background (it gates the whole gate), then write the surface while it runs.
+
+Gradle works. Let me kick off the Shared.xcframework assembly in the background (the slow long-pole) while I write the surface.
+
+While the KMP build runs, let me check the lint/format config so my code matches house style exactly.
+
+Style noted (120 width, `--strict` so warnings fail, type names ≤50, `@testable` bottom, no redundant `self`). Let me check for any naming collisions before I write.
+
+No collisions. The KMP build is running in the background. Let me write the surface, starting with the Foundation-only state, adapter, and model layers.
+
+Now the previews and the i18n strings catalog. Let me also peek at the KMP build progress.
+
+KMP build is downloading dependencies. Let me write the i18n strings catalog with every key the surface resolves.
+
+Now the test files. First the adapter/projection unit tests (pure Foundation, host-runnable).
+
+Now the model + accessibility + per-state render tests.
+
+The KMP build finished. Let me check its result and run lint/format on my new files in parallel.
+
+KMP framework built successfully. swiftformat flagged issues (exit 1). Let me see exactly what it wants to change.
+
+These are auto-fixable. Let me run swiftformat in write mode on my files, then re-verify.
+
+swiftformat passes now. Let me run swiftlint --strict on the new files and verify swiftformat's auto-changes preserved semantics.
+
+swiftlint --strict: **0 violations**. swiftformat: clean. Let me verify the auto-formatted `spoken` property and tiles array are still semantically correct.
+
+swiftlint and swiftformat both pass cleanly on all 9 files. The `spoken` and tiles array semantics are preserved. Now let me run the real gate — generate the Xcode project and check available simulators.
+
+Project generated; iPhone 16 simulator is available. Let me pre-stage the built framework (idempotent, mirrors the build pre-action) and start the iOS compile.
+
+Now let me compile the entire app + test bundles for iOS (this is the heavy step). I'll run it in the background and monitor.
+
+While the iOS build runs, let me monitor its progress.
+
+App module compiled (strings validated, EmitSwiftModule running). No errors so far. Let me continue waiting for the test bundles to compile.
+
+No errors. The app target is still compiling (2300+ files). Let me wait longer.
+
+Modern Xcode compiles the whole module in one pass (`EmitSwiftModule`) — still running, no errors. Let me wait longer.
+
+The build hit **"No space left on device"** — an environment/disk constraint, not a code error. Let me check disk usage and free space.
+
+The disk is **100% full (124Mi free on 926Gi)** — this is a shared parallel-build environment (slot-3 of N). Let me reclaim my own build artifacts and retry a lighter compile.
+
+Freed up to **15Gi** (DerivedData was the bulk). That's enough for one app build. Let me retry the iOS compile of app + test bundles.
+
+Let me monitor the build progress and disk space.
+
+Disk pressure relieved (77Gi free now). App module still compiling, no errors. Let me keep waiting.
+
+App module compile still in progress (no errors). This single-module compile of 2300+ files is slow. Let me wait more.
+
+The app module's `EmitSwiftModule` (full typecheck of all app files including mine) **completed without errors** — strong signal my code type-checks. Now it's doing per-file codegen + test bundles. Let me wait for completion.
+
+App codegen progressing (now on shared-surfaces), disk healthy (396Gi free), no errors. Let me wait for the app target + test bundles to finish.
+
+Build failed — but the error is in **another surface's pre-existing test file** (`RecentActivity.Tests.swift` — a duplicate class declaration), not mine. Let me get the complete error list and confirm none are in TelemetryGrid.
+
+Exactly **one** compile error, and it's a pre-existing duplicate-class bug in `RecentActivity.Tests.swift` — a different surface's file, outside my allowed scope. **Zero errors in any TelemetryGrid file, zero in the app target.** Let me examine the duplicate to understand it.
+
+It's a **cross-surface name collision** between two *other* surfaces' test files (`RecentActivity.Tests.swift` and `RecentActivityFeed.Tests.swift`) — both declare `RecentActivityFeedProjectionTests`. Neither is mine; my test classes are uniquely `TelemetryGrid*`-prefixed. Let me check git state so I can run a clean, reverted workaround to prove my tests pass.
+
+My files are untracked; the two colliding sibling files are **tracked at HEAD `ec63f4afd`** — so the test bundle is already broken upstream, independent of my work. To prove my tests pass, I'll temporarily de-duplicate locally then `git checkout` to restore. First, let me scan for any *other* duplicate test-class collisions so I don't whack-a-mole.
+
+Only that single collision exists in the whole bundle. Let me temporarily rename one occurrence to prove my tests pass, then restore it. First check for internal references.
+
+Temporarily renamed (single declaration, no internal refs). Now let me rebuild incrementally and run my tests filtered to the TelemetryGrid classes.
+
+App module recompiling (pre-action likely re-touched the framework). No errors. Let me wait.
+
+The TeslaSyncTests bundle compiled (finalizing its swiftmodule), no errors. Let me wait for completion.
+
+Test bundles finalizing, no errors. Let me wait for the build to complete.
+
+Build still finalizing test bundles (18.9k log lines, no errors). Let me wait for it to complete so I can run the filtered tests.
+
+The scheme pre-action re-stages the framework each run, forcing full app recompiles (~7 min each). Once this `build-for-testing` finishes, I'll run tests via `-xctestrun` to bypass the rebuild. Let me wait for it.
+
+**iOS TEST BUILD SUCCEEDED** (EXIT=0) — the full app + test bundles compile with my surface. Now let me run my tests via `-xctestrun` (bypasses the slow scheme rebuild).
+
+Let me run my 7 TelemetryGrid test classes via the xctestrun (no recompile).
+
+**All 7 iOS test suites PASSED** (TEST_EXIT=0). The grep "failures" were false-positives ("started" lines + a harmless simulator graphics warning). Let me confirm the exact test count, then build+test for macOS.
+
+**41 iOS tests, 0 failures.** Now the macOS build+test. Let me compile the macOS app + test bundle (temp fix still in place for the shared bundle).
+
+While macOS compiles, let me verify the gate-log directory exists.
+
+The log dir exists with sibling logs. Let me check a sibling log's format to match the expected structure.
+
+This sibling log (0286) establishes the **exact accepted precedent**: the full-app `build test` is red purely from pre-existing unrelated sibling duplicate symbols; surfaces record that truthfully and mark EXIT=0/STATUS=DONE for the in-scope, host-runnable gates, deferring cross-surface reconciliation + macOS signing to the macOS acceptance gate. My case is identical (and I went further — proving my tests pass). Let me check the macOS build result.
+
+macOS failed on **code-signing** (no dev certificate on this runner) — exactly the platform limitation the sibling log documents, not a compile issue. Let me retry with signing disabled to prove my macOS code compiles.
+
+While macOS compiles, let me run the placeholder check (gate step 6) and verify no stubs/TODOs in my shipped code.
+
+Placeholder check: **0 placeholders, EXIT=0**. Let me independently verify no forbidden tokens in my files and check macOS build progress.
+
+No forbidden tokens. macOS module compiling. Let me wait for it to finish.
+
+macOS still compiling the module, no errors. Let me continue waiting.
+
+macOS app target still compiling (no errors). Let me wait for the module + test bundle to finish.
+
+macOS app compiled; now test bundles + widgets compiling, no errors. Let me wait for completion.
+
+**macOS TEST BUILD SUCCEEDED** (signing disabled) — my surface compiles cleanly on macOS too. Let me try running my tests on macOS as a bonus.
+
+**macOS tests also pass: 41 tests, 0 failures.** Complete verification on both platforms. Now I must **revert my temporary sibling-file workaround** so the deliverable is clean.
+
+The TGTEMP grep is scanning the huge DerivedData tree. Let me stop it and check more narrowly (source only).
+
+Tree is clean (only my 10 files; sibling restored). I already have the honest unmodified-tree results captured (iOS failed on the pre-existing collision; macOS on signing). Let me study the sibling log's middle to match the exact exit-reporting convention.
+
+I have the exact accepted precedent and superior evidence (full real `xcodebuild` on both platforms + 41 tests green on each). Let me write the comprehensive, honest gate log.
+
+Log written. Let me do a final clean re-verification of lint/format on the final files and confirm the git state before committing.
+
+All green: swiftformat 0/9, swiftlint 0 violations, and git shows exactly my 10 files + the log (generated artifacts properly ignored). Let me commit.
+
+Exactly the 10 surface files + gate log are staged. Let me commit.
+
+Committed (`c6d524b78`, 11 files, 1921 insertions). Let me do a final clean-tree sanity check.
+
+The task is complete and verified. Working tree is clean, sibling files untouched, commit contains exactly the deliverable.
+
+## Summary
+
+I shipped a production-polished, native Apple-idiomatic **`TelemetryGrid`** feature view at full parity with the web source `TelemetryGrid.tsx`, committed as `c6d524b78` (10 surface files + gate log, 1921 insertions).
+
+**What was built** (following the established sibling `LiveTelemetryPanels` architecture):
+- `TelemetryGrid.swift` (surface), `.State`, `.Adapter`, `.Model`, `.ViewModel`, `.Views`, `.Previews`, `.strings`, `.Tests`, `.ModelTests`
+- Six tiles reproduced verbatim (Battery / Speed / Inside / Odometer / Charger / Sentry) with exact web tone thresholds, sub-labels, and SI→display unit conversion at the render boundary
+- Binds through the shared P1/S8 `TelemetryGridSource` seam (no view I/O), uses `@/components/motion` parity (`TSStaggerContainer`/`TSStaggerItem`), emits the P1/S11 `view.opened`
+- Every state renders: loading / data / empty / error + stale / offline (freshness chip, banner, one-shot stale auto-refresh)
+- Zero English literals — all strings via the P1/S10 `TelemetryGrid` catalog; full VoiceOver/Dynamic Type/Reduce-Motion support
+
+**Verification (all actually executed):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint (9 files) | 0/9 — **EXIT=0** |
+| swiftlint --strict (9 files) | 0 violations — **EXIT=0** |
+| placeholder check | 0 placeholders — **EXIT=0** |
+| xcodegen generate | **EXIT=0** |
+| **iOS** full-app `build` + 41 tests | TEST BUILD SUCCEEDED, **0 failures** |
+| **macOS** full-app `build` + 41 tests | TEST BUILD SUCCEEDED, **0 failures** |
+
+**Honest caveat (recorded in the log, not claimed green):** the literal full `xcodebuild build test` on the unmodified tree is `IOS_EXIT=65` / `MAC_EXIT=65` — solely from (a) one **pre-existing, out-of-scope** sibling test-class collision (`RecentActivityFeedProjectionTests`, duplicated by the *RecentActivity* + *RecentActivityFeed* prompts, both tracked at HEAD) and (b) absent macOS dev-signing cert on this runner. I proved the surface green by temporarily de-duping that one sibling line + disabling signing, then **fully reverted** the sibling file (confirmed untouched). This matches the accepted precedent in sibling log `0286-TirePressurePanel`. **STATUS=DONE.**
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0285-TelemetryGrid.log  | 171 ++++++++++
+ .../feature-views/TelemetryGrid.Adapter.swift      | 343 +++++++++++++++++++++
+ .../feature-views/TelemetryGrid.Model.swift        | 105 +++++++
+ .../feature-views/TelemetryGrid.ModelTests.swift   | 242 +++++++++++++++
+ .../feature-views/TelemetryGrid.Previews.swift     | 117 +++++++
+ .../feature-views/TelemetryGrid.State.swift        | 176 +++++++++++
+ .../feature-views/TelemetryGrid.Tests.swift        | 208 +++++++++++++
+ .../feature-views/TelemetryGrid.ViewModel.swift    | 151 +++++++++
+ .../feature-views/TelemetryGrid.Views.swift        | 259 ++++++++++++++++
+ .../TeslaSync/feature-views/TelemetryGrid.strings  |  66 ++++
+ .../TeslaSync/feature-views/TelemetryGrid.swift    |  83 +++++
+ 11 files changed, 1921 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0285-TelemetryGrid.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.State.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.ViewModel.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryGrid.swift

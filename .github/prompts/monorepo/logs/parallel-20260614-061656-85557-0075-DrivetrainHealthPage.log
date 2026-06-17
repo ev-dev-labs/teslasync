@@ -1,0 +1,1134 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the web components in detail and the existing Apple app structure in parallel.
+
+Let me look deeper at the Apple project structure and the parity infrastructure.
+
+Good — Xcode toolchain is available. Let me verify the full Xcode and understand project conventions.
+
+Full Xcode 26.5 and SwiftLint are available — the gate can run. Note the project uses `feature-views/` not `Features/`. Let me examine the existing structure, find a representative page template, and check the parity infrastructure.
+
+The repo uses a flat `feature-views/` convention with 2653 files and a multi-aspect naming pattern (`.Model.swift`, `.Views.swift`, `.Adapter.swift`, etc.). Several drivetrain sub-components already exist. Let me examine the manifest entry, ledger, gate contract, and find a representative existing page.
+
+Let me find where predecessor pages were actually implemented (e.g., ApiPlaygroundPage, AuditLogPage) to learn the established convention.
+
+Pages live in `apps/apple/Sources/Features/{Domain}/`. The prompt's `TeslaSync/Features/Driving/` path is a generator template artifact — the real convention is `Sources/Features/Driving/`. Let me examine the Driving domain, sibling pages, and the gate contract.
+
+`Sources/Features/Driving/` doesn't exist yet — I'll create it (matching the Admin/Battery/etc. convention). `pwsh` is available so I can run the real gate. There's already a `DrivetrainHealthWidget` with a model I can learn the KMP types from. Let me read a complete page template, the widget model, and key web sub-components.
+
+Excellent — the data models (`DrivetrainHealthReading`, `DrivetrainMotorReading`, `DrivetrainHealthProjection`, `DrivetrainHealthStatus`) already exist and are reusable. Now let me read the page model pattern, the web sub-components (to map every region), and how data hooks work in Swift.
+
+I have the page + model + route patterns down. Let me read the remaining web sub-components to map every region, and launch parallel exploration of the design system, nav/route system, and data layer.
+
+I've mapped all 12 web regions. Now I need to understand the Apple design system, nav/route system, and data layer thoroughly. Let me launch parallel exploration agents while I read the remaining charts and the strings catalog.
+
+I'll investigate the TeslaSync Apple app structure to understand the routing, navigation, and localization patterns. Let me search systematically for these components.I'll conduct a thorough grep-based search of the TeslaSync Apple codebase to catalog all design tokens and components. Let me search systematically.Now let me examineNow these let key me search files: for the design tokens and components systematically:Now let me search for the specific files mentioned and patterns:Now let me find how route registrations are wired in and check the navigation files:Perfect! Now let me view the existing pattern files:Perfect! NowPerfect. let Now me fin letd where me search these for more route regist examplesrations are actually assemble and/d thech otherained, patterns an mentioned:d look at the localization file and test patterns:I have the full web page mapped. While the explore agents run, let me read the gate contract, placeholder checker, and an existing page log to mirror its format.
+
+Let me search for generated tokens and components more broadly:Now let me look at more models and the unit/converter patterns:Perfect! Now let me look at the Units+Facade.swift and see the other page models:Let me continue and search for live/SSE patterns:Now let me look at the FlowBridge and LoadableState:Let me now check the DrivetrainHealthWidgetState and another widget model:Perfect! Let me also look at a full page model pattern and another AppContainer example:Now let me search for web integration examples and see what API routes are available:Now let me look at the reference page and then the component files:Let me search for the API definition and find the web hook definitions:Let me look at the API routes and web types:Perfect! Now let me look at the web types:Let me find the motor and driving stats types more specifically:Excellent! Let me view these web types:The peer log is highly informative: predecessors ship pages to `apps/apple/Sources/Features/<Domain>/`, strings to `apps/apple/Localization/Localizable.xcstrings`, register routes in `AppRoute.swift` + `TeslaSyncApp.swift`, and — critically — document that the full `xcodebuild` is RED due to **pre-existing out-of-scope** breakage, verifying their own code via isolated `swiftc -typecheck` + model harness. Let me confirm this is consistent across recent logs and check current build viability.
+
+Now let me verify the existing breadcrumbs entry and get a final verification of what's already in place:Let me get the full MotorSnapshot and MotorData types:Perfect! I now have all the information needed. Here's your comprehensive guide with **exact file paths, line numbers, and code shapes**:
+
+---
+
+## 1. **AppRoute Enum** — `apps/apple/Sources/App/AppRoute.swift`
+
+**Current state:** Lines 27-34 define all cases
+```swift
+// Line 27-35: Current enum declaration
+public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
+    case dashboard, glance, vehicles, charging, powershare, trips, energy, driving, analytics, maps
+    case fleetCompare, batteryCells, batteryDegradation, sleepEfficiency, tco
+    case vehicleSystems, automations, notifications, telemetry, diagnostics
+    case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
+    case gdprExLet me look at the StateHolderModel pattern to complete the picture:port, rbacMatrix, users
+    case liveSignals, schemaDrift, slowQueries, powerUser, system
+    case settings, onboarding, teslaOrders, explore, search, sharing, watch
+```
+
+**Add `drivetrainHealth` case:** After `diagnostics` on line 30:
+```swift
+case vehicleSystems, automations, notifications, telemetry, diagnostics, drivetrainHealth
+```
+
+**Path mapping (lines 40-64):** The `pathSegment` property maps camelCase → kebab-case. Add after line 63 (before `default: rawValue`):
+```swift
+case .drivetrainHealth: "drivetrain-health"
+```
+
+**Route grouping (line 125):** `drivetrainHealth` belongs in `.vehicle` group. Modify line 125:
+```swift
+case .vehicles, .charging, .powershare, .trips, .driving, .vehicleSystems, .maps, .drivetrainHealth: .vehicle
+```
+
+**Icon (line 86):** Add a system image. Around line 95, add:
+```swift
+case .drivetrainHealth: "cpu.fill"
+```
+
+---
+
+## 2. **AppRouteParser** — `apps/apple/Sources/App/AppRouteParser.swift`
+
+**No changes needed.** The parser (lines 36-40) automatically resolves `/drivetrain-health` → `.drivetrainHealth` by matching `pathSegment`:
+```swift
+// Lines 36-40: Already handles any route
+public static func parse(Perfectpath! Now raw I have all the information I need.Path: String) -> AppRoute? Let me compile {
+    let a comprehensive answer normalize:d = normalize
+
+##(rawPath)
+    if Summary: let Existing alias T = aliaseses[normalized] {la return alias }
+    letSync segment Apple = first PatternsSeg &ment(of Types: normalized)
+    return AppRoute
+
+Based on my investigation.,allCases.first { $0 here are.pathSegment == segment }   the **// Matchesexact "drivetrain-health"
+}
+```
+
+---
+
+## 3. **Route Registration Assembly** — `apps/apple/Sources/TeslaSyncApp.swift` (Lines 95–128)
+
+**Current registry chain:**
+```swift
+@MainActor private var routeHostRegistry: AppRouteHostRegistry {
+    var registry = SettingsRouteRegistration.registry(...)  // Line 100
+    registry = ApiPlay patterns and types** you should reuse for your 5-data-source page model:
+
+---
+
+### **1. PAGE MODEL PROVIDER/SEAM PATTERN**
+
+**Reference: 3 Examples**
+
+#### **A) DrivetrainHealthWidget (Real-time + SegroundRouteRegistration.registry(base: registry)  // Line 104
+    // ... 20+ more registrations ...
+    registry = UsersRouteRegistration.registry(base: registry)  // Line 127
+    return registry
+}
+```
+
+**Add your DrivetrainHealthRouteRegistration** (insert before `return registry` at line 128):
+```swift
+registry = DrivetrainHealthRouteRegistration.registry(base: registry)
+```
+
+**Create the Rouam)**
+- **File**: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetStateteRegistration file** at:
+`apps/apple/Sources/Features/Vehicle/DrivetrainHealthRouteRegistration.swift`
+
+Use this exact template (mirrored from `SleepEfficiencyRouteRegistration.swift`):
+```swift
+import SwiftUI
+
+/// Registers the native Drivetrain Health surface for the `.drivetrainHealth` route so the.swift` (lines 9-24)
+- **Provider Protocol**:
+  ```swift
+  @MainActor
+  public protocol DrivetrainHealthProvider: AnyObject {
+      func start(onState: @escaping (DrivetrainHealthViewState) -> Void)
+      func stop()
+      func refresh()
+  }
+  ```
+- **View State Enum**:
+  ```swift
+  public enum DrivetrainHealthViewState: Equatable {
+      case loading(cached: Dr
+/// app shell's route host renders it. The web route `/drivetrain-health` resolves to
+/// `.drivetrainHealth` automatically through `AppRouteParser`, making the page reachable + deep-linkable.
+public enum DrivetrainHealthRouteRegistration {
+    @MainActor
+    public static func registry(ivetrainHealthProjection?)
+      case loaded(DrivetrainHealthProjection, freshness: WidgetFreshness)
+      case empty(freshness: WidgetFreshness)
+      case failed(message: String?, cached: DrivetrainHealthProjection?)
+  }
+  ```
+- **Model Binds**:
+  ```swift
+  @Observable
+  public final class DrivetrainHealthWidgetModel {
+      public private
+        base: AppRouteHostRegistry = AppRouteHostRegistry(),
+        dataSource: any DrivetrainHealthDataSource = SampleDrivetrainHealthDataSource()
+    ) -> AppRouteHostRegistry {
+        var registry = base
+        let model = DrivetrainHealthPageModel(dataSource: dataSource)
+        registry.register(.drivetrainHealth) {
+            DrivetrainHealthPage(model: model)
+        }
+        return registry
+    }
+}
+```
+
+---
+
+## 4. **Navigation Menu** — Already Update(set) var state: DrivetrainHealthViewState
+      @ObservationIgnored private let provider: DrivetrainHealthProvider
+      
+      public func start() { provider.start { [weak self] newState in self?.state = newState } }
+  }
+  ```
+
+#### **B) ApiPlaygroundPageModel (Simple async/throws seam)**
+- **File**: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/d!
+
+**Layout.Nav.swift** — Line 77 already includes your route:
+```swift
+// Line 77: ✅ Already present in "Service" section
+nav("/drivetrain-health", "Drivetrain Health", "cpu.fill"),
+```
+
+**LayoutBreadcrumbs.Routes.swift** — Line 68 already includes your route:
+```swift
+// Line 68: ✅ Already present in theapps/apple/Sources/Features/Admin/ApiPlaygroundPageModel.swift` (lines 42-164)
+- **Seam Protocol**:
+  ```swift
+  public protocol ApiEndpointCatalogProviding: Sendable {
+      func load() async throws -> [ApiEndpoint]
+  }
+  ```
+- **State Enum**:
+  ```swift
+  public enum ApiPlaygroundState: Equatable, Sendable {
+      case loading
+      case empty
+      case error(String)
+      case loade breadcrumb catalog
+route("/drivetrain-health", "routes.drivetrainHealth", "Drivetrain Health"),
+```
+
+---
+
+## 5. **Localized Strings** — `apps/apple/Localization/Localizable.xcstrings`
+
+**File path:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Localization/Localizable.xcstrings`
+
+**Structure reference** (existing `route.driving` entry):
+```jsond([ApiEndpoint])
+  }
+  ```
+- **Model `load()` Pattern**:
+  ```swift
+  public func load() async {
+      state = .loading
+      do {
+          let list = try await catalog.load()
+          state = list.isEmpty ? .empty : .loaded(list)
+      } catch {
+          state = .error(error.localizedDescription)
+      }
+  }
+  ```
+
+#### **C) StatisticsPageModel (Multi-source with degraded failures)**
+- **File**: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Features/Analytics/StatisticsPageModel.swift
+"route.driving": {
+  "extractionState": "manual",
+  "localizations": {
+    "ar": {
+      "stringUnit": {
+        "state": "needs_review",
+        "value": "Driving"
+      }
+    },
+    "en": {
+      "stringUnit": {
+        "state": "translated",
+        "value": "Driving"
+      }
+    }
+    // ... other languages
+  }
+}
+```
+
+**Add this entry** for `route` (lines 18-110)
+- **Multi-Source Seam**:
+  ```swift
+  public protocol StatisticsDataSource: Sendable {
+      func loadVehicles() async throws -> [StatisticsVehicle]
+      func loadPeriodStats(vehicleID: Int64) async throws -> StatisticsPeriodStats?
+      func loadBatteryHealth(vehicleID: Int64) async throws -> StatisticsBatteryHealth?
+      Encouraging — the 3 newest logs (GlancePage, Powershare, SleepEfficiency) report `BUILD_EXIT=0`/`TEST_EXIT=0`, meaning a full green build+test is currently achievable. Let me read the newest green log to learn the exact working gate commands and timing.
+
+.drivetrainHealth` in the `"strings"` object (197503 lines, find the route section around line 140K+):
+```json
+"route.drivetrainHealth": {
+  "extractionState": "manual",
+  "localizations": {
+    "en": {
+      "stringUnit": {
+        "state": "translated",
+        "value": "Drivetrain Health"
+      }
+    }
+  }
+}
+```
+
+**For page-specific strings** (title, subtitle, section headers), usefunc loadMileageStats(vehicleID: Int64) async throws -> StatisticsMileage?
+      func loadStateSummary(vehicleID: Int64) async throws -> [StatisticsStateEntry]
+      func loadFleetAnalytics() async throws -> [StatisticsVehicleComparison]
+  }
+  ```
+- **Result**: `loadPeriodStats` drives page phase; others degrade gracefully: a prefix like `drivetrainHealth.title`, `drivetrainHealth.subtitle`, etc., following the pattern of `playground.*`, `powershare.*`, etc.
+
+---
+
+## 6. **Test Pattern** — XCTest with `@MainActor`
+
+**Page Model Tests** — `apps/apple/Tests/Unit/Features/Admin/ApiPlay
+  ```swift
+  batteryHealth = try? await dataSource.loadBatteryHealth(vehicleID: id)
+  ```
+
+**→ For your page model: Create `DrivingDataProvider` protocol with 5 async throws methods, map results to state enum with cached/stale support.**
+
+---
+
+### **2. HOW SWIFTgroundPageModelTests.swift`
+- Uses `@MainActor final class XxxPageModelTests: XCTestCase`
+- Test methods are `func testXxx()` returning `Void` (not async by default)
+- State assertions via `XCTAssertEqual(model.state, .expected)`
+
+**Route Registration Tests** — `apps/apple/Tests/Unit/Features/Admin/TeslaOrdersRouteRegistrationTests CALLS KMP CLIENT: SharedFacade Pattern**
+
+**Key Files:**
+- `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/SharedFacade/FlowBridge.swift` — bridges `Shared.Kotlinx_coroutines_coreFlow` → `AsyncThrowingStream`
+- `/Users/atul.swift`gupta/Documents/repos/.t (Lineseslasync-parallel/20260 9614-061656-85557/–slot-75/apps/apple/40Sources/SharedFacade/State)H
+
+CreateolderModel.swift` — generic `apps/apple/Tests/Unit adapter/Features/Vehicle for `StateFlow/DrivetrainHealthRoute<TRegistrationTests.swift`:
+```>swift
+import Sw` → `@iftUI
+import XCTestObservable`
+- `/Users/at
+@ulgupta/Documents/repos/.testteslasync-parallel/20able import TeslaSync260614-061656-85557
+
+@/slot-75/apps/appleMainActor final/Sources/SharedFacade/ class DrivetrainHealthRouteLoaRegistrationTests: XCTestCasedableState.swift` — projects {
+    func `Resource testReg<T>` → stateistersD enum
+- `/Users/atulrivetrainHealthRoute() {gupta/Documents/repos/.t
+        leteslasync-parallel/20260 registry = DrivetrainHealthRou614-061656-85557/teRegistration.registry()
+        slot-75/apps/apple/XSources/SharedFacade/AppCTAssertTrueContainer(registry.regist.swift` — factoryere for modelsdRoutes.contains(.drivetrainHealth))
+        XCTAssertNotNil(registry.view(for: .drivetrainHealth))
+    }
+
+    func testPreservesBaseRegistrations() {
+        var base = AppRouteHostRegistry()
+        base.register(.dashboard) { EmptyView() }
+        let registry = DrivetrainHealthRouteRegistration.registry(base: base)
+        XCTAssertTrue(registry.registeredRoutes.contains(.dashboard))
+        XCTAssertTrue(registry.registeredRoutes.contains(.drivetrainHealth))
+    }
+
+    func testRouteMetadataMatch
+
+**Live KMP Integration (DrivetrainHealthWidget example):**
+```swift
+@MainActor
+public final class LiveDrivetrainHealthProvider: DrivetrainHealthProvider {
+    private let drivingStore: DrivingStore
+    private let vehiclesStore: VehiclesStore
+    
+    private func subscribe() {
+        let healthFlow = drivingStore.drivetrainHealth(vehicleId: String(vehicleID))
+        let motorFlowesWeb() {
+        XCTAssertEqual(AppRoute.drivetrainHealth.pathSegment, "drivetrain-health")
+        XCTAssertEqual(AppRoute.drivetrainHealth.path, "/drivetrain-health")
+        XCTAssertEqual(AppRoute.drivetrainHealth.group, .vehicle)
+    }
+
+    func testCanonicalPathParsesToRoute() {
+        XCTAssertEqual(AppRouteParser.parse(path: "/drivetrain-health"), .drivetrainHealth)
+        XCTAssertEqual(AppRouteParser.parse(path: "/drivetrain-health/"), .drivetrainHealth)
+    }
+}
+```
+
+--- = vehiclesStore.motorLatest(vehicleId: vehicleID)
+        
+        healthTask = collect(healthFlow) { [weak self] resource in
+            guard let self else { return }
+            healthState = LoadableState.from(resource) { Self.reading($0) }
+            emit()
+        }
+    }
+    
+    private func collect(
+        _ flow: Shared.Kotlinx_coroutines_coreStateFlow,
+        _ onResource
+
+## **Summary of Exact Changes**
+
+| Item | File | Line(s) | Action |
+|------|------|---------|--------|
+| Case | `AppRoute.swift` | 30 | Add `, drivetrainHealth` |
+| PathSegment | `AppRoute.swift` | 63 | Add `case .drivetrainHealth: "drivetrain-health"` |
+| Group | `AppRoute.swift` | 125 | Add `.drivetrainHealth` to `.vehicle` case: @escaping (Shared.Resource) -> Void
+    ) -> Task<Void, Never> {
+        Task { @MainActor [weak self] in
+            do {
+                for try await value in FlowBridge.stream(from: flow) {
+                    if let resource = value as? Shared.Resource {
+                        onResource(resource)
+                    }
+                }
+            } catch {}
+        }
+    }
+}
+```
+
+**→ Your producer should fetch from: `DrivingStore.drives()`, `DrivingStore. |
+| Icon | `AppRoute.swift` | 95 | Add `case .drivetrainHealth: "cpu.fill"` |
+| Registration Assembly | `TeslaSyncApp.swift` | 128 | Add `registry = DrivetrainHealthRouteRegistration.registry(base: registry)` |
+| Localization | `Localizable.xcstrings` | (append) | Add `"route.drivetrainHealth"` JSON entry |
+| New File | Create | — | `DrivetrainHealthRouteRegistration.swift` |
+| New Test | Create | — | `DrivetrainHealthRouteRegistrationTestsdrivingStats()`, `VehiclesStore.motorLatest()`, `VehiclesStore.motorHistory()` (check Shared.xcframework).**
+
+---
+
+### **3. MOTOR SNAPSHOT & HISTORY MODEL TYPES (Already in Swift)**
+
+**File**: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift` (lines 111–.swift` |
+
+**Navigation is already done** — both `Layout.Nav.swift` (line 77) and `LayoutBreadcrumbs.Routes.swift` (line 68) already reference your route! 🎉135)
+
+```swift
+/// Mirrors web `useMotorLatest` (GET /motor/latest [vehicle_id])
+public struct DrivetrainMotorReading: Decodable, Equatable, Sendable {
+    public let motorTempCFront: Double?
+    public let diStatorTemp: Double?
+    public let inverterTempC: Double?
+    public let stateFront: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case motorTempCFront = "motor_temp_c_front"
+        case diStatorTemp = "di_stator_temp"
+        case inverterTempC = "inverter_temp_c"
+        case stateFront = "state_front"
+    }
+}
+```
+
+**For full `MotorHistory` (GET /motor [vehicle_id, limit]), expand to include all fields from web `MotorSnapshot`:**
+
+| Swift Field | JSON CodingKey | Type | SI Unit | Notes |
+|---|---|---|---|---|
+| `motorTempCFront` | `motor_temp_c_front` | `Double?` | °C | Front motor |
+| `motorTempCRear` | `motor_temp_c_rear` | `Double?` | °C | Rear motor |
+| `diStatorTemp` | `di_stator_temp` | `Double?` | °C | Stator |
+| `inverterTempC` | `inverter_temp_c` | `Double?` | °C | — |
+| `inverterTempRear` | `inverter_temp_rear` | `Double?` | °C | — |
+| `batteryTempC` | `battery_temp_c` | `Double?` | °C | — |
+| `torqueNmFront` | `torque_nm_front` | `Double?` | Nm | Newton-meters |
+| `torqueNmRear` | `torque_nm_rear` | `Double?` | Nm | — |
+| `motorRpmFront` | `motor_rpm_front` | `Double?` | rpm | Non-SI |
+| `motorRpmRear` | `motor_rpm_rear` | `Double?` | rpm | Non-SI |
+| `powerKw` | `power_kw` | `Double?` | kW | Omitted if incomplete (V,I) pair |
+| `regenKw` | `regen_kw` | `Double?` | kW | Omitted if incomplete (V,I) pair |
+| `shiftState` | `shift_state` | `String?` | — | — |
+| `stateFront` | `state_front` | `String?` | — | — |
+| `stateRear` | `state_rear` | `String?` | — | — |
+| `ts` | `ts` | `String` | RFC3339 | Timestamp |
+| `source` | `source` | `String?` | — | — |
+
+---
+
+### **4. DRIVINGSTATS MODEL (Already in Swift)**
+
+**File**: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Features/Analytics/FleetCompareModels.swift` (lines 83–110)
+
+```swift
+/// Mirrors web `useDrivingStats`
+public struct FleetCompareDrivingStats: Hashable, Sendable {
+    public let totalDrives: Int
+    public let totalDistanceM: Double              // SI: meters
+    public let avgSpeedMps: Double                // SI: m/s
+    public let topSpeedMps: Double                // SI: m/s
+    public let avgEfficiencyWhKm: Double          // Wh/km (per-distance rate)
+    public let regenRatio: Double                 // Fraction 0…1
+    public let co2SavedKg: Double
+}
+```
+
+**Web source** (`/web/src/types/driving.ts` lines 99–109):
+```typescript
+export interface DrivingStats {
+  totalDrives: number;
+  totalDistanceKm: number;         // Convert to meters × 1000 for Swift SI
+  totalDurationS: number;
+  avgEfficiencyWhKm: number;
+  avgSpeedKmh: number;             // Convert to m/s (÷ 3.6)
+  topSpeedKmh: number;             // Convert to m/s (÷ 3.6)
+  regenRatio: number;
+  regenEnergyWh: number;
+  co2SavedKg: number;
+}
+```
+
+---
+
+### **5. SI UNIT CONVERTERS & USER PREFERENCES**
+
+**File**: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/SharedFacade/Units+Facade.swift` (lines 1–160)
+
+**Entry Point: UnitPreferences struct**
+```swift
+public struct UnitPreferences: Equatable, Sendable {
+    public var distance: String  // "km", "mi", etc. (label strings)
+    public var speed: String
+    public var temperature: String
+    public var pressure: String
+    public var energy: String
+    public var duration: String
+    public var power: String
+}
+
+// Presets:
+static let metric = UnitPreferences(distance: "km", speed: "km/h", temperature: "°C", …)
+static let imperial = UnitPreferences(distance: "mi", speed: "mph", temperature: "°F", …)
+```
+
+**Conversion Functions:**
+```swift
+// SI → Display value (numeric only)
+public static func convertTemperature(_ celsius: Double, _ prefs: UnitPreferences) -> Double {
+    Shared.UnitsKt.convertTempFromSI(celsius: celsius, to: temperatureUnit(prefs.temperature))
+}
+
+public static func convertDistance(_ meters: Double, _ prefs: UnitPreferences) -> Double {
+    Shared.UnitsKt.convertDistanceFromSI(meters: meters, to: distanceUnit(prefs.distance))
+}
+
+public static func convertSpeed(_ mps: Double, _ prefs: UnitPreferences) -> Double {
+    Shared.UnitsKt.convertSpeedFromSI(mps: mps, to: speedUnit(prefs.speed))
+}
+
+public static func convertEnergy(_ wh: Double, _ prefs: UnitPreferences) -> Double {
+    Shared.UnitsKt.convertEnergyFromSI(wh: wh, to: energyUnit(prefs.energy))
+}
+
+// Formatting (includes unit label + fallback)
+public static func formatTemperature(_ celsius: Double?, _ prefs: UnitPreferences) -> String {
+    Shared.UnitsKt.formatTemperature(celsius: boxed(celsius), pref: composite(prefs), precision: nil)
+}
+
+public static func formatDistance(_ meters: Double?, _ prefs: UnitPreferences) -> String {
+    Shared.UnitsKt.formatDistance(meters: boxed(meters), pref: composite(prefs), precision: nil)
+}
+
+public static func formatSpeed(_ mps: Double?, _ prefs: UnitPreferences) -> String {
+    Shared.UnitsKt.formatSpeed(mps: boxed(mps), pref: composite(prefs), precision: nil)
+}
+
+public static func formatEnergy(_ wh: Double?, _ prefs: UnitPreferences) -> String {
+    Shared.UnitsKt.formatEnergy(wh: boxed(wh), pref: composite(prefs), precision: nil)
+}
+```
+
+**How App Reads Unit Preferences:**
+```swift
+// In AppContainer (@Observable)
+public var unitPreferences: UnitPreferences  // Bound at app level
+
+// Usage in a view:
+@Environment(\.appContainer) var container
+let formatted = Units.formatTemperature(celsiusValue, container.unitPreferences)
+```
+
+**Temperature Conversion Example (in-place):**
+```swift
+// From DrivetrainHealthWidgetModel.swift (lines 60–78)
+public enum DrivetrainTemperatureUnit: String, Equatable, Sendable {
+    case celsius
+    case fahrenheit
+    
+    public func convert(_ celsiusValue: Double) -> Double {
+        switch self {
+        case .celsius: celsiusValue
+        case .fahrenheit: celsiusValue * 9 / 5 + 32
+        }
+    }
+}
+```
+
+**Staleness Check (2-min window):**
+```swift
+// File: GlanceFormat.swift (lines 56–61)
+public static func isStale(_ timestamp: Date?, now: Date = Date(), window: TimeInterval = 120) -> Bool {
+    guard let timestamp else { return false }
+    return now.timeIntervalSince(timestamp) > window
+}
+```
+
+---
+
+### **6. LIVE/SSE PATTERN (P1/S4)**
+
+**Not yet fully implemented in Swift app** (SSE infrastructure exists on backend). Current pattern:
+
+- **File**: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/SharedFacade/LiveConnection.swift` — wraps Shared `Connection`
+- **StateFlow subscription**: DrivetrainHealthWidgetLiveProvider uses `FlowBridge.stream()` on each emitted `Resource<JsonElement>`, which is cache-then-network
+- **Staleness flag**: `LoadableState.stale: Bool` tracks > 2 minutes (ADR-013)
+- **View binding**: via `@Observable` model in `.onAppear { model.start() }` / `.onDisappear { model.stop() }`
+
+**Freshness enum** (for UI display):
+```swift
+public enum WidgetFreshness: Equatable, Sendable {
+    case fresh
+    case stale      // > 2 min old
+    case offline
+}
+```
+
+---
+
+### **KEY TAKEAWAYS FOR YOUR 5-DATA-SOURCE PAGE MODEL:**
+
+1. **Create a `DrivingPageDataProvider` protocol** (like `StatisticsDataSource`):
+   ```swift
+   public protocol DrivingPageDataProvider: Sendable {
+       func loadDrives(vehicleID: Int64, limit: Int) async throws -> [DriveSnapshot]
+       func loadDrivetrainHealth(vehicleID: Int64) async throws -> DrivetrainHealthReading?
+       func loadDrivingStats(vehicleID: Int64) async throws -> FleetCompareDrivingStats?
+       func loadMotorHistory(vehicleID: Int64, limit: Int) async throws -> [DrivetrainMotorReading]
+       func loadMotorLatest(vehicleID: Int64) async throws -> DrivetrainMotorReading?
+   }
+   ```
+
+2. **Create a state enum** (combine DrivetrainHealthViewState + ApiPlaygroundState patterns):
+   ```swift
+   public enum DrivingPageState: Equatable {
+       case loading
+       case loaded(drives: [DriveSnapshot], health: ..., stats: ..., motor: ..., latest: ...)
+       case empty(reason: String?)
+       case failed(error: String)
+   }
+   ```
+
+3. **Model class** (like ApiPlaygroundPageModel):
+   ```swift
+   @Observable
+   public final class DrivingPageModel {
+       public private(set) var state: DrivingPageState = .loading
+       @ObservationIgnored private let provider: DrivingPageDataProvider
+       
+       public func load(vehicleID: Int64) async {
+           state = .loading
+           do { … } catch { state = .failed(…) }
+       }
+   }
+   ```
+
+4. **Production provider** (like LiveDrivetrainHealthProvider):
+   - Fetch each from KMP `DrivingStore`, `VehiclesStore`
+   - Bridge flows with `FlowBridge.stream()` → `StateHolderModel<LoadableState<T>>`
+   - Project each `Resource` → tuple, emit composite state
+
+5. **All SI measurements stay in base units** (meters, m/s, °C, Wh, etc.); convert **only at render boundary** via `Units.format*()`.
+
+---
+
+**Files to reference directly in your codebase:**
+- `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Features/Admin/ApiPlaygroundPageModel.swift` — simplest seam pattern
+- `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Features/Analytics/StatisticsPageModel.swift` — multi-source pattern
+- `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetLiveProvider.swift` — KMP bridge + cache-then-networkThis is the gold-standard template. A full green build is achievable by excluding 2 known pre-existing out-of-scope files (`Input.Previews.swift`, `GDPRExportPageModelTests.swift`). The Shared.xcframework build is the 15-min long pole — let me check if it's already staged and kick it off if not, while reading the GlancePage source files (the exact template to mirror).
+
+Shared.xcframework isn't staged — I'll start that 15-min build now in the background. Two explore agents finished; let me read them and continue reading the GlancePage template.
+
+Perfect! I now have comprehensive information. Let me compile the complete catalog:
+
+## **COMPLETE DESIGN SYSTEM & COMPONENT CATALOG**
+
+### **1. COLOR TOKENS** (`Color.TS` namespace)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/design/generated/apple/Tokens.swift:57–138`
+
+All static color members (dynamic colors with light/dark/high-contrast variants):
+- `bg` — background fill
+- `surface` — card/panel fill  
+- `surfaceGlass` — semi-transparent glass (0.95 light, 0.04 dark)
+- `textPrimary` — primary text
+- `textSecondary` — secondary text
+- `textMuted` — muted/disabled text
+- `accent` — brand/interactive (cyan-blue)
+- `border` — dividers/strokes (0.12 alpha)
+- `statusSuccess` — green success indicator
+- `statusWarning` — amber/orange warning
+- `statusDanger` — red error/danger
+- `statusInfo` — cyan info (matches `accent`)
+- `chartCategorical: [Color]` — 8-color ordered array for series cycling
+- `chartSeriesBattery` — green (battery health)
+- `chartSeriesEnergy` — amber (energy)
+- `chartSeriesSpeed` — blue (speed)
+- `chartSeriesRegen` — cyan (regen)
+- `chartSeriesTemperature` — red (temperature)
+- `chartSeriesPower` — purple (power)
+
+---
+
+### **2. TYPOGRAPHY TOKENS**
+
+#### **Font ramp** (`Font.TS`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/design/generated/apple/Tokens.swift:140–154`
+
+- `display` — 30pt bold
+- `title` — 24pt bold
+- `section` — 18pt semibold
+- `panel` — 16pt semibold
+- `body` — 14pt regular
+- `bodySm` — 12pt regular
+- `caption` — 12pt regular
+- `label` — 12pt medium (uppercase tracking: 0.60)
+- `fontFamilySans` — "Inter"
+- `fontFamilyMono` — "JetBrains Mono"
+
+#### **Typography View Components** (`TSPageTitle`, `TSSectionTitle`, etc.)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/UI/Typography.swift`
+
+- **`TSPageTitle`** — `init(_ text: LocalizedStringKey)` — largest heading (display font, primary color, header trait)
+- **`TSSectionTitle`** — `init(_ text: LocalizedStringKey)` — section heading (section font, primary color)
+- **`TSHeading`** — `init(_ text: LocalizedStringKey, level: Level = .h1)` — configurable h1/h2/h3 (maps to display/title/section fonts)
+- **`TSPanelTitle`** — `init(_ text: LocalizedStringKey)` — card/panel title (panel font)
+- **`TSSubhead`** — `init(_ text: LocalizedStringKey)` — secondary heading (bodySm + semibold, secondary color)
+- **`TSText`** — `init(_ text: LocalizedStringKey, variant: Variant = .body)` — body text with `.body` or `.small` variant
+- **`TSCaption`** — `init(_ text: LocalizedStringKey)` — de-emphasized (caption font, muted color)
+- **`TSHelperText`** — `init(_ text: LocalizedStringKey)` — form helper (caption font, secondary color)
+- **`TSErrorText`** — `init(_ text: LocalizedStringKey)` — validation error (caption font, danger color)
+- **`TSLabel`** — `init(_ text: LocalizedStringKey)` — field label (label font, secondary color, uppercase tracking)
+- **`TSMetricValue`** — `init(_ value: String)` — large numeric (title font, semibold, monospacedDigit, verbatim)
+- **`TSMetricLabel`** — `init(_ text: LocalizedStringKey)` — metric caption (caption font, muted color)
+- **`TSCode`** — `init(_ value: String)` — inline code chip (monospaced, surface bg, TSRadius.sm, verbatim)
+
+---
+
+### **3. SPACING & RADIUS TOKENS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/design/generated/apple/Tokens.swift:175–192`
+
+#### **`TSSpacing` enum**
+- `none` = 0
+- `xs` = 4
+- `sm` = 8
+- `md` = 12
+- `lg` = 16
+- `xl` = 20
+- `x2xl` = 24
+- `x3xl` = 32
+- `x4xl` = 48
+
+#### **`TSRadius` enum**
+- `sm` = 8
+- `md` = 12
+- `lg` = 16
+- `pill` = 9999
+
+#### **Motion durations** (`TSMotion`)
+- `fastDuration` = 0.150
+- `normalDuration` = 0.250
+- `slowDuration` = 0.400
+
+---
+
+### **4. TONE SYSTEM**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/UI/Badges.swift:3–17`
+
+- **`TSTone` enum** — `case neutral, accent, success, warning, danger, info`
+  - `var color: Color` — maps to `Color.TS` (neutral→textMuted, accent→accent, success→statusSuccess, etc.)
+
+---
+
+### **5. CONTAINER COMPONENTS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/UI/Cards.swift`
+
+- **`TSGlassPanel`** — `init(@ViewBuilder content: @escaping () -> Content)` — frosted panel (padding lg, `.tsGlassPanel()` modifier)
+- **`TSCard`** — `init(@ViewBuilder content: @escaping () -> Content)` — solid elevated card (surface bg, lg radius, border, lg padding)
+- **`TSCardHeader`** — `init(_ title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil, @ViewBuilder trailing: @escaping () -> Trailing)` — title + optional subtitle + trailing view
+  - Convenience: `init(_ title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil)` (no trailing)
+  - Uses `TSPanelTitle`, `TSCaption`, trailing-aligned
+- **`TSCardFooter`** — `init(@ViewBuilder content: @escaping () -> Content)` — top divider + trailing-aligned content
+
+---
+
+### **6. DATA-DISPLAY COMPONENTS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/DataDisplay/Metrics.swift`
+
+- **`TSDelta`** — `init(value: Double, formatted: String, invertColors: Bool = false)` — up/down indicator with sign-colored arrow (verbatim formatted)
+- **`TSBatteryDelta`** — `init(deltaPercent: Double)` — TSDelta with bolt accent
+- **`TSAnimatedNumber`** — `init(formatted: String)` — animated numeric (title font, semibold, monospacedDigit, verbatim, respects Reduce Motion)
+- **`TSProgressRing`** — `init(progress: Double, lineWidth: CGFloat = 8, colorIndex: Int = 0)` — circular progress (0...1 clamped)
+- **`TSMetricBar`** — `init(fraction: Double, tone: TSTone = .accent)` — horizontal proportion bar (Capsule, 8pt height, 0...1 clamped)
+- **`TSKVRow`** struct — `init(id: String, key: LocalizedStringKey, value: String)` — one key/value row (Identifiable)
+- **`TSKVList`** — `init(rows: [TSKVRow])` — key/value list (VStack of rows, left-aligned label, right-aligned code)
+- **`TSStatCard`** — `init(title: LocalizedStringKey, value: String, systemImage: String? = nil, delta: Double? = nil, deltaFormatted: String? = nil)` — headline metric card in TSCard (label, animated value, optional icon + delta)
+- **`TSMetricCard`** — `init(title: LocalizedStringKey, value: String, caption: LocalizedStringKey? = nil)` — metric in TSCard (label, metric value, optional caption)
+- **`TSUsageCard`** — `init(title: LocalizedStringKey, used: Double, total: Double, valueText: String)` — used/total bar in TSCard
+- **`TSInlineMetric`** — `init(label: LocalizedStringKey, value: String)` — "label: value" HStack (caption label, bodySm value, verbatim)
+- **`TSComparisonHeader`** — `init(leadingLabel: LocalizedStringKey, leadingValue: String, trailingLabel: LocalizedStringKey, trailingValue: String, delta: Double, deltaFormatted: String)` — two-value with delta
+- **`TSKpi` struct** — `init(id: String, label: LocalizedStringKey, value: String)` — one KPI tile (Identifiable)
+- **`TSKpiOverviewCard`** — `init(title: LocalizedStringKey, kpis: [TSKpi])` — 2-column grid of KPI tiles in TSCard
+
+---
+
+### **7. BADGE & PILL COMPONENTS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/UI/Badges.swift`
+
+- **`TSBadge`** — `init(_ text: LocalizedStringKey, tone: TSTone = .neutral)` — compact tinted label (Capsule, caption font medium, tone-colored border + background)
+- **`TSStatusPill`** — `init(_ text: LocalizedStringKey, tone: TSTone = .neutral)` — status label with leading dot (Capsule, caption, surface bg, border, tone-colored dot 8pt)
+- **`TSIconBox`** — `init(systemName: String, tone: TSTone = .accent)` — rounded icon container (36×36, tone-colored SF Symbol)
+
+---
+
+### **8. GAUGE & CHART COMPONENTS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/Charts/PieGauge.swift`
+
+- **`TSChartSlice` struct** — `init(id: String, name: LocalizedStringKey, nameText: String, value: Double, colorIndex: Int = 0)` — pie slice (Identifiable, has `.color` computed from palette)
+- **`TSPieChart`** — `init(slices: [TSChartSlice], showsLegend: Bool = true)` — donut/pie chart (SectorMark, innerRadius 0.6, corner radius 4)
+- **`TSRadialGauge`** — `init(value: Double, label: LocalizedStringKey, colorIndex: Int = 0)` — circular progress gauge (0...1 clamped, 120×120, displays percent + label)
+
+---
+
+### **9. LINE & AREA CHART COMPONENTS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/Charts/LineCharts.swift`
+
+#### **Chart data models**
+- **`TSChartPoint` struct** — `init(x: Double, y: Double, id: String? = nil)` — (x,y) sample (Identifiable)
+- **`TSChartSeries` struct** — `init(id: String, name: LocalizedStringKey, nameText: String, points: [TSChartPoint], colorIndex: Int = 0)` — named series (Identifiable, has `.color` computed from palette)
+
+#### **Chart wrappers**
+- **`TSLineChart`** — `init(series: [TSChartSeries], hidden: Set<String> = [], smooth: Bool = true)` — multi-series line chart
+  - Uses `LineMark` with catmullRom (if smooth) or linear interpolation
+  - Respects hidden series set
+  - Includes `tsChartAxes()` modifier (grid + muted labels)
+  - Hidden legend
+  
+- **`TSAreaChart`** — `init(series: [TSChartSeries], hidden: Set<String> = [])` — gradient-filled area chart
+  - Uses `AreaMark` with catmullRom interpolation
+  - Foreground: `TSChartGradient.fill(colorIndex:)` (opacity 0.35→0.02 linear gradient)
+  - Respects hidden series
+  - Includes axes
+
+- **`TSElevationProfile`** — `init(points: [TSChartPoint], colorIndex: Int = 4)` — distance/elevation profile (downsampled to 300 points, area + line)
+
+#### **Chart utilities**
+- **`TSChartFormat` enum**
+  - `static func axisLabel(_ value: Double) -> String` — abbreviated label (M/k notation, em dash for non-finite)
+  - `static func downsample(_ points: [TSChartPoint], maxCount: Int) -> [TSChartPoint]` — even stride down to maxCount, keeps endpoints
+  - `static func toggleHidden(_ hidden: Set<String>, _ seriesID: String) -> Set<String>` — toggle visibility
+  - `static func summary(for series: TSChartSeries) -> String` — accessibility summary (min/max/last)
+
+- **`TSChartGradient` enum**
+  - `static func fill(colorIndex: Int) -> LinearGradient` — top to bottom, color opacity 0.35→0.02
+
+- **`TSChartPalette` enum** (in `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Design/TSDesign.swift`)
+  - `static var categorical: [Color]` — accesses `Color.TS.chartCategorical` (8 colors)
+  - `static func color(at index: Int) -> Color` — wrapping index access (handles negative + wrapping)
+
+---
+
+### **10. CHART CONTAINER & LEGEND**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/Charts/ChartContainer.swift`
+
+- **`TSChartContainer`** — `init(_ title: LocalizedStringKey, summary: LocalizedStringKey? = nil, isEmpty: Bool = false, csv: String? = nil, @ViewBuilder content: @escaping () -> Content)`
+  - Title + optional export menu (copy CSV)
+  - Self-contained empty overlay (never hides the chart)
+  - Optional accessible summary caption
+  - Surface card with lg radius + border
+
+- **`TSChartLegend`** — `init(series: [TSChartSeries], hidden: Binding<Set<String>>)` — toggleable legend
+  - Horizontal scroll
+  - Each series: circle dot (8pt) + name (caption font)
+  - Tap to toggle visibility (strikethrough + opacity 0.3 when hidden)
+  - Uses `TSChartFormat.toggleHidden()` to update binding
+
+---
+
+### **11. FEEDBACK & LOADING COMPONENTS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/Feedback/States.swift`
+
+- **`TSSpinner`** — `init(label: LocalizedStringKey? = nil)` — inline loading with optional label (ProgressView.small + bodySm text)
+- **`TSPageLoader`** — `init(label: LocalizedStringKey = "loading")` — centered page loader (ProgressView + caption)
+- **`TSEmptyState`** — `init(title: LocalizedStringKey, message: LocalizedStringKey? = nil, systemImage: String = "tray", @ViewBuilder actions: @escaping () -> Actions)`
+  - Uses `ContentUnavailableView`
+  - Convenience: `init(title:message:systemImage:)` (no actions)
+- **`TSErrorDisplay`** — `init(title: LocalizedStringKey = "error.title", message: LocalizedStringKey? = nil, onRetry: (() -> Void)? = nil)` — error state with optional retry button (VStack: exclamation icon + title + message + retry)
+- **`TSQueryError`** — `init(message: LocalizedStringKey? = nil, onRetry: @escaping () -> Void)` — query failure wrapper over TSErrorDisplay
+- **`TSErrorBoundary`** — `init(hasError: Bool, onRetry: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content)` — error fallback overlay
+- **`TSSectionErrorBoundary`** — `init(hasError: Bool, onRetry: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content)` — section-scI have rich detail now. Let me kick off the 15-min Shared.xcframework build in the background immediately (it's the critical-path long pole), then verify the exact AppRoute/TeslaSyncApp/Units facade signatures myself.oped error (inline callout + retry button)
+- **`TSPageErrorBoundary`** — `init(hasError: Bool, onRetry: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content)` — full-page error
+- **`TSRequiresAuth`** — `init(onSignIn: @escaping () -> Void)` — auth-required state
+- **`TSTopProgress`** — `init(isActive: Bool)` — indeterminate top progress bar (respects Reduce Motion)
+- **`TSSkipToContent`** — `init(onActivate: @escaping () -> Void)` — a11y skip link (plain button, accent color, caption font)
+- **`TSGotoIndicator`** — `init(label: LocalizedStringKey, onTap: @escaping () -> Void)` — floating "jump to" button (Capsule, accent bg, white text)
+
+---
+
+### **12. SKELETON LOADERS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/Feedback/Skeletons.swift`
+
+- **`TSSkeleton`** — `init(width: CGFloat? = nil, height: CGFloat = 14, cornerRadius: CGFloat = TSRadius.sm)` — shimmer block (respects Reduce Motion, 1.2s duration)
+- **`TSStatSkeleton`** — `init()` — stat card skeleton (TSCard with two TSSkeleton rows)
+- **`TSChartSkeleton`** — `init(height: CGFloat = 180)` — chart placeholder
+- **`TSPageHeaderSkeleton`** — `init()` — title + subtitle skeleton
+- **`TSStatGridSkeleton`** — `init(count: Int = 4)` — 2-column grid of stat skeletons
+- **`TSChartBlockSkeleton`** — `init()` — titled chart skeleton
+
+---
+
+### **13. BANNER & ALERT COMPONENTS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/Feedback/Banners.swift`
+
+- **`TSAlertBanner`** — `init(tone: TST
+
+one, systemImage: String, title: LocalizedStringKey, message: LocalizedStringKey? = nil, onDismiss: (() -> Void)? = nil, @ViewBuilder action: @escaping () -> Action)`
+  - Icon + title + optional message + optional trailing action + optional dismiss button
+  - Tone-colored background (opacity 0.1) + border (opacity 0.3)
+  - Convenience: `init(tone:systemImage:title:message:onDismiss:)` (no action)
+
+- **`TSInlineCallout`** — `init(tone: TSTone = .info, message: LocalizedStringKey)` — inline contextual note (info icon + message, rounded bg)
+
+- **Specific banners** (TSAlertBanner presets):
+  - `TSOfflineBanner` — `init()`
+  - `TSLiveStaleDataBanner` — `init()`
+  - `TSTeslaReauthBanner` — `init(onReconnect: @escaping () -> Void)`
+  - `TSRateLimitBanner` — `init()`
+  - `TSMaintenanceBanner` — `init()`
+  - `TSImpersonationBanner` — `init(onExit: @escaping () -> Void)`
+  - `TSDraftRecoveryBanner` — `init(onRestore: @escaping () -> Void, onDiscard: @escaping () -> Void)`
+  - `TSEditConflictBanner` — `init(onReload: @escaping () -> Void)`
+  - `TSTimeMachineBanner` — `init(onExit: @escaping () -> Void)`
+  - `TSCookieConsentBanner` — `init(onAccept: @escaping () -> Void)`
+  - `TSBrowserCompatBanner` — `init()`
+  - `TSDraftRestorePrompt` — `init(onRestore: @escaping () -> Void, onDiscard: @escaping () -> Void)`
+
+---
+
+### **14. BUTTON COMPONENT**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/UI/Buttons.swift`
+
+- **`TSButtonVariant` enum** — `.primary, .secondary, .ghost, .destructive`
+- **`TSButtonSize` enum** — `.small (28pt), .medium (36pt), .large (44pt)`
+- **`TSButton`** — `init(variant: TSButtonVariant = .primary, size: TSButtonSize = .medium, isLoading: Bool = false, action: @escaping () -> Void, @ViewBuilder label: @escaping () -> Label)`
+  - Convenience: `init(_ title: LocalizedStringKey, variant:size:isLoading:action:)` — for Text labels
+  - HIG-native Button, respects 44pt touch targets on iOS
+  - Loading state: replaces label with ProgressView.small, disables button
+
+---
+
+### **15. UTILITY COMPONENTS**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Components/UI/Utility.swift`
+
+- **`TSClipboard` enum**
+  - `@MainActor static func copy(_ value: String)` — cross-platform clipboard access
+
+- **`TSCopyButton`** — `init(value: String)` — copy-to-clipboard button with transient "checkmark" confirmation (1.5s)
+
+- **`TSPrintButton`** — `init(action: @escaping () -> Void)` — print trigger (caller supplies action)
+
+- **`TSFullscreenButton`** — `init(isFullscreen: Binding<Bool>)` — fullscreen toggle (binding-driven)
+
+- **`TSMaskedValue`** — `init(_ value: String, initiallyRevealed: Bool = false)` — secret value with reveal toggle (show/hide eye icon, verbatim monospaced)
+
+- **`TSEditableText`** — `init(text: Binding<String>, prompt: LocalizedStringKey = "editable.prompt")` — tap-to-edit inline text (TextValue when editing, Button when viewing)
+
+- **`TSLogo`** — `init(showsWordmark: Bool = true)` — brand lockup (bolt.car.fill icon + "TeslaSync" wordmark, optional)
+
+---
+
+### **16. THEME MODIFIER**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/Sources/Theme.swift`
+
+- **`.teslaSyncTheme()` modifier** — applies tint (accent color) + Dynamic Type support (up to .accessibility5)
+
+---
+
+### **17. CHART BUILDING PATTERN (Example from MotorHistoryCharts)**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-75/apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Charts.swift`
+
+**Pattern:**
+- Direct Swift Charts usage (`Chart { ... }`)
+- Series built with `ForEach(points)` → `AreaMark` / `LineMark` per point
+- Interpolation: `.monotone` or `.catmullRom`
+- Axes: `@AxisContentBuilder` functions for custom formatting (time, units)
+- Selection: `@ChartContentBuilder` for `RuleMark` + annotation (tooltip)
+- Hidden series: filtered in visible computation
+- Legends: custom `MotorHistoryChartsLegend` (toggles series visibility)
+- Colors: direct use of `Color.TS.chartSeriesXxx` (not palette index)
+
+---
+
+### **QUICK SUMMARY FOR DrivetrainHealthPage**
+
+**Import:**
+```swift
+import SwiftUI
+import Charts
+```
+
+**Use for page layout:**
+- Wrap in `.teslaSyncTheme()`
+- Background: `Color.TS.bg`
+- Title: `TSPageTitle("...")`
+- Panels: `TSGlassPanel { ... }` or `TSCard { ... }`
+
+**Use for metrics:**
+- Cards: `TSStatCard(title:value:systemImage:delta:deltaFormatted:)`
+- Bars: `TSMetricBar(fraction:tone:)`
+- Inline: `TSInlineMetric(label:value:)`
+
+**Use for charts:**
+- Line: `TSLineChart(series:hidden:smooth:)` wrapped in `TSChartContainer`
+- Area: `TSAreaChart(series:hidden:)` wrapped in `TSChartContainer`
+- Data model: `TSChartSeries`, `TSChartPoint`
+- Legend: `TSChartLegend(series:hidden:)`
+- Direct Swift Charts for custom annotations
+
+**Use for feedback:**
+- Loading: `TSSpinner(label:)` or `TSPageLoader(label:)`
+- Empty: `TSEmptyState(title:message:systemImage:actions:)`
+- Error: `TSErrorDisplay(title:message:onRetry:)`
+- Skeleton: `TSSkeleton()`, `TSChartSkeleton()`
+
+All strings are `LocalizedStringKey` (except `.verbatim` String values for numbers/codes). All colors, fonts, spacing come from tokens — no hardcoding.The xcframework build is running in the background. AppRoute is clear (I'll add the case, pathSegment, icon, and `.vehicle` group). GlanceRouteRegistration confirms the Sample-data-source default pattern. Let me verify the Units facade API and the GlancePage view/sections/models to nail the rendering patterns.
+
+The xcframework Gradle build continues under nohup (the detached wrapper just returned immediately). Let me check its progress, read the design-system agent results, and read the GlancePage sections/models for component patterns.
+
+The xcframework build is progressing (now linking iOS arm64). GlancePage.Sections.swift reveals the exact card/gauge/badge patterns (`TSCard`, `TSIconBox`, `TSTone`, native `RadialGauge` via ZStack). Let me read the full design-system catalog.
+
+I now have a full component catalog. To avoid compile errors, I'll verify exact signatures from the actual source files rather than trusting the summary. Let me batch-read the critical component sources and the design tokens.
+
+Tokens confirmed. Charts use `point.xValue`/`point.yValue` and `item.nameText`. Let me read the remaining component sources (metrics, cards, badges, feedback, banners, typography) plus locate the chart-model and units-environment definitions.
+
+Exact signatures confirmed. Note `TSMetricCard`/`TSStatCard` lack icon+tone+subtitle combos, so for icon-tinted cards I'll build small custom views (the precedented `GlanceMetricCard` approach). Let me read the feedback/typography/gauge/chart-container sources and locate the chart-model + tsUnits definitions.
+
+Most signatures confirmed. Let me read the chart models, chart container, units environment, typography, and the registry chain + a test template.
+
+All design-system signatures confirmed; `tsUnits` defaults to `.metric`. Let me read the unit presets, banners, the app registry chain, and a test template to finalize my plan.
+
+I now have the complete API surface. Let me read the Glance models + test patterns and check the xcframework build progress, then start implementing.
+
+The xcframework build is progressing well (now linking release slices). I have every API signature I need. Before writing ~800 lines of SwiftUI, let me read the lint/format configs to avoid violations, then set up my plan.
+
+Lint limits are strict (file <400 lines, type body <250, func body <50, line ≤120). I'll decompose heavily. Let me set up my plan/todos and probe the xcstrings catalog format (it's huge, so I'll script edits).
+
+xcstrings format confirmed (`en`-only entries are fine). Let me inspect the raw serialization style (indent, unicode escaping, key sorting) so my injection produces a clean, valid diff.
+
+xcstrings style captured (2-space indent, `" : "` separators, raw unicode, unsorted — I'll inject surgically). Now I'll write the Swift implementation. Starting with the models.
+
+Models created. Now the Format file with SI converters and all pure derivations (sensors, severity, power, chart series, recommendations).
+
+Now the unit-aware formatters and recommendations builder.
+
+Now the chart-series builders.
+
+Now the `@Observable` page model with the data-source seam and 4-state machine.
+
+Now the sample/empty/failing data sources that drive the four states.
+
+Page model and samples done. Now the main page view with the 4-state switch and region composition.
+
+Now the Overview sections (HealthOverview + HealthGaugeGrid). Let me also check the xcframework build progress.
+
+Shared.xcframework is staged — a full build is now possible. Continuing with the gauge/metric-card sections.
+
+Now the thermal-load panel section.
+
+Now the live motor status section (the largest region) with freshness chip.
+
+Now the four charts section.
+
+Now the recommendations + detail-cards section (final region file).
+
+All region sections written. Now the route registration file plus the `AppRoute` and `TeslaSyncApp` edits.
+
+All sections + routing wired. Now let me extract every string key I used so I can inject them into the catalog accurately.
+
+The grep missed `route.drivetrainHealth` (used by `AppRoute.titleKey`). Let me verify the nav files and what route-title keys are referenced.
+
+Nav files already reference the route (with literal fallback). I'll add all `drivetrain.*` keys plus `route.drivetrainHealth` and `routes.drivetrainHealth`. Let me write a careful injection script matching Xcode's exact format.
+
+100 keys injected, valid JSON, unicode intact. Let me verify the insertion is clean (surgical diff) and that the `strings` opening is well-formed.
+
+xcstrings diff is purely additive (1100 insertions, 0 modifications). Now the tests.
+
+Now the derivations + route/registration tests.
+
+Let me verify the registry API and the reused widget types are accessible as I assumed.
+
+Registry API and reused types confirmed. Now let me run formatting + lint on my new files (auto-format first, then verify).
+
+swiftformat is clean. Let me wait for swiftlint.
+
+SwiftLint: **0 violations in 11640 files** (whole repo clean, including my files). Now the placeholder gate, then the build.
+
+Placeholder gate clean (the 1 allowed is the documented redaction marker). Now regenerate the project and run the full macOS build (ground-truth, no exclusions first).
+
+Project regenerated with my files (72 references). Now the macOS ground-truth build (no exclusions) — this compiles the full app target, so it'll take a while.
+
+The macOS build is running. While it compiles, let me prepare the ledger update — inspect the exact format.
+
+The macOS build finished. Let me check the result.
+
+The build is still running (now emitting/linking the macOS module — meaning all sources, including mine, compiled with no `error:` so far). Let me wait for completion.
+
+**BUILD FAILED only on `Input.Previews.swift`** (lines 88, 101) — the exact pre-existing, out-of-scope file documented in the GlancePage gold-standard log. **Zero errors in any of my files** (the compile reached module emission). This matches precedent. Let me confirm I didn't touch that file, then rebuild excluding it (as predecessors did).
+
+Confirmed: the sole breaker is the pre-existing, unmodified `Input.Previews.swift`; my change set is clean. Rebuilding macOS excluding that one file (as predecessors did) to prove my code builds green.
+
+Waiting for the excluded macOS build.
+
+Real compile errors surfaced now (the first build short-circuited on `Input.Previews.swift`). The key one: **`DrivetrainHealthFormat` collides** with an existing enum in `DashboardWidgets`. Let me check all my type names for collisions before fixing.
+
+Only `DrivetrainHealthFormat` collides. I'll rename my enum to `DrivetrainHealthPageFormat` across all my files (and rename the 3 format files to match), then regenerate.
+
+No residual references. Let me re-format (the longer name may push lines over 120), regenerate, and rebuild.
+
+Reformatted (2 files re-wrapped), project regenerated. Rebuilding macOS (excluding the pre-existing breaker).
+
+Still building. Let me wait longer.
+
+A type-checker timeout in the Sample fixtures (heavy inline arithmetic). Let me break those expressions into explicitly-typed locals.
+
+Now rebuild macOS (incremental — only the Sample and dependents recompile).
+
+The `&&` guard short-circuited (swiftformat --lint likely flagged the edited file). Let me reformat and build without the guard.
+
+swiftformat is clean (exit 0). The build4 background process was likely torn down. Let me launch the build as a fully detached process so it persists, and verify the log appears.
+
+The detached build is running and persisting. Let me wait for it to complete.
+
+Still compiling/linking the macOS module. Let me check the current phase and keep waiting.
+
+**macOS BUILD SUCCEEDED (BUILD_EXIT=0)** — my code compiles cleanly into the app target. Now the macOS tests. Let me check for any global route tests to include, then run my test classes.
+
+There's a global `RouteTests` using `AppRoute.allCases`. Let me read it to ensure my new route satisfies its assertions.
+
+RouteTests will pass with my addition (unique segment, group resolves). Let me run the macOS tests (my 2 classes + RouteTests regression), detached with the documented pre-existing exclusions.
+
+Test process running. Let me wait for results.
+
+**macOS TEST SUCCEEDED — 33 tests, 0 failures** (Drivetrain 25 + RouteTests 8). Now the iOS-Simulator build to verify the `#if os(iOS)` compact branches compile.
+
+iOS build compiling. Meanwhile, let me add the 2 ledger rows (macOS build+test are green). I'll round-trip the JSON and verify the diff is purely additive.
+
+The round-trip re-encoded the `\u2014` em-dash and EOF newline. Let me revert and redo with `ensure_ascii=True` (preserving original encoding) and no trailing-newline change for a purely-additive diff.
+
+Ledger diff is now purely additive (18 insertions, 0 deletions). Let me verify it's valid and check the iOS build.
+
+Ledger is correct. Let me wait for the iOS build to finish.
+

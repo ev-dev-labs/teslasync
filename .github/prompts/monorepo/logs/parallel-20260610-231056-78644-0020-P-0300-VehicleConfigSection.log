@@ -1,0 +1,74 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple app environment.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me explore the existing Apple app structure.
+
+The structure exists with a per-view file pattern (`.swift`, `.Model.swift`, `.Previews.swift`, `.strings`). Let me find existing references and the project setup.
+
+Uses XcodeGen (`project.yml`). No VehicleConfigSection yet. Let me read the project config and find similar reference feature-views (vehicle-detail sections).
+
+Now I understand the per-surface file convention. Let me find the closest analog (a presentational KV-list section) and the native shared components. Let me look at the existing patterns.
+
+`ChargerSpecsPanel` is the closest analog (a specs panel with the full file set). Let me read it completely as my template, plus the shared component libraries.
+
+Let me read the reference files individually for full detail.
+
+Excellent, very comprehensive template. Let me read the rest of the reference set and the shared component/token files.
+
+Now the Previews, Tests, strings, plus the web type definitions and KVList component for exact field/layout parity.
+
+I have a thorough template. Now let me confirm the shared token/component APIs and the exact web types for `VehicleConfigSnapshot` + `KVList`.
+
+Now let me confirm the exact token/component APIs available (colors, spacing, fonts, radius) and the GlassPanel/Skeleton signatures.
+
+Now let me confirm the design token members (colors, fonts, spacing, radius) to ensure I only reference real tokens.
+
+I have all token APIs confirmed. Let me check the build tooling feasibility (xcodegen, Shared.xcframework staging) and whether sibling vehicle-detail sections exist.
+
+`xcodegen` is present but the `.xcodeproj` and `Shared.xcframework` must be generated/built (KMP via Gradle — the long pole). Let me inspect the shared module and kick off the framework build in the background while I write code.
+
+Java 17 + gradlew present. Let me kick off the Shared.xcframework build in the background (long pole) while I write the surface code.
+
+Gradle is progressing (cached). Now let me write the plan and the 7 surface files. First, let me check the lint/format configs to match house style.
+
+Let me read the placeholder pattern list and how `-Path` resolves, so my code avoids every forbidden token.
+
+Confirmed: matching is case-insensitive, and forbidden tokens include **"Placeholder"**, "TODO", "not implemented", etc. I'll avoid all of them in every file (e.g., use `skeletonRowCount`, not "placeholder"). Let me write the plan and all 7 files.
+
+pwsh available; Shared.xcframework is linking. Now writing the surface files. Starting with the Model (state-holder + telemetry + i18n seams).
+
+Now the Adapter (pure projection core).
+
+Now the main view, previews, tests, and strings files.
+
+All 7 files created. Let me verify no forbidden tokens, run the linters on my files, and check the framework build.
+
+swiftformat flagged formatting in 2 files. Let me auto-format with the ecosystem tool, then re-lint.
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+One swiftlint complexity violation: the 12-case `value(for:)` switch (complexity 12 > 10). Let me split out the string-field resolution into a helper to reduce branching while keeping all cases explicit.
+
+Lint and format both pass. Let me check the Shared.xcframework build status.
+
+Shared.xcframework built and staged. Now generate the Xcode project and run the iOS build+test.
+
+Project generated. Let me run an iOS build first (faster feedback on compilation) before the full gate. Launching in background.
+
+Let me check the background build session directly and the log file location.
+
+The background redirect approach got tangled (shared environment has other xcodebuild runs too). Let me stop my session and run the build cleanly in a monitored session.
+
+Let me run the iOS build+test cleanly in sync mode (long wait), recording the real exit code to a log.
+
+That stale log was from another slot (slot-12, 00:36) — my `&`-backgrounded job was killed when the async session ended, and never wrote. I'll run in sync mode (no `&`) with a namespaced log and let the tool report the real exit code.
+
+My `VehicleConfigSection.*` files compiled with **no errors** — the build failure is entirely in unrelated surfaces (`RecentDrives*`, `StateTimeline*`) with "ambiguous for type lookup" errors. Let me verify these are pre-existing duplicate-type collisions outside my scope.
+
+Definitive: my 7 files are the only working-tree changes (all untracked), and the failures are **pre-existing duplicate type definitions** in baseline files — e.g. `RecentDrivesLoadStatus` is declared in BOTH `dashboard-widgets/RecentDrivesListWidget.Model.swift` and `feature-views/RecentDrivesSection.Adapter.swift` (same module → "ambiguous"). These are sibling surfaces, explicitly out of my allowed scope. Let me quantify the blast radius and confirm zero diagnostics in my files.
+
+My files have **zero** error diagnostics (the 15 matches are compile-batch listings, not errors). The blast radius is exactly two pre-existing colliding surface families. Let me time-box an isolation experiment to actually *run* my tests: check what references the colliding widget files, then temporarily relocate one side of each collision.
+
+The colliding widget files are self-contained (no external references). Let me run a **non-committed isolation experiment**: temporarily relocate one side of each pre-existing collision, then build+test to prove my surface and its tests actually pass. I'll restore everything afterward.
+
+Files relocated and project regenerated. Now build+test for iOS (warm cache, incremental).
+

@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed, and `simctl` (iOS Simulator) is unavailable. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the Apple app structure to understand what exists.
+
+Now let me read the web source and explore the Apple app's structure in parallel.
+
+The Apple app has an existing `dashboard-widgets` directory with 706 entries. Let me find a similar reference widget and check if CostForecastWidget already exists.
+
+`CostForecastWidget` does not exist yet. `ChargeCostTrackerWidget` is the closest analog (charging + cost + bar chart). Let me read its complete file set to learn the conventions.
+
+Excellent, very well-structured. Let me read the rest of the reference files and the web sources in parallel.
+
+Let me read the Swift Charts reference, remaining test/preview files, and the web data sources in parallel.
+
+`MonthlyMileageWidget` uses monthly bars — ideal reference for the bar chart. Let me read it along with the remaining test/strings files and the web data sources.
+
+Now let me read the web types, hook, shared widget components, registry entry, and the Apple design tokens.
+
+Let me read the web shared components, useFormatting, and locate the Apple design tokens and registration types.
+
+Let me locate the full design token definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion, chart palette).
+
+Tokens come from `apps/design/generated/apple/Tokens.swift`. Let me read it plus the rest of project.yml and the test file conventions.
+
+Let me read the design tokens, the test conventions, and check tooling availability (pwsh, SwiftUI compile).
+
+SwiftUI typechecks and pwsh is available. Let me read the test conventions and a charging BarMark precedent before writing.
+
+Let me read the adapter/UI test conventions, the chart-widget body composition, and lint configs.
+
+Let me read `useFormatting`, the charts `fmt`/`axisTick` helpers, and the placeholder checker to finalize parity details.
+
+Let me quickly read the shared `WidgetChartSummary` to match composition, then I'll start building.
+
+I have a complete understanding. Let me set up a plan and todos, then build the implementation.
+
+Now I'll build the files, starting with the Foundation-only Model.
+
+Let me typecheck the Foundation-only logic files together with the shared infra to catch errors early.
+
+Logic files typecheck cleanly under Swift 6. Now the Swift Charts bar chart.
+
+The `makeProjectionStub` helper is awkward and uses the word "stub". Let me refactor `chartSummary` to take bars directly.
+
+Now the leaf subviews (stat row/grid, skeleton).
+
+Now the main surface view.
+
+Now the critical check — typecheck the full SwiftUI surface against the real design tokens and Charts framework.
+
+Full surface typechecks cleanly against real APIs. Now the previews, strings, and tests.
+
+Now the two test files. Let me write the adapter/layout tests with precisely computed expected values.
+
+All files created. Now let me validate the exact pinned test values by compiling the logic with a small harness, and typecheck the tests against a mini-module.
+
+Every pinned test value matches runtime output exactly. Now let me typecheck the test files against a testable mini-module.
+
+Module builds cleanly (all 6 surface files compile as a real module). The test typecheck only fails because `XCTest` isn't on the default search path. Let me locate it.
+
+Xcode IS installed at `/Applications/Xcode.app` (just not `xcode-select`-active). This may let me run more of the real gate. Let me assess Xcode, XcodeGen, simulators, and the Shared.xcframework dependency, and typecheck the tests with real XCTest.
+
+Xcode 26.5 works, but **no iOS Simulator runtimes** are installed and the **KMP `Shared.xcframework` dependency is absent** (only `.gitkeep`). Let me check the framework build script and available SDKs to decide how much of the real gate is runnable.
+
+Now the picture is definitive. The full `xcodebuild build test` gate is genuinely blocked (no iOS Simulator runtimes; KMP `Shared.xcframework` dependency absent + needs Kotlin/Gradle). But I can still prove the surface compiles for **iOS 18** and that the **tests typecheck with real XCTest**. Let me do both.
+
+A) iOS 18 and B) macOS 15 module both compile **EXIT=0**. The tests only failed because the XCTest *Swift overlay* (which exposes `XCTAssert*`) wasn't on the path — it lives in `Developer/usr/lib`, not the Frameworks dir. Let me add it.
+
+Tests typecheck (EXIT=0). There are strict-concurrency warnings because `CostForecastWidget` (a SwiftUI `View`) is `@MainActor`, so its static `registration`/`surfaceSlug` are main-actor-isolated. Let me make the registry test class `@MainActor` to keep it warning-clean.
+
+Tests typecheck with zero warnings. Now swiftformat, swiftlint, and the placeholder gate on the new files.
+
+Three formatting issues. Let me auto-fix with swiftformat (write mode) on the affected files, then re-verify.
+
+Auto-fixed. Let me re-lint all 9 files and re-typecheck to confirm formatting passes and nothing broke.
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+One SwiftLint violation: a 3-member tuple (`large_tuple` max 2). Let me replace it with a small private struct.
+
+Now re-run swiftlint, swiftformat, re-typecheck the surface and harness to confirm everything still holds.
+
+All green: swiftlint 0 violations, swiftformat clean, surface typechecks. Let me re-validate values, re-typecheck tests/iOS18 after the edit, and run the placeholder gate.
+
+Values, iOS 18, and tests all still pass. Now the placeholder gate via pwsh, exactly as specified.
+
+Placeholder gate passes. The end-to-end `xcodebuild build test` is genuinely blocked (no iOS Simulator runtime + missing KMP `Shared.xcframework`), but every runnable check passes. Let me check the logs dir and a sibling log for format.
+
+The sibling `ChargeCostTrackerWidget.log` establishes the canonical precedent. Let me read it in full to mirror its structure and verify how the blocker was reproduced.
+
+This is the canonical "code-complete + DEFERRED Xcode gate" disposition used by all 60 sibling surfaces (host-runnable gates GREEN; xcodebuild deferred to macos-latest CI due to the pre-existing missing KMP `Shared.xcframework`). Let me reproduce the BUILD_RESULT=65 blocker honestly (via `xcodegen generate` + a direct target build, which skips the gradle scheme pre-action) and confirm my files enumerate into the project.
+
+All 10 files enumerate into the project. Now reproduce the missing-framework blocker via a direct target build (no gradle pre-action).
+
+**REPRODUCED** the exact blocker: `error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'. BUILD_RESULT=65` — identical to all sibling surfaces. This is the pre-existing KMP dependency, outside my allowed scope. Let me clean up generated artifacts and check git state.
+
+Clean — only my 10 new files (plus 2 pre-existing unrelated web changes I won't touch). Let me go further than typecheck: actually **execute** the XCTest suite via a temporary SwiftPM package (matching the sibling's strongest evidence). This runs the real test cases.
+
+**31 tests executed, 0 failures** — the real XCTest suite passes against the live surface, design tokens, Charts/SwiftUI under Swift 6 strict concurrency. Now I have comprehensive evidence. Let me write the log and clean up temp artifacts.
+
+Now clean up temp artifacts and run a final consolidated gate pass.
+
+Clean. Final consolidated gate pass, then commit only my files + the log.
+
+All gates green. Now commit only my surface files and the log (excluding the pre-existing unrelated web changes).
+
+Exactly the 10 surface files + log staged (pre-existing web changes excluded). Committing.
+
+The task is complete. Let me do a final verification that the committed surface is intact.
+

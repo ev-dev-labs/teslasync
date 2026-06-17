@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me explore the Apple app structure and web source in parallel.
+
+There's an existing Apple app with `BatteryCellsWidget` and `DrivetrainHealthWidget` as reference patterns. Let me study these thoroughly along with the infrastructure.
+
+Excellent reference patterns. Let me read the remaining BatteryCells and Drivetrain files plus project config and tests.
+
+Now let me study the Drivetrain widget (uses live provider), the SharedFacade layer, project config, and existing tests.
+
+Two patterns exist (BatteryCells uses `EnergyStore` + `LoadableState`; Drivetrain uses a provider seam). Let me examine the facade layer, the live provider wiring, and the web `useEnergyStats` hook to pick the right pattern.
+
+Now let me understand the build setup — whether `Shared` framework is available, the project config, and existing widget tests.
+
+Let me stop the broad search and run targeted checks.
+
+The canonical P4 widgets live in `TeslaSync/dashboard-widgets/` with dot-separated naming (`.Model`, `.Adapter`, `.Previews`, `.strings`, `.Tests`). This matches the `EnergyStatsWidget.*` allowed-files glob. Let me find energy-related widgets and a chart-based reference.
+
+`EnergyStatsWidget` is new. `BatteryDegradationTrendWidget` (chart + stats) is the ideal template. Let me read it end-to-end.
+
+This is the canonical template. Let me read the remaining BatteryDegradationTrend files plus an `.Adapter` to see the Shared live-binding pattern.
+
+Let me find the live Shared-binding wiring pattern and the energy data shapes.
+
+None of the widgets use `#if canImport(Shared)` — they bind `EnergyStore` directly. Let me see the SolarProduction live binding, the `EnergyStats` web type, and the KMP `EnergyStore` API.
+
+Confirmed: widget files are entirely Shared-free; the `Source` protocol is the seam, wired to Shared at a composition root out of scope. This de-risks the build. Let me read the `EnergyStats` type, the KMP `EnergyStore` API, and design tokens.
+
+Let me read design tokens, chart colors, the `energyStats` KMP signature, and the Previews/Tests/strings formats.
+
+Now the test pattern and the stat-grid/compact view pattern. Let me read the BatteryDegradationTrend tests, the ChargeCostTracker main view + tile views, and lint config.
+
+I have the full architecture. Let me read the `useUnits` hook, the `WidgetStatGrid` shared component, and the unit-conversion instructions to nail the conversion math.
+
+Confirmed all registry metadata. Now let me set up the plan, verify tooling, and kick off the long-pole KMP framework build in the background while I write code.
+
+Tooling is all present. Let me write the plan, generate the Xcode project, and start the KMP framework build (long pole) in the background.
+
+Project generated. Now let me start the KMP Shared framework build (the long pole) in the background while I write the widget code.
+
+While the framework builds, let me check how the Solar energy widget handles Wh→kWh conversion (precedent for the chart units), then check `AnimatedNumber`/`fmtNumber` defaults.
+
+Strong precedent: SolarProduction converts `energy_wh / 1000` to kWh for its chart ("both platforms chart identical kWh"). I'll do the same for EnergyStats (matching the explicit "Energy (kWh)" labels + SI boundary). `AnimatedNumber` default = 0 decimals; `fmtNumber` coerces non-finite→0. Let me grab Solar's `shortDate` helper, then write all files.
+
+I have everything needed. Now let me write all the widget files. Starting with the domain models.
+
+Now the pure adapter (the unit-tested core: conversion + formatting + projection).
+
+The KMP framework build finished. Let me confirm it succeeded, then continue writing the Model file.
+
+The Gradle build was killed externally ("stop command received") — a parallel-slot daemon interference, not a code issue. It got to `linkDebugFrameworkIosArm64`. Let me retry with `--no-daemon` to isolate from the shared daemon, in the background, while I keep writing code.
+
+Now the Model file (seams, observable view-model, strings facade).
+
+Now the chart + stat-grid presentation views (Swift Charts).
+
+Let me verify all the design tokens I referenced actually exist before writing the rest.
+
+`Color.TS.surfaceElevated` doesn't exist. Let me check the valid surface tokens, how other tiles style their background, and confirm `TSSpacing`/`TSRadius`.
+
+`surfaceGlass` is the right token. Let me fix that reference.
+
+`surfaceGlass` fixed. Now the main view file. First, let me simplify the model's stale-refresh (I'll handle it view-side like BatteryDegradation), then write the surface.
+
+Now the main surface view.
+
+The surface is written. Let me check the framework rebuild status, then write the previews, strings, and tests.
+
+Still building (no-daemon is slower). Let me write the previews file.
+
+Now the i18n strings table.
+
+Let me cross-check every i18n key referenced in code against the strings table.
+
+All i18n keys are covered. Now the comprehensive test suite.
+
+All files are written. Let me make the chart's X-axis label-thinning robust (explicit strided dates instead of a possibly-fragile categorical `desiredCount`), then run formatting/lint.
+
+Let me check the framework build status and run swiftformat/swiftlint on my new files (these don't need the full build).
+
+swiftformat wants consistent numeric grouping. Let me auto-apply formatting (ecosystem tool) to my files, then re-verify.
+
+swiftformat passes (0/7 need formatting). Let me check the lingering shell and run swiftlint on my files.
+
+swiftlint: **0 violations in 7 files**. Now let me regenerate the Xcode project to include the new files, and wait for the framework build.
+
+My files are in the project (48 references across app + test targets). The framework build continues. Let me wait for it.
+
+It's been a while with no output (the `tail` buffers until exit). Let me check from a separate shell whether the build is actively progressing.
+
+The framework build completed. Let me confirm it succeeded and was staged.
+
+**Framework build SUCCESSFUL** (16m48s). It's written to the gradle output dir but not yet staged. Let me stage it manually, then run a fast target-only compile (skipping the flaky gradle pre-action) to validate my Swift code.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now a fast target-only compile to validate my Swift code, skipping the gradle pre-action.
+
+Let me wait for the app target compile to validate my Swift compiles cleanly.
+
+The build failed, but **every error is in pre-existing, unrelated widgets** (`ChargeStatusWidget`, `ChargeStatusLiveWidget`, `ChargeSessionChartWidget`) — type-name collisions like `ChargeStatusProjection`/`ChargeStateDTO` defined twice. **Zero errors in my `EnergyStatsWidget.*` files** (my code + strings compiled past). Let me confirm these are baseline issues, not caused by me.
+
+Confirmed: my 8 `EnergyStatsWidget.*` files are the **only** things I added (untracked). The `ChargeStatusWidget` / `ChargeStatusLiveWidget` / `ChargeSessionChartWidget` collisions are in **committed baseline files at HEAD** (a bad parallel merge), entirely unrelated to my work. Let me map the exact collision so I can validate my widget compiles in isolation.
+
+The collision is fully pre-existing: `ChargeStatusWidget` and `ChargeStatusLiveWidget` both define 7 identical type names, and `ChargeSessionChartWidget` duplicates `ChargeSessionDTO` — all committed at HEAD. To honestly verify my widget compiles cleanly (Swift compiles whole-module, so I must rule out masked errors), let me temporarily exclude the broken families, build, then restore. First, check nothing else references them.
+
+The 3 broken families aren't referenced anywhere else — safe to temporarily exclude for an isolation build. Let me stop the lingering grep and do the validation (move to backup, regenerate, build, then restore).
+
+22 files backed up. Now regenerate and build the target to validate my widget compiles cleanly.
+
+Let me wait for the isolation build to compile the module.
+
+**BUILD SUCCEEDED** with the broken families excluded — this proves my `EnergyStatsWidget` compiles cleanly with zero errors. Now let me run my EnergyStatsWidget tests in this isolated state to prove they pass (targeting just my test classes on the booted iPhone 16).
+
+Let me wait for the isolated test run (compiles test bundle + runs my tests).
+
+**All 32 EnergyStatsWidget tests PASSED** (`** TEST SUCCEEDED **`) — Format (6), Projector (10), Model (9), Registry (2), Accessibility (5). My widget is conclusively correct. Let me also validate the macOS build in isolation (gate requires both platforms; my code is cross-platform), still with the broken families excluded.
+
+**macOS isolation build also SUCCEEDED.** My widget compiles on both platforms + 32/32 tests pass + lint/format clean. Now let me **restore** the pre-existing broken files to return the repo to its baseline state, then run the real gate honestly.
+
+All 22 files restored; git shows only my 8 files added, nothing of theirs modified. Let me regenerate and check the gate tooling (pwsh, check-placeholders, log dir).
+
+All gate tooling is available (`pwsh`, `check-placeholders.ps1`). Now let me run the **real gate faithfully** from the repo root, exactly as specified. It will capture the pre-existing baseline build failure honestly. Let me create and run the gate script.
+
+Let me run the faithful gate (this attempts both full builds, lint, format, placeholder check — it will take ~15 min and will surface the pre-existing build failure honestly).
+
+The gate is running (will take ~15 min). While it runs, let me verify my files contain no forbidden placeholder tokens (the `check-placeholders` step).
+
+My files are clean of placeholder tokens. Let me verify against the actual pattern list to be confident `PLACEHOLDER_EXIT=0`.
+
+`PLACEHOLDER_EXIT=0` confirmed (my files have none of the forbidden patterns; the check only scans my `EnergyStatsWidget*` files). Let me monitor the gate progress.
+
+The gate completed: **ios=65, mac=65** (pre-existing build failures), **fmt=0** (all 2010 files clean), **placeholder=0** (clean), **lint=2** (violations somewhere). Let me verify the build errors are exclusively the pre-existing collisions and that no swiftlint violations are in my files.
+
+**Conclusive:** 153 compile errors, **zero in any EnergyStats file**. All errors trace to the pre-existing `ChargeStatusLiveWidget`/`ChargeStatusWidget`/`ChargeSessionChartWidget` collisions (which cascade to other widgets — all of which built fine in my isolation test). The 1 swiftlint violation is also not in my files. Let me pinpoint the pre-existing swiftlint violation, then append a structured evidence section to the log.
+
+The lone swiftlint violation is in `LiveSignalSparklinesWidget.Builder.swift` (pre-existing, not mine). I have complete evidence. Let me append a structured, self-contained analysis + final EXIT/STATUS to the log, embedding fresh per-file proofs.
+
+The log is complete with comprehensive evidence (fresh per-file proof: swiftformat 0/7, swiftlint 0 violations), root-cause analysis, isolation validation, git proof, and `EXIT=65 / STATUS=BLOCKED`. 
+
+Now let me commit the additive, verified artifact + log (purely additive; doesn't cause the pre-existing red). Let me verify my files and stage explicitly.
+
+All 9 files staged (8 artifact + log); `.xcodeproj` is gitignored; the 2 pre-existing modified web files are untouched. Let me commit.
+
+Committed (`0bc753c20`) — 8 artifact files + the log. Let me clean up temp files and verify the working tree is clean (restored files byte-identical to baseline).
+
+The working tree is clean: temp files removed, all 8 artifact files + log committed, the 3 restored widget families are byte-identical to HEAD (untouched), and only the 2 pre-existing (non-mine) web-file modifications remain. Task is as complete as possible within the allowed scope.
+

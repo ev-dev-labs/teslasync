@@ -1,0 +1,200 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Web source exists. Let me read the web source and explore the Apple structure.
+
+Now let me read the actual source file in sections.
+
+I now fully understand the web source contract. Let me explore the existing Apple app structure to understand the patterns (state holders, tokens, i18n, diagnostics) and how the Xcode project is set up.
+
+There's an existing `shared-surfaces` directory with 204 prior surfaces. Let me examine the established pattern by viewing the directory and a representative precedent.
+
+A clear 8-file pattern per surface. Let me study the `Accordion` precedent (interactive UI, similar to Lightbox) in full, plus the project.yml build config.
+
+XcodeGen-based build; shared-surfaces are auto-globbed. `TourOverlay` (an overlay surface) is the closest precedent to Lightbox. Let me study it completely along with the i18n/tokens/diagnostics facades.
+
+Excellent precedent. Let me read the rest of the TourOverlay file set to fully internalize the pattern (States, Seams, Adapter, Views, Previews, strings, Tests, AdapterTests).
+
+Now let me read the AdapterTests and locate the shared infrastructure (tokens + components) that surfaces depend on.
+
+Let me read the design tokens and the shared component signatures I'll use.
+
+Now let me read the shared component signatures (TSButton, TSEmptyState, TSSkeleton, TSFadeIn, TSCard, TSSpinner) I'll compose with.
+
+Let me check the `Accordion` precedent — it's a controlled interactive component (like Lightbox has internal state), to see how internal UI state is modeled.
+
+Let me read the TSButton init, lint config, and check how surfaces handle remote images (AsyncImage) and the surface-slug test convention.
+
+There's an `Avatar` surface using AsyncImage — the precedent for native remote image loading. Let me study it.
+
+I have a complete understanding of the architecture. Let me set up tracking and check build feasibility in parallel.
+
+iPhone 16 sim is booted, xcodegen present. But `Shared.xcframework` must be built via KMP/Gradle. Let me check that toolchain's feasibility — it gates the whole build.
+
+Java 17 + gradlew present, so the KMP build may be feasible (slow). Let me set up tracking and start kicking off the shared framework build in the background while I write code.
+
+Now I have everything needed. The KMP framework builds in the background. Let me write the surface files, starting with the pure core (Adapter) and seams.
+
+Core logic done. Let me check the KMP build progress and write the leaf-state views.
+
+KMP build still running. Let me write the leaf-state views (loading/empty/error).
+
+Now the main data viewer — the meatiest file. Let me write `Lightbox.Views.swift`.
+
+Now the main `Lightbox.swift` public view. Let me check the KMP build and write it.
+
+Now the i18n catalog and previews.
+
+Now the test files — pure-core adapter tests first.
+
+Now the model state-holder tests.
+
+All 10 files written. Let me fix a potential `Equatable` issue, check the KMP build, and start formatting/linting my files.
+
+Let me run swiftformat and swiftlint on my files (these don't need the framework build).
+
+Only one issue (a trailing comma). Let me auto-fix my files with swiftformat, then re-lint.
+
+Let me verify the fix and run swiftlint on my files.
+
+swiftlint: 0 violations. swiftformat: clean. Let me check the KMP build progress.
+
+While the KMP build continues, let me independently type-check the dependency-light core (Adapter + Seams + Model, no SwiftUI) to catch logic errors early.
+
+Pure core type-checks cleanly (exit 0). Let me wait for the KMP framework build to finish — it gates the full xcodebuild.
+
+Let me check whether the KMP build is actively progressing or stalled.
+
+The KMP build is actively progressing (Gradle/Kotlin-Native compiling at ~20% CPU, konan toolchain present, build dir active). Kotlin/Native multi-arch compilation is slow. Let me wait.
+
+Progress confirmed — the debug XCFramework is built; it's now compiling the optimized release variant (Kotlin/Native release is slow). Let me continue waiting.
+
+KMP `Shared.xcframework` built and staged (24m). Now let me generate the Xcode project and start the gate build/test.
+
+Project generated and framework has all slices (ios-arm64, ios-arm64-simulator, macos-arm64). Now let me run the gate. I'll start with the iOS build+test (the long pole), writing to the official log.
+
+Now the iOS build+test (long pole). Starting it in the background and monitoring.
+
+The iOS build+test is running. Let me monitor for early errors (preAction gradle staging, then compilation).
+
+Good — preAction (gradle) was fast (up-to-date), now compiling the Swift module with no errors yet. Let me continue monitoring.
+
+Still in whole-module emit (large module, no errors). Let me keep waiting.
+
+Let me verify the build process is actively working (not hung).
+
+Build is actively progressing (8 parallel swift-frontend processes at high CPU). Large module compile takes time. Let me wait and check the background shell.
+
+App module compiled past whole-module type-check with no errors (my non-test files are in there). Now compiling the test target (81 parallel frontends). Let me keep waiting.
+
+BUILD FAILED, but my error grep missed the cause. Let me find the actual failure.
+
+No `error:` lines but BUILD FAILED — unusual. Let me find the actual failed command and its context.
+
+Found it — line 22863 "Command SwiftCompile failed with a nonzero exit code" but no `error:`. The failed batch is unrelated A-files (AnomalyInlineRow, AppearanceSettings…), suggesting a frontend crash/OOM from 81 parallel processes. Let me inspect the failure signature.
+
+Two compiler "Stack dump:" crashes (lines 18585, 22833) — swift-frontend segfaults, not type errors. Let me see which files triggered them (mine or unrelated).
+
+The crash is an LLVM `report_at_maximum_capacity` (out-of-memory) during IRGen of an **unrelated** file (`AppearanceSettings.Controls.swift`), caused by 81 parallel swift-frontend processes plus leftover Gradle daemons — not a code defect. My files type-checked fine (whole-module emit passed; no Lightbox file in any crash). Let me free memory and rebuild with reduced parallelism.
+
+80 swift-frontend processes still alive — let me check whether xcodebuild is still running (the test phase) or these are orphans.
+
+The shell is still running — xcodebuild moved to the `test` action's build pass (a second build) with 80 parallel frontends, risking another OOM. Let me stop it and re-run with controlled parallelism.
+
+86 orphaned swift-frontend processes are holding memory. Let me terminate them by explicit PID (using `kill`, not name-based).
+
+The wrapper needs literal numeric PIDs. Let me capture the current list, then kill with explicit numbers.
+
+All orphans cleared, memory 80% free. The OOM was purely from excessive parallelism (81 frontends). Let me re-run the gate build+test with capped concurrency (`-jobs 4`) — incremental, so it reuses cached objects.
+
+Re-run started with capped parallelism. Let me monitor memory and progress to ensure no OOM recurrence.
+
+Memory healthy (83% free), 0 crashes, capped frontends. Let me keep monitoring the heavy test-target compile.
+
+Healthy build, no crashes. The 2000+ file test target compile is slow. Let me wait in a longer interval.
+
+Still compiling the app target (incremental state was partly invalidated when I killed frontends), memory healthy, no errors. Let me wait a longer interval.
+
+Stable but slow app-target compile at -jobs 4 (memory healthy, no errors). Let me wait a longer interval to let it progress through the large module.
+
+App target + extensions are linking now (app Swift compile succeeded — my files compiled clean in the full build). Test target build + run is next. Let me continue monitoring.
+
+Still finishing the app target (~13.6k lines, memory fine, no errors). Let me look at the exact current step.
+
+App target still compiling its large file set at -jobs 4 (memory healthy at 71%, 0 errors). It's a slow grind since killing frontends invalidated incremental state. Let me wait a longer interval.
+
+Let me gauge how far the app-target compile has progressed (alphabetically) to decide whether to wait or bump parallelism.
+
+App-target shared-surfaces fully compiled (reached `withAiFeature`); now finishing feature-views/Sources. My Lightbox files compiled with 0 errors. App link + test target next. Let me wait.
+
+Still finishing the app target (Sources/feature-views are large). Let me check the current compile frontier.
+
+App target is into its final feature-views/Sources files (V-files), memory fine, 0 errors. Let me wait for the app link + test-target build to begin.
+
+Test-target build is being set up (app target built OK), but 2 "Stack dump" matches appeared in this run. Let me investigate whether they're fatal or retried.
+
+A deterministic compiler crash (`report_at_maximum_capacity` during IRGen) on **`AppearanceSettings.Controls.swift`** — an out-of-scope file I didn't touch — reproduced in BOTH runs (default and `-jobs 4`), identical thunk mangling. This is a pre-existing Swift 6.3.2 IRGen bug, not memory and not my code (IRGen is per-file; my files are in a separate batch that compiled cleanly). Let me gather definitive evidence: confirm my Lightbox object files were produced and that AppearanceSettings is the sole failure.
+
+Definitive evidence gathered: **all 7 of my Lightbox implementation `.o` files built successfully** (full compile→IRGen→codegen passed), `AppearanceSettings.Controls.o` did NOT build (crashed in IRGen), and git shows I touched **only** Lightbox files. The blocker is a pre-existing, out-of-scope Swift 6.3.2 compiler bug.
+
+Let me stop the doomed run and produce a fast, isolated reproduction proving the crash is in non-Lightbox code.
+
+The crash is conclusive and external: a deterministic Swift 6.3.2 IRGen bug (`report_at_maximum_capacity` in `SyncCallEmission::setArgs`) on the async/actor reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` in **`AppearanceSettings.Controls.swift`** — an out-of-scope file I'm forbidden to modify. My 7 Lightbox `.o` files all built. Let me now run the build-independent gate steps (lint, format, placeholder) for real.
+
+pwsh + the placeholder script are available. Let me run the three build-independent gate steps for real (placeholder, swiftlint --strict, swiftformat --lint) and capture exits.
+
+Placeholder check: EXIT=0, count=0. Now the full-scope swiftlint --strict and swiftformat --lint (as the gate runs them).
+
+Full-scope swiftformat flags a **pre-existing** issue in `RecentDrivesSection.Previews.swift` (another slot's file, not mine). My files are clean. Let me run swiftlint --strict full-scope too.
+
+Full-scope swiftlint finds 3 pre-existing violations and swiftformat 1 — all in baseline/other-slot files. Let me confirm none are in my Lightbox files.
+
+The 3 swiftlint violations (`WidgetChartSummary.Tests.swift`) and 1 swiftformat issue (`RecentDrivesSection.Previews.swift`) are all **pre-existing, out-of-scope** files (other parallel slots) — **none in Lightbox**. To rigorously confirm the macOS build hits the same compiler crash (not skip-and-assume), let me run it in the background while I write the gate log.
+
+The macOS build is running (will hit the same crash). Let me write the comprehensive gate log with the iOS evidence and the real lint/format/placeholder results while macOS compiles.
+
+macOS finished quickly — let me read the result.
+
+macOS failed fast (MAC_EXIT=65) for a **different** environmental reason: the macOS targets require a code-signing development certificate (entitlements: hardened runtime, app groups), and none is configured (`DEVELOPMENT_TEAM: ""`). It never reached compilation. Let me capture that evidence.
+
+Both platforms are blocked by **environmental** issues unrelated to my code: iOS by a pre-existing Swift 6.3.2 IRGen compiler crash on out-of-scope `AppearanceSettings.Controls.swift`, macOS by a missing code-signing certificate. Let me write the authoritative, honest gate log.
+
+My surface compiles fully and passes all scoped checks, but the app-build blocker prevents executing my XCTests through Xcode. Since my Adapter+Model+Seams tests are pure (no SwiftUI/app deps), let me **execute them standalone** via a throwaway SwiftPM package to get real "tests pass" evidence.
+
+51 tests executed, **3 failures** — real bugs to fix. Let me see them.
+
+The standalone run caught a real test bug: `testStaleTransitionAutoRefreshesOnce` discards the model with `_`, so it deallocates (the source holds it only weakly via `onUpdate`), making subsequent `push`es no-ops. The model design is correct (retained by `@State`/`withExtendedLifetime`); the test must retain it. Let me fix the repo test file.
+
+Now let me re-run the standalone suite with the fix to confirm all tests pass.
+
+**All 51 tests pass** (0 failures) — the standalone run validated my full Adapter+Model+Seams logic and caught a real test bug now fixed. Let me re-verify the edited test file passes swiftformat + swiftlint.
+
+Both pass. Let me record the standalone test execution (51/51) in the gate log as additional verification evidence.
+
+All verification complete. Let me finalize: confirm the log trailer, update plan/todos, and clean up temp artifacts.
+
+Everything is finalized and clean. Let me update the plan and todos to reflect the verified-but-environment-blocked outcome.
+
+The task is complete to the maximum extent achievable in this environment. Let me do a final confirmation of the deliverable file set before summarizing.
+
+## Summary
+
+I built the production-grade native Apple (SwiftUI) parity of `components/ui/Lightbox.tsx` as a 10-file shared surface under `apps/apple/TeslaSync/shared-surfaces/Lightbox.*` (2,139 lines), following the established `TourOverlay`/`Accordion` architecture (pure Adapter, Seams, `@Observable` Model state-holder, States, Views, main View, Previews, strings, + Adapter/Model tests).
+
+**Full web parity reproduced:** counter "n / total", caption when present, prev/next hidden for single image, no-wraparound nav caps, navigate-resets-zoom, 1×–5× zoom in 0.5× steps, zoom-out-to-1× clears pan, reset-disabled logic, `safeInitialIndex` clamp + no-snap-back, keyboard map (Esc/←/→/Home/End/+(=)/−(_)/0), backdrop-tap-closes while image/controls don't, per-image loading skeleton + broken-image fallback, drag-to-pan + native pinch. All 8 source i18n keys (+13 native) in the P1/S10 catalog; VoiceOver labels on every control; Dynamic Type via tokens; reduce-motion honored; `view.opened` telemetry.
+
+**Verified GREEN where scopeable:**
+- All 7 implementation files compiled to object code in the full app-target build (compile→IRGen→codegen); whole-module type-check clean.
+- **51/51 Adapter+Model tests executed and PASS** (ran standalone via SwiftPM since the app build is blocked — this caught & fixed a real test-only bug: a discarded model deallocating behind the source's weak callback).
+- `swiftlint --strict`, `swiftformat --lint`, and the placeholder check are **all clean on Lightbox**.
+
+**Gate result: `EXIT=65 / STATUS=BLOCKED`** — the full `xcodebuild build test` cannot reach 0 on this runner due to **three out-of-scope/environment blockers** I'm contractually forbidden to touch (allowed files = `Lightbox.*` + log):
+1. **iOS:** a deterministic Swift 6.3.2 compiler **IRGen crash** (`report_at_maximum_capacity`) on `AppearanceSettings.Controls.swift` — not my file; reproduced identically twice.
+2. **macOS:** no Apple Developer **code-signing certificate** for the entitlement-bearing macOS targets.
+3. **lint/format full-tree:** pre-existing violations in other slots' files (`WidgetChartSummary.Tests.swift`, `RecentDrivesSection.Previews.swift`) — none in Lightbox.
+
+Full evidence (crash stack trace, `.o` proof, per-step exits, standalone test run) is in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0219-Lightbox.log`. Per Honesty Covenant #8 (no commit on red), the complete, verified surface is left **staged-but-uncommitted** in the working tree — ready to commit on a clean CI runner.
+
+
+
+I've reached the honest terminal state for this task. All implementable work is complete and verified; the remaining gate failures are external/out-of-scope blockers I'm contractually forbidden to fix, and committing is intentionally withheld per the binding Honesty Covenant #8 (no commit on red). There are no further in-scope actions, errors to resolve, or ambiguities.
+

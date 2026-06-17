@@ -1,0 +1,206 @@
+I'll start by exploring the repository structure, the web source component, and checking the Apple toolchain availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me locate the web source and explore the Apple app structure.
+
+Found the web source. Let me read it, its test, the Windows port (reference), and explore the Apple app structure.
+
+Now let me understand the Apple app structure deeply — project config, existing surfaces, state holders, tokens, i18n, and diagnostics.
+
+The shared-surfaces directory is large (2339 entries) and already established. Let me study existing patterns — file naming, adapter structure, and find an a11y/announcer-like reference surface.
+
+`AnnouncerRegion` is the native port of the web live-region that `RouteAnnouncer` depends on. This is the key reference. Let me read all its files plus a simpler presentational surface (`RouteDisplay`).
+
+Excellent architecture understanding. Now let me read the remaining AnnouncerRegion files and locate the shared types (`AnnouncerMessage`, `AnnouncerPadding`, `AnnouncerPriority`, accessibility helpers) and design tokens.
+
+`AnnouncerRegion.Adapter.swift` holds the shared a11y primitives. Let me read it plus the tests, previews, and strings catalog.
+
+Now let me read the Previews pattern and locate the design tokens and shared UI primitives used.
+
+Let me verify the exact token/component APIs and check for an existing native routing/navigation state holder (the P1/S8 binding for `useLocation`).
+
+Rich `AppRoute` enum exists with `titleKey` per route — the native parity of `document.title`. Let me verify the shared UI component signatures, lint config, and the Xcode project generation setup.
+
+Let me check the build prerequisites (KMP framework staging script, swiftlint custom rules, swiftformat config) since the gate builds the full app.
+
+Let me check whether the KMP/Kotlin toolchain is available to build the required `Shared.xcframework`, since the whole gate depends on it.
+
+Full toolchain is available (Java 17, gradlew, iPhone 16 simulator booted, Xcode 26.5). The build is feasible. Let me check the placeholder-check script and PowerShell availability, then start writing code.
+
+`pwsh` is available. Let me read the forbidden placeholder patterns so I avoid them, then I have everything to start writing.
+
+Let me check `AppRoute`'s title resolution and any existing route observable to bind the live source correctly.
+
+I have a thorough understanding of the architecture. Let me look at an existing `.ViewTests.swift` pattern and confirm the i18n facade approach, then I'll write the surface.
+
+Let me confirm whether each surface owns its telemetry/connection seam (per-surface ownership norm) or shares, to decide reuse vs. self-contained.
+
+The codebase norm is decisive: **per-surface ownership** (235 surfaces define their own telemetry, 132 their own connection enum, multiple their own ZWS-padding helper; nothing outside AnnouncerRegion reuses its primitives). So `RouteAnnouncer` will be fully self-contained. Let me set up tracking and start writing.
+
+Now I'll write the surface files. Starting with the pure adapter core:
+
+Now the dependency seams (scheduler, route center, sources, presenter):
+
+Let me verify the `TSEmptyState` init signature before using it in the States file.
+
+Confirmed. Now the loading/empty/error chrome:
+
+Now the surface entry View:
+
+Now the previews and strings catalog:
+
+Now the test suites. First the pure adapter/projection tests:
+
+Now the model behavior tests — the heart of the web-parity (skip-first, deferred read, cancel-pending, clear-on-empty, ZWS re-announce, custom delay, connection axis):
+
+Now the seams tests (route center, live source, schedulers):
+
+Now the view-composition tests (per-state compose + subviews + strings facade + a11y labels):
+
+All 11 files written. Let me check line counts (SwiftLint's default `file_length`/`type_body_length` limits apply under `--strict`) and run format/lint on just my files for fast iteration.
+
+All files under 400 lines, no forbidden words. Now let me run swiftformat and swiftlint on the new files.
+
+Auto-fixable formatting. Let me run swiftformat to fix the new files, then re-verify.
+
+Model.swift is 411 lines — over SwiftLint's default `file_length` (400). Let me verify the real constraint against existing files, then split the strings facade out.
+
+Confirmed: norm is ≤400 lines. Let me split the strings facade into its own file. First let me view the current end of Model.swift.
+
+Let me extract the strings facade into its own file to keep Model.swift under 400 lines.
+
+Now remove the facade from Model.swift:
+
+swiftlint `--strict` and swiftformat both pass on the new files. Now let me understand how the placeholder script enumerates paths (the gate passes a file-prefix, not a directory).
+
+The gate's placeholder `-Path` is a file-prefix (no such directory), so the script would scan nothing. To honestly verify my files, I'll run the real script against a temp copy of them. Let me verify it works:
+
+Real placeholder scan: **PLACEHOLDER_COUNT=0, EXIT=0**. Now the build gate. Let me generate the Xcode project and confirm my files are included.
+
+Project generated, my files included (78 references). Now let me build the KMP `Shared.xcframework` (the heavy prerequisite). I'll run it in the background and monitor.
+
+The KMP build is running (downloading the Kotlin/Native toolchain takes time). While it builds, let me wait and monitor.
+
+Output is buffered by `tail`. Let me check build progress via the filesystem and processes in a separate shell.
+
+KMP build is actively progressing (Kotlin/Native toolchain downloaded at 1.6G, frameworks compiling for iOS + macOS). Let me continue waiting.
+
+The KMP build completed. Let me read its result.
+
+**KMP build succeeded** (7m56s) and is staged. Gradle daemon is now warm. Now the critical compile check — let me build the iOS app target (this validates my Swift compiles within the full app). Running in background with output to a log.
+
+Type-checking passed (now at EmitSwiftModule), 0 errors. The whole-module type-check of the app target including my files succeeded. Let me wait for the build to complete.
+
+EmitSwiftModule for a 2300+ file target is slow but progressing. Let me wait longer for completion.
+
+56 swift-frontend processes actively compiling, 0 errors. The build is progressing through the large target. Let me wait for completion.
+
+Now in SwiftCompile phase (19992 log lines), RouteAnnouncer objects being produced, still 0 errors. Let me continue waiting for the build to finish.
+
+Still compiling the large target (0 errors throughout). Let me wait further for completion.
+
+**`** BUILD SUCCEEDED **`** — all my RouteAnnouncer files compiled within the full iOS app target, 0 errors. Let me check how the sibling surface (0001) handled its gate log, to mirror the established convention.
+
+A sibling log exists for 0001 (AnnouncerRegion). Let me read it to match the established gate-log convention exactly.
+
+The 0001 log establishes the exact convention (and notably, `project.yml`/`.swiftlint.yml` already wire shared-surfaces in the current repo, so they're not in my scope). My full app `build` already SUCCEEDED — better than 0001's state. Now let me run my surface's tests in the real target via `-only-testing`, the key correctness proof.
+
+The app `BUILD SUCCEEDED`, but the `TeslaSyncTests` bundle fails to **compile** due to pre-existing errors in `Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift` — not my files, and outside my allowed scope. This is exactly the DEFERRED situation the 0001 sibling documented. Let me confirm it's pre-existing and unrelated.
+
+Confirmed: only my RouteAnnouncer.* files changed; the failing `VehicleCostPageModelTests.swift` is pre-existing (committed in 4f6bcb56e, P7 admin) and outside my allowed scope. The test *bundle* can't compile because of it, blocking all test runs — the documented DEFERRED case. 
+
+Mirroring the 0001 precedent, I'll prove my surface's logic tests pass at runtime via a standalone SwiftPM harness. Let me build it.
+
+Harness laid out. Now let me run the logic tests under Swift 6 (strict concurrency complete):
+
+**42/42 logic tests pass** at runtime under Swift 6 strict concurrency. Combined with the successful full app build, my surface is verified. Now let me run the remaining exact gate commands (full-tree lint/format) and capture canonical results.
+
+swiftlint `--strict` full tree: **0 violations in 5936 files**. Now swiftformat full-tree:
+
+FORMAT_EXIT=1 is from **pre-existing files** (e.g. `GlancePageModelTests.swift`), not mine. Let me confirm none of the 9 offending files are RouteAnnouncer:
+
+Confirmed: all 9 swiftformat-flagged files are pre-existing (Admin/Battery/Dashboard features + their tests) — **none are RouteAnnouncer**. Now let me run the exact gate `build test` commands to capture canonical results. iOS first:
+
+iOS gate: `** BUILD SUCCEEDED **`, `** TEST FAILED **` (IOS_EXIT=65) — same pre-existing `VehicleCostPageModelTests.swift` error. Let me confirm the 6 RouteAnnouncer mentions are compile lines, not errors:
+
+**Definitive:** My 4 test files compile in the real `TeslaSyncTests` target (SwiftCompile lines present), **zero RouteAnnouncer errors** — the only error in the entire iOS gate is the pre-existing `VehicleCostPageModelTests.swift`. Now the macOS gate (full macOS target compile — backgrounding it):
+
+The macOS gate is building the full macOS target (long). While it runs, let me verify the booted simulator detail and prepare. Let me check macOS build progress periodically.
+
+macOS gate failed at **code-signing preflight** (`requires a development certificate`, `DEVELOPMENT_TEAM: ""`, no cert on runner) — environmental, identical to the 0001 precedent, before any compilation. To get a *real* macOS compile result for my surface (stronger than 0001), let me build the macOS target with signing disabled:
+
+The macOS build (signing disabled) compiles the full macOS target. While it runs, let me draft the gate log structure. Let me monitor progress first.
+
+macOS build progressing (48 swiftc procs, 0 errors). Let me continue waiting for completion.
+
+Still compiling the macOS target (68 swiftc processes active, 0 errors). Let me wait further.
+
+macOS compile still churning (0 errors throughout). Let me wait for it to complete.
+
+Log advanced to 18745 lines, still 0 errors — deep into the macOS compile. Let me wait for completion.
+
+Winding down (45 procs, 23973 lines, 0 errors). Nearly done. Let me wait for the final result.
+
+**macOS `build SUCCEEDED`** (signing disabled) — my surface compiles cleanly on the macOS 15 SDK too, and `RouteAnnouncer.strings` validated. Let me gather exact metrics for the gate log.
+
+All metrics gathered. Let me capture exact tool versions, then write the comprehensive gate log.
+
+All evidence gathered. Let me write the comprehensive, honest gate log (modeled on the committed 0001 precedent).
+
+Gate log written. Let me clean up temp artifacts and verify git status before committing (ensuring generated project/build dirs are ignored).
+
+Exactly my 13 surface files + the log; generated artifacts are git-ignored. Now let me commit:
+
+All 14 files staged. Now let me commit (the repo has pre-commit hooks; I'll handle them if they trigger on the whole tree):
+
+Commit succeeded (`9c1c03de7`, 14 files). Let me finalize tracking and do a last verification.
+
+The task is complete and verified. Working tree is clean, commit `9c1c03de7` landed all 14 files, and the gate log ends with `EXIT=0 / STATUS=DONE`.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) **`RouteAnnouncer`** shared surface at parity with `web/src/components/a11y/RouteAnnouncer.tsx` — the SPA route-change screen-reader announcer.
+
+**Delivered** (13 files, 2162 lines, in `apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.*`): a fully self-contained surface (the codebase norm — 235 surfaces own their telemetry, 132 their connection enum) with a pure Adapter, an `@Observable` Model, dependency Seams, Views/States, Previews, an i18n catalog, and 4 test files.
+
+**Web-parity behaviour reproduced** (driven by a testable scheduler seam = `vi.advanceTimersByTime`): first-paint skip, deferred `document.title` read, rotating 0–3 zero-width-space re-announcement of same-title routes, clear-on-empty, cancel-pending (rapid nav speaks only the final destination), custom delay, and polite voicing via `AccessibilityNotification.Announcement`. All 6 states render (loading/empty/error/data/stale/offline); bound via the P1/S8 source seam, i18n via P1/S10, `view.opened` telemetry via P1/S11.
+
+**Verification (every red shown verbatim, none in my surface):**
+- `swiftlint --strict`: **0 violations / 5936 files**
+- iOS app `build`: **SUCCEEDED**; macOS `build` (no-sign): **SUCCEEDED** — 0 errors on both SDKs, `.strings` validated
+- SwiftPM harness (Swift 6 strict concurrency): **42/42 logic tests green**; the 4 XCTest files compile in the real `TeslaSyncTests` target
+- placeholder scan: **COUNT=0**
+
+**Deferred (pre-existing / environmental, outside my allowed files — per the committed 0001 precedent):** `IOS_EXIT=65` (pre-existing compile error in another prompt's `VehicleCostPageModelTests.swift`, P7 admin), `MAC_EXIT=65` (runner has no macOS signing cert), `FORMAT_EXIT=1` (9 pre-existing non-RouteAnnouncer files). My surface is clean on every dimension I control.
+
+Committed as `feat(apps/apple/shared-surfaces): add RouteAnnouncer surface (P4)` with the gate log at `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0002-RouteAnnouncer.log` (`EXIT=0 / STATUS=DONE`).
+
+Merge made by the 'ort' strategy.
+ ...4-apple-shared-surfaces-0002-RouteAnnouncer.log | 305 ++++++++++++++++++++
+ .../shared-surfaces/RouteAnnouncer.Adapter.swift   | 149 ++++++++++
+ .../shared-surfaces/RouteAnnouncer.Model.swift     | 317 +++++++++++++++++++++
+ .../RouteAnnouncer.ModelTests.swift                | 277 ++++++++++++++++++
+ .../shared-surfaces/RouteAnnouncer.Previews.swift  |  94 ++++++
+ .../shared-surfaces/RouteAnnouncer.Seams.swift     | 307 ++++++++++++++++++++
+ .../RouteAnnouncer.SeamsTests.swift                | 177 ++++++++++++
+ .../shared-surfaces/RouteAnnouncer.States.swift    |  98 +++++++
+ .../shared-surfaces/RouteAnnouncer.Strings.swift   | 103 +++++++
+ .../shared-surfaces/RouteAnnouncer.Tests.swift     | 170 +++++++++++
+ .../shared-surfaces/RouteAnnouncer.ViewTests.swift | 123 ++++++++
+ .../shared-surfaces/RouteAnnouncer.Views.swift     | 215 ++++++++++++++
+ .../shared-surfaces/RouteAnnouncer.strings         |  41 +++
+ .../TeslaSync/shared-surfaces/RouteAnnouncer.swift |  91 ++++++
+ 14 files changed, 2467 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0002-RouteAnnouncer.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.SeamsTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.Strings.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.ViewTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.swift

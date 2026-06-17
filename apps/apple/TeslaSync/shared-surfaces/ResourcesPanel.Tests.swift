@@ -154,11 +154,11 @@ final class ResourcesPanelStringsTests: XCTestCase {
 final class ResourcesPanelViewCompositionTests: XCTestCase {
     func testSurfaceComposesWithRows() {
         _ = ResourcesPanel(rows: [
-            ResourceRow(
+            ResourceRowShared(
                 label: "Memory", valueText: "1.8 GB", metaText: "of 8 GB", percent: 22,
                 icon: { Image(systemName: "memorychip") }
             ),
-            ResourceRow(label: "Uptime", valueText: "12d 4h")
+            ResourceRowShared(label: "Uptime", valueText: "12d 4h")
         ])
         XCTAssertEqual(ResourcesPanel.surfaceSlug, "ResourcesPanel")
     }
@@ -169,7 +169,7 @@ final class ResourcesPanelViewCompositionTests: XCTestCase {
 
     func testSurfaceComposesWithFootnoteAndIdentifier() {
         _ = ResourcesPanel(
-            rows: [ResourceRow(label: "Disk", valueText: "94 GB", percent: 94)],
+            rows: [ResourceRowShared(label: "Disk", valueText: "94 GB", percent: 94)],
             accessibilityIdentifier: "resources-panel"
         ) {
             Text(verbatim: "CPU % not yet exposed")
@@ -179,7 +179,7 @@ final class ResourcesPanelViewCompositionTests: XCTestCase {
     func testContentViewComposesForEveryBranch() {
         for severityPercent in [nil, 22, 72, 94] as [Double?] {
             for hasIcon in [true, false] {
-                let row = ResourceRow(
+                let row = ResourceRowShared(
                     label: "Row", valueText: "value", metaText: "meta", percent: severityPercent,
                     icon: { hasIcon ? AnyView(Image(systemName: "gauge")) : AnyView(EmptyView()) }
                 )
@@ -233,22 +233,22 @@ final class ResourcesPanelViewCompositionTests: XCTestCase {
     }
 }
 
-// MARK: - ResourceRow slot erasure (web `icon` ReactNode → AnyView?)
+// MARK: - ResourceRowShared slot erasure (web `icon` ReactNode → AnyView?)
 
 @MainActor
 final class ResourceRowSlotTests: XCTestCase {
     func testIconBuilderPresenceMapsToHasIcon() {
-        let withIcon = ResourceRow(
+        let withIcon = ResourceRowShared(
             label: "Memory", valueText: "1.8 GB", icon: { Image(systemName: "memorychip") }
         )
         XCTAssertTrue(withIcon.inputs.hasIcon, "a real icon builder erases to a non-nil slot")
 
-        let withoutIcon = ResourceRow(label: "Uptime", valueText: "12d 4h")
+        let withoutIcon = ResourceRowShared(label: "Uptime", valueText: "12d 4h")
         XCTAssertFalse(withoutIcon.inputs.hasIcon, "the default EmptyView icon builder erases to nil")
     }
 
     func testRowPropsCarryIntoInputs() {
-        let row = ResourceRow(label: "Disk", valueText: "94 GB", metaText: "of 100 GB", percent: 94)
+        let row = ResourceRowShared(label: "Disk", valueText: "94 GB", metaText: "of 100 GB", percent: 94)
         XCTAssertEqual(row.id, "Disk", "id defaults to the label (web key={row.label})")
         XCTAssertEqual(row.inputs.label, "Disk")
         XCTAssertEqual(row.inputs.valueText, "94 GB")
@@ -257,7 +257,7 @@ final class ResourceRowSlotTests: XCTestCase {
     }
 
     func testExplicitIdOverridesLabel() {
-        let row = ResourceRow(id: "disk-row", label: "Disk", valueText: "94 GB")
+        let row = ResourceRowShared(id: "disk-row", label: "Disk", valueText: "94 GB")
         XCTAssertEqual(row.id, "disk-row")
         XCTAssertEqual(row.inputs.id, "disk-row")
     }

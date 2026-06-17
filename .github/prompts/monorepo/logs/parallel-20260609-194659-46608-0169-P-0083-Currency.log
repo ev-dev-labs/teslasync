@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and checking the required capabilities before doing any work.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Web source and Apple app both exist. Let me read the web source and explore the Apple app structure.
+
+The `shared-surfaces` dir already exists with many entries. Let me check for existing Currency files and study sibling surfaces to learn the established native patterns.
+
+There's a clear 8-10 file convention per surface. `AnimatedNumber` is the closest analog (a pure `data-display` formatter). Let me study its full file set to learn the exact conventions, plus the web `useFormatting`/`fmtNumber` sources.
+
+Excellent — this is the key precedent. `AnimatedNumber` documents the exact disposition for pure presentational formatters: it does NOT synthesize loading/error/stale/offline chrome (citing 0053 AIThinkingIndicator), and binds i18n via injected `Locale`. `Currency` is the same shape. Let me read the rest of the file set.
+
+Now I understand the convention. Let me examine the web data sources (`useFormatting`, `fmtNumber`), the build wiring (project.yml), and the P1/S9 design tokens.
+
+Now I have the full data model. `currencySymbol` comes from settings via `useFormatting()`. Let me find the native settings/formatting state-holder, the P1/S9 tokens, build wiring, and any existing native number formatter to reuse.
+
+`Sources/Components/DataDisplay/TypedFormatters.swift` looks like the native home of the format components. Let me read it plus the settings platform layer and a currency-using widget precedent.
+
+There's an existing atomic `TSCurrency` (out of scope — different bundle, uses currencyCode). My shared-surface must faithfully mirror the web `Currency.tsx` (symbol-prefix + locale number + fallback). Let me read the settings state-holder, the `ChartTooltip` shared-surface (which also binds `useFormatting`), and the P1/S9 design tokens.
+
+`AppSettings` (local prefs) has no currency field — the web sources it from server settings via `useFormatting`→`useSettings`. Let me check the SharedFacade domains (likely P1/S8) and how existing currency-consuming widgets source the symbol, plus the P1/S9 design tokens.
+
+`CostBreakdownWidget.Format.swift` is the exact precedent: it ports `fmtNumber` + `formatCurrency` and treats `currencySymbol` as injected data (default "$"). Let me read the P1/S8 state-holder base + the settings domain, the P1/S9 design tokens, and the build wiring (project.yml).
+
+Build globs `TeslaSync/shared-surfaces` wholesale with excludes. P1/S8 = `StateHolderModel`/domain models bridging Kotlin StateFlows. The AnimatedNumber sibling deliberately uses a local prop-driven model (no fake network) for pure formatters. Let me read the full project.yml target/test wiring to understand how `.Tests.swift` and `.strings` files are routed.
+
+Now I understand the full wiring: files glob into the app target; `*Tests.swift` route to the XCTest bundle; `.strings` bundle as resources. The build uses XcodeGen + a staged `Shared.xcframework`. Let me assess what's actually runnable on this runner.
+
+Critical capability finding: the full `xcodebuild build test` requires `Shared.xcframework`, which is **not** staged (only `.gitkeep`) and must be built from the KMP core via Gradle/Kotlin-Native. Let me check whether that toolchain is available, since it determines whether the full gate can run.
+
+Toolchain is viable: Java 17, gradlew, iPhone 16 simulator booted. The KMP `Shared.xcframework` (Gradle/Kotlin-Native) is the long pole, so I'll kick it off in the background now while I author the surface. Let me set up tracking and start the build.
+
+Now I'll kick off the Shared.xcframework build in the background (long pole) and start authoring the surface in parallel.
+
+Confirmed: placeholder matching is **case-insensitive**, so I must avoid "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" anywhere in `.swift` files. Let me get a baseline placeholder scan (confirms tree is clean + pwsh works) and check gradle progress.
+
+Gradle is nearly done (release frameworks linking; debug XCFramework already wrote out). Baseline placeholder scan shows **pre-existing** siblings use "Placeholder" (count=13) — so my gate must scan only my Currency files. Before authoring, let me check for symbol collisions (`Currency`, `CurrencyModel`, etc.) and confirm the token namespace.
+
+No collisions. Let me confirm the gradle build finished and the xcframework is staged, then author all files.
+
+Gradle is finishing the release XCFramework. Let me author all surface files now. Starting with the pure core (Adapter):
+
+Now the Views and main public surface. The web `Currency` span carries no `tabular-nums`/font/color of its own (only caller `className`), so — unlike AnimatedNumber — I deliberately do NOT force `monospacedDigit`; the figure inherits font/color from the use-site. The web `title` maps to `.help()` on the value branch only.
+
+Now the Previews and strings files:
+
+Gradle finished. Let me verify the xcframework was staged, then write the comprehensive test file.
+
+Gradle succeeded but the XCFramework wasn't copied to `Frameworks/` — I ran the Gradle task directly, not the wrapper script that also stages it. Let me see the copy logic and run the full staging script (Gradle is cached now, so it'll be fast).
+
+XCFramework is fully staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the comprehensive test file mirroring the AnimatedNumber test structure:
+
+All 8 files created. Let me mark progress and run a fast standalone correctness check of the locale-sensitive pure logic (Adapter + Projection) with `swiftc` before the heavy xcodebuild — this validates the parity-critical formatting quickly.
+
+The standalone harness just needs to be named `main.swift` for top-level code. Let me fix and rerun.
+
+All 38 pure-logic parity checks pass — locale formatting, symbol resolution, canonical string, fallback, negative, override all match web semantics. Now the real gates. Let me run swiftlint + swiftformat on my files (isolating from pre-existing siblings).
+
+swiftlint passes (0 violations). swiftformat wants the multiline `if` brace wrapped. Let me auto-fix with swiftformat (write mode) — the ecosystem tool — then re-verify.
+
+swiftformat and swiftlint conflict on the multiline `if` brace. I'll rewrite that computed property to keep each statement single-line, satisfying both. Let me view the current block and fix it.
+
+Now re-verify both formatters agree and the logic still passes:
+
+swiftformat=0, swiftlint=0, pure logic all pass. Now the placeholder gate on my files (the gate's literal `-Path .../Currency` prefix doesn't resolve a real path, so I scan the actual Currency files — the honest interpretation):
+
+Two violations in the test file. Let me see exactly what they are.
+
+The substring "ToDo" in `FallsBackToDollar` trips the case-insensitive "TODO" pattern. Let me scan all my files for any such accidental substrings and rename.
+
+Renamed. Let me re-verify placeholder count is 0 across all files, plus lint/format still clean on the edited test file.
+
+All static gates pass: swiftlint=0, swiftformat=0, placeholders=0, pure logic all pass. Now the full xcodebuild gate. First generate the Xcode project (git-ignored, not present), then build+test. Let me generate it.
+
+Project generated (schemes `TeslaSync`, `TeslaSync-macOS`). Now the heavy gate. I'll start the iOS build in the background (the scheme pre-action re-runs the now-cached Gradle staging), exporting JAVA_HOME so the pre-action's gradlew works.
+
+The XCFramework staged correctly and compilation proceeded — but the build hit **pre-existing compile errors in unrelated surfaces** (`RecentDrivesListWidget.*`, `RecentDrivesSection.*` — "ambiguous for type lookup"), **none in Currency**. Let me get the full error inventory and confirm zero Currency errors.
+
+Confirmed: **162 pre-existing errors, all in 4 non-Currency files** (`RecentDrivesListWidget.*`+`RecentDrivesSection.*`, `StateTimelineWidget.*`+`StateTimeline.*`) — duplicate type declarations causing "ambiguous for type lookup". **Zero Currency errors.** Let me root-cause (prove pre-existing & independent) and typecheck all my Currency files standalone against SwiftUI.
+
+Root cause is unambiguous and **pre-existing**: `RecentDrivesModel` is declared in *both* `RecentDrivesListWidget.Model.swift` and `RecentDrivesSection.Model.swift` (same for `StateTimeline*`) — duplicate declarations colliding in the single `TeslaSync` module. My Currency files reference none of them, so the app fails to compile identically with or without my surface. Now let me prove all my files compile against SwiftUI:
+
+`TYPECHECK_EXIT=0` — all 6 source files (SwiftUI views, `@Observable`/OSLog model, DEBUG previews + design tokens) compile under Swift 6 / macOS 15 SDK. Let me also run the Model + view-construction logic at runtime (mirroring the XCTest cases that can't execute in the duplicate-type-broken app host), compiling against SwiftUI.
+
+Two harness-only issues (not in my surface): the spy must mirror the real lock-guarded non-`@MainActor` double, and `@main` needs `-parse-as-library` with a non-`main.swift` filename. Let me fix the harness.
+
+All Model + view runtime checks pass (once-only telemetry, sync, fallback, view construction). For rigor (matching the gate's iOS destination, ADR-002 shared sources), let me also typecheck my files against the iOS 18 simulator SDK.
+
+iOS typecheck also passes. My surface compiles for **both** iOS 18 simulator and macOS 15. Now let me locate the gate log directory and run the literal gate's `xcodebuild build test` commands (to capture real exit codes), starting with iOS in the background.
+
+This is the decisive precedent. The AnimatedNumber sibling (0075) — the canonical pattern I followed — hit the **exact same** pre-existing `StateTimeline*`/`RecentDrives*` duplicate-symbol collisions, documented the full-app gate as DEFERRED (not failed by this code) to the P4 acceptance gate, verified the surface independently green, and closed `EXIT=0 / STATUS=DONE`. Let me read its full log to mirror the structure precisely.
+
+The canonical precedent is clear. Notably, 0075 ran the **actual `Currency.Tests.swift`** via an isolated SwiftPM module (surface sources + real Tokens.swift, Swift 6 mode) — more rigorous than my hand harness. I'll replicate that. Let me (a) kick off both full-app `build test` gates in the background to capture real exit codes, and (b) build the isolated SwiftPM test harness in parallel.
+
+Now the isolated SwiftPM harness (mirrors 0075's [4/6]) — it compiles my surface sources + real `Tokens.swift` as module `TeslaSync` and runs the **actual** `Currency.Tests.swift` under Swift 6 mode:
+
+The **real `Currency.Tests.swift` ran in the isolated Swift 6 module: 34 tests, 0 failures**, against the actual `Tokens.swift` design system — matching the 0075 precedent's authoritative verification. Now let me check the full-app gates' progress.
+
+Both full-app gates exited 65 (build failed → testing cancelled), matching the precedent. Let me extract the evidence (error totals, zero-Currency confirmation, representative lines) from both gate logs.
+
+iOS: 108 errors, 0 Currency, duplicate-decl confirmed. macOS: 4 errors, 0 Currency. Let me capture the actual macOS error lines (the precedent saw code-signing).
+
+macOS shows the identical 4 code-signing errors as the precedent (unsigned runner), 0 Currency. I have all evidence. Let me grab exact declaration line numbers for the root-cause citation, then write the log.
+
+All confirmed: git sees only my 8 new Currency files; xcodeproj + xcframework are git-ignored. Now I'll write the comprehensive, honest gate log mirroring the 0075 precedent. Let me get a timestamp and create it.
+
+The gate log is written. Let me clean up temp artifacts and stage exactly the allowed files (8 Currency files + the log), verifying nothing else is touched.
+
+Exactly the 9 allowed files staged (8 Currency + log), nothing else. Now commit per the prompt's message:
+
+Committed cleanly: 9 files, 1046 insertions, working tree clean. Let me do a final airtight verification pass on the committed files (lint/format/placeholder) and mark todos done.
+
+All final checks green. Let me confirm no open todos remain.
+
+All 11 todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0083-Currency.log     | 138 +++++++++
+ .../shared-surfaces/Currency.Adapter.swift         | 210 +++++++++++++
+ .../TeslaSync/shared-surfaces/Currency.Model.swift |  88 ++++++
+ .../shared-surfaces/Currency.Previews.swift        |  71 +++++
+ .../shared-surfaces/Currency.Projection.swift      |  68 +++++
+ .../TeslaSync/shared-surfaces/Currency.Tests.swift | 337 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Currency.Views.swift |  44 +++
+ .../TeslaSync/shared-surfaces/Currency.strings     |  21 ++
+ .../apple/TeslaSync/shared-surfaces/Currency.swift |  69 +++++
+ 9 files changed, 1046 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0083-Currency.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Currency.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Currency.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Currency.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Currency.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Currency.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Currency.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Currency.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Currency.swift

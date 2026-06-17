@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the Apple app structure and the web source.
+
+Now let me check whether `AppearanceSettings` already exists and study the closest analog (`GeneralSettings`, `AdvancedSettings`) to learn the established native pattern.
+
+This is a sophisticated established pattern. Let me locate the shared infrastructure (tokens, i18n facade, state-holders, shared UI components) since I can only create `AppearanceSettings.*` files.
+
+Now I understand the target structure. Let me check the build prerequisites (xcodegen, xcframework) and find where the shared `Settings*` types and UI components are defined.
+
+Key insight: shared `Settings*` types live in `GeneralSettings.Models.swift`/`.Seams.swift` (same app module) — I can reference them. Now let me check the build prerequisites (KMP xcframework script) since that gates `xcodebuild`.
+
+The build links a KMP `Shared.xcframework` (Gradle/Kotlin). Let me check whether that toolchain works here and how prior surfaces were validated.
+
+The predecessor methodology is clear: host-level gates (swift typecheck, XCTest, lint, format, placeholder) are green; the full `xcodebuild` is deferred because the KMP `Shared.xcframework` (Gradle/Kotlin) is environment-blocked. Let me read the full predecessor log to reproduce the exact gate commands.
+
+This gives me the complete established methodology. Let me examine how the second settings surface (`AdvancedSettings`) handles the shared chrome types — whether it reuses `Settings*` types or defines its own — plus the shared chrome views.
+
+Each surface is fully self-contained with its own namespaced types/views, all compiling against the shared `Sources/` component library. Let me inventory the shared components, tokens, i18n facade, and telemetry seam.
+
+Now let me read the chrome views, the shared UI components, and design tokens I'll build against.
+
+Now let me read the typography/buttons/badges components, the previews pattern, and check for a Toggle/segmented control component.
+
+Let me check the remaining shared components (IconBox, Button, Badge, Skeleton, Toggle/Pickers), the `.strings` format, and the placeholder gate script.
+
+Let me read the test patterns and `.strings` format from both surfaces to match conventions precisely.
+
+I have the full pattern. Let me read the lint/format configs and the AdvancedSettings self-contained set (adapter/projection/states/model/views/tests/previews) to finalize my file structure.
+
+Let me check the existing Theme system and read the AdvancedSettings self-contained set (adapter/projection/states/views/previews/tests) to finalize my structure.
+
+I have a complete grasp of the pattern. Let me grab the exact palette values and local-pref hook shapes from the web source to ensure data parity.
+
+I now have complete data parity understanding. Let me set up tracking and write the plan, then build the surface.
+
+Now I'll build the surface. Starting with the Foundation value types and i18n facade.
+
+Now the pure adapter with projections, catalogs, palettes, and accessibility copy.
+
+Now the chrome views (header, freshness chip, banner, toast, section header, choice card, toggle row, button, hex helper).
+
+Now the theme section (composed `ThemePicker` parity: mode + accent).
+
+Now the display envelopes, density section (+preview+swatch), and sidebar section (+swatch).
+
+Let me decouple the toggle row (value + callback instead of binding) before writing the panels.
+
+Now the panels (time format, chart palette, status bar, celebration, product tours).
+
+Now the main surface shell + i18n SwiftUI half.
+
+Now the i18n catalog (table "AppearanceSettings").
+
+Now the previews covering all six states + Dynamic Type.
+
+Now the adapter + i18n tests.
+
+Now the view-model tests.
+
+All 12 files written. Let me update todos and check line counts + run swiftformat.
+
+`Views.swift` is 414 lines (over the 400 limit). Let me run swiftformat first (it may rewrap), then split as needed.
+
+`Views.swift` still exceeds 400. Let me split the reusable controls into a separate file.
+
+Now I'll create the Controls file with the reusable controls and remove them from Views.swift.
+
+Now remove the extracted controls from Views.swift (lines 228–414).
+
+Both files now under 400. Let me run swiftformat (lint) and swiftlint (strict) scoped to my files.
+
+swiftformat clean. Now swiftlint --strict on the surface files.
+
+swiftlint clean (0 violations, 13 files). Now the placeholder gate — I'll scan my actual files (copied to a temp dir for a genuine result) plus a corroborating grep.
+
+Placeholder gate clean. Now the core host gate: swiftc typecheck against both SDKs. Let me gather the toolchain paths and verify the shared-component closure.
+
+Toolchain confirmed. Let me run the iOS 18 simulator typecheck against the minimal shared-component closure.
+
+Clean compile (exit 0), but there's a Sendable data-race warning on the toggle binding. Let me fix it properly by marking the toggle callback chain `@MainActor`.
+
+Now let me re-run all three typechecks (iOS, macOS, DEBUG previews) to confirm the warning is resolved and no new errors.
+
+iOS typecheck clean (warning gone). Waiting for macOS typecheck to finish.
+
+Both SDK typechecks pass (exit 0). Now the DEBUG previews typecheck (expands the `#Preview` macros).
+
+All three typechecks pass (iOS, macOS, DEBUG previews). Now I'll execute the committed XCTest suite via a self-contained SwiftPM package (the Foundation/Observation production files + the two test files).
+
+All 33 tests pass (0 failures). Now I'll capture the honest deferred-xcodebuild evidence: generate the project and attempt a real build to record the genuine missing-`Shared.xcframework` failure.
+
+Project generated (exit 0); the 13 surface files are referenced. Now the honest build attempt to capture the genuine blocker.
+
+Genuine blocker captured: missing `Shared.xcframework` → `BUILD FAILED` exit 65 (identical to the predecessor disposition — KMP Gradle build is environment-blocked, independent of this UI surface). Let me clean up generated artifacts and check git status.
+
+All 14 files staged, no stray artifacts. Let me verify i18n completeness (every key referenced in code is declared in the catalog).
+
+My regex only caught direct facade calls; most keys are passed as `titleKey:`/`helpKey:` parameters. Let me verify every declared key appears as a literal somewhere in the Swift sources.
+
+i18n is consistent (0 orphans, 0 missing). I noticed one inconsistency: the `theme.chartPalette.help` key has two different in-code fallbacks. Let me align both to the web-verbatim text.
+
+Let me re-format and re-verify the changed file compiles and lints cleanly.
+
+All clean. Let me re-run the three typechecks to confirm the edited `Panels.swift` still compiles against both SDKs.
+
+Every host gate is green. Let me gather final file metrics and write the gate log.
+
+Now I'll write the gate log documenting all evidence honestly.
+
+All gates green and the log is written. Let me update tracking and commit the allowed files.
+
+All 15 files staged (14 surface + log), nothing extraneous. Committing.
+
+Commit succeeded (`0dd623aa3`), working tree clean. Let me do a final verification of the log tail and todo state.
+
+All todos complete, working tree clean, log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0204-AppearanceSettings.log | 259 ++++++++++++++++
+ .../feature-views/AppearanceSettings.Adapter.swift | 330 +++++++++++++++++++++
+ .../AppearanceSettings.Controls.swift              | 201 +++++++++++++
+ .../feature-views/AppearanceSettings.Model.swift   | 267 +++++++++++++++++
+ .../AppearanceSettings.ModelTests.swift            | 261 ++++++++++++++++
+ .../feature-views/AppearanceSettings.Models.swift  | 274 +++++++++++++++++
+ .../feature-views/AppearanceSettings.Panels.swift  | 311 +++++++++++++++++++
+ .../AppearanceSettings.Previews.swift              | 110 +++++++
+ .../feature-views/AppearanceSettings.Seams.swift   | 215 ++++++++++++++
+ .../AppearanceSettings.Sections.swift              | 326 ++++++++++++++++++++
+ .../feature-views/AppearanceSettings.Tests.swift   | 178 +++++++++++
+ .../feature-views/AppearanceSettings.Theme.swift   | 129 ++++++++
+ .../feature-views/AppearanceSettings.Views.swift   | 226 ++++++++++++++
+ .../feature-views/AppearanceSettings.strings       | 141 +++++++++
+ .../feature-views/AppearanceSettings.swift         | 134 +++++++++
+ 15 files changed, 3362 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0204-AppearanceSettings.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Panels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Sections.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Theme.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AppearanceSettings.swift

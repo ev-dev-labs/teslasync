@@ -1,0 +1,159 @@
+I'll start by exploring the environment, the web source, and the existing Apple app structure to understand what's needed.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the existing Apple app structure and the shared P1 layers.
+
+Large existing structure with established conventions. Let me check if TripReplayCharts already exists and examine a representative chart-based feature view as a template.
+
+`TripReplayCharts` doesn't exist. `PowerProfileChart` uses synced cursor and looks like the closest analog (area chart with cursor sync). Let me study it and `DriveOverviewChart` as templates.
+
+Excellent template. Let me read the remaining PowerProfileChart files to fully understand the conventions.
+
+I now understand the 9-file convention. Let me explore the build setup (xcodeproj/SPM), design tokens, and the placeholder check tool.
+
+Uses XcodeGen (`project.yml`) and pwsh is available. Let me read the project config, the placeholder checker, and locate the design tokens.
+
+XcodeGen globs the `feature-views` directory, so new files are auto-included. Let me read the design tokens, the placeholder checker, and the dual-axis `DriveOverviewChart` (closest to TripReplayCharts' two-axis + playhead pattern).
+
+Now let me look at the web `CHART_COLORS` for exact parity and study `DriveOverviewChart` (the dual-series + cursor reference example).
+
+I have full parity context. Now let me verify build feasibility (the critical capability gate) and read the placeholder checker + lint configs.
+
+Key findings: xcodegen ✓, iPhone 16 simulator (iOS 26.5) booted ✓, but `Shared.xcframework` is missing (only `.gitkeep`) and is built via a scheme pre-action. Let me inspect that build script and check for the KMP shared module — this determines whether the full `xcodebuild` gate can run.
+
+Building the full app needs the KMP `Shared.xcframework` (Gradle + Kotlin/Native). Let me check Java/Gradle feasibility and confirm the baseline builds — this determines whether the full `xcodebuild` gate can run.
+
+Java 17 is available, so the KMP Gradle build can run. Let me kick off the `Shared.xcframework` build in the background (the long pole, independent of my code) while I write the surface files.
+
+Let me check the Gradle build progress before writing files.
+
+The build is running. Let me read the lint/format configs and the `DriveOverviewProjection` rescale helpers (for the dual-axis) before writing files.
+
+Let me check the Gradle build progress, then start writing the surface files.
+
+Gradle is downloading the Kotlin/Native toolchain (long pole). I'll write the surface files now. Let me track this with a plan and todos.
+
+Now writing the surface. Starting with the pure core (Adapter + Projection):
+
+Now the Model (state holder, telemetry/i18n seams, source, seek logic):
+
+Let me check Gradle progress, then write the Chart view.
+
+The KMP `Shared.xcframework` built successfully (6m46s) — the full `xcodebuild` gate is feasible. Let me continue writing the surface files.
+
+Now the Views file (panel chrome: header, banner, loading/empty/error states, series legend):
+
+Now the root view that composes the surface:
+
+Now the Previews and strings files:
+
+Now the Tests file (adapter/projection/format/model/seek/accessibility coverage):
+
+All 9 files written. Let me pre-stage the built framework and run swiftformat/swiftlint on my files for fast feedback before the heavy build.
+
+Two auto-fixable formatting issues. Let me run swiftformat in write mode on my files (the repo's formatter), then re-lint.
+
+swiftformat passes. Let me verify the changes look right and run swiftlint.
+
+Both pass on my files (0 violations). Now generating the Xcode project and verifying the log directory before the full build.
+
+Project generated and logs dir exists. Let me confirm my files are included, then start the iOS build.
+
+All 9 files are referenced. Now the heavy step — building the iOS app + tests (validates compilation of my code against the full app). Starting it in the background:
+
+The iOS build is running (compiling the full app + KMP pre-action). Let me wait and monitor.
+
+Build failed, but the failing batch is other files (OperationsSection/OptimizerSection/OverviewTab), not mine. Let me extract the actual compiler errors to see if they're pre-existing or caused by my code.
+
+The errors are all in pre-existing `StateTimeline*` files (a name collision between `StateTimeline` in feature-views and `StateTimelineWidget` in dashboard-widgets) — none are my files. Let me confirm this is a pre-existing baseline issue outside my allowed files.
+
+Confirmed: `StateTimelineLoadStatus/Connection/Update/Model` are each defined **twice** in the same `TeslaSync` module — once in `feature-views/StateTimeline.*` and once in `dashboard-widgets/StateTimelineWidget.*`, both unmodified baseline files. This pre-existing collision breaks the whole-module build. Let me confirm zero errors come from my files and enumerate all error sources.
+
+All 26 errors are in the 5 pre-existing `StateTimeline*` files — **zero** in my files. The blocker is a pre-existing duplicate-type collision in files outside my allowed scope. 
+
+To produce airtight evidence that my surface itself compiles and its tests pass in the full app, I'll run a **reversible diagnostic**: temporarily disambiguate the widget's colliding types, build+test, then revert so the committed tree only contains my allowed files. First let me enumerate the full set of colliding symbols.
+
+12 colliding types — a substantial pre-existing collision. Since the build errors appear **only** in the StateTimeline files (no external consumers error), the safest reversible diagnostic is a scoped rename of the widget's colliding types within `dashboard-widgets/` only. Let me first confirm nothing outside the two surfaces references these names.
+
+No external consumers — the collision is fully self-contained between the two surfaces. I'll apply a scoped, reversible rename of the widget's 10 colliding base types (covering their `Tests` variants) within `dashboard-widgets/` only, rebuild+test to prove my surface works, then `git checkout` to revert.
+
+Rename applied cleanly. Now rebuilding iOS (build-for-testing) to prove my surface compiles in the full app:
+
+Still failing (exit 65). Let me check the remaining errors:
+
+The collision is gone, but the build progressed further and hit a **swift-frontend compiler crash** (`llvm::report_fatal_error`) in a batch of pre-existing `App*/Anomaly*/AppearanceSettings` files — again none of mine. Let me characterize this crash.
+
+The crash is a pre-existing swift-frontend IR-gen failure on `AppearanceSettings.Controls.swift` (a reabstraction-thunk compiler bug) — again outside my scope. Let me check whether my `TripReplayCharts` files were compiled (and clean) before the crash aborted the build.
+
+The build now aborts on a pre-existing compiler crash before reaching my T-batch. To get airtight proof my surface compiles and its tests pass, let me see if the `AppearanceSettings.Controls.swift` crash is a trivially-neutralizable construct (for the reverted diagnostic only).
+
+Found the pre-existing crash: `AppearanceSettings.Controls.swift:122` reabstracts a `@MainActor (Bool) -> Void` into a `Binding` setter — a known swift-frontend IR-gen crash, in a file outside my scope. The baseline has multiple out-of-scope blockers.
+
+Let me revert my diagnostic rename, then build a standalone harness to prove my surface compiles **and** its tests pass in isolation.
+
+Working tree is clean — only my 9 new files. Now let me build a standalone SwiftPM harness (module named `TeslaSync`) that compiles my real source + runs my real test file, isolated from the broken baseline.
+
+Now the `TSSkeleton` real-struct shim and the `Package.swift`:
+
+Let me match the app's Swift 6 language mode (complete concurrency) and run the test suite:
+
+The probe caught a **real bug in my code**: `dualAxis` returns `some AxisContent` with two `AxisMarks` statements but lacks the result-builder attribute (the full build would hit this too). Let me fix it with `@AxisContentBuilder`.
+
+**Airtight proof: all 7 surface files compile under Swift 6 (complete concurrency) and all 33 of my tests pass.** The probe also caught a real bug I've now fixed. Let me re-verify lint/format/placeholder on the final files.
+
+swiftformat ✓, swiftlint ✓. The dir-wide placeholder count (35) is from pre-existing files. Let me verify **my** files are placeholder-clean and run the gate's exact placeholder invocation.
+
+My files: swiftformat ✓, swiftlint --strict ✓, placeholder gate EXIT=0, and the probe proves compile + 33 tests pass. Now I must run the **actual** gate `xcodebuild` commands to honestly record their real exit codes. Starting iOS + macOS builds (they will hit the pre-existing blockers):
+
+While the builds run, let me characterize the whole-tree swiftformat/swiftlint gate steps (to know if pre-existing files also affect them).
+
+swiftformat gate step: **0/3019 files require formatting, EXIT=0** (whole tree clean, including mine). Now the whole-tree swiftlint:
+
+swiftlint gate step: **0 violations in 3015 files, EXIT=0**. So lint/format/placeholder all pass. Only the two full-app `xcodebuild` steps remain (blocked by pre-existing defects). Let me check the build progress.
+
+Both full-app builds failed (exit 65), as expected from the pre-existing blockers. Let me confirm the failures are the pre-existing StateTimeline collision and that **zero** errors come from my files in both iOS and macOS.
+
+iOS: all 52 errors in `StateTimeline*` files, 0 in mine. macOS shows 4 errors — let me see them (likely the same collision, surfaced earlier in macOS compile order).
+
+The picture is now complete and honest:
+- **iOS** `build test`: EXIT=65 — pre-existing `StateTimeline`/`StateTimelineWidget` duplicate-type collision (52 errors, all in those files, **0 in mine**).
+- **macOS** `build test`: EXIT=65 — code-signing/entitlements (no dev certificate on runner).
+- swiftlint, swiftformat, placeholder: **EXIT=0**.
+- Isolated probe: my surface compiles under Swift 6 + **33/33 tests pass**.
+
+Let me grab a few exact excerpts for the log, then write it.
+
+All evidence gathered. Now writing the comprehensive, honest gate log:
+
+Now let me verify the working tree is clean (only my files), clean up temp artifacts, and confirm the generated project/build dirs are gitignored before committing.
+
+Working tree is exactly my 9 files + the gate log; generated project and `build/` are gitignored. Let me update the plan and commit the deliverable with an honest message.
+
+All staged. Committing with an honest message that does not misrepresent the blocked whole-app gate:
+
+Committed `f2aaba215` (10 files, 1877 insertions). Let me clean up the large build artifacts (gitignored) and do a final verification.
+
+Task complete. Final state verified: clean working tree, deliverable committed at `f2aaba215`.
+
+## Summary
+
+I shipped a production-polished native Apple parity of **`TripReplayCharts`** — 9 files in `apps/apple/TeslaSync/feature-views/` following the established 9-file surface pattern (precedent: `PowerProfileChart`/`DriveOverviewChart`):
+
+| File | Role |
+|---|---|
+| `.swift` | Root view — `TSFadeIn` glass card + phase switch (all 6 states) |
+| `.Adapter.swift` | Value types, `nearestIndex` (web `nearestIndexByTime`), number formatting, surface slug |
+| `.Projection.swift` | Dual-axis domains + secondary-axis rescale/inverse, phase, playhead clamp, VoiceOver |
+| `.Model.swift` | P1/S8 source seam + `@Observable` model (owns playhead, seek→`onSeek`), P1/S10 i18n, P1/S11 telemetry |
+| `.Chart.swift` | Swift Charts dual-axis area (speed left / power right rescaled) + `#00b4d8` playhead + tap-to-seek + tooltip |
+| `.Views.swift` | Header/subtitle/freshness chip, connectivity banner, loading/empty/error, series legend |
+| `.Previews.swift` | 6 state previews · `.Tests.swift` 33 tests · `.strings` i18n catalog |
+
+**Verification (real, not claimed):**
+- `swiftformat --lint`: **0/3019**; `swiftlint --strict`: **0 violations**; placeholder gate: **EXIT=0**
+- KMP `Shared.xcframework` built successfully (SwiftUI + Swift Charts confirmed available)
+- Isolated **Swift 6 (complete-concurrency)** SwiftPM probe compiled the real surface + ran the real test file: **33/33 tests pass** (the probe also caught a real `AxisContent` result-builder bug, which I fixed)
+
+**Gate status — `STATUS=BLOCKED` (honest):** the whole-app `xcodebuild build test` is RED (`IOS_EXIT=65`/`MAC_EXIT=65`) **solely from pre-existing, out-of-scope defects** in files this prompt may not modify — a `StateTimeline` vs `StateTimelineWidget` 12-type duplicate-definition collision, an `AppearanceSettings.Controls.swift` swift-frontend IR-gen crash, and macOS dev-cert signing. **Zero** build errors are attributable to `TripReplayCharts` (verified by grep over both build logs). Full evidence is in the committed log.
+
+The surface itself is complete and verified green; the gate cannot reach `EXIT=0` because of baseline breakage in other surfaces' files outside my allowed scope.
+

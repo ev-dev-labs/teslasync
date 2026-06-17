@@ -1,0 +1,141 @@
+I'll start by exploring the repository structure and verifying both the web source spec and the native Apple capability on this runner.
+
+Capabilities confirmed: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all present. The first command's output was unexpectedly large — let me inspect the key parts.
+
+Capability confirmed and the Apple monorepo scaffold exists. Now let me study the established native patterns: existing shared-surfaces, the shared facade (P1/S8 state holders), design tokens (P1/S9), i18n (P1/S10), and diagnostics (P1/S11).
+
+The shared-surfaces directory is large with multi-file surfaces. Let me find a complete chart-based example most similar to `ElevationProfile` to follow the established pattern.
+
+There's significant variation in file decomposition. Let me find surfaces that actually render Swift Charts (the closest analog) and understand the canonical structure, telemetry, and i18n facade.
+
+No surfaces use Swift Charts yet — they're mostly AI panels. I need the cross-cutting infrastructure first. Let me read the saved listing and the core facade/design/platform files.
+
+There's a native `Components/Charts` and `Components/Feedback` (the atomic components I must use). Let me read the core infrastructure: charts, feedback, state holders, design tokens.
+
+Now let me understand the design tokens, how Swift Charts are wrapped, the telemetry contract, and a representative complete surface to match conventions. Let me also check how `project.yml` includes these files.
+
+Key discovery: an atomic `TSElevationProfile` chart component already exists in `Components/Charts/LineCharts.swift` (out of scope to build, but I must reuse it). My job is the **shared surface** that wires it to state-holders, telemetry, i18n, and all states. Let me study a representative complete surface and the telemetry/i18n contracts.
+
+The canonical surface is 10 files. `AISpeedProfileInsights` is the closest analog (a chart surface). Let me read its full file set to match conventions exactly.
+
+Excellent — the pattern is very clear now. Let me read the Model (telemetry + facade binding), Adapter (pure transform), Views, and Previews to complete my understanding.
+
+Let me read the test conventions, design tokens, test target wiring in project.yml, and the placeholder-checker patterns to ensure compliance.
+
+I have the full surface pattern. Now let me read the design tokens, the atomic primitives I'll reuse (Skeleton/Button/Typography/Motion), the test-target wiring in project.yml, and the lint/placeholder configs.
+
+I notice the XCTest bundle targets aren't in the part of `project.yml` I've read. Let me find them, read the swiftlint custom rules, and check the atomic component signatures I'll call.
+
+No custom swiftlint rules. Test wiring confirmed (co-located `*Tests.swift` compile into `TeslaSyncTests`/`TeslaSync-macOSTests`). Let me read `TSButton`'s init, the full Tokens file, and `TSInlineCallout`.
+
+I now have all the patterns and tokens I need. Before writing code, I must determine whether the **build gate** can actually run here — it depends on XcodeGen and a KMP `Shared.xcframework`. This decides DONE vs BLOCKED. Let me probe the build prerequisites.
+
+Build needs the KMP `apps/shared` module compiled to `Shared.xcframework` via Gradle/Kotlin-Native. Let me check whether that toolchain is viable here.
+
+All build prerequisites are present: XcodeGen 2.45.4, Java 17, KMP `apps/shared` module, iPhone 16 simulator (booted), Xcode 26.5. The gate is viable. The long pole is the Kotlin/Native `Shared.xcframework` build — I'll start that in the background now while I write code.
+
+I have everything needed: web `fmt` = locale-aware fixed-decimal formatting, `AREA_DEFAULTS` = monotone curve / strokeWidth 2, gradient 0.4→0.02. Let me set up tracking and write the plan, then build all 10 surface files.
+
+Let me check the background framework build progress, then start writing the surface files.
+
+Framework build is nearly done (linking release frameworks). Now writing the surface. Starting with the three pure/core files: Adapter, Model, Projection.
+
+Core logic files done. Let me update tracking and check the framework build, then write the chrome/views/surface.
+
+Build's almost staged. Let me write the remaining UI files: Views (Swift Charts), Chrome, and the surface entry.
+
+Framework build completed. Let me verify staging and continue with Chrome and the surface entry file.
+
+`Shared.xcframework` staged (iOS device, iOS sim, macOS slices). Now the Chrome and surface entry files.
+
+Surface UI complete. Now the Previews, the i18n `.strings` catalog, and the two test files.
+
+Now the two test files — the pure adapter tests and the projection/model/a11y tests.
+
+All 10 files written. Let me mark progress and run the fast checks first (format, lint, placeholders) before the heavy build.
+
+Files formatted. Now lint + format-lint + placeholder checks on my files (fast feedback before the build).
+
+Format and lint both clean (0 violations). Now placeholder check + project generation.
+
+pwsh is available and no placeholders present. Now generate the Xcode project, then run the heavy build/test.
+
+Project generates cleanly with both schemes. Now the heavy step — iOS build+test on the simulator. Running it in the background while I monitor.
+
+Build is running. While it compiles, let me verify a couple of atomic-component usages I want to be certain about — `TSSkeleton`'s width behavior and that `chartXSelection`/annotation APIs match this SDK.
+
+Build is in the Swift compile phase (where my code would surface any errors). `TSSkeleton(height:)` expands to full width as needed. Let me wait and check for compile errors.
+
+iOS build+test finished. Let me read the result.
+
+Build failed. The key issue affecting my code: `ElevationSample` collides with an existing type in `feature-views/ElevationChart.Model.swift`. My new type made it ambiguous. There are also unrelated `RecentDrives*` ambiguities. Let me investigate the collisions precisely.
+
+Two collisions in my files. Let me pinpoint the `ElevationProfileChart` collision source before renaming.
+
+Clear picture now. My `ElevationSample` and `ElevationProfileChart` (view) collide with the pre-existing `feature-views/ElevationChart.*` sibling. The `RecentDrives*` ambiguities are pre-existing collisions between two tracked sibling files (not mine). 
+
+First, let me fix MY collisions by renaming to unique names, after confirming the new names are free.
+
+The baseline has extensive pre-existing duplicate-type collisions across sibling surfaces (`RecentDrives*`, `StateTimeline*`, `KioskClockPosition`, `ElevationChart`'s `ElevationSample`) — independent of my work and outside my allowed file scope. First, I'll fix the two collisions **I** introduced by renaming to unique names (`ElevationProfileSample`, `ElevationProfileChartView`), then characterize the workspace.
+
+Renames clean. Now let me re-validate format/lint on my changed files and characterize the workspace collisions (tracked vs untracked).
+
+Decisive finding: the colliding sibling files are **all tracked/committed**, and my 10 files are the **only** changes in the working tree (0 modified tracked files). So the committed baseline `TeslaSync` target already fails to compile due to pre-existing duplicate-type collisions across siblings — independent of my surface and outside my allowed scope.
+
+My files now lint/format clean. To prove my surface itself compiles and its tests pass (sidestepping the poisoned baseline), let me check whether the shared component library is self-contained enough for an isolated build.
+
+The component library is self-contained (only system frameworks, no `Shared` dependency). Let me confirm `TSElevationProfile` only appears in my comments (not as a code dependency), then set up an isolated build to prove my surface compiles and its tests pass.
+
+`TSElevationProfile` is comment-only — confirmed. My real deps are all in the self-contained component library. Let me verify the component library doesn't reach into facade/app code, then build the isolated proof.
+
+Component library is fully self-contained (41 files, no facade/Shared deps). I'll build an **isolated** framework (module named `TeslaSync` so `@testable import` works) from the component library + my surface, plus a test bundle from my 2 test files — proving my surface compiles and tests pass, bypassing the poisoned baseline.
+
+xcodegen is hanging unexpectedly. Let me stop it and inspect the generated spec.
+
+xcodegen choked on `createIntermediateGroups` with far-away absolute paths. Let me disable that option and regenerate with a timeout guard.
+
+Isolated project generated. Now build+test it on the iPhone 16 simulator (small, should be fast).
+
+The isolated build failed **only** in a sibling component file `UnitFormatters.swift` (needs `UnitPreferences`/`TSUnitsKey` from the facade layer) — not my surface, and not a file my surface uses. I included too much of the component dir. Let me pin down the minimal closed set my surface actually needs.
+
+`UnitFormatters.swift` is the facade-coupled component (needs `UnitPreferences`/`TSUnitsKey` from `SharedFacade`); my surface doesn't use it. Let me find all such facade-coupled component files to exclude them in one shot.
+
+Only `UnitFormatters.swift` is facade-coupled. Excluding it makes the set self-contained. Let me update the isolated project and rebuild+test.
+
+**Isolated build + test SUCCEEDED**: `BUILD SUCCEEDED`, `TEST SUCCEEDED`, **42/42 tests passed, 0 failures** — proving my surface compiles cleanly (Swift 6, strict concurrency, iOS 18) against the real shared component library and that all adapter/projection/model/a11y tests pass.
+
+Now let me capture authoritative full-gate evidence (post-rename) to document that my surface contributes zero errors and the failures are pre-existing sibling collisions. Starting the full iOS gate in the background.
+
+Full iOS gate running. Meanwhile, let me run the fast gate steps: the placeholder check (as the gate specifies), then whole-tree swiftformat and swiftlint.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now the whole-tree swiftformat and swiftlint (as the gate runs them).
+
+Whole-tree swiftformat: **FORMAT_EXIT=0** (0/3846 files need formatting). Now whole-tree swiftlint --strict (as the gate runs it).
+
+Whole-tree **swiftlint --strict: LINT_EXIT=0** (0 violations in 3616 files) and **swiftformat: 0**. Now the full iOS gate (post-rename) finished — let me read whether my rename cleared all ElevationProfile errors and what remains.
+
+Definitive evidence captured. The full iOS gate fails with **IOS_EXIT=65**, but:
+- **ElevationProfile errors: 0** — my surface contributes zero compile errors.
+- **ElevationChart errors: 0** — my rename eliminated the collisions I introduced.
+- All failures are in **pre-existing tracked sibling files**: `RecentDrives*` (RecentDrivesListWidget + RecentDrivesSection) and `StateTimeline*` (StateTimelineWidget + StateTimeline) — duplicate public types colliding in the shared module, outside my allowed scope.
+
+Let me run the macOS gate (real `MAC_EXIT` for the log) while I assemble the evidence.
+
+While macOS builds, let me extract the precise root-cause evidence (the duplicate declarations and representative collision errors) for the log.
+
+macOS gate done. Let me read its result.
+
+macOS gate fails at a **code-signing** step (no development certificate on the runner — an environment gap), again with **0 ElevationProfile errors**; the iOS gate fails on the pre-existing sibling collisions. Both blockers are outside my surface and my allowed file scope.
+
+Let me gather final version/evidence strings and write the honest gate log.
+
+All evidence gathered. Now I'll write the comprehensive, honest gate log.
+
+Log written. Now let me clean up temporary artifacts and verify the working tree is exactly my 10 surface files + the log (no stray modifications to tracked files).
+
+Working tree is clean: exactly my 10 surface files + the log untracked, **0 modified tracked files**, and build artifacts (`.xcodeproj`, `Shared.xcframework`) are git-ignored. Let me finalize tracking.
+
+The task is complete to the maximum extent possible within scope. Let me provide the final summary.
+
+I built the full `ElevationProfile` Apple shared surface and verified it rigorously. The full-app gate is blocked by pre-existing, out-of-scope issues — documented honestly in the log, with the commit withheld per the Honesty Covenant ("no commit on red").
+

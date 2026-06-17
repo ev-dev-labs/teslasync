@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure to understand the task, the web source, and the existing Apple app architecture.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me explore the Apple app structure and the web source.
+
+The web source is clear. Now let me study the existing Apple dashboard-widgets to understand the established native patterns. With 435 entries, there are plenty of examples to follow.
+
+CommandHistoryWidget doesn't exist yet. Let me find the shared infrastructure (WidgetShell equivalent, EventFeed, state holders, tokens, i18n) and a similar list-based widget to use as a pattern reference.
+
+There's a strong established pattern. The closest analogs are `SentryEventLogWidget`, `MediaHistoryWidget`, and `SignalLogWidget` (all EventFeed-based). Let me study these in depth.
+
+Let me read the full `SentryEventLogWidget` set — it's the closest analog (event log + status mapping + EventFeed).
+
+Excellent template. Let me read the remaining Sentry files (Adapter, Views, Previews, strings, Tests) to learn the complete pattern.
+
+Let me read the Previews, strings, Tests for the Sentry widget, plus the web hooks and shared widget components that define the data shapes.
+
+Now let me read the web data shapes (`useCommands`, `WidgetShell`, the shared `WidgetEventFeed`, `types`) and the native shared infrastructure (tokens, registration, skeleton).
+
+Now let me read the web shared `WidgetEventFeed` and the native shared infrastructure (tokens, registration types, skeleton).
+
+The build uses XcodeGen with design tokens from `../design/generated/apple`. Let me inspect the token definitions, the Badge/Skeleton components, and verify tooling availability.
+
+Now I have the full token vocabulary. The `Shared.xcframework` is absent (needs KMP/Gradle). Let me check build feasibility context and the Badge component API (needed for the CompactView), plus how existing widgets use a compact branch.
+
+Key finding: `macos-pending-verifications.md` documents that the full-app `xcodebuild` gate is **known-blocked by pre-existing infra** (unstaged `Shared.xcframework` needing Kotlin/Native, parallel-merge `DashboardWidgetSize` collisions, signing). Prior P4 surfaces verify in isolation + defer the full-app build. Let me confirm the established protocol by reading a representative P4 log and the tooling.
+
+I now fully understand the sanctioned protocol: every P4 surface is verified **in isolation** (Swift 6 build+tests, swiftlint/swiftformat/placeholder, xcodegen enumeration), with the full-app `xcodebuild` explicitly **DEFERRED** to the signed `macos-latest` gate (blocked by pre-existing infra: unstaged `Shared.xcframework` + parallel-merge `DashboardWidgetSize` collisions + signing). Let me gather the last pieces: Skeleton deps, lint configs, placeholder tooling.
+
+`pwsh`, swiftlint, swiftformat all present. Skeletons only depend on Tokens. Let me read the placeholder checker and confirm the canonical registry metadata.
+
+I have everything I need: the web source, data shapes, design tokens, infra types, the exact `SentryEventLogWidget` reference pattern, lint/format configs, the placeholder gate, and the sanctioned "isolated-verify + defer full-app build" protocol. Let me set up tracking and write the implementation.
+
+Now I'll write the surface. Starting with the Model (state-holder seam, telemetry, registry, i18n facade).
+
+Now the Adapter (pure projection core: status catalog, formatCommandName, feed builder, layout, relative time, a11y).
+
+Now the Views (compact latest row + status badge, event feed + empty + row, connectivity banner).
+
+Now the main surface view (header, state switch, compact vs feed):
+
+Now the Previews and strings files.
+
+Now the Tests file (adapter + layout + model + registry + a11y), mirroring the Sentry test structure.
+
+All 7 files written. Let me update tracking and begin verification — starting with swiftformat/swiftlint on the new files.
+
+swiftformat 0.61.1 hangs even on a trivial 2-line file in this environment (prints "Running SwiftFormat..." then never returns) — a tooling/environment issue unrelated to my code. Let me confirm swiftlint works and kick off a long-timeout swiftformat in the background while I proceed with the more important isolated build+test.
+
+swiftlint 0.63.3 works and reports 0 violations. Let me run it with `--strict` (the gate mode) and set up the isolated SwiftPM build+test harness.
+
+swiftlint `--strict`: **0 violations** across all 6 files. Let me check the swiftformat background result.
+
+swiftformat works — it just has high first-launch overhead (the primed run finished in ~12s). Now that it's primed, let me lint my actual 6 files with a generous timeout.
+
+swiftformat found real issues (redundant `@ViewBuilder`, and test lines exceeding 120 cols). Let me apply swiftformat to auto-fix, then re-verify with both swiftformat and swiftlint.
+
+Applied. Let me re-verify both swiftformat (should be clean) and swiftlint --strict, and inspect what changed.
+
+swiftformat now passes (0/6 require formatting); the redundant `@ViewBuilder` was removed. Let me re-confirm swiftlint --strict, then set up the isolated SwiftPM build+test harness (the strongest surface-ownable evidence).
+
+swiftlint --strict and swiftformat both clean. Now the strongest evidence: an isolated SwiftPM package (module `TeslaSync`) that compiles my surface + the real shared infra under Swift 6 and runs the tests. Let me check the two shared component files are self-contained first.
+
+Skeletons.swift's other structs pull in `TSCard`, so for the isolated harness I'll include the real `Tokens.swift`, `DashboardWidgetInfra.swift`, `Badges.swift` (real `TSTone`), and a verbatim extract of just the real `TSSkeleton` struct. Let me build the harness and run `swift build`/`swift test` under Swift 6 language mode.
+
+Harness assembled. Now build and test it under Swift 6 language mode.
+
+Isolated build succeeded under Swift 6 / macOS 15. Now run the tests.
+
+All **29 tests pass, 0 failures** under Swift 6. Now the placeholder gate, xcodegen enumeration, and iOS-SDK typecheck.
+
+Placeholder gate clean (COUNT=0), self-test passes, xcodegen succeeded. Let me confirm target enumeration and typecheck against the iOS 18 simulator SDK (the gate's destination).
+
+All 7 files enumerated into the project (42 refs); iOS 18 simulator typecheck passes under Swift 6. Now let me honestly assess the full-app `xcodebuild` gate. First, verify the current state of the documented pre-existing blockers, then attempt the real build.
+
+Confirmed: the historical `DashboardWidgetSize` collision is resolved (defined once), and co-located `*Tests.swift` are excluded from app targets in `project.yml`. The sole remaining blocker is the **unstaged `Shared.xcframework`** (Kotlin/Native via Gradle) + signing. Let me attempt the real iOS gate build on this runner to capture honest evidence (time-boxed).
+
+While the iOS build runs, let me monitor its early output to see whether the Gradle/Kotlin-Native pre-action runs on this host.
+
+The Gradle/Kotlin-Native pre-action **is running and functional on this host** — it's compiling the KMP shared core (`compileKotlinIosArm64`, `linkDebugFrameworkIosArm64`, `assembleDebugIosFatFrameworkForSharedXCFramework`). This verifies the toolchain works. Let me let it continue and check progress.
+
+The KMP `Shared.xcframework` was **successfully assembled on this host** ("xcframework successfully written out…") — the Kotlin/Native toolchain works here. The build is now proceeding to app compilation. Let me wait for the time-boxed run to conclude and capture where it lands.
+
+The time-boxed build was interrupted (RC=124) — it was still in the **pre-action**: it successfully assembled the *debug* `Shared.xcframework` on this host, then began the long-running *release* `linkReleaseFrameworkIosArm64` step (the documented long pole) when the timer cut it. This confirms the Kotlin/Native toolchain works here and the release-framework assembly is the gating step — exactly the sanctioned `macos-pending` deferral. Let me verify the working tree is clean of generated artifacts before writing the log.
+
+Working tree shows only my 7 intended files (generated `.xcodeproj`/build artifacts are gitignored). Now let me write the gate log with the full, honest evidence trail.
+
+Now let me do final-validation: lint the `.strings` catalog, re-confirm the shipped files pass swiftlint --strict in their final on-disk state, and confirm all deliverables exist.
+
+The catalog is valid and complete. Let me do a final integrity cross-check: every i18n key referenced in Swift must exist in the catalog (and confirm the a11y key).
+
+All used i18n keys are present in the catalog; all 5 web-source parity keys confirmed. Everything is green. Let me mark verification done, clean up temp artifacts, and commit the 7 surface files + the log.
+
+All 8 deliverables staged. Now commit.
+
+Committed cleanly (`c7583a55f`), working tree clean. Let me do a final confirmation that the commit contains exactly the 8 intended files.
+
+All todos complete. Let me do a final status check.
+
+All 8 todos done. The task is complete and committed.
+
+Merge made by the 'ort' strategy.
+ ...dashboard-widgets-0029-CommandHistoryWidget.log | 216 ++++++++++++
+ .../CommandHistoryWidget.Adapter.swift             | 253 ++++++++++++++
+ .../CommandHistoryWidget.Model.swift               | 287 ++++++++++++++++
+ .../CommandHistoryWidget.Previews.swift            | 156 +++++++++
+ .../CommandHistoryWidget.Tests.swift               | 371 +++++++++++++++++++++
+ .../CommandHistoryWidget.Views.swift               | 190 +++++++++++
+ .../dashboard-widgets/CommandHistoryWidget.strings |  46 +++
+ .../dashboard-widgets/CommandHistoryWidget.swift   | 229 +++++++++++++
+ 8 files changed, 1748 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0029-CommandHistoryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandHistoryWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandHistoryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandHistoryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandHistoryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandHistoryWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandHistoryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandHistoryWidget.swift

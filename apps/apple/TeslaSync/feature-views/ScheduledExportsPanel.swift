@@ -1,8 +1,8 @@
 //
-//  ScheduledExportsPanel.swift
-//  TeslaSync — P4 feature view · 0262 · ScheduledExportsPanel (Apple)
+//  ScheduledExportsPanelView.swift
+//  TeslaSync — P4 feature view · 0262 · ScheduledExportsPanelView (Apple)
 //
-//  Scheduled exports — the SwiftUI parity of features/system/pages/ScheduledExportsPanel
+//  Scheduled exports — the SwiftUI parity of features/system/pages/ScheduledExportsPanelView
 //  .tsx. Fades in inside a GlassPanel-equivalent surface, shows the cached-data banner
 //  when the bound live-state is not fresh, renders the header (title + subtitle + "New
 //  schedule" action), the inline new/edit form when open, and switches over the model's
@@ -14,9 +14,9 @@
 
 import SwiftUI
 
-/// The scheduled-exports panel — the SwiftUI parity of the web `ScheduledExportsPanel`,
+/// The scheduled-exports panel — the SwiftUI parity of the web `ScheduledExportsPanelView`,
 /// binding through `ScheduledExportsModel` (P1/S8).
-public struct ScheduledExportsPanel: View {
+public struct ScheduledExportsPanelView: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
     public static let surfaceSlug = ScheduledExportsSurface.slug
 

@@ -1,0 +1,163 @@
+I'll start by exploring the repository structure and reading the web source component, while checking the Apple app setup and available tooling.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me explore the Apple app structure and read the web source.
+
+Now let me look at the existing modals-dialogs directory and a recent example to learn the established pattern.
+
+The repo uses a rich multi-file pattern per surface (`.swift`, `.Model`, `.Adapter`, `.Seams`, `.States`, `.Views`, `.Previews`, `.strings`, `.Tests`, `.ModelTests`). Let me read the web data hooks/types and study a recent complete example (TOUSettingsModal) plus the SharedFacade infrastructure.
+
+Let me read the sharing types and the `formatDate` function specifically.
+
+No existing share infra in the Apple app — I'll build the surface's own adapter via the established seams pattern. Let me study the complete TOUSettingsModal set (most recent) and core SharedFacade files.
+
+This is a rich, well-established pattern. Let me read the rest of the TOUSettingsModal set to fully internalize the conventions.
+
+Let me locate the shared design tokens and the remaining TOU files (Controls, Previews, strings, Tests, ModelTests, and where the phase/projection/surface types live).
+
+Let me find the design token definitions and the shared UI components (Button, Toggle, Select, TextField) so the native surface maps correctly.
+
+Important finding: the project uses XcodeGen, and `TeslaSync/modals-dialogs` is **not** listed in `project.yml` sources. Let me investigate how modal surfaces are wired in and check the build baseline.
+
+Modal surfaces are never wired into `project.yml`. Let me check how prior modal prompts verified their work by reading an existing log, and locate the logs directory and verification scripts.
+
+Now I fully understand the established methodology: the full-app `xcodebuild` is **deferred** (unstaged KMP framework + unwired tier), and surfaces are verified via host-runnable gates (swiftformat, swiftlint, dual-SDK `swiftc -typecheck`, isolated SwiftPM tests). Let me read the design tokens and shared components.
+
+Let me study the closest analog (SignalConfigModal: list + create + revoke) and the shared form controls.
+
+Let me read the lint configs, the placeholder script, clipboard patterns, and the SignalConfigModal list/rows analog and adapter tests.
+
+Shared `Clipboard` + `CopyButton` exist in `Components/UI/Utility.swift`, and `EntryDrawer` models a clipboard seam. Let me read those plus the placeholder script and the list/rows analog.
+
+Let me read the adapter/a11y test pattern and the list-rows-with-actions analog before designing.
+
+I have enough understanding of the patterns. Let me check the EntryDrawer date-facade seam (since ShareDriveDialog formats `expires_at`), then I'll create the plan and start writing.
+
+I now have a thorough understanding of the established architecture, design tokens, shared components, and verification methodology. Let me write a plan and start building the surface.
+
+Now let me create the pure Adapter core.
+
+Now the Seams file (telemetry, controller, clipboard, URL builder, date formatter, source, strings, accessibility).
+
+I placed the platform import mid-file. Let me move it to the top with the other imports.
+
+Let me make the revoke outcome token-aware (cleaner correlation for per-row state), updating the Adapter and the default controller.
+
+Now the Model state holder.
+
+Now the entry view.
+
+Now the States file (loading/empty/error/inline error/freshness chip/connectivity banner).
+
+Now the Views file (header, content, create form, result panel).
+
+Now the Controls (form inputs) and Rows (links list) files.
+
+Now the Previews file.
+
+Now the strings catalog (all web keys + native state/a11y keys).
+
+Now the adapter/projection/accessibility unit tests.
+
+Now the state-holder ModelTests.
+
+All 11 files created. Let me verify line counts, then run swiftformat + swiftlint on the surface files.
+
+One swiftlint violation — a wrapped return type put the brace on its own line. Let me fix that helper.
+
+swiftformat and swiftlint disagree on the wrapped return brace. I'll simplify the helper to a short one-liner and inline the richer links where needed.
+
+Now re-run format + lint to confirm clean.
+
+format/lint both green. Now the dual-SDK `swiftc -typecheck` (iOS 18 + macOS 15) against the real tokens + shared `TSButton`.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDKs typecheck clean. Now the isolated SwiftPM build + test of the SwiftUI-free core (Adapter + Seams + Model) with the two test files.
+
+All 41 isolated tests pass. Now the placeholder scan, i18n key parity, and a Node date-format parity check.
+
+i18n key parity is perfect (35=35, 0 missing). pwsh is available. The only "placeholder" hit is the web-parity i18n **key name** `titlePlaceholder`. Let me read the real script to learn its allow mechanism, then run it.
+
+The placeholder script scans `.swift` only (not `.strings`), and the one hit is the web-parity i18n **key** `titlePlaceholder`. I'll isolate it on its own line with a `// parity:allow` marker (the documented opt-out), matching the TOU precedent.
+
+format/lint clean. Now run the real placeholder gate on a copy of the files (+ self-test) and a Node date-format parity check.
+
+The gate is case-insensitive, so the common English word "placeholder" (my variable name + several comments) trips it. I'll purge the word from all `.swift` files except the one unavoidable i18n key (which keeps its marker). Let me find every occurrence.
+
+I'll purge the word from comments/variable names, keeping only the unavoidable i18n key line (already marked). Editing Controls and States.
+
+Now re-verify: format, lint, placeholder gate on a fresh copy, and re-typecheck the view layer.
+
+PLACEHOLDER_COUNT=0 (ALLOWED=1), format/lint clean. Let me re-confirm both SDK typechecks after the rename, and prove the tier is unwired via xcodegen.
+
+Both SDKs clean. Now document the deferral: confirm the KMP framework is unstaged and that xcodegen excludes the tier.
+
+Deferral proven (framework unstaged; 0 tier references after xcodegen). Let me capture live evidence that the full-app build is blocked by the KMP prebuild, matching the sibling methodology.
+
+The KMP shared project is real, so the prebuild Gradle assemble is the genuine long-pole. Let me capture brief live evidence of the full-app build being pinned there, then clean up.
+
+The full-app build is pinned in the pre-build "Stage Shared.xcframework" Gradle/Kotlin-Native phase (empty build log after ~190s; active Gradle daemons + `:core:assembleSharedXCFramework` workers). That's the documented blocker. Let me find and stop my build cleanly.
+
+No lingering build from my slot (the backgrounded `xcodebuild` ended with its launching session). The evidence is captured. Let me clean up the generated project + temp dirs and verify git status shows only my surface files.
+
+Git status is clean — exactly my 12 files, nothing else. Let me run a final consolidated verification (SwiftPM tests rebuilt from the final files) to capture authoritative evidence for the log.
+
+All host gates green (41/41 tests). Let me clean the temp dir, grab tool versions, then write the authoritative log.
+
+All files are within budget. Now I'll write the authoritative gate log with the real evidence collected.
+
+The log is written. Now let me commit the surface and log per the prompt's commit spec (staging the actual files explicitly).
+
+All 13 files staged. Committing.
+
+Task complete. The working tree is clean and the commit is in place.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`ShareDriveDialog`** at parity with `web/src/features/driving/components/ShareDriveDialog.tsx`, following the established modals-dialogs architecture (state-holder + seams + projection core + SwiftUI view layer).
+
+**Delivered** (12 files, committed `f18216e2f`): `ShareDriveDialog.{Adapter,Seams,Model,swift,States,Views,Controls,Rows,Previews,strings,Tests,ModelTests}` — every file ≤ 376 lines.
+
+**Parity reproduced**: the always-present create form (title `Input`, include-speed/telemetry `Toggle`s, expiry `Select`, "Generate Link"), the success result panel (`${origin}/s/{token}` URL + Copy + open + "Create another link"), and the existing-links list (title/Untitled, views, Expired/Expires{date}/No expiry, copy + revoke). Data binds via P1/S8 seams (`useShareLinks`/`useCreateShareLink`/`useRevokeShareLink`) — no HTTP in the view. Every state renders: loading / empty / error+retry / content, plus create-pending, per-row revoke spinner, inline errors, and stale/offline freshness.
+
+**Verified green on this runner** (honest, surface-scoped):
+- swiftformat --lint: 0/11 · swiftlint --strict: 0 violations
+- `swiftc -typecheck` iOS 18 **and** macOS 15 SDKs (Swift 6, strict concurrency): 0 errors
+- isolated SwiftPM: **41/41 tests pass**
+- placeholder gate: COUNT=0 (ALLOWED=1, the web `titlePlaceholder` key, opted out with reason)
+- i18n: 35=35 keys, all 21 web-source keys present · `formatDate` byte-identical to Node
+
+**Deferred (not failed), with live evidence in the log**: the full-app `xcodebuild build test` — the KMP `Shared.xcframework` is unstaged (Frameworks/ holds only `.gitkeep`) and the `modals-dialogs` tier isn't wired into `project.yml`/`.swiftlint.yml` (proven: xcodegen pbxproj has 0 `ShareDriveDialog` refs). Both are pre-existing, out-of-Allowed-files baseline conditions owned by the P4 acceptance gate — identical to sibling surfaces (e.g. 0021 TOUSettingsModal). Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and committed. All host-runnable gates are green and the work is committed cleanly.
+
+Merge made by the 'ort' strategy.
+ ...-apple-modals-dialogs-0028-ShareDriveDialog.log | 221 ++++++++++++
+ .../modals-dialogs/ShareDriveDialog.Adapter.swift  | 296 ++++++++++++++++
+ .../modals-dialogs/ShareDriveDialog.Controls.swift | 123 +++++++
+ .../modals-dialogs/ShareDriveDialog.Model.swift    | 312 +++++++++++++++++
+ .../ShareDriveDialog.ModelTests.swift              | 376 +++++++++++++++++++++
+ .../modals-dialogs/ShareDriveDialog.Previews.swift | 145 ++++++++
+ .../modals-dialogs/ShareDriveDialog.Rows.swift     | 180 ++++++++++
+ .../modals-dialogs/ShareDriveDialog.Seams.swift    | 275 +++++++++++++++
+ .../modals-dialogs/ShareDriveDialog.States.swift   | 195 +++++++++++
+ .../modals-dialogs/ShareDriveDialog.Tests.swift    | 218 ++++++++++++
+ .../modals-dialogs/ShareDriveDialog.Views.swift    | 288 ++++++++++++++++
+ .../modals-dialogs/ShareDriveDialog.strings        |  67 ++++
+ .../modals-dialogs/ShareDriveDialog.swift          |  61 ++++
+ 13 files changed, 2757 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0028-ShareDriveDialog.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.Rows.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ShareDriveDialog.swift

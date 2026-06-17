@@ -1,0 +1,135 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and reference materials. Let me look at the existing admin pages for patterns and the relevant types/hooks.
+
+The Admin directory doesn't exist yet. Let me look at the existing Apple app structure, the recent RbacMatrixPage reference, and the parity ledger.
+
+Two structures exist: the prompt says `apps/apple/TeslaSync/Features/Admin/` but the actual predecessor (RbacMatrixPage) used `apps/apple/Sources/Features/Admin/`. Let me examine the working precedent carefully.
+
+Now I understand—the real working path is `apps/apple/Sources/Features/Admin/`. The prompt's `TeslaSync/Features/Admin/` paths are idealized generator output. Let me study the most relevant precedents (RbacMatrix + observability pages like DiskForecast/SchemaDrift).
+
+Excellent precedent. `DiskForecastPage` is very close to what I need. Let me read the table, route registration, a page with Select controls, the test pattern, and the shared component/token catalog.
+
+Let me examine the route enum, parser, app wiring, Select/Picker usage, and the test conventions.
+
+Let me look at the Select/Picker pattern, app wiring, and SchemaDrift registration to understand the full integration.
+
+Now let me read the test conventions, the SchemaDrift registration, and discover the shared component/token catalog.
+
+Let me read the shared component definitions I'll need: Typography, Cards, States, Banners, and the design tokens.
+
+Let me read the remaining components (Cards, Banners, Skeletons), the design tokens, and check which i18n keys already exist.
+
+`admin.subsystem.unavailableTitle` already exists—I'll reuse it. Let me read the design tokens, Skeletons, the xcstrings structure, and the Pickers component.
+
+Let me find the design token definitions, the build setup, and check tool availability.
+
+Good—full Apple toolchain is available (Xcode 26.5, swift 6.3, swiftlint, pwsh). The build uses xcodegen (`project.yml`). Let me examine the build config, the gate contract, and the token definitions.
+
+Design tokens come from `apps/design/generated/apple`. Let me read those token names, the TSTone enum, the gate README, and the existing log directory.
+
+Let me read the full token catalog (Color.TS, Font.TS) and the RbacMatrix log to mirror the expected log format.
+
+I now have the complete picture. The full `xcodebuild` for the mega-scheme has pre-existing unrelated failures (per the RbacMatrix log), verified instead via isolated type-checks + harness. Let me verify the exact `fmtNumber` semantics and the existing `unavailableTitle` value before writing code.
+
+I have everything needed. `fmtNumber` defaults to precision 2 (matching the sibling DiskForecast port). Let me set up tracking and find exact xcstrings insertion points.
+
+The xcstrings has two regions: an early "manual" block (~4700-5160, where DiskForecast keys live) and a bulk-imported block (192800+). Let me view both insertion contexts.
+
+The xcstrings `strings` object ends at line 193958; the predecessor appended keys at the end. Let me read the lint configs and one more page reference before writing.
+
+I have full context now. SwiftLint is line-length 120/160, swiftformat maxwidth 120. Let me write the implementation, starting with the models file.
+
+Now the `@Observable` page model:
+
+Now the main page view with chrome, controls, and state routing:
+
+Now the adaptive table:
+
+Now the route registration and navigation wiring:
+
+Now the AppRoute, AppRouteParser, and TeslaSyncApp edits:
+
+Now append the 21 i18n keys to the string catalog:
+
+Let me validate the JSON and verify the keys:
+
+All 21 keys valid. Now the model unit tests:
+
+Now let me verify referenced symbols exist, then run lint/format on the new files.
+
+swiftformat wants consistent numeric grouping. Let me auto-fix my files with swiftformat (write mode), then re-lint:
+
+swiftformat passes now. Let me verify it only changed digit-grouping (not values) and run swiftlint:
+
+swiftformat preserved values (just normalized grouping). One swiftlint nesting violation: the `enum Mode` is 2 levels deep. Let me hoist it to class level:
+
+swiftlint clean. Now the placeholder scan and a swiftformat re-check on the test file:
+
+Placeholder scan clean (0 from my files). Now let me assess the build environment — check for the staged framework, xcodegen, and any existing project.
+
+xcodegen + java are available, but `Shared.xcframework` isn't staged. Let me check whether my dependency layers (Components/Design/App/Theme) are KMP-free so I can type-check in isolation, and inspect the framework build script.
+
+My dependency layers are KMP-free. Let me do an isolated type-check of my new files against the real Components/Design/App/Theme (the predecessor's approach). First, let me confirm the Components subset is self-contained.
+
+Let me do a targeted real type-check: my new files + the shared Components/Design/App-routing/Theme layer (KMP-free, the predecessor's proven self-contained set).
+
+Components only use SDK frameworks (Charts/MapKit/CoreLocation) — KMP-free. Let me type-check my files against the full real shared layer, targeting macOS:
+
+Only `UnitFormatters.swift` (which my code doesn't use) needs an app-level `UnitPreferences` type. Let me narrow to exactly the Component files my page depends on (+ transitive UI deps):
+
+One real error: `seed` must be public to be a default argument of a public init. Let me fix:
+
+macOS type-check passes with zero errors. Now the iOS type-check (exercises the `#if os(iOS)` compact branches):
+
+Both type-checks pass with zero errors. Now let me build and **execute** a model harness to actually exercise the logic (state machine, formatters, cache ratio, sample sort):
+
+The `-parse-as-library` flag blocks top-level code. Let me remove it (main.swift is the entry point):
+
+Harness executed green — all logic verified. Now let me confirm the project generates and my files are integrated via xcodegen:
+
+xcodegen succeeded (exit 0); my files are integrated (36 refs). Let me confirm the generated project is git-ignored and check the pre-existing build blocker the predecessor documented.
+
+Confirmed: generated project is git-ignored; the full-build blocker is a **pre-existing** unrelated sibling error (`Input.Previews.swift`), and my files don't import the KMP `Shared` framework. Let me also type-check the test file against the real model API + XCTest:
+
+The XCTest C-macro import fails in ad-hoc compilation (a known tooling limitation, not a code issue). Let me add the XCTest Swift overlay search path:
+
+Test type-check passes (exit 0) with the XCTest overlay. **All verification green.** Now let me update the parity ledger. Let me view its structure:
+
+Let me validate the ledger JSON, then write the evidence log:
+
+Ledger valid (2 rows, 22/22). Now the evidence log:
+
+Now let me clean up temp files and do a final consolidated gate verification on the finished state:
+
+Final lint/format clean (0 violations, 0/7 formatting). Let me run the final placeholder scan and review the full change set before committing:
+
+All gates green and the change set is exactly as intended (the git-ignored `.xcodeproj` correctly excluded). Let me mark verification complete and commit:
+
+All 12 files staged (the git-ignored `.xcodeproj` correctly excluded). Now committing:
+
+Committed (`38acd7bc3`). Let me verify a clean working tree and final todo state:
+
+Working tree is clean, all 8 todos done, and the commit landed cleanly. The task is complete.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-SlowQueriesPage.log      | 242 +++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 231 ++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   7 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Sources/Features/Admin/SlowQueriesModels.swift | 290 +++++++++++++++++++++
+ .../Features/Admin/SlowQueriesPage.Table.swift     | 124 +++++++++
+ .../Sources/Features/Admin/SlowQueriesPage.swift   | 275 +++++++++++++++++++
+ .../Features/Admin/SlowQueriesPageModel.swift      |  72 +++++
+ .../Admin/SlowQueriesRouteRegistration.swift       |  26 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Features/Admin/SlowQueriesPageModelTests.swift | 189 ++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 12 files changed, 1474 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-SlowQueriesPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/SlowQueriesModels.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SlowQueriesPage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SlowQueriesPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SlowQueriesPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SlowQueriesRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/SlowQueriesPageModelTests.swift

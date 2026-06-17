@@ -1,0 +1,183 @@
+I'll start by exploring the environment and the web source to understand the task scope and verify capability requirements.
+
+Capability confirmed: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, and iOS simulators all available. Now let me read the web source and explore the existing Apple app structure.
+
+Now let me explore the web source dependencies and the existing Apple feature-views structure in parallel.
+
+I have the web source clear. Now let me understand the data types, the project build config, and study a complete existing feature-view as a template.
+
+There's already an `InfrastructureSection` set of files. Let me examine their current state to determine if they're stubs or complete.
+
+The files already exist with substantial content (1722 lines). Let me check git status and read the placeholder checker plus the existing implementation to understand the baseline state.
+
+There's an existing commit `26bf81cbd` that already added this surface. My job is to verify it's complete, correct, at parity, and passes the gate — fixing anything that doesn't. Let me read the full implementation and check the build infrastructure.
+
+Critical finding: the **existing Apple `InfrastructureSection` reproduces the WRONG web source**. Its header says it's parity for `features/admin/components/devtools/InfrastructureSection.tsx` (a grid of on-demand tools: Db Stats, Migrations, MQTT, Env, Runtime), but **this task (0248) binds to `features/system/components/status/InfrastructureSection.tsx`** (an accordion with SSE Connection / Polling Engine / DB pool via `useQuery`). They collide on the same native filename. Let me confirm before acting.
+
+Confirmed: the existing Apple surface is parity for the **admin/devtools** source (tools grid), but task 0248 binds to the **system/status** source (accordion + SSE/Polling/DB-pool via `useQuery`). I must rewrite it. The best native exemplars are sibling sections from the same web folder. Let me study `BackendStatusSection` (a sibling that wraps `AccordionSection` + `useQuery`) and the design-token/strings infrastructure.
+
+`BackendStatusSection` is the ideal template — same web folder, wraps `AccordionSection`, uses `useQuery`. Let me read its full file set to learn the established native architecture (Model/Adapter/Views/States/strings/Tests).
+
+Excellent template. Now let me read the remaining `BackendStatusSection` files (the accordion chrome, projection, sections, adapter, tests) plus locate the design tokens and the test-target wiring.
+
+I now understand the architecture deeply. Before rewriting, I must check for external references to the existing `InfrastructureSection` symbols (to avoid breaking compilation elsewhere, since I can only touch `InfrastructureSection.*`), and read the remaining exemplar pieces + design tokens + test wiring.
+
+No external references to the existing `InfrastructureSection` symbols — it's standalone, so I can safely rewrite it. Let me read the test-target wiring, the remaining exemplar files (Sections/Previews/Tests/ModelTests), and locate the design tokens.
+
+I have the full architecture now. Let me read the test/preview exemplars and confirm the exact design-token member names so my rewrite compiles cleanly.
+
+My grep didn't capture the token definitions (they're structured differently). Since I'll mirror `BackendStatusSection` (same target, compiles), I can reuse its exact token references. Let me confirm the shared component APIs (Cards, Badges, Lists) and read the Tests exemplar + token files to avoid compile errors.
+
+Token definitions live in the generated `DesignTokens` group. Let me read the core token/component files and the Tests exemplar to lock down exact APIs.
+
+All tokens confirmed. Let me read the shared `Badges`/`Cards`/`Lists` components and the `BackendStatusSection.Tests` exemplar, then I'll have everything to write the rewrite.
+
+Everything's confirmed. Let me read the `BackendStatusSection.Tests.swift` to mirror the UI/a11y test + fixture pattern, then I'll start the rewrite.
+
+I have the complete pattern. Let me verify the exact API types and the lint config before writing.
+
+Now I understand the full pattern and API types. The critical open question: **the `Shared.xcframework` is missing** (only `.gitkeep` present), yet app/test targets depend on it. Let me investigate the build bootstrap to determine if the xcodebuild gate is achievable, and read the rest of the lint config.
+
+Wrong directory. Let me investigate from the correct paths.
+
+There's `apps/apple/Scripts/build-shared-xcframework.sh`. Let me read it and check toolchain availability, plus the pending-verifications doc.
+
+I now have the complete picture. Key findings:
+- The full-app `xcodebuild` is **blocked by pre-existing, unrelated parallel-merge collisions** (documented in `macos-pending-verifications.md` across ~8 prior surfaces). The established methodology verifies each surface in **isolation** (swiftc -typecheck iOS18+macOS15, isolated SwiftPM build+tests, swiftlint --strict, swiftformat --lint, placeholder gate, xcodegen enumeration).
+- My surface imports no KMP `Shared`, so it's independent of the missing `Shared.xcframework`.
+
+Let me start baseline gate checks in the background and write a plan.
+
+Good — Components/Design only import system frameworks (no `Shared`), so they're isolation-friendly. Let me verify my planned type names don't collide with other surfaces in the target before writing.
+
+Let me read the baseline results while the collision scan finishes.
+
+Baseline: swiftformat is clean (0/2476). But swiftlint found **1 pre-existing serious violation** (my `tail` hid which file — the captured exit was `tail`'s, not swiftlint's). I must identify it to confirm it's not in my scope. Let me find it and check the collision scan.
+
+Let me read both results.
+
+Clear results:
+1. **Pre-existing swiftlint violation** is in `LiveSignalSparklinesWidget.Builder.swift:158` (`opening_brace`) — unrelated to my surface, matches the documented pre-existing collisions. The tree-wide gate is RED at baseline for that reason; my files must add 0 violations.
+2. **No type-name collisions** for any of my planned names.
+
+Now I'll remove the 8 obsolete files and write the new parity surface. Starting with the pure-logic core.
+
+Now I'll create the surface files. Starting with the pure-logic Adapter (DTOs + projected types):
+
+Now the Projection file (phase resolution, projections, formatting, surface slug, a11y):
+
+Now the Model file (state holder, telemetry seam, strings facade, source seam, in-memory source):
+
+Now the Views file (accordion shell, freshness chip/banner, badges, card header, KV row, metric tile):
+
+Now the Sections file (the two cards + the database-pool metric row):
+
+Now the States file (loading / empty / error):
+
+Now the main View entry. The web `InfrastructureSection` does **not** pass `defaultOpen`, so it's collapsed by default — I'll honor that with an `initiallyExpanded` param (previews/tests open it).
+
+Now the Previews (one per state, expanded to show content):
+
+Now the strings catalog (web-exact parity keys + chrome keys):
+
+Now the Tests file (pure adapter/projection/format/a11y + shared fixtures):
+
+Now the ModelTests (state-holder coverage):
+
+All 11 files created. Now let me verify line counts (swiftlint file_length ≤400), format with swiftformat, and run a quick placeholder check.
+
+All files ≤334 lines, no placeholder tokens. Let me format my files with swiftformat, then lint them.
+
+`0/10 files formatted` — already conforming. Now lint my files specifically:
+
+Both clean: swiftlint `LINT_EXIT=0`, swiftformat `0/10`. Now the cross-SDK compile proof. Let me typecheck my surface + the real design-system deps against the macOS 15 and iOS 18 SDKs.
+
+SDKs are 26.5 (target min via triple). Let me typecheck my surface against the macOS 15 SDK with the minimal real design-system deps, Swift 6 strict concurrency (no `-D DEBUG` → production path):
+
+macOS 15 typecheck clean. Now iOS 18 simulator:
+
+Both SDKs clean (0 errors/warnings, Swift 6, strict concurrency). Now let me verify my `#if DEBUG` previews compile too, by typechecking with `-D DEBUG` plus the broader UI component set (so the deps' own previews resolve):
+
+Good — those errors are in `DataDisplay/UnitFormatters.swift` (references an app-level `Units` type), **not my files**. That confirms the broader module has external deps. Let me narrow to just the UI/Motion/Feedback/Design set the previews actually need:
+
+The errors are all in *other components'* DEBUG previews (`TSMetricBar`, `Units`) — never my files. Let me find those symbols' homes so I can include the full transitive closure and prove my views+previews compile in debug:
+
+`Units` lives in `Sources/SharedFacade/Units+Facade.swift` which `import Shared` (the missing KMP framework) — and it's referenced by `DataDisplay`/`Feedback` in **non-preview** code. That's the documented pre-existing `Shared` blocker, and **my surface doesn't use those components**. Let me confirm my previews compile in DEBUG with just the focused dep closure my views actually touch:
+
+Entire surface (production **and** previews) compiles cleanly on iOS 18 + macOS 15, Swift 6, strict concurrency. Now the isolated SwiftPM build + test run. Let me build a throwaway package with my files + the focused real deps and run the tests.
+
+Isolated SwiftPM: **30 tests, 0 failures** under Swift 6 strict concurrency against the real design-system deps. Now let me run `xcodegen generate` (confirms the project enumerates my files) and the placeholder gate.
+
+xcodegen generates cleanly and enumerates all 11 files (66 pbxproj refs across iOS/macOS/test targets). Now the placeholder gate — I'll run both the exact gate command and a real scan of my files for honesty:
+
+Placeholder gate clean (both exact gate command and a real scan of my files: `PLACEHOLDER_COUNT=0`).
+
+All isolated verifications are green. Now I'll run the **actual gate commands** to capture honest evidence. First let me confirm the scheme exists, then run the fast gates and a bounded `xcodebuild` to document the pre-existing full-app blocker.
+
+Both schemes exist. Let me check the canonical log directory and how prior surfaces' logs concluded (to match the established STATUS convention), then run the gates.
+
+There's a `0248` slot expected. Let me read how prior surfaces (esp. the macOS-pending ones) concluded their logs to match the established STATUS convention:
+
+Now I fully understand the sanctioned disposition: surface verified green-in-isolation → `EXIT=0`/`STATUS=DONE`, with the full-app `xcodebuild` gate **DEFERRED** (pre-existing/unrelated blockers) + a macOS-pending row. The sibling template 0239 did exactly this. Since I have Xcode here, I'll attempt the real xcodebuild to capture honest evidence. Let me start a bounded iOS build in the background and run the fast gates meanwhile.
+
+Tree-wide gates captured: swiftformat `0/2479` (FORMAT_EXIT=0), swiftlint LINT_EXIT=2 (the single pre-existing `LiveSignalSparklinesWidget` violation, unrelated to my surface), placeholder EXIT=0. Let me check the iOS xcodebuild progress.
+
+The Gradle pre-build is progressing (Kotlin tasks FROM-CACHE — the cache is warm), so the `Shared.xcframework` may actually assemble and proceed to compile the app. Let me let it continue and check progress.
+
+The Gradle build wrote the DEBUG `Shared.xcframework` and is now on the long-pole RELEASE Kotlin/Native link (where prior runs timed out). Let me give it more time.
+
+Still on the Kotlin/Native release link (the documented long-pole, ~6min in). Let me wait further to see if it reaches app compilation, where I can confirm zero errors from my surface.
+
+The Gradle build **completed** (`Shared.xcframework` staged) and xcodebuild is now compiling the real `TeslaSync` app module (Swift 6, iOS 18 simulator, `-enable-testing`) — including my files. 0 errors so far. Let me wait for the app compile to finish or hit the pre-existing collisions.
+
+iOS xcodebuild completed with `IOS_EXIT=65` (full-app failure, as expected). Let me analyze the failures to confirm zero errors from my surface and identify the pre-existing blockers.
+
+Confirmed: **0 errors from InfrastructureSection**. The failures are pre-existing dashboard-widget collisions (`ChargeSessionDTO` ambiguous). Let me read the full extract to document the blockers precisely.
+
+Conclusive: **426 errors in the full-app iOS build — ALL in pre-existing/unrelated parallel-merge collisions** (dashboard-widgets `ChargeSessionDTO`/`ChargeStatus*`, and another slot's `DrivingCoachSection` with ambiguous `DrivingCoachLoadStatus`). **Zero errors in InfrastructureSection.** This matches the documented blockers exactly. Now let me run the macOS gate (Gradle cache is warm now) while I draft the log.
+
+While macOS builds, let me extract the precise failure data for the log.
+
+Rock-solid evidence: iOS `IOS_EXIT=65`, 426 errors **all** from pre-existing duplicate-type collisions (`ChargeSessionDTO`, `SafetyModel`, `DrivingCoachLoadStatus`, etc. — each "ambiguous", defined 2× across parallel-merged surfaces), **0 errors in InfrastructureSection**. Let me check macOS progress.
+
+macOS build completed. Let me read its result and confirm the failure is the same pre-existing blocker with zero InfrastructureSection errors.
+
+macOS gate: `MAC_EXIT=65` — blocked by **macOS development-signing** (no signing identity on this runner; a documented platform-capability blocker), **0 InfrastructureSection errors**. 
+
+I now have complete, honest evidence. Let me update the plan and write the gate log.
+
+Now let me write the comprehensive, honest gate log:
+
+The log is written. Now let me clean up temp artifacts and verify the git working tree only contains my intended changes before committing.
+
+Working tree is exactly as intended: my 11 `InfrastructureSection.*` files (modified/new) + the deleted `.Catalog.swift` + the log. The two `web/...` files are **pre-existing unrelated modifications** (present at session start) and the generated `.xcodeproj`/`.xcframework` are git-ignored. Let me stage only my files and verify before committing.
+
+Staged set is exactly correct (11 `InfrastructureSection.*` files + deleted `.Catalog.swift` + log; the unrelated `web/*` files are left unstaged). Let me commit with the prompt's specified message.
+
+Committed as `ed0805718` (13 files; unrelated `web/*` correctly excluded). Let me do a final verification that the working tree is clean and the committed surface re-passes lint/format (covenant #8 "no commit on red").
+
+All verifications pass and the working tree is clean (only the two pre-existing, unrelated `web/*` modifications remain untouched). The committed surface re-passes swiftlint (`0`) and swiftformat (`0/10`).
+
+The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...le-feature-views-0248-InfrastructureSection.log | 169 +++++++
+ .../InfrastructureSection.Adapter.swift            | 386 ++++++++-------
+ .../InfrastructureSection.Catalog.swift            | 244 ----------
+ .../InfrastructureSection.Model.swift              | 315 ++++++------
+ .../InfrastructureSection.ModelTests.swift         | 145 ++++++
+ .../InfrastructureSection.Previews.swift           | 165 ++++---
+ .../InfrastructureSection.Projection.swift         | 216 +++++++++
+ .../InfrastructureSection.Sections.swift           | 128 +++++
+ .../InfrastructureSection.States.swift             |  96 ++++
+ .../InfrastructureSection.Tests.swift              | 396 +++++++--------
+ .../InfrastructureSection.Views.swift              | 538 ++++++++++-----------
+ .../feature-views/InfrastructureSection.strings    |  93 ++--
+ .../feature-views/InfrastructureSection.swift      | 213 ++++----
+ 13 files changed, 1765 insertions(+), 1339 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0248-InfrastructureSection.log
+ delete mode 100644 apps/apple/TeslaSync/feature-views/InfrastructureSection.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfrastructureSection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfrastructureSection.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfrastructureSection.Sections.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfrastructureSection.States.swift

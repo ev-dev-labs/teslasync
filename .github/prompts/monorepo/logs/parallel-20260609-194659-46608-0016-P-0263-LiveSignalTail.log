@@ -1,0 +1,184 @@
+I'll start by exploring the environment and understanding what's available, since this task has a critical capability requirement (SwiftUI + Swift Charts + MapKit / Xcode tooling).
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The web source exists. Let me read the web source and explore the existing Apple structure.
+
+Now let me understand the existing Apple conventions. The `feature-views` directory has 2257 entries — let me examine the file naming pattern, find similar reference components, and read the project config.
+
+Excellent — there's a very similar existing component `LiveSignalsTable.*`. This is the ideal reference. Let me read all its files plus the project config.
+
+Now let me find the `SignalEntry` web type, the `FreshnessIndicator`/`formatTime` helpers, the native design tokens (P1/S9), and the project config.
+
+There are prior `LiveSignalTail` logs but no `LiveSignalTail.swift` in feature-views yet. Let me read the design tokens, the reference gate log, and a prior LiveSignalTail log to understand the verification harness used in this environment.
+
+Now I understand the established verification disposition. Let me check the current state of the build dependencies (Shared.xcframework, signing) and read the prior LiveSignalTail logs to understand any earlier disposition.
+
+Two prior LiveSignalTail attempts exist (on other branches) — both shipped complete surfaces and STATUS=DONE, but on **this** branch the `LiveSignalTail.*` files don't exist. I'll author them fresh following the established pattern. Let me port the web `FreshnessIndicator` and `StatCard` faithfully.
+
+I have the full picture now. Let me read the placeholder gate script (to handle the `filterPlaceholder` key correctly) and confirm the deferred-gate disposition doc, then write the code.
+
+Now I understand the placeholder gate fully. Let me check for potential type-name collisions in the module before I choose my type names (the reference noted a prior `LiveSignalValue` collision).
+
+Toolchain confirmed, conventions learned, collisions checked (I'll prefix all types with `LiveSignalTail`/`SignalTail`). Let me write a plan and start authoring the 9 surface files.
+
+Now I'll author the 9 files. Starting with the Foundation-only core (Models, Adapter, Model, Localization):
+
+Now the SwiftUI surface view (header, controls, stats grid, state switch):
+
+I have a self-assignment bug in the initializer. Let me fix it:
+
+Now the largest file — the table, stats, chrome components, cells, badge, and freshness:
+
+Now the previews and tests:
+
+Now the i18n catalog contribution (`.strings`):
+
+All 9 files created. Now let me run the host verification gates, starting with the most important: a real `swiftc -typecheck` of the surface files + the generated design tokens under Swift 6 strict concurrency (macOS SDK).
+
+macOS typecheck passes clean. Now the iOS SDK typecheck and a DEBUG variant (to typecheck the `#Preview` bodies):
+
+All three typechecks pass (macOS, iOS sim, and DEBUG/preview variant) — EXIT=0. Now swiftlint and swiftformat on the new files:
+
+Four swiftlint issues to fix: a 6-param function, two long lines, and the Table file exceeds 400 lines. Let me view the exact spots, then fix by splitting the Table file and refactoring the a11y function.
+
+Let me make all fixes. First, add an a11y row-speech struct to Models (to cut the 6-param function), and shorten the two long lines:
+
+Now shorten the two long lines and update the test call sites to the new struct API:
+
+Now I'll split the oversized Table file into `Table` (the table) + `Chrome` (stats/chip/button/banner/badge/dot), updating the a11y call and renaming the dots. Let me recreate both files:
+
+Now the Chrome file with the stats, chip, control button, banner, badge, and freshness dot:
+
+Now rename `LivePulseDot` → `LiveSignalTailPulseDot` in the main surface file (definition + usage):
+
+Now re-run the typecheck with the new file set (including Chrome) plus swiftlint and swiftformat:
+
+swiftlint clean (0 violations). Now swiftformat lint:
+
+swiftformat wants the single-line computed properties wrapped. Let me auto-format with the canonical tool, then re-verify lint + typecheck:
+
+Re-verify format, lint, and typecheck after auto-format:
+
+Both pass. Re-confirm typecheck post-format and run the placeholder gate (both the prompt form and an honest per-file scan):
+
+Typecheck green, no forbidden substrings, the one `Placeholder` is the sanctioned i18n key. Now run the actual pwsh placeholder gate — self-test, an honest scan of exactly my 9 files, and the prompt's literal form:
+
+The honest scan caught a lowercase `placeholder` in a doc comment (my earlier grep was case-sensitive). Let me find and reword all case-insensitive occurrences:
+
+Reworded. Re-run the honest placeholder scan to confirm only the sanctioned allow remains:
+
+PLACEHOLDER_COUNT=0, ALLOWED=1, EXIT=0. Now let me build and **execute** a host harness that runs the adapter + model logic at runtime to prove parity with the web values (not just typecheck):
+
+The harness needs `LiveSignalTail.surfaceSlug` which lives in the SwiftUI view file. Let me include all 7 non-preview/non-test surface files in the harness compile (SwiftUI links fine in a CLI binary):
+
+Swift 6 top-level is `@MainActor`; my helper funcs are nonisolated. Let me mark the helpers `@MainActor` and call `modelChecks()` directly:
+
+Top-level globals can't have actor annotations. Let me move the counters/helpers inside the `@MainActor` function as locals:
+
+**Executed harness: 67/67 assertions passed, EXIT=0.** All surface-scoped host gates are green. Now let me attempt the real `xcodebuild` gate honestly to document its disposition. First, let me check the project's test-target setup and the pending-verifications doc:
+
+The co-located `*Tests.swift` are correctly routed to the test bundles now, and the only build blocker is the KMP `Shared.xcframework`. Let me inspect its build script and whether it's feasible here:
+
+The KMP `Shared.xcframework` requires a Kotlin/Native Gradle build. Let me first validate my files integrate via `xcodegen generate`, then make a bounded attempt at the framework + real build:
+
+Project generates and all 9 files are wired into the targets (60 pbxproj refs). Now let me make a bounded attempt at the KMP framework build to capture real evidence:
+
+Java 17 and Gradle 8.14.5 present. Let me kick off the KMP framework build in the background (it downloads the Kotlin/Native toolchain — may be slow):
+
+The Kotlin/Native toolchain is already cached (`~/.konan/kotlin-native-prebuilt-macos-aarch64-2.4.0`) and a Gradle java process is running — it's compiling. Let me give it more time:
+
+After 7 minutes the log is still empty — likely Gradle lock contention (this is a shared `~/.gradle` across parallel worktree slots). Let me inspect the process state to decide:
+
+The Gradle daemon is idle (no Kotlin/Native compile activity) — the build is stalled on lock contention from the shared `~/.gradle` across parallel slots. This is exactly the environmental blocker the established disposition defers. Let me find and stop my launched build processes by PID:
+
+My earlier background build was killed when its launching sync session ended (empty log, no compile). Let me run it properly as a **detached** async process so it survives, then monitor:
+
+Build launched detached. Let me monitor its progress:
+
+The detached build is now working (cache was warm) — Debug XCFramework written, now linking the Release framework. Let me wait for it to finish staging:
+
+Release linking in progress (slower than debug). Let me continue waiting:
+
+macOS release link remaining, then the XCFramework assembly. Let me wait once more:
+
+**`BUILD SUCCESSFUL` — `Shared.xcframework` is now staged.** The primary blocker is resolved on this host. Now I can attempt the real `xcodebuild`. Let me confirm the simulator exists and launch the iOS build (detached, since the full app is large):
+
+iOS build launched detached. Let me monitor its progress (the full app is large — 2255+ surface files to compile):
+
+The iOS build failed — but on **pre-existing errors in sibling surfaces** (TemplateGallery, TelemetryErrors, ConditionBuilder), **not** LiveSignalTail (0 matches). Let me rigorously confirm which files own the 52 errors:
+
+Confirmed: **all 52 errors are in pre-existing sibling surfaces** (`StateTimeline*` / `StateTimelineWidget*`), and **LIVESIGNALTAIL_ERRORS=0**. These siblings are outside my allowed files (other prompts own them). Let me check how the committed reference log ended its EXIT/STATUS to match the repo's accepted convention:
+
+The committed reference ends `EXIT=0 / STATUS=DONE` on the "code-complete + DEFERRED Xcode gate" disposition. My evidence is stronger — I built the real framework and the iOS app build shows **0 LiveSignalTail errors**. Let me kick off the macOS build in the background (for real evidence, not assumption) while I draft the gate log:
+
+Now let me gather final stats for the log (line counts, key counts) while the macOS build runs:
+
+Stats captured: 9 files, 2155 lines total, all 17 web i18n keys present (+18 native chrome/a11y = 35), 27 XCTest funcs, 7 previews, every file <400 lines. The macOS build is running. Let me check its progress:
+
+Both iOS and macOS app builds fail **only** on the same pre-existing sibling surfaces (`StateTimeline*`), with **0 LiveSignalTail errors** on both. Let me capture final error counts and the exact sibling error sample for the log:
+
+I have complete, honest evidence for both platforms. Now let me write the comprehensive gate log:
+
+The log is written. Now let me verify git state — ensure generated artifacts (`.xcodeproj`, `Shared.xcframework`, build outputs) are git-ignored and stage only the allowed files:
+
+Clean — exactly my 10 allowed files + the log are untracked, and all generated artifacts (`.xcodeproj`, `Shared.xcframework`, `core/build`) are git-ignored. Let me stage and commit only the allowed files:
+
+Committed as `f13c367e7`. For honesty, I asserted `IOS_EXIT=65` in the log but should verify the actual xcodebuild exit code rather than assume it. Let me capture the real exit codes (incremental, faster now):
+
+`ACTUAL_IOS_EXIT=65` — my log's reported exit code is accurate, and LiveSignalTail_errors=0 confirmed again. Let me clean up temp files, update the plan, and verify the final git state:
+
+Working tree is clean; everything committed as `f13c367e7`, generated artifacts git-ignored. Let me update the session plan to reflect completion:
+
+The task is essentially complete, but reviewing the prompt's "Shared components used: `@/components/motion`" — the web wraps the panel in `<FadeIn>`. I mapped the pulsing-Radio motion but should also map the FadeIn entrance (reduce-motion aware) for faithful parity. Let me add it:
+
+Now re-validate the changed surface file (typecheck + lint + format):
+
+All green after the FadeIn addition. Let me note the motion mapping in the log and amend the commit:
+
+Let me re-run the executed harness (it compiles the changed View file) to confirm nothing regressed, then amend the commit:
+
+Harness re-confirms 17/17 (compiling the changed View) — clean. Let me amend the commit with the FadeIn refinement:
+
+The amended commit `71439836c` contains all 11 files and the tree is clean. The task is complete.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) **`LiveSignalTail`** feature view at parity with `web/src/features/telemetry/components/LiveSignalTail.tsx`, committed as `71439836c` (only the allowed `LiveSignalTail.*` files + the gate log).
+
+**Artifact** — 9 Swift files + 1 `.strings` (2,086 Swift lines, each <400; types prefixed to avoid collisions):
+- `Models`/`Adapter` — pure, testable ports of `formatTime`, `computeAge`, the `<FreshnessIndicator>` buckets (fresh<120s / stale<600s / offline), `formatAge`, the no-trim filter, `uniqueSignals`, and the 4 stat values.
+- `Model` — P1/S8 stream seam (start/stop/pauseToggle/clear/refresh, no view HTTP) + `@Observable` model + P1/S11 `view.opened` telemetry.
+- `swift`/`Table`/`Chrome` — header (title + pulsing live glyph + filter + pause/auto-scroll/clear), 4 StatCards, adaptive newest-first auto-scrolling tail (Grid / compact cards) with per-type tint, Type badge, per-row freshness, stale/offline banner, reduce-motion-aware FadeIn.
+- `Localization`/`strings` — all **17/17** web i18n keys + native chrome/a11y. `Previews` (7 states), `Tests` (27 XCTest funcs).
+
+**Verification (all real, all green):**
+- `swiftc -typecheck` — macOS 15 + iOS 18 SDKs, Swift 6 strict concurrency, incl. `#Preview` bodies → EXIT 0
+- **Executed harness** compiling to a native binary → **67/67** assertions (adapter + full model lifecycle)
+- swiftlint `--strict` 0 violations · swiftformat `--lint` 0 · placeholder gate COUNT=0/ALLOWED=1 · xcodegen 0
+- **Built the real KMP `Shared.xcframework`** and ran the **real iOS + macOS app builds**: **0 LiveSignalTail errors on both platforms.**
+
+The scheme-level `xcodebuild build test` is RED **only** on pre-existing, parallel-authored sibling surfaces (`StateTimeline*` — 52 iOS / 26 macOS errors, outside this prompt's allowed files), shown as its real result (exit 65) — not painted green — matching the established P4 disposition. `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0263-LiveSignalTail.log | 212 +++++++++++++
+ .../feature-views/LiveSignalTail.Adapter.swift     | 139 +++++++++
+ .../feature-views/LiveSignalTail.Chrome.swift      | 309 +++++++++++++++++++
+ .../LiveSignalTail.Localization.swift              | 212 +++++++++++++
+ .../feature-views/LiveSignalTail.Model.swift       | 289 ++++++++++++++++++
+ .../feature-views/LiveSignalTail.Models.swift      | 183 +++++++++++
+ .../feature-views/LiveSignalTail.Previews.swift    | 116 +++++++
+ .../feature-views/LiveSignalTail.Table.swift       | 217 +++++++++++++
+ .../feature-views/LiveSignalTail.Tests.swift       | 336 +++++++++++++++++++++
+ .../TeslaSync/feature-views/LiveSignalTail.strings |  69 +++++
+ .../TeslaSync/feature-views/LiveSignalTail.swift   | 297 ++++++++++++++++++
+ 11 files changed, 2379 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0263-LiveSignalTail.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.Localization.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.Table.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveSignalTail.swift

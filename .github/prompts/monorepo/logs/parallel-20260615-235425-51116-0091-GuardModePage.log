@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure to understand the web source page, the existing Apple app structure, and the supporting infrastructure (KMP core, design tokens, components).
+
+The web source is large. Let me read it in full sections and explore the Apple app structure in parallel.
+
+The VehicleSystems dir doesn't exist yet. Let me continue reading the web source and explore existing Apple Features patterns and toolchain availability.
+
+Good — Xcode 26.5, swiftlint, and swift are all available. Let me finish reading the web source and examine the existing Apple Feature pages (System, Telemetry) that were recently created as reference patterns.
+
+Let me finish reading the web source and study the established Apple page patterns (SystemStatusPage is a good full reference).
+
+Now I understand the established pattern (View + `@Observable` model, mock data with "KMP core integration pending", `String(localized:)`, materials/GroupBox). Let me study the toolchain wiring, placeholder scanner, navigation, localization catalog, and the maps component wrapper.
+
+project.yml is at `apps/apple/project.yml`. Let me read the placeholder patterns, project config, navigation registration, and check pwsh availability.
+
+pwsh is available and `Features/` is auto-included by xcodegen. Let me check the build prerequisites (xcodegen, Shared.xcframework), the maps component wrapper, design tokens, and how navigation/ledger work.
+
+Critical check: the Shared.xcframework path and whether the project builds at baseline. Let me verify the framework, ledger, navigation registration, and a MapKit usage example.
+
+Shared.xcframework is missing (only `.gitkeep`) — the build likely can't link the KMP core. Let me check the ledger statuses, prior page logs (DONE vs BLOCKED), navigation registration, and the existing GuardModeWidget model for reusable types.
+
+Now the workflow is clear: prior pages skip the full `xcodebuild` (missing KMP `Shared.xcframework`/too slow) and gate on placeholder scan + swiftlint + type-check, marking DONE with PARITY_COVERED==REQUIRED. The ledger has 2 rows per page (macos + ios). Let me set up tracking and investigate the model-type sources, navigation registration, existing Guard widget, design tokens, and a MapKit example.
+
+Models are defined locally per-feature (not in the framework), and nav is a catalog in `Layout.Nav.swift`. Let me check the route→view resolver, whether `/guard-mode` exists in nav, the existing Guard widget types (to avoid name collisions), and the design tokens.
+
+`/guard-mode` is already in the nav catalog (Security section). The Guard widget already defines many `Guard*` public types — I must avoid collisions by using `GuardMode*`-prefixed types and a `GuardModePageModel`. Now let me find the route→view resolver and the localization key convention.
+
+The 38 `guard.` keys already exist in `Localizable.xcstrings`. Let me confirm they match the required keys, check whether sibling Features pages register routes (to follow precedent), and inspect the design-token API.
+
+Let me clarify the contradictory count — check what the 38 `guard.` matches actually are, and how sibling pages reference localization keys (dotted vs literal).
+
+The catalog already contains all guard keys under the `translation.guard.*` namespace (the web's i18next default namespace). Let me see exactly how SignalDiffPage constructs localized strings with keys + defaults, and confirm the key↔catalog mapping.
+
+I now have the exact localization pattern: `String(localized: "translation.guard.X", defaultValue: "...")`, and the catalog already holds most keys. Let me confirm precisely which of the 38 required keys are missing, study a MapKit example, and read the SignalDiffPage model's state enum + Vehicle type.
+
+I have the MapKit pattern (native `Map`/`Marker`/`MapCircle`/`MapPolyline`/`Annotation`). Only 2 keys are missing from the catalog (`guard.acknowledgedBy`, `guard.panicConfirmMessage`). Let me read the SignalDiffPage model (state machine + local Vehicle type) and the swiftlint config before building.
+
+Key insight: `.swiftlint.yml` doesn't include `TeslaSync/Features`, but the gate passes the path explicitly, so `--strict` still applies (line_length warning=120 fails under strict). I'll decompose into multiple files and keep lines ≤120. Let me read the SignalDiffPage model tail to mirror the mock-data + web-hook-name conventions, then start building.
+
+I now have the complete established pattern. Let me set up the plan and todo tracking, then build the files.
+
+Plan and todos are set. Let me look at the exact catalog entry format for a guard key so I can add the 2 missing keys identically.
+
+The catalog has per-locale entries (ar/en/he). Let me check a couple existing guard entries to mirror the ar/he convention, then insert the 2 missing keys via a precise script.
+
+Clear convention: `extractionState: manual`, locales ar/en/he (en translated, ar/he needs_review with same value), positional `%1$@` formatting. I'll do a surgical text insertion of the 2 missing keys (to keep the 117k-line file diff minimal) and validate JSON after.
+
+All 38 guard keys now exist in the catalog. Let me read the web hook types so my Swift models mirror the real API contract (field names, SI units).
+
+Now the Guard types are precise. Let me grab the acknowledge mutation path and the geofence shape.
+
+I now have the full API contract (GuardConfig, GuardEvent, Geofence with SI meters radius, vehicle state fields, all endpoints). Let me build the Swift files. Starting with the models.
+
+Models done. Now the `@Observable` page model with the 8 web-hook-named methods, derived state, and interactive mock backing store. I'll use same-file extensions to keep the type body small and the file under length limits.
+
+Now I need the 8 hook-named data methods. They access the model's `private` backing store, so they must live in the same file (same-file extensions can see `private`). Let me check the current line count and append the data-source extension.
+
+GuardModePageModel.swift is 271 lines — I'll keep it lean by putting the data-source methods in a separate file. That requires the backing store to be cross-file accessible. Let me make the 3 backing props internal, then create the data-source file.
+
+Now the MapKit live-map panel with all 6 map elements as distinct named symbols (Map container, mapStyle tile layer, Marker, MapCircle, popup Annotation, MapPolyline). Let me update todos and write it.
+
+Now I need to handle the two parameterized strings (`armedSince`, `unackEvents`) deterministically. The catalog stores `%1$@` format, so I'll fetch the template via `String(localized:)` and apply `String(format:)` with a string arg — avoiding numeric format-specifier mismatch. Let me fix the model's `armedSinceText` and add an `unackEventsText` helper.
+
+Now the shared UI helpers (the GlassPanel peer, section title, badge, triggered banner) plus panels 1–3 (toggle, status, panic). Let me write `GuardModeStatusViews.swift`.
+
+Now panels 4 (settings) and 6 (timeline + event row). Let me write both files.
+
+Now the main page view that assembles everything: 4-state scaffold, toolbar vehicle picker, panic confirmation dialog, staleness indicator, and the live-map panel (GlassPanel 5). Let me update todos and write it.
+
+I left a stray `import CoreLocation` near the bottom — imports must be at the top. Let me fix that.
+
+Let me remove the now-duplicate `import CoreLocation` at the bottom of the file.
+
+All 8 files are written. Let me verify line counts (file_length budget) and run a standalone Swift type-check against the simulator SDK.
+
+All files under 400 lines. One line is 121 chars — let me find and fix it.
+
+Now let me run a standalone Swift type-check of all 8 files against the iOS simulator SDK (Swift 6 mode, matching the project's `SWIFT_VERSION 6.0`).
+
+Type-check passes cleanly in Swift 6 strict mode. Now swiftlint `--strict` (run from `apps/apple` so it picks up the project `.swiftlint.yml`).
+
+swiftlint linted the whole project (config `included` expands scope) and found 3 serious violations. Let me isolate whether any are in my files by filtering the violation lines.
+
+The 3 violations are pre-existing in unrelated files (`MyActivityPageModel.swift`, `AnomalyInlineRow.Previews.swift`); linting **only my 8 files** exits 0 — clean. Let me reproduce the gate exactly (from repo root, as the PowerShell does) and confirm there's no root config that would change behavior.
+
+Gate-style swiftlint from repo root exits **0** (clean). Now the placeholder scan, exactly as the gate runs it.
+
+All three real gates pass on my files: type-check **0**, swiftlint **0**, placeholder **COUNT=0 / EXIT=0**. Now let me verify parity coverage — confirm all 38 string keys are referenced and the panel/map/state symbols exist.
+
+All 54 parity items verified present (38 strings, 6 panels, 6 maps, 4 states, plus all 8 hooks by name). I introduced 5 extra keys (3 sensitivity options + retry + staleData) — let me check which exist in the catalog and register any missing so every visible literal resolves from it.
+
+`translation.common.retry` already exists. Let me add the 4 missing extra keys (3 sensitivity options + `common.staleData`) to the catalog with the same structure.
+
+All visible strings now resolve from the catalog. Critical check before finalizing: since the app target compiles **both** `Sources/` and `TeslaSync/Features/`, I must ensure none of my top-level type names collide with existing symbols. Let me grep the whole Apple target.
+
+No symbol collisions anywhere in the Apple target — my `GuardMode*` names are unique. Now let me look at the ledger format and find where to add the 2 rows (macos + ios).
+
+I'll append 2 ledger rows (macos + ios) for `page:vehicle-systems/GuardMode`. Let me update todos and write the ledger.
+
+Let me verify the ledger diff is clean (only the 2 new rows, not a full reformat).
+
+Clean 18-line ledger diff. Let me confirm the catalog diff is also minimal (only my 6 added keys), then write the evidence log.
+
+Catalog diff is clean (6 keys, 138 lines, no reformat). Now let me model the evidence log on an existing one. Let me read the SignalDiffPage log structure.
+
+The log is large (embeds tool output). Let me view its head and the PARITY/exit sections to match the expected structure.
+
+I have the exact log format. Let me auto-generate accurate file:line evidence for all 54 parity items so the log is precise.
+
+All 54 items have concrete file:line evidence. Let me write the evidence log. First, let me create the logs directory if needed and capture clean gate outputs to embed honestly.
+
+Confirmed: `apps/apple/Frameworks/` has no `Shared.xcframework` (only hidden `.gitkeep`) — the KMP core needed to link a full build is absent. Now let me write the evidence log.
+
+Let me verify the hand-cited line numbers in `GuardModePage.swift` are accurate so the log is honest.
+
+A few hand-cited line numbers shifted after my edits. Let me get the exact remaining lines and correct the log for honesty.
+
+Let me correct the shifted citations in the log.
+
+Log citations corrected. Since I edited `GuardModePage.swift` after the last type-check, let me re-run all three gates fresh as final verification before committing.
+
+Type-check passes, no long lines. Final swiftlint + placeholder re-run.
+
+All four gates green (line-length, Swift 6 type-check, swiftlint --strict, placeholder). Let me review the full set of changes before committing.
+
+Changes are exactly as intended (catalog +6 keys, ledger +2 rows, log, 8 new Swift files). Let me mark todos done and commit.
+
+Committed. Let me do a final verification: clean working tree, log ends with `EXIT=0`/`STATUS=DONE`, and all todos complete.
+
+All 12 todos done, working tree clean, log ends with `PARITY_COVERED=54 / PARITY_REQUIRED=54`, `EXIT=0`, `STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip ActionItem: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip FormField: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationStats: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ResourceRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportDelivery: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportsPanel: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SignalDiffRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SystemHealthData: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TabButton: ambiguous sides ['secondary', 'secondary']

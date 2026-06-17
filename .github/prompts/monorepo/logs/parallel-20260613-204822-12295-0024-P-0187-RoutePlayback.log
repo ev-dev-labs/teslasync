@@ -1,0 +1,192 @@
+I'll start by exploring the environment, checking Apple toolchain availability, and reading the web source and existing Apple project structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple project structure.
+
+Now let me explore the existing `shared-surfaces` directory and the shared facade/state-holder infrastructure to learn the established patterns.
+
+`apps/apple/TeslaSync/` holds the native surface bundles; `apps/apple/Sources/` holds the shared infra. Let me explore the shared infrastructure and an existing surface's file pattern.
+
+The surface file pattern is clear: `.swift` (view), `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.AdapterTests`, `.strings`. Let me read the core shared infra and find an existing map-using surface to match patterns.
+
+There's already a `PlaybackControls` surface, native Map components, and an `AnimatedMarker` surface. Let me read the core shared infra and reusable components.
+
+A `TSRoutePlayback` atomic component already exists in the component library (out of scope here). My job is the *surface* that composes atomics, binds state holders, handles all states, i18n, telemetry, and tests. Let me study the canonical surface pattern via the map-related `AnimatedMarker` surface and shared infra.
+
+Now let me read the complete `AnimatedMarker` surface (the closest map-related analog) to learn the canonical pattern for a presentational map surface — entry view, model, adapter, views, projection, strings, and tests.
+
+This is the canonical template. Let me read the remaining AnimatedMarker files (Projection, Logic, MarkerMap, Views, strings, Previews, tests) plus the design tokens and feedback components.
+
+Let me read the remaining AnimatedMarker files (Views, strings, Previews, tests), the design tokens, feedback states, and the reusable playback controls.
+
+Let me read the design tokens, the reusable playback controls, the project config, and the test/preview patterns.
+
+Let me read the project config (to understand file registration), the PlaybackControls surface for parity reference, and the AnimatedMarker test/preview patterns.
+
+Now I understand file registration (globbed by directory, tests auto-routed to test bundles). Let me verify the build toolchain: xcodegen, the generated project, and the Shared.xcframework staging — these determine whether the gate can actually run.
+
+Critical finding: the full build requires `Shared.xcframework` (KMP/Gradle/Kotlin-Native), which isn't staged. Let me assess build feasibility (gradlew, JDK, simulators) while reading the remaining test patterns and i18n catalog setup.
+
+JDK 17, gradlew, and a booted iPhone 16 simulator are all present — the gate can run. I'll kick off the Shared.xcframework Gradle build in the background now (it's the slow prerequisite) while I read the final reference files.
+
+Let me read the design tokens (exact token names), the web PlaybackControls contract, and the native PlaybackControls surface projection for parity.
+
+I have all the design tokens and the full pattern. Let me verify there are no naming collisions, read the lint/format/placeholder configs, and check the i18n catalog setup before writing.
+
+No collisions. Let me read the placeholder patterns and the scanning logic to ensure my code won't trip the gate.
+
+Now I understand the placeholder gate (forbidden: `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`, plus swift `fatalError("unimpl`/`fatalError("not`). I'll keep all code free of these. Let me check the Gradle build progress and the Localization setup.
+
+I now have a complete understanding of the architecture, tokens, conventions, lint/format/placeholder gates, and the web source. The Gradle build is running in the background. Let me write a plan and start creating the surface files following the canonical `AnimatedMarker` template.
+
+Now let me create the Foundation-only core: Adapter, Logic, and Projection.
+
+Now the Model — the state-holder plus playback engine. This is the most complex file.
+
+Let me check the Gradle build progress, then continue with the MapKit host.
+
+Gradle still building. Continuing with the MapKit host.
+
+Let me add a `stepFrame` control to the model (for keyboard stepping), then build the SwiftUI chrome.
+
+The Gradle build finished. Let me verify the xcframework was staged.
+
+Gradle build succeeded (12m). The framework needs staging into `apps/apple/Frameworks/` (the xcodebuild preAction does this, but I'll stage it now to de-risk). Let me stage it and continue writing the Surface file.
+
+Now let me refine the state views into clean centered cards (the error view needs a scrim since it can overlay a cached map), then build the Surface.
+
+Now the main Surface view that composes everything.
+
+Now the i18n strings catalog.
+
+Now the previews.
+
+Now the adapter/pure-core test suite.
+
+Now the model/view/accessibility test suite.
+
+All 11 surface files are written. Now let me verify them: scan for forbidden placeholder tokens, then run the formatter and linter on my files.
+
+No forbidden tokens; 11 files (~2745 lines). Now let me run swiftformat to normalize my files, then verify, then run swiftlint.
+
+swiftformat normalized 4 files. Let me verify with `--lint` and run swiftlint on the new files.
+
+swiftformat passes. swiftlint found 5 issues: 3 file-length (>400), 1 void-ternary, 1 brace-spacing. I'll split the 3 oversized files and fix the two code issues. Let me inspect the specifics and current line counts.
+
+swiftformat is clean. swiftlint needs 3 files split (≤400 lines each, matching the surface convention) plus 2 small code fixes. Let me read the formatted Views.swift and Model.swift to split them precisely.
+
+I have the full content. Now let me split Views.swift into three files (Views/Controls/States), each under 400 lines. First, create the Controls and States files.
+
+Now let me replace Views.swift with just the marker/metric layer (the rest moved to Controls/States), with an updated header.
+
+Now let me split Model.swift: extract the telemetry/input/source seams and i18n facade into a new `Source.swift`, and fix the void-ternary. Let me read the current Model.swift.
+
+Now I'll split Model.swift into `Source.swift` (telemetry/input/source seams + i18n facade) and a trimmed `Model.swift`, and fix the void-ternary — all via precise extraction.
+
+Extraction clean. Now compose the new `Source.swift` and trimmed `Model.swift`, and fix the void-ternary.
+
+Both files are now under 400 lines and the void-ternary is fixed. Now let me split the Tests file. Let me find the section boundaries.
+
+Now split Tests.swift into `Tests.swift` (fixtures + model tests + spy) and `ControlTests.swift` (control + view + a11y tests + recorder).
+
+Now compose the two test files.
+
+Both test files are under 400 lines. Now fix the brace-spacing in the view-test helper. Let me view it and fix it.
+
+Now re-run swiftformat (apply) on all files to normalize the splits, then verify with lint.
+
+All files are now ≤ 310 lines. Let me run the full lint checks on all my files.
+
+Both pass: swiftformat `0/14 require formatting`, swiftlint `0 violations`. Now regenerate the Xcode project (to pick up new files) and start the iOS build+test.
+
+swiftformat, swiftlint pass; project regenerated with my files. Now let me verify the build directory/log path and start an iOS `build-for-testing` to shake out any compile errors in my code (faster iteration than full test).
+
+Baseline is clean — only my 15 new files are untracked, so the gate reflects only my work. Let me start the iOS `build-for-testing` to catch any compile errors (runs the gradle pre-action, then compiles app + tests).
+
+While the build runs, let me proactively review for a likely Swift 6 strict-concurrency issue: `static let` of the non-Sendable `ISO8601DateFormatter` in `RoutePlaybackTime`. I'll switch to the Sendable `Date.ISO8601FormatStyle`.
+
+Now let me check the in-flight build's progress.
+
+Build failed (4 errors). Let me extract the actual compile errors.
+
+Only one real source error: the Previews argument order (`showsLayerSwitcher` must precede `showsControls`). My proactive ISO8601 fix didn't trigger an error but is valid. Let me fix the arg order and validate the `ISO8601FormatStyle` API standalone (to avoid another full-build round-trip).
+
+ISO8601FormatStyle validated (1000.0, 500.0, nil, nil — matches my tests). Let me reformat/lint the two edited files and rebuild.
+
+Clean. Now rebuild iOS build-for-testing (incremental).
+
+Build running. Let me review test files for issues while it compiles, then check progress.
+
+Still compiling (no errors surfaced yet). Let me continue waiting.
+
+App target built; the test bundle failed to compile. Let me find the test compile errors.
+
+Let me search more broadly for the failure cause.
+
+A Swift compiler crash (`report_fatal_error`), not a normal type error. Let me see the crash context to find the triggering file/expression.
+
+The failure is a **Swift compiler IRGen crash** (`report_fatal_error` / SmallVector at-max-capacity) while whole-module-compiling the app for testability — and it crashed in a **pre-existing, non-RoutePlayback file** (`AppearanceSettings.Controls.swift`). My files compiled fine in the app target's batch build. This looks like a module-scale/compiler issue. Let me retry the test build once to check determinism.
+
+While the retry runs, let me demangle the crashing symbol and check determinism context.
+
+The app module is **4,613 source files** — enormous. The crashing symbol is a generic `@isolated(any) @Sendable` concurrency reabstraction thunk in a **pre-existing file**, not my code. Let me wait for the retry to assess determinism.
+
+Confirmed deterministic — same crash, same pre-existing symbol (`@isolated(any) @Sendable` thunk in `AppearanceSettings.Controls.swift`), reproduced exactly. Now the decisive test: does it crash **without my files**? Let me temporarily remove them, regenerate, and rebuild.
+
+Now rebuild the test bundle **without** my files to determine if the crash is pre-existing.
+
+While that builds, let me examine the pre-existing crashing file to understand the trigger.
+
+`AppearanceSettings.Controls.swift` is standard SwiftUI (a `Button`-based choice card) — the crash is a compiler IRGen bug on a SwiftUI action thunk, unrelated to my code. Let me wait for the no-RoutePlayback build to confirm it's pre-existing.
+
+Still building. Let me continue waiting.
+
+**Decisive:** the build crashes at the **exact same pre-existing symbol even with my files removed**. This is a deterministic compiler bug independent of my surface. Let me confirm the exit code and capture the evidence.
+
+**Definitive conclusion:** The `build-for-testing` crash is a **pre-existing, deterministic `swift-frontend` IRGen compiler bug** — it reproduces at the identical symbol (`@isolated(any) @Sendable` thunk in the pre-existing `AppearanceSettings.Controls.swift`) **with my files entirely removed**. It is independent of my surface and outside my editable scope.
+
+Let me restore my files, regenerate, and gather positive evidence that my surface is correct (app-target compile, standalone test execution, lint/format/placeholder).
+
+Now let me prove my surface compiles into the production app (the plain app-target `build` doesn't enable testability, so it avoids the pre-existing compiler bug). Running it async.
+
+While the app build runs, let me build a standalone harness that executes my real adapter/logic/projection code against my test assertions (proving that layer, independent of the blocked test bundle).
+
+Harness needs `@MainActor` on the helper funcs (Swift 6 top-level isolation). Let me fix and rerun.
+
+Top-level vars can't carry the actor annotation. Let me wrap the harness in a class to avoid isolation entirely.
+
+All 47 checks pass against my real adapter/logic/projection code under Swift 6. Let me check the app-target build result.
+
+App build running. Let me wait for it.
+
+App build failed too. Let me see the actual cause — my code error or the same pre-existing crash.
+
+The plain app build **also crashes at the identical pre-existing symbol with zero RoutePlayback errors** — confirming the crash is a deterministic `swift-frontend` IRGen compiler bug in the pre-existing `AppearanceSettings.Controls.swift`, independent of (and unfixable from) my surface. Meanwhile my surface is verified: lint/format clean, 47/47 logic checks pass.
+
+Let me run the remaining gate steps I can (placeholder, swiftformat --lint, swiftlint --strict) to capture for the log.
+
+The exact gate placeholder command returns `EXIT=0`. The 101 violations are pre-existing in sibling surfaces. Let me confirm none are in my files, and run the whole-tree swiftformat/swiftlint (as the gate does).
+
+Correcting the working dir — the gate runs `swiftformat --lint apps/apple` from the repo root. Let me run both whole-tree linters correctly.
+
+Whole-tree `swiftformat --lint` fails on a **pre-existing** file (`RecentDrivesSection.Previews.swift`), not mine — "1/5801 files require formatting" and that file isn't RoutePlayback. Let me run the whole-tree `swiftlint --strict` to complete the gate picture.
+
+While the whole-tree swiftlint runs, let me capture authentic macOS gate evidence too (it compiles the same app module, so it should hit the same pre-existing crash).
+
+Whole-tree `swiftlint --strict`: 3 violations (LINT_EXIT=2) — my scoped run was 0, so these are pre-existing siblings. Let me capture exactly which files (to confirm none are mine) and check the macOS build.
+
+The 3 swiftlint violations are all in a pre-existing widget file — **none in RoutePlayback**. Let me check the macOS build result.
+
+macOS is blocked by a **pre-existing code-signing** requirement (no dev cert configured) — also external. Every gate failure is pre-existing/environmental; **zero** are in RoutePlayback. Let me gather exact evidence lines and write the gate log.
+
+I have complete evidence. Now let me write the comprehensive, honest gate log.
+
+The gate log is written. Let me verify my tracked changes are exactly the allowed files (the regenerated `.xcodeproj` and staged framework should be git-ignored), and clean up temp artifacts.
+
+Exactly the 15 allowed surface files + the log are my only tracked changes (xcodeproj/framework/build are git-ignored). Let me do a final full scoped lint of all my files (after the Logic/Previews edits) to confirm the log's "clean" claim, and clean up temp artifacts.
+
+All 14 Swift files: `0/14` format, `0` lint violations, tokens CLEAN. Let me clean up temporary artifacts (keeping the staged framework for re-runs) and update the plan.
+
+Cleanup complete. Let me update the plan and finalize.
+
+The RoutePlayback Apple shared surface is complete and verified to the maximum extent possible within scope. Summary below.
+

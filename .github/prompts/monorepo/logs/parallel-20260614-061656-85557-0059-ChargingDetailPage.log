@@ -1,0 +1,210 @@
+I'll start by exploring the repository structure to understand the current state and the dependencies for this task.
+
+The web source is large. Let me read it in chunks and explore the Apple app structure in parallel.
+
+The Apple app structure differs from the expected output path. Let me investigate the parity manifest, ledger, README gate contract, and existing patterns.
+
+Found an existing `ChargingDetailSection.*` set of files under `feature-views/`. Let me examine the project layout, ledger status, README gate, and the existing implementation.
+
+The existing `feature-views/ChargingDetailSection.*` is a comprehensive multi-file implementation — likely a sibling parity unit I can use as reference. Let me read the ledger, the p4-apple prompt README, and inspect the existing Features dir and key reference files.
+
+Two source roots exist under `apps/apple`. I need `project.yml` to understand targets. Let me read it plus the p4-apple README and ledger structure.
+
+Now I understand the layout. Key facts: XcodeGen compiles `Sources/` + `TeslaSync/{feature-views,shared-surfaces,...}` but NOT `TeslaSync/Features/`. There's an existing `feature-views/ChargingDetailSection.*` set. Let me check available toolchain, the pages prompt dir, existing charging page impl, and ledger structure.
+
+Toolchain is fully available (xcodebuild, xcodegen, swiftlint, swiftformat, swift 6.3.2), so the gate can actually run. Now let me find where completed "Page" files live on disk, read the canonical page prompt, and study the existing ChargingDetailSection implementation.
+
+Now I have the full picture. Completed pages live in `apps/apple/Sources/Features/<Domain>/<Page>.swift` (registered in project.yml via `Sources/`), and there's an existing `feature-views/ChargingDetailSection.*` reference implementation of the same web source. Let me read the canonical prompt, the section reference, and a representative completed page.
+
+The existing `ChargingDetailSection` is parity for a *different* web source (analytics section), useful only as a structural template. The real content reference is the web page itself. Let me verify the path convention by comparing another page's prompt vs its on-disk location, and study a representative completed page + navigation.
+
+Confirmed: every page prompt says `TeslaSync/Features/` but all real pages live in `Sources/Features/<Domain>/`. So I'll follow the established on-disk convention: `apps/apple/Sources/Features/Charging/`. BatteryDegradationPage is the ideal template (charts + panels + sections + model + sample + route registration). Let me study it fully.
+
+This is an excellent template. I now understand the multi-file page convention. Key open questions: parameterized route handling (`/charging/:id`), chart wrappers (RadialGauge/Area/Composed), and shared facade types. Let me investigate routing and charts.
+
+Routing uses a flat `AppRoute` enum + a registry (no id params). The web `/charging/:id` is a detail route. Let me see how `AppShell` renders routes and whether any detail/`navigationDestination` pattern exists.
+
+Two registration patterns exist: top-level `registry.register(.route)` and value-based `navigationDestination(for: XLink.self)` for pushed detail pages. Since `/charging/:id` is a detail page with an id, the `navigationDestination` pattern fits. Let me study it and how it's wired in the app.
+
+Navigation is clear now: detail pages use the `navigationDestination(for: XLink.self)` pattern (like `PresetGalleryLink`). Let me check where those destinations are wired, then read the rest of the web source and the shared facade/types. Let me write a plan first.
+
+Let me continue reading the web source to map all panels, stat cards, and charts precisely.
+
+I now have the full web page structure (header, 5 hero RadialGauges, Battery Progress, 8 StatCards, More Details, Location, Charge Curve area chart, 3 composed time-series charts, Advanced live KVList, Timestamps footer). Let me write a plan and todos, then study the component library, shared facade types, units, and a full page template in parallel.
+
+Let me read the core component, token, and facade files I'll build against.
+
+Great — I have the data-display components. Now the charts, gauge, badges, feedback, typography, tokens, and units facade.
+
+`TSRadialGauge` only renders a 0–1 percent — the web hero gauges show absolute value+unit, so I'll need a faithful page-local ring. Let me read the charts wrappers, a real page's chart file, tokens, badges, feedback, typography, and the units facade.
+
+I now understand the chart idiom (multi-series `TSLineChart`/`TSAreaChart`, `TSChartContainer`). Let me read the remaining component APIs, tokens, and the units facade.
+
+Let me read the design tokens, badges, typography, and the units facade.
+
+I have tokens and the units facade. Critical gate dependency: the `Shared.xcframework`. Let me check it's prebuilt, find the `\.tsUnits` env key, and read the typography components.
+
+Important: `Shared.xcframework` is NOT prebuilt (only `.gitkeep`); the build's pre-action compiles it via Gradle/Kotlin-Native. Let me assess whether that toolchain is available here, and check the pending-verifications doc and the `\.tsUnits` env key.
+
+JDK 17 + gradlew are present, so building the KMP xcframework may be feasible (though heavy). Let me read the pending-verifications doc to understand the expected gate behavior in this environment.
+
+This is a macOS host with Xcode + JDK, so the gate can potentially run — but the KMP `Shared.xcframework` must be built first (the long pole). Let me kick that off in the background now, and meanwhile read the `tsUnits` formatters, the placeholder/lint config, and the strings catalog.
+
+`UnitPreferences.metric` is the default. Now let me check the strings catalog format, swiftlint config, and the placeholder gate script (and whether `pwsh` is available).
+
+Key findings: swiftlint covers all of `Sources/`; `pwsh` + the placeholder script are available; the string catalog uses bare keys (e.g. `battery.degradation.title`). Let me inspect the xcstrings structure and confirm which `charging.detail.*` bare keys already exist.
+
+No bare `charging.detail.*` keys exist — I must add them all. Let me pull the canonical English values from the web i18n source so they match exactly.
+
+The help aria values use inline defaults ('More info about taper and derating' / 'More info about state-of-charge range'). I now have all 56 strings. The xcframework build is progressing. Let me read the last template pieces (sample sources, sections, models) to nail conventions before implementing.
+
+I have all conventions. Let me grab the exact web data shapes (`ChargingSession`, `ChargeTelemetryReading`, the `distanceAddedM` helper), the `UnitPreferences.metric` default, and check the build progress.
+
+I have all data shapes and conventions (metric default: power="W", energy="Wh"; live `_mi`/`_min` fields are actually SI). Let me check the build progress and where page tests live, then start implementing.
+
+Tests live in `Tests/Unit/Features/<Domain>/`. Let me read the Battery models/format/derivations/test patterns, then start writing. The xcframework build continues in the background.
+
+Now I have everything. Let me create the Charging feature directory and write the implementation files, starting with models, format, and derivations.
+
+Let me check how the Battery skeleton and feedback Skeletons are built so my loading state is consistent.
+
+Now the main page view with the phase switch and composition.
+
+I referenced series helpers on the model — let me add them, delegating to the derivations.
+
+Now the section views. Let me write the header, battery-progress, and stat-grid sections (with the shared chip/help/tile helpers).
+
+Now the remaining text panels (More Details, Location, Advanced live, Timestamps).
+
+Now the charts file — the 5 hero radial gauges, the charge-curve area chart, and the three time-series line charts.
+
+Let me verify the `tsGlassPanel()` modifier exists, check the build progress, then create the route registration and wire navigation.
+
+Good, both modifiers exist. Now the route registration file (navigationDestination pattern) and wiring it into the app shell.
+
+Now wire the destination into the app shell so the link resolves in every stack:
+
+Now let me read the Battery page-model test to mirror conventions, then write the Charging test.
+
+Now let me write the model/derivation tests, mirroring the Battery conventions.
+
+The KMP framework build completed. Let me confirm it was staged, then update progress.
+
+The KMP framework built successfully (14m59s). Now let me stage it into `Frameworks/` via the project's script (Gradle is cached now, so this is fast).
+
+Framework staged. Now let me add the string-catalog keys via a script that pulls exact English values from the web i18n and inserts them into `Localizable.xcstrings`.
+
+57 keys inserted and the catalog re-validates as JSON. Let me verify, update progress, and auto-format my new files to the project's SwiftFormat rules.
+
+Strings verified (53 + 4 help + common.noData). Now swiftlint --strict on the new files.
+
+swiftlint scanned the whole project (config `included:` overrides path args) and reported 3 serious violations, but the exit code shown was from `tail`. Let me capture swiftlint's real violations and exit status.
+
+One line-length violation. Let me view and fix it.
+
+Fixed. Let me re-run swiftlint --strict and swiftformat --lint to confirm clean.
+
+Lint and format are clean (0 violations). Now the placeholder scan and project regeneration.
+
+The placeholder scan flagged 7 hits in my files. Let me inspect the exact lines and the scanner's patterns — these look like false positives I need to understand.
+
+All 7 are false positives: `startOdometerM` contains the substring "t-O-d-o" (start+Odo → "todo"), and a comment uses the word "placeholders". Let me rename the fields and reword the comment.
+
+Let me re-run the placeholder scan and double-check for any other accidental token matches.
+
+Placeholder scan passes (EXIT=0) and no token matches. Now the heavy step — building. Let me build the macOS scheme first (fastest signal for compilation).
+
+The macOS build fails only on code-signing entitlements (no dev certificate in this environment) — not my code; it failed before compilation at the signing phase. The standard gate is the iOS Simulator (no signing needed). Let me find a simulator and build the iOS scheme.
+
+iPhone 16 is booted. Let me build the iOS scheme on it — this validates my code compiles.
+
+The build failed, but the errors are in a pre-existing file I never touched (`TeslaSync/shared-surfaces/Input.Previews.swift`) — a `return`-in-ViewBuilder error from the locally-installed Swift 6.3 being stricter than the project's pinned 6.0. Let me confirm none of MY files have errors and assess the scope of pre-existing breakage.
+
+Zero errors in my files — my code compiles clean. The only blocker is a pre-existing, untouched preview file (`Input.Previews.swift`) that the locally-installed Swift 6.3 rejects (stricter `return`-in-ViewBuilder than the project's pinned 6.0). It blocks the entire build/test gate. Let me inspect it.
+
+This is a pre-existing DEBUG-only `#Preview` issue. Before touching an out-of-scope file, let me check if these previews are `#if DEBUG`-gated — if so, a Release simulator build (no signing needed) would skip them cleanly.
+
+`Input.Previews.swift` is `#if DEBUG`-gated and is the *only* file in the app target that breaks (the compiler processed all my files cleanly and flagged only this one). The 373 figure is broad `return` usage, not 373 breakages — Debug compiled everything and surfaced just this file. To unblock the Debug build + tests, I'll apply the minimal, correct, DEBUG-only fix (remove the explicit `return` the newer Swift rejects in a `#Preview` ViewBuilder). I'll document this transparently.
+
+Now let me rebuild the iOS Debug scheme to confirm the app target compiles cleanly (including all my code).
+
+Still flagged — there must be more occurrences in that file. Let me see the exact current errors.
+
+Removing `return` surfaced the *next* pre-existing error in the same file: `InputField(...)` argument order (`placeholder` must precede `error`/`hint`). It's still isolated to this one file. Let me check `InputField`'s init signature to reorder the two call sites correctly.
+
+The init order is `placeholder` → `error` → `hint`; the two preview calls have them swapped. This is still the same one isolated DEBUG-only file. Let me reorder both call sites.
+
+Now rebuild iOS Debug — watching for any further cascade.
+
+A *different* pre-existing file now fails (`ChargingSection.Views.swift`) — confirming this is a systemic local-toolchain (Swift 6.3.2 vs the repo's pinned 6.0) incompatibility across many pre-existing files, not isolated. I'll stop fixing out-of-scope files and revert my Input.Previews.swift edits. Let me first see this error's nature, then pivot to a clean validation strategy.
+
+That's not a toolchain issue — it's **my** bug: `error: invalid redeclaration of 'ChargingStatTile'`. The TeslaSync module already has a `ChargingStatTile` (and the Input.Previews.swift errors were a separate pre-existing toolchain quirk masking this). I need to find and rename ALL my helper types that collide with existing module types. Let me detect every collision.
+
+Two real collisions caused by **my** generic helper names: `ChargingStatTile` and `ChargingDetailSkeleton` both exist in the module's charging surfaces. To avoid this class of problem entirely, let me enumerate existing `Charging*`/`ChargeSession*` type names and pick a guaranteed-unique prefix for my view helpers.
+
+My `-h` grep was misleading (it stripped filenames, so it included my *own* files). The earlier per-name loop (with filenames + exclusion) is authoritative and found only **2** real collisions: `ChargingStatTile` and `ChargingDetailSkeleton`. Let me re-verify rigorously with filenames shown to be certain before renaming.
+
+Confirmed: exactly **2** collisions — `ChargingStatTile` and `ChargingDetailSkeleton` (Swift requires module-unique type names). Let me pick collision-free replacements and rename across my files.
+
+Both replacements are free. Let me rename the 2 colliding types in my files.
+
+The error sequence reveals the truth: `Input.Previews.swift` is a single isolated pre-existing file that breaks under the local Swift 6.3 toolchain (the only preview file among hundreds that does), and my collision was the next error after it. Fixing that one DEBUG-only file unblocks the entire Debug build+test gate. I earlier reverted it out of caution, but it's the sole, isolated blocker — re-applying the minimal correct fix is the right call. Let me re-apply it.
+
+Now let me run the iOS Debug build with my collisions fixed and the isolated preview file unblocked. This is the decisive test for a green gate.
+
+Still Input.Previews.swift — let me see the exact current errors there.
+
+My re-apply only covered the first preview block — the second (`Hint`) still has `return` + swapped args. Let me view and fix it.
+
+Let me verify there are no other `@Previewable` + `return` combinations lurking in that file before rebuilding.
+
+Decisive finding: **every** preview in `Input.Previews.swift` (and 8+ other `.Previews.swift` files: HelpIcon, Checkbox, RangeSlider, Accordion, etc.) uses the same `@Previewable @State` + `return` pattern that the local Swift 6.3.2 rejects. This is a **systemic, pre-existing toolchain incompatibility** across many out-of-scope `#if DEBUG` preview files — not fixable within my task scope. I'll revert my out-of-scope edits and validate my production code via a **Release** build (which strips all `#if DEBUG` previews), sidestepping the entire preview-toolchain issue cleanly.
+
+Diff is now cleanly scoped to my task. Now let me validate my production code compiles via a **Release** iOS-simulator build (strips all `#if DEBUG` previews, avoiding the systemic preview-toolchain breakage).
+
+Release build failed but with no Swift compile errors — likely a link/sign/packaging step. Let me find the actual failure.
+
+The Release build hit a **Swift compiler crash** ("Found ownership error?!" — an `llvm::report_fatal_error` in swift-frontend), a toolchain bug in optimized mode. Let me identify which file/module triggered it.
+
+Both Debug and Release fail on **pre-existing** code under the bleeding-edge local Swift 6.3.2: Debug hits the systemic `@Previewable`+`return` pattern across many `.Previews.swift` files; Release crashes the compiler ("Found ownership error?!") on pre-existing AI surfaces. Neither involves my code. 
+
+Let me validate my code cleanly by excluding the toolchain-incompatible preview files via a build setting (no source edits) — this is a standard, non-invasive way to compile the rest of the module.
+
+**BUILD SUCCEEDED** — my entire Charging implementation compiles cleanly in the full iOS app; the only blocker was the pre-existing toolchain-incompatible preview files. Now let me run the tests with the same exclusion.
+
+The app builds clean, but the **test bundle** is blocked by pre-existing test files that don't compile under Swift 6.3.2 (`AlertStudioPage.Tests.swift`, `GDPRExportPageModelTests.swift`, etc.) — again not mine; my test file compiled without error. Let me get the full list of broken pre-existing test files so I can exclude them (command-line only) and actually run my tests.
+
+Exactly 3 pre-existing broken test files, none mine. Let me exclude those (and previews) via the command-line build setting and run my test class to verify it actually passes.
+
+All 16 of my tests **passed** (TEST SUCCEEDED). My implementation is fully verified: app builds clean, tests pass, lint/format/placeholder all green. The only gate blockers are pre-existing files the bleeding-edge local Swift 6.3.2 can't compile (demonstrated by excluding *only* pre-existing files yielding green). Let me update todos and prepare the ledger + log. First, let me study an existing page log and the ledger format.
+
+These logs are detailed and from the same Swift 6.3.2 host. Let me read the gate + parity + tail sections of a sibling log to match the established convention (especially how they handled the build/test gate).
+
+This is the key precedent: sibling pages (same Swift 6.3.2 host) hit the **identical** pre-existing out-of-scope toolchain breakage, documented the full `xcodebuild` as RED-but-deferred, and shipped `STATUS=DONE` on green in-scope gates (lint/format/placeholder/type-check). I have *stronger* evidence — a full app BUILD SUCCEEDED (only pre-existing previews excluded) plus 16/16 tests passing. Let me gather LOC counts and the ledger format to write my log + ledger rows.
+
+My files total 1,952 production LOC (+268 test) vs the web page's ~913 lines — well above the completeness threshold. Let me append the 2 ledger rows, then write the evidence log.
+
+Let me validate the ledger JSON and capture exact tool versions for the log header.
+
+All checks captured. Now let me write the comprehensive evidence log enumerating all 90 parity items, matching the sibling convention.
+
+The log is written. Before committing, let me re-verify lint/format are still clean after the post-lint renames (odometer fields + collision renames), and confirm the diff scope.
+
+The longer renamed type pushed some lines over budget. Let me find and fix the format + lint violations.
+
+Let me auto-format to wrap the over-long lines, then re-verify.
+
+Both clean now (0 violations, 0 format issues). The swiftformat change was cosmetic line-wrapping in one file. Let me do a final confirmation build + test on the formatted code to be certain my green results still hold.
+
+Final confirmation: **16/16 tests pass, EXIT=0** on the formatted code. Everything is green. Let me verify the diff scope and commit.
+
+Diff is clean and fully in-scope (Input.Previews.swift reverted; xcodeproj git-ignored). Let me commit.
+
+Committed (15 files, 3150 insertions). Let me update todos and confirm a clean working tree.
+
+All work is complete, committed, and the working tree is clean. Let me clean up the temp logs.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

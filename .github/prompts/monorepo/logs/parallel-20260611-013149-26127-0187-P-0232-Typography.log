@@ -1,0 +1,148 @@
+I'll start by understanding the environment and the task requirements. Let me explore the repository structure, check the web source, and verify the native Apple tooling capabilities.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted, pwsh). Now let me examine the web source and the existing Apple app structure.
+
+There's an extensive existing Apple app. Let me read the web source, the project config, and look for existing shared-surfaces and similar UI components to learn conventions.
+
+The web source is a pure presentational typography primitive (Heading, Text, and convenience roles). The `shared-surfaces` dir already exists with an established 4-file pattern (`.Adapter`, `.AdapterTests`, `.Model`, `.Previews`). Let me check whether Typography already exists, read the web tokens, and study the existing pattern via a representative example.
+
+Typography doesn't exist yet. Let me read the full web typography tokens and study the Accordion example (the full 8-file pattern) to learn the conventions.
+
+This is a well-established pattern. Typography is pure-presentational (no data/states), so I need to find the closest analogous pure-presentational primitive already implemented to match conventions exactly. Let me study the full Accordion set and the project config, and find pure-presentational analogs.
+
+`Label` is the closest analog (it's literally a Typography convenience export). Let me read the full Accordion file-set to understand all conventions (Model, Adapter, Views, Previews, strings, Tests), plus Label.swift and the project.yml build config.
+
+The precedent is explicit: pure-presentational primitives (Delta, MetricCard, InlineCallout, etc.) reproduce only the source's REAL branches — no fabricated loading/error/stale/offline chrome. Typography is the same. Let me read the remaining Accordion files, Label, the Apple Design tokens, and project.yml.
+
+Let me read the test files, previews, the Apple Design token system, and the project.yml build config.
+
+Now let me examine the Apple Design token system and the project.yml build configuration to understand available tokens and how files are compiled.
+
+project.yml is an XcodeGen spec. Design tokens come from `../design/generated/apple`. Let me read the full project.yml source configuration and locate the token definitions (Font.TS, Color.TS, TSSpacing, etc.).
+
+I now have the full token system. Let me read the Accordion view-test half, the closest analog (Label), check Dynamic Type conventions, and verify the Xcode project generation setup (XcodeGen vs committed `.xcodeproj`).
+
+Label is renamed `FormLabel` to avoid shadowing SwiftUI's built-in `Label` (slug stays "Label"). My Typography components face the same issue — `Text` and `Label` are SwiftUI built-ins. Let me check name collisions, the Xcode project generation setup, and lint configs.
+
+There's already an atomic `Sources/Components/UI/Typography.swift` with `TSHeading`/`TSText` — that's the component-library bundle (explicitly out of scope). My task is the **shared-surface** layer with its own Model/Adapter/telemetry pattern. Let me read the existing atomic version to understand it and avoid collisions.
+
+Key finding: the atomic `TS*` typography components already exist (out of scope). My shared-surface must use distinct names — I'll namespace under `enum Typography`. Let me study the cited sibling pure-presentational primitives (Delta, StaggerItem, InlineCallout) to nail the minimal model/telemetry pattern for surfaces without interaction.
+
+All siblings use the full pattern. Let me read InlineCallout end-to-end (it has variant-based rendering, closest to Typography's role-based rendering) plus Delta's view/model to confirm conventions.
+
+Let me read the remaining InlineCallout files (Model, Views, strings, Tests) to complete my understanding of the model/telemetry/i18n/test patterns.
+
+Let me read the InlineCallout strings/tests for final pattern confirmation, and verify the build prerequisites (xcodegen project generation, Shared.xcframework, check-placeholders tool, test-target config).
+
+Critical finding: `Shared.xcframework` is absent (only `.gitkeep`) yet all app/test targets depend on it — a full `xcodebuild` may be blocked by this environment gap. Let me read the placeholder-check rules (my code/comments must avoid forbidden tokens), the framework build script, and attempt project generation.
+
+Two big environment factors: (1) `Shared.xcframework` needs the Kotlin/Native (KMP/Gradle) toolchain, (2) placeholder gate forbids tokens like "TODO/Placeholder/not implemented" in my files. Let me check KMP availability, the placeholder matching logic + `-Path` handling, and test xcodegen generation.
+
+Let me check how the codebase handles Dynamic Type (explicit acceptance criterion) and confirm no top-level `Typography` type collision, then I'll have enough to build.
+
+I have a thorough understanding now. Key decisions:
+- Namespace components under `enum Typography` (avoids SwiftUI `Text`/`Label` and existing atomic `TS*` collisions).
+- Pure-presentational → reproduce only the web's REAL branches (13 roles × Heading/Text composition × granular overrides × mono), per the documented sibling precedent — no fabricated loading/error states.
+- `--strict` swiftlint means ≤120-char code lines, ≤400-line files, ≤50-line functions; I'll split Adapter/Projection like Delta did.
+- Avoid forbidden placeholder tokens entirely.
+
+Let me set up tracking and write a plan.
+
+Now I'll write the files. Starting with the Foundation-only core (Adapter + Projection).
+
+Now the Views file (the styled renderer + SwiftUI weight/color mappings + Dynamic Type + lifecycle modifier).
+
+Now the main public surface file. The critical detail: inside `enum Typography`, bare `Text` resolves to `Typography.Text` (the nested type), so I must use `SwiftUI.Text` explicitly for SwiftUI's. Let me write the core (namespace + Heading + Text).
+
+Now the convenience role peers in a second file (keeps both under the 400-line strict limit).
+
+Now the strings file (anonymous source, header-only) and the previews.
+
+The preview shims are overcomplicated — convenience peers accept `LocalizedStringKey`, and string literals satisfy that directly. Let me rewrite the previews cleanly.
+
+Now the test files. First the pure-core adapter tests.
+
+Now the model + view + accessibility test half.
+
+All 9 files created. Let me update tracking and verify line counts, then run the gate tools.
+
+All files ≤242 lines and ≤114-char lines. Now let me run the formatters/linters on my files first, then the full gate scope.
+
+swiftformat wants the computed `surfaceSlug` bodies wrapped. Cleaner: make them stored `static let` (matches InlineCallout's `surfaceSlug`). Let me fix both.
+
+swiftformat passes (0/9 require formatting). Now swiftlint --strict on my files.
+
+swiftlint --strict passes (0 violations). Now let me prove the code compiles. The full `xcodebuild` needs `Shared.xcframework` (KMP/Gradle), so first I'll do a standalone `swiftc -typecheck` of the source files + the design tokens (same module) against the macOS SDK.
+
+Standalone typecheck of the 7 source files + tokens passes (exit 0) — including `@Observable` and `#Preview` macros under Swift 6. Now let me verify the 2 test files compile by type-checking them together with the sources as one module + XCTest.
+
+The XCTest assertion macros aren't available to bare `swiftc -typecheck` (a known tooling limitation — they need the test-bundle build context), and my copy loop mis-globbed `Typography.swift`. The real test compile happens via `xcodebuild`. Let me run the placeholder gate, generate the Xcode project, and probe whether the KMP `Shared.xcframework` (required by all app/test targets) can be built here.
+
+Excellent — check-placeholders PASSES (EXIT=0, COUNT=0) both the gate's literal path and an honest scan of my actual files. xcodegen generated the project with the required `TeslaSync` and `TeslaSync-macOS` schemes.
+
+Now the build hurdle: all app/test targets depend on `Shared.xcframework` (KMP/Gradle), which isn't staged. Let me probe whether it can be built here.
+
+The KMP `Shared.xcframework` is genuinely required (many Swift files `import Shared`). Building it needs the Kotlin/Native toolchain via Gradle. Let me attempt it — if it succeeds I can run the true gate. I'll start it in the background and monitor.
+
+Gradle 8.14.5 + Java 17 work and the wrapper is cached. Now the heavy step: assembling the KMP `Shared.xcframework` (Kotlin/Native compile for 3 Apple targets). Let me run the staging script in the background and monitor.
+
+The KMP build is running in the background. Let me monitor it.
+
+The KMP/Kotlin-Native build downloads a large toolchain on first run; still going. Let me keep waiting.
+
+`tail` buffers until completion, hiding progress. Let me check build activity in a separate shell.
+
+Good — the Kotlin/Native toolchain (1.6G, v2.4.0) is already downloaded and it's actively compiling (clang++ emitting objects for the 3 Apple targets). The build is feasible. Let me keep waiting.
+
+KMP build succeeded (7m11s) and `Shared.xcframework` is staged. Now I can run the real Xcode gate. I'll compile the full app + test bundle (which includes my test files) via `build-for-testing` for iOS, then run my tests. Starting the compile in the background.
+
+Monitoring the iOS compile (whole app + test bundle, 1500+ files). Let me wait.
+
+Filename collision: the atomic `Sources/Components/UI/Typography.swift` already exists, and Swift requires unique leaf filenames per target. Only the bare `Typography.swift` collides (my suffixed files are unique). Let me check the precedent for this (the existing `.Surface.swift` files) and confirm no other collisions.
+
+Confirmed: `ChartContainer.Surface.swift` and `MapTileLayer.Surface.swift` are the exact precedent — when the bare `<Name>.swift` collides with an atomic component file, the shared-surface main file uses `.Surface.swift`. Let me check that precedent's header convention, then rename.
+
+Exactly the precedent. Let me rename my main file to `Typography.Surface.swift` and update its header.
+
+Now regenerate the project (file set changed) and rebuild. The Gradle prebuild is cached now, so this should be faster.
+
+The build finished. Let me check the result and any errors.
+
+The build failed on a **pre-existing, unrelated** error in `AISuggestNewGeofences.swift` (a different surface I didn't touch) — there are **zero Typography errors**, confirming my files compile in the full module. Let me verify it's pre-existing (not caused by me) and check git status.
+
+Confirmed pre-existing: only my `Typography.*` files are new; `AISuggestNewGeofences.swift` is unmodified and has a genuine pre-existing Swift error (`@ViewBuilder` non-escaping `content` captured in escaping `TSGlassPanel` closure) — unrelated to Typography and outside my allowed-files scope. Critically, the full-module compile reported **zero Typography errors**.
+
+To actually execute my tests (the sibling bug blocks the full app test bundle), I'll build a standalone SwiftPM harness with only my files + design tokens — my code depends on neither the broken file nor the Shared framework.
+
+**All 36 of my tests pass (0 failures)** in the standalone harness, executing on the real macOS toolchain — proving my source + test files compile and the logic is correct. Combined with the full-module compile showing zero Typography errors, my surface is verified.
+
+Now let me run the remaining gate lint steps exactly as specified (global scope) and capture real results.
+
+swiftformat --lint on the full `apps/apple` (5051 files) PASSES — gate step 4 green. Now `swiftlint --strict` (gate step 3), which treats warnings as errors across all included dirs.
+
+All three non-build gate steps pass globally: **swiftlint --strict = 0 violations (4753 files)**, **swiftformat = 0/5051**, **check-placeholders = EXIT 0**. The two `xcodebuild` steps are blocked only by the pre-existing `AISuggestNewGeofences` error.
+
+To get definitive proof my tests run in the **real app target** (not just SPM), I'll do a bounded, reverted diagnostic: temporarily move that one broken sibling surface aside, rebuild, and run my tests in `TeslaSyncTests`. Let me check its files first.
+
+There are **4 sibling files** sharing the same broken pattern — the pre-existing breakage is systemic across unrelated surfaces (a Swift 6.3.2/Xcode 26.5 interaction), not a single file. Excluding them all would cascade across many out-of-scope surfaces, so I won't chase it. My SPM harness already proves my tests run green on the real toolchain.
+
+For honest per-step gate evidence, let me capture the real macOS build result too (shares the same broken Sources).
+
+While macOS builds, let me confirm the root cause of the sibling error (for accurate log evidence) by inspecting `TSGlassPanel`'s signature.
+
+Root cause confirmed: `TSGlassPanel.init` takes `@escaping () -> Content` (it stores the closure), but the 4 sibling files pass a **non-escaping** `@ViewBuilder content` into it — a genuine pre-existing Swift error in out-of-scope files. My Typography code doesn't use that pattern. Let me read the macOS build result.
+
+macOS is blocked by a **code-signing/entitlements** environment limitation (no development certificate on the runner) — it never even reached compilation. So the two `xcodebuild` blockers are both external to my surface: iOS = pre-existing sibling compile errors (out of scope), macOS = signing environment gap.
+
+Let me confirm the logs directory and finalize my file set before writing the honest gate log.
+
+Confirmed: only my `Typography.*` files are new (generated `.xcodeproj`/`build/` are gitignored). Now let me write the honest, comprehensive gate log with all real per-step results and the surface verification evidence.
+
+Let me refine one line in the log for scrupulous accuracy (the failed build didn't fully compile every file, so I'll attribute compile-proof precisely to the standalone + SPM runs).
+
+The log is complete and honest. Let me do final cleanup of build artifacts/temp files and verify the working tree contains exactly my deliverable (10 Typography files + the log).
+
+The working tree is clean — exactly my 10 `Typography.*` files plus the log are new, and **no tracked file was modified** (empty `git diff`). Build artifacts and temp files are cleaned.
+
+Per Honesty Covenant rule 8 ("No commit on red") and the aggregate `xcodebuild` gate being red due to external/pre-existing factors, I will **not** run the commit — the complete, verified deliverable sits in the working tree alongside the honest log.
+

@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure to understand the task and existing patterns.
+
+This page has many sub-components beyond the 2 panels named in the manifest. Let me explore the full scope — sub-components, the Apple app structure, and tooling.
+
+Xcode 26.5, swiftlint, and swift are all available — the gate can run. There's already a large Apple app with many admin pages. Let me study an existing admin page as a template and read all the web sub-components.
+
+The Apple source uses a different layout (`feature-views/`, etc.) than the prompt's stated output path. Some security-access pieces already exist. Let me find how existing admin **pages** are actually structured and named.
+
+This is a large monorepo (2653 feature-view files) with a multi-file-per-component convention. The prompt's stated paths differ from actual repo layout. Let me find where admin pages actually live and read the parity manifest/ledger and gate contract.
+
+Now it's clear: admin pages live in `apps/apple/Sources/Features/Admin/`. All tooling is present (pwsh, xcodegen, swiftlint, xcodebuild). Let me read the gate contract (README), project.yml, the parity manifest record, and an analogous existing admin page.
+
+The prompt's paths are idealized; real admin pages live in `apps/apple/Sources/Features/Admin/`. Let me read an existing admin page's log (real gate commands) plus the UsersPage implementation, route registration, the parity manifest record, and ledger.
+
+Excellent — the UsersPage log gives me the exact playbook. Now let me read the web sub-components, check which native feature-views already exist for security-access, and read the parity manifest/ledger records.
+
+All 8 sub-components already exist as native feature-views (7 files each). Let me read the full manifest records and locate the native digital-twin equivalent.
+
+The 8 native sub-components exist, plus a native `VehicleTwin` in shared-surfaces. Now I need each component's public API. Let me read the main view + model files for the security-access feature-views and check the ledger status.
+
+The pattern is clear: each feature-view has a `Source` seam + `Input` snapshot + `@Observable Model`, and the parent page feeds inputs. Let me confirm these are separate parity units and read all 8 components' seam contracts at once.
+
+The 8 components aren't separate manifest parity units but are complete, reusable native views. My page composes them — like UsersPage reused UserImpersonateButton. Let me read each component's full Model to learn the exact Input/Source contracts.
+
+The component pattern is fully consistent. I need the remaining domain types and to check whether `.Adapter.swift` files provide reusable mapping from a shared security model. Let me read the rest of the models and the adapters.
+
+I have the pattern. Now let me read the remaining 3 component models and locate all the domain types each requires, plus check for a shared security event model in the facade.
+
+Let me set up tracking and read the final component model plus all the domain input types I'll need to construct.
+
+Now let me read the adapter files that define each domain type and the production mapping logic.
+
+Let me read the remaining adapters and check the shared facade for a canonical security model, plus the shared UI primitives and routing.
+
+I now understand all component contracts. Let me read the last two signal/event types and check which derivation helpers already exist natively (buckets, stats, timeline).
+
+I have all component contracts. Now let me read the page model pattern, shared UI primitives, routing infra, the native VehicleTwin/VehicleSelect, and the xcstrings.
+
+No native VehicleSelect/RangePicker exist — I'll build those natively in the page. Let me read the shared UI primitives and the VehicleTwin API.
+
+Let me read the VehicleTwin API, remaining UI primitives (Typography, States), and the routing files.
+
+Let me read the VehicleTwin model/state seam, routing, typography, and the Users sample/tests patterns.
+
+The VehicleTwin surface is integrable via an in-memory source. Let me find `VehicleTwinState`, read routing, typography, and the Users sample/tests, and check existing strings.
+
+The catalog already has 79 `admin.security` lines (component keys folded in). Let me verify which exact page keys exist and read the routing + typography + sample/test patterns.
+
+Let me check the string-key convention (the `translation.` prefix) and read the parser, typography, app registration, and Users sample/tests.
+
+String convention is clear: `translation.<webKey>` for content, bare `route.<case>` for nav. Let me read typography, the Users sample/tests, app registration, and the xcstrings JSON shape.
+
+Let me read the app wiring (route host registry composition) and the xcstrings JSON structure.
+
+I now have all the patterns. Let me check the baseline build state, branch, and whether the KMP xcframework is prebuilt (the build needs it).
+
+The build needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native) which isn't built yet. This is slow, so let me start it in the background now while I write code.
+
+Gradle works. Let me kick off the xcframework assembly in the background and start writing code while it builds.
+
+Let me check the build log briefly, then read the twin-state mapping (web + native enums) I need for GlassPanel2.
+
+Gradle is actively compiling Kotlin/Native slices — good. Let me check if a native twin-state builder already exists to reuse, and read the web parsers I'd otherwise port.
+
+A native twin builder exists. Let me read it to reuse for GlassPanel2's twin state.
+
+A reusable `TwinStateBuilder.buildTwinState` exists. Let me get the `TwinSecurityInput`/`TwinDoorSignal` shapes, then I'll write the code.
+
+I have everything needed. Let me write the code, starting with the pure models/derivations file. First, let me verify name collisions and recheck `TwinDoorSignal` cases.
+
+All clear. Now writing the pure models/derivations/mappers file.
+
+Models file created. Let me verify the few enum case names I'll switch on (sentry load status, connection) and check the build progress.
+
+Build is near done (linking release framework). The sentry status has no `.empty` case — noted. Let me write the page model with relays and child composition.
+
+Now let me verify the xcframework build finished for slot-4, then write the page view.
+
+Build still assembling. Let me write the page view while it finishes.
+
+Now the sample data + scenario factory.
+
+Now the route registration.
+
+Now wiring navigation. Let me edit AppRoute, AppRouteParser, and TeslaSyncApp.
+
+Now adding the string-catalog keys. Let me confirm the exact opening lines to anchor the insertion.
+
+Let me validate the JSON and check the build progress.
+
+JSON valid, build nearly done. Let me write the tests.
+
+Tests written. Let me run the fast checks (swiftlint + xcodegen) while the framework finishes, and check build progress.
+
+Swiftlint found fixable violations: param count, line length, file length, function body length, and an orphaned doc comment. Let me fix them by splitting files and refactoring. First, locate the section boundaries.
+
+Let me split the models file: extract derivations/mappers to a new file and convert the orphaned doc header.
+
+Now split the relays out of the page model and refactor `project()`. Let me find the relay section.
+
+Model under 400 now. Let me refactor the long `project()` function into smaller helpers.
+
+Now fix the Sample file's parameter count and long lines. Let me view the relevant sections.
+
+Now fix the test's long line 233.
+
+Let me re-run swiftlint on all new/edited files to confirm clean.
+
+Swiftlint clean. Let me check the xcframework build and run the placeholder scan.
+
+slot-4's release xcframework is built. Let me run the placeholder scan on the **real** path and generate the Xcode project.
+
+Placeholder scan clean (my files: 0). Project generated. Let me stage the framework and find a simulator, then build.
+
+Framework staged, iPhone 17 Pro available. Let me build the app (this compiles the full module — it'll take a while).
+
+Build is compiling. Let me check progress.
+
+Module emit in progress, 0 errors so far. Let me wait for completion.
+
+Still type-checking the full module (4500+ files). Let me continue waiting.
+
+Build failed (exit 65). Let me see the actual errors.
+
+One error — my static `ISO8601DateFormatter` isn't concurrency-safe (Swift 6). Let me fix it with a local formatter helper.
+
+That was the only error. Let me rebuild.
+
+Still compiling, 0 errors. Let me keep waiting.
+
+Whole-module emit is slow (large module + shared machine). Let me wait further.
+

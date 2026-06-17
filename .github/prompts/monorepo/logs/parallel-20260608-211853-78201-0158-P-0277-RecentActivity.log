@@ -1,0 +1,50 @@
+I'll start by exploring the codebase structure and reading the web source that serves as the specification.
+
+Let me explore the Apple app structure in depth to understand the existing patterns I must follow.
+
+The `feature-views` directory already has ~1900 files. Let me examine the file conventions by looking at an existing feature view completely.
+
+There's already a substantial set of `RecentActivity.*` files. Let me read all of them to assess their current state against the spec.
+
+I notice a critical discrepancy: the existing `RecentActivity.*` native files reference `features/dashboard/components/RecentActivity.tsx` (prompt 0130), but my prompt 0277 targets `features/vehicles/components/RecentActivity.tsx`. Let me investigate this collision carefully before doing anything.
+
+Git opened a pager. Let me gather facts about both web sources and the prompt set to resolve this collision properly.
+
+Now I fully understand: there are **two distinct** `RecentActivity` web components. The existing native files implement the **dashboard** version (0130, three panels with charts). My prompt 0277 wants the **vehicles** version (two panels, no charts). Let me check the prompt set to understand the intended file mapping and naming convention.
+
+Critical evidence: both 0130 and 0277 prompts exist. The 0130 (dashboard) is done and committed. Let me read both prompt files' metadata to see their declared native output paths.
+
+Both prompts declare the identical native output path `RecentActivity.*` — a genuine collision. The 0130 dashboard version is already committed. Let me check prior 0277 run logs to see how this collision was previously handled.
+
+Decisive evidence. A prior P-0277 run resolved this exact collision by creating **`RecentActivity.Vehicles.*` files** with `VehiclesRecentActivity` type namespacing, leaving the 0130 dashboard files byte-identical. But those files are **absent** from my current tree. Let me confirm the tree state, check tooling, and read the full prior log as a blueprint.
+
+Excellent — Swift 6.3.2, Xcode 26.5, swiftlint, swiftformat all present. The prior 0277 run is a proven blueprint (10 `RecentActivity.Vehicles.*` files, `VehiclesRecentActivity` prefix). Those files are absent from my tree, so I must recreate them. Let me study the existing 0130 files to learn exact conventions, and read the rest of the prior log.
+
+The 0130 conventions are clear: `Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`, `TSSkeleton`, `TSFadeIn`, local `RecentActivityGlassPanel`. Let me verify the design-system symbols exist and read the remaining 0130 files (tests, previews, strings) plus the rest of the prior 0277 log.
+
+Let me locate the exact token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) in the Design sources.
+
+`TSSpacing` only appears in the Watch target. The main app's tokens must come from elsewhere. Let me examine `project.yml` and `TSDesign.swift` to understand the target layout and where `Color.TS`/`Font.TS`/`TSSpacing` resolve for feature-views.
+
+The app target compiles `Sources`, `feature-views`, and `../design/generated/apple`. Tokens likely live in the generated design package. Let me read the full project.yml (excludes matter) and the generated design tokens.
+
+Now I understand the build topology: app targets compile feature-views (excluding `*Tests.swift`); test targets compile only `*Tests.swift`; tokens come from `../design/generated/apple`; **Shared.xcframework** (KMP) is a build prerequisite. Let me read the design tokens and the 0130 test/preview patterns.
+
+Let me read the full design tokens, the 0130 test files, and the rest of the prior 0277 log (gate execution + golden values).
+
+I now have all design conventions. Let me confirm web parity details: the SI converters, `useUnits` shape, and the `TimeStamp`/`InlineMetric`/`IconBox`/`AnimatedNumber` web components, plus `TSFadeIn`'s signature and the rest of the prior 0277 gate log.
+
+I have full parity detail. Let me confirm the `Drive`/`ChargingSession` API field names, the `TSFadeIn`/`TSButton` signatures, and read the prior log's gate execution section.
+
+Let me read the rest of the prior 0277 gate log and check the build tooling (xcodegen, Shared.xcframework, placeholder checker).
+
+I have a proven, sanctioned approach. Let me verify the pre-existing blockers (for truthful evidence) and the dependency closure of the shared components I'll use in an isolated build.
+
+All blockers and dependencies confirmed. The definitive, verified blocker for the full-app gate is the unstaged `Shared.xcframework` (only `.gitkeep`; needs the KMP/Gradle toolchain). Let me check the dependency closure of `TSSkeleton`/`TSGlassPanel` so I can decide my isolated-build file set.
+
+Closure decided: I'll keep external deps minimal (shared `TSFadeIn` only) with self-contained chrome, so my isolated build needs just `Tokens.swift` + `Motion.swift` + my files. Let me read the lint/format configs before writing.
+
+I have everything I need. Decision: ship the vehicles surface as **`RecentActivity.Vehicles.*`** (10 files, `VehiclesRecentActivity` type prefix), leaving the 0130 dashboard files byte-identical — the sanctioned resolution for this genuine prompt collision. Let me record a plan and start writing.
+
+Now I'll write the surface. Starting with the pure core adapter.
+

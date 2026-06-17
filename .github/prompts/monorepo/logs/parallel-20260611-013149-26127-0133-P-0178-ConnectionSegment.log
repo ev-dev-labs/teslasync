@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure and understanding what's available, including whether the Apple toolchain exists on this runner.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, Swift 6.3.2). Let me find the web source and explore the existing Apple structure.
+
+The shared-surfaces directory is large (1298 entries). Let me understand the existing patterns and infrastructure.
+
+The pattern is clear: each surface has `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Seams.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me study a complete simple example and the shared infrastructure.
+
+No surface uses ApiHealth yet — I'll need to wire that up. Let me study a complete example end-to-end to learn all conventions.
+
+Let me read the remaining example files and the shared infrastructure (facade, tokens, design system) in parallel.
+
+Let me examine the Tests pattern, design tokens, shared components, the SharedFacade, and project.yml.
+
+Let me read the design tokens, key facade files, and find the shared components.
+
+Let me find the design token/component definitions and understand the facade domains and project structure.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read that and the key shared components I'll use.
+
+Now I understand the tokens. Let me examine the shared components I'll use and check for any existing status/connection indicator surface to model against.
+
+Excellent — there are ideal components: `TSStatusDot`, `TSStatusBadge`, `TSLiveIndicator`, `TSFreshnessIndicator`, `TSTone`. Let me read those, the Tooltip, and the project.yml.
+
+Now let me check the build feasibility: xcodegen, the Shared.xcframework, and the build script.
+
+Critical finding: `Shared.xcframework` is not prebuilt — it's built via Gradle/KMP (Kotlin Native). Let me check the pending-verifications doc and prior logs to understand the expected build state on this runner.
+
+This is a goldmine — a prior run's log documents the exact parity spec and file layout (though those files aren't in this slot). Let me read the full prior log and verify current wiring.
+
+I now have the full picture and the sanctioned disposition (code-complete + isolated verification; full-app `xcodebuild` is DEFERRED due to pre-existing co-located-XCTest/signing issues). Let me verify wiring and check for symbol collisions before implementing.
+
+Wiring is already present (`.swiftlint.yml` + `project.yml` both include `shared-surfaces`). No `ConnectionSegment` refs exist. Let me verify the shorter `Connection*` type names won't collide across the shared module.
+
+All type names are collision-free. Let me check the placeholder tool, pwsh availability, and confirm the i18n facade convention.
+
+I have the complete picture. Let me confirm a few exact API signatures (TSSkeleton, TSButton, TSCard, the i18n facade convention) before writing code.
+
+I have everything needed. Let me set up tracking and write the plan, then implement all files.
+
+Now implementing. Starting with the pure core files (Adapter, Projection, Seams).
+
+Now the Views and Chrome.
+
+Let me fix two long lines in the freshness chip (swiftlint `--strict` treats >120 as error).
+
+Now the main surface view.
+
+Now previews and the i18n catalog.
+
+Now the test files.
+
+All 11 files created. Let me mark tests done and run the fast gates (swiftformat, swiftlint, placeholder check) on the surface.
+
+swiftformat clean (0/10). Now swiftlint `--strict` on the surface + the placeholder gate.
+
+Placeholder gate clean (0). One swiftlint violation: `multiple_closures_with_trailing_closure` at the `Button` in `openButton`. Let me fix it.
+
+Re-running both linters on the changed file to ensure they don't conflict.
+
+Both linters clean on the fix. Let me confirm the full surface scope passes swiftlint, then build the isolated SwiftPM verification harness.
+
+All linters green on the surface. Now building the isolated SwiftPM harness to actually compile + run the tests against the real design tokens.
+
+Surface compiles clean under Swift 6 strict concurrency. Now running the tests.
+
+All 35 tests pass under Swift 6. Now the real iOS-18 + macOS-15 SDK typecheck (including the DEBUG previews).
+
+iOS-18 typecheck clean (incl. previews). Now macOS-15.
+
+Both SDK typechecks clean. Now `xcodegen generate` to confirm the files enumerate into the targets.
+
+`xcodegen generate` clean — all 11 files enumerated (66 refs across iOS/macOS app + test targets), and `.xcodeproj` is gitignored. 
+
+Now the full xcodebuild gate. Note this slot's `project.yml` *excludes* `*Tests.swift` from app targets, so the real blocker is the unstaged KMP `Shared.xcframework`. Let me check signing/gitignore and launch the real iOS build (its scheme pre-action runs the Gradle framework assembly) in the background.
+
+Signing: 0 identities (macOS will fail on signing — pre-existing). Git status shows only my 11 files. Let me launch the real iOS gate build (its pre-action runs the Gradle KMP framework assembly) in the background and capture full output.
+
+Xcode and iPhone 16 simulator ready. Launching the iOS gate (`build test`) in the background — its pre-action assembles the KMP framework via Gradle.
+
+Build launched in the background. Let me monitor its progress (the Gradle KMP assembly typically takes ~6 minutes).
+
+The launcher returned; the build runs in a detached subshell. Let me check the log file for progress.
+
+The backgrounded subshell was torn down with the launcher. Let me relaunch properly as a fully detached process.
+
+Detached build running. Let me wait and monitor the Gradle framework assembly + compile progress.
+
+Gradle is building — DEBUG framework done, now on the Kotlin/Native release link (the long pole). Let me continue waiting.
+
+Still in the Kotlin/Native release link (the documented long-pole). Continuing to wait.
+
+Nearly through the release links (macOS arm64 now). Waiting for the framework to stage and Xcode to start compiling.
+
+
+Authorization error, you may need to run /login (Request ID: F6EC:32E117:20AC5E1:2468EF4:6A2B919A)

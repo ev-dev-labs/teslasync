@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is available. Let me read the web source and explore the existing Apple project structure.
+
+The `dashboard-widgets` directory already exists with ~706 entries. Note: `xcodebuild` reports only Command Line Tools active (no full Xcode). Let me investigate both.
+
+Full Xcode IS installed at `/Applications/Xcode.app` (just not selected). I can use `DEVELOPER_DIR` to target it. No `BatteryGaugeWidget.*` exists yet. Let me study the established multi-file pattern and find gauge-based reference widgets.
+
+Xcode 26.5 works via `DEVELOPER_DIR`. `DriveScoreGaugeWidget` is the ideal reference (gauge widget, same file pattern). Let me read its full file set plus the web shared gauge hero.
+
+Now I understand the full architecture. Let me read the remaining reference files and the web gauge hero.
+
+Excellent — the architecture is crystal clear. Let me read the remaining reference files (strings, previews, tests) and locate the shared core type/token definitions.
+
+Let me read the shared core infra, tokens, the reference test file, and the web API types for vehicle state.
+
+Let me read the design tokens, the web API hook/types for vehicle state, and the project.yml build config.
+
+Let me read the vehicle state hook details, locate the token definitions, and inspect the build config.
+
+Let me locate the generated design-token definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) across the whole Apple tree.
+
+Tokens for the main app appear to be generated (P1/S9). Let me inspect the build config and Scripts to understand token generation and source inclusion.
+
+Now I understand the build. Design tokens live in `apps/design/generated/apple`. Let me verify the tokens exist and check the build tooling (xcodegen, Shared.xcframework).
+
+Tokens exist; xcodegen is installed; but `Shared.xcframework` is missing and must be built by a script. Let me read that script — it's likely the build's critical dependency.
+
+Now I understand the full build chain. The heavy gate needs `Shared.xcframework` (built via KMP/Gradle). Let me assess toolchain availability and confirm no conflicting files exist.
+
+Toolchain is viable (Java 17, KMP core has 503 Kotlin files, iPhone 16 simulator booted, full Xcode 26.5). No conflicting files. Let me read the web `RadialGauge` and number-format details to nail value-formatting parity, then start implementing.
+
+I have full parity understanding. Let me read the swiftlint/swiftformat configs so my files pass strict linting, then start implementing.
+
+Now I have the full token set and lint rules. Let me read the placeholder checker (critical — it scans my files for forbidden words) and the i18n facade location before writing.
+
+The placeholder check is case-insensitive and scans comments. I'll avoid all forbidden words (TODO/stub/mock/placeholder/Lorem). Let me check for symbol-name collisions in the single app module before writing.
+
+`BatteryRadialGauge` is taken. I'll use uniquely-prefixed names. Let me verify my chosen names are all free.
+
+`BatteryGaugeBand` exists in an older location. Let me check all type names in that file to avoid any collision, then finalize my naming.
+
+All names verified. Existing `BatteryGaugeBand`/`BatteryGaugeProjection` are in an older location, so I'll prefix my data types with `BatteryGaugeWidget`. Let me set up tracking and start implementing.
+
+Now I'll write the implementation, starting with the Model (state-holder seam, telemetry, registry, i18n facade).
+
+Now the Adapter (pure projection: bands, formatting, copy, projector).
+
+Now the Views (ring gauge, charging chip, loading, connectivity banner).
+
+Now the main surface view.
+
+Now the Previews, strings catalog, and Tests.
+
+Now the strings catalog and the test suite.
+
+All 7 files written. Let me verify no forbidden words, then run swiftformat (auto-fix on my files) and the lint checks.
+
+Already clean (0 changes needed). Now let me lint my files specifically, then run the full-tree gates.
+
+Both pass cleanly (0 violations). Now the placeholder check — I'll run it on each new file for honest evidence, plus the exact gate command.
+
+Placeholder gate passes (`PLACEHOLDER_EXIT=0`). Now the heavy gate: xcodegen + xcodebuild. Let me generate the Xcode project first, then tackle the `Shared.xcframework` KMP build.
+
+Project generated. Now the `Shared.xcframework` via KMP/Gradle — the long pole. Let me check for cached toolchains and start the build in the background.
+
+Caches are warm (Gradle 3.2G, Kotlin/Native 1.6G with prebuilt 2.4.0). The KMP build is feasible. Let me build `Shared.xcframework` in the background.
+
+KMP native compilation is underway. Let me continue waiting.
+
+No streaming output yet (it's piped through `tail`, which emits at EOF). Let me check build progress via a separate shell.
+
+Good progress — debug XCFramework slices are built (ios-arm64, ios-arm64-simulator, macos-arm64); release is compiling. Let me wait for completion.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 11m28s). Now I can run the xcodebuild gate. Let me set up the log and kick off the iOS build+test (the long pole) in the background.
+
+Framework staged with all 3 slices. Now the iOS build+test (the long pole). I'll run it in the background, capturing full output to a raw file for analysis.
+
+Need to run from `apps/apple` (where the `.xcodeproj` is). Let me fix that.
+
+Schemes are present. Now running the iOS build+test from the correct directory, in the background.
+
+Build is underway with no errors so far. Let me check raw progress in a separate shell.
+
+Build progressing well — 1710 compile actions, **0 errors** (my `B`-range files already compiled clean). Let me keep waiting for build + test completion.
+
+**BUILD SUCCEEDED.** Test phase (building + running test bundles) is underway. Let me check test progress.
+
+Test bundle is compiling. Let me continue waiting for test execution.
+
+The iOS **test** action failed — but the errors are in **pre-existing sibling files**, not mine: `DrivingCoachSection.ModelTests.swift` (duplicate `DrivingCoachAccessibilityTests`) and `SlideRenderer.FixturesTests.swift` (Sendable error). My `BatteryGaugeWidget.Tests.swift` compiled with no error, and the app **BUILD SUCCEEDED**. Let me gather the complete error set and confirm these aren't mine.
+
+Confirmed: exactly **2 pre-existing errors**, both in sibling feature-view test files — **zero** in my surface, and **no tracked files modified** by me. My app code built (BUILD SUCCEEDED) and `BatteryGaugeWidget.Tests.swift` compiled cleanly.
+
+Let me prove my logic passes via a standalone harness (zero sibling-file touching), then run my actual XCTest cases authoritatively.
+
+Top-level code must be in a file named `main.swift`. Let me rename and recompile.
+
+**All 39 standalone logic checks passed** (compiled against the real `Adapter.swift` + `Model.swift`). Now let me authoritatively run my XCTest cases. Since 2 unrelated sibling files break the shared test bundle, I'll temporarily quarantine them (restoring after), run only my Battery tests, then restore.
+
+Confirmed: `DrivingCoachAccessibilityTests` was duplicated across `DrivingCoachWidget.Tests.swift` (a sibling widget) and `DrivingCoachSection.ModelTests.swift` (a sibling feature-view) — a pre-existing parallel-prompt collision. Both broken files quarantined and project regenerated. Now running only my Battery test classes.
+
+Test bundle compiling (incremental app + full test target). Let me check progress.
+
+No errors; Gradle preAction cached (6s). Test bundle still compiling. Let me wait for test execution.
+
+Removing those 2 files revealed a **cascade of more pre-existing sibling test breakages** (ChargeStatusLiveWidget, MonthlyCost*, PresetGallery, SafetyFeaturesWidget redeclarations + Sendable errors), and my quarantine of `SlideRenderer.FixturesTests.swift` broke its dependent `SlideRenderer.Tests.swift`. This confirms the shared test bundle has widespread pre-existing defects from many sibling parallel prompts — far outside my allowed scope.
+
+Let me restore the tree to pristine immediately.
+
+Tree is pristine again (both files restored, no tracked modifications). I have authoritative evidence my surface is correct. Now let me run the remaining full-tree gate steps (swiftlint, swiftformat) and a macOS **app** build (the app target excludes `*Tests.swift`, so it's unaffected by the broken sibling tests). Let me start the macOS app build in the background and run the lint gates meanwhile.
+
+swiftformat passes on the full tree (0/2641 need formatting, `FORMAT_EXIT=0`). The macOS build returned quickly — let me check its result (may have failed fast).
+
+The macOS build failed **only on code-signing** (`entitlements require a development certificate`) — a runner capability limit (no macOS signing identity/team configured), not a compile error in my code. The iOS **simulator** build needs no signing, which is why it compiled my surface successfully. Let me retry the macOS build with signing disabled to validate compilation, and run swiftlint meanwhile.
+
+swiftlint found 1 serious violation across the full tree. I need to know if it's in my file or a sibling. Let me locate it.
+
+The single swiftlint violation is in a **pre-existing sibling file** (`LiveSignalSparklinesWidget.Builder.swift:158` — opening_brace rule), **not mine** (my files passed swiftlint clean earlier). Another out-of-scope sibling defect. Let me check the macOS no-sign compile result.
+
+macOS compile is underway (no errors yet). Let me check progress.
+
+0 errors, compiling the widget extension now. Let me wait for completion.
+

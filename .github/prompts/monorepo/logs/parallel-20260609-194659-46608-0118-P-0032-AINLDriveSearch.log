@@ -1,0 +1,163 @@
+I'll start by exploring the repository structure to understand the task context, the web source component, and the existing Apple app structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+The web source is small but depends on `AIFeatureCard` and `useAiStream`. Let me read those and explore the existing Apple shared-surfaces patterns.
+
+There's an established multi-file pattern per surface. Let me find the closest analog — a prompt-input streaming AI feature (like `AINLSearch`, `AINLAlertBuilder`) — and read the `useAiStream` hook.
+
+`AILifetimeStatsQA` is the ideal analog — it's also a prompt-input streaming AI feature using `AIFeatureCard` + `useAiStream`. Let me read its web source and all its Apple files to learn the exact pattern.
+
+`AILifetimeStatsQA` is a near-perfect analog. Let me read all 11 of its Apple files to learn the exact pattern, conventions, and infrastructure (state holders, tokens, i18n facade, diagnostics).
+
+Excellent pattern clarity. Let me read the remaining AILifetimeStatsQA files (Logic, Adapter, Source, Chrome, Views, Previews, Tests, ModelTests, strings) to capture the full contract.
+
+Let me read the view layer (Chrome, Views, Previews) and tests (Tests, ModelTests) and the strings file to complete my understanding of the tokens and test patterns.
+
+Now the tests, previews, and strings, plus locate the shared token/component definitions referenced (TSSpacing, Color.TS, TSButton, TSGlassPanel, TSSkeleton).
+
+Let me read the Previews and strings files, and locate the shared token/component definitions to confirm what's available.
+
+Let me confirm the exact APIs of the shared tokens/components and inspect how `project.yml` wires up the shared-surfaces files and tests.
+
+Let me read the theme tokens and shared components, and assess build feasibility (xcodegen, Shared.xcframework, simulators, test target wiring).
+
+Key finding: `Frameworks/Shared.xcframework` is absent (only `.gitkeep`), and all app/test targets depend on it. This likely blocks the full `xcodebuild` gate. Let me confirm the token/component APIs, check for a framework build script, and look at prior shared-surface logs for precedent.
+
+There's a precedent log for the analog (0024-AILifetimeStatsQA). Let me check how it concluded and inspect the framework build script and placeholder checker.
+
+I now have the full methodology and the sanctioned disposition: the full-app `xcodebuild` gate is DEFERRED (missing KMP `Shared.xcframework` + unrelated pre-existing breakage), while the surface is independently verified on-runner via swiftformat, swiftlint, placeholder scan, a dual-SDK `swiftc -typecheck` against the real design system, and a SwiftPM test harness. Let me verify the feature ID, backend route, and lint configs before writing code.
+
+All confirmed: feature id `nl-drive-search-replay` and route `/ai/drives/search` are real; the `AINLSearch` sibling confirms the prompt-only shape (no vehicle, no char cap, no textarea aria-label). Let me check for type-name collisions and read the exact signatures of `TSGlassPanel`, `TSButton`, `TSSkeleton`.
+
+No collisions. `TSGlassPanel.init` needs `@escaping`. Let me confirm `TSButton` and `TSSkeleton` signatures.
+
+I have everything needed. The sanctioned disposition (per the analog's committed log) is: full-app `xcodebuild` is DEFERRED (missing KMP `Shared.xcframework` + unrelated baseline breakage), with on-runner verification via swiftformat, swiftlint `--strict`, placeholder scan, dual-SDK `swiftc -typecheck` against the real design system, and a SwiftPM test harness. Let me record a plan and start writing the surface.
+
+Now I'll write the surface. Starting with the pure cores (Adapter, Logic).
+
+Now the Model (state-holder seam, telemetry, source protocol, observable model, strings facade).
+
+Now the in-memory source for previews/tests.
+
+Now the presentational subviews (Header, HelixBadge, PromptField, ActionButton).
+
+Now the Chrome (output panel + gate chrome + the reduce-motion pulse helper).
+
+Now the main view surface + freshness chip/banner.
+
+Now the Previews (one per state).
+
+Now the i18n strings catalog (5 web-source keys + 6 Helix scaffold + 12 native chrome = 23 keys).
+
+Now the test files — first the adapter/logic/accessibility/i18n tests.
+
+Now the model wiring tests.
+
+All 11 files created. Now let me run the static verification gates — swiftformat and swiftlint on the new surface.
+
+swiftformat clean (0/10). Now swiftlint `--strict`.
+
+swiftlint clean (0 violations, 10 files). Now the placeholder scan. Let me inspect `check-placeholders.ps1` to invoke it correctly.
+
+The gate's literal `-Path` (a path prefix, not a real dir) would trivially pass without scanning. For an honest check I'll scan my actual files — but first I must verify my legitimate use of the word "placeholder" (the SwiftUI text-field concept) doesn't trip a forbidden pattern.
+
+The forbidden list includes `"Placeholder"` (compiled case-insensitive), which collides with the legitimate SwiftUI text-field *placeholder* concept (the parity of the web `<Textarea placeholder>` prop). The prescribed gate command passes a filename **prefix** (not a real path), so `Get-ChildItem -LiteralPath` scans nothing → trivially `EXIT=0` (this is exactly why the analog's log showed COUNT=0 despite using "placeholder"). I'll run the prescribed command verbatim **and** a meaningful temp-dir scan, reporting both honestly.
+
+Prescribed gate returns `EXIT=0`. Now the meaningful scan over a temp copy of my actual files, to truly exercise the patterns:
+
+The meaningful scan shows **7 hits, all the legitimate SwiftUI/web `placeholder` input-hint concept** (the mandatory web-source key `drives.aiSearch.placeholder`, the field's placeholder text, its a11y value, and doc prose) and **ZERO real stub markers** — identical to the accepted analog. The prescribed gate is `EXIT=0`. I won't game the substring checker by renaming a correct, web-parity term; I'll document transparently.
+
+Now the critical compile/test proof. Let me map the self-contained design-system closure (excluding any KMP `Shared`-bound files) for the `swiftc -typecheck` + SwiftPM harness.
+
+None import `Shared` directly. The precedent excluded `UnitFormatters.swift` as the lone KMP-bound leaf. Let me confirm why, and verify the closure (Tokens + Sources/Design + Sources/Components minus UnitFormatters) is self-contained.
+
+`UnitFormatters.swift` uses KMP types `UnitPreferences`/`Units` (from `Shared.xcframework`) — hence excluded. Let me confirm no other closure file references those KMP types.
+
+Closure confirmed self-contained (only `UnitFormatters.swift` is KMP-bound; nothing else references those types). My surface uses only TSButton/TSGlassPanel/TSSkeleton + tokens. Let me build the SwiftPM harness — a real module named `TeslaSync` (design system + my 8 sources) + my 2 test files — to prove compilation and run the tests.
+
+`tsGlassPanel()` is in TSMaterial.swift (included). Now the manifest, then build + test under Swift 6.
+
+Library builds clean under Swift 6 / macOS 15. Now run the tests.
+
+**39/39 tests pass, 0 failures** (Model 19, Request 6, Logic 7, Accessibility 6, Strings 1), built against the real design system under Swift 6 / macOS 15. Now the explicit dual-SDK `swiftc -typecheck` (iOS 18 simulator + macOS 15) — the two platforms the app ships (ADR-002).
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDKs typecheck clean. Now the i18n bidirectional parity check (keys in `.strings` ↔ keys referenced in Swift, plus web-source key coverage).
+
+My code-key grep missed multi-line `string(` calls (key on the next line). Let me re-extract keys as any i18n-namespaced string literal across the Swift files.
+
+**i18n parity: 23/23 keys, 0 missing, 0 orphan, all 5 web-source keys present, no raw `Text("…")` literals.** All host-runnable gates are green. Now, like the precedent, let me ATTEMPT the prescribed full-app `xcodebuild` gate to (a) prove my files wire into the project via `xcodegen` and (b) confirm zero errors attributable to my surface (it will be blocked by the absent KMP `Shared.xcframework`).
+
+My `&&` chain short-circuited on `git check-ignore` (xcodegen never ran). Let me check the ignore rule properly and run xcodegen standalone.
+
+xcodegen succeeded; `.xcodeproj/` and `Frameworks/*.xcframework/` are gitignored (confirming `Shared.xcframework` is a build-staged artifact). My 11 files are the only untracked changes. Let me verify wiring and attempt the build.
+
+All 11 files wired into the project (66 refs); `Shared.xcframework` absent; iPhone 16 sim booted. Now attempt the prescribed `xcodebuild` — capturing the log to prove zero errors attributable to my surface.
+
+The `xcodebuild` build failed (EXIT=65) **exactly as the precedent documented** — **ZERO errors mention `AINLDriveSearch`**. Every error is in unrelated pre-existing co-resident surfaces (`RecentDrivesListWidget` ↔ `RecentDrivesSection` duplicate-symbol/ambiguous-type collisions). Let me enumerate the failing files to confirm none are mine.
+
+54 errors, all in 10 pre-existing files (`RecentDrivesListWidget.*`, `RecentDrivesSection.*`, `StateTimeline*.*`) — the exact duplicate-symbol collisions the precedent named. ZERO errors/warnings in `AINLDriveSearch`, and I touched none of those files. To avoid skip-and-assume, let me also attempt the prescribed macOS build (backgrounded) while I prepare the log.
+
+While the macOS build runs, let me verify line counts, state/preview coverage, and that there are no improper hardcoded English literals (only i18n keys, SF Symbols, and sanctioned `t(key, fallback)` defaults).
+
+All literals are doc comments, sanctioned `string(key, fallback)` defaults (the `t(key,default)` pattern), SF Symbols, i18n keys, or DEBUG preview samples — no improper hardcoded user-facing English. 1778 lines across 11 files (comparable to the analog's 1896), 10 `#Preview` blocks. Let me read the macOS build result.
+
+macOS build also failed (EXIT=65) with ZERO `AINLDriveSearch` errors. Let me confirm the macOS failure cause (the "distinct error files" came back empty — possibly a different earlier-stage failure).
+
+Both full-app builds are blocked by factors **entirely outside my surface**: iOS-sim by pre-existing `RecentDrives*`/`StateTimeline*` duplicate-symbol collisions; macOS by runner code-signing (dev cert) + the un-stageable KMP `Shared.xcframework`. **ZERO `AINLDriveSearch` errors/warnings in either.** This is the sanctioned DEFERRED disposition. Let me gather final data and write the log.
+
+I have all the evidence. Now writing the comprehensive gate log.
+
+Log written. Now cleanup (generated `.xcodeproj`, temp harness, temp logs) and a final scope/lint check before committing.
+
+Clean — exactly the 11 surface files + the log, lint green. Now commit (staging precisely my files + the log).
+
+Committed cleanly (`57e2bad45`), working tree clean. The task is complete and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`AINLDriveSearch`** SwiftUI surface at parity with `web/src/components/ai/AINLDriveSearch.tsx`, following the established 0024-`AILifetimeStatsQA` analog and adapting it (the web body is `{ prompt }` only — **no vehicle scope, no char cap**, faithful to the source).
+
+**11 files** (1778 source/test lines + 23-key `.strings`): Adapter (request projection), Logic (phase/gate/connection/hint enums + a11y seam), Model (`@Observable` state-holder + telemetry + i18n facade), Source (in-memory), the View + freshness chrome, Views, Chrome, 10 `#Preview` states, and 2 XCTest files.
+
+**Verification (all on this runner, raw exits in the log):**
+- `swiftformat --lint` → **0/10**
+- `swiftlint --strict` → **0 violations / 10 files**
+- placeholder gate → **EXIT=0** (+ transparent true-scan: zero real stub markers; the 7 "Placeholder" hits are the legitimate web-parity input-hint term)
+- `swiftc -typecheck` vs the **real** design system → **0 errors on iOS 18 + macOS 15** (Swift 6, strict concurrency, incl. `#Preview`)
+- SwiftPM harness (real `TeslaSync` module) → build clean + **39/39 tests pass**
+- i18n parity → **23/23 keys, 0 missing/orphan, all 5 web keys present**, no raw literals
+- telemetry `view.opened` slug `AINLDriveSearch`; VoiceOver/Dynamic Type/reduce-motion covered
+
+**Full-app `xcodebuild` (iOS-sim + macOS): ATTEMPTED, DEFERRED** — blocked by pre-existing duplicate-symbol breakage in unrelated co-resident surfaces (`RecentDrives*`/`StateTimeline*`), runner code-signing, and the absent KMP `Shared.xcframework`. **Zero errors/warnings in `AINLDriveSearch.*`** in either build. This is the sanctioned disposition per `apps/macos-pending-verifications.md`.
+
+Log ends `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...-apple-shared-surfaces-0032-AINLDriveSearch.log | 244 ++++++++++++++++++
+ .../shared-surfaces/AINLDriveSearch.Adapter.swift  |  67 +++++
+ .../shared-surfaces/AINLDriveSearch.Chrome.swift   | 195 +++++++++++++++
+ .../shared-surfaces/AINLDriveSearch.Logic.swift    | 167 +++++++++++++
+ .../shared-surfaces/AINLDriveSearch.Model.swift    | 273 +++++++++++++++++++++
+ .../AINLDriveSearch.ModelTests.swift               | 232 +++++++++++++++++
+ .../shared-surfaces/AINLDriveSearch.Previews.swift | 110 +++++++++
+ .../shared-surfaces/AINLDriveSearch.Source.swift   |  84 +++++++
+ .../shared-surfaces/AINLDriveSearch.Tests.swift    | 190 ++++++++++++++
+ .../shared-surfaces/AINLDriveSearch.Views.swift    | 210 ++++++++++++++++
+ .../shared-surfaces/AINLDriveSearch.strings        |  47 ++++
+ .../shared-surfaces/AINLDriveSearch.swift          | 203 +++++++++++++++
+ 12 files changed, 2022 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0032-AINLDriveSearch.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.swift

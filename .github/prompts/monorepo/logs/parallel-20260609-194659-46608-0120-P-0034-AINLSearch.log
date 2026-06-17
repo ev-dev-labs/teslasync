@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure and checking the runner's capabilities for this Apple/Swift task.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Now let me read the web source and explore the existing Apple app structure.
+
+The web source is a simple AI streaming search card. Let me read the web dependencies and find the closest existing native AI-streaming surface to use as a template.
+
+Now I understand the web component fully. Let me find the closest existing native template — ideally a sibling NL-search/prompt-streaming surface like `AINLDriveSearch` or `AILifetimeStatsQA`.
+
+`AILifetimeStatsQA` is the closest analog (prompt-input + AI streaming Q&A). Let me read its full file set and its web source to learn the established native architecture.
+
+`AILifetimeStatsQA` is the ideal template. Let me read its web source and all native files to fully internalize the architecture.
+
+Excellent architecture. Let me read the remaining template files to fully understand the pattern before writing the new surface.
+
+Let me read the remaining template files: Chrome, Views, Previews, strings, and both test files.
+
+Now the Previews, strings catalog, and both test files to complete my understanding of the pattern.
+
+Now the two test files to learn the test conventions.
+
+I have a complete understanding of the template. Now let me verify the shared tokens exist, how the project includes these files (XcodeGen globs vs explicit), and confirm no `AINLSearch` native file exists yet.
+
+XcodeGen globs the `shared-surfaces` directory (excluding `*Tests.swift`, which go to test targets). So new `AINLSearch.*` files are auto-included. Let me confirm the exact token API surface I'll consume.
+
+All tokens confirmed. Let me verify the exact `TSButton` and `TSGlassPanel` initializer signatures the template uses.
+
+All shared APIs confirmed. The key parity differences for `AINLSearch` vs the template: no `vehicleId` (body is just `{ prompt }`), `canStart = prompt.trim() non-empty`, and no char cap (web has no `maxLength`). Let me check build tooling, lint configs, the placeholder script, and confirm no `NLSearch` name collision.
+
+Tooling is all present (xcodegen, pwsh). Let me read the placeholder patterns and how the script resolves `-Path`, since my views legitimately use the word "placeholder".
+
+Case-insensitive matching means I must avoid the literal word "placeholder" in `.swift` files (the `.strings` file is exempt by extension). The web-parity i18n key `search.aiSearch.placeholder` is unavoidable, so I'll use the sanctioned `// parity:allow` marker there. Let me read the project.yml test-target setup and list simulators, then set up my todo list.
+
+All confirmed: iPhone 16 simulator present, test targets include `shared-surfaces/**/*Tests.swift`, schemes `TeslaSync` + `TeslaSync-macOS` exist. Let me set up my todo list and verify the `Shared.xcframework` dependency exists before building.
+
+Critical finding: `Frameworks/` contains only `.gitkeep` — the `Shared.xcframework` (KMP core, a build dependency the app/test targets link) is absent. Let me investigate whether it can be built/fetched, and how pervasively the code depends on it, before concluding anything about the build gate.
+
+There's a `build-shared-xcframework.sh`. Let me read it and check whether the KMP toolchain is available to produce the framework.
+
+There's a `gradlew` wrapper and `java` is available; the xcframework builds via Gradle (`:core:assembleSharedXCFramework`), wired as an xcodebuild pre-build phase. This is the long-pole dependency, so I'll kick it off in the background now while I write the Swift files.
+
+Config targets `iosSimulatorArm64` + `macosArm64` — matches this Apple Silicon runner. Let me kick off the Gradle xcframework build in the background, then write the Swift files while it runs.
+
+The Gradle build is running in the background. Now let me write the Swift files. Starting with the pure foundational files — Adapter (surface identity + request projection) and Logic (enums + decision logic + accessibility).
+
+The background launcher returned (the Gradle process is detached via nohup). Let me check its progress and continue writing the Logic file.
+
+Gradle is progressing (downloading Kotlin/Native, linking frameworks, several tasks cached). Let me keep writing while it builds — the Logic file next.
+
+Logic done. Let me mark progress and write the Model (state-holder seam, telemetry, observable model, i18n facade) — adapted to drop the vehicle axis since `AINLSearch` only has a prompt.
+
+Now the in-memory Source for previews/tests, then I'll check the Gradle build progress.
+
+Gradle has built the debug XCFramework and is now linking the release frameworks — on track. Let me write the Views (header, badge, query field, action button), carefully avoiding the literal word "placeholder" in Swift (only the required web-parity i18n key, with a sanctioned `// parity:allow`).
+
+Now the Chrome file (output panel, error row, thinking indicator, gate loading/error chrome, symbol pulse helper).
+
+Now the main view file — `AINLSearch.swift` with the state switch, freshness chip, and connectivity banner.
+
+Now the Previews file (per-state `#Preview` blocks).
+
+Now the i18n strings catalog with all keys (web-parity + shared Helix scaffold + native chrome).
+
+Let me verify every i18n key used in code is defined in the strings file, and check the Gradle build status.
+
+All single-line keys check out. Let me do a more thorough check capturing multiline-call keys too, then write the test files while Gradle finishes the release framework.
+
+All keys reconcile (`loadingA11y` is used in Chrome.swift — the grep just skipped it due to digits in the key). Now the test files. First the adapter/logic/accessibility/i18n unit tests.
+
+Now the model wiring tests.
+
+All 11 files written. Let me run fast lint feedback on my new files (swiftformat + swiftlint) and check Gradle completion in parallel.
+
+swiftformat: clean (0/10 need formatting). Gradle: **BUILD SUCCESSFUL** — the release `Shared.xcframework` is built. Let me stage it into `Frameworks/` (what the pre-build script does) and run swiftlint on my files.
+
+xcframework staged (ios-arm64, ios-arm64-simulator, macos-arm64) and swiftlint: **0 violations** on all 10 files. Now generate the Xcode project and start the iOS build+test.
+
+Project generated; `AINLSearch` is wired into the targets (66 pbxproj refs). Now the iOS build+test (the long pole). I'll run it in the background and monitor.
+
+iOS build+test running in background. Let me monitor progress.
+
+The launcher returned (xcodebuild is detached and running). Let me read my monitor's output.
+
+Log is empty after ~90s — likely the pre-build Gradle phase or xcodebuild buffering. Let me check process state and log size.
+
+The async session was killed (I didn't set `detach: true`), so no log was written — only the Gradle daemon persists. Let me re-run the iOS build+test as a managed sync command (persists and notifies on completion), writing full output to a log.
+
+The iOS build failed — but the errors are in **pre-existing files** (`YearlyTrendChart`, `globalShortcuts`, `helpers`, `selectedVehicle`, `StateTimeline`), not my `AINLSearch` files. The errors are "ambiguous for type lookup" on `StateTimelineModel/Update/Connection/LoadStatus` — duplicate type definitions. Let me determine whether this is pre-existing or somehow triggered by my change.
+
+The errors reference only pre-existing sibling surfaces. Let me confirm: (1) zero errors in my `AINLSearch`/`NLSearch` files, (2) git shows I only added `AINLSearch.*`, and (3) the full set of compile errors.
+
+Confirmed: **zero errors in my files**; git shows I only added `AINLSearch.*`. The build failure is entirely from **pre-existing duplicate-symbol collisions** between sibling surfaces (`feature-views/StateTimeline.*` vs `dashboard-widgets/StateTimelineWidget.*`, and `RecentDrives` likewise) — both define identical public types (`StateTimelineModel`, `RecentDrivesModel`, etc.) in the same module. These are outside my allowed file scope (`AINLSearch.*` only) and unrelated to my surface.
+
+Let me start the macOS gate in the background (detached so it persists) and meanwhile verify my surface compiles in isolation.
+
+Now let me check whether the iOS build compiled my files before aborting, and prepare an isolated typecheck of my surface.
+
+The macOS shell notification arrived (likely the launcher returning). Let me check its log, and also note: my `AINLSearch.strings` validated + copied successfully in the iOS build.
+
+The detached shell didn't persist either. Let me first run a fast isolated type-check of my surface (proving it compiles against the real shared tokens/components), then run the macOS gate via the reliable managed-sync method.
+
+The typecheck errors are in `Cards.swift` (a component referencing other component files I didn't include), not my files. Let me include the full Components tree plus typography so the dependency graph resolves.
+
+Zero errors in my files. The 6 remaining errors are in other component files referencing types outside this subset. Let me confirm none are mine and see what they are.
+
+All 6 errors are `TSChartPalette` (a charts symbol my surface doesn't use). Let me locate it and include it for a fully-clean isolated typecheck.
+
+`tsGlassPanel` lives in another file. Let me find it and the remaining helpers to close out a fully-green isolated typecheck.
+
+**Proven:** across 4 typecheck configurations `MY_FILE_ERRORS=0` every time — my surface is type-correct; all noise is from partially-included sibling app files. The full-app build is blocked solely by pre-existing duplicate-symbol collisions in sibling surfaces owned by other artifacts (`StateTimeline`/`StateTimelineWidget`, `RecentDrives`/`RecentDrivesWidget`), outside my allowed file scope.
+
+Let me run the placeholder gate (both the verbatim command and a real per-file scan) and gather blocker evidence, then run the macOS gate.
+
+The real scan flagged line 123 — my `// parity:allow` marker was on the line *above* the key literal, but the script requires it on the *same* line as the match. Let me view and fix that.
+
+Now re-verify: placeholder scan, swiftformat, and swiftlint on the edited file.
+
+Placeholder real scan: **ALLOWED=1, COUNT=0, EXIT=0**; swiftformat + swiftlint still clean. Now I'll run the macOS gate (managed sync) for honest log evidence — it will hit the same pre-existing collisions.
+
+macOS gate is also red (MAC_EXIT=65) — but with a **different** cause: code-signing entitlements require a development certificate, unavailable on this runner (`DEVELOPMENT_TEAM: ""`). Let me check whether the macOS Swift compile itself succeeded or also hit the collisions, and confirm no errors in my files.
+
+macOS has **zero** compile errors and **zero** collision errors in its log — it fails earlier, at code-signing (8 entitlement errors): the runner has no development certificate (`DEVELOPMENT_TEAM` empty). So both gates are red for reasons entirely outside my surface. Now let me run the exact full-tree lint gate commands and gather the blocker evidence.
+
+**Full-tree lint gates pass:** swiftformat 0/3667 need formatting (FORMAT_EXIT=0); swiftlint --strict 0 violations across 3437 files (LINT_EXIT=0). So 3 of 5 gate steps are green; only the two `build test` steps are blocked. Let me gather the final blocker evidence for the log.
+
+All evidence confirmed. Now, since my XCTest cases can't run while the app module is blocked by the collision, let me prove my surface's behavior directly: my Adapter/Logic/Model/Source are SwiftUI-free (Foundation/Observation/OSLog only), so I can compile them standalone and execute the test assertions as a self-test program.
+
+The self-test references the SwiftUI `AINLSearch` view, but I'm compiling only the 4 SwiftUI-free files. Let me drop that one alias assertion (the view file needs SwiftUI + tokens).
+
+Now compile the self-test with the 4 SwiftUI-free source files and run it.
+
+The self-test needs `main.swift` naming and Swift 6 concurrency fixes. Let me rewrite it cleanly.
+
+**All 44 behavioral self-tests PASSED** — concrete runtime proof my Adapter/Logic/Model/Source behave exactly as the XCTest cases assert, including the web-parity specifics (raw prompt body, trimmed `canStart`, no `maxLength` cap, telemetry-once, stale auto-refresh, offline disable). 
+
+Now let me clean up temp files and write the official gate log.
+
+Now let me write the comprehensive, honest gate log.
+
+Now let me commit the surface and log. First mark todos, then commit with an honest message reflecting the BLOCKED gate.
+
+All 11 surface files + log staged (generated project/xcframework correctly git-ignored). Committing now.
+
+Committed (HEAD `abfc0a0c6`). Let me verify the commit contents and clean up temp files.
+
+The commit is clean: exactly 12 files (11 surface + log), 1934 insertions, working tree clean (generated project/xcframework correctly git-ignored), log ends `EXIT=1 / STATUS=BLOCKED`. Temp files cleaned. Let me confirm the final todo state.
+
+I've completed all work within my power and allowed scope. Here's the final summary.
+

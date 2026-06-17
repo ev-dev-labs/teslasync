@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure and understanding the web source page I need to port, along with the existing Apple app conventions.
+
+Now let me explore the Apple app structure and existing conventions in detail.
+
+I can see the existing multi-file component pattern. Let me check the build system, whether Xcode is available, and look at a representative data-driven feature for conventions.
+
+Xcode 26.5, swiftlint, swift, and xcodegen are all available — so the gate is **not** blocked. Note the project uses XcodeGen (`.xcodeproj` is git-ignored). Let me examine the parity manifest, ledger, gate contract, and a representative existing feature.
+
+The ledger shows sibling automation pages already "done". Let me find where those actually live (since there's no `Features/` dir), check whether the KMP framework is prebuilt, and read the gate contract.
+
+Now I see the real convention: parity pages live under `apps/apple/TeslaSync/Sources/Features/Automations/` (which IS in the build via the `Sources` path). The prompt's `Features/Automations` path drops the `Sources/` segment. Let me study the closest sibling — `AutomationsListPage` — which even has a Presets file.
+
+Excellent — this is the gold-standard pattern. The sibling page even has a Presets panel. Let me read the presets panel, route registration, models, sample data source, the test pattern, and the web preset types.
+
+Now let me read the web preset types, the route system (`AppRoute`/`AppRouteHostRegistry`), the sample data source, and the models file.
+
+The web `PresetGallery` is `(unrouted)` and there's no `AppRoute` case for it — adding one would be scope creep. Let me see how sibling unrouted pages (`AutomationCard`, `AutomationActivityFeed`) handle registration, plus the sample data source, models, and a test.
+
+Now let me read the sample data source pattern, the models file, a test file, and verify the design token / component names available.
+
+Let me confirm the exact shared component/token APIs I'll use (TSGlassPanel, TSButton, TSBadge, TSEmptyState, TSIconBox, motion, Color.TS, Font.TS) and check for staleness/SSE conventions.
+
+Let me read the generated design tokens (Color.TS/Font.TS/TSSpacing), the Skeleton component, and check the string catalog for existing `automations.presets.*` keys.
+
+The catalog has both `translation.`-prefixed and bare keys. The sibling code uses bare keys (`automations.presets.install`). Let me inspect the catalog structure to confirm which form resolves and which of my 4 required strings are missing.
+
+Catalog uses standard xcstrings with bare keys; action-count format is `%lld actions`. I need to add 6 bare keys (empty, noTrigger, 4 trigger labels). Now let me read the placeholder scanner, the gate contract, and a sibling log to mirror the format.
+
+Critical: the placeholder scanner flags the word "placeholder" case-insensitively, so I must avoid `.redacted(reason: .placeholder)` and the word in comments — I'll use `TSSkeleton` like the sibling. Let me read a sibling log for the exact evidence format and check the KMP framework build script.
+
+This sibling log is the definitive precedent: same output-path deviation (use `Sources/Features/Automations/`), and a documented pre-existing out-of-scope IRGen crash makes full `xcodebuild` RED — verified instead via swiftc -typecheck + harness + placeholder/lint gates. Let me check for symbol collisions, read the swiftlint config, and the models file.
+
+No collisions, lint config is clear (≤120 line length, isEmpty over count==0). Let me read the models file and swiftformat config to finalize conventions, then start building.
+
+I now have a complete understanding. Let me set up tracking and check the `automations.presets.title` value (for the nav title), then build.
+
+Title is "Quick Start Templates" — good for a nav title. Now I'll write the plan and start creating files. Let me create the session plan, the model, and the sample data source.
+
+Model and sample sources created. Let me verify how siblings render a *dynamic* localization key (for the trigger label and action-count), so I use the correct idiom.
+
+Confirmed: `LocalizedStringKey(runtimeString)` and `String(localized: String.LocalizationValue(key))` are the sibling idioms. Now let me create the card views, the page, and the route registration.
+
+Now the test file, mirroring the sibling XCTest conventions.
+
+Now let me add the 6 missing bare string keys to the catalog, after the `actionCount` entry.
+
+Let me update tracking, validate the JSON, and run swiftformat (write) on the new files.
+
+All 8 keys present and JSON valid. Let me run swiftformat (write) on the new files, then the placeholder scan.
+
+swiftformat-lint clean (0/6) and placeholder scan clean (COUNT=0). Now swiftlint --strict on the new files.
+
+One nesting violation: `Failure` is nested 2 levels deep in the test. Let me move it to file scope.
+
+swiftlint clean (0/6) and format clean. Now the key compile proof: `swiftc -typecheck` against real SDKs. Let me map the dependency closure and find any KMP-coupled files to exclude.
+
+Clean separation — the design system (42 files) has zero KMP imports, and my files only depend on it. Let me run the real `swiftc -typecheck` (iOS 18 + macOS 15, Swift 6, strict concurrency) over the design system + my surface.
+
+`teslaSyncTheme()` lives outside the design-system folders. Let me locate it and include it.
+
+`Sources/Theme.swift` (SwiftUI-only). Let me add it and re-run iOS + macOS typechecks.
+
+Only `UnitFormatters.swift` fails — the KMP-coupled file the sibling log explicitly excludes (my surface uses no SI units). Let me exclude it and confirm whether anything else references the KMP `Units` symbol.
+
+Both **iOS-18 and macOS-15 typechecks pass (EXIT=0)** under Swift 6 strict concurrency — only the KMP-coupled `UnitFormatters.swift` (unused by this surface) excluded, matching the documented sibling disposition. Now let me build and RUN an executable model harness (since `xcodebuild test` can't run, per precedent).
+
+Filename isn't `main.swift`, so top-level code is rejected. Let me wrap it in an `@main` struct.
+
+Harness **19/19 passed, RUN_EXIT=0**. Now let me run `xcodegen generate` to confirm enumeration, check the documented build disposition, and assess the KMP framework build feasibility.
+
+xcodegen succeeded; my files are enumerated (96 pbxproj refs). Let me read the documented disposition and probe whether the KMP/Gradle framework build is feasible here.
+
+Network is up, but the doc confirms **multiple pre-existing, unrelated full-app build blockers** (duplicate-symbol collisions like `DashboardWidgetSize` redefined 8×, plus the IRGen crash file which exists). Let me verify the duplicate-symbol collisions — a fast, concrete proof the full-app build is pre-RED independent of my change.
+
+Those specific collisions aren't present in this slot, so I shouldn't cite them. The honest path is to get ground truth from the real build. Let me check whether the Kotlin/Native toolchain is already cached (which determines KMP build feasibility/time).
+
+The Kotlin/Native toolchain (2.4.0) and Gradle caches are already present — so a real build is feasible. Let me build the `Shared.xcframework` in the background, then run the full `xcodebuild`.
+
+The KMP build is running. While it compiles, let me update the parity ledger (2 rows, 9/9) — this is independent of the build result.
+
+Let me validate the ledger JSON and check on the KMP build progress.
+
+Ledger validated and schema-conformant. The KMP native build is still compiling. Let me keep waiting.
+
+**`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 7m22s).** Now I can run the real full `xcodebuild` for ground truth. Let me kick it off (it's a large build), capturing to a log.
+
+BUILD_EXIT=65, but it failed in 13s — too fast for a deep compile. Let me examine the actual failure.
+
+A real collision **I caused**: there's already a `TeslaSync/feature-views/PresetGallery.swift`. Swift requires unique filenames per target. The sibling pages avoid this by using a `*Page` suffix. Let me find all existing `PresetGallery*` filenames to rename mine safely.
+
+The pre-existing `feature-views/PresetGallery.*` is a whole separate artifact — and since it's the **same compile target**, I must check for both filename AND type collisions. Let me inspect the types it declares.
+
+Found the real collisions: the pre-existing `feature-views/PresetGallery.*` artifact is in the **same target** and already declares public `AutomationTriggerKind` and `AutomationPresetItem` (plus the `PresetGallery.swift` filename). I'll rename my two colliding types and the colliding file. Let me confirm my new names are globally unique first.
+
+`PresetGalleryPhase` shows 5 external matches — let me see exactly what those are before deciding.
+
+There's a *second* unrelated pre-existing `PresetGalleryPhase` (in AlertMessageEditor). To stop playing whack-a-mole, let me namespace all my domain types uniquely and verify the entire set against the whole target at once.
+
+All 16 final names are collision-free. Let me rename the 2 colliding files and apply the type renames across my files and the harness.
+
+Renames are clean. Let me restore the web-type references in the doc comments (sed rewrote them) and confirm the `useAutomationPresets` method name is intact.
+
+`useAutomationPresets` is intact, and the `PresetCard`/`PresetCardSkeleton` refs are correct (real web names). Let me restore the 6 web-type references in the model doc comments.
+
+Now re-run format + lint + placeholder on the renamed fileset.
+
+Format/lint/placeholder all clean. Let me re-run the typechecks and harness with the renamed files.
+
+**iOS+macOS typechecks: 0/0; harness: 19/19.** Now regenerate the project and run the full `xcodebuild` to confirm the collision is resolved.
+
+Build ran longer (69s) — let me check whether the remaining failure is the pre-existing out-of-scope issue or something in my code.
+
+No PresetGallery errors — my collision is fixed. The build now fails only in pre-existing, out-of-scope `TeslaSync/shared-surfaces/Input.Previews.swift` (a result-builder `return` bug). Let me confirm that file is unmodified by me and is genuinely pre-existing.
+
+Conclusive: `Input.Previews.swift` was committed at `ed5f636e3` (a prior P4 commit), is **unmodified by me**, and contains a pre-existing `return`-in-`@ViewBuilder` bug. My change set is exactly the 6 new files + 2 additive edits. Let me confirm my files were enumerated in the compile and that no other failures trace to my code.
+
+Only `Input.Previews.swift` has errors. To definitively prove the RED is pre-existing (honesty covenant #1), let me reproduce it on a clean baseline by stashing my work, building, then restoring.
+
+My work is stashed (refs dropped 96→60, the remainder being the pre-existing feature-view). Let me build the baseline to confirm the same pre-existing RED.
+
+**Definitive proof:** the clean baseline (HEAD, without my changes) fails with the **identical** `BUILD_EXIT=65` on the **same** `Input.Previews.swift` — confirming the RED is pre-existing and out-of-scope. Let me restore my work.
+
+Work restored, project regenerated (96 refs). I have a complete, honest verification picture. Let me gather line counts and write the evidence log.
+
+Now let me write the evidence log.
+
+Let me update tracking, verify the final git state is clean (only intended changes), and confirm no stray artifacts.
+
+Final state is exactly as intended (6 new files + 2 additive edits + log; framework/project git-ignored). Let me stage and commit.
+
+Committed as `05c0b2e0d`. Let me do a final clean-state verification.
+
+All complete and verified. The working tree is clean, the commit contains exactly the 9 intended files (+1079 lines), the log ends with `EXIT=0`/`STATUS=DONE`, and all todos are done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-automations-PresetGallery.log  | 220 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  66 +++++++
+ .../Automations/PresetGalleryModel.Sample.swift    | 118 +++++++++++
+ .../Features/Automations/PresetGalleryModel.swift  | 202 +++++++++++++++++++
+ .../Automations/PresetGalleryPage.Card.swift       | 127 ++++++++++++
+ .../Features/Automations/PresetGalleryPage.swift   | 132 +++++++++++++
+ .../PresetGalleryRouteRegistration.swift           |  55 ++++++
+ .../Automations/PresetGalleryModelTests.swift      | 141 +++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 9 files changed, 1079 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-automations-PresetGallery.log
+ create mode 100644 apps/apple/Sources/Features/Automations/PresetGalleryModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/PresetGalleryModel.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/PresetGalleryPage.Card.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/PresetGalleryPage.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/PresetGalleryRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Automations/PresetGalleryModelTests.swift

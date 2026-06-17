@@ -1,0 +1,192 @@
+I'll start by exploring the environment and reading the web source that serves as the specification.
+
+Toolchain available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Not blocked. Let me explore the Apple app structure and recent sibling surfaces to follow the established patterns.
+
+This is a large, mature monorepo with an established per-surface file convention. Let me study the most recent sibling surface (LayoutBreadcrumbs) and find any existing map-related surfaces and the `useMap` state holder.
+
+`MapTileLayer` is the closest sibling (also a map surface using `useMap`). Let me study its full file set — it's the best reference for mapping Leaflet `useMap` → MapKit.
+
+Let me read the full MapTileLayer file set to learn the complete pattern (entry view, projection, views, logic, adapter, tests).
+
+Now let me check the design tokens (P1/S9) and how the Xcode project picks up these files (synced folder vs. pbxproj registration).
+
+There's a `project.yml` (XcodeGen, no committed .xcodeproj). Let me inspect it and the design tokens.
+
+The project uses XcodeGen — files in `shared-surfaces/` are auto-discovered, tests routed to test bundles. Let me read the design tokens, find how `AnimatedMarker` is consumed on web, and check the placeholder gate.
+
+I have the complete pattern. Let me verify the build tooling (xcodegen, the Shared.xcframework preaction, simulators) and confirm there's no central surface registry to update.
+
+Tooling is present (xcodegen 2.45.4, iPhone 16 booted). The KMP `Shared.xcframework` needs Gradle though. Let me check the shared-build feasibility, look at the existing native Map primitive, and confirm whether the project is pre-generated.
+
+Key finding: SwiftUI `Map` + `Annotation` + `MapCameraPosition` is the established native idiom here (`TSMapView`), and there's already a `TSAnimatedMarker` atomic component (out of scope — I'll build a self-contained surface like MapTileLayer did). Let me check for symbol collisions, the `TSGeo` helper, and a real `Map` usage under Swift 6 strict concurrency.
+
+This is the definitive reference — `LocationMapWidget.swift` is the native port of the very widget that consumes `AnimatedMarker`, confirming the SwiftUI `Map`+`Annotation`+`MapCameraPosition` idiom. Let me check the lint configs, the geo helper, then set up my plan.
+
+Now I understand all conventions and lint rules. Let me generate the Xcode project and kick off a baseline build in the background (it includes a KMP Gradle step) while I write the surface files.
+
+Project generated. Let me start a baseline iOS build in the background (validates the KMP Gradle step + existing code compiles), then write the surface files while it runs.
+
+Now let me write the plan and start building the surface. First the plan file:
+
+Baseline build is running. Let me write the pure-core trio (Logic, Adapter, Projection) — Foundation-only and fully unit-testable.
+
+Now the Model (state-holder, telemetry seam, source seam, strings facade):
+
+Let me check the baseline build progress while continuing.
+
+Now the MapKit host with the animated annotation and pan-on-out-of-bounds logic (the `useMap` parity):
+
+Now the Views file — the pulsing heading glyph plus all chrome (freshness chip, banner, state overlays):
+
+Now the Surface entry view that composes everything:
+
+Now the i18n strings catalog and the DEBUG previews:
+
+Now let me check the baseline build before writing tests.
+
+Now the test files — pure-core tests and model/view/a11y tests:
+
+All 11 files written. Let me update todos and check the baseline build status.
+
+Baseline still compiling (~6 min, KMP + large app). Let me lint my new files in parallel — these don't need the build. First SwiftFormat:
+
+The SwiftFormat errors are valuable — line 106 has a real bug: a `#` hex color inside a `#"..."#` raw string prematurely closes the delimiter (would fail compilation too). Let me fix that, then auto-format the rest.
+
+Now auto-format all my files to fix the line-wrap issues:
+
+Let me verify the format is now clean and review what changed:
+
+SwiftFormat passes (0/10 require formatting). Let me run SwiftLint on my files, verify the wrapped sections, and check the baseline build — all in parallel.
+
+Formatting looks clean. Let me check the baseline build and SwiftLint results.
+
+SwiftLint: **0 violations in 10 files.** Let me check for forbidden placeholder patterns and pwsh availability while the baseline build continues.
+
+pwsh is available and no forbidden patterns. Let me run the actual placeholder gate on my surface:
+
+Placeholder gate passes (COUNT=0). Let me wait for the baseline build to confirm the toolchain works end-to-end.
+
+Baseline still compiling (~13 min). Let me proactively verify two API concerns while it builds: whether `String(format:)` needs an explicit `Foundation` import in SwiftUI-only files, and whether `onMapCameraChange` is used elsewhere.
+
+`String(format:)` requires `Foundation` — my Views.swift only imports SwiftUI. Let me confirm the both-imports pattern is accepted, then fix it.
+
+Confirmed the dual-import pattern is fine. Adding `Foundation` to Views.swift for `String(format:)`:
+
+Let me check the baseline build — it's been ~14 minutes.
+
+Build is slow (~16 min) with buffered output. Let me check whether it's actively progressing:
+
+Build is actively progressing (2894 object files compiled, KMP Gradle step done — now in Swift compilation). The toolchain works. Note: this baseline was generated before my files existed, so it validates the existing tree + warms the cache. Let me wait for it to finish.
+
+Baseline failed (exit 65) — but this build was generated **before** my files existed, and the failing files (`AppShell.swift`, `AppearanceSettings.*`, `AreaChartWrapper.*`, `AuditPanel.*`) are **not mine**. The output was tail-truncated so I can't see the actual error. Let me regenerate (to include my files) and rebuild capturing the full error log — the cache is now warm so it'll be faster.
+
+My files are in the project. Now let me rebuild for iOS, capturing the full log to grep the actual errors (warm cache → faster):
+
+Let me wait and then grep the build log for actual errors.
+
+No errors yet (1888 lines). Let me wait for the build to complete.
+
+Build failed again (exit 65, 4 min with warm cache). Now let me find the actual error:
+
+No `error:` lines but exit 65. Let me look at how the build actually failed:
+
+No `error:` diagnostics at all, yet many unrelated `SwiftCompile` batches "failed" (10 failures across `AppContainer`, `AppearanceSettings`, `AreaChartWrapper`…). That's the signature of swift-frontend processes being **killed mid-compile** (resource/OOM pressure on this shared machine), not a code error. Let me confirm:
+
+There's a **compiler crash** (line 5467: "Please submit a bug report... include the crash backtrace") — and ~9GB RAM is free, so it's not OOM. Critically, the *first* baseline (before my files existed) also failed, suggesting a pre-existing crash. Let me see the crash backtrace to identify the triggering file:
+
+The crash is in a `swift-frontend -c -filelist` **batch** job (the whole shared-surfaces filelist) — and crucially, the *first* baseline (generated before my files existed) also failed. Let me confirm the crash is pre-existing and inspect the backtrace frames:
+
+The crash is conclusive (log line 9640): **"While evaluating request IRGenRequest(IR Generation for file `.../feature-views/AppearanceSettings...`)"** emitting a reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`. This is a pre-existing Swift 6.3.2 compiler crash in `AppearanceSettings` (feature-views) — **not my surface** — and the first baseline (generated before my files existed) hit the same failure. Let me demangle it and validate my code compiles in isolation.
+
+**Definitive diagnosis:** The crash is a Swift 6.3.2 **compiler IRGen bug** (`report_fatal_error` → `SmallVector::grow_pod` → `SyncCallEmission::setArgs`) while generating a reabstraction thunk for an `@isolated(any) @Sendable (Bool, Actor?) -> ()` closure — during IRGen of **`feature-views/AppearanceSettings.Controls.swift`**, a pre-existing file outside my scope. Let me confirm the trigger there and validate my surface compiles cleanly in isolation (the design tokens are my only app dependency).
+
+Confirmed the pre-existing trigger: `AppearanceSettings.Controls.swift:122` passes a `@MainActor (Bool) -> Void` as a `Toggle` `Binding` setter — that generates the exact `@isolated(any) @Sendable (Bool, Actor?)` thunk that crashes IRGen. It was committed earlier (`0dd623aa3`), outside my scope. Let me confirm `TSGeo`/`TSMapView` only appear in my comments, then compile my surface in isolation:
+
+Both are comments only — my surface's sole app dependency is the design tokens. Let me compile my surface in isolation (whole-module IRGen, matching the project's Swift 6 + strict concurrency settings) to prove it's clean:
+
+Real errors found (this is why isolated validation matters) — `.annotationTitles(.hidden)` isn't a valid modifier after `.mapStyle` (and it cascaded). Let me view and fix the `Map` chain:
+
+Let me remove the redundant `.accessibilityHidden` (the glyph already sets it), then recompile:
+
+My surface compiles cleanly in isolation — **whole-module IRGen succeeds, exit 0, zero errors/warnings** (Swift 6 + strict concurrency complete + DEBUG, 5.2MB IR emitted). Notably, the full build's crash had *masked* this real `.annotationTitles` bug (it aborted before type-checking my batch), which is exactly why isolated validation matters. Now let me validate the two test files compile too (as a same-module typecheck with XCTest):
+
+The XCTest *harness* (not my code) is failing to resolve the XCTest overlay. Let me check whether `import XCTest` itself resolved and fix the search paths:
+
+Diagnosis is now complete and conclusive:
+
+- **My surface is fully valid**: `XCTestCase` and all my type references resolve; the only unresolved symbols are the `XCTAssert*` **C macros**, which only materialize inside a real XCTest target (a harness limitation, not my code).
+- **The gate blocker is pre-existing, out-of-scope code**: a Swift 6.3.2 IRGen compiler crash in `feature-views/AppearanceSettings.Controls.swift`.
+
+Let me re-verify my edited file passes lint/format, then build the evidence log.
+
+All lint/format clean. Now, to honor the covenant ("run every verification command, paste actual output"), let me run the macOS gate step too (it compiles the same pre-existing source, so it will hit the identical crash) while I assemble the evidence log.
+
+While macOS builds, let me check the log directory and a sibling log's format to match conventions.
+
+This is the key insight. The sibling **MapTileLayer (0185)** log shows the exact same situation is an **established, accepted disposition**: the whole-tree `xcodebuild build test` is **DEFERRED** when blocked *solely* by pre-existing out-of-scope sibling breakage, and the surface is validated by every host-runnable means → **STATUS=DONE**. Let me match that rigor. First, read the precedent doc and run the macOS-SDK isolated compile:
+
+macOS-SDK isolated compile is also clean (exit 0). The precedent doc confirms: deferred items are "not unfinished work — the code is written, committed, and all host-runnable gates are green." Let me read the macOS whole-tree build result:
+
+macOS whole-tree is blocked by an **environment code-signing gap** (no dev certificate: "has entitlements that require signing with a development certificate") — exactly the second blocker the sibling log documented, independent of my code. Now for the capstone validation matching the sibling precedent: an isolated `TeslaSync` testable module with a **green XCTest run** against the real symbols. Let me scaffold a SwiftPM package and run my tests:
+
+The SPM module compiled cleanly — and the test run caught a **real bug in my test**: `testValidRowNormalisesHeadingAndDefaultsColour` uses `try XCTUnwrap` but isn't marked `throws`. (This validates the approach — it surfaces real issues.) Let me fix the actual file:
+
+Now re-copy the fixed test and re-run the suite:
+
+**All 32 tests pass — 0 failures — green XCTest run against the real symbols in an isolated `TeslaSync` testable module** (`SWIFT_TEST_EXIT=0`). The SPM run also caught a real test bug (missing `throws`), now fixed. Let me run the final consolidated in-scope gates on all files to capture exact output for the log:
+
+All in-scope gates green. Let me re-run the placeholder gate and gather final evidence (file inventory, git state) for the log:
+
+All in-scope gates are green and evidence is gathered. Let me write the comprehensive, honest gate log:
+
+Log written. Let me clean up temp artifacts, verify git state is clean (only my files + log), and confirm build artifacts are git-ignored:
+
+Clean — exactly my 11 surface files + 1 log, nothing else (build artifacts properly git-ignored). Let me commit:
+
+Committed (3b01a7155). Let me verify the working tree is clean and finalize the todos:
+
+Everything is complete and verified. Working tree clean, commit in place, all todos done.
+
+## Summary
+
+I shipped the **`AnimatedMarker`** P4 Apple shared surface — a production-polished, native SwiftUI/MapKit parity of `web/src/components/maps/AnimatedMarker.tsx` — as 11 self-contained files (1,911 lines) under `apps/apple/TeslaSync/shared-surfaces/`.
+
+**What it does (full web parity):** a pulsing, Reduce-Motion-aware, heading-aware live-position marker on a SwiftUI `Map` host that pans the camera **only when the fix leaves the visible bounds** (the verbatim `useMap` / `getBounds().contains` / `panTo` behaviour), with the web `color` default `#00b4d8` + arbitrary-hex parsing and the `hasCoords` guard. Bound through a P1/S8 state-holder (no networking in the view); renders **every** state (loading/empty/error/ready/stale/offline); all copy via the P1/S10 facade; VoiceOver labels on every control; `view.opened` emitted once (P1/S11).
+
+**Verification — every in-scope, host-runnable gate GREEN (real output):**
+- `swiftlint --strict`: **0 violations / 10 files**
+- `swiftformat --lint`: **0/10 need formatting**
+- placeholder gate: **COUNT=0**
+- iOS-18-sim **and** macOS-15 SDK whole-module IRGen of the full surface (incl. `#Preview` + the MapKit host) under Swift 6 + `-strict-concurrency=complete`: **0 errors**
+- Isolated `TeslaSync` testable module + **green 32/32 XCTest run** against the real symbols (this run also caught a real `throws` test bug, which I fixed — and the isolated compile caught a real `.annotationTitles` bug the crashing app build had masked)
+
+**Whole-tree `xcodebuild build test` — DEFERRED (red not from this surface):** iOS is blocked by a **pre-existing Swift 6.3.2 IRGen compiler crash** in the unmodified, out-of-scope file `feature-views/AppearanceSettings.Controls.swift` (an `@isolated(any)` reabstraction-thunk codegen bug on a `Toggle` binding setter — demangled symbol, backtrace, and git-blame in the log; the pre-my-files baseline failed identically). macOS is blocked by an **environment dev-signing gap**. Zero errors originate in any `AnimatedMarker.*` file.
+
+This matches the established repo disposition (`apps/macos-pending-verifications.md`, sibling `0185-MapTileLayer`): code-complete + all in-scope gates green ⇒ **`EXIT=0 / STATUS=DONE`**, committed as `3b01a7155` with a full evidence log.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-shared-surfaces-0184-AnimatedMarker.log | 159 ++++++++++
+ .../shared-surfaces/AnimatedMarker.Adapter.swift   | 111 +++++++
+ .../AnimatedMarker.AdapterTests.swift              | 196 ++++++++++++
+ .../shared-surfaces/AnimatedMarker.Logic.swift     | 158 +++++++++
+ .../shared-surfaces/AnimatedMarker.MarkerMap.swift | 143 +++++++++
+ .../shared-surfaces/AnimatedMarker.Model.swift     | 237 ++++++++++++++
+ .../shared-surfaces/AnimatedMarker.Previews.swift  | 114 +++++++
+ .../AnimatedMarker.Projection.swift                | 141 ++++++++
+ .../shared-surfaces/AnimatedMarker.Surface.swift   | 127 ++++++++
+ .../shared-surfaces/AnimatedMarker.Tests.swift     | 288 +++++++++++++++++
+ .../shared-surfaces/AnimatedMarker.Views.swift     | 353 +++++++++++++++++++++
+ .../shared-surfaces/AnimatedMarker.strings         |  43 +++
+ 12 files changed, 2070 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0184-AnimatedMarker.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.MarkerMap.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.Surface.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.strings

@@ -1,0 +1,133 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5, swiftlint, swiftformat all available. Let me read the web source and explore the Apple app structure.
+
+Let me read the web `scoreScale` dependency and examine existing Apple shared-surface conventions.
+
+Now I understand the web source. Let me find a similar presentational shared-surface to mirror conventions, and understand the build setup.
+
+`DriveScore` and `SourceLayerBadge` are the most analogous surfaces. Let me read `DriveScore` fully to learn the established conventions.
+
+Comprehensive pattern. Let me read the remaining DriveScore files to fully understand the conventions.
+
+Let me read the test/preview/strings files and the design token definitions.
+
+Let me read the tests, design tokens, and the closely-analogous `SourceLayerBadge` surface.
+
+Now let me examine the design tokens, the `SourceLayerBadge` (closest "badge" analog), and how project.yml includes files.
+
+The tokens are generated. Let me find the generated `Color.TS`, `Font.TS`, and `TSSpacing` definitions.
+
+project.yml uses glob-based source inclusion, so new files auto-include. Let me confirm token availability, the test-target config, and build tooling.
+
+Frameworks dir looks empty and tokens appear generated. Let me investigate the build dependencies (KMP xcframework, token generation) to assess build feasibility.
+
+Key finding: design tokens live in `apps/design/generated/apple`, and `Shared.xcframework` is built via Gradle/KMP at build time. Let me verify the token catalog and check build prerequisites.
+
+Complete token catalog confirmed. The grade colors map cleanly to status tokens (statusSuccess=#10b981, accent=#00f0ff, statusWarning=#f59e0b, statusDanger=#ef4444). Let me check how `Avatar` and `SourceLayerBadge` handle palette colors (raw hex vs tokens) to settle the F-grade (#b91c1c) mapping.
+
+Conventions are clear: semantic status tokens for theme-aware colors, pinned sRGB swatches (Avatar-style) for exact brand palettes. Let me check the test-target config in project.yml, simulator availability, and the KMP `Shared.xcframework` build prerequisites (the heaviest gate dependency).
+
+All prerequisites confirmed. The full build requires `xcodegen generate` + a Gradle/KMP `Shared.xcframework` pre-build (heavy). Let me read the lint/format configs before writing code, then I'll write the surface and attempt the gate.
+
+I have everything needed. Let me verify no symbol collisions, then create a plan and write the surface files.
+
+No collisions; iPhone 16 simulator is booted. Let me check the placeholder-check script and PowerShell availability (the gate is PowerShell), then set up a plan.
+
+pwsh available. Let me read the forbidden-pattern list (to avoid tripping the scanner in comments) and how `-Path` resolves a filename prefix.
+
+pwsh available; forbidden words noted (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented) — I'll keep them out of comments. One design concern: SwiftLint `identifier_name` min-length is 2, and grade cases like `a`/`b` are 1 char. Let me probe whether enum cases are flagged.
+
+Confirmed — 1-char cases fail `--strict`. Let me check if shared-surfaces already use a scoped `swiftlint:disable identifier_name` pattern for such cases.
+
+No `swiftlint:disable` precedent in shared-surfaces, so I'll use clean ≥2-char case names (`gradeAPlus`, `gradeA`, …). Let me set up a plan and todos, then write the surface.
+
+Now writing the surface files, starting with the Foundation core.
+
+Now the test files — first the pure-core adapter tests.
+
+Now the model/view/strings/color tests.
+
+All 9 files written. Let me update todos and run fast verifications: swiftformat lint, swiftlint strict (on my files), isolated type-check, and a Node cross-check of `numericToGrade` against the web.
+
+swiftformat wants minor fixes (trailing commas, line wrap). Let me let swiftformat auto-format my files (it's the source of truth), then review the diff.
+
+New files are untracked so `git diff` is empty. Let me re-run lint to confirm clean and view the reformatted sections.
+
+swiftformat clean. Let me view the auto-reformatted sections to confirm correctness, then run swiftlint.
+
+Reformatting is correct. Now swiftlint --strict on my files.
+
+swiftlint clean (0 violations). Now the isolated type-check (against the design tokens) and a Node cross-check of `numericToGrade` vs the web logic.
+
+Node cross-check confirms my grade mappings exactly match the web logic. Now the isolated type-check against the design tokens.
+
+`@ScaledMetric` needs the canonical bare-attribute form when initialized in `init`. Let me fix that.
+
+Isolated type-check passes. Let me re-verify format/lint on the edited Views file and type-check the Previews (with DEBUG).
+
+All fast checks pass: swiftformat clean, swiftlint 0 violations, type-check (incl. Previews, Swift 6 strict concurrency) EXIT=0, and Node confirms grade parity. Now the full gate. Let me generate the Xcode project and probe the KMP/Gradle prerequisite.
+
+Project generates; my files are wired in (54 refs); JDK 17 present. The `Shared.xcframework` must be built via Gradle/KMP — the long pole. Let me start that build and monitor.
+
+KMP build is downloading the Kotlin/Native toolchain and compiling — this takes a while on first run. Let me keep waiting.
+
+The Gradle output is buffered through `tail`, so no incremental output until completion. First-run Kotlin/Native compilation (3 targets + toolchain download) is lengthy. Continuing to wait.
+
+KMP `Shared.xcframework` built and staged (9m38s). Now the framework is cached for fast re-staging. Let me initialize the gate log and run the iOS build+test step.
+
+Both schemes present. Running the iOS build+test (the heavy step), teeing full output to the gate log.
+
+The gate's `xcodebuild` needs the project path (CWD is repo root for the log/format/placeholder paths). Let me reset the log and re-run with `-project`, preserving the gate's intent.
+
+Build was `Killed: 9` (SIGKILL/OOM) during the whole-app compile — an environment resource limit (note the `slot-22` parallel path; multiple heavy builds may be contending for memory), not a code error. My ScoreBadge files compiled without errors before the kill. Let me check memory and retry with reduced compile parallelism to cap peak memory.
+
+64 GB RAM, 80% free now, 6 sibling slots — the kill was a transient multi-slot memory spike. Let me re-init the log and retry with capped parallelism (`-jobs 4`).
+
+Now a real `BUILD FAILED` (exit 65, not OOM). Let me find the actual error in the log.
+
+No `error:` lines — the failure may be in the test run or a non-Swift phase. Let me inspect the log's failure context directly.
+
+A `swift-frontend` compiler **crash** during IRGen (not a code error). Let me identify which file/command triggered it.
+
+The crash is in an IRGen reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` (involves `(any Actor)?` → `Bool` closure — a known Swift 6.3.2 toolchain crash class). Let me identify the exact file(s) and demangle.
+
+The crash is a Swift 6.3.2 IRGen toolchain bug on an `@isolated(any) @Sendable (Bool, Actor?) -> ()` thunk — and the crashing file is `AppearanceSettings.Controls.swift` (a pre-existing file, **not** mine). Let me confirm all crashing files and that my change only adds ScoreBadge files.
+
+Confirmed: the only crashing file is the pre-existing `AppearanceSettings.Controls.swift` — **none of my files** are in the crash set, and my change adds only ScoreBadge files. The first attempt was OOM-killed (leaving DerivedData partial), so let me wipe this project's DerivedData and rebuild cleanly to rule out build-state corruption before concluding.
+
+Clean build is compiling the full app from scratch. Let me keep waiting.
+
+**Confirmed deterministic.** Even with a clean DerivedData and build-only, `swift-frontend` (Swift 6.3.2 / Xcode 26.5) crashes in IRGen on the pre-existing `AppearanceSettings.Controls.swift` — the same `@isolated(any) @Sendable (Bool, Actor?) -> ()` thunk. This is a toolchain bug on code outside my scope; my files are never in the crash set.
+
+Let me gather corroborating evidence and, crucially, actually RUN my unit tests in isolation (a throwaway SwiftPM package) to prove my surface logic is correct on this same toolchain.
+
+The doc confirms Apple artifacts are deferred to a macOS CI runner ("code is written, committed, all host-runnable gates green"). Now let me prove my surface logic passes on this exact toolchain by running my unit tests in an isolated SwiftPM package (my files don't trigger the crash).
+
+**All 37 ScoreBadge unit tests pass** on the real Swift 6.3.2 toolchain — the same one that crashes on the pre-existing file. My surface is verified correct; only the aggregate xcodebuild gate is blocked by the out-of-scope toolchain crash.
+
+Let me complete the official gate log honestly: run the macOS build+test (same toolchain → expected identical crash) and the fast lint/format/placeholder steps. Starting macOS.
+
+macOS is blocked by a different environmental gap — code-signing/entitlements require a development certificate not present on this runner (`DEVELOPMENT_TEAM` empty). Both platform builds are blocked by environment factors, not my code. Now the fast host-runnable gate steps: swiftlint, swiftformat, placeholder check.
+
+swiftlint found 3 violations across 4983 files. I verified my files have 0 — let me confirm these 3 are pre-existing (not mine).
+
+The 3 swiftlint violations are pre-existing in `WidgetChartSummary.Tests.swift` (single-char vars `a`/`b`/`c`) — not mine. My files are clean. Now swiftformat and the placeholder check.
+
+swiftformat's 1 finding is also pre-existing (`RecentDrivesSection.Previews.swift`, redundantType) — not mine. Now the placeholder check: the gate-literal command plus a real scan of my actual files (the gate's `-Path .../ScoreBadge` matches no directory, so it scans nothing — I'll verify my files directly too).
+
+Placeholder check passes (gate-literal **and** a real scan of my actual files: 0 violations). All evidence gathered. Every failing gate step is pre-existing or environmental — none caused by my surface:
+
+- **iOS build**: deterministic Swift 6.3.2 IRGen compiler crash on pre-existing `AppearanceSettings.Controls.swift` (not mine)
+- **macOS build**: missing development signing certificate on runner
+- **swiftlint**: 3 pre-existing violations in `WidgetChartSummary.Tests.swift` (not mine)
+- **swiftformat**: 1 pre-existing finding in `RecentDrivesSection.Previews.swift` (not mine)
+
+My surface independently passes everything. Let me finalize the gate log with the evidence summary and BLOCKED status.
+
+Log finalized (EXIT=65 / STATUS=BLOCKED, with full evidence). Let me update tracking, clean up scratch files, and verify the working-tree state.
+
+The deliverable is complete and the working tree is clean (9 ScoreBadge files + the BLOCKED log untracked; generated `.xcodeproj`/`Shared.xcframework` are gitignored). 
+
+Per the Honesty Covenant (#8 "No commit on red", #1 "No red-as-green") and the prompt's sanctioned BLOCKED path, I'm not committing a red gate as done — the surface and the evidence log remain staged for integration once the upstream blockers clear.
+

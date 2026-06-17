@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure to understand what exists and what infrastructure is available for this task.
+
+Apple toolchain (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat) and the `apps/apple` infra both exist. Let me read the web source and understand the Apple app structure.
+
+Now let me explore the existing Apple app structure to follow established patterns — feature-views, state holders, tokens, i18n, diagnostics, and tests.
+
+This is a large, well-established pattern (1552 feature-view files). Let me find the sibling drivetrain-health components and understand the canonical file structure, shared facade, and tokens.
+
+`HealthRecommendations` doesn't exist yet but all its siblings do. Let me study the closest siblings (`DetailCards`, `ThermalLoadPanel`, `HealthGaugeGrid`) to learn the exact architecture, and the shared facade/tokens.
+
+Excellent — rich, sophisticated architecture. Let me study the Views, States, Previews, Tests, strings, and design tokens to fully internalize the conventions before writing.
+
+Now let me read the design tokens, the motion/stagger components, the `HealthStatus` representation in siblings, and the test/preview patterns.
+
+Let me read the design tokens, the `HealthStatus` representation in `HealthGaugeGrid`, the build config, and locate the shared motion/glass components.
+
+The shared components live in `apps/apple/Sources/`. Let me read the design tokens, motion, glass panel, skeleton, and empty-state components, plus the build config.
+
+Now let me read the material tokens, color/font token definitions, the skeleton component, and the build config to confirm scheme names and file inclusion.
+
+Let me locate the color/font/spacing token definitions and read the build config.
+
+Build uses XcodeGen with glob-based source inclusion (so new files auto-include after `xcodegen generate`). Let me read the design tokens and the rest of `project.yml` (test targets/schemes).
+
+Let me read the design tokens file to get exact `Color.TS` and `Font.TS` member names.
+
+I have all tokens. Now let me verify the web i18n catalog values, the placeholder checker, and tool availability (xcodegen, pwsh).
+
+Both `xcodegen` (2.45.4) and `pwsh` are available. Let me confirm the exact `drivetrain.tips.*` catalog values in en.json.
+
+The `drivetrain.tips.*` keys aren't in en.json — the web source relies on inline `t()` English fallbacks (the authoritative spec). Let me read the lint/format configs to ensure `--strict` compliance, then look at one derivation-style sibling for the computed-list pattern.
+
+I now have a thorough understanding. Let me check the view-test style and confirm no naming collisions before writing.
+
+No collisions, and the view-test pattern uses `ImageRenderer` per state. Let me read the placeholder patterns (to avoid forbidden tokens) and confirm the iOS simulator + Shared.xcframework situation before writing.
+
+Key finding: `Shared.xcframework` is not staged (only `.gitkeep`), and the build scheme stages it via a pre-action script. Let me read that script and assess toolchain availability — this is the critical build-capability question.
+
+Now I understand the full picture. The app links a KMP `Shared.xcframework` built via Gradle (the long pole). Java 17 + gradlew are present. Let me kick that build off in the background now while I write the surface, and set up my plan/todos.
+
+Framework build running in background. Let me write the plan and start creating the surface files, beginning with the pure projection adapter.
+
+Now I'll write the pure projection adapter — the faithful port of the web `useMemo` logic.
+
+Now the Views file — the priority-tinted recommendation rows, header, and staggered list (faithful to the web priority styling).
+
+Now the States file — freshness chip, connectivity banner, loading skeleton, empty state, and error state.
+
+Now the main entry surface that switches over the model's phase.
+
+Now the Previews, strings catalog, and the three test files. Let me write Previews first.
+
+Now the i18n catalog contribution. Values mirror the web source's inline `t()` defaults exactly.
+
+Let me check the framework build progress, then write the test files.
+
+Framework build is compiling (Kotlin/Native). Continuing with the test files. First the adapter/projection/i18n/a11y tests.
+
+Now the model tests — phases, telemetry, connection, and the stale auto-refresh.
+
+Now the per-state view-render smoke tests using `ImageRenderer`.
+
+All 10 files written. Now let me auto-format my files with swiftformat, then lint-check them, and check the framework build progress.
+
+swiftformat-clean (0/9 require formatting). Now swiftlint --strict on my files.
+
+One swiftlint violation: `function_body_length` (69 lines). Let me refactor the projection into composed static arrays — cleaner and DRYer.
+
+Let me re-format and re-lint after the refactor, and check the framework build.
+
+swiftlint --strict: **0 violations**, swiftformat: clean. Now let me regenerate the Xcode project and run the placeholder gate (both independent of the framework build).
+
+xcodegen succeeded (60 references to my files in the project) and placeholder check passed. Let me verify the placeholder script actually scanned my files (the gate uses a path prefix, not a dir), and check the framework build progress.
+
+Let me inspect how the script resolves the `-Path` argument (the gate passes a path prefix), to ensure honest placeholder coverage.
+
+The gate's placeholder step scans by literal path; the per-surface prefix means it passes vacuously (a known trait of this flat layout). For honest verification, let me run it against a temp dir containing only my files, and check the framework build.
+
+Honest placeholder scan on a real temp dir (9 files): **PLACEHOLDER_COUNT=0**. My files are genuinely clean. The framework build (Kotlin/Native) is still compiling — let me wait for it.
+
+**Framework build SUCCEEDED** (12m 21s) — KMP builds cleanly on this runner, de-risking the gate. Let me stage the framework, then run the full gate. First, stage it:
+
+Framework staged (`Frameworks/Shared.xcframework` present). Now I'll run the full gate. Starting with the iOS build+test (the long pole), writing to the gate log. Let me initialize the log and launch it.
+
+iOS build+test launched in background. Let me wait and monitor progress via the log.
+
+The iOS build failed — but the errors are in **pre-existing, unrelated files** (`dashboard-widgets/SafetyFeaturesWidget.*`, `SafetyHistoryWidget.*`), not my surface. Let me assess the full scope and confirm these aren't caused by my changes.
+
+Confirmed: **226 pre-existing compile errors in 6 unrelated dashboard-widget surfaces** (Charge*/Fleet*/Safety* widgets), **zero errors in my HealthRecommendations files**, and git confirms I only added my 10 allowed files. Those broken widgets are explicitly **out of scope** and **outside my allowed files**. Let me check whether I can cleanly isolate my surface to prove it compiles + tests pass, by checking for external references to the broken widgets.
+
+The 6 broken widgets are **self-contained** (zero external references), so I can cleanly isolate my surface to prove it compiles and its tests pass — using a command-line-only `EXCLUDED_SOURCE_FILE_NAMES` (no committed file changes). Let me run that isolated verification.
+
+Isolated build+test running. Let me wait and monitor.
+
+Another pre-existing broken sibling surfaced (`TimestampTool.Previews.swift`) — confirming the shared branch has multiple broken in-flight surfaces, none of them mine. Rather than whack-a-mole, let me isolate cleanly: exclude **all** sibling feature-views/widgets (and their tests) except mine, keeping the real core, and run my tests. First, confirm the core (`Sources/`) doesn't reference sibling surfaces.
+
+Both confirmed: `Sources/` (the core) is independent of sibling surfaces, and I identified the sibling-referencing unit tests. Now the decisive isolated build+test — exclude all sibling surfaces/tests, keep the real core, run my tests.
+
+Isolated verification running. Let me wait and check it.
+
+**Decisive isolated verification PASSED**: `BUILD SUCCEEDED` + `TEST SUCCEEDED` — all **35 of my tests pass** (projection, model phases, telemetry, connection/auto-refresh, i18n keys, a11y, and all 8 per-state view renders), with **zero errors in my files** against the real core + KMP framework.
+
+My surface is proven correct. The official full-module gate is red solely due to pre-existing broken sibling surfaces outside my scope. Let me now run the remaining official gate steps to record real exit codes.
+
+Linting and formatting the whole tree in the background. Let me wait for them.
+
+swiftlint --strict (whole tree): **1 pre-existing violation in a sibling, 0 in my files**. Let me identify it and wait for swiftformat.
+
+swiftformat (whole tree): **clean, FORMAT_EXIT=0**. swiftlint's 1 violation is a pre-existing sibling (`LiveSignalSparklinesWidget`). Now the official macOS build+test (will fail at compile like iOS, recording the real exit), then I'll prove macOS parity for my surface in isolation.
+
+macOS official build running (will fail at compile like iOS). Let me wait for it.
+
+macOS official build failed at a **different** pre-existing issue: code-signing/entitlements require a development certificate not available on this runner (MAC_EXIT=65) — a runner capability gap, before sources even compile. Let me prove macOS parity for my surface by building+testing in isolation with signing disabled.
+
+Waiting for the isolated macOS verification.
+
+**macOS isolated verification also PASSED**: `BUILD SUCCEEDED` + `TEST SUCCEEDED`, 35/35 tests. My surface is now proven on **both iOS and macOS**. Let me check the gate log's recorded iOS exit code, then compose the final honest gate log.
+
+IOS_EXIT=65 recorded. I have all results. Let me extract the precise list of pre-existing broken sibling surfaces from the official iOS log, then compose the final honest gate-log appendix.
+
+Confirmed: 6 broken sibling widgets in the official iOS log (+ TimestampTool surfaced later), **0 errors in HealthRecommendations**. Now let me append the complete, honest analysis and isolated-verification evidence to the gate log.
+
+The gate log now ends with `EXIT=1` / `STATUS=BLOCKED` with complete evidence. Let me clean up scratch artifacts and verify the final repo state.
+
+Final state is clean: only my 10 allowed files + the gate log are added; the `.xcodeproj` is gitignored. Let me update tracking and record the outcome, then finalize.
+
+Let me do a final check that the gate log is intact and no processes are hanging.
+
+All background shells are completed (no hanging processes), and the gate log is intact — ending with `EXIT=1` / `STATUS=BLOCKED` plus full evidence and the per-step exit codes. The work is complete to the extent possible within scope.
+

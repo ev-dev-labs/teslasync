@@ -1,6 +1,6 @@
 //
-//  ActionItem.Views.swift
-//  TeslaSync — P4 shared surface · 0196 · ActionItem (Apple)
+//  ActionItemShared.Views.swift
+//  TeslaSync — P4 shared surface · 0196 · ActionItemShared (Apple)
 //
 //  The presentational pieces of the single operator-task row: the severity → semantic-tone token
 //  projection (the web `*-400` / `*-500` glyph / tint / ring hues) and the content view — the native peer
@@ -44,9 +44,9 @@ extension ActionSeverity {
     }
 }
 
-// MARK: - ActionItemContainer (web `<ActionItem>` outer element)
+// MARK: - ActionItemContainer (web `<ActionItemShared>` outer element)
 
-/// The operator-task row — the native peer of the web `<ActionItem>` body. A pure function of its
+/// The operator-task row — the native peer of the web `<ActionItemShared>` body. A pure function of its
 /// projection + the optional CTA handler: it renders the tinted, ringed surface with the leading severity
 /// glyph, the title + optional description column, and the trailing CTA affordance. Generic-free + a pure
 /// function of its inputs (no networking, no derivation), so it composes in every branch for snapshot /

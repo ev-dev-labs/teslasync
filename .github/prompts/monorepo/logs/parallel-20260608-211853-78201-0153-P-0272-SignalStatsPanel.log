@@ -1,0 +1,42 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me check a few remaining details: the web DataTable sort behavior, native interpolation handling, and the logs directory.
+
+Now I have a complete understanding. Let me set up tracking and confirm no existing files, then write the implementation.
+
+Writing the pure projection core first:
+
+Now the state-holder, projection, telemetry, and i18n facade:
+
+Now the main surface view:
+
+Now the presentational subviews:
+
+Now the i18n catalog and previews:
+
+Now the test suite:
+
+All seven files are written. Let me update tracking and run the fast linters on the new files first.
+
+swiftformat is the formatting source of truth — let me auto-format the new files, then re-verify.
+
+swiftformat passes. Now swiftlint on the new files:
+
+`empty_count` is a false positive on the domain `count` field. Sibling files use bare-identifier comparisons to avoid it. Let me bind to a local:
+
+Both linters pass on the new files. Now the heavy part — the build. The app target links `Shared.xcframework`, built from KMP via a Gradle pre-build phase. Let me regenerate the project and kick off the shared-framework build in the background.
+
+Network and Java are available — the Gradle/KMP build is feasible. Let me start the shared-framework build in the background (it's the long pole).
+
+While the framework builds, let me review the post-format output of the key files for correctness.
+
+Code looks correct post-format. Let me check the framework build progress.
+
+Gradle is still bootstrapping (first run downloads the toolchain). Let me verify no symbol collisions with existing app-target types while it builds.
+
+No collisions. Let me continue waiting for the Gradle build.
+
+The `tail` pipe buffers until exit. Let me check build progress out-of-band.
+
+Good progress — Kotlin/Native toolchain is cached and it's actively compiling the release binaries for all Apple targets. Let me keep waiting.
+

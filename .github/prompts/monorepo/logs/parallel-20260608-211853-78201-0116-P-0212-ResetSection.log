@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and understanding what's available, especially the Apple toolchain and the web source.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim booted). Let me explore the Apple app structure and the web source.
+
+Now let me explore the Apple app's `TeslaSync` source tree, especially `feature-views`, the shared P1/S8/S9/S10 layers, and existing patterns.
+
+`PrivacySection` and `BackupActionsCard` are strong templates (settings, Toast, ConfirmDialog, danger reset). Let me read both file sets fully.
+
+Now let me examine the BackupActionsCard (typed-confirm/danger reset pattern), the shared design tokens, and the project build config.
+
+Now let me check critical build prerequisites: XcodeGen, the Shared.xcframework, the build script, and the design tokens.
+
+Build needs `Shared.xcframework` (KMP/Gradle). Let me assess whether that's buildable here, and look at the token/component APIs I'll use.
+
+Java 17 + gradlew present; many prior DerivedData dirs exist (build has run before). Let me kick off the Shared.xcframework build in the background while I study the token APIs and the web reset hook.
+
+Now let me read the design tokens/components I'll use and check for an existing typed-confirmation pattern (danger zone needs "type RESET").
+
+Let me check the gradle build progress and read the TSSkeleton + TOTP typed-confirmation pattern.
+
+Let me read the TOTP model (typed-confirm + async mutation wiring), the BackupActionsCard model (async mutation seam), and the TSIconBox API.
+
+I have the full design-system and pattern picture. Let me verify tooling specifics (pwsh, lint/format configs, placeholder checker) and whether a native motion component exists, while the framework builds.
+
+pwsh is available (I can run the exact gate). Let me read the native Motion component, placeholder patterns, and the formatter config.
+
+Native `TSFadeIn` exists. Now let me read the placeholder checker (scoping/case) and check the framework build progress.
+
+pwsh + native `TSFadeIn` available; placeholder checker is case-insensitive (I'll avoid TODO/placeholder/etc.). Code lines must be ≤120 (strict). Let me check the build progress, then start writing.
+
+Build is compiling (long pole, no output yet). Let me set up a plan and todos, then write the surface files in parallel with the build.
+
+Build is the long pole. Let me write the surface files now, starting with the pure Adapter core.
+
+Adapter written. Let me mark progress, check the build, and write the Model (seams + view-model).
+
+The Model uses `Text` (SwiftUI) in the facade — I need to add `import SwiftUI` like PrivacyModel does.
+
+Now the in-memory seams (Sources) for previews/tests.
+
+Let me check the framework build progress before continuing with the views.
+
+Build is actively compiling (Kotlin/Native → LLVM, clang running). It's feasible. Let me continue writing while it builds — marking progress and writing the Views.
+
+Now the Chrome (status banner, confirm sheets, toast, skeleton).
+
+The framework build finished. Let me confirm it staged correctly, then continue writing the remaining files.
+
+Framework staged (iOS arm64, iOS sim arm64, macOS arm64). Let me refine the per-section sheet to take an explicit row (robust dismissal), then write the main composition view.
+
+Now the main composition view:
+
+Now the i18n catalog (strings). Marking progress.
+
+Now the Previews (every state).
+
+Now the pure adapter tests.
+
+Let me check the BackupActionsCard tests to mirror the exact async/controllable test pattern.
+
+Now the model behavior tests, mirroring the controllable-async pattern.
+
+All 10 files written. Let me update progress, scan for forbidden tokens in my files, and run swiftformat to normalize.
+
+No forbidden tokens. Let me auto-format my files with swiftformat, then verify lint-clean.
+
+swiftformat clean. swiftlint found 4 violations — let me see them.
+
+3 of my violations + 1 in a file I didn't touch. Let me inspect the 4th (is it pre-existing?) and view my flagged lines.
+
+The 4th violation is pre-existing in `LiveSignalSparklinesWidget.Builder.swift` (unmodified baseline, not in my allowed files). I'll fix my 3. Let me locate "whitelist" usages and the trailing-closure site.
+
+Let me fix my 3 violations (inclusive-language rename + comments, trailing-closure, large-tuple).
+
+Now fix the large-tuple in the test harness (return a struct) and update its two call sites.
+
+Now re-format and re-lint to confirm my files are clean (only the pre-existing baseline violation should remain).
+
+My files are lint-clean; the only remaining swiftlint violation is pre-existing in `LiveSignalSparklinesWidget.Builder.swift` (a file outside my allowed scope). Let me confirm my files are clean in isolation, then generate the Xcode project.
+
+My files: 0 violations. Now let me generate the Xcode project and kick off the iOS build+test.
+
+Project generated. Now the critical step — iOS build + test. Starting it in the background (full app compile + tests).
+
+iOS build+test running. Let me monitor its progress.
+
+Gradle pre-action is cached/fast. The Swift compile is the heavy part. Let me wait and check for any errors.
+
+The iOS build failed (IOS_EXIT=65) — but the errors are in **other** surfaces (`ChargeSessionChartWidget`, `ChargeStatusWidget`, `AIRestorePanel`, etc.), not mine. Let me confirm my files are error-free and assess whether this is pre-existing baseline breakage.
+
+Zero errors in my files — all 565 errors are pre-existing in `dashboard-widgets` baseline surfaces. Let me investigate the root cause (type ambiguity) and check the documented pending-verifications.
+
+Root cause: pre-existing **duplicate public type definitions** in other agents' `dashboard-widgets` surfaces (e.g. `ChargeDistanceUnit`, `ChargeSessionDTO` each defined twice). This breaks the baseline app target — unrelated to my surface and outside my allowed files. Let me confirm the breakage is contained to `dashboard-widgets` so I can verify my surface in isolation.
+
+All 565 errors are confined to `dashboard-widgets`; nothing in `feature-views`/`Sources` references those types. To verify my surface compiles and its tests pass without the broken baseline, I'll temporarily exclude `dashboard-widgets` (reverting after). First, confirm `Sources` doesn't register widget views.
+
+`WidgetPicker` feature-views matched — let me confirm whether they depend on `dashboard-widgets` types (which would affect a clean exclusion).
+
+`WidgetPicker` is self-contained; nothing outside `dashboard-widgets` depends on those types. Excluding it is safe. Let me temporarily exclude `dashboard-widgets` (reverting after), regenerate, and run the isolated iOS build+test to prove my surface compiles and tests pass.
+
+Removed (only comments remain). Let me regenerate and run the isolated iOS build+test.
+
+While the isolated build runs, let me prepare the log directory and check the gate-log path.
+
+Let me check a sibling feature-view log (e.g., PrivacySection 0209) to match the expected format and see how prior surfaces handled the baseline.
+
+This is the key context — the sibling **PrivacySection (0209)** log establishes the sanctioned disposition: ship the surface, verify via an **isolated** build+test, and treat the full-app gate as DEFERRED when blocked only by pre-existing repo-wide breakage. Let me read the documented pending-verifications and check my isolated build progress.
+
+The pending-verifications doc + PrivacySection log confirm the **sanctioned disposition**: the full-app build is blocked by documented pre-existing parallel-merge collisions (it even cites the exact `LiveSignalSparklinesWidget` `opening_brace` error I found). My isolated build now also reveals pre-existing collisions in `MonthlyCostChart` (another surface). The accepted verification is an **isolated SwiftPM build+test** of the surface. Let me stop the doomed full build, revert project.yml, and set up the isolation.
+
+Let me revert project.yml, then analyze the design-system import closure for a clean SwiftPM isolation.
+
+The design system (`Sources/Components` + `Sources/Design`) imports only system frameworks — no KMP `Shared`. So I can verify my surface in a clean SwiftPM package (design system + my surface + tests) under Swift 6. Let me build that isolation.
+
+41 self-contained files. Let me assemble the isolation package and run `swift test` under Swift 6.
+
+Package assembled. Let me run `swift test` (Swift 6, macOS-15 target).
+
+My surface files **compiled cleanly** (`[51/52] ResetSection.Views.swift`, `[52/52] ResetSection.swift`). The only errors are in a design-system extra I copied (`UnitFormatters.swift`) that references a `Units` helper from outside the design system — my surface doesn't use it. Let me drop such unused design-system leaves and rebuild.
+
+The full surface **compiles cleanly** against the real design system (Swift 6, macOS-15). Now let me run the tests.
+
+**42/42 tests pass** (Swift 6 strict concurrency, macOS-15), surface compiles clean against the real design system. Now the iOS-18 typecheck to prove iOS compilation.
+
+**Complete isolated verification: build OK, 42/42 tests pass, iOS-18 typecheck exit 0.** This matches the sanctioned disposition. Let me regenerate the project (reverted config), confirm it's git-ignored, and run the fast in-scope gates + kick off the macOS build for real evidence.
+
+Format-clean (whole tree, FORMAT_EXIT=0), `.xcodeproj` git-ignored, my files enumerated. Let me run the placeholder gate (exact + an honest scan of my files) and start the macOS build for real evidence.
+
+Placeholder gate clean (both exact + honest scan). Let me kick off the macOS build for real evidence, then write the gate log while it runs.
+
+Placeholder + format + isolated verification all green. Let me write the comprehensive, honest gate log while the macOS build runs.
+
+The macOS build finished. Let me capture its real result and verify the cause matches.
+
+macOS (MAC_EXIT=65) fails on **development-signing** (entitlements requiring a dev certificate — a documented host condition), with zero ResetSection errors. Let me finalize the macOS line in the log.
+
+macOS fails only on dev-signing (host condition). Log finalized. Let me clean up temp artifacts, stage exactly my files + the log, and verify the staged set before committing.
+
+Exactly my 10 surface files + the log are staged (project.yml reverted, pre-existing changes untouched). Committing.
+
+Committed (`981f52cb8`, 11 files). Let me do a final verification — working tree clean of my artifacts, and the log ends correctly.
+
+All todos complete; commit clean. Task finished.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0212-ResetSection.log   | 225 ++++++++++++
+ .../feature-views/ResetSection.Adapter.swift       | 375 +++++++++++++++++++
+ .../feature-views/ResetSection.AdapterTests.swift  | 200 +++++++++++
+ .../feature-views/ResetSection.Chrome.swift        | 353 ++++++++++++++++++
+ .../feature-views/ResetSection.Model.swift         | 399 +++++++++++++++++++++
+ .../feature-views/ResetSection.Previews.swift      |  99 +++++
+ .../feature-views/ResetSection.Sources.swift       | 151 ++++++++
+ .../feature-views/ResetSection.Tests.swift         | 325 +++++++++++++++++
+ .../feature-views/ResetSection.Views.swift         | 328 +++++++++++++++++
+ .../TeslaSync/feature-views/ResetSection.strings   |  93 +++++
+ .../TeslaSync/feature-views/ResetSection.swift     | 123 +++++++
+ 11 files changed, 2671 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0212-ResetSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.Sources.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResetSection.swift

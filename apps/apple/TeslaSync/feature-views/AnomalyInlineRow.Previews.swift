@@ -34,7 +34,9 @@
             )
         }
 
-        static func data(count: Int, severity: AnomalyInlineRowSeverity, signal: String, minutesAgo: Double) -> AnomalyInlineRowData {
+        static func data(
+            count: Int, severity: AnomalyInlineRowSeverity, signal: String, minutesAgo: Double
+        ) -> AnomalyInlineRowData {
             AnomalyInlineRowData(
                 anomalies: [entry(signal: signal, severity: severity, minutesAgo: minutesAgo)],
                 signalsMonitored: 42,
@@ -86,7 +88,9 @@
                         )
                     )
                     anomalyInlineRowPreview(
-                        AnomalyInlineRowUpdate(status: .loaded, data: AnomalyInlineRowData(anomalies: [], anomaliesLast24h: 0))
+                        AnomalyInlineRowUpdate(
+                            status: .loaded, data: AnomalyInlineRowData(anomalies: [], anomaliesLast24h: 0)
+                        )
                     )
                     anomalyInlineRowPreview(AnomalyInlineRowUpdate(status: .failed("Request timed out")))
                 }

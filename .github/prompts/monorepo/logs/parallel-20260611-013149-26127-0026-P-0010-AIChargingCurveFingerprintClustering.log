@@ -1,0 +1,120 @@
+I'll start by understanding the environment and capabilities, since this task has a strict capability requirement (SwiftUI + Swift Charts + MapKit, iOS 18/iPadOS 18/macOS 15). Let me explore in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simctl). Let me read the web source and understand the existing Apple project conventions.
+
+There's an established convention (`.Adapter`, `.Chrome`, `.Model`, `.Previews`, `.Projection`, `.strings`, `.AdapterTests`). I need to find an already-ported surface with the **same** web dependencies (`AIFeatureCard` + `withAiFeature` + `useAiStream`) to match conventions exactly. Let me investigate.
+
+`AIMLChargingCurveClustering` is the closest domain sibling and is already ported with the full file convention. Let me compare web sources to pick the best structural template, then study its Swift fileset.
+
+`AIMLChargingCurveClustering` is the near-identical sibling — same page, same `vehicleId`+`useAiStream`+`AIFeatureCard` shape. It's the perfect template. Let me read its complete Swift fileset and the project.yml.
+
+The template pattern is clear and excellent. Let me read the remaining template files plus project.yml to understand registration and the full view/test/projection layers.
+
+Let me read the remaining template files (Previews, strings, both test files) and the project.yml registration.
+
+Let me read the final template test file and the project.yml to understand build/scheme/registration.
+
+I now fully understand the established convention. Before writing code, I must assess the **build infrastructure** (the gate runs `xcodebuild build test` which needs xcodegen + a KMP `Shared.xcframework` + simulators + pwsh for the placeholder check). Let me verify these prerequisites.
+
+Infrastructure is largely present (xcodegen, pwsh, iPhone 16 sim), but `Frameworks/` has no `Shared.xcframework` and there's no `.xcodeproj` yet. The build preAction runs `build-shared-xcframework.sh` (KMP). Let me check whether that can actually run here.
+
+KMP shared core exists with a Gradle wrapper and Java 17 is present — the full `xcodebuild build test` gate is theoretically runnable but heavy (it builds a Kotlin/Native xcframework + 65+ surfaces). My plan: write the 10 files faithfully from the proven sibling template, run surface-scoped validations (swiftlint/swiftformat/placeholder/standalone-logic), then attempt the full gate and log real output. Let me read the lint configs to match style exactly.
+
+I have everything needed. The full `xcodebuild build test` gate is heavy (KMP xcframework + 65+ surfaces) but the toolchain is present. Let me set up tracking, then write the 10 files faithfully from the proven sibling template with the parity adaptations (vehicle_id-only body, `>0` canStart rule, `charging.aiClustering.*` keys, fingerprint copy).
+
+Now writing the pure-core Adapter file:
+
+Now the Model file (state holder, i18n facade, telemetry, in-memory source):
+
+Now the Projection file (pure resolve + localized output, with the `>0` canStart rule):
+
+Now the main surface `.swift` file (the `View` struct + card chrome):
+
+Now the Chrome file (freshness chip, refresh, banner, loading skeleton, gate-error):
+
+Now the Views file (badge, Ask-Helix button, thinking indicator, output panel, ready body):
+
+Now the Previews file (all surface states):
+
+Now the `.strings` localization catalog:
+
+Now the AdapterTests file (Foundation-only unit coverage, with the vehicle_id-only body and `>0` gate parity tests):
+
+Now the main Tests file (projection, model wiring, telemetry, freshness, accessibility):
+
+All 10 files created. Let me run the surface-scoped validations: swiftformat, swiftlint, and the placeholder gate on my new files.
+
+swiftformat passes (0/9 need formatting). Now swiftlint --strict and the placeholder gate:
+
+swiftlint --strict: **0 violations** on all 9 files. The placeholder hits are all in *other* surfaces (AILifetimeStatsQA, AINLDriveSearch) — my files have zero. Let me confirm how the gate's `-Path` filter works (it targets my surface prefix) by reading the script's scan logic.
+
+swiftlint (0 violations) and swiftformat (clean) pass on all 9 files; the placeholder script treats the surface-prefix `-Path` as a literal (non-existent) path → clean exit 0, and a full-dir scan confirms none of the 13 pre-existing hits are in my files. 
+
+Now the real gate: `xcodebuild build test`. This needs the Xcode project generated and the KMP `Shared.xcframework` built via Gradle. Let me generate the project and probe whether the Kotlin/Native toolchain can build offline.
+
+Xcode project generated successfully. Now the critical/risky step — building the KMP `Shared.xcframework` via Gradle (the scheme's mandatory pre-build action). Let me inspect the core module and check whether the Gradle/Kotlin-Native toolchain is cached locally before kicking off the build.
+
+The toolchain is cached locally: Gradle 8.14.5 distribution **and** the Kotlin/Native prebuilt (`~/.konan/...2.4.0`) are present — the KMP build has run here before. Let me kick off the `Shared.xcframework` assembly in the background and monitor.
+
+KMP build still running after 3 minutes (Kotlin/Native compilation + XCFramework assembly for multiple architectures is heavy). Let me continue waiting.
+
+6 minutes in. Let me peek at the build log directly to confirm it's making progress (not stuck).
+
+The KMP build is nearly done — Release frameworks are linking and the Debug XCFramework already succeeded. Let me wait for it to finish staging.
+
+KMP `Shared.xcframework` built and staged successfully (BUILD SUCCESSFUL, 7m46s). Now I can run the real Xcode gate. Let me initialize the official gate log and kick off the iOS `build-for-testing` (compiles all ~660 sources including mine) in the background, while I check the aggregate lint/format baseline.
+
+The iOS build returned exit 65, but the failing compile batch is entirely **unrelated** sibling files (AppearanceSettings, AuditPanel, Auth — none mine). I must see the actual `error:` lines to determine whether it's pre-existing or somehow triggered by my code.
+
+No `error:` lines at all, yet exit 65 with "2 failures." My files compile (they appear as individual SwiftCompile commands). This pattern often means a batch was *cancelled* due to a failure elsewhere, or a non-`error:`-formatted failure. Let me dig into the real cause.
+
+A single real failure at line 10593 ("Command SwiftCompile failed with a nonzero exit code") in the AppearanceSettings/AuditPanel/Auth batch — **not** my files, and with **no `error:` text**, which usually signals a compiler crash or OOM. Let me inspect the context to confirm the cause.
+
+This is a **pre-existing Swift compiler crash** — `swift-frontend` aborted with `report_fatal_error` / `report_at_maximum_capacity` during **IR generation for `AppearanceSettings.Controls.swift`** (a reabstraction thunk), a sibling file outside my scope that I never touched. No `error:` in my files; my files compiled. Let me gather decisive evidence: confirm I only added files, capture the failed frontend command, and reproduce it with my files excluded.
+
+Confirmed: git shows I **only added** my 11 files and touched none of the crashing files. The failure is a pre-existing `swift-frontend` IRGen crash. Let me decisively prove my files don't cause it: re-run the exact failed frontend command, then re-run with my 9 files removed from the module filelist.
+
+The module filelist has my 7 app-target files. Let me confirm the crash is reproducible by re-running the exact failed frontend command, then re-run it with my files removed from the module — decisive proof either way.
+
+RUN 1 reproduces the crash deterministically (`Abort trap: 6`, `report_at_maximum_capacity`, IRGen of `AppearanceSettings.Controls.swift`). Now RUN 2 — same command but with my 7 files removed from the module filelist:
+
+**DECISIVE PROOF: the crash is pre-existing and unrelated to my work.** With my 7 files removed from the module, the identical frontend command crashes identically (`Abort trap: 6`, `report_at_maximum_capacity`, IRGen of `AppearanceSettings.Controls.swift`). 
+
+Evidence chain: (1) git shows I only *added* files; (2) the crash is in a sibling file I never touched; (3) crash reproduces with AND without my files.
+
+Now let me prove **my** surface logic compiles under the Swift 6 toolchain and its tests pass, via a standalone harness (the app target can't link due to the unrelated crash).
+
+Now compile the real Adapter+Model+Projection with the harness (Swift 6, macOS) and run all parity assertions:
+
+Outstanding — the harness **compiled cleanly under Swift 6 strict concurrency (exit 0)** and **all 106 parity assertions passed**. This validates the Adapter/Model/Projection core (request body, the `>0` gate, SSE parse, reducer, output/action derivation, projection phases, localized copy, and the @MainActor model's telemetry/freshness/delegation).
+
+Let me confirm my SwiftUI files (Chrome/Views/main/Previews) also compiled in the real module by checking for their object files in DerivedData (the build compiled them before the unrelated crash aborted linking).
+
+No `.o` files — expected, since the IRGen crash aborts the target before any batch emits objects. Let me get stronger evidence for the SwiftUI files: a module-wide **type-check** (which stops before the IRGen phase that crashes), proving my files type-check against the real module + design tokens. First, let me inspect the captured command's mode/output flags to transform it safely.
+
+The batch has 25 primaries with `-o` outputs and a supplementary-output map. I'll transform it into a **module-wide type-check with MY 7 files as the primaries** (full semantic analysis of my files against the real module + Shared.xcframework + design tokens). `-typecheck` stops before the IRGen phase that crashes, so it cleanly isolates my files' correctness.
+
+A typecheck error appeared, but **not** in my files (grep for my files in diagnostics returned nothing). Let me see the actual error — likely a flag/secondary-file issue.
+
+Flag-order bug: I inserted `-typecheck` before `-frontend`. Let me place it right after `-frontend` and re-run.
+
+**Definitive: `TYPECHECK_MINE_EXIT=0`, 0 errors** — all 7 of my app-target files type-check cleanly against the real TeslaSync module (Shared.xcframework + design tokens + SwiftUI). (The shell's exit 1 is just the final `grep -c` printing "0".)
+
+My surface is fully green in isolation. The aggregate `build test` is blocked solely by the pre-existing sibling crash. Let me now run the remaining gate steps for real — macOS build test (background) plus the aggregate lint/format/placeholder — and record everything in the official log.
+
+swiftformat aggregate: **FORMAT_EXIT=0** (0/4227 files). macOS build finished already — let me read it, and run the remaining gate steps (aggregate swiftlint, placeholder).
+
+macOS: **MAC_EXIT=65**; placeholder gate step: **PLACEHOLDER_EXIT=0**. Let me confirm the macOS failure cause (same pre-existing crash?) and run the aggregate swiftlint gate step.
+
+Key findings: **macOS fails on code-signing** (`entitlements require a development certificate` — an environment capability limit, not my code, not the IRGen crash), and **aggregate swiftlint --strict = 0 violations across all 4227 files**. Let me confirm the repo documents the macOS signing limitation, then write the comprehensive gate log.
+
+The repo's own `macos-pending-verifications.md` documents this **exact, accepted pattern** for ~10 sibling P4 surfaces: each surface "verified green in isolation," full-app `xcodebuild build test` "blocked by pre-existing, unrelated" issues + "macOS development-signing," marked "macOS-pending" pending the CI acceptance gate with signing identities. My situation matches and is even better-evidenced. Let me write the comprehensive, honest gate log.
+
+Log finalized (129 lines). Now let me clean up temp artifacts, verify the generated project is git-ignored, and stage exactly my allowed files.
+
+Confirmed: the generated `.xcodeproj` and `Shared.xcframework` are git-ignored; only my 10 files + the log are untracked. Let me commit exactly the allowed files per the prompt's commit instruction.
+
+Committed `b7c4c77c9` (11 files, 2363 insertions). Let me finalize tracking and do a last clean-tree check.
+
+Task complete. Working tree clean, all deliverables committed.
+

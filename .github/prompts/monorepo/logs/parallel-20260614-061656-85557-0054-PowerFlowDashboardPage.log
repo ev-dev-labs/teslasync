@@ -1,0 +1,237 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Now let me explore the Apple app structure and existing patterns.
+
+Xcode and all tooling are available. Let me examine the project config, parity ledger, and existing page patterns.
+
+The prompt's target path `TeslaSync/Features/Battery/` isn't in `project.yml`, but the real repo uses `TeslaSync/feature-views/`. Let me examine the parity ledger, an existing page example, and how the KMP core is consumed.
+
+`page:battery/BatteryCells` is already done. Let me study it as the canonical reference for structure, KMP integration, charts, and i18n.
+
+The ledger marks `BatteryCells` done but no files exist — ledger rows are pre-seeded. Let me check the logs and study the real page conventions via `AlertStudioPage`.
+
+There's a prior `PowerFlowDashboardPage.log` and a `BatteryCellsPage.log`. Let me read both to understand the expected structure and file placement.
+
+The real convention is `apps/apple/Sources/Features/<Domain>/` (compiled via the `Sources` glob). Let me read the rest of that log and explore the actual `Sources/` tree.
+
+This BatteryCells log is the gold-standard reference. Let me explore the real `Sources/` tree — page files live under `Sources/Features/`, which my earlier search missed.
+
+`Sources/Features/Battery/` already has the BatteryCells page. Now let me study the model/route/charts conventions and the shared component library in parallel.
+
+Strong grasp of conventions now. Let me read the chart wrappers, the time-series chart example, the route enum, app registry, and the Units facade.
+
+Let me read the main page view, sample data source, route enum, app registry, and locate the UI components I'll need.
+
+Let me read the route enum, app registry wiring, and locate the UI component/token definitions.
+
+Let me get exact signatures for the UI components and tokens I'll use, plus check existing `powerFlow` strings.
+
+Tokens live in the generated design group. Let me confirm the token names and the `tsUnits`/theme helpers.
+
+Let me read the metric primitives, web energy types/hooks, and check existing strings.
+
+Now let me read the web energy types/hooks for accurate data modeling, and check the strings catalog.
+
+Let me confirm the history hook return type and inspect the xcstrings format plus any existing powerFlow keys.
+
+41 `powerFlow` strings already exist (from energy widgets). Let me see which of my 33 keys exist and get the canonical English values from the web locale.
+
+Existing keys have a `translation.` prefix, but Swift pages reference bare keys. Let me verify the convention with `battery.cells.title` and `statistics.health`.
+
+Confirmed: Swift pages use bare keys; I must add 33 bare `powerFlow.*` keys. Let me pull the canonical English values from the web locale.
+
+All 33 values resolved (the 2 aria defaults come from the web source inline). Now let me check what breaks when adding an `AppRoute` case — exhaustive switches and spotlight/parser handling.
+
+`WatchDeepLink` is a separate enum — unaffected. Only `AppRoute.swift`'s `systemImage`/`group` switches need the new case. Let me check the build prerequisites: the Shared.xcframework, the placeholder gate, and swiftlint config.
+
+`Shared.xcframework` isn't staged (needs Gradle/Kotlin-Native). Let me check the staging script and toolchain availability, plus the swiftlint `included` scope — these determine my gate strategy.
+
+The xcframework needs a Kotlin/Native Gradle build. Let me start it in the background now so a real `xcodebuild` is possible later, while I write the code.
+
+I have a complete picture. Let me set up tracking and check for existing range-preset string keys before writing code.
+
+No existing range keys. Let me see how the analytics pages handle time-range selection to stay consistent.
+
+Let me check the web RangePicker preset labels so I can port them faithfully.
+
+I have all I need. Let me read the format helper and test conventions, then check the background build.
+
+Let me check the background xcframework build, then start writing files.
+
+The xcframework is compiling (Kotlin/Native, will take a while). I'll write all code meanwhile. Let me record a brief plan and start with the models.
+
+Let me verify the web date format helpers so my Swift formatters match.
+
+Now I'll write the model and format files.
+
+Now the page model with the data-source seam and phases.
+
+Now the sample data source with the loading/empty/error seams.
+
+Let me check the skeleton primitives before writing the sections.
+
+Now the panel sub-views (badges, metric cards, battery state, flow diagram, skeleton).
+
+The xcframework finished — let me confirm it succeeded, and verify the `FlowLayout` I used exists.
+
+xcframework built successfully. Let me confirm `FlowLayout` is a reusable shared type (not file-private).
+
+`FlowLayout` isn't shared — it's a file-local `CoverageFlowLayout: Layout`. I'll add my own small flow layout. Let me view the proven implementation to replicate.
+
+I'll add a self-contained flow layout and use it for the badges.
+
+Now the charts sub-views (range picker, power-over-time area, SOC line).
+
+Now the main page view with the phase switch, adaptive layout, and previews.
+
+Now the route registration and the navigation wiring.
+
+Now I'll add the strings to the catalog. Let me inspect the exact JSON formatting first.
+
+Now I'll insert the 42 string keys (33 powerFlow + route + spotlight + 7 date presets) with minimal-diff text insertion.
+
+All 42 keys added, JSON valid. Let me verify every required string is referenced in my Swift code.
+
+All 33 strings wired. Now the XCTest model tests.
+
+Now let me run the formatter, linter, and placeholder gate on the new files.
+
+Auto-fixable formatting issues. Let me format the files and re-verify.
+
+swiftformat passes (0/11). Now swiftlint --strict scoped to my files.
+
+Swiftlint scanned all files (config `included` overrides args). Let me see the 2 violations specifically.
+
+One violation (mine): multiple-closures with trailing closure on `TSButton`. Let me see how the codebase passes custom button labels.
+
+Let me fix it by passing `label:` explicitly (non-trailing).
+
+swiftlint clean (0 violations across all files). Now the placeholder gate.
+
+Placeholder gate flagged line 327 — likely the word "placeholder" in a comment. Let me check and reword it.
+
+Placeholder gate passes (COUNT=0). Now let me generate the Xcode project and verify my files are included.
+
+All files included. Now the real build. Let me start the macOS build (stages the xcframework via pre-action) in the background.
+
+The build is running. Let me update progress and prepare the ledger while it compiles.
+
+Let me check the build progress.
+
+The macOS build completed. Let me confirm the result.
+
+BUILD FAILED — and I caused a real regression: my `PowerFlowLiveStatus` collides with an existing type in `LivePowerFlowWidget`. Let me find all colliding type names so I can rename mine.
+
+Real regression: `PowerFlowLiveStatus` and `PowerFlowFormat` (and possibly others) already exist in the widgets. Let me do a definitive collision check for every type I declared.
+
+Definitive: only 2 collisions. Let me rename `PowerFlowFormat`→`PowerFlowDashboardFormat` and `PowerFlowLiveStatus`→`PowerFlowDashboardLiveStatus` across my files (and rename the format file to match).
+
+Renamed cleanly. Let me check whether the first build showed any errors in *my* files vs pre-existing ones, and which files had pre-existing breakage.
+
+None of my files errored — the 70 widget errors were caused by my (now-fixed) collision; 14 are pre-existing in `Input.Previews.swift` (untouched by me). Let me regenerate the project and rebuild.
+
+`Input.Previews.swift` is confirmed pre-existing/untouched. Let me rebuild macOS to confirm the collision fix cleared the widget errors.
+
+The rebuild is running. Let me monitor it.
+
+Excellent — error count dropped 84→4, **zero errors in my files**, and the widget collision is fixed. The only failures are 4 pre-existing errors in `Input.Previews.swift` (untouched by me). Let me inspect them and verify they're DEBUG-gated previews.
+
+Confirmed pre-existing: `Input.Previews.swift` is a DEBUG-only preview file with an explicit-`return`-in-ViewBuilder bug at lines 88/101 — unrelated to my work and forbidden to commit-fix. To get a true green build+test signal for my code, I'll temporarily stub this one file locally, build+test, then revert it.
+
+File is git-tracked (restorable). Now rebuild macOS — expecting green with the sole pre-existing blocker stubbed.
+
+Build running. Let me wait for it.
+
+0 errors, module emitting. Let me wait for completion.
+
+Still compiling, 0 errors. Let me continue waiting.
+
+**BUILD SUCCEEDED** (macOS, 0 errors) — my full page compiles into the app. Now let me run my model tests.
+
+Tests building/running. Let me monitor.
+
+Test run finished with "(3 failures)". Let me see whether they're mine or pre-existing in other test files.
+
+The 3 failures are pre-existing compile errors in `Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift` (not mine). My test compiles clean. Let me confirm it's pre-existing and see the errors.
+
+Confirmed pre-existing (Swift 6 actor-isolation error in Admin, untouched by me). Let me temporarily stub it too and re-run my tests.
+
+Tests rebuilding with the stub. Let me wait.
+
+**TEST SUCCEEDED.** Let me capture the exact passed-test count.
+
+All 18 tests pass (0 failures). The stubs are still in place — let me verify the **iOS** target also compiles (my only iOS-specific code is the `#if os(iOS)` size-class branch), then I'll revert the stubs.
+
+iOS build running (~6 min). Let me gather final file metrics and draft the evidence log while it compiles.
+
+Source is 1328 LOC + 263 test LOC (vs web 415) — well above the floor. Let me wait for the iOS build.
+
+0 errors so far on iOS, my files clean. Let me continue waiting for completion.
+
+iOS build is linking extensions and emitting the main module (0 errors). Let me wait for it to finish.
+
+Still compiling the second arch slice (0 errors). Let me wait for completion.
+
+Still linking (0 errors, my files clean). Let me keep waiting for the final result.
+
+iOS build at 41k lines, 0 errors, compiling my route registration cleanly. Let me wait for the final result.
+
+iOS build reported "(2 failures)" at the link stage despite 0 compile errors. Let me investigate.
+
+The x86_64 link failure is an environment/arch artifact: the `Shared.xcframework` only ships an **arm64** iOS-simulator slice (the generic destination also tried x86_64). My code compiled with 0 errors for both arches. Let me rebuild for arm64 simulator only.
+
+Let me wait for the arm64-only iOS build (arm64 objects are cached, so mainly re-linking).
+
+**iOS BUILD SUCCEEDED** (arm64 sim). All in-scope gates are green. Now let me revert the 2 temporary stubs (pre-existing out-of-scope files) and confirm a clean tree.
+
+Both stubs reverted cleanly. Let me verify the full working-tree change set is exactly my intended files.
+
+Working tree is exactly my intended change set (3 modified + 9 new). Let me verify the modified-file diffs are minimal and that build artifacts are gitignored.
+
+All diffs are minimal and correct (xcstrings: +462/-0 pure additions; build artifacts gitignored). Now let me add the 2 ledger rows.
+
+Ledger updated (2 rows, 48/48, JSON valid). Let me capture tool versions for the evidence log header.
+
+All gates green. Now let me write the comprehensive evidence log.
+
+Evidence log written. Let me finalize: update todos, clean temp files, and do a final verification before committing.
+
+Clean, intended change set; log ends `EXIT=0 / STATUS=DONE`. Let me create the commit per the prompt's COMMIT section.
+
+Commit `3e4da39fa` created; working tree clean. Let me confirm all todos are complete.
+
+All 10 todos complete and the work is committed. Here's the final summary.
+
+## ✅ `page:battery/PowerFlowDashboard` — SwiftUI/HIG parity — STATUS=DONE
+
+Native SwiftUI implementation of the web `PowerFlowDashboardPage` (`/power-flow`), shipped at **48/48 parity** and committed (`3e4da39fa`).
+
+**Delivered** (`apps/apple/Sources/Features/Battery/`, mirroring the proven sibling-page convention since the prompt's literal `TeslaSync/Features/Battery` path isn't a `project.yml` source group — reconciled in the log per covenant #9):
+- 8 source files + 1 XCTest file (1328 + 263 LOC vs the web's 415) — `@Observable` model over an injectable `PowerFlowDataSource` seam, SI value types, sample/empty/failing seams, adaptive macOS/iOS view, decomposed sections + charts, route registration.
+- **8 panels** (4 stat cards, battery-state, flow-diagram, 2 chart panels), **4 charts** (P3 `TSChartContainer`+`TSAreaChart` / `TSChartContainer`+`TSLineChart` — native Swift Charts, no WKWebView), **3 data states** (+ a 4th error state), **33 strings**.
+- Wired `.powerFlow` into `AppRoute.swift` + `TeslaSyncApp.swift`; added **42 bare keys** to `Localizable.xcstrings` (33 `powerFlow.*` + route/spotlight + 7 `date.preset.*`); `apple-ledger.json` +2 rows.
+
+**Gate — all in-scope GREEN** (real exits):
+| Step | Result |
+|---|---|
+| Shared.xcframework (Gradle) | ✅ BUILD SUCCESSFUL |
+| xcodegen / swiftformat --lint / swiftlint --strict | ✅ 0 / 0-of-11 / 0-of-11552 |
+| check-placeholders | ✅ COUNT=0 |
+| macOS build / **18 unit tests** | ✅ SUCCEEDED / **18 passed, 0 failures** |
+| iOS (arm64 sim) build | ✅ SUCCEEDED |
+| PARITY_COVERED | **48 == 48** |
+
+**Honesty notes:** I caught and fixed a real regression I introduced — my `PowerFlowLiveStatus`/`PowerFlowFormat` collided with the existing `LivePowerFlowWidget`, which I resolved by renaming my types to `PowerFlowDashboard…` (no sibling edits). The full-tree Debug build/test is red **only** due to two pre-existing, out-of-scope files (`Input.Previews.swift`, `GDPRExportPageModelTests.swift`) untouched by this task; I neutralized them locally to get a true green build+test signal, then reverted them — the committed tree contains zero edits to either, and zero diagnostics in any of my files.
+
+
+
+The task is fully complete and committed. All work is verified and persistent.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

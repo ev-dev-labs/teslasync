@@ -26,7 +26,7 @@ private enum ScheduledExportsPanelSampleSchedules {
     static func drives(
         id: Int = 1,
         enabled: Bool = true,
-        delivery: ScheduledExportDelivery = ScheduledExportDelivery(kind: .download),
+        delivery: ScheduledExportDeliveryView = ScheduledExportDeliveryView(kind: .download),
         lastRunAt: Date? = nil,
         lastStatus: ScheduledExportRunStatus? = nil,
         nextRunAt: Date? = Date(timeIntervalSince1970: 1_717_000_000)
@@ -55,7 +55,7 @@ private enum ScheduledExportsPanelSampleSchedules {
             vehicleID: 7,
             columns: ["start", "end"],
             scheduleCron: "0 0 * * *",
-            delivery: ScheduledExportDelivery(kind: .email, target: "you@example.com"),
+            delivery: ScheduledExportDeliveryView(kind: .email, target: "you@example.com"),
             rangeWindow: "24h",
             enabled: false,
             lastRunAt: Date(timeIntervalSince1970: 1_716_000_000),
@@ -189,19 +189,19 @@ final class ScheduledExportItemTests: XCTestCase {
     }
 
     func testDeliveryLabelWithoutTarget() {
-        let item = ScheduledExportsPanelSampleSchedules.drives(delivery: ScheduledExportDelivery(kind: .download))
+        let item = ScheduledExportsPanelSampleSchedules.drives(delivery: ScheduledExportDeliveryView(kind: .download))
         XCTAssertEqual(item.deliveryLabel(localize: passthroughLocalize), "download")
     }
 
     func testDeliveryLabelWithTarget() {
         let item = ScheduledExportsPanelSampleSchedules.drives(
-            delivery: ScheduledExportDelivery(kind: .webhook, target: "https://x/h")
+            delivery: ScheduledExportDeliveryView(kind: .webhook, target: "https://x/h")
         )
         XCTAssertEqual(item.deliveryLabel(localize: passthroughLocalize), "webhook → https://x/h")
     }
 
     func testDeliveryTargetSuffixIgnoresEmpty() {
-        let delivery = ScheduledExportDelivery(kind: .email, target: "")
+        let delivery = ScheduledExportDeliveryView(kind: .email, target: "")
         XCTAssertNil(delivery.targetSuffix)
     }
 }

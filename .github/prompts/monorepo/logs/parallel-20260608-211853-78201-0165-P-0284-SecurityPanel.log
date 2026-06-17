@@ -1,0 +1,12 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Let me explore the web source and existing Apple app structure.
+
+Now let me explore the existing Apple app structure, especially the feature-views directory and recently-added panels to follow the established pattern.
+
+There's an extensive established pattern. Let me examine the most recently-added panels (ScheduledExportsPanel, SignalHistoryTable) and check for any existing Security-related files to follow the current conventions.
+
+Found `SecurityStatusCards` and `SecurityStatistics` — closely related. Let me study these to learn the full file pattern (main view, Model, Adapter, Views, States, Previews, Tests, strings).
+
+Excellent, very thorough pattern. Let me read the Adapter (projection), strings, Previews, and Tests for SecurityStatusCards, plus the project.yml build config.
+

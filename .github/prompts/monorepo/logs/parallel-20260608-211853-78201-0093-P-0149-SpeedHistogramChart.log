@@ -1,0 +1,124 @@
+I'll start by exploring the environment and reading the web source that serves as the specification.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the Apple app structure to understand the existing architecture.
+
+This is a large, established monorepo with ~1529 files following a consistent multi-file pattern per surface. Let me check if SpeedHistogramChart already exists, and find a similar chart-based surface to use as a precise template.
+
+`ChargerTypeChart` and `CostPerKwhChart` are standalone bar-chart surfaces with the exact multi-file pattern I need. Let me read the complete `ChargerTypeChart` set as my primary template.
+
+Excellent architecture. Let me read the remaining ChargerTypeChart files to fully internalize the conventions.
+
+Now let me read the Previews, strings, Tests, and also examine the web data shape (`SpeedHistogramBucket`) plus how `speedHistData` is computed in the parent.
+
+Let me read the web computation of `speedHistData`, the ChargerTypeChart tests, and verify the shared tokens/test wiring.
+
+I now fully understand the established pattern. Let me verify the shared tokens exist and understand the build/test wiring (project.yml, schemes, how `.strings`/`.swift` files are included).
+
+XcodeGen-based build; feature-views are auto-included, Tests excluded from app target. Let me find the test-target wiring, the shared token sources, and the gate tooling (pwsh, check-placeholders).
+
+pwsh, xcodegen all available. Test targets auto-include co-located `*Tests.swift`. Let me locate the design tokens (TSSpacing/Color.TS/Font.TS) and confirm the motion/skeleton primitive signatures and schemes.
+
+Let me read the design tokens, the Skeleton primitive, and confirm the macOS scheme.
+
+I have all the architecture I need. Let me verify build wiring details: macOS scheme, simulator availability, whether `.xcodeproj` exists, the prior log format, and any surface registry.
+
+macOS scheme exists, iPhone 16 booted, need xcodegen. The master catalog already references "SpeedHistogram". Let me check those existing keys, the prior log format, and the parity manifest.
+
+Key insight from the reference log: `xcode-select` may point at CommandLineTools, requiring `DEVELOPER_DIR`. Let me verify the toolchain setup and the Shared.xcframework dependency before building.
+
+Shared.xcframework must be built via Gradle (KMP). The reference log shows it passing here, so the toolchain should work. Let me verify Java/Gradle and read the rest of the build script's fallback behavior.
+
+Java 17 + gradlew present. The Gradle KMP shared-framework build is the slow part — let me pre-warm it in the background now while I write the surface code.
+
+Now let me read the lint config and a single-series chart example to match conventions exactly before writing.
+
+Let me check the shared-framework build progress before writing the files.
+
+The shared build is compiling (slow KMP step). I'll write all surface files now while it runs. Let me create a plan file first, then the Foundation-only logic files.
+
+Now the main view, Chart, and Views files.
+
+Now the Previews, Tests, and strings files. Let me also check the shared-build progress.
+
+Now the Tests file and the strings catalog.
+
+All 9 files created. Let me verify i18n key consistency, file line counts, and check the shared-build progress.
+
+All keys match; all files under 400 lines. Let me run swiftformat and swiftlint on the new files for fast feedback, and check the shared build.
+
+swiftformat wants trailing commas removed (`--commas inline`). Let me auto-fix with the formatter itself, then re-lint.
+
+Formatter passes now, and the shared framework finished building. Let me verify the shared build result and run swiftlint on the new files.
+
+Shared framework staged; swiftlint and swiftformat both pass on the new files. Let me verify the formatter kept the code valid, then generate the Xcode project.
+
+bandEdges is valid; project generated. Now I'll author the log preamble, then run the full gate (iOS + macOS build/test) appending real output. Let me write the preamble.
+
+Now let me check how the reference log captured the (huge) xcodebuild output — full or filtered — so I match the convention.
+
+The reference reveals the full `xcodebuild build test` had a pre-existing failure (exit 65) and they leaned on SwiftPM (`swift build`/`swift test`). Let me read that section in detail and check for a Package.swift.
+
+Now I understand the established disposition. The current `project.yml` excludes `*Tests.swift` from the app target (unlike at ChargerType's time), so the iOS build may now succeed. Let me run the **real** iOS xcodebuild gate and capture the actual result.
+
+iOS test failed (exit 65) in a batch of sibling `U*`/`V*` files — none mine. I must find the actual `error:` lines and confirm none are in my files. Let me extract them.
+
+678 errors — all "ambiguous for type lookup" (pre-existing duplicate-type collisions across sibling surfaces). Let me prove **none** are in my files and identify the scope.
+
+**Zero** SpeedHistogram errors — my surface is clean. All 678 failures are pre-existing type-collision defects in sibling surfaces (`ChargeStatusWidget`, `SafetyFeaturesWidget`, etc.), outside my allowed files. Let me confirm my type names introduce no collisions, then build an isolated harness to prove my surface compiles + tests green.
+
+No collisions introduced. Now let me build an isolated SwiftPM harness (in the session folder, outside the repo) with the **real** design-system dependencies to prove my surface compiles and tests green on the macOS host.
+
+Harness scaffolded. Let me build and test it with the macOS host toolchain (Swift 6 strict concurrency).
+
+Build clean (Swift 6 strict). Now run the test suite.
+
+All **27 tests pass, 0 failures** on the macOS host (Swift 6 strict). Now let me type-check the production view set against the **iOS** simulator SDK (the iOS gate platform), as the established verification does.
+
+iOS type-check passes. Now the macOS xcodebuild probe (real exit code) — expect the same pre-existing sibling type-collisions.
+
+macOS got past compile to **code-signing** — 4 errors, all "entitlements require a development certificate" (no signing identity on this runner), **0** SpeedHistogram errors. Let me confirm whether macOS compiled the app sources (to understand why no type-collisions surfaced there).
+
+macOS bailed at **code-signing** (no dev certificate) before compiling any source — a pure provisioning limitation, 0 SpeedHistogram errors. Both xcodebuild failures are pre-existing/environmental and outside my allowed files. Now the remaining whole-tree gates: swiftformat, swiftlint, and the scoped placeholder check.
+
+FORMAT_EXIT=0 (whole tree clean). LINT_EXIT=2 from a **pre-existing sibling** (`LiveSignalSparklinesWidget.Builder.swift`). Let me get the full violation list and confirm none are mine, then run the scoped placeholder check.
+
+Only **1** lint violation tree-wide — a pre-existing sibling (`LiveSignalSparklinesWidget`, from another commit), **0** mine, outside my allowed files. Now the scoped placeholder gate.
+
+Scoped placeholder gate clean (COUNT=0). Let me confirm the deferral policy doc to cite it accurately, then finalize the log.
+
+The `macos-pending-verifications.md` registry confirms this is the **established, user-approved disposition** — predecessors (0010, 0180, 0231, 0038) hit the identical pre-existing collisions, and 0038 even cites the *exact same* `LiveSignalSparklinesWidget.Builder.swift` lint defect I found. Let me gather final evidence (pbxproj registration + broken-sibling scope), then write the log.
+
+All evidence confirms the established disposition: my files are registered (54 pbxproj refs), the iOS failures are pre-existing sibling type-collisions (`Charge*`/`Safety*`/`FleetStatsBar` widgets — zero mine), and only my 9 files + log are new. Let me append the gate-execution results to the log.
+
+Log finalized (245 lines). Let me do a final scoped lint/format verification on the exact files, then commit with explicit paths.
+
+Both scoped gates pass; all 9 files present. Now let me commit exactly the allowed files plus the log.
+
+Exactly the 9 allowed files + the log staged. Committing now.
+
+Committed (`24661ecf3`). Let me clean up temp files and verify the working tree is clean (no stray generated artifacts).
+
+Working tree is clean — only the 2 pre-existing admin web files remain (untouched by me), and the generated `.xcodeproj` is correctly git-ignored. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0149-SpeedHistogramChart.log | 245 ++++++++++++++++++
+ .../SpeedHistogramChart.Adapter.swift              | 173 +++++++++++++
+ .../feature-views/SpeedHistogramChart.Chart.swift  | 154 +++++++++++
+ .../feature-views/SpeedHistogramChart.Model.swift  | 227 ++++++++++++++++
+ .../feature-views/SpeedHistogramChart.Models.swift |  86 +++++++
+ .../SpeedHistogramChart.Previews.swift             |  93 +++++++
+ .../feature-views/SpeedHistogramChart.Tests.swift  | 284 +++++++++++++++++++++
+ .../feature-views/SpeedHistogramChart.Views.swift  | 241 +++++++++++++++++
+ .../feature-views/SpeedHistogramChart.strings      |  44 ++++
+ .../feature-views/SpeedHistogramChart.swift        |  70 +++++
+ 10 files changed, 1617 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0149-SpeedHistogramChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedHistogramChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedHistogramChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedHistogramChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedHistogramChart.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedHistogramChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedHistogramChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedHistogramChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedHistogramChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedHistogramChart.swift

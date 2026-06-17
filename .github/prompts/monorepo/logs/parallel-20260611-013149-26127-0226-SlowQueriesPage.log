@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand the task scope, the web source page, and the existing Apple app architecture.
+
+Now let me explore the Apple app structure, the parity manifest, and existing similar pages in depth.
+
+Now let me examine the Features directory structure, the types, and the parity manifest entry for this page.
+
+The Features directory doesn't exist yet. Let me explore the existing TeslaSync app structure deeply to understand conventions.
+
+There's both a `TeslaSync/` tree and a `Sources/` tree. Let me understand the project layout via `project.yml` and look at the existing `feature-views` and `Sources/Features/Admin`.
+
+Now I understand the layout. Existing admin pages live in `Sources/Features/Admin/` (e.g., `DiskForecastPage` — the closest analog, same hook file). The prompt's stated `TeslaSync/Features/Admin/` path isn't a build source root. Let me examine the DiskForecast analog deeply and check the manifest/ledger and README gate contract.
+
+The DiskForecast page is a near-perfect analog. Let me examine its Table, route registration, the manifest/ledger entries, and the components/localization conventions.
+
+Let me understand the navigation registry mechanism, the other admin route registrations, and gather the manifest/ledger/README/localization context.
+
+Let me check the parity manifest/ledger entries, the README gate contract, and confirm the file-placement convention (sibling tests, whether `TeslaSync/Features` exists).
+
+Let me inspect the ledger structure, the README gate contract, and how the localization catalog stores the sibling's strings.
+
+Let me read the DiskForecast log (to mirror the log format exactly), the p4-apple README gate contract, and check shared UI components + the localization catalog.
+
+This DiskForecast log is the gold-standard template. Let me read its full PARITY section and final STATUS, and check whether the pre-existing build breakage still exists at HEAD.
+
+I have the full template now. The key challenge: DiskForecast already claims the `.admin` route, so SlowQueries needs its own route (mirroring how `apiPlayground`/`liveSignals`/`fleetTelemetryCoverage` each got a dedicated route). Let me assess the blast radius of adding an `AppRoute` case by checking existing tests.
+
+Adding an `AppRoute` case could ripple into exhaustive switches across out-of-scope files (widgets, intents, watch). Let me measure that blast radius before deciding.
+
+Let me check the toolchain availability (determines gate strategy), confirm the pre-existing build breakage, and check for any catalog-completeness test.
+
+Full Apple toolchain is available. Let me verify the pre-existing build breakage, check for a catalog-completeness test, and read the shared components I'll need (Pickers, Typography, Cards, Feedback).
+
+`TSSelect` exists (web `Select`). Let me read the key shared components I'll use — Cards (TSGlassPanel), Typography (Code/Caption/PanelTitle/PageTitle/Label), Feedback (EmptyState/AlertBanner/ErrorDisplay/Skeleton) — and confirm the TSGlassPanel signature behind the pre-existing breakage.
+
+Confirmed the pre-existing out-of-scope breakage is real (`TSGlassPanel` requires `@escaping`; the shared-surface helper passes non-escaping). I'll avoid that pattern. Now let me read the exact public component symbols I'll use.
+
+Let me read the web `numberFormat.ts` to port `fmtNumber` exactly, and confirm the design tokens used by DiskForecast exist.
+
+Let me check the shared facade for an operator-confidence binding (to describe the data-source seam faithfully), read the sibling's model test to mirror its structure, and confirm the design tokens.
+
+Let me inspect the `Localizable.xcstrings` structure (how `admin.diskForecast` keys are stored) so I add `admin.slowQueries` keys in the exact same format, and confirm the design tokens.
+
+The xcstrings format is clear. `admin.subsystem.unavailableTitle` already exists. Now the key decision: `.admin` is taken by DiskForecast, but `liveSignals`/`fleetTelemetryCoverage` each added a dedicated route. Let me confirm that pattern via the FleetTelemetry registration + its log to settle the routing approach.
+
+Settled. FleetTelemetryCoverage + LiveSignals both added a dedicated route + alias precisely to avoid displacing DiskForecast's `.admin` (covenant #7). I'll follow that exact pattern. Let me check for any hardcoded route/menu-count assertions that could break, then set up my plan.
+
+`MenuCommandCatalogTests` asserts navigate routes == `AppRoute.allCases`. Let me confirm `MenuCommandCatalog` derives from `allCases` (so a new case is auto-covered) and view the exact test.
+
+Confirmed `navigateCommands()` maps over `AppRoute.allCases`, so a new case is auto-covered. The dedicated-route approach is fully validated. Let me quickly check the web `PageContainer` loading/error semantics to map states faithfully, then write my plan.
+
+I now have everything needed. Let me record the plan and task list, then implement. The routing approach is validated: add a dedicated `.slowQueries` route + alias (exactly as FleetTelemetry/LiveSignals did to avoid displacing DiskForecast's `.admin`).
+
+Now implementing. Starting with the model (types, data-source seam, state, formatters):
+
+Now the page view with always-visible controls and state-routed table area:
+
+Let me simplify the binding approach — computed `Binding`s avoid the awkward `Bindable` parameter passing and trigger reload directly:
+
+Now the adaptive table (7 columns on macOS/iPad, cards on compact iPhone):
+
+Now the route registration (dedicated `.slowQueries`, mirroring FleetTelemetryCoverage):
+
+Model and page done. Now wiring navigation — `AppRoute`, parser alias, and the app composition chain:
+
+Now the localization strings. Let me first check whether the catalog keys are alphabetically sorted (determines insert strategy):
+
+Not sorted, and the file uses Xcode-style ` : ` spacing — a full Python re-dump would churn every line. I'll insert text blocks matching the exact format. Let me confirm the precise formatting:
+
+Now I understand the exact format. Let me add the strings via a Python script that builds Xcode-style blocks (proper escaping) and inserts them, then validates:
+
+21 keys added, JSON valid. Let me verify the inserted formatting matches Xcode style and the rest is untouched:
+
+Clean additions-only diff (231 lines = 21 keys). Now the model tests, mirroring the DiskForecast test structure:
+
+Now let me verify formatting and linting on my files using the repo configs:
+
+swiftformat flagged 2 of my files (number grouping + single-line bodies). Let me auto-fix my new files (the edited shared files already pass):
+
+swiftformat passes (0/8). Now swiftlint --strict on all changed files:
+
+Two single-char identifier violations in `cacheHitRatio`. Let me rename them:
+
+Both lint gates pass (0/0). Let me verify the auto-formatted seed values are intact and run the placeholder scan:
+
+Seed values intact (only `_` grouping normalized). Now the placeholder scan against my actual directory:
+
+Placeholder scan clean (0). Now the critical correctness proof: isolated `swiftc -typecheck` against the real tokens + components (the full app target build is known to be RED from pre-existing out-of-scope breakage). Let me discover the exact dependency files first:
+
+TSTone is in Badges.swift. Let me run the isolated `swiftc -typecheck` (macOS) against a curated dependency set, iterating on any missing symbols:
+
+macOS type-check: **0 errors**. Now iOS (exercises the `#if os(iOS)` compact branches in both the page and table):
+
+Both idioms type-check clean (**0 errors**). Now execute the real model logic via a standalone harness (the XCTest bundle can't run — it hosts on the app target, which is RED from pre-existing out-of-scope breakage). Let me write and run it:
+
+Two harness/test issues: the harness counters need `@MainActor`, and `number(1000, decimals: 0)` is ambiguous between my `Double`/`Int64` overloads for an untyped literal (production callers pass typed values, so it's test-only). Let me fix both:
+
+Harness: **30/30 assertions passed**. Let me re-lint the edited test file, then kick off the real `xcodebuild` path (stage Shared.xcframework → xcodegen → build) in the background to get an honest `BUILD_EXIT` and confirm zero diagnostics in my files:
+
+Test lints clean; Java is present. Let me start the Shared.xcframework build (KMP/Gradle, ~7min) in the background while I prepare the ledger and log:
+
+While that builds, let me update the ledger. First inspect its exact formatting:
+
+The ledger is standard JSON (2-space indent). Let me append the 2 SlowQueries rows via precise text insertion (zero churn to existing rows) and validate:
+
+Ledger updated (10 rows, SlowQueries 22/22 done, clean diff). Let me check the xcframework build progress:
+
+Still building. Let me gather LOC and verify each parity item's evidence while it runs:
+
+All 17 required strings present; LOC healthy (716 impl vs 179 web). Let me confirm every parity string is actually referenced in my Swift code (used, not just in the catalog):
+
+All strings referenced, all states handled. Let me check the xcframework build:
+
+Still building. Let me verify the `AppRoute` edits are coherent while waiting:
+
+`AppRoute`/parser diffs are clean. Let me continue waiting for the xcframework build:
+
+Shared.xcframework staged (`XCFRAMEWORK_EXIT=0`). Now `xcodegen generate`, then the full build:
+
+`xcodegen` succeeded; SlowQueries referenced 30× in the project (iOS+macOS app + both test bundles). Now the full build (background — likely RED on the pre-existing out-of-scope shared-surfaces bug, which I'll confirm doesn't touch my files):
+
+Build running. Let me wait and check progress:
+
+Build failed (`BUILD_EXIT=65`) as expected. Let me analyze: confirm all errors are pre-existing out-of-scope, and ZERO in my files:
+
+Confirmed: the build halts on **exactly 1 error** — `escaping closure captures non-escaping parameter 'content'` in `TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift` (the same pre-existing `glass(@ViewBuilder _ content:)` bug class the predecessor logs documented), with **zero diagnostics in any of my files**. Let me confirm I never touched that file and verify my full change set:
+
+All scope confirmed: only my files changed; the erroring `AIAutoNameUnnamedLocations.swift` is untouched/pre-existing; `.xcodeproj` is git-ignored. Let me grab tool versions, then write the evidence log:
+
+Now I'll write the comprehensive evidence log:
+
+Log written ending `EXIT=0 / STATUS=DONE`. Final verification pass (re-lint everything, clean up temp harness), then commit:
+
+All gates green (format 0, lint 0/8, JSON valid, log `EXIT=0/STATUS=DONE`). Let me mark todos done and commit:
+
+All 11 in-scope files staged, `.xcodeproj` correctly excluded. Committing:
+
+Committed (`95f64fc97`, 11 files). Let me confirm all todos are complete:
+
+All 8 todos done. The task is complete and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

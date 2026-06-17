@@ -1,0 +1,216 @@
+I'll start by exploring the repository structure to understand what exists and read the key reference files.
+
+Xcode 26.5, swiftlint, and swift 6.3.2 are all available — the gate won't be BLOCKED for lack of a runner. Let me explore the web source, the Apple app structure, and parity files.
+
+Xcode toolchain is available. Now let me understand the Apple project structure, the parity manifest, ledger, and find existing page implementations to use as patterns.
+
+There are two source locations: `Sources/Features/Battery` (in project.yml) and the prompt's target `TeslaSync/Features/Battery`. Let me investigate the existing Battery feature, check if VampireDrain already exists, and read the parity manifest/ledger.
+
+Key finding: the established pattern is `Sources/Features/Battery/` (not `TeslaSync/Features/Battery`), and there's NO VampireDrain page yet — but BatteryDegradation, SleepEfficiency, etc. exist as multi-file pages. The prompt's `TeslaSync/Features/Battery` path is a generator template default that doesn't match this repo's actual layout. Let me confirm by reading the parity manifest record, ledger, and how prior pages were committed.
+
+Let me extract the full manifest records and check the ledger rows + gate contract.
+
+The manifest confirms 45 required items (9 panels + 3 charts + 3 states + 30 strings) and VampireDrain is not yet in the ledger. The established home is `Sources/Features/Battery/`. SleepEfficiency (48 items: table + charts + sessions) is the closest analog. Let me read its full multi-file implementation as my template.
+
+Rich, well-established architecture. Let me read the rest of the SleepEfficiency files (Sections, Charts, Table, Models, Format, Sample), plus locate the RadialGauge usage, the AppRoute enum, and the string catalog.
+
+Now let me read the data models, format helpers, sample data source, find the chart wrappers (RadialGauge, LineChart), and locate the route + string catalog.
+
+No vampire route exists yet — I'll need to add one. Let me read the routing infrastructure, the gauge/line chart wrappers, the format helpers, and the shared battery types.
+
+I have `TSRadialGauge`. Now let me read the line/bar chart APIs, the route registry, the format helpers, locate shared battery types, find how route registrations are wired in, and locate the string catalog.
+
+Now let me read the chart models, format helpers, shared battery types, the route-registration composition point, and locate the string catalog.
+
+Let me read the app registration block, an existing parity log (to learn the exact `=== PARITY ===` evidence format), the shared battery types, and locate the string catalog.
+
+Let me read the SleepEfficiency parity log (the exact gate format I must replicate) and inspect the string catalog structure.
+
+This is the canonical template — the SleepEfficiency log confirms my path analysis exactly. The page belongs in `apps/apple/Sources/Features/Battery/**`. Let me set up a plan and check the build toolchain (xcodegen, pwsh, prebuilt Shared.xcframework) and remaining component APIs.
+
+All tooling present except the `Shared.xcframework` (needs the KMP build). Let me check the build script, the KMP toolchain, the placeholder rules, and the RadialGauge panel precedent.
+
+Java 17 + gradlew are present, so the KMP build can run (~14 min). I'll kick that off in the background now, then continue reading the remaining component APIs and the swiftlint config.
+
+Note: swiftlint `--strict` makes the 120-char warning an error — I must keep lines ≤120. Let me read the remaining component definitions (badges, severity/tone, glass panel, chart container, data table, empty/error states, card/iconbox, legend) so I use exact APIs.
+
+The launcher returned (nohup keeps the build running). Let me check actual build progress and read the key component definitions.
+
+KMP build is compiling (mostly FROM-CACHE — promising). Let me read the final batch of component definitions: chart container, feedback states, data table, typography, pickers, and the shared battery legend/severity types.
+
+Let me read the data table, typography, pickers, and shared battery types (severity, legend, vehicle).
+
+Let me read the picker, severity, legend, and vehicle definitions — the last APIs I need.
+
+Let me confirm the `BatterySeverity.tone` extension, the `Color.TS` tokens, check for any test that counts routes, look at an existing test pattern, and check KMP build progress.
+
+`BatterySeverity.tone` exists; `RouteTests` asserts all path segments are unique (my `vampire-drain` is unique). KMP build is linking now. Let me read RouteTests, verify the design tokens, and study the existing test pattern.
+
+All component APIs confirmed. Let me check the string catalog format, which of the 30 keys already exist, and the KMP build status.
+
+Catalog uses standard xcstrings JSON. Only "Date", "action.refresh", "action.retry" already exist; I'll add the rest. Let me check the KMP build status and write a plan.
+
+KMP build is linking release frameworks (progressing well). I have everything I need. Let me write a plan, then create all the source files.
+
+Now let me create the source files, starting with the models and format layer.
+
+Now the main page view with header, phase switch, and ready assembly.
+
+Now the sections file (metric cards, score gauge, tips, skeleton).
+
+Now the charts file (drain-rate trend line + daily-drain grouped bars).
+
+Now the sessions table (GlassPanel8).
+
+Now the route registration file.
+
+Now let me wire up navigation: add the route case, the path segment/icon/group, the deep-link alias, and the registration.
+
+Now let me add the 31 localization keys to the string catalog, inserting them surgically to match Xcode's exact format.
+
+The marker format differs from my guess. Let me inspect the exact bytes around the `strings` opening.
+
+The marker is `  "strings": {` (no space before colon), while entries use ` : `. Let me fix the marker and re-run.
+
+31 keys inserted. Now let me add the two ledger rows. Let me check the ledger's exact formatting first.
+
+The ledger uses standard 2-space JSON. Let me append the two VampireDrain rows via a safe text replacement and validate.
+
+Ledger updated. Now let me write the model tests and check the KMP build status.
+
+KMP build still linking the release macOS framework. Let me write the test file while it finishes.
+
+All files created. Let me run swiftlint on my new files to catch any issues early (this is fast and doesn't need the framework).
+
+Six line-length violations. Let me view and fix them.
+
+I renamed `sentry:` to `on:` in the rows. Now I must update the `SessionSample` struct field and its usage.
+
+Now fix the chart series line length.
+
+Let me re-run swiftlint to confirm clean.
+
+My files lint clean (0 violations). Let me run the placeholder scan and check the KMP build status.
+
+Placeholder scan clean (COUNT=0, EXIT=0) and the KMP **Shared.xcframework build succeeded and is staged**. Now let me generate the Xcode project and verify the pre-existing Xcode-26.5 breakers the predecessor documented.
+
+Changes are isolated; pre-existing breakers are unmodified; project generated. Now let me build the macOS app target. First build is full, so I'll run it with a long wait and capture all compiler output (this surfaces any errors in my code too).
+
+Build failed only on code-signing (no dev certificate) — an environment issue, not code. Let me check whether compilation succeeded before signing, then retry with signing disabled.
+
+No real compile errors yet — the build aborted at the widget target's signing before compiling the app. Let me rebuild with signing disabled to reach actual Swift compilation.
+
+Full build in progress (7+ min, expected for a first clean build). Let me keep waiting.
+
+Let me check build progress from the raw log.
+
+Build is compiling the Widgets dependency target (0 errors so far); the main app with my files compiles after. Let me continue waiting.
+
+Main app target is now compiling (0 errors so far). Let me wait for it to reach my files and complete.
+
+Still 0 errors, build progressing. Let me wait for it to finish compiling the app module.
+
+All 9 of my VampireDrain files compiled with 0 errors. The build is finishing (linking). Let me wait for the final result.
+
+**BUILD SUCCEEDED** with 0 errors — all 9 of my files compiled, and notably the app built clean without needing any source exclusions. Now let me run the tests (my model tests + RouteTests to confirm routing still works).
+
+The test build failed on a **pre-existing** file (`TimelinePageModelTests.swift`) — a third Xcode-26.5 compat breaker, unrelated to my change. Let me confirm it's unmodified and isolate the pre-existing broken test files (build-setting override, no source edits), then run my tests.
+
+Confirmed: the 3 breaker files are unmodified by me. Test build running with them isolated. Let me wait.
+
+0 errors so far. Let me wait for the test bundle to compile and tests to run.
+
+Test bundle still compiling (large target). Let me wait longer.
+
+The exclusion change forced a full app module rebuild (82 swift-frontend processes active, 0 errors). It'll take ~15 min. Let me wait for it to finish.
+
+A fourth pre-existing breaker surfaced (`VehicleCostPageModelTests.swift`). These are environment-level Xcode-26.5 concurrency incompatibilities across many test files (the repo documents macOS verification as PENDING). Iterative exclusion with full rebuilds is too slow — let me enumerate ALL breakers at once. First, let me see how many errors each run actually reported.
+
+Each run stops at the first error, so whack-a-mole means one full rebuild per breaker — impractical. Let me understand the failure pattern by examining the breaking files vs. my working test.
+
+The first test attempt (no Input.Previews exclusion) failed in just **12 seconds** — the app target was cached and the test bundle fast-failed at the first breaker. My earlier mistake was excluding `Input.Previews.swift`, which forced a 15-min app rebuild. Let me enumerate all pre-existing test breakers quickly using `build-for-testing` (app stays cached, fast-fails per breaker), excluding only test files.
+
+Iteration 1 is slow — setting `EXCLUDED_SOURCE_FILE_NAMES` (any value) changes the app target's settings hash and forces an app rebuild. Let me check what it's compiling.
+
+The app rebuilds on any `EXCLUDED_SOURCE_FILE_NAMES` change, making per-file iteration too slow. Let me stop this and instead surface ALL pre-existing breakers in one pass by disabling batch-mode compilation (one frontend per file → parallel error reporting).
+
+While the breaker-enumeration build runs (~20 min), let me draft the evidence log with the full PARITY section. Let me check build progress first.
+
+App is rebuilding with batch-mode off (expected). Let me draft the evidence log while it runs, then fill in final gate numbers.
+
+Log drafted. Let me check the breaker-enumeration build progress.
+
+App still compiling (batch-mode-off is slower per-file). Let me wait longer.
+
+The batch-mode-off app rebuild is slow (40 frontend processes still on app files). It's the reliable way to surface every test breaker at once, so let me let it finish reaching the test target. Let me wait.
+
+This batch-off app rebuild is too slow. Let me pivot to a definitive fast approach: exclude **all** test files except the two I need (my model tests + RouteTests), so only those compile — guaranteeing one rebuild reaches a green test run. Let me stop the slow build and enumerate the test files.
+
+Cleaner approach: exclude all `*Tests.swift` via a glob and re-include only my two test files via `INCLUDED_SOURCE_FILE_NAMES`. This compiles just my 2 test files (plus support files) — one rebuild, then a green test run. Let me launch it.
+
+Final test build running (app rebuild + my 2 test files). Let me wait and monitor.
+
+App rebuilding in batch mode (0 errors). Let me keep waiting for it to reach the test run.
+
+Still compiling the app (0 errors, ~12 min in). Let me wait more for the app to finish and tests to run.
+
+Build still linking (0 errors). Let me wait further for completion.
+
+Full app rebuild in batch mode (0 errors), progressing through the surface files. Let me wait for it to finish and run the tests.
+
+Tests appear to be starting (xctest processes active). Let me wait for results.
+
+App + test bundle compiling in parallel; my 2 test files are correctly the only ones in the test module (INCLUDED worked). 0 errors. Let me wait for completion.
+
+🎉 **TEST SUCCEEDED** — 25 tests passed, 0 failures (17 VampireDrain model tests + 8 RouteTests). My routing changes didn't break anything, and all my logic tests pass. Now let me finalize the evidence log with the real gate numbers.
+
+Log finalized with real numbers (45/45 parity, 0 lint, 0 placeholders, app BUILD SUCCEEDED, 25/25 tests passed). Now let me verify the working tree before committing — ensure generated artifacts (xcodeproj, framework) are gitignored and only my files are staged.
+
+Working tree is clean — only my intended files, and generated artifacts (xcodeproj, framework) are properly gitignored. Let me stage all my files and commit.
+
+All 16 files staged. Let me commit.
+
+Committed cleanly as `de2e90eab`. Let me do a final verification of the log's covenant-required ending, the ledger, and update the plan.
+
+All gates verified: log ends `EXIT=0 / STATUS=DONE`, parity 45/45, ledger 45/45 for both platforms. Let me add a brief note to the log justifying the iOS row (shared source group), then finalize the plan.
+
+I updated the committed log after committing. Let me fold that final log edit into the commit via amend.
+
+Commit amended (`567e84051`), clean tree. Let me do one final definitive gate re-check (swiftlint on the committed files) to be fully certain before declaring done.
+
+All gates are green and verified. The task is complete.
+
+## Summary
+
+I delivered native SwiftUI/HIG parity of the web `VampireDrainPage` (route `/charging/vampire-drain`), adaptive across macOS + iOS, at **full 45/45 parity**.
+
+**Path resolution (disclosed, no silent drift):** The prompt's template output path `TeslaSync/Features/Battery/**` isn't a compiled root in `project.yml`. The real, build-compiled home — where every sibling Battery page lives — is `apps/apple/Sources/Features/Battery/**`, so the page actually compiles into the shipping targets.
+
+**What was built (committed `567e84051`, 16 files, +2003):**
+- **9 source files** — `@Observable VampireDrainPageModel` + `DataSource` seam (no networking in the view), models/derivations, formatters, the page view, sections (4 metric cards + score `RadialGauge` + tips + skeleton), charts (drain‑rate‑trend `LineChart` + daily‑drain `BarChart`), and the sessions `DataTable`.
+- **All 45 parity items:** 9 panels, 3 native Swift Charts (no WKWebView), loading/empty/error/success states, 30 strings (web key names verbatim).
+- **Navigation:** new `.vampireDrain` route (segment `vampire-drain`, `.energy` group), `/charging/vampire-drain` deep‑link alias, and registration in `TeslaSyncApp`.
+- **i18n:** 31 keys added to `Localizable.xcstrings`.
+- **Ledger:** `page:battery/VampireDrain` set covered **45/45** for `apple-macos` + `apple-ios`.
+- **Evidence log** with full PARITY enumeration → `EXIT=0 STATUS=DONE`.
+
+**Gate (all green, actually run):**
+- swiftlint `--strict`: **0 violations** (13 files)
+- placeholder scan: **0** (`EXIT=0`)
+- KMP `Shared.xcframework`: built + staged
+- macOS app **BUILD SUCCEEDED** (full source set, strict Swift 6 / complete concurrency, no exclusions)
+- **TEST SUCCEEDED: 25/25** (17 model + 8 routing)
+
+**Honest disclosure:** A literal whole-bundle `xcodebuild test` is blocked by several **pre-existing, unmodified, out-of-scope** `*Tests.swift` files (e.g. `TimelinePageModelTests`, `VehicleCostPageModelTests`) that fail Xcode 26.5's stricter actor-isolation checks — a documented PENDING condition. I isolated them via an `EXCLUDED/INCLUDED_SOURCE_FILE_NAMES` build override (no source edits) to run this page's tests green; the app `build` itself needed no exclusions.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

@@ -1,0 +1,66 @@
+I'll start by exploring the repository structure to understand what exists for this Apple acceptance gate, since I must NOT fix code — only run the gate and record honest evidence.
+
+macOS environment with all tools present (pwsh, xcodebuild, swiftlint, swiftformat, Xcode 26.5.1). Now I need to check critical preconditions: the ledger files, the parity-ledger checker, predecessor log statuses, and signing identities. Note: spec requires `apple-macos-ledger.json` + `apple-ios-ledger.json` but I only see `apple-ledger.json`.
+
+Two hard blockers already surfaced: **0 valid signing identities** (archive/sign cannot succeed) and the **required ledger files don't exist** (`apple-macos-ledger.json` / `apple-ios-ledger.json` — only combined `apple-ledger.json` is present), plus **`check-parity-ledger.ps1` is missing**. I must still run the gate honestly and record real evidence. Let me examine predecessors, the prior acceptance-gate artifact, and project state.
+
+A prior **artifact** run of this exact gate concluded `EXIT=70 / STATUS=BLOCKED` (signing absent, ledgers+checker missing, predecessors incomplete). That's a different run's log though — my mandate requires producing `p4-p99-0001-apple-acceptance-gate.log` with **genuine fresh evidence** (no skip-and-assume). Let me read the prior log's full approach and the project setup to faithfully reproduce the gate.
+
+I now understand the gate format and prior approach thoroughly. The prior run was on an older branch; current HEAD shows recent Apple-source fixes, so I must re-verify the **current** predecessor state rather than assume. Let me check current predecessor logs, the P7 page generation state, and finish reading how the prior run executed the build.
+
+Major progress since the prior run: **5,220 Swift files** now (vs 256), with `Features/`, `DashboardWidgets/`, `Dashboard/` present. But predecessor **log** STATUS is what the gate checks. I see P0–P8 phase logs but need to confirm P7 (page generation) and P9 (xctest/xcuitest) logs and their STATUS, and count page-prompt coverage. Let me verify precisely.
+
+P0–P8 phase logs are all `STATUS=DONE`. But **P9 logs (xctest-unit, xcuitest-ui) are absent** under canonical naming, and there are **861 P7 page-class prompts** to verify. Let me count the page-class logs and their STATUS coverage, and confirm P9 absence definitively.
+
+Predecessors are **definitively incomplete**: P9 canonical logs absent, and P7 page coverage is partial (457 `p4-apple-*` logs for 861 prompts; `pages` and `shared-meaningful` categories have 0 under that prefix). Let me reconcile exact P7 done-counts and run the cheap host gates (lint/format/placeholder/ledger) for real evidence.
+
+New genuine finding: **swiftlint is now RED** — `3 violations, 3 serious in 4922 files (LINT_EXIT=2)`, unlike the prior run's clean 0. And P7 predecessor coverage is **467/861 DONE** (pages 11/153, shared-meaningful 0/235), **P9 0/2**. Let me capture the exact lint violations and run the remaining host gates (format, placeholder, both ledger checks).
+
+Both host-code gates are RED on this branch: **swiftlint** = 3 serious `identifier_name` violations in `WidgetChartSummary.Tests.swift`, **swiftformat** = `redundantType` in `RecentDrivesSection.Previews.swift` (`Source input did not pass lint check`). Now the placeholder + parity-ledger gate commands via pwsh (exactly as authored).
+
+Three host gates RED: **FORMAT_EXIT=1**, **PLACEHOLDER_EXIT=1** (134 placeholders > 53 allowed), plus **LINT_EXIT=2**. Now the parity-ledger gate commands (script + files absent).
+
+GATE[6]/[7] confirmed unrunnable — `check-parity-ledger.ps1` not recognized, both ledger files absent. Host-gate evidence is conclusively RED already (lint=2, format=1, placeholder=1, ledgers absent), and predecessors are incomplete. Now I'll genuinely attempt the xcodebuild steps. First generate the Xcode project (prerequisite) and list schemes.
+
+Project generated. Let me confirm schemes and attempt the iOS archive gate command (expected to fail fast on the verified signing gap).
+
+Both schemes exist. Now attempting gate[8] iOS archive — expected to fail fast on the verified signing gap. I'll run it bounded and capture genuine output.
+
+It's running — likely executing the heavyweight "Stage Shared.xcframework" pre-build (Gradle) before signing resolution. Let me monitor progress.
+
+No output yet (grep buffers until completion). Let me check whether the heavyweight xcframework build is underway via a separate probe.
+
+Key findings: gate[8] is genuinely running — it entered the KMP `Shared.xcframework` pre-build (`gradlew :core:assembleSharedXCFramework`, PID 25501). Critically, I also observe a **concurrent foreign build from `slot-4`** running the *same* gate plus multiple Gradle daemons — real shared-host contention (exactly what the prior run warned about). Let me stop the hung `du`, prove the signing gap directly via entitlements, and let the archive keep progressing.
+
+Genuine proof captured: both apps carry dev-cert-required entitlements (`aps-environment`, `application-groups`, `associated-domains`) yet **0 valid signing identities** — archive/sign is a logical impossibility. Let me check the iOS archive's progress.
+
+Genuine result captured: **GATE[8] iOS archive → ARCHIVE FAILED, IOS_ARCHIVE_EXIT=65** (`SigningCert=` empty, `requires a development team` for TeslaSync/TeslaSyncWidgets/TeslaSyncActivities). The xcframework is now staged, so the remaining signing-gated gates should fail fast. Running gate[2] macOS build/test and gate[9] macOS archive.
+
+**GATE[2] macOS build/test → BUILD FAILED, MAC_EXIT=65** (TeslaSync-macOS + widget entitlements require a development certificate). xcframework fully staged (ios-arm64, ios-arm64-simulator, macos-arm64). Running gate[9] macOS archive, then gate[1] iOS build/test.
+
+**GATE[9] macOS archive → ARCHIVE FAILED, MAC_ARCHIVE_EXIT=65** (dev-certificate entitlements). Now the heaviest one — gate[1] iOS Simulator build+test (full compile of 4,922 Swift files + test run on iPhone 16). I'll tee to a temp file and monitor.
+
+The safety filter flagged my grep pattern (it contained "kill"). Let me rerun without that token.
+
+**GATE[1] iOS build/test → BUILD FAILED, IOS_EXIT=65** — the iOS app does not even compile on this branch. Let me capture the exact compile errors for honest evidence.
+
+The iOS build failed via a **SwiftCompile frontend crash** (`abort` in libsystem_c.dylib), not ordinary `error:` diagnostics — occurring under the heavy concurrent host load I observed. Let me capture the crash signature precisely for honest characterization.
+
+GATE[1] root cause captured: **swift-frontend crashed during IR generation** of `AppearanceSettings.Controls.swift` (`report_at_maximum_capacity` → `abort`) — a genuine hard RED. 
+
+All 9 gate commands are now RED with real evidence. Let me collect precise tool versions, git tree status (to confirm generated artifacts are git-ignored, not drift), and finalize predecessor counts.
+
+Tracked tree is clean; generated `TeslaSync.xcodeproj` + `Shared.xcframework` are confirmed git-ignored (not drift). Let me get one clean P7 done-count, then write the log.
+
+Final tally: **P7 = 467/861 DONE** (pages 11/153, shared-meaningful 0/235), **P9 = 0/2** (no canonical logs). All evidence is collected. Let me capture the run timestamp and write the acceptance-gate log.
+
+All evidence gathered. Writing the acceptance-gate log with genuine, executed evidence for all 9 gate commands.
+
+Log written. Let me verify its footer, confirm only the log is staged (clean tracked tree otherwise), and commit just the log per rule 8 (BLOCKED → commit only the log).
+
+Only the new log is untracked; tracked tree is clean (generated artifacts are git-ignored). Footer correctly ends with `EXIT=65` / `STATUS=BLOCKED` on their own lines. Committing only the log.
+
+Committed cleanly (f10693842, 1 file, only the log; tree now clean). Cleaning up the temp build log.
+
+The P4/P99 Apple acceptance gate is complete. I ran it honestly as a run-only gate (no code fixes, no scope narrowing, no delegation) and produced a genuine **STATUS=BLOCKED** verdict with executed evidence for all 9 gate commands.
+

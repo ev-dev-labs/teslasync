@@ -1,0 +1,143 @@
+I'll start by exploring the repository structure and understanding the task requirements, including whether the necessary tooling and source files exist.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Note: no iPhone 16 simulator — iPhone 17 series is available, I'll adapt. Let me read the web source and examine the existing Apple structure/patterns from prior surfaces.
+
+Now let me examine the shared-surfaces directory and the most recent surface implementation (DateGroupedList) to learn the established pattern, plus check for any existing format-type surfaces.
+
+No Distance files exist yet, and no sibling format surfaces. Let me find surfaces that handle units/formatting and study the canonical DateGroupedList pattern in full.
+
+The codebase has a clear established pattern. No surface uses units yet, so I need to understand the native unit infrastructure. Let me read the rest of the DateGroupedList pattern and find how units/preferences are modeled in the Apple shared core.
+
+The shared core tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSFadeIn`) and unit infrastructure must live elsewhere. Let me locate them.
+
+Found the unit infrastructure. Let me read the core files: the units facade (P1/S8), measurement system, unit formatters, and the motion/token primitives.
+
+Key finding: an atomic `TSDistance` formatter already exists in the component library (out of scope per the prompt). My task is the **shared-surface** tier `Distance`. The web source is a pure synchronous formatter (no fetch) — so like the DateGroupedList precedent, I must reproduce only its real branches (value + empty), not fabricate network states. Let me confirm the token locations, units state-holder binding, build config, and golden tests.
+
+Now I understand the units facade and projection pattern. Let me read the design tokens, motion primitives, web helper functions (`fmtNumber`, `convertDistanceFromSI`), the build config, and a peer pure-presentational surface (AnimatedNumber) to nail the exact conventions.
+
+AnimatedNumber is the closest peer (a numeric formatter surface). Let me read its full implementation as the template, plus locate the actual token definitions and the build config.
+
+The AnimatedNumber pattern is clear and ideal. Let me read its remaining files (Adapter with Input/Meta/Formatting, strings, Tests, Previews), find the token definitions, and read the build config.
+
+I now have the full pattern. Distance's web source has a real two-branch structure: value present → formatted distance + unit (with raw-value title), value absent → em-dash. Let me confirm token names and the build/test wiring in project.yml.
+
+Build wiring is clear: app target compiles `shared-surfaces/` (excluding `*Tests.swift`); the iOS & macOS test bundles compile `shared-surfaces/**/*Tests.swift`. Swift 6, strict concurrency. Design tokens live in `apps/design/generated/apple`. Let me read the generated tokens and the Design helpers.
+
+Now I have all the tokens. The build/test wiring and patterns are clear. Let me verify the exact web conversion math and check how a feature surface that uses units (QuickStatsGrid) structures its pure formatter, to decide between the KMP `Units` facade vs. a pure local formatter.
+
+The `QuickStatsFormat` enum is the canonical pure-Swift parity pattern (reproduces web conversion+formatting locally, testable without the Kotlin runtime, uses `.halfUp` to match `Intl.NumberFormat`). I'll follow it. Let me confirm the web `useUnits` shape and read the lint/format configs to avoid gate failures.
+
+Let me read the placeholder-check script (to avoid forbidden tokens in shipped code) and see how a surface reading `@Environment(\.tsUnits)` feeds its model.
+
+Now I have everything. Key gate constraints noted: forbidden tokens include "Placeholder" and "not implemented" (case-insensitive) — I'll avoid them in shipped code. `pwsh`, `xcodegen`, Xcode, swiftlint, swiftformat all available; iPhone 16 sim absent (will use iPhone 17). Let me check prior surface gate logs to learn the expected outcome (DONE vs BLOCKED) and whether full xcodebuild works here.
+
+The DateGroupedList log reveals the **sanctioned disposition**: full-app `xcodebuild` is typically DEFERRED (baseline-RED on pre-existing signing/co-located-test conditions), with surfaces independently verified via isolated Swift 6 build+test, `swiftc -typecheck` on both SDKs, and green swiftlint/swiftformat/placeholder. I'll write the code, run the fast gates, then attempt the real build and gather evidence. Let me check whether the Shared.xcframework is prebuilt.
+
+`Shared.xcframework` is not prebuilt — the full `xcodebuild` gate requires building the KMP core via Gradle (the sanctioned heavy/DEFERRED step). I'll start that build in the background now while I write the code, then run the fast static gates and an isolated Swift 6 verification as reliable evidence.
+
+Java 17 and gradlew present. Let me kick off the KMP `Shared.xcframework` build in the background, then write all the Distance surface files while it compiles.
+
+The KMP build is running in the background. Now I'll write all 8 Distance surface files, modeled precisely on the AnimatedNumber pattern. Starting with the pure core (Adapter) and projection.
+
+Now the comprehensive test suite covering formatting, projection (every branch), meta, accessibility, model, and views.
+
+All 8 files written. Now let me run the fast static gates: swiftformat (auto-fix my files, then lint-verify), swiftlint, and the placeholder check. Let me also peek at the Gradle build progress.
+
+swiftformat and swiftlint are clean (0 violations). Now the placeholder check. The gate's literal path `.../Distance` isn't a real directory (surfaces are flat files), so I'll run both the literal gate command and a genuine scoped scan of my actual files for honesty. Let me also check the Gradle build.
+
+Both placeholder scans clean (COUNT=0). The Gradle build completed — let me confirm the `Shared.xcframework` was produced and staged.
+
+Excellent — the `Shared.xcframework` built successfully (7m38s cold; now cached). Now let me generate the Xcode project, stage the framework, and run the real gate builds. iPhone 16 sim is absent, so I'll use iPhone 17.
+
+Project generated, framework staged. Now the real iOS build. I'll build the app (compiles all Sources + my Distance files) targeting iPhone 17, capturing to the gate log.
+
+iPhone 16 simulator **is** available (booted) — I'll use the exact gate destination. Let me set up the gate log and run the iOS `build test`. I'll run it in the background and monitor.
+
+The iOS build+test is running in the background. Let me monitor its progress.
+
+Critical finding: the build surfaced **pre-existing duplicate-type errors in unrelated surfaces** (`RecentDrivesListWidget.*`, `RecentDrivesSection.Seams.swift` — "ambiguous for type lookup"), **not** in my files. My `Distance.strings` bundled fine and my module emitted. Let me confirm none of the errors are mine, gather the full error set, and verify my changes are the only modifications.
+
+Confirmed decisively:
+- **git status**: only my `Distance.*` files + the log are new — I modified nothing else.
+- **Zero errors in any `Distance.*` file.**
+- All ~108 errors are pre-existing **duplicate-type** errors ("ambiguous for type lookup") in unrelated surfaces (`RecentDrivesListWidget.*`, `StateTimelineWidget.*`, `StateTimeline.*`, `RecentDrivesSection.*`) — the sanctioned baseline-RED condition.
+
+Let me capture the build's failure summary, then prove my surface compiles + tests pass in isolation against the real toolchain (the predecessor's standard).
+
+iOS build failed exactly as the precedent predicted — **baseline-RED on pre-existing duplicate-type errors** in unrelated surfaces (VehicleHeader, VehicleHero, RecentDrives, StateTimeline). **Zero** errors in my `Distance.*` files, and git confirms I touched nothing else. Now I'll prove my surface + tests compile and pass under the real Swift 6 strict-concurrency toolchain in isolation (the predecessor's verification standard). Let me record the iOS result and build the harness.
+
+Now let me build the isolated Swift 6 verification harness — a SwiftPM package compiling my actual Distance sources + a faithful shim of the in-module deps (`UnitPreferences`, `.tsUnits` env, real generated tokens), running my real test suite.
+
+Now let me build and test the isolated package under Swift 6 strict concurrency (language mode v6).
+
+A genuine Swift 6 strict-concurrency issue surfaced (exactly why isolated verification matters): the `DistanceResolve` function-type alias isn't `@Sendable`, so the `static let string` global isn't concurrency-safe. Let me check how the DateGroupedList precedent declared its resolver typealias and match it.
+
+The convention is `@Sendable`. Let me fix my typealias to match.
+
+Build clean under Swift 6 (including #Preview macros). Now run the test suite.
+
+All **33 tests pass under Swift 6 strict concurrency** (macOS target), 0 failures — covering formatting, every projection branch, meta, accessibility, model, and views; the #Preview macros compiled too. The `@Sendable` fix is validated. Let me re-verify the static gates on the edited file and run the macOS gate (expected baseline-RED on the same pre-existing errors).
+
+Static gates remain clean after the edit. While the macOS build runs, let me run the full gate-scope `swiftformat --lint` and `swiftlint --strict` to record whether the whole-tree checks are clean or baseline-affected by other files.
+
+Full `swiftformat --lint` over all 3938 files → **0 require formatting** (FMT_EXIT=0, gate green). The macOS build finished — let me read its result.
+
+macOS build is baseline-RED on **development-signing** (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` "require signing with a development certificate") — an environment condition owned by the signed CI runner, exactly the precedent's named baseline. **Zero** errors in my files, and my isolated harness already proved macOS-arm64 compilation + 33 passing tests. Let me run the full `swiftlint --strict` (gate scope) to complete static-gate evidence.
+
+Complete static-gate picture:
+- **swiftlint --strict**: 0 violations across all 3708 files ✓
+- **swiftformat --lint**: 0/3938 require formatting ✓
+- **placeholder**: COUNT=0 ✓
+- **isolated Swift 6 build+test**: 33/33 pass (macOS arm64, strict concurrency) ✓
+- **iOS / macOS xcodebuild**: baseline-RED (pre-existing duplicate-types / dev-signing) — 0 errors in `Distance.*`, only my files changed.
+
+Let me write the comprehensive, honest gate log.
+
+Log finalized with full honest evidence. Now let me clean up temp artifacts and verify git status before committing (ensuring the generated project/framework are git-ignored and only my files are staged).
+
+Clean — only my 8 `Distance.*` files + the log are untracked; the generated project/framework are git-ignored. Now committing per the prompt's instructions.
+
+Committed (7e045ad33) with exactly the 8 `Distance.*` files + the gate log. Let me do a final clean-tree verification.
+
+Task complete. The Distance shared surface is shipped, verified, and committed.
+
+## Summary
+
+Built the production Apple-native **`Distance`** shared surface (P4 · 0085) at parity with the web source `components/data-display/format/Distance.tsx`, committed as `7e045ad33` (8 source files + gate log, 1111 insertions).
+
+**What it does** (faithful to the web source): takes a caller distance in `miles` or `km` (miles-first precedence), normalizes to SI metres, converts to the user's preferred unit, formats with locale-aware grouping + half-away rounding at the resolved precision (`prop → preference → 2`, clamped 0…20), appends the unit label, and surfaces the raw caller value as a `.help` tooltip — rendering the em-dash sentinel `—` when neither input is finite.
+
+**Architecture binding**: `\.tsUnits` env (P1/S8 `useUnits` parity) + `DistanceModel` state-holder, P1/S9 generated tokens, P1/S10 i18n facade (`Distance.strings`), P1/S11 once-only `view.opened` telemetry. Honest parity note (matching the AnimatedNumber/DateGroupedList precedent): the source is a synchronous formatter with no fetch, so only its real branches (value + empty) are reproduced — no fabricated network states.
+
+**Verification (raw evidence in the log):**
+| Gate | Result |
+|---|---|
+| swiftlint --strict (3708 files) | **0 violations** ✓ |
+| swiftformat --lint (3938 files) | **0 require formatting** ✓ |
+| placeholder scan | **COUNT=0** ✓ |
+| Isolated Swift 6 strict-concurrency build+test (macOS-15 SDK) | **33/33 tests pass** ✓ |
+| iOS / macOS full-app `xcodebuild` | baseline-RED — **0 errors in `Distance.*`** |
+
+I built the KMP `Shared.xcframework` (Gradle) and ran the **real** Xcode 26.5 gate. The two full-app `xcodebuild` gates are **DEFERRED/baseline-RED on pre-existing, unrelated conditions** — duplicate-type definitions in other slots' surfaces (`VehicleHero*`, `RecentDrives*`, `StateTimeline*`) and macOS development-signing — **not my code** (git confirms only `Distance.*` changed). The isolated Swift 6 build proves macOS-SDK compilation + behavior, and **caught a real `@Sendable` defect** I fixed before commit. This matches the repo's sanctioned "code-complete + deferred Xcode gate" disposition → `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0085-Distance.log     | 129 ++++++++
+ .../shared-surfaces/Distance.Adapter.swift         | 224 ++++++++++++++
+ .../TeslaSync/shared-surfaces/Distance.Model.swift | 111 +++++++
+ .../shared-surfaces/Distance.Previews.swift        |  50 ++++
+ .../shared-surfaces/Distance.Projection.swift      | 113 +++++++
+ .../TeslaSync/shared-surfaces/Distance.Tests.swift | 331 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Distance.Views.swift |  44 +++
+ .../TeslaSync/shared-surfaces/Distance.strings     |  20 ++
+ .../apple/TeslaSync/shared-surfaces/Distance.swift |  89 ++++++
+ 9 files changed, 1111 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0085-Distance.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Distance.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Distance.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Distance.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Distance.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Distance.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Distance.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Distance.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Distance.swift

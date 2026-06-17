@@ -78,7 +78,7 @@ public struct TirePressureHistoryUpdate: Sendable, Equatable {
 }
 
 /// The seam the view binds through. The production app implements this over the
-/// shared P1/S8 state holders (`StateHolderModel<LoadableState<[TirePressureReading]>>`
+/// shared P1/S8 state holders (`StateHolderModel<LoadableState<[TirePressureWidgetReading]>>`
 /// from the KMP `VehicleSystemsStore`, plus the settings `UnitStore`); previews and
 /// tests use `InMemoryTirePressureHistorySource`. The view never talks to the
 /// network directly.

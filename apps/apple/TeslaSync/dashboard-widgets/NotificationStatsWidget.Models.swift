@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0069 · NotificationStatsWidget (Apple)
 //
 //  Domain value types ported from the web source's data contracts
-//  (api/types.ts `NotificationStats` / `NotificationLog`) plus the snake-case
+//  (api/types.ts `NotificationStatsWidgetStats` / `NotificationLog`) plus the snake-case
 //  decode adapter the production source uses to project the cached DTOs. Pure
 //  Foundation — no SwiftUI, no Shared xcframework — so it host-compiles and the
 //  cached→projection adapter is unit-testable in isolation.
@@ -11,10 +11,10 @@
 
 import Foundation
 
-// MARK: - NotificationStats (web `NotificationStats`, GET /notifications/stats)
+// MARK: - NotificationStatsWidgetStats (web `NotificationStatsWidgetStats`, GET /notifications/stats)
 
-/// Aggregate delivery counters for the last window (web `NotificationStats`).
-public struct NotificationStats: Equatable, Sendable {
+/// Aggregate delivery counters for the last window (web `NotificationStatsWidgetStats`).
+public struct NotificationStatsWidgetStats: Equatable, Sendable {
     public var totalSent: Int
     public var sent: Int
     public var failed: Int
@@ -112,10 +112,10 @@ public struct NotificationLog: Equatable, Sendable, Identifiable {
 /// into one snapshot. The web shows content iff `stats` is present, so the data is
 /// keyed on stats and carries logs as an auxiliary (possibly empty) array.
 public struct NotificationStatsData: Equatable, Sendable {
-    public var stats: NotificationStats
+    public var stats: NotificationStatsWidgetStats
     public var logs: [NotificationLog]
 
-    public init(stats: NotificationStats, logs: [NotificationLog] = []) {
+    public init(stats: NotificationStatsWidgetStats, logs: [NotificationLog] = []) {
         self.stats = stats
         self.logs = logs
     }
@@ -123,7 +123,7 @@ public struct NotificationStatsData: Equatable, Sendable {
 
 // MARK: - Decode adapter (snake-case DTO → value types)
 
-public extension NotificationStats {
+public extension NotificationStatsWidgetStats {
     private struct DTO: Decodable {
         let totalSent: Int?
         let sent: Int?
@@ -134,12 +134,12 @@ public extension NotificationStats {
     }
 
     /// Decodes the `/notifications/stats` snake-case JSON object.
-    static func decode(fromJSONString json: String) -> NotificationStats? {
+    static func decode(fromJSONString json: String) -> NotificationStatsWidgetStats? {
         guard let data = json.data(using: .utf8) else { return nil }
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         guard let dto = try? decoder.decode(DTO.self, from: data) else { return nil }
-        return NotificationStats(
+        return NotificationStatsWidgetStats(
             totalSent: dto.totalSent ?? 0,
             sent: dto.sent ?? 0,
             failed: dto.failed ?? 0,
@@ -151,7 +151,7 @@ public extension NotificationStats {
 
     /// Bridges a shared-core payload (a JSON `String`) to the value type. The
     /// production `NotificationStatsSource` hands the cached DTO here.
-    static func decode(fromSharedPayload payload: Any) -> NotificationStats? {
+    static func decode(fromSharedPayload payload: Any) -> NotificationStatsWidgetStats? {
         if let json = payload as? String { return decode(fromJSONString: json) }
         return nil
     }

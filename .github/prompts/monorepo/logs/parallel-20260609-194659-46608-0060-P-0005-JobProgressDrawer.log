@@ -1,0 +1,155 @@
+I'll start by exploring the repository to understand what exists and what capabilities are available on this runner.
+
+Capabilities ARE available: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat. The web source and `apps/apple` exist. Let me read the web source and understand the Apple app structure.
+
+This is a large, well-established monorepo with a clear file-splitting convention. Let me study the conventions, shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 telemetry), and find an existing export-related surface to mirror.
+
+`Sources` under TeslaSync is empty. Shared infra is likely in `apps/apple/Sources`. Let me explore the shared infrastructure and an existing export surface to learn the exact patterns.
+
+The conventions are clear. Now let me study the shared facade (state holders), design tokens, i18n facade, telemetry, the Model/view/test pattern, and how `project.yml` includes source directories.
+
+Now let me read a full representative surface end-to-end (Model, view, States/Views, Seams, strings, Tests) to learn exactly how views bind data and render, without directly importing the KMP core.
+
+Now I understand the binding architecture. Let me read the seam protocols, sub-view states, strings facade, tests, and the design system tokens.
+
+Excellent. Now the design tokens, strings format, tests, previews, and the build config.
+
+I now understand the full surface pattern. Before writing code, I must assess true buildability (Honesty Covenant: capability evidence required). Let me check the toolchain, the Shared.xcframework, xcodegen, and prior surface logs to see what STATUS comparable Apple prompts reached.
+
+xcodegen is present but `Shared.xcframework` is not built (only `.gitkeep`). Let me read the framework build script and several prior surface logs to see what STATUS comparable prompts actually reached — this calibrates honest expectations.
+
+Critical insight: the established protocol reaches `STATUS=DONE` via **surface-scoped host-runnable gates** (swiftformat, swiftlint, swift typecheck iOS+macOS, swift test, placeholder check, xcodegen) and **defers** the full `xcodebuild` because building the KMP `Shared.xcframework` (Kotlin/Native) times out on the runner — plus there's a pre-existing app-target collision unrelated to any new surface. Let me read the full prior log to replicate the exact methodology.
+
+I now have the complete sanctioned methodology (used by 412 prior surfaces). Let me find the exact gate-runner tooling (typecheck harness, isolated SwiftPM test setup, placeholder checker) so I replicate it faithfully rather than inventing.
+
+pwsh is available (placeholder gate runs for real). Note: `FeedbackOverlays.swift` already references "JobProgressDrawer" — I must read it to avoid collisions and align. Let me read the placeholder patterns, that feedback file, and locate the design-token component APIs.
+
+Key finding: an **atomic** `TSJobProgressDrawer` already exists in the shared component library (explicitly out of scope per the prompt). My surface must be the **data-bound modal** at `modals-dialogs/JobProgressDrawer.*` and must NOT collide with `TSJobProgressDrawer`/`TSJobProgress`. Let me capture the precise APIs of the tokens/components I'll use.
+
+Let me capture the remaining APIs: typography (TSPanelTitle/TSText/TSCaption/TSCode/TSBadge), tokens (Color.TS/Font.TS/TSSpacing/TSRadius), TSFadeIn, TSIconBox, TSMetricBar.
+
+Let me read the typography, badges, motion, metrics, and design tokens to capture exact APIs.
+
+I have all token APIs. Now let me read the web data hook (`useExports`), the format utilities (`formatBytes`/`formatRelative`), the `.strings` file format, and the test/preview patterns to faithfully reproduce data + tests.
+
+I have the complete data model and formatters. Let me verify symbol-collision safety for my planned types and read the `.strings` format plus the test/preview patterns.
+
+`ExportJobItem`/`ExportJobStatus` already exist elsewhere — I'll use distinct `ExportDrawer*` names. Let me verify those are collision-free and read the Previews/Tests/ModelTests patterns plus the glass-material modifier.
+
+All names are collision-free. Let me read the test patterns and the glass-material modifier to finalize my understanding.
+
+I have the full pattern. Now I must determine the exact dependency boundary for the isolated typecheck (the views depend on the design system but must avoid files importing the unbuilt `Shared` framework). Let me map which `Sources/` files import `Shared`.
+
+`Sources/Components` + `Sources/Design` + generated `Tokens.swift` are `Shared`-free — that's my view typecheck closure. The `Shared`-importing files are isolated to SharedFacade/Live/a few widgets, which my surface doesn't need. Let me read the lint/format configs, then write the plan.
+
+I have the lint/format rules and test pattern. One open question: `modals-dialogs` is a NEW tier not yet in `project.yml`/`.swiftlint.yml`. Let me check whether sibling modals-dialogs prompts exist and how the tier is meant to be wired, to decide integration scope.
+
+This is the first surface in a brand-new `modals-dialogs` tier (31 sibling prompts, none built yet; tier not wired into `project.yml`/`.swiftlint.yml`). Per the established protocol and my allowed-files constraint (`JobProgressDrawer.*` + log only), I'll build the surface and verify via surface-scoped gates, deferring the full-app `xcodebuild` (KMP framework long-pole + tier wiring) to the P99 acceptance gate — exactly as 412 prior surfaces did. Let me record the plan and create the directory.
+
+Now I'll create the surface files. Starting with the pure, dependency-free Adapter core.
+
+Now the Seams file (telemetry, strings facade, date/bytes facades, presentation store, actions, source, accessibility).
+
+Now the Model (state holder) — binds the source, runs the drawer-state machine, stale auto-refresh, telemetry, and exposes row display helpers.
+
+Now the main view (visibility routing) and the States file (chip, panel, header, body, sections, rows, status icon, freshness/banner, loading/empty/error). Writing modifiers on separate lines to stay within the 120-col lint budget.
+
+Now the Previews, strings catalog, and the two test files.
+
+Now the two test files. First the adapter/projection/formatter/accessibility tests.
+
+Now the model state-holder tests.
+
+All 9 surface files created. Now let me run the surface-acceptance gates. Starting with swiftformat (auto-fix on my own files, then lint to confirm).
+
+Minor auto-fixable issues (trailing commas, redundant returns) in my own files. Let me auto-format them and re-lint.
+
+swiftformat passes (0/8 require formatting). Let me verify the auto-fix kept the switch logic correct, then run swiftlint.
+
+Auto-fix correctly produced valid switch expressions. Now swiftlint --strict on the surface files.
+
+swiftlint linted the configured `included` set (3235 files) but my new `modals-dialogs` tier isn't in `included`, so I must verify my files are actually linted. Let me lint them explicitly with a scoped config mirroring the repo rules.
+
+One violation: `States.swift` is 560 lines (exceeds the 400-line `file_length` rule). I'll split it — moving the row, status icon, and leaf states into a new `JobProgressDrawer.Rows.swift` (still matches `JobProgressDrawer.*`). Let me find the split boundary.
+
+I'll split at line 254. Creating `JobProgressDrawer.Rows.swift` with the row/status-icon/leaf-states, and truncating `States.swift`.
+
+Now update the `States.swift` header to reflect its reduced scope, then re-run format + lint.
+
+Format + lint both pass (0 violations). Now let me determine the exact design-system symbols my views use so I can build a minimal, `Shared`-free typecheck closure.
+
+Minimal closure confirmed: only `Tokens.swift` + `Motion.swift` + my files. Let me run the iOS-simulator typecheck under Swift 6.
+
+iOS typecheck passes clean. Now macOS.
+
+Both typechecks pass. Now the isolated SwiftPM build + test: I'll assemble a throwaway package whose `TeslaSync` module is the pure-logic trio (Adapter/Seams/Model) and run the two test files against it.
+
+All 40 tests pass (23 adapter + 17 model). Now the placeholder/stub gate (pwsh).
+
+Placeholder gate passes (COUNT=0). Now xcodegen: first confirm the real spec still generates cleanly, then prove my files enumerate via a scratch spec that registers the `modals-dialogs` tier (without modifying the real `project.yml`, per allowed-files).
+
+Real spec generates cleanly. Now the scratch spec registering `modals-dialogs` to prove my files enumerate into the app + test targets.
+
+All 10 files enumerate cleanly into the scratch project (app + test targets); scratch removed. All 7 surface gates are green. Now let me gather the collision-free evidence and the full-app deferral evidence for the log.
+
+Surface is fully collision-free (0 external defs). The `Frameworks/Shared.xcframework` isn't staged (only a `.gitkeep` placeholder in `Frameworks/`). Let me re-capture the remaining deferral evidence (the prior-art `ChargingProjection` collision is irrelevant — let me check the current state) and confirm a clean tree.
+
+Let me confirm the working tree contains only my new surface files (no stray edits to shared files).
+
+Clean tree — only my new `modals-dialogs/` files, no shared-file edits. All gates green. Let me gather final counts and write the gate log.
+
+All gates green. Now writing the gate log per the Honesty Covenant (ends with `EXIT=<int>` / `STATUS=<DONE|BLOCKED>`).
+
+Log written. Let me run one consolidated final verification of the on-disk files to confirm the committed state is fully green before committing.
+
+Re-running the isolated tests on fresh copies of the final files plus the placeholder gate.
+
+All seven gates are green on the final files. Per the Honesty Covenant (no commit on red — all green), let me commit the surface and log.
+
+Committed (c10a4ce, 11 files). Let me update the plan status and confirm a clean tree.
+
+All gates green, committed, tree clean, temp artifacts removed. The task is complete.
+
+## Summary
+
+I built a production-grade native Apple (SwiftUI) parity of `web/src/components/feedback/JobProgressDrawer.tsx` at `apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.*` — the first surface of the new `modals-dialogs` tier.
+
+**Delivered (11 files, ~2,060 Swift LOC):**
+- **`.Adapter.swift`** — pure, dependency-free core: `ExportDrawerStatus/Kind/Job`, the drawer state machine (`JobDrawerPresentation`→`Visibility`), body-phase resolver, and faithful ports of web `formatBytes`/`formatRelative`.
+- **`.Seams.swift`** — P1/S11 telemetry, P1/S10 strings facade, date facade, the `localStorage`→`UserDefaults` presentation store, the download action seam, and the P1/S8 `ExportDrawerJobsSource` (+ in-memory).
+- **`.Model.swift`** — `@MainActor @Observable` model: buckets, presentation persistence, auto-promote, ambient auto-hide (with `pinned` modal suppression), stale auto-refresh, `view.opened` telemetry.
+- **`.swift` / `.States.swift` / `.Rows.swift`** — every state rendered: minimized chip, header (Minimize/Dismiss), sections, rows (status icon, Download/failed), loading, empty, error+retry, inline error, stale/offline chip+banner. Full VoiceOver + Dynamic Type + reduce-motion.
+- **`.Previews.swift`** (11 states), **`.strings`** (all web i18n keys + chrome), **`.Tests.swift`** + **`.ModelTests.swift`** (40 tests).
+
+**Surface-acceptance gates — all green** (real output in the log): swiftformat `0/9`, swiftlint `--strict` `0 violations`, iOS-18 + macOS-15 Swift-6 typecheck `0/0`, isolated SwiftPM `40 tests, 0 failures`, placeholder `COUNT=0`, xcodegen valid + all 10 files enumerate. Surface is collision-free (0 external defs).
+
+**Honesty note:** The full-app `xcodebuild` is **deferred** (log `EXIT=0 / STATUS=DONE`) — blocked only by the unstaged KMP `Shared.xcframework` (Kotlin/Native long-pole) and the not-yet-bootstrapped `modals-dialogs` tier in `project.yml` (a shared file outside this prompt's allowed scope). Both are surface-independent, matching the exact protocol used by all 412 prior P4-apple surfaces. No shared files were modified.
+
+Committed as `c10a4ce`.
+
+The task is fully complete and verified. All work is done, gates are green, and the commit is in place.
+
+Merge made by the 'ort' strategy.
+ ...apple-modals-dialogs-0005-JobProgressDrawer.log | 144 ++++++++
+ .../modals-dialogs/JobProgressDrawer.Adapter.swift | 390 +++++++++++++++++++++
+ .../modals-dialogs/JobProgressDrawer.Model.swift   | 269 ++++++++++++++
+ .../JobProgressDrawer.ModelTests.swift             | 306 ++++++++++++++++
+ .../JobProgressDrawer.Previews.swift               | 160 +++++++++
+ .../modals-dialogs/JobProgressDrawer.Rows.swift    | 320 +++++++++++++++++
+ .../modals-dialogs/JobProgressDrawer.Seams.swift   | 300 ++++++++++++++++
+ .../modals-dialogs/JobProgressDrawer.States.swift  | 252 +++++++++++++
+ .../modals-dialogs/JobProgressDrawer.Tests.swift   | 301 ++++++++++++++++
+ .../modals-dialogs/JobProgressDrawer.strings       |  67 ++++
+ .../modals-dialogs/JobProgressDrawer.swift         |  47 +++
+ 11 files changed, 2556 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0005-JobProgressDrawer.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.Rows.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.swift

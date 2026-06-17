@@ -1,0 +1,78 @@
+I'll start by exploring the repository structure and reading the web source component, while checking the runner's Apple toolchain capability.
+
+The Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2) — not blocked. Now let me explore the existing Apple app structure to match established patterns.
+
+A large, established `feature-views` directory exists with a clear multi-file pattern. Let me check for any existing InfoTile and study a simple presentational example (AccordionSection has no Adapter, like InfoTile).
+
+No existing InfoTile. AccordionSection is the closest pure-presentational pattern (no Adapter). Let me read its full file set plus the strings to learn the exact conventions.
+
+The pattern is clear and well-established. Let me read the remaining AccordionSection files (strings, Previews, Tests) and locate the design token definitions (P1/S9) and shared facade.
+
+Now let me read the design token definitions to use the correct token names for InfoTile.
+
+Let me read the Theme/token definitions to get exact names for spacing, radius, colors, and fonts.
+
+The tokens are generated (P2). Let me find the generated Tokens file and the Motion file.
+
+I have the token vocabulary. Let me verify a few specifics (statusError, spacing beyond xl, the Motion/TSFadeIn API) and — critically — how the Xcode project includes these files so my new files actually compile.
+
+`Font.TS.section` (18 semibold) maps perfectly to the web `text-lg font-semibold` value. Now the critical question: how does the Xcode project include these files? Let me check the project structure and how existing feature-views are referenced.
+
+No `.xcodeproj` — this uses XcodeGen (`project.yml`). Let me read it to understand targets, source globs, schemes, and how feature-views are included.
+
+XcodeGen uses **path-based globs** — new `InfoTile.*` files under `feature-views/` will be auto-included (app target compiles non-`*Tests.swift`; test bundle compiles `*Tests.swift`). Let me check the heavy dependency (`Shared.xcframework`) and the gate's tooling before deciding build strategy.
+
+The app target links `Shared.xcframework` (KMP/Gradle). Let me check how prior sibling surfaces' gate logs concluded — that tells me the realistic build outcome on this runner and the expected log format.
+
+This is the established, sanctioned disposition: implement fully, prove GREEN via host gates + an **isolated Swift 6 build+test**, then run the full-app gate (deferred-RED for pre-existing reasons). Let me study the exact isolated-build methodology from the 0272 log and check for helper scripts.
+
+I now fully understand the sanctioned methodology (implement fully → prove GREEN via host gates + isolated Swift 6 build/test → full-app gate deferred-RED for pre-existing reasons). Let me read the lint/format configs and a reference value-rendering component before writing, and set up my plan tracking.
+
+`TSTone` exists with `.color`. Let me check if I can reuse it for the value tint (DRY) rather than inventing a new enum, and confirm how localized `Text` keys resolve in this codebase.
+
+I have everything I need. This is a sanctioned "code-complete + isolated Swift 6 verify + deferred full-app gate" surface. Let me set up tracking and write the six `InfoTile.*` files following the AccordionSection pattern precisely.
+
+Now let me format and lint the new files. First auto-format with swiftformat, then run swiftlint --strict and the placeholder scanner.
+
+swiftformat reports my files already conform (0/5 changed). Now swiftlint --strict on the new files plus the full-tree swiftformat lint, and the placeholder scan.
+
+swiftlint --strict: **0 violations** on all 5 files. Now the full-tree swiftformat lint (the actual gate command) and the placeholder scanner.
+
+Placeholder scan: **0** both ways. Let me wait for the full-tree swiftformat lint to finish.
+
+All host gates GREEN: **swiftlint 0 violations · swiftformat 0/2950 · placeholder 0**. Now I'll build the isolated Swift 6 harness to independently prove the surface compiles + its tests pass. First, let me confirm the real shared-component dependencies (e.g., where `tsDynamicColor` is defined).
+
+Tokens.swift is self-contained (private `tsDynamicColor`, with lint/format disabled). InfoTile only depends on `Tokens.swift` + `TSMaterial.swift`. Let me build the isolated Swift 6 SwiftPM harness with the byte-exact shipped sources to prove compile + tests pass.
+
+Harness laid out with swift-tools 6.0 (Swift 6 language mode = strict concurrency complete). Now build + run the surface's tests against the real design system.
+
+Surface compiles clean under Swift 6 strict concurrency. Now run the tests.
+
+All **31 tests pass, 0 failures** in the isolated Swift 6 build (strict concurrency complete) against the real design system. Now the full-app xcodebuild gate. Let me check its prerequisites (Java/Gradle for the `Shared.xcframework` pre-action, simulator) before running it for real.
+
+Prerequisites are present (Java 17, Gradle, iPhone 16 booted) but `Shared.xcframework` must be built via Gradle (~9 min). Let me generate the Xcode project and kick off the framework build for the real full-app gate.
+
+Project generated; InfoTile files wired into the targets (36 references). Now build `Shared.xcframework` via Gradle (the heavy pre-req). I'll run it in the background and monitor.
+
+Gradle build in progress (~9 min expected). Let me continue waiting.
+
+Gradle **BUILD SUCCESSFUL** (7m17s); `Shared.xcframework` staged. Now run the real full-app iOS gate (build + test), capturing raw output.
+
+iOS gate launched in background. Let me monitor its progress.
+
+The `&` child was discarded when the sync command ended, and another slot (slot-58) is sharing the machine. Let me relaunch the iOS gate as a properly detached async process with a dedicated DerivedData path to avoid contention.
+
+iOS gate detached (pid 21843). Let me verify it's writing and monitor progress.
+
+iOS gate is actively compiling the TeslaSync app target. This will take a while. Let me wait and poll.
+
+A `** BUILD FAILED **` marker appeared (process still finishing the `test` action). Let me start root-causing the errors now while it completes — critically, checking whether any reference InfoTile.
+
+0 `error:` lines and no InfoTile errors yet, but build still finalizing. Let me wait for completion and capture the final exit + full error analysis.
+
+iOS gate result is clear and matches the documented pre-existing condition. The **app target compiled** (module emitted); the failure is in the **co-located test bundle** compiling other surfaces' tests — specifically the pre-existing non-`Sendable` `passthroughLocalize` closure in `PresetGallery.*`. Let me confirm the honesty facts and capture the exact exit code with a fast incremental re-run.
+
+All iOS errors are the pre-existing `PresetGallery.*` non-`Sendable` closure; the app target (with InfoTile) compiled, and **zero InfoTile errors**. Let me get the full error inventory and capture the exact exit code via a fast incremental re-run.
+
+iOS gate is definitively RED on **exactly 2 pre-existing errors** in `PresetGallery.*` (other surfaces) — **0 InfoTile errors**, and git shows only InfoTile.* added. Now let me capture the exact iOS exit code (fast incremental re-run) and run the macOS gate. Both detached.
+

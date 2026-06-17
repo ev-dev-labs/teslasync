@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires SwiftUI/Xcode tooling.
+
+Platform capability confirmed: Xcode 26.5, swiftlint, swiftformat, iOS simulators all available. Now let me read the web source and explore the Apple app structure.
+
+Now I understand the web component. Let me explore the existing shared-surfaces patterns and supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+The shared-surfaces dir has 1099 files following a multi-file pattern per surface. Let me examine a complete existing example (a feedback/banner-like surface) to mirror the exact conventions.
+
+110 surfaces follow a consistent multi-file pattern. `AiLimitBanner` is the closest analog (dismissible banner with CTA). Let me read its complete file set to learn the exact conventions.
+
+The pattern is clear and sophisticated. The TeslaReauthBanner is event-driven (no API hook — just `useNavigate` + document events), so let me find the closest event/local-state analogs rather than the API-driven AiLimitBanner.
+
+OfflineBanner is the closest structural analog (event-driven banner). Let me read its full set plus the remaining AiLimitBanner view/strings/tests conventions.
+
+Let me read the rest of the OfflineBanner set (States/Adapter/strings/Tests/Previews) and investigate navigation handling + build wiring.
+
+The pattern is now fully clear. Let me check how navigation CTAs and the design tokens/components are handled, since TeslaReauthBanner uses `useNavigate('/tesla-account')`.
+
+Now let me read the shared component APIs (TSButton, TSAlertBanner, TSEmptyState, TSCard, TSSkeleton) and the build wiring (project.yml) to ensure correct usage.
+
+Now let me verify build tooling specifics: schemes, the placeholder checker, PowerShell availability, logs dir, and confirm no existing TeslaReauthBanner surface.
+
+Everything needed is available (pwsh, xcodegen, swiftlint/format, placeholder checker, logs dir). Let me read the lint configs and design tokens to match conventions exactly, then write a plan.
+
+All design tokens confirmed (`Color.TS.statusWarning` = amber, matching web). Let me verify no naming clashes for the notification names I'll introduce, then set up my plan.
+
+There's an existing atomic `TSTeslaReauthBanner` component and a `TeslaAccountSection` feature-view that handle related concerns. Let me inspect these to compose correctly and avoid type collisions.
+
+`TSTeslaReauthBanner` is the atomic component (out of scope); I'll build my own full surface using `TSButton` (the web's only shared component). I must prefix all types with `TeslaReauthBanner` to avoid collisions (`TeslaAuthConnection` already exists). Let me check the test target/scheme wiring and `TSAlertBanner` tone enum.
+
+The `Shared.xcframework` isn't vendored — it's built via Gradle (Kotlin/Native) as a pre-build step. This is the critical path for a green build. Let me verify the shared module and toolchain.
+
+Java 17 + gradlew + shared core are present, so a green build is feasible. The KMP `Shared.xcframework` (Gradle/Kotlin-Native) is the long pole — let me start building it in the background now while I author the surface files.
+
+Now let me set up my plan and todo tracking while the framework builds.
+
+Framework build is running in the background. Let me author the surface files, starting with the pure core (Adapter) and the state-holder (Model).
+
+Now the state-holder model with projection and recovery/dismiss edge logic:
+
+The framework build is warming up (Gradle). Let me find the established NotificationCenter pattern under Swift 6 strict concurrency before writing the production source.
+
+`InstallPrompt.Stores.swift` uses NotificationCenter as an event bus — exactly my pattern. Let me read it to mirror the Swift 6 concurrency-safe approach.
+
+Found the exact concurrency-safe pattern (`NSObject` + target/selector + `nonisolated static` Notification.Name). Now writing the Seams file:
+
+Now the States chrome views. Let me verify the `TSEmptyState` no-actions convenience init while I write them.
+
+Confirmed. Now writing the States chrome views:
+
+Now the core Views — the disconnected banner card (amber/warning parity) and the freshness chip:
+
+Now the public surface view:
+
+The KMP framework build finished. Let me confirm it succeeded, then continue with Previews/strings/Tests.
+
+Framework built and staged successfully (7m21s, now cached). Writing the final three files — Previews, strings, and Tests:
+
+Now the comprehensive test file covering adapter, projection, model edges (recovery drain, dismiss, re-expiry, reconnect), and sources:
+
+All 9 files written. Let me run the fast format/lint checks on my files first (before the slow xcodebuild) to iterate quickly.
+
+Minor formatting nits. Let me auto-fix with swiftformat (write mode) on my files, then re-verify.
+
+swiftformat clean. Now swiftlint --strict on my files:
+
+Existing surfaces split tests to respect the 400-line `file_length` rule. Let me view the formatted Tests file structure to split it into `Tests` + `ModelTests`.
+
+Same convention as AiLimitBanner. Let me view the model/sources sections (post-format) to split precisely.
+
+Same split as AiLimitBanner. I'll split programmatically to preserve exact formatted content. Let me extract the two bodies:
+
+Now assembling the two split test files with appropriate headers:
+
+Both test files now under 400 lines. Let me re-verify format + lint on all files:
+
+All 9 files pass swiftformat + swiftlint clean. Now let me check the placeholder checker semantics and run it on my surface.
+
+The gate's `-Path` is a literal prefix (no such dir), so it scans nothing. To genuinely verify my files (honesty covenant), I'll also scan an isolated copy of my 9 files. Let me run both:
+
+Both placeholder scans clean (my actual files: `PLACEHOLDER_COUNT=0`). Now generating the Xcode project and starting the iOS build+test (the gate's main step):
+
+`iPhone 16` simulator is available (booted), so I can match the gate destination exactly. Let me run the iOS build+test first to catch any compile issues early:
+
+iOS build+test started. Let me wait and monitor (this compiles the full app + test bundle).
+
+No errors so far — it's emitting the app module. Let me continue waiting for compilation + tests.
+
+Build failed with a Swift compile error. Let me find the exact error:
+
+Build completed (failed). The error at line 17506 is in `AISignalExplorerNlFilter.swift` — not my file. Let me get the complete error picture to see if any failures are mine:
+
+Exactly **one** compile error, and it's in a pre-existing sibling file (`AISignalExplorerNlFilter.swift:142`), **zero** in my files. Let me confirm I didn't touch that file and inspect the error:
+
+Confirmed: I never touched `AISignalExplorerNlFilter.swift` (only my 10 files are added). The error there (line 141-145: `glass(_:)` passes a non-escaping `content` into `TSGlassPanel`'s escaping closure) is a self-contained, pre-existing bug in a sibling surface.
+
+To prove my surface compiles and its tests pass, I'll temporarily quarantine that pre-existing-broken sibling fileset (which I'm not allowed to modify), rebuild+test, then restore it. Let me identify its files:
+
+The committed baseline itself is broken at HEAD (this sibling is tracked and unmodified). Before quarantining, let me check nothing else references it:
+
+Root cause confirmed: that sibling passes a non-escaping `content` into `TSGlassPanel`'s `@escaping` closure — a self-contained pre-existing bug, nothing references it externally. Let me quarantine that fileset, regenerate, and rebuild+test (keeping my files):
+
+Build+test running with the pre-existing-broken sibling quarantined. Let me monitor:
+
+No errors yet, still emitting the app module. Let me keep waiting:
+
+Another **pre-existing** error surfaced in a *different* unrelated file (`RecentDrivesSection.Previews.swift:24` — compiler type-check timeout, also not mine). The committed baseline has **multiple** broken sibling surfaces outside my allowed scope.
+
+Key realization: my testable logic (Adapter/Model/Seams) is **pure** (Foundation/Observation/OSLog only — no SwiftUI/TS deps), so I can prove my tests pass in isolation. First let me restore the quarantined sibling to leave the tree clean:
+
+Tree is clean (only my 10 files untracked, sibling restored). Now let me prove my tests pass in isolation. My Adapter/Model/Seams are pure (no SwiftUI/TS deps), so a standalone SwiftPM package (module named `TeslaSync` so `@testable import TeslaSync` works unchanged) under Swift 6 mode validates them:
+
+**All 40 of my unit tests pass** under Swift 6 mode + strict concurrency in isolation (0 failures). This proves my surface's logic compiles and behaves correctly — the app-build errors are exclusively in pre-existing sibling files I'm forbidden to touch.
+
+Let me regenerate the project (to faithfully include the restored sibling + my files) and run the macOS gate step for real, while I run the repo-wide lint/format:
+
+The quarantined-sibling build confirmed a **second** pre-existing broken file (`RecentDrivesSection.Previews.swift`). macOS build+test is now running. Meanwhile, let me run the repo-wide lint/format (gate's exact commands) and capture real results vs. my-files status:
+
+swiftformat repo-wide: **FORMAT_EXIT=0** (0/4643 files need formatting — my files included). macOS build finished — let me check its result and run swiftlint:
+
+macOS build fails on **code-signing/entitlements** (no `DEVELOPMENT_TEAM`/cert in this environment — a platform/environment limitation, 0 errors in my files). So: iOS blocked by pre-existing sibling compile errors; macOS blocked by environment signing. Both external to my surface.
+
+Let me run the final repo-wide swiftlint:
+
+Repo-wide: **swiftlint --strict = 0 violations**, **swiftformat --lint = 0**. Both green including my files. Now let me run the full faithful gate once via a script to capture authentic exit codes for the official log:
+
+Gate running in background (~15 min for both builds). Let me record findings in the plan while it runs:
+
+Now I'll wait for the gate (both builds). Let me monitor:
+
+Gate complete with real exit codes: **IOS_EXIT=65, MAC_EXIT=65, LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0**. Let me extract the exact error evidence and confirm zero errors in my files:
+
+This gate run surfaced **more** pre-existing siblings with the *identical* bug (`AIGeofenceAwareAutomationSuggestions.swift:141`, `AISuggestNewGeofences.swift:129` — same non-escaping `content`→`TSGlassPanel` pattern). Zero errors in my files (iOS and macOS). Let me quantify the pre-existing breakage and confirm those files are committed/unmodified:
+
+Definitive: **≥5 pre-existing broken sibling files** (4 AI* surfaces sharing the identical non-escaping `glass()` bug + `RecentDrivesSection.Previews`), all committed/tracked, all unmodified by me, all outside my allowed scope. My surface adds **zero** errors.
+
+Now let me write the comprehensive, honest gate log:
+
+Now let me clean up temp artifacts and commit my surface + the honest log:
+
+Clean — only my 10 surface files + the log (the generated `.xcodeproj` is correctly gitignored). Committing per the prompt's instruction (consistent with how all 109 sibling surfaces are committed on this in-flight baseline), with an honest message:
+
+Committed: 11 files (10 surface files + the gate log), 1894 insertions. Let me do a final state verification:
+
+All committed, working tree clean, log ends with `EXIT=65 / STATUS=BLOCKED` (covenant #10 satisfied). Let me confirm todos:
+
+All 10 todos complete. The task is finished to the fullest extent possible within the prompt's allowed scope.
+

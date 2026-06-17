@@ -1,0 +1,182 @@
+I'll start by understanding the environment capabilities and the codebase structure, since this task requires Apple-specific tooling (Xcode, SwiftUI, swiftlint, swiftformat).
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the existing Apple app structure to understand the architecture I must integrate with.
+
+This is a large, mature codebase (~2500 files in feature-views) with a clear per-surface file convention. Let me check whether ClimatePanel already exists, find a close analog panel to mirror conventions, and understand the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+`SecurityPanel` is a ported sibling telemetry panel — perfect analog. Let me study it thoroughly along with its web source to mirror conventions exactly.
+
+Excellent, the pattern is very clear. Let me read the remaining SecurityPanel files (Adapter, Views, Previews, strings, Tests) and the web SecurityPanel source to fully internalize the conventions.
+
+Now let me read the remaining SecurityPanel files (Previews, strings, Tests) plus the web SecurityPanel source, and locate the shared design tokens and components I'll need (TSGlassPanel, MetricCard equivalent, units/temperature formatting).
+
+Now I understand the convention thoroughly. The ClimatePanel uses `useUnits().formatTemperature` and `MetricCard`, which SecurityPanel didn't. Let me examine the web MetricCard + useUnits, the native design tokens, and how existing native surfaces handle unit/temperature formatting and MetricCard.
+
+Now let me understand the native units/temperature formatting story and the design tokens. The web converts Celsius→display at the boundary via `useUnits()`. I need the native equivalent. Let me search.
+
+`TemperatureMetricCards` and `LiveTelemetryPanels` are highly relevant native ports. Let me examine how they handle SI→display temperature formatting (the units facade) and the MetricCard equivalent.
+
+There's a `Units+Facade.swift` and `LiveTelemetryPanels.Adapter.swift` (the web parent of ClimatePanel). Let me read the units facade and the temperature-conversion approach in full.
+
+Now let me read the parent `LiveTelemetryPanels.Adapter` (handles ClimateSnapshot), the native MetricCard-equivalent rendering, the `ClimateSnapshot` web type, and the design tokens.
+
+I now have a complete picture. Let me verify the exact design-token members and shared-component APIs I'll use, so I don't invent any symbols. Let me also confirm the ClimatePanel fan-bar styling and check `Font.TS`/`Color.TS`/`TSSpacing`/`TSRadius` members.
+
+Let me verify the exact APIs for `TSButton`, `TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, and confirm `statusInfo` exists (for the blue defrost badge).
+
+Important collision check needed — several `ClimatePanel*` symbols (`ClimatePanelModel`, `ClimatePanelSource`, `ClimatePanelInput`, etc.) already exist even though `ClimatePanel.*` files don't. I must find which files define them to avoid redeclaration collisions in the shared `TeslaSync` module.
+
+The collision source is `dashboard-widgets/ClimateControlPanelWidget.*`, which internally named its types `ClimatePanel*`. I must see exactly which symbols it claims (especially whether `struct ClimatePanel` the View exists) so I can pick non-colliding names.
+
+`ClimateControlPanelWidget` (a dashboard widget) has claimed nearly all `ClimatePanel*` supporting type names (Model, Source, Update, Projection, Strings, Telemetry, Connection, etc.), but NOT the bare `ClimatePanel` View nor `ClimatePanelSurface`. Since all files compile into one `TeslaSync` module, I must pick a collision-free prefix for supporting types. Let me verify candidate prefixes.
+
+`struct ClimatePanel` (View) and `ClimatePanelSurface` are free; the widget claimed the rest. **Decision:** View = `ClimatePanel`, slug enum = `ClimatePanelSurface` (slug string `"ClimatePanel"`), all supporting types prefixed `CabinClimatePanel` (collision-free, documented). Now let me check the build tooling: xcodegen, pwsh, the placeholder checker, and lint configs.
+
+`xcodegen` and `pwsh` are both available. I'll need to generate the project and stage `Shared.xcframework`. Let me read the placeholder patterns (to avoid forbidden words), and check the `Shared.xcframework` build situation (the riskiest part of the gate).
+
+`Shared.xcframework` is built from KMP via Gradle (not prebuilt). My surface won't import `Shared` (pure-Swift temp conversion like `TemperatureMetricCards`), but the full `xcodebuild` gate still links it. Let me assess build feasibility: check `apps/shared`, JDK, and the pending-verifications notes.
+
+JDK 17 + gradlew are present, so the KMP `Shared.xcframework` build is feasible. It's the long pole, so I'll pre-warm it in the background now while I write the Swift files. Let me kick it off and set up my todo tracking.
+
+JDK 17 + gradlew present — the Shared framework build is running in the background. I have everything I need. Let me verify the web `resolveEmpty`/`DEFAULT_EMPTY_DISPLAY` (so my null temp renders identically) and the SF Symbol availability, then start writing files.
+
+Build is progressing (debug XCFramework written, linking release). Confirmed `'—'` empty sentinel and SF symbols. Now writing the files, starting with the pure Adapter.
+
+Adapter done. Now the Model (slug, telemetry seam, state-holder seam, @Observable model, in-memory source, strings facade).
+
+Model done. Now I need a wrapping layout for the badges (web `flex-wrap`). Let me check for a shared flow layout before writing the Views file.
+
+No shared flow layout exists, so I'll include a small private `Layout` for the wrapping badges (the established in-repo pattern). Writing the Views file now.
+
+Now the main View file and the strings catalog.
+
+Now the Previews and the Tests.
+
+Now the Tests — covering the temperature math, the full projection (cards, rows, HVAC nullish, fan clamp, badges), phase resolution, and model wiring/telemetry/freshness/auto-refresh.
+
+All 7 files written. Let me check the Shared framework build status and run quick swiftformat/swiftlint on my new files for fast feedback before the full gate.
+
+Shared.xcframework built successfully (7m) and is staged. Now let me lint my new files specifically for fast feedback before the full gate.
+
+swiftformat flags unused `Layout` protocol args (`cache`, `proposal`). Let me see how existing `Layout` conformances in the repo handle this to match the accepted style.
+
+The accepted style marks unused protocol args' internal names with `_`. Let me fix my `Layout` signatures accordingly.
+
+Now re-run swiftformat lint plus swiftlint --strict on my files.
+
+swiftformat passes. swiftlint flags `file_length` (max 400 lines under `--strict`) on Adapter (522), Views (489), and Tests (401). The repo convention is to split into more `ClimatePanel.*` files (all allowed). Let me check exact line counts and plan the split.
+
+Plan: split Adapter→+Projection, Views→+States, Tests→+ProjectionTests (all `ClimatePanel.*`, matching repo convention). Let me inspect the exact cut boundaries.
+
+Boundaries confirmed. I'll split via sed: Adapter→Projection (lines 319-522), Views→States (238-489), and Tests→ProjectionTests (1-259) + slim Tests (261-401). Executing the split now.
+
+All files now under 400 lines. Let me fix the `ProjectionTests.swift` header (it inherited the original Tests header that over-claims state-holder coverage), then re-run swiftformat + swiftlint on all parts.
+
+Now re-run swiftformat + swiftlint --strict on all 9 ClimatePanel files.
+
+swiftformat (0/9) and swiftlint --strict (0 violations) both pass. Let me verify no forbidden placeholder patterns in my files and generate the Xcode project.
+
+Placeholder gate passes (COUNT=0). My files are clean. Now generate the Xcode project and confirm an iPhone 16 simulator exists for the gate destination.
+
+Project generated; iPhone 16 simulator is booted. Let me run the iOS `build test` first (to validate compilation + my tests) before the full gate. Starting it in the background.
+
+While the iOS build/test runs, let me monitor it. Builds of this size take several minutes.
+
+Build failed. Let me find the actual compile errors.
+
+The errors are NOT in my files — they're pre-existing ambiguities in `RecentDrives*` and `StateTimeline*` (widget vs. feature-view duplicate type names). Let me confirm these are pre-existing and unrelated to my change.
+
+Git confirms my 10 ClimatePanel files are the ONLY changes — `RecentDrives*` and `StateTimeline*` are untouched baseline files. They define the same type names in BOTH `dashboard-widgets/` and `feature-views/` (same `TeslaSync` target). Let me inspect the actual duplicate declarations.
+
+Definitive: those duplicate type declarations are in tracked, unmodified baseline files — the baseline doesn't compile, independent of my work. Let me get the COMPLETE picture of all pre-existing collisions in the build log.
+
+All 270 errors come from exactly TWO pre-existing collision families (`RecentDrives*`, `StateTimeline*`) across 4 baseline files I never touched. Zero errors reference my surface. To strengthen proof that MY surface is correct, let me check whether I can cleanly isolate those colliding surfaces to run my tests. First, gauge how widely those types are referenced.
+
+The colliding types have ZERO external references — each surface is self-contained. So I can cleanly isolate the two duplicate **widget** surfaces to prove my ClimatePanel compiles and its tests pass. This is a temporary, fully-reverted diagnostic — the official gate will run unmodified afterward. Let me set it up.
+
+Path slip — they're under `TeslaSync/`. Let me correct.
+
+Globs are precise (won't touch the separate `RecentDrivesWidget`). Let me hold the two duplicate widget surfaces aside, regenerate, and run the isolated build+test to verify my ClimatePanel compiles and its tests pass.
+
+Isolated build running. While it compiles, let me prepare the official log location and review a sibling surface's log format for consistency.
+
+**Critical precedent found.** The completed sibling SecurityPanel (0284) log documents this EXACT situation: whole-app `xcodebuild` is DEFERRED due to the same pre-existing `StateTimeline`/widget collision (outside allowed files), while the surface is verified by per-surface compile + green XCTests → **EXIT=0/STATUS=DONE** (ADR-012 precedent). My isolation build does precisely this. Let me read its result.
+
+The isolated build is still running (log actively growing, now compiling `W*` widgets — past the earlier collision point, zero errors so far). Let me wait for it to finish.
+
+Another **pre-existing** baseline error surfaced in the isolated build — `shared-surfaces/AISignalExplorerNlFilter.swift` (escaping-closure) plus a build-system crash — confirming the baseline is broken in multiple unrelated places, none mine. First, I must restore the held files to keep the baseline pristine, then look for a sanctioned per-surface verification helper.
+
+Baseline restored & pristine (only my ClimatePanel files untracked). No per-surface helper exists, so — matching the sibling precedent of executing tests over the REAL Adapter+Model — I'll build a throwaway SwiftPM package over verbatim copies of my logic files (Adapter+Projection+Model) and run my full XCTest suite under Swift 6 strict-concurrency.
+
+Copies are byte-identical to the real sources. Now executing my full test suite under Swift 6 strict concurrency.
+
+**35/35 tests passed** under Swift 6 strict concurrency over the byte-identical real Adapter+Projection+Model. Now I need a clean compile proof for the SwiftUI view layer. Let me map its dependency closure and check whether those shared sources import the KMP `Shared` framework.
+
+None of the UI/Design/Motion/Feedback sources import the KMP `Shared` framework — so I can typecheck the view layer against just the SDK + those shared UI sources. Let me locate `TSSpacing`/`TSRadius` and confirm the imports of the specific dependency files.
+
+Let me precisely locate the remaining token definitions (`TSSpacing`, `TSRadius`, `TSMotion`, `Color.TS`, `Font.TS`) so I can assemble a minimal, correct compile set for the view layer.
+
+Let me pinpoint the token namespace definitions (`Color.TS`, `TSSpacing`, etc.) with a broad search so I can assemble a complete compile set.
+
+`Tokens.swift` defines `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`. Let me typecheck the full view layer (my 7 files + the real token/component sources) against the macOS 15 SDK under Swift 6 mode, letting the compiler confirm or reveal any missing dependency.
+
+Errors are in a dependency (`Cards.swift` needs `TSPanelTitle`/`TSCaption` from Typography) — not my files. Let me add the broader UI/Design component set and re-typecheck.
+
+Now only a dependency error (`FeedbackOverlays` needs `TSMetricBar`) — still nothing in my files. The whole-dir approach drags in components I don't use. Let me switch to a surgical dependency set (only the files my surface actually needs).
+
+The macOS 15 view-layer typecheck **passed (swiftc exit 0, zero errors)** — my full surface type-checks against the real shared tokens + components under Swift 6. Now the same against the iOS 18 simulator SDK (the gate's destination).
+
+Both SDK typechecks pass (iOS + macOS, Swift 6, exit 0). I now have complete in-scope verification. Before writing the official log, let me study the full sibling SecurityPanel log to replicate its exact honest disposition format (how it reconciles the deferred whole-app build with EXIT/STATUS).
+
+The SecurityPanel log is a precise, honest template (real gate exits recorded + DEFERRED whole-app build + EXECUTED host verification → EXIT=0/STATUS=DONE per ADR-012). Notably its whole-tree `swiftlint`/`swiftformat` were GREEN. Let me regenerate the project, kick off the macOS gate build (background), and run the whole-tree lint/format for official exit codes.
+
+Whole-tree `swiftlint --strict` = **0 violations in 3844 files** (LINT_EXIT=0). Now the whole-tree swiftformat (gate step 4), and check the macOS build.
+
+Whole-tree `swiftformat --lint` = **0/4074 require formatting** (FORMAT_EXIT=0). Let me check the macOS gate build.
+
+macOS build failed first on **dev-certificate signing** (entitlements), zero climate errors — matching the SecurityPanel precedent. To record authoritative integer exit codes for the official gate log, let me re-run both `build test` steps with explicit exit capture (the results won't change, but honesty requires the real codes).
+
+Gate builds are running (~12-16 min). While they run, let me verify my final file inventory and confirm no stray artifacts, and re-confirm parity details are intact.
+
+My 10 ClimatePanel files are the only changes (xcodeproj + Shared.xcframework are git-ignored). Let me check the gate build progress.
+
+iOS gate build still compiling. Let me wait for both to complete.
+
+Both gate builds finished with authoritative codes: **IOS_EXIT=65, MAC_EXIT=65** (matching the sibling precedent). Let me extract the precise root-cause evidence (duplicate-definition file:line pairs, climate-error counts) for the official log.
+
+I have all authoritative evidence. Let me write the comprehensive, honest official gate log mirroring the accepted sibling format.
+
+Official log written. Now commit per the prompt's Commit section. Let me verify the branch and exact untracked set first, then commit only my files + the log.
+
+Branch is the slot's auto branch; only my 10 files + the log are untracked (xcodeproj/xcframework git-ignored). Committing per the prompt's Commit section (using the `ClimatePanel.*` glob so the files actually match).
+
+Committed cleanly (10 surface files + log). Let me clean up the throwaway `/tmp` artifacts, verify the working tree is clean, and finalize todos.
+
+All clean: working tree clean, temp artifacts removed, the temporarily-held baseline widgets fully restored, HEAD is my commit. Let me finalize todos and confirm the log disposition.
+
+All todos done; the committed log ends with `EXIT=0 / STATUS=DONE`. The task is complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0278-ClimatePanel.log   | 210 ++++++++++++++
+ .../feature-views/ClimatePanel.Adapter.swift       | 317 +++++++++++++++++++++
+ .../feature-views/ClimatePanel.Model.swift         | 274 ++++++++++++++++++
+ .../feature-views/ClimatePanel.Previews.swift      | 125 ++++++++
+ .../feature-views/ClimatePanel.Projection.swift    | 219 ++++++++++++++
+ .../ClimatePanel.ProjectionTests.swift             | 256 +++++++++++++++++
+ .../feature-views/ClimatePanel.States.swift        | 265 +++++++++++++++++
+ .../feature-views/ClimatePanel.Tests.swift         | 157 ++++++++++
+ .../feature-views/ClimatePanel.Views.swift         | 236 +++++++++++++++
+ .../TeslaSync/feature-views/ClimatePanel.strings   |  40 +++
+ .../TeslaSync/feature-views/ClimatePanel.swift     |  73 +++++
+ 11 files changed, 2172 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0278-ClimatePanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.ProjectionTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimatePanel.swift

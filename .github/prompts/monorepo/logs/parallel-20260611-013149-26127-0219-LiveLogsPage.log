@@ -1,0 +1,197 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Xcode 26.5, swiftlint, swift 6.3, pwsh all present. This is a large existing app (5160 swift files) using kebab-case dirs, not `Features/`. Let me investigate the parity manifest, ledger, and existing conventions before writing code.
+
+I now have the full web source (4 GlassPanels: filters, controls, error, table). Let me examine the ledger, existing Apple conventions, and the KMP integration.
+
+Reference implementations live at `apps/apple/Sources/Features/Admin/` (not `TeslaSync/Features/`). Three sibling admin pages are done. Let me study them as the canonical pattern.
+
+Now let me study the live-data/SSE patterns and the design system. Let me look at FleetTelemetryCoverage (most complex), route registration, and search for SSE infrastructure.
+
+Now I understand the model/route patterns. Let me map the navigation/route system, SSE infrastructure, and the design-system component library.
+
+Let me read the web `useLogStream` hook and survey the Apple component library + string catalog.
+
+Now I have the full web hook contract. Let me read the exact component signatures I'll use.
+
+Key finding: route tests assert `MenuCommandCatalog` navigate-routes == `AppRoute.allCases`, and pathSegments must be unique. Let me read the route tests, parser, menu catalog, and shell to plan navigation wiring correctly.
+
+Adding a `.liveLogs` route auto-syncs the menu catalog (it maps over `allCases`). Let me verify token names, the shell rendering, and the sibling test pattern.
+
+Now let me confirm the string catalog format and check whether any target keys already exist.
+
+Let me inspect the placeholder scanner, swiftlint config, the gate contract, and a sibling log's PARITY format.
+
+Critical: the placeholder scanner flags the substring "Placeholder" case-insensitively. My required keys include `grepPlaceholder`/`vehicleIdPlaceholder`. Let me see how the existing code handles placeholder keys.
+
+This sibling log is a goldmine — it documents the exact gate sequence and path reconciliation. Let me check build prerequisites (xcframework, xcodegen, swiftformat) and read the log's PARITY section.
+
+I now have the complete methodology from the sibling log. The full `xcodebuild` is blocked by pre-existing out-of-scope breakage + an unstaged `Shared.xcframework`; siblings verified via isolated swiftlint/swiftformat/placeholder + a model harness + a `swiftc -typecheck` against real tokens/components. Let me check the xcframework build feasibility and the typecheck inputs, then set up my plan.
+
+Building `Shared.xcframework` needs the Kotlin/Native toolchain (~10 min) and even then the full app build is RED from pre-existing out-of-scope breakage. I'll kick the xcframework build off in the background to honestly attempt a full build later, while I implement and run the in-scope verification (the proven sibling methodology). Let me set up my plan first.
+
+Let me write the plan, then implement. Starting with the model.
+
+I introduced a typo (full-width colon). Let me fix it and create the sample source.
+
+The page needs text-field bindings to an `@Observable` model. Let me check how FleetTelemetryCoveragePage derives its filter binding and structures panels/states.
+
+The binding pattern is `Binding(get:set:)`. FleetTelemetry uses a custom `CoverageFlowLayout` for wrapping chips. Let me read it to mirror a flow layout for my controls/stats.
+
+Now the main page file. I'll mirror the sibling patterns (bindings, adaptive layout, conditional error panel, previews) and reuse the module-internal `CoverageFlowLayout` for wrapping controls.
+
+The xcframework build finished. Let me check its result, then continue with the table file.
+
+The `Shared.xcframework` built successfully (GRADLE_EXIT=0) — a real full build may be possible. Let me stage it and write the table/components file.
+
+Let me refine `reconnect()` to faithfully reproduce the web's transient-disconnect (making `.disconnected` genuinely reachable), then write the tests.
+
+Now wiring navigation: AppRoute enum, parser alias, and app registration.
+
+Now wire the registration into the app shell:
+
+Now the string catalog. Let me inspect its raw formatting so my insertion matches the existing style (minimal diff).
+
+The format is Xcode-style (`" : "` separators, unsorted, 2-space indent). I'll insert new entries textually right after `"strings" : {` to avoid reformatting the 4.6MB file. Let me write an insertion script.
+
+The top-level uses `"strings": {` (no space before colon). Let me make the marker robust.
+
+42 keys inserted (total 8240), JSON validated. Now the in-scope verification. Let me run swiftformat --lint and swiftlint --strict on my files.
+
+swiftformat flagged 4 of my files. Let me auto-format them (the 3 edited shared files already pass) and re-lint.
+
+swiftformat passes (0/9). Now swiftlint --strict on my files.
+
+Several swiftlint issues: a swiftformat↔swiftlint brace conflict, 2 long lines, and file/type length. Let me inspect the flagged lines.
+
+This is a swiftformat↔swiftlint brace conflict plus length limits. Let me check the swiftformat config, then fix braces, shorten long lines, and split files to satisfy length rules.
+
+Confirmed: maxwidth 120 and the swiftformat/swiftlint brace conflict requires avoiding multiline `if let` conditions. Let me fix the braces, shorten the 2 long sample lines, then split files for length.
+
+Now let me split files for length. Let me view the current model file to extract the value types into a separate file.
+
+Now I'll split the model file: value types + formatter → new `LiveLogsStream.swift`; model stays in `LiveLogsPageModel.swift`.
+
+Both are now ~212/220 lines. Now split the page file: move panel helpers into an `extension LiveLogsPage` in a new file. Let me find the boundaries.
+
+Let me view the page file's top and the body/isCompact region to split cleanly.
+
+Page split into 104 + 318 lines. Let me re-run swiftformat and swiftlint on all files.
+
+swiftformat 0/11, swiftlint **0 violations in 11 files**. Now the placeholder scan (ADR-011).
+
+Placeholder scan flagged 2 lines — likely swiftformat wrapped the `TSTextField` calls, separating the `// parity:allow` marker from the key line. Let me inspect.
+
+The marker must be on the *same line* as the key (the scanner is per-line). Let me move `.onSubmit` to the container and add trailing `// parity:allow` markers, matching the sibling pattern.
+
+The trailing comment pushes the line >120. I'll wrap the `TSTextField` calls (matching `--wraparguments before-first`) so the key-arg line carries the marker and stays ≤120.
+
+swiftformat preserved the structure and marker. Let me run the full in-scope gate on all files.
+
+All static gates green: **swiftformat 0/11, swiftlint 0 violations, placeholder COUNT=0**. Now the build. Let me generate the Xcode project and confirm my files are included.
+
+Project generated; LiveLogs referenced 48× (both app targets + test bundles). Let me kick off a real build in the background (long pole), then run the focused isolated typecheck + model harness while it runs.
+
+While the build runs, let me prepare an isolated model harness (executes the model logic under Swift 6 strict concurrency) as a fast authoritative in-scope proof.
+
+The harness ran (34/36) and surfaced two **test-expectation** bugs plus a design insight: web shows the empty state whenever the buffer is empty (the "connecting" distinction belongs only to the badge). Let me simplify `tableState` to `empty`/`success` (more faithful) and fix the assertions.
+
+Now update the page `tableBody` to the two-state switch and remove the now-unused connecting view.
+
+Now fix the harness assertions (initial table is `.empty`; `vehicle_id` is a field per web `extractFields`), recopy sources, recompile, and rerun.
+
+Model harness: **36/36 passed** under Swift 6 strict concurrency. The macOS build finished — let me check its result.
+
+Build failed (exit 65) — the error diagnostics were truncated. I must determine honestly whether the failure is in my code or pre-existing out-of-scope code. Let me search the full log.
+
+Zero `error:` diagnostics — consistent with the sibling's reported toolchain IR crash, not a source error. Let me confirm the failure mode.
+
+Confirmed: this is the **identical pre-existing toolchain IR crash** (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, "Please submit a bug report") the sibling logs documented — 0 `error:` diagnostics, no mention of my files. Per covenant #6/#7 I must not commit-fix out-of-scope code. Let me prove my view code via the isolated `swiftc -typecheck` against real tokens+components (sibling methodology). First, check component import deps.
+
+No `Shared`/Charts/MapKit imports in my dependency closure — I can typecheck without the framework. Let me run the isolated `swiftc -typecheck` against the real tokens + components for macOS (sibling methodology).
+
+The errors are in a sibling component file (`UnitFormatters.swift` needs `Units`), not my code. To make my feature self-contained (and avoid cross-feature coupling for verification), I'll replace the borrowed `CoverageFlowLayout` with my own `LiveLogsFlowLayout`, then typecheck a tight dependency closure. Let me check a couple of symbol locations first.
+
+The `&&` chain broke on `grep -c` returning 0. `TSSeverity` is self-contained in StatusIndicators (no `Units` dep). Let me find my `CoverageFlowLayout` usages to replace them.
+
+I'll add a self-contained `LiveLogsFlowLayout` and replace the 3 borrowed usages, removing cross-feature coupling.
+
+Now my feature is self-contained. Let me reformat the changed files and run the tight-closure macOS typecheck.
+
+The typecheck is compiling. Let me wait for it.
+
+The full-component typecheck is slow (SwiftUI inference over ~50 files). Let me keep waiting.
+
+~6 min with no output — too slow over the full component set. Let me stop it and run a tighter closure. First I'll resolve the transitive symbol locations.
+
+Found the minimal closure. I'll typecheck my files + only the components they transitively need, and skip `#if DEBUG` previews (no `-DDEBUG`) to avoid preview-induced deps — much faster.
+
+Real issue found: the `extension LiveLogsPage` lives in a separate file, so it can't see `private` members (Swift `private` is file-scoped). The idiomatic fix for a type split across files is internal (default) access. Let me drop `private` on the cross-file members.
+
+`isCompact` (used by the extension) is also `private` in the main file. Let me make it internal too.
+
+The `body` (main file) can't see the extension's `private` helpers. Simplest fix: make the panel helpers internal too. Let me drop `private` across the extension file.
+
+EXIT=1 but no `error:` lines captured — let me see the full output.
+
+macOS typecheck: **EXIT=0, 0 errors** (the earlier EXIT=1 was a stale chained-run artifact). Now the iOS target (exercises the `#if os(iOS)` compact + keyboardType branches).
+
+Both macOS and iOS typechecks pass: **EXIT=0, 0 errors** against the real tokens + components under Swift 6 strict concurrency. The access-level/flow-layout edits need a final format/lint/placeholder re-check.
+
+swiftformat reflowed Panels and the placeholder markers slipped off the key lines again (COUNT=2). Let me inspect.
+
+The violations are in my model *doc comments* (I wrote "empty placeholder"). The scanner flags the word anywhere. Let me find and reword all stray "placeholder" mentions in my files.
+
+All static gates green. Now I must fix the XCTest to match the simplified `TableState` (it still references the removed `.connecting` and the wrong fields expectation) — these mirror the harness fixes. Let me view and correct.
+
+Let me verify the test file has no other stale references to the removed cases, and re-run swiftlint on it.
+
+Test file consistent and lint-clean. Let me also verify my `#if DEBUG` previews compile by running a `-DDEBUG` typecheck and filtering for errors in my files.
+
+macOS DEBUG previews also typecheck clean (EXIT=0, 0 errors). All in-scope gates are green. Let me gather the file inventory + git status for the evidence log.
+
+Implementation is 1539 LOC (8 files) vs the web's 674 — well above threshold. Git scope is clean. Let me update todos and write the evidence log.
+
+Confirmed `.xcodeproj` and `Shared.xcframework` are gitignored. Now let me write the comprehensive evidence log.
+
+Now update the apple-ledger with the two LiveLogs rows. Let me check its format.
+
+Ledger updated (8 rows; LiveLogs 37/37 ×2). Let me run one consolidated final verification, then commit the in-scope files.
+
+All final gates green. Committing the in-scope files.
+
+Committed (`25dc128c9`, 14 files). Let me finalize todos, clean temp files, and verify the tree.
+
+All work is complete and committed; the working tree is clean. Here's the summary.
+
+## Summary
+
+Delivered a complete, HIG-native SwiftUI **`LiveLogsPage`** at full parity with `web/src/features/admin/pages/LiveLogsPage.tsx` (data source `useLogStream`), committed as `25dc128c9` (14 files, +2263 LOC).
+
+**Implementation** (`apps/apple/Sources/Features/Admin/` — the real compiled home; the prompt's `TeslaSync/Features/Admin` doesn't exist, reconciled per the 3 DONE sibling admin pages):
+- **4 GlassPanels** — filters (level/grep/vehicle), controls (connection badge + buffered/received/drops stats + ADR-013 staleness chip; autoscroll/pause/clear/download/reconnect), conditional error panel, and the log table.
+- **Adaptive table** — pinned-header columnar grid (macOS/iPad) ↔ per-row cards (iPhone), bounded scroll, tail-following autoscroll, severity-toned level chips, `key=value` field chips with `+N` overflow, regex grep-match highlighting.
+- **`@Observable` model** — rolling 1000-event FIFO buffer, drops, pause (keeps socket), clear, `.txt` `fileExporter`, live `.task(id:)` subscription through a `LiveLogStreamSource` seam (production binds the shared KMP SSE core per ADR-004/009).
+- New **`.liveLogs` route** (System group, alias `/admin/logs`) wired into nav. **42 strings** added to `Localizable.xcstrings` (31 required + level labels/a11y/route).
+
+**Verification — all in-scope gates GREEN:**
+- swiftformat `--lint` 0/11 · swiftlint `--strict` 0 violations/11 · placeholder scan COUNT=0
+- model harness **36/36** (Swift 6 strict concurrency, executes the real model)
+- `swiftc -typecheck` **0 errors** on macOS + iOS + DEBUG-previews against the real P2 tokens + P3 components
+- `Shared.xcframework` built/staged; `xcodegen` regenerated (LiveLogs ×48)
+
+**`=== PARITY === PARITY_COVERED=37 / 37`**, evidence log at `.github/prompts/monorepo/logs/apple-page-admin-LiveLogsPage.log`, ledger updated (macOS+iOS, 37/37).
+
+**One documented RED:** the full `xcodebuild` fails with a pre-existing **out-of-scope swift-frontend IR crash** (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR` — the identical mangled thunk the sibling DONE logs document; **0 source errors, no mention of any LiveLogs file**). Per covenant #6/#7 it's forbidden to commit-fix; deferred exactly as the three already-DONE sibling pages did. `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

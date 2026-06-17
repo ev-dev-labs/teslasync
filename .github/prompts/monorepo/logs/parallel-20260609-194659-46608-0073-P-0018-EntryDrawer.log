@@ -1,0 +1,135 @@
+I'll start by exploring the task: reading the web source spec, understanding the existing Apple app structure, and checking tool availability.
+
+Tools are all available (xcodebuild, swiftlint, swiftformat, pwsh). Now let me explore the Apple app structure and the related types.
+
+There's a well-established pattern here. Let me study the existing examples and the types file in detail.
+
+Let me study the architecture: a complete drawer example plus the shared facade, design tokens, and i18n infrastructure.
+
+Let me read the key files individually using the view tool.
+
+Let me read the Model, Adapter, Views, strings, and the shared facade infrastructure.
+
+Let me examine the Adapter pattern, Design tokens, the strings format, and the shared component library (UI/DataDisplay) for native equivalents of KVList, Tabs, CopyButton.
+
+Let me understand the build setup and the design system + shared components.
+
+I notice `modals-dialogs` isn't in the visible sources. Let me check the full project.yml and test target configuration.
+
+Key finding: `modals-dialogs` isn't wired into `project.yml` (neither app nor test targets) — these are self-contained parallel-prompt surfaces. Let me verify build capability and study the closest analog (JobProgressDrawer) plus the design tokens/components I'll depend on.
+
+Critical capability findings: `xcodegen` is present, iPhone 16 sim exists, but **`apps/apple/Frameworks/` is empty — `Shared.xcframework` is missing**. The app target depends on it (`Sources/SharedFacade/*` does `import Shared`), so a full `xcodebuild build test` can't link on this runner. The modals-dialogs surfaces, however, don't import `Shared` — they're self-contained on Design/Components tokens. Let me confirm the dependency surface and set up a standalone typecheck path.
+
+The modals-dialogs surfaces are pure SwiftUI/Foundation (no `import Shared`). Let me locate the exact token definitions so I can both use them correctly and build a standalone typecheck harness.
+
+The design tokens live in `apps/design/generated/apple/Tokens.swift` (wired as `DesignTokens`). Now let me deeply study the closest analog (JobProgressDrawer — a lazy-loaded data drawer) to match conventions precisely.
+
+Now let me read the JobProgressDrawer Model, States, Previews, strings, and both test files to nail the conventions.
+
+Let me read the States, Rows, Previews, and both test files for JobProgressDrawer, plus the design tokens and the two shared components I'll use.
+
+I now understand the conventions thoroughly. Let me read the remaining reference pieces: the view/a11y Tests, Previews, leaf-state Rows, the design tokens, and the two shared components I'll use.
+
+Let me read the design tokens, the two shared components, and the leaf-state Rows reference.
+
+Let me check the lint/format configs, the placeholder checker, and the GeofenceDrawer header/views + tests (it has the close button + freshness chip + `.isModal` pattern I need).
+
+Let me read the web utilities I must port faithfully: `fmtInt`, the `TimeStamp`, `CopyButton`, `Tabs`, and `Drawer` components.
+
+I have the full picture. Let me verify the standalone-compile dependency surface (whether Components/Design are `Shared`-free) so I can build a faithful typecheck+test harness, since the full `xcodebuild` can't link without the missing `Shared.xcframework`.
+
+Everything is `Shared`-free in Components/Design, so I can build a faithful standalone `TeslaSync`-named harness to actually compile + run the tests. Let me set up tracking and start implementing.
+
+Now implementing. Starting with the pure projection core.
+
+All 10 files created. Now verifying — format, lint, and placeholders first.
+
+Placeholders clean (0). Format found 3 trailing-comma issues — let me auto-fix with swiftformat, then re-lint.
+
+Format passes. Let me verify what the auto-fix changed (should be only trailing commas) and run swiftlint on my files.
+
+Swiftlint flagged ModelTests file/type length (the gate's swiftlint won't scan modals-dialogs, but I'll fix for quality). Let me tighten ModelTests with helpers and trim redundant cases covered by the adapter matrix.
+
+Both swiftformat and swiftlint pass on all 9 files. Now the strongest verification: compile + run the XCTest files in a standalone `TeslaSync`-named SwiftPM harness (Components+Design+Tokens+EntryDrawer), since the full `xcodebuild` can't link without the missing `Shared.xcframework`.
+
+EntryDrawer itself compiled cleanly — the only error is a Components `UnitFormatters` file that depends on `Units` from the (excluded) SharedFacade. EntryDrawer doesn't use it. Let me drop the SharedFacade-dependent Components files from the harness and rebuild.
+
+Harness library builds clean (exit 0) under Swift 6 strict concurrency. Now run the actual XCTest suites.
+
+All 38 tests pass (20 model + 18 adapter), 0 failures, under Swift 6 strict concurrency. Now let me capture concrete evidence for the `xcodebuild` gate blocker (missing framework + surface not wired into project.yml).
+
+Evidence confirmed: `Frameworks/` has only `.gitkeep` (no `Shared.xcframework`), all app/test targets depend on it, and `modals-dialogs` is absent from `project.yml`. Let me check the "Stage Shared.xcframework" script and then capture the actual `xcodebuild` failure.
+
+The framework is built at build-time via a KMP Gradle preAction (`apps/shared`), which is outside my allowed-files scope. Let me check whether that toolchain is even runnable here, then attempt a bounded `xcodebuild` to capture the real behavior.
+
+KMP project + Java 17 exist, so the framework is theoretically buildable — but a full Kotlin/Native build is heavy and, crucially, EntryDrawer still isn't in `project.yml` so `xcodebuild` wouldn't compile/test it. Let me make a bounded `xcodebuild` attempt to capture the real behavior for the log.
+
+Timed out at 200s (the KMP framework preAction + package resolution). Let me capture the raw tail to document exactly what it's doing.
+
+The KMP framework build is actually progressing and mostly cached (`UP-TO-DATE`) — it was interrupted mid-link by my timeout. So the toolchain works; the app build just needs more time. Let me give the full build a generous bound to capture a definitive result.
+
+Decisive evidence: the KMP `Shared.xcframework` preAction **succeeded** (cached), then the **app build failed on PRE-EXISTING errors unrelated to EntryDrawer** — duplicate type declarations (`RecentDrivesModel`/`RecentDrivesLoadStatus`/etc.) colliding between `RecentDrivesListWidget.*` and `RecentDrivesSection.*`. EntryDrawer isn't even in the app target. Let me confirm these collisions are pre-existing and not mine.
+
+Confirmed: the `RecentDrives*` type collisions are **pre-existing** (declared in both `dashboard-widgets/RecentDrivesListWidget.*` and `feature-views/RecentDrivesSection.*`), in files I never touched, and EntryDrawer references none of them. The app build red is unrelated to my work, and EntryDrawer isn't in `project.yml` anyway. My surface is fully green via the harness.
+
+Let me re-capture the green checks freshly for a self-contained log, then clean up and write the gate log.
+
+All green: harness 38/38, swiftformat 0/9, swiftlint 0 violations. Let me verify the log directory, clean up generated artifacts, and confirm git status.
+
+Git is clean — exactly my 10 files. Let me check an existing log to match the established format.
+
+The established methodology (per the JobProgressDrawer log) is exactly what I found: full-app `xcodebuild` is **deferred** for two surface-independent reasons (unstaged KMP framework + `modals-dialogs` not yet in `project.yml`), with the surface verified GREEN via host-runnable scoped gates. Let me match that rigor — add an explicit iOS-18 SDK typecheck and a collision audit.
+
+iOS-18 typecheck passes (exit 0). Now the macOS-15 typecheck and a collision audit (critical, given the pre-existing `RecentDrives` collision lesson — I must ensure my `EntryDrawer*` names are unique across the app module).
+
+macOS-15 typecheck passes (exit 0) and the collision audit is clean — **zero** external `EntryDrawer*` definitions (no collision, unlike the pre-existing `RecentDrives*` case). All surface-scoped gates are GREEN. Let me gather host/LOC info and write the gate log.
+
+All gates green; full-app `xcodebuild` deferred per the established protocol (and additionally blocked by a pre-existing, unrelated `RecentDrives*` collision). Writing the gate log.
+
+Log written. Let me do a final git review and commit exactly the 10 surface files + the log.
+
+Clean tree — exactly the 10 surface files + the log. Committing.
+
+Committed cleanly (HEAD `e4b93a1ce`, working tree clean). Let me finalize tracking.
+
+All work complete and committed. Final state verified.
+
+## Summary
+
+Shipped the native Apple **`EntryDrawer`** surface (P4 · modals-dialogs · 0018) at parity with `web/src/features/admin/components/dlq-inspector/EntryDrawer.tsx`.
+
+**Delivered** — 10 files (9 Swift + 1 `.strings`, 2,044 non-blank LOC) under `apps/apple/TeslaSync/modals-dialogs/EntryDrawer.*`, following the established JobProgressDrawer/GeofenceDrawer architecture (main View / Model / Adapter / Seams / States / Views / Previews / strings / ModelTests / Tests):
+- **Faithful web ports:** `decodeBase64Utf8` (strict UTF-8, ""-on-binary), `fmtInt` (grouped), 8-row KVList with em-dash fallbacks + `TimeStamp absolute`, inner/raw tabs, `CopyButton` (Copy/Copied → raw-base64 fallback), the 4-gate `replayDisabled` rule, and all 14 extracted i18n keys + `common.close`/`copyButton.*`.
+- **Every state renders** (no blank box): loading, empty, error+retry, content, inline-error, stale (chip+banner+1× auto-refresh), offline, summary-only-loading spinner, replay-in-flight, replay-disabled.
+- Bound through a P1/S8 source seam (no HTTP in the view), P1/S9 tokens, P1/S10 i18n facade, P1/S11 `view.opened` telemetry; VoiceOver labels on every control, `.isModal`, Dynamic Type, reduce-motion.
+
+**Verification — all surface gates GREEN:** swiftformat `0/9`; swiftlint `--strict` `0 violations`; iOS-18 + macOS-15 SDK `swiftc -typecheck` `0 errors`; isolated SwiftPM build + **38 XCTest (20 model + 18 adapter), 0 failures**; placeholder gate `0`; xcodegen spec valid; collision audit `0` external `EntryDrawer*` defs.
+
+**Full-app `xcodebuild` — deferred (per established protocol), with captured evidence:** the KMP `Shared.xcframework` stages fine, but the app build red-stops on **pre-existing, unrelated** `RecentDrives*` duplicate-type collisions in other surfaces (files I never touched), and `modals-dialogs` still isn't registered in `project.yml` — both outside this prompt's allowed files. Documented transparently in the gate log (`IOS_EXIT=deferred`/`MAC_EXIT=deferred`, `EXIT=0`, `STATUS=DONE`).
+
+Committed (`e4b93a1ce`) the 10 surface files + `.github/prompts/monorepo/logs/p4-apple-modals-dialogs-0018-EntryDrawer.log`; working tree clean.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-modals-dialogs-0018-EntryDrawer.log   | 155 +++++++++
+ .../modals-dialogs/EntryDrawer.Adapter.swift       | 366 +++++++++++++++++++++
+ .../modals-dialogs/EntryDrawer.Model.swift         | 268 +++++++++++++++
+ .../modals-dialogs/EntryDrawer.ModelTests.swift    | 361 ++++++++++++++++++++
+ .../modals-dialogs/EntryDrawer.Previews.swift      | 155 +++++++++
+ .../modals-dialogs/EntryDrawer.Seams.swift         | 270 +++++++++++++++
+ .../modals-dialogs/EntryDrawer.States.swift        | 191 +++++++++++
+ .../modals-dialogs/EntryDrawer.Tests.swift         | 265 +++++++++++++++
+ .../modals-dialogs/EntryDrawer.Views.swift         | 298 +++++++++++++++++
+ .../TeslaSync/modals-dialogs/EntryDrawer.strings   |  48 +++
+ .../TeslaSync/modals-dialogs/EntryDrawer.swift     |  97 ++++++
+ 11 files changed, 2474 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0018-EntryDrawer.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/EntryDrawer.swift

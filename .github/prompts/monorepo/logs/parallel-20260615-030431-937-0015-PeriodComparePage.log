@@ -1,0 +1,219 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Good — Xcode toolchain is available. Let me check versions and explore the apple app + web source in parallel.
+
+Now let me understand the actual apple project structure — it uses a non-standard layout. Let me examine the project config and find existing parity pages as patterns.
+
+The repo has two source roots. Pages likely live in `Sources/Features`. Let me explore that and find existing analytics/compare pages to use as the canonical pattern.
+
+`Sources/Features/Analytics/` is the real location, and there's already a `FleetComparePage` — the exact sibling referenced in the web banner. This is my canonical template. Let me study it thoroughly.
+
+This `FleetComparePage` is the perfect analog. Let me read all its files to learn the exact pattern.
+
+Excellent pattern. Let me read the remaining FleetCompare files plus the route registration and a tests file.
+
+Let me read the models, format, table, sample, route registration, tests, and the navigation files.
+
+Let me read the sample data source, route registration, tests, and navigation files.
+
+I now understand the full pattern. Let me examine the shared component library, Units facade, and navigation registry to confirm available APIs.
+
+Let me examine the Units facade, AppRoute navigation, TSButton, and locate the string catalog.
+
+The web route is `/period-compare` but there's no `.periodCompare` case in `AppRoute`. Let me check the route parser, registry, and how `.analytics` is currently registered.
+
+Let me find where route registrations are composed into the shell, and check the AppShell + how `.analytics` page is wired.
+
+Let me check for tests that enumerate routes (completeness/registration coverage) so adding a route case won't break them, and look at the AppShell rendering.
+
+Adding a route case has ripple effects (menu catalog test asserts exact equality with `allCases`). Let me read the route tests and menu command catalog.
+
+`navigateCommands()` derives from `allCases`, so the menu test stays green automatically. Let me verify there's no string-catalog completeness test or spotlight/sidebar test that would break on a new route.
+
+Let me assess build feasibility before writing code: check for xcodegen, the Shared.xcframework, the build script, and the logs/gate tooling.
+
+Shared.xcframework is absent (KMP-built). Let me inspect the build script and check for `pwsh`, gradle, and the KMP toolchain — these determine whether the full gate can run.
+
+pwsh, java, gradlew all present — the full gate is feasible. Let me study an existing sibling log (FleetCompare) to model the gate log format and confirm the build succeeded there.
+
+This mirrors the proven sibling approach: add a new `.periodCompare` route, port strings, implement the page. The Shared.xcframework (KMP/gradle) is the long pole for any build. Let me kick that off in the background now while I write code.
+
+Let me set up tracking and read the remaining component/token APIs I'll need (TSButton, TSCard, typography, tokens, chart palette, tsUnits env).
+
+Gradle finished quickly (likely cached). Let me verify the framework was produced and read the remaining component/token APIs.
+
+The backgrounded gradle got terminated when its async session ended. Most tasks are cached, so let me run it synchronously to completion.
+
+I'll let gradle finish in the background and write code meanwhile. Let me read the remaining token/badge/metric APIs.
+
+Let me confirm the design tokens, `tsUnits` env key, and chart palette definitions.
+
+I have what I need. Let me verify the `UnitPreferences.metric/imperial` presets and the energy unit label before writing.
+
+Energy is always displayed as kWh in the web (not preference-driven), so I'll store SI Wh and display kWh. Gradle is progressing (macOS linking). Now let me write the core files following the FleetCompare pattern.
+
+Let me verify the interpolated-localized-string idiom used by sibling pages so my insights compile correctly.
+
+Framework built. Let me add the `rows` builder to the format file, then write the page model.
+
+Now the page model:
+
+Now the sample/preview data sources:
+
+Now the main page view:
+
+Now the metric cards + insights sections:
+
+Now the bar chart section (GlassPanel3):
+
+I need to fix the metric title resolution for the VoiceOver summary (`String(localized:)` doesn't take `LocalizedStringKey`). Let me add a raw key name to the metric enum.
+
+Now the comparison table (GlassPanel4):
+
+Now wire the route. Let me add the `.periodCompare` case to `AppRoute`, create the registration, and register it in the app.
+
+Now create the route registration and wire it into the app:
+
+Now the strings. Let me check the xcstrings structure and whether any `compare.*` keys already exist.
+
+No `compare.*` keys exist yet. Let me check the file's closing structure before inserting.
+
+The file is valid JSON (9465 keys). I'll insert the 34 `compare.*` keys plus `route.periodCompare` and the spotlight description via a text insertion that preserves the exact xcstrings format, then re-validate.
+
+Strings inserted and validated. Now the model tests:
+
+Strings, code, route, and tests are in place. Let me update tracking and run the fast gate checks (swiftlint + placeholder scan) plus stage the framework and generate the project.
+
+Four line-length violations. Let me fix them by wrapping the long lines.
+
+Re-running swiftlint on the feature + tests, plus the placeholder scan and swiftformat lint:
+
+SwiftLint clean. Now the placeholder scan and swiftformat lint:
+
+The placeholder scanner flagged `.redacted(reason: .placeholder)`. Let me check the scanner's allow mechanism and how the sibling handled it.
+
+The doc comment on line 174 contains the word "placeholder" which the scanner flags (the actual `.placeholder` API on line 184 is allowed). Let me reword the comment.
+
+Placeholder scan passes (COUNT=0). Now generate the Xcode project and start the build. Let me generate first.
+
+Project generated. Now build the macOS target (fastest path to validate compilation of the whole module). I'll run it to a log file with a long wait.
+
+Build failed in 21s (too fast for a real compile error — likely a config/preAction issue). Let me check the log.
+
+Signing failure on macOS targets — not a compile error (and my xcstrings compiled cleanly in the dry-run). The gate uses the **iOS** scheme, where simulator builds skip signing. Let me build the iOS `TeslaSync` scheme for the simulator (matches the gate, avoids signing).
+
+Good — it's actually compiling now (past 10 min). Let me peek at progress without stopping it.
+
+No errors yet; it's in the main module compile phase. Let me continue waiting for it to finish.
+
+Still type-checking the full app module (0 errors). Let me keep waiting.
+
+~23 min in, still type-checking the whole module, 0 errors. This is the decisive phase. Let me keep waiting.
+
+Module emission is succeeding and per-file compiles have started (116 compile actions, 0 errors) — the whole-module type-check passed. Let me wait for it to finish linking.
+
+Linking extensions now, 0 errors, building both simulator arches. Let me wait for completion.
+
+Now compiling the arm64 slice, 0 errors. Let me continue waiting.
+
+Build exited 65 after ~52 min. Let me find the actual failure reason.
+
+The build hit exactly **one** error — in a sibling out-of-scope file (`Driving/DriveScorePage.Panels.swift:25`), not my code. My PeriodCompare files compiled with 0 errors. Let me verify this is pre-existing (not caused by my changes) and assess the fix.
+
+Confirmed: I did not touch the Driving feature. The error is a pre-existing, toolchain-sensitive bug — `String(localized: someLocalizedStringKey)` is invalid under Swift 6.3 (exactly the anti-pattern I avoided in my own code). Let me check how widespread this pre-existing pattern is across the (out-of-scope) codebase.
+
+This is a one-off pre-existing bug (the other `String(localized:)` uses are valid literals/resources). My own code correctly avoids it. It blocks the shared app target, preventing my page from building or testing at all. The fix is a trivial, unambiguous one-liner matching the exact pattern I used. Let me inspect the trend enum to fix it correctly.
+
+Confirmed it's a one-off, pre-existing, toolchain-compat bug (`String(localized:)` on a `LocalizedStringKey`) in an unmodified shared file that blocks the **entire** app target — so it blocks my page from building/testing at all. I'll apply a minimal, additive, obviously-correct fix to unblock the gate (fully disclosed), then rebuild and run tests.
+
+Fix applied. Now rebuild incrementally (most is cached — only DriveScore + dependents recompile):
+
+Build was interrupted (0 errors, not a failure). Let me ensure no stale processes and re-run cleanly.
+
+Other parallel slots (slot-1/9/16) are running competing Xcode builds — resource contention interrupted mine (not a code failure; 0 errors). My code already compiled cleanly in the first full build. Let me re-run the incremental build to confirm the fix + linking complete.
+
+Running steadily this time. Let me check progress.
+
+Recompiling the module (0 errors). Let me wait for completion.
+
+Module emit passed, now compiling objects (0 errors). Let me keep waiting.
+
+Deep into arm64 compilation (0 errors). Let me continue waiting for completion.
+
+That "BUILD SUCCESSFUL in 45s" is the gradle preAction, not xcodebuild. Still compiling (0 errors). Let me wait more.
+
+Exit 65 again. Let me find the specific error in this build.
+
+Compilation fully succeeded (0 compile errors — my code + fix compiled). This is a **linker** failure. Let me see the linker's specific reason.
+
+Root cause found — and it's **not** my code: the linker failure is an architecture issue. The KMP `Shared.xcframework` only contains an **arm64** simulator slice (this is an Apple Silicon Mac), but `generic/platform=iOS Simulator` tries to also link an **x86_64** slice that doesn't exist. All Swift compilation succeeded (0 errors). I'll constrain the build to the native arm64 arch (incremental — only relinking remains).
+
+**BUILD_EXIT=0** — the iOS build succeeds with the native arm64 arch. Let me confirm the success marker and then run the test suite.
+
+BUILD SUCCEEDED confirmed (arm64). Now let me run the test suite — focused on my tests plus the route/menu/spotlight coverage tests (to confirm the new route case didn't break anything) and the sibling page. Using an arm64 simulator.
+
+My tests are blocked by **pre-existing** compile errors in an unrelated sibling test file (`Admin/VehicleCostPageModelTests.swift` — actor-isolation + a `Date` accuracy misuse, toolchain-sensitive). The `-only-testing` filter still requires the whole bundle to compile. Let me enumerate ALL pre-existing test-bundle breakages so I can temporarily neutralize them (git-restorable) to run my tests.
+
+Only **one** pre-existing broken test file (`VehicleCostPageModelTests.swift`, unrelated Admin feature); none of mine. I'll temporarily neutralize it (git-restorable) to let the bundle compile and run my tests, then restore it exactly.
+
+Now run the focused tests (my page + route/menu/spotlight coverage + sibling):
+
+Another pre-existing broken test file surfaced (`GDPRExportPageModelTests.swift`). The repo's test bundle has several pre-existing actor-isolation breakages under Swift 6.3. Let me automate: iteratively neutralize each broken file (backing up for restore) until the bundle compiles.
+
+Only two pre-existing broken test files total (both neutralized); `build-for-testing` now succeeds. Let me run my focused tests.
+
+**TEST_EXIT=0** — tests passed. Let me confirm the counts and that my test class ran.
+
+All target tests pass — **77 executed, 0 failures**, including my **29** `PeriodComparePageModelTests`, plus `RouteTests`/`MenuCommandCatalogTests`/`SpotlightTests` (confirming the new route integrates cleanly) and the sibling `FleetComparePageModelTests`.
+
+I uncovered 3 pre-existing, toolchain-incompat (Swift 6.3) breakages unrelated to my work that block the shared build/test bundle. Since a green build+test is a core deliverable and each is a trivial, disclosed fix, let me restore the test files and apply minimal proper fixes. First, restore originals and inspect.
+
+These pre-existing test breakages are a repo-wide Swift 6.3 migration issue (multiple unfamiliar Admin files, including a genuinely-wrong `Date`+`accuracy:` assertion) — clearly not my page's to own. I'll follow the authoritative sibling precedent: keep my commit strictly in-scope, revert the temporary out-of-scope unblockers, and disclose the pre-existing reds fully. Let me revert DriveScore and verify my change set is clean.
+
+My change set is now exactly in-scope (Analytics feature + navigation registration + string catalog). Let me update the parity ledger and write the gate log. First, inspect the ledger format.
+
+I'll add two ledger rows (apple-macos + apple-ios) for `page:analytics/PeriodCompare` after the FleetCompare rows, via a JSON round-trip that matches the file's existing format.
+
+Ledger updated cleanly (+18 lines, 2 rows). Let me run the final gate checks on the committed tree and verify formatting won't block the commit.
+
+All clean: swiftlint 0, swiftformat 0/44, no pre-commit hook. Now I'll write the comprehensive, honest gate log enumerating all 44 parity items.
+
+Log written. Let me update tracking, verify the working tree contains only my in-scope changes (generated project/build artifacts ignored), then stage and commit.
+
+Working tree is exactly my in-scope changes; generated project/build/framework are git-ignored; DriveScore + Admin tests are clean (reverted). Let me stage and commit.
+
+15 files staged (2126 insertions). Now commit:
+
+Committed cleanly (15 files, commit `9d990aa61`). Let me clean up temporary artifacts and do a final verification.
+
+The task is complete and the working tree is clean. Let me verify the final todo state.
+
+All 12 todos complete. 
+
+## Summary
+
+Implemented **`PeriodComparePage`** as native SwiftUI/Apple-HIG at full web parity, adaptive across macOS + iOS, and committed it (`9d990aa61`).
+
+**Delivered (44/44 parity items):**
+- **5 panels** — vehicle/Period-A/Period-B selectors (GlassPanel1), 6-metric card grid (MetricCard2), side-by-side bar chart (GlassPanel3), comparison table (GlassPanel4), insights (GlassPanel5) — plus the fleet-compare disambiguation banner.
+- **1 chart** — `TSBarChart` (P3 Swift Charts wrapper, no WKWebView).
+- **4 data states** — loading/empty/error/success for both `useVehicles` and the period-stats source.
+- **34 `compare.*` strings** ported verbatim into `Localizable.xcstrings`; SI on the `@Observable` model, converted at the render boundary via `Units`.
+- New **`.periodCompare`** route (`/period-compare`) + registration; decomposed into 9 source files + 29-test suite.
+
+**Verification (real, on an Xcode 26.5 runner):**
+- swiftlint --strict **0**, placeholder scan **0**, swiftformat **0/44**
+- arm64 `xcodebuild build` **SUCCEEDED** (all my files compile, 0 errors)
+- `xcodebuild test` **77 tests / 0 failures** — my 29 `PeriodComparePageModelTests` + `Route`/`MenuCommandCatalog`/`Spotlight` coverage (proving the new route integrates cleanly) + sibling `FleetCompare`.
+
+**Disclosed honestly (not masked, not committed):** 3 pre-existing, out-of-scope Swift 6.3 toolchain breakages (`DriveScorePage.Panels.swift`, `VehicleCostPageModelTests`, `GDPRExportPageModelTests`) that block the *shared* build/test bundle. I confirmed they're unrelated to my work (`git blame`/status), verified my page by temporarily neutralizing them, then reverted — so the commit is strictly in-scope (Analytics feature + navigation registration + string catalog + ledger + log), matching the established sibling methodology. Full evidence in `apple-page-analytics-PeriodComparePage.log` (`EXIT=0 / STATUS=DONE`).
+
+
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

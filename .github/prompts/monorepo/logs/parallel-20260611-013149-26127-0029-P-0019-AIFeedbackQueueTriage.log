@@ -1,0 +1,163 @@
+I'll start by exploring the repository structure to understand what exists and what capabilities are available on this runner.
+
+The full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Not blocked on capability. Let me explore the web source and Apple app structure.
+
+Let me read the web source and its key dependencies in parallel.
+
+Now let me explore the existing Apple app structure, especially existing shared-surfaces and the P1 infrastructure (state-holders, tokens, i18n, diagnostics).
+
+658 files already exist. Let me check if AIFeedbackQueueTriage already exists, and find the closest reference surface (an AI card that uses AIFeatureCard + useAiStream + withAiFeature with a single button).
+
+`AIDriveCoaching` and `AIRangePrediction` are fully-implemented reference surfaces with the complete file set. Let me read their web sources to find the closest structural match, then study the full Swift file set of the best reference.
+
+`AIRangePrediction` is the closest structural match — static URL, id passed in the body, `canStart` based on a nullable id. Let me study its complete Swift file set as the reference pattern.
+
+This is a comprehensive pattern. Let me read the remaining reference files: Projection, Adapter, Views, Chrome, Previews, strings, and the two test files.
+
+Now let me read the strings, Previews, and both test files, plus understand the shared design tokens and project structure.
+
+Now the two test files plus the design token definitions and project.yml.
+
+I have a thorough understanding of the reference pattern. Now let me understand the build configuration (how files are included) and the shared design tokens, and confirm the i18n/diagnostics infrastructure exists.
+
+Now I understand the build setup — files in `shared-surfaces/` are auto-globbed (app target excludes `*Tests.swift`; test bundles include them). Let me verify no naming collisions, confirm the design tokens exist, and check the gate tooling.
+
+`pwsh` is available, `check-placeholders.ps1` exists, no name collisions. Let me confirm the exact token/component APIs (TSSpacing, TSRadius, Color.TS, Font.TS, TSButton, TSSkeleton, TSFadeIn) so my code compiles.
+
+All tokens exist. Let me confirm the exact APIs of TSButton, TSSkeleton, and TSFadeIn.
+
+Let me check the placeholder-checker patterns and which files it scans, so my code won't trip it.
+
+The placeholder checker forbids the word "Placeholder" (case-insensitive) in `.swift` files — I'll avoid it (the web source's "placeholder body" comment must be reworded). Now let me confirm build tooling: xcodegen, lint configs, and the xcframework prebuild script.
+
+xcodegen 2.45.4 is available but `.xcodeproj` must be generated. The critical risk is the `Shared.xcframework` prebuild (Gradle/KMP). Let me check whether it's already staged and whether the build can succeed here.
+
+`Shared.xcframework` isn't staged — it must be built via Gradle/KMP. Let me check how prior surfaces were verified by inspecting the logs directory and recent git history.
+
+Let me read the AIRangePrediction gate log to see the expected build outcome and how the xcframework/build was handled in this environment.
+
+I now understand the established precedent: the surface is verified **green in isolation** (typecheck + isolated XCTest against the real design system + lint + format + placeholder + i18n), while the full-app `xcodebuild` gate is BLOCKED by pre-existing cross-surface collisions, KMP toolchain, and macOS code-signing — all outside this prompt's allowed-files scope. I'll aim to verify my surface green and run the real gate for honest evidence.
+
+Let me set up tracking and check the isolated-build dependency surface.
+
+Clean module-wide; the design system has no KMP dependency, so isolated verification is viable. Let me set up the plan and todos, then write the files.
+
+Now I'll write the files. Starting with the dependency-free Adapter (core logic), Model, and Projection.
+
+Core logic done. Now the presentational layers — Views and Chrome.
+
+Now the main View and the Previews.
+
+Now the i18n catalog (.strings).
+
+Now the two test files — adapter-level and projection/model/a11y.
+
+All 10 files created. Now let me verify formatting, linting, and placeholder cleanliness on my files.
+
+swiftformat clean (0/9), placeholders clean. Now swiftlint --strict on my files.
+
+swiftlint --strict: 0 violations. Now the definitive check — an isolated SwiftPM module (my surface + the real design system, `@testable import TeslaSync`) to compile and run my XCTests. Let me survey the design-system dependency surface first.
+
+Design system is self-contained (system frameworks only). Let me check `UnitFormatters.swift` (the one KMP-coupled file to exclude) and confirm nothing else in Components references the KMP `Units` facade.
+
+Only `UnitFormatters.swift` is KMP-coupled (uses `UnitPreferences`). Let me build an isolated SwiftPM module (Swift 6 mode, macOS 15) with my surface + the real design system and run my XCTests.
+
+Package assembled. Now running `swift test` (compiles the real design system + my surface + runs XCTests).
+
+Isolated verification is **green: 74/74 tests pass** against the real design system in Swift 6 mode. Now the real gate — `xcodegen generate` (confirm enumeration), then `xcodebuild`.
+
+xcodegen succeeded — all 10 files enumerated (60 pbxproj refs). Now the real `xcodebuild`. The scheme's preAction builds the KMP `Shared.xcframework` via Gradle (slow). Let me kick off the iOS build async and capture output for error attribution, while I check the current cross-surface collision landscape.
+
+The iOS build is running in the background. Let me analyze the current cross-surface collision landscape more precisely while it compiles.
+
+Most of those are nested types (`.Phase`, `.Kind`) — namespaced, not collisions. Let me check the build progress and verify the specific top-level cross-surface collisions the reference cited.
+
+The reference-cited collisions now appear in only **one** file each — they may have been resolved since that log. Let me confirm the dashboard-widgets counterparts and check the build's current phase.
+
+Confirmed — the dashboard-widget types now use an `STW` prefix, so the reference's R1 collision is **resolved** by the other agents. The build is in the KMP/Gradle xcframework phase (Kotlin/Native linking). Let me wait for it to progress to the Swift compilation phase.
+
+KMP `Shared.xcframework` (debug) successfully assembled — now building the release variant. No errors yet. Let me keep waiting for the Swift compilation phase.
+
+Gradle done; Xcode is now in the build-setup/resource phase (xcstringstool). Swift compilation will follow. Continuing to wait.
+
+Swift compilation is in full swing — **0 errors**, and `EmitSwiftModule` for the whole `TeslaSync` module is succeeding (meaning no ambiguous-type collisions). This may build green. Continuing to wait for app compile → test bundle → simulator test run.
+
+The iOS build finished with exit 65. Let me analyze the failures and attribute them.
+
+Exactly 1 error, and it's **not** mine. Let me locate which other-surface file it's in.
+
+The single blocker is a pre-existing compile error in **`AIGeofenceAwareAutomationSuggestions.swift:141`** (P4 0020 — another agent's surface, outside my allowed-files scope). My surface has **0 errors**. Let me confirm my 7 source files were actually compiled in this real build (so the 0-attribution is meaningful).
+
+All 7 of my source files were genuinely compiled (0 errors mine). The iOS build failed solely on the pre-existing `AIGeofenceAwareAutomationSuggestions.swift` error. Now let me run the macOS gate for complete evidence (xcframework is now cached, so faster).
+
+Confirmed: only my 10 files are added; the blocker is in another agent's committed surface (commit 40e1e5da0). Let me gather line counts while the macOS build runs.
+
+Line counts total 2183 (reference was 2148 — essentially identical structure). Now let me run the placeholder gate (both the literal prompt command and a real scan of my files) and the i18n parity check while macOS builds.
+
+Placeholder gate clean both ways (literal command + real scan of all files). Now i18n parity verification and a final lint/format capture for the log.
+
+i18n parity is exact (all keys 1:1, description byte-identical at 368 chars). Let me verify the projection's inline fallback also byte-matches, and re-capture clean lint/format output for the log.
+
+The 370-vs-368 is a Python `unicode_escape` artifact (the em-dash is 3 UTF-8 bytes mis-decoded as 3 chars, +2). Let me verify the projection fallback correctly without that mangling.
+
+Confirmed: the projection fallback is **byte-exact** (368 chars, em-dash preserved). Everything for my surface is green. Let me check the macOS build progress.
+
+macOS build finished (exit 65). Let me attribute its errors and confirm my files compiled for macOS too.
+
+macOS: 2 errors, **0 mine**; my 7 files compiled. The blockers are the same pre-existing "escaping closure captures non-escaping parameter 'content'" bug in **other agents'** AI surfaces (iOS surfaced it in `AIGeofenceAware...`, macOS in `AIAutoNameUnnamedLocations`), plus the macOS test-runner needs signing (0 identities). Let me enumerate the complete set of sibling surfaces carrying that pre-existing bug, for an honest log.
+
+Complete picture: both platforms fail (exit 65) **only** on a pre-existing "escaping closure" bug in two other agents' surfaces (`AIGeofenceAwareAutomationSuggestions`, `AIAutoNameUnnamedLocations`) — my surface uses no such pattern — plus the macOS test-runner needs code-signing (0 identities). My 7 files compiled clean on both. Let me confirm zero warnings attributable to my files and that the project is gitignored, then write the log.
+
+All clean: 0 warnings mine, the `TeslaSync` module **emitted successfully** on iOS (proving no type-level collisions remain — only a body-level bug in two sibling surfaces), `.xcodeproj` is gitignored. Now let me write the comprehensive gate log.
+
+Log written. Now let me stage exactly my 10 files + the log, verify the staged set is clean, and commit.
+
+Exactly 11 files staged (10 surface + log), nothing extraneous. Committing.
+
+Committed cleanly (c888d0bb1); working tree clean. Let me finalize todos and clean up temp artifacts.
+
+All 14 todos complete, 10 surface files committed, temp artifacts cleaned. The task is finished.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) parity port of `AIFeedbackQueueTriage` — the Helix feedback-queue triage advisor — at parity with `web/src/components/ai/AIFeedbackQueueTriage.tsx`, following the established `AIRangePrediction` (0043) reference pattern.
+
+**Delivered (10 files, 2183 lines, committed `c888d0bb1`):**
+- `.Adapter` (request/SSE-parse/stream-reducer/output+action derivations), `.Model` (P1/S8 state-holder, P1/S10 i18n facade, P1/S11 telemetry seam), `.Projection` (pure view-state), `.Views` + `.Chrome` (HIG-native SwiftUI using P1/S9 tokens), `.swift` (the View), `.Previews`, `.strings` (i18n catalog), and 2 test files.
+
+**Key parity decisions:**
+- `canStart`/`haveFeedback` requires `feedbackId > 0` (nil/0/negative disabled) — unlike the vehicle-id surfaces where 0 is valid; body ships `{feedback_id: haveFeedback ? id : 0}` to `/ai/feedback/triage/draft`.
+- **Propose-only** contract preserved: the web source references `useUpdateFeedback` only in comments to state the advisor never mutates — so I bind only the stream + i18n (no mutation peer).
+- All states reproduced (gated/loading/error/ready × empty/no-feedback/thinking/prose/stream-error × live/stale/offline) + VoiceOver/Dynamic Type/Reduce Motion.
+
+**Verification (all green for my surface):**
+- Isolated SwiftPM XCTest against the **real** design system (Swift 6, macOS 15): **74/74 pass**.
+- swiftlint --strict **0** · swiftformat --lint **0/9** · placeholder gate **0** · i18n **4/4** web keys (description byte-exact, 368 chars).
+- Real `xcodebuild` iOS + macOS: my 7 sources compiled clean, **0 errors / 0 warnings mine**, `TeslaSync` module emitted (no type collisions).
+
+**`EXIT=0` / `STATUS=BLOCKED`** (sanctioned path): the full-app `build test` is blocked solely by pre-existing `escaping closure captures non-escaping parameter 'content'` bugs in **two other agents' surfaces** (`AIGeofenceAwareAutomationSuggestions`, `AIAutoNameUnnamedLocations`) plus macOS code-signing (0 identities) — all outside this prompt's allowed-files scope (`AIFeedbackQueueTriage.*` + log). Full evidence is in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0019-AIFeedbackQueueTriage.log`. Notably, the reference's R1 type-collision blocker is now resolved.
+
+Merge made by the 'ort' strategy.
+ ...-shared-surfaces-0019-AIFeedbackQueueTriage.log | 218 ++++++++++++
+ .../AIFeedbackQueueTriage.Adapter.swift            | 338 +++++++++++++++++++
+ .../AIFeedbackQueueTriage.AdapterTests.swift       | 293 ++++++++++++++++
+ .../AIFeedbackQueueTriage.Chrome.swift             | 164 +++++++++
+ .../AIFeedbackQueueTriage.Model.swift              | 366 ++++++++++++++++++++
+ .../AIFeedbackQueueTriage.Previews.swift           | 119 +++++++
+ .../AIFeedbackQueueTriage.Projection.swift         | 128 +++++++
+ .../AIFeedbackQueueTriage.Tests.swift              | 368 +++++++++++++++++++++
+ .../AIFeedbackQueueTriage.Views.swift              | 238 +++++++++++++
+ .../shared-surfaces/AIFeedbackQueueTriage.strings  |  45 +++
+ .../shared-surfaces/AIFeedbackQueueTriage.swift    | 124 +++++++
+ 11 files changed, 2401 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0019-AIFeedbackQueueTriage.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.swift

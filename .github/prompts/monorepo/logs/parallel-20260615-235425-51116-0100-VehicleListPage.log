@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure to understand the task scope — the web source page, the existing Apple app structure, and the parity manifest.
+
+Let me explore the web source page, the Apple app structure, and the parity manifest in parallel.
+
+Now let me explore the Apple app structure, parity manifest, and the relevant web hooks/types.
+
+Let me explore the Apple TeslaSync source structure, existing Features, and the parity manifest record.
+
+The find ran from `apps/apple` and shows `Sources/Features/`. Let me clarify the actual structure — there's a discrepancy between the prompt's stated output path and the real layout. Let me inspect the TeslaSync directory, project.yml, and the parity manifest record.
+
+`apps/apple/TeslaSync/Features/` has VehicleSystems, System, Telemetry, Trips — no Vehicles yet. Let me examine the parity manifest record for this page and inspect a sibling feature (Trips) to learn conventions.
+
+Let me find the full `page` kind manifest record (with panels/strings/states) and study the Trips feature as the closest template — its Page, PageModel, RouteRegistration, and Strings files.
+
+Let me study the Trips feature's Page, PageModel, DataSource, and Strings to learn the established patterns (data binding, states, i18n, design tokens).
+
+Rich established conventions. Let me examine the remaining Trips files (Models, SampleData), the SharedFacade domains (for the data layer), and the Strings pattern in another feature.
+
+Let me understand the data layer: the SharedFacade (AppContainer, StateHolderModel, Domains) and search for existing vehicle-state/pinned types already in the Apple app to reuse.
+
+There are existing `feature-views/` files referencing `fetchVehicleState` (BatteryComparison, FleetSummary) — directly relevant to this page's panels. Let me investigate these and the broader feature-views structure for vehicle-related surfaces.
+
+Excellent — there are existing P3 component parity units: `FleetSummary`, `BatteryComparison`, `VehicleCard`. These are exactly this page's building blocks. Let me read their public APIs (the main view + model files).
+
+The page composes three existing surfaces. Let me read their Models + Adapters to learn construction, plus the strings facade pattern and a sibling page's route registration.
+
+I now understand the surface architecture. Let me check toolchain availability (decides gate outcome) and read the component models I'll compose, plus the project config and an existing top-level page's nav registration.
+
+Xcode 26.5 + swiftlint are available, so the gate can actually run. Now let me understand the module/build structure, the app navigation, and whether production data sources exist for these surfaces.
+
+Key finding: it's a single `TeslaSync` module (so I can compose `FleetSummary`/`BatteryComparison`/`VehicleCard` directly), and there are no production data sources yet — surfaces are driven by in-memory sources. Let me check the build logistics: xcodeproj presence, xcodegen, the gate README, the placeholder scanner, and whether Shared.xcframework is staged.
+
+Shared.xcframework isn't staged (needs a Gradle/KMP build), and the placeholder scanner is PowerShell. Let me check `pwsh`, the framework build script, the placeholder patterns, and locate the gate README + log path in the prompts tree.
+
+There's a p4-apple README and many completed sibling page logs. Let me read the gate contract and a representative completed page log, and check whether any existing page already composes these vehicle surfaces.
+
+`QuickStatsPage` composes these surfaces — my ideal template. Let me read it and a completed page log to learn the wiring pattern and the exact `=== PARITY ===`/gate format.
+
+Critical insight from the sibling log: the **full `xcodebuild build test` is a known pre-existing crash** (2.6k+ mega-surface files) that siblings treat as out-of-scope; they verify via isolated + full-core **type-checks** (both idioms), a **model harness**, plus swiftlint/swiftformat/xcodegen/placeholder gates, then commit `STATUS=DONE`. Let me read the nav/routing files and the ledger format.
+
+`AppRoute.vehicles` already exists (primary tab, `.vehicle` group, path `/vehicles`). I need to find the central route-host registry assembly and the QuickStats page/model template. Let me read those.
+
+`.vehicles` isn't registered to any page yet. Let me read the registry core, find the master assembly point, and read the QuickStats page+model template.
+
+Let me read the master assembly (`TeslaSyncApp.swift`) and the QuickStats page + model as my template.
+
+The established page pattern is self-contained (QuickStats built its own `QuickStatsPageVehicleCard`, not the shared surface). Let me study the QuickStats page/model/models/sample as my primary template, and survey the TS component catalog + design tokens.
+
+Let me read the QuickStats model + sample data source, then survey the component catalog (UI/DataDisplay/Feedback/Motion) and design tokens.
+
+Template is clear. Now let me survey the components I'll use (QuickStats sections + format, the UI/DataDisplay/Feedback catalogs) and the design tokens.
+
+Let me efficiently extract the public component APIs I'll need via targeted grep, plus the units facade and formatters.
+
+Let me read the Units facade (`Units.convertDistance`, `formatDistance`, `\.tsUnits`), `TSStatCard`, and the remaining components (Skeletons, Motion, Banners, Overlays, TSMetricValue).
+
+Let me confirm the units environment, pin button, and remaining component signatures (Typography, Skeletons, Motion, Banners, Overlays).
+
+No pin component exists — I'll build a token-based pin toggle. Let me read the final component signatures (Skeletons, Banners, Overlays, StatusDot) before writing.
+
+Let me locate the design tokens and read the Overlays view-modifiers (for modal/sheet patterns).
+
+Let me read the design tokens (Color.TS access pattern, Font.TS, TSSpacing, TSRadius) to use exact names.
+
+I have all tokens. Now let me check the localization catalog structure and which of my 24 keys already exist.
+
+`common.delete`, `common.noData`, `route.vehicles` already exist — I need to add `nav.vehicles` + 21 `vehicles.*` keys (22 total). The catalog is a 5.5MB sorted JSON. Let me inspect exact byte formatting to insert cleanly without reformatting the whole file.
+
+Let me confirm `TSRadius` members, find a sibling page's toolbar-actions pattern, and check existing `vehicles.*`/`nav.*` keys for placement.
+
+I have all patterns needed. Let me check the toolbar placement pattern and the ledger format, then start building.
+
+No ledger rows exist yet for VehicleList — I'll add two (macos+ios). I have all patterns. Let me read the lint configs (the gate runs `swiftlint --strict` on my dir) so my files pass, then set up the plan.
+
+Critical: `--strict` makes the 120-char warning an error, so all my code lines must be ≤120. Let me read the placeholder scanner to avoid tripping it, then I'll set up the plan and start building.
+
+The scanner flags the word "Placeholder" case-insensitively — I'll avoid it (use TS skeleton components, no `.redacted(reason:.placeholder)`). Now let me read the web types to replicate `deriveVehicleStatus`/`statusVariant`/`VehicleState`/`Vehicle` fields, then set up the plan.
+
+I now have complete understanding of the web behavior, status mapping, components, tokens, lint rules, and the gate. Let me set up the plan and todos, then build.
+
+Now I'll build the files. Starting with the models (DTOs, status, phase, data source protocol).
+
+Models done. Let me check the web `batteryColor` thresholds before writing the format/tone helper.
+
+Battery: >60 success, >25 warning, else danger. Now the format helper (Foundation-only, tone mapping goes in the view layer).
+
+Now the `@Observable` page model with load/refresh/sync/delete/pin and derived fleet metrics.
+
+Now the sample data sources (default + preview/test doubles).
+
+Core data layer done. Now the main page view. Let me write it with small, lint-friendly bodies.
+
+Now the fleet summary section, metric card, header, and tone helpers.
+
+Now the fleet battery status panel (GlassPanel8) with rows and bar.
+
+Now the vehicle card (GlassPanel9) with status pill and action column.
+
+Now let me verify `common.cancel` exists, then write the chrome (banners/toast/delete) and skeleton files.
+
+`common.cancel`/`action.retry`/`statusInfo` all present. Now the chrome (sync banners, toast, delete confirmation) and skeleton.
+
+Now the route registration and wiring it into the app's registry.
+
+All Swift files written. Now let me add the 28 string keys to the catalog via a precise textual insertion (preserving the existing Xcode format), then validate.
+
+Catalog valid (28 keys added, 11602 total). Now let me run the fast gates: placeholder scan and swiftlint --strict on my directory.
+
+Placeholder scan clean. Swiftlint linted the whole project (config `included`) and found 3 violations — let me isolate whether any are in my files.
+
+The 3 violations are pre-existing in **other** files (MyActivityPageModel, AnomalyInlineRow) — **zero** in my `Features/Vehicles/` files. Let me verify no line (incl. comments) exceeds 120 so it passes under any config, and confirm via the exact gate invocation.
+
+Under the default config (gate from repo root) my files have 3 real violations to fix: a `multiple_closures_with_trailing_closure` (sync button) and two 125-char lines (battery bar). Let me view and fix them.
+
+Let me fix all three: wrap the battery-bar calls (via a clean convenience init) and convert the sync button to multi-trailing-closure syntax.
+
+Let me re-run swiftlint both ways (repo config + default/repo-root) to confirm my files are now clean.
+
+No violations matched and no lines >120. Let me confirm swiftlint's actual exit code cleanly (the EXIT=1 was from grep finding nothing).
+

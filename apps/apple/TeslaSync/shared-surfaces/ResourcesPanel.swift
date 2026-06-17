@@ -21,13 +21,13 @@
 
 import SwiftUI
 
-// MARK: - ResourceRow (web `ResourceRow`)
+// MARK: - ResourceRowShared (web `ResourceRowShared`)
 
-/// One resource row's props — the native peer of the web `ResourceRow` interface. Carries the label, the
+/// One resource row's props — the native peer of the web `ResourceRowShared` interface. Carries the label, the
 /// formatted value, the optional sub-label, the optional `percent`, and the optional decorative icon slot
 /// (erased to `AnyView?`). The Equatable structural subset used by the projection + the `.onChange`
 /// reuse-guard is exposed as ``inputs`` (the icon view is excluded — it is not Equatable).
-public struct ResourceRow: Identifiable {
+public struct ResourceRowShared: Identifiable {
     /// Stable identity for `ForEach` — the web `key={row.label}`; defaults to the label.
     public let id: String
     /// The left-aligned row label, e.g. "Memory" (web `label`).
@@ -41,7 +41,7 @@ public struct ResourceRow: Identifiable {
     /// The erased decorative icon slot (web `icon`); `nil` for an omitted icon (web `undefined`).
     let iconSlot: AnyView?
 
-    /// The prop-style initializer — the parity of one web `ResourceRow`. `label` / `valueText` are
+    /// The prop-style initializer — the parity of one web `ResourceRowShared`. `label` / `valueText` are
     /// required; `metaText` / `percent` default to omitted (web optional); the `icon` builder defaults to
     /// omitted (web `undefined`), detected as an `EmptyView` so it reserves no layout.
     public init(
@@ -57,7 +57,7 @@ public struct ResourceRow: Identifiable {
         self.valueText = valueText
         self.metaText = metaText
         self.percent = percent
-        iconSlot = ResourceRow.slot(icon)
+        iconSlot = ResourceRowShared.slot(icon)
     }
 
     /// Erases the icon to `AnyView`, mapping an `EmptyView` builder to `nil` (web `undefined` icon) so it
@@ -90,7 +90,7 @@ public struct ResourcesPanel: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
     public static let surfaceSlug = ResourcesPanelSurface.slug
 
-    private let rows: [ResourceRow]
+    private let rows: [ResourceRowShared]
     private let accessibilityID: String?
     private let footnoteSlot: AnyView?
 
@@ -100,7 +100,7 @@ public struct ResourcesPanel: View {
     /// (web required prop); `accessibilityIdentifier` maps the web `id` (default omitted); the `footnote`
     /// builder defaults to omitted (web `undefined`), detected as an `EmptyView`.
     public init<Footnote: View>(
-        rows: [ResourceRow],
+        rows: [ResourceRowShared],
         accessibilityIdentifier: String? = nil,
         @ViewBuilder footnote: () -> Footnote = { EmptyView() },
         telemetry: any ResourcesPanelTelemetry = OSLogResourcesPanelTelemetry()
@@ -152,7 +152,7 @@ public struct ResourcesPanel: View {
 /// empty state when there are none), and the footnote, all inside the shared glass panel.
 struct ResourcesPanelContentView: View {
     let projection: ResourcesPanelProjection
-    let rows: [ResourceRow]
+    let rows: [ResourceRowShared]
     let title: String
     let emptyMessage: String
     let footnote: AnyView?

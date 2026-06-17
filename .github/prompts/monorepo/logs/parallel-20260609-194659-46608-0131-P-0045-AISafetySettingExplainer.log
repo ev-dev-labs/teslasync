@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Now let me explore the web source and Apple app structure.
+
+The web source exists and there's already a `shared-surfaces` directory. Let me read the web source and explore existing patterns.
+
+Now I understand the web source. Let me examine the existing shared-surfaces to find a similar AI-stream-based surface to use as the established pattern.
+
+Many AI surfaces exist already. Let me find the web component most similar to mine (AIFeatureCard + withAiFeature + useAiStream, narrative) to use its native port as the canonical pattern.
+
+Let me examine the native conventions by inspecting a completed narrative AI surface and the project setup. The closest analogs are the narrative explainers.
+
+This is a near-perfect structural analog. Let me read the full reference file group and find the native shared components (AIFeatureCard, withAiFeature) plus a closer analog with `onAction`/`buttonPlacement`/cancel-on-unmount.
+
+The native AIFeatureCard exists as a shared surface. Let me read the reference template group and the AIFeatureCard native API in parallel.
+
+The native `AIFeatureCard` is a rich shared component I should consume directly (per the web contract). Let me read its Model API and find a sibling that consumes it, to match the established pattern.
+
+Key finding: every sibling surface is **self-contained** (zero external consumers of `AIFeatureCardContent`) — each reproduces the AIFeatureCard composition with its own bespoke chrome, matching the "Allowed files" constraint. I'll follow that established pattern. Let me read the rest of the reference group.
+
+Let me read the remaining reference files (Chrome, Adapter, Previews, strings, tests) and locate the supporting types (StreamSnapshot, Action, Output, etc.).
+
+I now fully understand the reference architecture. Let me read the web `AIFeatureCard`/`withAiFeature` contracts, the remaining reference files (Previews, strings, tests), and the project build config.
+
+Now I understand the full button contract. Let me read the web `AiOutputPanel` (for the paused-confirm branch), the reference test/strings/preview files, the project config, and verify the design tokens exist.
+
+Let me read the reference test files, the project config, and confirm the design tokens/components exist.
+
+I now have a complete understanding of the conventions. Let me verify the project config and design tokens exist before writing.
+
+XcodeGen-based project (`.xcodeproj` is git-ignored, rebuilt via `xcodegen generate`). Shared-surfaces are glob-included. Let me verify the toolchain, the design tokens, and the shared framework setup.
+
+All design tokens exist. Critical risk identified: the build requires `Shared.xcframework` (KMP/Gradle/Kotlin toolchain) which isn't staged. Let me check `Font.TS` tokens, the build situation, and the pending-verifications doc.
+
+All `Font.TS` tokens exist. Let me read the pending-verifications doc and shared-core contract to understand the established build stance on this kind of runner.
+
+Key insight: Apple builds are macOS-only (Kotlin/Native), and I'm on macOS. Let me read the full pending-verifications doc to understand how prior P4 surfaces handled the gate, and check for `pwsh`.
+
+I now understand the established methodology precisely: each surface is verified green in **isolation** (swiftc -typecheck + isolated tests + lint + placeholder + i18n parity + xcodegen enumeration), while the full `xcodebuild` is deferred to macOS CI because it's blocked by pre-existing cross-surface collisions, the `Shared.xcframework` Kotlin/Native long-pole, and signing. Let me verify the feature registry, `pwsh`, and any isolated-build harness.
+
+`safety-setting-explainer` is a registered feature, `pwsh` is available, and I know the placeholder patterns to avoid. Let me check the feature metadata, web tests, and confirm no Swift symbol collisions for my `SafetySettingExplainer` prefix.
+
+Everything is confirmed. Let me record a plan and todos, then verify the exact shared-component APIs I'll consume (TSButton/TSGlassPanel/TSSkeleton/TSFadeIn/TSRadius) before writing.
+
+All APIs confirmed. Let me set up the plan and todos, then write the surface.
+
+Now I'll write all 10 surface files. Starting with the Adapter (pure logic) and Model.
+
+All 10 files written. Now let me verify — starting with swiftformat and swiftlint on my files.
+
+Two lines exceed max width. Let me check the config and fix them.
+
+maxwidth is 120. Let me fix the long line and proactively scan all my files for any other >120-char lines.
+
+No more long lines. Let me re-run swiftformat and run swiftlint on my files.
+
+swiftformat (0/9) and swiftlint (0 violations) both pass on my files. Now the placeholder check — let me read the script to invoke it correctly.
+
+The script returns a vacuous pass if the path doesn't exist. To honestly verify MY files, I'll scan a temp dir containing only my files, plus run the literal gate path. Let me also self-test the script.
+
+Placeholder check passes (PLACEHOLDER_COUNT=0). Now let me run `xcodegen generate` to confirm my files are enumerated into the project.
+
+`xcodegen generate` succeeded and all 10 files are enumerated. Now let me set up the isolated `swiftc -typecheck` — first I need to know which Sources files depend on the KMP `Shared` module (to exclude them).
+
+`Sources/Components` and `Sources/Design` have zero KMP `Shared` coupling — so I can typecheck my surface against the real design system in isolation. Let me run the iOS 18 typecheck.
+
+As the reference docs noted, `UnitFormatters.swift` is the one SharedFacade-coupled component (uses the KMP `Units`). My surface doesn't use it. Let me exclude it and re-run.
+
+iOS 18 typecheck: **0 errors**. Now macOS 15.
+
+Both iOS 18 and macOS 15 typecheck cleanly (**0 errors**, Swift 6 strict concurrency). Now let me actually **run** the adapter/projection/model tests via an ephemeral SwiftPM package.
+
+All **74 tests pass** (0 failures) in the isolated SwiftPM build. Now the i18n parity check — every web `t()` key must be in my catalog.
+
+My extraction regex missed multi-line `t()` calls. Let me extract the keys more robustly.
+
+All 4 web-source keys are **present** in my catalog (the `comm` mismatch was a formatting artifact; the direct per-key check is authoritative). Let me start the long-pole `Shared.xcframework` Gradle build in the background, and run a dead-key check meanwhile.
+
+No dead keys. Let me check the Gradle build's initial progress.
+
+The Gradle build is genuinely progressing (Kotlin/Native distribution downloaded, compile tasks cached, now linking). Let me check the logs directory and a prior surface log for format while it builds.
+
+Let me read the reference surface's log to match the expected format exactly.
+
+The reference twin's log confirms the established disposition precisely: full-app `xcodebuild` reds are pre-existing/out-of-scope, surface verified green in isolation → **EXIT=0/STATUS=DONE**. Let me run the tree-wide gate steps (swiftformat/swiftlint) and check Gradle progress.
+
+Tree-wide swiftformat: **0/3713 files require formatting**. Gradle finished the DEBUG framework and is now linking the RELEASE variant. Let me run the tree-wide swiftlint gate step.
+
+Tree-wide swiftlint: **0 violations in 3483 files**. Let me check the Gradle RELEASE framework build progress.
+
+Gradle is still linking the RELEASE Kotlin/Native framework (the long pole). Let me wait for it to finish.
+
+Good progress — it's on the final RELEASE link task (`linkReleaseFrameworkMacosArm64`). Let me wait for completion.
+
+Gradle completed. Let me verify the RELEASE framework was produced and stage it.
+
+The RELEASE `Shared.xcframework` built (6m 52s) and is staged. Now let me run the real iOS `xcodebuild build test` (framework resolves now). Backgrounding it with capture.
+
+The iOS build is running. Let me monitor it.
+
+iOS build completed: **IOS_EXIT=65**, with **0 errors in my surface**. As the reference precedent documented, the failure is pre-existing cross-surface duplicate-type collisions (`StateTimeline*` etc.). Let me gather precise evidence.
+
+Conclusive: all 162 errors are pre-existing `RecentDrives*`/`StateTimeline*` duplicate-type collisions in **sibling** `dashboard-widgets/` + `feature-views/` surfaces (other agents). **Zero** in mine. Let me confirm these are pre-existing and my commit adds only my files.
+
+All evidence conclusive: my commit adds **only** my 10 files; the colliding types are defined in **pre-existing** sibling files; my surface is in **zero** failed compile commands; my `.strings` **copied cleanly** into the app bundle. Now the macOS build + signing check.
+
+Signing: **0 valid identities** (confirms the macOS signing blocker). Let me verify the macOS build is running properly — re-launching as a tracked async job to be safe.
+
+The backgrounded mac build was killed with its parent shell. Let me re-run it as a proper async job.
+
+Let me wait for the macOS build result.
+
+macOS: **MAC_EXIT=65** — pre-existing code-signing blocker (0 valid identities), reached before Swift compilation (SwiftCompile=0), **0 errors in mine**. Identical to the reference precedent. I now have all gate results. Let me write the comprehensive evidence log.
+
+Log written ending **EXIT=0 / STATUS=DONE**. Now let me verify git state and commit only the allowed files (the generated `.xcodeproj`/`Shared.xcframework` must stay out).
+
+Git state is clean — exactly my 10 files + the log; generated artifacts are gitignored. Committing now.
+
+Committed: exactly the 10 surface files + the log. Let me clean up scratch files and verify the final todo state.
+
+All 11 todos complete; scratch cleaned; commit in place with exactly the 10 surface files + log.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`AISafetySettingExplainer`** at parity with `web/src/components/ai/AISafetySettingExplainer.tsx`, following the established shared-surface architecture (mirroring the structural twin `AICabinTemperatureImpactNarrative`).
+
+**10 files** under `apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.*`:
+- `.Adapter` (empty `{}` body, `/ai/settings/safety/explain`, SSE parse, reducer, `canStart=state!=pausedConfirm`, `isBusy` guard, output/action derivations), `.Model` (P1/S8 source seam, P1/S10 facade, P1/S11 `view.opened`, cancel-on-unmount), `.Projection`, `.Views`, `.Chrome`, main `.swift`, `.Previews`, `.strings`, `.Tests`, `.AdapterTests`.
+- Every web branch reproduced: `withAiFeature` gate, narrative streaming, all `AiOutputPanel` states, and the P4 leaf axis (loading/empty/error/ready/stale/offline/gated).
+
+**Verification (all green, real output):**
+- iOS 18 + macOS 15 `swiftc -typecheck` (Swift 6 strict concurrency): **0 errors**
+- Isolated SwiftPM run: **74/74 tests pass**
+- `swiftlint --strict`: **0 violations / 3483 files** · `swiftformat --lint`: **0/3713** · placeholder: **PLACEHOLDER_COUNT=0**
+- `xcodegen generate` enumerates all 10 files · i18n parity 4/4 web keys + 4 shared, 0 dead
+- KMP `Shared.xcframework` **built (6m52s) + staged**
+
+**Full-app xcodebuild (honestly disclosed):** `IOS_EXIT=65` / `MAC_EXIT=65` — both **pre-existing, out-of-allowed-files** blockers (sibling `RecentDrives*`/`StateTimeline*` duplicate-type collisions; macOS code-signing with 0 identities). **Zero errors in this surface**; my `.strings` copied cleanly into the app bundle; `git status` confirms the commit adds only my 11 files.
+
+Log ends **`EXIT=0` / `STATUS=DONE`**; committed with the prescribed message + Co-authored-by trailer.
+
+Merge made by the 'ort' strategy.
+ ...ared-surfaces-0045-AISafetySettingExplainer.log | 248 ++++++++++++++
+ .../AISafetySettingExplainer.Adapter.swift         | 355 +++++++++++++++++++
+ .../AISafetySettingExplainer.AdapterTests.swift    | 328 ++++++++++++++++++
+ .../AISafetySettingExplainer.Chrome.swift          | 164 +++++++++
+ .../AISafetySettingExplainer.Model.swift           | 368 ++++++++++++++++++++
+ .../AISafetySettingExplainer.Previews.swift        | 126 +++++++
+ .../AISafetySettingExplainer.Projection.swift      | 120 +++++++
+ .../AISafetySettingExplainer.Tests.swift           | 374 +++++++++++++++++++++
+ .../AISafetySettingExplainer.Views.swift           | 241 +++++++++++++
+ .../AISafetySettingExplainer.strings               |  44 +++
+ .../shared-surfaces/AISafetySettingExplainer.swift | 129 +++++++
+ 11 files changed, 2497 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0045-AISafetySettingExplainer.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.swift

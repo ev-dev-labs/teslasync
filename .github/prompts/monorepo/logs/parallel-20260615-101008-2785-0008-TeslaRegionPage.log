@@ -1,0 +1,197 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+The web page wraps a `RegionSettings` component. Let me read that component and explore the Apple app structure in parallel.
+
+Now let me explore the Apple app structure, existing pages, design tokens, components, and the parity manifest to understand established patterns.
+
+The directory structure differs from the target path. Let me examine the existing Swift files to learn established patterns.
+
+There's already a native `RegionSettings` component family. The web page wraps `<RegionSettings />`, so my page should wrap the native equivalent. Let me examine the project config, the existing RegionSettings, PageContainer, and a sample Page.
+
+The native `RegionSettings` component already exists and mirrors the web component. My `TeslaRegionPage` should wrap it, just like the web page wraps `<RegionSettings />`. Let me examine navigation registration, the PageContainer scaffold, a sample Page, and the parity ledger.
+
+A real `Sources/Features/Admin/` exists with route registrations (and `Sources/` is built). Let me examine how admin pages are structured and registered there.
+
+Now the architecture is clear: full pages live in `Sources/Features/Admin/` (e.g., `FleetAPIPage.swift`, `SystemPage.swift`, `TeslaOrdersPage.swift`), each with a Page view, PageModel, RouteRegistration, and tests in `Tests/Unit/Features/Admin/`. The prompt's `TeslaSync/Features/Admin/` maps to the real `Sources/Features/Admin/`. Let me study the simplest page templates and the routing system.
+
+`TeslaOrdersPage` is the ideal template — a Tesla-prefixed admin page wrapping a shared section, exactly analogous to `TeslaRegionPage` wrapping `RegionSettings`. Let me study the routing system, the title component, and the localization catalog.
+
+Note: `AppRoute` has no `.teslaRegion` case yet — I'll need to add one (the web route is `/tesla-region`). Let me check how keys appear in the catalog, the `TSPageTitle` component, the web route registration, and existing route tests.
+
+Now I understand the i18n convention: web `region.*` keys map to `translation.region.*` in `Localizable.xcstrings` (siblings `translation.region.fleetApiUrl`, etc. exist, but `.title`/`.subtitle` don't yet). I also need to add a `.teslaRegion` case to `AppRoute`. Let me find all exhaustive switches over `AppRoute` and study the RegionSettings supporting files.
+
+`.teslaOrders` only appears in `AppRoute.swift` (3 switches) and the composition root `TeslaSyncApp.swift`. Adding `.teslaRegion` is well-contained. Let me read the composition root, the web sidebar grouping, and the RegionSettings supporting files.
+
+I have what I need for the page and registration. Let me read the test pattern, lint config, placeholder patterns, the web sidebar group, and the RegionSettings strings/views to finalize details.
+
+Confirmed: `/tesla-region` is in the **Account** group with the globe icon. Now let me inspect the xcstrings structure (languages, format, insertion points) so I can add keys cleanly, and check `TSSpacing` tokens.
+
+The catalog uses a compact style (`"en": {`) for the `translation.region.*` and `route.*` entries with `ar`/`en`/`he` locales. Let me pin down exact insertion points for the new keys.
+
+`translation.region.subtitle` already exists. Let me verify whether `translation.region.title` and `route.teslaRegion` also already exist (my earlier grep pattern missed the `translation.` prefix).
+
+Both parity string keys already exist. Let me confirm their English values match the web defaults, then I'll add only the missing `route.teslaRegion` key.
+
+Both parity string keys already exist with correct values. Only `route.teslaRegion` (sidebar label) is missing. Let me do final pre-implementation checks: confirm no other exhaustive `AppRoute` switches, check the ledger entry, and the log directory.
+
+Confirmed the account-group routes only appear in `AppRoute.swift`. Now let me check tool availability (xcodebuild/swiftlint/xcodegen), the ledger structure, and an existing thin-wrapper page log to mirror the format.
+
+The full Apple toolchain is available (Xcode 26.5, swiftlint, xcodegen, swiftformat, pwsh) — so the gate can actually run and I should target STATUS=DONE. Let me view the TeslaOrders ledger rows and its log to mirror the exact format.
+
+I now have a complete, authoritative template — the `TeslaOrdersPage` sibling (same "thin PageContainer wrapper around a shared section" shape). Let me set up tracking and verify the exact `AppRoute` edit points and line lengths.
+
+Line 35 has room (100→113 chars with `teslaRegion`). I have everything needed. Let me write the plan file and create the page view, route registration, and tests.
+
+Now the route registration, mirroring `TeslaOrdersRouteRegistration`.
+
+Now the route registration tests.
+
+Now wire `.teslaRegion` into `AppRoute.swift` (case + pathSegment + systemImage + group).
+
+Now compose the registration into the app shell, near its `TeslaOrders` sibling.
+
+Now add the `route.teslaRegion` sidebar-label key to the catalog (region.title/subtitle already exist). Let me confirm a unique anchor, then insert.
+
+Anchor confirmed unique. Let me validate the JSON baseline separately, then insert the key.
+
+Catalog updated cleanly (+1 key, JSON valid). Now add the two ledger rows for `page:admin/TeslaRegion` after the TeslaOrders rows.
+
+Ledger rows conform to schema. Now let me run the in-scope gate checks — swiftformat, swiftlint, and the placeholder scan — on my files.
+
+swiftformat clean (0/5). Now swiftlint --strict on my files and the placeholder scan.
+
+swiftlint clean (0 violations). Now the placeholder scan on my source and test directories.
+
+All in-scope quality gates are green (swiftformat 0/5, swiftlint 0, placeholders 0). Now for the build/test. Let me check whether `Shared.xcframework` is staged and the KMP toolchain, since the scheme stages it via Gradle.
+
+`Shared.xcframework` isn't staged (needed to compile), but OpenJDK 17 + Xcode are present. Building it via Gradle is the long pole (~10 min). Let me kick that off in the background, then run `xcodegen generate` and a routing harness while it builds.
+
+While the xcframework builds, let me regenerate the Xcode project and confirm my files are included.
+
+Project regenerated (GEN_EXIT=0); `TeslaRegion` appears 18× in the pbxproj (iOS + macOS apps + both test bundles) — same as TeslaOrders, confirming my files are built. Now let me run an executed routing harness to prove the nav logic with my real edits.
+
+Harness compiled clean. Let me run it.
+
+Routing harness passes 13/13 — my nav edits are correct with no regressions. Let me check the xcframework build progress.
+
+The xcframework build is still running (~10 min expected). Let me wait for it to complete before running the full build/test.
+
+The xcframework build completed but — critically — it staged to **slot-7**, not slot-8. Let me investigate why and whether slot-8 has the framework.
+
+There's parallel-slot interference: `/tmp` is shared, and slot-8's `Frameworks/` is still empty while slot-7 got staged. My background shell may still be running. Let me check its status and avoid the shared `/tmp` log collision.
+
+My slot-8 xcframework build (pid 30403) is still running — the `/tmp` log was clobbered by slot-7's parallel build. My shell's own stdout will report the real exit. Let me wait for it to finish.
+
+My slot-8 xcframework is staged (`XCFRAMEWORK_EXIT=0`). The earlier `/tmp` slot-7 paths were just the shared-log collision. Now let me verify the framework and start the macOS build with a slot-8-isolated DerivedData path to avoid colliding with slot-7.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). DerivedData is gitignored. Let me build the macOS app target (skipping the Gradle pre-action since the framework is staged) with an isolated DerivedData path and a uniquely-named log.
+
+The macOS build is running in the background. Let me wait and monitor.
+
+The redirect failed because `DerivedData/` didn't exist yet (xcodebuild never ran). Let me create it and re-run.
+
+Build exited instantly with 64 (xcodebuild usage error). Let me read the log.
+
+`-derivedDataPath` requires `-scheme`. Let me use the macOS scheme with the isolated DerivedData path (its pre-action re-stages the framework incrementally).
+
+The macOS build is running (Gradle pre-action + compiling ~3900 files). Let me wait and monitor.
+
+Build is at the EmitSwiftModule phase with **0 errors** — whole-module type-checking (Sema) passed, including my files. IRGen + link remain. Let me keep waiting.
+
+Still in whole-module compile (IRGen/codegen of ~3900 files), 0 errors so far. This phase is long. Let me keep waiting.
+
+Log grew to 15.7K lines, still 0 errors. Let me check the current phase without the grep short-circuit.
+
+Build is actively generating object files (CommandPalette, CommandSearch, …) with **0 errors** — no IRGen crash so far. Let me continue waiting.
+
+Excellent progress: 24K log lines, **0 errors**, the widget extension already linked, main app still compiling. No IRGen crash. Let me wait for the final result.
+
+**BUILD_EXIT=0** — the full macOS app built green (the pre-existing breakage the sibling hit isn't present here). Let me confirm the success markers.
+
+**BUILD SUCCEEDED**, 0 errors, `TeslaSync.app` produced — my code compiles and links into the full app. Now let me run my tests via the macOS test scheme (reusing the built DerivedData).
+
+Tests are building/running in the background. Let me wait and monitor.
+
+Tests exited 65 after only ~19s — likely a test-bundle build issue, not my test. Let me read the log.
+
+The test-bundle build is blocked by a **pre-existing, out-of-scope** compile error in `GDPRExportPageModelTests.swift` (a main-actor isolation error — not my file). `-only-testing` still compiles the whole bundle, so this blocks my tests. Let me enumerate all pre-existing test-bundle errors to understand the scope.
+
+Exactly **one** pre-existing, out-of-scope error blocks the test bundle: `GDPRExportPageModelTests.swift` (a main-actor isolation issue, unrelated to TeslaRegion — zero errors in my files). Since it's a single unrelated file, let me temporarily quarantine it (not modify/commit) to actually execute my 5 tests, then restore it byte-for-byte.
+
+Confirmed pre-existing (committed by sibling `3a3340bd1`, untouched by me, clean in git). Let me quarantine it, regenerate, and run my tests.
+
+Test bundle building (now without the quarantined file) and running my 5 tests. Let me wait.
+
+Another pre-existing error surfaced (exit 65 in ~24s). Let me identify it.
+
+A second sibling file (`VehicleCostPageModelTests.swift`) has the same pre-existing main-actor isolation issue — this looks like a toolchain-drift class (repo pins Swift 6.0.1; runner has 6.3.2) affecting sibling admin model tests, not my code. Let me assess the full scope before deciding.
+
+This is a systemic toolchain-drift issue: the repo pins Swift 6.0.1 but the runner has Swift 6.3.2, which is stricter about `@MainActor` isolation in nonisolated XCTest contexts — affecting many sibling `*PageModelTests.swift` (not my code). Let me restore the quarantined file (keep the repo pristine) and enumerate the full scope honestly via a whole-module typecheck of the test target.
+
+Confirmed: repo pins **Swift 6.0.1**, runner has **6.3.2** — a real toolchain drift, and the restored file is pristine (only my new test shows as untracked). Let me reconstruct the test target's whole-module typecheck to enumerate the full pre-existing-error scope in one pass.
+
+I have the test target's file list. Let me extract the actual compiler flags from the build log so I can run a single whole-module typecheck and enumerate every pre-existing test error at once.
+
+I have the exact test-target flags. Rather than reconstruct the whole 1152-file command, let me directly typecheck **my** test file against the green-built `TeslaSync` module — this proves my test compiles. First, confirm the built module is present.
+
+Both present (module built with testability + XCTest). Let me typecheck my test file against the green-built module (pointing at the macOS xcframework slice for the transitive `Shared` dependency).
+
+My test file type-checks cleanly against the real built module (`MYTEST_TYPECHECK_EXIT=0`) — proving the test is valid. Now let me run an authoritative whole-test-target typecheck to enumerate the complete pre-existing-error scope in one pass.
+
+Whole-test-target typecheck running. Let me wait for it.
+
+Typecheck found errors (exit 1). Let me enumerate the complete set of broken files and confirm none are mine.
+
+Authoritative result: the test target's **only** blockers are pre-existing sibling `*PageModelTests.swift` (VehicleCost: 4 errors incl. main-actor isolation + a `Double`/`Date` API-drift; GDPRExport earlier) — **zero errors in my files**, confirming Swift 6.0.1→6.3.2 toolchain drift. Let me make one bounded attempt to actually execute my 5 tests by quarantining the two known-broken siblings.
+
+Test bundle building (2 known-broken siblings quarantined) and running my tests. Let me wait.
+
+**TEST_EXIT=0** — with the 2 pre-existing broken siblings quarantined, the test bundle compiled and my tests ran. Let me confirm my 5 tests passed.
+
+All **5 tests passed** — `** TEST SUCCEEDED **`, 0 failures. The quarantine was purely to isolate pre-existing sibling-test drift. Now let me restore the 2 siblings byte-for-byte and regenerate the project to leave the repo pristine.
+
+Both siblings restored byte-for-byte (hashes match committed exactly); repo pristine except my new test. Complete verification achieved. Let me capture the final git state for the log.
+
+Clean, exactly the expected change set; gitignored build artifacts confirmed excluded. Let me capture tool versions, then write the evidence log.
+
+Now let me write the comprehensive evidence log with the real, honest gate transcript.
+
+Log written. Let me mark the final todo done and commit exactly the in-scope files (with the required trailer).
+
+All 8 files staged, no artifacts. Let me commit.
+
+Committed cleanly (`07ac606de`, 8 files, +477/-2). Let me verify the working tree is clean and remove temporary artifacts.
+
+Working tree pristine, temp artifacts removed. Let me do a final confirmation of the committed change set and todo status.
+
+All complete and verified. Every todo is done, the working tree is pristine, and the committed tree's JSON artifacts validate.
+
+## Summary
+
+Implemented **`page:admin/TeslaRegion`** as a native SwiftUI page at full web parity with `web/src/features/admin/pages/TeslaRegionPage.tsx`, committed as `07ac606de`.
+
+**What shipped (8 files, +477/−2):**
+- `Sources/Features/Admin/TeslaRegionPage.swift` — HIG-native page: `ScrollView` scaffold + header (`TSPageTitle` title + subtitle) over the already-shipped native `RegionSettings` panel, bound to its `@Observable RegionSettingsModel` (P1/S8). Adaptive macOS/iOS, a11y, design tokens, DEBUG previews (content/empty/loading/error). Mirrors the sibling `TeslaOrdersPage` 1:1 (web page is a thin `PageContainer` wrapper around `<RegionSettings/>`).
+- `Sources/Features/Admin/TeslaRegionRouteRegistration.swift` — registers `.teslaRegion`.
+- `Tests/Unit/Features/Admin/TeslaRegionRouteRegistrationTests.swift` — 5 XCTests.
+- `Sources/App/AppRoute.swift` — `.teslaRegion` case (`tesla-region` / globe / Account group).
+- `Sources/TeslaSyncApp.swift` — wired into `\.routeHosts`.
+- `Localization/Localizable.xcstrings` — added `route.teslaRegion`; `translation.region.title`/`subtitle` already existed and are reused.
+- `apps/parity/apple-ledger.json` — +2 rows (apple-macos, apple-ios), covered 2/2.
+- Evidence log with full gate transcript.
+
+**Verification (all real exit codes):** Shared.xcframework staged (Gradle, exit 0) → `xcodegen` (0) → **swiftformat 0/5**, **swiftlint --strict 0**, **placeholders 0** → **full macOS app `xcodebuild build` → `** BUILD SUCCEEDED **`, 0 errors** (my code compiles + links into the real app) → routing harness **13/13** → my XCTest type-checks against the real built module → **my 5 tests executed `** TEST SUCCEEDED **` (5/5)**. **PARITY_COVERED=2/2. EXIT=0, STATUS=DONE.**
+
+**Honest caveat:** The macOS XCTest *bundle as a whole* can't compile on this runner due to **pre-existing, out-of-scope** main-actor-isolation/API-drift errors in sibling `GDPRExportPageModelTests.swift` and `VehicleCostPageModelTests.swift` — a Swift 6.0.1→6.3.2 toolchain drift (repo pins 6.0.1). Zero errors in my files. To get real execution evidence I temporarily moved those two siblings aside, ran my suite green, then **restored them byte-for-byte** (git blob hashes verified); the committed deliverable doesn't touch them, and the working tree is pristine.
+
+
+
+The task is fully complete and verified — all 9 todos done, commit `07ac606de` in place, working tree pristine.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

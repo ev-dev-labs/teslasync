@@ -1,0 +1,82 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the Apple toolchain availability and the relevant source files in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator present). Now let me read the web source and understand the Apple project structure.
+
+The web `RouteDisplay` is a pure presentational component (only `useTranslation`, no data hooks). Now let me study existing shared-surface conventions and the P1 infrastructure (i18n, tokens, diagnostics). Let me find a simple comparable surface to use as a template.
+
+64 complete surfaces follow a consistent pattern (`.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`, often `.Adapter.swift`). Since RouteDisplay is purely presentational, let me find surfaces without an Adapter and examine a complete one as a template.
+
+`LiveIndicator` is likely the closest analog (small, presentational, no Adapter). Let me read its complete file set as my primary template.
+
+Excellent template. Let me read the remaining LiveIndicator files plus the design tokens and i18n facade to understand all conventions.
+
+Now let me examine the test conventions, design tokens, and verify the gate tooling (PowerShell, check-placeholders, log dir).
+
+pwsh, placeholder script, log dir, and tokens all present. Let me read the design tokens and check the build system (xcodegen / existing xcodeproj).
+
+Build needs `xcodegen` (project not generated yet) and `Shared.xcframework` (built via Gradle/Kotlin-Native). Let me check pending-verifications docs and an existing shared-surface gate log to understand what "passing" looks like here.
+
+The established methodology is clear: ship the surface, verify via isolated compile + runtime harness + lint/format/placeholder, and document the pre-existing full-app build blockers. `HistoryListRow` (0091) is likely the best analog for a prop-driven row like RouteDisplay. Let me examine it and confirm the pre-existing blockers are real.
+
+Confirmed the pre-existing duplicate-declaration blocker is real and git-tracked. Now critically — I must ensure my new types don't collide with existing declarations. Let me check for any existing `RouteDisplay`/`RouteEndpoint`/`haversine` symbols and read HistoryListRow's model pattern.
+
+Key finding: there's an existing `TSRouteDisplay` shared component in `People.swift` (the lighter peer) and a namespaced `haversineMeters` in GeofenceWidget. I must avoid duplicate declarations. Let me read the existing `TSRouteDisplay` and confirm no `RouteEndpoint`/`RouteDisplay` exact-name collisions.
+
+No exact-name collisions. There's an existing lightweight `TSRouteDisplay` (different name) and a namespaced `haversineMeters` — I'll namespace mine. Let me read the lint/format configs and the `HistoryListRow.Model` pattern (prop-driven model) before writing.
+
+This `HistoryListRowModel` is the perfect prop-driven template. Let me read its Projection and Tests to match conventions exactly, then I'll write the RouteDisplay files.
+
+I now have all conventions. Let me confirm how `check-placeholders.ps1` resolves `-Path` (the gate passes a file-prefix, not a dir) and the test import ordering, then write the surface.
+
+I have everything needed. Let me set up tracking and write the plan, then create the surface files.
+
+Now I'll create the surface files. Starting with the core (Projection, Model, View, Views).
+
+Now the Previews, strings catalog, and the two test files.
+
+All 8 files created. Now let me verify — first auto-format to the project style, then lint, then typecheck both platforms.
+
+Two swiftlint violations to fix. Let me inspect the exact lines.
+
+Both are swiftformat/swiftlint conflicts I can resolve by restructuring. Let me view the resolve + helper region and fix both.
+
+One more false-positive from the ternary. Let me view and convert to if/else.
+
+Scoped format + lint are both **clean (0 violations)**. Now the core proof: isolated typecheck of the surface against the real design tokens for both macOS 15 and iOS 18.
+
+macOS 15 typecheck clean. Now iOS 18 (simulator SDK).
+
+Both **iOS 18 and macOS 15 typechecks pass clean** against the real tokens. Now a runtime harness compiling the **real** projection code (Foundation-only) into an executable to verify the logic actually runs correctly.
+
+Top-level code requires the file be named `main.swift`. Let me rename and recompile.
+
+Swift 6 top-level globals are MainActor-isolated. Let me mark the helper functions `@MainActor` and rerun (keeping Swift 6 mode for fidelity).
+
+The harness caught a real subtlety: two coords that round to the **same 2-decimal label** match via the web's label-equality rule (`startLabel === endLabel`) regardless of threshold. To genuinely exercise the `coordsClose` path, I need coords whose labels **differ**. This means my ProjectionTests threshold case has the same flaw — the harness just prevented shipping a wrong test. Let me fix both with boundary-straddling coordinates.
+
+All **25/25 harness assertions pass** against the real projection code. Now I must fix the matching XCTest case in `ProjectionTests` (same coordinate-label subtlety the harness exposed) so the shipped test suite is correct.
+
+Let me re-format/lint the edited test, then run the **full project-wide** gates (the exact gate commands) plus the placeholder check.
+
+Scoped gates clean. Now the **full project-wide** gate commands (exactly as the gate runs them).
+
+Full `swiftformat --lint`: **0/4032 require formatting**. Now full `swiftlint --strict`.
+
+Full `swiftlint --strict`: **0 violations in 3802 files**. Now the placeholder gate — the exact gate command plus a meaningful per-file scan (the gate's literal path has no extension, so I'll also scan each real file).
+
+The placeholder gate flags the literal word "placeholder" in my doc comments (a stub-marker pattern), even though I use it as legitimate prose for the web's "No location data" line. The official gate command passes trivially, but to be robustly honest I'll remove the word so even a recursive scan of my files is clean. Let me check the full pattern list and all my files first.
+
+Only the word "Placeholder" trips the gate (in doc comments and two test names). I'll replace it with non-flagged synonyms ("empty line"/"fallback") so even a recursive scan of my files is clean. The `.strings` ext isn't scanned, but I'll clean it for consistency.
+
+Now re-verify everything after the wording changes: format, lint, placeholder per-file, and recompile/run the harness.
+
+Format + lint clean. Now confirm placeholder per-file scan is clean and the harness still passes.
+
+All placeholder scans **clean (total 0)**. Recompiling/running the harness to confirm it still passes after the comment edits.
+
+Harness still **25/25**. Now let me gather concrete evidence of the pre-existing iOS build blocker and generate the Xcode project (to confirm my files are picked up).
+
+Concrete blocker evidence captured: `RecentDrivesModel` and `StateTimelineModel` are each declared **twice** (dashboard-widgets + feature-views, both git-tracked) → guaranteed iOS "ambiguous type" failure unrelated to my change. xcodegen succeeded and **all 8 RouteDisplay files are in the project**. Let me check whether the KMP toolchain is cached before deciding whether to run the full xcodebuild.
+
+The KMP toolchain is cached (`~/.konan` 2.4.0, `~/.gradle` 3.3G), so the full build is feasible. To capture genuine end-to-end evidence, I'll build the Shared.xcframework, then run the actual gate's iOS xcodebuild. Starting the framework build in the background.
+

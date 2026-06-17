@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure to understand the current state of the Apple app and the task requirements.
+
+Good — macOS 26.5, Xcode 26.5, swiftlint, and swiftformat are all available. Let me explore the Apple app structure.
+
+Let me examine the project configuration and existing test structure.
+
+There's already a `Tests/UI` directory with 4 XCUITest files and both iOS + macOS UITest targets are configured. Let me read the existing tests and understand the app's launch-argument/fixture harness.
+
+Let me understand the app's launch-argument harness and routing. Let me search for how `uiTest` arguments are processed and inspect the App sources.
+
+Let me read the predecessor artifact log and the app's entry/routing files to understand the existing harness.
+
+Now let me probe my actual build/test capabilities and read the predecessor unit-test log plus the demo views that the existing harness uses.
+
+Host load is healthy (4.84, vs the predecessor's 130–573), iOS 26.5 sims are booted, but there are **0 code-signing identities** (the known macOS blocker). Let me create a plan and read the key context: predecessor unit log, the demo-view harness pattern, parity ledger, and representative components.
+
+Let me verify what unit tests and routing exist, inspect the parity ledger, and examine the macOS entitlements that drive the signing blocker.
+
+Let me examine the auth coordinator (to find how to inject an authenticated shell), RootView, and the route host registry.
+
+Now let me read the key component APIs I'll exercise in the gallery harness, plus the localization setup.
+
+The localization is a modern `.xcstrings` catalog (missing keys render as themselves — safe). Let me efficiently extract the public API surface of all components so the gallery harness compiles correctly.
+
+Let me get the exact init signatures for the components I'll use in the gallery.
+
+Let me check the map annotation/geofence inits and the settings view (to add an identifier), then I have enough to build.
+
+I now have the full component API surface. Let me check the lint config (to avoid violations) and any existing AppShell tests before I start authoring.
+
+Lint is strict (line length ≤120 enforced). Let me check the existing route tests, then I'll write the plan and start authoring.
+
+I have a complete understanding now. Host load is low (so iOS UI execution should actually work this time, unlike the predecessor), but there are 0 code-signing identities (macOS blocker). Let me set up tracking and write the plan.
+
+The project needs generation and `Shared.xcframework` needs building (slow Kotlin/Native). Let me check gitignore and the build script, then kick off the framework build in the background while I author code.
+
+`.xcodeproj` and `Shared.xcframework` are git-ignored (safe). Let me kick off the Kotlin/Native framework build in the background while I author the Swift code.
+
+Framework build is running in the background. Now let me author the harness. I'll create the support file, sample data, gallery, and sections.
+
+Let me locate the exact `Font.TS` and `Color.TS` token definitions to use correct names.
+
+All tokens confirmed. Now let me create the harness files.
+
+App wiring now. Let me update `TeslaSyncApp` for the gallery surface, deep-link initial route, and accessibility overrides.
+
+Now let me update `AppShell` to add accessibility identifiers and make the tab shell honor `selection` for deep links.
+
+Now let me add the `TabSelection` enum and the pending-state identifier on `RouteHost`.
+
+Now the CommandPalette search field/rows and Settings root identifiers.
+
+Let me check the framework build progress while I prepare the test suites.
+
+Framework still building. Let me author the UI test suites now. First, the shared support helpers.
+
+Framework build completed. Let me verify it, then continue with the test suites.
+
+`Shared.xcframework` staged. Now the three UI test suites.
+
+Now let me format my new/changed files and run the linters before building.
+
+Excellent — **swiftlint --strict: 0 violations in 3896 files**, formatting clean. Now let me run the placeholder gate and generate the Xcode project.
+
+The placeholder gate is RED — but all matches are in **pre-existing** `TeslaSync/feature-views/*` files. Let me understand the script and confirm whether this is a baseline condition or something my changes affected.
+
+All reported matches are in pre-existing `TeslaSync/feature-views/*`. Let me check the patterns file and whether any of MY files match, plus establish the baseline.
+
+My files have 3 matches I must fix (two "placeholder" strings + `xxxLarge` matching "XXX"). But there are ~93 **pre-existing** matches in `TeslaSync/feature-views/*`. Let me first fix mine, then investigate the pre-existing ones to understand the baseline.
+
+Now I understand: the ~93 pre-existing matches are **false positives** — legitimate UX uses of the word "placeholder" (search-field prompts, select placeholder options) in predecessor `feature-views`, plus my 3. Let me first make MY deliverable clean, then re-scan comprehensively.
+
+My deliverable files are now clean. The ~93 remaining matches are pre-existing false positives in predecessor `feature-views` (legit "placeholder" UX terminology), outside this prompt's scope. Let me verify my files are clean, re-lint, and generate the Xcode project.
+
+Let me re-run the full placeholder check to see the current count.
+
+Confirmed: **my deliverable is placeholder-clean**; the 93 remaining are pre-existing false positives in predecessor `feature-views` (note: 44 `parity:allow` opt-outs already exist there — this is predecessor debt). The macOS signing blocker already forces BLOCKED, so I'll document this and not expand scope into 93 unrelated edits.
+
+Now let me generate the Xcode project and run the iOS gate (the big achievable win at this load).
+
+Project generated with both iOS and macOS UI-test targets wired. Now let me build-for-testing on iOS (the critical compile check for all my new code). I'll use a per-slot DerivedData path to avoid contention.
+
+Build completed. Let me check the result (success/failure and any errors).
+
+Build failed but no `error:` lines found — let me find the actual failure reason.
+
+The `-quiet` flag hid the actual diagnostics. Let me re-run capturing full output to a log file and extract the real compile errors.
+
+The compile error is in a **pre-existing** file (`RecentDrivesSection.Previews.swift`), not mine — a compiler type-check timeout. Let me get the complete list of errors to confirm none are in my code.
+
+Exactly one compile error, in a **pre-existing** feature-view preview (`RecentDrivesSection.Previews.swift:24`) — a SwiftUI compiler type-check timeout, not my code. But it blocks the app build, which blocks running my UI tests. Let me inspect it — this is tightly coupled to my deliverable (I need the app to build).
+
+This is the sole blocker for the iOS build (and thus my UI tests). It's a SwiftUI compiler type-check timeout the compiler itself says to fix by breaking up the expression — a trivial, behavior-preserving change. Since my deliverable requires the app to build, I'll fix it. Let me confirm the model's field types first.
+
+Types confirmed. Let me break up the expression with explicitly-typed locals (the compiler-recommended fix, behavior-preserving).
+
+Now let me rebuild for testing and confirm it compiles clean.
+
+Still failing but with 0 `error:` lines — let me find what's failing now.
+
+A compiler crash (`swift-frontend` fatal error) now. Let me see the crash context to identify the file.
+
+The crash is in a different pre-existing feature-view file. Let me identify exactly which expression crashes the compiler (the crash dump records what it was type-checking).
+
+The crash is an LLVM `report_at_maximum_capacity` IRGen crash compiling pre-existing `AppearanceSettings.Controls.swift` (a `(Bool, MainActor?) -> Bool` reabstraction thunk) — a deep compiler issue in predecessor code, not mine. This is a **pre-existing baseline breakage** (these feature-views landed after the predecessor's green build). Let me confirm the baseline is broken without my changes, and assess scope.
+
+Confirmed pre-existing: `AppearanceSettings.Controls.swift` is from commit `0dd623aa3` (a P4 feature-view that landed **after** the predecessor's green build), untouched by me. The baseline iOS app build is broken by predecessor code on Xcode 26.5. Let me make a bounded attempt to unblock it (to prove my tests run), starting by inspecting the crashing file.
+
+I've now confirmed the iOS build is broken at baseline by **systemic pre-existing compiler issues** in predecessor feature-views (two different untouched files failed: `RecentDrivesSection.Previews` type-check timeout, then `AppearanceSettings.Controls` IRGen crash on Xcode 26.5). This is far outside "add XCUITest UI coverage" scope and is a deep compiler-crash rabbit hole. 
+
+The disciplined call: revert my out-of-scope RecentDrives edit, keep my changeset focused on the deliverable, and document the pre-existing breakage with the captured log evidence. Let me revert it.
+
+My changeset is now clean and focused. Let me prove the UI test suites compile via a standalone type-check against XCTest (they're black-box, no app dependency), as supplementary evidence the deliverable is sound.
+
+The standalone type-check can't resolve XCTest's C assertion macros outside Xcode's build system — that's a limitation of the probe, not my code (it failed identically on the pre-existing suites). Let me run the **exact official gate commands** to capture honest evidence. First the iOS `build test` (cache is now warm; this also re-checks whether the pre-existing crash is deterministic).
+
+The official iOS gate confirms **systemic pre-existing breakage**: now a *third* untouched file fails — `AIGeofenceAwareAutomationSuggestions.swift:141: escaping closure captures non-escaping parameter` (a hard compile error), alongside the `RecentDrives` timeout and `AppearanceSettings` IRGen crash. Let me confirm none of my files error, and enumerate all pre-existing failures.
+
+Confirmed: **none of my files have any compile error** — the build only fails in 3 (likely more) pre-existing predecessor files. This is systemic baseline breakage, far outside the scope of "add XCUITest UI coverage", and a hard/uncertain compiler-crash cascade. The macOS leg is independently signing-blocked too.
+
+Let me run the remaining official gate commands honestly: macOS `build test` (async) plus `swiftformat --lint` and re-confirm `swiftlint`.
+
+Host gates GREEN: **swiftformat --lint = 0** (0/4126 need formatting), **swiftlint --strict = 0** (0 violations in 3896 files). The macOS gate finished — let me check its result.
+
+Both legs are RED for reasons **outside my deliverable**: macOS fails at the signing/entitlement check (0 dev certs — same capability blocker as the predecessor, before compiling); iOS fails on pre-existing predecessor compile breakage. My files have zero errors on both.
+
+The iOS errors are 3 pre-existing files; two look like real, localized bugs (a type-check timeout and an escaping-closure error) and the IRGen crash may well be collateral from them. Proving my 25 UI tests actually run is the biggest value-add over the predecessor, so I'll make a **bounded, time-boxed attempt**: temporarily patch the pre-existing breakage locally to execute the suite, then revert so my shipped changeset stays scoped. Let me inspect the escaping-closure error.
+
+The escaping-closure error is a trivial, clearly-correct fix (`content` needs `@escaping` because `TSGlassPanel` stores it). Combined with the RecentDrives expression break-up, the `AppearanceSettings` IRGen crash may well be collateral from these real errors. Let me **temporarily** patch the pre-existing breakage (to be reverted before commit) and rebuild to attempt executing my suite.
+
+Now let me rebuild for testing to see if these fixes unblock it (and whether the IRGen crash was collateral).
+
+Progress — the `AppearanceSettings` IRGen crash was **collateral** (gone after fixing the 2 real errors), but a new pre-existing error surfaced in `AISignalExplorerNlFilter.swift`. Let me see it to gauge the tail.
+
+Same mechanical pattern (`glass` helper missing `@escaping`) — likely repeated across many shared-surface files. Let me count how widespread these pre-existing patterns are to decide whether a bounded temp-fix is feasible.
+
+This is a **large, systemic pre-existing breakage**: 32 files share the non-`@escaping` `glass`/`panel` helper pattern (a Swift 6 compile error), plus type-check timeouts — clearly committed without a passing compile gate on this toolchain, across many predecessor surfaces. This is far beyond my scope and an open-ended cascade (multiple error classes, 30+ files). My bounded attempt has hit its stop criterion.
+
+Let me revert the temporary patches so my shipped changeset is purely the deliverable.
+
+Changeset is now clean (deliverable only). Let me gather exact counts for the evidence log.
+
+I have all evidence. Summary of the official gate run:
+
+| Gate | Result | Cause |
+|---|---|---|
+| `swiftlint --strict` | **0 violations** (3896 files) | ✅ |
+| `swiftformat --lint` | **0/4126** need formatting | ✅ |
+| placeholder (my files) | **0 matches** | ✅ |
+| iOS `build test` | EXIT=65 | ❌ pre-existing compile breakage (≥3 files, 32-file `@escaping` pattern) — **0 errors in my files** |
+| macOS `build test` | EXIT=65 | ❌ 0 signing identities (capability) |
+| placeholder (all) | EXIT=1 | ❌ 93 pre-existing false-positives in predecessor feature-views |
+
+Let me write the evidence log.
+
+Now let me verify the final git state (ensuring generated artifacts are properly ignored) and commit per the prompt's instructions.
+
+Git state is correct — only my deliverable files plus the log; all generated artifacts (`.xcodeproj`, `Shared.xcframework`, `.build`) are properly git-ignored. Let me commit per the prompt's instructions.
+
+Committed as `faf63d174`. Let me finalize: update tracking and verify a clean working tree.
+
+Everything is finalized and verified:
+- **Working tree clean**, commit `faf63d174` on the branch.
+- Temporary probe patches fully reverted (pre-existing files back to original — `startSOC`/`@escaping` checks both return 0).
+- All todos complete.
+
+Let me do a final confirmation that my committed deliverable files are intact and the log is in place.
+
+The deliverable is committed and the gate run honestly. The task is complete with a sanctioned `STATUS=BLOCKED` outcome, fully documented with evidence.
+

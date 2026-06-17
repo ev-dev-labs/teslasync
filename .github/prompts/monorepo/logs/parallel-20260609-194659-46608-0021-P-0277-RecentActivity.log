@@ -1,0 +1,181 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Let me explore the Apple app structure more thoroughly, especially the feature-views directory and existing patterns.
+
+The toolchain is available. Let me examine the feature-views patterns to find a good model to follow.
+
+Let me look at a representative feature-view with the full file set and find the native shared components (GlassPanel, IconBox, etc.).
+
+The shared components live in `apps/apple/Sources/Components/`. Let me read the closest analog feature-view (AutomationActivityFeed) in full and the shared components.
+
+Excellent comprehensive example. Let me read the remaining AutomationActivityFeed files, the shared components, and the project config.
+
+Now let me read the Previews/Tests, the design tokens, and the data-display/UI native components used by the web source.
+
+Let me read the test patterns, the remaining shared components (IconBox, FadeIn, Skeleton), and the project config.
+
+Let me find the IconBox/Skeleton components, the design tokens, and how the native side handles units (since RecentActivity uses `useUnits`).
+
+There are existing `RecentDrivesWidget` analogs. Let me read the Units facade, unit formatters, the RecentDrives adapter, and IconBox.
+
+Let me read the existing RecentDrives widget adapter (closest analog for drives+units), the design tokens, and the Skeleton component.
+
+Now let me read the RecentDrives model (for the unit prefs/DTO patterns), the web unitConversion + api types (for exact parity), and the design tokens.
+
+Let me read the energy conversion, web API types (Drive/ChargingSession), the TimeStamp component, and locate the design tokens.
+
+Let me locate the design token definitions, read the project config, and the web AnimatedNumber/InlineMetric/fmtInt for exact parity.
+
+The tokens are likely generated. Let me check the project.yml and how tokens are generated/included.
+
+Now let me look at the generated design tokens and check the build toolchain availability (xcodegen, the Shared framework script).
+
+Let me read the generated Tokens.swift to confirm the exact token API, and check the macOS pending-verifications doc for build caveats.
+
+I have nearly everything. Let me confirm the web IconBox sizing and the number formatters for exact parity.
+
+I now have a complete understanding of the architecture. Let me set up tracking, kick off the slow KMP framework build in the background, and generate the Xcode project.
+
+There's already a `RecentActivity.*` set present. I must inspect it before doing anything — it may be a different surface or a stub to flesh out.
+
+Important discovery: an existing `RecentActivity.*` surface (prompt 0130) already targets a *different* web source (`features/dashboard/components/RecentActivity.tsx`, with charts). Mine (0277) targets `features/vehicles/components/RecentActivity.tsx`. Let me confirm the collision scope before deciding.
+
+Now it's clear: prompt 0130 already shipped a **different** `RecentActivity` surface (dashboard, with charts) — it's committed (`681c0bcf8`) and owns the `RecentActivity*` Swift type names. Mine (0277) is the **vehicles** drives/charges surface. I must add mine without breaking 0130, so I'll disambiguate file names (still matching the `RecentActivity.*` allowed glob) and Swift type names. Let me check the gate tooling and 0130's telemetry slug.
+
+`pwsh` is available so I can run the literal gate. 0130 uses slug/table "RecentActivity". Let me read how the placeholder gate enumerates files (to ensure my disambiguated files are scanned), then I'll start writing.
+
+Key finding: the placeholder gate scans a literal path (`.../RecentActivity`) that isn't a real dir, so it's vacuously clean for both 0130 and me — but I'll still genuinely verify my files. The hard constraint is the Swift compiler: I must disambiguate type + file names to coexist with the committed 0130 surface. My files will use the `RecentActivity.Vehicles.*` prefix (matches the allowed `RecentActivity.*` glob) with `VehicleRecentActivity*` type names.
+
+Let me kick off the slow KMP framework build in the background now, then write the code while it runs.
+
+0130 uses `@Environment(\.horizontalSizeClass)` for responsive layout and compiles on both platforms. Let me confirm 0130's gate passed (validating that pattern on macOS) and check the framework build progress.
+
+This is decisive: the 0130 gate reached `STATUS=DONE` on a **Command-Line-Tools-only runner** that couldn't run xcodebuild/simulators (accepted via peer disposition). My runner has **full Xcode 26.5 + a booted iPhone 16 simulator + the KMP build running**, so I can attempt the real gate. The framework build is progressing healthily.
+
+Now I'll write the surface. Starting with the pure adapter and the model/seams.
+
+Now the Model file (state-holder seam, telemetry, projection, i18n facade).
+
+Adapter + Model done. Now the row views and small presentational components.
+
+Now the Views file: panel shell, header, state chrome (empty/error/loading), and the two panels.
+
+Now the main surface view.
+
+Now the strings catalog and previews. Let me also check the framework build progress.
+
+The KMP framework built successfully (6m24s) and is staged — the full toolchain works. Now the previews and tests.
+
+Now the test suite covering the adapter, projection, model wiring, and accessibility.
+
+All 8 files written. Let me update tracking and run swiftformat + swiftlint on my files (auto-fix formatting first, then verify).
+
+swiftformat is clean. swiftlint flags one long line (288) in the Adapter. Let me fix it.
+
+Let me proactively check for any other long lines across my files, then re-run both linters.
+
+Both linters pass clean on my files. Now let me honestly verify no placeholder/stub patterns, then generate the Xcode project.
+
+My files are clean. Now let me generate the Xcode project and start the iOS build+test.
+
+Project generated. Let me first do a fast compile of the app target (iOS simulator, using the already-staged framework, bypassing the 6-min scheme pre-action) to validate my code compiles. I'll run it async and monitor.
+
+Build failed (exit 65). Let me check whether the errors are in my files or pre-existing peer files.
+
+Crucial result: **zero errors in my files** — all 26 errors are pre-existing peer collisions (duplicate `StateTimeline*` types defined in both a feature-view and a dashboard-widget — "ambiguous for type lookup"). This is exactly the kind of collision I avoided by disambiguating. Let me see the full scope of pre-existing breakage.
+
+The entire app-build blocker is a single pre-existing peer collision: `StateTimeline` (feature-view) and `StateTimelineWidget` (dashboard-widget) both define `StateTimelineModel/Update/Connection/LoadStatus`. Zero issues in my files. Let me confirm those 3 "RecentActivity.Vehicles" mentions are not errors, and map the collision's reference scope to see if I can cleanly isolate a verification build.
+
+Confirmed: the 3 "RecentActivity.Vehicles" log lines are successful strings-file copy/validation (not errors) — my Swift compiled cleanly and my strings validated. The collision is fully self-contained (no external references to those types). For a no-file-change verification build that can actually run my tests, I need to pick which colliding peer set to exclude. Let me check external references to each side's view/registration.
+
+Both colliding surfaces have zero external references, so I can cleanly exclude one set for a **verification-only** build (command-line override, no file changes) to prove my surface compiles and my tests pass. Let me run the scheme build+test with `StateTimelineWidget.*` excluded.
+
+Verification build+test is running. Let me re-read my final formatted files to double-check parity/logic while it compiles, and verify the main view + model survived auto-format correctly.
+
+The adapter logic is sound. Let me check the verification build+test progress.
+
+Verification build also failed (exit 65) — there must be more pre-existing collisions beyond StateTimeline. Let me analyze.
+
+The StateTimeline exclusion worked — now the **only** errors are a real bug in my own `Views.swift`: I named a private helper `body`, colliding with the `View` protocol's `body`. Excellent catch by the real build. Let me fix it (rename `body` → `panelBody` in both panels).
+
+That's the bug. Let me check whether `@ViewBuilder` survived and fix both panels by renaming `body` → `panelBody`.
+
+The `@ViewBuilder` was also lost. Let me rename both private `body` helpers to `panelBody` (with `@ViewBuilder`) and update references.
+
+Now let me reformat and verify `@ViewBuilder` survives on `panelBody`, then re-lint.
+
+`@ViewBuilder` now survives on `panelBody` (SwiftFormat strips it only from properties literally named `body`). Let me re-lint, then re-run the verification build+test.
+
+Both linters clean. Now re-run the verification build+test (peer collision excluded) — reusing the derived data for an incremental build.
+
+Verification build is running. Let me prepare by confirming no other risky `body`-named helpers exist in my files while it compiles.
+
+No residual issues. Let me wait for the verification build+test to complete.
+
+Still building. Let me wait more.
+
+Still failing. Let me check what errors remain.
+
+0 compile errors now. Exit 65 likely means build succeeded but the test phase had an issue. Let me investigate.
+
+Build reports "2 failures" but 0 compile errors. Let me see what those failures are.
+
+Now the real picture: with the peer collision excluded, my files **type-check cleanly** (0 errors in my files, and the build reached IRGen — which only happens after whole-module type-checking succeeds). The remaining failure is a pre-existing **swift-frontend IRGen crash** on an unrelated batch (`AnomalyInlineRow…AuditPanel`). Let me capture the crash reason, then validate my logic+tests in isolation.
+
+Decisive finding: the remaining whole-app failure is a **swift-frontend IRGen capacity crash** (`report_at_maximum_capacity` / `report_fatal_error`) while generating IR for a peer file (`AppearanceSettings…`) — a pre-existing compiler-scaling limit on the ~4,600-file module, not my code. Critically, the build reached IRGen, meaning **my files type-checked cleanly in the real module**.
+
+To get concrete green evidence for my logic + tests (which are pure Foundation), I'll run them in an isolated SwiftPM package.
+
+**All 24 unit tests pass** in isolation (Swift 6 strict concurrency, macOS 15). Combined with verify2 type-checking my files cleanly in the real module, this is strong evidence. Let me also compile my SwiftUI view files standalone (with token-accurate shims) to fully prove they build independent of the broken peer module.
+
+All my view files **compiled cleanly** (`Compiling Views.swift`, `Rows.swift`, `Main.swift`, `Previews.swift`, `Emitting module` all succeeded). The only failure is SwiftPM mis-identifying the target as an executable because I named a file `Main.swift`. Let me rename it and rebuild for a clean library result.
+
+**Complete green evidence for my surface:**
+- ✅ swiftformat `--lint`: 0/7 need formatting
+- ✅ swiftlint `--strict`: 0 violations
+- ✅ no placeholder patterns
+- ✅ 24/24 unit tests pass (Swift 6 strict, isolated)
+- ✅ all view files compile + link standalone (Swift 6)
+- ✅ whole-module type-check clean for my files (verify2 reached IRGen, 0 errors in my files)
+
+The whole-app gate is blocked only by pre-existing peer issues. Now let me run the **official gate** commands to capture authentic results for the canonical log. Starting the iOS build+test (the literal gate command).
+
+While the iOS gate builds, let me run the faster gate steps (placeholder check, swiftformat lint, swiftlint strict) in parallel and capture their real results.
+
+The literal placeholder gate is `EXIT=0`. The whole-dir scan shows 35 violations — all in **peer** files (none in mine). Let me prove my files specifically are clean with an authentic scan, and check the iOS gate progress.
+
+My files scan **100% clean** (PLACEHOLDER_COUNT=0, ALLOWED=0). The iOS gate is compiling and accumulating the expected StateTimeline errors. Let me wait for it to finish to capture the canonical exit code.
+
+iOS gate: `IOS_EXIT=65` (fails fast at the StateTimeline type-check). Let me confirm the cause and kick off the macOS gate plus the lint steps.
+
+iOS gate confirmed: **0 errors in my files** — all failures are the pre-existing StateTimeline peer collision. macOS gate is running. Let me run the swiftformat and swiftlint gate steps now.
+
+swiftformat `--lint apps/apple`: **FORMAT_EXIT=0** (0/3058 files need formatting) — green, whole tree. The macOS gate finished. Let me capture its result and run swiftlint.
+
+macOS gate: `MAC_EXIT=65` — fails at **code-signing** (no dev certificate; `DEVELOPMENT_TEAM=""` in project.yml), an environmental issue before compilation; **0 errors in my files**. Now the last gate step — swiftlint --strict (whole tree).
+
+swiftlint `--strict`: **LINT_EXIT=0** — 0 violations in 3054 files (whole tree). 
+
+**Gate step results:**
+| Step | Result | Cause if red |
+|---|---|---|
+| iOS build test | 🔴 65 | pre-existing StateTimeline peer collision (0 errors in my files) |
+| macOS build test | 🔴 65 | environmental code-signing (no dev cert) |
+| swiftlint --strict | 🟢 0 | — |
+| swiftformat --lint | 🟢 0 | — |
+| placeholder check | 🟢 0 | — |
+
+Let me check git status (ensure generated project/build artifacts are ignored) before writing the log and committing.
+
+Only my 8 files are untracked; the generated `.xcodeproj`, `build/`, and framework are all git-ignored. Now let me write the canonical gate log with full, honest evidence, then commit.
+
+I have all the evidence. Let me write the canonical gate log.
+
+Now let me clean up temp verification artifacts and commit the surface + log.
+
+All 9 files staged. Now let me commit.
+
+Commit `797db015b` created (9 files, 2062 insertions). Let me verify the working tree is clean and finalize tracking.
+
+Working tree clean; all tracking complete. The task is delivered and verified to the maximum extent the environment allows.
+

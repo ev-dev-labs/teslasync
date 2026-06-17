@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the Apple app structure to understand the existing conventions and dependencies.
+
+The feature-views directory is large. Let me check for existing SecuritySection files and look at sibling examples to understand conventions.
+
+No existing `SecuritySection.*`, but there are close siblings: `SecurityStatusCards.*`, `SecurityPanel.*`, `SecurityStatistics.*`. Let me study the closest analog (`SecurityStatusCards`) which renders security status cards like my web source.
+
+This is a comprehensive pattern. Let me read the remaining SecurityStatusCards files to fully understand the structure.
+
+Now let me read the Previews, Tests, and strings files, plus the shared design tokens.
+
+Excellent, I now understand the established pattern thoroughly. Let me check the runner capability (Xcode) and locate the shared design tokens/components in parallel.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, booted iPhone 17 Pro sim). This is **not** a BLOCKED scenario — I must build the real surface. Note: the gate names `iPhone 16` but only iPhone 17-series sims exist; I'll adapt the destination.
+
+Let me read the design tokens, project config, and key shared components.
+
+Let me check the build infrastructure (xcodegen, Shared.xcframework) and read the shared components/tokens I'll depend on.
+
+Key finding: `Shared.xcframework` is absent (only `.gitkeep`), and the build scheme has a pre-action to build it via Kotlin. Let me check the build script and a recent sibling log to learn the established build outcome (DONE vs BLOCKED) in this environment.
+
+The MetricCard log reveals the established precedent: independent surface verification + honest full-gate evidence, with pre-existing sibling collisions proven out-of-scope. Let me read the most relevant precedent (the feature-views SecurityStatusCards log) and check the Kotlin/Gradle toolchain for the xcframework.
+
+I now fully understand the established precedent. The feature-views SecurityStatusCards log (0046) is my gold template: author the surface, verify independently (swiftc typecheck vs iOS 18 + macOS 15 SDKs, SwiftPM test harness, lint/format/placeholder), and document the full Xcode gate deferral with real captured evidence. JDK 17 + gradlew exist, so I'll also attempt the real framework build.
+
+Let me read the full template log and all dependency signatures I'll need.
+
+This is the complete gold template — I now know the exact verification methodology. Let me read all dependency signatures (native components + tokens) and the web components/types for parity fidelity.
+
+Native `TSMetricCard` lacks icon/color, so (like SecurityStatusCards) I'll build a custom tinted tile. Let me read the web `MetricCard`/`EmptyState` for layout parity, the API types, and the design tokens.
+
+Now let me read the `SecurityEvent`/`VehicleState` API types and the design tokens.
+
+Now let me read the design `Tokens.swift` (Color.TS/Font.TS/TSSpacing/TSRadius API) and the web `neonColorMap` + `EmptyState` for color/empty parity.
+
+I have all tokens and component signatures. Let me do final pre-write checks: confirm no `SecuritySection` symbol collisions, the web `EmptyState` signature, and `neonColorMap` green/cyan mapping.
+
+All confirmed: no `SecuritySection` symbol collision, web `EmptyState` shows icon+message (role="status"), and color map green→emerald/success, cyan→cyan/info. I have everything needed. Let me set up tracking and start authoring.
+
+Now I'll author the surface. Starting with the pure projection core.
+
+Now the Model (state-holder seam + telemetry + i18n facade + phases).
+
+Now the presentational subviews.
+
+Now the main surface view.
+
+Now the previews (one per state).
+
+Now the comprehensive test suite.
+
+Now the i18n strings catalog contribution.
+
+All 7 files authored. Let me update tracking and begin verification — first checking the import surface of the component closure and linting my new files.
+
+swiftformat found auto-fixable issues. Let me apply the formatter (using the repo config) to my files, then re-lint.
+
+Formatting passes. Let me verify the auto-formatter preserved my logic in the Adapter (the `conditionalAssignment`/`redundantReturn` rewrites).
+
+Formatter preserved the logic (converted to switch expressions). Now the critical verification: typecheck the surface against the real iOS 18 simulator SDK with the full component closure.
+
+Only `UnitFormatters.swift` fails — it depends on the KMP `Units` facade (from Shared.xcframework), which the precedent log also excluded from the harness. My surface doesn't use it. Let me re-run excluding that one file.
+
+iOS 18 typecheck passes (EXIT=0, 46-file closure). Now the macOS 15 SDK typecheck.
+
+Both SDK typechecks pass (EXIT=0). Now I'll build a SwiftPM harness to actually **execute** the XCTest suite against the real component library (precedent steps [3]/[4]).
+
+SwiftPM harness ready (46 lib files + test). Now build and execute the test suite.
+
+28 tests ran, 1 failure. Let me find which assertion failed.
+
+My test caught a real bug: `.map(Double.init)` bound to `Double(bitPattern:)` instead of the value initializer (16 → 8e-323). Fixing to an explicit closure.
+
+All 28 tests pass (EXIT=0). Now swiftlint --strict, the placeholder gate, and xcodegen enumeration.
+
+One swiftlint violation: single-char `n`. Renaming, then re-lint + placeholder gate.
+
+All scoped gates green (lint 0, format 0, placeholders 0). Let me re-confirm the test suite after the rename and verify xcodegen enumerates the files.
+
+Tests still 28/0; xcodegen enumerates all 7 files (now fully target-registered). Now I'll attempt the real full gate. It needs `Shared.xcframework` (Kotlin/Native). Let me probe feasibility of that toolchain first.
+
+Kotlin/Native toolchain is cached and network works — building `Shared.xcframework` is feasible. Let me build it (async, monitored).
+
+Gradle is compiling Kotlin/Native (multi-arch — takes several minutes). Let me continue waiting.
+
+Build still going (~8 min). Let me check for progress signs without disturbing it.
+
+Build is actively progressing (33 compile processes, partial xcframework appearing). Let me keep waiting.
+
+`Shared.xcframework` built successfully (8m24s). Let me stage it and run the real full Xcode gate for the iOS simulator.
+
+Framework staged. Now running the real iOS-simulator gate build (whole app — slow). Running async with monitoring.
+
+Good — 0 errors so far, compiling the main app module. Let me keep waiting.
+
+Build failed (IOS_BUILD_EXIT=65) — as the precedent predicted. Let me extract and categorize ALL errors to confirm none are in my SecuritySection surface.
+
+Confirmed: 54 errors, **zero** in SecuritySection — all in the exact sibling families the precedent flagged (`RecentDrives*`, `StateTimeline*`). Let me sample the error messages to confirm they're the documented duplicate-type collisions.
+
+Errors are exactly the documented pre-existing duplicate-type collisions (`RecentDrives*`/`StateTimeline*` types declared in two sibling files each). My surface contributes zero. To make the "pre-existing" proof unimpeachable, I'll run a **baseline** build with my files removed and confirm the identical 54 errors.
+
+Baseline build running. Let me wait for it.
+

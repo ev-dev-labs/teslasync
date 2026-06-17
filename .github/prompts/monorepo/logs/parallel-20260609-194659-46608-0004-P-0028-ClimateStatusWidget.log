@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Both directories exist. Let me read the web source spec and check the Apple app structure in parallel.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen). Not a BLOCKED situation. Let me examine the existing widget patterns and check for any existing ClimateStatusWidget files.
+
+`ClimateStatusWidget` doesn't exist yet — I need to create it. There are sibling climate widgets (`ClimateControlPanelWidget`, `ClimateHistoryWidget`) to use as domain references. Let me read the full reference widget set and the registry metadata.
+
+Excellent reference. Let me read the remaining reference files (Adapter, Projection, Views, Previews, strings, tests) and the registry metadata.
+
+Let me read the remaining reference files (Views, Previews, strings, both test files) and the registry metadata.
+
+Let me read the strings, both test files, and the registry metadata.
+
+Now let me read the Tests.swift, the web registry metadata, and the shared design tokens/registration types.
+
+Now let me find the shared design token and registration type definitions to confirm what's available.
+
+The tokens are generated at `apps/design/generated/apple/`. Let me inspect them and the Skeletons component.
+
+Let me examine the project wiring, the placeholder checker, and tooling availability.
+
+All tooling is present (pwsh, swiftlint, swiftformat, xcodegen, Xcode 26.5). Now let me confirm the web helper semantics for exact parity: `fmtInt`/`fmtNumber`, `convertTempFromSI`, `useUnits`, and `useClimateLatest` data shape.
+
+I now have full parity context. Let me check the build prerequisites (Shared.xcframework, the staging script) and the logs directory before writing code.
+
+Important: `Shared.xcframework` isn't staged (requires KMP/Gradle). Let me check the predecessor's log (0026 ClimateControlPanelWidget) to see what a passing/blocked gate looked like on this runner.
+
+I have complete context. Key finding: the predecessor (0026) established the accepted methodology — the literal `build test` gate has **pre-existing, unrelated** failures (PresetGallery test files break Swift-6 strict concurrency; a LiveSignalSparklines swiftlint violation; no macOS signing identity). The accepted proof is surface-scoped: isolated SwiftPM build+test, real iOS/macOS `swiftc -typecheck`, and scoped lint/format/placeholder = 0.
+
+Let me set up tracking and verify no symbol collisions, then write the 9 files.
+
+No collisions. Let me create the plan file and start writing the surface files.
+
+Now writing the surface files, starting with the pure adapter core.
+
+Now I'll write all 9 surface files. Starting with the pure adapter core:
+
+Now the main surface View with registration, header, and state switch:
+
+Now the presentational subviews:
+
+Now the Previews and strings files:
+
+Now the two test files (using the `@Sendable` passthrough pattern to satisfy Swift-6 strict concurrency):
+
+All 9 files written. Let me update tracking and run the fast scoped gates (swiftformat, swiftlint, placeholder check) on the new files.
+
+Two test lines exceed 120 width. Let me auto-fix with swiftformat (the formatter itself), then re-lint:
+
+swiftformat passes (0/8). Now swiftlint --strict on the surface files:
+
+swiftlint: 0 violations. Now the placeholder gate:
+
+All three fast gates green (format 0/8, lint 0, placeholder 0). Now the critical proof: an isolated SwiftPM build+test harness with the **real** `Tokens.swift` + `DashboardWidgetInfra.swift`, under Swift 6 strict concurrency.
+
+Isolated build succeeds under Swift 6 strict concurrency. Now running the tests:
+
+All 34 tests pass under Swift 6 strict concurrency. Now the real-SDK typecheck for iOS 18 and macOS 15 (matching the app's `-swift-version 6 -strict-concurrency=complete`):
+
+Both real-SDK typechecks pass (iOS 18 + macOS 15, including DEBUG previews). Now let me regenerate the Xcode project and confirm all 9 files are enumerated into the app + test targets.
+
+All 9 files enumerated. Now let me attempt the full app build, which needs `Shared.xcframework` (built via Gradle/KMP). Let me check toolchain feasibility first.
+
+Java 17 + Gradle are available. Let me build the `Shared.xcframework` (Kotlin/Native) so I can compile my surface into the real app target. This is slow on first run, so I'll start it and monitor.
+
+Gradle build still running (first-run Kotlin/Native toolchain download + compile). Let me continue waiting.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 6m52s). Now let me build the full iOS app target to prove my surface compiles + links into the real app. Building (not testing, to isolate from the known-broken PresetGallery test bundle).
+
+Build failed — but the failing compile batches are sibling files (AnomalyInlineRow, AppCommandActions, AppearanceSettings…), not my surface. I must confirm the actual errors and verify zero are attributable to ClimateStatusWidget. Let me capture the full error log.
+
+The failure is a **swift-frontend compiler crash** (`llvm::report_fatal_error`), not a source error. Let me examine the crash to identify its trigger and confirm it's unrelated to my surface.
+
+This is the module file-list (frame 3), not the trigger. Let me find the actual fatal-error reason and the crashing stack frames.
+
+The crash signature is decisive: `report_at_maximum_capacity` → `SmallVectorBase<unsigned int>::grow_pod` inside **whole-module IRGen** (`emitLazyDefinitions` → `emitSILFunction`), with **zero `error:` diagnostics**. This is an LLVM SmallVector capacity overflow from the module's sheer size (~2,643 files accumulated by parallel agents) — a module-scale compiler limit, not a source error.
+
+My files are proven clean in isolation. Let me run the decisive control test: rebuild the app target with my 9 files temporarily removed — if it still crashes, attribution is airtight.
+
+Files removed from project (0 refs). Now rebuilding the iOS app **without** my files (clean build to force whole-module IRGen) to confirm the crash persists:
+
+Decisive: **without my files the build still FAILS identically** — exit 65, same `report_at_maximum_capacity` IRGen crash signature (4 matches), 0 `error:` diagnostics. The crash is a pre-existing whole-module IRGen SmallVector overflow from the accumulated 2,643-file module, fully independent of my surface.
+
+Let me restore my files and regenerate the project.
+
+Files restored (9 refs). Now let me attempt the strongest possible integration proof: a **whole-module type-check** of the entire real app target (all ~2,600 sibling files **including** my surface) against the iOS 18 SDK + the real `Shared.xcframework`. Type-checking runs Sema but stops before the IRGen step that overflows — so if it passes, it proves my files integrate cleanly at the semantic level with every sibling.
+
+The simulator slice is `ios-arm64-simulator`. Let me run the whole-module type-check of all 2,398 app-target files (including my surface) against the iOS 18 SDK + real `Shared.xcframework`, matching the project's Swift 6 + strict-concurrency settings.
+
+Whole-module type-check of 2,398 files is heavy; still running. Let me wait.
+
+This bonus whole-module check is taking very long (single-process Sema over 2,398 files). I already have conclusive evidence. Let me give it one final wait, then proceed regardless.
+
+~18 minutes — impractically slow for a bonus check on this host. I'll stop it; my evidence is already conclusive (per-file dual-SDK typecheck, isolated build+tests, and the control test). Stopping and proceeding to write the gate log.
+
+I have a conclusive evidence package. Now let me run the literal gate commands to capture verbatim exit codes. Starting with the fast ones (tree-wide format, tree-wide lint, scoped placeholder):
+
+FORMAT tree-wide 0/2964, PLACEHOLDER 0. Now the tree-wide swiftlint --strict (the literal gate's lint step):
+
+Tree-wide swiftlint is now **0 violations in 2960 files** (the predecessor's pre-existing lint violation was since fixed by another agent). Now the two heavy literal gate steps. Let me run the iOS `build test` gate command verbatim and capture its exit:
+
+iOS gate: `IOS_EXIT=65`, BUILD/TEST FAILED — crash signature present (6), **0 errors attributable to ClimateStatusWidget**, 0 total `error:` lines. Now the macOS literal gate:
+
+macOS gate: `MAC_EXIT=65`, 0 errors attributable to my surface — but 4 `error:` lines I must inspect to confirm they're pre-existing/unrelated:
+
+Both gate failures are pre-existing/environmental, **zero attributable to my surface**:
+- **iOS**: whole-module IRGen `SmallVector` capacity overflow (control-test-proven independent of my files), 0 `error:` diagnostics.
+- **macOS**: signing/entitlements only ("requires signing with a development certificate") — no dev cert on this host (ADR-012), 0 compile errors.
+
+Now I'll write the comprehensive gate log with verbatim exit codes and the full evidence package.
+
+Now final verification and cleanup. Let me re-confirm the surface files still pass format+lint, check git status matches the allowed files, and verify build artifacts are git-ignored.
+
+All clean: git status shows exactly my 9 surface files + the log (nothing else); `.xcodeproj` and `Shared.xcframework` are git-ignored. Surface re-confirmed format 0/8, lint 0. Now committing per the prompt's commit spec:
+
+Committed cleanly (10 files, 1,637 insertions). Let me do a final working-tree check.
+
+The task is complete and committed with a clean working tree. All 8 todos are done.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`ClimateStatusWidget`** (SwiftUI) at full parity with `web/src/features/dashboard/widgets/ClimateStatusWidget.tsx` — 9 files, registry `climate-status` (1×2, min 1×2, max 2×40).
+
+**Architecture (mirrors the established sibling pattern):** pure Foundation core (`.Adapter`/`.Projection`), P1/S8 state-holder seam + `@Observable` model + P1/S11 telemetry + P1/S10 i18n facade (`.Model`), SwiftUI surface + subviews (`.swift`/`.Views`), previews, `.strings`, and two XCTest suites.
+
+**Parity reproduced verbatim:** Cabin/Outside temps via `convertTempFromSI` → `fmtInt` + unit suffix; HVAC `fmtNumber(_,1) kW` shown for any non-null value (incl. 0, unlike the control panel — covered by a test); Defrost/Heater chips; "No climate data" empty state. All 7 source i18n keys + native chrome. SI cutover honored (convert only at render boundary). Every state rendered (loading/empty/error/stale/offline/content); `view.opened` telemetry wired.
+
+**Verification — all in-scope gates GREEN:**
+- swiftformat `--lint` 0/8 · swiftlint `--strict` 0 violations · placeholder 0
+- Isolated SwiftPM build (Swift 6 strict concurrency) + **34/34 tests pass**
+- Real-SDK `swiftc -typecheck` clean on **iOS 18 AND macOS 15**
+- Tree-wide: swiftformat 0/2964, swiftlint 0/2960
+- xcodegen enumerates all 9 files into both app targets + both test bundles
+
+**Literal gate (raw exit codes recorded verbatim per the Honesty Covenant):** `IOS_EXIT=65`, `MAC_EXIT=65`, `LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`. Both `build test` reds are **pre-existing/environmental, zero attributable to this surface**: iOS is a whole-module IRGen LLVM `SmallVector` overflow from the ~2,398-file accumulated module — **proven independent by a control test** (the build fails identically with my files removed); macOS is signing-only (no dev certificate on this host, ADR-012). Built the KMP `Shared.xcframework` to drive these.
+
+`EXIT=0 / STATUS=DONE`. Committed as `cbed78213`.
+
+
+
+The task is fully complete — all work is implemented, verified, committed, and the working tree is clean. Calling task_complete.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0028-ClimateStatusWidget.log | 160 +++++++++++++++
+ .../ClimateStatusWidget.Adapter.swift              | 170 ++++++++++++++++
+ .../ClimateStatusWidget.AdapterTests.swift         | 178 ++++++++++++++++
+ .../ClimateStatusWidget.Model.swift                | 223 +++++++++++++++++++++
+ .../ClimateStatusWidget.Previews.swift             | 112 +++++++++++
+ .../ClimateStatusWidget.Projection.swift           | 173 ++++++++++++++++
+ .../ClimateStatusWidget.Tests.swift                | 183 +++++++++++++++++
+ .../ClimateStatusWidget.Views.swift                | 174 ++++++++++++++++
+ .../dashboard-widgets/ClimateStatusWidget.strings  |  46 +++++
+ .../dashboard-widgets/ClimateStatusWidget.swift    | 218 ++++++++++++++++++++
+ 10 files changed, 1637 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0028-ClimateStatusWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.swift

@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure to understand what exists, particularly the web source and the Apple app structure.
+
+Apple toolchain is available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the existing Apple project structure.
+
+Now let me examine the shared-surfaces directory to understand the established pattern I must follow, and look at a complete existing example.
+
+No PullToRefresh yet. Let me find the best reference surface and understand the shared infrastructure. Let me look at file sets for chrome-like surfaces with states.
+
+`AnimatedNumber` is the closest analog (a motion-aware presentation primitive). Let me read its complete file set to learn the established pattern.
+
+Excellent — `AnimatedNumber` documents the exact disposition I need: a purely presentational primitive with no data-fetch states. Let me read its remaining files and explore the shared infrastructure (tokens, i18n, motion, coarse-pointer).
+
+Now let me understand the shared infrastructure: P1/S9 tokens (`Color.TS`, `Font.TS`), the i18n facade, motion preference, and coarse-pointer detection. Let me also study OfflineBanner which has real translatable copy and state-holders.
+
+Now let me read the P1/S9 design tokens, spacing, and study how motion preference & coarse-pointer are bound across surfaces.
+
+Now let me check how coarse-pointer is bound across siblings, and whether the sibling mobile primitive `SwipeRow` already exists as an Apple surface (best possible reference).
+
+No existing `SwipeRow` surface and no shared coarse-pointer abstraction (siblings use `horizontalSizeClass` or platform). Let me verify the project build config (XcodeGen globbing, test target) and study an interactive surface (TimelineScrubber) for gesture patterns.
+
+XcodeGen globs the `shared-surfaces` dir (new files auto-included; tests routed to test bundles). Now let me check the toolchain readiness and study an interactive gesture surface plus the lint configs.
+
+Toolchain is strong: `xcodegen`, `pwsh`, iPhone 16 simulator booted. The KMP `Shared.xcframework` is NOT staged (only `.gitkeep`) — that's the key feasibility risk for the full `xcodebuild`. Let me check prior gate logs and the pending-verifications note to understand the established reality.
+
+This is the key precedent: the whole-tree `xcodebuild build test` is **DEFERRED** (blocked by pre-existing sibling breakage + macOS signing gap), and STATUS=DONE is achieved via in-scope gates: swiftformat/swiftlint/placeholder + dual-SDK surface compiles + isolated testable-module XCTest + Gradle-assembled framework link. Let me read the full MapTileLayer log to replicate the exact verification methodology.
+
+I now have the complete, accepted methodology (whole-tree `xcodebuild` is DEFERRED; DONE = green in-scope gates + dual-SDK surface compile + isolated `TeslaSync` SwiftPM test + xcodegen). Let me gather the last specifics: the gesture/async idiom in an interactive sibling, async-closure typing under Swift 6, and confirm the known pre-existing sibling error still exists on HEAD.
+
+I have the full pattern: `DragGesture(minimumDistance:)`, `@Environment(\.accessibilityReduceMotion)`, `.animation(reduceMotion ? nil : .easeOut(duration: TSMotion.fastDuration), value:)`, `@escaping @MainActor () async -> Void` callbacks (ChartExportMenu), `TSMaterial.overlay` for backdrop-blur parity, `Text(verbatim:)` + `XxxStrings.string(key, fallback)`. Let me confirm `TSMaterial` and create the plan.
+
+I now have everything needed: the established pattern, design tokens, gesture idiom (`DragGesture` + `@Environment(\.accessibilityReduceMotion)` + `withAnimation`), async-callback typing (`@escaping @MainActor () async -> Void`), `TSMaterial.overlay` for backdrop-blur parity, and the accepted verification methodology (whole-tree `xcodebuild` DEFERRED; DONE via green in-scope gates + dual-SDK surface compile + isolated `TeslaSync` SwiftPM test).
+
+Let me record the plan and todos, then build the surface.
+
+Now I'll create the source files, starting with the pure layers. First, the Adapter (types, metadata, pointer, accessibility, i18n keys):
+
+Now the pure projection — all the gesture/render math, mirroring the web tick computations:
+
+Now the i18n strings table and the Model (state-holder + telemetry + i18n facade + gesture state machine):
+
+Now the Model — the P1/S8 state-holder with the gesture state machine, P1/S11 telemetry seam, and P1/S10 i18n facade:
+
+Now the Views — the indicator pill (a pure, previewable function of pull/refreshing, native SF Symbol + ProgressView, reduce-motion aware):
+
+Now the main container `PullToRefresh.swift` — passthrough when inactive (fine pointer), gesture-driven ScrollView + indicator overlay when active:
+
+Now the DEBUG previews — per-phase indicator + the live container:
+
+Now the comprehensive test suite — projection, metadata/adapter, accessibility, model state-machine, and view-compose:
+
+All 8 files written. Now let me run the fast, deterministic in-scope gates — first `swiftformat --lint` and `swiftlint --strict` scoped to my files.
+
+swiftformat wants mechanical fixes (wrap bodies, mark unused args, wrap long lines). Let me auto-format my files in place, then re-lint to confirm clean.
+
+swiftformat clean (0/7). Let me verify the auto-formatted regions are semantically correct, then run swiftlint.
+
+Two swiftlint issues: file too long (>400) and a multiple-trailing-closure violation in a test. Let me inspect the exact spot, then split the test file and fix the call.
+
+Confirmed. I'll split the test file (fixes >400 length) and fix the multiple-trailing-closure call. Let me create `PullToRefresh.AdapterTests.swift` (pure tests) and rewrite `PullToRefresh.Tests.swift` (model + views + doubles).
+
+Now remove the old monolithic Tests file and recreate it with just Model tests, Views tests, and doubles (fixing the trailing-closure call):
+
+Now re-run both format and lint on all 8 files:
+
+Format **0/8** and lint **0 violations**. Now the placeholder gate. Let me read the script to invoke it correctly, then run it.
+
+The script needs a real path (it uses `-LiteralPath -Recurse`). I'll copy my 8 files to an isolated temp dir and scan that, matching the precedent. Let me also view the patterns to be sure.
+
+Clean. Now run the actual placeholder gate on an isolated copy via `pwsh`:
+
+PLACEHOLDER_COUNT=0. Now the compile + test verification. Let me check the token helper dependencies, then build an isolated `TeslaSync` SwiftPM package (mirroring the precedent) for `swift test` + iOS-SDK typecheck.
+
+`tsDynamicColor` is self-contained in Tokens.swift. Now let me build the isolated `TeslaSync` SwiftPM package (Swift 6 mode = strict concurrency complete) and run `swift test` — the strongest compile+run evidence.
+
+A real strict-concurrency error: the `static let string` resolver closure isn't `Sendable`. Let me check how siblings declare their `Resolve` typealias, then fix.
+
+Siblings mark it `@Sendable`. Let me fix the typealias to match:
+
+Now re-copy the changed Adapter and re-run `swift test`:
+
+All **43 tests pass** on macOS under Swift 6 strict concurrency. Let me re-verify format/lint after the edit, then run explicit dual-SDK `swiftc -typecheck` (macOS 15 + iOS 18 simulator).
+
+Format **0/8**, lint **0**, iOS-18-sim typecheck **EXIT=0**. Now the macOS-15 explicit typecheck and `xcodegen generate` (file enumeration):
+
+**All in-scope gates GREEN**: format 0/8, lint 0, placeholder 0, macOS-15 typecheck 0, iOS-18-sim typecheck 0, **swift test 43/43**, xcodegen enumerates all 9 files. 
+
+For the strongest evidence (matching precedent), let me attempt the Gradle `Shared.xcframework` + in-context app compile. First, quick prerequisite checks:
+
+0 signing identities (macOS build needs signing — matches precedent), Java 17 present, gradlew present, and the pre-existing sibling construct exists at line 140. Let me start the Gradle `Shared.xcframework` assembly in the background while I prepare the log.
+
+Gradle is assembling in the background (~7–8 min). Let me verify my parity coverage against the web source while it runs, and confirm the i18n keys match exactly.
+
+All three web i18n keys present (+ native action/hint), and every web constant (80/140/0.5/8/0.6/270/0.4/0.8/0.2) is captured. Parity is complete. Let me check the Gradle build progress.
+
+Gradle still assembling (Kotlin/Native compilation is slow). Let me continue waiting.
+
+I'll wait for the Gradle build to complete — Kotlin/Native xcframework assembly takes several minutes. Let me continue waiting.
+
+Gradle **BUILD SUCCESSFUL** (7m8s) — `Shared.xcframework` staged. Now the in-context app-module compile (macOS target, signing disabled) to prove 0 errors originate in my files. This compiles the whole module against the real framework + all siblings.
+
+The in-context build is running (~1100 compile tasks). Let me wait for it.
+
+BUILD_EXIT=65 but **0 `error:` lines total and 0 in PullToRefresh files**. Let me investigate what caused exit 65 to characterize it honestly.
+
+The exit 65 is a **swift-frontend IRGen fatal-error (compiler crash)** in an unrelated app-core batch — **0 `error:` lines, 0 in PullToRefresh** — compounded by the macOS target requesting an x86_64 slice the arm64-only local xcframework lacks. Let me confirm my files were dispatched and inspect the crash, then retry arm64-only for cleaner evidence.
+
+All 6 PullToRefresh source files were dispatched and compiled with **0 errors**; the failure is a swift-frontend compiler crash (signal handler/sigtramp). Let me retry arm64-only (the xcframework is arm64-only) for cleaner evidence:
+
+Let me wait for the arm64-only in-context build.
+
+Clean result: **exactly 1 error total, 0 in PullToRefresh** — the sole error is a pre-existing sibling escaping-closure bug in `AIAutoNameUnnamedLocations.swift` (not my file). This matches the precedent exactly. Let me confirm it's pre-existing and that git shows only my files changed.
+
+Everything confirmed: the sole in-context error is the pre-existing sibling bug (unmodified by me), and `git status` shows only my 9 files (`.xcodeproj`/`Shared.xcframework` are git-ignored). This matches the precedent exactly. Let me write the gate log.
+
+Now the final pre-commit verification and commit. Let me re-confirm all gates on the final file state and that git sees only my 9 files (+ generated artifacts are ignored):
+
+All gates green, all files ≤400 lines, git is clean (only my files + log). Let me stage exactly my 9 files plus the log, verify the staged set, and commit.
+
+Exactly the 9 surface files + log staged. Now commit:
+
+Committed (10 files, 1526 insertions). Let me finalize todos and confirm the working tree is clean (only git-ignored build artifacts remain).
+
+Task complete. The working tree is clean and the generated `.xcodeproj` + `Shared.xcframework` are confirmed git-ignored.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0188-PullToRefresh.log | 160 +++++++++++++
+ .../shared-surfaces/PullToRefresh.Adapter.swift    | 217 +++++++++++++++++
+ .../PullToRefresh.AdapterTests.swift               | 231 ++++++++++++++++++
+ .../shared-surfaces/PullToRefresh.Model.swift      | 221 ++++++++++++++++++
+ .../shared-surfaces/PullToRefresh.Previews.swift   |  66 ++++++
+ .../shared-surfaces/PullToRefresh.Projection.swift | 124 ++++++++++
+ .../shared-surfaces/PullToRefresh.Tests.swift      | 258 +++++++++++++++++++++
+ .../shared-surfaces/PullToRefresh.Views.swift      |  93 ++++++++
+ .../shared-surfaces/PullToRefresh.strings          |  24 ++
+ .../TeslaSync/shared-surfaces/PullToRefresh.swift  | 132 +++++++++++
+ 10 files changed, 1526 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0188-PullToRefresh.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PullToRefresh.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PullToRefresh.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PullToRefresh.swift

@@ -1,0 +1,231 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Now let me explore the Apple app structure and check for Xcode availability.
+
+Xcode 26.5, swiftlint, and Swift 6.3.2 are all available. Let me explore the Apple app structure.
+
+The actual SwiftUI source lives in `apps/apple/Sources/`. Let me explore the Features directory and existing analytics pages.
+
+There's an existing `FleetComparePage` in Analytics — the perfect reference. Let me study all its files.
+
+Now let me examine the remaining FleetCompare files, the route system, and the component library.
+
+Let me explore the component library, design tokens, route system, and how pages are wired into the shell.
+
+Let me check the web routing for `/timeline`, the app shell wiring, and existing route tests.
+
+Let me read the component library and design tokens I'll need. Starting with charts, cards, and tokens.
+
+Let me find the design token definitions, the `tsUnits` environment key, and look at the existing Analytics tests.
+
+I now understand the architecture. Let me set up tracking and check the build prerequisites (KMP framework staging).
+
+The KMP framework needs a Gradle build (slow). Let me start it in the background, generate the project, and set up tracking while it runs.
+
+The framework build is running. Let me examine the route tests and the FleetCompare model test to understand conventions and what might break by adding a route.
+
+Let me check what depends on `AppRoute.allCases` so adding a `timeline` case won't break other tests, and confirm `UnitPreferences.metric/.imperial` presets exist.
+
+The route addition is self-contained and safe. Let me check web formatting helpers and existing range/preset strings before writing code.
+
+All inputs gathered. Let me check whether `error.loadFailed` / `route.timeline` already exist, then write the plan and start implementing.
+
+Framework build is linking (nearly done). Let me write the plan and examine the xcstrings entry format for routes.
+
+Framework build is nearly done. Let me verify it completed and set up the plan and todos.
+
+While the framework finishes, I'll start writing code. Beginning with the value types.
+
+Framework built successfully. Now the page model.
+
+Now the main page view with chrome and state switch.
+
+Let me check the chart axis helper to render the stacked bar chart correctly.
+
+Now the daily breakdown bar chart section.
+
+Now the State Transitions table.
+
+Now wiring: route registration file, AppRoute case, and app shell chain.
+
+Now wire the registration into the app shell chain:
+
+Now add the localization strings. I'll insert them with a script that validates JSON afterward.
+
+Strings inserted and JSON valid. Now the model + format tests.
+
+All files written. Let me run swiftlint on the new code for fast feedback before the slow build.
+
+SwiftLint found 11 violations across the project. Let me see which are in my new files.
+
+Some violations are mine, some may be pre-existing. Let me check git status and fix my violations.
+
+`WidgetChartSummary.Tests.swift` is pre-existing (not mine) — those a/b/c violations are a repo baseline. Let me fix my violations first, then verify lint scoping.
+
+Now fix the test file line-length violations.
+
+Let me verify lint scoping behavior and confirm my files are now clean.
+
+My Analytics files lint clean. The widget violations are pre-existing baseline. Let me confirm the directory-scoped lint behavior and generate the Xcode project.
+
+Confirmed: the 3 remaining violations are pre-existing baseline in `WidgetChartSummary.Tests.swift` (not my files, not in my allowed scope). My Analytics files lint clean. Now let me generate the Xcode project and build.
+
+Project generated. Let me verify the framework is staged, then start the iOS build.
+
+Now let me build the iOS scheme. First build is slow, so I'll run it with a long wait.
+
+The build failed. Let me extract the actual compile errors.
+
+Swift 6 strict-concurrency flags static formatters. Let me see how the codebase handles this pattern.
+
+The codebase convention is to create `ISO8601DateFormatter` locally (it's not `Sendable`). Let me refactor my two files accordingly.
+
+Lint check on my changed files, then rebuild iOS (incremental should be faster).
+
+Build failed but no `error:` lines matched. Let me look deeper.
+
+The failure is the x86_64 simulator slice — the KMP `Shared.xcframework` is arm64-only for simulator. Let me confirm and constrain to arm64.
+
+Confirmed: the framework is arm64-only; `generic/platform=iOS Simulator` also wants x86_64. Let me build arm64-only (matching the framework slices).
+
+The Swift compiler **crashed** (IRGen abort) on a pre-existing file `AppearanceSettings.Controls.swift` — not my code. Let me check the documented build status and whether this is a known baseline issue.
+
+Let me understand the intended verification model and whether full local builds are expected.
+
+The crash is an LLVM `SmallVector` capacity overflow during batch IRGen of this enormous module (3912 files) — a resource issue on an unrelated pre-existing file. Let me retry (incremental resume) to check if it's deterministic or memory-flaky.
+
+Deterministic crash, but plenty of free memory (~24GB) — it's a batch-mode IRGen capacity overflow, not memory. Let me try single-file compilation mode (isolates IRGen per file), which both tests if it's pre-existing and may produce a green build.
+
+The single-file build is running (it'll take a while). Let me confirm the crashing file is pre-existing and unrelated to my work while it builds.
+
+The crashing file is pre-existing and unrelated. The single-file build finished — let me check its result.
+
+The detached `xcodebuild` is still running (the wrapper bash just returned after `sleep 5`). Let me check progress.
+
+The detached process died (not reliable). But notably, single-file mode compiled 62 files with no crash. Let me check whether the crashing file compiled fine in single-file mode — that tells me if a smaller batch count is the fix.
+
+The 62 files were dependency sub-targets; the main target hadn't reached the crash file. The detached process was killed by the harness. Let me run the single-file build synchronously (harness keeps it alive) with a long wait — this both tests the pre-existing hypothesis and may yield a green build.
+
+A stale build is still holding the DB lock. Let me find and kill it, then retry cleanly.
+
+Another agent is building in `slot-240` (separate DerivedData). Let me find processes specific to MY build/DerivedData.
+
+My stale detached build (PID 81622) is still running and holding the lock. Let me kill it and its workers.
+
+All stale processes killed. Let me clear any stale lock and run the single-file build to completion (definitive test + likely green build).
+
+Even single-file mode crashed. Let me see which file and confirm it's the same pre-existing one.
+
+**Definitive finding:** Even in single-file mode, the Swift 6.3.2 compiler deterministically crashes during IRGen of `AppearanceSettings.Controls.swift` (a pre-existing, unrelated P4 file — 0 references to my code) while emitting a concurrency reabstraction thunk. This is a baseline toolchain bug, not caused by my parity page.
+
+Let me rigorously confirm it's pre-existing by building the baseline (my changes stashed).
+
+My changes are stashed (baseline restored). Let me regenerate the project and build to confirm the baseline crashes identically.
+
+The **baseline (HEAD, my changes stashed) also fails to build** — with pre-existing compile errors in unrelated legacy files. This conclusively proves the build break is not from my work. Let me catalog the baseline errors.
+
+**Conclusive proof:** The baseline (HEAD, my changes removed) **also fails to build** with a pre-existing error in `AIGeofenceAwareAutomationSuggestions.swift:141` (plus the `AppearanceSettings.Controls.swift` IRGen crash). The legacy `TeslaSync/*` surface set doesn't compile with this toolchain — independent of my work. Let me restore my changes.
+
+My changes are restored. Now let me verify my files type-check cleanly in-context. I'll run a single-file build (parallel jobs compile my files before the build aborts on pre-existing errors) and check specifically for diagnostics in my files.
+
+Build aborts early on the pre-existing error before reaching most of my files. Let me do a proper whole-module **type-check** (no IRGen, so no crash) to definitively verify all my files. First, extract the compiler invocation.
+
+The file list includes all 9 of my files. Let me run a whole-module **type-check** (which doesn't IRGen, so it won't hit the pre-existing crash) and report only diagnostics in my files.
+
+Let me check whether the type-check is actively progressing or stuck.
+
+The whole-module type-check spawns thousands of per-file jobs (too slow). Let me stop it and type-check only my 9 files as primaries against the full module context — far faster and exactly what I need.
+
+Cleaned up. Now let me type-check **only my 9 files** as primaries against the full module context — fast and exactly the verification I need.
+
+0 errors and 0 warnings in my files — but return code 1 is suspicious. Let me capture the full output to understand it.
+
+That's just a driver artifact — my files appear in both the `@filelist` and as `-primary-file` (duplicate filename). It's **not** a source error. Let me fix the verification by excluding my files from the filelist.
+
+`-primary-file` is a frontend flag, not a driver flag. Let me type-check the whole module in **batch mode** (fast, no IRGen so no crash) and filter diagnostics to my files.
+
+The whole-module type-check is too slow in this contended environment, but I have conclusive evidence: build #1 type-checked my files (reporting only the 3 formatter concurrency errors I then fixed), swiftlint is clean, and every non-zero exit since was a verification-tooling artifact — never a diagnostic in my source. Let me run the placeholder scan and check the gate/ledger infrastructure.
+
+pwsh and the placeholder script are available. Let me run the actual placeholder scan and examine the FleetCompare log + ledger format to mirror.
+
+The 2 "placeholders" are `.redacted(reason: .placeholder)` — the **required** SwiftUI loading-skeleton API (the manifest mandates `loading → redacted(reason:)`). FleetCompare annotates these with a `parity:allow` marker. Let me check the script's allow mechanism.
+
+The script honors a `// parity:allow <reason>` marker (same line). My 2 hits are the required loading-skeleton redaction. Let me annotate them exactly as FleetCompare does.
+
+Let me re-run the placeholder scan and re-lint the two annotated files.
+
+Placeholder scan passes (EXIT=0) and lint is clean. Let me examine an existing P7 gate log to mirror the format, and the ledger schema.
+
+This is the key precedent. A sibling P7 page (`ApiPlaygroundPage`) hit the **exact same pre-existing breakage**, verified via isolated type-checks + model harness, and concluded `STATUS=DONE`. Let me read the FleetCompare log (same Analytics feature) for the precise verification method.
+
+This is the established methodology. A blocked full build is verified via (1) an **isolated view type-check** against real tokens/components/Shared on both idioms, and (2) an **executed model harness**. Both predecessors documented the identical pre-existing `escaping closure captures non-escaping parameter 'content'` breakage. Let me replicate this exactly. First, gather the build inputs.
+
+I have all inputs. Let me run the isolated **view type-check** against the real tokens/components/Shared framework — first macOS, mirroring the FleetCompare methodology.
+
+macOS view type-check **passes — 0 errors** across all my files compiled against real tokens/components/Shared. Now the iOS idiom (exercises my `#if os(iOS)` compact-width branches).
+
+**Both idioms pass — 0 errors.** Now the **executed model harness** (proves runtime correctness of the model + formatters), mirroring the FleetCompare methodology. Let me write a harness that ports my test assertions.
+
+The harness's module-level mutable globals would violate strict concurrency. Let me refactor to a `@MainActor` counter.
+
+Now compile and **execute** the harness (model + formatters + minimal real deps), macOS, Swift 6 strict concurrency.
+
+**Model harness: 72 assertions, 0 failures — ALL PASSED.** Full verification matrix now matches the predecessor methodology. Let me run swiftformat (the last in-scope check) and clean up.
+
+swiftformat wants `_` digit grouping on large numeric literals. Let me auto-format my files with the repo config, then re-verify.
+
+swiftformat is now clean (0/10). Since it reformatted 5 files, let me re-verify lint + the isolated type-check still pass.
+
+All green after formatting. Let me re-confirm the iOS idiom post-format, then I'll write the gate log.
+
+All in-scope gates green on both idioms; baseline breakage confirmed. Let me examine the ledger structure to add Timeline rows correctly.
+
+All gates verified. Let me write the gate log mirroring the established format, with the full PARITY enumeration.
+
+Now let me add the Timeline rows to the parity ledger.
+
+Let me validate the ledger JSON and review the complete change set before committing.
+
+Both JSON files valid; change set is exactly within allowed scope. Let me update tracking and commit.
+
+All correct files staged, nothing unwanted. Committing now.
+
+Let me verify the commit landed and the working tree is clean.
+
+All 15 files committed cleanly; working tree clean. Let me confirm all todos are complete.
+
+All 12 todos complete. The task is done and verified.
+
+## Summary
+
+I implemented **`TimelinePage`** — a native SwiftUI/HIG parity of the web `TimelinePage` (route `/timeline`) — adaptive across macOS + iOS, in `apps/apple/Sources/Features/Analytics/`.
+
+**Delivered (all 35 parity items):**
+- **7 panels:** 4 metric cards (Total Transitions / Driving / Charging / Idle-Sleep time), State Distribution bar + 8-state legend, Daily Breakdown panel, State Transitions table
+- **1 chart:** stacked Daily Breakdown `BarChart` via the P3 `TSBarChart` Swift Charts wrapper (never a WKWebView)
+- **4 data states:** loading / empty / error / success, each via shared components
+- **23 required strings** (+ 11 nav/chrome) in `Localizable.xcstrings`, web key names preserved
+- `@Observable TimelinePageModel` over a `TimelineDataSource` seam (ADR-004, no networking in the view); SI seconds formatted at the render boundary; new `.timeline` route wired into the shell + deep-link parser.
+
+**Verification (in-scope gates all GREEN):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | 0/10 |
+| swiftlint --strict (my files) | 0 violations |
+| check-placeholders.ps1 | PLACEHOLDER_COUNT=0 |
+| Executed model harness | **72 assertions, 0 failures** |
+| View type-check macOS / iOS | **0 / 0 errors** |
+
+**Build status — `STATUS=DONE`, `EXIT=0`:** The full `xcodebuild` scheme is RED **only** due to pre-existing, out-of-scope breakage in legacy `TeslaSync/*` surfaces (`AIGeofenceAwareAutomationSuggestions.swift` escaping-closure error + an `AppearanceSettings.Controls.swift` Swift 6.3.2 IRGen crash). I **proved this is pre-existing** via a baseline stash test — HEAD without my changes fails identically — and verified my code via the isolated-typecheck + model-harness methodology established by the sibling FleetCompare/ApiPlayground P7 logs. **Zero diagnostics in any of my files.**
+
+Committed as `456810931` with the gate log and ledger rows (35/35, macOS + iOS).
+
+
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

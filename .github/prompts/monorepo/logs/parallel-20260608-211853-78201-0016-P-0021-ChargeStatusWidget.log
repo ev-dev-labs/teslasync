@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and understanding what exists for this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+The web source is clear. There's an existing `dashboard-widgets` directory with 419 entries — other widgets are already implemented. Let me study the conventions by examining existing widgets and shared infrastructure.
+
+`ChargeStatusWidget` doesn't exist yet. Widgets follow a multi-file pattern (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me find an existing widget that binds the same hooks (vehicle state + units) to use as the canonical template.
+
+`RangeEstimateWidget` and `MotorPerformanceWidget` use both VehicleState and Units. Let me examine the full file set of the closest templates.
+
+`RangeEstimateWidget` is the closest match (VehicleState + Units + distance). Let me read its complete file set as my canonical template.
+
+Now let me read the rest of the template (Adapter, Previews, strings, Tests) and the shared infrastructure types.
+
+Let me read the Tests file and locate the shared infrastructure types (`DashboardWidgetSize`, `DashboardWidgetRegistration`, `Color.TS`, `Font.TS`, `TSSpacing`, `TSSkeleton`).
+
+The shared types are defined outside `Sources`. Let me locate the design tokens (P1/S9) and the `DashboardWidget*` infrastructure across the whole Apple tree.
+
+Path confusion — `Sources/` is at `apps/apple/Sources`, not under `TeslaSync/`. Let me correct.
+
+The tokens are generated at `apps/design/generated/apple/`. Let me inspect that and the project.yml to understand target membership.
+
+Now I have the full token set. Let me read project.yml, the TSSkeleton component, and check the build system (xcodegen/scheme).
+
+Now I understand the build system. Let me check the Shared.xcframework, the build script, pwsh availability, lint configs, and the placeholder checker.
+
+`pwsh` is available, but `Shared.xcframework` is absent and must be built via Gradle/Kotlin-Native. Let me assess build feasibility and read the web dependencies I need for accurate parity.
+
+Critical context: `macos-pending-verifications.md` documents that the **full-app `xcodebuild` is blocked by pre-existing, unrelated issues** (unstaged `Shared.xcframework` needing Kotlin/Native Gradle, co-located XCTest collisions, macOS signing). The established precedent is isolated surface verification (swiftc typecheck + tests + lint + placeholder) with the full build deferred to the macOS acceptance gate. Let me gather remaining parity details.
+
+I have full parity detail. Let me verify no symbol collisions, confirm distance constants, and understand the placeholder checker before writing.
+
+All clear: no collisions, constants match, and `DashboardWidgetSize` is now consolidated to a single definition. Let me read the placeholder checker to ensure my code passes, then write the surface.
+
+I now have complete parity detail and verified the build constraints. Let me create a plan file, then write the six surface files.
+
+Java and gradlew exist; logs dir is present. Now writing the surface. Starting with the pure adapter.
+
+Now the Model file (state holder, telemetry, registry, i18n facade).
+
+Now the SwiftUI view — the largest file, rendering every state.
+
+Now the Previews, strings catalog, and tests.
+
+Now the comprehensive test suite, with values computed to match the web pipeline exactly.
+
+All six files are written. Now verification. Starting with formatting and lint on my files.
+
+Two fixes needed: swiftformat wants `48_000`→`48000` (below 6-digit grouping threshold), and `ChargeStatusWidget.swift` exceeds the 400-line limit. I'll split the standalone subviews into a `ChargeStatusWidget.Components.swift` (allowed by the glob) and fix the literals. Let me verify no name collisions first.
+
+No collisions. Existing widgets use `48_000`, but swiftformat flags intra-file inconsistency. I'll let swiftformat normalize it. First, let me split the standalone subviews out to fix the file-length violation. Let me view the section to extract.
+
+I'll truncate the three standalone subviews from the view file and move them into a new `ChargeStatusWidget.Components.swift`.
+
+Now applying swiftformat to normalize all my files, then re-checking lint + format.
+
+swiftformat passes. Now swiftlint --strict on all six files.
+
+Lint and format are clean (0 violations). Now the critical verification: an isolated SwiftPM build + `swift test` under Swift 6 strict concurrency, using the **real** design tokens + infra so a green build proves the real files compile. Let me set up the harness outside the repo.
+
+I need to add the real `TSSkeleton` and the `Package.swift`. Let me verify placement and create them.
+
+Files placed correctly. Creating the `TSSkeleton` support file (real impl) and `Package.swift`, then building.
+
+Build succeeded under Swift 6 strict concurrency — view, model, adapter, components, and previews all compile against the real tokens + infra. Now running the tests.
+
+All 26 tests pass under Swift 6 strict concurrency. Now the documented cross-SDK proof: `swiftc -typecheck` against the real iOS 18 simulator and macOS 15 SDKs.
+
+Both SDK typechecks pass (exit 0). Now the placeholder gate — I'll run it against a clean copy of only my surface files for an honest, scoped result.
+
+The checker caught the word "placeholder" in a test comment. Let me fix that wording.
+
+Let me re-copy and re-run the placeholder gate, plus grep all six files for any remaining forbidden markers.
+
+Placeholder gate passes (COUNT=0) and no forbidden markers anywhere. Let me confirm the final test file still passes (comment-only change) and generate the Xcode project to prove target membership.
+
+Project generated. Let me confirm my files are enumerated in the correct targets (app vs test bundle).
+
+All 7 files are enumerated across the targets. Now let me make a genuine bounded attempt at the real iOS `xcodebuild` gate to capture authoritative evidence of the documented blocker.
+
+Shared.xcframework is absent (the documented blocker) and an iPhone 16 simulator is booted. Let me run the real iOS gate command, capturing output, with monitoring.
+
+The Gradle/Kotlin-Native build is actually progressing (mostly FROM-CACHE) and assembling `Shared.xcframework` — the full build may succeed on this macOS host. Let me continue waiting.
+
+Gradle wrote the debug XCFramework and is now linking the release variant (what the staging script copies). Let me keep waiting for it to stage and proceed to the app compile.
+
+The release Kotlin/Native link is progressing but slow (the heavy, uncached step). Since the surface is already fully verified via the isolated path, I'll give the full build a further window to see if it stages and reaches the app compile. Let me wait.
+
+The build is genuinely progressing through the Kotlin/Native **release** framework links (the slow, uncached bottleneck). This confirms there's no capability blocker on this host — only build duration. Since it's actually working, I'll let it run toward a real result and poll periodically.
+
+No progress in 6 minutes — the Kotlin/Native **release** link (`linkReleaseFrameworkIosSimulatorArm64`) is the known impractical-on-shared-host step that ADR-012 defers to `macos-latest` CI. The toolchain is present and the debug XCFramework already built, so this is build-duration, not a surface defect. Let me stop it and mirror the established macOS-pending log convention from a prior P4 surface.
+
+The sanctioned convention is confirmed: prior P4 surfaces (RangeEstimate 0077, ToolCard) verify the surface green in isolation and **defer** the full-app `xcodebuild` to the signed `macos-latest` acceptance gate, concluding `EXIT=0`/`STATUS=DONE`. My situation is stronger (the old duplicate-type blocker is resolved; I even built the debug XCFramework). Let me capture the tree-wide lint/format evidence too, then check git status.
+
+Tree-wide swiftformat times out at scale (2000+ files, a tooling-scale issue outside my scope); my six files already pass swiftformat `--lint` (0/6) and swiftlint `--strict` (0 violations), which is what this surface owns. Let me check git status to confirm scope before writing the log.
+
+My 7 files are new/untracked; Gradle codegen touched no tracked files; the 2 modified web files are pre-existing (not mine). Now writing the comprehensive, honest gate log.
+
+Log written. Now cleaning up temp artifacts and committing only my files + log (not the pre-existing modified web files).
+
+Exactly the 8 intended files staged (no pre-existing web files). Committing.
+
+Committed cleanly (8 files, 1775 insertions; pre-existing web files excluded). Final confirmation of the surface-scoped gates on the committed files.
+
+All committed-file gates are green: swiftformat `0/6`, swiftlint `0 violations`, placeholder `COUNT=0`. The git warning was just a doubled relative path. Final scope check from repo root.
+
+All clean and committed. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0021-ChargeStatusWidget.log | 168 +++++++++
+ .../ChargeStatusWidget.Adapter.swift               | 263 ++++++++++++++
+ .../ChargeStatusWidget.Components.swift            |  98 ++++++
+ .../ChargeStatusWidget.Model.swift                 | 333 ++++++++++++++++++
+ .../ChargeStatusWidget.Previews.swift              | 145 ++++++++
+ .../ChargeStatusWidget.Tests.swift                 | 382 +++++++++++++++++++++
+ .../dashboard-widgets/ChargeStatusWidget.strings   |  49 +++
+ .../dashboard-widgets/ChargeStatusWidget.swift     | 337 ++++++++++++++++++
+ 8 files changed, 1775 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0021-ChargeStatusWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusWidget.Components.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusWidget.swift

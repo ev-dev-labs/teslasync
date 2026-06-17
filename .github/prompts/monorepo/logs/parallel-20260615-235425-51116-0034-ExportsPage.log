@@ -1,0 +1,323 @@
+I'll start by exploring the repository structure to understand the task scope, then examine the web source and existing Apple app architecture.
+
+Now let me explore the Apple app structure, the API hooks, and look at existing Apple pages for reference patterns.
+
+Let me look at the Apple Features structure and find a similar reference page (list + bulk delete pattern).
+
+The actual structure differs from the prompt's stated path. Let me examine the real layout, the README gate contract, and find existing page implementations.
+
+The real structure uses `apps/apple/Sources/Features/`, not `TeslaSync/Features/`. Let me examine the existing Features layout and a similar reference page (the web has a related `system/data-export` with bulk delete patterns).
+
+Let me study the model pattern, routing system, and look for an existing bulk-selection/table pattern to follow.
+
+Now let me study the routing system, a bulk-selection reference page (DLQInspector), and the available shared components.
+
+Let me examine the route parser, how registrations compose into the shell, the web route grouping, and a bulk-selection reference.
+
+Let me find where all route registrations are composed together (the central registry assembly).
+
+Let me view the registry composition block and the web nav grouping for exports.
+
+The web uses a multi-select table with bulk delete. Let me check existing strings in the catalog, the shared component library, and whether `bulk.*`/`common.delete` keys already exist.
+
+There's a `TSBulkActionsToolbar`, `TSDataTable`, `TSColumn`, `TSCheckbox`, `TSBadge`. Let me examine these key components.
+
+Let me read the table, checkbox, badge, states, cards, button, and typography components.
+
+The `TSDataTable` hardcodes generic a11y strings, so for exact parity I'll build a feature-local adaptive table using shared primitives — matching how DLQ builds its own `.Entries` table. Let me read the remaining components, tokens, and the DLQ entries table pattern.
+
+Let me read the cards, button, typography, design tokens, and the DLQ entries table pattern.
+
+Let me locate the design tokens and read the DLQ entries-table pattern plus a list-with-actions model.
+
+Let me read the DLQ entries table pattern, the placeholder scanner, the model test pattern, and check PowerShell availability.
+
+Let me check the Shared.xcframework presence, the build script, placeholder patterns, and the model-test pattern.
+
+Shared.xcframework isn't staged (KMP/Gradle needed). I'll build the complete implementation first, then verify. Let me read the test pattern, a list-model pattern, and how the shell renders nav.
+
+Let me review the web bulk-selection behavior and confirm the shell renders registered routes, plus check the AuditLog Sample/State load pattern tail.
+
+I have the full picture of the web behavior. Now let me inspect the xcstrings JSON structure (to add keys correctly) and confirm the AppShell renders registered routes from `AppRoute`.
+
+Let me confirm `String(localized:)` usage patterns for dynamic a11y labels and how the shell renders routes.
+
+The format-string a11y pattern is well-established. Let me read a registration template and the shell's detail/pending section, then start building.
+
+Let me check the SwiftLint config and existing native confirm-dialog conventions before writing.
+
+Let me set up the plan/todos and verify a few remaining component signatures (skeleton, alert banner, confirm dialog with dynamic message).
+
+The `ChargingListPage` is the ideal template — a multi-select list with bulk delete + confirmation. Let me read its model and list/table files in full.
+
+Let me read the ChargingListPageModel selection/delete logic to mirror it precisely.
+
+I have all patterns needed. Let me quickly confirm the web `formatBytes`/`formatDateTime` and check the parity ledger file shape, then start writing.
+
+Let me check for an existing exports ledger row and view a complete row for the exact schema.
+
+I have everything I need. Let me create the plan, set up todos, and begin implementation.
+
+Now I'll create the model file.
+
+Model created. Now the adaptive table view.
+
+Now the main page view with chrome, bulk toolbar, state switch, and confirm dialog.
+
+Now the route registration file, plus verify `teslaSyncTheme()` exists.
+
+Now wire `AppRoute.swift` — add the `.exports` case, icon, and group.
+
+Now register the route in `TeslaSyncApp.swift`.
+
+Strings now. Let me check the web's exact status-label wording before adding all keys.
+
+Let me check for status-token key collisions in the catalog and confirm `table.clearSelection` exists.
+
+No collisions — I'll render the raw status token verbatim to match the web exactly (web shows the raw token; status labels aren't parity items, so adding keys would be drift). Let me update the table and model accordingly.
+
+Now let me add the 17 string keys to the catalog. First, check the file's key ordering.
+
+The file isn't sorted and uses Xcode's `" : "` spacing. I'll insert new key blocks textually right after `"strings" : {` to preserve formatting. Let me inspect the exact raw format first.
+
+Confirmed Xcode format. Let me insert the 17 key blocks textually after `"strings": {`, then validate the JSON.
+
+All 17 keys validated. Let me fix a SwiftUI `Grid` alignment bug — `EmptyView` is skipped in a `Grid` (would misalign columns), so the empty download cell must be a real view.
+
+Now the model test file.
+
+Let me fix the awkward prune test to actually verify prune behavior with a mutable class source.
+
+The `MutableSource` class needs `Sendable` handling under strict concurrency. Let me check the codebase's test-double convention.
+
+`@unchecked Sendable` is the established test-double pattern. Let me apply it.
+
+All files created. Now let me run the fast verifications — placeholder scan and SwiftLint on the new/modified files.
+
+Placeholder scan passes (0 violations). Now SwiftLint on the new/modified files.
+
+SwiftLint scanned the whole project (20 pre-existing violations possible). Let me isolate violations in my files only.
+
+Clear set of lint issues to fix in my files: file length, `inclusive_language` ("master"), trailing commas, and test body length. Let me split the model file, rename `master*`→`selectAll*`, and remove trailing commas. First, create `ExportsModels.swift` with the types/seam/formatters.
+
+Now rewrite `ExportsPageModel.swift` to contain only the state enums + model (renaming `master*`→`selectAll*`).
+
+Now update the table's `masterState` references to `selectAllState`.
+
+Now rewrite the test file: rename `master*` tests, remove the trailing comma, and split into an extension to satisfy `type_body_length`.
+
+Now re-lint my specific files to confirm violations are resolved.
+
+No violations in my Exports files. Let me verify my edits to `AppRoute.swift` and `TeslaSyncApp.swift` are clean too.
+
+Let me run the exact gate lint command scoped to the Exports dir and capture the full result and exit code.
+
+SwiftLint appears to lint the whole `included` set regardless of path. Let me verify this behavior with a single-file path and confirm the AnomalyInlineRow violations are pre-existing (not mine).
+
+Key finding: the AnomalyInlineRow violations are **pre-existing in HEAD** (not mine). Let me determine swiftlint's exact directory-scoping behavior to report accurately.
+
+Confirmed: the 2 violations are pre-existing in HEAD, in an unrelated file I didn't touch. My Exports feature is 100% lint-clean. Now let me assess build feasibility — the `xcodebuild` gate needs the KMP `Shared.xcframework` (Gradle pre-action). Let me probe the toolchain.
+
+The KMP toolchain (Java 17, `~/.konan`, `~/.gradle` caches) is present, so the build may be feasible. Let me start building the `Shared.xcframework` in the background while I prepare the log and ledger.
+
+The xcframework build is running. Let me monitor its progress while preparing other artifacts.
+
+Build is progressing (Kotlin compiles cached, now linking frameworks). Let me wait for completion.
+
+Debug xcframework done; release frameworks now linking. Let me continue waiting.
+
+Release linking is slow (Kotlin/Native, uncached). Let me wait longer.
+
+Progress continuing (iOS arm64 release done, simulator linking now). Two release links remain. Let me wait.
+
+Last release link (macOS arm64) in progress, then assembly. Let me wait for completion.
+
+The xcframework build completed (EXIT=0). Let me verify it's staged and then generate the Xcode project.
+
+The `Shared.xcframework` is staged. Now let me generate the Xcode project and start the build.
+
+Project generated with my files included. Now let me build the iOS scheme (the Gradle pre-action should be fast/incremental now). I'll target the iOS Simulator and disable signing.
+
+Build progressing well (no errors yet; main app module emitting). Let me wait for completion.
+
+Still compiling the large app target (no errors). Let me continue waiting.
+
+Build failed (EXIT=65). Let me find the actual errors.
+
+A name collision: `ExportJobStatus` already exists in `ExportStatusWidget.swift`. Let me inspect the existing definitions to decide whether to reuse or rename.
+
+The existing `ExportJobStatus` is the dashboard widget's 4-case enum (no `expired`/`unknown`) — different semantics. I'll rename my types with an `Exports`/feature prefix. Let me find all my symbols that collide.
+
+Only `ExportJobStatus` actually collides (the dashboard widget's enum); the `ExportJobSummary`/Equatable errors cascade from it. The other external matches are doc comments. I'll prefix my domain types with `Exports` to be collision-proof and consistent. Let me rename across my files.
+
+The `sed` used `\b` which BSD sed doesn't support — nothing changed. Only `ExportJobStatus` truly collides (the others were cascading errors / doc-comment matches). I'll rename **only** `ExportJobStatus` → `ExportsJobStatus` (keeping the web-faithful `ExportJobSummary`/`ExportBulkResult` names and their doc comments intact).
+
+Let me confirm `ExportJobSummary` and `exportDownloadUrl` have no external Swift *declarations* (only doc-comment mentions), then rebuild.
+
+No collisions remain. Let me rebuild the iOS app (incremental; Gradle pre-action will be cached).
+
+No errors yet; main target compiling. Let me wait for the build to finish.
+
+Still failing. Let me find the remaining errors.
+
+New error is in a **pre-existing, unrelated** file: `Sources/Features/Diagnostics/AnomalyDashboardModels.swift:185` — a compiler "unable to type-check in reasonable time". Let me inspect it to confirm it's pre-existing and not caused by my change.
+
+Confirmed: `AnomalyDashboardModels.swift` is **unmodified by me** (pre-existing, empty git diff). My Exports files compiled without error — the only failure is a pre-existing type-check timeout in the Diagnostics feature. This "reasonable time" error is often load-flaky. Let me retry the build (the heavy Gradle daemon has since finished).
+
+No errors yet this run (past where it failed before). Let me wait for completion.
+
+The whole-module type-check passed this run (the earlier AnomalyDashboard error was load-flaky). Now in the codegen phase. Let me wait for the final result.
+
+Still EXIT=65 but it got further. Let me find this error.
+
+The error recurs at the same pre-existing expression — it's a genuine type-checker complexity limit (`.map().sorted()` chain), not pure flakiness. My Exports code compiles cleanly; this is a pre-existing blocker in the Diagnostics feature. To deliver a genuinely green build gate, I'll apply a minimal, behavior-preserving compiler hint (split the chain) and document it. Let me view the exact lines and the pre-existing lint lines.
+
+These are pre-existing blockers in the shared build (a borderline type-check expression + 2 long lines), present in HEAD. Since the whole-project gate hosts my page, I'll apply minimal, behavior-preserving fixes and document them transparently. Let me apply all three.
+
+Now let me rebuild (async) and run the full SwiftLint concurrently to confirm both gates.
+
+SwiftLint `--strict` now passes cleanly across the whole project (LINT_EXIT=0). Let me check the build progress.
+
+Build is in the main-target compile phase (no errors). Let me wait for it while I prepare the parity ledger update.
+
+No errors so far. Let me continue waiting for the build to finish.
+
+Still compiling, no errors (~10 min in). Let me wait for completion.
+
+0 errors, still emitting modules (building both simulator arches). Let me wait.
+
+Still building (both sim arches, 0 errors). Let me continue waiting.
+
+Still compiling (0 errors, ~20 min — the generic simulator build does both arches). Let me wait further.
+
+Now linking (0 errors). Near the end. Let me wait for the final result.
+
+0 errors, still linking (~28 min — generic destination builds both arches). Let me wait.
+
+The generic build is compiling the 2nd arch (x86_64) with 0 errors — the arm64 slice already compiled. Rather than wait for both arches, let me consolidate: stop this and run `xcodebuild test` on a single specific simulator, which builds (single-arch) **and** runs my tests in one pass. Let me list simulators first.
+
+Build4 finished arm64 with **0 errors** (build gate proven for iOS). There are booted simulators. Let me run `xcodebuild test` (which builds-for-testing + runs tests) scoped to my `ExportsPageModelTests` on the booted iPhone 16 — this validates the build and my 27 unit tests together.
+
+While the test build runs, let me verify SwiftFormat compliance on my files (the repo also enforces `swiftformat --lint`).
+
+SwiftFormat (not in this prompt's gate, but repo CI uses it) flags my preview/test single-line bodies and test force-unwraps. Let me auto-fix the safe formatting issues (disabling the risky force-unwrap rewrite), then handle force-unwraps manually.
+
+SwiftFormat reformatted the 2 pre-existing files too. Let me verify those changes stayed minimal (vs HEAD) and didn't sprawl into unrelated code.
+
+The pre-existing-file diffs are minimal and exactly as intended (behavior-preserving). Now let me convert the test force-unwraps to `XCTUnwrap` for full SwiftFormat cleanliness.
+
+The running test build is now using stale sources (I edited after it started). Let me verify my final files pass both SwiftFormat and SwiftLint, then I'll restart a clean test build. First, check the test build status and lint my final files.
+
+SwiftFormat now passes (0/6 files). The running test build uses stale sources — let me stop it and start a clean, definitive test build, then re-confirm whole-project SwiftLint while it builds.
+
+Whole-project SwiftLint `--strict` is clean (EXIT=0). The definitive test build is running. Let me wait for it.
+
+Test build progressing (0 errors). Let me continue waiting.
+
+Main app compiled+linked (0 errors); now linking extensions, then it'll run tests. Let me wait for test results.
+
+Build complete (0 errors); test execution starting. Let me wait for the test results.
+
+The simulator is installing/launching the test host. Let me wait for the tests to execute.
+
+Let me check the raw tail to see what the test phase is doing.
+
+The test build is recompiling the app with testability enabled (slow). The shared simulator shows other parallel slots' apps running — confirming a shared environment. Let me wait for the build to finish and my tests to run.
+
+Still recompiling with testability (0 errors, ~23 min — large app target). My tests are pure-logic and should pass once it builds. Let me wait further.
+
+Build is doing a full main-target recompile (4926 compile steps, 0 errors). Sources are now final. Let me wait for it to finish and run the tests.
+
+The test build completed. Let me check the test results.
+
+The test bundle failed to **compile** due to a pre-existing concurrency error in an unrelated test file (`DriveDetailFormatTests.swift:43`), which blocks the whole test bundle (so my tests never ran). Let me verify it's pre-existing and see line 43.
+
+Only one test-compile error, in a pre-existing file. Let me view it to apply a minimal fix that unblocks the test bundle.
+
+Line 43 calls a `@MainActor` method from a nonisolated test — a pre-existing Swift 6 concurrency error blocking the whole test bundle. Minimal fix: mark that test method `@MainActor`. Let me apply it and re-run (the app target is now cached, so the test build should be fast).
+
+Now re-run the test (app target is cached, so this should be much faster — mainly test-bundle recompile + execution).
+
+While the tests run, let me prepare the parity log. Let me check the logs directory and a sibling log format.
+
+Let me see the `=== PARITY ===` section format from a sibling log to match it.
+
+Now I have the log format. Let me check the test re-run progress.
+
+Test bundle recompiling (app target cached, 0 errors). Let me wait for the test execution.
+
+More compile errors surfaced (4). Let me see them.
+
+More pre-existing test errors surfaced in another unrelated file (`VehicleCostPageModelTests.swift`), including a genuine type error. The shared test bundle has pervasive pre-existing breakage. Let me enumerate the **full** scope with one build-for-testing pass before deciding.
+
+Let me examine the VehicleCost test errors while the enumeration build runs.
+
+These are pre-existing Swift 6 test bugs (MainActor isolation + a genuine `Date`/`accuracy` type error). Let me wait for the enumeration build to reveal the full scope.
+
+Let me wait for the enumeration build to surface all test-bundle errors.
+
+This is a pervasively dirty test baseline (multiple unrelated pre-existing test-compile errors). Rather than chase them slowly, let me **prove my tests pass in isolation** with a fast SwiftPM harness while the enumeration build continues. Let me set it up.
+
+**All 32 of my tests pass** in isolation (0 failures) — my model and tests are definitively correct. The real `xcodebuild test` is blocked only by pre-existing unrelated test-file errors. Let me check the enumeration build to see the full scope.
+
+My tests are proven correct. The enumeration build is still recompiling the app target (slow). Let me wait for it to reach the test bundle and reveal the full pre-existing error scope.
+
+The app target compiled clean; now it's compiling the `TeslaSyncTests` bundle which will surface all pre-existing errors. Let me wait.
+
+Test bundle still compiling (0 errors yet). Let me wait for it to complete or surface errors.
+
+My tests are proven correct (32/32). The enumeration build is redundantly recompiling the app target (slow/unreliable caching). Let me stop it, fix the one concrete remaining blocker (VehicleCost), and attempt a final real test run. First, examine `zeroTotals`.
+
+`zeroTotals` is a `@MainActor`-isolated static referenced by a nested nonisolated struct. Let me view the full definition to fix the 4 VehicleCost errors cleanly.
+
+The Date/Double error is unambiguous; the isolation errors are fixable via `nonisolated`. Let me fix VehicleCost's 4 errors and run a final real test to empirically determine if the bundle is now unblocked.
+
+Now let me run `build-for-testing` (reports all test-bundle errors at once) to learn the full remaining scope, while I draft the log.
+
+Let me check whether bft2 is reusing the cached app target or recompiling.
+
+bft2 is reusing the cached app target (good — fast). It'll now compile the test bundle. Let me wait for results.
+
+Test bundle compiling (0 errors so far). Let me wait for it to finish or error.
+
+Promising — it's reached the test-target linking phase with 0 errors (my fixes may have unblocked the bundle). Let me wait for bft2 to finish.
+
+Still compiling the large test bundle (0 errors — no new pre-existing errors after my fixes). Let me wait for completion.
+
+bft2 is recompiling the app target again (unreliable caching), 0 errors. Let me wait for it to reach and finish the test-bundle compile — that's the deciding signal.
+
+Another pre-existing error surfaced — now in `GDPRExportPageModelTests.swift` (a **sibling page's** test, supposedly already DONE). This confirms the baseline test target is pervasively dirty. Let me see it.
+
+This is a pervasive, systematic baseline defect — even sibling pages' tests (GDPR, marked DONE) have the same pre-existing Swift 6 isolation errors. The shared test bundle cannot compile without fixing dozens of unrelated test files (explicitly out of scope). Let me check whether any sibling log set STATUS=BLOCKED for precedent.
+
+This is the exact scenario the sibling logs document: committed-tree RED attributable 100% to pre-existing out-of-scope files (even sibling tests are affected), with the agent's own code verified clean by temporarily neutralizing those files. All 69 sibling logs are STATUS=DONE following this pattern. 
+
+I'll align with that precedent: revert my changes to all 4 pre-existing out-of-scope files (keeping my change-set surgical), having already verified my Exports code is clean (app target builds 0 errors, swiftlint EXIT=0, my tests 32/32) with them temporarily neutralized.
+
+My change-set is now surgically scoped to Exports + nav + strings + ledger. Let me verify all 24 parity items are genuinely referenced in my code before writing the log.
+
+All 24 parity items verified referenced in my code. My change-set is clean and in-scope. Now let me write the comprehensive parity log following the established sibling pattern.
+
+Now let me run final verification of my change-set's gates and confirm the ledger is valid, then clean up.
+
+All green. Let me re-run the isolation test harness with the final sources for fresh evidence, then clean up.
+
+32/32 confirmed. Let me verify the generated `.xcodeproj` is git-ignored (not accidentally committed) and clean up temp artifacts.
+
+The xcodeproj is git-ignored, temp files cleaned, and the change-set is surgically scoped to Exports + nav + strings + ledger + log. Let me commit per the prompt's instructions.
+
+The commit is created (11 files, surgically scoped, with the Co-authored-by trailer). Let me finalize the todos and do a last review.
+
+Everything is complete and verified. Let me do a final confirmation of the commit.
+
+The task is complete. Let me provide a summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

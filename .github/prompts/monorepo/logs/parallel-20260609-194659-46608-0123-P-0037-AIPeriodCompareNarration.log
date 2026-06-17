@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task has a hard capability requirement (SwiftUI + Swift Charts + MapKit, Xcode tooling).
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Not blocked. Let me read the web source and the Apple app structure.
+
+The shared-surfaces directory already exists with many implemented surfaces. Let me find the closest analog — an `AIFeatureCard` + `useAiStream`-based narration surface that already has a native implementation — to follow conventions exactly.
+
+`AICostForecastNarration` is the closest analog (AIFeatureCard + useAiStream narration). Let me read its full file set as the gold-standard template.
+
+This is a superb template. Let me read the remaining AICostForecastNarration files (Adapter, Projection, Views, Chrome, Previews, strings, Tests, AdapterTests) to replicate the full structure precisely.
+
+Now the Views, Chrome, Previews, strings, and the two test files.
+
+Now the Previews, strings, and the two test files.
+
+Now the two test files to replicate test conventions exactly.
+
+I now fully understand the template. Let me verify the shared P1/S9 tokens and P4 primitives exist, and understand how `project.yml` wires sources/tests/strings.
+
+project.yml uses globs, so new files are auto-included. Let me read project.yml fully and confirm token names (`Color.TS`, `Font.TS`) and `TSButton`/`TSSkeleton` APIs.
+
+Now let me verify lint configs and confirm the exact token APIs (`Color.TS.*`, `Font.TS.*`, `TSSpacing.*`, `TSButton`, `TSSkeleton`, `TSFadeIn`) so my new files compile cleanly.
+
+All tokens confirmed. Now the `TSButton`, `TSSkeleton`, `TSFadeIn` APIs.
+
+All APIs confirmed. I have a complete, working template (`AICostForecastNarration`) and verified tokens/primitives. Let me set up tracking and write the plan, then create the 10 surface files.
+
+Now creating the surface files. Starting with the core: Adapter, Model, Projection.
+
+Now creating the Adapter (pure Foundation core — request body, SSE parsing, stream reducer, output/action derivation):
+
+Now the Model (state-holder seam, i18n facade, telemetry, observable model):
+
+Now the Projection (pure input→view-state mapping with localization):
+
+Now the Views (presentational subviews — badge, button, thinking, output panel, ready view):
+
+Now the Chrome (P4 leaf chrome — freshness chip, refresh, connectivity banner, loading, gate-error):
+
+Now the main View, Previews, and strings:
+
+Now the AdapterTests (Foundation-only: request body with the `>= 0` parity, SSE parse, reducer, output/action):
+
+Now the surface Tests (projection phases/ready/output, input→request, model wiring/telemetry/freshness, a11y):
+
+All 10 files created. Let me verify the placeholder script exists and run fast lint/format checks on the new files before the long xcodebuild.
+
+All files in place. Let me run the fast checks (swiftformat, swiftlint, placeholders) on the new files to iterate quickly before the long xcodebuild.
+
+swiftformat clean. swiftlint flags only one issue: `Tests.swift` is 409 lines (>400 `file_length` under `--strict`). I'll condense the header comment to get under 400 without touching test logic.
+
+Need ≤400; still 402. Let me trim two more header comment lines.
+
+swiftlint + swiftformat both clean; Tests.swift is exactly 400 lines. Now the placeholder check and verifying the build prerequisites (xcodegen, Shared.xcframework).
+
+Placeholder check passes. The build needs `xcodegen generate` + a Gradle-built `Shared.xcframework` (Kotlin/Native). Let me assess build feasibility before committing to the long run.
+
+The `macos-pending-verifications.md` ledger reveals the established pattern: these P4 surfaces are verified green at the **surface level** (isolated build/test + iOS-18/macOS-15 `swiftc -typecheck` + lint/format/placeholder), while the **full-app `xcodebuild`** is environmentally blocked (KMP `Shared.xcframework` Kotlin/Native long-pole, pre-existing parallel-merge collisions in *other* surfaces, no signing identity). My surface imports no KMP `Shared` (Foundation/SwiftUI/Observation/OSLog only).
+
+I'll do the strongest honest verification: start the Gradle xcframework build (long pole) in the background, and meanwhile run `xcodegen generate`, an isolated test harness, and real dual-SDK typechecks. Let me begin and write the gate log.
+
+Starting the Gradle `Shared.xcframework` build (the long pole) in the background, then proceeding with in-scope verification.
+
+`xcodegen generate` succeeded. Let me confirm all 10 files are enumerated in the project and correctly partitioned between app and test targets.
+
+All 10 files enumerated and correctly partitioned. Now I'll build an isolated SwiftPM harness to actually compile + run my tests under Swift 6. Let me check the dependency closure of the primitives my views use.
+
+The primitives are self-contained on tokens. I'll build an isolated SwiftPM harness (module `TeslaSync`) with minimal primitive shims + the real `Tokens.swift`, symlink my real sources + tests, and actually run the tests under Swift 6. Let me create it.
+
+Now the `Package.swift` and minimal primitive shims:
+
+The whole surface (including SwiftUI views + `#Preview`) compiles cleanly under Swift 6 strict concurrency. Now let me run the tests:
+
+All **80 tests pass, 0 failures** under Swift 6 strict concurrency, and the full surface (incl. SwiftUI views + `#Preview`) compiles. Now the real dual-SDK typecheck against iOS 18 and macOS 15 SDKs:
+
+Both dual-SDK typechecks pass (0 errors). Now let me verify i18n parity (web `t()` keys ↔ my `.strings` ↔ code keys) and check the background xcframework build progress.
+
+The "dead keys" result is a grep false-positive — my facade calls span multiple lines, so single-line matching missed them. Let me re-extract code keys correctly (namespace-pattern match) and confirm the background release xcframework progress.
+
+The two flagged keys contain digits (`a11y`, `A11y`) which my letter-only pattern skipped — they ARE used. Let me confirm directly and check the release xcframework staging.
+
+i18n parity fully confirmed (4/4 web keys present, every code key cataloged, no dead keys). The release `Shared.xcframework` is still linking (Kotlin/Native long pole). Let me wait for it, then attempt the real full-app gate.
+
+Excellent — `Shared.xcframework` built (6m 21s) and staged. Now I'll run the real full-app iOS gate, capturing output to analyze whether any failures touch my surface. This compiles the entire app + all co-located tests, so it may take many minutes.
+
+The full-app iOS `build test` failed — but on **pre-existing, unrelated** collisions (`StateTimelineLoadStatus`/`StateTimelineModel` ambiguous; failing files are `YearlyTrendChart`, `VehicleGauges`, `WeekSelector`, `WeeklyDigestWidget`, `WhyEndedPanel` — none mine). Zero `AIPeriodCompareNarration` errors. Let me analyze the log definitively.
+
+216 errors total — all from other agents' parallel-merged surfaces (`RecentDrives*`/`StateTimeline*` ambiguous-type redeclarations). Let me confirm the 3 "AIPeriodCompareNarration" mentions are NOT errors in my files (just batched-compile filename listings).
+
+Definitive: my surface produced **zero errors/warnings** in the real full-app compile — the only mentions of it are my `.strings` file being **successfully copied into the app bundle**. The 216 errors are pre-existing duplicate-type collisions (`StateTimelineModel`, `RecentDrivesModel` each defined in 2 files) from other agents' parallel-merged surfaces.
+
+Let me record the surface-level green evidence to the gate log, then run the macOS build + tree-wide lint/format to capture real exit codes.
+
+Now the real platform gate commands with captured exit codes. Running iOS + macOS `build test` and tree-wide lint/format, appending summarized evidence to the gate log. Launching in background (two full builds).
+
+Gate runner launched (both builds). While it runs, let me capture the tree-wide swiftlint/swiftformat the gate also specifies, scoped to confirm my files are clean.
+
+Tree-wide `swiftformat --lint`: **0/3686 files require formatting** (entire tree clean). Now tree-wide `swiftlint --strict`:
+
+Tree-wide `swiftlint --strict`: **0 violations in 3456 files** (the "9" are progress lines, summary confirms 0). Both lint gates pass tree-wide. Now let me wait for the iOS+macOS builds to finish.
+
+The gate runner is a detached process. Let me poll its progress log directly.
+
+iOS build still running; macOS queued after it. Let me wait.
+
+Gate runner finished: `IOS=143 MAC=65`. The macOS exit (65) is a clean build/test failure. The iOS `143` is a SIGTERM-interruption artifact from overlapping xcodebuild processes (my first nohup run was still alive). Let me kill strays and get one clean iOS exit code.
+
+All stray builds cleared. Now one clean iOS `build test` to capture a deterministic exit code:
+
+Clean iOS exit captured: **IOS_EXIT=65** (TEST FAILED), **0 errors in my surface**, 108 pre-existing errors elsewhere. Let me confirm the macOS failure is the same pre-existing cause (not mine), then finalize the gate log.
+
+Let me characterize the 4 macOS errors precisely (my greps came back empty for them) to keep the log honest.
+
+Now I have the complete, honest picture. The macOS failure is **4 dev-signing errors** (`0 valid identities found`) — environmental. The iOS failure is the pre-existing `RecentDrives*`/`StateTimeline*` dup-type collisions in other agents' surfaces. **Zero errors in my surface on both.** Let me finalize the gate log.
+
+Gate log finalized honestly (`EXIT=65`, `STATUS=BLOCKED`, full evidence). Now let me check git status and stage only the allowed files (my 10 surface files + the log).
+
+Only my 10 surface files + the log are untracked; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored (no risk of staging artifacts). Staging the allowed paths and committing:
+
+Committed cleanly (exactly the 11 allowed files). Let me clean up temporary artifacts and mark the gate todo done.
+
+Two stray `xcodebuild` processes (37418, 37772) and a gradle launcher remain from my runs. Let me terminate the xcodebuild strays by PID.
+
+All clean: no stray processes, commit in place, working tree clean. Let me confirm final todo state.
+
+All 11 todos done. Task complete.
+

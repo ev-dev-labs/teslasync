@@ -1,0 +1,160 @@
+I'll start by exploring the codebase to understand the web source page and the existing Apple app structure.
+
+The Battery feature dir doesn't exist yet. Let me explore the existing Apple app structure to understand the conventions and patterns.
+
+The actual code lives in `apps/apple/Sources/Features/Battery/`, not the path in the prompt metadata. `SleepEfficiencyPage` is the closest analog (battery page with charts + table). Let me study it and the project setup.
+
+Excellent reference. Let me read all the SleepEfficiency support files plus the BatteryCells charts (for RadialGauge/chart patterns) and the project setup.
+
+Let me read the remaining SleepEfficiency files plus the BatteryCells RadialGauge usage and route registration patterns.
+
+The pattern is clear. Now let me examine the chart components (RadialGauge/Line/Bar), the project build config, route system, and shared models.
+
+The build globs all of `Sources/`, so new files are auto-included. Now let me locate the chart wrappers (RadialGauge, Line, Bar), the route enum, shared models, and the string catalog.
+
+No `.vampireDrain` route exists yet — I'll need to add it. Let me read the route system, the RadialGauge wrapper usage in BatteryDegradation, and the chart wrapper signatures.
+
+Now let me read the chart component signatures, route parser, models, and the RadialGauge definition.
+
+Let me read the remaining component definitions and models in parallel.
+
+Now the DataTable, models, units facade, and how route registrations are aggregated.
+
+Let me check the severity-to-tone mapping, the Units facade, badge/tone/emptystate components, and how route registrations are aggregated.
+
+Let me read the route host registry, severity-tone extension, units facade, and confirm remaining component signatures.
+
+Let me find where route registrations are composed centrally, and the `tsUnits` environment + metric/imperial presets.
+
+Let me read the app registration composition, the empty/error states, and the tsUnits environment extension.
+
+I now have a full understanding of the architecture. Let me check toolchain availability, a sibling log's format, the placeholder scanner, and the string catalog structure.
+
+Full toolchain is available (Xcode 26.5, swiftlint, xcodegen). Let me check sibling test placement, the placeholder patterns, the string catalog structure, and the ledger.
+
+Toolchain is fully available. Let me confirm a few remaining component signatures, check the BatteryDegradation line-chart x-mapping, the ledger, and whether the AI explanation component exists.
+
+The line-chart pattern uses index x + a date caption (`BatteryDegradationTimeAxis`). The AI explanation is a separate artifact (P-0057) and not among the 9 panels, so it's out of scope here. Let me read the ledger structure, typography, pickers, and cards signatures.
+
+Let me read the ledger rows structure in detail to see the SleepEfficiency rows and whether a VampireDrain row exists.
+
+No VampireDrain rows exist yet — I'll add them. I have everything needed. Let me set up a plan and todos, then implement.
+
+Now let me check the SwiftLint config to respect its rules, then start creating files.
+
+SwiftLint: `--strict` (warnings = errors), line ≤120 (code), default body/type/file limits. I'll keep functions small like the siblings. Now creating the model files.
+
+Now the formatters file with fixed decimals matching the web's `fmtNumber(x, n)`.
+
+Now the page model with data source seam and phase, mirroring the sibling.
+
+Now the sample data sources (success / empty / empty-sections / failing).
+
+Those `EntrySample` lines exceed the 120-char limit. Let me verify and fix with a compact tuple form.
+
+Let me reformat the sample entries to a compact tuple form that stays within the line limit.
+
+Now remove the now-unused `EntrySample` struct.
+
+Models, format, model, and sample are done. Let me update todos and check existing shared a11y string keys before writing the view.
+
+`action.refresh` exists; I'll reuse it. Now creating the main page view.
+
+Now the sections file: summary metric cards, tips, and the loading skeleton.
+
+Now the charts file: score gauge (RadialGauge), drain-rate trend (LineChart), and daily drain (BarChart).
+
+Let me view the full TSBadge styling so I can render the dynamic Loss%/Sentry badges correctly.
+
+Now the sessions table (web GlassPanel8) with the dynamic Loss%/Sentry badges and a sessions-count chip.
+
+Now the route registration file.
+
+Now wiring navigation. Let me edit AppRoute (case + pathSegment + systemImage + group), the parser alias, and the app registration.
+
+Now the parser alias for the nested `/charging/vampire-drain` path, and the app registration.
+
+Let me check for other exhaustive switches over `AppRoute` and any tests asserting route counts/coverage that my new case could break.
+
+The menu command catalog test asserts it covers all routes. Let me inspect `RouteTests.swift`, the menu catalog test, and how the catalog is built.
+
+`testNavigateCommandsCoverEveryRoute` requires the menu catalog to cover every route. Let me check how it's built.
+
+`navigateCommands()` derives from `AppRoute.allCases`, so it's auto-covered. Let me verify shortcuts won't collide.
+
+Navigation auto-covers the new route via `AppRoute.allCases`. Now let me inspect the string catalog's tail and unicode handling before inserting keys.
+
+The catalog uses literal UTF-8 dashes. I must avoid duplicate keys. Let me check which of my 32 keys already exist in the catalog.
+
+Only "Date" pre-exists. Let me insert the other 31 keys after the `"strings"` opening, then validate the JSON.
+
+The top-level uses `": "` (no space before colon). Let me fix the marker and re-run.
+
+All 31 keys inserted and validated. Now let me check the test target config to decide where to place the model tests.
+
+Test targets include `Tests/Unit`. The sibling Battery tests live in `Tests/Unit/Features/Battery/`. Let me read the sibling test to mirror its structure.
+
+Now the model tests, mirroring the sibling's structure (adapted: no range, score/severity derivations, alias parsing).
+
+Now let me verify. First a quick SwiftLint pass on the new files and check the placeholder tooling.
+
+Four lint issues to fix: 2 line-length, 2 large-tuple. Let me fix them.
+
+Now fix the two large-tuple violations in the sample file by reintroducing named seed structs.
+
+`s` and `e` violate the 2-char identifier minimum. Let me rename to `start`/`end`.
+
+Let me re-run SwiftLint on the new files to confirm clean.
+
+The named-struct labels push lines over 120. Let me wrap each `EntrySeed` across two lines.
+
+SwiftLint clean on new files. Now the full Battery-directory lint (as the gate specifies) plus the placeholder scan.
+
+SwiftLint: 0 violations across the repo. Placeholder scan: 0 violations (4 allowed markers). Now let me generate the Xcode project and check the build prerequisites (Shared.xcframework, schemes).
+
+The `Shared.xcframework` (KMP core) is absent — only a `.gitkeep` exists. Let me investigate how it's built/provided.
+
+There's a `build-shared-xcframework.sh` (KMP/gradle). Let me read the pending-verification doc and the script to understand the expected build path.
+
+Java 17 is available. Let me read the full build script to find the gradle task.
+
+Java 17 is present and there's a gradle task `:core:assembleSharedXCFramework`. Let me build the Shared.xcframework in the background (first run downloads Kotlin/Native — slow) while I prepare the ledger and log.
+
+`assembleSharedXCFramework` is valid. Let me start the actual xcframework build (long first run) in the background.
+
+While the framework builds, let me check progress.
+
+Let me add the ledger rows while the framework builds.
+
+Ledger updated cleanly (19 insertions). Let me check the framework build progress.
+
+Still compiling (Kotlin/Native first run). Let me verify my parity evidence in parallel — grepping each panel/chart/state/string call site.
+
+All 45 parity items confirmed in code (30/30 strings, 9 panels, 3 charts, 3 states). Let me check the framework build progress.
+
+Good progress — K/N compiler downloaded, debug xcframework built, release in progress. Let me wait for completion.
+
+Let me check whether the gradle build is still alive.
+
+Build is alive (gradle daemon + K/N compiling release slices). Let me continue waiting.
+
+Let me check whether the release compile is still actively progressing.
+
+The gradle daemon is actively compiling `bin/macosArm64` (release). Let me keep waiting.
+
+Three of five arch slices done (iosArm64, iosSimulatorArm64, macosArm64); Intel slices remain. Let me keep waiting.
+
+**Shared.xcframework built and staged** (23m54s, BUILD SUCCESSFUL). The gradle daemon is now warm. Let me list schemes and start the macOS build.
+
+Build scheme `TeslaSync-macOS` exists. Let me run a baseline build (no exclusions) to honestly establish what passes/fails. Output to a log file.
+
+Build failed only on **code signing** (no dev certificate in this environment), before compiling Swift. Let me retry with signing disabled — the standard CI approach.
+
+It's compiling now (past signing). Let me monitor progress.
+
+0 errors so far, actively compiling. Let me wait for completion.
+
+66 swift-frontend processes actively compiling (141k objects built). Let me keep waiting.
+
+0 errors; it's emitting the TeslaSync-macOS module (deep into the build). Let me continue waiting.
+

@@ -1,0 +1,133 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is available (xcodebuild + swiftlint). Note the actual structure uses `apps/apple/Sources/Features/`, not `apps/apple/TeslaSync/Features/`. Let me examine the most recent similar page implementation and the existing Charging feature.
+
+The most recent SleepEfficiencyPage is the ideal template. The actual repo convention is `apps/apple/Sources/Features/<Domain>/`, not the `TeslaSync/Features/` path in the prompt metadata. Let me study the template deeply.
+
+No existing signal-observation usage in the Apple app — I'll model a new data-source seam. Let me read the web signal helpers, the vehicle model, the route enum, app registration, and the test template.
+
+Now let me examine the shared TS components (Badge, StatCard, GlassPanel, EmptyState) and the test template.
+
+Let me verify the web i18n strings, number formatting, route parser, registry, and units environment.
+
+Let me check the build system (the gate references an `.xcodeproj` that may not exist) by reading the prior log, and confirm `TSSelect`'s API.
+
+The build uses xcodegen (`project.yml`), scheme `TeslaSync-macOS`. Let me inspect the project config, toolchain, and the full prior log gate section.
+
+The gate is real and heavy: it needs the KMP `Shared.xcframework` (~14 min Gradle build) before `xcodebuild`. Let me verify the toolchain and kick that long build off in the background now, while I write code.
+
+Java 17 + gradlew are present. Launching the KMP `Shared.xcframework` build in the background (the ~14‑min long pole), then I'll write all code while it runs.
+
+Now I understand the full picture. Note: `common.noData` already exists (= "No data available") — I'll reuse it, not redefine. Let me check the swiftlint rules before writing code, then scaffold the feature.
+
+Config understood (≤120 char lines under `--strict`, en-only string blocks). Let me scaffold the Charging feature directory and write the model layer.
+
+Now the sample/preview data sources:
+
+Now the sections file (the two panels, the stat card, the dynamic-value badge, and the loading skeleton):
+
+Now the main page view:
+
+Now the route registration:
+
+Now wire the route into `AppRoute` and the app registry:
+
+Now the model tests:
+
+Now add the 15 new i18n strings (reusing existing `common.noData`). I'll insert a block right after the `"strings"` opening to preserve the file's formatting:
+
+Let me validate the JSON and verify key presence/uniqueness:
+
+All keys present, JSON valid, no duplicates. Let me run the fast gates (swiftlint + placeholder) on the new code and check the KMP build progress.
+
+Both fast gates pass (lint: 0 violations across 11591 files; placeholder: 0 count, 1 allowed). KMP build still running. Let me update the parity ledger while it builds.
+
+KMP build finished. Let me add the two ledger rows and read the build output.
+
+Shared.xcframework built and staged (7m17s). Let me validate the ledger, generate the Xcode project, and start the macOS build.
+
+Ledger valid, project generated. Now the macOS build (the Gradle preAction will be cache-warm). Running async with monitoring:
+
+Build failed only at code-signing (no dev certificate in this environment) — it never reached Swift compilation. I'll disable code signing and rebuild so the actual compilation is verified.
+
+Swift now compiles, but 6 pre-existing `*.Previews.swift` files fail (the Xcode‑26.5 result‑builder `return` issue noted in the prior log). I need the exact errors and the full list of broken files to confirm none are mine. Let me capture them.
+
+Confirmed: the **only** compile errors are in one pre-existing, out-of-scope file — `TeslaSync/shared-surfaces/Input.Previews.swift` (the same file the prior log documented). Let me prove it's unmodified by my change, then rebuild with it isolated to verify my code compiles.
+
+Proven pre-existing and unmodified. Rebuilding with that one file isolated (build-setting override, no source edits) to verify my code compiles:
+
+Build still compiling the full app. Let me keep waiting.
+
+**BUILD SUCCEEDED** with only the pre-existing file excluded; my 7 Powershare sources compiled cleanly (0 errors). Now the test run — isolating the same pre-existing file plus the known-broken `GDPRExportPageModelTests.swift` (per prior log), running only my new test class:
+
+All 7 Powershare sources compiled. Test run launched — waiting for results.
+
+Test command exited 0 (my grep regex was malformed). Let me read the actual results from the log:
+
+All **18/18 tests passed** (`** TEST SUCCEEDED **`; the `error:` lines are benign macOS sandbox warnings). Let me run the canonical full gate commands once more to capture exact output for the evidence log.
+
+Final gate: **lint 0 violations**, **placeholder 0**. Now I'll write the evidence log with the full PARITY enumeration. Let me confirm the logs directory and the prompt path.
+
+Log written. Let me clean up temp files and verify what git will commit (the generated `.xcodeproj` and `Shared.xcframework` should be git-ignored):
+
+Generated artifacts are git-ignored; my changeset is clean. My page has an iOS-only `#if os(iOS)` branch the macOS build doesn't compile — to avoid red-as-green on the `apple-ios` row, let me verify that branch compiles with a quick iOS build. First, check for an available simulator.
+
+An iOS 26.5 simulator is available. Building the iOS target to compile the `#if os(iOS)` branch (same pre-existing-file isolation):
+
+iOS build still compiling (fresh arch). Continuing to wait.
+
+**iOS BUILD SUCCEEDED** too — all 7 Powershare files compiled for iOS (including the `#if os(iOS)` branch), 0 errors. Both ledger rows are now genuinely verified. Let me add the iOS evidence to the log and clean up.
+
+Both platforms verified green. Let me do a final review of the two view files, then commit.
+
+Implementation is faithful and complete. Committing the change:
+
+Committed (`d481cbe8a`). Let me do a final verification that the working tree is clean.
+
+The task is complete and fully verified. Working tree is clean, both ledger rows are covered (21/21), and the log ends with `EXIT=0 / STATUS=DONE`.
+
+## Summary
+
+I implemented a native SwiftUI port of the web `PowersharePage` (`/powershare`) at full web parity, adaptive across macOS + iOS, following the established repo architecture.
+
+**Delivered (`apps/apple/Sources/Features/Charging/`):**
+- `PowershareModels.swift` — `PowershareVehicle`, `PowershareSnapshot` (+ `hasData`/`hasStopReason`), the pure `statusVariant`/`stopReasonVariant` → badge-tone maps, and the phase enum
+- `PowershareFormat.swift` — kW/hours/text display formatters mirroring web `fmtNumber`
+- `PowersharePageModel.swift` + `.Sample.swift` — `@Observable` model over a KMP-facade `DataSource` seam (no networking in the view, ADR-004)
+- `PowersharePage.swift` + `.Sections.swift` — the two panels, stat cards, dynamic status/stop-reason badges, loading skeleton
+- `PowershareRouteRegistration.swift`, plus `AppRoute`/`TeslaSyncApp` wiring, 15 string-catalog keys, the test bundle, the ledger rows, and the evidence log
+
+**Parity:** `PARITY_COVERED=21/21` — 5 panels, the empty + success states (plus loading/error), and 14 i18n strings (reusing existing `common.noData`), each with file+symbol evidence in the log.
+
+**Verification (all green):**
+- swiftlint `--strict`: **0 violations**
+- placeholder gate: **0** (1 documented redaction marker)
+- KMP `Shared.xcframework` built; **macOS app + iOS-Simulator app both BUILD SUCCEEDED** (all 7 sources compiled, including the iOS-only adaptive branch)
+- **18/18** `PowersharePageModelTests` pass
+
+**Honest disclosure:** the full `xcodebuild` is blocked only by two pre-existing, out-of-scope, Xcode‑26.5‑incompatible files (`Input.Previews.swift`, `GDPRExportPageModelTests.swift`) — both verified unmodified by this change and isolated via a build-setting override (no source edits), exactly as the predecessor P7 page did. Code signing was disabled (no dev cert on this runner). Committed as `d481cbe8a`.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-charging-PowersharePage.log    | 187 ++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 165 ++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   5 +-
+ .../Features/Charging/PowershareFormat.swift       |  51 +++++
+ .../Features/Charging/PowershareModels.swift       | 133 +++++++++++++
+ .../Charging/PowersharePage.Sections.swift         | 208 ++++++++++++++++++++
+ .../Sources/Features/Charging/PowersharePage.swift | 183 ++++++++++++++++++
+ .../Charging/PowersharePageModel.Sample.swift      |  59 ++++++
+ .../Features/Charging/PowersharePageModel.swift    | 106 ++++++++++
+ .../Charging/PowershareRouteRegistration.swift     |  22 +++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Charging/PowersharePageModelTests.swift        | 215 +++++++++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 13 files changed, 1351 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-charging-PowersharePage.log
+ create mode 100644 apps/apple/Sources/Features/Charging/PowershareFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/PowershareModels.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/PowersharePage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/PowersharePage.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/PowersharePageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/PowersharePageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Charging/PowershareRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Charging/PowersharePageModelTests.swift

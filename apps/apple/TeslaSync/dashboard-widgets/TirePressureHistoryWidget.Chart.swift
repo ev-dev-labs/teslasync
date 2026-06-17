@@ -20,7 +20,7 @@ private struct TirePressureMark: Identifiable {
 }
 
 /// The tire-pressure-history Swift Charts surface.
-struct TirePressureHistoryChart: View {
+struct TirePressureHistoryWidgetChart: View {
     let projection: TirePressureProjection
     let showAxisTitles: Bool
     var timeLabel: (Date) -> String = { $0.formatted(date: .omitted, time: .shortened) }

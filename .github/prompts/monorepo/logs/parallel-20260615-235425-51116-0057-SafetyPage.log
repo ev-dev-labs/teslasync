@@ -1,0 +1,204 @@
+I'll start by exploring the repository structure and understanding the task. Let me look at the web source, the Apple app structure, and related files in parallel.
+
+Now let me look at the existing Settings feature directory and find a good reference page to follow the established patterns.
+
+The Settings feature directory doesn't exist yet. Let me explore the Features structure and find a reference page to learn the established patterns.
+
+The actual structure differs from the spec. Let me explore the real layout — `Sources/`, `feature-views/`, and find existing page+model examples.
+
+The real page architecture lives in `Sources/Features/`. Let me find existing settings pages and the page+model pattern there.
+
+Let me examine an existing feature page to understand the established page+model architecture, navigation registration, and how the project is configured.
+
+Let me study the Exports feature end-to-end (page, model, route registration), check the ledger, and see how routes/navigation work.
+
+Let me read these files individually for clarity.
+
+I now understand the page+model+route patterns. Let me check tool availability (critical for the gate), the ledger, the logs format, and whether any settings pages already exist in the Apple app.
+
+All tools are available — the gate is not blocked. The ledger confirms completed pages live in `Sources/Features/<Domain>/` (not the prompt's stated `TeslaSync/Features/` path). Let me verify the route system, an existing page log format, and the placeholder script.
+
+No settings pages exist yet in the Apple app. Let me read the route system and an existing completed page log to mirror the exact format.
+
+Let me read the route parser, host registry, and a complete real page (AuditLog) including its model and route registration to mirror the exact pattern.
+
+Let me find where route registrations are composed (the composition root) and how `.settings` is currently handled, plus read the full AuditLog page for reference.
+
+Let me read the composition root `TeslaSyncApp.swift` to see how registries are chained.
+
+Now I understand the route composition. There's already a `SettingsRouteRegistration`. Nested routes (like `.notificationsAudit`) use a slash `pathSegment` + an alias. Let me read the route tests, the existing SettingsRouteRegistration, the full AuditLog page+model, and how the sidebar renders.
+
+The uniqueness test requires a unique pathSegment (`settings/safety` works). Let me read SettingsScene, the full AuditLog page+model, and the existing AuditLog log to mirror format.
+
+Let me read the existing AuditLog log (for exact format), the settings model, and check the AISafetySettingExplainer's public API.
+
+This log is highly informative. Let me read the rest — especially the PARITY section format and how they concluded with the pre-existing build breakage.
+
+I now have the full methodology. The established precedent: ship at `Sources/Features/Settings/`, add a dedicated route + alias + registration, and verify via in-scope gates (xcodegen, swiftformat, swiftlint, placeholder, model harness, isolated typecheck) since the full xcodebuild has a pre-existing out-of-scope crash. I'll verify that breakage myself rather than assume. Let me study the design components and settings model.
+
+Let me read the remaining design pieces (GlassPanel, States, tokens) and the settings model, plus the web settings defaults.
+
+Let me read the design tokens, settings model, web settings defaults, and the Localizable.xcstrings structure.
+
+`AppSettings` lacks the safety notification fields — those are server-side in the web `useSettings()`. So I'll build a dedicated `SafetyPageModel` with local state seeded to the web defaults. Let me read the design tokens directly and the web settings defaults.
+
+Defaults captured. Now let me confirm the generated token members exist, inspect the AuditLogPageModel style, and check the string catalog.
+
+I have all tokens confirmed. Let me read the AuditLogPageModel (model style), its test, the string catalog format, and the AppShell sidebar.
+
+The catalog already has 24 `safetySettings` mentions. Let me see exactly which keys exist so I only add what's missing.
+
+There are `translation.safetySettings.*` keys but the Apple app uses bare keys (e.g. `exportsList.title`). Let me verify the key convention before adding anything.
+
+Let me clarify exactly which bare keys exist in the catalog vs. the `.strings` companion files.
+
+Confirmed: P7 pages add bare keys to the master catalog. Let me view the AuditLog custom badges pattern (for rendering dynamic/verbatim values in a badge) and the model test style.
+
+I have all the patterns. Now a critical check before adding an `AppRoute` case: find every exhaustive `switch` over `AppRoute` that could break, plus the AI explainer's public API and how the shell renders routes.
+
+Two switches over `AppRoute` to verify: `ExploreCatalog.gating` and `WatchDeepLink`. Let me check whether they have a `default` and find any other exhaustive route switches.
+
+I now have a complete understanding. Let me set up a plan and todos, then implement. Key decisions:
+- Ship at `apps/apple/Sources/Features/Settings/` (real compiled path; prompt's `TeslaSync/Features/` doesn't exist — same reconciliation every sibling page log records).
+- Add a dedicated `.settingsSafety` route (pathSegment `settings/safety`, `.account` group) + alias `/settings/safety` + registration — mirroring `.notificationsAudit`/`.auditLog`. Only `AppRoute.swift`'s 3 switches are exhaustive over `AppRoute`.
+- Faithful GlassPanel1 listing of all 7 safety rows + page chrome; bare keys in the catalog.
+
+Let me check the lint config (line length, rules) so I write compliant code from the start, then create the model files.
+
+Lint constraints noted (120 width, `--self remove`, before-first wrapping). Now let me create the model files.
+
+Now the row views and value badge (mirroring the `AuditSuccessBadge` token pattern, uniform `.info` tone per web `variant="info"`).
+
+Now the main `SafetyPage.swift` — page chrome + GlassPanel1 listing with dividers + change hint, plus previews.
+
+Now the route registration, mirroring `AuditLogRouteRegistration`:
+
+Now let me wire the route into `AppRoute.swift` (case + 3 switches), keeping every line ≤120.
+
+Now the alias in `AppRouteParser.swift`:
+
+Now chain the registration in `TeslaSyncApp.swift`, grouped with the Settings registration:
+
+Now the model tests:
+
+Now let me add the catalog keys. First, let me find the insertion point and confirm the JSON structure.
+
+The catalog is valid JSON (11085 keys, Xcode formatting with `" : "`). I'll insert my 28 bare keys as text right after `"strings": {`, preserving formatting. Let me write an insertion script.
+
+Catalog updated (11113 keys, validated). Now the ledger. Let me inspect its structure and formatting before editing.
+
+I'll append 2 ledger rows via a precise text insertion (preserving formatting), then validate.
+
+All structural changes are in. Now let me run the formatter/linter gates. First `swiftformat --lint` on my changed files from `apps/apple`.
+
+Two files need trailing-comma fixes (config uses `--commas inline`). Let me auto-format my new files (the edited shared files already pass), then re-verify.
+
+swiftformat passes (0/9). Let me verify the auto-edits look right, then run swiftlint --strict.
+
+swiftlint flagged only `AnomalyInlineRow.Previews.swift` (a pre-existing repo file, NOT mine) — zero violations in my files. swiftlint merged the config's `included` dirs. Let me confirm my files are clean by linting them explicitly, and verify that file is pre-existing/unmodified.
+
+Confirmed pre-existing and out-of-scope. Let me lint only my explicit files to get a clean in-scope signal.
+
+My files are lint-clean (LINT_EXIT=0). Now the placeholder gate on my Settings dir + tests:
+
+Placeholder gate clean. Now let me generate the Xcode project (picks up my new files under `Sources`).
+
+xcodegen succeeded; my files are wired into all targets. Now let me attempt the real full build (macOS scheme) and capture the result honestly — this is the authoritative gate.
+
+Build is still running. Let me peek at the partial log to check progress and whether my files compiled cleanly.
+
+The build is still staging the KMP `Shared.xcframework` (slow Gradle preAction) — app compilation hasn't started. No errors yet. Let me wait.
+
+KMP xcframework staging is still running (heavy multi-platform Gradle build). No errors/crash. Let me keep waiting.
+
+The full build is still in the KMP staging phase. Let me let it continue and, in parallel, run the fast in-scope model harness (proves the model logic under Swift 6 strict concurrency) while preparing the isolated view typecheck.
+
+Model harness passes under Swift 6 strict concurrency. Let me check the build's progress, then run the isolated view typecheck against the real tokens/components for both idioms.
+
+Build is gated on slow KMP framework linking (Swift compile not yet started). Let me run the isolated view typecheck against real tokens/components for macOS first.
+
+macOS typecheck passes against real tokens/components. Now the iOS pass (exercises the `#if os(iOS)` compact-width branch):
+
+Both idioms typecheck clean. Let me validate my `#if DEBUG` previews with a `-DDEBUG` pass — first checking the extra dependency closure (Theme + Cards preview deps).
+
+Theme/Buttons/Badges previews are self-contained. Let me run the `-DDEBUG` pass to validate my previews compile.
+
+All in-scope typechecks + harness pass. Let me check the full build status.
+
+In-scope gates are all green (format, lint, placeholder, harness, macOS+iOS+preview typechecks). The full `xcodebuild` is still in the slow KMP framework-staging preAction (Swift compile not started). Let me update progress and write the evidence log while the build continues, then finalize its result.
+
+Let me continue waiting for the KMP staging to finish so the build reaches Swift compilation.
+
+KMP staging finished — Swift compilation has now started (89 compile actions, 0 errors, 0 crash). This is the decisive phase. Let me monitor.
+
+Whole-module type-checking (EmitSwiftModule) is in progress with 0 errors — meaning my files type-check within the full module. Per the AuditLog precedent, codegen (where the pre-existing shared-surfaces crash occurs) comes after this. Let me continue monitoring.
+
+Excellent — whole-module type-checking completed with **0 errors** (my files type-check within the real full app module), and the build is now in per-batch codegen (alphabetically at the L* files). Still 0 errors, 0 crash. Let me continue monitoring for either success or the documented shared-surfaces crash.
+
+At P* files now (26867 lines), still 0 errors / 0 crash — the build may compile cleanly at this HEAD. Let me keep waiting.
+
+The full macOS build **SUCCEEDED — BUILD_EXIT=0**! No shared-surfaces crash at this HEAD; the entire app (my files + edits) compiled and linked. Let me confirm the result in the log and then run the test bundle.
+
+**`** BUILD SUCCEEDED **`** — 0 errors, 0 crashes, all 5 Safety source files compiled into the real app. This is a clean authoritative pass (better than siblings blocked by the pre-existing crash). Now let me run my test class via the macOS test bundle (scoped to my new tests — the full suite is out of scope).
+
+Test run failed fast (exit 65). Let me check why.
+
+The test-bundle build failed on a **pre-existing, out-of-scope** error: `WebhooksPageModelTests.swift` (not my file) uses `LocalizedStringKey` without `import SwiftUI`. One broken sibling test file fails the whole bundle compile. Let me confirm it's pre-existing and unmodified by me.
+
+Confirmed pre-existing and out-of-scope (no diff vs HEAD; missing `import SwiftUI`). The app build is green, but this broken sibling test file blocks the whole test-bundle compile. To authoritatively prove **my** tests pass, I'll temporarily patch the pre-existing broken file(s), run only my test class, then revert. First, let me find all such pre-existing breakages.
+
+Only one pre-existing broken file. Let me temporarily patch it (add `import SwiftUI`), run **only my** test class, then revert — proving my tests pass.
+
+TEST_EXIT=0 — my tests pass. Let me confirm the count, then immediately revert the temporary patch.
+
+All 12 of my tests pass (`** TEST SUCCEEDED **`), and the temporary patch is reverted. Let me confirm the executed count and review the final git status to ensure only my intended files changed.
+
+All 11 tests pass; git status shows exactly my intended in-scope changes (xcodeproj is git-ignored). Let me do final gate confirmations and clarify the swiftlint directory-scan behavior for the log.
+
+Confirmed: swiftlint's directory arg expands to the config's `included` set (6310 files); the 2 violations are pre-existing in `AnomalyInlineRow.Previews.swift` (not mine). My explicit-file lint = 0. Let me gather tool versions and LOC counts for the evidence log.
+
+All data gathered. Now let me write the comprehensive evidence log.
+
+Log written. Let me update todos, verify the final tree is clean, and commit the in-scope files.
+
+Tree is exactly the intended in-scope set. Let me clean up temp probes and commit on the current branch with the prescribed message + trailer.
+
+All 12 in-scope files staged (xcodeproj git-ignored, not included). Let me commit.
+
+Committed (HEAD `335ec3376`), working tree clean. Let me do a final confirmation of todo state and the committed content integrity.
+
+All committed content verified — catalog keys present, ledger rows at 8/8 covered. Let me confirm all todos are closed.
+
+All 9 todos done. The task is complete and verified end-to-end.
+
+## Summary
+
+Delivered a native **SwiftUI/HIG `SafetyPage`** at full web parity for `page:settings/Safety`, committed as `335ec3376`.
+
+**What shipped** (`apps/apple/Sources/Features/Settings/`):
+- `SafetyModels.swift` — `SafetySettings` (seeded to web `DEFAULT_SETTINGS`), `AlertDigestMode`, `SafetyValue`, `SafetySettingRow.listing(for:)` mirroring web `SAFETY_ROWS` 1:1, plus a docs-URL resolver.
+- `SafetyPageModel.swift` — `@MainActor @Observable` holder (ADR-004, no networking in view).
+- `SafetyPage.swift` + `SafetyPage.Rows.swift` — page chrome + the `GlassPanel1` listing (7 divider-separated rows: localized title + value badge + description + Docs link + change-hint footer), adaptive macOS/iPad-vs-iPhone, value badge mirroring the sibling `AuditSuccessBadge` token pattern.
+- `SafetyRouteRegistration.swift` + a dedicated `.settingsSafety` route (alias `/settings/safety`) chained in `TeslaSyncApp.swift`.
+- 28 bare keys added to `Localizable.xcstrings` (web names verbatim); ledger updated (+2 rows, 8/8); 11-test `SafetyPageModelTests`.
+
+**Reconciliations (logged):** prompt's `TeslaSync/Features/Settings/**` path doesn't exist → shipped at the real compiled `Sources/Features/Settings/**` (every sibling page does the same).
+
+**Gates — all green:** xcodegen 0 · swiftformat 0/9 · swiftlint --strict 0 (my files) · placeholder 0/0 · Swift-6 model harness ALL PASSED · macOS+iOS+preview typecheck 0/0/0 · **full `xcodebuild` `** BUILD SUCCEEDED **`** (my files compiled+linked, no shared-surfaces crash at this HEAD) · **`** TEST SUCCEEDED **` 11/11** (after temporarily patching+reverting one pre-existing out-of-scope broken sibling test file). **PARITY_COVERED=8/8 · EXIT=0 · STATUS=DONE.**
+
+
+
+The task is fully complete and verified — committed at `335ec3376` with all gates green and all 9 todos done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

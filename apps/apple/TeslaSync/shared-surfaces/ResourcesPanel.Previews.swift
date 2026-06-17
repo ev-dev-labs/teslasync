@@ -28,21 +28,21 @@ import SwiftUI
     #Preview("Severities · normal / warn / critical") {
         staged("green < 70 % · amber ≥ 70 % · red ≥ 90 % bars + value tint") {
             ResourcesPanel(rows: [
-                ResourceRow(
+                ResourceRowShared(
                     label: "Memory",
                     valueText: "1.8 GB",
                     metaText: "of 8 GB",
                     percent: 22,
                     icon: { Image(systemName: "memorychip") }
                 ),
-                ResourceRow(
+                ResourceRowShared(
                     label: "DB pool",
                     valueText: "18",
                     metaText: "of 25",
                     percent: 72,
                     icon: { Image(systemName: "cylinder.split.1x2") }
                 ),
-                ResourceRow(
+                ResourceRowShared(
                     label: "Disk",
                     valueText: "94 GB",
                     metaText: "of 100 GB",
@@ -56,13 +56,13 @@ import SwiftUI
     #Preview("No-bar rows · icon / sub-label variants") {
         staged("rows without a percent render label + value only (no bar)") {
             ResourcesPanel(rows: [
-                ResourceRow(
+                ResourceRowShared(
                     label: "Goroutines",
                     valueText: "248",
                     icon: { Image(systemName: "point.3.connected.trianglepath.dotted") }
                 ),
-                ResourceRow(label: "Uptime", valueText: "12d 4h"),
-                ResourceRow(
+                ResourceRowShared(label: "Uptime", valueText: "12d 4h"),
+                ResourceRowShared(
                     label: "Open files",
                     valueText: "1,204",
                     metaText: "soft 4,096"
@@ -76,7 +76,7 @@ import SwiftUI
     #Preview("Truncation · long label") {
         staged("the flexible label truncates · the value + sub-label hold their width") {
             ResourcesPanel(rows: [
-                ResourceRow(
+                ResourceRowShared(
                     label: "Resident set size of the long-running API process",
                     valueText: "2.4 GB",
                     metaText: "of 8 GB",

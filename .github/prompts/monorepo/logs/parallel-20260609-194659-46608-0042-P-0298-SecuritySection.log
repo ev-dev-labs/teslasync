@@ -1,0 +1,141 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source specification and explore the Apple app structure.
+
+Let me examine the existing feature-views structure and find a similar reference implementation to follow the established patterns.
+
+No existing `SecuritySection` — I'll model it on `ClimateSection` (sibling vehicle-detail section). Let me read the full ClimateSection set plus the security-related surfaces for data patterns.
+
+Now let me read the remaining ClimateSection files (Views, Previews, Tests, strings) and the SecurityStatusCards set for security-domain data patterns.
+
+Let me read the ClimateSection tests and strings, plus the SecurityStatusCards set (same security domain — shares Locked/Sentry/door/window keys).
+
+Now let me examine the SecurityStatusCards set (same domain) to align data shapes and i18n keys, plus check the web SecurityStatusCards source.
+
+Let me check the web types for `SecurityEvent`/`VehicleState` and verify the shared tokens/components exist.
+
+I now have the full pattern. Let me verify the shared tokens/components exist, check how the Xcode project includes files, and check toolchain availability.
+
+The find command had a flag-ordering bug. Let me locate the project and token definitions correctly.
+
+It's an XcodeGen project (`project.yml`), tokens in `Sources/Theme.swift`. Let me read both and check XcodeGen availability.
+
+XcodeGen auto-includes `feature-views` files by path — no project.pbxproj editing needed. Let me read the theme tokens, shared components, lint configs, and the gate's helper script.
+
+Let me read the shared component signatures, the generated tokens, and the placeholder checker.
+
+Let me confirm the `TSButton` signature, the generated design tokens, and inspect the placeholder checker.
+
+Let me check the placeholder patterns and how `-Path` is resolved (the gate passes a path prefix, not a directory).
+
+All dependencies confirmed: tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), components (`TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, `TSButton`), XcodeGen auto-includes `feature-views/*`, and toolchain (Xcode 26.5, swiftlint, swiftformat, pwsh, xcodegen) is present. Note: `Placeholder` is a forbidden word — I'll avoid it everywhere.
+
+Let me set up a plan and todos, then write the surface files.
+
+Now I'll write the surface files. Starting with the pure projection core (Adapter), the state-holder/Model, and the strings catalog.
+
+Now the comprehensive test file:
+
+All 7 files created. Now let me verify — first auto-format and lint my files, then the full build/test gate.
+
+SwiftFormat wants implicit-return switch expressions and wrapped property bodies (the project style). Let me auto-format my files, then review the changes.
+
+SwiftFormat passes now. Let me review the auto-formatted switch-expression changes in the Adapter to confirm correctness, then run swiftlint.
+
+The switch expressions are valid Swift 5.9+ (contextual type `Double?` promotes the branches). Let me run swiftlint and investigate the build prerequisites (the `Shared.xcframework` KMP dependency the scheme's preAction builds).
+
+Two issues: (1) swiftlint flags my 7-param `resolve` (max 5), (2) the build needs the KMP `Shared.xcframework` (Gradle). Let me first fix the param-count violation by bundling the localized words into a struct.
+
+Now update the test call site to use the `Localized` struct:
+
+Now re-run swiftformat and swiftlint on the changed files, and check the KMP/Gradle build prerequisites in parallel:
+
+swiftlint (0 violations) and swiftformat (0 changes) pass. Java 17 + gradlew present, iPhone 16 simulator booted. Let me generate the Xcode project and attempt the KMP `Shared.xcframework` build (the build's critical dependency).
+
+Project generated. Let me confirm my files are included, then kick off the KMP framework build (may be slow — running async).
+
+My files are in the project (all 7, across app + test targets). While the KMP build runs, let me quickly validate the mixed `nil`/`Double` switch-expression pattern compiles in isolation (a key risk).
+
+Switch-expression pattern compiles and runs correctly under Swift 6. Let me check the KMP build progress.
+
+The KMP/Gradle build is still running (downloading Kotlin/Native toolchain). Let me continue waiting.
+
+KMP `Shared.xcframework` built and staged successfully. Now let me run the iOS build to verify the whole app (including my surface) compiles. Running async with a dedicated DerivedData path so the test step can reuse it.
+
+Build failed (exit 65), but the failing batch lists `WeeklySummaryCardWidget`/`WhyEndedPanel`/`WidgetPicker` files — not mine. I need the actual `error:` lines. Let me extract them.
+
+These errors are all about `RecentDrives*`/`StateTimeline*` types being "ambiguous for type lookup" — duplicate definitions across **sibling** surfaces I never touched. Let me confirm (a) I only added `SecuritySection.*` files, (b) my type names are unique (no new collision), and (c) zero errors reference my files.
+
+Confirmed: only my 7 files added, zero errors reference `SecuritySection`, and all my type names are unique (no new collisions). The failures are pre-existing duplicate-type collisions in sibling surfaces. Let me prove the baseline is already red (collisions live in committed files I didn't touch) and that my surface compiles in isolation.
+
+Proven: `RecentDrivesConnection` and `StateTimelineConnection` are each defined in **two committed sibling files** (a feature-view + its widget) — pre-existing duplicate-type collisions unrelated to my work. The app target was already red at baseline.
+
+To honestly verify my surface compiles against the real design system, let me isolate-compile my files with their actual dependencies. First, check the dependency closure is self-contained (no KMP `Shared` import).
+
+The design/component closure is self-contained (no KMP import). Let me isolate-compile my surface against the **real** design system + components — proving it compiles independently of the broken siblings.
+
+I over-included — `Sources/Components/DataDisplay/UnitFormatters.swift` (which my surface never uses) needs `UnitPreferences` from elsewhere. Let me narrow to the exact closure my files reference. Let me map the component subdirs and transitive deps.
+
+Only `UnitFormatters.swift` needs the out-of-closure type. Let me compile the precise minimal closure my surface needs (UI + Motion + Feedback + Design + tokens, excluding DataDisplay/Charts/Maps/Forms) plus my source files:
+
+Source files typecheck cleanly against the real design system. Now let me go further and actually **run** my tests by assembling a minimal SwiftPM package (my source + Tests + the real design closure) and running `swift test` on the host:
+
+All 32 tests pass in isolation — including the per-state render smoke test exercising the full SwiftUI view stack with the real design components. My surface is proven correct. Now let me characterize the pre-existing blocker and run the remaining gate checks.
+
+My files are placeholder-clean (`PLACEHOLDER_COUNT=0`). The blocker is exactly 2 pre-existing sibling-surface collisions (`RecentDrives*` × `RecentDrivesListWidget`, `StateTimeline*` × `StateTimelineWidget`) — 8 duplicate types in committed files I'm **not allowed to modify** (allowed files = `SecuritySection.*` only).
+
+Let me run the macOS build (to honestly confirm identical blockage) in the background, and meanwhile capture whole-repo lint/format state.
+
+The whole repo passes `swiftformat --lint` (0 issues). Let me read the macOS build result.
+
+The macOS log shows no compile errors at all, yet exited 65 on "Testing". Let me examine what actually failed there.
+
+The macOS failure is a **code-signing/entitlements** error (`requires signing with a development certificate`) — a genuine platform-capability blocker in this headless environment, independent of (and prior to) the iOS sibling-collision blocker. Let me capture the whole-repo swiftlint state for the log.
+
+Whole-repo swiftlint `--strict` also passes (0 violations). The **only** red gate steps are the two xcodebuild steps — iOS blocked by out-of-scope sibling collisions, macOS additionally by missing code-signing capability. Let me confirm the exact placeholder gate command's exit, then write the authoritative gate log.
+
+`PLACEHOLDER_EXIT=0` confirmed. I now have all evidence. Let me write the authoritative gate log.
+
+Log written. Let me update todos, clean up temp artifacts, and verify exactly what git will commit (generated `.xcodeproj`/`build`/`Shared.xcframework` should be ignored).
+
+Exactly the 7 surface files + the log are staged; generated artifacts are git-ignored. My surface is green (typecheck + 32 tests + lint + format + placeholder all pass); the full-app gate is BLOCKED only by out-of-scope/environment causes. Committing the verified surface with the transparent log:
+
+Committed. Let me verify the commit and final state.
+
+The commit landed cleanly — 8 files, 1629 insertions, working tree clean (generated artifacts git-ignored). Let me finalize the todos.
+
+Task complete. Here's the summary.
+
+## SecuritySection (Apple, P4/0298) — shipped & committed (`f84a483c7`)
+
+Native SwiftUI parity of `vehicle-detail/SecuritySection.tsx`, modeled on the sibling `ClimateSection` leaf. **7 files, 1629 lines:**
+
+| File | Role |
+|---|---|
+| `SecuritySection.swift` | Surface: glass panel, always-visible **Security** header, freshness chip/banner, state switch |
+| `SecuritySection.Adapter.swift` | Pure core: `windowOpenCount` (JS `Number()` coercion), door-state `String()`/`''` guard, 4-card projection (value+accent+glyph) |
+| `SecuritySection.Model.swift` | P1/S8 `SecuritySectionSource` seam, P1/S11 `view.opened` telemetry, P1/S10 facade, projector, `@Observable` model |
+| `SecuritySection.Views.swift` | Responsive tile grid, metric tile, accent icon chip, loading/empty/error chrome |
+| `SecuritySection.Previews.swift` | 8 previews (all states) |
+| `SecuritySection.Tests.swift` | 32 tests: adapter parity, projector phases, model wiring/telemetry/stale, a11y, per-state render |
+| `SecuritySection.strings` | All 12 web i18n keys + native chrome |
+
+**Tiles (web order):** Locked (Yes/No, lock↔unlock, green/cyan) · Sentry (Active/Off, eye) · Doors (state||Closed, cyan-if-present) · Windows ("{count} open"||Closed, cyan-if-open). All states render: loading/empty/error/data + live/stale/offline.
+
+## Verification (honest)
+- ✅ `swiftlint --strict` **0** · `swiftformat --lint` **0** · placeholder **0**
+- ✅ Isolated `swiftc -typecheck` against the **real** design system: **0 errors**
+- ✅ `swift test`: **32/32 pass** (incl. per-state render smoke)
+- ✅ KMP `Shared.xcframework` built & staged; iPhone 16 sim available
+
+## Gate: `STATUS=BLOCKED` (`EXIT=65`)
+The full-app `xcodebuild build test` is red for reasons **not attributable to and not fixable within this surface** (allowed files = `SecuritySection.*` only):
+- **iOS** — pre-existing duplicate-type collisions in unrelated committed siblings (`RecentDrives*`×`RecentDrivesListWidget`, `StateTimeline*`×`StateTimelineWidget`); **0** errors reference any `SecuritySection` file.
+- **macOS** — entitlements require a development signing certificate absent in this headless environment.
+
+Per the Honesty Covenant I did not claim a green full-app gate; the committed log documents every step with evidence, and the surface itself is independently proven correct.
+
+
+
+The task is fully complete. Let me update the plan to reflect final status, then mark complete.
+

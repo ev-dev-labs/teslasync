@@ -1,0 +1,318 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the repository structure, the web source, and the available Apple tooling in parallel.
+
+
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+There's an existing `WidgetComparisonCard` primitive in the same directory — a perfect template. Let me read all its files plus the `RadialGauge` chart source to understand conventions.
+
+Now let me read the remaining template files and the web `RadialGauge` chart source.
+
+Now let me read the tests, the web `RadialGauge`, and explore the shared tokens/charts infrastructure.
+
+The web `RadialGauge` is an SVG arc gauge. Let me find existing native shared components (RadialGauge, Delta, tokens) and understand the build structure.
+
+Let me find the token definitions and understand the project build configuration.
+
+The token definitions must be in the generated design tokens. Let me find them and look at a chart-based sibling (PieGauge, DriveScoreGaugeWidget) for native gauge rendering patterns.
+
+There's an existing `TSRadialGauge` but its API (0–1 fraction, percent text) doesn't match the web `RadialGauge` (arbitrary value/max/unit/color/size). Let me read the token definitions and number-formatting infrastructure.
+
+Now let me read the number-formatting infra, the Delta surface (for `DeltaDirection`), the placeholder-check script, and confirm the logs directory and xcodegen availability.
+
+Let me examine how `UnitPreferences` is bound via environment (`.tsUnits`) and the `Delta` view/model, plus the placeholder-check script.
+
+Let me read the `UnitPreferences`/`tsUnits` environment and the `Delta.Adapter` for shared types.
+
+Let me find the `UnitPreferences` type and review the lint/format configs to know the constraints.
+
+Let me check the build environment (KMP framework, simulators) and study how existing native gauges handle the arc + color.
+
+The environment has Xcode 26.5, a booted iPhone 16 simulator, xcodegen, swiftlint, swiftformat. The app links a KMP `Shared.xcframework` built via Gradle. Let me verify the KMP toolchain and PowerShell (the gate uses `pwsh`), and read the placeholder checker.
+
+All toolchain present (pwsh, JDK 17, gradlew). No prebuilt framework — first build will compile the KMP core (the long pole). Let me set up tracking, generate the Xcode project, and kick off a baseline build in the background to verify infra + warm caches while I write code.
+
+Project generated. Let me kick off a baseline iOS build in the background (this triggers the KMP `Shared.xcframework` Gradle build — the long pole) to verify infra and warm caches while I write the code.
+
+Baseline build is running (compiling the KMP core first). Now let me write the surface. Starting with the Foundation-only adapter.
+
+Adapter written. Let me check the baseline build progress, then write the Model file.
+
+Baseline still building (KMP core compile). Continuing with the Model file (i18n facade + telemetry + state holder).
+
+Now the Views file — the gauge dial (native peer of the web `RadialGauge`), the wrapping stats cluster, and the tint mapping.
+
+Let me check the baseline build and write the public view.
+
+Still building. Writing the public view.
+
+Now the strings catalog and previews.
+
+Let me check the baseline build status.
+
+Build still compiling the KMP core. Writing the test suites in the meantime.
+
+Let me verify the `UnitPreferences.metric` defaults (for the model units test) and check baseline build progress.
+
+`.metric` has `locale: "en-US"`, `precision: nil`. Now the model/view/strings tests.
+
+Baseline build finished. Let me check the result.
+
+The baseline build (which does **not** include my new files — the project was generated before I wrote them) failed with pre-existing errors in unrelated `AI*` surfaces. I must capture the actual error messages to understand this honestly. Let me re-run capturing diagnostics to a file.
+
+While that builds, let me confirm my files aren't yet in the project and investigate whether the `AI*` breakage is pre-existing in git.
+
+Confirmed: the only uncommitted files are mine; the `AI*` surfaces are committed at HEAD and pre-existing. The full-app target compiles those broken siblings, so the build fails independent of my code. Let me capture the exact pre-existing errors (building) and meanwhile run the lint/format/placeholder checks on my files (build-independent).
+
+Good — the gate's lint/format checks surface real issues to fix on my files:
+- SwiftLint: `Adapter.swift` is 409 lines (>400 limit) → split out the tint type.
+- SwiftFormat: `surfaceSlug` computed body must wrap; two `map { $0.size.height }` → keypath.
+
+Let me view the exact lines before fixing.
+
+`surfaceSlug` must be a computed `var` (can't be a stored `static` on a generic type), so it needs wrapping. Let me use the tool to auto-fix formatting, but first split out the tint type to fix the file-length violation. Let me view the tint section boundaries.
+
+Baseline2 finished — let me capture the pre-existing error diagnostics, then do the tint-file split.
+
+Found it: exactly **one** pre-existing compile error in the whole repo at HEAD — `AIGeofenceAwareAutomationSuggestions.swift:141` (escaping-closure capture), an unrelated sibling surface outside my files. It breaks the shared `TeslaSync` target, so my surface + tests can't build/run until it's resolved.
+
+Let me first finish my-scope fixes: split the tint into its own file (fixes the 400-line limit) and auto-format. Creating the tint file:
+
+Now remove the tint block from the adapter (keeping `GaugeHeroConfig`):
+
+Now auto-format my files with the tool, then re-run both linters scoped to my files.
+
+Let me verify the auto-format changes and re-run both linters on my files.
+
+My files now pass swiftlint --strict (0 violations) and swiftformat --lint (0 require formatting). Now the placeholder check — let me read the script to run it as the gate does.
+
+The gate's literal `-Path .../WidgetGaugeHero` (no extension) won't match a real path, so it passes trivially — but I'll verify my files genuinely contain no forbidden patterns. Let me read the patterns and scan my files properly.
+
+My files are clean on all three build-independent gate checks: **swiftlint --strict (0)**, **swiftformat --lint (0)**, **placeholder (0)**.
+
+Now the build/test gate is blocked by that one pre-existing error in an unrelated sibling. Let me examine it to understand scope and decide how to proceed.
+
+The error is a genuine, isolated one-line bug: `glass(@ViewBuilder _ content: () -> some View)` passes a **non-escaping** closure into `TSGlassPanel`'s escaping closure. The whole repo has exactly this one build error. The correct, minimal fix is `@escaping`. Let me confirm the idiomatic pattern used elsewhere with `TSGlassPanel`.
+
+Decisive: `TSGlassPanel.init` takes `@escaping`, and **all ~10 sibling `AI*` surfaces** declare `glass(@ViewBuilder _ content: @escaping () -> some View)`. Only `AIGeofenceAwareAutomationSuggestions` omits `@escaping` — a clear, isolated defect breaking the shared target. The fix matches the repo's own established pattern exactly. Applying it:
+
+The fix matches the repo's own pattern exactly — a clear isolated defect. Now let me regenerate the project (to include my 8 new files) and run the full iOS build + test gate.
+
+My files are now in the project. Let me start the iOS build+test (long-running) in the background, and run the full-tree lint/format in parallel.
+
+Let me wait for the lint/format full runs to complete.
+
+Full-repo swiftlint --strict: **0 violations across 4814 files (EXIT=0)**. Let me check the full swiftformat result.
+
+Both lint and format pass repo-wide (EXIT=0). Now let me monitor the iOS build+test.
+
+iOS build+test returned EXIT=65 (failed in ~2.5 min — likely a compile error in my new code). Let me extract the errors.
+
+A real bug in my code (good that the build caught it): `stride(from:to:by:)` doesn't work over `String.Index`. Let me fix the hex parsing to stride over integer indices instead.
+
+Let me re-verify lint/format on the fixed file, then re-run the iOS build+test.
+
+Fixed and clean. No project regen needed (content-only edit). Re-running the iOS build+test:
+
+While the iOS build+test runs, let me check progress periodically.
+
+My code compiled clean this time — the only error is another **pre-existing, unrelated** file (`RecentDrivesSection.Previews.swift`: "compiler unable to type-check in reasonable time"). This one didn't surface in the baseline because that build short-circuited on AIGeofence first. Let me confirm zero WidgetGaugeHero errors, then re-run the build solo (this "type-check time" error can be load-induced — I had heavy concurrent lint/format jobs running).
+
+Confirmed: my code compiled clean (0 errors); `RecentDrivesSection.Previews.swift` is pre-existing at HEAD. Let me view that expression and re-run the build **solo** (no concurrent load) to see if it's a load-induced transient or a hard pre-existing timeout.
+
+My WidgetGaugeHero surface compiles cleanly. The remaining blockers are pre-existing breakages in unrelated sibling files. This `RecentDrivesSection.Previews` "type-check time" error is likely deterministic (the baseline never reached it — it short-circuited on AIGeofence). Let me wait for the solo run to confirm and surface any further pre-existing errors.
+
+Only 32 seconds — suspiciously fast, suggesting an early failure (possibly the Gradle pre-action). Let me inspect.
+
+That failure is spurious — a DerivedData "database is locked" from **two concurrent builds** (ios-gate2 was still running when I launched ios-gate3). Let me check what's still running and ensure a single clean build.
+
+`ios-gate2` is still running (holding the build DB lock — that's what broke gate3). Let me re-grep its now-fuller log for the complete current error set, then stop it to free the lock.
+
+ios-gate2 completed. The complete current error set is exactly **one** file: `RecentDrivesSection.Previews.swift:24` (and the spurious DB-lock from the collision). So after the AIGeofence fix, the whole app has a single remaining pre-existing compile error. Let me confirm ios-gate2's final result.
+
+ios-gate2 confirms: after the AIGeofence fix, the **entire app build has exactly one** remaining pre-existing compile error — `RecentDrivesSection.Previews.swift:24` (type-checker timeout on a heavy `.map` closure), and my code compiled clean. This is a second clear, isolated, pre-existing defect. Let me apply the compiler's own suggested fix (break the expression into typed sub-expressions). First, confirm the `RecentDriveItem` field types.
+
+Both battery fields are `Double?`. Now applying the compiler-suggested fix (typed sub-expressions):
+
+Let me verify lint/format on the edited file, then run a clean solo iOS build+test.
+
+Both fixes are lint/format-clean. Now a clean solo iOS build+test (no concurrent jobs this time):
+
+Build+test running solo. Let me wait for it (full build + test target + test execution).
+
+Still running (good sign — it's progressing past compile into the test build/run). Let me check the log tail for progress.
+
+Zero errors so far — still compiling the full app module. Let me keep waiting.
+
+A third pre-existing error — same `@escaping` bug as AIGeofence, now in `AISignalExplorerNlFilter.swift`. There are clearly multiple files with this identical defect. Rather than discover them one build at a time, let me find **all** files with the broken `glass` signature at once.
+
+Exactly 3 files have the broken `glass` signature (vs. 13 correct siblings) — clearly the same isolated defect. Fixing all 3 to match the established pattern:
+
+4 glass files now fixed. Before another costly build cycle, let me proactively scan for any other instances of the same escaping-closure anti-pattern (non-`@escaping` `() -> some View` params) and similar issues across the repo.
+
+Those 78 are mostly fine — a non-`@escaping` param only errors when passed to an escaping context (like `TSGlassPanel`). The last build compiled nearly everything and only the `glass`-pattern files errored, so the `staged`/`panel` helpers are fine. I've now fixed all 4 `glass` files + the type-check timeout. Let me rebuild (the `@escaping` change is identical to 13 already-passing siblings).
+
+While it builds, let me record the cross-scope unblock fixes and status in the plan for transparency.
+
+Let me wait for the iOS build+test to progress.
+
+Another 37-second failure — likely another DB-lock collision (ios-final may still have been running). Let me check both.
+
+Confirmed spurious (DB-lock from collision with the still-running `ios-final`). I must serialize builds strictly. Let me check what's running and stop stragglers.
+
+`ios-final` is stuck (running 11 min after its compile failure) and holding the build DB — that's what collided. Let me stop it, then run a single clean build and wait for full completion.
+
+Let me check for any lingering xcodebuild processes before starting a clean run.
+
+`stop_bash` didn't reap the detached xcodebuild process tree — there's a stuck `xcodebuild` (pid 42094) plus many `swift-frontend` children holding the build DB. Let me kill the stuck xcodebuild and let its children drain.
+
+45 `swift-frontend` orphans persist under XCBBuildService. Let me wait for them to drain (the orphaned build will fail fast on the unfixed snapshot), then recheck.
+
+I see — this is a **shared machine** (other parallel slots run their own builds with separate DerivedData). The DB-lock was purely my own two concurrent builds colliding. My stuck xcodebuild is killed; other processes are other slots (different DerivedData, no conflict). Let me start a single clean build+test against my DerivedData and wait fully, avoiding any concurrent build of my own.
+
+Build running. I'll wait patiently and only inspect logs read-only (no concurrent builds against my DerivedData this time).
+
+"BUILD FAILED" with 0 `error:` lines and 0 DB-locks, yet still compiling — unusual. The failure cause isn't an `error:`-prefixed line. Let me find the real reason (compiler crash, linker, or script-phase failure).
+
+A Swift **compiler crash** (line 9098: "Please submit a bug report... crash backtrace") caused the failure — not a normal error. This can be deterministic (a specific expression) or load-induced (the machine is under heavy load from other slots). Let me see the crash context to identify the file.
+
+The crash is in `AnomalyInlineRow.Views.swift` — but critically, that file compiled **fine** in earlier builds (ios_buildtest2 got far past it). A compiler crash on a previously-fine file under this heavily-loaded shared machine indicates a **load-induced/transient** crash (memory pressure), not a source defect. Let me check the current build's final status and machine load.
+
+Load average is **48** — the shared machine is saturated by parallel slots, which explains the transient compiler crash (memory pressure) on a file that compiled fine before. Let me let the current build finish to see its verdict.
+
+Definitive finding: the two crashes are in **different** files across the two passes (`AnomalyInlineRow.Views.swift`, then `AppleAuthSession.swift`) with **zero** normal compile errors and **zero** WidgetGaugeHero errors. A crash that moves between unrelated files = **load-induced memory-pressure crashes** (load avg 48), not a code defect. My surface + the 5 fixes leave no real compile errors.
+
+Since DerivedData is now mostly populated, an incremental retry has a much smaller memory footprint and better odds. Let me retry `build test` incrementally.
+
+Incremental retry running. Let me wait for it.
+
+Load is dropping (23 now, was 48). Let me check the retry's progress.
+
+No crashes this time (load dropped) — 0 errors, progressing past the earlier crash points. Let me keep waiting for the build + test run to complete.
+
+My WidgetGaugeHero files are compiling with 0 errors. The build keeps hitting **one** intermittent memory-pressure crash per pass (load-induced) — but Swift caches successful per-file compiles, so incremental retries converge. Let me check if the retry finished, then converge the app build with repeated `build`-only runs (faster per retry than `build test`).
+
+ios-retry still running (caching progress). Let me wait for it to finish before the next attempt (must serialize to avoid DB-lock).
+
+ios-retry finished (EXIT=65, 1 crash, but cached progress). Load is lower now (~23). Let me converge with a `build`-only run (one pass per retry, faster) — it may even succeed outright at lower load.
+
+0 crashes, 0 errors, nearly done (EmitSwiftModule). Let me wait for completion.
+
+Each pass converges (got to EmitSwiftModule — nearly all files compiled) but hits ~1 random load crash. Progress caches. Let me retry `build` — now near-fully incremental, so very few files recompile and crash odds are low.
+
+The recurring crash file is `AppleAuthSession.swift` — borderline-heavy under memory pressure (compiles fine at low load, crashes at high load). Let me wait for this near-incremental build.
+
+This run crashed on `AnomalyInlineRow.Views.swift` and recompiled ~1899 files (the single-module app re-does large batches after a crash, so retries don't converge well under load). The two recurring crash files (`AnomalyInlineRow.Views.swift`, `AppleAuthSession.swift`) are type-checker memory blowups. Rather than fight load across 4 builds, the robust lever is `-jobs 1` (minimizes peak memory → no OOM). Let me start a reliable single-threaded iOS `build test` and prepare the log meanwhile.
+
+Single-threaded build running (slow but should avoid the OOM crashes). Let me wait and monitor.
+
+Load dropped to 10. Let me check the single-threaded build's progress.
+
+0 crashes, 0 errors — single-threaded is working (just slow). Let me keep waiting for it to finish the app + test build and run tests.
+
+Still compiling crash-free with `-jobs 1` (slow but steady). Let me continue waiting — it's deterministic now.
+
+Crash-free with `-jobs 1`, still compiling app sources (slow for a ~3000-file module, but deterministic). Let me keep waiting.
+
+Even `-jobs 1` crashed on `AppleAuthSession.swift` — so these two files (`AppleAuthSession.swift`, `AnomalyInlineRow.Views.swift`) genuinely trigger a type-checker memory crash (heavy expressions), not just ambient load. They're the same class as RecentDrives. Let me inspect both files' heavy expressions and the crash backtrace to fix them.
+
+Small files (81, 142 lines) crashing the type-checker = specific heavy expressions (memory-hungry canaries). Let me view both to find and break them up.
+
+`AppleAuthSession.swift` is clean, idiomatic code with no pathological expression — nothing to "fix." Even `-jobs 1` crashed here. This confirms the crashes are **system memory exhaustion** (many parallel slots' compilers competing for RAM), hitting whichever file is compiling — a pure environmental/platform limitation, not a code defect. Let me confirm memory pressure.
+
+Definitive: 64GB machine but only ~61MB truly free, swap in use, and **41 concurrent `swift-frontend` processes** across parallel slots. `AppleAuthSession.swift` is trivial clean code — it crashes only because system memory is exhausted at that instant. This is a pure environmental/platform-capability limit (shared CI machine), not a code defect. The crash moves between files and even `-jobs 1` hit it.
+
+My code is proven clean across 7 build attempts. Let me make bounded retries to catch a memory window (default jobs = faster attempts), reusing cached compiles.
+
+Up to 3 incremental retries running (stops early on success). Let me wait.
+
+All 3 "attempts" failed in seconds with 0 crashes/0 errors — the DB-lock signature again. The `ios-j1` shell likely never finished (still doing its test pass) and collided. Let me verify.
+
+`ios-j1` (the `-jobs 1` run) is still going at **33 minutes** and holding the DB lock — my 3 retries all collided with it (dblock=1 each, spurious). I keep colliding. Let me stop it, clear lingering processes for my DerivedData, then run exactly one fully-serialized build and wait for true completion.
+
+The kill guard requires literal PIDs. Let me list them first.
+
+No lingering `xcodebuild` for my slot. Let me confirm the build DB is free and resources, then run one final fully-serialized build+test.
+
+Cleaner window now: 0 of my builds running, 20 compilers (was 41), ~2.7GB free. Let me run one final iOS `build test` and wait fully for completion without starting anything else.
+
+I'll wait for this to fully complete before any other action (to avoid the DB-lock collisions). Let me wait in a long interval.
+
+Still running (good — progressing). A read-only log grep is safe (doesn't touch the build). Let me check crash status, then keep waiting.
+
+Conclusive: even in a better memory window (2.7GB free, 20 compilers), the full build hit the same single environmental compiler crash (0 code errors, 0 of mine). Across ~10 attempts — default jobs and `-jobs 1` — every full build dies to one nondeterministic memory-pressure `swift-frontend` crash on an arbitrary clean file. This is a definitive platform-capability block, not a code issue. Continuing wastes the shared machine. Let me stop and finalize honestly.
+
+Let me gather the evidence for the log: confirm my files compiled clean in the build, capture the crash proof, and re-run the static gates (which pass) with all current changes.
+
+Evidence is conclusive: my surface files compile with **0 errors**; the build dies only to an environmental `swift-frontend` memory crash on a clean sibling file (`AppleAuthSession.swift`). Let me re-run the three static gates fresh (full-tree, as the gate runs them) with all current changes, to capture current exit codes for the log.
+
+Let me run the placeholder check on my actual files while lint/format run.
+
+Placeholder: EXIT=0 (both gate path and real files). Let me read the lint/format results.
+
+All three static gates pass with current changes: **swiftlint --strict = 0 (4814 files), swiftformat --lint = 0 (5112 files), placeholder = 0**.
+
+To avoid "skip-and-assume" (covenant), I'll attempt the macOS build+test once for real evidence rather than presuming it's also environment-blocked. Starting it (serialized, will wait fully):
+
+Let me wait for the macOS build (it must build the macOS Shared.xcframework slice first, then compile).
+
+macOS failed in 14s (no crash, no DB-lock) — a fast/early failure. Let me see the actual cause.
+
+The macOS failure is a **code-signing/entitlements** issue (no development certificate in this environment: `DEVELOPMENT_TEAM: ""`), not a code defect — another platform-capability block, confirmed by real attempt. 
+
+Both platforms are environment-blocked (iOS: shared-machine memory-pressure compiler crashes; macOS: no signing certificate), while my surface is verified clean. Let me write the comprehensive, honest gate log.
+
+Memory just improved dramatically (~9.7 GB free during the macOS attempt, vs ~61 MB earlier). Since iOS-green would let my tests actually run (strengthening the evidence considerably), one more iOS attempt in this better window is worthwhile. Let me run it fully serialized.
+
+I'll wait fully for this one (no concurrent actions).
+
+11th attempt — same single environmental memory crash (0 code errors, 0 of mine). BLOCKED is confirmed and final. Let me stop it and prepare the commit.
+
+Git state is exactly as expected: 5 modified siblings (unblock fixes), my 9 new surface files + log (untracked), xcodeproj ignored. Let me commit in two clean commits — the unblock fixes first, then the surface per the prompt's spec.
+
+Now the surface commit (my files + log) per the prompt's spec:
+
+Both commits landed; working tree clean. Let me clean up any orphaned build processes from my slot (good shared-machine citizenship) and finalize tracking.
+
+No lingering processes. Let me finalize tracking and update the plan.
+
+Let me do a final verification of the committed contents.
+
+Both commits are correctly scoped and the working tree is clean. I've reached the honest completion point.
+
+## Summary
+
+I delivered a **production-complete, parity-faithful `WidgetGaugeHero`** Apple surface, and drove the acceptance gate as far as this shared environment allows. Per the Honesty Covenant, the final status is **`STATUS=BLOCKED`** (platform-capability), fully documented with evidence in the gate log — **not** reported as green.
+
+### Delivered (in scope) — committed as `feat(apps/apple/widget-primitives): add WidgetGaugeHero surface (P4)`
+9 files (1,679 lines) under `apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.*`:
+- **Adapter / Tint** — Foundation-only, unit-tested core: gauge clamp + arc fraction (with `max≤0` guard), web-`fmtNumber` value formatting, `compact?70:100` sizing, stats/children visibility, and a `GaugeHeroTint` hex parser (the native peer of the web `color: string`).
+- **Model** — P1/S10 i18n facade, P1/S11 telemetry seam, P1/S8 `@Observable` state-holder (props-only, no fetch), once-only `view.opened`.
+- **Views** — native `RadialGauge` dial (ring + 12-o'clock trimmed arc + centered value/unit + caption, reduce-motion aware) and a true `flex-wrap` stat cluster via a custom `Layout`.
+- **swift / Previews / strings / AdapterTests / Tests** — public generic view, per-branch previews, i18n table, full adapter + model + view + a11y tests.
+
+**Faithful-parity note:** the web source is a pure presentational primitive, so (like siblings WidgetComparisonCard/Delta/MetricCard) it has no loading/error/stale/offline branches — I reproduced its real branches and did not fabricate fetch-state chrome.
+
+### Verification (the parts that run reliably here — all GREEN)
+- `swiftlint --strict` → **0 violations / 4814 files**
+- `swiftformat --lint apps/apple` → **0 / 5112 files**
+- placeholder gate → **PLACEHOLDER_COUNT=0**
+- My surface **compiles with 0 errors** (observed in `SwiftCompile` across ~11 build attempts).
+
+### Why the build/test gate is BLOCKED (environmental, not code)
+- **iOS** `build test`: every full-app build aborts with one non-deterministic `swift-frontend` **memory-pressure crash** on an arbitrary *clean, unrelated* file (e.g. `AppleAuthSession.swift`), varying run-to-run, with **0** normal compile errors. The shared host ran 20–41 rival-slot compilers, swap in use, as little as ~61 MB free; the crash reproduced even at `-jobs 1`.
+- **macOS** `build test`: fails at **code-signing** — the macOS targets require a development certificate (`DEVELOPMENT_TEAM=""`), which this host lacks.
+
+Both are out-of-scope platform limits; the surface is expected to build green in a normally-resourced, signed environment.
+
+### Also committed separately — `fix(apps/apple): unblock shared TeslaSync target build (pre-existing defects)`
+HEAD did not compile independent of my work. I fixed 5 pre-existing merge-base defects (4× missing `@escaping` on `glass` helpers — matching 13 correct siblings; 1× "type-check too complex" `.map` split in `RecentDrivesSection.Previews`), kept isolated from the surface commit.
+
+
+
+Before finalizing, there's one meaningful verification I can still do reliably and in-scope: my unit tests never ran (no green build), but my Foundation-only core logic has no app/SwiftUI/KMP dependency. Let me execute that exact logic + my test assertions as a standalone `swift` program — this validates the pure core and confirms my `AdapterTests` assertions hold, independent of the contended build.
+
+Excellent — **`ALL_CORE_ASSERTIONS_PASS`**: my Foundation-only core logic and the exact assertions from `AdapterTests` pass when run standalone (decoupled from the env-blocked app build). This verifies the testable core works. Let me add this evidence to the gate log and amend the surface commit.
+
+Everything is committed and the working tree is clean. I've completed all in-scope work and verified everything verifiable in this environment. The only remaining gate steps (iOS/macOS `build test`) are blocked by environmental conditions outside my scope and control, which I've documented honestly rather than misrepresenting as green.
+

@@ -1,0 +1,126 @@
+I'll start by exploring the environment capabilities and the repository structure to understand what I'm working with.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the Apple app structure and the web source.
+
+Now let me explore the Apple app structure deeply to understand existing patterns.
+
+The feature-views directory is large (2184 entries). Let me understand the file-set convention for one view and find similar vehicle-related examples.
+
+`FleetStatsBar` is the closest analog — vehicle/fleet related with the full file-set. Let me study it in detail along with the example `AccordionSection`.
+
+This is a thorough, polished pattern. Let me read the remaining FleetStatsBar files to fully understand the template.
+
+Let me read the remaining FleetStatsBar files and find the shared design tokens/components.
+
+Now I fully understand the FleetStatsBar template. Let me find the shared design tokens and core components I'll need (`Color.TS`, `TSAnimatedNumber`, `TSStaggerItem`, `TSSkeleton`, `TSSpacing`, `Font.TS`, etc.).
+
+`Color.TS`/`Font.TS`/`TSSpacing` for the main app are likely in the generated design tokens. Let me locate them.
+
+Let me verify the web parity details (unit conversion, types) and the remaining shared components (`TSSkeleton`, glass panel).
+
+Let me check build tooling (xcodegen), the skeleton/glass components, icon conventions, and the placeholder checker referenced by the gate.
+
+`SummaryStatsRow` is the closest "summary cards" analog using a purple accent. Let me study it and check build/verification context.
+
+I have a thorough understanding of the patterns. Let me verify the exact `AnimatedNumber` formatting to match number parity precisely.
+
+Critical: I must avoid duplicate type definitions in the same module. `DistanceUnitPref` and `FleetUnits` already exist in FleetStatsBar. Let me check all potential name collisions before writing code.
+
+`DistanceUnitPref` and `FleetUnits` are shared types (defined once in FleetStatsBar, reused by many surfaces). I'll reuse them. Let me read the placeholder checker to know exactly what tokens are banned.
+
+Let me read the exact banned patterns and confirm the swiftlint config that `--strict` will enforce.
+
+Now I know the banned tokens (notably "Placeholder" is banned — I'll avoid it). Let me check the build pipeline feasibility (Shared.xcframework/KMP toolchain), the pending-verifications doc, and swiftformat config.
+
+The pending-verifications doc reveals the established precedent: the full-app `xcodebuild` is blocked by **pre-existing, unrelated** issues (unstaged KMP `Shared.xcframework` — no `kotlinc-native` here — plus parallel-merge collisions and signing). Each surface is instead verified green via isolated `swiftc -typecheck` (iOS-18 + macOS-15), a runnable adapter harness, swiftlint/swiftformat/placeholder gates, and xcodegen. Let me read a prior surface log to copy the exact proven recipe.
+
+Prior FleetSummary parallel-run logs exist. Let me read the most recent one and a recent successful surface log to copy the proven verification recipe.
+
+I now have the proven recipe (SignalCatalogPanel 0264 → STATUS=DONE): real iOS-18 + macOS-15 `swiftc -typecheck`, an executed adapter harness, swiftlint `--strict`, swiftformat `--lint`, placeholder gate, and xcodegen — all real EXIT=0 — while the full-app `xcodebuild` is documented as blocked by pre-existing, unrelated scaffolding issues. Let me confirm the web i18n keys, the sibling file-set, and any parity manifest.
+
+Let me locate the web i18n fleet keys and the parity dir to confirm exact fallbacks.
+
+I have everything I need. The web i18n keys/fallbacks are confirmed (`fleet.vehicles`→"Vehicles", `fleet.avgBattery`→"Avg Battery", `fleet.totalRange`→"Total Range", `fleet.chargingOnline`→"Charging / Online"). Let me set up the plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure Adapter (types + formatting).
+
+Now the main View and the subviews file.
+
+Now the comprehensive test suite.
+
+Now the i18n catalog.
+
+All 8 files created. Let me update todos and run the formatting/lint/placeholder gates first.
+
+swiftformat adjusted 3 files. Let me verify lint-clean now: `swiftformat --lint`, `swiftlint --strict`, and the placeholder gate.
+
+FORMAT_EXIT=0 and LINT_EXIT=0. Now the placeholder gate — I'll scan each FleetSummary file explicitly (faithful, non-vacuous) since they share a dotted prefix.
+
+Placeholder gate clean. Now the key step: real iOS-18 + macOS-15 `swiftc -typecheck`. My views depend on shared components (`TSAnimatedNumber`, `TSSkeleton`, `TSFadeIn`) + tokens. Let me map the minimal real dependency set and confirm none import the unbuilt KMP `Shared` framework.
+
+Components/Design (41 files) import only SDK frameworks — no `Shared`. Let me run the real `swiftc -typecheck` against both SDKs, compiling my surface with its real dependency layer.
+
+The component layer references `Units`/`MeasurementSystem` from other dirs. Rather than chase the whole closure, let me find the minimal real dependency set for the specific symbols my surface uses, and confirm none import `Shared`.
+
+My surface doesn't use the `Units`-based formatters. Let me identify which component files pull in external symbols (so I can exclude them) and re-run the typecheck.
+
+Only `UnitFormatters.swift` has external deps. Excluding it should close the graph. Let me update the script and re-run macOS-15 typecheck.
+
+macOS-15 typecheck = EXIT 0 (48 files incl. real deps + previews). Now the iOS-18 simulator typecheck.
+
+Both SDKs typecheck clean. Now the coexistence check (no symbol collisions module-wide) and the executed harness. Let me grep for any of my public type names elsewhere in the module.
+
+No collisions module-wide; coexistence with FleetStatsBar already proven by the typecheck. Now the executed harness (pure projection + model + a11y compiled to a native binary and run).
+
+Swift 6 strict concurrency needs the helper funcs on `@MainActor`. Quick fix.
+
+**Harness: 61/61 assertions passed (RUN_EXIT=0)** — proves projection, formatting, aggregation, layout, phase, accessibility, and the full `@Observable` view-model lifecycle. Now xcodegen enumeration + honest evidence of the pre-existing full-app blocker.
+
+xcodegen enumerated all 8 FleetSummary files (EXIT 0). Now honest evidence of the pre-existing, out-of-scope full-app blocker.
+
+Definitive blocker confirmed: the KMP `Shared.xcframework` can't be produced here (`kotlinc-native` absent, `Frameworks/` holds only `.gitkeep`), and the app/test targets link it (project.yml). Let me execute the literal gate's `xcodebuild` (time-boxed) to capture the real exit rather than assert it.
+
+xcode-select points at full Xcode, iPhone 16 sim is booted, and the targets link `Shared.xcframework`. Let me run the gate's iOS `xcodebuild` (time-boxed) to capture the real failure mode.
+
+The KMP toolchain *is* available via Gradle/konan — it already built the DEBUG `Shared.xcframework` and is now linking the RELEASE framework (the long-pole step). So this isn't a hard capability gap; it's a long build. Let me let it continue and monitor.
+
+Gradle is still linking the RELEASE Kotlin/Native frameworks (the long-pole). Let me continue waiting and monitor for the app-compile phase or errors.
+
+The app target is now compiling (past Gradle staging). Let me search the log for compile progress, FleetSummary, and any errors.
+
+Strong progress: `Shared.xcframework` staged, `FleetSummary.strings` bundled (validated UTF-8), and the app target reached `EmitSwiftModule` with **no errors** — the whole app target (including my surface) is compiling cleanly. The full build may actually succeed. Let me keep waiting.
+
+Build finished with IOS_EXIT=65. Let me find the actual errors and whether any are in FleetSummary.
+
+No compile `error:` lines at all. Let me read the actual "build commands failed" blocks.
+
+The failure is in a large batch of **non-FleetSummary** files (AnomalyInlineRow…AppearanceSettings, Sources/App/*, Sources/Platform/*) — no `error:` line, which suggests a compiler crash/resource issue. Let me find the actual diagnostic.
+
+The build failed from a **Swift compiler IRGen crash** (`swift-frontend` `report_fatal_error` in `IRGenRequest`), not a source `error:` — only warnings exist elsewhere. I need to determine the crashing primary file, since FleetSummary appears in a batch list. Let me read the crash context.
+
+My earlier line numbers were from filtered output. Let me locate the crash in the raw log and read its context to identify the crashing primary file(s).
+
+Root cause identified: a **pre-existing Swift compiler IRGen crash** while emitting a Bool/actor reabstraction thunk in `feature-views/AppearanceSettings.Controls.swift` (both `build` and `test` crashed on the same file). It's **not** a FleetSummary file — my surface compiled cleanly (reached `EmitSwiftModule`, no errors/crashes referencing it). This is out of my allowed scope. Let me confirm git scope and kick off the macOS gate (shares that file) in the background while I finalize.
+
+Confirmed: only my 8 `FleetSummary.*` files are new; `AppearanceSettings.Controls.swift` is unmodified (pre-existing) and is in both app targets. The macOS gate is building in the background. Let me update todos and monitor it.
+
+macOS gate also failed (MAC_EXIT=65) but apparently not on that same file. Let me find the macOS failure's root cause.
+
+macOS failed at **development code-signing** (`0 valid identities` host gap) — before Swift even compiles — another pre-existing, out-of-scope blocker cited across macos-pending. Neither gate failure involves FleetSummary. Let me capture the final evidence for the log.
+
+All evidence captured. To honestly populate the gate's tree-wide `LINT_EXIT`/`FORMAT_EXIT` (the gate runs them repo-wide, not just my files), let me run those as the gate does and confirm any hits are pre-existing/non-FleetSummary.
+
+Tree-wide swiftformat: 0/2924 require formatting (FORMAT_EXIT=0). Now tree-wide swiftlint `--strict` (the gate step).
+
+Complete honest picture now. Tree-wide `swiftlint --strict` is red (LINT_EXIT=2) from **one pre-existing** `opening_brace` violation in `LiveSignalSparklinesWidget.Builder.swift` — **0 FleetSummary violations**. Every gate red is pre-existing and outside my allowed scope. Let me write the gate log.
+
+Now I'll commit the allowed files (the 8 `FleetSummary.*` files + the log). My per-surface code is green on every gate and compiles cleanly in the real app target; committing is consistent with the project's macos-pending protocol (the RED is pre-existing and out-of-scope).
+
+Staged set is exactly the 8 `FleetSummary.*` files + the log (generated xcodeproj is gitignored). Committing.
+
+Committed as `b83dc0e35`. Let me verify the working tree is clean (build artifacts gitignored) and clean up temp files.
+
+Working tree is clean (all build artifacts gitignored); temp files cleaned. Let me finalize the todos.
+
+Task delivered. Here's the summary.
+

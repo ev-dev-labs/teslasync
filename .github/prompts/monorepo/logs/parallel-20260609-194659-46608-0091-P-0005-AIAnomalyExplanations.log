@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple/Xcode tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators with iPhone 16 booted). Let me read the web source and explore the existing Apple app structure.
+
+The web source is simple — it wraps `AIFeatureCard` via a `withAiFeature` HOC, using `useAiStream`. I need to understand the full dependency chain and the existing Apple app patterns. Let me read the web dependencies and explore the Apple structure.
+
+Now I fully understand the web source. Let me examine the Apple project structure — the build config, existing surface patterns, and the P1/S8/S9/S10/S11 infrastructure (state holders, tokens, i18n, telemetry).
+
+The project uses XcodeGen. Critically, `project.yml` does **not** list `TeslaSync/shared-surfaces` (nor `modals-dialogs`) as a source path. My allowed files are only `shared-surfaces/AIAnomalyExplanations.*` + the log. Let me investigate how the build resolves sources and whether xcodegen/xcodeproj exist.
+
+Now I understand the file decomposition pattern (`.swift`, `.Model`, `.Views`, `.Adapter`, `.States`, `.Seams`, `.Previews`, `.strings`, `.Tests`, `.ModelTests`). Critically, `shared-surfaces` isn't wired into `project.yml`. Let me find existing AI surfaces to mirror, the state-holder/i18n/token/telemetry infra, and check prior shared-surfaces logs.
+
+Found the canonical prompt and prior run logs. Let me read the actual on-disk prompt, the prior P-0005 artifact log (to learn the established convention), and check whether an `AIAnomalyExplanations` native surface already exists anywhere.
+
+A prior run already implemented this exact surface (10 files in `shared-surfaces/`) but those files are absent in this fresh slot — I must recreate them. The prior log documents the honest approach: the full-app `xcodebuild` gate is blocked by **pre-existing** issues (Shared.xcframework KMP staging, `shared-surfaces` not wired into `project.yml`, co-located tests), so it verified via an **isolated Swift 6 build + XCTest** and deferred the full-app gate with evidence. Let me read the full prior log to mirror the exact patterns and seams.
+
+This prior log is an excellent roadmap. Let me read the rest of it to capture the isolated-build harness and remaining gate evidence.
+
+I now have the predecessor's full approach: 10 files, P1/S8 state-holder seam + P1/S9 tokens (`TSSpacing`/`Color.TS`/`Font.TS`) + P1/S10 i18n facade + P1/S11 telemetry, verified via an **isolated SwiftPM Swift-6 build + 45 XCTest** with the full-app gate deferred on pre-existing blockers. `AiUsageCard.*` is the closest template. Let me study it and the design system primitives.
+
+`AiUsageCard` is the ideal template — it gives me the exact P1/S8/S10/S11 seam shapes and token usage. Let me read its remaining files plus the design tokens to learn the real primitive APIs.
+
+Let me read the remaining template files (Views, Chrome, Previews, Tests, strings) and the design system tokens to learn the exact primitive APIs.
+
+I have the core patterns. Now let me confirm the exact design-system primitive APIs (`Color.TS`, `Font.TS`, `TSSpacing`, `TSButton`, `TSSkeleton`, `TSFadeIn`) and read the template's tests/previews/strings.
+
+`Font.TS.panel` isn't a thing — that was a minor inaccuracy in the prior log. Let me read the generated tokens and the key component declarations to get exact APIs.
+
+`Font.TS.panel` does exist (Tokens.swift:145). Now let me read `TSSkeleton`/`TSFadeIn` signatures and the template's test/preview/strings files to mirror their patterns precisely.
+
+Let me read the model/telemetry test patterns, the strings/AdapterTests, and the lint/format/placeholder configs.
+
+Now let me check the lint/format/placeholder configs and the AdapterTests structure, plus understand component interdependencies for the isolated build.
+
+Components/Design only import system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation) — self-contained, so the isolated build is viable. Let me check `pwsh`, the forbidden-pattern list, and the AdapterTests structure before writing.
+
+All tools present (pwsh 7.6.2, swift, xcodebuild). Forbidden patterns: TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented. Let me read the web `AiOutputPanel` + `AIThinkingIndicator` to nail the output-branch parity, then I'll write the surface.
+
+I have complete parity understanding. The `AiOutputPanel` branch order is: `!hasAnything`(idle+no text)→nothing; `error`→"Helix error:"; `streaming`+no text→thinking; else→prose. Now I'll build the surface. Let me set up tracking and write the plan.
+
+Now writing the surface, starting with the pure-Foundation Adapter (request, SSE parser, stream reducer, output/action derivations).
+
+Now the Projection (pure input→resolved with localization), mirroring the AiOutputPanel branch order and the canStart rule.
+
+Now the Chrome (freshness chip, refresh, connectivity banner, availability loading skeleton, retryable gate-error).
+
+Now the main surface file (gate→EmptyView, header with title+badge+freshness+refresh, phase switch, lifecycle, surfaceSlug).
+
+Now the Previews (one per state) and the strings catalog.
+
+Now the test files. First the Tests.swift (projection phases, ready content, output branches, model wiring/telemetry/auto-refresh/delegation, a11y).
+
+Let me clean up the confusing `testLiveResetsStaleAutoRefreshArming` test to use the single-model pattern.
+
+Now the AdapterTests (request, SSE parse, reducer, output/action derivations) — pure logic asserted against the web expressions.
+
+All 10 files written. Now I'll verify via an isolated SwiftPM build + XCTest against the real design system (the predecessor's sanctioned approach, since the full-app `xcodebuild` is blocked by pre-existing KMP/project.yml issues). Let me first check what design sources are needed.
+
+The needed design files only import SwiftUI with no cross-refs — a clean minimal set. Let me build the isolated SwiftPM harness (copying the real design sources + my surface) and run it with the Xcode toolchain.
+
+My surface code compiled cleanly — the only error is `Skeletons.swift` referencing `TSCard` (from `Cards.swift`), which I didn't copy. Let me add `Cards.swift` and rebuild.
+
+The chain pulls in `TSBadge` (Badges.swift) and `TSText/TSPanelTitle/TSCaption` (Typography.swift) — exactly the predecessor's set (Typography/Badges/Buttons/Cards/Motion/Skeletons). Let me add them.
+
+Build is green. Now running the XCTest suite.
+
+All 69 tests pass, 0 failures, under Swift 6 strict concurrency against the real design system. Now the static gates — swiftformat, swiftlint, placeholder check on my files.
+
+Just one auto-fixable issue (inline loop body). Let me apply swiftformat to my files and re-verify.
+
+swiftformat clean. Let me verify the auto-formatted section is still correct, then run swiftlint on my files.
+
+SwiftLint used the config's `included:` list (which omits `shared-surfaces`), so those 3235 files didn't include mine. To honestly lint exactly my files with the same rules, I'll copy the repo config to a temp path, re-scope `included:` to my dir, and run it.
+
+Linting my 9 files now. Two real violations: cyclomatic complexity in `typedEvent` and a `String(decoding:)` rule in the test. Let me view the exact current text and fix both.
+
+Now fix the test's `String(decoding:)` rule violation.
+
+Re-running format, lint, and the isolated test after the fixes.
+
+Format + lint both green (0 violations). Now re-sync and re-run the isolated test suite to confirm the refactor is still green.
+
+All 69 tests green after refactor. Now the placeholder gate — I'll run both the honest directory scan and the literal stem path from the gate.
+
+Placeholder check clean (COUNT=0). Now I'll honestly document the full-app `xcodebuild` gate disposition by *verifying* the pre-existing blockers (not assuming). Let me check the Frameworks staging, the shared-xcframework script, and co-located test counts.
+
+Verified all three pre-existing blockers: `Frameworks/` holds only `.gitkeep` (Shared.xcframework unstaged → scheme pre-action must run Gradle KMP), `project.yml` omits `shared-surfaces`, and 384 co-located test files import XCTest into the app target. To honestly *attempt* (not assume) the full-app gate, let me generate the project and make a bounded build attempt.
+
+`xcodegen` succeeds but the generated project has **0** references to my surface (project.yml omits `shared-surfaces`) — concrete proof the full-app gate is a P99 wiring concern, not my code. Let me make a bounded attempt at the actual `xcodebuild` to capture the Shared.xcframework Gradle-staging blocker.
+
+The empty `xcodebuild` log confirms the build is stuck in the pre-build **Shared.xcframework staging** — and `ps` shows the contended Gradle `:core:assembleSharedXCFramework` KMP task running across parallel slots (a 47-min daemon, slot-90 actively staging). Let me check my own process and capture the staging evidence, then clean up.
+
+My sync subshell `&` didn't persist (sync sessions are discarded). The processes seen were other slots. I've already *definitively* verified the blockers, but to genuinely attempt the gate on this runner (not assume), let me run a bounded `xcodebuild` via a persistent async session, capture the staging behavior, then clean up.
+
+`timeout` is available. Running a bounded (180s) `xcodebuild` for the iOS gate to capture the staging blocker on this runner.
+
+The bounded attempt confirms it exactly: the `xcodebuild` pre-action is still assembling the **Shared.xcframework via Gradle** (`:core:assembleSharedDebugXCFramework`, `:core:linkReleaseFrameworkIosArm64`) when the 180s cap hit — `** BUILD INTERRUPTED **`, never reaching my code. Let me clean up any slot-91 staging processes I spawned.
+
+Both orphaned staging processes are gone. The macOS gate shares the identical "Stage Shared.xcframework" pre-action, so it's blocked the same way (re-running Gradle would be wasteful). Let me check git status and clean up verification artifacts.
+
+Clean — only my new `shared-surfaces/` directory is untracked. Now a final consolidated verification pass to capture exact raw numbers for the log (per-surface gates + the literal whole-tree gate exits).
+
+All per-surface gates green (FORMAT=0, LINT=0, PLACEHOLDER=0, 69 tests pass). Now capturing the literal whole-tree gate exits honestly (to prove any nonzero comes from pre-existing foreign files, not mine).
+
+Whole-tree swiftformat is clean here (0/3474, exit 0). Now the literal `swiftlint --strict` (default config) to record its exit honestly.
+
+Both whole-tree gates are green in this slot (FORMAT_WHOLE_EXIT=0, LINT_WHOLE_EXIT=0). I have all evidence. Let me write the comprehensive, honest gate log.
+
+Log written. Now verifying the tree is exactly my deliverables, then committing per the prompt.
+
+All 11 deliverables staged (10 surface files + log), nothing extraneous. Committing.
+
+Committed: 11 files, 2293 insertions. Let me finalize tracking and confirm the working tree is clean.
+
+Everything is complete and verified. Let me update the plan to reflect completion.
+
+All 13 todos done. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...-shared-surfaces-0005-AIAnomalyExplanations.log | 232 +++++++++++++
+ .../AIAnomalyExplanations.Adapter.swift            | 320 ++++++++++++++++++
+ .../AIAnomalyExplanations.AdapterTests.swift       | 262 +++++++++++++++
+ .../AIAnomalyExplanations.Chrome.swift             | 149 +++++++++
+ .../AIAnomalyExplanations.Model.swift              | 366 +++++++++++++++++++++
+ .../AIAnomalyExplanations.Previews.swift           | 116 +++++++
+ .../AIAnomalyExplanations.Projection.swift         | 108 ++++++
+ .../AIAnomalyExplanations.Tests.swift              | 345 +++++++++++++++++++
+ .../AIAnomalyExplanations.Views.swift              | 238 ++++++++++++++
+ .../shared-surfaces/AIAnomalyExplanations.strings  |  45 +++
+ .../shared-surfaces/AIAnomalyExplanations.swift    | 112 +++++++
+ 11 files changed, 2293 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0005-AIAnomalyExplanations.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.swift

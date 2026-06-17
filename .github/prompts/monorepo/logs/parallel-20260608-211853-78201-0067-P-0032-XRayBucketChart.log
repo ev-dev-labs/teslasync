@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the Apple platform tooling availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). I must implement, not block. Let me study the existing conventions deeply.
+
+The feature views live in `apps/apple/TeslaSync/feature-views/`. Let me examine existing examples and the test for an existing feature view (ToolCard).
+
+There are many existing feature views (1438 entries). Let me find the best chart-based example to model after, and understand the shared infrastructure (ChartContainer equivalent, state holders, i18n, telemetry).
+
+Let me examine the shared ChartContainer, BarCharts, and a close bar-chart analog (ChargerTypeChart) as a complete model.
+
+ChargerTypeChart is a complete chart model. Let me read ToolCard (closest pure-presentational analog) and the full ChargerTypeChart set, plus chart models and telemetry contract.
+
+ChargerTypeChart is the canonical full pattern (model with phases, connection states). Let me read its complete file set plus ToolCard's, to internalize the conventions.
+
+Let me read the remaining example files, the web data type, the date-format hook, and the design tokens infrastructure.
+
+Now let me examine the design tokens, the date-format facade analog, and the web data type + helpers.
+
+Let me check for existing X-Ray/ingest native surfaces (siblings) and how time-axis charts format time.
+
+Critical finding: sibling X-Ray surfaces already exist (`XRayFieldsTable.*`, `XRayHeader.*`) from the same web feature directory. I must align with their conventions. Let me read them.
+
+The `XRayFieldsTable` is my exact sibling template. Let me read its adapter, views, strings, tests, and locate the shared X-Ray components (`XRayFreshnessChip`, `XRayConnectivityBanner`).
+
+Let me read the sibling Views (shared chrome) and check whether `XRayHeader` reuses the Fields connection type or defines its own.
+
+Confirmed: each surface is fully self-contained with its own `*Connection` enum, chip, strings table, and slug. `XRayHeader` defines `XRayHeaderConnection`. I'll mirror this with `XRayBucket*` types. Let me read the sibling's strings, tests, previews, and the header's chip naming.
+
+Let me read the card component (correct path), check the build tooling (xcodegen, existing project), and the pending-verifications note.
+
+I now have the complete pattern. Key insight from `macos-pending-verifications.md`: the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** parallel-merge collisions; prior surfaces verify in isolation (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + swiftlint/swiftformat/placeholder + `xcodegen generate`) and defer full-app build to the acceptance gate. I'll follow that exact precedent. Let me read the lint configs and confirm no `XRayBucket` symbols exist yet.
+
+Let me check the placeholder gate tooling and patterns so my code avoids flagged tokens.
+
+`pwsh` is available. Let me verify the placeholder script's matching behavior (case sensitivity) so my comments stay clean.
+
+I have everything I need. Let me set up a plan and todos, then write the 8 surface files following the exact `XRayFieldsTable`/`ChargerTypeChart` sibling patterns.
+
+Now writing the surface. Starting with the Model (state-holder seam) and Adapter (pure projection).
+
+Now the Swift Charts bar chart with temporal x-axis, selection tooltip, and axes.
+
+Now the presentational chrome: freshness chip, connectivity banner, data table, summary, and loading/empty/error states.
+
+Now the main `View` file that orchestrates phases plus the SwiftUI i18n helpers.
+
+I need to fix two consistency issues before writing strings: avoid a duplicated key fallback and use uniform `%@` positional args (Swift `String`) to avoid `%lld`/positional pitfalls.
+
+Now the i18n catalog, previews, and tests.
+
+Now the unit tests (adapter projection, model state, accessibility, telemetry).
+
+All 8 files written. Now let me auto-format with swiftformat (matching the gate config) and review changes, since some test lines exceed 120 columns.
+
+swiftformat lint is clean. Now swiftlint --strict on the surface files.
+
+swiftlint --strict: 0 violations. Now the placeholder gate — I'll scan an isolated copy of my files for an honest count.
+
+Placeholder gate clean (COUNT=0). Now `xcodegen generate` to wire the project and confirm my files are enumerated.
+
+xcodegen enumerates all 8 files. Now let me set up an isolated compile harness. First, check whether the design system (Components + Design) is self-contained.
+
+Design system is self-contained (only system imports). I'll build an isolated SwiftPM harness named `TeslaSync` (so my unmodified `@testable import TeslaSync` test works) that vendors the real design system + my surface, then `swift build` + `swift test`.
+
+Now write the Package manifest and run `swift build` + `swift test`.
+
+`UnitFormatters.swift` depends on an app-level `Units` type my surface doesn't use. Let me find all design-system files with external dependencies and exclude them from the harness (my surface doesn't need them).
+
+`swift build` complete — surface compiles against the real design system under Swift 6 strict concurrency. Now run the tests.
+
+All 18 tests pass. Now the cross-platform `swiftc -typecheck` against the iOS 18 and macOS 15 SDKs (including DEBUG previews).
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDK typechecks pass. Now let me verify (truthfully) the documented pre-existing collision blocker exists, and assess the Shared.xcframework build cost before attempting the full app build.
+
+At this commit the previously-documented duplicate-symbol collisions are single-defined, and `java`+`gradlew` exist — so the full build may be more feasible here. Let me attempt the real Shared.xcframework Gradle build (bounded), which the app build requires.
+
+Good — Kotlin/Native 2.4.0 is already cached and Java 17 is present. Let me build the Shared.xcframework (required by the app build).
+
+Kotlin/Native is compiling all Apple targets (slow first build). Let me keep waiting.
+
+Shared.xcframework built and staged (10m46s, K/N cached). Now the real full-app iOS-simulator `xcodebuild build test`. Running async with logging since it compiles the whole app.
+
+Build running (pid 31618), logging to file. Let me monitor progress.
+
+Build reached module emission; 113 `error:` lines and 10 `XRayBucketChart` mentions present. Let me categorize the errors — are any in my files?
+
+The 113 errors are **all pre-existing** — `SafetyModel`, `SafetyConnection`, `FleetStatsBarModel` etc. are "ambiguous for type lookup" (duplicate type definitions from parallel-merge surfaces). My `XRayBucketChart.*` files appear only as clean `SwiftCompile` lines with **zero `error:`**. Let me wait for completion and confirm definitively.
+
+**Definitive result:** ZERO `XRayBucketChart` errors. The full-app build failed (exit 65) solely on **pre-existing parallel-merge duplicate-symbol collisions** in unrelated surfaces (`SafetyModel`, `ChargeStatusProjection`, `FleetStatsBarModel`, etc. — "ambiguous for type lookup"), exactly matching the documented `macos-pending-verifications.md` precedent. My files compiled cleanly before the unrelated files failed.
+
+Let me kick off the macOS build (same shared Sources → same pre-existing block) in the background for gate completeness, and write the gate log meanwhile.
+
+Let me gather precise iOS build stats and confirm the log directory exists.
+
+iOS: 226 total errors, **0 in my files**, 13 distinct pre-existing colliding symbols, exit 65. Let me check for a sibling feature-view log to match format, and peek at the acceptance-gate log for the collision narrative.
+
+There's an existing `XRayBucketChart` log from a prior slot. Let me read it to match the exact format and STATUS convention.
+
+This is enlightening — the prior `XRayBucketChart` run (a Command-Line-Tools-only runner) ended `EXIT=1 / STATUS=BLOCKED`. My runner is fully capable and my surface is green; my only blocker is **pre-existing unrelated collisions**. Let me check the macOS build progress to capture `MAC_EXIT`.
+
+The macOS build's log isn't materializing though Gradle/konan are active — the background process may have detached oddly. Let me check the poll shell and re-verify state.
+
+I'm sharing this runner with other slots (70, 72 are running their own Gradle builds) — my earlier macOS background job didn't persist. The macOS app target compiles the identical shared Sources, so it'll hit the same pre-existing collisions. Let me run it cleanly, skipping the Gradle preAction (Shared.xcframework is already staged) via `-target`, detached so it survives.
+
+`-derivedDataPath` needs `-scheme`. Let me re-run with `-target` and isolated build dirs (no preAction, no derivedDataPath).
+
+Both full builds confirm: `IOS_EXIT=65`, `MAC_EXIT=65`, **0 `XRayBucketChart` errors**, same **13 pre-existing** colliding symbols. Let me capture the exact colliding-symbol evidence (proving they're in other surfaces) for the log.
+
+Conclusive: all 13 colliding symbols are defined in **multiple other surfaces** (e.g., `SafetyModel` in `SafetyHistoryWidget`/`SafetyFeaturesWidget`, `FleetStatsBarModel` in `FleetStatsBarWidget`/`FleetStatsBar`) — none mine. Let me collect header metadata, then write the gate log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Now clean up temp artifacts and verify git state before committing (ensure generated project + staged xcframework are gitignored).
+
+Generated project + staged xcframework are correctly gitignored. The 2 modified web files are pre-existing (not mine) — I'll leave them. Let me stage only my 8 surface files + the log and commit.
+
+Only my 8 files + the log are staged. Committing with the prompt's message.
+
+Committed (9 files, 1550 insertions). Let me finalize todos and do a last sanity check.
+
+All verification complete. Let me confirm the todo ledger is fully closed.
+
+All 10 todos done. The task is complete.
+

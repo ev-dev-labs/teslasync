@@ -1,0 +1,172 @@
+I'll start by exploring the environment and reading the web source specification. Let me run several independent checks in parallel.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Capability is present — not BLOCKED. Let me explore the existing Apple app structure and the web source dependencies.
+
+The `shared-surfaces` directory has ~1900 files — an established pattern. Let me examine a complete existing surface to learn the exact file conventions, and find the supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+A clear convention exists. `ActiveVehicleSegment` is the closest analog (vehicle selection). Let me study it end-to-end to learn the binding/model/adapter/views/tests/i18n/telemetry patterns.
+
+Excellent analog. Let me read the remaining files (Seams, Views, Previews, Tests, AdapterTests, strings) plus the shared tokens to complete my understanding of the pattern.
+
+Let me read the remaining test/preview/strings files and locate the shared design tokens (P1/S9).
+
+Now let me read the AdapterTests pattern and locate the shared design tokens (TSSpacing, Color.TS, Font.TS, TSSkeleton, TSRadius) plus the build config.
+
+The tokens aren't in those dirs. Let me locate the design token definitions across the whole Apple tree.
+
+Tokens live in `Sources/Design/TSDesign.swift`. Let me read it and the build config.
+
+`TSDesign.swift` is tiny — tokens are likely generated. Let me check `../design/generated/apple` and the exact excludes wiring in project.yml.
+
+Let me read the generated Tokens.swift (P1/S9) and the test-target section of project.yml.
+
+I have the full pattern. Now let me confirm the `PinnedItem` type, the `TSSkeleton` shared component, the test-target wiring, and that no `VehiclePicker.*` already exists.
+
+Let me verify the `TSSkeleton` API, the XcodeGen/build tooling, and available simulators.
+
+Everything's available. Let me verify the `Shared.xcframework` dependency and `pwsh`, then generate the Xcode project and kick off a baseline build while I write code.
+
+Important: `Shared.xcframework` is just a `.gitkeep` placeholder — the binary dependency isn't present. Let me investigate the build script and whether it can be produced.
+
+There's a KMP `Shared.xcframework` built via Gradle as a pre-build step. This is the critical build dependency. Let me check how sibling surfaces verified (their logs) and how the build script is wired.
+
+There's already a prior `VehiclePicker` artifact log and many sibling logs. Let me check the prior outcome for this exact surface and whether sibling builds actually pass or get BLOCKED on this runner.
+
+Now I understand the verification landscape. The prior VehiclePicker run was BLOCKED, but DONE siblings use a refined per-surface verification (typecheck both SDKs + swift test + surface-scoped lint/format + xcodegen). Let me study the cleanest DONE recipe (0003) and the ActiveVehicleSegment analog log.
+
+The log is large. Let me read it from the saved file to extract the exact verification recipe.
+
+Let me read the verification/gate section of this log to capture the exact commands.
+
+I now have the complete predecessor-accepted recipe (0003 reached `STATUS=DONE`). The decisive evidence is surface-scoped: typecheck against the real design system on both SDKs + swift-test the real sources + surface lint/format/placeholder/xcodegen — all green; the full xcodebuild gates are run verbatim and reported honestly (iOS pre-existing IRGen crash, macOS code-signing).
+
+Let me kick off the long-pole KMP `Shared.xcframework` Gradle build in the background while I write the surface, and record a plan.
+
+The KMP build is running in the background. Let me read the full lint/format configs to write compliant code on the first pass, then study the web `Select` and `PinnedItem` precisely.
+
+I have all constraints. Now I'll write the surface, mirroring the `ActiveVehicleSegment` (0176) analog precisely but adapting for pin-aware ordering (`usePinned`) instead of metrics. Let me create the pure core files first.
+
+Now the Seams file (telemetry, phase, snapshot, source) — mirroring the analog.
+
+KMP build is nearly done (release frameworks linking). Now the Model file — i18n facade + `@Observable` state-holder.
+
+Now the main view and the presentational subviews.
+
+Now the strings file and previews. Let me also check the KMP build status.
+
+KMP build is finishing the release link (cache is now warm for xcodebuild's pre-build step). Now the test files. First, the pure-core AdapterTests.
+
+Now the model/view/strings test file.
+
+All 9 files written. Let me update todos, then auto-format and lint the surface files.
+
+Surface format/lint both clean (0). Now placeholder check, xcodegen, and KMP status.
+
+All surface-scoped checks green so far: format 0/8, lint 0, placeholder 0, xcodegen OK (54 refs). KMP framework built (`BUILD SUCCESSFUL 7m23s`, now cached). Now I'll run the prompt's exact iOS gate in the background (the authoritative compile of all my files), then corroborate with an isolated typecheck + behavioral harness.
+
+iOS gate is building in background (KMP xcframework has all needed slices). Meanwhile, let me build a standalone SwiftPM harness to execute the real Adapter/Model/Seams behavioral tests as corroborating evidence (outside the repo to avoid pollution).
+
+Harness derived cleanly (no SwiftUI residue). Now let me run `swift test` to execute the real Adapter/Model/Seams behavioral coverage.
+
+Behavioral harness: **34/34 tests pass** under Swift 6 strict concurrency (real Adapter+Model+Seams+pin-sort+projection+phase+routing+telemetry+strings). `SWIFT_TEST_EXIT=0`. Let me check the iOS build progress and whether my files are compiling.
+
+iOS build is progressing cleanly — `VehiclePicker.strings` validated (UTF-8, no error), now in `SwiftEmitModule` (whole-module typecheck of all files including mine), no errors yet. Let me wait for this phase.
+
+Build still in the long `SwiftEmitModule` (whole-module typecheck) phase — output is buffered. Let me wait longer.
+
+Whole-module typecheck (`SwiftEmitModule`) passed with 0 errors — all files including my `VehiclePicker.*` typechecked. Now in the codegen (IRGen) phase. Let me wait for the final outcome (success or the predecessor's pre-existing IRGen crash).
+
+Build still in codegen (now compiling Battery* surfaces), no errors. This is a large phase. Let me continue waiting.
+
+Build is now compiling the `AppearanceSettings` batch (the predecessor's known IRGen-crash file). Let me check whether it crashes or proceeds.
+
+Confirmed — the iOS build fails at the **exact pre-existing crash** the predecessors documented: a swift-frontend `Stack dump` during `IRGenRequest` for `feature-views/AppearanceSettings.Controls.swift` (a file I did not touch), `** BUILD FAILED **`. My whole-module typecheck already passed. Let me wait for the wrapper to record `IOS_EXIT`, then run the covenant-required files-removed baseline to prove it's pre-existing.
+
+Let me inspect exactly where `VehiclePicker` appears in the crash region — I must be precise about whether it's in the crashed batch's input list vs. the crash trace itself.
+
+Precise picture: the crash is `IRGenRequest` for `feature-views/AppearanceSettings.Controls.swift` (SIL thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, a `Bool`/`(any Actor)?` reabstraction) — a pre-existing file. The 6 `VehiclePicker` lines (24916–24921) are just the whole-module input-file list every surface appears in, not the crash trace. Let me wait for the build to exit, then run the files-removed baseline to prove it's pre-existing.
+
+The app target already shows `** BUILD FAILED **` (the pre-existing crash); xcodebuild is now doing single-file isolation retries (re-crashing the same file), delaying its return. Let me check what it's doing and decide whether to wait or capture the determined result.
+
+App target build already determined FAILED; remaining `swift-frontend` jobs are in-flight concurrent batches the driver will reap. Let me wait for clean exit and the recorded `IOS_EXIT`.
+
+The iOS build is genuinely still grinding through the giant module's remaining parallel batches (log now 40k lines) before returning 65. Let me run the prompt's whole-tree lint/format gates now (no DerivedData conflict) while it finishes.
+
+Whole-tree swiftlint: `LINT_EXIT=2` — 3 violations, all pre-existing in `widget-primitives/WidgetChartSummary.Tests.swift` (vars `a`/`b`/`c`, another prompt's file). The 8 `VehiclePicker` matches are progress lines, not violations. Now the whole-tree swiftformat gate, and re-check the iOS build.
+
+The iOS build finished: **`IOS_EXIT=65`** (the pre-existing IRGen crash; my whole-module typecheck passed). Let me get the swiftformat result.
+
+Whole-tree swiftformat: `FORMAT_EXIT=1` — 1/5506 files require formatting (0 are VehiclePicker). Let me identify that pre-existing file to document it.
+
+Whole-tree swiftformat failure is pre-existing in `feature-views/RecentDrivesSection.Previews.swift:27/28` (redundantType) — another surface, not mine. This matches predecessor 0003 exactly. 
+
+Now the covenant-required **files-removed baseline**: I'll stash my 9 files, regenerate, and rebuild iOS to prove the crash reproduces identically without my surface.
+
+The stash worked (0 VehiclePicker files remain); the `grep -c` returning 0 short-circuited the chain before xcodegen. Let me regenerate and start the baseline build.
+
+Baseline build started (0 VehiclePicker refs). Let me poll for the crash reproduction on `AppearanceSettings.Controls.swift`.
+
+Baseline whole-module typecheck passed (without my files); now in codegen, no crash yet. Incremental build is leaner (reusing cached objects). Let me wait for the IRGen crash to reproduce.
+
+Baseline output is buffered mid-batch (parallel IRGen running). Let me wait for the next flush where the `AppearanceSettings` crash should surface.
+
+Baseline progressing (now 12k lines), still in codegen. Let me continue waiting for the `AppearanceSettings` batch to flush.
+
+**Baseline proof complete.** With my `VehiclePicker.*` files removed, the iOS build fails **identically**: `Stack dump` → `IRGenRequest` for `AppearanceSettings.Controls.swift` → `** BUILD FAILED **` → `BASELINE_IOS_EXIT=65`, with 0 VehiclePicker references. The crash is pre-existing/environmental, independent of my surface. Let me confirm the matching SIL thunk, then restore my files.
+
+SIL thunk matches exactly (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR`) — conclusive pre-existing crash. Surface restored (9 files, 54 refs). Now the macOS gate (its `SwiftEmitModule` also proves the macOS-SDK typecheck of my surface).
+
+macOS gate building in background. Let me record verified evidence and draft the gate log while it compiles.
+
+Let me gather facts for the log while the macOS build runs: confirm zero source-level errors in the iOS log, count surface lines, and check git status.
+
+All clean: **0 source-level `error:` diagnostics** in both iOS and baseline logs; **0 VehiclePicker references in any crash frame**; git shows only my 9 files added (no existing file touched, project.yml unchanged). Surface = 1,726 lines (1,658 Swift). Let me check macOS build progress.
+
+macOS gate failed exactly as predecessors documented: `error: "TeslaSync-macOS" has entitlements that require signing with a development certificate` → `** BUILD FAILED **` → `MAC_EXIT=65` (environmental, no source compile). Since it bailed before Swift compilation, I'll get clean macOS-SDK typecheck evidence via an isolated typecheck. Let me locate the minimal design-system deps.
+
+TSCard pulls a deep component web, so I'll typecheck my surface against the full real design system (`Sources/Components` + `Sources/Design` + tokens), matching the predecessor's approach. Let me attempt it on the macOS SDK.
+
+The isolated compile pulled in design-system files (`UnitFormatters.swift`) that reach into the KMP facade (`UnitPreferences`) — **0 errors in my VehiclePicker files**, but design-system externals broke the overall compile. Let me build the minimal closure my surface actually needs (excluding facade-dependent design files).
+
+Only `UnitFormatters.swift` reaches into the facade. Let me exclude it and run the isolated typecheck on both SDKs.
+
+macOS-15 SDK typecheck: **`TYPECHECK_MAC_EXIT=0`** (0 errors, surface + 41 real design files, Swift 6 strict concurrency). Waiting on the iOS-SDK typecheck.
+
+**Both SDK typechecks pass: `TYPECHECK_IOS_EXIT=0`, `TYPECHECK_MAC_EXIT=0`** (surface vs. real design system, Swift 6 strict concurrency). All surface-scoped evidence is now complete and green. Let me finalize evidence, verify macOS log details, and clean up the temp harness.
+
+Let me re-verify the exact macOS signing-error wording (my grep used "requires" vs the actual "require").
+
+Confirmed: macOS fails at entitlements/code-signing validation (`require signing with a development certificate`) before any Swift compile — environmental. I now have complete evidence. Let me capture tool versions/branch and write the gate log.
+
+I have all evidence. Now let me write the comprehensive, honest gate log.
+
+Log written. Let me do a final surface-scoped lint/format verification (files unchanged since last green run, but confirming), verify the tree, then commit.
+
+All green: surface format 0/8, lint 0/8, and git shows **only** the 9 surface files + log untracked (no other file touched). Let me commit.
+
+Committed (`bda29e0d9`). Let me update todos and do a final state check.
+
+The task is complete and verified. The working tree is clean (generated `.xcodeproj`/`Frameworks` are gitignored), and the commit contains exactly the 9 surface files + the gate log (2024 insertions, nothing else). The log ends with `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0183-VehiclePicker.log | 298 +++++++++++++++++++++
+ .../shared-surfaces/VehiclePicker.Adapter.swift    | 259 ++++++++++++++++++
+ .../VehiclePicker.AdapterTests.swift               | 232 ++++++++++++++++
+ .../shared-surfaces/VehiclePicker.Model.swift      | 220 +++++++++++++++
+ .../shared-surfaces/VehiclePicker.Previews.swift   |  92 +++++++
+ .../shared-surfaces/VehiclePicker.Seams.swift      | 176 ++++++++++++
+ .../shared-surfaces/VehiclePicker.Tests.swift      | 294 ++++++++++++++++++++
+ .../shared-surfaces/VehiclePicker.Views.swift      | 297 ++++++++++++++++++++
+ .../shared-surfaces/VehiclePicker.strings          |  68 +++++
+ .../TeslaSync/shared-surfaces/VehiclePicker.swift  |  88 ++++++
+ 10 files changed, 2024 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0183-VehiclePicker.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePicker.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePicker.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePicker.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePicker.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePicker.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePicker.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePicker.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePicker.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePicker.swift

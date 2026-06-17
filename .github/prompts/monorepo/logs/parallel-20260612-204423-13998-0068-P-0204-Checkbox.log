@@ -1,0 +1,135 @@
+I'll start by understanding the task: build a native Apple `Checkbox` surface at parity with the web source. First, let me check platform capability and explore the repo structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Now let me read the web source and study the existing surface patterns.
+
+Now I understand the web source: a pure presentational checkbox (sizes sm/md/lg, checked/unchecked/indeterminate/disabled/focus states, label). No data binding. Let me study the build system and an existing presentational surface (Accordion) as the template.
+
+Now let me check the baseline build capability (xcodegen, the Shared.xcframework dependency) and read the Accordion template files to learn conventions.
+
+Excellent — sophisticated MV architecture. Let me read the rest of the Accordion template files and check the KMP/Gradle dependency (which the build needs) plus the design tokens.
+
+Now let me read the remaining Accordion files (strings, previews, tests) and locate the design token definitions I'll need (colors, spacing, fonts, motion).
+
+I have the full pattern. Now let me locate the design tokens (colors, spacing, fonts, motion) and assess whether the KMP `Shared.xcframework` build dependency is satisfiable (Java/Gradle).
+
+Java 17 + gradlew present, tokens at `apps/design/generated/apple/Tokens.swift`. Let me read the tokens and Theme to get exact names (especially the cyan accent + border-strong the checkbox needs).
+
+I now have all tokens and the full pattern. The web Checkbox is a pure presentational control (no fetch). Let me check for the closest control-like sibling (toggle/switch/radio) to mirror native control a11y semantics, and confirm the project generates.
+
+A `Toggle` surface exists — the closest sibling to a checkbox (boolean control). Let me read it to mirror its control a11y semantics and controlled/uncontrolled handling.
+
+The Toggle surface is the ideal control sibling. Let me read its remaining files to mirror native control semantics (projection, model, views, strings, tests).
+
+The `Toggle` surface gives me the exact control pattern (9 files incl. `.Projection`). The web Checkbox supports controlled+uncontrolled+indeterminate, so I'll blend Toggle's structure with Accordion's controlled/uncontrolled logic, drawn as a custom indicator (native checkbox style can't do indeterminate cross-platform). Let me write a plan file and check a few capability bits.
+
+All tooling present (pwsh, xcodegen, placeholder script). Let me read the placeholder checker to know what to avoid, then I'll write the surface.
+
+Let me read the forbidden-patterns list so my code avoids every flagged token.
+
+All tooling confirmed. The web Checkbox is a pure presentational control (no fetch) supporting controlled/uncontrolled + indeterminate. I'll mirror the `Toggle` 9-file control pattern, blended with `Accordion`'s controlled/uncontrolled logic, drawn as a custom indicator (native checkbox style can't do indeterminate cross-platform). Let me set up tracking and write the production files.
+
+Now writing the production files — Adapter, Projection, Model, Views, the public view, and strings.
+
+Production files written. Let me run an isolated Swift 6 typecheck against the real design tokens to catch errors fast before writing tests.
+
+Isolated Swift 6 strict-concurrency typecheck passes against the real tokens. Now the tests and previews.
+
+All 9 files written. Let me normalize formatting with swiftformat (using the repo config), then re-typecheck including previews.
+
+swiftformat normalized 1 file. Let me verify format compliance, run swiftlint on my files, and re-typecheck including previews (DEBUG).
+
+swiftformat ✓, typecheck (incl. previews) ✓. swiftlint flagged one issue: `Button` with two trailing closure literals. Let me fix it to use explicit `action:`/`label:` (the form swiftlint accepts), then re-verify.
+
+Fixed — swiftformat keeps the form and swiftlint passes. Let me confirm all 8 files lint clean and re-typecheck after the edit.
+
+All 8 files lint clean and typecheck passes. Now the placeholder gate and project generation.
+
+Placeholder gate ✓ (COUNT=0), project generated ✓. The build's pre-action compiles a KMP `Shared.xcframework` via Gradle — the heaviest/riskiest step. Let me build it first to validate that dependency before the full app build.
+
+An iPhone 16 simulator exists (booted), so I can use the exact gate destination. The KMP framework build is running. Let me monitor it.
+
+KMP first-build is downloading toolchains. Let me continue waiting.
+
+The `tail` pipe buffers until completion, so no incremental output is visible. KMP/Kotlin-Native first compile is lengthy. Let me keep waiting.
+
+Let me check whether the build is actively progressing (not hung) via the filesystem, without disturbing the running build.
+
+Build is actively progressing — Kotlin/Native frameworks for `iosSimulatorArm64` and `macosArm64` are being assembled (690M built, 38 linker procs). Let me wait for the XCFramework to finish staging.
+
+The per-target frameworks built; the XCFramework assembly (release LLVM linking) is the slow final step. Let me continue waiting.
+
+KMP `Shared.xcframework` built successfully (11m13s) and staged. The build dependency is satisfied. Now the full gate. Let me initialize the log and start the iOS build+test (the long pole — compiles the whole app + runs all tests, with the framework now cached so the pre-action is fast).
+
+Lint logged. Now the full iOS `build test` (compiles the entire app module — required because tests `@testable import TeslaSync` — then runs all tests). Starting it with full output teed to a raw log; I'll monitor.
+
+iOS build+test started. Let me monitor progress via the raw log while it compiles.
+
+Let me peek at the raw build log to gauge progress (compilation phase).
+
+App module is compiling cleanly (0 errors, EmitSwiftModule for TeslaSync underway). Let me keep waiting.
+
+Still building. Let me check the raw log for the compile/link/test phase transition.
+
+App module (all 2000+ files incl. Checkbox) compiled with **0 errors** — now linking extensions and building the test bundle. Let me continue monitoring through the test phase.
+
+"BUILD FAILED" but 0 `error:` lines — likely a link or build-command failure. Let me find the actual cause.
+
+Build failed with a `SwiftCompile` error but my `error:` grep missed it. Let me see the exact failing file and command.
+
+The failing batch is feature-views files (ApiPlaygroundPage.swift etc.) — not my Checkbox files. But 0 `error:` lines is unusual. Let me find the real diagnostic (crash, OOM, or a differently-formatted error).
+
+The Swift compiler **crashed** (segfault + stack dump), not a source error. Let me see the crash details to identify the trigger and whether it involves my code.
+
+The compiler crashed during IRGen of `feature-views/AppearanceSettings.Controls.swift` (a file I didn't touch) on a reabstraction thunk. Let me demangle the symbol and confirm my files are the only changes vs. baseline.
+
+The crash thunk is `@isolated(any) @Sendable (Bool) -> Void` — a signature my plain `(Bool) -> Void` closures don't produce. The crashing file `AppearanceSettings.Controls.swift` is untouched baseline code. This looks like a pre-existing Swift 6.3.2 toolchain IRGen bug. I must verify rigorously: inspect the trigger and reproduce on baseline (without my files). Let me inspect the file and confirm the build shell finished.
+
+**Decisive finding.** Line 107 of the untouched baseline file `AppearanceSettings.Controls.swift`:
+```swift
+let onChange: @MainActor (Bool) -> Void
+Toggle("", isOn: Binding(get: { isOn }, set: onChange))
+```
+A `@MainActor (Bool) -> Void` used as a `@Sendable` Binding setter produces exactly the `@isolated(any) @Sendable (Bool) -> Void` reabstraction thunk that crashes Swift 6.3.2's IRGen. My code uses no such pattern. To prove this is pre-existing and independent of my surface, let me reproduce on the baseline (my files moved out).
+
+Baseline (no Checkbox files) regenerated. Now building the app target to check for the same crash.
+
+Baseline build running. While it compiles toward the crash point, let me check the repo's intended toolchain and any documented build status (useful BLOCKED evidence).
+
+Version lock: **Xcode 26 / Swift 6.0.1**, but the runner has **Xcode 26.5 / Swift 6.3.2** — a newer toolchain than the locked baseline. The IRGen crash is a 6.3.2 regression on baseline code. Let me check the baseline build progress for the reproduction.
+
+Baseline still in early compile (no crash yet). Let me wait for it to reach the feature-views IRGen phase.
+
+Baseline log stalled at 167KB for ~3 min — a long compile batch. Let me verify the compiler is actively working (not hung).
+
+Compiler is actively working (40 swift-frontend procs at high CPU) in the IRGen phase. The crash batch is imminent. Let me wait.
+
+**CONFIRMED — decisive evidence.** The baseline build (with my Checkbox files completely removed from the tree) crashes at the **exact same spot**: `swift-frontend` IRGen crash on `feature-views/AppearanceSettings.Controls.swift`, `BUILD FAILED`, EXIT=65. This is a pre-existing Swift 6.3.2 toolchain bug on baseline code, **independent of my surface**.
+
+Let me restore my files immediately (they were moved out for the test) and regenerate.
+
+All 9 files restored, project regenerated. Now let me re-verify my surface post-restore (lint/format/typecheck/placeholder) and start the macOS gate build (which shares the same crashing baseline file) to record its result honestly.
+
+Scoped re-verification post-restore: swiftformat 0/8 need formatting, swiftlint 0 violations. The macOS shell finished quickly — let me read its result.
+
+macOS gate also failed (MAC_EXIT=65) — but in 15s, so let me confirm the cause is the same IRGen crash and not something else.
+
+The macOS target fails fast on a **different** environment blocker: code-signing — `"TeslaSync-macOS" has entitlements that require signing with a development certificate` (no dev cert in this environment; it never even reaches compilation). Both gate builds are blocked by environment factors unrelated to my surface. Let me gather the remaining gate evidence: the placeholder gate, whole-tree lint/format (gate steps that don't depend on the crash), and confirm the documented macOS-signing limitation.
+
+**Critical context found.** `apps/macos-pending-verifications.md` documents that **every** P4 Apple surface prompt (ToolCard, AlertMessageEditor, FSMTimelineChart, etc.) reaches the identical terminal state: *surface verified green in isolation (typecheck + tests + swiftlint/swiftformat/placeholder clean), full-app `xcodebuild build test` blocked by pre-existing, unrelated issues + macOS dev-signing → status "macOS-pending"*, deferred to the dedicated `P99-0001-apple-acceptance-gate` runner with signing identities. My situation matches this documented convention exactly. Placeholder gate ✓ (COUNT=0). Let me get the whole-tree format result.
+
+Whole-tree swiftformat flags 1 pre-existing file — `feature-views/RecentDrivesSection.Previews.swift` (not mine, not in my allowed scope). My 8 files pass tree-wide. Let me run the gate's whole-tree swiftlint to complete the picture and confirm zero Checkbox violations.
+
+Whole-tree swiftlint: 3 violations across 5292 files, **zero in Checkbox** (confirmed). Like the format step, these are pre-existing other-surface issues. Let me identify them for the record, then write the comprehensive log.
+
+All evidence gathered. The 3 lint violations are in `widget-primitives/WidgetChartSummary.Tests.swift` (another surface). Now let me write the comprehensive, honest gate log.
+
+
+
+Log written. Now let me finalize: update tracking, confirm the deliverable is intact, and stage the files. Given the full-app gate is BLOCKED (red) by pre-existing/environment factors, Honesty Covenant rule 8 ("No commit on red") means I will **stage but not commit**.
+
+Deliverable intact: all 9 files + log present; generated `.xcodeproj` correctly gitignored; nothing stray. Per Covenant rule 8 ("No commit on red"), since the full-app gate is BLOCKED I will **stage** the deliverable (signals readiness) but **not commit**.
+
+Everything staged. Let me clean up the temporary build/evidence artifacts I created in `/tmp` (all evidence is captured in the gate log).
+
+Cleanup done. The deliverable (9 files, 1,407 lines + 138-line gate log) is staged and verified. Task complete.
+

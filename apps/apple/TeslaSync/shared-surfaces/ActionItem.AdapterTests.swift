@@ -1,11 +1,11 @@
 //
-//  ActionItem.AdapterTests.swift
-//  TeslaSync — P4 shared surface · 0196 · ActionItem (Apple)
+//  ActionItemShared.AdapterTests.swift
+//  TeslaSync — P4 shared surface · 0196 · ActionItemShared (Apple)
 //
 //  Pure-core coverage for the single operator-task row (the model + view-composition half lives in
-//  ActionItem.Tests.swift; split to keep each file within the SwiftLint file-length budget). This is the
+//  ActionItemShared.Tests.swift; split to keep each file within the SwiftLint file-length budget). This is the
 //  "adapter (cached → projection)" unit test the acceptance calls for: it drives the structural props
-//  through ``ActionItemProjector`` and asserts the verbatim port of the web `ActionItem` + `ActionCTA`
+//  through ``ActionItemProjector`` and asserts the verbatim port of the web `ActionItemShared` + `ActionCTA`
 //  render bodies, plus the value types it is built on:
 //    • severity — raw values, all cases, the per-tier glyph (web `ActionSeverity` / lucide icon).
 //    • CTA kind — raw values, all cases, the isLink / opensExternally derivations (web `<Link>` / `<a>` /
@@ -26,7 +26,7 @@ import XCTest
 
 final class ActionItemSurfaceTests: XCTestCase {
     func testSlug() {
-        XCTAssertEqual(ActionItemSurface.slug, "ActionItem")
+        XCTAssertEqual(ActionItemSurface.slug, "ActionItemShared")
     }
 }
 
@@ -129,11 +129,11 @@ final class ActionItemInputTests: XCTestCase {
     }
 }
 
-// MARK: - ActionItemProjector (web `ActionItem` + `ActionCTA` render bodies)
+// MARK: - ActionItemProjector (web `ActionItemShared` + `ActionCTA` render bodies)
 
 final class ActionItemProjectorTests: XCTestCase {
     /// An identity severity-word resolver — keeps the projector assertions independent of the i18n
-    /// catalog (the localized words are covered by the strings tests in ActionItem.Tests.swift).
+    /// catalog (the localized words are covered by the strings tests in ActionItemShared.Tests.swift).
     private func word(_ severity: ActionSeverity) -> String {
         severity.rawValue
     }

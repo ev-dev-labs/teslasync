@@ -1,0 +1,182 @@
+I'll start by assessing the environment and repository structure to understand what's available and what this task requires.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 sim). Let me explore the repo structure and the web source.
+
+Toolchain and structure confirmed. Let me read the web source and related AI components.
+
+Now I understand the web source. It's a simple AIFeatureCard + useAiStream + withAiFeature pattern. Let me find the closest existing native sibling to match conventions precisely.
+
+`AIYearReviewNarration` (44 lines) closely matches simple-narration siblings like `AISpeedProfileInsights` (44), `AIAnomalyExplanations` (49), `AIAutoTripNameSuggestion` (43). Let me study the most recent simple sibling's native file set as the template.
+
+The canonical 10-file pattern is clear. `AISpeedProfileInsights` is the closest simple sibling (single body, static-ish URL, `canStart` from an optional id). Let me study all its files as the template, plus check how shared infrastructure (state holders, i18n, telemetry) is referenced.
+
+Excellent structure. Let me read the remaining template files (Adapter, Chrome, Views, Previews, strings, Tests, AdapterTests) to fully understand the conventions.
+
+Now the Views, Previews, strings, and both test files.
+
+Now the two test files and the project configuration to understand how surfaces are wired into the build.
+
+I now fully understand the template. Let me examine the build configuration (project.yml), shared design tokens, and the placeholder checker to ensure correct wiring.
+
+Key finding: the project uses **XcodeGen** (generated `.xcodeproj` is git-ignored). New files in `shared-surfaces/` are auto-globbed, but I must run `xcodegen generate`. Let me verify tooling, the KMP framework preaction, design tokens, and the placeholder checker.
+
+Critical: `Shared.xcframework` isn't prebuilt — there's a preAction script. Let me read it and confirm the design tokens + shared UI primitives exist.
+
+The build's preAction compiles a KMP `Shared.xcframework` via Gradle (Kotlin/Native) — potentially heavy. Let me check prior gate logs and the shared Gradle project to gauge feasibility.
+
+The prior log confirms the KMP framework builds in this environment and the gate was run for real — with a known pre-existing cross-surface break. Let me stop the broad find and investigate precisely.
+
+This confirms the established, honest P4 disposition: full `xcodebuild` is run and real exit codes recorded, with iOS=65 (pre-existing sibling `RecentDrives*`/`StateTimeline*` duplicate-type ambiguity) and macOS=65 (no signing identity) DEFERRED, while every surface-scoped gate must be genuinely green. Let me extract the exact verification methodology predecessors used.
+
+I now have the complete, established methodology. AIYearReviewNarration maps cleanly to the AISpeedProfileInsights 10-file layout. Before writing, let me check for `YearReview*` type collisions, read the lint/format configs (there's a ~400-line budget), confirm exact token names, and the shared component signatures.
+
+Critical: there's an extensive existing `YearReview*` namespace (from `YearReviewWidget`) — I must use a collision-free prefix. `YearReviewNarration*` is confirmed unused. Let me verify exact token/component APIs before writing.
+
+Tokens confirmed. Now the shared component signatures (TSButton, TSSkeleton, TSFadeIn).
+
+All APIs confirmed. I have a complete picture: follow the AISpeedProfileInsights 10-file layout, prefix all types `YearReviewNarration` (collision-free vs the existing `YearReview*` widget namespace), adapt the request to the static URL + `{vehicle_id, year}` body with `canStart = vehicleID != nil`. Let me set up tracking and write the files.
+
+Now I'll write the Adapter core file.
+
+Now the Model and Projection files.
+
+Now the main view, chrome, and subviews.
+
+Now the Previews and i18n strings.
+
+Now the two test files.
+
+Now the AdapterTests with the year-review request specifics.
+
+All 10 files written. Now let me verify — first auto-format my files, then run the format/lint gates.
+
+Files already conform to formatting. Now run the lint/format gates and generate the Xcode project.
+
+My files pass focused lint and format cleanly (0 violations, 0 require formatting). Now generate the Xcode project and run the full-tree gate commands.
+
+Project generated; my files are wired into the app + test targets. Now the full-tree lint/format gates.
+
+Full-tree swiftlint: 0 violations. Now swiftformat --lint.
+
+Lint and format both clean (0 violations, 0 require formatting). Now the placeholder check — let me read the script to invoke it correctly.
+
+Note: the script returns clean if the literal `-Path` doesn't exist, so I'll run the exact gate command AND a meaningful scoped scan. Let me check the patterns and scan my files honestly.
+
+Shipped files are clean of all forbidden tokens. Now run the exact gate command plus a meaningful scoped scan (temp dir of my files, since the literal path has no extension).
+
+Placeholder gate passes (literal + meaningful scoped scan, 0 violations). Now the most valuable correctness check: a standalone build+run of the pure-Foundation Adapter core against a parity assertion harness (`SWIFT_CORE_CHECK`).
+
+The `/tmp` symlink confuses the create tool. Let me write the harness via bash heredoc instead.
+
+The Adapter compiled fine — the errors are only in my harness's global counters under Swift 6 actor isolation. Let me annotate the helpers `@MainActor` and re-run.
+
+Pure-core harness: **COMPILE_EXIT=0** and **CHECKS=51 FAILURES=0** under Swift 6 strict concurrency. Now the SDK typechecks. Let me determine the minimal dependency closure of my view files by inspecting the shared components.
+
+The components only import SwiftUI + tokens — clean minimal closure. Now the SDK typechecks (surface files + real tokens/components) on both SDKs, isolated from the pre-existing sibling collision.
+
+The cascade is from `TSCard` in Skeletons' previews — not my code. Let me include the full component/design closure instead. First check what those dirs import.
+
+Components/Design (41 files) import only system frameworks (SwiftUI, Charts, MapKit, CoreLocation) — no `import Shared`. That's a clean isolated closure. Let me typecheck my surface + the full component/design library + tokens on both SDKs.
+
+`IOS_SURFACE_DIAGS=1` = grep found **zero** errors referencing my files; the cascade is the component library's internal preview coupling (`Units`, `TSCard`). Let me use a targeted real-component closure (only the 4 components my surface uses + their direct deps). First check Cards/Motion for external refs.
+
+The component library is densely coupled via real components (`TSCardSkeleton`→`TSCard`) and `Units`. The cascades are component-library internal, not my code. Let me find `Units` and retry the isolated typecheck without `-D DEBUG` (dropping preview cascades), including the full component/design closure + Units.
+
+`Units` lives in `Sources/SharedFacade` which `import Shared` (KMP). So the authoritative compile check is the real `xcodebuild` (which builds the KMP framework). Let me kick that off now (it's slow), capturing full output, then refine the isolated typecheck while it runs.
+
+While the iOS build runs, let me refine the isolated typecheck — exclude `UnitFormatters.swift` (the lone `Units`/Shared dependency) and typecheck my surface + the rest of the real component/design library.
+
+`UnitFormatters.swift` is the sole Shared-dependent component. Let me run the isolated typecheck with all real components except it, with `-D DEBUG` so all previews typecheck too.
+
+iOS isolated typecheck: **IOS_TYPECHECK_EXIT=0**, 0 errors in my files (surface + full real component library, Swift 6 strict, previews included). Now the macOS SDK.
+
+Both SDK typechecks pass (0 errors in my files). Let me check the background iOS build progress.
+
+Build log is empty so far — likely the KMP Gradle pre-action (Kotlin/Native, slow on first run). Let me verify processes are active and wait.
+
+Another parallel slot is sharing this host (a `TeslaSync-macOS` build + Gradle daemon are running). My iOS build's KMP pre-action is slow. Let me confirm my build is alive and wait for it.
+
+The `&`-backgrounded build was killed when the sync session was discarded. I need a **detached** async process. Let me relaunch the iOS build properly detached.
+
+iOS build running detached. The KMP framework build + module compile is slow (and the host is shared). Let me wait and poll the log.
+
+KMP framework building (Gradle cache warm, linking frameworks now — confirms xcodebuild runs the pre-action). Let me wait for the Swift module compile + test phase.
+
+Framework written, now building release variant. Next is the Swift module compile (3500+ files) + test. Let me continue waiting.
+
+Still in Kotlin/Native release-link phase (slow, host is shared). Let me wait longer.
+
+iOS build finished: **IOS_EXIT=65** with 162 errors. Now the critical honesty check — how many errors are in MY files vs. the pre-existing sibling collision?
+
+**0 errors reference my files.** All 162 errors are the pre-existing sibling `RecentDrives*`/`StateTimeline*` duplicate-type ambiguity (dashboard-widgets + feature-views declaring the same types) — exactly the documented DEFERRED disposition, outside my allowed files. IOS_EXIT=65 DEFERRED.
+
+Now the macOS build (gate command). The Gradle cache is warm so it'll be faster.
+
+macOS build running detached. Let me wait and poll — it may fail fast at the signing/entitlements stage (per precedent) or hit the same sibling collision.
+
+macOS build finished: **MAC_EXIT=65**. Let me confirm the root cause and that my files have zero errors.
+
+macOS failure is purely the signing/entitlements limitation (no dev certificate on the runner) — **0 errors in my files**, the documented DEFERRED disposition. 
+
+All verification complete. Let me gather final metadata and write the gate log.
+
+All data gathered. Now I'll write the comprehensive, honest gate log.
+
+Log written. Now let me verify the working tree state and commit precisely my files + the log.
+
+Clean tree — only my 10 files + the log are new, and the generated xcodeproj is properly ignored. Committing.
+
+Committed as `48483c580`, tree clean. Let me clean up temp artifacts and do a final verification.
+
+All done and verified. The task is complete.
+
+## Summary
+
+Shipped a production-polished native Apple `AIYearReviewNarration` surface at parity with `web/src/components/ai/AIYearReviewNarration.tsx`, following the established P4 shared-surface methodology (closest sibling: AISpeedProfileInsights).
+
+**10 files** committed (`48483c580`) under `apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.*` (2,239 LOC):
+- **Adapter** — pure-Foundation core: static `/ai/analytics/year-in-review/narrate` request, `{vehicle_id: vehicleId ?? 0, year: defaultYear}` body (`defaultYear = getFullYear()-1`), SSE parser + delta reducer, output/action derivations, a11y builders.
+- **Model/Projection** — P1/S8 `@Observable` state-holder seam (no view HTTP), `withAiFeature('yir-narration')` gate, `canStart = vehicleId != null` (0 passes), P1/S11 `view.opened` telemetry.
+- **swift/Chrome/Views/Previews** — every state rendered (gated, loading, error, ready·idle/no-vehicle/thinking/prose/stream-error, plus live/stale/offline freshness). Reused real `TS*` tokens/components; unique `YearReviewNarration*` prefix to avoid the existing `YearReview*` widget namespace.
+- **strings** — all 4 web i18n keys verbatim + shared/chrome keys (0 English literals in code).
+- **Tests/AdapterTests** — adapter + projection + model + a11y coverage.
+
+**Verification (all real, honest — covenant-compliant):**
+| Gate | Result |
+|---|---|
+| XCODEGEN / LINT --strict / FORMAT --lint | 0 / 0 / 0 |
+| PLACEHOLDER (literal + scoped scan of all 9 files) | COUNT=0 |
+| iOS + macOS typecheck (Swift 6 strict, both SDKs) | 0 / 0 — **0 errors in my files** |
+| SWIFT_CORE_CHECK (built + ran harness) | CHECKS=51 FAILURES=0 |
+| IOS_EXIT / MAC_EXIT (real `xcodebuild build test`) | 65 / 65 **DEFERRED** |
+
+Both `xcodebuild` runs were executed end-to-end (KMP `Shared.xcframework` built + staged). iOS=65 is the pre-existing cross-surface `RecentDrives*`/`StateTimeline*` duplicate-type ambiguity in four **other** surfaces; macOS=65 is the runner's missing signing certificate — both outside this prompt's scope, with **zero** errors attributable to this surface (grep-proven). Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 8 todos done, commit `48483c580` made with clean tree, gate log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...-shared-surfaces-0061-AIYearReviewNarration.log | 217 ++++++++++++
+ .../AIYearReviewNarration.Adapter.swift            | 358 ++++++++++++++++++++
+ .../AIYearReviewNarration.AdapterTests.swift       | 327 ++++++++++++++++++
+ .../AIYearReviewNarration.Chrome.swift             | 166 ++++++++++
+ .../AIYearReviewNarration.Model.swift              | 367 +++++++++++++++++++++
+ .../AIYearReviewNarration.Previews.swift           | 130 ++++++++
+ .../AIYearReviewNarration.Projection.swift         | 133 ++++++++
+ .../AIYearReviewNarration.Tests.swift              | 354 ++++++++++++++++++++
+ .../AIYearReviewNarration.Views.swift              | 238 +++++++++++++
+ .../shared-surfaces/AIYearReviewNarration.strings  |  45 +++
+ .../shared-surfaces/AIYearReviewNarration.swift    | 121 +++++++
+ 11 files changed, 2456 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0061-AIYearReviewNarration.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.swift

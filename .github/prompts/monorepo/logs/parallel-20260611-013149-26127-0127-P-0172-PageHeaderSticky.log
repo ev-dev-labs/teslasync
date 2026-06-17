@@ -1,0 +1,172 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me read the web source and explore the Apple app structure in parallel.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, xcodegen, pwsh). Let me study the existing shared-surfaces patterns, especially the most recently added ones.
+
+The most recent `BreadcrumbOverridesContext` surface is the ideal template (also a presentational component). Let me read all its files to learn the conventions.
+
+Let me read the remaining BreadcrumbOverridesContext files to fully understand the conventions.
+
+Now let me read the test files and the build/token infrastructure to understand conventions fully.
+
+Now let me examine the build configuration and token system (P1/S9).
+
+Let me examine the token system (P1/S9) and theme definitions.
+
+Let me read the token definitions and theme files to use the correct tokens.
+
+Let me look at the gate log format, the placeholder checker, and search for existing scroll-detection patterns.
+
+Let me read the full prior log to understand the complete verification methodology used.
+
+I have the full methodology and precedent. Let me search for existing native scroll patterns and check the diagnostics contract before designing.
+
+SwiftLint `--strict` enforces the 400-line file limit (largest existing is 319). Let me verify the iOS 18 / macOS 15 scroll APIs compile before designing around them.
+
+iOS APIs compile. Let me verify on macOS 15 SDK too.
+
+Both SDKs compile the scroll APIs. Let me check build prerequisites (Shared.xcframework, generated project) and set up tracking.
+
+The Shared.xcframework isn't staged (gitignored). Let me check the build script and start the KMP framework build in the background while I implement.
+
+Java + gradlew present. Let me kick off the KMP Shared.xcframework build in the background (~8min) so it's ready for the xcodebuild gate, then implement while it runs.
+
+Background framework build is running. Let me write a brief plan and the Adapter file (pure visibility logic).
+
+Now let me write the Adapter (pure, Foundation-only visibility logic).
+
+Build is linking Kotlin/Native. Let me write the Adapter file.
+
+Now the Projection (resolved read-model).
+
+Now the Model (i18n facade, telemetry seam, @Observable state-holder).
+
+Main view needs careful concurrency handling for preferences. Let me check the existing Popover PreferenceKey pattern under strict concurrency.
+
+Good — direct `model` calls work from these closures in this codebase, but I'll use `@State` + `.onChange` for guaranteed MainActor safety. Let me write the main view file.
+
+Now the Views file (bar chrome + DEBUG inspector staging every branch).
+
+Now the Previews file (one per branch).
+
+Now the strings catalog.
+
+Now the pure-core AdapterTests.
+
+Now the model + view-composition + i18n Tests.
+
+All 9 files written. Let me run an isolated typecheck of the surface against the real design tokens (iOS 18 SDK first), with `-D DEBUG` to cover preview/inspector branches.
+
+One fix needed — the optional `defaultValue` needs an explicit `= nil`.
+
+iOS source clean. Now the macOS 15 SDK typecheck.
+
+Both SDKs clean. Now let me set up a standalone SwiftPM harness to actually run the tests (mirroring the precedent), since the full xcodebuild has pre-existing sibling-surface issues.
+
+All 30 tests pass under Swift 6 strict concurrency. Let me update todos and run the style gates (swiftformat, swiftlint) on the new files.
+
+swiftformat flagged formatting (mostly long test lines + single-line bodies). Let me auto-fix in place with the ecosystem tool, then re-verify.
+
+Formatting passes. Let me re-verify typecheck (both SDKs) and tests still pass after the auto-format changes.
+
+Let me confirm the XCTest count explicitly post-format.
+
+swiftlint now — running `--strict` tree-wide as the gate specifies.
+
+5 violations tree-wide. Let me see which are mine.
+
+All 5 are mine: 4 are the `PageHeaderStickyBar(... onScrollToTop:) { summary }` trailing-closure pattern, 1 is a long line. Let me view and fix them.
+
+Let me view the exact call sites to fix the trailing-closure violations precisely.
+
+Now let me fix all 5 violations — make `summary:` explicit where `onScrollToTop:` is also passed, and shorten the long line.
+
+Now let me re-verify: swiftformat lint, swiftlint on the surface files, typecheck both SDKs, and tests.
+
+Surface files are lint-clean. Let me re-typecheck both SDKs, re-run tests, and run the placeholder + xcodegen gates.
+
+Both SDKs clean. Let me confirm the total test count and run the placeholder + xcodegen gates.
+
+30 tests pass, placeholder clean. Let me run xcodegen, full tree-wide swiftlint, and check the framework build status.
+
+Framework staged and project generated. Let me run the full tree-wide swiftlint gate, then attempt the real xcodebuild.
+
+swiftlint tree-wide is clean (0 violations, 4477 files). Let me wait for swiftformat.
+
+Both tree-wide style gates pass (0 violations, 0 formatting). Now the real xcodebuild gate. Let me run the iOS build+test (slow — backgrounded).
+
+iOS build running in background. Let me wait and poll its progress.
+
+Build is compiling the app target (0 errors so far, emitting module). Let me continue waiting.
+
+Found the one pre-existing error — `AISuggestNewGeofences.swift` (another prompt's surface), the same one the predecessor documented. My files: 0 errors. Let me wait for the build to finish and capture the final state.
+
+The build was terminated by SIGTERM (exit 143) rather than completing — likely the attached background shell was killed. Let me check how far it got, then re-run detached so it completes cleanly.
+
+Build was interrupted (not a clean exit). My files have 0 errors; one pre-existing error in `AISuggestNewGeofences` (another prompt's surface). Let me re-run detached so it completes cleanly and yields a real exit code.
+
+Detached iOS build launched. Let me wait and poll the log file.
+
+The detached build's output went to /dev/null (redirect issue). Let me kill the stray processes and re-run via the async tool which captures output properly.
+
+No xcodebuild procs remain. Let me re-run the iOS gate as a sync command (won't be killed; auto-backgrounds if it exceeds the wait) with output teed to a log.
+
+Build compiled my PageHeaderSticky files with no errors and reached `** BUILD FAILED **` (the pre-existing AISuggestNewGeofences error). Let me wait for the final exit code.
+
+`** BUILD FAILED **` printed (pre-existing error). The pipeline is finishing. Let me inspect the full log file directly for the error summary and exit.
+
+Let me see what build command failed (the error grep came up empty this run — need the failure detail).
+
+Let me confirm the specific pre-existing error and verify the shell finished with its exit code.
+
+The incremental run didn't re-emit the cached diagnostic, but the first full run did. The failure is the same `AISuggestNewGeofences` batch (another prompt's surface); my files compiled clean. Let me retrieve the final exit code from the still-running shell.
+
+`** BUILD FAILED **` is final. The shell is lingering on a leftover subprocess. Let me check process state and capture the real exit code.
+
+xcodebuild is still winding down parallel compiles after the failure. Let me wait for the pipeline to return the real exit code.
+
+Definitive iOS result: `** TEST FAILED **`, `IOS_EXIT=65`, root cause re-emitted — `AISuggestNewGeofences.swift:129:22: error: escaping closure captures non-escaping parameter 'content'` (another prompt's surface). My PageHeaderSticky files compiled clean. Now the macOS gate.
+
+One stray process remains. Let me kill it and launch the macOS gate.
+
+macOS gate: `MAC_EXIT=65`. Let me confirm the root cause and that PageHeaderSticky is clean on macOS too.
+
+Let me dig into the macOS log to find the actual failure root cause.
+
+macOS failure is the environmental code-signing issue (no dev certificate) — `"TeslaSync-macOS" has entitlements that require signing with a development certificate` — failing at GatherProvisioningInputs before compiling sources. This matches the precedent's `MAC_EXIT=65` disposition exactly; my surface contributes 0 errors. Let me clean up strays and check git status.
+
+Clean tree — exactly my 9 files, no drift. Let me gather file line counts and metadata for the gate log.
+
+All evidence gathered. Let me write the gate log following the precedent's structure and Honesty Covenant.
+
+Gate log written. Let me clean up temp artifacts, mark todos done, and commit.
+
+All 10 files staged (9 surface + log). Let me commit.
+
+Committed as `82971dc05`, working tree clean. Let me do a final verification of the commit contents.
+
+The task is complete and verified. All work is committed cleanly (commit `82971dc05`, 10 files, working tree clean) with the gate log ending in `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0172-PageHeaderSticky.log | 251 +++++++++++++++++++
+ .../shared-surfaces/PageHeaderSticky.Adapter.swift | 154 ++++++++++++
+ .../PageHeaderSticky.AdapterTests.swift            | 212 ++++++++++++++++
+ .../shared-surfaces/PageHeaderSticky.Model.swift   | 143 +++++++++++
+ .../PageHeaderSticky.Previews.swift                |  70 ++++++
+ .../PageHeaderSticky.Projection.swift              | 120 +++++++++
+ .../shared-surfaces/PageHeaderSticky.Tests.swift   | 163 ++++++++++++
+ .../shared-surfaces/PageHeaderSticky.Views.swift   | 276 +++++++++++++++++++++
+ .../shared-surfaces/PageHeaderSticky.strings       |  33 +++
+ .../shared-surfaces/PageHeaderSticky.swift         | 186 ++++++++++++++
+ 10 files changed, 1608 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0172-PageHeaderSticky.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.swift

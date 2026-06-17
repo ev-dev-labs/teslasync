@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and reading the web source that I need to reproduce.
+
+Now let me explore the Apple app structure to understand the conventions and shared infrastructure.
+
+This is a well-established codebase with a clear multi-file pattern per modal. Let me check build tooling availability and read a representative complete example plus the shared Modal component.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, iPhone 16 simulator booted). Let me study the web dependencies and the complete native modal pattern in parallel.
+
+The pattern is now clear. Let me locate the shared infrastructure (tokens, components) and read the remaining SessionExpiredModal files plus the native Modal component to fully understand conventions.
+
+I need to find where the shared design tokens and components live. Let me search more broadly and read the project configuration.
+
+The app target sources don't obviously list `modals-dialogs`. Let me check how that directory is wired into the build and read the test target config.
+
+`modals-dialogs` isn't listed in `project.yml` sources. I need to understand how the build actually picks up these surface files. Let me investigate the build generation setup.
+
+The `.xcodeproj` is generated via xcodegen (git-ignored), and `modals-dialogs` isn't in `project.yml`. This is critical to understand before writing code. Let me investigate the build wiring and the Shared.xcframework dependency.
+
+Now I understand the architecture: surfaces in `modals-dialogs/` are authored to convention but integrated into `project.yml` in a later phase (this surface *blocks* the P4 acceptance gate). The `Shared.xcframework` requires a KMP/Gradle build. Let me read the shared components, design tokens, and remaining SessionExpiredModal files to mirror conventions exactly, and check verification tooling.
+
+`pwsh`, design tokens, and the KMP `apps/shared` module all exist. Let me read the design tokens, the shared UI components I'll need, and the SessionExpiredModal test/preview files to mirror conventions.
+
+Excellent — I have the token and component APIs. Now let me read the feedback components, a comparable action-based modal (ReauthDialog), the test/preview conventions, and the remaining web dependencies.
+
+Let me read the test/preview conventions and a comparable action-modal (ReauthDialog) to finalize my structure.
+
+I have a complete picture of conventions. Let me kick off the heavy KMP `Shared.xcframework` build in the background (needed for any real `xcodebuild`), and meanwhile check the test tooling and pending-verification notes.
+
+No snapshot library exists — tests are projection/model logic + accessibility assertions. Let me quickly confirm the web `Modal` and `CopyButton` behavior for faithful parity, then start building.
+
+No snapshot lib; tests are logic/projection + a11y assertions. Let me read the lint configs and a titled/dismissible modal example (ConfirmDialog) to match header/close conventions, then check the Gradle build progress.
+
+Let me check the Gradle build progress before writing code.
+
+I now have a complete understanding of all conventions. Let me set up a plan and todo tracking, then build the surface. The Gradle build runs in the background for later real verification.
+
+Now I'll write the surface files, starting with the pure projection core (the Adapter).
+
+The Gradle build finished. Let me check its result.
+
+The KMP `Shared.xcframework` built successfully — a **real `xcodebuild` verification is feasible**. I'll finish the files, then do a real build+test by temporarily wiring only the ExportModal files into a throwaway `project.yml` (reverted before commit). Let me continue with the Seams file.
+
+All 10 files are written. Now let me format and lint them.
+
+swiftformat made some adjustments. Let me verify lint cleanliness with `swiftformat --lint` and `swiftlint --strict` on my files.
+
+swiftlint flags two real issues: `Adapter.swift` exceeds the 400-line file limit, and single-char field names `i`/`w`/`h` (only `x`/`y` are whitelisted). I'll split the JSON serializer into its own `ExportModal.JSON.swift` file and rename the layout fields. Let me view the current boundaries.
+
+I'll split the JSON serializer into a new file and rename the single-char layout fields. First, create `ExportModal.JSON.swift`:
+
+Now I'll remove the JSON section from `Adapter.swift` (now in its own file) by truncating at the `ExportProjection` close, then rename the single-char layout fields.
+
+Adapter is still 412 lines (>400). I'll cleanly separate the data models into `ExportModal.Models.swift` (renaming the single-char fields there) and keep only the projection logic in `Adapter.swift`. Let me rewrite both.
+
+Now the slimmed `Adapter.swift` with just the phase enums and projection logic, using the renamed fields:
+
+Now update the test/preview files that construct `ExportLayoutItem` with the old labels. Let me find them.
+
+Now reformat all files (including the two new ones) and re-run both linters.
+
+Both linters pass clean (0 violations). Now I'll set up the **real `xcodebuild` verification**. First let me examine exactly how the test targets include the surface dirs, so I wire ExportModal the same way.
+
+The integration pattern is clear (app targets exclude `*Tests.swift`, test targets include only `*Tests.swift`). Before wiring, let me check for any symbol collisions with existing `Export*` types in the compiled `Sources/`.
+
+There's a real collision: `ExportPhase` already exists as a public type in the compiled module (and generic `Export*` names risk more). The established convention (e.g., `SessionExpired*`) is to prefix every surface type with the full surface name. I'll rename all my `Export*` types to `ExportModal*` (the view struct `ExportModal` and string literals stay). A single precise regex handles it:
+
+Rename succeeded cleanly. Let me reformat (names grew ~5 chars, may break the 120-col limit) and re-lint.
+
+Both linters pass clean. Now the real build verification. Let me stage the freshly-built `Shared.xcframework`, confirm it's git-ignored, and verify no remaining type collisions in the compiled module.
+
+No collisions, xcframework staged and git-ignored. Now I'll temporarily wire **only** the ExportModal files into `project.yml` (backed up, reverted before commit) and regenerate the project.
+
+Wiring applied to all 4 targets. Let me generate the Xcode project.
+
+Project generated with ExportModal wired in (72 refs). Now the real iOS build of the app target (compiles my files against the real shared components + KMP framework). This is the long pole — I'll run it in the background.
+
+Build running in background. Let me update tracking and monitor progress.
+
+Build failed with 4 errors. Let me extract them.
+
+The 4 failures are **not** in my files — they're pre-existing duplicate-type collisions between sibling surfaces (`RecentDrivesModel`/`StateTimelineUpdate` defined in both `dashboard-widgets` and `feature-views`). Let me confirm my files are error-free and that these collisions are pre-existing.
+
+Confirmed: my files have **zero** errors, and the 4 failures are pre-existing duplicate `public` types (`RecentDrivesModel`, `RecentDrivesUpdate`, `StateTimelineUpdate`) defined in **both** `dashboard-widgets` and `feature-views` — sibling surfaces in the base project, unrelated to my change. Let me (1) kick off a baseline build to confirm attribution, and meanwhile (2) prove my surface compiles in isolation and (3) run my unit tests via a throwaway SwiftPM package.
+
+First, the baseline build (original `project.yml`, background):
+
+Now the isolated type-check of my surface against the **real** design system. Let me check what the shared components I use depend on, then run `swiftc -typecheck`.
+
+Baseline build finished. Let me check its result — this confirms whether the 4 failures are pre-existing.
+
+Exit 1 (not the usual 65) is unexpected — let me inspect the baseline log.
+
+The baseline build never ran — `grep -c` returned 0 and exited non-zero, breaking the `&&` chain (a shell quirk, not a real failure). The static evidence is already airtight (`public final class RecentDrivesModel` exists in two compiled dirs). Let me re-run the baseline properly and, in parallel, check the `Sources/Components` dependency surface for an isolated view-compile target.
+
+`Sources/Components` is a clean, self-contained library (only system imports, no KMP/surface refs). I'll use it for an isolated view-compile later. Meanwhile, let me run my **logic unit tests** now via an independent throwaway SwiftPM package (the logic files import only Foundation/Observation — no SwiftUI).
+
+All **38 logic unit tests pass** under Swift 6 mode (adapter projection, JSON/base64 vectors, phase resolution, model lifecycle, commands, accessibility). The baseline build also finished — let me confirm it fails on the same pre-existing collisions.
+
+**Definitive proof**: the baseline build (no ExportModal wiring) fails identically — `BASE_EXIT=65`, 54 errors, all pre-existing `RecentDrives*`/`StateTimeline*` duplicate-type collisions between sibling surfaces. My change is not the cause. Now let me affirmatively prove my **SwiftUI views** compile against the real component library via an isolated `swiftc -typecheck`.
+
+The only 6 errors are in `Sources/Components/Maps/MapView.swift` (references `TSChartPalette`, defined outside `Components`) — **zero** in my files. My views don't use Maps. Let me locate `TSChartPalette` and include its source so the component library resolves cleanly.
+
+`TSChartPalette` lives in `Sources/Design`. Let me include it and re-run the isolated typecheck.
+
+The full `Components` library has deeper app-level deps (`UnitPreferences`, etc.) — still **zero** errors in my files. Let me compile just the minimal closure my views actually use (TSGlassPanel/TSFadeIn/TSButton + their token/typography deps).
+
+**Isolated view typecheck passes (EXIT=0, zero errors)** against the real design system under Swift 6 strict concurrency. My surface is fully green. Let me do a macOS typecheck for the macOS gate leg, scan for forbidden placeholder words, and inspect the placeholder-check script + logs dir.
+
+macOS typecheck also clean (EXIT=0). Let me run the actual `check-placeholders.ps1` gate tool and verify the logs directory.
+
+The logs dir exists. Let me run the placeholder gate exactly as specified and see how it resolves the `ExportModal` path prefix.
+
+Let me confirm the placeholder scanner actually inspects my files (not just matching zero) by running it on a temp copy of my surface.
+
+Everything in my scope is green: placeholder scanner confirms 0 placeholders in my files. Let me verify the repo is clean (only my files changed, `project.yml` restored), then clean up build scaffolding.
+
+Repo is surgically clean — only my 12 `ExportModal.*` files, `project.yml` untouched. Now I'll write the honest gate log capturing every real result.
+
+Now let me stage exactly the allowed files and commit.
+
+Exactly the 12 surface files + log are staged. Let me commit.
+
+Committed cleanly (13 files, working tree clean). Let me finalize tracking.
+
+I've completed the ExportModal surface. Here's the summary.
+

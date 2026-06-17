@@ -1,0 +1,200 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the platform capabilities and the existing structure.
+
+Platform capability is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Now let me deeply explore the existing apps/apple structure to understand the P1/S8 state holders, tokens, i18n facade, and existing patterns.
+
+Good understanding of the project. XcodeGen-based, shared-surfaces folder exists with co-located tests. Let me examine existing shared-surfaces and the facade/token/i18n infrastructure to match established patterns.
+
+The shared-surfaces folder is large (2209 entries) with established patterns. Let me check if VehicleHeroCard already exists and examine a complete existing surface as a template.
+
+986 established surfaces with a clear multi-file pattern. Let me study the SharedFacade (P1/S8), Design tokens (P1/S9), and a representative vehicle-related surface end-to-end to match conventions exactly.
+
+This is a mature, well-structured pattern. Let me read the rest of the template surface and the core infrastructure (seams, adapter, facade, tokens) in parallel.
+
+The pattern is clear. The adapter mirrors `unitConversion.ts` SI math locally for determinism. Now let me read the Views/Previews/strings/Tests of the template, the design tokens, and locate the native components (GlassPanel, RadialGauge, StatusBadge, StatCard, Badge, Grid).
+
+Let me read the design tokens and the native component APIs I'll map to (GlassPanel/Card, RadialGauge/PieGauge, StatusBadge, StatCard, Badge), plus the template's Previews and Tests.
+
+Now let me read the web shared components and helpers the hero card depends on, to reproduce data, composition, and conversions faithfully.
+
+Let me locate the FSM registry and read the remaining web dependencies (Badge, GlassPanel, Grid, unitConversion, numberFormat, useUnits).
+
+Important: `Frameworks/` only has `.gitkeep` — `Shared.xcframework` must be built by a script (KMP toolchain). Let me inspect the build script and the shared module.
+
+Java 17 + gradlew present, so the KMP framework can build. Let me read the template's Previews/Tests/AdapterTests for exact test structure, check the slot's git state, and see how photos are handled elsewhere.
+
+I now fully understand the pattern. Let me read the Previews template, check the slot's git state and completed-surface logs, and set up todo tracking.
+
+There's a prior VehicleHeroCard artifact log from another parallel run. Let me inspect it for the expected file layout/status, and check for a warm DerivedData cache.
+
+The prior parallel run used a focused build/test strategy and marked the whole-app scheme steps as DEFERRED due to pre-existing out-of-scope blockers. This is key. Let me read that full log to understand the verification approach and the blockers.
+
+This prior log is a goldmine. Note it's from 2026-06-08 and three blockers were cited — but project.yml now DOES wire `shared-surfaces` (b3 resolved), and 986 surfaces are merged. I must independently verify the current baseline (especially b2 duplicate types and b1 KMP). Let me set up todos and check configs/components/collisions.
+
+Now let me verify the current baseline for the b2 duplicate-type blocker and any `VehicleHeroCard` symbol collisions, and check reusable feedback components.
+
+b2 now shows only ONE `VehicleHeroProjection` (in VehicleHeroCardWidget.Adapter) — the prior duplicate may be resolved. My `struct VehicleHeroCard` name is free (only `TSVehicleHeroCard` and `VehicleHeroCardWidget` exist). Let me run a proper duplicate-type scan and read the container/badge/metric components I'll compose with.
+
+`TSGlassPanel`/`TSCard` exist and `.tsGlassPanel()` material modifier is available. Let me confirm the exact public type names in the sibling VehicleHero widgets (to guarantee my `VehicleHeroCard*` prefix won't collide) and read the material modifier + metric/badge tone APIs.
+
+Decisive: siblings use the `VehicleHero*` prefix (e.g. `VehicleHeroModel`, `VehicleHeroProjection`, `VehicleHeroStrings`). Only `VehicleHeroCardWidget` starts with `VehicleHeroCard`. So my `VehicleHeroCard*` prefix is collision-free. Let me read the FSM theme defaults to nail the status-dot palette exactly.
+
+I now have the exact FSM dot palette (success→green-400, danger→red-400, etc.) and all gauge hex colors. Before writing, let me establish the lint/format baseline (the gate runs these `--strict` over the whole app, so pre-existing violations matter) and confirm the prior `function_body_length` issue.
+
+Baseline swiftlint `--strict` is GREEN (0 violations, 5532 files) — the prior out-of-scope violation is resolved. Let me check swiftformat baseline, then start writing the surface.
+
+Both lint and format baselines are GREEN. The full-app gate is therefore achievable if my code is clean and the app builds. The KMP `Shared.xcframework` is the long pole — let me kick off its Gradle build in the background now while I write the surface.
+
+Both baselines are green and the KMP build is running in the background. Now I'll write the surface. Starting with the pure-Foundation core (Adapter + Projection) — the parity logic.
+
+Two lines in `stats` will exceed the 120-col limit. Let me refactor to precompute those values into locals.
+
+Now the Seams file (telemetry seam, phase, snapshot, sources).
+
+Now the i18n strings facade (P1/S10) with web-verbatim keys plus native chrome, in its own file.
+
+Pure core + model + seams + strings done. Let me check the Gradle build progress before writing the SwiftUI views.
+
+Gradle is still compiling Kotlin/Native (the long pole). I'll continue building the SwiftUI layer. Writing the atomic views (palette, photo, badges, identity header).
+
+Gradle build completed. Let me confirm the framework is staged, then continue with the Content/Chrome/main-view files.
+
+The Shared.xcframework is built and staged (b1 resolved — 8m13s). The full gate is now achievable. Let me write the Content views (gauges, stat grid, action bar, no-live-data fallback).
+
+Now the Chrome file: freshness chip, refresh, connectivity banner, and the loading/empty/error leaf states.
+
+Now I'll add `vehicleID` to the identity (so the action bar derives purely from the projection), then write the main public View.
+
+Now the main public View that binds the model and composes everything.
+
+Now the i18n `.strings` catalog (mirrors web keys verbatim + native additions).
+
+Now the DEBUG previews covering every state.
+
+Now the test suites. Writing the pure adapter/projection tests first.
+
+Now the model/view/strings test suite.
+
+All 14 files written. Now let me auto-format my files with swiftformat, then verify lint/format pass on my surface.
+
+swiftformat reformatted 6 files. Let me verify both `--lint` checks pass cleanly now (the actual gate commands).
+
+swiftformat `--lint` is clean (0/5843). Now let me run swiftlint `--strict` (the gate) and, in parallel, set up an isolated SwiftPM module to fast-compile and execute my tests before the heavy xcodebuild.
+
+swiftlint found 1 violation (in my new files — baseline was 0). Let me identify it.
+
+The `void_function_in_ternary` rule (a syntactic heuristic) flags the ternary in the implicit-return switch case. I'll extract the battery color into an `if/else` expression helper.
+
+Fixed. Let me sync to the isolated module and run the isolated compile + tests for fast feedback.
+
+Isolated module compiles under Swift 6 and **all 47 tests pass**. My parity math is verified. Let me re-confirm swiftlint is now clean, then run the full xcodebuild gate.
+
+swiftlint `--strict` is now clean (0 violations). Now let me generate the Xcode project and run the placeholder check (both quick), then launch the heavy xcodebuild.
+
+Project generated and placeholder check passed (0). Now the heavy step. Let me first verify the **whole app compiles** with my surface (the critical integration check) via an iOS `build`, before running the full test action.
+
+The iOS whole-app build is running (compiling 5500+ files from scratch). While it builds, let me monitor and wait — this is the critical integration check.
+
+My grep pattern had an invalid `**` token that broke the pipe. Let me stop and restart the build with reliable file-based logging.
+
+The iOS build is logging to a file. Let me monitor its progress.
+
+Build progressing with no errors — currently compiling shared-surfaces. Let me wait for it to reach my files and complete.
+
+No errors; the app target is at EmitSwiftModule (late stage). Let me wait for completion.
+
+Build is healthy (compiling all ~986 surfaces, no errors). This is a large clean build. Let me wait longer.
+
+**iOS BUILD SUCCEEDED** (exit 0) — my surface integrates cleanly into the whole app with no collisions. Now the test action. Let me run `build test` for iOS (reusing cached build) and the macOS scheme in sequence.
+
+The iOS test action is running (compiling test bundles, then executing). Let me monitor.
+
+The iOS test-bundle compile failed — but on a **pre-existing, out-of-scope** duplicate: `RecentActivityFeedProjectionTests` redeclared in `RecentActivity.Tests.swift` (a different surface). Let me verify this is pre-existing and not caused by my work.
+
+Confirmed: `RecentActivityFeedProjectionTests` is declared in **two pre-existing sibling files** (`RecentActivityFeed.Tests.swift` and `RecentActivity.Tests.swift`) — both outside my allowed scope. My surface has zero errors. Let me gather airtight evidence that this is pre-existing and verify my own test classes are collision-free, while starting the macOS app build.
+
+Evidence is airtight: my 14 `VehicleHeroCard.*` files are the **only** changes; both RecentActivity test files are pre-existing/tracked; all my test classes are collision-free. The macOS build returned quickly — let me check its result.
+
+The macOS build failed on **code-signing** (no development certificate on this runner) — an environment limitation, not a compile error. My surface already compiled for macOS in the isolated module (which ran on `arm64-apple-macos`). Let me get real whole-app macOS compile evidence by rebuilding with signing disabled, then I'll write the gate log.
+
+The macOS unsigned build is compiling. Let me wait for it (it compiles the whole app for the macOS SDK, ~15-20 min) and monitor.
+
+Still compiling, no errors. Let me wait for completion.
+
+macOS build at EmitSwiftModule (late stage), no errors. Let me wait for it to finish.
+
+The macOS build log is static at EmitSwiftModule (the expensive whole-module type-check for the ~5000-file app target). Let me confirm the process is alive and progressing, not stuck.
+
+Healthy — 8+ parallel `swift-frontend` processes compiling object files (DerivedData at 2.3G and growing). Let me wait for completion.
+
+Compilation advanced significantly (17,820 lines, no errors). Let me wait for the final link + status.
+
+The app/extension targets are still compiling object files (63 swift processes, no errors). Let me wait for the final build status.
+
+Healthy but slow (71 swift processes, no errors). Let me back off monitoring and wait longer.
+
+**macOS BUILD SUCCEEDED** (unsigned, exit 0). My surface compiles cleanly in the whole app on **both iOS and macOS**. Let me confirm the macOS result detail and update todos, then write the honest gate log.
+
+All results collected. Now I'll write the comprehensive, honest gate log.
+
+Now let me verify git status shows only my surface files + the log (no build artifacts or generated project), then clean up and commit.
+
+Clean — only my 14 surface files + the log are uncommitted; generated project/build/framework are all gitignored. Let me commit.
+
+Committed (`cb48be1dc`). Let me mark the gate done, clean up the large build artifacts (gitignored DerivedData ~10GB+ and the generated project), and do a final status check.
+
+Working tree is clean and the commit is in place. Let me confirm all todos are complete.
+
+All todos complete. The task is finished.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) **`VehicleHeroCard`** shared surface at full parity with `web/src/components/vehicles/VehicleHeroCard.tsx`, then verified it against the gate.
+
+**Delivered** (14 files, all within the allowed `apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.*` scope, committed as `cb48be1dc`):
+- Pure core — `Adapter`/`Projection`/`Projector`: SI converters, JS-faithful `Math.round` + `fmtInt`/`fmtNumber`, the FSM status catalog, and the verbatim render math (4 `RadialGauge`s, 8 `StatCard`s in source order, identity, photo-alt).
+- State layer — `Model` (P1/S8 `@Observable`), `Seams` (P1/S11 telemetry, phase, snapshot, sources), `Strings` (P1/S10 facade) + `.strings` catalog mirroring every web `t()` key verbatim.
+- Views — `swift`/`Views`/`Content`/`Chrome`/`Previews`: glass shell, exact web hex palette, `AsyncImage` photo, status/model badges, gauges, stat grid, action bar, and every P4 leaf state (loading/empty/error/no-live-data) + stale/offline freshness chip & banner. Full VoiceOver, Dynamic Type, Reduce-Motion.
+
+**Gate results (real output):**
+- `swiftformat --lint`: **0/5843** · `swiftlint --strict`: **0 violations/5545** · placeholder check: **0**
+- Isolated `swift build` + `swift test` (real tokens, Swift 6 complete concurrency): **47/47 tests pass**
+- iOS whole-app `xcodebuild … build`: **BUILD SUCCEEDED** · macOS whole-app build (unsigned): **BUILD SUCCEEDED** — the surface compiles in the real app on **both platforms**, no collisions.
+
+**Transparently blocked (pre-existing, out-of-scope — documented with evidence in the log, not claimed green):** the scheme `build test` steps fail because two sibling surfaces (`RecentActivity` + `RecentActivityFeed`) both declare `RecentActivityFeedProjectionTests`, breaking the shared test-bundle compile — plus macOS dev-cert signing. `git status` proves my 14 files are the only changes; neither blocker is attributable to this surface, and I cannot edit those out-of-scope files. The KMP `Shared.xcframework` was built/staged, resolving a predecessor blocker. Log ends with `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified. All work is committed, the working tree is clean, and all in-scope verification passed.
+
+Merge made by the 'ort' strategy.
+ ...-apple-shared-surfaces-0233-VehicleHeroCard.log | 186 +++++++++++
+ .../shared-surfaces/VehicleHeroCard.Adapter.swift  | 156 +++++++++
+ .../VehicleHeroCard.AdapterTests.swift             | 287 +++++++++++++++++
+ .../shared-surfaces/VehicleHeroCard.Chrome.swift   | 217 +++++++++++++
+ .../shared-surfaces/VehicleHeroCard.Content.swift  | 201 ++++++++++++
+ .../shared-surfaces/VehicleHeroCard.Model.swift    | 141 +++++++++
+ .../shared-surfaces/VehicleHeroCard.Previews.swift | 135 ++++++++
+ .../VehicleHeroCard.Projection.swift               | 215 +++++++++++++
+ .../VehicleHeroCard.Projector.swift                | 220 +++++++++++++
+ .../shared-surfaces/VehicleHeroCard.Seams.swift    | 185 +++++++++++
+ .../shared-surfaces/VehicleHeroCard.Strings.swift  | 218 +++++++++++++
+ .../shared-surfaces/VehicleHeroCard.Tests.swift    | 351 +++++++++++++++++++++
+ .../shared-surfaces/VehicleHeroCard.Views.swift    | 174 ++++++++++
+ .../shared-surfaces/VehicleHeroCard.strings        |  94 ++++++
+ .../shared-surfaces/VehicleHeroCard.swift          | 107 +++++++
+ 15 files changed, 2887 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0233-VehicleHeroCard.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Content.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Strings.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.swift

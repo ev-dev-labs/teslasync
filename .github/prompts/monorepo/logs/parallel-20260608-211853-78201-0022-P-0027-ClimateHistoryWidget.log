@@ -1,0 +1,98 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim booted). Let me explore the web source and Apple app structure.
+
+Let me examine the existing Apple dashboard widgets to understand established patterns.
+
+No existing ClimateHistoryWidget. The closest analog is `TirePressureHistoryWidget` (vehicle-systems history chart with SI conversion). Let me study it and `MotorHistoryWidget` end-to-end.
+
+Let me read these files individually.
+
+Now let me read the infrastructure, design tokens, and check how the project builds.
+
+The build requires a KMP `Shared.xcframework` (Gradle/Kotlin) as a pre-action. Let me verify the full toolchain feasibility and read the web data hooks plus a temperature-based analog.
+
+There are prior logs for ClimateHistoryWidget. Let me check the latest one and a successful analog's log to understand expected gate outcome, plus the data types.
+
+The prior run shows the full scheme build is blocked by cross-slot collisions on the integration branch; they used a per-surface "section A" compile gate. Let me read the full methodology and the canonical analog log, plus the data types.
+
+Now I have the methodology. Let me gather the remaining data-shape details: `ClimateState` type, `convertTempFromSI`, `useUnits`, and the `TSSkeleton` component.
+
+I have the full data shape. Let me confirm `TSSkeleton`'s API and `fmtInt`'s behavior, then I'll write the widget.
+
+I now have everything needed. Let me check the lint/format config to match conventions exactly, then set up tracking.
+
+I have full understanding of the pattern, data shapes, tokens, and gate methodology. Let me set up tracking and write the plan.
+
+Now I'll write the widget files, starting with the pure-domain Projection.
+
+All 7 files written. Let me run the lint/format gates on the new files.
+
+swiftformat passes (0/6). Now swiftlint on the surface files.
+
+swiftlint passes (0 violations). Let me check the placeholder script's interface, then run the placeholder gate and full-tree format/lint.
+
+Placeholder gate passes (COUNT=0). Now the full-tree format and lint gates (the exact gate commands).
+
+Full-tree format passes (0/1927). Now full-tree swiftlint --strict (the exact gate command).
+
+Full-tree found 1 violation — let me confirm it's a pre-existing sibling (not mine), since my files linted clean.
+
+Confirmed — the lone violation is in sibling `LiveSignalSparklinesWidget.Builder.swift` (out of my Allowed files). Let me verify it's pre-existing in HEAD and unmodified by me.
+
+All gates clean on my files; the lone full-tree lint violation is a pre-existing sibling, and my changes are confined to the 7 allowed files. Now the critical compile + test gates. Let me find the real component-library closure (Skeletons → Cards deps).
+
+Component library has no `Shared` dependency — safe to assemble the host closure. Let me run GATE [1]: `swiftc -typecheck` of the surface + real component library against the macOS SDK.
+
+GATE [1] typecheck passes (EXIT=0). Now GATE [2]: a throwaway SwiftPM package (module `TeslaSync`) running the full XCTest suite.
+
+GATE [2] green: **31 tests executed, 0 failures**. Now prove the surface wires into the app target via `xcodegen generate`, then attempt the full xcodebuild gate and capture the real result.
+
+All 7 files wired in (42 refs). Now let me attempt the full xcodebuild gate and capture the real result. First the concrete evidence of the `Shared.xcframework` dependency, then I'll try to build it.
+
+Captured concrete evidence: app target requires `Shared.xcframework` (exit 65). Let me check whether building it via Gradle is feasible here, and whether the integration branch has pre-existing duplicate-symbol collisions independent of my surface.
+
+Kotlin/Native toolchain and Gradle caches are present, and `DashboardWidgetSize`/`DashboardWidgetTelemetry` are each defined once (no duplicate-symbol collision). Building `Shared.xcframework` looks feasible — let me try it so I can run the real gate.
+
+Gradle KMP build is still running (compiles multiple architectures). Let me continue waiting.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 17m55s). Now I can run the **real** gate. Let me build the app target with the staged framework first (fast feedback, gradle now up-to-date), capturing whether my surface integrates into the full app.
+
+The app build failed — but on **sibling** `ChargeStatusWidget` files (duplicate `ChargingProjection`), not mine. My `.strings` compiled clean. Let me confirm every error is pre-existing and none are in ClimateHistory.
+
+Confirmed: every build error is in pre-existing siblings (`ChargeStatusWidget.*`), zero in ClimateHistory, and `ChargingProjection` is duplicated between two sibling files outside my scope. Let me verify they're pre-existing in HEAD and that my `.strings` validated in the real app build.
+
+Both duplicate `ChargingProjection` definers are in HEAD unmodified by me, and my `.strings` validated in the real app build. Let me capture the macOS target's real state too, then clean up generated artifacts.
+
+Same pre-existing sibling collision on macOS (`ChargingProjection` declared in both `ChargeStatusWidget.Adapter.swift:118` and `ChargingDetailSection.Adapter.swift:240`) — zero ClimateHistory errors, `.strings` validated. I have complete, honest evidence. Let me clean up generated artifacts and confirm the tree is scoped to my 7 files.
+
+git status confirms only my 7 files. I have complete, honest evidence — and notably I built the real `Shared.xcframework` and ran the actual xcodebuild (the surface contributes zero errors; only a pre-existing sibling duplicate blocks the whole module). Let me gather line counts and write the gate log.
+
+All data gathered. Now I'll write the comprehensive, honest gate log.
+
+Log written. Let me do a final scope check and commit exactly the allowed files.
+
+Exactly the 7 surface files + the log are staged. Committing now.
+
+Committed cleanly (a5ac41625), working tree clean. Let me finalize tracking.
+
+Let me clean up temp files and finalize.
+
+Merge made by the 'ort' strategy.
+ ...dashboard-widgets-0027-ClimateHistoryWidget.log | 264 +++++++++++++++++
+ .../ClimateHistoryWidget.Chart.swift               | 177 +++++++++++
+ .../ClimateHistoryWidget.Model.swift               | 238 +++++++++++++++
+ .../ClimateHistoryWidget.Previews.swift            | 107 +++++++
+ .../ClimateHistoryWidget.Projection.swift          | 299 +++++++++++++++++++
+ .../ClimateHistoryWidget.Tests.swift               | 315 ++++++++++++++++++++
+ .../dashboard-widgets/ClimateHistoryWidget.strings |  44 +++
+ .../dashboard-widgets/ClimateHistoryWidget.swift   | 322 +++++++++++++++++++++
+ 8 files changed, 1766 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0027-ClimateHistoryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateHistoryWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateHistoryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateHistoryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateHistoryWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateHistoryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateHistoryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateHistoryWidget.swift

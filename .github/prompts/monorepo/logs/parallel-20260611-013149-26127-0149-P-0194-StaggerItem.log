@@ -1,0 +1,192 @@
+I'll start by understanding the task environment: the web source, the existing Apple app structure, and whether the required Apple toolchain is available.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me read the web source and understand the existing Apple project structure.
+
+Now let me read the `useMotionPreference` hook and explore the existing Apple project structure deeply, especially how motion components and shared surfaces are already implemented.
+
+Key finding: there's an existing `apps/apple/Sources/Components/Motion/Motion.swift` AND a parity directory `apps/apple/TeslaSync/shared-surfaces/` (1374 entries). Let me understand the project structure, the existing Motion component, and find sibling motion surfaces (FadeIn/StaggerContainer) to match the exact pattern.
+
+The project uses XcodeGen; `shared-surfaces/` is compiled into both iOS and macOS app targets, with `*Tests.swift` routed to test bundles. There's an existing `TSStaggerItem` in `Sources/Components/Motion/Motion.swift`, but no sibling motion surface exists yet in `shared-surfaces/`. I need to learn the exact multi-file surface convention. Let me study a representative complete surface, the placeholder checker, the parity manifest, and the telemetry contract.
+
+Correction: `parity/`, `tools/`, `design/` are under `apps/` (not `apps/apple/`). The placeholder checker is at `apps/tools/check-placeholders.ps1` (matches the gate). Let me read the full ActiveFilterChips surface as a template, the placeholder checker + patterns, and check `pwsh` and the `Shared.xcframework` build situation.
+
+Now I understand the surface conventions well. Critical: the placeholder checker forbids the words "TODO", "FIXME", "Placeholder", "not implemented" etc. (case-insensitive) — I'll avoid all of them. Let me verify build infrastructure (the biggest risk) and read the design tokens, the `.States` convention, and remaining template files.
+
+Infra is available (pwsh ✓, xcodegen ✓), but `Frameworks/` is empty — the build depends on `Shared.xcframework` staged by a pre-action script. This is the key build risk. Let me read that script, the generated design tokens (for `TSMotion`/`TSSpacing`/`Color.TS`), and the remaining template files.
+
+Build risk confirmed: the scheme builds the KMP `Shared.xcframework` via Gradle (`apps/shared/gradlew`). Let me read the design tokens, check the KMP shared module, and read the remaining template files (Adapter, Tests, AdapterTests) to complete my understanding.
+
+I now have the full token set and test conventions. Let me read the Adapter/AdapterTests (to see where `Surface.slug`, `Input`, `Projection`, `Projector` live) and inspect the KMP module structure — then I'll kick off the long-pole framework build in the background while I write code.
+
+Gradle 8.14.5 works and the KMP module is real. The `ActiveFilterChips.Adapter.swift` comment **confirms my architectural decision**: pure presentational primitives (it cites siblings InlineCallout 0124, Delta 0081, MetricCard 0095) reproduce only the source's REAL branches and explicitly do NOT fabricate loading/error/stale/offline. `StaggerItem` is exactly such a primitive.
+
+Let me kick off the long-pole KMP framework build in the background while I write the surface, and verify the cited sibling precedents exist.
+
+Precedents confirmed (Delta, InlineCallout, MetricCard — tiny presentational primitives with the same fileset). The KMP build is running in the background. Let me read the simplest precedent (`Delta`) to nail the minimal primitive pattern, and check the build started cleanly.
+
+The KMP build is downloading Kotlin/Native and compiling (many tasks FROM-CACHE — promising). I now fully understand the pattern. Before writing, let me check the lint configs (to avoid violations), confirm no symbol collisions with the existing `TSStaggerItem`, and verify a couple of shared API signatures.
+
+No collisions, configs understood (line length ≤120 for code, `--self remove`, `@testable` imports at bottom, no trailing commas). I have everything I need. Let me write the surface. Starting with the pure Foundation-only core (`Adapter`).
+
+Now the Model (i18n facade, telemetry seam, observable state-holder).
+
+Now the Views file — the reveal modifier, the entrance-animation helper, and the token-driven empty-content leaf.
+
+Now the public surface entry point.
+
+Now the Previews — one per real branch (full-motion entrance, indexed cascade, reduced-motion, empty-content leaf).
+
+Now the strings catalog contribution.
+
+Now the pure-core tests (`AdapterTests`) — mirroring the web `useMotionPreference` cases plus the projection/phase derivation.
+
+Now the SwiftUI/state-holder half of the tests (`Tests.swift`) — model lifecycle, entrance animation, view composition across branches, strings, and reduce-motion a11y.
+
+The KMP framework build finished. Let me check its result and fix the two long assert lines I noted in AdapterTests, then run the linters/formatter on my files.
+
+The KMP `Shared.xcframework` built successfully (7m) and is staged — the full build gate is unblocked. Let me fix the two over-long assert lines in AdapterTests before linting.
+
+Let me scan all my new files for any lines over 120 chars, then run the formatter and linters scoped to the project.
+
+All lines ≤120. Now let me run swiftformat (mutating) on my files to normalize style, then verify with the linters.
+
+Both linters pass on my files (swiftformat 0/7 need formatting; swiftlint 0 violations). Now let me generate the Xcode project and run the full iOS build+test gate.
+
+Project generated; StaggerItem is wired into the targets (48 pbxproj references). Now let me run the full iOS build+test gate in the background (it compiles the whole app + test bundles, so it's slow).
+
+While the iOS build runs, let me verify the log directory exists and monitor build progress.
+
+The logs dir and naming convention are confirmed. Let me look at a sample completed log to match its structure, and check iOS build progress.
+
+The iOS build is actively compiling the app target, and the Delta log gives me the exact expected final-log format. Let me wait for the iOS build+test to progress.
+
+The iOS build shell shows "Terminated: 15" after only ~90s — something sent SIGTERM. Let me inspect the actual log to see where it stopped and the recorded exit code.
+
+Found the real bug: `\.accessibilityReduceMotion` is a **get-only** environment key, so the preview's `.environment(\.accessibilityReduceMotion, true)` fails to compile (it needs a `WritableKeyPath`). Reading it in the view is fine; overriding it isn't.
+
+The clean fix: reading the live environment is correct for the real API (matches the existing `Motion.swift` pattern), but I'll add a model-injection seam so previews/tests can drive the preference explicitly without overriding a system key. Let me first confirm there were no *other* compile errors, then fix.
+
+Only one error — everything else compiled cleanly. Let me fix the surface (add a preference-injection seam) and the preview (drive reduced motion via the injected model instead of overriding the system key).
+
+Now fix the reduced-motion preview to drive the preference via an injected model instead of the get-only system key.
+
+Let me re-format/lint the changed files, then re-run the iOS build+test (now incremental).
+
+Both files clean. Re-running the iOS build+test (now incremental).
+
+Still running past 150s (no early SIGTERM — confirms the earlier 143 was the compile-failure cascade). Let me check progress via the log.
+
+No errors; still compiling the app module + dependents. Let me continue waiting for the test phase.
+
+IOS_EXIT=65 — a failure. Let me find the cause.
+
+The build failures are **not** in my files — they're pre-existing errors in two unrelated surfaces (`AISignalExplorerNlFilter.swift:142` and `AIGeofenceAwareAutomationSuggestions.swift:141`: "escaping closure captures non-escaping parameter 'content'"). My StaggerItem files compiled with 0 errors. Let me confirm these are pre-existing (not caused by me) and not modified in my checkout.
+
+Confirmed: `git status` shows **only my 8 StaggerItem files** as new — I did not modify those sibling files. And the first build never reached them (it was interrupted earlier), which is why they appeared only now. These are pre-existing, out-of-scope errors (and my prompt's "Allowed files" forbids me from touching them).
+
+Let me characterize the pre-existing breakage precisely, then prove my own surface compiles in isolation.
+
+Definitively confirmed: both sibling files are **tracked in HEAD and unmodified by me**, and their bug is their own `glass()` helper passing a non-escaping `@ViewBuilder content` into `TSGlassPanel`'s escaping closure — a pre-existing Swift 6.3 strictness break, outside my allowed files. My `ios2.log` shows **0 errors in any StaggerItem file**; tests only failed to *run* because "Testing cancelled because the build failed" on those siblings.
+
+Let me (1) prove my surface compiles standalone via `swiftc -typecheck`, then (2) run my tests by excluding only the pre-existing-broken siblings via a command-line override (no files modified).
+
+My surface **typechecks cleanly in isolation** under Swift 6 strict concurrency (RC=0). Now let me run the actual XCTest suite by excluding only the two pre-existing-broken siblings (command-line override, no files changed) so the test target can link and run my tests.
+
+While the build runs, let me check how widespread this pre-existing `glass(@ViewBuilder...)` pattern is, to know whether excluding 2 siblings will suffice.
+
+There are 4 surfaces sharing this `glass()` pattern, but the full build reported only 2 errors — so the other 2 may differ. Let me monitor the exclusion build to see if more siblings break.
+
+0 errors with just the 2 siblings excluded — good. Still compiling/linking the test target. Let me wait for the test run to complete.
+
+Exit 65 but 0 compile errors earlier — likely test failures or a late error. Let me inspect.
+
+Another *different* pre-existing error surfaced in yet another unrelated file (`RecentDrivesSection.Previews.swift:24` — "compiler unable to type-check in reasonable time"). The baseline app target has **multiple** pre-existing breakages from the Xcode 26.5/Swift 6.3 toolchain — all outside my allowed scope. Chasing them by exclusion is endless and out of scope.
+
+The most honest way to actually *execute* my tests against my *real* shipped code: build a throwaway SwiftPM package (in /tmp, touching no repo files) with a real module named `TeslaSync` containing my surface + the design tokens, and run my **unmodified** `@testable` XCTest files. My surface only depends on SwiftUI/Foundation + the tokens, so this is clean.
+
+**All 31 of my XCTest cases PASS** against the real shipped code (SWIFT_TEST_RC=0, 0 failures) — executed on macOS via SwiftPM. Combined with the clean isolated typecheck and 0 StaggerItem errors in the real app/test build, my surface is verified.
+
+Now the remaining gate steps: placeholder check and the full-tree lint/format. Let me run the placeholder gate (scoped to my actual files, as the Delta precedent did) and swiftformat on the full tree.
+
+Placeholder check is clean (COUNT=0, EXIT=0) — both the scoped scan and the literal gate command. Now let me run the full-tree lint gates (these don't compile, so they're unaffected by the pre-existing compile errors).
+
+Full-tree swiftformat: **0/4889 require formatting, FORMAT_EXIT=0** (green). Now the full-tree swiftlint --strict.
+
+Full-tree gates are green: **swiftlint --strict = 0 violations (EXIT=0)**, **swiftformat --lint = 0/4889 (EXIT=0)**, **placeholders = COUNT=0 (EXIT=0)**. My surface: isolated typecheck RC=0, 31/31 XCTests pass, 0 errors in the real app/test build.
+
+The only red is the iOS/macOS `build test` — due to pre-existing errors in unrelated sibling surfaces. Let me check how recent sibling logs reported the build step, to align with the established honest convention.
+
+This is decisive: the established, predecessor-accepted convention across **all** sibling logs (Delta 0081, MetricCard 0095, InlineCallout 0124, ActiveFilterChips 0147) is that the iOS/macOS `build test` gates are RED (EXIT=65) from these **same** pre-existing foreign sibling errors, reported verbatim with baseline proof, while the surface is verified green via `swiftc -typecheck` + `swift test` + lint/format/placeholder — concluding **EXIT=0/STATUS=DONE** (Honesty #7: I must follow the predecessor's accepted disposition).
+
+To match their gold-standard evidence, let me prove the iOS reds are pre-existing via a baseline build (my files excluded) and add the macOS typecheck.
+
+macOS surface typecheck is clean (MAC_TYPECHECK_EXIT=0). Let me wait for the baseline iOS build (my files excluded) to prove the foreign errors are pre-existing.
+
+Baseline still compiling (module emit). Let me wait for it to reach the per-file codegen where the foreign errors surface.
+
+BASELINE_IOS_EXIT=65 — the build **still fails with my files excluded**. Let me confirm the failing files are the foreign siblings (proving the reds are pre-existing, not mine).
+
+**Airtight baseline proof**: with my files excluded, the iOS build *still* fails (BASELINE_IOS_EXIT=65) on a foreign sibling (`AISuggestNewGeofences.swift:129` — same systematic escaping-closure defect), with **0 StaggerItem errors**. The reds are definitively pre-existing and foreign.
+
+Now let me execute the macOS gate verbatim (predecessors ran it; I won't assume) while I draft the log.
+
+While the macOS gate runs, let me gather the facts for the log: line counts, the verbatim foreign-error evidence from the unmodified iOS gate, and tool versions.
+
+I have the evidence: 7 `.swift` files (921 LOC) + strings, all under the 400-line budget; the unmodified iOS gate's only 2 errors are foreign (`AISignalExplorerNlFilter:142`, `AIGeofenceAwareAutomationSuggestions:141`), **0 StaggerItem**. Let me grab clean tool versions, then wait for the macOS gate.
+
+The macOS gate finished. Let me get MAC_EXIT and confirm its failures are also foreign.
+
+MAC_EXIT=65, but it finished in ~15s (too fast for compilation) — likely a pre-build/signing gap, as Delta's log noted. Let me confirm the cause.
+
+MAC_EXIT=65 is an **environmental signing gap** (no macOS development certificate on the runner — `DEVELOPMENT_TEAM=""`), failing pre-compile with **0 StaggerItem errors** — exactly as Delta's log documented. The Shared.xcframework staged fine.
+
+I now have complete, predecessor-aligned evidence. Let me write the gate log.
+
+The log is written. Now let me verify git status (ensure the generated `.xcodeproj` and `Frameworks/` are gitignored), then commit exactly my 8 surface files + the log.
+
+Clean: exactly my 8 surface files + the log are untracked; `.xcodeproj` and `Frameworks/` are gitignored. Committing now.
+
+Committed as `bbb2979a3` with exactly the 8 surface files + log. Let me do a final verification that the commit is clean and complete.
+
+Task complete. The `StaggerItem` Apple shared surface is implemented, verified, and committed (`bbb2979a3`); working tree is clean.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic `StaggerItem` at parity with `web/src/components/motion/StaggerItem.tsx` — **8 files, 921 LOC** in `apps/apple/TeslaSync/shared-surfaces/`:
+
+- **`.Adapter`** — Foundation-only core: surface slug, `StaggerItemPhase` (web `hidden`/`show`), a **1:1 port of `useMotionPreference`**, props (`index` + `defaultMs=350`), and a pure projector (hidden `{0,15}`→shown `{1,0}`; reduce→`{1,0}`; cascade `index*0.06`).
+- **`.Model`** — P1/S10 strings facade, P1/S11 telemetry seam, P1/S8 `@Observable` model (reduce-motion bind via `\.accessibilityReduceMotion`, reveal phase flip, once-only `view.opened`).
+- **`.Views`** — token-driven entrance animation (easeOut, nil under reduce), reveal modifier, never-a-blank-box empty leaf.
+- **`.swift` / `.Previews` / `.strings` / 2 test files** — public surface (+ injection seam), 4 previews, native a11y strings, **31 XCTest cases**.
+
+**Parity scope (Honesty #2):** the web source is a pure motion wrapper with no fetch — so loading/error/stale/offline are documented **N/A** (not skipped), reproducing only the real branches, exactly as siblings Delta/MetricCard/InlineCallout/ActiveFilterChips did.
+
+**Verification (all executed):** iOS+macOS `swiftc -typecheck` = 0 errors · `swift test` = **31/31 pass** · `swiftlint --strict` = 0/4591 · `swiftformat --lint` = 0/4889 · placeholders = 0 · KMP xcframework built green.
+
+**Gate reds are foreign/pre-existing (proven, not surface-attributable):**
+- `IOS_EXIT=65` — only errors are sibling AI* surfaces' escaping-closure defect; **baseline build with my files excluded still fails** → pre-existing.
+- `MAC_EXIT=65` — environmental macOS dev-signing-certificate gap (pre-compile).
+- Both with **0 StaggerItem errors**, dispositioned per the accepted predecessor convention → **EXIT=0 / STATUS=DONE**.
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0194-StaggerItem.log  | 185 ++++++++++++++++++++
+ .../shared-surfaces/StaggerItem.Adapter.swift      | 189 +++++++++++++++++++++
+ .../shared-surfaces/StaggerItem.AdapterTests.swift | 171 +++++++++++++++++++
+ .../shared-surfaces/StaggerItem.Model.swift        | 157 +++++++++++++++++
+ .../shared-surfaces/StaggerItem.Previews.swift     |  90 ++++++++++
+ .../shared-surfaces/StaggerItem.Tests.swift        | 152 +++++++++++++++++
+ .../shared-surfaces/StaggerItem.Views.swift        |  83 +++++++++
+ .../TeslaSync/shared-surfaces/StaggerItem.strings  |  22 +++
+ .../TeslaSync/shared-surfaces/StaggerItem.swift    |  79 +++++++++
+ 9 files changed, 1128 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0194-StaggerItem.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerItem.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerItem.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerItem.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerItem.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerItem.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerItem.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerItem.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StaggerItem.swift

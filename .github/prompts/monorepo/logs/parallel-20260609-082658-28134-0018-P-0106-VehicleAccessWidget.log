@@ -1,0 +1,76 @@
+I'll start by exploring the repository structure and checking platform capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available. Let me explore deeply before deciding on capability status — first the web source and existing Apple structure.
+
+The Apple `dashboard-widgets` directory already exists with many implemented widgets. Let me examine the SDK availability and the structure of existing widgets to follow the established pattern.
+
+No existing VehicleAccess native files — I need to create them. Only Command Line Tools (no full Xcode) and only macOS SDKs are present, so `xcodebuild` can't run. Let me study the established native widget patterns and shared infrastructure before deciding capability status. Let me read the web shared pieces and find a good sibling model.
+
+Let me find a native widget that uses the same `WidgetDetailCard`/`DetailEntry` pattern and Badge, plus read the web shared components that VehicleAccessWidget depends on.
+
+`WarrantyStatusWidget` and `EnergySiteInfoWidget` are good models using the DetailCard pattern. Let me examine a complete widget file set and locate the core shared native infrastructure (WidgetShell, state holders, tokens, i18n, diagnostics).
+
+Let me read the complete WarrantyStatusWidget set — it's the closest model (DetailCard + badges + multi-state).
+
+Excellent — this is a rich, production-quality pattern. Let me read the rest of the WarrantyStatusWidget set and the shared token/type infrastructure.
+
+Let me read the remaining files (Content, Builder, Previews, strings, Tests) and the shared token/type infrastructure.
+
+Now let me read the Previews, strings, Tests, and locate the shared design tokens and dashboard grid types.
+
+Let me read the dashboard infra and find the core design token definitions.
+
+Let me find the exact token definitions in the Design directory.
+
+The tokens come from generated `apps/design/generated/apple/Tokens.swift`. Let me read the token surface, the `TSTone`/`TSSkeleton`/`TSMetricBar` primitives, and the project config.
+
+Now let me read the test patterns, the web data hooks (for DTO shapes), the registry metadata, and the project config.
+
+I have the full architecture now. Let me read the registry entry, web hooks (DTO shapes), date formatter, placeholder checker, and lint configs.
+
+Let me read the DTO type definitions, the `useVehicleMobileEnabled` hook, the date formatter, and the placeholder checker.
+
+Let me confirm the mobile-enabled envelope shape and read the placeholder checker to learn what's forbidden.
+
+Let me read the forbidden-patterns list, lint configs, and confirm the mobile-enabled type.
+
+Let me verify the test target picks up `*Tests.swift`, check for any symbol collisions, and confirm baseline lint cleanliness.
+
+No collisions; test target is correct. Let me probe the toolchain: confirm `xcodebuild` is unavailable and test whether `swiftc` can typecheck SwiftUI/Charts/MapKit against the macOS SDK (for partial verification).
+
+Critical capability findings: `xcodebuild` is **unavailable** (requires full Xcode; only CLT present), but `swiftc -typecheck` against the **macOS 15 SDK with SwiftUI + Charts + MapKit + Observation succeeds (exit 0)**. So I can produce the full implementation and partially verify it by typechecking against the macOS SDK, plus run swiftlint/swiftformat/placeholder gates. The `xcodebuild build test` portions will be BLOCKED with evidence.
+
+Let me read `WidgetShell.tsx` to faithfully reproduce its chrome, then start building.
+
+WidgetShell is clear. Let me read `DataFreshness` (relative-time semantics) and the web `EmptyState` to faithfully reproduce freshness + empty chrome.
+
+I have a thorough understanding now. Let me confirm the `TSSkeleton` API and check baseline lint/format state on the existing dir before I start writing.
+
+`TSSkeleton` API confirmed. Let me locate `TSCard` (a transitive dep for the skeletons file) so I can assemble a focused typecheck later, then I'll start writing.
+
+I now have a complete understanding of the architecture, tokens, data shapes, gate tooling, and capability constraints. Let me set up tracking and write the plan.
+
+Now I'll create the files, starting with the Foundation core (Models + Projection).
+
+Now creating the Foundation core files.
+
+Let me typecheck the Foundation core immediately to catch errors early.
+
+Core typechecks clean under Swift 6. Now the state-holder/Model file.
+
+I need to fix a buggy line in `apply` — the `isError` assignment is convoluted. Let me simplify it.
+
+Now the main view file.
+
+Now the content body and sub-views.
+
+Now the Previews file.
+
+Now the i18n strings catalog.
+
+Let me typecheck the full surface against the real design tokens (assembling the minimal real dependency set), iterating as needed.
+
+Those errors are in the shared `Cards.swift` (a transitive dep of the skeletons file), not my code. Let me find the few real files needed to satisfy that chain so the harness uses real tokens.
+
+Both only import SwiftUI. Let me add them and re-run the typecheck.
+

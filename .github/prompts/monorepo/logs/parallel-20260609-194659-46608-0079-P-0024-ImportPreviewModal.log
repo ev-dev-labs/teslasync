@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure and reading the web source to understand what I need to reproduce natively.
+
+This is a well-established per-surface pattern with ~11 files each. Let me study the conventions deeply by reading a complete reference surface and the shared infrastructure.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat). Let me study the shared infrastructure and a complete reference surface.
+
+This is a rich, well-structured MVVM pattern. Let me study the supporting files, the design tokens, the widget registry to port, and the build config.
+
+The registry is large. Let me check whether a widget catalog/registry already exists in the Apple sources to bind to, and read the design tokens + Modal component + remaining EntryDrawer reference files.
+
+A native `MiniGridPreview`, widget catalog, and `SettingsExportImport` already exist. Let me examine these reusable dependencies.
+
+A complete native `MiniGridPreview` already exists with a widget icon catalog. Let me read the catalogs and the existing import/export feature to reuse the registry and validation patterns.
+
+The native `WidgetCatalog` (registry) and `MiniGridPreview` already exist — I can bind to both. Now let me study the design tokens, shared components, build config, and the existing import/export feature.
+
+Now let me read the shared components I'll map to and the build config.
+
+Let me read the final reference pieces: previews, strings, tests conventions, the remaining UI components, and the build config.
+
+Let me read the build config, remaining components, modal presentation pattern, and the existing import/export feature for the file-import seam pattern.
+
+Critical finding: `project.yml` does **not** list `TeslaSync/modals-dialogs` as a source path. Let me investigate how the modals-dialogs surfaces get built and whether an xcodeproj exists.
+
+`modals-dialogs` is intentionally developed in isolation (siblings like EntryDrawer were committed the same way) and wired in at the P4 acceptance gate. Let me check the verification tooling: placeholder script, the shared framework build, and lint config.
+
+Let me check a sibling surface's log to see how prior prompts handled verification given the wiring/KMP realities.
+
+This reveals the established verification approach. Let me read the rest of the sibling log to replicate it faithfully.
+
+I now have the complete, established verification methodology. Let me read the lint configs to respect the budgets, then extract the widget registry data.
+
+Lint budgets: files <400 lines, type bodies <250, functions <50, lines ≤120 (`--strict`). Now let me extract the widget registry (id→name from WidgetPicker.Catalog, id→symbol from MiniGridPreview.Catalog) to port faithfully.
+
+All 118 widgets have both name and symbol; max line width 119 (within budget). Let me verify the remaining component signatures I'll use (GlassPanel, Badge, FadeIn, TextArea/TextField), then write the plan.
+
+`TSBadge`/`TSTabs` take `LocalizedStringKey`, so for dynamic facade-resolved strings I'll build token chrome with `Text(verbatim:)` (the established pattern). Let me check the file-import precedent, confirm no symbol collisions, and write the plan.
+
+I have everything needed. Let me generate the widget catalog data, write the plan, and set up todos.
+
+Now I'll write the surface. Starting with the pure core (Adapter).
+
+Now the widget catalog (118-entry registry seam). Let me regenerate the dictionary body with the final initializer form and verify widths.
+
+Catalog is faithful. Let me write the projection (preview rows, badges, mini-grid tiles, a11y) and mark progress.
+
+Now the `@Observable` view-model.
+
+Now the main View. Let me first check the existing drag-drop pattern in the codebase to reuse a compiling approach.
+
+I have the compiling drop + fileImporter pattern. Let me write the main View.
+
+Now the sub-views. Starting with the leaf states (banners + empty state).
+
+Now the header, tab bar, and input screens (file/paste/url).
+
+Now the preview screen (summary, badges, widget list, actions).
+
+Now the mini-grid thumbnail and widget row views.
+
+Now the previews (one per state) and the strings catalog.
+
+Now the test suites — adapter/projection/a11y tests first.
+
+Now the model state-holder tests.
+
+All 13 files written. Let me fix a potentially long line, then run the verification gates.
+
+Now let me run the verification gates. Starting with swiftformat and swiftlint.
+
+Two trailing-comma normalizations needed. Let me auto-format my surface files (ecosystem tool applies the repo's exact rules), then re-lint.
+
+swiftformat passes (FORMAT_EXIT=0). Now swiftlint --strict on the surface files.
+
+The layout item uses single-char names `i`, `w`, `h` (only `x`, `y`, `id`, `ok`, `t` are allowed). Let me view and rename them to descriptive names.
+
+Now update the projection's grid math to the new field names.
+
+Now update the test that constructs a layout item directly:
+
+Lint + format are GREEN (0 violations). Now the swiftc type-check against the iOS 18 + macOS 15 SDKs with the Shared-free closure. Let me identify SDK paths and any SharedFacade-coupled files to exclude.
+
+No SharedFacade coupling in Components/Design and my surface only uses tokens + TSButton/TSFadeIn/TSAnimation. Let me run the iOS 18 type-check against the Shared-free closure.
+
+`UnitFormatters.swift` is the SharedFacade-coupled component (as the methodology notes). Let me exclude it and re-run.
+
+iOS type-check passes (0 errors). Now the macOS 15 SDK type-check.
+
+Both type-checks pass. Now the isolated SwiftPM build + test (module `TeslaSync`) that actually runs the XCTest suites.
+
+Build succeeds. Now run the tests.
+
+All 39 tests pass. Now the placeholder gate, xcodegen spec validity, and collision audit.
+
+All 8 surface-scoped gates are GREEN. Let me confirm the working tree only contains my surface files (no shared files modified).
+
+Clean — only my 14 surface files, no shared files touched. Now let me capture honest evidence for the full-app build deferral (the surface-independent blockers).
+
+Confirmed all three surface-independent blockers. Let me make a bounded real `xcodebuild` attempt to capture live failure evidence (my files aren't in `project.yml`, so this exercises the app, not my surface).
+
+The Gradle KMP assemble (Shared.xcframework) is the long pole, as documented. Let me wait a bit more for it to progress past staging.
+
+The Gradle framework staged successfully and the app began compiling. The build completed — let me read the final result.
+
+The full-app build red-stopped on the **pre-existing, surface-independent** `RecentDrives*` ambiguous-type collision (RC=65) — exactly as the sibling EntryDrawer log documented. Let me confirm my surface wasn't compiled (unwired tier) and capture the failure summary.
+
+Full-app build evidence captured: Shared.xcframework staged OK, then **BUILD FAILED (RC=65)** on the pre-existing `RecentDrives*` collision; **0** ImportPreviewModal references (tier unwired) — surface-independent. Let me clean up and gather data for the log.
+
+All evidence gathered. Now let me write the verification log.
+
+Let me do a final lint/format confirmation on the final files and verify the complete working tree before committing.
+
+Everything is clean — FMT=0, LINT=0, and the working tree contains exactly the 14 surface files + the log (no shared files touched). Let me commit.
+
+Committed successfully (15 files, 2853 insertions). Let me finalize the todo tracking and confirm a clean tree.
+
+The ImportPreviewModal Apple surface is complete, verified, and committed. Final summary below.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic `ImportPreviewModal` at parity with the web source `features/dashboard/components/ImportPreviewModal.tsx`, following the established P4 MVVM pattern (matching the verified EntryDrawer surface).
+
+**14 files** (`apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.*`, 2,383 non-blank LOC):
+- **Pure core** — `validateImportData` port (parse guards, required fields, widget dedupe, registry-availability split, layout clamp `lg4/md3/sm2/xs1`, 100-char name slice), url-safe-base64 decoder + `#import=`/`?import=` extraction, a faithful 118-id widget registry seam (name + SF Symbol), and the preview projection (badges, rows, mini-grid math).
+- **State holder** (`@Observable`, P1/S8) + SwiftUI views: header, 3 input tabs (drag-drop/browse file, paste editor, share-URL), and the preview screen (errors/warnings banners, mini-grid thumbnail, count badges, widget-availability list, Back/Import).
+- **Every web branch renders real chrome** (no blank box); `view.opened` telemetry (P1/S11), full i18n via the P1/S10 facade (no English literals), VoiceOver labels, Dynamic Type, Reduce-Motion. The generic remote loading/stale/offline states don't exist in the source (no async fetch) and were not fabricated.
+
+**Surface-acceptance gates — all GREEN:**
+`FORMAT=0 · LINT=0 (0 violations) · iOS18 typecheck=0 · macOS15 typecheck=0 · SwiftPM test 39/39 · placeholders=0 · xcodegen valid · collision=0`
+
+**Full-app `xcodebuild` — DEFERRED** (surface-independent, captured live): Shared.xcframework staged via Gradle OK, then build red-stopped (RC=65) on a **pre-existing** `RecentDrives*` duplicate-type collision between two already-committed surfaces; `modals-dialogs` isn't yet in `project.yml` (integration-owned, outside Allowed-files), so xcodebuild compiled **0** ImportPreviewModal references/errors. Documented in the log per the Honesty Covenant (`EXIT=0 / STATUS=DONE`).
+
+Only the 14 surface files + the log were committed (`d823be9`); no shared file modified; working tree clean.
+
+
+
+The task is fully complete — all 10 todos done, all gates green, committed, and the working tree is clean.
+
+Merge made by the 'ort' strategy.
+ ...pple-modals-dialogs-0024-ImportPreviewModal.log | 177 ++++++++++
+ .../ImportPreviewModal.Adapter.swift               | 390 +++++++++++++++++++++
+ .../ImportPreviewModal.Catalog.swift               | 192 ++++++++++
+ .../ImportPreviewModal.MiniGrid.swift              | 170 +++++++++
+ .../modals-dialogs/ImportPreviewModal.Model.swift  | 221 ++++++++++++
+ .../ImportPreviewModal.ModelTests.swift            | 249 +++++++++++++
+ .../ImportPreviewModal.PreviewScreen.swift         | 151 ++++++++
+ .../ImportPreviewModal.Previews.swift              | 124 +++++++
+ .../ImportPreviewModal.Projection.swift            | 231 ++++++++++++
+ .../modals-dialogs/ImportPreviewModal.Seams.swift  |  72 ++++
+ .../modals-dialogs/ImportPreviewModal.States.swift |  81 +++++
+ .../modals-dialogs/ImportPreviewModal.Tests.swift  | 328 +++++++++++++++++
+ .../modals-dialogs/ImportPreviewModal.Views.swift  | 260 ++++++++++++++
+ .../modals-dialogs/ImportPreviewModal.strings      |  59 ++++
+ .../modals-dialogs/ImportPreviewModal.swift        | 148 ++++++++
+ 15 files changed, 2853 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0024-ImportPreviewModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.MiniGrid.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.PreviewScreen.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.swift

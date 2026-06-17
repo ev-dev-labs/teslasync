@@ -1,0 +1,163 @@
+I'll start by exploring the repository structure to understand what exists and what's required, and check whether the Apple toolchain and source files are present.
+
+Toolchain confirmed: Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, iPhone 16 simulator available. Both the web source and `apps/apple` exist. Not blocked. Now reading the web source and existing Apple project structure.
+
+Now let me explore the Apple project structure deeply to understand conventions, existing shared surfaces, and the P1/P4 infrastructure I must bind to.
+
+A clear multi-file convention exists per surface (`.swift`, `.Adapter`, `.Model`, `.Projection`, `.Views`, `.Chrome`, `.Previews`, `.strings`, `.Tests`, `.AdapterTests`). There's an existing `AIFeatureCard` native surface and many AI siblings. Let me find the closest sibling to mirror. I'll compare web sources and read a complete native sibling that uses the same `useAiStream + AIFeatureCard + withAiFeature` pattern.
+
+`AIDriveCoaching` is the ideal template — identical pattern (`useAiStream` + `withAiFeature` + `AIFeatureCard`, no children/inputSlot, `canStart` guard). Reading its complete native file set to learn the architecture.
+
+Excellent — this is a rich, well-architected template. Reading the remaining 7 files of the `AIDriveCoaching` sibling to fully internalize the pattern (Projection, Views, Chrome, Previews, strings, and both test files).
+
+Now the remaining template files — Previews, strings, and both test files — to understand test structure, preview conventions, and string catalog format.
+
+Reading the adapter test file and confirming the shared P1/S9 design tokens and components (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSButton`, `TSSkeleton`, `TSFadeIn`) that I must reuse.
+
+The template is fully understood. `AIRangePrediction` differs from `AIDriveCoaching` in three ways: (1) static URL `/ai/ml/range/train`, (2) body carries `vehicle_id` + `days:14` integers (id in body, not path), (3) `canStart = vehicleId != null` (not `> 0`). Let me find the sibling that encodes an integer `vehicle_id` body to mirror that correctly, verify tokens, and confirm no `AIRangePrediction.*` exists yet.
+
+`AIMLChargingCurveClustering` is the perfect body-encoding sibling — it has the same `vehicle_id` + `days` body and `vehicleId != null` canStart. Let me read its web source and native Adapter/Projection to mirror the integer-body encoding and canStart rule exactly.
+
+`AIMLChargingCurveClustering` matches `AIRangePrediction` almost exactly (same `vehicle_id`+days body, same `canStart = vehicleId != null`). I'll use it as the primary template. Reading its remaining files to capture the body/canStart/test specifics precisely.
+
+I now have the complete template. `AIMLChargingCurveClustering` is the exact structural twin. Reading its remaining 6 files (swift, Views, Chrome, Previews, strings, Tests) to capture the body/days test assertions and finalize my plan.
+
+Reading the final template files — MLChargingCurveClustering's Previews, strings, Tests, and AdapterTests — to capture the body/days test assertions exactly.
+
+I have the full pattern. Before writing, let me verify the build prerequisites: the `Shared.xcframework` staging, swiftlint/swiftformat configs, and check whether an `xcodeproj` already exists so I know how the gate build will behave.
+
+Key finding: the build pre-action builds a KMP `Shared.xcframework` via Gradle (needs Kotlin/Native), and `Frameworks/` only has `.gitkeep`. But 25 sibling surfaces have gate logs. Let me check a sibling log to learn the real gate outcome/format, check for `pwsh`, and read the pending-verifications doc.
+
+This is decisive. The sibling logs reveal the established, sanctioned methodology: each surface is verified **green in isolation + real app-module compile**, and the full-app `build test` gate is documented as BLOCKED by pre-existing OTHER-surface collisions + KMP toolchain + macOS signing (per `apps/macos-pending-verifications.md`). `pwsh` is available so I can run the gate verbatim.
+
+Let me set up tracking, check whether those pre-existing collisions exist in this tree now, and look for the isolated-build harness siblings used.
+
+The pre-existing collisions (StateTimeline*/RecentDrives*) are present in this tree, confirming the documented full-app blocker. No checked-in SwiftPM harness — siblings build one on the fly. `gradlew` exists for the KMP framework.
+
+I now have everything. Writing the plan, then creating all 10 surface files mirroring the `AIMLChargingCurveClustering` twin with range-specific URL/body/strings.
+
+Now creating the surface files. Starting with the Adapter (range-specific request: static URL `/ai/ml/range/train`, body `{vehicle_id, days:14}`).
+
+Now the Model file (state-holder seam P1/S8, i18n facade P1/S10, telemetry P1/S11).
+
+Now the Projection (pure projection + localization, with range-specific strings and `canStart = vehicleId != nil`).
+
+Now the main surface View, Views (presentational subviews), and Chrome (P4 leaf chrome) — creating in parallel.
+
+Now the Previews and strings catalog.
+
+Now the two test files — Tests.swift (projection/model/accessibility) and AdapterTests.swift (request body/SSE/reducer/output/action), with range-specific assertions including the `vehicleId != null` semantics (id 0 allowed).
+
+Now the AdapterTests with the range-specific request-body assertions plus SSE/reducer/output/action coverage.
+
+All 10 files created. Let me verify they're present, then run swiftlint and swiftformat.
+
+swiftformat clean (0/9). Now swiftlint --strict on the surface files.
+
+swiftlint --strict: **0 violations**. Now let me run the placeholder gate and scope the isolated-build design dependencies (which real design files my surface needs, and which are KMP-coupled and must be excluded).
+
+Placeholder tool loads patterns from `placeholder-patterns.json` and supports `// parity:allow`. The design files only import SwiftUI/UIKit/AppKit (no KMP `Shared`), so an isolated compile against the real design system is feasible. Let me find any SharedFacade-coupled files to exclude and confirm the component set.
+
+The design system imports only system frameworks (no KMP `Shared`) — an isolated compile is viable. Let me check the lone `import UIKit`/`import AppKit` files (platform guards matter for a macOS isolated build) and confirm the token symbols my surface needs.
+
+All platform imports are properly `#if os()`-guarded — a macOS isolated build is safe. Now I'll build an isolated SwiftPM module (my surface + the **real** design system, no KMP) and run my tests against it — the decisive correctness proof. Let me set it up.
+
+49 library files assembled. Now the Package.swift (macOS 15, Swift 6 mode to match the real project) and build.
+
+The only error is `UnitFormatters.swift` referencing `Units` (the SharedFacade/KMP type) — exactly the file the sibling excluded. My surface files all compiled. Removing it (my surface doesn't use it) and running the tests.
+
+**73/73 tests pass** against the real design system (Swift 6, macOS). Decisive proof the surface is correct. Now the placeholder gate, i18n parity, and an iOS-18 typecheck. Let me first read the rest of the placeholder tool to run it correctly.
+
+The scan is `Get-ChildItem -Recurse`. I'll run it against a temp dir holding exactly my 10 files (honest, scoped). First, let me grep my files for every forbidden pattern (case-insensitive) to be certain they're clean, then run the placeholder gate + i18n parity + iOS-18 typecheck.
+
+Clean. Now running the placeholder gate (real scan of my files) and the i18n parity check.
+
+Placeholder gate passes (COUNT=0). My i18n extraction regex was buggy (didn't strip trailing quote / missed the multi-line `description` key). Let me redo it robustly.
+
+i18n parity: **4/4 web keys present, 0 missing**, all shared literals present. macOS-15 compile already proven via `swift test`. Now the iOS-18 typecheck to complete the dual-platform evidence.
+
+iOS-18 typecheck: **0 errors**. All isolated verification is green. Now the real xcodebuild gate. First, `xcodegen generate` and confirm my 10 files are enumerated into the project.
+
+xcodegen generated the project — all 10 files enumerated (60 pbxproj refs, matching the sibling). Now the real xcodebuild. This triggers the KMP `Shared.xcframework` Gradle build (~9 min per the sibling) then the full app compile. Starting the iOS `build test` and capturing output.
+
+Build launched in background (KMP Gradle build first, ~9 min, then app compile). Let me monitor progress.
+
+The KMP `Shared.xcframework` built successfully (~9 min as documented). Let me verify the xcodebuild child is still running and keep monitoring the app-compile phase.
+
+The slot-129 xcodebuild (pid 65509) is running; KMP is now building the release framework. Multiple parallel slots share the host, so it's slower. Let me wait and re-check.
+
+Still in the contended KMP release-framework phase (many parallel slots sharing the host). Continuing to wait.
+
+iOS build finished: **IOS_XCODEBUILD_EXIT=65**, KMP framework staged, 270 `error:` lines. Now the critical attribution — how many errors are mine vs the pre-existing cross-surface collisions.
+
+**0 errors attributable to AIRangePrediction.\*** — my surface compiles clean in the real app module. All 270 errors are the documented pre-existing cross-surface collisions (`StateTimeline*`/`RecentDrives*` ambiguous type lookups in other agents' surfaces). This matches the sibling precedent exactly.
+
+Now the macOS build (gate requires both) and a signing-identity check.
+
+macOS signing: **0 valid identities** — confirms the documented macOS test-runner blocker. macOS build running. Let me wait for it to finish.
+
+macOS build finished: **MAC_XCODEBUILD_EXIT=65**, 271 errors. Let me run the same attribution for macOS and confirm the `.strings` catalog validated.
+
+Both platforms: **0 errors attributable to AIRangePrediction.\***, identical pre-existing collision breakdown, and `AIRangePrediction.strings` CopyStringsFile-validated (0 errors) on both. I have complete evidence. Writing the gate log.
+
+Now writing the comprehensive gate log with all the honest evidence.
+
+Log written. Now let me verify git status — I must commit only my 10 surface files + the log, not the generated `xcodeproj` or staged framework.
+
+Clean — exactly my 10 files + the log are untracked; the generated `xcodeproj` and staged framework are git-ignored. Committing.
+
+Committed cleanly as `9d48b4bc6` — exactly the 10 surface files + the log. Cleaning up temp artifacts and final verification.
+
+All todos complete, working tree clean (only git-ignored generated artifacts remain). The task is done.
+
+All steps complete and verified. Final summary:
+
+## P4 · Shared surface · 0043 — `AIRangePrediction` (Apple) — shipped
+
+Built the native SwiftUI parity of `web/src/components/ai/AIRangePrediction.tsx` as **10 files** (2,148 lines) at `apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.*`, mirroring the established `AIMLChargingCurveClustering` twin and committed as `9d48b4bc6`.
+
+**Faithful parity to the web source**
+- `withAiFeature('range-prediction-model')` gate → `.gated` phase (renders nothing when AI off)
+- `useAiStream` POST `/ai/ml/range/train`, body `{vehicle_id: vehicleId ?? 0, days: 14}` (id in body, static URL)
+- `canStart = vehicleId != null` — **id 0 is a valid selection** (locked by a dedicated test)
+- All states: gated / loading / gate-error / ready × output {empty / no-vehicle / thinking / prose / stream-error / unknown} × freshness {live / stale / offline} chip + banner + one-shot stale auto-refresh
+- Bound through `RangePredictionModel` (P1/S8) — no HTTP in the view; i18n via P1/S10 facade; P1/S11 `view.opened` telemetry deferred past the gate; VoiceOver + Dynamic Type + Reduce Motion
+
+**Verification (all real, all green)**
+- swiftlint --strict **0 violations/9** · swiftformat --lint **0/9** · placeholder gate **COUNT=0**
+- i18n parity **4/4 web keys** present, 0 dead/missing
+- swiftc -typecheck **iOS-18 = 0 errors**; isolated SwiftPM build **macOS-15 = 0 errors** (vs the REAL design system)
+- Isolated SwiftPM XCTest **73/73 PASS** (Swift 6, @testable)
+- xcodegen enumerates all 10 files; `.strings` CopyStringsFile-validated on iOS + macOS
+- REAL `xcodebuild build test` iOS + macOS: **0 errors attributable to AIRangePrediction.\*** (surface compiles clean in the real app module)
+
+**Verdict — `EXIT=0` / `STATUS=BLOCKED`** (per the prompt's sanctioned path): the surface is green in isolation and in the real app-module compile. The full-app `build test` gate fails (EXIT=65) solely on **pre-existing, out-of-scope blockers**: cross-surface collisions in other agents' surfaces (`StateTimeline*`/`RecentDrives*`, 270/271 errors, 0 mine), the KMP `Shared.xcframework` toolchain, and macOS 0 signing identities — the identical deferral recorded for all 25 prior P4 Apple surfaces in `apps/macos-pending-verifications.md`.
+
+
+
+All work is finished and verified. Let me update the plan to reflect completion, then mark the task complete.
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0043-AIRangePrediction.log | 219 ++++++++++++
+ .../AIRangePrediction.Adapter.swift                | 329 ++++++++++++++++++
+ .../AIRangePrediction.AdapterTests.swift           | 286 ++++++++++++++++
+ .../shared-surfaces/AIRangePrediction.Chrome.swift | 164 +++++++++
+ .../shared-surfaces/AIRangePrediction.Model.swift  | 366 +++++++++++++++++++++
+ .../AIRangePrediction.Previews.swift               | 119 +++++++
+ .../AIRangePrediction.Projection.swift             | 121 +++++++
+ .../shared-surfaces/AIRangePrediction.Tests.swift  | 360 ++++++++++++++++++++
+ .../shared-surfaces/AIRangePrediction.Views.swift  | 238 ++++++++++++++
+ .../shared-surfaces/AIRangePrediction.strings      |  45 +++
+ .../shared-surfaces/AIRangePrediction.swift        | 120 +++++++
+ 11 files changed, 2367 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0043-AIRangePrediction.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.swift

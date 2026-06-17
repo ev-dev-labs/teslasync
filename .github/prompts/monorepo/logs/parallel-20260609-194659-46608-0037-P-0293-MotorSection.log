@@ -1,0 +1,140 @@
+I'll start by exploring the task requirements: the web source spec, the Apple app infrastructure, and the toolchain capability.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The Apple app exists. Let me explore its structure and find existing feature-view patterns to follow.
+
+This is a mature monorepo (3119 Swift files, prompt 0293 — many predecessors exist). I must follow the established pattern exactly (covenant #7: no predecessor bypass). Let me find the most similar complete exemplar surface to mirror.
+
+`SpeedGearPanel` is the closest exemplar (powertrain telemetry, 8-file standard structure). Let me read all its files to learn the exact pattern, plus the i18n/tokens/state-holder facades it depends on.
+
+Excellent pattern clarity. Let me read the remaining SpeedGearPanel files (Adapter, Views, Previews, strings, and both test files).
+
+Let me read the remaining exemplar files (Previews, strings, both test files) and the native MetricCard component the web source maps to.
+
+Let me read the two exemplar test files, the native MetricCard (`Metrics.swift`), and the unit formatters — plus the web `MotorSnapshot` type and `useUnits` for exact parity.
+
+Now let me read the native MetricCard (`Metrics.swift`), the web `MotorSnapshot` type, `useUnits`, the web `MetricCard`, and `numberFormat` to nail exact parity.
+
+Let me read the web `MetricCard` component, the `formatTemperature` lib function, and the native shared tokens/components I'll consume (Color.TS, Font.TS, TSGlassPanel, TSEmptyState, TSIconBox, etc.).
+
+Let me read the exact `formatTemperature` function (with default precision), the `neonColorMap`/`MetricCardProps`, and the native token/component APIs I'll consume.
+
+Cards/TSGlassPanel is in UI/. Let me read the remaining native component + token APIs I need.
+
+Let me read the design tokens (Color.TS, Font.TS, TSSpacing) and the `TSIconBox`/`TSButton` init to finalize the color mapping (web uses cyan/purple/green).
+
+Let me locate the design token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) — they're likely generated under apps/design.
+
+I now have all tokens. Let me check how predecessor surfaces port temperature conversion (`formatTemperature`) to stay consistent — checking TemperatureGauges and any shared temp idiom.
+
+`TemperatureUnit` is already declared (unprefixed) in TemperatureGauges within the same module — I must use a surface-prefixed enum to avoid collision (matching the SpeedGear convention). Let me confirm how other temp surfaces namespace theirs.
+
+Key finding: `MotorTemperatureUnit` and many `Motor*` symbols already exist. I'll use the unique `MotorSection*` prefix. `TemperatureMetricCards` is the closest "MetricCard grid with icon+color" idiom — let me confirm no `MotorSection*` collisions and study that rendering.
+
+`TemperatureMetricCards` is the canonical MetricCard-grid idiom. Let me read its Views (card cell + accent→token mapping) and main view (header/grid/states) plus its projector icon choices.
+
+This idiom maps almost 1:1 to MotorSection. Let me read the TemperatureMetricCards main view, the Adapter (format + projector + accessibility), and the Model to complete my reference.
+
+I have a complete reference. Before writing code, let me verify the full build feasibility: xcodegen, the Shared.xcframework dependency, the placeholder checker, and simulator availability.
+
+Most tooling is ready (xcodegen, booted iPhone 16 sim, placeholder checker). The KMP `Shared.xcframework` is empty and needs a Gradle build. Let me assess KMP build feasibility and how pervasively app sources import `Shared`.
+
+14 app files import the KMP `Shared` framework, so the full gate build needs `Shared.xcframework`. I'll kick off the Gradle build in the background now while I write the deliverable. Let me create the session plan and start the framework build.
+
+Background framework build started. Let me read the lint/format configs to ensure my files comply, plus the TemperatureMetricCards Model (for exact Strings/Surface/telemetry facade idiom) and its Projection top.
+
+Let me check the background build progress and read how TemperatureMetricCards.Projection keeps the multi-card builder within function-length limits (critical for `--strict`).
+
+The Gradle build succeeded (XCFramework written). Let me confirm it staged into `Frameworks/Shared.xcframework`, then I'll start writing the 8 MotorSection files.
+
+Staging didn't finish (release link was still running when the backgrounded process ended). Let me re-run the script synchronously — Gradle tasks are now cached so it should finish quickly — and confirm staging.
+
+The release link is slow (Kotlin/Native). It's running in the background — I'll write the deliverable files now and check back. Starting with the Model.
+
+Now the Adapter (pure projection core): format/convert helpers, accent enum, metric tile, the 8-card projector, and accessibility.
+
+The Shared framework build finished. Let me confirm staging, then continue with the Views file.
+
+Shared.xcframework is staged (ios-arm64, ios-arm64-simulator, macos-arm64). The full gate can now run. Continuing with the Views file.
+
+Now the main view file with header, phase switch, empty and error states.
+
+Now the strings catalog and the Previews file.
+
+Now the adapter/projection unit tests.
+
+Now the model + view-render-smoke tests.
+
+All 8 files written. Let me verify line counts (file_length budget) and run swiftformat/swiftlint on the new files for fast feedback.
+
+One swiftformat fix needed: `preferKeyPath`. Let me convert `.filter { $0.isFinite }` to keyPath syntax.
+
+Let me inspect the exact line 140 and capture the specific swiftlint violations.
+
+Four real violations in my files plus the swiftformat one. Let me see exactly what swiftformat wants by auto-formatting a copy of the Model, and confirm the desired form.
+
+swiftformat wants `.compactMap(\.self)`. Now I'll fix all 4 lint violations + the format issue. Let me view the Adapter projector section to rewrite it with a `Slot` struct (fixes the 6-param functions).
+
+swiftformat wants `.compactMap(\.self)`. For the Adapter, the cleanest fix for the 6-param functions is a `Slot`-based projector. I'll rewrite the Adapter file cleanly (delete + recreate) and fix the Model, View, and Views issues.
+
+Now fix the Model (compactMap), the TSButton call (multiple closures), and the Views freshness tuple (large_tuple). Let me first confirm the `TSButton` convenience init signature.
+
+The convenience init exists. Now applying the three remaining fixes (Model compactMap, TSButton convenience init, freshness Descriptor struct).
+
+Now re-run swiftformat and swiftlint to confirm all clean.
+
+swiftformat is clean. Now swiftlint --strict.
+
+swiftlint --strict: **0 violations in 3122 files**. swiftformat clean. Now generate the Xcode project and run the full gate build+test.
+
+Project generated. Now running the iOS build+test (the core gate step). This is a large build, so I'll capture to a log and monitor.
+
+Build started. Let me monitor progress.
+
+The backgrounded process was killed when its sync session ended (empty log). I'll run it in managed sync mode with a long wait so it persists and notifies on completion.
+
+derivedData exists (build had started) but output was lost. Running properly in managed sync mode now with a long wait.
+
+Build is progressing. Let me check the final result in the log.
+
+The build failed — but on **pre-existing `StateTimeline*` "ambiguous type" errors**, not MotorSection. Let me verify these are duplicate declarations unrelated to my work.
+
+Confirmed: this is a **pre-existing, unrelated collision** — both `feature-views/StateTimeline.*` and `dashboard-widgets/StateTimelineWidget.*` declare the same `StateTimeline*` public types in the same module. Only my MotorSection files are new. Let me gather precise evidence: confirm MotorSection contributes zero errors, and check the full repo state.
+
+Decisive evidence: **MotorSection contributes zero errors** — the 65 failures are all the pre-existing `StateTimeline` duplicate-symbol collision (a separate surface, explicitly out of scope per the prompt). Only my 8 files are new. Let me verify nothing outside the StateTimeline files references those types, so I can run an isolated verification of MotorSection without touching repo sources.
+
+Nothing outside the StateTimeline files references those types — they're fully self-contained. So I can prove MotorSection compiles and its tests pass by building the real app **minus** the pre-existing broken predecessor (via `EXCLUDED_SOURCE_FILE_NAMES`, no source edits). Running that now with MotorSection's test classes.
+
+The isolated build also failed but showed no `error:` lines in the filter. Let me inspect the actual failure.
+
+My grep matched "linker" noise, hiding the real errors. Let me extract the actual Swift `error:` diagnostics from the isolated build.
+
+Zero Swift `error:` lines, yet SwiftCompile failed — that signals a compiler crash, not a code error. Let me confirm the failure mode.
+
+Grep keeps matching env-export noise. Let me extract the precise failure with a tighter pattern.
+
+It's a **swiftc compiler crash** (LLVM "Stack dump") during the clean isolated build — an environmental/compiler issue, not a MotorSection code error (MotorSection compiled with zero errors in the batch). The original non-excluded build did NOT crash. Let me retry the isolated test on the **warm** derivedData (reuses already-compiled objects, avoids the clean-build crash).
+
+Confirmed: a **swiftc compiler crash** (LLVM stack dump, "compiler-generated", not tied to any MotorSection line) occurs when building this massive module — an environmental/compiler issue. MotorSection compiled with zero errors in every batch. 
+
+To get deterministic proof of MotorSection's correctness, I'll compile its pure Model+Adapter and run its logic tests in an isolated SwiftPM package (tiny module, no crash). Setting that up now.
+
+Now run the isolated `swift test` — deterministic proof of the surface's logic.
+
+**All 35 isolated tests passed (0 failures)** — the adapter + model logic is proven correct (temperature conversion, number formatting, vbat fallback, peak-temp, 8-tile projection incl. °F/em-dash/rpm, phase matrix, accessibility, model wiring/telemetry/freshness). Now let me run the placeholder check and re-confirm lint/format. First, inspect how check-placeholders.ps1 handles `-Path`.
+
+Let me run the placeholder check exactly as the gate specifies, and check how it resolves the `-Path` prefix.
+
+Placeholder check passes (PLACEHOLDER_COUNT=0). Now let me capture the macOS gate result honestly (same module → expect the same pre-existing StateTimeline failure), to record `MAC_EXIT` for the log.
+
+macOS fails for a *different* environmental reason — **code-signing**: the macOS targets require a development certificate (`DEVELOPMENT_TEAM` is empty; the CI `macos-latest` runner has one, this environment doesn't). It never even reached Swift compilation. Again **zero MotorSection errors**.
+
+Both on-device gate platforms are blocked by environmental/pre-existing issues outside my surface and outside my allowed files. Let me verify the log dir and git-ignore status, then write the authoritative log.
+
+Everything confirmed: generated artifacts are git-ignored (working tree is clean except my 8 MotorSection files), log dir exists. Now I'll write the authoritative, honest gate log with all real exit codes, root-cause evidence, and the isolated verification results.
+
+The authoritative log is written. Let me do a final integrity pass: confirm the deliverable + log are present, the working tree is clean (only my files), and re-confirm lint/format on the final file state.
+
+All clean: 8 deliverable files + log present, working tree contains only my files (build artifacts gitignored), swiftformat final check 0/7. Let me update the plan and tidy the large scratch build dirs.
+
+The task is complete. Let me provide the final summary.
+

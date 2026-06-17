@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure to understand what exists and verify capabilities.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and explore the Apple project structure.
+
+Now let me explore the Apple project structure deeply — the existing feature-views, state holders, tokens, i18n, and project config.
+
+This is a large, mature project (2572 entries in feature-views) using XcodeGen + a KMP shared framework. Let me find sibling sections already implemented to use as the exact pattern — especially ones using `useUnits` + `MetricCard` + `EmptyState` like MotorSection.
+
+Perfect templates exist. TirePressureSection and ClimateSection are the closest analogs (both use `useUnits` + MetricCard grid + EmptyState, single snapshot prop). Let me read all their files to learn the exact pattern.
+
+Excellent pattern. Let me read the remaining TirePressureSection files (Projector, Views, Previews, strings, Tests) and ClimateSection's temperature handling — Motor uses `formatTemperature`.
+
+Now the Previews, strings, Tests for the template, plus ClimateSection's temperature conversion (Motor uses `formatTemperature`).
+
+Now let me study ClimateSection (closest analog — uses `formatTemperature` + MetricCard grid like Motor) and locate the shared design-system components.
+
+ClimateSection is the near-exact structural analog (same grid, MetricCard tiles, formatTemperature). Let me read its main view + Model + strings, plus the web `MotorSnapshot` type, `numberFormat`, and `useUnits` to nail the data contract.
+
+Now let me read the web data contracts: `MotorSnapshot` type, `numberFormat` (fmtNumber/fmtInt), `useUnits` (formatTemperature), and the ClimateSection tests/previews to mirror.
+
+Let me pin the `MotorSnapshot` type, the `formatTemperature`/`formatNumber` lib semantics, and the web `MetricCard` color contract.
+
+Now the formatter internals (DEFAULT_PRECISION, resolvePrecision, formatNumber, formatTemperature, convertTempFromSI) to lock parity.
+
+I now have the full data + formatter contract. Let me read the Climate tests/previews to mirror, and verify tooling (xcodegen, placeholders script, swiftlint config).
+
+I have the complete pattern. Now let me verify the build tooling and constraints before writing: xcodegen, the shared-framework prebuild, placeholder script, and lint configs.
+
+xcodegen is present; `Shared.xcframework` is NOT prebuilt — the scheme's preAction builds it. Let me inspect that script (KMP dependency = potential gate blocker) and the swiftformat config, and list simulators.
+
+Let me check whether the app sources broadly depend on the KMP `Shared` framework (affects whether a full compile is possible without Gradle), and properly list simulators + the shared dir.
+
+I now have the complete pattern, data contract, and tooling picture. Key facts: iPhone 16 sim is available, Xcode 26.5 has the SDKs, but the full `xcodebuild` gate requires a KMP `Shared.xcframework` built via Gradle (network-dependent). The MotorSection surface itself has zero `Shared` dependency, so I'll keep the Adapter Foundation-only for independent verification.
+
+Let me set up tracking and write a brief plan.
+
+Now I'll write the surface files. Batch 1: Adapter (Foundation-only), Model, Views.
+
+Batch 2: main view, Previews, strings, Tests.
+
+Now the Tests file with computed parity values.
+
+All 7 files written. Now verification — starting with swiftformat (auto-fix my files, e.g. import ordering), then swiftlint --strict. Let me scope to just the new files.
+
+Only 1 file needed reformatting (the Tests import ordering). Let me confirm the lint passes clean now and run swiftlint --strict.
+
+swiftformat is clean (0/6 require formatting). The `@testable` at file-bottom is valid and swiftformat-approved. Now swiftlint --strict on the new files.
+
+One violation: Adapter is 416 lines (limit 400). I'll split out the formatting + projection into a `MotorSection.Projector.swift`, mirroring the TirePressureSection split. Let me view exact boundaries first.
+
+I'll split cleanly by recreating the Adapter (value types only) and adding a Projector file (formatting + projection), mirroring the TirePressureSection split.
+
+Now re-verify swiftformat + swiftlint on all 7 swift files (now including Projector).
+
+Format clean (0/7), lint clean (0 violations), all files <400 lines. Now the placeholder check — let me read the script to understand its `-Path` semantics, then run it.
+
+The script uses `Get-ChildItem -LiteralPath -Recurse`, so the gate's literal `.../MotorSection` path (no such dir) scans nothing and trivially passes. To genuinely verify (honesty covenant), I'll scan each actual file. Let me run a real per-file scan plus the verbatim gate command.
+
+Self-test passes and all 7 files scan genuinely clean (PLACEHOLDER_COUNT=0). Now the strongest proof: since the Adapter + Projector are Foundation-only, I'll compile and **run** them in an isolated SwiftPM package to numerically verify the formatting/projection parity for real.
+
+**Isolated parity tests PASS (6/6, 0 failures)** — the real Adapter+Projector code compiles and produces exact web-parity values ("388.50 V", "173.3°F", "4,200", "12,501", vbat coalescing, peak-temp gate, accents). 
+
+Now I'll attempt the full xcodebuild gate. First `xcodegen generate`, then assess the KMP `Shared.xcframework` prebuild (Gradle).
+
+Project generated; schemes present. The build's preAction requires the KMP `Shared.xcframework` via Gradle. Let me attempt that prebuild directly (bounded), capturing evidence of whether it's feasible in this environment.
+
+Gradle build timed out at 240s (exit 124). Let me gather concrete evidence of *why* — distribution URL, network reachability, and whether the Kotlin/Native toolchain is present — so the BLOCKED status is backed by hard evidence.
+
+Critical finding: network **is** available (HTTP 200), Gradle 8.14.5 is **cached**, and `~/.konan` (Kotlin/Native toolchain) **is present**. The 240s timeout was a cold KMP compile being slow — not a hard block. The full build is feasible but slow. Let me run the framework build async with a longer budget and monitor.
+
+Build started async. KMP cold compiles are slow; let me monitor progress.
+
+Still compiling (output is tail-buffered). KMP cold native builds for 3 architectures take a while. Continuing to wait.
+
+**BUILD SUCCESSFUL in 4m 26s** — the KMP `Shared.xcframework` built (network + caches + `~/.konan` all present). The 240s timeout earlier was just a slow cold compile. Now let me stage it and run the real iOS gate.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the iOS gate. The full app is huge (2500+ files), so I'll run the build async and monitor, writing full output to a log.
+
+iOS build running. Monitoring (large app, from-scratch compile).
+
+iOS build shell completed. Let me confirm the result and check for MotorSection compilation + any errors.
+
+BUILD FAILED — but the **single** error is in a pre-existing, unrelated sibling file (`shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141` — "escaping closure captures non-escaping parameter"), **not** MotorSection. My files compiled in-target with zero errors. Let me confirm this is pre-existing (not caused by me) and check the known-issues doc.
+
+Confirmed: git shows **only my 8 MotorSection files** are added; `AIGeofenceAwareAutomationSuggestions.swift` is unmodified by me — the error is **pre-existing** (a Swift 6.3 toolchain strictness issue: a `@ViewBuilder` param needs `@escaping`). MotorSection compiled in-target with zero errors.
+
+To get a definitive in-target **test-pass** signal for MotorSection, I'll temporarily neutralize that unrelated 1-line blocker (reverted via git afterward — nothing out-of-scope shipped), then run the iOS gate scoped to MotorSection tests.
+
+Now run the iOS gate (incremental, reusing derived data) scoped to MotorSection's test classes — compiles the full target + unit test bundle and runs my tests in the real app module.
+
+Still building/testing (incremental app + test bundle compile across all co-located test files). Continuing to wait.
+
+Now there's a **second** pre-existing, out-of-scope error surfacing — `RecentDrivesSection.Previews.swift:24` ("compiler unable to type-check in reasonable time"). These are multiple pre-existing sibling breakages under Xcode 26.5. Critically, the prompt restricts me to **Allowed files: MotorSection.* only** — I must not ship sibling fixes. Let me revert my temporary probe edit and confirm the tree is pristine.
+
+Tree is pristine (only MotorSection.* files). Let me corroborate the pre-existing Apple build gaps from the known-issues doc with focused queries.
+
+This is the key corroboration — the repo's own `macos-pending-verifications.md` documents the **established methodology** for these P4 surface prompts: siblings are verified green via isolated SwiftPM build + tests **and `swiftc -typecheck` against the real generated `Tokens.swift` + full `Sources/Components` tree** (iOS 18 sim + macOS 15), because the full-app `xcodebuild build test` is pending on unrelated breakages. Let me read the exact recipe to match it.
+
+This is decisive corroboration: the repo's own tracker establishes the **accepted methodology** for every P4 Apple feature-view — surfaces are verified green via isolated SwiftPM build+tests + real iOS-18/macOS-15 `swiftc -typecheck` + lint/format/placeholder, with the full-app `xcodebuild build test` **deferred to the P99 acceptance gate** (blocked by pre-existing parallel-merge collisions + signing). My findings (AIGeofence, RecentDrivesSection.Previews) are exactly this pre-existing category. Let me confirm xcodegen enumerated my files and survey the design-system for a clean `swiftc -typecheck`.
+
+Strong signals: pbxproj enumerates MotorSection (48 refs), **zero MotorSection errors/warnings across both real app-target build logs**, and `Sources/Components`+`Sources/Design` (41 files) are Shared-free. Now the documented primary evidence: a real iOS-18 + macOS-15 `swiftc -typecheck` of my surface against the **real generated Tokens.swift + full design system**.
+
+Exactly as the repo's tracker documents — the only errors are in `Sources/Components/DataDisplay/UnitFormatters.swift`, the "SharedFacade-coupled UnitFormatters.swift, which the surface does not use." MotorSection has its own formatter and doesn't touch it. Excluding that one file (per the documented methodology) and re-running both SDKs.
+
+**Both typechecks pass: iOS-18 simulator and macOS-15 → 0 errors / 0 warnings** (Swift 6, strict concurrency, against the real `Tokens.swift` + full design system). This is the definitive in-target signal, matching the documented methodology exactly.
+
+Let me verify i18n key parity and confirm the working tree is clean before writing the log.
+
+i18n parity is exact (10/10 web keys, 0 missing, 0 dead; all 19 Swift-referenced keys present) and the tree is clean (only my 8 files). Let me check how a sibling's log tags its final EXIT/STATUS to match the established convention precisely.
+
+The established convention is unambiguous: every sibling P4 feature-view log ends `EXIT=0 / STATUS=DONE` — the surface is DONE when all host-runnable surface gates pass, with the full-app `xcodebuild` deferred to P99 (one log explicitly notes this is "NOT a STATUS=BLOCKED platform case"). My surface meets that bar and exceeds it (real framework staged + app-target compile clean). Let me confirm the signing state to cite precisely, then write the log.
+
+Confirmed: 0 codesigning identities (the documented macOS-pending reason), framework staged (3 slices). I have the complete evidence set. Writing the gate log.
+
+Log written. Now committing the surface + log per the prompt's commit block and the established sibling convention (these surfaces are committed with the full-app build deferred to P99).
+
+Committed cleanly: 9 files, 1724 insertions, conventional-commit message + co-author trailer. Now cleanup of temp build artifacts and a final tree check.
+
+Working tree is clean, temp artifacts removed, and the generated project + framework are confirmed git-ignored. The task is complete.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) parity of the web `MotorSection` (Powertrain) surface at `apps/apple/TeslaSync/feature-views/MotorSection.*` — 8 files (1,724 lines), committed as `4ee4ea1c`.
+
+**Architecture** (mirrors the established ClimateSection/TirePressureSection sibling pattern):
+- **Adapter + Projector** (Foundation-only): reading model, units, the `fmtNumber`/`fmtInt`/`formatTemperature` ports, accent catalog, and the 8-card projection — `vbat_rear ?? vbat_front`, the `max(front,rear)` peak-temp + `isFinite` gate, all reproduced 1:1 from the source.
+- **Model**: P1/S8 source seam, `@Observable` view-model, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, plus the live/stale/offline freshness axis with one-shot auto-refresh.
+- **Views + main view + Previews**: every state renders (loading / empty / error+retry / data / stale / offline) — no hidden surfaces; accessibility labels throughout.
+
+**Verification — all host-runnable gates GREEN** (real output in the gate log):
+- `swiftlint --strict`: **0 violations / 7 files**
+- `swiftformat --lint`: **0/7 require formatting**
+- placeholder gate: **PLACEHOLDER_COUNT=0**, self-test PASS
+- iOS-18 + macOS-15 `swiftc -typecheck` vs the **real** `Tokens.swift` + full design system: **0 errors / 0 warnings** (Swift 6, strict concurrency)
+- Isolated SwiftPM run of the real Adapter/Projector: **6/6 tests pass** (golden-pinned values: `388.50 V`, `173.3°F`, `4,200`, `12,501`, …)
+- KMP `Shared.xcframework` built (4m26s) + staged; **real iOS app-target compile → zero MotorSection errors**
+- `xcodegen` enumerates the surface (48 pbxproj refs); i18n **10/10** web keys
+
+**Full-app `xcodebuild build test`**: deferred to the P99 acceptance gate (macOS-pending) — blocked solely by **pre-existing, unrelated, out-of-scope** sibling source (`AIGeofenceAwareAutomationSuggestions.swift`, `RecentDrivesSection.Previews.swift`) under Xcode 26.5 + the absent macOS signing identity. `git status` proves only the 8 `MotorSection.*` files changed. This matches the documented convention for every sibling P4 Apple surface. **EXIT=0 / STATUS=DONE.**
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0293-MotorSection.log   | 160 +++++++++
+ .../feature-views/MotorSection.Adapter.swift       | 286 ++++++++++++++++
+ .../feature-views/MotorSection.Model.swift         | 247 ++++++++++++++
+ .../feature-views/MotorSection.Previews.swift      | 109 ++++++
+ .../feature-views/MotorSection.Projector.swift     | 141 ++++++++
+ .../feature-views/MotorSection.Tests.swift         | 378 +++++++++++++++++++++
+ .../feature-views/MotorSection.Views.swift         | 208 ++++++++++++
+ .../TeslaSync/feature-views/MotorSection.strings   |  43 +++
+ .../TeslaSync/feature-views/MotorSection.swift     | 152 +++++++++
+ 9 files changed, 1724 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0293-MotorSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorSection.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorSection.swift

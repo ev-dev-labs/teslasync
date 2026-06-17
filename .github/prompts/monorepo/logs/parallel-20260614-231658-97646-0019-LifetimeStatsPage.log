@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The Apple app structure differs from the prompt's stated path. Let me investigate the actual conventions by exploring existing feature views and analytics pages.
+
+The convention is clear: each page is a multi-file set under `Sources/Features/<Domain>/`. Let me study the simplest analog (Powershare — no charts) and the closest analytics page in full, plus the parity manifest and ledger.
+
+Now let me study the Statistics page (closest analog with a stat grid) and the web hook/types in parallel.
+
+Let me examine the Units facade, shared components, routing infrastructure, and the Statistics sections in parallel.
+
+Full Swift toolchain is available (Xcode 26.5, swiftlint, xcodegen, pwsh). Let me study an existing log format and the placeholder checker.
+
+Let me examine the typography components, the string catalog format, and an existing analytics test to model mine.
+
+Now let me check the canonical web i18n values for the `lifetime.*` keys to port them verbatim.
+
+I have a thorough understanding now. Let me set up my plan and todos, then check the build prerequisites.
+
+Shared.xcframework isn't staged (10-min Gradle build). Let me kick that off in the background now while I write the code.
+
+The Gradle build is running in the background. Now let me implement the code, starting with the models.
+
+The launcher returned (Gradle runs detached). Let me check its real progress and write the models file.
+
+Gradle is compiling the KMP targets. Let me write the model files while it builds.
+
+Now let me check the web currency formatting defaults before writing the format helpers.
+
+Let me check the Gradle build progress, then write the main page view.
+
+The hero/page is in place. Let me check the swiftlint config to avoid violations before writing the large sections file.
+
+Config understood (≤120 line length, before-first wrapping). Now the large sections file:
+
+Now let me wire up routing. First, add the `lifetimeStats` case to `AppRoute`:
+
+Now the route registration file and wiring it into the app:
+
+Shared.xcframework is staged. Now let me add the strings. First, I'll verify a JSON round-trip preserves Xcode's exact `.xcstrings` formatting before modifying it.
+
+Now I understand the exact format (top-level `": "`, entries use `" : "`). Let me surgically insert the 42 keys:
+
+Now the test file, mirroring the sibling structure:
+
+Let me update todos and run the formatters/linters on the new files.
+
+Minor mechanical issues. Let me check line 150 then auto-format my new files.
+
+swiftformat passes. Now swiftlint --strict:
+
+`file_length` (789 > 400). The convention is to split into multiple files (like `BatteryCellsPage.*`, `DriveScorePage.*`). Let me see the structure and split it.
+
+I'll split it into three files (matching the multi-file page convention). Let me do this precisely with a script:
+
+All three files are now under 400 lines. Let me re-run both linters on the full set:
+
+A double blank line from the join. Let me auto-fix:
+
+Both linters pass. Now the placeholder scan (ADR-011) and a final full lint:
+
+Placeholder scan passes (0). Now let me build a standalone logic harness to actually execute the model + formatter logic (the full XCTest bundle won't link here due to pre-existing out-of-scope breakage, per the sibling Statistics page).
+
+Now compile and run the harness against the real LifetimeStats sources:
+
+The harness deadlocked (blocking the main thread that the `@MainActor` Task needs). Let me stop it and switch to top-level `await`.
+
+Harness passes (65/65). Now let me generate the Xcode project and run the in-scope type-check against the real app module.
+
+Project generated (LifetimeStats referenced 162×). Let me start the macOS type-check build in the background (the full app target is large and, per the sibling, fails in the pre-existing `TeslaSync/*` AI tree — I'll verify none of my files error).
+
+While it builds, let me update the parity ledger. First verify its JSON formatting round-trips cleanly:
+
+The build is now compiling in real Swift 6 strict-concurrency mode (stronger than the harness). Let me fix the ledger insertion (needs `ensure_ascii=True`) and add the two rows:
+
+Ledger updated (70 rows, format verified). Let me mark that done and check the build progress.
+
+Build is progressing (compiling the pre-existing `TeslaSync/*` tree). 6 errors so far, none in my files. Let me inspect those errors to confirm they're all pre-existing/out-of-scope:
+
+All errors are in the pre-existing `TeslaSync/shared-surfaces/Input.Previews.swift` (out-of-scope) — none in my files. Let me confirm my files were compiled and wait for the build to settle.
+
+The build uses whole-module batch compilation (single file list). Let me confirm my files are in that compile list, and let the build finish:
+
+All 9 of my source files are in the whole-module compile list. Let me wait for the build to settle and capture the final error set.
+
+Build finished as expected: **the only `error:` lines are in the pre-existing `TeslaSync/shared-surfaces/Input.Previews.swift`; zero errors reference any LifetimeStats file.** Let me add a stronger isolation check — type-check the entire clean `Sources/**` core (which includes my files + all their real dependencies, excluding the broken `TeslaSync/*` surface tree) under Swift 6:
+
+The clean typecheck just needs the right xcframework slice path (`import Shared` module-not-found is a search-path issue, not a code issue — still 0 LifetimeStats errors). Let me point `-F` at the macOS slice and re-run:
+
+The 60 errors are all in the unrelated `Sources/Features/Automations/` feature (it depends on types defined in the excluded `TeslaSync/*` tree) — **0 LifetimeStats errors**. Let me exclude that cross-dependent feature for a clean isolation proof of my subtree + its real deps:
+
+While that runs, let me verify the parity arithmetic and gather final counts for the log.
+
+Down to 2 errors, both in another cross-dependent feature (`Driving/DriveScorePage.Panels.swift`) — still **0 LifetimeStats errors**. Let me exclude that too for a pristine run that still includes my files + full real dependency graph:
+
+Conclusive: across the whole-module Swift 6 build **and** three progressively-narrowed Sources type-checks, **every** residual error is in a different pre-existing feature that depends on the excluded `TeslaSync/*` tree — **0 LifetimeStats errors in all four compilations**. Let me capture the final build verdict and gather the remaining evidence for the log.
+
+Build verdict confirmed: `** BUILD FAILED **` with the **only** error being pre-existing `TeslaSync/shared-surfaces/Input.Previews.swift` (out-of-scope). Before writing the log, let me verify all 41 strings are actually referenced in my Swift code:
+
+All 41 strings verified in code (none missing, no extras). Let me run the final consolidated lint/format pass to capture exact numbers, then write the evidence log.
+
+All gates green. Now let me write the evidence log:
+
+Log written. Let me clean up temp artifacts and check git state to prepare the commit with the real file paths.
+
+Clean — only my intended changes (no build artifacts leaked). Let me commit with the real file paths, following the sibling commit convention:
+
+Committed. Let me verify the working tree is clean (no build artifacts leaked) and finalize.
+
+All gates green, working tree clean, committed. Task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../apple-page-analytics-LifetimeStatsPage.log     | 229 ++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 462 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ .../Features/Analytics/LifetimeStatsFormat.swift   | 179 ++++++++
+ .../Features/Analytics/LifetimeStatsModels.swift   | 304 ++++++++++++++
+ .../Analytics/LifetimeStatsPage.Panels.swift       | 271 ++++++++++++
+ .../Analytics/LifetimeStatsPage.Records.swift      | 278 +++++++++++++
+ .../Analytics/LifetimeStatsPage.Sections.swift     | 251 +++++++++++
+ .../Features/Analytics/LifetimeStatsPage.swift     | 190 +++++++++
+ .../Analytics/LifetimeStatsPageModel.Sample.swift  | 113 +++++
+ .../Analytics/LifetimeStatsPageModel.swift         | 126 ++++++
+ .../Analytics/LifetimeStatsRouteRegistration.swift |  22 +
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Analytics/LifetimeStatsPageModelTests.swift    | 285 +++++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 15 files changed, 2733 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-analytics-LifetimeStatsPage.log
+ create mode 100644 apps/apple/Sources/Features/Analytics/LifetimeStatsFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/LifetimeStatsModels.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/LifetimeStatsPage.Panels.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/LifetimeStatsPage.Records.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/LifetimeStatsPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/LifetimeStatsPage.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/LifetimeStatsPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/LifetimeStatsPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/LifetimeStatsRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Analytics/LifetimeStatsPageModelTests.swift

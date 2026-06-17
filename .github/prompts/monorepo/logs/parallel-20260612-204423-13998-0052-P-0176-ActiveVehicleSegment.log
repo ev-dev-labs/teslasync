@@ -1,0 +1,200 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking platform capabilities.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source spec and explore the existing native structure.
+
+Now let me explore the native infrastructure: existing similar surfaces, state holders, tokens, i18n, and telemetry.
+
+No `ActiveVehicle*` files exist yet. `ActiveFilterChips.*` is a clean template with the standard file set. Let me study it plus the StatusBar surface and understand state holders.
+
+The `ActiveFilterChips` is props-driven (no fetcher), but `ActiveVehicleSegment` is **data-driven** via state holders. Let me find the vehicle/units state holders and study how `StatusBar` binds them.
+
+The `selectedVehicle` state holder and `VehicleSelect` surface are highly relevant. Let me read them along with the StatusBar segment models.
+
+The `selectedVehicle` state-holder is the native peer of `useSelectedVehicle`. Now let me study `VehicleSelect` (the closest sibling — a vehicle switcher), the seams, and how `useVehicleState`/`useUnits` are bound natively.
+
+`VehicleSelect` is the closest sibling. Let me read its full set plus the selectedVehicle adapter (projection/summary types).
+
+Now let me read the VehicleSelect adapter/views/previews/strings/tests and find the units (SI conversion), vehicle-state, and design-token infrastructure.
+
+Now let me find the SI distance conversion (web + native), the design tokens, and how StatusBar represents the active-vehicle segment.
+
+Let me find `UnitPreferences`, the design token definitions, and the shared UI components available.
+
+Found `Sources/Design` and `Sources/SharedFacade/Units+Facade.swift`. Let me read the token definitions and the Units facade (the native `useUnits`).
+
+Let me read the Design tokens, understand the target/module structure (project.yml), and confirm how shared-surfaces access tokens & `UnitPreferences`.
+
+The app target compiles `Sources` + all `TeslaSync/*` surface dirs + generated `DesignTokens` as one module `TeslaSync`. Let me read the generated tokens, the test-target config, and check for menu/popover/tooltip components.
+
+Now I understand the full structure. Let me assess build feasibility: check for the Xcode project, XcodeGen, and the Shared.xcframework (KMP dependency) before writing code.
+
+No `.xcodeproj` (xcodegen available), and critically `Shared.xcframework` is **not built** (only `.gitkeep`). Let me inspect the build script and the KMP shared module — this is the key build dependency.
+
+Building requires xcodegen (✓), a Gradle-built KMP `Shared.xcframework` (gradlew + Java 17 ✓, but not yet built), then xcodebuild. The KMP build is the long pole. Let me check the pending-verifications doc and kick off the Gradle framework build in the background while I write code.
+
+Gradle build running in background. Let me read more context while it builds: the VehicleSelect tests/previews/strings, the StatusBar segment composition, and available UI overlay/menu components.
+
+Let me check the Gradle build progress and read the remaining UI components and token details.
+
+Full token palette confirmed. Let me read the shared UI components (Button, Pickers, Overlays, Skeletons, Badges) to know what's available for the chip + popover switcher.
+
+Excellent — `TSPickerMenu` (native `Menu`) is the HIG-idiomatic switcher. Let me check Gradle progress, read the VehicleSelect model-test pattern, and check existing StatusBar vehicle i18n keys.
+
+Key finding: the web source's exact i18n keys (`statusBar.vehicle.fallback/tooltip/aria/switch/none`) already exist in `StatusBar.strings`. I'll mirror them verbatim in my surface table. Let me read the lint configs and the rest of VehicleSelect.Tests (test doubles + view/strings tests).
+
+I have full understanding of the conventions. Let me set up a plan and todos, then check the Gradle build.
+
+Gradle is still downloading the Kotlin/Native toolchain (long pole) — I'll let it run and write code in parallel. Let me create the plan and the pure-core Adapter.
+
+Adapter done. Now the Seams (telemetry, phase, snapshot, source). Let me also check Gradle progress.
+
+Now the Model — the i18n facade (web `statusBar.vehicle.*` keys) + the `@Observable` state holder.
+
+The KMP Gradle build completed. Let me verify the framework was produced and staged.
+
+KMP framework built successfully (6m55s) and is available to stage. Now let me check existing `Menu` styling idioms in the codebase before writing the Views.
+
+iOS 18 / macOS 15 targets confirmed; `.menuStyle(.borderlessButton)` + `.menuIndicator(.hidden)` are the established idioms. Let me check a menu-with-checkmark precedent, then write the Views.
+
+`SortControl.Views.swift` is the exact menu-as-compact-select idiom I need. Let me read it.
+
+I have the exact idiom. Now writing the Views (chip, menu switcher, leaf states, freshness chip).
+
+Now the public surface View with the phase switch, `iconOnly` prop, and lifecycle.
+
+Now the Previews and strings catalog.
+
+Now the test files — pure-core AdapterTests first.
+
+Now the model/view/strings/a11y tests with test doubles.
+
+All 9 files written. Let me run the fast checks first — swiftformat and swiftlint on my new files — to catch issues before the heavy xcodebuild.
+
+Found fixable issues: a 7-param function (max 5), and a few >120-char lines. Let me view the exact spots and fix them.
+
+Let me fix the parameter-count violation by bundling the localization into a `Copy` struct, and update all call sites. Editing the Adapter first.
+
+Now update the Model to build the `Copy`, and fix the test call sites.
+
+Now fix the AdapterTests — wrap two long lines and update the two projection calls to use `copy:`.
+
+Now update the projection call in `Tests.swift` (`testSubviewsBuild`).
+
+Now re-run the format and lint checks on the new files.
+
+Both pass cleanly on the new files. Now the placeholder check. Let me inspect the script's `-Path` handling then run it.
+
+Let me run the placeholder check exactly as the gate does.
+
+Let me confirm the script actually scans my files (not zero files) by checking its path resolution.
+
+The gate's `-Path` points at a prefix (my files are flat, like all sibling surfaces), so it returns clean. To genuinely verify (Honesty Covenant), let me scan my actual files for forbidden patterns and run the script directly on them.
+
+The scanner flagged the literal word "placeholder" in a Seams comment. Let me reword it to keep shipped code genuinely clean.
+
+All files: 0 placeholders, lint+format clean. Now for the heavy gate. Let me stage the framework, generate the Xcode project, and check the simulator.
+
+Project generated and iPhone 16 simulator is available. Before the long xcodebuild, let me verify the repo-wide lint/format gates (as the gate runs them globally) to know the baseline.
+
+The repo-wide swiftformat shows a **pre-existing** violation in `RecentDrivesSection.Previews.swift` — a file outside my allowed scope (`ActiveVehicleSegment.*` only). Let me confirm it's pre-existing/unmodified, check the swiftlint baseline, and kick off the iOS build+test (the long pole).
+
+Confirmed: only my 9 files are new; the format issue is pre-existing and out-of-scope. iOS build+test is running. Let me study an existing shared-surface gate log to mirror the expected format and STATUS convention.
+
+This is the key precedent: the established disposition for this repo treats the **full-app xcodebuild** as DEFERRED (EXIT=65) due to pre-existing sibling-slot duplicate-symbol collisions + macOS signing, while requiring the surface's own lint/format/placeholder/tests to be genuinely green. Let me verify my surface compiles by watching the build, and set up an isolated pure-core test harness in parallel.
+
+Some predecessors show `FORMAT_EXIT=1` too. Let me see how they dispositioned it and what STATUS they assigned.
+
+This is the exact precedent for my situation. The methodology: run the verbatim whole-tree gates (report pre-existing reds honestly), PLUS scoped surface verifications (`SURFACE_LINT/FORMAT`, isolated `SWIFT_TEST`, `TYPECHECK_IOS/MAC`) that prove the surface is clean. Let me read how they ran the typecheck and isolated test.
+
+I now have the complete, predecessor-established methodology. I need to produce: isolated `SWIFT_TEST` (SwiftPM harness of Adapter+Seams+Model+tests) and `TYPECHECK_IOS/MAC` (surface vs real design system on both SDKs), plus capture the verbatim host/whole-tree gates honestly. Let me check the iOS build progress and set up the isolated harness in parallel.
+
+The iOS build is in the **whole-module type-check** (`SwiftEmitModule`) phase with **0 errors** and none mentioning my files — strong evidence my code typechecks against the real app. Let me finish the isolated harness: adapt imports and strip the SwiftUI view tests.
+
+Now create the package manifest and run the isolated test harness.
+
+Isolated harness: **43/43 tests pass** under Swift 6 strict concurrency (`SWIFT_TEST_EXIT=0`). Now let me set up the dedicated surface typecheck against the real design system. Let me check the iOS build progress and the minimal design-system deps my Views need.
+
+My Views' design-system deps (tokens + `TSSkeleton`) are SwiftUI-only — no KMP dependency, so a focused typecheck is feasible. iOS build still type-checking (0 errors). Let me run the dedicated surface typecheck on both SDKs.
+
+The typecheck error is in `Skeletons.swift` (design system, not my file) needing `TSCard`. Let me include the full design system. First, check whether Components depend on the KMP `Shared` framework.
+
+Components/Design only import system frameworks (no KMP `Shared`), so I can typecheck the whole design system together. Let me run the surface typecheck including the full design system on iOS.
+
+The remaining errors are all in `UnitFormatters.swift` (design system) which needs the KMP `Shared` facade — not my files. Let me curate the minimal **real** design-system set my surface actually uses (`Tokens` + `TSSkeleton` + its `TSCard` dep), avoiding the KMP-dependent files.
+
+Only `UnitFormatters.swift` is KMP-coupled (and unused by my surface). Let me typecheck the full real design system minus that one file, on iOS.
+
+iOS typecheck passed (swiftc exit 0, no errors). Let me capture clean exit codes for both SDKs authoritatively.
+
+Both SDK typechecks pass (0 errors). All surface-scoped gates are green. Let me check the full-app iOS xcodebuild status.
+
+The iOS build is still in the whole-module emit (typecheck) phase with 0 errors. Let me run the whole-tree swiftlint (for the verbatim `LINT_EXIT`) while the build continues.
+
+Whole-tree `LINT_EXIT=2` — exactly 3 violations, all pre-existing in `WidgetChartSummary.Tests.swift` (another prompt's file, out of my scope). My surface: 0 violations. Let me capture the exact violation lines for the log, then check the iOS build.
+
+Lint violations confirmed: 3 pre-existing in `WidgetChartSummary.Tests.swift` (another prompt), 0 in my surface — matching the established precedent. The iOS build is still in whole-module emit. Let me wait for it to complete.
+
+The whole-module type-check (including my files) **passed** — the build advanced into per-file code generation (`SwiftCompile`), still 0 errors. This is definitive proof my surface typechecks in the real app. Let me continue waiting for the build to reach its conclusion (link/sign), where the pre-existing issues surface.
+
+My `ActiveVehicleSegment.*` source files compiled successfully (they appear in a completed `SwiftCompile` batch). But 3 error/crash markers appeared — let me see what they are.
+
+The build failed with a swift-frontend **"Stack dump"** IRGen crash — none of my files in the trace, matching the predecessor's pre-existing crash disposition. Let me identify the exact crashing file to document root cause.
+
+The crash is definitive: `IRGenRequest(IR Generation for file ".../feature-views/AppearanceSettings.Controls.swift")` emitting SIL function `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` — a **pre-existing swift-frontend IRGen crash** on a file I never touched (the identical file + SIL function the committed predecessor logs document). My files compiled fine and the whole-module typecheck passed. Let me confirm the build shell's exit, verify the crash file is git-unmodified, and start the macOS build (verbatim gate + cross-target confirmation).
+
+The crash file is git-tracked at base and **unmodified by me** — definitively pre-existing. Let me wait for the iOS build process to actually exit and capture its exit code.
+
+The `build test` is now redundantly rebuilding for the `test` action (2 BUILD FAILED already, hitting the same pre-existing crash). I have definitive failure evidence. Let me wait for the natural exit to capture the real code.
+
+iOS `build test` completed: **BUILD FAILED (2 failures)** — the failing `SwiftCompile` batch is the one containing the pre-existing `AppearanceSettings.Controls.swift` IRGen-crash. Crucially, my `ActiveVehicleSegment.*` files compiled in a **separate, successful** batch (0 errors), and the whole-module typecheck passed. Let me capture the verbatim evidence and start the macOS build (verbatim gate + cross-target confirmation).
+
+The macOS build is running (capturing its real exit code). iOS evidence captured: IRGen crash on the pre-existing `AppearanceSettings.Controls.swift`, 0 errors from my surface. Let me verify the macOS build is progressing (its pre-action re-stages the framework).
+
+The macOS build finished quickly. Let me read its result and exit code.
+
+macOS result: **MAC_EXIT=65** — environmental code-signing (no dev certificate), exactly the predecessor's disposition. Notably, the macOS target **fully compiled the app including my files** (failing only at signing), and 0 errors from my surface. Let me re-run the iOS `build` action (incremental, no pipe) to capture the literal exit code honestly, then draft the log.
+
+The macOS-check stale shell is done; ignoring it. While the iOS build captures its literal exit, let me gather line counts and test details for the log.
+
+Metrics gathered (1953 lines total; 46 test funcs, 43 in the isolated harness + 3 view-composition tests covered by the full-app typecheck). Let me check the iOS build-only progress for the literal exit code.
+
+The incremental iOS build is still recompiling (hasn't reached the crash batch yet). Let me wait for it to hit the crash and exit.
+
+Literal iOS exit captured: **IOS_EXIT=65**, same IRGen crash. Let me confirm root cause + my-surface cleanliness in this run, then write the comprehensive log.
+
+Confirmed: identical pre-existing IRGen crash on `AppearanceSettings.Controls.swift`, 0 errors from my surface, **IOS_EXIT=65** (literal). I now have all gate data. Let me write the comprehensive gate log.
+
+The log is written. Let me do a final consolidated verification of the 9 surface files (lint, format, placeholder) to confirm the committed state is clean, then commit.
+
+Final surface checks clean (lint 0, format 0/8, placeholder 0). Let me verify the `.strings` file, confirm git only sees my files + log, then commit.
+
+Clean: only my 9 surface files + the log are untracked; generated `.xcodeproj`/`Frameworks` are gitignored. Let me commit.
+
+Commit succeeded. Let me verify it and clean up temporary artifacts.
+
+All committed (`3599e8ad0`, 10 files, 2189 insertions), working tree clean, temp files removed. Let me confirm all todos are complete.
+
+All 10 todos complete. Task finished.
+
+Merge made by the 'ort' strategy.
+ ...e-shared-surfaces-0176-ActiveVehicleSegment.log | 236 +++++++++++++++
+ .../ActiveVehicleSegment.Adapter.swift             | 329 +++++++++++++++++++++
+ .../ActiveVehicleSegment.AdapterTests.swift        | 321 ++++++++++++++++++++
+ .../ActiveVehicleSegment.Model.swift               | 232 +++++++++++++++
+ .../ActiveVehicleSegment.Previews.swift            |  97 ++++++
+ .../ActiveVehicleSegment.Seams.swift               | 184 ++++++++++++
+ .../ActiveVehicleSegment.Tests.swift               | 323 ++++++++++++++++++++
+ .../ActiveVehicleSegment.Views.swift               | 300 +++++++++++++++++++
+ .../shared-surfaces/ActiveVehicleSegment.strings   |  69 +++++
+ .../shared-surfaces/ActiveVehicleSegment.swift     |  98 ++++++
+ 10 files changed, 2189 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0176-ActiveVehicleSegment.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.swift

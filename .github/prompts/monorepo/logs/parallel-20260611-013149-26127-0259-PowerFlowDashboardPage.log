@@ -1,0 +1,66 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Now let me explore the apple app structure, parity manifest, and existing components.
+
+Let me explore existing Swift patterns - feature-views, shared components, and the energy domain.
+
+Found existing PowerFlow widgets. Let me examine these to understand the data layer and patterns.
+
+Let me examine the data models, builder, and history widget patterns.
+
+Let me check the build tooling availability and examine the history widget's chart rendering plus design tokens.
+
+Xcode, swiftlint, swift, and pwsh are all available—the gate can run. Let me examine the chart wrappers, adapter (production source wiring), and design tokens.
+
+Let me examine the project structure, design tokens, navigation registration, and how the xcstrings catalog works.
+
+Key finding: `project.yml` doesn't list a `Features/` path. Let me check the build reality—whether the `.xcodeproj` exists, xcodegen, and the KMP Shared.xcframework.
+
+Building the full app needs the KMP `Shared.xcframework` (Gradle/Kotlin). Let me check navigation registration, the string catalog, the web energy types/hooks, and an SSE example in parallel.
+
+There's an existing `Sources/Features/` with route registrations. Let me study those conventions and check for an existing energy/battery feature.
+
+Existing battery pages live in `Sources/Features/Battery/` (e.g. `BatteryCellsPage`). Let me resolve the path convention by checking the generator's path mapping and the apple-ledger.
+
+The ledger confirms completed pages (e.g. `page:admin/ApiPlayground`) live in `Sources/Features/<Domain>/`, not `TeslaSync/Features/`. I'll follow that working convention. Let me study a complete parity page as my template plus the routing system.
+
+Excellent template. Now let me study the routing system, shared components, units facade, and the charts pattern used in pages.
+
+`AppRoute` needs a `.powerFlow` case. Let me find where route registrations are composed, the shared component catalog, the units facade, and the route parser.
+
+Full component catalog exists under `Sources/Components/`. Let me read the key component APIs I'll use.
+
+Let me read the remaining components (typography, badges, buttons, skeletons, pickers), the units facade, and a page-level chart example.
+
+Let me examine the units facade (SI converters), the page-level chart pattern, skeletons, and the sample data source pattern.
+
+Higher-level `TSLineChart`/`TSAreaChart` wrappers exist. Let me read those, the units facade, theme, and skeletons.
+
+Let me read the `Units` facade, chart models/wrappers, and skeletons.
+
+I now understand the architecture. Note `Units+Facade.swift` imports the KMP `Shared` framework—the whole app target depends on it. Let me check the gate scripts, lint config, the KMP/Gradle setup, and the sample/test patterns.
+
+I have a comprehensive understanding now. The KMP `Shared.xcframework` (Gradle/Kotlin) is the long pole for any `xcodebuild`. Let me kick off that build in the background while I write the implementation.
+
+Let me read the web energy types, lint rules, chart palette, skeletons, and check for existing SSE/staleness patterns and a page test example.
+
+Gradle is progressing (downloading Kotlin/Native, some cache hits). Let me verify the build process is still alive and read the remaining reference files.
+
+The Gradle build is healthy and progressing through Kotlin/Native compilation. I have all the reference I need. Let me set up tracking and inspect the string catalog format.
+
+String catalog format is clear. Let me verify which generic shared-component keys exist (so my page never shows raw keys) and write the plan.
+
+All generic component default keys are absent (auto-extraction handles English literals, but dotted keys need explicit values). I'll add the 33 `powerFlow.*` keys + `route.powerFlow` + minimal error/empty keys. Let me write the plan, then implement.
+
+Let me check the shared build progress and whether range-preset string keys already exist in the catalog (to reuse).
+
+The KMP framework finished the debug variant and is building release (nearly done). The catalog uses bare dotted keys like `battery.cells.title`, so I'll add bare `powerFlow.*` keys. Now let me write the model.
+
+Model written. Now let me check the KMP `formatPower`/`formatEnergy` semantics to decide the formatter approach, and confirm the shared build finished.
+
+The KMP `formatPower` uses a fixed user unit (no W↔kW auto-scaling), but the web page's local `fmtWatts` auto-scales by magnitude. For true display parity I'll port `fmtWatts`/`fmtWh` as pure SI→display formatters. Let me write the format + projection file.
+
+Let me mark progress and write the sample/empty/failing data sources.
+
+Let me check the shared framework build status, then write the sections (panels).
+

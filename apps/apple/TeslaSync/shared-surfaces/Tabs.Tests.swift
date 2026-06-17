@@ -178,7 +178,7 @@ final class TabsViewTests: XCTestCase {
             key: "a", label: "A", isSelected: true, isDisabled: false,
             tabElementID: "t1-tab-a", panelID: "t1-panel-a"
         )
-        _ = TabButton(item: item, onSelect: {}, onMove: { _ in })
+        _ = TabButtonShared(item: item, onSelect: {}, onMove: { _ in })
         _ = TabsEmptyView(message: "No tabs available")
         _ = TabsStrip(controller: TabsController(
             input: TabsInput(tabs: [TabItem(key: "a", label: "A")], activeTab: "a"),

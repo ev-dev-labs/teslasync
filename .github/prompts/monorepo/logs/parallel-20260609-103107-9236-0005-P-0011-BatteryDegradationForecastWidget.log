@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure, reading the web source, and checking the runner's Apple toolchain capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and no iOS simulators are available. However `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me explore deeply before deciding on approach.
+
+The dashboard-widgets directory already has 700+ files with established patterns. Let me examine the existing structure and find reference widgets and infrastructure.
+
+Excellent — there's a very close sibling `BatteryDegradationTrendWidget` (battery + degradation). Let me read its full file set to learn the exact conventions, since it's the best reference.
+
+The pattern is very clear and well-established. Let me read the remaining Trend widget files and locate the shared infrastructure (tokens, registry, shared components).
+
+Now let me read the Previews, strings, Tests, and Chart files, plus locate the shared infrastructure types.
+
+Let me read the Previews and Tests files, and locate all the shared infrastructure types.
+
+Now let me locate all shared infrastructure types and understand the host-based validation harness (since full Xcode is unavailable).
+
+`Sources/` and `TeslaSync/` may be different targets. Let me read the project structure and the key shared types to understand exactly what compiles together.
+
+Now I understand the target structure. My files go in `TeslaSync/dashboard-widgets/` and compile with `Sources/` + design tokens. Let me read the infra, theme tokens, and skeleton definitions.
+
+Now let me read the native skeleton, the web shared components I'm porting (WidgetShell, shared tip cards, Badge, StatCard, EmptyState), and the data hook/types.
+
+Let me read the web tip-cards shared component, the data hook/types, and the registry entry to nail the data shape.
+
+Now let me read the lint/format configs and placeholder checker, and verify pwsh availability for the gate.
+
+`pwsh` is available, so I can run the placeholder gate. Let me read the placeholder checker and find a sibling widget that renders tip-cards/recommendation rows to match house style.
+
+Let me find `TSCard` (a transitive dep of Skeletons) and study a sibling that renders recommendation/tip rows, to match house style.
+
+The `DrivingCoachWidget` is an even closer template (recommendations → tip cards with impact). Let me read its Views, Adapter, and main view to match house style precisely.
+
+The `DrivingCoachWidget` is the ideal template. Let me find `TSTone` and read the DrivingCoach main view, model, and strings to complete my understanding.
+
+I now have a complete picture. Let me read the DrivingCoach Model and strings to finalize the model + i18n patterns, then I'll write the widget.
+
+I have a thorough understanding now. Let me check the dependency surface of `Badges.swift`/`Cards.swift` (for my host-compile harness) and set up my plan and todos.
+
+I now have a thorough understanding of every convention. Let me set up tracking and write a brief plan, then build the 7 widget files modeled on the `DrivingCoachWidget`/`BatteryDegradationTrendWidget` siblings.
+
+Now I'll write the Adapter (pure projection/format/accessibility core):
+
+Now the Model (state-holder + telemetry + i18n facade):
+
+Now the Views (presentational subviews):
+
+Now the main surface view:
+
+Now the Previews, strings catalog, and Tests:
+
+Now the comprehensive test suite:
+
+All 7 files written. Now let me verify: format my files, then lint. First swiftformat (format mode) on my files only:
+
+swiftformat adjusted 3 files. Let me see the changes and confirm `--lint` now passes on my files, plus run swiftlint --strict:
+
+swiftformat passes; swiftlint flags 2 `file_length` violations (Adapter 444, Tests 466; limit 400). I'll split each into two house-style files (siblings use Models+Builder and Tests+ModelTests). Let me read the formatted Adapter to split it precisely:
+
+I'll split the Adapter into `Models.swift` (types) + `Builder.swift` (builder/format/a11y), matching the Trend sibling's decomposition:
+
+Models 247, Builder 207 — both under 400. Now split Tests. Let me find exact boundaries:
+
+Boundaries confirmed. Now I'll split Tests into `Tests.swift` (Builder+Format) and `ModelTests.swift` (Model+Registry+Accessibility):
+
+Both under 400. Now reformat the new files and re-run both linters on all my files:
+
+swiftformat --lint: 0/8 need formatting. swiftlint --strict: **0 violations**. Now the placeholder gate and host compile. Let me run the placeholder check (on a temp copy of my files, for an honest result) and start building the SwiftPM verification harness:
+
+Placeholder gate passes (0 violations). Now the key verification: a host SwiftPM harness to **actually compile and run the tests** against the real design tokens + infra (since full Xcode/simulators are unavailable). Let me build it:
+
+Now the Package manifest and a shim file providing the two remaining shared symbols (`TSTone`, `TSSkeleton`) copied verbatim from the real sources:
+
+Now build and run the tests via SwiftPM:
+
+All logic/view files compiled cleanly. The only errors are `#Preview` macros, which need Xcode's `PreviewsMacros` plugin (unavailable on CommandLineTools) — a harness limitation, not a code issue. I'll exclude the DEBUG-only Previews file from the host smoke build and run the tests:
+
+XCTest isn't bundled with CommandLineTools (Xcode-only), and there's a library emit-module error to diagnose. Let me see the real library error first:
+
+The library is compiling cleanly. Let me wait for it to complete:
+
+Library builds cleanly under Swift 6 strict concurrency. Since XCTest isn't in CommandLineTools, I'll add a standalone executable that actually runs the same assertions (real runtime verification of the logic). Let me update the package and write the runner:
+
+Harness-only concurrency nit (Swift 6 global mutable state). Let me make the counters `@MainActor`:
+
+**84/84 host assertions pass** (real runtime verification of the adapter/format/model/registry/accessibility logic). Now a critical check: since all widgets compile into ONE module, I must confirm none of my public type names collide with existing symbols. Let me scan:
+
+Let me stop and use a faster single-pass search:
+
+All matches are in my own files — **zero collisions**. Let me confirm the registration pattern matches siblings (no central registry edits needed, per allowed-files) and that there's no aggregator I'm expected to touch:
+
+Zero collisions, and no central aggregator references sibling registrations (each widget owns its `static registration`, matching the per-surface allowed-files contract). My implementation is complete and verified as far as the runner allows. Let me check the log directory and git state, then write the gate log:
+
+The log directory exists. Let me check a prior run's log for this exact artifact to match the expected format and status convention:
+
+A prior orchestration run (in a *different* working tree, with a real Xcode 26.5 toolchain) implemented this surface and recorded STATUS=DONE. My files here are all brand-new (`??`), so this slot is a fresh implementation. Critically, **my runner has no Xcode** — so per the prompt's capability clause, the two `xcodebuild` gates are genuinely BLOCKED here. I'll record that honestly with full evidence. Let me generate the gate log from real command output:
+
+The capability gap is confirmed (no Xcode, no iOS SDK/simulators). Now let me append the **runnable** gates (all real) — swiftlint, swiftformat, placeholder, and the host SwiftPM compile + executed assertions:
+
+Now append the host SwiftPM build + executed-assertions evidence, plus an authentic XCTest-availability probe:
+
+The build line came back empty (incremental cache) and there's a stray Cyrillic character. Let me regenerate the **entire log** cleanly in one pass with a fresh clean build for authentic compile output:
+
+Clean build passes (all surface files compiled) and 84/84 assertions pass. Now let me regenerate the complete log in one authentic pass:
+
+Let me verify the final log reads correctly end-to-end:
+
+The log is authentic and honest. Let me do a final quality check — verify the Swift 6 build produces no warnings for my code (v6 mode promotes data races to errors, but let me confirm zero warnings too):
+
+No warnings or errors in my files — clean Swift 6 build. Now let me check the full working tree before staging, to ensure I commit only my files + the log:
+
+Working tree is clean — exactly my 9 widget files + the log. Let me stage, commit, and clean up the temp harness:
+
+Committed. Let me confirm all 10 files are in the commit and the tree is clean:
+
+All 10 files committed; working tree clean. Let me confirm the todo ledger is fully closed:
+
+All 9 todos complete. Here's the final summary.
+

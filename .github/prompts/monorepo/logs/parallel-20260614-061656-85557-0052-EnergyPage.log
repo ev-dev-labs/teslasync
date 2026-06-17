@@ -1,0 +1,235 @@
+I'll start by exploring the repository structure to understand the task scope, the web source, and the existing Apple app architecture.
+
+Toolchain is available (xcodebuild, swiftlint, swift). Let me read the web source and explore the Apple app structure.
+
+The `Features` dir doesn't exist yet. Let me explore the actual Apple app structure and continue reading the web source.
+
+This is a large existing Apple codebase (5592 swift files, flat structure). Let me read the rest of the web source and examine existing feature-view pages to learn the established patterns.
+
+This is a sophisticated MVVM codebase with multi-file components. Let me examine the build config, existing page patterns, parity ledger, and check whether a reference page already exists.
+
+The real source convention is `apps/apple/Sources/Features/<Domain>/` (BatteryCells already exists there). Let me study the existing Battery feature as my template, plus the ledger and manifest entries for Energy.
+
+Now I have clarity. The established convention is `apps/apple/Sources/Features/Battery/` with a multi-file page structure. Let me study the entire BatteryCells reference page — it's my canonical template.
+
+The template is clear. Let me read the remaining BatteryCells files to fully internalize sections, charts, models, sample data source, and tests.
+
+Excellent template coverage. Let me read the models, sample data source, format helpers, the table (Heatmap), trend/area charts, and the tests to complete my understanding.
+
+Let me read the remaining reference files (table, trend charts, insights, derivations, tests) and locate the shared chart/UI component APIs I'll need (RadialGauge, AreaChart, PieChart, DataTable).
+
+I have the full page pattern. Now I need the remaining component APIs (RadialGauge, PieChart, ComposedChart), the route enum, SI/currency facades, and the string catalog. Let me locate them and read the tests.
+
+Let me read the chart component library, the Units facade, the route enum, and the Statistics page that uses RadialGauge/PieChart as reference.
+
+Now I understand the gauges and pie chart. The web `RadialGauge` shows a value+unit (not just a percent), so I'll need a richer gauge. Let me check how Statistics page handles value gauges, plus read the bar/area charts, Units facade, and route enum.
+
+I have the chart wrappers including `TSComposedChart`. Now let me read the Units facade, the AppRoute enum, confirm `TSAreaChart`/`TSLineChart`/`TSChartContainer` signatures, and inspect the string catalog format.
+
+`.energy` route exists. The Units facade imports `Shared` (KMP). Let me read the full route enum, check the Shared framework presence and build path, read the container/line charts, and find how routes get registered + whether an Energy page already exists.
+
+Key finding: `Shared.xcframework` is not present (only `.gitkeep`) — the build depends on it via a preAction script. Let me verify the toolchain to build it, since that determines DONE vs BLOCKED. Also read the registry wiring and the manifest entry.
+
+The shared KMP module is at `apps/shared` with gradlew + Java 17. Building `Shared.xcframework` (Kotlin/Native) is the long pole. Let me kick that off in the background now, then continue reading the registry wiring, manifest record, and string catalog while it builds.
+
+Gradle works offline (toolchain cached). Let me kick off the `Shared.xcframework` assembly in the background now, then continue studying the registry wiring and manifest while it builds.
+
+I have the full component picture. Let me find where route registrations are aggregated into the shell, read the line/area chart signatures, and check the string catalog + how a production (non-sample) data source binds to the KMP client.
+
+Registrations compose in `TeslaSyncApp.swift` (line ~114). The catalog has both bare and `translation.`-prefixed keys. Let me parse the xcstrings JSON to see exactly which of the 56 energy keys already exist, and extract the manifest record for the Energy page.
+
+55 of 56 energy keys are missing from the catalog — I'll add them with web English defaults. Let me inspect the catalog entry format (including an interpolation example), check how BatteryCells handles English-literal keys, and extract the full Energy manifest record.
+
+Catalog structure is clear (dotted + english-literal keys both used; `%@`/`%lld` interpolation). Let me extract the full Energy manifest record to confirm exact panels/charts/states, then read the line/area chart bodies and the TeslaSyncApp registration site.
+
+I have the complete manifest. Let me read the rest of the web source (Efficiency/Charging-time/Charger-breakdown/sessions/tips), the line/area chart bodies, and the registration site — plus check the framework build progress.
+
+I now have the complete web structure and all chart wrappers. Let me check the framework build progress and confirm a few remaining API details (currency formatting, `TSTone` cases, `Color.TS`/`Font.TS` members, `TSCaption`/`TSText`).
+
+Framework build still compiling. Let me gather the remaining API details: currency/percent formatters, `TSTone` cases, design tokens (Color.TS/Font.TS/TSSpacing), and typography components.
+
+Let me read the design tokens, typography, cards, and confirm the DataTable/Select/EmptyState/Button signatures I'll use.
+
+I have all design tokens and typography. Let me confirm the exact signatures of the remaining components I'll call (TSEmptyState, TSDataTable/TSColumn, TSSelect, TSButton, TSCard, TSIconBox, TSChartPalette, TSGlassPanel, `tsUnits` env) to avoid compile errors.
+
+Let me locate `TSChartPalette`, `teslaSyncTheme`, and `TSIconBox`, and check the framework build progress.
+
+I now have every API I need. Let me set up tracking and a plan, then write the implementation. The framework build continues in the background.
+
+All APIs confirmed. Let me write the implementation, starting with the models and formatters.
+
+The Shared.xcframework build completed. Let me confirm it's staged, then continue writing the formatter file.
+
+Framework built and staged (cached for next builds). Continuing with the formatter file.
+
+Models and formatters done. Now the page model with the data-source seam (hook-named methods) and phase machine.
+
+Now the sample data source plus the preview/test doubles.
+
+Now the main page view with header, phase switch, and ready layout.
+
+Page scaffold done. Let me check how the existing code handles localized string interpolation (count/unit) before writing the hero sections.
+
+The convention is `String(format: String(localized: "key"), args)`. Let me check the swiftlint config to respect its limits, then write the hero sections.
+
+Understood the lint limits (120-char lines, ≤400-line files, ≤50-line funcs, `isEmpty` over count, min identifier length 2). Now the hero gauges + quick metrics.
+
+Now the lifetime panel and cost-comparison cards.
+
+Now the chart panels. Two files to respect the 400-line limit: composed/area charts here, bar/pie next.
+
+Now the time-of-day bar chart and charger-type pie + legend.
+
+Now the recent-charging-sessions table.
+
+Now the route registration. Let me view the registration block in TeslaSyncApp.swift to wire it in correctly.
+
+`.energy` isn't registered. Let me create the route registration and wire it into the app.
+
+All Swift files written. Now let me add the 56 strings to the catalog. First, let me check the catalog's exact formatting to minimize diff.
+
+The catalog uses Xcode's `" : "` separator style. Let me match it exactly and verify a byte-identical round-trip before inserting keys.
+
+I'll do a surgical text insertion to avoid reformatting the 4.8MB file. Let me generate exactly-formatted entries and insert them, then validate.
+
+The top-level uses `": "` but entries use `" : "`. Let me fix the marker and re-run.
+
+Strings added and validated. Now the test suite mirroring the BatteryCells style.
+
+All files written. Let me run swiftlint on the new files first for fast feedback before the full build.
+
+swiftlint ran on the whole project (36 violations). Let me see which are mine vs pre-existing.
+
+All 18 violations are mine (repo was clean). Let me view the exact long lines and fix them.
+
+Let me fix all 18 line-length/body-length issues. First the sample specs block.
+
+Now fix the two chart legend lines and the test file.
+
+Now fix the test file — wrap the live dict and move `makeData` to an extension to drop under the type-body limit.
+
+Let me re-run swiftlint to confirm all violations are resolved.
+
+swiftlint passes (0 violations). Now generate the Xcode project and build.
+
+Project generated, simulator available. Let me build the TeslaSync scheme for the iOS Simulator (this compiles the whole app, so it'll take a while).
+
+Build running in background. Let me inspect the placeholder-scan script while it compiles.
+
+Placeholder scan passes (COUNT=0, EXIT=0). Let me check the build progress.
+
+Build failed (3 failures). Let me find the errors.
+
+The errors are in `Input.Previews.swift` (a file I didn't touch). Let me see all 3 failures and confirm none are mine.
+
+None of the errors are in my files — they're in `Input.Previews.swift` (untouched). Let me check if this is a pre-existing baseline break.
+
+This is a pre-existing baseline break in `Input.Previews.swift` (untouched by me) — an illegal `return` inside a `#Preview` ViewBuilder. It blocks the whole build, so I must verify whether it's isolated or widespread, then fix it minimally to get a green gate. Let me find all occurrences.
+
+Many preview files use `return staged(`, but only `Input.Previews.swift` failed — the difference is combining `@Previewable` with `return` (illegal in a result builder under this newer toolchain). Let me find exactly which files have both, to fix them all at once.
+
+This is a systemic pre-existing baseline break: 8 `shared-surfaces` preview files combine `@Previewable` with `return` (illegal in a result-builder body under this newer Swift toolchain). The app can't compile in Debug — which blocks both the build AND tests — regardless of my work. I'll fix these minimally (dev-only preview tooling) to unblock the gate, and document it transparently. Let me inspect the return patterns first.
+
+Most are preview-body `return`s after `@Previewable`, but `SearchInput` line 42 `return model` may be a helper. Let me inspect the structure before editing.
+
+`SearchInput` line 42 `return model` is a helper function — must not touch. The broken ones are `return staged(`/`return <Wrapper>(` after `@Previewable`. Let me verify the two wrapper-view cases before editing.
+
+Let me precisely identify which `#Preview` blocks have BOTH `@Previewable` and `return` in the *same* block (only those fail) — the file-level grep was too coarse.
+
+6 files have 22 broken `#Preview` blocks (the build only reached the first). All use `return staged(` (the `return model` helper in SearchInput is safely distinct). Let me strip `return ` only from `return staged(` lines, then rebuild incrementally.
+
+22 returns stripped (HelpSegment correctly left alone — its `return`s aren't under `@Previewable`). Let me rebuild incrementally.
+
+Build running. Let me check the toolchain version context while it compiles.
+
+Confirmed root cause: repo locks Swift 6.0.1 but the machine has Swift 6.3.2, which is stricter about `return` in result builders — a pre-existing toolchain drift unrelated to my work. Let me wait for the build.
+
+More failures surfaced — possibly different error types. Let me see the actual errors.
+
+More pre-existing breaks surfaced in `Input.Previews.swift` (argument-order errors previously masked) — this is a systemic Swift 6.3.2-vs-6.0.1 toolchain-drift issue affecting many dev-only preview files. Chasing them file-by-file is the wrong approach. 
+
+The clean, non-invasive path: revert my preview edits to keep the baseline pristine, then verify my code via a build/test that excludes the dev-only `*.Previews.swift` (canvas tooling, never needed for build/test/runtime) using `EXCLUDED_SOURCE_FILE_NAMES` — no repo files modified.
+
+My diff is now clean (only Energy files + registration + strings). Now verify the full app compiles via a build that excludes the toolchain-broken preview tooling.
+
+Still failing with previews excluded — more toolchain-drift breaks beyond previews. Let me see exactly what's failing and whether any are mine.
+
+Real issue found: my `EnergyDailyPoint` (and likely other `Energy*` types) collide with existing types in `TeslaSync/dashboard-widgets/EnergyStatsWidget.Models.swift` — same module. The ambiguity cascades and even breaks the existing widget. (The `EnergyStatsWidget.Chart.swift:155` "type-check timeout" is a separate pre-existing toolchain issue.) Let me find ALL existing `Energy*` type names to rename my colliders.
+
+The grep used `-h` (stripped paths). Let me re-run correctly to find which of my type names are declared in *other* files (the real colliders).
+
+Only `EnergyDailyPoint` collides (with the dashboard widget's type) — and that ambiguity cascades into all the other errors, including breaking the widget's own code. Let me rename my type to a unique name across all my files.
+
+Renamed cleanly. The widget errors and cascades likely stemmed from that ambiguity. Let me rebuild (previews excluded) to confirm my code compiles and see what — if anything — remains.
+
+Build running. Let me wait for it to complete.
+
+Still compiling. Let me wait longer.
+
+**BUILD SUCCEEDED.** My collision fix resolved the widget cascade AND the type-check timeout (both were caused by the `EnergyDailyPoint` ambiguity). The whole app — including my Energy page — compiles cleanly; the only remaining baseline issue is the dev-only `*.Previews.swift` toolchain drift, which is excluded. Now let me run my test suite (previews excluded).
+
+Test building/running. Let me prepare the evidence log location while it runs.
+
+Crucial context: the sibling P7 logs (e.g. APIKeysPage) document the **same** pre-existing out-of-scope full-scheme break, and the established methodology verifies via in-scope gates (placeholder, swiftformat, swiftlint, xcodegen, isolated type-check, executed model harness) and commits on green. I've actually gotten a *full* app build to succeed. Let me check my test result.
+
+The test *bundle* fails to compile due to pre-existing toolchain-drift breaks in **other** sibling test files (GDPRExportPageModelTests, FullscreenButton.Tests, …) — `-only-testing` still compiles the whole bundle. This is exactly the "out-of-scope pre-existing full-scheme RED" the sibling logs describe. Let me confirm none are mine, then run my model logic via a standalone harness (my model/format files import only Foundation/Observation).
+
+Confirmed: the only test-bundle errors are pre-existing toolchain-drift issues in sibling files (e.g. `GDPRExportPageModelTests.swift` — Swift 6.3.2 stricter actor isolation); **none in my test file**. My model/format files import only Foundation/Observation, so I'll run them via a standalone harness (the sibling "executed model harness" approach). Let me write it.
+
+Now compile the harness with the model files (Foundation-only) and run it.
+
+Harness compiled cleanly. Let me run it.
+
+The harness caught two **wrong test expectations** (production code is correct): time-of-day for hours [2,8,14,20,23] is [night1, morning1, afternoon1, evening2]=[1,1,1,2] (I had [2,1,1,1]), and my `hasNoEnergyData` harness check used non-zero `totalWh`. Let me fix the harness expectations and the matching XCTest assertions.
+
+Now the matching XCTest fixes.
+
+Recompile and rerun the harness.
+
+**Harness PASSES: 40 checks, 0 failures.** My model logic is verified at runtime. Now let me run swiftformat (part of the sibling gate) and re-confirm swiftlint after the rename/fixes.
+
+swiftformat wants auto-fixable changes (number grouping, await hoisting, wrapping). Let me auto-format my files, then re-verify both swiftformat and swiftlint pass.
+
+swiftformat passes. Let me re-verify swiftlint and recompile/rerun the harness (since the model files were reformatted).
+
+swiftformat's auto-wrap exploded `sampleSessions()` to one-arg-per-line (160 lines > the 100-line limit). Let me check the `.swiftformat` config to understand the wrap behavior, then restructure.
+
+`--wraparguments before-first` explodes any over-120 call to one-arg-per-line. I'll shorten the `SessionSpec` labels so each call fits on one ≤120 line (no wrap → compact function body). Let me view the current state and rewrite.
+
+Let me rewrite `sampleSessions()` + `SessionSpec` with short labels so each spec fits on one line (no wrap, compact body). I'll replace the exploded block by line range.
+
+Function is now 36 lines. Let me re-verify swiftformat, swiftlint, and the harness all pass.
+
+All in-scope gates green (swiftformat 0, swiftlint 0, harness 40/0). Let me run a final full app build (previews excluded) to confirm everything still compiles after the rename + formatting, and meanwhile inspect the ledger structure to add the Energy rows.
+
+Ledger has two rows per page (macos + ios). Let me check the build, then add the two Energy rows matching the BatteryCells format.
+
+Build still running. Let me update the ledger while it compiles — first checking its raw format.
+
+Ledger updated (+2 Energy rows). Let me check the final build result.
+
+Full rebuild is lengthy. Let me wait for completion.
+
+**BUILD SUCCEEDED** after all edits. Every in-scope gate is green. Let me read the sibling BatteryCells evidence log to match the exact expected structure (especially the `=== PARITY ===` enumeration).
+
+The sibling log confirms my methodology exactly (output-path reconciliation + harness/isolated-build when the full scheme is blocked by pre-existing out-of-scope breaks). Let me gather LOC/status, then write the comprehensive evidence log.
+
+All in-scope gates green and my diff is clean. Now let me write the comprehensive evidence log.
+
+Log written ending with `EXIT=0 / STATUS=DONE`. Let me do a final pre-commit verification: confirm the diff is clean (previews reverted), JSON valid, and gates green.
+
+Clean diff — only my deliverable. All in-scope gates green. Let me commit with the prompt's message and the Co-authored-by trailer.
+
+Committed (8bf1b1da9): 16 files, +3392 lines — the complete Energy parity deliverable. Let me mark tracking complete.
+
+All todos complete. Let me confirm a clean working tree post-commit and clean up the temp harness binary.
+
+Task complete. The working tree is clean and the deliverable is committed (`8bf1b1da9`).
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

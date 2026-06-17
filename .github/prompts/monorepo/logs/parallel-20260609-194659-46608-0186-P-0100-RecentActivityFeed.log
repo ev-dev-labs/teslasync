@@ -1,0 +1,106 @@
+I'll start by exploring the repository structure and the key files referenced in this task.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Not blocked. Let me read the web source and explore the Apple app conventions.
+
+The `shared-surfaces` directory exists with many established surfaces. Let me study the canonical pattern by examining the file naming and a complete example surface.
+
+Clear canonical pattern. Each surface = `{Name}.{swift,Model,Adapter,Projection,Views,Chrome,Previews,strings,Tests,AdapterTests}`. Let me study a complete non-AI list surface (`HistoryListRow`, `DateGroupedList`) since `RecentActivityFeed` is a data-display list.
+
+`HistoryListRow` is the closest analog. Let me read all its files to internalize the complete pattern.
+
+Let me read the rest of `HistoryListRow`, plus the shared infra (EmptyState/Timeline equivalents) and the web dependencies the source relies on.
+
+Key insight: the web `RecentActivityFeed` is **prop-driven** (takes `entries`, only hook is `useTranslation`) — a pure presentational primitive like `HistoryListRow`. Let me confirm the repo convention for such primitives and gather the web dependencies + native support types.
+
+Now let me read the web dependencies (UserActivityEntry, formatRelative, EmptyState) and the native support types (design tokens, native EmptyState, Timeline, relative-time surface, test patterns).
+
+There's an atomic `TSRecentActivityFeed`/`TSTimeline` in the component library (out of scope), and my surface is the standalone parity build. Let me read the design tokens, the atomic Timeline/EmptyState, the relative-time parity, and the project build config.
+
+Let me locate the design token definitions, the test patterns, and the Xcode build configuration (critical for the gate).
+
+Now I understand the build system (XcodeGen + generated tokens + KMP `Shared.xcframework`). Let me assess build feasibility on this runner and read the remaining patterns (tests, `TSEmptyState`, icons).
+
+Tooling is present (xcodegen, pwsh, swiftlint, swiftformat, generated `Tokens.swift`, check-placeholders.ps1). The KMP `Shared.xcframework` isn't prebuilt. Let me read the token API, lint configs, build script, and test patterns.
+
+I now have the full token/lint API. Let me read the test conventions, `TSEmptyState`, the web icon map, and check for an existing lucide→SF Symbol convention.
+
+I have the full pattern. Let me verify no name collisions, read the model/view test style, and confirm the navigation/AppRoute convention before writing.
+
+I have everything needed. Let me check the placeholder-checker rules and build feasibility (Java/gradle for the KMP framework), then start writing.
+
+Java 17 + gradlew are present. I have full understanding now. Let me set up tracking and write the plan, then build the surface files.
+
+Now I'll write the Foundation-only core. Starting with `Adapter.swift` (slug, entry type, tone, visual registry, route mapping).
+
+`RelativeTime.swift` — port of `formatRelative`.
+
+`Projection.swift` — the pure cached→projection adapter.
+
+Let me typecheck the Foundation-only core early to catch issues fast.
+
+Core compiles clean. Now `Model.swift` (i18n facade, telemetry seam, `@Observable` state-holder).
+
+Now `Views.swift` — tone→token color, empty state (EmptyState parity), and the timeline rendering.
+
+Now the public surface entry `RecentActivityFeed.swift`.
+
+Let me typecheck the full surface (my 6 files + the design tokens) against the macOS SDK.
+
+Full surface typechecks clean. Now the previews, strings catalog, and tests.
+
+Now the `.strings` catalog (web keys preserved verbatim + native a11y/relative additions).
+
+Now the pure-core `AdapterTests.swift` (registry, route, relative-time, projector).
+
+Now `Tests.swift` — model lifecycle, telemetry, tone→token, view composition, facade.
+
+All 10 files written. Let me run the formatter, linter, and placeholder gate on the new files.
+
+swiftformat found auto-fixable issues. Let me fix the force-unwraps manually (not auto-fixable), then run swiftformat to auto-fix the rest.
+
+swiftformat passes. Now swiftlint `--strict` on my files, plus re-typecheck and file-length check.
+
+Two `opening_brace` violations from multiline signatures. Let me view and fix them.
+
+Single-line signatures will satisfy both formatters. The `Tests` helper doesn't use `override`; I'll drop it there and collapse the `AdapterTests` one to a single line.
+
+Re-running both formatters/linters on the new files to confirm clean.
+
+Both linters pass clean (0/0). Now the placeholder gate. Let me understand its `-Path` handling and run it.
+
+The gate's `-Path` points at a non-existent dir (prefix), so it trivially passes. For real evidence, I'll scan a temp copy of my files plus run the exact gate command and a manual grep.
+
+Placeholder gate clean (COUNT=0). Now the build gate. Let me regenerate the Xcode project and check simulator availability.
+
+Project regenerates cleanly and iPhone 16 (iOS 26.5) is available. Now the build gate's long pole — the KMP `Shared.xcframework` via Gradle. Let me attempt it (first run downloads Kotlin/Native + deps, so it's slow).
+
+Gradle is downloading the Kotlin/Native toolchain and dependencies (first run). Let me continue waiting.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL). Now the full iOS build + test (gradle is now cached, so the preAction is fast). This compiles the whole app + runs tests.
+
+The iOS build failed (exit 65), but the errors reference `StateTimeline*` / `WidgetPicker` / `XRayBucketChart` — not my files. Let me determine whether these are pre-existing or triggered by my change.
+
+No errors in my files (the 3 `RecentActivityFeed` matches are batch-compile command lines, not errors). The failures are pre-existing duplicate-type ambiguities in `dashboard-widgets` (`StateTimelineModel`, `RecentDrivesModel`, etc.). Let me confirm these are pre-existing and unrelated to my change.
+
+Conclusive: **all 270 errors are in `dashboard-widgets` + `feature-views` (0 in `shared-surfaces`)**, caused by pre-existing duplicate type declarations (`StateTimelineModel`/`StateTimelineLoadStatus` declared in both `dashboard-widgets/StateTimelineWidget.*` and `feature-views/StateTimeline.*`). `git status` confirms I only added my 10 files. My surface compiled with zero errors and its `.strings` validated.
+
+To definitively prove the baseline is already red (independent of my change), I'll build the app with my files temporarily removed.
+
+Baseline build (without my files) **also fails with EXIT=65** — proving the failure is pre-existing. Let me confirm the errors match, then restore my files.
+
+Definitive: **baseline (without my files) fails identically (EXIT 65, 54 errors, all in `dashboard-widgets`+`feature-views`, 0 in `shared-surfaces`)**. My change neither causes nor worsens it. Files restored, project regenerated.
+
+The pre-existing break (duplicate `StateTimeline*`/`RecentDrives*` declarations across other surfaces) blocks XCTest from running. Let me verify my test code is type-correct against my API by compiling source+tests together as one module (on copies, stripping `@testable`).
+
+The standalone test compile surfaced a **real** strict-concurrency issue (`enFallback` global isn't `Sendable`) that would break the test target — plus expected XCTest-macro noise (a limitation of plain `swiftc`, not a real error). Let me fix the concurrency issue.
+
+Let me re-verify the standalone typecheck shows no real (non-XCTest-macro) errors remain.
+
+All real errors resolved — only the unavoidable XCTest-macro artifact remains (not present in the real test target). My test code is type-correct and strict-concurrency-clean. Let me kick off the macOS gate (background) and meanwhile re-verify the edited file and locate the log directory.
+
+My files re-lint clean. macOS gate is building in the background. Let me run the whole-tree lint/format gate commands to capture real exit codes.
+
+Whole-tree swiftformat is clean (0/4026). macOS gate finished — let me read its result.
+
+macOS gate also fails (EXIT 65) — but on **code-signing** (no development certificate on this runner; an environment limitation) plus it shares the same pre-existing duplicate-type sources. Again **0 errors in `shared-surfaces`**. Let me run the whole-tree `swiftlint --strict` gate command to complete the lint evidence.
+

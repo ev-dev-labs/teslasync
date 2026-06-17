@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the web components this page depends on and the existing Apple app structure.
+
+The `Features` directory doesn't exist yet. Let me explore the actual Apple app structure and the parity manifest.
+
+There are two source trees. Let me check the project.yml to understand the build layout and find the exact manifest record for this page.
+
+Key finding: the build (`project.yml`) compiles from `Sources/`, not `TeslaSync/Features/`. Let me check existing admin pages, the ledger, and whether an Xcode runner exists.
+
+Xcode 26.5 is available — no BLOCKED. There's a clear sibling pattern in `Sources/Features/Admin/`. Let me check the ledger, existing Rate-Limit/Queue Apple components, and the gate contract.
+
+Let me check the manifest for the two panels and read the full web panel sources plus their hooks/types.
+
+I now understand the structure. The manifest scopes `page:admin/System` to **2 strings** (no panels/data sources extracted), but the web page composes two budget panels. Let me read the full web panels, hooks, types, i18n strings, and the Apple page/model/route patterns to decide fidelity.
+
+Both panels are substantial, data-bound components. Per the **TeslaOrdersPage precedent** (thin page composing sections), and the covenant's anti-stub/anti-narrowing rules, I'll reproduce the page faithfully with native sections. Let me study the Apple injectable-source pattern, design tokens, route registration, and the web i18n/types in parallel.
+
+`ActiveOrdersModel`/`ActiveOrdersSection`/DTOs are defined elsewhere (not in `Sources/`). Let me locate the shared section pattern across the whole Apple tree, plus read the web types, i18n strings, xcstrings format, design tokens, and route enum.
+
+Shared sections live in `TeslaSync/feature-views/`; pages in `Sources/Features/Admin/`. Let me read the exact web types/strings, the xcstrings format, the route enum, and the Apple component library (UI/DataDisplay/Feedback) so my sections use real shared components.
+
+`AppRoute.system` already exists (path `/system`, group `.system`). The web subtitle default lives in the component (not en.json). Let me read the xcstrings format/keys, the route parser & registry wiring, and the design tokens/components I'll need.
+
+A `translation.system.page.title` key already exists. Let me check what's around it (and whether subtitle exists), read the full parser aliases, find the registry aggregator, and check the ledger for an existing System row.
+
+55 lines match rateLimit/queue keys — they may already exist in xcstrings. Let me verify which keys exist, search the whole tree for any RateLimit/Queue Swift symbols, find the registry composition root, and check the ledger row.
+
+**Major finding:** all `rateLimitStatus.*` and `queueStatus.*` strings already exist in the catalog (en.json is mirrored into xcstrings). Only `system.page.subtitle` is missing. The two panels aren't yet ported to Swift. Per the **TeslaOrdersPage→ActiveOrdersSection precedent** and the anti-stub/anti-narrowing covenant, I'll build the full page: shell + two native budget sections. Let me study the canonical `ActiveOrdersSection` architecture and the shared components/tokens I'll reuse.
+
+This is a thorough, well-architected pattern (Source seam + `@Observable` model + InMemory source + phase enum + sub-views). Now I need: how interpolated `{{var}}` strings are stored/consumed, where the Orders sub-views are defined, and the design tokens/shared components. Let me check these.
+
+Interpolated keys are stored with proper Swift format specifiers (`%1$@`). Now let me read the design tokens, typography/card/motion components, the Orders sub-views (for state patterns), and find the localization-with-format helper plus MetricBar/Button/Badge/Spinner/EmptyState components.
+
+Now I have the component vocabulary. Let me read the `TSButton` init, the design tokens, the localization-with-arguments idiom used elsewhere, and the route-registration test pattern.
+
+I have the full component and idiom vocabulary. Let me read the design tokens, the route registry API, a model-building route registration example, and the motion/feedback helpers.
+
+Let me confirm the `Color.TS`/`Font.TS` members and read a model-building route registration to mirror the chain pattern.
+
+I now have a complete picture of tokens, components, patterns, and routing. Let me verify the build toolchain (xcodeproj generation + Shared.xcframework staging) before writing code, and set up a plan/todos.
+
+The build needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native). My SystemPage code won't import Shared, but the whole app target does. Let me check the toolchain and kick off the framework build in the background while I write code. Let me also set up a plan and todos.
+
+JDK 17 + gradlew present. Let me generate the Xcode project and start the slow KMP framework build in the background while I write the Swift code.
+
+Project generated. Now starting the KMP Shared framework build in the background.
+
+Build running in background. Let me write the plan and start implementing the Swift files.
+
+Let me find the shared number/relative-time/duration formatters and the preview pattern before writing.
+
+I have the preview/formatter conventions. Before writing, I must avoid type-name collisions with the existing `RateLimitBanner` surface and any KMP `Shared` exports. Let me check existing type declarations for the names I plan to use.
+
+**Critical finding:** the panels are **already ported** as feature-views (`RateLimitStatusPanel.*`, `QueueStatusPanel.*`). Per the predecessor pattern (like TeslaOrdersPage→ActiveOrdersSection), my SystemPage must **compose** these existing sections, not re-create them. Let me read their public APIs.
+
+The panels are fully-built public Views taking models (`RateLimitModel`, `QueueStatusModel`) with their own `.strings` tables. My job is to **compose** them. Let me read their model APIs, sample sources, and preview construction, and confirm no SystemPage exists yet.
+
+The panels are fully self-contained. Now let me read the Queue panel's API, both Previews (to mirror sample seeding), and confirm no SystemPage exists yet.
+
+All APIs are clear. The panels are fully built and self-localized. My SystemPage **composes** `RateLimitStatusPanel(model:)` + `QueueStatusPanel(model:)`. Let me confirm the exact DTO initializers and check for a Queue-jobs drawer surface, then start writing.
+
+A `QueueJobDrawer` surface exists. The web SystemPage wires QueueStatusPanel→QueueJobDrawer, and the Apple `QueueStatusPanel` exposes `onOpenWorker`. Let me read the drawer's public API to wire it faithfully.
+
+Let me find the top-level `QueueJobDrawer` view and its model/source API to decide how to wire `onOpenWorker`.
+
+The drawer is `QueueJobDrawer(model:)` presented as an overlay; its model takes a `QueueJobsSource` + worker + onClose. The `onOpenWorker` callback exists precisely for a host to wire. I'll compose it faithfully. Let me read the jobs source/update/row shapes.
+
+I now have every API needed. Let me verify the drawer's `dismiss` wiring and `TSSpacing.none`, then write all files.
+
+Let me verify exactly which `TeslaSync/*` subdirectories are compiled into the app target — this determines whether I can reference the `modals-dialogs/QueueJobDrawer` surface.
+
+Confirmed: `modals-dialogs` is **not** compiled — so I won't wire the drawer (the `feature-views` panels ARE compiled). This simplifies the design. The KMP framework build also finished — let me confirm it staged.
+
+KMP framework built successfully. Let me stage it into `Frameworks/` (priming the build), then write the Swift files.
+
+Framework staged. Let me confirm the `QueueStatusInput`/`InMemoryQueueStatusSource` exact signatures, then write the files.
+
+All signatures confirmed. Writing the three new Swift files now.
+
+Now wiring the route into the app shell, the parser alias, and the missing subtitle string. Let me view the exact insertion points.
+
+Now adding the `system.page.subtitle` string to the catalog. Let me view the exact title block boundaries.
+
+Let me validate the edited JSON catalog and confirm the `QueueStat` initializer defaults before writing tests.
+
+JSON valid, both keys present. `oldestPendingAgeSeconds` is `Double` (integer literals coerce fine). Now the test file.
+
+Now regenerating the Xcode project to pick up the new files, then building.
+
+Project regenerated with new files. Let me run swiftlint on the new files first (fast), then kick off the build.
+
+Lint found fixable issues: the preview helper is too long and duplicates the route-registration sample data. I'll replace it by reusing `SystemRouteRegistration.sampleModel()`, and wrap the long test lines. Let me view the exact preview block to replace.
+
+Now wrapping the long test lines.
+
+Re-running swiftlint to confirm clean.
+
+Lint clean. Now the full build (iOS Simulator, no signing). This compiles the whole app target — the long pole.
+
+Build failed, but the listed failures are pre-existing files (Toast.Previews, SessionList, WidgetBigNumber…) plus an x86_64 arch note for Shared.xcframework. Let me extract the actual compiler errors to see if my files are implicated or if it's an architecture/destination issue.
+
+The only real compiler errors are in a **pre-existing** file I didn't touch (`shared-surfaces/Input.Previews.swift` — "explicit return in ViewBuilder"), plus an x86_64 arch note for Shared.xcframework. My files have zero errors. Let me confirm this is pre-existing and isolate whether it's a destination/arch artifact by inspecting the file and checking git status.
+
+Confirmed: the failures are a **pre-existing** Xcode 26.5 incompatibility with `@Previewable…return` in unrelated `#if DEBUG` preview files (Input/Toast/SessionList/Widget…), none of which I touched. My files have zero errors. The gate's `xcodebuild build` defaults to **Release**, which compiles out `#if DEBUG` previews. Let me verify my code compiles via a Release build (previews excluded).
+
+Release build is compiling the full app (optimized). Let me wait for it.
+
+Build finished. Let me check the result from the saved log.
+
+Release build failed but with **no `error:` lines** — meaning my code compiled. The failure is almost certainly the x86_64 simulator link (Shared.xcframework only has arm64-simulator). Let me confirm the failure reason and rebuild for arm64-only.
+
+The failure is x86_64 simulator compilation — my local `Shared.xcframework` only has **arm64** slices (Kotlin/Native on Apple Silicon). My code itself compiled (no `error:` lines). Let me rebuild arm64-only (Release) to get a clean link — this matches what the CI runner's all-slice framework would do.
+
+Release arm64 build still compiling. Let me wait.
+
+No compile errors again. Let me find the specific failure in this arm64 build.
+
+Let me look at the raw tail of the log to find the actual diagnostic (no `error:` line is unusual — could be a compiler crash or pre-existing baseline break).
+
+Found it: the Release failure is a **swift-frontend compiler crash** (`Found ownership error?!` → `llvm::report_fatal_error`) on pre-existing code (`AIAlertTuningSuggestions`), and Debug fails on the pre-existing `@Previewable…return` previews. Both are environmental (Xcode 26.5) issues unrelated to my code. Let me get a definitive clean compile by building Debug (unoptimized → no crash) with `#if DEBUG` previews excluded, arm64-only.
+
+**BUILD SUCCEEDED.** With `#if DEBUG` previews excluded (avoiding the pre-existing `@Previewable…return` errors) and unoptimized compilation (avoiding the pre-existing Release optimizer crash), the **entire app target — including all my SystemPage code, route wiring, and parser alias — compiles and links** (arm64 iOS Simulator). This definitively proves my code is correct and integrates. Both build blockers are pre-existing/environmental.
+
+Now let me run my tests with the same clean workaround. Let me find a simulator.
+
+A simulator is booted (iPhone 17 Pro). Let me run my test class with the same clean settings (the app target is already compiled with these flags, so this should mostly compile the test bundle and run).
+
+Exactly as diagnosed: my `SystemRouteRegistrationTests` is **not** in any error list — it compiles. The test-bundle failures are pre-existing co-located tests referencing `#if DEBUG` sample data (broken only because I excluded DEBUG). Both gate blockers are pre-existing toolchain issues. Let me quantify the pre-existing breakage, run the real-path lint, check the placeholder tooling, and kick off the exact gate build for an honest EXIT capture.
+
+Key facts established: only **8 pre-existing** `#if DEBUG` preview files carry the `@Previewable`+`return` pattern (all unmodified by me), pwsh + the placeholder script are available. Let me get the Admin lint result, run the real placeholder scan, and check the gate's default build config + ledger schema.
+
+`swiftlint --strict` returns **0 violations across all 11,448 files** (the repo config's `included:` paths take precedence) — the lint gate is **green**, including my files. Now let me run the real placeholder scan, determine the gate's default build config, and check the ledger schema.
+
+Decisive facts now established:
+- **Placeholder scan: 0 placeholders, EXIT=0** on all my files ✓
+- **swiftlint --strict: 0 violations** (whole repo, incl. my files) ✓
+- Default gate config = **Debug, ONLY_ACTIVE_ARCH=YES** (arm64) → the x86_64/Release-crash issues are NOT hit by the gate; the **only** Debug-build blocker is the **8 pre-existing, unmodified `#if DEBUG` preview files** (`@Previewable`+`return`) that Xcode 26.5 rejects.
+- Ledger allows status `blocked`.
+
+Let me run the faithful gate build (Debug, booted arm64 sim, previews on) in the background to capture the real EXIT, and write the evidence log meanwhile.
+
+While the build runs, let me confirm the PARITY evidence (both strings present + used) and prepare the ledger update.
+
+PARITY confirmed: both strings present in the catalog and used in `SystemPage.swift` (lines 58–59) → **PARITY_COVERED=2 == PARITY_REQUIRED=2**. Let me check the gate build progress.
+
+Definitive gate evidence captured: the gate build (Debug, arm64) fails with **EXIT=65 solely on the pre-existing `Input.Previews.swift`** (`@Previewable`+`return`) — zero errors in my files. I now have all real results. Let me write the honest evidence log.
+
+Now updating the ledger with honest `blocked` rows for both platforms.
+
+Ledger updated (2 `blocked` rows, covered=2/2). Let me verify the working tree is clean of build artifacts and reflects only my intended changes, then clean up temp logs.
+
+Working tree is clean — only my intended changes; build artifacts are git-ignored. Let me do a final sanity review of the edited `SystemPage.swift` and update my task tracking.
+
+All implementation and verification complete. Let me record the final state in the plan and provide an honest summary.
+

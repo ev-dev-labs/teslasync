@@ -1,0 +1,137 @@
+I'll start by exploring the repository structure to understand what exists, particularly around the Apple app and the web source component.
+
+Apple toolchain is available. Let me read the web source and explore the existing Apple structure in parallel.
+
+Now let me examine the existing `shared-surfaces` directory to understand the established native patterns, especially any existing AI surfaces.
+
+There are 768 files with many AI surfaces already built. Let me find the closest structural twin to use as a reference pattern. First, let me check which similar simple AI-stream surfaces exist natively.
+
+The established native file structure per surface is 10 files. Let me read the web sources of the closest twins, then study one complete native implementation as my reference pattern.
+
+`AIRangePrediction` is the closest twin (vehicleId + numeric body field, fixed POST URL). Let me read its complete native implementation as my reference pattern.
+
+Excellent reference architecture. Let me read the remaining files of the twin in parallel.
+
+Now the remaining 3 Swift files plus strings, and I need to confirm the shared tokens/components exist and how the project includes files.
+
+Let me read the test files, project.yml, and locate the shared tokens/components.
+
+I now fully understand the 10-file pattern. Let me verify the shared tokens/components exist and understand the build setup.
+
+Files are auto-globbed by directory. Let me verify the design tokens location, the Shared.xcframework dependency, and test-target config — these determine whether the build can succeed.
+
+Important finding: `Frameworks/Shared.xcframework` is only a `.gitkeep` placeholder — both app and test targets depend on it. This may block `xcodebuild`. Let me confirm the token/component APIs and then test build feasibility.
+
+I have everything I need on tokens/components. Let me check the gate tooling (pwsh, check-placeholders, lint configs) and the framework placeholder before writing code.
+
+Both `pwsh` and the Swift linters are available. The `Shared.xcframework` is a git-ignored KMP artifact built by a script. Let me check that script's feasibility and set up my task tracking, then write code.
+
+There's a `gradlew` wrapper — building `Shared.xcframework` needs the Kotlin/Native toolchain + Gradle (heavy, network-dependent). I'll write complete parity code, pass the static gates, then attempt the full build for honest evidence. Let me create the plan and start writing the Adapter.
+
+Now writing the Adapter — the dependency-free testable core (request body, SSE parsing, reducer, output/action derivation).
+
+Now the Model.swift — strings facade, connection, availability, telemetry, input snapshot, resolved view-state, source protocol, the observable model, and in-memory source.
+
+Now the Projection — the pure resolve with the **`> 0`** canStart rule (the key parity difference from the twin).
+
+Now the Chrome — freshness chip, refresh button, connectivity banner, loading skeleton, and gate-error view.
+
+Now the Views — Helix badge, action button, thinking dots/indicator, output panel, and ready card body.
+
+Now the main surface view, then the previews.
+
+Now the Previews covering every state.
+
+Now the adapter unit tests, including the key parity boundaries: `lookback_days` omitted at 0 / included at >0, and `vehicle_id` coercion.
+
+Now the main Tests file — projection, model wiring, telemetry, freshness, and the **critical** `canStart` boundary where id 0 = false (the parity difference from the twin).
+
+Now the strings catalog with all i18n keys and their web English fallbacks.
+
+All 10 files written. Let me update todos and run the static gates: swiftformat (auto-fix to match repo style), then verify with lint, swiftlint --strict, and placeholder check on my files.
+
+Files already matched format rules. Now let me run swiftlint --strict, swiftformat --lint, and the placeholder check scoped to my new files.
+
+All three static gates pass cleanly:
+- **swiftlint --strict**: 0 violations in 9 files
+- **swiftformat --lint**: 0/9 require formatting
+- **check-placeholders**: PLACEHOLDER_COUNT=0, EXIT=0
+
+Now the build/test gate. Let me assess the Xcode environment and confirm the project generates with my files.
+
+Full Xcode 26.5 and a booted iPhone 16 simulator are present — the Apple capability is available. Let me generate the project and confirm my files are included.
+
+Project generated and includes my files. Now let me test whether the `Shared.xcframework` (KMP artifact, required by the build) can be produced via Gradle — this determines if the full `xcodebuild` gate can run.
+
+The Gradle build timed out at 240s with zero output — likely blocked on the distribution/toolchain download. Let me gather concrete evidence: the wrapper config, network reachability, and Gradle cache state.
+
+Network IS available (Gradle + Maven reachable, HTTP 200) and the Gradle 8.14.5 distribution is already cached. The timeout was the Kotlin/Native toolchain download + compile (slow on first run), not a hard block. The full gate is achievable — just slow. Let me run the xcframework build with a longer window.
+
+The `Shared.xcframework` built successfully (4m13s — the earlier timeout was just the Kotlin/Native compile time). Let me stage it where the project expects, and prep the gate log directory.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now I'll run the actual gate, starting with the log header and the iOS build+test. This compiles the full app (768+ surfaces) and runs the XCTest suite, so it's long-running — I'll capture full output to the gate log and monitor.
+
+The iOS build+test is running in the background. While it compiles, let me verify my type names don't collide with any existing symbols (which would cause duplicate-definition errors).
+
+No symbol collisions. The iOS build+test completed — let me read the result.
+
+The xcodebuild needs to run from `apps/apple` (where the `.xcodeproj` lives) — the gate assumes that cwd. Let me reset the log and re-run correctly with an absolute log path.
+
+Now re-running the iOS build+test from `apps/apple` (background, full output to log).
+
+Build+test running. Let me monitor its progress.
+
+Still compiling. Let me peek at the log tail to gauge progress.
+
+App target compiling under Swift 6 strict concurrency. Let me continue waiting for completion.
+
+Build failed (IOS_EXIT=65) — but the failing files are **sibling** surfaces (AIAlertTuningSuggestions, AIAnomalyExplanations, AIAutoNameUnnamedLocations, AIAutoTripNameSuggestion), not mine. Let me find the actual compiler errors to determine the cause.
+
+The actual compiler errors are in **two pre-existing sibling surfaces** I'm forbidden to touch (`AIGeofenceAwareAutomationSuggestions.swift:141`, `AIAutoNameUnnamedLocations.swift:123`) — both `escaping closure captures non-escaping parameter 'content'`. None are in my files. Let me confirm my working tree only adds my files, and inspect the sibling errors.
+
+Confirmed: my working tree only **adds** my 10 files + the log — zero modifications to siblings. The 2 failing surfaces (`AIGeofenceAwareAutomationSuggestions`, `AIAutoNameUnnamedLocations`) have pre-existing Swift 6 `@escaping` errors on the committed baseline. Let me check whether my files compiled to object code in the incremental build (proof my code is type-correct under the same compiler).
+
+No `.o` emitted — the target compile aborted on the sibling errors. To get **definitive, independent** proof my surface type-checks under the same Swift 6 compiler, I'll do a standalone `swiftc -typecheck` of my files plus their token/component dependencies. Let me first inspect those dependencies.
+
+The component files only import SwiftUI. Let me run a standalone `swiftc -typecheck` of my 7 non-test files plus their 4 dependency files (Tokens, Buttons, Skeletons, Motion) under Swift 6 + strict concurrency + iOS 18 simulator SDK — definitive isolated proof my surface is type-correct.
+
+The `-F` glob accidentally expanded to many DerivedData dirs. My files need no framework path (they don't import Shared). Let me re-run without `-F`.
+
+`Skeletons.swift` itself references `TSCard` (from elsewhere in the component library). Let me include the whole shared component library (`Sources/Components`) + tokens + my files, after confirming it doesn't import the `Shared` module.
+
+`Sources/Components` (39 files) is Shared-free. Let me typecheck the full component library + tokens + my 7 non-test files as a self-contained Swift 6 module.
+
+Still only sibling/library symbols missing (`TSChartPalette`), zero errors in my files. The component library has broad transitive deps. Let me locate `TSChartPalette` and check whether `Buttons.swift`/`Motion.swift` are self-contained, so I can assemble a minimal but real dependency set.
+
+`TSChartPalette` lives in `Sources/Design`. Let me add that to the typecheck set (Tokens + Components + Design + my files).
+
+Every typecheck error is in library/sibling files (their transitive `Shared`-module deps), never in my files. Let me do a clean, bounded proof: real `Tokens.swift` + real `Buttons.swift` + real `Motion.swift` (all self-contained) + a faithful `TSSkeleton` signature shim + my 7 files.
+
+Both are self-contained (the only "Shared" hit is a comment). Now the clean isolated typecheck:
+
+**Isolated typecheck of my surface: EXIT=0, 0 errors** under Swift 6 + strict concurrency + iOS 18 SDK. My code is type-correct; every build failure is in out-of-scope pre-existing siblings.
+
+Let me complete the remaining gate steps honestly. Starting the macOS build+test in the background, then running the static gates.
+
+swiftlint --strict on the whole tree (4048 files): **0 violations** (LINT_EXIT=0). The macOS build finished — let me read it and run swiftformat.
+
+Both build steps fail outside my scope: iOS on the 2 pre-existing sibling `@escaping` errors; macOS on the same plus **code-signing/entitlements** errors (no dev certificate on this runner — `DEVELOPMENT_TEAM=""`). The static gates are all green: **swiftlint 0 violations, swiftformat clean**. Let me run the placeholder step and append all results + the isolated-verification evidence to the log.
+
+Now let me append the isolated-verification evidence and a precise, evidence-backed analysis, then finalize the log.
+
+Let me update my task tracker and finalize the log with the terminal EXIT/STATUS markers.
+
+Before committing, let me check the repo's established convention for how BLOCKED logs are handled (committed or not), to follow precedent.
+
+This is decisive: the repo has **370+ committed `STATUS=BLOCKED` logs**, with reasons matching mine verbatim ("surface green in isolation … full-app gate blocked by [out-of-scope causes]"). Committing a verified surface with a BLOCKED log is the established convention. Let me confirm git ignores the generated project/framework, then stage exactly my files + log.
+
+Clean: git ignores the generated project + framework; only my 10 files + log are untracked. Let me clean up temp files, stage exactly my files + log, and commit with the conventional message plus an honest BLOCKED body.
+
+All 11 artifacts staged (10 surface files + log), nothing extraneous. Committing now.
+
+Commit `7dd54599e` created — 10 surface files + the gate log (working tree otherwise clean). Let me do a final verification.
+
+All verified: working tree clean, surface is 2315 lines (comparable to the twin's 2148 — complete, not a stub), zero placeholders. Let me finalize tracking.
+
+All todos complete. Task finished.
+

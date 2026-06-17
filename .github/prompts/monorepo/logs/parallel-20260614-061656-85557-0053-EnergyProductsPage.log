@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode and swiftlint are available. Let me explore the Apple project structure and existing patterns.
+
+Let me examine the project configuration and existing feature pages to understand the real structure.
+
+The actual feature code lives in `Sources/Features/`, not `TeslaSync/Features/`. Let me check existing energy/battery pages and the parity ledger to understand conventions.
+
+The real location is `Sources/Features/Battery/` (matching existing `BatteryCellsPage`). Let me study that canonical pattern thoroughly.
+
+Excellent pattern. Let me read the sample data sources, sections, and charts to complete my understanding.
+
+Let me examine the charts (RadialGauge), format helpers, component library, and the route enum.
+
+Let me find the RadialGauge and the key shared components I'll reuse.
+
+Now let me read the web types/hooks and the route host registry to understand data shapes and navigation wiring.
+
+Now let me check the app composition, route parser, exhaustive switches, and the parity ledger.
+
+Let me read the ledger format, manifest entry, localization file, and the placeholder script.
+
+This is the exact precedent I need. Let me read the rest of the BatteryCells log (PARITY + gate format), the swiftlint config, models pattern, and design tokens.
+
+Let me check the build tooling environment and how the precedent log concludes.
+
+I have the full precedent. Let me read the chart models, design tokens, and existing string keys, while probing the KMP/build toolchain.
+
+Let me read the web formatters and the Apple motion components, then I'll have everything to build.
+
+I now have a complete understanding. Let me set up tracking and check the test directory layout, then start building.
+
+Let me check the models convention (how SwiftUI keys are handled in the pure models file).
+
+The convention is clear: Foundation-only models, tones/keys mapped at the view boundary. Let me create the models and format files.
+
+Let me use `.filter{}.count` instead of `count(where:)` to avoid any availability gating.
+
+Now the page model with the data-source seam:
+
+Now the main page view:
+
+Let me verify a couple of helpers (theme modifier, any existing flow layout) before writing the sections.
+
+`teslaSyncTheme` exists; no flow layout exists. Let me check `TSAnimatedNumber` (used by TSStatCard) handles non-numeric values, and confirm the theme modifier signature.
+
+`TSStatCard` handles non-numeric values fine. Now the sections file with the site card, capability chips, flow layout, and skeleton:
+
+The site-info section needs the TOU "Update" button. Let me check existing generic action keys (close/done) before writing it.
+
+Now the site-info section (with the RadialGauge chart and TOU sheet). I'll decompose into small sub-views to avoid SwiftUI type-check timeouts:
+
+Now the route registration and wiring:
+
+Now wire into the app, and check for any other exhaustive switches over `AppRoute` that my new case could break.
+
+Two files have route-enumerating switches. Let me check if they're exhaustive (would break with my new case).
+
+Good — `WatchDeepLink` is its own enum (not affected), and `SpotlightIndexer` uses runtime string lookups (no compile break). I need to add `route.energyProducts` + spotlight + the 33 manifest keys + extras. Let me find the strings-object anchor in the xcstrings file.
+
+All clear — no compile breaks. Now I'll insert the 33 manifest keys plus 10 required extras (route, spotlight, empty-titles, resource/mode labels, subtitle format) into the string catalog via a safe textual insertion, then validate.
+
+Strings added and validated. Now the model tests:
+
+Files created. Let me update progress and run the fast gates (format, lint, placeholder scan).
+
+swiftformat flagged auto-fixable issues (number grouping, doc comments, wrapping). Let me apply the formatter (ecosystem tool) to my files, then re-lint.
+
+Format passes and opt-out markers survived. Now swiftlint and the placeholder scan:
+
+Two `multiple_closures_with_trailing_closure` violations on the icon buttons. Let me pass `label:` explicitly instead of as a trailing closure.
+
+Format and lint are clean. One placeholder-scan hit — the word "placeholder" appears in a doc comment. Let me find and reword all such occurrences.
+
+Now re-run the placeholder scan and probe the build environment (KMP framework + pre-existing breakage state).
+
+Placeholder scan clean (0/0). KMP toolchain (Java 17 + gradlew) is available. Let me first run an authoritative model+format harness (Swift 6 strict concurrency, no SwiftUI), then attempt the full build.
+
+Harness passes all assertions under Swift 6 strict concurrency. Now let me attempt the real build — generate the project and build the KMP framework + app. This may be slow, so I'll run it in the background.
+
+Project generates cleanly. Let me kick off the KMP framework build (the slow part) in the background, then continue with the ledger and evidence log while it runs.
+
+While that builds, let me prepare the ledger update. Let me inspect the ledger structure.
+
+Now let me add the two ledger rows (apple-macos + apple-ios) for the EnergyProducts page.
+
+Ledger updated cleanly (+18 lines, 2 rows). Let me check the framework build progress.
+
+The Gradle build is downloading Kotlin/Native and compiling. Let me check whether it's still running and let it continue.
+
+The Gradle build is actively linking the frameworks (good progress, many cache hits). Let me wait for it to finish, then build the app.
+
+Debug framework done; now building release variants. Let me wait for completion.
+
+Almost there — linking the release macOS framework (the final heavy link step). Let me wait a bit more.
+
+Framework built and staged (BUILD SUCCESSFUL). Now the real app build. Let me run the macOS build in the background and capture the log.
+
+Build running. Let me check progress while I draft the evidence log.
+
+Build is whole-module-compiling the app target (my files included), 0 errors in my files so far. Let me wait for it to finish.
+
+Build failed. Let me extract the actual `error:` lines to confirm whether any are in my files versus pre-existing/architecture issues.
+
+Zero errors in my files — the build fails only on a pre-existing, out-of-scope file `Input.Previews.swift` (ViewBuilder `return` errors). Let me confirm it's untouched by me and pre-existing, then run a clean arm64-only build for a precise signal.
+
+Confirmed: my changes are exactly the in-scope files; `Input.Previews.swift` is pre-existing (a `return`-in-`#Preview` error) and untouched by me. Let me run a clean arm64-only build (matching the framework arch) for the definitive signal, and in parallel set up an isolated type-check of my files.
+
+The component library is self-contained (no `Shared` imports). The arm64 build is running — let me wait for it and extract the definitive error signal.
+
+Conclusive: the arm64 build fails **only** on the pre-existing, untouched `Input.Previews.swift` (6 `return`-in-ViewBuilder errors) — **zero** errors in my files. To get a fully GREEN signal, let me rebuild with just that pre-existing file excluded (a non-destructive command-line override).
+
+While the GREEN build runs, let me gather host info for the log header.
+
+Let me check the GREEN build result.
+
+The whole-module compile (my files included) is running with 0 errors. Let me wait for completion.
+
+Still linking (0 errors). Let me wait for the final verdict.
+
+The `TeslaSync.app` product built successfully with 0 errors. Let me confirm the final build marker.
+
+The whole-module type-check (EmitSwiftModule) passed with 0 errors; it's now in the object-code/link phase for the large app. Let me wait for the final SUCCEEDED marker.
+
+**BUILD SUCCEEDED** with 0 errors once the lone pre-existing broken file is excluded. This conclusively proves my code (and the route wiring) compiles and links GREEN. Let me update todos, gather file stats, and write the evidence log.
+
+All data gathered (xcodeproj gitignored, 1701 LOC across 9 files). Now I'll write the evidence log.
+
+Log written. Now let me re-run the fast gates on the **final** file state (I edited buttons + a comment after the last lint), to be certain the committed state is clean.
+
+All final gates clean (format 0, lint 0, placeholder 0, JSON valid). Let me kick off a scoped XCTest run in the background (extra evidence) and stage the commit while it runs.
+
+Now let me stage exactly my files and commit while the test runs.
+
+Exactly 14 in-scope files staged, no build artifacts. Let me commit.
+
+Committed (`bf1e9c688`), working tree clean. Now let me check the scoped XCTest result.
+
+The test build fails on a **pre-existing** out-of-scope test (`GDPRExportPageModelTests.swift` — an actor-isolation error), not mine. Let me see how many pre-existing broken test files there are, and try excluding them to actually run my tests.
+
+Only one pre-existing broken test file; mine has zero errors. Let me re-run excluding both pre-existing files so my tests actually execute.
+
+**TEST SUCCEEDED** — 17/17 `EnergyProductsPageModelTests` pass (the "errors" are harmless macOS service noise). This exceeds the precedent: my code builds, links, AND its tests execute green. Let me record the real test result in the log and amend the commit.
+
+Let me amend the commit to include the updated log.
+
+The amended commit (`35b076155`) contains all 14 in-scope files (+2407 lines). Let me verify todos and clean up the generated (gitignored) build artifacts to leave the workspace tidy.
+
+All todos complete, workspace clean, commit `35b076155` in place. The task is fully done and verified.
+
+## Summary
+
+I implemented the native SwiftUI/HIG **EnergyProductsPage** at full web parity (`page:battery/EnergyProducts`, route `/energy-products`), matching `web/src/features/battery/pages/EnergyProductsPage.tsx`.
+
+**Delivered (committed `35b076155`, 14 files, +2407 lines):**
+- 8 Swift sources in `apps/apple/Sources/Features/Battery/` — Foundation-only SI models + pure formatters, an `@MainActor @Observable` model with an injectable data-source seam (page-level sites + lazy per-site config), sample/empty/failing seams, the adaptive page (macOS 2-col / iPhone 1-col), sections (summary cards, site card, capability chips in a native wrapping `Layout`, skeleton), and the site-config section (operation mode, **backup-reserve `TSRadialGauge`**, Powerwalls/rated-power/rated-energy, firmware, component badges, rate-plan panel + sheet).
+- New `.energyProducts` route (enum case + `AppRoute` switches + `RouteRegistration` + `TeslaSyncApp` wiring) — deep-linkable via `AppRouteParser`.
+- 43 `Localizable.xcstrings` keys (33 manifest verbatim + 10 required extras).
+- 17-case XCTest suite + 2 ledger rows.
+
+**Verification (all green):**
+- swiftformat `0`, swiftlint `--strict` `0`, placeholder scan `0`
+- Swift-6 strict-concurrency model harness: **43/43**
+- `xcodebuild` (KMP `Shared.xcframework` built fresh): **BUILD SUCCEEDED** — my code + route wiring compile and link clean
+- `xcodebuild test`: **TEST SUCCEEDED** — 17/17
+- Parity **51/51** (13 panels + 1 chart + 4 states + 33 strings)
+
+The only repo-baseline build/test red comes from two **pre-existing, out-of-scope** sibling files (`Input.Previews.swift`, `GDPRExportPageModelTests.swift`) that I'm forbidden to fix and did not touch — zero diagnostics in any of my files. Evidence log ends `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

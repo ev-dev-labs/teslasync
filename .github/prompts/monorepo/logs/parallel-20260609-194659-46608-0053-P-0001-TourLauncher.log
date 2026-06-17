@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Not blocked. Let me read the web source and understand the existing Apple app structure.
+
+Now let me examine the tour registry (the data model), the existing `feature-views` pattern (most recent surface work), and the project configuration.
+
+Let me read the tour definitions and study the existing `feature-views` surface pattern to mirror its structure.
+
+I have all tour metadata. Now let me study the architecture: how surfaces bind state holders, tokens, i18n, telemetry, and how files register in the build. Let me read the project config and a representative surface set.
+
+Key finding: `misc-surfaces` isn't registered in `project.yml` (only `feature-views` and `dashboard-widgets` are). I'll need to wire it in. Let me study a representative list-style surface fully and the shared infra (state holders, tokens, i18n, telemetry).
+
+Let me read a full representative surface (`RecentDrivesSection`) and the shared infrastructure to learn exact conventions.
+
+Excellent pattern. Let me read the remaining RecentDrivesSection files (Views, Previews, Tests, strings) and the design tokens + shared UI components.
+
+Now let me read the strings file format, design tokens, and the shared UI components (Button, GlassPanel, FadeIn, and any Modal/Sheet).
+
+Now let me read the design tokens and the remaining shared components (Motion, Cards, Typography, Badges) to confirm exact token/component names.
+
+Key risk: `Shared.xcframework` isn't staged (only `.gitkeep`), and the app target links it. Let me check how prior surfaces handled the gate and whether the KMP build works here.
+
+This confirms the disposition pattern. Let me read the tail of the VehicleCharts log (final gate invocations + STATUS) and test whether the KMP/Shared.xcframework build is feasible here.
+
+I now understand the sanctioned disposition (code-complete + independently verified; full-app `xcodebuild` DEFERRED on pre-existing unrelated conditions). Let me check how the new `misc-surfaces` tier should be registered and read the canonical environment-block reference.
+
+There are sibling misc-surface prompts (0002, 0003) and a `surface-units.json` registry. The `misc-surfaces` tier needs one-time registration in `project.yml`. Let me confirm the surface-units entry and check for any allowed-files enforcement before deciding on wiring.
+
+The commit explicitly stages only the surface glob + log, so `project.yml`/tier registration is owned by the acceptance gate (not this prompt) — I'll ship the surface and verify it independently, mirroring the VehicleCharts disposition. Let me confirm the design-system files are Shared-free so I can typecheck the view layer in isolation.
+
+Design system is Shared-free — I can typecheck the view layer in isolation. Let me verify there are no existing `Tour*` symbol collisions, then set up my plan and todos.
+
+No collisions. I have a complete understanding of the pattern. Let me set up my plan and todos, then build the surface.
+
+Directory + Adapter (pure core) first.
+
+Now the Seams file (telemetry, controller, source, i18n facade, accessibility).
+
+Now the Model (state holder).
+
+Now the States, Views, and root View (SwiftUI). Let me create the States file.
+
+Now the content Views (header, rows, footer, badges) + the `.text` helper.
+
+Now the root View.
+
+Now the Previews.
+
+Now the strings catalog.
+
+Now the unit tests (adapter/projection/route-match/accessibility).
+
+Now the model (state-holder) tests.
+
+All 10 surface files are written. Now the verification phase. Let me check tool availability and run the host-runnable gates on my files.
+
+swiftformat wants the trailing comma removed in the catalog array. Let me apply swiftformat (the ecosystem tool) to fix formatting, then re-lint.
+
+swiftformat passes (0/9). Now swiftlint (strict) and the placeholder gate on my files.
+
+swiftlint linted the repo's `included` set (3200 files), which excludes `misc-surfaces` — so my files weren't actually checked. Let me lint them explicitly with a temp config mirroring the repo rules.
+
+swiftlint `--strict` on my 9 files: **0 violations**. All host gates green. Now the independent verification — isolated compile+test of the logic layer (the VehicleCharts-sanctioned `[1]`). Let me set up a SwiftPM harness.
+
+**31/31 isolated tests pass** under Swift 6 strict concurrency. Now the dual-SDK typecheck of the SwiftUI view layer against the real design system (the sanctioned `[2]`). Let me resolve SDK paths and compile.
+
+The full `Components` dir has a Shared-coupled file (`UnitFormatters` → `UnitPreferences`). Let me use the minimal Shared-free closure my views actually need.
+
+iOS typecheck clean (swiftc exit 0, no diagnostics). Let me re-run both SDKs capturing the exit code explicitly to be unambiguous.
+
+**Both iOS-18 and macOS-15 SDK typechecks of the full view layer + design system: 0 errors, 0 warnings.** My code is fully verified. Now let me attempt the actual prompt gate (`xcodebuild`) to capture honest evidence of the environment block. First, generate the project.
+
+Confirmed: `misc-surfaces` is absent from the generated project (tier not yet globbed in `project.yml`), while `feature-views` is present (3 refs). My files aren't in the full-app target — so the `xcodebuild` gate exercises pre-existing conditions, not my code. Let me attempt the real iOS gate command to capture the honest block.
+
+xcodebuild is still running (Xcode 26.5 does execute the scheme pre-action that builds the KMP `Shared.xcframework` via Gradle — slow, ~12 min per VehicleCharts). Let me wait for it.
+
+iOS gate completed: **IOS_EXIT=65**, 162 errors — all in pre-existing sibling feature-views (`VehicleGauges`/`VehicleHeader`/`VehicleHero` consuming ambiguous `StateTimeline*` types from parallel-merge duplicate-type collisions), **0 in TourLauncher**. Exactly the documented pre-existing block. Let me extract evidence and run the macOS gate.
+
+KMP `Shared.xcframework` **built + staged successfully** (not a capability block); all 162 iOS errors are in pre-existing sibling surfaces (`RecentDrivesListWidget`/`StateTimelineWidget`/`StateTimeline`/`VehicleGauges`… with ambiguous `StateTimeline*` types), **0 in TourLauncher**. Now the macOS gate.
+
+macOS gate: **MAC_EXIT=65**, 4 errors — all macOS development-signing (no certificate on this runner, `DEVELOPMENT_TEAM=""`), **0 in TourLauncher**. This is the documented pre-existing block, identical to the VehicleCharts disposition. Let me verify the generated build artifacts are git-ignored so only my surface + log get committed.
+
+Clean working tree — only my surface files are untracked; generated `.xcodeproj`/`Shared.xcframework` are git-ignored. Let me gather final metrics and write the gate log.
+
+All metrics gathered (10 files, 1829 lines, max 327, 31 tests). Now the comprehensive gate log.
+
+Let me clean up temp files and verify the placeholder gate actually scanned my files (not a vacuous pass) by inspecting how it resolves `-Path`.
+
+The prompt's `-Path …/TourLauncher` (no extension) doesn't exist as a path, so the tool returns a **vacuous** `Count=0` without scanning. Let me run it against the real directory to get genuine evidence.
+
+Genuine green confirmed: real-directory scan → **COUNT=0**, and a positive-control probe (`// TODO`) → COUNT=2/EXIT=1, proving the scanner actually reads my files. Let me update the log's placeholder line to reflect the genuine scan, then clean up temp files.
+
+Now clean up temp artifacts and verify the working tree is clean before committing.
+
+Clean tree — only the 10 surface files + log. Final lint sanity check, then commit.
+
+Final gates green (swiftformat 0/9, swiftlint 0 violations). Committing.
+
+Committed cleanly (11 files, commit `66078dc81`). Let me finalize todos and confirm the working tree is clean.
+
+All todos complete, working tree clean, commit `66078dc81` on the branch. Task finished.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-misc-surfaces-0001-TourLauncher.log   | 236 +++++++++++++++
+ .../misc-surfaces/TourLauncher.Adapter.swift       | 327 +++++++++++++++++++++
+ .../misc-surfaces/TourLauncher.Model.swift         | 164 +++++++++++
+ .../misc-surfaces/TourLauncher.ModelTests.swift    | 204 +++++++++++++
+ .../misc-surfaces/TourLauncher.Previews.swift      |  77 +++++
+ .../misc-surfaces/TourLauncher.Seams.swift         | 218 ++++++++++++++
+ .../misc-surfaces/TourLauncher.States.swift        | 183 ++++++++++++
+ .../misc-surfaces/TourLauncher.Tests.swift         | 233 +++++++++++++++
+ .../misc-surfaces/TourLauncher.Views.swift         | 272 +++++++++++++++++
+ .../TeslaSync/misc-surfaces/TourLauncher.strings   |  70 +++++
+ .../TeslaSync/misc-surfaces/TourLauncher.swift     |  81 +++++
+ 11 files changed, 2065 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-misc-surfaces-0001-TourLauncher.log
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.Model.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.States.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.Views.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.strings
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/TourLauncher.swift

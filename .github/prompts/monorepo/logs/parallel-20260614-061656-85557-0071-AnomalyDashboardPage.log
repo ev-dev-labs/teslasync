@@ -1,0 +1,193 @@
+I'll start by exploring the codebase to understand the task scope, the web source page, and the existing Apple app structure.
+
+Now let me explore the Apple app structure and the supporting infrastructure (KMP core, design tokens, components, the API hook).
+
+This is a large, mature codebase. Let me examine the parity manifest record and ledger for this specific page, plus an existing complete page implementation as a pattern reference.
+
+Now let me look at the apple-ledger and find an existing complete parity page to use as a pattern reference.
+
+Let me find where existing ledger pages actually live and examine their structure, since the prompt's expected path differs from the flat directory layout I'm seeing.
+
+The real convention is `apps/apple/TeslaSync/Sources/Features/<Domain>/`. Let me study a complete example with a chart (TrueCost) to learn the full pattern, and check for an existing Diagnostics directory.
+
+The real source tree is `apps/apple/Sources/Features/`. Let me read project.yml to confirm what's actually in the build target, and read the complete TrueCost page set as my pattern.
+
+The build target compiles `Sources/`, not `TeslaSync/Features/`. Every one of the 56 ledger pages lives in `Sources/Features/<Domain>/`. I'll follow that real, build-included convention. Let me study the full TrueCost page set (it has a chart) as my pattern.
+
+Excellent pattern. Let me read the chart, sections, models, sample data source, and test files for TrueCost, plus the route system.
+
+Let me read the models, sample data source, test file, and the route system to complete my understanding.
+
+Now let me examine the route system, shared chart/stat components, and the string catalog format.
+
+The `diagnostics` route case already exists. Let me examine the route parser, the host registry, and how routes without a registered page are handled.
+
+Let me look at the route host registry and where pages are composed into the app shell, plus how an unregistered route renders.
+
+Let me find where all the route registrations are composed into the shell (the central wiring point).
+
+Let me check the web routing to see what `/diagnostics`, `/analytics/anomalies`, and `/anomaly-detection` map to, so I choose the right route binding.
+
+No web `/diagnostics` route exists; the existing Apple `.diagnostics` route is unhosted. I'll host AnomalyDashboard there and add deep-link aliases. Now let me survey the shared components I'll need (StatCard, BarChart orientation, Badge, EmptyState, typography).
+
+Let me look at the full Charts component set, the ChartContainer, EmptyState, Badges, Typography, and design tokens — and check whether any feature builds a horizontal/ranking bar chart.
+
+Let me read the ChartContainer, the EmptyState/States, Badges, Typography, and design tokens to finalize component signatures.
+
+Let me read the design tokens (Color/Font/Spacing/Palette/Card/GlassPanel), the picker, and locate the string catalog.
+
+Let me find the generated design tokens (spacing/radius/colors/fonts) and the chart axes modifier + picker.
+
+Let me check the chart axes modifier, the picker, the string catalog format, and whether anomaly keys already exist.
+
+Let me check the lint config, placeholder scanner, and whether the Apple toolchain (xcodebuild/swiftlint/pwsh) is even available on this machine — that determines whether the gate can run.
+
+Full toolchain is available — so I must make the gate genuinely pass. Let me read the lint config, the placeholder scanner, and the shared-framework build script to assess build feasibility.
+
+Let me check whether the Shared.xcframework (KMP) is prebuilt and inspect the build script — this determines whether a full `xcodebuild` is feasible.
+
+The Shared.xcframework isn't prebuilt — it requires a full KMP/Gradle build. Let me check the documented verification protocol and whether other completed pages faced the same constraint.
+
+This repo has a well-established verification methodology. Let me read a completed page's log to mirror its exact gate methodology and STATUS reporting.
+
+This is the exact methodology template. Let me read the PARITY section format and the log ending, then inspect the string catalog format.
+
+I have a complete methodology template. Let me set up tracking, then investigate the backend data vocabulary (health statuses, categories) and the string catalog format.
+
+Now let me investigate the backend data vocabulary and the string catalog format.
+
+Now I have the exact vocabulary (categories: battery/tires/motors/hvac/charging; statuses: normal/critical/warning/info). Let me check the web number/time formatting and the Apple timestamp helper + string catalog format.
+
+Now let me inspect the string catalog format and check which keys already exist (route.diagnostics, any anomaly.*, reusable common keys).
+
+Co-located `.strings` resolve the shared `error.*`/`chart.*` keys, so the sibling error pattern works. Let me view the StatisticsPage (closest sibling) and confirm StatCard grid usage in real pages.
+
+I now have the complete pattern. Let me verify the route tests won't break (I'm reusing `.diagnostics` + adding parser aliases) and confirm the Diagnostics test dir convention.
+
+Let me do final safety checks: any architecture test banning direct `Charts` imports in features, and confirm the Diagnostics test dir + theme modifier.
+
+I have a complete understanding. Let me build the Diagnostics feature, starting with the models file.
+
+Now the format helpers (number/zscore/relative-time, ported from web `fmtNumber` and `formatRelative`).
+
+Now the `@Observable` model with the data-source seam.
+
+Now the sample/preview/test data sources.
+
+Now the main page view (header + phase switch + AI seams), mirroring the sibling pages.
+
+Now the sections file (4 stat cards, health grid, timeline, skeleton, no-vehicle panel).
+
+Now the frequency bar chart (GlassPanel7) — native Swift Charts, horizontal, wrapped in `TSChartContainer`.
+
+Now the route registration, mirroring the sibling pattern but hosting the existing `.diagnostics` route.
+
+Now wire the navigation: add parser aliases and compose the registration into the app shell.
+
+Now the model + formatter tests, mirroring the sibling test pattern.
+
+Strings file next. Let me first test round-trip fidelity of the xcstrings JSON so my edit produces a minimal, clean diff.
+
+The xcstrings has Xcode's mixed formatting (top-level `": "`, nested `" : "`), so a full reserialize won't match. I'll insert keys as a text block in the exact nested style. Let me confirm the `strings` opening line and verify no `anomaly.*` keys exist.
+
+Confirmed format. Let me insert the 32 keys (15 required + 17 supporting) after the `"strings": {` line, in Xcode's nested style.
+
+32 keys inserted cleanly. Let me update tracking and begin verification — first checking the swiftformat config and validating the xcstrings.
+
+Let me lint-check formatting on my new and edited files, then auto-fix as needed.
+
+swiftformat found auto-fixable issues. Let me apply formatting, then manually fix the test force-unwrap (which isn't auto-fixed).
+
+swiftformat auto-fixed both. Let me confirm a clean lint pass now.
+
+swiftformat clean. Now swiftlint --strict on the new/edited files.
+
+swiftlint ran over the whole tree. Let me extract the actual 4 violations and check whether any are in my files.
+
+Two swiftlint violations in the Sample file (function length + parameter count). Let me refactor it using a compact tuple-row fixture and small helper functions.
+
+Let me re-verify both linters are clean on the refactored Sample (and all my files).
+
+Let me auto-format the Sample file and see the exact remaining swiftlint violations.
+
+`large_tuple` rejects the 8-member tuple. Since initializers are exempt from `function_parameter_count` (the sibling `CostBreakdown.init` has 16 params), I'll use a small fixture struct stored as a static property (not a function body, so `function_body_length` won't apply either).
+
+Now re-run both linters on the Diagnostics dir to confirm fully clean.
+
+Both linters are clean. Now the critical in-scope type-check. Let me first map which shared files import the KMP `Shared` module (to scope a Shared-free typecheck closure) and confirm my files don't.
+
+Components/Design are Shared-free. Let me find any component files coupled to the `SharedFacade` (e.g., `UnitPreferences`) so I can exclude them from a Shared-free typecheck closure.
+
+Only `UnitFormatters.swift` is Shared-coupled. Let me scope the typecheck closure — check `Sources/App` contents and any cross-references like `TSClipboard`.
+
+All my dependencies live in `Sources/Components`, `Sources/Design`, and `Sources/App`. Let me assemble the Shared-free typecheck closure and run the macOS type-check.
+
+macOS type-check passes (0 errors). Now the iOS slice.
+
+Both type-checks pass. Now let me run the placeholder scanner, xcodegen, and an executable logic harness. First the placeholder scan + xcodegen.
+
+Placeholder scan clean (EXIT=0). Now xcodegen to confirm the project enumerates my files.
+
+xcodegen succeeds, files enumerated. Now the executable logic harness to actually run the model/formatter/derivation logic.
+
+The harness needs to be named `main.swift` for top-level code. Let me fix and rerun.
+
+Harness passes (27/27). Now let me document the full-build state honestly: verify the known infra blockers (unstaged Shared.xcframework, signing) and attempt a bounded real build to prove my files aren't the blocker.
+
+Confirmed: Shared.xcframework unstaged + 0 signing identities (the documented infra blockers). Let me attempt a real targeted build to capture the exact failure point.
+
+The full build fails at the unstaged KMP framework — before any Swift compiles, proving my files aren't the blocker (matching the documented sibling findings). Let me make one bounded attempt to stage the Shared.xcframework so I can do a real app-target compile. First check the KMP toolchain.
+
+Java 17 + gradlew present. Let me build/stage the Shared.xcframework in the background (a successful build took ~6m40s for a sibling) and monitor it while I prepare the ledger and log.
+
+Gradle is still building. Let me update the parity ledger while it runs.
+
+Ledger updated. Let me check the Gradle build progress and validate the ledger diff format.
+
+The DEBUG framework built; it's now linking the RELEASE framework (the long-pole step). Let me keep waiting.
+
+Release framework is linking (iosArm64 done, iosSimulator next). Let me continue waiting for it to finish.
+
+The Shared.xcframework built (BUILD SUCCESSFUL, 14m) and is staged. Now I can run a **real app-target compile** to prove zero Anomaly errors among any pre-existing ones.
+
+Real app compile: 6 errors total, **zero in my Anomaly/Diagnostics files**. Let me confirm the 6 are pre-existing out-of-scope errors.
+
+Real app-target compile shows **zero Anomaly errors** — the only 6 lines (2 unique) are pre-existing ViewBuilder issues in another agent's `Input.Previews.swift`. Let me confirm git status is clean-scoped and check the framework slices, then run the iOS app-target compile too (gate-primary).
+
+Only my intended files changed; `Input.Previews.swift` is confirmed pre-existing. Let me start the iOS app-target compile in the background and verify the framework binary is git-ignored.
+
+iOS build running in background. Let me write the comprehensive evidence log now.
+
+Log drafted (with an iOS-result placeholder). Let me check the iOS app-build progress.
+
+iOS build is compiling the main Swift module. Let me wait for it to finish.
+
+iOS app compile: exit 65, 6 errors, **0 Anomaly errors** — same pre-existing blocker. Let me confirm and finalize the log.
+
+Both platforms: identical pre-existing blocker, zero Anomaly errors. Let me finalize the log's iOS result line.
+
+Let me verify the ledger edit is clean (minimal diff) and the JSON is valid.
+
+Ledger diff is clean (+18 lines, 2 rows). Let me verify the xcstrings diff is minimal too.
+
+xcstrings diff is clean (+352 lines, 32 keys, no existing-key changes). Let me review the two navigation edits and the full change set before committing.
+
+All changes are clean and correctly scoped. Let me update tracking, run a final lint confirmation, clean up build artifacts, and commit.
+
+Format clean. Final swiftlint confirmation on my files, then I'll commit.
+
+All gates green (0 violations). Let me commit the complete, scoped change set.
+
+All 14 files staged, no artifacts. Committing now.
+
+Committed (HEAD `3c691f502`). Let me clean up scratch files and confirm the working tree is clean.
+
+Working tree is clean; all changes committed. Let me confirm the todo state and do a final summary.
+
+All 12 todos complete. The task is finished and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

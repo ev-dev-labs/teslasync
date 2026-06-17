@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and the key files involved in this parity task.
+
+This is a thin shell page with a 5-tab layout. Let me examine the sub-components, the parity manifest, existing Apple admin pages, and navigation conventions.
+
+The Admin features directory doesn't exist yet. Let me examine the parity manifest record, the Apple Features structure, and existing admin page models/tests for conventions.
+
+The `Features/Admin` directory doesn't exist yet. The existing structure differs from what tests reference. Let me understand the project layout, build config, and existing page conventions.
+
+The `Sources/` directory holds most code. Let me locate where existing admin pages live and how routes/navigation are registered.
+
+Existing admin pages live in `apps/apple/Sources/Features/Admin/` (the prompt's `TeslaSync/Features/Admin` path is a generator default — the real, compiled location is `Sources/Features/Admin`). Let me study the existing admin page conventions thoroughly.
+
+Let me study the simplest admin page (TeslaOrders) and the API Playground page (model + view + route + test) to learn all conventions.
+
+Now I understand the page/model/route pattern. Let me read the model, its test, the AppRoute enum, and the 5 web section sources to understand the full DevTools content and how sub-sections are handled.
+
+The 5 devtools sections are NOT separate parity units in the manifest — so this page unit owns the full shell. Let me read the AppRoute enum and all 5 web section sources to determine the real content scope.
+
+The sections are substantial (15 client-side utility tools, backend tools, reference links). Let me read the constants, tools directory, and remaining sections to scope what's genuinely reproducible natively vs. backend-dependent.
+
+Let me read the two remaining big sections, representative tool files, the design tokens/components, and the AppRoute/registry system.
+
+Let me check Apple toolchain availability and read the design tokens, FleetApiSection structure, and a representative tool.
+
+Full Apple toolchain is available — I can build, lint, and test. Let me read the design tokens and locate the shared UI components I'll use.
+
+Let me read the route tests, a sibling route-registration + its test, the TSButton API, and the generated tokens to finalize my implementation plan.
+
+Now let me examine the string catalog conventions, the placeholder script, the ledger, an existing log, and the gate README to finalize.
+
+Excellent — the ApiPlayground log gives me the exact proven methodology. Let me check the swiftlint limits, the ledger entry format, and search for any exhaustive switches over `AppRoute` that adding a case would require updating.
+
+`WatchDeepLink` is its own enum — safe. The only exhaustive switches are in `AppRoute.swift` itself (systemImage, group). Let me read the placeholder patterns and the exact xcstrings entry format, then set up my plan.
+
+Let me read the structure of the large FleetApiSection to make the Fleet API tab faithful.
+
+I now have a complete picture. This is a thin tabbed-shell page (manifest `requiredCount=2`); the 5 web sections are heavily backend-interactive and are NOT separate parity units. I'll build a faithful native tabbed shell with genuine, backend-free reference content per tab, following the proven ApiPlayground/TeslaOrders patterns. Let me set up my plan and todos.
+
+Xcode 26.5 is available but `Shared.xcframework` isn't staged (a ~10 min KMP build). Let me kick that off in the background while I implement, then fall back to the proven isolated-verification methodology if needed.
+
+Framework build is running in the background. Now let me write the model and value types. Starting with `DevToolsPageModel.swift`.
+
+Now the catalog with static seed data and the health source seams.
+
+Now the main page view with header, adaptive tab bar, and content router.
+
+Now the shared chrome helpers and the section views. Starting with shared chrome.
+
+Now the Fleet API, Infrastructure, and Reference sections.
+
+Let me verify the `TSSkeleton` API before writing the Telemetry section.
+
+Now the Telemetry section with its three data states.
+
+Let me fix the awkward closure in the refresh button and locate the shared text-input component for the Utilities search.
+
+`TSTextField` is the shared input. Let me confirm its signature, then write the Utilities section.
+
+Now the Utilities section with search, grid, empty state, and quick-reference panels.
+
+The Shared.xcframework finished building. Let me confirm it's staged, then continue with route registration.
+
+Framework is staged — full `xcodebuild` is now viable. Let me wire up the route: edit `AppRoute.swift`, create the registration, and chain it in `TeslaSyncApp.swift`.
+
+I opened an extra paren — let me view the closing of that block and balance it.
+
+Route wired. Now let me add all the `devtools.*` localization keys to the string catalog via a precise Python splice (keeps the 188k-line file's format, minimal diff).
+
+All 94 keys inserted, JSON valid. Let me verify every key referenced in my Swift files actually exists in the catalog (catch typos/mismatches).
+
+All keys verified — zero missing, zero dead. Now the model and route-registration tests, mirroring the sibling admin test conventions.
+
+Now let me run the verification gate. First, format and lint my files (the `TeslaSyncApp.swift` indentation needs fixing).
+
+swiftformat wants its house style (wrapped property bodies, wrapped long lines). Let me apply the fix to my files, then re-lint to confirm clean.
+
+swiftformat clean. Now swiftlint --strict on my files.
+
+Three swiftlint issues to fix: test nesting, an opening-brace on the generic `where` clause, and the catalog struct body exceeding 250 lines. Let me fix all three — move catalog data to file-scope constants, simplify the grid generic, and flatten the test error.
+
+Now fix the grid generic and the test nesting.
+
+Now re-run swiftformat + swiftlint on the changed files.
+
+swiftformat and swiftlint both clean (0 violations). Now the placeholder scan and a forbidden-word check.
+
+Placeholder scan clean (0 count). Now regenerate the Xcode project and run the full build + test. Let me start with `xcodegen`, then kick off the macOS test run.
+
+My files are referenced 60× in the project. Let me check whether the framework pre-action skips when already staged (to gauge build time).
+
+The pre-action re-links via Gradle (~7 min) but builds + tests in one shot. Let me kick off the macOS build+test in the background, then write the log/ledger while it runs.
+
+While that builds, let me verify the edited shared files have clean, minimal diffs.
+
+The diffs are clean (swiftformat re-indented the nav chain as expected). Now let me add the two ledger rows via targeted insertion (minimal diff).
+
+Ledger updated. Let me check the build progress.
+
+The framework pre-action completed and it's compiling the app target — no errors so far. Let me wait for it to finish building and testing.
+
+Compiling the full app target (fresh DerivedData, many files) — this is the slow phase. Let me wait longer.
+
+It's actively compiling many files — progressing well, no errors. Let me grep specifically for compile errors and my files.
+
+My DevTools files compiled with no errors. The full app target build continues. Let me wait for completion.
+
+Build succeeded and tests ran, but with 3 failures. Let me identify exactly which tests failed.
+
+There's a test-bundle compile error in a sibling file (`RecentActivity.Tests.swift`) — an invalid redeclaration. Let me confirm it's pre-existing and out-of-scope (not caused by me).
+
+Confirmed: `RecentActivityFeedProjectionTests` is duplicated across two **sibling** test files I didn't touch — a pre-existing collision blocking the whole test bundle. Let me check whether it's the only test-bundle error.
+
+Only one error exists — the pre-existing sibling duplicate. The app target compiled my code cleanly. To actually *run* my tests (the bundle is blocked by the sibling collision), I'll temporarily resolve the duplicate for verification only, run my tests, then restore the sibling file via `git checkout` (committed tree stays clean — the ApiPlayground precedent).
+
+Now run only my two test classes (bundle should compile now). Launching in the background.
+
+While tests run, let me capture host info for the log.
+
+Let me check the test results.
+
+Recompiling and no errors — let me wait for it to finish building and run my tests.
+
+Compiling the test bundle now (no errors). Let me wait for the test execution to complete.
+
+Still building the large app target (no errors). Let me continue waiting.
+
+Build progressing (16k+ lines, no errors). Let me wait for linking and test execution.
+
+Full app recompile in progress (framework re-stage invalidated cache), no errors at 21k lines. Let me keep waiting for tests to run.
+

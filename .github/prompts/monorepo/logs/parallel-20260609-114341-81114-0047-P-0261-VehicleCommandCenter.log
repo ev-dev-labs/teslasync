@@ -1,0 +1,176 @@
+I'll start by exploring the repository structure to understand what exists and verify the Apple toolchain capability required by this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Web source exists. Let me explore the Apple app structure and the web source in depth.
+
+This is a complex component. Let me explore the established native Apple pattern, the `feature-views` directory, the project config, and the web `commands` module it depends on.
+
+There's a rich established multi-file pattern (~2077 files). Let me check whether `VehicleCommandCenter.*` already exists, find a close reference example with mutations/toast/search, and read the web `commands` module dependency.
+
+All sub-components (CommandSearch, CommandTile, ToggleCommandTile, InputCommandTile, CollapsibleCommandGroup) already exist as native feature-views. Only the orchestrating `VehicleCommandCenter` is missing. I can only create `VehicleCommandCenter.*` files. Let me study the web data model and the native conventions.
+
+Let me read the directly-related native command sub-components fully to understand the exact conventions (Model, Adapter, Views, States, strings, Tests, Previews patterns).
+
+This is a mature, highly-structured codebase. Each surface is self-contained with Model/Adapter/Views/States/strings/Tests/Previews. Let me read the rest of the CommandSearch surface and the shared design tokens (P1/S9) to internalize conventions.
+
+Conventions are clear now. Let me read the remaining CommandSearch files and locate the shared P1/S9 tokens and surface-slug helpers.
+
+I now fully understand the conventions. Critical: all feature-views compile into one `TeslaSync` module, so type names must be globally unique. Let me verify the collision-avoidance convention by checking how sibling command surfaces name their types.
+
+Clear now: types are prefixed per-surface (`CommandTile*`), while `CommandDTO`/`CommandMatch` are CommandSearch-owned shared types. Dialog surfaces don't exist natively. Let me check whether any existing feature-view composes other feature-view surfaces, to decide compose-vs-self-contained.
+
+Convention confirmed: surfaces are fully self-contained (no cross-surface view composition). VehicleCommandCenter must reproduce its orchestration internally with `VehicleCommandCenter`-prefixed types. Now the critical capability question — can I actually build/test? Let me assess the toolchain (xcodegen, Shared.xcframework, simulators) and shared view primitives.
+
+xcodegen ✓, iPhone 16 simulator ✓ (booted). But `Shared.xcframework` is empty (.gitkeep only) — the app build pre-action builds it via a KMP script. This is the crux of build feasibility. Let me inspect the build script and shared view primitives.
+
+The Shared.xcframework needs the Kotlin/Gradle toolchain. Let me check whether that's buildable here, whether pwsh + the placeholder checker exist, and read the reusable view primitives (Badges, Cards, Material) plus the command-dispatch/toast pattern.
+
+All prerequisites exist (pwsh, gradlew, java 17, xcodegen, iPhone 16 sim). The Shared.xcframework (KMP/Gradle) is the long pole. Let me generate the Xcode project and kick off the Shared framework build in the background while I write the surface.
+
+Project generated; both `TeslaSync` and `TeslaSync-macOS` schemes exist. Let me kick off the Shared.xcframework Gradle build in the background (long pole) while I write the surface.
+
+Build started in background. Let me read the remaining references I need — the command-tile data types (to avoid name collisions), the collapsible group rendering, and the rest of the commands catalog structure — while the Shared framework builds.
+
+I have a thorough grasp of the conventions and the data model. Let me check the Shared build progress and read how the native app handles units (SI→display) so my adapter matches conventions.
+
+Shared build still running (likely fetching Kotlin/Native). Let me read how `BatteryTab.Adapter` converts SI→display to match the unit-conversion convention.
+
+I have all conventions needed: per-surface self-contained types, own SI converters (`metersPerMile = 1609.344`, `°F = c*9/5+32`), token-driven views, localization facade, telemetry seam, in-memory source. Let me verify the swiftlint baseline constraints (file/type length) and check the Shared build.
+
+Baseline confirmed: files kept under ~396 lines, swiftlint `--strict` clean on CommandSearch. Let me write a plan and start building the surface. First, a quick check on the Shared build.
+
+Shared build still compiling (KMP/Gradle, first run). Let me write the surface files now, starting with the Foundation value types.
+
+Models, Projection, Adapter done. Let me check the Shared build, then write the seams (source/telemetry/toast/strings) file.
+
+Still building. Let me write the seams (telemetry/toast/strings facade/source protocol/update).
+
+Now the model (the observable state holder).
+
+Now the in-memory source for previews/tests.
+
+Let me check the Shared build progress, then write the presentational views.
+
+Shared build still compiling (KMP first-build is slow). I'll keep writing. Now the presentational views (header, stats, banners, search field).
+
+Now the command tiles, grid, favorites bar, and collapsible category group.
+
+The Shared.xcframework build completed. Let me confirm it staged correctly, then continue writing the remaining files.
+
+Excellent — Shared.xcframework built (11m51s) and staged for iOS + macOS, and Gradle is now cached for faster rebuilds. The full build/test path is feasible. Let me write the remaining files: states, dialogs, strings, main view, tests, previews.
+
+Now the command dialogs (input/select/confirm). First, let me add a dialog binding to the model.
+
+Now let me refactor the model's `activate` to take a command ID (the view only has resolved tiles), then write the main composed view.
+
+Now the localization catalog with every key the surface resolves.
+
+Now the adapter/projection tests.
+
+Now the model tests with telemetry/toast spies.
+
+Now the previews for every state.
+
+All 12 files written. Now let me regenerate the Xcode project to include the new files, check file lengths, and run the fast verifications (swiftformat, swiftlint, placeholder check) on my files.
+
+All files under 396 lines. Now let me run swiftformat and swiftlint on my files.
+
+swiftformat found style deviations. Let me auto-fix my files with swiftformat (applies the project's rules), then re-verify.
+
+swiftformat passes. Now swiftlint `--strict` on my files, and recheck lengths after formatting.
+
+Three swiftlint issues: a trailing-closure rule in Dialogs, a brace/wrap in the Tests fixture, and `project()` exceeding 5 non-default params. Let me view the affected sections precisely.
+
+Clear fixes needed. Let me bundle the projector inputs into a `VehicleCommandCenterCatalog` struct (fixes param count), and fix the dialog trailing-closure calls. Let me view the ConfirmDialog section first.
+
+Now let me apply all fixes: add the catalog struct, refactor `project()`, update the model and tests, and fix the dialog trailing closures.
+
+Now update the model's `recompute()` and the test fixtures, and fix the dialog trailing closures.
+
+Now fix the two dialog trailing-closure calls.
+
+Let me re-run swiftformat + swiftlint + placeholder check on all my files.
+
+swiftformat and swiftlint `--strict` both pass on my files. Now the placeholder check (as the gate runs it).
+
+Placeholder check passes (0 found). Now the critical step: the full `xcodebuild` build+test. Let me first kick off the iOS build to verify my code compiles and integrates into the real app target (the long pole — 2000+ files). I'll run it in the background and monitor.
+
+While the iOS build runs, let me proactively fix two issues I spotted on review: a confusing variable shadow in the main view's `subtitle`, and double-optional access in two model tests.
+
+Let me check the iOS build progress.
+
+Build still compiling. Let me re-verify the files I just edited pass format/lint in a separate shell while the build continues.
+
+iOS build completed. Let me read the result and fix the one formatting issue from my edits.
+
+Build failed in my files batch — I need the specific compiler errors. Let me rebuild capturing errors (incremental, so faster now).
+
+Argument-order errors in Previews (my `systemImage` param is declared before `inputPrompt`/`inputParamName`). Let me reorder those two preview commands.
+
+Let me rebuild iOS (incremental now) and check for any remaining errors.
+
+No `error:` lines but BUILD FAILED across unrelated batches — let me look at the actual diagnostic near the failure.
+
+The failure is a non-deterministic `swift-frontend` **compiler crash** (stack dump during IR generation) in `AppearanceSettings.Controls.swift` — a pre-existing file, not mine. The first run crashed in a different batch. This signals memory pressure from highly parallel batch compilation of the 2000+ file module. My files compiled (they're no longer in the failing batch). Let me check memory and retry with reduced parallelism (incremental, so cached files are reused).
+
+64 GB RAM. Let me retry the build (incremental — cached files reused). A non-deterministic compiler crash should clear on retry.
+
+Now it's deterministic in `AppearanceSettings.Controls.swift` (a pre-existing file, not mine) — a `swift-frontend` IRGen crash on a `@MainActor` closure thunk. My files are no longer in the failing batch. I must verify this is pre-existing and not triggered by my change. Let me isolation-test: temporarily move my files out, regenerate, and rebuild.
+
+Building baseline (without my files) to check if the crash persists.
+
+Confirmed: the baseline **without my files also crashes** deterministically in the same pre-existing file `AppearanceSettings.Controls.swift` (swift-frontend IRGen crash). This is a toolchain/pre-existing issue independent of my surface. Let me restore my files and examine the crash to find a build workaround.
+
+This is a confirmed pre-existing Swift 6.3.2 `swift-frontend` compiler bug ("Please submit a bug report") in `AppearanceSettings.Controls.swift` — the baseline without my files crashes identically. Let me check how prior P4 surface gate logs handled builds in this repo, to calibrate the expected outcome.
+
+Prior successful logs used `CODE_SIGNING_ALLOWED=NO`, and some prior logs even mention the same `swift-frontend` crash. Let me see how a prior run handled that crash.
+
+Prior art shows the gate passing elsewhere with `CODE_SIGNING_ALLOWED=NO`, and some runs hit this same intermittent `swift-frontend` crash. The crash may be load/batch-dependent. Let me retry the incremental build with code signing disabled (most files are now cached, so this is faster and changes batch composition).
+
+Deterministic pre-existing crash (4 builds). Retrying won't help. This is a batch-mode `swift-frontend` IRGen bug. Let me (a) kick off a build with batch mode disabled in the background (the standard mitigation for batch-mode compiler crashes), and (b) meanwhile compile and run my Foundation-only core + tests standalone to get real runtime evidence that my logic is correct.
+
+While that builds, let me get real runtime evidence for my core logic by compiling the Foundation-only files standalone and running the key assertions.
+
+The standalone run caught a real bug — in my **test's expectation**, not the code: the `security` category fixture actually has 5 commands (wake_up, lock, sentry, speed_limit, clear_pin), not 4. The code is correct (returns 5). Let me fix the assertion in the XCTest and the harness.
+
+All 33 core assertions pass — real runtime proof my adapter/projection logic matches the web source. Let me check the batch-mode-off build progress.
+
+Core logic verified (33/33). Batch-mode-off build still compiling. Let me also verify the Model layer (activation routing, execution→toast mapping) standalone with SwiftUI, in parallel, for independent evidence.
+
+The batch-mode-off build finished. Let me check its result.
+
+Decisive: even with **batch mode disabled**, the identical `swift-frontend` IRGen crash hits `AppearanceSettings.Controls.swift` (a pre-existing, out-of-scope file). Combined with the baseline-without-my-files also crashing, this is a confirmed pre-existing Swift 6.3.2 compiler bug that blocks the whole app target on this runner — independent of my surface. Let me run the Model-layer harness for completeness, then capture the macOS result and write the honest gate log.
+
+Both harness errors are artifacts of standalone compilation (the harness omits the `VehicleCommandCenter` View type and uses Swift 5 mode) — not real code issues, since `Model.swift` compiled cleanly in the actual app target. Let me add a stub type and compile in Swift 6 mode to match the app target.
+
+These are Swift 6 strict-concurrency issues in my **harness** code (top-level `@MainActor` globals + helper isolation), not the production code. Let me fix the harness helpers' isolation.
+
+All 36 model-layer assertions pass (69 total runtime assertions green). Let me re-verify final lint/format on all files, then kick off the macOS build for honest gate evidence (it compiles the same crashing source).
+
+swiftlint `--strict` is clean (LINT=0). The swiftformat "error" was just because my glob included the `.strings` file (swiftformat only handles `.swift`). Let me confirm format passes on the `.swift` files only.
+
+swiftformat clean (0/14). The macOS build runs in the background. The gate runs swiftlint/swiftformat on the **whole tree**, so let me run those whole-tree checks to get the real gate values.
+
+The whole-tree swiftlint flags a **pre-existing** violation in `LiveSignalSparklinesWidget.Builder.swift` (not my file). Let me confirm via git that I only added my files and these pre-existing issues aren't mine.
+
+Confirmed: only my 15 files are added; both gate blockers (`LiveSignalSparklinesWidget.Builder.swift` lint violation and `AppearanceSettings.Controls.swift` compiler crash) are pre-existing and untouched by me. Let me get the whole-tree swiftformat result and check the macOS build.
+
+The path was wrong (ran from inside `apps/apple`). Let me run the gate's format command from the repo root.
+
+FORMAT gate passes (0/2835 require formatting). macOS build finished — let me read its result.
+
+macOS build crashes identically in the same pre-existing file — both iOS and macOS builds are blocked by the same compiler bug. Let me gather precise evidence snippets, then write the honest gate log.
+
+I have complete evidence. All four build variants (iOS, iOS batch-off, macOS, and baseline-without-my-files) crash identically in the pre-existing `AppearanceSettings.Controls.swift`, and the whole-tree lint flags a pre-existing violation in `LiveSignalSparklinesWidget.Builder.swift` — both untouched by me. Let me write the honest gate log.
+
+Now let me verify git status is clean of build artifacts before committing, and clean up temp build directories.
+
+Git is clean — only my 15 surface files + the log (build artifacts are git-ignored). Let me commit per the prompt's commit step.
+
+All 16 files staged (3,584 insertions). Let me commit with an honest message documenting the surface and the pre-existing gate blockers.
+
+Committed (HEAD `dc8a8bc14`). Let me update the session plan to reflect the final state.
+
+Let me do a final verification that the commit is clean and complete.
+
+The task is complete. Let me summarize the outcome.
+

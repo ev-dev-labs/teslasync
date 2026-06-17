@@ -1,0 +1,120 @@
+I'll start by understanding the task. Let me explore the repository structure, read the web source, and check tool availability.
+
+macOS with Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all available. iPhone 16 simulator is booted. Not blocked. Now let me read the web source and existing Apple structure.
+
+`project.yml` is at `apps/apple/`. Let me explore the Apple app structure deeply to understand existing patterns, state holders, tokens, i18n, and any existing feature-views.
+
+2340 files exist. Let me check if TelemetryGrid already exists, understand the SharedFacade (state holders), and examine a complete representative example to learn the exact pattern.
+
+No existing TelemetryGrid. Let me read the core infrastructure: state holders, units facade, design tokens, motion, and loadable state.
+
+Now let me read the project.yml build config, find the telemetry/diagnostics contract, and locate a representative example that uses Units + a VehicleState-like model.
+
+XcodeGen with file globbing — files in `feature-views/` auto-include. Let me find the best reference example (grid + Units + stagger motion), check for an existing VehicleState model and InfoTile, and the telemetry/diagnostics contract.
+
+`LiveVehicleState` is the closest analog (same domain, uses VehicleState). Let me examine its complete file set as the primary reference.
+
+Excellent reference. Let me read the remaining LiveVehicleState files plus the design tokens.
+
+Now the test patterns and design tokens. Let me read the Tests file and design system.
+
+The tokens are generated. Let me find the design token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) and the feedback components used.
+
+Now the shared component APIs: GlassPanel, EmptyState, Skeleton, and typography.
+
+I have the full native vocabulary. Now I need exact parity semantics: the `VehicleState` shape, `useUnits` formatters (SI inputs), and `fmtInt`/`fmtNumber`.
+
+Now `fmtInt`/`fmtNumber` and how existing feature-views inject the `Units` facade into projections.
+
+`LiveTelemetry` is the closest analog (units + telemetry). Let me read its Adapter, Model, and Projections to learn the Units injection pattern.
+
+The `LiveTelemetry` adapter uses a pure-port pattern. Let me see how its Model/Projections wire the real `Units` facade, and how `DrivingTab` uses it directly.
+
+The pattern is clear: **pure-port** (like `LiveTelemetry`), since I can only touch `TelemetryGrid.*` files and need precision control for the odometer. Let me read the web SI converters/formatters to port them faithfully, plus the unit-conversion instructions.
+
+Let me get the `fmtNumber` globals (`_globalPrecision`, `_globalLocale`, `safeNumber`) for exact parity.
+
+I now have complete parity semantics. Let me check build feasibility: the Shared.xcframework, the staging script, and whether `pwsh` + the placeholder script exist.
+
+I have everything needed for exact parity. Let me check the lint/format configs to comply, then write the files.
+
+Configs are clear (≤120 cols, no trailing commas in wrapped collections, `@testable` at bottom). Let me check for any type-name collisions in the module before finalizing names, and set up my plan/todos.
+
+No collisions. Let me set up the plan and todos, then build the files.
+
+Now I'll create the files, starting with the pure-port Adapter.
+
+Now the Model (state-holder seam, telemetry, strings facade).
+
+Let me add a `Text` helper to the strings facade, then write the Views.
+
+Now the Views file.
+
+Now the main surface view.
+
+Now Previews, strings, and Tests.
+
+All 7 files created. Let me auto-format them, then run swiftformat/swiftlint/placeholder checks.
+
+swiftformat passes (0/3081 require formatting). Now swiftlint --strict.
+
+swiftlint flags the Adapter at 514 lines (>400 limit). I'll split the projection out into `TelemetryGrid.Projection.swift` (also a `TelemetryGrid.*` allowed file). Let me find the split point.
+
+I'll move the tile view-model + projection (lines 306–514) into a new `TelemetryGrid.Projection.swift`.
+
+Both files now under 400 lines. Let me re-format and re-lint all 7 files.
+
+swiftlint --strict passes (0 violations) on all 7 files. Now the placeholder gate.
+
+Placeholder gate passes (COUNT=0, EXIT=0). All static gates green. Now the heavy part: generate the Xcode project and build. Let me update todos and start.
+
+Project generated. The KMP `Shared.xcframework` build (via Gradle) is the long pole and most likely environmental risk. Let me build it directly to de-risk, running in the background.
+
+KMP framework build running in background. Let me monitor its progress.
+
+Kotlin/Native first builds are slow (toolchain download + compile). Let me verify real progress is happening without disturbing the build.
+
+KMP toolchain is preinstalled and a `debug` framework exists from a prior run — it's actively compiling the `release` variant (load avg ~6.7). Let me keep waiting.
+
+KMP `Shared.xcframework` built (6m31s) and staged. Gradle is now cached so subsequent preActions are fast. Let me verify the log directory and start the iOS build+test in the background.
+
+Log dir exists, framework staged, iPhone 16 booted. Starting the iOS build+test in the background (isolated derived data to avoid contention with other slots).
+
+iOS build+test launched (logging to `/tmp/ts-ios-0285.log`). Let me monitor for early errors (preAction, project config).
+
+The build failed — but the errors are in **pre-existing** `StateTimeline.*` / `StateTimelineWidget.*` files (ambiguous type lookups), not mine. Let me get the complete error picture and confirm none are in my files.
+
+576 files appear in the log (mostly cascade noise from the module-wide ambiguity). Let me precisely check whether any **actual error** is attributed to a TelemetryGrid file.
+
+Confirmed: **zero** compile errors in any TelemetryGrid file. All 104 errors are pre-existing ambiguous-type collisions in unrelated sibling surfaces (`StateTimeline`/`StateTimelineWidget`, `LivePowerFlowWidget`, etc.) — outside my allowed-files scope. Let me (1) prove the collisions are pre-existing/duplicate definitions, and (2) prove my surface compiles + tests pass via an isolated harness.
+
+Proven: `StateTimelineLoadStatus`/`StateTimelineConnection` are **duplicate-defined** in two pre-existing tracked files — a baseline collision independent of my untracked additions. Now let me prove MY surface compiles and tests pass via an isolated SwiftPM harness (no KMP, no broken siblings).
+
+Now the Package manifest, then build + test the harness.
+
+Harness library builds cleanly under Swift 6 strict concurrency — my surface compiles. Now run the tests.
+
+**All 30 parity tests pass** (0 failures) and the surface compiles under Swift 6 strict concurrency. Let me capture the iOS app build's exit, then run the macOS build (same module → same pre-existing collisions) to complete the gate evidence.
+
+iOS gate: `IOS_EXIT=65`, 104 errors — **0 in TelemetryGrid.\***. The failure is entirely pre-existing sibling-surface collisions. Let me run the macOS gate (same module → same root cause) to complete the gate record, in the background.
+
+While the macOS build runs, let me capture the whole-tree swiftlint result (part of the gate).
+
+Whole-tree `swiftlint --strict` passes (LINT_EXIT=0). The macOS build finished — let me read its result.
+
+The macOS gate failed at a **different** step — code-signing (no development certificate in this environment), before compilation — plus it shares the same sibling collisions. Both gate failures are outside my scope. Let me gather final numbers and confirm the generated project is git-ignored.
+
+I have complete, honest evidence. Let me write the comprehensive gate log.
+
+Let me verify whether the colliding sibling files are committed (baseline) or concurrent additions, to keep my log precise.
+
+Confirmed: the colliding `StateTimeline*` files are committed baseline (tracked, unmodified at HEAD) — the monorepo's aggregate app target is genuinely red independent of my work. My log is accurate.
+
+Let me verify my repo additions are exactly the intended files, confirm generated artifacts are git-ignored, and clean up transient files.
+
+Working tree is clean — exactly the 8 `TelemetryGrid.*` files + the gate log; the generated project is removed and the staged KMP framework is git-ignored. Let me finalize the todo state.
+
+Let me do a final confirmation of the delivered files.
+
+The TelemetryGrid Apple surface is complete and independently verified. Final summary below.
+

@@ -1,0 +1,282 @@
+I'll start by exploring the repository structure to understand the task context, the web source page, and the existing Apple app architecture.
+
+Now let me explore the Apple app structure and parity infrastructure to understand existing patterns.
+
+The manifest is large. Let me explore the Apple app structure and find the QuickStats parity record.
+
+Let me view the key manifest records and the Apple feature-views directory structure.
+
+The Features directory doesn't exist yet. Let me explore the actual Apple app structure to find where features live and what patterns exist.
+
+This is a large, established codebase. Let me understand the conventions: check for existing QuickStats, look at the apple-ledger, find comparable "page" implementations, and check the build toolchain.
+
+Build tools are available (xcodebuild, swiftlint, xcodegen). Let me examine the project config, ledger, the prompt/log location, and a comparable existing implementation to learn conventions.
+
+There are existing page logs (e.g., admin pages). Let me find where existing pages live and read the full project.yml sources config.
+
+Now I understand: pages live in `Sources/Features/<Domain>/`. Let me explore the Features directory, find a comparable page (analytics/vehicles based), and understand KMP core integration.
+
+A `GlancePage` already exists in the Dashboard domain — the closest analog. Let me study it thoroughly to learn the exact conventions.
+
+The Sources dir is at `apps/apple/Sources/`, not under `TeslaSync/`. Let me read the GlancePage files with the correct path.
+
+Excellent analog. Let me read the rest of the Glance files and find the production data source that binds to the KMP core.
+
+Let me read the Glance sections, sample data sources, route parser, and find the production KMP-backed data source.
+
+I have a strong grasp of the page pattern. Now let me find the route system, the production KMP-backed data source pattern, the analytics use case, currency formatting, and the test pattern.
+
+The Glance page uses only the DataSource seam + Sample default (no direct KMP wiring in-page) — that's the established sibling pattern. Let me examine the Analytics models (for the fleet summary shape), the route system, and the Glance test patterns.
+
+No `quickStats` route exists yet. Let me examine the route parser, host registry, how Glance is surfaced in nav, and how the web app routes `/quick-stats`.
+
+Let me read the app's route registration in TeslaSyncApp.swift, check build prerequisites (xcframework, xcodeproj), and look at an existing DONE log + the gate scripts.
+
+Key finding: the real path is `Sources/Features/`, AppRoute + TeslaSyncApp + xcstrings + ledger are the navigation/registration files. But `Shared.xcframework` is empty. Let me read the full APIKeysPage log to understand the exact gate process and how the build was handled.
+
+This is the definitive precedent. The gate approach is: placeholder scan + swiftformat + swiftlint + xcodegen + isolated dual-platform type-check + executed model harness; full xcodebuild is out-of-scope (empty Shared.xcframework + pre-existing mega-surface crash). Let me write a plan, then gather the remaining specifics (web hooks, Units facade, currency formatting, test patterns).
+
+Now let me gather the remaining specifics: web hooks (analytics/units/formatting), the Apple Units facade, currency formatting, the Glance test patterns, and the shared components used.
+
+Let me read the web analytics types, the Units facade, currency formatting in a sibling, and the Glance test files.
+
+The `Units` facade imports `Shared` (KMP). Since Glance is the closest sibling that also uses `Units` for distance conversion, let me read its log and test files to see exactly how the SI-dependent verification was handled.
+
+Let me read the GlancePage log — the closest sibling that uses SI conversion — to learn its exact verification approach for the `Units`/`Shared` dependency.
+
+The GlancePage log shows a full `xcodebuild build test` succeeded when `Shared.xcframework` was present. Currently it's empty. Let me check the Glance log header (build setup) and whether I can build the KMP `Shared.xcframework` now.
+
+Now I have the full picture: the authoritative path is to build `Shared.xcframework` via the KMP script (~15 min), then `xcodegen` + `xcodebuild` the macOS scheme (excluding the known pre-existing `Input.Previews.swift` breaker). Let me verify Java and kick off the framework build in the background now, so it runs while I write code.
+
+Java 17 present, git clean. Let me see the gradle task the script runs, then start the framework build in the background while I write code.
+
+Starting the KMP `Shared.xcframework` build in the background now — it's the long pole (~15 min). I'll write all the Swift code while it runs.
+
+The framework build is running. Now let me gather the final implementation specifics: component signatures (TSEmptyState/TSCard/TSIconBox/page title), the TSTone enum, sibling currency formatting, the web MetricCard, and the Glance test patterns.
+
+The launcher returned. Let me check whether the gradle build is actually running or failed fast, and read the component/token files I need.
+
+Gradle is actively building (downloading Kotlin/Native, compiling). Let me read the component and token files I need to write correct code.
+
+`TSTone` has neutral/accent/success/warning/danger/info (no cyan/purple). Let me read the Cards, Typography, design tokens, and the web MetricCard to map colors correctly.
+
+Let me read the Theme tokens, generated Tokens, Typography components, and the web MetricCard to finalize color/typography mapping.
+
+The web MetricCards in QuickStats pass **no icon** (color tints only an absent icon), so faithful parity = label + value, no icon. Let me read the generated Tokens, Typography components, the `tsUnits` environment, and check the `tsGlassPanel` modifier.
+
+Now let me read the Typography components, the `tsUnits` environment, the `tsGlassPanel` modifier, and the Glance test files to mirror.
+
+Let me read the `tsUnits` environment/formatters, the glass material modifier, and the Glance test files to mirror.
+
+Let me read the Glance derivations tests, find `UnitPreferences.metric`/`.imperial`, a sibling currency formatter, and the RouteTests.
+
+`AnalyticsFormat.swift` has the exact currency + int helpers I need. Let me read it, the `UnitPreferences` presets, the RouteTests, and how Analytics binds its data source.
+
+I have everything needed. Let me check the build progress and inspect the xcstrings format (around existing `glance.*` and `route.glance` keys) so I can add entries correctly.
+
+DEBUG xcframework is done; RELEASE is still linking (the script stages the release one). Let me view the exact xcstrings entry format for `glance.*` keys, then start writing code while the build finishes.
+
+I have the full xcstrings format. Let me set up todos and inspect the ledger format for the Glance page, then start writing all files.
+
+Let me view the Glance ledger rows to see the exact format and whether a QuickStats row already exists.
+
+No QuickStats row yet — I'll add two after the Glance rows. Let me check the swiftlint config to avoid violations, then write all the Swift files.
+
+swiftlint: 120-line limit (comments exempt), `empty_count`, `first_where` etc. The build is finishing the release framework. Let me write the implementation files now, mirroring the Glance sibling style. Starting with models, format, model, and sample.
+
+Now the `@Observable` model, mirroring `GlancePageModel`.
+
+Now the sample/preview/test data sources, mirroring `GlancePageModel.Sample`.
+
+Let me update todos, check build progress, and inspect the placeholder scanner patterns (to write a clean loading state with zero opt-outs).
+
+The scanner flags `.placeholder`/"Placeholder" (case-insensitive). To stay clean with zero opt-outs (like APIKeysPage), I'll use the shared `TSSkeleton` primitive instead of `.redacted`. Let me check its API.
+
+Perfect — `TSStatSkeleton` and `TSStatGridSkeleton` are ideal for a clean, opt-out-free loading state. Now let me write the sections (sub-views) file.
+
+Now the main page view, mirroring `GlancePage`.
+
+Now the route registration file, plus the `AppRoute` enum additions. Let me also verify there are no other exhaustive `AppRoute` switches I'd break.
+
+Let me check the `WatchDeepLink.swift` switch — it may be exhaustive over `AppRoute`.
+
+`WatchDeepLink` is its own enum — not affected. The only exhaustive `AppRoute` switches are in `AppRoute.swift`. Let me make the 4 additions there.
+
+Now wire the registration in `TeslaSyncApp.swift`, right after the Glance registration.
+
+Now add the 9 `quickStats.*` strings + `route.quickStats` to the catalog, inserted right after the `route.glance` entry.
+
+Let me validate the xcstrings JSON, add the ledger rows, and check the build progress.
+
+Framework built (9m12s) and staged — I can now do a real `xcodebuild`. Let me add the ledger rows and write the test file.
+
+Now the test file, mirroring the Glance test patterns (state machine + derivations + route).
+
+All files written. Now the verification gate. Let me run swiftformat (auto-format) on my new/modified files, then confirm with `--lint`.
+
+swiftformat adjusted 3 files. Let me verify the changes are sane (especially in the modified `AppRoute`/`TeslaSyncApp`), then run `--lint` and `swiftlint --strict`.
+
+Clean diffs — only my intended changes. Now run `swiftformat --lint`, `swiftlint --strict`, and the placeholder scan on my files.
+
+swiftformat clean, swiftlint **0 violations**. Now the placeholder scan.
+
+PLACEHOLDER_COUNT=0 (the 1 ALLOWED is Glance's pre-existing redaction marker, not mine). Let me confirm my files contribute zero, then run xcodegen + the real build.
+
+My files contribute zero placeholders. Now `xcodegen generate`, then the real `xcodebuild`. Let me generate the project first.
+
+Project generated; QuickStats files are included. Now the authoritative step — building the full macOS app (with the known pre-existing `Input.Previews.swift` breaker excluded, per the Glance precedent). Starting it in the background.
+
+Build running in background. Let me monitor its progress.
+
+The build is compiling the mega-surface and reports some failures. Let me inspect the actual `error:` lines to see if any are in my files vs pre-existing.
+
+A real name collision: a pre-existing `QuickStatsGrid` feature-view already defines `QuickStatsVehicleState` (and likely other `QuickStats*` types) in the same module. My types clash. Per the covenant I must NOT edit the sibling — I'll rename MY types. Let me enumerate the existing `QuickStatsGrid` type names to find all collisions, and stop the doomed build.
+
+Root cause: the pre-existing `QuickStatsGrid` widget owns an entire `QuickStats*` type namespace in the same module — my `QuickStatsVehicleState` and `QuickStatsFormat` collide (the other errors cascade). Per the covenant I won't touch the sibling; I'll prefix ALL my page types with `QuickStatsPage`. Let me kill the doomed build and verify the new names are collision-free module-wide.
+
+Let me find the build PIDs explicitly and terminate them.
+
+Build killed. Let me verify my new `QuickStatsPage*` names don't exist anywhere else in the module before renaming.
+
+Confirmed: `QuickStatsPage*` prefix is free; colliders live in `QuickStatsGrid.Adapter.swift`. I'll rename all my page types to the `QuickStatsPage` prefix (keeping `QuickStatsPage`, `QuickStatsPageModel`, `QuickStatsRouteRegistration`). Applying targeted word-boundary renames across my 8 files.
+
+Let me verify no colliding bare `QuickStats<Noun>` type tokens remain in my files (only `QuickStatsPage*`, `QuickStatsRouteRegistration`, and the `.quickStats` route case/string keys should remain).
+
+Clean — all my types are now `QuickStatsPage*` prefixed and collision-free. Let me verify the sample data source renames and route registration, then re-run swiftformat + swiftlint.
+
+All renames consistent; swiftformat clean; swiftlint **0 violations**. The collision is resolved (my types are now `QuickStatsPage*`, widget's `QuickStats*` untouched). Restarting the macOS build (no new files, so no xcodegen needed).
+
+Build running. Let me wait and monitor for errors/completion.
+
+No errors anywhere so far; build still compiling. Let me continue waiting for completion.
+
+Still compiling the app target (0 errors, late-stage "EmitSwiftModule"). Let me wait for the final link.
+
+The app target is a single huge module — whole-module emit is slow but at 0 errors. Let me wait longer for the link.
+
+Still emitting the whole module (0 errors, procs decreasing — progressing). The 5000-file WMO pass is slow. Let me keep waiting.
+
+Past the whole-module type-check (0 errors) — now generating object files. My code type-checks in the full app. Waiting for link.
+
+Final batch compilation of the module (0 errors, `builtin-Swift-Compilation` with `-j20`). Nearly to the link. Let me wait.
+
+**BUILD SUCCEEDED** with 0 errors — the full macOS app builds with QuickStatsPage included. Let me confirm my files compiled, then run the targeted tests.
+
+All my files compiled. Let me find the macOS unit-test target name and the pre-existing test-bundle exclusions, then run the targeted tests.
+
+Test target is `TeslaSync-macOSTests`. Let me run my `QuickStatsPageModelTests` + the `RouteTests` regression (excluding the pre-existing `Input.Previews.swift` + `GDPRExportPageModelTests.swift` breakers, per the Glance precedent). Starting in background.
+
+Test running in the background. Let me monitor it.
+
+The test bundle failed to **compile** due to a pre-existing broken test file (`VehicleCostPageModelTests.swift` — not mine). There may be several such pre-existing breakers. Let me enumerate all of them.
+
+Only `VehicleCostPageModelTests.swift` (not mine) is breaking — zero errors in my test. Let me confirm it's pre-existing (I didn't touch it) and peek at the error, then re-run with it excluded.
+
+Confirmed pre-existing (git shows only my files changed; the error is in a nonisolated `StubSource` default — unrelated to me). The app is already built/cached, so re-running the test only recompiles the test bundle. Let me re-run with `VehicleCostPageModelTests.swift` also excluded, iterating if more pre-existing breakers surface.
+
+Re-running. Let me monitor for compile errors or test results.
+
+Multiple pre-existing broken test files (`VehicleCost`, now `Timeline`, likely more) — a known env issue (`macos-pending-verifications.md`). Iterating one-by-one is slow. Let me enumerate ALL broken test files in a single fast type-check pass against the already-built module. First, the test target's sources and DerivedData path.
+
+Iterating is too slow. Let me enumerate ALL broken test files in one batch type-check pass against the already-built `TeslaSync` module. First locate the built module and gather the test files.
+
+This is a shared DerivedData root (dozens of parallel builds) with 1181 test files — many pre-existing breakers. Rather than fight the broken bundle, I'll execute my logic via a standalone harness (the APIKeys-log approach), compiling my REAL model/format files against minimal shims. Let me write it.
+
+Now the shims and the executable harness that runs my real model + formatter logic.
+
+Now compile and execute the harness (with `-D DEBUG` to include the preview/test seams, Swift 6 strict concurrency to match the project).
+
+**Harness: ALL PASSED** (31 assertions, exit 0) — my model state machine + every formatter execute correctly, compiled under Swift 6 strict concurrency. Now let me execute the route logic (the RouteTests regression) via a focused route harness, since the full test bundle is blocked by pre-existing breakers.
+
+The top-level file must be named `main.swift`. Let me rename and re-run.
+
+Swift 6 top-level isolation issue. Let me wrap the logic in a function.
+
+**ROUTE ALL PASSED** (8 checks) — route metadata, parser, uniqueness invariant, and no-regression all verified. Now let me compile-verify my actual XCTest file against the built module (to honestly confirm it compiles, since the app target doesn't include test files). Let me locate the testable module.
+
+Found it. Let me type-check my two test files against the real built `TeslaSync` module to honestly confirm they compile.
+
+Those errors are XCTest C-macro artifacts of bare `swiftc` (note: "macro 'XCTAssertTrue' unavailable: function like macros not supported") — line 195 cascades from the failed `XCTAssertEqual` macro, while lines 192-194 (`AppRoute.quickStats.path/.group`) resolved fine. Let me capture the FULL error list to confirm the ONLY errors are XCTest macros (not my symbols).
+
+**Conclusive**: every one of the 100 typecheck "errors" is XCTest's C-macro non-expansion in bare `swiftc` (`XCTAssertEqual`/`XCTFail` etc. + their contextual-base cascades) — ZERO reference my symbols. My test file's references all resolve against the real module; only the XCTest harness macros (which work under real `xcodebuild`) don't expand here.
+
+Let me kick off the iOS-Simulator build (to exercise the `#if os(iOS)` adaptive branch, matching the Glance precedent) in the background while I write the evidence log.
+
+Let me update progress tracking and write the comprehensive evidence log while the iOS build runs.
+
+Let me write the comprehensive evidence log now (I'll confirm the iOS build result before finalizing).
+
+Log drafted with a placeholder for the iOS result. Let me check the iOS build progress.
+
+iOS build compiling (0 errors). Let me verify the overall change scope while it runs.
+
+Change scope is exactly right: 4 modified (xcstrings, AppRoute, TeslaSyncApp, ledger) + 8 new Swift files + the log. Let me wait for the iOS build to complete.
+
+iOS build still compiling (0 errors). Let me check its phase and continue waiting.
+
+iOS build is linking (`Ld`) — near the end. Let me wait for completion.
+
+iOS build is compiling both x86_64 + arm64 simulator slices plus widget extensions (2× the work) — 0 errors throughout. Let me wait for it to finish linking.
+
+iOS Swift compilation is done for both arch slices (0 errors — the `#if os(iOS)` branch compiled); it's now in the final link phase. Let me wait for BUILD SUCCEEDED.
+
+Build is at the final "Touch" phase (finalizing app bundles) — BUILD SUCCEEDED is imminent. Let me check.
+
+iOS is now compiling the x86_64 app slice (the arm64 slice's module already emitted cleanly — source is validated; 0 errors). Building both arches of the mega-app is slow. Let me wait for the final 2-arch link.
+
+Both iOS arch slices have passed type-check (EmitSwiftModule, 0 errors); x86_64 is now generating object files. The source is fully validated. Let me wait for the final link.
+
+The iOS build is generating object files for both arches (log grew to 42k lines, 0 errors) — final codegen before link. Let me wait for it to finish.
+
+Final binary linking (both arches, 0 errors) — widgets done, main app preview dylibs linking. Let me check for completion.
+
+iOS build hit a **linker** error (not a Swift compile error — all Swift compilation passed 0 errors for both arches). Let me see what it is.
+
+Let me find the actual linker error message.
+
+Root cause identified: the KMP `Shared.xcframework`'s iOS-Simulator slice is **arm64-only**, but `generic/platform=iOS Simulator` forced an x86_64 link too → `ld: symbol(s) not found for architecture x86_64`. This is a framework-slice/toolchain issue, NOT a code issue — **all Swift compilation passed 0 errors for both arches**. The Glance precedent used a named (arm64) simulator. Let me re-link arm64-only (the arm64 slice is already compiled/cached, so this is fast).
+
+arm64-only iOS build running (arm64 objects already cached, so mainly re-linking). Let me monitor.
+
+**iOS-Simulator (arm64) BUILD SUCCEEDED** with 0 errors — the `#if os(iOS)` adaptive branch compiles. Let me confirm my files compiled for iOS, then finalize the log's iOS result.
+
+All 7 of my files compiled for iOS arm64 (and the pre-existing `QuickStatsGrid.*` widget compiled alongside — confirming my prefix coexists cleanly). iOS arm64 build = 0 errors. Let me finalize the log's iOS result.
+
+The log is finalized with iOS GREEN. Let me do a final lint sanity check, then stage and commit (excluding the git-ignored generated `.xcodeproj`).
+
+All gates green: swiftlint 0 violations, log ends `EXIT=0 / STATUS=DONE`, xcodeproj correctly git-ignored. Let me stage the exact change set and commit.
+
+All 13 files staged cleanly (no stray files). Let me commit.
+
+Committed (`42312e1c6`, 13 files, +1326/-2). Let me update tracking and clean up temp artifacts.
+
+All complete — clean working tree, commit `42312e1c6` at HEAD, temp artifacts removed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-dashboard-QuickStatsPage.log   | 299 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 110 ++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ .../Features/Dashboard/QuickStatsFormat.swift      |  64 +++++
+ .../Features/Dashboard/QuickStatsModels.swift      | 109 ++++++++
+ .../Dashboard/QuickStatsPage.Sections.swift        | 196 ++++++++++++++
+ .../Features/Dashboard/QuickStatsPage.swift        | 128 +++++++++
+ .../Dashboard/QuickStatsPageModel.Sample.swift     |  87 ++++++
+ .../Features/Dashboard/QuickStatsPageModel.swift   |  84 ++++++
+ .../Dashboard/QuickStatsRouteRegistration.swift    |  24 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Dashboard/QuickStatsPageModelTests.swift       | 202 ++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 13 files changed, 1326 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-dashboard-QuickStatsPage.log
+ create mode 100644 apps/apple/Sources/Features/Dashboard/QuickStatsFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/QuickStatsModels.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/QuickStatsPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/QuickStatsPage.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/QuickStatsPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/QuickStatsPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/QuickStatsRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Dashboard/QuickStatsPageModelTests.swift
+[dedupe] no duplicate top-level types

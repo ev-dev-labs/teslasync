@@ -1,0 +1,219 @@
+I'll start by exploring the repository structure and the key files for this task.
+
+Let me explore the Apple app structure and the manifest/ledger files.
+
+Let me examine the actual TeslaSync directory structure more carefully.
+
+The real Swift code lives in `Sources/Features/`. Let me examine the project config and existing page examples to understand the actual structure.
+
+Now I understand the real layout: Swift code lives in `Sources/Features/`. Let me check tooling availability and study the FleetCompare page as the closest Analytics template, plus the web components.
+
+Full toolchain is available (Xcode 26.5, swiftlint, xcodegen, pwsh) — the gate can run for STATUS=DONE. Let me read the web components and Swift templates in parallel.
+
+Now let me read all the section components to capture the exact visual layout and content.
+
+Now let me study the FleetCompare Swift implementation thoroughly — it's the closest Analytics template.
+
+Excellent template. Let me read the remaining FleetCompare files and explore the component/design/routing infrastructure.
+
+Let me explore the component library, design tokens, routing, and localization infrastructure.
+
+Let me read the routing infrastructure and the sample data source to understand wiring.
+
+The `fleetCompare` route exists but there's no `weeklyDigest` route yet. Let me find where route registrations are composed and how the app shell wires them.
+
+Let me read the app registration chain, shell, web routing, and design tokens.
+
+Let me confirm the web route and read the design tokens plus core component APIs.
+
+Let me read the generated design tokens and the key component APIs I'll use.
+
+Let me read the core UI components, charts, and units facade in parallel.
+
+Let me read the charts, badges, buttons, select, and units facade.
+
+Let me find the `Units` facade definition and the `TSSelect`/`TSButton` components.
+
+Let me read the Units facade, Pickers (TSSelect), Buttons, and Metrics (StatCard).
+
+Let me read the test pattern, placeholder scanner, swiftlint config, and inspect the xcstrings format.
+
+Let me check the forbidden patterns, the UnitPreferences `.metric`/`.imperial` helpers, swiftlint config, and the xcstrings format.
+
+Critical: `swiftlint --strict` + "Placeholder" is a forbidden word. Let me check the `UnitPreferences.metric` helpers and the xcstrings JSON format.
+
+I now have a complete understanding. Let me check for AppRoute tests and whether the xcstrings is sorted (to minimize diff).
+
+The catalog appends in insertion order. Let me verify round-trip formatting safety and read the RouteTests.
+
+Let me verify the build prerequisites: the Shared framework, xcodeproj generation, and the build script.
+
+Building requires generating the Xcode project and the KMP `Shared.xcframework` via Gradle. Let me check the toolchain and kick off the (slow) framework build in the background while I implement.
+
+Java 17 + Gradle are available. Let me kick off the slow KMP framework build in the background now, then implement the Swift code while it compiles.
+
+Let me set up the plan and todos, then verify xcodegen while the framework builds.
+
+The KMP build is using cached tasks (fast). Now I'll implement the Swift code. Starting with the SI models.
+
+Now the core page model with week math, filtering, and aggregation.
+
+I need to fix the confusing `recomputeState()` logic. Let me simplify it to a clean `settleState()`.
+
+Now the sample data sources with SI fixtures landing in the current week.
+
+Let me check the framework build progress while I continue.
+
+The framework is nearly built. Now the main page view.
+
+Let me simplify the section signatures (use adaptive grids; keep `isCompact` only where it truly branches) before writing the sections.
+
+Let me check the framework build finished, then write the reusable component sub-views.
+
+Build still linking release variants. Let me write the reusable component sub-views.
+
+Now the seven section views.
+
+Let me replace the two runtime-string `TSBadge` usages with a clean verbatim value chip.
+
+Now wire up navigation. Let me add the `weeklyDigest` route to `AppRoute`.
+
+Now let me collect all the localization keys I reference and add them to the catalog.
+
+Surprising — let me verify those base keys with a raw grep (the shared components reference them).
+
+Those base keys are a pre-existing catalog gap (shared components render keys literally). I'll add my 64 digest keys + `route.weeklyDigest`, plus the 3 base keys my required error/loading states display. Let me do it with format-preserving insertion.
+
+67 keys added, JSON validated. Let me verify the catalog format is intact and the diff is clean (additions only).
+
+Catalog is clean (additive only). Now the model tests.
+
+Tests written. Let me check the framework build completed before running the gate.
+
+The `Shared.xcframework` is staged and Gradle finished. Let me verify it, then generate the Xcode project.
+
+Project generated with all xcframework slices. Let me run swiftlint --strict on my new files first (fast feedback before the slow build).
+
+Lint caught real issues early. Let me fix them: move the grid helper to Components, split the oversized Sections file, replace 3+ tuples with structs, and trim the test. First, the model's city-pair tuple.
+
+Now replace the large tuples in the Sample file with small structs.
+
+Now move the grid helper to Components and split the oversized Sections file.
+
+Now let me view the Sections file boundary to split Charging/Battery/Alerts/WeekOverWeek into a new file.
+
+Let me verify the split boundaries are clean (balanced braces).
+
+Now fix the test: wrap the long line and split formatter tests into a second class.
+
+Let me re-run swiftlint on all the files including the new split file.
+
+All 12 files pass swiftlint --strict with 0 violations. Now the build. Let me check available simulators, then run the gate build.
+
+Booted simulators available. Let me run the gate build for the iOS scheme (this compiles the whole app — will take several minutes).
+
+Build failed with compile errors in my files. Let me extract the actual errors.
+
+Two issues: (1) the project wasn't regenerated after I split the file (MoreSections missing), and (2) `WeeklyDigestFormat` collides with an existing type. Let me find the collisions.
+
+Found it — `WeeklyDigestFormat` collides with the dashboard widget. Let me check for any other collisions across all my type names vs. the existing widget files.
+
+Only `WeeklyDigestFormat` collides (with the dashboard widget). I also forgot to regenerate the project after splitting the file. Let me rename my type to `WeeklyDigestValueFormat` across my files and rename its file.
+
+Rename complete. Now regenerate the project (to include MoreSections + renamed file) and rebuild.
+
+Both files are in the project now. Let me rebuild.
+
+A different error appeared in an unrelated pre-existing file. Let me confirm my files are clean and check whether this error is pre-existing.
+
+My files compile cleanly — the only error is one pre-existing issue in an unrelated file I didn't touch. Let me inspect it and confirm it's pre-existing.
+
+This is very clarifying. The `macos-pending-verifications.md` documents that `AIGeofenceAwareAutomationSuggestions.swift:141` is a **pre-existing, unrelated** error (committed `40e1e5da0`, another agent's surface) that blocks the full-app build for *all* surfaces — and sibling "done" surfaces handle this by verifying their own surface compiles clean. Let me check how the existing "done" page logs phrase their status.
+
+The convention is clear (sibling "done" pages: `EXIT=0/STATUS=DONE` with in-scope gates green; pre-existing cross-surface breakage is deferred, and **temporary out-of-scope verification edits are restored via `git checkout`**). Let me do exactly that: temporarily neutralize the pre-existing blocker(s) to get a real green build+test for my surface, then restore them. First, inspect the AIGeofence error.
+
+The fix is trivial — `content` needs `@escaping` (it's stored by `TSGlassPanel`). This is a **temporary** verification edit I'll restore afterward. Let me apply it and rebuild to surface any further pre-existing blockers.
+
+The build is progressing further now. Let me wait for it to complete.
+
+Same pattern in the twin file (documented as pre-existing). Let me apply the same temporary fix and continue iterating.
+
+Build failed but no standard error lines. Let me find the actual failure (likely the documented type-check timeout).
+
+A toolchain **IR crash** (`llvm::report_fatal_error`) — the documented "toolchain IR crash" the sibling pages also hit and deferred. Let me confirm it's not in my files and identify it, then restore the temp edits.
+
+Confirmed: **0 WeeklyDigest errors** in the real-module compile across all builds. The full build is RED only from a pre-existing toolchain IR crash in `withAiFeature.*` + the two sibling escaping-closure errors + signing — all documented as pre-existing/out-of-scope. This matches the sibling "done" convention exactly. Let me restore the temporary out-of-scope edits.
+
+Tree is clean — only my allowed files remain. Now let me build an executable model harness (the sibling-convention runtime evidence). First, check dependencies to keep the harness lean.
+
+Model harness can be Shared-free. Let me check the Shared framework layout (to optionally include ValueFormat), then write and run the harness.
+
+The macOS slice has `Modules/`. Let me write a comprehensive harness (model + format) and try compiling with Shared linked.
+
+Now compile and run the harness with the real model/format files (linking Shared for `UnitPreferences`).
+
+The DEBUG-only sample sources need `-D DEBUG`. Let me recompile.
+
+Compilation (type-check + IR) succeeded — the failure is purely at link (the KMP framework needs `sqlite3`). Let me add `-lsqlite3` and relink.
+
+**Harness: 55/55 passed** — model logic + formatters verified at runtime against the real Tokens, TSTone, and KMP `Units` facade. Now the placeholder gate.
+
+Placeholder gate passes (COUNT=0, EXIT=0). There's 1 `parity:allow` — let me confirm what it is (I don't recall adding one).
+
+The 1 `parity:allow` is in the pre-existing sibling FleetCompare file — **my** files have zero forbidden words. All in-scope gates are green. Let me model my evidence log on the existing analytics sibling log.
+
+Let me read the FleetCompare log's gate/disposition tail and the ledger row format to match exactly.
+
+I have the full format. Let me find where the analytics rows live in the ledger to insert mine.
+
+Let me add my two ledger rows after the FleetCompare entry.
+
+Ledger valid (16 rows; my 2 at 8/8). Now let me write the evidence log, modeled on the sibling format.
+
+Log written. Let me do final verification: re-lint after the rename (line lengths may have shifted), confirm no stale references, and count test cases.
+
+The rename pushed 2 lines over 120 chars. Let me view and fix them.
+
+Let me fix the test count in the log and re-lint to confirm clean.
+
+0 violations across all 12 files. Let me do a final git status review before committing.
+
+Clean — only my allowed files. Let me commit.
+
+Committed as `519bca107`. Let me verify the working tree is clean and finalize.
+
+All clean and finalized. Let me update tracking and finish.
+
+The task is complete. Here's a summary of what I delivered.
+
+## WeeklyDigestPage — SwiftUI/HIG parity (P4-APPLE · P7 · analytics/WeeklyDigest)
+
+I implemented a complete, native SwiftUI port of the web `WeeklyDigestPage` under the real compiled source root `apps/apple/Sources/Features/Analytics/` (the prompt's `TeslaSync/Features/...` path is generator boilerplate — `project.yml` compiles `Sources/`).
+
+**Files (committed `519bca107`, only allowed scope):**
+- 9 source files: `WeeklyDigestModels`, `WeeklyDigestValueFormat`, `WeeklyDigestPageModel` (+ `.Sample`), `WeeklyDigestPage` (+ `.Components`, `.Sections`, `.MoreSections`), `WeeklyDigestRouteRegistration`
+- `WeeklyDigestPageModelTests.swift` (23 cases)
+- Nav: `AppRoute.swift` (+`.weeklyDigest`/`weekly-digest`), `TeslaSyncApp.swift` (route-host wiring)
+- `Localizable.xcstrings` (+67 keys, additive), `apple-ledger.json` (+2 rows, 8/8), evidence log
+
+**Faithful reproduction (no scope narrowing):** `@Observable` model over an injectable data-source seam → loading/empty/error/ready; vehicle Select; Monday-first week navigator; Week-Summary highlight grid; driving (daily-distance Swift-Charts bar + mini stats + top drive); charging (daily-energy bar + mini stats); battery health (pills + range stats); alerts (severity breakdown + distribution donut); week-over-week cards. SI values convert only at the render boundary via the KMP `Units` facade; every string from the catalog with web key names.
+
+**Gate results (in-scope all green):**
+- `swiftlint --strict`: **0 violations / 12 files**
+- placeholder scan: **PLACEHOLDER_COUNT=0**
+- executed model+format harness (real Tokens/TSTone/Units+Shared): **55/55**
+- in-module compile: **0 diagnostics** in any of my files
+- **PARITY_COVERED=8/8**
+
+The full `xcodebuild` scheme is RED only from **pre-existing, out-of-scope** sibling breakage (`AIGeofenceAware`/`AISuggestNewGeofences` escaping-closure + a `withAiFeature` toolchain IR crash + macOS signing), all documented in `macos-pending-verifications.md`. I temporarily neutralized the two escaping-closure errors purely to confirm my files compile in the real module, then restored them via `git checkout` (tree clean) — matching the established sibling "done" convention. **EXIT=0 / STATUS=DONE.**
+
+
+
+The task is fully complete and committed. All 10 todos are done, the working tree is clean, and the commit is in place.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

@@ -1,0 +1,138 @@
+I'll start by exploring the environment and the web source to understand what needs to be built.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the existing Apple app structure.
+
+Now let me look at the data hook and the existing Apple app structure to understand patterns I need to follow.
+
+The Apple app has a rich established pattern. Each feature view = multiple files (`.swift`, `.Adapter`, `.Model`, `.Views`, `.States`, `.Previews`, `.Tests`, `.ModelTests`, `.strings`). Let me check if TimeOfUseAnalysis already exists and find a chart-based exemplar to follow.
+
+Sibling cost-analysis components already exist natively (`CostPerKwhChart`, `ChargerTypeChart`, `CostForecastSection`). Let me study the closest sibling's full file set as my template.
+
+`CostPerKwhChart` is the ideal template — sibling cost-analysis component with a chart. Let me read its complete file set.
+
+Excellent pattern. Let me read the remaining template files: Chart, Views, Previews, Tests, strings.
+
+Let me read the Previews, Tests, strings, plus the ChargerTypeChart's bar chart and views (closest to my bar+insights layout).
+
+Now let me understand the build system and locate the shared design tokens (TSGlassPanel, Color.TS, Font.TS, etc.).
+
+Build uses XcodeGen (`project.yml`). Let me read the project config, the design tokens, and shared components.
+
+Let me read the shared component/token files and the ChargerTypeChart's bar chart + views (for BarMark and insight-card patterns).
+
+I have the full pattern. Now the critical risk: verifying the build toolchain (xcodegen, Shared.xcframework). Let me check these before writing code.
+
+The build needs a KMP `Shared.xcframework` via Gradle/Kotlin Native. Let me assess feasibility and read the pending-verifications doc.
+
+The pending-verifications doc reveals the established pattern: surfaces are verified in **isolation** (SwiftPM build + `swiftc -typecheck` on both SDKs + lint/format/placeholder), while the full-app `xcodebuild` is deferred to a macOS CI gate (blocked by pre-existing unrelated merge collisions). Let me examine the tooling and shared component signatures.
+
+Let me verify the number formatting, i18n keys in the web catalog, and the placeholder gate rules.
+
+I now understand the full pattern and the placeholder gate (case-insensitive — I must avoid "placeholder"/"TODO"/etc. even in comments). Let me verify the i18n keys in the web catalog and check how prior surfaces logged their isolated verification.
+
+All ToU i18n keys confirmed in the web catalog. Let me read the prior CostPerKwhChart gate log to mirror the exact verification methodology.
+
+This is the gold-standard methodology to replicate exactly. The prior surface verified via an isolated SwiftPM harness (real `Tokens.swift` + `TSDesign.swift` + verbatim `TSFadeIn`/`TSSkeleton`/`TSGlassPanel`) plus iOS-18 typecheck, lint/format/placeholder gates, and documented the full `xcodebuild` as deferred (pre-existing, out-of-scope breakage). Let me find the `tsGlassPanel()` modifier and set up my plan.
+
+Prior parallel runs logged this surface but the code isn't in this slot's tree. Let me read the `tsGlassPanel` modifier and peek at a prior ToU artifact log for any surface-specific gotchas.
+
+This prior artifact log (from a separate branch) confirms my plan precisely — same parity mapping, same isolated-harness methodology, same deferred-xcodebuild disposition. I have everything I need. Let me set up my plan and confirm the adaptive-layout convention.
+
+Both `horizontalSizeClass` and `LazyVGrid` are established conventions. Before writing, let me read the lint/format configs so my files pass `--strict`/`--lint` first time.
+
+Configs are clear (maxwidth 120, before-first wrapping, no trailing commas, `@testable` at bottom). I'll mirror the template style exactly. Let me set up my plan and todos, then write the pure Adapter core first.
+
+Now the pure Adapter core:
+
+Now the Model (seams + observable state holder):
+
+Now the Swift Charts bar chart:
+
+Now the Views (chrome, legend, insight cards, states):
+
+Now the entry view + adaptive layout:
+
+Now the per-state previews:
+
+Now the i18n strings and the test suite:
+
+All 8 files written. Let me update progress and start verification — first the fast lint/format gates on my files.
+
+Minor formatting — let me auto-fix with swiftformat (the ecosystem tool), then re-verify lint + swiftlint.
+
+swiftformat clean. Now swiftlint --strict on my files:
+
+Two `file_length` violations (>400 lines) after auto-formatting expanded property bodies. The idiomatic fix (matching the prior art) is to split: Adapter → Adapter + Projection, and Tests → Tests + AdapterTests. Let me view the current boundaries.
+
+Let me create the Projection file and trim the Adapter:
+
+Now let me trim the Adapter to remove the moved sections, keeping the Surface identity. Let me confirm the boundary first.
+
+Now split the Tests file. Let me find the exact section boundaries.
+
+Now perform the Tests split:
+
+All files now under 400 lines (9 `.swift` + 1 `.strings`). Let me re-run format + lint on the full set.
+
+format + lint clean (0 violations). Now the placeholder gate on my files:
+
+Placeholder gate clean (SELFTEST_EXIT=0, COUNT=0). Now `xcodegen generate` to prove file enumeration:
+
+xcodegen enumerates all 10 files. Now the real-compilation proof — I'll build an isolated SwiftPM harness (real `Tokens.swift`/`TSDesign.swift`/`TSMaterial.swift` + verbatim `TSFadeIn`/`TSGlassPanel`/`TSSkeleton` shims) and run the tests on the macOS host.
+
+Now the verbatim shims and the Package manifest:
+
+Now build the harness (using the full Xcode toolchain):
+
+Harness builds clean under Swift 6. Now run the tests:
+
+All **42 tests pass** on the macOS host under Swift 6 strict concurrency. Now the real-SDK typechecks for iOS 18 and macOS 15 (covering the `#if os(iOS)` branch):
+
+iOS 18 typecheck clean (covers the iOS-only `horizontalSizeClass` branch). Now macOS 15:
+
+All surface-scoped gates are green (build, 42 tests, iOS+macOS typecheck, lint, format, placeholder, xcodegen). Now I'll honestly probe the full `xcodebuild` to capture the real blocker evidence (matching the deferred-gate disposition) and gather pre-existing-condition counts.
+
+This slot's blockers: unstaged `Shared.xcframework` + 320 co-located test files importing XCTest into the app target (note: `DashboardWidgetSize` is only defined once here, so that's not a factor — I'll document accurately). Now the real `xcodebuild` probe:
+
+Probe confirms the honest deferred-gate disposition: **RC=65**, first error is the unstaged `Shared.xcframework`, and **0 TimeOfUseAnalysis mentions** (zero errors attributable to my surface). Let me check git status and confirm the generated project is ignored.
+
+Generated project is git-ignored; the two `.tsx` edits pre-date my task. Let me write the gate log with this slot's actual evidence.
+
+Now add a row to the macOS-pending verifications ledger, matching the established precedent:
+
+The prompt's allowed files are strictly `TimeOfUseAnalysis.*` + the log. The `macos-pending-verifications.md` edit is outside that allowlist, so I'll revert it (the deferral is fully documented in my gate log instead).
+
+Now a final verification pass on the real files, then commit.
+
+All final gates green. Let me commit the allowed files (the 10 surface files + the gate log):
+
+All 11 allowed files staged (the two pre-existing `.tsx` edits correctly left unstaged). Committing:
+
+Committed (`07974c958`). Let me update tracking and do a final clean-state confirmation.
+
+The task is complete and verified. Working tree is clean (only the two pre-existing unrelated `.tsx` edits remain), and the commit contains all 10 surface files plus the gate log.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0119-TimeOfUseAnalysis.log | 209 ++++++++++++
+ .../feature-views/TimeOfUseAnalysis.Adapter.swift  | 248 ++++++++++++++
+ .../TimeOfUseAnalysis.AdapterTests.swift           | 222 ++++++++++++
+ .../feature-views/TimeOfUseAnalysis.Chart.swift    | 195 +++++++++++
+ .../feature-views/TimeOfUseAnalysis.Model.swift    | 310 +++++++++++++++++
+ .../feature-views/TimeOfUseAnalysis.Previews.swift | 116 +++++++
+ .../TimeOfUseAnalysis.Projection.swift             | 183 ++++++++++
+ .../feature-views/TimeOfUseAnalysis.Tests.swift    | 209 ++++++++++++
+ .../feature-views/TimeOfUseAnalysis.Views.swift    | 372 +++++++++++++++++++++
+ .../feature-views/TimeOfUseAnalysis.strings        |  56 ++++
+ .../feature-views/TimeOfUseAnalysis.swift          | 139 ++++++++
+ 11 files changed, 2259 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0119-TimeOfUseAnalysis.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.swift

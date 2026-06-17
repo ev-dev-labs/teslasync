@@ -1,0 +1,179 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the existing Apple app structure.
+
+Let me explore the Apple app structure, the web components this page uses, and the parity manifest.
+
+Let me explore the Apple TeslaSync structure and find the p4-apple README and existing Features.
+
+The actual structure differs from the prompt's assumptions. Let me read the p4-apple README and explore the real Apple app layout.
+
+This is a large existing codebase with established conventions. Let me find existing page files and any existing ApiPlayground artifacts to understand the real patterns.
+
+Now let me check the build tooling, the project configuration, and study the closest analog (AlertStudioPage) plus the parity manifest entry. Let me also check the unit-conversion instructions that apply.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, xcodegen, swift 6.3.2, pwsh) — the gate can run. Key finding: project.yml includes `feature-views/`, `shared-surfaces/` etc., but NOT a `Features/` path. Let me investigate `Sources/Features`, the ledgers, and the AlertStudioPage reference pattern.
+
+Two page conventions exist: canonical `Sources/Features/Dashboard/` and the bulk `feature-views/` (AlertStudioPage). Let me examine both reference implementations and the navigation registration to determine the right pattern.
+
+Now I understand the nav architecture (AppRoute enum + RouteHostRegistry). Let me see how `/api-playground` is routed in the web app, how pages register in AppShell, and study the AlertStudioPage reference pattern.
+
+Let me see the full AppShell, find where the registry is populated, and check the web route grouping context.
+
+Let me read how the registry is composed in TeslaSyncApp and the SettingsRouteRegistration pattern — this is the canonical page-registration model I'll mirror.
+
+Now I understand the registration pattern. Let me check RouteTests (to avoid breaking), extract the exact parity manifest entry, and study a reference page (AppSettingsView) plus available components/tokens.
+
+I have the exact parity spec (2 panels, 4 states, 4 strings, count=10). Adding an `apiPlayground` AppRoute case is safe for RouteTests. Let me study the component library, design tokens, a reference page, and the string catalog.
+
+Let me study the key components (Cards, States, Typography), the design tokens, and a reference page to learn the exact API conventions.
+
+Strong understanding of the component library now. Let me look at the page scaffold pattern, typography, skeletons, design tokens, the strings catalog format, and a reference page/model.
+
+The catalog already has 27 `playground.*` entries. Let me check which exact keys exist, and study the reference page (AppSettingsView/Model) plus Typography.
+
+The 4 required keys are absent (the 27 matches were `sqlPlayground.*`). I'll add all 4. Let me read the reference page (AppSettingsView), Typography, and the design tokens.
+
+Let me check the design tokens, the glass material modifier, the swiftlint config, and the test target setup.
+
+Let me see the rest of the swiftlint config and the test-target wiring in project.yml.
+
+Let me check the schemes, any tests referencing AppRoute (to avoid breakage), and study the closest page-with-model reference (AlertStudioPage ViewModel + its tests).
+
+Let me verify nothing else does an exhaustive switch over `AppRoute` (which would force updates) and check the route-referencing tests for hardcoded counts.
+
+Let me confirm the Spotlight and Menu catalogs won't break when a route is added (these enumerate `AppRoute.allCases`).
+
+Adding the route is safe across all tests (navigate commands & spotlight enumerate `allCases` symmetrically; no hardcoded counts depend on `AppRoute`). Let me read the placeholder scanner (to avoid trigger words) and confirm Font.TS scalability.
+
+Now I understand the placeholder gate (must avoid words like "TODO", "Placeholder", "not implemented", `fatalError`). Let me study how an existing page View instantiates its `@Observable` model (Swift 6 strict concurrency) so my init compiles cleanly.
+
+The injected-model pattern is clear. Let me see exactly how `ExportStatusWidget` builds a `@MainActor` model from a defaulted seam in its init (closest analog) to copy the Swift 6 concurrency approach.
+
+I have everything needed. Let me check the ledger schema/format (referenced in the commit step) and then write my plan.
+
+Let me study an existing p4-apple artifact log to match the expected log format (gate output, `=== PARITY ===` enumeration, EXIT/STATUS).
+
+This is invaluable — it reveals the real gate mechanics and known environmental constraints (broken shared test bundle at HEAD, macOS signing gap, xcframework pre-action). Let me check whether the Shared.xcframework is prebuilt, the build script, and the swiftformat config before I start coding.
+
+Critical findings: `Shared.xcframework` must be built from source via Gradle (slow), and the full XCTest bundle is known-broken at HEAD by out-of-scope files. I'll start the framework build in the background now while I write code, following the established gate precedent.
+
+Background framework build is running. Let me set up todo tracking and create the model file (the core `@Observable` state holder).
+
+Model created. Now the main view — the most important parity artifact (2 panels, 4 states, 4 strings, adaptive + a11y).
+
+Now the route registration (mirroring `SettingsRouteRegistration` exactly for Swift 6 safety):
+
+Now wiring the route into the nav system — editing `AppRoute.swift` (3 switches + enum case) and `TeslaSyncApp.swift` (chaining the registry).
+
+Now let me add the string keys. First let me confirm the exact JSON formatting of the catalog header to anchor my insertion correctly.
+
+Now I'll add all string keys via a safe surgical JSON insertion (the file has 8121 keys, so I'll insert a block and validate).
+
+Now the XCTest for the model (4 states + selection + grouping), placed in the canonical `Tests/Unit` location:
+
+Files created. Let me update todos, check the background framework build, and run the fast static gates (swiftformat, swiftlint, placeholder scan) on my files.
+
+swiftformat enforces house rules (wrap long lines, wrap single-line property/function bodies). Let me auto-format my 4 new files in place (leaving the 2 existing files' tiny edits untouched), then re-lint all.
+
+swiftformat clean. Now swiftlint --strict on my files plus the placeholder scan, and a check on the framework build.
+
+swiftlint scanned the whole project (config `included:` overrides path args). 6 violations exist project-wide — I must check whether any are in MY files. Let me extract the actual violation lines.
+
+The 6 violations are pre-existing in an out-of-scope sibling (`WidgetChartSummary.Tests.swift`) — none in my files. SwiftLint's config `included:` forces a whole-project scan, so let me isolate my files with a temp config mirroring the repo rules to produce clean evidence.
+
+My 4 files pass swiftlint --strict (0 violations). Let me verify the auto-formatted files are still correct and check the framework build progress.
+
+Auto-format preserved all logic. The framework build is nearly done (linking macOS release). Let me wait for it to finish staging.
+
+Shared.xcframework built and staged. Now generate the Xcode project and start the iOS build (the long pole).
+
+Project generated; my files are included (24 references across targets). Now I'll start the iOS Simulator build in the background (full app compile is slow) and poll it.
+
+Build running. While it compiles, let me verify two risk areas in my code compile against existing patterns: the `.teslaSyncTheme()` modifier and the `String(localized:)` usage.
+
+Both patterns are confirmed valid. Now let me monitor the iOS build.
+
+The background job was killed when its parent shell exited (I didn't detach it). Let me restart the iOS build properly using detached async mode so it survives.
+
+iOS build running detached. Let me poll it.
+
+iOS build exited 65 (failure). Let me find the actual errors — critically, whether any are in my files vs. pre-existing/environmental (signing).
+
+No compile errors found. Exit 65 with no `error:` lines suggests a signing/packaging failure. Let me inspect the failure reason.
+
+The failure batch includes my files but is the **x86_64** simulator arch — and the Shared.xcframework only ships `ios-arm64-simulator` (no x86_64). That's the root cause, not my code. Let me confirm there's no actual error in my code before re-running arm64-only.
+
+Zero `error:` lines anywhere — my code has no compile errors. The failure is the x86_64 arch (xcframework only ships arm64-simulator) plus an appex provisioning step. The precedent used a concrete arm64 simulator. Let me find an available simulator and rebuild arm64-only.
+
+Available arm64 simulators confirmed (iOS 26.5). Let me rebuild targeting a concrete arm64 simulator with `ONLY_ACTIVE_ARCH=YES ARCHS=arm64` (matching the xcframework's slices), which also sidesteps the universal-build provisioning step.
+
+Now arm64-only surfaces 1 real `error:`. Let me see it.
+
+The single error is a pre-existing SwiftUI **type-check timeout** in an out-of-scope sibling Preview (`RecentDrivesSection.Previews.swift:24`) — not my code. Per the established gate precedent, I'll verify my code compiles by temporarily neutralizing the out-of-scope blocker (then restore via git, never commit). First, confirm my change set is clean and inspect the blocker.
+
+Change set is clean — only my files. Now I'll temporarily neutralize the out-of-scope blocker (tracked file, restored via `git checkout` afterward), then rebuild to prove my code compiles in Debug.
+
+Build progressed past the first blocker and hit a *second* pre-existing out-of-scope error (`AIGeofenceAwareAutomationSuggestions.swift:141` — escaping-closure, unrelated to me). The tree has multiple pre-existing out-of-scope compile errors. Notably, **zero errors have ever appeared in my files** across all attempts.
+
+Let me get definitive evidence for my model via a standalone Swift 6 host harness (it imports only Foundation/Observation — no module deps), and check the 2nd blocker's references.
+
+Model compiles standalone under Swift 6 strict concurrency. Let me run the harness to execute the state-machine assertions.
+
+**All 13 model assertions pass** under Swift 6 strict concurrency. Now, to reach a clean build proving my *view* compiles, I'll temporarily neutralize the bounded set of pre-existing out-of-scope blockers (restored via git before commit). Let me inspect blocker #2.
+
+The blocker is a pre-existing misuse of `TSGlassPanel` (non-escaping `content` passed into an escaping closure) — notably, my own code uses `TSGlassPanel` correctly with inline literals. I'll apply a minimal behavior-preserving temporary fix (restored before commit) and continue the verification build.
+
+Same trivial pre-existing pattern (`glass(@ViewBuilder content:)` missing `@escaping`) in another out-of-scope AI* file. The build now compiles most of the module (380s). Let me find ALL occurrences of this class of pre-existing bug and fix them in one batch (temporarily), then rebuild.
+
+This is a systematic pre-existing bug class across **71 out-of-scope files** (the generated `glass(@ViewBuilder content:)` helper missing `@escaping`) — plus the separate timeout file. This confirms broad pre-existing breakage at HEAD, out-of-scope and forbidden to commit-fix. As a final verification push, I'll apply the mechanical fix across all 71 temporarily and rebuild once; if it cascades to new classes I'll stop and rely on the strong evidence already gathered. All temp edits restored before commit.
+
+Build exited 65 with **zero `error:` lines** — Swift compilation of the entire module (including my view) succeeded; the failure is now at a later stage. Let me confirm it's the environmental signing/packaging step.
+
+Zero `error:` lines but the SwiftCompile batch (containing my files) "failed" — this pattern (failure with no diagnostic) suggests a compiler crash or a killed process, not a code error. Let me investigate the real failure signal.
+
+Decisive finding: the build now hits a **Swift compiler crash** ("While emitting IR... Please submit a bug report") — a compiler defect in the broken tree, not a code diagnostic. The pre-existing baseline is broadly broken (71-file escaping bug class + timeout file + a compiler IR crash). This is out-of-scope and forbidden to commit-fix.
+
+Let me restore the tree to pristine (keeping only my deliverable changes), then prove my view compiles against the **real** component/token sources in an isolated subset (the authoritative approach).
+
+Tree is pristine (only my deliverables remain). Now the authoritative check: type-check my view + its **real** component/token dependencies as an isolated subset using `swiftc -typecheck` (which also avoids the tree's IR-emission crash). Let me first see if the Components layer is self-contained.
+
+Components/Design/Theme are fully self-contained (only system frameworks). I'll type-check my view + its real dependencies as an isolated subset with `swiftc -typecheck` under Swift 6 strict concurrency — authoritative proof my view's API usage is correct (and it sidesteps the tree's IR crash).
+
+All errors are confined to one unrelated component file (`UnitFormatters.swift`, which needs external `Units`/`UnitPreferences` types I didn't include) — **zero errors in my ApiPlayground files**. My view doesn't use that file. Let me narrow the subset to exactly the component categories my view uses (UI + Feedback + Design + tokens) and re-run.
+
+Down to one error: an unused `Feedback/FeedbackOverlays.swift` references `TSMetricBar` (DataDisplay). My view doesn't use it. Excluding it:
+
+**TYPECHECK_EXIT=0** — my view + model + registration + AppRoute type-check cleanly against the **real** component/token sources under Swift 6 strict concurrency (macOS target). Let me also verify the iOS-specific `#if os(iOS)` adaptive branch compiles by type-checking against the iOS SDK.
+
+Both idioms type-check clean (macOS EXIT=0, iOS EXIT=0), and catalog keys survived. I now have comprehensive evidence. Let me record the full transcript and write the parity log.
+
+All evidence gathered. Now I'll write the comprehensive parity log with the binding `=== PARITY ===` section (10/10) and honest gate transcript.
+
+Now the parity ledger (per the prompt's commit step), then I'll validate everything and commit.
+
+Now final validation (JSON validity, re-confirm the fast gates after restore, verify AppRoute edits) before committing.
+
+All gates green. Let me clean up temporary build artifacts, do a final change-set review, and commit.
+
+Change set is exactly my deliverables. Staging and committing:
+
+Committed (`1cb3821ba`, 9 files, +997). Let me finalize todos and do a last clean-state check.
+
+The task is complete. The working tree is clean and the artifact is committed.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-ApiPlaygroundPage.log    | 171 +++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 176 ++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ .../Sources/Features/Admin/ApiPlaygroundPage.swift | 316 +++++++++++++++++++++
+ .../Features/Admin/ApiPlaygroundPageModel.swift    | 180 ++++++++++++
+ .../Admin/ApiPlaygroundRouteRegistration.swift     |  20 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   8 +-
+ .../Admin/ApiPlaygroundPageModelTests.swift        | 101 +++++++
+ apps/parity/apple-ledger.json                      |  24 ++
+ 9 files changed, 997 insertions(+), 5 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-ApiPlaygroundPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiPlaygroundPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiPlaygroundPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiPlaygroundRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/ApiPlaygroundPageModelTests.swift
+ create mode 100644 apps/parity/apple-ledger.json

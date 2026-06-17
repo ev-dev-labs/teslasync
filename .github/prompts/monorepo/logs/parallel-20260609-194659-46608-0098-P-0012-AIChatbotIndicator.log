@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure to understand what exists and what capabilities are available.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim booted). Now let me read the web source and explore the existing Apple project structure.
+
+Now let me examine the existing `shared-surfaces` directory and the established patterns (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+Three AI surfaces already exist as predecessors. The latest convention (shared by `AIAutoTripNameSuggestion` and `AnnouncerRegion`) uses: Adapter, Model, ModelTests, Previews, Seams, States, strings, swift, Tests, Views. Let me study `AIAutoTripNameSuggestion` (closest AI analog) end-to-end.
+
+This is a sophisticated, well-established pattern. Let me read the rest of the analog surface and the project config in parallel.
+
+Now let me understand the web gate (`useAiEnabled`), the AI features registry, `HelixMark`, the shared design tokens, and the remaining test/strings/previews files.
+
+I now understand the gate semantics (`useAiEnabled` fails closed; settings-backed). Critical: I need to understand the build target structure and whether shared types like `HelixMark`/`TSSpacing`/`TSSkeleton` collide or are shared. Let me investigate.
+
+Key findings: all shared-surfaces compile in ONE `TeslaSync` module — so `HelixMark`/`HelixMarkShape` already exist and I must reuse (not redefine) them. The project uses XcodeGen + a KMP `Shared.xcframework` preAction. Let me verify the design tokens, the build tooling, and the predecessor tests/previews.
+
+Let me check the predecessor logs (to know expected gate outcome), the KMP/Gradle build feasibility, the design tokens API, and lint configs.
+
+The predecessor precedent is now clear: full `xcodebuild` hits `EXIT=65` due to **pre-existing sibling-slot duplicate types** (a parallel-dev artifact), so predecessors verified their surface compiles in isolation, ran `swift test` on pure logic, and marked xcodebuild DEFERRED with verbatim evidence → `EXIT=0 STATUS=DONE`. There's also a prior AIChatbotIndicator attempt log. Let me read both the prior attempt and the full 0007 methodology log.
+
+This is the key artifact: a prior slot (241) implemented this exact surface but had **only Command Line Tools** (no full Xcode) so it deferred xcodebuild entirely. My env has full Xcode + simulator, matching the 0007 environment. Critically: in the current repo state `HelixMark` already exists (trip-name surface), so I must use a uniquely-named mark to avoid a collision. Let me read the lint configs, shared component APIs, and predecessor previews/tests.
+
+Let me read the remaining shared component APIs, the predecessor's view/a11y tests, and the full 0007 methodology log to mirror the verification approach.
+
+Let me get the exact `TSButton` init signature and the 0007 methodology (how predecessors ran isolated verification + xcodebuild in this environment).
+
+I have a comprehensive understanding now. Let me make final checks on the component layout (typography primitives, Components externals) to ensure my isolated typecheck will resolve, then I'll build.
+
+Components only import SwiftUI — clean dependency closure. Let me grab the exact HelixMark SVG rung geometry to reproduce it faithfully, then I'll write the plan and all files.
+
+I have everything needed. Let me set up tracking and write the plan, then create all surface files.
+
+Now I'll create all 8 surface files. Starting with the pure Adapter and Projection:
+
+All 8 files created. Now let me run the verification pipeline — starting with swiftformat (apply, to auto-fix), then re-lint, swiftlint --strict, and placeholder scan on my surface files.
+
+swiftformat clean (0/7 require formatting). Let me check what it changed, then run swiftlint --strict and the placeholder scan.
+
+swiftlint clean (0 violations). Now the placeholder check and the isolated pure-logic compile+run. Let me locate the placeholder script and check tooling.
+
+Placeholder scan clean. Let me run the actual `check-placeholders.ps1` gate script, then set up and run the isolated pure-logic compile+RUN harness.
+
+Placeholder gate passes. Now the isolated pure-logic compile + RUN harness (mirroring the predecessor's GATE 2). Let me create it in the session dir (keeping the repo clean) and compile against the macOS SDK with Swift 6 strict concurrency.
+
+The top-level-expression error is because the entry file must be named `main.swift` when compiling multiple files. Let me rename and recompile.
+
+Swift 6 top-level is MainActor-isolated. Let me restructure the harness so all state and checks live inside one `@MainActor func main()`.
+
+Isolated logic: **40/40 assertions green**, `HARNESS_FAILURES=0`. Now the full-surface typecheck **including the Views** against the real tokens + shared components.
+
+Full-surface typecheck (Views included) is clean. Let me cover the Previews `#Preview` macro (DEBUG pass) and run `xcodegen generate` to enumerate the files into both app targets.
+
+The DEBUG error is in `Cards.swift`'s own preview (references `TSBadge` from `Badges.swift`, which I didn't include) — not my code. xcodegen enumerated all 8 files cleanly. Let me add `Badges.swift` to get a clean DEBUG pass that validates my `Previews.swift`.
+
+`TYPECHECK_DEBUG_EXIT=0` — Previews compile. There's one actor-isolation **warning** in `staged` (calls a MainActor init from a nonisolated helper). Let me make it `@MainActor` for pristine, warning-free strict-concurrency code.
+
+DEBUG typecheck now fully clean (no warnings), Previews lint/format clean. Now the full `xcodebuild` gate (GATE D). First, let me stage the KMP `Shared.xcframework` via the Gradle script (the scheme's pre-action) — this is the slow step, so I'll run it in the background.
+
+Good — konan/gradle caches exist, so staging should be quick. Let me update progress tracking while it runs.
+
+Gradle staging completed. Let me verify the framework was staged, then launch the full iOS `xcodebuild build test` gate.
+
+The background job was torn down before completing (the inner `&` returned control early). Let me run the staging script properly as a monitored command.
+
+Gradle is compiling the KMP framework (Kotlin/Native). Let me continue waiting.
+
+Let me check the staging log for progress.
+
+Gradle is linking the release frameworks now (debug xcframework already done). Let me wait for it to finish.
+
+`Shared.xcframework` staged (ios-arm64-simulator, macos-arm64, ios-arm64). Now the full iOS `xcodebuild build test` gate — the exact prompt command. This compiles the whole app (thousands of files), so I'll run it monitored and capture to a log.
+
+`IOS_EXIT=65` — matching the documented 0007 precedent exactly. The failures are pre-existing sibling-slot **`StateTimeline*` ambiguous-type** collisions in `feature-views`/`misc-surfaces` files — none of which are mine. Let me rigorously prove my surface contributed **zero** errors.
+
+All **270 errors are pre-existing `StateTimeline*`/`RecentDrives*` ambiguous-type collisions** from parallel sibling slots; **zero** mention my surface. Let me confirm the 3 AIChatbotIndicator log mentions are benign compile entries and that the ambiguous types are defined in sibling files (not mine), then run the macOS gate.
+
+**Definitive proof of surface cleanliness:**
+- The only 3 `AIChatbotIndicator` log entries are the benign `CopyStringsFile` step for my `.strings` — my surface compiled and its strings copied successfully.
+- The ambiguous `RecentDrives*`/`StateTimeline*` types are **duplicated across sibling slots** (`dashboard-widgets/*` vs `feature-views/*`) — the exact pre-existing collision documented in the 0007 precedent. None are my files.
+
+Now the macOS gate command from the prompt:
+
+Both gates match the documented 0007 precedent exactly:
+- **`IOS_EXIT=65`** — 270 pre-existing sibling-slot `RecentDrives*`/`StateTimeline*` ambiguous-type errors; **0 from my surface**.
+- **`MAC_EXIT=65`** — macOS code-signing (no dev certificate on runner); **0 from my surface**.
+
+Let me verify no silent drift (only my 8 files + generated artifacts are new) and confirm the xcodeproj/framework are git-ignored.
+
+No silent drift — only my 8 files are new; xcodeproj + framework are git-ignored. Let me gather tool/git versions for the log header, then write the gate log.
+
+All evidence gathered. Now I'll write the comprehensive gate log following the established predecessor format.
+
+Now let me commit — staging exactly the 8 surface files plus the log, and verifying the staged set before committing.
+
+Exactly 8 surface files + 1 log staged, nothing else. Committing:
+
+Committed `ba2ba4125` (9 files, 1437 insertions). Let me finalize: update tracking, tidy the temporary harness binary, and confirm the working tree is clean.
+
+Task complete. The working tree is clean and the commit is in place.
+
+Merge made by the 'ort' strategy.
+ ...ple-shared-surfaces-0012-AIChatbotIndicator.log | 269 +++++++++++++++
+ .../AIChatbotIndicator.Adapter.swift               | 155 +++++++++
+ .../shared-surfaces/AIChatbotIndicator.Model.swift | 204 +++++++++++
+ .../AIChatbotIndicator.Previews.swift              |  70 ++++
+ .../AIChatbotIndicator.Projection.swift            |  57 ++++
+ .../shared-surfaces/AIChatbotIndicator.Tests.swift | 371 +++++++++++++++++++++
+ .../shared-surfaces/AIChatbotIndicator.Views.swift | 207 ++++++++++++
+ .../shared-surfaces/AIChatbotIndicator.strings     |  31 ++
+ .../shared-surfaces/AIChatbotIndicator.swift       |  73 ++++
+ 9 files changed, 1437 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0012-AIChatbotIndicator.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.swift

@@ -1,0 +1,66 @@
+I'll start by exploring the environment and the web source specification, then determine the existing Apple app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify the exact capability boundary and explore the existing Apple app structure — this determines whether I can BUILD/TEST or must mark the gate BLOCKED while still shipping complete code.
+
+`Xcode.app` exists in /Applications — the active dir is just pointing at CommandLineTools. Let me test whether `DEVELOPER_DIR` override unlocks the toolchain, and explore the existing widget patterns.
+
+Capability is AVAILABLE via `DEVELOPER_DIR` (Xcode 26.5, iOS 26.5 sim, iPhone 16 booted). I will NOT mark BLOCKED. The target dir already has 706 files with an established multi-file widget pattern. Let me find whether ClimateStatusWidget exists and study the established pattern.
+
+`ClimateStatusWidget` doesn't exist yet. Closest domain reference is `ClimateHistoryWidget` (climate, but chart-based). I need a simpler row-based reference too. Let me read the web-side contracts (WidgetShell, types, registry, hook) and survey reference Swift widgets in parallel.
+
+Now I understand the web contract. The best references are `ClimateHistoryWidget` (same climate domain — shows hook binding, strings, registry) and `GuardModeWidget`/`ChargeStatusWidget` (row + chips structure, no chart). Let me read the shared infra and the climate-domain reference fully.
+
+The pattern is clear and rich. Now let me read the full set of climate-domain reference files (Model, Projection, strings, Previews, Tests) plus the shared facade to understand state-holder binding, units, and telemetry.
+
+Excellent reference architecture. Now let me read the strings/previews/tests patterns, the web `useClimateLatest` hook + climate type, and the design token definitions to confirm available primitives.
+
+Let me read the exact `useClimateLatest` hook implementation and the climate type definition, plus confirm the design tokens.
+
+Now I have the data contract. Let me read the design tokens, the test pattern, and confirm how `dashboard-widgets` files get compiled (project.yml).
+
+Build globs `dashboard-widgets/**` (excluding `*Tests.swift`). Let me confirm the exact color tokens available, the test target wiring, and the established test pattern.
+
+I now have the full token set and build wiring. Let me read the established test pattern, confirm the Xcode project generation flow, and check a chip/row reference widget.
+
+No committed `.xcodeproj` — it's xcodegen-generated. Let me confirm the project-generation flow, whether `Shared.xcframework` is prebuilt (KMP dependency), and the exact Font/spacing token members.
+
+I have everything needed. Let me verify whether there's a central native widget catalog I must register into, and how registrations are aggregated, before writing code.
+
+No central registry to update — each surface owns its `registration` (90 exist). Crucially, `ClimateHistoryWidget` already defines shared `Climate*` types in the same module, so I must namespace mine as `ClimateStatus*` to avoid redeclaration. Let me confirm no `ClimateStatus` symbol exists yet, then set up tracking.
+
+Confirmed: `ClimateStatus*` type prefix is free, and `TemplateGallery.Catalog.swift` already lists `climate-status` at 1×2/1×2/2×40 with icon `thermometer.medium` — validating my metadata. I'll namespace all types `ClimateStatus*` to avoid collisions with `ClimateHistory`'s shared `Climate*` types. Let me read the lint/format configs to comply, then set up tracking.
+
+I have all the constraints (swiftlint strict ≤120 lines, swiftformat before-first wrapping, `--self remove`). Let me set up tracking, check `pwsh`/placeholder patterns, and write the plan.
+
+`pwsh` is available; placeholder patterns are clear (avoid TODO/FIXME/stub/mock/placeholder/Lorem/"not implemented"/`fatalError("unimpl"`). Let me write the plan, then create all six files.
+
+Now writing the six files. Starting with the pure-domain projection adapter.
+
+Now the strings catalog and the test suite.
+
+All six files written. Let me run the fast checks first (swiftformat, swiftlint) on the new files to catch issues before the heavy xcodebuild gate.
+
+swiftformat clean. Now swiftlint strict on the new files.
+
+Both fast checks pass (0 issues). Now the heavy gate. First generate the Xcode project (picks up new files) and assess the KMP `Shared.xcframework` build dependency.
+
+Project generated with my files (36 refs), JDK 17 + gradlew present. The KMP `Shared.xcframework` build is the slow/risky pre-action — let me warm it up directly first so I can isolate any failure.
+
+KMP first-build is compiling (downloads Kotlin/Native deps). Let me keep waiting.
+
+Still compiling (~7 min). Kotlin/Native first-time setup downloads the compiler toolchain. Continuing to wait.
+
+~11 min elapsed. Let me check in a separate shell whether it's actively progressing (Kotlin/Native processes, downloads) versus stuck.
+
+Machine is shared across parallel slots (many `swift-frontend` processes from other builds) — CPU contention is slowing my Gradle build. Konan toolchain (2.4.0) is already downloaded, so it's compiling, not stalled. Continuing to wait.
+
+~15 min. Let me verify forward progress in the Gradle build artifacts.
+
+Progress confirmed: release frameworks for iOS targets built, Gradle active at ~42% CPU, assembling the release XCFramework now. Continuing to wait.
+
+Release XCFramework still linking (Kotlin/Native release optimization is slow, worsened by CPU contention). Java active at 35%. Waiting more.
+
+`Shared.xcframework` built (22m) and staged — the heavy KMP dependency is now warm and incremental for subsequent runs. Now running the real iOS gate. Let me set up the log and kick off `xcodebuild build test`.
+
+Now the iOS build. I'll run `build-for-testing` first (the real compile of my code in the full app + test bundle), then execute tests on the reused build — equivalent to `build test` but lets me verify compile separately. Kicking it off.
+

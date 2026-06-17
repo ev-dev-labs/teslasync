@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Now let me study the web source constants and existing Apple patterns.
+
+The pattern is well-established (174 feature-views already done). Let me examine a complete reference example and check for similar static-link views.
+
+Standard 7-file pattern confirmed: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me read a complete canonical example plus a "Section" example end-to-end.
+
+Now let me read the remaining files of the canonical example and locate the shared P4 core components.
+
+Let me read the Tests file and locate the shared P4 core components (TSGlassPanel, Color.TS, Font.TS, etc.).
+
+Let me examine the project config, test target setup, shared core components, and whether the Xcode project is pre-generated.
+
+Found the shared component locations. Let me read the design tokens and the exact APIs of the components I'll use (TSGlassPanel, TSButton, TSSkeleton, TSFadeIn).
+
+Let me read the design tokens and the key shared component APIs.
+
+Now let me read the exact APIs of the shared components I'll compose with, plus the placeholder-checker.
+
+`TSGlassPanel` has no `hover` param (native handles interaction via tap). Now let me check PowerShell availability for the gate, the placeholder-scan logic, and confirm the freshest committed widget pattern.
+
+I now understand the full pattern. Let me check the realistic verification bar by reading a recent gate log, the macOS-pending notes, and the scanner's path behavior.
+
+I now understand the established precedent clearly (ADR-012: surface-isolated verification green + full-app `xcodebuild` deferred via `macos-pending-verifications.md`). This runner has Xcode 26.5, so I'll also attempt the real gate. Let me gather the i18n values, lint configs, the external-link idiom, and sibling devtools ports.
+
+Sibling devtools ports exist. Let me read the web i18n values, the closest sibling (`ClientUtilitiesSection`), and the external-link idiom.
+
+The `devtools.ref.*` keys aren't in the catalog (web renders humanized fallbacks, matching the sibling precedent). Let me read the external-link idiom and the sibling's state-holder/catalog model, then I'll have everything to write the surface.
+
+I have the full pattern. Let me look at the external-link idiom in context and the sibling's icon-tint mapping (web `ICON_COLOR_MAP`), then write the surface.
+
+Let me confirm the responsive grid idiom and check for any public-symbol collisions before writing (collisions are the #1 full-app build risk noted in the precedent).
+
+No collisions, grid idiom confirmed. Let me set up a quick todo list and start writing the 7 surface files.
+
+Now the Previews, strings, and Tests files.
+
+All 7 files written. Let me run swiftformat and swiftlint on my files first (fast feedback), then do deeper verification.
+
+swiftformat flagged fixable issues. Let me auto-format with the ecosystem tool, then re-check what remains.
+
+swiftformat passes. Let me review its changes and run swiftlint --strict.
+
+swiftlint --strict: **0 violations**. swiftformat: **clean**. Now the gold-standard check — an isolated SwiftPM build+test harness (per the ADR-012 precedent) that actually compiles my code and runs the unit tests, using the real design Tokens + minimal shims for the shared UI components.
+
+Surface compiles cleanly under Swift 6 mode (incl. Previews). Now run the unit tests.
+
+One test fails out of 22. Let me find which.
+
+My test assumed `URL(string:)` rejects `"not a url"`, but the current SDK leniently percent-encodes it. Let me find a reliably-nil input on this platform and fix the test.
+
+`""` is the reliably-nil case. Let me fix the test to use a blank href (portable across SDKs).
+
+All **22 tests pass**. Let me re-verify format/lint on the edited test file, then typecheck against both the iOS 18 and macOS 15 SDKs (cross-platform proof).
+
+Format/lint clean on the edited test. Now typecheck the surface against both SDKs (iOS 18 + macOS 15 deployment targets).
+
+Both SDK typechecks pass with zero diagnostics. Now the placeholder gate — I'll run it honestly against my actual files (the prompt's literal prefix path resolves to "nothing to scan").
+
+The word "placeholders" in a comment trips the scanner. Let me reword it.
+
+Placeholder gate: **COUNT=0**. Now I'll attempt the real `xcodebuild` gate. First, generate the Xcode project and check the Shared.xcframework prerequisite.
+
+Shared.xcframework is absent (it's a KMP/Gradle artifact, itself `macos-pending` per `p1-shared/S3`). The scheme's pre-action builds it via Gradle. Let me generate the project and confirm my files are enumerated, then attempt the real build.
+
+Project generated; all 7 files are enumerated. Now I'll attempt the real iOS `xcodebuild` gate. The scheme runs a Gradle pre-action to assemble the (currently-absent) KMP `Shared.xcframework`. Let me run it in the background and monitor.
+
+The KMP/Gradle toolchain IS working here (tasks resolving FROM-CACHE) — the pre-action is assembling `Shared.xcframework`. The full build may actually proceed. Let me keep waiting.
+
+The pre-action is finishing the release XCFramework. Let me continue waiting for the Xcode compile phase to begin.
+
+Gradle is doing the (uncached) release native-link of the XCFramework — the slow part. It's progressing. Let me wait further.
+
+The full app build failed (exit 65) — but the failing compile batches are other surfaces (WidgetPicker, WhyEndedPanel, CommandHistory…), not mine. Let me extract the actual compiler `error:` lines to identify the cause.
+
+All errors are pre-existing **`'X' is ambiguous for type lookup`** duplicate-symbol collisions in `dashboard-widgets/ChargeStatus*` / `ChargeSessionChartWidget` (`ChargeSessionDTO`, `ChargeStatusProjection`, `ChargeUnitPrefs`, …) — the exact parallel-merge collisions documented in `macos-pending-verifications.md`. Let me confirm zero of my files are implicated and that these dupes are pre-existing (independent of my change).
+
+**Definitive confirmation:**
+- **Zero** `ReferenceLinks` errors in the full-app build — my surface compiled clean in the real iOS app target (Gradle `Shared.xcframework` pre-action succeeded).
+- All failures are pre-existing **duplicate-symbol collisions** in `dashboard-widgets/ChargeStatus*` (e.g. `ChargeStatusProjection`/`ChargeSessionDTO`/`ChargeUnitPrefs` each defined in 2 files), untouched by me (clean `git status`) — the exact precedent in `macos-pending-verifications.md`.
+
+Let me capture the macOS gate exit too (background) while I write the gate log.
+
+While macOS builds, let me gather evidence for the log (line counts, i18n key parity, file inventory).
+
+macOS build finished. Let me read its result and confirm the same pre-existing blocker (zero ReferenceLinks errors).
+
+macOS gate fails even earlier — at **development-signing/entitlements** (the other documented `macos-pending` blocker; no signing identity on this runner), before source compilation. Zero ReferenceLinks errors. Let me run one macOS build with signing disabled (background) to directly confirm my surface compiles in the real macOS target too, while I write the gate log.
+
+Let me study the exact log format from the closest precedent (AcDcStatsPanel) before writing mine.
+
+This is the precedent format. My disposition matches AcDcStatsPanel (surface green; full-app gate RED only on pre-existing unrelated blockers → `STATUS=DONE`). Let me check the macOS no-sign build progress and confirm the app-target test handling.
+
+In this slot's HEAD the app target excludes `*Tests.swift` (so my tests are test-bundle-only). The macOS no-sign build is compiling. Let me wait for it to complete.
+
+The macOS no-sign build compiled sources and failed (65). Let me confirm it's the same pre-existing `Charge*` collisions with zero ReferenceLinks errors.
+
+Identical on macOS: **zero ReferenceLinks errors**; same pre-existing `Charge*` collisions. My surface compiles cleanly in both real app targets. Now let me run the two whole-tree lint/format gates literally (for accurate log numbers), then write the log.
+
+`swiftformat --lint apps/apple`: **0/2080 files require formatting** (FORMAT_EXIT=0). Now the swiftlint gate over the whole tree.
+
+One pre-existing swiftlint violation in the whole tree (my 6 files already passed clean). Let me identify it to document honestly.
+
+The lone swiftlint violation is pre-existing in `dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift` (already noted in `macos-pending-verifications.md`), untouched by me. I have complete evidence. Let me verify git state, then write the gate log.
+
+Git state is clean — only my 7 files are new; the 2 modified `web/*.tsx` are pre-existing (not mine). Now let me write the gate log.
+
+Log written. Let me clean up temp artifacts and verify the git state shows only my intended files (generated project/framework are gitignored).
+
+Git state is clean — only my 7 surface files + the log are new; generated `xcodeproj`/`Shared.xcframework` are gitignored; the 2 `web/*.tsx` are pre-existing (excluded). Let me stage exactly my files and commit.
+
+Exactly 8 files staged; the 2 pre-existing `web/*.tsx` remain unstaged. Committing now.
+
+Committed cleanly as **`a94d172b1`** (8 files, 1258 insertions). Working tree shows only the 2 pre-existing `web/*.tsx` files (correctly left untouched). Let me finalize the todos.
+
+Merge made by the 'ort' strategy.
+ ...le-feature-views-0007-ReferenceLinksSection.log | 159 ++++++++++++
+ .../ReferenceLinksSection.Adapter.swift            | 142 +++++++++++
+ .../ReferenceLinksSection.Model.swift              | 245 ++++++++++++++++++
+ .../ReferenceLinksSection.Previews.swift           |  67 +++++
+ .../ReferenceLinksSection.Tests.swift              | 236 ++++++++++++++++++
+ .../ReferenceLinksSection.Views.swift              | 273 +++++++++++++++++++++
+ .../feature-views/ReferenceLinksSection.strings    |  45 ++++
+ .../feature-views/ReferenceLinksSection.swift      |  91 +++++++
+ 8 files changed, 1258 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0007-ReferenceLinksSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ReferenceLinksSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ReferenceLinksSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ReferenceLinksSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ReferenceLinksSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ReferenceLinksSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ReferenceLinksSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ReferenceLinksSection.swift

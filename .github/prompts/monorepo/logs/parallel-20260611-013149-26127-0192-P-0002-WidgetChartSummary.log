@@ -1,0 +1,163 @@
+I'll start by understanding the task: creating a native Apple SwiftUI version of a web component. First, let me explore the repository structure, check the web source, and verify Apple tooling availability.
+
+Apple tooling is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim). Now let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply — project config, existing widget-primitives, and the P1 dependencies (state holders, tokens, i18n, diagnostics).
+
+The `widget-primitives` directory doesn't exist yet, and critically, it's **not** listed in `project.yml` sources. Let me investigate the prompt series structure, predecessor logs, existing widget patterns, and the feedback/state-holder/token/i18n infrastructure.
+
+A large monorepo prompt series exists. Let me check the predecessor (0001) status, the established dashboard-widgets pattern in the Apple app, and the feedback/token/i18n/diagnostics infrastructure.
+
+No widget-primitive logs exist yet (0001 not run). The `widget-primitives` dir is absent from `project.yml`. Let me check the build baseline (xcodeproj/xcodegen), read the sibling prompts (0001, 0013/WidgetShell), and locate the Feedback components.
+
+Critical findings: no `.xcodeproj` (xcodegen-generated, gitignored), xcodegen is installed, and `widget-primitives` is absent from `project.yml`. P-0001 hasn't run, so the directory needs wiring. Let me examine the Shared.xcframework staging, the Feedback components, design tokens, i18n facade, diagnostics contract, and state-holder layer.
+
+Now let me check whether the KMP `Shared.xcframework` build works here (it's required by the app targets and not prebuilt), and confirm how existing dashboard-widget gates fared. Let me also read the design tokens, an existing widget for conventions, and the i18n/diagnostics infrastructure.
+
+Key insight: existing dashboard-widget logs show the full `xcodebuild` is RED due to documented external causes (KMP framework staging + macOS signing + sibling-surface collisions), deferred to the P99 gate — yet per-surface in-scope gates pass. Only `java` is present (no gradle/kotlin), and `Shared.xcframework` isn't prebuilt. Let me start the KMP framework build in the background and read the conventions I need in parallel.
+
+I have the design tokens (P1/S9). The KMP `Shared.xcframework` isn't prebuilt and needs Gradle 8.14.5 + Kotlin/Native via the wrapper. Let me kick off that build in the background now (it's slow) while I study the established widget conventions, i18n, and diagnostics.
+
+The cleanest pattern is a self-contained per-surface telemetry seam (`viewOpened(surface:)` protocol + os_log sink). Let me read the gold-standard `AnalyticsSummaryWidget` files in the same `TeslaSync/dashboard-widgets/` tier to mirror conventions exactly.
+
+Excellent reference. Let me read the i18n facade definition (in `.Model.swift`), the test conventions, and preview conventions — plus check the gradle build progress.
+
+The KMP build is still downloading/running. Let me find the i18n `Strings` facade definition and study the test conventions while it builds.
+
+I now have all conventions. Let me check the KMP build progress and scan for any naming collisions before writing the surface.
+
+No type collisions — sibling widgets only reference `ChartSummaryStat` in comments and define local stat types. Let me read the rest of `WallConnector`'s stat cell to match the exact vetted token choices, and check the KMP build progress.
+
+Now I have the exact vetted stat-cell convention. Let me read the placeholder-checker patterns (to avoid forbidden tokens), the `TSSparkline`/`MiniCharts` API for previews, and check the KMP build.
+
+The KMP `Shared.xcframework` built successfully (release + debug). A full `xcodebuild` is now viable for real verification. Let me stage the framework and write the surface files. First, the plan and the SwiftUI-free model.
+
+Now let me create the five surface files.
+
+Let me fast-typecheck the model + view in isolation (with the design tokens) against the macOS 15 SDK under Swift 6 strict concurrency, before writing previews/tests.
+
+Isolated typecheck passes cleanly under Swift 6 strict concurrency. Now the previews, strings, and tests.
+
+Now the test suite — covering model, layout logic, accessibility, strings facade, telemetry seam, and per-state view rendering smoke via `ImageRenderer`.
+
+Now I'll wire `TeslaSync/widget-primitives` into `project.yml` — both app targets (with `*Tests.swift` excluded) and both unit-test targets (with `*Tests.swift` included), mirroring `dashboard-widgets` exactly.
+
+Let me verify the `project.yml` wiring and regenerate the Xcode project.
+
+Project generated. Let me run the formatters/linters on my new files first for fast feedback.
+
+swiftlint --strict passes (0 violations across the tree). swiftformat flagged auto-fixable style issues in my files. Let me apply the repo's canonical formatting and re-verify.
+
+Formatting passes now. Let me review what swiftformat changed to confirm correctness, then re-typecheck.
+
+The sed slices look truncated — let me view the full formatted view file to confirm the `Label { } icon: { }` and braces are intact, then re-typecheck.
+
+`Label { } icon: { }` intact; doc-comment conversions are fine. Let me re-typecheck (post-format) and then launch the full iOS `xcodebuild` build+test.
+
+Post-format typecheck still clean. Now the real gate. Let me run the full iOS `xcodebuild build test`, capturing output. This is slow, so I'll background it and monitor.
+
+The iOS build/test is running in the background. Let me wait and monitor its progress.
+
+Good progress — 0 errors so far, my files are being compiled. Let me continue waiting for the build/test to complete.
+
+Build failed with 1 error. Let me find it.
+
+The single build error is in a **sibling** file I didn't touch — `shared-surfaces/AIAutoNameUnnamedLocations.swift:123` — not in my widget-primitives surface. My files compiled with 0 errors. Let me confirm it's pre-existing/external and assess the sibling error.
+
+Confirmed: I only modified `project.yml` + added `widget-primitives/`. The failing sibling file is **unmodified by me** and was already in the build target at HEAD — so this is a pre-existing, external error (a non-`@escaping` closure in `AIAutoNameUnnamedLocations.swift`). My surface compiled with 0 errors.
+
+To get **real test-execution evidence** independent of the sibling blocker, let me build and run my XCTest cases as a standalone macOS test bundle (sibling-independent).
+
+The raw-`swiftc` route can't expose XCTest's C assertion macros (a known limitation — needs the Xcode test host). The authoritative way to run my tests is the real `xcodebuild test`, which requires unblocking the one pre-existing sibling compile error. I'll apply a **temporary, uncommitted** fix to the sibling (reverted before commit via `git restore`), run the real tests, then restore it.
+
+Temporary unblock applied. Now let me run the real iOS `build test` to compile my surface and execute my XCTest cases in the proper harness.
+
+While the build runs, let me check whether PowerShell (`pwsh`) is available for the placeholder gate, and review the checker logic.
+
+`pwsh` is available, so I can run the real placeholder gate. Let me pre-verify my files contain no forbidden tokens while the build runs.
+
+My files are clean. Let me monitor the build+test progress.
+
+0 errors so far — the sibling unblock cleared the blocker. Let me keep waiting for compilation + test execution.
+
+Two findings from build #2: (1) my surface compiled with **0 errors** (only a fixable Swift-6 concurrency warning in my Previews), and (2) a **second** pre-existing sibling error of the identical `glass(_:)` non-`@escaping` pattern appeared (`AISuggestNewGeofences.swift`) — confirming a class of external sibling errors outside my allowed files.
+
+Let me fix my Previews warning properly (make the chart slot `@MainActor`), then verify via an isolated SwiftPM test run. First, the view + previews edits:
+
+Now let me update the Previews to inline the chart slot (removing the nonisolated free function that triggered the warning).
+
+Formatting clean. Let me re-verify the `@MainActor` chart change typechecks, then build the isolated SwiftPM package to run my actual XCTest cases.
+
+Typecheck clean. Now let me build an isolated SwiftPM package containing my exact sources + tests and run my **real XCTest cases** with `swift test` (which properly provides XCTest assertions, unlike raw swiftc).
+
+**All 21 of my XCTest cases pass** in the real XCTest harness (isolated SwiftPM run): model, layout decisions, accessibility, strings facade, telemetry seam, and per-state `ImageRenderer` rendering — 0 failures.
+
+Now let me clean up, revert the temporary sibling unblock so the tree is pristine, and regenerate the project.
+
+Pristine tree confirmed (only `project.yml` + `widget-primitives/`). Now let me run the fast gate steps (lint, format, placeholder) and capture results.
+
+Three gate steps are GREEN: swiftlint --strict (0 violations/4775 files), swiftformat --lint (0/5077 need formatting), placeholder check (COUNT=0, EXIT=0). Now the two full builds (expected RED on the pre-existing sibling errors). Let me run the iOS gate on the current pristine tree.
+
+While the iOS gate runs, let me wait and monitor. I'll check progress periodically.
+
+iOS gate failed again on yet another pre-existing sibling (`AISignalExplorerNlFilter.swift:142`) — same `glass(_:)` non-`@escaping` pattern, a 3rd distinct `AI*` shared-surface. **No errors in my files.** Let me quantify the external blast radius for honest documentation.
+
+Confirmed: exactly **4 pre-existing sibling files** in `shared-surfaces/` (all `AI*` surfaces) share the identical non-`@escaping` `glass(_:)` error — none are mine. These block the whole-module build and are outside my allowed files. Let me run the macOS gate to capture its (same-cause) result.
+
+While the macOS gate runs, let me extract precise evidence lines from the iOS gate log for the report.
+
+My files compiled cleanly in the iOS gate (visible in the `SwiftCompile` invocations); the **only** error is the external sibling. Let me wait for the macOS gate to complete.
+
+macOS gate finished. Let me extract its result and confirm the cause is the same external siblings.
+
+macOS RED is the documented **environmental code-signing gap** (no development certificate on the runner) — it fails at the signing step *before* compilation, exactly per the P4 precedent. Both full-build REDs are external (iOS: 4 pre-existing sibling files; macOS: signing), neither in my files.
+
+Let me update the plan and write the comprehensive, honest gate log.
+
+Now the comprehensive, honest gate log:
+
+The log is written. Let me verify the full git status (ensure the generated `.xcodeproj` and staged framework are git-ignored, not accidentally staged), then do a final format/lint sanity check before committing.
+
+Clean: only `project.yml` (modified), the log, and `widget-primitives/` are pending; the framework and `.xcodeproj` are correctly git-ignored. Final sanity check on my files, then commit.
+
+All 5 files present and format-clean. Now let me commit the surface, the necessary `project.yml` wiring, and the log.
+
+Committed (`4b4d6219f`, 7 files, +847). Let me confirm the working tree is clean and no temp artifacts remain.
+
+Done. The working tree is clean, the sibling file is pristine (temporary verification patch reverted), and the commit is in place.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) port of `WidgetChartSummary` at parity with the web source, committed as `4b4d6219f`.
+
+**Delivered** (`apps/apple/TeslaSync/widget-primitives/WidgetChartSummary.*`):
+- **Model** (SwiftUI-free): `ChartSummaryStat` (string + numeric inits), `WidgetChartSummaryLayout` (the web render-branch decisions), accessibility label builder, P1/S10 i18n facade, P1/S11 `view.opened` telemetry seam.
+- **View**: generic chart-slot primitive — empty state (`ContentUnavailableView` ↔ web `EmptyState`), responsive stat row (2‑col grid default → `@sm` row, compact forces grid), chart fills remaining height, hidden in compact. Design tokens only, full VoiceOver labels, Swift 6 strict-concurrency clean.
+- **Previews** (5 branches), **strings** table, and **21 XCTest cases**.
+
+**Verification (real evidence):**
+- swiftlint --strict → **0 violations** / 4775 files
+- swiftformat --lint apps/apple → **0/5077** need formatting
+- placeholder gate → **PLACEHOLDER_COUNT=0**
+- Surface **compiles in the real iOS app module** (0 errors/0 warnings in my files)
+- **21/21 tests pass** in a real XCTest harness (isolated strict-concurrency SwiftPM run)
+- KMP `Shared.xcframework` built locally
+
+**Honest disposition:** the full iOS/macOS schemes are RED — but solely on **external** causes outside this prompt's allowed files: 4 pre-existing sibling `AI*` shared-surfaces with a non-`@escaping` `glass(_:)` defect (iOS), and an environmental code-signing gap (macOS). Both are deferred to their owners / the P4/P99 signed gate, matching every prior P4 surface. I also committed the required `project.yml` wiring (registering `widget-primitives` in both app + test targets, mirroring `dashboard-widgets`) — without it the surface would never compile — and documented this in the log and commit body. Log ends `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/project.yml
+Merge made by the 'ort' strategy.
+ ...e-widget-primitives-0002-WidgetChartSummary.log | 197 +++++++++++++++++++
+ .../WidgetChartSummary.Model.swift                 | 135 +++++++++++++
+ .../WidgetChartSummary.Previews.swift              |  77 ++++++++
+ .../WidgetChartSummary.Tests.swift                 | 217 +++++++++++++++++++++
+ .../widget-primitives/WidgetChartSummary.strings   |  17 ++
+ .../widget-primitives/WidgetChartSummary.swift     | 188 ++++++++++++++++++
+ apps/apple/project.yml                             |   8 +
+ 7 files changed, 839 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-widget-primitives-0002-WidgetChartSummary.log
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetChartSummary.Model.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetChartSummary.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetChartSummary.strings
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetChartSummary.swift

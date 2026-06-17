@@ -1,0 +1,173 @@
+I'll start by exploring the environment, checking tool availability, and reading the web source that defines this widget primitive.
+
+Apple toolchain is fully available (Xcode, swiftlint, swiftformat). Now let me read the web source and study the existing Apple app structure/patterns.
+
+The Apple app has an established widget-primitive pattern. No `WidgetGaugeHero.*` exists yet — I need to create it. Let me study the closest existing analogs (`WidgetStatGrid` — presentational with stats; `WidgetChartSummary` — chart-based) to match conventions exactly.
+
+Let me read the remaining StatGrid files (the Adapter holds the model types), the chart-based ChartSummary, and locate the shared design tokens.
+
+The established pattern is clear and the StatGrid Adapter's "faithful-parity note" (lines 14-23) is critical: pure presentational primitives reproduce only the web source's **real** branches — no fabricated loading/error/stale/offline. I'll follow that precedent. Now let me read the web `RadialGauge`, the design tokens, the test patterns, and check how files are registered.
+
+Now let me read the design tokens, the web RadialGauge, the AdapterTests pattern, and the project.yml to confirm file registration.
+
+Let me locate the exact token definitions, number formatting helpers, lint config, and project build config.
+
+Tokens are generated under `apps/design/generated/apple`. Let me find the exact token API (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) and a number formatter.
+
+Now I have the token API. Let me verify the build/gate tooling (pwsh, xcodegen, existing xcodeproj), read the placeholder checker, and check how the i18n `.strings` files integrate + how a sibling with a `children` slot is handled.
+
+Key finding: AdapterTests mention "the isolated SwiftPM harness the Apple surface gate uses while the full app build is deferred." Let me read a sibling's gate log, the placeholder patterns, and locate the SwiftPM harness to understand the real verification path.
+
+Placeholder patterns are case-insensitive — I must avoid "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" in `.swift` files. Now let me check for existing P4 widget-primitive gate logs to confirm the expected log format and STATUS outcome.
+
+Let me read the sibling WidgetStatGrid gate log (whose source I've studied) and the WidgetChartSummary log to see the exact accepted log format and real gate outcome.
+
+I now have the authoritative gate methodology and log format. Let me capture host versions, confirm the pre-existing error context, and study how a sibling with a `children` slot (WidgetMapView) handled it natively, plus the ComparisonCard public API.
+
+All tools confirmed (matches sibling log host). Let me check the native `children`-slot idiom in WidgetMapView and the web number formatter I must port for the gauge value.
+
+I have everything needed for faithful parity. Let me verify the documented pre-existing compile error still exists in this slot and read the project.yml target/test wiring before writing code.
+
+Confirmed: pre-existing context is present, build wiring is folder-based (no project.yml edits needed), and my two test files (`*.Tests.swift`, `*.AdapterTests.swift`) auto-route to test bundles. I have full parity understanding. Let me write a plan file and create the 8 surface files.
+
+Now I'll create the surface files, starting with the Foundation-pure Adapter.
+
+Now the Model (i18n facade + telemetry seam + observable state-holder):
+
+Now the public View with the generic accessory slot (web `children`) plus a no-accessory convenience:
+
+Now the presentational subviews — the radial ring (Swift-native gauge), the wrapping stats flow, and the tint→token mapping:
+
+Now the i18n catalog (`.strings`), the previews, and both test files:
+
+All 8 files created. Now let me run the verification gates. Starting with swiftformat (auto-format my files, then lint-verify):
+
+swiftformat clean (0/7 require formatting). Now swiftlint `--strict` on the surface files:
+
+One swiftlint issue: `AdapterTests.swift` is 440 lines (file_length limit 400 under `--strict`). I'll tighten it under 400 while keeping all test coverage. Let me rewrite it compactly:
+
+swiftlint clean (0 violations), AdapterTests now 336 lines. Now the placeholder gate and an independent grep for forbidden markers:
+
+Both placeholder gates pass (COUNT=0, EXIT=0). Let me re-verify the grep with a correct exit code (the previous one read `head`'s status):
+
+All surface-scoped gates green so far (format, lint, placeholder). Now the **isolated SwiftPM harness** [4] — the Foundation-pure layer (Adapter + Model + AdapterTests) under Swift 6:
+
+Isolated harness: **24/24 passed** under Swift 6 (including en_US grouping). Now the **full SwiftPM harness** [4b] — add Tokens + TSDesign + the SwiftUI views + view tests:
+
+Full harness: **30/30 passed** — SwiftUI views compile + compose under Swift 6. Now [5] dual-SDK `swiftc -typecheck` of the **entire shipped surface incl. Previews** against the real design tokens, for iOS 18 and macOS 15:
+
+iOS 18 type-check: **0 errors**. Now macOS 15:
+
+Both SDKs type-check clean. Now [6] xcodegen generate (regenerates the project incl. my files):
+
+xcodegen: EXIT=0, all 8 files enumerated (9 refs each across both apps + both test bundles). Now let me attempt the full-app xcodebuild gate honestly — first checking the KMP framework dependency and capturing the real first failure:
+
+The `Shared.xcframework` (KMP, git-ignored, not checked in) is absent — the full-app `xcodebuild` can't link without it. Let me check whether I can stage it (as the sibling did) so I can run a real app-target compile of my surface:
+
+The KMP module + gradle + Java 17 are present. Let me stage the framework in the background (the sibling reported ~15m cold) while I capture the current xcodebuild blocker and prepare the log.
+
+While the framework builds, let me find how it gets staged into the app (pre-action/script) so I can run the app-target compile correctly afterward:
+
+The pre-action script builds the same gradle task I'm running, then stages it. Let me check the background build's progress:
+
+The cold Kotlin/Native build is downloading its toolchain (~15m expected). Let me wait and monitor:
+
+Framework built (BUILD SUCCESSFUL in 7m26s). Let me stage it and run the iOS app-target compile to capture the real result — proving my surface compiles and isolating any pre-existing errors:
+
+Now the iOS app-target compile (whole TeslaSync module, ~thousands of files). Running with output captured for error analysis:
+
+Let me peek at build progress and check for any surface-related errors so far:
+
+0 errors so far; the module is in the emit phase. Let me wait for completion:
+
+Module emit completed with **0 errors** (whole-module type-check passed, including my surface). Now in per-file compile. Let me wait for completion:
+
+Build failed (exit 65). Let me find the actual error(s) and confirm whether any are in my surface:
+
+Build failed but with **0 compiler errors** and **0 WidgetGaugeHero errors**. Let me see which build command actually failed (likely link/sign/resource):
+
+The failing batch is `A*` files (AppSettings/AppearanceSettings/etc.) — unrelated to my surface — yet `grep " error: "` found nothing. Let me dig for the real diagnostic (crash, fatal, or alternate format):
+
+It's a **swift-frontend compiler crash** during IRGen (`report_fatal_error` in `IRGenRequest`), not a source error. Let me read the crash context to identify the trigger:
+
+This is a **swift-frontend IRGen compiler crash** (`report_fatal_error`→`abort`), not a source error — and the whole-module type-check (EmitModule) had already passed cleanly. It's crashing on an unrelated `A*` batch (AppSettings/AppearanceSettings/etc.), not my surface. Let me capture the exact crashing primary-file, then verify it's pre-existing by rebuilding with my files removed:
+
+Crash is entirely in `AppearanceSettings.*` (another prompt's feature-view) — **zero** WidgetGaugeHero files involved. To honestly confirm it's pre-existing (not triggered by my addition), let me rebuild with my 8 files temporarily removed:
+
+Baseline build running (module recompiles without my files). Let me wait for it:
+
+Baseline still in module-emit; the crash occurs later in IRGen. Let me wait for it to reach the compile phase:
+
+Baseline (without my files) **also failed with EXIT=65**. Let me confirm it's the identical pre-existing crash:
+
+Confirmed: baseline (without my files) reproduces the **identical IRGen crash** on the same `App*/ApiPlayground*` files, with 0 source errors. The crash is definitively pre-existing. Let me check those 11 stale WidgetGaugeHero log mentions, then restore my files:
+
+Those 11 mentions are just `note: Removed stale file '...WidgetGaugeHero.*.o'` — incremental cleanup of my previously-compiled objects (proving my files DID compile to `.o` with no errors in the with-surface build). **Conclusive: the iOS RED is a pre-existing IRGen compiler crash in unrelated `AppearanceSettings`/`App*` files, not my surface.** Let me restore my files, regenerate, and check macOS signing:
+
+macOS signing: **0 valid identities** (environmental). Let me run the macOS app-target compile too, to capture its real result rather than assume — it shares the same `Sources`:
+
+Let me reference the deferral owner doc while the macOS build runs:
+
+This is the established deferral ledger (owner: `p4-apple/P99-0001-apple-acceptance-gate`). I should add a row for my surface. Let me get the table header and check the macOS build:
+
+I have the exact ledger format (and sibling 0003 already has a row). The macOS build is still compiling. Let me wait for its result:
+
+macOS build still compiling (no crash/error yet). Let me wait for completion:
+
+macOS build also failed (exit 65). Let me confirm it's the same pre-existing crash with zero surface errors:
+
+Complete, honest evidence gathered. macOS reproduces the **same pre-existing IRGen crash** (0 source errors, 0 surface errors) + 0 signing identities. Now let me write the gate log following the established sibling format:
+
+Now let me add a deferral ledger row to `apps/macos-pending-verifications.md`, next to the sibling widget-primitives row. Let me find the precise insertion anchor:
+
+The table ends at line 49 (CommandPalette), followed by `## Resolution protocol`. Let me append my deferral row using that unique boundary as anchor:
+
+Now let me verify the final git state and confirm generated artifacts are properly ignored (not committed):
+
+Git state is exactly right: my 8 files + log are untracked, the ledger is modified, and all generated artifacts (xcodeproj/build/xcframework) are git-ignored. Let me clean up temp harnesses and commit (including the precedented ledger update):
+
+All 10 files staged. Now commit:
+
+Commit succeeded. Let me verify the final state:
+
+Commit `e3d2ca4d3` landed (10 files, 1712 insertions), tree clean. Final post-commit re-verification of the surface-scoped gates to confirm no drift:
+
+swiftformat 0/7 and swiftlint 0 violations confirmed post-commit. Let me get the placeholder result:
+
+All gates confirmed green post-commit. The task is complete.
+
+## Summary
+
+Shipped the native Apple/SwiftUI **`WidgetGaugeHero`** widget primitive at full parity with `web/src/features/dashboard/widgets/shared/WidgetGaugeHero.tsx` (and its embedded `RadialGauge`), committed as `e3d2ca4d3` (8 surface files + log + deferral-ledger row).
+
+**What it does (faithful parity):** a centered column with an always-present radial hero ring (Swift-native `Circle().trim` arc: `clamp(value,0,max)` fill, integer-aware decimals via a `fmtNumber` port, centered reading + unit, caption below, `compact ? 70 : 100`), an optional wrapping stats row (`!compact && stats>0`), and a generic accessory slot (web `children`, `!compact`). Pure presentational — binds through a P1/S8 `@Observable` holder (props→projection, once-only `view.opened`), token-driven (P1/S9, no raw hex — `gauge.color`→semantic `GaugeTint`), i18n facade (P1/S10), full VoiceOver/Reduce-Motion a11y, plus a `max<=0` zero-fill null-safety guard. Per sibling precedent (0003/0010), only the source's **real** branches are reproduced — no fabricated loading/error/stale/offline.
+
+**Verification (all run, raw results):**
+- swiftformat --lint **0/7** · swiftlint --strict **0 violations/7** · placeholder gate **COUNT=0**
+- Isolated SwiftPM **24/24** + full SwiftPM (with SwiftUI views) **30/30** under Swift 6
+- Dual-SDK `swiftc -typecheck` (iOS 18 + macOS 15, incl. Previews, real Tokens) **0 errors**
+- `xcodegen generate` enumerates all 8 files
+
+**Full-app xcodebuild:** staged the KMP `Shared.xcframework` (gradle, 7m26s) and compiled both iOS + macOS targets — the module's whole-module type-check **passed with zero `WidgetGaugeHero` errors**. The build is RED only for a **pre-existing swift-frontend IRGen crash** in unrelated `AppearanceSettings`/`Sources` files — **proven pre-existing by a baseline rebuild with my 8 files removed** (identical crash) — plus macOS dev-signing (0 identities). Deferred to `P99-0001-apple-acceptance-gate`, recorded in `apps/macos-pending-verifications.md`. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...pple-widget-primitives-0007-WidgetGaugeHero.log | 193 +++++++++++
+ .../WidgetGaugeHero.Adapter.swift                  | 351 +++++++++++++++++++++
+ .../WidgetGaugeHero.AdapterTests.swift             | 336 ++++++++++++++++++++
+ .../widget-primitives/WidgetGaugeHero.Model.swift  | 157 +++++++++
+ .../WidgetGaugeHero.Previews.swift                 | 131 ++++++++
+ .../widget-primitives/WidgetGaugeHero.Tests.swift  | 134 ++++++++
+ .../widget-primitives/WidgetGaugeHero.Views.swift  | 253 +++++++++++++++
+ .../widget-primitives/WidgetGaugeHero.strings      |  30 ++
+ .../widget-primitives/WidgetGaugeHero.swift        | 126 ++++++++
+ apps/macos-pending-verifications.md                |   1 +
+ 10 files changed, 1712 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-widget-primitives-0007-WidgetGaugeHero.log
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.Model.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.Views.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.strings
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.swift

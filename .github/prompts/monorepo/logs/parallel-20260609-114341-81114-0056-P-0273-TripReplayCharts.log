@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure to understand what exists for the Apple app and the web source.
+
+The Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat). Let me explore the Apple app structure and read the web source.
+
+Now let me explore the Apple Sources directory structure and the project configuration.
+
+The Apple app is extensive with many existing surfaces. Let me study the conventions by examining an existing chart-based feature view and the shared infrastructure (state holders, tokens, i18n, charts).
+
+`BatteryLevelChart` is the closest existing chart surface. Let me read its complete file set to learn the canonical structure and shared infrastructure usage.
+
+Excellent pattern. Let me read the remaining reference files (Adapter, Views, Previews, Tests, strings) to fully internalize the conventions.
+
+Let me read the Previews, Tests, and strings files, plus locate the design token definitions.
+
+I have the full pattern. Now let me locate the design tokens, shared primitives (TSFadeIn, TSSkeleton), and check whether a native cursor-sync store already exists to bind to.
+
+Several existing chart surfaces reference synced cursors. Let me examine how they implement the cursor-sync pattern natively.
+
+`SocChart` is the canonical synced-cursor surface — the closest analog. Let me read its complete file set.
+
+Let me read SocChart's Adapter, Views, Tests, Previews, and strings to complete my understanding of the synced-cursor chart pattern.
+
+Now let me read SocChart's tests, previews, and strings, plus examine how existing surfaces handle dual-axis (speed + power) charts.
+
+Let me examine the design tokens and how an existing dual-series drive chart handles speed+power axes.
+
+Let me find the Font.TS definition, the web CHART_COLORS palette, and how DriveOverviewChart handles dual series.
+
+`DriveOverviewChart` shows the dual-axis rescale technique. Let me read its projection math and confirm the web chart color palette.
+
+I have the dual-axis rescale pattern. The web colors are `CHART_COLORS[0]=#0072B2` (speed), `CHART_COLORS[1]=#E69F00` (power), playhead `#00b4d8`. Let me confirm the web chart styling defaults (AREA_DEFAULTS, areaGradient, fmt) for faithful parity.
+
+I now have complete styling parity details. Let me verify the build/verification toolchain availability before authoring.
+
+`Shared.xcframework` isn't present (only `.gitkeep`); the scheme builds it via a preAction script. Let me inspect that script to gauge whether a full app build is feasible here.
+
+Full app build needs a KMP/Gradle step. Let me check the lint/format configs (to guarantee my files pass) and whether the KMP toolchain is even available.
+
+Java 17 + gradlew exist, so the KMP build is potentially feasible. I have everything needed. Let me confirm the web number formatter (`fmtNumber`) behavior for faithful tick formatting, then set up tracking and start authoring.
+
+I have full parity details (`fmtNumber` = locale `toLocaleString`, non-finite→0 via `safeNumber`). Let me set up tracking and begin authoring the 8 surface files.
+
+Now authoring the pure projection core (Adapter):
+
+Now the Model (state holder + telemetry + i18n facade):
+
+Now the dual-axis Swift Charts view (`.Chart.swift`):
+
+I referenced an undefined `TripReplayChartsMotion`. Let me fix it to use the existing `TSMotion.normalDuration` token like the other surfaces:
+
+Now the chrome views (header, freshness chip, banner, legend, states):
+
+Now the main composable view:
+
+Now the previews:
+
+Now the comprehensive test suite:
+
+Let me fix a `var`/`let` issue in the tests, then write the strings catalog:
+
+All 8 files authored. Now let me verify formatting and lint on the new files, and run the placeholder check.
+
+Two redundant `@ViewBuilder` attributes. Let me let swiftformat auto-fix all my files (safe, config-driven), then re-lint:
+
+swiftformat passes. Now swiftlint --strict on the new files:
+
+Two swiftlint issues in Tests: a 3-member tuple (`large_tuple`) and file length (405 > 400). Let me refactor the `makePoints` helper to use arrays instead of tuples, then trim the header. I'll do all literal replacements in one pass:
+
+The first `trace` is multi-line and wasn't caught. Let me view and fix it:
+
+Now let me trim the header comment to get under 400 lines, then re-lint:
+
+swiftlint + swiftformat both pass with 0 violations. Now the placeholder check:
+
+Placeholder check passes (0 placeholders). Now let me prove the parity logic + model state machine actually compile and pass by building an isolated SwiftPM harness (Adapter + Model are token-free, so they compile against just SwiftUI/Foundation):
+
+All 37 isolation tests pass — the parity logic and model state machine are proven correct. Now let me type-check the SwiftUI/Charts view files (which the logic harness didn't cover). First, let me inspect the `TSFadeIn`/`TSSkeleton` signatures and their dependencies:
+
+`TSFadeIn`/`TSSkeleton` signatures match my usage. Let me type-check the view/chart files against the real tokens + primitives + Swift Charts (catches any Charts API or token misuse the logic harness couldn't):
+
+The only errors are inside the auxiliary `Skeletons.swift` (it references `TSCard` from another file) — not my code. My files compiled. Let me swap in a minimal `TSSkeleton` stub to isolate my surface cleanly:
+
+Type-check passes cleanly under **Swift 6 strict concurrency** for every surface file. Now let me attempt the real gate. First, regenerate the Xcode project and confirm my files (incl. tests) are wired in:
+
+Project regenerated and my files are wired in (48 references). The full build's scheme pre-action builds the KMP `Shared.xcframework` via Gradle. Let me test that step in isolation first to gauge feasibility:
+
+The KMP `Shared.xcframework` Gradle assemble timed out (no progress in 240s). Let me capture concrete evidence of why the full-app build is environmentally blocked — does even the Gradle wrapper bootstrap?
+
+Gradle bootstraps fine (8.14.5 cached) and network works (200) — the KMP build is feasible but slow on a cold Kotlin/Native cache. Let me run it in the background with a generous window and monitor, while I prepare the gate log:
+
+While KMP builds, let me run the gate's global lint/format steps (as written) to capture authoritative results and confirm I introduced no regressions:
+
+swiftformat over all of `apps/apple` passes (0/2912 need formatting). Let me check the KMP build status:
+
+The KMP build is mostly cached (tasks UP-TO-DATE) — it was just killed prematurely when the launcher shell exited. It nearly finished. Let me run it synchronously to completion (should be quick now):
+
+Release linking (Kotlin/Native, optimized) is slow. Let me keep waiting:
+
+KMP `Shared.xcframework` built successfully. Let me stage it and run the full iOS app build (the key integration test — does my surface compile within the real 1900-file app target):
+
+Now the full iOS app build (compiles all ~1900 files + my surface against the real app target):
+
+The iOS build is running in the background. Let me monitor its progress:
+
+`tail -8` only flushes at end. Let me peek at the build log directly for progress:
+
+The `/tmp` log is shared across parallel slots (note the `slot-58` path — log interleaving), but my async `iosbuild` shell captures only my build's result with its own per-path DerivedData. Let me wait for my build to complete and read its authoritative result:
+
+The build failed, but the reported failing batch contains **other** files (`AnomalyInlineRow.*`, `App*.swift`, `AppearanceSettings.*`) — **not** my `TripReplayCharts` files. The `tail -8` truncated the actual error diagnostics. Let me extract the real `error:` lines, filtering to my slot and checking whether my surface is implicated:
+
+No errors reference my slot or my files. The failing batches are other files, and `tail -8` discarded the actual diagnostics. Let me re-run incrementally (warm DerivedData) with full output to a unique, unpolluted log, and check the documented baseline status:
+
+The `macos-pending-verifications.md` reveals the established baseline: **every** prior P4 apple feature-view surface hit the same wall — the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** parallel-merge collisions (`DashboardWidgetSize` redefined 8–15×, co-located `*.Tests.swift` importing XCTest into the app target, dev-signing), and each surface is accepted as green via the host-runnable gates. My fresh log (exit 65) is unique/unpolluted. Let me confirm the failure is those pre-existing collisions and that my surface contributes zero errors:
+
+Let me search the log with broader patterns to locate the actual failure:
+
+xcodebuild cancelled sibling jobs on first failure, so the source-level diagnostic for the failing A-files batch isn't in stdout. The `macos-pending-verifications.md` is authoritative that the baseline app build is blocked by pre-existing collisions. Let me (1) confirm my `Tests.swift` is correctly excluded from the app target, and (2) extract the real diagnostic by compiling the failing batch's frontend directly. First, verify my test file's target membership and hunt the diagnostic:
+
+My `Tests.swift` is correctly in the **test targets only** (2 entries, both in 509-file test-target phases — not the 1900-file app target), confirming the project's `*Tests.swift` exclude works. The parallel build cancelled before printing the source diagnostic. Let me re-run incrementally with `-quiet` to surface the actual pre-existing error cleanly:
+
+The new build system swallowed the diagnostics on job cancellation. Let me extract them from the DerivedData build activity log:
+
+The `.xcactivitylog` didn't decode (0 bytes). The raw log likely has binary bytes making `grep` skip lines. Let me re-grep with `-a` (treat as text):
+
+`SwiftCompile failed` with **no** `error:` diagnostic typically means the compiler **crashed or was killed** (resource contention in this shared multi-slot environment), not a source error. Let me confirm:
+
+Confirmed — it's a **Swift compiler crash** (stack dump + "submit a bug report"), not a source error in my code. Let me identify what the compiler was processing when it crashed:
+
+**Root cause identified:** the iOS build fails on a **Swift 6.3.2 compiler IRGen crash** (`While emitting IR SIL function …` during IR Generation for **`AppearanceSettings.Controls.swift`**) — a pre-existing, unrelated file. Zero `TripReplayCharts` involvement in the crash path. This matches the documented `macos-pending` baseline blockers.
+
+Let me gather final corroborating evidence: prove my code passes full IRGen (`-c`, not just typecheck), check macOS signing, and confirm build artifacts are git-ignored:
+
+macOS has **0 signing identities** (documented blocker), build artifacts are git-ignored, and exactly my 8 files are staged-ready. Let me redo the IRGen proof using whole-module mode (single output):
+
+My surface passes **full IRGen/codegen** (951KB object, exit 0) under Swift 6 strict concurrency — proving my code codegens cleanly through the same backend stage that crashes on the unrelated `AppearanceSettings.Controls.swift`. Let me also confirm the iOS‑18 simulator SDK type-check (matching the prior-surface evidence bar), then write the gate log:
+
+Comprehensive verification complete. Every host-runnable gate for my surface is green; the full-app build is blocked solely by a pre-existing, unrelated compiler crash + absent macOS signing. Let me write the gate log with full evidence:
+
+Now let me verify nothing unintended changed, then commit exactly my surface files + the log:
+
+Clean — only my 8 surface files + the log. Committing per the prompt's Commit section:
+
+Committed as `ef5750ebf`. Let me update tracking and clean up temporary verification artifacts:
+
+The surface is committed (1960 lines, healthy file sizes). To honor the covenant's "no skip-and-assume", let me actually run the macOS build rather than infer its result — confirming it hits the same pre-existing crash:
+
+macOS build running in background. Let me wait and monitor:
+
+macOS build returned exit 65. Let me confirm it's the same pre-existing crash and that my surface is clean:
+
+Confirmed by **actual execution**: the macOS build (exit 65) fails with the identical pre-existing IRGen crash in `AppearanceSettings.Controls.swift` — 0 source errors, 0 TripReplayCharts errors. Let me update the log to reflect this as observed (not inferred) evidence, and amend the commit:
+
+Let me do a final verification of the committed state:
+
+The TripReplayCharts Apple surface is complete, verified, and committed (`57d87f2b1`). Here's the final summary.
+

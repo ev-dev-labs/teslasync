@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure and reading the web source component.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, pwsh, iPhone 16 simulator). Now let me read the web source and explore the apps/apple structure.
+
+Web source is a simple keyboard-shortcut indicator. Let me explore the Apple app structure to understand the existing patterns, state holders, tokens, and i18n facade.
+
+Let me examine simple banner-style surfaces and the supporting infrastructure (tokens, i18n, state holders, telemetry).
+
+`DraftRecoveryBanner` (predecessor 0116, also a feedback banner) is the ideal template. Let me read the complete set.
+
+Now let me examine the design tokens, shared components, and how the build picks up surface files.
+
+The build uses XcodeGen with directory globs — dropping `GotoIndicator.*` files into `shared-surfaces/` auto-includes them. Now let me read the design tokens and shared components to learn the exact APIs available.
+
+`TSSpacing`/`TSRadius`/`Color.TS`/`Font.TS` are generated tokens. Let me locate them and read the key shared components.
+
+Now let me read the shared components I'll compose with: Buttons, Cards, States (EmptyState), Typography, and Banners.
+
+There's already an atomic `TSGotoIndicator` in the component library (out of scope per the prompt). My shared **surface** is distinct. Let me check for naming collisions, the build tooling, and the i18n facade conventions.
+
+No collisions, `xcodegen` is available, but the `.xcodeproj` and `Shared.xcframework` are not yet generated. Let me inspect the build scripts and the shared framework dependency.
+
+The build depends on a KMP shared core via Gradle. Let me check predecessor logs and the shared module to gauge the baseline build state.
+
+The established methodology is clear: predecessors verify via an **isolated Swift build + XCTest + lint/format/placeholder**, and defer the full-app `xcodebuild` gate to the P99 signed runner due to pre-existing unrelated sibling-surface compile errors + macOS signing. Let me confirm this is still current by checking the latest logs.
+
+This is now clear. Let me read the full predecessor log to replicate its exact isolated-verification methodology, then set up my plan.
+
+I have the full methodology. Let me read the remaining UI primitives (materials, typography, cards, banners) to finalize my component vocabulary, then start authoring.
+
+I now have a complete understanding of the architecture, the established methodology, and all component APIs. Let me set up my plan and todos, then author the surface.
+
+Now I'll author the surface. Starting with the pure core (Adapter), then Model and Seams.
+
+Now the view layer — the bound surface, the leaf-state chrome, and the presentational hint pill.
+
+Now let me wire the reduce-motion-aware entrance animation into the surface so the hint's transition fires on phase change.
+
+Now the Previews and strings catalog.
+
+All 9 files created. Now let me run the fast gates first — swiftformat and swiftlint on my files.
+
+One trailing-comma violation in the `keys` array. Let me fix it.
+
+Re-running both tools to confirm clean.
+
+swiftformat + swiftlint both green. Now the placeholder gate — let me read the script to run it exactly as the gate does.
+
+Placeholder gate clean. Now the critical step — the isolated Swift 6 strict-concurrency build + test of the logic core (Adapter + Model + Seams + Tests).
+
+All 24 isolated tests pass under Swift 6 strict concurrency. Now the dual-SDK typecheck of the view files against the **real** design system. Let me gather the design-system file set.
+
+My surface doesn't use `UnitFormatters`. Let me run the dual-SDK typecheck against the real design system (Tokens + Design + Components, excluding `UnitFormatters`), matching the predecessor's proven set.
+
+iOS typecheck clean (0 errors). Now macOS and both DEBUG variants (for the `#Preview` blocks).
+
+All 4 typecheck variants pass (iOS, macOS, ±DEBUG). The view layer compiles cleanly against the real design system on both SDKs. Now `xcodegen generate` + confirming the full-app gate's pre-existing blockers.
+
+xcodegen enumerated all 9 files (9 refs each across the iOS+macOS app + test targets). Both pre-existing blockers re-confirmed: macOS has 0 signing identities, and the two sibling surfaces with the escaping-closure bug still exist. Let me kick off the Shared.xcframework Gradle build in the background and, meanwhile, definitively reproduce the sibling compile error via the typecheck harness.
+
+Java 17 + the shared module are present. Let me start the Shared.xcframework Gradle build in the background, and meanwhile reproduce the sibling compile error definitively.
+
+The Gradle build is running detached. Let me reproduce the sibling compile error definitively while it builds.
+
+The sibling surfaces now typecheck **clean** — the predecessor's cited escaping-closure blockers appear resolved on this newer toolchain. This means I must not assume; I need to run the real full-app build. Let me check the Gradle build progress.
+
+The Gradle build produced a **debug** xcframework but the staging script expects **release**. Let me check the full log tail.
+
+The Gradle build is still running — now linking the **release** frameworks. Let me wait for it to finish staging.
+
+Release linking (Kotlin/Native) is slow. Let me wait longer for it to finish staging.
+
+Shared.xcframework staged. Now let me run the actual full-app iOS gate (the exact gate command). This compiles the entire app, so I'll run it in the background and poll.
+
+Let me monitor the iOS build progress.
+
+The launcher returned; xcodebuild is still running detached and was mid-compile (my `GotoIndicator.strings` was already validated + copied into the app bundle). Let me check whether it has finished.
+
+The whole-app Swift module compile is underway (my `.strings` already integrated cleanly). Let me wait for compile/link/test to progress.
+
+The full-app build reproduces the predecessor's exact blocker: `AISuggestNewGeofences.swift:129` escaping-closure error (pre-existing, out of my allowed files). Let me wait for the build to finish and capture the complete error set.
+
+iOS full-app build **FAILED (exit 65)** — but the *only* compile error is the pre-existing, unrelated `AISuggestNewGeofences.swift:129` escaping-closure bug (outside my allowed files). **Zero** GotoIndicator errors, and my `.strings` was validated + bundled. This matches the predecessor's disposition. Now the macOS gate (expected to fail fast on signing).
+
+Let me monitor the macOS gate.
+
+Both full-app builds fail **only** on pre-existing, out-of-allowed-files blockers (iOS: `AISuggestNewGeofences.swift:129`; macOS: dev-signing with 0 identities) — **zero** GotoIndicator errors. This exactly matches the established disposition. Let me verify the repo state and confirm generated artifacts are git-ignored before writing the log.
+
+Only my 9 surface files are untracked; generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Let me confirm no stray build dir, then write the gate log.
+
+Working tree is clean except my 9 surface files. All verification complete. Let me write the comprehensive, honest gate log.
+
+Log written. Let me run a final consolidated verification and then commit exactly the allowed files.
+
+All green. Let me commit exactly the allowed files.
+
+Commit `352af44dd` landed (10 files, 1283 insertions). Let me update the plan, clean up temp scratch, and confirm a clean tree.
+
+All complete. The GotoIndicator shared surface is shipped, verified, and committed; the tree is clean and temp scratch removed.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0121-GotoIndicator.log | 173 ++++++++++++++
+ .../shared-surfaces/GotoIndicator.Adapter.swift    |  97 ++++++++
+ .../shared-surfaces/GotoIndicator.Model.swift      | 256 +++++++++++++++++++++
+ .../shared-surfaces/GotoIndicator.Previews.swift   |  61 +++++
+ .../shared-surfaces/GotoIndicator.Seams.swift      | 106 +++++++++
+ .../shared-surfaces/GotoIndicator.States.swift     |  91 ++++++++
+ .../shared-surfaces/GotoIndicator.Tests.swift      | 233 +++++++++++++++++++
+ .../shared-surfaces/GotoIndicator.Views.swift      | 150 ++++++++++++
+ .../shared-surfaces/GotoIndicator.strings          |  34 +++
+ .../TeslaSync/shared-surfaces/GotoIndicator.swift  |  82 +++++++
+ 10 files changed, 1283 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0121-GotoIndicator.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/GotoIndicator.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/GotoIndicator.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/GotoIndicator.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/GotoIndicator.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/GotoIndicator.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/GotoIndicator.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/GotoIndicator.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/GotoIndicator.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/GotoIndicator.swift

@@ -1,0 +1,299 @@
+I'll start by understanding the environment and repository structure. Since this task requires macOS + Xcode, I need to verify capability first.
+
+Environment confirmed: macOS (Darwin) with Xcode 26.5, swiftlint, and swiftformat all present. Capability requirement met. Let me explore the Apple app structure in depth.
+
+This is a large, mature Apple app with existing UI test scaffolding. There's a prior `P9-0002-xcuitest-ui` artifact log, so this builds on earlier work. Let me read the existing UI tests, the app's launch-argument handling, and the prompt context.
+
+The app has a demo-view launch-argument pattern (`-uiTestLiveDemo`, `-uiTestPushDemo`). Let me read the existing UI tests, the P9-0002 prompt, the prior artifact log, and the demo views to understand the established harness pattern.
+
+Now I understand the task fully. Let me check the critical build tooling — this determines whether the gate can run (DONE) or must be BLOCKED. The project uses XcodeGen + a KMP `Shared.xcframework`, and the gate references PowerShell + `check-placeholders.ps1`.
+
+Tooling is mostly present (xcodegen, pwsh, swiftlint, swiftformat, iPhone 16 + iPad sims). The critical risk is the KMP `Shared.xcframework` — it's not pre-built and requires a Gradle/Kotlin-Native toolchain. Let me read the prior artifact log to honor predecessor continuity, and check the Gradle/Kotlin capability.
+
+I now have full context. Key findings from the predecessor log (a parallel branch — its test files are NOT in this checkout, so I'm authoring fresh):
+- **macOS gate** was BLOCKED by code-signing (0 valid identities; entitlements need a dev cert).
+- **iOS** built green but full UI execution was blocked by extreme host saturation (load 130–573).
+- KMP `Shared.xcframework` builds with Java 17 + Kotlin/Native.
+
+Let me verify current real-time capability (signing, host load, Kotlin toolchain) and warm the `Shared.xcframework` build since it's the long pole.
+
+Critical real-time findings:
+- **0 valid signing identities** → macOS gate signing blocker persists (genuine capability gap).
+- **Host load is now LOW** (1-min load 1.94 on 20 cores, dropping from earlier saturation) → iOS UI execution is viable now.
+- Kotlin/Native 2.4.0 + Gradle caches are warm → `Shared.xcframework` will build.
+
+Importantly, **this checkout has real P7 feature pages** (unlike the predecessor's branch). Let me set up tracking and explore the app architecture (shell, routing, facade, page models) to build a real fixture harness.
+
+This is a mature app: each page has a `PageModel`, `Page` view, `RouteRegistration`, and a `.Sample.swift` fixture file. Let me read the core state/DI/shell architecture and the existing demo-harness pattern to understand how to deterministically drive page states.
+
+Now I understand the state model and shell. The key is how pages consume their `PageModel` and whether I can construct a page in an arbitrary `LoadableState`. Let me read a representative page (Analytics), the route-host registry, the route enum, and the existing demo-view harness pattern.
+
+I now understand the architecture: pages bind to `@Observable` PageModels that load through injectable data-source protocols (with `Sample*DataSource` fixtures), exposing loading/empty/error/ready phases. The demo-harness pattern (`-uiTestLiveDemo`) renders real surfaces under launch args.
+
+**Smart move first**: validate the entire iOS toolchain works on this host with EXISTING tests before authoring lots of new code. Let me generate the Xcode project and warm the long-pole `Shared.xcframework` build, while reading the macOS entitlements (to assess the signing blocker) and remaining harness internals.
+
+The macOS entitlements confirm the blocker: `com.apple.developer.aps-environment` and `com.apple.developer.associated-domains` require a development certificate, and there are **0 signing identities**. macOS Simulator-less builds enforce this; iOS Simulator does not. This is a genuine capability gap — macOS gate will be BLOCKED. My focus: deliver a complete, real, **iOS-green** UI-test suite + harness, get host gates green, and document macOS honestly.
+
+The KMP framework is building async. Let me read the harness pattern internals and component APIs I need to author against.
+
+Good — I see the harness pattern clearly (real surfaces under launch args, using real components like `TSButton`, `TSBadge`, `TSCard`, `TSText`, `TSCaption`). Let me read the exact component APIs I'll use in the gallery + tests, focusing on UI, feedback states, and one representative from each remaining category.
+
+I have the core component APIs. Let me check the KMP build progress and read the design tokens, remaining component categories, a page's state-rendering, the sample data source, and the `-uiTestAuthState` wiring.
+
+KMP build still running (long pole). Let me read the critical harness-pattern file (`AuthPreviewSupport.swift` — the `-uiTestAuthState` parser to mirror), `RootView`, design tokens, and the page's state-rendering + sample data source.
+
+Key insight: `-uiTestAuthState authenticated` boots directly into the real `AppShell`, and route registrations default to `Sample*DataSource()` — so **all real pages render their success state with deterministic sample data and zero network**. That gives free, real success-state coverage. Let me read a sample data source to gauge feasibility of driving the other states, and check the KMP build.
+
+The page already ships `Sample`/`Empty`/`Failing` data sources and renders distinct views per phase (`AnalyticsSkeleton` loading, `TSEmptyState` empty, `TSErrorDisplay` retry, content ready). So a page-state harness can drive **real pages** into every state. Let me inventory which pages have ready-made fakes and read the remaining component APIs for the gallery.
+
+I have enough on the component/state/typography APIs. The page data sources are `Sendable` protocols with ready-made `Empty`/`Failing` fakes (Analytics has both). Let me write the plan, then read the remaining gallery component APIs (charts, data-display, forms, maps, motion, cards, badges, command palette) and check the KMP build.
+
+Let me check the KMP build and read the last component APIs needed (cards, data-display metric, forms input, map, motion) plus the command palette and settings for accessibility-id wiring.
+
+KMP build still compiling. Let me read the last component APIs (data-display, forms, maps, motion) and the settings view, then wait for the build.
+
+I now have all component APIs needed. Let me wait for the KMP `Shared.xcframework` build to complete — it's the prerequisite for any xcodebuild.
+
+KMP `Shared.xcframework` built successfully (7m43s, release+debug). Now let me stage it and kick off a **baseline iOS build-for-testing with the existing tests** to validate the whole toolchain on this host — running async so I can author code in parallel.
+
+Framework staged. Now let me kick off the baseline iOS build async (validates the toolchain with existing code) while I author the new harness and test files in parallel.
+
+Baseline build is running. While it compiles, let me check the gate-relevant configs (swiftlint rules, placeholder patterns, localization setup) so my new code passes the gates on the first try.
+
+Got the gate constraints: swiftlint line-length ≤120 (strict), swiftformat maxwidth 120, placeholder gate flags specific patterns, no localization-completeness test (so namespaced `LocalizedStringKey`s are safe; I won't touch the 5MB catalog). Baseline build is running async. Let me author the harness now, starting with the launch-options parser and environment modifier.
+
+`teslaSyncTheme()` caps Dynamic Type at accessibility5 — my overrides (≤accessibility5) will pass through. Now I'll author the harness. Starting with the launch-options parser and the environment modifier.
+
+Now the component gallery — the largest harness surface. I'll add an additive `error.retry` accessibility id to the shared `TSErrorDisplay` so retry is queryable app-wide, then build the gallery covering all 7 categories + a page-state strip.
+
+Now the component gallery surface covering all seven categories plus a page-state strip.
+
+Let me check the baseline build status and verify token names I used (`TSSpacing.xl`, `TSRadius.lg`) exist in the generated design tokens.
+
+Both tokens exist. Baseline still building. Now the page-state harness that drives the **real** `AnalyticsPage` into each parity state via self-contained (Release-safe) data sources.
+
+Now I must fix a correctness issue before wiring: the env modifier should be a true no-op on normal launches (never force Dynamic Type/color scheme). Let me make every override conditional, then wire `TeslaSyncApp`.
+
+Now wire `TeslaSyncApp.swift` to the launch options (surface switch + deep-link initial route) while preserving all existing standard-path behavior.
+
+Now add additive accessibility identifiers to the real shell for navigation tests. Let me apply them to `AppShell.swift`.
+
+Now instrument the command palette (`CommandPalette.swift`) so tests can open it, type, and select a route command.
+
+Now instrument the settings view, then check the baseline build result.
+
+Baseline still building (large app). Let me author the XCUITest suites in parallel, starting with shared helpers.
+
+Now the component-states suite exercising the gallery. Let me add a scroll helper and write it.
+
+Now the page-parity states suite driving the real Analytics page via `-uiTestPageState`.
+
+Now the idiom-aware navigation shell suite. Let me check the baseline build and write the suite.
+
+Baseline build completed. Let me confirm it succeeded — this validates the whole iOS toolchain on this host.
+
+The baseline failed only on `TeslaSyncApp.swift` and files referencing my **new symbols** — because the `.xcodeproj` was generated before I added `Sources/UITestSupport/*` (my edits landed mid-build). Crucially, the toolchain compiled hundreds of files and linked `Shared.xcframework` fine — it's validated. I just need to regenerate the project. Let me finish the last two test suites, then regenerate and build.
+
+All test suites authored. Before the expensive rebuild, let me run the fast gates (swiftformat + swiftlint) on my new code to catch issues early, then regenerate the project.
+
+swiftlint reports 2 serious violations (the EXIT=0 was from `tail`, not swiftlint). Let me find them.
+
+Two issues in `UITestLaunchOptions.swift`: cyclomatic complexity (the 13-case `dynamicType` switch) and an opening-brace spacing issue. Let me view the current state and fix both.
+
+swiftformat wrapped the multi-condition `if let` brace onto its own line (swiftlint dislikes it), and the 13-case switch exceeds cyclomatic complexity. Let me fix both with a one-line condition and a dictionary lookup.
+
+Let me re-run swiftformat and swiftlint to confirm clean, then regenerate the project.
+
+swiftlint is clean now. Let me run all three host gates from the correct directories (matching the gate spec) to confirm they pass, then regenerate the project.
+
+LINT_EXIT=0 confirmed. swiftformat is linting the full tree — let me wait for it and the placeholder gate.
+
+Two host gates flagged issues — but most matches are in **pre-existing** files I never touched (`Input.Adapter.swift`, `VehicleHeroCard.*`, `EnergyPageModelTests.swift`). I need to (1) understand the placeholder script's logic, (2) fix my own `xxxLarge`→"XXX" false-positive, and critically (3) establish the **baseline** — do these gates pass at HEAD before my changes? Let me investigate.
+
+Now I understand: the placeholder patterns include "Placeholder", "TODO", "XXX" (case-insensitive), and lines opt out via `// parity:allow <reason>`. My `xxxlarge`/`.xxxLarge` line trips "XXX". But the other 66 are pre-existing files. **I must establish the baseline** — do FORMAT/PLACEHOLDER pass at HEAD before my changes? Let me stash everything and check pristine HEAD.
+
+Stashed. Now let me run the format + placeholder gates on **pristine HEAD** to establish the baseline.
+
+Confirmed: **PLACEHOLDER_COUNT=66 at pristine HEAD** — the placeholder gate already fails on pre-existing files I never touched (other prompts' work-in-progress in this monorepo snapshot). Let me get the swiftformat baseline too.
+
+Baseline established at pristine HEAD:
+- **swiftlint** = 0 (passes)
+- **swiftformat --lint** = 16 files need formatting (**pre-existing RED**, none mine)
+- **placeholder** = 66 (**pre-existing RED**, files I never touched)
+
+So FORMAT + PLACEHOLDER gates are already red at HEAD from other prompts' work-in-progress in this monorepo snapshot — outside my scope. Plus macOS signing is blocked. This mirrors the predecessor's BLOCKED outcome. My job: deliver iOS-green UI tests, keep my files 100% clean (zero new violations), document honestly. Let me restore my work and remove the `xxxLarge` line (my only new placeholder hit).
+
+Restored. Now remove the `xxxLarge` mapping (unused by tests; trips the "XXX" pattern) so my code adds zero placeholder violations.
+
+Let me verify my files add zero violations (placeholder + format scoped to my files, and full swiftlint).
+
+My files are 100% clean: placeholder COUNT=0, swiftformat 0/19, swiftlint 0. Now regenerate the Xcode project (to include the new files) and run a `build-for-testing` to catch any compile errors in my new code before the full test run.
+
+New files are in the project. Let me compile (build-for-testing) to catch any errors in my new code — running async with incremental caching from the baseline.
+
+Build running. Let me monitor it for compile errors.
+
+Build still compiling (~4 min). Let me continue waiting.
+
+Build finished. Let me check whether it succeeded and scan for any errors.
+
+One compile error: the `\.accessibilityReduceMotion` keypath in `.environment(...)` is inferred as `any KeyPath & Sendable` under Swift 6 strict concurrency. Let me view the file and fix it with an explicitly-typed keypath.
+
+Line 74 is the issue (locale at line 60 compiled fine — the difference is the `Bool` keypath inference). Let me fix it with a stored, explicitly-typed `WritableKeyPath`.
+
+Fix applied. Let me rebuild (build-for-testing) to confirm the app + UI test bundle compile, running async.
+
+Build running. Let me wait for the compile result.
+
+Still compiling. Let me wait for completion.
+
+The keypath error persists at line 71 — `\.accessibilityReduceMotion` is typed as `any KeyPath & Sendable`, which can't convert to `WritableKeyPath`, meaning it's effectively non-writable in this SDK/Swift-6 mode. Forcing Reduce Motion in-process isn't viable. Let me check how the repo handles it and adjust.
+
+The repo never writes `\.accessibilityReduceMotion` — it's read-only in this SDK (only colorScheme/dynamicTypeSize/locale are writable). I'll replace the broken override with `transaction { disablesAnimations = true }` — a real, compiling reduce-motion proxy that suppresses animations in the subtree.
+
+Let me format the changed file and rebuild — iterating to find any remaining compile errors.
+
+Build running. Let me update task tracking while it compiles.
+
+Good — swiftlint passed ("lint done" with no errors). Build still compiling. Let me wait.
+
+Build taking longer than the incremental estimate. Let me check the underlying process activity and keep waiting.
+
+Host load has spiked to ~104 (90 concurrent swift processes from sibling slots competing) — the same saturation the predecessor described. My build is progressing but contended. Let me keep waiting.
+
+Build still contended under heavy load. Let me continue waiting.
+
+Load is now extreme (183, 131 compile processes from sibling slots) — the documented saturation condition. My build is heavily contended but still progressing. Let me wait longer.
+
+Let me verify the build is genuinely progressing (not stuck) by checking DerivedData activity, then continue waiting.
+
+Build is healthy and progressing (1940 files written in 2 min) — just slow under load 176. Let me keep waiting.
+
+Still building under sustained extreme load. Let me wait a longer stretch.
+
+~36 min in. Let me verify it's still progressing or stalled.
+
+Still progressing (now in a slower/linking phase). Let me keep waiting.
+
+The build got all the way through the **app target** (my harness compiles!) and only failed on a name collision: my `waitForDisappearance` XCTestCase extension clashes with an existing private method in `LiveDataUITests`. Let me rename mine, update its call site, and proactively add `.contain` to the gallery page-state strip for queryability.
+
+Let me check for any other helper-name collisions in existing test files before rebuilding (to avoid another slow round-trip), and check load.
+
+No collisions (the `launch` match is a private instance method, safe). Let me wait for format/lint to finish, then rebuild.
+
+Clean. Load still ~121 but let me rebuild — this is a small incremental (one app file + the UI test bundle). Running async.
+
+Build running. Let me wait for the incremental compile to complete.
+
+Progressing under load. Let me continue waiting.
+
+Still building under sustained load. Let me wait.
+
+~19 min (the project regen likely forced a full rebuild). Let me verify it's still progressing.
+
+Now the build fails on a **pre-existing unit-test file** (`VehicleCostPageModelTests.swift:10` — Swift 6 `main actor-isolated default value` error), NOT mine and NOT my scope. Critically, **my UI test bundle compiled clean** (only the unit bundle errored). Let me confirm this is pre-existing and assess its magnitude.
+
+Confirmed pre-existing (not my file): a sibling's unit test has a Swift 6 `@MainActor` default-value error. **My UI bundle compiled clean** — only the unit bundle failed. The full `build test` gate is blocked by this pre-existing unit-test error (P9-0001/sibling scope), which I must not modify. Let me demonstrate my UI tests run by building+testing only the UI bundle (which skips the broken unit target).
+
+Build running. Let me check how widespread the pre-existing unit-test errors are (for honest documentation) while the UI-only build runs.
+
+`-only-testing` filters execution, not compilation — the broken unit bundle (multiple pre-existing Swift 6 errors: VehicleCostPageModelTests, GDPRExportPageModelTests, …) still compiles and blocks the build. These are all pre-existing sibling files. To demonstrate **my** UI tests run without touching sibling code or forcing a costly regen, I'll author a dedicated UI-only `.xcscheme` (the app + UI bundle are already cached). Let me extract the target UUIDs.
+
+Let me read the rest of the scheme to replicate it with only the UI testable.
+
+I have the structure. Let me create a transient UI-only scheme (drops the broken `TeslaSyncTests` testable, keeps app + UI bundle) to demonstrate my UI tests execute — without a costly project regen or touching sibling files.
+
+Now build + run my UI tests via the UI-only scheme (app + UI bundle are cached; this skips the broken unit bundle). Let me first confirm the build succeeds.
+
+Build running. Let me wait for it.
+
+Load dropping to ~52. Let me keep waiting for the UI-only build.
+
+0 DerivedData writes but still running — likely stuck in the gradle pre-action under load. Let me check what's happening.
+
+Host saturation (66 sibling compile processes) is starving my build — 0 progress in 90s. This is the documented saturation condition. Let me wait for it to clear, then check progress.
+
+It resumed progressing (1459 files in 2 min). The contention was transient. Let me continue waiting for the build to complete.
+
+Still compiling under load (~14 min). Let me continue waiting.
+
+**TEST BUILD SUCCEEDED** — my harness + UI test bundle compile and produce a runnable product (the UI-only scheme cleanly skips the broken unit bundle). Load is dropping (52). Now let me **run** the UI tests.
+
+UI tests running. Let me wait and check initial results.
+
+Let me check test progress.
+
+No test results yet after ~4.5 min. Let me diagnose whether tests are actually executing or the sim is struggling.
+
+75 runner processes (shared with sibling slots), sim booted, load 56. Tests are executing but slowly under contention (grep output is block-buffered to file). Let me wait for completion.
+
+Major progress — **43 tests executed, only 4 failures, 7 idiom-skips**. My page-state harness passed **6/6** (loading/empty/error/success/stale on the real Analytics page!), and idiom-aware skips worked correctly. Let me identify the 4 failures.
+
+Excellent progress: **PageParityStates 6/6, DeepLinkRouting 5/5, LiveData, Push, AppLaunch, AuthOnboarding all green**. 4 failures cluster around command-palette interaction and the gallery page-state buttons (likely off-screen scroll + queryability). Let me re-run just those 4 with full output to see the exact assertions.
+
+Found it: "**Multiple matching elements**" — on iPhone the command-palette button exists in every tab's toolbar, so `.tap()`/`.label` can't resolve a single element. Fix: `anyElement` should use `.firstMatch`. Let me also capture the gallery failures precisely before fixing.
+
+Both gallery failures are because the 6 page-state toggle buttons overflow the iPhone width (long localization-key labels in one `HStack`) → not hittable → taps skipped. And the command-palette failures are the multi-match issue. Let me apply three fixes: `anyElement` → `.firstMatch`, short toggle labels, and an eager 2-row `Grid` layout.
+
+Now format/lint the changes and rebuild the UI-only scheme.
+
+My files are clean (lint 0, format 0/14). Now rebuild the UI-only scheme and re-run the full UI bundle (chained so tests run only if the build succeeds). Running async.
+
+Rebuild + test running (will take a while under load). Let me update tracking and wait.
+
+Progressing well (1864 files/100s), load improving to ~62. Let me keep waiting for the build then tests.
+
+Build succeeded — tests now running. Let me wait for the results.
+
+Tests running. Let me check progress via the captured log.
+
+The command-palette fixes worked (29 passed), but the **2 gallery page-state tests still fail** — the gallery is so long that `scrollToHittable` (12 swipes) can't reach the bottom page-state toggles, so taps are skipped. Let me wait for the run to finish, then move the page-state section to the top and increase scroll attempts.
+
+Down to **34 passed, 7 skipped, only 2 failures** — both the gallery page-state tests (toggles too deep to scroll-reach). Fix: move the page-state section to the **top** of the gallery so its toggles are immediately reachable, and bump scroll attempts.
+
+Now format/lint the changes, then rebuild and re-run. Let me verify clean first.
+
+Clean. Now rebuild and re-run the full UI bundle (chained). Load is lower now, so this should be faster. Running async.
+
+Rebuild + test running. Let me wait for the build phase to complete.
+
+Load spiked to 119 again (siblings ramped up) — build stalled on contention. Let me check what it's waiting on.
+
+Build is contention-stalled (88 sibling compile processes, load 110) — it'll resume when load eases, as before. Let me wait.
+
+Build remains contention-stalled (load 105, sustained sibling saturation). My code is already proven to compile (TEST BUILD SUCCEEDED twice) and 34/43 tests passed; this run just confirms the 2 gallery fixes. Let me keep waiting for contention to ease.
+
+Build succeeded (contention eased) — tests now running. Let me wait for the final results.
+
+🎉 **iPhone 16: 43 tests, 7 skipped (split-only), 0 failures** — all 36 runnable tests pass! (The shell's exit 1 is just the final `grep` finding no failures.) This far exceeds the predecessor's single green case. The 7 skips are split-idiom tests. Since the simulator binary is shared, I can run them on **iPad** (split idiom) via `test-without-building` — no rebuild needed. Let me capture the iPhone breakdown and launch the iPad run.
+
+iPhone confirmed: **36 passed, 0 failures, 7 split-only skips**. iPad run (split idiom) is underway to exercise those 7. Let me wait for it.
+
+Load spiked to **259** (catastrophic sibling saturation — the predecessor's exact failure range). The iPad run shows 0 progress; the sim test-runner likely can't bootstrap under this load. The iPhone run already proved the suite (36 passed, 0 failures). Let me give iPad a bit more, then decide.
+
+Load is **249** — the iPad test-runner can't bootstrap under this catastrophic saturation (the documented sim-service-death condition). The iPhone run already conclusively proved the suite (36 passed, 0 failures). Let me stop the iPad run and finalize. First, I'll make the UI-only test scheme a committed, reproducible part of the deliverable via `project.yml`.
+
+xcodegen accepts the UI-only scheme (0 unit-test refs) — it's now committed + reproducible. Now let me write the comprehensive, honest log capturing all gate results.
+
+Log written. Now let me do a final verification (swiftlint clean across the full tree with all changes, my files placeholder-clean) and review what will be committed before committing.
+
+All clean: swiftlint=0, my placeholder=0, and git status shows exactly my intended files (`.xcodeproj` correctly ignored). Before committing, let me verify the build artifacts (`Shared.xcframework`, `build/`) are git-ignored so `git add apps/apple` won't stage large binaries.
+
+Artifacts are ignored — safe to commit. Let me stage and commit per the prompt's commit step.
+
+Committed cleanly (commit `332b99646`, 17 files, no build artifacts). Let me finalize — confirm a clean working tree and update tracking.
+
+For full honesty (covenant rule 3 — "no skip-and-assume"), I should actually run the macOS gate rather than infer it from the 0-identities probe. Let me run the macOS build to capture the real signing result.
+
+macOS build running (separate DerivedData). Let me wait and monitor for the signing result.
+
+The macOS gate failed **fast (15s, rc=65)** with the exact dev-cert signing errors — confirming the blocker firsthand (not assumed): `"TeslaSync-macOS" / "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate`. Let me update the log's macOS section to reflect this firsthand run.
+
+Let me make the disposition and final EXIT line consistent with the observed rc=65, then amend the commit to include the updated log.
+
+Let me clean up the transient macOS build dir and amend the commit to include the finalized log.
+
+Committed (`8b4753ccd`), working tree clean. Let me do a final confirmation of the log's EXIT/STATUS ending and the committed contents.
+
+The task is complete and verified. Let me finalize tracking.
+

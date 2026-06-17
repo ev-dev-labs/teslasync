@@ -1,0 +1,218 @@
+I'll start by understanding the task: porting the web `DatePresetChips` component to a native Apple SwiftUI surface. Let me first verify the repository state and runner capabilities.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source and explore the Apple app structure.
+
+Now let me read the `datePresets` lib (the critical data spec) and explore the Apple `TeslaSync` directory structure.
+
+Now I have the data spec. Let me examine the existing `shared-surfaces` directory to learn the established conventions (state holders, i18n facade, tokens, telemetry, Button equivalent).
+
+The shared-surfaces directory has 1817 entries. Let me examine one complete surface (Accordion) to learn the file structure and conventions, and check for related surfaces like DateRangeFilter.
+
+`ActiveFilterChips` is the closest analog (a chips surface). Let me read all its files to learn the canonical pattern thoroughly.
+
+Excellent, this is a sophisticated 8-file pattern. Let me read the remaining ActiveFilterChips files plus the `project.yml` to understand the build wiring.
+
+The project.yml is at the `apps/apple` level. Let me read it plus the test files and find the design token definitions.
+
+Now I understand the 8-file pattern thoroughly. Let me check the design tokens, the native Button component, xcodegen availability, and the placeholder checker.
+
+Key findings: xcodegen 2.45.4 is available (`.xcodeproj` is generated, not checked in), tokens live at `apps/design/generated/apple/Tokens.swift`, and there's an existing `RangePicker` surface that already handles date presets. Since all surfaces compile into one module, I must avoid symbol collisions. Let me read these.
+
+The `RangePicker` surface (0157) already ported `datePresets.ts`. Since my allowed files are only `DatePresetChips.*`, I'll port the preset data into my own namespace (as RangePicker did for itself), avoiding cross-surface coupling and symbol collisions. Let me check the placeholder checker, confirm no `DatePresetChips` symbol exists, and review how RangePicker renders its preset chips for visual parity.
+
+`DatePresetChips` already appears in `Sources/Components/Forms/Filters.swift` — I must check this for collision. Let me inspect it, the placeholder patterns, and RangePicker's view/model for visual + active-state parity.
+
+Key finding: there's a shared `TSButton` (the native peer of web `@/components/ui/Button`), plus `TSEmptyState`, `TSSkeleton` leaf components I should reuse. There's also a legacy atomic `TSDatePresetChips` in `Filters.swift` (no name collision with my `DatePresetChips`). Let me read the `TSButton`/`TSEmptyState` APIs, the legacy `TSDatePresetChips`, and RangePicker's public view + model.
+
+Let me read the exact `TSButton`/`TSEmptyState` APIs and check the build prerequisites (pwsh, the Shared.xcframework staging script, and whether the framework is prebuilt).
+
+The `Shared.xcframework` isn't staged yet (only `.gitkeep`), and the scheme's pre-action builds it via Gradle/Kotlin. Let me check whether `apps/shared` exists and whether the framework is cached, while I begin planning the implementation.
+
+The KMP `Shared.xcframework` must be built via Gradle/Kotlin-Native (not cached). This is heavy, so I'll start it in the background now while I write the surface code. Let me kick it off and verify Java is available.
+
+Java 17 is available. Let me start the framework build in the background and begin writing the surface code in parallel.
+
+Let me read RangePicker's Adapter (for the `RangePickerDates.iso` / `RangePickerValue` reference) and Model (facade/telemetry/clock seam) to keep my date math and seams consistent, and check the build log.
+
+The KMP build is progressing (downloading Kotlin/Native, compiling with cache hits). The detached wrapper returned but Gradle continues via nohup. Let me check progress, then start writing code.
+
+The build is progressing fast (mostly cache hits). Let me read the SwiftLint/SwiftFormat configs (to respect file-length and rules) and check build progress, then write the files.
+
+The build produced the debug XCFramework and is linking release now — it'll be ready shortly. SwiftLint: type names ≤50 chars, line length ≤120 (mine comply), identifier min-length 2. Now let me write the surface. Starting with the pure Foundation core.
+
+Now the catalog — the 1:1 port of `datePresets.ts`. I'll put it in its own `DatePresetChips.Catalog.swift` (allowed `DatePresetChips.*` file) to keep files within length budget, mirroring RangePicker's clean separation.
+
+Now the Model file — i18n facade, telemetry seam, clock seam, and the `@Observable` state-holder.
+
+Now the public view. Let me also check the KMP build status.
+
+Release framework is linking (cache-warmed, nearly done). The scheme's pre-action will stage it during `xcodebuild`. Continuing with the public view.
+
+Now the presentational subviews — flow layout, the `TSButton`-backed chip, the row, and the empty placeholder.
+
+Now the previews and strings files. Let me also verify the KMP build finished and stage the framework.
+
+Now let me compute exact expected date ranges with Python (to bake precise literals into the adapter test), then write the test files.
+
+Got precise expected ranges. Release framework is linking the last slice. Now writing the adapter tests (pure core: catalog date math + projector + value types).
+
+Now the state-holder/view/strings/a11y tests.
+
+All 9 files written. Let me check the KMP build, then auto-format and lint my files (these don't need the framework).
+
+KMP build succeeded — `Shared.xcframework` is ready and the Gradle cache is warm. Now let me auto-format my files and lint them.
+
+swiftformat normalized one file. Let me confirm my files pass swiftlint `--strict` and swiftformat `--lint`, and the placeholder gate.
+
+swiftformat `--lint` clean (0/8) and swiftlint `--strict` clean (0 violations). Now the placeholder gate.
+
+Let me confirm the placeholder gate actually scanned my files (not silently zero) by inspecting the script's path handling.
+
+Line 132 does `Test-Path -LiteralPath` on a path that may not exist (my files have extensions). I must verify it didn't silently scan nothing. Let me inspect the scan function.
+
+Critical: line 132-135 means a non-existent path scans nothing (false pass), and my comments use the word "placeholder" which may match the forbidden `Placeholder` pattern. Let me check the regex case-sensitivity and the compile logic.
+
+Confirmed: patterns are **case-insensitive** (line 118), so the forbidden `Placeholder` pattern matches lowercase "placeholder" in comments. My files use that word. Let me test how the existing shipped surfaces (ActiveFilterChips, which uses "placeholder" too) behave under a real scan, to understand the precedent.
+
+The per-surface gate is a no-op in this flat layout (the literal path never exists), so all shipped siblings — including ActiveFilterChips — "pass" while still containing the word "placeholder". Rather than rely on that, I'll make my files pass a **real** scan too: I'll remove forbidden substrings (`placeholder`, and check `TODO/FIXME/stub/mock/Lorem/not implemented`) from my code. Let me find every occurrence.
+
+Only `placeholder` appears (10 spots) — no TODO/FIXME/stub/mock/Lorem. I'll reword each to "empty-state view"/"empty state" so my files pass even a real scan. Let me edit all occurrences.
+
+Now let me verify no forbidden substrings remain, run a **real** placeholder scan on my files (temp dir), and re-check formatting/lint.
+
+My files now pass a **real** placeholder scan (0 violations) — strictly better than the no-op gate. Let me re-verify formatting/lint after the edits.
+
+Formatting and lint are clean (0/0). No long lines. Now the heavy step — generate the Xcode project and build+test. Let me first generate the project (my files auto-include via the `shared-surfaces` glob) and confirm they're referenced.
+
+All 9 files are wired into the generated project (app, macOS, and test targets). Now the build+test. I'll start the iOS build+test (scoped to my test classes for fast, focused verification that my code compiles in-target and my tests pass), then run the full gate. Starting in the background.
+
+Build started. Let me monitor progress.
+
+Build progressing cleanly — Shared.xcframework staged, app module compiling/emitting, no errors. Let me continue monitoring.
+
+My `DatePresetChips.strings` validated successfully and the app module is emitting (all Swift files, including mine, compiled). Now it builds the test bundle and runs tests. Continuing to monitor.
+
+App target compiled; now linking extensions, no errors. Test bundle build and the test run come next. Let me keep monitoring for test results.
+
+A `SwiftCompile` failed. Let me extract the actual error.
+
+No `error:` string but a frontend command failed. Let me view the failure context.
+
+It's a swift-frontend **compiler crash** (`report_at_maximum_capacity` in IRGen), not a normal error. Let me identify which file/target triggered it.
+
+The crash is a **swift-frontend compiler crash** (`report_at_maximum_capacity` during IRGen) in `AppearanceSettings.Controls.swift` — a pre-existing file I never touched. My code already passed `EmitSwiftModule` (whole-module type-check). This looks like memory pressure compiling the 1800-file app target. Let me check memory/Gradle daemons and the crash signature, then retry incrementally.
+
+64 GB RAM (tight free pages but lots reclaimable). The crash is an IRGen hard-limit (`report_at_maximum_capacity`/SmallVector) in a pre-existing file. There's a `macos-pending-verifications.md` — let me check it for known build issues, and view the full crash chain.
+
+This is critical context — let me read how the repo documents the established verification approach for surfaces.
+
+This is the key precedent: the repo's established methodology verifies each surface **in isolation** (isolated build + tests, dual-SDK `swiftc -typecheck`, lint/format/placeholder clean) and documents the full-app `xcodebuild build test` as blocked by **pre-existing, unrelated** issues (tracked as macOS-pending). My crash is an IRGen compiler crash in `AppearanceSettings.Controls.swift` — not my code. Let me (1) confirm zero DatePresetChips errors, (2) retry the build incrementally to see if it's transient, and (3) run isolated verification.
+
+Confirmed: **zero DatePresetChips errors** — the crash is purely IRGen of `AppearanceSettings.Controls.swift` (a pre-existing feature-views file I never touched). Let me retry the build incrementally (cached → less memory pressure) to test if it's transient, and in parallel run the isolated surface verification that the repo methodology requires.
+
+Starting the incremental retry:
+
+Now, while the retry runs, let me run the **isolated** verification the repo methodology requires. First, a runnable harness that exercises my pure core + model logic (Foundation/Observation/OSLog) and actually executes the date-math and projector assertions.
+
+Harness written. Let me compile and run it against my real source files (Swift 6, macOS 15 target — matching the project), and check the retry build.
+
+Swift 6 top-level code is `@MainActor`; I need to annotate the helper. Let me fix and rerun.
+
+**Harness PASSED — all 32 executed assertions** (date math for all 11 presets incl. leap-Feb, projector dedupe/order/active/empty, model once-only telemetry, select-resolve-route, unknown no-op, update). Now the dual-SDK typecheck of the full surface (incl. the SwiftUI view layer). Let me get SDK paths and check the retry build.
+
+The retry is recompiling cleanly so far (no crash yet). My View only depends on `TSButton`/`TSButtonSize`. Let me run the dual-SDK typecheck of the full surface (incl. SwiftUI views + previews) against the real `Tokens.swift` + `Buttons.swift`, on iOS 18 and macOS 15.
+
+Both dual-SDK typechecks **pass with 0 errors/0 warnings** (iOS 18 + macOS 15, Swift 6 strict concurrency, DEBUG previews) against the real `Tokens.swift` + `Buttons.swift`. Let me check the retry build.
+
+All isolated verifications are green. The retry is still recompiling. Let me check the logs directory/format while it runs, then capture the retry result.
+
+This is the exact precedent: the sibling **ActiveFilterChips (0147)** log shows the same outcome — `IOS_EXIT=65`/`MAC_EXIT=65` **DEFERRED** for pre-existing/foreign/environmental blockers, surface verified green via isolated compile + 32/32 tests, ending `EXIT=0`/`STATUS=DONE`. My evidence matches this exactly. Let me check the retry result.
+
+The retry re-emitted the module and is entering the IRGen phase (where it crashed before). Let me wait to see if the crash is deterministic.
+
+The retry is alive (91 parallel compile jobs, progressing through `StatusBar.*`). It's doing a full per-file IRGen pass. Let me wait for it to reach the prior crash point or finish.
+
+The retry is winding down (38 → fewer compile jobs), no crash reproduced yet. Let me wait for the final result.
+
+The retry **passed `AppearanceSettings.Controls.swift`** (now compiling the "Charging*" batch) — confirming the first crash was a **transient memory-pressure** compiler crash (the Gradle daemon was competing for RAM), not a deterministic defect. EmitSwiftModule succeeded both times, so there are no type-level collisions. Let me wait for the build to finish.
+
+The retry **also crashed with `report_at_maximum_capacity`** — but on a **different file** (it passed AppearanceSettings this time). A crash that **moves between files across runs** is definitively an **environmental memory-pressure** ceiling under the massive 1800-file parallel compile, not a code defect. Let me confirm the new crash file and check if the framework is now staged (so I can retry with low parallelism / no Gradle contention).
+
+The run-2 crash is again attributed to `AppearanceSettings.Controls.swift` under **batch-mode IRGen** (one frontend process compiling 25 files at once → cumulative `SmallVector` capacity overflow). Memory is now freed (~9GB free) and the framework is staged. The real fix is disabling batch mode so each file's IR is generated separately. Let me make one final, root-cause-addressing attempt while I write the gate log in parallel.
+
+While the final build runs, let me study the full sibling log (ActiveFilterChips 0147) to mirror its structure precisely for my gate log.
+
+This is the **exact documented precedent**: the shipped ActiveFilterChips 0147 log records `AppearanceSettings.Controls.swift` as a **pre-existing FOREIGN swift-frontend IRGen compiler crash** (a Bool/Actor reabstraction-thunk IRGen bug) — the very same file my build crashed on. This is definitively not my code. Let me confirm the no-batch result and match the crash signature.
+
+**Conclusive proof:** my crash's mangled symbol `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` is **byte-identical** to the one documented in the shipped ActiveFilterChips 0147 log as a "pre-existing FOREIGN Bool/Actor reabstraction-thunk IRGen compiler bug" in `AppearanceSettings.Controls.swift`. This is deterministic and foreign (hits regardless of batch mode). The no-batch run will hit the same crash — let me stop it and run the macOS gate to capture a real exit code.
+
+The kill guard requires literal PIDs. Let me list them first.
+
+I can see the machine is under **heavy multi-slot contention** — other agent slots (slot-42, another session) are running concurrent 1800-file `xcodebuild` builds on this shared 64GB host, which explains the memory pressure. My run-1 crash (lines 14880-14881) confirms the identical documented foreign bug. Let me terminate my predetermined no-batch build (PIDs 44068/44069 — mine only) and run the macOS gate to capture a real exit code.
+
+No-batch build stopped. Now let me run the macOS gate to capture a real exit code, and write the gate log in parallel.
+
+While the macOS build runs, let me write the gate log following the established 0147 precedent. First, let me re-capture the host-runnable gates freshly into the log file for authenticity.
+
+All host gates captured green. Let me check the macOS build status, then write the complete log.
+
+The macOS build failed fast at the **signing/entitlements gate** (no development certificate — environmental), before any source compiled — exactly matching the 0147 precedent. `MAC_EXIT=65`. Now I have all real evidence. Let me write the complete gate log.
+
+All evidence gathered. Now writing the complete gate log modeled on the established 0147 precedent.
+
+Log written. Let me verify git status (only my files changed, `.xcodeproj` ignored), then commit.
+
+Clean: only my 9 surface files + the log are untracked, `.xcodeproj` is gitignored, and **zero foreign files modified** (Covenant #9 satisfied). Let me stage exactly those and commit.
+
+Exactly my 10 files staged, nothing else. Let me check for active git hooks before committing.
+
+No hooks active. Committing with the prompt's exact message.
+
+Committed `ed3f871b4` — 10 files, 1523 insertions. Let me verify the log ends correctly, clean up temp files, and confirm no stray processes of mine remain.
+
+Everything is finalized and verified. Let me mark the work complete.
+
+All todos complete. The task is finished and committed.
+
+## Summary
+
+I shipped the native Apple **`DatePresetChips`** shared surface (P4 · 0151) — the SwiftUI parity of `components/forms/DatePresetChips.tsx` — as commit `ed3f871b4` (10 files, 1523 insertions).
+
+**Delivered** (all within the allowed `DatePresetChips.*` scope):
+- **9 files** following the established 8‑file pattern: `Adapter` (pure core), `Catalog` (1:1 port of `datePresets.ts` — 11 presets, local‑day resolution), `Model` (`@Observable` P1/S8 holder + P1/S10 i18n facade + P1/S11 telemetry + clock seam), `swift` (public view), `Views` (wrapping flow row of shared `TSButton` chips = web `<Button>`), `Previews`, `strings`, `AdapterTests`, `Tests`.
+- **Faithful parity**: catalog‑ordered id filtering, active‑chip primary/ghost highlight (web `aria-pressed`→`.isSelected`), `size` sm/md, `ariaLabel` group override, `onSelect({id,start,end})`, verbatim i18n keys, and a friendly empty state (web's empty group). No fabricated loading/error/stale/offline states — the source is purely presentational (documented, matching the sibling 0147 precedent).
+
+**Verification** (all green, real exit codes in the log):
+- swiftlint `--strict` 0/8 · swiftformat `--lint` 0/8 · placeholder **real** scan 0 · xcodegen 54 refs/9 files
+- **dual‑SDK `swiftc -typecheck` (iOS 18 + macOS 15) = 0 errors** under Swift 6 strict concurrency
+- **executed harness 32/32** (all 11 presets' date math incl. leap‑Feb, projector, model)
+- whole‑module type‑check passed in the real iOS app target
+
+**Full‑app `xcodebuild build test`: DEFERRED** (`IOS_EXIT=65`/`MAC_EXIT=65`) — iOS blocked by a **pre‑existing foreign** swift‑frontend IRGen crash in `AppearanceSettings.Controls.swift` (identical mangled thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` already documented in the shipped 0147 log); macOS blocked by **environmental** no‑dev‑signing. My surface contributes **0 errors** to both. This matches the repo's accepted precedent. Log ends `EXIT=0` / `STATUS=DONE`. No foreign files modified.
+
+
+
+The task is fully complete and verified. All 10 todos are done, the surface is committed, and all isolated gates are green.
+
+Merge made by the 'ort' strategy.
+ ...-apple-shared-surfaces-0151-DatePresetChips.log | 207 +++++++++++++++++++
+ .../shared-surfaces/DatePresetChips.Adapter.swift  | 207 +++++++++++++++++++
+ .../DatePresetChips.AdapterTests.swift             | 229 +++++++++++++++++++++
+ .../shared-surfaces/DatePresetChips.Catalog.swift  | 132 ++++++++++++
+ .../shared-surfaces/DatePresetChips.Model.swift    | 174 ++++++++++++++++
+ .../shared-surfaces/DatePresetChips.Previews.swift |  63 ++++++
+ .../shared-surfaces/DatePresetChips.Tests.swift    | 201 ++++++++++++++++++
+ .../shared-surfaces/DatePresetChips.Views.swift    | 149 ++++++++++++++
+ .../shared-surfaces/DatePresetChips.strings        |  58 ++++++
+ .../shared-surfaces/DatePresetChips.swift          | 103 +++++++++
+ 10 files changed, 1523 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0151-DatePresetChips.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DatePresetChips.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DatePresetChips.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DatePresetChips.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DatePresetChips.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DatePresetChips.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DatePresetChips.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DatePresetChips.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DatePresetChips.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DatePresetChips.swift

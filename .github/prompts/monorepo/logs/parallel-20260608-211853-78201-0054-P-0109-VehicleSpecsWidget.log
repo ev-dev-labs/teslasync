@@ -1,0 +1,158 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple toolchain is available.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Web source exists. Let me explore the Apple app structure in depth.
+
+There's an established `dashboard-widgets` directory with many widgets. Let me check if VehicleSpecsWidget already exists, read the web source, and study existing widget conventions.
+
+VehicleSpecsWidget does not yet exist in Apple. Let me study existing widget conventions (a non-chart detail widget is the best reference) and the web hooks for data shapes.
+
+The standard widget structure is 8 files: `.swift`, `.Builder.swift`, `.Content.swift`, `.Model.swift`, `.Models.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. `VehicleUpgradesWidget` is the closest analog (vehicle config/options). Let me read it fully plus the shared facade.
+
+Excellent, mature and consistent conventions. Let me read the remaining VehicleUpgrades files and the shared infrastructure.
+
+Let me read the Builder, Previews, strings, Tests, and the shared token/registration infrastructure.
+
+Now the strings file, the Tests file, and the shared infrastructure (registration types + tokens).
+
+Let me locate the shared registration types and design tokens, plus the web data types.
+
+The infra is in `Sources/DashboardWidgets/DashboardWidgetInfra.swift`, but widgets live in `TeslaSync/dashboard-widgets/`. I need to understand the target layout. Let me read project.yml and the infra/token files.
+
+Build setup uses XcodeGen (`.xcodeproj` is git-ignored). New files in `TeslaSync/dashboard-widgets/` are auto-included. Let me find the design token definitions and check the XcodeGen/project state.
+
+Now the web data types and shared widget components for full parity understanding.
+
+I have the full picture of conventions. Now I need to assess build feasibility — the scheme stages a `Shared.xcframework` via a preAction script. Let me check that and how sibling prompts logged their gate.
+
+Very informative — the sibling 0110 used a "swiftc host gate" to execute the adapter tests, and DEFERRED the full xcodebuild (Shared.xcframework needs the Kotlin/Gradle toolchain). Let me read the full 0110 log to reproduce its exact verification methodology, and check toolchain feasibility on this host.
+
+This is the canonical precedent. On this host **Xcode 26.5 is present** (unlike 0110's CLT-only host), so I should attempt the real gate. The key dependency is `Shared.xcframework` (Kotlin/Gradle). Let me probe the full capability surface.
+
+This host is fully capable: **Xcode 26.5 + iPhone 16 simulator (booted) + Java 17 + Gradle wrapper all present** — so unlike 0110's CLT-only host, I can attempt the real `xcodebuild` gate. Let me set up tracking and check for symbol collisions before authoring.
+
+No collisions — all `ChargerSpecs*` types are differently prefixed; my `Spec*`/`VehicleSpecs*` names are clear. Let me write the plan, then author the two pure-logic files first.
+
+Now authoring the domain types and pure adapter.
+
+Pure core authored. Let me immediately execute it via a swiftc harness to prove the adapter logic (gate step [1]).
+
+Top-level code must be in `main.swift` when compiling multiple files. Let me rename the harness.
+
+Adapter harness: **COMPILE_EXIT=0, RUN_EXIT=0, 34/34 assertions pass.** Now the state-holder, telemetry, i18n facade, and accessibility layer.
+
+Now the main surface view with registration, header, and state branches.
+
+Now the content body (compact headline + standard detail-card list) and the chip.
+
+Now the previews (one per state).
+
+Now the i18n catalog and the test suite.
+
+All 8 files authored. Now running the host formatting/lint gates. First, apply swiftformat to my files, then verify.
+
+swiftformat normalized 2 files. Let me verify formatting (whole tree, as the gate runs it) and lint my surface files.
+
+Surface is format-clean (whole tree 0/2060) and lint-clean. Now the whole-tree swiftlint (as the gate runs it) and a real placeholder scan of my files.
+
+Placeholder scan clean (COUNT=0) and no forbidden tokens. The whole-tree swiftlint shows 1 pre-existing violation — let me confirm it's not in my files.
+
+Confirmed: the single whole-tree violation is in **`LiveSignalSparklinesWidget.Builder.swift:158`** — a sibling file outside my allowed-files set (`VehicleSpecsWidget.*` + log). My surface lint is green (0). Let me confirm my changes are confined, then typecheck the surface against the real component library.
+
+My files are all new/untracked; `LiveSignalSparklinesWidget` is untouched (pre-existing). Now let me pursue the real xcodebuild gate. The long pole is `Shared.xcframework` (Kotlin/Gradle) — let me kick that off in the background while I run the surface typecheck against the real component library.
+
+Gradle is fully functional (offline `tasks` succeeded, Kotlin/Native targets configured). Let me kick off the real `Shared.xcframework` build in the background, then run the surface typecheck while it compiles.
+
+Background xcframework build started. Now the surface typecheck against the real component library. Let me check `TSCard`'s dependencies first.
+
+The launcher returned; the gradle build runs under nohup. Let me check its progress and meanwhile gather the `tsGlassPanel` dependency for a focused typecheck.
+
+The xcframework build is progressing (downloading Kotlin/Native, much is cached) — the real gate is feasible. While it runs, let me typecheck my surface against the real component library, adding real dependency files as needed.
+
+My files have zero errors — the failures are all in real sibling files (`Cards.swift` typography deps). Let me close the real dependency tree by adding the typography file.
+
+**TYPECHECK_EXIT=0** — all 5 source files type-check against the real component library. Let me typecheck the Tests file (with an XCTest shim) and check the background xcframework build progress.
+
+The xcframework DEBUG variant built successfully (Kotlin/Native works here!) — release is finishing. The Tests typecheck failure is just a shim artifact (stripping `import XCTest` removed Foundation). Let me fix the shim and re-run.
+
+**TYPECHECK_TESTS_EXIT=0.** All host gates green. Now let me complete the real xcodebuild gate. First, wait for the xcframework build, then stage it and generate the project.
+
+Release linking in progress. Let me wait for it to finish.
+
+Release linking is slow (Kotlin/Native). Let me continue waiting for completion.
+
+Now on the final `linkReleaseFrameworkMacosArm64` step. Let me wait for it to wrap up.
+
+**BUILD SUCCESSFUL in 10m 41s** — release `Shared.xcframework` is ready. Let me stage it, generate the Xcode project, and start the real iOS build+test.
+
+Project generated and xcframework staged. Let me confirm my files are in the project, then launch the real iOS build+test in the background.
+
+All 8 files are in the project. Now launching the real iOS Simulator build+test in the background.
+
+Let me verify the iOS build is progressing (not erroring early).
+
+The iOS build is compiling cleanly (currently the widgets target). It'll take a while. Let me gather artifact line counts while it runs, then keep monitoring.
+
+The iOS build failed — but every error is in **sibling files** (`ChargeStatusWidget.Previews.swift`, `FleetStatsBarWidget.swift` — a `FleetStatsBarModel is ambiguous` duplicate-type collision). I must confirm **none** are in my surface. Let me extract the full error list.
+
+Confirmed: **0 errors in my surface** — all ~150 errors are in pre-existing sibling widgets (`ChargeStatus*`, `ChargeSessionChart*`, `FleetStatsBar*`), including a real duplicate-`FleetStatsBarModel` collision (`FleetStatsBarWidget.Model.swift` vs `feature-views/FleetStatsBar.Model.swift`). Let me verify these broken siblings are standalone (not referenced elsewhere), so I can quarantine them to prove my surface + tests build/run green in the real toolchain.
+
+The 4 broken sibling widgets are standalone (referenced nowhere else) and all pre-existing. To produce a **positive** real-toolchain signal for my surface, I'll temporarily quarantine only those git-tracked broken siblings, rebuild+test (running my actual XCTest suite), then restore them. Let me set that up.
+
+28 files (4 broken sibling groups) quarantined; project regenerated. Now re-run the real iOS build+test — this should compile my surface and run my XCTest suite.
+
+Let me monitor the build. It'll take several minutes to compile the module and run tests.
+
+More pre-existing broken siblings surfaced (`DriveScoreGaugeWidget.*`, `DriveScoreWidget.Adapter.swift`) — still **0 errors in my files**. The tree has widespread pre-existing breakage (whack-a-mole), independent of my surface. Let me restore the quarantined files to pristine, then prove my **full** surface via an executed macOS binary (covering model/registry/a11y, beyond the adapter).
+
+Tree restored to pristine (siblings intact, my 8 files present). Now let me EXECUTE the full surface logic (model phases, telemetry, registry clamp, a11y) as a real macOS binary — beyond the adapter harness — compiling my SwiftUI files against the real components.
+
+**Outstanding** — `COMPILE_EXIT=0, RUN_EXIT=0, 29/29` assertions pass. The **full** surface logic (model phases, telemetry, registry/clamp, a11y) executes green as a real macOS binary built against the real components. Combined with the adapter harness, **63 assertions executed green**.
+
+Let me capture the real macOS build result too (not assume), then write the comprehensive log.
+
+While macOS builds, let me verify gitignore coverage and i18n key completeness (every code key must exist in the catalog).
+
+gitignore covers the generated artifacts (won't be committed); **i18n MISSING_COUNT=0** (all 21 code keys are in the catalog). Let me check the macOS build result.
+
+macOS build still compiling (0 surface errors so far). Let me wait for it to reach the TeslaSync module.
+
+Still compiling earlier targets. Let me wait longer for it to reach the module type-check where the pre-existing errors surface.
+
+Both legs confirmed: **macOS BUILD FAILED** too, same class of pre-existing sibling errors (`DriveScoreBand is ambiguous`), **0 errors in my surface**. Let me capture concise evidence for the log, then clean up temp artifacts.
+
+Rock-solid evidence: both legs fail only on **pre-existing duplicate-type collisions** in sibling widgets (`FleetStatsBarModel` and `DriveScoreBand` each defined in two files) — 0 surface errors. Let me clean up the git-ignored build artifacts and confirm the tree is pristine.
+
+Tree is pristine (only my 8 files). I have complete, honest evidence. Now let me write the comprehensive gate log.
+
+Log written. Let me do a final clean verification of exactly the files I'll commit (lint + format + placeholders + a re-run of the adapter harness), then commit.
+
+Surface is lint-clean (0) and format-clean (0/7). Final re-run of the adapter harness + placeholder scan on the exact files to commit, then I'll commit.
+
+All final checks green (adapter 6/6, placeholder 0). Now staging exactly my 8 surface files + the log and committing.
+
+The `git add` succeeded; my status flag was wrong. Let me confirm staged files correctly, then commit.
+
+Committed as `9ab6d4d32` (9 files, exactly my 8 surface files + the log). Let me do a final confirmation and tidy temp logs.
+
+All 12 todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0109-VehicleSpecsWidget.log | 217 +++++++++++++++
+ .../VehicleSpecsWidget.Builder.swift               | 103 ++++++++
+ .../VehicleSpecsWidget.Content.swift               | 145 ++++++++++
+ .../VehicleSpecsWidget.Model.swift                 | 273 +++++++++++++++++++
+ .../VehicleSpecsWidget.Models.swift                | 262 ++++++++++++++++++
+ .../VehicleSpecsWidget.Previews.swift              | 124 +++++++++
+ .../VehicleSpecsWidget.Tests.swift                 | 294 +++++++++++++++++++++
+ .../dashboard-widgets/VehicleSpecsWidget.strings   |  47 ++++
+ .../dashboard-widgets/VehicleSpecsWidget.swift     | 242 +++++++++++++++++
+ 9 files changed, 1707 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0109-VehicleSpecsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.swift

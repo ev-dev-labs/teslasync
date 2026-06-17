@@ -1,0 +1,227 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the web components, the Apple app structure, and the parity manifest in parallel.
+
+Now let me read the web components in detail and explore the Apple app's existing structure for patterns.
+
+I now understand the web page fully. Let me check tooling availability and explore the existing Apple app structure for patterns.
+
+Xcode 26.5, Swift 6.3.2, swiftlint, and pwsh are all available. The actual structure differs from the prompt's stated path. Let me explore the real layout.
+
+The P3 components already exist as native Swift files. There are two source roots. Let me understand the actual project structure and how pages are organized.
+
+Two layouts exist. The canonical app is `apps/apple/Sources/Features/Admin/` (with sibling diagnostic pages like DLQInspectorPage, FeatureFlagsPage). Let me read the project.yml to learn what's actually compiled, plus study the closest-matching sibling page pattern.
+
+Both `Sources/` and `TeslaSync/feature-views/` compile into the same `TeslaSync` module. The XRay P3 components live in `feature-views/`. Let me examine those components, the parity ledger/manifest, the gate script, and how sibling pages are structured.
+
+The XRay components live in `feature-views/`, which also contains full pages (AlertStudioPage). No IngestXRayPage exists yet. Let me check a sibling admin page's log + ledger entry to learn the established output path convention, plus read the gate script and parity README.
+
+Excellent — the DLQInspector log is a goldmine. It establishes the exact convention: sibling admin pages live in `apps/apple/Sources/Features/Admin/` (the prompt's `TeslaSync/Features/Admin/` path is a stale template default), with a multi-file structure (Models, PageModel, PageModel.Sample, Page, sub-views, RouteRegistration, Tests) + nav edits + xcstrings. It also documents that the full `xcodebuild` is blocked by a pre-existing legacy-tree break, verified instead via full-core type-check + model harness.
+
+Let me study the DLQInspector files as my template, plus check git/build baseline.
+
+Key finding: working tree is clean, and there's a recent commit fixing `Input` previews — the legacy break the DLQ log cited may be resolved. The Shared.xcframework is **not** staged yet. Let me study the DLQ model/seam pattern, locate the shared TS components, and check the build tooling.
+
+Now I understand the architecture. The KMP `Shared.xcframework` needs staging via Gradle for a full build. Let me kick that off in the background (it's the long pole) while I study the shared components and route system.
+
+Java 17 + gradlew present. Let me start the Shared.xcframework build in the background (long pole), then continue studying the shared components and route system.
+
+The xcframework build is running in the background. Let me locate and read the remaining shared components (Select, charts, feedback, typography, metrics, data table) and the route system files I'll need.
+
+Let me read the core shared components I'll compose: Pickers, ChartContainer/BarCharts, States (EmptyState/ErrorDisplay), Metrics (StatCard), and the route system.
+
+Let me read the bar chart wrapper, feedback states, metrics (StatCard), and route system in parallel.
+
+Let me read the metrics (StatCard), data table, route system, and find a sibling page that composes a chart for idiom reference.
+
+No admin page uses charts/selects yet. Let me find chart/select usage idioms elsewhere, and read the route registration system (AppRoute, AppRouteParser, TeslaSyncApp) plus DataTable/Badges/Skeletons.
+
+Let me read the route parser, app registration block, a chart-composing sibling page, DataTable, Badges, and the DLQ test pattern. Also checking the xcframework build progress.
+
+The chart idiom is clear from DriveScorePage. Let me read DataTable, Badges, Skeletons, Typography, the DLQ Models + test pattern, and the app registration context.
+
+Let me read Typography, the DLQ test pattern, the app registration context, and the LiveSignalInspector (closest analog — per-vehicle picker), then check build progress.
+
+The `LiveSignalInspectorPageModel` is the ideal analog (per-vehicle admin inspector with a vehicle picker + `InspectorVehicle` type I can reuse). Let me extract the exact manifest record, the ledger format, and read Badges/Skeletons + the DLQ test pattern.
+
+Manifest confirms requiredCount=12 (4 panels + 3 states + 5 strings, 0 charts/maps). Ledger needs 2 rows (macos + ios). Let me confirm ledger top-level structure, read Badges/Skeletons, the DLQ test pattern, and the LiveSignalInspector log (closest analog).
+
+I have all the component patterns. Let me read the DLQ test file, the xcstrings format, and check the xcframework build progress.
+
+Let me check the LiveSignalInspector log (closest analog) for the path/gate recipe, and critically — check what type names the existing `feature-views` XRay components declare so I avoid collisions.
+
+Critical finding: the `feature-views` tree already declares ~150 `XRay*`/`IngestXRay*` public types (including `IngestXRayWindow`, `IngestXRayBucket`, `IngestXRaySummary`, `XRayFieldStat`, `XRayValueKind`) in the **same module**. I must avoid all name collisions. Let me verify my planned type names are collision-free across the entire module.
+
+All 23 candidate names are collision-free. My `IngestXRay*` prefix is safe (avoiding the existing `IngestXRayWindow`/`IngestXRayBucket`/`IngestXRaySummary`/`XRayFieldStat`/`XRayValueKind`). Let me check the build progress and set up my plan + todos.
+
+The LiveSignalInspector log confirms my exact plan: output to `Sources/Features/Admin/` (documented path reconciliation), full multi-file structure + nav/xcstrings/ledger edits, and the Gradle framework build takes ~8min (mine is running). Let me set up my plan and todos, then implement.
+
+Now implementing. Starting with the Models file (wire types, seams, states, formatters).
+
+The Shared.xcframework build completed. Let me verify it succeeded, then continue with the PageModel.
+
+Shared.xcframework staged for ios-arm64, ios-arm64-simulator, macos-arm64 — I can now do real builds/type-checks. Continuing with the PageModel.
+
+Now the sample data sources (populated defaults for page/preview/tests).
+
+Sample done. Before writing the controls (vehicle picker with dynamic labels), let me see how the DONE LiveSignalInspectorPage renders its vehicle picker — same dynamic-label problem.
+
+The LiveSignalInspectorPage is the exact template (native `Picker` with `Text(verbatim:)` for vehicle labels). Let me verify a few symbols (TSIconBox, teslaSyncTheme, Color.TS.bg, TSLiveIndicator not needed) before writing the view files.
+
+All symbols confirmed. Now writing the five view files (Page + Controls + Header + Chart + Fields).
+
+I duplicated `statLabelKey` — it's already public in Models.swift. Let me remove the redundant extension in Header.swift.
+
+Now the Chart section (GlassPanel3) with the bucket bar chart and its loading/empty/success/error states.
+
+Now the Fields section (GlassPanel4) with the sortable data table.
+
+Now the route registration, then the nav edits (AppRoute, AppRouteParser, TeslaSyncApp).
+
+Now the nav wiring — AppRoute, AppRouteParser, and TeslaSyncApp registration.
+
+Now the strings. The xcstrings file is huge (9459 keys) — I'll inspect its exact formatting first, then insert my keys textually to keep the diff minimal (matching the DLQ precedent).
+
+The xcstrings uses 2-space indentation with `" : "` inside entries. I'll insert my keys textually right after the `"strings": {` opener to keep the rest byte-for-byte unchanged. Let me write a script to do this safely.
+
+49 keys inserted (total 9508), JSON validates. Now let me lint/format my new files. First swiftformat, then swiftlint.
+
+swiftformat flagged auto-fixable style issues (doc-comment style + single-line property body wrapping) in 2 files. Let me auto-apply formatting to my files, then re-verify.
+
+Formatting applied to 2 files. Let me verify swiftformat now passes and run swiftlint --strict.
+
+swiftformat passes (0/12). Now swiftlint --strict on my files (targeted to avoid scanning the 2653-file legacy tree).
+
+6 swiftlint violations to fix: trailing-closure usage in TSColumn (Fields), cyclomatic complexity (valueKindLabel), and a 4-tuple (Sample seeds). Let me view the current (post-format) Fields columns block, then fix all three files.
+
+Now fix the `valueKindLabel` complexity (use a dictionary) and the 4-tuple in Sample. Let me view both current spots.
+
+Now I need to add the `IngestXRayFieldSeed` struct and `fieldSeeds` data. Let me view the current tail of Sample.swift.
+
+Now the test file. Let me mark route/strings done and write comprehensive model + formatter tests.
+
+Now re-format and re-lint everything including the test, then run placeholder scan.
+
+Placeholder scan clean (PLACEHOLDER_COUNT=0; the 7 ALLOWED are pre-existing sibling opt-outs, none mine). Let me check the format result and run swiftlint --strict on everything including the test.
+
+Two test-file violations: nested `enum Mode` (nesting) and class body too long. Let me move the stub doubles to file scope. Let me view the current test top.
+
+Now append the doubles + helpers at file scope (end of file). Let me view the end first.
+
+Now update the call sites in the test class to use the renamed file-scope helpers.
+
+The rename is clean (no stray calls, `model.` access intact). Let me re-format and re-lint the test file.
+
+Test file is clean. Let me run a final combined lint pass on all files to confirm green, then regenerate the project and build.
+
+All 13 files pass swiftlint --strict (0 violations), swiftformat, and placeholder scan. Now let me regenerate the Xcode project and verify my code compiles against the real Shared.xcframework via a full-core type-check.
+
+Project regenerated; my files are referenced (60 build refs). Now the decisive check — let me run the full macOS build (the real gate). I'll start it in the background and monitor.
+
+The macOS build is running in the background (staging framework + compiling ~3000 files). Let me wait and monitor.
+
+Build is actively compiling (past framework staging, now compiling the shared-surfaces/feature-views tree — no errors yet, suggesting the legacy break is resolved on this branch). Let me keep waiting.
+
+No errors; build is at the module-emission/link phase. Let me wait for completion.
+
+Build is in whole-module emission (the long pole for a 3000-file module). No errors. Let me wait longer.
+
+Linking has begun (preview dylibs linked successfully — my `#Preview` blocks compile). Main module still emitting. No errors. Let me wait for the final link.
+
+Still in whole-module emission (no output, no errors). Let me verify the compiler is actively working (not hung) and keep waiting.
+
+Healthy — 6 swift-frontend jobs at 30-50% CPU, actively compiling in parallel. Just a large build. Let me wait more.
+
+Build failed in `DriveScorePage.Panels.swift` — not my files. I must determine if it's pre-existing or something I triggered. Let me find the actual error diagnostic.
+
+The error is a pre-existing type error in a sibling file I didn't touch: `DriveScorePage.Panels.swift:25` — `cannot convert LocalizedStringKey to String.LocalizationValue`. Let me view it and confirm it's not mine.
+
+Confirmed: the error is in `DriveScorePage.Panels.swift:25` (`String(localized: model.overallTrend.labelKey)` — a LocalizedStringKey/LocalizationValue mismatch), a sibling DONE page **not in my changeset**. This is a pre-existing toolchain break, exactly the out-of-scope situation the DLQ sibling documented. Let me confirm my files compiled cleanly in that build and verify via independent full-core type-check.
+
+The build's whole-module type-check covered my files — the ONLY diagnostic in the entire module was `DriveScorePage.Panels.swift:25`, zero in IngestXRay. Let me verify my model-layer imports (for a standalone harness) and confirm the model files don't depend on the broken app target.
+
+IngestXRayModels.swift uses `LocalizedStringKey` (a SwiftUI type) but only imports Foundation. Let me verify whether it actually resolves standalone — this matters for correctness and my test harness.
+
+Found a latent issue: `IngestXRayModels.swift` uses `LocalizedStringKey` (SwiftUI) but the model layer should stay UI-agnostic (the full build only tolerated it via a module-wide re-export). I'll move the display-key builders to the view files (which import SwiftUI), keeping Models pure Foundation. Let me view the option enums and refactor.
+
+Now add the display-key builders to the view files (which import SwiftUI). Let me view the end of Controls.swift and add the enum extensions there and in Header.
+
+Now add the `statLabelKey` builder to Header.swift.
+
+Now Models should be pure Foundation. Let me verify it type-checks standalone, confirm tests don't reference the moved props, and re-lint the 3 changed files.
+
+Models is now pure-Foundation and type-checks clean. Let me re-lint the 3 changed files, then build+run a standalone model harness (since the app target can't link tests due to the pre-existing DriveScore error).
+
+swiftlint passes; swiftformat needs to reformat 2 files. Let me apply it.
+
+swiftformat passes (0/3). Now let me build and execute a standalone model harness — since the app target can't build (pre-existing DriveScore error), this proves my model logic works (the DLQ-precedent approach). Let me write the harness.
+
+Extensions intact. Now let me write the model harness with assertions covering the core logic.
+
+Now compile the harness with the 3 model files and run it.
+
+Harness needs MainActor isolation for its counters (Swift 6 strict concurrency). Let me fix the harness and recompile.
+
+**Model harness: 35/35 checks passed, ALL PASSED (exit 0).** The testable model logic is verified. Since I refactored Models/Controls/Header after the earlier build, let me re-verify my current code compiles in the real Sources context via a full-core type-check against the staged framework.
+
+Both verification methods show **zero IngestXRay errors**. The full-core type-check's only errors are pre-existing `TeslaOrdersPage` (feature-views deps excluded from a Sources-only check — exactly the DLQ-documented baseline). Let me prove the build-blocking DriveScore line is pre-existing code I didn't author.
+
+Definitively proven: the build-blocking line was committed by `ed42a3f9a` ("DriveScorePage at web parity") — a **prior sibling-page commit**, not my work, and not in my diff. This is an out-of-scope pre-existing break (DLQ-precedent situation). My code is verified green by the whole-module type-check, full-core type-check, and the executed harness.
+
+Let me run a final combined lint pass on all files (post-refactor), then write the ledger + log.
+
+All final gates GREEN: swiftlint 0 violations (13 files), swiftformat 0/13, placeholder COUNT=0. Now let me update the ledger and inspect its format.
+
+Now let me append the 2 ledger rows (apple-macos + apple-ios) preserving the exact format.
+
+Ledger updated (74 rows). Now let me write the evidence log. Let me first count my test cases for accuracy.
+
+31 XCTest cases, 1687 LOC total. Now let me write the comprehensive evidence log.
+
+Now let me do final validation before committing: confirm xcstrings validity + required keys, view-file imports, ledger validity, and the full changeset.
+
+All validations pass. Let me review the full changeset and confirm the generated project/framework are git-ignored before committing.
+
+Changeset is exactly as intended (5 modified + 9 sources + 1 test + 1 log); generated artifacts are git-ignored. Let me commit.
+
+All 16 files staged. Now let me commit.
+
+Committed as `7fa00ef0e`. Let me finalize: clean up temp files, mark todos done, and verify the working tree is clean.
+
+All todos complete, working tree clean, temp files removed. The task is fully delivered.
+
+## Summary
+
+I implemented **`IngestXRayPage`** as native SwiftUI/Apple HIG at full web parity, committed as `7fa00ef0e`.
+
+**Parity: 12/12** (`PARITY_COVERED == PARITY_REQUIRED`)
+- **4 panels**: GlassPanel1 (vehicle/window/bucket controls), GlassPanel2 (no-vehicle prompt), GlassPanel3 (bucket bar chart via the P3 `TSBarChart` Swift Charts wrapper), GlassPanel4 (sortable field-stats `TSDataTable`) — plus the header stat strip (web `XRayHeader`).
+- **3 data states** (loading/empty/success, + error for robustness) for both `useIngestXRay` and `useVehicles`, bound through an `@Observable` model over KMP-style seams (ADR-004, no networking in the view), re-keyed by a `reloadToken` like the web query key.
+- **5 required strings** + 44 extra, all from `Localizable.xcstrings` with web key names (zero hardcoded). Adaptive macOS+iOS, a11y, SI N/A (sample-count metadata).
+
+**Files**: 9 sources + 1 test (31 cases) in `Sources/Features/Admin/` (the real compiled home; the prompt's `TeslaSync/Features/Admin` path doesn't exist — reconciliation logged), nav wiring (`AppRoute`/`AppRouteParser`/`TeslaSyncApp`), 49 xcstrings keys, +2 ledger rows (macos+ios, done 12/12), and the evidence log.
+
+**Gates — all in-scope GREEN**: swiftformat `0/13`, swiftlint `--strict` `0 violations`, placeholder `COUNT=0`, xcodegen, full-core macOS type-check (**zero IngestXRay diagnostics**), and an executed model harness (**35/35 ALL PASSED**) standing in for the XCTest run.
+
+**One honest caveat (covenant #1)**: the full `xcodebuild build`/`test` is **red on a pre-existing sibling error** — `DriveScorePage.Panels.swift:25` (`String(localized: LocalizedStringKey)`), `git blame`d to a prior commit (`ed42a3f9a`, the DriveScore P7 page), **not in my changeset** and outside my allowed files (covenant #7). The whole-module compile reported *only* that one error and **zero in my files**; the test bundle can't run because it links that blocked app target. This is the same out-of-scope condition the sibling DLQ/LiveSignal logs documented. `STATUS=DONE`.
+
+
+
+The commit is made and all in-scope gates are green, but to match the DLQ-precedent rigor (which type-checked **both** macOS and iOS) and confirm my adaptive/compact branches compile on the iOS idiom, let me run the iOS full-core type-check before finalizing.
+
+iOS type-check exited 1 but with zero IngestXRay errors. Let me confirm the iOS errors are the same pre-existing baseline (not mine).
+
+iOS type-check confirms **zero IngestXRay errors** on iOS too — only the same pre-existing `TeslaOrdersPage` baseline (excluded feature-views deps). My adaptive/compact branches compile on both idioms. Let me add this iOS evidence to the log and amend the commit.
+
+Let me amend the commit to include the iOS evidence in the log, and clean up.
+
+Everything is complete and verified. The commit is amended (`a3d38d845`) with both macOS and iOS type-check evidence, and the working tree is clean.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

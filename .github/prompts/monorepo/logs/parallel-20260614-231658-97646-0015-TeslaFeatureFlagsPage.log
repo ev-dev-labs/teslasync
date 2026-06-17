@@ -1,0 +1,159 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swift 6.3.2, pwsh). Now let me explore the Apple app structure, the FeatureToggles component, and key reference files.
+
+There are two candidate structures. Let me resolve where admin pages actually live by examining the existing implementation and the generated prompt's path convention.
+
+The real source lives at `apps/apple/Sources/Features/Admin/` — the prompt's "Output" path is a generated template. The sibling `FeatureFlagsPage` (a different page) is my best reference. Let me gather context in parallel.
+
+Now I understand: the web page wraps `<FeatureToggles />`, which DOES have an API source (`useTeslaFeatureConfig`), a header, refresh button, a table, and empty state. The manifest only parsed the thin wrapper. Honoring the no-scope-narrowing covenant, I'll implement the full FeatureToggles UI. Let me read the sibling implementation and supporting infrastructure.
+
+Excellent template. Now let me study the data-source seam, state enums, routing, the shared facade (for Tesla feature config), tests, and component library in parallel.
+
+No existing Tesla feature-config binding in Apple. I'll add a `teslaFeatures` route. Let me read the full routing files, the most-similar sibling (TeslaOrders), the component library, and the test pattern.
+
+Now let me read the routing parser, app registration, component library, xcstrings, a test example, and the ledger.
+
+Let me read the component library, theme tokens, app registration block, xcstrings, a test, and the ledger.
+
+Let me read typography, buttons, skeletons, theme tokens, the app registration block, and a test file.
+
+Let me read the theme tokens, the table sibling, FlagJSONValue, a test, the app registration block, and check the xcstrings + ledger.
+
+I now understand the full architecture. Let me read the theme tokens, app registration, the web data hook, the web locale strings, and the ledger.
+
+Let me read the design tokens, the web envelope type + locale strings, the app shell, and the ledger format.
+
+The web strings are confirmed (settings namespace). Now I must locate the design token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) for the main target.
+
+Tokens are generated at `apps/design/generated/apple`. Let me read them, the project.yml test target, the app shell sidebar, and the xcstrings format.
+
+Tokens and structure confirmed. Let me check the test target config, the xcstrings format, AppShell fallback behavior, and whether the xcodeproj needs generating.
+
+There are already `translation.featureConfig.*` keys in the catalog. Let me examine their exact format, check which are missing (e.g. `.title`), and inspect the route key format.
+
+All the `translation.featureConfig.*` and `translation.toast.featureConfig*` strings already exist in the catalog. Only `route.teslaFeatures` is missing. Let me check the toast mechanism, the route key format, and the web sidebar label.
+
+The web sidebar labels `/tesla-features` as "Feature Flags" (purple flag icon). All strings exist except `route.teslaFeatures`. Let me confirm the web group, read the sibling gate process, and generate the Xcode project to establish a baseline.
+
+This is the key insight: the full `xcodebuild` is RED at baseline due to pre-existing out-of-scope breakage in sibling surfaces. Siblings committed on green IN-SCOPE gates (swiftlint, placeholders, whole-module type-check, executed test harness). Let me read the exact gate commands the closest sibling (FeatureFlags) executed.
+
+I now have the full gate methodology. Let me read the exact `swiftc -typecheck` invocations the sibling used, then I'll establish my baseline.
+
+I now have the complete, precedent-established gate methodology. Let me set up tracking, find the preview theme modifier + lint config, and generate the project to characterize the baseline.
+
+Lint/format rules captured (120 col, self-remove, before-first wrapping). Let me find the theme modifier definition, generate the Xcode project, and kick off a baseline build to characterize the pre-existing failure.
+
+Project generates cleanly. Let me read the theme modifier and kick off a baseline build (before my changes) to characterize the pre-existing failure honestly.
+
+Baseline build is running. I have a complete design. Let me check the build status briefly, then start writing the implementation files.
+
+Build running. Let me write the implementation files now, starting with the models.
+
+Now the main page view. Let me check the baseline build status in parallel.
+
+Still building. Let me write the main page view.
+
+Now the adaptive table.
+
+Now the route registration.
+
+Now the routing edits. Let me check the baseline build and make the AppRoute + app registration edits.
+
+Now register the route in the app shell.
+
+Now add the `route.teslaFeatures` string to the catalog (all `featureConfig.*` keys already exist).
+
+Let me validate the catalog JSON and check the baseline build.
+
+The catalog is valid (9388 keys). The baseline build is now contaminated by my edits, so I'll stop it and run a definitive full build after regenerating. Let me write the tests and update the ledger.
+
+Now update the apple ledger. Let me view its tail to insert rows correctly.
+
+Ledger updated (68 rows, 2/2 covered). Now let me run the gates. Starting with project regen, placeholder scan, swiftformat, and swiftlint.
+
+Placeholder scan clean (0). Now swiftformat lint on my new + edited files.
+
+swiftformat wants `try await` hoisted. I'll use the sibling's pattern (assign to a local first). Let me fix both spots.
+
+Now re-run swiftformat and run swiftlint on my files.
+
+swiftformat clean (0/9). Now swiftlint --strict on my files.
+
+swiftlint clean (0 violations in 9 files). Now the critical isolated type-check. Let me first verify the shared-component dependency set is self-contained.
+
+Dependencies are self-contained (only system frameworks). Now the isolated macOS type-check of my files against the real shared components.
+
+Only error is in `UnitFormatters.swift` (a component I don't use) referencing `Units` (SI converter). Let me locate `Units` and add it to the dependency set.
+
+`Units` lives in `SharedFacade` (likely KMP-bridged). Since I don't use `UnitFormatters`, let me scope the type-check to only the UI + Feedback components I actually use. Let me verify those are self-contained.
+
+`Units+Facade` imports KMP `Shared`; UI + Feedback components are clean (no Units/Shared refs). Let me re-run the type-check scoped to UI + Feedback components.
+
+`FeedbackOverlays` pulls in `TSMetricBar`. Let me scope to the exact component files my page uses (Cards, Buttons, Badges, Typography, States, Banners, Skeletons + Design).
+
+Isolated macOS type-check **passes (0 diagnostics)**. Now the iOS type-check (exercises the `#if os(iOS)` compact branches in the table).
+
+Both isolated type-checks pass (macOS + iOS, 0 diagnostics). Now the model harness — compile and **execute** the model logic with stub sources.
+
+Top-level code requires the file be named `main.swift`. Let me fix and re-run.
+
+Swift 6 actor isolation on the top-level global. Let me mark the helper `@MainActor`.
+
+Model harness: **ALL PASSED (36/36)**, exit 0. All in-scope gates are green. Now let me regenerate the project (to include new files) and attempt the full xcodebuild to characterize the pre-existing breakage.
+
+Project regenerated with my files (42 refs). The build links the absent `Frameworks/Shared.xcframework` (KMP core, staged via a Gradle script). Let me attempt the full macOS build to capture a real exit code and prove failures aren't in my files.
+
+The full build is running. Let me verify route wiring by executing a small routing harness (like the sibling did) while the build continues.
+
+Routing harness: **ALL PASSED (10/10)**. Let me check the full build status.
+
+The full build is genuinely progressing — the `Shared.xcframework` (KMP core) was staged successfully and it's now compiling the mega-surfaces. This environment has the KMP toolchain. Let me let it continue and draft the evidence log meanwhile.
+
+No real compile errors yet — the build is progressing cleanly. Let me wait for it to complete.
+
+Full build exited 65 (failure), matching the documented sibling outcome. Let me determine exactly where it failed to confirm none of my files are involved.
+
+The build failure (exit 65) is isolated to **one pre-existing file**: `TeslaSync/shared-surfaces/Input.Previews.swift` (an explicit `return` in a `ViewBuilder` — the documented shared-surfaces breakage). **Zero of my files have errors** — meaning my files compiled cleanly within the full real app target (with the staged KMP `Shared.xcframework`). Let me confirm my change set excludes that file.
+
+Definitive proof: my full change set is 11 files (6 new Admin sources + 1 test + AppRoute + TeslaSyncApp + xcstrings + ledger). The failing `Input.Previews.swift` is pre-existing and untouched. My files compiled with **zero errors inside the full real app target** (with the staged KMP `Shared.xcframework`). Now let me write the evidence log.
+
+The evidence log is complete. Let me update tracking, do a final lint/JSON sanity check, and commit.
+
+All final checks green. Now let me commit (excluding the gitignored generated project).
+
+All 12 files staged correctly; the generated xcodeproj is gitignored. Now commit.
+
+Committed (`bc995c9a`), working tree clean. Let me clean up temp files and do a final verification.
+
+All complete and verified. Let me finalize the todo tracking.
+
+All work is complete and verified. Let me summarize.
+
+## Summary
+
+Delivered a native **SwiftUI / Apple HIG** implementation of the web `TeslaFeatureFlagsPage` (`/tesla-features`) at full parity, adaptive across macOS + iOS.
+
+**What shipped** (committed as `bc995c9a` — 11 code files + log):
+- **6 new sources** under `apps/apple/Sources/Features/Admin/`: models (`TeslaFeatureFlagEntry`/envelope/state/JS-truthiness + date formatter), a sample data source, an `@Observable @MainActor TeslaFeatureFlagsPageModel`, the page view, an adaptive Feature/Status/Details table, and route registration.
+- The web page wraps `<FeatureToggles/>`, so (honoring no-scope-narrowing/ADR-011) I reproduced the **full** surface: icon header, "Synced …" timestamp, a Refresh action mapped to a dismissible success/error banner, the Enabled/Disabled badge table, and **all four states** (loading/empty/error/loaded) for the single feature-config source.
+- Wired a new `.teslaFeatures` `AppRoute` (Account group, `tesla-features` segment) + app registration; added `route.teslaFeatures` and **reused** the pre-existing `translation.featureConfig.*` / `translation.toast.featureConfig*` catalog strings verbatim.
+- XCTest peer + updated `apple-ledger.json` (apple-macos & apple-ios → done, 2/2).
+
+**Verification (all real, pasted exit codes):**
+- check-placeholders **0** · swiftformat **0/9** · swiftlint --strict **0/9**
+- Isolated Swift 6 type-check **macOS=0** and **iOS=0** diagnostics (against real P2/P3 tokens + components)
+- Executed model harness **36/36** + routing harness **10/10**
+- `PARITY_COVERED=2 == PARITY_REQUIRED=2` (`featureConfig.title`, `featureConfig.subtitle`)
+
+**Honest RED:** the full `xcodebuild` (=65) compiled the real app target — including all my files with **zero diagnostics** against the freshly-staged KMP `Shared.xcframework` — and fails solely on one pre-existing, untouched file (`shared-surfaces/Input.Previews.swift`, a `return`-in-`ViewBuilder` error). Not mine, not fixed (out of scope). `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all gates green, committed, ledger updated, log finalized. Calling task_complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

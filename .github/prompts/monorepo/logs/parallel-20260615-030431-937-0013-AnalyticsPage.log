@@ -1,0 +1,249 @@
+I'll start by exploring the codebase to understand the task. Let me read the web source page and examine the Apple app structure.
+
+The web page uses tabs and sub-components. Let me explore the analytics components and the existing Apple Features structure.
+
+The Apple `Features/` directory doesn't exist yet. Let me explore the existing Apple app structure to understand conventions, and read the web analytics tab components.
+
+The Apple app uses different directory names than the prompt's stated output path. Let me examine existing feature views and the project configuration to understand conventions.
+
+There are multiple source structures. Let me investigate `Sources/Features/Analytics`, the project.yml build config, and the ledger entry format.
+
+Project.yml is at a different location. Let me find the build config and examine an existing page to understand the exact conventions.
+
+I see the established convention is `apps/apple/Sources/Features/Analytics/`. The prompt's path differs. Let me read the project.yml to determine the actual build source roots — this is critical.
+
+Now I understand the build. The prompt's stated path `apps/apple/TeslaSync/Features/` is NOT in any compiled source root — but `apps/apple/Sources/Features/Analytics/` IS (and holds the 4 existing analytics pages). Let me verify tooling availability (critical for the gate) and read the README docs and ledger.
+
+Full toolchain is available (Xcode 26.5, xcodegen, swiftlint, swift 6.3, pwsh) — the gate can actually run. There's no ledger row for `page:analytics/Analytics` yet. Let me read the ledger row format, the manifest record, and the existing page model/route patterns.
+
+Excellent — toolchain is fully available. The convention is clear: analytics pages live in `apps/apple/Sources/Features/Analytics/` (4 siblings there), which IS a compiled source root — unlike the prompt's stated `TeslaSync/Features/` path which is NOT in `project.yml`. To deliver a page that actually builds and passes the gate, I'll follow the established convention. Let me investigate routing wiring and read the web tab components for full parity scope.
+
+This is a large page. The manifest declares 0 panels/0 charts for this unit (formal `PARITY_REQUIRED=9` = 3 states + 6 strings), suggesting sub-tabs are separate units — but the prompt says reproduce every region. Let me read the exact manifest record and check whether the tab components are separate parity units to determine scope precisely.
+
+Let me verify the tab sub-components are separate parity units — this determines whether this unit owns the full chart implementations or just the orchestration shell.
+
+The manifest scanner only extracted `AnalyticsPage.tsx` itself (states + strings = 9); it didn't recurse into the imported tab sub-components. But the covenant ("no parity shortcuts/scope narrowing/stubs") and the prompt ("reproduce every region") require the full page. Let me read all the tab components and the data type to map the complete scope.
+
+Let me read the remaining components and the `FleetAnalytics` data type.
+
+Let me read the final sub-components, constants/helpers, and the `FleetAnalytics` type definition.
+
+I now have the full web scope. This is a large 4-tab page. Let me examine the `FleetAnalytics` type and the existing Swift chart/section/model conventions (TrueCost is a good template), plus the component library.
+
+Let me read the TrueCost model/sections/format/sample (my templates) and the page shell.
+
+Now let me read the Units facade, metric/tab/feedback components, and the routing files to resolve the `.analytics` registration.
+
+Let me read the Units facade, key UI components (metric card, tabs, glass panel, states), and the routing files.
+
+Let me read the routing files (to resolve the `.analytics` registration), the Tabs/States components, and the TrueCost models/format/sample templates.
+
+Key finding: `StatisticsRouteRegistration` registers `.analytics` (the `/analytics` route's enum case). I need to understand the aliasing and how registries compose. Let me read the route parser and find where registries are wired into the shell.
+
+Let me read the full registration block in `TeslaSyncApp.swift` and the `AppShell` routing to resolve the `.analytics` ownership.
+
+Let me check for any other route-case collisions across all registration files — this tells me whether `.analytics` double-claiming is unique.
+
+Each route registers exactly once; `.analytics` is currently claimed by `StatisticsRouteRegistration` (a stopgap, since `/statistics` aliases to `.analytics`). The canonical `/analytics` route belongs to AnalyticsPage. I'll register AnalyticsPage as the canonical `.analytics` owner. Let me read the remaining templates (models, format, sample, feedback, tabs, tests) and write my plan.
+
+Let me read the feedback/tabs/typography components, TrueCostFormat, and locate the string catalog + placeholder script.
+
+Let me read the format helper, design tokens, typography/cards, and an existing test to complete my reference set.
+
+Let me read the cards, tokens, the string catalog, the placeholder script, and an existing model test.
+
+Placeholder gate forbids words like "TODO", "Placeholder", "Coming soon". Now let me read the token definitions, `TSTone`, and check which `analytics.*` strings already exist in the catalog.
+
+No `analytics.*` keys exist yet. Let me check how sibling pages' strings (e.g. `tco.title`) are stored and verify the catalog format.
+
+No `analytics.*` keys exist; the central `Localizable.xcstrings` is where strings live (30 `tco.*` keys present). I have all patterns now. Let me check the swiftlint rules and an existing test, then write my plan.
+
+I have all the patterns. Let me read an existing log file's `=== PARITY ===` format and the ledger schema to produce correct artifacts.
+
+The TrueCost log confirms my path decision (siblings also use `Sources/Features/Analytics/` and documented the `TeslaSync/Features/` reconciliation) and shows the route-conflict handling. Crucially, there's an existing `AnalyticsPage.log` — prior work may exist. Let me read it.
+
+Critical finding: a prior AnalyticsPage attempt existed (in `TeslaSync/Features/Analytics/` with project.yml edits) but was **reverted** — those files/edits are gone now, and crucially that run had **no full Xcode** so its build gate was deferred. I have full Xcode 26.5. The 4 committed sibling pages all live in `Sources/Features/Analytics/` (proven build root). I'll follow the sibling convention. Let me write my plan and run baseline checks.
+
+Baseline swiftlint is clean (0 violations, 5886 files). The `Shared.xcframework` is absent (only `.gitkeep`) — it's built via Gradle/Kotlin-Native. Let me check whether I can build it (determines if the full xcodebuild gate can run) and set up my plan.
+
+Java 17 + Gradle wrapper are present, so I can build `Shared.xcframework`. This is slow (Kotlin/Native first build), so I'll start it in the background now while I write code.
+
+The Gradle build is progressing (downloading Kotlin/Native, compiling iOS targets — some cached). Let me write my plan and set up tracking while it builds.
+
+Gradle is compiling the shared framework in the background. Now let me build the Swift files. I'll use internal access (everything is one module) to keep files concise and under swiftlint's strict limits. Starting with the models.
+
+Now the page model with data source protocol, tab/range enums, and phase.
+
+Now the sample data sources (realistic SI fixture so every chart renders, plus empty/failing/no-trend doubles).
+
+Foundation files are done. The Gradle build is linking framework slices (debug XCFramework already produced). Now the shared UI building blocks.
+
+Now the shared row/legend/axis components used across tabs.
+
+Now the page shell with header, phase switch, and tab bar.
+
+Now the hero gauges, freshness chip, and range menu.
+
+Let me verify two API references (`tsUnits`, `teslaSyncTheme`) and check Gradle progress before building the tabs.
+
+`tsUnits` and `teslaSyncTheme` confirmed. Gradle is still linking framework slices. Now the composed-chart helper (native Swift Charts for multi-series/dual-metric regions the single-geometry wrappers can't express).
+
+Now the Overview tab's vehicle-comparison sections (fleet usage pie, efficiency leaderboard, radar small-multiples, energy & activity).
+
+Let me add a convenience initializer to the composed-chart series for reuse, then build the main Overview tab.
+
+Now the main Overview tab (distance-by-vehicle, day-of-week, monthly-cost, quick links + tab composition).
+
+Gradle is linking macOS slices now. Let me add a reusable distribution-bar chart (used by 4 distribution sections), then build the Driving tab.
+
+Now the Driving tab — performance cards and temperature stats in the main file.
+
+Now the Driving tab's charts (distributions, hourly, scatter, daily trend, efficiency trend).
+
+The `Shared.xcframework` build **succeeded** and is staged — I can run the full xcodebuild gate. Now the Charging tab.
+
+Now the Charging detail sections (brands, monthly trend, cost analysis, cost by type).
+
+Now the Battery tab (health cards, timeline, capacity/range lines, degradation composed, no-trend empty).
+
+All four tabs done. Now let me check for route-registration tests before wiring (to avoid breaking the test gate), then create the route registration.
+
+No test asserts which page hosts `.analytics` (only path-parsing). Displacing the Statistics stopgap in the live registry is test-safe. Let me confirm the RouteTests context, then create the route registration.
+
+RouteTests only check path-parsing — displacing the Statistics stopgap is test-safe, and `/analytics` → `.analytics` confirms AnalyticsPage's canonical ownership. Now the route registration + wiring.
+
+All tabs, route registration, and wiring are done. Now I'll add the ~115 `analytics.*` string keys to the catalog. Let me do this with a Python script that splices entries in without reformatting the 4.9MB file.
+
+The `json.dump` reformatted the entire 4.9MB file — a huge, ugly diff. Let me revert and use a minimal text-splice instead to preserve the original formatting.
+
+Minimal splice done (126 keys, valid JSON). Let me verify the diff is clean and the header is untouched.
+
+Clean diff (1386 insertions only). Now the model + format + route tests.
+
+All code, route wiring, strings, and tests are written. Now let me run the gate. Starting with the placeholder scan and swiftlint on my new files.
+
+Placeholder scan passes (COUNT=0; the 5 allowed opt-outs span my file + the 4 sibling pages). Now swiftlint --strict.
+
+7 violations (baseline was 0, so all in my new files). Let me see them.
+
+7 line-length violations (>120). Let me view and fix each.
+
+Seven >120-char lines. Let me fix all by wrapping arguments.
+
+Let me re-run swiftlint to confirm 0 violations.
+
+swiftlint --strict: **0 violations**. Now generate the Xcode project and build.
+
+swiftlint clean, project generated. Now I'll build. Let me build the macOS target first (fastest path to catch compile errors — no simulator needed), capturing output.
+
+Build failed (exit 65). Let me see the compile errors.
+
+Those 2 errors are code-signing (no dev certificate in this environment), not compile errors — signing happens after compilation. Let me rebuild with signing disabled to get a true compile check.
+
+A naming collision: my `ChargingAnalytics` (and likely `DriveAnalytics`) clashes with existing types in the `TeslaSync` module's feature-views. Let me find all collisions with my new type names.
+
+Only one collision: my `ChargingAnalytics` clashes with the existing `ChargingDetailSection` feature-view type. Let me rename mine to `FleetChargingAnalytics` and check my section-struct names don't collide either.
+
+No other collisions. Let me rename `ChargingAnalytics` → `FleetChargingAnalytics` in all 4 spots.
+
+Now rebuild to surface any remaining compile errors (incremental, faster).
+
+1 error left, not in analytics files. Let me see it.
+
+1 remaining error is in `Sources/Features/Driving/DriveScorePage.Panels.swift` — a file I never touched (not Analytics). This looks like pre-existing toolchain drift. Let me confirm it's pre-existing and check the scope of any such breakage.
+
+Confirmed pre-existing: `DriveScorePage.Panels.swift:25` is unmodified by me and the bug (`String(localized:)` given a `LocalizedStringKey`) exists in committed HEAD — Swift 6.3.2 toolchain drift. Let me measure how widespread this pre-existing pattern is.
+
+Confirmed pre-existing and isolated to this 1 line. The accepted sibling disposition defers xcodebuild, but I have Xcode — so I'll verify properly. To run my build+test without permanently touching out-of-scope code, I'll temporarily patch this 1 line, run the gate, then revert it. First let me understand the type.
+
+`DriveScoreTrend` is a `String` enum. I'll temporarily patch this 1 pre-existing line to unblock the build, verify my code builds+tests green, then revert it (keeping my diff scoped). Applying the temp patch.
+
+Now rebuild macOS to confirm the full app (including my analytics code) compiles green.
+
+Build is compiling the full module — let me wait for it.
+
+Still building. Let me check the log for progress while it continues.
+
+Progressing well — 0 errors, compiling feature-views. Let me keep waiting.
+
+My 20 analytics files compiled with **0 errors**. The build is still finishing the remaining files + linking. Let me wait for completion.
+
+Steady progress, 0 errors. Large module — let me continue waiting.
+
+4152 files compiled, 0 errors, near the end (dashboard-widgets). Let me wait for it to finish.
+
+4358 compiled, 0 errors — still finishing. Let me keep waiting for the link.
+
+**macOS BUILD_EXIT=0** — the full app compiles green with my analytics code. Now let me run my tests on macOS (scoped to my test class first for speed).
+
+The test target has a **pre-existing** error in a sibling's test file (`VehicleCostPageModelTests.swift:10`, another Swift 6.3 concurrency tightening) — unrelated to me but it blocks the whole test target. Let me find all such pre-existing test-target errors so I can temp-patch them together.
+
+`VehicleCostPageModelTests.swift:10` is pre-existing (unmodified by me) — a Swift 6.3 concurrency tightening in a sibling test. Let me build-for-testing once to enumerate ALL pre-existing test-target errors at once.
+
+A second pre-existing test error surfaced in a different sibling file (`GDPRExportPageModelTests`) — the test target has broad Swift 6.3.2 concurrency-tightening breakage in out-of-scope sibling tests. Chasing all of them is out of scope. Matching the accepted sibling disposition, I'll verify my real model+format logic via a standalone harness (compiling the actual source files). Let me set that up.
+
+Now compile and run the harness (it exercises the real `AnalyticsFormat` + `AnalyticsPageModel` + `AnalyticsModels` + sample source).
+
+**Harness: 26/26 assertions pass, 0 failures** — my real model + format logic is verified. Combined with the green macOS app build, my code is solid. The full `xcodebuild test` is unavoidably blocked by pre-existing out-of-scope test errors (GDPRExport, VehicleCost, …) regardless of my work — matching the siblings' deferred-test disposition. Let me kick off an iOS build (to verify the `#if os(iOS)` branches) in the background while I write the ledger and log.
+
+The iOS build is running. Let me add the ledger rows. First, the ledger structure.
+
+The iOS build continues in the background. Let me add the two ledger rows (macOS + iOS) for `page:analytics/Analytics`.
+
+Ledger valid (2 rows, 9/9). iOS build progressing (0 errors). Let me write the evidence log while it builds.
+
+Log written (with an iOS-build placeholder to fill in). Let me check the iOS build progress.
+
+iOS build is early (doing dependencies first), 0 errors. Let me wait for it to progress to my files.
+
+The iOS build seems stalled at 116. Let me check what it's doing.
+
+The iOS build is alive and in the `EmitSwiftModule` phase for `TeslaSync` (whole-module type-check passed — building both simulator arches), 0 errors. My xcstrings are being compiled in too. Let me wait for it to finish.
+
+iOS module emitted with 0 errors (iOS branches type-check). Now compiling/linking objects for both arches. Let me wait for completion.
+
+iOS build was **interrupted** (environment/resource artifact — 0 errors throughout, and the whole-module type-check had already emitted successfully). Let me retry it cleanly to get a definitive result.
+
+iOS retry again type-checks clean (EmitSwiftModule, 0 errors) — re-confirming the iOS branches compile. Let me wait for it to finish linking.
+
+Linking underway (14 link steps), 0 errors. Let me wait for the final result.
+
+x86_64 object compilation in progress, 0 errors. Dual-arch build is lengthy. Let me continue waiting.
+
+My analytics files compiled to iOS objects (37 compile entries, both arches), **0 errors** — definitive iOS verification. The build is finishing remaining unrelated files. Let me wait for the final result.
+
+arm64 objects compiling now (second arch), 0 errors. Let me wait for the final link.
+
+iOS build failed with 1 error (after my analytics files already compiled clean). Let me see what it is.
+
+The iOS error is a **linker** failure (not a compile error, and not in my files — my analytics objects already compiled clean for both arches). The macOS app linked fine. This is likely a Shared.xcframework simulator-arch slice issue (x86_64 vs arm64). Let me check the linker details and the framework's slices.
+
+Root cause confirmed: `Shared.xcframework` has only the **arm64** simulator slice (this is Apple Silicon; the KMP build produced arm64-only), but `generic/platform=iOS Simulator` also tries x86_64 — a framework-arch/environment issue, **not my code** (my analytics objects compiled clean for both arches). Let me rebuild targeting arm64 only.
+
+iPhone 17 Pro simulator is available (arm64 on Apple Silicon). Let me rebuild iOS for arm64 only — matching the framework's available slice.
+
+**iOS BUILD SUCCEEDED (IOS_BUILD_EXIT=0, 0 errors)** — my code builds AND links green on iOS (arm64 sim). Both platforms verified green. Now let me revert the temporary out-of-scope DriveScore patch to keep my diff scoped.
+
+DriveScore reverted cleanly. Now let me update the log's iOS-build line with the actual green result.
+
+Let me update the covenant summary to reflect both-platform green builds.
+
+Let me verify my final diff is properly scoped (and the generated `.xcodeproj` is git-ignored).
+
+Diff is clean and fully scoped: 19 new analytics files (18 source + 1 test) + log, and 3 in-scope modified files (xcstrings, TeslaSyncApp nav registration, ledger). No out-of-scope files modified; the generated `.xcodeproj` is git-ignored. Let me update tracking, clean temp files, and verify the log's PARITY count.
+
+Everything verified: PARITY 9/9, log ends EXIT=0/STATUS=DONE, temp files cleaned, diff scoped. Now let me commit the work (staging only the in-scope files, with corrected `Sources/` paths).
+
+All 23 in-scope files staged. Let me commit.
+
+Committed cleanly (8d8f056b3), working tree clean. Let me do a final verification of the todo state and the committed ledger/log.
+
+All 15 todos done; commit has 23 files / 4421 insertions; both ledger rows present (9/9). Let me do a final confirmation that all analytics files are in the commit (the `--stat` truncated the list).
+
+All verification complete. The commit contains exactly the in-scope files (18 analytics source + test + log + nav registration + xcstrings + ledger), with **zero** out-of-scope files. The task is finished and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

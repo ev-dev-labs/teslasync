@@ -1,0 +1,139 @@
+I'll start by exploring the repository structure and the web source that serves as the specification, plus checking the Apple toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source spec and the existing Apple app patterns.
+
+This is a large established monorepo with a clear multi-file pattern per surface. Let me study the most recent committed example (SettingsSearch) and the web dependencies (TreeSelect, useSignals, SignalDescriptor, SignalSparklinePreview).
+
+Let me read the core dependencies: the web TreeSelect primitive, the useSignals hook, SignalSparklinePreview, the SignalDescriptor type, and the SettingsSearch Swift pattern files.
+
+Let me read the remaining SettingsSearch pattern files and understand the shared P1/S8/S9/S10/S11 infrastructure.
+
+Now let me check the build config (project.yml), the strings format, the test pattern, and locate the P1/S9 token definitions.
+
+The build auto-globs `feature-views/`, so no project.yml edits needed. Let me examine the design tokens (P1/S9), the test patterns, and the placeholder checker.
+
+All tooling present. Let me read the test conventions and the Shared.xcframework build script (a potential build blocker), plus lint configs.
+
+The Shared.xcframework requires a Kotlin/Native Gradle build — a potential full-build blocker. Let me check the documented verification status and the remaining test fixture pattern.
+
+I now understand the full pattern and the verification reality (isolated build green + full-app build documented macOS-pending due to pre-existing Gradle/collision issues). Let me check how prior surface logs concluded to match precedent, and locate the logs directory.
+
+A prior attempt at this exact surface exists in the logs. Let me read it plus a successful surface's log to match format and conclusion precedent.
+
+This is a fresh attempt (prior was a different parallel run, not merged). Critically, my branch's `project.yml` already excludes `*Tests.swift` from the app target (fixing prior blocker R1). Let me verify the other pre-existing blockers' current state before planning verification.
+
+Pre-existing blockers R1 (Tests in app target) and R2 (DashboardWidgetSize ×15) are already FIXED in this branch — only the Gradle `Shared.xcframework` and macOS signing remain. The iOS build has a real chance. Let me set up tracking and write the surface. I'll start the Gradle framework build in the background now since it's the ~12‑minute long pole.
+
+Java 17 + gradlew present. Let me kick off the `Shared.xcframework` Gradle build in the background (the ~12‑min long pole) while I write the surface.
+
+Gradle building in the background. Now I'll write the surface. Starting with the Foundation-only core.
+
+The background launcher returned (Gradle runs under nohup). Let me verify it's progressing, then continue writing files.
+
+Gradle is compiling Kotlin/Native (progressing, though sharing the host with another slot). Now writing the Foundation core. First, the value types.
+
+Now the projected output types.
+
+Now the pure projector — the core grouping, filtering, and selection algebra (verbatim port of the web `SignalCategoryTree` `useMemo` + `TreeSelect` logic).
+
+Let me validate the Foundation core compiles standalone (no SwiftUI deps) before continuing.
+
+Foundation core typechecks clean under Swift 6. Now the state holder, telemetry/i18n/source seams.
+
+Now the state views (loading/empty/no-results/error).
+
+Now the presentational chrome (search field, freshness chip, connectivity banner, header).
+
+Now the tree rows — group headers, leaf rows, the leaf metadata accessory (the `renderLeafRight` slot), and the list.
+
+Now the root view that composes everything.
+
+Let me update progress and typecheck the full surface (with design tokens) against the macOS SDK to catch errors early.
+
+Full surface typechecks clean on macOS 15. Let me verify the iOS 18 SDK too and check Gradle progress.
+
+Both SDKs clean; Gradle is in the final linking phase. Now the previews (every state).
+
+Now let me enumerate every i18n key referenced in the Swift sources so the strings catalog is complete.
+
+Now the i18n catalog with all static keys plus the dynamic category/kind/unit keys.
+
+Now the test suites. First the adapter/value tests.
+
+Now the state-holder + accessibility tests.
+
+All 12 files written. Let me check line counts (must be <400 for `--strict`), update todos, and check Gradle status.
+
+All files <400 lines (largest 341), and **`Shared.xcframework` BUILD SUCCESSFUL + staged**. The full iOS build is now viable. First, the static gates scoped to my files.
+
+swiftformat wants auto-fixable formatting (wrap property bodies, redundant returns, trailing commas). Let me apply the formatter, then re-verify.
+
+swiftformat clean. Let me re-typecheck (formatter changed code) and run swiftlint + placeholder gates.
+
+Two swiftlint rules to fix: `large_tuple` (my 3-member tuples) and `function_parameter_count` (6 params). I'll replace tuples with a small struct and bundle the projection context. Let me view the current post-format Adapter region.
+
+Refactoring to replace 3-member tuples with a `CategorySlice` struct and bundle the projection context into a struct (fixing both `large_tuple` and `function_parameter_count`).
+
+Now re-run all three: typecheck, swiftformat, and swiftlint.
+
+Static gates all green (typecheck 0, swiftformat 0/11, swiftlint 0 violations). Now the placeholder gate, then I'll set up an isolated SwiftPM build to actually run the tests.
+
+Placeholder gate clean. Now setting up an isolated SwiftPM package to actually compile and run the test suite under Swift 6.
+
+55 tests ran, 1 failure. Let me find which one.
+
+Classic Swift `.none` vs `Optional.none` ambiguity in the test (the implementation is correct — `climate?.selectionState` is `Optional(.none)` but the literal `.none` resolved to `nil`). Let me fix that test assertion.
+
+All 55 tests pass under Swift 6. Let me re-verify static gates on the edited test file and generate the Xcode project to confirm enumeration.
+
+Project generated; my 12 files are enumerated (72 pbxproj refs across app + macOS + test targets). Static gates remain clean. Now the full iOS Simulator `build test` (the framework is staged, R1/R2 are fixed). Starting it — this compiles ~1900 files so I'll let it run in the background.
+
+The iOS build is running. Let me monitor its progress while it compiles.
+
+My build (PID 31367) is progressing — now emitting the `TeslaSync` app module (past dependency setup, into the main compile). Other slots' xcodebuilds are sharing the host. Let me wait and watch for errors.
+
+My build failed but I need to confirm the errors are pre-existing and not in my files. Let me analyze the actual error lines.
+
+Zero errors in my files. Let me get the full list of pre-existing files breaking the build to characterize them precisely.
+
+Zero errors in my files — the 284 errors are all pre-existing duplicate-type collisions in `dashboard-widgets/*` (ChargeStatus/ChargeSession/Safety/DrivingCoach widgets) and `DrivingCoachSection`, outside my allowed scope. Let me rigorously prove these are pre-existing and not caused by my additions.
+
+Conclusive proof: (1) git shows I added **only** SignalCategoryTree files (no other edits), (2) the erroring types (`ChargeSessionDTO`, `ChargeStatusProjection`, etc.) are each **declared in 2 files** — pre-existing duplicate-decl collisions, and (3) my `SignalDescriptor`/Signal* types collide with nothing. Let me check how a committed surface's log concluded (DONE vs BLOCKED) to match precedent.
+
+The committed precedent (SettingsSearch) concluded `EXIT=1 / STATUS=BLOCKED` yet was still committed — surface green on all host-runnable gates, full-app build deferred. My evidence is strictly stronger (real iOS compile reached, 0 errors in my files). Let me capture the macOS scheme result too, then finalize. Starting the macOS build in the background.
+
+While macOS builds, let me extract precise iOS evidence for the log.
+
+iOS gate: `BUILD/TEST FAILED` with 0 errors in my files — all failures are `'X' is ambiguous for type lookup` from pre-existing duplicate-declared types (ChargeSessionDTO, SafetyModel, etc.) in dashboard-widgets/DrivingCoachSection. Let me check the macOS build progress.
+
+macOS gate fails at the **development-signing** stage (R3, environment) before compiling — plus it shares the same pre-existing duplicate-type collisions. I now have complete evidence. Let me write the gate log.
+
+Now let me verify exactly what's untracked before committing (ensuring I add only my surface files + log, not the generated xcodeproj).
+
+Clean — only my 12 files + the log are untracked; the generated xcodeproj is ignored. Committing now.
+
+Committed `18e2c87d3` (13 files, 2844 insertions). Let me update tracking and clean up temp artifacts.
+
+The task is complete. The SignalCategoryTree native Apple surface is shipped, verified, and committed.
+
+## Summary
+
+Built **`SignalCategoryTree`** — the SwiftUI/Apple parity of `web/src/features/telemetry/components/SignalCategoryTree.tsx` — as 12 files under `apps/apple/TeslaSync/feature-views/`, following the established surface architecture (P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry). Committed as `18e2c87d3`.
+
+**Parity delivered**: the categorized signal picker binds `useAvailableSignals` via the state-holder seam (no HTTP in the view), reproduces the wrapped `TreeSelect` behavior natively (category grouping with the verbatim `CATEGORY_ORDER`/labels, leaf alpha-sort, search filter, tri-state group + select-all checkboxes, `{selected}/{total}` counts, select/clear-visible, expand-while-searching), and renders the leaf `renderLeafRight` slot as the descriptor-owned kind chip + unit badge (gated by the same `isSearching || expanded` rule; the live sparkline is the child surface's own prompt). Every state renders — loading / content / empty / no-results / error — inside a native stale/offline freshness envelope. No English literals (full i18n), VoiceOver labels/values throughout, reduce-motion skeleton, `view.opened` telemetry.
+
+**Verification (all in-scope / host-runnable gates GREEN)**:
+- swiftformat `--lint` = 0/11 · swiftlint `--strict` = 0 violations · placeholder gate = 0
+- Isolated SwiftPM build + **55 XCTest cases, 0 failures** (Swift 6)
+- Real **iOS 18 + macOS 15** `swiftc -typecheck` = 0 errors
+- `Shared.xcframework` built (Gradle/KMP) & staged · `xcodegen` enumerates all 12 files
+- Real Xcode iOS app-target compile = **0 errors in SignalCategoryTree files**
+
+**Scheme `build test` — STATUS=BLOCKED (EXIT=1), documented with evidence**: the shared app/test targets fail on **pre-existing, out-of-scope** duplicate-type declarations from other prompts' parallel merges (`ChargeSessionDTO`, `ChargeStatusProjection`, `SafetyModel`, etc. — each declared in 2 files, in `dashboard-widgets/*` + `DrivingCoachSection`) plus macOS dev-signing absence. `git status` confirms my changeset adds **only** `SignalCategoryTree.*`; my types collide with nothing. Per the Honesty Covenant (no red-as-green, no out-of-scope edits) I reported the scheme gate BLOCKED rather than mask it or edit other prompts' surfaces — matching the committed P4 precedent (`apps/macos-pending-verifications.md`), with the full-app build deferred to the `p4-apple/P99-0001` macOS acceptance runner.
+
+
+
+The work is fully complete and committed. Let me do a final verification of the commit integrity before marking done.
+
+Verified: commit `18e2c87d3` is intact (all 12 surface files + log), working tree clean. The task is fully complete.
+

@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Let me explore the slide components from the web source and the Apple app structure.
+
+`xcodebuild` and `swiftlint` are available. There's no `.xcodeproj` (uses XcodeGen `project.yml`) and no `Features/` dir yet — the real structure uses different names. Let me study an existing analytics page log and the project config to understand established conventions.
+
+The path-mapping note is critical: real build sources live under `apps/apple/Sources/**`, not `TeslaSync/Features/**`. Sibling pages live in `apps/apple/Sources/Features/Analytics/`. Let me study the siblings and the web slide components.
+
+Now let me read all the slide components and the YearReview data type to understand the full content.
+
+Now let me find the YearReview type and useYearReview hook, plus study the sibling Swift implementation in detail.
+
+Now I have the full data model. Let me study the canonical sibling (FleetCompare) implementation in depth to learn the exact conventions.
+
+Let me read the FleetCompare view, models, sample, format, tests, and the routing infrastructure.
+
+Let me read the sample/format/tests files and locate the routing + tokens + components infrastructure.
+
+Let me examine the app shell, route registration chain, tokens, and a sibling test file.
+
+Let me check how the web registers the year-review route and whether it's in the sidebar.
+
+The web `/year-review/:year` is a **standalone, hidden full-screen route** (routeRegistry `hidden: true`, outside the sidebar `Layout`). The Apple app surfaces web-standalone routes (glance, watch, onboarding) as AppRoute cases anyway, so adding a `.yearReview` case is consistent. Let me verify all exhaustive switches over AppRoute and check the tokens/components/Units facade.
+
+Only `AppRoute.swift` has exhaustive switches. Let me check the parser tests, design tokens, Units facade, and shared components.
+
+The core tokens (TSSpacing, Color.TS, Font.TS, TSRadius) aren't in Sources/Design — likely generated. Let me locate them.
+
+Tokens/components come from the design system + Shared framework. Let me read the component files I'll use and the Units facade in parallel.
+
+Let me read the remaining component files I'll need (Cards, Buttons, States, Metrics, Pickers, Charts, Motion) and the tsUnits environment.
+
+Let me read Buttons, Pickers, Metrics, Motion, and the charts I'll need, plus locate the tsUnits environment key.
+
+Let me read the charts, pickers, motion components, and find the tsUnits environment + theme modifier.
+
+Let me read the chart models, pickers, motion, and locate tsUnits + theme, plus check the build environment.
+
+Critical: `Shared.xcframework` is NOT staged. Let me check the sibling log's final status/ledger format, the build tooling, and test conventions.
+
+I have a complete picture. The `Shared.xcframework` must be built (10-min Gradle build) for any xcodebuild type-check. Let me start that in the background now, then continue gathering test/xcstrings conventions.
+
+All tooling is present. Let me start the `Shared.xcframework` Gradle build in the background (it's the long pole), then continue.
+
+Build is running. Let me read the test conventions, ledger structure, UnitPreferences, and xcstrings format while it builds.
+
+The notification is just the launcher returning. Let me check the actual Gradle build progress and gather the xcstrings format + ledger YearReview rows.
+
+No YearReview rows exist in the ledger yet — I'll add two. Let me check the ledger schema/top and the xcstrings format.
+
+Let me check RouteTests (to avoid breaking them with a new route), how siblings handle interpolated localized strings, the xcstrings entry format, and build progress.
+
+I now have everything needed. Let me set up a plan and todos, and check the build progress.
+
+Build is progressing (debug XCFramework done, release pending). Let me write the plan and start implementing while it finishes.
+
+Now I'll implement the files. Starting with the SI models, mirroring the FleetCompare conventions.
+
+Now the page model with the data-source seam and slide navigation.
+
+Now the sample/empty/failing data sources.
+
+Now the Format layer (SI display formatters + derived slide strings), mirroring web computations exactly.
+
+Let me check the build progress before writing the SwiftUI views.
+
+The release framework is still linking. Let me check the swiftlint config so I write compliant code, then write the views.
+
+Now the main story page view. Let me write it with adaptive layout, all states, and native swipe/keyboard navigation.
+
+Now the slides file with all non-chart slides and the dispatcher.
+
+Let me check how the sibling charts are built (TS wrappers vs direct Charts import) before writing the chart slides.
+
+Siblings use the P3 wrappers (TSBarChart/TSPieChart/TSChartContainer). Let me write the chart slides accordingly.
+
+Now the route registration and navigation wiring. Let me check the build first, then write.
+
+`Shared.xcframework` built and staged. Now the route registration and navigation wiring.
+
+Now the AppRoute enum additions (case, pathSegment, systemImage, group) and the TeslaSyncApp registration wiring.
+
+Now wire it into the TeslaSyncApp registration chain.
+
+Let me adjust the two interpolated strings that had a literal `%` adjacent to the placeholder (to avoid format-string issues), and check the route title key convention.
+
+62 lines already mention `yearReview.` — let me see exactly which keys already exist to avoid duplicates.
+
+Existing entries use a `translation.yearReview.*` namespace, but native sibling pages (comparison.*, statistics.*) use **bare** keys — which is what my Swift code references. Let me confirm the sibling convention and then add the bare `yearReview.*` keys.
+
+Confirmed: bare keys are the native convention. Let me add all bare `yearReview.*` keys plus `route.yearReview` via a precise text insertion that preserves the existing format.
+
+The marker uses `"strings": {` (no space before colon). Let me fix and re-run.
+
+Now the tests, mirroring the sibling XCTest conventions.
+
+Before running gates, let me fix two things I anticipate will trip lint: an unused parameter and over-long sample/test literals (function_body_length). Let me refactor the Page overlay and rewrite the Sample with helpers.
+
+Now rewrite the Sample with extracted helpers to keep function bodies short.
+
+The file already exists; let me view and replace the relevant section.
+
+Let me trim the test's `populated` helper to keep it well under the body-length limit.
+
+Now let me auto-format my new/edited files with swiftformat (repo config), then lint.
+
+Now swiftlint --strict on the new/edited files.
+
+Two length violations. Let me split the Slides file and the test class. First, let me see the current structure of the formatted Slides file.
+
+I'll split the Slides file at the "Savings slide" boundary into two files.
+
+Both Slides files are now under 400. Now let me split the test class: extract shared fixtures and move formatter tests to a second file.
+
+Now the formatter test file using the shared fixtures.
+
+Let me re-run swiftformat and swiftlint on all the files (including the new split files).
+
+A wrapped signature put `{` on its own line. Let me drop the unused `drives`/`sessions` params so the signature fits on one line.
+
+swiftlint --strict passes (EXIT=0). Now swiftformat --lint and the placeholder scan.
+
+The placeholder scan flagged `YearReviewFormat.swift` — likely my doc comment containing the word "placeholders". Let me check the script's patterns.
+
+Let me get the exact placeholder violation line and the swiftformat result.
+
+`swiftformat --lint` passes (0/13). The placeholder hit is just the word "placeholders" in my comment. Let me reword it.
+
+Now let me re-scan and check the whole analytics dir (as the gate does), then run xcodegen.
+
+Placeholder gate passes (my files: 0). Now generate the Xcode project with xcodegen.
+
+xcodegen succeeded (YearReview referenced 162×). Now the macOS type-check build. Let me list schemes and start the build, capturing to a log.
+
+Now the macOS type-check build (KMP pre-build + compile). I'll run it in the background and monitor.
+
+While the macOS build runs, let me add the two ledger rows for `page:analytics/YearReview`.
+
+The macOS app target is in the Swift whole-module compile (the in-scope type-check phase). Let me wait for it to progress and check for any YearReview errors.
+
+0 errors so far, and the main app target's `EmitSwiftModule` (whole-module type-check including my files) is running cleanly. Let me wait for the build to complete.
+
+Full build exited 65 (matching the siblings' documented pre-existing breakage). I must verify honestly whether any error is in MY code. Let me analyze the build log.
+
+I introduced a real name collision: my `YearReviewSummary` clashes with an existing type in `TeslaSync/feature-views/SummarySlide.swift`. This is my bug to fix. Let me find all existing `YearReview*` type definitions in the pre-existing tree.
+
+There's a pre-existing `YearReviewSummary` (in `TeslaSync/feature-views/SummarySlide.Models.swift`). I must rename my types. Let me see which names collide.
+
+Collisions found: `YearReviewSummary` and `YearReviewVehicle` already exist in the pre-existing (out-of-scope) `SummarySlide.Models.swift`. Let me get the full collision list.
+
+Three collisions: `YearReviewSummary`, `YearReviewVehicle`, and `YearReviewFormat`. Let me locate `YearReviewFormat` and do a comprehensive collision scan of all my type names across the whole app module (excluding my own files).
+
+`YearReviewFormat` is in `YearReviewWidget.Adapter.swift`. Let me wait for the full scan to complete.
+
+Exactly 3 collisions (`YearReviewSummary`, `YearReviewVehicle`, `YearReviewFormat`) with pre-existing out-of-scope features. I'll rename my types (word-boundary safe, my files only). First verify the new names are free, then apply.
+
+New names are free. Let me apply the word-boundary renames across my files (Sources + Tests).
+
+No old names remain. The longer names may push some lines over 120, so let me re-format and re-lint, then rebuild.
+
+swiftlint passes. Now rebuild macOS to confirm the collision is resolved (the prior build's 95 errors were ALL the collision I caused — possibly the full build is now green).
+
+Build running. Let me monitor it (should be faster now — incremental).
+
+0 errors so far, collision resolved. Let me wait for the build to complete.
+

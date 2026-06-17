@@ -1,0 +1,202 @@
+I'll start by exploring the repository structure to understand the task scope. Note that delegation is FORBIDDEN here, so I'll do all the work myself.
+
+The web page is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web page and explore the Apple app structure.
+
+Let me read the rest of the web page's render section and explore the Apple structure deeply.
+
+Let me finish reading the web page and explore the Apple Sources structure to understand existing patterns.
+
+The real Swift code is under `apps/apple/Sources/`. Let me examine the existing Dashboard feature, the project config, and check for an Xcode runner.
+
+Xcode tooling IS available (`xcodebuild`, `swiftlint`, `swift`). Let me reconcile the output path discrepancy and look at existing patterns. Let me check the project config, ledger, and existing feature pages.
+
+I see two parallel structures: `Sources/` (hand-written) and `TeslaSync/` (surface files, all in project.yml). The prompt targets `TeslaSync/Features/Dashboard/`. Let me check the ledger, navigation registration, and prior page logs to understand conventions.
+
+Let me read a prior completed page log to learn the exact conventions, log format, and actual file paths used.
+
+This matches the established predecessor pattern: real code lives under `Sources/Features/<Domain>/`, with a documented PATH RESOLUTION NOTE. Let me study an existing simple page end-to-end plus the route registration, string catalog, and shared components.
+
+The catalog is 4.8MB (flat keys). Bare `title`/`subtitle` are collision-prone. Let me check how other pages namespace their keys and whether the dashboard keys already exist.
+
+Confirmed: convention is `<page>.title`; no dashboard/onboarding/theme keys exist yet. Let me study the Powershare page (closest analog — 2 panels, simple states) and route registration patterns.
+
+The Powershare page exists as my template. Let me read all its files plus the route registration and app entry.
+
+Excellent template. Now let me read the route registration, format helper, app entry, tests pattern, and key shared components.
+
+The `.dashboard` route already exists in the enum but isn't registered. Let me examine the route parser, shell registry, shared components, and the facade for auth/sync data.
+
+Now let me read the placeholder scanner and the remaining shared components I'll compose with.
+
+Let me read the placeholder patterns, the remaining UI primitives, and how the facade/data sources are wired in a sibling page.
+
+Now the UI primitives and a sibling test file. Note: "Placeholder"/"not implemented" are forbidden words (even in comments) — I'll avoid them.
+
+Let me read the badge/tone primitives, a sibling test file, and confirm the `route.dashboard` key exists.
+
+All primitives confirmed. Let me read the test pattern and the exact xcstrings entry format so I can append the 36 keys correctly.
+
+Let me check the manifest's dashboard record for namespace context, confirm no bare-key usage, and read the lint config.
+
+The manifest confirms the parity record. Let me verify the design token member names (spacing/radius/fonts) before writing, and set up my plan.
+
+I have everything I need. Let me set up tracking and write the plan.
+
+Let me create the plan and kick off the long-running Shared.xcframework build in the background so it's ready when I build.
+
+Framework not staged yet — it needs building (~7 min per the predecessor log). Let me inspect the build script and start it in the background while I write code.
+
+The framework build (Gradle/Kotlin-Native) is needed and slow. Let me start it in the background now, then write code while it builds.
+
+Framework is building. Let me create the feature directories and write the model layer.
+
+Now the main page view with the phase switch, banners, and presentations.
+
+Let me verify the reusable `action.*` keys I'm referencing exist in the catalog.
+
+Now the sections file — this wires every parity string. Let me write it carefully.
+
+Now the route registration.
+
+Now wire the route into the app registry.
+
+Now the model tests.
+
+Let me switch the concatenated `Text` styling to the non-deprecated `foregroundStyle` (which returns `Text` on iOS 17+), then scan my new files for forbidden words.
+
+A few code lines exceed the 120-char strict lint limit. Let me view and reformat them.
+
+Now let me run SwiftLint on just the new files to catch issues early (doesn't need the framework).
+
+SwiftLint linted the whole set and found 8 violations. Let me see which ones (mine vs pre-existing).
+
+Let me get the complete list of all 8 violations.
+
+Four lint issues, all mine: file too long + 3 trailing-closure violations. I'll split into three files and fix the closures. Let me delete and recreate cleanly.
+
+Let me re-run SwiftLint and check the framework build progress.
+
+SwiftLint is clean (0 violations). Framework still building. Let me add the 44 catalog strings via a safe, surgical Python insert (36 manifest keys + 8 supporting widget-tile keys).
+
+All 44 strings added, JSON valid. Let me update progress and inspect the ledger structure to add the dashboard rows.
+
+Framework build completed. Let me verify it staged correctly, then add the ledger rows.
+
+Framework staged. Now add the 2 ledger rows.
+
+Ledger updated (+18 lines, purely additive). Now let me generate the Xcode project and build for macOS.
+
+Project generated with Dashboard files included. Now let me build for macOS (no exclusions first, to observe the honest baseline). The scheme pre-action re-runs Gradle but should be up-to-date now.
+
+Build running. Let me monitor progress.
+
+Build progressing well — module emitting, 0 errors so far. Let me wait for completion.
+
+Build failed (exit 65). Let me see the actual errors — mine vs pre-existing.
+
+Confirmed: the only errors are the pre-existing, out-of-scope `Input.Previews.swift` (exactly as the predecessor documented) — zero errors in my Dashboard code. Let me re-run with that one file isolated (no source edits) to verify my code builds green.
+
+Still compiling with 0 errors. Let me wait for it to finish.
+
+Still in module emission, 0 errors. Let me continue waiting.
+
+The macOS app module (~5800 files) is slow to emit. 0 errors throughout. Let me wait further.
+
+Actively compiling in batches, 0 errors. Full target rebuild in progress. Let me wait for completion.
+
+Still exit 65 with Input.Previews.swift excluded. Let me see what errors remain.
+
+Two real issues in my code: (1) `TSTone` isn't `Sendable` so it can't be a stored property; (2) `DashboardWidgetTile` (and possibly other `Dashboard*` names) collide with the existing dashboard-grid surfaces. Let me find ALL name collisions before renaming.
+
+Only `DashboardWidgetTile` collides (existing generic type in `DashboardGrid.Views.swift`). I'll rename mine to `DashboardBoardTile` and make `DashboardFeature.tone` computed (so the struct stays `Sendable` without `TSTone`). Let me apply the fixes.
+
+Now rename the colliding tile type in both files:
+
+Let me confirm the rename is complete and `DashboardBoardTile` is unique.
+
+Rename is clean and unique. Let me re-lint, then rebuild macOS.
+
+Lint clean. Now rebuild macOS (full target recompile, ~8-10 min). Starting it.
+
+Build running. Let me monitor it.
+
+0 errors so far. Let me keep waiting for the build to finish.
+
+Still emitting the large module, 0 errors. Let me wait further.
+
+The whole-module emit is the slow phase (9 compiler processes active, 0 errors). Let me continue waiting.
+
+Module emitted, now compiling objects (13.8k log lines, 0 errors). Let me wait for completion.
+
+Still compiling objects (15.9k lines, 0 errors). Let me wait for linking to finish.
+
+Still compiling (20k lines, 0 errors). Let me wait for it to complete.
+
+macOS build **SUCCEEDED** (exit 0). Let me confirm and verify my Dashboard files compiled, then run the tests.
+
+macOS build **SUCCEEDED**, 0 errors, all 8 Dashboard files compiled, zero attributable warnings. Now let me run my tests (first excluding only the pre-existing `Input.Previews.swift`, to honestly observe whether the GDPR test file also needs isolating).
+
+Test build failed (exit 65). Let me see whether it's the pre-existing GDPR test or my code.
+
+Confirmed: the only test-build error is the pre-existing `GDPRExportPageModelTests.swift` (the exact main-actor issue the predecessor documented) — zero errors in my tests. Let me isolate it (no source edits) and run my tests.
+
+Tests passed (exit 0). Let me confirm the test count and results.
+
+All **25 tests passed**. Now let me run the placeholder gate (pwsh) and check available iOS simulators for the iOS build.
+
+Placeholder scan clean (COUNT=0, 1 allowed redaction marker). iPhone 17 Pro simulator available. Now the iOS build.
+
+iOS build running. Let me check git status of my changes while it compiles.
+
+Changed files look correct. Let me verify the generated project and framework are gitignored, then keep monitoring the iOS build.
+
+Both generated artifacts are gitignored. iOS build compiling with 0 errors (Swift 6, iOS 18 target). Let me wait for it.
+
+0 errors, still building. Let me wait for completion.
+
+Still in the whole-module emit phase (0 errors). Let me continue waiting.
+
+Module emitted, now compiling objects (17.7k lines, 0 errors). Let me wait for it to finish.
+
+Linking now (0 errors). Let me wait for the final result.
+
+Still finalizing. Let me wait for the build process to complete.
+
+iOS build **SUCCEEDED** (0 errors). Let me confirm my files compiled for iOS and check for attributable warnings, then write the evidence log.
+
+Everything is green. Let me write the comprehensive evidence log.
+
+Let me run a final cross-check: verify the log's parity counts and that every required string is both in the catalog and referenced in my Swift code.
+
+All 41 parity items verified: 2 panels, 3 states, 36 strings — each string both in the catalog and wired in Swift. Let me finalize todos and commit per the prompt's commit step.
+
+All correct files staged (13 files, +2370). Now the commit.
+
+Committed (`6bf18cffa`). Let me do a final clean-state check and confirm all todos are done.
+
+All green and committed. The task is complete.
+
+## Summary
+
+Implemented the native **SwiftUI / Apple HIG** parity of the web `DashboardPage` (`web/src/features/dashboard/pages/DashboardPage.tsx`, route `/` — the "Command Center"), adaptive across macOS + iOS. **41/41 parity items covered** (2 panels, 3 states, 36 strings).
+
+**Delivered** (`apps/apple/Sources/Features/Dashboard/`): `DashboardModels`, `DashboardPageModel` (+`.Sample`), `DashboardPage` (+`.Sections`/`.Banners`/`.States`), `DashboardRouteRegistration`; 25-case `DashboardPageModelTests`; wired `.dashboard` into `TeslaSyncApp`; +44 catalog strings; +2 ledger rows; evidence log. Bound `useAuthStatus` + `useSyncVehicles` through an `@Observable` model (no networking in the view); onboarding (GlassPanel1 + GlassPanel2 feature cards) vs. widget board gated by the synced fleet, with loading/error/success states.
+
+**Gate — all green:**
+- `swiftlint --strict`: **0 violations** (11,604 files)
+- placeholder scan (ADR-011): **0** (1 documented redaction allow)
+- macOS build: **BUILD SUCCEEDED**; macOS tests: **25/25 passed**
+- iOS-Simulator build (iPhone 17 Pro): **BUILD SUCCEEDED**
+- All 8 Dashboard files compiled on both targets; 0 attributable warnings.
+
+**Disclosed (no silent drift):** (1) used the real compiled path `Sources/Features/Dashboard/` instead of the prompt's non-existent `TeslaSync/Features/Dashboard/`; (2) `title`/`subtitle` → `dashboard.title`/`dashboard.subtitle` (web `dashboard` namespace + sibling convention); (3) two pre-existing, out-of-scope, Xcode-26.5-incompatible files (`Input.Previews.swift`, `GDPRExportPageModelTests.swift`) isolated via build setting only — no source edits.
+
+Committed as `6bf18cffa`. `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

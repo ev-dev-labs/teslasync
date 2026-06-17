@@ -1,9 +1,9 @@
 //
-//  ActionItem.Projection.swift
-//  TeslaSync — P4 shared surface · 0196 · ActionItem (Apple)
+//  ActionItemShared.Projection.swift
+//  TeslaSync — P4 shared surface · 0196 · ActionItemShared (Apple)
 //
 //  The pure projection from the props to the view-ready model the SwiftUI body renders — the native port
-//  of the web `ActionItem` + `ActionCTA` render bodies. The web component collapses its props into a
+//  of the web `ActionItemShared` + `ActionCTA` render bodies. The web component collapses its props into a
 //  fixed set of layout decisions: the severity (which picks the glyph + colours the chrome), the title +
 //  optional description text, and — from the `cta`'s `to` / `external` / `onClick` — whether a trailing
 //  CTA renders and as which wrapper (internal route / external link / action button). This projection
@@ -15,7 +15,7 @@
 //  (the severity / title / description / cta) and derives the rendered layout decisions — no networking,
 //  no clock, no SwiftUI — plus the composed VoiceOver label (the accessible parity of the colour-encoded
 //  severity, which a sighted user perceives but a VoiceOver user cannot). The localized severity word +
-//  the CTA hints are resolved in the @Observable model (ActionItem.Model.swift), which owns the i18n
+//  the CTA hints are resolved in the @Observable model (ActionItemShared.Model.swift), which owns the i18n
 //  facade, and injected here so the projector stays Foundation-only + facade-agnostic for tests.
 //
 
@@ -52,9 +52,9 @@ public struct ActionItemCTAProjection: Sendable, Equatable {
     }
 }
 
-// MARK: - ActionItemProjection (web `ActionItem` render output)
+// MARK: - ActionItemProjection (web `ActionItemShared` render output)
 
-/// The resolved, view-ready layout decisions — the native bundle of everything the web `ActionItem`
+/// The resolved, view-ready layout decisions — the native bundle of everything the web `ActionItemShared`
 /// render body decides from its props. The view is a pure function of this value: it tints the chrome by
 /// `severity`, shows the `iconSystemName` glyph, renders the `title` (and the `description` iff present),
 /// and renders the trailing `cta` affordance iff present. `accessibilityLabel` is the composed VoiceOver
@@ -100,9 +100,9 @@ public struct ActionItemProjection: Sendable, Equatable {
     }
 }
 
-// MARK: - ActionItemProjector (web `ActionItem` + `ActionCTA` render bodies)
+// MARK: - ActionItemProjector (web `ActionItemShared` + `ActionCTA` render bodies)
 
-/// Pure projection to the view-ready layout decisions — the verbatim port of the web `ActionItem` +
+/// Pure projection to the view-ready layout decisions — the verbatim port of the web `ActionItemShared` +
 /// `ActionCTA` render bodies. Kept as a pure function over the caller-owned structural props so every
 /// branch (each severity, description present / absent, each CTA kind, the CTA-null case) is unit tested
 /// without an @Observable model or a view.

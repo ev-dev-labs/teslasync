@@ -1,0 +1,108 @@
+I'll start by understanding the task, checking capabilities, and exploring the repository structure.
+
+Apple toolchain is fully available. Let me read the web source and explore the existing native structure.
+
+Now let me look at the `useAnnouncer` hook, the test, the Windows sibling implementation, and the Apple structure.
+
+Let me explore the existing shared-surfaces directory and find a sibling example to follow the established conventions.
+
+`AnnouncerRegion` is the direct sibling — same a11y family. Let me read all its files to follow the exact conventions.
+
+Let me read the remaining AnnouncerRegion files to fully understand the structure.
+
+Let me read the remaining AnnouncerRegion files (Previews, strings, Tests, ModelTests) and the project config.
+
+Now let me understand build feasibility — the shared framework dependency and tooling. This determines whether the full gate can run.
+
+Let me check whether the KMP shared build is feasible here and whether sibling gates have passed before (proving achievability).
+
+The sibling precedent is clear and invaluable. Let me read the full AnnouncerRegion gate log and the prior RouteAnnouncer logs to follow the established gate strategy exactly.
+
+The precedent is fully clear. Let me set up tracking, verify config/wiring, and read the prior RouteAnnouncer reference log plus design-system signatures.
+
+This prior reference log is gold — it confirms the subdirectory layout decision and the gate strategy. Let me record a plan, then verify the placeholder script, sibling dispositions, current collision state, and design-system signatures.
+
+The consensus is EXIT=0/STATUS=DONE with full xcodebuild DEFERRED on pre-existing out-of-scope blockers, surface verified clean in isolation. Critical: placeholder common-patterns are case-insensitive, so I must avoid "placeholder/TODO/FIXME/XXX" even in comments. Let me establish the baseline and verify design-system signatures.
+
+Baseline `swiftformat` is already red on 9 pre-existing files in `Tests/Unit/**` (not shared-surfaces) — I'll track that. `RecentDrivesModel` ×2 confirms the duplicate-symbol collision persists. Let me start the baseline lint async and verify remaining signatures.
+
+All signatures confirmed. Let me verify the exact `Color.TS` token names, then I'll write the plan and begin implementation.
+
+All design-system signatures confirmed. Let me check for any existing `Route*` symbol collisions and create the plan, then implement.
+
+Baseline established: **swiftlint clean (0 violations / 5895 files)**, **swiftformat red on 9 pre-existing `Tests/Unit/**` files** (not my scope), `RecentDrivesModel`×2 collision persists. No `RouteLocation`/`RouteAnnouncement`/`RouteAnnouncer` symbols exist — names are safe. Let me record the plan and todos.
+
+All names are collision-free. Let me create the directory and write the pure Adapter core first.
+
+Now the Model layer (seams, projection, observable model, i18n facade):
+
+Now the Seams (location publisher, scheduler, sources, presenter):
+
+Adapter/Model/Seams done. Let me write the view layer (main view, Views, States).
+
+Now Previews and the i18n strings table:
+
+Now the test files (the parity heart). First the adapter/reducer/projection/accessibility tests:
+
+Now the model/seams/voicing/live-source tests:
+
+All 10 files created. Let me format-fix my files, then lint them.
+
+swiftformat is clean (0/9). swiftlint reports 1 violation across the tree — baseline was 0, so it's likely mine. Let me locate it.
+
+`file_length` (>400 lines) on ModelTests — I'll split the seam tests into their own `RouteAnnouncer.SeamsTests.swift` (also matches the allowed glob). Let me view the boundaries.
+
+Only ModelTests exceeds 400 lines. I'll split the seam tests into a separate `RouteAnnouncer.SeamsTests.swift`. Let me recreate both cleanly.
+
+Let me restore `private` on the test doubles (only ModelTests uses them) and re-verify format/lint on my files.
+
+All files ≤400 lines, swiftformat clean. Now the full swiftlint --strict:
+
+swiftlint is fully green (0/5905). Now the placeholder check and investigating the design-system file set for the isolated typecheck.
+
+Placeholder clean (0). Design-system dirs only import SwiftUI/UIKit/AppKit. Let me set up the dual-SDK typecheck of the full surface against the real design system.
+
+`TSMetricBar` lives in `Sources/Components/DataDisplay`. Let me include the full `Sources/Components` + `Sources/Design` + tokens. Let me iterate the macOS typecheck with the broader set.
+
+No `error:` lines. Let me confirm swiftc's actual exit code for macOS, then run the iOS SDK typecheck.
+
+The brace-glob dropped `RouteAnnouncer.swift` (the `swift` element collided). Let me use a robust file list and re-run both SDKs.
+
+The design-system subset isn't self-contained (it transitively needs `UnitPreferences` etc. from core). The robust approach is to typecheck against the entire `Sources/` core module. Let me count and run.
+
+Core needs the `Shared.xcframework` (14 Sources import `Shared`) — and the full xcodebuild gate needs it too. Let me build it now (async, ~6 min) and run the SwiftPM logic harness meanwhile.
+
+Now the SwiftPM logic harness (Adapter/Model/Seams + tests). Let me set it up in a temp package.
+
+Test call sites pass `history:` before `latest:`, but the initializer order is `latest, history`. Let me fix the 5 call sites in the real ModelTests.
+
+One more ordering issue likely in Tests.swift. Let me grep all `RouteAnnouncerInput(` call sites to verify argument order.
+
+Fixed. Let me re-sync the harness and re-run the tests.
+
+All 53 tests pass under Swift 6 strict concurrency (`SWIFT_TEST_EXIT=0`). Let me check the Gradle build progress.
+
+All 53 harness tests green. Gradle still building. Let me attempt a minimal-closure isolated typecheck of the View layer (parallel with Gradle).
+
+The minimal-closure keeps cascading (`TSInlineCallout` next). I'll do the authoritative isolated typecheck against the full `Sources/` core once `Shared.xcframework` is built. Let me wait for Gradle.
+
+Gradle still compiling K/N (first run downloads the toolchain). Let me re-verify format/lint after my test-file edits while it builds.
+
+Format/lint still clean after edits. Let me wait for the Gradle build to complete.
+
+`Shared.xcframework` built and staged. Now the authoritative isolated typecheck — full `Sources/` core + my surface against both SDKs with the framework available.
+
+I omitted the `DesignTokens` group (`design/generated/apple`) — that's why `Font.TS`/`TSSpacing` were unresolved. Let me re-run with tokens included.
+
+My surface shows **zero errors** in every typecheck run; remaining errors are pre-existing core/KMP resolution issues in raw `swiftc`. The authoritative View-layer proof is the real `xcodebuild` (correct module + framework setup). Let me generate the project and build.
+
+xcodegen clean; my files are integrated (69 refs, 6 build-file memberships). Now the full iOS xcodebuild gate. Let me verify the simulator exists and run it.
+
+Build is mid-compile (EmitSwiftModule), 0 errors so far. Let me wait for it to complete.
+
+The app module is emitting cleanly — **0 errors, no redeclaration collisions** so far. The build may actually be progressing past the historical sibling collisions. Let me keep waiting.
+
+The whole-module type-check (`EmitSwiftModule`) already succeeded with **0 errors and no redeclaration collisions** — the historical sibling collisions are gone in this tree. Now in per-file codegen. Let me keep waiting for the build+test to finish.
+
+Build is linking now (app compiled with **0 errors**). The test bundle build + simulator test run is next. Let me wait.
+

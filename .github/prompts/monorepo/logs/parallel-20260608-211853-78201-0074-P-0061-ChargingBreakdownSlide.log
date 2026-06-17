@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability in parallel.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me read the web source and understand the existing Apple app patterns.
+
+This is a well-established multi-file pattern. Let me find sibling "Slide" components (especially review slides) and check for existing `ChargingBreakdownSlide` files and the `YearReview` type in the Apple codebase.
+
+The web source uses `YearReview`. There's a family of review slides. `StatChartSlide` uses charts and `EnvironmentSlide` has motion — both relevant. Let me read the web type and the closest Swift analogs in parallel.
+
+`StatChartSlide` is the ideal template — chart + YearReview prop + full state machine + motion + telemetry. Let me read all its files and find existing donut/pie (`SectorMark`) usage for the chart.
+
+Excellent, the pattern is clear. Let me read the remaining template files (Previews, Tests, strings), find existing `SectorMark` (donut) usage, and locate the design tokens.
+
+`ChargerTypeBreakdown` is a very close donut-chart analog. Let me examine its chart implementation and check the token/telemetry definitions to confirm available APIs.
+
+This is a near-perfect donut analog. Let me locate and read the design tokens, chart palette, telemetry types, and the rest of the `ChargerTypeBreakdown` family (Model, main view, Views, Adapter).
+
+I have a thorough grasp now. Let me read the foundational tokens (`TSDesign.swift`), the telemetry types, the motion primitive signatures, and the rest of the `ChargerTypeBreakdown` family (main view, Views, Adapter, strings) to nail down exact APIs.
+
+The token file is split. Let me find the actual `Color.TS`/`Font.TS`/`TSSpacing`/`TSMotion`/`TSTone` definitions and read the telemetry types, motion primitives, and remaining ChargerType files.
+
+Tokens are referenced from a generated file. Let me find the actual `Color.TS`/`Font.TS`/`TSSpacing` definitions and read the telemetry types, motion primitive, and the ChargerType adapter/strings/previews to confirm exact APIs.
+
+Let me read the token definitions in `Theme.swift`, the telemetry types, the motion primitive, and the remaining ChargerType files (strings, previews, tests) to finalize the API surface.
+
+Let me read the precise token namespace definitions and telemetry/motion APIs.
+
+The `.TS` namespaces live elsewhere (likely generated). Let me locate them precisely across the whole Apple tree.
+
+Let me resolve the token discrepancy and confirm motion/skeleton/project setup precisely.
+
+`TSMotion` and the token namespaces are clearly available to the target. The critical question is how sources are included. Let me read `project.yml` and confirm the token/skeleton/glass APIs and chart palette.
+
+Now I understand the build: XcodeGen globs `feature-views/`, and design tokens live in `../design/generated/apple`. Let me confirm the token API there and check build tooling availability.
+
+xcodegen and pwsh are available, but the `.xcodeproj` isn't generated and `Shared.xcframework` isn't built. Let me read the full token API, the xcframework build script, and look for a host harness.
+
+Now let me read the remaining color tokens, the `TSSkeleton` signature, locate `check-placeholders`, and assess the `Shared.xcframework` build feasibility (the key risk).
+
+All APIs confirmed. The big risk is the `Shared.xcframework` (KMP) build. Let me check the pending-verifications doc, how sibling slices logged their gate status, and the placeholder checker — these tell me the expected outcome and constraints.
+
+The established methodology is clear. Let me read the sibling gate logs (StatChartSlide 0067, ChargerTypeBreakdown 0108) to mirror their exact verification structure and final STATUS.
+
+Let me read these logs in sections to understand the structure and final status.
+
+I now have the complete methodology (the "code-complete + DEFERRED Xcode gate" precedent). Let me read the lint configs and the ChargerType previews/tests/strings to mirror structure, then write the files.
+
+I have the full picture. Before writing, let me verify the dependency closure weight — especially the telemetry file's imports (it's in a large registry file) — and the glass/tone/skeleton deps, so my verification harness stays minimal.
+
+All deps import only SwiftUI (no Shared), and the telemetry file is a self-contained 111 lines. There are prior harness leftovers in /tmp — let me inspect them; they may contain the exact closure I can reuse.
+
+These are prior DerivedData/build logs, confirming earlier slots ran the deferred Xcode steps. My path is locked to the established "code-complete + DEFERRED Xcode gate" precedent. Let me set up tracking and check if a prebuilt `Shared.xcframework` exists for a bonus real build.
+
+No prebuilt framework. Per the unanimous sibling precedent (and since the full app build is independently blocked by pre-existing co-located-XCTest + signing issues outside my allowed files), I'll follow the "code-complete + DEFERRED Xcode gate" methodology. Let me write the plan and start creating files.
+
+Now I'll write all 8 surface files, mirroring the established `StatChartSlide` + `ChargerTypeBreakdown` patterns. Starting with the Model and Projection (pure logic).
+
+Model and Projection done. Now the Swift Charts donut, palette, and legend chip.
+
+Now the Components file (hero, legend, freshness chip, retry, and all state views).
+
+Now the main surface view with telemetry and state switching.
+
+Now the Previews and strings files.
+
+Now the comprehensive test suite.
+
+All 8 files written. Let me run swiftformat and swiftlint on them first to catch style issues early.
+
+Minor formatting issues. Let me auto-fix with swiftformat (the ecosystem tool), then review and re-lint.
+
+swiftformat passes. Let me review the auto-formatted changes and run swiftlint --strict.
+
+swiftformat (0/7) and swiftlint --strict (0 violations) both pass. Now I'll assemble the typecheck closure. Let me check the telemetry file's self-containment and whether any design/component files import `Shared`.
+
+The telemetry file depends on `DashboardWidgetSize` (the multiply-defined type). For my isolated harness I need exactly one definition. Let me find it and check the component-file deps.
+
+`DashboardWidgetSize` lives only in `DashboardWidgetInfra.swift`, and the component files only depend on Tokens. Let me check `DashboardWidgetInfra.swift`'s weight, then build the typecheck closure.
+
+Clean closure confirmed. Now let me run the iOS-18 + macOS-15 `swiftc -typecheck` with the full Xcode toolchain.
+
+Toolchain ready. Now the iOS-18 simulator SDK typecheck of the surface + real dependency closure.
+
+`Skeletons.swift` pulls in `TSCard`. The component library is interdependent, so I'll use the full self-consistent design+component closure (like the precedent's "42-file closure"). Let me first verify that closure typechecks on its own.
+
+All 52 errors are isolated to `UnitFormatters.swift` (the SI-units file the slide never uses — the StatChartSlide precedent excluded it too). Let me exclude it and re-verify the closure.
+
+The 43-file closure typechecks cleanly (0 errors). Now the full iOS + macOS typecheck including my surface, plus the DEBUG previews pass.
+
+Steps [1] and [2] passed (iOS + macOS typecheck = 0). The previews macro-expansion typecheck is still running — let me wait for it.
+
+All three typechecks pass (iOS=0, macOS=0, previews=0). Now the `swift test` SwiftPM harness that executes the unit tests against the real surface + closure.
+
+No collisions. Let me build the throwaway SwiftPM harness (module `TeslaSync`) and execute the tests.
+
+All 23 tests pass (0 failures), SWIFT_TEST_EXIT=0. Now the placeholder gate — let me read the script to invoke it correctly for my surface.
+
+The script needs a real path scoped to my files. Let me check the forbidden patterns, then run it on a temp copy of my surface files (the precedent's approach).
+
+No forbidden words. Let me run the placeholder gate (pwsh) on a temp copy of my surface files.
+
+Placeholder gate clean (COUNT=0). Now `xcodegen generate` to confirm the files are enumerated into the targets, and capture the deferred-Xcode evidence.
+
+xcodegen succeeds — all 8 files enumerated (48 refs). Now capture the deferred-Xcode evidence (the missing `Shared.xcframework` that blocks the app build before any feature-views compile), then clean up.
+
+Captured (MAC_BUILD_EXIT=65, missing `Shared.xcframework` — aborts before any feature-views compile). Let me clean up the generated project/harness and confirm the working tree only has my intended changes.
+
+All host-runnable gates pass and the tree is clean (8 untracked files). Let me gather final artifact metrics and write the gate log.
+
+All 5 source i18n keys + 10 native chrome keys present. Now let me write the gate log mirroring the established precedent structure.
+
+Let me fix a test-name reference in the log for accuracy, then clean up temp artifacts.
+
+The log shouldn't claim a tracking row exists in `macos-pending-verifications.md` (that file is outside my allowed files, and I won't edit it). Let me correct that wording for honesty.
+
+Now a final lint/format re-check on the shipped files, then commit.
+
+Both clean. Now committing the surface and log.
+
+Exactly the 8 surface files + the log are staged. Committing:
+
+Committed. Let me do a final verification of the commit contents and clean tree.
+
+All 15 todos complete. The task is fully done and verified.
+
+## Summary
+
+Shipped a production-polished native Apple `ChargingBreakdownSlide` (P4/0061) at parity with the web source `features/analytics/components/review/ChargingBreakdownSlide.tsx`, following the established `StatChartSlide`/`ChargerTypeBreakdown` architecture.
+
+**8 files committed** (`c39a517a3`, 1,657 insertions):
+- `.Model.swift` — P1/S8 state-holder seam, error taxonomy, cache-then-network load state, `YearReview` input subset, `@Observable` model, P1/S10 i18n facade
+- `.Projection.swift` — pure adapter: `chartData` memo (3 types filtered to value>0, colored by **filtered index**), `fmtNumber`/`Math.round` ports, all-state resolver, a11y seam
+- `.Chart.swift` — Swift Charts donut (`SectorMark`, innerRadius `.ratio(0.65)`); web `COLORS` mapped to tokens (`chartSeriesEnergy`==#f59e0b and `chartSeriesSpeed`==#3b82f6 are **exact** matches)
+- `.Components.swift` — 🔌 spring hero + session count + SOC caption, legend, freshness chip, retry, loading/empty/error/offline
+- `.swift` — surface + `view.opened` telemetry + presentation switch
+- `.Previews.swift`, `.strings` (5 source keys + 10 chrome keys), `.Tests.swift`
+
+**Verification (all real, all green):**
+| Gate | Result |
+|---|---|
+| iOS-18 + macOS-15 `swiftc -typecheck` | `EXIT=0` / `EXIT=0` |
+| DEBUG previews typecheck | `EXIT=0` |
+| `swift test` (SwiftPM harness) | **23/23 passed** |
+| `swiftlint --strict` / `swiftformat --lint` | 0 violations / 0 of 7 |
+| `check-placeholders.ps1` | `COUNT=0` |
+| `xcodegen generate` | `EXIT=0`, 48 pbxproj refs |
+
+The full `xcodebuild build test` is **DEFERRED** (un-staged KMP `Shared.xcframework` → `MAC_BUILD_EXIT=65` captured, plus pre-existing co-located-XCTest/signing) — both outside this prompt's allowed files, matching the unanimous ADR-012 sibling precedent. Log ends `EXIT=0 / STATUS=DONE`.
+
+The task is fully complete and verified. All 15 todos are done, the work is committed (`c39a517a3`), and the working tree is clean.
+
+Merge made by the 'ort' strategy.
+ ...e-feature-views-0061-ChargingBreakdownSlide.log | 243 ++++++++++++++++
+ .../ChargingBreakdownSlide.Chart.swift             | 101 +++++++
+ .../ChargingBreakdownSlide.Components.swift        | 264 +++++++++++++++++
+ .../ChargingBreakdownSlide.Model.swift             | 240 +++++++++++++++
+ .../ChargingBreakdownSlide.Previews.swift          |  75 +++++
+ .../ChargingBreakdownSlide.Projection.swift        | 249 ++++++++++++++++
+ .../ChargingBreakdownSlide.Tests.swift             | 323 +++++++++++++++++++++
+ .../feature-views/ChargingBreakdownSlide.strings   |  43 +++
+ .../feature-views/ChargingBreakdownSlide.swift     | 119 ++++++++
+ 9 files changed, 1657 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0061-ChargingBreakdownSlide.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.Components.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.swift

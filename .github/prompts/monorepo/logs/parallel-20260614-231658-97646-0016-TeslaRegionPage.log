@@ -1,0 +1,113 @@
+I'll start by exploring the repository structure and understanding the task. Let me look at the web source, the Apple app structure, and relevant instructions.
+
+Now let me explore the Apple app structure, the parity manifest, and how existing pages are implemented.
+
+The actual layout differs from the prompt's stated path. Let me find where existing pages live and understand the real structure.
+
+The real path is `apps/apple/Sources/Features/Admin/`. Let me study the existing pages there, especially simpler ones, plus navigation and localization.
+
+There's a clear convention: `XxxPage.swift` + `XxxPageModel.swift` + `XxxRouteRegistration.swift`. Let me examine the manifest entry for this unit, check whether RegionSettings is a separate unit, read the web RegionSettings component, and study comparable simple pages.
+
+Three manifest units share this source; only `page:admin/TeslaRegion` (2 strings, no data) is mine. The web page composes the shared `RegionSettings` component. Let me check whether a native RegionSettings view already exists, look at the TeslaOrders precedent, and the region data hook.
+
+No native RegionSettings exists yet. The web page composes the shared `RegionSettings` component (which has region data, refresh, panels, empty state). To avoid a stub (ADR-011), I'll implement the full content natively within the Admin feature. Let me study the model/page/route conventions and gate tooling.
+
+Clear conventions now. Let me gather the remaining technical details: LoadState/DataSource patterns, the AppRoute enum, route composition, design tokens, the xcstrings catalog, gate tooling, and the web region data types.
+
+`TeslaOrdersPage` is the ideal precedent — a thin wrapper around a shared section. Since no native RegionSettings exists, I'll build the full region content within the Admin feature (allowed files). Let me find the AppRoute enum, registry composition, design tokens, the xcstrings catalog convention, and gate tooling.
+
+Let me read the full AppRoute enum, the project setup (to assess buildability), the web orders namespace + region locale, and the registry composition root.
+
+The region strings **already exist** in the catalog (`translation.region.title`, `.subtitle`, `.regionCode`, `.fleetApiUrl`, `.lastSynced`, `.refresh`, `.noData`). Namespace convention confirmed: web `settings:region.title` → `translation.region.title`. Let me verify those values, the registry composition, design tokens, and build feasibility (XcodeGen + KMP framework).
+
+All strings exist (including `toast.regionRefreshed/Failed`) — no catalog edits needed. Let me find the route-registration composition root, confirm design tokens/components exist, check the KMP framework, and look at sibling tests.
+
+Composition root is `TeslaSyncApp.swift`. All components exist. Concern: `Frameworks/` only has `.gitkeep` — no `Shared.xcframework`. Let me check how the build references KMP, read the registration block, a sibling gate log (to see expected build outcome), the test pattern, and component signatures.
+
+The sibling precedent is clear: the full `xcodebuild` needs a KMP `Shared.xcframework` (built via Gradle, not present here), so siblings ran placeholder + swiftlint + swiftformat + xcodegen + type-check + a runnable model harness, deferring only the KMP-dependent full build, reaching DONE. Let me find the closest log (TeslaOrders), check swiftformat, and read component/token signatures.
+
+Toolchain is fully present (Xcode 26.5, swiftlint, swiftformat, xcodegen, pwsh). Let me read the TeslaOrders gate log (closest analog), the design tokens, and the component signatures I'll use.
+
+The TeslaOrders log is a perfect methodology template (reached DONE via lint/format/placeholder/xcodegen/whole-module type-check/executed harness, with full xcodebuild RED only from pre-existing out-of-scope breakage). Let me locate the design-token definitions, check KMP/Gradle build feasibility, and read the component signatures I'll use.
+
+Java 17 + the KMP module (`apps/shared`) exist, but the framework build is ~9.5 min and the full xcodebuild is RED anyway from pre-existing breakage. My files won't import `Shared` (DataSource seam pattern). The design tokens appear generated — let me locate them and read the component signatures I need.
+
+Tokens aren't checked into the app Sources (only the Watch has its own). They're generated at build time (P2 codegen). Let me check `.gitignore`/project.yml for the token codegen, read the Watch token shapes, and the component signatures.
+
+Design tokens live at `apps/design/generated/apple/Tokens.swift` (present on disk). The KMP framework build is slow (~9 min), so I'll start it in the background now, then read tokens and component signatures while it runs.
+
+Good — I have the core component APIs. Let me read the remaining signatures: Typography (TSPageTitle etc.), Badges (TSIconBox), Buttons (TSButton), Banners (TSAlertBanner/TSTone), Motion (TSFadeIn), and the token definitions.
+
+Let me read Buttons, Banners, Motion, the full token set, the route parser, and a sibling model test.
+
+I have the full design system. Let me read Motion, Skeletons, the route parser, a sibling model test, and confirm the web region data shape. Also check the gradle build progress.
+
+I have everything needed. Let me check the swiftlint/swiftformat config (to satisfy `--strict`), confirm the theme modifier, and check the gradle build progress.
+
+The gradle build finished (exit 0). Let me verify the xcframework was staged, then I'll start writing the implementation.
+
+The framework didn't actually stage (likely needs network/toolchain). My files won't import `Shared`, so I'll verify via a focused type-check + harness. Let me restart the framework build as best-effort (logged), and confirm my dependencies are `Shared`-free, while I begin implementing.
+
+All dependencies are `Shared`-free, so a focused type-check will work. Let me confirm the sub-view model-declaration convention, then write everything.
+
+Convention confirmed (`let model`, `Label("translation.key", systemImage:)`). Let me set up tracking and write all files.
+
+Now the AppRoute and TeslaSyncApp edits:
+
+Files created. Let me run the formatter on the new/edited files, then verify with lint mode.
+
+`swiftformat --lint` = 0/8 require formatting (clean). Let me check which file was reformatted, run swiftlint, the placeholder gate, and check the framework build log.
+
+Gradle built the XCFramework (to its own output dir; staging is separate). One swiftlint error: `multiple_closures_with_trailing_closure` on my `TSButton` call. Let me fix it by passing both closures as explicit labeled arguments.
+
+swiftlint --strict on my files = 0 violations. Let me run the placeholder gate, stage the built framework, and run xcodegen.
+
+Placeholder gate clean (0 in my files), framework staged (ios-arm64, simulator, macos-arm64). Let me generate the Xcode project and list schemes.
+
+Project generated (GEN_EXIT=0, TeslaRegion referenced 36×). Framework is staged. Let me run the macOS build to verify compilation, in the background since it's a large target.
+
+Project-wide swiftlint --strict is fully clean (0 violations). The macOS build is running. Let me verify my AppRoute edits and check build progress.
+
+The macOS build finished. Let me read its result and check for any errors referencing my files.
+
+The log chain broke on a non-matching grep. Let me check the build status and error count properly.
+
+Whole-module type-check passed (reached EmitSwiftModule) with 0 errors and none in my files; it's now in object-code/link phase. Let me add the sidebar route-title string (mirroring the TeslaOrders precedent) while the build finishes.
+
+I'll insert a `route.teslaRegion` sidebar title (alphabetically between teslaOrders and users), mirroring the TeslaOrders precedent.
+
+The build completed. Let me validate the JSON edit and read the final build result.
+
+Build FAILED (exit 65) with 6 errors — **none in my files** (matches the documented pre-existing breakage). Let me identify those errors to confirm they're pre-existing and out-of-scope.
+
+All 6 errors are in one untouched, out-of-scope file (`TeslaSync/shared-surfaces/Input.Previews.swift`), and the module emitted (whole-module type-check passed). Let me confirm that file is unmodified and view the offending lines, then run a base-state build to prove the breakage pre-exists.
+
+Confirmed: `Input.Previews.swift` is untouched and uses a pre-existing `return`-in-`#Preview` (ViewBuilder) pattern unrelated to my change. Let me prove it fails at base too — stash my changes, rebuild, then auto-restore.
+
+Base project has 0 TeslaRegion refs. Now run the base build, then auto-restore my changes.
+
+Base build is **also RED (BASE_EXIT=65)** and my changes are restored (36 refs, stash dropped). Let me confirm the base failure is the same pre-existing file, verify my tree is restored, then run a standalone harness to prove my model + routing logic at runtime.
+
+Base build fails with the **identical** `Input.Previews.swift` errors — proving the breakage pre-exists independent of my change. My tree is restored (9 changes). Now let me prove my model + routing logic at runtime with a standalone harness (since the pre-existing app-target break blocks `xcodebuild test`).
+
+The `main.swift` filename triggers top-level mode. Let me recompile with `-parse-as-library`.
+
+**Harness: 25/25 assertions passed (RUN_EXIT=0).** All verification gates are green; the only RED is pre-existing/out-of-scope (proven at base). Let me update the ledger — first inspect its structure and the TeslaOrders rows.
+
+Ledger valid (68 rows; TeslaRegion macOS+iOS done 2/2). Let me gather line counts and the KMP build line for the log, then write the evidence log.
+
+All data collected. Let me write the evidence log.
+
+Log written (PARITY_COVERED=2, ends EXIT=0/STATUS=DONE). Let me do a final pre-commit verification of the exact changed files, then commit.
+
+All green: 11 files staged-to-be (4 modified + 7 new), both JSON valid, swiftformat 0/8, swiftlint --strict exit 0. Let me commit.
+
+Committed (c53367791, 11 files, 950 insertions). Let me finalize todos, confirm a clean tree, and clean temp artifacts.
+
+Task complete. Working tree is clean, commit `c53367791` is in place, and temp artifacts are cleaned up.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

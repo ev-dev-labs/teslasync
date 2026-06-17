@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available. Let me read the web source and explore the Apple project structure.
+
+Now let me understand the existing Apple project conventions — build config, state holders, tokens, i18n, and a representative shared surface as a template.
+
+Now let me study the shared infrastructure (state holders, design tokens, i18n facade, telemetry) and find a representative template surface.
+
+Let me find the i18n facade, telemetry contract, design tokens, and a banner-like template surface.
+
+`ServiceStatus` is the ideal template — it's the sibling banner mounted right below `BrowserCompatBanner` in the web Layout. Let me study all its files plus `AiLimitBanner` for the banner pattern.
+
+Let me read the complete ServiceStatus surface (the closest analog) to learn the exact conventions.
+
+Let me read the rest of the ServiceStatus surface files to complete my understanding of the conventions.
+
+Let me read the remaining template files plus the design tokens and shared components.
+
+Let me read the AiLimitBanner (a conditionally-hidden banner — closest precedent for dismiss/hide logic) and the design tokens + shared components.
+
+Let me read the design tokens, find the shared TS components, and read the remaining banner files (Views, Model, Tests).
+
+Let me read the design tokens (correct path) and the key shared components I'll use.
+
+I found the tokens, `TSAlertBanner`, and an atomic `TSBrowserCompatBanner` preset (out of scope — that's the component-library bundle; my surface is the bound stateful version). Let me read the remaining component signatures and the AiLimitBanner card/model/test patterns.
+
+Let me read the remaining component signatures and the UI test pattern.
+
+Let me confirm the remaining component signatures (TSTone, TSButton, TSCard, TSFadeIn), the UI-test pattern, and critically — the build toolchain (xcodegen, Shared.xcframework script, logs dir, placeholder checker).
+
+Let me verify the critical build prerequisites: whether the Shared.xcframework is pre-staged, if pwsh exists, the placeholder-check logic, and the exact TSTone/TSButton/TSCard/TSFadeIn signatures.
+
+All prerequisites are present (xcodegen, pwsh, gradlew, iPhone 16 simulator booted). Let me confirm TSButton/TSCard signatures, the placeholder checker logic, and the view/UI test convention.
+
+I now understand all conventions. Let me read the lint configs, the placeholder checker, and a sibling log to match formats exactly.
+
+Let me read a sibling surface's gate log to understand the expected build/test outcome and environment behavior.
+
+This sibling log reveals the established, accepted disposition. Let me read its tail to see exactly how the final EXIT/STATUS is reconciled.
+
+I have a complete understanding of the conventions and the established P4 disposition. Let me set up the plan and todos, then implement.
+
+Now I'll implement the surface. Starting with the pure core — the Adapter.
+
+I have the exact web spec (lib + component). Let me mark the first todo in progress and write the pure-core Adapter.
+
+Now the Model (state-holder, projection, telemetry, i18n facade).
+
+Now the Seams — source, capability probe (warning-free runtime checks via `ProcessInfo`), and dismissal store.
+
+Now the SwiftUI layer — States (loading/empty/error chrome).
+
+Now the Views — the warning banner card (dismiss rendered as a standalone, individually-focusable control per the accessible sibling pattern) and the freshness chip.
+
+Now the main surface view.
+
+Now the Previews (DEBUG, one per state).
+
+I need to make the pure core self-contained for the isolated build — the model references the slug, so I'll make the slug canonical on the model and have the view delegate to it.
+
+Now the pure adapter/projection/accessibility tests.
+
+Now the state-holder + seams tests.
+
+Now the i18n strings catalog.
+
+All 10 files created. Let me verify formatting first — run swiftformat in lint mode on my files using the repo config.
+
+swiftformat wants changes (the repo uses `--commas inline`). Let me let the canonical formatter fix my files, then re-lint.
+
+Formatting passes. Let me confirm the auto-fix only touched trailing commas, then run swiftlint scoped to my files.
+
+swiftlint --strict and swiftformat both clean on my files. Now the placeholder gate — I'll run both the gate's literal invocation and a genuine scan of my actual files.
+
+All hygiene gates pass (lint, format, placeholder, no forbidden words). Now the isolated Swift 6 build + XCTest of the pure core (Adapter+Model+Seams are SwiftUI-free and self-contained).
+
+Isolated Swift 6 tests: **42/42 passed** under strict concurrency. Now the real-module type-check. First generate the Xcode project and confirm my files are enumerated.
+
+All 10 files enumerated (60 pbxproj refs). The real-module build needs `Shared.xcframework` staged via Gradle. Let me check the toolchain and stage it (the sibling log shows ~7m for this step).
+
+Java 17 + Gradle 8.14.5 present. Let me stage the KMP `Shared.xcframework` in the background (this is the slow step).
+
+While the KMP framework builds, let me verify the post-format SwiftUI files are correct against the real component APIs.
+
+The Seams file is correct post-format. Let me wait for the KMP framework build to complete.
+
+Gradle is near done (release iOS frameworks linking, cache warm). Let me wait for it to finish staging.
+
+Still linking the release frameworks. Let me wait for completion.
+
+`Shared.xcframework` staged (BUILD SUCCESSFUL 8m20s). Now the real-module build/test for iOS — the authoritative type-check of my files. Launching in the background (large build).
+
+iOS build running. Let me wait and monitor progress.
+
+My `.strings` file compiled cleanly (CopyStringsFile validated, UTF-8). Let me check for any errors surfacing so far.
+
+No errors in my files. One pre-existing sibling defect surfaced (`AISuggestNewGeofences.swift:129` — outside my scope). Let me wait for the build to complete.
+
+iOS build finished: **IOS_EXIT=65** (build failure, as the sibling log predicted). Let me analyze the complete error set and confirm zero diagnostics in my files.
+
+**Zero diagnostics in my files.** The only 2 errors are pre-existing sibling defects (`AISuggestNewGeofences.swift`, `AIAutoNameUnnamedLocations.swift` — same "escaping closure" class the ServiceStatus log cited, outside my allowed files). Let me confirm my files actually compiled (object files emitted) and that the failing files are untracked-by-me.
+
+The 0 `.o` files is expected — the whole app-target Swift compile aborts on the 2 sibling errors, so *no* file emits objects. To conclusively prove my files compile in the real module, let me rebuild with only those 2 pre-existing-broken sibling files excluded (no file/project edits — a build-setting exclusion).
+
+The exclusion build is running. Let me wait for it (it recompiles the app module).
+
+Excluding the main files orphaned their `.Previews` companions (expected). Still **0 my-file diagnostics**. Let me check whether these AI surfaces are referenced elsewhere, then exclude the full set (main + Previews) to get a clean compile that emits my object files.
+
+The 2 surfaces are self-contained. Let me rebuild excluding all 4 affected files (main + Previews of both) — this should yield a clean app-target compile and emit my object files as conclusive proof. I'll draft the gate log while it runs.
+
+Let me wait for the exclusion build to finish.
+
+A third sibling surface (`AIGeofenceAwareAutomationSuggestions.swift`) has the identical pre-existing "escaping closure" bug — it's a widespread sibling defect. My files remain at **0 diagnostics**. Let me enumerate ALL siblings with this exact bug so I can exclude them in one pass for the conclusive proof.
+
+Exactly 4 sibling surfaces share the buggy `glass(@ViewBuilder _ content:)` idiom (including `AISignalExplorerNlFilter` — the very file the ServiceStatus log cited). Let me exclude all 4 mains + their Previews for the conclusive green-compile proof of my files.
+
+While the exclusion build runs, let me run the gate's full-scope swiftformat and swiftlint (read-only) to capture their results for the log.
+
+Full-scope swiftformat: **0/4495 files require formatting** (FORMAT_EXIT=0). Now the full-scope swiftlint, and let me check the exclusion build.
+
+Full-scope swiftlint --strict: **LINT_EXIT=0**. Both gate lint/format commands pass on the whole tree. Let me check the exclusion build result.
+
+**Conclusive proof emerging**: with the 4 buggy siblings excluded, the app module reached `EmitSwiftModule` with **0 errors**, and my files are compiling to objects (`BrowserCompatBanner.o`, `BrowserCompatBanner.Views.o`). Let me let it finish.
+
+Let me analyze the excl3 result — my files emitted objects, so let me see what's still failing.
+
+**Conclusive proof achieved**: with the 4 buggy siblings excluded, the app target's `EmitSwiftModule` **succeeded** with my files in it (0 diagnostics) and emitted `BrowserCompatBanner.o`/`.Views.o`. The only remaining error is `RecentDrivesSection.Previews.swift` — the *exact* pre-existing defect the ServiceStatus log cited. Now the macOS gate build for honest reporting.
+
+The macOS build is running. Let me wait for it.
+
+The macOS build failed in 9s — too fast for a compile failure. Let me see what happened.
+
+macOS failed at **code-signing** (no development certificate on the runner) — the exact environmental issue the ServiceStatus log cited, before compilation. For a symmetric macOS compile proof of my files, let me run a signing-disabled macOS build excluding the known pre-existing-broken siblings.
+
+The macOS compile is running (fresh DerivedData). Let me wait for it.
+
+Zero compile errors and zero my-file diagnostics on macOS, but no `.o`/EmitSwiftModule for the app target — the build failed elsewhere. Let me find the actual macOS failure.
+
+macOS `EmitSwiftModule` for the app target **succeeded** (whole-module type-check passed with my files). A later per-file SwiftCompile batch of *other* sibling files failed. Let me find that cause and confirm my macOS object emission.
+
+macOS `EmitSwiftModule` for the app target **succeeded** with my files (whole-module type-check passed) — 0 my-file diagnostics. The macOS per-file batch failure is a `swift-frontend` **compiler crash** in an unrelated sibling batch (not a source error in any of my files). Both platforms' surface diagnostics are 0. Let me confirm the working tree is clean (only my 10 files) and capture HEAD before writing the log.
+
+All verification complete. Working tree is clean (only my 10 files; no tracked-file modifications). Now writing the comprehensive, honest gate log.
+
+Log written. Now let me clean up temp build artifacts and verify the working tree shows only my intended files before committing.
+
+Working tree shows exactly my 10 surface files + the log (project/framework/build artifacts are gitignored). Staging and committing.
+
+Committed as `80171d739`. Let me finalize the todos and do a last sanity check on the committed artifacts and log.
+
+All verified. Let me confirm all todos are complete.
+
+All 14 todos complete. The task is finished.
+
+Merge made by the 'ort' strategy.
+ ...le-shared-surfaces-0114-BrowserCompatBanner.log | 172 +++++++++++++
+ .../BrowserCompatBanner.Adapter.swift              | 165 +++++++++++++
+ .../BrowserCompatBanner.Model.swift                | 243 ++++++++++++++++++
+ .../BrowserCompatBanner.ModelTests.swift           | 252 +++++++++++++++++++
+ .../BrowserCompatBanner.Previews.swift             |  84 +++++++
+ .../BrowserCompatBanner.Seams.swift                | 272 +++++++++++++++++++++
+ .../BrowserCompatBanner.States.swift               | 140 +++++++++++
+ .../BrowserCompatBanner.Tests.swift                | 189 ++++++++++++++
+ .../BrowserCompatBanner.Views.swift                | 135 ++++++++++
+ .../shared-surfaces/BrowserCompatBanner.strings    |  45 ++++
+ .../shared-surfaces/BrowserCompatBanner.swift      |  93 +++++++
+ 11 files changed, 1790 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0114-BrowserCompatBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.swift

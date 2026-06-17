@@ -1,0 +1,138 @@
+I'll start by exploring the repository structure to understand the current state of the Apple app and the web source page I need to port.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+The actual structure differs from the prompt's stated path. Let me explore the real structure deeply and continue reading the web source.
+
+This is a large, sophisticated repo. The actual structure uses `Sources/Features/` not `TeslaSync/Features/`. Let me study the most recently-built pages (SqlPlayground, Webhooks) to learn the exact conventions, and look at the parity ledger.
+
+Pages live in `Sources/Features/{Domain}/`. There's no `System` dir yet — I'll create it. Let me study the reference pages (Webhooks is the cleanest small example) and the parity manifest/ledger entries in detail.
+
+Now I understand the page conventions well. Let me read the rest of the web source, its subcomponents, the routing system, and find the chatbot entry in the parity manifest.
+
+Let me read the chatbot manifest record, the AppRoute enum, and continue with the web source.
+
+Let me find the routing infrastructure and re-examine the manifest structure.
+
+Now let me read the routing infrastructure and the rest of the web source plus its subcomponents.
+
+I now have the full web render. GlassPanel1 = main conversation+input panel, GlassPanel2 = the inline "thinking" panel. Let me study the web subcomponents and the already-shipped Apple `ChatMessageItem` feature view (to reuse, DRY), plus how the shared facade exposes chat data.
+
+A shipped `ChatMessageItem` + `ChatMessageModel` already exists. Let me study its model/adapter to reuse it, plus the web types and remaining subcomponents.
+
+The shipped `ChatMessageItem` uses `ChatMessageData`. Let me find related shipped Apple components (SessionList, SuggestedPrompts, AIChatbotIndicator, HelixMark, TypingDots) and the `ChatMessageData` type so I can reuse them.
+
+Nearly every sub-component is already a shipped P4 surface — perfect for DRY composition. Let me read their public APIs (SessionList, SuggestedPrompts, ChatMessageData/adapter, TypingDots, AIChatbotIndicator, AIVoiceMode).
+
+Let me read the seams/adapters for these shipped components and the remaining ones (SuggestedPrompts, TypingDots, AIChatbotIndicator, AIVoiceMode).
+
+I have a clear picture of the composable surfaces. Now let me read the adapters (for `ChatMessageData`, `ChatSessionListItem`, and production binding patterns), `TypingDots`, and the design tokens.
+
+I have all the core types. Now let me read TypingDots, the AIChatbotIndicator/AIVoiceMode public inits, the `ChatSuggestion` type, and the design tokens.
+
+`Color.TS`, `TSSpacing`, `TSRadius`, `Font.TS` are generated tokens (P2). Let me locate them and the `TSGlassPanel` container view, `TSButton`, `TSPageTitle`, `TSFadeIn`, AI surface models.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it and the Buttons/Typography components.
+
+Let me read the color tokens, Typography components, and find the `TSGlassPanel` container view + `TSFadeIn`.
+
+Let me read the AI surface inits, TypingDots, ChatSuggestion, TSGlassPanel/TSFadeIn, and an existing model test for structure.
+
+Let me read the AI input types, the typing indicator, the localization catalog setup, and an existing test for structure.
+
+Let me verify which chatbot strings already exist in the catalog and confirm the module/test structure.
+
+None exist yet — I'll add all 13 plus `route.chatbot`. Let me inspect the xcstrings format using an existing key.
+
+I understand the catalog format. Let me check tooling availability (xcodebuild/swiftlint/xcodegen), confirm the single-module structure, and read the test pattern + placeholder scanner.
+
+Full Apple toolchain is available — I can run the real gate. Let me examine the test target config, the existing test pattern, and the placeholder scanner.
+
+Let me check where `/chatbot` lives in the web app's route groups, and read the placeholder scanner + gate contract.
+
+Let me read the placeholder patterns and the gate contract from the p4-apple README.
+
+Now let me examine the apple-ledger.json structure to understand how to add the chatbot row, and check the web App.tsx group context for chatbot.
+
+I have a thorough understanding now. Let me check the SwiftLint config limits, then write my plan.
+
+SwiftLint `--strict` enforces ≤120-char lines, ≤400-line files, ≤50-line functions — so I'll split into small files matching the existing pattern. Let me confirm the web sidebar group for chatbot, then write my plan.
+
+The web places `/chatbot` ("Helix Chat") in the Settings section — I'll map it to the `.account` group. Now let me check the AIVoiceMode/AIChatbotIndicator model construction so I can faithfully include them.
+
+I now have a complete understanding of the architecture. Let me write a plan and set up tracking, then implement.
+
+Now let me implement. First, add the localization strings. Let me check the exact xcstrings formatting to produce a minimal, faithful diff.
+
+The xcstrings uses Xcode's `" : "` separator and alphabetical key order. To keep a minimal additive diff, I'll insert text blocks in the correct alphabetical slots. Let me find the neighbors for `chatbot.*` and `route.chatbot`.
+
+`chatbot.*` keys go between `charging.viewAnomalies` and `command.blocked.needsAuth`; `route.chatbot` between `route.chargingHeatmap` and `route.dashboard`. I'll do targeted text insertion to keep the 11k existing entries byte-identical.
+
+The file isn't globally sorted (mixed insertion order + mixed colon styles), so I'll insert my 14 entries safely just before the closing of the `strings` object, in canonical Xcode style. Let me do this surgically with Python.
+
+Strings added and JSON validated. Let me verify the diff is clean and additive.
+
+Clean additive diff (154 insertions, validated JSON). Now the AppRoute change.
+
+That edit was a no-op mistake. Let me add the `chatbot` systemImage case properly near `.watch`.
+
+My earlier edit corrupted line 184. Let me fix it and add the chatbot cases.
+
+Let me verify the AppRoute changes are correct.
+
+AppRoute is clean. Now let me build the Swift files. First, the conversation seam (`ChatbotConversation.swift`).
+
+Now the sessions backend + actions adapter (`ChatbotSessions.swift`).
+
+Now the core `ChatbotPageModel.swift`.
+
+Now the row-management extension (`ChatbotPageModel.Rows.swift`) to keep the main type body small.
+
+I need to fix access levels — the extension is in a separate file, so `private` stored properties won't be visible. Let me make them internal and fix the `rowSources` naming.
+
+Now let me verify the exact `ChatSuggestion` defaults accessor and `InMemoryVoiceModeSource` init before writing the sample factory.
+
+Let me harden the `nextID` computation to consider all session histories, then write the sample factory.
+
+Strings, model, conversation, sessions, and sample are done. Now the views.
+
+I need `rowModels` to be `Identifiable` for `ForEach`. Let me introduce a `ChatbotRow` wrapper and update the model.
+
+Now update the row-building extension to produce `ChatbotRow`:
+
+Now the conversation panel views. Let me write `ChatbotPage.Views.swift` (panel + log + states).
+
+Let me verify `common.retry` exists in the catalog before writing the composer.
+
+The repo uses `action.retry`. There's also a shared Feedback `States.swift` I should reuse (DRY). Let me check both.
+
+I'll reuse the shipped `TSQueryError` for the error state (DRY) instead of a custom one. Let me update the Views file.
+
+That edit broke the switch. Let me view and repair.
+
+Let me repair the broken switch and scroll function:
+
+Now fix the retry key in `ChatbotLogErrorState` to use the existing `action.retry`:
+
+Now the composer + thinking panel (`ChatbotPage.Composer.swift`).
+
+Now the route registration and wiring into the app.
+
+Let me verify a few cross-platform concerns (especially `horizontalSizeClass` on macOS) by checking existing repo usage, then run swiftlint on my files.
+
+`horizontalSizeClass` and two-param `onChange` are established patterns. Let me run swiftlint on my new files for fast feedback.
+
+SwiftLint lints the whole `included` set. 6 violations found — let me see which are mine vs pre-existing.
+
+4 are mine (2 pre-existing in AnomalyInlineRow are not). Let me fix: parameter count in Rows, and trailing-closure style in 3 TSButton calls.
+
+Now fix the three TSButton trailing-closure violations:
+
+Let me re-run swiftlint filtering to my files, and run swiftformat --lint on them.
+
+My 9 files pass swiftlint `--strict` and swiftformat `--lint`. The 2 remaining violations are pre-existing in `AnomalyInlineRow.Previews.swift` (not my files). Let me confirm they're pre-existing and unrelated.
+
+The 2 violations are pre-existing baseline debt from an unrelated commit. Let me check whether swiftlint respects explicit file paths (to scope the gate to my new code as the prompt intends).
+
+
+Execution failed: CAPIError: 400 {"error":{"message":"The requested model is not supported.","code":"model_not_supported","param":"model","type":"invalid_request_error"}} (Request ID: E858:253941:110B1A5:12DF7F0:6A3214D2)

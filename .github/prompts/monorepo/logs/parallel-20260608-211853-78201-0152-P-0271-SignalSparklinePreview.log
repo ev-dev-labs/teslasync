@@ -1,0 +1,74 @@
+I'll start by exploring the repository structure, the web source component, and tooling availability.
+
+Tooling is available (xcodebuild, swiftlint, swiftformat, swift, pwsh) and `apps/apple` exists. Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source. Let me explore the Apple feature-views structure, find similar existing examples, and locate the shared state-holders/tokens/i18n.
+
+`LiveSignalsTable` is the closest analog (same signals domain). Let me study it thoroughly along with the shared facade, design tokens, and localization structure.
+
+Excellent template. Let me read the remaining LiveSignalsTable files plus the design tokens and shared components.
+
+Let me read the test pattern, sub-component file, design tokens, and check for existing native chart components.
+
+There's a native `MiniCharts.swift` (likely Sparkline). Let me read it, the design tokens, the web Sparkline source, and feedback components.
+
+Let me confirm the token definitions, the native chart idiom, and the web data types (SignalKind/SignalEnvelope, useSignalHistory).
+
+Let me read the exact web data types, the rest of the hooks, the design tokens, and chart models needed for the sparkline.
+
+The Tokens path is `apps/design/generated/apple`. Let me read tokens, chart models, the skeleton component, and the test target config.
+
+Let me check the build feasibility (xcodeproj, xcodegen, simulators, xcframework) and read the skeleton component plus test target config.
+
+Key finding: `Shared.xcframework` is only a `.gitkeep` placeholder — the app target depends on it. Let me read the full test-target config, the placeholder checker, and probe whether the project builds at baseline.
+
+There's a `build-shared-xcframework.sh` staging script (a scheme preAction). Let me read it and inspect an existing feature-view gate log to see the real expected outcome/format in this environment.
+
+Let me inspect the existing LiveSignalsTable and StatorTempChart gate logs to see the real outcome/format in this environment.
+
+I now have the full picture. The established, already-committed disposition for P4 Apple feature-views (per the LiveSignalsTable analog log) is **code-complete + host-validated, with the full Xcode app build/test DEFERRED** because `Shared.xcframework` requires a Kotlin/Native+Gradle build and there are 0 signing identities. Let me verify those blockers still hold here, check lint configs, and rule out symbol collisions.
+
+All blockers confirmed: **0 codesigning identities** (the app build/test gate is genuinely blocked on signing — matching the established, already-committed P4 disposition). Module-level generic `Signal*` types exist in the sibling `LiveSignalSparklinesWidget`, so I'll prefix all my types with `SignalSparklinePreview` to avoid collisions. Let me set up tracking and the plan.
+
+All blockers verified. Now I'll build the surface following the analog's decomposition, prefixing every type with `SignalSparklinePreview*` to avoid module collisions with the sibling widget. Creating the pure-Foundation core first (Models, Adapter, Localization, strings).
+
+Core types done. Now the Model (telemetry + source seams + observable model).
+
+Now the surface View and the Swift Charts sparkline.
+
+Now the previews and the test suite.
+
+All 9 files created. Now running the host gates. First, auto-format with swiftformat and verify lint-clean.
+
+swiftformat and swiftlint are clean (0 violations). Now the real typecheck: compile the production surface files together with the actual generated design tokens under Swift 6 / macOS 15 / strict concurrency.
+
+The real compiler caught a genuine defect: `Color.TS.accent` is `internal`, so it can't be a default-argument value in a `public init`. Fix: make `tint` optional and resolve the token inside the init body (internal access is allowed there).
+
+Typecheck passes (`TYPECHECK_EXIT=0`). Now validate the previews under `-D DEBUG` and re-confirm lint/format on the edited file.
+
+Previews typecheck cleanly under DEBUG and the edited view stays lint/format clean. Now the **executed adapter harness** — compile the pure Foundation core (Models + Adapter + Localization) into a real binary with assertions and run it for a true exit code.
+
+The harness scaffolding itself tripped strict concurrency (global mutable state). That's a harness issue, not surface code. Let me wrap it in a `@MainActor` function with locals and rerun — keeping strict concurrency for full fidelity.
+
+Adapter harness: **34/34 passed, RUN_EXIT=0**. Now the placeholder gate. Let me check the forbidden-pattern list and scan my own files for any trigger words (I used "placeholder"/"skeleton" in comments).
+
+The COMMON forbidden list includes `Placeholder`. I used it in two comments — I'll reword them (cleaner than opt-out markers). "skeleton" is not a forbidden pattern.
+
+Let me view the actual occurrence — it's in the struct doc comment, not the property comment.
+
+Now run the placeholder gate — both an honest scan of exactly my files (copied to a temp dir) and the literal prompt-form command.
+
+Placeholder scan clean (COUNT=0, no opt-outs). Let me run a consolidated final verification of all gates plus an i18n key parity check (code keys ↔ catalog keys).
+
+All host gates green. Now an i18n key-parity check (code ↔ catalog) plus a real probe that my files are registered in the generated Xcode project.
+
+The i18n diff had a quote-extraction artifact. Let me redo it cleanly using the key prefix. (Good news: `xcodegen generate` succeeded and all 9 files are registered as app-target sources — 54 refs — and the `.xcodeproj` is git-ignored.)
+
+i18n parity is exact (17 == 17, identical sets, zero dead refs/keys). Now let me capture **real evidence** of the Xcode app-build blocker by actually attempting the prompt's `xcodebuild` step (bounded), alongside the deterministic signing/framework probes.
+
+Bounded `xcodebuild` probe is running in the background. Deterministic blockers confirmed: **0 codesigning identities** and `Frameworks/` holds only `.gitkeep`. Let me wait for the build probe to hit its failure point.
+
+The backgrounded probe was discarded with the sync session (0-byte log). Let me run it properly bounded with `gtimeout`, synchronously, to capture the real failure line.
+
+Major finding: the probe shows the Kotlin/Native `Shared.xcframework` **actually builds successfully here** (gradle works — JDK present) — it was mid-compiling when my 240s bound killed it. So a real app build is feasible here, just slow. The covenant demands I genuinely try rather than assume-defer. Let me run the full iOS build to completion with a generous bound (xcframework is now cached).
+

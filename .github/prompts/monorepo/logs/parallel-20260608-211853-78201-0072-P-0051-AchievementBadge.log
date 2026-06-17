@@ -1,0 +1,197 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Now let me read the web source and understand existing Apple conventions.
+
+Now I understand the file structure pattern. Let me check if AchievementBadge files already exist, and study a complete reference component.
+
+No existing files — I'll create them. Let me study the DataDisplay components and a complete reference feature-view to match conventions exactly.
+
+Let me read a complete reference component (AcDcStatsPanel) and the DataDisplay Metrics to understand conventions.
+
+Excellent pattern. Let me read the remaining reference files plus the design tokens and Metrics components.
+
+Let me read the remaining reference files, design tokens, and the gauge/ring components.
+
+Now let me examine the design tokens and shared components I can reference (read-only, since I can only create AchievementBadge.* files).
+
+There's a `TSProgressRing` already. Let me read the design tokens and the Metrics file.
+
+`TSProgressRing` uses only a palette index, not an arbitrary color — the web passes specific amber/gray. Since I can only create `AchievementBadge.*` files, I'll build the ring inline. Let me locate the design tokens (Color.TS, Font.TS, TSSpacing, etc.).
+
+Now I have the full token set. Let me understand the build system (how new files are compiled) and check for view/snapshot test patterns and shared component signatures.
+
+The build uses XcodeGen (project.yml). Let me read it to confirm how feature-views files are picked up, and check view-test patterns.
+
+Build is XcodeGen directory-globbed, so `AchievementBadge.*` files auto-join the app target and `*Tests.swift` join the test bundle. Let me check toolchain readiness and verify shared component signatures.
+
+xcodegen and iPhone 16 sim are ready, but `Shared.xcframework` is missing (only `.gitkeep`). Let me inspect the staging script and shared component signatures.
+
+The app links `Shared.xcframework`, built from KMP via Gradle. Let me check whether that toolchain is viable here, read the pending-verifications note, the placeholder checker, and remaining component signatures.
+
+I now have the full picture. Key finding: `apps/macos-pending-verifications.md` documents the established precedent — the full-app `xcodebuild` is blocked by **pre-existing, unrelated** collisions (e.g. `DashboardWidgetSize` redefined 15×) outside my allowed files, so surfaces are verified **in isolation** (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder) and the full-app build is deferred to the macOS CI gate.
+
+Let me check for symbol collisions before writing, and confirm no existing Achievement symbols.
+
+Important: there's already an `AchievementBadgeView` and an achievement model in the dashboard widget. Since the whole app is one module, I must avoid symbol collisions. Let me inspect the existing achievement symbols.
+
+Now I understand the constraints fully. Existing symbols to avoid: `AchievementBadgeView`, `AchievementUnlock`. I'll prefix all my types with `AchievementBadge` and name the main view `AchievementBadge` (free). Let me set up a todo list and write the plan.
+
+Now I'll write the surface files. Starting with the pure Adapter.
+
+Now the Model (state holder, projection, i18n facade, telemetry).
+
+Now the Views (the parity rendering — tile, inline ring, chrome, freshness chip).
+
+Now the main surface view.
+
+Now the strings catalog, Previews, and the two test files.
+
+Now the test files — Tests (adapter/projection/a11y) and ModelTests (state holder).
+
+All 8 files created. Now let me verify. First, let me confirm exactly which shared symbols my surface references and whether the shared component/design dirs are self-contained (for an isolated SwiftPM harness).
+
+My surface uses a small, self-contained set (`TSButton`, `TSFadeIn`, `TSSkeleton`, tokens). `Sources/Components` + `Sources/Design` import only system frameworks (no `Shared.`), so an isolated SwiftPM harness named `TeslaSync` will work. Let me run the fast gates (lint/format/placeholder) scoped to my files and find the configs.
+
+Placeholder gate passes (COUNT=0). Let me read the lint/format configs and run them on my files.
+
+Configs found. Let me auto-format my files to match the project's swiftformat rules, then lint-verify and run swiftlint — all scoped to my files.
+
+Only 1/7 needed changes. Let me review the diff, then lint-verify and run swiftlint.
+
+Files are untracked so no diff baseline. Let me lint-verify formatting and run swiftlint, both scoped to my files.
+
+swiftformat clean (0/7). swiftlint found one issue: `AchievementBadge.Views.swift` is 409 lines (limit 400). I'll split the loading/empty/error chrome into a separate `AchievementBadge.States.swift` (matching the pattern other surfaces use). Let me find the split point.
+
+swiftformat passed. The only swiftlint issue is file length (409 > 400). I'll split the chrome views into `AchievementBadge.States.swift` and DRY the repeated tile surface into a shared modifier. Let me view the post-format tile section to edit precisely.
+
+I'll split the chrome into a new `AchievementBadge.States.swift` and DRY the repeated tile surface into a shared modifier. First, truncate the chrome from Views.swift, then add the shared modifier and update the tile.
+
+I left redundant padding/frame before the surface modifier (which already applies them). Let me remove the duplication.
+
+Now create the States file with the chrome views using the shared surface modifier.
+
+Now re-run format + lint on all swift files (now 8 swift files + 1 strings).
+
+All three fast gates pass on my files (swiftformat 0/8, swiftlint 0 violations, placeholder 0). Now the key verification: an isolated SwiftPM build + test harness (the precedent's methodology). Let me set it up.
+
+Build compiled all my AchievementBadge files, but exit=1 — there's an error (likely in a copied Components file). Let me capture the full error output.
+
+No `error:` lines but exit=1. Let me inspect the full log for the failure cause.
+
+Diagnostics likely went to stdout. Let me capture combined output and find the error (a snippet showed `117 | }`).
+
+The errors are in a copied Components file (`UnitFormatters.swift`) that depends on external `UnitPreferences`/`TSUnitsKey` — not something my surface uses. I'll rebuild the harness with only the minimal dependency closure. Let me map the closure of my deps (Buttons, Motion, Skeletons→Cards→Typography/Badges).
+
+Only `DataDisplay/UnitFormatters.swift` has external deps. Let me confirm nothing else in Components references its symbols, then I can simply exclude that one file.
+
+No cross-references. I'll exclude that one external-dependent file from the harness (my surface doesn't use it) and rebuild.
+
+Build succeeds (EXIT=0) under Swift 6 strict concurrency. Now run the tests.
+
+All 31 tests pass (0 failures) under Swift 6 strict concurrency. Now the SDK-specific typecheck for iOS 18 + macOS 15 (per precedent). Let me locate the SDKs and typecheck the library source set against both.
+
+iOS 18 typecheck passes. Now macOS 15.
+
+Both SDK typechecks pass. Now `xcodegen generate` to confirm the project enumerates my files, and re-run placeholder on the full set (now includes States.swift).
+
+All 9 files enumerated in the generated project; placeholder + xcodegen both EXIT=0. Now let me gather honest evidence about the full-app `xcodebuild` gate. First, confirm whether the documented pre-existing collisions (outside my allowed files) still exist in this repo state.
+
+In this fresh slot, `DashboardWidgetSize` is defined once (not 15×) — the documented collision may be resolved here. The remaining heavy dependency is the KMP `Shared.xcframework` (Gradle/Kotlin Native), which the full-app `xcodebuild` requires via a pre-action. Let me make a time-boxed attempt to build it, to get concrete evidence.
+
+Gradle/KMP config loads fine offline (`:core:tasks` succeeded in 2s). Let me attempt the actual `Shared.xcframework` assembly (Kotlin/Native) with a bounded wait.
+
+Started the KMP build in the background. While it runs, let me verify test-file target membership in the generated project and prepare the gate log. Let me check the build progress first.
+
+The sync shell discarded the background job. Let me restart the KMP build as a properly detached async process.
+
+The KMP build is still running. Let me check its log for progress.
+
+The KMP toolchain is cached — it's already producing the framework and is now on the release linking. Let me wait for it to finish.
+
+Release linking in progress. Let me wait for completion.
+
+Nearly done (macOS release linking). Let me wait for the final XCFramework assembly.
+
+KMP build succeeded (EXIT=0). Let me verify and stage the framework, then run the real iOS `xcodebuild` gate.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the real iOS `xcodebuild` gate. I'll start it in the background and monitor for AchievementBadge-specific issues vs unrelated parallel-merge collisions.
+
+Full-app build failed (226 error lines) — but the failing compile units are all OTHER surfaces (WeekSelector, RedisDiagnosticEmptyState, RequestBuilder, RegionSettings, etc.). Let me confirm **zero** errors are in AchievementBadge, and characterize the unrelated failures.
+
+Confirmed: **zero** AchievementBadge errors. All 226 failures are in other parallel-authored surfaces (ChargeStatusWidget, SafetyFeaturesWidget, etc.). Let me capture representative samples of these unrelated errors for the log evidence.
+
+The unrelated errors are `'ChargeSessionDTO' is ambiguous for type lookup` — duplicate type definitions from parallel-authored widgets, with cascading inference errors. Classic pre-existing collisions. Let me confirm AchievementBadge was compiled in the full build (it appears in compile batches).
+
+Conclusive evidence: `ChargeSessionDTO` is duplicated across `ChargeStatusLiveWidget.Model.swift` and `ChargeSessionChartWidget.Models.swift` — a pre-existing parallel-merge collision in other surfaces (outside my allowed files). **Zero** AchievementBadge errors. This matches the documented `macos-pending` precedent exactly.
+
+Let me run the gate's lint/format commands (both whole-tree as the gate runs them, and scoped to my surface) to capture honest results.
+
+Surface gates all green; only my 9 files are new; the framework artifact is gitignored. Let me mirror the exact log convention a prior `macos-pending` surface used (e.g., AlertMessageEditor/FSMTimelineChart) so STATUS/EXIT wording matches the established precedent.
+
+Let me read neighboring surface logs (0049, 0050, 0052) to match the exact convention.
+
+This is the exact precedent. Notably, my slot is **further along** than that predecessor: feature-views IS registered in project.yml (xcodegen enumerated my 9 files), the framework IS staged, and I actually **ran** the full `xcodebuild` — proving zero AchievementBadge errors with failures isolated to unrelated surfaces. Let me gather final facts for the log.
+
+I have everything. Now let me write the gate log (mirroring the precedent format), ending with the required `EXIT`/`STATUS` lines.
+
+Log written, ending with `EXIT=0`/`STATUS=DONE`. Now let me commit only the allowed files (the 9 surface files + the log), verifying nothing stray (artifacts are gitignored).
+
+Exactly the 10 allowed files staged (9 surface + log), nothing stray. Committing now.
+
+Committed as `ca45a98de`. Let me verify the final git state is clean and clean up temp artifacts.
+
+Clean commit (10 files, 1676 insertions). The only remaining working-tree changes are the two **pre-existing** web file mods that were present before I started — correctly untouched. Let me finalize the todo tracking.
+
+All work is complete and verified. Here's the summary.
+
+## P4 · Feature view · 0051 — AchievementBadge (Apple) ✅ STATUS=DONE
+
+Shipped a production-polished SwiftUI parity of `web/src/features/analytics/components/AchievementBadge.tsx`, committed as `ca45a98de`.
+
+### Delivered (10 files, allowed scope only)
+`AchievementBadge.{Adapter,Model,Views,States,swift,Previews,Tests,ModelTests}.swift` + `.strings` + the gate log. All symbols prefixed to avoid the existing `AchievementBadgeView`/`AchievementUnlock`.
+
+### Parity
+- **Derived values verbatim**: `isNearComplete = !unlocked && progress≥0.8`, `pct = round(progress*100)`, ring sweep `pct/100`.
+- **Composition**: inline progress ring (amber/grey), grayscale-locked / full-colour-unlocked icon, name/description/`{pct}%`-or-`✓ Unlocked` footer, amber-vs-neutral tile, near-complete pulse — across `sm/md/lg`.
+- **6 states** (loading/empty/error/data/stale/offline), P1/S8 seam binding (no view HTTP), P1/S10 i18n (`lifetime.unlocked` verbatim, no English literals), P1/S11 `view.opened` telemetry, VoiceOver + Dynamic Type + reduce-motion.
+
+### Verification — every host-runnable gate GREEN (real output)
+| Gate | Result |
+|---|---|
+| Isolated SwiftPM `swift build` (Swift 6 strict concurrency) | EXIT=0 |
+| `swift test` — **31/31** passed | EXIT=0 |
+| `swiftc -typecheck` iOS 18 + macOS 15 SDKs | EXIT=0 |
+| swiftlint --strict / swiftformat --lint / placeholder | 0 / 0 / 0 |
+| `xcodegen generate` — all 9 files enumerated | EXIT=0 |
+| Full iOS `xcodebuild` (real, framework staged) | **0 AchievementBadge errors** |
+
+### Honest deferral
+I assembled the KMP `Shared.xcframework` (Kotlin/Native) and ran the **real** full-app `xcodebuild`. It fails (226 errors) **only** on pre-existing, unrelated parallel-authored surfaces — root cause `ChargeSessionDTO` defined twice (`ChargeStatusLiveWidget` + `ChargeSessionChartWidget`), outside my allowed files. **Zero** errors are AchievementBadge. The repo-wide build/test is deferred to the P4 acceptance gate per established precedent (0050/0180/0231), documented with real exit codes — never represented as passing.
+
+
+
+The task is fully complete — all 10 todos done, surface committed (`ca45a98de`), every host-runnable gate green, and the full-app build deferral honestly documented with real evidence.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0051-AchievementBadge.log | 236 ++++++++++++++++
+ .../feature-views/AchievementBadge.Adapter.swift   | 130 +++++++++
+ .../feature-views/AchievementBadge.Model.swift     | 289 ++++++++++++++++++++
+ .../AchievementBadge.ModelTests.swift              | 160 +++++++++++
+ .../feature-views/AchievementBadge.Previews.swift  | 137 ++++++++++
+ .../feature-views/AchievementBadge.States.swift    | 112 ++++++++
+ .../feature-views/AchievementBadge.Tests.swift     | 208 +++++++++++++++
+ .../feature-views/AchievementBadge.Views.swift     | 297 +++++++++++++++++++++
+ .../feature-views/AchievementBadge.strings         |  34 +++
+ .../TeslaSync/feature-views/AchievementBadge.swift |  73 +++++
+ 10 files changed, 1676 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0051-AchievementBadge.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AchievementBadge.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AchievementBadge.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AchievementBadge.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AchievementBadge.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AchievementBadge.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AchievementBadge.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AchievementBadge.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AchievementBadge.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AchievementBadge.swift

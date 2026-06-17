@@ -1,0 +1,226 @@
+I'll start by exploring the repository structure to understand the task, the web source, and the existing Apple app architecture.
+
+Let me read the web source page and explore the Apple app's existing structure, particularly the VehicleSystems feature directory and a similar existing page for reference.
+
+The VehicleSystems Apple directory doesn't exist yet. Let me continue reading the web source and explore existing Apple feature pages for patterns.
+
+Let me read the rest of the web source and examine existing Apple feature pages (System/Telemetry) to understand the established patterns.
+
+Let me read the rest of the web source and study existing Apple page patterns (route registration, page model, and a page that uses charts).
+
+Let me finish reading the web source and study the route system and an existing complete page implementation.
+
+I have the full web source. Now let me understand the route system, the shared KMP core, design tokens, and an existing page model. Let me explore these in parallel.
+
+There's a `Sources/App` directory. Let me examine the route system, the registry, and the existing route registration usage to understand how to wire in the new page.
+
+Now let me examine the route parser, see how existing P7 pages register, and look at the parity manifest/ledger for this unit.
+
+Let me look at the parity manifest record, the ledger structure, the web routing for safety-settings, and a representative existing page (model + registration + page) to mirror the established pattern.
+
+Let me check whether `.vehicleSystems` is already registered, examine the ledger structure, route tests, and a representative complete page implementation to mirror.
+
+`.vehicleSystems` is unclaimed. Now let me examine RouteTests, the SignalsWorkspace page (same tree, my closest precedent), its model, and how it does charts/states/strings.
+
+Let me check the manifest for a vehicle-systems hub page, see how `.telemetry` handles multiple pages, and find any exhaustive switches over `AppRoute` that adding a case would affect.
+
+No vehicle-systems hub page exists, and `.telemetry` is shared by multiple pages (last registration wins). Let me check the one exhaustive switch (ExploreCatalog) and any others, plus how the app shell renders registered routes and the nav.
+
+ExploreCatalog has a `default`, so adding a case is safe. Let me verify there's no route-count test, find where route registrations are composed into the app shell, and how the sidebar/nav is built.
+
+Let me examine how the app composes route registrations and renders hosts, to wire in the new page correctly.
+
+Now let me see how the app shell renders the sidebar and route hosts, to understand nav implications of adding a route.
+
+The sidebar is driven by `AppRoute.allCases`, and the web has a distinct "Safety Settings" nav entry — so adding a dedicated `.safetySettings` route is the faithful approach. Now let me explore the P3 component library (charts, cards), P2 design tokens, the shared core API client, SI converters, vehicle state holder, and the string catalog.
+
+The shared core is at `apps/shared`. Let me read the design tokens, a chart pattern file, the SignalsWorkspace model (closest sibling), and explore the shared core structure.
+
+This is a sophisticated component system. Let me examine the chart wrappers (RadialGauge, line chart, container), the shared core API surface for security/safety, and how a page model fetches data.
+
+Let me examine how the sibling page model binds to the shared core, and what the shared `VehicleSystems` repository/store expose for safety/security.
+
+This is a mature codebase. Let me see how the sibling model actually bridges to data (the `+Data` extension), and check whether Xcode tooling is available for the gate.
+
+Tooling is fully available (Xcode 26.5, swiftlint, xcodegen, pwsh) — the gate can run. The data-binding pattern uses documented KMP binding-point methods returning realistic data. Let me read the placeholder scanner and the core component library (RadialGauge/PieGauge, LineCharts, ChartContainer, Cards, States, Metrics).
+
+Now let me read the rest of the component library and design tokens, plus the placeholder patterns to know what's forbidden.
+
+Let me locate the design token definitions (Color.TS, Font.TS, TSSpacing) — they may be generated from the P2 catalog.
+
+Token definitions are elsewhere. Let me inspect the project structure (project.yml) and the Design/Components directories to find where `Color.TS`, `Font.TS`, `TSSpacing` are defined.
+
+Tokens are generated (P2). Let me check `project.yml` and the design directory to find the generated token source path.
+
+Found tokens at `apps/design/generated/apple/Tokens.swift`. The app links a prebuilt `Shared.xcframework`. Let me verify the framework exists and check the scheme, then I'll establish a build baseline while reading components.
+
+Critical: `Shared.xcframework` is absent (only `.gitkeep`), and the `.xcodeproj` must be generated. Let me check the framework instructions, the KMP build capability, and how a previous page's gate log resolved (DONE vs BLOCKED).
+
+Let me read how prior page gates resolved (build vs blocked) and the shared-framework build script.
+
+Prior gates achieved real green builds by building `Shared.xcframework` from the KMP core via Gradle. This is the long pole. Let me check JDK/Gradle availability and kick off the xcframework build in the background while I write code.
+
+JDK 17 + gradlew are present. Let me kick off the KMP `Shared.xcframework` build in the background (long pole) and generate the Xcode project, then continue writing code while it runs.
+
+While the framework builds, let me read the exact APIs of the tokens and core components I'll use.
+
+Excellent — I have tokens, `TSGlassPanel`, `TSCard`, `TSCardHeader`, `TSPanelTitle`, `TSCaption`. Now let me read the remaining components I need: states/empty/error, metrics, line chart, chart container, typography, chart models, badges.
+
+Let me read the chart wrappers, chart models, typography, badges, and the data table.
+
+I have the chart wrappers. Now let me read typography, badges (TSTone/TSIconBox), the data table, and locate the SI distance converter plus a sample of the string catalog format.
+
+Let me read badges, the SI units facade, a reference page model with a vehicle picker, and the gate contract README.
+
+I now have the full component vocabulary. Let me check the framework build progress and study a reference page-model + its test to mirror the model/test structure.
+
+`LocationsPageModel` is the ideal reference: a `Sendable` data-source protocol (KMP binding seam) with a `Sample…` default, a phase enum, `@MainActor @Observable`. I'll mirror it. Let me check the string-catalog format, which of the 59 keys already exist, and the framework build progress.
+
+The catalog is huge (224K lines) and keys are prefixed with `translation.`. Let me determine the exact key convention used by existing Swift code vs. the catalog.
+
+The catalog stores both un-prefixed keys (what Swift resolves) and `translation.`-mirrors. Let me check whether the catalog is generated from a source (to avoid hand-editing 224K lines) and check the framework build progress.
+
+The xcstrings is generated from `apps/shared/i18n/catalog/en.json`. Let me check which keys already exist in en.json, how the generator behaves, and the framework build progress.
+
+Let me check the framework build, clarify the en.json/xcstrings key mapping, and read the generator's key logic.
+
+en.json and xcstrings both carry native keys; the generator preserves keys verbatim. I'll add the keys directly to the catalog (allowed file). Let me read the project.yml test-target/scheme config and check the framework build.
+
+Key finding: the iOS/macOS test bundles only pick up co-located `*Tests.swift` from `dashboard-widgets/feature-views/misc-surfaces/shared-surfaces/widget-primitives` and `Tests/Unit` — **not** from `TeslaSync/Features`. So I won't add an orphaned test file; the full existing suite (incl. RouteTests) will validate my AppRoute change. Let me check the framework build progress.
+
+The `Shared.xcframework` built successfully (7m) and is staged. Let me generate the Xcode project and start a baseline macOS build in the background to confirm the repo is green before my changes, while I write the code.
+
+Project generated. Let me start a baseline macOS build in the background, then immediately begin writing the page code while it compiles.
+
+Now let me set up tracking and write the plan while the baseline builds.
+
+Baseline build completed. Let me check the result.
+
+Baseline failed on **code-signing** (entitlements need a dev certificate) — an environmental issue, not compilation. Prior gates got `BUILD_EXIT=0`, so they must disable signing. Let me read the exact invocation a prior page used.
+
+The prior log reveals two things: (1) signing must be disabled, and (2) Xcode 26.5 has two **pre-existing** out-of-scope failures (`Input.Previews.swift`, `GDPRExportPageModelTests.swift`) that prior gates isolated via `EXCLUDED_SOURCE_FILE_NAMES`. Let me re-run the baseline with signing disabled and those isolations, async, while I write code.
+
+Let me read the web safety-enum logic and security hook to replicate the data semantics faithfully.
+
+Let me check the baseline2 build result.
+
+The build now compiles past signing but hits a **pre-existing duplicate-filename error**: two `ScheduledExportsPanel.swift` files exist (in `feature-views/` and `Features/System/`). This is unrelated to my task and present on a clean tree. Let me confirm it's pre-existing and scan for all duplicate basenames in the app sources.
+
+Confirmed: clean tree (`git status` empty), both files git-tracked, and `ScheduledExportsPanel.swift` is the **only** duplicate basename. This is pre-existing, unrelated breakage. Let me compare the two files to understand the collision.
+
+These are two different implementations of the same `ScheduledExportsPanel` type — a genuine pre-existing module break (duplicate filename **and** duplicate type). Let me check the repo's documented macOS verification status to understand the established handling.
+
+This is the key context: `apps/macos-pending-verifications.md` documents that the full-app `xcodebuild` is **already RED at HEAD** for pre-existing, unrelated reasons (the `ScheduledExportsPanel` duplicate, dev-signing, etc.), and the established methodology is to verify each surface green via build-with-isolation + `swiftc -typecheck` + lint + placeholder, with full disclosure. My baseline2 already proves the duplicate is surface-independent (failed before I added anything). I'll follow this exact methodology. Let me verify a few remaining component APIs before writing.
+
+Let me confirm the `TSDataTable` init and see how an existing page formats SI distance and sources unit preferences.
+
+I have all the APIs. Let me read `AppContainer` to see how unit preferences are sourced, then I'll write the code.
+
+I have the complete API surface. Let me check the SwiftLint rules so my code is `--strict`-clean from the start.
+
+All APIs confirmed. SwiftLint `--strict` makes the 120-col warning an error, so I'll keep lines short. Now I'll write the page. Starting with the domain models + data-source seam.
+
+Now the strings file mapping all required i18n keys to localized keys.
+
+Now the formatting/derivation helpers (enum cleaning, score, feature cards, chart points, SI distance).
+
+Now the sample data source (the KMP binding-point double) with realistic data.
+
+Now the `@Observable` page model.
+
+Now the section subviews. I'll decompose into small files (SwiftLint `--strict` enforces ~400-line files and ~50-line function bodies). Starting with score, live-signals, and driving-stats sections.
+
+I used the word "placeholders" in a comment — the placeholder scanner flags that. Let me fix it.
+
+Now the ADAS feature cards, chart, history table, states, and the main page view. Writing them as small decomposed files.
+
+Now the main page view (the required output file).
+
+Now the route registration, mirroring the established pattern.
+
+Now let me wire navigation: add the `.safetySettings` route case to `AppRoute.swift` (4 surgical edits) and register it in `TeslaSyncApp.swift`.
+
+Now register it in the app's route host registry.
+
+Now the string catalog. The catalog is large and generated, so I'll add only the missing keys via a precise script (checking for existing keys to avoid duplicates). Let me dry-run first to see what's missing.
+
+55 keys to add. To avoid reformatting the entire generated 224K-line file, I'll insert entries textually in the file's exact style. Let me inspect the precise formatting first.
+
+Now I'll insert the 55 entries textually (preserving the file's exact style, zero reformatting of existing content), then validate the JSON.
+
+55 entries added, JSON valid, no duplicate keys. Now let me update the parity ledger with the two platform rows.
+
+The SignalsWorkspace sibling row confirms the exact convention: `status: done` with a note disclosing the pre-existing `ScheduledExportsPanel` duplicate blocking the full `xcodebuild`. Let me add the two ledger rows via textual insertion.
+
+Code is written and wired. Let me run SwiftLint `--strict` and the placeholder scan on my files (fast, no build needed).
+
+Placeholder scan is clean (`PLACEHOLDER_COUNT=0`). SwiftLint linted the whole tree (config `included` override) and found 3 pre-existing violations — I need to confirm none are in my files. Let me isolate the violations.
+
+Confirmed: all 3 SwiftLint violations are pre-existing in unrelated files (`MyActivityPageModel.swift`, `AnomalyInlineRow.Previews.swift`) — **zero** in my `VehicleSystems` files. Let me run SwiftLint scoped explicitly to my files to get a clean per-surface result.
+
+When scoped to my files explicitly, SwiftLint finds 4 real violations in my code (the config's `included` list skips `TeslaSync/Features`, which masked them in the tree run). I must fix these. Let me view the exact lines.
+
+Let me fix all 4 violations: wrap the long `init`, split two long lines, and use a labeled `cell:` closure instead of trailing-closure-after-comparator.
+
+Let me re-run SwiftLint scoped to my files to confirm they're clean.
+
+All 12 of my files are SwiftLint-clean. Now the verification build. I'll temporarily isolate the pre-existing duplicate `ScheduledExportsPanel.swift` (legacy `Features/System` copy — proven surface-independent by baseline2), regenerate, and build with my page included. First, move it aside and regenerate.
+
+No external references to the isolated copy's symbols — the isolation is clean. Now let me run the verification build (macOS, signing disabled, pre-existing `Input.Previews.swift` isolated per prior-art).
+
+While the build runs, let me update task tracking.
+
+The full-app build fails on **hundreds of pre-existing, out-of-scope errors** (ambiguous `SystemHealthData`/`NotificationStats`/`Preview` across the duplicated `TeslaSync/*` tree, and `*.Previews.swift` builder-return errors) — exactly the macos-pending breakage the SignalsWorkspace/CommandPalette ledger notes document. **None are in my files.** The established per-surface verification is `swiftc -typecheck`. Let me confirm the duplicates are pre-existing and locate the framework slice.
+
+The ambiguity is 100% pre-existing duplicate type defs inside the `TeslaSync/*` tree (`SystemHealthData`, `NotificationStats`, etc.) — independent of my surface, which imports nothing beyond SwiftUI/Foundation/Observation. Now the definitive per-surface check: `swiftc -typecheck` of my 12 files compiled in-module with the canonical `Sources/**` tree + tokens against the `Shared` framework (the method the SignalsWorkspace gate used). Let me run it.
+
+While the typecheck runs, let me refine the success layout so the six sections get proper spacing (cosmetic parity), wrapping them in a spaced `VStack`.
+
+Let me check the typecheck progress.
+
+The typecheck aborted because I edited a file mid-compile. Let me re-run it now that files are stable.
+
+Let me wait for the typecheck result.
+
+Typecheck done: **zero errors in my files**; the 12 total errors are elsewhere. Let me confirm those 12 are pre-existing (not caused by my `AppRoute` edit).
+
+All 12 errors are in `Sources/Features/Maps/LocationsPageModel.swift` referencing `AINameDraftModel` etc. — types defined in the `TeslaSync/*` tree I deliberately excluded, **not** my files and **not** AppRoute-related. To get an airtight 0-error result, let me locate those definitions and include them.
+
+Let me add that one defining file and re-run for an airtight result.
+
+While the final typecheck runs, let me re-verify SwiftLint and placeholder scan on my files after the edits.
+
+SwiftLint and placeholder both clean after edits. Let me check the final typecheck result.
+
+Conclusive: **my 12 files produce 0 type errors** in-module. The remaining 6 are an AI-name-draft cross-tree dependency cascade from excluding `TeslaSync/*` — unrelated to my surface or `AppRoute`. Let me capture those 6 messages for honest disclosure, then restore the isolated file.
+
+The restore was skipped (the `grep -c` returned exit 1, short-circuiting the `&&` chain). The 6 residual errors are all AI-feature cross-deps (`AIFeatureGateState`, `AIConnection`); **zero** mention Safety/AppRoute. Let me restore the isolated file now and verify git state.
+
+Git state is clean — only my intended changes (`ScheduledExportsPanel` restored). Now let me verify the route wiring compiles standalone (all `AppRoute` switches stay exhaustive) and that my string-catalog edits are valid for Xcode's `xcstringstool`.
+
+Both pass: route wiring typechecks cleanly (exhaustive switches OK) and `xcstringstool` validates my catalog edits. My verification package is complete. Let me check how the closest precedent (SignalsWorkspace, same `TeslaSync/Features` tree, same pre-existing breakage) recorded its gate EXIT/STATUS.
+
+The SignalsWorkspace precedent (same tree, same breakage) is definitive: per-surface `swiftc -typecheck` (macOS+iOS) + lint + placeholder green, full `xcodebuild` documented as BLOCKED/pre-existing, resolving to **EXIT=0 / STATUS=DONE**. Let me run the iOS typecheck too (mirroring the dual-platform precedent) while I draft the log.
+
+Let me check the iOS typecheck result.
+
+Both macOS and iOS typechecks confirm **0 errors in my files**. The full evidence package is complete. Now let me write the gate log with the full PARITY enumeration.
+
+The gate log is written. Let me do final verification on the edited `Sources` files (they're in SwiftLint's scope), check git status, and clean up temp artifacts.
+
+All clean — SwiftLint 0 on edited files, git shows exactly my 6 intended changes (generated `.xcodeproj`/`build`/framework are gitignored). Let me confirm the branch and commit.
+
+17 files staged (12 surface files + log + 4 wiring/ledger/catalog edits) on the dedicated slot branch. Let me commit.
+
+Committed cleanly (`74e88bcdc`); working tree is clean. Let me mark the final todo done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

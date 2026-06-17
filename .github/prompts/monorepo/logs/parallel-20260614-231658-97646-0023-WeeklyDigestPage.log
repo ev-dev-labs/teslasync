@@ -1,0 +1,56 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me examine the existing Apple app structure, a recently-completed similar page, and the parity infrastructure.
+
+The actual Apple directory structure differs from the prompt's stated path. Let me find where existing pages actually live.
+
+The real convention is `apps/apple/Sources/Features/<Domain>/`. Let me study the closest analytics predecessor (TrueCost), the manifest record, the ledger, and the log format.
+
+Now let me read the web hook/components to reproduce faithfully, plus the predecessor model, route registration, ledger, and log format.
+
+The manifest scope is minimal (3 states + 5 strings) but the web page is rich. Let me check toolchain availability and read the predecessor model + log + web components to reproduce faithfully.
+
+Toolchain is fully available. The predecessor methodology is clear: files go in `Sources/Features/Analytics/`, strings in the platform `Localizable.xcstrings`, plus a route + ledger + log. Let me read the web components to reproduce faithfully.
+
+Now the remaining web sections, then the predecessor Swift files to match patterns precisely.
+
+Now let me study the predecessor Swift implementation in depth to learn the exact component/token APIs.
+
+Now let me map the shared component library, the route system, and the test/sample patterns.
+
+The Apple catalog uses plain web-style keys (e.g., `tco.title`). The web keys for this page are `analytics.weeklyDigest.*`. Let me pull the full web string set from the `translation.*` mirror to port values verbatim.
+
+I have the full web string set. Now let me check the ledger format and look at how the Statistics sibling handles day-bucketed charts.
+
+I have everything needed. Let me set up tracking, write a plan, and kick off a baseline project generation + build to understand the starting state.
+
+Project generates cleanly. Let me start a baseline macOS build in the background while I write the implementation.
+
+While the baseline build runs, let me check the lint rules so my code passes `--strict` the first time, then write the plan.
+
+Lint budget is clear (≤120 cols, `isEmpty` over count, type names ≤50). Let me write the plan, then start implementing with the Shared-free logic files.
+
+Now let me create the implementation. Starting with the Shared-free models and pure aggregation logic.
+
+Let me check on the baseline build while I continue.
+
+Baseline still building. Let me write the display formatters (Units facade boundary).
+
+Now the `@Observable` page model.
+
+Now the sample/empty/failing data sources.
+
+Let me check the baseline build progress before writing the views.
+
+Baseline still compiling. Let me write the page scaffold.
+
+Let me check the chart axis helper to handle day labels correctly, then write the sections.
+
+Axis helper shows numeric labels (like TrueCost). I'll mirror TrueCost's pattern with a localized day-label row. Now writing the sections.
+
+The baseline build finished. Let me read its result to establish the starting state.
+
+Baseline is pre-existing RED (matches predecessor notes). Let me confirm these errors are out-of-scope.
+
+Baseline RED is purely out-of-scope (`TeslaSync/shared-surfaces/Input.Previews.swift`), confirming predecessor notes. I'll verify in-scope via build with that file excluded. Let me check the chart palette for severity colors, then finish the charts.
+

@@ -1,0 +1,171 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me read the web source page and explore the Apple app structure.
+
+Let me explore the existing Apple app structure, the API types, and the parity ledger.
+
+The existing Apple app uses a different structure (`feature-views/` with multi-file components) than the prompt's expected path. Let me investigate the actual conventions before deciding.
+
+Now I understand the actual convention. The completed pages live in `apps/apple/Sources/Features/<Domain>/`, not the prompt's literal `TeslaSync/Features/` path (which isn't compiled by `project.yml`). Let me study the existing admin pages as the precedent.
+
+Now I understand the convention clearly. Let me study the most representative pages (DiskForecast and FleetTelemetryCoverage) and their models, route registration, and tests.
+
+This is a high-quality, well-structured codebase. Let me explore the design system components, SI converters, routing, and the web API types.
+
+Let me find the design token definitions and read the key reusable components.
+
+Let me read the feedback states, unit formatters, the web API type for lifetime stats, and the existing AchievementBadge component.
+
+Full Apple toolchain is available (Xcode 26.5, swift 6.3, swiftlint, xcodegen). I can build/lint/test. Let me study the routing infrastructure, the selected-vehicle handling, and the SI unit formatters.
+
+Let me study the SI unit formatters, selected-vehicle handling, and the string catalog format.
+
+Let me check whether the Shared.xcframework (KMP core) is present and how the build stages it, since lifetime stats needs SI unit conversion.
+
+The `Shared.xcframework` isn't staged — it's built from KMP via Gradle. This is the long pole. Let me check feasibility and kick off the build in the background while I write code.
+
+Java 17 + gradle cache present — the KMP build is feasible. Let me kick off the `Shared.xcframework` build in the background (long pole) while I write the implementation.
+
+While that builds, let me study the string catalog format, the currency/number formatters, and the selected-vehicle surface.
+
+Let me check the KMP build progress and read the achievement tile view plus a route registration test pattern.
+
+I have a clear picture. Let me reuse the existing `AchievementBadgeTile`. Let me check the Motion components and the TeslaOrders registration pattern (the newest page), then check the build.
+
+Let me check the KMP build progress.
+
+I now have a thorough understanding. Let me set up a plan and todo list, then implement.
+
+Let me verify adding an `AppRoute` case is safe (no breaking exhaustive switches) and check the placeholder scanner + swiftlint rules.
+
+No other exhaustive `AppRoute` switches — safe to add a case. Let me check build progress, then start writing.
+
+KMP build still compiling (first run). Let me write the model file while it builds.
+
+The KMP build finished. Let me read its result and create the Analytics directory + model file.
+
+Shared.xcframework is staged (7m39s, now cached). Now let me create the model file.
+
+Now the sample data source file (matching the `.Sample.swift` convention from sibling pages).
+
+Now the main page view.
+
+Now the sections file with the six detail panels and helper tiles.
+
+Now wire navigation: add the `AppRoute` case, parser alias, and route registration.
+
+Now the route registration file and wiring into the app composition root.
+
+I need to render the stat-card sublabels (`lifetime.hours`/`sessions`/`vsGas`) for full string parity. `TSStatCard` lacks a sublabel, so I'll add a composed `LifetimeStatCard`. Let me update the grid and add the card.
+
+Now let me add the 42 strings to the catalog via a script (surgical insertion + JSON validation).
+
+Let me fix `hourLabel` to match the web (no zero-padding: `7:00` not `07:00`), then write the tests.
+
+Let me update todos and run swiftlint on the new files.
+
+swiftlint linted the whole project. Let me filter the violations to my files.
+
+Violations are in my files only (file length + line length). Let me view the offending lines, fix line lengths, then split the oversized sections file.
+
+I'll add model display helpers, fix the two page lines, then split/compact the section files. First, the model helpers:
+
+Let me rewrite the section file split into two files (to satisfy the 400-line limit) with shorter lines. First remove the old one.
+
+Now the tiles file with the leaf components.
+
+Let me re-run swiftlint and check my files are clean.
+
+My files pass swiftlint. Now the placeholder scan. Let me check the scanner and run it (or replicate it).
+
+pwsh is available. Let me run the placeholder scan on my Analytics files.
+
+The scan flags the word "placeholder" — two are in comments (reword) and one is the legitimate SwiftUI `.redacted(reason: .placeholder)` API. Let me view and fix.
+
+Placeholder scan passes. Now regenerate the Xcode project (to include new files) and build. Let me start with xcodegen.
+
+New files are in the project. Let me build the macOS app target (Shared.xcframework is already staged, so I'll build the target directly to skip the Gradle pre-action).
+
+The build attempted x86_64 (the Shared.xcframework is arm64-only — this Mac is Apple Silicon). That's an invocation issue, not my code (failures are in unrelated x86_64 files). Let me rebuild arm64-only.
+
+arm64 build surfaced a compile error — but in an untouched, unrelated file (`AIGeofenceAwareAutomationSuggestions.swift`), not mine. Let me verify it's pre-existing and check the macOS verification notes.
+
+The blocker is a pre-existing `@escaping` bug in an untouched AI file (not mine). Let me capture the FULL set of pre-existing compile errors to understand scope.
+
+The build is non-deterministic — a second pre-existing file (`AISuggestNewGeofences.swift`) with the same `@escaping` bug pattern. These are untouched files. Let me quantify the pre-existing breakage and check the macOS verification notes.
+
+73 files use that signature (most are fine; only those passing it to `@escaping` break). Let me read the macOS verification notes — they likely document this pre-existing state.
+
+The pending-verifications doc reveals the methodology: per-surface `swiftc -typecheck` is the host gate; full `xcodebuild build test` is **deferred to CI**. The pre-existing `@escaping` errors are documented/known. Let me precisely quantify the broken-helper set to decide whether a real full build is achievable.
+
+This confirms a **systemic, pre-existing** breakage (~50+ generated AI surface files pass non-escaping closures to `@escaping` `TSGlassPanel`) — documented in `macos-pending-verifications.md`, which defers full `xcodebuild build test` to CI and uses per-surface `swiftc -typecheck` as the host gate. Fixing 50+ unrelated files is out of scope. Let me verify MY surface via `swiftc -typecheck` against the real dependencies (the documented host gate). First, check Sources/ coupling to the broken dirs.
+
+My surface compiled cleanly in the builds (only pre-existing AI files failed). For rigorous proof, let me run the documented host gate — `swiftc -typecheck` of my surface against its real dependencies + the Shared framework. Let me assemble the dependency closure.
+
+Let me locate a few helper symbols, then assemble a focused `swiftc -typecheck` of my surface + its real dependency files.
+
+Default `swiftc` excludes `#if DEBUG`, trimming preview deps. Let me typecheck my surface against a focused real-dependency set + the Shared framework.
+
+`AppContainer.swift` pulls heavy auth/state-holder deps. Let me add the files defining those symbols and re-run.
+
+`AppContainer.swift` only contributes the `UnitPreferences.metric/.imperial` extension I need (the rest is heavy auth/state code). Let me use a throwaway `/tmp` shim with that exact extension instead, and re-run.
+
+Typecheck passes (0 errors/0 warnings, Swift 6 strict concurrency) — the documented host gate is green. Now let me also validate the model's **runtime** logic (especially the KMP unit conversions my tests assert) via a small executable harness.
+
+Top-level code requires the file be named `main.swift`. Let me rename and recompile.
+
+Those are just warnings (top-level is already MainActor-isolated, so `await` is unneeded). Let me see the real error and simplify the harness.
+
+Compile succeeded; it's a link error (the Shared framework needs extra system libs). Let me see the linker error.
+
+All 17 runtime checks PASS — including the real KMP conversions that back my test assertions. Now let me typecheck the test file too (stripping `@testable import` for a single-module compile, adding XCTest).
+
+Two issues in the standalone test typecheck: (1) `XCTAssert*` macros are C macros unavailable to standalone `-typecheck` (harness-only limitation), and (2) a **real** actor-isolation error — `makeStats` is MainActor-isolated (test class is `@MainActor`) but called from the nonisolated `StubSource.load()`. Let me fix #2 by making the pure factory `nonisolated`.
+
+That edit was malformed (I dropped the body opener). Let me view and fix properly by adding `nonisolated`.
+
+I broke the body. Let me restore the `LifetimeStats(` opener and add `nonisolated`.
+
+Now let me re-run the standalone test typecheck, filtering out the expected XCTest-macro limitation to confirm no other (real) errors remain.
+
+Those remaining errors are cascades from the unavailable XCTest macros (the compiler can't infer `.loading`/`.loaded` without `XCTAssertEqual`'s generic context). The real actor-isolation error is fixed. Let me prove the test is clean with a minimal XCTest shim.
+
+Test file type-checks clean (exit 0) under Swift 6 strict concurrency. All surface-scoped + host gates are green. Let me check how the existing DONE admin-page logs reported the build/test gate (to match the established convention for full-build deferral).
+
+This is the exact precedent: the DONE DiskForecast page reports per-surface `swiftc -typecheck` (macOS **and** iOS) + lint + placeholder + harness green, with the full xcodebuild RED documented as pre-existing/out-of-scope/deferred — and still `EXIT=0 / STATUS=DONE`. Let me run the iOS-simulator typecheck too (exercises the `#if os(iOS)` compact branch).
+
+iOS-simulator typecheck also clean. The full verification matrix matches the DONE-page precedent. Let me run final lint + placeholder on all touched files, then write the evidence log and update the ledger.
+
+swiftlint clean on all touched files. The placeholder path was off (wrong cwd). Let me re-run from repo root.
+
+Both placeholder scans pass. Let me update todos, then write the evidence log and update the parity ledger.
+
+All 42 keys present. Now let me write the evidence log with the full `=== PARITY ===` section (56 items).
+
+Now let me update the parity ledger with the two platform rows (apple-macos + apple-ios).
+
+Ledger updated (14 rows). Let me verify the new rows, check for any existing AppRoute tests my new enum case could affect, and clean up temp files.
+
+Tests reference AppRoute. Let me check whether any assert a hardcoded route count or iterate all routes (which must handle my new case).
+
+My new `.lifetimeStats` case is consistent with all RouteTests (unique pathSegment, has a group, parses). No breakage. Let me clean up temp files and review the final diff before committing.
+
+Clean, surgical diff. The xcodeproj is gitignored (rebuilt via `xcodegen`). I didn't include `LifetimeStatsRouteRegistration.swift` in my earlier typecheck closure — let me verify it (and thus the `TeslaSyncApp` wiring) type-checks before committing.
+
+The full surface + route registration type-checks clean. Everything is verified. Let me mark the final todo done and commit.
+
+All 13 files staged (full decomposition: model + sample + page + sections + tiles + route registration + tests). Let me commit.
+
+Committed; working tree clean. Let me do a final confirmation of the todo status and the log's required trailer.
+
+All todos done, the evidence log ends with `EXIT=0 / STATUS=DONE`, `PARITY_COVERED=56 == PARITY_REQUIRED=56`, and the working tree is clean. The task is complete and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

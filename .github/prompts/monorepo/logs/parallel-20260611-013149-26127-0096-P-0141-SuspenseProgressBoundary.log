@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and the web source component to understand what I'm working with.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The web source exists. Let me read it and study the established pattern from the recently-added ReloadPrompt surface.
+
+The web source is a small pure-presentational Suspense→progress bridge. Let me study the most recent surface (ReloadPrompt) to follow the established file pattern, plus the `globalProgress` lib and the shared infra.
+
+No `.xcodeproj` — uses XcodeGen (`project.yml`). Let me read the `globalProgress` lib (the data model behind this component), its test, and the full ReloadPrompt surface as the pattern template.
+
+Now I understand the data model. Let me study the complete ReloadPrompt surface (closest analog — a lifecycle/PWA bridge) to learn the exact 9-file pattern.
+
+Excellent pattern. Let me read the remaining ReloadPrompt files (States, Views, Previews, strings, Tests) to complete my understanding.
+
+I have the full pattern. Now let me check the build config (project.yml), the related web `TopProgress`/`useGlobalProgress` consumers, and verify the shared tokens/components exist.
+
+Let me read the web `TopProgress` and `useGlobalProgress` consumers (to fully capture the surface's behavior), and locate the shared token/component definitions I'll reuse.
+
+I have the full surface behavior. Let me verify the exact APIs of the shared components/tokens I'll use, so my Swift compiles cleanly.
+
+Key finding: a shared indeterminate `TSTopProgress` exists, but the web `TopProgress` is *determinate* (width reflects the trickle). My surface will own a determinate, trickle-reflecting bar. Let me confirm the exact color/spacing/font token names.
+
+Let me confirm `TSSpacing`, the `Color.TS` namespace structure, and `Font.TS`/`TSMotion` by reading the token file directly.
+
+Let me find the `TSSpacing` definition and confirm `TSMotion`.
+
+Now I have all token APIs confirmed. Let me check the toolchain prerequisites: xcodegen, the placeholder checker, the lint configs, and the Shared.xcframework build step (a potential build blocker).
+
+`xcodegen` is available, but `Shared.xcframework` is absent and its build needs the Kotlin/Native toolchain via Gradle. Let me check how prior surface logs (e.g., ReloadPrompt 0136) resolved their gate — DONE or BLOCKED — to follow the established evidence convention.
+
+The predecessor convention is clear: ship the complete surface, make swiftlint/swiftformat/placeholder green, independently verify the surface compiles + tests pass against the real design system, and honestly record the full-app `xcodebuild` gate as pre-existing/unrelated red. Let me verify my dependency surface is KMP-free so I can build an honest standalone verification harness.
+
+`Sources/Components` + `Sources/Design` are KMP-free (only system frameworks). I can build an honest standalone verification harness. Let me read the placeholder checker to know exactly which tokens are banned in my files.
+
+Let me read the exact placeholder patterns and confirm there's no pre-existing `SuspenseProgressBoundary` native file.
+
+I have everything I need: the full pattern, the data model (`globalProgress`), the token APIs, the build/lint/placeholder gates, and the predecessor's honesty convention. Banned tokens include the literal word "Placeholder" and "not implemented" — I'll avoid them. Let me set up a plan and todos, then write the surface.
+
+Now writing the surface files. Starting with the pure Adapter core.
+
+Now the main view and its convenience initializer.
+
+Now the presentational subviews: the determinate progress bar (the `TopProgress` peer) and freshness chip.
+
+Now the leaf-state chrome: fallback skeleton, empty, and error views.
+
+Now the previews (DEBUG-only) covering every state plus the standalone bar.
+
+Now the i18n strings catalog.
+
+Now the comprehensive test suite — porting the web `globalProgress.test.ts` contract plus adapter, projection, and model coverage.
+
+All 9 files written. Let me update progress and run swiftformat + swiftlint on the new files to catch style issues early.
+
+swiftformat found auto-fixable formatting. Since the gate runs in `--lint` mode, I'll apply swiftformat to my files, then re-verify.
+
+swiftformat passes. Let me run swiftlint --strict on my files and verify the reformatted logic (projection, trickle) is still correct.
+
+swiftlint passes except one `file_length` violation: Tests.swift is 468 lines (limit 400). I'll split the controller+model tests into a second `*Tests.swift` file (matches the allowed glob and the test-target include). Let me view the split region.
+
+Clean split at line 170. Let me create the second test file and trim the original.
+
+Both under 400 lines now. Let me update the original Tests.swift header to remove the now-moved Controller/Model bullets (avoid stale docs).
+
+Now re-run swiftformat and swiftlint on the full set (now 9 source + 2 test files).
+
+swiftformat and swiftlint are both clean (0 violations) on all 9 files. Now the critical honesty step: independently verify the surface + tests compile and pass against the **real** design system under Swift 6 strict concurrency. Let me build a standalone SwiftPM harness (Components/Design are KMP-free).
+
+Now the Package manifest, then build against the real design system.
+
+Expected: a few non-needed components (e.g., `UnitFormatters`) reference external helpers like `Units`. My surface doesn't use them. Let me narrow the harness to the real component files my surface actually needs (transitively) and rebuild.
+
+Only `FeedbackOverlays.swift` (unused by my surface) references a removed `TSMetricBar`. Removing it.
+
+Surface compiles against the real design system under Swift 6. Now run the test suites.
+
+All 42 tests pass on macOS under Swift 6 strict concurrency. Now the iOS 18 SDK typecheck to substantiate cross-SDK parity.
+
+iOS 18 SDK typecheck passes under Swift 6. Both SDKs compile; 42/42 tests pass. Now the placeholder gate — I'll verify honestly (scoped scan of my files) and run the exact gate command.
+
+No banned tokens; PLACEHOLDER_COUNT=0. Now let me run the whole-tree swiftlint and swiftformat exactly as the gate does, to confirm the tree stays green with my additions.
+
+Whole-tree swiftformat is clean (0/4643). Now whole-tree swiftlint --strict.
+
+Whole-tree swiftlint is clean (0 violations / 4345 files) and swiftformat clean (0/4643). Now I must actually run the xcodebuild gate steps (the covenant forbids skip-and-assume). Let me check the KMP/Gradle prerequisites and generate the Xcode project.
+
+Project generated; Java 17 + Gradle present. Let me check the simulator and start the iOS gate build in the background (it's heavy: Gradle KMP + ~4000 files), capturing real output.
+
+iPhone 16 sim and both schemes exist. Let me run the iOS gate build in the background (Gradle KMP + full app compile), capturing full output to a temp file to monitor progress.
+
+The iOS build is running in the background. Let me monitor its progress (Gradle staging, then compilation).
+
+The Gradle KMP build works on this runner and is progressing (linking frameworks). Let me verify the background xcodebuild is still alive and the log is still growing.
+
+Gradle succeeded — `Shared.xcframework` was written, and the build is now compiling the app. This is the heavy phase (~4000 files) and is expected to hit the pre-existing sibling-file failure. Let me wait and poll.
+
+Still in Gradle's Kotlin/Native release-framework linking (multi-arch, slow). No app-compile errors yet. Let me continue waiting.
+
+Gradle is still linking release frameworks (now macOS arch) — slowed by parallel-slot contention on the shared Gradle daemon. Let me wait for it to finish staging and begin app compilation.
+
+App compilation is underway (1627 compile tasks) and 1 error has appeared. Let me capture exactly what failed.
+
+The only compile error is in a **pre-existing sibling surface** (`AISuggestNewGeofences.swift:129` — "escaping closure captures non-escaping parameter 'content'"), which I did not touch. My `SuspenseProgressBoundary.*` files are compiling in the same real target batch with **zero** diagnostics. Let me confirm no errors are attributed to my files and wait for the final exit code.
+
+Confirmed: **zero diagnostics from my files**; the sole error is the pre-existing sibling `AISuggestNewGeofences.swift`. Let me wait for the build to finish and capture the real `IOS_EXIT`.
+
+`IOS_EXIT=65` — TEST FAILED because the build failed on the pre-existing `AISuggestNewGeofences.swift` error (not my code). Let me capture the iOS failure evidence, then run the macOS gate (it'll hit the same pre-existing error; `Shared.xcframework` is now staged so its Gradle pre-action is cached).
+
+Let me capture the iOS error evidence cleanly and confirm the macOS build is progressing.
+
+macOS finished quickly (Gradle cached). Let me read its exit code and failure cause.
+
+The shared `/tmp` is contaminated by parallel slots (the macOS log shows `slot-84` paths). I'll re-run both builds to **session-unique** paths for trustworthy, slot-96-only evidence. DerivedData and Gradle are now warm, so re-runs are fast. Starting iOS.
+
+The attached background subshell was killed when its launcher returned (and parallel slots pollute `pgrep`). Let me use a **detached** process (survives independently) writing to the session-unique log.
+
+Detached iOS build launched to the session log. Let me wait and poll.
+
+Clean slot-96 evidence: **IOS_EXIT=65**, with errors only in **pre-existing sibling surfaces** (`AIAutoNameUnnamedLocations.swift`, `AISignalExplorerNlFilter.swift` — a systemic `escaping closure captures non-escaping parameter 'content'` bug across AI* siblings). **My files: zero diagnostics.** Now the macOS build, detached to a session-unique log.
+
+Macos build detached. Let me wait and capture its result.
+
+Authoritative slot-96 evidence captured: **MAC_EXIT=65** (macOS development-signing — no dev cert in runner; fails at planning before compiling), **my files zero diagnostics**. Now let me run the remaining gate steps (placeholder, exact + scoped) and re-confirm the harness verification, capturing everything for the log.
+
+All green: PLACEHOLDER_EXIT=0, scoped PLACEHOLDER_COUNT=0, harness 42/42. Now let me assemble the authentic gate log. First I'll extract the precise evidence snippets from the slot-96 build logs.
+
+Evidence is clean and complete. Let me verify git status (only my files should be new; the generated `.xcodeproj` must be git-ignored) before assembling the log.
+
+Exactly 10 new files (`SuspenseProgressBoundary.*`); the generated `.xcodeproj` is git-ignored. Now I'll write the authentic gate log with all real results and the honesty covenant.
+
+Log written. Final pre-commit verification on my files, cleanup of stale shared `/tmp` logs, then commit.
+
+All clean. Committing the surface + log.
+
+Committed (`d82cfe4dc`). Let me confirm the working tree is clean apart from the git-ignored project file.
+
+The task is complete. The working tree is clean and the commit (`d82cfe4dc`) contains all 11 files (10 surface + the gate log), 1711 insertions.
+

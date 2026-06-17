@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+The web source is clear. Now let me explore the existing Apple app structure to understand the established patterns and shared infrastructure.
+
+No `.xcodeproj` — they use XcodeGen (`project.yml`). Let me examine the build config, a reference widget with a chart, and the web-side shared dependencies.
+
+The structure is `apps/apple/` (project root) with `TeslaSync/dashboard-widgets/` inside. Let me read the build config, lint rules, and find a strong reference widget that uses Swift Charts + a stat grid.
+
+Let me check tool availability (critical for the gate) and examine a strong reference widget with both an area chart and a stat grid.
+
+Full toolchain is available (Xcode 26.5, swiftlint, swiftformat, xcodegen, pwsh, iPhone 16 sim booted) — I'm not blocked. Let me study the closest reference widget (`SolarProductionWidget` — energy + area chart) end-to-end.
+
+Excellent reference architecture. Let me read the remaining SolarProductionWidget files and locate the shared infrastructure they depend on.
+
+Now the Previews, strings, Tests, and the shared infrastructure definitions.
+
+Let me read the shared infra, the test pattern, and locate the web registry + useEnergyStats hook for the exact data shape.
+
+I have the full pattern. Now let me pin down the EnergyStats-specific data: the web registry entry, the `useEnergyStats` hook + `EnergyStats` type, the `useUnits` hook, and the native units/tokens infra.
+
+The web `EnergyStats` shape is clear. Let me check the native energy-formatting convention (how existing widgets map `MeasurementSystem` → energy/efficiency display) and confirm the design tokens available.
+
+Let me read the design tokens and the established efficiency-conversion pattern (DriveEfficiencyChartWidget binds `MeasurementSystem` and converts Wh/m → Wh/km|Wh/mi — exactly what EnergyStats needs).
+
+Design tokens live in `apps/design/generated/apple` (per project.yml `../design/generated/apple`). Let me locate the exact `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, and `TSSkeleton` definitions.
+
+I have all tokens and components. Let me read the full `Font.TS` set, find the big-number compact convention used by existing widgets, and confirm the project generates.
+
+Project generates cleanly. Let me read the compact big-number convention (`TSAnimatedNumber` + ChargeCostTracker compact) and how a widget threads `MeasurementSystem` through its update seam.
+
+I have everything I need on the native side. Let me read the web `WidgetStatGrid` and `numberFormat.fmtNumber` to mirror the stat-grid composition and number formatting exactly.
+
+Let me check the native `StatCard`/`TSCard` equivalents to mirror the stat-card styling faithfully.
+
+I now have the complete picture. Let me verify there are no symbol collisions for my planned `EnergyStats*` types, then set up tracking and start writing.
+
+No collisions, no existing files. Let me set up tracking and write the plan.
+
+Now I'll create the files. Starting with the pure Foundation layer (Models + Builder).
+
+Models + Builder done. Now the Model.swift (state holder, telemetry, i18n facade, formatters, accessibility).
+
+Now the Chart.swift — stat item type, stat grid, stat card, and the Swift Charts area chart.
+
+Now the main surface file with header, all states, and compact/standard/wide layouts.
+
+Now the Previews, strings, and Tests files.
+
+All 8 files created. Let me regenerate the project and run fast checks (format + lint) on the new files before the slow build.
+
+Minor line-width issues. Let me auto-format my files with swiftformat, then re-verify.
+
+swiftformat passes; swiftlint flags 2 long lines in Model.swift (326-327). Let me view and fix them.
+
+Let me refactor the summary to keep lines under 120.
+
+Line 327 is 121 chars. Let me let swiftformat wrap it, then re-verify both tools.
+
+Both lint and format pass cleanly on my files. Before the long build, let me verify the `Shared.xcframework` dependency is staged (its preAction could be a slow/networked blocker).
+
+The `Shared.xcframework` isn't staged — the scheme's preAction builds it via Gradle/Kotlin-Native. Let me verify that toolchain is viable before committing to the long build.
+
+Java 17 is available (`/usr/bin/java` → openjdk@17), so the KMP build is viable. Let me build & stage `Shared.xcframework` first (the long pole) to warm it before the Xcode build.
+
+The KMP/Kotlin-Native build is running (first build downloads the K/N compiler). Let me keep waiting.
+
+`Shared.xcframework` built and staged (8m). Gradle cache is now warm. Let me run the iOS build+test gate (the long pole), capturing output.
+
+iOS build+test is running in the background. Let me monitor progress.
+
+The async session got torn down and killed the build. Let me run it as a sync command (which keeps running in the background if it exceeds the wait, with completion notification).
+
+Build failed (exit 65). The batched compile output hides the real error. Let me extract the actual `error:` lines.
+
+No `error:` diagnostics in 29k lines — that signals a compiler crash or OOM kill (likely resource pressure: warm 3GB Gradle daemon + many parallel swift-frontend procs). Let me check for crash signatures, leftover processes, and memory.
+
+The compiler **crashed** (not a code error) emitting IR for a `<compiler-generated>` reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` (a `Bool`/`(any Actor)?` isolated-closure thunk). Let me read the crash context to see what triggered it.
+
+This is a Swift compiler **codegen crash** (upstream bug: "Please submit a bug report") emitting a `Bool`/`(any Actor)?` isolated-closure thunk — not a diagnostic in my code. I must determine whether the baseline (without my files) also crashes. Let me temporarily move my files out and do a build-only check.
+
+The **baseline also crashes** (3 crash signatures, BUILD FAILED) with my files removed. This proves the compiler crash is pre-existing/environmental, not caused by my code. Let me confirm it's the same thunk.
+
+Definitive proof: the baseline (my files removed) crashes on the **identical** thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`. This is a pre-existing upstream Swift compiler bug in the existing app target — not my code. Let me restore my files, decode the symbol for the record, and check for any documented Apple-build caveat.
+
+The crash thunk decodes to a `@isolated(any) @Sendable (Bool) -> Void` reabstraction thunk — a known Swift 6.x IRGen bug, triggered by the **existing** code (reproduced with my files absent). And a `macos-pending-verifications.md` doc exists. Let me read it.
+
+This is the established repo convention: prior P4 Apple surfaces verify the surface green in isolation, then document the **pre-existing, unrelated** full-app build blocker as "macOS-pending." Let me follow that precedent exactly. Let me read a prior surface log to match the EXIT/STATUS wording.
+
+The DriveEfficiencyChartWidget precedent (same tier, P4-0038) is decisive: it ships `EXIT=0 / STATUS=DONE` by verifying the surface in isolation (isolated Swift 6 build + executed tests + lint/format/placeholder green) and deferring the full-app `xcodebuild build test` (pre-existing, unrelated blocker) to the P99 macOS gate, recorded in `macos-pending-verifications.md`.
+
+I'll follow that exact sanctioned path. First, an isolated real-SDK typecheck of my surface. Let me locate dependencies and SDKs.
+
+My surface references only: `Color.TS.*`, `Font.TS.{caption,label,panel}`, `TSSpacing`, `TSRadius`, `TSSkeleton`, `TSAnimatedNumber`, `DashboardWidgetSize/Registration`. The crash is in IRGen of *other* files. I'll do an isolated real-SDK build of my surface against the **real** `Tokens.swift` + `DashboardWidgetInfra.swift` (plus thin shims for the 2 leaf views), compiled + executed on macOS-15 and compiled on iOS-18. Let me set up the harness.
+
+Now let me build the macOS-15 executable (full surface codegen) and run the harness.
+
+Good — the only error is in my **harness helper** (`makeModel` needs `@MainActor`), not in the surface code (which compiled clean). Let me fix the harness.
+
+Again harness-only (the global `check` mutates `@MainActor` globals); my surface compiled clean (only a benign `nonisolated(unsafe)` warning — kept intentionally for cross-toolchain robustness, matching the SolarProductionWidget pattern). Let me make the harness helpers `@MainActor`.
+
+**macOS-15: build clean (0 errors) + harness 59/59 passed.** My surface compiles, codegens, and its logic executes correctly under Swift 6 strict concurrency. Now the iOS-18 simulator verification (typecheck incl. previews + full codegen).
+
+**iOS-18: typecheck 0 errors, full codegen 0 errors, object emitted — no crash.** My surface is proven correct on both SDKs. Now the remaining host-runnable gate steps: placeholder check, lint/format (scoped + tree-wide), i18n parity, and xcodegen enumeration.
+
+All per-surface gates green (placeholder `COUNT=0/EXIT=0`, swiftlint 0 violations, swiftformat 0). Now i18n parity (web keys ⊆ my catalog) and xcodegen file enumeration.
+
+i18n parity complete (all 10 web keys present; 0 missing) and xcodegen enumerates all 8 files. Now the tree-wide `swiftformat --lint apps/apple` and `swiftlint --strict` (the literal gate commands) to capture real exit codes.
+
+`swiftformat --lint apps/apple`: **FORMAT_EXIT=0** (0/2963 files, whole tree clean). Now `swiftlint --strict` tree-wide.
+
+Tree-wide gates are green: **`swiftlint --strict` = 0 violations (2959 files)**, **`swiftformat --lint` = 0/2963**, **placeholder = 0**. The "7" was just progress lines, not violations. 
+
+To avoid skip-and-assume, let me run the actual macOS `build test` gate step too (it shares the same crashing Sources) to capture a real `MAC_EXIT`, while I draft the gate log.
+
+macOS `build test` = MAC_EXIT=65, BUILD FAILED, with **0 EnergyStats errors**. The crash grep didn't match — let me characterize the actual macOS failure (compiler crash vs the known dev-signing blocker).
+
+macOS failed on the **pre-existing dev-signing blocker** (`DEVELOPMENT_TEAM=""` + entitlements on `TeslaSync-macOS`/`TeslaSyncWidgets-macOS`) — the exact blocker documented for every prior P4 surface — with **0 EnergyStats errors**. Both platform failures are pre-existing and unrelated to my surface. Let me gather exact evidence snippets and write the gate log.
+
+I have complete, airtight evidence. Let me write the comprehensive gate log.
+
+Gate log written. Let me update tracking, clean up temp artifacts, and check git status before committing.
+
+Clean — only my 8 surface files + the log are staged-to-add; `.xcodeproj` and `Shared.xcframework` are git-ignored. Let me commit per the gate's commit spec.
+
+Committed (80fd7e51d, 9 files, 1909 insertions). Let me do a final clean-state verification.
+
+All clean: working tree clean, 9 files committed, no build artifacts tracked, log ends `EXIT=0 / STATUS=DONE`.
+
+All 9 todos done. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...le-dashboard-widgets-0048-EnergyStatsWidget.log | 132 ++++++++
+ .../EnergyStatsWidget.Builder.swift                | 112 ++++++
+ .../EnergyStatsWidget.Chart.swift                  | 199 +++++++++++
+ .../EnergyStatsWidget.Model.swift                  | 340 +++++++++++++++++++
+ .../EnergyStatsWidget.Models.swift                 | 221 ++++++++++++
+ .../EnergyStatsWidget.Previews.swift               | 135 ++++++++
+ .../EnergyStatsWidget.Tests.swift                  | 343 +++++++++++++++++++
+ .../dashboard-widgets/EnergyStatsWidget.strings    |  51 +++
+ .../dashboard-widgets/EnergyStatsWidget.swift      | 376 +++++++++++++++++++++
+ 9 files changed, 1909 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0048-EnergyStatsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.swift

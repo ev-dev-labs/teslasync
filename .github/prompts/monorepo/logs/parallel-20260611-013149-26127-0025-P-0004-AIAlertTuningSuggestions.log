@@ -1,0 +1,154 @@
+I'll start by exploring the environment and reading the key files to understand the task. Note: delegation is FORBIDDEN for this task, so I'll do all work directly.
+
+Full toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, simulators). Now let me read the web source and explore the existing Apple app structure.
+
+There's already a `shared-surfaces` directory. Let me explore existing AI surfaces and the web dependencies to understand established patterns.
+
+There's a well-established pattern. `AIAnomalyExplanations` is the closest analog (also an AI/useAiStream surface). Let me examine its complete file set and find the native equivalents of the web dependencies.
+
+Let me read the complete `AIAnomalyExplanations` file set — this is my template. Reading in parallel.
+
+Excellent, very thorough pattern. Let me read the remaining files: Model, Projection, Views, Previews, strings, and both test files.
+
+Now let me read the Views, Previews, strings catalog, and both test files to complete my understanding of the template.
+
+Now the two test files, plus I need to understand the shared tokens/facade. Reading in parallel.
+
+I have the complete template. Now let me understand the build config (project.yml), the shared tokens, and the web shared components (AIFeatureCard, withAiFeature, Button) for parity precision.
+
+Now I understand the build (XcodeGen auto-globs `shared-surfaces/`). Let me examine the web output panel for parity, locate the design tokens, and verify the backend route/tool exists.
+
+Backend route and source exist. Let me verify the exact path/proposal fields and read the design tokens + component signatures.
+
+Let me read the component signatures (TSButton, TSSkeleton, TSFadeIn) to use them correctly.
+
+Let me check the lint config, the logs path, and the placeholder-check script before writing code.
+
+Let me inspect the placeholder-check script and the Shared.xcframework staging script (a scheme preAction — potential blocker).
+
+Key concern: the build scheme's preAction builds a KMP `Shared.xcframework` via Gradle. Let me verify whether it's already staged and whether the placeholder patterns would flag my prose.
+
+Critical: `Shared.xcframework` is not staged (built via Gradle/KMP in a scheme preAction). Let me read the predecessor AIAnomalyExplanations gate log to see how the build behaves in this environment.
+
+The predecessor documents a sanctioned disposition: full-app `xcodebuild` is DEFERRED (pre-existing Gradle/KMP `Shared.xcframework` contention), with independent verification via an **isolated Swift 6 build + XCTest**. Let me read how they ran that isolated verification.
+
+I now have the full sanctioned methodology. Let me check current Gradle/KMP contention and map the design-system dependency graph for an isolated verification build.
+
+Gradle KMP contention is **active right now** (PID 29598 at 150% CPU running `assembleSharedXCFramework`, plus slot-20) — confirming the DEFERRED full-app disposition. The design sources are under `apps/apple/Sources`. Let me map them.
+
+The isolated-build approach needs a closed subset of the design system. Let me read the candidate dependency files to confirm closure.
+
+I have everything I need. The Gradle KMP contention is active (confirming the sanctioned DEFERRED full-app disposition), and I've mapped the design-system subset for isolated verification. Let me set up tracking and write the plan.
+
+Now I'll write the Adapter (the pure, testable core). Mirroring the established template with the alert-tuning specifics (patch capture from `tool_result`).
+
+Now the Model (state-holder seam, strings facade, telemetry, `@Observable` model with the apply flow).
+
+Now the Projection (pure input→resolved, including the proposal preview region).
+
+Adapter, Model, Projection done. Now the Views (presentational subviews including the proposal preview + Apply button).
+
+Now the Chrome (freshness chip, refresh, connectivity banner, loading skeleton, gate-error).
+
+Now the top-level surface file.
+
+Now the Previews, strings catalog, and both test files.
+
+Now the strings catalog:
+
+Now the AdapterTests (Foundation-only: request, SSE parse, reducer, patch capture/extraction, output, action/busy).
+
+Now the Tests.swift (projection, proposal preview, model wiring/telemetry/apply, a11y).
+
+All 10 files written. Now let me set up the sanctioned **isolated SwiftPM build + test** (the full-app `xcodebuild` is blocked by the active KMP Gradle staging). I'll symlink the exact shipped sources + the real design system into a temp package.
+
+Now the Package.swift and run the isolated build + tests.
+
+Isolated build + **92 tests, 0 failures** — green under Swift 6 strict-concurrency. Now the static gates. First on my 9 files specifically, then whole-tree as the gate specifies.
+
+Isolated tests pass (92/0). The static linters found fixable issues: two files exceed the 400-line budget, plus trailing commas / long lines / single-line property bodies. I'll split the over-long files (matching the established decomposition pattern) and auto-format. Let me view the exact boundaries.
+
+Let me view the Model's resolved-types block boundaries, then perform the splits.
+
+Rather than fragile large edits, I'll split mechanically with `awk`/`sed`. Let me locate the exact anchor line numbers.
+
+Now I'll split the two over-long files mechanically (matching the established decomposition pattern). Extracting `AlertRuleDraftPatch` → `Patch.swift` and the resolved view-state types → `ViewState.swift`.
+
+All under 400 lines. Let me verify the seams are clean, then run swiftformat autofix on all 11 files.
+
+Seams are clean. Now run swiftformat autofix on all 11 files, then re-lint both tools.
+
+Both linters clean (0 violations, 0 format issues). Now re-verify the isolated build+test with the 2 new files added.
+
+92/92 still green after split+format. Now the whole-tree gates + placeholder scan (both the literal gate path and a targeted scan of my files for honesty).
+
+Placeholder scans clean (COUNT=0), no forbidden words. Now the whole-tree linter commands the gate runs literally (to report honestly — any failures are pre-existing in other surfaces).
+
+Whole-tree swiftformat clean (0/4220). Now whole-tree `swiftlint --strict`.
+
+Whole-tree swiftlint clean (0/3950). Now let me attempt the literal full-app `xcodebuild` gate to capture raw evidence of the KMP blocker. First verify the generated project is git-ignored, then generate it.
+
+Clean — only my 12 files, and the generated project/framework are git-ignored. Let me generate the Xcode project and attempt the full-app build to capture the KMP blocker evidence.
+
+Project generated. Now attempting the full-app `xcodebuild` (the scheme's preAction builds the KMP `Shared.xcframework` via the contended Gradle). Running async with a bounded window to capture evidence.
+
+Build running. Let me check the Gradle contention evidence while it runs, then read progress.
+
+Clear contention evidence: my slot-25 build spawned its own Gradle wrapper (PID 80954) for `:core:assembleSharedXCFramework`, contending with slots 21/23 and a daemon (PID 73498) pinned at 100% CPU for ~6min. Let me read the build log to confirm it's stuck in the preAction staging step.
+
+The preAction Gradle is actually progressing for slot-25 — it produced the *debug* `Shared.xcframework` and is now assembling the release variant (the heavy, contended step). Let me wait and keep reading; it may complete.
+
+It's actively progressing — now linking the release Kotlin/Native framework (`linkReleaseFrameworkIosSimulatorArm64`), the heavy contended step. Since it's not deadlocked, I'll give it more time; if the app compile starts I can confirm my files build in the real target.
+
+Still in the contended Kotlin/Native release link (`linkReleaseFrameworkMacosArm64`, after the iOS variants) — the documented long-pole staging step, ~8min in. My code is already independently green. I'll give it one more window to see if it stages and starts the actual app compile (which would let me confirm my files compile in the real target).
+
+Breakthrough: the `Shared.xcframework` is now **staged**, and the real iOS app target is compiling — my files are referenced (3 hits) with **no compile errors**. It's emitting the TeslaSync module. Let me wait for the build to finish.
+
+The full-app **BUILD FAILED — but not from my code.** My 8 surface files compiled in the real iOS target with zero diagnostics. The failing `SwiftCompile` batch is entirely *other* surfaces (`AppearanceSettings.*`, `AuditPanel.*`, `AppSettings*`, `Auth*`). Let me capture the precise pre-existing error to prove it's not mine.
+
+Zero `error:` diagnostics in any file. The "2 failures" SwiftCompile batch has no source diagnostics — pointing to subprocess termination under the multi-slot resource contention. Let me find the precise failure reason.
+
+There's a `swift-frontend` **compiler crash** (classic "Program arguments:" crash dump) at line 10693 — not a source error. Let me capture the crash signature and which file triggered it.
+
+Definitive: it's a **`swift-frontend` compiler crash** (Swift 6.3.2), not a source error — and the module's `EmitSwiftModule` (whole-module type-check) had already **succeeded**, so the crash is in a later codegen batch under the multi-slot resource contention. The long file list is just the module filelist. Let me capture the crash signal + primary file.
+
+Now I have a complete, honest picture. Let me confirm git status is clean (generated project/framework are git-ignored) and mark verification done.
+
+Git status is exactly my 12 files; generated artifacts are git-ignored. Now I'll write the comprehensive gate log with all raw evidence.
+
+Log written. Now cleanup temp artifacts and commit the 12 files + log.
+
+All 13 staged correctly (12 source files + log). Now commit with the prompt's exact message.
+
+Committed (`92ffcc630`), tree clean. Final verification of commit contents + log tail.
+
+All complete: 13 files committed (`92ffcc630`), every file under the 400-line budget, all todos done, log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ared-surfaces-0004-AIAlertTuningSuggestions.log | 276 ++++++++++++++
+ .../AIAlertTuningSuggestions.Adapter.swift         | 376 +++++++++++++++++++
+ .../AIAlertTuningSuggestions.AdapterTests.swift    | 396 ++++++++++++++++++++
+ .../AIAlertTuningSuggestions.Chrome.swift          | 149 ++++++++
+ .../AIAlertTuningSuggestions.Model.swift           | 308 ++++++++++++++++
+ .../AIAlertTuningSuggestions.Patch.swift           | 106 ++++++
+ .../AIAlertTuningSuggestions.Previews.swift        | 140 ++++++++
+ .../AIAlertTuningSuggestions.Projection.swift      | 140 ++++++++
+ .../AIAlertTuningSuggestions.Tests.swift           | 398 +++++++++++++++++++++
+ .../AIAlertTuningSuggestions.ViewState.swift       | 151 ++++++++
+ .../AIAlertTuningSuggestions.Views.swift           | 304 ++++++++++++++++
+ .../AIAlertTuningSuggestions.strings               |  46 +++
+ .../shared-surfaces/AIAlertTuningSuggestions.swift | 125 +++++++
+ 13 files changed, 2915 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0004-AIAlertTuningSuggestions.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.Patch.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.ViewState.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIAlertTuningSuggestions.swift

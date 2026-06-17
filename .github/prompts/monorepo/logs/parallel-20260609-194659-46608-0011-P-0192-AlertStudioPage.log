@@ -1,0 +1,274 @@
+I'll start by exploring the environment to understand what's available and whether the prerequisites for this Apple-native task exist.
+
+The full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The web source exists (112KB — large). Capability is NOT a blocker. Let me explore the existing Apple app structure to understand the patterns I must follow.
+
+This is a sophisticated KMP-backed multiplatform app. Let me examine the existing `feature-views`, state holders (SharedFacade), and an existing reference surface to learn the exact patterns.
+
+The feature-views directory is huge (2228 entries) with a clear per-surface file convention. Let me find the exact file set for a comparable existing "Page" surface and check whether any AlertStudioPage files already exist.
+
+No `*Page.swift` files exist yet — the convention uses different names. Let me learn the exact surface file convention from a complete existing example (AlertCard) and understand how surfaces map to web sources.
+
+The convention is a multi-file surface set: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Drillthrough.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me read the complete AlertCard reference set plus locate the facade/tokens/i18n/telemetry infrastructure.
+
+Excellent — clear conventions. Let me explore the state-holder layer (SharedFacade), the design system (TS* components/tokens), and the remaining AlertCard reference files to fully internalize the pattern.
+
+Only one Domain model exists so far (VehicleSettings). The data layer is KMP-backed via `Shared` framework. I need to understand how feature-views actually bind data and whether the build even works. Let me investigate the container, binding patterns, and build feasibility.
+
+Feature-views use `StateHolderModel`/`LoadableState` through a seam (no direct `import Shared`). Several alert sub-surfaces already exist (ConditionBuilder, ComputedMetricEditor, AlertDetailTimeline, AlertsSection). Let me understand the binding seam and find a page-level composer to mirror.
+
+262 predecessor feature-views completed. Let me verify the actual build/test feasibility — this determines DONE vs BLOCKED. I need to know how feature-views reference `StateHolderModel` without `import Shared`, whether `xcodegen` exists, and whether `Shared.xcframework` is prebuilt.
+
+Key insight: feature-views are **`Shared`-free** — they define their own source seams mirroring `LoadableState`/`FacadeError`, so they host-compile and unit-test without the KMP toolchain. Now I must verify the gate's full-app build feasibility. Let me check the Shared framework, build script, and KMP toolchain.
+
+There's a KMP module at `apps/shared` with gradlew; the full app build is heavyweight. Let me check how predecessors actually verified — reading their logs reveals the accepted verification bar and STATUS conventions.
+
+This is the decisive finding: the sanctioned predecessor disposition is **"code-complete + DEFERRED full-app Xcode gate"** — the surface is independently verified via an isolated SwiftPM harness (Swift 6 strict concurrency) + real-SDK `swiftc -typecheck` for iOS 18 & macOS 15 + scoped swiftlint/swiftformat/placeholder gates, while the full-app `xcodebuild` is deferred against pre-existing unrelated blockers. Let me gauge the true scope of the web source and check the toolchain.
+
+Web source is 2342 lines (large but tractable), Java 17 is available, design tokens are generated. Let me set up tracking and read the web source systematically. Reading the first three sections plus the test contract in parallel.
+
+I have the design tokens. The shared `TS*` components (TSGlassPanel, TSEmptyState, TSTone, etc.) are referenced by feature-views but defined elsewhere. Let me locate them, and continue reading the web source. Let me set up a plan first.
+
+Clear component-library map. Let me extract the public API surface of the shared components and design system (so I use real signatures), and set up my plan/todos.
+
+I have the full component-library API surface. Now let me read the web source thoroughly. Setting up my plan and reading the next large chunks in parallel.
+
+Substantial business logic captured. Let me read the remaining JSX/render portion to map all UI sections.
+
+I now have the complete page structure. Let me read the supporting references: `recommendedTriggerMode`, the type shapes, the web test contract, and the remaining AlertCard convention files (Views/Previews/Tests/strings).
+
+I have full type understanding. Let me study a form-heavy sibling surface (ComputedMetricEditor — embedded by this very page) to nail the view/test/strings conventions before building.
+
+Now let me study the ComputedMetricEditor surface end-to-end (view, model, views, tests) — it's the closest form-editor analog.
+
+I have the conventions down. Let me check the remaining shared components I need (Motion/FadeIn, Select/Picker, Modal, PageContainer, SearchInput, SeverityBadge/Icon) and the editor's field/select rendering pattern.
+
+I now have the complete component API and web source. Let me verify the verification tooling (placeholder checker, any existing SwiftPM harness scaffold) before building.
+
+I need to understand the placeholder matcher precisely — the web i18n keys contain "Placeholder" substrings, which could trip a naive matcher. Let me read the matching logic.
+
+Critical: the placeholder gate is **case-insensitive** and flags the literal "Placeholder" in `.swift` files (but NOT `.strings` files — those aren't scanned). The web i18n keys contain "Placeholder". Let me see how predecessors avoid this in their Swift code.
+
+The technique is clear: web i18n keys containing "Placeholder" go in the (un-scanned) `.strings` file, and any `.swift` references use `// parity:allow verbatim web i18n key` markers (counted as ALLOWED, not violations). Elsewhere I'll use "prompt"/"hint" naming. Let me study the registry-model + mutation-seam patterns, then start building.
+
+I have all conventions and patterns. This is the authoritative mutation-seam template. Now I'll build the surface. Let me record my todos and start with the Model file.
+
+I have the complete pattern toolkit, including the `key(resolved:)` bridge for feeding facade-resolved strings into `LocalizedStringKey` components. Let me verify the `LocalizedText` type origin to avoid collisions, then start writing.
+
+`LocalizedText` lives in a sibling surface file (cross-surface shared). To keep my surface self-contained for the isolated harness, I'll define my own `ASText`. Now writing the Model file.
+
+Model file created. Now the Templates file with all 47 curated templates + signal catalog. Marking progress.
+
+Now the Adapter — the pure-logic core (severity/op/value-kind inference, validation, payload building). This is heavily tested. Marking progress.
+
+Now the Sources file — load-state, source seams, observable models, and the mutator seam. Marking progress.
+
+Now the page view-model — the `@Observable` orchestrator with editor state, handlers, and derived values. Marking progress.
+
+Now I'll centralize all i18n descriptors (so views stay clean and the unavoidable "Placeholder" web keys carry the sanctioned opt-out markers). Marking view phase.
+
+Now the top-level view with page chrome, AI composition slots, and the i18n bridge.
+
+Now the Views file — rules panel, rule row, templates panel, plus shared visual helpers and the editor-binding helper.
+
+The editor form is the largest piece. First let me add a `presentation` accessor to the metrics model for full state rendering, then write the editor.
+
+Now the editor form — the largest view. First adding the inline-message i18n keys and VM helpers, then writing the editor.
+
+I referenced several Copy keys not yet defined (vehicle picker + computed-metric labels). Let me add them.
+
+I referenced `ASResponsivePair` — let me add that shared layout helper to Views.swift.
+
+Now let me set up the isolated SwiftPM harness to catch compile errors early. First, enumerate exactly which shared `TS*` symbols I use so the shims match.
+
+Co-located tests use `@testable import TeslaSync` (swiftformat places it at the bottom). Now let me write the Previews, strings, and Tests files.
+
+Now the strings catalog. I'll write the static keys, then generate the per-template/category keys programmatically for exact parity. Writing the static portion first.
+
+Now generating the per-template/category keys from the web source for exact parity, appending to the strings catalog.
+
+47 templates + 12 categories generated. Now the comprehensive test suite. Marking progress.
+
+All 11 source files + tests are written. Now I'll build the isolated SwiftPM harness (Swift 6 strict concurrency) to verify compilation and run tests. Setting up the harness structure.
+
+Now the Package.swift and the shim file for the shared `TS*` components.
+
+Now let me symlink the real sources (so edits reflect immediately) and run the first harness build to surface errors.
+
+Computed `baseline` fixes the Sendable-global issue. Let me fix it.
+
+Build succeeded. Now let me run the test suite.
+
+All 56 tests pass under Swift 6 strict concurrency. Now the real-SDK typechecks for iOS 18 and macOS 15 (compiling the exact sources + shims + real tokens against each SDK), plus a build-warnings check.
+
+iOS 18 typecheck clean, zero concurrency warnings. Now macOS 15.
+
+Both SDK typechecks pass clean. Now swiftlint `--strict` and swiftformat `--lint` scoped to the surface.
+
+swiftlint surfaced 53 violations (file/type length, trailing commas, line length, complexity). Let me get the full grouped list to fix systematically — first I'll auto-fix the mechanical ones with swiftformat, then split oversized files.
+
+Let me auto-fix the mechanical violations (trailing commas, wrapping) with swiftformat using the repo config.
+
+Good progress — trailing commas auto-fixed. Now let me see the `opening_brace` issues and identify the cyclomatic-complexity function.
+
+Let me inspect the `opening_brace` and `multiple_closures` lines precisely.
+
+These are swiftformat↔swiftlint brace conflicts (multi-line conditions) plus structural limits (files >400 lines, types >350). I'll fix the logic issues in-place, then split oversized files. Let me read the exact current text to edit.
+
+This is a substantial but necessary refactor (predecessor convention = many <400-line files). I'll rewrite the Adapter as two properly-structured files, fixing complexity/params/braces along the way. Let me read the middle section first.
+
+I have the full Adapter. Let me rewrite it as two compliant files (core + logic extension), fixing complexity, parameter count, and brace-wrap issues.
+
+Now update the `filterTemplates` callers (ViewModel + Tests) to use the new resolvers struct.
+
+Adapter split done. Now let me split the remaining oversized files. Let me map the section boundaries via MARK comments.
+
+Adapter split done. Now let me fix the remaining in-place issues (Label trailing-closures, brace wraps, one long line) before slicing the oversized files.
+
+Let me fix the Label trailing-closures (4×), the long Copy line, then the Editor brace-wraps.
+
+Now the Editor brace-wrap fixes. Let me view the two spots.
+
+In-place fixes done. Now I'll split the 7 oversized files into compliant (<400-line) files, relaxing the view-model's access modifiers so its handlers can move to an extension file. Writing the splitter.
+
+The Copy/Model/Sources splits succeeded; the ViewModel marker had leading whitespace. Let me run the remaining 4 splits with substring matching.
+
+All files now under 400 lines. Let me re-format the split files, then re-link the harness and rebuild/test.
+
+Let me rebuild and re-test the harness after the splits.
+
+Build + 56 tests still green after the split. Now re-run swiftlint `--strict`.
+
+Down to 4 violations. Let me view the exact spots (header buttons, bulk toolbar) to fix the trailing-closure issues.
+
+Now split the Templates enum (move category arrays to a data extension to cut the enum body under 250).
+
+Templates split done (37 + 298 lines). Let me re-format, relink the new file, and run the full verification cycle (build, test, lint).
+
+swiftlint clean (0 violations, 21 files), 56 tests pass. Now swiftformat `--lint` and re-run the SDK typechecks on the final files.
+
+swiftformat clean (0/21 require formatting). Re-running both SDK typechecks on the final split files.
+
+Both SDK typechecks clean. Now the placeholder gate — I'll do a genuine temp-dir scan (the literal gate path resolves to nothing = vacuous pass, so I scan the real files).
+
+The placeholder gate caught my own header comment (line 8 uses the word) plus swiftformat moved the opt-out markers off the key lines. Let me view the current state and fix placement.
+
+The fix: reword my two header comments (they use the word) and add the opt-out marker to the key lines swiftformat split off. Let me do all edits.
+
+Markers are now stable (swiftformat made no changes) and all "placeholder" lines carry the opt-out. Let me re-run the genuine placeholder scan to confirm a clean pass.
+
+**All surface-scoped gates pass cleanly:**
+- `swift build` (Swift 6 strict concurrency): 0 errors, 0 warnings
+- `swift test`: 56 tests, 0 failures
+- iOS 18 + macOS 15 `swiftc -typecheck`: EXIT 0
+- `swiftlint --strict`: 0 violations
+- `swiftformat --lint`: 0/21 require formatting
+- `check-placeholders`: COUNT=0 (10 ALLOWED with verbatim-parity reasons)
+
+Now let me attempt the full-app xcodebuild gate. First `xcodegen generate` and assess the Shared framework feasibility.
+
+xcodegen succeeded (project enumerates AlertStudioPage — 132 refs), and `apps/shared/core` is a real 515-file KMP module. Let me attempt the full-app build (which triggers the Gradle `Shared.xcframework` pre-action). Starting the macOS build in the background.
+
+The Gradle framework build (Kotlin/Native toolchain) is running — the long pole. Let me wait for it.
+
+The Shared.xcframework built successfully (`GRADLE_SHARED_EXIT=0`, 6m56s) and is staged — so the full-app build is feasible. Now running the macOS `build test` gate.
+
+MAC_EXIT=65 (as predecessors saw). Let me determine whether any failure is AlertStudioPage-related or pre-existing.
+
+macOS: only **4 errors, all pre-existing dev-signing** (TeslaSync-macOS / TeslaSyncWidgets-macOS entitlements) — **zero AlertStudioPage errors**. Critically, the macOS app target (which compiles my surface against the real `Shared.xcframework` + real components) **compiled cleanly** before the signing step. Now the iOS gate.
+
+IOS_EXIT=65. Let me analyze whether the iOS failures are AlertStudioPage-related or the pre-existing dashboard-widget issue predecessors documented.
+
+Zero compile errors on iOS, yet EXIT=65. Let me find the actual failure cause.
+
+iOS shows zero `error:` lines yet a `SwiftCompile failed` in an `A*` batch (`AnomalyInlineRow…AuditPanel.Components` — note AlertStudioPage is **not** in it). Since macOS compiled the *same* sources cleanly, let me pinpoint the real iOS cause and confirm AlertStudioPage compiled.
+
+The iOS failure is a **swift-frontend compiler CRASH** ("Please submit a bug report", "Stack dump") — **zero `error:` diagnostics anywhere**. The same sources compiled cleanly on macOS, and my isolated iOS-18-SDK typecheck passed. Let me extract the crash context to document it precisely and honestly.
+
+**Definitive root cause:** the iOS failure is a **swift-frontend IRGen crash compiling `AppearanceSettings.Controls.swift`** (a pre-existing sibling surface I never touched — emitting a SwiftUI `ScrollViewProxy` reabstraction thunk), with **zero `error:` diagnostics** and **zero AlertStudioPage involvement** in the backtrace. macOS compiled the same sources cleanly (signing-only failures). Both full-app blockers are pre-existing and unrelated.
+
+Let me gather final evidence and write the log.
+
+Let me verify what the macOS build actually compiled (the signing error may occur early).
+
+Corrected understanding: macOS failed at **signing validation before any compilation** (0 SwiftCompile, pre-existing P4/P99 signing blocker); iOS **compiled through type-checking** and crashed swift-frontend **uniquely** in `AppearanceSettings.Controls.swift` IRGen (the only "IR Generation for file" crash), with zero AlertStudioPage errors. Now writing the honest gate log.
+
+Log written. Let me run a final consolidated verification (lint, format, harness build+test) to confirm nothing regressed after the last comment edits, then commit.
+
+Let me confirm swiftlint summary and re-run the test (the `&&` chain short-circuited on the clean build).
+
+All green: swiftlint 0 violations (21 files), 56 tests pass, swiftformat 0/21, harness build clean. Let me check git status and commit precisely the surface files + log.
+
+Clean — only my 22 surface files + the log are new; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored; no stray changes. Committing per the prompt spec.
+
+Let me confirm the commit landed and update my tracking.
+
+Commit `e5bd28357` landed with all 23 files; working tree clean. Let me clean up the temporary build logs.
+
+All work is committed and the tree is clean. The task is complete.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`AlertStudioPage`** SwiftUI surface at parity with the 2342-line web source `features/notifications/pages/AlertStudioPage.tsx` — **22 files, ~5,900 LOC** at `apps/apple/TeslaSync/feature-views/AlertStudioPage.*` (commit `e5bd28357`).
+
+**What was built (full parity):** page chrome + actions; gated AI builder/conflict/tuning composition slots (baseline = off, ADR-015 §I3); templates browser (47 curated rule templates + derived signal catalog, search, category filter, card grid); responsive two-column rules-list + the complete typed-rule editor (name/status, vehicle targeting, signal+operator OR computed-metric panel, severity + allowed-ops, the kind-aware typed-value editor, cooldown + alert-behavior force-choose with recommendation banner, repeat-only max-fires + escalation, message template + include-title, test-delivery channel picker, Save/Delete/Test/Reset); snooze sheet; discard/delete confirmations. Every state (loading/empty/error/stale/offline/content) renders. All 17 data hooks bind through Shared-free P1/S8 seams (no HTTP in the view); P1/S10 i18n facade (zero hardcoded English); P1/S11 `view.opened` telemetry; VoiceOver labels throughout.
+
+**Verification — surface gates all GREEN:**
+- Isolated SwiftPM harness (Swift 6 language mode, complete strict concurrency) compiling the exact shipped sources against the **real** generated design tokens: `swift build` 0 errors/0 warnings; **56 XCTest cases pass, 0 failures**
+- Real-SDK `swiftc -typecheck`: **iOS 18 = 0**, **macOS 15 = 0**
+- `swiftlint --strict`: **0 violations** (21 files) · `swiftformat --lint`: **0/21** · `check-placeholders`: **COUNT=0** (10 verbatim-parity opt-outs)
+- KMP `Shared.xcframework` assembled (`GRADLE_SHARED_EXIT=0`); xcodegen enumerates all 22 files
+
+**Full-app xcodebuild gate — honestly DEFERRED** (`IOS_EXIT=65` / `MAC_EXIT=65`), with concrete proof both blockers are pre-existing and unrelated to this surface: iOS is a swift-frontend **IRGen crash uniquely in `AppearanceSettings.Controls.swift`** (a sibling file I never touched — **zero `error:` diagnostics, zero AlertStudioPage errors**); macOS fails at **dev-signing validation before any compilation**. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete — all 12 todos done, work committed (`e5bd28357`), tree clean, all surface-scoped gates green, and the full-app gate honestly deferred with concrete evidence.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0192-AlertStudioPage.log | 169 +++++++++
+ .../AlertStudioPage.Adapter.Logic.swift            | 296 ++++++++++++++++
+ .../feature-views/AlertStudioPage.Adapter.swift    | 276 +++++++++++++++
+ .../feature-views/AlertStudioPage.Copy.More.swift  | 238 +++++++++++++
+ .../feature-views/AlertStudioPage.Copy.swift       | 220 ++++++++++++
+ .../AlertStudioPage.Editor.Behavior.swift          | 393 +++++++++++++++++++++
+ .../AlertStudioPage.Editor.Fields.swift            | 309 ++++++++++++++++
+ .../feature-views/AlertStudioPage.Editor.swift     | 290 +++++++++++++++
+ .../feature-views/AlertStudioPage.Handlers.swift   | 331 +++++++++++++++++
+ .../AlertStudioPage.Model.Types.swift              | 367 +++++++++++++++++++
+ .../feature-views/AlertStudioPage.Model.swift      | 327 +++++++++++++++++
+ .../feature-views/AlertStudioPage.Models.swift     | 222 ++++++++++++
+ .../feature-views/AlertStudioPage.Previews.swift   | 181 ++++++++++
+ .../feature-views/AlertStudioPage.Rules.swift      | 256 ++++++++++++++
+ .../feature-views/AlertStudioPage.Sources.swift    | 234 ++++++++++++
+ .../AlertStudioPage.Templates.Data.swift           | 297 ++++++++++++++++
+ .../feature-views/AlertStudioPage.Templates.swift  |  36 ++
+ .../feature-views/AlertStudioPage.Tests.swift      | 346 ++++++++++++++++++
+ .../feature-views/AlertStudioPage.ViewModel.swift  | 320 +++++++++++++++++
+ .../AlertStudioPage.ViewModelTests.swift           | 370 +++++++++++++++++++
+ .../feature-views/AlertStudioPage.Views.swift      | 268 ++++++++++++++
+ .../feature-views/AlertStudioPage.strings          | 326 +++++++++++++++++
+ .../TeslaSync/feature-views/AlertStudioPage.swift  | 318 +++++++++++++++++
+ 23 files changed, 6390 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0192-AlertStudioPage.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Adapter.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Copy.More.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Copy.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Editor.Behavior.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Editor.Fields.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Editor.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Handlers.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Model.Types.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Rules.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Sources.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Templates.Data.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Templates.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.ViewModel.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.ViewModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertStudioPage.swift

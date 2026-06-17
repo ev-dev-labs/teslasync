@@ -1,0 +1,137 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and supporting files in parallel.
+
+There are existing admin page implementations (ApiPlayground, DiskForecast). Let me find them to follow the established pattern.
+
+The actual path is `apps/apple/Sources/Features/Admin/`. Let me study the existing admin pages to match conventions exactly.
+
+Excellent pattern reference. Let me read the model, route registration, table, and tests for DiskForecast.
+
+Let me examine the ApiPlayground page (closest analog - it has a table/filter), the route registry, and the table component.
+
+Now let me read the web API hook/types, the route registry/parser, and the test file.
+
+Now let me read the web types and the route registry/parser system.
+
+Let me check the AppShell rendering, the tooling environment, and the project setup in parallel.
+
+Toolchain is available (xcodebuild, swiftlint, pwsh, xcodegen). Now let me locate the shared UI components and design tokens I'll need.
+
+The tokens are generated (P2). Let me read the generated Tokens file to confirm exact token names.
+
+Now let me examine the Localizable.xcstrings structure and find existing admin keys to match the format.
+
+Let me read the full AppShell and check for existing route-registration tests to understand navigation constraints.
+
+I have all the components and tokens. Before finalizing the routing approach, let me check for exhaustive switches over `AppRoute` that adding a case would break, and confirm the log directory.
+
+`MenuCommandCatalogTests` asserts the menu catalog covers every `AppRoute`. Let me check how it's built.
+
+Adding the route case is safe (menu catalog derives from `allCases`). Now let me check the test target config, swiftlint rules, and the placeholder scanner.
+
+Case-insensitive matching means the key `coverage.filter.placeholder` needs a `// parity:allow` opt-out. Let me check the test target config, the Shared.xcframework presence, and existing `parity:allow` usage.
+
+`Shared.xcframework` is absent (only `.gitkeep`). This is a hard build dependency. Let me check the gate contract and whether the framework can be produced.
+
+Building requires assembling the KMP `Shared.xcframework` via Gradle (the long pole). Let me kick that off in the background now, then write all code while it runs.
+
+Java 17 and Gradle are available. Let me start the xcframework build in the background and write code while it runs.
+
+Now let me set up tracking and write the implementation files while the framework builds.
+
+Let me check the build progress and look for an existing flow/wrap layout for the chips.
+
+The build is compiling (Gradle running). Let me write the main page view now.
+
+Let me check build progress and write the sections/table/chips file.
+
+Now let me wire up the routing: add the AppRoute case, the deep-link alias, the registration file, and the app composition.
+
+Now the route registration file and the app composition wiring:
+
+Now the unit tests. Let me check build progress and write them.
+
+The `Shared.xcframework` built and staged successfully (BUILD SUCCESSFUL). Now I can build the app. Let me write the tests, add strings, then run the gate.
+
+Now let me add the 38 strings to the catalog using a Python script that safely edits the JSON and validates it.
+
+Strings added (8160 → 8198, validated). Let me verify the inserted block and view the full ledger.
+
+Let me check the ledger schema, then append the two rows.
+
+Now let me run SwiftLint on the new/edited files and generate the Xcode project in parallel.
+
+SwiftLint found 6 violations across the run. Let me isolate which are in my files.
+
+Three violations in my files (the 3 widget-test ones are pre-existing, outside the Admin gate path). Let me fix line length and split the large sample data into its own file.
+
+Now remove the large sample from the model file and recreate it in its own file split into per-category builders:
+
+Model file is now 287 lines. Now let me create the sample data in its own file, split into per-category builders to satisfy `function_body_length`.
+
+Let me re-lint just my Admin files plus the touched App files to confirm all violations are resolved.
+
+All my-file violations fixed. Let me run the gate's lint + placeholder scan on the Admin dir, and regenerate the project (new Sample file added).
+
+SwiftLint is linting beyond the path argument. Let me investigate its scoping behavior with a single-file invocation.
+
+SwiftLint lints the whole project's `included` set when given a directory. Let me check the existing DiskForecast gate log to see how the gate was actually run and whether the project was lint-clean.
+
+This reveals the established methodology. Let me read the full gate approach and the documented pre-existing build blocker.
+
+I now understand the established gate methodology: the full `xcodebuild` is blocked by a documented pre-existing out-of-scope error, so correctness is proven via isolated `swiftc` typecheck + model harness. Let me start the full build in the background and run the scoped checks meanwhile.
+
+Let me run swiftformat and swiftlint on exactly my files (scoped, like the precedent).
+
+SwiftLint is clean on my files. SwiftFormat wants unused Layout-protocol args marked with `_`. Let me fix those two signatures.
+
+SwiftFormat, SwiftLint, and placeholder gates are all green on my files. Now let me assemble the dependency set for the isolated typecheck and build the model harness. First, locate the transitive dependencies.
+
+Dependencies located. Let me build and run the model logic harness (proves model correctness in isolation, as the precedent did).
+
+Strict-concurrency isolation issue in the harness. Let me mark the helper `@MainActor`.
+
+Model harness: 39 assertions, 0 failures, compiled under Swift 6 strict concurrency. The full build finished too — let me check its result.
+
+The full build (BUILD_EXIT=65) is blocked solely by the documented pre-existing out-of-scope error in `AISuggestNewGeofences.swift` — **zero diagnostics in my files**. Now the authoritative proof: isolated view typecheck against the real tokens/components for both macOS and iOS.
+
+macOS typecheck clean. Now the iOS target (exercises the `#if os(iOS)` compact branches in the page and table):
+
+Both typechecks pass on macOS and iOS. All in-scope gates are green. Let me verify every parity string key is referenced in my Swift sources (for the evidence log).
+
+All 37 keys referenced in source and present in the catalog. Let me update the ledger and gather evidence line numbers for the log.
+
+All evidence gathered. Let me capture tool versions, then write the parity evidence log.
+
+All files wired into the project (36 pbxproj refs). Now let me write the comprehensive parity evidence log.
+
+Log written. Let me run a final consolidated verification pass to confirm nothing regressed and the JSON artifacts are valid.
+
+All gates green and JSON valid. Let me confirm the generated `.xcodeproj`/xcframework are git-ignored, then stage and commit.
+
+Committed. Let me clean up temp files and finalize tracking.
+
+All work is complete, verified, and committed. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ ...apple-page-admin-FleetTelemetryCoveragePage.log | 199 ++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 418 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   7 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../FleetTelemetryCoveragePage.Sections.swift      | 286 ++++++++++++++
+ .../Admin/FleetTelemetryCoveragePage.swift         | 331 ++++++++++++++++
+ .../FleetTelemetryCoveragePageModel.Sample.swift   | 119 ++++++
+ .../Admin/FleetTelemetryCoveragePageModel.swift    | 287 ++++++++++++++
+ .../FleetTelemetryCoverageRouteRegistration.swift  |  26 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |  12 +-
+ .../FleetTelemetryCoveragePageModelTests.swift     | 241 ++++++++++++
+ apps/parity/apple-ledger.json                      |  20 +-
+ 12 files changed, 1939 insertions(+), 8 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-FleetTelemetryCoveragePage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetTelemetryCoveragePage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetTelemetryCoveragePage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetTelemetryCoveragePageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetTelemetryCoveragePageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/FleetTelemetryCoverageRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/FleetTelemetryCoveragePageModelTests.swift

@@ -1,0 +1,277 @@
+I'll start by exploring the repository structure to understand the task fully — the web source page, the existing Apple app structure, and the supporting infrastructure (KMP core, components, tokens).
+
+The web page uses many sub-components. Let me explore the Apple app structure and the security-access components in parallel.
+
+Xcode toolchain is available (xcodebuild, swiftlint, swift). Now let me explore the Apple app's existing structure and find a reference page to follow the established patterns.
+
+The directory structure differs from the prompt (no `Features/` yet). There are large generated-looking dirs. Let me look at the project config and find existing reference implementations.
+
+There's already a rich set of security Swift components. Let me check whether `SecurityAccessPage` already exists, understand the file conventions, and look at the parity manifest/ledger.
+
+Key finding: `AlertStudioPage.swift` is the ONLY existing page — my reference template. The security sub-components are already ported, but the aggregating page is missing. Let me study the reference page and the manifest record.
+
+`AlertStudioPage` is the reference (22 files, 6221 lines). For SecurityAccess, sub-components already exist. Let me study the reference page's structure and the existing security components' APIs.
+
+Now let me survey all the existing security-related Swift files and the web sub-components to understand what's available to compose into the page.
+
+All sub-components are pre-built. Let me efficiently extract their public APIs (View structs, inits, Models) rather than reading all 15k lines.
+
+Each component takes a typed Model. Let me read the Model definitions and the reference ViewModel/Model to understand data binding.
+
+The architecture is clear now: each component = View + `@Observable` Model + Source seam + Adapter + Strings. Let me understand the admin components' Models/Adapters and the data-binding pattern from the reference ViewModel.
+
+I understand the component architecture. Before writing code, I must assess build feasibility — this determines whether the gate can reach DONE or must honestly report BLOCKED. Let me check the toolchain and project state.
+
+`pwsh`, `xcodegen`, and Xcode 26.5 are present, but **`Shared.xcframework` is missing** (empty Frameworks dir) — a declared build dependency. Let me check if it can be built from the KMP shared module and whether the project generates.
+
+KMP `Shared.xcframework` must be built from Gradle/Kotlin-Native — likely infeasible offline. Let me check the gate contract (README) and existing logs to see the expected format and whether prior Apple pages landed DONE or BLOCKED.
+
+Many prior Apple page logs exist. Let me examine a few to learn the expected log format and whether prior pages reached DONE (with a real build) or BLOCKED.
+
+This is the key insight. The established methodology: `LINT_EXIT=0` + `PLACEHOLDER_EXIT=0` are mandatory-green, while `BUILD_EXIT=65` is accepted when proven to be pre-existing out-of-scope breakage (the missing `Shared.xcframework`), with zero diagnostics in the author's own files. Let me read representative logs in full to learn the exact accepted format.
+
+Now I have the authoritative methodology. Key facts: real compiled path is `apps/apple/Sources/Features/<Domain>/`, gate = swiftlint+placeholder (must be green) + build (accepted as 65 if pre-existing breakage proven), tests under `apps/apple/Tests/Unit/Features/`. Let me create a plan and explore the `Sources/` structure + a sibling admin page as a direct template.
+
+The convention is clear: self-contained page family under `Sources/Features/Admin/`. The security sub-components live in `TeslaSync/feature-views/` (same module, so reusable). Let me set up a plan and todos, then deep-read the key references: a sibling admin page (data seam), SecurityPanel (possible composite), adapters, web helpers, and the SecurityEvent type.
+
+Let me set up the plan and deep-read the critical references in parallel: web helpers/types (projection logic), a sibling admin page's data seam, and the sub-component Input types I'll construct.
+
+I have the full helper logic and `SecurityEvent` shape. Now the pivotal question: how to bind data and whether to compose the 8 shipped sub-components. Let me read two sub-component Models in full, the data-seam pattern from a sibling admin page, and the SharedFacade.
+
+Composition of the 8 shipped sub-components is the faithful approach, and their Input APIs are clean (simple value structs + InMemory sources with `push()`). Let me read the remaining sub-component Input APIs, the data-seam pattern, route registration, and the VehicleTwin equivalent in one batch.
+
+Each child has a distinct input event type. Let me extract those definitions, check for a canonical Swift `SecurityEvent`/SharedFacade data layer, and read the data-seam + route-registration patterns.
+
+Let me check the child Adapters for ready-made builder functions and the signal-value enums, plus the data-seam pattern and route registration — this determines how much mapping code I write.
+
+I now understand the full composition surface. Let me record a plan and todos, then read the data-seam (UsersPageModel), route registration, AppRoute, and the SharedFacade vehicle/security API in parallel.
+
+Data-seam pattern is clear (Providing protocol + callback + load/refresh, KMP-backed in prod, in-memory doubles for tests). Let me read route registration, app wiring, the SharedFacade data layer, header-action components, and the placeholder script in one batch.
+
+I need to add a `securityAccess` AppRoute case. Let me read the rest of AppRoute.swift (group mapping, parser, any exhaustive switches) and the SharedFacade data layer + header-action components.
+
+The `group` and `systemImage` switches are exhaustive — I'll need to add `.securityAccess` there. Let me find all exhaustive AppRoute switches, the route parser, the app registration wiring, and the SharedFacade data layer.
+
+Registration wiring is clear (chain in `routeHostRegistry`). Let me read the async DataSource convention (AuditLog), the SI/Units facade, and confirm shared component + header-action + digital-twin equivalents exist.
+
+I have the async DataSource pattern. Final reconnaissance batch: confirm shared-component/token names, locate digital-twin/header-action equivalents, read the placeholder script rules, and check the xcstrings catalog.
+
+Shared components confirmed (TSGlassPanel, TSAlertBanner, TSEmptyState, TSErrorDisplay, TSFadeIn, TSBadge, TSButton, etc.). No native `VehicleTwin` exists — I'll build GlassPanel2 natively. Let me read the exact token definitions, the forbidden placeholder patterns, and a sibling vehicle-selection pattern.
+
+Critical: "Placeholder" is a forbidden word — I'll avoid `.redacted(.placeholder)` and the word entirely, using `TSSkeleton` instead. Let me locate the token definitions and read a sibling's vehicle-selection header pattern.
+
+Complete token API confirmed. Let me read the exact shared-component initializer signatures I'll use and a sibling page's vehicle-picker header pattern.
+
+Let me read the exact component signatures (States, Banners, Cards, Typography) and the `TSTone` enum so I use valid APIs.
+
+Let me read the `TSButton` init, the Typography components (TSText/TSCaption/TSSectionTitle), and a sibling page's vehicle-picker header for consistency.
+
+I have the full component toolbox. Let me check the xcstrings catalog format + existing keys, read a sibling vehicle-picker header, and the typography variants.
+
+xcstrings is a 4.9MB JSON — I'll edit it programmatically. My keys are absent (need adding). Let me mirror a recently-added key's format, read the vehicle-picker header pattern, and the typography variants.
+
+Recent keys use `en`-only with `extractionState: manual`. Let me read the vehicle-picker header pattern and typography variants, then begin writing.
+
+Let me read the `TSSelect` vehicle-picker usage and the model's vehicles/selection API to mirror it.
+
+I have the full UI pattern. Now the final detail I need: the exact case names of each child's signal-value enums and status enums for the mappers. Let me extract them precisely.
+
+Two last enum definitions to confirm. Let me read them precisely.
+
+I now have 100% of the API surface. Let me check the swiftlint config (to satisfy `--strict`) before writing, then start implementing the pure models file.
+
+Config understood: `--strict` makes warnings fail, so I must respect line-length ≤120, function ≤50 lines, type ≤250 lines, file ≤400 lines, cyclomatic ≤10, and opt-in rules (`empty_count`, `first_where`, etc.). I'll split into focused files. Let me start writing the pure canonical types.
+
+I have the complete API surface. Let me mark exploration done and write the foundation files. Starting with the canonical pure types.
+
+Now the pure logic layer (ported web helpers), decomposed to respect cyclomatic-complexity and length limits.
+
+Let me verify the two pure files type-check in isolation — early validation and log evidence.
+
+Pure layer type-checks clean. Let me lint these two files early to catch `--strict` issues.
+
+Pure layer is clean. Now the child-input mappers (depend on feature-views child types — app-target only). Let me write the signal converters + latest-based section inputs.
+
+Now the history-based section inputs (sentry chart, statistics, history table, timeline).
+
+Let me fix a redundant ternary in the statistics mapper.
+
+Now the orchestrating page model with the data-source seam and child wiring.
+
+Let me create the relays holder (the 8 in-memory sources, seeded with loading states).
+
+Now let me append the load/resolve/push orchestration (same file for `private` access).
+
+Now the sample/empty/failing data sources and the `sample()` convenience.
+
+Now the views. Let me confirm the `TSSelect`/`TSSelectOption` and `TSBadge`/`TSFadeIn` signatures before writing the page view.
+
+I have all the APIs. Let me write the main page view.
+
+I introduced a redeclaration of `model`. Let me fix that — the `@State` property is already accessible in same-file extensions.
+
+Now the sections view (phase switch, error banner, GlassPanel1 alert, GlassPanel2 twin, 8 composed sections, skeleton).
+
+Now the digital-twin view (GlassPanel2 internals) — a native SwiftUI security-state summary.
+
+Let me make the twin chip's identity stable by keying off the string key.
+
+Now route wiring. Let me read the route parser and any route tests to wire `.securityAccess` correctly without breaking exhaustive checks.
+
+Adding an enum case touches exhaustiveness tests. Let me read RouteTests and the menu command catalog to wire `.securityAccess` everywhere required.
+
+`MenuCommandCatalog` must cover every route. Let me check whether it's derived from `allCases` or hand-maintained.
+
+Route wiring is safe — navigate commands derive from `allCases`. Let me add the `.securityAccess` case to AppRoute (enum, pathSegment, systemImage, group) and the parser alias.
+
+Now the route registration file and the app wiring:
+
+Now let me add the localization keys to the xcstrings catalog programmatically (preserving format), checking `route.vehicles` exists.
+
+Let me verify the xcstrings diff is minimal (not a full reformat) and valid.
+
+The re-sort reformatted the entire 93k-line file — unacceptable. Let me revert and inspect the original formatting to make a surgical addition.
+
+The original uses Xcode's `"key" : value` style (space before colon), 2-space indent, unsorted. Let me insert the 21 blocks surgically as text right after `"strings": {`, preserving all existing entries.
+
+Clean: 231 insertions, 0 deletions. Now the unit tests. Let me read a sibling admin model test to match conventions.
+
+Tests use stub DataSources + async `load()`. Let me check the child models' public read surface so I can assert wiring in tests.
+
+Let me confirm `EventHistoryAdapter.rows` is 1:1 (so range-filter tests are robust).
+
+`rows(from:)` is 1:1 — exact counts are safe. Let me write the logic tests.
+
+Now the page-model + route-registration tests.
+
+All source files written. Let me update todos and run swiftlint `--strict` on every new + edited file.
+
+One violation: 6-param helper exceeds the limit. Let me derive `open` from `door` to drop a parameter.
+
+Let me re-lint and run the full Admin-dir lint (the gate target) plus tests.
+
+LINT_EXIT=0 (0 violations, 5866 files). Now the placeholder gate. Let me grep my files for forbidden tokens and run the script.
+
+PLACEHOLDER_EXIT=0. Now the build. The KMP `Shared.xcframework` is missing. Let me check whether it can be built (JDK + the build script) before deciding the build path.
+
+JDK 17 is present. Let me kick off the `Shared.xcframework` Gradle build in the background (it's slow), and meanwhile build + run a standalone harness to prove my pure logic executes correctly.
+
+While that builds, let me compile and execute a standalone harness to prove the pure logic runs correctly.
+
+The pure-logic harness passes all 15 assertions. Now let me update the parity ledger. Let me inspect its structure.
+
+Let me check the xcframework build progress.
+
+Gradle is actively building (network works, some tasks cached) — promising. Let me run `xcodegen generate` now (project scaffolding) and wait for the framework build.
+
+Project generated. Let me wait for the xcframework build to finish.
+
+The debug xcframework built; now linking the release variant. Let me wait for it to finish and stage.
+
+Still linking release frameworks (slower, optimized). Let me wait more.
+
+Linking the final release macOS framework — nearly done. Let me wait for the assemble + staging step.
+
+**`Shared.xcframework` built and staged successfully (BUILD SUCCESSFUL).** Now I can do a real `xcodebuild`. Let me run the macOS Debug build (no exclusions) to verify my files compile and surface any pre-existing breakers.
+
+Build launched. Let me wait and poll its progress.
+
+Build exited 65 with 4 failures. Let me identify exactly which files have errors — confirming none are mine.
+
+The only errors are in `shared-surfaces/Input.Previews.swift` (lines 88, 101) — the documented pre-existing Xcode-26.5 breaker, **zero errors in my files**. Let me confirm I didn't modify it, then build with that one file excluded to prove my code compiles.
+
+Confirmed: only my files changed; `Input.Previews.swift` is pre-existing and out-of-scope. Let me build with that one file excluded to prove my code compiles GREEN.
+
+Let me wait for the excluded build to complete (should compile all my files and link).
+
+The build shell finished. Let me read the final result.
+
+Let me read the actual tail of the build log to see the final result.
+
+The log ended mid-emit without a result — the background build may have been cut off. Let me check if xcodebuild is still running.
+
+xcodebuild is still running (22 processes) — it's a full app compile. Let me wait for completion.
+
+Still compiling (44 processes, 0 errors). Let me update the ledger while it finishes. First, check the ledger format.
+
+Let me append the 2 ledger rows (preserving format) and verify a minimal diff.
+
+Ledger updated cleanly (+18 lines, 2 rows). Let me check the build status.
+
+The excluded build revealed 18 more errors downstream. Let me identify exactly which files — critically, whether any are mine.
+
+Real errors in my files surfaced (the first build bailed early on the pre-existing file). Three root causes: cross-file `private model` access (15), non-Sendable static formatters (2), and `View`+`Identifiable` MainActor conflict (1). Let me check the sibling convention for cross-file model access, then fix all three.
+
+Root causes are clear. The sibling convention reads `model` cross-file via accessible properties. Let me apply three fixes: make `model` readable cross-file, use Sendable `ISO8601FormatStyle`, and resolve the `View`+`Identifiable` conflict.
+
+Now fix the twin chip's `View`+`Identifiable` conflict:
+
+Let me verify the new `ISO8601FormatStyle` parsing handles the "Z" form, and re-lint the changed files.
+
+ISO parsing works, lint clean. Let me rebuild macOS (excluding the pre-existing breaker) to confirm all 18 errors are resolved and the app builds GREEN.
+
+Let me wait for the rebuild to complete.
+
+0 errors so far, still linking. Let me wait for completion.
+
+Down to 1 error. Let me identify it.
+
+The remaining error is in `Sources/Features/Driving/DriveScorePage.Panels.swift` — another pre-existing Xcode-26.5 breaker I didn't touch. **Zero errors in my files** (whole-module type-check validated all my files). Let me do the definitive baseline proof: stash my work, rebuild, and confirm the same pre-existing breakers occur without my changes.
+
+Stashed (working tree clean = baseline). Let me regenerate the project and rebuild to confirm the pre-existing breakers occur without my changes.
+
+Baseline building. Let me wait for it to surface the pre-existing breaker.
+
+Baseline still compiling. Let me wait for it to finish.
+
+Let me wait a bit longer for the baseline build.
+
+**Definitive proof:** baseline (my work stashed) fails with the identical `DriveScorePage.Panels.swift` pre-existing error and **zero SecurityAccess errors**. Both breakers are pre-existing/out-of-scope. Let me restore my work and regenerate.
+
+My work is restored (18 files). Let me confirm my iOS adaptive branches compile by building for the iOS Simulator and checking for any SecurityAccess errors.
+
+Let me wait for the iOS build while preparing the log.
+
+iOS still compiling (0 SecurityAccess errors so far). Let me wait for it to finish.
+
+Still building. Let me wait a bit more for the iOS build to finish.
+
+iOS build: only the pre-existing `DriveScorePage.Panels.swift` error, **zero SecurityAccess errors** — my iOS adaptive branches compile clean too. I have complete evidence. Let me capture the authoritative gate numbers, then write the log.
+
+Let me re-run the placeholder gate with the correct path (I ran it from the wrong CWD).
+
+PLACEHOLDER_COUNT=0. Let me capture line counts and panel/section evidence for the log.
+
+I have complete evidence. Let me write the comprehensive, honest log file.
+
+The log is written. Let me verify the final state and confirm the generated project/framework are gitignored before committing.
+
+Everything is in order: only my intended files changed, generated artifacts gitignored, log ends with `EXIT=0 STATUS=DONE`. Let me update todos and commit.
+
+All files staged. Let me commit.
+
+Committed (`d55b8c369`), working tree clean. Let me do a final audit: confirm no stray hardcoded UI strings in my views (all must be i18n keys).
+
+All view literals are i18n keys (only a11y punctuation is verbatim). Let me verify my log's "SwiftCompile units" claim is literally accurate against the build logs.
+
+Let me check the macOS excluded builds (which proceeded further) for the SwiftCompile units, to make the log claim precise.
+
+All 11 of my files compiled as SwiftCompile units in both the macOS (excluded) and iOS builds. Let me sharpen the log with that concrete evidence and amend the commit.
+
+Let me amend the commit with the sharpened log.
+
+Committed cleanly. Let me run a final end-to-end verification of the committed tree.
+
+All verified. Let me mark todos done and tidy temp artifacts.
+
+Task complete. Final verification confirms a clean tree, all gates green, and the work committed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

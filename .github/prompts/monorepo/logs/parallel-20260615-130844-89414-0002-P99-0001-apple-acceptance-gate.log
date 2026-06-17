@@ -1,0 +1,110 @@
+I'll start by understanding the task and the repository state. This is an Apple acceptance gate that I must run honestly — no faking results. Let me investigate the environment and predecessors.
+
+The monorepo structure exists. Now let me check tool capabilities (Xcode, SwiftLint, SwiftFormat) and the key artifacts — this determines whether the gate can even run.
+
+Xcode 26.5, SwiftLint, SwiftFormat, and Swift are all installed. Now I need to check the predecessors, parity ledgers, the gate tools, and signing capability. Note: the spec references `apple-macos-ledger.json` and `apple-ios-ledger.json` but I only see `apple-ledger.json`. Let me investigate thoroughly.
+
+Critical preflight findings so far:
+- **Xcode 26.5, SwiftLint, SwiftFormat, pwsh, xcodegen** all present ✅
+- **0 valid signing identities** ❌ (capability requirement for archive/sign)
+- **`check-parity-ledger.ps1` is MISSING** ❌ (gate references it)
+- **`apple-macos-ledger.json` & `apple-ios-ledger.json` do NOT exist** ❌ (only `apple-ledger.json`)
+
+Let me verify predecessor logs and inspect the existing ledger and project before concluding.
+
+The monorepo was clearly developed on a Windows host (shared-ledger notes Apple native tests were "SKIPPED on this Windows host"). Now let me systematically verify predecessor log STATUS and confirm the simulator destinations and project schemes.
+
+Found predecessor gaps: **4 of 719 page logs lack STATUS=DONE**, and the numbered list is missing `p4-p9-0002-xcuitest-ui.log`. Let me confirm these gaps and check what those incomplete logs actually say.
+
+The picture is now definitive. The predecessors themselves are **not all DONE**:
+- 3 shared-surface logs explicitly say `STATUS=BLOCKED` (citing "OTHER-surface compile bugs/collisions + macOS codesign" and even naming "p4-apple/P99-0001 macOS acceptance gate once those collisions are merged + signing is present")
+- 1 widget log ended with `IOS_EXIT=143` / `BUILD INTERRUPTED` (no STATUS)
+- `p4-p9-0002-xcuitest-ui.log` is **missing entirely**
+
+Plus: 0 signing identities, missing split ledgers, missing parity tool. This is a clear BLOCKED gate. But I must run the gate honestly and capture real evidence. Let me inspect the project setup, then execute.
+
+Crucial discoveries:
+1. **`Frameworks/Shared.xcframework`** (the KMP core both apps link against) is **absent** — only `.gitkeep` exists. The build cannot link.
+2. **A prior run of this exact gate exists**: `artifact-20260608-165536-88496-0003-P99-0001-apple-acceptance-gate.log`, which already recorded the split ledgers as `MISSING` and ran the now-absent parity tool.
+
+Let me read that prior gate log and the deferral ADR to align my conclusion with the established canonical outcome.
+
+There's an established canonical precedent: the prior run concluded `EXIT=1 / STATUS=BLOCKED` on five independent grounds (signing, missing ledgers/tool, predecessors, code-quality, hygiene). I must reproduce this **firsthand on this host** — not copy it. Let me check the deferral ADR, the KMP scaffold predecessor status, and the xcframework build feasibility.
+
+I now have a complete, firsthand-verified picture. The KMP scaffold predecessor (`p1-s3-0001-kmp-scaffold.log`) is itself `STATUS=BLOCKED`, `p4-p9-0002-xcuitest-ui.log` is missing, and JDK 17 + gradlew exist (xcframework buildable but slow). The established precedent concluded `BLOCKED`. I must reproduce this firsthand on THIS host.
+
+Let me set up: generate the Xcode project (build prereq), confirm schemes, and check timeout tooling.
+
+Project generated; schemes will resolve. `timeout`/`gtimeout` available. Before running, I need to resolve the commit policy on BLOCKED (Covenant rule 8 "No commit on red" vs. the Commit section). Let me check how sibling phase acceptance gates (Windows P99, Android P99) handled this empirically.
+
+Empirically resolved: the canonical `p4-p99-0001-apple-acceptance-gate.log` was **never committed** across 3 prior BLOCKED runs, while the one DONE gate (`p1-s99 shared`) **was** committed. This confirms Covenant #8 "No commit on red" — on BLOCKED I write the log but do not commit it (harness manages artifact copies).
+
+Now I'll run the gate firsthand. Let me write the PREFLIGHT section capturing real evidence on this host.
+
+Preflight part 1 captured — schemes resolve (`TeslaSync`, `TeslaSync-macOS` present). Now the predecessor audit, ledger/tool presence, and working-tree hygiene.
+
+The audit is solid. One cosmetic fix: my P0..P9 regex also caught the gate's own log (`p4-p99-0001`) — let me annotate it as self-referential, then run the actual gate commands (fast ones first, expensive iOS build last).
+
+Now executing the fast gate steps firsthand (macOS build/test, lint, format, placeholder, ledger checks, archives). The signing failures should be quick.
+
+Still running after 180s — the macOS build is compiling (likely running the KMP pre-build script + macOS sources before the codesign failure). Let me wait for it.
+
+Let me peek at the in-progress macOS build output to see what stage it's at, without disturbing the running gate.
+
+The macOS build/test is doing a full KMP Gradle build (FROM-CACHE — no network needed) then compiling the app before the codesign failure. This is inherently expensive (the prior run did ~4 full compiles). Let me let it run and capture firsthand exit codes.
+
+Fast gate done — 8/9 markers captured firsthand:
+- `MAC_EXIT=65` (codesign), `IOS_ARCHIVE_EXIT=65`, `MAC_ARCHIVE_EXIT=65` (signing)
+- `LINT=0` (passes here), `FORMAT=1` (fails), `PH=1` (fails)
+- `MAC_LEDGER_EXIT=64`, `IOS_LEDGER_EXIT=64` (missing tool/files)
+
+Let me extract the precise firsthand failure messages, then launch the final iOS build+test.
+
+macOS failure is **purely codesign** (4 errors = entitlements require dev certificate; Swift compiled fine) → BUILD/TEST FAILED. Archives fail on "requires a development team." Ledger verifier confirmed missing firsthand. But the placeholder result is puzzling (`COUNT=66 < ALLOWED=247` yet `EXIT=1`) — I must verify its verdict logic before reporting. Let me launch the final iOS build+test and inspect the placeholder script in parallel.
+
+Placeholder logic confirmed: line 243 `$exit = if ($result.Count -gt 0) { 1 }` — so `PLACEHOLDER_COUNT=66` (real disallowed TODO/Placeholder markers, distinct from the 247 pre-approved opt-outs) → legitimate RED. My reporting is accurate.
+
+The iOS Simulator build+test is running (the long pole; macOS compiled cleanly so iOS should compile too). Let me wait and monitor.
+
+Good — iOS build progressing with **0 compile errors** (app module emitting now). The app compiles cleanly; it's the long compile of all surfaces before tests run. Let me keep waiting.
+
+Still compiling cleanly (0 errors, now on widget surfaces). Large surface set. Continuing to wait.
+
+Widget extensions linked successfully; main app target now compiling (still 0 errors). Getting closer to the link + test phase. Continuing to wait.
+
+iOS build+test finished with `IOS_EXIT=65` (not 0 — differs from the prior run) despite 0 compile errors. Let me find the exact failure cause.
+
+Root cause found firsthand: the iOS **app + extensions build and simulator-codesign successfully**, but the **`TeslaSyncTests` XCTest bundle fails to compile** — `VehicleCostPageModelTests.swift:10:13: error: main actor-isolated default value in a nonisolated context` (Swift 6 concurrency) → `** TEST FAILED **` → `IOS_EXIT=65`. A genuine RED, out of scope to fix.
+
+All 9 markers now captured firsthand. Let me append the iOS section, aggregation, and disposition to the log.
+
+Let me verify the complete log end-to-end for correctness and honesty.
+
+Log is 354 lines with all 9 firsthand markers, `AGG_EXIT=1`, and ends with `EXIT=1`/`STATUS=BLOCKED`. One ambiguity: line 192 has an interim `EXIT=1` (the placeholder tool's own stdout). Let me review that section and the disposition to ensure clarity.
+
+The log is thorough and accurate. The interim `EXIT=1` at line 192 is the placeholder tool's own stdout (clearly within the `[5/9]` section, followed by my `PLACEHOLDER_EXIT=1`). The log unambiguously ends with the gate verdict. Let me disambiguate that interim line and review the final disposition section.
+
+The disposition is comprehensive and firsthand-accurate. Two refinements: (1) disambiguate the interim placeholder-tool `EXIT=1`, and (2) since I'll clean up the transient build artifacts, update note E to reflect the final state. Then I'll remove the generated artifacts and temp files.
+
+Now removing the transient build artifacts and temp files, then verifying the working tree contains only the untracked log.
+
+Working tree is clean — only the untracked acceptance log remains; `Frameworks/` restored to `.gitkeep`-only. Final integrity check on the log.
+
+The Apple acceptance gate is complete. I ran it firsthand on this macOS host and recorded the canonical log with a verified `EXIT=1 / STATUS=BLOCKED` verdict.
+
+## Result: `STATUS=BLOCKED` (EXIT=1)
+
+I executed all 9 gate commands firsthand (Xcode 26.5, iPhone 16 / iOS 26.5 sim) and wrote `.github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log` (356 lines). Per the prompt's capability mandate ("if the gate can't run → STATUS=BLOCKED"), the gate is blocked on **five independent, evidence-backed grounds**:
+
+| Ground | Evidence (firsthand) |
+|---|---|
+| **A. Code signing** | `security find-identity` = **0 identities** → `MAC_EXIT=65`, `IOS_ARCHIVE_EXIT=65`, `MAC_ARCHIVE_EXIT=65` (no dev cert/team) — signed archives not producible |
+| **B. Missing gate artifacts** | `apple-macos-ledger.json`, `apple-ios-ledger.json`, `check-parity-ledger.ps1` all **MISSING** → `MAC_LEDGER_EXIT=64`, `IOS_LEDGER_EXIT=64` |
+| **C. Predecessors not DONE** | `p4-p9-0002-xcuitest-ui.log` missing; `p1-s3-0001-kmp-scaffold`=BLOCKED; 4/720 page logs not DONE |
+| **D. Build/quality RED** | `IOS_EXIT=65` (TeslaSyncTests Swift-6 main-actor compile error); `FORMAT_EXIT=1` (9 files); `PLACEHOLDER_EXIT=1` (66 markers) |
+| **E. Hygiene** | source tree clean (not blocking) |
+
+Notably, the iOS **app + extensions compiled and simulator-codesigned cleanly (0 errors)** — only the XCTest bundle fails. `LINT_EXIT=0` passed.
+
+**Covenant compliance:** No code fixed, no scope narrowed, no delegation, firsthand evidence only. Per Covenant #8 ("no commit on red") + step 6 (commit only on DONE) — confirmed empirically (the canonical log was never committed across 3 prior BLOCKED runs, while the one DONE gate was) — the BLOCKED log is **recorded but not committed**. Transient build artifacts and temp files were cleaned up; the only working-tree change is the untracked log.
+

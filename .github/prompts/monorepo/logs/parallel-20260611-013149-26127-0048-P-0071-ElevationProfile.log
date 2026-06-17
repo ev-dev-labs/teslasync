@@ -1,0 +1,180 @@
+I'll start by exploring the repository structure and understanding what exists, then read the web source spec and check tool availability.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 26.5 simulators). Now let me read the web source spec and explore the Apple app structure.
+
+Now I understand the web spec. Let me explore the Apple app structure deeply — the project config, existing shared-surfaces, and the P1 dependencies (state holders, tokens, i18n, diagnostics).
+
+A well-established multi-file pattern exists per surface. Let me find a chart-based surface to use as a template and locate the P1 infrastructure (state-holders, tokens, i18n facade, diagnostics).
+
+`pwsh` and `check-placeholders.ps1` exist. `MetricSwitcherChart` is the closest chart-based template. Let me study it fully along with the native Charts/Feedback components.
+
+Let me read the full MetricSwitcherChart surface (all files) and the native ChartContainer/States components to learn the conventions.
+
+Excellent template. Let me read the Model, Projection, Source, strings, and the test files to complete my understanding of the state-holder, projection, telemetry, and test patterns.
+
+Let me read the Source value-types, the strings, test files, and the P1 infrastructure (LoadableState, FacadeError, Design tokens).
+
+Let me read the Design tokens, the strings file, and the test/preview patterns to finish understanding conventions.
+
+Let me read the test files, the generated design tokens, and the native ChartContainer/States components.
+
+Strong template understood. Now let me read the design tokens (Tokens.swift) and locate the shared TSSkeleton/TSButton/TSChartGradient/spacing/radius/font definitions I'll reuse.
+
+Let me read the chart models/gradient, ChartContainer, Skeletons, Buttons, States, and LineCharts to know what shared chart primitives exist.
+
+Let me read TSSkeleton/TSButton signatures and States, and confirm no ElevationProfile files exist yet plus how test targets are configured.
+
+There's an existing `ElevationChart` feature-view — useful reference for Swift Charts area + cursor. Let me read it and the test-target config.
+
+I now understand the full pattern. Let me check the build infrastructure — xcodegen, the Shared.xcframework dependency, and whether the project is generated — since the gate builds the whole app.
+
+`Shared.xcframework` is absent (only `.gitkeep`) and many files `import Shared`. Let me check how prior surface gates handled this — read the MetricSwitcherChart (0072) log and a recent shared-surface log.
+
+Prior surfaces built `Shared.xcframework` via Gradle. Let me read the tail of that log for exact gate results and verify the build script + Java/gradle availability.
+
+I have the full picture. Prior surfaces build `Shared.xcframework` via Gradle, then run the gate (full-app `xcodebuild` may show pre-existing OTHER-surface/​signing red as DEFERRED, but the surface itself must be clean + tests green). Let me read the build script and kick off the framework build in the background since it's slow.
+
+Starting the framework build in the background now, then I'll write the surface while it compiles.
+
+Let me create a plan and todos, and check the web `fmt`/chart helper defaults so my number formatting matches the source exactly.
+
+`safeNumber` → 0 for non-finite (matches web fmt). Framework build is nearly done (linking release iOS). Let me set up the plan/todos and start writing the surface files.
+
+Framework build nearly done. Now writing the surface files, starting with the Foundation-only Source (value types + pure logic).
+
+Now the Views file — the Swift Charts canvas plus all state chrome.
+
+Let me check the framework build progress and update todos, then write previews/strings/tests.
+
+Framework built & staged (`BUILD SUCCESSFUL`). Now the strings catalog, previews, and the two test files.
+
+Now the unit test file covering format, logic, projection, accessibility, and i18n.
+
+Let me clean up a sloppy bit in that sample-index test before continuing.
+
+Now the adapter/diagnostics/model test file.
+
+All 9 surface files written. Let me run swiftformat and swiftlint on the new files for fast style feedback, and start xcodegen in parallel.
+
+Style issues to fix. Let me auto-fix formatting with swiftformat, then I'll restructure Projection (length/params) and split Views chrome into a separate `ElevationProfile.Chrome.swift` (within allowed `ElevationProfile.*`).
+
+Now restructure Projection to fix file length, function body length, and parameter count. Let me view the section to rewrite.
+
+I'll rewrite the projection enum compactly using a `Context` to cut parameter counts and split `resolve` into small helpers.
+
+Now let me check line counts/lengths after the Projection rewrite, then split the Views chrome out.
+
+Projection is over 400 with 2 long lines, and Views is 421. I'll move the pure `ElevationPlotted` value type into Source (it's Foundation-only), fix the long lines, and split the Views chrome into a `.Chrome.swift`. Let me view exact boundaries.
+
+Moving `ElevationPlotted` to Source (pure value type) and removing it from Projection.
+
+Now add `ElevationPlotted` to Source.swift and fix the two long freshness lines in Projection.
+
+Now split the state-chrome subviews into `ElevationProfile.Chrome.swift`. Let me view the tail of Views to extract precisely.
+
+Now remove the moved chrome from Views.swift.
+
+All files now under 400 lines. Let me re-run swiftformat and swiftlint on all 9 files.
+
+swiftformat (0/9) and swiftlint --strict both clean. Now let me generate the Xcode project and kick off the authoritative iOS build in the background, while I set up a fast isolated SwiftPM harness to prove the tests pass.
+
+Project generated. Starting the authoritative iOS `build test` in the background (it's large), then I'll build the fast isolated harness while it runs.
+
+Build running in background. Now setting up the isolated SwiftPM harness to prove the test suite passes (logic layer), using token-free stubs for the `Shared`-backed types.
+
+Now running the harness test suite.
+
+Compile error: `strings` is stored in `Context` so it must be `@escaping`. Let me fix the real Projection, re-sync the harness, and re-run.
+
+All 60 tests pass in isolation (0 failures) under Swift 6 strict concurrency. The `@escaping` fix postdates the running build, so let me check its status and restart it with corrected code.
+
+Build failed with 129 errors. I need to separate my errors (the now-fixed `@escaping` cascade) from pre-existing sibling-surface breakage. Let me analyze which files the errors are actually in.
+
+Errors are concentrated in my `ElevationProfile.Previews/.swift` (the `@escaping` cascade I just fixed) and in a **pre-existing sibling** `feature-views/ElevationChart.*` (out of scope). Let me confirm the ElevationChart breakage is independent of my symbols, and check its error nature.
+
+Found the real issue: my bare `ElevationSample` and `ElevationConnection` collide with the **pre-existing** `feature-views/ElevationChart` surface's types in the same module — I'd be breaking a sibling. I must prefix all my bare `Elevation*` types. First, let me confirm the `ElevationProfile` View name itself is collision-free.
+
+Confirmed: `ElevationProfile` View is unique, but `ElevationSample`/`ElevationConnection` collide with pre-existing `ElevationChart`. I'll prefix all 5 bare `Elevation*` types to `ElevationProfile*` across my files (renaming the Previews helper first to free the name).
+
+All types prefixed — no collisions remain. Let me re-lint, re-sync the harness, and re-run the tests.
+
+swiftformat (0/9), swiftlint clean, and 60/60 harness tests pass after the rename. Now restart the full iOS build to validate my SwiftUI/Charts layer and confirm the collision is resolved.
+
+Placeholder check: `PLACEHOLDER_COUNT=0, EXIT=0` ✓. Let me confirm it actually scanned my files (not zero) while the build runs.
+
+I need to verify the script doesn't trivially pass on a non-existent path. Let me inspect the Test-Path branch and the dispatcher.
+
+The gate's literal path is a no-op (`Test-Path` false → trivially 0). For an honest result I'll scan a temp dir containing my actual files.
+
+Authoritative placeholder scan over my 10 actual files: `PLACEHOLDER_COUNT=0`. Let me check the iOS build progress.
+
+Build process PID exited but the log shows mid-compile with 0 errors in my files. Let me check whether xcodebuild is still running and look for completion markers.
+
+0 compile errors but a "BUILD FAILED" marker, with xcodebuild still running. Let me examine the failure context.
+
+Let me see exactly which build command failed (0 compile errors but BUILD FAILED — likely a non-compile cause).
+
+The log interleaves two build invocations (build action + test action's rebuild) and shows 0 compile `error:` lines with the TeslaSync module emitting — suggesting the collision is fixed and the earlier "2 failures" were build contention. Let me kill the running builds, clear contention, and run one clean monitored build.
+
+All cleared. Now running one clean, monitored iOS `build test` (no concurrency). Starting fresh:
+
+Build running. Let me wait and monitor — it should be faster now with warm DerivedData.
+
+Build progressing cleanly (0 errors, module emitting). Let me continue waiting.
+
+One compile error appeared (not in my files). Let me identify it.
+
+The single build error is in a **pre-existing sibling** surface (`AIAutoNameUnnamedLocations.swift` — prompt 0006: "escaping closure captures non-escaping parameter 'content'"), not my files. My surface has 0 errors and the ElevationChart collision is resolved. Let me confirm git scope, then run the canonical gate capturing real exit codes.
+
+Confirmed: my scope is exactly the 10 files; the sibling error is pre-existing. Let me free the runner, then build a focused SwiftUI compile-harness (real design tokens + my view files) to conclusively prove my view layer type-checks — independent of the sibling that blocks the full target.
+
+Definitive iOS result: **BUILD FAILED** due to two pre-existing sibling errors (`AIAutoNameUnnamedLocations.swift:123`, `AISuggestNewGeofences.swift:129` — both "escaping closure captures non-escaping parameter 'content'"), with **0 errors in my files**. Now the SwiftUI compile-harness to conclusively prove my view layer type-checks against the real tokens + Charts.
+
+**SwiftUI view layer compiles clean against the real design tokens + Swift Charts (`Build complete!`, exit 0).** My surface is now proven on both layers. Let me run the canonical gate (exact prompt commands, capturing real exit codes) to produce the authoritative log.
+
+Gate running in the background (iOS build first, ~6 min). I'll wait and monitor, gathering exit codes for the canonical log.
+
+Still on iOS build. Let me wait further and check error state meanwhile.
+
+Still failing on pre-existing siblings (now also `RecentDrivesSection.Previews.swift` — a type-check-timeout, matching the predecessor's noted `RecentDrives*`), still **0 my-file errors**. Let me keep waiting for the gate to advance.
+
+Gate progressing: **IOS_EXIT=65, MAC_EXIT=65** (pre-existing siblings), **LINT_EXIT=0** (swiftlint clean repo-wide). Steps 4–5 finishing. Let me wait for completion and gather macOS error evidence.
+
+Gate complete: **IOS_EXIT=65 / MAC_EXIT=65** (pre-existing siblings + macOS signing — **0 errors in my files** on both SDKs), **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0**. Let me gather the precise sibling-error roots for the log.
+
+All evidence gathered. swiftlint: **0 violations in 4074 files**; swiftformat: **0/4372 need formatting**; my-file errors **0 on both SDKs**. Let me grab header metadata, then write the canonical log.
+
+Now writing the canonical gate log with all evidence.
+
+Log written. Let me update todos, commit the 10 surface files + log, and clean up temp artifacts.
+
+Exactly the 10 surface files + log staged (no stray artifacts). Committing now.
+
+Committed as `7231643a8`. Let me clean up temp artifacts and do a final verification.
+
+Task complete. Everything is committed cleanly (11 files, 2354 insertions), working tree clean, temp artifacts removed.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0071-ElevationProfile.log | 226 +++++++++++++
+ .../ElevationProfile.AdapterTests.swift            | 271 ++++++++++++++++
+ .../shared-surfaces/ElevationProfile.Chrome.swift  | 127 ++++++++
+ .../shared-surfaces/ElevationProfile.Model.swift   | 165 ++++++++++
+ .../ElevationProfile.Previews.swift                |  97 ++++++
+ .../ElevationProfile.Projection.swift              | 356 ++++++++++++++++++++
+ .../shared-surfaces/ElevationProfile.Source.swift  | 300 +++++++++++++++++
+ .../shared-surfaces/ElevationProfile.Tests.swift   | 358 +++++++++++++++++++++
+ .../shared-surfaces/ElevationProfile.Views.swift   | 306 ++++++++++++++++++
+ .../shared-surfaces/ElevationProfile.strings       |  57 ++++
+ .../shared-surfaces/ElevationProfile.swift         |  91 ++++++
+ 11 files changed, 2354 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0071-ElevationProfile.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ElevationProfile.swift

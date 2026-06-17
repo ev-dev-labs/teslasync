@@ -1,0 +1,198 @@
+I'll start by exploring the repository structure to understand the codebase, the web source, and the existing Apple app architecture.
+
+Good — I'm on macOS with xcodebuild, swiftlint, and swiftformat available. Let me read the web source and explore the Apple app structure.
+
+There's already a populated `dashboard-widgets` directory. Let me examine the existing pattern and check if ChargingScheduleWidget already exists.
+
+ChargingScheduleWidget doesn't exist yet. Let me study the existing widget patterns and shared infrastructure. I'll read the SuperchargerHistoryWidget set (charging-related, complete with tests/strings) as a template.
+
+Now I understand the per-widget file pattern. Let me read the remaining template files and the shared infrastructure (tokens, registry types, feedback components).
+
+Excellent — I have a clear picture of the pattern. Now let me locate the shared infrastructure: design tokens, registry types, skeleton component, and the web Timeline/Badge/EmptyState components that the source uses.
+
+Let me read the core infrastructure and the web components the source depends on.
+
+Let me read the design tokens, skeleton, web Badge/useDateFormat/WidgetShell, and the widget types.
+
+Let me read the design tokens and find where `Color.TS`/`Font.TS`/`TSSpacing` are defined, plus the widget types and Skeletons.
+
+Token definitions appear generated. Let me check the project.yml build config, Resources, and Scripts to understand token generation and how `dashboard-widgets` files get compiled.
+
+Design tokens live in `apps/design/generated/apple`. Let me inspect those token files, the Skeletons component, and find a widget that binds vehicle-state + live-signals (closest data shape to my source).
+
+Let me read the design tokens and the Skeletons component, plus examine a widget that reads vehicle state + live charge signals (RangeEstimateWidget looks closest).
+
+Now let me study the closest-matching widgets that bind vehicle-state + live-signals to mirror their state-holder seam precisely.
+
+I now have a thorough grasp of the architecture. Let me check how signals are modeled (DigitalTwinMini.Inputs), the web vehicle-state shape, and the lint configs.
+
+Let me read the lint configs (at `apps/apple/`), the web vehicle-state hook, and the placeholder-check script referenced by the gate.
+
+Tooling is available and iPhone 16 simulator is booted. The critical question is whether `Shared.xcframework` (KMP) can be built. Let me inspect the build script.
+
+KMP shared module exists with gradlew + Java 17. Let me check how prior widget prompts were actually verified — the logs directory should reveal whether the full xcodebuild gate ran or a host-based approach was used.
+
+Let me read the full template log to understand the exact verification approach and EXIT/STATUS determination used by prior widgets.
+
+I now fully understand the established verification precedent (surface-scoped host gates green + governed ADR-012 deferral of the aggregate Xcode build). Let me confirm the registry metadata, the i18n namespace, and the web date/time formatting to ensure faithful parity.
+
+I have everything I need to design faithfully. Let me verify the exact Foundation time-format output, confirm `useVehicles` shape, and ensure none of my intended Swift type names collide with sibling widgets (to avoid the known duplicate-symbol drift).
+
+The template gives "3:30 PM" (1-digit hour) vs the web's 2-digit "03:30 PM". Let me check how sibling widgets format clock times to follow the established convention rather than invent one.
+
+I've confirmed the convention: sibling widgets use idiomatic `.short`/template time styling (locale hour), not the web's 2-digit. No type-name collisions. Let me set up tracking and write a brief plan, then build the surface.
+
+Now I'll write the Adapter (pure, Foundation-only — the projection that mirrors the web source's data pipeline).
+
+Now the Model (state-holder seam + telemetry + i18n facade), mirroring the established RangeEstimate/SuperchargerHistory seams.
+
+Now the subviews (freshness chip, banner, mode/pending badges, the timeline, the tall detail row, compact hero).
+
+Now the main View — registration, header, and every state (compact + standard).
+
+Now the Previews, strings catalog, and Tests.
+
+Now the i18n strings catalog:
+
+Let me verify the exact `"jmm"` formatter output for my test fixtures before asserting on them.
+
+Confirmed all fixture outputs. Now the comprehensive test suite:
+
+I introduced an odd non-ASCII shim by mistake. Let me remove it and use plain `XCTAssertFalse`.
+
+All 7 files are written. Now let me run the surface-scoped host gates. First swiftformat (auto-fix then lint) and swiftlint on the surface files.
+
+swiftformat adjusted 2 files. Let me confirm lint-clean on both swiftformat and swiftlint for the surface, and review what changed.
+
+swiftformat is clean. swiftlint flags 3 length violations (Adapter file/function length, Tests file length). I'll split inputs+formatters into a sibling `ChargingScheduleWidget.Signals.swift`, extract a timeline helper, and split the tests — all idiomatic here. Let me view the current Adapter post-format to craft precise edits.
+
+I'll move the inputs+formatters into a sibling `ChargingScheduleWidget.Signals.swift` and slim the Adapter (extracting a timeline helper to fix the function-length rule).
+
+Now I'll recreate the Adapter cleanly (trimmed, with an extracted timeline helper) since the inputs/formatters now live in Signals.swift.
+
+Now split the oversized Tests file into two (both end in `Tests.swift`, so both compile into the test targets and match the allowed-files glob).
+
+Now the second test file (model + registry + accessibility):
+
+Now re-run swiftformat (write) on the new/changed files, then swiftformat --lint and swiftlint --strict across all surface files.
+
+All files are now well under 400 lines. Let me run the full surface lint gates on all 8 swift files.
+
+The glob missed the main `ChargingScheduleWidget.swift` (no second dot). Let me lint all 8 files explicitly including the view.
+
+All 8 files pass swiftformat and swiftlint --strict with zero violations. Now the placeholder gate on each surface file:
+
+Placeholder gate is clean (COUNT=0). Now the most important gate — a REAL XCTest run via an isolated SwiftPM harness. Let me locate the shared symbols my surface compiles against (TSSkeleton/TSCard deps) to assemble a faithful harness.
+
+Cards.swift has a deep dependency chain. The faithful, minimal approach (matching precedent) is: real Tokens.swift + real DashboardWidgetInfra.swift + a tiny `TSSkeleton` shim. Let me confirm my surface references no other shared symbols.
+
+My surface only needs Tokens, DashboardWidgetInfra, and TSSkeleton. Let me assemble the isolated SwiftPM harness (real tokens + real registry types + a minimal TSSkeleton shim + my surface + tests) and run a REAL XCTest.
+
+Now run the real XCTest suite against the macOS SDK:
+
+36 tests ran with 6 failures. Let me see exactly which assertions failed.
+
+The failures are invisible: modern Foundation emits a narrow no-break space (U+202F) before AM/PM, not a regular space. I'll normalize that to a plain space in the formatter — cleaner for display, VoiceOver, and tests. Let me update `ChargingScheduleFormat.time`.
+
+All 36 tests pass (Parse 5, Format 5, Mode 3, Adapter 7, Model 9, Registry 3, Accessibility 4). Let me re-lint the modified Signals file and run the iOS 18 simulator SDK typecheck.
+
+iOS 18 typecheck passes and Signals re-lint is clean. Now the governed full-Xcode gate: let me generate the project and attempt the aggregate iOS/macOS builds to characterize them (per ADR-012 precedent). First, xcodegen.
+
+xcodegen succeeded. The build's pre-action builds the KMP `Shared.xcframework` via Gradle (Kotlin/Native). Let me probe whether that toolchain is available/cached before attempting the full build.
+
+The konan toolchain is present but Gradle is slow to configure. Let me attempt the Shared.xcframework build with a real timeout in the background.
+
+The cold KMP Gradle/Kotlin-Native build exceeded an 8-minute timeout (GRADLE_EXIT=124) — so the aggregate xcodebuild's `Shared.xcframework` prerequisite can't be produced quickly here. Before finalizing the deferral, let me confirm the pre-existing sibling duplicate-symbol drift (which the precedent documented makes the aggregate build red regardless of my surface) still exists, and that my surface does NOT contribute to it.
+
+The duplicate-symbol drift the precedent cited has since been reconciled — no sibling redeclares the shared types, and neither does my surface. The sole remaining aggregate-build blocker is the cold KMP `Shared.xcframework` build time. Let me relaunch it in the background (it may now resume incrementally) while I prepare the log, then attempt the real xcodebuild if it completes.
+
+While the KMP build runs, let me cross-verify i18n parity: every `t()` key in the web source must have a matching key in my `.strings` catalog and be resolved in my Swift code.
+
+The trailing quote leaked into my key extraction. Let me fix the check:
+
+Full i18n parity confirmed (16/16 keys, 0 misses). Let me check the KMP build progress.
+
+KMP build is configuring (shared runner has 27 contending Gradle processes from parallel slots). Let me gather final artifact metrics while it builds.
+
+Let me check the KMP build status again.
+
+Kotlin/Native compilation is active (15 native processes) but the framework isn't produced yet. Let me wait for it to progress.
+
+Now it's progressing — Kotlin compilation is cached (UP-TO-DATE), and it's in the framework-linking phase. Let me wait for the XCFramework assembly to finish.
+
+The XCFramework assembly is underway (fat-framework stage). Let me keep waiting for completion.
+
+Release frameworks are linking now (the target produces the release XCFramework). Let me continue waiting.
+
+The DEBUG `Shared.xcframework` built successfully; only the optimized RELEASE link exceeded the 25-min timeout (GRADLE_EXIT=124) on this heavily-contended shared runner. I now have a usable framework. Let me stage it and run the real iOS xcodebuild with the slow release pre-action bypassed, to get genuine aggregate-build evidence for my surface.
+
+Staged the debug framework (iOS device, iOS simulator, macOS slices) and stripped the slow pre-action. Now the real iOS aggregate build:
+
+Good signs — 0 errors so far and the build reached `EmitSwiftModule` for the TeslaSync target. Let me wait for completion.
+
+Still compiling the full app module — 0 errors, no ChargingSchedule errors. Let me keep waiting for the build to finish.
+
+The entire app module compiled with **0 errors** (1691 compile tasks) and reached the link phase. Let me wait for the final build result.
+
+🎉 **`** BUILD SUCCEEDED **` — XCB_IOS_EXIT=0.** The full iOS app target (all ~400 sibling widgets + my surface + the KMP Shared.xcframework) compiled and linked with **zero errors**. Now let me run my surface's XCTests on the booted iPhone 16 simulator (filtered to my classes) for real on-device test evidence within the full app.
+
+Test action failed fast (52s) — likely a test-bundle build issue, not my tests. Let me inspect the actual errors.
+
+The test **bundle built and linked successfully** (including my test files) — the failure is purely `xcrun: error: unable to find utility "simctl"` at the simulator-launch step, an environment/toolchain-selection issue, not my surface. Let me diagnose and retry the run reusing the already-built bundle.
+
+`xcode-select` and `xcrun -f simctl` both resolve correctly to Xcode. The real failure is *"Test crashed with signal kill before establishing connection / never finished bootstrapping"* — the **hosted host-app crashes on launch** in a backend-less simulator (this blocks all hosted unit tests, not my surface). Let me confirm by launching the built app directly in the simulator.
+
+The app actually launches fine via simctl (PID 17523) — so the earlier test failure was transient (CoreSimulator contention from 27 concurrent Gradle builds + the secondary simctl-diagnostics error). Now that the parallel Gradle builds have subsided, let me retry the on-simulator tests reusing the already-built bundle.
+
+🎉 **On-simulator iOS XCTest: 36/36 PASS, EXIT=0** (hosted in the real TeslaSync.app on iPhone 16). The earlier failure was transient CoreSimulator contention. **The iOS gate is fully green: build + test both pass.**
+
+Now the macOS gate. Let me strip the macOS scheme's slow pre-action and attempt the build with signing disabled (the duplicate-symbol drift that previously blocked it is now reconciled).
+
+macOS compiled but failed at the **link** step (not compilation). Let me see the specific linker error.
+
+macOS **compiles** my surface and all widgets cleanly (0 ChargingSchedule errors); it fails only at **link** with `cannot link directly with 'SwiftUICore'` → undefined symbols — a known Xcode-26 toolchain linker restriction, not my code. Let me see which symbols are undefined to confirm it's environmental, and verify my files don't import SwiftUICore.
+
+**Definitive root cause for macOS:** the undefined symbols (`_sqlite3_enable_load_extension`, `_sqlite3_load_extension`) come from **the KMP Shared framework's SQLiter/touchlab SQLite driver** (`Shared[10](libco.touchlab:sqliter-driver-cinterop...)`) — a Shared-framework + macOS-sqlite linkage concern, with **zero** ChargingSchedule involvement. My surface compiles clean on macOS (reached link) and passes 36/36 on the macOS SDK via the harness. This is the governed environmental macOS deferral.
+
+The iOS gate is fully green (build + test). Let me verify git ignores the generated project/framework so only my surface + log get committed.
+
+All generated artifacts are gitignored; only my 9 surface files are untracked, and the 2 pre-existing web changes are untouched. Let me run the gate's tree-wide swiftformat/swiftlint to characterize them honestly, then write the log.
+
+Tree-wide swiftformat is clean (0/1923). swiftlint shows **1** violation across 1919 files — my surface was already 0/8, so it's a pre-existing sibling. Let me confirm it's not mine.
+
+The lone tree-wide swiftlint violation is in a pre-existing sibling (`LiveSignalSparklinesWidget.Builder.swift`, prompt 0057) — **not my surface** (mine is 0/0), and outside my allowed files. Now let me capture the toolchain versions and write the verification log.
+
+Now I'll write the comprehensive, honest verification log.
+
+The log is written. Now let me clean up temp/gitignored build artifacts, restore the repo to its original state, and verify final lint once more before committing.
+
+Cleanup complete (Frameworks restored to `.gitkeep`, generated project + temp artifacts removed); final surface lint is 0/8 format, 0 violations. Now let me stage exactly my 9 surface files + the log (not the pre-existing web changes) and commit.
+
+Exactly 9 surface files + 1 log staged; the pre-existing web changes remain unstaged. Committing:
+
+Committed as `7cceb520c`, working tree clean except the pre-existing web changes I correctly left untouched. Let me finalize the task tracker.
+
+The task is complete. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ ...shboard-widgets-0023-ChargingScheduleWidget.log | 207 +++++++++++++
+ .../ChargingScheduleWidget.Adapter.swift           | 272 +++++++++++++++++
+ .../ChargingScheduleWidget.Model.swift             | 284 ++++++++++++++++++
+ .../ChargingScheduleWidget.ModelTests.swift        | 233 ++++++++++++++
+ .../ChargingScheduleWidget.Previews.swift          | 138 +++++++++
+ .../ChargingScheduleWidget.Signals.swift           | 176 +++++++++++
+ .../ChargingScheduleWidget.Tests.swift             | 268 +++++++++++++++++
+ .../ChargingScheduleWidget.Timeline.swift          | 301 +++++++++++++++++++
+ .../ChargingScheduleWidget.strings                 |  57 ++++
+ .../dashboard-widgets/ChargingScheduleWidget.swift | 333 +++++++++++++++++++++
+ 10 files changed, 2269 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0023-ChargingScheduleWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.Signals.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.Timeline.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.swift

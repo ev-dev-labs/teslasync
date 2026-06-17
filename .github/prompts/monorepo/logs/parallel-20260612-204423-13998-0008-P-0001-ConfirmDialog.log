@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+I have the spec. Now let me explore the Apple app structure and check toolchain availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the TeslaSync directory structure and find existing patterns.
+
+There's an existing `modals-dialogs` directory with established patterns. Let me examine existing modal implementations to follow conventions.
+
+There's already a `ConfirmDialog.*` set. Let me read the existing files to understand whether they map to the AI confirm dialog spec or something else.
+
+The existing `ConfirmDialog.*` files map to `components/ui/ConfirmDialog.tsx` (prompt 0012 — destructive action). My prompt (0001) targets `components/ai/ConfirmDialog.tsx` (the **AiConfirmDialog** — a different component). This is a naming collision. Let me investigate the conventions before deciding the filename.
+
+Two distinct `ConfirmDialog` artifacts exist: 0001 (`ai/ConfirmDialog.tsx` — mine) and 0012 (`ui/ConfirmDialog.tsx` — already built). Let me read the 0001 logs and locate both prompt files to understand the intended resolution.
+
+A prior 0001 run created `ConfirmDialog.*` files for the AI dialog, but they were later overwritten by the 0012 `ui/ConfirmDialog` surface (filename collision). I must not destroy 0012. Let me check git history and locate the actual prompt files to resolve the collision correctly.
+
+Only one commit touches `ConfirmDialog.swift` (the 0012 version currently in tree). Let me read both prompt files (0001 and 0012) to see their declared native output paths and how the collision should be resolved.
+
+Both 0001 and 0012 prompts declare the identical output path `ConfirmDialog.*` — a real collision between two different web components. Let me inspect the commit history to confirm the current state and see whether the AI version was ever committed.
+
+There's a commit `2ba5040a5 add AiConfirmDialog surface (P4)` — the 0001 surface was reconciled to `AiConfirmDialog.*`. Let me inspect that commit and check whether those files currently exist in the tree.
+
+Now it's clear. Commit `2ba5040a5` (on a different parallel branch, NOT an ancestor of HEAD) resolved the collision by naming the 0001 surface `AiConfirmDialog.*`. Those files don't exist on my branch. My task: build the `AiConfirmDialog.*` surface here. Let me review the canonical implementation from that commit and the on-branch conventions (current 0012 surface).
+
+The runner has full Xcode 26.5 (unlike the prior CLT-only run). Let me restore the canonical `AiConfirmDialog.*` surface files from commit `2ba5040a5`, then verify they integrate with the current branch's shared infrastructure and actually build here.
+
+Files restored. Key environment facts: `Shared.xcframework` is **absent** (only `.gitkeep`), no `.xcodeproj`, simulators are iPhone 17-series (no "iPhone 16"). Let me examine `project.yml` to understand the Shared dependency, scheme pre-actions, and whether `modals-dialogs` is wired into the target.
+
+Critical findings: app targets depend on the absent `Frameworks/Shared.xcframework` (built via a Kotlin/Gradle pre-action script), and **`TeslaSync/modals-dialogs` is not registered in any `project.yml` target** — so `xcodebuild` won't compile my files regardless. `project.yml` is outside my allowed files. Let me read the restored surface files in detail to understand their dependencies and plan real verification.
+
+The surface depends on shared primitives: `TSFadeIn`, `TSGlassPanel`, `TSButton`, `TSSpacing`, `TSRadius`, `Color.TS.*`, `Font.TS.*`. Let me read the rest of the restored files and the shared-framework build script to plan real compilation verification.
+
+Let me read the remaining restored files: Adapter, States, Previews, strings, and the two test files.
+
+I now understand the full surface. Let me read the remaining files (Previews, strings, tests) and locate the shared primitive definitions to plan a real compile.
+
+Dependencies are SwiftUI-only primitives (no `Shared` coupling): `Tokens.swift`, `Cards.swift`, `Buttons.swift`, `Motion.swift`. Let me check their transitive closure and read the test files to plan a real compile + test run.
+
+Dependencies are clean (SwiftUI + tokens only). Let me read the last test file and verify the token definitions exist, then I'll set up a real SwiftPM compile + test harness.
+
+All tokens exist on the current branch. Let me verify the `TSGlassPanel`, `TSButton`, and `TSFadeIn` initializer signatures match the surface's usage, then set up a real compile.
+
+All signatures match the current branch. Now let me run a **real compile** of the shipped surface together with its actual shared dependencies (tokens + primitives) against the macOS SDK.
+
+Dependency files pull in more of the Components layer (`TSPanelTitle`, `TSCaption`, `.tsGlassPanel()`). Let me compile against the **entire Components library** + tokens (the real shared UI module, which is `Shared`-free) together with my surface — a complete, faithful integration compile.
+
+The full Components glob drags in unrelated Maps/Charts deps. Let me locate the exact files defining the symbols my surface's direct dependencies need, and compile a precise closure (UI + Motion + tokens) — excluding unrelated Maps/Charts.
+
+`.tsGlassPanel()` is in `Sources/Design/TSMaterial.swift`. Let me compile the precise closure: tokens + TSMaterial + UI/{Cards,Buttons,Typography} + Motion + my surface.
+
+Shipped surface compiles cleanly against real primitives (EXIT=0). Now let me verify the Previews (DEBUG path with `#Preview` macros) compile, and confirm the `#Preview` macro works under this toolchain.
+
+The `#Preview` macro works (the errors are the *dependency files'* own preview blocks needing the full UI library — `TSBadge` etc.). To verify MY Previews cleanly, I'll strip the dependency files' trailing DEBUG preview blocks in temp copies. Let me check their structure.
+
+My Previews compile cleanly (EXIT=0). Now the critical step — actually **run** the XCTest suites via a SwiftPM package using the real primitives.
+
+All **34 XCTest tests pass** (0 failures) via real `swift test`. Now let me run SwiftLint (strict) and SwiftFormat (lint) on the surface files using the repo configs.
+
+SwiftLint: 0 violations. SwiftFormat: 0 files need formatting. Now the placeholder gate via pwsh.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now let me capture concrete evidence for the BLOCKED `xcodebuild` gate steps. First, the shared-framework build script.
+
+The `xcodebuild` gate is blocked by two factors outside my allowed files: (1) `Shared.xcframework` requires a Gradle/Kotlin-Native build (no system gradle), (2) `modals-dialogs` isn't registered in `project.yml`. Let me capture concrete evidence by generating the project and attempting a build (bounded by timeout).
+
+Project generates. Note: `xcodebuild` CLI does not run scheme pre-actions, so the build will fail on the missing `Shared.xcframework` dependency. Let me capture that concrete evidence.
+
+Let me capture the build error to a file with a bounded wait (the missing-framework error surfaces at link time after compiling the large tree).
+
+While the build runs, let me check its progress.
+
+Unexpectedly, this runner **has** the Kotlin/Native toolchain cached and `xcodebuild` IS running the Gradle pre-action. The build completed — let me read the result.
+
+The build reached the heavyweight Gradle/Kotlin-Native pre-action. Critically, even a full app build won't compile my files because `modals-dialogs` isn't in `project.yml`. Let me stop the orphaned build, confirm that membership gap, and check the prior committed log's STATUS convention.
+
+I now have the established disposition from the prior committed run. Let me clean up the orphaned build and capture the decisive membership proof (the generated project has zero references to my surface).
+
+Decisive proof captured: **0 references to `AiConfirmDialog`** (and 0 to `modals-dialogs`) in the generated Xcode project, while wired tiers like `feature-views` appear — so my surface is structurally not compiled by the app build. Let me clean up the orphaned build processes I spawned.
+
+The safety wrapper requires literal numeric PIDs. Let me re-list and kill them explicitly.
+
+Note: PID 59170 is **slot-9** (another parallel agent) and the openjdk GradleDaemons are shared infrastructure — I'll leave those. Let me stop only my slot-8 gradlew launchers (56328, 58549).
+
+Build processes cleaned up. Let me verify git status is clean (generated artifacts git-ignored) and check whether the build staged a `Shared.xcframework`.
+
+Git is clean — only my 10 surface files staged; generated project is git-ignored; no framework staged. Let me confirm the documented pending-verification tracker references the unrelated full-app failures, so my log cites it accurately.
+
+The tracker confirms the established cohort-wide disposition: every P4-apple surface verifies green in isolation while the full-app `xcodebuild` is red for **pre-existing, unrelated** reasons (`RecentDrivesSection.Previews.swift` type-check timeout, `AIGeofenceAwareAutomationSuggestions.swift:141`, macOS dev-signing) — both blocker files exist on this branch. Let me add the iOS-18 SDK typecheck (cohort convention checks both SDKs) before writing the log.
+
+iOS-18 typecheck passes too (EXIT=0). I have comprehensive cross-platform verification. Let me clean up temp artifacts and write the gate log.
+
+Cleanup done, only my 10 surface files staged. Now let me write the comprehensive, honest gate log.
+
+Log written. Let me run a final consolidated green-check before committing (no commit on red).
+
+All green at commit time. Let me stage the log and commit.
+
+Exactly 11 files staged (10 surface + log). Committing now.
+
+Committed (fdbdaa8e2), tree clean. Final sanity check: confirm the commit contents, that the sibling 0012 `ConfirmDialog` surface is untouched, and no stray build artifacts remain.
+
+The 0012 sibling surface is intact (10 files, still the destructive-action `ui/ConfirmDialog` parity). Commit has 11 files. The new `xcodebuild` PIDs appeared *after* my cleanup — let me confirm they belong to the other parallel slot (slot-9), not mine.
+
+Confirmed — those `xcodebuild` processes use `-destination name=iPhone 16` (absent on this runner) and started after my cleanup; they belong to another parallel slot, not mine. I'll leave them untouched.
+
+The task is complete. Final summary:
+
+## Summary
+
+Shipped the **`AiConfirmDialog`** surface — the SwiftUI parity of `components/ai/ConfirmDialog.tsx` (the Helix AI tool-use approval dialog) — to `apps/apple/TeslaSync/modals-dialogs/`.
+
+**Naming-collision resolution (key decision):** The 0001 prompt's generated path `ConfirmDialog.*` collides with the already-shipped **0012** sibling (`components/ui/ConfirmDialog.tsx`, the destructive-action dialog, in-tree at `ConfirmDialog.*`). Overwriting it would violate covenant #7 (predecessor bypass). I shipped as **`AiConfirmDialog.*`** — matching the web component's exported symbol and the existing `Ai*` convention — leaving 0012 intact (verified: 10 files untouched).
+
+**Committed** (`fdbdaa8e2`, 11 files): 10 surface files (`.swift/.Adapter/.Model/.Seams/.Views/.States/.Previews/.strings/.ModelTests/.Tests`) + the gate log.
+
+**Verification (all real, on this runner):**
+- `swiftc -typecheck` shipped surface + **real** design system — **macOS-15 = 0**, **iOS-18 sim = 0**, Previews/`#Preview` = 0 (Swift 6, strict concurrency)
+- `swift test` (real XCTest via isolated SwiftPM against real primitives) — **34/34 passed**
+- `swiftlint --strict` = **0 violations** · `swiftformat --lint` = **0/9** · placeholder gate = **0**
+
+**Full-app `xcodebuild build test`: BLOCKED** at the integration/acceptance tier (logged with evidence, `STATUS=BLOCKED`, `EXIT=1`) — not caused by this surface: the `modals-dialogs` tier isn't wired into `project.yml` (**0 references** to the surface in the generated `.pbxproj`; `project.yml` is outside allowed files), and the whole-app scheme is red for pre-existing unrelated sibling errors + macOS dev-signing per `apps/macos-pending-verifications.md`. This matches the disposition of the entire P4-apple cohort and the predecessor for this surface.
+
+Working tree is clean; temp/generated artifacts removed; my build processes cleaned up (other slots' left intact).
+

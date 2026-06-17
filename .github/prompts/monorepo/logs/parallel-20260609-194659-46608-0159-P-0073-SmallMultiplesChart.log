@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source spec and explore the Apple project structure.
+
+Now let me examine the existing shared-surfaces patterns. I'll look at the full file listing and find a chart-based surface to use as a reference template.
+
+Let me examine the `ChartContainer` and `ChartLegend` surfaces as the closest chart-related references to understand the file structure pattern.
+
+`ChartContainer` is the canonical chart reference with the full file pattern. Let me read its core files to learn the conventions precisely.
+
+The ChartContainer pattern is rich. Let me study the lighter `ChartLegend` (a presentational chart surface, closer in spirit to SmallMultiplesChart) end-to-end, plus the ChartContainer body/views to see how Swift Charts and states are rendered.
+
+Excellent reference. Let me read the rest of ChartLegend (Adapter, Projection, strings, tests, previews) and locate the shared design tokens (P1/S9) to learn the exact primitives available.
+
+Now let me locate the shared design tokens (P1/S9), find how Swift Charts is used in a real line-chart surface, and understand the Xcode project structure (how files get included).
+
+Let me find where the design tokens and shared primitives are defined, and look at a real Swift Charts line-chart surface for reference.
+
+It uses XcodeGen. Let me read `project.yml` to understand targets, schemes, and source inclusion, plus the design tokens.
+
+Now I understand the build system (XcodeGen). Let me check the toolchain prerequisites: xcodegen, the Shared.xcframework, pwsh, the placeholder checker, and existing logs for format reference.
+
+Let me inspect the Shared.xcframework build script (KMP dependency risk) and check how prior surface logs concluded (DONE vs BLOCKED).
+
+The capability picture is now clear: prior per-surface runs got iOS fully green (build+test+lint+format+placeholder) and only macOS *signed test execution* was blocked (pre-existing repo config). Let me read the test/preview patterns, the design tokens, and a real Swift Charts line surface.
+
+Let me read the generated design tokens, a real Swift Charts line-chart surface (sparklines — closest to small multiples), and the ChartLegend model/UI test pattern.
+
+Now I have the full token vocabulary. Let me read a real Swift Charts line surface, the model/UI test pattern, and the placeholder checker.
+
+Let me read the placeholder patterns, the model-test portion of ChartLegend.Tests, and a real Swift Charts `LineMark` surface.
+
+I have a thorough understanding. Let me read one real Swift Charts `LineMark` surface to nail the chart idiom, then I'll start building.
+
+I now have the complete pattern. Let me quickly check the web `useDateFormat` hook (to faithfully port `formatTime`) and confirm there's no existing native date helper I should reuse, then I'll start building.
+
+I now have a complete understanding of the architecture, tokens, test/preview patterns, Swift Charts idiom, and the gate. Let me set up a plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure Adapter core.
+
+I need to fix the `strideSample` port — my identity check was broken. Let me rewrite it to faithfully track the last-visited index like the web source.
+
+Now the Projection (pure resolved view-state).
+
+I need to define `SmallMultiplesChartInput` (referenced by the projection). I'll add it to the Adapter (pure layer), consistent with where `ChartLegendInput` lives.
+
+Now the Model (state-holder seam, telemetry, source, strings facade).
+
+The `Resolved` box is over-engineered. Let me simplify to match ChartLegend's direct `resolved` property exactly.
+
+Now the surface entry view and the Views file. Updating todos first.
+
+Now the Views file — the grid, the Swift Charts mini-line cell with shared time cursor, and all leaf-state views.
+
+Let me verify the `TSSkeleton`, `TSButton`, and `TSFadeIn` signatures before building, since I assumed `width: nil` for a full-width skeleton.
+
+`TSSkeleton` confirmed. Let me verify `TSButton` and `TSFadeIn` signatures, then generate the project and do a first compile.
+
+`TSButton` confirmed. Let me cast the `Double`→`CGFloat` frame/skeleton values defensively, then write the strings, previews, and tests.
+
+Now the strings catalog, previews, and the two test files.
+
+Now the test files. First the pure-core adapter tests.
+
+Now the projection + model tests.
+
+All 9 files written. Let me update todos, regenerate the Xcode project, and run the fast linters on the new files first (before the heavy KMP build).
+
+Project generated. Now run swiftformat and swiftlint on the new files (fast, dependency-free).
+
+swiftformat wants `return` removed in the switch. Let me auto-fix with swiftformat (write mode) on the new files — the ecosystem-tool approach.
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+Only a file-length violation (424 > 400). The house pattern splits view files. Let me move the chart + helpers into `SmallMultiplesChart.Chart.swift`. First let me view the current formatted Views file boundaries.
+
+The fix is to split the chart + helpers into a dedicated `SmallMultiplesChart.Chart.swift` (matching the house `.Chart.swift` convention). Let me create it and trim Views.
+
+Now remove those moved sections from Views.swift and drop the now-unused `import Charts`.
+
+Now re-run both linters on all 9 files and regenerate the project (new file added).
+
+All 9 files pass both linters cleanly (FORMAT_EXIT=0, LINT_EXIT=0). Now the placeholder gate, run exactly as the gate specifies.
+
+Placeholder gate passes. Now the heavy builds. Let me regenerate the project (new file added), verify the iPhone 16 simulator exists, and check the KMP shared module prerequisites.
+
+Project regenerated with all 9 files (60 pbxproj refs), iPhone 16 sim booted, KMP shared module present. The biggest risk is the KMP `Shared.xcframework` Gradle build (scheme preAction). Let me build it standalone first to gauge feasibility.
+
+KMP build is still running (cold Gradle/Kotlin-Native bootstrap — expected). Let me continue waiting.
+
+Still bootstrapping (output buffered through `tail`). Cold KMP builds download Gradle + Kotlin/Native — this can take 10–20 min. Continuing to wait.
+
+KMP `Shared.xcframework` built successfully (8m, now cached + staged). Now the iOS gate: full `build test`. Running in background with a long wait.
+
+The `&`-backgrounded subshell didn't persist. Let me run xcodebuild directly as the async process instead (the correct pattern), teeing to a log.
+
+iOS build+test finished. Let me extract the verdict and my surface's test results from the 1.6 MB log.
+
+Build failed — but the 235 errors are all in **pre-existing** unrelated files (`RecentDrivesListWidget`, `RecentDrivesSection`) showing "ambiguous for type lookup" — duplicate type definitions I didn't create. Zero errors mention `SmallMultiples`. Let me confirm this is pre-existing baseline breakage, not caused by my additions.
+
+Conclusive: **all 235 errors are pre-existing**, in unmodified files (`RecentDrivesModel`/`RecentDrivesConnection` are each defined twice across two predecessor surfaces; same for StateTimeline). `git status` confirms I added **only** SmallMultiples-prefixed files. Zero errors are in my surface. This is pre-existing baseline breakage in predecessor surfaces that are explicitly **out of scope** ("Other surfaces… each has its own prompt") and outside my allowed files.
+
+Per covenant rule 7 (surface predecessor gaps, don't work around them), I must not "fix" those files. Let me gather positive evidence my core compiles in isolation, and confirm the StateTimeline duplication.
+
+The standalone type-check caught a **real Swift 6 concurrency bug in my code** — `static let` `ISO8601DateFormatter` isn't `Sendable`. Excellent catch (it was masked in the app build by the 235 pre-existing errors). Let me fix it by using local formatter instances.
+
+Now re-verify the core type-checks clean, and identify the minimal dependency set to also type-check the UI files in isolation.
+
+Core type-checks clean under Swift 6 strict concurrency (exit 0). Now let me type-check the **UI files** in isolation against their minimal token + component dependencies — to prove the whole surface compiles independent of the broken predecessor surfaces.
+
+My files show **zero** errors — the spiral is only in the pulled-in `Cards.swift` dependency. Let me isolate precisely: compile my UI files against the **real** Tokens, TSDesign, Buttons, and Motion (which compile cleanly), plus a faithful shim for just `TSSkeleton` (avoids the `Cards.swift` chain I don't use).
+
+My **entire surface type-checks clean (exit 0)** under Swift 6 strict concurrency in isolation, against real tokens/Button/Motion. Combined with the core type-check, every source file is verified compilable. Now let me run the canonical macOS gate (to capture its real exit — will hit the same pre-existing errors) and re-run iOS with my fix, capturing authoritative exit codes.
+
+Both builds exit 65. Let me confirm both fail **only** on the pre-existing predecessor errors with zero `SmallMultiples` errors, then run the linter/placeholder gate steps.
+
+Complete honest picture confirmed:
+- **iOS** (exit 65): 162 errors, **0 in my surface** — all in pre-existing predecessor surfaces (`RecentDrives*`, `StateTimeline*` duplicate type defs).
+- **macOS** (exit 65): pre-existing signing-certificate errors (`DEVELOPMENT_TEAM=""`) — the documented standing macOS blocker — plus **0 in my surface**.
+
+Now re-run the fast gate steps (I edited the Adapter, so must re-verify) capturing exits.
+
+All fast gate steps green (FORMAT_EXIT=0, LINT_EXIT=0, PLACEHOLDER_EXIT=0). Let me capture representative pre-existing error samples for the log, then write the authoritative log.
+
+Now I'll write the authoritative gate log with all real exit codes and full evidence.
+
+Now commit the surface + log with a transparent message that states the BLOCKED gate (no success claimed). Let me stage and verify what's included first.
+
+Exactly the 10 surface files + log staged, nothing generated. Committing with a transparent message.
+
+Committed (11 files, 2393 insertions). Let me clean up temp files and do a final working-tree sanity check.
+
+Working tree clean. Let me verify the committed log footer (covenant rule 10) and finalize.
+
+All work is complete and committed. Here is the honest outcome.
+
+## Summary
+
+I shipped a production-polished, native Apple port of `SmallMultiplesChart` (web → SwiftUI + Swift Charts) as **10 files** under `apps/apple/TeslaSync/shared-surfaces/SmallMultiplesChart.*`, following the established `ChartLegend`/`ChartContainer` shared-surface architecture.
+
+**Parity reproduced from the web source:**
+- Verbatim ports of the three web perf layers: `isFinitePoint`, `strideSample`, and per-cell finite-only projection.
+- Per-cell own y-scale (the whole point of small multiples), responsive grid (web `auto-fill minmax` → `LazyVGrid`, whose lazy row build is the native peer of the web `IntersectionObserver` lazy-mount), shared time-cursor crosshair (web `syncId` peer via `chartXSelection` + `RuleMark`), and the per-cell **"No data"** branch using the one verbatim web key `smallMultiples.noData`.
+- All states render: loading / error / empty / populated + stale/offline freshness. Bound through the P1/S8 state-holder seam, emits the P1/S11 `view.opened` event, all copy via the P1/S10 facade. VoiceOver labels, Dynamic Type, Reduce Motion. Unit + projection + model + view tests and per-state previews included.
+
+**Verification (real results):**
+| Step | Result |
+|---|---|
+| swiftlint --strict (9 files) | **0** |
+| swiftformat --lint (9 files) | **0** |
+| placeholder gate | **0** |
+| Isolated Swift-6 strict-concurrency type-check (all 6 source files) | **0** |
+| iOS `build test` | **EXIT=65 — BLOCKED** |
+| macOS `build test` | **EXIT=65 — BLOCKED** |
+
+The isolated type-check **caught and fixed a real Swift-6 concurrency bug** in my code (`static let ISO8601DateFormatter` isn't `Sendable`).
+
+**Why BLOCKED (honest):** The whole-app iOS/macOS builds fail with **zero errors in this surface**. All failures are **pre-existing, out-of-scope** predecessor breakage — duplicate public type definitions in `RecentDrivesListWidget`/`RecentDrivesSection` and `StateTimelineWidget`/`StateTimeline` ("ambiguous for type lookup") — plus the repo-wide macOS dev-signing requirement (`DEVELOPMENT_TEAM=""`). Per covenant rule 7 I surfaced these and did **not** work around them (they belong to other prompts and aren't in my allowed-files set). `git status` confirms I added only `SmallMultiplesChart.*` files.
+
+Log written to `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0073-SmallMultiplesChart.log` ending in `EXIT=65` / `STATUS=BLOCKED`; surface + log committed (`0a6a1b7c8`).
+
+
+
+All 12 todos are complete. The surface is fully implemented, every in-scope verification is green, the gate ran with real exit codes, the honest BLOCKED log is written, and everything is committed with a clean working tree. The only blockers are pre-existing, out-of-scope predecessor defects that covenant rule 7 forbids working around. Nothing further is actionable for this surface without violating scope.
+

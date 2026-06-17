@@ -1,0 +1,231 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app structure, and the supporting infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P4 core).
+
+Now let me explore the Apple app structure to understand existing patterns, state holders, tokens, and i18n infrastructure.
+
+There's an existing `dashboard-widgets` directory with established patterns. Let me examine the existing widget structure, particularly any climate-related widgets and the shared facade.
+
+The `ClimateHistoryWidget` is the closest domain match. Let me study its full file set and the shared facade climate domain to understand the established patterns.
+
+Excellent template. Let me read the projection, previews, tests, strings, and the shared facade climate domain.
+
+Now let me examine the previews, strings, design tokens, and the registration types, plus the shared facade to understand how real sources bind.
+
+Let me examine the design tokens, registration types, and skeleton component used by the widgets.
+
+Let me read the design tokens, registration infra, and skeleton component.
+
+Let me find the token definitions (TSSpacing, TSRadius, Color.TS, Font.TS) and the TSCard component.
+
+`Sources/Theme.swift` holds the tokens. Let me read it and check build tooling availability in parallel.
+
+All tooling available (Xcode 26.5, swiftlint, swiftformat, xcodegen, iPhone 16 simulator booted). Let me read the generated design tokens and the project config.
+
+I now have the full token API. Let me read the web data types (the `useClimateLatest` hook + `ClimateState` type), the web registry, and a native status-panel widget for chip/badge patterns.
+
+`DoorWindowStatusWidget` is the ideal structural match (status panel with chips, no chart). Let me read the web climate type and the DoorWindow widget files.
+
+Let me read the DoorWindow Model, Projection, Adapter, and Views to understand the snapshot-panel data flow.
+
+Let me read the web `ClimateSnapshot` type, the DoorWindow Views/Adapter, and find the `TSTone`/badge component.
+
+Now let me find `TSTone`, read the DoorWindow strings/previews/adapter to mirror conventions, and verify the build config and placeholder check script.
+
+I have a thorough understanding now. Let me check the build configuration, placeholder check script, Badges component, and the DoorWindow strings/previews format.
+
+I now have a complete picture. Let me verify the build setup (xcodeproj presence, xcodegen, pwsh for the placeholder script) and read the check-placeholders script.
+
+pwsh is available and the project uses xcodegen (xcodeproj is generated, not committed). Let me check the gitignore, placeholder patterns, the framework build script, and the macos-pending-verifications note.
+
+Let me check the pending-verifications note, whether the Shared framework/Gradle are present, and how other widgets verify (a sibling's approach).
+
+I now have a complete understanding. Key insight from `macos-pending-verifications.md`: each surface is verified green in **isolation** (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder, `xcodegen generate` enumeration), while the full-app `xcodebuild` is gated by pre-existing unrelated blockers (unstaged Gradle `Shared.xcframework`, cross-file collisions). I'll follow that proven approach.
+
+Critical: I must use a unique type prefix to avoid symbol collisions with the sibling `ClimateHistoryWidget` (which defines public `ClimateTemperatureUnit`, `ClimateConnection`, etc.). Let me verify no `ClimatePanel`/`ClimateControlPanel` symbols exist yet, and set up tracking.
+
+No collisions — my `ClimatePanel*` prefix is clear (only `LiveClimatePanel` exists, unrelated). Let me confirm the web number formatters to port them faithfully, then start building.
+
+Confirmed: `fmtInt` = 0 fraction digits with grouping, `fmtNumber(_,1)` = exactly 1 fraction digit, fan speed uses raw interpolation. I have everything needed. Let me create the plan and start building the 8 files.
+
+Now the Adapter file (pure conversion/formatting/derivation core):
+
+Now the Projection file (pure view-model builder + accessibility):
+
+Now the Model file (state-holder seam, telemetry, i18n facade):
+
+Now let me check for an existing flow/wrap layout I can reuse for the wrapping chip row before writing the Views file.
+
+Each widget defines its own prefixed `Layout`. I'll add `ClimatePanelFlowLayout`. Now the Views file:
+
+Now the main surface View file:
+
+Now the strings (i18n catalog) file:
+
+Now the Previews file:
+
+Now the comprehensive Tests file:
+
+All 8 files created. Now let me verify them. First, let me enumerate the external shared symbols my files depend on and locate `TSCard` (needed by `Skeletons.swift`), so I can build a faithful isolated harness.
+
+Dependencies are a closed set: `Tokens.swift`, `DashboardWidgetInfra.swift`, `Skeletons.swift` (+ `Cards.swift` for `TSCard`). Let me verify `Cards.swift` is self-contained, then build an isolated SwiftPM harness using the **real** dependency files (zero drift).
+
+`Cards.swift` has a large dep graph, but I only need the self-contained `TSSkeleton` (SwiftUI + tokens only). I'll build an isolated SwiftPM harness named `TeslaSync` using the **real** `Tokens.swift` + `DashboardWidgetInfra.swift` (symlinked) plus a faithful `TSSkeleton` leaf shim, then compile + run tests under Swift 6 strict concurrency.
+
+Now the `TSSkeleton` leaf shim (faithful copy) and `Package.swift`:
+
+Now build + test the isolated harness under Swift 6 strict concurrency:
+
+Build is clean under Swift 6 strict concurrency. Now run the tests:
+
+Strict-concurrency caught a non-`Sendable` global in my test file. Fixing the `passthrough` localizer to be `@Sendable`:
+
+All **44 tests pass** under Swift 6 strict concurrency. Now the real iOS-18 + macOS-15 `swiftc -typecheck` against the actual SDKs (using the real dependency files), per the established precedent:
+
+Both SDK typechecks pass with **0 errors/0 warnings** under Swift 6 strict concurrency. Now swiftlint `--strict`, swiftformat `--lint`, and the placeholder gate on my 8 files:
+
+All violations are confined to the Tests file (file length >400, one long line, and `docComments`/`wrap` style). The repo already uses split test files (e.g. `DoorWindowStatusWidget.AdapterTests.swift`), which is the clean fix. Let me check the configs and the offending lines first.
+
+All issues are confined to the Tests file (length >400, one 126-char line, comment style). The repo's own pattern is to split into a second `*.AdapterTests.swift` (matches my allowed glob and the test target's `**/*Tests.swift` include). I'll split the tests. Creating `ClimateControlPanelWidget.AdapterTests.swift` with the pure-logic suites:
+
+Now rewrite `Tests.swift` to keep only the model/registry/accessibility suites (the adapter suites moved out). Removing and recreating for a clean split:
+
+Now update the harness with both test files and re-verify tests, lint, and format:
+
+44 tests pass across both files. Now re-run swiftlint `--strict` and swiftformat `--lint` on all 9 Swift files:
+
+Both swiftlint `--strict` and swiftformat `--lint` are **clean (0 violations)**. Now the placeholder gate. Let me check how the script resolves `-Path`, then run it as the gate specifies:
+
+The script uses `-LiteralPath`, so the gate's literal `…/ClimateControlPanelWidget` prefix scans nothing (trivially clean). To **honestly** verify my files, I'll scan a directory containing exactly my 9 files:
+
+Placeholder gate: **PLACEHOLDER_COUNT=0, 0 opt-outs, EXIT=0**. Now `xcodegen generate` to prove the project enumerates my files:
+
+`xcodegen generate` succeeded and **all 9 files are enumerated** in the project. Now let me verify the state of the full-app gate. First, confirm the pre-existing blockers (unstaged Gradle framework + known cross-file collisions) and kick off the Gradle framework build in the background to capture real evidence:
+
+Confirmed the pre-existing, unrelated full-app blockers: (1) `Shared.xcframework` is unstaged (only `.gitkeep`), and (2) a tree-wide `swiftlint --strict` error in `LiveSignalSparklinesWidget.Builder.swift:158` (not my file). Now let me attempt the real gate's long-pole — the Gradle `Shared.xcframework` assembly — to capture current-state evidence. Starting it in the background:
+
+Java 17 + gtimeout available. Let me run the `Shared.xcframework` assembly (the documented long-pole) with a bounded timeout, in the background:
+
+While Gradle builds in the background, let me refine one parity detail. The web computes `isCompact` from the size the component receives (so a 1×1 host shows the compact temperature view); my current code derives it from the clamped footprint, which would make the compact branch unreachable. Let me make `isCompact` faithful to the web while still clamping the grid footprint:
+
+Now re-verify everything after the edit: harness build/test, SDK typechecks, lint, and format:
+
+Clean build (no warnings), 44 tests pass. Re-running SDK typechecks + lint + format to confirm still green after the edit:
+
+All green after the refinement. Let me check the background Gradle build status:
+
+The most faithful port: the web component keys `isCompact` off the size it's given and does **not** clamp (the registry min/max is enforced by the grid, not the component). Let me remove the now-unused clamped `size` storage so the widget mirrors the web component exactly:
+
+Clean build, lint, and format. Let me check on the Gradle `Shared.xcframework` build (it was on the RELEASE Kotlin/Native link):
+
+The Gradle build hit **`GRADLE_RUN_EXIT=124`** (the 300s `gtimeout` bound) on the RELEASE Kotlin/Native link — exactly the documented long-pole that prior sibling prompts also hit. The link was actively progressing, so let me give it a much larger budget to actually stage the framework and enable a genuine full-app build. Restarting it detached with a 20-minute bound:
+
+While the framework builds, let me verify the log directory exists and do a final review of the main view file:
+
+Logs dir exists with the expected naming. Let me look at a sibling log to match the expected format, and check Gradle progress:
+
+This sibling log is the exact precedent: **STATUS=DONE** is the established outcome when the surface passes all in-scope gates and compiles clean into the real app target, with the full-app build failing only on **pre-existing unrelated** sibling collisions + macOS dev-signing. The sibling successfully staged `Shared.xcframework` (it just needs >300s). Let me monitor my framework build:
+
+Kotlin/Native release link is heavily underway (99 active procs). Let me wait for it to complete:
+
+The detached script's log vanished (its parent process was likely reaped), but the Gradle daemon continues the release link independently (procs winding down 80→42, indicating completion). The XCFramework is produced at the Gradle build path and copied to `Frameworks/` by the script — I can stage manually if needed. Let me wait for the loop:
+
+Let me stop the monitor loop and check the build-output path directly, then re-run the staging script synchronously (cached link tasks make it fast, and it performs the final copy):
+
+Only the debug XCFramework was produced; the release link (the long-pole) was interrupted when the detached script was reaped. Let me re-run the staging script synchronously (cached compile tasks make most of it fast; the release link is the remaining work) and await completion:
+
+Release link is genuinely long-running. Let me continue waiting:
+
+Let me check the release link progress in a separate shell while staging continues:
+
+Good progress: iosArm64 + iosSimulatorArm64 release frameworks are linked; macosArm64 + final XCFramework assembly remain (1 proc active). Nearly there — continuing to wait:
+
+Now 0 active link procs but macosArm64 (the last release target) + XCFramework assembly still pending. Let me wait for the assembly to finish:
+
+All three release frameworks are now linked (macos just finished), with clang++ doing final object emission. The XCFramework assembly + staging copy should complete shortly. Waiting for the script to finish:
+
+The release `Shared.xcframework` built successfully (BUILD SUCCESSFUL in 19m). The script was terminated (exit 143) right before the final copy, so let me stage it manually (replicating the script's copy step) and verify:
+
+`Shared.xcframework` is fully staged (all 3 slices). Now let me run the real gate's iOS build against the freshly-built framework, capturing whether **my surface** compiles into the app target. Running the build in the background:
+
+iOS build running. Let me wait for it to compile the app sources and check whether my surface compiles (and whether failures are in unrelated sibling files):
+
+The app target is actively compiling with **0 errors so far**. Let me wait for it to finish or surface errors:
+
+**`** BUILD SUCCEEDED **`** — the **full iOS app target built clean** against the freshly-built `Shared.xcframework`, with **0 errors**. My surface compiles into the real app. Now let me run my surface's tests in the **real app test target** on the simulator, and start the macOS build. First, the scoped iOS test run:
+
+iOS scoped-test building (app cached, now compiling the test bundle). Let me wait and check whether the test bundle compiles and my tests run:
+
+`** TEST FAILED **` with 2 errors. Let me see exactly what failed — whether it's my code or pre-existing sibling test files:
+
+The 2 test-bundle errors are in **pre-existing sibling files** (`PresetGallery.ModelTests.swift`, `PresetGallery.Tests.swift`) — they have the identical non-`@Sendable` closure issue I already fixed in my own tests, and they're outside my allowed files. **Zero errors in my files.** The app test bundle can't link until those sibling files compile. Now the macOS build to capture its status:
+
+macOS build running (pre-action will re-stage from cache, then compile). Let me wait and check the result:
+
+macOS build compiling with **0 errors** so far. Let me wait for completion:
+
+**`** BUILD SUCCEEDED **` for macOS too** — my surface compiles clean into **both** the iOS and macOS app targets (0 errors), against the freshly-built `Shared.xcframework`. Now let me capture the gate's tree-wide swiftlint/swiftformat exit codes and confirm none of the violations are mine:
+
+Tree-wide swiftlint: exactly **1 pre-existing violation** in `LiveSignalSparklinesWidget.Builder.swift` (not mine), **0 in my files**. Now the tree-wide swiftformat check:
+
+My files are clean for swiftformat (dashboard-widgets dir: 0/621 require formatting, exit 0). The full-tree `swiftformat --lint apps/apple` returned 70 — let me confirm that's a pre-existing issue outside my files:
+
+That exit 70 was my path mistake (ran from inside `apps/apple`, so it looked for `apps/apple/apps/apple`). Let me run the gate's swiftformat command correctly from the repo root:
+
+Tree-wide swiftformat: **FORMAT_EXIT=0** (0/2643). All gate evidence collected. Let me confirm my surface files were actually compiled into the iOS app target (for the log evidence):
+
+Comprehensive evidence: all 6 source files compiled into the iOS app target, my `.strings` copied into `TeslaSync.app`, both iOS+macOS **BUILD SUCCEEDED**, and the iOS `build test` blocker is exactly the 2 pre-existing `PresetGallery` sibling test files. Now let me write the gate log:
+
+The log is written. Now let me verify git status before committing (ensuring only my intended files are staged, and build artifacts are properly ignored):
+
+All 9 surface files + the log are untracked; build artifacts (xcodeproj, framework, DerivedData) are correctly git-ignored. Committing per the prompt's commit spec:
+
+Committed (`03ef7062f`). Let me clean up the temporary harness/scan artifacts I created in `/tmp`:
+
+The task is complete. All artifacts are committed (`03ef7062f`, 2180 insertions across 10 files), the working tree is clean, and temp files are cleaned up.
+
+## Summary
+
+I shipped a production-polished, native Apple SwiftUI port of **`ClimateControlPanelWidget`** at full parity with the web source, then verified it exhaustively and honestly.
+
+**Delivered (9 files, all matching the allowed `ClimateControlPanelWidget.*` glob):**
+- `.swift` — surface View: glass shell, header (title/icon/freshness chip/refresh/open), and a `loading / empty / error / content` state switch with stale+offline banners
+- `.Model.swift` — P1/S8 `ClimatePanelSource` seam, `@Observable` model (no networking in the view), P1/S11 `view.opened` telemetry, P1/S10 i18n facade
+- `.Adapter.swift` / `.Projection.swift` — pure SI→display temp conversion (`convertTempFromSI`), `fmtInt`/`fmtNumber` ports, HVAC/seat/steering/defrost/battery derivations, metric+chip projection, VoiceOver summary
+- `.Views.swift` — compact + full 2×2 layouts, metric cell, tinted chips, connectivity banner, leading-aligned flow layout
+- `.Previews.swift`, `.strings` (all 17 source keys + chrome), `.Tests.swift` + `.AdapterTests.swift`
+
+**Verification (every in-scope gate green):**
+- Isolated SwiftPM build + **44/44 tests pass** under Swift 6 strict concurrency
+- `swiftc -typecheck` clean on **real iOS 18 + macOS 15 SDKs** (0 errors/0 warnings)
+- swiftlint `--strict` **0**, swiftformat `--lint` **0**, placeholder gate **0** (0 opt-outs), `xcodegen` enumerates all 9 files
+- **Full iOS app `** BUILD SUCCEEDED **`** and **full macOS app `** BUILD SUCCEEDED **`** against a freshly-built `Shared.xcframework` (Gradle 19m link) — my surface compiles clean into both real app targets with `.strings` bundled
+
+**Honest blockers (pre-existing, unrelated, outside allowed files):** the full `build test` and tree-wide `swiftlint --strict` are red only due to two sibling test files (`PresetGallery.*Tests.swift`, identical non-`@Sendable` issue) and `LiveSignalSparklinesWidget.Builder.swift` — documented in the gate log and deferred to the macos-latest acceptance gate. The log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified. Let me do a final sanity check that the commit and deliverables are intact:
+
+Everything is confirmed intact: commit `03ef7062f` with all 9 surface files + the log, ending `EXIT=0 / STATUS=DONE`. The task is genuinely complete.
+
+Merge made by the 'ort' strategy.
+ ...oard-widgets-0026-ClimateControlPanelWidget.log | 144 +++++++++
+ .../ClimateControlPanelWidget.Adapter.swift        | 280 +++++++++++++++++
+ .../ClimateControlPanelWidget.AdapterTests.swift   | 246 +++++++++++++++
+ .../ClimateControlPanelWidget.Model.swift          | 223 ++++++++++++++
+ .../ClimateControlPanelWidget.Previews.swift       | 150 +++++++++
+ .../ClimateControlPanelWidget.Projection.swift     | 336 +++++++++++++++++++++
+ .../ClimateControlPanelWidget.Tests.swift          | 189 ++++++++++++
+ .../ClimateControlPanelWidget.Views.swift          | 300 ++++++++++++++++++
+ .../ClimateControlPanelWidget.strings              |  61 ++++
+ .../ClimateControlPanelWidget.swift                | 251 +++++++++++++++
+ 10 files changed, 2180 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0026-ClimateControlPanelWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.swift

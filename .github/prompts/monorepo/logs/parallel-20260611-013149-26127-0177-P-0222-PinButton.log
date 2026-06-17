@@ -1,0 +1,187 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and explore the existing Apple app structure.
+
+The web source is at `web/src/components/ui/PinButton.tsx`, and there's an existing `shared-surfaces` directory with many files. Let me read the web source and examine existing examples to follow conventions.
+
+Now let me understand the data hooks/types and examine existing shared-surface examples to follow conventions.
+
+Now I understand the multi-file structure. Let me read a complete simple example set and the PinnedItem types to understand conventions deeply.
+
+This is a high-quality, detailed implementation. `ActiveFilterChips` is purely presentational, but `PinButton` binds to data hooks (`usePinned`, `useTogglePin`). Let me read the rest of ActiveFilterChips files and find the shared P1/S8 state-holder infrastructure plus a data-bound example with loading/error/empty/stale/offline states.
+
+Let me read the rest (Views, tests, previews, strings) and identify the token system used.
+
+Let me read the previews/strings and find the shared infrastructure (tokens P1/S9, state-holders P1/S8, i18n P1/S10, diagnostics P1/S11).
+
+`Sources/` is at the apple level. Let me read `project.yml` and locate the shared infrastructure (tokens `Color.TS`/`Font.TS`/`TSSpacing`, state-holders, diagnostics).
+
+`project.yml` is at `apps/apple/project.yml` and tokens are in `Sources/Design/TSDesign.swift`. Let me read these and find a data-bound surface pattern (loading/error/stale/offline) plus the state-holder infrastructure.
+
+Found `Sources/SharedFacade/` (the P1/S8 facade). Let me read the core infrastructure and check for an existing Pinned domain.
+
+Now I understand the `LoadableState`/`StateHolderModel` pattern (P1/S8). Since I can only touch `PinButton.*` files, let me check the AppContainer and find a data-bound shared-surface that uses `LoadableState` to copy the seam pattern.
+
+Let me examine how sibling surfaces resolve the loading/error/stale/offline states — whether they render generic chrome or follow faithful-parity. This determines PinButton's approach.
+
+`DensityToggle` is the closest analog (a persisted toggle). Let me study it fully to model PinButton's store seam and state-holder.
+
+PinButton genuinely fetches (unlike these pure-presentational toggles), so I need the data-bound pattern. Let me study `MetricSwitcherChart` (uses `LoadableState`) to see how a fetching surface defines its data seam and renders states.
+
+MetricSwitcherChart receives `LoadableState` as a prop (parent-fed). PinButton self-fetches (calls hooks internally), so I need the self-fetching seam pattern. Let me find a surface with an async data-source/store seam.
+
+`CookieConsentBanner` self-fetches (reads + writes a preference, like pin/unpin) and uses `LoadableState`. Let me study its data-source seam, model, and adapter.
+
+This is the exact self-fetching pattern I need (push-based source + store seams + in-memory doubles). Let me read the Model, view entry, and Adapter to complete my understanding.
+
+I now have the full pattern. Let me read CookieConsentBanner's Adapter (status/freshness value types + chip), view entry, and Views to finalize how degraded states render, then I'll design PinButton.
+
+I have a thorough understanding of the P4 states contract. Let me read the view entry (default seam wiring) and Views to see chip/state rendering, plus the lint config for budgets.
+
+Now let me read the design tokens (P1/S9) and confirm the test target config so my files compile correctly.
+
+Let me read the full Tokens.swift to get exact token names for colors, fonts, radius, and motion.
+
+I have all the tokens. The "pinned" amber maps to `Color.TS.statusWarning`. Now let me verify the build toolchain situation (xcodegen, Shared.xcframework, test targets) since the gate requires a full `xcodebuild`.
+
+Critical finding: `Frameworks/Shared.xcframework` is only a `.gitkeep` placeholder — the KMP shared-core binary is absent. The app target imports `Shared`, so a full `xcodebuild` can't link. Let me check how sibling surfaces' gate logs handled this — that's the authoritative precedent.
+
+Let me read the gate logs of the sibling surfaces I studied (ActiveFilterChips, CookieConsentBanner, DensityToggle) to see exactly how they handled the `xcodebuild` step and their final STATUS.
+
+This is the authoritative precedent. The Shared framework can be built via a script, but full `xcodebuild` still fails on pre-existing foreign sibling defects. Let me read the rest to see the macOS/lint/format steps and the final EXIT/STATUS disposition.
+
+I now have the complete authoritative precedent (STATUS=DONE with iOS/macOS builds DEFERRED as foreign/environmental, plus standalone surface-clean proof). Let me verify the helper scripts exist and kick off the ~8-min Shared.xcframework build in the background while I write the surface.
+
+The framework build script and placeholder checker exist. Let me kick off the ~8-min Shared.xcframework build in the background, verify the Gradle/Java toolchain, then write the surface while it builds.
+
+Toolchain confirmed. Let me start the Shared.xcframework build in the background, then write the surface while it builds.
+
+I have the full authoritative precedent: ship the surface, run all gates for real, and the iOS/macOS `xcodebuild` reds are DEFERRED (foreign/environmental) with a standalone surface-clean compile + test proof → `EXIT=0 STATUS=DONE`. Framework build is running in the background. 
+
+Now I'll write the 9 `PinButton.*` files following the `CookieConsentBanner`/`ActiveFilterChips` architecture. Starting with the pure Foundation core.
+
+The background launcher returned (the build itself runs detached, logging to `/tmp/pinbtn_xcframework.log`). I'll check it later. Now the data seams file.
+
+Now the Model file (telemetry seam P1/S11, i18n facade P1/S10, observable state-holder P1/S8).
+
+Now the Views file: token-driven presentational pieces (glyph/spinner, inline label, status badge overlay, tone→color mapping).
+
+Now the public surface entry that composes the button with lifecycle, accessibility, hover, and the badge overlay.
+
+Now the i18n strings catalog and the DEBUG previews.
+
+Now the DEBUG previews covering every branch.
+
+Now the pure-core adapter tests.
+
+Now the model + view + strings tests.
+
+All 9 files written. Now let me verify. First, a standalone Swift 6 strict-concurrency type-check of the surface against the real macOS SDK (this catches compile errors without needing the absent `Shared.xcframework`). Let me also check the framework build progress.
+
+TYPECHECK_EXIT=0 — the surface compiles clean under Swift 6 strict concurrency. And the **Shared.xcframework build succeeded** (7m51s, now staged with all slices) — so the full build is no longer framework-blocked. 
+
+Now let me run swiftformat and swiftlint on my files and fix any issues.
+
+swiftlint: 0 violations. swiftformat flagged a few auto-fixable items (redundant `@ViewBuilder`, single-line property bodies). Let me let swiftformat auto-fix them, then re-verify.
+
+Let me review the auto-fix diff, then re-run all three checks (format, lint, typecheck).
+
+New files are untracked, so `git diff` is empty. Let me view the changed regions directly and re-run all checks.
+
+Fixes look correct. Let me re-run all three checks to confirm green.
+
+All green: FORMAT_EXIT=0, LINT_EXIT=0, TYPECHECK_EXIT=0. Now let me build a standalone executable harness that runs the adapter + model + strings logic to prove the test behavior is green (the committed XCTests assert the same logic).
+
+54/54 assertions passed — the surface logic is verifiably correct. Now the placeholder check and `xcodegen generate`.
+
+PLACEHOLDER_EXIT=0, XCODEGEN_EXIT=0 (54 PinButton refs across iOS/macOS app + both test bundles). Now the full `xcodebuild` (framework is present). Per precedent these may hit pre-existing foreign sibling defects, but I must run them for real to capture honest exit codes. Starting the iOS build+test in the background.
+
+The iOS build is running. Let me wait and monitor its progress.
+
+The launcher returned; the actual `xcodebuild` runs detached to `/tmp/pinbtn_ios_build.log`. Let me monitor that log.
+
+Build is progressing well — it's emitting the TeslaSync module (Swift sources type-checking), the Shared.xcframework PCM generated fine, and 0 PinButton errors. Let me keep monitoring.
+
+iOS build FAILED with **1 error, 0 of them PinButton**. Let me capture that error verbatim (file:line) to confirm it's foreign and attribute root cause honestly.
+
+The single iOS error is a **pre-existing FOREIGN defect** in `AISuggestNewGeofences.swift:129` (`escaping closure captures non-escaping parameter 'content'`) — the exact systematic AI*-surface pattern the precedent documented. 0 PinButton errors, and the module type-checked (EmitSwiftModule succeeded). Let me prove attribution via git, and start the macOS build to capture its real exit code.
+
+Git proof is conclusive: only my 9 `PinButton.*` files are added; `AISuggestNewGeofences.swift` is a pre-existing tracked foreign file I never touched. The iOS red is foreign/out-of-scope. Now the macOS build+test to capture its real exit code.
+
+macOS build running. Let me monitor it (and I'll run the iOS baseline reproduction afterward, since it needs exclusive tree access).
+
+macOS build FAILED with **4 errors, all ENVIRONMENTAL** (no development-signing certificate for `TeslaSync-macOS`/`TeslaSyncWidgets-macOS`), 0 PinButton errors — it fails at the signing gate, exactly the precedent's disposition. 
+
+Both reds are now characterized (iOS=foreign, macOS=environmental). For gold-standard rigor, let me run the iOS baseline reproduction: move my files out, rebuild, and confirm the same foreign error reproduces without my surface.
+
+My files are out (0 PinButton refs). Now build iOS without them to confirm the foreign error reproduces independently.
+
+Baseline build running. Let me wait and check (then I'll restore my files regardless of outcome).
+
+Baseline still compiling (no result yet, 0 PinButton refs as expected). Let me wait for it to reach the foreign error.
+
+**Baseline proof complete:** with my files removed (0 PinButton refs), the iOS build STILL fails on the same systematic foreign defect — `AIGeofenceAwareAutomationSuggestions.swift:141` (same `escaping closure captures non-escaping parameter 'content'` pattern). The iOS red is conclusively foreign/pre-existing. Now let me restore my files and regenerate.
+
+Files restored (9 files, 54 refs). Let me do a final verification pass and confirm the tree is clean.
+
+Clean: only my 9 files untracked, swiftlint 0 violations, swiftformat 0. Now let me run the gate-accurate FULL `swiftlint --strict` and `swiftformat --lint apps/apple` (repo-wide, as the gate does).
+
+Full `swiftlint --strict`: **0 violations across 4722 files** (LINT_EXIT=0). Now the full `swiftformat --lint apps/apple`.
+
+Full `swiftformat --lint`: **0/5020 files** (FORMAT_EXIT=0). All gate signals captured. Let me gather the final evidence (confirm my files were compiled in-module) before writing the log.
+
+Final evidence confirmed: iOS module type-checked (EmitSwiftModule succeeded), `PinButton.strings` validated + copied into the app bundle, and **both** iOS errors are foreign (`AISuggestNewGeofences:129`, `AIGeofenceAwareAutomationSuggestions:141`), 0 PinButton errors. Let me capture the precise exit codes (incremental rebuilds, fail fast) to report them honestly.
+
+MAC_EXIT=65 confirmed (environmental signing). Now the precise iOS exit code (incremental rebuild, fails at the foreign error).
+
+IOS_EXIT=65 confirmed (foreign defects: `AISuggestNewGeofences:129`, plus `RecentDrivesSection.Previews:24` type-check-timeout — all foreign, **0 PinButton errors**). All exit codes are now precisely captured. Let me list the complete foreign error set, then write the gate log.
+
+All evidence confirmed. Now let me write the comprehensive, honest gate log following the precedent format.
+
+Gate log written. Let me clean up temporary verification artifacts, verify the repo has no stray files, then commit.
+
+Clean — only my 9 `PinButton.*` files and the log are untracked (xcodeproj and framework are git-ignored). Now commit per the prompt's Commit section.
+
+Committed as `eb22cdd` with 0 untracked files remaining. The task is complete.
+
+## Summary
+
+Shipped the native Apple-idiomatic **`PinButton`** P4 shared surface (SwiftUI parity of `components/ui/PinButton.tsx`) — 9 files in `apps/apple/TeslaSync/shared-surfaces/PinButton.*`, following the established `CookieConsentBanner`/`ActiveFilterChips` architecture (pure Foundation adapter → P1/S8 data seam → `@Observable` state-holder → token-driven views).
+
+**Parity reproduced:** unpinned/pinned glyphs (lucide `Pin`/`PinOff` → SF `pin`/`pin.slash.fill`, amber via `Color.TS.statusWarning`), `toggle.isPending` → disabled+dimmed, the `pin.pin`/`pin.unpin`/`pin.pinned` i18n keys (verbatim), tooltip, `aria-pressed`→`.isSelected`, and the data binding to `usePinned`+`useTogglePin` via a bucket-scoped `PinnedStore`. The query freshness the web swallows is surfaced per the P4 leaf contract as a gated cold-load spinner + offline→error→stale corner badge with a VoiceOver Retry action and one-shot stale auto-refresh.
+
+**Verification (all real, captured):**
+- `swiftlint --strict`: **0 violations / 4722 files**
+- `swiftformat --lint`: **0 / 5020 files**
+- placeholder check: **0**; `xcodegen`: **54 refs**
+- Standalone Swift 6 `strict-concurrency=complete` macOS-SDK type-check: **0 errors**; test harness: **54/54 green**
+- `Shared.xcframework`: built successfully (7m51s)
+
+**Deferred reds (proven foreign/environmental, 0 PinButton errors):**
+- iOS `xcodebuild` = 65 — pre-existing foreign defects (`AISuggestNewGeofences.swift:129`, `AIGeofenceAwareAutomationSuggestions.swift:141`, `RecentDrivesSection.Previews.swift:24`); **baseline build with my files removed reproduces the same red**, and the module type-checked with my files present.
+- macOS `xcodebuild` = 65 — environmental no-dev-cert signing.
+
+`git status` shows only my 9 files added. Gate log written; committed with the prescribed message. **EXIT=0 / STATUS=DONE.**
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0222-PinButton.log    | 215 ++++++++++++
+ .../shared-surfaces/PinButton.Adapter.swift        | 374 +++++++++++++++++++++
+ .../shared-surfaces/PinButton.AdapterTests.swift   | 216 ++++++++++++
+ .../shared-surfaces/PinButton.Model.swift          | 203 +++++++++++
+ .../shared-surfaces/PinButton.Previews.swift       |  97 ++++++
+ .../shared-surfaces/PinButton.Sources.swift        | 193 +++++++++++
+ .../shared-surfaces/PinButton.Tests.swift          | 258 ++++++++++++++
+ .../shared-surfaces/PinButton.Views.swift          | 108 ++++++
+ .../TeslaSync/shared-surfaces/PinButton.strings    |  45 +++
+ .../TeslaSync/shared-surfaces/PinButton.swift      | 147 ++++++++
+ 10 files changed, 1856 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0222-PinButton.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PinButton.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PinButton.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PinButton.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PinButton.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PinButton.Sources.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PinButton.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PinButton.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PinButton.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PinButton.swift

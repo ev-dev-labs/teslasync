@@ -1,0 +1,182 @@
+I'll start by exploring the repository structure and reading the key files to understand the task scope.
+
+Apple toolchain is available. Let me explore the existing structure and the web source.
+
+Now let me study the existing feature-views to understand the established native patterns, since VehicleCommandCenter was just added as a reference.
+
+The file-set pattern is clear. FleetSummary is simpler (4 stat tiles, no commands/dialogs). Let me study the VehicleCommandCenter reference files in depth to learn the exact architecture, state-holder binding, i18n facade, tokens, telemetry, and test harness.
+
+Let me read the rest of the reference architecture in parallel.
+
+The architecture is very clear now. Let me read the Adapter, Views, Previews, and design-system primitives to complete my understanding.
+
+Let me read the Views, test files, strings, and design system primitives.
+
+Now let me examine the design tokens, strings format, project build setup, and the data-display AnimatedNumber equivalent.
+
+The project uses XcodeGen. Let me read the project config, design tokens, placeholder checker, and check for an AnimatedNumber equivalent.
+
+XcodeGen globs the feature-views dir, so new files auto-include. Swift 6 strict concurrency is on. Let me read the design system, AnimatedNumber, the shared components, the build script, and placeholder rules.
+
+Now let me read the remaining shared components and the SharedFacade state-holder layer to understand the loading/empty/error/stale/offline vocabulary.
+
+Let me read the motion, skeleton, badge, typography components, and the facade state-holder layer.
+
+Let me find the typography components and the units facade.
+
+The adapter reimplements conversions in Foundation (host-testable) rather than using the KMP `Shared` framework. Let me read the typography components and check the Shared framework build prerequisites.
+
+The `Shared.xcframework` isn't staged — it's built via Gradle/Kotlin-Native in a preAction. Let me check how predecessors' gate logs resolved (DONE vs BLOCKED) to understand the expected outcome on this runner.
+
+The predecessor methodology is clear: author the full surface, run surface-scoped gates (swiftlint/swiftformat/placeholders + host compile of Foundation logic), run the full xcodebuild capturing real exit codes, and document pre-existing/environmental failures honestly. Let me read the full predecessor log to replicate the exact methodology.
+
+I now have the full methodology template. Let me check for any reusable isolated-build harness and confirm the current tree state before authoring.
+
+I have the full picture. The proven methodology is: isolated SwiftPM build+test (Swift 6 strict concurrency) + real iOS/macOS SDK typechecks + swiftlint/swiftformat/placeholder/i18n, with full-app xcodebuild deferred. Let me read the lint configs and the VCC adapter-test style before authoring.
+
+Let me verify the web conversion math and unit labels to port them exactly.
+
+All math confirmed (METERS_PER_MILE=1609.344, KM=1000, FOOT=0.3048; VehicleState has battery_level/rated_range/is_charging). Let me set up tracking and author the surface.
+
+Now I'll author the surface, starting with the Foundation-only State and Adapter files.
+
+Let me check the web `AnimatedNumber` to match its number rendering (grouping/rounding) faithfully.
+
+The web `AnimatedNumber` uses `fmtNumber(value, decimals)` — same as VCC's port. Now I'll author the Adapter with the verbatim web math.
+
+Now the SwiftUI views and the main view file.
+
+Now the previews, strings, and tests.
+
+Let me refine the range tile's accessibility value to avoid a redundant unit (the label already carries it), and update the test.
+
+Now the model/a11y/render tests.
+
+All 10 files authored. Now let me set up the isolated SwiftPM harness. First, let me verify the token/component closure has no external dependencies (only `UnitFormatters.swift` depends on KMP).
+
+Confirmed: only `UnitFormatters.swift` depends on the KMP facade; everything else uses system frameworks only. Let me build the isolated SwiftPM harness to prove compile + tests under Swift 6 strict concurrency.
+
+Isolated build passes (Swift 6 strict concurrency). Now run the test suite.
+
+All 35 tests pass (incl. per-state render smoke). Now the lint/format/placeholder/i18n gates.
+
+Three swiftlint issues (function body/param count, one long test line) and four swiftformat issues. Let me refactor `buildMetrics` to use a context struct (fixes param count + body length), then auto-format the rest.
+
+Now let me auto-fix the remaining formatting issues with swiftformat, then review the changes.
+
+Auto-fixes applied. Let me re-sync the harness with the updated files and re-verify build + tests, then re-run the linters.
+
+Build + 35 tests still green after fixes. Re-running the linters to confirm clean.
+
+swiftlint + swiftformat clean. Now the placeholder gate and i18n coverage.
+
+Placeholder gate clean (COUNT=0, 0 opt-outs). Now i18n key coverage.
+
+The 5 "orphans" are false positives — they're referenced as `labelKey:`/multi-line `format(` arguments, not single-line `FleetSummaryStrings.string(`. Let me verify all declared keys appear as literals in the Swift sources.
+
+Full i18n parity (19=19, 0 missing/orphan, plutil OK). Now the real iOS 18 + macOS 15 SDK type-checks.
+
+iOS 18 type-check clean. Now macOS 15.
+
+Both SDK type-checks clean (0 errors). Now `xcodegen generate` to confirm the new files are enumerated.
+
+xcodegen clean — all 10 files enumerated across targets. Before the full-app build, let me verify my public type names don't collide with sibling surfaces, and check signing/simulator state.
+
+One real collision: `FleetConnection` already exists in `FleetApiSection.Models.swift` (same module). I must rename my types to be collision-free. Let me survey all sibling `Fleet*` declarations.
+
+The second grep was polluted by my own files (line-content filter). The authoritative per-type check (path-excluded) flagged only `FleetConnection`. Let me precisely re-verify external collisions by path-excluding my files.
+
+Only `FleetConnection` collides (with `FleetApiSection.Models.swift`). I'll rename my type to `FleetSummaryConnection` to be collision-free, then re-verify everything.
+
+Rename clean, no lines over 120. Re-syncing harness and re-verifying build, tests, and linters.
+
+Build + 35 tests + lint all green after rename. Now I'll attempt the full-app xcodebuild to capture real evidence. First, the `Shared.xcframework` Gradle build (the known long-pole), bounded.
+
+`Shared.xcframework` is unstaged; gradlew + Java 17 present. Let me attempt the Gradle build (async, bounded) to capture its real outcome.
+
+Gradle is building the framework (the known long-pole). Let me wait and monitor its progress.
+
+Gradle still compiling (Kotlin/Native toolchain — the long pole). Let me continue waiting.
+
+Gradle ~5.5min in (Kotlin/Native link long-pole; predecessor took ~6m45s). Waiting a bit more to see if it completes.
+
+Gradle BUILD SUCCESSFUL (7m3s, GRADLE_EXIT=0). Let me stage the framework and run the full iOS xcodebuild to capture the real result.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the full iOS xcodebuild build/test.
+
+iOS build running. Let me monitor while it compiles the full app.
+
+iOS build exited 65 (fast, ~66s). Let me examine the real failure cause and confirm zero FleetSummary errors.
+
+iOS build failed (exit 65) with 104 errors — **zero in FleetSummary**. All errors are pre-existing sibling collisions: `StateTimeline*` types are *ambiguous* (redeclared across `StateTimelineWidget.*` dashboard-widget AND `StateTimeline.*` feature-view siblings). Let me confirm FleetSummary compiled clean and these collisions are pre-existing/unrelated.
+
+FleetSummary has **0 errors** in the full iOS build; all 104 errors are `StateTimeline*` ambiguities (duplicate declarations across `StateTimelineWidget.*` + `StateTimeline.*` siblings) — and git confirms I only added FleetSummary files. Let me do the predecessor-standard isolation rebuild to prove the collision is pre-existing (independent of my surface).
+
+Isolation build (without FleetSummary) also fails with exit 65. Let me confirm it's the identical StateTimeline collision, then restore my files.
+
+Isolation rebuild is conclusive: **without** FleetSummary the iOS build still fails with 78 errors — **all 78 in StateTimeline siblings, 0 FleetSummary**. The collision is pre-existing and unrelated. Files restored (10), project regenerated. Now the macOS build to capture MAC_EXIT.
+
+macOS build running. Let me wait for it to complete.
+
+macOS build exited 65 (fast, ~11s — likely dev-signing). Let me confirm the cause and zero FleetSummary errors.
+
+macOS fails at dev-signing (0 identities on this runner), before app compile — **0 FleetSummary errors**. All evidence gathered. Let me get final line counts and write the gate log.
+
+All evidence gathered. Now I'll write the comprehensive gate log following the predecessor format.
+
+Log written. Let me clean up temp artifacts and verify the git state before committing.
+
+Clean — only the 10 FleetSummary files + the log are untracked; xcodeproj & framework are gitignored. Committing the allowed scope.
+
+Committed (1108fe0d0). Let me finalize the todo tracking and confirm a clean working tree.
+
+The task is complete and verified. All work is committed to a clean tree.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) **FleetSummary** surface at parity with `web/src/features/vehicles/components/FleetSummary.tsx`, following the established P4 feature-view architecture (VehicleCommandCenter 0261 precedent).
+
+**10 files** (`apps/apple/TeslaSync/feature-views/FleetSummary.*`, commit `1108fe0d0`):
+- `State` (DTOs + P1/S8 `FleetSummarySource` seam), `Model` (P1/S11 telemetry + P1/S10 i18n facade + in-memory source), `Adapter` (pure projector — verbatim web aggregation, `fmtNumber`, `convertDistanceFromSI`), `ViewModel` (`@Observable`, phase + stale auto-refresh), `swift`/`Views` (4 glass tiles + grid + freshness chip + skeleton), `Previews`, `Tests`, `ModelTests`, `strings`.
+
+**Parity**: the 4 tiles (Vehicles / Avg Battery % / Total Range / Charging-Online) reproduce the web math exactly — resolved-states filter, average battery, Σ rated_range in SI→display conversion, charging/online counts. All 6 states render (loading/content/empty/error/stale/offline). `view.opened` telemetry emitted once with slug `FleetSummary`.
+
+**Host gates — all GREEN (real output):**
+- Isolated SwiftPM build: **Build complete!** (Swift 6, `-strict-concurrency=complete`)
+- `swift test`: **35/35 passed** (adapter + per-state model + a11y + ImageRenderer render smoke)
+- iOS 18 + macOS 15 `swiftc -typecheck`: **0 errors**
+- swiftlint --strict **0 violations** · swiftformat --lint **0/9** · placeholder gate **COUNT=0** · i18n **19=19** (0 missing/orphan, plutil OK)
+- Renamed `FleetConnection`→`FleetSummaryConnection` to eliminate the one sibling collision (now collision-free).
+
+**Full-app xcodebuild — RAN, captured, DEFERRED** (matching predecessor disposition): iOS `IOS_EXIT=65` and macOS `MAC_EXIT=65`, both with **ZERO FleetSummary errors**. iOS fails on a **pre-existing** `StateTimeline*` duplicate-declaration collision in sibling surfaces (`StateTimelineWidget.*` + `StateTimeline.*`), **proven pre-existing by an isolation rebuild** (78 errors, all StateTimeline, with FleetSummary removed); macOS fails on dev-signing (0 identities). Both are out-of-scope and deferred to the signed P99 acceptance gate.
+
+**Log:** `.github/prompts/monorepo/logs/p4-apple-feature-views-0276-FleetSummary.log` — `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 14 todos done, work committed to a clean tree, and every host-runnable gate is green.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0276-FleetSummary.log   | 263 +++++++++++++++++
+ .../feature-views/FleetSummary.Adapter.swift       | 311 +++++++++++++++++++++
+ .../feature-views/FleetSummary.Model.swift         | 102 +++++++
+ .../feature-views/FleetSummary.ModelTests.swift    | 243 ++++++++++++++++
+ .../feature-views/FleetSummary.Previews.swift      |  92 ++++++
+ .../feature-views/FleetSummary.State.swift         | 135 +++++++++
+ .../feature-views/FleetSummary.Tests.swift         | 208 ++++++++++++++
+ .../feature-views/FleetSummary.ViewModel.swift     | 163 +++++++++++
+ .../feature-views/FleetSummary.Views.swift         | 163 +++++++++++
+ .../TeslaSync/feature-views/FleetSummary.strings   |  46 +++
+ .../TeslaSync/feature-views/FleetSummary.swift     | 112 ++++++++
+ 11 files changed, 1838 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0276-FleetSummary.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.State.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.ViewModel.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetSummary.swift

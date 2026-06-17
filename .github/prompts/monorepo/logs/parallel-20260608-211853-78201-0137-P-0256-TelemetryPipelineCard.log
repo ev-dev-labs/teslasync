@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and understanding both the web source and the existing Apple app setup.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat). Let me read the web source and examine existing Apple feature-view patterns.
+
+This is a per-surface multi-file pattern. `TelemetryPipelineCard.*` doesn't exist yet. The closest analog is `FleetTelemetryHealth.*` (telemetry/MQTT/fleet). Let me study it as the canonical pattern, plus the project config and shared infrastructure.
+
+Excellent pattern. Let me read the remaining FleetTelemetryHealth files plus the shared tokens to understand all conventions.
+
+Now let me read the Previews, strings, Tests files and find the shared P1/S9 token definitions (TSSpacing, Color.TS, Font.TS, TSTone, TSIconBox, TSSkeleton).
+
+Let me read the Tests file and locate the design tokens (TSSpacing, Color.TS, Font.TS, TSRadius, TSIconBox, TSSkeleton).
+
+Let me find the exact token definitions (TSSpacing, Color.TS, Font.TS, TSRadius, TSTone, TSIconBox, TSSkeleton, surfaceGlass).
+
+Let me read the generated Tokens, the Badges (TSTone/TSIconBox), Skeletons, and Typography (Font.TS) to know the exact available APIs.
+
+Let me read the Skeletons (TSSkeleton), the web data types, and check i18n namespace conventions.
+
+Let me read the web test file (best parity spec), the consumer usage, and the TelemetryStatus type.
+
+Let me read the consumer usage, the number formatter, the app route enum, and check how feature-views handle navigation.
+
+Let me read `fmtInt`, the sibling status component (AnomalyInlineRow), and a navigation pattern to align conventions.
+
+I have a complete understanding of the architecture. Now let me assess build feasibility (simulators, the Shared.xcframework prebuild step which may need Kotlin) and set up my plan.
+
+Let me check the placeholder-checker rules, the navigation view idiom (AnomalyInlineRow), and kick off the Shared.xcframework build in the background (it's independent of my code).
+
+Let me read the forbidden-patterns list and the model's activation seam, and start the Shared.xcframework build in the background.
+
+Forbidden patterns are case-insensitive and include "Placeholder" — I'll avoid that word entirely (including SwiftUI's `.placeholder` redaction reason). Now I have everything. Let me kick off the Shared.xcframework build in the background and set up my plan + todos.
+
+Java 17 + gradlew present. Let me start the Shared.xcframework build in the background while I write the Swift code.
+
+The build is running in the background. Let me write my plan and begin creating the Swift files, starting with the Model and seams.
+
+Now I'll write the Model file with all the seams, DTOs, and the observable view-model.
+
+Model written. Now the Adapter — the pure, testable projection core with the liveness ladder and formatters.
+
+Gradle is still working (likely downloading the distribution). Let me continue writing the Adapter while it runs.
+
+Adapter done. Let me check the gradle build progress, then write the main view.
+
+Gradle is still fetching its toolchain (quiet under `--console=plain`). I'll keep building out the Swift surface. Writing the main view now.
+
+Now the chrome subviews (Views.swift) — freshness chip, banner, stat grid, liveness chips, empty/error/loading states, footer, plus a flow layout.
+
+The gradle build completed. Let me check whether the Shared.xcframework was staged successfully.
+
+The Shared.xcframework built and staged successfully — the full xcodebuild gate is feasible. Let me verify it and finish the remaining files (Rows, Previews, strings, Tests).
+
+Framework staged with all needed slices. Now the per-vehicle list and row.
+
+Now the previews (every state) and the i18n strings catalog.
+
+Now the i18n strings catalog with every key the surface resolves.
+
+Let me make `TelemetryLiveness` explicitly `Hashable` (needed for `ForEach id: \.self`), then write the comprehensive test suite.
+
+Now the comprehensive test suite — adapter projection, model state machine, accessibility, and telemetry.
+
+All 8 files written. Now let me verify — first auto-format my files with swiftformat, then lint, then swiftlint. Let me update todos and run.
+
+swiftformat found auto-fixable issues. Let me apply the formatter to my files, then re-verify.
+
+Formatted. Let me run the lint exactly as the gate does, from the repo root.
+
+swiftformat passes (0/2509 need formatting). Now swiftlint --strict on my files first for fast feedback.
+
+Three fixes needed: a statement-position issue in the if-expression, and three files exceed the 400-line limit (need splitting). Let me view the affected region and current line counts.
+
+I'll split the three oversized files and fix the if-expression. Let me view the exact sections to relocate (post-format).
+
+Now executing the Adapter fixes: fix the if-expression and relocate the three trailing helper sections to a new `Format.swift`.
+
+Now create `Format.swift` with the relocated helpers.
+
+Now the Views.swift split. Let me view the sections to relocate (Empty/Error/Loading/Footer/FlowLayout).
+
+Let me view the Tests.swift doubles section to plan the split precisely (the `rawTone` helper must stay with AdapterTests).
+
+Now I'll split Views and Tests via sed (preserving the already-formatted content). Creating `States.swift` and `ModelTests.swift`, truncating the originals.
+
+All files now under 400 lines. Let me re-format (clean up sed artifacts) and run both linters strictly.
+
+swiftlint: 0 violations, swiftformat: 0/10 need formatting. Let me run the full-tree gates (swiftformat lint, placeholder check) and verify my files are genuinely placeholder-clean.
+
+All quick gates pass: swiftformat (0/2512), placeholder gate (EXIT=0), and an honest scan of my real files (COUNT=0). Now the build. Let me start the full `swiftlint --strict` in the background and generate the Xcode project.
+
+Xcode project generated. Now the main event — the iOS build + test. This is a large project, so I'll run it in the background and monitor.
+
+The full swiftlint finished. Let me read its result while the iOS build runs.
+
+The full-tree swiftlint reports 1 violation — but my 10 files linted clean. Let me locate it (likely pre-existing).
+
+The violation is in an unrelated pre-existing widget file, not my surface. Let me confirm it predates my work and inspect it.
+
+The widget violation is confirmed pre-existing (committed at HEAD, untouched by me). The iOS build finished — let me read the result.
+
+The build failed in compile batches containing pre-existing files (`SummarySlide.*`, `SuperchargerHistoryWidget.*`). I need the actual compiler errors, not the batch summary. Let me extract them.
+
+These are pre-existing "ambiguous type lookup" errors (duplicate type declarations) in unrelated `Charge*`/`Summary*` widget surfaces — the aggregated monorepo has colliding symbols independent of my work. Let me confirm none of my files are implicated and gauge the scope.
+
+Decisive finding: my files produce **zero** compile errors — all 21 failing files are pre-existing unrelated surfaces with duplicate type declarations (`ChargeSessionDTO`, `SafetyModel`, etc.), which I'm not allowed to touch. To get conclusive proof my surface compiles (since a batch failure may have short-circuited the whole-module build), I'll typecheck my files against the real shared dependencies in isolation. Let me find the minimal dependency closure.
+
+My surface has **zero** errors; the 21 failing files are pre-existing duplicate-symbol collisions in unrelated surfaces I can't touch. Since a whole-module batch failure may short-circuit before reaching my files, I'll get decisive proof by building **and running** my surface + tests in an isolated SwiftPM package against the *real* shared dependencies. Let me check Cards.swift deps first.
+
+My surface only needs tokens + `TSTone` + `TSSkeleton` (the deeper component files cascade into Typography). Let me confirm exactly which shared symbols my files reference, then build an isolated SwiftPM package that **runs** my tests against the real tokens.
+
+Confirmed: my files only need real tokens (`Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`) + `TSTone` + `TSSkeleton`. Let me build an isolated SwiftPM package and actually **run** my tests against the real tokens + `TSTone`.
+
+My surface compiles cleanly under Swift 6 strict concurrency. Now let me **run** the tests.
+
+**30/30 tests pass** and the surface compiles cleanly under Swift 6 strict concurrency. Let me update my tracking and run the macOS whole-tree build (it shares the same sources, so it will hit the identical pre-existing collisions — but I'll capture real evidence). Starting it in the background.
+
+While macOS builds, let me gather precise evidence for the gate log from the iOS build.
+
+The macOS build finished. Let me confirm it failed for the identical pre-existing reason.
+
+The macOS build failed but with no compile `error:` lines — a different failure phase. Let me check what actually failed there.
+
+The macOS whole-tree build is blocked by a *different* environment issue — code-signing entitlements require a dev certificate (no signing identity in this environment) — and never reached compilation. Note my isolated `swift build`/`swift test` already ran on the **macOS arm64 host**, proving macOS compilation + tests. Let me now close the loop with an **iOS-simulator-target** typecheck of my surface to prove iOS compilation too.
+
+The grep exit (1 = no matches) masked swiftc's real status. Let me capture swiftc's actual exit code directly.
+
+iOS-target typecheck **passes cleanly** (SWIFTC_EXIT=0). My surface is now proven green on both platforms in isolation. Let me verify the log directory and write the comprehensive gate log.
+
+Let me verify the main view file `TelemetryPipelineCard.swift` exists and is tracked (the glob listing seemed to omit it).
+
+All 11 files present and untracked. Now let me write the comprehensive, honest gate log.
+
+The log is written. Now let me finalize: clean up temp artifacts, verify git only sees my intended files, and stage them. First a git status check to ensure the generated project/framework won't be committed.
+
+The generated `.xcodeproj`/`Shared.xcframework` are gitignored (won't be committed), and the two modified `web/*` files are pre-existing (not mine — I'll exclude them). Let me stage only my 11 surface files + the log and commit.
+
+All 11 surface files + log staged; the pre-existing `web/*` modifications are excluded. Committing with an honest message.
+
+Committed (`5e313c45e`). Let me finalize the todo tracking and do a last confirmation of the committed contents.
+
+The deliverable is complete and committed. Let me verify no stray background processes remain, then finalize.
+
+All background processes have completed; the working tree is clean of my changes (committed as `5e313c45e`). The task is finished.
+

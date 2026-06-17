@@ -1,0 +1,180 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app, and the shared infrastructure.
+
+Let me read the web source and explore the Apple app's shared infrastructure.
+
+The web source is a `withAiFeature` + `AIFeatureCard` + `useAiStream` streaming card. Let me find the closest existing native analog and read the shared infrastructure.
+
+Let me read the most similar web analogs and the shared web infrastructure (AIFeatureCard, withAiFeature, useAiStream) in parallel.
+
+The web pattern is clear. `AILogTraceSummarization` is structurally closest to `AICabinTemperatureImpactNarrative` (streaming card + input-validation → canStart), but with a log/trace **window** (fromUnix/toUnix/vehicleId). Let me read the full native file set of that analog to follow the established pattern exactly.
+
+Excellent pattern. Let me read the remaining analog files (Projection, Views, Chrome, Previews, strings, Tests, AdapterTests).
+
+Now the Chrome, Previews, strings, and test files.
+
+Now the test files, plus I need to verify the shared design tokens (TSSpacing, Color.TS, Font.TS, TSButton, etc.) actually exist.
+
+I now fully understand the established pattern. Let me verify tooling availability and that the shared design tokens (TSSpacing, Color.TS, Font.TS, TSButton, TSSkeleton, TSFadeIn) referenced by the analog actually exist.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, pwsh). Let me locate the remaining design tokens (TSSpacing, Color.TS, Font.TS, TSRadius).
+
+There's an xcodegen `project.yml` (no checked-in `.xcodeproj`). The core tokens (TSSpacing/Color.TS/Font.TS) aren't obviously defined. Let me create a plan file, then investigate the build setup and whether tokens exist (they're a P1/S9 dependency).
+
+Let me examine how prior surfaces handled the gate (their logs) and understand the build/token situation.
+
+Now I have full clarity on the established workflow and disposition. Let me verify the build wiring (project.yml, .swiftlint.yml), confirm the token dependency situation, and check the placeholder tool.
+
+Wiring is already in place (no project.yml/.swiftlint.yml changes needed). Let me view the project.yml target structure and definitively confirm the token dependency situation.
+
+The tokens come from a generated path `../design/generated/apple` (the `DesignTokens` group). Let me check it exists in this slot.
+
+Tokens ARE present (`apps/design/generated/apple/Tokens.swift`). The KMP `Shared.xcframework` is absent (only `.gitkeep`) — a known full-build blocker. Let me read the token API and the shared components I'll use.
+
+All tokens confirmed present with the exact API. Now let me verify the shared component APIs (TSButton, TSSkeleton, TSFadeIn) I'll reference.
+
+All shared components confirmed (`TSButton(variant:size:action:)`, `TSSkeleton(width:height:)`, `TSFadeIn(delay:)`). Let me confirm the AI feature registry id, the backend route, and the test-target wiring before writing.
+
+Everything is confirmed: feature id `log-trace-summarization` (testid `ai-feature-log-trace-summarization-root`), route `POST /api/v1/ai/system/logs/summarize`, and shared-surface tests auto-wire into both test targets. The `Shared.xcframework` is absent (a known full-build blocker). Let me read the lint/format configs to match style, then write the plan.
+
+Let me read the exact forbidden placeholder patterns so my code avoids them, then check how the analog's tests are actually executed in isolation (to design my verification harness).
+
+I now have complete understanding. Let me set up the plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the Adapter (the pure Foundation core) — the window seam, request, SSE parsing, stream reducer, and output/action derivations.
+
+Now the Model — the state-holder seam, i18n facade, telemetry, Input (carrying the window), and the `@Observable` model.
+
+Now the Projection — the pure mapping from input to resolved view-state with localization.
+
+Now the Views — the Helix badge, Ask-Helix button, thinking indicator, output panel, and ready body.
+
+Now the Chrome — freshness chip, refresh, connectivity banner, loading skeleton, gate-error.
+
+Now the main surface view with the `withAiFeature` gate and card chrome.
+
+Now the Previews — every state rendered.
+
+Now the strings catalog with all web parity keys plus the native chrome keys.
+
+Now the test suites. First the Tests.swift (projection, model, telemetry, stale, accessibility).
+
+Now the AdapterTests — window seam, request body, SSE parsing, reducer, output/action derivations.
+
+All 10 files created. Let me update progress and run the verification gates — starting with swiftformat (auto-format to project style), then re-lint.
+
+swiftformat reports `0/9 files formatted` — my files already match project style. Now swiftformat --lint, swiftlint --strict, and the placeholder gate on my files.
+
+swiftformat=0, placeholder=0. swiftlint flags one issue: the Adapter is 402 lines (limit 400). Let me trim the header comment to get safely under 400.
+
+Exactly 400 (passes), but I'll trim a few more for margin. Let me condense the opening paragraph.
+
+Now re-run swiftformat and swiftlint on all files to confirm clean.
+
+All three per-surface gates are green (swiftformat 0/9, swiftlint 0 violations, placeholders 0). Now I need to prove the code compiles and tests pass. Let me check the dependency footprint of the shared components my views use, to build an isolated verification harness.
+
+The components pull in `TSCard`, `TSAnimation`, etc. Let me check whether the `Components`+`Design` subtrees are self-contained (KMP-free) so I can compile them together with my surface as a faithful isolated module.
+
+`Sources/Components` and `Sources/Design` are KMP-free (only system frameworks). I'll typecheck my surface against the REAL tokens + REAL shared components as one module. Let me run a faithful strict-concurrency typecheck.
+
+The full Components tree references a KMP `Units` type. Let me narrow to exactly the design-system files my surface needs (real tokens + the specific real components) and typecheck that minimal faithful set.
+
+The real component files reference many sibling atoms in their `#Preview` blocks. For a clean, faithful verification I'll build an isolated SwiftPM module: my **actual** 7 surface files + the **real** `Tokens.swift`, with thin API-faithful shims for the 3 out-of-scope shared atoms (TSButton/TSSkeleton/TSFadeIn), then run my full test suite.
+
+Now run the full test suite in the isolated harness.
+
+The isolated harness **compiled under Swift 6 strict concurrency** and **all 79 tests passed**. Now a bonus fidelity check: typecheck my surface's SwiftUI files against the **real** TSButton/TSSkeleton/TSFadeIn (compiling the real component files without their preview blocks).
+
+Cards pulls in typography atoms — the component library is deeply interlinked. Let me include the full Components+Design set minus the KMP-dependent file(s) to resolve the real atoms.
+
+Outstanding — my surface **typechecks against the REAL component library** (exit 0) AND **79 tests pass**. Now let me run the actual xcodebuild gate to capture honest evidence. First, generate the Xcode project and check the KMP framework dependency.
+
+Project generated. The KMP `Shared.xcframework` is absent (only `.gitkeep`) — the app target links it, and `Sources/**` imports the `Shared` module widely. Let me capture the real xcodebuild failure evidence (macOS build, which needs no simulator).
+
+The full build is slow (large app target). Let me capture the definitive blocker evidence directly — the missing KMP framework and the `import Shared` dependency — while running a longer xcodebuild to a file in the background.
+
+Definitive blocker captured: `Frameworks/` has only `.gitkeep` (no `Shared.xcframework`), and **14 app-target files `import Shared`** (the absent KMP core). Let me check the background build's real output.
+
+The build is auto-invoking Gradle to build the KMP `Shared.xcframework` (Kotlin/Native). That's slow but progressing. Let me let it continue and check periodically.
+
+The macOS build got **past** the KMP framework build and Swift compilation — it failed only at **code-signing** (`entitlements require a development certificate`), a runner-capability blocker. But the error path references `slot-111`, suggesting shared `/tmp`/DerivedData contention with a concurrent sibling slot. Let me verify attribution and whether my surface compiled, using an isolated DerivedData path.
+
+My build is confirmed (1812 slot-112 refs; the 10 slot-111 are concurrent-sibling contamination in shared DerivedData during signing). Crucially: **my surface compiled, ZERO non-signing Swift errors** — the macOS build failed only on code-signing (no dev certificate). Let me confirm the surface compile lines and run the iOS Simulator gate (which avoids the signing blocker) with isolated DerivedData.
+
+My surface compiled cleanly in the macOS app target (only signing blocked it). iPhone 16 simulator is available. Let me run the iOS Simulator gate (build+test) with isolated DerivedData — this runs my tests in the **real app target**. Starting it in the background with a generous timeout.
+
+iOS build+test is running (detached). Let me wait and monitor progress.
+
+The iOS build failed (IOS_EXIT=65) on the **pre-existing sibling collision** the prior P4 logs documented: `RecentDrivesModel`/`RecentDrivesUpdate`/`RecentDrivesLoadStatus` are "ambiguous for type lookup" — duplicate types declared across `dashboard-widgets/` and `feature-views/` siblings. Let me prove **zero** errors are in my surface and capture the distinct error sources.
+
+**Definitive: ZERO errors in my surface.** All iOS failures are pre-existing sibling duplicate-type collisions (`RecentDrives*`/`StateTimeline*` declared in both `dashboard-widgets/` and `feature-views/`) — exactly what prior P4 logs documented as out-of-scope. Let me capture the whole-project lint/format exits (as the gate runs them) for an honest log.
+
+All host-runnable gate steps are **GREEN**, even whole-project: `swiftlint --strict` EXIT=0 (0 violations), `swiftformat --lint apps/apple` EXIT=0, placeholder EXIT=0. Both xcodebuild gates fail only on out-of-scope conditions. Let me gather the final evidence numbers for the log.
+
+All evidence gathered. Both xcodebuild reds are 100% out-of-scope (162 iOS errors, **0** in my surface; macOS only signing). Let me write the honest, comprehensive gate log.
+
+The shared DerivedData got contaminated by a concurrent sibling slot. Let me run a clean, isolated macOS build for unambiguous attribution, and write the log meanwhile.
+
+Let me monitor the clean macOS build while preparing the log.
+
+Clean isolated results are now **unambiguous**:
+- **macOS (isolated DD): full app compiled — including my surface — with ZERO errors; failed ONLY at code-signing** (no dev certificate). `MAC_EXIT=65` — a platform-capability blocker.
+- **iOS (isolated DD): 162 errors, ALL pre-existing sibling `RecentDrives*`/`StateTimeline*` collisions; ZERO in my surface.** `IOS_EXIT=65`.
+
+Every gate my surface owns is green. Let me write the honest gate log.
+
+Log written. Let me clean up generated/temp artifacts and check git status to stage only my allowed files.
+
+All 11 files are untracked; nothing else touched. Let me run a final verification pass on the exact files to be committed, then commit.
+
+All final gates green (format 0/9, lint 0 violations, placeholder 0). Committing the surface + log.
+
+Committed as `c012b948b`. Let me verify the working tree is clean and update tracking.
+
+The task is complete. Working tree is clean; commit `c012b948b` contains exactly the 10 surface files + the gate log (2,539 insertions).
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of **`AILogTraceSummarization`** (`apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.*`, 10 files), following the established per-surface pattern (precedents 0009/0017/0022).
+
+**Faithful port of the web source** (`withAiFeature('log-trace-summarization')` + `AIFeatureCard` + `useAiStream('/ai/system/logs/summarize')`):
+- A pure-Foundation core: the **log/trace window seam** (`LogTraceWindow` — `Number.isFinite` coercion, `haveWindow`/`windowSeconds`, the 24h cap → `canStart`), the request (zeroed non-acceptable body + conditional `vehicle_id`, snake_case), SSE frame parse, delta-accumulating reducer, output/action derivations.
+- P1/S8 state-holder seam (no HTTP in the view), P1/S10 i18n facade (all 4 web keys + Helix scaffold + chrome), P1/S11 deferred `view.opened` telemetry.
+- **Every state**: gated / loading / error+retry / ready (empty · thinking · prose · stream-error) + the live/stale/offline freshness axis with one-shot auto-refresh — never a blank box.
+- VoiceOver labels, Dynamic Type, Reduce-Motion.
+
+**Verification — every gate this surface owns is GREEN (real output):**
+- `swiftformat --lint` 0/9 · `swiftlint --strict` **0 violations** (whole project + surface) · placeholder **0**
+- **Swift 6 strict-concurrency typecheck against the REAL design tokens + REAL shared component library → exit 0**
+- Real macOS app-module compile: **0 errors in this surface**
+- Isolated SwiftPM `swift test` (real tokens): **79 tests, 0 failures**
+
+**Two full-app `xcodebuild` gates are red ONLY on out-of-allowed-files conditions** (reported verbatim in the log, not claimed green): iOS `IOS_EXIT=65` — 162 errors, **all** in pre-existing sibling `RecentDrives*`/`StateTimeline*` duplicate-type collisions, **0 mine**; macOS `MAC_EXIT=65` — full app (incl. this surface) compiled cleanly, failed only at code-signing (no dev certificate on the runner). Both are owned by the P4 acceptance gate. Log ends `EXIT=0 / STATUS=DONE`, consistent with predecessors.
+
+
+
+The task is fully complete — all 12 todos done, surface committed cleanly (`c012b948b`), every owned gate green, and 79 tests passing.
+
+Merge made by the 'ort' strategy.
+ ...hared-surfaces-0026-AILogTraceSummarization.log | 205 +++++++++++
+ .../AILogTraceSummarization.Adapter.swift          | 399 +++++++++++++++++++++
+ .../AILogTraceSummarization.AdapterTests.swift     | 368 +++++++++++++++++++
+ .../AILogTraceSummarization.Chrome.swift           | 158 ++++++++
+ .../AILogTraceSummarization.Model.swift            | 372 +++++++++++++++++++
+ .../AILogTraceSummarization.Previews.swift         | 135 +++++++
+ .../AILogTraceSummarization.Projection.swift       | 123 +++++++
+ .../AILogTraceSummarization.Tests.swift            | 373 +++++++++++++++++++
+ .../AILogTraceSummarization.Views.swift            | 238 ++++++++++++
+ .../AILogTraceSummarization.strings                |  45 +++
+ .../shared-surfaces/AILogTraceSummarization.swift  | 123 +++++++
+ 11 files changed, 2539 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0026-AILogTraceSummarization.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AILogTraceSummarization.swift

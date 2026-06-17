@@ -1,0 +1,148 @@
+I'll start by exploring the environment and reading the web source that serves as the specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Let me read the web source and understand the existing Apple project structure.
+
+`InfoTile` is a pure presentational component. Let me explore the existing Apple `TeslaSync/feature-views` directory and sibling patterns.
+
+Let me look at the existing feature-views files and find a comparable simple presentational sibling to follow the established pattern.
+
+Large established pattern (2335 files). Let me check for any existing InfoTile files, read project.yml for build config, and examine the most recent sibling (FleetSummary) as the canonical pattern.
+
+XcodeGen-based build; feature-views are globbed in. Let me check toolchain prerequisites (xcodegen, Shared.xcframework, generated project) and read the canonical FleetSummary pattern plus find the native GlassPanel equivalent.
+
+Let me read the build-shared script and the full FleetSummary surface (canonical pattern) to understand structure, telemetry, i18n, and design tokens.
+
+Let me understand how parents use `InfoTile`, find the native design-token/shared-component equivalents (TSFadeIn, TSEmptyState, GlassPanel), and read the rest of the FleetSummary pattern files.
+
+Let me find where `InfoTile` is used in web (to confirm it's a generic tile), read the native shared components I'll compose with, and identify a clean presentational sibling to mirror conventions.
+
+`InfoTile` is consumed by `TelemetryGrid.tsx`. Let me read that real usage plus the native shared components (Cards, Typography, States, Motion) and design tokens.
+
+Now I understand the real usage. Let me examine a presentational sibling (`AchievementBadge`) to see how the repo reconciles the state template, plus the native shared components and tokens.
+
+The repo convention (even for presentational leaves like `AchievementBadge`) binds through a Model with loading/empty/error/data phases + a stale/offline connection axis. Let me read the full `AchievementBadge` set and `FleetSummary` state/viewmodel to replicate the P1/S8 pattern exactly.
+
+Excellent — I now have the canonical leaf pattern. Let me read the remaining `AchievementBadge` files (Views, Previews, ModelTests, Tests, strings) and the design tokens to finalize my implementation plan.
+
+Now let me read the test/preview conventions and the design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSSkeleton, TSFadeIn) to ensure my implementation compiles under strict mode.
+
+Let me read the design tokens, shared component signatures (TSSkeleton, TSButton, TSFadeIn), the Previews convention, and the lint/format configs.
+
+Let me read the full Tokens.swift, the Buttons signature, Motion (for Stagger), and the Previews convention.
+
+I have the complete pattern. Let me check the lint/format configs and the `TSButton` signature, then verify the KMP shared-framework build prerequisite.
+
+I have everything needed. Let me set up tracking, kick off the long-pole KMP `Shared.xcframework` build in the background, and create a plan.
+
+Gradle build kicked off. Now writing the implementation, starting with the pure adapter core.
+
+Gradle is running. Now writing all InfoTile source files.
+
+Now the Views file (data tile, tint mapping, glass surface, header, freshness chip).
+
+Now the States file (loading skeleton, empty `—` placeholder, error with retry).
+
+Now the Previews and strings files.
+
+Let me rename the `none` case to `absent` to avoid any `Optional.none` ambiguity, then write the tests.
+
+Now the two test files (adapter/projection coverage and state-holder coverage).
+
+All 9 files written. Let me check the gradle build progress and run swiftformat/swiftlint on the new files.
+
+swiftformat found auto-fixable issues. Let me apply swiftformat to the InfoTile files (ecosystem auto-fix) and re-verify.
+
+swiftformat clean. Let me verify the auto-formatted sections look correct and run swiftlint on the new files.
+
+swiftlint and swiftformat pass cleanly on the new files. Let me check the gradle build progress.
+
+Gradle is still compiling (downloading Kotlin/Native toolchain likely). Let me run the full-tree lint checks (part of the gate) while waiting.
+
+swiftformat passes on all 3077 files. The KMP build finished — let me check its result.
+
+KMP framework built and staged (6m57s). Now let me generate the Xcode project (with all InfoTile files present) and run the full `swiftlint --strict` gate step.
+
+Project generated with InfoTile included; full `swiftlint --strict` (3073 files) and `swiftformat --lint` (3077 files) both pass with 0 violations. Now the iOS build+test (long pole). Let me set up the gate log and start it.
+
+iOS build+test is running in the background. Let me wait and monitor.
+
+iOS build+test completed. Let me check the result and InfoTile test outcomes from the log.
+
+The build failed — but **not** due to InfoTile. All errors are pre-existing `StateTimeline*` type ambiguities (duplicate definitions across `feature-views/StateTimeline.*` and `dashboard-widgets/StateTimelineWidget.*`). Let me confirm this is pre-existing and unrelated to my change.
+
+Confirmed: **zero InfoTile errors** — my surface compiled cleanly. The build is blocked entirely by a **pre-existing collision** between two sibling committed surfaces (`feature-views/StateTimeline.*` and `dashboard-widgets/StateTimelineWidget.*`), both declaring the same public types (`StateTimelineModel`, `StateTimelineConnection`, `StateTimelineUpdate`, `StateTimelineLoadStatus`) into one module. These are outside my allowed scope (`InfoTile.*` only).
+
+Let me verify InfoTile's real logic by running its actual Adapter+Model code standalone, and check whether a clean temporary exclusion of the collision is feasible for gold-standard test evidence.
+
+Both colliding surfaces are self-contained (no external references). Let me check for view/registry references before a safe, reversible exclusion experiment to run InfoTile's real XCTests.
+
+Both surfaces are fully self-contained (zero external references), so a temporary exclusion is safe. First, let me get fast runtime proof by running InfoTile's **real** Adapter+Model code standalone.
+
+All 33 runtime assertions on the **real** InfoTile Adapter+Model code passed (the lone warning is in my throwaway driver, not the shipped sources). Now the gold-standard evidence: temporarily exclude the colliding sibling widget (safe — zero external refs), then run InfoTile's real XCTests in-target.
+
+Widget set moved out, project regenerated. Now build + run InfoTile's XCTests in-target on iPhone 16.
+
+While that builds, let me handle the placeholder-check gate step. Let me inspect the checker and patterns.
+
+`pwsh` is available, so I can run the real checker. But my code uses the word "placeholder" — let me check the checker's matching (case sensitivity / boundaries) and scan my files for risky tokens.
+
+Key finding: the checker matches **case-insensitively**, and the covenant forbids the literal word "placeholder" in shipped code. My files use "placeholder" descriptively (the em-dash for absent data). To be unambiguously compliant with a meaningful scan, let me find and remove all flagged tokens.
+
+Only "placeholder" is flagged (13 occurrences; "skeleton" is not on the list). Let me also check the test files, then rename all to unambiguous terms (em-dash / absent / dash).
+
+Let me check the in-target build+test progress before making the cosmetic rename (to avoid a mid-compile race).
+
+Still building. Let me check raw progress via the log file without disturbing it.
+
+Module compiling cleanly with 0 errors (collision resolved). Let me wait for the test run to complete.
+
+No compile errors, yet TEST FAILED (65). Let me find the actual failure (test failure, linker, or runner issue).
+
+A Swift compiler crash occurred (not in InfoTile). Let me find what file triggered it.
+
+The in-target build hit a **pre-existing Swift compiler IRGen crash** on `AppearanceSettings.Controls.swift` (another unrelated surface) — not InfoTile. Critically, the TeslaSync swiftmodule **emitted successfully** beforehand, proving the entire module (including InfoTile) type-checks. So the tree has two independent pre-existing blockers (StateTimeline collision + an IRGen crash), both outside my scope.
+
+Let me restore the tree and apply the cosmetic "placeholder"→"em-dash" rename (covenant compliance) together.
+
+Tree restored (only InfoTile.* untracked). Let me finish the rename in the remaining files.
+
+All renames applied. Let me verify no forbidden tokens remain, re-run lint, re-run the standalone logic test on the renamed code, and run the real placeholder checker.
+
+The `no` flag is a cwd/config artifact (swiftlint from the nested dir didn't load `apps/apple/.swiftlint.yml`). The authoritative gate runs from `apps/apple`. Let me confirm with the exact gate command — and also re-run swiftformat — from the correct cwd.
+
+Authoritative gate from `apps/apple`: **swiftlint 0 violations** (3073 files), **swiftformat 0** (3077 files). The earlier `no` flag was just the nested cwd not loading the config.
+
+Now the placeholder gate. Let me run the real pwsh checker — both the literal gate path and a meaningful scoped scan of my actual files.
+
+Placeholder gate passes (COUNT=0, EXIT=0) on both the literal path and a meaningful scoped scan of my actual files.
+
+Now the iOS/macOS build+test gates on the **real tree**. Let me regenerate (StateTimelineWidget restored) and run iOS build+test, capturing the true outcome.
+
+Real tree regenerated. Now running the iOS build+test gate (will hit the pre-existing StateTimeline collision). Let me run it and capture the true result.
+
+While iOS builds, let me get gold-standard test evidence by executing my **actual XCTest files** via a minimal SwiftPM package (copies of the real sources + the real test files), since the giant app module is blocked by unrelated crashes.
+
+The package only needs a tiny shim for `InfoTile.surfaceSlug` (the View re-exposes it in-app; headless here). Let me add it so the **real test files run unmodified** (except the import line).
+
+**29/29 InfoTile XCTest cases pass** via the real XCTest runner (0 failures) — adapter, display, number-formatting, projection, tint, model state-machine, and a11y suites all green. The iOS real-tree build also finished — let me capture its result.
+
+Real-tree iOS gate: **IOS_EXIT=65**, failing solely on the pre-existing StateTimeline collision (zero InfoTile errors). Let me run the macOS gate (same source set → same blocker) to capture airtight evidence, while I compose the final log.
+
+Let me verify the final edited view files while macOS builds.
+
+States.swift looks correct. macOS build finished — let me capture its result.
+
+macOS fails (MAC_EXIT=65) on a **code-signing/entitlements** environment limitation (no development certificate available) — plus it shares the same StateTimeline collision. Let me confirm whether the collision also appears in the macOS compile.
+
+Now I have the complete, airtight picture. Let me write the comprehensive final gate log.
+
+**Gate outcomes:** iOS=65 (pre-existing StateTimeline collision), macOS=65 (pre-existing code-signing/no-dev-cert), lint=0, format=0, placeholders=0. **InfoTile itself: compiles clean, 29/29 XCTests pass, lint/format/placeholder all clean.**
+
+Log written (105 lines). Let me verify git status (only InfoTile.* + log should be added; generated project/frameworks must be ignored) before committing.
+
+Clean scope — exactly the 9 `InfoTile.*` files + the log (generated project/framework are gitignored). Let me commit.
+
+Committed as `f805a5428`. Let me clean up temp artifacts and do a final verification.
+
+The InfoTile Apple surface is complete, verified, and committed. Final summary below.
+

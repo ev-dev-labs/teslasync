@@ -1,0 +1,179 @@
+I'll start by exploring the repository structure and verifying the runtime capabilities required by this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Not a BLOCKED scenario. Let me explore the web source and the existing Apple app structure.
+
+There's a well-established multi-file pattern per surface. Let me read the web source completely and study the closest existing analog surfaces to match conventions exactly.
+
+Now I fully understand the web source. Let me study the closest existing analog (`AIAutoTripNameSuggestion` — a suggestion surface) and the shared `AIFeatureCard` native scaffold to match conventions exactly.
+
+Excellent — well-established pattern. Critical concern: these define `public` types like `AiStreamSnapshot`, `AiStreamReducer`, `AiSseFrameParser`. I must check whether these are shared (defined once) or per-surface to avoid redeclaration conflicts.
+
+`AiStreamSnapshot`/`AiStreamReducer` are defined once (in `AIAutoTripNameSuggestion.Adapter.swift`) and shared. I must reference them, not redefine. Let me confirm the target/module structure and how other AI-stream surfaces reference these shared types.
+
+Key finding: all `shared-surfaces/*.swift` compile into ONE `TeslaSync` module (both iOS + macOS targets). So type names must be unique across surfaces. `AiStreamSnapshot` only appears in `AIAutoTripNameSuggestion.*`. I need to see how OTHER streaming surfaces name their types to avoid collisions. Let me read several reference files in parallel.
+
+Critical: `AICostForecastNarration` uses surface-prefixed `CostNarrationStreamSnapshot`/`CostNarrationStreamReducer`. Only `AIAutoTripNameSuggestion` uses the generic `AiStream*` names. So each surface owns uniquely-named copies. I must verify whether view structs like `HelixMark`/`AIBadge` collide across surfaces. Let me check how the second streaming surface names its views.
+
+Architecture confirmed: every surface owns uniquely-prefixed copies of all types/views. `AIAutoTripNameSuggestion` owns the generic `AiStream*`/`HelixMark`/`AIBadge` names; `AICostForecastNarration` uses `CostNarration*`. So I'll prefix everything with `QuietHours`. 
+
+My surface differs critically: it captures a **structured `tool_result` payload** (not delta text), then offers "Apply to form". I need the exact SSE `tool_result` contract and backend field names. Let me read those plus more reference files.
+
+Now I understand the token/component vocabulary. Let me read the SSE contract for `tool_result` data, the backend tool definition, the input type, and the structured-projection analog.
+
+Now I have the full SSE contract — `tool_result` carries a `data` payload my surface must parse into a structured proposal. Let me confirm exact backend field names + tool name + endpoint, and study the structured-projection analog model.
+
+Let me read the backend proposal struct (exact JSON field names) and confirm the endpoint registration.
+
+Full backend contract confirmed: endpoint `/ai/settings/quiet-hours/draft`, tool `draft_quiet_hours_window`, feature gate `quiet-hours-suggestion`, proposal fields match the web exactly. Now let me absorb the remaining conventions — the structured-projection model, States, strings, Previews, and both test files.
+
+Let me read the strings, previews, and both test files to match those formats exactly, plus confirm the design tokens and test-target wiring.
+
+Now the two test files plus design-token verification and the test-target config.
+
+I have the full pattern. Before writing, let me verify the exact design-token/component APIs exist and check the test-target config + placeholder checker.
+
+All tokens/components exist and `pwsh` is available. Let me confirm exact token/component APIs (fonts, spacing, radius, `TSButton`/`TSGlassPanel`/`TSSkeleton`/`TSFadeIn` signatures) and the test-bundle config.
+
+Let me confirm the schemes (the gate builds `TeslaSync` + `TeslaSync-macOS`) and that the design tokens resolve in the generated dir.
+
+All tokens and schemes confirmed. Now let me assess build feasibility (XcodeGen, existing xcodeproj, the KMP `Shared.xcframework` preAction) before writing code, so I know what verification is achievable.
+
+Build requires generating the project (xcodegen present) + a KMP `Shared.xcframework` via Gradle (currently unbuilt). That's heavy but I'll attempt it after writing. First, a final collision check to pick a safe type-name prefix (note `QuietHours` struct already exists in the module).
+
+Decisive: tons of `QuietHours*` symbols already exist (the baseline `QuietHoursPanel`), including `QuietHoursConnection`, `QuietHoursStrings`, `QuietHoursSource`, `QuietHoursProjection`, `QuietHoursFreshnessChip`. `QuietHoursSuggestion`-prefixed names are all free. I'll use that prefix. 
+
+Now I must read the web `AIFeatureCard` to faithfully reproduce what it renders for stream states (thinking/error/delta prose) alongside my proposal block.
+
+Now I understand the full composition: header → Ask-Helix button → **children (my proposal block)** → AiOutputPanel (streamed prose/thinking/error). Let me read `AiOutputPanel` + `AIThinkingIndicator` to reproduce their exact branches.
+
+I now have the complete composition model. Let me check the lint/format configs so I structure files to pass `--strict`, then start writing.
+
+All constraints clear: type names ≤50 chars, lines ≤120, **files ≤400 lines** (default `file_length` becomes error under `--strict`), functions ≤50 lines. I'll split into focused files with the `QuietHoursSuggestion` prefix. Let me set up tracking and write the plan.
+
+Now I'll write the files. Starting with the pure core — Adapter and Parser.
+
+Now the Projection — the pure, localized resolve into a `Ready` struct (testable). Decomposed into small helpers to satisfy the ≤50-line function budget.
+
+Now the Model — strings facade, connection, telemetry, input snapshot, and the `@Observable` state-holder.
+
+Now the Seams — context source + stream driver (live + in-memory doubles).
+
+Adapter/Parser/Model/Projection/Seams done. Now the presentational Views.
+
+Now the States — proposal block, output panel (hint/thinking/prose/error), thinking view, and loading skeleton.
+
+Now the main `AIQuietHoursSuggestion` View.
+
+Now Previews, the strings catalog, and the two test files.
+
+Now the test files — split into four (`Tests`, `AdapterTests`, `ProjectionTests`, `ModelTests`) to stay well under the 400-line `--strict` limit. First, parser + proposal validation + lifecycle.
+
+Now the AdapterTests — reducer, endpoint, patch builder, accessibility.
+
+Now ProjectionTests (per-state) and ModelTests (state-holder + live driver request builder).
+
+Now ModelTests — state-holder behavior + the live driver request builder.
+
+All 12 files created. Let me update tracking and run fast checks: file/line-length sanity, then auto-format my files, then swiftlint.
+
+All files ≤359 lines; no overlong code lines. Now auto-format my files with the repo config, then lint.
+
+7 files reformatted. Now verify format lint passes and run swiftlint --strict on the new files.
+
+Two lint fixes needed: a multiple-trailing-closure in States, and a too-short type alias `S` in Projection. Let me fix both.
+
+All `S.` usages are my alias. Let me rename the alias to `Str` (≥3 chars) safely with perl.
+
+Now reformat the two edited files and re-run both linters.
+
+swiftlint --strict: **0 violations**. swiftformat --lint: **0 require formatting**. Now the placeholder check.
+
+Placeholder gate: **EXIT=0**. Now the heavy part — the full xcodebuild gate. First, prepare the log dir, generate the Xcode project, and probe the KMP `Shared.xcframework` build feasibility (the main risk).
+
+KMP prereqs look present (Java 17, gradle caches, gradlew). Let me generate the Xcode project (picks up my new files via globbing), then probe the Shared.xcframework build.
+
+Project generated; my files are included (84 references across targets). Now probe the KMP framework build (the gating risk) — running async with monitoring.
+
+KMP build still running at 240s (Kotlin/Native first builds are slow). Let me continue waiting.
+
+KMP `Shared.xcframework` built successfully (7m13s, now cached). Let me stage it into `Frameworks/` and confirm.
+
+Framework staged. Now the iOS build+test (large compile). Launching in the background with output captured, and I'll monitor.
+
+Build is compiling the TeslaSync module. The "error:" substring count may include noise — let me inspect actual compile errors.
+
+Build completed — but with 162 **pre-existing** compile errors in OTHER surfaces (`RecentDrivesListWidget`, `RecentDrivesSection`, `StateTimeline` — "ambiguous for type lookup"), and **zero** referencing my `QuietHoursSuggestion` surface. Let me get the exit code and confirm these errors are pre-existing and not caused by my additions.
+
+Build failed with `IOS_EXIT=65`, but from **pre-existing** errors in unrelated surfaces — none reference my surface. Since ambiguities require duplicate definitions and all my types are uniquely `QuietHoursSuggestion`-prefixed, I cannot be the cause. Let me prove this rigorously: confirm git shows only my new files, and that the ambiguous types have pre-existing duplicate definitions I didn't create.
+
+Confirmed: only my 14 new files exist; every erroring file is an unrelated sibling surface (`RecentDrivesListWidget*`, `StateTimelineWidget*`, `RecentDrivesSection*`, `StateTimeline*`); **zero** errors reference my surface. The "ambiguous for type lookup" errors require duplicate definitions — let me show those pre-exist in non-mine files, then run a definitive baseline build with my files removed.
+
+Root cause is definitive: each ambiguous type is defined **twice** — once in `dashboard-widgets/` and once in `feature-views/` (two sibling surfaces that violated unique-naming). None are mine. Now the definitive baseline proof — remove my files, regenerate, rebuild, and confirm the same failures persist.
+
+`BASELINE_EXIT=65` with my files removed — the identical failures persist in the same unrelated files. **Definitive proof the breakage is pre-existing and independent of my surface.** Let me restore my files and regenerate.
+
+Files restored; baseline confirmed clean of my work. To get a faithful GREEN signal for my surface, I'll quarantine the broken sibling surfaces temporarily and run the real gate. First, let me map the full scope of the pre-existing ambiguity and external references.
+
+Ambiguity is confined to exactly two duplicated surface families: `RecentDrives*` (widget + section) and `StateTimeline*` (widget + feature-view). To get a faithful green for my surface, I'll temporarily quarantine the `dashboard-widgets` copies. Let me check their external references and full file sets first.
+
+No external references — quarantining the `dashboard-widgets` duplicates is safe and bounded. Let me temporarily quarantine them (verification-only; restored before commit), regenerate, and run the real iOS build + my surface's tests.
+
+Quarantined (restored before commit). Now the real iOS build + my surface's tests. Launching async with monitoring.
+
+Module now type-checks cleanly (0 ambiguity errors, 0 errors) — it's compiling individual files. The full build + test will take a while. Let me wait.
+
+Still `EXIT=65` but 0 ambiguity errors — a different issue surfaced. Let me inspect the remaining errors.
+
+One remaining error — again **not mine**: `AIAutoNameUnnamedLocations.swift:123` (another pre-existing broken sibling surface). My surface contributes **0 errors**, and the module type-checked my view files cleanly. Rather than whack-a-mole through every broken sibling, let me restore the quarantine (clean repo state) and definitively run my tests in isolation via SwiftPM (my logic files are pure Foundation).
+
+Repo restored to a clean state (only my 14 files). Now a definitive isolated test run: my logic files are pure Foundation, so I'll build them + my tests as a SwiftPM package named `TeslaSync` and run the actual XCTest suite.
+
+**All 80 of my tests pass (0 failures), `SWIFT_TEST_EXIT=0`** in the isolated SwiftPM run — definitively verifying my adapter/parser/reducer/proposal/projection/model/patch/accessibility logic. Let me capture the real macOS build status too (shares the broken module), then assemble the official gate log.
+
+The macOS build failed in 4s — too fast for compilation, so it failed early (likely the scheme pre-action). Let me check why.
+
+The macOS build is blocked by **code-signing** (requires a development certificate — an environment limitation), failing before compilation; it also shares the same pre-existing Swift baseline errors. Neither is my code. 
+
+I now have complete, honest evidence. Let me gather exact figures and assemble the official gate log.
+
+All evidence gathered: **80 tests pass, 0 failures, `SWIFT_TEST_EXIT=0`**. Now let me write the official gate log with the complete honest record.
+
+Now let me verify the build artifacts are gitignored, clean up temporary verification artifacts, and confirm the final working-tree state.
+
+Working tree is clean — only my 14 new files + the log (build artifacts are gitignored). 
+
+Now the commit decision: the Honesty Covenant rule **"8 No commit on red"** is binding, and the full-scheme gate is genuinely RED (`EXIT=65`) due to pre-existing, out-of-scope breakage + a macOS signing environment limitation. Per the covenant, `STATUS=BLOCKED` — so I will **not** force the commit. I'll leave the complete, verified files + evidence log in the working tree.
+
+## Summary
+
+I built the production-grade native Apple (SwiftUI) parity of `components/ai/AIQuietHoursSuggestion.tsx` as **14 new files** under `apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.*`, faithfully reproducing the web surface: the `withAiFeature('quiet-hours-suggestion')` gate, the `useAiStream` SSE client against `/ai/settings/quiet-hours/draft`, the typed proposal captured from the `draft_quiet_hours_window` `tool_result` frame, the "Apply to form" propose-only patch (`onApplyDraft`), and every state (gatedOff · loading · idle · thinking · proposal · error · stale · offline). Architecture matches the established pattern (uniquely `QuietHoursSuggestion`-prefixed types, P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n, P1/S11 `view.opened` telemetry).
+
+### Verification — the new surface is GREEN on every in-scope check
+| Check | Result |
+|---|---|
+| `swiftlint --strict` (13 files) | **0 violations** |
+| `swiftformat --lint` | **0 require formatting** |
+| `check-placeholders.ps1` | **PLACEHOLDER_COUNT=0, EXIT=0** |
+| KMP `Shared.xcframework` | **BUILD SUCCESSFUL** |
+| Isolated XCTest of the real adapter/parser/reducer/proposal/projection/model/seams | **80 tests, 0 failures** |
+| Compile errors attributed to the surface | **0** (views + logic type-check in the real `TeslaSync` module) |
+
+### The full-scheme gate is RED — and I did NOT commit (Honesty Covenant #8 "No commit on red")
+`IOS_EXIT=65` / `MAC_EXIT=65` are caused **entirely by pre-existing, out-of-scope problems**, proven not mine:
+- **Duplicate type definitions** in unrelated sibling surfaces (`RecentDrives*` and `StateTimeline*` are each defined in *both* `dashboard-widgets/` and `feature-views/`), making them module-ambiguous.
+- An unrelated `escaping closure` error in `AIAutoNameUnnamedLocations.swift:123`.
+- macOS requires a **development signing certificate** unavailable on this runner.
+- **Baseline proof:** rebuilding with my 14 files removed reproduces the identical failures (`BASELINE_EXIT=65`). None of these files are in my allowed scope (`AIQuietHoursSuggestion.*`), so I cannot fix them here.
+
+Per the covenant I logged `EXIT=65 / STATUS=BLOCKED` with full raw evidence and left the complete, verified files + log in the working tree (build artifacts are gitignored). Once the shared baseline is repaired, the surface is ready to ship with:
+
+```
+git add apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.* \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0041-AIQuietHoursSuggestion.log
+git commit -m "feat(apps/apple/shared-surfaces): add AIQuietHoursSuggestion surface (P4)"
+```
+
+
+
+The task is complete to the fullest extent possible within scope. The surface is fully built and verified green on every in-scope check; the full-scheme gate is blocked solely by pre-existing, out-of-scope baseline breakage and a macOS signing environment limitation (proven not caused by my work), so per the binding Honesty Covenant ("No commit on red") I logged `STATUS=BLOCKED` and did not force the commit.
+

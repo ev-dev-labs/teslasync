@@ -1,0 +1,80 @@
+I'll start by exploring the repository structure to understand what exists for this Apple acceptance gate.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me gather complete evidence before concluding. Let me explore the prompt location, parity ledgers, predecessor logs, and capabilities.
+
+Critical prerequisites are missing. Let me read the actual P99 prompt and inspect the existing artifact log to confirm format and conventions.
+
+The prior artifact log is the canonical reference — it ran this exact gate and concluded `STATUS=BLOCKED / EXIT=70`. That host had full Xcode via `DEVELOPER_DIR` override. This host is more constrained. Let me verify the current host's facts: Xcode presence, predecessor logs, git state, and the canonical log's existence.
+
+`/Applications/Xcode.app` exists but isn't the active developer dir. The prior run used a `DEVELOPER_DIR` override. The tree is clean (good). P9 canonical logs are absent. Let me probe whether Xcode is actually usable, check xcodegen, and audit P9/P7 predecessor logs.
+
+Xcode 26.5 IS reachable via `DEVELOPER_DIR`, and xcodegen is available. But the decisive blockers are stacking: **0 signing identities**, **both parity ledgers absent**, **`check-parity-ledger.ps1` absent**, and **P9 canonical predecessor logs absent**. Let me verify P9/P7 predecessor STATUS precisely and check the most recent prior-run dispositions.
+
+Predecessors confirm the picture: most recent **P9-0001 = BLOCKED (EXIT=65)**, **P9-0002 absent**, most recent **P99 = BLOCKED (EXIT=1)**. Let me read the most recent P99 artifact's GATE section to see the accepted execution pattern, check P7 page-log coverage, and confirm the xcframework build script.
+
+The most recent accepted run (fully-capable host) ran the entire gate for real and still landed **BLOCKED** (signing + ledgers + lint/placeholder). This confirms the binding, out-of-scope blockers. I'll run the real gate on this host. First, probe KMP/simulator prerequisites and run the cheap Swift gates for real.
+
+Real cheap-gate evidence so far: **LINT_EXIT=2** (1 serious violation), **FORMAT_EXIT=0** (clean), simulators work, but **Android SDK is absent** (no `ANDROID_HOME`, no `local.properties`) — the KMP `:core` module uses the `android.library` plugin, so the Shared.xcframework build may fail at configuration. Let me capture the lint violation, run the placeholder + ledger gates, and generate the Xcode project.
+
+Real cheap-gate results captured: **LINT=2** (opening-brace error), **FORMAT=0** (clean), **PLACEHOLDER=1** (67 found / 24 allowed), **MAC_LEDGER=1 & IOS_LEDGER=1** (checker script absent). Now the xcodebuild halves. Let me generate the project and inspect the xcframework build script (Android SDK is absent, which may block the KMP build).
+
+`xcodegen generate` succeeded (`TeslaSync.xcodeproj` created). The xcframework build script runs `gradlew :core:assembleSharedXCFramework`. Let me check the core Gradle Android requirement and kick off the real iOS `xcodebuild build test` gate command in the background (it triggers the KMP xcframework pre-build).
+
+Confirmed: KMP `:core` applies `android.library` plugin with `compileSdk` — it **requires the Android SDK**, which is absent on this host. The iOS `xcodebuild` is running and triggering the gradle xcframework pre-build. Let me poll its output.
+
+The shell redirects to a file. Let me tail the actual log to see real progress.
+
+The KMP xcframework build is **succeeding** (Kotlin/Native targets FROM-CACHE; debug xcframework already written). The iOS `xcodebuild` will now compile ~2635 Swift files and run tests — this takes a while. I'll let it run and poll. I'll run the xcodebuild commands **sequentially** to avoid the shared-host contention the prior run hit.
+
+The gradle release xcframework linking is underway (slow Kotlin/Native release link, not cached). xcodebuild buffers heavily. Let me wait longer for the Swift compile phase to begin.
+
+iOS is now actively compiling Swift sources (log at 1.6MB) after a successful xcframework build. While it compiles, let me quantify the P7 page-prompt predecessor coverage (concrete DONE/BLOCKED counts) without disturbing the build.
+
+Concrete predecessor data emerging: canonical p4-apple page logs exist (e.g., `p4-apple-dashboard-widgets-0001-*`) but only ~337 vs **861 P7 prompts**, and **P9 canonical logs are absent**. Let me get the precise canonical p4-apple page-log count and DONE/BLOCKED split.
+
+Predecessor verdict is concrete: **333 of 861 P7 page prompts have canonical DONE logs (~39%); 528 unlogged**, plus **P9 absent**. Decisively incomplete (rule 7). Let me check iOS build progress.
+
+"BUILD SUCCEEDED" appeared (2.2MB log). Let me check whether the test phase is running and the main build shell's status.
+
+App `build` action succeeded (line 13418). xcodebuild is now building/running the **test** action on the booted iPhone 16 simulator (~13 min elapsed). Let me wait for the iOS gate to finish.
+
+iOS gate finished: **IOS_EXIT=65** (app BUILD SUCCEEDED, test action failed). Let me extract the precise test-failure reason.
+
+Real iOS result: **IOS_EXIT=65** — app `** BUILD SUCCEEDED **`, but the **test bundle failed to compile** (`invalid redeclaration of 'MonthlyCostAccessibilityTests'`, `'SpyMonthlyCostTelemetry'`, type errors in `MonthlyCost*.Tests.swift`) → `** TEST FAILED **`. Out of scope to fix. Now the remaining xcodebuild commands (xcframework is cached). Let me run the iOS archive.
+
+iOS archive failed fast (6s): **IOS_ARCHIVE_EXIT=65**. Let me capture the signing error, then run the macOS build+test and macOS archive.
+
+Both archives fail on signing (no dev team): **IOS_ARCHIVE_EXIT=65**, **MAC_ARCHIVE_EXIT=65**. Let me capture the macOS archive error and run the final command — macOS build+test.
+
+macOS build+test also failed fast: **MAC_EXIT=65**. Let me capture its error to confirm root cause.
+
+All nine gate commands have real results now. **8 of 9 RED.** Summary: IOS=65 (test compile errors), MAC=65 (entitlements need dev cert), LINT=2, FORMAT=0✅, PLACEHOLDER=1 (67/24), MAC_LEDGER=1 & IOS_LEDGER=1 (checker absent), IOS_ARCHIVE=65 & MAC_ARCHIVE=65 (no dev team). Let me gather final preflight facts and confirm tree cleanliness before composing the log.
+
+All evidence captured. Tracked tree is **clean**; generated `Shared.xcframework`/`TeslaSync.xcodeproj`/gradle outputs are git-ignored (not drift). P7 prompts total **861** (pages 153, feature-views 308, dashboard-widgets 118, modals-dialogs 31, shared-meaningful 235, widget-primitives 13, misc-surfaces 3); only **333** have canonical DONE logs. Now I'll write the acceptance log.
+
+Log written. Let me verify the footer, confirm only the log is staged (nothing else tracked changed), and commit just the log per rule 8.
+
+Footer correct (`EXIT=65` / `STATUS=BLOCKED`); exactly one file staged. Committing the log only.
+
+Committed (1 file, 259 insertions). Final verification that the tracked tree is clean post-commit.
+
+Done. I executed the **P4/P99 Apple acceptance gate** for real on this host and recorded honest evidence per the binding Honesty Covenant.
+
+## Result: `STATUS=BLOCKED` / `EXIT=65`
+
+The gate ran genuinely — full **Xcode 26.5** was reachable via `DEVELOPER_DIR`, the **iPhone 16** simulator was booted, `xcodegen` generated the project, and the KMP `Shared.xcframework` built from the warm Gradle cache. All 9 gate commands ran verbatim; **8 of 9 RED**:
+
+| Step | Result |
+|---|---|
+| iOS build+test | **65** — app `BUILD SUCCEEDED`, but test bundle fails to compile (`MonthlyCost*.Tests.swift` duplicate symbols + type errors) |
+| macOS build+test | **65** — entitlements require a dev certificate (0 identities) |
+| swiftlint --strict | **2** — 1 serious (`opening_brace` in `LiveSignalSparklinesWidget.Builder.swift:158`) |
+| swiftformat --lint | **0** ✅ |
+| placeholder scan | **1** — 67 found / 24 allowed |
+| macos / ios ledger | **1 / 1** — `check-parity-ledger.ps1` + both ledger JSONs absent |
+| iOS / macOS archive | **65 / 65** — signing requires a development team; no archives produced |
+
+**Decisive blockers (any one forces BLOCKED):** predecessors incomplete (`p4-p9-0001` BLOCKED, `p4-p9-0002` absent, P7 pages **333/861** DONE); both parity ledgers + checker absent; **0 codesigning identities**.
+
+Per **rule 8 (no commit on red)** I committed **only** the acceptance log — `09fdce172`, 1 file. Tracked tree is clean; generated `xcodeproj`/`xcframework`/Gradle outputs are git-ignored. I did **not** fix code, narrow scope, delegate, or create missing ledgers/pages/signing config (all explicitly out of scope).
+

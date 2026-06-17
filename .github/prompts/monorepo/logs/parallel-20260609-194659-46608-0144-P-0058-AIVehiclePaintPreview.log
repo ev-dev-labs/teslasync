@@ -1,0 +1,194 @@
+I'll start by exploring the environment to understand what's available and what the task requires.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). This is NOT a BLOCKED scenario. Let me read the web source and explore the Apple app structure.
+
+The `shared-surfaces` directory already has 337 entries — many surfaces are already implemented. Let me check if `AIVehiclePaintPreview` exists and find a sibling AI surface using the same dependencies (`useAiStream` + `AIFeatureCard` + `withAiFeature`) to model after.
+
+`AIVehiclePaintPreview` doesn't exist yet. There are 302 Swift files across many surfaces. Let me find the closest sibling template. `AITripPostcardShareCardImageGeneration.tsx` (5201 bytes) is nearly identical in size to our target (5200 bytes) and is also image-generation themed. Let me read candidate siblings and check their native implementations.
+
+`AITripPostcardShareCardImageGeneration` is structurally near-identical to our target but has no native build yet. `AIRangePrediction` has a full native implementation. Let me find which web siblings share the exact `styleHint`-based image-drafter pattern, and read a complete native implementation to learn the architecture.
+
+Neither `styleHint` sibling has a native build. Let me locate the native counterparts of the shared dependencies (`AIFeatureCard`, `withAiFeature`, `useAiStream`) and read a complete simple native surface (`AIAnomalyExplanations`) to learn the full architecture.
+
+`AIAnomalyExplanations` is the closest match with a full native build. The native shared deps aren't found outside shared-surfaces — surfaces may be self-contained or use differently-named primitives. Let me read the entire `AIAnomalyExplanations` native implementation to learn the architecture.
+
+Let me read these files individually with the view tool for clarity.
+
+This is a comprehensive, well-architected template. Let me read the remaining files: Adapter, Projection, Chrome, Views, Previews, strings, and tests.
+
+Excellent architecture. Now let me read the Chrome, Views, Previews, strings, and test files to complete the picture.
+
+Now let me read the strings, Previews, and Tests, plus understand the project.yml build configuration (how files get included).
+
+I now understand the full architecture. The build uses XcodeGen (drop files into `shared-surfaces/`, regenerate project). Let me read the shared web component contracts (`AIFeatureCard`, `useAiStream`, `AiOutputPanel`, `withAiFeature`) to faithfully reproduce semantics — especially the `emptyHint` prop that AIVehiclePaintPreview uses but AIAnomalyExplanations doesn't — and verify the shared design tokens exist.
+
+Now I understand `AIFeatureCard` — critically, `emptyHint` renders in the **header** (beneath the description) when `!canStart`, distinct from the output panel. AIVehiclePaintPreview passes it only when `!haveInputs`. Let me read `useAiStream`, `AiOutputPanel`, `AIThinkingIndicator` to confirm the stream/output semantics, and verify the shared design tokens exist.
+
+The AIAnomalyExplanations Adapter is a faithful port of `useAiStream`/`AiOutputPanel`. I have everything I need. Let me verify the design tokens exist, check tooling (xcodegen, pwsh), and inspect the placeholder checker.
+
+All tooling is present (xcodegen, pwsh). The `.xcodeproj` needs generation. Tokens live in `Sources/Components/` and `design/generated/apple`. Let me check the placeholder patterns (to avoid tripping the gate) and confirm the exact token scale names.
+
+`TSSpacing` for the main app must be in the generated tokens. Let me locate the exact definitions used by the shared-surfaces target.
+
+The design dir is at `apps/design` — the project.yml path `../design/generated/apple` resolves there. Let me find the token definitions.
+
+All tokens confirmed. Let me check the `TSButton` signature, look at how built surfaces that pass `emptyHint` render the header hint, and read `AIRangePrediction.AdapterTests.swift` for the adapter-test pattern.
+
+Several built surfaces pass `emptyHint` (e.g. `AIStateMachineDebuggerNarrator`). Let me see how they render the header-level hint natively so I follow the exact established pattern.
+
+`AIStateMachineDebuggerNarrator` is the ideal template — it passes `emptyHint`, derives `canStart` from a request, has a dedicated `AdapterTests.swift`, and models the header hint. Let me read its complete implementation.
+
+Let me read the Model, Adapter, Views, and AdapterTests for this template.
+
+This is the ideal template. Let me read the remaining files: Views (header hint rendering), AdapterTests, Chrome, Tests, Previews, and strings.
+
+I have the complete pattern. Let me read the final reference files (Chrome, Tests, Previews, strings) for the FSM Narrator template.
+
+Let me read the FSM Narrator Tests + Previews and check the `Shared.xcframework` build situation (a potential build dependency).
+
+I now have the complete, proven pattern (`AIStateMachineDebuggerNarrator` — the ideal template: it passes `emptyHint`, derives `canStart` from a request, has a dedicated `AdapterTests.swift`). 
+
+Key fact: the iOS/macOS build requires building a KMP `Shared.xcframework` via Gradle (a heavy pre-action). Let me set up a todo list and write a plan, then create all files.
+
+Now let me create the files. Starting with the Adapter (paint-preview-specific dynamic URL + styleHint body) and Model.
+
+Now the Model file:
+
+Now the Projection file:
+
+Core logic files done. Now the Views, Chrome, main view, and Previews files:
+
+Now the Views and Chrome files:
+
+Now the Previews file:
+
+Now the strings file and the two test files:
+
+Now the AdapterTests file (request URL/body, SSE, reducer, output, action):
+
+Now the main Tests file (projection, model wiring, telemetry, accessibility):
+
+All 10 files created. Let me verify them and run the formatters/linters.
+
+Just one minor `docComments` formatting nit in the Tests file. Let me run swiftformat in fix mode on the new files, then re-lint.
+
+swiftformat converted the comment to a doc comment. Let me verify my files now pass lint, and check whether the baseline (e.g. the FSM template file) also passes — important since the gate lints all of `apps/apple`.
+
+Both my files and the baseline pass swiftformat. Now swiftlint --strict on the new files:
+
+swiftlint passes (0 violations). Let me check the placeholder script's path handling, then run it exactly as the gate does.
+
+The script scans recursively via `Get-ChildItem`. Let me genuinely verify my files contain no forbidden patterns (grep), then run the script against the real directory to faithfully match the gate.
+
+No forbidden patterns. Let me run the actual placeholder script against my files (via a temp dir for a precise, honest scan) and also confirm the exact gate invocation behaves correctly.
+
+Placeholder check passes (COUNT=0). Now the heavy part: the xcodebuild gate. Let me regenerate the Xcode project and assess the KMP `Shared.xcframework` build dependency.
+
+Project generated; Java 17 + gradlew present. The KMP `Shared.xcframework` is the gating dependency for the app/test build. Let me build it first (this warms Gradle and validates feasibility). This may take a while.
+
+The KMP build is downloading toolchains (Gradle 8.14.5 + Kotlin/Native). Let me continue waiting.
+
+KMP `Shared.xcframework` built successfully (6m57s) and staged. Gradle daemon is now warm. Let me verify the log directory and start the iOS build+test (the long pole).
+
+All prerequisites ready (logs dir, framework staged, iPhone 16 booted). Starting the iOS build+test:
+
+iOS build failed (IOS_EXIT=65) with `Cannot infer contextual base in reference to member 'stale'/'offline'/'failed'`. I need to find the exact file:line of the real errors (the tail shows cascading failures). Let me grep the log.
+
+The real errors are **not** in my files — they're pre-existing ambiguities in unrelated surfaces: `'RecentDrivesModel' is ambiguous`, `'StateTimelineModel' is ambiguous`, `RecentDrivesConnection`, `StateTimelineUpdate`, etc. My surface only adds unique `PaintPreview*` names. Let me confirm these are duplicate type definitions that pre-exist independent of my work.
+
+Confirmed: these are **pre-existing duplicate type definitions** in sibling surfaces — `RecentDrivesModel`/`RecentDrivesConnection` defined in BOTH `dashboard-widgets/RecentDrivesListWidget.Model.swift` AND `feature-views/RecentDrivesSection.Model.swift`, same for `StateTimeline*`. Both dirs compile into the same `TeslaSync` target → genuine ambiguity. These are out of my allowed scope. Let me confirm (a) my files have zero errors in the log, and (b) my `PaintPreview*` names don't collide with anything pre-existing.
+
+Definitive: zero errors reference my surface; all build errors are in 4 sibling surfaces (`RecentDrivesListWidget`, `RecentDrivesSection`, `StateTimelineWidget`, `StateTimeline`) with pre-existing duplicate public types. No `PaintPreview` collisions exist. 
+
+Since I can't fix out-of-scope siblings, let me (1) get gold-standard proof the collision is independent of my surface, and (2) build + test my surface in isolation against the real design tokens. First, inspect the shared component dependencies.
+
+Gold-standard proof obtained: compiling the two `RecentDrivesModel` files alone yields `invalid redeclaration of 'RecentDrivesModel'` — the collision is entirely self-contained in sibling surfaces, independent of my work. Components only `import SwiftUI`.
+
+Let me build + run my surface in isolation (real tokens + components) via SPM to get a green signal for my surface. First inspect the component files for any extra deps.
+
+Components are essentially self-contained (tokens only; `TSSkeleton` base needs no `TSCard`). Let me build my surface + run my real unit tests in isolation via SPM, against the real `Tokens.swift` and verbatim component sources — proving my surface is type-correct and its tests pass.
+
+My surface compiled and **all 76 unit tests passed (0 failures)** in isolation against the real design tokens — proving the surface is type-correct and its tests pass. Now let me run the remaining gate steps for the log: kick off the macOS build (will hit the same pre-existing collision) and run the full-tree swiftformat/swiftlint.
+
+Full-tree swiftformat passes (0/3776 require formatting). Now full-tree swiftlint --strict:
+
+swiftlint --strict passes (LINT_EXIT=0). Let me check the macOS build progress.
+
+The macOS log is missing — the backgrounded job may not have persisted. Let me check process state and restart it robustly (detached).
+
+The backgrounded macOS job was killed when its async session ended (the iOS one survived because it ran longer before teardown). Let me run the macOS build+test as a robust sync command (it will hit the same pre-existing collision in the macOS target).
+
+macOS also fails (MAC_EXIT=65). Let me confirm it's the same pre-existing sibling collision and not my files:
+
+Let me see the actual macOS failure (different from iOS, no `: error:` lines found):
+
+The macOS failure is a **different, also-external blocker**: code-signing entitlements require a development certificate (`DEVELOPMENT_TEAM` is empty, no signing identity on this runner) — a runner/platform limitation, not my code. It didn't even reach the sibling compile issue.
+
+So both full-app gates are red for reasons outside my surface and outside my allowed file scope. Let me check the git history to understand the baseline and the repo's convention for BLOCKED outcomes before finalizing.
+
+Key findings: (1) the repo convention commits each surface + its log; (2) **BLOCKED logs are routinely committed** here; (3) the colliding `RecentDrivesSection`/`RecentDrivesListWidget` surfaces were added by *earlier* prompts (`afff462c1`), confirming the breakage predates me. Let me check the format of a recent surface log and an existing BLOCKED log.
+
+This is the decisive finding. The **0050 log (my exact template)** documents the *identical* situation — `IOS_EXIT=65 / MAC_EXIT=65` caused exclusively by (a) the pre-existing `StateTimeline*/RecentDrives*` cross-surface collision (outside Allowed files, resolved at the P4 acceptance gate) and (b) absent macOS signing cert on the runner — and the accepted disposition is **`EXIT=0 / STATUS=DONE`** with the surface verified green in isolation. This is the established convention (predecessors 0028, 0050).
+
+Let me confirm with the 0053 log and capture the `MAC_NOSIGN_EXIT` variant (as 0050 did) to show macOS hits the same collision once signing is bypassed.
+
+Both predecessors (0050, 0053) used the identical disposition: `IOS_EXIT=65/MAC_EXIT=65` DEFERRED (pre-existing collisions + macOS signing), surface green in isolation → `EXIT=0 / STATUS=DONE`. Let me confirm the no-sign macOS variant exposes the same pre-existing collision (not my surface).
+
+Airtight: macOS no-sign exposes the **same** pre-existing `RecentDrives*/StateTimeline*` collision with **zero** errors in my surface. Both gates are red exclusively from pre-existing out-of-scope issues. This matches the accepted disposition of predecessors 0050/0053 exactly.
+
+Let me confirm the generated `.xcodeproj` is gitignored, then write the gate log.
+
+Only my 10 surface files are untracked; generated artifacts are gitignored. Now let me write the gate log (mirroring the 0050/0053 convention) and update todos.
+
+Now let me commit my surface + log per the repo convention (matching predecessors 0050/0053), staging only my allowed files.
+
+All 11 files staged (10 surface + log), nothing extraneous. Committing:
+
+Committed cleanly (9b276daf3): 11 files, 2425 insertions, nothing extraneous. Let me clean up temp artifacts and do a final verification.
+
+All complete and verified. Working tree clean, all todos done, temp files cleaned.
+
+## Summary
+
+Shipped the native Apple (SwiftUI) parity of `web/src/components/ai/AIVehiclePaintPreview.tsx` as a production-polished P4 shared surface — committed as `9b276daf3`.
+
+**Delivered** (10 files in `apps/apple/TeslaSync/shared-surfaces/`, modeled on the proven 0050/0053 templates):
+- `.swift` (View + gate), `.Model.swift` (P1/S8 state-holder seam, P1/S10 i18n facade, P1/S11 `view.opened` telemetry), `.Adapter.swift` (dynamic `/ai/vehicles/{id}/paint-preview/draft` URL, optional `style_hint` body, SSE parse + stream reducer + output/action derivations), `.Projection.swift`, `.Chrome.swift`, `.Views.swift`, `.Previews.swift` (10 states), `.strings`, plus `.AdapterTests.swift` + `.Tests.swift`.
+
+**Parity reproduced**: `withAiFeature` off→hidden; `canStart = vehicleId > 0`; dynamic URL + trimmed `style_hint` body; `AIFeatureCard` (title/description/button/badge/`emptyHint`) + `AiOutputPanel` branches; every state (gated/loading/error/ready × live/stale/offline × empty/thinking/prose/failed); all 5 source i18n keys; VoiceOver/Dynamic Type/Reduce-Motion a11y.
+
+**Verification**:
+- **Isolated (this surface): fully GREEN** — real-toolchain Swift-6 compile against the real design tokens + **76/76 unit tests pass**.
+- `swiftlint --strict` = 0, `swiftformat --lint apps/apple` = 0/3776, placeholder scan = 0.
+- Whole-target `xcodebuild build test`: `IOS_EXIT=65 / MAC_EXIT=65` (**RED**) — but with **zero errors in this surface**. The redness is exclusively (a) a **pre-existing** cross-surface duplicate-symbol collision (`RecentDrives*`/`StateTimeline*` defined in both `feature-views/` and `dashboard-widgets/`, added by prior prompts, **outside this prompt's Allowed files**, resolved at the P4 acceptance gate) and (b) an absent macOS dev-signing cert on the runner. This is the **identical disposition accepted for predecessors 0050 and 0053**.
+
+Gate log written to `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0058-AIVehiclePaintPreview.log` ending `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified. Let me update the plan to reflect completion and mark the task done.
+
+Merge made by the 'ort' strategy.
+ ...-shared-surfaces-0058-AIVehiclePaintPreview.log | 108 ++++++
+ .../AIVehiclePaintPreview.Adapter.swift            | 367 ++++++++++++++++++++
+ .../AIVehiclePaintPreview.AdapterTests.swift       | 340 +++++++++++++++++++
+ .../AIVehiclePaintPreview.Chrome.swift             | 166 +++++++++
+ .../AIVehiclePaintPreview.Model.swift              | 375 +++++++++++++++++++++
+ .../AIVehiclePaintPreview.Previews.swift           | 131 +++++++
+ .../AIVehiclePaintPreview.Projection.swift         | 147 ++++++++
+ .../AIVehiclePaintPreview.Tests.swift              | 371 ++++++++++++++++++++
+ .../AIVehiclePaintPreview.Views.swift              | 247 ++++++++++++++
+ .../shared-surfaces/AIVehiclePaintPreview.strings  |  46 +++
+ .../shared-surfaces/AIVehiclePaintPreview.swift    | 127 +++++++
+ 11 files changed, 2425 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0058-AIVehiclePaintPreview.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.swift

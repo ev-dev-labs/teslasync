@@ -1,0 +1,242 @@
+I'll start by exploring the repository structure to understand what exists and what needs to be built.
+
+The Apple app exists. Let me explore the web source page and the Apple app structure in parallel.
+
+Web source is large. Let me read it in chunks and explore the Apple project structure.
+
+The output path in the prompt (`TeslaSync/Features/Admin/`) differs from the actual project layout (`Sources/Features/` and `TeslaSync/feature-views/`). Let me check toolchain availability and existing patterns.
+
+Toolchain is fully available (Xcode 26.5, xcodegen, swiftlint, swift 6.3.2, pwsh) — so the gate can run. The real admin pages live in `Sources/Features/Admin/` (the prompt's `TeslaSync/Features/Admin/` is a generator template path not wired into `project.yml`). Let me read the rest of the web page and study existing admin page patterns.
+
+Let me read the rest of the web page and study a complete admin page reference (DiskForecast).
+
+Excellent reference pattern. Let me read the rest of the web page, the model, and the route registration.
+
+Let me read the rest of the web page and explore the routing, localization, and shared component infrastructure.
+
+Let me read the final part of the web page and the routing infrastructure.
+
+The web route is `/backup` but `AppRoute` has no `.backup` case. Let me examine the parser, composition root, and how registrations compose.
+
+Let me see the composition chain in TeslaSyncApp and find all exhaustive switches over `AppRoute`.
+
+Adding a `.backup` route precisely mirrors web `/backup`. Let me check the tests that reference `AppRoute` to understand the blast radius before deciding.
+
+Adding `.backup` is viable: pathSegments stay unique, `group`/`systemImage` switches get a case, and the menu/spotlight catalogs derive from `allCases`. Let me confirm the menu catalog is `allCases`-driven and inventory the design tokens + shared components.
+
+Menu/spotlight catalogs are `allCases`-driven, so `.backup` is safe. Now let me read the key shared components I'll reuse (cards, metrics, typography, states, banners, badges, buttons).
+
+Let me read the remaining components I'll use: typography, feedback states/skeletons/banners, badges, buttons, and the table/overlay/field primitives for the modals.
+
+Let me read badges, buttons, skeletons, banners, and the adaptive table reference pattern.
+
+Let me read the buttons, the adaptive table reference, status indicators, and check the localization catalog for existing keys.
+
+Let me inspect the localization catalog structure and the model-test pattern.
+
+Now let me examine the exact xcstrings JSON structure (header, a route entry, and `common.cancel`) so I can add keys correctly.
+
+I now understand the full web page and the Apple architecture. Let me check the lint config, placeholder scanner, design tokens, and form/overlay components before writing.
+
+Critical: the placeholder scanner flags the literal substring "Placeholder" (case-insensitive), and the parity key `backup.configNamePlaceholder` contains it — I'll use the sanctioned `// parity:allow` marker there. Let me read the web formatters to port them and check the theme/glass helpers.
+
+I have all the context I need. Let me check the build prerequisites (Shared.xcframework / xcodegen) since the gate requires a real `xcodebuild`.
+
+Building the full app needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me assess whether that's feasible here and check the pending-verifications doc.
+
+We're on a macOS host with Xcode, unlike the typical Windows/Linux dev host. Let me cleanly check the JDK/Gradle availability to see if the KMP build is feasible.
+
+JDK 17 + gradlew are present, so the KMP build may be feasible (it's the long pole). Let me kick off the `Shared.xcframework` Gradle build in the background now while I implement, then set up my plan and todos.
+
+The Xcode project generated. The xcframework build "completed" suspiciously fast — let me check its log.
+
+The Gradle build is progressing (mostly cached) but didn't finish — the detached wrapper exited early. Let me restart it in async mode and proceed to implement in parallel.
+
+Let me write the plan file, then start implementing the model layer.
+
+Now let me implement. Starting with the `AppRoute` changes.
+
+Now the model layer. Let me create the value types and data-source seam.
+
+The models file uses `LocalizedStringKey` and `TSTone` (SwiftUI). Let me fix the import.
+
+Now the formatters and feedback mapping.
+
+Now the `@Observable` page model with states, derived stats, and actions.
+
+Now the seeded in-memory sample data source.
+
+The build is running in the background. Let me check its progress briefly, then build the main page view.
+
+Build still running. Let me write the main page view.
+
+Now the sections (stats grid, panels, recent errors, toast).
+
+Now a small shared chip and the two adaptive tables.
+
+Now the config editor sheet with dynamic provider fields.
+
+Now the provider field specs and rendering.
+
+Now the restore preview sheet.
+
+Now the route registration and wiring into the app composition.
+
+Let me view the exact composition block to wire the registration precisely.
+
+The KMP build completed. Let me wire the registration into the composition, then check the build result.
+
+`Shared.xcframework` built and staged successfully (12m). Now the localization keys — I'll insert all 80 new keys via a validated Python script.
+
+81 keys added and JSON validated. Now the model tests.
+
+All files written. Let me run swiftlint on the new files first (fast feedback before the heavier build).
+
+Two lint issues: an orphaned doc comment and one long line. Let me fix both.
+
+Let me add the `sizeText`/`recordsText` helpers and update the compact card to reuse them.
+
+Let me re-run swiftlint on the full Admin directory plus the edited app files.
+
+Let me see exactly which 3 violations exist and whether they're in my files.
+
+The 3 violations are pre-existing in `widget-primitives` (unrelated to my task). Let me confirm scoping lint to just the Admin dir is clean.
+
+Confirmed: my Admin files are lint-clean (the only `--strict` violations are 3 pre-existing single-letter test vars in `widget-primitives`, outside my allowed scope and present on baseline). Let me stop the re-scan, run the placeholder gate, and regenerate the project to include my new files.
+
+The placeholder marker needs to be on the same line as the match. Let me fix that.
+
+Now let me add the `nameField` property with the opt-out marker on the matching line.
+
+The doc comment still contains the literal substring. Let me reword it to avoid both the word and the key name.
+
+Let me re-run the placeholder scan and lint on the editor file to confirm both are clean.
+
+`ignores_comments` measures the full line here. Let me break the call so the marker sits on a short line.
+
+My files pass lint and placeholder gates. Now the real build. Let me first compile-validate via the macOS target (no simulator needed), which exercises all my Swift.
+
+While the macOS build runs, let me poll it.
+
+The macOS failure is a code-signing/entitlements environment issue (no dev certificate), not a code problem — and it failed before compiling sources. The iOS Simulator build doesn't need signing. Let me check available simulators and build the iOS scheme.
+
+An iPhone 16 simulator is already booted on iOS 26.5. Let me build the iOS scheme (this validates all my Swift compiles in the app target).
+
+Let me wait for the iOS build to compile all sources.
+
+A real collision: an existing `BackupRun` type exists in `dashboard-widgets/BackupMonitorWidget`. My public `BackupRun` (and possibly others) clash. Let me find all existing `Backup*` type definitions to scope the rename.
+
+The module shares one namespace and has an extensive existing `Backup*` widget ecosystem. Let me find every collision against my type names precisely.
+
+Three collisions: `BackupRun`, `BackupRunStatus`, `BackupToastView`. I'll rename my types (word-boundary-safe so `BackupRunsTable` etc. are untouched): `BackupRun`→`BackupRunRecord`, `BackupRunStatus`→`BackupRunPhase`, `BackupToastView`→`BackupRestoreToast`.
+
+Renames applied cleanly. The longer names may have pushed some lines over 120 chars — let me re-lint my files.
+
+Clean. Let me rebuild the iOS scheme to confirm everything compiles.
+
+Let me wait for the iOS build result.
+
+No errors yet (good sign — it's compiling past my files). Let me continue waiting.
+
+Still compiling with no errors. Let me wait for completion.
+
+The build is large (5400 files) and still linking with no errors so far. Let me keep waiting.
+
+Build failed but with no `error:` lines (likely signing/linking, like macOS). Let me capture the full failure reason.
+
+Let me see exactly which build command failed near line 16893.
+
+The failing batch includes `AppRoute.swift` (my edit). Let me find the actual compiler diagnostic in the log.
+
+No `error:` text at all — that points to a compiler crash/kill (e.g., heavy type-inference) rather than a normal diagnostic. Let me check how my BackupRestore batch fared and look for crash indicators.
+
+Found it: line 15230 "Command SwiftCompile failed with a nonzero exit code" — a frontend crash (no diagnostic). Let me see which file's job it was.
+
+Let me check for the classic SwiftUI "too complex to type-check" signature and identify the crashing job.
+
+Let me check for a frontend stack dump that pinpoints the crashing expression.
+
+The crash is **not in my code** — it's an LLVM `report_at_maximum_capacity` **IRGen crash** in `AppearanceSettings.Controls.swift` (a file I never touched). Crucially, IRGen runs *after* type-checking, so the whole module — including all my files — **type-checked successfully**. This looks like a pre-existing toolchain codegen bug. Let me verify it reproduces on the baseline (without my changes) to be certain.
+
+Baseline is clean. Let me regenerate and build the baseline to see if the same IRGen crash occurs.
+
+Baseline build running (~10-13 min). While it runs, let me look at the file the compiler crashed on.
+
+It's a generic SwiftUI control file — exactly the kind that triggers IRGen crashes. Let me wait and check the baseline log for the same crash signature.
+
+Baseline still compiling (no result yet). Let me wait for it to reach the same point.
+
+Baseline also failed (EXIT=65). Let me confirm it's the identical crash.
+
+**Confirmed: identical pre-existing crash on the clean baseline** — same `report_at_maximum_capacity` IRGen crash in the same `AppearanceSettings.Controls.swift` (a file I never touched). The project does not build on this local toolchain even at baseline; this is the class of issue `macos-pending-verifications.md` defers to CI. Critically, IRGen runs *after* whole-module type-checking, so my code type-checks. Let me restore my work.
+
+Restored. Now let me definitively prove my code type-checks by extracting the real compiler invocation and re-running it in whole-module `-typecheck` mode (which skips the crashing IRGen phase). First, locate the driver command.
+
+Found the driver command using a response file. Let me extract it fully.
+
+I have the exact compiler invocation. Let me re-run it in whole-module `-typecheck` mode (skips the crashing IRGen) to definitively prove every file — including mine — type-checks.
+
+The cached filelist is from the baseline (lacks my files). Let me build an augmented filelist (baseline + my 13 new files) and run whole-module `-typecheck`.
+
+Let me check the command's compilation-mode flags before adding `-typecheck`.
+
+The command has `-c -incremental -enable-batch-mode`. Let me strip those (+ output-file-map) and add `-typecheck` for a clean whole-module type-check.
+
+Type-check running (no IRGen → avoids the crash). Let me wait for it.
+
+Whole-module type-check is heavy (single-threaded over 4300 files). Let me give it more time.
+
+Let me check whether it's progressing or stuck, and whether any diagnostics have streamed.
+
+It's running per-file type-check jobs over all 4303 files (thorough but slow, with verbose parseable output). Let me check for real diagnostics in my files so far.
+
+0 errors so far. The per-file type-check is slow but running clean — I'll let it continue in the background as bonus confirmation. I already have conclusive evidence: my files' compile batch processed with zero diagnostics *before* the unrelated crash, and the baseline reproduces the identical crash. Let me check the ledger and log paths while it runs.
+
+Let me study the existing log format and the ledger structure to mirror them.
+
+This is the established precedent for this exact program — the sibling ApiPlayground page hit the **identical** pre-existing `AppearanceSettings.Controls.swift` IRGen toolchain crash, verified via isolated type-checks + a model harness, and shipped `STATUS=DONE`. Let me see their exact isolated-verification method to replicate it.
+
+This is the canonical methodology for this program — isolated view type-check (against real P2 tokens + P3 components) for both idioms + an executed model harness, with the full xcodebuild RED due to the same pre-existing crash. Let me stop the slow whole-module run and replicate this focused, conclusive verification.
+
+Components/Design are self-contained. Let me run the isolated view type-check against the real tokens + components for macOS.
+
+All 52 errors are in `Components/DataDisplay/UnitFormatters.swift` (depends on app-level `Units`/`UnitPreferences` types outside my set) — **none in my files**, and I don't use unit conversion (backup is unit-agnostic). Let me exclude the unit-formatter files (which need the Settings/facade layer) and re-run.
+
+**macOS view type-check: 0 errors, 0 warnings** — my 13 files + the real P2 tokens + P3 components all type-check under Swift 6 strict concurrency. Now the iOS idiom (exercises the `#if os(iOS)` compact branches).
+
+**Both idioms type-check clean (0/0).** Now the executed model harness — I'll compile my real model logic + assertions into a runnable binary and execute it (mirroring my XCTest assertions, since `xcodebuild test` is blocked by the same crash).
+
+Now compile the harness (real model + value types + support) into a binary and run it.
+
+Top-level code requires the file be named `main.swift`. Let me rename and recompile.
+
+Strict-concurrency: the harness counters are MainActor-isolated. Let me make `check` `@MainActor` and recompile.
+
+**Model harness: 47 assertions, 0 failures — ALL PASSED** (Swift 6 strict concurrency). 
+
+Full verification matches the program's established methodology. Let me update the ledger and write the evidence log. First, the ledger (Python parse+append preserves exact formatting).
+
+Ledger updated and valid. Let me gather final line counts and the exact gate numbers, then write the evidence log.
+
+I see stray swiftmodule artifacts from the `-typecheck` runs leaked into `apps/apple/`. Let me remove those (never commit them), then verify the tree is clean.
+
+Tree is clean. Let me grab the toolchain versions and write the evidence log.
+
+Now the evidence log with the full gate transcript and 91-item parity enumeration.
+
+Log written. Let me run a final verification of the in-scope gates and confirm the generated project is gitignored before committing.
+
+All in-scope gates green; the generated project is gitignored. Let me commit the deliverables (explicit paths only).
+
+All 19 deliverables staged, nothing stray. Let me commit.
+
+Committed (`45e5ca6ba`). Let me do a final clean-tree check and remove my temp diagnostic files.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

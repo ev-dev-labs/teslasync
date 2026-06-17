@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and reading the web source specification, then check the Apple app tooling availability.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Now let me read the web source spec and explore the Apple app structure.
+
+I have the full web spec. Now let me understand the Apple project layout, build system, state holders, and look at a representative existing surface to follow the established pattern.
+
+XcodeGen-based project. Let me read the build config, state-holder infrastructure, design tokens, and find a representative surface to use as a template.
+
+Key finding: a sibling `FreshnessIndicator` surface already exists — the web source even references it. Let me read it fully as the canonical template, plus the state-holder infrastructure, design tokens, and diagnostics contract.
+
+Let me read the entire FreshnessIndicator surface — it's the direct sibling and my best template.
+
+Excellent template. Let me read the remaining FreshnessIndicator files, the LiveIndicator relative-time helper (which may match my 5-bucket formatter), design tokens, and an example `view.opened` usage and `.strings` format.
+
+Now let me read the tests, the LiveIndicator relative-time helper (which likely has the day/week buckets I need), and locate the design-token + shared-primitive definitions.
+
+Now let me locate the design-token and shared-primitive definitions referenced by the sibling surface (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion, TSSkeleton, TSButton), and check the diagnostics contract usage.
+
+Let me check the Shared.xcframework staging script and whether the framework already exists — this preAction gates the build.
+
+The xcframework isn't staged. Let me check the KMP shared module and whether the build can run in this environment.
+
+Java 17 + gradlew are present. The KMP `Shared.xcframework` must be built before the app compiles, and that's slow on first run. Let me kick it off in the background now while I write the surface.
+
+While that builds, let me check the LiveIndicator views for the ping/pulse animation pattern (my web source has an `animate-ping` ring the sibling lacked), then set up my plan.
+
+I have a complete understanding of the patterns. Let me check the KMP build progress, then write a plan and start creating files.
+
+KMP build is compiling in the background. Let me write the plan and start creating the surface files. I'll begin with the pure core (Adapter + Projection) that everything builds on.
+
+Now the pure core — Adapter and Projection:
+
+Let me refine the readout to carry `isFetching` (for the faithful reduce-motion tooltip override), then write the View + Views.
+
+Now the SwiftUI entry and the presentational subviews:
+
+Let me check on the KMP build, then write the strings catalog and previews.
+
+Still compiling KMP. Writing the strings catalog and previews:
+
+Now the tests. Updating todos and writing both test files:
+
+KMP build finished. Let me confirm the framework staged, then write the final test file.
+
+Framework staged. Now the comprehensive projection/model/view test suite:
+
+All 9 files created. Let me update todos, then format and lint my files before regenerating the project.
+
+`swiftformat` is clean. `swiftlint --strict` found one issue: `DataFreshness.Tests.swift` exceeds the 400-line limit (466). I'll split the projection tests into their own file. Let me view the exact boundaries to extract.
+
+I'll split into two test files (the file-length limit is 400). Let me remove the current one and recreate it partitioned.
+
+Now re-run format + lint across all DataFreshness files (including the new split):
+
+Format and strict-lint both pass (0 violations). Now regenerate the Xcode project so the new files are included, then build.
+
+Project regenerated (60 DataFreshness references). Let me do a fast iOS build-only first to surface any compile errors before the full test run.
+
+The build failed — but the failures are in **other** surfaces (`AIFeedbackQueueTriage`, `AIGeofenceAwareAutomationSuggestions`, `AIInboxAutoCategorization`, `AIIncidentTimelineSummarizer`), not my DataFreshness files. Let me see the actual errors and check whether this is a pre-existing baseline failure.
+
+Only **one** real error, and it's in `AIGeofenceAwareAutomationSuggestions.swift` — a sibling surface outside my allowed file scope. My DataFreshness files produced zero errors. I need to determine if this is pre-existing baseline breakage. Let me check whether the `.xcodeproj` is committed and whether HEAD builds.
+
+My DataFreshness files compiled cleanly — the sole error is in a committed sibling surface, and the `.xcodeproj` is gitignored (so the build always globs every surface). This means the baseline is red regardless of my change. Let me inspect the failing sibling and the known-issues doc to understand scope.
+
+The sibling error is a genuine Swift escaping-closure bug in `AIGeofenceAwareAutomationSuggestions.swift` (passing the non-escaping `content` into `TSGlassPanel`). The pending-verifications doc claims host gates are green, so this looks like toolchain-induced (Xcode 26.5/Swift 6.3) pre-existing breakage. Let me check `TSGlassPanel` and how many surfaces share this broken pattern to gauge scope.
+
+`TSGlassPanel` takes an `@escaping` closure, and 28 sibling surfaces share the non-escaping `glass(@ViewBuilder _ content:)` helper that feeds it — so the whole-app build is broadly, pre-existingly red on this Swift 6.3/Xcode 26.5 toolchain, across many sibling surfaces outside my allowed scope. Let me verify my surface in isolation. First, check whether `Sources/` references any shared surfaces (which would affect an isolated build).
+
+This is pre-existing, toolchain-induced breakage across ~28 sibling surfaces (they pass a non-escaping `content` into the `@escaping` `TSGlassPanel`), all outside my allowed `DataFreshness.*` scope. My files have zero errors. To get real compile+test proof for my surface, I'll temporarily exclude the broken sibling surfaces, build+test, then restore. First, compute the broken set and check nothing kept references them.
+
+24 broken sibling bases — and several (DriveScore, MetricCard, BatteryDelta…) are referenced by feature-views, so excluding them cascades. Instead I'll verify my surface against a minimal dependency closure in a throwaway project (no tracked files touched). First, let me confirm exactly which external symbols my files depend on.
+
+My surface only depends on design tokens + `TSSkeleton`. Let me check `Cards.swift` (pulled in by `Skeletons.swift`) to finalize the minimal closure, then build a throwaway framework+test target that excludes all broken siblings.
+
+The broken siblings are entangled with feature-views, so no clean app subset exists. I'll build a throwaway framework that compiles the self-contained component library + my surface (module named `TeslaSync`) and runs my tests — excluding all broken code. Let me first check what `Sources/Components` imports.
+
+`Sources/Components` is fully self-contained (only system frameworks, no KMP, no app-only deps). I'll build a throwaway `TeslaSync` framework = components + design + tokens + my surface, with a test target running my unit tests — excluding all broken code. Creating the temp spec:
+
+Throwaway project generated. Now build + run my unit tests against it:
+
+Close — my files aren't the problem. `Sources/Components` references `UnitPreferences`/`TSUnitsKey` defined elsewhere. Let me find those and add them to the verify closure.
+
+`UnitPreferences` lives in `Sources/SharedFacade`. Let me add that to the closure and check its imports.
+
+`SharedFacade` needs the KMP `Shared` framework (already staged). Let me add it to the closure with the framework dependency, then rebuild.
+
+Converging — only `AuthTokenProviding` missing now (pulled by `SharedFacade/AppContainer`). But my surface doesn't use SharedFacade; Components only needs `UnitPreferences` from `Units+Facade.swift`. Let me include just that one file instead of the whole dir.
+
+`Units+Facade.swift` is standalone. Rebuilding + testing:
+
+Down to one symbol: a Components file uses `UnitPreferences.metric`, defined outside the file I included. My surface doesn't use the units facade at all — I over-included the whole `Components` dir. Let me find `.metric` and decide minimal vs. add-one-file.
+
+`UnitPreferences.metric` is in `AppContainer.swift` (which needs `AuthTokenProviding` → deep tail), pulled only because I included the whole `Components` dir. My surface needs just `TSSkeleton`→`TSCard`→typography/badge/button. Let me locate those exact files and confirm they're units-free.
+
+Typography is in `Typography.swift`; Buttons/Cards/Skeletons/Badges are clean of units/auth. Let me check Typography too, then switch the spec to the minimal component file set (dropping the whole-dir include and the units facade).
+
+Typography is clean too. Let me rewrite the verify spec with the minimal component closure (no whole-dir include, no units facade, no KMP):
+
+The only errors now are in **my test files**: `fixedTime` is a global `let` of a non-`Sendable` closure type (Swift 6 strict concurrency). The app-only build never compiled the test files, so this surfaced only here — exactly why the isolated test run is valuable. Fixing both:
+
+Rebuild + test with the fix:
+
+54 tests ran; **53 pass**. The one failure is a typo in *my test expectation* (offline uses `msAgo(1200)` = 20m, but I asserted "10m ago"). The code is correct. Fixing the assertion:
+
+Re-running the verification suite:
+
+**All 54 tests pass — TEST SUCCEEDED.** My surface compiles and its full unit suite is green against the real design system. (The isolated run also caught a real Swift 6 `@Sendable` issue in my test files that the app-only build couldn't.)
+
+Now let me run the remaining gate steps (lint, format, placeholder) and confirm my files plus the broader tree.
+
+My files are format-clean and lint-clean (0 violations). Now the placeholder gate. I'll scan my actual files (the literal gate path isn't a directory, so I'll verify genuinely on a temp copy) plus a direct grep.
+
+Placeholder check is clean (`PLACEHOLDER_COUNT=0`) and direct grep found nothing. Now let me remove the throwaway project, regenerate the real one, and run the actual gate commands to capture honest exit codes.
+
+Only my DataFreshness files are changed. Now let me execute the actual gate commands and capture honest exit codes into the official log. This runs the real (full-app) build/test which will hit the pre-existing sibling breakage — I'll record it truthfully.
+
+The gate (iOS + macOS build/test, then lint/format) is running — these full-app builds are slow and will hit the pre-existing sibling breakage. While it runs, let me record the verification evidence I've already gathered. Let me wait for the gate.
+
+The gate ran. Results: **LINT_EXIT=0** (0 violations across 4074 files), **FORMAT_EXIT=0** (0/4372 need formatting) — so my files and all siblings are lint/format-clean. **iOS/macOS build FAILED** purely on pre-existing out-of-scope issues: sibling `TSGlassPanel` escaping-closure compile errors (`AIAutoNameUnnamedLocations`, `AISignalExplorerNlFilter`, …) plus a macOS code-signing config error. Let me confirm zero DataFreshness errors and quantify the pre-existing breakage for the log.
+
+Confirmed: **0 DataFreshness errors** in the full build. Let me extract the sibling error files correctly (the column number broke my earlier regex):
+
+Confirmed: the only compile errors are in sibling surfaces (`AISignalExplorerNlFilter`, `AIAutoNameUnnamedLocations`, …) all with the identical pre-existing `TSGlassPanel` escaping-closure bug; **zero** in DataFreshness. Now let me run the placeholder step and append the full verification + blocker analysis to the gate log.
+
+Now append the isolated-surface verification evidence, the blocker analysis, and the final status:
+
+The gate log is complete and honest. Let me do a final git status check, mark todos, and commit the surface + log.
+
+All 10 surface files + the log are staged-ready, no gitignored artifacts. Committing:
+
+Committed cleanly (e639808de, 11 files, 1963 insertions). Let me finalize: clean temp files, confirm a clean working tree, and update todos.
+
+The DataFreshness Apple surface is complete, committed, and verified to the maximum extent the environment allows. Final summary:
+

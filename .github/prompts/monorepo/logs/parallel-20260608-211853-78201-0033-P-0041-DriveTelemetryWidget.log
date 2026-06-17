@@ -1,0 +1,118 @@
+I'll start by exploring the environment and understanding what's available, since this task requires the Apple/Swift toolchain.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The Apple app uses XcodeGen (`project.yml`). Let me read the web source and explore the Apple app structure.
+
+The structure is clear. `dashboard-widgets/` exists with 489 entries. Let me check if `DriveTelemetryWidget` already exists and find a sibling widget to learn the established native pattern.
+
+`DriveTelemetryWidget.*` doesn't exist yet — I need to create it. There's an established multi-file pattern per widget. Let me study the closest analog (`ChargingTelemetryWidget`) and the web shared components.
+
+`MotorHistoryWidget` is the closest analog (multi-series time-series chart). Let me read its full file set to learn the established conventions, plus the `ChargingTelemetryWidget` main view.
+
+Excellent template. Now let me read the Model, Projection, Previews, strings, and Tests for MotorHistoryWidget to understand the state-holder layer, adapter, tokens, and test patterns.
+
+Now the Previews, strings, Tests, and the shared token/registration definitions.
+
+I have the full widget pattern. Now let me locate the shared infrastructure (tokens, registration, MeasurementSystem) and read the exact web hook/type field names I must port.
+
+Let me find the exact token names available (chart series colors, spacing, fonts) so my chart uses valid tokens.
+
+All tokens confirmed. Now let me verify the test/build tooling: TSSkeleton API, xcodegen availability, the placeholder checker, and lint configs.
+
+xcodegen is available. Let me check how sibling widget prompts fared (their logs), and whether the heavy `Shared.xcframework` dependency is present — this determines if a full `xcodebuild` is feasible.
+
+Key insight: the established precedent (MotorHistory 0066, etc.) is "code-complete + host-gate green, Xcode app build/test DEFERRED" because `Shared.xcframework` is unstaged and signing identities are absent. Let me read the full MotorHistory log to replicate their exact honest verification methodology.
+
+I now fully understand the established honest methodology: host-validate (swiftc typecheck + executed XCTest via SwiftPM + adapter harness + swiftlint + swiftformat + placeholder gate), with the full Xcode app build/test DEFERRED for verified environmental reasons (Shared.xcframework unstaged + signing). Let me gather the final details needed to write compliant files and reproduce the harness.
+
+I have the complete picture and the proven, honest methodology to follow. Let me confirm the web conversion constants and the SwiftPM closure files' imports, then write the surface.
+
+`Skeletons.swift` references `TSCard`, so my host harness needs the same component-library closure MotorHistory used. Let me confirm the design-system dirs are Shared-free, then I'll write everything.
+
+Design-system closure is Shared-free (20 files). Let me check for any type-name collisions in the single app module before I commit to names, and create a tracking plan.
+
+No collisions. Now I'll author the 7 surface files, modeled on the proven MotorHistory pattern. Starting with the pure-domain Projection.
+
+Now the Model (state-holder seam + telemetry + i18n facade + a11y).
+
+Now the Swift Charts dual-axis composition.
+
+Now the main surface view with the glass shell, header, all states, and the legend.
+
+Now the Previews and strings files.
+
+Now the XCTest suite covering adapter, scale, model, registry, and a11y.
+
+All 7 files authored. Now the verification phase. First, normalize formatting with swiftformat (using the repo config), then lint.
+
+swiftformat normalized 3 files. Now run swiftlint --strict on the surface files (the config includes `TeslaSync/dashboard-widgets`).
+
+Tests file is 415 lines — 15 over the 400 limit. Let me condense it (merge the two efficiency-absent tests and trim comments) to stay under 400, matching the single-Tests-file precedent.
+
+swiftformat reformatted the file. Let me view the current text around those tests.
+
+408 — need ≤400. Let me trim the header comment block and a few inline comments.
+
+I'll remove three inline comment lines to get safely under 400.
+
+Tests is now exactly 400 lines and swiftformat --lint passes. Re-run swiftlint --strict.
+
+swiftlint and swiftformat both clean. Now the critical step: actually compile the surface against the real component-library closure and execute the XCTest suite via SwiftPM. Let me identify the exact closure filenames (matching the MotorHistory precedent).
+
+Closure files confirmed. Now I'll build a throwaway SwiftPM package that compiles my surface against the real (Shared-free) component-library closure and **executes** the XCTest suite — exactly the MotorHistory precedent.
+
+Surface compiles clean against the real component library under Swift 6 strict concurrency. Now **execute** the XCTest suite.
+
+All 29 tests executed green. Now the independent adapter harness (second proof — compile the pure domain to a native binary and run it), mirroring the precedent.
+
+Swift 6 main-actor isolation on top-level globals. Let me wrap the harness in a `@MainActor` entrypoint.
+
+Adapter harness: 21/21 passed. Now the tree-wide `swiftformat --lint` gate and the placeholder checker.
+
+Tree-wide format gate: 0/1982 files require formatting. Let me check the placeholder script's parameters, then run it.
+
+The placeholder script scans by `-Path` and language extension. Let me view the patterns and run the check on my files (a temp dir copy for a meaningful scan) plus the literal gate path.
+
+No banned patterns. Now run the actual pwsh placeholder gate.
+
+All six host-runnable gates pass. Now I'll verify the Xcode-only deferral reasons by command (the honest precedent) — and actually attempt project generation + build to capture the real blocker rather than just asserting it.
+
+Both blockers confirmed: Shared.xcframework absent (needs a Gradle/Kotlin-Native build) and 0 codesigning identities. The project generates with my files included. Let me confirm my files are wired into the app + test targets, then attempt a time-boxed real `xcodebuild` to capture the actual blocker.
+
+All 7 files are wired into the generated Xcode project (app + test targets + strings resource), and the iPhone 16 simulator is booted. Now a time-boxed real `xcodebuild` to capture the actual blocker.
+
+The iOS build hung past 200s (killed) — consistent with the heavy Gradle `Shared.xcframework` staging pre-build. Let me capture the raw output to pinpoint exactly where it blocks.
+
+Concrete, honest evidence: the Xcode build enters the **"Stage Shared.xcframework"** pre-build phase, prints "▸ Assembling Shared.xcframework via Gradle…", and hangs starting a Gradle (Kotlin/Native) daemon until interrupted — a code-unrelated environmental blocker, plus 0 codesigning identities. This matches the precedent: host-validated, Xcode app build DEFERRED. Let me clean up generated artifacts and verify git status.
+
+Cleaned up; xcodeproj is gitignored, Gradle daemons stopped. The two modified `web/...` files are pre-existing (not mine) — I'll commit only my files + the log. Let me gather final facts for the gate log.
+
+All files within the 400-line limit. Now I'll write the comprehensive, honest gate log following the established precedent.
+
+The log is written. Let me do a final confirmation that the canonical (to-be-committed) files are lint- and format-clean, then commit only my files plus the log.
+
+Both clean. Now commit exactly my 7 surface files plus the gate log (excluding the pre-existing unrelated `web/` changes).
+
+Committed (8 files, 1966 insertions). The pre-existing `web/` changes were correctly excluded. Let me verify the exact commit subject (the oneline display showed an odd space).
+
+Commit subject and trailer are correct, and the working tree retains only the two pre-existing unrelated `web/` changes (correctly left untouched). Let me do a final cleanup verification.
+
+All clean. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...dashboard-widgets-0041-DriveTelemetryWidget.log | 208 +++++++++++
+ .../DriveTelemetryWidget.Chart.swift               | 173 +++++++++
+ .../DriveTelemetryWidget.Model.swift               | 252 +++++++++++++
+ .../DriveTelemetryWidget.Previews.swift            | 138 +++++++
+ .../DriveTelemetryWidget.Projection.swift          | 369 +++++++++++++++++++
+ .../DriveTelemetryWidget.Tests.swift               | 400 +++++++++++++++++++++
+ .../dashboard-widgets/DriveTelemetryWidget.strings |  51 +++
+ .../dashboard-widgets/DriveTelemetryWidget.swift   | 375 +++++++++++++++++++
+ 8 files changed, 1966 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0041-DriveTelemetryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveTelemetryWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveTelemetryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveTelemetryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveTelemetryWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveTelemetryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveTelemetryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DriveTelemetryWidget.swift

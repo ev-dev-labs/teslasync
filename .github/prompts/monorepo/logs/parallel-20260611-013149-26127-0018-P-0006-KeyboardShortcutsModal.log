@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The web source is a keyboard-shortcuts cheat-sheet modal with search + filter chips (All/Global/This page), grouped shortcut rows. Now let me understand the existing Apple app structure and patterns.
+
+There's already a populated `modals-dialogs/` directory. Let me examine the file pattern for an existing surface and check whether KeyboardShortcutsModal already exists.
+
+The surface file pattern is clear. Let me study the canonical `AcknowledgeAlertDialog` surface (full standard file set) to learn the architecture, plus check the project.yml for how files are included.
+
+Now I understand the core architecture. Let me read the remaining canonical files (Adapter, Views, Previews, strings, tests) and the project.yml to understand build wiring.
+
+Excellent — the architecture is very clear now. Let me read the test patterns and locate the shared infrastructure (tokens P1/S9, components, the `TS*` primitives).
+
+The `Sources` dir is at `apps/apple/Sources`, not under `TeslaSync`. Let me locate the shared token/component definitions (`TSSpacing`, `TSGlassPanel`, `TSButton`, `Color.TS`, `Font.TS`) and understand the build structure via project.yml.
+
+Important detail: the head of `project.yml` lists `dashboard-widgets`, `feature-views`, `misc-surfaces`, `shared-surfaces` but NOT `modals-dialogs`. Let me check how modals-dialogs is wired and locate the design tokens.
+
+`modals-dialogs` is **not** referenced in project.yml. This is critical — I need to understand the build wiring before I can honestly pass the gate. Let me investigate how prior modals-dialogs surfaces were integrated and whether the xcodeproj is generated.
+
+The build wiring is clear now: `project.yml` includes `dashboard-widgets`, `feature-views`, `misc-surfaces`, `shared-surfaces` in both app targets and test bundles — but **not** `modals-dialogs`. The `.xcodeproj` is generated via `xcodegen` (available) from `project.yml`, and there's a `Shared.xcframework` dependency. Let me verify whether the build can actually run in this environment.
+
+The `Shared.xcframework` is a `.gitkeep` placeholder; it's built by a scheme pre-action script `build-shared-xcframework.sh` (KMP shared core). Let me read that script — it determines whether the gate can run at all.
+
+The build's pre-action requires building the KMP shared core via Gradle (`apps/shared/gradlew :core:assembleSharedXCFramework`) — needing the Kotlin/Native Apple toolchain. Let me check prior surface gate logs to understand the established precedent (DONE vs BLOCKED) and whether the build infra actually runs here.
+
+Let me read a representative prior log (0017 AcknowledgeAlertDialog) and the tail of a couple others to learn the established gate outcome and evidence format.
+
+This is the key precedent. Prior modals-dialogs surfaces (0017, etc.) shipped as **"code-complete + independently-verified"** with STATUS=DONE: the surface's own code is verified via isolated SwiftPM build/test (pure logic) + iOS-18/macOS-15 SDK `swiftc -typecheck` (SwiftUI layer), swiftlint/swiftformat/placeholder all green — while the full-app `xcodebuild` is honestly reported RED due to pre-existing unrelated sibling collisions + the modals-dialogs tier being unwired in project.yml (outside allowed files). Let me read the middle of the 0017 log to learn the exact verification commands.
+
+I now have the complete, sanctioned playbook (matches all prior siblings): author the full surface, then verify via [1] swiftformat, [2] swiftlint --strict on my files, [3] placeholder scan, [4] isolated SwiftPM build+test of the pure logic/model, [5] iOS-18 + macOS-15 `swiftc -typecheck` of the SwiftUI layer against the real design system, and [6] full-app xcodebuild with tier-unwired proof. Let me now read the web data hook and the shared components/tokens I'll need.
+
+Now the design tokens are clear. Let me read the web shortcut registry hook (data shape) and the shared SwiftUI components I'll compose with (Cards/TSGlassPanel, Motion/TSFadeIn, Buttons/TSButton, Fields, Tabs).
+
+I have the web data model (`ShortcutDefinition`: id, keys[], description, group, scope, routeMatch) and the modal's filter/group/sort/empty logic. Let me read the remaining shared components I'll compose with (Motion/TSFadeIn, Buttons/TSButton, Fields, Tabs, Typography) and check for a search-field component.
+
+Let me read Fields (search input), Tabs (segmented filter), and Typography, plus locate the `tsGlassPanel()` modifier and `TSText`/title helpers.
+
+Let me read Typography, locate the `tsGlassPanel()` modifier (Material/Design files), and review the swiftlint/swiftformat configs so my files conform.
+
+Let me read the material/design files (where `tsGlassPanel()` lives) to complete my understanding of the design system, then I'll have everything to author the surface.
+
+I now have the full design system and conventions. Let me set up tracking and run a collision check on my candidate type names before authoring.
+
+Two potential collisions to investigate: `ShortcutScope` (1 file in compiled Sources) and `KeyboardShortcuts` (3 files). Let me check what those are so I can namespace safely.
+
+There's a pre-existing `TSKeyboardShortcutsModal` and `KeyboardShortcutsView` in compiled `Sources/`. My P4 surface's top-level view is `KeyboardShortcutsModal` (no `TS` prefix) — distinct — but I must check their helper type names to avoid collisions and learn the existing shape. Let me read both.
+
+Clear picture now: there's a pre-existing `TSKeyboardShortcutsModal`/`TSShortcut`/`KeyboardShortcutsView` in compiled `Sources/`. My P4 surface top-level view is `KeyboardShortcutsModal` (distinct), and I'll namespace all helper types with a collision-free `KBShortcut(s)` prefix. Let me verify that prefix is clear, then start authoring.
+
+`KBShortcut` prefix is free and `KeyboardShortcutsModal` is available. Let me author the surface, starting with the pure projection core.
+
+Now the Seams file (telemetry, filter store, source protocol, controller, i18n facade, accessibility builders).
+
+Now the Model state holder (split derived copy into an extension to respect the type-body length budget).
+
+Now the main view, then the subviews and states.
+
+Now the States file (loading, empty, error+retry, freshness chip, connectivity banner).
+
+Now the Previews with sample registry data for every state.
+
+Let me simplify the preview helper to construct the modal directly (remove the extra extension).
+
+Now the strings catalog.
+
+Now the tests — adapter/projection/accessibility coverage first.
+
+Now the model state-holder tests.
+
+All 10 files authored. Let me begin verification — first check line counts (≤400 budget) and auto-normalize formatting with swiftformat on my files.
+
+All files ≤400 lines (max 298). swiftformat normalized 5/9 files. Let me review what changed to ensure correctness.
+
+My files pass `swiftformat --lint`. Let me run the actual gate's formatting/lint/placeholder steps: [1] full `swiftformat --lint apps/apple`, [2] `swiftlint --strict` on my files, [3] placeholder scan.
+
+[1] GREEN (0/4169 require formatting). Now [2] swiftlint --strict on my surface files (the repo config's `included` doesn't list modals-dialogs, so passing explicitly, same approach as prior siblings).
+
+[2] GREEN (0 violations in 9 files). Now [3] — let me read the placeholder scanner to run it correctly.
+
+The prompt's `-Path .../KeyboardShortcutsModal` (no extension) scans vacuously. Let me read the patterns and check my files for any trigger substrings, then run the scan against the prompt path AND an isolated copy of my files (to avoid a false green).
+
+No triggers in my files. Let me run [3]: the prompt's literal path (vacuous), an isolated copy of my 9 swift files (the meaningful scan), and the scanner self-test to prove it works.
+
+[3] GREEN (real scan of 9 files = 0; self-test all PASS). Now [4] — isolated SwiftPM build+test of the pure logic + state holder ({Adapter, Seams, Model} + the two test files), Swift 6 strict concurrency.
+
+Real Swift 6 strict-concurrency error caught: `UserDefaultsKBShortcutsFilterStore` conforms to `Sendable` (via the protocol) but stores non-Sendable `UserDefaults`. `UserDefaults` is documented thread-safe, so an `@unchecked Sendable` conformance with justification is the correct fix.
+
+[4] GREEN — 42/42 tests pass under Swift 6 strict concurrency. Now [5]: iOS-18 + macOS-15 SDK `swiftc -typecheck` of the full SwiftUI view layer against the real design system. Let me confirm the minimal design-system dependency set imports nothing exotic.
+
+Design system imports are clean (SwiftUI/UIKit/AppKit only). The closed dependency set is Tokens + TSMaterial + TSDesign + Motion + Badges/Buttons/Cards/Typography. Let me run the iOS-18 and macOS-15 SDK typechecks of my full view layer + that real design system (with `-D DEBUG` to include previews).
+
+[5a] iOS-18 typecheck GREEN (0 errors). Now [5b] macOS-15.
+
+Both SDK typechecks GREEN (0 errors). Now [6] — the full-app xcodebuild. First the fast, definitive tier-wiring proof: generate the real Xcode project and grep the pbxproj to confirm my files are not in the build (vs. a wired tier that is).
+
+Definitive tier-unwired proof on this runner: `KeyboardShortcutsModal`=0 and `modals-dialogs`=0 pbxproj refs (my files aren't in the build), while wired tiers `RecentDrivesSection`=66 and `StateTimelineWidget`=54 do appear. Let me check macOS signing availability and the KMP/gradle prerequisites before attempting the full xcodebuild.
+
+macOS signing has 0 valid identities (→ macOS step signing-deferred, as documented for siblings), but Java 17 + gradlew + a booted iPhone 16 simulator are present, so the iOS build is runnable. Per the sibling precedent (run it, report honestly), let me attempt the actual full-app iOS xcodebuild and capture the real exit.
+
+The KMP gradle build is still running (first-run dependency download + Kotlin/Native compile is slow). Let me check progress.
+
+KMP Shared.xcframework built successfully (7m18s) and staged. Now I can run the actual gate's iOS xcodebuild. Per the sibling precedent this will characterize whether the full-app build is affected by my (unwired) surface.
+
+IOS_EXIT=65 (RED) — matching the documented sibling outcome. Now I must prove this RED is unrelated to my surface. Let me analyze the build log.
+
+Only 3 errors, 0 mentioning my surface. Let me see the actual error content to characterize them honestly.
+
+The RED is fully characterized: exactly 3 pre-existing errors, all in unrelated `shared-surfaces` siblings (`AIAutoNameUnnamedLocations.swift`, `AIGeofenceAwareAutomationSuggestions.swift` — "escaping closure captures non-escaping parameter") in a wired tier. **Zero** errors in any of my files (which have 0 pbxproj refs). Let me confirm my changes are confined and these AI* files are untouched by me.
+
+All verification complete and changes confined to my 10 files (the failing AI* siblings are pre-existing, untouched; generated xcodeproj/xcframework are gitignored). Let me verify the i18n key bijection (catalog ↔ code) and clean up the temp package.
+
+i18n bijection is clean: all 17 catalog keys are referenced and all referenced `shortcuts.*` i18n keys exist (the 2 "missing" hits are a Logger category + a log-message string, not i18n keys). The 6 web-source keys are all present. Since I edited Seams/Previews after the first format pass, let me re-confirm [1]/[2] GREEN on the final files and capture final line counts.
+
+Final files GREEN: [1] FORMAT_EXIT=0, [2] LINT_EXIT=0 (0 violations/9 files); all files ≤300 lines. Let me write the honest gate log.
+
+Now let me commit only the allowed files (my surface files + the log), verifying nothing else (generated xcodeproj/xcframework) gets included.
+
+Clean — only my 10 surface files + the log are uncommitted; generated artifacts are gitignored. Committing now.
+
+Commit succeeded (`470be7404`). Let me do a final confirmation of a clean tree and the commit contents.
+
+The task is complete. Working tree is clean; the commit contains exactly the 10 surface files + the gate log.
+
+Merge made by the 'ort' strategy.
+ ...-modals-dialogs-0006-KeyboardShortcutsModal.log | 294 ++++++++++++++++++++
+ .../KeyboardShortcutsModal.Adapter.swift           | 300 +++++++++++++++++++++
+ .../KeyboardShortcutsModal.Model.swift             | 209 ++++++++++++++
+ .../KeyboardShortcutsModal.ModelTests.swift        | 240 +++++++++++++++++
+ .../KeyboardShortcutsModal.Previews.swift          | 142 ++++++++++
+ .../KeyboardShortcutsModal.Seams.swift             | 234 ++++++++++++++++
+ .../KeyboardShortcutsModal.States.swift            | 162 +++++++++++
+ .../KeyboardShortcutsModal.Tests.swift             | 290 ++++++++++++++++++++
+ .../KeyboardShortcutsModal.Views.swift             | 284 +++++++++++++++++++
+ .../modals-dialogs/KeyboardShortcutsModal.strings  |  47 ++++
+ .../modals-dialogs/KeyboardShortcutsModal.swift    |  91 +++++++
+ 11 files changed, 2293 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0006-KeyboardShortcutsModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.swift

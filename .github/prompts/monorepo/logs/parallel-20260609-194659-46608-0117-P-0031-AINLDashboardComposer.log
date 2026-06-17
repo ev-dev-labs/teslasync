@@ -1,0 +1,157 @@
+I'll start by exploring the repository structure and verifying both the web source and Apple toolchain availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now reading the web source end-to-end and exploring the Apple app structure.
+
+This is a mature codebase with a strong, repeated per-surface file pattern. Let me study the closest sibling surfaces and the project's build/test wiring before writing code.
+
+XcodeGen-based project; `AIFeatureCard` is already ported natively and is the key reusable dependency. None of the AINL* streaming surfaces are ported yet. Let me study the native `AIFeatureCard` fileset, the `useAiStream`/`withAiFeature`/`AIFeatureCard` web sources, and the project wiring.
+
+Now reading the native `AIFeatureCard` (the dependency I must reuse) and the closest analog `AICrossRuleConflictDetection` (which also captures `tool_result` frames into typed envelopes via its own stream).
+
+Now studying the closest analog — `AICrossRuleConflictDetection` — which also captures `tool_result` frames into typed envelopes and renders extra UI. Reading its full fileset plus the AIFeatureCard supporting types.
+
+`AICrossRuleConflictDetection` is the canonical analog: it owns the gate, captures `tool_result` into typed envelopes, forwards a parent callback (like my `onApply`), and rebuilds the scaffold with its own per-surface components + shared design tokens. Reading the rest of its fileset to template faithfully.
+
+Reading the analog's Logic/Source/Adapter/strings/Previews/test files plus the shared design tokens (P1/S9) and project wiring.
+
+Reading the analog's Adapter (data model types), test files, Previews, the shared design tokens (P1/S9), and the project/build wiring.
+
+Reading the design tokens, the native field/textarea components, the analog's tests, and the project/placeholder tooling.
+
+Confirming exact component APIs (TSButton variants, TSGlassPanel, TSSkeleton) and the native multi-line text input, plus the token surface.
+
+All tokens and component APIs confirmed. Now reading the build/lint/placeholder config to ensure compliance.
+
+Critical: the gate builds the full iOS+macOS app, which depends on a KMP `Shared.xcframework` and XcodeGen. Assessing build feasibility before writing code.
+
+iPhone 16 sim is available and XcodeGen is present, but `Shared.xcframework` is unstaged and requires the KMP/Gradle toolchain. Reading the documented verification protocol and checking the KMP build feasibility.
+
+This is decisive. The `macos-pending-verifications.md` documents the established, accepted protocol for these P4 Apple surface prompts: the **surface** is verified green in isolation (swiftc -typecheck on both SDKs, isolated tests, swiftlint/swiftformat/placeholder/i18n clean, xcodegen enumerates files), while the **full-app `xcodebuild build test`** is `macOS-pending`/BLOCKED by pre-existing, unrelated blockers (unstaged KMP `Shared.xcframework`, cross-surface parallel-merge collisions, dev-signing). My surface is Shared-free (Foundation/SwiftUI/Observation/OSLog), matching the analog.
+
+Let me set up tracking and verify there are no naming collisions before writing.
+
+Verifying the placeholder checker's logic and allow-mechanism (precedents mention a `// parity:allow` annotation for the verbatim web `*Placeholder` i18n key), and confirming `pwsh` availability.
+
+All tooling confirmed available (pwsh 7.6.2, xcodegen, swiftc both SDKs, iPhone 16 sim). The placeholder gate scans only `.swift`/`.kt`/`.cs` (not `.strings`), case-insensitively, with a `// parity:allow <reason>` opt-out — exactly as precedents used for the verbatim web `*Placeholder` key.
+
+Now writing the surface. Starting with the Foundation-only core (Adapter → types + parse).
+
+I now have the complete, proven protocol from ~16 precedents. Let me write the surface. Starting with the Foundation-only Adapter (types + parse logic).
+
+Now the Logic file (pure booleans, request body, accessibility summary).
+
+Now the Source file (in-memory source for previews/tests + draft encoding helper).
+
+Now the Views file (header, badge, prompt field, action button, draft summary).
+
+Now the Chrome file (output panel, error/thinking, empty box, gate chrome, chip, flow layout, pulse helper).
+
+Now the Previews (all states, DEBUG).
+
+Now the i18n strings catalog.
+
+Fixing a placeholder-gate hazard: the doc comment contains the word "placeholder", and the `// parity:allow` marker must sit on the same line as the matched key literal.
+
+Now the test files. Starting with AdapterTests (the `tool_result` → draft decode).
+
+Now the ModelTests (state-holder wiring).
+
+Now the final test file (logic / request / accessibility / i18n).
+
+All 12 files written. Now the verification phase. First, swiftformat lint + autoformat on my files, then swiftlint.
+
+swiftformat flagged auto-fixable formatting. Running it in write mode on my files, then re-linting.
+
+swiftformat clean (0/11). Verifying the auto-rewrites preserved correctness (the `parse` conditional-assignment rewrite and the `parity:allow` marker placement).
+
+Both rewrites are correct and the `parity:allow` marker is on the key line. Now running swiftlint --strict on my files.
+
+swiftlint vs swiftformat disagree on a wrapped multiline signature brace. Fixing by keeping the helper signature on one line (≤120). Let me view and edit.
+
+Re-running both linters on my files to confirm clean.
+
+swiftformat 0/11 and swiftlint --strict 0 violations. Now the placeholder gate — running it against my files (via a temp dir for an isolated count) and confirming the gate's literal-path behavior.
+
+Placeholder gate clean (COUNT=0, 1 sanctioned allow). Now the cross-SDK `swiftc -typecheck`. First, mapping the real design-system dependency set and excluding any KMP-`Shared`-coupled files (the precedent approach).
+
+No KMP coupling in Components/Design. Let me scope the typecheck to the exact components my surface uses and confirm their dependencies.
+
+Let me run the macOS `swiftc -typecheck` of my app-target files against the real tokens + the components they use.
+
+Those errors are inside `Cards.swift`'s own preview referencing sibling components. Compiling the full design system together so siblings resolve (the precedent approach).
+
+Confirmed: zero errors in my files; the only failure is the SharedFacade-coupled `UnitFormatters.swift` (which the precedents also exclude). Excluding it and re-running.
+
+macOS typecheck: **0 errors**. Now the iOS-18 simulator typecheck, plus checking my files specifically produce 0 warnings on both SDKs.
+
+macOS + iOS-18 typecheck both **0 errors / 0 warnings** in my files. Now the highest-value check: actually *running* the tests via an isolated SwiftPM `TeslaSync` package (so `@testable import TeslaSync` resolves), built under Swift 6 mode.
+
+All **50/50 tests pass** under Swift 6 mode. Now i18n parity (web `t()` keys ⊆ my catalog) and `xcodegen generate` enumeration.
+
+Some web keys are multiline `t(\n 'key',...)` — let me extract all key occurrences robustly.
+
+All 8 web keys present (0 missing). The native-only keys are P4 chrome/draft-summary copy. Verifying none are dead (all referenced in Swift), then running `xcodegen generate`.
+
+0 dead keys (29/29 referenced). Now `xcodegen generate` to confirm enumeration in the project.
+
+Comprehensive isolated verification is green. Now documenting the full-gate blockers (matching the precedents) before running the gate: signing identities, pre-existing cross-surface collisions, and xcframework state.
+
+Documented blockers confirmed in this slot (0 signing identities, unstaged xcframework, pre-existing RecentDrives*/StateTimeline* collisions across other agents' surfaces). 
+
+Now I'll attempt the real gate. First, kick off the KMP `Shared.xcframework` Gradle staging in the background (the scheme pre-action), then run a real app-target compile to prove zero-surface-errors while it builds.
+
+Confirmed concrete collision (`enum RecentDrivesConnection` declared 2×). Starting the KMP `Shared.xcframework` Gradle build in the background (it's the long pole, ~7-8 min per precedents).
+
+Gradle building in the background. Meanwhile, verifying file sizes (SwiftLint file_length ≤400) and cleaning up the temp package.
+
+All files ≤318 lines (well under the 400 limit); 2394 total — a complete implementation. Gradle is compiling Kotlin (using build cache). Let me wait for it to finish.
+
+Gradle has assembled the DEBUG xcframework and is on the RELEASE Kotlin/Native link (the long pole). Waiting more.
+
+Gradle completed successfully. Staging the xcframework and verifying.
+
+Shared.xcframework staged (built in 6m30s). Now running a real iOS app-target compile (`CODE_SIGNING_ALLOWED=NO`) to prove zero-surface-errors inside the real app module while capturing the pre-existing collisions.
+
+App-target compile running. Let me wait and monitor.
+
+App-target compile finished. Analyzing the result — checking the real exit, my-surface errors vs. the pre-existing collisions.
+
+**Decisive evidence: the real iOS app-target compile (with the freshly-built `Shared.xcframework`) shows `MY_ERR_COUNT=0` — zero errors in any AINLDashboardComposer file.** All 54 errors are the pre-existing `RecentDrives*`/`StateTimeline*` ambiguous-redeclaration collisions between other agents' `dashboard-widgets/*` and `feature-views/*` surfaces. Let me confirm the error-file breakdown, then run the canonical gate into the log.
+
+All 54 errors are confined to other agents' `RecentDrives*`/`StateTimeline*` surfaces — **zero in my surface**, proven inside the real app module. Now running the canonical gate (both schemes + lint/format/placeholder) into the log.
+
+Gate running in the background (both schemes + lint/format/placeholder). Let me monitor progress.
+
+Gate completed. Reading the canonical log.
+
+Gate results captured: **LINT_EXIT=0** (0 violations / 3420 files tree-wide), **FORMAT_EXIT=0** (0/3650), **PLACEHOLDER_EXIT=0**; both build steps exit 65 with **0 AINLDashboardComposer errors** — blocked solely by pre-existing cross-surface collisions + dev-signing. Let me characterize the macOS errors, then append the full evidence + verdict to the log.
+
+macOS failures are purely dev-signing (0 valid identities); iOS failures are the pre-existing cross-surface collisions — **0 AINLDashboardComposer errors in either**. Now appending the comprehensive surface-level evidence and the final verdict to the log.
+
+Log complete, ending with `EXIT=65` / `STATUS=BLOCKED` (the documented platform-capability outcome). Now verifying git state before committing — confirming build artifacts are ignored and only my surface files + log are staged.
+
+Working tree is clean except my 12 surface files + the log; build artifacts are git-ignored. The surface is fully green on every dimension within its control. Committing per the prompt (the documented macOS-pending protocol — surface + honest BLOCKED log, deferred to the P99 signed-runner gate).
+
+Commit created (the `--cached` flag error was in a harmless echo; the pipe's exit let the chain continue and the commit succeeded). Verifying the commit contents.
+
+Commit verified: exactly **13 files** (12 surface + 1 log), 2589 insertions, working tree clean. Marking the plan complete and cleaning up temp files.
+
+The task is complete. Here's the summary.
+
+## P4 · Shared surface · 0031 — `AINLDashboardComposer` (Apple)
+
+Shipped a production-complete SwiftUI parity of `components/ai/AINLDashboardComposer.tsx` — the **12-file** surface under `apps/apple/TeslaSync/shared-surfaces/AINLDashboardComposer.*` (2394 LoC, every file ≤318 lines), committed as `087eb4a3f` with the log.
+
+**Parity reproduced** (web → native): `useTranslation`→`NLDashboardStrings` (P1/S10), `useAiStream`→`NLDashboardSource` seam + stream phases, `withAiFeature`→`NLDashboardGateState` (`off`→renders nothing), `AIFeatureCard`→native scaffold via shared P1/S9 tokens, `Textarea`→`TextEditor` prompt slot, `parseDashboardLayoutDraft`/`draft_dashboard_layout` `tool_result`→exhaustively-tested `NLDashboardDraft.parse`, `onApply`→injected parent callback, plus `view.opened` telemetry (slug `AINLDashboardComposer`). **All 10 states render** (loading/idle/streaming/draft/empty/error/gateError/stale/offline/gatedOff).
+
+**Surface verified green (all within-scope dimensions):**
+- `swiftc -typecheck` iOS-18 **and** macOS-15 (Swift 6, strict concurrency, real design system): **0 errors / 0 warnings**
+- Isolated SwiftPM `swift test`: **50/50 pass**
+- swiftlint `--strict` **0** (tree-wide 0/3420) · swiftformat `--lint` **0** (tree-wide 0/3650) · placeholder `COUNT=0` (1 sanctioned `parity:allow`)
+- i18n: **8/8** web keys, 0 missing, 0 dead · `xcodegen` enumerates all 12 files
+- KMP `Shared.xcframework` assembled live (6m30s) + staged → real app-module compile = **0 surface errors**
+
+**Gate result — `EXIT=65` / `STATUS=BLOCKED`:** `LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`. The two whole-app `xcodebuild build test` steps exit 65 with **zero AINLDashboardComposer errors** — blocked solely by pre-existing, unrelated cross-surface `RecentDrives*`/`StateTimeline*` redeclaration collisions (other agents' surfaces) + macOS dev-signing (0 valid identities), deferred to `p4-apple/P99-0001` on a signed `macos-latest` runner per the documented `macos-pending` protocol. The log ends with the honest `EXIT`/`STATUS` verdict and full evidence.
+
+
+

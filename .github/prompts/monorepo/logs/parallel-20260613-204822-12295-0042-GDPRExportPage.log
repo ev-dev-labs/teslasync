@@ -1,0 +1,92 @@
+I'll start by exploring the repository structure to understand the task and the existing patterns.
+
+Xcode toolchain is available (`xcodebuild`, `swiftlint`, `swift`). Now let me explore the Apple app structure and existing patterns.
+
+The real structure is `apps/apple/Sources/Features/Admin/`. Let me study existing admin pages and the build/parity setup.
+
+Let me study the model, route registration, sub-views, and parity manifest in parallel.
+
+Excellent. The patterns are clear. Now let me examine the parity manifest, ledger, components, routes, and the web hook/types.
+
+Now let me examine the log format, route system, web hook/types, and find the shared components.
+
+Let me read the component definitions I'll need in parallel.
+
+Now let me read the remaining components (feedback, buttons, inputs, typography, design tokens).
+
+Let me inspect the xcstrings entry format, the test pattern, theme helper, and check pwsh for the placeholder gate.
+
+Now let me check build feasibility for the KMP framework dependency (ADR-004) and the project's framework-staging mechanism.
+
+Java 17 + xcodegen + Gradle wrapper are present. The KMP `Shared.xcframework` (ADR-004 build dependency) isn't staged. Let me kick off that long build in the background while I write the Swift code.
+
+While Gradle runs, let me set up todos and read the remaining reference files (PageContainer, DiskForecastPage full, SharedFacade base URL).
+
+PageContainer's `query` prop only drives a freshness badge — it doesn't gate children. Good, that simplifies the port. Let me read the full DiskForecastPage (StatCard grid pattern) and check the app's API base config for the download URL.
+
+I have everything I need. Let me write the model file first.
+
+Now the Views file with the 8 panels. Let me check the Gradle build progress first, then write it.
+
+Gradle still running. Let me write the Views file with all 8 panels.
+
+Now the main page file with chrome, state router, and previews.
+
+Now the route registration and the three wiring edits. Let me check Gradle progress and write these.
+
+Gradle `Shared.xcframework` built successfully (8m41s) — the full Xcode build is now viable. Let me wire the route into `AppRoute`, the parser, and the app, then stage the framework.
+
+Now wire the registration into the app and add the `route.gdprExport` title. Let me check for any exhaustive `AppRoute` switches that a new case would break.
+
+Let me verify the xcstrings key ordering so I can insert cleanly, and check for any test asserting the AppRoute case set.
+
+The file isn't fully sorted, so I'll do an order-preserving insert. Let me test round-trip fidelity to ensure a clean diff.
+
+The format is Xcode's xcstrings style (` : ` inside `strings`). I'll do a safe textual insert. Let me add all 31 keys.
+
+31 keys added (8555 → 8586). Let me verify the insert is clean (additive-only) and validate JSON, then write the tests.
+
+Clean additive diff (341 insertions, 0 deletions). Now the model tests.
+
+Now let me lint and format-check the new/edited Swift files before building.
+
+Two auto-fixable formatting issues. Let me apply swiftformat to the flagged files.
+
+swiftformat clean. Now swiftlint --strict on the Admin dir and edited files.
+
+Three swiftlint issues to fix. Let me inspect the trailing-closure violation and the model file length.
+
+The button passes two closures—I'll make the label explicit. And I'll extract the formatters into their own file (model >400 lines) and rename `v`. Let me see the extraction boundary.
+
+I'll extract the formatters into their own file (fixing `v`→`doubleValue` and a `date`-shadowing bug), truncate the model, and fix the button's explicit label.
+
+Now re-run swiftformat and swiftlint on all 6 new files + 3 edited.
+
+Lint clean. Now let me stage the framework, generate the Xcode project, and run the placeholder gate.
+
+The placeholder scanner matched my i18n key name `idPlaceholder` (web parity key). Let me inspect the exact pattern to choose the right fix.
+
+This is the established convention — siblings use `// parity:allow i18n key name, not a stub` for exactly this. Let me apply it.
+
+Placeholder gate green (ALLOWED=7, COUNT=0), lint clean, project generated. Now the big one — the full Xcode build. Let me start the iOS build in the background and check available simulators for testing.
+
+Build running in background. There's a booted simulator for testing. Let me check the route-registration test pattern to add parity-evidence coverage for the nav wiring.
+
+This is valuable nav-wiring parity evidence. Let me add a parallel route-registration test.
+
+Test file lint-clean. Let me check the build log progress while it compiles.
+
+Build is compiling cleanly (0 errors, emitting module). Let me wait for it to complete.
+
+The build is in the whole-module emit phase (type-checking all sources) — slow for this large target but progressing with 0 errors. Let me keep waiting.
+
+Log hasn't grown in ~7 min — let me verify the compiler is actively working (CPU) and not deadlocked.
+
+Healthy — many `swift-frontend` processes compiling in parallel (per-file phase now active), 0 errors. xcodebuild buffers log output per phase. Let me continue waiting.
+
+Progressing (log grew, fresh compilers spawning, 0 errors). Let me keep waiting for the build to finish.
+
+Log jumped to 17.7k lines, still 0 errors — deep into compilation. Let me continue waiting.
+
+Now compiling the arm64 slice (generic simulator builds both arches), still 0 errors. Let me keep waiting.
+

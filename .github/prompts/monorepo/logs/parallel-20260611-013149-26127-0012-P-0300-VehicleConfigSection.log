@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure, the web source specification, and checking tool availability on this runner.
+
+All Apple tooling is present (Xcode 26.5, swiftlint, swiftformat, iOS 26.5 simulators incl. iPhone 16). Both source and target dirs exist. Let me read the web source spec and the existing Apple app structure.
+
+The web source is a focused component: a `GlassPanel` with a Settings header and a 2-column `KVList` of vehicle config rows, with a skeleton loading fallback. Now I need to understand the existing Apple conventions. The `feature-views` dir is huge (2579 entries) — there must be sibling examples. Let me find existing patterns and the supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+Clear multi-file convention per feature view (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.Tests`, `.ModelTests`, `.strings`). I need a structurally similar reference. `VehicleConfigSection` renders a KVList in a panel — let me study close analogues and the shared infrastructure (state holders, tokens, i18n, diagnostics, and the shared GlassPanel/KVList/Skeleton equivalents).
+
+`TirePressureSection` is an ideal reference — vehicle-related, similar scale. Let me read its complete file set to learn the exact conventions (model, adapter, views, states, previews, strings, tests).
+
+Excellent — this is a mature, highly-structured codebase. I understand the file decomposition now. Let me read the remaining reference files (Projector, Views, Previews, strings, Tests) and the build config to learn the full pattern, including the shared design-system components.
+
+Now the Previews, strings, Tests, build config, and shared design-system primitives.
+
+I have the full pattern. Now let me locate the shared design-system primitives (`TSGlassPanel`, `TSFadeIn`, `TSSpacing`, `TSRadius`, `TSSkeleton`, `TSTone`, `Font.TS`, `Color.TS`) and understand the build/test target wiring in `project.yml`.
+
+XcodeGen auto-globs `feature-views/` (excluding `*Tests.swift`, which go to the test bundles), so my new files will be picked up by `xcodegen generate`. Now I need the definitions of the shared `TS*` primitives. My scoped grep missed them — let me search the whole Apple + design tree.
+
+Found them. Let me read the shared primitives' APIs and the design tokens, plus check the data-display components for a KVList-equivalent.
+
+Now let me check for a native KVList equivalent, the `TSSkeleton`/`TSFadeIn` APIs, and the swiftlint/swiftformat configs (since the gate runs `--strict`).
+
+There's a native `TSKVList` — the direct counterpart of the web `KVList`. Let me read its API plus the typography components (`TSPanelTitle`, `TSText`, etc.) so I compose with the right shared primitives.
+
+`TSKVList` exists but takes `LocalizedStringKey` keys (main-bundle lookup) and is single-column — it can't honor the per-surface i18n facade or the web's `columns={2}`. The sibling prompt (TirePressureSection 0299) builds its own grid + resolves strings through its per-surface facade. I'll follow that proven pattern. Let me read the web `KVList` to reproduce its layout faithfully.
+
+Now I fully understand the web `KVList` (2-col grid, label muted / value medium, space-between). Let me check the swiftformat config, the placeholder-check script, and the Shared.xcframework build step (to gauge build cost) before writing code.
+
+Let me read the forbidden placeholder patterns and verify `pwsh`/`xcodegen` availability plus whether the Xcode project needs generation.
+
+Critical: the build has a Gradle/KMP `Shared.xcframework` pre-action. Let me check whether that framework is already staged, and how the sibling prompt (TirePressureSection 0299) handled its gate/log — that tells me the expected STATUS on this runner.
+
+`Shared.xcframework` is not staged (only `.gitkeep`). Let me read the predecessor TirePressureSection 0299 log and a prior VehicleConfigSection attempt log to learn the expected build outcome on this runner.
+
+Key finding: the full `xcodebuild` gate can't run on this runner because `Shared.xcframework` requires the Kotlin/Native (Gradle) toolchain and isn't staged. The predecessor (0299 TirePressureSection) used an **isolated SwiftPM build+test** + typecheck + lint + format + placeholder + xcodegen verification and documented the xcodebuild step as DEFERRED on that pre-existing blocker. Let me confirm this slot's current state and read the tail of the 0299 log for the exact closing format.
+
+Now I have the exact, covenant-compliant precedent: an **isolated SwiftPM build+test** against the real design system, iOS typecheck, lint, format, placeholder, and xcodegen — all green — while the full-app `xcodebuild` is documented truthfully as RED from *pre-existing, unrelated* sibling collisions (out of my file scope) + the unstaged KMP framework. This slot has no VehicleConfigSection yet (clean tree at `2d1ef7a8d`). 
+
+A key lesson from 0299's xcodebuild failure: type names must be globally unique across the app target. Let me verify my planned prefix `VCSection` / `VehicleConfigSection` is collision-free and confirm the `Sources/Components` tree is self-contained against the design tokens.
+
+I have everything I need. This slot is clean at `2d1ef7a8d` with no VehicleConfigSection files. My plan: mirror the **direct predecessor TirePressureSection 0299** (present + green in this slot) — same 8-file structure, `VCSection`-prefixed types (verified collision-free), per-surface i18n facade, full state envelope, and the same covenant-compliant verification (isolated SwiftPM build+test + iOS typecheck + lint + format + placeholder + xcodegen), documenting the full-app `xcodebuild` truthfully.
+
+Let me create a plan file, then write the surface. Starting with the pure Adapter layer.
+
+Now the pure Adapter layer (value types + value resolution, Foundation-only).
+
+Now the Projector layer (projector + phase + connection + surface slug + accessibility, Foundation-only).
+
+Now the Model layer — telemetry seam (P1/S11), i18n facade (P1/S10), source seam (P1/S8), the `@Observable` model, and the in-memory source.
+
+Now the presentational chrome — header, freshness chip, banner, 2-column KV grid, row, loading, empty, and error states.
+
+Now the main view file that composes everything and switches over phase.
+
+Now the Previews (one per state) and the strings catalog.
+
+Now the i18n strings catalog (15 verbatim web keys + native chrome keys).
+
+Now the comprehensive test suite (adapter value resolution, projector, model lifecycle, accessibility).
+
+All 8 files created. Let me format-lint and lint my files (fast feedback) before the heavier build.
+
+Just one trailing-comma issue (`--commas inline`). Let me auto-fix my files with swiftformat (applies only to the files I pass), then re-verify format + run swiftlint.
+
+Format is clean. One swiftlint issue: `value(in:strings:)` has cyclomatic complexity 12 (the `??`-heavy 12-case switch). Note the pure `labelKey`/`order` 12-case switches were *not* flagged, confirming it's the nil-coalescing operators driving complexity. I'll refactor to keyPath lookups — cleaner and lower complexity.
+
+swiftformat: `0/7`. swiftlint --strict: **0 violations**. Now the isolated SwiftPM build+test against the *real* design system (mirroring 0299's verification [1]/[2]). Let me set up the harness.
+
+Now the `Package.swift` and run the isolated build.
+
+My surface files compiled cleanly. The failure is in shared `UnitFormatters.swift`/`TypedFormatters.swift` referencing a `Units` type defined outside the design-system dirs (my surface doesn't use them). Let me locate `Units` and decide whether to include it or exclude those two unused formatter files.
+
+The `Units` facade lives in `Sources/SharedFacade` and `import Shared` (the KMP framework) — so anything depending on it can't compile without the Kotlin toolchain. I'll exclude exactly the Shared-dependent files from the harness (my surface uses none of them). Let me map that set precisely.
+
+Only `UnitFormatters.swift` is Shared-dependent (everything else compiled). Let me confirm nothing else references the types it defines, then exclude just that one file and rebuild.
+
+Safe to exclude. Removing that one Shared-coupled file (unused by my surface) and rebuilding.
+
+**Build complete!** (BUILD_EXIT=0). Now run the isolated tests.
+
+All **17 tests passed, 0 failures**. Now [3] the iOS typecheck against the real iPhoneSimulator SDK (validates the `#if os(iOS)` size-class branches), with `-D DEBUG` so the Previews are covered too.
+
+iOS typecheck: **0 errors** (47 files). Now the placeholder gate and xcodegen. Let me first see how the script handles the literal gate path (which is a file-prefix, not a dir), then run a definitive scan of my actual files.
+
+Let me confirm my files are actually scanned (not zero matches) by inspecting the script's path logic and running a definitive raw scan of my files for every forbidden pattern.
+
+The script uses `Get-ChildItem -LiteralPath … -Recurse -File -ErrorAction SilentlyContinue`, so the prompt's literal path (a file-prefix, not a real dir) scans **zero** files — a quirk that trivially passes. My raw grep already proves **zero** forbidden patterns. For a *meaningful* script run, let me scan a temp dir holding exactly my files, then run `xcodegen generate`.
+
+Placeholder gate over my actual 8 files: **COUNT=0, EXIT=0**. Now `xcodegen generate` to confirm the project enumerates my new files.
+
+xcodegen succeeded. Let me verify the project enumerated my files correctly (6 in app targets, Tests routed to XCTest bundles), then run the literal full-app `xcodebuild` to document its true outcome.
+
+All 8 files enumerated (6 sources + Tests + strings in the right targets). Surface verification is fully green: build, 17 tests, iOS typecheck, lint, format, placeholder, xcodegen — all 0.
+
+Now [8]: run the **literal full-app `xcodebuild`** gate to document its true outcome. This triggers the scheme's KMP `Shared.xcframework` Gradle pre-action. Let me first probe that dependency, then run the gate bounded.
+
+Java 17 + gradlew present; framework still unstaged. Running the literal gate now (it will trigger the KMP Gradle pre-action). I'll capture authentic output to a log, bounded.
+
+The KMP Gradle build is actually progressing (Kotlin/Native cached, now linking the framework). So the framework will stage and xcodebuild will proceed to compile the full app target. Let me keep polling.
+
+Framework assembling (debug done, release linking). Let me continue polling.
+
+Framework staged; xcodebuild is now compiling the full `TeslaSync` app module (arm64 iOS sim, -swift-version 6). Let me wait for the compile result and scan for errors.
+
+Build **FAILED** (as predicted by the 0299 precedent). Let me capture the exact error(s) and confirm they're pre-existing/unrelated to my surface.
+
+Definitive, covenant-critical result: **BUILD FAILED with exactly one error**, in a **pre-existing, unrelated** sibling surface — `AIGeofenceAwareAutomationSuggestions.swift:141` (`escaping closure captures non-escaping parameter 'content'`), which is **outside my allowed file scope**. **Zero** errors reference VehicleConfigSection. This matches the 0299 precedent precisely. Let me confirm the exit code, that my files compiled cleanly within the full build, and that only my files are modified in git.
+
+IOS_EXIT=65, only my 8 files are new in git, and the AIGeofence file is pre-existing/untouched. Let me confirm both `error:` lines are the same pre-existing file, then write the gate log.
+
+Both errors are the **same pre-existing Swift-6 escaping-closure bug** in two *other* prompts' shared-surfaces (`AIGeofenceAwareAutomationSuggestions` P4/0020 and `AIAutoNameUnnamedLocations`) — both outside my file scope. Let me confirm my surface was enumerated for compilation in the full build (no errors), then write the gate log.
+
+My 6 source files were enumerated for compilation in the full build (19 mentions) with **zero** own errors. All evidence captured. Let me do a final app-wide uniqueness check, then author the gate log.
+
+All checks complete. Authoring the gate log with the full, truthful evidence.
+
+Now clean up the gitignored project artifact check and commit precisely my files + log. First verify the `.xcodeproj` is ignored and confirm the exact staged set.
+
+Clean — only my 8 surface files + the log are untracked (`.xcodeproj` is gitignored). Staging exactly those and committing with the prompt's message.
+
+9 files staged (8 surface + log). Committing with the prompt's exact message.
+
+Committed as `2fc8ba694` (9 files, +1498). Final verification of the commit and clean working tree.
+
+The task is complete and verified. Everything is committed (`2fc8ba694`), the working tree is clean, and the gitignored `.xcodeproj`/DerivedData build artifacts are excluded.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0300-VehicleConfigSection.log | 139 +++++++++++
+ .../VehicleConfigSection.Adapter.swift             | 276 +++++++++++++++++++++
+ .../feature-views/VehicleConfigSection.Model.swift | 226 +++++++++++++++++
+ .../VehicleConfigSection.Previews.swift            | 116 +++++++++
+ .../VehicleConfigSection.Projector.swift           | 112 +++++++++
+ .../feature-views/VehicleConfigSection.Tests.swift | 256 +++++++++++++++++++
+ .../feature-views/VehicleConfigSection.Views.swift | 260 +++++++++++++++++++
+ .../feature-views/VehicleConfigSection.strings     |  54 ++++
+ .../feature-views/VehicleConfigSection.swift       |  59 +++++
+ 9 files changed, 1498 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0300-VehicleConfigSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleConfigSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleConfigSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleConfigSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleConfigSection.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleConfigSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleConfigSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleConfigSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleConfigSection.swift

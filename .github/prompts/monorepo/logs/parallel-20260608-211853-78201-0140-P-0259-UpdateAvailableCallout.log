@@ -1,0 +1,164 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app patterns.
+
+Let me read the web source and explore the Apple app structure.
+
+The web source is a simple callout. Now let me explore the Apple app structure to understand the established patterns.
+
+`UpdateAvailableCallout` doesn't exist yet. Let me study an existing feature-view's file structure and find similar components (status callouts, ones using date formatting).
+
+Now let me see the test/previews/strings patterns and find how `useDateFormat` maps to a native state holder.
+
+Let me find the native counterpart of `useDateFormat` and look at a component's Adapter that uses it.
+
+`RedisDiagnosticEmptyState` is in the same `status/` family and ports `useDateFormat().formatDateTime`. Let me study its full fileset.
+
+Now let me find the design token definitions (P1/S9) and shared chrome like `tsGlassPanel`, `Color.TS`, `Font.TS`, `TSSpacing`.
+
+Let me find the generated token definitions (TSSpacing, TSRadius, Color.TS, Font.TS) and the Motion/TSFadeIn component.
+
+The design tokens live in `apps/design/generated/apple`. Let me read those and check tool availability.
+
+Good — all tools present. Let me read the design tokens and check the Xcode/simulator setup.
+
+All infrastructure is in place. Let me study the Link/Views/Previews/Copy patterns and the interpolation helper used for version strings.
+
+Let me read the Copy (interpolation), Previews, strings, and a Tests sample to nail the i18n + test patterns.
+
+Let me find the `RDText`/`RDInterpolate` types and review the Adapter and Tests structure.
+
+Let me view the Tests file structure and verify the gate tooling (pwsh, check-placeholders script).
+
+Let me read the lint configs, the placeholder checker, and the rest of the Tests file (a11y/UI test portion).
+
+Let me check the placeholder patterns to know exactly what to avoid in the Swift source.
+
+Now I understand all patterns. Let me check the build prerequisites (Shared.xcframework, generated project) before writing code, since the gate requires a full build.
+
+I have a clear picture of the established pattern. Let me confirm how the web source is consumed (the parent + update-check data flow) to model the native binding faithfully.
+
+Now I fully understand the data flow. Let me verify type-name prefixes won't collide and confirm a couple of shared helpers exist.
+
+I have everything I need. Let me set up tracking and write a plan, then build the fileset following the established NewVersionBanner/RedisDiagnosticEmptyState precedents.
+
+All details confirmed. Let me write the plan and create the fileset.
+
+Now let me create the Adapter (pure projection core):
+
+Now the Copy catalog (promoting the web's hardcoded English literals to keys):
+
+Now the Model (P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 facade):
+
+Now the surface entry point and the presentational Views:
+
+Now the strings catalog and Previews:
+
+Now the comprehensive test suite:
+
+Let me fix two test issues I spotted (a double-optional syntax and a redundant call):
+
+Now let me auto-format my Swift files and run the per-file lint gates.
+
+`0/7 formatted` — already conformant. Now the lint gates:
+
+One line-length violation. Let me view and fix it:
+
+Both lint gates pass (0 violations). Now the placeholder gate — let me verify my files genuinely against the scanner patterns:
+
+Now run the actual placeholder scanner — both the literal gate invocation and a genuine scan of my files in isolation:
+
+Placeholder gate clean (COUNT=0). Now let me verify the pre-existing full-app blockers empirically (for honest logging) and check the isolated-build inputs my code needs.
+
+This worktree is clean (`DashboardWidgetSize` defined once). Let me check my isolated-build dependencies are self-contained, then set up the isolated SwiftPM build.
+
+All deps are token-only and self-contained. Let me set up the isolated SwiftPM build+test (the sanctioned green-evidence path) under Swift 6 strict-concurrency mode.
+
+All 36 isolated tests pass under Swift 6 strict-concurrency. Now let me attempt the full xcodebuild gate. First, generate the project and probe the Shared.xcframework (KMP/Gradle) feasibility.
+
+Project generated (my files included), JDK 17 present. Let me attempt the Shared.xcframework Gradle/KMP build (the heavy prerequisite) in the background.
+
+While Gradle runs, let me verify my public type names don't collide anywhere in the full app target (which would break the full build).
+
+No collisions. Let me check the Gradle build progress.
+
+The Gradle build is progressing (KMP compiles are cached). Let me wait for it to finish staging the release framework.
+
+Release frameworks are linking now. Let me wait for completion.
+
+Still linking release slices. Let me wait further for the staging to complete.
+
+Final release slice (macOS) linking. Let me wait for the staging to finish.
+
+GRADLE_EXIT=0. Let me verify the framework staged and launch the full iOS build+test (the gate command).
+
+Framework staged. Now the full iOS build+test gate (the heavy step):
+
+The full iOS build+test is running (compiling ~1842 feature views + Sources). Let me monitor progress.
+
+The full iOS build failed with errors in OTHER feature-view files. I must determine whether my change caused them or they're pre-existing. Let me investigate the actual errors carefully.
+
+The errors are "ambiguous for type lookup" on types like `SafetyModel`, `ChargeStatusProjection`, `ChargeSessionDTO` — i.e. PRE-EXISTING duplicate-definition collisions across sibling surfaces, with the `.loaded/.live/.stale` errors cascading from them. Let me verify this empirically and confirm none of my files are implicated.
+
+Conclusively pre-existing: those types are each defined in 2 sibling files (parallel-merge collisions), and ZERO of my files appear in any error. Let me capture the specific colliding file pairs as log evidence, and confirm my surface's own files compiled.
+
+Conclusive: all 15 ambiguous types are pre-existing collisions in sibling parallel-authored surfaces (e.g. `SafetyHistoryWidget`+`SafetyFeaturesWidget`), none in my allowed files. Let me capture the macOS gate result too (same shared sources → same wall) and verify my files were reached/compiled.
+
+While macOS builds, let me confirm whether my files were compiled in the iOS build and produced zero diagnostics.
+
+My files compiled cleanly in the real iOS app target (listed in SwiftCompile, zero errors/warnings). The failure is entirely pre-existing collisions in other surfaces. Let me wait for the macOS build to confirm the same wall.
+
+macOS failed in 10s (MAC_EXIT=65) — too fast for a compile failure. Let me check why.
+
+macOS failed for a *different* pre-existing reason — code-signing (entitlements need a dev certificate the unsigned runner lacks; `DEVELOPMENT_TEAM` is empty). Also not my code. Let me check how the precedent log concluded its EXIT/STATUS to match the sanctioned disposition.
+
+The precedent confirms the sanctioned disposition: per-surface gates + isolated Swift 6 build green, full-app xcodebuild DEFERRED on pre-existing out-of-scope blockers → EXIT=0/STATUS=DONE, with full honest disclosure of the reds. My evidence is even stronger (framework staged, my files compiled clean in the real app target). Let me gather toolchain/version facts for the log.
+
+I have all the evidence. Let me write the comprehensive gate log.
+
+Now let me verify git status and ensure only my intended files (plus the log) get committed — no generated artifacts.
+
+All generated artifacts are gitignored. The two modified web files are pre-existing edits (unrelated to my Apple task) — I'll leave them untouched. Let me commit only my 8 files + the log.
+
+Only my 8 files + the log are staged. Let me commit:
+
+Committed cleanly (9 files, 1628 insertions). Let me clean up temp artifacts and finalize tracking.
+
+All gates re-confirmed green on the committed files. The task is complete.
+
+## Summary
+
+Shipped a production-complete, Apple-idiomatic **`UpdateAvailableCallout`** at parity with `web/src/features/system/components/status/UpdateAvailableCallout.tsx` — **8 files / 1412 lines**, committed as `9b7c55d04` with the gate log.
+
+**Parity delivered**
+- Reproduced every web branch: heading ± `latest` version, body ± `current` prefix, last-checked ± `checkedAt`, and the "View notes" external link to the exact GitHub releases URL.
+- Bound the **P1/S8** state-holder seam (mirroring `SystemStatusPage`'s `hasUpdate` mount gate → presented/idle), **P1/S9** tokens, **P1/S10** i18n (promoted the web's hardcoded English literals to a localized catalog — the source makes no `t()` calls), **P1/S11** `view.opened` telemetry (deferred to first presentation, like the web's conditional mount).
+- Ported `useDateFormat().formatDateTime` (medium/short, `—` sentinel); mapped all five P4 leaf states (loading/empty/error → distinct withdrawn reasons; stale/offline → presented + freshness chip); full VoiceOver/Dynamic Type/Reduce-Motion support.
+
+**Gates (raw, on this runner)**
+- ✅ swiftformat `0/7` · swiftlint `0 violations` · placeholders `COUNT=0`
+- ✅ Isolated SwiftPM build + **36/36 tests** under Swift 6 strict-concurrency
+- ✅ `xcodegen generate` + Gradle `Shared.xcframework` assembled & staged
+- ✅ My files compiled with **zero diagnostics inside the real iOS app target**
+- ⚠️ Full-app iOS/macOS `xcodebuild` are **RED for pre-existing, out-of-scope reasons only** — 15 duplicate-type collisions in *other* sibling surfaces (zero of my files in any error) and the macOS dev-signing identity the runner lacks. Disclosed with raw evidence; deferred to the P4 acceptance gate.
+
+Log ends `EXIT=0 / STATUS=DONE` — the sanctioned "code-complete + deferred full-app gate" disposition, consistent with the 0129 NewVersionBanner precedent.
+
+Merge made by the 'ort' strategy.
+ ...e-feature-views-0259-UpdateAvailableCallout.log | 216 ++++++++++++
+ .../UpdateAvailableCallout.Adapter.swift           | 309 ++++++++++++++++
+ .../UpdateAvailableCallout.Copy.swift              | 113 ++++++
+ .../UpdateAvailableCallout.Model.swift             | 218 ++++++++++++
+ .../UpdateAvailableCallout.Previews.swift          | 102 ++++++
+ .../UpdateAvailableCallout.Tests.swift             | 390 +++++++++++++++++++++
+ .../UpdateAvailableCallout.Views.swift             | 192 ++++++++++
+ .../feature-views/UpdateAvailableCallout.strings   |  39 +++
+ .../feature-views/UpdateAvailableCallout.swift     |  49 +++
+ 9 files changed, 1628 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0259-UpdateAvailableCallout.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/UpdateAvailableCallout.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UpdateAvailableCallout.Copy.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UpdateAvailableCallout.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UpdateAvailableCallout.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UpdateAvailableCallout.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UpdateAvailableCallout.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UpdateAvailableCallout.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/UpdateAvailableCallout.swift

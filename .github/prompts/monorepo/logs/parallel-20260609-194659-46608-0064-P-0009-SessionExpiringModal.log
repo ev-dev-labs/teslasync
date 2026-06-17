@@ -1,0 +1,137 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+I have the web source. Now let me study the existing modal implementations to understand the established native patterns.
+
+Now let me examine the AddAnnotationPopover set and the shared P1 design tokens.
+
+Now let me find the shared P1 design tokens/components and the web `useSessionMonitor` hook to understand the data contract.
+
+The `modals-dialogs` directory isn't yet wired into `project.yml`, and tokens come from `../design/generated/apple`. Let me check toolchain availability and read the remaining reference files.
+
+Full toolchain present (Xcode 26.5, Swift 6.3.2). Let me check git history to understand how predecessor modal surfaces were wired into the build.
+
+This is the key precedent. Let me read the full predecessor log to replicate the exact surface-acceptance gate methodology.
+
+Now I understand the methodology precisely. Let me read the data contract (`useSessionMonitor`), design tokens, and the closest analog (AddAnnotationPopover) model/adapter.
+
+Let me read the AddAnnotationPopover full set (closest analog — a Modal with phases) plus the shared `TSGlassPanel`/`TSFadeIn` and facade.
+
+Let me read the remaining analog files (Seams, States, Views, Previews, strings) and shared components in parallel.
+
+Let me read the shared UI components (TSButton, TSGlassPanel, TSFadeIn) and the placeholder-check tool.
+
+Let me view the TSButton component, the AddAnnotation tests/previews, and the placeholder-check tool.
+
+Let me check the lint configs and the placeholder tool, then I'll have everything I need.
+
+I now have a complete understanding of the established pattern. Let me check for symbol collisions before writing the new surface.
+
+All names are free. Let me verify SDK paths for the typecheck gates and set up my plan.
+
+All toolchain and SDKs confirmed. Let me set up my plan and todo tracking, then implement.
+
+All names are free and SDKs confirmed. Now I'll create the surface. Starting with the pure projection core.
+
+Now the Seams file (telemetry, controller, source, strings, accessibility).
+
+Now the state-holder model.
+
+Now let me verify the `TSButton` API before writing the views.
+
+Now the View entry, content views, and state views.
+
+Now the strings catalog.
+
+Now the previews and the two test files.
+
+Now the adapter test suite.
+
+Now the model state-holder test suite.
+
+All 10 files created. Let me update progress and verify string-key coverage and forbidden words before running gates.
+
+All 19 keys match exactly. Now checking forbidden words, then running the gates.
+
+All clean. Now running the surface-acceptance gates. Gate 1 — swiftformat lint:
+
+Gate 1 passed (0/9 require formatting). Gate 2 — swiftlint --strict:
+
+Gate 2 passed (0 violations). Let me check how the predecessor that uses `TSGlassPanel`/`TSButton` (AddAnnotationPopover) handled the typecheck closure.
+
+The closure is tokens + design + Motion + UI(Buttons/Cards/Typography/Badges) + the 7 non-test surface files. Let me locate the exact dependency files.
+
+Let me run the iOS typecheck (gate 3) with the proper dependency closure.
+
+iOS typecheck clean. Gate 4 — macOS typecheck:
+
+Both typechecks clean. Gate 5 — isolated SwiftPM build + test:
+
+Swift 6 disallows `NSLock.lock()/unlock()` inside `async` methods. Let me fix the two async controller bodies to use `withLock`.
+
+Re-running gate 5 with the fix:
+
+Gate 5 passed — 37 tests, 0 failures. Gate 6 — placeholder/stub gate (isolated to my surface + positive control):
+
+Gate 6 passed (COUNT=0; positive control caught the probe). Gate 7 — xcodegen spec validity + scratch-tier file enumeration:
+
+Gate 7a passed. Now 7b — scratch spec that wires the `modals-dialogs` tier, then enumerate my files in the generated project:
+
+Gate 7 passed — all 10 files enumerate. Let me re-verify format+lint after the ModelTests edit, run the collision audit, and confirm a clean working tree.
+
+All 7 gates are green and the working tree is clean. Let me gather file metrics and write the gate log.
+
+All metrics good (largest file 334 lines < 400; max width 118 ≤ 120). Let me capture exact tool versions, then write the log.
+
+Now I'll write the comprehensive gate log.
+
+Log written. Let me clean up temp artifacts, confirm a clean tree, then commit.
+
+All 11 files staged, no leftover artifacts. Committing:
+
+Committed cleanly (`449a39694`); working tree is clean. Let me finalize the todo tracking and plan.
+
+All work is complete and verified. Let me do a final confirmation of the committed state.
+
+The surface is complete, verified, and committed. All work is done.
+
+## Summary
+
+Shipped a production-polished native Apple parity of `SessionExpiringModal` at `apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.*` (10 files, 2124 lines), following the exact methodology established by the predecessor modal surfaces (0002/0005).
+
+**What was built** — a faithful SwiftUI port of `components/feedback/SessionExpiringModal.tsx`:
+- **Pure projection core** (`.Adapter`): verbatim port of the web `deriveSessionState` (against an injected clock), `formatCountdown` → `m:ss`, the `open`/visibility predicate, body-phase resolution, and the unsaved-draft sort/cap/overflow.
+- **P1/S8 state holder** (`.Model`): binds a `SessionExpiringSource` seam (no HTTP in the view), a 1Hz `tick()` that re-derives so the countdown animates and the dialog auto-hides at expiry, an async `stay()` (web `await refresh()`, "Refreshing…" in-flight), `signOut()`, and `view.opened` telemetry once.
+- **Views/States**: every state renders real chrome — hidden (web `null`), loading, empty, error+retry, content (countdown + unsaved-drafts panel + actions), inline-error, stale + offline (chip + banner). Uses shared `TSGlassPanel`/`TSButton`/`TSFadeIn` + P1/S9 tokens; all 8 web i18n keys + native chrome through the P1/S10 facade; VoiceOver labels on every interactive element.
+- **Tests**: 37 passing (23 adapter/projection/a11y + 14 model), plus 7 per-state previews.
+
+**Verification — all 7 surface-acceptance gates GREEN** (raw output in the log):
+`FORMAT=0 · LINT=0 · IOS_TYPECHECK=0 · MAC_TYPECHECK=0 · SWIFT_TEST=0 (37 tests) · PLACEHOLDER=0 (+positive control) · XCODEGEN=0 (10 files enumerate)`.
+
+The full-app `xcodebuild build test` is **DEFERRED** (logged honestly per Covenant rules 1/10): the KMP `Shared.xcframework` is unstaged and the `modals-dialogs` tier isn't yet in `project.yml` — both one-time integration bootstraps outside this prompt's Allowed-files. No shared file was modified; working tree clean. Committed as `449a39694`. **EXIT=0 / STATUS=DONE.**
+
+The task is fully complete and verified. All 12 todos are done, all 7 surface-acceptance gates passed, and the work is committed (`449a39694`) with a clean working tree.
+
+Merge made by the 'ort' strategy.
+ ...le-modals-dialogs-0009-SessionExpiringModal.log | 178 +++++++++++
+ .../SessionExpiringModal.Adapter.swift             | 303 +++++++++++++++++++
+ .../SessionExpiringModal.Model.swift               | 208 +++++++++++++
+ .../SessionExpiringModal.ModelTests.swift          | 334 +++++++++++++++++++++
+ .../SessionExpiringModal.Previews.swift            | 118 ++++++++
+ .../SessionExpiringModal.Seams.swift               | 195 ++++++++++++
+ .../SessionExpiringModal.States.swift              | 188 ++++++++++++
+ .../SessionExpiringModal.Tests.swift               | 252 ++++++++++++++++
+ .../SessionExpiringModal.Views.swift               | 255 ++++++++++++++++
+ .../modals-dialogs/SessionExpiringModal.strings    |  44 +++
+ .../modals-dialogs/SessionExpiringModal.swift      |  49 +++
+ 11 files changed, 2124 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0009-SessionExpiringModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/SessionExpiringModal.swift

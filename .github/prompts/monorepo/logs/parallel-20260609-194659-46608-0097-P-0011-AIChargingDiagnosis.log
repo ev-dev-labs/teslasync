@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure and checking the capabilities required for this task.
+
+Good — all tooling is available (Xcode 26.5, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+The web source is a thin AI feature card. Let me study the web building blocks (`withAiFeature`, `AIFeatureCard`, `useAiStream`) and an existing native AI surface to learn the established pattern.
+
+`AIAnomalyExplanations` is the exact same web pattern (AIFeatureCard + withAiFeature + useAiStream) and has a complete native implementation. It's my template. Let me read all its native files.
+
+Excellent template. Let me read the remaining files: Projection, Views, Chrome, Adapter, Previews, strings, and tests.
+
+Let me read the remaining template files (Chrome, Adapter, Previews, strings, and both test files).
+
+Now let me read the Previews, strings, and both test files to complete my understanding of the pattern.
+
+Now the test files to learn the test patterns.
+
+I have the full pattern. `AIChargingDiagnosis` is structurally identical to `AIAnomalyExplanations` with key differences: path-based route `/ai/charging/{sessionID}/diagnose`, empty body, `canStart` from a string `sessionId`, feature id `charging-diagnosis`. Let me verify the web hooks, the feature registry, the build config, and that shared tokens exist.
+
+`charging-diagnosis` is a valid feature id, and `useAiStream` confirms the reducer port is correct. Let me check the build config (how shared-surfaces files are included), verify shared tokens exist, and read the feature registry entry.
+
+The `shared-surfaces` folder is auto-included by directory path (tests excluded for app targets). Shared tokens all exist. Let me check the test target config in project.yml and the i18n integration point.
+
+Let me check the lint configs, the placeholder-check script, and whether the Xcode project needs generation via xcodegen.
+
+`xcodegen` is available and there's no committed `.xcodeproj` (must generate). Let me read the placeholder-check script to know what patterns to avoid.
+
+Let me see the exact forbidden patterns and confirm the existing template passes the placeholder check (baseline).
+
+I have the full picture. Forbidden words include "Placeholder", "TODO", etc. (case-insensitive) — I'll avoid them. Now let me check for type-name collisions before choosing my `ChargingDiagnosis` prefix, since everything compiles into one module.
+
+No `ChargingDiagnosis` collision exists, but many `Charging*` types do — so I'll use the specific `ChargingDiagnosis` prefix. Let me verify `TSSpacing.x4xl` exists (the template references it) and confirm the exact token API surface.
+
+I now have everything needed. Let me set up a plan and todos, then build the 10 files modeled precisely on the known-good `AIAnomalyExplanations` template.
+
+Now creating the files. Starting with the Adapter (the dependency-free core).
+
+Now the Projection.
+
+Now the Views file.
+
+Now the Chrome file.
+
+Now the main view, Previews, and strings.
+
+Now the two test files — AdapterTests first.
+
+Now the main Tests file (projection / model / accessibility).
+
+All 10 files created. Let me normalize formatting on my new files with swiftformat (write mode), then lint just my files before the expensive full build.
+
+swiftformat normalized 4 files. Let me verify lint passes on my files and the format is now clean.
+
+Format and lint both pass with 0 violations on my files. Now let me run the placeholder check on my actual files, confirm the log directory, and regenerate the Xcode project.
+
+Placeholder check passes (0 count) on my real files. Now let me regenerate the Xcode project and check the Shared.xcframework dependency.
+
+The project generated, but `Shared.xcframework` is missing (a scheme pre-action builds it). Let me inspect that build script.
+
+The build links a KMP `Shared.xcframework` built via Gradle (Kotlin/Native). Let me check whether that's buildable in this environment.
+
+Java 17 + gradlew are present. Let me build the `Shared.xcframework` (this may be slow on first run — Kotlin/Native toolchain download).
+
+Gradle/Kotlin-Native build is running (first build downloads the toolchain). Let me keep waiting.
+
+Still building. Let me check in parallel whether it's actively downloading the Kotlin/Native toolchain (progress) versus stuck.
+
+It's actively compiling (Kotlin/Native LLVM backend producing frameworks for iOS + macOS). Let me wait for completion.
+
+The `Shared.xcframework` built and staged successfully. Now let me verify the iPhone 16 simulator exists and start the iOS build+test gate (the expensive step).
+
+iPhone 16 simulator is available and the framework is staged. Let me initialize the gate log and run the iOS build + test.
+
+The build failed — but **none** of the errors are in my files. They're pre-existing "ambiguous type lookup" errors (duplicate type definitions) in `RecentDrives*` and `StateTimeline*` surfaces, which are outside my allowed scope. Let me prove these are pre-existing duplicates not caused by my work.
+
+This conclusively proves the failures are **pre-existing duplicate `public` type definitions** in sibling surfaces (`StateTimelineModel`, `StateTimelineConnection`, `RecentDrivesUpdate`, `RecentDrivesConnection`, etc. each defined twice — once in `dashboard-widgets`, once in `feature-views`). My files define none of these. Let me confirm via git that these are pre-existing (not introduced by me) and check their blast radius.
+
+Definitively confirmed: my working tree adds **only** my 10 files + the log (all untracked). The duplicate-defining sibling files are **pre-existing commits** (`57117c5cd`, `2737a7bb5`) that I have not modified. The `TeslaSync` scheme is red at baseline.
+
+To honestly verify *my* surface compiles and its tests pass, I need the module to compile. Let me check the blast radius of the broken sibling surfaces (are they referenced elsewhere?) to find the safest temporary, reverted neutralization for verification.
+
+Key finding: the 8 ambiguous types belong to two **self-contained** sibling surfaces (`StateTimeline*` and `RecentDrives*`), each duplicated across `feature-views` and `dashboard-widgets`. Nothing external references them. 
+
+To honestly verify *my* surface compiles and its tests pass (the module must compile as a whole), I'll temporarily quarantine the **dashboard-widgets duplicate copies** (resolving the collisions), run my tests, then fully restore them — committing only my in-scope files. Let me list those duplicate files.
+
+No dangling references — quarantining the dashboard-widgets duplicate copies will cleanly resolve all 8 collisions. Let me temporarily quarantine them, regenerate, and build+test **only my surface's test classes** to verify it compiles and passes. (These sibling files will be fully restored afterward; my commit stays in-scope.)
+
+Quarantine done, project regenerated. Now building + running **only my surface's test classes** to verify it compiles and passes.
+
+Another **pre-existing** error surfaced in a different sibling surface (`AIAutoNameUnnamedLocations.swift:123` — escaping-closure bug). The baseline module has multiple unrelated breakages. Let me get the full error inventory from this build.
+
+Only **one** error remains, again in a pre-existing, unmodified sibling (`AIAutoNameUnnamedLocations.swift`). None in my files. Let me view that pre-existing bug and check it's self-contained, then quarantine it too for verification.
+
+Confirmed: `AIAutoNameUnnamedLocations.swift:122` is a genuine pre-existing bug (non-escaping `content` closure passed into `TSGlassPanel`), self-contained, unmodified by me. Let me quarantine it and rebuild my tests.
+
+The baseline is broadly broken across many pre-existing sibling surfaces (now the `RecentDrives` feature-view copy shows its own redeclaration + type-mismatch bugs). Whack-a-mole on the full module is unreliable. Let me quarantine the **entire** broken self-contained sibling surfaces (both copies of RecentDrives + StateTimeline) and rebuild my tests once more; these patterns restore unambiguously.
+
+Build still failed but my filter hid the errors. Let me see all errors — including whether any are now in my files.
+
+No compile `error:` lines at all now. The failure must be a link/runtime/test issue. Let me inspect the failure reason.
+
+The Swift compiler now **crashes** (`llvm::report_fatal_error`) on yet more pre-existing broken siblings (`FacadeError` duplicate, `FrontendErrorsCard`, `TelemetryErrors*`). The baseline TeslaSync module is pervasively broken across dozens of parallel sibling surfaces — quarantining is unbounded. 
+
+First, let me **restore all quarantined files** precisely so the repo returns to its original state (only my files added).
+
+All sibling files restored; `git status` confirms only my files + log are untracked. The repo is back to its original (pre-existing-broken) state.
+
+Now I'll verify my surface **in isolation** via a standalone SwiftPM package (module named `TeslaSync` so `@testable import` works), pulling in only the real design-token/component dependencies — bypassing the pervasively-broken sibling surfaces. Let me inspect my UI dependencies' closure.
+
+The UI dependency closure is small and clean: `Tokens.swift` + `Buttons.swift` + `Skeletons.swift` + `Motion.swift` (all only `import SwiftUI`). Let me build a standalone SwiftPM package (module `TeslaSync`) with my surface + these real deps + my tests — isolated from the broken module. First, a quick check that Tokens.swift is self-contained.
+
+My files produced **zero errors in all three full-app build attempts** — only siblings failed. For definitive proof, I'll build a standalone SwiftPM package. Let me first check the app's Swift language version to match it, avoiding false concurrency mismatches.
+
+App uses Swift 6.0 + `complete` strict concurrency, and my files produced **0 errors** across all full-app attempts. Let me create the standalone package (matching Swift 6.0) for definitive build+test proof.
+
+Only the real `Skeletons.swift` fails — its *other* variants (`TSStatSkeleton`, `TSChartSkeleton`) reference `TSCard`, which my surface never uses. I only use the base `TSSkeleton`. Let me trim the dependency file to just `TSSkeleton`.
+
+`TSSkeleton` (the only one I use) is self-contained. Let me replace the package's copy with just that struct and re-run.
+
+**Definitive proof:** the standalone package **builds cleanly** (UI views + logic, Swift 6.0 strict-concurrency complete) and **all 72 of my tests pass, 0 failures**. Combined with 0 lint/format/placeholder violations and 0 errors in my files across every full-app attempt, my surface is complete and correct.
+
+The aggregate gate is blocked solely by pervasive **pre-existing** sibling breakage. Let me now capture the authentic remaining gate steps for the log. First regenerate the project (restored state), then run macOS build+test.
+
+macOS gate is blocked by a **code-signing** requirement (no development certificate in this environment) — `MAC_EXIT=65`. (My standalone build already proved my code compiles for macOS.) Now let me capture the lint, format, and placeholder gate steps.
+
+3 of 5 gate steps are **clean** (`LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`). Only the two app-build steps fail — iOS from pre-existing sibling breakage, macOS from code-signing. Let me write the comprehensive, honest summary to the gate log.
+
+Log finalized honestly: `EXIT=65 / STATUS=BLOCKED`, with full evidence that the surface itself is green (72/72 tests, lint/format/placeholder clean) and the block is pre-existing external breakage. Let me update tracking, clean temp artifacts, and commit my in-scope files + log.
+
+Working tree is clean — only my 10 files + the log are untracked. Let me commit them with the prescribed message.
+
+The commit may be running a pre-commit hook. Let me wait for it.
+
+The commit is running a slow pre-commit hook. Let me inspect what it's doing in parallel.
+
+`.git` is a worktree pointer and no lint processes are running. Let me check whether the `git commit` is stuck on a lock or still active.
+
+The commit process is gone and HEAD is unchanged (my commit didn't land) — the shell is stuck. Let me stop it and investigate global hooks before retrying.
+
+No hooks, nothing staged (stopping rolled it back). Likely transient lock contention from parallel worktrees sharing one object store. Let me check for gitattributes filters, then retry staging alone.
+
+`git add` is instant — the hang was in `git commit`. For worktrees, hooks live in the **main** repo's gitdir. Let me check there.
+
+No active hooks/filters — the earlier hang was almost certainly bash history-expansion on `!!` in my commit message. Let me commit using a message file (`-F`) to avoid shell interpretation.
+
+Commit landed (`a2124e3d0`). Let me verify it contains exactly my 11 files and nothing else.
+
+The commit cleanly contains exactly my 11 files (10 surface + the gate log), nothing else, and the working tree is clean. Let me do a final tracking check.
+
+All implementation todos are done; the gate is honestly marked blocked. The deliverable is complete and committed. Here's my final summary.
+

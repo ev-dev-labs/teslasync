@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and the web source that I need to port.
+
+Apple toolchain is available (Xcode, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+Now I understand the web source. Let me explore the Apple app structure to understand the existing patterns, state holders, tokens, i18n, and how other shared surfaces are built.
+
+This is a complex XcodeGen-based monorepo with a KMP Shared.xcframework dependency. Let me explore the shared-surfaces directory and the supporting infrastructure (state holders, tokens, i18n, diagnostics, ConfirmDialog).
+
+There's a native `ConfirmDialog` in modals-dialogs (the counterpart to the web shared component) — that's my key reference. XcodeGen is available but Shared.xcframework isn't built yet. Let me examine the ConfirmDialog implementation and survey existing shared-surfaces for the established pattern.
+
+`GuardedLink` already exists — that's the sibling surface that consumes the same guard context. It's my closest reference. Let me read both the GuardedLink and ConfirmDialog file sets.
+
+Let me read the rest of the GuardedLink reference files and the native ConfirmDialog to fully internalize the established pattern.
+
+I now fully understand the established pattern. Let me verify the design tokens and shared UI components (TSCard, TSEmptyState, TSButton, TSSkeleton, Color.TS, Font.TS, TSSpacing, TSRadius) and check the native ConfirmDialog API.
+
+Let me read the shared component APIs and the design tokens I'll use.
+
+Let me confirm the remaining component/token APIs (TSSkeleton, TSButton, TSFadeIn, typography, Color.TS/Font.TS tokens).
+
+Let me read the typography, motion, banners components and locate the generated design tokens.
+
+The generated design tokens directory doesn't exist yet. Let me locate where `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius` are defined and check the design generation setup.
+
+Let me read the build script, placeholder checker, and lint configs, and check tooling availability (pwsh, gradle).
+
+`pwsh`, gradle wrapper, and the KMP shared core are present. The xcframework build (Gradle + Kotlin/Native) is the long pole for the gate, so I'll start it early in the background while I write the surface. Let me also read the lint configs and create a plan.
+
+Background xcframework build is running. Now let me check for existing symbol names to avoid collisions, since GuardedLink lives in the same module and already defines several `NavigationGuard*`/`Guarded*` types.
+
+I have all tokens/components confirmed. Let me check existing EnvironmentKey patterns (the provider must "provide" context like the web one) and peek at a non-link "listener" surface for side-effect patterns, while the xcframework builds.
+
+The KMP toolchain works (build is progressing, mostly cached). Let me find actual EnvironmentKey definitions to follow the established provider pattern.
+
+Excellent — there's a direct precedent: `ChartTimeRangeProvider`/`ChartHiddenSeriesProvider` are React-context-parity providers using `EnvironmentKey` + `@Observable` model. Let me study the closest one and its file layout.
+
+I now have two strong references: **GuardedLink** (guard-or-navigate flow, confirm dialog, P4 leaf states) and **ChartTimeRangeProvider** (React-context-provider parity via `EnvironmentKey` + `@Observable` model). My `NavigationGuardProvider` combines both. Let me write a plan and start creating the surface files.
+
+Now let me create the surface files, starting with the pure adapter core.
+
+I need to fix the Optional extension syntax — Swift doesn't allow `extension Type?` shorthand. Let me correct it.
+
+Now the Previews and Tests files, then the strings catalog.
+
+All 10 files created. Let me check the background xcframework build, run swiftformat/swiftlint on the new files, and find any lines over 120 chars.
+
+The xcframework built successfully and is staged. One line exceeds 120 chars. Let me run swiftformat in lint mode on the new files to see all formatting issues, then auto-format.
+
+swiftformat found wrapping issues (my manual arg alignment vs `before-first`) and the Optional-extension sugar. Let me auto-format the new files, then review what it changed.
+
+swiftformat rewrote it to `extension NavigationGuardProviderModel?` — I must verify that optional-sugar extension syntax actually compiles. Let me test it in isolation quickly.
+
+`extension Foo?` compiles fine in Swift 6. Formatting is clean. Now let me run swiftlint on the new files.
+
+swiftlint flags Tests.swift at 420 lines (limit 400). I'll split the model tests into a separate `NavigationGuardProvider.ModelTests.swift` (matches the allowed glob, like ChartTimeRange's split). Let me find the split boundary.
+
+I'll split at line 156. Let me extract the model section and build the new ModelTests file, then truncate Tests.swift.
+
+Both test files are now under 400 lines. Let me re-run both linters on all new files (including the new ModelTests).
+
+Both linters pass clean on all 10 files. Now let me check how the placeholder gate resolves its `-Path` (the gate points at a path prefix, not a dir), then run it.
+
+The gate's `-Path` points at a non-existent prefix (so it scans nothing = trivially clean). For real evidence I'll scan a temp copy of exactly my files, and also run the literal gate command. Let me verify placeholders both ways.
+
+Placeholder check passes (0 violations in my files). Now let me regenerate the Xcode project and confirm my files are picked up.
+
+Project regenerated and my files are referenced (66 entries). Let me verify the `iPhone 16` simulator exists, then start the full iOS build+test gate (this is a large app, so it'll run a while).
+
+iPhone 16 is booted and schemes exist. The app is huge, so I'll start the iOS `build test` in the background (to a temp log for iteration) and, in parallel, validate that the whole-project lints (which the gate runs repo-wide) are clean at baseline.
+
+Whole-project swiftformat is clean (0/4585). Now the repo-wide swiftlint, while the iOS build runs.
+
+Repo-wide swiftlint and swiftformat both pass clean. Now let me monitor the iOS build+test progress.
+
+Build is compiling the app module (no errors yet). The app is large, so I'll wait and poll for completion or errors.
+
+The build failed, but the error is in a **different, pre-existing surface** (`AISignalExplorerNlFilter.swift:142`), not my files — all my `NavigationGuardProvider.*` files compiled without errors. Let me get the complete error list to confirm the failure is isolated to code I didn't touch.
+
+Confirmed: the **only** compile error is in `AISignalExplorerNlFilter.swift:142` — a tracked, pre-existing file I did not touch (my files are all untracked new additions). Zero errors in my surface. This pre-existing, out-of-scope error blocks the whole shared-module build. Let me inspect it to confirm it's genuinely unrelated and pre-existing.
+
+This is a **pre-existing, unrelated compile error** outside my allowed files (`AISignalExplorerNlFilter.swift:141` passes a non-escaping `@ViewBuilder` param into `TSGlassPanel`'s escaping closure). My surface compiled with zero errors, but this sibling blocks the whole shared module, so my test target never got to build.
+
+To verify my tests actually pass, I'll temporarily fix the sibling **for verification only**, build+test, then revert it via `git checkout` so my committed change contains only my surface. Let me confirm it's committed/unmodified, then apply the temporary fix.
+
+Confirmed pristine and committed at HEAD (a different prompt's surface). Applying a **temporary, verification-only** fix to unblock the module build:
+
+Now let me rebuild and run the iOS tests (incremental, so faster). I'll monitor for my surface's test results.
+
+Another pre-existing sibling has the **identical bug** (`AIGeofenceAwareAutomationSuggestions.swift:141` — same `glass()` helper pattern). This is a systemic pre-existing issue across multiple sibling surfaces, all out-of-scope. Let me find every instance to understand the full scope.
+
+This is a **systemic pre-existing issue**: ~42 sibling surfaces share a copy-pasted `glass(@ViewBuilder _ content: () -> some View)` helper that fails under this runner's stricter Swift 6 toolchain — none caused by me, all outside my allowed files. My files correctly use `@escaping`. 
+
+To verify my tests pass, I'll apply a **bounded, reversible** transformation (adding `@escaping`, which is always safe) across the affected sibling files for verification only, build+test, then revert everything via `git checkout`. Let me capture the file list and apply it.
+
+43 sibling files patched (reversibly). Let me confirm my own files were untouched, then rebuild + test.
+
+My files are untouched and clean. The rebuild+test is running. Let me wait and check for any remaining errors and my test results.
+
+Yet another **distinct** pre-existing error in a different sibling (`RecentDrivesSection.Previews.swift:24` — compiler type-check timeout). The committed baseline simply does not compile under this runner's toolchain — multiple unrelated pre-existing errors across many sibling surfaces, none mine.
+
+Chasing these is unbounded. Better approach: my **tests** only depend on my 4 pure-logic files (Adapter/Projection/Model/Seams — Foundation/Observation/OSLog only, no SwiftUI/tokens). I'll verify them in an isolated SwiftPM package, fully decoupled from the broken baseline. First, let me revert all sibling patches to restore a pristine baseline.
+
+Baseline restored pristine (0 tracked modifications); my 11 new files remain. Now let me build an isolated SwiftPM package with my 4 pure-logic files + 2 test files (Swift 6 complete-concurrency, matching the app) to run my tests decoupled from the broken baseline.
+
+All **31 of my tests pass** (0 failures) under Swift 6 complete-concurrency in isolation: registry (4), projection (8), accessibility (4), model/state-holder (15). My logic is verified.
+
+Now let me produce the authentic official gate log by running the full gate as specified (it will fail on the pre-existing sibling errors, which I'll document), capturing real exit codes. Let me set up and launch it.
+
+While the gate runs, let me confirm across all prior build logs that my files never produced a single error (airtight evidence the surface compiles in the real module).
+
+Airtight: **zero errors/warnings in any of my files** across all builds; my files compiled against the real module/components. The 3 blockers are all pre-existing sibling files outside my scope. Let me monitor the official gate.
+
+The gate is recompiling for iOS (DerivedData was invalidated by my revert). It will fail again on the same pre-existing siblings, then proceed to macOS (the long pole). Let me wait for it to complete and clean up a stray temp file meanwhile.
+
+Gate progress: IOS_EXIT=65, MAC_EXIT=65 (both blocked by pre-existing siblings), LINT_EXIT=0, swiftformat running. Let me wait for completion and confirm the macOS failure is also pre-existing (not mine).
+
+The official gate completed with authentic results:
+- **IOS_EXIT=65** — pre-existing compile errors in unrelated sibling surfaces
+- **MAC_EXIT=65** — macOS **code-signing/entitlements** failure (no development certificate on this runner — a platform-capability limit; `DEVELOPMENT_TEAM` is empty)
+- **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0**
+- **Zero errors in any of my files** anywhere in the gate log.
+
+Let me capture the exact iOS blocker list from the gate log and confirm git is pristine except my files, then write the honest appendix.
+
+Git is pristine (0 tracked modifications) — only my 11 new files + the log. Now let me append a thorough, honest summary to the gate log documenting the blockers and my surface's verification evidence, then finalize with EXIT/STATUS.
+
+The gate log is complete and ends with `EXIT=65 / STATUS=BLOCKED` per the covenant.
+
+Per the **binding Honesty Covenant rule 8 ("No commit on red")**, since the full-app gate is red (blocked by external pre-existing issues, not my surface), I will **not** commit — the prompt's commit step belongs to the green/DONE path. My verified files remain in the working tree. Let me clean up temp artifacts and confirm final state.
+
+The deliverable is complete: **11 files, 1687 lines** (comparable to sibling GuardedLink's 1584), git left pristine except my untracked files + the log.
+
+I've done everything within my allowed scope. The remaining blockers are entirely external and outside this prompt's allowed files. Let me record the final status in the plan and conclude.
+
+I've completed and verified the `NavigationGuardProvider` Apple surface to the full extent possible within this prompt's allowed scope. The full-app gate is blocked by issues entirely external to my work, which I've documented honestly.
+

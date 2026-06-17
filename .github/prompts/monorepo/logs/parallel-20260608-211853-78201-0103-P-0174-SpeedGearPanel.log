@@ -1,0 +1,220 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app structure, and the shared P1 layers (state holders, tokens, i18n, diagnostics).
+
+The web source is clear. Now let me explore the Apple app structure, existing feature-views, and the shared P1 layers.
+
+There's a large established feature-views directory. Let me check for any existing SpeedGearPanel files and study a complete reference example with all the file types.
+
+`LiveMotorStatus` (motor data) and `SummaryStatsGrid` (grid of stats) are the closest references. Let me read both full sets to learn the established patterns.
+
+Excellent reference. Let me read the remaining LiveMotorStatus files plus the SummaryStatsGrid set to understand grid layout, Badge usage, and shared tokens.
+
+The pattern is crystal clear—`LiveMotorStatus` is the sibling template. Now let me verify the shared P1/S9 tokens, the `TSTone` badge tones (I need success/danger/warning/neutral), the web speed converter, and how `project.yml` includes files.
+
+Let me read the design tokens, badge tones, and the web speed converter to ensure exact parity.
+
+Now the constants, the Badge component, design token names, and the project.yml inclusion mechanism.
+
+File inclusion is glob-based—no manual project.yml edits needed. Let me read the core design tokens, the GlassPanel/EmptyState/Skeleton components, and the SummaryStatsGrid metric-grid reference.
+
+Let me confirm the `TSGlassPanel`, `TSSkeleton` signatures and the generated token members I'll use.
+
+Let me read the full token catalog and the web type definitions for `Drive` and `MotorSnapshot`.
+
+I now have all tokens and types. Let me verify the build tooling (xcodegen, schemes, simulators) and read the web `fmtNumber` default precision before writing code.
+
+All tooling present (Xcode 26.5, iPhone 16 booted, xcodegen, swiftlint, swiftformat). Let me confirm the global precision default and generate the baseline project to discover scheme names.
+
+Confirmed: precision default = 2, and schemes `TeslaSync` + `TeslaSync-macOS` exist. Let me kick off a baseline iOS build in the background to verify project health and gauge timing while I write the code.
+
+Baseline build is compiling (large project). Let me check the web default speed unit and whether sibling Apple surfaces already model a speed unit, to avoid drift.
+
+Let me look at how a sibling driving surface models its speed unit + SI conversion, to match the idiom.
+
+Two idioms exist; I'll follow the typed-enum approach (`HealthSpeedUnit` style) since the panel needs deterministic SI conversion. The default fallback is `km/h` (web: non-`mi` → `km/h`). Now writing the files. Starting with the Model.
+
+Let me check the baseline build progress, then write the Adapter (the SwiftUI-free projection core).
+
+Baseline build still compiling (large project). Writing the Adapter—the SwiftUI-free projection core that ports the web numeric pipeline verbatim.
+
+Now the Views file (SwiftUI chrome). Let me check baseline progress in parallel.
+
+Still building. Writing the Views file (SwiftUI chrome), mirroring the sibling's idioms.
+
+Now the main view file, mirroring the sibling's state-switching structure.
+
+Let me check the baseline build status before writing previews and tests.
+
+Baseline still building (large project, expected). Writing previews and strings while it compiles.
+
+Now the comprehensive test file. Let me write it with carefully-computed parity values.
+
+All 7 files written. Let me check the baseline build result.
+
+The baseline build (started before my files existed, so it excludes them) failed with exit 65 — a **pre-existing** failure. But `tail -8` hid the actual compiler errors. I need the real `error:` lines. Let me regenerate (to include my files) and rebuild with full logging, then inspect the actual errors. Meanwhile, I'll examine the singled-out failing file.
+
+The build now uses cache (fast). Let me extract the actual `error:` lines.
+
+All 113 errors are in `dashboard-widgets/` (Charge*Widget files) — "ambiguous for type lookup", a duplicate-definition symptom. None appear to be in my `feature-views/SpeedGearPanel`. Let me confirm that, check git status, and investigate whether this is pre-existing.
+
+Confirmed: **0 errors in my files**, all 113 pre-existing errors are in `dashboard-widgets/` (Charge*Widget). Critically, build #1 (before my files were in the project) *already* failed with exit 65 — proving the breakage predates my work. The "ambiguous for type lookup" symptom means duplicate type definitions. Let me pinpoint the duplicates to document this precisely.
+
+All 113 errors are pre-existing duplicate-type collisions in `dashboard-widgets/`: `ChargeStatusLiveWidget.Model.swift` redefines `ChargeSessionDTO`, `ChargeLoadStatus`, `ChargeStatusUpdate` (etc.) already defined by `ChargeStatusWidget.Model.swift` / `ChargeSessionChartWidget.Models.swift`. This predates my work and is outside my allowed scope (`SpeedGearPanel.*`).
+
+To genuinely verify *my* code compiles and its tests pass, I'll isolate it from this unrelated breakage. First, let me check nothing outside `dashboard-widgets` references those widgets (so sidelining them for verification won't cascade).
+
+No external references — sidelining `dashboard-widgets` for verification is safe. First, let me lint/format my 7 files (independent of the build) and read the lint configs.
+
+swiftformat found fixable issues in my files. Let me auto-apply formatting with the ecosystem tool (not hand-editing), then re-verify.
+
+swiftformat passes (0/6 need formatting). Now swiftlint on my files, and let me verify the auto-wrapped lines remained semantically correct.
+
+swiftlint flags one issue in my files: the test file is now 454 lines (>400 `file_length` under `--strict`). The convention (LiveMotorStatus.Tests was 398) is to stay under 400. I'll split into two test files (allowed by `SpeedGearPanel.*`). Let me read the formatted test file to split precisely.
+
+Let me find the exact section boundaries to split cleanly.
+
+Clear split points. Let me read the exact formatted content of each section to split accurately.
+
+Both sections captured. Let me split into two lint-clean files (each well under 400 lines): remove the old test file and create the adapter/accessibility tests and the model/view tests separately.
+
+Now re-run swiftformat and swiftlint on all my files (now 7 incl. the split) to confirm clean.
+
+Clean: **swiftformat 0/7**, **swiftlint --strict 0 violations**, all files <400 lines. Now I'll verify my code actually compiles and tests pass — isolated from the pre-existing `dashboard-widgets` breakage. Let me find the test target name first.
+
+`TeslaSyncTests` compiles my `*Tests.swift`. For isolated verification, I'll sideline `dashboard-widgets`, regenerate, then build+run only my test classes. First the quick sideline+generate:
+
+Dashboard-widgets sidelined (704 files) and project regenerated. Let me confirm my files are in and run the isolated test build for my classes.
+
+Good — my 42 refs present, dashboard sources gone. Now the isolated build+test of my classes (reusing the cache where possible). This is a significant recompile, so I'll let it run.
+
+Fast failure (7s) — likely a build-graph issue, not my code. Let me check the log.
+
+The reused derivedData (`/tmp/tsbuild`) has a stale build graph referencing the moved files. Let me confirm the regenerated project itself is clean, then rebuild with a fresh derivedData path.
+
+Confirmed: the regenerated project is clean (0 dashboard refs); the error was purely stale derivedData. Rebuilding with a fresh derivedData path. This is a clean build, so it'll take several minutes.
+
+Still fast-failing. Let me check the actual error.
+
+Same error despite fresh derivedData — so the regenerated project itself still references the dashboard files (my earlier grep missed them due to pbxproj path splitting). Let me inspect directly.
+
+Root cause: `xcodegen` requires the `dashboard-widgets` path to exist (it's in `project.yml`), so my earlier regenerate silently failed and the build used the stale project. Let me restore the directory, then sideline only the minimal duplicate-introducing fileset (`ChargeStatusLiveWidget.*`) while keeping the directory intact.
+
+First, restore and identify the colliding fileset and any references to it.
+
+`ChargeStatusLiveWidget.*` (7 files) is the duplicate-introducer, and **nothing references it** outside its own set. Sidelining it (while keeping the directory so xcodegen succeeds) should resolve all 113 ambiguities. Let me do that and run the isolated build+test with a fresh derivedData path.
+
+xcodegen succeeded with `ChargeStatusLiveWidget` removed (0 refs). Now the clean isolated build+test of my 6 test classes:
+
+Compiled for ~3 min then failed. Let me see the actual errors now.
+
+More pre-existing collisions exist in `dashboard-widgets` (FleetStatsBar*, Safety*, etc.) — the whole directory is pervasively pre-broken from prior parallel merges. Whack-a-mole won't scale. I'll empty the directory entirely (keeping it present so xcodegen succeeds) for a clean isolation build, then restore. First restore CSLW, move the whole dir out, and leave a placeholder.
+
+Key insight: the collisions are dashboard-widget files redefining types that **feature-views already define** (e.g., `FleetStatsBarModel` exists in both `feature-views/FleetStatsBar.Model.swift` and `dashboard-widgets/FleetStatsBarWidget.Model.swift`). Emptying dashboard-widgets removes the duplicate definers, leaving feature-views canonical. Let me regenerate and run the clean isolated build+test.
+
+xcodegen succeeded; dashboard widget files gone. Running the clean isolated build+test now (fresh derivedData):
+
+Let me check the v4 errors.
+
+Emptying dashboard-widgets exposed yet another pre-existing collision now in `feature-views/MonthlyCostChart` (`MonthlyCostStrings`/`MonthlyCostAccessibility` redeclared) — it was masked behind the earlier dashboard failure. The baseline is broken in multiple inherited surfaces. Let me proactively scan ALL feature-views for duplicate type declarations so I can sideline them in one pass rather than iterating.
+
+Only `MonthlyCostChart`'s two types are duplicated in feature-views. Let me find both definition sites to sideline the duplicate.
+
+`MonthlyCostChart` and `MonthlyCostTable` are two separately-merged surfaces that both define `MonthlyCostStrings`/`MonthlyCostAccessibility` — a pre-existing cross-surface collision. The scan confirms these are the *only* feature-view duplicates. I'll sideline one (`MonthlyCostTable.*`) and rebuild.
+
+No remaining feature-view duplicates. Running the isolated build+test (fresh derivedData) — this should now compile cleanly:
+
+Down to **1 error** — a pre-existing main-actor concurrency bug in `TimestampTool.Previews.swift` (a DEBUG-only preview, not mine; it appeared in earlier runs too). Let me sideline just that preview file and rebuild.
+
+Rebuilding — reusing the v5 cache (only TimestampTool changed) for speed:
+
+The reused derivedData is producing phantom stale-graph errors (`DigitalTwinMiniWidgetTests` — a dashboard-widget test file I already removed). I must use a **fresh** derivedData path after each regenerate. Let me confirm the sidelined files are truly off-disk, then do one clean fresh build.
+
+The current pbxproj still references `DigitalTwinMiniWidgetTests` (6 refs) despite the file being gone from disk — pointing to an xcodegen state issue. Let me regenerate fresh and immediately verify the ground truth.
+
+Let me find where `DigitalTwinMiniWidgetTests.swift` actually lives — it may be in `Tests/Unit` (always compiled), referencing now-removed dashboard-widget types.
+
+Root cause clarified: `Tests/Unit/DashboardWidgets/` contains tests referencing the dashboard-widget types I emptied. Since the test target compiles ALL its files (even with `-only-testing`), I must also sideline those dependent test dirs. Let me map the Tests/Unit dependency on the emptied/sidelined surfaces.
+
+The cascade is small and bounded: `Tests/Unit/DashboardWidgets/` (2 files) + `Tests/Unit/Dashboard/` (1 file) reference the emptied widgets. Let me identify and sideline those, then do a final fresh build.
+
+Sidelined the 4 dependent test files. Let me regenerate fresh and verify the project is clean before the final build.
+
+`DestinationETAWidgetTests.swift` wasn't moved (my narrower grep pattern missed it). Let me move it now, regenerate, and run the final build.
+
+This is cascading because I emptied *all* dashboard-widgets (including clean ones), breaking their `Tests/Unit` tests. For verification I'll sideline the whole `Tests/Unit/Dashboard` dir too, then do the final fresh build. Let me also scan for any other `Tests/Unit` references to be thorough.
+
+Broad scan now clean. Let me regenerate (project must reflect the moved Dashboard files) and run the final fresh isolated build+test.
+
+**V9_EXIT=0 — green!** My SpeedGearPanel surface compiles and all my tests pass on iOS once the pre-existing breakage is sidelined. Let me confirm the test counts.
+
+**All 39 SpeedGearPanel tests pass on iOS, 0 failures, `** TEST SUCCEEDED **`** (the "1" is just my grep matching "0 failures"). Definitive proof my surface compiles and behaves correctly.
+
+Since sidelining is still in place, let me capture macOS evidence too (the gate requires it) before restoring.
+
+Fast macOS failure — let me check why.
+
+macOS failure is a **code-signing/entitlements** environment limitation (not a code issue): "entitlements require signing with a development certificate." For verification I can disable signing (standard CI practice). Let me retry.
+
+macOS isolated build+test passes (exit 0) with signing disabled. Let me confirm the counts.
+
+**Verified on both platforms: 39 tests pass, `** TEST SUCCEEDED **`.** My surface is proven correct. Now I must restore the repo to pristine baseline. Let me check backup contents first, then restore everything.
+
+Backups intact. Let me restore everything to pristine, then verify with `git status` that only my 7 files remain as additions.
+
+Restore is clean — `git status` shows **only my 8 files** (the test split made 8), nothing else deleted or modified. Let me clean up temp dirs, regenerate the project to baseline+mine, and check the log directory and `pwsh` availability.
+
+All gate tooling is available (`pwsh`, `check-placeholders.ps1`, log dir exists). Let me view the placeholder checker, then run the gate steps. First, the placeholder check on my files (the surface-scoped gate step).
+
+Let me check the placeholder patterns — my code legitimately uses the word "placeholder" (for the em-dash), which could trip the checker.
+
+Critical: the checker's `common` patterns include `"Placeholder"` (case-insensitive), and acceptance criterion #6 forbids "placeholder" in shipped code. My code uses `placeholder`/`isPlaceholder` and comments mention it. Although the gate's `-Path` is vacuous (no such dir), relying on that would be a shortcut. I'll genuinely purge the word. Let me find all occurrences.
+
+Only "placeholder" appears (no other forbidden words). Let me see exact lines to rename the identifiers and rephrase comments.
+
+No other forbidden words. I'll purge "placeholder" genuinely (renaming `placeholder`→`emDash`, `isPlaceholder`→`isAbsent`, and rephrasing comments/test-names) so the code truly satisfies acceptance criterion #6, not just the vacuous gate path. Applying the mechanical rename:
+
+All "placeholder" purged. Let me sanity-check the renamed sections and re-run lint/format.
+
+Rename is clean and consistent. Re-running swiftformat + swiftlint on my files:
+
+After rename: swiftformat 0/7, swiftlint --strict 0 violations, and the placeholder checker reports **PLACEHOLDER_COUNT=0** on my actual file. Let me scan all my files at once, then re-verify the build still compiles after the identifier rename.
+
+All 7 files: **PLACEHOLDER_COUNT=0**. Now I must re-verify the build compiles after the identifier rename. Let me re-sideline the pre-existing breakage, build+test with fresh derivedData, then restore.
+
+V10_EXIT=0 — build+tests still pass after the rename. Let me confirm counts and restore the repo.
+
+iOS green post-rename (39 tests). Restore clean — only my 8 files. To make the log airtight on the *final* code, let me re-verify **macOS** too (signing disabled), then restore.
+
+macOS green on final code (exit 0). Let me confirm counts and restore.
+
+**Both platforms verified green on the final code: iOS 39 tests, macOS 39 tests, 0 failures.** Repo restored — only my 8 files changed.
+
+Now let me regenerate the project and run the official gate steps for the log. I'll start the iOS build in the background and run the faster lint/format/placeholder steps meanwhile.
+
+The iOS gate build finished. Let me read its result and run the lint/format/placeholder gate steps in parallel.
+
+Only 2 seconds and exit 66 — an early failure, not a real build. Let me see what happened.
+
+A race condition — the async build started mid-regenerate. The project exists now. Let me re-launch the iOS gate build (background) and run the lint/format/placeholder steps (which read source files directly) in parallel.
+
+swiftlint --strict (whole project) found 1 violation. Let me identify it (mine or pre-existing) and run swiftformat + placeholder gate steps.
+
+swiftformat (whole project): **EXIT=0, clean** (incl. mine). swiftlint (whole project): 1 violation — **pre-existing** in `dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift` (0 in mine). Let me run the placeholder gate step and check the iOS build progress.
+
+Placeholder: **EXIT=0** (mine genuinely clean). The iOS gate build is still running. Let me run the official macOS gate step (fails fast on signing) while iOS continues.
+
+macOS gate: **EXIT=65, code-signing failure** (environment: no dev certificate). Let me check the iOS gate build status.
+
+iOS gate: **EXIT=65**. Let me confirm the errors are all pre-existing and none in my files.
+
+iOS gate: **254 errors, 100% in `dashboard-widgets/`, 0 in my code** (sample: `ChargeSessionDTO is ambiguous`). All authentic gate results are now captured. Let me write the gate log with full evidence.
+
+Gate log written. Now let me commit the surface + log (as the prompt's Commit section instructs), staging exactly my files and verifying nothing stray is included.
+
+Staging is clean — exactly my 8 surface files + the log. Committing:
+
+Committed as `ac3b8c1e3`, working tree clean. Let me do a final verification of the commit contents and overall state.
+
+Commit `ac3b8c1e3` is clean: 8 surface files + gate log (1821 insertions), working tree clean, log ends `EXIT=65 / STATUS=BLOCKED`. Let me clean up the temporary build artifacts I created.
+
+Task complete. Let me summarize the outcome.
+

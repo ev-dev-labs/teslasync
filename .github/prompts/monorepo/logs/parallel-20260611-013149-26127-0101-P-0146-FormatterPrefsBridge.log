@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure to understand the task context, find the web source, and check the Apple toolchain availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me find the web source and explore the Apple project structure.
+
+Established pattern exists (1129 shared-surface entries). Let me read the web source and study existing implementations to match the pattern.
+
+Now I understand the web source: `FormatterPrefsBridge` is a **side-effect-only** component that renders `null`. It syncs formatter globals (locale + decimal precision) with persisted settings and subscribes to cross-tab settings-changed broadcasts. Let me study an existing native shared surface to match the established pattern precisely.
+
+The directory is flat with `<Surface>.<Aspect>.swift` files. `AchievementUnlockListener` looks like a side-effect listener — the closest analog to a Bridge. Let me read its full file set plus the project config.
+
+This is a sophisticated multi-file architecture. Let me read the remaining reference files and the build config in parallel to fully understand conventions.
+
+Let me understand the shared tokens (P1/S9), the build config, and find where the cross-cutting types (Meta, Resolve, Connection) are defined.
+
+I now understand the architecture: each surface is fully self-contained. Critically, **allowed files are only `FormatterPrefsBridge.*`** — so I must reuse existing shared `TS*` tokens/components. Let me locate those definitions and the test-target config.
+
+Let me check the build prerequisites (Shared.xcframework, xcodegen) and read the token/component definitions I'll reference.
+
+Now let me check a critical risk: the build requires a KMP `Shared.xcframework` via Gradle. Let me check that prerequisite and read an existing surface's log to see the expected outcome/format.
+
+The established convention is clear: the full-app `xcodebuild` gate is **DEFERRED** (pre-existing infra gap — missing KMP `Shared.xcframework` needs Gradle, exit 65), and surfaces are independently verified via an **isolated SwiftPM harness** + swiftlint + swiftformat + placeholder scan. Let me study that harness convention, the placeholder checker, and the remaining reference files.
+
+Critical: `"Placeholder"` and `"not implemented"` are case-insensitive forbidden patterns — I must avoid those words in my Swift code. Let me read the full reference log to learn the exact verification methodology (isolated harness), plus the remaining reference Swift files.
+
+Excellent — this is the gold-standard methodology. Let me read the rest of the log (the DEFERRED xcodebuild section + exact closure) and the remaining reference files in parallel.
+
+I have the full methodology. Now let me read the exact file formats (strings, tests, views, previews) and the shared component signatures I'll consume.
+
+Let me read the shared component signatures and the Views/Previews reference format in parallel.
+
+Let me read the typography helpers, the previews format, and list the full component set.
+
+I now fully understand the native architecture. To port faithfully, I must read the web libraries the bridge depends on (`resolveLocale`, the `numberFormat` globals, broadcast topics, and the settings shape).
+
+Let me read the `useSettings` hook and broadcast signature to model the settings shape faithfully.
+
+I have the complete specification. Let me check the lint/format rules before writing, then set up my plan.
+
+Now let me read the remaining closure files (Design + Banners + Utility) to confirm the proven typecheck closure, then I'll start implementing.
+
+I have everything needed. Let me set up my plan and todos, then implement the 12-file surface.
+
+`import os` is established. Now let me create the surface files, starting with the pure Adapter core.
+
+Now the three test files. Starting with the pure AdapterTests.
+
+All 12 files created. Let me track progress and begin verification — first auto-format my files to swiftformat's canonical form, then lint.
+
+Files already in canonical format (0/11 changed). Now run the linters on my files.
+
+Both linters pass (0 violations). Now the meaningful verification: build an isolated SwiftPM harness (module `TeslaSync`) with my files + the real component closure, and run the XCTest suite.
+
+Harness staged. Now write `Package.swift` and run the test suite under Swift 6 strict concurrency.
+
+`OSAllocatedUnfairLock` needs `import os` — I have it in Adapter.swift (which compiled fine) but missed it in Seams.swift and ModelTests.swift. Let me fix both, then re-format.
+
+Import order canonical. Now re-run the test suite.
+
+All **35 tests pass** under Swift 6 strict concurrency (macOS). Now the iOS 18 simulator + macOS 15 SDK typechecks of the production closure (including DEBUG previews).
+
+iOS 18 typecheck clean. Now the macOS 15 SDK typecheck (with DEBUG previews).
+
+Both SDK typechecks clean. Now the placeholder gate — I'll run the self-test, the literal gate path, a real temp-dir scan of my files, and a direct grep.
+
+Now the honest real scan (copy my 12 files to a temp dir + direct grep), since the literal prefix path matches no directory.
+
+Real scan + grep both clean (0 placeholders). Now `xcodegen generate` + target-membership parse. First confirm the generated project is gitignored.
+
+xcodegen generated cleanly. Let me verify target membership by parsing the generated pbxproj (production files → 2 app targets; test files → 2 test targets).
+
+Counts are 4 (each build file is referenced twice in the pbxproj × 2 targets). Let me fix the main-file check and do a definitive target-association parse to prove production→app targets and tests→test targets.
+
+**Target membership is exactly correct**: production files + `.strings` in both app targets (`TeslaSync`, `TeslaSync-macOS`); only `*Tests.swift` in both test targets. Now capture the real full-app `xcodebuild` evidence (expected to fail at the unstaged KMP framework link — the pre-existing infra gap).
+
+Confirmed: **exit 65, unstaged `Shared.xcframework`, zero FormatterPrefsBridge compile errors** — the pre-existing infra gap, identical to every prior P4 surface. All surface-scoped gates are green. Let me check repo cleanliness before writing the log.
+
+The generated `.xcodeproj` is correctly gitignored (pattern has trailing slash); git status shows only my 12 files. Let me verify file sizes are within the lint budget and gather line counts for the log.
+
+All files within budget (≤321 lines, ≤116-char code lines). Every surface-scoped gate is green. Let me write the comprehensive gate log.
+
+Log written. Now clean up generated/temp artifacts and re-run the linters on the final files (I edited Seams + ModelTests after the first lint pass — must confirm the committed artifact is green).
+
+Final linters green (0 format diffs, 0 lint violations). Let me confirm clean git status, then stage and commit only my files + the log.
+
+All 13 files staged (12 surface + log), nothing extraneous. Now commit with the prescribed message.
+
+Committed cleanly (13 files). Let me do a final confirmation of the commit and clean working tree.
+
+Task complete. The FormatterPrefsBridge Apple surface is implemented, fully verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...e-shared-surfaces-0146-FormatterPrefsBridge.log | 223 ++++++++++++++
+ .../FormatterPrefsBridge.Adapter.swift             | 198 +++++++++++++
+ .../FormatterPrefsBridge.AdapterTests.swift        | 112 +++++++
+ .../FormatterPrefsBridge.Model.swift               | 189 ++++++++++++
+ .../FormatterPrefsBridge.ModelTests.swift          | 215 ++++++++++++++
+ .../FormatterPrefsBridge.Previews.swift            |  78 +++++
+ .../FormatterPrefsBridge.Projection.swift          | 161 +++++++++++
+ .../FormatterPrefsBridge.Seams.swift               | 321 +++++++++++++++++++++
+ .../FormatterPrefsBridge.States.swift              | 122 ++++++++
+ .../FormatterPrefsBridge.Tests.swift               | 202 +++++++++++++
+ .../FormatterPrefsBridge.Views.swift               | 188 ++++++++++++
+ .../shared-surfaces/FormatterPrefsBridge.strings   |  41 +++
+ .../shared-surfaces/FormatterPrefsBridge.swift     |  89 ++++++
+ 13 files changed, 2139 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0146-FormatterPrefsBridge.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/FormatterPrefsBridge.swift

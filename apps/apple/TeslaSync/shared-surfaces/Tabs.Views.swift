@@ -3,7 +3,7 @@
 //  TeslaSync — P4 shared surface · 0227 · Tabs (Apple)
 //
 //  The presentational pieces of the accessible tab strip — the native peers of the web elements: the
-//  `role="tablist"` container (``TabsStrip``), each `role="tab"` `<button>` (``TabButton``), and the
+//  `role="tablist"` container (``TabsStrip``), each `role="tab"` `<button>` (``TabButtonShared``), and the
 //  friendly empty-state message shown when there are no tabs (``TabsEmptyView`` — the native "never a blank
 //  box" branch the web leaves as an empty container). All chrome is token-driven (P1/S9): the selected tab
 //  is the accent tone with a 2pt accent underline (web `border-b-2 border-blue-600 text-blue-600`); the
@@ -27,7 +27,7 @@ import SwiftUI
 // MARK: - TabsStrip (web `<div role="tablist">`)
 
 /// The tab strip — the native peer of the web `role="tablist"` container. Lays the tabs out in a horizontal
-/// row over a hairline baseline (web `flex gap-1 border-b`), binds each ``TabButton`` to the
+/// row over a hairline baseline (web `flex gap-1 border-b`), binds each ``TabButtonShared`` to the
 /// ``TabsController`` (tap → activate, arrows / Home / End → roving move), and renders the friendly
 /// ``TabsEmptyView`` empty-state message instead when there are no tabs. The roving `@FocusState` follows the active
 /// tab so a keyboard move re-targets focus (web `refs.current.get(nextKey)?.focus()`).
@@ -51,7 +51,7 @@ struct TabsStrip: View {
     private func populatedStrip(_ projection: TabsProjection) -> some View {
         HStack(alignment: .bottom, spacing: TabsLayout.stripSpacing) {
             ForEach(projection.items) { item in
-                TabButton(
+                TabButtonShared(
                     item: item,
                     onSelect: { activate(item.key) },
                     onMove: { direction in move(direction, from: item.key) }
@@ -83,7 +83,7 @@ struct TabsStrip: View {
     }
 }
 
-// MARK: - TabButton (web `<button role="tab">`)
+// MARK: - TabButtonShared (web `<button role="tab">`)
 
 /// One tab — the native peer of the web `<button role="tab" aria-selected aria-controls tabIndex disabled>`.
 /// A plain button whose label is accent-toned + underlined when selected (web `border-b-2 border-blue-600
@@ -91,7 +91,7 @@ struct TabsStrip: View {
 /// non-interactive when disabled (web `opacity-50 cursor-not-allowed`). Tap reports an activation; the four
 /// navigation keys report a roving move. Carries its label + the `.isSelected` trait (web `aria-selected`)
 /// and its `tabElementID` (web `id`) for VoiceOver / tests; the underline is decorative.
-struct TabButton: View {
+struct TabButtonShared: View {
     let item: TabsItemProjection
     let onSelect: () -> Void
     let onMove: (TabsKeyMove) -> Void

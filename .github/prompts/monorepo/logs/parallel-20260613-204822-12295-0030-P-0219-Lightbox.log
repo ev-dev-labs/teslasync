@@ -1,0 +1,192 @@
+I'll start by understanding the task: porting the web `Lightbox` component to native Apple (SwiftUI). Let me explore the web source, the Apple app structure, and verify platform capability in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me read the web source and study an existing shared-surface pattern.
+
+Now I have the full web source. Let me study the existing Apple conventions — the project structure and a clean reference surface (Accordion), plus a data-driven one to understand state handling.
+
+This project uses XcodeGen (`project.yml`, no checked-in `.xcodeproj`). Let me examine the project config, check for xcodegen, and study the Accordion reference surface in full.
+
+Let me assess build feasibility (xcodegen, the KMP xcframework staging) and study the Accordion reference surface in full.
+
+Key finding: `Frameworks/Shared.xcframework` is only a `.gitkeep` — the KMP framework must be built via Gradle (Kotlin/Native). The app target has 5704 Swift files. Let me read the Accordion reference fully and check KMP build feasibility.
+
+Excellent — these are hand-crafted, high-quality references. Let me read the rest of the Accordion set and the design token sources.
+
+Now let me read the remaining Accordion files (Previews, strings, Tests), see a state-enum example, and locate the design token definitions.
+
+Design tokens live in `../design/generated/apple/Tokens.swift`. Let me read it to learn the exact token API, and check for a telemetry spy helper + any existing overlay/viewer surface to mirror.
+
+Now let me read the lint/format configs and find an existing overlay/modal surface to match idioms (backdrop, escape, telemetry seam reuse).
+
+There's a `VehiclePhotoGallery` feature and a `Lightbox` reference in `Overlays.swift`, plus a `Modal` surface with the overlay/States/Seams pattern. Let me examine these for idioms (backdrop, escape, AsyncImage, view.opened).
+
+This is rich context. The codebase already anticipates this surface: `VehiclePhotoGallery` defers deep zoom/pan/focus-trap to the shared `<Lightbox>`, and there's a `tsLightbox` presentation modifier plus a `Modal` surface with the canonical state-router/seams pattern. Let me read these to nail the idioms.
+
+Let me read the Modal surface's Adapter, Model, Seams, and Views to mirror the canonical overlay + state-router + view.opened idioms.
+
+I now understand both the pure-primitive (Accordion) and the stateful-overlay (Modal) patterns. Let me read the Modal Seams, Views, the rest of States, and the main Modal.swift to mirror the seam + retry + escape + view.opened idioms precisely.
+
+I have a thorough understanding of both the pure-primitive (Accordion) and stateful-overlay (Modal) conventions, the design tokens, lint/format rules, and the build setup. The codebase even anticipates this surface (VehiclePhotoGallery defers deep zoom/pan/focus-trap to `<Lightbox>`). Let me set up a plan and todos, then build.
+
+Now I'll write the surface. Starting with the pure adapter core.
+
+Let me make `update`'s closure optional (so the injected-model path doesn't clobber the model's real closure), then write the public `Lightbox.swift`.
+
+All seven implementation files are written. Let me do an early type-check against the iOS simulator SDK in Swift 6 mode (matching the project's strict concurrency) before writing previews/tests — this catches API/concurrency errors early.
+
+`NSLock.lock()` is unavailable in async contexts under Swift 6. Let me switch the test double to `withLock`.
+
+Type-check passes clean in Swift 6 mode for iOS. Let me also verify against the macOS SDK (AppKit paths: `NSImage`, `onExitCommand`, `onHover`).
+
+Both SDKs type-check clean. Now the previews and tests.
+
+All 10 files written. Now let me auto-format them to the project style, then lint. First swiftformat (write mode) on just the Lightbox files.
+
+swiftformat reformatted 8/11 files. Now verify format compliance and run swiftlint --strict on the Lightbox files.
+
+Format clean. Now swiftlint --strict on the Lightbox files.
+
+Two real issues: a false-positive `static_over_final_class` on the URLProtocol override (drop `final`), and a too-long base64 literal line. Let me inspect and fix.
+
+Lint and format both pass on the Lightbox files. Let me type-check the full app-target set (including DEBUG previews) for both SDKs.
+
+The preview helper builds a `@MainActor` model from a nonisolated function. Let me mark it `@MainActor`.
+
+App target type-checks clean on both SDKs incl. previews. Let me re-verify lint/format on the edited Previews file, then tackle the full build gate.
+
+All Lightbox files pass type-check, swiftlint --strict, and swiftformat --lint on both SDKs. Now the full build gate. Let me assess the monorepo build chain: generate the Xcode project and probe the KMP `Shared.xcframework` dependency.
+
+Java 17 + Gradle wrapper are present. Let me generate the Xcode project and kick off the KMP `Shared.xcframework` build (the heavy prerequisite) in the background.
+
+Project generated with all schemes. Now the KMP `Shared.xcframework` must be built (Gradle/Kotlin-Native). Let me start that in the background — it's the heavy prerequisite (downloads Gradle 8.14.5 + Kotlin/Native).
+
+While the KMP framework builds, let me check the gate's supporting pieces (log dir, placeholder checker, pwsh availability).
+
+pwsh and the placeholder checker are available. Let me read a sibling log (the Accordion reference, 0203) to see the expected gate outcome/format in this environment.
+
+This reveals the established, predecessor-accepted disposition: the full-app `xcodebuild build test` is **DEFERRED** (blocked by the unstaged KMP `Shared.xcframework`), while the surface is proven green via **dual-SDK typecheck + an executing SwiftPM test harness + lint/format/placeholder**, ending `EXIT=0 / STATUS=DONE`. Let me check the KMP build progress and confirm `macos-pending-verifications.md`.
+
+`macos-pending-verifications.md` exists (54KB) and documents the deferral rationale — notably it's for *Windows/Linux* hosts; I'm on macOS with Xcode, so I'll attempt the real build too. The KMP framework is still downloading/building. Meanwhile, let me set up the SwiftPM test harness (the "tests execute green" evidence) in a temp dir.
+
+Excellent — **all 49 XCTest methods execute green** via the SwiftPM harness under Swift 6 strict concurrency (SWIFT_TEST_EXIT=0). Now the placeholder checker and KMP build progress.
+
+Placeholder check clean (COUNT=0). Let me check the KMP framework build progress.
+
+The KMP build is genuinely progressing — Gradle 8.14.5 downloaded, Kotlin/Native 2.4.0 + LLVM toolchain actively compiling the iOS frameworks. Let me wait for it to finish staging the XCFramework.
+
+The debug XCFramework is assembled; the release variant (which the script stages) is still compiling. Let me wait for it to complete and stage.
+
+The KMP `Shared.xcframework` built and staged successfully. Let me capture its final output.
+
+The KMP framework built (9m40s) and is staged — the exact prerequisite predecessors couldn't satisfy on Windows/Linux. Since I'm on macOS with it staged, I'll attempt the **real** full-app gate. Starting the iOS build+test (5704 files) in the background with monitoring.
+
+The iOS build is running. Let me monitor its early progress to catch any configuration error quickly.
+
+Build is underway (no errors yet; preAction + setup). The full compile of 5704 files takes time. Let me wait and check the raw log for progress.
+
+Only 1 log line after 6 min but 6 xcodebuild processes — likely buffering or the scheme's gradle preAction stalling on a daemon lock (shared env). Let me investigate what's actually running.
+
+The iOS build is genuinely compiling — 1930 object files produced, `Lightbox.strings` already bundled, many active `swift-frontend` processes (a parallel slot-29 build is also competing for CPU). Let me wait and recheck.
+
+Steady progress (3380 object files, no errors). The large single module is still compiling. Let me continue waiting.
+
+4405 object files, still zero errors (xcodebuild buffers the piped log until phase end; object-file count is the live signal). Let me keep waiting for the compile+link+test to finish.
+
+The iOS build+test command completed (app binary linked). Let me read its final result.
+
+The `IOS_EXIT=65` is unreliable — my live filter used an invalid regex (`**`) that broke the pipe, killing `tee` (hence the 1-line log) while xcodebuild itself ran to completion (binary linked). I need a clean capture. Let me re-run with warm DerivedData and full logging — first `build` alone to confirm the full app + my surface compiles.
+
+**Full iOS app BUILD SUCCEEDED** (exit 0, zero errors) — my Lightbox surface compiles & links into the entire 5704-file app against the real KMP framework. Now the `test` action. Let me run it cleanly and capture full output.
+
+The iOS test action is running. Let me monitor its progress (it compiles thousands of co-located test files).
+
+The test action completed. Let me read its result.
+
+24s is too fast for a real test build — it failed early. Let me read the actual error.
+
+The `test` action failed on a **pre-existing** duplicate type in another surface's test (`RecentActivity.Tests.swift:103: invalid redeclaration of 'RecentActivityFeedProjectionTests'`) — not my surface, and not in my allowed files. Let me confirm it's pre-existing and verify my own test doubles introduce no name collisions.
+
+Critical finds: (1) the failure is a **pre-existing** duplicate between `RecentActivityFeed.Tests.swift` and `RecentActivity.Tests.swift` (neither mine, both outside my allowed files); (2) my `CloseRecorder` helper is a **non-private top-level name that collides** with `QueueJobDrawer.ModelTests.swift` — a collision I introduced. I must scope my test doubles `private`. Let me confirm cross-file usage, then fix.
+
+Confirmed: the test-module failure is a **pre-existing** duplicate (`RecentActivityFeed.Tests.swift` vs `RecentActivity.Tests.swift`, both outside my allowed files). Separately, my helper doubles are non-private while every sibling scopes them `private` (QueueJobDrawer's `CloseRecorder` is `private`). I'll scope mine `private` to match convention and remove any namespace risk.
+
+Now re-verify: lint/format on the changed files, re-run the SwiftPM harness with the private doubles, and confirm no remaining test-class name collisions.
+
+All clean and unique. Let me re-run the SwiftPM harness with the now-private doubles to confirm tests still execute green.
+
+49/49 tests green with private doubles. Now let me attempt the macOS app build (the dual-SDK typecheck already proves my code compiles on macOS 15; this adds full-app link evidence). Starting it in the background while I prepare the gate log.
+
+The macOS build is running. Let me run the consolidated host-runnable gates fresh and capture exact exit codes for the log.
+
+macOS build finished quickly (suspicious — likely an early failure) and the placeholder check returned 1 because I ran it from the wrong cwd (the script path is repo-root-relative). Let me fix both: read the macOS result and re-run placeholder from repo root.
+
+macOS build failed instantly on **code-signing entitlements** (no dev certificate on this runner) — the pre-existing macOS-signing condition predecessors documented, before any compilation. Let me retry with signing disabled to get real macOS compile evidence, in the background.
+
+The macOS build (signing disabled) is running. Let me gather precise evidence snippets for the log while it compiles.
+
+Scope confirmed clean — only the 12 `Lightbox.*` files are new. Let me verify the full git status has no stray changes, then wait for the macOS build.
+
+Confirmed: the only repo changes are my 12 `Lightbox.*` files (xcodeproj + framework are git-ignored). Let me check the macOS build progress.
+
+macOS build is compiling cleanly (973 object files, no errors) past the signing gate. Let me wait for it to finish while it builds, then assemble the final log.
+
+macOS build past halfway (2873 object files, still zero errors). Let me continue waiting for completion.
+
+Still compiling (4042 object files, zero errors; heavy CPU contention with the parallel slot). Let me wait for it to finish.
+
+**Both the full iOS and macOS apps BUILD SUCCEEDED** with my Lightbox surface linked against the real KMP `Shared.xcframework`. I now have a complete, honest result. Let me write the gate log.
+
+Now a final full verification on all 12 files post-edits, then commit.
+
+All 12 files clean (lint 0, format 0). Now staging and committing.
+
+All 13 staged (12 surface files + log) — exactly the allowed scope. Committing.
+
+Committed: 13 files, 2412 insertions (`9c8648560`). Let me clean up temp build artifacts and confirm a clean working tree.
+
+The task is complete. Here's what I delivered.
+
+## P4 · Shared surface · 0219 — `Lightbox` (Apple) — **STATUS=DONE**
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of `web/src/components/ui/Lightbox.tsx` as **12 files** under `apps/apple/TeslaSync/shared-surfaces/Lightbox.*` (2412 lines), committed as `9c8648560`.
+
+**Architecture (mirrors the Accordion/Modal conventions):** pure `LightboxProjector` core, `@Observable @MainActor LightboxModel` state-holder, telemetry + image-loader + i18n + a11y seams, a phase-router (loading/loaded/error+retry/empty), composed overlay/controls, the public `Lightbox` view, previews, `.strings` catalog, and 3 test files.
+
+**Faithful parity:** open/close, ←/→ nav + Home/End, +/-/0 zoom (1×–5×, 0.5 steps with snap-to-1× pan reset), drag-to-pan when zoomed, counter, caption, decode skeleton, neighbour pre-warm, Esc/keyboard aliases, full VoiceOver + reduce-motion. All 8 web `t()` keys mirrored verbatim with `{{…}}` interpolation; `view.opened` telemetry. Per the honesty covenant, `stale`/`offline` (which have no analog in this fetch-free source) are documented, not fabricated — `offline` folds into the real `onError`→retry branch.
+
+**Verification (all executed on this macOS runner, raw exits):**
+- iOS 18 + macOS 15 SDK type-check, Swift 6 strict concurrency — **0 / 0**
+- **49/49 XCTest methods execute green** (SwiftPM harness)
+- `swiftlint --strict`, `swiftformat --lint`, placeholder check — **all 0**
+- Built the KMP `Shared.xcframework` here (the predecessor Windows/Linux blocker), then **full iOS app BUILD SUCCEEDED** and **full macOS app BUILD SUCCEEDED** with the surface linked in.
+
+The full-module `test` run and the *signed* macOS build are blocked only by **pre-existing, out-of-allowed-scope** conditions — a duplicate `RecentActivityFeedProjectionTests` across two *other* surfaces, and macOS dev-cert signing — both documented with file:line evidence in the gate log. Git changes are confined to the 12 `Lightbox.*` files + the log.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0219-Lightbox.log     | 127 +++++++++
+ .../shared-surfaces/Lightbox.Adapter.swift         | 296 +++++++++++++++++++++
+ .../shared-surfaces/Lightbox.AdapterTests.swift    | 181 +++++++++++++
+ .../shared-surfaces/Lightbox.Controls.swift        | 162 +++++++++++
+ .../TeslaSync/shared-surfaces/Lightbox.Model.swift | 261 ++++++++++++++++++
+ .../shared-surfaces/Lightbox.ModelTests.swift      | 235 ++++++++++++++++
+ .../shared-surfaces/Lightbox.Previews.swift        | 111 ++++++++
+ .../TeslaSync/shared-surfaces/Lightbox.Seams.swift | 267 +++++++++++++++++++
+ .../shared-surfaces/Lightbox.States.swift          | 179 +++++++++++++
+ .../TeslaSync/shared-surfaces/Lightbox.Tests.swift | 182 +++++++++++++
+ .../TeslaSync/shared-surfaces/Lightbox.Views.swift | 211 +++++++++++++++
+ .../TeslaSync/shared-surfaces/Lightbox.strings     |  69 +++++
+ .../apple/TeslaSync/shared-surfaces/Lightbox.swift | 131 +++++++++
+ 13 files changed, 2412 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0219-Lightbox.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Lightbox.swift

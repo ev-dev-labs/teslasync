@@ -229,7 +229,7 @@ public enum SignalDiffTableAccessibility {
     /// the two source layers, and the pinned flag when set. The selected state is
     /// announced separately via the `.isSelected` trait.
     public static func rowLabel(
-        for row: SignalDiffRow,
+        for row: SignalDiffRowView,
         locale: Locale = SignalDiffTableFormat.defaultLocale
     ) -> String {
         var parts = [

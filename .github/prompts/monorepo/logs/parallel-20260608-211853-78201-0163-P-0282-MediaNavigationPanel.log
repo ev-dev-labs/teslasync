@@ -1,0 +1,16 @@
+I'll start by exploring the environment to understand what's available and read the web source specification.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and explore the Apple structure.
+
+Now let me find existing similar panels to use as templates, and check if MediaNavigationPanel already exists.
+
+Clear file convention exists. Let me study a complete sibling example to learn the patterns (adapter, model, views, previews, tests, strings).
+
+Now let me examine the shared infrastructure (tokens, glass panel, project.yml) and the web helpers I need to port.
+
+Let me examine the generated design tokens and shared components I'll be using.
+
+Let me read the web helpers I need to port and the shared components (TSGlassPanel, TSSkeleton, Badge).
+
+Now let me find how sibling native surfaces handle distance/unit preferences and read the shared components (TSGlassPanel, TSSkeleton, Badge).
+

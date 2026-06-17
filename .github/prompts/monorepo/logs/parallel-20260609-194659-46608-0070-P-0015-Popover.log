@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure to understand the task context, the web source component, and whether the Apple native toolchain exists.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Now let me read the web source and understand the existing Apple app structure and patterns.
+
+The toolchain and patterns exist. This follows an established multi-file surface convention. Let me study the project build config, the shared infrastructure (state holders, tokens, i18n, diagnostics), and a complete reference surface in parallel.
+
+Key finding: `modals-dialogs` is NOT in `project.yml` sources, yet surface files exist there. I need to understand the real build wiring before writing code. Let me investigate.
+
+Now the picture is clear: `modals-dialogs` is an "unwired tier" (per last commit message), `.xcodeproj` is git-ignored (not present), and the full build needs a KMP `Shared.xcframework`. Let me read the previous surface's log to understand the verification precedent, and check the KMP build situation.
+
+I now understand the precedent: surfaces use **surface-scoped gates** (swiftformat/swiftlint/swiftc-typecheck/tests against real SDKs) because the full `xcodebuild` is blocked by an unstaged KMP `Shared.xcframework` + unwired tier. Allowed files are only `modals-dialogs/Popover.*` + the log. Let me read the rest of the precedent log and the reference surface files to learn exact conventions.
+
+I have the precedent fully. Now let me study the design tokens (P1/S9), the Model/Adapter/States/strings conventions, lint configs, and check for any existing native overlay primitive to align with.
+
+There's an existing `Sources/Components/UI/Overlays.swift`. Let me read it (to align and avoid symbol collisions), plus the design tokens, material, and the Model/Adapter/strings/Previews/tests conventions.
+
+The path is `apps/design/...` not `apps/apple/design/...`. Note: an existing `tsPopover` View extension exists in `Overlays.swift` (a simple native wrapper) — my richer anchored primitive must avoid symbol collisions. Let me read the tokens, material, and the Model/Adapter/strings/Previews/test conventions.
+
+Now I understand the tokens and that the repo standardizes on native `.popover` (in `Overlays.swift`, `NotificationBellPopover`). Let me check for symbol collisions for my planned `Popover*` types, and read the Model/strings/Previews/test conventions to replicate exactly.
+
+No collisions — clean. Let me read the Previews, Tests, ModelTests, Adapter, and States conventions to replicate the structure and test harness exactly.
+
+I have all conventions needed. Let me quickly confirm where the `surface slug` is defined and how the chrome view uses tokens, then write the plan and implement.
+
+I have a complete understanding of the conventions. The web `Popover` is an anonymous positioning **primitive** (anchored overlay with side/align/flip/clamp + dismiss), not a data surface. Let me set up the plan and todos, then implement the 9-file surface.
+
+Now implementing the core. Starting with the geometry engine — a faithful port of the web `compute()`.
+
+Now the Views file — the surface chrome plus the faithful custom-positioned `PopoverContainer` that genuinely uses the geometry engine at runtime.
+
+Now the public API + SwiftUI mapping + window-level modifier using the native `.popover` HIG transport.
+
+Now the strings catalog and previews.
+
+Now the two test files — geometry/accessibility/strings, then the model behavior tests.
+
+All 9 files created. Now let me run the surface-scoped gates. First, format and lint.
+
+Format passes (0/8 require formatting). Now swiftlint --strict on the surface files (scoped in, since the repo `included` list doesn't yet name the tier).
+
+swiftlint --strict: 0 violations. Now the type-check gate against the real iOS 18 + macOS 15 SDKs under Swift 6 strict concurrency (the design tokens + my view files; tests excluded as they need XCTest).
+
+Name collision: the slug enum `PopoverSurface` clashes with the chrome view `PopoverSurface<Content>`. I'll rename the slug holder to `PopoverSurfaceID` and update references.
+
+Renamed. Re-running the iOS type-check.
+
+`.onExitCommand` is macOS-only. I'll wrap it in a platform-guarded modifier so Esc works on macOS while iOS uses the `.escape` accessibility action.
+
+iOS type-check passes. Now macOS 15.
+
+Both SDKs type-check clean. Now the isolated SwiftPM build + test of the SwiftUI-free core (Geometry, Seams, Model) with the two test files, under Swift 6 strict concurrency.
+
+Swift 6 flags the global test closure as non-Sendable. Marking it `@Sendable`.
+
+All 33 tests pass (22 geometry/accessibility + 11 model), 0 failures. Re-running format + lint after the edits to confirm still clean.
+
+Format + lint still clean. Now the placeholder/stub gate (ADR-011). Let me check the forbidden patterns and confirm my files are clean, then run the gate on an isolated copy.
+
+Clean — no forbidden tokens. Running the actual `check-placeholders.ps1` gate on an isolated copy of the surface.
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now xcodegen spec validity — first confirm the real spec still generates with the new files on disk, then a throwaway scratch spec that registers the `modals-dialogs` tier to prove the surface enumerates cleanly.
+
+Real spec valid. Now the scratch spec that registers the `modals-dialogs` tier (cloning the `misc-surfaces` blocks) to prove the surface enumerates cleanly into all targets.
+
+xcodegen gates pass (real + scratch both exit 0; my files register). The "12" includes substring matches from the longer `*Popover` surfaces — my precise set is 9 files. Now the collision audit + I'll attempt the full xcodebuild to capture honest evidence of the known KMP-framework blocker.
+
+Collision audit clean; `Frameworks/` holds only `.gitkeep` (KMP framework unstaged). Let me capture concrete evidence of the full-build blocker by inspecting the scheme's pre-build framework script and the KMP toolchain state.
+
+The scheme's pre-build phase runs a Kotlin/Native Gradle assemble (`:core:assembleSharedXCFramework`) to produce the unstaged `Shared.xcframework`. Let me check the canonical deferral doc, then do a bounded real `xcodebuild` attempt to capture live evidence of the blocker.
+
+The deferral doc confirms the methodology. Let me capture live evidence: generate the real project and launch a bounded `xcodebuild` to observe where it blocks.
+
+iPhone 16 sim is booted; project generated. Launching a bounded `xcodebuild build` to observe the blocker.
+
+The `/tmp` log path collided with a **parallel slot (slot-68)** building concurrently on this shared host — the log shows `slot-68` paths, contaminating the evidence. Let me identify whether my own `slot-70` xcodebuild is running so I can clean it up by its specific PID (not by name).
+
+Only `slot-68`'s xcodebuild is running (another agent) — my launch didn't persist. I won't touch theirs. Let me re-attempt my own bounded build with a slot-70-unique log and reliable PID capture, to get uncontaminated evidence.
+
+My build launches keep failing (`setsid` unavailable on macOS; earlier `nohup` didn't persist) and the host is running heavy parallel builds from other slots. Let me confirm the running xcodebuild isn't mine, then stop chasing a contaminated full-build and clean up — the blocker is already conclusively proven statically.
+
+lsof can't read those builds' cwd (not mine — owned by other slots' contexts); my launches failed (`setsid` missing). I won't touch other agents' processes. The blocker is conclusively proven statically. Let me clean up my temp artifacts and verify the working tree.
+
+Working tree is clean — only my 9 `Popover.*` files, no shared files touched. Let me do one final consolidated run of all surface-scoped gates against the exact committed file state, to capture an authoritative transcript for the log.
+
+All green. Now the final SwiftPM test + placeholder gate for the authoritative transcript.
+
+All gates green: FORMAT=0, LINT=0, IOS/MAC typecheck=0, SWIFT_TEST=0 (33/33), PLACEHOLDER=0, XCODEGEN=0, collision=0. Let me gather tool versions and confirm the log path, then write the gate log.
+
+All file sizes are well within limits (max 201 lines; total 1153 non-blank LOC across 9 swift files + 1 strings catalog). Now writing the authoritative gate log.
+
+Log written. Now staging only my surface files + the log and committing with the prescribed message.
+
+Exactly the 9 surface files + log staged. Committing.
+
+Self-review caught a parity bug: the web Popover is `aria-modal="false"` (intentionally **not** a focus trap), but `PopoverContainer` added `.isModal`. Removing it to match the web's non-modal semantics.
+
+Now re-verifying the changed file (format, lint, iOS type-check), then I'll amend the commit.
+
+All green. Amending the commit to fold in the parity fix.
+
+Working tree clean. Let me confirm the final commit contains exactly the complete file set.
+
+All 10 files committed. Let me finalize tracking.
+
+The `Popover` surface is complete, verified, and committed.
+
+## Summary
+
+Shipped a native, Apple‑idiomatic SwiftUI parity of `web/src/components/ui/Popover.tsx` into `apps/apple/TeslaSync/modals-dialogs/Popover.*` (9 source files + gate log), commit **fd4aed2b1**.
+
+**What the source is:** an *anonymous positioning primitive* (anchored overlay with side/align/auto‑flip/viewport‑clamp + Esc/click‑outside dismiss, `role="dialog"`/`aria-modal="false"`), not a data surface — no hooks, charts, or i18n keys.
+
+**Implementation (P1/S8–S11 conventions):**
+- `PopoverGeometry` — a 1:1 port of the web `useLayoutEffect compute()` (resolveSide/flip, start/end/center align, sideOffset, 8px clamp, availableContentSize).
+- `PopoverModel` — `@MainActor @Observable` state holder: present/dismiss lifecycle, measuring→positioned transition (web `pos===null`), geometry delegation, `view.opened` once‑per‑open (P1/S11).
+- `popoverSurface` modifier uses the native `.popover` HIG transport (auto‑flip/clamp/dismiss/focus‑restore, forced popover on compact iOS) mapping side→`arrowEdge`/align→`UnitPoint`; `PopoverContainer` consumes `place()` for the inline bounded reproduction.
+- a11y region label + `.escape` + macOS Esc, Reduce Motion, Dynamic Type; non‑modal (matched `aria-modal="false"` — caught & fixed an `.isModal` slip); i18n via P1/S10.
+
+**Honest state mapping:** reproduced the primitive's *real* branches (closed/measuring/positioned/flipped/clamped/empty); the template's loading/error/stale/offline are N/A for a positioner — documented, not fabricated.
+
+**Verification — all surface gates GREEN:** swiftformat `0`, swiftlint `--strict` `0`, iOS‑18 + macOS‑15 type‑check (Swift 6 strict) `0`, isolated SwiftPM `swift test` **33/33**, check‑placeholders `0`, xcodegen real+scratch `0`, collision audit `0`.
+
+**Full‑app `xcodebuild`:** DEFERRED with evidence (unstaged KMP `Shared.xcframework` + `modals-dialogs` tier not yet in `project.yml` — both outside this prompt's allowed files), exactly per the established precedent and `apps/macos-pending-verifications.md`. Log ends `EXIT=0 / STATUS=DONE`. No shared files modified; temp artifacts cleaned up.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-modals-dialogs-0015-Popover.log  | 208 +++++++++++++++++++++
+ .../modals-dialogs/Popover.Geometry.swift          | 180 ++++++++++++++++++
+ .../TeslaSync/modals-dialogs/Popover.Model.swift   | 178 ++++++++++++++++++
+ .../modals-dialogs/Popover.ModelTests.swift        | 189 +++++++++++++++++++
+ .../modals-dialogs/Popover.Previews.swift          | 175 +++++++++++++++++
+ .../TeslaSync/modals-dialogs/Popover.Seams.swift   |  94 ++++++++++
+ .../TeslaSync/modals-dialogs/Popover.Tests.swift   | 201 ++++++++++++++++++++
+ .../TeslaSync/modals-dialogs/Popover.Views.swift   | 183 ++++++++++++++++++
+ .../apple/TeslaSync/modals-dialogs/Popover.strings |  19 ++
+ apps/apple/TeslaSync/modals-dialogs/Popover.swift  | 135 +++++++++++++
+ 10 files changed, 1562 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0015-Popover.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Popover.Geometry.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Popover.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Popover.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Popover.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Popover.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Popover.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Popover.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Popover.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Popover.swift

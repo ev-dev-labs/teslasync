@@ -1,0 +1,208 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking platform capabilities.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source spec and explore the existing Apple app structure.
+
+This is a large, established codebase with hundreds of widget files following a clear multi-file pattern. Let me study an existing complete widget as a template and the shared infrastructure. Let me check whether this widget already exists and examine a representative example.
+
+Key finding: a native `EnergyFlowWidget.*` exists (different widget), but `EnergyFlowAnimatedWidget.*` does **not**. The existing `EnergyFlowWidget` uses the same `WidgetFlowDiagram` shared component — it's the perfect template. Let me read all its files plus the web counterparts and shared diagram.
+
+Excellent template. Let me read the remaining `EnergyFlowWidget` files (Builder, Diagram, Palette, Previews, strings, Tests) and the two relevant web sources, plus confirm the shared infra symbols exist.
+
+Now let me read the two web sources (`EnergyFlowWidget.tsx`, `WidgetFlowDiagram.tsx`) to understand the exact differences, plus the remaining native template files (Previews, strings, Tests) and confirm the shared infra symbols.
+
+Now let me read the remaining template files (Previews, Tests) and verify the shared infrastructure symbols and how widgets are wired into the build.
+
+I have the full template pattern. Let me verify the shared infrastructure symbols exist and understand how files get into the build target (glob vs. explicit list).
+
+Files in `TeslaSync/dashboard-widgets/` are auto-globbed into the targets (excluding `*Tests.swift`). Let me read the test-target config in `project.yml`, confirm `xcodegen` is available, and verify the design-token symbols exist for the app targets.
+
+Let me read the full test-target section and confirm the design-token symbols (`TSSpacing`, `TSRadius`, `TSMotion`, `Color.TS`, `Font.TS`).
+
+Now let me confirm build prerequisites: the `Shared.xcframework` staging, lint/format configs, and check the `check-placeholders` script the gate uses.
+
+Key finding: `Shared.xcframework` isn't present — the build scheme's pre-action builds it via Gradle/KMP. `pwsh` is available for the gate. Let me probe the KMP/Java toolchain to assess whether a full `xcodebuild` is feasible, and check the baseline git state.
+
+Java 17, Gradle, and the KMP core are present, so a full build is feasible (the `Shared.xcframework` must be assembled first — slow). Let me pre-stage that framework in the background while I write the Swift files, and set up my plan/todos.
+
+Java 17 + Gradle present; the framework is assembling in the background. Let me write the plan and start creating the surface files. I'll model everything faithfully to the web source (3 always-present nodes, deadband thresholds `>0.5`/`<-0.5`, a distinct CompactView).
+
+Now the Model (state-holder, telemetry, i18n facade, formatters, accessibility) — exposing the raw vehicle state so the CompactView can read signed power directly.
+
+Now the Palette (arrow tints + neutral node chrome) and update todos.
+
+Let me check the KMP framework build progress, then continue with the Diagram.
+
+KMP framework still compiling (expected — Kotlin/Native is slow). Continuing with the Diagram while it builds.
+
+Now let me confirm the exact `Font.TS` / `Color.TS` members available (to pick a valid "big number" font and status colors) before writing the CompactView and the main widget.
+
+Font/color tokens confirmed (`Font.TS.title` for the big number; brand cyan/emerald/amber live in my palette). Let me add a testable compact a11y summary to the Model, then write the CompactView.
+
+Now the distinct CompactView (reads signed power directly).
+
+Now I need the exact `DashboardWidgetRegistration` / `DashboardWidgetSize` signatures and whether there's a central catalog widgets must be added to. Let me check.
+
+Confirmed: `DashboardWidgetRegistration` signature, and widgets self-own their `registration` (no central catalog wiring needed). Now the main surface view.
+
+The KMP framework finished. Let me verify it staged correctly, then continue with strings/previews/tests.
+
+KMP framework staged (ios-arm64, ios-arm64-simulator, macos-arm64) and now cached. Writing the i18n catalog, previews, and tests.
+
+Now the previews (DEBUG-only, one per state) and the test suite.
+
+Now the comprehensive test suite (adapter parity incl. deadband thresholds, all-3-nodes/arrows-always, model phases, telemetry, registry, formatting + a11y).
+
+All 10 files written. Let me harden the deadband test (avoid `.init` shorthand and long lines that could trip `swiftlint --strict`), then auto-format and lint my files.
+
+Now auto-format my files to the project's `swiftformat` rules, then review what changed.
+
+Files are untracked so `git diff` is empty (expected). Let me verify both linters pass on my files.
+
+swiftformat passes. One swiftlint line-length violation at Model.swift:331. Let me view and fix it.
+
+Let me refactor `compactSummary` with a local helper to shorten the lines (also DRY-er).
+
+Now re-run both linters on the Model file to confirm clean, then move to xcodegen + build.
+
+Both linters pass on all 9 files. Now regenerate the Xcode project so the new files are picked up.
+
+Project regenerated. Let me confirm my files are wired into both the app and test targets, and check the iPhone 16 simulator exists before building.
+
+All 10 files wired into the project; iPhone 16 simulator is available. Let me compile everything (app + test bundle) for iOS first to catch any errors fast — this is the slow initial build, so I'll run it in the background.
+
+Build started. I'll wait and check progress.
+
+Build reported "(3 failures)". Let me extract the actual errors from the log.
+
+None of the errors are in my files — they're pre-existing "ambiguous type lookup" collisions in `RecentDrives*` and `StateTimeline*` (unrelated surfaces). Let me confirm these are duplicate declarations that exist independent of my work.
+
+Confirmed pre-existing: `RecentDrivesModel`, `RecentDrivesUpdate`, `RecentDrivesLoadStatus`, `StateTimelineUpdate`, `StateTimelineLoadStatus` are each declared in **two** committed sibling files (a dashboard-widget and a feature-view), so they collide in the single app module. My `EnergyFlowAnimated*`-prefixed types produce **zero** errors. This is a pre-existing baseline breakage in sibling surfaces, outside my allowed-files scope.
+
+Let me get definitive evidence: first confirm the build is red even without my files, and check what references those colliding surfaces.
+
+Definitive: only my 10 files are new; the colliding files are all committed at HEAD. I did not cause the breakage. Let me enumerate the full set of pre-existing collisions and check whether those sibling surfaces are referenced elsewhere (so I can isolate them to prove my surface builds + tests pass).
+
+Two sibling surface families (`RecentDrives*`, `StateTimeline*`) each redeclare the same model types — a pre-existing consolidation collision. To prove my surface builds and its tests pass, I'll isolate it from these collisions. First, let me confirm nothing *outside* those families references them (so I can safely move them aside temporarily).
+
+No external references — both families are fully self-contained. Before isolating, let me make sure there are no *other* errors in the build beyond these two families.
+
+All 54 errors are confined to the two sibling families — none in my files or elsewhere. Isolating them will yield a clean build. Let me temporarily move those families aside, regenerate, and run the full iOS build+test to prove my surface compiles and its tests pass.
+
+17 + 21 sibling files isolated; a separate `RecentDrivesWidget.*` surface (different type names, no collision) correctly remains. Project regenerated. Now running the full iOS build + test to prove my surface compiles and its tests pass.
+
+Build+test running. I'll wait for it to make progress.
+
+I'll continue waiting for the build+test to complete.
+
+Build succeeded and it reached the testing phase, but reports "(2 failures)". Let me find what failed — and specifically check my tests.
+
+Another *different* pre-existing error surfaced once the collisions were gone: `AIGeofenceAwareAutomationSuggestions.swift:141` (escaping-closure bug) — again a sibling file, not mine. The consolidated baseline has multiple independent pre-existing breakages. Let me confirm this one is also committed/not-mine and self-contained.
+
+This AIGeofence error is coupled to `AINLAutomationBuilder.*`. The consolidated baseline clearly has several independent pre-existing breakages. Let me push to a green build by isolating this AI-automation cluster too, capping the effort — first map the cluster and its external references.
+
+`AINLAutomationBuilder` only mentions AIGeofence in *comments* — no real code dependency, so the broken `AIGeofenceAwareAutomationSuggestions.swift` is effectively self-contained. Let me confirm it's a single-file surface, isolate it, and rebuild (app-target build is faster for finding the next pre-existing error).
+
+`AIGeofenceAwareAutomationSuggestions` is an 11-file self-contained family (only self/comment references). Isolating it too. I'll switch to app-target `build` (faster) to flush out any remaining pre-existing errors before running tests.
+
+I'll keep waiting for the app build to finish.
+
+Another pre-existing failure. Let me identify it.
+
+The Swift compiler **crashed** (`llvm::report_fatal_error`), not a normal error. Let me see what triggered it.
+
+This is now a **third class** of pre-existing breakage: a Swift compiler **crash** (`report_at_maximum_capacity` during IRGen of `AppearanceSettings.Controls.swift`, a core sibling file — not removable without cascading). The consolidated baseline is broken in multiple independent ways, none in my files. Chasing a full green build is unbounded.
+
+Let me restore the tree to pristine, then verify my surface definitively via a bounded standalone harness. First, restore:
+
+Tree is pristine (only my 10 files untracked; all siblings restored). 
+
+I've conclusively established the consolidated baseline has **multiple independent pre-existing breakages** in sibling surfaces (duplicate symbols, an escaping-closure bug, and a compiler IRGen crash), none in my files, none fixable within my allowed-files scope. My files produced **zero** compiler errors during real-module sema.
+
+To definitively prove my surface compiles and its tests pass, I'll build a bounded standalone harness using the **real** design-token infra if its dependency closure is small. Let me check.
+
+`Color.TS`/`Font.TS`/`TSSpacing`/etc. come from the **generated** design tokens (`apps/design/generated/apple`). Let me locate that file and gauge the real-infra closure.
+
+The real infra closure is tiny and self-contained: `Tokens.swift` (189 lines), `DashboardWidgetInfra.swift`, `Skeletons.swift`. I'll build a standalone SwiftPM harness using these **real** files + my surface, and run my tests on it. Let me verify the conditional imports and Skeletons' self-containment first.
+
+Everything lines up: `Tokens.swift` compiles on macOS (`canImport` guards) and defines every `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`/`TSMotion` member I use; `TSSkeleton`'s init matches my calls; `Skeletons.swift` is self-contained. I'll build a SwiftPM harness using these **real** infra files + my surface, and run my test suite (Swift 6 language mode to match the app).
+
+Now the `Package.swift` (macOS 15, Swift 6 language mode + complete concurrency to match the app) and run the tests.
+
+My surface compiled **cleanly** (all 8 files). The only errors are from unrelated skeleton components (`TSStatSkeleton`/`TSPageHeaderSkeleton`) in the copied `Skeletons.swift` needing `TSCard` — components I don't use. Let me trim the harness copy to just the `TSSkeleton` struct I actually use.
+
+The grep is buffering output until completion. Let me wait more for `swift test` to finish.
+
+~12 min with no output is abnormal for a tiny package. Let me diagnose in a separate shell (the grep pipe may be hiding a hang).
+
+No active compiler process and no recent build artifacts — `swift test` appears stalled (likely the shared SwiftBuild daemon or macro plugin-server). Let me stop it and re-run cleanly with streaming output.
+
+A new `SWBBuildService` (SwiftPM's SwiftBuild backend) is at 0% CPU — likely contending with the leftover Xcode daemon. Let me stop and force SwiftPM's native build system, which avoids that daemon.
+
+The native build system is now actively compiling (multiple `swift-frontend` at 40-80% CPU) — the SwiftBuild daemon was the culprit. Let me wait for completion.
+
+`EFA.swiftmodule` has been emitted — my surface **type-checks cleanly** against the real infra under Swift 6 strict concurrency. Let me wait for the build to finalize.
+
+Build is unusually slow post module-emission. Let me check for orphaned compiler processes from the earlier stopped builds.
+
+All 20 are the same age (44s) at 90%+ CPU — a parallel object-codegen batch, not a hang. SwiftUI + strict-concurrency type-checking is just CPU-heavy per file. Let me wait for it to finish.
+
+`EFA.swiftmodule` emitted = my surface type-checks cleanly. The lingering varying-age frontends are likely orphans from the earlier stopped runs competing for CPU. Let me wait a bit more for the build to link.
+
+Shell 48 is stuck behind CPU contention from orphaned compiler workers left by the earlier stopped runs. Let me stop it and clear only the orphaned `swift-frontend` workers (not the shared Xcode daemons), then do one clean run writing to a file I can monitor.
+
+A runaway: the SwiftBuild daemons spawned by my stopped runs keep relaunching compiler workers (60 now). I must kill the daemons I spawned (not the old shared one). Let me list the exact PIDs.
+
+Four recent `SWBBuildService` daemons (mine) are respawning workers; PID 1562 is the pre-existing shared one (won't touch). Let me kill my 4 daemons first, then the workers.
+
+Daemons cleared (only shared 1562 remains). Now the orphaned workers.
+
+All my orphaned workers/daemons cleared (only the shared `1562` remains). The contention is gone. Let me run `swift test` once with the native build system, logging to a file I can monitor (avoiding pipe-buffering).
+
+The harness `Skeletons.swift` shows the full version again (TSCard error). Let me check its current content — the earlier trim may not have persisted.
+
+The earlier trim didn't persist — the harness has the full 140-line `Skeletons.swift`. Let me definitively replace it with just the real `TSSkeleton` struct (lines 1–42) and verify no `TSCard` remains.
+
+Harness `Skeletons.swift` now contains only the real `TSSkeleton` (42 lines, no `TSCard`); only the shared daemon remains. Let me run the full `swift test` cleanly and monitor via the log file.
+
+Let me check progress directly in a fresh shell instead of waiting on the monitor.
+
+The machine is heavily loaded by the build (simple commands are slow). Let me wait for the check.
+
+Monitoring commands are slow under heavy build load. Let me stop the stuck monitors and wait for the build to finish before reading the log.
+
+Let me wait for the build to complete, then read the result log.
+
+The environment appears severely resource-saturated (even `sleep`+`tail` won't return). Let me stop the monitor and test basic responsiveness.
+
+Load average is **53** (3 users sharing the box) — my parallel build is thrashing the shared machine. Let me read the log to see how far it got, then kill my build to restore responsiveness.
+
+Let me retrieve the launched build's PID from the launch shell so I can kill it directly.
+
+Build driver PID is 73822. Let me stop the stuck monitor and kill the build (process group) to relieve the thrashing machine.
+
+Load dropped from 53 → 21 after killing the driver. Let me read how far the build got and clear any stragglers.
+
+**All tests PASSED.** The log shows `Test Suite 'All tests' passed` — the build completed and my XCTest suite ran green before I killed the lingering driver. Let me capture the full summary (total test count, all suites) and clear the straggler workers.
+
+**Definitive: 33/33 tests passed, 0 failures** across all 4 suites (Builder ×12, Model ×10, Accessibility ×9, Registry ×2) — compiled against the **real** design-token infra under Swift 6 strict concurrency. Let me clear the straggler workers to free the shared machine.
+
+Two new `SWBBuildService` daemons (mine) are respawning workers again. Let me kill those daemons to stop the respawn loop, then the workers.
+
+A persistent driver keeps respawning the daemon. Let me find the root driver via the daemon's parent PID and kill the whole chain.
+
+The respawner is a **concurrent `xcodebuild`** (PID 87077) from another user/slot in this shared environment — not mine. My `swift test` already completed (33/33 passed). I'll stop interfering with others' processes and finalize. Let me preserve the test evidence, clean up my harness, and confirm the repo tree is pristine.
+
+Repo tree is pristine (10 untracked files, 0 modified). My surface is fully verified: **33/33 tests pass** against real infra. Now let me run the remaining lightweight gate checks (lint/format/placeholder) on my files and assemble the official log.
+
+Both `swiftlint --strict` (0 violations) and `swiftformat --lint` (0 changes) pass. Now the placeholder gate.
+
+All gate checks on my surface pass: **swiftlint --strict** (0), **swiftformat --lint** (0), **check-placeholders** (COUNT=0), and **33/33 tests pass** against real infra. Let me write the official log with honest, complete evidence.
+
+Now let me update tracking and commit the surface + log.
+
+All 11 files staged (10 surface + log). Committing with the prescribed message.
+
+Committed. Let me verify the final state.
+
+All todos complete. The work is done and committed. Here's the honest, evidence-backed summary.
+

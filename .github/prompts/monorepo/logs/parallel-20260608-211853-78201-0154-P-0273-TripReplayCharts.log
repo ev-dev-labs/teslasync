@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure and understanding the task requirements, then check runner capabilities for the Apple toolchain.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). This is NOT a BLOCKED scenario — I must build the native view. Let me read the web source and explore the existing Apple app structure.
+
+The web source is clear. Now let me study the established Apple patterns. Let me find a representative chart-based feature view that uses synced cursor, plus the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+`SocChart`, `DriveOverviewChart`, and `ElevationChart` use the synced cursor pattern — the closest analogs. Let me study their full file sets.
+
+`DriveOverviewChart` is the closest analog (chart + synced cursor + projection). Let me read its complete file set as my template.
+
+Now let me read the rest of the DriveOverviewChart file set (Projection, Views, Adapter, Previews, Tests, strings) to fully internalize conventions.
+
+Let me read the remaining DriveOverviewChart files plus the project configuration to understand how files are included in the build.
+
+Let me read the Tests file, project config, and locate the shared token/infrastructure definitions.
+
+Let me read the web chart shared lib (for CHART_COLORS/fmt), the project config, and the simpler SocChart synced-cursor analog, plus locate shared tokens.
+
+Key insight: `project.yml` uses globs, so new files are auto-included on `xcodegen generate`. Let me get the web CHART_COLORS values, locate the shared design tokens, read SocChart's model/views (synced-cursor binding), and check xcodegen + existing xcodeproj.
+
+xcodegen 2.45.4 is available; `.xcodeproj` is generated on demand. `CHART_COLORS` defaults to the CB-safe palette (`#0072B2` speed, `#E69F00` power). Let me confirm that export, read the shared tokens + MeasurementSystem, the build-shared-xcframework script, and SocChart's synced-cursor model/views.
+
+I have the architecture. Now let me locate the design tokens (TSSpacing, Color.TS, Font.TS, TSFadeIn, TSSkeleton, TSMotion, TSRadius) and read SocChart's Views + Adapter to see the Swift Charts area + reference-line + selection pattern.
+
+Let me confirm the exact token names and helper signatures I'll use (Color.TS.*, Font.TS.*, TSSpacing/TSRadius/TSMotion, TSFadeIn, TSSkeleton).
+
+I now have the full pattern. Let me check the lint config, the placeholder-check tool, and whether `pwsh` is available for the gate.
+
+`pwsh` is available. Let me read the forbidden placeholder patterns so my code avoids them, then set up my plan and todos.
+
+Let me check the build prerequisites (Shared.xcframework, Gradle) and how recent surfaces were committed.
+
+`Frameworks/Shared.xcframework` isn't staged — the gate's `xcodebuild` requires building it via Gradle (Kotlin/Native), the long pole. Let me kick that off in the background now while I write code, and confirm the gradlew is functional.
+
+Java 17 + Gradle 8.14.5 are present, so the KMP build is feasible (though slow on first run). Let me kick off the Shared.xcframework build in the background now, then write code in parallel.
+
+Let me set up my plan and todos, then start writing the surface files while the framework builds.
+
+The Gradle build is progressing with a warm cache (FROM-CACHE) and downloading the Kotlin/Native distribution — good signs. Now writing the surface files, starting with the pure core (Adapter).
+
+Now the Model (state-holder seam + telemetry + i18n facade + seek action).
+
+Model done. Let me check the framework build and update todos, then write the Chart file.
+
+Framework build is on the release pass and nearly done. Let me confirm the Swift Charts axis-label/selection APIs used elsewhere so I match supported usage, then write the Chart file.
+
+`YearlyTrendChart` uses dual `.chartYAxisLabel(position: .leading/.trailing)` — exactly my dual-axis need. Let me read it to match the API precisely.
+
+I have the dual-axis-label API confirmed. Now writing the Chart file.
+
+Now the Views file (header/chip/banner/loading/empty/error). Let me also check the framework staging.
+
+Framework still linking release. Continuing with the Views file.
+
+Now the root view file.
+
+Now the Previews file plus a framework-staging check.
+
+Log is actively updating (release linking is just slow). Continuing with Previews while it builds.
+
+Now the comprehensive Tests file (adapter/projection + number format + model + accessibility).
+
+Now the i18n strings catalog.
+
+All 9 files written. Let me verify every i18n key referenced in code has a matching `.strings` entry, and update todos.
+
+Perfect key parity. Let me run the deterministic checks: auto-format my files with swiftformat, then lint. Let me also check framework staging.
+
+Framework is staged and swiftformat reports my files are already clean (0/8 needed formatting). Now swiftlint --strict on my files + the placeholder check.
+
+swiftlint: 0 violations. Now the placeholder check, run exactly as the gate does.
+
+Let me confirm the placeholder check actually scanned my files (the `-Path` is a filename prefix, not a dir) and do an independent forbidden-word scan.
+
+Let me see how the script behaves on a non-existent literal path, and independently scan my files for every forbidden token.
+
+Confirmed: my files are genuinely placeholder-free, swiftlint-clean, and swiftformat-clean. The gate's placeholder step returns 0. Now the real build. Let me generate the Xcode project and prepare the log directory.
+
+Project generated. Let me confirm my files are wired into the targets, then kick off the iOS build-for-testing in the background.
+
+All 9 files wired in. Now the critical compile validation — building the full iOS app (which compiles all my non-test files in-module). Starting in the background.
+
+The launcher returned; the actual build runs via nohup. Let me monitor its log.
+
+Build is compiling the TeslaSync module (EmitSwiftModule) — my files are in this. Let me keep monitoring for completion or errors.
+
+The shared `/tmp` log vanished (shared environment — another slot likely cleaned `/tmp`). Let me check whether the build actually produced products, and switch to logging inside my slot workspace.
+
+The full iOS app (`TeslaSync.app`) **compiled successfully** with my code — that's the key compile validation. The `/tmp` log was wiped by a co-tenant slot. Let me re-run logging to my slot-local dir (now warm/incremental), compiling the full test bundle too, and capture the real exit code.
+
+While the test bundle compiles, let me run the static gates over the whole tree (as the gate does): swiftformat --lint and swiftlint --strict.
+
+swiftformat --lint (full tree, 2586 files): **0 require formatting, EXIT=0**. Let me check the test-bundle build progress.
+
+No errors; it's finishing the app target then will compile the test bundle. Let me wait and re-check.
+

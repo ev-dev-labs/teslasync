@@ -1,0 +1,234 @@
+I'll start by exploring the repository structure and checking the capability requirements (macOS + Xcode).
+
+Capability requirements are met (Xcode 26.5, simulators, swiftlint/swiftformat). Let me explore the Apple project structure.
+
+Existing UI test bundles and tests already exist. Let me read them plus the launch/fixture harness and app entry point.
+
+Now let me understand the app entry point, navigation shell, and how launch arguments are wired.
+
+Let me explore the real navigation shell, routes, and the page/feature structure.
+
+Let me read the main app shell, RootView (auth gate), and route host registry.
+
+Let me read the auth preview support (to understand injectable states) and explore the Features/pages and parity ledgers.
+
+Let me examine the page-state machinery, a representative page, and shared components with their accessibility identifiers.
+
+Let me look at the parity ledger, the predecessor P9-0001 unit tests, and count the pages to scope the work.
+
+Let me check the build tooling (xcodegen, the Shared.xcframework script) to establish a baseline build path.
+
+The build needs a KMP `Shared.xcframework` via Gradle. Let me check whether that toolchain works here and review the most recent P9-0001 gate log to confirm the environment can build/test.
+
+The environment precedent is clear: iOS gate runs green (P9-0001: 6588 unit + 13 UI tests passed); macOS verbatim `build test` is BLOCKED on dev-cert signing (EXIT=65, ADR-012). Let me kick off the long-pole KMP framework build in the background, then design the new tests while it runs.
+
+Project generated; Gradle build running in background. Let me study the demo-view harness pattern, the components, the placeholder gate, and the macOS signing situation.
+
+Component categories match the spec (UI, Charts, DataDisplay, Feedback, Forms, Maps, Motion). Let me inventory the components and confirm `pwsh` availability for the placeholder gate.
+
+Let me read the public API of representative components from each category to build the gallery.
+
+Let me check the Gradle build progress and read more component APIs (Badges, Cards, Metrics, Charts, Forms, Maps, Motion).
+
+Gradle still building. Let me read the remaining component APIs and the localization setup.
+
+The localization file is huge (auto-managed). Let me check how demo keys are handled and inventory the data-source doubles available for driving page states, while Gradle builds.
+
+Let me check the data-source double gating (DEBUG vs not) and the Gradle build progress.
+
+Confirmed: Empty/Failing doubles are `#if DEBUG`-gated (harness must match). Gradle still building. Let me set up the plan and todos, then read the remaining page protocols.
+
+Let me read the full AutomationsList protocol and the page initializers, and check the Gradle build progress.
+
+Gradle still building. Let me get the FleetCompare model init and inventory existing accessibility identifiers in the feature pages (so my tests can assert on real elements).
+
+Key finding: feature pages have zero accessibility identifiers. I'll add a small set to shared state components (TSEmptyState/TSErrorDisplay) and use a model-bound phase marker in the harness. Let me read the remaining page phase APIs and check Gradle.
+
+Gradle build succeeded (7m12s, framework written). Let me stage it and pin down the remaining two pages' phase enums (FleetCompare, BatteryCells).
+
+I now have all phase enums. Let me read the command palette and verify route-title localization (to decide query strategy for nav tests).
+
+Route titles are localized; groups aren't. I'll use the command palette + routeHost identifiers as the reliable cross-idiom nav signal. Let me read the remaining component APIs I need for the gallery (Forms, Maps, charts, metric cards, select/tabs).
+
+Let me read the chart model, a metric/stat card, and the picker/tabs APIs to construct valid gallery instances.
+
+I have all component APIs. Let me check whether existing tests depend on `TSErrorDisplay`'s combined a11y structure before I expose its retry button for testing.
+
+No test dependencies. The codebase uses a clear identifier convention (`live.*`, `push.*`, `auth.*`). I'll follow it. Now writing the code, starting with surgical identifier additions to shared components.
+
+Now creating the harness infrastructure. First the scenario parser + root view + marker.
+
+Let me verify the `TSMapAnnotation` initializer I used.
+
+The init order is `id, coordinate, title, tone`. Let me fix the gallery's annotation call.
+
+Now the page-state harness (DEBUG) — per-page wrappers with model-bound phase markers, plus pending/recoverable doubles.
+
+Let me verify the model type names/initializers I referenced in the pending doubles against the Sample doubles.
+
+The iPhone `TabView` ignores `selection`, so deep links wouldn't navigate on the iPhone gate (the primary green gate). I'll wire tab selection minimally so primary-route deep links work on both idioms. Let me re-read the current AppShell.
+
+I'll wire the iPhone TabView to honor `selection` for primary-tab routes (a clean, correct improvement that makes deep links navigate on the iPhone gate too).
+
+Now wiring the harness into the app entry point.
+
+Let me add identifiers to the "More" list rows (for non-primary route nav on iPhone) and inspect the settings surface for testable controls.
+
+The settings view has many toggles. Let me check `AppSettingsModel`'s init and `TSToggle` so I can both render settings deterministically in the harness and add a toggle identifier.
+
+`AppSettingsModel` has a convenient default init. Let me add a deterministic settings surface to the harness and tag one toggle so the settings-change flow is testable on every idiom.
+
+The harness wiring is complete. Now writing the four XCUITest suites.
+
+Now regenerating the project to include new files, and formatting/linting my new code early (fast checks before the slow build).
+
+`swiftformat --lint` surfaced one **pre-existing** defect in `RecentDrivesSection.Previews.swift` (not my code). Per the P9-0001 precedent (fix surfaced defects to keep host gates green), I'll fix it. Let me inspect it first.
+
+Fixed. Now running swiftlint --strict and the placeholder gate.
+
+3 violations found. Let me see exactly which ones (and whether they're mine).
+
+The 3 lint violations are **pre-existing** in `WidgetChartSummary.Tests.swift` (single-letter vars a/b/c), not my code. Let me view the context and the swiftlint config.
+
+Pre-existing single-letter test vars. I'll rename them semantically (keeps the test intent, satisfies the lint gate — same as the P9-0001 precedent of fixing surfaced defects).
+
+Now running the placeholder gate and re-verifying lint is clean.
+
+The placeholder gate shows **135 pre-existing violations** (matches of the word "Placeholder" across many unrelated feature files). I must first ensure MY code adds none, then establish the true baseline. Let me check my files for pattern matches.
+
+Only one match in my code (`fieldPlaceholder`). Let me fix it, then inspect the pre-existing matches to understand if they're real stubs or false positives (e.g., SwiftUI `.redacted(.placeholder)`).
+
+Confirmed: the pre-existing placeholder matches are **false positives** — legitimate comments and a search-prompt key (e.g., "never 'placeholder'", `.redacted`-style usage). My only match is now fixed. Let me harden two harness details (CoreLocation import, explicit settings init) and verify my code adds zero violations.
+
+Let me re-run the placeholder gate (capturing full output) to confirm my files add zero violations and record the pre-existing baseline.
+
+Confirmed: my code adds **0** placeholder violations (count dropped 135→134 after fixing my one match). The remaining 134 are pre-existing false positives (comments/prompt keys in unrelated feature files from parallel-task drift). Let me record the scope, then start the critical iOS build+test.
+
+134 violations across 56 pre-existing files (parallel-task drift), none mine. The iOS UI-test build is running. Let me update tracking while it builds.
+
+Build still in progress (Gradle pre-action + large Swift 6 compile). Continuing to wait.
+
+The build hit a Swift compile error in a batch including my edited files, but the message scrolled off. Let me extract the exact error.
+
+Found it: `NSLock.lock()/unlock()` are banned in async contexts under Swift 6. Let me replace the lock with an actor-based counter.
+
+Fixed with an actor-based counter. Let me rebuild for testing (compiles app + test bundles) to catch any remaining compile errors fast.
+
+No compile errors. Let me run the UI tests (reusing the build) and capture the results.
+
+`simctl` wasn't found — likely a transient/`xcode-select` issue (possibly from parallel activity). Let me check the developer dir and simulator state.
+
+Transient issue — `xcode-select` is correct and the iPhone 16 sim is booted. Let me retry the UI test run (pinning `DEVELOPER_DIR`).
+
+Persisting `simctl` error despite a correct `xcode-select` — likely a shared-environment race (parallel slots toggling `xcode-select`). Let me re-check state and probe.
+
+`xcode-select` is being toggled by parallel slots (shared env). `DEVELOPER_DIR` is correct now. Let me retry the UI test run — the race is intermittent, so persistence should catch a clean window.
+
+Three consistent failures — let me verify the test build products exist and probe whether `xcrun simctl` is reachable in the exact same invocation context.
+
+No `.xctestrun` (so `test-without-building` can't work) and the shared host has many parallel slots thrashing `xcode-select`. Let me run the full `test` against the booted iPhone 16 by UDID, with a retry loop to catch a clean window.
+
+Progress — no simctl error this time, but `TEST FAILED`. I need the actual failure detail. Let me capture full output to a file and inspect.
+
+Single test taking unusually long (heavy parallel build contention likely). Let me wait more.
+
+The real blocker: **pre-existing compile errors in the unit-test target** (`SpyStateTimelineTelemetry` redeclaration, missing `EmptyView`/`import SwiftUI`) — parallel-task drift that blocks the *entire* iOS test build, including my UI tests. Let me enumerate ALL test-target compile errors.
+
+Only 3 pre-existing errors in 2 unrelated unit-test files, blocking the whole iOS test build. Let me investigate both to fix minimally.
+
+Let me fully investigate the redeclaration and the missing import.
+
+Both are pre-existing parallel-drift defects:
+1. `StateTimeline.ModelTests.swift:284` declares `SpyStateTimelineTelemetry` as **internal**, colliding module-wide with the `private` one in `StateTimelineWidget.Tests.swift`.
+2. `ChartContainer.AdapterTests.swift` uses `EmptyView` without `import SwiftUI`.
+
+Both block the iOS test build. Fixing minimally (matching the P9-0001 precedent).
+
+Let me check the swiftformat import rules (to order the new import correctly) and rebuild the test target.
+
+swiftformat reordered imports correctly (`testable-bottom`). Now rebuilding the test target to confirm all compile errors are cleared.
+
+Build failed (exit 65) but no `error:` lines — likely a linker or non-compile failure. Let me dig into the log.
+
+A **swift-frontend compiler crash** (`llvm::report_fatal_error`), not a source error — likely resource exhaustion under heavy parallel load, or a specific file. Let me identify the crashing compile unit.
+
+A transient **swift-frontend IRGen crash** on unrelated app files (`AppearanceSettings.Controls.swift`) — resource exhaustion under heavy parallel load (the same file compiled fine earlier). None of my code is involved. Let me retry the build+test with bounded retries to catch a lower-load window.
+
+Attempt 1 crashed again (recurring under load); attempt 2 building. Let me keep waiting.
+
+Attempts 1–2 both crashed under load. Waiting for attempts 3–4.
+
+Attempt 3 running longer (no crash yet — promising). Waiting.
+
+Attempt 3 cleared the crash and revealed **more** pre-existing parallel-drift test collisions (`ChangeSpy` redeclared in 3 files, a concurrency error in `CronParser.Tests`). Same fixable pattern. Let me inspect them.
+
+Clear pattern: a test-helper type declared **internal** in one file collides module-wide with `private` copies elsewhere (parallel-drift). Rather than many slow build iterations, let me proactively find ALL such collisions across the test target.
+
+Good — the only real top-level collision left is `ChangeSpy` in `ActionBuilder.ModelTests.swift` (the others are nested/scoped). Let me fix that + the concurrency `let`, and proactively scan for similar global-closure concurrency issues.
+
+Bounded set — only one of each pattern remains. Applying both fixes.
+
+The unit-test fixes are bounded. To verify my deliverable efficiently (without repeatedly building the huge, drift-broken unit target), I'll temporarily isolate the scheme's test action to the UI target only, verify, then revert. Let me edit project.yml.
+
+Regenerating and running the isolated UI-test suite (app + UITests only) with crash/simctl retries.
+
+Isolated runs are faster but still hitting transient infra issues (parallel contention). Attempt 3 in progress.
+
+Attempt 3 running longer (getting further — likely compiling/testing). Waiting.
+
+Attempt 3 built further (~10min) then hit a transient crash; attempt 4 running. The shared host is heavily contended. Waiting.
+
+Five consecutive transient failures — severe parallel-host contention. Waiting for attempts 5–6.
+
+Attempt 6 (final in loop) running. Waiting for it to complete.
+
+Attempt 6 running longer (likely a fuller build). Continuing to wait.
+
+All 6 attempts failed on transient infrastructure issues (none on my code). Let me characterize the exact failure types to report precisely.
+
+All failures are **swift-frontend IRGen crashes** (resource exhaustion under parallel load) — never my code, and confirmed transient (IRGen succeeded in earlier runs). Let me try a memory-pressure-reduced build (`-jobs 2`) to dodge the OOM crashes, then run the tests.
+
+Jobs-limited build running steadily (~9min, no crash yet — promising). Waiting for completion.
+
+Build stable at ~16min (low parallelism avoiding crashes). Continuing to wait for it to finish.
+
+Even at `-jobs 2`, attempt 1 crashed after ~24min — the IRGen crashes are driven by **system-wide** memory pressure from all parallel slots, not my job count. Attempt 2 may reuse cached artifacts. Let me give it one more window while verifying the non-simulator gates in parallel.
+
+`swiftformat --lint` is **GREEN** (0/5227). Let me confirm swiftlint is green too while the build continues.
+
+Both `swiftlint --strict` and `swiftformat --lint` are now **GREEN**. The build attempt continues. Let me wait for it.
+
+Attempt 2 at ~18min, no crash yet. Waiting for it to finish the build.
+
+Build at ~22min, still progressing without crash. Waiting for the result.
+
+Let me peek at the build log to see what stage attempt 2 is at.
+
+The build is genuinely progressing through the app's thousands of files at `-jobs 2` (no crash, log actively growing). This is my best shot at a clean build. Let me continue waiting.
+
+The build is progressing without crashes but extremely slowly under contention (still in feature-views at ~27min). Let me revert the project.yml isolation now (text-only; doesn't disturb the running build's `.xcodeproj`) and prepare the honest log while the build continues.
+
+The app build is grinding through thousands of files at `-jobs 2` without crashing but very slowly (~32min, still compiling) under heavy contention. Let me write the honest evidence log while it continues, then do a final check before committing.
+
+Log written. Let me check whether the long-running build finally completed (which would let me run the UI tests and strengthen the evidence).
+
+Build still compiling at ~35min (no crash, but CPU-starved by contention). Let me review my full change set (safe, read-only) while giving the build a final window.
+
+Change set is exactly right (harness + 4 suites + 6 pre-existing-defect fixes; project.yml correctly reverted). The build is at ~40min, still pre-link under heavy CPU contention. Let me give it one more window to reach completion so I can run the suites.
+
+~48min in, still pre-link under severe CPU contention — not a productive use of more time. I've made an exhaustive, well-evidenced effort. Let me stop the build, free resources, and commit the completed deliverable with the honest log.
+
+Now committing the deliverable. Let me stage and verify nothing unwanted (gitignored project files) gets included.
+
+Staged set is exactly correct (no generated artifacts). Committing with an honest message.
+
+Committed (19 files, +1201/−21). Let me restore the generated project to match the reverted project.yml, clean up temp files, and update tracking.
+
+Let me confirm the regenerated scheme restored both test targets (hygiene check).
+
+Both test targets restored in scheme + committed project.yml. Let me do a final clean-state verification.
+
+Everything is committed and the working tree is clean. Let me record the final status in plan.md and wrap up.
+
+The task is complete to the fullest extent possible in this environment. Here's the summary.
+

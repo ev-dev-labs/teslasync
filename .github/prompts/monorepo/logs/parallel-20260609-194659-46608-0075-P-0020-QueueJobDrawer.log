@@ -1,0 +1,130 @@
+I'll start by exploring the environment, reading the web source, and checking platform capabilities since this task requires SwiftUI/Xcode tooling.
+
+All Apple tooling is present (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 18+ simulators). The web source is a slide-in drawer listing recent worker jobs with loading/error/empty/list states. Now let me study the existing native app structure and shared layers.
+
+There's a clear per-surface file pattern. `JobProgressDrawer` is the closest analog (a drawer showing jobs). Let me study it and the base `Drawer` primitive thoroughly.
+
+Let me continue studying the reference files: the adapter, seams, rows, strings, and tests for JobProgressDrawer, plus the base Drawer primitive.
+
+Excellent, the pattern is very clear. Now let me examine the base `Drawer` primitive, the shared tokens (P1/S9), the test/preview/strings patterns, and critically the Xcode project structure to understand how files get built.
+
+XcodeGen-based (`project.yml`). Let me read the project config, the shared tokens (P1/S9), the strings/test/preview patterns, and the tooling.
+
+Critical finding: `modals-dialogs` is NOT in `project.yml` sources, yet I can only modify `QueueJobDrawer.*` files. Let me check how prior modals-dialogs surfaces handled the build gate by examining their logs and the project setup.
+
+Now I understand the established methodology. The full-app gate is expected RED due to pre-existing sibling collisions; predecessors validate via isolated Swift 6 build+test. Let me read the full predecessor logs and tooling to replicate their exact gate approach.
+
+The JobProgressDrawer log (gate 0005) is the canonical template: 7 isolated host-runnable gates + a documented-deferred full-app xcodebuild. Let me gather the remaining inputs: the web data types/hooks, the date utils, tooling availability, design tokens, and the test/preview patterns.
+
+All tooling present (pwsh, xcodegen 2.45.4, check-placeholders.ps1, Tokens.swift, Motion.swift). Let me read the exact `QueueJobView` data shape, the date format utilities, and the web `Drawer` primitive.
+
+Now I have the date/duration logic and status tone map. Let me read the design tokens, the Motion helper, the `formatRoundedInt` helper, and the JobProgressDrawer test/preview patterns plus the Drawer Model/Adapter (the controlled-drawer phase model).
+
+I have the tokens. Status tone map: success→`statusSuccess`, warning→`statusWarning`, info(cyan)→`statusInfo`, danger→`statusDanger`, muted→`textMuted`. Let me read the test/preview patterns, configs, Motion helper, and the web Drawer primitive.
+
+I have the full picture of tokens, configs (≤400 lines/file, maxwidth 120), Motion, and previews. Let me read the test patterns and the controlled-drawer model/adapter (Drawer) plus the web Drawer primitive for parity.
+
+Let me read the JobProgressDrawer adapter tests and the controlled Drawer model + web Drawer primitive to finalize my design.
+
+I now have a complete understanding of the architecture. Let me confirm the web `Drawer` primitive's close-button/header composition for parity, then I'll start building.
+
+I have everything needed. Let me set up tracking and the plan, then build the 10-file surface following the established pattern.
+
+Now I'll build the surface. Starting with the pure projection core (Adapter).
+
+Now the Seams file (telemetry, i18n, date facade, source, accessibility).
+
+Now the Model (P1/S8 state holder with per-row projection).
+
+Now the main View (scrim + slide-in panel with focus/escape semantics).
+
+Now the Views file (scrim, header, freshness chip, connectivity banner, list).
+
+Now the Rows file (job row, status-tone color, and the loading/empty/error/inline-error leaf states).
+
+Now the Previews and strings catalog.
+
+Now the two test files (adapter/projection/a11y + model lifecycle).
+
+All 10 files created. Now let me run the gate. First, check line counts (≤400 for swiftlint) and auto-format with swiftformat, then verify.
+
+Files are well under 400 lines. swiftformat adjusted 4 files. Let me review the changes and confirm `--lint` is clean.
+
+New files are untracked so no diff. Let me confirm `swiftformat --lint` is clean, then run swiftlint strict on the surface.
+
+`FORMAT_EXIT=0`. Now swiftlint `--strict` scoped to the surface files.
+
+`LINT_EXIT=0`. Now the iOS + macOS SDK typechecks (tokens + Motion + the 7 surface view/logic files).
+
+iOS typecheck clean. Now macOS 15 SDK typecheck.
+
+Both typechecks clean (`IOS_TYPECHECK_EXIT=0`, `MAC_TYPECHECK_EXIT=0`). Now the isolated SwiftPM build+test (module = Adapter/Seams/Model; tests = Tests/ModelTests).
+
+A real failure caught a mismatch — but it's my **test expectation**, not the formatter: the `sent()` sample uses `durationMs: 1850` (→ "1.9s", which correctly matches the web `formatDurationMsLong`), while two assertions expected "1.5s". The formatter is correct. I'll align the sample to a clean 1500ms so the intent reads clearly.
+
+All 33 isolated tests pass (`SWIFT_TEST_EXIT=0`). Now the placeholder/stub scanner — let me check its interface first.
+
+The scanner needs a literal path. I'll scan a temp copy of exactly my surface files (precise per-surface evidence) and also the full tier dir (as the predecessor did).
+
+Placeholder gate clean (`PLACEHOLDER_COUNT=0` for my files). Now the xcodegen spec-validity gate.
+
+Real spec generates cleanly (`REAL_XCODEGEN_EXIT=0`). Let me confirm the xcodeproj ignore status and run the scratch-spec enumeration check (proving my files register into a target once the tier is wired).
+
+Confirmed git-ignored. Now the scratch-spec enumeration check.
+
+All 10 files enumerate cleanly (`COUNT=10`, `SCRATCH_XCODEGEN_EXIT=0`). Now I'll honestly attempt the full-app xcodebuild gate. First, gather the structural-blocker evidence, then attempt a bounded real build.
+
+Structural blockers confirmed (tier not in `project.yml`; `Shared.xcframework` absent; no `iPhone 16` sim). Let me inspect the KMP framework preAction script, then attempt the real build to capture honest evidence.
+
+The preAction shells out to Gradle (Kotlin/Native) to assemble `Shared.xcframework` — the documented long-pole. Let me attempt the real full-app build with a bounded window to capture honest evidence. First generate the project and start the iOS build asynchronously.
+
+`timeout` available, project generated. Now attempting the real iOS full-app build (bounded at 360s; substituting iPhone 17 since iPhone 16 isn't installed — the preAction will try the KMP Gradle assemble).
+
+The KMP Gradle toolchain actually works here — the build progressed through Kotlin/Native compilation and debug XCFramework assembly, and was mid-release-link when my 360s bound hit (`IOS_EXIT=124` = timeout interrupt, **not** a code error). Let me stage the framework to completion separately (warm daemon), then re-run to get a definitive app-level exit.
+
+Framework staged (`STAGE_EXIT=0`). Now re-running the full-app iOS build to get a definitive app-level compile exit (preAction is now ~1s UP-TO-DATE).
+
+Exactly the predecessor-documented outcome: `IOS_EXIT=65` from **pre-existing sibling collisions** (`RecentDrivesModel`/`RecentDrivesUpdate`/`StateTimelineUpdate` ambiguous type lookups in `dashboard-widgets` + `feature-views`), with **`QJD_ERRORS=0`**. Let me confirm zero errors originate from `modals-dialogs`, then run the macOS build.
+
+Both full-app builds are RED for **entirely pre-existing, surface-independent** reasons, with **0 QueueJobDrawer errors and 0 modals-dialogs errors on both platforms**:
+- **iOS (`IOS_EXIT=65`)**: 54 sibling duplicate-type collisions in `dashboard-widgets/` + `feature-views/` (RecentDrives*/DigitalTwin*/DoorWindowStatus*/StateTimeline*) — none mine.
+- **macOS (`MAC_EXIT=65`)**: macOS code-signing (`DEVELOPMENT_TEAM=""`) + same sibling collisions.
+
+This matches the Drawer (0013) predecessor exactly. Now let me clean up build artifacts and verify a clean tree.
+
+Clean tree — only my 10 new files; no shared config touched; `Frameworks/` restored. All gates are accounted for. Let me gather LOC counts and write the honest gate log.
+
+Now I'll write the honest gate log following the covenant.
+
+Log written. Now staging exactly my 10 surface files + the log, and committing.
+
+All 11 files staged (10 surface + log), nothing stray. Committing.
+
+Committed as `a27e7a0c4`, working tree clean. Let me finalize tracking and clean up temp logs.
+
+All 12 todos done, temp artifacts cleaned, commit verified (11 files, 1907 insertions).
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-modals-dialogs-0020-QueueJobDrawer.log | 157 +++++++++++++
+ .../modals-dialogs/QueueJobDrawer.Adapter.swift    | 228 ++++++++++++++++++
+ .../modals-dialogs/QueueJobDrawer.Model.swift      | 202 ++++++++++++++++
+ .../modals-dialogs/QueueJobDrawer.ModelTests.swift | 255 +++++++++++++++++++++
+ .../modals-dialogs/QueueJobDrawer.Previews.swift   | 130 +++++++++++
+ .../modals-dialogs/QueueJobDrawer.Rows.swift       | 238 +++++++++++++++++++
+ .../modals-dialogs/QueueJobDrawer.Seams.swift      | 195 ++++++++++++++++
+ .../modals-dialogs/QueueJobDrawer.Tests.swift      | 170 ++++++++++++++
+ .../modals-dialogs/QueueJobDrawer.Views.swift      | 168 ++++++++++++++
+ .../modals-dialogs/QueueJobDrawer.strings          |  50 ++++
+ .../TeslaSync/modals-dialogs/QueueJobDrawer.swift  | 114 +++++++++
+ 11 files changed, 1907 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0020-QueueJobDrawer.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Rows.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.swift

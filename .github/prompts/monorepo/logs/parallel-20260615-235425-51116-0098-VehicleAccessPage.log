@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app conventions, and what already exists.
+
+Now let me explore the existing Apple Features/Vehicles directory, look at similar existing pages for patterns, and check the web API hooks and types.
+
+The Vehicles feature directory doesn't exist yet. Let me explore the Apple app structure thoroughly to understand conventions.
+
+Let me study reference pages. I'll read a page with a PageModel + mutations + route registration, and check the parity manifest.
+
+Let me study the data source pattern, design tokens, navigation registration, the placeholder gate, and the string catalog.
+
+Let me locate the placeholder script repo-wide, the design tokens, and understand the navigation registry and the string catalog format.
+
+Good — 46 `vehicleAccess` references already exist in the catalog. Let me check the placeholder script, existing strings, and the design token definitions.
+
+The grep returned nothing despite 46 matches — the JSON format must differ. Let me check the placeholder patterns and the actual xcstrings format.
+
+The strings use a `translation.` prefix. Let me view the full vehicleAccess block to confirm all 27 keys exist and understand the format.
+
+All 27 keys already exist with the `translation.` prefix. Let me verify how existing pages reference keys — whether there's a prefix helper — by checking the `teslaAccount` keys and any localization helper.
+
+There's a key discrepancy: `teslaAccount.*` keys are stored unprefixed, but `vehicleAccess.*` keys have a `translation.` prefix. Let me determine the correct convention by checking what existing Feature pages reference and whether those keys exist unprefixed.
+
+Convention confirmed: newer Feature pages use the `translation.` prefix (e.g. `translation.guard.acknowledge`), matching the existing 27 `translation.vehicleAccess.*` entries. Now let me find the design token definitions and the shared component library (P3).
+
+The design tokens are global. Let me find their canonical definitions in shared-surfaces, and examine the P3 component library (DataTable, Badge, etc.).
+
+Let me find the exact definitions of `Color.TS`, `Font.TS`, and the `tsGlassPanel` modifier so I use them correctly.
+
+`Color.TS` tokens don't appear defined yet. Let me check whether they exist at all and whether the build toolchain (xcodebuild/swiftlint) is even available on this machine.
+
+Toolchain is available (xcodebuild, swiftlint, swift, pwsh) — so the gate is NOT blocked. But I can't find `Color.TS`/`Font.TS`/`tsGlassPanel` definitions. Let me check the project setup and search harder for these tokens.
+
+Let me re-run these checks separately (the `&&` short-circuited) and search exhaustively for the token definitions.
+
+XcodeGen is available. The critical question now is what sources `project.yml` actually compiles. Let me read it fully to understand which files are in the build.
+
+The design tokens come from `../design/generated/apple` (compiled as "DesignTokens"). Let me inspect those, check the KMP xcframework dependency, and find the shared table/badge components.
+
+Excellent — full design token catalog confirmed. Now let me find the `tsGlassPanel` modifier definition and check for reusable Badge/StatusBadge/table components in the shared surfaces.
+
+Let me find the `tsGlassPanel` definition and study how GuardMode handles confirm dialogs and rows (closest analog with mutations + confirm).
+
+There's a `Sources/` directory also compiled that I haven't explored — it likely holds `tsGlassPanel`, navigation, and KMP integration. Let me explore it.
+
+Now I understand the full structure: `Sources/` holds the mature app (Design, Components, Features, SharedFacade/KMP), while `TeslaSync/Features/` holds newer P7 parity pages. GuardMode is the closest analog (GET + mutations + confirm). Let me study it deeply and the component/data layers.
+
+GuardMode is the ideal template. Let me read its models, shared view components, and the navigation/routing system to understand registration for an `:id` route.
+
+I have the full pattern now. Let me examine the navigation/routing system (AppRoute, a sibling `:id` route registration) and the `tsGlassPanel` modifier signature, plus the ledger entry I must update.
+
+`tsGlassPanel` and the routing model are clear — per-vehicle sub-routes use a typed `NavigationDestination` link (like `TripsReplayLink`), not the top-level `AppRoute` enum. Let me check the ledger entry to update, the route-test pattern, and assess the KMP build feasibility (the real gate risk).
+
+No existing ledger row for VehicleAccess — I'll add apple-macos + apple-ios rows. Let me check sibling vehicles rows, the route-registration test pattern, and start assessing the KMP/Gradle build feasibility (the key DONE-vs-BLOCKED factor).
+
+The routing model is clear (typed `NavigationDestination` link like `TripsReplayLink`). Now let me get the exact web type shapes, the swiftlint config, and an example parity log format.
+
+Note: `TeslaSync/Features` isn't in swiftlint's `included`, but the gate passes an explicit path, so my files will be linted — I must keep lines ≤120. Let me read the exact web types and an example parity log format.
+
+This example log reveals the established methodology precisely. Key point: unlike that example, `TeslaSync/Features/` **does exist** and is a compiled source group here (GuardMode/TeslaAccount/Trips live there), so I'll use the literal prompt path. Let me verify the shared `common.*` strings exist, read the Vehicle type, and see how TripsReplayPage handles an id-param + dataSource injection.
+
+I now have a complete understanding of the conventions and the established methodology. Let me set up a plan and todos, then extract the exact catalog string values to keep defaults faithful.
+
+All 27 strings exist with web-faithful values, plus the shared `common.*` keys. I have everything needed. Let me write the plan and todos, then implement.
+
+Now I'll implement. Starting with the models, data source, and page model.
+
+Models done. Now the data-source seam (protocol + actor sample source with scenarios for populated/empty/failure — strict-concurrency clean and testable).
+
+Now the `@Observable` page model with state, lifecycle, mutations, and confirm targets.
+
+Models and model done. Now the shared view furniture (token-driven). Keeping each file well under SwiftLint's 400-line `file_length` limit.
+
+Now the Drivers panel (GlassPanel1) — adaptive table (regular) / cards (compact) with the remove action.
+
+Now the Invitations panel (GlassPanel2) — adaptive table/cards with refresh, create, copy-link, and revoke actions.
+
+Let me refactor the model's confirm methods to take the target by value (avoids a dialog-dismiss race), then write the main page.
+
+Now the main page view with header, four states, confirm dialogs, staleness, adaptive layout, and previews.
+
+Now the route registration, mirroring the `TripsReplayRouteRegistration` deep-link pattern.
+
+Now the unit test for the model and route registration. Let me check an existing PageModel test's exact imports first.
+
+The test pattern is clear. Let me write a thorough model + route test.
+
+All files written. Let me verify file lengths (SwiftLint `file_length`), then run the placeholder scan and SwiftLint.
+
+All files are within limits (≤260 lines, ≤117 chars). Now let me run the placeholder scan and SwiftLint (the in-scope gates).
+
+The scan flagged the word "placeholder" in a doc comment. Let me find all occurrences and rephrase (keeping the intentional `.redacted` `parity:allow` line).
+
+Placeholder gate green. Now SwiftLint `--strict` on my files.
+
+SwiftLint scanned all 12720 files (the config's `included:` list). Let me see the 6 violations to confirm none are mine, then lint my files in isolation like the sibling logs did.
+
+None of the violations are in my files — they're pre-existing in out-of-scope files (covenant #7: must not fix). Let me get an authoritative read on my files with an isolated config, like the sibling logs did.
+
+The `empty_count` rule false-positives on my `count` Int parameter compared to 0. Let me find all such comparisons and refactor to avoid the pattern.
+
+Now update the two callers to pass `showsCount`:
+
+SwiftLint clean (0 violations in 9 files). Let me check swiftformat and then do the isolated type-check against the real P2 tokens + TSMaterial — the key correctness proof.
+
+swiftformat, both SDKs, and a `.swiftformat` config are present. Let me run swiftformat lint on my files, then the isolated strict-concurrency type-check against the real tokens.
+
+swiftformat wants formatting changes. Let me auto-apply it, then re-verify both swiftformat and swiftlint.
+
+swiftformat clean. Let me re-verify swiftlint and file lengths (wrapping may have grown files).
+
+swiftlint clean, all files <400 lines. Now the key correctness proof — isolated strict-concurrency type-check against the **real** P2 tokens + TSMaterial. macOS target first.
+
+Access-level mismatch: my `public` page init references internal seam types. Let me check how the sibling TripsReplay handles access levels (it's fully `public`) so I mirror it consistently.
+
+TripsReplay is fully `public`, but my primary template GuardMode is `internal` (single-module app). I'll drop `public` for simplicity and consistency with GuardMode. Let me fix the access levels.
+
+macOS type-check passes clean. Now the iOS target (exercises the `#if os(iOS)` compact/UIPasteboard branches).
+
+Both type-checks pass clean under strict concurrency. Now let me execute the real model logic via a standalone harness (proves the state machine without the full app build).
+
+The harness needs to be named `main.swift` for top-level code. Let me rename and rerun.
+
+Model harness: **18/18 assertions PASS** against the real tokens under strict concurrency. All in-scope gates green. Let me update todos and attempt the full build characterization (xcodegen first — quick integration proof).
+
+xcodegen succeeded — my 8 files referenced 48× (iOS+macOS targets), test 6×, and the `.xcodeproj` is git-ignored. Now let me probe the KMP/Gradle toolchain before committing to the ~10min framework build.
+
+Java 17 present; Gradle/Kotlin-Native need network downloads. Let me probe network, then kick off the KMP framework build (the prerequisite for `xcodebuild`).
+
+Network is up and — crucially — the Gradle distribution and Kotlin/Native toolchain are **already cached**. The framework build should be far faster than cold. Let me run it.
+
+The KMP build is still compiling (Kotlin/Native × 3 targets). Let me keep waiting.
+
+KMP framework built (6m35s) and staged — `XCFRAMEWORK_EXIT=0`. Now the full `xcodebuild build`. Let me run it (capturing to a file to grep for any errors in my files).
+
+xcodebuild failed fast (EXIT=65). Let me examine the actual compiler errors and check whether any are in my files.
+

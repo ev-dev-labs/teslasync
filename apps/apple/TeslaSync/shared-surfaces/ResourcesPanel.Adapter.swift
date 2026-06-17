@@ -70,7 +70,7 @@ public enum ResourceSeverity: String, Sendable, Equatable, CaseIterable {
 // MARK: - ResourceRowInputs (the Equatable structural props of one row)
 
 /// The structural props one resource row renders from — the Equatable, Sendable subset of the web
-/// `ResourceRow`. It deliberately excludes the icon view (a `ReactNode` slot, not Equatable / Sendable);
+/// `ResourceRowShared`. It deliberately excludes the icon view (a `ReactNode` slot, not Equatable / Sendable);
 /// that lives on the view and is passed straight to the content view. What stays here is everything the
 /// pure projection + the `.onChange` reuse-guard need: the label, the value string, the optional
 /// sub-label, the optional `percent`, and the icon-presence flag. A reused row that swaps any of these

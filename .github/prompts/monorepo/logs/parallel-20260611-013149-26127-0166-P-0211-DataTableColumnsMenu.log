@@ -1,0 +1,122 @@
+I'll start by investigating the actual state of the repository to understand what exists and what capabilities are available on this runner.
+
+The runner has the full Apple toolchain (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). This is a monorepo with a real Apple app. Let me examine the web source spec and the existing native structure.
+
+This is a pure-UI controlled component (only `useTranslation`, data via props). Now let me study the established native file convention by reading a representative exemplar set. I'll look at `Accordion` (a UI primitive likely with no data hooks) and `ActiveFilterChips`.
+
+`Accordion` is the cleanest exemplar (pure UI primitive). Let me read its complete file set to learn the exact conventions.
+
+Excellent — this is a mature, sophisticated pattern. Key insight: the Accordion adapter explicitly documents that pure presentational primitives reproduce **only real branches** and do NOT fabricate loading/error/stale/offline (that would be "silent drift"). Let me study the closest analog (`ActiveFilterChips` — a collection with toggle logic), the design tokens, and the build system.
+
+Strong grasp of the pattern now. Let me read the design tokens, the remaining exemplar files (Views/Previews/Tests/strings), and critically — the `project.yml` to understand how `shared-surfaces` files are compiled.
+
+Now I understand the build topology: `shared-surfaces/*.swift` compile into the app targets; `*Tests.swift` into the test bundles; design tokens come from `../design/generated/apple` (P1/S9); the project is generated via XcodeGen and depends on `Shared.xcframework`. Let me verify all prerequisites for the gate.
+
+`xcodegen` is present and design tokens exist, but `Shared.xcframework` is absent (only `.gitkeep`) and the app targets depend on it. The scheme's pre-action builds it via `Scripts/build-shared-xcframework.sh`. This script is the key feasibility risk. Let me read it and the token definitions.
+
+I now have the full token vocabulary. The critical feasibility risk is `Shared.xcframework`, which the build pre-action produces via the KMP/Gradle toolchain. Let me probe that and read the pending-verifications doc, which likely documents the build status.
+
+KMP project exists with `gradlew` and Java 17 is present. The doc confirms these are "deferred artifact verifications" for macOS CI. Let me read the remaining exemplar files to nail the test/preview/strings conventions, and verify the gate's auxiliary tools exist.
+
+Let me read the test/preview/strings exemplars and verify the gate's auxiliary tooling (check-placeholders, lint configs).
+
+I have a complete picture of the pattern. Let me read the lint configs, the placeholder checker, and confirm the log directory before writing code.
+
+Found prior logs for this exact artifact (0211). Let me read those to understand prior outcomes/status, plus the placeholder checker and the canonical prompt file.
+
+Critical insight: a prior run (different runner, only Command Line Tools) shipped this exact artifact as commit `5054ad7eb` with `STATUS=BLOCKED` — but **my runner has full Xcode 26.5**, so I may be able to reach `STATUS=DONE`. The files don't exist in my clean worktree. Let me check simulator/SDK/KMP feasibility before deciding, and whether that prior commit is reachable here.
+
+This is decisive: I have **full Xcode 26.5, a booted iPhone 16 simulator, iOS/macOS SDKs**, AND the prior known-good artifact `5054ad7eb` is reachable in git history. The prior run was BLOCKED only because *its* runner lacked Xcode — a limitation I don't have. Strategy: retrieve the prior verified files as a reviewed starting point, then run the **real** build/test gate to reach `STATUS=DONE`. Let me retrieve and review them.
+
+Let me restore the 7 verified surface files from the prior commit into my worktree, then review them against the web source.
+
+Restored. Now let me thoroughly review all 7 files against the web source for correctness and parity.
+
+These are high-quality, faithful ports. The Adapter references `TSTone` — I must verify that symbol exists. Let me read the remaining 5 files and confirm external dependencies.
+
+The views depend on shared components `TSTone`, `TSSkeleton`, `TSButton`. Let me read the remaining files and verify those symbols exist with matching signatures.
+
+All three shared components exist. I must verify their exact APIs match usage (`TSTone.warning/.neutral/.color`, `TSSkeleton` inits, `TSButton(variant:size:action:)` with `.ghost`/`.small`). Let me check.
+
+All shared component APIs match usage exactly (`TSTone.warning/.neutral/.color`, `TSSkeleton` inits, `TSButton(variant:.ghost,size:.small,action:)`). The restored files are complete and faithful. 
+
+My runner has advantages the prior (BLOCKED) run lacked: **full Xcode + booted simulator**. My goal is to reach `STATUS=DONE` by actually running the gate. Let me set up tracking and start verification.
+
+The 3 shared components only import SwiftUI + tokens — perfect for a standalone harness. Let me run the fast, in-scope gate checks first: swiftformat and swiftlint on my files.
+
+swiftformat: **0/6 require formatting** ✅. No swiftlint violations matched my files. Let me run the full swiftlint to capture its real exit code and confirm my files are clean while seeing any pre-existing tree issues.
+
+Outstanding: **swiftlint --strict = 0 violations across all 4662 files** (LINT_EXIT=0), swiftformat 0/6. Now the placeholder gate (scoped to my files, honestly) and the standalone compile+test harness.
+
+Placeholder gate: **COUNT=0, EXIT=0** (genuinely scanned my files; self-test confirms the scanner works). Now the standalone compile+test harness — compiling my surface against the *real* tokens and shared components, then running the unit tests.
+
+The harness surfaced two things: (1) a harness-only missing `TSCard` (from sibling skeletons I copied, not my code), and critically (2) a **real Swift 6 strict-concurrency error in my `Previews.swift`**: `static let actions = ColumnsMenuActions(...)` is non-Sendable. The project uses `SWIFT_STRICT_CONCURRENCY: complete`, so this **would block the real build** — the prior run never caught it because it couldn't compile. I must fix it. Let me view Previews.swift and locate `TSCard`.
+
+Found a **genuine bug** the prior run couldn't catch. The fix: the preview's `static let actions` (non-Sendable `ColumnsMenuActions`) needs `@MainActor` isolation — previews run on MainActor, and the compiler explicitly suggests this. The `TSCard` error is harness-only (from sibling skeleton types I copied that my surface doesn't use). Let me apply the real fix and check `Cards.swift` deps to repair the harness.
+
+`Cards.swift` only imports SwiftUI (tokens-only dep). Let me add it to the harness, re-copy the fixed Previews, and rebuild.
+
+Harness cascade — `Cards.swift` pulls in more components (`TSText`, `TSGlassPanel`, etc.) that my surface doesn't use. Importantly, **my `Views.swift` compiled cleanly**. Cleanest fix: drop `Cards.swift` and trim the harness `Skeletons.swift` to just the `TSSkeleton` struct my surface actually uses.
+
+Harness **builds clean (BUILD_EXIT=0)** with my Sendable fix — all 5 source files compile against the real tokens + components under Swift 6 strict concurrency. Now run the unit tests.
+
+**All 23 unit tests pass, 0 failures**, under Swift 6 strict concurrency against the real tokens + components. My surface is proven correct, and I fixed a real concurrency bug the prior run missed. 
+
+In-scope gate status so far: swiftformat ✅, swiftlint ✅, placeholders ✅, compile+test ✅.
+
+Now the real `xcodebuild` gate. Step 1: generate the project; step 2: probe the KMP `Shared.xcframework` pre-action (the main feasibility risk).
+
+`xcodegen generate` succeeded; `TeslaSync` and `TeslaSync-macOS` schemes exist. Now the critical feasibility gate — the KMP `Shared.xcframework` build (the scheme's pre-action). Let me run it directly so I can isolate its success/failure and timing.
+
+The KMP build is running, and there's a 3.5G `~/.gradle` cache (Gradle 8.14.5 + Kotlin/Native likely partly cached). Let me keep waiting.
+
+Still compiling (~7 min in) — KMP/Kotlin-Native XCFramework assembly across iOS + macOS slices is inherently slow. Let me continue waiting.
+
+**KMP `Shared.xcframework` built successfully** (7m44s, Kotlin compiles from the 3.5G cache — no network needed) and is staged. The biggest blocker is cleared. Now the real gate: `xcodebuild build test`. Let me launch the iOS build+test in the background, logging to a file.
+
+A shared-environment process (PID 57634, different derivedData) is also building — I'll use my own derived-data path to avoid collision. My earlier background job died when its sync session ended; I need a **detached** process that survives. Let me relaunch the iOS gate properly detached.
+
+Detached iOS build+test is running. Let me monitor its progress.
+
+Good — iOS build cleared the KMP pre-action and dependency setup, now compiling the 4662-file `TeslaSync` module. No errors yet. This compile phase is heavy; let me keep monitoring.
+
+The iOS build **failed (IOS_EXIT=65)** — but with a single, telling error: a **pre-existing type-check timeout in `RecentDrivesSection.Previews.swift`** (a feature-view I did **not** touch and am **not** allowed to modify per the prompt's allowed-files list). My surface is not implicated. Let me confirm my files are error-free in the real build, capture the exact blocker, and prove my surface compiles against the real **iOS SDK**.
+
+**Confirmed: the only error in the entire iOS build is the pre-existing `RecentDrivesSection.Previews.swift` timeout — zero errors in my surface**, and all 5 of my files were compiled. Now let me prove my surface type-checks against the real **iOS simulator SDK** (Swift 6), then run the macOS gate.
+
+My surface **type-checks clean against the real iOS SDK** under Swift 6 (IOS_TYPECHECK_EXIT=0). Now run the macOS gate (it shares `feature-views`, so likely the same pre-existing blocker — but I'll verify, not assume).
+
+macOS build+test is running detached. Let me wait and monitor (it shares `feature-views`, so I'll verify whether it hits the same pre-existing blocker).
+
+macOS failed too (MAC_EXIT=65) — but for a **different, environment-level reason: code-signing**. The macOS app + widget targets have entitlements requiring a development certificate that this runner lacks (`DEVELOPMENT_TEAM` is empty). Again, **zero errors in my surface**. This is precisely the prompt's "capability unavailable on the runner → BLOCKED" condition.
+
+Let me capture the remaining gate evidence (whole-tree swiftformat, swiftlint summary) before writing the log.
+
+The whole-tree swiftformat (the **literal gate command**) caught a real issue **my own edit introduced**: the `//` comment I added before `@MainActor static let actions` violates the `docComments` rule (comments before declarations must be `///`). The rest of the tree is clean (1/4960 — only my file). The earlier scoped format check ran *before* my edit, so it missed this. Let me fix it to a doc comment and re-verify.
+
+Now re-verify the fix: scoped swiftformat + swiftlint on my files, and rebuild+test the harness to confirm `///` doesn't break compilation.
+
+Fix confirmed: swiftformat 0/6, swiftlint 0 on my files, tests pass. Let me confirm the whole-tree swiftformat (gate-literal) is now clean and the 23 XCTests still pass.
+
+All controllable checks are green: **whole-tree swiftformat 0/4960**, swiftlint 0, placeholder 0, 23 tests pass. Let me re-run the iOS-SDK typecheck on the *fixed* surface (fast, airtight) since my doc-comment edit post-dated the earlier iOS run.
+
+The fixed surface type-checks clean against the iOS SDK. Everything in my control is green; both `xcodebuild` failures are external (pre-existing out-of-scope file / missing signing cert). Let me write the canonical gate log with full honest evidence.
+
+Log written. Now let me carefully review the full working-tree status to ensure I stage **only** my 7 surface files + the log (not the generated `.xcodeproj`, the built `.xcframework`, or any pre-existing/shared changes).
+
+Status is exactly right: my 7 surface files + the log, and the generated `.xcodeproj`/`.xcframework` are git-ignored (won't be committed). No pre-existing/shared changes in this worktree. Let me stage precisely those 8 paths and commit with an honest message.
+
+Exactly 8 files staged. Now commit with an honest message documenting the verified-green surface and the external BLOCKED gate reason.
+
+Committed as `bb9d0b28e` (8 files), tree clean. To more fully satisfy the acceptance criterion "**per-state snapshot/UI test**" (matching the `ActiveFilterChips` exemplar's `testSurfaceComposesForEveryBranch`), I'll add explicit per-state view-composition tests, verify them, then amend the commit.
+
+Now verify the expanded test suite compiles + passes, and stays lint/format clean.
+
+Expanded suite: **26 tests, 0 failures**, file stays format/lint clean. Let me update the log's test counts + LOC and amend the commit.
+
+Log consistent (26 tests, EXIT block intact, no stray references). Let me stage the updated Tests + log and amend the commit (also correcting the message's test count to 26).
+
+Amended commit `af24a294d` (8 files, 1544 insertions), tree clean. Let me clean up my temp artifacts (leaving the other process's `/tmp/dd-preview` untouched) and finalize tracking.
+
+All work is complete and the tree is clean. Final summary below.
+

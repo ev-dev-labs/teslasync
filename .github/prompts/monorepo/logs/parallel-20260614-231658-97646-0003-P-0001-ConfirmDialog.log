@@ -1,0 +1,164 @@
+I'll start by exploring the task requirements: the web source component, the existing Apple app structure, and the build tooling availability.
+
+All tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16/17 simulators booted). There's an established file pattern. Let me read the web source and the closest existing reference (`CommandConfirmDialog`).
+
+Now I understand the web source. Let me study the closest existing native reference (`CommandConfirmDialog`) to learn the established architecture conventions.
+
+Excellent established architecture. Let me read the remaining reference files (Seams, States, Views, Previews, strings, tests) to fully understand all conventions.
+
+Let me read the remaining reference files (Previews, strings, tests) and the project.yml to understand build inclusion and shared tokens.
+
+Let me read the UI tests, project.yml, and locate the shared design tokens/components.
+
+The `modals-dialogs` directory isn't listed in the sources I see. Let me view the full project.yml to understand build inclusion.
+
+Critical finding: `project.yml` doesn't list `TeslaSync/modals-dialogs` as a source path. I need to understand the actual build setup before writing code. Let me investigate the project generation mechanism and git state.
+
+modals-dialogs is git-tracked (324 files, ~30 surfaces) but NOT referenced in `project.yml`, and `ConfirmDialog.*` + the log are my only allowed files (so I must not edit project.yml). Let me understand the baseline build — the Shared.xcframework dependency and shared tokens — before writing code.
+
+Shared.xcframework requires a KMP/Gradle toolchain and doesn't exist yet. Let me check how prior modals-dialogs surfaces were verified — their committed logs will reveal the real verification approach and expected STATUS.
+
+Very informative — the modals-dialogs tier is intentionally "unwired" from the Xcode project; predecessors achieved STATUS=DONE via standalone typecheck against the real SDKs + tests + lint. Critically, there's already a `0012-ConfirmDialog.log`. I must check for a filename collision with existing `ConfirmDialog.*` files and confirm which web source each maps to.
+
+**Critical discovery — naming collision.** The existing `ConfirmDialog.*` files (10 of them) were created by prompt **0012** for web source `ui/ConfirmDialog.tsx` (variant/severity/typed-confirmation). My task **0001** targets a *different* web source `ai/ConfirmDialog.tsx` (AI tool approval, exported as `AiConfirmDialog`) but the prompt maps it to the same `ConfirmDialog.*` path. Overwriting would destroy 0012's work and cause Swift symbol collisions. Let me confirm the existing files implement the ui variant and check for any existing `AiConfirm*`.
+
+Collision confirmed: existing `ConfirmDialog.*` (0012) = `ui/ConfirmDialog.tsx` with public symbols `ConfirmDialog`/`ConfirmDialogModel`/slug `"ConfirmDialog"`. My task (0001) = `ai/ConfirmDialog.tsx` (exported `AiConfirmDialog`). Creating `ConfirmDialog.*` would overwrite a sibling surface AND cause duplicate Swift symbols in the same module. The honest resolution: ship as `AiConfirmDialog.*` with distinct `AiConfirm*` symbols and the source's own `ai.confirm.*` i18n keys, without touching 0012. Let me confirm both web sources exist and read the shared token/component APIs I'll depend on.
+
+Both web sources exist (distinct surfaces). TSButton supports `.primary`/`.secondary` variants — matching the web source. Let me read the exact token + component APIs (Tokens.swift, TSGlassPanel, TSFadeIn, TSButtonSize) so my code compiles cleanly.
+
+No `AiConfirm*` files exist yet. Now let me confirm no existing surface already implements the ai dialog, and check the dependency closure of the shared component files (so I can set up a reliable standalone typecheck against the real SDKs, as predecessors did).
+
+Component files only import SwiftUI and use design tokens. Let me verify the whole `Sources/Components` tree is self-contained (no KMP `Shared` import) so I can typecheck my surface against the real design system standalone, and read the lint/format configs my code must satisfy.
+
+Key findings: `swiftlint`'s `included:` list also omits `modals-dialogs` (so I'll lint my files explicitly), but `swiftformat --lint apps/apple` DOES cover them. `Sources/Components` is fully self-contained (only SwiftUI/Charts/MapKit/CoreLocation/Foundation). This enables the predecessor verification method: run pure-logic tests via SwiftPM + typecheck the SwiftUI layer against the real SDKs. Let me establish a typecheck baseline (Tokens + Components) and write the plan while it runs.
+
+`TSChartPalette` lives in `Sources/Design`. Let me include that layer and re-run the baseline typecheck closure.
+
+The full Components tree pulls in app-model types (`UnitPreferences`). I'll use a surgical closure: only the design-system files my surface actually touches. Let me find the Typography file defining `TSPanelTitle`/`TSCaption` and verify the minimal closure typechecks.
+
+Design-system files cross-reference each other. Let me find the minimal self-contained closure by including the UI + Motion component groups (excluding DataDisplay/Maps/Charts which need app-model types).
+
+The minimal closure (`Tokens + Sources/Design + Components/UI + Components/Motion`) typechecks cleanly on the iOS-18 SDK — that's my SwiftUI verification harness. I now have a complete, honest verification strategy matching the predecessors. Let me record the plan and todos, then implement.
+
+Now creating the surface. Starting with the pure projection core (Adapter).
+
+Now the Seams file (telemetry, controller, source, strings facade, accessibility).
+
+Now the Model (state holder).
+
+Now the States file (loading/empty/error/inline-error/freshness/banner).
+
+Now the Views file (panel shell, header, content, intro/tool/args sections, footer).
+
+Now the entry View and the strings catalog.
+
+Now the Previews file (one per state).
+
+Now the test files — ModelTests (state-holder coverage) and Tests (projection + accessibility).
+
+Now the projection + accessibility tests (the pure data-adapter coverage).
+
+All 10 files created. Let me update todos and begin verification — first swiftformat (the gate runs it over all of apps/apple).
+
+swiftformat wants trailing commas removed (`--commas inline`). Let me auto-format my files in place, then re-lint to confirm.
+
+swiftformat passes (0/9). Now swiftlint --strict on my files.
+
+swiftlint: **0 violations**. Now the SwiftUI-layer typecheck against the real design system on the iOS-18 SDK (all non-test files + tokens + Design + Components/UI + Components/Motion).
+
+iOS-18 typecheck clean. Now the macOS-15 SDK typecheck.
+
+Both SDKs typecheck clean. Now the **pure-logic test run** via a throwaway SwiftPM package (module `TeslaSync` = Adapter+Model+Seams; tests = ModelTests+Tests) under Swift 6.
+
+39 tests ran, 1 failure. Let me find the failing assertion.
+
+The re-entrancy test is flaky (a single `Task.yield()` doesn't deterministically let the child task reach its suspension point — first run failed, second passed). Since test and child both run on the main actor, I'll replace the single yield with a bounded poll on `submitting`, which is deterministic.
+
+Re-format the edited test file, then run the suite 5× to confirm determinism.
+
+5/5 deterministic passes (39/39). Now the placeholder check. Let me inspect the script + patterns and run it (via pwsh if available).
+
+pwsh is available. Let me see how `-Path` is consumed (the gate passes a filename prefix, not a dir), then run it for my surface.
+
+The gate's `-Path .../ConfirmDialog` is a filename prefix (not a directory), so it scans nothing and passes trivially. For a *meaningful* check I'll scan a temp dir containing only my real `.swift` files. Let me also run the script's self-test to confirm it works.
+
+The check flagged `XXX` — it's a false-positive matching `\uXXXX` in a comment. Let me reword that comment to avoid the literal sequence.
+
+Reworded. Let me re-scan placeholders on the updated files and grep for any other forbidden patterns, plus re-confirm format/lint on the edited Adapter.
+
+PLACEHOLDER_COUNT=0, clean. Let me re-confirm format + lint across all files after the edits, then re-run both SDK typechecks to be safe.
+
+All surface-scoped gates are green (format, lint, both SDK typechecks, 39/39 tests ×5, placeholder=0). Now the literal full-app gate. Let me generate the Xcode project and confirm whether `modals-dialogs` is wired into the build.
+
+Confirmed: the generated pbxproj has **0** references to `AiConfirmDialog` or `modals-dialogs` — the entire tier is unwired (same as all 30 sibling surfaces), so the full-app build cannot exercise my files. That's precisely why I verified via standalone typecheck + SwiftPM tests. Now let me characterize the full-app gate's real blocker in this environment: the `Shared.xcframework` (KMP/Gradle) dependency. I'll attempt it timeboxed.
+
+The KMP/Gradle build is the heavyweight, surface-independent dependency. Let me give it more time to either complete or fail.
+
+The KMP `Shared.xcframework` built successfully (7m) and is staged — the heavyweight dependency is now satisfied. Let me run the actual literal gate (iOS `xcodebuild build test`) to capture first-hand evidence of its real outcome in this environment.
+
+While that runs, let me characterize the macOS signing situation (siblings reported macOS deferred on signing) and check the build progress.
+
+macOS signing: **0 valid identities** — the macOS gate is signing-blocked (pre-existing, environment-level, same as siblings). Let me monitor the iOS build progress.
+
+iOS build/test completed. Let me characterize the result precisely — overall status, the nature of the 3 failures, and confirm none of my files were involved.
+
+The full-app iOS gate **BUILD FAILED** on a pre-existing, surface-independent error in a wired-tier file (`shared-surfaces/Input.Previews.swift:88` — a ViewBuilder `return` error), with **0** references to my files. Let me confirm every error is in unrelated files (none mine).
+
+Confirmed: the iOS build fails on a **single pre-existing wired-tier file** (`shared-surfaces/Input.Previews.swift`, 6 errors, all `return`-in-ViewBuilder) — none in my surface (0 AiConfirm errors), which isn't in the build. Let me verify git status shows only my files changed (I touched nothing else).
+
+Verified: git status shows **only my 10 files** (the generated `.xcodeproj` and staged framework are git-ignored). `Input.Previews.swift` is an untouched, pre-existing wired file. I now have complete first-hand evidence. Let me confirm the build artifacts are git-ignored and clean up temp verification dirs.
+
+All clean. Now let me write the comprehensive gate log documenting the collision resolution, parity, and all first-hand verification evidence.
+
+Let me set a real timestamp in the log header.
+
+Let me run a final consolidated verification, then stage and commit only my files + the log.
+
+All final checks green (format 0/9, lint 0 violations, placeholder=0, 10 files). Committing my files + the log.
+
+Exactly the 10 surface files + log staged (no generated artifacts). Committing.
+
+Committed (`a5427dd83`), working tree clean. Let me confirm the commit's contents and finalize.
+
+Task complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`AiConfirmDialog`** — the native SwiftUI parity of `web/src/components/ai/ConfirmDialog.tsx` (the AI tool-use approval dialog: tool name + verbatim JSON args + mutating/read intro, with Approve/Cancel locked while the continuation POST is in flight).
+
+**Key finding — naming collision (resolved transparently):** the prompt's literal output path `ConfirmDialog.*` is already owned by sibling prompt **0012** (the *generic* `ui/ConfirmDialog.tsx`, public symbols `ConfirmDialog`/`ConfirmDialogModel`, slug `"ConfirmDialog"`). Writing `ConfirmDialog.*` would overwrite that surface **and** create duplicate Swift symbols in module `TeslaSync`. I shipped under **`AiConfirmDialog.*`** (distinct `AiConfirm*` symbols, the source's own `ai.confirm.*` i18n keys, slug `"AiConfirmDialog"`) without touching any 0012 file — documented in the log per Covenant rules 7 & 9.
+
+**Delivered** (10 files, established 0029-architecture): Adapter (pure projection + ordered-JSON `JSON.stringify(_,null,2)`-parity pretty-printer), Seams (telemetry/controller/source/i18n/a11y), Model (P1/S8 `@Observable`), States, Views, entry View, `.strings`, Previews, ModelTests, Tests. All six states render real chrome (loading/empty/error/stale/offline/content).
+
+**Verification (first-hand, this runner):**
+- `swiftformat --lint` 0/9 · `swiftlint --strict` 0 violations · placeholder COUNT=0
+- iOS-18 **and** macOS-15 SDK typechecks against the real design system: 0 errors
+- **39/39 tests** pass under Swift 6 strict concurrency (5× deterministic)
+- Full-app `xcodebuild`: KMP `Shared.xcframework` built (7m), then **RED only on a pre-existing, unrelated wired file** `shared-surfaces/Input.Previews.swift` (0 references to my files — the modals-dialogs tier is unwired); macOS signing-deferred (0 valid identities). Same sanctioned disposition as siblings 0012/0029.
+
+Committed as `a5427dd83` (11 files, +2186); working tree clean. Log: `.github/prompts/monorepo/logs/p4-apple-modals-dialogs-0001-ConfirmDialog.log` → `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-modals-dialogs-0001-ConfirmDialog.log | 176 +++++++++++
+ .../modals-dialogs/AiConfirmDialog.Adapter.swift   | 333 +++++++++++++++++++
+ .../modals-dialogs/AiConfirmDialog.Model.swift     | 243 ++++++++++++++
+ .../AiConfirmDialog.ModelTests.swift               | 352 +++++++++++++++++++++
+ .../modals-dialogs/AiConfirmDialog.Previews.swift  | 135 ++++++++
+ .../modals-dialogs/AiConfirmDialog.Seams.swift     | 192 +++++++++++
+ .../modals-dialogs/AiConfirmDialog.States.swift    | 188 +++++++++++
+ .../modals-dialogs/AiConfirmDialog.Tests.swift     | 192 +++++++++++
+ .../modals-dialogs/AiConfirmDialog.Views.swift     | 278 ++++++++++++++++
+ .../modals-dialogs/AiConfirmDialog.strings         |  45 +++
+ .../TeslaSync/modals-dialogs/AiConfirmDialog.swift |  52 +++
+ 11 files changed, 2186 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0001-ConfirmDialog.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.swift

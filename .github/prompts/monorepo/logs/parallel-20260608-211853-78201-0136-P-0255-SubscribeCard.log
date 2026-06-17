@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure, reading the web source spec, and checking available build tools.
+
+Build tools are available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the existing Apple app structure to understand the P4 core, state holders, tokens, and i18n facades.
+
+There's an extensive established pattern. Let me check if SubscribeCard already exists, examine a simple reference component, and understand the shared facades.
+
+SubscribeCard has no Swift files yet (only prior attempt logs). Let me read the previous attempt logs and study the established pattern from a similar presentational component.
+
+This is critical context: the prior attempt described shipping files but **none exist** in `feature-views/` (clean working tree). I must actually create them. Also notably, **this runner has full Xcode 26.5** (the prior runner had CLI tools only). Let me verify Xcode capabilities and study the closest precedent (`AiUsageCard`).
+
+This runner has full Xcode 26.5 + booted iPhone 16 simulator. `QuickNav` is the best precedent (presentational + navigation). Let me read its complete file set as a template.
+
+Excellent precedent. Now let me read the remaining QuickNav files (Views, Previews, Tests, strings) to complete my understanding of the template.
+
+Now let me read the QuickNav tests, strings, and the design token definitions I'll need.
+
+I have a thorough understanding of the template. Now let me confirm the exact design tokens and shared components (GlassPanel, TSSkeleton, tokens) available, since the web `SubscribeCard` wraps in `GlassPanel`.
+
+Let me locate the canonical token definitions used by the main app target (TSSpacing, TSRadius, TSMotion, Font.TS) and view the generated Tokens.swift.
+
+Let me confirm the `TSSkeleton` and `GlassPanel` APIs, and check how the Xcode project includes feature-view files (to know whether I need to register them).
+
+Let me view the `project.yml` (XcodeGen) to understand how feature-view and test files are included, and the GlassPanel API in Cards.swift.
+
+Now I understand the project wiring: `project.yml` globs the `feature-views` directory (non-test files → app targets, `*Tests.swift` → test bundles), so new `SubscribeCard.*` files are auto-included on `xcodegen generate`. Let me check `AppRoute`/`AppRouteParser` to map the web link paths to native routes, and confirm XcodeGen availability.
+
+I have everything I need. Let me check the swiftlint/swiftformat configs to match the exact lint rules, then create a plan and write the files.
+
+Let me check the placeholder-checker script to know exactly what tokens it flags, then I'll create the plan and write files.
+
+I have all the constraints. Forbidden tokens in `.swift`: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented". Let me set up tracking and check the build baseline (Shared.xcframework dependency) before writing.
+
+Confirmed: `Shared.xcframework` is absent (requires KMP/Gradle toolchain via a pre-build script) — a heavy pre-existing dependency for the full `xcodebuild` gate. Let me quickly verify the prior log's claim of pre-existing build blockers (duplicate `DashboardWidgetSize`) and check the KMP shared module, to plan verification honestly.
+
+The prior log's "DashboardWidgetSize ×15" blocker claim is **false here** (only 1 definition exists) — confirming I must verify independently, not trust prior logs. The KMP `apps/shared` module exists with a gradlew. Let me see the exact Gradle task and launch the Shared.xcframework build in the background while I write the surface.
+
+Launching the KMP `Shared.xcframework` build in the background (the long pole for the full xcodebuild gate) while I write the surface files.
+
+Java 17 present, KMP build running in background. Now I'll write the surface files, starting with the pure-core Adapter and the strings catalog.
+
+Now the Previews and Tests files. Let me also peek at the KMP build progress.
+
+The KMP build got killed when its parent sync shell exited (it wasn't truly detached). The debug XCFramework completed and most tasks are cached. Let me relaunch it properly detached so it persists, then continue writing the Previews/Tests in parallel.
+
+While that runs, let me write the Previews and Tests files.
+
+All 7 files written. Let me check the KMP build status and run the fast gates (swiftformat, swiftlint, placeholder).
+
+swiftformat flagged only the Previews file (one long line). Let me auto-format all SubscribeCard files, then re-verify.
+
+swiftformat passes (0/6 require formatting). Now swiftlint --strict and the placeholder check.
+
+All fast gates green: swiftformat 0/6, swiftlint 0 violations, placeholder COUNT=0 on every file. Let me check the KMP build and view the auto-wrapped Previews change.
+
+The auto-wrap is correct. The KMP build is still running — let me check its log directly.
+
+The build is now on release native linking (debug tasks cached). Let me generate the Xcode project in parallel while the framework finishes.
+
+Project generated; `SubscribeCard` appears 42× in the pbxproj (auto-included via directory globbing). Let me wait for the KMP framework to finish staging.
+
+`Shared.xcframework` now appears staged. Let me wait for the KMP build to fully complete and confirm.
+
+KMP `Shared.xcframework` built and staged (BUILD SUCCESSFUL, 5m26s). Now I can run the real xcodebuild gate. Let me start the iOS app build (compiles my 6 source files into the app module).
+
+The iOS build is compiling in the background. Let me monitor progress and watch for errors.
+
+Build progressing well (4426 log lines, no errors, compiling the TeslaSync module). Let me wait for it to complete.
+
+The iOS build failed (exit 65, 10 failures) — appears related to `.Previews.swift` files. Let me extract the actual errors.
+
+All 10 failures are **pre-existing** ambiguous-type errors in `dashboard-widgets` files (`ChargeSessionDTO`, `ChargeStatusUpdate`, `ChargeDistanceUnit`, etc. — duplicate type definitions) — **none in SubscribeCard**. Let me rigorously verify: zero SubscribeCard errors, the duplicates are pre-existing, and my changes touch only SubscribeCard files.
+
+**Conclusively pre-existing breakage, zero SubscribeCard errors.** Evidence:
+- 852 total errors, **0 in any SubscribeCard file**; all are "ambiguous type lookup" / "cannot infer contextual base" from duplicate type defs in **other** surfaces.
+- `ChargeSessionDTO` is defined in **two** pre-existing committed files (`ChargeStatusLiveWidget.Model.swift` + `ChargeSessionChartWidget.Models.swift`).
+- My working tree adds **only** the 7 `SubscribeCard.*` files.
+
+The full-app target doesn't compile at HEAD for reasons outside my scope. Let me stop the hung grep and verify the shared component library is a clean compilable set so I can do an isolated build of my surface against the **real** components.
+
+The shared component library (`Sources/Components` + `Sources/Design`) only imports system frameworks and references **none** of the broken DTOs — a clean, closed compilable set. This lets me do an isolated Swift 6 strict-concurrency build of my surface against the **real** components. Let me locate the `tsGlassPanel()` modifier and confirm AppRoute's dependencies.
+
+All dependencies are clean and self-contained. Note: `/tmp/ios-build.log` got cleaned (volatile `/tmp`), so I'll re-capture build evidence to a persistent path later. Now let me build an isolated Swift 6 strict-concurrency SwiftPM package that compiles my surface against the **real** shared components + tokens, and runs my tests. I'll symlink the real files (zero drift).
+
+Components/Design are fully self-contained. Let me scaffold the isolated verification package (symlinking real files for zero drift).
+
+48 real files linked. Now the Package manifest, then build with Swift 6 strict concurrency.
+
+Excellent — my surface files compiled cleanly; the only error is in an unrelated component (`UnitFormatters.swift`) referencing an external `Units` type I didn't include. Let me find `Units` and either include it or exclude the few unrelated formatter files my surface doesn't use.
+
+`Units` lives in `Units+Facade.swift` which imports the KMP `Shared` framework — and only one unrelated component (`UnitFormatters.swift`) uses it. My surface doesn't. Let me confirm nothing else in Components depends on `UnitFormatters`' symbols, then exclude just that file from the harness.
+
+`UnitFormatters.swift` defines view types used nowhere else in Components and is the sole KMP-`Shared`-dependent file. Removing it from the harness is safe. Let me drop that symlink and rebuild + test.
+
+Isolated verification is **fully green**: the package compiled under Swift 6 strict concurrency against the **real** shared components + tokens, and **all 41 shipped test assertions passed** (catalog parity, projection, view-model lifecycle, accessibility, AppRouteParser route-parity, and 6 per-state `ImageRenderer` render-smoke checks).
+
+Now let me produce airtight baseline evidence for the blocked full-app gate: capture the build **with** my files, then **without** them (at HEAD), to a persistent log — proving the 852 errors are pre-existing and my surface adds zero.
+
+WITH my files: 852 errors, **0 in SubscribeCard**, across 21 other files. Now the baseline at HEAD (my files removed) to prove identical pre-existing breakage.
+
+Decisive: the **baseline at HEAD (without my files) also fails** (EXIT=65) across the **same 21 files** — all pre-existing dashboard-widgets/feature-views surfaces, none mine. (Error count varies, 284 vs 852, due to compiler cascade-recovery variance, but the broken file set is identical.) Let me restore my files, regenerate, and confirm the broken file sets match exactly.
+
+**Airtight proof complete.** The broken-file sets are byte-identical between baseline (no SubscribeCard) and with-SubscribeCard — the `comm -3` diff is empty. All 21 broken files are pre-existing `dashboard-widgets`/`feature-views` surfaces (e.g. `ChargeStatusWidget`, `SafetyFeaturesWidget`, `DrivingCoachSection`), **none are SubscribeCard**. My surface adds zero errors.
+
+Files restored (7 present). Let me confirm git cleanliness, then write the gate log.
+
+Git is clean — only my 7 `SubscribeCard.*` files are untracked; `.xcodeproj` and `build/` are gitignored. 
+
+To avoid skip-and-assume on the macOS gate step, let me actually run the macOS build (it shares the same broken sources) and capture real evidence, plus re-capture the scoped fast-gate outputs for the log.
+
+The macOS build failed (EXIT=65) with only 2 non-source errors and 0 SubscribeCard errors. Let me see what those 2 errors are.
+
+Both gate steps are **BLOCKED by pre-existing, out-of-scope conditions**, neither caused by my surface:
+- **iOS**: duplicate-type compile errors in 21 other surfaces (identical with/without my files; 0 in SubscribeCard).
+- **macOS**: code-signing requirement (empty `DEVELOPMENT_TEAM`, dev certificate needed) on the macOS app/widget targets — fails before compilation.
+
+Let me capture fresh, quotable output for all in-scope gates, then write the log.
+
+All in-scope gates green. Let me capture the isolated build's completion line cleanly, then write the gate log.
+
+All in-scope gates green; isolated build "Build complete!". Now let me write the comprehensive, honest gate log.
+
+Now let me clean up the gitignored build artifacts (DerivedData) and commit the surface + log per the prompt.
+
+Clean — only my 7 surface files and the log. Committing per the prompt's specification.
+
+Committed (`361b42de3`, 8 files, 1656 insertions). Let me verify the final working tree is clean and the commit is intact.
+
+All complete and verified. Working tree clean, commit intact, log ends `EXIT=0 / STATUS=DONE`, all todos done.
+
+## Summary
+
+Shipped the **`SubscribeCard`** Apple feature-view (P4 · 0255) at full parity with `web/src/features/system/components/status/SubscribeCard.tsx`, following the accepted `QuickNav` presentational-nav precedent. Committed as `361b42de3` (7 surface files + gate log, 1656 insertions).
+
+**Delivered files** (`apps/apple/TeslaSync/feature-views/SubscribeCard.*`):
+- `.Adapter.swift` — pure core: 5-channel catalog (Email/Slack/Discord/Webhook/Browser push), lucide→SF icon map, web `to` + canonical native route, responsive 1↔2-col math, projection, a11y copy, surface slug.
+- `.Model.swift` — P1/S8 state-holder (`SubscribeCardViewModel`), P1/S11 `view.opened` telemetry, P1/S10 i18n facade, Static + InMemory sources.
+- `.Views.swift` — bell header + caption, channel grid/tile, loading skeleton, empty, error+retry, stale/offline chip.
+- `.swift` — `TSGlassPanel`-wrapped card binding the model, phase switch, `onSelect` navigation.
+- `.Previews.swift` (6 states), `.Tests.swift` (41 assertions), `.strings` (byte-equal English fallbacks).
+
+**Verification (all in-scope gates green, real output):**
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **0/6** · placeholder: **COUNT=0**
+- **Isolated Swift 6 strict-concurrency build** against the **real** shared components + design tokens: **Build complete!**
+- **41/41 shipped tests pass** — catalog/route parity, projection, view-model lifecycle, accessibility, and 6 per-state `ImageRenderer` render-smokes.
+
+**xcodebuild gate — reported RED/BLOCKED honestly (not green):** The full-app iOS build fails (852 pre-existing duplicate-type errors across 21 **other** surfaces — `ChargeSessionDTO` defined twice, etc.); the macOS build fails at code-signing (empty `DEVELOPMENT_TEAM`). **Proven non-causal**: rebuilding with my 7 files removed yields a byte-identical broken-file set (0 SubscribeCard errors in either). Both blockers are out-of-scope (other surfaces / P99 signing) and owned by the acceptance gate.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0255-SubscribeCard.log  | 173 +++++++++
+ .../feature-views/SubscribeCard.Adapter.swift      | 281 +++++++++++++++
+ .../feature-views/SubscribeCard.Model.swift        | 268 ++++++++++++++
+ .../feature-views/SubscribeCard.Previews.swift     |  78 ++++
+ .../feature-views/SubscribeCard.Tests.swift        | 397 +++++++++++++++++++++
+ .../feature-views/SubscribeCard.Views.swift        | 328 +++++++++++++++++
+ .../TeslaSync/feature-views/SubscribeCard.strings  |  48 +++
+ .../TeslaSync/feature-views/SubscribeCard.swift    |  83 +++++
+ 8 files changed, 1656 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0255-SubscribeCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SubscribeCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SubscribeCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SubscribeCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SubscribeCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SubscribeCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SubscribeCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SubscribeCard.swift

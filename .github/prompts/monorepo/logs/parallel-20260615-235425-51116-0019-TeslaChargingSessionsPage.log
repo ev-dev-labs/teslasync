@@ -1,0 +1,285 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and a recently-completed reference page (ChargingHeatmapPage) to understand the established patterns.
+
+The ChargingHeatmapPage is the most recent reference. Let me read its full set of files to learn the established patterns.
+
+Let me read the remaining ChargingHeatmap files plus the tests to fully understand the pattern.
+
+Let me read the Sections file, tests, and discover the shared component/design-token APIs.
+
+Now let me discover the shared infrastructure: design tokens, components, routing, units, and the string catalog.
+
+No existing `teslaChargingSessions` route. Let me examine the route parser, registry, web route registration, and the key components I'll need.
+
+Let me examine how ChargingDetail registers (a non-enum sibling route), the RouteHostRegistry, and the app wiring.
+
+Now let me read the key shared components I'll use: DataTable, ChartContainer, BarCharts, Cards, Metrics, and feedback States.
+
+Now reading the chart bar component, cards, metrics, feedback states, pickers, buttons, and forms filters.
+
+Reading cards, buttons, pickers, typography, forms filters, and the units facade.
+
+Let me read the remaining APIs (TSCurrency, UnitPreferences.metric, typography, buttons, chart models, filters) and the web charging hooks for the data shape.
+
+Reading typography, buttons, design tokens, and the filters (range picker).
+
+Let me read the design tokens, maps components, project config, and find existing DataTable/Map usage in features.
+
+Let me read the map annotation struct and the string-catalog format for an existing key.
+
+Let me check tool availability (Xcode/swiftlint/pwsh), the placeholder scanner, and a sibling log's format.
+
+All tools available — gate can actually run. Let me read the placeholder patterns, the sibling log format, and the p4-apple gate README.
+
+Let me read the rest of the sibling log (gate + ledger sections) and the ledger/README.
+
+Let me check the ledger rows format and the build environment state (xcframework, xcodeproj).
+
+I have enough component knowledge. Let me check how sibling pages obtain user unit preferences for display (the Total Energy stat is user‑pref on web), and confirm the web `useUnits`/`useFormatting` semantics.
+
+Found `@Environment(\.tsUnits)` for user prefs. Let me read the EnergyPage template (uses tsUnits + DataTable) and find the tsUnits env key + any currency setting.
+
+Let me check how the sibling ChargingDetail handles currency, and the tsUnits env default.
+
+I now have full context. Let me check which target strings already exist, then write the plan and begin implementation.
+
+Now I'll write the plan and set up tracking, then implement.
+
+Now implementing. Starting with the Models (value types + pure derivations).
+
+Now the Format helpers.
+
+Now the @Observable page model.
+
+Now the sample/preview/test data sources.
+
+Now the main page View.
+
+Let me verify the motion component API before building sections.
+
+Now the Sections file (banner, controls, stats, map, skeleton).
+
+Let me fix the Sections file: add MapKit imports, simplify the map camera, and use plain `let model`.
+
+Now the page's loading case (pass isCompact) and the Charts file.
+
+Now the table section with columns and CSV export.
+
+Now the route registration and AppRoute wiring.
+
+Now editing AppRoute.swift (enum case, pathSegment, systemImage, group) and TeslaSyncApp.swift wiring.
+
+Now adding the strings. Let me first inspect the xcstrings raw formatting (indent + key order) to minimize diff.
+
+The xcstrings uses Xcode's formatting (keys unordered is fine). I'll insert new blocks at the top of `strings` with exact formatting, skipping any that exist, and validate JSON.
+
+All 41 keys added. Now writing the tests.
+
+Now the derivations + formatters tests.
+
+Now running the gates. First swiftlint and the placeholder scan (no framework needed).
+
+Lint violations to fix (trailing commas, line length, function length, closure style). Let me inspect the specifics and the formatter config.
+
+`--commas inline` — let me run swiftformat to auto-fix, then manually fix the closure, function length, and line length.
+
+Good — only 3 left. Let me view the current refreshButton and the Sample data block (post-format) to fix them precisely.
+
+Now let me fix the TSButton closure and replace the Sample data with a compact pipe-delimited fixture.
+
+The fixture exploded under formatting. Let me replace the whole sample-data region with a compact pipe‑delimited fixture in a separate type (avoids both function and type body length limits). I'll splice via Python for precision.
+
+Longest line is exactly 120 (within limit). Let me re-run swiftlint and swiftformat --lint on the new files.
+
+swiftformat is clean. Let me re-run swiftlint after the `fields` rename, and also add a fixture-parse test.
+
+swiftlint clean. Let me add a fixture-parse guard test, then run the full-dir swiftlint and the placeholder scan.
+
+swiftlint clean. Now the placeholder scan.
+
+Placeholder scan clean (0 violations). Let me add a map refit-on-change, then inspect the xcframework build script before the heavy build.
+
+The xcframework isn't staged — that's the gating dependency for build/test. Let me kick off the Gradle build in the background and prepare the ledger/log while it runs.
+
+Java 17 present. Starting the Gradle xcframework build in the background.
+
+While it builds, let me verify the project generates with my files (xcodegen) and check the exact ledger row format.
+
+xcodegen succeeded. Let me confirm my files are in the project and check build progress.
+
+All 11 files are in the project. But there are pre-existing `TeslaChargingSessionsMap.*` feature-view files — I must check for type-name collisions with my models.
+
+No collisions — their types use `TeslaChargingSessionsMap*`/`...Record`/`...Marker`; mine are distinct. Let me check the xcframework build progress.
+
+Gradle is downloading the Kotlin/Native distribution and linking frameworks. Let me wait longer.
+
+DEBUG xcframework done; now linking the RELEASE variant (the long pole). Let me keep waiting.
+
+Release link is the documented long pole. Let me wait in longer increments while it completes.
+
+Progress — iosArm64 release linked, now iosSimulator. Let me continue waiting.
+
+Last release link (macOS) in progress. Let me wait for completion and staging.
+
+Still linking the macOS release framework. Let me wait further.
+
+Shared.xcframework built (21m) and staged. Now let me list schemes and run the macOS build (isolating the known pre-existing Xcode-26.5 failures).
+
+Now the macOS build (full app compile). Running in background with the known pre-existing app-target file isolated.
+
+Compiling the app target (EmitSwiftModule), no errors in my files yet. Let me wait for completion.
+
+Build exited 1. Let me see whether the errors are in my files or pre-existing.
+
+No compile `error:` lines. Let me look at the failure reason (linker/signing/other).
+
+"BUILD INTERRUPTED" with no `error:` lines — likely a parallel compile failure or compiler issue. Let me dig deeper.
+
+No Swift compile errors. "BUILD INTERRUPTED" right at module emission is unusual. Let me look at the context before it and check for a compiler crash.
+
+The app target compiled (all other targets linked); "BUILD INTERRUPTED" at module emission with zero diagnostics points to a transient resource interruption (heavy shared env after the 21‑min Gradle build), not my code. Let me re-run incrementally, disabling preview-dylib generation to reduce memory pressure.
+
+The build is being killed mid‑compile (truncated log, no summary) — memory pressure on this shared machine after the 21‑min Gradle build, not a code defect. Let me free the Gradle daemon's memory and cap compiler parallelism, then resume the incremental build.
+
+15GB free, so likely build-service contention/interruption rather than hard OOM. The Gradle daemon is stopped. Let me resume the same (previews-off) incremental build with capped parallelism, synchronously, and capture the exit code.
+
+Consistently killed at `EmitSwiftModule` (the single memory‑heavy whole‑module merge for this 6000‑file target) with zero diagnostics — an environment/process‑memory limit, not my code. Crucially, all per‑file `SwiftCompile` type‑checking finished first. Let me confirm my files compiled clean and weren't the cause.
+
+The build reaching `EmitSwiftModule` proves every source file (including mine) passed type‑checking — that step only runs after all per‑file compile jobs succeed. Let me confirm my files were actually in the compile set (batched), then attempt the heavy merge step once more in isolation.
+
+Killed at the whole‑module type‑check/emit step (memory‑bound for this 6000‑file target). The sibling page achieved this here in a freer window, so let me retry the incremental build (it resumes at the emit step).
+
+Still running at 300s (not killed quickly this time — encouraging). Let me wait for it to finish the emit + object compiles + link.
+
+EmitSwiftModule passed — whole‑module type‑checking (including my files) succeeded. Now it's compiling object files (final phase before link). Let me wait for completion.
+
+Object compilation is progressing alphabetically (at "A…" surfaces; mine are "T…"). Let me wait for the full build to finish.
+
+EmitSwiftModule passed (type‑check green); now grinding through low‑memory object compiles (at "D…", `-jobs 2`). It's progressing safely. Let me wait in larger increments.
+
+At "R…" surfaces now, progressing safely. Let me wait further for the object phase + link to complete.
+
+Whole‑module type‑check already passed (the definitive correctness gate); now it's mechanical object codegen + link, no errors. Let me keep waiting.
+
+1420 files compiled, no errors, still grinding object codegen with `-jobs 2`. Let me keep waiting for the link + success.
+
+All 9 of my source files compiled to object code with zero errors. Just the final link remains. Let me wait for BUILD SUCCEEDED.
+
+Nearly through object compilation (1970 files, no errors). Let me wait for the final link.
+
+2219 files compiled, no errors, still progressing. Let me wait a longer increment for completion.
+
+2465 files compiled and climbing (large split-file app target), no errors. Let me wait once more for it to reach the link.
+
+The app target is huge and `-jobs 2` is too slow. Let me stop and resume with higher parallelism (object compiles are low‑memory; the risky emit step is already cached).
+
+Stray build processes remain. Let me check whether they belong to my slot before deciding, then start the faster build.
+
+Those stray processes are OTHER parallel slots' builds (different args/working dirs) — I must not touch them; they explain the memory contention. My build4 session was already stopped. Let me start my faster resume build cleanly.
+
+build5 (`-jobs 8`) is much faster — 2038 files in ~7 min, emit‑module passed again, no errors. Let me wait for the link.
+
+build5 reached the "T…" object compiles (very deep, near done) before contention from concurrent slots interrupted it again. The type‑check passed twice. Let me check whether my files compiled, then retry the small remaining increment.
+
+build5 compiled 3234 objects (7 of my files cached from build4, 2 recompiled now) — all 9 have valid objects. No competing slot build detected right now. Let me retry immediately to grab this quieter window — only the tail of object compiles + link remain.
+
+build6 resuming cleanly (175 objects, no errors, no interruption). Let me wait for the link.
+
+build6 is at the EmitSwiftModule step again (re‑validating). Let me wait to see it pass through to the link.
+
+build6 passed EmitSwiftModule and is into the final links (preview dylib done). Let me wait for the main app link + BUILD SUCCEEDED.
+
+build6 is re‑doing the object phase (interruptions dirty the incremental state). The correctness gate (EmitSwiftModule whole‑module type‑check) has now passed three times with all my files compiling cleanly. Let me let build6 run uninterrupted and wait a large block for it to reach the link.
+
+No interruption this run (2395 objects, at "W…" in the Sources group, no errors). Close to the link. Let me wait.
+
+build6 still uninterrupted (2940 objects, "V…" files, no errors) — closing in on the link. Let me wait.
+
+3435 objects compiled, uninterrupted, no errors — essentially the whole target. Let me wait for the final link.
+
+Uninterrupted run, 3832 files compiled, zero errors — grinding through this very large target. Let me give it another large block to reach the link.
+
+**BUILD6_EXIT=0** — the macOS build succeeded! Let me confirm.
+
+**BUILD SUCCEEDED** (macOS, full app including my page; app binary at my slot's DerivedData). Now running my unit tests (isolating the 4 documented pre‑existing Xcode‑26.5 failures, exactly as the sibling page did).
+
+TEST_EXIT=0. Let me confirm the test suite results.
+
+**TEST SUCCEEDED** — 35 tests, 0 failures (20 derivations + 15 model). macOS build + test fully green. Now starting the iOS‑Simulator build (separate SDK compile) in the background while I prepare the ledger and log.
+
+iOS build running. While it compiles, let me prepare the ledger rows and the evidence log. Let me check iOS progress first.
+
+iOS EmitSwiftModule already passed (type‑check green, including the `#if os(iOS)` branches); now compiling objects, no errors. Let me wait for it to finish while it grinds.
+
+iOS build uninterrupted (494 objects, no errors) but slow. iOS type‑check already passed. Let me prepare the ledger rows now (data is final) while iOS keeps compiling.
+
+Let me verify the ledger diff is minimal and check iOS progress.
+
+Ledger diff is clean (18 insertions, correctly placed). iOS build uninterrupted but slow (570 objects). Let me keep waiting for it to finish.
+
+iOS build steady and uninterrupted (1163 objects, no errors). Let me continue waiting.
+
+iOS build steady and clean (1463 objects, zero errors), iOS type‑check already passed. Let me keep waiting for the link.
+
+iOS at 2060 objects, still clean and uninterrupted. Let me wait for it to reach the link.
+
+iOS at 2536 objects, clean and uninterrupted. Let me continue waiting for the final stretch.
+
+iOS at 3552 objects (nearly complete), clean and uninterrupted. Let me wait for the final link.
+
+iOS at 3852 objects — my files are compiling in the final batch, zero errors. Just the link remains. Let me wait.
+
+All 9 of my files compiled clean for iOS too. Build finishing the last files before link. Let me wait.
+
+The iOS build is now doing a second architecture pass (x86_64) — the `generic` destination builds a universal simulator binary, doubling the work for no extra correctness signal (arm64 already compiled my files clean). Let me get a concrete simulator and re-run arm64‑only to link the cached objects into a fast BUILD SUCCEEDED.
+
+iPhone 17 Pro is available. Let me stop the dual‑arch build and re‑run arm64‑only (reuses cached objects → fast link).
+
+iOS arm64‑only build at EmitSwiftModule (single arch, no x86_64, no errors). Most objects are cached, so the link should follow quickly. Let me wait.
+
+iOS arm64 emit‑module got OOM‑killed by contention (same transient pattern macOS hit). Note the earlier generic iOS build already passed arm64 EmitSwiftModule and compiled all 9 of my files cleanly. Let me retry — if emit‑module catches a free window, the cached objects link fast.
+
+ios‑build3 at EmitSwiftModule (not yet killed). Let me wait to see it pass.
+
+ios‑build3 grinding at EmitSwiftModule (no kill yet). Let me wait for it to clear.
+
+ios‑build3 passed EmitSwiftModule and is compiling objects (892, no errors). Let me wait for it to reach the link.
+
+iOS build3 progressing cleanly (1340 objects, no errors, uninterrupted). The macOS gate is fully green and iOS type‑check has passed; I'll let this run to capture the iOS link. Let me wait.
+
+iOS build3 at 1813 objects, clean, uninterrupted. Let me keep waiting.
+
+iOS build3 at 2560 objects, accelerating, still clean. Let me wait for the final stretch.
+
+iOS build3 at 3457 objects (~91%), clean and uninterrupted. Nearly at the link. Let me wait.
+
+iOS build3 at 4203 objects (large target), still clean and uninterrupted. Let me wait for the link.
+
+iOS build3 at 4653 objects ("T…" files, near the end), no errors. Let me wait for the link.
+
+**IOS_BUILD3_EXIT=0** — iOS build succeeded! Let me confirm.
+
+All gates green: macOS BUILD SUCCEEDED + 35/35 tests, iOS BUILD SUCCEEDED (all 9 files compiled, no errors). Now writing the evidence log.
+
+Now let me review all changes before committing — confirming I only touch allowed files and no build artifacts get staged.
+
+Clean: only my intended files changed; the generated `.xcodeproj` and staged `Shared.xcframework` are gitignored. Let me verify the xcstrings/AppRoute diffs are minimal, then commit.
+
+All diffs are minimal and intended (xcstrings purely additive, AppRoute/TeslaSyncApp small edits). Let me stage exactly the allowed files and commit.
+
+All 16 files staged correctly. Committing.
+
+Committed (233d2815c), working tree clean. Let me update the plan, mark todos done, and clean up temp logs.
+
+All 12 todos done, plan updated, everything committed and verified. The task is complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

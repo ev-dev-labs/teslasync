@@ -1,0 +1,84 @@
+I'll start by exploring the repository structure and understanding what's available, including the web source and the Apple app conventions.
+
+Environment is macOS with Xcode 26.5, swift, swiftlint, swiftformat all available — not blocked on capability. The predecessor `Distance` surface was just committed (HEAD~1), which uses the same `useUnits` hook. Let me read the web source and the Distance reference.
+
+The `Distance` surface is the ideal template — same `useUnits` hook, same shape (canonical SI + alt unit, conversion, title, em-dash fallback). Let me read all Distance files to replicate the exact architecture.
+
+Excellent reference architecture. Let me read the remaining Distance files plus the supporting types (`UnitPreferences`, `tsUnits` env) and the web `convertTempFromSI`.
+
+Now let me read the Distance tests, the log, the supporting types (`UnitPreferences`, `tsUnits`, theme tokens), and the web conversion lib.
+
+The Distance surface references a shared `UnitPreferences` type and `\.tsUnits` environment. I need to find where those are defined (the P4 core / S8 seam) so Temperature binds to the same ones.
+
+Let me read the shared P4 core seams and the web temperature conversion function.
+
+Now let me read the exact web `convertTempFromSI` and `fmtNumber` implementations to match the conversion semantics precisely.
+
+Let me read the web Format tests to confirm exact Temperature semantics (note: display has no space, title has a space, title uses `.toFixed(1)`).
+
+I have full parity understanding. Web confirms: display has **no space** (`20°C`), title has a space and uses `.toFixed(1)`, empty renders `—`, `f` input converts via `(f-32)*5/9`. Let me verify theme tokens and lint rules before writing.
+
+I have complete parity understanding. Key Temperature-specific differences from Distance: **no space** between number and unit (`20°C`), title uses `.toFixed(1)`, SI carrier is Celsius (no scaling), affine °F conversion, and identifiers must be ≥2 chars (so `celsius`/`fahrenheit`, not `c`/`f`, per the lint rule). Let me set up tracking and write the 8 files.
+
+All 8 files written. Let me run the format/lint checks on the new files for fast feedback, and check for the placeholder script tooling.
+
+Scoped swiftformat (0/7) and swiftlint --strict (0 violations) both pass. `pwsh` is available. Let me locate the placeholder script.
+
+The scanner recurses a path; the gate's literal `-Path .../Temperature` (no extension) doesn't exist as a path, so it trivially returns 0 (same as Distance). I'll also run a **real** scan over copies of my files. First, let me verify my files contain none of the forbidden substrings.
+
+Only matches are my own `TemperatureEmptyView` type (a substring of "EmptyView"), which does NOT match the scanner's actual regex `EmptyView\(\) // placeholder`. No TODO/FIXME/Placeholder/etc. Let me run the real placeholder scanner on copies of my files plus the literal gate command.
+
+Both placeholder checks pass (EXIT=0, COUNT=0). Now let me run the full gate-scope swiftlint and swiftformat (the real gate commands) and check the Xcode project setup.
+
+swiftformat full gate passes (0/3960). No `.xcodeproj` yet (xcodegen-based); xcodegen is available. Let me run the full swiftlint gate and investigate the build dependencies (KMP Shared framework) to plan verification.
+
+Both gate linters pass on the full tree: **swiftlint --strict 0 violations (3730 files)**, **swiftformat 0/3960**. The `Frameworks/` dir is empty — the KMP `Shared.xcframework` (a Gradle artifact) isn't present, so a full `xcodebuild` cannot link in this environment (a pre-existing condition, same as the Distance predecessor). `Tokens.swift` is self-contained.
+
+I'll reproduce the predecessor's sanctioned independent verification: an isolated Swift 6 strict-concurrency build+test of the surface against the **real** design tokens + faithful seam copies. Let me set that up.
+
+Isolated Swift 6 build succeeded (all surface files + real tokens + `#Preview` macros compiled). Now the test suite.
+
+All **36 tests pass** under Swift 6 strict concurrency on the macOS SDK (0 failures), and `#Preview` macros compiled. Now let me attempt the actual `xcodebuild` gate to honestly capture the baseline state. First, confirm the xcodegen project is git-ignored so generating it is safe.
+
+`xcodegen` project would sit at `apps/apple/TeslaSync.xcodeproj`. My commit uses explicit paths so it won't be staged, but I'll confirm and clean up. Let me generate the project and attempt the iOS gate build to capture the real baseline (with a bounded wait), checking whether any errors originate in `Temperature.*`.
+
+Project generated and confirmed **git-ignored** (won't be committed). Now let me run the iOS `xcodebuild` gate command, capturing output to analyze the baseline failure and confirm no errors originate in `Temperature.*`.
+
+The build is actually assembling `Shared.xcframework` via Gradle on-the-fly (not missing after all) and progressing through Kotlin + Swift compilation. This is a long full-app build. Let me wait for it.
+
+No errors yet — Gradle is still linking the KMP frameworks for all platforms (slow). No `Temperature.*` errors. Let me continue waiting for the build to reach the Swift app compile / test phase.
+
+iOS build completed: **IOS_EXIT=65**. Crucially, every failure is a **pre-existing ambiguous/duplicate type** in unrelated surfaces (`VehicleHero*`, `VehicleHeader*`, `StateTimeline*`, `VehicleGauges*`) — the exact baseline-RED condition the Distance predecessor documented. Let me prove zero errors originate in `Temperature.*`.
+
+**Definitive: zero errors mention `Temperature`.** The surface's files (`Temperature.Adapter/Model/Previews/Projection/Views`) were actively compiling with no errors. All 156 error lines are pre-existing duplicate-type definitions in unrelated surfaces (`StateTimeline*`, `RecentDrives*`, `VehicleHero*`) — the exact baseline-RED the Distance predecessor documented. Now let me capture the macOS gate result.
+
+macOS build: **MAC_EXIT=65**, failing on **development-signing** entitlements (environment, not code) — exactly the Distance predecessor's macOS condition. Zero `Temperature` errors. Let me characterize the macOS log fully, then clean up generated artifacts.
+
+Clean: working tree shows **only my 8 `Temperature.*` files**. macOS compiled Swift cleanly (0 ambiguous errors) and failed solely on dev-signing. All gate results captured. Let me write the gate log (verifying the logs directory first).
+
+Log written. Let me update tracking, do a final clean-tree verification, and commit with the exact message from the prompt (using a glob so the `git add` reliably matches all 8 files).
+
+All clean: swiftformat 0/7, swiftlint silent (0 violations), and the working tree contains only my 8 `Temperature.*` files plus the log. Committing now.
+
+Committed successfully — `d8f0e4585`, 9 files, 1221 insertions, working tree clean. Let me mark the final task done.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0089-Temperature.log  | 194 +++++++++++
+ .../shared-surfaces/Temperature.Adapter.swift      | 232 +++++++++++++
+ .../shared-surfaces/Temperature.Model.swift        | 111 +++++++
+ .../shared-surfaces/Temperature.Previews.swift     |  50 +++
+ .../shared-surfaces/Temperature.Projection.swift   | 117 +++++++
+ .../shared-surfaces/Temperature.Tests.swift        | 359 +++++++++++++++++++++
+ .../shared-surfaces/Temperature.Views.swift        |  44 +++
+ .../TeslaSync/shared-surfaces/Temperature.strings  |  20 ++
+ .../TeslaSync/shared-surfaces/Temperature.swift    |  94 ++++++
+ 9 files changed, 1221 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0089-Temperature.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Temperature.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Temperature.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Temperature.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Temperature.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Temperature.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Temperature.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Temperature.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Temperature.swift

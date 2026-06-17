@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and verifying the capabilities required for this Apple shared-surface task.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, pwsh). Web source and `apps/apple/TeslaSync` exist. Let me read the web source and explore the Apple structure.
+
+The web source is a simple AI feature card. Let me examine existing native shared-surfaces (especially AI ones) to follow the established pattern, plus the web components it composes.
+
+There's already a native `AIAnomalyExplanations` surface. Let me find the closest analog to my web source — particularly the sibling `AIChargingCurveFingerprintClustering` — and study the native file structure pattern.
+
+The sibling isn't implemented in native yet. `AIAnomalyExplanations` is the closest done example. Let me study its full native file set plus the web `AIFeatureCard` (to capture all states I must reproduce).
+
+Now I have the web pattern. Let me study the complete native `AIAnomalyExplanations` file set — it's the ideal template since its web source mirrors mine.
+
+Excellent template. Let me read the remaining native files to fully internalize the pattern before replicating.
+
+Let me read the remaining files (Adapter, Previews, strings, Tests, AdapterTests) and locate where the stream-snapshot/action/accessibility helper types are defined.
+
+Now the test files and how the project includes these sources. Let me also verify the shared tokens/components exist.
+
+I now fully understand the architecture. Let me verify how the Xcode project includes these sources (glob vs explicit) and confirm the shared P1/S9 tokens + P4 components exist, plus check for naming-prefix collisions.
+
+The project globs `TeslaSync/shared-surfaces`, so new files are auto-included. Let me check the excludes config and verify the exact token members (TSSpacing, TSRadius, Font.TS, Color.TS) I'll use exist.
+
+Let me read the design tokens and the Tests target configuration to ensure I use valid token members and that test files are wired in.
+
+I have everything needed: tokens confirmed, test bundles auto-glob `*Tests.swift`, app target globs the rest. Let me verify the build prerequisites (xcodegen, generated project, xcframework, simulator) before writing code.
+
+Key finding: `Shared.xcframework` is missing (only `.gitkeep`), and no `.xcodeproj` is generated yet. There's a build script. Let me check the build script and the `macos-pending-verifications.md` doc, which likely documents the runner's build status.
+
+This is the key context: the repo has an established precedent (`macos-pending-verifications.md`) — the full-app `xcodebuild` is blocked by pre-existing, unrelated issues (missing KMP `Shared.xcframework` requiring Kotlin/Native, absent code-signing identities, other agents' collisions). Each surface is verified green **in isolation** instead. Let me read the rest of the doc, the placeholder checker, and lint configs.
+
+I now have full clarity. The established repo precedent (`macos-pending-verifications.md`) is unambiguous: the full-app `xcodebuild build test` is blocked by **pre-existing, platform-capability issues** — the unstaged KMP `Shared.xcframework` (needs Kotlin/Native, times out) and **0 valid code-signing identities** (just confirmed). Every prior P4 surface verifies green **in isolation** (`swiftc -typecheck` iOS-18 + macOS-15, isolated SwiftPM tests, swiftlint/swiftformat/placeholder, xcodegen enumeration) and records the full build as macOS-pending.
+
+Let me set up a tracking plan and write the surface. First, let me confirm my shared-component dependencies are self-contained.
+
+All shared components are self-contained (SwiftUI + tokens only). I have a complete understanding of the pattern. Let me set up tracking and write the surface files.
+
+All 10 files created. Now let me verify — starting with swiftformat and swiftlint on my files.
+
+swiftformat clean (0/9). Now swiftlint --strict on my files.
+
+swiftlint --strict: **0 violations in 9 files**. Now the placeholder gate. The gate's literal `-Path` points at a filename prefix (not a real dir), so to genuinely verify I'll scan a temp copy of my actual `.swift` files.
+
+Placeholder gate clean (COUNT=0). Now the key step: `swiftc -typecheck` for iOS-18 + macOS-15. Let me identify the minimal real component dependencies and any `Shared`-coupled files to exclude.
+
+No `Shared` coupling in Components/Design — clean. Let me confirm `Cards.swift` is self-contained, then run the dual-SDK typecheck with the minimal real dependency set.
+
+`Cards.swift` uses `.tsGlassPanel()` from Design. I'll compile against the full Components + Design + Tokens set (none import `Shared`). Let me run the iOS-18 typecheck.
+
+Expected — `UnitFormatters.swift` is the SharedFacade-coupled file (references `UnitPreferences` from the KMP layer) that prior agents excluded. My surface doesn't use it. Let me exclude it and re-run.
+
+iOS-18 typecheck: **0 errors**. Now macOS-15, and I'll also check for any warnings in my own files.
+
+Both SDKs typecheck with **0 errors, 0 diagnostics in my files**. Now the isolated SwiftPM test run. Let me build a temp package (module `TeslaSync` = my sources + design system, minus the Shared-coupled `UnitFormatters`) and run `swift test`.
+
+**All 69 tests passed, 0 failures.** Now let me clean up and run `xcodegen generate` to prove the files are enumerated in the project.
+
+xcodegen succeeded. Let me verify my files are enumerated in the generated project, and confirm the `.xcodeproj` handling (it's a generated artifact).
+
+All 10 files enumerated (60 pbxproj refs); the `.xcodeproj` is gitignored. **Isolation verification is fully green:** swiftformat 0/9, swiftlint 0 violations, placeholder 0, iOS-18 + macOS-15 typecheck 0 errors, **69/69 tests pass**, xcodegen enumerates all files.
+
+Now the real gate. Let me first check whether the documented pre-existing cross-surface collisions still exist in this tree, then attempt the actual `xcodebuild`.
+
+The documented pre-existing blockers are **confirmed present** in this tree (independent of my surface):
+- `StateTimelineModel` redeclared in both `dashboard-widgets/StateTimelineWidget.Model.swift` and `feature-views/StateTimeline.Model.swift`
+- `RecentDrives*` redeclared across dashboard-widgets + feature-views
+- **0 code-signing identities**
+- KMP `Shared.xcframework` unstaged
+
+Let me check the logs dir and the Gradle setup, then run the real gate.
+
+Logs dir exists (443 prior p4-apple logs); Gradle wrapper + JDK 17 present. Let me assemble the KMP `Shared.xcframework` in the background (so a real app-module compile of my surface is possible), while I run the fast gate steps in parallel.
+
+Gradle assembling in background. Meanwhile, let me build the log with the deterministic verification evidence. First, capture the fast gate steps.
+
+Now append placeholder gate, dual-SDK typecheck, i18n parity, and xcodegen evidence.
+
+Now append the dual-SDK typecheck and isolated test evidence.
+
+Let me append the isolated test result and xcodegen enumeration, and check on the Gradle build.
+
+Let me check the Gradle background build and append the xcodegen enumeration evidence.
+
+Gradle still assembling (~3.5 min in; doc says 6–8 min). Let me wait for it.
+
+Gradle's at ~9 min (the documented Kotlin/Native long-pole). Let me give it a bit more.
+
+Gradle **BUILD SUCCESSFUL in 8m 49s** — the release `Shared.xcframework` is built. Let me stage it and run the real `xcodebuild` gate (iOS Simulator build needs no signing, so it'll reach Swift compilation).
+
+Framework staged (ios-arm64-simulator included), scheme present. Now the real `xcodebuild` iOS-Simulator build — capturing full output to grep for my surface vs. the pre-existing collisions.
+
+xcodebuild failed (exit 65, expected). Let me analyze the cause — confirm **zero** errors in my surface vs. the pre-existing collisions.
+
+0 errors in my surface (the `grep -c` returning 0 broke the `&&` chain). Let me get the full breakdown of the 108 pre-existing errors.
+
+**Definitive evidence: 0 errors in my surface.** All 108 build errors are pre-existing cross-surface collisions in *other agents'* surfaces — `StateTimelineWidget.*`/`StateTimeline.*` and `RecentDrivesListWidget.*`/`RecentDrivesSection.*` ambiguous redeclarations (exactly as documented in `macos-pending-verifications.md`). My surface compiled clean inside the real app module.
+
+Let me append this evidence and kick off the macOS build line in parallel.
+
+While the macOS build runs, let me confirm my surface was actually compiled (not skipped) and has zero warnings in the real iOS build.
+
+My `.strings` catalog validated (CopyStringsFile, UTF-8) and the app module compiled with my surface included — **0 errors, 0 warnings** mine. Let me wait for the macOS build to finish.
+
+macOS build also failed (exit 65). Let me confirm the same attribution — 0 errors in my surface.
+
+Identical on macOS: 108 errors, **all** in other agents' `StateTimeline*`/`RecentDrives*` surfaces, **0 in mine**, plus 0 signing identities. Let me finalize the log with the conclusion.
+
+Log finalized (179 lines). Now let me check git status, clean up build artifacts, and verify only my allowed files are staged.
+
+All 11 deliverable files are untracked; every build artifact is gitignored. Let me update tracking, clean generated artifacts, and commit the surface + log.
+
+Let me stage the allowed files and commit.
+
+Committed as `95b15f192`. Let me do a final clean-tree verification.
+
+All committed, tree clean — 11 files, 2290 insertions. The task is complete to the fullest extent the host permits.
+
+Merge made by the 'ort' strategy.
+ ...d-surfaces-0027-AIMLChargingCurveClustering.log | 179 ++++++++++
+ .../AIMLChargingCurveClustering.Adapter.swift      | 326 ++++++++++++++++++
+ .../AIMLChargingCurveClustering.AdapterTests.swift | 268 +++++++++++++++
+ .../AIMLChargingCurveClustering.Chrome.swift       | 164 +++++++++
+ .../AIMLChargingCurveClustering.Model.swift        | 367 +++++++++++++++++++++
+ .../AIMLChargingCurveClustering.Previews.swift     | 117 +++++++
+ .../AIMLChargingCurveClustering.Projection.swift   | 119 +++++++
+ .../AIMLChargingCurveClustering.Tests.swift        | 345 +++++++++++++++++++
+ .../AIMLChargingCurveClustering.Views.swift        | 239 ++++++++++++++
+ .../AIMLChargingCurveClustering.strings            |  45 +++
+ .../AIMLChargingCurveClustering.swift              | 121 +++++++
+ 11 files changed, 2290 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0027-AIMLChargingCurveClustering.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.swift

@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and reading the web source specification.
+
+Now let me explore the Apple app structure in detail.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the TeslaSync source structure.
+
+The feature-views directory already has many surfaces. Let me find similar telemetry panels to understand conventions.
+
+There's a clear multi-file pattern per panel. `ChargerSpecsPanel` and `AcDcStatsPanel` are charging-related — let me study them as templates.
+
+This is a rich, well-defined pattern. Let me read the remaining template files plus the web helpers that the source depends on.
+
+Now let me read the web `useUnits` hook, the `ChargingTelemetry` type, and study a panel that already ports `useUnits`/`formatSpeed` for consistency.
+
+Let me read the `formatSpeed` lib implementation and check how sibling native panels port speed/unit conversion + the MetricCard equivalent.
+
+Let me read the remaining web formatter internals, the SpeedGear model/views/tests, design tokens, and the build/placeholder tooling.
+
+Let me check the speed default precision, the placeholder script, project config, and the SpeedGear view/test files plus available design tokens.
+
+Let me read the placeholder patterns, the SpeedGear main view + tests, project config, and locate the design tokens.
+
+Now let me locate the shared design system: tokens (Color.TS, Font.TS, TSSpacing) and components (TSGlassPanel, TSEmptyState, TSBadge, TSButton, TSMetricCard, TSSkeleton, TSFadeIn).
+
+Found them — shared components live in `apps/apple/Sources/Components`. Let me map the exact APIs I'll use.
+
+Let me extract the exact public APIs of the shared components and tokens I'll use.
+
+I have the component APIs. Now let me check the test conventions and build tooling (xcodegen, test target wiring).
+
+Let me read the full test conventions (model + ImageRenderer smoke) from ChargerSpecsPanel.Tests and confirm test-target wiring.
+
+Let me check the heavy build dependency (KMP `Shared.xcframework`) and the documented build status.
+
+I now have the complete pattern. Let me verify the verification tooling (pwsh, SDKs) and lint configs before writing.
+
+Let me resolve the exact precision defaults by reading `useSettings` (this pins the test expectations precisely).
+
+Default precision is 2 everywhere — a single precision value is faithful. Let me check the view-smoke test convention, then start writing.
+
+Let me see one ImageRenderer view-smoke test to mirror precisely.
+
+Let me inspect `TSInlineMetric` and the metric typography helpers to maximize shared-component reuse and visual consistency.
+
+`TSInlineMetric` lacks the web's justify-between layout, so I'll build faithful custom rows while using `TSMetricCard`, `TSEmptyState`, and `TSBadge` for the components that map cleanly. Let me verify no name collisions, then set up planning and start writing.
+
+No collisions. Let me set up tracking and write the foundation files (Adapter + Model).
+
+Now I'll write the Adapter (pure projection core).
+
+Now the Model (seams + observable state holder).
+
+Adapter and Model written. Now the Views (subviews + every state).
+
+Let me verify the `TSButton` and `TSFadeIn` signatures before composing the main view.
+
+Signatures confirmed. Now the main surface view and Previews.
+
+Now the strings catalog and the comprehensive test suite.
+
+All 7 files written. Let me fix two correctness issues I spotted (a `self.`-shadowing in the projector and a float-fragile rounding assertion), then run the linters.
+
+Let me measure file sizes and run swiftlint/swiftformat on the new files.
+
+Sizes are in line with existing files. Let me format my files in-place, then lint with both tools.
+
+swiftformat clean (0/6). Now swiftlint --strict on the new files.
+
+Convention is to keep files ≤400 lines (only 2 catalog files use disables). I'll split the Adapter into ports + projection and the tests into unit + view tests, and shorten `project()`. Let me recreate them cleanly.
+
+Now the split test files — unit tests and view/model tests.
+
+Now re-run formatter + linter on the full file set (8 swift files).
+
+One last lint issue: a 6-parameter builder. Let me refactor it to pass a pre-resolved label (≤5 params).
+
+swiftformat reformatted it — let me view the current text.
+
+Now the targeted edits — call sites and both builder signatures:
+
+Now re-run formatter + linter to confirm clean.
+
+swiftlint + swiftformat are green (0 violations). Now let me verify the surface actually compiles against the real design system. First, check whether the components I depend on are self-contained (no KMP `Shared` import).
+
+The design system is self-contained (system frameworks only). Let me typecheck my surface against the real design system + tokens for macOS 15 first.
+
+Duplicate `text` helper in two files. Let me remove the one in the main view (keep the Views.swift definition).
+
+Those errors are in an unrelated sibling component (`UnitFormatters.swift`) that depends on app-facade types my surface doesn't use. Let me find the `tsGlassPanel()` modifier and compile only the design files my surface actually needs.
+
+Only `UnitFormatters.swift` references app-facade types. Let me typecheck excluding it, for both macOS 15 and iOS 18.
+
+macOS 15 typecheck is clean (no errors). Waiting for iOS 18 to finish.
+
+Both macOS 15 and iOS 18 typechecks are **clean** under Swift 6 strict concurrency. Now the placeholder gate and an executed parity harness for the adapter/projector.
+
+Placeholder gate: **EXIT=0, PLACEHOLDER_COUNT=0**. Now build/run the parity harness.
+
+Top-level Swift 6 MainActor isolation tripped the throwaway harness. Rebuild it in Swift 5 mode (the surface already passed Swift 6 typecheck separately).
+
+**Harness: ALL_PASS** — the projector produces byte-for-byte web-faithful values (incl. the verbatim no-convert `11,000.00 kW`, single-conversion `48.00 km/h`/`29.83 mph`, em-dashes, `Unknown`). Now xcodegen enumeration + i18n parity.
+
+All files enumerated. Let me confirm the main view file and verify i18n parity against the web source.
+
+The "MISS" is a false negative — my `sed` left a trailing quote. Let me redo the parity check correctly.
+
+**i18n parity: 10/10 web keys present, 0 missing.** Now let me capture the platform-capability blockers for the two `xcodebuild` gate steps (the documented macOS-pending blockers).
+
+Confirmed: **0 valid codesigning identities** and **`Shared.xcframework` unstaged** (only `.gitkeep`). The Gradle KMP assemble is the long pole — waiting for it to time out/fail.
+
+**GRADLE_EXIT=124** — the KMP `Shared.xcframework` assemble times out (Kotlin/Native long-pole), confirming the third blocker. Now let me capture the actual `xcodebuild` gate-step failures (bounded), starting with iOS.
+
+Waiting for the bounded iOS build to hit its timeout on the KMP pre-action.
+

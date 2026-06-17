@@ -1,0 +1,176 @@
+I'll start by exploring the repository structure to understand the existing Apple app setup, the web source, and the shared infrastructure mentioned in the prompt.
+
+Apple app structure exists. Let me read the web source and explore the existing Apple app architecture in parallel.
+
+Now let me examine the existing `feature-views` directory pattern and the shared infrastructure (state holders, tokens, i18n).
+
+The feature-views directory has 1708 files following a multi-file pattern per view. Let me examine the file-set pattern for one example and check for any existing TeslaAccount files.
+
+Now I understand the canonical 7-file pattern: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me read a complete reference example and the SharedFacade infrastructure.
+
+Excellent architecture clarity. Let me read the remaining reference files and the shared infrastructure (Views, Tests, strings, Previews, Domains, Theme, UI components) in parallel.
+
+Let me read the design tokens, key UI components, the test pattern, the existing settings domain model, and the web hooks in parallel.
+
+I now understand the data shapes and architecture. The web source uses 5 hooks (incl. `useRefreshAuth`). This is an interactive surface with mutations + confirm + toast, more complex than the pure-presentational reference. Let me read the native component library and find an existing feature-view that does actions/confirm/toast to follow that pattern.
+
+Let me read the feedback/overlay/motion components and find the generated design tokens, plus search for an existing feature-view that does actions+confirm+toast (the closest pattern to mine).
+
+Let me find the generated tokens, typography, skeletons, and search for an existing interactive feature-view with confirm dialog + toast + actions to match the established pattern.
+
+`UserImpersonateButton` is the ideal interactive reference (button + confirm + action + toast). Let me read its full file set and the generated design tokens.
+
+`UserImpersonateButton` is the canonical interactive pattern. Let me read its remaining files, the design tokens, typography/banner/skeleton components, AND check tooling availability (critical for the gate) in parallel.
+
+All tooling is available (Xcode, swift 6.3.2, swiftlint, swiftformat, pwsh) and simulators present — the gate can run for real. Let me read the test/preview patterns, design tokens, and remaining UI primitives.
+
+I have the full interactive pattern. Now let me confirm exact token names (`TSTone`, `Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`), typography components, and how the Xcode project includes these files (scheme names, file globbing).
+
+Let me confirm the remaining details: Font tokens, `TSSkeleton` signature, the Xcode project file-inclusion + scheme names, and the web date formatter to mirror.
+
+Let me check the project generation setup (xcodeproj/xcodegen), the test-target config, and the web date formatter.
+
+Critical: the app/test targets depend on `Frameworks/Shared.xcframework` (the compiled KMP framework). Let me verify whether it exists — this determines whether the full gate can build.
+
+Key finding: `Shared.xcframework` (the compiled KMP core) is **missing** — only `.gitkeep`. The app/test targets depend on it via a Gradle pre-build step. Let me check whether the Kotlin/Gradle toolchain can produce it, and inspect the placeholder checker + macOS test target.
+
+JDK 17 + gradlew are present, so building the KMP framework may be feasible (the long pole). Let me read the forbidden-pattern list (so my code stays clean), then kick off the framework build in the background while I write the surface.
+
+Forbidden patterns are case-insensitive and include "Placeholder", "TODO", "FIXME", "XXX", "not implemented". I'll keep all Swift files clean of these. Let me set up tracking and kick off the long-pole KMP framework build in the background.
+
+Project generated. Now let me start the KMP framework build in the background (the long pole) and write the surface code while it runs.
+
+Project generated and framework build running in background. Let me verify there are no `TeslaAccount*` symbol collisions, then start writing the Adapter (the pure projection core).
+
+No collisions. Now I'll write the surface. Starting with the Adapter (pure, testable projections).
+
+Adapter done. Now the Model — the seams (telemetry, status, action, expiry-signal, toast), the `@Observable` view-model with the confirm/action/recovery flows, in-memory seams, and the i18n facade.
+
+Let me check the framework build progress, then write the main view.
+
+Framework build still running. Let me continue writing the view files.
+
+Now I'll refine the Adapter's action-button model to carry button prominence (so the view maps to `TSButtonVariant` without re-deriving), then write the subviews.
+
+Now the subviews — the full presentational layer with a wrapping action row, status branches, and the leaf-state chrome.
+
+Now the i18n catalog. Let me check the framework build status and write the strings file.
+
+Now the previews covering every state.
+
+Now the comprehensive test suite — adapter projections, model state/flows, toast routing, and accessibility.
+
+All 7 files are written. The framework build completed — let me check the result.
+
+The KMP framework built successfully (10m) and is staged — the full gate is now feasible. Before the expensive xcodebuild, let me validate my files with the linters. Let me read the lint configs and run them on my files.
+
+Critical constraints: line_length 120 (strict → warnings are errors), swiftformat maxwidth 120 with before-first wrapping. Let me auto-format my files, then lint them.
+
+Only the Tests file has 4 long lines. Let me run swiftformat on my files to apply the repo's formatting rules, then re-check.
+
+All lines ≤120 now. Let me verify with `swiftformat --lint` and `swiftlint --strict` on my files.
+
+SwiftFormat passes. SwiftLint flags file_length (>400) on Model/Views/Tests and type_body_length (>250) on the model test class — the references avoid this by splitting across more files. Let me check all line counts and split accordingly.
+
+Clear plan: split Model, Views, and Tests to stay under 400 lines/file and 250 lines/type. Let me view the exact tail sections to move precisely.
+
+Let me view the exact blocks to move (OSLog defaults + in-memory seams + facade).
+
+Now I'll create the Seams file (concrete seam implementations + i18n facade) and remove those blocks from Model.
+
+Now remove the moved blocks from Model.swift (the two OSLog defaults and the in-memory seams + facade).
+
+Now truncate Model.swift to remove the moved in-memory seams + facade (everything from that MARK to EOF).
+
+Model is 381 lines now. Now split Views.swift — move the actions row, synced line, chrome, and layout (from line 305) into a States file. Let me verify the boundary.
+
+Views split done (303 + 239). Now split Tests.swift — move model tests + doubles to a ModelTests file and split the oversized model test class into two. Let me find the boundaries.
+
+Now truncate Tests.swift to keep only adapter tests, then write a fresh ModelTests file with the model tests split into two classes.
+
+Now I'll write the ModelTests file with the model tests split into two classes (each under the type-body limit) plus shared file-scope helpers and the test doubles. Let me also fix the Tests.swift header to reflect the split.
+
+Now let me re-format and re-lint all the (now split) files, and verify line counts.
+
+ModelTests is 419 lines (>400). I'll split it: keep the Status suite in ModelTests and move the Actions suite to a separate `ActionTests.swift` (each self-contained). Let me find the boundaries.
+
+Splitting the model tests across two self-contained files. Let me assemble them.
+
+SwiftFormat reports a brace imbalance in both assembled files. Let me inspect the tails to diagnose.
+
+The doubles block lost its final 3 lines (MutableClock's tail) during extraction. Let me append the missing closing lines to both files.
+
+Braces balanced, both test files under 400 lines. Let me run the full swiftlint --strict and swiftformat --lint on all my files.
+
+All linters pass (swiftformat + swiftlint strict, 0 violations). Now the build. Let me verify the log directory and available simulators, then start compiling the app + tests for iOS.
+
+Log dir exists with prior gate logs. I'll use "iPhone 17 Pro". Let me peek at a prior gate log for the expected format, then start compiling the app + tests (validates all my files).
+
+Crucial insight from the prior log: the iOS app **compiles cleanly** — that gate was blocked on infra (signing, parity ledgers), not compile errors. My build is running. Let me update tracking and write the plan while it compiles.
+
+Let me check the iOS build progress.
+
+The build surfaced errors — but in **pre-existing** `dashboard-widgets` files (ambiguous `ChargeSessionDTO` type lookups), not mine. Let me confirm my files are clean and get the final status.
+
+My TeslaAccountSection files compile **cleanly** — all 142 errors are in pre-existing `dashboard-widgets/*` files (ambiguous `ChargeSessionDTO`/`ChargeDistanceUnit` type lookups vs the Shared framework). Let me confirm these are pre-existing and unrelated to my change.
+
+Confirmed: I only added TeslaAccountSection files; the failures are in **pre-existing, unmodified** surfaces (DrivingCoachSection, ~40 dashboard-widgets) that don't compile against the Shared framework — independent of my change. Let me quantify the pre-existing breakage and check whether the design-system pieces my surface needs are Shared-free (so I can run my tests in isolation).
+
+Massive pre-existing breakage: **293 distinct surfaces (373 files) fail to compile** against the Shared framework — none are mine. The design-system pieces I need are all Shared-free, so I can run my tests in isolation. Let me find which Components/Design files import Shared (to build a clean harness).
+
+None of the 41 Components/Design files import Shared. My tests only exercise the pure Adapter/Model/Seams (which need `TSTone` from Badges). Let me verify Badges is self-contained so I can build a minimal isolated harness to actually *run* my tests.
+
+Badges is fully self-contained. I'll build a minimal isolated SwiftPM harness (`TeslaSync` module = tokens + TSTone + my Adapter/Model/Seams) and run my test suites against it — proving they compile and pass, independent of the 293 pre-existing broken surfaces.
+
+The harness uses Swift 6 strict-concurrency (stricter than the app build, which compiled my files cleanly). It flags `TeslaAccountActionButton` static constants needing `Sendable` — a genuinely-correct conformance (immutable value type) that's also good practice. Let me add it to my Adapter.
+
+**All 51 tests pass** in the isolated harness (Swift 6 strict-concurrency, macOS) — proving my suites compile and pass. The `Sendable` fix also makes my code Swift-6-clean. Now let me re-verify lint after the edit, run the placeholder gate on my files, and confirm the pre-existing ambiguity is a real committed duplicate.
+
+check-placeholders on the whole `feature-views` dir reports 27 — but those are in pre-existing surfaces. And critically, `ChargeSessionDTO` is declared **twice** in committed dashboard-widgets files (a pre-existing duplicate → the app target can't compile regardless of my change). Let me confirm MY files are placeholder-clean in isolation.
+
+My files are placeholder-clean (EXIT=0, zero forbidden patterns). Now I'll run the actual gate commands and capture real results to the log. Starting the iOS `build test` (will fail on pre-existing breakage — capturing honestly).
+
+While the iOS build runs, let me execute the lint/format/placeholder gate steps (capturing results).
+
+swiftformat (whole tree, 2414 files): **EXIT=0**. check-placeholders (my surface): **EXIT=0**. Now swiftlint --strict (whole tree), and let me check the iOS build.
+
+swiftlint is running and the iOS build continues. Let me wait for both to complete.
+
+iOS gate: **IOS_EXIT=65** (build failed on pre-existing breakage). Let me read the swiftlint result and confirm the iOS failure is pre-existing (not mine).
+
+iOS gate: EXIT=65, 1040 errors, **0 in my files**. swiftlint --strict (whole tree): 1 violation. Let me confirm that single violation is pre-existing, not mine.
+
+The single swiftlint violation is in pre-existing `LiveSignalSparklinesWidget.Builder.swift` — **not mine** (my 10 files: 0 violations). Now the macOS gate step.
+
+While macOS builds, let me gather evidence data for the log (file counts, pre-existing failure breakdown from the actual gate run).
+
+My surface: 10 swift files + strings, all ≤381 lines, **0 files failing** in the iOS gate build. Let me wait for the macOS build to complete.
+
+macOS gate: **MAC_EXIT=65** (same pre-existing cause). Let me confirm my files are clean there too, then assemble the gate log.
+
+All gate steps captured. Summary: iOS/macOS builds fail on **pre-existing, out-of-scope** breakage (duplicate `ChargeSessionDTO`, widget signing) with **0 errors in my files**; swiftlint's 1 violation is in a pre-existing widget; swiftformat + placeholder pass. My surface is green by every in-scope measure (51 tests pass). Let me write the honest gate log.
+
+Now let me verify what git will stage (generated artifacts must be ignored), then commit the surface + log.
+
+Clean staging — only my 11 surface files + the log (generated `xcodeproj`/`xcframework` are git-ignored; no foreign file touched). Let me commit.
+
+Committed (20c6a6da2). Let me finalize: update tracking, clean up temp artifacts, and verify the working tree is clean.
+
+Everything is committed and the working tree is clean. The task is complete to the maximum extent permitted by scope.
+
+## Summary
+
+I shipped a production-polished, native SwiftUI parity of **`TeslaAccountSection`** at `apps/apple/TeslaSync/feature-views/TeslaAccountSection.*` — 11 files (10 Swift + a `.strings` catalog), following the repo's established multi-file surface architecture (Adapter / Model / Seams / View / Views / States / Previews + adapter & model test suites).
+
+**Parity with the web source** (`features/settings/components/TeslaAccountSection.tsx`):
+- All hooks bound through **shared P1/S8 seams** (status / action / toast / auth-expiry) — no HTTP in the view.
+- **Every state renders**: loading, empty, error+retry, data (connected w/ "Expires in Nd" pill + "Token expires…" / not-connected / disconnected + reconnect body), plus the orthogonal stale/offline freshness axis.
+- All web i18n keys via the **P1/S10 facade**; VoiceOver labels on every control; `view.opened` telemetry (P1/S11); the disconnect `ConfirmDialog` → native `.alert`; `useToast` → toast seam.
+
+**In-scope verification — all GREEN:**
+- `swiftformat --lint`: 0/10 • `swiftlint --strict`: 0 violations • check-placeholders: 0
+- Clean compile in the **real iOS + macOS app targets** (0 errors in my files)
+- **51 unit tests pass** (adapter + model status/actions + a11y + i18n), executed in an isolated SwiftPM harness under Swift 6 strict concurrency.
+
+**Gate outcome: `EXIT=65 / STATUS=BLOCKED`** (logged at `.github/prompts/monorepo/logs/p4-apple-feature-views-0216-TeslaAccountSection.log`). The full-app `xcodebuild build test` cannot return 0 because **293 pre-existing, committed, out-of-scope surfaces** don't compile against `Shared.xcframework` (e.g. a duplicate `ChargeSessionDTO` declaration in `dashboard-widgets`) plus a macOS widget signing requirement — none of which this prompt is permitted to modify. Per the Honesty Covenant I reported this as BLOCKED rather than fake a pass. I also built the KMP `Shared.xcframework` (a git-ignored prerequisite) so the gate was genuinely runnable. Committed the surface + honest log; no foreign file touched.
+

@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure and understanding both the web source and the native Apple app structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+The `dashboard-widgets` directory already exists with 419 files following a multi-file pattern. Let me check whether my widget already exists and study a complete reference widget.
+
+My widget doesn't exist yet. Let me study the complete file set for representative reference widgets to understand the established pattern.
+
+The pattern is a 7-file set per widget: `.swift` (main view), `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. `ProjectedRangeWidget` is the closest analog (battery/energy data). Let me read its full set.
+
+Excellent, this is a clean, well-architected pattern. Let me read the remaining reference files: Adapter, Views, Previews, Tests, and strings.
+
+Let me read the Previews, Tests, and strings files, plus locate the shared infrastructure types referenced (registration, tokens, MeasurementSystem).
+
+I now understand the full 7-file pattern. Let me examine the shared infrastructure types and the web data contract. Let me locate the key shared definitions and the web hook/components.
+
+Let me read the core infra types, the web data types, and the design tokens definitions.
+
+Let me locate the exact token definitions (TSSpacing, TSRadius, Font.TS, Color.TS, TSTone) and the shared view components to confirm available APIs.
+
+Tokens are defined in `TeslaSyncWatchShared`, but dashboard-widgets are in the main app. Let me examine project.yml target mapping and the main Theme.swift to understand how tokens are shared.
+
+Now I understand the build wiring: dashboard-widget files are auto-included via directory glob, tests go to the test bundles, tokens come from `../design/generated/apple`. Let me verify tooling and confirm token APIs + whether a central catalog needs registration.
+
+There's a `WidgetPicker.Catalog.swift`. Let me check whether it references individual widget registrations (i.e., whether I must add mine) and confirm the TSTone API.
+
+The catalog already has a `battery-degradation-forecast` entry (line 322). Let me read it to confirm exact metadata my widget's `registration` must match.
+
+Catalog entry confirmed (id `battery-degradation-forecast`, 2×4, icon `chart.line.downtrend.xyaxis`). The static catalog is already correct — my widget just needs a matching `registration`. Now let me read the web shell/shared tip-card components and the native data-display primitives I'll reuse.
+
+Let me confirm the full token vocabulary (Font.TS, Color.TS, TSSpacing, TSRadius) from the generated Tokens file and the TSCard API.
+
+I have the complete token vocabulary. Now let me assess the build/gate feasibility before writing code: check pwsh, the placeholder script, and whether the KMP `Shared.xcframework` (a scheme pre-action dependency) is available.
+
+The KMP `Shared.xcframework` isn't staged (only `.gitkeep`); the scheme builds it via Gradle/Kotlin-Native as a pre-action. That's the main gate risk. Let me check whether my widget's real dependencies are KMP-free (enabling a focused typecheck) and kick off the framework build in the background to assess full-gate feasibility.
+
+My widget's dependencies are all KMP-free (SwiftUI/Foundation only), and the web source uses plain text (no AnimatedNumber), so my surface won't import `Shared`. The Gradle KMP build is slow (timed out at 150s). Let me start it detached for the real gate, and meanwhile check whether the whole Components layer is KMP-free so I can do a focused typecheck.
+
+The Components layer is fully KMP-free (39 files), so I can do a focused typecheck. Let me check the native StatCard/Card equivalents and the web StatCard to render the "Current Health" card faithfully.
+
+The KMP build completed. Let me check its result and read the `TSStatCard` API for the "Current Health" card.
+
+The launcher shell returned (the `&`), but Gradle itself is still linking the release framework (slow). I'll let it run and verify later. Let me check the lint/format configs to avoid violations, then write the code.
+
+Let me read the forbidden-pattern list and recheck the Gradle build status.
+
+I have everything I need. Key constraints noted: forbidden words (`TODO`, `FIXME`, `Placeholder`, `not implemented`, `Lorem ipsum`, plus prompt's `stub`/`mock`); swiftformat `--self remove` + `before-first` wrapping. The KMP build is running under heavy parallel contention. Let me set up tracking and write the 7 files, starting with strings + Model.
+
+Now the Model file (state-holder seam, telemetry, i18n facade):
+
+Now the Adapter (pure projection core — health tier, risk rows, tips, formatting, accessibility):
+
+Now the presentational subviews:
+
+Now the main widget view (shell, header, states, layout switching):
+
+Now the previews (every state) and then the tests:
+
+Now the comprehensive tests:
+
+All 7 files written. Let me run the focused verifications — swiftformat, swiftlint, and the placeholder gate on my files — and check the KMP build progress.
+
+Auto-fixable formatting issues. Let me run `swiftformat` (the ecosystem auto-fixer) on my files, then re-verify both linters.
+
+New files are untracked, so no diff. Let me view the auto-formatted regions directly and re-run both linters.
+
+Changes are correct (switch-expression implicit returns, wrapped property body). Let me re-verify both linters pass on my files.
+
+Both linters pass on my files (FORMAT_EXIT=0, swiftlint 0 violations). Placeholder check passed. Now let me do a focused `swiftc` typecheck against the real KMP-free design-system layer to validate types compile before the heavy xcodebuild.
+
+The errors are in unrelated `Components/Maps` files (external `TSChartPalette`), not mine — pulling all of Components drags in extra deps. Let me identify exactly which external `TS*` symbols my files use, then compile against a minimal real dependency set.
+
+My files use only `TSSpacing`, `TSRadius`, `Color.TS.*`, `Font.TS.*` (Tokens), `DashboardWidget*` (Infra), `TSTone` (Badges), `TSSkeleton` (Skeletons) — `TSBadge` is only a comment. Let me compile against that minimal real set plus a faithful `TSSkeleton` (its real struct is self-contained; the rest of Skeletons.swift drags in `TSCard`).
+
+My 5 view-side files type-check cleanly (Swift 6 strict, macOS 15 target). Now let me check the KMP framework build status to proceed with the full gate.
+
+Slot-7's release `Shared.xcframework` is built. Let me stage it, generate the Xcode project with my new files, and verify the log directory and simulator exist.
+
+Project generated, framework staged, iPhone 16 sim booted. Let me confirm my files were picked up by xcodegen, then start the iOS build+test gate.
+
+All 7 files are in the project. Let me get a fast compile signal on the real app target (building the target directly against the staged framework, skipping the gradle scheme pre-action), before running the official combined gate.
+
+Full app compilation is underway (large module + contention). Let me continue waiting.
+
+Still compiling under heavy parallel load. Let me keep waiting and check progress in parallel.
+
+Load average is 223 — extreme contention from ~20 parallel slots all compiling. The build is progressing (20 active compiler processes) but slow. Let me stop the diagnostic and patiently wait for the build.
+
+Key finding: the **entire app — including all my widget files — compiled successfully**. The only failure was the linker for **x86_64**, because the staged `Shared.xcframework` only has an arm64 simulator slice and my `-target` invocation built all architectures. The official gate uses `-destination 'platform=iOS Simulator,name=iPhone 16'` (Apple-Silicon → arm64-only), which links against the arm64 slice that exists. Let me run the official gate command. First the log header + iOS build/test.
+
+Now the official iOS gate command (arm64 via destination). This is a large build under heavy load — I'll start it and monitor.
+
+Still building (~16 min). Let me peek at the log tail to gauge progress without disturbing the build.
+
+Progress visible (app module compiling, load easing to ~141). Let me keep waiting for the build+test to finish.
+
+App target built and linked (arm64) successfully — now building test bundles and preparing to run tests. Let me keep waiting.
+
+Build SUCCEEDED — tests are now launching on the simulator. Let me continue waiting for test results.
+
+The test action is recompiling for testing (separate from the build action), then will run. Let me keep waiting.
+
+The iOS run shows the critical signal: **BUILD SUCCEEDED** (my code compiles + links in the real arm64 target) and UITests even started passing. The failure is environmental — `xcrun: error: unable to find utility "simctl"` and "Test crashed with signal kill" — the simulator/test-runner infrastructure died under the extreme parallel load (was load avg 223), during the pre-existing **UITest** suite, not my code. Let me check whether my unit tests ran and verify simctl is back.
+
+Clear diagnosis: the `TeslaSyncTests` bundle (with my tests) **compiled successfully**, but the `test` action crashed during the pre-existing **UITest** suite when `simctl` transiently vanished under ~223 load (now back, load down to ~81). My unit tests never got to execute. Let me run my surface's unit tests in isolation (incremental build is now warm) to get clean evidence — this avoids the flaky UITest E2E path entirely.
+
+Now my tests actually ran: **24 of 25 passed**. The one failure is a bug in my **test fixture**, not the code: `"deep_discharge_soc"` contains the substring `"charge"`, so it correctly maps to `bolt.fill` first (matching the web `riskIcon` ordering, which checks charge before battery/soc). My code is faithful to the web; the test input was wrong. (The trailing `simctl` line is just post-test diagnostics collection — tests already completed.) Let me fix the fixture to cleanly exercise the soc/depth branch.
+
+Let me re-verify lint/format on the edited test file and re-run my surface's unit tests to confirm a fully green pass.
+
+Test file clean. Now re-run my surface's unit tests to confirm all green (saving full output for the gate log).
+
+**TEST SUCCEEDED — all 25 surface unit tests pass** (Adapter 13, Model 8, Registry 2, Accessibility 2; 0 failures). The earlier full-gate red was purely the pre-existing UITest suite crashing when `simctl` vanished under ~223 load.
+
+Now let me run the remaining gate steps. First the fast static gates (whole-tree swiftlint/swiftformat + placeholder check with the exact gate path), then the macOS build.
+
+The whole-tree swiftlint found 1 serious violation, but my exit-code capture was masked by the subshell. My own files passed individually, so I need to locate this violation. Let me find it and get the true exit code.
+
+The single swiftlint violation is in **`LiveSignalSparklinesWidget.Builder.swift`** — a pre-existing sibling widget, NOT my surface (mine are clean). That file is outside this prompt's allowed-files scope. Let me confirm it's pre-existing/unmodified at HEAD, then run the remaining static gates (swiftformat whole-tree, placeholder).
+
+Confirmed pre-existing and unmodified (the gate's `swiftlint --strict` is red due to a latent `opening_brace` violation in a sibling widget at HEAD — outside my scope). Let me run the remaining static gates: `swiftformat --lint apps/apple` and the placeholder check with the gate's exact path.
+
+Static gates: **swiftformat --lint apps/apple = EXIT 0** (all 1921 files clean, including mine), **placeholder check = EXIT 0**. The only red static gate is `swiftlint --strict`, solely from the pre-existing `LiveSignalSparklinesWidget.Builder.swift` violation (not my surface).
+
+Now the macOS side. Let me validate cross-platform compilation + run my surface tests on macOS via a scoped `test` (this both compiles the macOS app with my files and runs my tests natively, no simctl dependency).
+
+The macOS failure is a **code-signing** error (entitlements need a dev certificate; `DEVELOPMENT_TEAM` is empty), not a compile error — the gate's macOS `build test` can't sign on this unsigned host. To get genuine macOS *compilation* evidence for my surface, let me build the macOS app target with signing disabled (this compiles the whole module including my files for macOS 15).
+

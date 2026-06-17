@@ -1,0 +1,64 @@
+I'll start by exploring the repository structure, the web source, and checking tool availability.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 17 simulators). Now let me study the web source dependencies and the existing Apple feature-views structure.
+
+There's a rich established pattern (each feature-view has ~7-10 files: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`, `.States.swift`, `.Telemetry.swift`). Let me find `batteryColor` and study a representative existing feature-view in full to replicate the conventions exactly.
+
+This is a mature, high-quality codebase. `BatteryPill` is purely presentational, but `BatteryComparison` is **data-bound** (owns a `useQuery` with refetch). I need to study the state-holder (P1/S8) pattern and a data-bound feature-view with all states. Let me find the core infrastructure and a representative data-bound view.
+
+Let me study the SharedFacade (P1/S8 state holders), the LoadableState, and find the vehicles domain holder plus the design tokens.
+
+`LoadableState` is the P1/S8 projection (idle/loading/loaded/empty/failed + stale). It's fed by a KMP `Shared.Resource`. I need to see how an existing **data-bound** feature-view consumes a state holder. Let me find feature-views that reference `LoadableState`/`StateHolder` and read the `StateHolderModel` + a vehicles-fleet example fully.
+
+73 feature-views use `LoadableState`. Let me read a complete data-bound example end-to-end to extract the exact contract. Let me pick one that fetches and projects a fleet/list with all states.
+
+`HealthGaugeGrid` is the best template — full fileset with `.States.swift` and `.ViewTests.swift`. Let me read it end-to-end.
+
+Excellent template. Let me read the remaining `HealthGaugeGrid` files (Adapter, Views, Previews, Tests, ViewTests, strings) and locate the design tokens/shared components.
+
+Let me read the test/preview/strings files and locate the design token + shared component definitions.
+
+I have the complete template. Now let me confirm the design tokens API, the build config (project.yml), the web `useUnits().formatDistance`, and the `Vehicle`/`VehicleState` types.
+
+Build is XcodeGen-based; the `TeslaSync` scheme has a preAction that builds `Shared.xcframework` (KMP). Files in `feature-views/` compile into the app, `*Tests.swift` into the test bundle. Let me locate the exact token/component APIs and check build tooling availability.
+
+Tokens are generated in `apps/design/generated/apple/Tokens.swift`. The `.xcodeproj` needs `xcodegen generate`. Let me read the tokens, the Frameworks dir, the shared-framework script, and the shared component APIs.
+
+I now have the full token API. The build needs the KMP `Shared.xcframework` (only `.gitkeep` present — must be built via Gradle/Kotlin). Let me check KMP build feasibility and read the remaining shared component APIs (`TSGlassPanel`, `TSEmptyState`, `TSSkeleton`, `TSFadeIn`, `TSTone`).
+
+Java 17 + gradlew present — KMP build is plausible but heavy. Let me read the exact shared component signatures I'll use.
+
+Now let me read `formatDistance` (web `useUnits` + `unitConversion`) for exact parity, plus the `TSSkeleton` and `TSFadeIn` signatures.
+
+Now the `formatDistance` helpers (`DEFAULT_PRECISION`, `resolvePrecision`, `formatNumber`, `resolveEmpty`, constants) and `TSFadeIn`.
+
+I now have full parity knowledge: `formatDistance` = convert SI→unit then format with **1** fraction digit + unit symbol; `—` only for non-finite (web guards with `?? 0` so always finite here). `batteryColor`: `>60`→success, `>25`→warning, else danger. Let me read the lint configs, the placeholder checker, and confirm `tsGlassPanel()` + check for any shared meter component.
+
+Forbidden words (case-insensitive) to avoid in shipped Swift: `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`. Noted. The full `xcodebuild` gate needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me kick that heavy build off in the background now while I write the surface code.
+
+Gradle is functional and the `assembleSharedXCFramework` task exists. Let me launch the full XCFramework assembly in the background (it's the long pole), logging to a file, then write the surface code while it builds.
+
+Gradle works. Let me check the background build progress and scan for any naming collisions before I write the surface.
+
+The async session tore down the nohup'd process (I didn't use `detach: true`). No collisions found — my planned names are safe. Let me relaunch the KMP build as a properly detached process, then write the surface code while it runs.
+
+KMP build is progressing — Kotlin/Native iOS compilation is mostly `FROM-CACHE`, so the full gate looks feasible. Let me write the plan and start creating the surface files.
+
+Now the Model file (state-holder seam, telemetry, i18n facade):
+
+Now the Adapter (pure, SwiftUI-free projector with web-parity formatting):
+
+Now the Views file (tint→tone, content list, animated gradient meter), and a build progress check:
+
+The KMP XCFramework finished writing (debug done, release linking) — the full gate is viable. Now the States file (freshness chip, banner, loading, empty, error):
+
+Now the main surface view:
+
+Now the i18n strings table and the Previews:
+
+Now the comprehensive logic + accessibility tests:
+
+Now the per-state view-render smoke tests:
+
+All 9 files created. Let me check the KMP build completion, stage the framework, then run the fast verifications (swiftformat, swiftlint, placeholder).
+

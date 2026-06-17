@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure to understand what exists and what capabilities are available.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Not blocked on capability. Let me explore the web source and Apple app structure.
+
+Let me read the web source and check whether OnboardingWizard files already exist.
+
+Now I understand the web source. Let me study the existing conventions using `AchievementUnlockedToast` (a presentational feedback surface — closest analog) and understand the build setup.
+
+Excellent pattern clarity. Let me read the remaining template files (Seams, Adapter, Views, Previews, Tests, strings) and locate the design tokens (P1/S9).
+
+Let me read the Adapter, Previews, Tests, strings files and locate the design tokens.
+
+Let me read the design tokens and shared components to understand what's available (P1/S9), plus the Previews/Tests patterns.
+
+The tokens are generated. Let me locate the token definitions and the key shared components I'll need (Cards, Buttons, States, Skeletons, Overlays/Modal, Typography).
+
+The token files aren't checked in — likely generated at build time. Let me understand the build/project setup, which is critical for the gate.
+
+The project uses XcodeGen. Let me examine `project.yml`, the xcframework build script, and the placeholder checker (which the gate runs).
+
+XcodeGen auto-includes the shared-surfaces folder; tokens come from `apps/design/generated/apple`. Let me inspect the tokens, the xcframework build script, the web broadcast lib, and the Previews/Tests pattern.
+
+Let me read the full tokens file, the Previews/Tests patterns, and survey the modals-dialogs directory (closest analog to a modal wizard).
+
+`ChangelogModal` is the ideal analog — a first-run discovery modal gated by persistence + cross-tab broadcast, with step/version navigation. Let me study its full implementation.
+
+Let me read ChangelogModal's Model + Adapter (persistence/projection patterns) and the Previews + Tests patterns, plus search for any existing onboarding/tour/first-run analogs.
+
+`InstallPrompt` is the perfect analog — persistence-gated first-run surface with `install.dismissed` broadcast and a dedicated `Stores.swift` persistence seam (native localStorage equivalent). Let me study it in full.
+
+This is exactly the template I need. Let me read the rest of InstallPrompt (Model, Adapter, Seams) to complete my understanding of the full pattern.
+
+I have a thorough grasp of the pattern. Let me read the remaining InstallPrompt files (Seams, Views, States, Previews, Tests, ModelTests, strings) to complete the template.
+
+Let me read the remaining InstallPrompt files (States, Previews, Tests, ModelTests, strings) and the shared component APIs I'll use (Buttons, Cards, States, Skeletons, Motion).
+
+Let me read the InstallPrompt Tests, ModelTests, strings, and the component APIs (Buttons, Cards, States, Skeletons, Motion).
+
+Let me read the InstallPrompt strings and the component APIs I'll use (Buttons, Cards, States, Skeletons, Motion, Overlays).
+
+Let me read the remaining component APIs: Cards, States (EmptyState), Skeletons, Motion (FadeIn), and Overlays (for modal/glass treatment).
+
+Let me read the Motion (TSFadeIn), Overlays (modal/glass), and Typography components to finalize the API surface I'll use.
+
+I now have the full pattern. Let me check the lint/format configs (must pass `--strict`), the logs directory, and any precedent for full-screen modal/backdrop + escape handling in shared surfaces.
+
+Configs understood (line length 120, `--self remove`, type names ≤60). Let me assess build feasibility: check for `xcodegen`, available simulators, and whether the KMP `Shared.xcframework` can be built (the scheme's pre-action requires it).
+
+Toolchain is viable: xcodegen 2.45.4, iPhone 16 simulator booted, Java 17 for KMP. The `Shared.xcframework` (KMP) is the long pole, so I'll start building it in the background now while I write the surface. Let me also record a plan.
+
+Build feasibility confirmed (xcodegen, simulator, Java all present). The KMP framework is building in the background. Now I'll write the 11 surface files. Let me check the gradle progress, then start with the pure Adapter core.
+
+Gradle is warming up. Let me write the files while it builds. Starting with the pure Adapter core.
+
+Now the Model file (telemetry seam, connection axis, input, projection, state-holder, strings facade).
+
+Now the Stores file (persistence + cross-scene broadcast seams — native localStorage/broadcast parity).
+
+Now the Seams file (source protocol, production source, in-memory source, `.live` factory).
+
+Let me check the gradle build progress, then continue with the States and Views files.
+
+Gradle still compiling KMP (first-run toolchain). Continuing with the States file (loading/empty/error chrome).
+
+Now the Views file (accent→token mapping, the active wizard overlay with step rail + reveal entrance, freshness chip).
+
+Now the public surface file (`OnboardingWizard.swift`) that switches over phase and composes the overlay + freshness chip.
+
+Now the Previews and strings files.
+
+Now the two test files. First the adapter/projection/stepper/accessibility tests.
+
+The KMP build finished. Let me confirm the framework assembled, then write the final test file.
+
+KMP `Shared.xcframework` built successfully (debug + release) — the full xcodebuild is feasible. Now the final test file covering the model and seams.
+
+All 11 files written. Let me verify the file set, then auto-format with swiftformat (to canonical style), run swiftlint --strict, and the placeholder check.
+
+All 11 files present. Now auto-format with swiftformat (using the repo config), then verify with `--lint`, run swiftlint `--strict`, and the placeholder check.
+
+swiftformat adjusted 3 files. Now verify `--lint` passes on the whole dir, run swiftlint `--strict`, and the placeholder check.
+
+swiftformat `--lint` clean (0/10) and swiftlint `--strict` found **0 violations**. Now the placeholder check — let me review the script's `-Path` semantics, then run it.
+
+The gate's `-Path` is extension-less, so the script scans nothing (trivially clean). To honestly prove my code is placeholder-free, I'll inspect the patterns and scan a temp copy of my 11 files. Let me check the patterns and grep my files.
+
+No forbidden tokens. Let me run the placeholder gate honestly: the exact gate invocation, plus a temp-dir scan of my 11 files to prove zero violations.
+
+Placeholder gate passes (COUNT=0, EXIT=0) both as-invoked and on a real scan of my files. Before the heavy xcodebuild, let me rule out symbol collisions across the single TeslaSync module (any pre-existing `Onboarding*` types).
+
+Existing onboarding symbols all use distinct prefixes (`OnboardingChecklist*`, `OnboardingGate*`). Let me confirm none of my exact type/test names collide.
+
+Found collisions: `OnboardingStep` (FleetApiSection.Models.swift) and `OnboardingStepper` (Stepper.swift) already exist. I must rename mine. Let me get the full collision list first.
+
+Let me run a comprehensive, efficient collision check across all my declared type and test names.
+
+Three collisions (`OnboardingStep`, `OnboardingStepper`, `OnboardingFreshnessChip`). The sibling convention prefixes every type with the full surface name, so I'll rename all my `Onboarding*` types to `OnboardingWizard*` — eliminating collisions entirely. This is safe since these types are only referenced within my 11 files.
+
+Let me verify the rename didn't create `WizardWizard` artifacts, preserved the slug/keys, and re-check collisions.
+
+Rename is clean (slug/keys preserved, no artifacts). Now re-check collisions for the renamed names, then re-run swiftformat (auto-fix) and swiftlint `--strict`.
+
+No collisions remain. The rename may have affected line lengths — let me re-run swiftformat (auto-fix) and swiftlint `--strict`.
+
+Both pass: swiftformat `--lint` 0/10, swiftlint `--strict` **0 violations**. Now regenerate the Xcode project and confirm my files are included.
+
+Project regenerated; OnboardingWizard files are referenced (66×). Now the iOS build+test — the long pole. I'll run it and monitor.
+
+While the iOS build runs, let me self-review the SwiftUI for compile risks. One concern: `keyboardShortcut(.cancel, …)` — `.cancel` isn't a valid `KeyEquivalent`. Let me check the closeButton code.
+
+Confirmed the bug. `.cancel` isn't a valid `KeyEquivalent`; the idiomatic Esc/cancel shortcut is `.cancelAction`. Let me fix it.
+
+Fixed. The in-flight build started before my fix, so let me check its progress and decide whether to restart with the corrected file.
+
+Build is in the whole-module compile/emit phase (gradle already staged). Since Swift compiles the whole module, my fix needs to be on disk before my file's compile — it is now. Let me wait for completion.
+
+The build failed — but on a **pre-existing, unrelated file** (`AISuggestNewGeofences.swift`), not mine. I must determine if this is a baseline issue. Let me gather all compile errors and inspect that file.
+
+Only one error, in `AISuggestNewGeofences.swift` (a sibling I never touched — `git status` confirms it's unmodified). My changes are purely additive. Let me inspect that file and the expected toolchain versions to classify this.
+
+This is a **pre-existing, out-of-scope** compile error: `AISuggestNewGeofences.swift` (committed by another P4 prompt at `d30ee02f9`) passes a non-escaping `@ViewBuilder` closure into `TSGlassPanel` (whose param is `@escaping`) — a genuine bug, unrelated to and unmodified by me. The locked toolchain is Swift 6.0.1 but the runner has 6.3.2.
+
+To attribute the blocker precisely, I'll temporarily fix that sibling (diagnostic only, then revert) to prove my surface builds+tests green. Let me check if more siblings are broken too.
+
+Now rebuild+test with the sibling temporarily compilable, to verify my surface and surface any other broken predecessors.
+
+Build+test is running (incremental). Let me wait and monitor — checking for any additional broken predecessors and my surface's compile/test results.
+
+The first shell's "success" is just the pipeline's tail exit — that build failed on the sibling, as established. Let me check the diagnostic build's progress directly.
+
+No errors yet; still compiling (sibling fix worked so far). Let me wait for it to reach the test phase.
+
+Build compiled (my surface included) but `** TEST FAILED **`. I need to know whether my OnboardingWizard tests failed or some other surface's. Let me check.
+
+Let me look deeper — `TEST FAILED` may mean the test *bundle* failed to compile. Let me search for errors and the failure context.
+
+Two **more** pre-existing, out-of-scope errors surfaced: `AISignalExplorerNlFilter.swift` (same missing-`@escaping` pattern) and `RecentDrivesSection.Previews.swift` (compiler type-check timeout). The baseline is broadly red from sibling prompts. Let me enumerate the full extent of these pre-existing breaks.
+
+This is decisive: **41 out-of-scope sibling files** share the exact broken `@ViewBuilder _ content: () -> some View` pattern that fails under the runner's Swift 6.3.2 (locked baseline is 6.0.1). The whole-app build is broadly pre-broken by other prompts' surfaces — none of which I may modify.
+
+My surface's core is SwiftUI-free (Adapter/Model/Seams/Stores), so I can prove my tests pass in isolation via a standalone SwiftPM package. Let me set that up.
+
+Confirmed SwiftUI-free core. Let me build a standalone SwiftPM package (Swift 6 language mode, strict concurrency) with my core + test files to prove the unit tests pass.
+
+**All 56 unit tests pass** under Swift 6 strict concurrency mode. My surface is verified: compiles in-module, 56 tests green, lint/format/placeholder clean. The full-app gate is blocked solely by 41+ pre-existing out-of-scope sibling defects.
+
+Let me revert my temporary diagnostic fix so the commit contains only my files.
+
+Reverted cleanly — only my 11 files remain as changes. Now I'll run the **actual gate** to produce an honest log. iOS and macOS share DerivedData, so I'll run sequentially. Let me launch the full gate runner.
+
+Gate is running (sequential builds + lint/format/placeholder). This will take ~12–15 min. Let me update the plan while it runs, then monitor.
+
+Now let me wait for the gate to progress through the builds.
+
+Gate complete: **IOS_EXIT=65, MAC_EXIT=65** (xcodebuild), **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0**. So lint/format pass repo-wide; only the two builds fail. macOS failed in ~10s though — let me verify both failures are the same predecessor compile errors.
+
+Now the full picture is clear and both failures are **outside my scope**:
+- **iOS (65):** pre-existing compile errors in sibling surfaces (`AISuggestNewGeofences`, `AISignalExplorerNlFilter`, +39 files) — my surface compiled clean.
+- **macOS (65):** missing development signing certificate (runner limitation) — a genuine platform-capability block.
+- **lint/format/placeholder: 0** (repo-wide, includes my files).
+
+Let me gather final specifics for the log.
+
+All confirmed: 42 sibling files carry the broken pattern; my 11 files are the only changes; lint/format/placeholder all 0. Now let me write the honest, comprehensive gate log.
+
+Now let me commit the 11 surface files plus the honest log.
+
+All 12 files staged (11 surface + log), nothing extraneous. Let me commit.
+
+Committed (12 files, 2183 insertions, `658aa0630`). Let me verify the working tree is clean and clean up temp artifacts.
+
+Everything is finalized and clean:
+- **Working tree clean** (only my commit; the regenerated `.xcodeproj`/`Shared.xcframework` are gitignored).
+- **My commit touches zero sibling files** (the diagnostic fix was reverted).
+- Temp artifacts removed.
+
+The task is at its honest terminal state. Let me report the outcome.
+

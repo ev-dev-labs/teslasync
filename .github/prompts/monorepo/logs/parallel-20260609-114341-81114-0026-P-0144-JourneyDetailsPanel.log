@@ -1,0 +1,129 @@
+I'll start by exploring the repository structure, reading the web source component, and checking what Apple tooling is available on this runner.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, iOS 26.5 simulators). Let me read the web source and explore the existing Apple app structure.
+
+Now let me examine the `DriveDetail` type, the existing Apple feature-views directory, and a recent example feature-view to understand the established pattern.
+
+Feature-views uses a 4-file pattern (`.swift`, `.Model.swift`, `.Previews.swift`, `.strings`). Let me check if JourneyDetailsPanel already exists, study a good reference feature-view, and read the project config + placeholder checker.
+
+`DriveDetailHeader` is a sibling of JourneyDetailsPanel in the same web `drive-detail/` feature — it's the ideal reference. Let me read all its files in full.
+
+Excellent reference pattern. Let me read the remaining DriveDetailHeader files (Adapter, Views, Previews, Tests, strings) to fully understand the established conventions.
+
+Let me read the Previews, Tests, and strings files, plus the web dependencies (DateTime, fmtNumber) and the test target registration in project.yml.
+
+Now I have the full pattern. Let me check the test target registration in project.yml, find the GlassPanel native equivalent, and read the web `DateTime` + `fmtNumber` source to reproduce their logic exactly.
+
+Tests auto-register via path globs (no manual project.yml edit needed). Let me read `TSGlassPanel`, the web `DateTime` + `fmtNumber` logic, and the native design tokens.
+
+Now let me read the web `dateFormat.ts` helpers (for `formatDateTime` parity), the native design tokens, `TSFadeIn`/`TSSkeleton`, and the placeholder checker.
+
+Let me read the placeholder patterns (to avoid forbidden words), the `formatDateTime`/`tzAbbreviation` web functions, and locate the `Color.TS`/`Font.TS` token definitions.
+
+Let me read the design tokens (`TSDesign.swift`), the `TSFadeIn`/`TSSkeleton` signatures, the web `tzAbbreviation`, and verify the reference passes the placeholder gate.
+
+Let me locate the generated `Color.TS`/`Font.TS` token definitions to confirm exact available token names.
+
+I now have the full token set and web logic. Let me verify Swift date/number formatting output before writing code, so my parity assertions are correct.
+
+Date/number formatting confirmed. Let me verify the build tooling: xcodegen availability, whether the `.xcodeproj` exists, and the scheme names.
+
+`.xcodeproj` must be generated via xcodegen (available). Schemes run a `build-shared-xcframework.sh` preaction. Let me inspect that script and check for a prebuilt framework before attempting a baseline build.
+
+The gate requires building the KMP `Shared.xcframework` via Gradle. Let me check prior gate logs, Java/Gradle availability, and the shared module to gauge feasibility.
+
+There are prior JourneyDetailsPanel logs from parallel runs. Let me read the most recent one and the sibling DriveDetailHeader log to understand the expected gate flow and whether the heavy build actually runs here.
+
+This prior run used a "code-complete + deferred xcodebuild" approach (KMP framework absent), validating via `swiftc -typecheck` against both SDKs + SwiftPM XCTest. Let me read the rest to capture the exact gate steps and final status.
+
+I now have a complete, proven blueprint. The established approach (precedent 0009/0036/0046/0054 + this exact prompt twice) is **code-complete + real host verification, with the literal `xcodebuild` deferred** because the KMP `Shared.xcframework` isn't staged (only `.gitkeep`) and staging it is outside this prompt's allowed files. Let me set up tracking and read the lint configs + typecheck-closure details.
+
+Closure identified. Let me check for any other KMP-dependent files to exclude from the flat typecheck, then begin authoring the surface files.
+
+The blueprint is clear. Let me quickly confirm the `Date.FormatStyle` vs `DateFormatter` output to pick the closest-to-web rendering, then start authoring.
+
+`DateFormatter` + template is the robust path (matches the proven sibling). I'll use it. Now writing the plan and the two Foundation-only files.
+
+Now authoring the Foundation-only Model file:
+
+Now the Foundation-only Adapter (projection core with all web parity logic):
+
+Foundation core done. Now the SwiftUI surface files. Updating todos and writing the main view:
+
+Now the subviews file — header, responsive endpoint grid, columns, chip, banner, skeleton, empty, error:
+
+Now the Previews and strings files:
+
+Now the comprehensive Tests file:
+
+All 7 files created. Now let me auto-format with the repo's swiftformat config, then verify formatting and lint pass.
+
+Files already conform (0/6 reformatted). Now verifying with `--lint` and running `swiftlint --strict` on the surface files:
+
+Format + lint both clean (EXIT=0). Now the dual-SDK typechecks. Let me set up the component-library closure and verify the Xcode toolchain path.
+
+Xcode toolchain confirmed. Now the iOS 18 simulator SDK typecheck against the real component-library closure (excluding the 2 KMP-dependent files):
+
+Typecheck is compiling the full closure. Let me wait for it to complete.
+
+iOS typecheck passed (0 errors). Now the macOS 15 SDK typecheck:
+
+Both typechecks pass (0 errors, both SDKs). Now I'll build a SwiftPM harness in /tmp to execute the XCTest suite against the real Foundation-only Model + Adapter. The harness runs the pure subset (logic/projection/phase/model); the SwiftUI view-state tests are covered by the dual-SDK typecheck + deferred Xcode target.
+
+Harness ready: 23 pure test methods across 4 classes, view-state block correctly stripped. Now running `swift build` + `swift test`:
+
+All 23 tests pass (0 failures), build + test EXIT=0. Now the placeholder gate. Let me first self-check for forbidden words, then run the gate:
+
+Placeholder gate clean. Now capturing the deferred-xcodebuild evidence: `xcodegen generate`, target registration, and framework-absence proof.
+
+Evidence captured: surface fully registered (42 pbxproj refs across both app targets), KMP framework absent (only `.gitkeep`), `.xcodeproj` git-ignored, iPhone 16 booted. The only xcodebuild blockers are the unstaged KMP framework (outside allowed files) + macOS signing — matching the 0009/0036/0046/0054 precedent. Let me clean up generated/temp artifacts and confirm a clean working tree.
+
+Clean tree — exactly 7 new files. Let me gather final line counts and write the gate log.
+
+All 6 web i18n keys present; files 105–388 lines (under the 400 house limit). Now writing the honest gate log:
+
+Log written. Now committing the surface files + log:
+
+Exactly 8 files staged (7 surface + log). Committing:
+
+Committed cleanly (8 files, tree clean). Let me finalize tracking and update the plan.
+
+All 10 todos complete; working tree clean. The task is done.
+
+## Summary
+
+Shipped a production-polished native Apple **`JourneyDetailsPanel`** surface (P4/0144) at parity with the web source `features/driving/components/drive-detail/JourneyDetailsPanel.tsx`, committed as `b4475c24f` (7 surface files + gate log, 1755 insertions, clean tree).
+
+**Files** (`apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.*`, all ≤388 lines):
+- **Model** — P1/S8 state-holder seam (`JourneyDetailsSource`→`@Observable JourneyDetailsModel`), P1/S11 telemetry, P1/S10 strings facade, DTO/prefs/enums
+- **Adapter** — Foundation-only projection core: `fmtNumber`/`formatDateTime` ports + the Start/Destination projector
+- **swift / Views** — `TSFadeIn`>`TSGlassPanel` header + responsive `LazyVGrid` endpoint columns, freshness chip, stale/offline banner, skeleton, empty, error+retry
+- **Previews / strings / Tests** — a preview per state; 6 web keys + 12 chrome keys; 31 test methods
+
+**Web parity** (unit-tested): truthy-address→coordinate→fallback branches, the signed-latitude/abs-longitude coordinate quirk, JS `lat && lon` truthiness, `{pct ?? '?'}%` battery, and the finished-vs-in-progress destination logic. All 6 source i18n keys present; per-column VoiceOver labels; `view.opened` telemetry.
+
+**Gate — host-runnable steps executed for real (all green):**
+- iOS 18 simulator + macOS 15 SDK `swiftc -typecheck` against the real component library — **0 errors** each
+- SwiftPM `swift build` + `swift test` — **23/23 passed**
+- `swiftlint --strict` — **0 violations**; `swiftformat --lint` — **0/6**; `check-placeholders` — **COUNT=0**
+
+**Deferred (honestly, not green):** the literal `xcodebuild build test` — the KMP `Shared.xcframework` is unstaged (only `.gitkeep`) and staging it is outside this prompt's allowed files; macOS signing needs a signed runner. Evidence captured: `xcodegen generate` exit 0, **42** pbxproj refs (surface registered in both app targets), framework absent, iPhone 16 booted. This matches the 0009/0036/0046/0054 + prior-0144 precedent (ADR-012). Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0144-JourneyDetailsPanel.log | 247 +++++++++++++
+ .../JourneyDetailsPanel.Adapter.swift              | 245 +++++++++++++
+ .../feature-views/JourneyDetailsPanel.Model.swift  | 310 ++++++++++++++++
+ .../JourneyDetailsPanel.Previews.swift             | 118 +++++++
+ .../feature-views/JourneyDetailsPanel.Tests.swift  | 388 +++++++++++++++++++++
+ .../feature-views/JourneyDetailsPanel.Views.swift  | 304 ++++++++++++++++
+ .../feature-views/JourneyDetailsPanel.strings      |  38 ++
+ .../feature-views/JourneyDetailsPanel.swift        | 105 ++++++
+ 8 files changed, 1755 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0144-JourneyDetailsPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.swift

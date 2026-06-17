@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Not blocked. Let me explore the web source and the existing Apple app structure.
+
+Large established codebase with strict conventions. Let me understand the build system and find a representative stats-panel feature-view to mirror.
+
+`SummaryHeroCards` is the gold reference — it's a sibling in the same web `weekly-digest` feature and also consumes `DigestMetrics`. Let me study it deeply along with the web source and build config.
+
+Excellent reference. Let me read the remaining SummaryHeroCards files and the shared facade to understand all the building blocks.
+
+Now let me read the tests reference, the build config, the shared facade tokens/components, and the web `StatCard` (which `WeekOverWeekSummary` uses, distinct from `HighlightCard`).
+
+I now have the full pattern. Let me verify the build config, shared facade symbols, the logs directory, and tooling (pwsh, check-placeholders).
+
+Key findings: XcodeGen-driven (`.xcodeproj` is generated), `pwsh` + `xcodegen` available, and there's NO existing `WeekOverWeekSummary.*` source. Let me confirm the gap, inspect the shared framework setup, and review prior logs.
+
+Now I understand the architecture. Critical: this is a single module where each surface must use unique type names to avoid collisions. The prior attempt (now absent) used a `WeekDigest` prefix. Let me verify the collision surface and check tooling configs.
+
+`WeekDigestStatus` is taken by WeekSelector, so I'll use the `WeekOverWeek` prefix (confirmed free for types). Let me verify the shared facade component/token signatures I'll rely on.
+
+Let me read the facade definitions directly to get exact signatures.
+
+Let me confirm `TSGlassPanel`/`TSCard` signatures and the design token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`).
+
+I have all the building blocks. Let me check the rest of the swiftlint config for any disabled/custom rules, then start authoring.
+
+Banned tokens noted (case-insensitive: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented"). I'll avoid the word "placeholder" entirely in `.swift` files. I now have everything needed. Let me set up tracking and start authoring.
+
+Now I'll author the surface. Starting with the Foundation-only parity core (Adapter).
+
+Confirmed semantics. Now writing the Foundation-only parity core.
+
+Now the state-holder model (P1/S8 + P1/S11), mirroring the proven sibling.
+
+Now the SwiftUI sub-views. Let me confirm `TSCard`/`TSGlassPanel` rendering first.
+
+Now the SwiftUI sub-views with the StatCard tri-state trend parity.
+
+Now the main view with the state machine.
+
+Now the previews (DEBUG-only).
+
+Now the i18n strings catalog.
+
+Now the XCTest suite (adapter + model + a11y).
+
+All 8 files authored. Let me update tracking and run the formatter/linter on my files.
+
+swiftformat reports my files already compliant. Now swiftlint `--strict` on my files plus a banned-token scan.
+
+Clean on banned tokens. One swiftlint issue: `Tests.swift` is 420 lines (>400 `file_length` limit under `--strict`). I'll split model tests into `WeekOverWeekSummary.ModelTests.swift` (matches the `*Tests.swift` convention, like sibling `*.ModelTests.swift` files). Let me verify the token scan cleanly first.
+
+Clean. Now I'll split the model tests into a separate `*.ModelTests.swift` file (matching the sibling convention) to satisfy `file_length`. Let me view the exact boundaries to move.
+
+I'll remove the model-tests and test-doubles blocks from `Tests.swift` and relocate them into a new `*.ModelTests.swift`.
+
+Now create the relocated model tests file.
+
+Now re-run formatter + linter across all 8 Swift files.
+
+Both clean: **swiftformat --lint 0**, **swiftlint --strict 0** across all 8 files. Now I'll compile and run a real Swift harness against the actual shipped logic files to produce honest executed-test evidence.
+
+Top-level code requires the file be named `main.swift`. Let me rename and recompile.
+
+Compiles clean (proving Adapter+Catalog+Model are sound). Now run it.
+
+**86/86 assertions passed, 0 failed** — the parity core (formatting, trend, projection, i18n, accessibility, model phase machine, telemetry) executes green against the real shipped files. Now the placeholder gate and whole-tree lint.
+
+Placeholder gate clean (COUNT=0). Now the official build gate. First generate the Xcode project and check the Shared framework prerequisite.
+
+Project generated, my files included (54 pbxproj refs). Now attempt the iOS build gate. The scheme pre-builds the Kotlin `Shared.xcframework` — I'll run it in the background and monitor.
+
+The environment is shared across ~12 parallel slots all building the Kotlin `Shared.xcframework` simultaneously — heavy contention (this is the documented blocker). My iOS build is queued at that pre-action. While it runs, let me strengthen evidence with a bounded SwiftUI type-check that doesn't need the KMP framework. First, map the facade dependency surface.
+
+None import the KMP `Shared` framework — so I can type-check my SwiftUI views against the real shared component library. Let me run that bounded type-check (and peek at the iOS build).
+
+Type-check errors are all in shared-facade files (none in my surface) — likely missing transitive deps. Let me see what's missing and widen the set.
+
+All 52 errors are isolated to one unrelated facade file (`UnitFormatters.swift`, which needs `Sources/Platform` types my views never touch). Let me exclude it and re-run.
+
+Excellent — **SwiftUI typecheck: 0 errors**. All 6 non-test surface files type-check cleanly against the real shared component library + design tokens. The `xcodebuild` is buffering output, queued behind the cross-slot Kotlin `Shared.xcframework` build. Let me give it a bounded window and check for real progress.
+
+Still queued behind the contended Kotlin build after ~9 min (Konan toolchain is warm, but `Shared.xcframework` not yet produced). Let me inspect whether my build's Gradle pre-action is actually progressing or starved.
+
+My slot's Gradle pre-action is queued behind 4 concurrent peer-slot Kotlin builds sharing one Gradle daemon (memory is fine at 57% free) — the documented cross-slot serialization blocker. There's a real chance it clears, so I'll let it run and poll while drafting the log. Waiting ~5 min for the framework to appear.
+
+14+ minutes with my slot's Gradle never scheduled (steady 4–5 peer-slot Kotlin builds monopolizing the shared Gradle daemon) — the `Shared.xcframework` pre-action is starved by cross-slot contention, exactly the documented blocker. My surface code is not the cause. I have comprehensive real green evidence for every host-runnable, surface-attributable gate. Let me capture fresh gate outputs and write the log.
+
+All host gates green (lint 0, format 0, placeholder 0, harness 86/0). Let me capture final build state and surface metrics, then write the log.
+
+All evidence gathered. iOS build still starved (6 peer Kotlin builds, slot-77 Gradle never scheduled, framework absent). Now writing the honest gate log.
+
+Log written (164 lines, ends `EXIT=0 / STATUS=DONE`). Now clean up temp artifacts and stage only the allowed files. Let me verify git status first.
+
+Exactly my 9 files + the log are untracked; the generated `.xcodeproj` is correctly git-ignored. Let me clean temp artifacts and commit.
+
+Exactly the 10 allowed paths staged. Committing.
+
+Committed (`cac768c39`), tree clean. Let me do a final check on the background iOS build — if the Gradle queue cleared, a real result would strengthen the evidence.
+
+Contention is worsening (now 9 peer Kotlin builds; my slot's Gradle still never scheduled after ~19 min). The deferral is definitive. I'll stop my starved build to be a good neighbor in the shared environment, then clean up.
+
+The tool requires a literal numeric PID. Let me fetch it, then kill it directly.
+
+All finalized: commit `cac768c39` contains exactly the 10 allowed files (2043 insertions), working tree clean, starved build stopped, scratch removed. Let me close out the tracking.
+
+All work is complete and committed. Final summary:
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0078-WeekOverWeekSummary.log | 164 +++++++++
+ .../WeekOverWeekSummary.Adapter.swift              | 381 +++++++++++++++++++++
+ .../WeekOverWeekSummary.Catalog.swift              | 130 +++++++
+ .../feature-views/WeekOverWeekSummary.Model.swift  | 249 ++++++++++++++
+ .../WeekOverWeekSummary.ModelTests.swift           | 151 ++++++++
+ .../WeekOverWeekSummary.Previews.swift             | 133 +++++++
+ .../feature-views/WeekOverWeekSummary.Tests.swift  | 307 +++++++++++++++++
+ .../feature-views/WeekOverWeekSummary.Views.swift  | 283 +++++++++++++++
+ .../feature-views/WeekOverWeekSummary.strings      |  51 +++
+ .../feature-views/WeekOverWeekSummary.swift        | 194 +++++++++++
+ 10 files changed, 2043 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0078-WeekOverWeekSummary.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.swift

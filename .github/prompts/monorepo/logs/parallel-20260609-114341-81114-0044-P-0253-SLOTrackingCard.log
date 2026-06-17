@@ -1,0 +1,196 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app setup.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+The web source is clear: a personal SLO/uptime card with window selector tabs, editable target %, tone-colored percentage, historical caveat, and loading/error states. The `feature-views` dir has 2070 files (many existing views). Let me find the established patterns and check if SLOTrackingCard files already exist.
+
+`BackendStatusSection` and `HealthProbesSection` are sibling status components — ideal references. They use an 11-file pattern (Adapter, Model, ModelTests, Previews, Projection, Sections, States, strings, swift, Tests, Views). Let me study `BackendStatusSection` thoroughly.
+
+Excellent, comprehensive reference pattern. Let me read the rest of the BackendStatusSection files to fully understand the architecture before writing native code.
+
+Let me read the remaining reference files plus the shared infrastructure they depend on.
+
+Let me read the remaining reference files and explore the shared P1 facade infrastructure.
+
+Let me read the Tests file and explore the shared design token infrastructure.
+
+Now let me see the test target config in project.yml and explore the shared design tokens.
+
+I have the design tokens. Now let me read the shared components (Cards/tsGlassPanel, Motion/TSFadeIn, Skeletons/TSSkeleton, TSIconBox) and find a GlassPanel-based card reference.
+
+Let me explore the remaining UI components (buttons, inputs, typography, badges, segmented controls) and the web `fmtPercent`.
+
+Let me read the relevant UI component sources (Buttons, Fields, Tabs, Typography) and the web `fmtNumber`.
+
+`TSTabs` is perfect for the window selector. Let me read Typography and Buttons, and check how local persistence (@AppStorage/UserDefaults) is handled elsewhere.
+
+Let me check the build tooling (xcodegen, simulators) and persistence patterns before writing code.
+
+xcodegen 2.45.4 available, iPhone 16 booted. Let me generate the Xcode project (baseline) and read the persistence seam pattern in parallel.
+
+I now fully understand the architecture. Let me confirm how SLOTrackingCard is composed in the web (plain GlassPanel vs accordion) and kick off a baseline build in the background.
+
+SLOTrackingCard is a standalone `GlassPanel` (not an accordion) rendered directly in SystemStatusPage. Let me verify the `Shared.xcframework` dependency exists and the backend route, then set up my plan.
+
+`Shared.xcframework` is only a `.gitkeep` placeholder — the KMP shared core isn't built. This could block the build. Let me investigate how the build is expected to resolve this dependency.
+
+The `macos-pending-verifications.md` reveals the established precedent: the full-app `xcodebuild` is blocked by pre-existing, unrelated issues (unstaged KMP `Shared.xcframework` + parallel-merge type collisions), so each surface is verified **green in isolation** (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder + `xcodegen generate`). Let me check whether those blockers still exist and read the framework script.
+
+The previously-noted type collisions (`DashboardWidgetSize`, `ChargingProjection`) are now resolved — single definitions each. The main remaining full-app blocker is the unstaged KMP `Shared.xcframework` (Kotlin/Native long-pole). My surface imports no KMP `Shared` (Foundation/SwiftUI only), like the `DrivingTips`/`ScheduledExportsPanel` precedents. Let me attempt to build the framework in the background while I write code.
+
+Let me kick off the KMP framework build in the background and start writing the surface in parallel.
+
+The framework build is running in the background. The previously-blocking type collisions are resolved. Let me check the lint/format config before writing, then write the surface.
+
+The background launch didn't persist. Let me restart the framework build cleanly in a detached async shell so it actually runs while I write code.
+
+Framework build is running detached. The previously-blocking collisions are resolved, and forbidden patterns are clear (avoid TODO/FIXME/Placeholder/mock/stub/Lorem). Now I'll write the surface, starting with the pure core files.
+
+Core files written. Let me check the framework build progress and write the Model (state holder + seams).
+
+Framework build is progressing well — DEBUG xcframework done, now linking the RELEASE variant (the long-pole). Let me continue writing the Model while it builds.
+
+Now the presentational views (header, target editor, figure, window selector, caveat, freshness chrome).
+
+Now the loading/empty/error states.
+
+Let me wire the freshness chip into the header, then create the Sections and top-level view.
+
+Now the top-level view that composes everything.
+
+Now the i18n catalog with all keys used.
+
+Now the previews (one per state) and the tests. Let me check the framework build progress in parallel.
+
+Release framework still linking (Kotlin/Native long-pole, actively progressing). Let me write previews and tests while it builds.
+
+Now the two test files (adapter/projection/a11y + state-holder). Fixtures live in Tests.swift.
+
+Now the state-holder tests.
+
+All 11 files written. Let me run format/lint/placeholder gates on the new files and check framework progress in parallel.
+
+swiftformat flagged inline loop bodies in `targetToken`. Let me fix that by wrapping the bodies onto new lines.
+
+The framework build finished. Let me fix the format issue and check the framework result.
+
+The KMP `Shared.xcframework` built successfully (10m) and is staged with all 3 slices. The major full-app blocker is resolved. Now I can attempt a **real** full-app build. First I must regenerate the Xcode project to enumerate my new files, then kick off the iOS build+test.
+
+All 11 files enumerated (66 pbxproj refs). Let me kick off the iOS build+test (long pole) in the background, then run the fast isolation checks in parallel.
+
+swiftformat clean (0/10), placeholder gate clean (COUNT=0). Now swiftlint on the new files.
+
+swiftlint found 2 issues: a 3-member tuple in tests and Model.swift exceeding 400 lines. Let me split the Model's seams into a `SLOTrackingCard.Seams.swift` file and fix the tuple. Let me view the current Model to split precisely.
+
+Now I'll create the Seams file and slim down the Model. First, the new Seams file:
+
+Now I'll recreate the slimmed Model file (state holder + identity only):
+
+The iOS build+test (started before my Model split) completed. Let me check its result — it tells me whether my surface compiles and tests pass.
+
+The completed build was invalidated — it raced with my Model file deletion (the error is "No such file" for Model.swift, not a type error). Notably, the app compiled through hundreds of files against the staged framework before hitting my mid-build edit, confirming the build environment works. I need to regenerate the project and fix the tuple. Let me rewrite ModelTests with a `Harness` struct.
+
+Now let me re-run lint/format on all 12 files and regenerate the project to enumerate the new Seams file.
+
+Lint and format both clean (0 violations, 0/11 reformat). Let me regenerate the project (to enumerate Seams.swift) and run a clean iOS build+test — no concurrent edits this time.
+
+Project regenerated with all 12 files enumerated. Now the clean iOS build+test (long pole). Let me start it and monitor.
+
+Build running. Let me verify the gate log directory exists while the build runs.
+
+Let me look at a recent precedent log to mirror the expected format, and check build progress.
+
+The build precedent format is clear. Critically, in my environment the framework is now staged AND the prior collisions are resolved — so the full-app build may actually pass (currently compiling the main app module). This would yield a real `EXIT=0`. Let me wait for it.
+
+The iOS build+test completed. Let me check the result.
+
+Real compile errors in my Views file (the build reached and compiled my code against the framework). Two issues: `TextField(verbatim:)` isn't valid, and the `keyboardType` cascade. Let me view and fix.
+
+Now add the platform-conditional keyboard modifier. Let me insert it after the `SLOTargetEditor` struct.
+
+Now let me re-run format/lint on the changed file, then do an incremental rebuild (faster — derived data is warm).
+
+Views file is clean. Let me proactively refine the target-editor buttons to use the facade directly (avoiding double-localization) before rebuilding. Let me view the current editor.
+
+Let me re-lint Views and kick off an incremental iOS build+test (warm derived data).
+
+Clean. Now the incremental iOS build+test (warm derived data should make this faster).
+
+No errors — the main app module compiled clean and it's now linking extensions. My code compiles. Let me wait for the test phase to complete.
+
+Build failed again but no obvious `error:` line for my files yet. Let me find the specific failure — it may be a different file or a compiler diagnostic I haven't surfaced.
+
+No `error:` lines anywhere in 14k lines — that signals a compiler *crash* ("Failed frontend command"), not a type error, likely resource pressure in this shared 20-way parallel build. Let me pinpoint the crashed invocation and confirm the process state.
+
+The build process is still running (65 procs), but there's a swift-frontend *crash* (internal compiler stack trace). Let me examine which file/batch triggered it and the crash reason.
+
+Root cause identified definitively: a **swift-frontend IRGen crash** while emitting IR for `AppearanceSettings.Controls.swift` (a reabstraction thunk `(Bool) -> Bool` — an Xcode 26.5 toolchain bug), in a compile batch that does **not** include any SLOTrackingCard file. My surface compiled cleanly (no `error:`, reached module emission). This is a pre-existing, surface-independent blocker outside my allowed edit scope. Let me stop the build and verify my surface in isolation.
+
+Let me locate the crash file precisely and gather the isolated-build dependency set.
+
+Confirmed: the crash is an IRGen compiler crash in the unrelated `AppearanceSettings.Controls.swift` (a different surface I can't edit), which only surfaces once my code makes the module type-check cleanly. My surface compiled green for iOS-18. Now let me prove the surface compiles on macOS **and** that all tests pass, via an isolated SwiftPM package (module named `TeslaSync` so `@testable import` works unchanged).
+
+The full-Components copy pulled in `UnitFormatters.swift`, which depends on an app-level `Units` type my surface doesn't use. Let me curate down to the minimal dependency closure my surface actually needs.
+
+Minimal files are clean (`CarAnimation`/`TSChartPalette` are self-defined). Let me rebuild the isolated package with just the curated closure.
+
+**Isolated build + tests PASSED on macOS: 49 tests, 0 failures.** My surface compiles on macOS 15 (Swift 6 strict) and every unit test passes. Now let me produce clean both-SDK `swiftc -typecheck` evidence (iOS 18 + macOS 15) over the surface source set for the log.
+
+Both-SDK typecheck GREEN (iOS-18 = 0, macOS-15 = 0). Every surface-scoped gate passes and 49 tests pass. The only blocker is the unrelated `AppearanceSettings.Controls.swift` IRGen crash. To be thorough before deferring, let me retry the full-app iOS build+test once (the environment is shared; I want to confirm the crash is deterministic vs. transient) while I prepare the gate log.
+
+While the retry builds, let me compute the surface LOC and re-confirm the quick gates with clean output for the log.
+
+Surface is 12 files / 2023 Swift LOC (vs 166 web LOC — native includes full state-holder, seams, tests, previews). Let me check the retry build's progress.
+
+Retry still compiling (no crash yet — the IRGen crash occurs later, post-typecheck). Let me wait for it to reach the IRGen phase.
+
+**The crash reproduced deterministically** — the retry build4 also failed at `AppearanceSettings.Controls.swift` IRGen (`Failed frontend command`, BUILD FAILED). Two independent full builds, identical unrelated crash. This confirms it's a deterministic, pre-existing, surface-independent toolchain bug. Let me capture the final iOS exit and kick off the macOS build for complete evidence.
+
+iOS retry confirmed: `IOS_EXIT=65`, deterministic crash on `AppearanceSettings.Controls.swift`, **0 SLOTrackingCard errors** in both builds. Let me kick off the macOS build+test for complete evidence (it compiles the same shared sources, so it'll hit the same crash) and write the gate log meanwhile.
+
+I have all metadata. The macOS build is running. Let me re-run all surface-scoped gates in one consolidated pass to capture authoritative output for the log.
+
+The macOS build completed. Let me check its result.
+
+macOS result clarified: `MAC_EXIT=65`, blocked by **development code-signing** (no dev certificate in this environment) — the exact precedent-documented macOS blocker — with **0 SLOTrackingCard errors**. Both full-app blockers are pre-existing and surface-independent. Let me capture the final placeholder + xcodegen gates, then write the log.
+
+All surface-scoped gates are GREEN. Both full-app blockers are confirmed pre-existing and surface-independent. Let me write the comprehensive gate log.
+
+Log written. Now let me verify what's staged for commit — I must commit only the surface files + log (not the git-ignored xcodeproj/framework).
+
+Clean — only my 12 surface files + the log are untracked; the regenerated `.xcodeproj` and staged framework are correctly git-ignored. Let me commit exactly the allowed files.
+
+All 13 files staged (12 surface + log). Let me commit with the prompt's message.
+
+Commit `23acda607` succeeded; working tree clean. Let me update tracking, clean up temp artifacts, and do a final verification.
+
+All 12 todos complete. The SLOTrackingCard surface is shipped, committed, and verified green by every surface-scoped gate.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0253-SLOTrackingCard.log | 148 +++++++++
+ .../feature-views/SLOTrackingCard.Adapter.swift    | 145 +++++++++
+ .../feature-views/SLOTrackingCard.Model.swift      | 232 ++++++++++++++
+ .../feature-views/SLOTrackingCard.ModelTests.swift | 261 ++++++++++++++++
+ .../feature-views/SLOTrackingCard.Previews.swift   | 128 ++++++++
+ .../feature-views/SLOTrackingCard.Projection.swift | 221 +++++++++++++
+ .../feature-views/SLOTrackingCard.Seams.swift      | 222 +++++++++++++
+ .../feature-views/SLOTrackingCard.Sections.swift   |  50 +++
+ .../feature-views/SLOTrackingCard.States.swift     |  99 ++++++
+ .../feature-views/SLOTrackingCard.Tests.swift      | 244 +++++++++++++++
+ .../feature-views/SLOTrackingCard.Views.swift      | 348 +++++++++++++++++++++
+ .../feature-views/SLOTrackingCard.strings          |  69 ++++
+ .../TeslaSync/feature-views/SLOTrackingCard.swift  |  73 +++++
+ 13 files changed, 2240 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0253-SLOTrackingCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.Sections.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SLOTrackingCard.swift

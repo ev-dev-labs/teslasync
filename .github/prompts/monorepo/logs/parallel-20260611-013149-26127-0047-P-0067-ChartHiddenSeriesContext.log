@@ -1,0 +1,211 @@
+I'll start by exploring the repository structure to understand what exists and verify platform capabilities before making any changes.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The `apps/apple` directory exists. Let me explore the Apple app structure and the web source.
+
+The web source is a **React Context bridge** for URL-persisted hidden-series state — not a visual panel. Let me read the underlying data hook and study the established native file pattern.
+
+`ChartTimeRangeContext` already exists as a native surface — that's the closest analog to my context-bridge task. Let me study its complete file set as the template, plus the related `ChartLegend`.
+
+`ChartTimeRangeContext` is the perfect 9-file template for a context surface. Let me read all its files to learn the exact established pattern.
+
+This is a sophisticated, faithful-parity pattern. Let me read the remaining `ChartTimeRangeContext` files to complete my understanding of the template.
+
+Now let me read the test files, strings, previews, and verify the shared infrastructure tokens exist.
+
+Let me read the model/view tests and verify the shared design tokens (Color.TS, Font.TS, TSSpacing) and project structure.
+
+I have a thorough understanding of the pattern now. Let me check the project.yml location and verify the design tokens exist.
+
+The `shared-surfaces` folder is a directory reference, so new files auto-include. Let me verify the build setup (schemes, xcodeproj generation) and confirm the exact token names I'll use.
+
+The `.xcodeproj` is generated via xcodegen (installed). Let me read the test-target config and the design token definitions to get exact APIs.
+
+Test bundles auto-include `*Tests.swift` from shared-surfaces. Let me read the design tokens at the correct path.
+
+Tokens come from the generated design tokens group. Let me locate the exact definitions.
+
+All tokens confirmed. Now let me check critical build prerequisites (Shared.xcframework), the web URL-state hook, prior-art for hidden-series in native, and the gate tooling.
+
+**Critical finding:** `Shared.xcframework` is absent (only `.gitkeep`) but it's a hard build dependency. Let me check precedent — how did sibling surface gates resolve, and is there a way to build the framework?
+
+Key discovery: there are prior logs for both my template sibling (0069) and this exact surface (0067). Let me read them to understand the established gate precedent.
+
+This is decisive precedent. The sibling 0069 gate documents that full-app `xcodebuild` is RED (65) for **pre-existing, out-of-scope** reasons (sibling duplicate types on iOS; missing macOS signing cert), while all in-scope gates are green → `STATUS=DONE`. Let me read the prior attempt log for *this* surface and confirm the files don't yet exist.
+
+The prior attempt (different slot, not merged here) confirms the approach and that tests pass via decoupled harness. The current tree has **no** `ChartHiddenSeriesContext.*` yet. Critical: I must avoid public-type collisions with existing `ChartLegend`/`ChartContainer` hidden-series code. Let me investigate the existing native hidden-series types.
+
+The `&&` chain stopped at the `ls` (exit 1 = absence confirmed). Let me run the symbol search independently with absolute paths.
+
+No `HiddenSeriesState`/`ChartHiddenSeries` type exists yet — only comments. There's a shared `TSChartFormat.toggleHidden` algebra I should reuse (DRY). My surface fills the genuinely-missing shared *context* bridge. Let me read the shared chart model and confirm ChartLegend's public type names (collision check), plus the web consumers.
+
+Now I have the full type landscape. No collisions if I use `ChartHiddenSeries*`/`HiddenSeries*` prefixes, and I'll reuse the shared `TSChartFormat.toggleHidden` algebra (DRY). Let me read the lint/format configs (file-length budget) and the web provider/consumer wiring for parity accuracy.
+
+Now I understand the full picture: lint caps (type_name ≤50, line ≤120 code), `--disable environmentEntry` (manual EnvironmentKey pattern), `--self remove`, `@testable import` at bottom. Let me check the placeholder-checker's forbidden words, then set up tracking and write a plan.
+
+Let me read the exact forbidden patterns from the JSON config.
+
+Forbidden words: `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder` (case-insensitive!), `Lorem ipsum`, `not implemented`, plus Swift `fatalError("unimpl"/"not"`, `Text("TODO`. I'll avoid all of these (use "empty state"/"no hidden series" wording). Only `ChartHiddenSeriesContext.*` files allowed — the directory is already globbed, so no config edits. Let me set up tracking.
+
+Now I'll author the files. First let me read the exact `useUrlArray` serialize/parse semantics to port faithfully.
+
+Now I have exact `useUrlArray`/`useHiddenSeries` semantics (empty→drop param, sorted comma-join, `split`). Let me author the pure Adapter core.
+
+Now the Model — store, state-holder, telemetry seam, and i18n facade (mirroring the sibling's concurrency design exactly).
+
+Now the main SwiftUI surface — environment context, provider (nil for absent chartKey), render-prop reader, and modifier.
+
+The Views file demonstrates consuming the context (a tappable legend). Let me check how the existing `ChartLegend` renders tappable entries so I'm consistent.
+
+Consistent pattern confirmed (`Button` + strikethrough/opacity + a11y traits, reduce-motion via `TSAnimation`). Now the Views file — the legend chip consuming the context plus a DEBUG sample chart that hides toggled series.
+
+Now the Previews file covering each real branch.
+
+Now the i18n strings table.
+
+Now the pure-core AdapterTests.
+
+Now the main Tests file — projection, store, model lifecycle, views composition, and i18n resolution.
+
+All 9 files created. Let me fix a redundant chart styling issue in Views before verifying, and update tracking.
+
+`seriesLabel` is now unused. Let me remove it and its string entry.
+
+Now let me run the in-scope verification gates. First swiftformat (scoped to my files), then swiftlint, then the placeholder check.
+
+swiftformat normalized 2 files. Now verify format-lint is clean, run swiftlint --strict, and the placeholder check on my files.
+
+In-scope format + lint both clean (EXIT=0). Now the placeholder gate via pwsh — both the literal gate path and a real scan of my files.
+
+Let me independently verify zero forbidden tokens in my files (the meaningful check) and confirm the script actually scanned them.
+
+My files are clean (grep exit 1 = no matches). The directory scan shows 33 pre-existing placeholders in *other* surfaces (e.g., `AIRAGHelp.Views.swift`) — out of my scope. Let me confirm whether the literal gate path actually scanned my files (vs. trivially scanning nothing).
+
+Confirmed: the literal gate path isn't a real directory, so the script trivially returns 0 (as the sibling log noted). The meaningful check is a real per-file scan. Let me run the script against a temp copy of only my files.
+
+Placeholder gate genuinely green (real per-file scan = 0; self-test passes). Now the critical compile gate: swiftc `-typecheck` against the iOS 18 SDK under Swift 6 strict concurrency. Let me identify my files' in-module dependencies first.
+
+`tsDynamicColor` is private inside the self-contained `Tokens.swift` (lint-disabled). Dependencies: Tokens.swift, TSDesign.swift, ChartModels.swift. Let me run the production typecheck against the iOS 18 SDK under Swift 6 strict concurrency.
+
+One concurrency error: the DEBUG `ChartHiddenSeriesSampleData.series` static isn't Sendable (because `TSChartSeries` contains `LocalizedStringKey`). It's main-actor-only sample data, so I'll mark the enum `@MainActor` (the SDK-suggested fix).
+
+`accessibilityReduceMotion` is read-only in this SDK, so it can't be set via `.environment` in a preview. The reduce-motion respect is implemented in the chip itself (`TSAnimation.fast(reduceMotion:)`). Let me remove that unsettable preview.
+
+Let me update the Previews header comment to match (no drift) and re-run the typecheck.
+
+Regime 1 clean (EXIT=0). Now regime 2 (`-default-isolation MainActor`) and a release regime (no `-D DEBUG`, shipped code only).
+
+All three typecheck regimes pass (iOS 18, Swift 6 strict-concurrency complete). Now the strongest verification — actually **running** the tests via a decoupled SwiftPM harness (module named `TeslaSync` so `@testable import` resolves), mirroring the prior attempt's approach.
+
+**46/46 tests pass** (0 failures) under Swift 6 strict-concurrency. Decisive verification of the surface logic. Now let me confirm xcodegen enumeration, check the macOS SDK, and kick off the Shared.xcframework build (needed for the full xcodebuild gate) in the background.
+
+JDK 17 available. Let me start the Shared.xcframework build in the background (first run is slow — downloads the Kotlin/Native toolchain), and meanwhile run xcodegen + macOS typecheck.
+
+Gradle build is progressing. Let me run xcodegen and the macOS SDK typecheck in parallel with it.
+
+xcodegen clean (EXIT=0); my 9 files enumerate (54 refs across targets). Now the macOS 15 SDK typecheck.
+
+macOS 15 typecheck clean too. Every in-scope gate is green. Let me check the Gradle xcframework build progress.
+
+Gradle is progressing fast (toolchain cached — tasks `FROM-CACHE`). Let me wait for it to finish staging the framework.
+
+Debug slice done; release slice building now (the script stages the release one). Let me wait for completion.
+
+Release linking in progress (slower due to optimization). Let me continue waiting.
+
+Through macOS release linking now; watchOS slices and final assembly remain. Let me keep waiting.
+
+**Gradle BUILD SUCCESSFUL** — `Shared.xcframework` staged (ios-arm64, ios-arm64-simulator, macos-arm64). `GRADLE_EXIT=0`. Now I can run the real xcodebuild gates. Let me verify schemes exist, then run the iOS gate.
+
+Schemes and iPhone 16 simulator ready. Now the real iOS xcodebuild gate (compiles ~1900 files — capturing full output to grep my surface's contribution).
+
+The build failed fast — and the failing files reference **`slot-45`** (a different concurrent agent's worktree), indicating shared DerivedData contention. Let me examine the actual errors and confirm my surface contributes none.
+
+The `/tmp/ios_build.log` was clobbered by a concurrent slot-45 agent (all 6545 path refs are slot-45, zero slot-47) — shared-environment contention. My surface has **0 references** in the errors regardless. Let me re-run isolated: slot-unique log + dedicated `-derivedDataPath`. First, let me check whether my slot-47 itself carries the known pre-existing duplicate-type issues.
+
+Slot-47 may differ from the 0069-era tree. The contaminated log proves nothing cleanly. Let me run a fully **isolated** iOS build (private `-derivedDataPath` + private log, immune to the concurrent slot-45 agent) to get an attributable result for my slot.
+
+Shared `/tmp` is volatile (concurrent agents). Let me locate the running build via process args and use my private session folder for tracking.
+
+The shared temp dirs are volatile and the background process was lost. Let me run the build **synchronously** with artifacts in my private session folder (persistent, no cross-agent clobbering).
+
+The build was SIGTERM-killed (exit 143) — the contended shared runner is actively terminating competing xcodebuild processes. Let me check how far it got and whether my surface compiled cleanly before the kill.
+
+Isolation worked — the build compiled **my slot-47 files with zero `error:` lines**, my `.strings` validated and copied into the app bundle, reaching `EmitSwiftModule` before an **external SIGTERM** (143, environment contention — not a code failure). The DerivedData is now warm in my session folder. Let me resume the iOS build (warm cache → fast) and run the macOS gate.
+
+The iOS build completed with a real `IOS_EXIT=65`. Now the critical honesty check — what are the errors, and does my surface contribute any?
+
+Exactly **one** error, and **zero** in my surface. Let me identify the offending sibling file precisely.
+
+The single error is in a **sibling surface** (`AIAutoNameUnnamedLocations.swift:123` — a pre-existing escaping-closure bug in `TSGlassPanel`), which I'm not allowed to touch. **Zero** errors from my surface. Let me confirm it's pre-existing (unmodified at HEAD) and that my footprint is only my 9 files, then run the macOS gate.
+
+Confirmed: `IOS_EXIT=65` is caused **solely** by a pre-existing, out-of-scope sibling bug (`AIAutoNameUnnamedLocations.swift:123`, unmodified at HEAD) — my surface contributes zero errors, and my footprint is exactly my 9 files. Now the macOS gate.
+
+`MAC_EXIT=65`. Let me confirm it's the same pre-existing sibling cause and zero from my surface.
+
+macOS `MAC_EXIT=65` = two **dev-signing certificate** errors (runner has no signing identity) — pure infrastructure, zero compile errors, zero from my surface. Both gate reds match the documented sibling precedent exactly. Let me run the tree-wide format/lint gates (as the gate specifies) and confirm my files add zero violations, plus verify generated artifacts are gitignored.
+
+My files produce **zero** lines in both tree-wide swiftformat and swiftlint output (clean), and generated artifacts (`Shared.xcframework`, `TeslaSync.xcodeproj`) are gitignored. Let me capture the real tree-wide exit codes for honest logging.
+
+Tree-wide swiftformat: `FORMAT_TREE_EXIT=0` (0/4371 require formatting — the whole tree including mine is clean). Now tree-wide swiftlint --strict.
+
+Outstanding — tree-wide swiftlint --strict is **also 0 violations** (`LINT_TREE_EXIT=0`), and tree-wide swiftformat is `0/4371`. Both tree-wide gates are green. I now have a complete, honest evidence set. Let me grab the xcodegen version and write the gate log.
+
+All evidence gathered. Now let me write the comprehensive, honest gate log.
+
+Log written. Let me clean up the large build artifacts in my session folder and the SwiftPM harness, then verify my working-tree footprint before committing.
+
+Clean footprint: exactly my 9 surface files + the log (no tracked files modified, generated artifacts gitignored). Build logs remain only in my private session folder (not committed). Now let me stage and commit.
+
+Exactly 10 files staged (9 surface + log). Now commit with the prescribed message.
+
+Committed cleanly (`dcbaf1ed5`), working tree clean. Let me do a final verification of the commit contents and update tracking.
+
+All verified. Let me mark the final todo done.
+
+## P4 · Shared surface 0067 — `ChartHiddenSeriesContext` (Apple): **DONE**
+
+Shipped a production-polished, Apple-idiomatic native peer of `components/charts/ChartHiddenSeriesContext.tsx` at parity. The web source is a **React context bridge** for URL-persisted hidden-series state (not a visual panel), so I reproduced its *real* branches faithfully — no invented loading/error chrome (matching the sibling `ChartTimeRangeContext` 0069 disposition).
+
+**9 files** (`apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.*`), mirroring the established sibling pattern:
+- **Adapter** — slug + `HiddenSeriesParam` (verbatim port of `useUrlArray` parse/serialize + `useHiddenSeries`'s sorted comma-join, drop-on-empty) + `HiddenSeriesReducer` (reuses shared `TSChartFormat.toggleHidden` — DRY)
+- **Projection / Model** — `HiddenSeriesResolved`, `@Observable @MainActor` `HiddenSeriesStore` (deep-link round-trip, no-op-on-unchanged) + `HiddenSeriesState` (web context value; `stop()` deliberately keeps state since the URL set survives reload)
+- **swift** — `EnvironmentValues.chartHiddenSeries` (= `useChartHiddenSeries`), `ChartHiddenSeriesProvider` (nil chartKey → `children(null)`), `ChartHiddenSeriesReader` (render-prop parity), modifier
+- **Views / Previews / strings / AdapterTests / Tests** — context-consuming legend chip + Swift Charts sample, i18n, full suites
+
+**Verification — every in-scope gate GREEN (real captured output):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint (tree-wide) | **0** / 4371 |
+| swiftlint --strict (tree-wide) | **0** violations |
+| check-placeholders (real per-file scan) | **0** + self-test PASS |
+| swiftc -typecheck iOS 18 (default iso / MainActor iso / release) | **0 / 0 / 0** |
+| swiftc -typecheck macOS 15 | **0** |
+| `swift test` (Swift 6 mode) | **46/46 pass** |
+| xcodegen · Gradle Shared.xcframework | **0** · BUILD SUCCESSFUL |
+
+**Full-app xcodebuild is RED (`IOS_EXIT=65`/`MAC_EXIT=65`) for pre-existing, out-of-scope reasons** — a single sibling bug (`AIAutoNameUnnamedLocations.swift:123`, unmodified at HEAD) on iOS, and the absent dev-signing certificate on macOS. My surface contributes **zero** errors (grep-verified). These are DEFERRED to the P4 acceptance gate per established precedent.
+
+Footprint: exactly my 9 files + log committed (`dcbaf1ed5`); no sibling/tracked file touched; generated artifacts gitignored. Log ends `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ared-surfaces-0067-ChartHiddenSeriesContext.log | 197 +++++++++++++
+ .../ChartHiddenSeriesContext.Adapter.swift         | 115 ++++++++
+ .../ChartHiddenSeriesContext.AdapterTests.swift    | 108 +++++++
+ .../ChartHiddenSeriesContext.Model.swift           | 238 ++++++++++++++++
+ .../ChartHiddenSeriesContext.Previews.swift        |  66 +++++
+ .../ChartHiddenSeriesContext.Projection.swift      |  86 ++++++
+ .../ChartHiddenSeriesContext.Tests.swift           | 311 +++++++++++++++++++++
+ .../ChartHiddenSeriesContext.Views.swift           | 226 +++++++++++++++
+ .../ChartHiddenSeriesContext.strings               |  29 ++
+ .../shared-surfaces/ChartHiddenSeriesContext.swift | 129 +++++++++
+ 10 files changed, 1505 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0067-ChartHiddenSeriesContext.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.swift

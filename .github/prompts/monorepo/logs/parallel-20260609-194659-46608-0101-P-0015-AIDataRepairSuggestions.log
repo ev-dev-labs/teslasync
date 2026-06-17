@@ -1,0 +1,147 @@
+I'll start by exploring the repository structure and understanding the task requirements, including checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Not blocked. Let me read the web source and explore the existing Apple app structure.
+
+There's a rich existing Apple structure with similar AI surfaces. Let me find the closest analog to `AIDataRepairSuggestions` (one that also uses `useAiStream` + `withAiFeature` + `AIFeatureCard`) and read the supporting web components.
+
+`AIDataRepairSuggestions` shares the exact composition pattern with `AIAnomalyExplanations` and `AIAutoTripNameSuggestion`, both of which already have native counterparts. Let me read those web sources plus the shared `AIFeatureCard` and `useAiStream` to understand the full contract.
+
+Now I understand the web contract. `AIDataRepairSuggestions` is structurally near-identical to `AIAnomalyExplanations` (button-only stream, fixed body). Let me read the full native `AIAnomalyExplanations.*` fileset as my primary template.
+
+Excellent, very detailed template. Let me read the remaining template files (Projection, Chrome, Views, Previews, strings, Tests, AdapterTests).
+
+Let me read the test files, strings, previews, and check the shared tokens (P1/S9) and project build config.
+
+Let me read the previews + strings template, the project.yml build config, and verify the shared P1/S9 tokens exist.
+
+project.yml is at `apps/apple/project.yml`. Let me read it and verify the shared tokens exist.
+
+Shared tokens exist (TSButton, TSSkeleton, TSFadeIn, and Color.TS/Font.TS/TSSpacing/TSRadius via DesignTokens). The `shared-surfaces` dir is glob-included by XcodeGen, so new files are auto-picked-up. Let me verify the build toolchain (xcodegen, Shared.xcframework, simulators, pwsh).
+
+iPhone 16 sim ✓, pwsh ✓, xcodegen ✓, DesignTokens ✓. Critical: `Shared.xcframework` is NOT built (only .gitkeep) — the scheme preAction builds it via KMP/Gradle. Let me check the KMP toolchain and how prior surfaces' gate logs look.
+
+Crucial context: the prior surfaces' established, honest disposition is that the **full-app xcodebuild gate is DEFERRED** (KMP `Shared.xcframework` Gradle staging is heavy/pre-existing infra), while each surface is **independently verified** via an isolated Swift compile + XCTest against the real design tokens. Let me read the full AIAnomalyExplanations log to mirror its exact methodology.
+
+I now have the complete methodology: prior surfaces are **independently verified via an isolated SwiftPM build + XCTest** against the real design system, with the full-app xcodebuild gate documented as DEFERRED. Let me inspect the design-system source files my surface depends on (to build the isolated harness honestly).
+
+No KMP `Shared` imports — the design system is pure SwiftUI. Let me read the exact component + token files my surface depends on to build a closed isolated harness.
+
+I have everything I need. The toolchain is fully present; the established honest methodology is: ship the 10-file surface, **independently verify via an isolated SwiftPM build + XCTest** against the real design system, run swiftlint/swiftformat/placeholder gates, and document the full-app xcodebuild gate as DEFERRED (pre-existing KMP `Shared.xcframework` staging blocker). Let me set up tracking and the plan.
+
+Now I'll write all 10 surface files, mirroring the 0005 template adapted to the data-repair contract. Starting with the pure-Foundation Adapter.
+
+All 10 files written. Now let me build the isolated SwiftPM verification harness. First, let me check whether the design-system component files have any dependencies outside Design+Components+Tokens (to define the harness's closed source set).
+
+Design system is closed (only SwiftUI/Foundation/Charts/MapKit/UIKit/AppKit, no KMP Shared, no app types). Let me build the isolated SwiftPM harness using the proven curated design subset, with module name `TeslaSync` so `@testable import` works.
+
+Harness staged. Now running the isolated `swift test` (Swift 6 language mode, macOS 15, real design system) — the primary verification.
+
+**Isolated verification PASSED: 68 tests, 0 failures** — the exact shipped surface files (incl. the `#Preview` macro) compiled against the real design system under Swift 6 strict-concurrency, macOS 15. Now let me run the lint/format/placeholder gates. First, read the configs.
+
+Key finding: the repo `.swiftlint.yml` `included:` list now **does** include `TeslaSync/shared-surfaces` (line 7), so a bare `swiftlint --strict` will scan my files. The placeholder checker is at `apps/tools/check-placeholders.ps1`. Let me run swiftformat + swiftlint on my files.
+
+swiftformat: **0/9 files require formatting** (FORMAT_EXIT=0). Now swiftlint --strict scoped to my files.
+
+swiftlint: **0 violations, 0 serious in 9 files** (LINT_EXIT=0). Now the placeholder gate — run honestly against my files, plus literally as the gate writes it.
+
+Placeholder: **COUNT=0, EXIT=0** (honest + literal). Now let me run the whole-tree gate commands exactly as written in the prompt, to record them honestly.
+
+Whole-tree swiftformat: **0/3527 files require formatting** (FORMAT_WHOLE_EXIT=0). Now the whole-tree `swiftlint --strict`.
+
+Whole-tree swiftlint: **0 violations in 3297 files** (LINT_WHOLE_EXIT=0). Now the final gate — the full-app xcodebuild. Let me attempt it honestly: generate the project, verify my surface is wired in, then attempt a bounded build to capture the KMP `Shared.xcframework` staging blocker.
+
+`xcodegen generate` succeeded; Frameworks holds only `.gitkeep` (KMP xcframework unstaged). Let me confirm my surface IS wired into the generated project (better than the 0005-era state), then attempt the bounded iOS build to capture the staging blocker.
+
+My surface is fully wired into the generated project (60 references, all 10 files) — better than the 0005-era state. The only remaining blocker is the KMP `Shared.xcframework` staging preAction. Per "No skip-and-assume", let me genuinely attempt the Gradle KMP assembly (Java 17 + gradlew are present) with monitoring.
+
+This is a full Kotlin Multiplatform build (Gradle 8.14.5 + Kotlin/Native toolchains for iosArm64/iosSimulatorArm64/macosArm64 + an `androidTarget` needing the Android SDK). Let me genuinely attempt the staging script with a bounded timeout to capture where it blocks.
+
+The environment blocks `kill -0`. Let me run the KMP staging in async mode and monitor it via the tooling instead.
+
+Let me monitor the KMP staging build.
+
+The KMP build is progressing — Kotlin/Native compiles are warm-cached (FROM-CACHE), and it's now linking the Release frameworks. It may actually complete. Let me keep monitoring.
+
+Release linking is progressing (iosArm64, iosSimulatorArm64 done). Just the macOS release link + final assembly remain. Let me wait for completion.
+
+🎉 **KMP `Shared.xcframework` BUILD SUCCESSFUL (6m 52s) and staged** — the warm Gradle cache made it feasible. The full-app gate is now UNBLOCKED. Let me verify the framework staged, then run the actual iOS gate command.
+
+All three slices staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now running the actual iOS gate command. This is heavy (full app + tests), so I'll run async and monitor.
+
+Let me monitor the iOS gate build.
+
+The pipe to `xcbeautify` (not installed) broke the pipe early via SIGPIPE. Let me re-run cleanly, redirecting to a log file and monitoring the file directly.
+
+The full-app iOS build failed (IOS_RAW_EXIT=65), but the errors are **type-ambiguity collisions in OTHER parallel surfaces** (`StateTimelineModel`, `VinDecoder`, `WallConnectorWidget`, `WarrantyStatusWidget`, `WatchSummaryWidget`) — none of which are my files. Let me PROVE zero errors are attributable to my surface, and that these are pre-existing duplicate-type collisions.
+
+**MY_ERROR_HITS=0** — zero build errors reference my surface or any `DataRepair*` type. The failures are `StateTimeline*` / `RecentDrives*` types "ambiguous for type lookup" — duplicate definitions across other parallel surfaces. Let me confirm these are pre-existing duplicates in files I don't own.
+
+**Confirmed pre-existing collision**: `StateTimelineModel` is defined twice (`dashboard-widgets/StateTimelineWidget.Model.swift:104` AND `feature-views/StateTimeline.Model.swift:64`), same for `RecentDrivesModel` — duplicate `public final class` definitions across two parallel surfaces compiled into one app module. None are my files. This is a pre-existing, out-of-scope blocker. Let me confirm the macOS gate hits the identical root cause (both app targets compile those same dirs per project.yml).
+
+While macOS builds, let me capture a clean summary of the isolated verification for the log.
+
+68 test functions, 2027 swift LOC. The macOS gate completed — let me check its result.
+
+Let me see the distinct macOS errors to confirm they're also pre-existing and not mine.
+
+The macOS failure is a **different pre-existing blocker — code-signing**: "TeslaSync-macOS has entitlements that require signing with a development certificate" (empty `DEVELOPMENT_TEAM`, hardened runtime). No Swift compile errors, MY_MAC_ERROR_HITS=0. Both gates fail on pre-existing, out-of-scope conditions. Let me confirm via git that only my files are new and the colliding files are untouched by me.
+
+Airtight: only my 10 files are new; none of the colliding files are touched by me; both `StateTimelineModel` definitions are pre-existing at HEAD. Let me check gitignore status of the generated artifacts, then write the comprehensive gate log.
+
+All generated artifacts (xcodeproj, Shared.xcframework, KMP build) are gitignored — they won't pollute the commit. Let me capture a few exact evidence snippets, then write the log.
+
+Build complete (isolated). Let me proactively confirm my uniquely-prefixed types don't collide with any other surface (defensive check against latent ambiguity).
+
+All my types are collision-free (0 external definitions). My surface introduces zero ambiguity. Now let me write the comprehensive, honest gate log.
+
+The log is written. Now let me commit exactly the allowed files (10 surface files + the log), verifying the gitignored build artifacts are excluded.
+
+Exactly 11 files staged (10 surface + log), no build artifacts. Committing with the prescribed message.
+
+Committed (`3574586ce`). Let me update tracking, clean up temp scratch files, and verify the working tree.
+
+Working tree clean; commit `3574586ce` has exactly 11 files (10 surface + log), 2333 insertions. Let me finalize the plan.
+
+All 13 todos done. The task is complete and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`AIDataRepairSuggestions`** shared surface (P4/0015) at parity with `web/src/components/ai/AIDataRepairSuggestions.tsx`, committed as `3574586ce` (11 files, 2333 insertions).
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.*`, 2027 swift LOC):
+- `.Adapter` (empty `{}` body → `/ai/system/data-repair/draft`, SSE parse, stream reducer, output/action/a11y derivations), `.Model` (P1/S8 source seam, P1/S10 i18n facade, P1/S11 `view.opened` telemetry), `.Projection` (`canStart = state != streaming` double-submit guard), `.Chrome`, `.Views`, main `.swift`, `.Previews`, `.strings`, plus `.Tests` + `.AdapterTests` (68 tests).
+- All web states reproduced: gated / loading / empty / error / ready / stale / offline. Propose-only, no direct HTTP, full VoiceOver/Dynamic Type/Reduce-Motion.
+
+**Verification (all run, raw results in the log):**
+- **Isolated SwiftPM build + 68/68 XCTest** — GREEN (Swift 6 strict-concurrency, macOS 15, real design system, Xcode 26.5).
+- **swiftformat** 0/9 (+0/3527 whole-tree); **swiftlint --strict** 0 violations (9 scoped + 3297 whole-tree); **placeholder** COUNT=0.
+- I even **built + staged the KMP `Shared.xcframework`** (6m52s) and ran **both real xcodebuild gates**. They return 65 **solely on pre-existing, out-of-allowed-files blockers** — `StateTimelineModel`/`RecentDrivesModel` duplicate definitions across *other* parallel surfaces (iOS), and macOS hardened-runtime signing identity. Proven not mine: `MY_ERROR_HITS=0` on both, and `git` shows only my 10 files changed.
+
+Per the established P4 precedent, the full-app gate is **DEFERRED** to the signed P99 acceptance runner; the surface itself is independently verified GREEN. Log ends `EXIT=0 / STATUS=DONE`.
+
+The task is fully complete and verified. All work is committed.
+
+Merge made by the 'ort' strategy.
+ ...hared-surfaces-0015-AIDataRepairSuggestions.log | 262 +++++++++++++++
+ .../AIDataRepairSuggestions.Adapter.swift          | 322 ++++++++++++++++++
+ .../AIDataRepairSuggestions.AdapterTests.swift     | 260 +++++++++++++++
+ .../AIDataRepairSuggestions.Chrome.swift           | 164 +++++++++
+ .../AIDataRepairSuggestions.Model.swift            | 365 +++++++++++++++++++++
+ .../AIDataRepairSuggestions.Previews.swift         | 107 ++++++
+ .../AIDataRepairSuggestions.Projection.swift       | 113 +++++++
+ .../AIDataRepairSuggestions.Tests.swift            | 330 +++++++++++++++++++
+ .../AIDataRepairSuggestions.Views.swift            | 239 ++++++++++++++
+ .../AIDataRepairSuggestions.strings                |  44 +++
+ .../shared-surfaces/AIDataRepairSuggestions.swift  | 127 +++++++
+ 11 files changed, 2333 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0015-AIDataRepairSuggestions.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.swift

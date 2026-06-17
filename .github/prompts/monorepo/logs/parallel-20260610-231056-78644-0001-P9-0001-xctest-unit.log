@@ -1,0 +1,274 @@
+I'll start by exploring the repository structure and checking the environment capabilities for this Apple XCTest task.
+
+macOS + Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, and simulators are all available. The gate can run. Let me explore the Apple project structure.
+
+There's substantial existing infrastructure. Let me read the project configuration and understand the existing test setup.
+
+Let me check the build tooling (xcodegen, the Shared.xcframework script), the log location, and the existing tests.
+
+The build depends on a KMP `Shared.xcframework` built via Gradle. Let me check the shared module, the existing tests, and a prior run log.
+
+Let me examine a prior artifact log to understand build feasibility/timing, and inspect the shared KMP core and existing test examples.
+
+This is very informative. A sibling run built the framework (~7min), generated the project, ran 6588 iOS tests at 83.7% coverage — blocked only on macOS code-signing. But this slot's tree is clean with no target log yet. Let me understand the current baseline: git history and existing test coverage.
+
+There are already 757 test files (P7 generated co-located tests). This task is about building, running the full gate, filling coverage gaps, and producing the log. Let me kick off the long-pole framework build now and inventory key files in parallel.
+
+Confirmed: 0 code-signing identities and the macOS app carries restricted entitlements (push, associated-domains) — same setup as the sibling run. Framework build is running. Let me inventory the facade, existing tests, and coverage bar while it builds.
+
+Infrastructure tests are already comprehensive (facade, auth, live, notifications, platform, widgets). Let me check the build progress and read the coverage ADR, facade, and a representative co-located page test.
+
+Now I understand the architecture: each surface is a set of co-located files (`.swift`, `.Model.swift`, `.Adapter.swift`, `.States.swift`, `.Tests.swift`). Let me run a gap analysis to find surfaces missing tests while the framework builds.
+
+Essentially 100% of surfaces have tests (ToolCard and DigitalTwinMiniWidget are covered in `Tests/Unit/`). The base is comprehensive. Let me check build progress and spot-check a co-located test's state coverage.
+
+This co-located test is exemplary — it covers loading/empty/error/data/stale/offline/refresh states. The base coverage is genuinely comprehensive. This P9 task is the verification gate. Let me set up tracking and wait for the framework build (the critical path).
+
+Now let me wait for the framework build to complete — it's the critical path.
+
+Build is actively progressing — Kotlin/Native clang++ is linking frameworks. Let me wait for completion.
+
+Framework built and staged. Now let me verify the slices and generate the Xcode project.
+
+All 3 slices present, project generated. Now let me run the iOS build+test gate (the big one — 6588 tests). I'll log to a file and monitor progress.
+
+iOS gate is running. Let me monitor progress via the log file.
+
+Build is compiling the app target (Swift 6, coverage instrumentation). This will take a while for 4500+ files. Let me wait and check periodically.
+
+iOS build succeeded but tests reported 6 failures (IOS_EXIT=65). Let me identify the exact failures.
+
+Found it: the base has type-name collisions causing `BUILD FAILED` (ambiguous type lookups). Two surfaces independently declare the same top-level type names. Let me get the complete picture of the collisions.
+
+Two contained collision groups (RecentDrives*, StateTimeline*), each shared between a feature-view and a dashboard-widget surface — accidental name clashes from parallel development. 192 errors all cascade from these 8 types. No other compile errors. Let me examine the declarations and reference counts to plan a surgical rename.
+
+Both sides declare identical public type names. I'll rename one side per collision to a unique prefix. Let me count references to choose the minimal-blast-radius side and confirm the new names don't collide.
+
+Dashboard-widget side has fewer references (55, 50) and the `*Widget`-prefixed names are free. I'll rename the widget side. Let me inspect the widget Model file and check for test-class-name collisions before renaming.
+
+Critical: there are also duplicate **test class names** across the bundle (e.g., `RecentDrivesModelTests`, `RecentDrivesPhaseTests`, `StateTimelineFormatTests`). Both production types AND test classes collide. I need the complete intersection of declared identifiers between each surface pair. Let me enumerate precisely.
+
+Now I have the complete collision sets (15 identifiers each, including production types AND test classes/helpers). Before fixing, let me do a comprehensive global scan for ALL duplicate top-level declarations (app sources and test bundle separately) so I fix everything in one pass rather than iterating slow builds.
+
+My scan missed `@MainActor`-prefixed declarations and surfaced 2 new collisions (`KioskClockPosition`, `RecentDrivesConnectivityBanner`). Let me fix the regex to handle attributes and get the complete, authoritative collision list with locations.
+
+Let me get the complete authoritative list with file locations (no exclusions) for both app-source and test-bundle duplicates.
+
+More detail emerged: the RecentDrives widget surface spans both `RecentDrivesListWidget.*` and `RecentDrivesWidget.*` files, and there's a separate `KioskClockPosition` collision between two unrelated surfaces (KioskSettingsModal vs KioskOverlay). Let me map the exact files of each colliding surface.
+
+The topology is clear now: three surface families have collisions — RecentDrives (`RecentDrivesSection` FV + `RecentDrivesListWidget` DW + `RecentDrivesWidget` DW), StateTimeline (`StateTimeline` FV + `StateTimelineWidget` DW), and Kiosk (`KioskSettingsModal` + `KioskOverlay` share `KioskClockPosition`). Let me get exact declaration locations for all 26 app duplicates to design a precise rename.
+
+Now I have the authoritative map: all 26 app duplicates + 5 test-class duplicates, each 2x between two surfaces. Before renaming, I must verify these identifiers aren't referenced from OUTSIDE their owning surfaces (a central registry could break). Let me check for external references.
+
+All colliding identifiers are fully contained within their owning surfaces — no external references, so the rename is safe. Now let me verify my planned NEW names don't already exist anywhere (to avoid creating fresh collisions).
+
+All 31 target names are free. The rename is fully safe and contained. Let me apply it with a single-pass word-boundary replacement scoped to each renamed surface's `.swift` files.
+
+253 replacements applied. Let me confirm zero duplicates remain (app + test bundle) and no new collisions were introduced.
+
+Zero duplicates remain. Let me re-run the iOS build+test gate (incremental — DerivedData is warm).
+
+BUILD FAILED but 0 standard `error:` lines — let me find the actual failure cause.
+
+Line 10606 shows `Command SwiftCompile failed with a nonzero exit code` but no `error:` diagnostic — suggests a compiler crash. Let me find the exact failing command and context.
+
+Root cause found: the Swift compiler (`swift-frontend`) **crashes during IRGen** with `report_at_maximum_capacity` (an LLVM SmallVector hard limit) while emitting a reabstraction thunk — triggered by my added `-enableCodeCoverage YES` instrumentation on this very large single-module app. The verbatim gate has **no coverage flag**. Let me stop this run and re-run the verbatim gate (no coverage) to establish the true gate result.
+
+The verbatim build is running. While it compiles, let me reflect on coverage strategy: if whole-module coverage instrumentation crashes `swift-frontend` at this scale, I'll need an honest fallback (structural per-surface state coverage). Let me monitor the verbatim build for the IRGen stage.
+
+The verbatim build (no coverage) **also** crashed (IOS_EXIT=65). So this is a pure module-scale problem, not coverage. Let me confirm the crash signature.
+
+Two distinct compiler-scaling failures surfaced (both pre-existing, unrelated to my rename):
+1. **IRGen crash** (`report_at_maximum_capacity`) on a reabstraction thunk in `AppearanceSettings.Controls.swift`.
+2. **Type-check timeout** in `RecentDrivesSection.Previews.swift:24`.
+
+Let me get the complete list of all such failures and examine the offending code.
+
+Only 2 isolated failures (not pervasive). Let me examine both offending files.
+
+Let me see the exact fatal-error message preceding the crash stack (to distinguish a code bug from memory pressure), and check whether sibling slots are competing for memory.
+
+Memory is fine (71% free, 64GB) — the crash is deterministic, not memory pressure. The crashing thunk is `(Bool) async`-isolated (note `A`=async, `ScA_pSg`=`(any Actor)?`), emitted lazily within a batch containing `helpers.*`, `selectedVehicle.*`, `withAiFeature.*`, `AppearanceSettings.Controls.swift`. Let me find the offending async/Bool/actor closure and fix the Previews timeout.
+
+Let me properly demangle the crashing thunk to identify the exact construct.
+
+The thunk is precisely: `@isolated(any) @Sendable (Bool) -> ()` reabstraction. This is a **compiler size-overflow bug** in IRGen's `setArgs` when emitting this specific thunk — so I must eliminate the construct that produces it (batch settings won't help). Let me find all `@Sendable`/`@isolated(any)` Bool closures and the shared toggle component.
+
+No explicit `@isolated(any)`/`@Sendable` Bool closures — they're compiler-inferred from `@MainActor (Bool) -> Void` stored closures bridged into `Binding`. The crash is a real IRGen compiler bug on that reabstraction thunk. Let me examine the shared toggle field and how these closures are passed.
+
+This is a genuine Swift compiler IRGen bug: it crashes emitting the standard `@isolated(any) @Sendable (Bool)->()` reabstraction thunk produced by `Binding(get:set:)` (whose closures are `@Sendable` in the iOS 18 SDK) receiving `@MainActor` setters. Since Swift 6 language mode forces complete concurrency, I can't relax it via settings — I must reproduce fast and find an effective source fix. Let me extract the failed frontend command for a fast (~1-2 min) iteration loop.
+
+The temp filelists survive. Let me extract the exact failed frontend command to reproduce the crash in ~1-2 min per iteration (vs 10-min full builds).
+
+The failed command compiles a 25-file batch. Let me reproduce the crash directly for fast iteration.
+
+Reproduced in <1 min (Abort trap 6). Now I have a fast loop. Let me identify which of the 25 batch files form the `@Sendable (Bool)` closure (custom `Binding` setters / Bool closures).
+
+Three candidate sites in this batch. The strongest is `AppearanceSettings.Controls.swift:122`. Let me run a fast diagnostic: temporarily neutralize that binding setter and re-run the repro to confirm it's the trigger.
+
+**Confirmed**: the `@MainActor (Bool) -> Void` setter passed to `Binding(get:set:)` is the trigger. Let me restore the file and check the SDK `Binding.init` signature to design a correct, behavior-preserving fix.
+
+Empirically confirmed the trigger. Let me test the proper fix — a non-isolated `@Sendable` setter that hops to the main actor via `assumeIsolated` (SwiftUI calls binding setters on the main actor), which should avoid the `@isolated(any)` thunk while preserving behavior.
+
+The `assumeIsolated` fix works (exit 0, no crash, no errors). But this thunk is per-type and per-site — I need to gauge the module-wide scale. Let me restore and survey how many sites/types are affected.
+
+`Binding(get:set:)` appears at 78 sites (43 files); 15 pass a bare stored closure as `set:`. Let me determine whether closure-*literal* setters also crash or only bare stored-closure values — this decides the fix scope.
+
+**Key finding**: only the *bare stored-closure value* (`set: onChange`) crashes — wrapping it as a closure literal `set: { onChange($0) }` compiles cleanly. The fix is to wrap bare-closure-value `get:`/`set:` arguments to `Binding`. Let me find all such sites module-wide.
+
+Only **3 sites** module-wide pass a bare stored-closure value as `set:`. That's very tractable. Let me view each to apply the precise wrapping fix.
+
+All 3 sites confirmed. Let me apply the closure-literal wrapping fix (empirically verified to avoid the crash) to all three, plus fix the Previews type-check timeout.
+
+Now fix the Previews type-check timeout. Let me first confirm `RecentDriveItem`'s field types so my annotations match.
+
+Three crash triggers and the Previews timeout fixed. Let me verify the original crash batch now compiles cleanly (it includes AppearanceSettings.Controls.swift and AppSettingsView.swift), then launch the full build.
+
+Crash batch now compiles cleanly. Let me run the full verbatim iOS gate.
+
+While the build runs, let me run the independent lint/format/placeholder gates in parallel (they scan source, not build output) and check my changes pass.
+
+swiftlint found 3 serious violations (my `SWIFTLINT_EXIT` captured `tail`'s exit, not swiftlint's). Let me capture the real exit and the 3 violations.
+
+My renames pushed 3 lines over the 120-char limit. Let me view and wrap them.
+
+Wait — `RecentDrivesListWidgetSpyRecentDrivesTelemetry` looks like a possible double-prefix artifact from my rename. Let me verify with git diff that the rename was correct and not malformed.
+
+Good — `RecentDrivesListWidgetSpyRecentDrivesTelemetry` was the pre-existing class name; my rename only correctly changed the protocol. Let me check the swiftformat config (maxwidth?) before wrapping the 3 long lines.
+
+`--maxwidth 120` + `--strict` (warnings→errors). Let me wrap all 3 long lines, then run swiftformat to normalize them to the project's canonical style.
+
+The full iOS gate finished. Let me check the result.
+
+Progress — the IRGen crash is gone. But there's a new BUILD FAILED. Let me find the actual errors.
+
+Crash and timeouts are gone. Two real (pre-existing, now-reached) errors remain: `escaping closure captures non-escaping parameter 'content'` in two shared-surface files. Let me view and fix them.
+
+Identical bug in both files: a `glass(@ViewBuilder _ content: () -> some View)` helper passing `content` into `TSGlassPanel`'s closure, which escapes. Let me check `TSGlassPanel`'s signature to apply the correct fix.
+
+Confirmed: `TSGlassPanel`'s content is `@escaping`, and most sibling surfaces correctly write `@escaping () -> some View`. Three files are missing `@escaping`. Let me find and fix all of them module-wide.
+
+3 files have the `glass` helper missing `@escaping`. Let me fix all three (matching the correct sibling pattern).
+
+Let me proactively check the other ~28 files with non-escaping `@ViewBuilder content` params to find any that also pass `content` into an escaping wrapper (avoiding more rebuild iterations).
+
+My heuristic is noisy (it flags `content()` inside non-escaping containers like `VStack` too). The real bug is only when `content` flows into an `@escaping`-content view (`TSGlassPanel`). Let me precisely check which flagged files pass non-escaping `content` into such a wrapper.
+
+0 remaining `content`→escaping-wrapper bugs after my 3 fixes. Let me launch the full gate again, and in parallel normalize my edited files with swiftformat and re-run the lint/placeholder gates.
+
+While the build runs, let me run the format and placeholder gates and capture any violations from my changes.
+
+swiftformat flags 3 `redundantType` issues in my Previews fix (lines 25-27, where `Double(...)` RHS makes `: Double` redundant). I'll fix those after the build (the extraction—not the annotations—prevents the timeout). Let me run the placeholder gate now.
+
+The placeholder gate reports 93 violations (pre-existing in the base). Let me inspect the patterns file and sample flagged lines to determine if these are real stubs or false positives needing `// parity:allow` markers.
+
+All 93 are the word "Placeholder" (capital P) — likely legitimate SwiftUI placeholder-text usage, not stubs. The sibling run handled these via `// parity:allow` markers. Let me sample several to confirm they're false positives before mass-marking.
+
+Confirmed — all 93 are legitimate "placeholder" UI text/prose/property names (search prompts, doc comments), not stubs. The sanctioned mechanism is the `// parity:allow` marker. Let me check the build status and the existing marker style before mass-marking.
+
+Build still running. Let me extract all 93 placeholder lines' content to confirm none are real stubs, and check the script's opt-out detection logic.
+
+All 93 are confirmed legitimate (em-dash constants, i18n search prompts, doc prose, test names) — zero real stubs. The opt-out is `// parity:allow <reason>`. Let me check the build result first (the keystone), then handle the markers.
+
+**BUILD SUCCEEDED** with 0 errors — all my fixes worked. Now the test bundle is compiling and tests will run. Let me wait for completion.
+
+Build succeeded but tests returned exit 65. Let me find whether it's a test-bundle compile failure or actual test failures.
+
+No compile errors, no test-case failures, yet TEST FAILED. Let me find the actual cause (launch failure, crash, or linker error).
+
+The failure is **"The Xcode build system has crashed. Build again to continue."** — a transient build-system (xcbuildd) crash during test-bundle compilation, not a code/test problem (the `build` action SUCCEEDED). I'll address the remaining gates now (between builds), then re-run. First, let me let swiftformat fix the 3 redundantType issues in my Previews edit.
+
+swiftformat cleaned the redundant types while preserving the extraction (timeout fix intact). Now let me apply `// parity:allow` markers to the 93 verified-legitimate placeholder lines with content-aware reasons.
+
+All 93 marked. Now let me verify the placeholder gate passes and check the markers didn't introduce new line-length or format violations.
+
+PLACEHOLDER now passes (COUNT=0), but my verbose marker reasons pushed 33 lines over swiftlint's 120-char limit. Markers must stay on the placeholder line, so I need shorter reasons + wrapping for already-long lines. Let me revert the markers and measure the real scope first.
+
+Reverted cleanly (no overlap with my other edits). 22 of 93 lines are >92 chars (need wrapping); 71 are short (a brief marker fits). Let me examine the 22 long lines to plan their handling.
+
+Most long lines are doc comments. Given macOS will block DONE anyway (signing), I'll still make lint/format/placeholder green for disposition quality. First, let me normalize my code edits with swiftformat and re-check swiftlint (markers reverted, so this shows only my-code issues).
+
+Down to 1 swiftlint issue: `opening_brace` on the wrapped class decl (a swiftformat-vs-swiftlint tension). Let me view the current state and resolve it.
+
+swiftformat puts the brace on its own line (conflicting with swiftlint). Cleanest fix: shorten the redundant test-double name so the declaration fits on one line (brace attached). Let me rename `RecentDrivesListWidgetSpyRecentDrivesTelemetry` → `SpyRecentDrivesListWidgetTelemetry` and collapse the wrap.
+
+One line, 110 chars, brace attached. Let me confirm swiftlint and swiftformat are both clean on my code edits now.
+
+Both lint and format are clean on my code edits. Now let me apply placeholder markers with a robust script: short marker for short lines, comment-wrapping for long comment lines (keeping the marker on the "placeholder" line), and flag any code lines for manual handling.
+
+89 of 93 handled; 4 need manual wrapping. Let me view their context.
+
+Let me wrap the 4 remaining lines manually, keeping each `placeholder` token + marker on a ≤120 line.
+
+All 93 markers placed. Let me verify all three source gates: placeholder (COUNT=0), swiftlint --strict, and swiftformat --lint.
+
+The marker approach hit swiftformat issues (2-space comments → `consecutiveSpaces`, multi-occurrence "placeholder" lines, comment-wrap structural issues). Let me revert all placeholder files and re-apply with a cleaner, robust script (1-space marker, word-wrap long comments, mark every placeholder line).
+
+That was just a path typo (ran from wrong dir). Let me confirm clean from repo root and re-apply markers with the improved script (1-space marker, word-wrap long comments, mark every placeholder line).
+
+4 code lines need expression-wrapping. Let me view their current state and wrap each.
+
+Let me wrap the 4 code lines (args each on their own line, marker on the placeholder-key line).
+
+All markers placed. Let me verify all three source gates together.
+
+All three source gates are green: **PLACEHOLDER COUNT=0**, **SWIFTFORMAT 0**, **SWIFTLINT 0**. Let me update the plan and run the final iOS build+test (the keystone — last attempt hit a transient build-system crash).
+
+The final iOS build+test is running (app target is warm, so it should reach tests faster). Let me monitor progress.
+
+Recurring transient **xcbuildd crash** ("build system has crashed. Build again to continue") — 0 compile errors. This is infrastructure (likely memory pressure from parallel sibling builds). Let me check system load and whether the run is still going.
+
+Load average **~40** — severe CPU contention from parallel sibling builds is crashing the Xcode build daemon (XCBBuildService). 0 compile errors; this is purely environmental. Let me check if the run is still alive.
+
+It's still running (test action retrying after the build-action crash). Let me wait for it to finish.
+
+2 build-system crashes (build + test actions). 7 compile errors appeared — let me verify these are real or crash-induced artifacts.
+
+A real pre-existing test-bundle collision surfaced (masked by the earlier crashes): `ChangeSpy` is declared twice (one lacks a `changes` member). Let me find both declarations.
+
+Three `ChangeSpy` test doubles: two `private`, one `internal` (ActionBuilder) — the internal one collides module-wide. My earlier scan missed private/internal mixes. Let me do a thorough scan for ALL test-double type names duplicated across test files where at least one is non-private.
+
+Two test-double collisions (internal-vs-private): `ChangeSpy` and `SpyStateTimelineTelemetry`. Both were missed because my scans skipped private decls. Let me check their usage scope to choose the safe fix (make internal→private vs rename).
+
+Both test doubles are file-local. The safe fix: make the two `internal` ones `private` (matching their counterparts). Let me apply.
+
+Both test-double collisions fixed. The recurring xcbuildd crashes are from the contended runner (load ~40). Let me split build-from-run and reduce parallelism for robustness: first `build-for-testing` (compiles app + test bundle, isolating any remaining compile errors).
+
+build-for-testing is running with reduced parallelism. Let me monitor for compile errors or build-system crashes.
+
+No xcbuildd crash this time (reduced parallelism helped). One real pre-existing test error: `EmptyView` not in scope in `ChartContainer.AdapterTests.swift:309` (missing `import SwiftUI`). Let me check and fix.
+
+The file imports XCTest (and `@testable import TeslaSync`) but not SwiftUI, which it needs for `EmptyView`. Let me view the import block and add `import SwiftUI`.
+
+Let me proactively find other test files using SwiftUI types (like `EmptyView`) without importing SwiftUI, to avoid more iterations.
+
+No others. Let me re-run build-for-testing to confirm the test bundle now compiles cleanly.
+
+build-for-testing re-running. Let me monitor for clean compilation.
+
+Still compiling (0 errors so far). Let me wait for completion.
+
+**BFT_EXIT=0** — the full test bundle compiles cleanly. Now let me run the tests via `test-without-building` (lighter, no recompile).
+
+Tests are running. Let me monitor for pass/fail.
+
+Tests are running (unit + UI tests, since the scheme includes both). Let me wait for completion.
+
+**TWB_EXIT=0 — all tests pass!** The iOS gate (build + test, run as build-for-testing + test-without-building to survive runner contention) is GREEN. Let me extract the test summary for the log.
+
+`TEST EXECUTE SUCCEEDED`, 0 failures. Let me get the test counts from the result bundle.
+
+**iOS gate GREEN: 15485 tests passed, 0 failures** (BFT_EXIT=0 + TWB_EXIT=0), plus swiftlint/swiftformat/placeholder all 0. Now let me run the macOS gate (expected BLOCKED on signing — must confirm, not assume). Let me check load first.
+
+macOS gate is compiling (expected to fail at signing). Note: the IRGen crash I fixed was the real blocker (it occurred with AND without coverage) — so coverage instrumentation may now work. While macOS builds, let me compute the test-suite metrics for the log.
+
+macOS gate finished. Let me check the result (expected: signing failure).
+
+macOS gate confirmed **BLOCKED on dev-cert signing** (MAC_EXIT=65): both `TeslaSync-macOS` and `TeslaSyncWidgets-macOS` have entitlements (`aps-environment`, `associated-domains`) requiring a development certificate; 0 valid identities. Crucially, the macOS app **compiled cleanly** (0 compile errors — same fixed Sources/) and failed *only* at signing — proving the block is purely the ADR-012 cert gap, not test quality.
+
+The IRGen crash I fixed occurred with AND without coverage, so coverage may now work. Let me measure coverage (the explicit acceptance criterion).
+
+The macOS verbatim log already proves compile-clean + signing-only failure, so no separate ad-hoc supplement is needed. Coverage build is running. Let me monitor it.
+
+Coverage instrumentation is compiling clean (0 errors, 0 crash — the thunk fix unblocked it). Let me wait for completion.
+

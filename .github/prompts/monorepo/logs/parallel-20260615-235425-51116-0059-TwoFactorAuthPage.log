@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure to understand the task — the web source page, the existing Apple app structure, and the parity infrastructure.
+
+The page is a thin shell wrapping `TOTPEnrollmentSection`. Let me explore that component and the existing Apple app structure to understand the full scope and patterns.
+
+The actual pages live in `apps/apple/Sources/Features/`, not the templated path. Let me explore the Settings feature directory, an existing page for patterns, and the web component.
+
+Now I understand the full scope — the page wraps a rich `TOTPEnrollmentSection`. Let me check the parity manifest, ledger, and existing Apple page patterns to understand conventions and whether TOTPEnrollmentSection is a separate unit.
+
+Let me read the manifest entry, the ledger structure, and an existing similar Apple page for the pattern.
+
+Let me check if `TOTPEnrollmentSection` is its own separate parity unit in the manifest, and verify the apple-ledger structure.
+
+No separate TOTP unit exists — the manifest scopes this to the page (2 strings). But the page wraps a rich `TOTPEnrollmentSection`. Let me examine the API hook, the Apple shared layer for TOTP support, an existing page pattern, and navigation registration.
+
+Key finding: no TOTP support exists in the Apple shared core, and allowed files exclude the shared core. Let me examine the existing page patterns, navigation registration, component library, and the string catalog to calibrate the right approach.
+
+`DevToolsPage` is the ideal analog — req 2, "renders from navigation values / local state, no API data sources". It reproduces the full page natively with local state and notes live API paths belong to separate units. Let me study the model pattern, route registration, components, and tokens.
+
+Now let me read the core components and design tokens I'll need: badges, buttons, overlays (modals), fields, typography, states, and the design system.
+
+Let me read overlays (modals), fields (inputs), typography, states, the design tokens, and the route system.
+
+Let me read typography, states (feedback), the design tokens, and the route system.
+
+I have the component library mapped. Now let me read the design tokens, route system, and search for ConfirmDialog/CopyButton equivalents, plus check how routes are wired in.
+
+`.settings` exists in the `.account` group but there's no `.twoFactor` route — I'll add one with pathSegment `account/2fa`. Let me read the route host registry, the copy utility, a confirm-dialog pattern, how registrations aggregate, and the design tokens.
+
+Now let me understand how route registrations aggregate into the app, the design tokens, project.yml source config, and the deep-link parser.
+
+There's a `SettingsRouteRegistration`. Let me read the app composition, the Settings registration, design tokens, and the route parser.
+
+Let me read the design tokens, project.yml source config, and locate the Settings registration pattern.
+
+I now understand the architecture. Let me verify tool availability, read the Settings registration pattern, check the placeholder scanner, and inspect the string catalog and an existing comparable log.
+
+All tools are present (xcodebuild, swiftlint, swift 6.3.2, pwsh) — so the gate must actually pass, not be BLOCKED. The DevTools log is my format template. Let me read it fully, the placeholder scanner, and check existing string keys.
+
+This is the definitive methodology template. Key insight: the full `xcodebuild` is RED at HEAD due to pre-existing out-of-scope sibling defects (forbidden to fix), so peers prove in-scope correctness via isolated Swift 6 strict-concurrency type-checks + executed harnesses. Let me set up tracking and read the remaining references.
+
+Let me fix the todo insert and read the token/theme definitions, an existing test, and the placeholder scanner.
+
+Complete token API confirmed. Let me read an existing model test, the placeholder scanner, the theme/material helpers, and check existing string keys to reuse.
+
+Let me read the placeholder patterns, a sample xcstrings entry, and check for route-exhaustiveness tests plus the model-driven sheet pattern.
+
+Forbidden words include "Placeholder" and "not implemented" (case-insensitive) — I'll avoid those in code/comments. Let me read the route test to keep it green, and the exact xcstrings JSON format.
+
+I understand the xcstrings format and route test constraints. Let me check for other exhaustive `switch` statements over `AppRoute` that adding a case could break.
+
+`WatchDeepLinkTarget` is a separate enum (safe). Let me confirm how SpotlightIndexer enumerates routes, then I'll start implementing.
+
+I have full context on tokens, components, routing, tests, and the placeholder gate. Let me quickly view the web `PageContainer`/`PageHeader` to faithfully reproduce the page chrome (title, subtitle, copyLink), then start implementing.
+
+`WebhooksPage` is the ideal peer template — also a thin `PageContainer(title+subtitle+copyLink)` wrapping a section via an `@Observable` model. Let me read it fully along with its model, the CopyLinkButton, and how it reproduces its section.
+
+`CopyLinkButton` is a shared component at `TeslaSync/shared-surfaces/`. Let me confirm its API and strings, then read the Webhooks parity log for the section-wrapping format.
+
+`CopyLinkButton(url:)` is reusable and owns its strings. WebhooksPage is my exact structural template. Let me read the lint/format config and the Webhooks parity log, then implement.
+
+Config understood (strict 120-col, `--self remove`, before-first wrapping; I'll auto-format then lint). Let me read the Webhooks parity log to mirror the format for a section-wrapping page, then implement.
+
+I have the complete template (WebhooksPage) and methodology. Let me write a plan file, then start implementing. First the value types and models.
+
+Now let me create the Settings feature directory and write the value types and model.
+
+Now the section view with state branches and sheet routing:
+
+Now the dialogs file (enroll/backup/disable + QR generator):
+
+Now the sample fixtures, page view, page model, and route registration:
+
+Now let me wire the route into `AppRoute.swift` (case, pathSegment, systemImage, group):
+
+Now the parser alias and the app registry chain:
+
+All code files and route wiring are in place. Now let me add the localization keys via a safe textual insertion script (additions-only diff), then validate the JSON.
+
+The top-level uses `"strings": {` (no space before colon). Let me fix the marker and re-run.
+
+40 keys added, JSON valid. Now the unit test:
+
+All source, test, route, and string changes are in place. Let me update tracking and run the formatter/linter gates on my files.
+
+Formatting issues found — let me auto-fix them with swiftformat, then re-verify.
+
+Auto-fixed 4 files. Let me verify the changed logic is still correct (especially the redundantReturn rewrites).
+
+The redundantReturn rewrite is correct (switch-expression form). Let me re-verify formatting passes and run swiftlint --strict on all my files.
+
+swiftformat passes (0/12). Now swiftlint --strict:
+
+swiftlint linted the whole tree (config `included` overrides paths) and found 4 violations. Let me identify whether any are in my files.
+
+None of the 4 violations are in my files — they're pre-existing sibling breakage in `AnomalyInlineRow.Previews.swift` (out of scope, forbidden to fix). Let me scope swiftlint to only my files for crisp proof.
+
+Positional file paths are honored. Let me lint all my files explicitly:
+
+swiftlint: 0 violations in my 12 files. Now the placeholder scan:
+
+Placeholder gate clean (0/0). Now the critical proof: an isolated Swift 6 strict-concurrency type-check. Let me read how the Webhooks peer (which also uses `CopyLinkButton`) scoped its type-check to replicate the exact dependency set.
+
+This is the exact methodology. Let me inspect the `CopyLinkButton` dependency files to assemble a correct isolated type-check (excluding test files with `@testable import`).
+
+I have the exact dependency recipe. Let me run the isolated Swift 6 strict-concurrency view type-check (macOS) against the real tokens/components/CopyLinkButton, excluding test/preview files with `@testable import`.
+
+Real bug caught — `TSText` needs `LocalizedStringKey`, but the formatted date is a `String`. Let me fix it to use a verbatim `Text`:
+
+macOS type-check passes (0/0). Now the iOS pass (exercises the `#if os(iOS)` keyboard + pasteboard branches):
+
+Both idioms type-check clean (0/0). Now let me run an executable model+route harness to prove the state machine and route logic at runtime under Swift 6 strict concurrency.
+
+Top-level code requires the file be named `main.swift`. Let me fix that:
+
+Harness: 28/28 passed under Swift 6 strict concurrency. All in-scope gates are green. Let me verify the full-build blocker state (Shared.xcframework) and check how the peer logs concluded EXIT/STATUS.
+
+Confirmed: `Shared.xcframework` is absent (only `.gitkeep`) — the full xcodebuild blocker is the out-of-scope KMP staging, exactly as the peer logs. I'll follow the accepted methodology. First, let me re-verify the file I edited after formatting, and validate the strings.
+
+Edited file clean; strings valid. Now let me append the 2 ledger rows. Let me inspect the ledger tail for exact formatting.
+
+Let me append the 2 ledger rows via additions-only textual insertion and validate:
+
+Ledger updated (+2 rows, 164 total). Now let me gather tool versions and the file change list for the evidence log.
+
+All evidence gathered. Now let me write the evidence log in the peer format:
+
+Log written. Let me run a final consolidated gate pass on all my files, clean up temp artifacts, and confirm everything is green before committing.
+
+Lint and placeholder are green. Let me do a final swiftformat lint on all 12 files, then commit.
+
+All gates green (format 0/12, lint 0, placeholder 0, type-check macOS+iOS 0/0, harness 28/28). Let me commit with the specified paths.
+
+Committed as `d55c390bf`. Let me update tracking and verify the working tree is clean.
+
+Task complete and verified. Working tree is clean, the commit landed (`d55c390bf`), and all temp artifacts are cleaned up.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

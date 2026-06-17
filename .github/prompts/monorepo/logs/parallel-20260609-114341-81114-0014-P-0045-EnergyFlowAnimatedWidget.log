@@ -1,0 +1,198 @@
+I'll start by exploring the task requirements: the web source, the existing Apple app structure, and whether the Apple toolchain is available on this runner.
+
+
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). Now let me explore the existing Apple app structure and the shared web components this widget depends on.
+
+Now let me examine an existing similar widget end-to-end to learn the established patterns, plus the web `WidgetFlowDiagram` shared component this widget renders.
+
+`BatteryGaugeWidget` is the ideal template — it also binds `useVehicleState`. Let me read its full multi-file set plus the web flow diagram spec.
+
+Let me read the BatteryGaugeWidget supporting files individually for clean output.
+
+Let me read the test conventions and find the shared types (DashboardWidgetSize, tokens) plus the project build config.
+
+Let me read the shared infra types, theme tokens, and project build config.
+
+The token symbols are used by existing committed widgets, so they must be generated at build time. Let me check `project.yml` to understand build/codegen and the test target layout.
+
+Key finding: design tokens live in `apps/design/generated/apple` and co-located `*Tests.swift` auto-join the test bundles. Let me inspect the token symbols and check the build toolchain (xcodegen, simulators, KMP framework).
+
+The toolchain is available, but `Shared.xcframework` (KMP core) isn't staged yet and the `.xcodeproj` needs generating. Let me read the full token set, the placeholder checker, the `fmtNumber` web util, and check for existing Canvas-based flow rendering conventions.
+
+I now have the full spec and token vocabulary. Let me read the lint/format configs and placeholder patterns so my code passes `--strict` gates, plus confirm the web empty-state component shape.
+
+Two sibling flow-diagram widgets already exist (`EnergyFlowWidget`, `LivePowerFlowWidget`). I must read them to match the Canvas-animation convention and avoid type-name collisions (single app module). Let me study them.
+
+`LivePowerFlowWidget` is a near-identical reproduction of the same `WidgetFlowDiagram.tsx` — an ideal convention reference. Since all widgets share one module, I must avoid type-name collisions. Let me enumerate existing type names in both sibling flow widgets and read `EnergyFlowWidget`'s data model.
+
+Critical: `EnergyFlowWidget` already owns the `EnergyFlow*` type namespace, so I'll prefix all my types with the full unique `EnergyFlowAnimatedWidget`. Let me study `EnergyFlowWidget`'s model/diagram (closest data-shape sibling) to match conventions.
+
+This is the gold-standard template — `EnergyFlowWidget` (0046) is the non-animated sibling reproducing the same shared diagram. Let me read its remaining files to precisely match structure, then I'll diff the two web sources to capture what "Animated" adds.
+
+The template is extremely close. My source differs by: (1) `>0.5`/`<-0.5` thresholds, (2) battery/**drive**/charger nodes that are **always all present**, (3) a distinct **CompactView**, (4) cyan/emerald/amber arrows. Let me read the remaining template files (Model, Palette, strings, Previews, Tests).
+
+Now the strings, previews, and tests conventions, then I'll write my widget.
+
+I have everything needed. Let me set up tracking and write the plan, then create the widget files. Starting with the Foundation-only domain + builder + palette files.
+
+Now the domain model file:
+
+Now the pure builder:
+
+The palette (cyan/emerald/amber + neutral chrome):
+
+The SwiftUI Canvas diagram:
+
+Now the main surface view (shell, header, states, compact-vs-diagram + the CompactView):
+
+The compact fallback view as its own file:
+
+Now the strings catalog, previews, and tests:
+
+Now the comprehensive test suite:
+
+All 9 files created. Now run the fast local gates — swiftformat normalization, swiftlint `--strict`, and the placeholder check on my files.
+
+swiftformat flags some long lines. Let me auto-fix with swiftformat (write mode), then re-verify.
+
+swiftformat passes. Now swiftlint `--strict` on the new files:
+
+swiftlint clean (0 violations). Now the placeholder gate, exactly as the gate specifies:
+
+All fast gates pass (swiftformat 0/9, swiftlint 0 violations, placeholders 0). Now the heavy gate. First generate the Xcode project, then stage the KMP `Shared.xcframework` (the long pole).
+
+Project generated with all 9 files referenced (60 target memberships). Now stage the KMP `Shared.xcframework` (Gradle/Kotlin-Native — the long pole). Starting it in the background.
+
+The KMP toolchain is working — downloading Kotlin/Native and compiling iOS targets (cache hits present). This is the long pole. Let me wait and poll.
+
+Debug XCFramework built; now linking the release frameworks (the slowest Kotlin/Native step). Let me keep waiting.
+
+Release iOS device framework linked; simulator + macOS release linking remain. Still progressing. Waiting more.
+
+iOS simulator release framework linked; macOS release linking is the last target. Nearly there.
+
+`Shared.xcframework` staged (BUILD SUCCESSFUL in 8m57s). The KMP toolchain works. Now run the full iOS build+test (the gate's first step) in the background.
+
+Now launching the iOS build+test in the background (large first build; the staged framework makes the pre-action fast):
+
+The app module is compiling (EmitSwiftModule). Compile errors in my code would surface here. Let me wait and scan for errors.
+
+Build is active (35 compiler processes, log growing, no errors). Compiling the full app now. Waiting.
+
+No errors; still compiling the large app target. Let me wait and check for test-phase progress markers.
+
+The build failed — but **not** from my code. The errors are pre-existing duplicate test-class declarations in a sibling widget (`SafetyFeaturesWidget.ModelTests.swift`). My files show zero errors. Let me confirm this is pre-existing and not caused by me.
+
+Confirmed: the only errors are in a **sibling** widget's committed test file (`SafetyFeaturesWidget.ModelTests.swift` vs `.Tests.swift` declaring the same classes) — none in my code, and my working tree only adds `EnergyFlowAnimatedWidget.*`. Let me understand this pre-existing baseline breakage.
+
+Both sibling files are committed at HEAD but declare different classes — so the redeclaration of `SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests` must collide with yet another committed file. Let me find all declarations across the test bundle.
+
+Root cause found: a **pre-existing baseline collision** — `SafetyFeaturesWidget.ModelTests.swift` and `SafetyHistoryWidget.ModelTests.swift` (both committed at HEAD, two unrelated sibling widgets) declare identically-named test classes (`SafetyModelTests`/`SafetyRegistryTests`/`SafetyAccessibilityTests`), so the shared `TeslaSyncTests` bundle can't compile. This is independent of my widget. Let me quantify how widespread such duplicate test-class names are across the committed test bundle.
+
+This is a **pervasive pre-existing baseline defect**: multiple unrelated sibling widgets (ChargeStatus, DrivingCoach, MonthlyCost, Safety families) committed duplicate generic test-class names, so the shared `TeslaSyncTests` bundle can't compile — entirely independent of my widget and spanning many files outside my allowed scope. Let me map the exact colliding files to plan an isolation-verification.
+
+These are 4 pre-existing colliding sibling pairs (ChargeStatus/DrivingCoach/MonthlyCost/Safety), all unrelated to my widget and outside my allowed scope. 
+
+My widget itself is clean. Let me first prove my **production code** compiles + links by building the app target only (the `build` action builds only the `TeslaSync` app target, excluding all test files):
+
+App module compiling, no errors. Waiting for completion.
+
+App product `TeslaSync.app` is present with zero errors. Let me confirm the explicit `BUILD SUCCEEDED`.
+
+Let me properly check whether the app-only build is still running (the PID I checked was the subshell, not xcodebuild).
+
+Now I understand the environment: this machine is **shared across many parallel slots** (I see other slots' `xcodebuild` runs, including ones using `-only-testing` to scope to their own widget's tests). My app target already compiled cleanly in the first run (zero errors in production code — only the sibling test-class collisions failed).
+
+To prove **my** tests pass without committing sibling edits, I'll temporarily de-duplicate the 4 predecessor collisions (revertible via `git checkout`), run only my test classes, then restore. First, the exact duplicate class names in each "second" file:
+
+I have the exact duplicated class names. Let me temporarily de-duplicate them in the 4 predecessor "second" files (fully revertible via `git checkout`), so the bundle compiles and I can run **my** tests:
+
+BSD `sed` doesn't support `\b`. Let me confirm nothing changed and redo with a BSD-compatible pattern targeting the `class` declarations:
+
+Duplicates resolved (empty list); 4 sibling files temporarily modified (will revert before commit). Now let me check if my app-only build finished so I can reuse its DerivedData for a fast incremental test run:
+
+My app-only build is stuck recompiling under heavy machine contention (100+ compiler processes from all parallel slots). It's redundant — my production code already compiled fully in the first run. Let me free that CPU and reclaim its DerivedData, then run a single scoped test build.
+
+Reclaimed. Now run the scoped test (reusing `/tmp/dd-ios` for incremental build) — compiles the now-deduplicated bundle and runs **only my** 4 test classes:
+
+Test build launched. Let me wait and monitor for compilation + test results.
+
+No errors yet; still compiling under heavy contention. Let me keep waiting for the test phase.
+
+The log has been stuck at 1851 lines for ~5 min — likely severe CPU starvation from all the parallel slots. Let me check machine load and whether my build is actually progressing.
+
+The machine is catastrophically oversubscribed (load avg **150**, 109 compiler processes from all parallel slots) — my scoped build has made zero progress in minutes. Rather than fight that, let me run my tests in a small standalone Swift package (fast even under load). Let me check the support-file dependencies first.
+
+The contention is transient but unpredictable. Let me verify my tests in a small standalone Swift package (compiles fast even under load). First, scan my files for every external symbol they reference, so I include exactly the right support files:
+
+My source files depend only on design tokens (`Tokens.swift`), the infra types (`DashboardWidgetInfra.swift`), and `TSSkeleton`. I'll assemble a minimal Swift 6 package (matching the app's strict-concurrency settings) with the real token/infra files + a tiny `TSSkeleton` shim, and run my real tests against my real code.
+
+Package assembled. Now run my real tests against my real code via `swift test`:
+
+Compilation is underway (1 EFAKit compiler process) but `swift test` buffers output until a phase completes. Let me wait for it to populate.
+
+The backgrounded pipeline died without output. Let me check machine load and run `swift test` directly (synchronously) for reliable output capture.
+
+Load dropped to 33 (other slots finishing). Let me run `swift test` synchronously now for reliable output:
+
+The standalone run caught a **real bug in my test file**: line 47 has `isCharging` before `batteryLevel`, violating my DTO's argument order (the rest are cascading errors from it). Let me fix it in the real file:
+
+Fixed. Let me re-sync the package copy and re-run `swift test` (load is now manageable):
+
+All **27 of my tests passed** (0 failures) — Builder (11), Model (10), Registry (2), Accessibility (4) — compiling my real widget code under Swift 6 strict concurrency. The standalone run also caught and let me fix a real arg-order bug in my test.
+
+Now let me restore the sibling files to pristine (I won't commit out-of-scope edits) and re-verify my widget's gates after the 1-line test fix.
+
+Working tree now contains only my 10 widget files. Let me re-run the three fast gates after the test fix:
+
+My surface passes all three fast gates cleanly. Now let me capture the **full-tree** swiftformat/swiftlint results (the gate runs these repo-wide) to record honest gate evidence:
+
+Path mistake — let me run from repo root as the gate does:
+
+Full-tree swiftformat `--lint`: **EXIT=0** (0/2663 files need formatting). Now the full-tree swiftlint `--strict`:
+
+Full-tree swiftlint found **1 violation** (mine are clean). Let me identify it — likely another predecessor:
+
+The full-tree swiftlint violation is also a **predecessor** (`LiveSignalSparklinesWidget.Builder.swift:158` — not mine). 
+
+The picture is now complete and decisive: the slot-14 baseline has **multiple pre-existing predecessor defects** (duplicate test-class names across 4 sibling widget families + 1 predecessor lint violation) that make the monorepo-wide gates red — all outside my surface and my Allowed files. My surface itself is fully green and verified (27/27 tests, lint/format/placeholder clean, compiles under Swift 6 strict concurrency). Since the canonical `build test` also runs *every other widget's* tests, a fully-green monorepo gate is not achievable from my allowed scope.
+
+Let me write the honest gate log.
+
+I need to substantiate the canonical exit codes honestly rather than infer them. Let me run the actual canonical iOS gate and capture its real exit code (the app is cached, so it recompiles only the test bundle and fails fast on the predecessor collisions):
+
+Now let me also start the canonical macOS gate (needs a full macOS build first, so start it now to progress in parallel) and capture its real exit code:
+
+Both canonical gates launched. Let me wait for the iOS one (cached app → fails fast at test-bundle compile) to capture its real exit code.
+
+Important correction: the canonical **macOS** gate fails earlier on **code signing** (`TeslaSync-macOS has entitlements that require signing with a development certificate`) — a runner/environment limitation, not the predecessor collision I'd assumed. Let me capture both real exit codes (macOS is done; iOS still compiling the test bundle).
+
+macOS canonical: **MAC_EXIT=65**, blocked on **code signing** (no development certificate on this runner for the hardened-runtime macOS app) — a runner-environment limit, distinct from the iOS predecessor block. My code itself compiles for macOS (proven via the A7 SwiftPM run targeting `arm64-apple-macos`).
+
+Let me wait for the iOS canonical run to append its real exit code.
+
+I have definitive iOS evidence already (the first run's `** TEST FAILED **` + exact redeclaration errors); the re-run is just confirming the literal code under heavy contention. Let me correct the log's macOS section now with the real observed finding (code-signing), then finalize iOS.
+
+Let me check the iOS canonical re-run for its real exit code.
+
+The iOS re-run is rebuilding the whole app from scratch under heavy contention (my earlier kill invalidated its incremental state) — it's just re-confirming the failure I already observed cleanly in the first canonical run. Let me extract that definitive first-run evidence and stop the redundant re-run.
+
+I have definitive observed iOS failure evidence (`** TEST FAILED **`, `Testing cancelled because the build failed`, exact `invalid redeclaration` errors). Let me stop the redundant contended re-run:
+
+Re-run stopped. Let me do a final review of the gate log for accuracy before committing.
+
+The log is accurate and honest. Now let me verify the generated `.xcodeproj` is git-ignored (so it isn't accidentally committed) and stage exactly my widget files + the log:
+
+Clean — only my 10 widget files + the log are untracked; sibling files reverted; build artifacts git-ignored. Let me update tracking, clean up the temp verification package, stage, and commit.
+
+All 11 files staged (10 widget files + log), no out-of-scope edits. Now commit with a transparent message:
+
+Committed (11 files, 2003 insertions). Let me do final verification — confirm a clean working tree, no out-of-scope changes, and clean up any lingering background processes/temp artifacts I created on this shared machine.
+
+Working tree is clean and the commit is exactly my 11 files. Let me confirm those lingering compiler processes are orphans from my killed iOS re-run (using `/tmp/dd-ios`) versus other slots, and clean up only mine:
+
+Those lingering compiler processes are one-shot orphans from the killed re-run (no coordinator to assign new work — they self-drain); only one references `/tmp/dd-ios`. I'll leave them rather than risk mis-killing other slots' processes. Let me tidy my own temp logs and do a final confirmation.
+
+The task is complete to the fullest extent achievable within scope. Final state confirmed: commit `9d4cd5117` on the branch, clean working tree, all 10 widget files + the gate log committed, no out-of-scope edits.
+

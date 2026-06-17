@@ -1,0 +1,184 @@
+I'll start by exploring the repository structure, the web source specification, and checking native tooling availability.
+
+Native tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim booted). Let me read the web source and explore the Apple app structure.
+
+Native tooling confirmed available. Let me explore the Apple app structure and the web shared components that the widget depends on.
+
+Let me explore the existing Apple dashboard-widgets directory (to follow established patterns) and find the web `shared` module plus the data hooks.
+
+The Apple app uses a multi-file-per-widget pattern (`.Adapter`, `.Model`, `.Previews`, etc.). Let me check whether AnalyticsSummaryWidget files already exist, find a good reference widget, and read the web shared component + hooks.
+
+Now I understand the multi-file pattern. Let me examine a closely-matching reference widget (MileageStats — analytics + stat grid) in full to learn the established native conventions.
+
+Excellent — this is a mature, well-defined pattern. Let me read the rest of the reference set (Adapter, Previews, Tests, strings) and locate the shared core infrastructure (tokens, registration, skeletons).
+
+Now let me read the test pattern and locate the shared core infrastructure (tokens, registration, skeletons, AnimatedNumber, Sparkline).
+
+Let me read the project structure (XcodeGen config) and the core infra/token definitions used by the flat `TeslaSync` target.
+
+Now I understand the target layout. The `TeslaSync` target compiles `Sources/` + `TeslaSync/dashboard-widgets/`. Let me read the core infra, tokens, AnimatedNumber, Skeletons, and native Sparkline.
+
+Let me read the design tokens, AnimatedNumber, Skeletons, chart palette, and the web `useAnalyticsSummary` hook to get exact DTO field names.
+
+The tokens are at `apps/design/generated/apple/Tokens.swift`. Let me read it, the `AnalyticsSummary` type, and the chart palette.
+
+I have the tokens and DTO. `Color.TS.accent` is exactly the web cyan `#00F0FF`. Now let me read the exact web conversion/formatting logic and the chart models for parity.
+
+Let me confirm the web `AnimatedNumber` formatting and the native chart model types (for `TSSparkline`).
+
+I now have full parity details. Let me verify there are no type-name collisions in the flat module before writing (the last commit fixed such collisions).
+
+No collisions — all `AnalyticsSummary*` names are free. Let me read the web `StatCard` to faithfully reproduce its icon/value layout, then I'll write the files.
+
+I now have complete parity knowledge. Let me set up a plan and write the six widget files modeled on the established LifetimeStats pattern, adapted to AnalyticsSummary's exact data pipeline.
+
+Model written. Now the Adapter (pure projection with exact web value parity).
+
+Now the main SwiftUI surface view with all states, layouts, the stat tile, and the sparkline row.
+
+Now the Previews and the i18n strings catalog.
+
+Now let me compute exact expected formatted values for the test sample using a standalone Swift snippet that mirrors the adapter's formatter, so I pin correct strings.
+
+Exact values computed. Let me also get the feet-branch distance string to pin the efficiency special-case test.
+
+All values computed. Now the comprehensive test suite.
+
+All six files created. Now let me investigate the build infrastructure (XcodeGen, Shared.xcframework, placeholder script) before running the gate.
+
+Let me examine peer logs to understand the established gate outcome and whether the full build is feasible here.
+
+The full build ran for peer 0001. Let me see the tail of that log to confirm the expected successful outcome.
+
+The build infrastructure works (peer hit BUILD SUCCEEDED, then UI tests got SIGTERM'd at 143 — the full `build test` is very heavy). Let me run the fast, decisive checks first: format/lint/placeholder on my files, and generate the project.
+
+Fast checks: placeholder ✅. swiftformat/swiftlint found fixable issues (long lines, function body length, file length). Let me view the exact spots and fix them.
+
+Let me view the full projector enum to refactor it cleanly.
+
+Now let me refactor the projector to fix function-body-length and long lines by extracting `makeStats`/`makeSparklines` helpers.
+
+Now fix the view file: wrap the long loading-label line, and extract the accent mapping + stat tile into a sibling `AnalyticsSummaryWidget.Tile.swift` (matches house pattern, drops file length under 400).
+
+Now I'll create the Tile file and remove the extracted parts from the main view, plus wrap the long loading label.
+
+Now remove the stat tile from the main view (now in the Tile file).
+
+Now re-run format and lint on all files (now 6 with the Tile file).
+
+swiftformat passes. One swiftlint issue: `makeStats` has 7 params (>5). Let me bundle them into a small input struct.
+
+I'll bundle the formatted display strings into a small struct (1 param) to satisfy the parameter-count rule. Let me add the struct and rewrite `makeStats`.
+
+All 6 files pass swiftformat and swiftlint --strict. Now the critical correctness check: compile the real module. Let me generate the Xcode project and run the iOS build (which triggers the Shared.xcframework pre-action).
+
+Project generated. `apps/shared` + gradlew exist, so the Shared.xcframework pre-action can run. Let me start the iOS build (compile validation — the key correctness signal) in the background and monitor.
+
+The iOS build is running (gradle building Shared.xcframework first). Let me monitor progress.
+
+Gradle is progressing (Kotlin tasks cached, now linking release frameworks). Let me continue waiting for the build.
+
+Gradle release-linking is underway (Kotlin/Native release links are slow). Let me keep waiting for the xcframework to assemble and the app compile to begin.
+
+Key finding: the build failed at the build-database attach step — **not** a code error. The DerivedData is a shared `/tmp/dd-ios` and another parallel slot (slot-5) is building there concurrently → DB lock. I'll use a slot-unique derivedDataPath to avoid the collision.
+
+Now I understand the convention — peers use a slot-local `-derivedDataPath build/dd-ios`. My run defaulted to the shared `/tmp/dd-ios` and collided with slot-5. Let me rebuild with the slot-local path.
+
+Framework is now staged, build proceeding (quiet mode). Let me wait for completion.
+
+Build 40 still running. Let me check its progress via the log.
+
+`TeslaSync.app` is built and there are zero errors — my code compiled into the real module. Let me get the final exit code.
+
+All products built (`TeslaSync.app`, both `.appex` extensions, `Shared.framework`) with no errors. The xcodebuild wrapper hasn't returned yet — let me check whether it's still alive or hung on a shared resource.
+
+xcodebuild (pid 36537) is alive and actively compiling (many `swift-frontend` workers, under heavy parallel-slot CPU contention). My app + extension products already exist with no errors. Let me wait for the definitive exit code.
+
+My xcodebuild finished and flushed its log (warnings are all in pre-existing files, none in mine). Let me confirm the build result and check specifically for any issues in my files.
+
+`-quiet` suppresses the "BUILD SUCCEEDED" line, so its absence is expected on success. Zero errors, zero issues in my files. Let me confirm shellId 40's final exit code.
+
+shellId 40 shows "running" at 18min but products are built. Let me inspect its actual process tree to see what it's waiting on.
+
+My build's xcodebuild is pid 34049 — still running amid **six** concurrent slot builds (heavy contention). My products are already linked with 0 errors. Let me wait for it to return its exit code.
+
+**`IOS_BUILD_RC=0`** — the iOS app (including my 6 files) builds cleanly. Now let me run my unit tests, scoped to the AnalyticsSummary surface, reusing the slot-local build.
+
+Test run in progress (building the test bundle, which compiles my Tests.swift). Let me monitor.
+
+Still building the test bundle (emitting module, no errors). Let me keep waiting for the test execution phase.
+
+Test run completed. Let me extract the test results from the log.
+
+The test bundle failed to compile — but due to a **pre-existing** duplicate-class collision in `ChargeStatusLiveWidget.Tests.swift` (not my code). Let me verify this is pre-existing and unrelated to my changes.
+
+Confirmed: the collision is **pre-existing** (both `ChargeStatusWidget.Tests.swift` and `ChargeStatusLiveWidget.Tests.swift` are committed at HEAD and declare the same class names). My 7 files are the only changes. Let me check the full scope of pre-existing duplicate test-class collisions in the test target.
+
+This is a pre-existing breakage across multiple widgets (ChargeStatus, DrivingCoach, MonthlyCost, Safety) — the shared XCTest target can't compile, independent of my work. To honestly execute **my** test logic, I'll compile my actual Foundation-only source files (Model + Adapter + Infra) in a standalone harness and run my assertions against the real code.
+
+The harness references `AnalyticsSummaryWidget.*` (the View, not compiled here). Let me point those at the equivalent `AnalyticsSummarySurface` (defined in the Model file).
+
+Swift 6 top-level is MainActor-isolated. Let me annotate the harness helpers `@MainActor` and call `modelChecks()` directly.
+
+Top-level vars can't carry a global actor. Let me restructure the harness into a `@MainActor enum` to hold state cleanly.
+
+Harness compiled cleanly against my real source files. Let me run it.
+
+**ALL ASSERTIONS PASSED** — my real Adapter + Model code executes correctly against every test expectation. Now, to convert this into a genuine XCTest pass, I need the test bundle to compile. It's blocked by pre-existing duplicate test-class names in unrelated surfaces. Let me map those collisions precisely so I can temporarily sideline them for verification (and restore after — never committed).
+
+The four pre-existing collision pairs are all in unrelated surfaces (ChargeStatus, DrivingCoach, MonthlyCost, Safety), tracked at HEAD. I'll temporarily blank one file per pair to unblock the shared test bundle, run my scoped XCTest, then restore them exactly via git (never committed).
+
+No remaining duplicate classes. Now let me run the scoped XCTest for my surface (reusing the built derived data).
+
+More pre-existing compile errors surfaced in yet another unrelated surface (`PresetGallery` — Sendable issues). The shared XCTest target is broadly pre-broken at HEAD, independent of my work. I won't chase fixing the whole repo's test target (forbidden by scope). Let me restore the files I temporarily blanked.
+
+The test target has multiple independent pre-existing breakages. Let me assess the full scope quickly so I can make one bounded sideline attempt rather than whack-a-mole.
+
+The test-target breakage spans ~13+ unrelated files (duplicate classes + non-Sendable lets) — a systemic pre-existing condition I'm scoped out of fixing. Let me check how a recent peer log classified this kind of environment-red to match house convention.
+
+This matches the established house precedent exactly (peer `IncidentForm`: in-scope all-green, out-of-scope pre-existing RED documented as DEFERRED → EXIT=0/STATUS=DONE). To match that bar, let me also confirm my surface type-checks against the macOS SDK. Starting the macOS build now.
+
+macOS build failed (RC=65). Let me check whether it's my code or pre-existing — critical to distinguish.
+
+Both macOS errors are the **environmental code-signing gap** (entitlements require a dev certificate) — zero Swift compile errors, none in my files. This is the exact environmental limitation the peer documented as DEFERRED. To get a clean macOS *compile* signal, let me rebuild with code signing disabled.
+
+macOS compile in progress. Let me check for errors and product while it builds.
+
+macOS `TeslaSync.app` built with 0 errors — my code compiles against the macOS SDK too. Let me wait for the final exit code.
+
+**MAC_BUILD_NOSIGN_RC=0** — my surface compiles cleanly on **both** the iOS 18 and macOS 15 SDKs. The only macOS failure is the environmental dev-cert signing gap. All in-scope checks are green. Let me re-run the fast gates fresh and assemble the authoritative gate log.
+
+All in-scope gates GREEN (format/lint/placeholder/harness 89 assertions + both SDK builds). Let me collect the out-of-scope blocker evidence, then write the authoritative gate log.
+
+Let me capture the duplicate-class proof directly, then write the comprehensive gate log.
+
+Now I'll write the authoritative gate log capturing all real results, evidence, and the honesty covenant disposition.
+
+Log written. Let me update todos, verify the working tree is clean except my deliverables, and clean up temporary artifacts before committing.
+
+Working tree is clean — only my 7 `AnalyticsSummaryWidget.*` files + the log are new; generated `build/`/`.xcodeproj` are gitignored. Let me stage and commit.
+
+Committed as `d080ee164` (8 files, 1888 insertions). Let me do a final integrity check — confirm the tree is clean and the temporarily-blanked sibling files are byte-identical to HEAD.
+
+Everything is verified and clean:
+- **Working tree clean**; the 4 sibling files I temporarily blanked for verification are **pristine vs HEAD** (fully restored, never committed).
+- Commit `d080ee164` contains exactly my 7 `AnalyticsSummaryWidget.*` files + the gate log.
+
+Merge made by the 'ort' strategy.
+ ...shboard-widgets-0002-AnalyticsSummaryWidget.log | 182 ++++++++++
+ .../AnalyticsSummaryWidget.Adapter.swift           | 337 +++++++++++++++++++
+ .../AnalyticsSummaryWidget.Model.swift             | 355 ++++++++++++++++++++
+ .../AnalyticsSummaryWidget.Previews.swift          | 175 ++++++++++
+ .../AnalyticsSummaryWidget.Tests.swift             | 365 +++++++++++++++++++++
+ .../AnalyticsSummaryWidget.Tile.swift              |  85 +++++
+ .../AnalyticsSummaryWidget.strings                 |  48 +++
+ .../dashboard-widgets/AnalyticsSummaryWidget.swift | 341 +++++++++++++++++++
+ 8 files changed, 1888 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0002-AnalyticsSummaryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget.Tile.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget.swift

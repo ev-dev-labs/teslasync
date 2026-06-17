@@ -1,0 +1,98 @@
+I'll start by exploring the repository structure and the web source that this native Apple surface must reproduce.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and understand the existing Apple app structure and predecessor patterns.
+
+Web source is clear. Now let me study the established predecessor pattern. The last commit added `OperationsSection` — let me examine its full file set, and check whether `SignalDiffTable` already has any files.
+
+Clear pattern emerges. Best table templates are `EntriesTable` and `EventHistoryTable`. Let me read the full `EventHistoryTable` set plus the recent `OperationsSection` to learn exact conventions (state-holder binding, tokens, i18n, telemetry, states, tests).
+
+Excellent — the predecessor pattern is now very clear. The web source for `SignalDiffTable` is also a pure presentational leaf (only `useTranslation`; data arrives via props), matching `EventHistoryTable`'s situation. Let me verify the shared P4 core component APIs I'll need (TSDataTable, TSColumn, TSBadge, TSTone, etc.) and check how stale/offline are handled elsewhere.
+
+Stale/offline chrome is widely used (741 files). Let me examine the shared core APIs I'll depend on, plus how a comparable surface models the full state vocabulary including stale/offline.
+
+Now let me study the design tokens, card/panel/skeleton/fadein primitives, and how a richer table surface (`MonthlyCostTable`) models stale/offline so I can reproduce the full state vocabulary the prompt requires.
+
+`MonthlyCostTable` is the ideal template — it's also a pure presentational table leaf and implements the full P4 leaf contract (phase: loading/empty/error/data + connection: live/stale/offline). Let me read its complete file set and locate the design tokens and remaining primitives.
+
+I have a complete authoritative template now. Let me gather the remaining specifics: the web `SignalDiffRow`/`SourceLayerBadge`/`SignalSource` types, `fmtNumber`, the design token names, `project.yml` (how files/tests are included), and how selection is wired into `TSDataTable`.
+
+`SourceLayerBadge` semantics are clear (l1/l2/log/stale/unknown glyph + tint + tooltip desc + age). Now I must locate the design tokens and understand the build setup (how files are included). Let me inspect `project.yml`, the Scripts dir, and the token source files.
+
+Critical: the build uses XcodeGen directory globs (so new files auto-join targets; `*Tests.swift` routes to test bundles). Tokens are generated into `apps/design/generated/apple`. Let me verify the toolchain feasibility (xcodegen, the Shared.xcframework preAction, simulator, placeholder script) and read the exact token names.
+
+All tooling is present (xcodegen 2.45.4, iPhone 16 simulator booted, tokens generated). The key risk is `Shared.xcframework` (only a `.gitkeep`; its preAction needs the Kotlin/Native toolchain). Let me read the pending-verifications doc and a predecessor's gate log to learn the established DONE/BLOCKED convention.
+
+Now I fully understand the established, gate-passing convention. Every predecessor surface achieves `STATUS=DONE` by running **host-runnable gates green** (real iOS-18 + macOS-15 `swiftc -typecheck`, isolated SwiftPM build + XCTest, swiftlint/swiftformat/placeholder, xcodegen enumeration) and honestly **deferring** the full-app `xcodebuild build test` to the P99 macos gate due to documented pre-existing/unrelated blockers (unstaged `Shared.xcframework`, co-located test wiring, sibling redeclarations, signing).
+
+Let me read a predecessor gate log end-to-end to replicate the exact verification commands and structure.
+
+Prior SignalDiffTable attempt logs exist from earlier parallel runs. Let me read the MonthlyCostTable gate log (exact verification command template) and a prior SignalDiffTable artifact log for reference.
+
+This MonthlyCostTable gate log is the authoritative methodology template. Now let me read the exact component signatures I'll call (TSGlassPanel/TSCard, TSFadeIn, TSSkeleton, TSButton) and check for any isolated SwiftPM harness tooling predecessors used.
+
+All component APIs confirmed. Now let me verify the design-system dependency closure for the isolated SwiftPM harness (the predecessor's key correctness proof): the contents of `Sources/Design`, `Sources/Components`, the `Tokens.swift` structure, and whether Components imports anything external (KMP `Shared`).
+
+Dependency closure is clean (only Apple frameworks; no KMP `Shared`). The isolated harness = Tokens + Sources/Design + Sources/Components + my surface, exactly like the predecessor. Let me read the lint/format configs, the placeholder checker, and a prior SignalDiffTable artifact log for cross-reference before writing code.
+
+I now have everything needed. Let me set up tracking and write the plan, then create the 7 files following the canonical `MonthlyCostTable` decomposition.
+
+Now I'll create the surface files. Starting with the pure Foundation-only Adapter (projection core).
+
+Now the Model (P1/S8 state-holder + P1/S11 telemetry + P1/S10 i18n facade).
+
+Now the Views (badge, delta cell, pin button, value text, legend, table, and loading/empty/error chrome).
+
+Now the main surface view.
+
+Now the Previews and the i18n strings catalog.
+
+Now the comprehensive test suite (adapter + projection + model + accessibility).
+
+All 7 files written. Let me verify formatting, linting, and placeholder compliance on the new surface.
+
+swiftformat flagged auto-fixable issues (number grouping, redundant returns, line wrapping). Let me apply the formatter (ecosystem tool) and re-verify.
+
+Formatter passed, but I must verify the auto-applied `redundantReturn`/`self` changes didn't introduce a name collision in `raw(_:)` (the `.number(number)` binding shadows the static `number(_:)` formatter). Let me inspect.
+
+swiftformat correctly preserved `self.number(...)` (avoiding the shadow collision) — the implicit-return switch is valid. Now swiftlint and the placeholder gate.
+
+Placeholder gate passes (0). Only issue: `SignalDiffTable.Tests.swift` is 428 lines (>400 `file_length` limit). The established fix is splitting model tests into a `.ModelTests.swift` file (matches the `ComputedMetricEditor.ModelTests.swift` precedent; the `*Tests.swift` glob routes it to the test bundles). Let me view the current structure and split.
+
+The split into `.Tests.swift` + `.ModelTests.swift` is the cleanest fix (matches the `ComputedMetricEditor.ModelTests.swift` precedent). I'll recreate `Tests.swift` without the model section and add `ModelTests.swift`.
+
+Now re-run swiftformat and swiftlint across all 7 surface files.
+
+swiftlint clean (0 violations). The recreated test files need auto-formatting. Let me apply it.
+
+All static gates green (format 0, lint 0, placeholder 0, every file ≤400 lines). Now the strongest correctness proof: the isolated SwiftPM harness (Tokens + Design + Components + surface) compiled + tested under Swift 6 strict concurrency — exactly what predecessors ran.
+
+The full `Components` dir isn't self-contained — `DataDisplay/UnitFormatters.swift` references an external `Units` type. My surface doesn't use it. Let me build a minimal component closure (only what the surface transitively needs) and verify it's self-contained.
+
+The 7 needed component files reference only `TS*` design types and SwiftUI/Apple types — fully self-contained. Let me restage the harness with this minimal closure.
+
+The harness caught a real Swift 6 strict-concurrency issue: the module-level `fallbackLocalize` closure isn't `Sendable`. The correct fix is to mark the `Localize` typealias `@Sendable` (all call sites pass the static `SignalDiffStrings.string`, which is sendable). Let me fix the Adapter.
+
+The isolated harness passes: **36 tests, 0 failures** under Swift 6 strict concurrency. Now the real-SDK typechecks (iOS 18 + macOS 15) and `xcodegen generate`. First re-verify the edited Adapter still lints clean.
+
+iOS 18 SDK typecheck clean (EXIT=0). Now macOS 15 typecheck and `xcodegen generate`.
+
+macOS 15 typecheck clean (EXIT=0); `xcodegen generate` succeeds and enumerates all 8 SignalDiffTable.* files. Now let me characterize the whole-tree gates and the pre-existing blockers (for an honest, evidence-based deferral of the full-app `xcodebuild`).
+
+Whole-tree swiftformat is green (0/2566). The pre-existing blocker is confirmed: `ChargingProjection` is declared as both a `struct` (dashboard-widgets) and an `enum` (feature-views) in the same module — a hard redeclaration error in sibling files I don't own, independent of my surface. Let me characterize the whole-tree swiftlint baseline and attempt the full `xcodebuild` for literal evidence.
+
+The single whole-tree swiftlint violation is pre-existing (`opening_brace` in sibling `LiveSignalSparklinesWidget.Builder.swift:158`, owned by another prompt) — **0 in my files**. Matches the predecessor baseline exactly.
+
+Let me attempt the full-app `xcodebuild` for literal evidence (bounded), capturing the real failure + confirming zero SignalDiffTable errors.
+
+Build is running (gradlew present at `../shared/gradlew`, so the preAction will attempt the KMP framework). Let me update tracking and check build progress.
+
+The xcodebuild finished. Let me examine the captured result.
+
+The `&` caused the async session to tear down and kill the build before it logged. Let me run `xcodebuild` as the foreground async command properly.
+
+While the build runs, let me verify the generated `.xcodeproj` is git-ignored and review my staged files.
+
+Clean: only my 8 files are untracked; `.xcodeproj` is git-ignored. Let me check the build progress.
+
+The KMP `Shared.xcframework` is actually building here (DEBUG variant written, now linking RELEASE) — the toolchain is available. The app compile will follow and hit the pre-existing `ChargingProjection` redeclaration. Let me wait for it to reach that failure.
+

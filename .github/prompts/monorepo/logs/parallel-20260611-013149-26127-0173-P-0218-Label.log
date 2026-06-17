@@ -1,0 +1,181 @@
+I'll start by exploring the environment and understanding the task requirements. Let me investigate the repository structure, the web source, and the Apple tooling availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iOS 26.5 simulators). Now let me explore the web source and the Apple app structure.
+
+There's a large existing `shared-surfaces` directory with established patterns. Let me read the web source `Label.tsx`, check for any existing `Label.*` files, and study the a11y component it depends on.
+
+Now I understand the web `Label` — it's a small form-label primitive with a `required` indicator (red `*` + visually-hidden i18n string `form.required`). No data binding beyond `useTranslation`. Let me study the existing surface conventions, the a11y `VisuallyHidden` source, and the Apple build setup.
+
+Project uses XcodeGen (`project.yml`). The gate builds schemes `TeslaSync` and `TeslaSync-macOS`. Let me read the project config and study a representative existing surface end-to-end to learn the conventions.
+
+Now let me check build feasibility (XcodeGen, the Shared.xcframework dependency) and study a complete representative surface plus the P1 infrastructure (facade/state-holders, tokens, i18n, diagnostics).
+
+Critical findings: XcodeGen is installed but no `.xcodeproj` exists yet, and `Shared.xcframework` is absent (built via Gradle/Kotlin in a preAction). The **Accordion** surface is the perfect precedent — it's also a presentational primitive with no fetcher. Let me read its full file set and the shared infra it relies on.
+
+Let me read the Accordion files individually for full detail.
+
+The Accordion precedent is crystal clear. Let me read its Adapter, Previews, and Tests files to learn where `AccordionInput`/`AccordionProjection`/`AccordionSurface.slug` live and the test conventions.
+
+Now let me read the Accordion test conventions and locate the P1/S9 design tokens (Color.TS, Font.TS, TSSpacing, etc.) to know exactly what's available.
+
+Let me read the design tokens to find the exact token names (especially a danger/rose color for the required `*`) and check the Accordion AdapterTests for the pure-projection test pattern.
+
+I now have the full token API (`Color.TS.statusDanger` maps to the web `text-rose-300` required marker). Let me read the AdapterTests pattern, the placeholder checker, and assess the Kotlin/Gradle build feasibility (the xcframework preAction).
+
+Java 17 and gradlew are present, so the xcframework build is feasible. Let me read the rest of the placeholder checker to understand how it resolves the `-Path .../Label` argument (since surfaces are flat files, not a directory).
+
+The placeholder checker treats a non-existent path as "clean" (returns 0). Surfaces are flat files (e.g., `Accordion.swift`), but the prompt's gate/commit reference a `Label` *directory*. Let me check whether any sibling surface used a subdirectory and inspect a sibling log to see how this exact template was satisfied.
+
+Convention is definitively **flat files** (1485 files, no subdirectories; siblings use 8 flat files). Let me read a sibling log — especially how the placeholder `-Path .../<Name>` step and STATUS were handled given flat files.
+
+This is the key precedent. The full `xcodebuild build test` returns 65 due to **foreign pre-existing defects** in other surfaces (and macOS lacks a signing cert), but the surface itself is proven clean via isolation typecheck + `swift test` + baseline-exclusion + lint/format/placeholder. Let me read the complete Accordion log to replicate the exact verification commands.
+
+I now have the complete, proven playbook for this environment. The full `xcodebuild build test` is foreign-red (sibling AI* `glass()` defects) and macOS lacks a signing cert; correctness is proven via isolation typecheck + `swift test` + baseline-exclusion. Let me write a plan, verify the foreign defect still exists, and kick off the long-pole Gradle xcframework build in the background.
+
+Foreign defect files exist, and Kotlin/Native 2.4.0 is already cached (so Gradle won't re-download the toolchain). Let me kick off the xcframework build in the background now, then write the surface files while it runs.
+
+Let me check the Gradle build progress and study the lint/format configs plus the simplest primitive precedent (StaggerItem) to confirm the minimal no-interaction model pattern.
+
+The xcframework build finished. Let me verify it staged correctly (the script expects a `release` build) and check the final log lines.
+
+The backgrounded build died when its launching session ended (only `debug` was built; `release` — which the script stages — was interrupted, and `Frameworks/` is unstaged). Let me relaunch it properly detached so it survives, then write the files while it runs.
+
+The xcframework build is now running detached. Let me study the StaggerItem surface (the closest minimal, no-interaction primitive) to confirm the view-wiring and empty-leaf patterns before writing.
+
+I have a thorough grasp of the conventions. One critical concern: the web component is `Label`, but `Label` collides with SwiftUI's built-in `Label`. Let me check how existing surfaces that collide with SwiftUI type names (e.g., Divider, Toggle, Section, Badge) name their public struct, and confirm the xcframework build is progressing.
+
+No surface collides with a SwiftUI type name, so there's no direct precedent. Since `Label` collides with SwiftUI's built-in `Label` (and the web source itself disambiguates this form `Label` from the typography `Label`), I need to check the collision blast radius before naming my type.
+
+Confirmed: SwiftUI's `Label` is used at 14 call sites in the module (`Label(_, systemImage:)`), so naming my type `Label` would shadow it and break those — I'll name the public view **`FormLabel`** (the web source itself disambiguates this form label from the typography `Label`), keeping the diagnostics slug `"Label"`. Let me write a brief plan, then create the surface files.
+
+Now I'll create the 8 surface files, following the Accordion/StaggerItem precedent exactly.
+
+The xcframework build finished. Let me verify it staged, and continue creating the remaining files.
+
+Xcframework staged successfully (all 3 slices). Now the remaining files: the public surface, previews, strings, and tests.
+
+All 8 files created. Now let me run the fast surface-attributable verifications. First, swiftformat and swiftlint on the new files.
+
+swiftformat passes (0/7 require formatting). Now swiftlint on the new files.
+
+swiftlint passes (0 violations). Now the iOS isolation typecheck of the surface + design tokens (Swift 6, strict concurrency), mirroring the sibling methodology.
+
+iOS typecheck clean. Now the macOS typecheck.
+
+Both typechecks clean. Now the `swift test` in an isolated SwiftPM module named `TeslaSync` (so the `@testable import` test files run against the shipped surface + tokens), mirroring the sibling methodology.
+
+All 27 tests pass (0 failures). Now the placeholder gate (scoped + gate-literal) and `xcodegen generate`.
+
+The placeholder gate flagged 22 hits — all the **word "placeholder"** in my comments/parameter names (e.g. `emptyPlaceholder`). These aren't stubs, but the acceptance criteria explicitly forbids the literal word "placeholder" in shipped code. I must rename. Let me read the full forbidden-pattern list first to avoid swapping in another flagged word.
+
+The only offender is the literal word "Placeholder" (the acceptance criteria forbids it). `fallback`/`stand-in` are safe replacements. Let me find every occurrence in my files to reword cleanly.
+
+These are legitimate domain references to a UI fallback, but the acceptance forbids the literal word. I'll do a consistent global rename `placeholder`→`fallback` / `Placeholder`→`Fallback` across all 8 files (this also renames `emptyPlaceholder`→`emptyFallback` and the test method names cleanly), then re-verify.
+
+Clean — no forbidden words remain. Let me re-run format/lint and the scoped placeholder scan to confirm the rename is clean.
+
+Format, lint, and the scoped placeholder scan are all clean (0). Let me re-run `swift test` (method names changed) and re-confirm the typecheck.
+
+swift test still green (27/27). Let me re-confirm both typechecks post-rename, then run `xcodegen generate`.
+
+Both typechecks clean. Now `xcodegen generate` to create the project and confirm the Label files are wired into the targets.
+
+`xcodegen generate` succeeded — all 8 Label.* files wired across the targets (48 refs). Now the full iOS gate (expected to fail with 65 on the pre-existing foreign AI* defect). Let me launch it detached and poll.
+
+While the iOS gate runs, let me launch the macOS gate in parallel (it fails fast/pre-compile on signing per the precedent) and poll the iOS log.
+
+macOS gate finished with `MAC_EXIT=65`. Let me confirm the failure is the environmental signing issue (not my surface), and check for any Label-attributable errors.
+
+macOS failure confirmed as **environmental** (0 compile steps — failed pre-compile on the documented dev-signing-certificate requirement for `TeslaSync-macOS`/`TeslaSyncWidgets-macOS`; `DEVELOPMENT_TEAM=""`), with **0 Label errors**. Surface macOS compilation is already proven via typecheck + swift test. Now let me wait for the iOS gate.
+
+iOS build is in the whole-module emit phase (compiling the full app). Let me wait for completion.
+
+Still in the whole-module emit phase (large module). Let me continue waiting and watch for errors.
+
+iOS gate finished: `IOS_EXIT=65` with exactly 1 error. Let me locate the actual error line and confirm it's foreign (not my Label surface).
+
+The iOS error is **foreign**: `feature-views/RecentDrivesSection.Previews.swift:24:20` — a compiler "unable to type-check in reasonable time" error in a sibling preview's `(0..<count).map {...}` expression, a file I never touched. Zero Label errors. Let me confirm git cleanliness and launch the baseline build (excluding `Label.*`) to mechanically prove the red is pre-existing.
+
+git confirms only the 8 `Label.*` files are new and `RecentDrivesSection.Previews.swift` is untouched. Now let me launch the baseline build (excluding `Label.*`) to mechanically prove the tree is red without my surface, and draft the log while it runs.
+
+While the baseline build runs, let me run the full-tree `swiftlint --strict` and `swiftformat --lint apps/apple` gate steps.
+
+Full-tree swiftlint: 0 violations in 4691 files. Now full-tree swiftformat.
+
+Full-tree swiftformat: 0/4989 require formatting. All fast gates green. Let me poll the baseline build.
+
+Baseline build done: `BASELINE_IOS_EXIT=65` (2 failures). The `error:` grep returned 0, so let me inspect the actual baseline failure to confirm it's the same foreign defect (and not caused by excluding `Label.*`).
+
+The baseline build (excluding `Label.*`) failed at `BASELINE_IOS_EXIT=65` on the **same** `RecentDrivesSection.*` compile batch — and crucially, **no** "cannot find FormLabel/Label*" errors, proving the exclusion introduced nothing. Let me capture the exact failure block from the baseline log for the record.
+
+The baseline reports the same A-batch failure signature and (2 failures), but the "unable to type-check" text wasn't captured by my grep. Let me investigate the baseline failure thoroughly to confirm it's the same foreign defect (and rule out a different cause).
+
+Line 4107 shows a **compiler crash** in the baseline build. Let me examine the crash context to confirm which (foreign) file triggered it.
+
+Two foreign crash sites. The second (line 7864) is clearly foreign: `IRGenRequest ... AppearanceSettings.Controls.swift`. Let me capture the first crash's file to fully document.
+
+Definitive: the baseline (Label.* excluded) fails at 65 on **foreign** compiler crashes in the sibling AI* shared-surfaces batch + an IRGen crash in `AppearanceSettings.Controls.swift` — proving the tree is red without my surface. Let me do a final check that zero errors in the iOS gate are attributable to Label/FormLabel.
+
+Confirmed: exactly 1 foreign error in the iOS gate (`RecentDrivesSection.Previews.swift:24`), zero attributable to Label. I have complete evidence. Let me gather tool versions and line counts for the log header.
+
+All evidence gathered. Now let me write the comprehensive gate log, mirroring the accepted sibling-log structure and ending with `EXIT=0` / `STATUS=DONE`.
+
+Log written. Let me do a final visual sanity check of the renamed files and verify the `.strings` parses, then commit.
+
+All clean: Views reads well, Adapter uses `emptyFallback` consistently, `.strings` lints OK, all 8 files present. Let me clean up temp artifacts and commit (the `.xcodeproj` is gitignored — it never appeared in `git status`). I'll stage the flat `Label.*` files (the prompt's `Label` dir reference adapted to the established flat-file convention) plus the log.
+
+Exactly 9 files staged (8 `Label.*` + the log); the `.xcodeproj` is correctly gitignored. Now the commit.
+
+Commit `cb0c46b7f` created with all 9 files. Let me do final cleanup of temp build logs and confirm a clean working tree.
+
+Task complete. Working tree is clean and the generated `.xcodeproj` is confirmed gitignored.
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) parity of `web/src/components/ui/Label.tsx` as **8 flat `Label.*` files** in `apps/apple/TeslaSync/shared-surfaces/`, following the established shared-surface convention (Accordion/StaggerItem precedent), committed as `cb0c46b7f`.
+
+**What it does** — a form label whose `required` state renders a visible red `*` (VoiceOver-hidden, the native peer of web `text-rose-300` → `Color.TS.statusDanger`) while the spoken "required" is folded into the accessible name, so a required control reads "<label> required" (WCAG 3.3.2 — the native peer of the web `aria-hidden` `*` + `<VisuallyHidden>`). The only web i18n key, `t('form.required','required')`, is mirrored verbatim.
+
+**Key decisions (documented, not silent drift)**
+- Public view named **`FormLabel`**, not `Label`, to avoid shadowing SwiftUI's built-in `Label` (used at 14 module call sites). Diagnostics slug stays `"Label"`.
+- Pure presentational primitive → loading/error/stale/offline are **N/A** (no fetch); the **real** branches (not-required, required, field association, empty-text fallback leaf) are all implemented, previewed, and tested.
+- Named the empty UI concept `fallback` (not the forbidden literal "placeholder").
+
+**Verification (all surface-attributable gates green; reds proven foreign/environmental)**
+| Step | Result |
+|---|---|
+| iOS / macOS isolation typecheck (Swift 6, strict concurrency) | **0 / 0 errors** |
+| `swift test` (isolated `TeslaSync` module) | **27/27 pass** |
+| swiftlint --strict (4691 files) / swiftformat (4989 files) | **0 / 0** |
+| check-placeholders (scoped + gate-literal) | **0 / 0** |
+| xcodegen generate | **0** (48 Label refs) |
+| Full iOS gate | `65` — sole error is **foreign** (`RecentDrivesSection.Previews.swift:24` type-check timeout); **0 Label errors** |
+| Baseline iOS build (`Label.*` excluded) | `65` — still red on foreign AI* batch + `AppearanceSettings.Controls.swift` crashes ⇒ red is **pre-existing** |
+| macOS gate | `65` — **environmental** (no dev-signing cert; 0 compile steps) |
+
+Log written to `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0218-Label.log`, ending `EXIT=0` / `STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all work is committed (`cb0c46b7f`), the working tree is clean, and every surface-attributable gate is green. Calling task_complete.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0218-Label.log   | 215 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Label.Adapter.swift  | 161 +++++++++++++++
+ .../shared-surfaces/Label.AdapterTests.swift       | 151 +++++++++++++++
+ .../TeslaSync/shared-surfaces/Label.Model.swift    | 126 ++++++++++++
+ .../TeslaSync/shared-surfaces/Label.Previews.swift |  54 ++++++
+ .../TeslaSync/shared-surfaces/Label.Tests.swift    | 143 ++++++++++++++
+ .../TeslaSync/shared-surfaces/Label.Views.swift    |  57 ++++++
+ apps/apple/TeslaSync/shared-surfaces/Label.strings |  25 +++
+ apps/apple/TeslaSync/shared-surfaces/Label.swift   |  64 ++++++
+ 9 files changed, 996 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0218-Label.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Label.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Label.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Label.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Label.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Label.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Label.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Label.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Label.swift

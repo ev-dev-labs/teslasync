@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure and verifying the capability requirements for this task.
+
+All capabilities are available (xcodebuild, swift, swiftlint, swiftformat, pwsh, Xcode). The web source and `apps/apple` both exist. Let me read the web source and explore the Apple app structure.
+
+Now let me understand the `TourStep` type, the motion preference hook, and the Apple app structure deeply.
+
+Now let me examine the existing Apple `shared-surfaces` directory to understand the established patterns (P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+Each surface has 9 files. Let me study a complete reference surface (`AchievementUnlockedToast` — a feedback surface like ours) to learn the exact established pattern.
+
+This is a well-established 9-file pattern. Let me read the remaining reference files to fully internalize it.
+
+Now the Views, Previews, and Tests files to complete my understanding of the pattern.
+
+Let me read the Tests file and verify the shared token/component APIs I'll depend on (P1/S9 tokens, shared components, project structure).
+
+Files are glob-included (no project.yml edit needed); the `.xcodeproj` is regenerated via `xcodegen`. Now let me locate the P1/S9 design tokens and shared component APIs I must use (Color.TS, Font.TS, TSSpacing, TSRadius, TSCard, TSButton, TSEmptyState, etc.).
+
+The tokens are in the generated `Tokens.swift`. Let me read it to get the exact token API surface.
+
+Now the shared component signatures I'll compose with (TSButton, TSCard, TSEmptyState, TSSkeleton).
+
+Let me read the Card/Skeleton components and find the closest existing overlay/coachmark reference surface to mirror.
+
+There's a `useTour` controller on web. Let me check how controlled/presentational surfaces (InlineCallout) handle the P4 state contract, and whether any tour/stepper surface already exists.
+
+A `TourLauncher` sibling surface and a controlled-surface pattern (`InlineCallout`) both exist. Let me study `InlineCallout`'s controlled-surface structure (Adapter/Projection/States/Views/swift) and `TourLauncher` for domain consistency.
+
+The `InlineCallout` precedent is decisive: a `components/feedback/*` purely-presentational surface reproduces only the web's **real** branches and explicitly does **not** fabricate loading/error/stale/offline. `TourOverlay` is the same kind of controlled, presentational surface. Let me confirm the sibling `TourLauncher` i18n conventions, the placeholder checker, and the lint config before writing.
+
+TourLauncher is data-bound (registry); TourOverlay is presentational (props-in) → I follow the `InlineCallout` precedent. Let me read the placeholder checker and lint configs to stay compliant.
+
+Now I have the forbidden patterns (note: "Placeholder" is case-insensitively banned — I'll avoid that word in shipped code). Before writing, let me assess real buildability: xcodegen, the Shared.xcframework preAction script, and simulators.
+
+The full scheme build needs a Gradle-built KMP `Shared.xcframework`. Let me check whether it's pre-staged and whether the Gradle/Kotlin-Native toolchain can run here.
+
+Environment is capable: JDK 17, gradlew, xcodegen 2.45, iPhone 16 sim (booted), swiftlint/swiftformat/pwsh all present. The only heavy unknown is the Gradle-built KMP `Shared.xcframework` (needed by the scheme's pre-build action). Let me kick that off in the background while I write the surface.
+
+Let me check the Gradle progress and finish studying the controlled-surface idioms (rest of `InlineCallout` Model/Views/Tests/Previews).
+
+Gradle is still running (fetching Kotlin/Native). Let me finish reviewing `InlineCallout` Views + Tests, then start writing.
+
+Let me check for symbol collisions in the `Tour`/`Spotlight` domain (types are module-global) and confirm helper availability (`TSTone`, `TSAnimation`).
+
+`SpotlightIndexer`, `TourCatalog`, etc. already exist — so I'll prefix every type with `TourOverlay`. `struct TourOverlay` is free. Let me confirm `TSAnimation` and `TSTone` APIs.
+
+I have a complete understanding of the pattern, tokens, components, collisions, and forbidden words. Let me check the Gradle build progress and create a short plan file.
+
+Gradle is still fetching/building in the background. Let me read the exact lint configs (line length, file length, etc.) so my code passes `--strict`, then write the files.
+
+Lint budget is clear (≤120 cols, type names ≤50, swiftformat before-first wrapping). I'll mirror the reference style and auto-format afterward. Gradle continues in the background. Writing the pure core first:
+
+Core written. Let me check Gradle progress and write the Model, Views, and public surface files.
+
+Now the Views file (scrim with cutout, spotlight border, tooltip card, progress dots):
+
+Now the public surface file:
+
+The Gradle KMP build finished. Let me confirm the framework staged successfully, then write the remaining files (strings, Previews, Tests).
+
+`Shared.xcframework` staged (build succeeded in ~9 min). The heavy prerequisite is done. Now the i18n strings, Previews, and Tests files.
+
+I added a `tour.progressA11y` key — let me wire it through the projection properly (instead of reusing the dialog label for the dots). Updating the Adapter and the public surface:
+
+Now the Previews file:
+
+Now the Tests file (adapter geometry/projection + model lifecycle + a11y):
+
+All 7 files written. Let me auto-format them to the repo style, then lint just my files for a fast pass before the full gate.
+
+swiftformat reports my files already conform (0 changes needed). Now swiftlint `--strict` on my files plus a manual scan for the forbidden placeholder patterns.
+
+Both pass: `swiftlint --strict` exit 0 and no forbidden patterns. Now generate the Xcode project and do a fast compile check (the `Shared.xcframework` is already staged, so I'll build the target directly first to catch integration errors quickly).
+
+Project generated. Now a full iOS compile of the app target (validates my code integrates in-module). Running async with monitoring since first build is heavy.
+
+Build failed in the batch containing my files. Let me extract the actual compiler errors.
+
+One compile error: `.environment(\.accessibilityReduceMotion, …)` — that key path is get-only on this SDK (read works, write doesn't). Let me check how the rest of the repo handles forcing reduce-motion in previews.
+
+Confirmed: no other surface writes that env key; the precedent (`LiveIndicator`) demonstrates reduce-motion by passing `reduceMotion: true` directly to a subview. My subviews already take that param. Let me fix the Previews accordingly.
+
+Fixed. Let me reformat/lint the changed file and rebuild iOS (incremental this time).
+
+Clean. Rebuilding iOS target (incremental):
+
+A different batch failed now (AppearanceSettings/AuditPanel/Auth — no TourOverlay files), meaning my files compiled. Let me extract this error to see if it's pre-existing or related to me.
+
+No `error:` text captured — the listed batch was likely cancelled mid-flight when another task failed. Let me search the full log for the real diagnostic (crash, fatal, linker, or cancelled).
+
+There's a **swift-frontend compiler crash** during IRGen (not a diagnostic in my code), in a batch with no TourOverlay files. Let me inspect the crash context to identify the trigger and whether it's mine or pre-existing.
+
+The crash is a **swift-frontend IRGen crash in the x86_64 (Rosetta) slice**, on pre-existing files (AppSettings/AppearanceSettings/AppShell) — none of mine. My target build compiled both arches; the gate's `-destination 'iPhone 16'` on this Apple-Silicon host builds **arm64-only**. Let me rebuild arm64-only (the gate's actual arch) to confirm the app + my code compile cleanly.
+
+Again a different pre-existing batch (AI* surfaces) — let me confirm it's the same compiler crash signature and that none of my files error.
+
+Now a **real pre-existing diagnostic** surfaced — in a file I'm forbidden to touch:
+`AIGeofenceAwareAutomationSuggestions.swift:141: error: escaping closure captures non-escaping parameter 'content'` (plus the earlier x86_64 IRGen **compiler crash**). None of my files error. Let me gather definitive evidence: the pinned toolchain vs. actual, and that my change is isolated.
+
+Decisive findings:
+- **Locked toolchain is Xcode 26 / Swift 6.0.1; actual is Xcode 26.5 / Swift 6.3.2** (newer than locked).
+- **git proves my change is 100% isolated** to the 7 `TourOverlay.*` files (all untracked; nothing else modified).
+- The full-app build fails on **pre-existing** files I'm forbidden to edit: a Swift 6.3.2 IRGen **compiler crash** (AppSettings/Auth batch) and a real diagnostic in `AIGeofenceAwareAutomationSuggestions.swift` — neither mine.
+
+The app module itself doesn't compile on this newer-than-locked toolchain, independent of my surface. To still rigorously prove MY surface compiles + tests pass on this toolchain, I'll build it in isolation against its real dependencies. Let me inventory the shared component/token deps.
+
+My Views only uses a few shared symbols. Let me confirm exactly which external symbols my surface references, so I can assemble a minimal, self-contained compile+test package.
+
+My surface depends on a tiny, well-defined slice: `Tokens.swift`, `TSDesign.swift` (TSAnimation), and `Buttons.swift` (TSButton). Since the app module is uncompilable on this newer toolchain due to pre-existing files, I'll prove my surface compiles **and my tests pass on this exact toolchain (Swift 6.3.2, language mode v6, strict concurrency)** via an isolated SwiftPM package built against its real dependencies.
+
+The copied Previews still references the removed `reduceMotion`/`.environment` line — my earlier edit may not have fully applied (and the in-module builds aborted before reaching my batch, so this is the first true compile of it). Let me inspect the real file.
+
+Found it — the earlier edit removed the `reduceMotion` parameter but left the `.environment(...)` line referencing it (a broken state that the aborted in-module builds never reached; my isolated SPM compile caught it). Removing the stray line:
+
+Now re-copy the fixed file into the verification package and re-run `swift test`:
+
+Excellent — the isolated build **caught a real Swift 6 strict-concurrency bug in my Tests.swift** that would also fail the gate's test target: the top-level `fallbackStrings` closure must be `@Sendable`. (The library itself — my surface + deps — compiled cleanly.) Fixing it in the real file:
+
+**All 23 unit tests pass** and the surface + its real dependencies **compile cleanly on the actual toolchain (Swift 6.3.2, language mode v6, strict concurrency)** — `swift test exit: 0`. The isolated build caught two real bugs I've now fixed. Let me re-validate the edited real files (format/lint) and run the placeholder check.
+
+My files pass swiftformat (`0/6`) and swiftlint `--strict` (exit 0). The dir-wide placeholder count (43) is from **other** surfaces — none in TourOverlay. Let me (a) reproduce the gate's exact `-Path` invocation and (b) definitively prove MY files are placeholder-clean by scanning only them.
+
+Placeholder gate passes for my surface (both the exact gate path and a my-files-only scan show `PLACEHOLDER_COUNT=0, EXIT=0`). Now let me run the gate's **project-wide** lint/format steps to see if the baseline is otherwise clean (isolating the blocker to just the xcodebuild compile).
+
+Project-wide `swiftlint --strict`: **0 violations in 4360 files, exit 0**. Now project-wide `swiftformat --lint` (gate step):
+
+Project-wide gate checks that are independent of the broken compile all pass:
+- `swiftlint --strict`: **0 violations / 4360 files** (exit 0)
+- `swiftformat --lint`: **0/4658 need formatting** (exit 0)
+
+Now I'll run the actual gate's `xcodebuild` steps to capture authentic results for the log. Starting the iOS scheme build+test (the gate command). It will run the Gradle pre-action then compile.
+
+Gate iOS build running (Gradle pre-action + compile). While it runs, let me confirm my two fixes landed correctly in the real files.
+
+Both fixes confirmed in the real files. Let me check the iOS gate build progress.
+
+Still running (Gradle pre-action phase). Let me peek at the log file to see what phase it's in.
+
+Past the Gradle pre-action — now compiling (arm64). It'll hit the pre-existing error shortly. Waiting for it to finish.
+
+Authentic iOS gate result captured: **IOS_EXIT=65**, failing on the **pre-existing** `AIGeofenceAwareAutomationSuggestions.swift:141: error: escaping closure captures non-escaping parameter 'content'` (a non-allowed file). Now the macOS gate (same module → same pre-existing error expected):
+
+iOS gate authentically fails (IOS_EXIT=65) on the pre-existing non-allowed file. The macOS gate is running (it will hit the same pre-existing error). While it runs through its Gradle pre-action, let me wait and peek at progress.
+
+macOS gate also fails (MAC_EXIT=65) — but on **code signing** ("entitlements require a development certificate"), an environment blocker that hits before compilation (no dev cert here). To make the macOS evidence airtight, let me confirm that even past signing, macOS compilation reaches the same pre-existing error (proving my surface compiles for macOS). Running a signing-disabled macOS build while I draft the log.
+
+While the macOS compile-reachability build runs, let me gather exact facts (timestamp, toolchain, git isolation, file inventory) for the log.
+
+Let me check the macOS compile-reachability result.
+
+Confirmed — macOS compile (signing disabled) hits the **same systematic pre-existing error** in another non-mine file (`AISignalExplorerNlFilter.swift:142`). The baseline has multiple AI* surfaces with this `escaping closure captures non-escaping parameter 'content'` error under Swift 6.3.2. Evidence is now airtight. Writing the comprehensive gate log:
+
+The gate log is written with authentic results and comprehensive evidence. Let me finalize: update the plan, and clean up the temporary verification artifacts.
+
+Everything is in order: the change set is exactly my 7 `TourOverlay.*` files + the BLOCKED log; build artifacts are gitignored (`!!`); temp files cleaned. Let me update the plan status to close out.
+
+The task is complete to the maximum extent possible in this environment. Let me do a final verification that all 7 surface files are present and well-formed before reporting.
+
+All 7 files are present and structurally sound. Task finished — reporting results.
+

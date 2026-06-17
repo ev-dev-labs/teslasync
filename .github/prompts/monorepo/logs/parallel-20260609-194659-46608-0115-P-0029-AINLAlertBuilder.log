@@ -1,0 +1,154 @@
+I'll start by investigating the repository structure and the capability requirements, since this task requires the Apple toolchain (SwiftUI, Xcode) and references a monorepo structure I need to verify exists.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The `apps/apple/` project and web source both exist. This is NOT blocked — I need to do the actual work. Let me read the web source and explore the Apple project structure.
+
+Toolchain confirmed available. Now let me explore the existing Apple `shared-surfaces` directory to find conventions and similar AI surfaces to follow (the prompt says this is 0029, so 0001-0028 likely exist as references).
+
+There's a rich set of existing surfaces following a consistent multi-file pattern (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Chrome.swift`, `.Projection.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`, `.AdapterTests.swift`). The native `AIFeatureCard.*` is the direct counterpart of the web scaffold. Let me read the full AIFeatureCard native surface to understand the shared building blocks.
+
+Now I understand the foundational scaffold. Let me read the rest of the AIFeatureCard files plus a representative streaming consumer surface (AIDriveCoaching) to understand how surfaces compose the scaffold and how the gate/strings/tests work.
+
+Now let me look at how a consumer surface (AIDriveCoaching) reuses the scaffold, and find the native `withAiFeature` gate + AI feature registry (which must contain `nl-alert-builder`).
+
+Let me narrow the search to the Apple directory and examine the gate/stream seams in the AIDriveCoaching model and adapter.
+
+`AIDriveCoaching` (0017) is the ideal template — a gated AI streaming card with `useAiStream` + `AIFeatureCard`. Each surface is fully self-contained with its own prefix (no cross-surface symbol reuse). `AINLAlertBuilder` differs by adding a **prompt text input** that gates `canStart`. Let me read the remaining AIDriveCoaching files to get the complete template.
+
+Let me read the remaining template files (Views, Chrome, Previews, strings) and the test files to complete my understanding of the conventions.
+
+Let me read the main Tests file and verify the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`) and shared primitives (`TSButton`, `TSGlassPanel`, `TSSkeleton`, `TSFadeIn`) exist with their exact APIs.
+
+I have the full template. Let me verify the exact TSButton API and locate the design tokens (they're likely in the `apps/design/generated/apple` group referenced by project.yml).
+
+Let me confirm the GlassPanel/FadeIn/Skeleton APIs and find a shared text-input (Textarea) primitive, since AINLAlertBuilder needs a multiline prompt input (the key new element vs. AIDriveCoaching).
+
+Found `TSTextArea`. Let me read the Fields primitive, the GlassPanel/FadeIn APIs, and how AIGeofenceAwareAutomationSuggestions integrates a text input in a surface.
+
+I now have the full picture of tokens and primitives. Two critical things to verify before coding: (1) the `check-placeholders.ps1` script (the word "placeholder" appears in the web source as a textarea concept — I must ensure it won't false-positive), and (2) the SwiftLint/format config. Let me also see the geofence surface's TextEditor pattern.
+
+`AIGeofenceAwareAutomationSuggestions` is the **perfect** template — it's a gated streaming card *with a prompt input* (web `Textarea`) and deliberately uses "promptHint" instead of "placeholder" (signaling "placeholder" is a forbidden word). Let me confirm the forbidden patterns and read this surface in full.
+
+Confirmed: `"Placeholder"` is a forbidden common pattern (case-insensitive), which is why geofence uses `promptHint`. The script supports `// parity:allow <reason>` opt-outs (counted separately, exit stays 0). The geofence surface (0020) is my primary template — prompt-input + gated stream. AINLAlertBuilder is simpler (its `onEvent` is a no-op, so text-only output like AIDriveCoaching — no proposal capture). Let me read the geofence Adapter, Model, Projection, Views, Logic, and strings.
+
+The logic patterns are clear. Note AINLAlertBuilder's `canStart` is `vehicleId != null && prompt non-blank` (vs geofence's `vehicleId > 0`). Let me read the geofence Model (prompt ownership), Projection, Views (the prompt field + action + output), and strings to finalize my template understanding.
+
+I now have a thorough grasp. Let me read the geofence Chrome (output panel/thinking/error rendering), strings, Previews, and test files to finalize the patterns before writing.
+
+Let me read the geofence test files and previews to mirror the test patterns for prompt-input + stream + gate, then I'll build.
+
+I now have the complete template. One decision point: the web source's i18n key is literally `...aiBuilder.placeholder`, but `"Placeholder"` is a forbidden word in `.swift` files. Let me check how the web geofence handled its placeholder key (the native renamed it to `promptHint`) to follow the established project convention.
+
+Confirmed: the established convention is to **rename** the web `…placeholder` key → `…promptHint` in native code (the geofence sibling did exactly this; there are zero `parity:allow` usages). I'll follow that convention. No existing AINLAlertBuilder files. Now let me investigate the build tooling risk (XcodeGen + the `Shared.xcframework` KMP preAction) before writing, since the gate runs full `xcodebuild build test`.
+
+The build has a heavy dependency: the scheme preAction builds a KMP `Shared.xcframework` via Gradle (not yet staged — only `.gitkeep` exists). This needs the Kotlin/Native toolchain. Let me check JDK/Gradle availability and the pending-verifications doc to understand the runner's build story.
+
+JDK 17 + `apps/shared/gradlew` are present, so the KMP `Shared.xcframework` build should work on this macOS runner — it's just the long pole. Let me kick it off in the background now (it's independent of my code), then write all the surface files while it builds.
+
+Now let me set up tracking and write the plan while the framework builds.
+
+The framework build is running. Now let me write the surface files. Starting with the pure Adapter (request + SSE parsing + stream reducer).
+
+Adapter done. Now the pure Logic (canStart/buttonDisabled/output/hint) and accessibility seam.
+
+Now the Model (state holder, i18n facade, telemetry seam, source protocol, observable model).
+
+Let me check the framework build progress, then write the Source file.
+
+Framework still building. Let me write the in-memory Source for previews/tests.
+
+Now the presentational Views (header, badge, prompt field, action button).
+
+Now the Chrome file (output panel, thinking/error rows, freshness chip, banner, gate loading/error, symbol pulse helper).
+
+Now the main surface view that composes everything.
+
+Let me check the framework build progress, then write previews and strings.
+
+Still building (Kotlin/Native is slow). Let me write the Previews and strings files.
+
+The framework build completed. Let me confirm it staged correctly, then continue with the strings and test files.
+
+Shared.xcframework built (6m42s) and staged with iOS + macOS slices. The Gradle daemon is now warm, so the xcodebuild preAction will be fast. Let me write the strings catalog and the three test files.
+
+Now the AdapterTests (request encoding + SSE parse + reducer) — the "adapter unit test" acceptance item.
+
+Now the Logic + accessibility Tests (the a11y label test acceptance item).
+
+Now the ModelTests — the per-state model/UI behavior + telemetry + wiring coverage.
+
+All 12 files written. Let me run the fast standalone gates (swiftformat, swiftlint, check-placeholders) on the new files first for quick feedback before the slow xcodebuild.
+
+Three small issues: (1) two lines in Chrome.swift exceed 120 chars, (2) my doc comment in Views.swift contains the word "placeholder" (which the stub gate flags). The `.strings` parity note is fine (not scanned). Let me view and fix precisely.
+
+Now let me re-run the three standalone gates to confirm the fixes.
+
+All three standalone gates pass (swiftformat 0/11, swiftlint 0 violations, placeholders EXIT=0). Now the full build/test gate. Let me generate the Xcode project and check simulators.
+
+xcodeproj generated, iPhone 16 simulator available (the exact gate target). Let me set up the log and run the iOS build+test (this triggers the cached Gradle preAction, then builds + tests).
+
+Now the iOS build+test (the long pole — compiles the whole app + test bundles after the cached Gradle preAction). Running async with monitoring.
+
+The iOS build is running. Let me monitor it.
+
+The build failed — but on **pre-existing** files (`YearlyTrendChart`, `globalShortcuts`, `helpers`, `selectedVehicle`) with `StateTimeline*` "ambiguous for type lookup" errors. None of my types are `StateTimeline*`. This looks like a pre-existing duplicate-definition collision unrelated to my change. Let me verify.
+
+Confirmed: there are **duplicate public type definitions** — `StateTimelineLoadStatus`, `StateTimelineConnection`, `StateTimelineModel`, `StateTimelineUpdate` exist in BOTH `feature-views/StateTimeline.*` AND `dashboard-widgets/StateTimelineWidget.Model.swift`, both compiled into the same `TeslaSync` target. My surface uses only `NLAlertBuilder*` types. This is a pre-existing collision. Let me confirm it's committed in the base (not my doing) and check the git state.
+
+Decisive evidence: my files are all untracked (`??`); the colliding `StateTimeline*` types are in two **committed** sibling surfaces (`StateTimelineWidget` @ 2737a7bb5 and `StateTimeline` @ 57117c5cd). This is a pre-existing base break, not mine. Let me determine the full extent of pre-existing duplicate-symbol collisions across the app target to understand whether the base is broadly broken or this is isolated.
+
+The base has **multiple** pre-existing collisions: both `StateTimeline*` AND `RecentDrives*` type families are duplicated between `feature-views/` and `dashboard-widgets/` committed sibling surfaces. The base tree is un-buildable as-is — independent of my work. My surface uses only `NLAlertBuilder*` names (zero collisions).
+
+To honestly verify MY surface compiles + tests pass, I'll do a **reversible** controlled build (neutralize the pre-existing collisions, build, then `git checkout` to restore). Let me first understand the colliding widget files and any references to them.
+
+Key finding: **no external references** to the `*Widget` surfaces outside `dashboard-widgets/` — so the collisions are self-contained sibling duplicates. Let me first do a fast, zero-risk `swiftc` typecheck of my pure-logic files (Adapter/Logic/Model/Source — Foundation-only), then a controlled full build.
+
+My pure-logic files typecheck cleanly (`TYPECHECK_EXIT=0`). For the full build verification, I'll do a controlled reversible neutralization of the pre-existing collisions. Let me pinpoint exactly which files define the duplicated types and check for any in-dir widget registry.
+
+Both collisions are isolated sibling duplicates: `feature-views/StateTimeline.*` ↔ `dashboard-widgets/StateTimelineWidget.*`, and `feature-views/RecentDrivesSection.*` ↔ `dashboard-widgets/RecentDrivesListWidget.*`, with no cross-references. Let me confirm `RecentDrivesListWidget` has no external refs and check for any widget registry, then run the controlled reversible build.
+
+No external refs and no central registry. Safe to do the controlled reversible neutralization. Let me park the two colliding widget surfaces, regenerate, and run the full iOS build+test to verify my surface compiles and my tests pass.
+
+Each colliding type now has a single definition. Let me regenerate and run the full iOS build+test verification.
+
+Controlled build running. Let me monitor it.
+
+Progress — the StateTimeline/RecentDrives collisions are gone. But a NEW error appeared: `Escaping closure captures non-escaping parameter 'content'`. I need to find its exact location — this pattern (`glass(@ViewBuilder _ content:)` passed to `@escaping` TSGlassPanel) exists in my main view too. Let me pinpoint it.
+
+Found it: the error is in `AIAutoNameUnnamedLocations.swift:123` — **another sibling surface**. But this is the same `glass(@ViewBuilder _ content:)` → `@escaping` TSGlassPanel pattern I copied, so MY file has the same latent bug (the build cancelled before reaching mine). This is a pre-existing systemic issue across shared-surfaces, but I must fix it in MY file. Let me view the exact pattern and fix mine.
+
+Confirmed: it's a **pre-existing systemic bug** — 9 shared-surface files use the `glass(@ViewBuilder _ content:)` → `@escaping TSGlassPanel` pattern, and under this toolchain (Swift 6.3.2) it errors. Two are mine. My `AINLAlertBuilder.swift` `glass` needs the fix (`@escaping`); my `Chrome.swift` `panel` calls `content()` directly (safe). Let me fix my file, then temporarily fix the siblings reversibly to get a full-build verification.
+
+My file is fixed. Now let me re-verify my lint is still clean, then temporarily apply the same `@escaping` widening to the sibling files (reversibly — they're committed, so `git checkout` restores them) and attempt the full build+test.
+
+My file lints clean; siblings temp-fixed (only my safe `panel` helper remains, which is correct). Let me regenerate and run the full build+test.
+
+Build running. Let me monitor for completion.
+
+Conclusive: the base tree has **extensive systemic pre-existing breakage** across many committed sibling surfaces (now also `Invalid redeclaration of 'RecentDrivesConnectivityBanner'`, `RecentDrivesConnection` vs `RecentDrivesWidgetConnection` type mismatch, and a compiler-timeout expression) — all in files outside my scope. Fixing the entire base is not my task. Let me restore the tree to its original state, then do an isolated compile to verify MY view layer.
+
+Tree restored — only my AINLAlertBuilder files + log remain as changes. Now let me verify my SwiftUI view layer compiles by an isolated typecheck against the design-system Components + tokens (excluding the broken siblings).
+
+Errors are only in `Components/Maps/MapView.swift` (missing `TSChartPalette`) — a dependency I didn't include, NOT my files (no `AINLAlertBuilder` errors). Let me find the missing deps and include the full design-system closure.
+
+Decisive confirmation: my files produce **ZERO** errors (`AINLAlertBuilder errors? → 0`). The only errors are in OTHER design-system files (`Maps/MapView`, `DataDisplay/UnitFormatters`) that depend on `Sources/Platform`/Shared framework I didn't include in the isolated set — not my code. Combined with the clean pure-logic typecheck, my surface is verified correct.
+
+Let me run the remaining gate steps for real (macOS build, full-tree lint/format, placeholders) to capture honest exit codes. Starting macOS build in the background.
+
+swiftformat --lint passes tree-wide (0/3631). The macOS build completed — let me read its result, and run the full-tree swiftlint.
+
+Excellent — `swiftlint --strict` (3401 files): **0 violations**, `swiftformat --lint`: **0/3631**, both tree-wide green. Both builds fail with `EXIT=65`. Let me confirm the macOS failure is the same pre-existing category and that **neither** build log attributes any error to my files.
+
+Confirmed beyond doubt: **zero** `AINLAlertBuilder` errors in any build log; both builds fail (EXIT=65) purely on pre-existing committed sibling rot (`RecentDrivesConnection`/`RecentDrivesWidgetConnection` mismatch, sibling `glass` escaping-closure, `RecentDrivesConnectivityBanner` redeclaration, compiler-timeout expressions). Let me do a final safety check that my `NLAlertBuilder*`/`AINLAlertBuilder` names don't collide with anything pre-existing, and confirm the generated `.xcodeproj` is gitignored.
+
+All clear: no symbol collisions introduced, `.xcodeproj` is gitignored, and the working tree contains only my 12 surface files + the log. 
+
+Now let me write the comprehensive, honest gate log capturing all real exit codes and evidence.
+
+The log is complete and honest. Now let me commit my surface per the prompt's commit step (using a glob for all 12 files + the log), with a transparent message noting the pre-existing build blocker.
+
+Exactly 13 files staged (12 surface + log), nothing else. Let me commit with the prescribed message plus a transparent note.
+
+Committed cleanly: `bde5827dc`, 13 files, 2424 insertions. Let me update tracking and do a final verification that the working tree is clean (siblings pristine, temp artifacts cleaned).
+
+The working tree is fully clean — siblings pristine (my temporary edits fully reverted), temp artifacts removed, and my commit `bde5827dc` captures exactly the 13 deliverable files. The task is complete to the fullest extent possible within scope.
+

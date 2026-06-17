@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is fully available. Let me read the web source spec and explore the existing Apple structure to understand established patterns.
+
+The web source is a presentational panel. Now let me study the established native patterns from recently-built sibling feature views and the project configuration.
+
+The most relevant sibling is `TemperatureMetricCards` (uses temperature + MetricCard). Let me read the full SignalSelector set (recent, clean pattern) and the temperature-based panel to understand `formatTemperature`/MetricCard mapping.
+
+This is a mature, well-structured codebase. Let me study the temperature panel (for `formatTemperature`/MetricCard/units mapping) and the rest of the SignalSelector set (Views, Previews, strings, Tests).
+
+Now let me understand the units/temperature facade, shared tokens, the build config, and the test/preview/strings patterns.
+
+Let me read the units math/adapter (the `formatTemperature` core), the main temperature view, its strings/previews, and locate the shared token/component definitions.
+
+Let me locate the shared design tokens (P1/S9), shared components (TSGlassPanel, TSMetricCard, TSEmptyState, TSFadeIn), and read the strings/previews/tests format plus the build config.
+
+The tokens are generated. Let me read the generated tokens file and the key shared component signatures.
+
+Now let me read the shared component signatures I'll use, plus the Previews/Tests format and build config.
+
+Let me read the shared component signatures I'll use and the build configuration.
+
+Let me check the build tooling (xcodegen, pwsh), the placeholder checker, and how prior surfaces' gate logs concluded — this tells me the realistic gate outcome in this environment.
+
+The accepted methodology is clear: the full mono-target `xcodebuild` can't complete (2200+ files overwhelm the compiler), so prior surfaces verify via targeted `swiftc` type-checking against both SDKs + executed adapter tests + lint/format/placeholder, documenting the full build as DEFERRED-RED. Let me read the verification commands section.
+
+I now fully understand the accepted methodology. Let me verify the web `formatTemperature` semantics, check the simulator, and find a sibling "Panel" that wraps in `TSGlassPanel` for composition reference.
+
+I have a complete picture. Let me set up tracking and check the dependency closure needed for type-checking (which shared files reference the unavailable `Shared` framework, to exclude them).
+
+All clear: `Sources/Components` only imports system frameworks; only `UnitFormatters.swift` is SharedFacade-coupled (exclude it for type-checking). I have everything needed. Let me set up tracking and author the surface.
+
+Now I'll author the surface, starting with the pure Adapter.
+
+Now the Views file with all presentational subviews and state chrome.
+
+Now the main view file.
+
+Now the Previews and strings files.
+
+All 7 files authored. Now let me verify — starting with the surface-scoped lint/format/placeholder checks (A1–A3).
+
+Several violations including two File Length violations (>400 lines). The allowed-files glob `ClimatePanel.*` lets me split into more files (the sibling pattern does this). Let me read the lint configs first.
+
+File-length violations (>400) on Adapter and Views. I'll split into more `ClimatePanel.*` files (the established sibling pattern) and fix the comma/parens/line-length issues. Let me view the exact problem lines first.
+
+Let me fix the two quick issues, then split the oversized files. First the edits:
+
+Now let me view the exact Adapter projection section to split it precisely:
+
+I'll split the Adapter: extract the projection half into a new `ClimatePanel.Projection.swift` and truncate the Adapter.
+
+Now fix the trailing comma in the moved `badges()` array:
+
+Now split the Views file. Let me find its MARK boundaries:
+
+Now I'll fix the redundant parens, then split off the state chrome into `ClimatePanel.States.swift`:
+
+All 8 files now under 400 lines. Let me re-run A1–A3 on the full surface:
+
+A1 (swiftformat) and A2 (swiftlint --strict) both GREEN. Now A3 (placeholder check). Let me inspect the script's path handling, then run it:
+
+Confirmed: the literal gate path scans nothing (clean-by-default). For honest evidence I'll scan the actual files in a temp dir, and also run the verbatim gate. Let me run A3:
+
+A3 GREEN (0 placeholders over the real files). Now the critical type-checks (A4/A5) against both SDKs with the real shared components. Let me assemble the dependency set and run the iOS-18 type-check:
+
+A4 (iOS-18) type-check clean. Now A5 (macOS-15):
+
+Both SDK type-checks clean (A4: 0 errors, A5: exit 0). Now A6 — compile and **execute** the pure Adapter + Projection + Model logic as a standalone Foundation binary. Let me build the runner:
+
+Two issues in my test runner (not the surface code) — Swift 6 top-level actor rules. Let me fix the runner:
+
+A6 EXECUTED: **63 checks, 0 failures**. All surface-scoped gates (A1–A6) are GREEN. Now the whole-tree gate commands. Let me run B3 (swiftformat), B5 (placeholders), then B4 (swiftlint):
+
+B3 (0/2938 require formatting) and B5 GREEN. Now B4 (swiftlint --strict whole tree):
+
+B4 found 1 violation in 2934 files. Let me confirm it's a pre-existing sibling (not ClimatePanel):
+
+B4's single violation is the **same pre-existing sibling** (`LiveSignalSparklinesWidget.Builder.swift:158`) the prior surface documented — **0 ClimatePanel violations**. Now for B1/B2 (xcodebuild). Let me generate the project and check the Shared framework staging:
+
+Project generated. The `Shared.xcframework` isn't staged — the scheme pre-action builds it via KMP/Gradle. Let me make a genuine attempt at B1 (iOS build+test) in the background and monitor:
+
+B1 is running (KMP build + full app compile takes a while). Let me monitor its progress:
+
+The KMP/Gradle build is progressing (linking frameworks). The launcher shell returned but xcodebuild continues. Let me keep monitoring:
+
+KMP framework assembled (debug done, now release). The Apple compile hasn't started yet. Let me continue monitoring:
+
+KMP still building release frameworks (~7 min in). The expensive Apple compile hasn't begun. Let me wait further:
+
+Let me read the latest progress:
+
+B1 completed: **IOS_EXIT=65**, failing on **sibling batches** (WebhookChannelsSection, WeekSelector, WeeklyDigestWidget — not ClimatePanel). Let me characterize the 64 "error:" lines and confirm zero ClimatePanel errors:
+
+There **are** ClimatePanel ambiguity errors — my type names collide with existing declarations elsewhere in the module. This is a real issue I must fix. Let me find the collision:
+
+Collision: the existing `ClimateControlPanelWidget` and `ClimateHistoryWidget` dashboard-widgets already declare `ClimatePanelModel`, `ClimatePanelConnection`, `ClimatePanelUpdate`, `ClimatePanelSource`, `ClimateSnapshotInput`, `ClimateLoadStatus`. I must rename my types uniquely. Let me get the **complete** collision list across all my declarations:
+
+Found all 12 collisions — my model-layer type names clash with the existing `ClimateControlPanelWidget`/`ClimateHistoryWidget` dashboard-widgets in the same module. My A4/A5 type-checks didn't catch this (they don't compile sibling surfaces). I'll namespace my surface's internal types with a unique `CabinClimate*` prefix (keeping the public `ClimatePanel` view name, the "ClimatePanel" slug, and the i18n table). Let me apply the rename:
+
+Now let me verify the slug/table strings and view name are intact, and check for any new collisions:
+
+Slug, table, view name, and comments all preserved. Let me wait for the collision check to finish:
+
+No new collisions. Let me re-run A1/A2 (format/lint) and the A4 iOS type-check on the renamed surface:
+
+A4 type-check clean after rename. The longer names pushed some lines over 120 — let me auto-format with swiftformat (write mode) and re-lint:
+
+A2 has one remaining issue: the Tests file is now 401 lines (swiftformat wrapping added a line). I'll split it into `Tests` + `ModelTests` (the sibling pattern) for clean margins. Let me find the split point:
+
+The test class names weren't renamed (they start with `@MainActor`, so my regex skipped them). Let me check if they collide in the test target and rename them for consistency, then split the file:
+
+Confirmed — two test classes collide with `ClimateControlPanelWidget.Tests.swift`. I'll rename all 7 test classes to `CabinClimate*` and split the file into `Tests` + `ModelTests`. Let me view the header first:
+
+Now let me re-run A1/A2 across all 9 files and confirm no test-class collisions remain:
+
+Just a trailing-newline issue in the new ModelTests file. Let me auto-format and re-verify:
+
+A1/A2 GREEN. Let me re-run the A4/A5 type-checks and rebuild the A6 executed runner with the renamed types:
+
+grep returned 0 errors (its exit 1 just means "no matches"). Let me capture swiftc's real exit code directly, and rebuild the A6 runner with renamed types:
+
+A4/A5 both EXIT 0, 0 errors. Now rebuild the A6 executed runner with renamed types:
+
+A6 EXECUTED: **63 checks, 0 failures**. Surface re-verified clean after rename. Now I must re-run B1 (iOS build) to confirm the ClimatePanel ambiguity errors are **gone** (the whole point of the rename). KMP is now cached so it'll reach the compile phase faster:
+

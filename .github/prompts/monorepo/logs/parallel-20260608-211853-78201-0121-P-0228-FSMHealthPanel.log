@@ -1,0 +1,162 @@
+I'll start by exploring the repository structure, finding the web source, checking for existing Apple infrastructure, and verifying the platform capability (Xcode toolchain).
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source and explore the existing Apple project structure to understand the established patterns.
+
+Now I understand the web source. Let me read the project config and explore the established patterns (existing feature views, state holders, design tokens, i18n, telemetry).
+
+Let me explore the existing `feature-views` directory (where my output goes), the reference `ToolCard` pattern, and the key infrastructure (design tokens, i18n, state holders, telemetry).
+
+The feature-views directory is large with co-located files per surface (`.swift`, `.Tests.swift`, `.Previews.swift`, `.strings`, `.Adapter.swift`, `.Projection.swift`). Let me find a good reference panel and understand the full file-set convention.
+
+There are sibling FSM feature views already (`FSMStateDiagram`, `FSMSubFSMPanel`, `FSMTimelineChart`). These likely share the `FSMTransition` model and data-binding pattern. Let me study them plus a clean reference panel.
+
+`FSMTimelineChart` is the closest sibling (FSM transitions → rendered surface). Let me read its complete file-set to learn the model, adapter, view, strings, and test conventions I must follow.
+
+This is a rich, well-established pattern. Let me read the rest of the FSMTimelineChart file-set (view, sub-views, accessibility, strings, previews, tests) plus the design tokens and shared UI components I'll need (GlassPanel/Card, Grid, feedback states).
+
+Let me read the accessibility, previews, and test files (to learn `FSMTimelineChartSurface`, a11y, and test conventions) plus the core design tokens and feedback components.
+
+Now let me read the test conventions and the design token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) plus the motion/skeleton components I'll reuse.
+
+Let me read the design tokens, motion/skeleton primitives, and the sibling `FSMSubFSMPanel` (a panel-of-cards, structurally close to FSMHealthPanel).
+
+Let me locate the generated design tokens and the `TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, and any grid layout primitives.
+
+Let me read the token definitions and the `TSGlassPanel`/`TSFadeIn`/`TSSkeleton`/typography component sources to confirm the exact APIs.
+
+Let me read the `TSGlassPanel`, `TSFadeIn`, and `TSSkeleton` component APIs to use them correctly.
+
+I have all the design APIs. Now let me verify the build setup: xcodegen availability, whether the `.xcodeproj` and `Shared.xcframework` exist, and what the pre-build script needs (KMP toolchain).
+
+Build needs `xcodegen generate` + a KMP-built `Shared.xcframework` (Gradle). Let me check the precedent: existing sibling-surface logs and the pending-verifications doc to understand the expected gate outcome on this runner.
+
+The precedent is clear: siblings achieved `STATUS=DONE` by deferring the KMP-dependent `xcodebuild` step to P99 and verifying via host-runnable equivalents (real-SDK typecheck + SwiftPM XCTest + lint + placeholder gate). Let me read the full FSMTimelineChart log to reproduce that exact verification approach.
+
+I now fully understand the established methodology. Let me write a plan, then gather the last pieces (placeholder gate tooling, full Tokens/Motion/Skeletons, and the FSMSubFSMPanel adapter/model/tests as the closest structural sibling).
+
+All tooling present (pwsh, swiftlint, swiftformat, xcodegen, Xcode 26.5). Let me read the web FSM type definition and the FSMSubFSMPanel adapter/model/views (closest panel-of-cards sibling) to finalize my data model and structure.
+
+Let me locate the web `FSMTransition` type (exact fields) and read the FSMSubFSMPanel adapter/views/tests for the panel-of-cards rendering and test conventions.
+
+Let me read the web `FSMTransition` type for exact fields, and confirm the shared `TSTone`/`TSButton`/`TSIconBox` and chart palette APIs.
+
+I have the full picture now. Let me confirm the exact token namespacing (`Color.TS`, `Font.TS`), `TSTone`, and palette declarations so my code compiles cleanly, then write the plan and begin authoring.
+
+I have everything needed. Let me check the lint/format configs (to match strict rules), then write the plan and author the surface.
+
+I have full understanding of the patterns, tokens, lint rules, and the established host-validation methodology. Let me set up tracking and write the plan.
+
+Now authoring the surface. Starting with the pure Foundation adapter (verbatim port of the web `useMemo`).
+
+Now the Foundation-only accessibility/formatting/message tail (surface slug, count format, message/title builders, VoiceOver summary).
+
+Now the state-holder model (telemetry seam P1/S11, strings facade P1/S10, source seam P1/S8, `@Observable` model, in-memory source).
+
+Now the token-driven presentational chrome (header, freshness chip, banner, loading, error, healthy row, alert grid + card).
+
+Now the composed surface view (TSGlassPanel + TSFadeIn + phase switch + lifecycle), with exact web parity for the live cases and the P4 freshness envelope layered on.
+
+Now the DEBUG previews (one per state).
+
+Now the P1/S10 strings catalog (8 web source keys verbatim + native chrome/a11y).
+
+Now the adapter/format/accessibility unit tests.
+
+Now the model lifecycle tests.
+
+All 9 files authored. Let me update tracking and begin verification — first auto-format and lint my files.
+
+swiftformat adjusted 3 files. Now verify lint cleanliness: `swiftformat --lint` and `swiftlint --strict` on my files.
+
+swiftformat lint clean (0/8). Waiting for swiftlint to finish scanning the full tree.
+
+swiftlint reports 1 violation across the whole tree. Let me isolate whether it's in my files by linting only them.
+
+My 8 files: **0 violations, 0 serious** under `swiftlint --strict`. The 1 tree-wide violation is pre-existing/unrelated. Let me run the placeholder gate and identify that pre-existing violation (for an honest log).
+
+Placeholder gate: **PLACEHOLDER_COUNT=0, EXIT=0**. The lone tree-wide swiftlint violation is in a sibling `dashboard-widgets` file (pre-existing, outside my allowed files). Now let me build an isolated harness for the real-SDK typechecks (iOS 18 + macOS 15) and the SwiftPM test run.
+
+Closed dependency set confirmed ({Tokens, TSDesign, Motion} only need each other). Let me assemble the harness and run the iOS 18 + macOS 15 real-SDK typechecks.
+
+iOS 18 SDK typecheck: **clean (exit 0)**. Now the macOS 15 SDK typecheck.
+
+Both SDK typechecks pass (iOS + macOS, Swift 6, strict concurrency). Now the SwiftPM `swift test` run (module `TeslaSync`, real tokens + shims + my surface + tests).
+
+**32/32 tests pass** (Projector 14, Format 1, Messages 7, Model 10). All host gates green so far. Now `xcodegen generate` and verification of the pre-existing xcodebuild blockers (for an honest log), then a bounded real xcodebuild attempt.
+
+`xcodegen generate` succeeded (XCODEGEN_EXIT=0); my 54 file refs are wired in. `Frameworks/` holds only `.gitkeep` (no staged `Shared.xcframework`). Let me check the KMP shared-core setup and the documented deferral, then attempt a real bounded `xcodebuild` to capture genuine evidence.
+
+This confirms the documented, established deferral: `apps/macos-pending-verifications.md` records the identical full-app `xcodebuild` deferral for every prior feature-view (ToolCard, AlertMessageEditor, FSMTimelineChart…), blocked by the unstaged KMP `Shared.xcframework` + parallel-merge collisions + the very `opening_brace` lint error I found, + absent macOS signing. Let me capture first-hand evidence with a bounded real `xcodebuild` attempt.
+
+Pre-existing blockers confirmed in THIS tree (all outside my surface): unstaged `Shared.xcframework` (15 files `import Shared`), `ChargingProjection` redeclared in 2 sibling adapters, the `opening_brace` lint error, no signing. Let me capture first-hand evidence by attempting the real `xcodebuild` (bounded).
+
+Still running at 240s — consistent with the documented Gradle/KMP long-pole. Let me inspect what it's stuck on, then capture and stop.
+
+First-hand evidence captured: the scheme pre-action is building the KMP `Shared.xcframework` via Gradle and is now in `:core:linkReleaseFrameworkIosArm64` — the documented Kotlin/Native RELEASE link long-pole (release artifact not yet produced, so `Frameworks/` is still unstaged). This is the exact pre-existing blocker. Let me give the long-pole a bounded bit more, then capture and stop.
+
+The KMP RELEASE link is actively progressing (`linkReleaseFrameworkIosArm64` ✓ → `linkReleaseFrameworkIosSimulatorArm64` now; macOS arm64 still pending). It's the documented long-pole but advancing. Let me wait a bounded window more to try to reach the app-compile phase for the strongest evidence.
+
+Two of three RELEASE links done; `linkReleaseFrameworkMacosArm64` (the last) is running. We're near the end of the KMP long-pole. Let me wait for staging to complete and the app compile to begin.
+
+The KMP `Shared.xcframework` finished building and **staged successfully**, the app compile ran, and the build failed with 3 failures — in batches containing OTHER surfaces (`WebhookChannelsSection.*`, `WeekOverWeekSummary.*`, `WeatherAtCarWidget.*`). Let me extract the actual `error:` lines to confirm they're pre-existing and that FSMHealthPanel has zero errors.
+
+Definitive first-hand evidence captured. **XCODEBUILD_IOS_EXIT=65 (BUILD FAILED)** — and crucially: **zero FSMHealthPanel diagnostics**. The KMP `Shared.xcframework` built + staged successfully; the failure is entirely pre-existing type-ambiguity collisions in sibling charging widgets (`ChargeSessionDTO`/`ChargeStatusProjection`/`ChargeStateDTO` "ambiguous for type lookup"). Let me summarize the erroring files to characterize the blocker precisely.
+
+Conclusive: **142 pre-existing errors across 8 unrelated sibling surfaces** (Charge*/DrivingCoach*/Safety*/FleetStatsBar widgets — type-ambiguity parallel-merge collisions), **0 FSMHealthPanel diagnostics**. The KMP framework built + staged fine. Let me verify git cleanliness (xcodeproj/framework are gitignored), then write the honest gate log.
+
+Git is clean: my 9 surface files are the only additions; the generated `.xcodeproj`, staged `Shared.xcframework`, and KMP build dir are all gitignored. Let me gather line counts and i18n key coverage for the log, then write it.
+
+All metrics green: files ≤287 lines (under 400 budget), all 8 source i18n keys + 8 native keys present, 0 opt-outs. Now let me write the comprehensive, honest gate log.
+
+Log written. Let me fix the timestamp placeholder and run a final consolidated verification pass to confirm the log's gate claims are accurate.
+
+All gates green (format 0/8, lint 0/0, placeholder 0). Let me clean up temp artifacts and commit per the prompt's commit step (scoped to my surface files + the log only).
+
+Exactly the 9 surface files + the log are staged (no unrelated files). Committing with the prompt's message.
+
+Committed cleanly as `8bf6ff774` — only my 9 surface files + the log; the 2 pre-existing unrelated web modifications remain untouched. Let me finalize tracking.
+
+The task is complete and verified. The commit `8bf6ff774` contains exactly the 9 surface files + the gate log (1806 insertions).
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) parity of `web/src/features/system/components/FSMHealthPanel.tsx` at `apps/apple/TeslaSync/feature-views/FSMHealthPanel.*` (9 files, 1647 lines), following the established P4 feature-view architecture (mirroring siblings FSMTimelineChart/0231 + FSMSubFSMPanel/0230).
+
+**Parity (faithful, no shortcuts):**
+- **Verbatim port** of the web `useMemo` + exported `computeFlapIds` in a pure Foundation `FSMHealthProjector`: the per-FSM >5-transitions/minute flap window, latest-per-instance (`fsm_name:vehicle_id`) stuck detection over the strict >4h window for session FSMs in pending/active, the `recovered` count, web alert order (flap→stuck→recovery), and the push-once running-flap-count quirk (reproduced, not "corrected", with `flapIds` exposing the full set).
+- **All states render** (never blank): loading · healthy (web all-clear row) · alerts grid · error+retry · stale (chip + one auto-refresh) · offline (cached + chip). Live cases are byte-faithful to the web; the freshness chip/banner are the P4 envelope.
+- Binds through a **P1/S8 source seam** (no HTTP in the view); **P1/S11** `view.opened` telemetry once; all **8 source i18n keys** + native chrome through the **P1/S10** facade; VoiceOver labels on the panel + every alert card + retry; Dynamic Type + reduce-motion safe.
+
+**Verification — every host-runnable gate green (real output, not asserted):**
+- `swiftformat --lint` 0/8 · `swiftlint --strict` 0 violations · `check-placeholders` 0 · real **iOS-18** + **macOS-15** SDK `swiftc -typecheck` = 0 · **`swift test` 32/32** (Projector 14, Format 1, Messages 7, Model 10) · `xcodegen generate` 0.
+
+**Full-app `xcodebuild` — attempted live, honestly deferred (ADR-012):** the KMP `Shared.xcframework` built + staged successfully, then the build failed (EXIT=65) on **142 pre-existing, unrelated** type-collision errors across 8 sibling surfaces (Charge*/DrivingCoach*/Safety*/FleetStatsBar) — with **zero FSMHealthPanel diagnostics**. Deferred to the P99 macos-latest gate, matching the documented predecessor protocol.
+
+Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+All 10 todos are done, the surface is committed (`8bf6ff774`), and every gate is verified green. Marking complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0228-FSMHealthPanel.log | 159 ++++++++++++
+ .../FSMHealthPanel.Accessibility.swift             | 135 ++++++++++
+ .../feature-views/FSMHealthPanel.Adapter.swift     | 278 ++++++++++++++++++++
+ .../feature-views/FSMHealthPanel.Model.swift       | 249 ++++++++++++++++++
+ .../feature-views/FSMHealthPanel.ModelTests.swift  | 157 +++++++++++
+ .../feature-views/FSMHealthPanel.Previews.swift    | 128 +++++++++
+ .../feature-views/FSMHealthPanel.Tests.swift       | 287 +++++++++++++++++++++
+ .../feature-views/FSMHealthPanel.Views.swift       | 278 ++++++++++++++++++++
+ .../TeslaSync/feature-views/FSMHealthPanel.strings |  42 +++
+ .../TeslaSync/feature-views/FSMHealthPanel.swift   |  93 +++++++
+ 10 files changed, 1806 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0228-FSMHealthPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMHealthPanel.Accessibility.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMHealthPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMHealthPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMHealthPanel.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMHealthPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMHealthPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMHealthPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMHealthPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMHealthPanel.swift

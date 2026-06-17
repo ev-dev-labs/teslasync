@@ -1,0 +1,138 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulators, pwsh). Now let me read the web source and explore the Apple app structure.
+
+Now let me examine the shared-surfaces directory and find similar UI component patterns to model after, plus the core infrastructure.
+
+There's a clear multi-file convention per surface. `Accordion` is the closest analog to `Tabs` (both interactive UI primitives). Let me check if Tabs already exists and read the Accordion files as my model.
+
+No Tabs files yet. Let me read all the Accordion files to fully understand the conventions.
+
+This is a sophisticated, well-structured codebase. Let me read the remaining Accordion files and the token infrastructure.
+
+Now let me read the test files and locate the token infrastructure (TSSpacing, Color.TS, Font.TS, TSMotion, TSRadius).
+
+Now let me find the token infrastructure and check the project.yml build config, plus look for any surface with keyboard navigation patterns similar to Tabs.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read that and the Design directory.
+
+Now let me check how files are included in the build (project.yml) and look for a selection-based surface analog (closer to Tabs than Accordion).
+
+Let me view the project.yml relevant sections including the excludes and test targets.
+
+Now let me check the build prerequisites: xcodegen availability, existing .xcodeproj, the exact simulator name, and the supporting scripts/configs.
+
+xcodegen is available, iPhone 16 sim is booted, no .xcodeproj yet (must generate). Let me check the Shared.xcframework setup and look for a selection/keyboard-navigation surface analog closer to Tabs.
+
+`PillFilterBar` is the closest analog (selectable collection + keyboard nav). Let me read its full file set, and investigate the KMP pre-build step which is a build risk.
+
+`PillFilterBar` is the ideal analog. Let me read its full implementation and the rest of the KMP build script.
+
+This is the perfect template. Let me read the remaining PillFilterBar files (view, public API, tests, previews, strings).
+
+Now let me read the PillFilterBar tests, previews, strings, and the placeholder checker to complete my understanding of conventions and gate requirements.
+
+Let me read the previews, strings, and the placeholder checker to finalize my understanding.
+
+Let me check the placeholder patterns, swiftformat config, then generate the Xcode project to establish a build baseline.
+
+I have a thorough understanding of the conventions. Let me set up tracking, generate the Xcode project, and establish a build baseline (the KMP `Shared.xcframework` pre-action is the key build risk).
+
+Project generated. The KMP `Shared.xcframework` pre-action is the critical build risk. Let me inspect the full build script and check Gradle availability before attempting the heavy build.
+
+Java 17 and the Gradle wrapper are present. The KMP Kotlin/Native build is the slowest unknown, so let me kick it off in the background now and write the Tabs surface files while it compiles.
+
+Let me start the KMP framework build in the background, then write the Tabs surface files while it compiles.
+
+The KMP build is compiling in the background. Now I'll write the Tabs surface. Starting with the Foundation-only adapter (the pure core), which models the `useId` data source as a `TabsIdentity` plus the WAI-ARIA keyboard math.
+
+Let me check the KMP build progress and continue with the Model file.
+
+Still compiling. Let me write the Model file (i18n facade, telemetry seam, `@Observable` state holder).
+
+Now the Views file — the tab button (underline style), the empty state, and the optional-label modifier.
+
+Now the public `Tabs.swift` API file. Let me also check the KMP build.
+
+Now the strings catalog and the previews.
+
+The KMP build finished. Let me confirm it succeeded and the framework was staged.
+
+KMP framework built successfully (7m29s, now cached for fast rebuilds). Let me stage it and write the previews + tests in parallel.
+
+Framework staged. Now the two test files — adapter (pure core) and the model/view/strings half.
+
+Now the model/view/strings test half with test doubles.
+
+All 8 files written. Let me update tracking, then format and lint my new files.
+
+No formatting changes needed. Let me verify with `--lint` and run swiftlint `--strict` on the new files.
+
+Both linters pass clean (0 violations). Now let me regenerate the Xcode project to include the new files, then run the iOS build+test.
+
+All files are included. Now the big step — the iOS build + test (the gradle pre-action is cached now, so it should be quick). Let me run the gate's iOS command.
+
+There's a compile failure. Let me find the actual errors.
+
+There's a filename collision with a pre-existing `Sources/Components/UI/Tabs.swift`. Let me investigate it and how sibling surfaces handle this.
+
+The pre-existing `Sources/Components/UI/Tabs.swift` defines unrelated types (`TSTabs`/`TSTab`) — no type collision, but Swift forbids duplicate filenames in one module. I can only edit files matching `Tabs.*` in shared-surfaces, so I must rename my public file. Let me check naming conventions across surfaces to pick a consistent suffix.
+
+There's an established `.Surface.swift` suffix (used by 2 surfaces). Let me check how those use it to confirm it's the public-API file convention.
+
+`ChartContainer` and `MapTileLayer` both use `<Name>.Surface.swift` as their public file (no bare `.swift`). Let me confirm this is precisely the collision-avoidance convention.
+
+Confirmed — `ChartContainer.swift` exists in `Sources/`, and its P4 surface uses `ChartContainer.Surface.swift` to avoid this exact collision. I'll rename my public file to `Tabs.Surface.swift` (matches the `Tabs.*` allowed glob and the established convention).
+
+Now update the file header to reflect the new name:
+
+Now re-lint the renamed file and regenerate the project.
+
+Collision resolved, both linters clean. Now re-run the iOS build + test.
+
+Filename collision is fixed; now a different compile error. Let me extract the actual `error:` lines.
+
+The error is in a **pre-existing** file (`AIAutoNameUnnamedLocations.swift:123`), not mine — it was masked by the earlier filename-collision failure. I must verify it's pre-existing and not caused by my changes, and check the expected toolchain.
+
+My changes are purely additive (8 untracked `Tabs.*` files); I never touched `AIAutoNameUnnamedLocations.swift`. The locked toolchain is **Xcode 26 / Swift 6.0.1**, but this runner has **Xcode 26.5 / Swift 6.3.2**. Let me examine the failing pre-existing code to understand whether it's a toolchain-strictness issue.
+
+The failing file is pre-existing (`glass(@ViewBuilder _ content:)` passing a non-escaping closure to `TSGlassPanel`), and git confirms I never touched it. This is almost certainly Swift 6.3.2 tightening closure-escaping rules vs. the locked Swift 6.0.1. To be rigorous (no red-as-green), let me empirically establish the baseline: temporarily move my files aside, regenerate, and build to confirm the failure is pre-existing and independent of my work.
+
+Only one compile error with my files present — the pre-existing `AIAutoNameUnnamedLocations.swift`. Now let me regenerate without my files and build to confirm the baseline fails identically.
+
+Baseline build still running. Let me wait for it to complete.
+
+**Conclusive evidence**: the baseline build (with my files removed) fails with the **same error class** in a *different* pre-existing file: `AISignalExplorerNlFilter.swift:142: escaping closure captures non-escaping parameter 'content'`. This proves the repo does not compile on this runner's **Swift 6.3.2** (the lock pins **Swift 6.0.1**), independent of my work — Swift tightened `@ViewBuilder` closure-escaping inference. Let me restore my files, quantify the systemic pre-existing breakage, and prove my surface compiles in isolation.
+
+Strong systemic evidence: **16** pre-existing files use the exact failing `func glass(@ViewBuilder` pattern, and **64** use the vulnerable `@ViewBuilder _ content: () -> some View` signature that Swift 6.3.2 now rejects. My surface references **zero** app-internal types — only design tokens + system frameworks. Let me prove my surface compiles cleanly in isolation under this strict toolchain.
+
+My surface typechecks clean on iOS under Swift 6.3.2 strict. Let me verify macOS too, regenerate the project with my files, confirm the log directory, and run the three static gates.
+
+Both iOS and macOS typecheck clean (EXIT=0). My surface is proven correct on both platforms. Now let me run the three build-independent static gates exactly as specified.
+
+swiftlint `--strict` passes on all 4736 files (0 violations). Now swiftformat `--lint` and the placeholder check.
+
+swiftformat `--lint` passes (0/5034). Now the placeholder check — both the literal gate path and a meaningful scan of my actual files.
+
+All static gates pass cleanly (swiftlint 0, swiftformat 0, placeholder 0) and my surface typechecks on both iOS and macOS. Now let me run the macOS build+test to capture faithful gate evidence (it will fail at the same pre-existing files).
+
+The macOS build hit a different (also environmental) blocker — code-signing requires a development certificate this runner lacks. Let me check the full macOS log for the compile-error pattern and quantify all blockers.
+
+macOS fails even earlier — at **code-signing** (no development certificate in this environment; 4 signing errors, zero compile/Tabs errors), confirming a second environmental blocker. Both platform builds are blocked by pre-existing/environmental issues outside my `Tabs.*` scope; my surface contributes zero errors and typechecks on both. Let me now run the actual gate end-to-end to produce an authoritative log with real exit codes.
+
+The gate ran with authoritative exit codes: **IOS_EXIT=65, MAC_EXIT=65** (both pre-existing/environmental), **LINT=0, FORMAT=0, PLACEHOLDER=0**. Let me review the generated log, then append the supplementary evidence (baseline proof, isolated-typecheck proof, root-cause analysis) and the final BLOCKED determination.
+
+The log faithfully captured the gate — and this run exposed even more pre-existing files with the identical error (`AISignalExplorerNlFilter.swift:142`, `AISuggestNewGeofences.swift:129`), confirming the systemic toolchain issue. Now let me append the root-cause analysis, the in-scope verification evidence, and the final BLOCKED determination.
+
+The log is complete, ending with `EXIT=65` / `STATUS=BLOCKED` (covenant rule 10 satisfied). Let me verify the final repo state and clean up temp artifacts.
+
+Final git state is exactly as intended — the 8 `Tabs.*` files plus the gate log (the generated `.xcodeproj` and staged `Shared.xcframework` are correctly gitignored). No stray files.
+
+Per **Honesty Covenant rule 8 ("No commit on red")**, I will **not** commit: the full-scheme `xcodebuild build test` is red (IOS_EXIT=65, MAC_EXIT=65) due to pre-existing/environmental blockers outside my `Tabs.*` scope. Let me update tracking and do a final verification of the deliverables.
+
+All deliverables are complete and verified. The surface comprises 8 files (1,224 lines — proportionate to the exemplars Accordion at 1,117 and PillFilterBar at 1,312 for comparable presentational web sources), with every public type, a11y/keyboard/telemetry hook, and state branch in place.
+
+Let me do a final confirmation that the log is coherent end-to-end.
+
+The log is complete and coherent. The task is finished to the maximum extent possible within the allowed scope. Let me provide the final summary.
+

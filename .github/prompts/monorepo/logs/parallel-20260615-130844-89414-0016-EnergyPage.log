@@ -1,0 +1,218 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+The web source is large. Let me read it in sections and explore the existing Apple Battery feature structure and an example existing page to learn the patterns.
+
+The Battery feature directory doesn't exist yet. Let me explore the existing Apple app structure and find an exemplary existing page to learn the established patterns.
+
+Let me read the project.yml, the rest of the web page, and examine the existing Apple feature-views structure plus the Battery tests that already reference `Features/Battery`.
+
+Key finding: `project.yml` lists `feature-views`, not `Features`. But tests reference `Tests/Unit/Features/Battery`. Let me investigate the actual source layout, the project.yml test target config, and existing Battery page models/tests to learn the contract.
+
+The real source layout uses `apps/apple/Sources/Features/`. Let me examine the existing Battery feature implementation to match conventions exactly.
+
+This is the established pattern. `SleepEfficiencyPage` is the closest analog (model + charts + table + sections). Let me read the full SleepEfficiency feature set to learn the conventions precisely.
+
+Excellent pattern clarity. Now let me read the rest of the SleepEfficiency feature files and locate the shared chart/gauge components (P3) and design tokens (P2).
+
+Now let me locate the shared P3 chart components (especially RadialGauge, AreaChart, ComposedChart, PieChart, BarChart wrappers), the P2 design tokens, and remaining support files.
+
+Let me read the chart component library files to learn the exact APIs for gauges, pie, bar, area, and composed charts.
+
+Note `TSRadialGauge` only shows a percentage, but the web Energy gauges show value+unit+label filling by value/max. Let me check how the existing BatteryDegradation page handles value-bearing gauges and read the line/bar/container chart wrappers.
+
+Let me read the ChartContainer, the existing BatteryDegradation charts (gauge usage), the format/table/sections/sample/route files, and the shared Battery models.
+
+Let me read the format/sections/table/sample/route files plus the shared Battery models and the Units facade to complete my understanding before implementing.
+
+Let me locate the route enum, Units facade, BatteryVehicle definition, the string catalog, and read the Sections + Sample files.
+
+Let me read the BatteryCells model (for `BatteryVehicle`), the Sample data sources, the Sections file, and find how routes get wired into the shell plus the shared UI component signatures.
+
+Let me read the BatteryCells model (for `BatteryVehicle`), find the route-registration wiring + shared UI component signatures, and check which Apple build tools are available on this machine.
+
+All build tools are available — I can build, lint, and test for real. Let me read the app composition, route registry, and the shared UI component/token signatures.
+
+Now let me read the shared UI component signatures and design tokens I'll be composing with.
+
+Let me efficiently extract the exact signatures of all shared components and tokens I'll compose with.
+
+Let me read the remaining component signatures (Typography, DataTable, States, Metrics) and the color/font tokens.
+
+Let me read States/Metrics components, the color/font tokens, the rest of the web page, and the `tsUnits` environment + currency source.
+
+Let me read the rest of the web page and check the `tsUnits` environment + existing energy strings in the catalog.
+
+I now have the complete web page. Let me verify the exact API field names (EnergyStats, ChargingSession, ChargingTelemetryLatest) and the `tsUnits` environment definition.
+
+Let me inspect the xcstrings JSON structure, the `UnitPreferences.metric` default, the test target config, and whether the Shared.xcframework needed to build is present.
+
+The `Shared.xcframework` (KMP core) is absent — only a `.gitkeep`. That likely blocks a full `xcodebuild`. Let me check the gate scripts, pwsh availability, and whether the framework can be built, plus the `UnitPreferences.metric`/currency wiring.
+
+pwsh, swiftlint, xcodegen all available. The KMP `Shared.xcframework` is missing, which may block `xcodebuild`. Let me check the logs dir for format reference, an existing sibling log, and whether the shared framework is buildable.
+
+A sibling log exists. Let me read it to match the exact log format (PARITY section, EXIT, STATUS) and check the parity ledger.
+
+This sibling log is the blueprint. It shows the prior agent built `Shared.xcframework` via a script (14 min), used the real path `apps/apple/Sources/Features/Battery/**`, and isolated 2 pre-existing out-of-scope failing files. Let me check the build script and the parity ledger format.
+
+Let me check for an existing `page:battery/Energy` ledger row and review the framework build script, then kick off the (long) framework build in the background while I write code.
+
+I have everything needed. The framework build is the long pole (~14 min) — let me kick it off in the background now, then write the plan and implement while it runs.
+
+Framework build is running in the background. Let me verify how existing Apple pages handle parameterized localized strings (`{{unit}}`/`{{days}}` → format args) and confirm chrome keys exist, then I'll finalize my approach.
+
+The framework launcher returned. Let me check the actual Gradle build progress and quickly view the web `RadialGauge` for faithful gauge formatting.
+
+Gradle is moving fast (cache hits) — debug XCFramework done, release in progress. Let me read the web RadialGauge for faithful gauge formatting while it finishes.
+
+I now have full fidelity on every detail. Let me set up the plan and todos, and confirm the framework finished staging.
+
+Release framework is linking. Let me check the swiftlint config to avoid `--strict` violations, then start writing files.
+
+Config understood (line ≤120, strict). Framework still linking. Let me write the implementation files, starting with models and format.
+
+Framework still linking release variants. Continuing with EnergyFormat.swift and the model.
+
+Now the page model with data-source seam, phases, range, and derived metrics.
+
+Now the sample/empty/failing data sources.
+
+Let me check the framework build progress before writing the views.
+
+Framework nearing completion. Let me write the sections file (hero gauges, quick metrics, lifetime, cost comparison, skeleton).
+
+Framework should be near done. Let me write the charts file (composed/area/bar/pie), reusing the shared Battery chart chrome.
+
+The `Shared.xcframework` is built and staged — a real build is now possible. Let me write the charts file.
+
+Now the recent charging sessions table (GlassPanel9).
+
+Now the main page view and the route registration.
+
+Now wire the route into the app shell.
+
+Files written. Let me update todos and insert the string-catalog keys via a safe targeted Python insertion.
+
+The marker format differs. Let me check the exact header bytes.
+
+61 keys inserted. Let me verify the web `fmtPercent` precision (for faithful savings %), then write the tests.
+
+`fmtPercent` matches my `EnergyFormat.percent`. Now let me write the model tests.
+
+Now let me run the gate checks. First, swiftlint on the new files.
+
+Several fixable lint issues: two files exceed 400 lines, a few long lines, and the test class exceeds body length. Let me view the long lines, then split files and wrap lines.
+
+Let me fix the long lines and split the oversized files. First the quick line-length wraps:
+
+Now fix the test long lines:
+
+Now let me split the test class to satisfy `type_body_length`. Let me view the current boundaries.
+
+I'll trim the model test file to lines 1–224 plus the closing brace, then create a separate derivations/format test file (properly wrapped).
+
+Now split the two oversized source files. Let me find the cut points.
+
+Now let me re-run swiftlint on all new files (including the split-out ones).
+
+One more long line. Let me view and fix it.
+
+All new-file lint issues fixed. Now the real gate: full `swiftlint --strict` across the repo (baseline is 0). Let me run it.
+
+One violation surfaced. Let me find it.
+
+The single violation is in `AppRoute.swift:29` — a file I did not modify. Let me confirm it's pre-existing via git.
+
+The violation is pre-existing in `AppRoute.swift:29` (a shared navigation file, not modified by me — sibling route-page work pushed the enum-case line to 123 chars). Since AppRoute is navigation infrastructure (in scope) and this is a zero-behavior formatting wrap that makes the full `--strict` gate genuinely green, I'll split the line.
+
+Full `swiftlint --strict` is clean (exit 0). Now the placeholder scan on the Battery feature.
+
+Placeholder scan clean (COUNT=0, EXIT=0). Now generate the Xcode project.
+
+Project generated. Let me check the Xcode toolchain version (the sibling log noted 2 pre-existing Xcode-26.5 incompatibilities), then start the macOS build.
+
+Same toolchain and the same 2 pre-existing problem files exist. Let me start the macOS build in the background, capturing output.
+
+Build running. Let me monitor it while I prepare the parity ledger update.
+
+Build failed on code-signing (no dev certificate in this headless env) — not a compile error. Let me rebuild with signing disabled.
+
+Build restarted with signing disabled. Let me wait and monitor for compile progress/errors.
+
+The build process completed. Let me read the final result.
+
+The log shows no terminal marker yet. Let me check if the build is still running and poll further.
+
+My build (pid 29045) is still running (a parallel agent in slot-14 is also building, sharing the machine). The app module is emitting — no compile errors so far. Let me wait longer.
+
+A real collision: my `EnergyDailyPoint` clashes with an existing type in `EnergyStatsWidget.Models.swift`. Let me find all collisions between my public types and the existing codebase.
+
+Let me get all compile errors from the build log (it reported 3 failures) using the proper search tool to confirm the full collision set.
+
+Only `EnergyDailyPoint` collides. Let me verify my other type names are unique using ripgrep, and inspect the existing widget type.
+
+Only `EnergyDailyPoint` collides (the widget owns it). I'll rename my type to `EnergyBreakdownDay` across my files.
+
+Renamed. Let me re-lint the affected files (the +2 chars could push lines over 120), then rebuild.
+
+Lint clean. Let me rebuild the macOS app (Input.Previews.swift compiled fine earlier, so that pre-existing issue may be resolved).
+
+Build running. Let me check whether the other pre-existing problem file (GDPRExport test) still has its Xcode-26.5 issue, which could block the test bundle from compiling.
+
+The build completed. Let me check the result.
+
+Build is actively recompiling the app target. Let me wait for completion.
+
+Still compiling (shared machine, large target). Let me continue waiting.
+
+Let me check what phase the build is in to confirm it's progressing.
+
+Build is in per-file compilation (type-check passed — no errors). Let me wait for it to finish.
+
+The log hasn't grown in 14 minutes despite "running" — possible stall or severe contention. Let me check process states and CPU.
+
+My build PID 29045 is gone but the log has no terminal marker — likely killed under heavy parallel-agent contention (80 swift-frontend procs across slots). Let me verify precisely.
+
+My build's `xcodebuild` child died silently (no terminal marker) under heavy parallel-agent contention (80 swift-frontend procs). My code already type-checked cleanly in two prior whole-module compiles — the only ever error was the now-fixed name collision. Let me kill the lingering wrapper and retry with a leaner, lower-memory target build.
+
+Load average is 104 (extreme parallel-agent contention) with ~900MB free — builds are being starved/OOM-killed. Let me start a lean, memory-bounded incremental build (reusing warm DerivedData) and let it run.
+
+Build running. While it compiles, let me add the two parity-ledger rows. First confirm the ledger's JSON formatting style so I don't reformat the whole file.
+
+Ledger round-trips cleanly. Let me insert the two Energy rows.
+
+Ledger updated. Let me check the lean build's progress.
+
+The lean build is wastefully compiling x86_64 for the widget dependency (doubling work). Let me force arm64-only to halve the load and improve completion odds. Let me find and kill it, then restart.
+
+Restarting arm64-only (avoids the x86_64 detour).
+
+Build restarted arm64-only. Let me wait and monitor.
+
+Good signs: my modified `Localizable.xcstrings` compiles cleanly (`xcstringstool`) and the app module is emitting (type-check passing). Let me keep waiting for the link.
+
+Same stall pattern at `EmitSwiftModule`. Let me check whether the log is actually advancing (mtime) or truly stalled.
+
+Type-check passes (the build repeatedly reaches `EmitSwiftModule`, which does full semantic analysis — my code is valid). It stalls only in the final codegen/link phase under contention. Load is now dropping (46). Let me check if my build is truly stalled or slowly progressing.
+
+My build is progressing but I throttled it with `nice` (lower priority than competing agents), so it's crawling. Load is dropping now — let me restart at normal priority with warm DerivedData.
+
+Restarting at normal priority (warm DerivedData should make this fast once it gets CPU).
+
+Build restarted at normal priority. Let me wait for completion.
+
+The build keeps reaching `EmitSwiftModule` (type-check passes cleanly every time) then slows in the link phase under contention. Let me stop restarting and verify it's genuinely progressing, then wait patiently.
+
+Linking has started (4 `Ld` references). Let me see which targets are linking.
+
+Both targets are compiling/linking — the build is in its final stages. Let me wait patiently (no more restarts).
+
+The log has been frozen at `EmitSwiftModule` for ~15 min while the process runs — likely output buffering (non-TTY) plus contention. Let me decisively check whether my build subtree is actively burning CPU or wedged.
+
+xcodebuild delegates to `XCBBuildService`, so work isn't a direct child. Let me find processes touching my DerivedData hash to confirm activity.
+
+My build is genuinely active — 22 `swift-frontend` processes on my DerivedData burning CPU (object-gen phase; log output is buffered). It's progressing under contention, not wedged. Let me wait a longer stretch.
+
+Build process exited but no terminal marker and no fresh binary — possibly killed again under contention. Let me inspect the raw end of the log.
+
+`** BUILD INTERRUPTED **` — and crucially, the log shows the app target fully compiled (`SwiftEmitModule` done) and was **copying resource bundles into `TeslaSync.app`** when interrupted. So compilation succeeded with zero errors; an external signal (backgrounded builds keep getting killed between calls under contention) interrupted the final bundling. Let me run it **synchronously** in the foreground (incremental, now warm) so nothing interrupts it.
+

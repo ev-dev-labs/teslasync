@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and checking the Apple toolchain availability, since this task requires SwiftUI + Swift Charts + MapKit and explicitly says to report BLOCKED with evidence if the platform capability is unavailable.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). So BLOCKED is not justified — I must implement. Let me read the web source and explore the existing Apple app structure.
+
+The web source exists. The `feature-views` dir has thousands of entries (sibling surfaces already built). Let me read the web source and check for existing BatteryRangeCharts native files plus a sibling for pattern reference.
+
+The web source is clear. There's a `BatteryRangePanel.*` set but I need `BatteryRangeCharts.*`. Let me check whether it exists and study the sibling `BatteryRangePanel` pattern (it's the closest analog) to match the established architecture.
+
+`BatteryRangeCharts.*` must be created. The sibling `BatteryRangePanel.*` is the closest analog and shows the established file architecture. Let me study it thoroughly — all files — to match conventions exactly.
+
+Excellent architecture. Let me read the remaining sibling files to fully internalize the pattern: Projection, States, Views, Previews, strings, and both test files.
+
+I have the full sibling pattern. Now I need: shared tokens/components, native chart patterns (Swift Charts), CHART_COLORS equivalent, and how the Xcode project includes files. Let me investigate these in parallel.
+
+`VehicleCharts.*` is a very close sibling. Let me find the Xcode project config (how files are included) and read the shared chart components + the VehicleCharts sibling.
+
+`TSChartPalette` is the CHART_COLORS equivalent. Let me read the closest sibling `VehicleCharts` (a vehicle-detail chart surface) and locate the palette, bar/area chart usage, and AnimatedNumber.
+
+The `VehicleCharts` surface is an excellent template using Swift Charts. Let me read the design tokens/palette, the Units/Formatting seams, and confirm shared component APIs.
+
+Now let me find the core token definitions (Color.TS, Font.TS, TSSpacing/Radius/Motion), the shared component APIs (TSGlassPanel, TSFadeIn, TSButton, TSSkeleton), and AnimatedNumber.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it to get exact token names.
+
+I have the full token vocabulary. `CHART_COLORS[0]/[1]` map to `TSChartPalette.color(at: 0/1)`. Now let me confirm the shared component APIs (TSGlassPanel, TSFadeIn, TSButton, TSSkeleton) and find the AnimatedNumber equivalent.
+
+I have all component APIs. Let me read the GlassPanel/Button details, the web helpers + types, a BarMark sibling example, and check xcodegen availability.
+
+Everything's available (xcodegen 2.45.4, pwsh, swiftlint, swiftformat). Let me read the exact web types and `formatDate`, plus a BarMark sibling for conventions.
+
+I have all the patterns. Let me read the placeholder-check script and the test-target config in project.yml to ensure my files integrate correctly with the gate.
+
+Let me read the placeholder patterns (to avoid forbidden words even in comments) and the XCTest target config.
+
+Now I understand the full integration. Co-located `*Tests.swift` auto-join the test bundles; `.strings` are auto-detected. Forbidden words include "Placeholder"/"TODO" — I'll avoid those in code. Let me write a plan and assess build feasibility (xcframework, simulator).
+
+Critical finding: `Frameworks/Shared.xcframework` is absent (only `.gitkeep`) — both app targets depend on it. Let me check whether it can be built here and how the repo expects it to be produced.
+
+Key environment finding: `Shared.xcframework` (the KMP core both app targets link) is absent — only a `.gitkeep`. It's built on-demand via Gradle/Kotlin-Native. This affects the heavy `xcodebuild` gate. I'll implement to full production quality, verify with every feasible check (swiftlint/swiftformat/placeholder/isolated swiftc typecheck), then attempt the real build and record honest evidence.
+
+Let me set up tracking and confirm a couple of web formatting details before writing.
+
+Confirmed: `AnimatedNumber` default decimals = 0; `RadialGauge` matches BatteryRangePanel's gauge logic. Let me read the lint configs and the VehicleCharts Model/States to match idioms precisely, then write the plan.
+
+I have everything needed. Let me record a brief plan, then build the surface. Starting with the pure data/adapter layer.
+
+Now the Projection (pure web-branch → content model mapping).
+
+Now the Model (P1/S8 state-holder seam, S11 telemetry, S10 strings facade).
+
+Now the States chrome (loading skeleton, empty, error+retry, freshness chip, connectivity banner).
+
+Now the Swift Charts file (battery bar chart + drive trend area chart with tooltips, legend, and accessibility descriptors).
+
+Now the Views (tone→color mapping, responsive 2-panel layout, gauge, stat tiles, panel headers, drive-empty).
+
+Now the main view, strings catalog, and previews.
+
+Now the test files (model tests + projection/math/a11y tests).
+
+All 11 files created. Let me verify: update todos, then run swiftformat, swiftlint, and the placeholder check on my files.
+
+swiftformat found issues — let me auto-fix with the ecosystem tool (write mode) on my files, then re-lint.
+
+Let me confirm the format is now clean and review the auto-applied `conditionalAssignment` change in the projection.
+
+swiftformat is clean (0/10). The `conditionalAssignment` rewrite is valid Swift 6. Let me simplify one redundant interpolation, then run swiftlint on my files.
+
+Four issues: two `opening_brace` (wrapped return types in tests), and two `file_length` (Charts 406, Adapter 445, limit 400). Let me view the brace spots and split the oversized files.
+
+swiftformat wrapped the brace (conflicting with swiftlint's `opening_brace`). I'll make those test helpers fit on one line by dropping the prefs param, and split the two oversized files. Let me view the exact spots first.
+
+The fix is to fully wrap the params (before-first style) so swiftformat keeps the brace on the closing line. Let me apply that to both helpers.
+
+Now split the two oversized files. First, move `BatteryRangeChartsFormat` + `BatteryRangeChartsMath` out of the Adapter into a new `BatteryRangeCharts.Math.swift`.
+
+Now create the Math file and remove that block from the Adapter.
+
+Now remove that block from the Adapter (delete from line 331 to EOF).
+
+Adapter now 330 lines. Now split Charts.swift — move the tooltips + AX descriptor into a new file.
+
+Now create the ChartParts file (tooltips + AX descriptor) and trim Charts.swift.
+
+Charts now 278 lines. Let me re-run swiftformat and swiftlint on all 12 swift files.
+
+swiftlint --strict: **0 violations**. swiftformat: **0/12**. Now the placeholder gate — I'll run it both verbatim (gate path) and against a temp copy of my actual files (honest verification), plus a direct grep for forbidden words.
+
+Placeholder gate clean (COUNT=0). Now the crucial step: actually type-check the Swift. Since `Shared.xcframework` (KMP) is absent, the full app build can't link — so I'll build an isolated `swiftc -typecheck` harness using the REAL design tokens + minimal stubs for the shared components I reference. First, let me enumerate every external `TS*` symbol my code uses.
+
+Good. Now the isolated type-check harness. Let me build it: copy my non-test files, add minimal stubs for the 5 shared components, include the REAL token files, and `swiftc -typecheck` against the macOS 15 SDK.
+
+Production files type-check cleanly (exit 0). Now type-check the test files (stripping `@testable import TeslaSync` since everything compiles as one module), with the XCTest framework path.
+
+The type-check caught real test-only issues: `XCTAssertEqual(optionalDouble, x, accuracy:)` — the `accuracy:` overload rejects `Double?`. Since these are exact integer-valued results, I'll drop `accuracy:` on the optional-chained ones (exact Equatable comparison). Let me find them all.
+
+All exact integer-valued — I'll drop `accuracy:` on these optional-chained assertions (exact equality is correct for rounded values). Applying to the repo file:
+
+Now re-run the full type-check (production + tests) with the fix.
+
+Type-check passes (exit 0) for production + tests. Let me re-confirm format/lint on the edited test file.
+
+All gates clean. Now let me attempt the real `xcodebuild` gate for honest evidence. First, generate the Xcode project (confirms my files are picked up by the globbed sources).
+
+Project generated. Let me confirm my files are included, then attempt the build (expecting the KMP `Shared.xcframework` blocker).
+
+All 13 files are in the generated project (app + test targets). Now let me attempt the actual gate build. I expect the KMP `Shared.xcframework` pre-build (Gradle) to be the blocker. Let me run it and capture evidence.
+
+The KMP toolchain actually works — Gradle downloaded Kotlin/Native and built the debug xcframework; it was mid-way through the release build when my 240s timeout fired. So the full gate IS achievable, just slow. Let me complete the xcframework build (it stages into `Frameworks/`), then run the real `xcodebuild`.
+
+The release Kotlin/Native link is slow (full optimization). Let me keep waiting.
+
+`Shared.xcframework` built and staged successfully (`BUILD SUCCESSFUL in 8m 27s`). The KMP blocker is resolved. Now let me run the real `xcodebuild` — first a full build of the iOS app (compiles all files incl. mine in the real project), capturing to a log.
+
+The iOS build is compiling all 5,711 files. Let me monitor progress.
+
+Build failed — but in **other** files (AppearanceSettings.*, ApiPlaygroundPage, AnomalyInlineRow), not mine. I must determine whether these are pre-existing or caused by my change. Let me extract the actual compiler errors.
+
+No `error:` lines and zero BatteryRangeCharts errors. The failure may be a cancelled batch masking the real error. Let me dig into the full log.
+
+Zero compile errors, yet "2 failures". The jobs were likely killed (resource/crash), not errored. Let me check for crashes/signals/OOM.
+
+The matches were command-line flags, not errors. A compiler crash would leave a stack dump. Let me search for that.
+
+Root cause found: a **swift-frontend compiler crash** — `llvm::report_at_maximum_capacity` (an OOM-class internal error) during **IRGen of `AppearanceSettings.Controls.swift`**, a sibling file I never touched. Zero errors in my code. This is a memory-pressure crash from compiling all 5,711 files at once. The first build cached most object files, so let me retry incrementally with reduced parallelism (lower peak memory).
+
+Confirmed the crash is in `AppearanceSettings.Controls.swift` (not my code). The incremental retry with `-jobs 2` is running. Let me wait.
+
+Same deterministic crash with `-jobs 2` — so it's **not** memory/parallelism; it's a reproducible swift-frontend IRGen crash on a Swift-6 concurrency reabstraction thunk in `AppearanceSettings.Controls.swift`. To rigorously prove it's pre-existing (not caused by adding my files), let me rebuild with my files temporarily removed and confirm the identical crash.
+
+My files are removed and the project regenerated (0 references). Now build the baseline to confirm the identical crash without my code.
+
+The baseline build hit **disk exhaustion** (`No space left on device`) — the two prior derived-data dirs + KMP/Kotlin-Native caches filled `/tmp`. Let me free space and reuse the existing derived data for the baseline check.
+
+The shared build volume is at **100%** (only 2.9G free) — a hard environmental limit across parallel slots. Let me run the baseline check reusing the existing derived data (minimal new disk) to confirm the `AppearanceSettings.Controls.swift` crash reproduces without my files.
+
+**Definitive proof.** The baseline build — with **zero** of my files in the project — produces the **identical** crash: `IRGenRequest(... AppearanceSettings.Controls.swift)` → `report_at_maximum_capacity` → BUILD FAILED. This pre-existing swift-frontend compiler crash in a sibling surface (which I'm forbidden to modify, and which has no dependency on my code) is wholly independent of my work.
+
+Let me restore my files and regenerate the project.
+
+Files restored (13 refs), disk freed (4.4G). Now let me run the final verification battery fresh (format, lint, placeholder, isolated type-check) to capture authoritative output for the gate log.
+
+Format, lint, placeholder all PASS. Now the final isolated type-check (rebuilding the harness fresh) to capture authoritative output.
+
+Final isolated type-check: **exit 0** — all 12 surface files + 2 test files compile cleanly. Now let me write the honest gate log with full evidence.
+
+Now let me verify git state — confirm only my surface files + log are to be committed (the generated `.xcodeproj` and staged `.xcframework` should be git-ignored).
+
+Clean — only my 13 files + the log are untracked; the generated `.xcodeproj` and `.xcframework` are git-ignored. Let me commit.
+
+Committed (commit `9a412ff6a`, all 14 files). Let me finalize tracking and clean up temp artifacts.
+
+Working tree is clean; the commit captures all 14 files (2,790 insertions). All tracked work is complete.
+
+## Summary
+
+I delivered a production-quality native Apple (SwiftUI + Swift Charts) parity of `BatteryRangeCharts`, committed as `9a412ff6a`.
+
+**What shipped** (13 files in `apps/apple/TeslaSync/feature-views/BatteryRangeCharts.*`, decomposed per the established sibling architecture):
+- **Battery Overview panel**: radial gauge + Battery/Range readouts + Current-vs-Remaining `BarMark` chart (web `CHART_COLORS[0]`, 0–100 axis).
+- **Drive Distance Trend panel**: distance + duration `AreaMark`/`LineMark` series (`CHART_COLORS[0]`/`[1]`) with legend, tooltips and an `AXChartDescriptor`, or the "No drive data for chart" empty state.
+- **All states**: loading skeleton, empty (`ContentUnavailableView`), error+retry (`QueryError` peer), stale (chip + one-shot auto-refresh), offline (cached chip) — plus the web per-panel empty branch.
+- Binds through the shared **P1/S8** `BatteryRangeChartsSource` (no HTTP in the view); every string via the **P1/S10** facade; VoiceOver labels everywhere; **P1/S11** `view.opened`; SI-only math at the render boundary; adapter/projection/math/a11y/model unit tests + per-state previews.
+
+**Verification (all green):** `swiftformat --lint` 0/12 · `swiftlint --strict` 0 violations · placeholder scan COUNT=0 · full `swiftc -typecheck` of every shipped + test file against the **real** design tokens and Charts/Accessibility frameworks (exit 0) · xcodegen integrates the files into the app + test targets · KMP `Shared.xcframework` built & staged.
+
+**Gate status — `STATUS=BLOCKED` (honest, with proof):** `xcodebuild build test` cannot go green on this runner because of a **pre-existing swift-frontend IRGen compiler crash** (`report_at_maximum_capacity`) in the **out-of-scope sibling** `AppearanceSettings.Controls.swift` — which I **proved is unrelated** by rebuilding with all my files removed (0 references) and getting the **identical crash** — compounded by the shared build volume hitting 100% disk. Neither is fixable within the allowed file scope, and per the prompt's capability clause I reported BLOCKED with the crash backtrace + baseline reproduction in the log rather than passing red as green.
+

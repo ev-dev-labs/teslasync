@@ -1,0 +1,135 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me read the helpers file and explore the existing Apple app structure.
+
+Let me explore the Apple app structure in detail.
+
+Apple toolchain is available. Let me check for existing related files and study the canonical feature-view structure.
+
+There are sibling driving-dynamics ports. `MotorEfficiencyInsights` is the closest analog (motor stats → insight text). Let me study it thoroughly as the canonical pattern.
+
+Now let me find where the shared driving-dynamics types live, and read the remaining canonical files (Views, States, Previews, Tests, strings).
+
+Let me read the remaining canonical files (Views, States, Previews, Tests, strings) to complete my understanding of the full structure.
+
+Let me read the Previews, Tests, and strings, plus locate the shared P1/S9 tokens and motion components.
+
+The shared tokens live elsewhere. Let me locate them across the Apple tree and check the project structure.
+
+Now I understand the layout — tokens are generated at `apps/design/generated/apple`. Let me read the test target config, the design tokens API, and the canonical Tests file.
+
+Now let me read the canonical Tests file and the shared components I'll use.
+
+Let me read the shared components I'll consume (TSGlassPanel, TSFadeIn, TSButton, TSSkeleton, TSTone).
+
+I have a complete understanding of the canonical pattern. Let me check git state and the log directory, then set up my plan.
+
+There are prior-run logs. Let me inspect the placeholder checker and a prior DrivingTips log for context.
+
+A prior parallel run implemented this in a different slot (not present in my worktree). Let me check key environment facts: the Shared.xcframework, ADR-012, and the prior gate log.
+
+The Shared.xcframework is missing — the full gate needs a slow KMP/Gradle build. Let me read the pending-verifications doc, ADR-012, and the prior gate log to follow the established honest approach.
+
+This is the key context — the established honest pattern: verify the surface in isolation (SwiftPM + swiftc typecheck + lint/format/placeholder + xcodegen), then defer the full-app `xcodebuild` gate to `macos-latest` CI with documented evidence of pre-existing blockers. Let me verify the actual environment facts before writing code.
+
+Critical findings: iPhone 16 simulator is **booted**, SDKs present (iOS/macOS 26.5, supports the 18/15 deployment targets), Swift 6.3. The only real blocker for the full-app gate is the missing `Shared.xcframework` (slow KMP/Gradle build) — matching the established deferral pattern. `DashboardWidgetSize` is defined once here (cleaner than prior merges). Let me set up tracking and read lint configs before writing code.
+
+Configs are clear (line_length 120 under `--strict`, swiftformat maxwidth 120, testable-import bottom). I'll mirror the proven sibling style. Now writing the surface files, starting with the pure Foundation adapter.
+
+Now the state-holder/model layer (P1/S8 seam, P1/S11 telemetry, P1/S10 facade).
+
+Now the presentational subviews (rows, list, loading, error) plus the icon→SwiftUI mapping.
+
+Now the main surface view, and I'll refine the loading skeleton to card-style rows (no nested glass).
+
+Now I'll fix the loading skeleton to use card-style rows (consistent with tip rows) since the surface now wraps everything in one outer panel.
+
+Now the Previews and strings files.
+
+Now the comprehensive test suite.
+
+All 7 surface files are written. Now let me verify: first check for over-length lines, then run swiftformat and swiftlint.
+
+A few test assertion lines exceed 120 chars (string literals aren't exempt). Let me wrap them and make the summary assertion DRY.
+
+Now let me run swiftformat (lint) and swiftlint (strict) on my files specifically.
+
+swiftformat is clean (0/6 require formatting). Now swiftlint --strict:
+
+swiftlint --strict and swiftformat --lint both pass on my files. Now the placeholder scan (real, against my files via a temp copy) and checking the component dependency closure for the isolated build.
+
+Placeholder scan is clean (COUNT=0) on my real files. The component closure imports only system frameworks — so `Sources/Components` + `Sources/Design` + `Tokens.swift` is self-contained. Let me build an isolated SwiftPM package (Swift 6 strict concurrency) to compile-verify the surface against the real shared components and run the unit tests.
+
+The build failed only on `Components/DataDisplay/UnitFormatters.swift` needing an external `\.tsUnits` environment key — a transitive dep my surface doesn't use. My DrivingTips files compiled. Let me find where `tsUnits` lives and include the minimal extra closure.
+
+`Cards.swift` and friends form a dense intra-Components web, but the only compile failure is `UnitFormatters.swift` (DataDisplay, uses `@Entry tsUnits`) — which my surface doesn't need. Let me confirm nothing else in Components needs it, then exclude just that file.
+
+Confirmed — `UnitFormatters.swift` is a leaf within Components (nothing else references its types). Excluding it.
+
+Isolated build succeeded — my surface compiles against the real tokens + components under Swift 6 strict concurrency. Now running the unit tests.
+
+All 33 tests pass under Swift 6 strict concurrency (macOS). Now the iOS-18 + macOS-15 `swiftc -typecheck` against the real SDKs to prove platform compatibility (the gate's iOS Simulator destination).
+
+Both iOS 18 and macOS 15 typechecks pass. Let me also confirm the test file itself is iOS-clean, then run `xcodegen generate` to confirm the real project enumerates my files.
+
+The surface is iOS-clean; the test-file iOS typecheck only failed because raw `swiftc` lacks the XCTest framework search path (an invocation detail, not a code issue — tests already pass on macOS). Let me retry with the simulator's Developer frameworks path to make it rigorous.
+
+iOS test typecheck now passes with the XCTest path. All host-runnable verifications are green. Now let me capture the **real** full-app gate blocker honestly. First, check whether the project has a framework-build pre-action.
+
+There's a `Scripts/build-shared-xcframework.sh` pre-build phase (KMP/Gradle). Let me read it to understand the real cost and capture the honest blocker.
+
+The full-app gate's pre-build phase runs `:core:assembleSharedXCFramework` (KMP/Gradle release build) — the script itself notes "On CI this runs on a macos-latest runner; see apps/macos-pending-verifications.md." Per rule #3 (no skip-and-assume), I'll attempt the real gate to capture genuine evidence of where it stops, bounded. Starting it in the background.
+
+While that runs, let me update todos and check progress periodically.
+
+Genuine evidence captured — the gate's pre-build phase really does trigger the heavy KMP/Gradle build (downloading Kotlin/Native, compiling `iosArm64`, linking the framework). Let me verify the build is still progressing and monitor whether it stages the framework and reaches my files.
+
+My iOS xcodebuild (PID 27786) is genuinely running the KMP Kotlin/Native framework link — and I can see ~8 other parallel xcodebuilds from sibling slots contending for the shared Gradle daemon. This is the documented heavy step deferred to macos-latest CI. I'll let it continue in the background while I gather facts and draft the honest log. Let me collect verification facts.
+
+Strong deliverable: 7 files, 1250 lines of Swift, all 9 web `t()` keys mirrored, 8 previews, 33 tests. Let me check the background build progress and the git working-tree state I'll commit.
+
+My original xcodebuild was orphaned (the `&` got SIGHUP'd when the async launcher returned), but it captured genuine evidence: the gate enters and progresses through the KMP Kotlin/Native framework link steps. The shared Gradle daemon is still assembling the framework (driven by sibling slots). Let me check if the framework staged in my slot, and relaunch a properly-attached build to attempt a real app-target compile of my surface.
+
+The Gradle build produced the **debug** framework but the script stages the **release** variant (still building under contention) — exactly reproducing the documented bottleneck. Critically, my surface binds via the `DrivingTipsSource` seam and never touches the KMP `Shared.xcframework`, so the framework is irrelevant to my surface's correctness. Let me confirm that, then finalize honestly.
+
+Confirmed — my surface imports only Foundation/SwiftUI/Observation/OSLog (no KMP `Shared`), so the isolated build fully proves it. Let me capture the real xcodebuild evidence lines for the log, then write the honest gate log.
+
+All evidence captured: the gate assembled the **debug** xcframework (ios-arm64, ios-arm64-simulator, macos-arm64) then proceeded to `linkReleaseFrameworkIosArm64` — the release variant (what the script stages) is the deferred bottleneck. Now I'll write an authoritative gate log by freshly re-running every host-runnable gate and teeing real output into it.
+
+All host-runnable gates are green (FORMAT/LINT/PLACEHOLDER/ISO_BUILD/ISO_TEST(33)/IOS_TYPECHECK/MAC_TYPECHECK/XCODEGEN all = 0; 42 DrivingTips refs in the project). Now let me append the full-app gate deferral section with the genuine captured evidence, parity mapping, and honest final status.
+
+Now let me append the ledger row to `apps/macos-pending-verifications.md` (matching the 5 prior surfaces' format).
+
+Let me verify the log integrity and the ledger row formatting before committing.
+
+Log ends correctly (EXIT=0/STATUS=DONE) with IOS/MAC recorded as DEFERRED (not fabricated). Let me clean temp artifacts and check the full working-tree state to scope the commit precisely.
+
+Working tree is cleanly scoped — my 7 files + log are untracked, the ledger is modified, and the Gradle/xcodegen outputs are gitignored (`!!`). The pre-existing web changes are untouched. Let me stage exactly my files and commit.
+
+Exactly 9 files staged; pre-existing web changes correctly excluded. Committing now.
+
+Committed as `9972fb9d7` (9 files, 1471 insertions). Let me run a final post-commit verification: confirm clean working tree (only pre-existing web changes remain) and re-confirm the committed files still pass the linters.
+
+All verifications pass post-commit. Let me mark the remaining todos done.
+
+All 9 todos are done. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0168-DrivingTips.log    | 181 +++++++++++
+ .../feature-views/DrivingTips.Adapter.swift        | 178 +++++++++++
+ .../feature-views/DrivingTips.Model.swift          | 281 ++++++++++++++++
+ .../feature-views/DrivingTips.Previews.swift       |  98 ++++++
+ .../feature-views/DrivingTips.Tests.swift          | 355 +++++++++++++++++++++
+ .../feature-views/DrivingTips.Views.swift          | 179 +++++++++++
+ .../TeslaSync/feature-views/DrivingTips.strings    |  38 +++
+ .../TeslaSync/feature-views/DrivingTips.swift      | 159 +++++++++
+ apps/macos-pending-verifications.md                |   2 +
+ 9 files changed, 1471 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0168-DrivingTips.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTips.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTips.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTips.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTips.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTips.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTips.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTips.swift

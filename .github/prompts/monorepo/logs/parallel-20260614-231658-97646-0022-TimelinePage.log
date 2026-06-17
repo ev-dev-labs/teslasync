@@ -1,0 +1,72 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, xcodegen, pwsh). Gate is not blocked. Let me study the closest existing analog pages.
+
+Let me study the routing system, chart/table components, and where route registrations are composed.
+
+Now let me find the gate contract (README), placeholder checker, log location, and parity ledger.
+
+I have a strong model now. Let me set up tracking and read the lint/format configs plus the app registration context.
+
+All research complete. Now writing the implementation, starting with models and formatters.
+
+Now let me verify a few component signatures I'll use in the view (error banner, button, theme helpers).
+
+Now the main page view and its sections/charts.
+
+Now wiring navigation. Let me check for any exhaustive switches or route-count assertions that adding `.timeline` could break.
+
+Now the route registration file and the app chain:
+
+Now the strings. Let me verify whether the catalog is sorted and whether any validator enforces ordering.
+
+The catalog isn't globally sorted and the i18n scripts target web, not the apple gate. I'll insert a clean block before the `route.tco` anchor.
+
+Now the model tests, then update the ledger.
+
+Now update the parity ledger with the two Timeline rows:
+
+Let me validate the ledger JSON, then run the fast gates (placeholder scan + swiftformat).
+
+Placeholder scan clean (0 violations). Now swiftformat:
+
+swiftformat found auto-fixable issues. Applying them in write mode:
+
+swiftformat clean now. Running swiftlint --strict:
+
+Two lint rules to fix (large tuples, trailing closures). Let me view the formatted regions, then fix.
+
+Fixing large tuples and trailing-closure violations. Starting with the table columns (also moving comparators to free functions to avoid escaping-self issues):
+
+Now the large-tuple fix in the model's `dailyBreakdown`:
+
+Now the sample-source tuples. Let me view the formatted regions first:
+
+Re-running swiftformat then swiftlint --strict on all changed files:
+
+swiftformat + swiftlint --strict both clean. Now to the build. Let me check framework staging and project generation.
+
+Shared.xcframework isn't staged (the scheme builds it via Gradle). Let me check the dependency surface and start the KMP framework build in the background while I run a scoped type-check.
+
+None of my files import the KMP `Shared` framework, and Components/Design/Theme don't either. Let me start the Shared.xcframework build in the background (needed for a full xcodebuild) while I run a standalone logic harness to execute the model/formatters.
+
+Now a standalone logic harness to execute the model + formatters (stubbing the one SwiftUI symbol the models reference):
+
+The Shared build is progressing. Fixing the harness entry point (drop `-parse-as-library` so top-level `await` is allowed):
+
+Harness passes: **CHECKS=45 FAILURES=0**. Model logic, phases, derivations, formatters, and state styling all verified. Let me check the Shared build progress.
+
+Gradle wrote the debug xcframework; the staging script wants the release slice. Let me generate the Xcode project and re-check the staging.
+
+xcodegen succeeded; Gradle is now linking the release framework. Let me verify whether the sibling-documented pre-existing breakage exists in this checkout while the framework finishes.
+
+The sibling's documented blocker (`ActiveOrdersSection`) is now resolved in this checkout — a full build may actually be green. Let me wait for the framework to finish staging.
+
+Release linking still in progress (Kotlin/Native release is slow). Continuing to wait for staging.
+
+Framework staged. Now running the real macOS app build (using `-target` to skip the framework pre-action since it's already staged). Starting it in the background:
+
+The `-target`+`-derivedDataPath` combo is invalid. Let me start the proper scheme build (cached pre-action) in the background, and meanwhile run a fast scoped type-check of my files against the real components.
+
+Full scheme build is running in the background. Now a fast scoped type-check of my files against the real components/design/tokens:
+

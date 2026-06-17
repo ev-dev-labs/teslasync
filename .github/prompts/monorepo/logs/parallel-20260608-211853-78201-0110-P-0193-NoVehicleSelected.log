@@ -1,0 +1,202 @@
+I'll start by exploring the repository structure and the web source that defines this surface.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing native structure.
+
+Web source is a simple defensive empty-state. The native `feature-views` dir already has 1647 files. Let me study the established file pattern using the most recent addition (PresetGallery) and another example.
+
+`PresetGallery` (latest) and especially `RedisDiagnosticEmptyState` and `OnboardingGate` (same onboarding domain, empty-state style) are the key templates. Let me read them.
+
+`OnboardingGate` is an excellent same-domain template. Now let me study the newest convention (`PresetGallery`, which adds `.Seams`/`.States`/`.ModelTests`), the closest empty-state analog (`RedisDiagnosticEmptyState`), and the project/build wiring.
+
+Now let me read the remaining PresetGallery files (Adapter, Views, Previews, Tests, ModelTests, strings) and locate the shared design tokens/components.
+
+Let me locate the shared design tokens and components, read the Views/Previews/strings template, and inspect the build wiring.
+
+`TSEmptyState` supports an action builder — a perfect match for the web `EmptyState` with its CTA. Now let me confirm tokens, the FadeIn/Skeleton/Button primitives, and critically the build wiring in `project.yml`.
+
+Build wiring globs `feature-views/` (auto-includes new files; `*Tests.swift` route to test bundles) — no project.yml edit needed, but the `.xcodeproj` is generated. Let me verify the toolchain (xcodegen, existing project, pwsh), the lint configs, tokens, and the placeholder script + log format.
+
+`pwsh`, `xcodegen`, `swiftlint`, `swiftformat` all present — I can run the real gate. Let me read the placeholder patterns (to avoid forbidden words), confirm token/primitive signatures, and check an existing log format.
+
+The PresetGallery log confirms pre-existing predecessor build reds exist (out-of-scope). Let me confirm the exact `Color.TS`/`Font.TS` token names and the `TSButton` signature before writing.
+
+I have the full picture. Let me verify the `Shared.xcframework`/build situation and the remaining token names (`Font.TS`, `TSSpacing` members), then I'll write the surface.
+
+Tokens confirmed. Note: `Shared.xcframework` is only a `.gitkeep` — it must be built via Gradle/KMP (heavy), matching the PresetGallery approach. Let me check simulators, then write the surface files. Let me record a plan first.
+
+Simulators check plus writing the pure adapter core:
+
+iPhone 16 simulator is booted — gate destination is valid. Now writing the surface. Starting with the pure adapter core.
+
+I spotted a typo in a comment. Let me fix it.
+
+Now the Seams file (telemetry, i18n facade, navigator, source protocol + in-memory source).
+
+Now the observable model (state holder).
+
+Now the presentation primitives (Views).
+
+I introduced a `body` naming collision in `NoVehicleSelectedReadyView`. Let me fix it.
+
+Now the main surface view that composes everything.
+
+Now the previews (one per state).
+
+Now the adapter + accessibility tests.
+
+Now the model (state-holder) tests.
+
+Now the strings catalog contribution.
+
+All 9 files written. Let me run swiftformat and swiftlint on my new files for fast style feedback.
+
+swiftformat wants implicit returns in the switch expressions (matching the OnboardingGate style). Let me fix both functions.
+
+Re-running swiftformat, and now swiftlint on the new files.
+
+Both clean. Now let me regenerate the Xcode project to include the new files, and verify they're picked up.
+
+Project regenerated with my files included (54 refs). Let me do a fast standalone compile of the pure adapter while I kick off the heavyweight `Shared.xcframework` build.
+
+Pure adapter type-checks clean standalone. The `Shared.xcframework` must be built via Gradle/KMP (the long pole). Let me kick that off in the background.
+
+While that builds, let me run the placeholder check and review the macOS code-signing context. First, the placeholder script:
+
+Let me honestly verify my files for forbidden placeholder patterns (the gate's literal path is a prefix that won't resolve, so I'll scan the real files too).
+
+Clean. Let me check the Gradle build progress and run the placeholder script honestly against my actual files.
+
+Placeholder scan of my actual files: `EXIT=0`. The Gradle build is actively compiling Kotlin/Native iOS targets. Let me wait for it to finish.
+
+Good progress — debug XCFramework built, now linking release frameworks. Let me continue waiting.
+
+Nearly done — linking release iOS simulator framework. Let me wait for completion.
+
+Shared.xcframework built and staged (RC=0). Let me verify staging, then run the iOS build+test.
+
+Shared.xcframework staged (iOS device, iOS simulator, macOS slices). Now the iOS build+test as the gate specifies. This compiles the full app (~1600 files), so it'll take several minutes — running in background with output captured.
+
+While the iOS build runs, let me proactively check for type-name collisions with other surfaces (a known risk in this shared module), especially my less-prefixed names like `SelectedVehicleRef`.
+
+No collisions — all my types are uniquely named. Let me monitor the iOS build progress.
+
+iOS build exited 65 (failure). I must determine whether it's my code or pre-existing defects. Let me analyze the errors.
+
+All 226 errors are pre-existing predecessor defects (duplicate type declarations causing "ambiguous for type lookup"). None mention my surface. Let me confirm the complete scope — verify zero errors are in `feature-views` or shared `Sources`.
+
+Definitive: all 226 errors are in `TeslaSync/dashboard-widgets` (pre-existing predecessor type-redeclaration defects), zero in `feature-views/` or `Sources/`. Let me gather positive proof my files were actually compiled (not skipped) by the module.
+
+My files were compiled (3× each in the log) with zero errors; the 226 failures are all duplicate-type defects in `dashboard-widgets`. Since `build` failed, the `test` phase didn't run my XCTests. To get positive green proof + actually run my tests, I'll do a temporary, fully-reverted isolation build. First, let me confirm nothing outside dashboard-widgets depends on it.
+
+There's a separate `Sources/DashboardWidgets/`. The "ambiguous" errors imply duplicate type definitions. Let me pinpoint where the duplicated types live to choose a safe isolation strategy.
+
+The duplicate types are entirely self-contained within `dashboard-widgets` (not referenced by `Sources/` or `feature-views/`). To produce positive green proof AND actually run my XCTests, I'll temporarily move the broken `dashboard-widgets` aside (fully reverted afterward — no committed change), rebuild, and run tests.
+
+While the isolated build runs, let me confirm the log directory exists.
+
+Still 65 — there are more pre-existing defects beyond dashboard-widgets, or the removal exposed something. Let me analyze.
+
+Down to 14 errors — all in OTHER predecessor feature-views (`MonthlyCostTable` "ambiguous use of 'string'", `TimestampTool` actor-isolation), previously masked behind the dashboard-widget failures. Zero in my files. These are pre-existing defects I can't edit. Let me check whether `Sources/` depends on them, then move them aside too to reach a green build that runs my tests.
+
+`Sources/` doesn't reference them — safe. Let me move these two broken predecessor surfaces aside and rebuild.
+
+Still running (longer than the fast-failing builds — likely progressing past type-check into compile/link/test). Let me keep waiting.
+
+Still 65 — more masked predecessor defects surfacing. Let me analyze the next layer.
+
+Down to a single error in `FixturesTests.swift` (a predecessor test). Let me see it.
+
+One predecessor test file (`SlideRenderer.FixturesTests.swift`) with a Swift 6 concurrency defect is blocking the test bundle. Moving it aside and rebuilding.
+
+0 errors and emitting the Swift module cleanly — the app target is compiling. Let me wait for build completion and test execution.
+
+Build emitted cleanly but exit 65. Let me check whether it's a test-target compile error, a test failure, or a link/sign issue.
+
+Found a **real defect in my own test files**: under Swift 6 `complete` concurrency, the file-scope `let passthroughLocalize` closure must be `@Sendable`. (This same latent issue exists in the predecessor templates but was masked by earlier build failures.) Let me fix both my test files.
+
+Let me quickly re-lint the two changed test files, then rebuild+test.
+
+Lint clean. Rebuilding+testing — the app module already compiled cleanly, so now my fixed test files should let the test bundle build and run.
+
+App module recompiling from scratch (0 errors). Let me continue waiting for the test phase.
+
+Exit 65 — let me see the next blocker (likely more predecessor test files with the same latent concurrency issue).
+
+My files now compile clean (0 errors). Two more predecessor test files have the same latent issue. Let me identify them.
+
+Confirmed: `PresetGallery.Tests.swift` / `.ModelTests.swift` (the predecessor) carry the identical latent defect — masked for them by the earlier build failures. Let me count how widespread this pattern is across predecessor test files.
+
+~78 predecessor test files share this latent defect — far beyond my editable scope. The test bundle can't compile without touching forbidden files. To still **run my tests**, let me isolate just my two test files: temporarily relocate all *other* feature-views test files, keeping mine. Let me gauge the count first.
+
+236 feature-views test files; ~78 share the latent defect — all forbidden to edit. To actually execute my XCTests, I'll isolate: move all other feature-views test files aside, keep only my two, and run targeted tests. Let me do it.
+
+Only my two test files remain. Regenerating and running build+test (targeting my test classes).
+
+0 errors; full app rebuild in progress (xcodegen invalidated the cache). Let me wait for the test phase.
+
+Exit 65 — likely `Tests/Unit` predecessor issues now. Let me check.
+
+That `Tests/Unit/DashboardWidgets` test references the dashboard-widgets I relocated — an isolation artifact. Let me move the dependent Tests/Unit/DashboardWidgets aside too and proactively check for other refs to moved surfaces.
+
+Now rebuilding+testing with the dependent test dir relocated.
+
+0 errors, app module still emitting. Let me wait for build completion and test run.
+
+`ISO6_IOS_EXIT=0` — build succeeded and tests ran. Let me confirm my test cases executed and passed.
+
+**All 25 of my tests PASSED** on iOS Simulator against the real app target + design system + Shared.xcframework under Swift 6 strict concurrency (`** TEST SUCCEEDED **`). Now I must carefully restore every relocated predecessor file. Let me restore and verify.
+
+All restored (dashboard-widgets: 704 files, feature-views tests: 236, 3 surfaces back). Let me verify git status shows ONLY my new files and no predecessor modifications.
+
+Repo is clean — only my 9 new files (the 2 pre-existing `.tsx` modifications aren't mine). Backups all cleared. Let me regenerate the project and run the macOS gate build (capturing whether my files produce any macOS-specific errors), while re-confirming scoped lint.
+
+While macOS builds, let me re-confirm the scoped lint/format/placeholder on my final files for the log record.
+
+All scoped checks green (format 0/8, lint 0 violations, placeholder 0). Let me wait for the macOS build.
+
+macOS exit 65 (expected predecessor reds). Let me confirm zero errors in my files on macOS.
+
+Only 4 errors and not in the usual compile format — the macOS build may have failed early (pre-action or signing). Let me see the actual errors.
+
+The macOS failure is purely a **runner code-signing gap** (no macOS development certificate) — the documented pre-existing limitation, hit before Swift compilation, unrelated to my code. To get positive macOS compile evidence for my surface, let me run a signing-disabled macOS `build` (full tree) and confirm zero errors in my files.
+
+Let me analyze the macOS compile — confirm my files were compiled with zero errors (predecessor reds are the same dashboard-widgets defects).
+
+My files compile clean on the macOS target too (mentioned 3× in the macOS compile, 0 errors); macOS `build test` is blocked only by the runner code-signing gap + the same predecessor reds. Now let me capture the raw full-tree lint/format gate results for honest logging.
+
+`swiftformat` full-tree passes (FORMAT_EXIT=0). `swiftlint --strict` exited 2 — let me see the actual violation(s) and whether any are in my files.
+
+The single `swiftlint --strict` violation is a predecessor `dashboard-widgets` brace-spacing issue — **zero violations in my 8 files** (all linted). `swiftformat` whole-tree is clean (EXIT=0). I now have the complete, honest evidence picture. Let me write the gate log.
+
+Now let me verify the final git state and stage only my deliverables (the 9 surface files + the log), leaving the pre-existing unrelated `.tsx` changes untouched.
+
+Exactly my 9 surface files + the log are staged; the 2 pre-existing unrelated `.tsx` edits are untouched; `.xcodeproj` is gitignored. Committing per the prompt's message.
+
+Commit `a345e806e` created with exactly the 9 surface files + log (1427 insertions). Let me clean up temp artifacts and do a final verification.
+
+Restoration is verified by git: `git status` shows ONLY the 2 pre-existing unrelated `.tsx` files — zero predecessor deletions/modifications under `apps/apple`. (The 236→239 test-file count difference reflects MonthlyCostTable/TimestampTool/SlideRenderer test files correctly restored.) Let me do a final authoritative confirmation.
+
+Everything reconciles: `apps/apple` is fully restored (empty pending changes), HEAD is my commit `a345e806e` with exactly 10 files, and the 3 predecessor test files are correctly back (explaining the 236→239 count). Task complete.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0193-NoVehicleSelected.log | 151 ++++++++++++++
+ .../feature-views/NoVehicleSelected.Adapter.swift  | 193 +++++++++++++++++
+ .../feature-views/NoVehicleSelected.Model.swift    | 159 ++++++++++++++
+ .../NoVehicleSelected.ModelTests.swift             | 200 ++++++++++++++++++
+ .../feature-views/NoVehicleSelected.Previews.swift |  83 ++++++++
+ .../feature-views/NoVehicleSelected.Seams.swift    | 148 +++++++++++++
+ .../feature-views/NoVehicleSelected.Tests.swift    | 131 ++++++++++++
+ .../feature-views/NoVehicleSelected.Views.swift    | 231 +++++++++++++++++++++
+ .../feature-views/NoVehicleSelected.strings        |  45 ++++
+ .../feature-views/NoVehicleSelected.swift          |  86 ++++++++
+ 10 files changed, 1427 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0193-NoVehicleSelected.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/NoVehicleSelected.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NoVehicleSelected.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NoVehicleSelected.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NoVehicleSelected.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NoVehicleSelected.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NoVehicleSelected.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NoVehicleSelected.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NoVehicleSelected.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/NoVehicleSelected.swift

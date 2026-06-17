@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and checking the capability requirements, since this task has a BLOCKED path if the Apple toolchain is unavailable.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators incl. iPhone 16). The web source and `apps/apple/TeslaSync/shared-surfaces/` both exist. Let me read the web source and study existing native patterns.
+
+The web source is small and clear: a `Range` formatter that renders the user's preferred range (rated vs ideal) formatted via distance units, returning `—` when null, plus a `useRangeLabel` hook. Now I need to understand the native project conventions. Let me study the build setup and a representative existing surface end-to-end.
+
+This is a mature XcodeGen-based project (`project.yml`, no committed `.xcodeproj`). The surface file pattern is consistent (`.swift`, `.Adapter`, `.Model`, `.Projection`, `.Chrome`, `.Views`, `.Previews`, `.strings`, `.Tests`, `.AdapterTests`). Let me read the project config, build scripts, and the shared infrastructure I must bind to.
+
+Key facts: surfaces are glob-included (just add files + regenerate via XcodeGen). The build needs `Shared.xcframework`. Let me check tooling availability, the log dir, the framework build script, and find sibling "format" surfaces plus the shared infra I must bind to (`useUnits`, `usePreferredRange`, tokens, i18n, diagnostics).
+
+xcodegen + pwsh available; xcodeproj not yet generated (I'll run `xcodegen generate`). The build needs `Shared.xcframework` built via Gradle (Kotlin/Native) — that's the main gate risk. Let me find the simplest complete surface to model after, locate the shared infra facades (units, preferred range, i18n, diagnostics, state-holder base), and check the Gradle/shared toolchain.
+
+`BatteryDelta`, `Currency`, `AnimatedNumber` are small `data-display/format` siblings of `Range` — ideal models. Let me read the web data model (`preferredRange.ts`), the native units facades, and confirm which native surface best models a format component.
+
+`Currency` lives in the same web dir (`components/data-display/format/`) as `Range` and is already built natively — it's my ideal template. Let me read the full `Currency` native surface set, the web `Currency.tsx`, and verify the Gradle/shared-framework toolchain (the main gate risk).
+
+`Currency` (0083) is the ideal template — same web dir, sibling format component. Toolchain looks viable (apps/shared + gradlew + Java 17 + warm ~/.gradle caches). Let me kick off the Shared.xcframework build in the background (the main gate risk) while I study the full Currency surface set.
+
+The Currency pattern is clear and documents the honest parity stance: a purely-presentational web source has only its real branches (value vs fallback), not synthesized loading/error chrome. `Range` differs in two ways: it formats via `useUnits().formatDistance` (KMP facade) and its companion `useRangeLabel` uses `t()`. Let me read the web `useUnits`, the native unit/settings facades, the i18n setup, and the Currency test convention.
+
+Now I understand formatting: web `Range` delegates to `useUnits().formatDistance(meters, { precision })` — it does no math itself. Native parity = delegate to the `Units.formatDistance` KMP facade. Key questions: precision semantics in the shared core, how the app builds `UnitPreferences`/`rangeType` (P1/S8), how surfaces test unit formatting, and the i18n facade. Let me investigate.
+
+Now I'll confirm precision semantics in the shared core, how the app builds `UnitPreferences`, the existing i18n keys for range labels, and how surfaces resolve localized strings (since `useRangeLabel` uses `t()`, unlike Currency).
+
+Precision semantics confirmed: passing the per-call precision as the override wins (`resolvePrecision`). Now the critical reference: `BatteryDelta` is a data-display format sibling that uses i18n. Let me read it fully to learn the i18n key convention, table usage, and label handling — plus how the app builds `UnitPreferences`.
+
+I now have the full pattern: per-surface `XxxStrings` enum using `NSLocalizedString(key, tableName:, value:)` with web-verbatim keys, injected formatters, and the documented honest stance that a purely-presentational web source reproduces only its real branches (value + empty), not synthesized loading/error chrome. Let me read the lint configs, placeholder rules, and the BatteryDelta layout, then check the framework build.
+
+I have a complete understanding of the conventions. Let me check the framework build progress and verify the design tokens (P1/S9) exist before writing the surface.
+
+Framework build still running (expected for KMP/Kotlin-Native). Let me confirm the exact P1/S9 token names used in previews while it builds.
+
+All P1/S9 tokens confirmed. One critical naming issue: a public `struct Range` would shadow `Swift.Range` module-wide and break existing code. Let me check how the codebase handles stdlib-colliding surface names, and verify the framework build.
+
+Framework build succeeded — `Shared.xcframework` is staged, so the gate's pre-build will be cached/fast. Naming decision: no surfaces collide with stdlib names and a module-level `struct Range` would shadow `Swift.Range` repo-wide, so I'll name the views `RangeValue` (web `Range`) + `RangeLabel` (web `useRangeLabel`), slug `"Range"`, files `Range.*` — matching the codebase's `TS`-prefix disambiguation convention for primitives. Let me set up tracking and start writing the surface.
+
+Now I'll write the surface. Starting with the pure adapter core.
+
+Pure adapter/projection files done. Now the two test files.
+
+All 9 files created. Let me get fast feedback with swiftformat/swiftlint on the new files before the expensive build.
+
+swiftlint is clean (0 violations). swiftformat wants implicit returns in the `switch`. I'll let the tool auto-fix it (ecosystem-preferred), then re-verify.
+
+Format + lint both clean. Let me verify the auto-fixed switch is valid Swift before the build.
+
+Switch is a valid implicit-return expression. Now I'll regenerate the Xcode project and run the acceptance gate. Starting with project generation.
+
+Project regenerated; Range files are included across app + test targets. Now I'll run the acceptance gate, building the log at the official path. Starting the iOS build+test (long-running).
+
+iOS build+test is running. Let me monitor it.
+
+iOS reported 3 failures. Let me extract the details from the full log.
+
+The 3 failures are **pre-existing build breaks in unrelated surfaces** (`RecentDrivesListWidget`, `RecentDrivesSection`, `StateTimeline*`) — "ambiguous for type lookup" / duplicate-type errors. Zero errors are in my `Range.*` files. Let me gather hard evidence: confirm these are pre-existing duplicates I didn't touch.
+
+Definitive evidence gathered. The failures are **pre-existing duplicate type declarations** across two committed predecessor surfaces I'm forbidden to touch:
+- `RecentDrivesModel/Update/LoadStatus/Connection` defined in BOTH `RecentDrivesListWidget.*` (commit 87b91a4d1) and `RecentDrivesSection.*` (commit afff462c1)
+- `StateTimelineUpdate` in BOTH `StateTimelineWidget.Model.swift` and `StateTimeline.Source.swift`
+
+Git confirms my only changes are the untracked `Range.*` files. Zero errors reference `Range`. Let me run the build-independent gate steps and assess whether the breakage is cleanly isolable.
+
+Critical findings: (1) placeholder check **EXIT=0** ✓; (2) the duplicate surfaces are **cleanly isolable** — nothing references those four view structs externally. This lets me prove my Range tests actually pass via a clearly-labeled isolation build (sibling dupes temporarily relocated, then restored — committed tree unchanged). First, let me run the build-independent gate steps (swiftlint/swiftformat full) and list the files to relocate.
+
+Strong gate evidence: **swiftlint --strict = 0 violations (3716 files), swiftformat --lint = 0 files need formatting (3946), placeholder = EXIT=0**. Only the iOS/macOS build+test fail, solely from pre-existing duplicate types in 4 out-of-scope sibling surfaces. Let me record lint/format to the log and run the macOS build step (gate completeness).
+
+macOS build+test running. Let me wait for it to complete.
+
+macOS failed identically (MAC_EXIT=65). Let me confirm no `Range.*` errors anywhere and that macOS failed on the same pre-existing dupes, then proceed to the isolation verification.
+
+Zero `Range.*` errors anywhere; both platforms fail only on the two pre-existing collision groups (`RecentDrives*`, `StateTimeline*`). Now the supplementary isolation verification to prove my Range tests actually pass — temporarily relocating the conflicting feature-views sets (restored afterward, committed tree untouched).
+
+Duplicates resolved for isolation (one definition each). Running the iOS build+test to prove my Range tests pass.
+
+The isolation build surfaced *more* pre-existing collisions (the base has several). Let me see them.
+
+The base has *additional* unrelated pre-existing breakage (escaping-closure bugs in `AIGeofenceAwareAutomationSuggestions` + `AISignalExplorerNlFilter`). My Range files still compiled with zero errors. Let me check if these are also self-contained and bounded — I'll relocate them too and retry once more, otherwise the base breakage is unbounded.
+
+`AIGeofenceAwareAutomationSuggestions` is referenced by `AINLAutomationBuilder` — the base breakage is **interdependent and unbounded** relative to my Range-only scope. I'll stop chasing the in-tree build. First, critically, restore the relocated files so the committed tree is pristine, then verify.
+
+Tree is pristine — only `Range.*` + log untracked, relocated files restored with zero diff. Since the in-tree app build is blocked by unbounded out-of-scope breakage, I'll run my Range tests via a standalone SwiftPM harness (links the real `Units` facade + `Shared` KMP framework — doesn't touch the broken tree). Let me inspect the framework first.
+
+The macOS slice is a **static** archive — clean to link via SwiftPM. I'll build a throwaway harness that compiles my real Range sources + the real `Units` facade + the `Shared` KMP framework, so my tests execute for real without touching the broken tree.
+
+Harness scaffolded with my real sources + the real `Units` facade + `Shared`. Running the tests.
+
+SwiftPM needs a package-relative path for the binary target. Let me copy the xcframework into the package and re-run.
+
+The harness caught a **real bug**: `RangeIntegrationTests` (non-`@MainActor`) instantiates the `@MainActor` `RangeModel` — which would fail to compile in the real Swift 6 strict-concurrency test target too (the test target never compiled in-tree because the app build failed first). This is exactly why running tests matters. Let me fix the actual test file and align the harness to Swift 6 mode to catch all such issues.
+
+Compilation now fully succeeds in Swift 6 mode (my `@MainActor` fix worked). Only the link fails — the `Shared` framework needs `sqlite3` (the real targets link `libsqlite3.tbd`). Let me add that linker setting and re-run.
+
+**All 38 tests pass (0 failures)** in Swift 6 mode — including integration tests driving the real `Units.formatDistance` SI engine (350 km, 412 km, 350.0 km, imperial mi). The harness also caught and let me fix a real `@MainActor` bug in my test file. Let me re-verify lint/format on the edited file and capture the per-suite results.
+
+Edited test file is clean (0 format/lint issues); all 10 Range suites pass (38 tests). Now I'll write the comprehensive analysis and final verdict into the gate log.
+
+The gate log is complete and ends with `EXIT=65` / `STATUS=BLOCKED` (covenant #10 satisfied). Let me clean up temporary artifacts and verify the committed tree is pristine.
+
+Tree is pristine — only the 9 `Range.*` files + log are untracked; no tracked file touched (`git diff` empty). Let me finalize tracking.
+
+Surface complete and fully verified; gate blocked by pre-existing out-of-scope breakage. Reporting the honest outcome.
+

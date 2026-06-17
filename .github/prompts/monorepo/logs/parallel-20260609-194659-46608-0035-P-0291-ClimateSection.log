@@ -1,0 +1,182 @@
+I'll start by understanding the task scope: exploring the repo structure, locating the web source spec, checking for the Apple app scaffolding, and verifying whether the required Apple toolchain is available on this runner.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The web source and a substantial `apps/apple` tree both exist. Let me study the web spec and the established native patterns from the most recent feature view.
+
+Now I understand the scope. The web source is a `GlassPanel` with a header + grid of `MetricCard`s, or `EmptyState`. The native output goes to `apps/apple/TeslaSync/feature-views/`. The last feature view (LiveTelemetryPanels) established a multi-file pattern. Let me study the existing feature-views directory thoroughly.
+
+ClimateSection doesn't exist yet. 275 surfaces exist. Let me find a simple, structurally-similar reference surface (GlassPanel + MetricCard grid + EmptyState) to learn the established architecture. Let me examine candidates.
+
+`BatteryHealthSection` (8 files, clean) is a good architectural reference. Let me read the closest web analogs and study the full native template in parallel.
+
+This architecture is well-established. Let me read the remaining BatteryHealthSection files (Views, Tiles, Previews, Tests, strings) and locate the shared native components I'll need (MetricCard, EmptyState, GlassPanel, tokens).
+
+Excellent — I now understand the full architecture. Let me read the BatteryHealthSection Previews + Tests, and study how PowertrainPanel (whose web source also uses `MetricCard`) maps it natively. I'll also locate the shared tokens and any reusable MetricCard/EmptyState native components.
+
+The PowertrainPanel uses a `connection` axis (live/stale/offline) plus a `TSGlassPanel { }` wrapper. Its web source uses `MetricCard` just like ClimateSection, so it's the ideal template. Let me read its Model + Views and locate the shared token/component definitions.
+
+PowertrainPanel is the ideal template (web source uses `MetricCard`, has the connection axis). Let me read its Adapter/Tests/Previews/strings, locate the shared component definitions, and inspect the web `ClimateSnapshot` type + `formatTemperature`.
+
+Let me read the shared component signatures and the remaining PowertrainPanel reference files (strings, Tests, Previews), plus locate the design tokens.
+
+Let me find the exact `TSMetricCard` init signature, and locate the `TSSpacing`/`TSRadius`/`Color.TS`/`Font.TS` token definitions.
+
+The generated tokens live at `apps/design/generated/apple/Tokens.swift`. Let me read the token definitions and the key shared component signatures (TSMetricCard, TSButton, TSFadeIn, TSSkeleton, TSTone).
+
+Let me read the web `MetricCard` component (to map icon/color faithfully) and the `Color.TS`/`Font.TS` token sections, plus the TSButton/TSFadeIn/TSSkeleton/TSTone signatures.
+
+Now I understand the web `MetricCard` (label + value + tinted icon box + subtitle). I'll build a faithful native tile within the ClimateSection files. Let me read the `Color.TS` palette, `TSTone`, and the TSButton/TSFadeIn/TSSkeleton signatures.
+
+Let me read the `TSTone`, `TSButton`, `TSFadeIn`, and `TSSkeleton` signatures to finalize the API surface I'll use.
+
+I have the full API surface. Now I must verify how `feature-views/` files are included in the Xcode targets (critical for the gate). Let me check the project structure and TSButton/TSGlassPanel signatures.
+
+Now I understand the build setup (XcodeGen + KMP `Shared.xcframework`). Let me check predecessor gate logs and tooling feasibility (xcodegen, the xcframework staging script, check-placeholders) to understand the realistic gate outcome.
+
+The predecessor pattern is clear: author a complete surface, run host/surface-scoped gates green, and honestly document the full-app `xcodebuild` (which needs the KMP `Shared.xcframework` + signing). Let me read the full predecessor log to match the exact verification methodology and honest logging format.
+
+I now fully understand the predecessor verification methodology (isolated SwiftPM build + typechecks + lint/format/placeholder/i18n gates, plus a documented full-app xcodebuild). Let me check for a reusable isolation harness, the lint/format configs, and confirm a clean tree.
+
+I have the complete picture of the methodology and the "DONE" bar. Let me read the canonical `formatTemperature`/`useUnits` web implementation and the two governing instruction files, so my native port is exact.
+
+I have the canonical `formatTemperature` semantics confirmed (matches the existing PowertrainPanel port). Let me read the exact `TSGlassPanel` and `TSButton` initializers, then set up my plan.
+
+I now have everything needed: the web spec, the canonical formatTemperature semantics, the full native architecture (PowertrainPanel template), all shared component/token signatures, and the predecessor verification methodology. Let me set up a plan and todos.
+
+Now I'll write the surface. Starting with the foundation — the Adapter (pure projection core).
+
+Adapter done. Now the Model (seams, @Observable model, i18n facade).
+
+Now the surface shell (`ClimateSection.swift`) with header, freshness chrome, and state switch.
+
+Let me check line counts so far — `swiftlint --strict` treats the 400-line `file_length` warning as an error, so each file must stay ≤ 400 lines.
+
+The Adapter is exactly at the 400-line threshold. Let me trim its comments for safe headroom, and put the (testable) value-text resolver in the Views file instead.
+
+392 lines — comfortable. Now the Views file (grid, tile, value resolver, state chrome).
+
+Now the per-state previews.
+
+Now the comprehensive test suite (adapter/format/projection + model/phase + a11y + per-state render smoke).
+
+Now the i18n strings catalog.
+
+All 7 files written. Let me run sanity checks: line counts, type-name collisions across the module, and i18n key coverage.
+
+The comparison had a trailing-quote artifact and missed the `labelKey` literals (referenced indirectly via `ClimateMetricKind`). Let me redo the coverage check properly.
+
+Perfect i18n coverage (22/22, 0 missing, 0 orphan) and all files ≤400 lines. Now the critical collision check — ensure no `Climate*` type names already exist elsewhere in the module.
+
+Critical finding: `ClimateProjection` already exists in `LiveTelemetry.Models.swift` (a sibling surface) — my types would collide. The sibling convention is surface-prefixed (`ClimatePanel*`, `ClimateStatus*`). I'll rename all my types to the `ClimateSection*` prefix. First, let me get the complete list of existing declarations to confirm my target names are free.
+
+The `ClimateSection*` namespace is completely free. Let me rename all my generic `Climate*` types to the surface-prefixed `ClimateSection*` (matching the `ClimatePanel*`/`ClimateStatus*` sibling convention), using word-boundary replacements.
+
+Let me verify the rename was clean (no double-prefixing, seam names intact, no stray generic types, no collisions).
+
+The remaining generic tokens are 7 test-class names (word boundaries protected the `*Tests` suffix). For uniqueness discipline, let me prefix them too.
+
+All types now uniquely prefixed. Let me do a final comprehensive collision check: extract every type I declare and confirm none exist elsewhere in the module.
+
+All top-level type names are unique (the only hit, `Phase`, is a nested type — `ClimateSectionResolved.Phase` — matching the sibling pattern, no real collision). Now let me build the isolation verification harness. First, identify which shared component/design files depend on the KMP `Shared` framework (must be excluded).
+
+No KMP imports in the 41 Components/Design files — the closure is self-contained. Let me build an isolated SwiftPM harness (predecessor's primary green proof) to compile + test the surface against the real tokens/components. First, set it up in a temp dir.
+
+Now let me run the isolated SwiftPM build (verification step [1]).
+
+`UnitFormatters.swift` references the KMP `Units` type — exactly the file the predecessor excluded. My surface doesn't use it. Let me remove it from the harness and rebuild.
+
+Isolated build green (`Build complete!`). Now run the full test suite (step [2]).
+
+32 tests ran, 1 failure. Let me find which test failed.
+
+The projector is correct — a present (even empty-fields) reading resolves to `.data`, matching web `climateData ? grid`. My test wrongly passed a non-nil reading. The intent (empty error string isn't an error) needs `reading: nil`. Let me fix the test in the repo.
+
+Fixed (and added a test documenting the present-but-empty → data behavior). Let me re-sync and re-run the suite.
+
+All 33 tests pass (SWIFT_TEST_EXIT=0). Now the iOS 18 + macOS 15 SDK typechecks (steps [3]/[4]) over the surface + real closure.
+
+iOS typecheck clean. Now the macOS 15 SDK typecheck (step [4]).
+
+Both SDK typechecks clean. Now the lint/format/placeholder gates on the actual repo files — swiftlint `--strict` [5].
+
+4 line-length violations in the Tests file (the rename pushed a few lines over 120). Let me view and wrap them.
+
+Let me view the surrounding context and wrap these 4 lines.
+
+Now let me wrap all 4 over-length lines.
+
+Now re-run swiftlint `--strict` and swiftformat `--lint` [6] on the surface files.
+
+swiftlint is clean. swiftformat wants multi-line property bodies (the siblings use that style). Auto-formatting will expand lines and may push the Adapter over 400 (swiftlint's limit), so let me first auto-format, then check the count.
+
+The Adapter is now 412 lines (over swiftlint's 400 limit) due to the wrapped property bodies. Let me trim ~22 lines of comments to get back under 400.
+
+Let me re-run swiftformat to normalize, then check the line count and re-lint.
+
+swiftformat passes, but the Adapter is 401 — 1 line over swiftlint's limit. Let me trim 2 more comment lines.
+
+399 target — let me trim one more line for safe headroom and verify.
+
+Now let me re-verify all formatting/lint gates and line counts together.
+
+All green (all files ≤400, swiftformat 0/6, swiftlint 0 violations). Let me re-sync the formatted files to the harness and re-verify build + tests still pass.
+
+Build + 33 tests green with formatted sources. Now the placeholder gate [7]. Let me check how the script resolves `-Path`, then run it on the surface.
+
+The script needs a real directory. Like the predecessors, I'll create a scan dir with my surface files. First let me check the forbidden patterns and confirm my files are clean.
+
+My files are clean of all forbidden patterns. Let me create the scan dir and run the placeholder gate [7].
+
+Placeholder gate passes (COUNT=0, EXIT=0). All host/surface gates are green. Now the full-app xcodebuild step. Let me do recon: regenerate the project (confirm my files are enumerated), and check the pre-existing build blockers (KMP xcframework, signing, sibling collisions).
+
+Project regenerates cleanly (GEN_EXIT=0), my files are enumerated (42 pbxproj refs), and there are 0 signing identities (macOS dev-signing blocker, pre-existing per ADR-012). Let me check the other pre-existing blockers: the sibling collision and the KMP/gradle xcframework setup.
+
+Confirmed: the `StateTimeline*` duplicate-declaration collision (predecessor's iOS blocker) is still present in two sibling surfaces (`StateTimelineWidget.*` + `StateTimeline.*`) — outside my allowed files. So the full-app build is predetermined to fail there regardless of my surface. Java 17 + gradlew are present, so I can try staging the KMP xcframework to capture a real xcodebuild run. Let me attempt it.
+
+Gradle is building the KMP shared core (predecessor took ~7 min). Let me wait for it.
+
+Shared.xcframework staged successfully (BUILD SUCCESSFUL in 6m32s). Now I can run the real full-app xcodebuild. Let me run the iOS build+test and capture the full output for analysis.
+
+iOS build exited 65 (as predicted). Let me analyze the log: total errors, ClimateSection-specific errors (must be 0), and confirm the cause.
+
+iOS build analysis is definitive: **52 total errors, 0 ClimateSection errors** — all 52 are the pre-existing `StateTimeline*` ambiguity in sibling surfaces (`StateTimeline.*` + `StateTimelineWidget.*`). My surface compiles clean within the full app. Now the macOS build [B] (expected: dev-signing failure).
+
+Let me confirm the 4 macOS errors are signing/entitlements (not compile errors).
+
+macOS: all 4 errors are dev-signing entitlements (0 identities, ADR-012) — fails before compile; 0 ClimateSection errors. Now the isolation proof (predecessor's gold standard): move my surface out, regenerate, rebuild, and confirm the `StateTimeline` collision persists without my files present.
+
+ISO_IOS_EXIT=65 with 0 ClimateSection refs — proving the collision is pre-existing. Let me confirm the isolation errors are all StateTimeline, then restore my files and regenerate.
+
+Isolation proof is conclusive: **without my surface (0 refs), the build still fails with the identical 52 `StateTimeline` errors, 0 non-StateTimeline** — the collision is definitively pre-existing. Files restored (42 refs). Let me run the final i18n/plutil checks and confirm the strings file is valid.
+
+All checks pass (plutil OK; i18n 22/22, 0 missing/orphan). Let me gather final counts for the log, then write it.
+
+All verified. Now let me write the comprehensive, honest gate log.
+
+Log written. Now let me clean up temp artifacts and verify git status shows only my intended files (surface + log; the generated `.xcodeproj` and staged xcframework should be git-ignored).
+
+Git status is clean — only my 7 surface files + the log are untracked; the generated `.xcodeproj` and staged xcframework are git-ignored. Let me commit.
+
+Committed (33c5b66d4). Let me do a final clean-tree verification and update todos.
+
+All done. Working tree is clean; the commit contains exactly the 7 surface files + the log (1787 insertions). Let me confirm all todos are complete.
+
+All 10 todos are done. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0291-ClimateSection.log | 284 +++++++++++++++
+ .../feature-views/ClimateSection.Adapter.swift     | 398 +++++++++++++++++++++
+ .../feature-views/ClimateSection.Model.swift       | 246 +++++++++++++
+ .../feature-views/ClimateSection.Previews.swift    | 105 ++++++
+ .../feature-views/ClimateSection.Tests.swift       | 338 +++++++++++++++++
+ .../feature-views/ClimateSection.Views.swift       | 218 +++++++++++
+ .../TeslaSync/feature-views/ClimateSection.strings |  46 +++
+ .../TeslaSync/feature-views/ClimateSection.swift   | 152 ++++++++
+ 8 files changed, 1787 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0291-ClimateSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimateSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimateSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimateSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimateSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimateSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimateSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ClimateSection.swift

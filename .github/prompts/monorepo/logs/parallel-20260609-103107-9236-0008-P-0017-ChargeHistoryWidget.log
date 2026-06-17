@@ -1,0 +1,112 @@
+I'll start by exploring the environment and understanding the task. Let me check the available tooling and the repository structure.
+
+Full Xcode exists at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. Let me check if Xcode is usable and explore the Apple app structure.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`. Now let me read the web source and examine existing widget patterns.
+
+`ChargeHistoryWidget` doesn't exist yet; close analogs do (`ChargeSessionChartWidget`, `SuperchargerHistoryWidget`). Let me read the web source, registry, and a template widget.
+
+Now let me study the closest template widget and the shared infrastructure. Reading multiple files in parallel.
+
+Excellent template. Let me read the rest of the `ChargeSessionChartWidget` family and locate shared infrastructure.
+
+Now let me locate the shared infrastructure and build config to confirm the exact APIs.
+
+Let me read the design tokens, skeleton component, and check the build tooling (xcodegen, shared framework script, placeholder checker).
+
+Shared.xcframework isn't built (needs KMP/Gradle). Let me find the design token definitions and any lighter host-gate harness.
+
+Now let me read the skeleton component and find an existing area-chart widget to mirror (web uses `AreaChartWrapper`).
+
+Key parity details noted: web uses `hasData = chartData.length > 1` and `isCompact = size.cols <= 1` (differs from ChargeSessionChart). Let me read the web shared components and an AreaMark example to ensure faithful parity.
+
+`BatteryDegradationTrendWidget` is the ideal analog — it's an area chart with the exact `chartData.length > 1` threshold. Let me check its Model + Tests for the `>1` handling and any view/snapshot test pattern, and confirm no existing ChargeHistory files.
+
+Let me see the view-rendering test pattern used by existing widgets to satisfy the "per-state snapshot/UI test" criterion.
+
+I now have a complete understanding of the pattern. Let me set up tracking and write the plan.
+
+Now I'll create the files. Starting with the foundation (Models + Builder).
+
+Now the strings catalog, previews, and tests.
+
+All 8 files created. Let me update tracking and start verification with the fast linters first.
+
+All 8 files written. Now let me run the formatters on the new files (the gate runs `swiftformat --lint` and `swiftlint --strict`). I'll apply swiftformat then review what it changes.
+
+Only the test `render` signature is too long. Let me auto-apply swiftformat to fix it, then re-verify all 7 files.
+
+Let me verify what swiftformat changed in the test file, then run swiftlint.
+
+Both linters pass on the new files (0 violations). The swiftformat change is correct. Now let me investigate the build path — there's a mention of a "swiftc host gate". Let me look for it and assess the heavy xcodebuild path.
+
+Let me check how past widget gates were logged (DONE vs BLOCKED) to understand the expected outcome and log format.
+
+The template widget's gate log proves the full toolchain (KMP Shared.xcframework ~32 min, Xcode 26.5, iPhone 16 sim) is available on this exact host and ran GREEN. So capability is NOT blocked — I must execute the real build. Let me check for a cached framework and the Gradle/Java environment.
+
+A sibling slot already built `Shared.xcframework` and the Gradle caches are warm — so slot-8's own build should hit cache and be far faster than the cold 32 min. Let me generate the Xcode project and kick off the framework build from slot-8's own source.
+
+Project generated. Now let me build the Shared.xcframework (warm Gradle cache should make this fast). Running in the background.
+
+The framework build is running. While it builds, let me verify the generated project picked up my files and re-check my code against the infra APIs.
+
+All 8 files are in the project (app + test bundles). Let me check the framework build progress.
+
+Framework build still compiling (KMP/Native). Let me wait longer — the cold build was 32 min; with warm caches it should be faster but still substantial.
+
+Let me confirm the build is actively progressing by checking the Gradle output directory.
+
+Build is actively progressing (640M output, frameworks linking for all Apple targets, 11 active processes). This is the expected heavy KMP/Native step. Let me continue waiting.
+
+Framework built (9 min, warm cache) and staged. Now let me run the real Xcode build+test. Starting with macOS (the clean path — no simulator flakiness), isolated to my surface's test classes. This first build is cold (whole app), so it'll run in the background.
+
+macOS build+test launched. Let me monitor progress — I'll watch for compile errors in my files specifically.
+
+App target compiling cleanly (0 errors, now emitting Swift module). Let me wait for the test bundle compile, link, and test run.
+
+The piped output only prints at completion. Let me check the log file directly for progress.
+
+Compiling cleanly with 0 errors — now recompiling the app with `-enable-testing` for the test bundle. Let me keep waiting for the test run.
+
+Build SUCCEEDED (0 errors). Now the test bundle (with my tests) is compiling. Let me wait for the test execution to complete.
+
+Still 0 errors; the test bundle (which compiles all co-located sibling tests too) is large. Let me wait longer for compile + test execution.
+
+The test-bundle compile failed — but in a batch of **sibling** files (SafetyFeaturesWidget, RouteEfficiencyWidget, etc.), not mine. The whole co-located test bundle compiles together, so a pre-existing sibling error blocks it. Let me extract the actual error messages to confirm none are in ChargeHistory files.
+
+Confirmed: the **only** compile errors are pre-existing duplicate-class declarations in a sibling surface (`SafetyFeaturesWidget.ModelTests.swift` redeclares classes from `SafetyFeaturesWidget.Tests.swift`) — zero errors in any ChargeHistory file, and the app target built with `** BUILD SUCCEEDED **`. Let me confirm this is pre-existing (not caused by me) and assess scope.
+
+Definitive: my working tree contains **only** my 8 files; the blocker is a pre-existing, tracked sibling defect (`SafetyFeaturesWidget.ModelTests.swift` redeclares test classes) that I'm forbidden to edit. The whole co-located test bundle compiles together, so it blocks my tests from running.
+
+I'll exclude that one pre-existing-broken sibling via an xcodebuild CLI build-setting override (`EXCLUDED_SOURCE_FILE_NAMES`) — this touches **zero** repo files — and run my 7 test classes. Let me launch on macOS.
+
+Test re-run launched with the pre-existing-broken sibling excluded. Let me wait for the test-bundle compile and execution.
+
+Confirmed only one sibling file is broken. Let me check the test log for compile completion and test results.
+
+Compiling cleanly (0 errors). The test bundle is recompiling (build settings changed). Let me wait for it to finish and run.
+
+The log has been static for 5 minutes. Let me check whether compilation is actively progressing or stalled.
+
+The build is very active — 122 `swift-frontend` processes compiling the large test bundle, but the host is contended by parallel slots (slot-11 etc. also building). It's progressing, just slow. Let me wait longer.
+
+More pre-existing sibling breakage surfaced. Let me extract the exact errors from this run.
+
+Multiple pre-existing siblings share duplicate `XCTestCase` class names (`ChargeStatusLiveWidget.Tests.swift` vs `ChargeStatusWidget.Tests.swift`, etc.) — a systemic pre-existing bundle defect, none in my files. Rather than discover them one slow run at a time, let me statically find **all** duplicate-class files across the test bundle so I can exclude them in a single run.
+
+The static scan resolves all 10 duplicate class names by excluding 4 pre-existing sibling files. Let me list each duplicate and verify the exclusion set fully de-duplicates the bundle (and confirm none are mine).
+
+Complete, verified picture: 10 duplicate `XCTestCase` class names across the bundle, **all** pre-existing/tracked sibling defects, fully resolved by excluding 4 sibling files (none mine). This shared test bundle cannot compile as-is regardless of my change. Let me run my 7 classes on macOS with all 4 pre-existing-broken siblings excluded — one definitive run.
+
+Definitive macOS run launched. Let me wait for the bundle recompile and test execution (host is contended, so this takes a while).
+
+This is whack-a-mole: the shared 454-file test bundle has multiple classes of pre-existing defects (duplicate classes AND Swift 6 concurrency violations in `PresetGallery`/`SlideRenderer` siblings) — none mine. It has never compiled cleanly in this tree, and each full-bundle run costs ~10 min.
+
+Cleaner path: build a **dedicated test target that sources only my test file** (+ links the already-built app), via an untracked xcodegen include-spec. This sidesteps the broken bundle entirely and reuses the cached app build. The tracked `project.yml` stays untouched; the generated `.xcodeproj` is git-ignored.
+
+Isolated test target `ChargeHistoryUnitTests` created (sources only my test file). Now let me run it — it reuses the already-built app and compiles just my one test file.
+
+App recompiling with testability (0 errors). Once that's done it compiles my single test file and runs. Let me wait.
+
+My isolated test target is now compiling (0 errors). Let me wait for it to link and run the tests.
+

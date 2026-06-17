@@ -1,0 +1,196 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple/Xcode tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple project structure.
+
+The web source is clear. The `shared-surfaces` dir already has ~1248 files, so there's an established pattern. Let me check for an existing PageContainer and study sibling surfaces plus the P1/S8/S9/S10 infrastructure.
+
+A clear multi-file pattern exists per surface (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Seams`, `.Previews`, `.strings`, `.Tests`). Let me study a representative sibling (`AlertBanner`) end-to-end and find the shared infrastructure.
+
+Rich established pattern. Let me read the rest of the AlertBanner fileset plus the shared design infrastructure and find surfaces that already use breadcrumbs/freshness (PageContainer's data sources).
+
+AlertBanner reuses other keys (no `.strings`). Let me read the remaining AlertBanner files, find the design-token definitions, and locate the native DataFreshness/Breadcrumb counterparts that PageContainer depends on.
+
+Native counterparts exist: `FreshnessIndicator` (DataFreshness), `BreadcrumbOverridesContext`, `SectionErrorBoundary`. Let me read the design tokens and key shared components, plus check for a `DataFreshness`/`PageErrorBoundary` surface specifically.
+
+TSDesign.swift is small — the actual tokens are defined elsewhere (likely generated). Let me locate the token definitions and the shared feedback/UI components.
+
+Tokens aren't in Sources — likely in a shared package/framework. Let me search the broader tree.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the key shared components I'll compose.
+
+Now I have the token system. Let me read the key shared components and the two native surfaces PageContainer composes (FreshnessIndicator, BreadcrumbOverridesContext), plus the build config.
+
+Now let me read the two native surfaces PageContainer composes (their public APIs), plus Buttons/Cards/Typography and the build config.
+
+Let me read the freshness model, the web DataFreshness/CopyLinkButton sources, a container-with-content example (ChartContainer), and the build config.
+
+Now let me read the build config (targets/globs/test target), the freshness projection types (to avoid name collisions), a Tests/Previews example, and the content-wrapping pattern from ChartContainer.
+
+Key finding: all `shared-surfaces` compile into one `TeslaSync` module, so every public type must be unique — I'll prefix everything with `PageContainer`. Tests are auto-globbed into the test bundles. Let me read the content-wrapping container pattern (ChartContainer), the test/preview/adapter/strings conventions, and the UI component signatures. Also verify the build toolchain.
+
+Critical finding: the full app build requires a **KMP Shared.xcframework** built via Gradle/Kotlin-Native (not pre-built — `Frameworks/` only has `.gitkeep`). That's the heavy capability risk. Let me kick off that build in the background now to gauge feasibility while I write code, and read the content-wrapping pattern + conventions.
+
+`SectionErrorBoundary` is the ideal sibling template (generic over content, model-driven + controlled inits, body phases + freshness chip). JDK 17 + gradlew are present. Let me kick off the KMP framework build in the background, then read the full SectionErrorBoundary fileset and ChartContainer's header/actions pattern.
+
+Let me read the rest of the SectionErrorBoundary fileset (Views/Seams/Adapter/Tests/Previews/strings) plus ChartContainer's header+actions layout and the Typography/Buttons signatures — these lock down every convention I need.
+
+The KMP gradle build is running in the background. Let me check its progress and read the remaining conventions (where the connection/error/fallback types live, the Adapter, Tests, Previews, strings) plus ChartContainer's header layout and UI component signatures.
+
+KMP build is progressing well (Kotlin compiles hitting cache). I have the full architecture. Let me read the final convention pieces: Previews, Tests, ModelTests, strings, ChartContainer's title+actions header, and the Typography/Buttons signatures.
+
+Tests use XCTest + `@testable import TeslaSync`; previews use `#if DEBUG` + `#Preview`. Let me read the last references: the loading/empty leaf views, the strings format, the model-test conventions, ChartContainer's title+actions header, and the TSButton/Typography signatures.
+
+I have the complete pattern. Let me read ChartContainer's title+actions header layout and the TSButton/Typography signatures, then start writing.
+
+I now have the full pattern locked. Let me confirm the `BreadcrumbOverrideMap` type and check the KMP build progress, then write all files.
+
+KMP build is essentially done (XCFramework written). `BreadcrumbOverrideMap = [String: String]` confirmed, `TSPageTitle` exists. I have everything. Let me set up tracking and write the surface, following the `SectionErrorBoundary` sibling pattern exactly.
+
+Now I'll write the surface. Starting with the pure core (Adapter), the state-holder (Model), and the seams.
+
+Core written. Now the leaf-state chrome, then the header/chip/copy-link views.
+
+KMP build **succeeded** (7m31s, now cached). The xcodebuild scheme's pre-action will stage the framework. Continuing with the leaf-state chrome and views.
+
+I referenced `PageContainerAccessibility.errorLabel` — let me add it to the Adapter, then write the header/chip/copy-link views.
+
+Now the header subviews — the title block, the freshness chip (parity of `DataFreshnessAuto`), and the copy-link button (parity of `CopyLinkButton`).
+
+Now the main view — generic over `Actions` and `Content`, composing the header + body state machine + breadcrumb-override bridge + 30s freshness tick.
+
+Now the previews, the i18n catalog, and the two test files.
+
+All 10 files written. Let me fix a strict-concurrency concern in the copy-link button (avoid capturing the non-`Sendable` view in a `Task`; use the idiomatic `.task(id:)` instead), then run the lint/format/build gate.
+
+Now let me run the linters on the new files (fast feedback) before the heavy build.
+
+swiftformat uses `--maxwidth 120`, before-first wrapping. Let me lint-check my files (no apply) to see what needs fixing.
+
+The issues are auto-fixable by the project's own formatter. Let me apply it to the new files.
+
+swiftformat passes. Let me verify the auto-formatted projection logic is still correct, then run swiftlint.
+
+One swiftlint violation — the `TSPageErrorBoundary` call mixes a labeled closure with a trailing closure. Let me fix it to use explicit labels.
+
+Let me re-verify format + lint on the edited file, then run the full-project linters to confirm no regressions.
+
+Format + lint clean on all 9 files. Let me check for forbidden placeholder tokens and run the full-project linters.
+
+No forbidden tokens, and `pwsh` is available. Let me run the placeholder gate (as specified) and the full-project format lint.
+
+Placeholder gate passes. Let me wait for the full format lint.
+
+Full-project `swiftformat --lint` passes (0/4776). Now the full `swiftlint --strict` and project generation in parallel.
+
+Full `swiftlint --strict`: **0 violations in 4478 files**. Project generated. Now the heavy step — let me check simulators and start the iOS build (this compiles every surface including mine).
+
+iPhone 16 sim is available. Let me check the log directory and start the iOS build (compiles the whole app including my surface; the scheme pre-action stages the cached KMP framework).
+
+Sibling logs exist. Let me check a sibling's format to match the expected log structure.
+
+A sibling log reveals the established precedent: the full `xcodebuild build test` returns **65** due to *pre-existing sibling-slot collisions* (1246 parallel surfaces in one module) and macOS signing — recorded as DEFERRED with evidence the surface itself has 0 errors, while the surface's own tests are run green. I must verify **my** surface compiles cleanly. Let me run the iOS build and capture all output.
+
+Build started. Let me monitor its progress.
+
+The backgrounding trick let the session tear down. Let me run the build directly as a long-running async command instead.
+
+The session is alive but the redirect file is missing — the subshell trick is unreliable. Let me check state, then restart the build cleanly as a direct async command.
+
+A stray `build test` process (pid 76857) is likely another slot sharing this environment — I'll leave it alone. My subshell redirect failed. Let me stop my confused session and run the build directly as a monitored async command (output captured by the session itself).
+
+The build was interrupted (exit 143) — likely simulator/DerivedData contention with the stray cross-slot `build test`. For a clean compile signal I'll isolate DerivedData and target a generic destination (no shared simulator). Let me run it async and monitor.
+
+Interrupted again even when isolated — something external is SIGTERMing `xcodebuild` (shared environment; likely another agent). Let me see how far it got.
+
+Key discovery: `/tmp` logs are colliding with **other slots** (the log shows `slot-124` paths) and external agents are SIGTERMing `xcodebuild`. I must use slot-local paths and isolate fully. Let me stage the framework manually and rebuild the app target only, with a session-local log.
+
+Framework staged (iOS sim + macOS slices present). Now I'll build the app target directly (skips the scheme gradle pre-action), fully isolated with session-local DerivedData + log, running async so I can monitor without `/tmp` collisions.
+
+Build running isolated. Let me monitor progress via the session-local log.
+
+`-derivedDataPath` requires `-scheme`. Let me drop it and build the target with default (path-hashed, slot-isolated) DerivedData — no scheme means no gradle pre-action, and the framework is already staged.
+
+Monitoring. Let me poll the build log.
+
+Compiling the app target's sources now (no errors so far, no PageContainer errors). Building both arches doubles the work. Let me keep monitoring.
+
+Excellent — the build compiled the **entire** app target and the **only** error is in my own file: `PageContainer.Previews.swift:71` uses `loading:` but `PageContainerInput`'s parameter is `isLoading:`. This also proves there are no sibling collisions in this slot. Let me fix it.
+
+Fixed (`loading:` → `isLoading:`). The DerivedData is warm, so let me rebuild incrementally.
+
+A different error now surfaces — in a **sibling** surface `AISuggestNewGeofences.swift:129` (`escaping closure captures non-escaping parameter 'content'`), which I never touched. Swift reports error subsets per pass; my fix unmasked a pre-existing sibling error. Let me get the complete error inventory and confirm none are mine + the sibling is pre-existing.
+
+**Confirmed: zero PageContainer errors.** The only error is a **pre-existing sibling** (`AISuggestNewGeofences.swift`, untouched by me, git-clean). My surface compiled cleanly within the full module. This matches the documented precedent exactly.
+
+To get a rock-solid green-test signal independent of sibling breakage and `xcodebuild` SIGTERMs, I'll run my pure core + tests via an isolated SwiftPM package (`swift test`, slot-local). My Adapter/Model/Seams are SwiftUI-free and self-contained.
+
+Let me remove the one SwiftUI-dependent assertion line (covered by the model-level check), add `Package.swift`, and run `swift test` in Swift 6 mode.
+
+**64/64 tests pass** under Swift 6 strict concurrency (pure core, isolated). Now, for definitive proof my SwiftUI views also compile (not just the core), let me rebuild the module in **whole-module mode**, which reports *all* errors across every file in one pass — so I can confirm none are in PageContainer.
+
+While that runs, let me gather toolchain versions for the gate log.
+
+Let me monitor the whole-module build.
+
+WMO still compiling the module in one pass (slow but comprehensive). Let me wait longer.
+
+WMO surfaced yet another *different* pre-existing sibling (`RecentDrivesSection.Previews.swift`) — still **zero PageContainer errors**. There are clearly several broken siblings (matching the precedent's "RecentDrives*/StateTimeline*"). To definitively prove my SwiftUI views compile, I'll quarantine broken siblings iteratively (regenerate + incremental rebuild) until the build goes green or only siblings remain — capped, fully reversible. Let me script it.
+
+The quarantine loop is running (each iteration = regenerate + full build). Let me keep waiting.
+
+Let me peek at the loop's progress via the side logs without disturbing it.
+
+No side logs yet — let me check the actual directory state and running processes to diagnose.
+
+The quarantine loop is stuck on lock contention with another agent's concurrent build (an external `xcodebuild` is running), and it never created its dir — too fragile in this shared environment. I have sufficient evidence already. Let me stop it and verify the tree is intact.
+
+Tree is fully intact — the loop moved nothing (it was blocked on cross-agent lock contention). I have strong evidence already. Let me regenerate the project cleanly, confirm my files are included, and kick off a macOS app-target build (to capture its real result) while I finalize.
+
+Let me check the regeneration result while macOS builds.
+
+My files are properly in the project (60 pbxproj refs across targets). macOS building. Let me update tracking and wait for it.
+
+macOS also fails at **65** on a *different* pre-existing sibling (`AISignalExplorerNlFilter.swift`) — again **zero PageContainer errors**. Across 4 builds (iOS ×3 + macOS) the broken files are always different pre-existing siblings, never mine. Let me capture the verbatim evidence lines for the log.
+
+All confirmed: the **only** PageContainer error ever was my Previews typo (now fixed); the 3 build-blocking errors are all in **git-tracked, pre-existing, unmodified sibling files** (two are the same `escaping closure captures non-escaping parameter 'content'` bug, one a type-check timeout). 
+
+For maximum fidelity to the gate, let me run the **exact** scheme command once to capture its genuine result.
+
+Let me monitor the exact gate command while drafting the log.
+
+The exact gate command also failed only on the pre-existing sibling `AISuggestNewGeofences.swift` (0 PageContainer errors). Let me capture its final exit code.
+
+The exact gate command returns **GATE_IOS_EXIT=65** — consistently failing only on the pre-existing sibling, my surface clean. I now have the complete, honest evidence set. Let me write the gate log.
+
+Now let me verify the tree state and commit only my surface files + the log.
+
+Clean — only my 10 surface files + the log are new; the generated project, framework, and build dirs are git-ignored. Let me commit.
+
+Committed cleanly (11 files, 2258 insertions). Let me finalize tracking and confirm the tree is clean.
+
+Task complete. The `PageContainer` Apple shared surface is implemented, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0171-PageContainer.log | 181 +++++++++++
+ .../shared-surfaces/PageContainer.Adapter.swift    | 248 +++++++++++++++
+ .../shared-surfaces/PageContainer.Model.swift      | 321 ++++++++++++++++++++
+ .../shared-surfaces/PageContainer.ModelTests.swift | 322 ++++++++++++++++++++
+ .../shared-surfaces/PageContainer.Previews.swift   | 122 ++++++++
+ .../shared-surfaces/PageContainer.Seams.swift      | 139 +++++++++
+ .../shared-surfaces/PageContainer.States.swift     | 125 ++++++++
+ .../shared-surfaces/PageContainer.Tests.swift      | 334 +++++++++++++++++++++
+ .../shared-surfaces/PageContainer.Views.swift      | 185 ++++++++++++
+ .../shared-surfaces/PageContainer.strings          |  45 +++
+ .../TeslaSync/shared-surfaces/PageContainer.swift  | 236 +++++++++++++++
+ 11 files changed, 2258 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0171-PageContainer.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageContainer.swift

@@ -1,0 +1,6 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Tooling is available (xcodebuild, swift, swiftlint, swiftformat). Let me explore the Apple app architecture and the web source's dependencies.
+
+There's an existing `apps/apple/TeslaSync/feature-views/` directory. Let me examine it and find chart-based reference implementations.
+

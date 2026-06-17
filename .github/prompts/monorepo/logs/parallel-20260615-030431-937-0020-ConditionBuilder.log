@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Now let me explore the apps/apple directory structure and existing patterns.
+
+There's a structural discrepancy. Let me examine the project layout, existing Automation patterns, and the parity manifest.
+
+This is a key discovery: actual feature code lives in `Sources/Features/Automations/`, not `TeslaSync/Features/Automations/`. Let me check tool availability and reconcile the path convention.
+
+Full toolchain is available (Xcode 26.5, swiftlint, xcodegen, pwsh, swiftformat) — not a BLOCKED scenario. Let me examine the parity manifest records and existing patterns.
+
+ActionBuilder is the closest sibling (also a sub-builder). Let me study how it was implemented — path, log format, and project wiring.
+
+Critical: ActionBuilder (the sibling) P7 page lives at `Sources/Features/Automations/ActionBuilderPage*.swift`, while an older `TeslaSync/feature-views/ConditionBuilder.*` artifact already exists. Let me read the full ActionBuilder log to learn the exact convention.
+
+This is the exact template. Let me read the rest of the ActionBuilder log (parity section + conclusion) and the existing ConditionBuilder reuse core.
+
+There's a reusable pure core at `TeslaSync/feature-views/ConditionBuilder.{Types,Adapter}.swift`. Let me study the existing feature-view rendering and the ActionBuilderPage template I'll mirror.
+
+Now let me examine the existing feature-view rendering, the ActionBuilderPage view/fields templates, and the shared P3 component library.
+
+Let me read the ActionBuilderPage main view + fields, the existing ConditionBuilder.Fields, and locate the P3 shared components.
+
+Now let me check the existing ConditionBuilder top view, its strings table (to port values), the Localizable.xcstrings, and confirm P3 component signatures.
+
+The existing `.strings` table has all values I need to port. Now let me check what already exists in `Localizable.xcstrings`.
+
+Only 3 of the required keys exist. I need to add 17 required + 53 supporting = 70 keys. Let me check the exact xcstrings entry format and confirm P3 component signatures.
+
+Let me confirm exact signatures for the P3 components I'll use.
+
+Let me confirm the remaining component init signatures (TSButton, TSGlassPanel, TSEmptyState, TSSkeleton, TSErrorDisplay, TSTone) before writing.
+
+I have all signatures confirmed. Let me set up tracking, check the build prerequisites (Shared.xcframework, check-placeholders script), and read the test template.
+
+I now have everything needed. Let me check the swiftlint config limits, then create the plan and start implementing.
+
+I have full context now. Let me create the plan and todo tracking, then implement.
+
+Now I'll write the page model, mirroring the ActionBuilder precedent and reusing the geofence data seam.
+
+The model returns a `Binding` which needs SwiftUI — I'll keep the model Foundation-only (harness-friendly) and move the binding to the SwiftUI layer.
+
+Now the Views file — text bridge, geofence picker (all data states), and primitives, porting the feature-view logic to the catalog localizer.
+
+Now the Fields file. First, let me verify the placeholder scanner patterns since `statePlaceholder` contains "Placeholder".
+
+"Placeholder" is a forbidden pattern. Let me check the exact matching logic (case sensitivity, opt-out handling).
+
+Critical: the scanner matches "Placeholder" case-insensitively in **all** lines (code + comments). Let me audit my files for that word and other forbidden patterns.
+
+Let me reword to avoid the forbidden word entirely (cleaner than opt-outs).
+
+Now the Fields file (row panel + 4 per-kind editors). The `statePlaceholder` parity key needs an opt-out marker.
+
+Now the main page view + skeleton + previews.
+
+Now the route registration seam and the model tests.
+
+All 6 Swift files written. Now let me add the catalog strings. First, verify the xcstrings formatting (sort order + indent) to minimize diff.
+
+The format uses `" : "` separators and isn't strictly sorted. I'll insert new entries surgically (preserving the existing 4.9MB file byte-for-byte) to keep a clean diff.
+
+Mixed format: top-level keys use `": "`, entries use `" : "`. My entry blocks already match the entry style. Let me fix the marker and re-run.
+
+70 keys added (9481 → 9551). Let me verify all required keys now resolve, then run formatting/lint gates.
+
+swiftformat found fixable issues. Let me view the specific lines, fix the `statePlaceholder` line manually (to protect the parity marker), and the text-bridge `Self.` shadowing.
+
+Let me fix the text-bridge shadowing, restructure the `statePrompt` line to fit width with the parity marker, then auto-format.
+
+Let me verify the parity-marker line fits within 120, then auto-format the files.
+
+Line is 118 chars (≤120). Now auto-format my files (write mode) to fix the `#if` indent, then re-lint.
+
+swiftformat clean (0/6), marker intact, indent fixed. Now swiftlint --strict and the placeholder scan.
+
+swiftlint --strict: 0 violations. Now the placeholder scan on both directories.
+
+PLACEHOLDER_COUNT=0 in both dirs. Let me confirm my files specifically have no unmarked forbidden patterns.
+
+All static gates pass (swiftformat 0/6, swiftlint --strict 0/6, placeholder COUNT=0). Now an executed model harness under Swift 6 strict concurrency, reusing the real pure core + geofence seam.
+
+Harness compiled clean under Swift 6 strict concurrency. Let me run it.
+
+18/18 harness assertions pass. Now let me set up the dual-platform view type-check against real P2/P3 sources. First, scout the dependency set (what imports `Shared`, where `teslaSyncTheme` lives, SDK paths).
+
+Good — no `Shared` imports in Theme/Design/Components. Let me get the remaining scout info.
+
+Now the dual-platform view type-check against the real P2 tokens + P3 components. Let me run macOS first.
+
+macOS type-check clean. Now iOS simulator (exercises the `#if os(iOS)` branches).
+
+Both view type-checks pass (0+0). Now let me attempt the authoritative full build. First, check xcframework staging feasibility.
+
+JDK 17 + gradlew present. Let me stage the Shared.xcframework (KMP/Gradle build) in the background, then proceed to the full xcodebuild gate.
+
+Build is running. While it compiles, let me prepare the ledger update. Let me inspect the ledger structure around the automations rows.
+
+I'll add the two ConditionBuilder ledger rows after the ActionBuilder pair.
+
+Ledger updated and valid. Let me check the Gradle build progress.
+
+Still building (KMP/Native first-run is slow). Let me continue waiting.
+

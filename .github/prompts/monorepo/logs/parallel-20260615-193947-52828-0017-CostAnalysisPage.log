@@ -1,0 +1,28 @@
+I'll start by exploring the repository structure to understand the task. Let me look at the web source page, the Apple app structure, and check the tooling.
+
+Xcode 26.5, swiftlint, swift 6.3.2, and pwsh are all available. The gate can run. The Apple app structure differs from the prompt — let me explore the actual layout and the web component pieces.
+
+The repo structure differs significantly from the prompt's stated paths. There's a rich set of existing Charging/Cost components under `TeslaSync/feature-views/`. Let me understand the actual conventions: how existing pages are structured, registered, and where the parity manifest/ledger live.
+
+Now I see the established convention: `Sources/Features/<Domain>/` holds `XxxPage.swift`, `XxxPageModel.swift`, `XxxRouteRegistration.swift`, etc. Let me examine the Charging features dir, the project.yml source roots, and the parity ledger entry.
+
+project.yml is at `apps/apple/project.yml`. The ledger has no CostAnalysis entry yet. Let me read the project config, ledger structure, and a complete reference page (Powershare in Charging, the closest sibling).
+
+Critical finding: `apps/apple/TeslaSync/Features/` is **not** a source root in project.yml. The real page convention is `apps/apple/Sources/Features/<Domain>/`. The prompt's path is a generated template that doesn't match the repo. I'll follow the actual convention (Powershare is the Charging sibling) so the build picks it up. Let me study the closest reference pages.
+
+Now I understand the page + model + route convention. Let me read the routing infrastructure and the remaining Powershare files (sections, models, format, sample) to learn the full pattern.
+
+Excellent template understanding. Now I need the routing system and to check whether the existing Cost* components in `feature-views/` are reusable and where routes get composed. Let me investigate.
+
+Key findings: no `costAnalysis` route exists yet (only `vehicleCost` admin route, which is different), and the Cost* components in `feature-views/` are orphans — not yet composed by any page. This P7 page is meant to compose them. Let me examine the web sub-components and the existing Swift Cost components to map reusability.
+
+The existing `feature-views/` Cost components are full P3 ports, each a `View` taking an `@Observable` model with its own Adapter and built-in loading/empty/error/content states. The P7 page composes them. Let me map which web sub-components have Swift equivalents and read the adapters + AI narration API.
+
+All 10 web sections already have Swift P3 components. The page's job is to compose them. The key question is construction ergonomics for each `@Observable` model. Let me examine the model + previews to learn the simplest correct construction path, and the AI narration API.
+
+Now I understand the construction pattern: each component has an `InMemory*Source` seeded with an `*Update`, and `Model(source:)`. The page composes them by computing projections from sessions. Let me get a consolidated map of every component's Source/Update/Model construction API and the AI narration API, plus read the web `useCostAnalysisData` projection.
+
+All 10 components share a consistent `InMemory*Source(initial:)` + `Model(source:)` pattern. Composing them is tractable. Let me read the web projection (`useCostAnalysisData`) and types to understand the data shapes I must compute, then map to each Swift component's Update.
+
+I now have the complete web projection (all formulas + constants). Before architecting, I need to resolve the localization strategy and the two components with different constructors. Let me check the string catalog and remaining component APIs.
+

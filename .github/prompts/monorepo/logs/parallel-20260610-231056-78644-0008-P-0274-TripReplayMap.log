@@ -1,0 +1,162 @@
+I'll start by exploring the repository structure, the web source spec, and the Apple app scaffolding, plus checking runner capabilities.
+
+Runner is fully capable: Xcode 26.5, Swift 6.3.2, swiftlint + swiftformat installed, iOS 26.5 simulators (including iPhone 16) available. Now reading the web source spec and Apple app structure.
+
+Now let me study existing feature-views for conventions, the maps/state-holder/token/i18n layers, and the lint/build configs.
+
+Large established codebase (2494 files in feature-views) with a clear multi-file convention. Let me check for existing TripReplayMap files, find a MapKit-based exemplar, and locate the P1 layers (state-holders, tokens, i18n, diagnostics).
+
+`TripPlannerMap` and `RouteMapSection` are the closest map-based exemplars. Let me examine the full file set for `TripPlannerMap` (the closest analog) to learn the exact conventions.
+
+Reading the complete TripPlannerMap exemplar to learn the exact file conventions, state-holder binding, MapKit usage, and i18n facade.
+
+Excellent, clear conventions. Now reading the remaining TripPlannerMap files (Views, States, Projection, Labels, Previews, strings, Tests, ModelTests).
+
+Now reading the test files and the shared infrastructure (TSGeo, design tokens, skeleton, glass panel helpers).
+
+I have the full convention. Now let me port-source the web geo helpers + `DrivePosition`, and find the shared Apple infra (`TSGeo`, design tokens, skeleton, glass panel) plus how a positions-based map surface (`RouteMapSection`) handles polylines and layer switching.
+
+Now reading the design tokens, skeleton/material helpers, and the `RouteMapSection` (positions-based map) to see polyline + layer-switcher patterns.
+
+`RouteMapSection` is the static sibling of `TripReplayMap` — very close. Let me read its remaining files plus the shared map/token symbols (`TSMapStyle`, `TSMapCamera`, `TSSkeleton`, `tsGlassPanel`, `TSSpacing`/`TSRadius`/`Color.TS`/`Font.TS`).
+
+I now understand the full pattern. Let me confirm the remaining shared symbols (`TSMapStyle`, `TSMapCamera`, `TSGlassPanel`/`TSFadeIn`/`TSButton`, `TSSkeleton`) and the design tokens, then write a plan.
+
+Let me confirm the `TSGlassPanel`/`TSFadeIn`/`TSButton`/`TSSkeleton` APIs and the `Color.TS`/`Font.TS` token names.
+
+All tokens confirmed. Now checking the build toolchain situation — XcodeGen, the `Shared.xcframework` dependency, and the build script the scheme invokes.
+
+XcodeGen + pwsh both present. The `.xcodeproj` needs generating and `Shared.xcframework` must be built by the scheme's pre-action. Let me read that build script and the Frameworks note.
+
+The build needs a Gradle-built KMP `Shared.xcframework` (heavy). Let me read the pending-verifications note and check the placeholder checker, then kick off the slow framework build early in the background.
+
+Let me read the forbidden placeholder patterns and grep the pending-verifications note, then kick off the slow KMP framework build in the background.
+
+Forbidden patterns noted (case-insensitive: `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`; plus swift-specific). I'll keep all my files clear of these. Let me check the pending-verifications doc's stance on local xcodebuild, and gradle availability.
+
+This clarifies the established, honest methodology. The full-app `xcodebuild` is documented as **macOS-pending** across *every* completed surface (0010, 0180, 0231, 0262, 0264, 0279, 0282, 0283, 0297…) due to pre-existing unrelated parallel-merge collisions, the KMP `Shared.xcframework` Kotlin/Native long-pole, and missing signing identities. Each surface proves itself green via **isolated SwiftPM build + tests**, **real iOS-18/macOS-15 `swiftc -typecheck`**, **swiftlint/swiftformat/placeholder**, and **i18n parity**.
+
+Let me kick off the slow Gradle framework build in the background now, and read a recent surface log to mirror the exact verification harness.
+
+Prior TripReplayMap runs exist as logs (the files themselves aren't in this slot). Let me read the most recent TripReplayMap execution log and the sibling RouteMapSection log to mirror the exact isolated-verification harness.
+
+This prior-run log is a precise architectural blueprint (10 files, isolated SwiftPM + 42 tests, deferred full-app gate). I'll build the real files myself following it and the proven `RouteMapSection`/`TripPlannerMap` patterns, then verify green. Let me confirm a few remaining API details (`TSTone`, `tsGlassPanel` modifier, `TSButtonVariant`, remaining `Color.TS` tokens) and write a plan.
+
+I now have a complete blueprint and all APIs confirmed. The established, honest methodology (used by every prior P4 surface) is: ship the surface, verify green via **isolated SwiftPM build + tests**, real `swiftc -typecheck`, swiftlint/swiftformat/placeholder/i18n, `xcodegen generate`, and record the full-app `xcodebuild` as **macOS-pending/deferred** with evidence. Let me set up tracking and start writing the 10 files.
+
+Now writing the pure Foundation core (Adapter).
+
+Now the Projection file (route geometry + phases + pure labels).
+
+Now the Model (state-holder seam + observable model + telemetry + i18n facade).
+
+Gradle is at the Kotlin/Native link stage (the long pole) — progressing. Continuing with the Model file.
+
+Now the MapKit canvas (Views) — the most involved SwiftUI file.
+
+Updating progress and writing the Chrome (chips, banners, skeleton, error, empty states).
+
+I need to verify the `TSSkeleton` API — I passed `height: nil` which is invalid (height is non-optional). Let me check its body.
+
+`TSSkeleton.height` is non-optional — I'll use a shared canvas-height constant and fix the empty/error sizing. Let me correct the Chrome file.
+
+Now the surface composition file (with the shared metrics constant, the `Text` facade helper, and the layer switcher resolved through the surface i18n table — the sibling `RouteMapSection` precedent).
+
+Now the i18n catalog (strings).
+
+Now the Previews file (all 7 states).
+
+Now the test files. AdapterTests (geo, speed bands, a11y) first.
+
+Let me tighten the long heading-assert lines (to satisfy swiftlint's 120-col rule) and write the projection/model Tests file.
+
+Now the projection + model Tests file.
+
+All 10 files written. Let me run swiftformat and swiftlint on the new files (and check Gradle progress).
+
+Minor formatting issues — letting swiftformat auto-fix my files (gate is lint-only, so files must be pre-formatted), then re-verify.
+
+swiftformat passes (0/9). Let me review the auto-format changes and run swiftlint --strict.
+
+Two swiftlint nits: a 1-char identifier `a` and an `opening_brace` from the wrapped `where`. Let me fix both in the Adapter.
+
+Re-verifying format + lint after fixes, and checking Gradle progress.
+
+Gradle **BUILD SUCCESSFUL (7m34s)** — `Shared.xcframework` is now available to stage. First, fix the lint catch-22 (`for_where` vs line length) using the `isValid` property.
+
+Both clean (format 0/9, lint 0 violations). Now the placeholder gate (literal command + an honest scoped scan of the real files), and staging the freshly built `Shared.xcframework`.
+
+Placeholder gate clean (COUNT=0) and `Shared.xcframework` staged (149M). Now the primary green signal — an **isolated SwiftPM harness** compiling the exact shipped sources against the real design system + running XCTest. Let me map the design-system dependency tree first.
+
+Only `UnitFormatters.swift` couples to `Platform` (and my surface doesn't use it). Let me build the isolated SwiftPM harness in `/tmp`, compiling the exact shipped sources against the real design system + Components tree.
+
+Confirmed safe to omit. Building the harness now.
+
+Harness assembled (38 Components + Design + Tokens + 7 surface files + 2 test files). Running `swift test` under the Xcode toolchain (full SDK + macro plugins).
+
+Compile errors surfaced (plus an `error: fatalError` suggesting a possible compiler/macro crash). Let me capture the full ordered error list to find the root cause.
+
+Root cause: I named both the value type (Projection) and the SwiftUI view (Views) `TripReplayPlayhead` — a redeclaration that collapsed type inference across the module (the `annotationTitles`/keypath/`Binding` errors are cascades). Let me rename the view and drop the uncertain `annotationTitles` modifier (matching `RouteMapSection`, which shows marker titles).
+
+Re-syncing the updated source into the harness and rebuilding.
+
+Module compiles clean (0 errors). Now running the test suite.
+
+**Isolated build + 42/42 tests pass** under Swift 6 strict concurrency against the real design system. Now `xcodegen generate` to confirm the files enumerate into both app targets + test bundles.
+
+`xcodegen generate` succeeded — all 10 files enumerated (60 pbxproj refs across both app targets + test bundles). 
+
+Now I'll attempt a real full-app iOS compile (Shared.xcframework is staged) in the background to gather fresh evidence on whether any errors are TripReplayMap-attributable vs the documented pre-existing blockers. Starting it detached and continuing.
+
+While that compiles, let me monitor progress (it will surface either clean or pre-existing collisions).
+
+The `-target` mode rejects `-derivedDataPath`. Let me use the scheme (the actual gate command, minus `test`) — the Gradle pre-action will now be incremental/fast since the framework is built.
+
+Full-app build **FAILED** as documented for every prior surface — and the failing compile batch is `VehicleCharts`/`VehicleCommandCenter`/`VehicleGauges`, **not** TripReplayMap. Let me confirm zero TripReplayMap-attributable errors and identify the pre-existing blockers.
+
+`pkill` isn't allowed — I'll analyze the (already-failed) log directly and kill the specific PID if it lingers.
+
+**Zero TripReplayMap-attributable errors.** The full-app build fails only on pre-existing parallel-merge collisions in *other* agents' surfaces (`RecentDrives*` and `StateTimeline*` ambiguous redeclarations) — exactly the documented blockers. (Other lingering xcodebuild PIDs belong to other agents sharing this host — I won't touch them.)
+
+Let me confirm my change set is confined to TripReplayMap files and that those collisions are pre-existing.
+
+Change set is confined to exactly the 10 TripReplayMap files (`.xcodeproj` and `Shared.xcframework` are git-ignored). The `RecentDrives*`/`StateTimeline*` collisions are pre-existing tracked files. Let me confirm none of my `TripReplay*` symbols collide with existing code.
+
+No symbol collisions — the only external "TripReplay" mention is a comment in `PlaybackSpeedMenu.Model.swift`; all my public type names are unique (0 occurrences elsewhere). 
+
+All evidence gathered. Writing the gate log now.
+
+Log written. Now committing exactly the 10 TripReplayMap files + the log (the `.xcodeproj` and `Shared.xcframework` are git-ignored).
+
+Exactly the 10 files + log staged. Let me check for pre-commit hooks before committing.
+
+No active hooks (worktree, pre-commit not installed). Committing.
+
+Committed cleanly (HEAD `e52e4ea14`); working tree clean (xcodeproj/framework are git-ignored). Cleaning up my temporary build artifacts (leaving other agents' processes and the git-ignored xcodeproj untouched).
+
+All 10 files committed (largest 306 lines, well within the 400-line SwiftLint budget) + the gate log; temp artifacts cleaned. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0274-TripReplayMap.log  | 224 +++++++++++++++
+ .../feature-views/TripReplayMap.Adapter.swift      | 209 ++++++++++++++
+ .../feature-views/TripReplayMap.AdapterTests.swift | 172 ++++++++++++
+ .../feature-views/TripReplayMap.Chrome.swift       | 187 +++++++++++++
+ .../feature-views/TripReplayMap.Model.swift        | 284 +++++++++++++++++++
+ .../feature-views/TripReplayMap.Previews.swift     | 120 ++++++++
+ .../feature-views/TripReplayMap.Projection.swift   | 306 +++++++++++++++++++++
+ .../feature-views/TripReplayMap.Tests.swift        | 272 ++++++++++++++++++
+ .../feature-views/TripReplayMap.Views.swift        | 189 +++++++++++++
+ .../TeslaSync/feature-views/TripReplayMap.strings  |  45 +++
+ .../TeslaSync/feature-views/TripReplayMap.swift    | 174 ++++++++++++
+ 11 files changed, 2182 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0274-TripReplayMap.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TripReplayMap.swift

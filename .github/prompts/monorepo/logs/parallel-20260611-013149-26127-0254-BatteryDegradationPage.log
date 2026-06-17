@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+The actual structure differs from the prompt. Let me examine the existing Features directories and parity tooling.
+
+The done pages live in `Sources/Features/<Category>/`. Let me study the existing Analytics pages to learn conventions.
+
+This is a well-decomposed pattern. Let me read the complete Statistics page set as my template.
+
+Excellent pattern clarity. Let me read the remaining Statistics files and the charts/components available.
+
+Now let me examine the available chart wrappers and shared components I'll need (ComposedChart, AreaChart, DataTable, AlertBanner, Badge).
+
+Now let me examine the routing system, Badges, Typography, Units facade, and how route registrations are aggregated.
+
+Let me check routing tests and the Units facade, Typography, and Badges before deciding the registration approach.
+
+Let me check the project.yml source roots and whether Xcode/swift tooling is available.
+
+This is a real macOS environment with full Xcode/Swift tooling — the gate can actually run. Let me study the web API hooks/types and the design tokens, then check the gate script.
+
+Now let me read the design tokens, typography, badges, cards, and the TSTone/TSIconBox primitives.
+
+Let me examine the localization catalog, the gate scripts, and the p4-apple README gate contract.
+
+Let me check the gate scripts and how placeholder scanning works.
+
+I have enough understanding to plan. Let me set up tracking and check which of the 60 strings already exist in the catalog to avoid JSON duplicate keys.
+
+Routing confirmed. Let me set up tracking and write the plan, then start building.
+
+Now I'll build the feature. Starting with the models (SI-canonical value types).
+
+Now the format helpers (display-boundary conversions + color/icon mapping).
+
+Now the `@Observable` page model with the data-source seam and derived chart data.
+
+Now the sample/empty/failing data sources.
+
+Now the main page view (header, phase switch, ready layout, skeleton).
+
+Now the sections file (summary, prediction, risk, recommendations, charging impact, health factors).
+
+Now the charts file (SoH gauge panel, trend+projection chart, range-loss chart).
+
+Now the history table (panel 21).
+
+Now the route registration, alias, and app wiring.
+
+Now wire the alias and the registration into the app chain.
+
+I added an opening paren — let me verify the closing parens balance.
+
+Now I'll add all 60 manifest strings to the catalog via a script (with JSON validation).
+
+The JSON reformatted the whole file. Let me revert and insert textually to keep the diff surgical.
+
+Surgical 660-line insert, validated. Let me verify the inserted block and head are intact.
+
+Now let me generate the Xcode project (XcodeGen) so the new files are included, then build.
+
+The build needs a Gradle-built KMP `Shared.xcframework`. Let me first run the fast gates (SwiftLint + placeholder scan) on my new files, then attempt the full build.
+
+Most violations are in my files (3 are pre-existing). Let me view the exact spots before fixing.
+
+I'll split the oversized Sections file and fix the line-length/operator issues.
+
+Now rewrite the Sample file to fix line-length and function-body-length violations.
+
+Let me re-run SwiftLint and check only my Battery files for remaining issues.
+
+SwiftLint clean. Now SwiftFormat lint and the placeholder gate.
+
+SwiftFormat found auto-fixable issues. Let me run the formatter on my files, then re-verify both linters.
+
+Both linters clean. Now the placeholder gate (PowerShell).
+
+Placeholder gate passes. Now the build — it needs the Gradle-built KMP `Shared.xcframework`. Let me assess the shared module.
+
+The build requires assembling the Kotlin/Native `Shared.xcframework` via Gradle (Kotlin 2.4.0). Let me kick that off in the background — it's the slow prerequisite.
+
+Gradle is downloading the Kotlin/Native toolchain (first run). While it works, let me generate the Xcode project so it's ready.
+
+Project generated with my files included. Let me check the Gradle build progress.
+
+Gradle is downloading the Kotlin/Native toolchain (first-run, can take a while). Let me keep waiting.
+
+Gradle build succeeded. Let me stage the framework and build the macOS app.
+
+Framework staged (Gradle now cached → 1s). Now the macOS build.
+
+Build failed only on code-signing (entitlements need a dev cert) — an environment issue, not code. The xcstrings compiled cleanly. Let me rebuild with signing disabled so it compiles the Swift.
+
+Only error is in a pre-existing unrelated file (`AISignalExplorerNlFilter.swift`), not mine. Let me confirm no Battery errors and inspect that pre-existing issue.
+
+Confirmed: zero Battery errors; one pre-existing unrelated error blocks the module build. Let me view it and apply a temporary patch to verify my code compiles, then revert it.
+
+The pre-existing error is a genuine bug under this newer Swift toolchain: `content` must be `@escaping` to pass into `TSGlassPanel`. I'll apply this minimal fix to unblock the module build, verify my code compiles, then run tests. I'll document this transparently.
+
+More pre-existing instances of the same toolchain-strictness pattern exist. Let me measure the scope — how many unrelated files share this exact issue.
+
+This is a systemic, pre-existing toolchain incompatibility (72+ unrelated files use a non-escaping `@ViewBuilder` closure that Swift 6.3.2 rejects). Critically, it revealed that MY `factorPanel` has the same latent issue — I must fix that in my own file. Let me check my files for this pattern.
+
+Only my `factorPanel` is affected. Let me fix it (it passes `content()` into the escaping `TSGlassPanel` closure).
+
+Now, to truly verify my page compiles and tests pass, I need a green module. The 72+ baseline files block it. I'll apply the mechanical `@escaping` fix to baseline files **temporarily** (recording them), build + test to green, then revert all baseline changes — keeping only my in-scope files.
+
+117 baseline files patched (recorded for revert). Let me confirm my intended files weren't touched, then rebuild.
+
+The @escaping class is resolved; now a different pre-existing class appears (a `#if DEBUG` preview with slow type-checking). Since previews are `#if DEBUG`, a **Release** build excludes them. Let me build Release config to verify the real (non-preview) code compiles.
+

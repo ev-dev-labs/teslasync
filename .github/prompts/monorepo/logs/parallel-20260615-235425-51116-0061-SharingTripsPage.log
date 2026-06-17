@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand the web source page and the Apple app architecture.
+
+I have the web source. The parity unit covers 2 GlassPanels (recent trips list + static hint), 3 states, and 8 strings — the AI card is a separate parity unit (gated by `withAiFeature`). Now let me explore the Apple app structure to understand existing patterns.
+
+Xcode 26.5, swiftlint, and swift 6.3.2 are all available — the gate can run. Let me explore the Apple project structure, parity infrastructure, and existing comparable pages in parallel.
+
+XcodeGen `project.yml` drives the project. Let me read the project config, parity manifest record, the ledger, and check for xcodegen.
+
+The `project.yml` does **not** list a `TeslaSync/Features` path — pages actually live under `feature-views`. The prompt's stated output path is a generator template; I must follow the **real** repo conventions. Let me inspect the manifest record, the apple ledger, and find how an existing page is structured + registered.
+
+The naming convention is multi-file per surface (`.swift`, `.Model.swift`, `.Views.swift`, `.Adapter.swift`, `.strings`, etc.). Let me find the ledger rows, how pages are structured, the Trips facade, and the localization setup.
+
+There's a completed reference page: `page:admin/ApiPlayground`. Let me study it end-to-end (files + evidence log format) since it's the closest template, plus check the localization catalog and the gen-prompts log path.
+
+The real convention is `apps/apple/Sources/Features/<Domain>/<Name>Page.swift` (that's where `ApiPlaygroundPage` actually lives, and `Sources` is in `project.yml`). The prompt's `TeslaSync/Features/...` path is a generator template not wired into the build. Let me study the reference page + its evidence log thoroughly.
+
+Excellent template. Now let me read the Model, the evidence log (for exact PARITY log format), and the routing infrastructure.
+
+This is the gold template. The reference page binds to a static seam; I need a **real data-bound** page using `useTrips`. Let me explore the SharedFacade (KMP binding), AppRoute, app wiring, and an existing data-bound page.
+
+Key finding: `.sharing` and `.trips` routes already exist in `AppRoute`. I need to check how `/sharing/trips` resolves, whether `.sharing` is already hosted, and how real data-bound pages bind to the KMP core. Let me investigate.
+
+`.sharing` exists but isn't registered to a page yet; `/sharing/trips` needs its own route. Let me examine the route parser, the registry/app wiring, the KMP facade primitives, and find a real data-bound list page to mirror.
+
+The parser uses `firstSegment` for non-aliased paths, so multi-segment routes (like `notifications/audit`) need explicit aliases. Let me check the web routing for `/sharing` vs `/sharing/trips`, and confirm whether `.sharing` is meant as a hub.
+
+No `/sharing` index page exists in web — `/sharing/trips` is the only sharing page. Let me read the registry/host mechanism and check for exhaustive `AppRoute` switches (to assess the risk of adding a new enum case vs. reusing the existing `.sharing` route).
+
+Decision on routing: the web has exactly one sharing page (`/sharing/trips`), and `.sharing` already resolves `/sharing/trips` via `firstSegment` but is unregistered. I'll register the existing `.sharing` route → `SharingTripsPage` (lowest-risk, no enum changes) plus an explicit alias. Now the key question: how to bind `useTrips` to real data. Let me study the web hook, the KMP facade primitives, and a real data-bound page.
+
+The KMP facade uses `StateHolderModel` (binds Kotlin `StateFlow`) and `LoadableState` (projects `Resource<T>`). Let me check whether the `Shared` core exposes a Trips holder and how an existing data-bound list page wires up — to decide between a direct KMP binding vs a Swift-side repository seam.
+
+Pages use an injected provider-seam + `@Observable` model with sample providers (`*PageModel.Sample.swift`). The closest analog to a trips list is the **charging sessions list**. Let me study it end-to-end.
+
+ChargingList is the structural analog. Let me read its model, models, sample provider, and route registration to mirror the exact data-binding pattern.
+
+Complete pattern understood: `DataSource` protocol seam + `Sample*DataSource` + `*Phase` enum + `@Observable` model + `RouteRegistration`. Let me read the phase enum, sample source, list/format helpers, and the SI distance conversion to mirror them.
+
+Now let me read the phase enum, the SI/format helpers, the Units facade (P1/S5 converters), and check the available design components/typography.
+
+Now let me assess the build environment: whether `Shared.xcframework` is already staged (it gates the build and the `Units` SI facade), and the current build status. This determines my verification strategy.
+
+`Shared.xcframework` is not staged (Gradle/Kotlin-Native build, ~10 min). Let me check whether pages use the `Units` (Shared) facade for display conversion or local arithmetic, the current build-breakage state, and the available design components — this decides my dependency + verification strategy.
+
+The established pattern uses `Units.convertDistance` (the P1/S5 Shared facade) — I'll follow it. Many P4-APPLE pages were recently merged. Let me read the most recent page's evidence log to learn the current build status + accepted verification methodology.
+
+Current accepted methodology: `xcodegen` + `swiftformat --lint` + `swiftlint --strict` + placeholder scan + executed model/route harness + macOS/iOS view type-check against real P2/P3, with the full `xcodebuild` recorded `NOT_RUN` (out-of-scope KMP `Shared.xcframework` staging blocker). My routing matches the `.powerSql` precedent exactly (register existing case + parser alias). Since my page uses `Units` (→`Shared`), let me see how a `Units`-dependent page (NavigationRoute) handled isolated verification.
+
+NavigationRoute (a `Units`-dependent page) actually built the `Shared.xcframework` via Gradle and ran the build. Since my page needs `Units` (→`Shared`), I'll kick off the xcframework build in the background now, then write all code while it builds. Let me verify the toolchain and launch it async.
+
+Toolchain is ready (Gradle 8.14.5, JDK 17, Kotlin 2.0.21). Let me kick off the `Shared.xcframework` build in the background and proceed to write code while it builds.
+
+Build is running. Let me read the design tokens, the components I'll use, the web components to replicate, and the route tests — all in parallel.
+
+The launcher returned but the detached Gradle build continues. Let me read the token + component sources I'll use.
+
+Tokens live in the generated `Tokens.swift`. Let me read it plus the key components.
+
+Tokens are clear. Now the components — let me read Cards (TSGlassPanel), States (TSEmptyState/TSErrorDisplay), Skeletons, Typography, and Metrics.
+
+Now the skeleton, typography, metrics components, and the `tsGlassPanel`/`teslaSyncTheme` modifiers.
+
+Let me read the Metrics component, the web `InlineMetric`/`PageContainer` to replicate, the theme/material modifiers, and check the build progress.
+
+Now let me check the theme/material modifiers, the web `PageContainer` + formatters, the route tests, and the build progress.
+
+The Gradle build is mostly cache-hit (fast) and nearly done. Two key findings: (1) `translation.sharing.trips.*` keys exist but the **un-prefixed** `sharing.trips.*` keys (what SwiftUI resolves) do not — I must add them; (2) `RouteTests.swift` exists. Let me inspect the xcstrings format and the route tests.
+
+The xcstrings has two styles: native page keys (`"playground.title" : {`, en-only, spaces around colons) vs bulk-imported `translation.*` keys (ar/en/he). I must add **un-prefixed** `sharing.trips.*` keys in the native style with web-default values. Let me check key ordering, read RouteTests, and the build status.
+
+RouteTests stay green since I'm reusing `.sharing` (no new enum case); the alias is safe. The xcstrings is feature-grouped with new pages prepending keys at the top. Let me check the build and confirm the i18n source defaults, then start writing code.
+
+The xcframework is nearly staged. I need to confirm how pages flow `UnitPreferences` into the view/format layer (to keep the model harness-able while doing SI conversion at the display boundary). Let me study `QuickStats` (a `Units`-dependent page) end-to-end.
+
+The pattern: format helpers reference same-module `Units`/`UnitPreferences` (no `import Shared` needed), and views read prefs via `@Environment(\.tsUnits)`. Let me confirm that environment key, then write all the code.
+
+`@Environment(\.tsUnits)` defaults to `.metric`. I have everything. Let me confirm the web default number precision for energy, then write the implementation.
+
+`_globalPrecision` defaults to 2 (energy → 2 decimals; distance/duration use `fmtInt` → 0). The xcframework debug slice is staged; release is still linking. Let me verify how the web `PageContainer` renders the `loading` prop (replace vs. inline) to render states faithfully, then write the code.
+
+Web `PageContainer` shows the header always, then a centered spinner while loading. I'll render both panels always with phase-driven content in GlassPanel1 (skeletons/empty/error/list) and the always-on static hint in GlassPanel2 — matching the web's per-panel skeleton code and the ChargingList/ApiPlayground precedent. Let me check whether a native `AITripPostcardShareCardImageGeneration` exists as a hostable surface (the web's 3rd section, a separate parity unit) to decide on scope.
+
+A native `AITripPostcardShareCardImageGeneration` View + `@Observable` Model already exist (a separate, shipped parity unit). The acceptance criteria require "every anonymous region from the web source reproduced," and the SqlPlayground precedent hosts its AI child (reuse, not reimplement). I'll host it, fed by the selected trip. Let me read its View + Model API to host it correctly.
+
+The native AI card exposes a convenience init `init(tripID:styleHint:featureEnabled:baseURL:)` and self-gates (renders `EmptyView` when off). The selection model exists specifically to feed it (per the web comment), and the SqlPlayground precedent hosts its AI child — so I'll host it too. Let me check how the AI-enabled flag is wired app-wide and how SqlPlayground hosted its drafter.
+
+I'll host the AI card (the web's 3rd region) via its convenience init — the selection model exists to feed it, and the SqlPlayground precedent + acceptance criteria require reproducing every region. The staged xcframework now lets me attempt a real full build for verification. Let me set up tracking and write the implementation.
+
+The release xcframework is still linking. Let me write the plan and start creating the source files.
+
+The release build continues. Let me check the swiftlint/swiftformat rules so I write compliant code, then create the files.
+
+Config understood (maxwidth 120, `--self remove`, before-first wrapping). I'll write the files then run swiftformat autofix to normalize. Let me create the 4 core files.
+
+I need to create the directories first.
+
+Now the Page view and RouteRegistration. Let me update tracking and check the build.
+
+The `Shared.xcframework` is now staged — I can run the full `xcodebuild`. Let me write the Page view and RouteRegistration.
+
+Now let me read the app wiring point and an existing route-registration test, then write the test + wiring.
+
+Let me find the end of the registry chain to insert my registration.
+
+Now let me wire up the navigation: chain the registration in the app and add the deep-link alias.
+
+Let me make the model Shared-free (move the limit constant off the `Units`-dependent `Format` enum) so it's independently testable, then write the tests.
+
+Now the test file covering states, selection, formatters, and parity string keys/values.
+
+Now let me verify which shared keys my view references already exist, before adding the 8 new `sharing.trips.*` keys.
+
+Pages pass page- or shared-scoped error keys. The error state is a native robustness addition (web has none), so I'll reuse an existing shared key rather than invent a non-parity string. Let me verify `error.loadFailed` exists.
+
+`error.loadFailed` exists. Let me fix the page's error state to use it (instead of the non-existent `error.title`/`error.queryMessage`).
+
+Now let me add the 8 `sharing.trips.*` keys. Let me view the exact xcstrings header bytes to anchor the insertion correctly.
+
+Now let me validate the JSON, then format and lint my files.
+
+JSON valid with all 8 keys. swiftformat normalized 3 files. Let me verify lint-clean and run swiftlint.
+
+swiftformat is clean (0/7). Now swiftlint on my files.
+
+swiftlint scanned all 12644 files (config `included:` overrides path args). Let me see the 4 violations to check if any are mine.
+
+The violations are in a pre-existing sibling file (`AnomalyInlineRow.Previews.swift`), not mine. Let me confirm zero violations in my files via an isolated config.
+
+My files have zero swiftlint violations (the 2 are in a pre-existing sibling). Let me produce clean isolated evidence with a scoped config, then generate the project and build.
+
+swiftlint: **0 violations in 7 files**. Now the placeholder scan and project generation. Let me check the placeholder script and pwsh availability.
+
+pwsh is available. Let me run the placeholder scan on my Sharing source directory.
+
+Placeholder scan: **0** in source and tests. Now let me generate the Xcode project and attempt the full build (the xcframework is staged). First, xcodegen.
+
+xcodegen succeeded; my files are wired into the project (42 pbxproj refs). Let me attempt the full build. I'll build the macOS scheme (no simulator needed, shares the same Sources) async and monitor.
+
+The macOS build is running (Gradle pre-action first). Meanwhile, let me prepare and run the Shared-free model harness as independent verification.
+
+Let me compile and run the model harness (Swift 6 strict concurrency).
+
+Model harness: **16/16 assertions pass** under Swift 6 strict concurrency. Let me check the macOS build progress.
+
+The build is compiling (quiet mode). Let me wait for it to progress.
+
+
+Execution failed: CAPIError: 400 {"error":{"message":"The requested model is not supported.","code":"model_not_supported","param":"model","type":"invalid_request_error"}} (Request ID: E8E9:BB820:21093C:2421A8:6A3214F2)
+
+Execution failed: CAPIError: 400 {"error":{"message":"The requested model is not supported.","code":"model_not_supported","param":"model","type":"invalid_request_error"}} (Request ID: E913:10845F:E5EC:103A5:6A32179C)

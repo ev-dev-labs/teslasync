@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure and the web source that I need to reproduce.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat). Let me read the web source and understand existing Apple conventions.
+
+The web source is a unit-aware pressure formatter. There's a clear multi-file convention per surface. Let me find sibling format surfaces and study a complete reference implementation.
+
+The sibling `Distance` surface is the closest analog (same SI-canonical + alt-unit shape). Let me study its full file set as the reference template.
+
+Let me read each Distance file individually.
+
+Now let me read the Views, Previews, Tests, strings, and the shared `UnitPreferences`/`tsUnits` environment dependency.
+
+I now fully understand the Distance reference. Let me examine the web conversion helpers, the shared `UnitPreferences`/`tsUnits` dependencies, and the Xcode project structure.
+
+Project uses XcodeGen (`project.yml`, no checked-in `.xcodeproj`). Let me read the conversion helper details, the `UnitPreferences` facade, `tsUnits` env, and project config.
+
+Confirmed: SI carrier is **kPa**. Now let me read the `UnitPreferences` facade, the `tsUnits` environment, and the web `fmtNumber`.
+
+Let me read the `fmtNumber` body and confirm the `.metric`/`.imperial` factories.
+
+Let me check the project config, design tokens, and how the build is bootstrapped (xcodegen).
+
+Now let me check the build tooling availability: xcodegen, the prebuilt Shared.xcframework, the framework build script, and the placeholder checker.
+
+Let me read the framework build script and placeholder patterns to understand verification feasibility.
+
+I have full context now. Let me check remaining tooling (pwsh, java) and the lint/format configs before writing code.
+
+All tooling present (pwsh, java 17, xcodegen, simulator booted). Let me check for any symbol collisions with `Pressure*` names before writing.
+
+No collisions (atomic is `TSPressure`; my surface is `Pressure`). I have everything needed. Let me record a plan and todos, then write all 8 surface files mirroring the proven Distance pattern.
+
+Now the Projection, Model, main View, Views, Previews, strings, and Tests files.
+
+Now the comprehensive test file. Let me write it mirroring the Distance test structure with pressure-specific assertions.
+
+All 8 files created. Let me sanity-check the numeric expectations and then run the format/lint/placeholder gates.
+
+Numbers confirmed. Now let me run the format, lint, and placeholder gates on the new files.
+
+swiftformat and swiftlint both pass with 0 violations. Now let me run the real placeholder gate (pwsh) against my files via a scoped temp copy, plus its self-test.
+
+Placeholder gate passes (COUNT=0). Now the heavy gate: generate the Xcode project and attempt the build. Let me start with xcodegen and probe the KMP framework build feasibility.
+
+Project generated after my files exist, so they're included. Let me verify and probe the KMP framework build (the riskiest dependency).
+
+All 8 files are in the project. Now the critical dependency — the KMP `Shared.xcframework`. Let me probe the toolchain cache and network before committing to a long build.
+
+Kotlin/Native 2.4.0 and gradle caches are present — the framework has been built here before. Let me build the `Shared.xcframework`.
+
+Framework build is running (Kotlin/Native compiles several architectures). Let me continue waiting.
+
+Framework built and staged successfully (10m37s). Let me set up the gate log directory and run the iOS build to confirm my code compiles within the full app.
+
+Logs dir exists. Now let me run the iOS build (compiles the whole app including my files). I'll run it in the background and monitor.
+
+Build is compiling the full app. Let me continue monitoring.
+
+Build completed. Let me check the result in the log.
+
+BUILD FAILED but no `error:` captured by my filter. Let me inspect the full log for the failure reason.
+
+Build failed in a batch that does NOT include my files (it's AppContainer/AppearanceSettings/etc.). Let me find the actual error diagnostic in the full log.
+
+All diagnostics are pre-existing warnings. The failure is "Command SwiftCompile failed with a nonzero exit code" with no `error:` — that smells like a compiler crash/OOM, not a source error. Let me inspect the failure context.
+
+It's a **Swift compiler crash** (swift-frontend stack dump), not a source error. Let me see what it was compiling when it crashed.
+
+The crash is a `swift-frontend` compiler crash while batch-compiling a giant filelist (the whole module), Swift 6.3.2 — a scale/resource issue, not a source error in my 7 small files. Let me check the compilation mode and confirm whether it's whole-module (memory-heavy).
+
+It's batch mode (`-primary-file`, `-Onone`), 64 GB RAM — the crash is on a specific file in the App*/Theme* batches, neither of which contains my files. Let me confirm my Pressure files compiled and find the exact crashing primary file.
+
+Decisive finding: my Pressure files were dispatched in the "P" batch (with PowerProfileChart/PresetGallery). The **crash is in the App\* batch** (AppContainer, AppSettings, AppearanceSettings, AppShell…) — none of my files. This is a pre-existing `swift-frontend` crash in untouched infrastructure. Let me check the crash backtrace determinism and whether my object files compiled.
+
+**Conclusive evidence:** All 6 of my Pressure `.o` object files compiled successfully — my code builds cleanly inside the full module. The crash is an `swift-frontend` **IRGen limit** (`report_at_maximum_capacity` in `SmallVector::grow_pod` during `IRGenSILFunction::visitFullApplySite`) inside the **App\*** batch (AppContainer/AppSettings/AppShell) — untouched pre-existing code. Let me prove it's pre-existing and independent by re-running the exact failed frontend command (its filelist excludes my files).
+
+Let me extract and re-run the exact crashing frontend command to prove determinism and independence from my files.
+
+The `-filelist` is the full-module context list; the **`-primary-file` set is entirely App\*** (none of mine). My files compiled in their own batch. Let me re-run the exact crashing command to prove it's deterministic, then re-run it with my files stripped from the context filelist to prove independence.
+
+Deterministic crash confirmed (exit 134/SIGABRT, identical `report_at_maximum_capacity` signature). Now let me prove independence: strip my 6 Pressure files from the context filelist and re-run — if it still crashes, my files are conclusively irrelevant.
+
+**Definitive proof of independence:** With all 6 Pressure files removed from the module context (3977→3971 lines), the App\* batch **still crashes identically** (exit 134, same signature). 
+
+Conclusion: the build failure is a **pre-existing Swift 6.3.2 `swift-frontend` IRGen crash** in untouched App\* infrastructure — fully independent of my surface, which compiles cleanly (all 6 `.o` files produced). Since the XCTest target can't link past this pre-existing crash, let me validate my surface's logic with a standalone harness compiling my actual Adapter + Projection and running the test assertions.
+
+Need the top-level file named `main.swift` (lowercase) for multi-file compilation. Let me fix and rerun.
+
+**All 45 logic assertions pass** (compiling my real `Pressure.Adapter.swift` + `Pressure.Projection.swift`). My surface is fully validated. 
+
+Now, to avoid skip-and-assume, let me run the macOS build for a real `MAC_EXIT` (it compiles the same shared App\* sources), while I record progress.
+
+macOS build failed fast (exit 65, no crash signature — failed before compilation). Let me check why.
+
+The macOS failure is **pre-existing code-signing** ("entitlements require a development certificate") — it fails before compilation (no crash signature), unrelated to my code. iOS simulator builds need no signing, so iOS reached compilation and hit the pre-existing App\* compiler crash.
+
+Both platform blockers are pre-existing and environmental. Let me now assemble the complete, honest gate log with all evidence. First, capture fresh surface-scoped gate runs.
+
+Now append the placeholder gate, build evidence, crash analysis, standalone harness results, and final status to the log.
+
+Now the build analysis and final status summary.
+
+The log is complete and honest. Now let me check the working tree state before committing only my surface files + the log (excluding generated/build artifacts).
+
+Working tree is clean except my 9 files; generated `.xcodeproj`, `build/`, and `Shared.xcframework` are git-ignored. My surface is verified-green; the BLOCKED status is pre-existing/environmental and fully documented. Committing the deliverable + honest evidence log.
+
+All 9 files staged. Committing.
+
+Committed as `e105d8548` with a clean tree. Let me clean up scratch files and finalize the todos.
+

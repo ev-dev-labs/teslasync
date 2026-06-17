@@ -1,0 +1,83 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page wraps a `GasPriceSettings` component. Let me examine that component and the Apple app structure in parallel.
+
+Now I understand the full UI lives in `GasPriceSettings`. There ARE API data sources (status, poll, toggle, config) — the manifest only parsed the thin wrapper. Per the honesty covenant (no scope narrowing), I must reproduce the full UI. Let me explore the Apple app structure.
+
+The actual source layout is `apps/apple/Sources/Features/Admin/` (not `TeslaSync/Features/`). I'll follow the established pattern. Let me study the existing admin pages and project config.
+
+Excellent, rich patterns to follow. Let me examine the models/data-source seam, the route enum, design tokens, and the component library.
+
+Now let me examine the route definitions, parser, and how routes are registered into the app shell.
+
+Now let me understand the route host registry, how registrations are composed into the shell, and how the web defines the gas-price route.
+
+Let me read the central route registry, a simpler sibling registration, and find the sidebar/shell wiring.
+
+Let me find the composition root where all registrations chain, plus the sidebar and how unregistered routes render.
+
+Let me read the rest of the registration chain and check the web sidebar grouping for gas-price.
+
+Let me read the web sidebar nav structure around the Integrations group to understand grouping and labels.
+
+Let me examine the app shell sidebar rendering and locate the component library + design tokens.
+
+The sidebar auto-renders any AppRoute case. Now let me read the component library and design tokens.
+
+Let me read typography, feedback states, metrics, fields, and the design tokens.
+
+Let me locate and read the design tokens, fields (toggle), and the test pattern.
+
+Let me read the design tokens, badges (TSIconBox/TSBadge/TSTone), and the test pattern.
+
+Let me find the generated token definitions (TSSpacing, TSRadius, Color.TS, Font.TS) and read a test file.
+
+Let me find the generated token definitions to confirm the exact available scale values.
+
+The tokens are referenced widely but defined somewhere specific. Let me check the project structure config and the token test to pin down definitions.
+
+Key finding: `apps/apple/TeslaSync/Features/` is **not** a compiled source path in `project.yml` — only `apps/apple/Sources/**` is (plus specific `TeslaSync/*` surface dirs). The established P7 admin pages live in `Sources/Features/Admin/`. I'll follow that working pattern. Let me confirm tokens, the string catalog, and the ledger/log locations.
+
+Let me read the generated tokens, the parity manifest record, the ledger, and a sample log to match the format.
+
+The FeatureFlagsPage.log is a perfect template. This page is much simpler. Let me verify the web API hooks, types, and i18n keys for the gas-price surface.
+
+Let me review the Apple-side formatting helpers to mirror the currency/date display-boundary pattern.
+
+I have the full architecture. Let me look at a simpler single-source admin page (DiskForecast) as a closer template, confirm the inline-callout component, and read the ledger format.
+
+`.unavailable` state via a typed error is exactly the pattern for the gas worker being unconfigured. Let me read the DiskForecast model, the ledger rows, banners, and the string catalog structure.
+
+Let me read the banners/skeleton components, the string catalog structure, and the swiftlint config.
+
+Let me check the rest of the lint config, tool availability, and the string catalog format.
+
+All tools present (Xcode runner available). Let me get the full lint config and confirm the Color/Font token roles, then I'll start building.
+
+I now have everything needed. Let me set up a plan and todos, then implement.
+
+Now I'll create the implementation files, starting with the models.
+
+Let me refine `GasPriceFeedback` (add `localizationKey` + `Hashable` for `.task(id:)` and VoiceOver announcements), then build the view.
+
+Now the controls extension (the live surface: toggle, interval, metric cards, action, feedback).
+
+Now the route registration, then the AppRoute case and app wiring.
+
+Let me view the exact registration chain to wire in the new registration precisely.
+
+Let me normalize formatting on the modified app file and verify the registration chain balances.
+
+Registration chain reindented correctly. Now let me add the string catalog keys.
+
+Let me verify the catalog diff isn't a massive reorder (the original may not have been sorted).
+
+The re-sort rewrote the whole file. Let me revert and append-only to preserve original order (minimal diff).
+
+Still large — my dump reformats existing lines. Let me inspect the original file's exact formatting to match it.
+
+The catalog uses Xcode's specific `" : "` separator format. Let me inspect the tail to do a precise raw-text insertion (guaranteeing a minimal diff).
+
+Now I'll do a precise raw-text insertion matching Xcode's exact format (minimal diff).
+
+Clean 253-line insertion. Now the test suite.

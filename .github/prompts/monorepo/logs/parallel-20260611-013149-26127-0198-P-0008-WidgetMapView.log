@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure, reading the web source, and checking the available Apple tooling.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, pwsh). The web source is a simple presentational map wrapper. Let me explore the Apple app structure and the P1/P4 foundations.
+
+There are existing widget primitives (WidgetChartSummary, WidgetComparisonCard). Let me study these established patterns and the native Maps/Feedback components that this primitive depends on.
+
+Now let me read the native Maps components (the peer of `@/components/maps`), the Feedback States (peer of EmptyState), and the supporting files for the existing primitives to fully understand the pattern.
+
+Let me read the Feedback States (EmptyState peer) and the full set of WidgetComparisonCard supporting files to learn the complete primitive pattern (Model, telemetry, i18n, Previews, Tests).
+
+Let me read the WidgetChartSummary supporting files (closest analog — a presentational primitive with a slot) and the WidgetComparisonCard's remaining files, plus understand the build/project setup.
+
+Now let me understand the build setup (how widget-primitives files are compiled) and the `Surface.slug` pattern used by WidgetComparisonCard.
+
+This uses XcodeGen (`project.yml`). Let me read it to understand targets/schemes and how the widget-primitives directory is sourced, plus the Adapter pattern for the Surface slug.
+
+This uses XcodeGen — the `widget-primitives` directory is sourced by path, so adding files + regenerating picks them up. Let me check tooling (xcodegen, the placeholder script), the design tokens, and the predecessor logs.
+
+Let me read the design tokens, the `tsUnits`/`TSTone` definitions, the predecessor log format, and the remaining WidgetComparisonCard files (Views, Tests, AdapterTests).
+
+Let me review the predecessor log format and the `tsUnits`/`TSTone` token definitions to align my implementation and gate execution.
+
+I now understand the full pattern and verification methodology. Let me gather the last pieces: the `.swiftlint.yml` scope, `TSTone`, whether the predecessor's known-broken files exist in this slot, the Shared.xcframework staging state, and the WidgetComparisonCard Views/AdapterTests for mirroring.
+
+The directory is already wired into `project.yml` and `.swiftlint.yml` (predecessor 0003 did that), so I stay within my allowed-files scope. Let me read the AdapterTests style and `TSTone`, then start building.
+
+I have a complete picture. The directory is already wired into the build and lint configs. Let me record a plan, then de-risk the two MapKit API choices (empty `MapContent` default + `Map(position:interactionModes:)`) with a quick typecheck before writing everything.
+
+Both SDKs typecheck the MapKit API design cleanly (empty `MapContent`, `Map(position:interactionModes:)`, `.mapStyle`, `.mapControls`). Let me track work in SQL and write the Foundation-pure layer first.
+
+Pure layer written. Let me verify it compiles in an isolated SwiftPM package on macOS before writing the SwiftUI layer and tests.
+
+Pure layer compiles clean under Swift 6 and tests pass. Now the SwiftUI layer.
+
+Now the pure AdapterTests (runs in SwiftPM) and the SwiftUI Tests (compile + run in P99).
+
+All 8 files written. Now the verification gauntlet. First, isolated SwiftPM `swift test` of the pure layer with a `TeslaSync`-named target so `@testable import TeslaSync` resolves the AdapterTests as-is.
+
+24 pure tests pass in isolation. Now the strongest compile+run check: a macOS SwiftPM package containing the full surface (incl SwiftUI views) + both test files, building and running everything except the `#Preview`-macro file.
+
+All 30 tests pass on macOS (views, subviews, render smoke, model, adapter, strings). Now dual-SDK `swiftc -typecheck` of the full shipped surface **including** the `#Preview` file, for both iOS 18 and macOS 15.
+
+Both SDKs typecheck the full surface (with previews) at 0 errors. Now swiftformat + swiftlint.
+
+One lint violation: `content_view` (underscore). Renaming to `contentView`.
+
+Surface is clean (lint 0, format 0, both SDK typechecks 0). Now run the gate's tree-wide `swiftformat --lint` and `swiftlint --strict` to confirm my files don't introduce tree regressions (and capture any pre-existing issues from other merged files).
+
+Tree-wide swiftformat clean (0/5115). Now tree-wide `swiftlint --strict`.
+
+Tree-wide swiftlint shows 3 violations — none in my files (my surface linted at 0). Let me identify them to prove they're pre-existing/other-agent files.
+
+The 3 tree-wide violations are all in `WidgetChartSummary.Tests.swift` (predecessor 0002's merged file, `a`/`b`/`c` identifiers) — **not** my surface (which lints 0) and outside my allowed-files scope. I'll document them. Let me inspect the placeholder script, then run it.
+
+The script treats a non-existent path as a clean no-op, so I'll run the literal gate path **and** the real directory (`-Language swift`) **and** an isolated copy of just my 7 files to make the result meaningful.
+
+Placeholder gate clean all three ways. Now `xcodegen generate` and verify my files are enumerated in the project.
+
+xcodegen succeeded — all 8 files enumerated (48 refs across iOS/macOS app + test bundles). Now let me assess the full-app `xcodebuild` gate: check the Shared.xcframework build prerequisites, the known-broken sibling files, and the pending-verifications ledger.
+
+`gradlew` exists but the Shared.xcframework needs an 8+ min KMP/Gradle build, and there are **0 codesigning identities** (macOS build fails at signing — same environmental blocker the predecessor documented). My surface only depends on `Tokens.swift` (already verified against both real SDKs), not on the xcframework or sibling surfaces. The one thing isolation can't catch is a **symbol collision** in the shared module — let me check that directly, and confirm the known-broken siblings.
+
+No symbol collisions — my 14 type names are unique in the app module, so the surface will compile cleanly into the shared `TeslaSync` module (it already compiles against the real `Tokens.swift` for both SDKs). Let me genuinely attempt the full-app gate. First, confirm the KMP/Gradle toolchain works before committing to the 8-min framework build.
+
+Java 17 + Gradle wrapper work. Let me stage the `Shared.xcframework` (the ~8-min KMP build) in the background while I prepare the log, then run the full `xcodebuild` gate.
+
+The Gradle build runs in the background. Let me check whether sibling surfaces append to the pending-verifications ledger (informational — that file is outside my allowed-files scope) and monitor the build.
+
+The ledger already documents the predecessor's identical situation (full-app RED for the same pre-existing `AIGeofenceAware`/`RecentDrivesSection.Previews` errors + macOS signing), confirming my approach. That file is outside my allowed-files scope, so I won't edit it. The Gradle build is hitting the cache (faster than a cold 8 min). Let me wait for it to finish.
+
+Still building the release variant. Let me wait for it to complete and stage.
+
+Release linking is in progress (macOS arm64 now). Let me wait for assembly + staging to complete.
+
+Shared.xcframework built (10m52s) and staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the actual prompt gate — the full-app iOS `xcodebuild build test`. Running it in the background and capturing output to isolate any surface errors.
+
+iOS build running (iPhone 16 booted). Let me monitor its progress.
+
+The TeslaSync app module is at the Swift module-emit phase with **0 errors so far** — my surface is compiling into the real app. Let me continue monitoring.
+
+Still compiling cleanly (0 errors). The app is large; let me keep waiting for the build + test phases.
+
+The iOS `build test` failed — but on the **same pre-existing error** the predecessor documented: `Escaping closure captures non-escaping parameter 'content'` in `AIGeofenceAwareAutomationSuggestions.swift` (another agent's shared-surface). Let me extract the exact error and confirm zero WidgetMapView involvement.
+
+Confirmed: the **only** error in the entire iOS build is the pre-existing `AIGeofenceAwareAutomationSuggestions.swift:141:22` (another agent's shared-surface, outside my allowed-files scope) — identical to the predecessor. **Zero WidgetMapView errors**; all 5 shipped surface files compiled and the TeslaSync module emitted. Now the macOS gate (expect RED at signing — 0 identities).
+
+Confirmed: macOS is RED **only** at development-signing (0 identities) — zero WidgetMapView errors. This exactly matches the predecessor's documented environmental blocker. I have all gate evidence. Let me capture final host details and write the authoritative log.
+
+All evidence gathered. Writing the authoritative gate log.
+
+Log written. Let me verify git state (ensure generated artifacts are ignored), clean temp dirs, then commit only my files + the log.
+
+Clean: only my 8 surface files + the log are untracked; the generated `.xcodeproj` and staged framework are git-ignored. Committing.
+
+Committed cleanly (commit `9b76a127f`, 9 files, +1252). Let me finalize the todo ledger and confirm a clean working tree.
+
+All todos done, working tree clean, surface committed. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...-apple-widget-primitives-0008-WidgetMapView.log | 192 +++++++++++++++
+ .../widget-primitives/WidgetMapView.Adapter.swift  | 212 ++++++++++++++++
+ .../WidgetMapView.AdapterTests.swift               | 266 +++++++++++++++++++++
+ .../widget-primitives/WidgetMapView.Model.swift    | 132 ++++++++++
+ .../widget-primitives/WidgetMapView.Previews.swift |  79 ++++++
+ .../widget-primitives/WidgetMapView.Tests.swift    | 107 +++++++++
+ .../widget-primitives/WidgetMapView.Views.swift    | 109 +++++++++
+ .../widget-primitives/WidgetMapView.strings        |  25 ++
+ .../widget-primitives/WidgetMapView.swift          | 130 ++++++++++
+ 9 files changed, 1252 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-widget-primitives-0008-WidgetMapView.log
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetMapView.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetMapView.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetMapView.Model.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetMapView.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetMapView.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetMapView.Views.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetMapView.strings
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetMapView.swift

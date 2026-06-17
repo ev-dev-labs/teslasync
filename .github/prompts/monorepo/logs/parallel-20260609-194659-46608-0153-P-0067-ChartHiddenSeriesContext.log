@@ -1,0 +1,139 @@
+I'll start by understanding the task: building a native Apple (SwiftUI) version of `ChartHiddenSeriesContext`, specified by the web source. First, let me read the web source and assess the runner's capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators including iPhone 16). Capability is **not** a blocker. Let me read the web source and explore the Apple app structure.
+
+The web source is a context bridge for URL-persisted hidden-series state. Let me read the `useHiddenSeries` hook (the core data source) and examine existing shared-surface conventions in the Apple app.
+
+Now I understand the data model. `HiddenSeriesState` is a URL-persisted chart legend toggle state (hidden set + toggle/isHidden/reset). Let me find the most similar existing surfaces (URL-state / chart-context bridges) and the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+`MotorHistoryCharts` and `PowerOutputChart` reference hidden-series/chartKey. Let me see exactly how the native code currently handles hidden-series state, and inspect the shared infrastructure layers (SharedFacade = P1/S8, Design = tokens/i18n/diagnostics).
+
+The native app handles hidden-series state **per-surface** (e.g., `PowerOutputChart.Model` reimplements `hiddenSeries`/`toggleSeries`/`toggleHidden`). The web `ChartHiddenSeriesContext` is the **shared primitive** that powers all of them. Let me read the key reference files and locate the shared infra (tokens, i18n, diagnostics, state-holder base).
+
+Each surface re-implements `toggleHidden` locally — `ChartHiddenSeriesContext` is the shared primitive that should unify them. Let me see how the repo handles *headless/infra* shared surfaces (web sources that are contexts/hooks, not visual panels) to match convention, and read the projection toggle + a state-holder base.
+
+Now let me understand the build system (XcodeGen `project.yml`, whether files are globbed), the gate tooling (PowerShell, check-placeholders), and a representative surface's full file set to match conventions precisely.
+
+Key finding: **XcodeGen globs `shared-surfaces/`** — new `.swift` files auto-join both app targets; `*Tests.swift` are excluded (they belong to XCTest bundles). `xcodegen`, `pwsh`, `swiftlint`, `swiftformat` all present. Let me read the test-target/scheme config, placeholder patterns, design tokens, and the state-holder seam.
+
+Now I understand the build system fully. Let me check the baseline build feasibility (the `Shared.xcframework` staging preAction is a risk), review recent commit patterns, placeholder patterns, and pick a clean template surface to mirror.
+
+The `Shared.xcframework` isn't committed — the build preAction runs Gradle (KMP). Many surfaces already exist (0001–0062), each with a log. Let me read a recent log + the pending-verifications doc to follow the established honesty/gate pattern, and list the most recent surface's files as my template.
+
+Critical context: the most recent surface (`withAiFeature` 0062) committed as `STATUS=BLOCKED` because the `Shared.xcframework` (KMP/Gradle) couldn't be staged for `xcodebuild`. But we *do* have full Xcode + simulators — the real question is whether the Gradle build works. Let me check DONE-vs-BLOCKED precedent, the KMP toolchain feasibility, and confirm file-structure conventions.
+
+`withAiFeature` (0062) is the ideal template: also an **anonymous, headless/infra** surface (a HOC gate, no charts/maps, zero i18n keys) — structurally analogous to my context-bridge. Files are flat (`withAiFeature.*`). Shared-surface logs are 351× BLOCKED (full `xcodebuild`+`Shared.xcframework` infeasible on these runners). Let me study the full `withAiFeature` set as my template.
+
+Excellent template. Let me read the remaining `withAiFeature` files (Adapter, Projection, Views, Previews, strings, Tests, ModelTests) plus the design tokens and `LoadableState`/connection conventions to fully align my port.
+
+Now I have the design-token vocabulary (`TSSpacing`, `Font.TS`, `Color.TS`, `TSRadius`). Let me read the remaining `withAiFeature` files (Previews, strings, Tests, ModelTests) and the `TSDesign` token definitions to finalize my mental model before writing.
+
+Let me read the `ModelTests` and the design tokens to confirm exact token/API names available.
+
+The concrete tokens live in the generated `DesignTokens` group. Let me inspect them to confirm exact token names (`Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`, `TSMotion`).
+
+Let me view the token namespacing structure to use exact APIs (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`).
+
+Now I have the full token vocabulary. Let me read the lint/format configs (to respect file-length budgets) and `LoadableState` (P1/S8 state modeling), plus the web `useUrlState` to faithfully port the URL-persistence semantics.
+
+Let me read the `useUrlArray` portion specifically to port its exact serialization semantics (comma-join, sort, omit-empty).
+
+I now have everything I need: full token vocabulary, lint/format budgets (line 120/160, type-name ≤50/60), the `withAiFeature` template (a structurally analogous anonymous/headless surface), and the exact web semantics of `useHiddenSeries`/`useUrlArray`. 
+
+Let me record a brief plan and the task breakdown, then build the 9-file surface.
+
+Now I'll build the surface. Starting with the Foundation-only core (`Adapter`) and the pure `Projection`.
+
+Now writing the Foundation-only core and pure projection:
+
+Now the `Model` (i18n facade, telemetry seam, P1/S8 store seam + Live/InMemory, `@Observable` state holder):
+
+Now the SwiftUI **Environment bridge** (`useChartHiddenSeries`/context parity), the **Provider** (render-prop parity), and the `.chartHiddenSeries(chartKey:)` modifier:
+
+Now the visible consumer the context drives — `ChartHiddenSeriesLegend` — rendering **every state** (not-opted-in, loading, empty, ready, failed, plus stale/offline chips), with full i18n + accessibility + tokens:
+
+Now the **Previews** (one per state) and the **i18n strings** table:
+
+Now the two test files — pure-core (`Tests`) and model/bridge/view (`ModelTests`):
+
+The a11y test assertion got convoluted and is logically wrong. Let me rewrite it to meaningfully verify the a11y label/hint derivation path:
+
+All 9 files written. Let me update todos and run the host-runnable verification gates: swiftformat (apply to my files), swiftlint --strict on my files, then placeholder check.
+
+Both formatting and strict lint pass with **0 violations** on my files. Now the placeholder gate — let me read how it resolves `-Path` (the gate passes a flat-file prefix), then run it.
+
+The gate passes a flat-file prefix path, so the script scans nothing (false clean). For honest verification I'll check the regex case-sensitivity and grep my real files for forbidden patterns — note I used `.redacted(reason: .placeholder)` which could match the `Placeholder` pattern.
+
+Confirmed: the regex is `IgnoreCase`, so `.redacted(reason: .placeholder)` would trip the `Placeholder` pattern. It's legitimate SwiftUI API, but to keep shipped code literally clean (no opt-out needed), I'll drop it — my loading skeleton already draws gray bars, so `.redacted` is redundant.
+
+My files are clean (0 forbidden patterns; real placeholder scan attributes 0 violations to them). Let me re-verify the edited `Views.swift` lints cleanly, then regenerate the Xcode project so my files are wired into both app targets.
+
+Project generated; my files are wired in (54 references across the targets). Now let me validate my production code **actually compiles** against the real SDK via a standalone `swiftc` type-check (independent of the Gradle/xcframework blocker). First, check the token helper's top.
+
+Tokens are self-contained. My surface only depends on the design tokens + system frameworks, so I can type-check the production code standalone against the real macOS SDK — this validates compilation independent of the Gradle/`Shared.xcframework` blocker.
+
+One Swift 6 strict-concurrency error on the `EnvironmentKey.defaultValue`. Let me see how the existing codebase resolves this exact pattern (manual `EnvironmentKey` with a non-Sendable value under strict concurrency).
+
+There's an established pattern. Let me read it to mirror exactly.
+
+The repo's canonical escape hatch is `nonisolated(unsafe) static let defaultValue` for an immutable default. My default is `nil` (immutable), so this is the exact precedent. Applying it:
+
+Production code type-checks cleanly under Swift 6 strict concurrency. Now let me type-check the **test files** too (compiling them in-module with the production code, linking XCTest).
+
+Test type-check passes (EXIT=0), but there are main-actor-isolation **warnings** in `LiveChartHiddenSeriesStoreTests` — `setUp`/`tearDown` are nonisolated but access `@MainActor` stored properties. I'll refactor to a per-test local suite helper (cleaner, avoids the isolation mismatch entirely), matching the repo's no-setUp pattern.
+
+Re-formatting and re-type-checking the tests after the refactor:
+
+All code type-checks cleanly (production + tests, 0 warnings/errors, Swift 6 strict concurrency). Now the remaining gate steps need the `Shared.xcframework` staged via Gradle (the known blocker behind 351 prior BLOCKED logs). Let me probe whether the Gradle KMP build is feasible on this runner.
+
+A 3.3GB Gradle cache exists **and** network is available — so the KMP build may actually be feasible here (unlike the runners behind the 351 BLOCKED logs). Let me attempt to build & stage `Shared.xcframework`.
+
+The `assembleSharedXCFramework` task is available and configures offline. Let me run the full assemble + stage (the heavy Kotlin/Native step) and monitor it.
+
+Gradle KMP build is running (Kotlin/Native compiles 3 targets). Let me keep waiting.
+
+`Shared.xcframework` built and staged successfully (BUILD SUCCESSFUL, 6m46s). The full `xcodebuild` gate is now viable — this could reach **DONE** rather than the BLOCKED precedent. Let me run the iOS build+test gate (the long pole), capturing full output.
+
+iOS gate failed (EXIT=65). Let me find the cause — whether it's my files, a pre-existing file, or a test failure.
+
+All errors are in **pre-existing** files (`RecentDrivesListWidget`, `RecentDrivesSection`, `StateTimeline*`) — "ambiguous for type lookup" = duplicate type-name collisions across other surfaces. **Zero** errors mention my files. These surfaces were committed as BLOCKED (full `xcodebuild` never ran, so the collisions were never caught). Let me prove this rigorously: confirm no error is in my files, and that I introduce no new type-name collision.
+
+Conclusive: **162 errors, all in 10 pre-existing files** (`RecentDrives*`, `StateTimeline*`). My surface's only footprint is its `.strings` file being **successfully bundled** — zero Swift errors in my files; they compiled cleanly within the full app. Let me prove the failures are pre-existing duplicate-type collisions (not caused by me).
+
+**Proof complete**: `RecentDrivesConnection`, `StateTimelineConnection`, `RecentDrivesModel` are each defined in **2 files** (pre-existing duplicate-definition collisions). Every one of my types is defined exactly **once**. My surface introduces zero collisions and compiles cleanly within the full app — the 162 errors are pre-existing, in 10 files outside my allowed scope.
+
+Now running the macOS gate to capture its real exit (shares the same sources → same pre-existing failures):
+
+macOS failed at **code-signing** (development certificate required — an environment capability), *before* compilation — also outside my scope and unrelated to my code. iOS failed on pre-existing type collisions. Now let me capture the remaining gate steps (whole-tree swiftlint/swiftformat — expected pre-existing failures per the withAiFeature precedent) and confirm none implicate my files.
+
+`swiftlint --strict` whole-tree = **EXIT 0, 0 violations** (the 8 "ChartHiddenSeriesContext" matches are just per-file progress lines). Waiting for swiftformat to finish.
+
+Both whole-tree lint gates pass: **`swiftlint --strict` EXIT 0** and **`swiftformat --lint` EXIT 0** (0 issues in my files). Now the placeholder gate (exact gate command + a genuine scan of my real files):
+
+All placeholder scans clean (COUNT=0). Let me gather toolchain versions and the precise pre-existing-failure evidence to embed in the log, then write it.
+
+All evidence gathered. The historical `Shared.xcframework` blocker does **not** apply here (I built it successfully). Now writing the comprehensive, honest gate log:
+
+Log written. Let me verify git state (ensure generated artifacts are ignored) and stage only my surface files + the log.
+
+Clean — only my 9 surface files + the log are untracked (generated `.xcodeproj` and `Shared.xcframework` are gitignored). Staging and committing:
+
+Committed as `eecd5e21c`. Let me update todos and clean up temp build artifacts.
+
+The task is complete. Final verification summary:
+
+**Delivered** — `ChartHiddenSeriesContext` native Apple surface (9 flat files under `apps/apple/TeslaSync/shared-surfaces/`), a faithful SwiftUI port of the headless web context bridge: Environment key (default `nil` = web `createContext(null)`), `ChartHiddenSeriesProvider` render-prop, `@Environment(\.chartHiddenSeries)`/`ChartHiddenSeriesReader` (= `useChartHiddenSeries`), a `@Observable` model over a P1/S8 store seam reproducing `useHiddenSeries`'s URL round-trip (`?hidden_{chartKey}=a,b,c`, sorted/comma-joined/empty-omitted), plus the first-party legend it drives — rendering **every** state (not-opted-in, loading, empty, ready, error+retry, stale/offline chips) with full i18n, accessibility, and `view.opened` telemetry.
+
+**Gate results:**
+| Step | Result |
+|---|---|
+| `swiftlint --strict` (whole tree) | **EXIT 0**, 0 violations |
+| `swiftformat --lint apps/apple` | **EXIT 0** |
+| placeholder check | **EXIT 0**, COUNT 0 (genuine scan of my files = 0) |
+| Swift-6 strict-concurrency type-check (production + tests) | **EXIT 0**, 0 errors/warnings |
+| `Shared.xcframework` build | **BUILD SUCCESSFUL** |
+| iOS `xcodebuild build test` | EXIT 65 — 162 **pre-existing** duplicate-type errors in 10 `RecentDrives*`/`StateTimeline*` files (proven: 2 definitions each); **0** errors in my files (strings bundled OK) |
+| macOS `xcodebuild build test` | EXIT 65 — **code-signing** (dev certificate) capability, before compilation |
+
+Both `xcodebuild` failures are outside this prompt's allowed-files scope and not caused by this surface. Committed (`eecd5e21c`) with the BLOCKED gate log per the established shared-surface convention (351 prior BLOCKED), but with stronger evidence — I actually built the KMP core and ran the full gate.
+

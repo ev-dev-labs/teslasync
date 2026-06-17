@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the apps/apple structure and the web source.
+
+Now let me explore the existing Apple structure to understand conventions and dependencies.
+
+There's an existing `shared-surfaces` directory with many surfaces. Let me understand the file structure pattern by examining one complete surface and checking if HistoryListRow already exists.
+
+Now I understand the file convention. Let me find a pure-presentational surface (no data hooks) similar to HistoryListRow to use as the closest template.
+
+`BatteryDelta` is a clean presentational template with all standard files. Let me read its complete file set to learn the conventions.
+
+The output is large. Let me view these files individually with the view tool.
+
+This is a thorough, well-structured convention. Let me read the remaining BatteryDelta files to fully understand the pattern.
+
+Let me read the remaining BatteryDelta files plus the GlassPanel native component and design tokens.
+
+Now let me read the test files, previews, and the supporting infrastructure (GlassPanel, design tokens).
+
+Let me read the Previews file and the design system infrastructure (GlassPanel, tokens).
+
+Let me find the native GlassPanel component and the design token definitions (Color.TS, Font.TS, TSSpacing, etc.).
+
+Let me view the native GlassPanel (Cards.swift) and locate the generated design tokens.
+
+The tokens appear to be generated. Let me locate their definitions and review the project.yml build config.
+
+Tokens come from `apps/design/generated/apple`, and the project uses XcodeGen. Let me check the generated tokens, xcodegen availability, and the build script.
+
+Now I understand the architecture. The build depends on a KMP `Shared.xcframework` built via Gradle. Let me check sibling surface logs to understand the established build/gate outcome pattern on this runner.
+
+Let me examine the BatteryDelta (0077) log — my template surface — to see how its gate concluded.
+
+This runner has full Xcode 26.5 (not just CLT). Let me check the actual gate log for BatteryDelta to see the real build outcome on this kind of runner.
+
+This is critical context. The established precedent: full Xcode 26.5 with iOS 18 + macOS 15 SDKs is available, KMP framework builds, but full-app `build test` gates are RED for **pre-existing out-of-scope** reasons (sibling duplicate-types on iOS, code-signing on macOS). Surfaces verify via scoped type-check + lint + placeholder gates. Let me read the verification methodology section and find a slot-based sibling.
+
+The methodology is now crystal clear. HistoryListRow is **slot-based** (unlike BatteryDelta), so I need the SwiftUI `@ViewBuilder` slot idiom and the navigation facade. Let me study a slot-based sibling (ChartContainer) and the navigation facade.
+
+Let me study a slot-based surface's main view and how interactive surfaces model activation/navigation.
+
+Let me check the lint config and whether `AnyView` is used/acceptable, plus the `onActivate`/tap convention from AnnotationList.
+
+`AnyView` is acceptable (used in the codebase) and not lint-banned; line limit is 120/160. Let me see how AnnotationList/ChartLegend model tap activation to follow convention, then check the placeholder gate tool.
+
+I have a clear picture. Convention uses `Button(action:)` + `.accessibilityAddTraits`, injected `@escaping @MainActor` closures, per-surface i18n facade via `NSLocalizedString`, and a pwsh placeholder gate (avoid words: TODO/FIXME/Placeholder/not implemented/Lorem). Let me confirm the AnyView precedent and i18n facade, then write my plan.
+
+I now have everything needed. Key findings: `AnyView`-erased view slots are an established pattern (`DataTable.swift`), the placeholder gate is **case-insensitive** (must avoid "todo/fixme/placeholder/not implemented/lorem" in any case), and Swift files must stay <400 lines and code lines ≤120 chars under `--strict`. Let me write the plan and implement.
+
+Now I'll create the surface files. Starting with the pure-core Adapter and Projection.
+
+Now the public surface view with the activation type and erased slots.
+
+Now the Views file — the layout, hover, glow, actions overlay, and tap isolation.
+
+Now the Previews and strings files.
+
+Now the test files. Marking progress and writing the pure-core adapter tests and the model/view/strings tests.
+
+All 9 files are written. Now let me verify — starting with formatting and linting my files.
+
+swiftformat normalized 2 files; now 0/8 require formatting. Let me run swiftlint --strict on my files and see what swiftformat changed.
+
+swiftlint --strict passes (0 violations). Now the SDK type-checks. Let me locate the SDKs and set up the harness.
+
+SDKs present (26.5). Let me set up a type-check harness and verify the production files against both the iOS 18 and macOS 15 SDKs under Swift 6 strict concurrency.
+
+Production files type-check clean against iOS 18 SDK. Now macOS 15 SDK and the test files.
+
+Production type-checks clean on **both** iOS 18 and macOS 15 SDKs. Now the test files (compiled in-module with the import neutralized, since the harness is one module).
+
+Good — only one warning, in the test file: `@MainActor () -> Void` is implicitly Sendable in Swift 6, and the `? {} : nil` ternary infers a non-isolated closure. Let me fix that and re-verify with `-warnings-as-errors` to guarantee zero warnings.
+
+The ternary with an empty `@MainActor` closure hits a compiler edge case. Let me use a plain `if`-assignment instead.
+
+Production + tests type-check cleanly on **both** SDKs with `-warnings-as-errors` (0 errors, 0 warnings). Let me re-confirm format/lint after the edit and run the placeholder gate.
+
+The 13 are across all sibling surfaces. Let me confirm **my** files specifically are clean by scanning only them.
+
+My files: **0 placeholder violations**, and none flagged in the full scan. Now let me generate the Xcode project, confirm my files are enumerated, and check the known pre-existing sibling duplicate-type collision.
+
+Confirmed: all 9 files enumerated (54 refs), and the pre-existing duplicate-type collision (`StateTimelineModel`/`RecentDrivesModel` declared in both `dashboard-widgets` and `feature-views`) exists in sibling files outside my scope. Now let me run the actual gate to capture real exit codes. First, check the KMP/Gradle setup the build depends on.
+
+Java 17 + gradlew present; the KMP framework will build via the pre-action. Let me check simulators and then run the actual gate (iOS build+test), capturing output. This may take a while due to the cold Kotlin/Native build.
+
+iPhone 16 sim is available. Let me run the actual iOS gate command async (the cold Kotlin/Native build makes this slow), capturing full output.
+
+I'll run the Gradle build for the KMP framework with a long wait.
+
+The cold Kotlin/Native build is running (it may also be downloading the K/N toolchain). Let me keep waiting while it builds.
+
+Gradle **BUILD SUCCESSFUL** (7m). The KMP framework is built. Now let me run the actual iOS gate, capturing real output to the log.
+
+Staged. Now the actual iOS gate command, capturing full output for analysis.
+
+iOS gate: **IOS_EXIT=65** (matches precedent). Let me analyze the build log to prove the failures are pre-existing and not in my surface.
+
+Confirmed: 162 errors, **0 mention HistoryListRow**, all are the pre-existing `StateTimeline*`/`RecentDrives*` duplicate-type ambiguities in sibling files. Let me prove it's pre-existing with a baseline build (my files removed), matching the precedent's rigor.
+
+The `ls` non-zero broke the chain. Let me regenerate and run the baseline build.
+
+**BASELINE_IOS_EXIT=65** without my files — proving the failure is pre-existing. Let me diff the error signatures and restore my files.
+
+Unique error signatures are **identical** with/without my surface (diff empty) — the iOS failure is proven pre-existing. Let me inspect that 1 baseline "HistoryListRow" mention to be thorough, then run the macOS gate.
+
+That mention is a benign `note:` — Xcode removing a stale `HistoryListRow.strings` artifact (0 errors). It actually confirms my `.strings` was compiled into the app during the with-surface build. Now the macOS gate.
+
+macOS gate: **MAC_EXIT=65**. Let me analyze the failure reason.
+
+macOS gate matches precedent precisely: 4 errors, **all code-signing** (no dev certificate on this runner), **0 mention HistoryListRow**, 0 compile errors. Now let me run the remaining tree-wide gate steps (swiftlint/swiftformat/placeholder) to capture the full gate picture.
+
+Tree-wide swiftlint --strict: **0 violations in 3741 files** (LINT_EXIT=0). Now swiftformat --lint and the scoped placeholder gate.
+
+swiftformat --lint tree-wide: **0/3971 files require formatting** (FORMAT_EXIT=0). Now the placeholder gate exactly as specified.
+
+All gate steps captured. Let me gather final specifics for the log (strings-copy evidence, error counts) before writing it.
+
+All evidence gathered. Let me update progress, write the comprehensive gate log, and prepare the commit.
+
+Log written. Now let me verify git status and confirm only my intended files are changes (generated project/framework should be git-ignored).
+
+Clean: generated project + framework are git-ignored; only my 9 files + the log are untracked. Let me clean temp artifacts and commit the scoped files.
+
+All 10 files staged. Committing with the specified message and required trailer.
+
+Committed (`d9f38587f`, 10 files). Let me do a final verification.
+
+All verified and committed. Let me finalize the tracking.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-shared-surfaces-0091-HistoryListRow.log | 193 ++++++++++++++++++
+ .../shared-surfaces/HistoryListRow.Adapter.swift   | 132 +++++++++++++
+ .../HistoryListRow.AdapterTests.swift              | 187 ++++++++++++++++++
+ .../shared-surfaces/HistoryListRow.Model.swift     | 132 +++++++++++++
+ .../shared-surfaces/HistoryListRow.Previews.swift  | 117 +++++++++++
+ .../HistoryListRow.Projection.swift                | 135 +++++++++++++
+ .../shared-surfaces/HistoryListRow.Tests.swift     | 220 +++++++++++++++++++++
+ .../shared-surfaces/HistoryListRow.Views.swift     | 198 +++++++++++++++++++
+ .../shared-surfaces/HistoryListRow.strings         |  18 ++
+ .../TeslaSync/shared-surfaces/HistoryListRow.swift | 181 +++++++++++++++++
+ 10 files changed, 1513 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0091-HistoryListRow.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HistoryListRow.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HistoryListRow.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HistoryListRow.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HistoryListRow.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HistoryListRow.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HistoryListRow.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HistoryListRow.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HistoryListRow.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HistoryListRow.swift

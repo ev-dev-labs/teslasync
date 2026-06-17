@@ -1,0 +1,188 @@
+I'll start by exploring the environment to understand the task scope and verify platform capabilities (a key requirement of this prompt).
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, pwsh, iPhone 16 simulator booted). This is **not** a BLOCKED scenario — I must implement. Let me read the web source and understand the native app structure.
+
+This is a large, well-established monorepo with ~180 feature views following a strict multi-file convention. Let me study the pattern, the web source's data dependencies, and the shared foundation layer (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+Now I understand the web source. Let me study the native convention by reading a complete representative feature view, and check the build tooling (xcodegen, existing xcodeproj).
+
+Let me read the representative feature view files properly and explore the shared foundation layer.
+
+`BackupActionsCard` is the closest analog — a backup-related action card with no data-fetch-on-mount (note: no States file). Let me study it thoroughly plus the shared foundation layer.
+
+Excellent — this is a mature, well-defined pattern. Let me read the BackupActionsCard core files (Model, Adapter, swift, Tests) and the shared foundation.
+
+The pattern is comprehensive. Let me read the BackupActionsCard core implementation files and the shared foundation in parallel.
+
+I have a thorough grasp of the pattern. Now let me examine the design tokens, shared components, and find how file import/export is handled natively (this surface needs file picker + export, unlike BackupActionsCard).
+
+The design tokens are generated. Let me locate them and read the key UI components I'll need (Button, Card/GlassPanel, Typography/Code, Skeleton, IconBox) plus the existing fileImporter usage.
+
+Now I have the full token vocabulary. Let me read the shared UI components I'll compose with (Button, Card, Typography, Skeleton, Utility/IconBox).
+
+Let me read Typography/Skeleton components, check the icon-box pattern, and critically assess build feasibility (the KMP `Shared.xcframework` dependency).
+
+Critical question: the build needs `Shared.xcframework` (KMP), which isn't prebuilt. Let me assess build feasibility and the icon-box convention.
+
+`TSIconBox(systemName:tone:)` exists. The build needs a Gradle-built KMP framework. Let me read the verification-strategy doc and check the shared module + tooling — this determines how I verify.
+
+I now understand the **established verification methodology** (from `macos-pending-verifications.md`): every prior P4 surface verifies *in isolation* (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder clean, `xcodegen generate`), while the full-app `xcodebuild build test` is deferred to the macOS acceptance gate due to **pre-existing, unrelated** parallel-merge collisions. Let me confirm component independence and file-import conventions before building.
+
+Components/Design are fully independent of `Shared` — so I can verify my surface via an isolated SwiftPM package that compiles the real component library + tokens + my files + tests. Let me read the remaining component APIs precisely and the placeholder rules.
+
+Let me read the placeholder-checker rules (critical to avoid tripping the gate) and confirm the `tsGlassPanel` material.
+
+I have everything needed. Forbidden literal patterns (case-insensitive): `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`, plus Swift `fatalError("unimpl`/`("not`, `Text("TODO`. I'll avoid all. Let me confirm the component library's import independence and the motion (FadeIn) API, then set up tracking and build.
+
+The component library imports only system frameworks — fully self-contained for isolated verification. `TSFadeIn` is the FadeIn equivalent; SDKs are iOS/macOS 26.5 (I'll target 18.0/15.0 deployment). Let me check for symbol-name collisions (a known hazard here) before writing, and set up tracking.
+
+`JSONValue` already exists. Let me inspect it — I can reuse it if it's a suitable public Sendable JSON type, otherwise I'll namespace mine.
+
+There's a public `JSONValue` in `FleetApiSection.Models.swift` (same module). To keep my surface self-contained and collision-free, I'll define my own `SettingsJSON` type. Let me check the lint/format configs so my files pass `--strict` first time.
+
+I'll structure verification as the precedent does: a pure-core isolated SwiftPM package (Adapter+Model+Tests — no SwiftUI deps, like BackupActionsCard.Tests) plus `swiftc -typecheck` of all files against both SDKs. Let me confirm the component library is macOS-clean (UIKit guarded), then write the code.
+
+Components are macOS-clean (only one guarded UIKit import). I can typecheck my surface + the full component library against both SDKs. Now writing the surface. Starting with the pure Adapter.
+
+Adapter written. Let me add JSON encoding helpers to it (needed for the export file payload), then write the Model.
+
+All seven files are written. Now verifying. First, auto-format my Swift files with the repo's swiftformat config, then lint.
+
+swiftformat is clean. swiftlint flags: file_length (>400) on 4 files, plus opening_brace, cyclomatic_complexity, and 2 long JSON lines. The repo convention is to split surfaces into more `Name.*` files (allowed by scope). Let me view the specific brace/complexity issues, then split files and fix.
+
+Clear issues: swiftformat wrapped long signatures putting `{` on its own line (opening_brace), plus file_length >400. The convention is more `Name.*` files. Let me check line counts and restructure into the standard multi-file split.
+
+Now I'll split the oversized files into the standard multi-file layout (all `SettingsExportImport.*`, within scope) and apply the targeted fixes. Starting with Adapter → Adapter + Projection.
+
+Now fix the `validate` cyclomatic complexity by extracting a section-validation helper. Let me view the current function.
+
+Now split Model → Model + Sources, and add the `SettingsPreviewContext` + `previewContext` to collapse the multi-clause `if`. Let me check the Model split boundary and view the preview-render area.
+
+Important catch: `private(set)` setters are only writable within the same file, but I moved the DEBUG preview seams into `Sources.swift`. They mutate the model's `private(set)` state, so they must live in `Model.swift`. Let me relocate that block.
+
+Model is now 418 (>400). I'll extract the seam/identity/telemetry/payload contracts into `SettingsExportImport.Seams.swift`, leaving `Model.swift` as just the view-model + DEBUG seams. Let me verify boundaries first.
+
+Now add `SettingsPreviewContext` (Projection) and the `previewContext` computed property (Model) to collapse the multi-clause `if` in the main view.
+
+Now fix the `opening_brace` issues in `Sources.swift` (long default-arg signatures). Let me add short static constants and use them.
+
+Now split Views → Views + Sections (the toast view needs the tone extension; both need the `SEILoc` helper, which is file-private so each gets a copy).
+
+Now update `SettingsImportPreview` to accept the collapsed `SettingsPreviewContext`. Let me view its current signature.
+
+Now update `main.swift` to use the collapsed `previewContext` (fixes the `opening_brace` there too).
+
+Now split Tests → AdapterTests + Tests and fix the two long JSON lines. Let me find exact boundaries.
+
+Now fix the two over-length JSON literal lines by wrapping them (JSON tolerates internal newlines).
+
+Now re-format all files and re-run both linters.
+
+All files under 400 (Projection at 398 is tight but valid). Re-running both linters strictly.
+
+swiftformat clean (0/11) and swiftlint --strict clean (0 violations). Now the isolated build. One Swift-6 concern: the sample fixtures are `static` on a `@MainActor` class but referenced from non-isolated test/preview contexts. Let me make them `nonisolated`.
+
+Now build the isolated SwiftPM package (pure lib `TeslaSync` = Adapter/Projection/Seams/Model/Sources + tests) under Swift 6 strict concurrency.
+
+Build succeeded under Swift 6. One warning: `nonisolated(unsafe)` is unnecessary since `NumberFormatter` is `Sendable` here. Let me remove it (keep it clean), then run the tests.
+
+Let me reconsider — I'll avoid the stored formatter entirely (sidesteps any Sendability concern) by building it per call. Let me view and replace the whole enum cleanly.
+
+Now re-copy the pure files and run the full test suite in the isolated package.
+
+Test target hit Swift 6 errors: the global `echo`/`echoFormat` closures must be `@Sendable`. Let me fix.
+
+All **51 tests pass** (25 model + 13 validation + 13 adapter projection), 0 failures, Swift 6 strict concurrency. Let me re-run the linters (I edited several files since) and then typecheck against both SDKs.
+
+Linters clean. Now `swiftc -typecheck` of the full surface (all view + model files) **plus the real component library + design tokens** against both the iOS 18 and macOS 15 SDKs.
+
+The errors are all in an unrelated component file (`UnitFormatters.swift`) that depends on `UnitPreferences`/`Units` defined outside Components — my surface never uses it. Let me determine exactly which shared components my surface references, then typecheck against just that closed set.
+
+My surface only needs Buttons, Cards, Badges, Typography, Motion + tokens/material. Let me typecheck that closed set + the full surface against iOS 18.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDKs typecheck clean. Now the placeholder gate. Let me run it both ways — the literal gate path and a real scan of my files via a temp dir (the gate's path arg lacks an extension, so I verify properly).
+
+Placeholder gate clean (0 count, 0 opt-outs). Now run `xcodegen generate` and confirm it enumerates my files.
+
+`xcodegen generate` succeeds and enumerates all 12 surface files. Now I must honestly attempt the full-app gate. Per the precedent it's blocked by pre-existing, unrelated collisions — but I won't assume; I'll verify. Let me check the log dir, the documented collision, and the build prerequisites.
+
+The documented collision (`DashboardWidgetSize`) appears only **once** in this slot (not 15× — this is a clean checkout), and Java is present, so I'll genuinely attempt the full build rather than presume. The prerequisite is the KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me start that build and monitor it.
+
+Gradle works. Now kick off the actual KMP `Shared.xcframework` assembly (the Kotlin/Native long-pole) asynchronously and monitor.
+
+Launched. While the Kotlin/Native framework builds, let me check progress periodically. First read after a short wait.
+
+Kotlin/Native is downloading + linking (progressing via cache). Let me keep monitoring while it assembles all slices.
+
+Good progress — Debug XCFramework assembled, now doing the RELEASE links (the long pole). Let me continue monitoring.
+
+The RELEASE Kotlin/Native link is the long-pole (matches the precedent's note) but it's genuinely progressing, not hung. Let me give it a longer interval.
+
+Two of three RELEASE links done (iosArm64, iosSimulatorArm64); macOS link + assemble remain. Nearly there.
+
+`Shared.xcframework` built (13m) and staged. Now I can run the **actual full-app gate**. Let me start the iOS-simulator build+test (matching the gate command) and monitor.
+
+Build launched. Let me write the gate log scaffolding while it runs, then check progress.
+
+The backgrounded build was torn down with its session and the log is empty. Let me relaunch it as a **detached** process (survives independently) and poll the log file.
+
+Another slot is running its own xcodebuild (shared machine — explains the precedent's contention note). Mine was killed. Let me relaunch **detached** with an isolated derivedDataPath, then poll the log.
+
+The detached build cleared the Gradle/preAction stage and `Shared.xcframework` links (Shared.pcm precompiled) — now emitting the `TeslaSync` app module. Let me poll for progress and any errors.
+
+The full build **FAILED (exit 65)** — but **zero errors are in my surface**. All errors are pre-existing, unrelated collisions in `dashboard-widgets/ChargeSessionChartWidget.*` (`ChargeSessionDTO` is ambiguous — a parallel-merge duplicate-type collision). Let me gather definitive evidence.
+
+**Definitive: 452 errors, ZERO in my surface** — all in pre-existing `dashboard-widgets/*` files (duplicate-type "ambiguous for type lookup" parallel-merge collisions). My surface type-checked cleanly inside the full app module. Let me confirm the duplicate types are genuinely pre-existing and that my changes are isolated.
+
+Conclusive evidence: the 452 errors are **pre-existing duplicate-type collisions** (e.g., `ChargeSessionDTO` defined in two different widget files), entirely in `dashboard-widgets/*` — **0 errors in `feature-views`**. The stray `web/src/...` changes were already in the tree before I started. Let me launch the macOS build (for honest evidence) and write the gate log while it runs.
+
+Now I'll generate the gate log with authentic command output. Let me run the host-runnable gates piped into the log (re-running for real output), then append the build analysis.
+
+Header written. Now append authentic host-gate output (typecheck both SDKs, isolated build+tests, lint, format, placeholder, xcodegen).
+
+Now append the placeholder gate, xcodegen, the Shared.xcframework build, and the full-app build results. Let me first check the macOS build status.
+
+Both full-app builds fail on **pre-existing/environment blockers, 0 surface errors**: iOS on the dashboard-widgets duplicate-type collisions (452 errors), macOS on development-signing (no cert in this env) — exactly the precedent's documented blockers. Let me append the remaining gate sections.
+
+Now append the full-app build evidence and the final EXIT/STATUS verdict.
+
+The nested grep quoting broke one line. Let me view and fix that section of the log.
+
+Let me review the complete gate log for correctness.
+
+The log is coherent and honest. The macOS signing-error detail line didn't render — let me add it for evidence completeness.
+
+The gate log is complete and honest. Now let me verify what will be staged (only my files + log; the generated `.xcodeproj` and `Shared.xcframework` must be git-ignored), then commit.
+
+All 12 surface files + log are new; `.xcodeproj` and `Shared.xcframework` are git-ignored. Committing exactly the surface + log (not the pre-existing web changes).
+
+The `add` succeeded; my status-check flag was wrong. Let me verify staged files and commit.
+
+Exactly 13 files staged (12 surface + log), nothing extraneous. Committing.
+
+Committed as `8b21f2827`. Let me finalize tracking and clean up temp build artifacts.
+
+All todos complete; temp build artifacts cleaned; evidence logs retained. The task is finished.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) parity of the web `SettingsExportImport` surface, following the repo's established feature-view architecture (the `BackupActionsCard` sibling pattern). Commit `8b21f2827` — 12 surface files + the gate log (3,073 insertions), strictly within the prompt's allowed-files scope.
+
+**Files (all `apps/apple/TeslaSync/feature-views/SettingsExportImport.*`):** `Adapter`, `Projection`, `Seams`, `Model`, `Sources` (pure, Foundation/Observation/OSLog), `Views`, `Sections`, `.swift` (main view + `FileDocument` + `fileImporter`/`fileExporter`/drag-drop), `Previews`, `.strings`, `AdapterTests`, `Tests`.
+
+**Parity reproduced:** export (fetch bundle → platform save), import file-pick/drag-drop → local schema validation (full `validateSettingsBundle` port) → dry-run preview with per-section diff → apply; every state — idle, export-busy, parsing, the five parse-error branches, preview, applying, applied, offline, and sudo-cancel-keeps-preview. Bound to P1/S8 seams (no HTTP in the view), P1/S10 i18n (every web key verbatim), P1/S11 `view.opened` telemetry, full VoiceOver labels.
+
+**Verification — every host-runnable gate GREEN:**
+- Isolated SwiftPM build + **51/51 tests** pass (Swift 6 strict concurrency)
+- `swiftc -typecheck` clean on **real iOS-18 and macOS-15 SDKs**
+- `swiftlint --strict` 0 violations / 0 opt-outs; `swiftformat --lint` 0/11
+- `check-placeholders` `PLACEHOLDER_COUNT=0`; `xcodegen` enumerates all 12 files
+
+**Full-app gate (honest, `STATUS=BLOCKED`):** I built the KMP `Shared.xcframework` (13 min) and ran the full `xcodebuild build test`. Both platforms are RED but with **0 errors in this surface** (0 anywhere in `feature-views`): iOS fails on 452 pre-existing duplicate-type collisions in `TeslaSync/dashboard-widgets/*` (owned by other prompts, out of my allowed scope); macOS fails at development-signing (no cert in this env). These are the exact blockers recorded in `apps/macos-pending-verifications.md`, deferred to the signed `macos-latest` acceptance gate. Per Honesty Covenant #1 I reported this RED rather than masking it — `EXIT=65 / STATUS=BLOCKED`, with full evidence in the gate log.
+
+
+
+The task is fully complete — all 14 todos done, surface implemented and verified green on every host-runnable gate, full-app build honestly reported, and everything committed (`8b21f2827`). There is no remaining in-scope work.
+

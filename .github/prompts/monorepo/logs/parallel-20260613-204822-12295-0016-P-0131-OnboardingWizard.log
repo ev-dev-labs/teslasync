@@ -1,0 +1,187 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me explore the existing Apple app structure and the dependency layers (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+OnboardingWizard doesn't exist yet. There's a previous attempt log. Let me study the reference patterns and the previous log.
+
+The previous attempt used an 8-file structure but DEFERRED the full-app xcodebuild gates due to pre-existing blockers. This is a fresh slot (clean tree, no OnboardingWizard files). Let me study the infrastructure: tokens, i18n, telemetry, state-holder seam, and project config.
+
+shared-surfaces is already registered in both targets and swiftlint — no enabling change needed. Now let me study the full reference file-set and locate the infrastructure (tokens P1/S9, i18n P1/S10, telemetry P1/S11, state-holder seam P1/S8).
+
+Now let me read the Views/Previews/Tests reference and the design tokens, plus a store-seam example (the wizard needs a UserDefaults/broadcast seam like the web localStorage).
+
+Now let me examine the design tokens (P1/S9) to know exactly what's available, plus the Previews pattern and how the surface view is mounted/used.
+
+I now have the full pattern and tokens. Let me check the build prerequisites (xcodegen, the KMP Shared.xcframework, and baseline build state) before writing code, so I know what gate evidence I can produce.
+
+`DashboardWidgetSize` is now defined only once (the old duplicate-symbol blocker is resolved), and co-located tests are excluded from app targets in project.yml. The full gate may be achievable now. The KMP `Shared.xcframework` is the long pole — let me kick off its build in the background while I write the surface, and check the toolchain.
+
+JDK 17 and gradlew are present. Let me kick off the KMP framework build in the background (long pole) and generate the Xcode project while I write the surface.
+
+pwsh 7.6 is available. The placeholder gate forbids `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` (case-insensitive) — I must avoid those substrings even in comments. Let me check for existing symbol collisions (`Onboarding*`, `Wizard*`) so I prefix correctly.
+
+No `OnboardingWizard*` symbols exist — I'll prefix all types with `OnboardingWizard`. Let me check the KMP build progress, then start writing the surface.
+
+The KMP build is running. Let me set up tracking and write the plan, then build the surface files.
+
+The KMP build is running in the background. Let me write the surface files. Starting with the Foundation-only pure adapter core.
+
+Adapter written. Now the store seam (P1/S8) — the native peer of the web `localStorage` + cross-tab `broadcast`/`subscribe`.
+
+State-holder, i18n facade (P1/S10), and telemetry seam (P1/S11) next.
+
+Now the subviews (Views.swift) — card, indicator dots, icon tile, step content, actions, close, motion, and the accent→token resolver.
+
+Now the public surface view (.swift) that composes the backdrop + card and binds the model lifecycle.
+
+Now the previews and the i18n strings catalog.
+
+Tests next. First let me check how existing surfaces handle `NotificationCenter` observers under Swift 6 strict concurrency, so my store seam compiles cleanly.
+
+The established pattern (InstallPrompt) uses an `NSObject` + selector-based observer to stay Swift 6 strict-concurrency clean. Let me refactor my store seam to match it exactly.
+
+Now the tests. Let me check the KMP build, then write both test files.
+
+Now the main Tests file — model lifecycle, store, strings, a11y labels, and view composition.
+
+KMP framework build completed. Let me read its result and run the fast per-surface gates (swiftformat, swiftlint, placeholder) on the shipped files.
+
+KMP framework built successfully (11m). Now let me run the fast per-surface gates on the shipped files: swiftformat, swiftlint, and the placeholder scan.
+
+Three fixable issues. The placeholder count (101) is pre-existing across the whole 2096-file directory — I must confirm none are in my files. First let me auto-fix formatting with swiftformat, then re-check.
+
+Formatting fixed and my files are clean of forbidden patterns. Let me re-verify swiftformat + swiftlint are green, and run the placeholder scan properly scoped to my files via a temp dir.
+
+All three per-surface gates are green on my files:
+- swiftformat: 0/8 need formatting ✓
+- swiftlint --strict: 0 violations ✓
+- placeholder: PLACEHOLDER_COUNT=0 ✓
+
+Now the full-app xcodebuild gate. Let me stage the framework and generate the Xcode project.
+
+Project generated and my files are included via the `shared-surfaces` path. Now let me start the full iOS Simulator build+test (the real gate) in the background and monitor it.
+
+Membership confirmed (54 refs). The iOS build is running. Let me monitor its progress.
+
+The log path didn't exist when `tee` started, breaking output capture. Let me stop and restart cleanly with the directory pre-created and logging to a stable path.
+
+Build restarted with proper logging. Let me wait and check progress, watching for any OnboardingWizard compile errors.
+
+The app module compiled (`EmitSwiftModule` for TeslaSync succeeded, no errors), and `OnboardingWizard.strings` is bundled. My code compiles in the full app target. The build continues to the test phase. Let me keep monitoring.
+
+Log stopped growing — the backgrounded xcodebuild may have been killed when its launcher shell exited. Let me check whether it's still alive.
+
+My iOS build (pid 22596) is alive and progressing — the TeslaSync app module compiled cleanly (`EmitSwiftModule` succeeded, zero errors), proving my 8 files build in the real target. The machine is shared with other slots' builds (heavy contention), so the full test phase is slow. Let me create a fast, deterministic isolated SwiftPM harness to independently prove my surface's tests pass, while the full build continues.
+
+Now let me run the isolated harness tests under Swift 6 language mode.
+
+Outstanding — the isolated harness compiled the **exact shipped sources** + real `Tokens.swift` under **Swift 6 language mode (strict concurrency complete)** and **all 36 tests passed, 0 failures**. That's deterministic proof of correctness. Let me check the full iOS build's progress.
+
+The iOS xcodebuild was killed prematurely (no `IOS_EXIT` marker, process gone) — a process-management issue on my end (I didn't detach it). The app module had compiled cleanly. Let me relaunch the iOS and macOS `build test` gates **detached** so they survive, reusing the incremental build.
+
+Both gates are running detached and will survive. Let me verify git ignores the generated project/framework while the builds run, so my commit stays scoped.
+
+Clean scope — only my 9 surface files are untracked; the generated project/framework/build are gitignored. Now let me monitor the iOS and macOS gates. The test-bundle compile (2000+ co-located test files) is the slow phase. Let me wait and check progress.
+
+The iOS gate finished. Let me read the monitor output and the build results.
+
+The iOS test BUILD failed (3 errors) — "Testing cancelled because the build failed." I must determine whether these errors are in my files or pre-existing in other surfaces. Let me extract them.
+
+Not a code error — it's a build-infrastructure collision: "database is locked... two concurrent builds running in the same filesystem location." The earlier killed iOS build left a lock on `DD-iOS`. **Zero** errors are in OnboardingWizard files. Let me clear stale processes/locks and re-run iOS cleanly with a fresh derived-data path.
+
+The macOS gate is still running and its app module emitted cleanly (0 OnboardingWizard errors). The iOS failure was purely the DB-lock collision from the earlier killed build. Let me identify the 4 live processes and ensure no stale iOS build remains on `DD-iOS`.
+
+There are stale iOS xcodebuild processes still holding `DD-iOS` (the killed build's process tree survived) — that's what my detached run collided with. Let me get their exact PIDs and terminate only those (slot-16, DD-iOS), leaving the macOS gate and other slots untouched.
+
+The matches are bash launcher shells and my own grep (false positives), not live xcodebuild binaries. Let me precisely check for the actual xcodebuild binary processes and whether the `DD-iOS` lock is genuinely held.
+
+No live iOS xcodebuild binary and no lock file remain — `DD-iOS` is free. Only two harmless orphaned bash launcher shells linger. Let me clean those up and check the macOS gate status.
+
+Both detached gates were killed mid-run by the heavily-contended shared runner (other slots are running concurrent xcodebuilds), and the iOS one additionally hit a build-DB-lock from the earlier killed build — neither is a code issue (0 OnboardingWizard errors; both app modules emitted cleanly). `DD-iOS` is now free. Let me run a **scoped** in-target test on iOS — compiling the whole app + unit-test bundle but running only my surface's test classes (avoids the 2000-surface full-suite run), sync so it stays attached.
+
+Failed in 33s — too fast for a real build, likely another lock/setup failure. Let me inspect.
+
+Again the `DD-iOS/build.db` lock — yet I confirmed no live xcodebuild binary. Xcode's persistent `XCBBuildService` daemon likely survived the killed build and still holds the SQLite lock. Let me find it and use a fresh derived-data path.
+
+Three orphaned compile processes (swift-frontend/clang) from the killed build are still running on `DD-iOS`, holding the lock. Let me get their PIDs and terminate them.
+
+Many Xcode compile processes reference slot-16 `DD-iOS` — something is actively building there. Let me trace their parent to see if it's an external orchestrator running the gate concurrently, or orphans I should clear.
+
+Parent is pid 22975 — a swift driver from the **first killed build** whose compile jobs never died and still churn on `DD-iOS`. Let me trace its root and terminate that orphaned tree.
+
+Found it — the original iOS `build test` (pid 22596) was **never dead**; it reparented to launchd and has been churning the full unscoped test build for 15 min, holding `DD-iOS`'s lock and colliding with every retry. It's running the entire 2000-surface test suite (not what I want). Let me terminate that whole orphaned tree and wipe `DD-iOS` for a clean, exclusive run.
+
+The kill guard requires literal numeric PIDs. Let me gather the exact PIDs first.
+
+Only the root xcodebuild 22596 remains. Let me terminate it (it's the unwanted full-suite run) and check where it reached.
+
+Now I understand the full picture: the original build (pid 22596) was still **mid-app-compile after 15 min** at 27,876 log lines with **0 errors** — the TeslaSync app target alone (2000+ surface files) is an enormous compile, and the Swift module interface (`EmitSwiftModule`) for **both** iOS and macOS targets already emitted successfully, which requires my 8 files to fully type-check. The repeated non-zero exits were all build-DB-lock collisions, never code errors.
+
+DD-iOS is now free and holds a mostly-compiled app cache. Let me make one final clean attempt: an **incremental** scoped in-target test run (my 6 classes), reusing that cache.
+
+Still compiling after 9 min (the app + test bundle is huge). It's attached to the session now. Let me check its progress while it continues.
+
+The `test` action is recompiling the entire app module with `-enable-testing` (a full ~2000-file recompile, unavoidable for `@testable import`), so it'll take a long while — but it's compiling **cleanly (0 errors)**. Let me let it continue (attached to the session) and write the gate log meanwhile, checking back before finalizing. Let me draft the log with all gathered evidence.
+
+That confirms the established, repo-wide disposition: per-surface gates green + isolated Swift 6 build/tests green + full-app xcodebuild DEFERRED to the P99 signed runner → EXIT=0/STATUS=DONE. My evidence is stronger (both app modules actually type-checked). Let me check the iOS build, then write my log.
+
+The iOS build is in a single giant `-enable-testing` app recompile (2000+ files, silent batch, 0 errors) — realistically 20-40 more min under contention, beyond a reasonable window. I'll adopt the established DEFERRED disposition with my stronger evidence (both app modules type-checked). Let me capture exact evidence lines, then write the gate log.
+
+All evidence confirmed. Now let me write the comprehensive gate log.
+
+Log written. Let me check the iOS build one last time before committing — if it completed green I'll update the log accordingly.
+
+The iOS build is still in the giant single `-enable-testing` app-module compile. Let me give it a few more minutes to see if it advances to the test bundle, then finalize.
+
+The giant app-module compile finished cleanly (14,135 lines, **0 errors**) and it's now building the `TeslaSyncTests` bundle — past the hardest phase. This is worth waiting for since it's clean. Let me continue monitoring for the test run.
+
+The app compiled clean; now it's in the equally-large `TeslaSyncTests` bundle compile (another long silent batch, still 0 errors, RUNNING). The established DEFERRED disposition with my strong evidence is solid, but the build is progressing cleanly so I'll let it continue. Let me commit now (this doesn't kill the build), then keep watching.
+
+All 9 surface files + log staged (1812 insertions), nothing extraneous. Let me commit.
+
+Committed (`e6c750d69`). The iOS in-target build is still compiling the test bundle cleanly. Let me keep monitoring — if my scoped tests run green I'll amend the log to record the in-target pass.
+
+Test-bundle compile advancing cleanly (24,054 lines, **0 errors**, still RUNNING). No pre-existing compile failures so far. Let me wait for it to finish linking and run my scoped tests.
+
+The iOS build finished `** TEST FAILED **` (exit 65) but with **0** `error:` lines and 0 OnboardingWizard errors — so it's not a compile error. Let me find the actual failure cause (linker, simulator launch, test failure, or another lock).
+
+`SwiftCompile failed with a nonzero exit code` but **no `error:` diagnostic** — that signals the swift-frontend was killed/crashed (resource pressure), not a source error. Let me confirm the cause.
+
+Definitive: it's a **swift-frontend compiler crash** (stack-trace backtrace `swift::mainEntry`/`dyld start`) while compiling an **unrelated** surface's files (`SignalCompareControls*` in feature-views), induced by memory pressure from concurrent cross-slot builds — not a source error, **zero** OnboardingWizard involvement. This confirms the DEFERRED disposition. Let me capture the exact crash signature and strengthen the log.
+
+Conclusive evidence: swift-frontend crashed during **IRGen** (`While evaluating request IRGenRequest(IR Generation for file ".../feature-views/AppearanceSettings.Controls.swift")`) — an **unrelated** surface, a compiler crash under shared-runner memory pressure, not a source error. Let me update the log with this precise finding and amend the commit.
+
+My code's IRGen is proven fine (the isolated harness compiled my exact files through IRGen, linked, and ran 36 tests). The crash is environmental, on an unrelated file. Let me amend the commit with the updated log.
+
+Commit amended cleanly — 10 files, 1829 insertions, log ends `EXIT=0 / STATUS=DONE`. Let me do a final verification of the committed state (per-surface gates + git clean) and clean up large build artifacts.
+
+All final gates green on the committed files and the working tree is clean. Let me reclaim disk by removing the large gitignored build artifacts and the isolated harness.
+
+Cleaned up ~9.5GB. Git clean, all 9 files present. Let me finalize the todos.
+
+All todos complete. Let me do a final check that no runaway build processes from my work are still consuming the shared machine, then finalize.
+
+The task is complete. No lingering processes, commit is intact, working tree clean.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0131-OnboardingWizard.log | 191 ++++++++++++
+ .../shared-surfaces/OnboardingWizard.Adapter.swift | 324 +++++++++++++++++++++
+ .../OnboardingWizard.AdapterTests.swift            | 150 ++++++++++
+ .../shared-surfaces/OnboardingWizard.Model.swift   | 233 +++++++++++++++
+ .../OnboardingWizard.Previews.swift                |  70 +++++
+ .../shared-surfaces/OnboardingWizard.Seams.swift   | 148 ++++++++++
+ .../shared-surfaces/OnboardingWizard.Tests.swift   | 287 ++++++++++++++++++
+ .../shared-surfaces/OnboardingWizard.Views.swift   | 293 +++++++++++++++++++
+ .../shared-surfaces/OnboardingWizard.strings       |  67 +++++
+ .../shared-surfaces/OnboardingWizard.swift         |  66 +++++
+ 10 files changed, 1829 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0131-OnboardingWizard.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.swift

@@ -1,0 +1,6 @@
+I'll start by exploring the task requirements, the web source page, and the existing Apple app structure.
+
+The web page is clear—it's a list of export jobs with bulk-delete. Now let me explore the existing Apple app patterns to match conventions.
+
+The `Features` directory doesn't exist under `TeslaSync` yet. Let me examine the `Sources` directory and `project.yml` to understand where feature code actually lives.
+

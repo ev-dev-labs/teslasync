@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure to understand the task — the web source page, the Apple project layout, and existing patterns to follow.
+
+The actual structure uses `apps/apple/Sources/Features/Charging/`, not the `TeslaSync/Features/...` path in the manifest. Let me examine the existing Charging feature, the parity manifest, and reference patterns.
+
+There's a `PowersharePage` sibling — same feature, same page kind, freshly implemented. That's my canonical reference. Let me study its full file set, its log format, and the manifest record.
+
+Excellent reference pattern. Let me read the remaining Powershare files (Sections, Models, Format, RouteRegistration, Sample) and the test, plus the log for the gate/parity format.
+
+Now the route registration, sample data source, test, and the log format. Plus the web charging-curve helpers/types and the charging hook to understand the data shape.
+
+Now the Powershare log (for the exact log/PARITY format) and the web charging-curve components plus the charging hook and AppRoute enum.
+
+I now have a thorough understanding of the pattern. The Powershare log confirms the path resolution (use `apps/apple/Sources/Features/Charging/`, not the manifest's `TeslaSync/` path). Let me confirm scope: check whether the chart sub-components are separate parity units, read the full manifest record for ChargingCurve, and inspect the AppRoute enum.
+
+The chart sub-components are NOT separate parity units — they don't appear in the manifest at all. The page record is exactly 11 items. To calibrate how faithfully the Apple sibling reproduced its web page, let me compare the Powershare web source against its Apple implementation, and read the ChargingCurve helpers + sub-components + the charging hook.
+
+Key calibration: the Powershare web page was fully inline (no sub-components), so its Apple sibling is a complete reproduction. ChargingCurve's web page composes real sections, so a faithful, non-stub page must reproduce them. I'll build the full page with native Swift Charts, anchored on the 11 required parity items. Let me gather the data layer, sub-components, and Apple infrastructure.
+
+Now I understand the string scoping: the manifest's 6 strings are exactly the page-file strings; sub-components use their own keys. To build a faithful, non-stub page I'll port the sections natively. Let me read the remaining sub-components, the data types, the native Swift Charts wrappers, and an existing Apple page that uses charts as a pattern reference.
+
+This is a substantial page. Before deciding final chart scope, I must verify the native Swift Charts infrastructure and how existing Apple feature pages use it. Let me inspect the charts components, an existing chart-bearing Apple page, the data type, and the remaining sub-components.
+
+Existing Battery sibling pages (BatteryDegradation, SleepEfficiency, BatteryCells) use native charts — ideal references. Let me study the chart wrappers and a sibling chart page, plus get the data type and hook.
+
+I have the chart API. Let me make a final scope decision: the repo standard (Battery sibling pages fully port their charts) plus the covenant's anti-stub/anti-narrowing rules mean I should fully port the page including all sections. First, critical infra checks — verify the toolchain availability (Xcode/swiftlint/pwsh), get the data type, hook, AppRoute, app registration, and study a sibling chart page end-to-end.
+
+Toolchain is fully available (xcodebuild, swiftlint 6.3.2, xcodegen, pwsh) — so build/lint/test are mandatory, not BLOCKED. I have the data shape and hook. Let me study a sibling chart page end-to-end and the remaining infra (BarCharts, AppRoute, app registration, YearlyTrendChart, the placeholder script).
+
+I have all chart wrappers. AppRoute needs a new `chargingCurve` case (it's a String enum with cases like `powershare`). Let me read AppRoute fully, the app registration, and the BatteryDegradation sibling (page + model + charts) end-to-end.
+
+Rich 4-state sibling pattern confirmed. Let me read the sibling's charts, model, route registration, the Units facade, and the app registration — then I'll have everything to implement.
+
+I have the full sibling pattern. Now let me verify the remaining infra: app registration, the Units/currency facade, key UI component signatures, the placeholder script, the ledger format, and the xcstrings format.
+
+The app file path differs. Let me locate the app registration wiring, the `TSSelect` definition, the `TSStatCard`/metrics components, and the currency formatter.
+
+I have the Units facade. To minimize build risk and match the Powershare sibling's self-contained pattern (and the web's unconditional kWh/kW), I'll store SI (Wh/W) and convert at the display boundary with a pure formatter. Let me verify the Shared framework presence (critical for building), the TSSelect/TSStatCard/TSEmptyState signatures, and the app registration block.
+
+Critical finding: `Shared.xcframework` is absent (only `.gitkeep`), but the app target links it — so a full `xcodebuild` needs the KMP framework built first. Let me check whether building it is feasible here (JDK/Gradle) and read the build script.
+
+JDK 17 present, build script exists, `apps/shared` is the KMP module. The framework build is the long pole — let me read the script, then kick it off in the background while I implement.
+
+Build script runs `apps/shared/gradlew :core:assembleSharedXCFramework`. This is the long pole (KMP/Native toolchain, several minutes). Let me launch it in the background now, then implement while it runs.
+
+Build launched. Let me check its initial progress and gather the final component/token signatures I need (TSEmptyState, TSErrorDisplay, glass/card/typography, tones, tokens) plus the route parser.
+
+The KMP build finished quickly (Gradle cache hit). Let me confirm the framework is staged and read the final component signatures and design tokens.
+
+The notification says the build process completed, but the framework isn't staged yet. Let me inspect the full build log to see what happened.
+
+The gradle build is still running (linking frameworks; other slots contend for the daemon). It'll finish in the background. Let me read the final signatures (Typography, Cards, tokens) and then start implementing.
+
+Let me locate the design tokens (TSSpacing, TSRadius, Color.TS, Font.TS) to confirm exact member names, and check the test target setup.
+
+Let me read the core token file `TSDesign.swift` to confirm exact token member names.
+
+Tokens are defined elsewhere (likely generated). Let me locate them precisely.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read the spacing/radius/font/color members.
+
+I now have every signature and token confirmed. Let me write the plan, seed todos, and check the framework build progress.
+
+The framework is still linking (release variant). Importantly, **80 `charging.curve` lines already exist** in the xcstrings — I must avoid duplicates. Let me list the existing keys to know exactly what's present and what I need to add.
+
+The two greps disagree — the 80 matches aren't `"charging.curve.X"` keys. Let me see what's actually matching to avoid wrong assumptions.
+
+The xcstrings has `translation.charging.curve.*` keys (a web-i18n bulk import), but Swift code uses **unprefixed** keys (e.g. `powershare.title`). Let me confirm Powershare's key format to follow the same convention.
+
+Now I understand the key convention (unprefixed Swift keys; `route.chargingCurve` and `charging.curve.*` need adding). Let me grab the `fmtNumber`/`fmtInt` defaults and the swiftlint line-length rule, and check the framework build.
+
+`--strict` means lines must be ≤120. Let me read the full swiftlint config (opt-in rules, identifier exclusions) and the `_globalPrecision` default, then start writing.
+
+I have all defaults (fmtNumber=2dp, fmtInt=0dp) and lint rules (lines ≤120, identifiers ≥2 chars except id/ok/x/y/t, use `.isEmpty`). Framework still linking in background. Let me start writing the source files — beginning with the pure Models and Format.
+
+Let me fix the month/year keying to use UTC (the web slices the UTC ISO string), then write the Format file.
+
+Now the Format file with pure display formatters (mirroring `PowershareFormat`).
+
+Now the `@Observable` page model with the data-source seam.
+
+Now the sample data source with representative sessions so all charts render.
+
+Now the main page view. Let me check the framework build and write the page.
+
+Framework still linking (now iOS-simulator target). Continuing to write the page view.
+
+Now the Sections file (selector, summary grid, the two GlassPanels, detail, skeleton).
+
+Now the charts file — the heart of the page (curve, comparison, charger-type, speed-trend, time-to-charge + yearly).
+
+Now route registration + AppRoute/app wiring. Let me read the app registration block to insert correctly, and check the build.
+
+Framework still building (slow due to slot contention). Let me write the route registration and wire up AppRoute + the app registry.
+
+Now the strings. The xcstrings is a large generated JSON — I'll insert keys via a precise anchor. Let me check the exact opening format and confirm the AppRoute group line length is within budget.
+
+xcstrings anchor is `  "strings": {` and the AppRoute line is 114 chars (OK). Let me verify the chart/common keys my code relies on already exist, then insert my new keys.
+
+Several component keys (`chart.noData`, `chart.line/area/bar`, `error.title`) are missing from this catalog. Let me check whether they live in another catalog or are simply absent repo-wide.
+
+The component keys (`chart.noData`, etc.) live in per-surface `.strings` files and resolve identically for all chart pages — not my concern. I only add my page's `charging.curve.*` + `route.chargingCurve` keys to the main catalog. Let me insert them via a validated Python script.
+
+49 keys inserted, JSON valid. Now the tests, mirroring the Powershare test structure.
+
+Now let me lint my new files early (fast, no framework needed) and check the framework build.
+
+SwiftLint is running; framework now linking the macOS target (nearly done). Let me wait for the lint result.
+
+SwiftLint is slow — likely CPU contention with the concurrent gradle builds. Let me check the framework status while lint continues.
+
+Heavy CPU contention across slots is slowing everything. Let me keep waiting for the lint result.
+
+SwiftLint surfaced default-rule violations (file length, param count, large tuple, type-body length). All fixable. Let me refactor: split derivations out of Models, split the charts file, replace the many-param fixture helpers with an exempt convenience `init`, and split the tests. Starting by truncating Models at the derivations boundary.
+
+Models is now 174 lines. Now the derivations file with the 3-tuple replaced by a struct.
+
+Now split the charts file — move time-to-charge, yearly trend, and shared chart chrome into a new file.
+
+Now rewrite the Sample file using a convenience `init` (initializers are exempt from the param-count rule) instead of the flagged helper.
+
+Now split and refactor the tests into two files using the exempt fixture `init`.
+
+Refactor complete. Let me re-run swiftlint on all the new/changed files to confirm zero violations.
+
+SwiftLint is clean (`LINT_EXIT=0`), all files under 400 lines. Now the placeholder gate and framework status.
+
+Framework is **staged** — I can build. But the placeholder scanner flagged false positives ("TODO"/"Placeholder" substrings). Let me inspect the exact lines.
+
+Both are false positives from substring matching: `startOdometerM`/`endOdometerM` contain "tOdo"→"todo", and my comment literally says "placeholder". The odometer fields are unused (the web's `distanceAddedM` isn't rendered on this page), so I'll remove them; and reword the comment. Let me view the exact Models init.
+
+Let me proactively scan all my files for any remaining placeholder-pattern substrings (excluding the allowed marker lines), then re-run the gate.
+
+No residual matches. Let me re-run the placeholder gate and generate the Xcode project (the framework is staged).
+
+Placeholder gate passes (`EXIT=0`) and the Xcode project generated. Now the macOS build (the framework pre-step is cached). Let me confirm scheme names and launch the build.
+
+Schemes confirmed (`TeslaSync-macOS`, `TeslaSync`). Let me launch the macOS build (excluding the pre-existing broken `Input.Previews.swift` per the Powershare precedent) and monitor.
+
+The macOS build is compiling (large target + contention). Let me check progress while preparing the ledger update in parallel.
+
+Build is in the module-emission phase (late stage), my files compiling without visible errors. Let me wait for completion.
+

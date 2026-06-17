@@ -1,0 +1,201 @@
+I'll start by understanding the current state of the repository and verifying what's available before making any claims.
+
+Toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure — the Xcode project, existing shared-surfaces, and the P1 dependencies.
+
+This is a large, mature Apple app with an established multi-file surface architecture. Let me study the established patterns and P1 dependencies before writing anything. Let me check the core Sources, find a representative surface, and look for version/changelog-related code.
+
+`NewVersionBanner` is the closest semantic predecessor (version + update-check + changelog). Let me read it in full plus the SharedFacade layer (P1/S8 state holders).
+
+Let me read the NewVersionBanner surface in full plus the SharedFacade core to learn the established pattern.
+
+Excellent — I now understand the architecture deeply. Let me read the remaining NewVersionBanner files (Views/States/Previews/strings/Tests), the design tokens (P1/S9), and the web `useChangelog` + types.
+
+The pattern is crystal clear. Now let me read the design tokens (P1/S9), the shared UI components I'll need (modal, tooltip, button, card), a test file, the Polling source, and the web changelog hook + types.
+
+Let me read the web types, the generated design tokens (P1/S9), and the key shared components (Buttons, Cards, Typography, States, Skeletons), plus a test file and lint config.
+
+Let me read the token color/font names, the motion component (TSFadeIn), the full TSButton init, and the test-file patterns plus lint config.
+
+Test file naming differs. Let me read the actual test files and the test-target wiring in project.yml.
+
+Now let me understand the build prerequisites — the Tests target wiring, the `Shared.xcframework` dependency (Frameworks only has `.gitkeep`), and the build script. This determines whether the gate can even run.
+
+This is a KMP-backed monorepo. The full gate requires building `Shared.xcframework` via Gradle (Kotlin/Native) + compiling the entire app. Let me check the documented build constraints and whether sibling status-bar segments were already ported.
+
+This is the key — predecessors verify surfaces via an **isolated SwiftPM build + tests**, with full-app `xcodebuild` deferred to the macOS CI matrix. Let me read that policy and find the isolated harness.
+
+Now I fully understand the established honest methodology: each surface is verified green in **isolation** (swiftc -typecheck on iOS+macOS SDKs, isolated tests, swiftlint/swiftformat/placeholder/i18n), while the full-app `xcodebuild` is **macOS-pending** (deferred to CI) due to the unstaged KMP `Shared.xcframework`, signing, and pre-existing parallel-merge collisions. Let me read the closest predecessor's gate log to replicate the exact verification commands and log format.
+
+I now have the complete, sanctioned methodology (`EXIT=0 STATUS=DONE` via independent green verification + deferred full-app xcodebuild). Let me capture the exact component APIs I'll call, plus look for a key-value list component for the modal's provenance grid.
+
+Found `TSKVList`/`TSKVRow` — ideal for the modal's provenance grid. Let me read those plus the badge/tone APIs for the update chip.
+
+I have a complete understanding of the architecture, components, tokens, and the sanctioned verification methodology. Let me verify which component files have heavy dependencies (Shared/SharedFacade) so I can scope my isolated typecheck, then set up my plan.
+
+No `Shared`/`SharedFacade` imports in Components/Design — the isolated typecheck closure is clean. `TSKVRow` is `Identifiable`. I have everything. Let me set up my plan and todo tracking, then build the surface.
+
+Now I'll build the surface. Starting with the pure core (`.Adapter.swift`).
+
+The Adapter is large because this surface is more complex. Let me check swiftlint's file-length budget and my file's line count before continuing.
+
+`--strict` upgrades swiftlint's default `file_length` warning (400 lines) to an error, and the largest existing adapter is exactly 399 lines — confirming a 400-line ceiling. Let me verify across all surfaces and check the default rule behavior empirically.
+
+Confirmed: hard limits are 400 lines/file, 120 chars/line, no trailing commas. The max existing file is exactly 400. I'll split the Projection into its own file (an established pattern) and fix the violations. Let me cut the projection + uptime formatter out of the Adapter.
+
+Now create the Projection file (with the long line wrapped, trailing comma removed) plus the pure tooltip/accessibility builders.
+
+Let me lint the two pure-core files before continuing.
+
+The multi-line return type tripped `opening_brace`. Let me reformat the signature so the brace stays on the same line.
+
+Adapter (344) and Projection are within budget. Now the seams. Given two probes + changelog observer + poller + build-info provider, I'll split across three files (Seams = infrastructure, Probes = network seams, Polling = production source) to respect the 400-line budget. Writing the infrastructure seams:
+
+Now the network probe seams (`.Probes.swift`).
+
+Now the production polling source + timer poller + notification-backed changelog observer (`.Polling.swift`).
+
+Now the state-holder, telemetry seam, and i18n facade (`.Model.swift`).
+
+State-holder done. Updating progress and writing the leaf chrome (`.States.swift`).
+
+Now the ready segment button + freshness chip (`.Views.swift`).
+
+Now the "About this build" modal content (`.Modal.swift`).
+
+Now the public surface composing everything (`.swift`).
+
+Now the DEBUG previews and the i18n strings catalog.
+
+Let me verify i18n parity — every key referenced in Swift must exist in the catalog, and no dead keys.
+
+The comparison had a trailing-quote artifact. Let me redo it cleanly, including the provenance-row keys (referenced dynamically via `row.labelKey`, defined as literals in Projection).
+
+Those two only appear "dead" because their `.string(` calls wrap across lines. Let me confirm they're genuinely used.
+
+i18n parity is perfect (26/26, 0 missing, 0 dead). Now the test suite. Writing the pure-core tests first.
+
+Now the state-holder + view-composition tests (`.ModelTests.swift`).
+
+Now the seams + polling-source tests (`.PollingTests.swift`).
+
+All 13 files written. Now the verification suite. Let me start with line counts, swiftlint, swiftformat, and the placeholder gate on the surface files.
+
+All files are within the 400-line budget. A few line-length and a large-tuple violation to fix. Let me address them: add a `ready(connection:)` helper, shorten the repeated snapshot lines, wrap long lines, and fix the 3-tuple in PollingTests.
+
+Now fix the PollingTests large-tuple and long line. Let me view and restructure `makeSource`.
+
+Now fix the remaining `(source, _, _)` destructures and the long update line:
+
+Now let me re-run swiftlint --strict and swiftformat --lint on all surface files:
+
+swiftlint is clean. swiftformat wants auto-formatting (hoistAwait/hoistTry/numberFormatting/wrap) plus manual force-unwrap fixes in tests. Let me auto-format my files, then handle force-unwraps manually.
+
+Auto-format done. Now fix the force-unwraps in `testModalContentComposes` with `XCTUnwrap`:
+
+Both linters clean, all files ≤400 lines. Now let me check the placeholder-patterns to ensure my comments don't trip the gate, then run a genuine placeholder scan on my actual files.
+
+"Placeholder" is a forbidden marker and appears in 3 of my comments. Let me find and reword every occurrence across my files.
+
+Placeholder gate clean. Now the isolated `swiftc -typecheck` against the real tokens + components. Let me first identify which Component files have heavier dependencies so I can scope the compile closure.
+
+Only `UnitFormatters.swift` is SharedFacade-coupled (excluded, per predecessor practice). Let me run the isolated `swiftc -typecheck` against the real tokens + full component/design closure for the iOS 18 simulator SDK.
+
+Only the Previews file errors — likely a cascade from an earlier root error. Let me capture the first errors from the top.
+
+The glob `VersionSegment.*.swift` missed the main `VersionSegment.swift` file (only one dot) — a harness bug, not a code bug. Let me fix the glob and re-run the iOS typecheck.
+
+Now 11 files including the main one. Let me run both iOS 18 and macOS 15 typechecks with the corrected closure.
+
+iOS 18 typecheck: **0 errors / 0 warnings**. Now macOS 15:
+
+Both SDKs: **0 errors / 0 warnings** under Swift 6 strict concurrency against the real tokens + full component closure. Now the isolated SwiftPM test run. Let me set up an ephemeral package (module `TeslaSync` so `@testable import` works) and execute the tests.
+
+swiftformat's `hoistAwait` rewrite broke the `XCTAssertEqual(await probe.probe(), …)` calls (async in a non-async autoclosure). I need to extract the async results into `let` bindings. Let me view and fix.
+
+Now re-verify formatting/lint on the fixed test file, then re-sync the package and re-run tests.
+
+The `ready()` helper needs a connection parameter (my earlier sed introduced `ready(.stale)`/`ready(.offline)` calls). Let me update the helper.
+
+**70 tests, 0 failures** under Swift 6 on macOS 15. Now `xcodegen generate` (confirm file enumeration) and the tree-wide swiftlint/swiftformat that the gate runs.
+
+All 15 files enumerated (90 refs). Now the tree-wide swiftlint/swiftformat that the gate runs — confirming my files are clean and checking the tree state.
+
+Tree-wide swiftlint: **0 violations, 4539 files**. Now tree-wide swiftformat --lint:
+
+Tree-wide swiftformat: **0/4837 require formatting**. Now the full-app xcodebuild gate. Let me capture the signing state and the framework-resolution block (quick), and kick off the iOS scheme build (which triggers the KMP Gradle pre-action) in the background.
+
+Confirmed the two documented, pre-existing blocks: **0 codesigning identities** (macOS scheme) and **no `Shared.xcframework`** (the iOS app-target build fails at framework resolution *before any Swift compiles* — zero VersionSegment errors). The KMP framework needs the Kotlin/Native toolchain via Gradle. Let me attempt to stage it in the background to try for a real in-module compile, while I write the gate log.
+
+Java 17 + gradlew present. Let me launch the KMP framework build in the background and monitor it while I prepare the gate log.
+
+Gradle is building. Let me check its initial progress while I prepare the deliverables.
+
+Gradle is downloading the Kotlin/Native distribution and linking the frameworks — good progress. Let me let it run and check back. Meanwhile I'll monitor.
+
+DEBUG xcframework assembled; now building the RELEASE variant (the long-pole). Let me continue waiting.
+
+Gradle succeeded (`GRADLE_EXIT=0`). Let me stage the framework and run a **real in-module iOS app-target compile** to prove zero VersionSegment errors inside the actual TeslaSync module.
+
+Framework staged. Now the real in-module iOS app-target compile, filtering for any VersionSegment errors:
+
+**Real in-module iOS app-target compile (Shared.xcframework staged): 0 VersionSegment errors.** The single build error is the pre-existing, unrelated `AIGeofenceAwareAutomationSuggestions.swift:141` escaping-closure error in another agent's surface (same one documented in the 0129 NewVersionBanner log, owned by P99). Let me also capture the macOS in-module evidence and confirm no VersionSegment warnings.
+
+Both SDKs: **0 VersionSegment errors/warnings in-module**; the only errors are pre-existing unrelated escaping-closure bugs in other agents' AI surfaces. Now let me run the **literal gate scheme commands** to capture the exact exit codes, starting with the iOS scheme `build test`.
+
+iOS scheme: `IOS_EXIT=65`, **0 VersionSegment errors** — blocked by the same pre-existing `AISuggestNewGeofences.swift` / `AIGeofenceAware...` escaping-closure errors documented in the 0129 log. Now the macOS scheme:
+
+macOS scheme: `MAC_EXIT=65`, **0 VersionSegment errors** — blocked by the documented macOS development-signing requirement (0 valid identities). Let me capture the exact pre-existing error lines and re-confirm the placeholder gate for the log.
+
+All evidence gathered: **70 test methods, 0 VersionSegment errors anywhere, placeholder clean.** The blockers are the documented pre-existing escaping-closure bugs in other agents' AI surfaces + macOS signing. Let me write the gate log.
+
+Now let me add the deferral entry to `macos-pending-verifications.md`, following the established table format.
+
+Now let me check git status and gitignore coverage before committing (the staged framework, generated xcodeproj, and build dirs must not be committed).
+
+Everything is clean and properly gitignored (framework/xcodeproj/build excluded). Let me do a final lint/format/placeholder pass on all surface files (after the test edits), then commit.
+
+All final checks green. Let me commit the surface, log, and ledger update.
+
+All 15 files + log + ledger staged. Committing:
+
+Committed (`e67c02d87`, 17 files). Let me verify the working tree is clean and the log terminates correctly.
+
+All verification complete and committed. The working tree is clean (only gitignored build artifacts remain), and the log terminates with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-shared-surfaces-0181-VersionSegment.log | 201 ++++++++++++
+ .../shared-surfaces/VersionSegment.Adapter.swift   | 344 +++++++++++++++++++++
+ .../VersionSegment.AdapterTests.swift              | 282 +++++++++++++++++
+ .../shared-surfaces/VersionSegment.Modal.swift     | 148 +++++++++
+ .../shared-surfaces/VersionSegment.Model.swift     | 166 ++++++++++
+ .../VersionSegment.ModelTests.swift                | 271 ++++++++++++++++
+ .../shared-surfaces/VersionSegment.Polling.swift   | 236 ++++++++++++++
+ .../VersionSegment.PollingTests.swift              | 232 ++++++++++++++
+ .../shared-surfaces/VersionSegment.Previews.swift  | 130 ++++++++
+ .../shared-surfaces/VersionSegment.Probes.swift    | 125 ++++++++
+ .../VersionSegment.Projection.swift                | 169 ++++++++++
+ .../shared-surfaces/VersionSegment.Seams.swift     | 182 +++++++++++
+ .../shared-surfaces/VersionSegment.States.swift    | 105 +++++++
+ .../shared-surfaces/VersionSegment.Views.swift     | 175 +++++++++++
+ .../shared-surfaces/VersionSegment.strings         |  48 +++
+ .../TeslaSync/shared-surfaces/VersionSegment.swift | 130 ++++++++
+ apps/macos-pending-verifications.md                |   2 +
+ 17 files changed, 2946 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0181-VersionSegment.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.Modal.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.Polling.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.PollingTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.Probes.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VersionSegment.swift

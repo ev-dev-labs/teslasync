@@ -1,0 +1,198 @@
+I'll start by understanding the environment, the web source, and the existing Apple app structure.
+
+Good — full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app conventions — the feature-views dir, a representative widget set, the project config, and shared infra (state-holders, tokens, i18n, diagnostics).
+
+No existing QueueStatusPanel. The canonical feature-view file set is 7 files: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me read the project config and locate shared infra (state-holders, tokens, i18n, diagnostics).
+
+Now let me study the shared facade (P1/S8 state holders), and find a complete reference feature-view to mirror conventions. Let me read the key infra files in parallel.
+
+The SharedFacade is the KMP binding layer, but with 229 feature-views and only ~2 domain facades, existing surfaces must use a different self-contained adapter pattern. Let me find a complete reference feature-view (ideally with a `.States.swift`) to mirror exactly.
+
+`BackgroundWorkersCard` and `BackendStatusSection` are close siblings. Let me inspect their file sets and read a complete reference.
+
+`BackgroundWorkersCard` is the ideal reference — SwiftUI parity of a sibling workers component, binding through a `BackgroundWorkersModel` (P1/S8) with all states. Let me read its complete file set.
+
+Excellent — this is the exact pattern. Let me read the remaining reference files: Adapter, Views, Content, strings, Previews, and Tests.
+
+Now the Content, strings, Previews, and Tests, plus the design tokens (P1/S9) to confirm available primitives like a MetricBar equivalent.
+
+Now the Previews + Tests, and the design-token/component definitions (P1/S9) — especially any MetricBar equivalent for the queue-depth bar.
+
+I have the full pattern. Now let me confirm the design-token/component primitives (P1/S9) I'll use, and check for a shared MetricBar/progress-bar equivalent for the queue-depth bar.
+
+Path correction — tokens live under `apps/design`. Let me read the token + component definitions I'll consume.
+
+Let me confirm `TSGlassPanel`, `TSButton`, and `TSCode` signatures.
+
+I have all token/component APIs. Now let me read the web formatting helpers I must port (`fmtNumber`, `formatRelative`, `formatDurationMsLong`) and check for existing native equivalents to reuse.
+
+Existing surfaces port their own formatters into `.Adapter.swift` (consistent with my allowed-files restriction). Let me confirm the `fmtNumber` default precision + `FALLBACK`, and mirror RateLimitStatusPanel's relative-time idiom.
+
+`fmtNumber` defaults to precision 2 with grouping (never reconfigured) — I'll mirror that faithfully. Let me check the lint/format configs to avoid gate failures, then I'll write the files.
+
+Forbidden words noted (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented + swift fatalErrors). Let me assess build feasibility: xcodegen, the Shared.xcframework, and the KMP toolchain.
+
+Key insight: feature-views (like `BackgroundWorkersCard`) are self-contained — they import only SwiftUI/Foundation, never `Shared`. But the full app target links the KMP `Shared.xcframework`, which isn't staged yet. Let me check whether the KMP build is feasible and start it in the background while I write source.
+
+JDK 17 + Kotlin/Native cache present — the KMP build has run here before. Let me kick off the `Shared.xcframework` assembly in the background while I write the source files.
+
+Let me set up tracking and confirm the web `MetricBar` fraction semantics before writing.
+
+Confirmed: web bar `pct = min(value/max*100, 100)` → full when depth>0. Let me verify the `fmtNumber` global precision/locale defaults are truly never reconfigured before I mirror them.
+
+There's a `FormatterPrefsBridge` that syncs precision/locale from settings. Let me check what precision it actually applies.
+
+`decimal_precision ?? 2` — counts use `fmtNumber` (default precision 2 + grouping). I'll mirror that faithfully. I have everything. Let me write the plan and start creating files.
+
+Gradle is building. Now I'll write the source files. Starting with the Adapter (wire models + projection + formatters).
+
+Adapter done. Now the Model file (telemetry seam, input snapshot, projection, source seam, observable model, i18n facade).
+
+Now the Views file (header, state views, and shared primitives).
+
+Now the Content file — the worker cards grid and the card subview.
+
+Now the root view file.
+
+Now the i18n strings catalog.
+
+Now the Previews for every state.
+
+Now the comprehensive test suite.
+
+All 8 files created. Let me run the lightweight gates (swiftformat, swiftlint, placeholder check) on my files and check the gradle build progress.
+
+Two fixable issues: swiftformat wants auto-formatting (number grouping, property-body wrapping, hoistTry), and swiftlint flags `cardSummary` having 6 params (max 5). Let me fix the param count, then let swiftformat auto-apply the rest.
+
+Right — the codebase wraps property bodies, hoists `try`, and groups long numeric literals. Let me let swiftformat auto-apply those, then re-verify both linters.
+
+swiftformat is clean. Just one swiftlint issue: Adapter.swift is 402 lines (max 400) after body-wrapping. Let me trim a few comment lines from the header.
+
+Both linters pass (0 violations; Adapter 399 lines). Now the placeholder gate and gradle progress.
+
+pwsh is available. Let me run the actual placeholder gate exactly as specified.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Gradle is still compiling the KMP framework. While it builds, let me type-check my Swift against a minimal token/component harness to catch any compile errors early.
+
+Gradle finished. Let me confirm the framework was staged and run the isolated type-check in parallel.
+
+Gradle BUILD SUCCESSFUL and my isolated type-check passed (EXIT=0). Now let me stage the framework, generate the Xcode project, and prepare the real build.
+
+Project generated; iPhone 16 simulator available (booted). Let me kick off the iOS build+test (long-running, async) and verify the whole-tree lint baseline in parallel.
+
+iOS build is running in the background. Let me verify the whole-tree lint baseline (part of the gate) while it builds.
+
+swiftformat whole-tree clean (0/2708 need formatting). Now whole-tree swiftlint --strict (the gate's lint step).
+
+One whole-tree swiftlint violation — let me identify whether it's mine or pre-existing.
+
+The lone whole-tree swiftlint violation is in a **pre-existing, unrelated** file (`LiveSignalSparklinesWidget.Builder.swift`) — outside this prompt's allowed files. My 7 surface files are lint-clean. I'll disclose it transparently in the log and not touch that file. Let me check the iOS build progress.
+
+Let me check the build log file directly for progress.
+
+A real Swift 6 strict-concurrency error in my Adapter: static `ISO8601DateFormatter` properties aren't `Sendable`. Let me see how sibling adapters handle date formatters, then fix consistently.
+
+The dominant convention is function-local `ISO8601DateFormatter()`. Let me mirror it exactly.
+
+That's the exact idiom — function-local formatters. Let me fix my `parseTimestamp` accordingly.
+
+Fixed. Let me re-verify lint on the changed file, then restart the iOS build (incremental — most of the app is already compiled).
+
+Clean. Restarting the iOS build+test (incremental now).
+
+iOS build+test running (incremental). Let me wait and monitor.
+
+The build DB is locked by a concurrent build — the original `ios-build` shell is likely still alive. Let me check and stop it.
+
+The original `ios-build` is still holding the lock. Let me stop it, then run a single clean build+test.
+
+Multiple concurrent xcodebuilds from other parallel slots are sharing this machine. Let me check whether any collide with my default DerivedData before retrying.
+
+My default DerivedData is free now (no lock). Let me reuse its cache for a fast incremental build+test, running synchronously to avoid double-runs.
+
+Still running. Let me check the raw log for progress.
+
+No errors — it's doing a near-full recompile cleanly (progressing through many widget files). Let me wait for it to finish compiling, linking, and running tests.
+
+BUILD SUCCEEDED with my QueueStatusPanel files compiled and no errors. Let me check whether the test phase has run.
+
+The build action succeeded; now it's in the test phase (compiling the test bundle + running on simulator). Let me wait for test results.
+
+The test bundle compile failed — but on **pre-existing** errors in sibling files `MonthlyCostChart.Tests.swift` / `MonthlyCostTable.Tests.swift` (redeclaration of `MonthlyCostAccessibilityTests`/`SpyMonthlyCostTelemetry`), not mine. My `QueueStatusPanel.Tests.swift` compiled without error. Let me confirm these are pre-existing and unmodified by me.
+
+Confirmed: only my 8 files are new; the `MonthlyCost*.Tests.swift` redeclaration errors are **pre-existing** at HEAD (`f545557af`), breaking the shared TeslaSyncTests bundle for everyone. My `QueueStatusPanel.Tests.swift` compiled cleanly. To prove my tests pass, I'll temporarily set aside those two pre-existing-broken sibling files (restored afterward — never committed), then run only my test classes.
+
+Pre-existing collision confirmed (`SpyMonthlyCostTelemetry` declared non-private in Chart + redeclared in Table; `MonthlyCostAccessibilityTests` in both). Now running only my 8 test classes on the iOS simulator.
+
+No errors/locks; still compiling. Let me keep waiting for the test execution.
+
+TEST FAILED — let me see whether it's my tests or more pre-existing compile breakage.
+
+No compile or test errors logged, yet TEST FAILED with no execution. Let me inspect the failure context more broadly.
+
+Moving the files broke the (already-generated) project's file list. xcodegen uses globs, so regenerating with the files relocated will cleanly exclude them. Let me regenerate and re-run my tests.
+
+Project regenerated cleanly (0 references to the relocated files). Now re-running my 8 test classes on iOS.
+
+Still compiling (regeneration invalidated some caches), no errors. Let me wait for the test run to complete.
+
+Full app rebuild in progress (regeneration invalidated caches), compiling cleanly. Let me wait.
+
+More pre-existing breakage surfaced (`SafetyFeaturesWidget.ModelTests.swift` redeclarations) — the shared test bundle has widespread duplicate-symbol bugs across many sibling surfaces at HEAD, and each xcodegen regen forces a ~15-min full rebuild. Chasing them isn't viable. 
+
+I'll restore the sibling files (keep the tree clean) and instead run my unit tests in an isolated SPM harness under Swift 6 strict concurrency — which compiles ALL my surface files and runs every test, fully isolated from the pre-existing breakage.
+
+Tree is clean. Now setting up an isolated SPM harness (Swift 6 strict-concurrency, macOS 15) that compiles all my surface files and runs every test.
+
+Now run the isolated test suite under Swift 6:
+
+All 28 tests pass under Swift 6 strict concurrency (EXIT=0) — this compiled every surface file and ran the full suite. Now let me regenerate the project to a clean state and run the macOS app build to cover that half of the gate.
+
+Project wired (48 QueueStatusPanel refs across targets). Starting the macOS app build (build action; `test` would hit the same pre-existing bundle breakage). This is a full compile — running it in the background.
+
+macOS build running in the background. Let me verify the surface-scoped gate commands once more (clean captures for the log) while it compiles.
+
+Surface clean (0 lint, 0 format issues; 1780 LOC). Let me monitor the macOS build.
+
+macOS build compiling cleanly (no errors). Let me continue waiting for it to finish.
+
+Still building (1.5MB log, no errors). Let me keep waiting.
+
+macOS **BUILD SUCCEEDED**. Both platforms build my surface. Let me confirm my files compiled in the macOS build and capture exact result lines for the log.
+
+Both platforms compiled all my files. Now writing the honest, comprehensive gate log.
+
+Now let me verify i18n key coverage (every key used in code exists in the catalog) and confirm a clean tree before committing.
+
+The dynamic `severity.\(...)` resolves to the 4 defined `severity.*` keys — fine. My single-line grep missed multi-line `format(` keys; let me cross-check all `queueStatus.*` literals robustly.
+
+Full i18n coverage confirmed (all used keys defined; the 4 `severity.*` keys are used dynamically). Let me do a final tree check and verify the xcodeproj is gitignored, then commit.
+
+Clean tree — only my 8 surface files + the log are new; xcodeproj is gitignored. Committing per the prompt's spec.
+
+Committed (`0c79f4234`, 1965 insertions). Let me finalize todos and clean up temp artifacts.
+
+The QueueStatusPanel Apple surface is complete, verified, and committed. Cleaned up all temp artifacts; working tree is clean.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0037-QueueStatusPanel.log | 134 +++++++
+ .../feature-views/QueueStatusPanel.Adapter.swift   | 391 ++++++++++++++++++++
+ .../feature-views/QueueStatusPanel.Content.swift   | 234 ++++++++++++
+ .../feature-views/QueueStatusPanel.Model.swift     | 275 +++++++++++++++
+ .../feature-views/QueueStatusPanel.Previews.swift  | 145 ++++++++
+ .../feature-views/QueueStatusPanel.Tests.swift     | 392 +++++++++++++++++++++
+ .../feature-views/QueueStatusPanel.Views.swift     | 273 ++++++++++++++
+ .../feature-views/QueueStatusPanel.strings         |  51 +++
+ .../TeslaSync/feature-views/QueueStatusPanel.swift |  70 ++++
+ 9 files changed, 1965 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0037-QueueStatusPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/QueueStatusPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QueueStatusPanel.Content.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QueueStatusPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QueueStatusPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QueueStatusPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QueueStatusPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QueueStatusPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/QueueStatusPanel.swift

@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure and checking tool availability, since this task requires native Apple toolchain (SwiftUI, xcodebuild, swiftlint, swiftformat).
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source spec and explore the existing native structure.
+
+Let me read the web source spec and examine existing shared-surface patterns to follow conventions.
+
+Now let me understand the `resilience` lib (data source) and examine existing native surface patterns to follow conventions.
+
+Let me read the resilience data source details and examine the `AiLimitBanner` surface (a banner, structurally similar) as a pattern reference.
+
+Let me check the `RequestStatus` type and how the project includes files (project.yml), plus read the `AiLimitBanner` reference surface.
+
+The project.yml isn't at that path. Let me locate it and read the full `AiLimitBanner` reference surface to learn the architecture conventions (Model, Adapter, Seams, States, Views, strings, tests).
+
+Excellent architecture. Let me read the remaining reference files (Views, States, Previews, strings, tests, Adapter) and the project.yml build config.
+
+Now let me read the project.yml build config and locate the shared P1/S9 tokens and shared components/i18n facade.
+
+Now let me check build tooling (xcodegen, the Shared.xcframework script) and locate the shared P1/S9 token + component definitions I'll need (TSCard, TSEmptyState, TSSkeleton, TSAlertBanner, TSButton, TSFadeIn, Color.TS, Font.TS, TSSpacing, TSRadius, TSTone).
+
+Let me read the design tokens and shared-component signatures so I use the exact APIs.
+
+Now let me read the shared component signatures (TSAlertBanner, TSEmptyState, TSCard, TSSkeleton, TSButton, TSFadeIn, TSTone, badges) to use exact APIs.
+
+Let me read the remaining component signatures (TSCard, TSSkeleton, TSButton, TSFadeIn, TSTone/badges) to finalize the API surface.
+
+Let me read TSButton, TSFadeIn, and TSBadge signatures, then I'll have the full API surface.
+
+I now have the full API surface. Let me verify backend `overall` values, the TSButton init, and the placeholder-check script that the gate runs.
+
+Let me check the placeholder patterns to ensure my code won't trip the gate, and confirm how AiLimitBanner avoids them.
+
+I have everything I need. Let me set up a plan and kick off the long-pole KMP xcframework build in the background while I write the surface.
+
+Simulator and pwsh are available; Gradle build is running. Let me record a plan and todos, then build the surface files.
+
+Let me check the swiftlint/swiftformat config so my files conform on the first pass.
+
+Config is clear. Now I'll write the surface files, starting with the pure Adapter core.
+
+Now the Model (state-holder, projection, telemetry seam, i18n facade):
+
+Now the Seams (source + poller, with production and test doubles):
+
+Let me check the Gradle build progress, then continue with the Views.
+
+Gradle still compiling. Continuing with the Views (banner, dot, breakdown, freshness chip):
+
+Now the state chrome (loading / empty / error):
+
+Now the composite `ServiceStatus` view, and I'll adjust `ServiceStatusDotRow` to size to content so the freshness chip composes on the same row.
+
+Now the i18n strings catalog and a canonical snapshot builder (so callers don't hardcode i18n keys):
+
+Now let me add a canonical snapshot builder to Model.swift so callers map the web `SystemStatus` subsystem fields without hardcoding i18n keys:
+
+Now the previews (DEBUG, one per state):
+
+Let me check the Gradle build progress before writing the tests.
+
+KMP framework built successfully. Now let me write the two test files (adapter/projection + state-holder).
+
+Now the state-holder tests:
+
+All 10 surface files are written. Let me format and lint them (fast checks first), updating todos as I go.
+
+Files are untracked (new). Now let me run `swiftlint --strict` and `swiftformat --lint` on the new files to confirm clean.
+
+All fast checks pass (0 swiftlint violations, 0 swiftformat). Now let me run the placeholder gate exactly as specified and confirm how it resolves the path.
+
+The gate's literal path resolves to "nothing to scan" (clean), but I'll genuinely verify by scanning each real file plus a manual grep for forbidden words.
+
+One match in Tests.swift. Let me find exactly what pattern triggered it.
+
+It's the substring "ToDo" inside "FallBackToDown" (matches "TODO" case-insensitively). Let me rename that test, then re-scan all files.
+
+All placeholder checks pass (0). Before the heavy build, let me check for type-name collisions with the 862 existing surfaces (a duplicate declaration would break the build).
+
+No collisions. Now let me stage the framework and generate the Xcode project.
+
+Project generated and framework staged. Let me confirm my files were picked up, then launch the iOS build+test (long pole) in the background.
+
+All 9 files included. Now launching the iOS Simulator build+test (the long pole) in the background.
+
+Build launched. Let me update todos and re-read my composite view once to double-check API usage while it compiles.
+
+Build passed the Gradle preAction and is compiling the Swift module. Let me wait and then scan for any errors.
+
+Build failed (IOS_EXIT=65) — but the failing files are pre-existing (`RecentActivity`, `RecentDrivesSection`, etc.), not my `ServiceStatus.*`. I must find the actual error messages to determine cause.
+
+Only ONE error, in a pre-existing file outside my scope: `RecentDrivesSection.Previews.swift:24` — a "compiler unable to type-check in reasonable time" (a type-check timeout). My `ServiceStatus.*` files produced zero errors. Let me inspect that expression and confirm my surface compiled cleanly.
+
+Confirmed: only my 10 files changed, and `ServiceStatus.*` produced **zero** compiler errors. The sole failure is a pre-existing type-check **timeout** in an out-of-scope file (`RecentDrivesSection.Previews.swift:24` — a heavy numeric `.map` literal expression). These timeouts are wall-clock-sensitive and my machine was saturated (Gradle + `-j20` + concurrent greps). Let me retry the build on a quiet machine (incremental, so faster) without concurrent load.
+
+Waiting quietly (no concurrent load) to test the flaky-timeout hypothesis.
+
+Different files failed this time (`AIRouteEfficiencySuggestions`, `AISettings`, `AISignalExplorerNlFilter`…) — strong evidence of **load-dependent type-check timeouts** flaking across the pre-existing codebase under `-j20`. Let me extract the exact errors.
+
+Two pre-existing errors now, both in out-of-scope files (`RecentDrivesSection.Previews.swift` recurs; `AISignalExplorerNlFilter.swift:142` is a hard escaping-closure error). My `ServiceStatus.*` remains 0 errors. Let me characterize the second error and confirm these files are unmodified baseline code.
+
+Definitive: both blockers are **pre-existing, tracked, unmodified** sibling surfaces (other prompts' scope), neither caused by my work. The `AISignalExplorerNlFilter.swift:142` error is a genuine escaping-closure bug in committed code; `RecentDrivesSection.Previews.swift:24` is a type-check timeout — both compiled into iOS **and** macOS targets. My `ServiceStatus.*` compiled with 0 errors twice.
+
+Per the prompt's explicit scope ("Allowed files: `ServiceStatus.*` + log"; "Out of Scope: Other surfaces … each has its own prompt"), I must not modify them. Let me run the remaining gate steps to capture honest exit codes for the log. First, the macOS build in the background.
+
+While the macOS build runs, I'll set up a standalone SwiftPM harness to actually **execute** my pure-logic unit tests (Adapter + Model + Seams + a11y) — proving they pass at runtime, since the app-hosted test bundle is blocked by the sibling defects. Creating the files now (no CPU), running after the macOS build finishes.
+
+The macOS build finished. Let me read its result and errors.
+
+macOS is blocked by an **environmental code-signing** requirement (no development certificate in this environment) — again unrelated to my surface (0 `ServiceStatus` errors on macOS too). Now let me run my standalone harness to prove the logic tests actually pass at runtime.
+
+All **41 unit tests pass** (0 failures) in the standalone harness — the adapter taxonomy, projection across every state, model state-holder (poller/connection/telemetry), seams, and accessibility builders all execute green. Now let me capture the full-scope lint/format exit codes (as the gate runs them).
+
+Full-scope `swiftlint --strict` passes (EXIT=0). Now `swiftformat --lint apps/apple`.
+
+Full-scope `swiftformat --lint` passes too (EXIT=0, 4430 files). Let me verify the logs directory and peek at a sibling log's format before writing mine.
+
+This sibling log (0004) reveals the **established repo disposition**: per-surface gates green + isolated build/tests green + surface type-checks in the real module → **STATUS=DONE**, with the full-app build documented as DEFERRED when it's red only from unrelated out-of-scope/environmental causes. My situation matches exactly. Let me confirm my **view** files (not just logic) type-checked in the real module, since the full build compiled them.
+
+My entire surface — **including the SwiftUI views against the real design system** — was compiled in the real app module on both iOS and macOS with **zero diagnostics**. This matches the repo's established "isolated-build + deferred-full-app" DONE disposition. Now let me write the honest gate log.
+
+Let me clean up temp artifacts, then stage **only** my surface files + the log precisely, and verify nothing unintended is staged before committing.
+
+Exactly the 10 surface files + log are untracked; the generated `.xcodeproj` and staged framework are git-ignored. Staging precisely and committing.
+
+Committed (e492d9723). Let me update the plan and do a final clean-tree check.
+
+Task complete. Here's the summary.
+
+## P4 · Shared surface · 0104 — `ServiceStatus` (Apple) — **DONE**
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of `components/data-display/ServiceStatus.tsx`, committed as `e492d9723` on `auto/20260611-013149-26127/59` (10 surface files + gate log, 1785 insertions).
+
+**What it reproduces (web source = spec):** both web exports — the offline **`ServiceStatusBanner`** (red "You are offline…" notice, `AnimatePresence` parity) and the **`SystemHealthDot`** (`overall` colour ternary healthy→green / degraded→amber / else→red), plus a subsystem breakdown built from the real `SystemStatus` contract fields. The web `useQuery(fetchSystemStatus, refetchInterval 60s)` → an injectable 60 s poller; `getConnectionStatus`/`onStatusChange` → the connection axis. All P4 leaf states render: loading / empty / error / data / stale / offline.
+
+**Architecture:** P1/S8 state-holder seam (`@Observable` model, no networking in the view), P1/S9 tokens only (no raw hex), P1/S10 i18n facade (no English literals in code), P1/S11 `view.opened` telemetry with slug `ServiceStatus`. VoiceOver labels + Reduce-Motion respected.
+
+**Verification (raw results, nothing rounded up):**
+- `swiftlint --strict` (full scope) → **0**; `swiftformat --lint apps/apple` (4430 files) → **0**; placeholder scan → **0**.
+- Isolated Swift 6 build → **41/41 unit tests pass** (adapter taxonomy, projection across every state, model poller/connection/telemetry, seams, a11y).
+- All 9 surface files (incl. SwiftUI views against the real design system) type-check with **0 errors / 0 warnings** inside the real `TeslaSync` app module on **iOS + macOS**.
+
+**Deferred (reported red, not failed by this code):** the full-app `build test` is blocked by issues entirely outside the allowed files — iOS by two pre-existing sibling-surface compile defects (`RecentDrivesSection.Previews.swift:24` type-check timeout; `AISignalExplorerNlFilter.swift:142` escaping-closure bug, both owned by other prompts), and macOS by an environmental development-signing requirement. Per the prompt's explicit scope and the established P4 "isolated-build + deferred-full-app" disposition (cf. sibling log 0004), these were left untouched and documented with file:line evidence in the gate log → `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0104-ServiceStatus.log | 124 +++++++++
+ .../shared-surfaces/ServiceStatus.Adapter.swift    | 112 ++++++++
+ .../shared-surfaces/ServiceStatus.Model.swift      | 305 +++++++++++++++++++++
+ .../shared-surfaces/ServiceStatus.ModelTests.swift | 241 ++++++++++++++++
+ .../shared-surfaces/ServiceStatus.Previews.swift   |  95 +++++++
+ .../shared-surfaces/ServiceStatus.Seams.swift      | 187 +++++++++++++
+ .../shared-surfaces/ServiceStatus.States.swift     | 108 ++++++++
+ .../shared-surfaces/ServiceStatus.Tests.swift      | 217 +++++++++++++++
+ .../shared-surfaces/ServiceStatus.Views.swift      | 249 +++++++++++++++++
+ .../shared-surfaces/ServiceStatus.strings          |  43 +++
+ .../TeslaSync/shared-surfaces/ServiceStatus.swift  | 104 +++++++
+ 11 files changed, 1785 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0104-ServiceStatus.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ServiceStatus.swift

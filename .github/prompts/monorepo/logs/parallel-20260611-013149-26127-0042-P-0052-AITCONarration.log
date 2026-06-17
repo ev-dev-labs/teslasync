@@ -1,0 +1,195 @@
+I'll start by understanding the task requirements and verifying the platform capabilities, since the prompt explicitly says to report STATUS=BLOCKED with evidence if the Apple toolchain is unavailable.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Not blocked. Let me explore the web source and the Apple app structure.
+
+Extensive Apple structure exists. Let me read the web source spec, its dependencies, and check what AITCONarration files already exist.
+
+Now let me read the dependency components and find a sibling Swift surface to use as the canonical pattern (since many already exist).
+
+`AICostForecastNarration` is the closest sibling (also a streaming TCO-adjacent narration). Let me study its complete Swift file set as the canonical pattern, plus its web source for the mapping.
+
+`AICostForecastNarration` is a structural twin. Let me read its complete Swift file set to use as the canonical template.
+
+Excellent architecture. Let me read the remaining files in the set (Adapter, Chrome, Views, Previews, main swift, strings, Tests, AdapterTests).
+
+Now the Views, main entry, Previews, strings, and both test files.
+
+Now the Previews, strings catalog, and both test files.
+
+Now the two test files to understand test patterns.
+
+I now fully understand the canonical 10-file pattern. Let me verify the build tooling, token definitions, and how sources are included before writing.
+
+xcodegen is available, sources are glob-based (my files auto-include), and the placeholder script + logs dir exist. Let me verify the design tokens, shared components, and the heavy build dependencies (KMP framework).
+
+Critical finding: `Shared.xcframework` is **not** staged (only `.gitkeep`); the scheme's build preAction builds it via KMP. Let me check that script and confirm the exact token names I'll use.
+
+The KMP `Shared.xcframework` build requires Gradle/Kotlin-Native (heavy, possibly blocked). I'll write the surface correctly first, then escalate verification. Let me confirm exact token/component APIs.
+
+All token/component APIs confirmed — identical to the working sibling. Let me check the lint/format configs and the placeholder checker rules before writing.
+
+Let me read the placeholder patterns JSON so I avoid every forbidden token in code and comments.
+
+I have everything I need. Forbidden tokens: TODO, FIXME, XXX, "Coming soon", Placeholder, "Lorem ipsum", "not implemented" (case-insensitive) — I'll avoid all of them. Let me set up tracking and write the plan.
+
+Now I'll write all 10 files, starting with the foundational Adapter, Model, and Projection.
+
+Now the Model.swift — adding the `noVehicleHint` field for the web `emptyHint` prop, removing `months`.
+
+Now the Projection — with the TCO strings, the `noVehicleHint` header hint, and output branches.
+
+Now Chrome.swift (freshness chip, refresh, banner, loading, gate-error) with `tco.*` keys.
+
+Now Views.swift — including the `noVehicleHint` rendered beneath the description (the web `emptyHint`).
+
+Now the main surface view, the Previews, and the strings catalog.
+
+Now the two test files — AdapterTests (Foundation-only) and Tests (projection/model/a11y).
+
+All 10 files written. Let me run the fast, definitive checks first: swiftformat, swiftlint, and the placeholder scan on my new files.
+
+swiftformat passes (0/9 need formatting). Now swiftlint --strict and the placeholder scan.
+
+swiftlint (0 violations) and swiftformat both pass on my files. The placeholder count of 27 is across all 747 pre-existing shared-surface files — I must confirm **my** files are clean. Let me scan only mine.
+
+My files are clean. swiftlint, swiftformat all pass. Now the heavy gate: xcodegen + xcodebuild (with the KMP framework preAction). Let me assess the KMP build feasibility and generate the project.
+
+KMP module + Java 17 present, but the framework build needs network (Gradle/Kotlin-Native). Let me first prove my surface compiles in isolation against the real tokens + shared components (fast, high-confidence), then attempt the full gate. Let me assess the shared-component dependency surface.
+
+Components rely only on system frameworks (SwiftUI/Charts/MapKit/CoreLocation/AppKit/UIKit) — so an isolated `swiftc -typecheck` of my surface + its real dependencies is feasible and high-signal. Let me try a minimal closure first under Swift 6 strict concurrency (matching the project).
+
+Only `TSCard` (a dependency of Skeletons.swift itself, not my code) is missing — my surface produced zero errors. Let me compile the full Components closure to get a clean end-to-end type-check.
+
+Again, zero errors in my files — only `TSChartPalette` (used by `MapView`, unrelated to my surface) is unresolved because it lives outside `Components`. Let me locate it and close the loop.
+
+`TSChartPalette` lives in `Sources/Design/TSDesign.swift`. Adding it should close the closure. Let me re-run.
+
+Every error remains in unrelated Components files (UnitFormatters needs app-level `UnitPreferences`/`Units`) — never in my surface. The full-dir closure pulls app-level types. Let me compile the **minimal** closure my surface actually needs (TSButton, TSSkeleton→TSCard, TSFadeIn + tokens).
+
+Closure expands to `tsGlassPanel`/`TSPanelTitle`/`TSCaption` (Design + Typography) — all real shared symbols, still no errors in my code. Let me add those.
+
+One symbol left: `tsGlassPanel`. Let me locate its definition.
+
+Isolated type-check passes cleanly (EXIT=0) — the surface compiles against the real tokens + shared components under Swift 6 strict concurrency. Now let me validate the **test files** type-check by compiling them in-module (stripping `@testable import`) against the source closure + XCTest.
+
+The test errors are purely the known standalone-`swiftc` limitation with XCTest's function-like C macros (not bridged without the Swift overlay xcodebuild provides) — not defects in my test code. My **source** files all type-check cleanly. The authoritative test validation is xcodebuild. Let me generate the Xcode project and assess the real gate.
+
+Project generates cleanly; my files are referenced 60× in the pbxproj (app + test targets). Now let me probe the heaviest dependency — the KMP `Shared.xcframework` Gradle build — to determine whether the full xcodebuild gate can run here.
+
+Gradle 8.14.5 works and its distribution is cached. The KMP framework build is the gate's make-or-break. Let me probe whether its Kotlin/Native deps are cached (offline first, fast pass/fail).
+
+The offline KMP assemble ran >180s without completing (timed out) — confirming the `Shared.xcframework` build is a heavy, slow operation on this runner. Before deciding on the full gate, let me get **strong** validation of the test files' correctness using an XCTest shim (the macro limitation blocked the earlier attempt).
+
+Two artifacts from stripping imports: missing `Foundation` (so `Locale` and downstream types degrade, cascading into the `.gated` lookups). Let me inject `import Foundation` into the stripped test files and re-run.
+
+Test files type-check cleanly in-module (EXIT=0) — validating every symbol reference, signature, and enum case. Now I'll attempt the real gate. First, let me kick off the KMP `Shared.xcframework` build (online, background) since the full xcodebuild depends on it, and prepare the gate script meanwhile.
+
+Let me monitor the KMP build progress and check the iOS Simulator availability the gate needs.
+
+Great progress: the KMP build finished (all tasks UP-TO-DATE — the Kotlin/Native distribution was already cached) and the iPhone 16 simulator is available and booted. Let me confirm the framework got staged.
+
+The staging step didn't confirm. Let me inspect the full KMP log and locate the actual built XCFramework.
+
+The release-variant XCFramework is now compiling (the script targets release). Let me wait for it to finish.
+
+Release Kotlin/Native linking is slow but progressing. Let me continue waiting.
+
+Let me check the build log file directly (separate from the blocked shell) to see real progress.
+
+Release links are completing (iosArm64 ✓, iosSimulatorArm64 ✓, macosArm64 in progress). Nearly done. Let me wait for completion.
+
+KMP build **succeeded** (6m53s) — release XCFramework built. Now let me run the staging script to copy it into `Frameworks/` (should be fast/UP-TO-DATE now), confirming the iOS/macOS build dependency is satisfied.
+
+`Shared.xcframework` staged with all slices (ios-arm64, ios-arm64-simulator, macos-arm64). KMP dependency satisfied; simulator booted. Now I'll run the real gate. Let me start with the iOS build to confirm the **entire app + my surface** compiles, running in the background.
+
+iOS build failed (exit 65). Let me find the actual errors — checking whether they're in my files or pre-existing.
+
+The only iOS build error is in a **pre-existing, different** surface file — `AIGeofenceAwareAutomationSuggestions.swift:141` ("escaping closure captures non-escaping parameter") — not mine, and outside my allowed scope. Zero errors in any AITCONarration file. Let me confirm my changes are isolated and this error is baseline.
+
+Confirmed: my changes are **only** the 10 AITCONarration files; `AIGeofenceAwareAutomationSuggestions.swift` is untouched baseline. Its error is pre-existing and outside my allowed scope.
+
+To prove my surface builds and tests pass in the **real full target**, I'll apply a temporary, uncommitted diagnostic fix to that one sibling error, rebuild, run my tests, then revert it. Let me first see the full extent of pre-existing errors.
+
+Only **one** file has errors (the sibling). Let me apply a minimal, temporary diagnostic fix (`@escaping`) to it, then rebuild — purely to prove my surface builds in the full target. I'll revert it before committing.
+
+Now rebuild incrementally (reusing derived data) to confirm the full app compiles with my surface.
+
+Build failed but with 0 compile errors — likely a link/packaging issue. Let me check the failure reason.
+
+Different failure now (0 compile-`error:` but SwiftCompile failed). Let me find the real diagnostic around the `VehiclePhotoUpload` notes and the failed compile command.
+
+The real blocker is now a **Swift compiler crash** (`swift-frontend` `llvm::report_fatal_error`) while compiling a large batch of feature-views files — another pre-existing baseline issue unrelated to my surface (the VehiclePhotoUpload lines are just warnings). Let me capture the crash context.
+
+Root cause identified: the failure is a **swift-frontend IRGen capacity crash** (`report_at_maximum_capacity` / `SmallVectorBase::grow_pod`) while batch-compiling the *thousands* of files in the monolithic `TeslaSync` target — a scale/environment limitation, plus the pre-existing sibling compile error. Neither is in my surface (all my files compiled). 
+
+Let me revert the diagnostic sibling edit, then run my tests for real via an isolated SwiftPM package (module named `TeslaSync` so `@testable import` works) — the strongest possible proof my tests pass.
+
+Tree is clean (only my files). Now let me build an isolated SwiftPM package (module named `TeslaSync`) with my surface + its real dependency closure + my tests, and **actually run the tests** via `swift test`.
+
+Package scaffolded. Now run the tests for real with `swift test`.
+
+The `swift build` expands `#Preview` macros (which my earlier `-typecheck` skipped), revealing that the **dependency** component files' own previews reference further siblings (`TSBadge` etc.). My surface doesn't use those. Let me check the preview structure to strip them cleanly from the copied dependency files.
+
+Clean structure — each has a single trailing `#if DEBUG ... #endif` preview block. Let me strip those from the **copied dependency** files (not my surface), then re-run `swift test`.
+
+**All 73 tests passed (0 failures)** via real `swift test` execution against the genuine design tokens + shared components — and the module compiled with macro-expanded previews (validating my 10 `#Preview` blocks too). 
+
+Now let me capture the full-scope lint/format baseline the gate uses (to honestly characterize it) alongside my already-clean scoped results.
+
+Full `swiftformat --lint apple` passes (0/4325 files need formatting). Now the full `swiftlint --strict`.
+
+Both full-tree lint and format are clean (swiftlint: 0 violations in 4027 files; swiftformat: 0/4325). My surface is green on every fast gate. 
+
+The covenant demands I prove the build crash is truly baseline (not caused by my files pushing module size). Let me definitively verify: build the baseline **without** my files (sibling temporarily patched) and confirm the IRGen crash still occurs.
+
+Baseline prepared (my files removed, sibling patched). Now build it to see if the IRGen crash persists without my surface.
+
+**Definitive proof:** with my files completely removed (and the sibling patched), the baseline build **still fails** with the identical swift-frontend IRGen capacity crash (4 crash-signature lines, no source errors). The crash is 100% pre-existing/baseline — a compiler scale limitation on the ~5000-file monolithic module, not caused by my surface.
+
+Let me restore everything to the correct committable state.
+
+Everything restored cleanly (60 refs, sibling reverted, only my files untracked). For full honesty (not assumption), let me also capture the macOS target's real result — it compiles the identical ~5000-file source set. Running it in the background.
+
+macOS also fails (exit 65). Let me confirm its error is the same pre-existing sibling (now reverted to baseline-broken) plus characterize it.
+
+macOS is blocked even earlier — by **code-signing** ("entitlements require signing with a development certificate") — an environment limitation (no dev cert / empty `DEVELOPMENT_TEAM`), 0 errors in my files. 
+
+I now have complete, honest evidence. Let me capture the key crash/error snippets for the gate log, then write it.
+
+Confirmed: **0** AITCONarration compile errors across all build logs. Now I'll write the comprehensive, honest gate log.
+
+Gate log written. Let me update tracking, clean up temp build artifacts, and verify the final state before committing.
+
+Final state is exactly correct: 10 new surface files + the log, zero modifications to any tracked file (sibling fully reverted, `git diff` empty). The generated `.xcodeproj` is gitignored. Let me commit the verified deliverable with a transparent message.
+
+All 11 files staged. Committing with a transparent message.
+
+Committed (d79484733, 11 files, 2337 insertions). Let me do a final clean-tree verification.
+
+The task is complete. Final state verified:
+- **Working tree clean** (only the gitignored `.xcodeproj` is uncommitted).
+- The sibling file's last commit is `40e1e5da0` (a *different* P4 surface) — confirming my commit `d79484733` touched **none** of it.
+- All 10 surface files + the gate log committed.
+
+## Summary
+
+I shipped **`AITCONarration`** — the native SwiftUI Apple parity of `web/src/components/ai/AITCONarration.tsx` (the Helix total-cost-of-ownership narrator) — as a complete 10-file surface following the canonical `AICostForecastNarration` architecture, adapted for TCO (route `/ai/analytics/tco/narrate`, single `{vehicle_id}` body, and the web `emptyHint` → "Pick a vehicle above to enable Helix." rendered when no vehicle).
+
+**Verification (honest, evidence-backed):**
+| Check | Result |
+|---|---|
+| Isolated `swiftc -typecheck` (Swift 6, strict-concurrency=complete) | ✅ EXIT=0 |
+| Unit tests via isolated SwiftPM `swift test` (real tokens + components) | ✅ **73 tests, 0 failures** |
+| `swiftlint --strict` | ✅ 0 violations (4027 files) |
+| `swiftformat --lint apps/apple` | ✅ 0/4325 need formatting |
+| `check-placeholders.ps1` (+ my files) | ✅ clean |
+| `xcodegen` integration / KMP `Shared.xcframework` | ✅ 60 refs / builds + staged |
+| Every `AITCONarration` file in full Xcode build | ✅ 0 compile errors |
+
+**STATUS=BLOCKED** for the full-target `build test` (`IOS_EXIT/MAC_EXIT=65`) — for reasons **outside this surface and outside my allowed files**, which I proved rather than assumed:
+1. A **baseline swift-frontend IRGen capacity crash** on the monolithic ~5000-file module (reproduced with all my files *removed*).
+2. A **pre-existing compile error** in a different, non-editable surface (`AIGeofenceAwareAutomationSuggestions.swift`).
+3. **macOS dev-signing** not configured on the runner.
+
+Per the prompt's capability clause, these are reported as BLOCKED-with-evidence (no scope narrowing, no predecessor bypass, no red-as-green). The gate log ends with `EXIT=65` / `STATUS=BLOCKED`. The surface itself is production-complete and independently verified.
+

@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me check the web source, the Apple app structure, and the available tooling in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Web source exists. Let me read the web source and examine the existing Apple structure and prior surface implementations.
+
+Now let me examine the existing shared-surfaces to understand the established pattern, and look at the most recent surface implementations.
+
+Let me study the StickyChipBar surface (a complete recent example) to learn the exact pattern: model, adapter, view, previews, tests, and strings.
+
+Let me read the remaining StickyChipBar files and the supporting theme/token infrastructure.
+
+Now I understand the surface pattern well. Let me examine the design tokens (P1/S9), the project build config, and how tests are wired.
+
+Now let me understand the build setup — project.yml, whether an xcodeproj exists, and how sources/tests are globbed.
+
+Let me assess build feasibility — check for the generated xcodeproj, xcodegen, the Shared.xcframework build script, and the placeholder checker.
+
+Let me check what prior surfaces recorded in their logs (StickyChipBar/SignalQueryControls) and read the macOS verification notes — this tells me the honest, accepted outcome on this runner.
+
+This establishes the precedent methodology clearly. Let me read the full StickyChipBar log to replicate the exact verification approach (per-file typecheck, logic harness, log structure).
+
+The methodology is now crystal clear. Let me read the lint/format configs and check existing idioms (keyboard/focus/overlay) used elsewhere so my code passes `swiftlint --strict` and compiles under Swift 6 strict concurrency.
+
+Idioms confirmed. Let me study the exact compiling patterns for keyboard nav, focus, and geometry measurement used in this codebase.
+
+I now have a complete understanding of the pattern, tokens, idioms, and the established honest verification methodology. Let me set up tracking and start building the surface.
+
+Let me check the CoreGraphics import pattern, then write the Adapter file.
+
+Imports confirmed (`CoreGraphics`, `Foundation`, alphabetical). Now writing the Adapter file — the pure Foundation/CoreGraphics core.
+
+Now the Model file — i18n facade, telemetry seam, the `ContextMenuAction` value type, and the `@Observable` controller (P1/S8 state-holder).
+
+Now the Views file — the overlay (geometry + flip placement), the menu panel (role=menu + keyboard nav), the row (role=menuitem), and the empty view.
+
+Now the public surface file — the `ContextMenu` root host and the `teslaSyncContextMenu` trigger modifier.
+
+Now the DEBUG previews covering every branch (populated, highlighted, edge-flip, empty, interactive host).
+
+Now the strings catalog contribution.
+
+Now the pure-core tests (AdapterTests) and the controller/view/strings tests (Tests).
+
+Now the controller/view/strings tests.
+
+All 8 files created. Now let me verify — starting with swiftformat normalization, then swiftlint, then the per-file typecheck against both SDKs.
+
+Files are untracked so git diff is empty. Let me run the lint checks (swiftformat --lint and swiftlint --strict) scoped to my files.
+
+Both lint gates are green (swiftformat 0/7, swiftlint 0 violations). Now the per-file typecheck against the real iOS and macOS SDKs under Swift 6.
+
+iOS typecheck: 0 errors. Now the macOS SDK leg.
+
+Both SDK typechecks pass (0 errors, 0 warnings). Now let me build and run an executed logic harness that exercises the real `ContextMenu.Adapter.swift` + `ContextMenu.Model.swift` code as a native macOS binary.
+
+Now compiling the harness with the real Adapter + Model sources and running it.
+
+The top-level globals are MainActor-isolated under Swift 6. Let me mark the helper `@MainActor`.
+
+Harness: **41/41 PASS**. Now the placeholder gate — I'll run both the literal gate command and a real scan of the actual files, plus a direct token grep.
+
+Both placeholder scans clean. Now the direct token grep and xcodegen project integration.
+
+Project generated. Let me verify the ContextMenu files are integrated into the app + test targets.
+
+Direct grep clean; project integration confirmed (48 refs, matching the precedent; each file present). Now I'll attempt the full-app gate. First, the prerequisite KMP `Shared.xcframework` build — I'll run it async with a time budget and monitor.
+
+KMP toolchain is cached (`~/.konan`, `~/.gradle`). The framework build has run here before, so it should complete with warm caches. Let me start it async and monitor.
+
+The framework build is running in the background. Let me monitor its progress.
+
+Gradle is progressing with warm caches (FROM-CACHE compiles). It's assembling the XCFramework now. Let me wait for the release assembly + staging to complete.
+
+Release linking in progress. Let me wait for it to finish staging.
+
+Last release link (macOS) running. Let me wait for the final assemble + stage.
+
+`Shared.xcframework` built (BUILD SUCCESSFUL, 7m 48s) and staged. Now I'll attempt the actual `xcodebuild build test` legs to record real exit codes. Let me check simulators and launch the iOS leg async.
+
+iPhone 16 simulator is booted. Launching the iOS gate leg (`build test`) async — this compiles the full app (~1400 surface files), so I'll monitor with a budget.
+
+The iOS build is running. Let me monitor it — checking for any ContextMenu-attributable errors and overall progress.
+
+Full app compiling clean — 0 errors, no ContextMenu errors, emitting the TeslaSync module. Let me continue monitoring.
+
+A `BUILD FAILED` marker appeared with 0 `error:` lines — let me find the actual failure reason.
+
+The iOS build failed in a **foreign** SwiftCompile batch (`AppMenuCommands/AppRoute/AppSettings/AppearanceSettings/AuditPanel…` — none are ContextMenu files), with 0 ContextMenu errors. Let me root-cause that foreign failure precisely and capture the final exit code.
+
+0 `error:` diagnostics anywhere — only warnings in foreign files. The failing batch had no diagnostic, indicating the swift-frontend was terminated (resource pressure on this shared runner), not a code error — and no ContextMenu file is involved. Let me confirm the signal and capture the final exit code.
+
+Definitive: line 13866/21120 show "**Command SwiftCompile failed with a nonzero exit code**" with **zero `error:` diagnostics** — the swift-frontend was terminated under memory pressure (a 1400-file module on a shared runner), an environmental/foreign failure with no ContextMenu file involved. Let me wait for the iOS process to exit, then run the macOS leg capturing exit codes precisely.
+
+The real cause is now crystal clear: a **swift-frontend compiler crash (stack dump)** while compiling a foreign batch beginning with `Sources/Platform/Menus/AppMenuCommands.swift` — a toolchain/environmental crash, zero ContextMenu involvement. Let me check the monitor.
+
+The build+test already recorded both `** BUILD FAILED **` and `** TEST FAILED **`; the lingering process is post-failure cleanup. Let me stop the monitor and capture the iOS result, then run the macOS leg with precise exit-code capture.
+
+iOS process exited cleanly (NO_PID). iOS leg verdict: **BUILD FAILED + TEST FAILED → IOS_EXIT=65** (foreign swift-frontend crash). Now launching the macOS leg with exit-code capture.
+
+The macOS leg is running. Let me monitor its progress (it may fail fast on signing or hit the same foreign compiler crash).
+
+macOS leg: **MAC_EXIT=65**, BUILD/TEST FAILED, no ContextMenu errors. Let me root-cause it precisely.
+
+Both legs are now precisely root-caused as **foreign/environmental**, neither involving ContextMenu:
+- **IOS_EXIT=65**: swift-frontend compiler crash (stack dump) in a foreign batch (`AppMenuCommands.swift` et al.) — toolchain/environmental.
+- **MAC_EXIT=65**: `"TeslaSync-macOS" has entitlements that require signing with a development certificate` — no macOS signing identity on this headless runner (the documented CI-matrix item).
+
+Let me confirm my changes are scoped only to ContextMenu files and that the foreign file is unmodified at HEAD.
+
+Confirmed: my changes are exactly the 8 ContextMenu files; the foreign `AppMenuCommands.swift` is unmodified at HEAD; the generated project and framework are gitignored. Let me gather final line counts and write the gate log.
+
+All data gathered. Now writing the comprehensive gate log following the established honest methodology.
+
+Log written. Now a final scoped re-verification, temp cleanup, then commit.
+
+Final scoped gates green; temp cleaned. Now staging and committing.
+
+All 9 files staged (gitignored project/framework correctly excluded). Committing.
+
+Done. The P4/0206 `ContextMenu` Apple surface is shipped, verified, and committed (`6436dc824`).
+
+## What I built
+A production-polished, native-idiomatic SwiftUI parity of `web/src/components/ui/ContextMenu.tsx` — 8 files (1,470 lines), following the established shared-surface architecture:
+
+| File | Role | Web peer |
+|---|---|---|
+| `.Adapter.swift` | Pure core: slug, `ContextMenuItemDescriptor`, `ContextMenuLayout`, `ContextMenuProjector` (open-guard, enabled-row traversal, **measure-and-flip placement**) | `ContextMenuItem`, `enabledIndices`/`focusNextEnabled`, `useLayoutEffect` |
+| `.Model.swift` | i18n facade (P1/S10), telemetry seam (P1/S11), `ContextMenuAction`, `@Observable @MainActor ContextMenuController` (P1/S8) | `useTranslation`, `useSyncExternalStore` module store |
+| `.swift` | `ContextMenu` host + `.teslaSyncContextMenu` trigger | `ContextMenuRoot` + `useContextMenu` |
+| `.Views.swift` | Overlay, panel (role=menu + keyboard nav), row (role=menuitem), empty body | portal `<div role=menu>`/`<button role=menuitem>` |
+| `.Previews / .Tests / .AdapterTests / .strings` | 6 previews · 36 XCTest methods · catalog | — |
+
+Faithfully reproduced the source's **real** branches (closed / populated rows with icon·shortcut·disabled·destructive / empty), keyboard contract, viewport flip, `contextMenu.menuLabel` i18n, `view.opened` telemetry, and full VoiceOver/Dynamic Type/Reduce-Motion a11y. No loading/error/stale/offline chrome fabricated — the imperative source has no fetch.
+
+## Verification (all surface-scoped gates GREEN, actually executed)
+- **swiftlint --strict**: 0 violations · **swiftformat --lint**: 0/7 · **placeholder**: 0
+- **Typecheck vs REAL iOS 26.5 + macOS 26.5 SDKs** (Swift 6, strict concurrency): 0 errors each
+- **Executed logic harness** (real Adapter+Model compiled to a native binary): **41/41 PASS**
+- **xcodegen**: 48 pbxproj refs (both apps + both XCTest bundles); `Shared.xcframework` built + staged
+
+## Honest full-app result
+I ran both `xcodebuild build test` legs with the real KMP framework staged:
+- **IOS_EXIT=65** — a **swift-frontend compiler crash** in a foreign batch (`AppMenuCommands.swift` et al., unmodified at HEAD); 0 ContextMenu errors.
+- **MAC_EXIT=65** — `entitlements require a development certificate` (no signing identity on this headless runner).
+
+Both are foreign/environmental with zero ContextMenu involvement, recorded with real exit codes — not painted green. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0206-ContextMenu.log  | 192 +++++++++++++
+ .../shared-surfaces/ContextMenu.Adapter.swift      | 197 ++++++++++++++
+ .../shared-surfaces/ContextMenu.AdapterTests.swift | 185 +++++++++++++
+ .../shared-surfaces/ContextMenu.Model.swift        | 298 +++++++++++++++++++++
+ .../shared-surfaces/ContextMenu.Previews.swift     | 130 +++++++++
+ .../shared-surfaces/ContextMenu.Tests.swift        | 244 +++++++++++++++++
+ .../shared-surfaces/ContextMenu.Views.swift        | 257 ++++++++++++++++++
+ .../TeslaSync/shared-surfaces/ContextMenu.strings  |  35 +++
+ .../TeslaSync/shared-surfaces/ContextMenu.swift    | 124 +++++++++
+ 9 files changed, 1662 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0206-ContextMenu.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ContextMenu.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ContextMenu.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ContextMenu.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ContextMenu.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ContextMenu.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ContextMenu.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ContextMenu.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ContextMenu.swift

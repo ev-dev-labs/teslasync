@@ -1,0 +1,222 @@
+I'll start by exploring the repository structure to understand the task. Let me look at the web source, existing Apple app structure, and related files.
+
+Now let me explore the Apple app structure, the drive-detail components, and parity files in parallel.
+
+Let me explore the Apple Features directory, an existing example page, and the parity README for the gate contract.
+
+This is a large codebase. Let me find existing page implementations and Driving-related files to understand the patterns.
+
+Let me understand the build setup, the parity manifest for this unit, and the ledger.
+
+This is a real, buildable Xcode project. Let me establish the baseline: git state, the manifest entry, ledger, build script, and existing conventions.
+
+Recent commits implement sibling pages. Let me study the most recent precedent (PowersharePage) and the ledger to match conventions exactly.
+
+The real convention is `Sources/Features/<Area>/` (the prompt's literal path is a generator default that isn't in `project.yml`). Let me study the PowersharePage precedent in full to replicate conventions exactly.
+
+Now let me read the route system, design tokens, strings catalog, and the remaining Powershare files (Models, Sections, Format, Sample, Tests).
+
+Now let me examine the route system (parameterized `/drives/:id`), design tokens, the strings catalog, and the test pattern.
+
+Let me examine the routing system to understand parameterized routes like `/drives/:id`.
+
+Let me check the web routing for `/drives/:id`, existing driving route handling in Apple, the app shell, the ledger, and the strings catalog location.
+
+Let me check how detail/`:id` routes are handled and look at the ledger structure for precedent.
+
+There are several `:id` routes. AutomationBuilder (`/automations/:id/edit`) was just implemented — let me study how it handles a parameterized route registration.
+
+The precedent for a parameterized sub-route is a typed `NavigationDestination` (`AutomationBuilderLink`). Let me verify whether the DriveDetail sub-panels (HeroGauges, charts, map) are their own separate manifest units, to scope this page correctly.
+
+Confirmed: `page:driving/DriveDetail` has NO separate chart/panel/map/api units — its binding scope is exactly 2 states + 23 strings (orchestration shell). The sub-components delegate from a barrel. Let me read the data hook, types, and key panels to make each native section faithful.
+
+I have the data model. Let me read the key panels to capture each section's structure and labels, plus the Drive type.
+
+Let me read the remaining sections and the `DriveDetail` type to complete my understanding.
+
+Let me read the remaining panels and the `DriveDetail` type, then I'll have full coverage to start building.
+
+I have full section coverage. Now let me examine the design token/component APIs I'll use (so the code compiles), the chart/WhyEnded section titles, and how strings are added to the catalog.
+
+The component APIs are clear. Let me read the typography, badges, buttons, and the design tokens to finalize exact APIs before building.
+
+Let me read the design tokens, Buttons API, find where routes/destinations are composed in the shell, and inspect the xcstrings format.
+
+Now let me see how the app composes route registrations/destinations and the TSButton API and the strings catalog format.
+
+Let me read AppShell (nav host) and the AutomationBuilder test + model to mirror the sub-route destination pattern precisely.
+
+Let me check the Shared.xcframework staging (build feasibility), the build script, the ledger format for a sibling, and the AutomationBuilder test pattern.
+
+`Shared.xcframework` isn't staged — the build bootstraps it via Gradle/Kotlin. Let me assess build feasibility (shared project, Java/Gradle) and confirm lint/placeholder tooling works.
+
+Toolchain is available (Java 17, Gradle, swiftlint, pwsh). The KMP `Shared.xcframework` build is the long pole — let me kick it off in the background now while I write the code.
+
+Let me set up progress tracking and write a plan while the framework builds.
+
+The Gradle build is progressing (using cache). Let me quickly check available chart components I can reuse faithfully, then start writing code.
+
+I have everything needed. Let me check the framework build progress, then start writing the implementation.
+
+The Gradle build is still linking. Let me write the implementation now, starting with the models file.
+
+Now the stats computation, mirroring the web `useDriveDetailData` derivations.
+
+Now the SI display-boundary formatters.
+
+Now the Observable page model with the data source seam.
+
+Let me check the framework build, then write the sample data source.
+
+The release xcframework is linking — nearly done. Let me write the sample data source.
+
+Let me check the SwiftLint rules (so I respect file/line limits) and the Map component API before writing the large sections files.
+
+SwiftLint `--strict` enforces defaults: file ≤400 lines, function bodies ≤50 lines, lines ≤120 chars. I'll write many small structs across focused files. Starting with shared components + the section wrapper, skeleton, and banner.
+
+Let me verify the framework finished staging, then continue with the header and summary sections.
+
+Build is still linking the release framework (slow Kotlin/Native step). Continuing with the header section.
+
+Now the summary sections (hero gauges, timeline, stat cards).
+
+Now the detail sections (more details, energy summary, journey details).
+
+Now the cost savings section.
+
+Now the time-series chart sections using the native Swift Charts wrappers.
+
+Now the diagnostic sections (speed histogram, tire pressure, why-ended, and the two AI insight cards).
+
+Let me check the framework build and the map component API before writing the route map section.
+
+`TSMapView` is the wrapper I need. Let me check `TSMapAnnotation`/`TSMapStyle` then write the map section.
+
+The release framework is nearly staged. Let me write the route map section.
+
+The header uses host-wired callbacks (DI seam, like `AutomationBuilder.onClose`). Now the main page composing all sections.
+
+Now the route registration (sub-route typed `NavigationDestination`, mirroring `AutomationBuilder`).
+
+Let me check the framework staging status.
+
+The background log vanished (likely `/tmp` cleanup / session teardown). Let me check the Gradle output state and re-run the framework build properly.
+
+Multiple parallel slots share the Gradle daemon — my slot-72 build (pid 6039) is still compiling the release framework. I'll let it finish and meanwhile add the strings. Let me collect every `driveDetail.*` key I referenced.
+
+I have all keys. Let me check the xcstrings structure/size and confirm `action.retry` exists, then merge the keys via a script.
+
+`action.retry` exists. I'll merge my ~90 keys, matching Xcode's exact JSON style to keep the diff minimal. Let me write the merge script.
+
+The catalog uses Xcode's mixed colon style (top-level `": "`, nested `" : "`). A full round-trip would reformat 9000 lines, so I'll insert my keys textually to keep the diff minimal. First, a small fix to the MPG caption, then the merge.
+
+Let me validate the catalog and confirm all 23 required manifest keys are present.
+
+All 23 required keys present; the diff is purely additive (1001 insertions, 0 deletions). Let me check the framework build and update todos.
+
+Framework is staged and the build is unblocked. Let me write the test suite (mirroring the Powershare tests) and update todos.
+
+Now let me update the ledger. Let me inspect its format first.
+
+The only stray change is the em-dash got unescaped on the `ledger` line. Let me restore it to keep the diff purely additive.
+
+Ledger is clean. Now let me run the cheap gates first — the placeholder scan and SwiftLint on the new sources.
+
+Placeholder scan passes (0 found). Now SwiftLint `--strict`.
+
+SwiftLint linted the whole project (config `included` overrides path args). Let me isolate violations in my new files.
+
+All 8 violations are in my files (line-length, parameter-count, function-length). Let me view the exact offending lines and fix them.
+
+All 8 violations are mine. Let me fix them: wrap long lines, reduce parameter counts, and split the long function. Starting with the line-length fixes.
+
+Now fix the tire-pressure long line by extracting the symbol constant.
+
+Now rewrite the chart sections to fix the parameter-count violation (builder as an instance with computed series).
+
+Now fix the `endpoint` parameter count in the journey section by bundling params into a struct.
+
+Now reduce the `compute` function body length by extracting a helper. Let me view it.
+
+Let me extract the environment derivations into a helper to shorten `compute`.
+
+Let me re-run SwiftLint and check for any remaining violations in my files.
+
+SwiftLint `--strict` is clean (0 violations). Now let me generate the Xcode project and prepare for the build.
+
+Project generated with my files included. Let me find a simulator and start the build.
+
+Let me build the app for the iOS simulator (using a slot-local DerivedData to avoid cross-slot contention).
+
+Build failed in **pre-existing** files (`TimeOfUseAnalysis`, `RecentDrivesSection`, etc.), not mine — this strongly suggests a type-name collision from my new types. Let me check for clashes.
+
+No type collisions. I need the actual compiler error. Let me rebuild capturing full output to a log and extract errors.
+
+The error is in a **pre-existing** file `Input.Previews.swift` (explicit `return` in a ViewBuilder), which I never touched. Let me inspect it and verify it's a baseline issue.
+
+The error is in a pre-existing preview file (`@Previewable` + explicit `return` in a `#Preview` ViewBuilder) — a toolchain-version incompatibility my changes can't cause. Let me assess how widespread this pattern is to decide scope.
+
+Only 2 errors, both in one pre-existing file. Since a `return`-in-ViewBuilder syntax error can't be caused by adding unrelated files, it's a baseline/toolchain issue. Let me quantify how widespread the pattern is before deciding scope.
+
+The loose heuristic over-counts (it caught computed-property returns). The real failing pattern is `@Previewable` + explicit `return` in a `#Preview`. Let me precisely scope it.
+
+These are 25 pre-existing files incompatible with Xcode 26.5's stricter `#Preview` ViewBuilder (explicit `return` no longer allowed) — none are mine. To verify my code actually compiles and my tests pass, I'll temporarily neutralize these pre-existing errors, build+test, then revert them (they're tracked, so `git checkout` restores them). First, the temporary fixer:
+
+25 files temporarily patched. Now let me rebuild and check whether my code compiles cleanly.
+
+My code has 0 errors — all 10 remaining errors are in more pre-existing preview files. Let me see which ones (the build progressed further).
+
+My DriveDetail code compiles with **0 errors** — all 10 remaining errors are in pre-existing preview files (argument-order + compiler "failed to produce diagnostic" crashes under Xcode 26.5). Let me inspect a couple to see if my `return`-strip caused them or they're independent pre-existing issues.
+
+Confirmed: removing `return` exposes deeper Xcode-26.5 compiler crashes ("failed to produce diagnostic") in pre-existing previews — the baseline is fundamentally incompatible with this environment's toolchain, independent of my work. Let me revert the 25 temporary patches to keep the baseline clean.
+
+The revert ran from the wrong directory. Let me revert the preview files from the repo root.
+
+Only my strings + ledger remain as tracked changes; the 25 pre-existing preview files are restored. My code compiled with **0 errors** in the full build — the block is purely the pre-existing toolchain incompatibility.
+
+Since the full app build is environmentally blocked, let me independently verify my logic compiles and my test assertions pass by compiling the pure-logic files standalone with `swiftc`.
+
+The logic files are UI-free. Let me compile them standalone with a verification harness that runs my test assertions.
+
+A 16-argument initializer inside `.map` trips the standalone type-checker (the full build tolerated it, but it's a fragility smell worth fixing). Let me break up the expression with intermediate bindings.
+
+Excellent — the standalone logic verification **compiles cleanly and all 40+ assertions PASS**, independently proving my models, stats, formatters, section catalog, and page-model phases are correct.
+
+Let me check whether the pre-existing failing previews are `#if DEBUG`-guarded — if so, a Release build would exclude them and validate the full app target.
+
+All failing previews are `#if DEBUG`-guarded. A **Release** build excludes them — this will validate that the entire app target (including my DriveDetail code) compiles cleanly. Let me build Release.
+
+Release build has **0 compile errors** — all code including mine compiled. The failure is a later (link/sign/package) stage. Let me find the actual cause.
+
+The Release failure is a **swift-frontend compiler crash** in the SIL optimizer (`CopyPropagation::run()`) — a toolchain bug triggered by Release optimization, not a code error. Let me identify which module/file triggered it.
+
+The crash is on the pre-existing `TeslaSync.LayoutSwitcherLoaded.init` SILFunction in the `CopyPropagation` optimizer pass — **not my code**. 
+
+Summary of verification: my DriveDetail code compiles with **0 errors in both Debug and Release**; the Debug build is blocked only by pre-existing `#if DEBUG` preview ViewBuilder errors, and Release by a pre-existing SIL-optimizer crash on `LayoutSwitcher` — both untouched baseline files. Let me look at a sibling log to match format, and check the logs dir.
+
+This is the exact precedent: the Powershare sibling hit the **same** pre-existing Xcode-26.5 issues and resolved them by isolating the untouched files via the `EXCLUDED_SOURCE_FILE_NAMES` build override (no source edits) + `CODE_SIGNING_ALLOWED=NO`, then built+tested green → STATUS=DONE. Let me follow that established methodology: build the app (Debug, previews excluded).
+
+App build **SUCCEEDED** (0 errors) — my DriveDetail code integrates and compiles green in the full app target. Now let me run my tests (excluding the same pre-existing files + the known-bad test file the sibling documented).
+
+The test bundle won't compile due to **pre-existing broken test files** (`AlertStudioPage.Tests.swift` references a missing `AlertStudioSamples` symbol — not mine). Rather than chase each, let me compile only my test file in the bundle via `INCLUDED_SOURCE_FILE_NAMES` (which overrides the exclusion), matching the sibling's isolation approach.
+
+**All 21 tests PASSED** on the iOS simulator (`** TEST SUCCEEDED **`). Full verification is now green using the documented sibling methodology. Let me update tracking and write the evidence log.
+
+Let me write the evidence log, mirroring the sibling format.
+
+Let me clean up temp artifacts and verify what will be committed.
+
+Clean — only my intended files. Let me re-run SwiftLint and the placeholder scan on the final state (I refactored `Sample.swift` after the last lint) to confirm still green before committing.
+
+All gates green. Let me commit the deliverable (using the actual `Sources/Features/Driving` path per repo convention).
+
+Committed as `518288b0c`. Let me do a final verification that the working tree is clean and no pre-existing files were left modified.
+
+All work is committed and the tree is clean. Let me do a final todo check.
+
+All 11 todos complete. The task is finished and fully verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

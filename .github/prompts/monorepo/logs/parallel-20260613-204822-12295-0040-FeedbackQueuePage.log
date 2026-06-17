@@ -1,0 +1,120 @@
+I'll start by exploring the task. Let me read the web source page, the Apple app structure, and relevant instruction files in parallel.
+
+The Apple app is large. Let me explore its structure focusing on the Admin features and existing page patterns.
+
+The actual structure differs from the prompt. Let me examine the project configuration and existing Admin sources to understand the real layout.
+
+Now I understand — admin pages live in `Sources/Features/Admin/`, not the idealized prompt path. Let me study the closest analog (AuditLogPage — paged table with filters) and its supporting files in detail.
+
+Let me examine the supporting files: models, table/filters sub-views, sample data, route enum, and the web feedback hooks/types.
+
+Let me look at the web feedback hooks/types, the route enum, sample data source, and a co-located test.
+
+Let me examine the route enum, route parser, web feedback types, and the route host registry.
+
+Let me read the web feedback types in full and understand how route registrations are aggregated.
+
+Now I understand routing. Let me check for existing feedback references, route-enumeration tests, the localization catalog, the ledger, and the placeholder script.
+
+Let me read the AuditLog log (the format template I must follow), the ledger, the placeholder script, and the manifest record.
+
+Full Apple toolchain is available. Let me locate the component library, masked-value component, the AuditLog log's PARITY section, and the manifest record.
+
+Let me read the beginning of the AuditLog log to understand the gate-execution structure and how build results were handled.
+
+I have a thorough understanding of the pattern. Let me read the component library and design tokens to use exact APIs, and find the masked-value component plus the manifest record.
+
+Let me read the remaining components: cards, states, skeletons, banners, utility, typography, pickers, disclosure.
+
+Let me read the typography, skeletons, banners, pickers components and the design tokens/theme.
+
+Let me verify design tokens, find the manifest record, and look at the existing model test pattern.
+
+Let me read the design tokens, theme helpers, and the existing model test to mirror.
+
+I have all components/tokens. Now let me inspect the localization catalog structure and check which of my needed keys already exist.
+
+Now let me check whether any tests assert the route set/count (so adding a route case won't break them), and how the sidebar renders routes.
+
+Adding a route case affects `MenuCommandCatalogTests` (asserts menu routes == all routes). Let me read the route tests and the menu catalog source.
+
+Good — menu/spotlight build from `allCases` via map/filter. Let me verify no other exhaustive `switch` over `AppRoute` exists that I'd need to update.
+
+I have a complete picture. Let me quickly check the web `UserCell` and `MaskedValue` to faithfully port the reporter column and masked email, then set up my plan.
+
+I now have a complete understanding of the architecture, components, tokens, routing, tests, and gate. Let me set up my plan and todos.
+
+Now I'll implement. Starting with the models file.
+
+Now the page model with the data-source seam and state machine.
+
+Now the sample data source.
+
+Now the badges (category + status).
+
+The table needs an expand affordance. Let me check existing generic a11y keys in the catalog before building it.
+
+Let me check the swiftlint/swiftformat config to match conventions, then build the table file.
+
+Now the table + expansion (the largest file). Writing it carefully within the 120-col lint budget.
+
+Now the expansion detail view in its own file.
+
+Now the main page view with filter row, states, pagination, and previews.
+
+Now the route registration. Let me view the exact TeslaSyncApp chain tail to craft precise edits.
+
+Now wire it into the `TeslaSyncApp` registry chain.
+
+Now run swiftformat to fix the nested-chain indentation and normalize all new files.
+
+Let me verify the TeslaSyncApp chain reindented correctly.
+
+The chain reindented and balanced correctly. Now the model tests.
+
+Now I'll add the 41 catalog keys (38 parity + `route.feedbackQueue` + 2 a11y/hint helpers) using a textual insert that preserves Xcode's `.xcstrings` formatting.
+
+41 keys added, JSON valid. Now let me run formatting + lint gates. First format the test, then lint everything.
+
+swiftformat clean. Now swiftlint --strict.
+
+swiftlint clean (0 violations). Now the placeholder gate on the real Admin dir + tests dir.
+
+Placeholder gate clean (COUNT=0). Now the authoritative in-scope compile proof — a model harness compiled + run under Swift 6 strict concurrency.
+
+Top-level code requires the file be named `main.swift`. Let me fix and rerun.
+
+Harness passes under Swift 6 strict concurrency. Now the view type-check against the real P2 tokens + P3 components (macOS + iOS), with previews compiled.
+
+macOS type-check clean (0 errors/warnings). Now the iOS simulator target (exercises the `#if os(iOS)` compact branches).
+
+Both idioms type-check clean (0/0). Now regenerate the Xcode project to confirm my files are picked up.
+
+The native `FeedbackQueueTriage` AI component already exists as a separate parity unit. Since the web page embeds it in the expansion, let me check its public entry point to decide whether to faithfully embed it.
+
+The AI triage is a **separate, already-delivered parity unit** in `TeslaSync/shared-surfaces/` (outside my allowed files) — correctly excluded from this page's 43-item scope. My in-scope proofs are complete. Let me honestly attempt the full `xcodebuild` to document its real result. First, check if the KMP framework is staged.
+
+KMP `Shared.xcframework` is not staged (only `.gitkeep`) — the full `xcodebuild` requires building it via Gradle/Kotlin-Native first. Let me probe the toolchain and any cached build before attempting.
+
+Java 17 + gradlew + a 1.6G Konan cache are present, so building the KMP framework is feasible. Let me build `Shared.xcframework` (needed for the full build), running in the background.
+
+The KMP build is running. Let me check its progress.
+
+Good progress — it's linking the release frameworks. Let me wait for completion.
+
+Nearly done (last platform linking). Let me wait for it to finish staging.
+
+KMP `Shared.xcframework` built and staged (12 min). Now the full `xcodebuild` for the macOS scheme. Starting it in the background with logging.
+
+Build running. Let me check the log for progress, my files, and any diagnostics.
+
+Build progressing through module emission — 0 errors, 0 crashes so far. Let me keep waiting.
+
+Build is in whole-module emission (heavy step for the 2600-file module), no crashes/errors. Let me continue waiting.
+
+80 parallel compilers active, still 0 errors/crashes — the large app compile is progressing. Let me wait longer.
+
+The build moved into parallel per-file compilation (now at "S" alphabetically) — still 0 errors/0 crashes, so the predecessor's shared-surfaces crash is NOT reproducing. Let me keep waiting.
+
+All 8 of my files are being compiled by the real build — 0 errors, 0 crashes. Let me wait for it to finish.
+

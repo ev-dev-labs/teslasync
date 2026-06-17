@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure and the web source component, then check the Apple toolchain availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, simulators). Now let me find the web source and understand the existing Apple project structure.
+
+Let me read the web source (the spec), its test, and the existing shared-surfaces directory.
+
+I have the spec. It's a pure presentational component (4 render branches, 2 i18n keys, optional pin icon, no data fetching). Now let me study the existing shared-surfaces patterns to match conventions exactly.
+
+Clear convention exists (85 surfaces, each with `.swift/.Model/.Views/.Previews/.Adapter/.Projection/.Tests/.strings/.Chrome`). Let me find the simplest presentational surface to model after, and understand the build config + core facades (tokens, i18n, telemetry).
+
+Let me disambiguate the directory layout, locate `project.yml`, and read the smallest surface (PlaybackSpeedMenu) as a template.
+
+Let me read these files via the view tool for proper formatting.
+
+Excellent template. Now let me read the design tokens, the remaining template files (Previews/strings/Tests), and a pure-display analog (`Distance`) since RouteDisplay has no callbacks.
+
+The tokens are defined elsewhere. Let me locate them across the whole Apple tree.
+
+Let me read `project.yml` to understand targets, source globs, and where tokens live for the main app.
+
+Now let me check build prerequisites (xcodegen, Shared.xcframework script, design tokens) and how verification is actually handled here.
+
+Build needs a Gradle/Kotlin-built `Shared.xcframework`. Let me check whether that toolchain/framework is available and read the known-verification状态 doc.
+
+This is the key context. The full-app `xcodebuild build test` is **macOS-pending across every surface** (unstaged Kotlin/Native `Shared.xcframework`, 0 signing identities, and pre-existing parallel-merge collisions in *other* agents' surfaces I'm not allowed to touch). The established, accepted per-surface verification is: `swiftc -typecheck` (iOS18+macOS15) against real Tokens.swift, isolated tests, swiftlint/swiftformat/placeholder clean, i18n parity, xcodegen enumeration.
+
+Let me read the token API, the placeholder checker, and an existing surface log to match conventions exactly.
+
+I have the token API. Now let me read the placeholder checker (and its allow mechanism), plus the tail of an existing shared-surfaces log to match the STATUS/verification convention.
+
+I now fully understand the accepted methodology (82/85 logs: per-surface gates green, full-app xcodebuild DEFERRED→65 for pre-existing infra). Let me check symbol-collision risk and the lint/format configs before writing.
+
+Found an existing `TSRouteDisplay` in the Components layer — let me read it for parity consistency, and locate the lint/format configs (they're at `apps/apple/`).
+
+I have everything needed. The accepted pattern is clear: per-surface gates green + full-app `xcodebuild` deferred (pre-existing Kotlin/Native `Shared.xcframework` + 0 macOS signing identities + sibling collisions). I'll build the 7-file surface, then verify with swiftformat/swiftlint/placeholder/isolated-run/dual-SDK typecheck/xcodegen.
+
+Let me set up tracking and create the files.
+
+Now creating the surface files, starting with the Foundation-only core.
+
+Now the two test files (logic/i18n + telemetry).
+
+All 7 files created. Let me update tracking and begin verification — first swiftformat (the gate config lives at `apps/apple`).
+
+swiftformat wants fixes (notably `XCTUnwrap` instead of force-unwrap in tests). Let me auto-apply, then inspect the transformed tests.
+
+swiftformat passes now. Let me inspect the auto-transformed test file (force-unwrap → XCTUnwrap) and the Model changes to confirm correctness.
+
+swiftformat passes; the auto-fix correctly converted force-unwraps to `try XCTUnwrap` with `throws`. Now swiftlint --strict and the placeholder gate.
+
+swiftformat vs swiftlint conflict on the multiline `if let` brace (a known issue per the macOS doc). Let me restructure `endpointLabel` to a single-line condition so both pass.
+
+Now re-run both formatters/linters to confirm the conflict is resolved with no regressions.
+
+Both formatters pass (0 violations). Now the placeholder gate — I'll scan my actual files (the gate's literal `-Path …/RouteDisplay` matches no path, so I verify the real files honestly).
+
+Placeholder gate clean (COUNT=0) and no banned words anywhere. Now the **isolated build + RUN** to prove the pure logic on this runner — I'll compile the Foundation-only Model with a harness mirroring the test assertions.
+
+Swift 6 top-level-code MainActor isolation issue. Let me wrap the harness in a single `@MainActor` function with local state.
+
+Isolated RUN: **25/25 assertions pass** (build+run exit 0); empirical labels confirm the threshold logic (122m, labels "📍 47.71" vs "📍 47.72"). Now the **dual-SDK typecheck** of all view files against the real `Tokens.swift` (iOS 18 + macOS 15, Swift 6 strict concurrency, DEBUG to include Previews).
+
+iOS 18 typecheck clean (0 errors/warnings). Now macOS 15.
+
+Both SDKs typecheck clean. Now `xcodegen generate` to confirm the project enumerates my files into the right targets.
+
+All host-runnable gates are green. Now let me capture honest evidence for the deferred full-app `xcodebuild` gate. First, confirm the destination situation and attempt a direct build to surface the real blocker.
+
+Key findings: **iPhone 16 simulator IS present** (booted), and the direct build fails with exactly the documented blocker — `There is no XCFramework found at .../Shared.xcframework` — **before any Swift compiles** (zero RouteDisplay errors). Let me attempt to stage the KMP framework via Gradle (bounded) to get the gold-standard real-app-module compile evidence.
+
+Gradle works offline with a warm daemon (`:core:tasks` succeeded in 2s — Kotlin/Native deps appear cached). Let me attempt the framework assembly (the documented long-pole) in the background and monitor.
+
+Gradle is assembling in the background. While it runs, let me do a final review of the formatted Model file (post-edit) and verify the view file is intact.
+
+Model file is clean and correct. Let me check the Gradle assembly progress.
+
+Still compiling (Kotlin/Native is the long-pole, ~6-7 min per precedent). Let me continue waiting.
+
+`Shared.xcframework` assembled successfully (BUILD SUCCESSFUL in 7m29s). Now let me stage it and run a **real app-target compile** to prove RouteDisplay compiles inside the actual TeslaSync module.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the real app-target compile — capturing all errors to analyze RouteDisplay vs pre-existing sibling issues.
+
+Decisive result: the real app-target compile produced **exactly 1 error, zero in RouteDisplay** — the only failure is a pre-existing sibling (`RecentDrivesSection.Previews.swift`, another agent's surface, itself already macOS-pending) hitting a type-check timeout. Let me confirm my surface actually compiled and capture the failure summary.
+
+Conclusive: my `RouteDisplay.strings` is copied/validated and the **sole failing compile batch is the `Recent*` sibling group** (RecentDrivesSection.Previews — already macOS-pending), containing zero RouteDisplay files. My surface compiles clean in the real app module. Let me capture the macOS signing evidence and confirm git scope.
+
+All evidence gathered: macOS has **0 signing identities** (macOS deferral), and only my 7 `RouteDisplay.*` files are untracked (generated artifacts are git-ignored). Let me write the gate log and commit.
+
+Log written. Now commit the surface + log (generated artifacts are git-ignored).
+
+Committed cleanly (only the 7 surface files + log). Let me do a final working-tree sanity check.
+
+Working tree clean; commit `38457ff1c` contains exactly the 7 surface files + log. Task complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0101-RouteDisplay.log | 135 +++++++++++
+ .../shared-surfaces/RouteDisplay.Model.swift       | 265 +++++++++++++++++++++
+ .../shared-surfaces/RouteDisplay.ModelTests.swift  |  73 ++++++
+ .../shared-surfaces/RouteDisplay.Previews.swift    | 110 +++++++++
+ .../shared-surfaces/RouteDisplay.Tests.swift       | 208 ++++++++++++++++
+ .../shared-surfaces/RouteDisplay.Views.swift       |  54 +++++
+ .../TeslaSync/shared-surfaces/RouteDisplay.strings |  20 ++
+ .../TeslaSync/shared-surfaces/RouteDisplay.swift   |  96 ++++++++
+ 8 files changed, 961 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0101-RouteDisplay.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteDisplay.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteDisplay.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteDisplay.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteDisplay.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteDisplay.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteDisplay.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteDisplay.swift

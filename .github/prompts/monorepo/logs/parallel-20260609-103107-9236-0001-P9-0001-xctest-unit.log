@@ -1,0 +1,134 @@
+I'll start by exploring the environment and repository structure to understand what we're working with.
+
+Key finding: This is macOS 26.5.1 with **only Command Line Tools** — no full Xcode (`xcodebuild` and `simctl` are unavailable), but Swift 6.3.2 IS available. Let me explore the Apple app structure deeply before deciding on approach.
+
+This is a mature Apple app (188 source files, 63 test files) using XcodeGen (`project.yml`). The environment has **no full Xcode** — only Command Line Tools + Swift 6.3.2. Let me read the prior artifact log, methodology, project config, and existing test conventions.
+
+The prior run (different branch) had full Xcode via `/Applications/Xcode.app`. Let me verify whether that exists **now**, and check how the repo evolved (it now has `Sources/Features` which didn't exist before).
+
+Full Xcode 26.5 IS available via `/Applications/Xcode.app`. So the "no Xcode runner" escape hatch does NOT apply — same as the prior run. The blockers were (A) macOS signing and (B) absent P7 pages. Let me probe the critical capabilities: simulators, signing identity, and the `Shared.xcframework` dependency (the prior run had to build it via a 23-min Gradle job).
+
+Decisive findings: iOS 26.5 simulator is present (iPhone 16 **booted**), but **0 signing identities** (macOS leg will fail deterministically) and **`Shared.xcframework` is absent** (only `.gitkeep`) — the KMP core dependency must be Gradle-built. The `macos-pending-verifications.md` reveals the full-app build has known **parallel-merge duplicate-symbol collisions** (`DashboardWidgetSize` redefined 8–15×, co-located `*.Tests.swift` in the app target). Let me measure the actual current state of these collisions and the project structure.
+
+Critical insight: HEAD is `b242fc213 "fix(apps/apple): dedupe cross-surface type-name collisions so the flat module compiles"` — the duplicate-symbol blocker from `macos-pending-verifications.md` was **just fixed**. `DashboardWidgetSize` now has exactly 1 definition. The surfaces ("pages") DO exist now under `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` with 402 co-located `*Tests.swift`. The project.yml correctly wires them into the test bundles.
+
+Let me do a precise coverage-gap analysis: which surfaces have Model/view-model files but lack tests.
+
+Coverage is already near-total: **229 feature-view surfaces + 92 dashboard-widget surfaces**, with only 2 apparent gaps — both false positives (ToolCard and DigitalTwinMiniWidget are tested centrally in `Tests/Unit/`). Let me start the fast, runnable gate legs now and understand the framework build dependency.
+
+`swiftformat --lint` is GREEN (0/2635). But the **placeholder gate is RED**: `PLACEHOLDER_COUNT=67 > ALLOWED=24` (prior run had 0). This regressed via parallel merges. Let me understand what the gate flags and whether these are genuine stubs or false positives — this is decisive for the gate.
+
+Now I understand the placeholder gate. It loads patterns from `placeholder-patterns.json` and matched the literal word `Placeholder` in 67 spots. Let me read the patterns, sample the violations to classify them, run `swiftlint --strict`, and kick off the long-pole Gradle framework build in the background.
+
+The Gradle framework build is running in the background. The placeholder pattern is the bare word `Placeholder` (in `common`), which matches legitimate Apple APIs. Let me confirm these are false positives (WidgetKit `placeholder(in:)`, SwiftUI redaction, `.placeholder` state cases) by sampling flagged lines, and examine test conventions.
+
+Confirmed: **all sampled placeholder hits are false positives** — em-dash constants (`static let placeholder = "—"`), code comments, TextField placeholder descriptions, and a test method name (`testNilDataProjectsEmptyPlaceholder`). The bare-word `Placeholder` pattern over-matches legitimate vocabulary. One file's comment literally says it's named `emDash` "never 'placeholder'" — and got flagged for saying the word. This is a gate-design false-positive regression, not real stubs.
+
+Let me check the Gradle build progress and run a state-coverage audit.
+
+The surfaces use `LoadState`-style enums (`loading/empty/content/data/error/stale`). The Gradle build is still warming up. Let me run a comprehensive state-coverage audit across all 321 surfaces.
+
+The audit surfaces real signal but over-reports (presentation-only surfaces whose doc comments mention states). Let me calibrate by reading representative flagged surfaces to distinguish genuine view-model state gaps from heuristic false positives, and check the Gradle build.
+
+QuickNavWidget is a **false positive** — its model has no `stale` state at all (`loading/empty/error/content` only), and its tests cover all 4 real states comprehensively (`testLoadingStateRenders`, `testEmptyStateRenders`, `testErrorStateRenders`, `testContentStateRenders`). The "stale" gaps are largely spurious. Let me check the Gradle progress and verify which `test=[]` surfaces are genuinely untested anywhere (vs. tested centrally).
+
+Definitive correction: in the state audit, `test=[]` meant "test file exists but my keyword scan found no state words," NOT "no test file." Only **ToolCard and DigitalTwinMiniWidget** truly lack a co-located test (both tested centrally). **All 321 surfaces have test files.** AccordionSection/BatteryPill/KioskOverlay etc. are structural/presentation components tested for their real contract (toggle/telemetry/a11y), not 5 data-states. So coverage is genuinely comprehensive — the "gaps" were heuristic false positives.
+
+The real work is now **verification**: run swiftlint, then the iOS `xcodebuild build test` (which will reveal any test-bundle compile errors — my scope to fix). Let me start swiftlint while Gradle builds.
+
+`swiftlint --strict` found exactly **1 serious violation** → LINT_EXIT=2 (RED). That's a single, fixable issue. Let me pinpoint it.
+
+Found it: `LiveSignalSparklinesWidget.Builder.swift:158:9` — an `opening_brace` violation (a genuine style defect, also noted in `macos-pending-verifications.md`). This is real, unlike the placeholder false positives. Let me view it and keep monitoring the Gradle build.
+
+**Gradle build SUCCEEDED in 7m13s** — `Shared.xcframework` is ready. I also see the lint issue: a multi-condition `if` with the `{` on its own line (line 158), a known swiftlint/swiftformat tension noted in the pending-verifications doc.
+
+Now the high-value step: stage the framework, generate the Xcode project, and run the real iOS gate to verify the unit suite compiles + passes. Let me stage and generate first.
+
+Project generated and framework staged. I also see the swiftformat config uses `--wraparguments before-first` etc., which is why the multi-line `if`'s brace-on-new-line passes swiftformat but fails swiftlint's `opening_brace` — a genuine tool conflict with a clean refactor fix.
+
+Now the key verification: run the real iOS gate. I'll start with `build-for-testing` (compiles app + all test bundles — the critical check that the 450+ test-file suite actually compiles as one bundle) before running tests.
+
+The iOS compile is running (2600+ source + 450+ test files). Let me monitor progress via the log file from a separate shell.
+
+**TEST BUILD FAILED** — the app target compiled, but the aggregate `TeslaSyncTests` bundle has **14 compile errors** (Scenario B). This is the genuine, in-scope P9-0001 problem: 450+ test files merged in parallel collide when compiled as one bundle. Let me extract the errors.
+
+Excellent — this is the genuine, in-scope P9-0001 work. The app target compiles fine; the **aggregate `TeslaSyncTests` bundle** has **duplicate test type names** across surface test files merged in parallel (each surface was only verified in isolation, so cross-file collisions surfaced only now in the aggregate gate). The conflicts:
+
+- `ChargeStatusLiveWidget.Tests.swift` ↔ `ChargeStatusWidget.Tests.swift` (5 classes)
+- `DrivingCoachSection.ModelTests.swift` ↔ `DrivingCoachWidget.Tests.swift` (1)
+- `MonthlyCostChart.Tests.swift` ↔ `MonthlyCostTable.Tests.swift` (2, incl. a spy helper)
+- `SafetyFeaturesWidget.ModelTests.swift` ↔ `SafetyHistoryWidget.ModelTests.swift` (3)
+
+Let me inspect these files to understand naming conventions and spy references before renaming.
+
+Good — 14 errors total: **11 duplicate test-type redeclarations** (4 conflict groups) + **3 non-Sendable global closure errors** (`passthroughLocalize` in PresetGallery ×2, `echo` in SlideRenderer.FixturesTests). All in test files — squarely in P9-0001 scope. The type decls are indented; let me view the exact declaration lines and the spy/closure definitions.
+
+Now I have a complete picture of all 14 errors. The collisions are duplicate **internal** test-class names across sibling surface test files (the `private` spies correctly don't collide, except Chart's `SpyMonthlyCostTelemetry` which is missing `private`). Let me view the 3 concurrency-error sites and confirm rename scopes before editing.
+
+All 14 errors are clear and fixable. Each colliding class name appears once (declaration only); cross-file grep confirms safe rename scope. The 3 concurrency errors are global/static closures needing `@Sendable`. Let me apply all fixes:
+
+**Renames** (disambiguate sibling surface test files) + **`@Sendable`** (Swift 6 global closures) + **`private`** (Chart's spy, matching its Table sibling).
+
+All 14 test-bundle fixes applied. Now the single swiftlint `opening_brace` defect — I'll resolve the swiftlint/swiftformat tension cleanly by extracting the 5-condition `if` into a Bool (keeps the brace on the same line without triggering swiftformat's multiline-brace rule).
+
+Now let me verify the lint/format are clean after my edits, then rebuild the iOS test bundle.
+
+Both gates are now **GREEN**: `swiftformat --lint` 0/2635 (FORMAT_EXIT=0) and `swiftlint --strict` 0 violations (LINT_EXIT=0). The brace fix resolved the only violation without breaking formatting. Now let me rebuild the iOS test bundle (incremental — should be fast) to confirm the 14 compile errors are gone.
+
+The incremental rebuild is running (app target re-link + test bundle recompile). Let me monitor.
+
+0 errors so far; it's re-emitting the app module (from my Builder.swift edit) before the test bundle. Let me wait for completion.
+
+Still compiling (app-module change cascades to a near-full test rebuild). Let me poll the log.
+
+The log hasn't grown in ~6 min and no compiler processes are visible — the build may have stalled or been killed. Let me check process state and memory precisely.
+
+The build is **alive but crawling** — many `swift-frontend` processes actively compiling (R state, consuming CPU), but the host is under extreme contention: **load average 150**, **~62 MB free RAM**, and **6 concurrent `xcodebuild` processes** (other parallel slots hammering the shared host — exactly the contention the prior run documented). My brace fix to an app-target file forced a near-full app+test re-emit. It's progressing; I'll be patient and poll.
+
+**TEST BUILD SUCCEEDED — 0 errors, `IOS_BFT2_EXIT=0`.** My 14 fixes resolved every compile error; the full iOS app + the aggregate `TeslaSyncTests` bundle (450+ test files) now compiles cleanly. Before my fixes it couldn't build at all.
+
+Now let me run the unit tests for pass/fail evidence. Given the severe memory pressure (~62 MB free), I'll disable parallel testing and target the `TeslaSyncTests` unit bundle (the P9-0001 deliverable; UITests are out of scope). Let me check memory/sim state first, then run.
+
+Memory recovered slightly (~142 MB free) but load is now **181**. The iPhone 16 sim is booted. The full unit bundle (thousands of tests) under this contention risks a long run + OOM. Let me first run a **curated subset of the exact classes I modified** plus the golden-vector core — this directly validates my edits with minimal OOM exposure. Let me get the precise class names in the touched files.
+
+Now I'll run a curated subset via `test-without-building`: the renamed classes (ChargeStatusLive*, SafetyFeatures*, DrivingCoachSection*, MonthlyCostChart*), their now-unique siblings (ChargeStatus*, SafetyModelTests), the Sendable-fix users (PresetGallery, SlideRenderer), and the golden-vector core. This proves my edits run + pass with minimal OOM exposure.
+
+**Subset passed: 111 tests, 0 failures, `SUBSET_EXIT=0`.** This verifies every fix: the renamed `ChargeStatusLive*`/`SafetyFeatures*`/`DrivingCoachSection*`/`MonthlyCostChart*` classes run, their now-unique siblings (`ChargeStatusAdapterTests`, `SafetyModelTests`) pass, the `@Sendable` fixes work (PresetGallery/SlideRenderer), and the **golden vectors pass**. The simulator launched fine despite load.
+
+Now let me run the **full `TeslaSyncTests` bundle** for complete evidence (build is cached).
+
+**FULL UNIT BUNDLE PASSED: 9562 tests, 0 failures, `FULL_EXIT=0`** (in ~87s). (The shell's "exit code 1" is just `grep -c` returning 1 for a zero match — the suite passed.) Before my fixes the bundle couldn't compile; now all 9562 tests pass.
+
+Now let me capture the remaining official gate legs for the log: the macOS leg (expected to fail at signing — the capability gap) and the exact iOS gate command. Let me run macOS first (fails fast/deterministically at signing).
+
+macOS leg confirmed **`MAC_EXIT=65` — deterministic signing block**: both `TeslaSync-macOS` and `TeslaSyncWidgets-macOS` "require signing with a development certificate," with independent proof `0 valid identities found`. This is the documented ADR-012 capability gap (entitlements: push/app-groups/associated-domains under hardened runtime), not a code defect.
+
+Now the exact iOS gate command for the official record (includes out-of-scope, load-sensitive UITests).
+
+The exact gate is running under load ~185 (includes the heavy, out-of-scope UITests). Let me poll progress.
+
+Still in the build phase under heavy load. Let me wait for it.
+
+The `build test` is re-emitting the app module (the scheme's pre-action re-stages the framework, invalidating the cache). RAM has recovered to ~5 GB (contention easing), so it should progress now. I already have definitive unit evidence (9562/0); this run captures the official `IOS_EXIT` including UITests. Let me wait.
+
+Log is growing (2 MB, recent mtime) with 43 active compile procs — progressing through the app re-emit cascade. I have definitive unit evidence already (9562/0); this run captures the official `IOS_EXIT` (gated mainly on the out-of-scope UITests). Let me let it run and be notified on completion.
+
+The exact gate is now in the **test-run phase**: the `TeslaSyncTests` unit bundle completed (all "0 failures"), and `TeslaSyncUITests` started — the first group already passed (**3 tests, 0 failures in 25s**). Load eased to ~139. It may go fully green this time. Let me wait for completion.
+
+`IOS_EXIT=65` / `** TEST FAILED **` — but the UITests **passed** (13 tests, 0 failures). So failures are in `TeslaSyncTests` this run, flagged on `surfaceSlug` assertions for `ChargeCostTrackerWidget`/`DriveScoreGaugeWidget` — surfaces I did **not** touch. My dedicated `-parallel-testing-enabled NO` run was 9562/0, but the exact gate uses **default parallel testing**. This smells like an order/parallel-dependency. Let me extract the exact failures.
+
+No individual test failures and no `passed`/`failed` line for `TeslaSyncTests` (it only shows `started`) — classic signature of the test host **crashing/being killed mid-run**, not a logic failure. Let me confirm the crash/kill cause.
+
+Key finding: the tests **passed** — `Test Suite 'All tests' passed` (UITests 13/0). The `IOS_EXIT=65`/`TEST FAILED` is a **post-test tooling artifact**: xcodebuild's diagnostic-collection subprocess failed with `xcrun: error: unable to find utility "simctl"` (the subprocess didn't inherit `DEVELOPER_DIR`, so `xcrun` resolved against CommandLineTools). Not a test/code failure. Let me confirm the `TeslaSyncTests` result + count in this run.
+
+The `IOS_EXIT=65` is a **post-test `simctl` diagnostics artifact** (host's `xcode-select` defaults to CommandLineTools; the diagnostic subprocess didn't inherit `DEVELOPER_DIR`), with **0 failed test cases** and `All tests passed`. Since this is a tooling/PATH issue, let me check if I can switch the system developer dir (sudo) to get a clean exact-gate exit, and confirm `TeslaSyncTests` actually executed in that run.
+
+Confirmed: **no passwordless sudo** (can't switch system `xcode-select` from CommandLineTools), so the exact-gate `simctl` diagnostics artifact is unavoidable here — but it recorded **0 failed `TeslaSyncTests` cases** (1528+ passed in the captured stream) and `All tests passed`. Combined with my dedicated clean run (9562/0), the unit deliverable is definitively green.
+
+I have complete evidence. Let me verify exactly what changed in git (ensuring build artifacts are gitignored) before writing the log and committing.
+
+Clean: exactly 8 surgical files changed (20 insertions / 20 deletions), all under `apps/apple/`. Build artifacts (`.xcodeproj`, `Shared.xcframework`, `build/`) are gitignored. Let me review the full diff to confirm correctness before writing the log.
+
+The diff is exactly as intended — surgical and correct (5 ChargeStatusLive renames, 3 SafetyFeatures renames, 1 DrivingCoachSection rename, 1 MonthlyCostChart rename + spy `private`, 2 `@Sendable`, 1 brace refactor). All verified green.
+
+Now let me write the comprehensive, honest log capturing all evidence and the disposition.

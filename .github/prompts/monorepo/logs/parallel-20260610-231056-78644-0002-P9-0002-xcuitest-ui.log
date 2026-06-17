@@ -1,0 +1,236 @@
+I'll start by exploring the environment and repository structure to understand what exists and whether the required capabilities (macOS + Xcode) are available.
+
+
+
+macOS + Xcode 26.5 + simulators are all available — the capability gate can run. Let me explore the Apple app structure in depth.
+
+The project uses XcodeGen with existing UI test bundles (`TeslaSyncUITests`, `TeslaSync-macOSUITests`) sourcing from `Tests/UI`. There are already 4 UI test files. Let me read the existing UI test patterns, the app entry point, and the routing layer.
+
+Now let me read the app entry point to understand how launch arguments wire up the deterministic demo surfaces.
+
+I now understand the launch-argument harness pattern. Let me examine the route registry wiring, the demo views, the auth injection, and the parity ledgers to understand what pages/components actually exist.
+
+There's a prior run of this exact prompt family. Let me read the prior P9-0002 XCUITest log and P9-0001 log to understand established patterns, plus the settings route registration and placeholder gate.
+
+I now have a clear picture. The prior run (different lineage, run 98066) authored this deliverable but ended BLOCKED on (A) macOS code-signing and (B) host saturation. Critically, **that code is NOT in the current consolidated branch** — `Tests/UI/` has only the 4 original files and there's no gallery harness. I must author it fresh. Let me probe current capabilities: host load, signing identities, pwsh.
+
+Critical findings: **host load is now low (4.98) — not saturated**, so I can actually execute iOS UI tests. **pwsh 7.6.2 is available**. But **0 valid signing identities** — macOS signing remains a capability gap. Let me examine the entitlements (to see if macOS signing is workaroundable), the Shared.xcframework build, and the feedback/states component API.
+
+Shared.xcframework is **not staged** — the scheme's pre-action builds it via Gradle (Kotlin/Native). This is a prerequisite for every xcodebuild. The macOS entitlements (`aps-environment`, `associated-domains`) require a dev certificate — confirming the signing capability gap. Let me verify the Kotlin/Native toolchain and time a Shared.xcframework build, while reading the key component APIs I'll need for the gallery.
+
+Kotlin/Native 2.4.0 + Java 17 are present but the XCFramework isn't built. Since it's a prerequisite for every xcodebuild, I'll start building it now in the background while I study the component APIs.
+
+Component API patterns are clear. The Shared.xcframework build is running in the background. Let me read the design tokens and the remaining key component APIs I'll use in the gallery, in parallel.
+
+Let me read the design tokens and the remaining components I'll use, and check the Gradle build progress.
+
+Gradle is warming up (first build takes time). Let me read the remaining component APIs — Typography, Badges, MiniCharts, Motion, MapView, Skeletons — to complete my vocabulary for the gallery.
+
+I have a comprehensive component vocabulary now. Let me read the final few APIs (charts models/minicharts, skeletons, maps, form inputs) and check the Gradle progress.
+
+Complete component vocabulary acquired. Gradle is still compiling Kotlin/Native (the long pole). Let me read the chart models and form inputs APIs, then set up my plan while the build runs.
+
+I have the full component vocabulary. Let me set up my plan and todos, then read the auth bootstrap, command palette, and settings view to wire identifiers + deep-link harness correctly. Checking Gradle too.
+
+Let me read the auth preview/bootstrap harness and settings view, and check Gradle progress (now ~2.5 min in).
+
+I have all the harness context I need. Let me read the lint/format/placeholder configs (to write compliant code first-time) and the settings view opening, then start authoring while Gradle finishes.
+
+Now I understand the gates fully. Key constraints: avoid placeholder tokens ("TODO/FIXME/Placeholder/Coming soon/not implemented"), keep type names ≤50 chars, no 1-char identifiers, 120 max width. Let me set up my plan/todos and check Gradle.
+
+Shared.xcframework built successfully (7m19s). Let me stage it and update my todos, then author all the code (the framework isn't needed for writing code, only for building).
+
+Framework staged. Let me write the plan, then author the gallery harness.
+
+Now let me read the map helper types (needed for the gallery maps section to compile) before authoring.
+
+I have all the types. Now let me author the gallery harness. First the sample data and the section container + sections.
+
+Now the section container and the ui/charts/data-display/feedback sections.
+
+Now the forms/maps/motion sections.
+
+Now the page-state enum/content and the gallery host view.
+
+Let me verify a couple of tokens I used (`TSSpacing.xl`, `Color.TS.bg`) exist before writing the host view.
+
+All tokens confirmed. Now the gallery host view.
+
+Gallery harness complete. Now let me wire the launch args into the app and add accessibility identifiers to the real shell, command palette, and settings.
+
+Now let me check the localization strings (to know how routes/tabs render in tests) and then add identifiers to the shell.
+
+Routes are localized (Dashboard, Charging, etc.) — I'll navigate by accessibility identifiers (locale-independent). Let me add identifiers to the shell.
+
+Now the command palette and settings identifiers. Let me view the settings body end first.
+
+Shell wiring complete. Let me update todos and author the XCUITest suites — starting with shared support helpers.
+
+Now the component gallery + page-state suite.
+
+Now the navigation shell suite (idiom-aware: split vs tab, deep links, aliases, command palette, settings).
+
+Now the accessibility + Dynamic Type + locale suite.
+
+All test suites authored. Now let me auto-format my new/edited files with swiftformat, then lint, before the expensive build.
+
+Let me run the host gates (swiftlint --strict, swiftformat --lint, placeholders) now to catch style issues before the build.
+
+swiftformat clean (0/4065). One swiftlint violation: `empty_count` — `buttons.count > 0` should be `!buttons.isEmpty`. Let me fix it.
+
+Let me re-verify swiftlint on that file, run the full strict scan (as the gate does), and the placeholder gate.
+
+All three host gates are green: **FORMAT_EXIT=0, LINT_EXIT=0, PLACEHOLDER_EXIT=0**. Now let me generate the Xcode project and build.
+
+Project generated with all new files included. Let me build-for-testing on iPhone 16 first (faster compile feedback), capturing to a log.
+
+Build running (includes the Gradle pre-action + full Swift compile). Let me wait and check progress.
+
+Build failed — but the errors are in pre-existing `shared-surfaces/AI*.swift` files I never touched. I must determine whether this is pre-existing or caused by my change. Let me extract the actual error messages.
+
+The errors are "ambiguous for type lookup" for `RecentDrivesModel`, `StateTimelineUpdate`, etc. — types I never touched. This signals duplicate type definitions in the pre-existing code. Let me determine whether this is pre-existing (baseline) or caused by me.
+
+Confirmed: this is a **pre-existing baseline build break** — `RecentDrivesModel`, `RecentDrivesLoadStatus`, `StateTimelineUpdate` etc. are each defined twice (in `dashboard-widgets/` AND `feature-views/`, both compiled into the same `TeslaSync` module). My `git status` shows I touched none of those files. Let me measure the full collision scope to decide between fixing it or reporting a predecessor block.
+
+The collision is contained to exactly two pairs of surfaces duplicated across `dashboard-widgets/` and `feature-views/`: the `RecentDrives*` family and the `StateTimeline*` family (the other "duplicates" are nested types like `Phase`/`Kind`, scoped to different parents — not real collisions). Let me examine these surfaces to decide whether a safe fix is feasible.
+
+This is now diagnostically clear and important. The pattern reveals the defect precisely:
+
+- `dashboard-widgets/` has a `RecentDrivesWidget` surface that **correctly** namespaces its types (`RecentDrivesWidget*`), but its `RecentDrivesListWidget` surface uses **bare** `RecentDrives*` names.
+- `feature-views/RecentDrivesSection` **also** uses bare `RecentDrives*` names → collision. Same story for `StateTimeline`.
+
+This is a substantial pre-existing consolidation defect in P4/P7 parity surfaces (~12 types × 2 families), entirely outside my XCUITest scope and in files I never touched. Let me check how coupled these surfaces are, to plan a local-only diagnostic build that proves my tests execute.
+
+These surfaces aren't referenced anywhere in `Sources/` (the shell/app) — they're self-contained parity surfaces. Before deciding, let me precisely identify ALL real *top-level* (column-0) duplicate types, since nested types create grep false-positives and the compiler only reported its first error batch.
+
+Three real collision groups: `RecentDrives*`, `StateTimeline*`, and `KioskClockPosition`. This is a systemic pre-existing integration defect across multiple unrelated parity surfaces. Let me locate the KioskClockPosition duplicate and confirm the command finished.
+
+`KioskClockPosition` is a third collision (`feature-views/KioskOverlay` vs `modals-dialogs/KioskSettingsModal`). Three independent pre-existing collisions confirm a systemic predecessor/consolidation defect — outside my XCUITest scope. The committed gate is BLOCKED on this predecessor break.
+
+To still **prove my deliverable executes** (strong evidence, not the gate verdict), I'll run a clearly-labeled **local-only diagnostic**: quarantine the feature-view side of the 3 colliding surfaces (none referenced by `Sources/` shell), build, run the full UI suite, then restore so only my deliverable is committed. Let me verify coupling and list the files.
+
+No cross-references — the 3 surfaces are self-contained. I'll quarantine the 27 feature-view files (clearly local-only), regenerate, and build. Let me update todos and start the diagnostic.
+
+Quarantined 27 files, regenerated. Now building for testing (diagnostic).
+
+Still failing — now in a different batch (`AISettings`, `AISignalExplorerNlFilter`). Either more collisions exist or my quarantine removed types these reference. Let me see the actual errors.
+
+A *second, different class* of pre-existing error surfaced (`AISignalExplorerNlFilter.swift:142: escaping closure captures non-escaping parameter` — again a file I never touched). This confirms the consolidated baseline has multiple independent pre-existing compile failures. Let me gauge whether the breakage is small (worth a local fix to prove execution) or unbounded. Let me view that error.
+
+The error: a `glass(@ViewBuilder _ content: () -> some View)` helper passes a *non-escaping* closure to `TSGlassPanel` (whose init requires `@escaping`). This pattern is likely replicated across many surfaces. Let me gauge how widespread the breakage is.
+
+Decisive evidence: the breakage is **broad** — ≥31 parity surfaces hit a non-escaping-closure error, plus 3 duplicate-type families, across 3052 pre-existing parity files I never touched. Fixing the predecessor baseline is unbounded and out of scope → the committed gate is legitimately **BLOCKED**.
+
+But I can still faithfully **prove my deliverable executes**: build the *real* app from `Sources/` (shell + components + gallery — none of which reference the un-wired, separately-broken parity surfaces) and run my UI suite. Let me restore the quarantined files and set up this clean, revertible diagnostic.
+
+Restored cleanly. Now I'll create a diagnostic project spec (real app built from `Sources/` only, UITests-only scheme) — generated in place, then reverted via `git checkout`. Let me edit the spec with Python and regenerate.
+
+PyYAML isn't installed. Let me install it and retry the diagnostic spec edit.
+
+Let me get PyYAML via `python3 -m pip` (pip isn't on PATH directly).
+
+PyYAML ready. Now let me write the diagnostic spec and regenerate (project.yml is still pristine since prior edits failed pre-write).
+
+Diagnostic spec applied (app builds from `Sources/` only; UITests-only scheme), my files present. Now let me build + run the UI suite on iPhone 16.
+
+Progress — the app target (Sources/ + gallery) compiled cleanly; now the failure is a compile error in **my** `NavigationShellUITests.swift`. Let me see it.
+
+The app + gallery compiled cleanly — the only error is in my `NavigationShellUITests`: `XCUIElementQuery` has no `isEmpty` (my swiftlint fix backfired). Let me fix it properly using `allElementsBoundByIndex.last` (compiles AND satisfies swiftlint).
+
+Let me re-run the diagnostic test (app target is cached; only my test bundle recompiles).
+
+Lint clean. Tests are building + executing (UI tests launch the app per test, so this takes several minutes). Let me wait.
+
+Major progress — the build succeeded and **tests executed**, with only 2 of ~30 failing (both in NavigationShell, on the iPhone tab idiom). Let me get the failure details.
+
+Both failures are element-queryability issues on the iPhone tab idiom (not logic): the toolbar command button and the settings `ScrollView` identifier aren't surfacing. Let me confirm the exact assertions and check whether navigation itself succeeded.
+
+Two iPhone-tab-idiom issues, both element-access (not logic):
+1. `shell.moreRow.settings` not found — the More `List` is **lazy**; `settings` (account group, bottom) isn't rendered until scrolled. (`trips`, higher up, passed.)
+2. `shell.commandPalette.button` — toolbar-button identifiers don't reliably surface in XCUITest.
+
+Let me fix both: add lazy-list scrolling to navigation, and open the palette via its ⌘K shortcut with a button fallback.
+
+Re-running just `NavigationShellUITests` (other suites passed) to iterate faster, after a quick lint.
+
+`NavigationShellUITests` now passes. Let me run the **full** UI test bundle (my 3 suites + the 4 pre-existing) on iPhone 16 to confirm everything is green.
+
+The command palette test passed in isolation but failed in the full run — flaky ⌘K behavior. Let me see exactly where it failed and dump the shell's element tree to find a deterministic way to open the palette.
+
+Found it: the button identifier **does** surface, but matches **two** elements (an `Other` container + the `Button`), so `descendants(.any)` tap failed with "multiple matching elements"; and ⌘K was flaky. The deterministic fix: query `app.buttons["...".firstMatch`. Let me rewrite the palette opener.
+
+Let me lint and re-run the full UI bundle on iPhone 16 to confirm all green.
+
+**Full UI bundle is GREEN on iPhone 16** (TEST SUCCEEDED). Let me extract the precise test counts, then run on an iPad (split idiom) to prove the split-idiom paths too.
+
+**41 passed, 0 failed** on iPhone 16 (the 1 split-only test skips on the tab idiom). Now let me prove the **split idiom** (sidebar nav, sidebar search, deep-link detail) on an iPad simulator.
+
+iPad run launched. While it executes, let me note the strong iPhone result and wait. Let me check the iPad progress.
+
+iPad booted (first-boot migration took ~75s); the test run is now proceeding. Let me wait for completion.
+
+On iPad (split idiom), 3 sidebar-interaction tests failed (the iPhone tab paths all passed). Likely the same multi-match issue on sidebar rows, plus the search field. Let me get the iPad failure details.
+
+The iPad failures are split-idiom sidebar mechanics: (1) sidebar `Label` propagates its identifier to **both** the icon Image and the text (multi-match → tap fails); (2) my center-swipe scrolled the detail pane, not the sidebar, so bottom rows never appeared. Let me view the current test to fix these precisely.
+
+Line 69: on iPad, `app.searchFields` is empty. So three split-idiom mechanics to fix: multi-match sidebar tap (`.firstMatch`), sidebar scrolling (must target the sidebar region, not detail), and the search-field query. Let me view the full file and apply robust fixes.
+
+I have a clear fix plan. The iPad deep-link tests (asserting `shell.pagePending.*` and `settings.root`) **passed**, confirming those markers work on split idiom — so I only need to fix sidebar row tapping (multi-match → `.firstMatch`), sidebar scrolling (target the sidebar region), and the search-field lookup. Let me apply these.
+
+Let me lint and re-run `NavigationShellUITests` on iPad to confirm the split-idiom fixes.
+
+`testSidebarSearchFiltersRoutes` now passes, but trips + settings navigation still fail. Let me see the new error details.
+
+The `.firstMatch` resolved to the decorative **Image** (not hittable). I need to tap the row's **text** (hittable) instead. The settings scroll now works (row found at the bottom) — just the tap target is wrong. Let me make the row tap target the static text, with fallbacks.
+
+Let me lint and re-run `NavigationShellUITests` on iPad.
+
+`NavigationShellUITests` passes on iPad. Let me confirm the **full** bundle on both idioms — iPhone first (regression check after my tap changes), then iPad.
+
+iPhone full bundle still green after my changes. Now the full iPad bundle.
+
+iPhone: 41 passed. Waiting for the iPad full run.
+
+**Both idioms GREEN**: iPhone 16 (tab) and iPad Pro 11" (split), full UI bundle passing. Let me get the iPad count, then restore the real `project.yml` (revert the diagnostic spec) and verify the working tree contains only my deliverable.
+
+**Final idiom coverage: iPhone 16 (tab) = 41 passed / 1 split-only skip; iPad Pro 11" (split) = 41 passed / 1 tab-only skip.** project.yml restored. Now let me verify the working tree contains only my deliverable (no predecessor files touched) and re-run the host gates on the final tree.
+
+Working tree is clean — only my deliverable (4 additive shell edits + `Sources/Dev/` + 4 `Tests/UI/` files), zero parity-surface files touched, `feature-views` fully intact. Let me re-run all three host gates on the final tree.
+
+All three host gates GREEN on the final tree (LINT=0, FORMAT=0, PLACEHOLDER=0). Let me capture the per-suite test breakdown for the log.
+
+All 7 UI suites pass on both idioms. Now let me capture the **real gate** results for the log: the macOS `build test` (full sources — will hit the same predecessor break, plus signing). I already have the real iOS gate failure in `/tmp/ios-bft.log`. Let me run macOS.
+
+macOS gate fails on **both** blockers (signing shown first — 0 dev-cert identities — plus the same predecessor build break). I now have all gate evidence. Let me confirm build artifacts + the generated `.xcodeproj` are gitignored before committing.
+
+All clear — generated project, build artifacts, and framework are gitignored; only my deliverable is staged. Let me confirm the exact new-test-method counts, then write the gate log.
+
+29 new test methods (13+9+7), ~1000 LOC. Now let me write the comprehensive gate log.
+
+Log written. Let me mark todos done and commit exactly the deliverable + log.
+
+Staged set is exactly the deliverable (4 additive shell edits + 5 gallery files + 4 test files + log) — zero parity files. Let me commit.
+
+Committed as `013960080` with a clean working tree. Let me do a final verification of the todo state and that the repo is in a clean, restored state.
+
+All verification complete. The repository is in a clean, restored state with the deliverable committed.
+
+## Summary
+
+I authored complete **XCUITest UI coverage** for the TeslaSync Apple app (P4·P9·0002) and **proved it executes green on both Apple idioms**, then reached an honest **STATUS=BLOCKED** because the iOS/macOS `build test` gate is broken by a **pre-existing predecessor defect** outside this task's scope.
+
+**Delivered (committed `013960080`, 14 files, +1248 lines, zero predecessor files touched):**
+- **29 new test methods** across 3 idiom-aware suites + shared helpers:
+  - `ComponentGalleryUITests` (13) — component states + loading/empty/error+retry/success/stale page-parity contract
+  - `NavigationShellUITests` (9) — split (sidebar+detail) vs tab nav, pending routes, command palette, sidebar search, More tab, web-alias deep links, Settings
+  - `AccessibilityUITests` (7) — Accessibility-XXXL Dynamic Type, alternate locale, accessible chart/map summaries, hit-target
+- **~1000-LOC component gallery harness** (`Sources/Dev/`) — launch-arg-gated like the shipping demo views, real `Components/*` (ui/charts/data-display/feedback/forms/maps/motion), deterministic in-memory fixtures
+- **Additive accessibility identifiers** on the real shell, command palette, settings + 2 launch args (`-uiTestComponentGallery`, `-uiTestDeepLink`)
+
+**Verified (real output):**
+- Full UI bundle **EXECUTED GREEN**: iPhone 16 (tab) **41 passed**, iPad Pro 11″ (split) **41 passed** — all 7 suites, both idioms
+- Host gates: `swiftlint --strict`=0, `swiftformat --lint`=0 (0/4065), placeholder=0
+- Found + fixed 2 real test defects via execution (command-palette multi-match element; sidebar icon-vs-text tap + iPad sidebar scroll)
+
+**Why BLOCKED (not my code):** The consolidated baseline doesn't compile — pre-existing duplicate public types (`RecentDrives*`/`StateTimeline*`/`KioskClockPosition`) and ≥31 non-escaping-closure errors across untouched P4/P7 parity surfaces (`git status` confirms I changed none) → `IOS_EXIT=65`. macOS additionally has **0 dev-cert signing identities** (ADR-012) → `MAC_EXIT=65`. Fixing the broad predecessor refactor is a P4/P7 responsibility, so I proved my deliverable via a clean, reverted `Sources/`-only diagnostic rather than bypassing the predecessor. Full evidence in `.github/prompts/monorepo/logs/p4-p9-0002-xcuitest-ui.log` (ends `EXIT=65 / STATUS=BLOCKED`).
+

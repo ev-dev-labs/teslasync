@@ -1,0 +1,162 @@
+I'll start by understanding my environment's capabilities and the repository structure, since this task requires the Apple toolchain (SwiftUI, Swift Charts, MapKit, xcodebuild).
+
+The Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me check the simulators and the repo structure.
+
+Apple toolchain is fully available (Xcode 26.5, iPhone 16 simulator booted). The web source and `apps/apple` both exist. Let me read the web source spec and explore the existing Apple project conventions.
+
+Now let me examine the existing `feature-views` directory to understand conventions, and look for an existing example feature view to mirror.
+
+2622 files already exist following a multi-file convention. Let me check whether TelemetryGrid already exists and find a closely-matching sibling (one that consumes `VehicleState` + `useUnits`) to use as the canonical template.
+
+`TelemetryGrid` is net new. It composes `InfoTile` and shares the `VehicleState` data shape with `VehicleStatePanel`. Let me read those native implementations as templates.
+
+InfoTile pattern is clear. Now the critical template: `VehicleStatePanel` consumes the same `VehicleState` + `useUnits` and binds via P1/S8 state holders. Let me read all its files.
+
+Now the Views, Format, Previews, Tests, and strings for VehicleStatePanel to complete my understanding of the conventions (especially the units/format mapping and test/preview structure).
+
+I have a deep understanding now. Let me read the Previews, Tests, strings, plus locate the native motion (`StaggerContainer`/`StaggerItem`) equivalents and the design tokens.
+
+Found `TSStaggerContainer`/`TSStaggerItem` in `Sources/Components/Motion/Motion.swift`. Let me read it, the web `useUnits` hook, the `VehicleState` type, and locate the design token + shared component definitions.
+
+The native motion file is under `apps/apple/Sources/...`. Let me read it plus the web `unitConversion`/`numberFormat` libs (for exact formatter parity) and the design tokens.
+
+Now let me locate the design token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) — they're likely in the generated design tokens group.
+
+I now have the full token set and formatter semantics. Let me confirm the shared component APIs (`TSGlassPanel`, `TSButton`, `TSSkeleton`) and check for any symbol collisions across the module before writing.
+
+No collisions. Let me confirm the `TSButton` init and reference a grid-layout pattern already used in the module.
+
+Let me check the lint/format configs so my code passes `swiftlint --strict` and `swiftformat --lint`.
+
+The placeholder gate is strict. Let me read its patterns and path-resolution so my files pass it.
+
+The placeholder gate forbids TODO/FIXME/XXX/"Coming soon"/Placeholder/"Lorem ipsum"/"not implemented" — I'll keep all files clean of those (plus stub/mock per acceptance). Now let me assess the build toolchain: xcodegen, an existing generated project, and the Shared.xcframework staging script.
+
+The full toolchain is present (xcodegen, pwsh, Gradle wrapper for the KMP Shared.xcframework). The Shared.xcframework must be built via Gradle before xcodebuild — that's the heavy dependency. My surface itself is pure SwiftUI (like the siblings, no KMP). Let me kick off the Shared.xcframework build in the background while I write the code.
+
+Java 17 + gradlew present. Let me start the KMP `Shared.xcframework` build in the background (the long pole) and write the code in parallel.
+
+I have everything I need: tokens, formatter semantics, sibling conventions, lint rules, and the build path. Let me set up a plan + todos and start writing the surface files.
+
+Let me check the Shared.xcframework build progress, then write the Model file.
+
+Gradle is building in the background. Let me write the Model file.
+
+Now the main view and the Views file. Let me write `TelemetryGrid.swift`.
+
+Now the Views file with the tile, responsive grid, and all state chrome.
+
+Now the Previews and strings files.
+
+Now the comprehensive test file (split into two `XCTestCase` classes to respect type-body length limits).
+
+All 8 files written. Let me check the Shared.xcframework build progress and run swiftformat/swiftlint on my files.
+
+Gradle (KMP) is still working. Let me run swiftformat + swiftlint + placeholder gate on my files now — these don't need the framework.
+
+swiftformat normalized 3 files. Let me verify `--lint` is now clean and run `swiftlint --strict`.
+
+swiftformat `--lint` clean (0/7) and swiftlint `--strict` clean (0 violations). Now the placeholder gate — let me check how it handles the non-directory `-Path` and run it.
+
+The gate's `-Path` resolves to "not found" → trivially clean, so I'll verify my actual files directly. Let me run the placeholder checker against each real file plus a grep sweep for forbidden tokens.
+
+The Shared.xcframework build finished successfully. Two notes: the official placeholder gate passes per-file (`PLACEHOLDER_COUNT=0` for all). The grep only flagged the word "stub" in two comments — not in the gate's pattern set, but the prompt's acceptance forbids "stub", so I'll reword them. The "api" error was a bash glob expanding `*>/dev/null` (PowerShell syntax) — I'll re-run the gate inside pwsh.
+
+Shared.xcframework built (11m42s) and staged. Let me re-lint the two edited files, run the placeholder gate properly via pwsh, and confirm the framework is staged.
+
+All clean. Now generate the Xcode project, then build+test.
+
+Project generated; both schemes present. Now the heavy step: build+test. Let me start the iOS build+test in the background (it stages the now-cached framework first, then compiles the full module), and check the gate log directory.
+
+iOS build+test running in background (compiling the full module — will take a while). Let me wait and poll progress.
+
+Still in pre-actions (staging the cached framework). The full-module compile is next. Let me wait longer.
+
+The compile is underway (xcodebuild buffers output). The full module is large, so this takes time. Let me continue waiting.
+
+It's been ~11 min with no output past the pre-action header. Let me check whether real work is happening (CPU/processes) versus a stall.
+
+Active compilation confirmed — many `swift-frontend` jobs running (the `@Observable`/macro plugin servers are busy too). It was just buffered output. Let me keep waiting.
+
+xcodebuild holds its output buffer until phase completion. Let me confirm forward progress by checking DerivedData object growth, then continue waiting.
+
+My xcodebuild (PID 30169, 19min) is alive with fresh high-CPU `swift-frontend` jobs — actively compiling. Let me wait in a longer increment; I'll be notified on completion.
+
+iOS build+test completed (6 MB output). Let me extract the actual exit code and test results.
+
+Build failed (IOS_EXIT=65). Let me find the actual compile errors.
+
+The batch summary hides the actual diagnostic. Let me extract the real compiler error around the failure points.
+
+No `error:` diagnostics in 6MB — suggests a compiler crash/signal rather than a type error. Let me inspect the context around the first failure.
+
+There's a compiler crash (6 signal markers). Let me read the saved grep output for the crash context and any `.swift:line:col` diagnostics.
+
+It's a **swift-frontend compiler crash in IRGen** (`emitSILFunction` → stack dump), not a type error — my TelemetryGrid files each compiled individually (lines 10060-10080). Let me find what the IRGen crash was processing.
+
+Found the crash stack dumps. Let me see which `-primary-file` the IRGen crash was processing.
+
+The full-module build hit a **swift-frontend IRGen compiler crash** (segfault emitting a reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`) while compiling **`AppearanceSettings.Controls.swift`** and other `App*` files — **none of which are mine**. My TelemetryGrid files each compiled individually (they appear as completed `SwiftCompile` lines, never as a crashing `-primary-file`). Let me confirm my changes are purely additive and prove my surface is correct in isolation (using `-typecheck`, which skips the crashing IRGen phase).
+
+Confirmed: my work is purely additive (8 new files); the crashing files are pre-existing and untouched. The crash thunk type `(Actor?) -> Bool` doesn't exist in my code. Let me (a) check current machine load, and (b) prove my surface compiles + tests pass in isolation via SwiftPM. First, inspect the shared component deps and system load.
+
+The machine is heavily loaded (49 build procs — parallel slots), which itself raises the odds the IRGen crash is resource-induced. The crash is in pre-existing files. Let me now prove my surface is correct two ways: (1) a SwiftPM harness running my full test suite behaviorally, and (2) re-run the gate build to see if it passes under changed load. Let me kick off the retry build and build the SwiftPM harness.
+
+My SwiftPM harness compiled under **Swift 6 strict concurrency** and **all 24 of my tests passed** (Format/Adapter/Projection + Model/Projector/telemetry/stale-refresh) — proving the core logic compiles and is behaviorally correct. Now let me compile-verify the SwiftUI **view** files via `-typecheck` (which skips the crashing IRGen phase). First, map the shared-component dependency closure.
+
+Components is self-contained (only system frameworks + DesignTokens). Let me `-typecheck` my view files against the full Components set + tokens under Swift 6 mode — this fully type-checks my SwiftUI views without the crashing IRGen phase.
+
+The error is in `Components/Maps/MapView.swift` (references `TSChartPalette`) — not my code. My views only use UI/Feedback/Motion components, so I dragged in unrelated Maps/Charts deps. Let me narrow to the subset my views actually need.
+
+My views need only UI/Feedback/Motion components. Let me narrow the typecheck set (adding `Sources/Design` for `TSChartPalette`) and exclude Charts/Maps.
+
+Whack-a-mole on Components-internal deps (now `TSMetricBar` in DataDisplay). Let me just include the **entire** Components tree + `Sources/Design` + Tokens (now that Design is present, the earlier `TSChartPalette` error is resolved) and type-check.
+
+All 52 errors are in unrelated Components files (`UnitFormatters.swift` needs app-level `UnitPreferences`/`Units`) — **zero errors in my files** again. Let me stop that over-broad run and type-check against the *minimal* closure my views actually use.
+
+Down to 2 errors, both in `Cards.swift` (`.tsGlassPanel` modifier defined in another UI file) — still **zero in my files**. Let me find and add that one file.
+
+`tsGlassPanel()` lives in `Sources/Design/TSMaterial.swift`. Let me add `Sources/Design` to the minimal set and re-check.
+
+**My surface is fully verified:** `swiftc -typecheck` of my view + core files (Swift 6 strict concurrency, real shared-component deps) = **0 errors**, and `swift test` = **all 24 tests pass**. Combined with clean swiftformat/swiftlint/placeholder gates, my code is complete and correct. The only failure is the full-module IRGen crash in pre-existing files. Let me check the retry build's status.
+
+The retry (incremental, with my files) is starting. Let me wait for it — being incremental, it should reach the crash point (or pass) faster.
+
+Retry completed. Let me check whether it passed or crashed again.
+
+The retry **crashed again with the identical signature** — IRGen crash on `AppearanceSettings.Controls.swift` (a pre-existing file), exit 65. So the crash is **deterministic**, not load-related. To seal the proof that it's pre-existing and independent of my additive files (covenant: verify, don't assume), let me reproduce it with my files removed.
+
+My files are removed and the project regenerated. Now build (build-only) to see if the crash persists without my files.
+
+The repro build (without my files) is running. While it finishes, let me note where I stand and wait for the conclusive result. I'll wait for it.
+
+The repro build (without my files) finished. Let me check whether it crashed identically — the conclusive test.
+
+**CONCLUSIVE:** Without my files, the build **still fails identically** (exit 65, same IRGen crash on `AppearanceSettings.Controls.swift`). This definitively proves the crash is **pre-existing and independent of my surface** — it reproduces with my files removed. Let me restore my files and verify they're intact.
+
+All 8 files restored and still clean (swiftformat 0/7, swiftlint 0 violations). Let me regenerate the project (with my files) and run the macOS gate build to confirm the same pre-existing crash affects it too (the crashing file is shared by both targets), while I assemble the log.
+
+While the macOS build runs, let me re-capture fresh proof output for the log (typecheck + swift test), then assemble the gate log once macOS finishes.
+
+Reconfirmed: 24 tests pass, 0 failures. Now let me wait for the macOS build to confirm the shared crash.
+
+macOS build finished quickly (small output). Let me check its result.
+
+The macOS build failed (exit 65) with a **code-signing/entitlements** error (no development certificate in this environment) — a separate, environmental blocker, also unrelated to my files. So both gate build steps are blocked by pre-existing/environmental issues. Let me run the macOS compile with signing disabled to capture the underlying compile state directly (it shares `AppearanceSettings.Controls.swift`), while I assemble the log.
+
+While the macOS-no-sign compile runs, I have all other evidence. Let me wait for it to complete so the log is final and complete.
+
+Still compiling. Let me wait for it to reach the same crash point.
+
+**Airtight conclusion.** The macOS compile (signing disabled) also crashes with the **identical pre-existing IRGen crash** on `AppearanceSettings.Controls.swift`, with **zero errors in my files**. 
+
+I now have complete evidence. Let me write the official gate log.
+
+Now let me clean up temp artifacts, update tracking, and commit the surface + log.
+
+No pre-commit hook; all 9 files staged. Let me commit with the prompt's title plus an honest body referencing the BLOCKED gate, and the required trailer.
+
+Committed cleanly (bdc7e39f7, 9 files, 1888 insertions). Let me update tracking and verify the working tree is clean (generated project gitignored).
+
+Everything is clean: no uncommitted changes, the generated `.xcodeproj` is correctly gitignored, and a final `swiftlint --strict` reconfirms 0 violations. The task is complete to the fullest extent possible within scope.
+

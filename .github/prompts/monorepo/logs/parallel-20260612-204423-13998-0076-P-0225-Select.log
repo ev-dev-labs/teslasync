@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure and checking the Apple toolchain availability, since this task requires SwiftUI/Xcode capabilities.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The `apps/apple/` dir exists. Let me read the web source and explore the Apple project.
+
+The web `Select` is a presentational form component (label + HelpIcon, select with options, error/hint, sizes, a11y). Now let me study existing Apple shared-surface patterns to match conventions exactly.
+
+Clear file convention per surface. `Select` is pure presentational, so let me study a similar presentational surface (`CopyButton` — no Adapter) end-to-end, plus the project.yml build config.
+
+Excellent, high-quality established pattern. Let me read the rest of the CopyButton fileset and the build config, plus check for Label/HelpIcon Apple counterparts.
+
+Both `Label.*` and `HelpIcon.*` exist as Apple surfaces. Let me read their public APIs, the design tokens, the build config (project.yml), and the CopyButton test patterns.
+
+Now let me understand the build system (project.yml), the design tokens, and the view-test pattern.
+
+Now I understand the build setup. Critical: the schemes have a preAction building a KMP `Shared.xcframework`, and the project uses XcodeGen. Let me check what infrastructure is actually available on this runner.
+
+Key facts: `xcodegen`, `pwsh`, iPhone 16 sim all present. But `.xcodeproj` and the KMP `Shared.xcframework` are NOT present — the scheme preAction builds the framework via Gradle (Kotlin/Native). Let me write the surface first, then assess the heavy build. Let me read the design tokens, shared Pickers/Fields, and the Label/HelpIcon internals to write correct parity code.
+
+Let me read the generated design tokens, Pickers, and the Label/HelpIcon internals plus the view-test pattern.
+
+There's an existing `TSSelect`, but it lacks parity (no error/hint/placeholder/help/sizes/a11y). The prompt wants a self-contained parity surface composing the existing `FormLabel` + `HelpIcon`. Let me read the correct Tokens path, HelpIcon model API, and the Label test/preview idioms (closest projection-surface match).
+
+Let me read the Font tokens, HelpIcon adapter types, lint/format configs, and the placeholder patterns to ensure compliance.
+
+Critical constraints noted (SwiftLint strict: 120-char code lines, type names ≤50; SwiftFormat: wrap-before-first, self-remove; placeholder patterns include "Placeholder"/"placeholder" which the web `placeholder` prop uses). Let me read the placeholder checker to understand path resolution and case sensitivity — this directly affects the gate.
+
+The placeholder checker is case-insensitive and flags "placeholder" — so I'll use Apple-idiomatic "prompt" for that concept and avoid forbidden tokens entirely. Now let me assess the heavy build dependency (KMP framework via Gradle) before committing to it.
+
+JDK 17, gradlew, Gradle caches, and the Kotlin/Native prebuilt toolchain (konan 2.4.0) are all present — so the KMP framework build may be feasible. Let me kick off the `Shared.xcframework` build in the background (the long pole) while I write the surface code.
+
+The `assembleSharedXCFramework` task exists and Gradle works. Let me kick off the framework build in the background, then write the surface code while it runs.
+
+Framework build is running in the background. The `assembleSharedXCFramework` task is valid. Now I'll write the surface code. Starting with the Foundation-only core (`Select.Adapter.swift`) — the projector logic that gets unit-tested.
+
+Now I'll write the Foundation-only core. I'll reuse the existing `HelpIconInput` type for the `help` prop (web `Omit<HelpIconProps,'for'> & {for?}`), matching how the web composes `<HelpIcon>`.
+
+Core written. Now the Model (i18n facade + telemetry seam + observable holder with selection state).
+
+I referenced `SelectProjector.displayTitle` in the Model — let me add it to the projector core.
+
+Now the presentational subviews (`Select.Views.swift`): size styling, field chrome, trigger, captions, menu rows/content, and the empty-leaf control.
+
+Now the public view (`Select.swift` → `FormSelect`) composing `FormLabel` + `HelpIcon` + the native menu + captions.
+
+Main view done. Let me check the framework build progress while I continue with strings and previews.
+
+Build still running. Let me write the strings catalog and previews.
+
+Now the test files. First the adapter/projector unit tests (the required "adapter unit test").
+
+Let me fix a likely-too-long line (the `resolve` helper) before it trips SwiftLint's 120-col strict limit.
+
+Now the model tests (telemetry once-only + selection behavior).
+
+The framework build completed. Let me check its result and verify the xcframework was staged.
+
+Framework built and staged (9m28s) — the full gate is now feasible. Let me write the final test file (view composition + a11y + strings), then run verifications.
+
+All 9 files written. Now let me verify my files with swiftformat, swiftlint, and the placeholder checker before the heavy xcodebuild.
+
+swiftformat found auto-fixable issues. Let me apply the formatter (it's aligned with swiftlint per the config), then re-lint.
+
+swiftformat passes now. Let me confirm the `@ViewBuilder` removal didn't break the if/else function, and run swiftlint --strict on my files.
+
+Compilation-safe (`@ViewBuilder` correctly kept on the if/else `control`, removed from single-expression funcs). One issue: `Select.Adapter.swift` is 416 lines (>400 limit). I'll split the `SelectProjection` value type into its own `Select.Projection.swift` (idiomatic here, e.g. `FormatterPrefsBridge.Projection.swift`).
+
+I'll extract `SelectProjection` into its own file and remove it from the Adapter.
+
+Adapter now 313 lines. Let me re-verify all 9 files with swiftformat and swiftlint, plus run the placeholder check.
+
+swiftformat clean. Now swiftlint --strict on all 9 files and the placeholder check.
+
+Exactly as predicted: the checker flags the literal word "placeholder" (case-insensitive) in my doc comments referencing the web prop. Although the gate's literal path (`.../Select`) doesn't exist so it scans nothing, the acceptance criteria forbid "placeholder" in shipped code. I'll reword to the Apple-idiomatic "prompt"/unselected-option phrasing. Let me find every occurrence.
+
+The `.strings` file isn't scanned (no matching extension), but I'll reword it too for consistency. The native prop is `prompt`; I'll reword all references to drop the literal token while keeping web→native traceability. Batching edits:
+
+Now re-run the placeholder scan to confirm zero, plus a quick swiftformat re-lint (edits were comment-only).
+
+Placeholder gate is clean (0), and no other forbidden tokens. Now let me do a fast standalone type-check of my surface + its real dependencies (tokens, FormLabel, HelpIcon) before committing to the full app build.
+
+Only error is `TSFadeIn` (a motion primitive) missing from my dependency set — it's in HelpIcon.Views, not my code. No errors in any `Select.*` file. Let me include that dep to get a fully clean standalone check, then move to the authoritative full build.
+
+Full surface + real dependencies type-check cleanly under Swift 6 strict mode (EXIT=0). Now the authoritative gate: generate the Xcode project, then build. Let me generate first.
+
+Project generated with my files auto-included via the directory globs. Now the long pole — the full iOS app build. Let me start it in the background (the scheme preAction re-runs the now-cached Gradle framework step).
+
+Build running. Let me verify the gate's log directory exists while the build compiles.
+
+Log dir exists with sibling logs. Let me read a sibling presentational-surface log to match the expected format and see how the build/test gate was actually run.
+
+This sibling log is the key — it shows the established honest methodology: the full `xcodebuild build test` can be RED due to **pre-existing baseline issues** (an IRGen crash on an unrelated file, macOS signing), and STATUS=DONE is reached by proving the surface itself is clean via surface-scoped checks (SWIFT_TEST run, per-SDK typecheck, surface lint/format, placeholder). Let me check the iOS build, then build a SwiftPM harness to actually run my tests.
+
+Build still compiling. Let me set up a SwiftPM harness in parallel (in /tmp, outside the repo) to actually compile + run my XCTest suite — mirroring the sibling's `SWIFT_TEST` evidence.
+
+Harness ready (17 module sources + 3 test files). Let me run `swift test` to compile and execute my XCTest suite.
+
+All 55 tests pass (0 failures) under Swift 6 strict concurrency — and the SwiftPM build compiled every surface source including the `#Preview` macros. Now the iOS-SDK typecheck (I did macOS earlier; the SwiftPM run also proved macOS compile). Let me run the iOS-simulator-SDK typecheck including all surface files.
+
+iOS typecheck clean (incl. Previews). Let me run the symmetric macOS typecheck (with Previews) and check on the full iOS app build.
+
+Both per-SDK typechecks pass (incl. Previews). The full iOS app build is still compiling. Let me wait for it.
+
+The iOS build failed with `IOS_BUILD_EXIT=65` (2 failures) — and the failing compile batch includes `AppearanceSettings.Controls.swift`, the exact file the sibling log flagged as a pre-existing baseline IRGen crash. Let me confirm the failures are baseline (not my Select files).
+
+Let me view the full failure analysis to confirm no `Select.*` file is implicated and capture the exact crash signature.
+
+**Confirmed baseline failure, not my surface:** the crash is a pure swift-frontend **IRGen compiler crash** generating IR for `feature-views/AppearanceSettings.Controls.swift` (no `: error:` source diagnostics anywhere, zero `Select.*` files implicated) — exactly the pre-existing baseline crash the sibling 0003 log documented.
+
+Now let me capture the full-tree gate steps (swiftlint/swiftformat over the whole app) and then reproduce the baseline crash with my surface removed.
+
+Both full-tree gate steps are RED for **pre-existing reasons in non-Select files** — and `FORMAT_EXIT=1` is the *exact same* `RecentDrivesSection.Previews.swift` file the sibling log flagged. Let me identify the 3 lint violations (confirm non-Select), then reproduce the baseline iOS crash with my surface removed.
+
+**All four full-tree failures are pre-existing baseline issues in files I never touched** (the 3 lint violations are in `WidgetChartSummary.Tests.swift` — the exact file the sibling flagged; none in Select). Now the definitive proof: reproduce the iOS IRGen crash with my surface removed.
+
+Surface removed and project regenerated. Now build iOS without my surface to reproduce the baseline crash.
+
+Baseline build running. While it compiles, let me gather toolchain versions for the log header and confirm git's clean baseline state.
+
+Toolchain captured (Xcode 26.5, Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.6.2). Branch `auto/20260612-204423-13998/76` @ `7fc07036b`, clean tree (my files are untracked, currently aside). Let me wait for the baseline reproduction build.
+
+**Definitive proof:** with my surface *removed*, the iOS build fails identically (`EXIT=65`, 2 failures, same `AppearanceSettings.Controls.swift` batch). Let me confirm the same IRGen crash signature, then restore my files.
+
+Baseline reproduction confirms it: **surface removed → identical `AppearanceSettings.Controls.swift` IRGen crash, 0 source errors.** Files restored, project regenerated. Now the macOS build for `MAC_EXIT` (shares the same crashing source, so expected baseline-red). Let me run it in the background and draft the gate log meanwhile.
+
+macOS build running. Let me write the comprehensive gate log now (mirroring the sibling's honest structure), leaving `MAC_EXIT` to fill once the build completes.
+
+Log drafted. Let me wait for the macOS build to fill in `MAC_EXIT`.
+
+macOS build also `EXIT=65` on the same `AppearanceSettings.Controls.swift` batch. Let me confirm the identical baseline IRGen crash (no Select, no source errors), then finalize the log.
+
+Confirmed: macOS fails identically on the baseline `AppearanceSettings.Controls.swift` IRGen crash (0 source errors, no Select implicated). Let me finalize the log's `MAC_EXIT`.
+
+Let me re-verify the surface files are still format/lint-clean after the reword edits, confirm git ignores the generated project, and check status before committing.
+
+All clean: surface format/lint 0, the generated project + framework are gitignored, and git shows only my 10 Select files + the log as untracked (project.yml/.swiftlint.yml unchanged — no drift). Let me clean temp artifacts and commit.
+
+All 11 files staged (10 surface + log), nothing else. Committing with the prompt's exact message + trailer.
+
+Committed as `acef3e993`. Let me verify the commit contents and final tree state.
+
+The task is complete and verified. The commit `acef3e993` contains exactly the 11 files (10 surface + log, 1915 insertions), the working tree is clean (generated project/framework are gitignored), and all todos are done.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`Select`** shared surface at parity with `web/src/components/ui/Select.tsx`, committed to `apps/apple/TeslaSync/shared-surfaces/Select.*`.
+
+**Architecture** (mirrors sibling surfaces like Label/HelpIcon/CopyButton):
+- `Select.Adapter.swift` — Foundation core: `SelectProjector` ports every web render decision verbatim (id-slug `label.toLowerCase().replace(/\s+/g,'-')`, `help.for ?? selectId`, described-by precedence, `hint && !error`, `aria-invalid`).
+- `Select.Projection.swift` / `Select.Model.swift` — view-ready projection + `@Observable` holder (selection/onChange, P1/S10 i18n facade, P1/S11 `view.opened` telemetry).
+- `Select.Views.swift` / `Select.swift` — `FormSelect` composes the **existing** `FormLabel` + `HelpIcon` (the web's `<Label>`/`<HelpIcon>`) over a native `Menu` peer of `<select>` (per-option disable, sizes→`controlSize`, error/hint captions, "never a blank box" empty leaf, full VoiceOver/Dynamic Type a11y).
+- `Select.Previews.swift`, `Select.strings`, + 3 XCTest files.
+
+**Verification (honest, evidence-based):**
+- ✅ Surface swiftformat `0`, swiftlint --strict `0`, placeholder `0`
+- ✅ `swift test` (isolated SwiftPM module, Swift 6 strict): **55/55 pass**
+- ✅ Per-SDK typecheck iOS + macOS: `0` errors; xcodegen `0`
+- ⚠️ Full-tree `xcodebuild` iOS/macOS (`65`), swiftlint (`2`), swiftformat (`1`) are **RED for pre-existing baseline reasons in files I never touched** — a swift-frontend IRGen crash on `feature-views/AppearanceSettings.Controls.swift` (**reproduced with my surface removed → identical crash**), 3 lint violations in `WidgetChartSummary.Tests.swift`, 1 format diff in `RecentDrivesSection.Previews.swift`. Zero `Select.*` files implicated. This matches the documented sibling precedent (log 0003).
+
+Gate log written to `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0225-Select.log`, ending `EXIT=0` / `STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0225-Select.log  | 171 +++++++++++
+ .../TeslaSync/shared-surfaces/Select.Adapter.swift | 313 +++++++++++++++++++++
+ .../shared-surfaces/Select.AdapterTests.swift      | 262 +++++++++++++++++
+ .../TeslaSync/shared-surfaces/Select.Model.swift   | 189 +++++++++++++
+ .../shared-surfaces/Select.ModelTests.swift        | 175 ++++++++++++
+ .../shared-surfaces/Select.Previews.swift          | 123 ++++++++
+ .../shared-surfaces/Select.Projection.swift        | 115 ++++++++
+ .../TeslaSync/shared-surfaces/Select.Tests.swift   | 139 +++++++++
+ .../TeslaSync/shared-surfaces/Select.Views.swift   | 211 ++++++++++++++
+ .../apple/TeslaSync/shared-surfaces/Select.strings |  28 ++
+ apps/apple/TeslaSync/shared-surfaces/Select.swift  | 189 +++++++++++++
+ 11 files changed, 1915 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0225-Select.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Select.swift

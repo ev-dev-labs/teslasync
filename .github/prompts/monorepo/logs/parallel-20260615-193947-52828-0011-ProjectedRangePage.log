@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source, existing Apple app structure, and key reference files.
+
+Good — Xcode tooling is available. Let me read the web source page and examine existing Apple battery feature pages for reference patterns.
+
+The `Features/Battery` directory doesn't exist yet. Let me read the rest of the web source and examine the Apple app's actual structure.
+
+The actual code lives in `apps/apple/Sources/Features/Battery/`. Let me read the rest of the web page and examine reference Apple pages (BatteryDegradation is the closest analog).
+
+Now let me examine the model pattern, chart wrappers, route enum, project config, and the xcstrings catalog. Let me also check an existing parity log and the ledger format.
+
+Let me examine the AppRoute enum, chart wrappers, xcstrings catalog, project config, and the parity README gate contract.
+
+Let me examine the route parser, web route definition, the chart/UI component signatures, and the Units facade.
+
+Let me read the key component signatures and the Units facade so I use them correctly.
+
+Let me read the panels reference, feedback/card components, Units facade, and chart model types.
+
+Let me read the panels reference, models/sample data sources, the tsUnits environment, and an existing parity log to mirror the format.
+
+Let me read the design tokens, the sample data source pattern, key UI component definitions, the BatteryVehicle type, and the parity README gate contract.
+
+Let me check build tooling feasibility (xcodegen, Shared.xcframework), the placeholder script, an existing log format, and the remaining UI component signatures.
+
+`pwsh` and `xcodegen` are available, but no `.xcodeproj` and no `Shared.xcframework` yet. Let me check the project dependencies and how an existing parity log handled the build gate.
+
+The predecessor's accepted methodology is clear: the full `xcodebuild` is RED due to pre-existing toolchain/xcframework issues, so verification is done via swiftlint --strict (0), placeholder scan (0), and a compiled+executed model harness. Let me read the final component signatures, then implement.
+
+Let me read the card/banner components, the existing summary section (metric cards), and the format helper.
+
+I now have a thorough understanding. Let me check the xcstrings format, the registration insertion point, and confirm design tokens before implementing.
+
+Let me inspect the exact raw format of the xcstrings file so I can add keys without reformatting the whole file.
+
+Let me read the SwiftLint config to ensure my code passes `--strict`, then set up my plan and todos.
+
+SwiftLint requires lines ≤120 (strict), `.isEmpty` over count comparisons, and `.first(where:)`. Now let me set up my plan and todos, then implement.
+
+Now I'll create the implementation. Starting with the pure model + format files (Foundation-only, harness-testable).
+
+Let me verify the web `fmtNumber` default precision to match it faithfully, then create the format file.
+
+Now the page model:
+
+Now the sample data sources:
+
+Now the main page view:
+
+Now the charts (efficiency gauge + projection curve):
+
+I'll add distance/speed/temp display helpers to the format file (precision-controlled, unit-converting), then build the sections.
+
+Now the largest file — the sections (hero, scenarios, matrix, what-if, factors, tips). Let me also fix the `drives` helper default:
+
+Now the route registration and navigation wiring:
+
+Now let me surgically add the strings to the xcstrings catalog (without reformatting the 10k-key file):
+
+32 keys inserted cleanly. Let me verify the diff is minimal, then run the verification gates (swiftlint, placeholder scan).
+
+Two `--strict` issues: file_length (489>400) and one long line. Let me check all file lengths and split the Sections file.
+
+Only the Sections file exceeds 400. Let me split out what-if/factors/tips into a Panels file. First, find the split point:
+
+Now fix the long line in the Panels file and verify both files end/start cleanly:
+
+Now let me re-run swiftlint on all new + edited files, and run the placeholder scan:
+
+SwiftLint passes (0). Now the placeholder scan and the full Battery-dir lint (the gate's actual target):
+
+Placeholder scan is clean (COUNT=0). Let me wait for the full-dir lint:
+
+Full Battery-dir lint passes (0). Now let me compile + run a harness over the pure model math to prove the logic is correct (the Models file is Foundation-only):
+
+Harness PASSES — all pure logic verified and the Models file compiles under `swiftc`. Now let me honestly assess the full build. Let me update todos and attempt `xcodegen` + check the xcframework dependency:
+
+No `Shared.xcframework` (KMP dependency) is staged, and there's no `gradle` on PATH (only `./gradlew` + system Java). Let me read the build script, generate the project, and attempt the build to record the real outcome:
+
+The build needs the Kotlin/Native toolchain via Gradle (heavy, CI-only). Let me check the referenced pending-verifications doc for the established convention:
+
+This confirms the documented convention (ADR-012): Kotlin/Native + Xcode builds are **CI-deferred "macOS-pending verifications"** — code is committed when all host-runnable gates are green. Let me confirm my files integrate via `xcodegen generate`, then attempt the build to capture the real outcome:
+
+`xcodegen generate` succeeded and all my ProjectedRange files are integrated (96 references across both targets). Now let me attempt the real `xcodebuild` to capture the honest outcome of the build gate:
+
+Now let me attempt the actual build (it triggers the Gradle/Kotlin-Native pre-build step). I'll run it bounded and capture the real behavior:
+
+Let me wait for the build to reveal its behavior:
+
+The Gradle/Kotlin-Native toolchain is cached here and actually progressing (`FROM-CACHE`, linking frameworks) — the build may genuinely complete. Let me keep waiting:
+
+The xcframework assembled successfully — now building the release variant before Swift app compilation. Let me keep waiting:
+
+Still linking release frameworks. Let me continue waiting for the Swift app compilation phase:
+
+Release Kotlin/Native linking is the slow phase (~13 min in). It's genuinely building. Let me wait longer for the Swift app compilation:
+
+Swift compilation of the app target (including my files) is now underway with no errors. Let me wait for it to finish:
+
+No errors so far (log at 6975 lines). Build still compiling. Let me wait for the final result:
+
+The TeslaSync module is emitting (late compile step) with **zero `error:` lines** — strong evidence my code compiles. Let me wait for the final BUILD result:
+
+The log's been stable for a few minutes — likely `tee` block-buffering while the x86_64 slice compiles. Let me verify real progress via the build process and object files:
+
+Build is healthy and progressing fast (854 x86_64 + 579 arm64 objects, 450 written in last 90s, zero errors). The arm64 slice already emitted its module cleanly — meaning all my files compiled. Let me wait for completion:
+
+**Critical finding:** The build failed (EXIT=65) but with **zero `error:` diagnostics** — the only note is:
+
+```
+note: 'Frameworks/Shared.xcframework' is missing architecture(s) required by this target (x86_64), but may still be link-compatible.
+```
+
+The KMP `Shared.xcframework` only contains **arm64** slices (`iosSimulatorArm64`/`iosArm64`/`macosArm64`) — the Kotlin/Native build doesn't produce an `x86_64` simulator slice. My `generic/platform=iOS Simulator` destination requested x86_64 too, so every file that `import`s `Shared` (my files **and** siblings like `Pressure`, `ProgressRing`, `PrivacySection`) fails the x86_64 slice. The arm64 slice already passed `EmitModule` (full type-check) cleanly. Let me confirm by rebuilding **arm64-only** (the arch the framework provides). The xcframework is now staged, so this is fast:
+
+Waiting for the arm64-only build (framework staged, modules cached — should be faster):
+
+Confirmed — the framework has only arm64 slices (`ios-arm64`, `ios-arm64-simulator`, `macos-arm64`), no x86_64. The arm64-only build is running. Let me wait for the result:
+
+Progressing well (377 objects in last 90s, zero errors, emitting module). Let me wait for the final result:
+
+Still compiling (110 procs, zero errors). Let me wait for completion:
+
+Now I have **real arm64 compile errors** — all "no member" on `ProjectedRangeFormat` methods I *did* define. This means `ProjectedRangeFormat.swift` itself failed to compile, making its type unavailable to consumers in the same batch. Let me find the root-cause error:
+
+Root cause found: `ProjectedRangeFormat.swift:9: error: invalid redeclaration of 'ProjectedRangeFormat'`. There's a duplicate declaration somewhere. Let me find it:
+
+There's a **pre-existing** `ProjectedRangeFormat` in the widgets (`ProjectedRangeWidget.Adapter.swift`) — same module, so my type name collides. Let me check for any other collisions between my types and the existing ProjectedRange widget code:
+
+There's a large pre-existing `ProjectedRange*` widget namespace. Let me wait for my collision scan to finish:
+
+Let me stop the slow scan and do a precise collision check between my declared types and the rest of the module:
+
+Clear diagnosis: the only real collision is `ProjectedRangeFormat` (the `Failure`/`CurveSample`/etc. matches are all nested private types, scoped — siblings prove they coexist). Let me stop the scan and rename my `ProjectedRangeFormat` → `RangeProjectionFormat`:
+
+The `git mv` failed (file is untracked) but the `sed` content rename succeeded. Let me rename the file with plain `mv` and verify:
+
+Clean rename complete. Now let me regenerate the project (picks up the renamed file) and re-lint, then rebuild arm64-only:
+
+Lint passes (0) and the project now references `RangeProjectionFormat.swift` (stale name gone). Let me rebuild arm64-only:
+
+Build running. Let me wait for it (incremental, framework staged):
+
+The xcstrings catalog compiled cleanly (`xcstringstool compile` — validates my 32 string additions) and Swift compilation is progressing with zero errors. The full app is recompiling (project regenerated). Let me wait for completion:
+
+The build is in the `EmitSwiftModule` phase (whole-app type-check) — the heaviest single step — with zero errors. Let me wait for it to finish:
+

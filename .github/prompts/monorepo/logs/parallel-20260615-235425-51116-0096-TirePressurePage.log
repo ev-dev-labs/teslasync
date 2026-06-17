@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+Let me read the web source page in full sections to understand all panels, charts, and strings.
+
+Now let me explore the Apple app structure to understand existing patterns. Let me look at the VehicleSystems directory and a recently-built sibling page.
+
+Let me examine the GuardMode sibling page and its log to learn conventions, plus the broader project layout.
+
+Good — I understand the sibling pattern (Page + PageModel + Models + DataSource + supporting views). Let me check tooling availability and read the GuardMode model/datasource/component files plus how strings are keyed.
+
+All tooling is present (xcodebuild, swiftlint, swift 6.3.2, pwsh), but `Shared.xcframework` is absent (`.gitkeep` only) — so `xcodebuild` will be BLOCKED, matching the GuardMode precedent which used Swift type-check instead. Let me read the model, models, supporting views, and locate the shared component library + SI converters.
+
+The GuardMode page builds its own card furniture locally (allowed-files scope). Now let me understand string catalog keys, the web i18n mapping, navigation registration, models, and whether any SI converter exists.
+
+Now let me check how the string keys are stored in the catalog and web i18n, plus find navigation registration.
+
+Let me look at the exact key formats in both catalogs for the strings I need.
+
+Let me verify which of my 19 keys already exist and inspect the xcstrings entry format.
+
+I need to add 13 new catalog keys (6 already exist). Let me check how GuardMode entries are formatted in the catalog and find the navigation registration.
+
+GuardModePage isn't registered elsewhere — let me understand the navigation/registration mechanism and the catalog entry format.
+
+There's a route-registration pattern. Let me examine it, plus the nav layout and how the Xcode project includes files.
+
+XcodeGen uses glob-based inclusion, so new files are auto-included. There's an `AppRouteHostRegistry`/`AppRouteParser` system. Let me examine the routing and nav layout to see how `/tire-pressure` maps.
+
+`/tire-pressure` already exists in nav and routes. Let me examine the AppRoute enum and host-registry mechanism to understand how pages bind to routes.
+
+`/tire-pressure` has no dedicated `AppRoute` case. Let me check the parser mapping and how route registrations get wired into the shell.
+
+Let me see the registration block in `TeslaSyncApp.swift` and whether `.vehicleSystems` already has a host, to decide on routing approach.
+
+The routing for `/tire-pressure` has no `AppRoute` case, and editing `AppRoute.swift` is out of allowed-file scope. I'll mirror the accepted GuardMode precedent: a fully navigable `View` (NavigationStack-ready with `.navigationTitle`/`.toolbar`) without hijacking an unrelated route. Now let me study existing Swift Charts usage and the SI pressure converter to port `convertPressureFromSI`.
+
+Rich design-token system exists (`Color.TS.*`, `Font.TS.*`). Let me port the web pressure converter exactly, inspect the `ProgressRing` (radial gauge analog), and confirm available tokens.
+
+Let me locate the `Color.TS`/`Font.TS` token definitions and view the `ProgressRing` view for radial-gauge inspiration.
+
+Now I have the full token system. Let me view the `ProgressRing` view for radial-gauge inspiration, then I have enough to build.
+
+I now have the full picture: design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), the `ProgressRing` trim-arc pattern for the RadialGauge, Swift Charts for the LineChart, and the GuardMode multi-file decomposition. Let me check the web `RadialGauge` rendering and existing catalog keys for tire/status labels to maximize reuse.
+
+The web `RadialGauge` clamps to `[0,max]`, shows value+unit centered, label below. I'll localize tire/status labels too (honoring "zero hardcoded"). Let me verify existing values for the keys I'll reuse, then write the plan and start building.
+
+All existing values match. Let me check the placeholder-scan script (so I avoid tripping it) and the SwiftLint config, then I'll write the plan and start building.
+
+Let me check the placeholder patterns so I avoid tripping the scan, then write the plan and begin building.
+
+Placeholder scan is case-insensitive and flags "Placeholder" — so `.redacted(reason: .placeholder)` needs a `// parity:allow` marker (as GuardMode did). I have everything I need. Let me write the plan and set up todos.
+
+Everything is mapped. Let me start building. First, the models file (data types, enums, helpers, SI converter, formatters).
+
+Now the data source seam with mock fixtures (hook-named methods, SI Pa values, warnings to exercise banner/table).
+
+Now the `@Observable` page model with state, lifecycle, and all web-parity derivations.
+
+Now the shared furniture, warning banner, summary metrics row, and gauges panel (styled with design tokens).
+
+Now the charts file — RadialGauge via Swift Charts `SectorMark` and the history `LineChart` via Swift Charts `LineMark`.
+
+Now the history table panel (GlassPanel9) with header, status-badge cells, and warning badges.
+
+Let me refine the model to add a history-loading flag (so the chart skeleton branch is reachable on reloads), then write the page and chart panel.
+
+Now append the history chart panel (GlassPanel8) to the charts file:
+
+Now the main page View — scaffold, four data states, toolbar pickers, and panel composition.
+
+All 7 Swift files are written. Let me verify they type-check before adding catalog strings. I'll compile the new files together with the design tokens against the macOS SDK.
+
+Type-check passes with Swift 6 strict concurrency. Let me confirm no symbol collisions with the sibling GuardMode files by compiling the whole VehicleSystems directory together.
+
+No collisions. Now let me run SwiftLint `--strict` on the new files with the project's config.
+
+SwiftLint linted the whole project (config `included` paths) and found 3 serious violations. Let me identify exactly where they are.
+
+The 3 violations are all **pre-existing** in unrelated files (`MyActivityPageModel.swift`, `AnomalyInlineRow.Previews.swift`) — none in my new TirePressure files. Let me confirm my files lint cleanly in isolation.
+
+One line-length violation at line 207. Let me fix it by extracting the prefix like in `inlineError`.
+
+My files lint clean. Let me re-type-check after the edit and run the placeholder scan.
+
+All three gates pass (type-check EXIT=0, lint 0 violations, placeholder COUNT=0 with 5 allowed). Now let me add the 25 catalog strings (13 required + 6 labels + 6 range) via a safe targeted JSON insertion.
+
+All 25 entries inserted and JSON validated. Let me cross-check that every `String(localized:)` key referenced in my Swift files resolves in the catalog.
+
+All 35 keys resolve. Let me scan for any stray hardcoded UI literals in my files (excluding the redacted skeleton placeholders).
+
+The `Text("\(prefix): \(message)")` are interpolations of already-localized strings (not hardcoded), and the two `verbatim:` are redacted skeleton shapes (never visible — matches the GuardMode precedent). Now let me honestly record the `xcodebuild` gate status — check if the project can even be generated/built given the absent xcframework.
+
+`xcodebuild` will be BLOCKED because the KMP `Shared.xcframework` (ADR-004 dependency) is absent — only `.gitkeep` present — matching the GuardMode precedent. Let me generate the project and attempt a build to capture honest evidence of the blocker.
+
+Project generated. Now let me attempt the build to capture the blocker evidence.
+
+The environment actually builds the KMP `Shared.xcframework` via a Gradle pre-build step (it succeeded), but the full `xcodebuild` timed out at 300s while compiling. This is more capable than the GuardMode precedent assumed. Let me check whether the framework got staged, then run the full build with a longer timeout in the background.
+
+The framework built but wasn't staged before the timeout. Let me run the full build in the background with a longer window so the Gradle step (now cached) can stage it and compile.
+
+The build is running in the background. While it compiles, let me inspect the parity ledger format so I can update it.
+
+Let me view the GuardMode ledger rows to mirror the structure for my new TirePressure rows.
+
+I'll add the two TirePressure rows right after the GuardMode rows in the ledger.
+
+Ledger updated and valid. Let me check the build progress.
+
+The build failed only on **code-signing/entitlements** (no development certificate in this environment) — not on any compilation error. The Gradle `Shared.xcframework` assembled and staged successfully, getting past framework staging. Let me retry with code-signing disabled so the Swift sources actually compile and I get a genuine build result.
+
+While the build runs, let me gather exact file:line evidence for each parity string and symbol for the log.
+
+All 19 string evidence lines collected. The build completed — let me read the result.
+
+Another **pre-existing** failure, unrelated to my work: a duplicate filename collision (`ScheduledExportsPanel.swift` exists twice in the repo's two source trees). None of my files are involved. Let me confirm these are pre-existing and not part of my change.
+
+Confirmed: both failures are **pre-existing** repo issues (code-signing with no dev cert, and a duplicate `ScheduledExportsPanel.swift` filename across two source trees) — neither involves my 7 new files. To give the strongest honest build evidence for my code, let me do a full **compile to object code** (not just type-check) of my files + tokens.
+
+Full compile to object code succeeded (8 `.o` files emitted) with Swift 6 strict concurrency — the strongest honest build signal. Let me confirm the generated build artifacts are git-ignored (so they won't be committed) and clean up temp files.
+
+Artifacts are git-ignored; temp cleaned. My deliverable is green at every controllable level; the raw `xcodebuild` is red only due to two pre-existing repo issues outside my scope. Let me view the GuardMode log's structure to mirror its format precisely for honest reporting.
+
+I have the exact format. Let me gather final file line counts and the base commit for the log.
+
+I have all data. Let me collect the panel/chart/state symbol line numbers for binding evidence, then write the log.
+
+I have complete evidence for all 34 parity items. Let me write the comprehensive, honest parity log.
+
+Log written. Let me update todos and do a final verification pass — spot-check a few cited evidence lines and re-confirm the gates.
+
+Evidence lines are accurate except a minor off-by-one: the table's "No History Data" is the line before 114. Let me verify and correct the log citation.
+
+Let me correct that one citation (114 → 113) in the log for accuracy.
+
+Citation corrected. Let me run the final consolidated gate verification before committing.
+
+All gates green (compile EXIT=0, placeholder COUNT=0, lint 0 violations). Let me review git status and commit the deliverable with the correct file set.
+
+Exactly the right change set, no generated artifacts. Let me stage the deliverable (including the catalog I modified) and commit.
+
+Committed (`ffb6d167e`). Let me do a final confirmation that the working tree is clean and mark verification complete.
+
+All 11 todos complete. The task is finished and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip ActionItem: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip FormField: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationStats: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ResourceRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportDelivery: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip ScheduledExportsPanel: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SignalDiffRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SystemHealthData: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TabButton: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureHistoryChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureReading: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

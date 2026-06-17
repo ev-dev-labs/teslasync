@@ -1,0 +1,182 @@
+I'll start by exploring the repository structure to understand the task, the web source specification, and the existing Apple app architecture.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Now let me explore the Apple app structure and the supporting layers (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+Now let me explore the Apple app's internal structure to understand the existing patterns — the dashboard-widgets directory, state holders (P1/S8), tokens (P1/S9), and i18n (P1/S10).
+
+There's already a populated `dashboard-widgets` directory with established patterns. Let me examine the file structure and check whether ClimateStatusWidget already exists.
+
+There are many established widgets following a multi-file pattern. ClimateStatusWidget doesn't exist yet. Let me study a closely-related existing widget (ChargeStatusWidget) to learn the exact pattern, plus examine the file types used.
+
+The pattern is clear. SecurityStatusWidget is the closest analog. Let me read its full file set to learn conventions, and examine the supporting layers.
+
+Excellent, the architecture is clear. Let me read the remaining SecurityStatusWidget files and the shared infrastructure (registration, tokens, skeleton, tone).
+
+Now let me read the Tests file and locate the shared infrastructure definitions (registration, tokens, tone, skeleton).
+
+Let me examine the shared infrastructure: registration/size, tokens (spacing/radius/color/font), tone, skeleton, and how units/temperature conversion are handled natively.
+
+The core tokens (TSSpacing, TSRadius, Color.TS, Font.TS) appear to be generated (P1/S9). Let me locate them across the whole apps/apple tree.
+
+The design tokens (P1/S9) are at `apps/design/generated/apple`. Let me examine them along with the project.yml test target configuration and how units/temperature are handled.
+
+Now let me understand how units/temperature conversion and number formatting are handled — both in the web source (`convertTempFromSI`, `useUnits`) and natively. Let me look in parallel.
+
+Now let me find how the native app handles temperature unit preferences and number formatting — checking existing native widgets that display temperature or use units.
+
+`WeatherAtCarWidget` is a climate sibling that shows temperature — the perfect reference. Let me read the units facade, formatters, and the WeatherAtCar adapter.
+
+WeatherAtCar is the ideal climate template. Let me read its Model and main view to see the unit prefs types, DTO/source/model structure, and how the view composes.
+
+I now have the full pattern. Let me confirm the exact `ClimateLatest` API shape and `useClimateLatest` hook, plus check the TSSkeleton signature and WeatherAtCar's strings/tests/previews for the climate-category conventions.
+
+The type is `ClimateSnapshot`. Let me confirm its exact field shape, and check the backend Go model to be precise about field types/nullability.
+
+I now have the full data contract. Let me verify the build toolchain (xcodegen, existing xcodeproj) and review WeatherAtCar's strings + tests for climate-category conventions, plus confirm no central registry needs editing.
+
+Let me read the placeholder checker and verify PowerShell availability and the macOS scheme name.
+
+Both `pwsh` and `xcodegen` are available. Let me check the forbidden placeholder patterns so my code stays clean.
+
+I have everything I need. Both `pwsh` and `xcodegen` are available, iPhone 16 sim is booted, and forbidden tokens are known (avoid "TODO/FIXME/XXX/Placeholder/Lorem ipsum/not implemented" in `.swift`). Let me check the WeatherAtCar tests/previews to mirror the test structure, then write my plan.
+
+I have a complete understanding of the architecture. Let me set up tracking, verify the Shared framework exists, and write my plan.
+
+The `Shared.xcframework` may be missing — critical for the build. Let me investigate the Frameworks directory.
+
+`Shared.xcframework` is absent (only `.gitkeep`); there's a build script. The app target depends on it via `import Shared`. Let me examine the build script and check for the KMP/Gradle toolchain.
+
+The xcframework is built via Gradle as an Xcode pre-build phase. Let me verify it's wired in project.yml, that `apps/shared` + gradlew + a JDK exist, so `xcodebuild` can produce it.
+
+All prerequisites exist: Gradle wrapper, JDK 17, and the xcframework is staged via scheme pre-actions. The KMP build is the long pole, so let me pre-warm it in the background now while I write the Swift files.
+
+The Gradle build is warming up in the background. Now let me write all seven widget files. Starting with the Model (seams, DTO, registry, strings facade), mirroring the established climate sibling.
+
+Model done. Now the Adapter (Foundation-only): temperature conversion, number formatting, projection types, projector, and accessibility — all faithful ports of the web pipeline.
+
+Now the main surface view, with the i18n SwiftUI helper, header, freshness chip, and all state branches.
+
+Now the presentational subviews (readout, rows, chips) with tone→color resolution. Let me also peek at the Gradle progress.
+
+Gradle still compiling KMP. Let me continue with Previews, Tests, and strings.
+
+Now the Tests file — adapter projection parity, phase matrix, model wiring, registry, and accessibility. I've precomputed the expected formatted values.
+
+Finally, the i18n strings catalog with all web-parity keys plus native chrome.
+
+All seven files created. Let me check the Gradle progress, scan my Swift files for forbidden placeholder tokens, and lint formatting — in parallel.
+
+Found one forbidden token ("placeholder") in an Adapter comment. Let me fix it and run the formatters on my files.
+
+swiftformat is contending for CPU with the heavy Gradle/Kotlin-Native build running in parallel. Let me stop the lint for now (re-run later when CPU is free) and let the critical-path Gradle build finish.
+
+Gradle's first Kotlin/Native build is the long pole. Let me run `xcodegen generate` (independent, fast) to wire my new files into the project while Gradle continues.
+
+Project generated with my files wired in. Let me verify they're referenced and check Gradle progress.
+
+All 7 files are wired into the project. Gradle's first Kotlin/Native build is still going (expected — it's the long pole). Let me wait for it to complete.
+
+It's been ~8 minutes with output buffered by `tail`. Let me verify Gradle is actively progressing (not deadlocked) by checking process activity and build-output growth.
+
+Multiple Java/Gradle daemons are running — likely parallel slots on this shared machine contending for CPU and the shared `~/.gradle` daemon registry. Let me check whether my build is actually progressing or stalled on a lock.
+
+Now it's clear: ~10 parallel slots are all running the same heavy Kotlin/Native build on one shared machine, contending for CPU and the shared Gradle daemon registry. My build (PID 86481) is progressing but starved (mostly waiting). This isn't a deadlock or capability gap — just resource contention. I'll let it complete, polling periodically.
+
+Real progress now — the debug `Shared.xcframework` (ios-arm64, ios-arm64-simulator, macos-arm64 slices) is assembled and 640 files changed in 5 min. The build is in active native-link phase. Let me continue waiting for completion (the script needs the `release/` variant).
+
+Build slowed again (only 4 files in 5 min) — the release Kotlin/Native variant is compiling under heavy contention. It's progressing, not deadlocked. I'll wait with longer polls to conserve. My code review is complete and I'm confident in compilation correctness (all APIs mirror the verified WeatherAtCar/Security siblings).
+
+Gradle `BUILD SUCCESSFUL` (34m30s) — both debug and release `Shared.xcframework` are built. Let me stage the framework, ensure the log directory exists, and verify the slices.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now let me run the iOS build+test gate. This will be slow under contention, so I'll run it in the background and poll.
+
+The iOS build+test is running in the background. Let me verify it started cleanly (the Gradle pre-action should now be fast since cached) before settling into longer polls.
+
+The iOS build is actively compiling the app's Swift module (including my new files) — Gradle pre-action already done, framework linked. Let me wait and watch for any compile errors.
+
+The iOS build+test shell completed. Let me read the final result and confirm the test outcome and exit code.
+
+iOS build failed with 5 errors. Let me find the exact compile errors.
+
+The 5 failures (11 errors) are all in **pre-existing sibling files I'm not allowed to touch** (`ChargeStatusWidget.*`, `ChargingDetailSection.*`, `ChargeCostTrackerWidget.*`) — duplicate `ChargingProjection` type declarations and an ambiguous `miles`. None are in my ClimateStatusWidget files. Let me rigorously verify this is a pre-existing baseline failure unrelated to my changes.
+
+This is conclusive: `git status --porcelain` shows my working tree adds **only** the 7 ClimateStatusWidget files. The 11 errors are entirely in **git-tracked sibling files** (pre-existing): two conflicting `public ChargingProjection` declarations (a `struct` in ChargeStatusWidget vs an `enum` in ChargingDetailSection) plus an ambiguous `miles` in ChargeCostTrackerWidget. My surface produced **zero** compile errors.
+
+The shared app module can't link until these pre-existing collisions are resolved, which blocks verifying my surface's tests. Let me assess the minimal unblock by examining the collisions and counting references.
+
+`ChargingProjection` collides between two surfaces; the cheaper rename is ChargeStatusWidget's `struct` (7 refs / 3 files). There's also a separate ambiguous `miles`. Both are pre-existing, out-of-scope defects blocking the shared module. Before deciding between minimally unblocking vs. isolated verification, let me inspect the exact collisions.
+
+Line 328's `.miles` is ambiguous — a deeper cross-surface enum collision, confirming the baseline has **systemic** duplicate-symbol defects from parallel generation (not just one type). Fixing all of these across many sibling surfaces is far outside my allowed scope and would conflict with their own slots. Let me map the full collision set to scope an isolated verification of my surface.
+
+Key finding: the breakage is **systemic, pre-existing, cross-surface** — two `convertChargeDistanceFromSI` overloads (ChargeStatusWidget vs ChargeCostTrackerWidget) make `.miles` ambiguous, plus the dual `ChargingProjection`. Crucially, `Sources/` (the app shell) references **none** of these, so surfaces are leaf nodes. Fixing this cluster spans many sibling surfaces across other slots — clearly outside my allowed scope.
+
+I'll verify my surface in isolation (proving it builds + all tests pass), which is honest and respects scope. Removing the ChargeStatusWidget surface alone resolves **both** collisions. Let me confirm nothing else depends on its symbols.
+
+No external dependencies on ChargeStatusWidget — removing it cleanly resolves both collisions. I'll run an **isolated verification** (temporarily holding ChargeStatusWidget aside, reverted afterward) to prove my surface builds and all its tests pass. This changes nothing I commit.
+
+ChargeStatusWidget held aside; project regenerated (0 refs to it, my surface intact). Now let me run the isolated iOS build+test in the background.
+
+The isolated iOS build is running. Meanwhile, let me lint/format-check my files (lighter now that the Gradle build is done). Running swiftformat and swiftlint on my surface files.
+
+swiftformat flagged 4 over-width lines in my Tests file. Let me auto-format my files to the project style, then re-verify clean.
+
+All 6 files now pass swiftformat `--lint` (the Tests file was auto-wrapped — cosmetic only). Now swiftlint `--strict` on my files, plus a check on the isolated iOS build progress.
+
+swiftlint `--strict`: **0 violations** in my files. Now the placeholder gate + check on the isolated iOS build.
+
+Placeholder gate clean (COUNT=0). Now let me check the isolated iOS build+test progress.
+
+The isolated iOS build is compiling the app module with no errors (collisions resolved). Let me record progress and wait for it to finish compiling, linking, and running my tests.
+
+The app module compiled cleanly (now linking app extensions) — confirming my surface + the rest of the app build with the collision source removed. Next it installs on the simulator and runs tests. Let me wait for completion.
+
+**BUILD SUCCEEDED** for the isolated iOS build. Now the test target builds and tests run on the simulator. Let me wait for the test results.
+
+The test bundles are building (my ClimateStatus test classes compiling — 17 mentions). Tests will run on the simulator next. Let me wait for the final result.
+
+**TEST SUCCEEDED** (IOS_ISO_PIPE_EXIT=0). My surface builds and all its tests pass on iOS. Let me extract the specific ClimateStatus test results as evidence.
+
+All **28 ClimateStatus test cases passed** on iOS (Adapter 15, Model 8, Accessibility 2, Phase 1, Registry 2), within an overall **6642 tests, 0 failures**. My surface is verified green on iOS and coexists with the entire app. Now let me run the macOS isolated build+test for full platform coverage (ChargeStatusWidget still held aside).
+
+Conclusive: the isolated build kept ChargeCostTrackerWidget and ChargingDetailSection and **still** built + passed 6642 tests — proving the **entire** pre-existing breakage stems solely from the ChargeStatusWidget surface colliding with two siblings, and there are no other hidden collisions. My surface is fully green and coexists with the whole app.
+
+Let me record the plan/decision and wait for the macOS isolated build.
+
+The macOS isolated build failed (1 failure). Let me find the exact cause — it could be macOS-specific.
+
+The macOS failure is **not** a code issue — it's a pre-existing **code-signing/entitlements** environment constraint (`DEVELOPMENT_TEAM` is empty, no dev certificate). The macOS app **compiled cleanly** (the only 4 errors are all signing, zero Swift errors); it failed at the signing step. This blocks the macOS gate for any build in this environment.
+
+Let me re-run the macOS isolated build+test with signing disabled (unsigned local binaries run fine on macOS) to verify my surface compiles, links, and its tests pass on macOS too.
+
+While the signing-disabled macOS build runs, let me confirm my surface compiled on macOS in the first attempt (evidence the only failures were signing).
+
+Confirmed: the macOS app had **0 compile errors** — only the 4 pre-existing signing errors. The signing-disabled run will verify tests. Let me wait for it.
+
+macOS app **BUILD SUCCEEDED** (signing disabled); now the test bundle is compiling. Let me wait for the macOS test results.
+
+macOS app built; tests are executing (a result-bundle log-write warning appeared, likely from system contention). Let me wait for the final macOS test result.
+
+macOS: **6642 tests, 0 failures, "All tests passed"** — all my ClimateStatus cases pass on macOS too. Let me capture the final exit code (the earlier result-bundle log warning may affect xcodebuild's exit despite tests passing).
+
+All macOS tests passed; xcodebuild appears to be finalizing (the result-bundle writer stalled under load). Let me give it more time to exit.
+
+The tests have definitively passed (6642, 0 failures, "All tests passed"); xcodebuild is hung on result-bundle finalization (an I/O issue under heavy load), not on testing. Let me confirm the tail and stop the stuck finalizer.
+
+Definitive: macOS **6642 tests, 0 failures, "All tests passed"** — all my ClimateStatus cases pass on macOS too (xcodebuild only hung on post-test result-bundle I/O, which I stopped). 
+
+Full verification complete on **both platforms**. Now let me restore ChargeStatusWidget (revert the isolation), regenerate, and confirm my working tree is clean except my files.
+
+Working tree is clean — exactly my 7 files, siblings restored unchanged. Verification is complete on both platforms. Now let me write the comprehensive, honest gate log with all evidence.
+
+Now let me verify the log file will be tracked (not gitignored) and stage exactly the prescribed files.
+
+Clean: exactly my 7 surface files + the log are untracked; the regenerated `.xcodeproj` is gitignored. Let me stage the prescribed files and commit with an honest message.
+
+All 8 files staged (7 surface + log), nothing else. Committing with an honest, transparent message.
+
+Committed (8 files, 1660 insertions). Let me finalize tracking and do a last sanity check that the tree is clean and intact.
+
+Everything is clean: working tree committed, ChargeStatusWidget intact/unmodified (7 files, 0 changes), my surface present (7 files). Let me clean up the temporary build logs and holding dir.
+
+Task complete. The ClimateStatusWidget surface is built, verified green on both platforms, and committed.
+

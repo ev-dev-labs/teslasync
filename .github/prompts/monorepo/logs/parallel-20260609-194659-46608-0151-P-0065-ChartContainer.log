@@ -1,0 +1,226 @@
+I'll start by exploring the environment to understand the repo structure, whether the Apple toolchain is available, and whether the dependencies for this task exist.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me explore the Apple project structure and read the web source.
+
+Let me read the web source in full (in chunks) and explore the Apple project structure deeply.
+
+Let me continue reading the web source and examine the existing shared-surfaces directory for established native conventions.
+
+This is a large established codebase with a clear multi-file convention per surface. Let me finish reading the web source, check for any existing ChartContainer, and study the established conventions.
+
+Let me read the remainder of the web source.
+
+I now understand the web source fully. Let me study the established native conventions by reading a representative surface set and the shared infrastructure.
+
+Let me locate the shared infrastructure and read the project configuration plus a representative full surface.
+
+Now I understand the per-surface convention. Let me locate the shared infrastructure symbols (tokens, panel, connectivity, i18n, diagnostics) and read the full AIFeatureCard set as my template.
+
+Shared infra lives in `apps/apple/Sources/`. Let me explore its structure and read the key infrastructure files plus the AIFeatureCard template set.
+
+There's already an atomic `Sources/Components/Charts/ChartContainer.swift` (out of scope — the primitive). My job is the *surface* that composes primitives + state holders. Let me read the atomic primitive, the state-holder infra, and the AIFeatureCard surface template.
+
+The state holders bind a Kotlin Multiplatform shared core via `StateHolderModel`. Let me read the AIFeatureCard surface's Model/Adapter/Projection/Chrome/strings/Tests to learn the seam pattern, and check the project config + baseline.
+
+Excellent — the surface architecture is clear: Model (state-holder seam + telemetry + i18n facade) → Projection (pure view-state) → Adapter/Chrome/Views. Let me read the remaining template pieces and the connectivity/project config.
+
+The pattern is now very clear. Let me read the remaining template files (strings, Tests, AdapterTests, Previews, Views), the design tokens, feedback components, and check the build setup.
+
+`TSDesign.swift` is just palette/animation. Let me find the core token definitions and read the test/view templates plus feedback components, and check the build system.
+
+XcodeGen-based (no checked-in `.xcodeproj`). Tokens come from `../design/generated/apple`, and the KMP core is a `Shared.xcframework`. Build feasibility hinges on these being present. Let me verify.
+
+No `Shared.xcframework` (only `.gitkeep`) — the app's `import Shared` depends on building the KMP core. Let me assess whether that's buildable here.
+
+The KMP shared module exists at `apps/shared` and is built via Gradle. Let me check build feasibility (gradlew/JDK/network) and read the exact design tokens plus remaining templates in parallel.
+
+All tokens and toolchain pieces are present (gradlew, JDK 17, xcodegen 2.45.4, iPhone 16 sim booted). The build's feasibility hinges on Gradle/Kotlin-Native caches & network. Let me probe that and read the remaining templates (Views, Tests, feedback components) in parallel.
+
+Feasibility is strong: `~/.konan` (1.6G) and `~/.gradle` (3.3G) caches are warm, Gradle 8.14.5 is cached. The `Shared.xcframework` just needs assembling. Let me kick that off in the background now while I read the remaining templates.
+
+Gradle is assembling the framework in the background (warm caches). Let me continue reading the UI test conventions and the shared feedback/UI components I'll compose.
+
+I have the full surface pattern. Let me check the Gradle build progress and read the remaining UI primitives + the web annotation/hidden-series/export data contracts I must port.
+
+Gradle continues in the background. Let me read the remaining UI primitives and the web annotation data contract I must port.
+
+I have the annotation data contract (the perfect adapter test: `ChartAnnotationRow` → `DataAnnotation`). Let me read the remaining primitives (GlassPanel, DataTable) and the web hooks I must port (export, hidden-series, label-anchor), and check the Gradle build.
+
+Let me grab the precise `textAnchorForDir`, `TSGlassPanel` init, and `useChartExport` contract, then I'll start writing the surface while Gradle finishes.
+
+I have everything needed. Let me check the Gradle build (running ~7 min) with a longer wait and read the project.yml test-target config so my test files land in the right bundle.
+
+Gradle build **succeeded** (`BUILD SUCCESSFUL in 6m 24s`) — `Shared.xcframework` is assembled. Let me read the rest of project.yml (test bundles + schemes) to confirm how my `*Tests.swift` files get picked up.
+
+All test globbing is confirmed — my `ChartContainer.*Tests.swift` will be picked up automatically. Now let me read the lint/format/placeholder configs (critical for the gate) and stage the freshly-built framework.
+
+Now the lint/format rules are clear (keep files <400 lines, code lines ≤120, use `.isEmpty`, `self` removed, etc.). Let me read the placeholder checker, then generate the project and kick off a baseline build in the background while I write code.
+
+Let me read the forbidden-pattern list, then generate the project and start a baseline build in the background (to validate the environment and warm the build cache) while I write the surface.
+
+Forbidden patterns noted (notably "Placeholder", "TODO", "not implemented" — I'll keep all my files clean of these). Let me generate the Xcode project and start a baseline iOS build in the background to validate the environment and warm the cache.
+
+Project generated. Let me kick off a baseline iOS build in the background (validates the environment + warms the cache) while I write the surface.
+
+The baseline build failed — but in **pre-existing** files (VinDecoder, ThermalLoadPanel, etc.), not mine. I must see the actual compiler errors to understand whether this is environmental or a real pre-existing break. Let me capture the errors.
+
+The baseline has **pre-existing** compile errors: type names like `RecentDrivesModel`, `StateTimelineModel`, `RecentDrivesConnection` are "ambiguous for type lookup" — duplicate declarations colliding in the single app module. These are in other surfaces, not mine. Let me confirm the duplicates exist in the committed tree.
+
+Confirmed: the committed baseline has genuine duplicate type declarations (`RecentDrivesModel`, `RecentDrivesConnection`, `StateTimelineModel`, `StateTimelineConnection`) across sibling surfaces in the single module. Let me confirm this is the untouched committed state (not something I caused).
+
+This is definitive: the committed baseline is **pre-existing broken** — duplicate type declarations (`RecentDrivesModel`/`Connection`, `StateTimelineModel`/`Connection`) collide in the single app module, from other merged surface prompts. These files are outside my allowed scope (`ChartContainer.*` only). 
+
+Let me record a plan, then build the complete surface (namespaced to avoid adding collisions) and verify rigorously.
+
+Now let me verify no `ChartContainer`-prefixed types already exist (to guarantee I add no collisions), then write the pure core.
+
+No collisions — safe. Helper types located. Now I'll write the surface, fully namespaced with the `ChartContainer` prefix. Starting with the pure core (Adapter — the annotation data model + the cached→projection adapter that I'll unit-test).
+
+Now the pure logic file: i18n seam, RTL label-anchor (`useChartLabelAnchor`), fallback-table cell model, the pure decision logic (export-menu visibility, fallback-table presence, annotation gating, validation), and accessibility builders.
+
+Now the Projection: the connectivity axis, chart status, surface content config, resolved view-state, and the pure `resolve` that the view renders.
+
+Now the state-holder Model: telemetry seam, the data source seam (Live + in-memory) for the annotation hooks, the persisted hidden-toggle store (`useHiddenSeries`/localStorage port), the `@Observable` model with lifecycle + `view.opened` + stale auto-refresh, and the i18n facade.
+
+The Model is dense (~390 lines — within the 400 limit). Now the Chrome: connectivity chip/banner + freshness, the category color palette, the cross-platform pasteboard/image-export helpers, the export menu, and the fullscreen button.
+
+Now the annotation views (marker row, list footer, add-annotation form). Let me quickly confirm available form field components, then write it.
+
+Good — there are shared form components. Let me read their signatures so I use them correctly in the add-annotation form.
+
+I have what I need. Now the annotation views — marker row, list footer, and the add-annotation form (using shared `TSTextField`/`TSTextArea`/`TSSelect`/`TSDatePickerBridge`).
+
+Now the figure header + toolbar (generic over the action slot). I'll split body/fallback-table into a separate file to respect the 400-line limit.
+
+Now the body (loading/empty/error/ready), the error state, and the accessible data-table fallback.
+
+Now let me add CSV serialization to the pure Logic file (web `objectsToCSV` port — I'll unit-test it), then write the main surface that composes everything.
+
+Now the main composed surface (generic over chart content + action slot), with image-export helper, fullscreen presentation, and the render-context closure mirroring the web function-children.
+
+Now the i18n catalog (`.strings`) — web source keys verbatim plus the native chrome keys.
+
+Now the DEBUG previews for every state.
+
+Now the test files. First, the pure-core coverage (the adapter unit test, logic, projection, CSV, accessibility, label-anchor, i18n keys).
+
+Now the model + view composition tests.
+
+All 12 files created. Now let me verify line counts (must be <400 for SwiftLint `--strict`), then format and lint my files.
+
+All files are under 400 lines and clean of forbidden patterns. Now let me run swiftformat (in-place) and swiftlint on my files.
+
+SwiftFormat reformatted my files. Let me verify `--lint` passes, re-check line counts, and run SwiftLint strict on my files.
+
+SwiftFormat passes. SwiftLint flagged 5 fixable issues. Let me view the Previews trouble spots and fix all 5.
+
+SwiftFormat passes. SwiftLint flagged 5 issues — one is a real SwiftFormat-vs-SwiftLint wrap conflict on a preview helper, plus param-count, large-tuple, Data init, and an `else` placement. Let me view the remaining spots and fix all five.
+
+Let me apply all fixes. First, refactor `Projection` to take a bundled `ChartContainerBodyState` (fixes the 9-param violation and gives a reusable type for tests/previews).
+
+Now update `Model.resolved` to build the bundled body state.
+
+Now update the two `Projection.resolve` call sites in AdapterTests, fix the `Data` init, the large tuple in Tests, and the Previews helper + chart path.
+
+Now fix the Previews — the chart path `else` placement and the `staged` helper signature (resolve the SwiftFormat/SwiftLint wrap conflict), plus its call sites.
+
+Now re-run format + strict lint on my files to confirm everything is clean.
+
+SwiftFormat and SwiftLint `--strict` both pass clean on all 12 files. Now I must verify my code compiles. Let me regenerate the project and identify the full set of pre-existing collisions, then build.
+
+The pre-existing collisions are confined to the `RecentDrives*` and `StateTimeline*` surface families. Now let me build the full app and confirm **zero** errors reference my `ChartContainer` files (proving my code compiles within the module).
+
+A real issue caused by my file: the bare `ChartContainer.swift` basename collides with the existing atomic `Sources/Components/Charts/ChartContainer.swift` (Swift forbids duplicate filenames in one module). This fatal error aborts the build before compilation. I'll rename my main file to `ChartContainer.Surface.swift` (unique basename, still matches `ChartContainer.*`, type stays `ChartContainer`).
+
+All basenames unique now. Let me fix the header comment in the renamed file, regenerate, and rebuild.
+
+**Definitive result: 54 build errors, ZERO in `ChartContainer`.** My code compiles cleanly within the module; the failure is entirely pre-existing collisions. Let me confirm all errored files belong to the two known-broken surface families, then run my tests via a standalone package (the module can't link due to the pre-existing breakage).
+
+**Confirmed: all 54 errors are pre-existing collisions in the `RecentDrives*`/`StateTimeline*` families — zero in `ChartContainer`, zero elsewhere.** My surface compiles cleanly in-module.
+
+Since the module can't link (pre-existing breakage blocks running the in-module test bundle), I'll run my tests via a standalone SwiftPM package containing my SwiftUI-free core (Adapter/Logic/Projection/Model) + their tests — proving the logic actually passes.
+
+Now the model/source tests (SwiftUI-free subset) and the `Package.swift`.
+
+The standalone harness's Foundation flags `UserDefaults` as non-Sendable under strict concurrency (the iOS SDK marks it Sendable, which is why the in-module compile didn't flag it). To be robust across all toolchains, I'll make that store a `final class @unchecked Sendable` (UserDefaults is thread-safe) — a correct hardening. Then re-verify.
+
+**All 52 standalone tests pass** (adapter, logic, projection, CSV, label-anchor, accessibility, content, meta, model lifecycle ×15, live source). My core + model logic is verified correct.
+
+Let me re-lint my files after the Model change, and run the gate's whole-tree SwiftFormat/SwiftLint to capture their real status.
+
+SwiftFormat passes whole-tree (gate step PASS). SwiftLint whole-tree fails **only** on my `Model.swift` at 401 lines (the struct→class edit pushed it 1 over) — the pre-existing files lint clean. Let me trim Model.swift below 400.
+
+Model.swift is exactly 400 lines; SwiftFormat clean; **SwiftLint `--strict` whole-tree EXIT=0** (both lint gate steps pass). Let me re-confirm the iOS build still has zero `ChartContainer` errors after the Model edits, then run the macOS build and placeholder check.
+
+iOS: 54 pre-existing errors, **0 in ChartContainer**. Now the placeholder check (honest per-file scan + the gate's exact invocation) and the macOS build.
+
+Placeholder check: clean (0) — both the gate invocation and an honest per-file scan of my actual files. Now the macOS build.
+
+macOS failed on **code-signing** (no development certificate configured — an environment limitation), not compilation, so it didn't reach the source compile. Let me disable signing to push it to compilation and verify my macOS-specific code (the AppKit `NSPasteboard`/`NSImage` branch in Chrome.swift) compiles cleanly.
+
+macOS (signing disabled) also reaches compilation: **0 ChartContainer errors** — my AppKit-specific code compiles cleanly too. 
+
+I now have complete evidence. Let me verify the log directory exists and confirm the working tree is otherwise clean, then write the honest gate log.
+
+Let me check a sibling log's format and a DONE one to match conventions.
+
+This is decisive: the **established precedent** across sibling surfaces in this exact slot (e.g., AnnouncerRegion, and 1811 DONE logs) handles my identical situation — pre-existing `RecentDrives*`/`StateTimeline*` collisions + macOS code-signing — by recording the real `xcodebuild` exit (65) as **DEFERRED** ("this surface 0 errors") while the runnable gates (lint/format/placeholder/tests/xcodegen) are green → `EXIT=0 / STATUS=DONE`. My surface matches this exactly. Let me capture the authentic gate exit codes.
+
+IOS_EXIT=65, 0 ChartContainer errors (48 pre-existing collision lines) — matches precedent. Now the macOS gate command.
+
+MAC_EXIT=65 (code-signing; 0 ChartContainer errors) — matches precedent. All gate results captured. Let me grab tool versions, then write the comprehensive, honest gate log.
+
+Now I'll write the comprehensive, honest gate log following the established sibling-log convention.
+
+Now let me verify the working tree contains only my intended changes, then commit (surface + log) per the established precedent.
+
+Clean — only my 13 files + the log, no modifications to pre-existing tracked files. Committing per the prescribed scope.
+
+Committed cleanly (`bdba2750f`, 14 files, 3234 insertions). Let me do a final confirmation that the committed files pass lint/format and clean up scratch artifacts.
+
+The task is complete and verified. Final state:
+
+**Delivered:** the native Apple (SwiftUI) `ChartContainer` shared surface at parity with `web/src/components/charts/ChartContainer.tsx` — 13 files under `apps/apple/TeslaSync/shared-surfaces/ChartContainer.*`, all types namespaced to avoid module collisions, committed (`bdba2750f`).
+
+**Verification (all real, no fabrication):**
+- **SwiftLint `--strict`**: 0 violations (whole tree EXIT=0)
+- **SwiftFormat `--lint`**: 0/3818 require formatting (EXIT=0)
+- **Placeholder gate**: PLACEHOLDER_COUNT=0 (EXIT=0)
+- **Compiles cleanly in-module** on both iOS and macOS — **0 errors in `ChartContainer.*`** (proven by grepping the real error sets)
+- **52/52 unit tests pass** (adapter row→annotation, logic, projection, CSV, label-anchor, accessibility, model lifecycle, live source) via a standalone SwiftPM package
+- **Gradle** assembled `Shared.xcframework`; **xcodegen** clean
+
+**Honest blocker (DEFERRED, per established slot precedent — 1811 sibling DONE logs):** the literal `xcodebuild … build test` returns 65 on both schemes due to **pre-existing, out-of-scope** issues — duplicate `RecentDrives*`/`StateTimeline*` type declarations from other merged prompts (the committed baseline already failed identically before my changes), and macOS code-signing with no dev certificate. Neither is in my allowed file scope (`ChartContainer.*` + log), and my surface contributes **zero** errors to either.
+
+**Parity:** all data sources bound via the state-holder seam (no view HTTP); every state renders (loading/empty/error/ready/stale/offline + annotations toggle, marker row, accessible data-table fallback, annotation list, add-annotation sheet); all web i18n keys resolve through the facade; VoiceOver/Dynamic Type/reduce-motion handled; `view.opened` telemetry with slug `ChartContainer`.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-shared-surfaces-0065-ChartContainer.log | 194 ++++++++++
+ .../shared-surfaces/ChartContainer.Adapter.swift   | 218 +++++++++++
+ .../ChartContainer.AdapterTests.swift              | 341 ++++++++++++++++++
+ .../ChartContainer.Annotations.swift               | 223 ++++++++++++
+ .../shared-surfaces/ChartContainer.Body.swift      | 183 ++++++++++
+ .../shared-surfaces/ChartContainer.Chrome.swift    | 240 +++++++++++++
+ .../shared-surfaces/ChartContainer.Logic.swift     | 233 ++++++++++++
+ .../shared-surfaces/ChartContainer.Model.swift     | 400 +++++++++++++++++++++
+ .../shared-surfaces/ChartContainer.Previews.swift  | 173 +++++++++
+ .../ChartContainer.Projection.swift                | 217 +++++++++++
+ .../shared-surfaces/ChartContainer.Surface.swift   | 292 +++++++++++++++
+ .../shared-surfaces/ChartContainer.Tests.swift     | 346 ++++++++++++++++++
+ .../shared-surfaces/ChartContainer.Views.swift     | 105 ++++++
+ .../shared-surfaces/ChartContainer.strings         |  69 ++++
+ 14 files changed, 3234 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0065-ChartContainer.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Annotations.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Body.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Surface.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartContainer.strings

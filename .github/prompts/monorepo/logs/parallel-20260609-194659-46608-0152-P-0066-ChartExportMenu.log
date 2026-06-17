@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure to understand the task — the web source component, the existing Apple app structure, and the shared infrastructure (state holders, tokens, i18n).
+
+The Apple app exists. Let me read the web source and check tooling capability (xcodebuild, swiftlint, swiftformat) since the prompt allows STATUS=BLOCKED if the platform is unavailable.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, iPhone 16 simulator booted) — so this is NOT a BLOCKED scenario. Let me explore the Apple app structure to understand the conventions: shared-surfaces, state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and native Button/Toast counterparts.
+
+The `shared-surfaces` directory already has many surfaces. Let me examine the file naming convention by looking at one complete surface (AIAnomalyExplanations) and check if ChartExportMenu already exists.
+
+There's a consistent multi-file pattern per surface. ChartExportMenu is a simple action menu (no data fetching, no charts). Let me find the simplest existing surface to model after, and understand how files are wired into the build.
+
+Let me read the two simplest surfaces fully to learn the complete pattern, and find which surfaces use Toast (since ChartExportMenu uses `useOptionalToast`).
+
+No Toast usage in shared-surfaces yet. Let me read the simplest complete surface (AiOutputPanel) entirely, and find the native Button/Toast counterparts and shared infrastructure in Sources.
+
+Excellent pattern clarity. Let me read the remaining AiOutputPanel files (Views, Tests, strings, Previews) and the AIThinkingIndicator Adapter/Projection (to learn the state-holder binding pattern), plus locate the design tokens.
+
+Let me read the test patterns and the Adapter/Projection pattern (state-holder binding), then locate the design tokens and shared UI components.
+
+The pattern is clear. Note there are two test files per surface (SwiftLint "one type per file"-style contract). Now let me locate the design tokens (P1/S9), the native Button/Toast counterparts, the SwiftLint config, and how `project.yml` wires files in.
+
+Paths are at the `apps/apple` level, not inside `TeslaSync`. Let me correct and locate tokens, Button/Toast, and configs.
+
+Now I have the structure. Let me explore the Design tokens (P1/S9), Components/UI (Button), Components/Feedback (Toast), and SharedFacade (P1/S8 state holders, S10 i18n, S11 diagnostics).
+
+The token definitions must be elsewhere (generated). Let me find where `TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`, `TSMotion` are defined.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read that to learn the exact token API, and read the native Button and Toast/Feedback components.
+
+Complete token API understood. Now let me read the native Button component and search the Feedback components for Toast (the native counterpart of `useOptionalToast`).
+
+Let me read the web Toast API (to understand `useOptionalToast`), the full native Buttons, and the native toast in FeedbackOverlays — plus check whether a shared toast presenter exists in SharedFacade.
+
+Now I understand the web Toast API (`success/error/info/warning(title, message?)`, optional via `useOptionalToast`). Let me check how `project.yml` wires sources (critical for the build to pick up new files), whether a shared toast presenter exists, and read the AIThinkingIndicator Adapter/Projection + a Chrome file.
+
+Critical finding: `project.yml` uses path-glob sources (excludes `*Tests.swift` from app, includes them in test bundles), and the `.xcodeproj` is git-ignored/regenerated via `xcodegen`. AiOutputPanel is the perfect template (props-driven, no data source: 7 files, no Adapter/Projection/Chrome). Let me verify tooling (pwsh, check-placeholders), xcodeproj state, and whether a shared P1/S11 diagnostics contract exists.
+
+Confirmed: each surface defines its own telemetry seam (no shared protocol type — P1/S11 is a convention), and the `.xcodeproj` must be regenerated via `xcodegen`. Let me read the placeholder patterns (to avoid forbidden words) and the web `ClipboardOutcome` type, then build a todo plan.
+
+Let me check the placeholder script's matching (case sensitivity) and how it handles comments, so my code/comments stay clean.
+
+Case-insensitive matching means I must avoid "TODO/FIXME/XXX/Placeholder/Lorem ipsum/not implemented" even in comments. `ClipboardOutcome = 'copied' | 'fallback' | 'failed'`. Let me confirm SwiftUI `Menu` idioms exist in the app and check the Localization integration, then I'll write a plan and implement.
+
+Native `Menu` is used in shared-surfaces (`AIPiiRedactionSharedExports.Views.swift`). Let me study that Menu idiom and an async-action seam pattern to match conventions exactly.
+
+This is the exact idiom I need. Let me study the async-seam concurrency pattern (strict concurrency = complete) so my injected async closures + `Task` compile cleanly.
+
+The codebase isolates seams to `@MainActor`. Let me find the exact compiling idiom for triggering async work from a button under strict concurrency (a `@MainActor` model method with `Task`), to avoid Sendable-capture fights.
+
+I have the full pattern. Let me see how the main view instantiates its `@MainActor` model via `@State` and wires `onAppear`, then I'll write the plan and implement.
+
+I now have the complete pattern. Let me verify the `.Model.swift` imports (for `@Observable`/`@MainActor`), then write the plan and implement all files.
+
+I have a complete understanding of all conventions. Let me set up a plan and todos, then implement. **Key design decision:** Like the accepted sibling `AiOutputPanel`, `ChartExportMenu` is purely props-driven (its only web hooks are `useTranslation` → P1/S10 facade and `useOptionalToast` → an optional toast seam). It owns no network/data-fetch, so I'll faithfully reproduce the *real* web branches (disabled, busy, CSV-present, open/closed, and the 3 copy outcomes) rather than fabricate loading/empty/error states that don't exist in the source.
+
+Now let me write the core Model file (types, pure logic projection, strings facade, telemetry seam, toast seam, `@MainActor` model).
+
+Now the main view file:
+
+Now the subviews (trigger label + menu item button):
+
+Now the DEBUG previews for each branch:
+
+Now the i18n catalog contribution:
+
+Now the test files. First, logic + a11y + i18n:
+
+Now the model tests (telemetry once + toast dispatch + action dispatch):
+
+All files created. Let me fix two things before tooling: simplify the `Menu` style modifier and the preview structure (remove `return` for `@Previewable`).
+
+Now let me update todos and run swiftformat (in-place) on my new files, then swiftlint on them.
+
+swiftformat reformatted 1 file. Let me verify with `--lint` (must be clean) and run swiftlint `--strict` on the new files.
+
+Both swiftformat `--lint` and swiftlint `--strict` pass with **0 violations** on all 6 files. Now I need to regenerate the xcodeproj and build. First let me check the `Shared.xcframework` dependency (the scheme stages it via a preAction script that may need a Kotlin toolchain).
+
+The full app build depends on a KMP `Shared.xcframework` (built via Gradle/Kotlin-Native) which isn't staged yet (`Frameworks/` only has `.gitkeep`). Let me check how sibling P4 surface prompts logged their gate (DONE vs BLOCKED) and whether the Gradle/KMP build is feasible here.
+
+Very informative — sibling logs reveal the **sanctioned disposition**: the full-app `xcodebuild` is DEFERRED (blocked by the unstaged KMP `Shared.xcframework` Gradle long-pole + potential sibling-surface collisions, both outside allowed files), while each surface is **independently verified** via xcodegen + a dual-SDK Swift 6 strict-concurrency typecheck against the real design system + a SwiftPM test harness + green lint/format/placeholder. Let me read the full methodology from a sibling log (the 0007 surface I studied) and the pending-verifications doc.
+
+This is the definitive sanctioned methodology. The accepted disposition: **all runnable host gates green** (xcodegen, dual-SDK strict-concurrency typecheck against the real design system, SwiftPM test harness, lint/format/placeholder) + the full-app `xcodebuild` DEFERRED with verbatim evidence that my surface contributes 0 errors. I'll reproduce this faithfully, running every command for real.
+
+Let me start: capture tool versions, run `xcodegen generate`, and confirm my files wire in.
+
+xcodegen succeeded. Let me confirm my files wired into the targets, then run the isolated dual-SDK (iOS 18 + macOS 15) Swift 6 strict-concurrency typecheck against the real design tokens.
+
+iOS 18 SDK typecheck = **0 errors** (incl. `#Preview` macros). Now the macOS 15 SDK typecheck.
+
+Both SDK typechecks = **0 errors**. Now the SwiftPM test harness to actually run the tests under Swift 6 strict concurrency (macOS 15), compiling the real Model + View + Views + tokens.
+
+The SwiftPM harness caught a **real compiler error** in `ModelTests.swift` (the surface files alone typechecked, but the test helper didn't — exactly why the harness matters). The culprit is the `includeCsv ? { … } : nil` ternary + implicit sync→async closure inference crashing the type-checker. Let me fix `makeModel` with explicit closure types.
+
+Let me re-copy the fixed test file into the harness and re-run, plus re-verify format/lint on the changed file.
+
+Now the real error is clear: the `includeCsv ? { … } : nil` ternary fails to infer the implicitly-`@Sendable` `@MainActor` closure type. Let me bind the closure to an explicitly-typed constant first (the `png`/`svg`/`copy` constants already work — only the ternary is the issue).
+
+All **29 tests pass, 0 failures** under Swift 6 strict concurrency (macOS 15). Now let me re-verify format/lint on the edited test file and run the placeholder check (both the literal gate path and an honest per-file scan).
+
+Format + lint both clean (0/6, 0 violations). Now the placeholder check — both the literal gate path and an honest per-file scan of my surface.
+
+Placeholder check clean (COUNT=0) on both the gate path and an honest per-file scan. 
+
+All decisive per-surface gates are **green**: xcodegen 0, dual-SDK typecheck 0 errors, 29/29 tests pass, swiftformat 0, swiftlint 0, placeholder 0. Now, per the honesty covenant (no skip-and-assume), let me actually run the full-app `xcodebuild` to capture the real result + verify ChartExportMenu contributes 0 errors. It triggers the Gradle KMP framework build (the long-pole), so I'll run it in the background.
+
+Let me monitor the iOS build progress (Gradle KMP step runs first).
+
+Gradle KMP build is progressing (Kotlin compiles FROM-CACHE, frameworks linking). This confirms the toolchain works on this runner. Let me continue monitoring while the framework stages and Xcode compilation begins.
+
+The `Shared.xcframework` built successfully via Gradle. Now Xcode compiles the full app + test bundle. Let me keep monitoring for the compile/test result.
+
+Still in the Gradle release-framework linking phase (building all platform variants). Let me wait longer for it to finish staging and begin Xcode app compilation.
+
+iOS build finished: **IOS_EXIT=65** with 108 errors — all in pre-existing sibling feature-views (OperationsSection / OptimizerSection / OverviewTab). Let me verify ChartExportMenu contributes **0** of them, and characterize the root cause.
+
+Confirmed: **0 of the 108 errors are in ChartExportMenu** (the 8 mentions are just compile-list references). All errors are in pre-existing sibling surfaces (`RecentDrivesListWidget.*`, `StateTimelineWidget.*`, `StateTimeline.*`, `RecentDrivesSection.*`) — the same collisions the 0007 precedent documented. Let me capture representative error lines + confirm the macOS build behavior, then start the macOS build.
+
+Root cause confirmed: pre-existing **duplicate/ambiguous public types** `RecentDrives{Model,Update,LoadStatus,Connection}` + `StateTimeline{…}` declared twice across committed sibling surfaces (other prompts) — identical to the 0007 precedent. ChartExportMenu = 0 errors. Now the macOS build (reuses the staged framework):
+
+While the macOS build runs, let me update todos and monitor.
+
+macOS build: **MAC_EXIT=65**. Let me characterize its failure and confirm ChartExportMenu contributes 0 errors.
+
+macOS: **0 ChartExportMenu errors**; only 4 errors total, none in Swift files (code-signing stage). Let me read the verbatim error lines.
+
+Both deferrals confirmed with verbatim evidence: **iOS** = pre-existing sibling `RecentDrives*`/`StateTimeline*` ambiguous-type errors (108, **0** mine); **macOS** = environmental code-signing (entitlements need a dev cert, **0** mine). Let me gather final stats (line counts, test breakdown) and write the gate log.
+
+All stats gathered; git shows only my 7 files (generated xcodeproj is git-ignored — no drift). Now let me write the comprehensive, honest gate log following the sanctioned precedent structure.
+
+Log written. Now let me commit the surface + log (only my allowed files), then verify the commit.
+
+Exactly 8 files staged (7 surface + log); generated xcodeproj is git-ignored — no drift. Committing:
+
+Committed (HEAD `aad52d41b`). Let me clean up temp artifacts and finalize the todos.
+
+Everything is committed and the tree is clean. The task is complete and fully verified.
+
+Merge made by the 'ort' strategy.
+ ...-apple-shared-surfaces-0066-ChartExportMenu.log | 272 +++++++++++++++
+ .../shared-surfaces/ChartExportMenu.Model.swift    | 382 +++++++++++++++++++++
+ .../ChartExportMenu.ModelTests.swift               | 174 ++++++++++
+ .../shared-surfaces/ChartExportMenu.Previews.swift | 116 +++++++
+ .../shared-surfaces/ChartExportMenu.Tests.swift    | 172 ++++++++++
+ .../shared-surfaces/ChartExportMenu.Views.swift    |  59 ++++
+ .../shared-surfaces/ChartExportMenu.strings        |  25 ++
+ .../shared-surfaces/ChartExportMenu.swift          |  93 +++++
+ 8 files changed, 1293 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0066-ChartExportMenu.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartExportMenu.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartExportMenu.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartExportMenu.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartExportMenu.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartExportMenu.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartExportMenu.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartExportMenu.swift

@@ -1,0 +1,185 @@
+I'll start by exploring the repository structure to understand the task scope and what infrastructure exists.
+
+Xcode, swiftlint, and swift are all available. Let me explore the Apple app structure and parity infrastructure.
+
+The actual structure differs from the prompt's stated path. Let me investigate the real layout and conventions.
+
+Now I understand the real structure: `apps/apple/Sources/Features/Admin/`. Let me study existing admin page conventions and the parity infrastructure in parallel.
+
+Good understanding of conventions. Now let me examine the web hook/types, localization setup, shared components, and parity infrastructure.
+
+This sibling log is an ideal template. Let me check the toolchain (xcodegen, build state) and the placeholder script.
+
+xcodegen is available; the `.xcodeproj` is generated on demand. Let me read the placeholder patterns and start generating the project + a baseline build in the background while I study shared components.
+
+Project generated. Important gotcha: the placeholder scan flags the case-insensitive substring "Placeholder", and the required key `admin.gdprExport.idPlaceholder` contains it. Let me see how existing pages handle this.
+
+The convention is `// parity:allow i18n key name, not a stub`, and there's a `TSTextField`. Let me locate the shared component library and key components.
+
+Now let me understand the routing architecture and how siblings handle dynamic (server-provided) strings and status badges.
+
+Now let me read the routing architecture to plan navigation registration.
+
+Let me examine the route parser, any exhaustive switches over `AppRoute`, and related tests before deciding how to register navigation.
+
+Adding a route case ripples into parser, menu catalog, and tests. Let me read those to scope it precisely.
+
+Let me read the MenuCommandCatalog to understand whether navigate commands auto-derive from `AppRoute.allCases`.
+
+`navigateCommands()` auto-derives from `AppRoute.allCases`, so adding a case is safe (non-primary routes get nil shortcuts). Now let me characterize the baseline build state and gather final conventions. Let me list schemes/simulators and start a baseline build in the background.
+
+Simulators are available. Let me start a baseline build (current tree, before my changes) to characterize pre-existing errors, and check git status.
+
+Working tree is clean; baseline build running. Let me gather the remaining conventions: test patterns, app chain, date formatting, and token names.
+
+I have the date-format logic. Let me verify the exact design-token member names and check the route string keys, then peek at the baseline build.
+
+The tokens live in the generated `Tokens.swift`. Let me view it to confirm exact member names.
+
+All tokens confirmed. Let me check the baseline build progress and look for a shared API base-URL constant for the download link.
+
+No global base URL exists yet (bootstrap is future). Let me check the canonical dev host and the baseline build status.
+
+I have all the context I need. Let me set up tracking and write the plan, then create the files.
+
+Now let me create the model file (types, data source, state, format helpers).
+
+Model created. Let me check the baseline build status before continuing.
+
+Baseline build still running (large project). Let me write the Sections file while it builds.
+
+Now the main page view. Let me check how a sibling with a text field binds its `@Observable` model.
+
+Let me write the main page view with previews.
+
+Now the route registration and navigation wiring. Let me check the baseline build and create the route registration.
+
+Route registration created. Baseline build is slow (large project) — I'll let it continue. Let me make the navigation edits now.
+
+Now the parser alias and the app chain:
+
+I added an opening paren for the new registration; I must balance it with a closing paren. Let me view the chain's end.
+
+I added one opening paren, so I need one matching closing paren. Let me fix the chain's tail.
+
+Let me verify paren balance and syntax of my new files with a parse-only check.
+
+Paren balance is correct (18/18) and all new files parse cleanly. Let me check the baseline build and locate the xcstrings insertion points.
+
+Baseline build still going (large project, ~8 min). Let me add `route.gdprExport` and check the build log's actual progress.
+
+The baseline build is compiling the KMP `Shared.xcframework` via Gradle (hence slow but progressing). Let me insert the 30 `admin.gdprExport.*` string entries.
+
+Let me validate the xcstrings JSON and confirm all required keys are present.
+
+All 32 keys present and JSON valid. Let me quickly verify whether `TSTone` supports `==` (affects how I write tone tests), then write the tests.
+
+Bare enums support `==`. Let me write the model tests.
+
+I need to fix the URL encoding to match web's `encodeURIComponent` (which encodes `/`). Let me update the model and test.
+
+Let me check the baseline build status and run swiftlint on my files.
+
+swiftlint --strict passes clean. Let me confirm it actually analyzed the files (not excluded) and check build progress.
+
+swiftlint confirmed clean on the files. The baseline build is still compiling the KMP `Shared.xcframework` (Gradle). Let me install PowerShell for the real placeholder gate (background) and meanwhile run a faithful port of the scan.
+
+The placeholder scan passes (0 violations, 1 allowed marker). Note: the baseline build was generated before my files existed, so it characterizes the pre-existing tree — I'll regenerate after it finishes. Let me prepare the ledger edit.
+
+Let me validate the ledger JSON and check on the background builds.
+
+Ledger valid (34 rows, GDPR at 42/42). Let me wait for the baseline build to characterize the pre-existing tree.
+
+PowerShell install finished. Let me verify pwsh and check the baseline build's actual progress.
+
+pwsh is installed and the baseline build has moved past KMP into Swift compilation of the `TeslaSync` target (0 errors so far). Let me wait for it to complete.
+
+Baseline is emitting the `TeslaSync` module (arm64), 0 errors — the pre-existing tree compiles clean so far. Let me wait for completion.
+
+The baseline build (without my files) is **already RED with 7 pre-existing failures** — confirming the sibling logs' note. Let me extract the exact pre-existing errors to document them as out-of-scope.
+
+Pre-existing failures are isolated to `TeslaSync/shared-surfaces/Input.Previews.swift` (lines 88, 101) — an out-of-scope file recently merged (commit `P-0217-Input`). Let me view it, then regenerate the project to include my files.
+
+The project now includes my files (30 pbxproj refs). The pre-existing error is `return` inside a `#Preview` ViewBuilder in the out-of-scope `Input.Previews.swift`. To get a definitive green build proving my files compile, I'll **temporarily** neutralize those 2 lines (then revert — never committed), build, test, and restore.
+
+Now let me run the full build with my files (and the temporary fix) to verify my code compiles cleanly.
+
+The verify build is running (incremental). Meanwhile, let me run the **real** placeholder gate now that pwsh is installed, against the reconciled path.
+
+Real placeholder gate passes (PLACEHOLDER_COUNT=0, EXIT=0). Let me run swiftlint --strict on the full admin dir (reconciled gate path) while the build runs.
+
+Swiftlint --strict passes with **0 violations across all 5701 files** (project-wide). Let me check the verify build.
+
+Good signs: 0 errors, and `CompileXCStrings` processed my updated catalog successfully. Let me wait for the build to finish.
+
+Build is recompiling the full `TeslaSync` target (0 errors so far) since the module changed. Let me wait for completion.
+
+More pre-existing bugs surfaced in the same out-of-scope file (`Input.Previews.swift` has wrong argument order too — a thoroughly broken previews file from the `P-0217-Input` merge). All errors remain in that one file; **none in my GDPR files**. Let me view the whole file to neutralize it cleanly for verification.
+
+Root cause: the out-of-scope `Input.Previews.swift` has wrong argument order in two `InputField` calls (the `return` errors were masking them). All errors are confined to that one file — none in my GDPR files. For a clean verification build, I'll temporarily neutralize the whole DEBUG-only previews file (no other file references it), build + test, then restore from backup.
+
+Now let me run build + my scoped tests together. First, confirm my test file is in the project, then run.
+
+My test file is wired into `TeslaSyncTests` and the scheme. Let me run build + my scoped test suite together.
+
+Tests are building/running in the background. Let me gather file LOC counts for the evidence log while it runs.
+
+My source files total 877 LOC (+253 test), well-decomposed. `Input.Previews.swift` shows modified — I'll revert it before commit. Let me monitor the test run.
+
+App target compiling clean (0 errors, emitting module). Next it builds the test target and runs my tests. Let me wait.
+
+App target compiled clean; now linking extensions and the test bundle. Let me wait for test execution results.
+
+Still building (the `TeslaSyncTests` target compiles the full unit-test tree). 0 errors. Let me wait.
+
+My GDPR files are compiling in the batch with **0 errors**. The test action is rebuilding both arch slices + the full test target (slow). Let me wait for test execution.
+
+The test action failed on a **pre-existing, out-of-scope test-target error** (`RecentActivity.Tests.swift:103` — a duplicate class declaration from a parallel merge), not anything in my code. Let me confirm that's the only test error, then run a standalone model harness (the sibling's verification protocol).
+
+Confirmed: the only test error is pre-existing/out-of-scope (`RecentActivity.Tests.swift` duplicate); **zero errors in any GDPR file**. Now let me run a standalone harness executing my test assertions against the real model code (the sibling's protocol).
+
+Now let me compile and run the harness against the real model code.
+
+The model compiled cleanly under Swift 6 — the only errors are my harness's own globals. Let me make them `@MainActor` and recompile.
+
+The shim just needs to be `public` to match the model's public API. Let me fix and rerun.
+
+**Harness: 71/71 assertions pass** against the real model under Swift 6 strict concurrency. Now let me revert the temporary out-of-scope neutralization and verify it's clean.
+
+All temporary changes reverted; the working tree contains exactly my in-scope changes. Let me verify every required string is actually referenced in my source (to back the PARITY evidence), then write the evidence log.
+
+All 31 strings are wired into the UI. Let me confirm the logs directory and gather host versions for the evidence log.
+
+All evidence gathered. Let me write the comprehensive evidence log.
+
+Let me verify the parity item count in the log is exactly 42, then create the commit.
+
+42 parity items confirmed (8+3+31), JSON valid, log ends correctly. Let me do a final git status check and create the commit with explicit paths.
+
+All 11 intended files staged, nothing out-of-scope, Input.Previews.swift clean. Let me create the commit.
+
+Commit `3a3340bd1` created; working tree clean. Let me verify the commit contents and clean up temp files.
+
+All 11 in-scope files committed cleanly; no out-of-scope changes; temp files cleaned. Let me finalize the tracking.
+
+All tasks complete. Let me give a final summary.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-GDPRExportPage.log       | 202 +++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 341 +++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   5 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Features/Admin/GDPRExportPage.Sections.swift   | 192 +++++++++++
+ .../Sources/Features/Admin/GDPRExportPage.swift    | 287 ++++++++++++++++
+ .../Features/Admin/GDPRExportPageModel.swift       | 369 +++++++++++++++++++++
+ .../Admin/GDPRExportRouteRegistration.swift        |  29 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   5 +-
+ .../Features/Admin/GDPRExportPageModelTests.swift  | 253 ++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 11 files changed, 1699 insertions(+), 3 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-GDPRExportPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/GDPRExportPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/GDPRExportPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/GDPRExportPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/GDPRExportRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift

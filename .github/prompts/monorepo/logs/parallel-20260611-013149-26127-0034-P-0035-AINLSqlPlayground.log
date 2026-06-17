@@ -1,0 +1,194 @@
+I'll start by exploring the repository structure to understand what exists and what's required for this task.
+
+The repo has both web source and Apple app structure. Let me read the web source, examine the Apple app structure, and check toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, pwsh). Apple app structure exists with many completed surfaces. Let me study the most recent similar surface as a template and find the shared AI infrastructure.
+
+`AINLDriveSearch` is the closest template (same primitives). `AINLSqlPlayground` adds draft-capture + "Apply to editor" logic. Let me read all the AINLDriveSearch native files to understand the full structure.
+
+Now let me read the Model, Source, and Logic files for AINLDriveSearch.
+
+Now let me read the test files and check the project.yml build configuration.
+
+Excellent. I now fully understand the template. Let me read the `useAiStream` hook to get the exact event shape, check `project.yml` build inclusion, and find the design token definitions.
+
+Let me examine the full project.yml to understand excludes and test target configuration.
+
+Now let me find the shared design token and component definitions, and check the build tooling (xcodegen, prebuilt framework).
+
+The build needs a KMP framework via Gradle. Let me check the build feasibility and read the design tokens/component signatures I'll need.
+
+All tokens confirmed. Let me read the placeholder patterns to know exactly what's forbidden, and verify the existing surfaces pass the checks (baseline).
+
+Let me read the AIFeatureCard (to understand the scaffold + children slot) and the lint configs to match style exactly.
+
+I have everything I need. The toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, pwsh), and I have a complete template in `AINLDriveSearch`. `AINLSqlPlayground` adds a captured-draft + "Apply to editor" flow. Let me set up tracking and write the plan.
+
+Now I'll write the source files. Starting with the pure Adapter (surface identity, request projection, `ReadonlySQLDraft` + parser).
+
+Now the Logic file (pure enums + decision logic + accessibility), adding the `canApply` predicate and a draft-ready a11y phrase.
+
+Now the Model file — the observable state-holder with draft capture and the `onApply` propose-only callback.
+
+Now the in-memory Source for previews/tests, with draft-pushing convenience.
+
+Now the Views file (header, badge, prompt field, action button).
+
+Now the Chrome file — output panel, error/thinking rows, the **draft card with "Apply to editor"**, and gate chrome.
+
+Now the main view composing all states (including the draft card in the ready body).
+
+Now the Previews and the .strings catalog.
+
+Now the test files. First the unit tests (adapter/parse/logic/a11y/strings).
+
+Now the ModelTests covering the model wiring, draft capture, and apply path.
+
+All 11 files created. Let me verify file lengths (swiftlint `--strict` enforces ≤400) and run the fast gates (swiftformat, swiftlint, placeholder check).
+
+All files ≤400 lines. Now run swiftformat and swiftlint on the new files.
+
+SwiftFormat flagged trailing-comma style and force-unwraps in tests. Let me view the exact spots, fix the force-unwrap manually, then let swiftformat auto-fix the comma style.
+
+Force-unwrap fixed. Now let me auto-fix the comma style with swiftformat write mode, then review what changed.
+
+Let me re-run swiftformat lint to confirm all issues are resolved.
+
+swiftformat passes. Let me verify the auto-formatted sections are semantically intact, then run swiftlint.
+
+Source formatting is intact. SwiftLint flags one issue: the ModelTests class body exceeds 250 lines. I'll split it into two test classes with shared file-scope helpers.
+
+Re-run both swiftformat and swiftlint on the new files to confirm clean.
+
+swiftformat and swiftlint both clean on the new files. Now the placeholder/stub gate:
+
+Placeholder gate passes (0 found). Now the critical step — the xcodebuild gate. First, generate the Xcode project and test whether the KMP `Shared.xcframework` Gradle build (a pre-build dependency) works in this environment.
+
+Project generated. Now test the KMP `Shared.xcframework` Gradle build (the pre-build dependency) — this is the critical-path risk. Let me check Java and run the build script.
+
+Java 17 is present. The shared core is a Kotlin Multiplatform module (also has an Android target). Let me run the `Shared.xcframework` Gradle build — this is the long pole (Kotlin/Native compilation). I'll run it in the background and monitor.
+
+The Gradle/Kotlin-Native build is compiling (first run downloads the K/N compiler + dependencies). Let me continue waiting.
+
+Still compiling (output is buffered by `tail`). Kotlin/Native first builds are slow. Let me keep waiting.
+
+`Shared.xcframework` built and staged successfully (8 min). Now let me verify the simulator and log directory, then run the iOS build+test gate.
+
+Logs dir exists and iPhone 16 is booted. Now the iOS build+test gate. This compiles the whole app + test targets (heavy). Running with a long wait.
+
+Build succeeded but 3 test failures. Let me identify which tests failed.
+
+The failure is a **compile error in a pre-existing file** (`AISignalExplorerNlFilter.swift:142`), not my code. Let me see all compile errors and inspect that file.
+
+Exactly one compile error, in a **pre-existing sibling file** (`AISignalExplorerNlFilter.swift`), zero in my files. Let me confirm it's pre-existing (not caused by me) and inspect it.
+
+Confirmed: this is a **pre-existing compile error in a committed predecessor surface** (`AISignalExplorerNlFilter.swift`, commit `441cd2538`), unmodified by me. Only my files are new. The shared module can't compile, which blocks my gate's `build test` step through no fault of my code. Let me inspect the exact error.
+
+Confirmed: line 141 is missing `@escaping` on the `content` closure passed into `TSGlassPanel` (my own surface gets this right). It's a trivial predecessor bug. Before deciding how to handle the out-of-scope file, let me check `macos-pending-verifications.md` — it likely documents the sanctioned convention for this exact situation.
+
+This doc reveals the **sanctioned convention**: each surface is verified green via host-runnable gates (swiftlint/swiftformat/placeholder + `swiftc -typecheck` of the surface + isolated tests), while the full-app `xcodebuild build test` is **deferred** to the macOS acceptance gate because it's blocked by *pre-existing, unrelated parallel-merge collisions* in other agents' surfaces. My situation matches exactly. Let me fully analyze the build log before deciding.
+
+**Decisive finding:** There is exactly **ONE** compile error in the entire iOS build+test — the predecessor `AISignalExplorerNlFilter.swift:142` (missing `@escaping`). No signing/linker/other errors; the historical collisions noted in the doc are already resolved. The "(3 failures)" are just the cascade from that one error.
+
+This one trivial bug is the sole blocker to a fully green gate. Let me prove that hypothesis: temporarily apply the obvious `@escaping` fix and re-run, to confirm my surface compiles and all my tests pass in the real app+test target.
+
+Predecessor patched (to validate my hypothesis). Re-running iOS build+test — this should compile and run all tests including mine.
+
+Fixing one revealed more — now a different predecessor file errors. Let me see all errors in this run.
+
+Two findings: (1) `RecentDrivesSection.Previews.swift:24` is a **pre-existing** predecessor type-check timeout (unrelated), and (2) **my own bug** — I named a struct `FlowChips`, which collides with an existing `FlowChips` in `FleetApiSection.Onboarding.swift`. I must rename mine (all my other types are surface-prefixed). Let me check for any other potential collisions from my type names first.
+
+Confirmed: only `FlowChips` collides (the other is `private` in `FleetApiSection.Onboarding.swift`; mine is internal, causing the conflict). `ReadonlySQLDraft` and all my prefixed types are unique. Let me fix **my** collision by surface-prefixing `FlowChips`, and look at the pre-existing `RecentDrivesSection.Previews` issue.
+
+`FlowChips` renamed to `NLSqlPlaygroundTableChipFlow`. The `RecentDrivesSection.Previews.swift` is in feature-views. Let me locate it and check remaining predecessor errors.
+
+The `RecentDrivesSection.Previews:24` error is a pre-existing compiler type-inference timeout (a `.map` closure) — unrelated to me. My `FlowChips` collision (the real own-surface bug) is fixed. 
+
+To obtain gold-standard proof that my surface compiles and its tests pass in the real targets, I'll temporarily annotate this predecessor expression (revert before commit) and rebuild. Let me view and patch it.
+
+Rebuilding iOS with the predecessor stragglers patched (temporary) and my `FlowChips` collision fixed.
+
+Only 2 errors now, both the **same systemic pre-existing bug** in another sibling (`AIGeofenceAwareAutomationSuggestions.swift:141` — identical missing-`@escaping` on its `glass` helper, which my surface gets right). Let me measure how widespread this predecessor pattern is to decide whether a full-green proof is feasible.
+
+Only 2 more siblings have this exact pre-existing `@escaping` bug. This is a small, bounded set of trivial predecessor bugs. I'll temporarily patch them to obtain a fully green build + run my tests, then revert all predecessor patches before committing. Patching both:
+
+Both patched. Rebuilding iOS — hoping for green so my tests execute.
+
+Build failed but no standard `error:` line — likely a compiler crash or timeout in that batch. Let me investigate the failure mode.
+
+The full-app build is blocked by a **series of pre-existing, unrelated predecessor problems** (systemic missing-`@escaping` in sibling `glass` helpers, a preview type-check timeout, and now an apparent compiler crash/OOM on a large `App*` batch with no diagnostic) — **zero in my files** across all builds. This precisely matches the documented macos-pending convention. Chasing a fully-green build means modifying an unbounded set of out-of-scope files, which violates scope and convention.
+
+I'll stop here: revert ALL my temporary predecessor patches (keeping only my surface + the legit `FlowChips` fix), then prove my surface via `swiftc -typecheck` on both SDKs.
+
+Only my files remain modified. Now the affirmative proof: `swiftc -typecheck` of my surface against the real design system on both SDKs. Let me map the dependency set (tokens + components my surface uses) and check for `Shared`/`SharedFacade` coupling.
+
+None of the components import `Shared`. The design system is self-contained (Tokens + Sources/Design + Sources/Components), matching the doc's typecheck approach (excluding the SharedFacade-coupled `UnitFormatters.swift`, which my surface doesn't use). Let me get the SDK paths and run a `swiftc -typecheck` of my surface against the real design system for the iOS-18 simulator SDK.
+
+Running `swiftc -typecheck` of my 8 surface source files against the real design system (Tokens + Design + Components) for the iOS-18 simulator SDK under Swift 6 strict concurrency:
+
+**iOS-18 typecheck: 0 errors** — my surface compiles cleanly against the real design system. Now the macOS-15 SDK:
+
+Both SDKs typecheck my surface cleanly (0 errors). Now I'll **actually run my test suite** via an isolated SwiftPM package (the convention's gold standard) — naming the target `TeslaSync` so `@testable import TeslaSync` works unchanged. Copying my surface + the real design system + my tests:
+
+Now run the full isolated test suite:
+
+The isolated harness caught a **real bug in my test helper** that the app build never reached (the predecessor errors blocked test compilation): `envelope(for:)` is `@MainActor`-isolated but my nonisolated file-scope helper calls it. The fix is correct design — make the pure JSON encoder `nonisolated`. Let me fix it in my Source.swift:
+
+Recopying the fixed Source.swift to the harness and re-running tests:
+
+**All 56 tests pass (0 failures)** under Swift 6 strict concurrency. The isolated harness caught and let me fix a real test-helper actor-isolation bug the blocked app build never reached.
+
+Let me re-verify the fast gates on the final files (Source.swift + Chrome.swift changed) and re-run both-SDK typechecks for clean final-state evidence.
+
+The swiftformat "error" is only because I passed the `.strings` file explicitly (it handles `.swift` only; the directory-scoped gate auto-skips it). swiftlint=0, placeholder=0. Let me confirm swiftformat on just the `.swift` files, then re-typecheck both SDKs on final files.
+
+swiftformat 0/10, both SDKs typecheck clean on final files. Now I'll capture the committed-state full-app build results (the gate's iOS + macOS `xcodebuild build test`) for the log. Running iOS first (committed state — no predecessor patches):
+
+Still building. Let me wait for completion.
+
+Committed-state iOS: **IOS_EXIT=65, ZERO AINLSqlPlayground errors** — blocked purely by pre-existing predecessors (`AIGeofenceAwareAutomationSuggestions` @escaping, `RecentDrivesSection.Previews` type-check timeout). Now the macOS build+test for `MAC_EXIT` (first macOS compile, slower):
+
+macOS: **MAC_EXIT=65, ZERO AINLSqlPlayground errors**. Let me capture the exact macOS blocking cause for the log.
+
+Both full-app builds show **ZERO AINLSqlPlayground errors**. The blockers are entirely pre-existing/environmental and match the documented macOS-pending convention exactly:
+- **iOS**: pre-existing predecessor compile errors (sibling surfaces' missing `@escaping`, a preview type-check timeout) — unrelated to my surface.
+- **macOS**: development code-signing (entitlements require a dev certificate; 0 signing identities in this env) — the documented P99-deferred blocker.
+
+I now have complete evidence. Let me write the comprehensive gate log.
+
+Log written. Let me verify the committed state is clean (only my files), confirm predecessors are fully reverted, and clean up temp artifacts.
+
+Clean: only my 11 surface files + the log are new; all predecessor patches fully reverted; generated `.xcodeproj` is gitignored. Now committing per the prompt's commit spec:
+
+All 12 files staged. Committing with the conventional message and Co-authored-by trailer:
+
+Commit `43828998a` succeeded (12 files, 2453 insertions). Let me do a final clean-state verification.
+
+Everything is clean and committed. Let me finalize tracking.
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0035-AINLSqlPlayground.log | 129 ++++++++
+ .../AINLSqlPlayground.Adapter.swift                | 129 ++++++++
+ .../shared-surfaces/AINLSqlPlayground.Chrome.swift | 324 ++++++++++++++++++++
+ .../shared-surfaces/AINLSqlPlayground.Logic.swift  | 189 ++++++++++++
+ .../shared-surfaces/AINLSqlPlayground.Model.swift  | 307 +++++++++++++++++++
+ .../AINLSqlPlayground.ModelTests.swift             | 328 +++++++++++++++++++++
+ .../AINLSqlPlayground.Previews.swift               | 128 ++++++++
+ .../shared-surfaces/AINLSqlPlayground.Source.swift | 132 +++++++++
+ .../shared-surfaces/AINLSqlPlayground.Tests.swift  | 304 +++++++++++++++++++
+ .../shared-surfaces/AINLSqlPlayground.Views.swift  | 212 +++++++++++++
+ .../shared-surfaces/AINLSqlPlayground.strings      |  52 ++++
+ .../shared-surfaces/AINLSqlPlayground.swift        | 219 ++++++++++++++
+ 12 files changed, 2453 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0035-AINLSqlPlayground.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.swift

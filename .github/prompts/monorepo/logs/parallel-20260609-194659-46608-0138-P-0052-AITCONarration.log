@@ -1,0 +1,147 @@
+I'll start by exploring the repository structure to understand what exists and what's needed for this task.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the existing Apple app structure.
+
+There's already a substantial set of implemented shared-surfaces. I must follow existing conventions exactly. Let me find a close analog — another `useAiStream` + `AIFeatureCard` + `withAiFeature` surface — and check whether AITCONarration already exists.
+
+`AICostForecastNarration` is a near-perfect analog (also a `useAiStream` narration surface). I'll study it as my template. Let me read the web source for both and the full Swift file set.
+
+Excellent — this is a high-quality, well-structured codebase. The TCO surface differs from the Cost analog in a few ways: no `months` param (simpler body `{ vehicle_id }`), and it DOES pass an `emptyHint` (`noVehicleHint`). Let me read the rest of the template files and find how `emptyHint` is rendered natively.
+
+Let me read the remaining template files (Previews, strings, both test files) and check how the project includes these files.
+
+Now I understand the full template structure. Let me verify the toolchain specifics: xcodegen availability, design tokens, the placeholder checker, and the Shared.xcframework build situation (a potential blocker).
+
+xcodegen is available but `Shared.xcframework` is missing (only `.gitkeep`). The build depends on a KMP framework — let me check the build script and whether it can run here, plus confirm the design tokens.
+
+The build needs a KMP `Shared.xcframework` via Gradle (potential blocker). Let me kick off that build in the background to assess feasibility, while I read the exact token/component APIs my code must use.
+
+Let me confirm the `TSSkeleton` and `TSFadeIn` APIs, then check the KMP build progress.
+
+All APIs confirmed: `TSSkeleton(width:height:cornerRadius:)`, `TSFadeIn { }`. The KMP build is still running (Kotlin/Native is slow on first run) — I'll let it continue. Let me check for naming collisions and how other surfaces render a header-level `emptyHint` (the TCO surface needs it, unlike Cost).
+
+No collision. Let me check which web surfaces pass `emptyHint` and how their native counterparts render that header-level hint, so I match the established convention.
+
+`AIPredictiveMaintenance` passes `emptyHint` and has a native version. Let me see how it models and renders that header-level hint to follow the convention.
+
+`AIMqttSseInspectorExplanations` is the one emptyHint-using surface with a native impl. Let me see exactly how it reproduces the header `emptyHint`.
+
+This is the exact convention I need — a header-region hint (`windowHint`) beneath the description PLUS a separate output-panel empty hint. Let me read the precise implementation across its Model, Projection, and Views.
+
+I now have the complete convention. Let me check the KMP build progress, then write the plan and begin creating files.
+
+KMP build still running (downloading toolchain). I'll proceed with writing code while it builds. Let me set up the plan and todos.
+
+Setting todos in progress and writing the Adapter (dependency-free core) — the TCO variant has a simpler body (`vehicle_id` only, no `months`).
+
+Adapter done. Now the Model (state-holder seam, types, model, source) — TCO variant drops `months` and adds the header `noVehicleHint` field to the Ready struct.
+
+Model done. Let me verify lint config constraints and KMP build status before writing the Projection (which has the long verbatim description).
+
+Lint limits: 120-char lines (strict), comments/URLs ignored. I'll break the long description into ≤120-char concatenated chunks like the Cost/MqttSse projections. The KMP build is still running (first-run toolchain download). Writing the Projection:
+
+The KMP build completed. Let me check its result — this determines whether the full gate is feasible.
+
+KMP `Shared.xcframework` built successfully (`GRADLE_EXIT=0`) — the full `xcodebuild build test` gate is feasible. Now continuing with Chrome, Views, the main view, Previews, strings, and tests.
+
+Now the Views — including the header `noVehicleHint` rendered beneath the description (the MqttSse `windowHint` pattern):
+
+Now the main view and Previews:
+
+Now the i18n strings catalog and the adapter tests:
+
+Now the final file — the projection/model/accessibility tests, including coverage for the header `noVehicleHint` field:
+
+All 10 files written. Now verification. Let me auto-format my new Swift files with swiftformat, then lint them — catching issues before the slow full build.
+
+swiftformat fixed 1 file. Let me confirm lint-clean with both tools on the new files.
+
+Both clean: swiftformat `0/9 require formatting`, swiftlint `0 violations`. Now the placeholder check. Let me understand the script's `-Path` semantics, then run it.
+
+The gate's `-Path .../AITCONarration` (no extension) isn't a real path — the script would scan nothing. I'll run it exactly as specified (for the official log) AND do a genuine scan of my actual files via a temp dir, for honest verification.
+
+Both placeholder checks pass (`COUNT=0`). Now the main gate. Let me generate the Xcode project and check the available simulator destination.
+
+Project generated; `iPhone 16` simulator is available. Now running the iOS build+test gate (this includes the cached KMP pre-build step and compiling the full app + test bundles — several minutes). Starting it in the background with logging.
+
+The iOS build+test is running (compiles the full app + test bundles). While it runs, let me review my code once more for strict-concurrency and type issues by checking the build progresses. Let me wait and poll.
+
+Build compiled successfully (reached the testing phase), but 4 tests failed. Let me identify exactly which tests failed.
+
+These errors are all in `RecentDrives*` and `StateTimeline*` files (dashboard-widgets & feature-views) — types I never touched. My surface only defines `TCONarration*`/`AITCONarration`. These look like pre-existing duplicate-type ("ambiguous") errors. Let me confirm they're pre-existing and unrelated to my change.
+
+Confirmed: `RecentDrivesConnection`, `RecentDrivesModel`, `StateTimelineConnection`, etc. are each defined **twice** (in `dashboard-widgets` AND `feature-views`) — pre-existing duplicate public types. Git status confirms I added only `AITCONarration.*` files. Let me understand exactly what failed (app target vs test target) and the failure summary.
+
+This is conclusive: **216 pre-existing errors, all in `RecentDrives*`/`StateTimeline*` sibling surfaces (duplicate public types defined in both `dashboard-widgets/` and `feature-views/`), zero from my surface.** The app target is red at baseline — `git status` confirms I added only `AITCONarration.*` files.
+
+Let me check whether those colliding surfaces are referenced elsewhere (to plan an authoritative isolation build that proves my surface compiles + my tests pass).
+
+The colliding families are self-contained (no external refs), and the design system doesn't import the KMP `Shared` framework. I'll verify my surface authoritatively via an isolated `swiftc` typecheck against the real design system. Let me confirm the design-system layer is `Shared`-free and locate `TSCard`.
+
+Key facts established: the 216 errors are pre-existing duplicate public types in self-contained sibling families (`RecentDrives*`, `StateTimeline*`), and the design system is `Shared`-free. I'll (a) run the macOS gate for the record in the background, and meanwhile (b) authoritatively verify my surface via isolated `swiftc` typecheck against the real design system, plus a runtime check of the parity logic.
+
+Now the isolated typecheck of my surface against the real design system. Let me locate the minimal real component deps and run `swiftc -typecheck` under the actual iOS SDK with Swift 6 + strict concurrency.
+
+Those errors are in `Cards.swift`'s own `#Preview` (referencing `TSBadge`/`TSText` I didn't include) — not my files. The dependency cascade means I should include the whole (Shared-free) Components dir. Let me read the macOS result and run the typecheck against all of Components.
+
+macOS gate recorded: `MAC_EXIT=65` (same pre-existing cause). The Components dir has its own external deps (`TSChartPalette` in Maps), so including all of it cascades. Let me typecheck my **production** files against just the real components they need, without DEBUG previews (avoids unrelated preview cascades).
+
+Cards cascades further (`tsGlassPanel`, `TSPanelTitle`, `TSCaption`) — the design system is a tightly-linked web with at least one dep outside Components. I'll use the **real Tokens** (self-contained) plus tiny shims for the 3 components my surface uses (signatures verified from the real files), with DEBUG so my Previews compile too. First, let me confirm exactly which token members my files reference.
+
+All referenced token members exist in the real Tokens. Now let me create signature-faithful shims for the 3 components and typecheck my full surface (incl. Previews) under Swift 6 + strict concurrency.
+
+My full surface type-checks cleanly under Swift 6 + strict concurrency (`SURFACE_TYPECHECK_EXIT=0`). Now let me prove the parity **behavior** at runtime: compile the pure core (Adapter + Projection + Model) into a standalone program that runs assertions mirroring my XCTests.
+
+Harness-only issue (top-level `var` is MainActor-isolated under Swift 6 mode) — not a surface problem. The surface already passed Swift 6 strict-concurrency typecheck. Let me run the behavior check in default mode (identical logic).
+
+Parity behavior verified: **`ALL_PARITY_ASSERTS_PASSED`** (request body, SSE parse, reducer, output, action, projection canStart/noVehicleHint/strings, phases, a11y). Now let me prove the test files themselves type-check against my types (XCTest, in-module).
+
+Test files: all my API references resolve — only the XCTest C-macros (`XCTAssertEqual`) are unavailable under raw `swiftc` (a known tooling artifact, not a code defect). The same assertions already pass in my standalone runtime check.
+
+I now have strong evidence my surface is correct. To make the blocker determination airtight, let me attempt the cleanest proof: temporarily remove the pre-existing colliding sibling families and confirm the whole scheme builds green and my tests run. First, locate all definitions and any external references.
+
+Definitions are cleanly split across `dashboard-widgets` vs `feature-views`, with no external references — but a deeper move-build risks cascading into a third `RecentDrivesWidget` set, and even a green isolation build wouldn't make the *official* whole-scheme gate green. I have sufficient authoritative evidence. Let me run the remaining gate steps (full-scope lint/format, as specified) and record their real exits.
+
+Full-scope lint and format both pass: **`LINT_EXIT=0`** (0 violations / 3521 files), **`FORMAT_EXIT=0`** (0/3751 need formatting). Let me confirm the shell settled, then write the comprehensive log summary.
+
+Let me append a complete, honest summary section to the gate log.
+
+The log is complete and honest. Now let me verify the working-tree state before committing — ensuring the generated `.xcodeproj` and KMP build artifacts are git-ignored, so I commit only my surface + log.
+
+Git is scanning the large KMP build dir. Let me check ignore status with targeted, fast commands.
+
+All generated artifacts are git-ignored. Let me stage exactly my surface files + the log, confirm what's staged, and commit.
+
+Exactly the 10 surface files + log are staged (no generated artifacts). Committing with the prescribed message:
+
+Committed (`c67c6ce33`). Let me update tracking and finalize.
+
+Done. Here's the honest outcome.
+
+## Summary
+
+I shipped the native Apple **`AITCONarration`** shared surface — a production-grade SwiftUI parity of `web/src/components/ai/AITCONarration.tsx` — as 10 files in `apps/apple/TeslaSync/shared-surfaces/`, committed in `c67c6ce33`.
+
+**What was built** (following the established `AICostForecastNarration` + `AIMqttSseInspectorExplanations` conventions):
+- Surface view + state-holder model, pure adapter (request/SSE/reducer/derivations), projection, P4 chrome (freshness chip, stale/offline banner, loading skeleton, gate-error), subviews, DEBUG previews, `.strings` catalog, and two test files.
+- TCO-specific deltas vs. the Cost analog: body is **`{ vehicle_id }` only** (no `months`), and the web `emptyHint` ("Pick a vehicle above to enable Helix.") is reproduced as a header hint shown only when `!canStart`.
+- All states render (gated/loading/error/ready · idle/no-vehicle/thinking/prose/stream-error/stale/offline); i18n via the facade (no English literals in code); VoiceOver labels, Dynamic Type, reduce-motion; `view.opened` telemetry deferred past the gate.
+
+**Verification (all green for this surface):**
+- `swiftlint --strict`: **0 violations** (3521 files) · `swiftformat --lint`: **0** reformat
+- `check-placeholders.ps1`: **0**
+- Isolated `swiftc -typecheck` of all 7 source files under **Swift 6 + `-strict-concurrency=complete`**: **0 errors**
+- Standalone runtime of the adapter+projection core: **`ALL_PARITY_ASSERTS_PASSED`**
+- KMP `Shared.xcframework` built; `xcodegen` generated the project; in the full build my 10 files produced **0 compile errors**.
+
+## ⚠️ Gate status: BLOCKED (honest)
+The official whole-scheme gate is **red**: `IOS_EXIT=65`, `MAC_EXIT=65`. The app target fails with **216 pre-existing "ambiguous type lookup" errors** — duplicate **public** types (`RecentDrivesModel/Connection/LoadStatus/Update`, `StateTimelineModel/Connection/LoadStatus/Update`) defined twice across **sibling** surfaces (`dashboard-widgets/` vs `feature-views/`). **Zero** errors reference my surface, and the baseline at HEAD already fails the same way.
+
+Those files are **outside this prompt's allowed scope** (`AITCONarration.*` + the log only), so I could not fix them. Resolving the duplication is a P4 cross-surface integration task. I did **not** mark this green (`STATUS=BLOCKED`, `EXIT=1` in the log) to avoid reporting red-as-green; `LINT_EXIT`/`FORMAT_EXIT`/`PLACEHOLDER_EXIT` are all 0.
+
+
+
+The reminder flags a stray in-progress todo. Let me reconcile tracking, then finalize.
+
+All 10 surface files committed and tracked; working tree clean; all todos done. I've completed the surface to the fullest extent possible within the allowed scope and am blocked only by a pre-existing, out-of-scope build issue.
+

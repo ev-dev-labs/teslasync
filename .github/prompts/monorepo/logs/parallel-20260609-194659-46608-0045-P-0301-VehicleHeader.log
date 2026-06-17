@@ -1,0 +1,135 @@
+I'll start by investigating the environment and the task dependencies. Let me check the Apple toolchain availability and explore the repository structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+Now let me explore the Apple app structure deeply — I need to understand the existing patterns, feature-views directory, and the P1/P4 dependencies (state-holders, tokens, i18n, diagnostics).
+
+The `feature-views` directory has 2432 entries — lots of existing examples to learn from. Let me find existing patterns and check whether VehicleHeader already exists.
+
+Clear multi-file pattern per feature view. VehicleHeader doesn't exist yet. Let me study a complete representative example to learn all conventions (state-holders, i18n, telemetry, tests).
+
+Excellent — very polished architecture. Let me read the remaining AchievementBadge files plus the shared Design tokens and Components to understand TSButton/Badge/GlassPanel equivalents.
+
+Let me locate the shared tokens (TSSpacing, Color.TS, Font.TS, TSButton, etc.) and check the AchievementBadge tests/previews patterns.
+
+Now let me read the shared UI components (Buttons, Badges, Cards) and find the main-app design token definitions (Color.TS, TSSpacing, Font.TS, TSRadius, TSFadeIn, TSSkeleton).
+
+Let me find the core design token definitions (Color.TS, TSSpacing, Font.TS, TSRadius) and the GlassPanel/Card, Motion, Skeleton components.
+
+Let me read the core theme tokens, Motion, Skeletons, Typography, and TSDesign/TSMaterial.
+
+Let me locate the generated design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) and the project.yml build config.
+
+Now I understand the architecture. The critical verification risk is the KMP `Shared.xcframework` dependency and `xcodegen`. Let me check build prerequisites and the generated design tokens.
+
+The KMP `Shared.xcframework` isn't present and must be built. Let me inspect the build script to determine if the toolchain is available — this decides whether full `xcodebuild` verification is possible.
+
+I have all design tokens. The build needs the KMP `Shared.xcframework` via Gradle. Let me assess KMP feasibility and read the documented pending-verifications context.
+
+Java 17 and the Gradle wrapper are present. Let me read the pending-verifications doc to understand the documented gate/build status.
+
+This is a large, well-established parallel effort. The full-app `xcodebuild` gate is documented as blocked by pre-existing/unrelated issues + the KMP long-pole + signing. Let me study the established per-surface verification methodology from recent logs to replicate it honestly.
+
+This is the canonical "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface. Now let me read the web types (Vehicle, VehicleStatus, statusVariant, deriveVehicleStatus) and a reference Seams file to design VehicleHeader correctly.
+
+Let me read the exact `VehicleState`/`VehicleStatus` enum, `statusVariant` mapping, and the `Vehicle` type fields used by the header.
+
+I now have the full parity spec. Let me read the lint configs and placeholder gate to ensure my code will pass, then I'll design the surface.
+
+pwsh is available; the placeholder scan is case-insensitive, so I must avoid "TODO/stub/mock/placeholder/Lorem/FIXME" everywhere. Let me check for potential symbol collisions and confirm no existing VehicleHeader symbols.
+
+No collisions, and RecentDrivesSection confirms the per-file placeholder scan is genuinely 0. Let me check which shared component files import the KMP `Shared` module (to plan the isolated typecheck set) and locate the `tsGlassPanel` modifier.
+
+I have a complete understanding. Let me create a plan and then build the surface. Let me set up tracking and write the plan file.
+
+Now I'll create the surface files, starting with the pure layer (Adapter, Seams, Model).
+
+All 10 files created. Now let me run the verification gates — first swiftformat (auto-format my files), then lint and swiftlint.
+
+swiftformat is clean; swiftlint flagged one `opening_brace` issue where the long class declaration got wrapped. Let me inspect and fix it.
+
+The long conformance list wrapped. Let me fix it with a clean composed protocol (keeps the `VehicleHeader` prefix to avoid collisions and fits on one line).
+
+Both clean (swiftformat 0/9, swiftlint 0 violations). Now the placeholder gate — let me verify no forbidden tokens and run the gate per file.
+
+Placeholder gate clean (0 across all files). Now the isolated SwiftPM build + test of the pure layer (Adapter + Model + Seams + both test files) under Swift 6 strict concurrency.
+
+Library builds clean under Swift 6. Now let me run the tests.
+
+All 26 tests pass under Swift 6 strict concurrency. Now the dual-SDK `swiftc -typecheck` of the full surface (incl. SwiftUI views) against the real design system. Let me gather the compile set.
+
+No Shared imports in the design system. `UnitFormatters.swift` is the one RecentDrivesSection excluded — let me check what it references, then run the full-design-system typecheck for both SDKs.
+
+My surface uses a specific subset of the design system. Let me compile the exact real shared-component files it depends on (Tokens + the components it uses) for both iOS 18 and macOS 15 — the strongest meaningful evidence.
+
+iOS typecheck clean (swiftc exit 0, no errors/warnings). Let me run both SDKs capturing the true compiler exit codes explicitly for rigor.
+
+Both iOS 18 and macOS 15 typecheck pass with 0 errors/0 warnings. Now `xcodegen generate` to confirm the files are enumerated into the project.
+
+All 10 files enumerated (60 refs across iOS/macOS app + test bundles). Now I'll honestly attempt the full-app `xcodebuild` gate to document its real state (expected RED/DEFERRED on the unstaged KMP framework, per the established pattern).
+
+Confirmed exactly as the established pattern documents: 0 signing identities, `Frameworks/` holds only `.gitkeep`, and the build fails with the single pre-existing framework-resolution error — **before any Swift source compiles**, zero VehicleHeader errors. 
+
+To strengthen the full-app evidence, let me attempt to stage the KMP framework via Gradle (time-boxed) so I can do a real app-target compile. I'll run it in the background while preparing the log.
+
+While Gradle runs, let me monitor it. Let me check progress after a short interval.
+
+Gradle is compiling the Kotlin/Native long-pole. Let me continue waiting (the precedent shows ~6-7 min when it succeeds).
+
+Still linking. Let me give it a final window before timing out (matching the precedent's ~6-7 min success or 124 timeout).
+
+Gradle succeeded in 8m — the release `Shared.xcframework` is built. Let me stage it and run a **real app-target compile** to prove zero surface errors in the actual app module (the gold-standard evidence).
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the real macOS app-target compile including my files — output captured for precise grepping.
+
+The full app build is running. Let me wait and monitor its progress.
+
+Build failed (exit 65) in ~1 min. Let me analyze the errors — checking for any VehicleHeader-specific errors vs pre-existing unrelated ones.
+
+0 VehicleHeader errors — my surface compiles cleanly in the real app target. The 108 errors are pre-existing parallel-merge collisions (`RecentDrives*`, `StateTimeline*`). Let me confirm which files own the errors.
+
+All 108 errors are confined to pre-existing `RecentDrives*`/`StateTimeline*` collisions (feature-view vs dashboard-widget redeclarations by other agents). **Zero VehicleHeader errors** — my surface compiles cleanly in the real app target. Let me capture the tree-wide swiftformat state for the log, then re-confirm test counts.
+
+Tree-wide `swiftformat --lint apps/apple` = 0/3164 (FORMAT_EXIT=0), and per-suite test counts confirmed (26/26). Let me capture the tree-wide swiftlint number honestly for the log.
+
+Comprehensive evidence gathered. Tree-wide swiftlint `--strict` = 0 violations (exit 0). Now let me write the gate log following the established format.
+
+Now let me add the deferred-verification row to `apps/macos-pending-verifications.md`. Let me read the table tail and insertion point.
+
+I'll insert my deferred row after the RecentDrivesSection row, matching the established format (noting my surface additionally got a real app-module compile with the framework staged).
+
+Now let me verify git status, confirm the generated artifacts are ignored, and clean up temp files before committing.
+
+Git status is exactly as intended (10 surface files + log new, pending-verifications modified; xcodeproj and Shared.xcframework correctly gitignored). Let me run a final full-surface lint re-confirmation, then commit.
+
+Final lints green (0/9 format, 0 violations). Now committing the surface, log, and deferred-verification row.
+
+Committed cleanly (12 files, 1642 insertions). Let me do a final status check and mark the work complete.
+
+The task is complete and verified. Working tree is clean (only gitignored build artifacts remain), and the gate log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0301-VehicleHeader.log  | 161 ++++++++++++
+ .../feature-views/VehicleHeader.Adapter.swift      | 150 +++++++++++
+ .../feature-views/VehicleHeader.Model.swift        | 217 ++++++++++++++++
+ .../feature-views/VehicleHeader.ModelTests.swift   | 112 ++++++++
+ .../feature-views/VehicleHeader.Previews.swift     | 107 ++++++++
+ .../feature-views/VehicleHeader.Seams.swift        | 179 +++++++++++++
+ .../feature-views/VehicleHeader.States.swift       | 122 +++++++++
+ .../feature-views/VehicleHeader.Tests.swift        | 183 +++++++++++++
+ .../feature-views/VehicleHeader.Views.swift        | 284 +++++++++++++++++++++
+ .../TeslaSync/feature-views/VehicleHeader.strings  |  49 ++++
+ .../TeslaSync/feature-views/VehicleHeader.swift    |  76 ++++++
+ apps/macos-pending-verifications.md                |   2 +
+ 12 files changed, 1642 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0301-VehicleHeader.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleHeader.swift

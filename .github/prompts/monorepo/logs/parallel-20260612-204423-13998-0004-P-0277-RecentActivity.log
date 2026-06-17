@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure and understanding what exists, plus checking the Apple toolchain capability.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple project structure.
+
+Now let me explore the existing `feature-views` directory and understand the established patterns from sibling surfaces.
+
+There's an established pattern (~650 surfaces × 4 files each). Let me check if RecentActivity already exists and find a reference surface that uses the same shared components.
+
+`RecentActivity.*` already exists with 11 files. I need to verify whether it's complete and at parity, or stubbed/broken. Let me read all existing files.
+
+I found a critical discrepancy. The existing `RecentActivity.*` files reference `features/dashboard/components/RecentActivity.tsx` (prompt **0130**, a 3-panel dashboard surface), but THIS prompt is **0277** with web source `features/vehicles/components/RecentActivity.tsx` (a 2-panel drives/charges surface). Let me investigate this collision before doing anything.
+
+Both web sources exist (dashboard=0130, vehicles=0277), and the current native files implement the **dashboard** version. This prompt (0277) needs the **vehicles** version but the filename slot is occupied. Let me check the parity registry and how collisions are intended to be resolved.
+
+Confirmed: two distinct prompts (0130=dashboard done, 0277=vehicles=this task, no log yet) both targeting `RecentActivity.*`. Let me examine the parity manifest entries to see how they're registered and whether distinct native paths/types are expected.
+
+Let me confirm 0130's status, read the 0277 prompt fully, and verify both web components are actually used (so both native surfaces are genuinely needed).
+
+0130 (dashboard) is DONE and locked. This prompt (0277) is the **vehicles** surface — a genuinely different component. I must add it without destroying 0130. First, let me understand the build system: how sources are included and whether the project builds.
+
+Now I understand the build system (XcodeGen, feature-views globbed into app + test targets, Swift 6 strict concurrency, a Shared.xcframework preAction). Key facts:
+- **0130 (dashboard) is DONE and locked** — I must not break it.
+- **0277 (this task) = the vehicles 2-panel surface** — genuinely different.
+
+Both target `RecentActivity.*`. To avoid destroying 0130 and Swift symbol collisions, I'll add the vehicles surface as `RecentActivity.Vehicles.*` files (matches the allowed glob) with distinct symbols. Let me check the build prerequisites (Shared.xcframework) and the shared facade conventions.
+
+Critical: `Shared.xcframework` doesn't exist — it's built by a Gradle/KMP preAction. Let me check how 0130 actually passed its gate (full log) and read the pending-verifications doc to understand the established verification posture.
+
+Now I understand the established methodology. Key insight: 0130's log shows the build runner had **only Command Line Tools (no Xcode.app)**, so it DEFERRED xcodebuild and instead proved correctness via real `swiftc -typecheck` + executed adapter/model drivers + lint/format/placeholder gates — a **user-approved** disposition. My runner has full Xcode 26.5, so I can do more. Let me read the rest of the log and the reference implementation to mirror conventions exactly.
+
+I now fully understand the 0130 methodology (it's the user-approved reference) and conventions. The vehicles surface is genuinely different (2 panels: drives + charges). Let me study the exact web formatting/component behavior I must reproduce, plus the shared facade primitives I'll bind to.
+
+I have the exact web data shapes and formatting. Now let me read the shared facade (P1/S8), design tokens (P1/S9), and the dashboard reference Views/States/Adapter/Previews/Tests so I can mirror the established Swift conventions precisely.
+
+`Units+Facade` imports the KMP `Shared` framework — so (like 0130) I'll keep my projection pure Foundation by carrying conversion divisors as plain Doubles. Let me read the dashboard reference (Views/States/Adapter/Previews/Tests) and the key shared components/tokens to mirror exact APIs.
+
+Excellent reference material. Let me read the Adapter (pure projection), Previews, Tests, ModelTests, and confirm the token/component signatures (TSSpacing, Color.TS, Font.TS, TSFadeIn, TSSkeleton).
+
+I have the full projection/model/test conventions. Let me confirm the exact token and shared-component signatures (so my code compiles against real APIs) and the lint/format rules I must satisfy.
+
+Let me read the lint/format configs, the adapter Tests, Previews reference, and the placeholder checker so I match all gates precisely.
+
+I have all conventions confirmed (tokens, components, lint rules: line ≤120, type names ≤50, `--strict`). Let me check the placeholder patterns and `pwsh` availability, then start building.
+
+I have everything needed. Let me verify no symbol collisions exist for my planned `VehicleRecentActivity*` names, probe the runner's simulator/KMP capability, and write the plan.
+
+My runner is fully capable: no symbol collisions, iOS simulators present (including **iPhone 16**, the gate's target), Java 17 + gradlew for the KMP framework, full Xcode. Unlike 0130's CLT-only runner, I can attempt the **real** xcodebuild gate. Let me kick off the slow KMP `Shared.xcframework` build in the background now while I implement.
+
+Runner is fully capable. KMP build running in background. Let me set up todos and start implementing the surface files (mirroring 0130's proven conventions with distinct `VehicleRecentActivity*` symbols).
+
+Now writing the files. Starting with the value types.
+
+Let me check the KMP build progress, then write the strings catalog and previews.
+
+KMP build still compiling (first-run gradle). Writing the strings catalog and remaining files meanwhile.
+
+KMP build finished. Let me confirm it staged the framework, then write the two test files.
+
+KMP `Shared.xcframework` built and staged (ios-arm64, ios-arm64-simulator, macos-arm64) — the full xcodebuild gate is feasible. Now the two test files.
+
+Let me fix an `XCTUnwrap` double-optional mistake in the tests.
+
+All 10 files written. Now running the verification gates. First, swiftformat (auto-format) and line-count check on my files.
+
+Line counts all well under 400. swiftformat normalized 3 files. Let me verify format is now clean and run swiftlint --strict on my files.
+
+swiftformat clean (0 need formatting) and **swiftlint --strict: 0 violations in 9 files**. Let me confirm all 9 on format explicitly and run the placeholder gate (meaningful scan + negative control, like 0130).
+
+Format clean (0/9), placeholder gate green (COUNT=0; control COUNT=1 proves scanner live). Now the executed adapter driver — compile Types+Adapter with golden-vector assertions and run (fast proof the projection logic is correct), mirroring 0130's methodology.
+
+The compile errors are all in the test *harness* (Swift 6 top-level MainActor isolation), not my Types/Adapter (which compiled clean). Let me restructure the driver to run inside a `@MainActor` function.
+
+Adapter driver: **COMPILE_EXIT=0, ALL_ADAPTER_CHECKS_PASS, RUN_EXIT=0** — projection logic is web-parity correct. Now the gold-standard real gate: generate the Xcode project and attempt the full build+test. Let me generate first.
+
+Project generated (GEN_EXIT=0), schemes present. Now kicking off the real iOS build (whole app, incl. my views) targeting **iPhone 16** in the background — this is large, so I'll monitor it.
+
+Build running. Let me monitor its progress (the gradle preAction runs first, then the Swift compile).
+
+Good signs: the KMP framework linked (cached), my `RecentActivity.Vehicles.strings` is bundled and validated, and it's now in the Swift module-emit phase with no errors. Let me continue monitoring the full build.
+
+Still compiling the whole module (no errors yet). This is the large whole-app compile. Let me wait longer.
+
+Build failed (exit 65, 2 failures) — but the failing batch is **other surfaces** (`AnomalyInlineRow`, `ApiPlaygroundPage`, `AppearanceSettings.*`), not my files. Let me extract the actual compiler errors and confirm whether any are mine.
+
+A **compiler crash** (not a code diagnostic) occurred. Let me examine the crash backtrace to see what triggered it and whether it involves my files.
+
+The compiler **crashed** while compiling a batch of unrelated surfaces (`AnomalyInlineRow`, `ApiPlayground*`, `AppearanceSettings.*`) — none mine. Let me read the stack dump to characterize it.
+
+The crash is a **swiftc IRGen compiler crash** during IR generation of `AppearanceSettings.Controls.swift` (plus a batch with `AnomalyInlineRow`/`ApiPlayground`) — all **pre-existing sibling surfaces I don't own and can't touch**. None of my `RecentActivity.Vehicles.*` files are implicated. This mirrors 0130's situation (whole-app harness blocked by factors outside the surface).
+
+Let me prove MY code is green in the real toolchain: a full type-check of my view set against the real shared chain, then an executed model driver.
+
+The errors are in the shared `Cards.swift` (missing `Typography.swift`), not my code. Let me add the missing shared chain files (Typography, Badges, Buttons) and re-run.
+
+**VIEWSET_TYPECHECK_EXIT=0** — my full view set (views + @Observable model) compiles clean under Swift 6 strict concurrency against the real shared chain. Now the executed model driver (real SwiftUI linked) to prove the state-holder runtime behavior.
+
+**ALL_MODEL_CHECKS_PASS, RUN_EXIT=0** — the @Observable model (telemetry-once, stale auto-refresh, offline, locale, phase matrix, a11y) runs correctly with real SwiftUI linked. My surface is fully proven green.
+
+Now I'll prove the whole-app compiler crash is **pre-existing and independent of my change**: rebuild with my files temporarily removed. Kicking that off in the background.
+
+My files moved aside, project regenerated. Now building WITHOUT my files to confirm the crash reproduces — background.
+
+Reproduction build running. Let me run the i18n key-coverage check (used-in-code vs defined-in-catalog) while it builds.
+
+Let me confirm the key sets match exactly (no orphans, no undefined) and that the 5 web-source parity keys are present.
+
+i18n coverage is exact: 22 used = 22 defined, 1:1, zero orphans/undefined, all 5 web-source parity keys present. Let me check the reproduction build progress.
+
+i18n coverage exact (22=22, all parity keys present). The reproduction build is in the heavy module-emit phase. Let me wait for it to reach the compile/IRGen stage where the crash occurs.
+
+Reproduction still in whole-module emit (the crash occurs later, in the per-file IRGen compile jobs). Let me keep waiting.
+
+The reproduction build finished. Let me check its result — did it crash on the same external files?
+
+**Definitive proof**: WITHOUT my files, the build crashes identically (exit 65) — same swiftc IRGen crash on `AppearanceSettings.Controls.swift`. The whole-app build crash is **pre-existing and independent of my surface**. Let me check those stale references, then restore my files.
+
+The 15 references are just "Removed stale file" notes — proving my files **had compiled to `.o` objects** (`RecentActivity.Vehicles.Adapter.o`, `Model.o`, `Types.o`, etc.) in the first real build *before* it crashed on the unrelated `AppearanceSettings.Controls.swift`. Strong corroboration my files compile in the real Xcode build. Files restored, project regenerated.
+
+Now let me run the literal whole-tree gate commands (swiftformat/swiftlint) to characterize the tree, plus confirm my files compiled in the first build.
+
+Whole-tree swiftlint running. Let me wait for it.
+
+Whole-tree swiftlint found 3 violations across 4931 files — but my scoped lint was **0 violations in 9 files**. Let me identify which files have those 3 (to confirm none are mine).
+
+The 3 whole-tree violations are all in `WidgetChartSummary.Tests.swift` (unrelated widget sibling) — **zero in my files**. Let me run the whole-tree swiftformat gate command to characterize it too.
+
+Whole-tree swiftformat: 1 file (`RecentDrivesSection.Previews.swift`, sibling) — **0 of mine**. 
+
+**Summary of evidence**: All three aggregate-tree failures are in named sibling surfaces outside my allowed files (`AppearanceSettings.Controls.swift` build crash — reproduced without my files; `WidgetChartSummary.Tests.swift` lint; `RecentDrivesSection.Previews.swift` format). Every surface-scoped gate on my code is green. Let me write the comprehensive log.
+
+Now let me verify git state (the generated xcodeproj should be ignored), confirm my files are intact, and clean up.
+
+All 11 artifacts are untracked; the generated xcodeproj is correctly git-ignored. Let me do a final scoped lint/format re-check (insurance after the move/restore), then commit.
+
+Final scoped re-verify clean (format 0/9, lint 0 violations). Committing the surface + log.
+
+Committed (154aefdf7) with all 11 artifacts. Let me verify the working tree is clean and tidy up temp files.
+
+Working tree is clean; only git-ignored build artifacts remain. Let me finalize the todo tracking.
+
+Task complete. Final summary below.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0277-RecentActivity.log | 310 +++++++++++++++++++++
+ .../RecentActivity.Vehicles.Adapter.swift          | 294 +++++++++++++++++++
+ .../RecentActivity.Vehicles.Model.swift            | 266 ++++++++++++++++++
+ .../RecentActivity.Vehicles.ModelTests.swift       | 205 ++++++++++++++
+ .../RecentActivity.Vehicles.Previews.swift         | 157 +++++++++++
+ .../RecentActivity.Vehicles.States.swift           | 180 ++++++++++++
+ .../RecentActivity.Vehicles.Tests.swift            | 173 ++++++++++++
+ .../RecentActivity.Vehicles.Types.swift            | 197 +++++++++++++
+ .../RecentActivity.Vehicles.Views.swift            | 233 ++++++++++++++++
+ .../feature-views/RecentActivity.Vehicles.strings  |  49 ++++
+ .../feature-views/RecentActivity.Vehicles.swift    | 126 +++++++++
+ 11 files changed, 2190 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0277-RecentActivity.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Types.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.swift

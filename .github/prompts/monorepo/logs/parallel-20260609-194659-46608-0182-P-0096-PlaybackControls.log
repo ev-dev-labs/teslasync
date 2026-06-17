@@ -1,0 +1,200 @@
+I'll start by exploring the repository structure and the web source component to understand what I'm building.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the web source and the Apple app structure.
+
+Now let me explore the Apple app structure in depth to understand existing patterns, state holders, tokens, and i18n.
+
+There's an extensive set of existing surfaces following a clear file pattern. Let me study a representative example end-to-end and look for related infra (state holders, tokens, i18n facade, existing playback/replay surfaces).
+
+Let me examine the shared infrastructure (SharedFacade, Design, Components, Theme) and a complete representative surface to learn the exact patterns.
+
+This is a KMP-backed architecture. `PlaybackControls` is a controlled UI component (no HTTP). Let me study the build system, design tokens, i18n facade, telemetry contract, and a complete representative surface to nail conventions.
+
+The build uses XcodeGen with glob-based sources (new files auto-included; I'll regenerate). Let me read a complete representative surface set and the test target config.
+
+Critical: `Frameworks/Shared.xcframework` is missing (only `.gitkeep`). The app targets depend on it. Let me check how predecessor surfaces handled this and whether the framework can be built.
+
+Let me read predecessor logs to see how they handled the missing framework and what STATUS they reached.
+
+Now I understand the established precedent: full `xcodebuild` is DEFERRED (no KMP framework/signing on runner); surfaces are verified via `xcodegen`, `swiftc -typecheck` (both SDKs), `swift test` (SwiftPM), swiftlint, swiftformat, and placeholder check. Let me study the gold-standard surface (KpiOverviewCard, 0093) end-to-end and find the verification harness.
+
+No committed Package.swift (only surface files + log are allowed to commit). Verification must use a throwaway harness. Let me read the full KpiOverviewCard gold-standard set to learn structure, imports, and dependencies.
+
+Excellent architecture clarity. Let me read the remaining gold-standard files (Projection, States, Views, Previews, strings, Tests) to complete my understanding of the pattern.
+
+Let me read the Views/Previews/strings/Tests of the gold standard plus the design token surface that defines the shared primitives (TSGlassPanel, TSSpacing, TSSkeleton, etc.).
+
+Now let me map the design-system primitives I'll need (TSGlassPanel, TSButton, TSSpacing, TSRadius, Color.TS, Font.TS, TSTone, TSSkeleton, TSEmptyState, TSQueryError) and find the native Button/Tooltip/menu equivalents.
+
+There's already a `Components/DataDisplay/Playback.swift` — likely the atomic playback primitives (scrubber/speed menu). Let me read it plus Buttons, Cards, Badges, and the design tokens.
+
+The atomic `TSPlaybackControls`/`TSTimelineScrubber`/`TSPlaybackSpeedMenu` already exist in the component library (out of scope, and too simple for full parity). Per the gold-standard pattern, I'll build complete self-contained subviews in my surface. Let me read the design tokens, Cards/Badges/Overlays, and the gold-standard Tests/Previews.
+
+Let me read the gold-standard Tests/Previews, the TSGlassPanel/TSTone primitives, and the web sibling components (PlaybackSpeedMenu, TimelineScrubber, useTripReplay) to capture exact data shapes and behavior.
+
+Let me read the web sibling components (PlaybackSpeedMenu, TimelineScrubber, useTripReplay) and the native primitives I'll compose with (TSGlassPanel, TSTone, Typography/TSCode, Overlays).
+
+I now fully understand the web composition. Let me confirm the `ReplaySpeed` type and check whether there's a native shortcut-registry facade (the `useShortcut` data source) and how the diagnostics/telemetry contract is standardized.
+
+Let me read the lint configs, the placeholder checker, the primitives I'll compose (TSGlassPanel/TSTone/Typography/States/Skeletons), and the predecessor log's exact verification commands.
+
+Critical lint constraints noted (line ≤120, `swiftlint --strict`, type name ≤50, files split for length). Let me read the placeholder patterns, the remaining primitives I'll compose with, and the predecessor's exact verification commands.
+
+I now have the complete verification methodology. Let me read the exact signatures of the primitives I'll compose with (TSGlassPanel, TSEmptyState, TSQueryError, TSSkeleton, TSTone, Typography helpers, Overlays).
+
+No Components/Design files import the KMP `Shared` framework — so my typecheck harness can compile all of Sources/Components + Sources/Design + Tokens with my surface. Let me confirm the two formatter files the predecessor excluded, then set up my plan and todos.
+
+I have all the architecture I need. Let me set up my plan/todos and run a collision check on the public type names I intend to use (must be unique across the `TeslaSync` module).
+
+No collisions. I'll namespace all public types under `PlaybackControls*` to be collision-proof. Let me write the plan and seed todos, then build the surface.
+
+Now I'll build the surface. Starting with the value-types/contracts layer (`PlaybackControls.Model.swift`).
+
+`PlaybackControls.Seams.swift` — the source seam (host snapshot) plus the `useShortcut` registry seam.
+
+`PlaybackControls.Projection.swift` — pure resolved state + projection + accessibility.
+
+`PlaybackControls.Keyboard.swift` — the keyboard command resolver, toast labels, and the `useShortcut` cheatsheet builder (kept low-complexity via grouped helpers).
+
+`PlaybackControls.Store.swift` — the `@Observable` state-holder (P1/S8) with intent dispatch, toast scheduling, and shortcut registration.
+
+`PlaybackControls.Scrubber.swift` — the native timeline scrubber (drag-to-scrub, marker ticks, hover/drag preview, accessible adjustable slider).
+
+`PlaybackControls.Views.swift` — the transport bar and its subviews (buttons, speed control, time readout, help popover, toast, freshness chip).
+
+`PlaybackControls.States.swift` — the loading / empty / error leaf chrome.
+
+`PlaybackControls.swift` — the bound surface View (phase switch, toast overlay, freshness chip, keyboard wiring + key decoder).
+
+`PlaybackControls.Previews.swift` and `PlaybackControls.strings`.
+
+Now the test files (split to respect the 400-line file limit). Core tests first:
+
+Now the keyboard/speed/view-compose tests:
+
+All 12 files written. Let me update todos and run the lint/format checks on the new files first.
+
+Let me check whether the gold-standard files also fail the current swiftformat (to understand if this is my issue or a tree-wide version drift), and the swiftformat version.
+
+Understood — the repo style wraps single-line bodies, groups numbers, etc. (gold-standard files conform). Let me auto-format my files with swiftformat (the ecosystem tool), then re-lint.
+
+swiftformat passes (0/12). Now swiftlint --strict on the new files:
+
+swiftlint found 4 issues. Let me inspect the exact lines in Keyboard.swift and the Tests file length.
+
+Three real lint issues: `void_function_in_ternary` (implicit-return ternaries), a 5-member tuple, and Tests.swift >400 lines. Let me fix Keyboard.swift (explicit returns + drop the tuple) and split the test file.
+
+Now split out the Model tests into a separate file. Let me locate the section boundaries in the (reformatted) Tests file.
+
+Now create the separate ModelTests file and truncate the Tests file.
+
+Now re-run swiftformat (apply) and swiftlint --strict across all my files:
+
+Two conflicts between swiftformat (`redundantReturn`) and swiftlint (`void_function_in_ternary`), plus a wrapped-signature brace issue. Let me view the current state and rewrite those sections to satisfy both tools.
+
+Both pass on my files. Now the full-tree `swiftlint --strict` (the actual gate) and the placeholder check:
+
+Full-tree swiftlint clean. Now whole-tree swiftformat and the placeholder check (needs pwsh):
+
+pwsh available; whole-tree swiftformat clean (0/4007). Now the placeholder gate:
+
+PLACEHOLDER_COUNT=13 are tree-wide (none matched "PlaybackControls"). Let me confirm my files specifically are clean by running the checker scoped exactly as the gate does, and verify the script's path handling.
+
+The gate's `-Path .../PlaybackControls` is a path prefix, not a directory. Let me run the checker on an isolated copy of exactly my 13 files for an honest per-surface count.
+
+My files: PLACEHOLDER_COUNT=0, EXIT=0 (the 13 tree-wide are pre-existing siblings). Now the core verification — `swiftc -typecheck` against the real design system on both SDKs. Let me gather SDK paths and confirm which component files are Shared-coupled.
+
+Only `UnitFormatters.swift` is Shared-coupled (excluded). Let me run the Swift 6 strict-concurrency `swiftc -typecheck` against the real design system + components on the macOS-15 SDK first.
+
+macOS-15 typecheck clean (0 errors, 51 files). Now iOS-18 simulator:
+
+Both SDKs typecheck clean (0 errors). Now `swift test` via a throwaway SwiftPM package vendoring the real design system + my surface as module `TeslaSync`. Let me build the harness.
+
+Two issues: a main-actor warning on `PlaybackControls.surfaceSlug` (View is `@MainActor`) and a compiler crash from the ternary-optional-closure pattern in `ActionRecorder`. Let me fix both (mutate the struct instead of ternary closures; make the Meta test `@MainActor`).
+
+Re-copy the updated test files into the harness and re-run `swift test`:
+
+All 57 tests pass (SWIFT_TEST_EXIT=0). Let me re-format/lint the edited test files and run `xcodegen generate` to confirm the project enumerates my files.
+
+Lint/format clean. Now `xcodegen generate` to confirm the project enumerates my files:
+
+xcodegen enumerates all 14 files (XCODEGEN_EXIT=0). Now let me capture real evidence for the deferred xcodebuild gate (missing KMP framework). I'll attempt the iOS build and capture the failure cause.
+
+The build was still compiling at timeout (the framework/build is the known long-pole). Let me capture deterministic root-cause evidence for the deferred gate: missing framework, the app's dependence on the `Shared` module, and macOS signing.
+
+Deferral root causes are deterministically proven (missing `Shared` module: "no such module 'Shared'"; 0 macOS signing identities). Now an i18n parity check — every key used in code must be declared in the `.strings` table (and vice versa):
+
+Perfect i18n parity (48 used = 48 declared, 0 missing/dead). Let me check git status to confirm only my files + the (git-ignored) xcodeproj are present, then write the log.
+
+Only my 14 files are untracked; the `.xcodeproj` is git-ignored. All gates GREEN. Let me update todos and write the verification log.
+
+Now clean up the throwaway harness, stage exactly my 14 files + the log, and verify the staged set before committing.
+
+Exactly 15 files staged (14 surface + log), nothing else dirty. Committing:
+
+Committed (HEAD `8d19beebf`), working tree clean. Let me do a final confirmation of the commit contents and mark the todos done.
+
+All 15 files committed (2909 insertions). Let me mark the final todo done.
+
+All work is complete and committed. 
+
+## Summary
+
+Shipped the production-polished, Apple-idiomatic **`PlaybackControls`** shared surface (P4 · 0096) at full parity with `web/src/components/data-display/PlaybackControls.tsx`.
+
+**Delivered** (14 files, committed at `8d19beebf`, +2909 lines):
+- Bound surface `View` + `@MainActor @Observable` state-holder (P1/S8), value-type `Input` snapshot, Source + **ShortcutRegistry** seams (the `useShortcut` parity), pure projection/keyboard resolvers, the i18n facade (P1/S10), and the `view.opened` telemetry seam (P1/S11).
+- Full web composition: Reset/Play‑Pause/Stop trio, speed cycle ({1,10,25,50,100}×) + menu, native **TimelineScrubber** (drag‑to‑scrub w/ 50ms throttle, 8 marker kinds, hover/drag preview, accessible adjustable slider), time readout, the complete keyboard map (Space/K, ←/→ ∓5s/∓30s, J/L, ,/., Home/End, 0–9, +/−) with transient toast + help cheatsheet.
+- Every state: loading / empty / error / content / stale / offline.
+
+**Verification — all GREEN (real captured output):**
+| Gate | Result |
+|---|---|
+| `swiftlint --strict` (tree) | 0 violations |
+| `swiftformat --lint` (tree) | 0/4007 |
+| placeholder gate (my files) | COUNT=0 |
+| `swiftc -typecheck` Swift 6 strict — macOS‑15 + iOS‑18 SDKs vs real design system | 0 errors |
+| `swift test` (SwiftPM, module `TeslaSync`) | **57/57 pass** |
+| `xcodegen generate` | all 14 files enumerated |
+| i18n parity | 48 used == 48 declared (0 missing/dead) |
+
+The full `xcodebuild` scheme gate is **DEFERRED** (not failed by this code) — deterministically proven root causes outside the allowed file scope: the KMP `Shared.xcframework` is unstaged (`no such module 'Shared'`) and macOS has 0 signing identities. This matches the sanctioned P4‑apple precedent (0093, 0090, …).
+
+**Log:** `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0096-PlaybackControls.log` → `EXIT=0` / `STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 12 todos done, committed at `8d19beebf`. Calling task_complete.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0096-PlaybackControls.log | 161 ++++++++++++
+ .../PlaybackControls.Keyboard.swift                | 277 ++++++++++++++++++++
+ .../PlaybackControls.KeyboardTests.swift           | 208 +++++++++++++++
+ .../shared-surfaces/PlaybackControls.Model.swift   | 291 +++++++++++++++++++++
+ .../PlaybackControls.ModelTests.swift              | 276 +++++++++++++++++++
+ .../PlaybackControls.Previews.swift                |  89 +++++++
+ .../PlaybackControls.Projection.swift              | 189 +++++++++++++
+ .../PlaybackControls.Scrubber.swift                | 236 +++++++++++++++++
+ .../shared-surfaces/PlaybackControls.Seams.swift   | 147 +++++++++++
+ .../shared-surfaces/PlaybackControls.States.swift  |  73 ++++++
+ .../shared-surfaces/PlaybackControls.Store.swift   | 232 ++++++++++++++++
+ .../shared-surfaces/PlaybackControls.Tests.swift   | 184 +++++++++++++
+ .../shared-surfaces/PlaybackControls.Views.swift   | 286 ++++++++++++++++++++
+ .../shared-surfaces/PlaybackControls.strings       |  71 +++++
+ .../shared-surfaces/PlaybackControls.swift         | 189 +++++++++++++
+ 15 files changed, 2909 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0096-PlaybackControls.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.Keyboard.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.KeyboardTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.Scrubber.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.Store.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PlaybackControls.swift

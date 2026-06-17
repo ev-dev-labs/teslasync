@@ -1,0 +1,54 @@
+I'll start by exploring the repository structure and reading the web source component, while checking the build environment capabilities.
+
+
+
+Environment confirmed: macOS with Xcode 26.5, swiftlint, swiftformat, swift 6.3.2, iPhone 16 simulator booted. Now let me read the score scale lib and explore the Apple app structure.
+
+Now I understand the web component. Let me explore the existing shared-surfaces patterns and the supporting infrastructure (tokens, i18n, diagnostics, state holders).
+
+There's already score/grade-related code in the Apple codebase plus a rich shared-surface convention. Let me study the existing patterns — the smallest complete surface (AIChatbotIndicator), the existing ScoreBadge reference, and the grade scale code.
+
+Let me understand the design system, diagnostics contract, and find the closest presentational (non-AI, non-fetching) shared-surface analog.
+
+`DriveScore` and `BatteryDelta` are the closest presentational analogs. Let me study `DriveScore` (a score surface) in full to mirror its exact conventions.
+
+Let me read the complete DriveScore surface — it's the closest analog and will be my template.
+
+The `DriveScore.Adapter.swift` "Faithful-parity note (states)" is the exact precedent I need — for pure presentational primitives, you reproduce only the source's real branches (not fabricated loading/error/offline). Let me read the remaining DriveScore files (Views, Previews, strings, Tests, AdapterTests).
+
+Now let me read the DriveScore tests and verify the design tokens I'll need exist (colors, fonts, spacing, glass panel).
+
+Excellent — I have the full template. Now let me verify the design tokens I need for the grade-color mapping (success/accent/warning/danger + a dark-red "critical" and a neutral grey) and the font/spacing tokens.
+
+Tokens live in `apps/design/generated/apple`. Let me inspect the available color/font/spacing tokens and the test-target config, and check xcodegen.
+
+Now let me check how the existing `TSTone`/`ChargingSessionCardTone` resolve `.critical` (dark-red) and `.neutral` colors, since the web grade palette distinguishes D (#ef4444) from F (#b91c1c).
+
+Now let me check the test-target config, lint configs, build tooling (xcodegen/pwsh), and the placeholder-check script referenced by the gate.
+
+Build requires a KMP `Shared.xcframework` staged via a script. Let me verify that's feasible, and set up a session DB to track my plan.
+
+Let me read the lint configs and check how existing surfaces handle `{{x}}`-style string interpolation in `.strings`, then write my plan.
+
+I now have a complete understanding. Let me set up tracking and check the heavy-build toolchain (JDK/Gradle for the KMP framework) while I begin writing code.
+
+Let me verify no existing type is named `ScoreBadge` (to avoid a collision with my public view) and check the existing `ChargingScoreGrade` case names convention.
+
+No collisions, and I'll mirror the `gradeAPlus…gradeNone` case naming from the sibling `ChargingScoreGrade`. Now writing the Foundation core.
+
+Core files written. Let me mark progress and write the two test files.
+
+All 9 files written. Let me do a fast standalone logic check of the Foundation-only core (Adapter + Projection) before the heavy build.
+
+Pure logic is correct and matches `numericToGrade` exactly. Now let me auto-format my files and verify with swiftformat/swiftlint.
+
+swiftformat and swiftlint both pass clean. Let me review what formatting changed and check the placeholder script's path handling (the gate passes a non-directory `ScoreBadge` prefix).
+
+The script treats a non-existent path as clean. To genuinely verify my files (honesty covenant), let me scan copies of them in a temp dir, then I'll also run the gate verbatim later.
+
+False positive: the literal word "placeholder" (describing the `%@` format specifier) trips the stub scanner. Let me reword it in both files so a real scan is clean.
+
+Placeholder + lint all clean. Now the heavy gate: generate the Xcode project, then validate the KMP `Shared.xcframework` build (the riskiest dependency) before the full app build.
+
+Project generated with both schemes. Now let me validate the KMP `Shared.xcframework` build (the scheme pre-action) standalone — it's the slowest, riskiest dependency.
+

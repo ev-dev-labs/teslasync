@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure and understanding the task context. Let me check the environment, the web source component, and whether an Apple app exists.
+
+Xcode 26.5, swift, swiftlint, swiftformat all available, and the Apple app exists. Let me read the web source and explore the Apple app structure.
+
+The shared-surfaces directory has many existing surfaces following a pattern (`.Adapter.swift`, `.Model.swift`, `.Previews.swift`, etc.). Let me check if DateRangeFilter already exists and study the established pattern from a representative surface.
+
+Let me read the rest of `datePresets.ts` and study the established file pattern from existing surfaces.
+
+The pattern is 8 files per surface. `SortControl` is the closest analog (a forms control). Let me study its complete file set as my template.
+
+Excellent template. Let me read the remaining SortControl files: Views, Previews, strings, and both test files.
+
+Now the strings file, both test files, and the design tokens (P1/S9).
+
+Let me read the view/state-holder tests, locate the design tokens (P1/S9), and check the project build config.
+
+Let me locate the design tokens and the i18n facade across the whole Apple tree.
+
+Paths are under `apps/apple/Sources`, not `apps/apple/TeslaSync/Sources`. Let me re-read.
+
+Let me view the app target source config (to see test excludes) and find the generated design tokens.
+
+Now I understand the full token system and the established pattern. Let me study `DensityToggle` (closest analog — chips with active state) and check for a shared `Button` primitive, plus confirm the pure-component state precedent.
+
+There's a shared `Button` primitive. Let me read it so the Apply button maps to the real component, and check how chips/preset-buttons map.
+
+Shared `TSButton` maps perfectly (primary/ghost, small). Now let me check the build setup: is there a generated `.xcodeproj`, is `xcodegen` available, and what are the lint/format/placeholder rules?
+
+I have the full picture. Let me read the placeholder patterns (to avoid forbidden words in comments), check simulators, and generate the Xcode project.
+
+Let me verify the prebuilt framework exists, then generate the Xcode project and start a baseline build to confirm the environment is healthy before writing code.
+
+Two key findings: placeholder matching is **case-insensitive** (I must avoid "placeholder"/"todo"/etc. in all my files), and **Shared.xcframework is missing** (only a `.gitkeep`). Let me investigate the framework build dependency.
+
+The Shared.xcframework is a Kotlin Multiplatform (KMP) artifact built via Gradle — a pre-build dependency. Let me check whether the toolchain/caches are present and kick off that build in the background while I write code.
+
+Java 17 and warm Gradle/Konan caches are present. Let me kick off the Shared.xcframework build in the background while I write the surface code.
+
+I have a thorough understanding. Let me set up tracking, then look at how an existing chips surface (`ActiveFilterChips`) handles wrapping layout, and check for any shared flow-layout helper.
+
+The framework build finished. Let me check its result and study the chip-wrapping layout used by `ActiveFilterChips`.
+
+The framework build is still running in the background (release slices). Let me monitor it and meanwhile read the `ActiveFilterChips` flow layout for reference.
+
+The framework is mid-build (release slices) and progressing. I have a great flow-layout reference. I'll start writing the surface now. To respect SwiftLint file-length limits, I'll split the pure core into `DateRangeFilter.Presets.swift` (catalog/ISO) + `DateRangeFilter.Adapter.swift` (projection), both allowed under `DateRangeFilter.*`.
+
+Let me write the pure-core files first.
+
+Now the Adapter (slug, resolve seam, Input, Projection, Projector). Let me also check the framework build progress.
+
+Still linking release slices. Let me continue with the Adapter.
+
+Now the Model (i18n facade, telemetry seam, `@Observable` state-holder).
+
+Now the Views file (input bar, chips, owned flow layout, composed content). Let me check the framework build and write it.
+
+Now the public surface View.
+
+Now the strings catalog and the DEBUG previews. Let me also check the framework build.
+
+Shared.xcframework is staged — the build environment is ready. Let me write the strings catalog and previews.
+
+Now the two test files. First the pure-core adapter tests (deterministic UTC calendar + fixed clock).
+
+Now the model + views + strings tests.
+
+All 9 files written. Let me regenerate the project and run the formatters/linters on my files first (fast iteration before the slow build).
+
+Project regenerated with the new files. Let me run swiftformat (write) on my Swift files, then verify lint passes.
+
+swiftformat reformatted 3 files. Let me review the changes and confirm `--lint` now passes for my files.
+
+swiftformat lint passes (0/8). Now swiftlint --strict on my files.
+
+Two SwiftLint violations to fix: cyclomatic complexity in `resolve` and an opening-brace issue from a wrapped signature. Let me view the current (post-format) state of both spots.
+
+Clear fixes. Let me refactor `resolve` into two sub-functions (complexity) and split the test helper into single-line-signature variants (brace spacing).
+
+Now update the two keyed call sites.
+
+Now re-format the two changed files and re-run swiftlint on all 8.
+
+swiftlint --strict passes (0 violations). Now the placeholder gate (run from repo root as the gate specifies).
+
+Let me confirm the placeholder check actually scanned my files (not zero files) by inspecting how it resolves `-Path`.
+
+The gate's `-Path .../DateRangeFilter` is a path **prefix** (not a real directory), so the script returns a trivial clean result without scanning. To honestly verify, let me run the checker on each of my files individually and grep for forbidden words.
+
+All 8 files: PLACEHOLDER_COUNT=0, and no forbidden words anywhere (including `.strings`). Now the authoritative step — the iOS build. Let me compile first (fast failure on my code) before the full build+test.
+
+Build still compiling (first full build from scratch). Let me continue waiting.
+
+iOS build completed (exit 0). Let me confirm no errors and capture the result line.
+
+Build FAILED (exit 65) but not from a `DateRangeFilter` error. Let me find the actual cause.
+
+A swift-frontend (compiler) crash, not a normal error. Let me read the full crash dump to find the trigger.
+
+The crash is a **swift-frontend (compiler) IRGen crash** emitting a reabstraction thunk for `(Bool, (any Actor)?)` while compiling `feature-views/AppearanceSettings.Controls.swift` — a file I did **not** touch. Let me inspect that file and confirm I haven't modified it.
+
+Confirmed: only my 9 files are new; `AppearanceSettings.Controls.swift` (line 122: `Toggle("", isOn: Binding(get:{isOn}, set: onChange))` with `onChange: @MainActor (Bool) -> Void`) is unmodified. The crash is a **toolchain IRGen bug** on a `@MainActor`-closure→Binding reabstraction thunk. Let me check the expected Xcode version and known-issues doc, and retry the build (incremental) to test determinism.
+
+Version lock targets Xcode 26 / Swift 6.0.1, but the runner has Swift 6.3.2 — a toolchain skew that can explain an IRGen regression. Let me wait for the retry and check the known-issues doc.
+
+**Decisive finding.** The project's own known-issues ledger (`macos-pending-verifications.md`) documents this **exact** crash signature (`report_at_maximum_capacity` → `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` in `AppearanceSettings.Controls.swift`) as a **pre-existing, unrelated whole-module IRGen capacity crash** that blocked the full `build test` for prior P4 surfaces (0079-DataFreshness, 0143-TimeMachineBanner). The retry reproduced the identical `report_at_maximum_capacity` crash — deterministic, toolchain-level, not from my code.
+
+Let me confirm zero `DateRangeFilter` errors in the build, then follow the established precedent: verify my surface green via isolated typecheck + executed logic harness.
+
+Let me run targeted greps that produce small output to confirm zero `DateRangeFilter` errors.
+
+**Conclusively confirmed**: `DateRangeFilter_error_count=0`, `total_compile_error_lines=0` — my code type-checked and SILGen'd cleanly; the build died only at the unrelated whole-module IRGen `report_at_maximum_capacity` crash (the documented pre-existing blocker).
+
+Now, following the established precedent, let me verify my surface green via isolated Swift 6 strict-concurrency typecheck (no IRGen → no capacity crash) for both iOS and macOS.
+
+Typecheck passes (exit 0) with only 2 warnings, both in the preview harness's ternary closures (`cond ? {…} : nil`) — a Swift 6 closure-isolation inference quirk. The precedent requires **0 warnings**, so let me fix by hoisting explicitly-typed optional closures.
+
+Let me re-run the iOS typecheck (confirm 0 warnings) and the macOS typecheck together.
+
+The hoist introduced errors. Let me see them.
+
+The explicit annotation forced a hard error (closures capturing `@State` can't be `@Sendable`). The robust fix: use `@MainActor` **method references** (which carry isolation correctly through the ternary) instead of closure literals. Let me view the current state and rewrite.
+
+Re-running both typechecks to confirm clean.
+
+Both typechecks now pass: **iOS-18-sim and macOS-15, Swift 6 strict-concurrency, 0 errors / 0 warnings**. Let me re-lint the changed Previews file and build an executed logic harness against the real source files.
+
+Previews clean (format 0/1, lint 0 violations). Now let me build an **executed logic harness** that compiles the real `Presets.swift` + `Adapter.swift` and runs the adapter/projection assertions.
+
+The harness runner itself hit Swift 6 top-level-actor isolation (a harness artifact, not surface code — strict concurrency was already proven by the typechecks). Let me compile the executable in the default language mode to run the logic.
+
+**Executed logic harness: 48/48 assertions PASS** against the real `Presets.swift` + `Adapter.swift` source. The adapter/projection/preset logic is proven by execution.
+
+Now let me capture the remaining gate evidence: signing identities, the macOS build failure mode, and tree-wide lint/format. Let me start the macOS build and check signing.
+
+Signing: **0 valid identities** — matching the documented macOS blocker. macOS build running in background. Let me run the tree-wide swiftlint and swiftformat (as the gate does) to characterize them honestly.
+
+Tree-wide swiftlint: 3 violations across 5131 files, **0 in DateRangeFilter** (pre-existing in other prompts' files, as the precedent documents). The macOS build finished — let me read it and identify the 3 pre-existing violations.
+
+macOS build: **FAILED at the entitlements/development-signing gate** (`TeslaSync-macOS`, `TeslaSyncWidgets-macOS` require a development certificate; 0 valid identities) — exactly the documented macOS blocker. The 3 swiftlint violations are all in `WidgetChartSummary.Tests.swift` (a different prompt's file). Let me run tree-wide swiftformat to finish characterizing the gate.
+
+Tree-wide swiftformat: 1 violation in `RecentDrivesSection.Previews.swift` (other prompt), **0 in DateRangeFilter** — matching the precedent. I now have the complete honest gate picture. Let me verify the log directory exists and confirm i18n parity (all web `t()` keys covered).
+
+**i18n parity: 15/15 web `t()` keys covered, 0 missing, 0 dead, + 1 native empty-state key.** Log directory exists. Let me gather final metrics, then write the gate log.
+
+All 10 files enumerated by xcodegen (54 pbxproj refs), 1960 total lines. Now let me write the comprehensive, honest gate log.
+
+The gate log is written. Let me clean up temp files and verify exactly what will be committed (ensuring I only stage my allowed files, not the regenerated project).
+
+Clean — only my 9 surface files + the log are untracked, and the regenerated `.xcodeproj` is gitignored. Let me stage exactly those and commit.
+
+Committed (`d52178012`). Let me finalize tracking and do a last verification of the committed state.
+
+Surface committed cleanly. To fully match the precedent's "state-holder proven by execution" bar, let me add a compact executed harness for the `@Observable` model's routing + once-only telemetry (the core projection/preset logic is already proven 48/48).
+
+Model state-holder harness: **10/10 PASS** (the warning is a throwaway-harness over-annotation, not in my surface — my real `SpyTelemetry` uses the correct non-isolated `@unchecked Sendable` + lock pattern). Let me add this evidence to the log and amend the commit.
+
+Let me clean up temp files and amend the commit with the updated log.
+
+The task is complete. Final commit `abbe7fed7` contains the surface (9 Swift + 1 strings) plus the evidence log; the working tree is clean and temp artifacts are removed.
+

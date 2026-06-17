@@ -1,0 +1,145 @@
+
+================================================================
+  TeslaSync — monorepo Native Apps Master Runner
+================================================================
+  Prompts root  : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo
+  Programs      : 1 (p4-apple)
+  Total prompts : 879
+  Already done  : 778
+  Pending       : 101
+  Starting from : #1
+  Single        : (all)
+  Model         : (default)
+  Timeout       : 600 min per prompt
+  Dry run       : False
+  Log-gate      : EXIT!=0 / STATUS=BLOCKED / [FAIL] / UNEXPECTED_COUNT -> RED
+  Run log       : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/run-2026-06-15_23-54-22.log
+================================================================
+
+
+================================================================
+  PARALLEL MODE
+================================================================
+  Jobs            : 6 concurrent
+  Pending prompts : 101
+  Launch branch   : feature/apps-ios (2840291806)
+  Integration     : parallel/20260615-235425-51116
+  Worktrees       : /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-235425-51116
+  State           : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/parallel/20260615-235425-51116
+  Agent binary    : copilot
+  Note: parallel mode does not enforce strict prompt ordering.
+================================================================
+
+Interrupted — stopping workers and cleaning up...
+
+================================================================
+  PARALLEL RUN FINISHED
+================================================================
+  Merged   : 51
+  Not green: 50
+  Launch branch 'feature/apps-ios' fast-forwarded onto parallel/20260615-235425-51116.
+  State    : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/parallel/20260615-235425-51116
+================================================================
+
+  Prompt outcomes:
+  p4-apple/P9-0002-xcuitest-ui.prompt.md                  RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/P99-0001-apple-acceptance-gate.prompt.md       RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/admin/SecurityAccessPage.prompt.md       merged
+  p4-apple/pages/analytics/WeeklyDigestPage.prompt.md     CONFLICT: merge conflict into integration branch
+  p4-apple/pages/battery/BatteryHealthPage.prompt.md      merged
+  p4-apple/pages/battery/EnergyFlowPage.prompt.md         merged
+  p4-apple/pages/battery/EnergyProductsPage.prompt.md     merged
+  p4-apple/pages/battery/PowerFlowDashboardPage.prompt.md CONFLICT: merge conflict into integration branch
+  p4-apple/pages/battery/ProjectedRangePage.prompt.md     merged
+  p4-apple/pages/battery/VampireDrainPage.prompt.md       merged
+  p4-apple/pages/charging/ChargingCurvePage.prompt.md     CONFLICT: merge conflict into integration branch
+  p4-apple/pages/charging/ChargingDetailPage.prompt.md    merged
+  p4-apple/pages/charging/ChargingHeatmapPage.prompt.md   merged
+  p4-apple/pages/charging/ChargingListPage.prompt.md      merged
+  p4-apple/pages/charging/CostAnalysisPage.prompt.md      CONFLICT: merge conflict into integration branch
+  p4-apple/pages/charging/SmartChargePage.prompt.md       CONFLICT: merge conflict into integration branch
+  p4-apple/pages/charging/TeslaChargingHistoryPage.prompt.md CONFLICT: merge conflict into integration branch
+  p4-apple/pages/charging/TeslaChargingSessionsMap.prompt.md merged
+  p4-apple/pages/charging/TeslaChargingSessionsPage.prompt.md CONFLICT: merge conflict into integration branch
+  p4-apple/pages/dashboard/DashboardPage.prompt.md        merged
+  p4-apple/pages/dashboard/QuickStatsPage.prompt.md       merged
+  p4-apple/pages/diagnostics/AnomalyDashboardPage.prompt.md merged
+  p4-apple/pages/driving/DriveDetailPage.prompt.md        merged
+  p4-apple/pages/driving/DrivesListPage.prompt.md         CONFLICT: merge conflict into integration branch
+  p4-apple/pages/driving/DrivetrainHealthPage.prompt.md   CONFLICT: merge conflict into integration branch
+  p4-apple/pages/driving/DrivingDynamicsPage.prompt.md    NOCOMMIT: green log but no commit on top of base
+  p4-apple/pages/driving/EfficiencyPage.prompt.md         merged
+  p4-apple/pages/driving/RegenEfficiencyPage.prompt.md    CONFLICT: merge conflict into integration branch
+  p4-apple/pages/driving/RouteEfficiencyPage.prompt.md    merged
+  p4-apple/pages/driving/SpeedProfilePage.prompt.md       CONFLICT: merge conflict into integration branch
+  p4-apple/pages/driving/TripPlannerPage.prompt.md        merged
+  p4-apple/pages/driving/TripReplayPage.prompt.md         merged
+  p4-apple/pages/explore/ExplorePage.prompt.md            merged
+  p4-apple/pages/exports/ExportsPage.prompt.md            merged
+  p4-apple/pages/maps/GeofencesPage.prompt.md             CONFLICT: merge conflict into integration branch
+  p4-apple/pages/maps/LocationsPage.prompt.md             merged
+  p4-apple/pages/maps/MapOverviewPage.prompt.md           merged
+  p4-apple/pages/maps/NavigationRoutePage.prompt.md       merged
+  p4-apple/pages/maps/TemperatureImpactPage.prompt.md     CONFLICT: merge conflict into integration branch
+  p4-apple/pages/notifications/AlertRulesPage.prompt.md   CONFLICT: merge conflict into integration branch
+  p4-apple/pages/notifications/AlertStudioPage.prompt.md  RED: exit 1
+  p4-apple/pages/notifications/AlertsListPage.prompt.md   CONFLICT: merge conflict into integration branch
+  p4-apple/pages/notifications/ArchivedPage.prompt.md     CONFLICT: merge conflict into integration branch
+  p4-apple/pages/notifications/AuditLogPage.prompt.md     merged
+  p4-apple/pages/notifications/BrowserNotificationsPage.prompt.md RED: exit 137
+  p4-apple/pages/notifications/ChannelsPage.prompt.md     CONFLICT: merge conflict into integration branch
+  p4-apple/pages/notifications/InboxPage.prompt.md        CONFLICT: merge conflict into integration branch
+  p4-apple/pages/notifications/QuietHoursPage.prompt.md   CONFLICT: merge conflict into integration branch
+  p4-apple/pages/notifications/WebhooksPage.prompt.md     merged
+  p4-apple/pages/onboarding/OnboardingPage.prompt.md      merged
+  p4-apple/pages/power-user/DashboardsPage.prompt.md      CONFLICT: merge conflict into integration branch
+  p4-apple/pages/power-user/GrafanaPanelPage.prompt.md    CONFLICT: merge conflict into integration branch
+  p4-apple/pages/power-user/SqlPlaygroundPage.prompt.md   merged
+  p4-apple/pages/settings/ActiveSessionsPage.prompt.md    merged
+  p4-apple/pages/settings/HelixPage.prompt.md             CONFLICT: merge conflict into integration branch
+  p4-apple/pages/settings/PrivacyPage.prompt.md           CONFLICT: merge conflict into integration branch
+  p4-apple/pages/settings/SafetyPage.prompt.md            CONFLICT: merge conflict into integration branch
+  p4-apple/pages/settings/SettingsPage.prompt.md          RED: exit 1
+  p4-apple/pages/settings/TwoFactorAuthPage.prompt.md     CONFLICT: merge conflict into integration branch
+  p4-apple/pages/sharing/SharedDrivePage.prompt.md        merged
+  p4-apple/pages/sharing/SharingTripsPage.prompt.md       RED: exit 1
+  p4-apple/pages/system/ChatbotPage.prompt.md             RED: exit 1
+  p4-apple/pages/system/CommandHistoryPage.prompt.md      RED: exit 1
+  p4-apple/pages/system/CommandsPage.prompt.md            RED: exit 1
+  p4-apple/pages/system/DBHealthPage.prompt.md            merged
+  p4-apple/pages/system/DataExportPage.prompt.md          RED: artifact: final EXIT=1, final STATUS=BLOCKED, parity gap (COVERED=0 < REQUIRED=75)
+  p4-apple/pages/system/DataRepairPage.prompt.md          merged
+  p4-apple/pages/system/DiagnosticPage.prompt.md          merged
+  p4-apple/pages/system/HelpPage.prompt.md                merged
+  p4-apple/pages/system/IncidentTimelinePage.prompt.md    RED: artifact: parity gap (COVERED=0 < REQUIRED=6)
+  p4-apple/pages/system/MyActivityPage.prompt.md          merged
+  p4-apple/pages/system/NotFoundPage.prompt.md            merged
+  p4-apple/pages/system/RoadmapPage.prompt.md             merged
+  p4-apple/pages/system/ScheduledExportsPanel.prompt.md   merged
+  p4-apple/pages/system/SearchPage.prompt.md              merged
+  p4-apple/pages/system/StateMachineDebuggerPage.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED, parity gap (COVERED=0 < REQUIRED=63)
+  p4-apple/pages/system/StatusApiDocsPage.prompt.md       merged
+  p4-apple/pages/system/SystemStatusPage.prompt.md        merged
+  p4-apple/pages/system/TeslaAccountPage.prompt.md        merged
+  p4-apple/pages/telemetry/LiveSignalMonitorPage.prompt.md RED: artifact: final EXIT=1
+  p4-apple/pages/telemetry/MQTTInspectorPage.prompt.md    RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/pages/telemetry/SignalDiffPage.prompt.md       merged
+  p4-apple/pages/telemetry/SignalExplorerPage.prompt.md   RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/telemetry/SignalGapDetectorPage.prompt.md merged
+  p4-apple/pages/telemetry/SignalLogViewerPage.prompt.md  RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/telemetry/SignalsWorkspacePage.prompt.md merged
+  p4-apple/pages/trips/TripDetailPage.prompt.md           RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/trips/TripListPage.prompt.md             RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/trips/TripReplayPage.prompt.md           merged
+  p4-apple/pages/vehicle-systems/ClimateControlPage.prompt.md merged
+  p4-apple/pages/vehicle-systems/GuardModePage.prompt.md  merged
+  p4-apple/pages/vehicle-systems/MaintenancePage.prompt.md merged
+  p4-apple/pages/vehicle-systems/MediaPlayerPage.prompt.md CONFLICT: merge conflict into integration branch
+  p4-apple/pages/vehicle-systems/SafetySettingsPage.prompt.md CONFLICT: merge conflict into integration branch
+  p4-apple/pages/vehicle-systems/SoftwareUpdatesPage.prompt.md merged
+  p4-apple/pages/vehicle-systems/TirePressurePage.prompt.md merged
+  p4-apple/pages/vehicles/DigitalTwinPage.prompt.md       RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/vehicles/VehicleAccessPage.prompt.md     CRASH: worker exited without verdict
+  p4-apple/pages/vehicles/VehicleDetailPage.prompt.md     merged
+  p4-apple/pages/vehicles/VehicleListPage.prompt.md       CRASH: worker exited without verdict
+  p4-apple/pages/watch/WatchFacePage.prompt.md            CRASH: worker exited without verdict

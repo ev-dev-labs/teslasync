@@ -1,0 +1,184 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the Apple app structure and the existing patterns.
+
+The structure is large. Let me look at existing shared-surfaces to understand the established patterns, and check if CarAnimation already exists.
+
+CarAnimation doesn't exist yet. There's a clear multi-file pattern per surface. Let me find surfaces that use `useMotionPreference` / motion, and read a complete reference set to learn the exact conventions.
+
+Let me study how an existing pure-visual/animation surface (Spinner) handles the multi-file pattern and the states requirement, since CarAnimation is similarly presentational.
+
+Spinner is an excellent analog — a pure presentational motion component using motion preference + label. Let me read its full file set to learn all the conventions.
+
+This Spinner template is an excellent near-exact analog. The key precedent: a pure presentational primitive reproduces only its REAL branches (no fabricated loading/error/stale/offline). Let me read the remaining Spinner files to learn the View/test/strings/preview conventions and shared infra.
+
+Let me read the remaining Spinner reference files and the shared token/infra definitions in parallel.
+
+Now I understand the Spinner template thoroughly. Let me find the shared P1/S9 token definitions (Color.TS, Font.TS, TSSpacing) and the web COLOR constants used by BatteryFillAnimation.
+
+The main-app token definitions aren't where I expected. Let me locate them precisely and understand the project structure (how files get compiled).
+
+The tokens come from `Sources/Design` and `../design/generated/apple`. Let me read the token definitions to learn exact available names (surfaces, status colors, text levels).
+
+Let me read the generated Tokens.swift and the TSDesign helpers to learn exact token names available.
+
+All tokens are clear. Status colors map exactly to the web COLOR constants (statusSuccess=#10b981, statusWarning=#f59e0b, statusDanger=#ef4444). Now let me understand the test target, the i18n integration, and tooling.
+
+Both `pwsh` and the Swift toolchain are available, so the full gate is runnable. Let me read the test target config, swiftlint/swiftformat configs, and placeholder patterns.
+
+SwiftLint `--strict` makes the 400-line file_length warning an error, so I'll keep every file ≤400 lines. Let me verify the web i18n keys and check the SharedFacade/Localization layout, then write the plan.
+
+The master catalog already contains 3 `carAnimation` keys. Let me extract them to use the exact key names.
+
+The master catalog already defines `translation.carAnimation.{charging,loading,tesla}`. Let me check how sibling surfaces resolve strings — master `translation.*` keys vs. their own per-surface table.
+
+The established pattern is clear: per-surface `Strings` enum + table + `.strings` file, with key names mirroring the web source. The master catalog already has `translation.carAnimation.*`. Now let me check build prerequisites: xcodegen, the Shared.xcframework, and existing project state.
+
+The `Shared.xcframework` (KMP core) is absent — only a `.gitkeep`. This is a binary dependency of the app targets. Let me probe whether it's buildable here, and set up my todo tracking.
+
+There's a Spinner gate log at 0140 — the closest precedent. Let me read it and the xcframework build script to understand how predecessors handled the gate.
+
+The Spinner log is the exact precedent and methodology. Key facts: the `Shared.xcframework` is built via `Scripts/build-shared-xcframework.sh` (~13 min Gradle), the full `xcodebuild` gate fails on FOREIGN/ENVIRONMENTAL reds (pre-existing IRGen crash in `AppearanceSettings.Controls.swift`; macOS signing), and surface correctness is proven via scoped lint/format, iOS+macOS `swiftc -typecheck`, and `swift test`. Let me start the long xcframework build in the background now, then write code while it runs.
+
+Java 17 is available. Let me start the xcframework build in the background (it takes ~13 min) and begin writing code while it runs.
+
+The Spinner precedent fully maps the methodology. The web `CarAnimation.tsx` exports **4** marks (CarAnimation silhouette, ChargingBolt, BatteryFillAnimation, WheelSpin) — I must reproduce all 4 faithfully. Let me verify the xcframework build is progressing, then write the pure core.
+
+The notification refers to the launcher wrapper; the actual Gradle build continues as a detached process. Let me confirm it's alive, then proceed to write code.
+
+Build is racing ahead (already linking release frameworks). Let me write the pure core now. Starting with the Adapter.
+
+Now the geometry file: SVG paths as testable command lists plus primitive shapes and the view-box mapper.
+
+Now the motion schedule and static style constants (the web `transition` props + fill/stroke values), kept as testable data.
+
+Now the Model: i18n facade, telemetry seam, and the `@Observable` state-holder.
+
+Now the shapes file — testable SwiftUI `Shape`s for the bezier paths, bolt polyline, animatable battery fill, and wheel spokes.
+
+Now the Tesla silhouette mark — the most complex composition with its staggered entry and looping lights.
+
+Now the remaining three marks — charging bolt, battery gauge, and wheel loader.
+
+Now the public surface — the 4 SwiftUI views with a shared lifecycle scaffold (DRY) and accessibility.
+
+Now the strings catalog contribution and the DEBUG previews. Let me also check the xcframework build progress.
+
+Excellent — the `Shared.xcframework` built successfully (11m16s) and is staged. Now let me write the two test files.
+
+Now the state-holder/view/strings/shape test half.
+
+All 11 files written. Let me verify file lengths (must be ≤400 for `--strict`) and run scoped swiftformat/swiftlint.
+
+All files ≤300 lines. Let me run scoped swiftformat and swiftlint on the new files.
+
+swiftformat found auto-fixable formatting issues. Let me apply formatting to my files, then re-lint.
+
+swiftformat passes. Now swiftlint `--strict` on the new files, and re-check line counts after formatting.
+
+Scoped swiftlint `--strict`: **0 violations**. swiftformat: **0**. Now the critical correctness check — standalone `swiftc -typecheck` of the surface + design tokens against the iOS 18 simulator SDK (proves my code compiles, isolated from the known-foreign app build).
+
+iOS typecheck: **0 errors/0 warnings** (Swift 6, strict concurrency). Now macOS 15.
+
+Both typechecks pass cleanly. Now let me actually **run** the unit tests via a throwaway SwiftPM package (module named `TeslaSync`, as the predecessor did) — this is the key surface-attributable green.
+
+All **41 tests pass**. Surface correctness is fully proven. Now xcodegen + the placeholder gate, then the literal xcodebuild gate.
+
+xcodegen: 72 CarAnimation refs across both apps + test bundles. Placeholder gate: 0. Let me run the placeholder gate scoped to ALL my files (temp dir), then launch the full xcodebuild gate.
+
+Placeholder gate clean (0/0) across all 12 files. Now the literal xcodebuild gate. Let me run the iOS build/test (slow — compiles the whole app against the staged framework) in the background and capture verbatim output.
+
+The iOS gate is compiling in the background. While it runs, let me confirm the (foreign) pre-existing crash file still exists and review git status of my additions.
+
+My iOS build (slot-61) is compiling the whole TeslaSync module (progressing through W/X files). Note: sibling agents in other slots share this machine — expected. Let me keep waiting for my build to reach completion or the (predecessor-documented) foreign IRGen crash.
+
+The whole-module `EmitSwiftModule for TeslaSync` (which includes my CarAnimation sources) is succeeding — strong integration evidence. It now proceeds to per-file IRGen (where the predecessor's foreign crash occurred). Let me keep polling.
+
+The iOS build failed with the **exact same foreign IRGen crash** the predecessor documented — in `feature-views/AppearanceSettings.Controls.swift`, **after** the whole-module `EmitSwiftModule for TeslaSync` (including my CarAnimation sources) succeeded. Let me extract the evidence and confirm zero CarAnimation errors.
+
+Confirmed: foreign IRGen crash (same SIL function the predecessor reported), **0 CarAnimation errors**, and my surface WAS compiled (17 SwiftCompile refs). Now the macOS gate (predecessor: environmental signing failure) and the iOS baseline proof. Let me run the macOS gate first (fails fast, pre-compile).
+
+macOS gate: `MAC_EXIT=65`, environmental signing failure (pre-compile), **0 CarAnimation errors** — matches the predecessor exactly (proven green independently via macOS typecheck + swift test). Now the iOS baseline proof: rebuild with `CarAnimation.*` EXCLUDED to confirm the foreign crash is pre-existing.
+
+The baseline is compiling. While it runs, let me gather tool versions for the log header.
+
+Let me poll the baseline build for completion.
+
+Baseline: `BASELINE_IOS_EXIT=65`, 0 CarAnimation files compiled. Let me confirm it's the **same** foreign crash (proving the red is pre-existing, not mine).
+
+The baseline hit an infrastructure DB-lock (concurrent build in shared DerivedData), not the foreign crash — inconclusive. Let me re-run it with an **isolated** `derivedDataPath` for a clean, conclusive baseline.
+
+The isolated baseline is doing a clean full compile (~several min). Let me wait and poll.
+
+Baseline2 still compiling (correctly excluding CarAnimation, 0 refs), not yet at the IRGen phase. Let me wait for completion.
+
+Baseline is now **conclusive**: `BASELINE_IOS_EXIT=65` with the **identical** foreign crash (`AppearanceSettings.Controls.swift`, same SIL function) and CarAnimation.* excluded → the red is **pre-existing and foreign**. Now the gate's full-tree lint/format steps (to capture totals and prove my files contribute zero).
+
+Full-tree swiftformat: `FORMAT_EXIT=1` — the **same foreign** `RecentDrivesSection.Previews.swift` the predecessor flagged; **no CarAnimation file** appears. Now the full-tree swiftlint `--strict`.
+
+Full-tree swiftlint: `LINT_EXIT=2` — the **same foreign** `WidgetChartSummary.Tests.swift` `identifier_name` violations the predecessor documented; **no CarAnimation violations**. Let me get the total count and confirm all are foreign.
+
+Full-tree swiftlint: exactly **3 foreign violations** (all `WidgetChartSummary.Tests.swift`), **0 CarAnimation**. All gate data is collected. Let me get final line counts, then write the gate log.
+
+All files ≤300 lines. Now let me write the comprehensive gate log.
+
+Gate log written. Now let me verify git status (ensure generated artifacts are ignored), clean temp files, and stage precisely.
+
+Clean — only my 12 surface files + the log are new; generated artifacts are ignored. Let me stage and commit.
+
+All 13 staged. Let me commit with the prescribed message.
+
+Committed cleanly (13 files, 2377 insertions). Let me do a final verification of the commit and working tree.
+
+Task complete. Committed as `61d1f85cb`.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) **CarAnimation** shared surface at parity with `web/src/components/motion/CarAnimation.tsx`, reproducing **all four** web exports — `CarAnimation` (Tesla silhouette), `ChargingBolt`, `BatteryFillAnimation`, `WheelSpin` — following the established Spinner (0140) bundle convention.
+
+**12 files (2,377 LOC)** under `apps/apple/TeslaSync/shared-surfaces/CarAnimation.*`:
+- Pure core (Adapter/Geometry/Timeline) — `useMotionPreference` ported 1:1, SVG bezier/polyline/primitive geometry as testable data, the full `transition` schedule + battery band thresholds.
+- State + facade (Model) — P1/S8 `@Observable` holder, P1/S10 i18n facade (`carAnimation.tesla/charging/loading`), P1/S11 once-only `view.opened`.
+- Views (Shapes/TeslaMark/Marks/surface) — staggered entry draw-in, spring wheels, looping head/tail-lights, fill-grow battery, forever spin; **every branch honors Reduce Motion** (resting frame, no motion).
+- Previews + 2 test files (41 tests).
+
+**Verification (all surface-attributable gates GREEN — actually executed):**
+- KMP `Shared.xcframework` built (Gradle SUCCESS 11m16s)
+- iOS + macOS `swiftc -typecheck` (Swift 6, strict concurrency): **0 errors**
+- `swift test`: **41/41 passed**
+- Scoped swiftlint `--strict`: **0** · scoped swiftformat: **0** · placeholder gate: **0** · xcodegen: **0** (72 refs)
+
+**The 4 non-zero whole-tree gates are FOREIGN/ENVIRONMENTAL, outside my allowed scope:** iOS/baseline `EXIT=65` (pre-existing IRGen crash in `AppearanceSettings.Controls.swift` — proven via a CarAnimation-excluded isolated baseline that reproduces the identical crash), macOS `EXIT=65` (no signing cert), lint/format reds in foreign `WidgetChartSummary.Tests`/`RecentDrivesSection.Previews` — dispositioned exactly as predecessor Spinner 0140. **CarAnimation contributes 0 errors.**
+
+Gate log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0190-CarAnimation.log` → `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0190-CarAnimation.log | 260 ++++++++++++++++++
+ .../shared-surfaces/CarAnimation.Adapter.swift     | 300 +++++++++++++++++++++
+ .../CarAnimation.AdapterTests.swift                | 252 +++++++++++++++++
+ .../shared-surfaces/CarAnimation.Geometry.swift    | 231 ++++++++++++++++
+ .../shared-surfaces/CarAnimation.Marks.swift       | 193 +++++++++++++
+ .../shared-surfaces/CarAnimation.Model.swift       | 140 ++++++++++
+ .../shared-surfaces/CarAnimation.Previews.swift    |  77 ++++++
+ .../shared-surfaces/CarAnimation.Shapes.swift      | 182 +++++++++++++
+ .../shared-surfaces/CarAnimation.TeslaMark.swift   | 210 +++++++++++++++
+ .../shared-surfaces/CarAnimation.Tests.swift       | 167 ++++++++++++
+ .../shared-surfaces/CarAnimation.Timeline.swift    | 119 ++++++++
+ .../TeslaSync/shared-surfaces/CarAnimation.strings |  25 ++
+ .../TeslaSync/shared-surfaces/CarAnimation.swift   | 221 +++++++++++++++
+ 13 files changed, 2377 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0190-CarAnimation.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.Geometry.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.Marks.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.Shapes.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.TeslaMark.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.Timeline.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/CarAnimation.swift

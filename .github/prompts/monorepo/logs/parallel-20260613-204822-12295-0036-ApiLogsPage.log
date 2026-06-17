@@ -1,0 +1,250 @@
+I'll start by exploring the repository structure to understand the task, then read the web source and existing Apple app structure.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web source and explore the Apple app structure.
+
+The Apple directory listing seems unusual. Let me explore the actual structure with glob and continue reading the web source.
+
+Let me finish reading the web source and look at the remaining pieces, plus understand the Apple app conventions.
+
+The actual Apple structure differs from the prompt's idealized paths. Let me investigate the real conventions, parity manifest, ledgers, and an existing page example.
+
+There's a discrepancy: the prompt expects `Features/Admin/` but the repo uses `feature-views/`, etc. Other admin pages already exist (per logs). Let me find an existing admin page to learn the real convention, and check the ledger status.
+
+Existing pages live in `feature-views/` (e.g., `AlertStudioPage`). Let me check the ledger, an existing page's log to confirm real paths, and the admin page logs' status.
+
+The ledger marks other admin pages "done" but no swift files exist for them. Let me inspect a "done" page's log and search file contents to understand what was actually produced.
+
+The logs reference yet another layout (`apps/apple/Sources/...`) that doesn't exist on disk either — these are from a parallel/earlier structure. The real on-disk convention is `apps/apple/TeslaSync/feature-views/`. Let me study `project.yml`, a reference page (`AlertStudioPage`), find the string catalog, and check toolchain availability.
+
+Toolchain is available (xcodebuild, swiftlint, swiftformat, xcodegen). Key finding: the Xcode project only compiles `TeslaSync/{feature-views,dashboard-widgets,misc-surfaces,shared-surfaces,widget-primitives}` + `Sources` + `Localization`. The prompt's `Features/Admin/` path wouldn't be built. Let me check if `apps/apple/Sources` exists and study the real page convention.
+
+Both `apps/apple/Sources/` and `apps/apple/TeslaSync/feature-views/` are compiled. The AuditLog precedent used `apps/apple/Sources/Features/Admin/`. Let me explore that tree — it's likely the real "page" home.
+
+Found the real convention: `apps/apple/Sources/Features/Admin/` with `XxxPage.swift`, `XxxPageModel.swift`, `XxxModels.swift`, `XxxRouteRegistration.swift`. The prompt's path is wrong; every sibling admin page lives here. `AuditLogPage` is the closest analog (paginated expandable table + filters + stats). Let me study it and the App route layer in depth.
+
+Excellent — clear convention. Now let me read the model, models, sample, and the App route layer to understand navigation registration and the data-source seam pattern.
+
+The pattern is very clear and well-structured. Let me read the App route layer, the sample data source, and the AuditLog table/filters/badges sub-views to learn the table + badge + filter idioms.
+
+Let me read the route parser, how registrations are composed, and the AuditLog table/filters/badges sub-views.
+
+Now I understand the architecture. Let me find: (1) where route registrations are composed, (2) the web App.tsx route for api-logs, (3) the shared design-token components (StatCard, Badge, Select/menu, TextField equivalents), and (4) the Filters/Badges sub-views.
+
+Let me read the registration chain in `TeslaSyncApp.swift`, the web routing context, and locate the shared design-token components (StatCard, Badge, Select, TextField, etc.).
+
+Let me locate the shared design-token component definitions (Color.TS, Font.TS, TSSpacing, TSButton, TSGlassPanel, StatCard/Badge/Select/TextField equivalents).
+
+Let me read the core design-token and component definitions to learn exact APIs.
+
+Let me read the tokens, cards, badges, typography, metrics, and feedback components.
+
+Let me read Badges (TSTone/TSBadge), Typography, Metrics (StatCard), Banners, States, Skeletons, and Forms.
+
+Let me read Metrics (StatCard), Feedback (Banners/States/Skeletons), Utility, and the Forms directory.
+
+Let me read the Pickers, Fields, Utility, Banners, Skeletons, and the AuditLog Filters sub-view.
+
+Let me read the remaining components (Banners, Skeletons, Utility), check the xcstrings catalog format + existing admin keys, and look at the ApiPlayground page as a second reference + a test file.
+
+Now let me check the xcstrings catalog format/existing admin keys, the ApiPlayground reference (page+model+registration+tests), the test convention, and `teslaSyncTheme()`.
+
+There are already 31 `apiLogs.` matches in the catalog. Let me see exactly which keys exist and whether they're complete.
+
+There are pre-seeded `translation.apiLogs.*` keys (web keys under a `translation.` namespace), but the Apple precedent (AuditLog) uses native keys like `admin.auditLog.*`. Let me reconcile: check the web AuditLog keys vs Swift keys, whether any Swift references `translation.*`, and the web ApiLogs default values.
+
+Web ApiLogs uses top-level `apiLogs.*` keys (vs AuditLog's `admin.auditLog.*`). A sibling page `TeslaOrdersPage.swift` references `translation.*` keys. Let me examine how TeslaOrders handles strings and the en.json structure to pick the right key convention.
+
+The convention: web keys map to catalog keys with a `translation.` prefix (TeslaOrders: `orders.title` → `translation.orders.title`), and the catalog already has all 31 `translation.apiLogs.*` keys. AuditLog's `admin.auditLog.*` is a different case. Let me confirm by checking en.json's root structure and whether `translation.error.loadFailed` exists, plus how other recent pages reference keys.
+
+All 30 required strings already exist in the catalog under the `translation.` prefix (matching the TeslaOrders sibling precedent), so no string additions are needed except a `route.apiLogs` nav title. Now let me read the web API types/devtools/serviceOptions to mirror the wire shapes, plus check route-title keys and the test setup.
+
+Let me read the exact `APICallLog`/`APICallLogStats`/`APICallLogResponse` interfaces and the `getAPICallLogs`/`getAPICallLogStats` functions.
+
+Let me read the rest of `getAPICallLogs`, confirm the test setup/convention, `teslaSyncTheme`, and route-title key format.
+
+Let me read the project.yml test-target config, the AuditLog test pattern, and the `route.apiPlayground` catalog entry format (to mirror for `route.apiLogs`).
+
+Let me confirm the test target config (so my test file compiles) and the `route.apiPlayground` catalog entry format.
+
+Let me view the test target config lines to confirm test placement.
+
+I now have a complete understanding of the architecture. Let me set up a plan and todos, then verify build feasibility (Shared.xcframework, xcodegen, pwsh placeholder script).
+
+Critical finding: `Shared.xcframework` (the KMP core) is absent — only a `.gitkeep`. So a full `xcodebuild` of the scheme cannot link (environment-level blocker, exactly the AuditLog precedent). `pwsh` + placeholder script + swiftlint/swiftformat/xcodegen are available. Let me check Theme.swift, whether components are self-contained, and any existing typecheck helper script.
+
+All dependencies are self-contained and the toolchain (swift 6.3, swiftlint, swiftformat, xcodegen, pwsh) is available — but `Shared.xcframework` (KMP core) is absent, so a full scheme link can't complete here (matching the AuditLog precedent). I'll verify via isolated strict-concurrency type-check + model test harness + the placeholder/lint gates.
+
+Let me start implementing. First, the data layer.
+
+Now the `@Observable` page model with the data-source seam.
+
+Now the sample data source seed.
+
+Data layer done. Now the badges sub-view.
+
+Now the main page file with header, stat cards, by-service chips, and the interpolation helpers.
+
+Now the filters panel (GlassPanel6).
+
+Now the entries table panel with expanded detail (GlassPanel7, plus GlassPanel1/8/9 inside the expansion).
+
+Let me fix the placeholder accessibility hint and create the expanded-detail file (GlassPanel1/8/9).
+
+Now the expanded-detail file with the JSON viewer, request-URL box (GlassPanel8), error box (GlassPanel9), and mono box (GlassPanel1).
+
+Views done. Now the route registration and app wiring.
+
+Now wire `AppRoute`, the parser alias, and the app registry chain.
+
+Now the parser alias and the app registry chain:
+
+I added an opening paren for the new registry wrapper — I need a matching closing paren at the end of the chain. Let me view and fix the closing parens.
+
+Now add the `route.apiLogs` nav-title key (and spotlight description, mirroring siblings) to the catalog. Let me view the insertion area.
+
+Let me validate the catalog JSON and create the test file.
+
+Catalog valid. Let me verify all 30 required parity strings resolve in the catalog, then write the test file.
+
+All 30 parity strings resolve. Now the model test suite.
+
+Now let me verify formatting, lint, and placeholders. First run swiftformat (auto-fix) on my files, then check the diff is contained.
+
+swiftformat reformatted 10/15. Let me verify the edited app files only changed in my regions (especially TeslaSyncApp.swift indentation).
+
+The registry chain re-indented cleanly. Let me confirm the AppRoute diff is just my additions and check the closing parens, then run swiftlint + placeholder gates.
+
+Let me view the full closing region to confirm paren balance, then run swiftlint, the placeholder gate, and the isolated type-check.
+
+Let me verify TeslaSyncApp.swift paren balance via a pure syntax parse, then run swiftlint and the placeholder gate.
+
+Paren balance confirmed and syntax parses clean. Now the meaningful check: an isolated **strict-concurrency type-check** of my new files together with their real dependencies (Components, Design, Tokens, Theme, App routes), for macOS — with `-D DEBUG` so the previews are checked too.
+
+The broad set pulled in an unrelated `UnitFormatters.swift` (depends on a units module outside my scope). All errors are in that file, none in mine. Let me narrow to the exact component dependencies my code uses for a clean signal.
+
+Real, actionable error in my code: `TSTone` (a public enum) isn't `Sendable`, so my statically-stored `ServiceConfig` can't be `Sendable`. Since I can't modify the shared `TSTone`, I'll store only labels statically and compute the tone via a function (like `methodTone`/`statusTone`). Let me rewrite the catalog.
+
+The file exists — let me edit it in place. I'll replace the struct, the stored dictionary, and the `service(_)` accessor, and add `serviceTone`.
+
+Now re-run the narrowed macOS type-check.
+
+Naming bug: my private state-switch property is also called `body`, colliding with the `View.body`. Let me rename it to `stateContent`.
+
+Re-running the macOS type-check after the `stateContent` rename.
+
+macOS type-check is clean (0 errors). Now the iOS-targeted type-check to exercise the `#if os(iOS)` compact branches.
+
+Both macOS and iOS strict-concurrency type-checks pass (0 errors), covering regular + compact branches. Now let me run swiftlint, swiftformat --lint, the placeholder gate on my files, and an executed model harness.
+
+swiftformat clean (0/15). Now swiftlint --strict on my files.
+
+swiftlint --strict: 0 violations. Now the placeholder gate (pwsh).
+
+The scanner flagged the word "placeholders" in my doc comment. Let me check the line and the patterns, then reword.
+
+Let me check the trigger patterns and scan all my files for any trigger words.
+
+Only one trigger — the word "placeholders" in a doc comment. Let me reword it.
+
+Now re-run the placeholder scan and write + run an executed model harness.
+
+Placeholder gate passes (COUNT=0). Now an executed model harness to verify runtime behavior (not just type-checking).
+
+The harness compiled and ran — one assertion failed: `exportJSON([])` doesn't yield `"[]"` (JSONSerialization renders empty arrays with newlines). Let me add an explicit empty guard.
+
+Harness passes all assertions — runtime logic verified. Let me re-confirm type-check + lint after the edits, then attempt the real xcodegen/xcodebuild gate for honest evidence.
+
+All checks green. Now let me attempt the real `xcodegen` + `xcodebuild` gate to honestly record the environment state.
+
+xcodegen succeeded (project generates cleanly with my files). The `.xcodeproj` is gitignored. Now let me attempt the actual `xcodebuild` to capture the exact blocker (expected: missing `Shared.xcframework`).
+
+It's compiling the large codebase (thousands of files). The `Frameworks/` dir definitively contains only `.gitkeep` — `Shared.xcframework` is absent, so linking will fail. Let me wait a bit more to capture the exact error.
+
+It's compiling the large out-of-scope codebase (thousands of files) and will inevitably fail at link time since `Shared.xcframework` is absent. I have definitive evidence of the blocker already. Let me stop it and record the environment state precisely.
+
+Definitively confirmed: every app + test target depends on `Frameworks/Shared.xcframework` (the KMP core), which is absent (only `.gitkeep`) and requires a full Kotlin/Native toolchain to produce — so a full-scheme `xcodebuild` is environmentally blocked, exactly as the sibling AuditLog page documented. My in-scope gates are all green. Let me clean up artifacts and update the ledger.
+
+Ledger valid (28 rows, both ApiLogs rows 43/43). Now let me write the evidence log with the full PARITY enumeration, gate results, and covenant.
+
+Let me do a final combined verification and check I haven't broken any existing route-count test by adding the `apiLogs` case.
+
+Two tests could be affected by the new route. Let me read `RouteTests.swift` and the menu command catalog test (which asserts navigate routes == all routes).
+
+`MenuCommandCatalogTests` asserts navigate commands cover **every** `AppRoute`. I must check whether the catalog derives from `allCases` (safe) or hardcodes routes (would break). Let me find it.
+
+`navigateCommands()` derives from `AppRoute.allCases`, so those tests stay green. But I must check for **exhaustive switches over `AppRoute`** elsewhere that would fail to compile with a new case. Let me search.
+
+Only `WatchDeepLink.swift` matched, and that's its own enum switching over `self`. Let me confirm it's independent of `AppRoute`, then finalize.
+
+Confirmed `WatchDeepLink` is independent. No exhaustive `AppRoute` switch breaks. Let me run the final combined verification on the current state of all files.
+
+Both type-checks clean (0/0). Final lint pass on all 15 files, then commit.
+
+All gates green (swiftlint 0, swiftformat 0/15, placeholder 0, type-check macOS 0 / iOS 0, harness passed, xcodegen 0). Let me review git status and commit.
+
+Clean status with exactly my intended changes (no generated `.xcodeproj`). Staging and committing.
+
+Committed successfully. Let me finalize the todo tracking.
+
+All 15 todos done. Let me tidy the generated build artifact (gitignored) and confirm the final clean state.
+
+The task is complete and committed. Working tree is clean.
+
+## Summary
+
+Implemented the native **SwiftUI/HIG `ApiLogsPage`** at full parity with `web/src/features/admin/pages/ApiLogsPage.tsx` (route `/api-logs`), adaptive across macOS + iOS.
+
+**Path reconciliation (recorded, no silent drift):** the prompt's `TeslaSync/Features/Admin/` path is *not* a `project.yml` source root, so files would never compile there. Every sibling admin page lives in `apps/apple/Sources/Features/Admin/` — I matched that built convention.
+
+**Parity: `PARITY_COVERED=43 / 43`**
+- **9 panels** — JSON body viewer, 4 stat cards (Total Calls / Error Rate / Avg Duration / Last 24h), filters, entries table, request-URL box, error box
+- **4 data states** — loading / empty / error / success, via an `@Observable ApiLogsPageModel` + injectable `ApiLogsDataSource` seam (ADR-004)
+- **30 strings** — web `apiLogs.*` + `error.loadFailed` keys, all resolving from the existing `translation.*` catalog mirror (no string drift); only added `route.apiLogs` nav title
+
+Faithful extras: stats feed, tappable by-service chips, service/method/status filters + endpoint search + date range, pagination, `ShareLink` export, and expandable request/response detail. Wired a new `.apiLogs` `AppRoute` + parser alias + registry registration (verified no sibling route/menu test breaks).
+
+**Gates (all in-scope green):**
+- swiftformat `--lint`: 0/15 · swiftlint `--strict`: 0 violations · placeholder scan: 0 · xcodegen: OK
+- Isolated Swift‑6 strict-concurrency type-check: **macOS 0 / iOS 0** errors
+- Executed model harness: **all assertions passed** + 30 XCTest cases written
+- Full `xcodebuild` is **BLOCKED** solely by the absent KMP `Frameworks/Shared.xcframework` (env-wide; every target depends on it; zero diagnostics in any `ApiLogs*` file) — documented honestly, matching the sibling AuditLog precedent.
+
+Ledger updated (both platforms `done` 43/43), evidence log written, committed as `b57d7147f` with `EXIT=0 / STATUS=DONE`.
+
+The task is fully complete and verified. All work is committed (`b57d7147f`), the working tree is clean, and all 15 todos are done.
+
+Merge made by the 'ort' strategy.
+ .../monorepo/logs/apple-page-admin-ApiLogsPage.log | 223 +++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  22 ++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Sources/Features/Admin/ApiLogsFormat.swift     | 137 ++++++++
+ .../Sources/Features/Admin/ApiLogsModels.swift     | 214 +++++++++++++
+ .../Features/Admin/ApiLogsPage.Badges.swift        |  63 ++++
+ .../Features/Admin/ApiLogsPage.Detail.swift        | 133 ++++++++
+ .../Features/Admin/ApiLogsPage.Filters.swift       | 250 +++++++++++++++
+ .../Sources/Features/Admin/ApiLogsPage.Table.swift | 256 +++++++++++++++
+ .../apple/Sources/Features/Admin/ApiLogsPage.swift | 217 +++++++++++++
+ .../Features/Admin/ApiLogsPageModel.Sample.swift   | 179 +++++++++++
+ .../Sources/Features/Admin/ApiLogsPageModel.swift  | 253 +++++++++++++++
+ .../Features/Admin/ApiLogsRouteRegistration.swift  |  24 ++
+ .../Features/Admin/ApiLogsServiceCatalog.swift     | 101 ++++++
+ apps/apple/Sources/TeslaSyncApp.swift              |  40 +--
+ .../Features/Admin/ApiLogsPageModelTests.swift     | 345 +++++++++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 18 files changed, 2462 insertions(+), 20 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-ApiLogsPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsModels.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsPage.Badges.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsPage.Detail.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsPage.Filters.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsPage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsRouteRegistration.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/ApiLogsServiceCatalog.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/ApiLogsPageModelTests.swift

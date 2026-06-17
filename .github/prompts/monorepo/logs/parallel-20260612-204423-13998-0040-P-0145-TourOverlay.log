@@ -1,0 +1,164 @@
+I'll start by exploring the repository structure to understand what exists for both the web source and the Apple app.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Capability check passes — not BLOCKED. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure in depth to understand existing patterns, the project configuration, and the P1 infrastructure (state holders, tokens, i18n, diagnostics).
+
+The build has a pre-action staging `Shared.xcframework`. Let me check whether that framework exists, look at example shared-surfaces to learn the exact pattern, and find the P1 infrastructure (state holders, tokens, i18n facade, diagnostics).
+
+The pattern is a multi-file surface (`.swift`, `.Adapter`, `.Model`, `.Views`, `.States`, `.Seams`, `.Previews`, `.strings`, `.Tests`, etc.). Let me find a close reference surface that uses motion preference + translation, and locate the P1 infrastructure (i18n facade, tokens, diagnostics, state holders).
+
+Let me read a complete reference surface (AchievementUnlockedToast — a feedback toast with the full file set) and the P1 infrastructure (StateHolderModel, i18n facade, diagnostics).
+
+Let me read a complete surface end-to-end plus one that emits `view.opened` telemetry, to learn the i18n facade and diagnostics contract precisely.
+
+Now let me read the Views/States patterns and locate the design tokens (TSSpacing, colors, typography) so the native surface uses the P1/S9 token layer correctly.
+
+Let me read the shared component APIs I'll use (Button, Card, Badge, EmptyState, Skeleton) and the reference surface's Views + Tests to nail the conventions.
+
+Let me read the reference Views + Tests + Previews, the remaining component APIs (Cards, Badges, Skeletons), and check how motion preference is handled natively.
+
+Let me read the test + adapter patterns, the web hooks (`useMotionPreference`, `useTour`), and check the logs directory + how motion preference is bound natively.
+
+Now let me read the web hooks for exact parity (`useMotionPreference`, `useTour`), check the logs dir, the placeholder checker, and whether the Shared.xcframework build is feasible.
+
+Key findings: 0143–0145 are missing from the `p4-apple-shared-surfaces` series (confirming TourOverlay is net-new here), `pwsh` is available, and there's a sibling `TourLauncher` surface. Let me examine the sibling tour surface and the prior TourOverlay artifact log for domain alignment.
+
+The prior artifact log confirms the exact scope and the multi-file approach. Let me read the sibling `TourLauncher` surface (same tour domain) to align models, seams, and naming conventions before authoring.
+
+Let me read the TourLauncher Model, Seams, and strings to fully align with the tour-domain conventions, plus confirm the `TSFadeIn`/`TSGlassPanel` component names.
+
+I now understand the full pattern. Let me verify the remaining component signatures I'll use (GlassPanel, FadeIn, Card, Skeleton, Badge) and check the swiftlint/swiftformat configs for constraints (line length, etc.).
+
+Let me read the exact signatures of the components I'll compose (GlassPanel, Card, FadeIn, Skeleton, Badge, Caption).
+
+I have the full pattern. Let me set up the plan/todos and check for any type-name collisions with the sibling `TourLauncher` (same module) before authoring.
+
+There's an atomic `TSTourOverlay` component (out of scope — the component-library bundle). My surface is distinct. Let me read it to avoid type collisions and cross-check parity.
+
+I have everything needed. Let me write the plan and author the pure-core Adapter file first (everything depends on it).
+
+Now the pure-core Adapter — the faithful port of the web geometry and control flow:
+
+Now the Seams file (telemetry, controller, source, i18n facade):
+
+Now the Model (state holder):
+
+Now the leaf-state chrome (loading / empty / error):
+
+Now the richest file — the spotlight cutout, border glow, tooltip card, progress dots, freshness chip, and the composed active view:
+
+Now the main public surface:
+
+Now the i18n strings catalog:
+
+Now the Previews covering every state, step position, and placement:
+
+Now the adapter unit tests (geometry, layout, projection, nav, dots, a11y):
+
+Now the model lifecycle/command tests:
+
+All 10 files written. Now let me verify formatting and linting. First, auto-format my files and confirm they're clean, then lint.
+
+swiftformat clean. Now swiftlint (strict) on my files:
+
+One swiftlint violation: the Adapter is 449 lines (>400 file_length limit). I'll split the geometry/derivation pieces into a separate file. Let me find the exact boundaries.
+
+I'll split the geometry/derivation sections into a new file. Let me extract lines 193–407 into `TourOverlay.Geometry.swift` and remove them from the Adapter:
+
+Split done (Adapter 233, Geometry 229 lines). Let me re-run swiftformat and swiftlint on all 10 Swift files:
+
+swiftlint and swiftformat both clean. Now the placeholder gate — let me check patterns and run it as the gate does:
+
+Placeholder gate passes (COUNT=0). Now the real verification. Let me check whether the shared component library (my surface's deps) is self-contained enough for a fast surface-isolated build, and assess the whole-app build's KMP dependency.
+
+The shared component kit (`Sources/Components` + `Sources/Design`) imports only system frameworks — no KMP. I'll build a surface-isolated project (real components + tokens + my surface, no 225 siblings, no Kotlin framework) and run my tests on the iPhone 16 simulator — the same precedent as the prior artifact. Let me set it up:
+
+xcodegen didn't finish. Let me retry it directly with visible output and a timeout to see what's happening:
+
+Let me diagnose whether xcodegen itself works here with a minimal local-only project:
+
+xcodegen works on local sources — the hang was from external absolute directory paths. Let me copy the deps + surface into the project (byte-identical) and regenerate:
+
+Byte-identical confirmed. Now generate the project with local paths and build+test on the iPhone 16 simulator:
+
+Project generated. Now build + test on the iPhone 16 simulator (this compiles the real component kit + my surface and runs my tests):
+
+The build failed — but in the **component kit**, not my surface: it references `UnitPreferences`/`TSUnitsKey` defined outside Components/Design. Let me locate those and add the minimal missing files:
+
+`UnitPreferences` lives in `Sources/SharedFacade/Units+Facade.swift`, pulled in by `Components/DataDisplay/UnitFormatters.swift` (which my surface does NOT use). Let me check if that facade is self-contained, then decide whether to add it or exclude the unused formatter:
+
+`Units+Facade.swift` imports the KMP `Shared` framework, so I won't pull it in. Only `UnitFormatters.swift` (unused by my surface) needs it. Let me check nothing else in Components depends on `UnitFormatters`, then exclude it:
+
+Safe to exclude. Let me remove the unused formatter from the isolated copy, regenerate, and rebuild+test:
+
+The app target compiled — now 2 **real** Swift 6 strict-concurrency errors in my test files: the top-level `identityLocalize` closure must be `@Sendable`. Let me fix the real surface files, then re-copy and rebuild:
+
+Outstanding — **BUILD SUCCEEDED** and **TEST SUCCEEDED**: all 42 tests pass on iPhone 16 / iOS 18 under Swift 6 strict concurrency. Now let me verify the macOS 15 build (the gate runs a macOS pass too) by adding a macOS target to the isolated harness:
+
+macOS 15: **BUILD SUCCEEDED** + **TEST SUCCEEDED** (42 tests; the linkd warnings are benign). My surface is fully green in isolation. Now, for honest evidence about the whole-app gate, let me attempt the real project generation + a bounded whole-app build to document its actual state:
+
+The Kotlin/Native toolchain IS present (`~/.konan/...2.4.0`), so the whole-app gate may be attemptable. Let me run the fast whole-tree lint/format checks first (honest baseline), and kick off the real project generation. Let me start with whole-tree swiftformat + generating the real xcodeproj in parallel:
+
+Honest baseline captured: whole-tree `swiftformat --lint` shows **1/5412** files need formatting — and it's a **pre-existing sibling** (`RecentDrivesSection.Previews.swift`), NOT TourOverlay. The real xcodeproj generated. Let me run whole-tree swiftlint and kick off the whole-app build (with the KMP pre-action) in the background:
+
+Whole-tree `swiftlint --strict`: only **3 violations, ALL pre-existing** in `widget-primitives/WidgetChartSummary.Tests.swift` — **ZERO in TourOverlay**. The background build already exited (fast — likely the KMP pre-action). Let me read its log:
+
+The KMP pre-action (Gradle) is genuinely progressing — the Kotlin/Native toolchain works here. The launcher returned but the `nohup`'d xcodebuild continues. Let me confirm it's still running and let it proceed:
+
+The whole-app build is genuinely running (xcodebuild + Gradle assembling the KMP framework). It will take many minutes. My surface is already fully verified in isolation, and whole-tree lint/format reds are all pre-existing siblings. Let me monitor the build's progress while it compiles:
+
+KMP framework assembled, no errors yet — now xcodebuild moves to compiling the Swift sources. Let me continue monitoring:
+
+Swift compilation is underway with **zero errors so far** (including zero TourOverlay errors). Let me keep monitoring for completion:
+
+The whole-app build **FAILED** — but the failing batch is sibling A-files (AnomalyInlineRow, ApiPlayground, AppContainer, AppearanceSettings…), none are TourOverlay. Let me find the actual error message:
+
+No compiler `error:` lines at all, yet the SwiftCompile batch failed — suggesting a compiler crash or kill (this is a shared box with a parallel slot-41 also compiling). Let me check for crash/OOM/signal indicators:
+
+There's a **Swift compiler crash (Stack dump)** at line 18475 — not a TourOverlay error. Let me see which file triggered the crash:
+
+Confirmed: the Swift **compiler crashed** ("Please submit a bug report… Stack dump") during the whole-module compile of a batch of **sibling A-files** (AnomalyInlineRow, ApiPlayground, AppCommands, AppContainer, AppearanceSettings…) — **zero TourOverlay involvement**. Let me capture the crash signature for the log:
+
+Definitive honest evidence: the whole-app build failed due to a **swift-frontend compiler crash during IR generation for the sibling file `AppearanceSettings.Controls.swift`** — `TourOverlay_error_refs=0` (zero TourOverlay errors). Let me check git state and clean up build artifacts before writing the log:
+
+Clean — git status shows **only my 11 new TourOverlay files**, no drift. Now let me write the honest gate log with all captured evidence:
+
+Let me do a final re-verification of the scoped lint/format (the test files changed after the initial check), then commit:
+
+All green: swiftformat 0/10, swiftlint 0 violations, strings plutil OK. Let me update todos and commit the surface + log:
+
+Only my 12 files staged. Committing:
+
+Committed (fd492cb42, 12 files, 2183 insertions). Let me clean up temp build artifacts and confirm a clean working tree:
+
+Task complete. Let me confirm the final todo state and wrap up.
+
+All 11 todos done, working tree clean, surface committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0145-TourOverlay.log  | 163 +++++++++++
+ .../shared-surfaces/TourOverlay.Adapter.swift      | 233 +++++++++++++++
+ .../shared-surfaces/TourOverlay.AdapterTests.swift | 294 +++++++++++++++++++
+ .../shared-surfaces/TourOverlay.Geometry.swift     | 229 +++++++++++++++
+ .../shared-surfaces/TourOverlay.Model.swift        | 198 +++++++++++++
+ .../shared-surfaces/TourOverlay.Previews.swift     | 101 +++++++
+ .../shared-surfaces/TourOverlay.Seams.swift        | 166 +++++++++++
+ .../shared-surfaces/TourOverlay.States.swift       | 130 +++++++++
+ .../shared-surfaces/TourOverlay.Tests.swift        | 214 ++++++++++++++
+ .../shared-surfaces/TourOverlay.Views.swift        | 320 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/TourOverlay.strings  |  34 +++
+ .../TeslaSync/shared-surfaces/TourOverlay.swift    | 101 +++++++
+ 12 files changed, 2183 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0145-TourOverlay.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.Geometry.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TourOverlay.swift

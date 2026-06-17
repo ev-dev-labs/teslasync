@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page is a thin tabbed shell with 5 sections. Let me explore the Apple project structure, parity manifest, and existing patterns.
+
+Key finding: existing pages aren't in `Features/Admin/`. Let me locate where Apple pages actually live and how the project is configured.
+
+Now I understand: real pages live in `apps/apple/Sources/Features/Admin/`. Let me study the simplest analog (TeslaOrders, coveredCount=2) and project config.
+
+TeslaOrders is the ideal analog. Now let me check AppRoute, the 5 section components, TabNav, design tokens, and project config.
+
+Now let me read the routing, the Tabs component, and the 5 section component signatures.
+
+`TSTabs` is the tab component. There's no `.devTools` AppRoute yet. Let me check the web routing and the section component signatures.
+
+Sections each take a Model. Let me see how to construct those models (Previews/Models) and read the routing composition root.
+
+Let me read the 5 section model files and the app composition root to understand construction and registration.
+
+Let me read the remaining 3 models, their previews (for sample construction), and the app composition root.
+
+Let me read the remaining model files and check how sections start themselves, plus the app root.
+
+All sections self-start via `.onAppear`. Let me get the FleetApi seed pattern and confirm the catalog symbols.
+
+I have all section seeds. Now let me check the composition root and any exhaustive `AppRoute` switches/tests I must keep consistent.
+
+Let me check the route tests, web sidebar placement, and whether other switches/tests need the new case.
+
+Adding `.devTools` only touches AppRoute.swift's three switches plus parser. Let me inspect the web route registry, the string catalog format, and the sidebar nav.
+
+`route.devTools`, `devtools.title/subtitle` are absent. TeslaOrders used a `translation.` prefix — let me verify the catalog namespace and read `TSPageTitle`.
+
+Key finding: `translation.devtools.title` and `translation.devtools.subtitle` already exist in the catalog. Now let me confirm how sections store their model and whether they wrap in their own ScrollView.
+
+Sections have mixed scroll behavior (FleetApi has its own ScrollView, ClientUtilities doesn't). Let me check the other three.
+
+Only FleetApiSection self-scrolls; the other four don't. Let me confirm the web devtools sections match the Apple components, check the motion component, and the remaining init signatures.
+
+The web devtools `InfrastructureSection` is a backend-tools grid, but the Apple `InfrastructureSection` in feature-views appears to be a different (system/status) component. Let me investigate this naming collision carefully.
+
+There's a `BackendStatusSection` and `BackendTool` in Apple. The web devtools `InfrastructureSection` is a backend-tools grid. Let me verify which Apple component is the correct parity.
+
+Confirmed: the web devtools `InfrastructureSection` (backend-tools grid) has NO dedicated Apple parity component — the same-named Apple file is the system/status one. Let me check the manifest's intended mapping and the `BackendTool` component.
+
+The page parity is intentionally narrow (2 strings, thin shell). 4 sections have Apple parity components; the devtools `InfrastructureSection` (backend-tools grid) does not. Let me examine the `BackendTool` component to compose the Infrastructure tab faithfully.
+
+`BackendTool` is cleanly composable. The Infrastructure tab can be faithfully reproduced from 4 `BackendTool` cards + an MQTT tool. Let me check the available input components and layout primitives.
+
+`TSRouteTransition` mirrors the web `<FadeIn key={tab}>`. Let me read the field, card, button, and tone primitives I'll need.
+
+I have all primitives. Now let me assess the build toolchain availability (xcodegen, pwsh, the Shared.xcframework) to know whether the gate can run.
+
+Toolchain mostly present, but `Shared.xcframework` is missing (only `.gitkeep`). Let me check whether it can be built (KMP/Gradle) — this determines if the full `xcodebuild` gate can run.
+
+Toolchain is present but `Shared.xcframework` must be built via Gradle/Kotlin-Native (the long pole). Let me kick that off in the background while I implement, and set up my plan.
+
+Gradle bootstraps cleanly. Let me start the `Shared.xcframework` build in the background, then set up my plan and implement while it runs.
+
+Build started in background. Let me set up my plan and task tracking.
+
+Build is progressing (compiling Kotlin/Native). Let me implement while it runs, starting with the route.
+
+Route edits done. Let me check whether the Infrastructure tool labels and tab labels already exist in the catalog before composing.
+
+Let me check the web i18n resources for the exact displayed copy of these labels.
+
+Web shows the keys verbatim for missing translations. I'll reproduce exactly. Let me read the SwiftLint config to respect its rules before writing.
+
+Let me check the xcstrings format so I can add keys correctly without corrupting the file.
+
+Design is finalized. Let me write the Infrastructure section composition first.
+
+Now the main page.
+
+Now let me fix access modifiers (keep everything internal to avoid the public/internal `Tab` cascade) and write the registration.
+
+Now the route registration with sample model factories.
+
+Let me view the exact composition-root region to wire in the registration precisely.
+
+Now the tests, plus a check that no other code switches exhaustively over `AppRoute` or asserts a route count.
+
+Let me check `WatchDeepLink.swift` — it references AppRoute cases and is in the watch target which also compiles AppRoute.
+
+`WatchDeepLink` is a separate enum — no exhaustiveness break. Let me write the tests.
+
+Let me check the build progress and add the catalog string keys.
+
+The `Shared.xcframework` built successfully — the full `xcodebuild` gate can run. Let me add the catalog string keys.
+
+13 keys added. Let me validate the catalog and lint my new Swift files.
+
+SwiftLint clean. Let me run the placeholder scan and generate the Xcode project.
+
+Placeholder scan clean. Let me stage the framework and generate the Xcode project.
+
+Project generated. Let me build the iOS app target (compiles all my new files) in the background.
+
+Let me make one defensive edit (explicit generic for the scroll helper) and check build progress.
+
+My edit accidentally dropped the struct's closing brace. Let me check and fix immediately.
+
+Fixed. Let me check the build result (it compiled the correct pre-edit version) and verify brace balance.
+
+Let me check whether the build process is still running and its final status.
+
+Build still compiling the main target. Let me verify my files' brace balance while waiting.
+
+Braces balanced. Let me wait for the build to finish.
+
+Still compiling the large main target. Let me continue waiting.
+
+The log stalled at 09:47 — let me check if the build is actually progressing (CPU) or stuck.
+
+Build is actively compiling the large main target (swift-frontend at 66% CPU). Let me keep waiting.
+
+Heavy parallel compilation (884% CPU, 81 frontends) — actively building. Let me wait more.
+
+Build is progressing (2434 object files and counting — this is a very large module). Let me continue monitoring.
+
+Object files climbing (2434→2544 in 30s). Let me wait for completion.
+
+`DevToolsPage.o` compiled with no errors. Let me confirm the other new files compiled and wait for final link.
+
+All new/edited files compiled successfully. Let me wait for the final link.
+
+Let me check what the build is currently doing.
+
+The log flushed (28515 lines) — still compiling the large target in batch mode. Let me verify no errors and keep waiting.
+
+Zero errors. The cold build of this large module is slow but progressing. Let me keep waiting.
+
+Nearly done (4058/4522 files compiled). Let me wait for the final files and link.
+
+The log shows "(2 failures)". Let me investigate — grep for the actual failures.
+
+Build failed only at x86_64 link — the prebuilt KMP `Shared.xcframework` has no x86_64 simulator slice (only arm64). My Swift code compiled and linked cleanly for arm64. This is an arch-availability limitation, not a code issue. Let me rebuild targeting arm64 simulator (what Apple Silicon actually runs).
+
+Rebuild started. Let me wait for it to relink (arm64 cache should make it fast).
+
+All arm64 objects present (4522/4522). The settings change triggered a re-validation pass. Let me wait for the definitive status.
+
+**BUILD SUCCEEDED** (arm64, 0 errors) — my code compiles and links cleanly. Now let me run the tests on a simulator.
+
+Booted simulators available. Let me run the focused tests (my new tests + RouteTests, which my AppRoute change affects).
+
+Tests building in the background. Let me wait and monitor.
+
+The test bundle hit a **pre-existing** compile error in an unrelated file (`RecentActivity.Tests.swift` — duplicate class), not my code. Let me confirm it's pre-existing and understand it.
+
+Confirmed pre-existing: two co-located test files (`RecentActivityFeed.Tests.swift` and `RecentActivity.Tests.swift`) both declare `RecentActivityFeedProjectionTests` — a merge collision from another parallel prompt, in files outside my scope. It blocks the whole test bundle from compiling. Let me verify my own tests pass by temporarily unblocking, then decide. First, let me inspect both.
+
+This is a single pre-existing merge collision (`RecentActivityFeedProjectionTests` in two files), unrelated to my work and outside my scope. To verify my own tests actually pass, I'll temporarily unblock the bundle, run my tests, then revert so my committed changeset stays in-scope.
+
+Bundle unblocked locally. Let me re-run the focused tests.
+
+Tests building. Let me wait and monitor.
+
+**TEST SUCCEEDED** — `DevToolsRouteRegistrationTests` (8 tests) and `RouteTests` (8 tests) all pass, 0 failures. Now let me revert the temporary unblock to keep my changeset in-scope.
+
+Reverted — changeset is strictly in-scope. Let me gather final gate evidence (placeholder, lint, parity strings) and assemble the log.
+
+All static gates are green (placeholder EXIT=0, swiftlint 0 violations across 5683 files), build SUCCEEDED, and my tests pass 16/16. Let me write the honest gate log.
+
+Let me add the ledger rows for `page:admin/DevTools` (both platforms), matching the existing schema.
+
+Ledger updated. Let me do a final review of the page file (after the brace fix) and check full git status before committing.
+
+Everything is in scope and verified. Let me commit the in-scope changeset.
+
+Committed cleanly (`bfaad0bcd`) with exactly the 10 in-scope files. Let me finalize task tracking.
+
+All todos complete. Let me do a final working-tree check and clean up temp artifacts.
+
+Task complete. All verifications pass for the artifact and the in-scope changeset is committed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

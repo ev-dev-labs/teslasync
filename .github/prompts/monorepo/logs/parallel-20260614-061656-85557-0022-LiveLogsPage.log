@@ -1,0 +1,209 @@
+I'll start by exploring the repository structure to understand the task scope, the web source page, and the existing Apple app structure.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web source and explore the Apple app structure in depth.
+
+Let me continue reading the web source (the JSX render) and explore existing Apple feature pages for patterns.
+
+Let me finish reading the web source and dig deeper into the Apple project structure.
+
+This is a large monorepo (6264 Swift files). The existing structure uses `feature-views/`, not `Features/Admin/`. I need to understand the real conventions, the parity manifest/ledger, and the build setup before writing code.
+
+There are existing logs for similar admin pages. Let me examine the most similar one (ApiLogsPage), the ledger, the manifest record, and the p4-apple README to understand expected format and whether Xcode is available.
+
+This ApiLogs precedent is the exact template I need. Now let me study the existing implementation in `Sources/Features/Admin/` to mirror conventions — especially ApiLogs (similar log viewer) and LiveSignalInspector (live SSE page).
+
+Now I'll study the closest precedents in depth. Let me read the ApiLogs implementation (similar log viewer) and the web `useLogStream` hook in parallel.
+
+Now let me study the live SSE precedent (LiveSignalInspector), the ApiLogs view/route/format files, and the available shared components.
+
+Let me read the route plumbing, the filters/badges precedent, and the live SSE view.
+
+Let me check the app registration, the live SSE table model, the badges precedent, and whether `liveLogs.*` strings already exist in the catalog.
+
+All 31 required `liveLogs.*` strings already exist in the catalog. `liveLogs` is a NEW route (only `liveSignals` exists). Now let me study the live SSE streaming model, the shared components/tokens, the sample data source pattern, and check for an existing native AI summary component.
+
+There's a `Sources/Live/LiveLog.swift` — highly relevant. Let me read the live SSE infrastructure and locate the `LiveSignalsTableModel`.
+
+Let me find the `LiveSignalsTable` component definition, read the staleness policy + connection state, and locate the shared UI components/tokens I'll need.
+
+`LiveSignalsTable` lives in `TeslaSync/feature-views/` (also compiled into the module). Let me read its live model (the streaming/connection/staleness precedent), the connection state enum, and the staleness policy.
+
+Now I understand the live patterns. Let me check tool availability, read the placeholder scanner + gate contract, and the shared components/tokens I'll use.
+
+All tools are available; `Shared.xcframework` is absent (only `.gitkeep`) → full `xcodebuild` will be BLOCKED at the KMP link stage, exactly like the ApiLogs precedent. Let me read the placeholder patterns, gate contract, and the shared components/tokens.
+
+Key risk: the placeholder scanner flags the substring "Placeholder" (case-insensitive), and LiveLogs has `grepPlaceholder` / `vehicleIdPlaceholder` string keys. Let me see how the existing codebase handles this.
+
+Convention confirmed: `// parity:allow i18n key name, not a stub`. Now let me read the shared components and design tokens I'll use.
+
+Let me read the remaining components (banner, stat card, live indicator, text field), the token source location, and the existing test pattern.
+
+Let me confirm the token scale, read the field/toggle components, the test pattern, and the project.yml source config.
+
+Let me check the project.yml source globs, the route-host registry API, and whether tests/spotlight require a catalog entry for every route.
+
+Adding an enum case requires updating exhaustive switches. Let me check which files switch over `AppRoute` exhaustively, the route tests, and the spotlight indexer.
+
+I have all the context I need. Let me verify the xcstrings formatting style and confirm the manifest record, then start building.
+
+I now have a complete picture. Let me confirm the interpolation-bearing string values (`filename` with `{{ts}}`, `stats.*` with `{{count}}`), then set up tracking and start building.
+
+Catalog uses `%1$@` format specifiers (not `{{token}}`), so I'll use `String(format:)`. I now have full context. Let me set up tracking and write the plan.
+
+Let me check the lint/format configs to match the rules exactly before writing code.
+
+Configs noted (maxwidth 120, before-first wrapping, no explicit self, @testable at bottom). I'll write the files and auto-format with swiftformat. Starting with the models.
+
+Now the format/parse layer (Foundation-only, isolated-compilable).
+
+Now the core `@Observable` model. Let me add the staleness window constant and write the page model.
+
+Now the sample stream — emits `connected` + representative seed lines, then stays live until cancelled.
+
+Now the main page view composing the 4 panels and the subscription lifecycle.
+
+Now the filters panel (GlassPanel1).
+
+Let me verify the shared freshness/live string keys exist before wiring the staleness indicator.
+
+Now the controls panel (GlassPanel2) with connection badge, stats, staleness, and actions.
+
+Now the table panel (GlassPanel4) with rows, level badge, grep highlighting, empty state, and autoscroll.
+
+Now the route registration, then the AppRoute/parser/app edits.
+
+Now wiring the route into `AppRoute`, the parser, and the app composition.
+
+Now register the route in the app composition. Let me re-read the exact registry chain to edit it precisely.
+
+That edit was wrong — I introduced a nonexistent method. Let me fix the closing parens correctly (just add one `)`).
+
+The app wiring is balanced. Now add the two new catalog strings (`route.liveLogs` + spotlight description) after the apiLogs block.
+
+Let me validate the catalog JSON and then write the unit tests.
+
+Now the unit tests mirroring the ApiLogs test structure.
+
+Let me simplify the unwrap in the main test and append the formatter/sample test extension.
+
+All files written. Now let me run the gates — first auto-format with swiftformat, then verify.
+
+Formatting is clean. Now let me run the lint + placeholder gates.
+
+swiftformat's deep-nesting of the registry chain conflicts with swiftlint's 120-col limit. The robust fix is to flatten the composition. Let me verify all registry signatures and the two `LiveLogsPage.Table`/`LiveLogsFormat` issues.
+
+Let me test whether the original registry chain was a swiftformat fixed point (to choose the least-invasive fix).
+
+The original also wasn't swiftformat-clean. The robust fix is to flatten the composition so it passes both tools. Let me verify the two registries with extra params (Settings, FleetCompare).
+
+The flat composition will satisfy both tools. Let me restore the original `TeslaSyncApp.swift` and apply a clean flattened refactor.
+
+Now let me fix the remaining 3 swiftlint issues (brace spacing in Format, shorthand-operator in the highlighter).
+
+Now fix the highlighter's shorthand-operator violations by building segments and reducing.
+
+Now re-format and re-run both lint gates.
+
+swiftlint clean. Now the placeholder gate and xcodegen.
+
+Placeholder gate green (COUNT=0). Now xcodegen to confirm the project generates with the new files.
+
+Project generates cleanly. Now let me run an isolated Swift-6 strict-concurrency type-check of the Foundation-only core files (the full `xcodebuild` is blocked by the absent KMP framework).
+
+Core type-checks clean under Swift 6. Now let me build and run an executable harness that exercises the model's runtime behavior.
+
+32/32 harness assertions pass. Now let me attempt an isolated type-check of the SwiftUI view files together with the design tokens + shared components they use. First, check those component files don't transitively need the KMP framework.
+
+All SwiftUI-only (no KMP). Let me type-check the view files against the tokens + components they use.
+
+macOS type-check clean (EXIT=0). Now the iOS target to exercise the `#if os(iOS)` compact branches.
+
+Both targets type-check clean under Swift 6. Let me confirm the full `xcodebuild` is BLOCKED specifically by the absent KMP framework (to document honestly).
+
+The blocker is confirmed (only `.gitkeep`; 4 targets reference the framework). Let me capture the actual `xcodebuild` failure for honest evidence.
+
+The xcodebuild scheme has a pre-action that assembles `Shared.xcframework` via Gradle — and it succeeded in this environment. My `timeout` cut it off. Let me check whether the framework is now staged, which would let me run the full build+test.
+
+The KMP framework builds in this environment — it just needs staging into `Frameworks/`. This means I can run the **full** build+test. Let me stage the framework directly.
+
+The script builds + stages the framework. Let me run it to stage `Shared.xcframework`, enabling the full build.
+
+Gradle KMP/Native release build is slow (compiling for multiple Apple arches). Let me keep waiting.
+
+`Shared.xcframework` is staged. Now I can run the **full** `xcodebuild`. Let me build the macOS app (compiles the entire module incl. my files) — running async with output to a log.
+
+The full build is compiling the whole module. Let me monitor progress.
+
+Build failed with 2 errors (none in LiveLogs). Let me see what they are.
+
+The 2 errors are **code-signing** errors (no dev certificate in this headless env) — Swift compilation of the entire module (including my files) succeeded. Let me rebuild with signing disabled to get a green build, then run the tests.
+
+Confirmed: 0 non-signing errors. The signing-disabled rebuild is running. Let me wait for it.
+
+The backgrounded job was orphaned. Let me re-run the build properly as a detached async process.
+
+Build still compiling (settings change triggered a rebuild), 0 errors so far. Let me keep waiting.
+
+Build failed only on a **pre-existing sibling file** (`shared-surfaces/Input.Previews.swift`), not my code. Let me investigate: check whether the first build compiled my files, confirm the sibling error is pre-existing, and verify no LiveLogs errors.
+
+build2's only errors are in the pre-existing sibling `Input.Previews.swift` — **0 LiveLogs errors**. Let me examine the first build and confirm the sibling file is pre-existing/unmodified.
+
+The first build fast-failed at signing validation (never compiled Swift); build2 compiled the full module and stopped only at the pre-existing sibling `Input.Previews.swift`. Let me confirm git status and inspect that sibling error — I'll try a temporary, reverted workaround to run my tests in-module.
+
+Confirmed: I modified only the 4 documented seam files + 10 new files; `Input.Previews.swift` is unmodified (pre-existing). The error is `return` inside a `#Preview` ViewBuilder — rejected by this newer toolchain (Xcode 26.5). Let me confirm this pattern is widespread (systemic pre-existing), not my concern.
+
+**Definitive finding:** 106 sibling files use the same `return`-in-`#Preview` pattern that this newer Xcode 26.5 toolchain rejects — a systemic pre-existing/toolchain blocker. **My files use it zero times** and have **0 build diagnostics**. The full `xcodebuild` is blocked by out-of-scope siblings + code-signing, exactly as the precedent's environment-BLOCKED disposition.
+
+Let me update the todos and finalize the ledger + evidence log.
+
+Ledger valid (37/37 both idioms). Now let me write the comprehensive evidence log.
+
+Now let me run a final clean verification of the lint/format/placeholder gates on the committed state, then commit.
+
+All gates green (format 0/13, lint 0 violations, placeholders 0). Let me verify build artifacts are git-ignored, then commit exactly the intended files.
+
+Build artifacts are git-ignored and there are no stray files. Let me commit exactly the intended files.
+
+Committed cleanly (16 files). Let me finalize the todo and confirm the working tree state.
+
+The task is complete and committed with a clean working tree. Let me clean up temporary build artifacts.
+
+All work is complete, verified, and committed. Here's the summary.
+
+## ✅ `page:admin/LiveLogs` — SwiftUI/HIG parity shipped (commit `e6a1e192f`)
+
+Native SwiftUI port of `web/src/features/admin/pages/LiveLogsPage.tsx` (the operator live SSE log tail), adaptive across macOS + iOS. **All 37 parity items covered** (4 panels · 2 states · 31 strings).
+
+**Architecture** — a pure `@Observable LiveLogsPageModel` (ADR-004, no transport in the view) owns the 1000-row rolling buffer, server-side (level/grep) + client-side (vehicle) filters, pause/auto-scroll/reconnect, received/drop/connection telemetry, and an ADR-013 staleness clock, bound to a cold `LiveLogsStream` `AsyncStream` seam tied to the view lifecycle via `.task(id:)`.
+
+**Files** (16): 9 new feature files + 371-line test + 4 documented-seam edits (`AppRoute`, `AppRouteParser`, `TeslaSyncApp`, `Localizable.xcstrings`) + ledger (+2 rows, 37/37) + evidence log.
+
+**Verification (actual results):**
+| Gate | Result |
+|---|---|
+| `swiftformat --lint` | `0/13 require formatting` |
+| `swiftlint --strict` | `0 violations, 0 serious` |
+| `check-placeholders.ps1` | `PLACEHOLDER_COUNT=0` |
+| `xcodegen generate` | OK |
+| isolated type-check **macOS** (Swift 6 strict, real tokens+components+routes) | `0 errors` |
+| isolated type-check **iOS** (compact branches) | `0 errors` |
+| executed model harness | `32/32 PASSED` |
+
+**Full `xcodebuild`: BLOCKED (out-of-scope, not my code).** The KMP `Shared.xcframework` *does* build here (I staged it via Gradle), and the full module compiles with **zero LiveLogs diagnostics** — but the build is blocked by (a) code-signing (no dev cert on this headless runner) and (b) a pre-existing Xcode-26.5 toolchain incompatibility (`return` inside `#Preview`) present in **106 sibling files, none mine**. Reported honestly as RED; my files are positively verified clean by the isolated type-checks + harness. I did not touch any sibling surface (covenant #7).
+
+I made three key reconciliations (logged): output path → `Sources/Features/Admin/` (the built convention, per the ApiLogs precedent); the unrouted web page → a first-class `.liveLogs` System route; and the deep `TeslaSyncApp` registry chain → a flattened `makeRouteHosts()` to satisfy both swiftformat and swiftlint.
+
+
+
+All 11 todos are done, the work is committed (`e6a1e192f`), the working tree is clean, and every in-scope gate is green. The task is fully complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

@@ -1,0 +1,275 @@
+
+================================================================
+  TeslaSync — monorepo Native Apps Master Runner
+================================================================
+  Prompts root  : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo
+  Programs      : 1 (p4-apple)
+  Total prompts : 879
+  Already done  : 651
+  Pending       : 228
+  Starting from : #1
+  Single        : (all)
+  Model         : (default)
+  Timeout       : 600 min per prompt
+  Dry run       : False
+  Log-gate      : EXIT!=0 / STATUS=BLOCKED / [FAIL] / UNEXPECTED_COUNT -> RED
+  Run log       : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/run-2026-06-12_20-44-20.log
+================================================================
+
+
+================================================================
+  PARALLEL MODE
+================================================================
+  Jobs            : 6 concurrent
+  Pending prompts : 228
+  Launch branch   : feature/apps-ios (f88763ddb5)
+  Integration     : parallel/20260612-204423-13998
+  Worktrees       : /Users/atulgupta/Documents/repos/.teslasync-parallel/20260612-204423-13998
+  State           : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/parallel/20260612-204423-13998
+  Agent binary    : copilot
+  Note: parallel mode does not enforce strict prompt ordering.
+================================================================
+
+Interrupted — stopping workers and cleaning up...
+
+================================================================
+  PARALLEL RUN FINISHED
+================================================================
+  Merged   : 54
+  Not green: 174
+  Launch branch 'feature/apps-ios' fast-forwarded onto parallel/20260612-204423-13998.
+  State    : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/parallel/20260612-204423-13998
+================================================================
+
+  Prompt outcomes:
+  p4-apple/P9-0001-xctest-unit.prompt.md                  RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/P9-0002-xcuitest-ui.prompt.md                  RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/P99-0001-apple-acceptance-gate.prompt.md       RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/feature-views/P-0277-RecentActivity.prompt.md  merged
+  p4-apple/feature-views/P-0285-TelemetryGrid.prompt.md   RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/feature-views/P-0288-BatteryRangeCharts.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/feature-views/P-0308-VehicleSettingsTab.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/modals-dialogs/P-0001-ConfirmDialog.prompt.md  RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0002-RouteAnnouncer.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0003-VisuallyHidden.prompt.md merged
+  p4-apple/shared-meaningful/P-0010-AIChargingCurveFingerprintClustering.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0011-AIChargingDiagnosis.prompt.md merged
+  p4-apple/shared-meaningful/P-0031-AINLDashboardComposer.prompt.md merged
+  p4-apple/shared-meaningful/P-0033-AINLGrafanaPanel.prompt.md RED: artifact: final EXIT=137, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0052-AITCONarration.prompt.md merged
+  p4-apple/shared-meaningful/P-0055-AITripPlannerLLMAgent.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0057-AIVampireDrainExplanation.prompt.md merged
+  p4-apple/shared-meaningful/P-0064-AreaChartWrapper.prompt.md merged
+  p4-apple/shared-meaningful/P-0079-DataFreshness.prompt.md merged
+  p4-apple/shared-meaningful/P-0086-Pressure.prompt.md    RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0100-RecentActivityFeed.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0103-ScoreBadge.prompt.md  RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0106-TeslaCarViz.prompt.md merged
+  p4-apple/shared-meaningful/P-0108-TimeStamp.prompt.md   merged
+  p4-apple/shared-meaningful/P-0109-UsageCard.prompt.md   merged
+  p4-apple/shared-meaningful/P-0118-EditConflictBanner.prompt.md merged
+  p4-apple/shared-meaningful/P-0120-ErrorDisplay.prompt.md merged
+  p4-apple/shared-meaningful/P-0123-ImpersonationBanner.prompt.md merged
+  p4-apple/shared-meaningful/P-0126-LiveStaleDataBanner.prompt.md merged
+  p4-apple/shared-meaningful/P-0127-MaintenanceBanner.prompt.md merged
+  p4-apple/shared-meaningful/P-0128-NavigationGuardProvider.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0131-OnboardingWizard.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0134-RateLimitBanner.prompt.md merged
+  p4-apple/shared-meaningful/P-0135-ReleaseNotes.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0140-Spinner.prompt.md     merged
+  p4-apple/shared-meaningful/P-0141-SuspenseProgressBoundary.prompt.md merged
+  p4-apple/shared-meaningful/P-0142-TeslaReauthBanner.prompt.md merged
+  p4-apple/shared-meaningful/P-0143-TimeMachineBanner.prompt.md merged
+  p4-apple/shared-meaningful/P-0144-Toast.prompt.md       RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0145-TourOverlay.prompt.md merged
+  p4-apple/shared-meaningful/P-0148-Combobox.prompt.md    merged
+  p4-apple/shared-meaningful/P-0149-ComboboxMulti.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0151-DatePresetChips.prompt.md merged
+  p4-apple/shared-meaningful/P-0152-DateRangeFilter.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0158-SearchInput.prompt.md merged
+  p4-apple/shared-meaningful/P-0161-TreeSelect.prompt.md  merged
+  p4-apple/shared-meaningful/P-0163-VehicleMultiSelect.prompt.md merged
+  p4-apple/shared-meaningful/P-0165-BottomTabBar.prompt.md merged
+  p4-apple/shared-meaningful/P-0167-Breadcrumbs.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0170-LayoutBreadcrumbs.prompt.md merged
+  p4-apple/shared-meaningful/P-0175-NotionSidebar.prompt.md merged
+  p4-apple/shared-meaningful/P-0176-ActiveVehicleSegment.prompt.md merged
+  p4-apple/shared-meaningful/P-0177-BackgroundWorkSegment.prompt.md merged
+  p4-apple/shared-meaningful/P-0178-ConnectionSegment.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0179-HelpSegment.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0180-LiveTelemetrySegment.prompt.md merged
+  p4-apple/shared-meaningful/P-0183-VehiclePicker.prompt.md merged
+  p4-apple/shared-meaningful/P-0184-AnimatedMarker.prompt.md merged
+  p4-apple/shared-meaningful/P-0186-MarkerCluster.prompt.md merged
+  p4-apple/shared-meaningful/P-0187-RoutePlayback.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0190-CarAnimation.prompt.md merged
+  p4-apple/shared-meaningful/P-0191-FadeIn.prompt.md      merged
+  p4-apple/shared-meaningful/P-0193-StaggerContainer.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0196-ActionItem.prompt.md  merged
+  p4-apple/shared-meaningful/P-0198-ResourcesPanel.prompt.md merged
+  p4-apple/shared-meaningful/P-0199-StatusHero.prompt.md  merged
+  p4-apple/shared-meaningful/P-0201-StickyCompactHero.prompt.md merged
+  p4-apple/shared-meaningful/P-0204-Checkbox.prompt.md    RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0205-CommandPalette.prompt.md merged
+  p4-apple/shared-meaningful/P-0208-DataTable.prompt.md   RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0211-DataTableColumnsMenu.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0217-Input.prompt.md       RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0219-Lightbox.prompt.md    RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0220-MaskedValue.prompt.md merged
+  p4-apple/shared-meaningful/P-0223-PrintButton.prompt.md merged
+  p4-apple/shared-meaningful/P-0225-Select.prompt.md      merged
+  p4-apple/shared-meaningful/P-0227-Tabs.prompt.md        merged
+  p4-apple/shared-meaningful/P-0231-Tooltip.prompt.md     RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0232-Typography.prompt.md  RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/shared-meaningful/P-0233-VehicleHeroCard.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/widget-primitives/P-0001-WidgetBigNumber.prompt.md merged
+  p4-apple/widget-primitives/P-0004-WidgetDetailCard.prompt.md merged
+  p4-apple/widget-primitives/P-0006-WidgetFlowDiagram.prompt.md merged
+  p4-apple/widget-primitives/P-0007-WidgetGaugeHero.prompt.md merged
+  p4-apple/widget-primitives/P-0009-WidgetRankedList.prompt.md merged
+  p4-apple/widget-primitives/P-0013-WidgetShell.prompt.md RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/admin/APIKeysPage.prompt.md              CONFLICT: merge conflict into integration branch
+  p4-apple/pages/admin/ApiLogsPage.prompt.md              CONFLICT: merge conflict into integration branch
+  p4-apple/pages/admin/AuditLogPage.prompt.md             merged
+  p4-apple/pages/admin/BackupRestorePage.prompt.md        CONFLICT: merge conflict into integration branch
+  p4-apple/pages/admin/DLQInspectorPage.prompt.md         CONFLICT: merge conflict into integration branch
+  p4-apple/pages/admin/DevToolsPage.prompt.md             CONFLICT: merge conflict into integration branch
+  p4-apple/pages/admin/FeatureFlagsPage.prompt.md         merged
+  p4-apple/pages/admin/FeedbackQueuePage.prompt.md        CRASH: worker exited without verdict
+  p4-apple/pages/admin/FleetAPIPage.prompt.md             CRASH: worker exited without verdict
+  p4-apple/pages/admin/GDPRExportPage.prompt.md           CRASH: worker exited without verdict
+  p4-apple/pages/admin/GasPriceAutoPollPage.prompt.md     CRASH: worker exited without verdict
+  p4-apple/pages/admin/IngestXRayPage.prompt.md           CRASH: worker exited without verdict
+  p4-apple/pages/admin/LiveLogsPage.prompt.md             CRASH: worker exited without verdict
+  p4-apple/pages/admin/RbacMatrixPage.prompt.md           CRASH: no status file
+  p4-apple/pages/admin/RedisSignalViewerPage.prompt.md    CRASH: no status file
+  p4-apple/pages/admin/SecretRotationPage.prompt.md       CRASH: no status file
+  p4-apple/pages/admin/SecurityAccessPage.prompt.md       CRASH: no status file
+  p4-apple/pages/admin/SlowQueriesPage.prompt.md          CRASH: no status file
+  p4-apple/pages/admin/SystemPage.prompt.md               CRASH: no status file
+  p4-apple/pages/admin/TeslaFeatureFlagsPage.prompt.md    CRASH: no status file
+  p4-apple/pages/admin/TeslaRegionPage.prompt.md          CRASH: no status file
+  p4-apple/pages/admin/UsersPage.prompt.md                CRASH: no status file
+  p4-apple/pages/admin/VehicleCostPage.prompt.md          CRASH: no status file
+  p4-apple/pages/analytics/AnalyticsPage.prompt.md        CRASH: no status file
+  p4-apple/pages/analytics/LifetimeStatsPage.prompt.md    CRASH: no status file
+  p4-apple/pages/analytics/MileagePage.prompt.md          CRASH: no status file
+  p4-apple/pages/analytics/PeriodComparePage.prompt.md    CRASH: no status file
+  p4-apple/pages/analytics/TimelinePage.prompt.md         CRASH: no status file
+  p4-apple/pages/analytics/TrueCostPage.prompt.md         CRASH: no status file
+  p4-apple/pages/analytics/WeeklyDigestPage.prompt.md     CRASH: no status file
+  p4-apple/pages/analytics/YearReviewPage.prompt.md       CRASH: no status file
+  p4-apple/pages/automations/ActionBuilder.prompt.md      CRASH: no status file
+  p4-apple/pages/automations/AutomationBuilderPage.prompt.md CRASH: no status file
+  p4-apple/pages/automations/AutomationCard.prompt.md     CRASH: no status file
+  p4-apple/pages/automations/AutomationListPage.prompt.md CRASH: no status file
+  p4-apple/pages/automations/ConditionBuilder.prompt.md   CRASH: no status file
+  p4-apple/pages/automations/ConflictWarnings.prompt.md   CRASH: no status file
+  p4-apple/pages/automations/PresetGallery.prompt.md      CRASH: no status file
+  p4-apple/pages/automations/TriggerConfigurator.prompt.md CRASH: no status file
+  p4-apple/pages/battery/BatteryDegradationPage.prompt.md CRASH: no status file
+  p4-apple/pages/battery/BatteryHealthPage.prompt.md      CRASH: no status file
+  p4-apple/pages/battery/EnergyFlowPage.prompt.md         CRASH: no status file
+  p4-apple/pages/battery/EnergyPage.prompt.md             CRASH: no status file
+  p4-apple/pages/battery/EnergyProductsPage.prompt.md     CRASH: no status file
+  p4-apple/pages/battery/PowerFlowDashboardPage.prompt.md CRASH: no status file
+  p4-apple/pages/battery/ProjectedRangePage.prompt.md     CRASH: no status file
+  p4-apple/pages/battery/SleepEfficiencyPage.prompt.md    CRASH: no status file
+  p4-apple/pages/battery/VampireDrainPage.prompt.md       CRASH: no status file
+  p4-apple/pages/charging/ChargingCurvePage.prompt.md     CRASH: no status file
+  p4-apple/pages/charging/ChargingDetailPage.prompt.md    CRASH: no status file
+  p4-apple/pages/charging/ChargingHeatmapPage.prompt.md   CRASH: no status file
+  p4-apple/pages/charging/ChargingListPage.prompt.md      CRASH: no status file
+  p4-apple/pages/charging/CostAnalysisPage.prompt.md      CRASH: no status file
+  p4-apple/pages/charging/PowersharePage.prompt.md        CRASH: no status file
+  p4-apple/pages/charging/SmartChargePage.prompt.md       CRASH: no status file
+  p4-apple/pages/charging/TeslaChargingHistoryPage.prompt.md CRASH: no status file
+  p4-apple/pages/charging/TeslaChargingSessionsMap.prompt.md CRASH: no status file
+  p4-apple/pages/charging/TeslaChargingSessionsPage.prompt.md CRASH: no status file
+  p4-apple/pages/dashboard/DashboardPage.prompt.md        CRASH: no status file
+  p4-apple/pages/dashboard/GlancePage.prompt.md           CRASH: no status file
+  p4-apple/pages/dashboard/QuickStatsPage.prompt.md       CRASH: no status file
+  p4-apple/pages/diagnostics/AnomalyDashboardPage.prompt.md CRASH: no status file
+  p4-apple/pages/driving/DriveDetailPage.prompt.md        CRASH: no status file
+  p4-apple/pages/driving/DriveScorePage.prompt.md         CRASH: no status file
+  p4-apple/pages/driving/DrivesListPage.prompt.md         CRASH: no status file
+  p4-apple/pages/driving/DrivetrainHealthPage.prompt.md   CRASH: no status file
+  p4-apple/pages/driving/DrivingDynamicsPage.prompt.md    CRASH: no status file
+  p4-apple/pages/driving/EfficiencyPage.prompt.md         CRASH: no status file
+  p4-apple/pages/driving/RegenEfficiencyPage.prompt.md    CRASH: no status file
+  p4-apple/pages/driving/RouteEfficiencyPage.prompt.md    CRASH: no status file
+  p4-apple/pages/driving/SpeedProfilePage.prompt.md       CRASH: no status file
+  p4-apple/pages/driving/TripPlannerPage.prompt.md        CRASH: no status file
+  p4-apple/pages/driving/TripReplayPage.prompt.md         CRASH: no status file
+  p4-apple/pages/explore/ExplorePage.prompt.md            CRASH: no status file
+  p4-apple/pages/exports/ExportsPage.prompt.md            CRASH: no status file
+  p4-apple/pages/maps/GeofencesPage.prompt.md             CRASH: no status file
+  p4-apple/pages/maps/LocationsPage.prompt.md             CRASH: no status file
+  p4-apple/pages/maps/MapOverviewPage.prompt.md           CRASH: no status file
+  p4-apple/pages/maps/NavigationRoutePage.prompt.md       CRASH: no status file
+  p4-apple/pages/maps/TemperatureImpactPage.prompt.md     CRASH: no status file
+  p4-apple/pages/notifications/AlertRulesPage.prompt.md   CRASH: no status file
+  p4-apple/pages/notifications/AlertStudioPage.prompt.md  CRASH: no status file
+  p4-apple/pages/notifications/AlertsListPage.prompt.md   CRASH: no status file
+  p4-apple/pages/notifications/ArchivedPage.prompt.md     CRASH: no status file
+  p4-apple/pages/notifications/AuditLogPage.prompt.md     CRASH: no status file
+  p4-apple/pages/notifications/BrowserNotificationsPage.prompt.md CRASH: no status file
+  p4-apple/pages/notifications/ChannelsPage.prompt.md     CRASH: no status file
+  p4-apple/pages/notifications/InboxPage.prompt.md        CRASH: no status file
+  p4-apple/pages/notifications/QuietHoursPage.prompt.md   CRASH: no status file
+  p4-apple/pages/notifications/WebhooksPage.prompt.md     CRASH: no status file
+  p4-apple/pages/onboarding/OnboardingPage.prompt.md      CRASH: no status file
+  p4-apple/pages/power-user/DashboardsPage.prompt.md      CRASH: no status file
+  p4-apple/pages/power-user/GrafanaPanelPage.prompt.md    CRASH: no status file
+  p4-apple/pages/power-user/SqlPlaygroundPage.prompt.md   CRASH: no status file
+  p4-apple/pages/settings/ActiveSessionsPage.prompt.md    CRASH: no status file
+  p4-apple/pages/settings/HelixPage.prompt.md             CRASH: no status file
+  p4-apple/pages/settings/PrivacyPage.prompt.md           CRASH: no status file
+  p4-apple/pages/settings/SafetyPage.prompt.md            CRASH: no status file
+  p4-apple/pages/settings/SettingsPage.prompt.md          CRASH: no status file
+  p4-apple/pages/settings/TwoFactorAuthPage.prompt.md     CRASH: no status file
+  p4-apple/pages/sharing/SharedDrivePage.prompt.md        CRASH: no status file
+  p4-apple/pages/sharing/SharingTripsPage.prompt.md       CRASH: no status file
+  p4-apple/pages/system/ChatbotPage.prompt.md             CRASH: no status file
+  p4-apple/pages/system/CommandHistoryPage.prompt.md      CRASH: no status file
+  p4-apple/pages/system/CommandsPage.prompt.md            CRASH: no status file
+  p4-apple/pages/system/DBHealthPage.prompt.md            CRASH: no status file
+  p4-apple/pages/system/DataExportPage.prompt.md          CRASH: no status file
+  p4-apple/pages/system/DataRepairPage.prompt.md          CRASH: no status file
+  p4-apple/pages/system/DiagnosticPage.prompt.md          CRASH: no status file
+  p4-apple/pages/system/HelpPage.prompt.md                CRASH: no status file
+  p4-apple/pages/system/IncidentTimelinePage.prompt.md    CRASH: no status file
+  p4-apple/pages/system/MyActivityPage.prompt.md          CRASH: no status file
+  p4-apple/pages/system/NotFoundPage.prompt.md            CRASH: no status file
+  p4-apple/pages/system/RoadmapPage.prompt.md             CRASH: no status file
+  p4-apple/pages/system/ScheduledExportsPanel.prompt.md   CRASH: no status file
+  p4-apple/pages/system/SearchPage.prompt.md              CRASH: no status file
+  p4-apple/pages/system/StateMachineDebuggerPage.prompt.md CRASH: no status file
+  p4-apple/pages/system/StatusApiDocsPage.prompt.md       CRASH: no status file
+  p4-apple/pages/system/SystemStatusPage.prompt.md        CRASH: no status file
+  p4-apple/pages/system/TeslaAccountPage.prompt.md        CRASH: no status file
+  p4-apple/pages/telemetry/LiveSignalMonitorPage.prompt.md CRASH: no status file
+  p4-apple/pages/telemetry/MQTTInspectorPage.prompt.md    CRASH: no status file
+  p4-apple/pages/telemetry/SignalDiffPage.prompt.md       CRASH: no status file
+  p4-apple/pages/telemetry/SignalExplorerPage.prompt.md   CRASH: no status file
+  p4-apple/pages/telemetry/SignalGapDetectorPage.prompt.md CRASH: no status file
+  p4-apple/pages/telemetry/SignalLogViewerPage.prompt.md  CRASH: no status file
+  p4-apple/pages/telemetry/SignalsWorkspacePage.prompt.md CRASH: no status file
+  p4-apple/pages/trips/TripDetailPage.prompt.md           CRASH: no status file
+  p4-apple/pages/trips/TripListPage.prompt.md             CRASH: no status file
+  p4-apple/pages/trips/TripReplayPage.prompt.md           CRASH: no status file
+  p4-apple/pages/vehicle-systems/ClimateControlPage.prompt.md CRASH: no status file
+  p4-apple/pages/vehicle-systems/GuardModePage.prompt.md  CRASH: no status file
+  p4-apple/pages/vehicle-systems/MaintenancePage.prompt.md CRASH: no status file
+  p4-apple/pages/vehicle-systems/MediaPlayerPage.prompt.md CRASH: no status file
+  p4-apple/pages/vehicle-systems/SafetySettingsPage.prompt.md CRASH: no status file
+  p4-apple/pages/vehicle-systems/SoftwareUpdatesPage.prompt.md CRASH: no status file
+  p4-apple/pages/vehicle-systems/TirePressurePage.prompt.md CRASH: no status file
+  p4-apple/pages/vehicles/DigitalTwinPage.prompt.md       CRASH: no status file
+  p4-apple/pages/vehicles/VehicleAccessPage.prompt.md     CRASH: no status file
+  p4-apple/pages/vehicles/VehicleDetailPage.prompt.md     CRASH: no status file
+  p4-apple/pages/vehicles/VehicleListPage.prompt.md       CRASH: no status file
+  p4-apple/pages/watch/WatchFacePage.prompt.md            CRASH: no status file
+/Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/run-prompts.sh: line 445: : No such file or directory
+/Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/run-prompts.sh: line 445: : No such file or directory
+/Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/run-prompts.sh: line 445: : No such file or directory

@@ -1,0 +1,185 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking what Apple tooling exists.
+
+The web source is read and the full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the existing Apple app structure.
+
+This is a substantial existing Apple app. Let me look at the target directory and existing examples to understand conventions.
+
+Let me examine the feature-views listing and find the most similar existing surface to use as a pattern reference.
+
+`LiveMotorStatus` is the closest analog (uses `MotorSnapshot` + `shift_state`). Let me read that full surface as the canonical pattern, and check whether any SpeedGearPanel files already exist.
+
+Good — `LiveMotorStatus` is an excellent template. Let me read the rest of its files plus the prior SpeedGearPanel attempt logs to learn pitfalls.
+
+Let me read the remaining template files (Previews, Tests, strings), plus `DriveStatCards` (which handles `Drive[]` aggregates + speed conversion) and the prior SpeedGearPanel attempt log.
+
+Now let me check the prior SpeedGearPanel attempt logs and the `DriveStatCards` surface (which handles `Drive[]` + speed conversion — the other half of what I need).
+
+I now have a thorough grasp of the canonical pattern. Both prior attempts ran in weaker environments (one had no Xcode; one lacked the `Shared.xcframework`). This runner has full Xcode 26.5. Let me verify the build prerequisites and read the remaining reference material (web unit-conversion, parent page, types, design tokens, Badge).
+
+Strong environment: `xcodegen` 2.45.4, iPhone 16 simulator **booted**, `pwsh` available, `check-placeholders.ps1` present. The one risk is the missing `Shared.xcframework`. Let me check whether it can be built and read the remaining web/design references.
+
+There's a `gradlew` wrapper, so `Shared.xcframework` can potentially be built (the xcodebuild pre-action does it automatically). Let me gather the final references: conversion constants, the `Drive`/`MotorSnapshot` types, design tokens, and the Badge component.
+
+Now I have the full data contract. Let me read the design tokens and the Badge component to map the web `Badge` variants correctly.
+
+`TSBadge` maps cleanly to the web variants via `TSTone` (success/danger/warning/neutral). Let me confirm the full design-token surface (`Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`) and the shared component signatures.
+
+Let me locate `Font.TS`, `TSSpacing`, and `TSRadius` definitions.
+
+Let me confirm the exact signatures of the shared components I'll consume (`TSFadeIn`, `TSGlassPanel`, `TSEmptyState`, `TSButton`, `TSSkeleton`).
+
+Let me check the placeholder gate's forbidden tokens and the `DriveStatCards` model (the drives-based model/source/formatting pattern) before writing.
+
+Let me check the exact forbidden placeholder patterns so my code stays clean.
+
+All patterns are clear. Let me verify `fmtNumber`'s default precision in the web source, then I'll create the plan and start writing.
+
+I have everything needed. Let me set up the plan and todos, then write the surface. I'll follow the canonical `LiveMotorStatus` 7-file structure exactly, adapted to `SpeedGearPanel`'s spec (motor shift/power + drive speed aggregates, with the documented single-conversion fix).
+
+Let me kick off the long-pole `Shared.xcframework` Gradle build in the background now (the xcodebuild gate needs it), while I write the surface files.
+
+Now let me write the Model file (state-holder seam, telemetry, i18n facade, DTOs, observable model).
+
+The background launcher returned (gradle runs detached). Let me check its progress and continue with the Adapter file.
+
+Gradle is actively linking the iOS framework — `Shared.xcframework` will build, enabling the full xcodebuild gate. Now the Adapter (pure projector core).
+
+Now the Views file (token mapping + presentational subviews).
+
+Now the main surface View file.
+
+Now the Previews and strings files. Let me also check on the gradle build.
+
+Excellent — the XCFramework is building (release variant linking now). Let me write the Previews and strings files.
+
+Now the Tests file — comprehensive coverage of the adapter, model, accessibility, and per-state view smoke. Let me compute fixtures precisely: drives `[avg 10/max 25, avg 20/max 35]` → avgMps 15.0, topMps 35.0 → km/h "54"/"126", mph "34"/"78".
+
+All 7 files written. Let me check the XCFramework build and run the fast gates (swiftformat, swiftlint, placeholder) on my files.
+
+Gradle is still linking release variants. Let me run swiftformat (in-place) on my files, then swiftlint and the placeholder gate.
+
+Two fixable lint issues: a 6-param function and the test file exceeding 400 lines. Let me fix the Adapter's `speedTile` (resolve label at call site → 5 params) and split the test file.
+
+Now split the test file (>400 lines). Let me find the boundary and move the model + view tests to a new file.
+
+Let me truncate `Tests.swift` to the adapter section and assemble the new `ModelTests.swift` from a header plus the extracted body.
+
+Now re-run swiftformat and swiftlint on all 7 swift files.
+
+swiftformat + swiftlint both clean (0 violations). Let me check the XCFramework and run the placeholder gate.
+
+Placeholder gate clean (COUNT=0). The XCFramework is still linking platform variants. Let me wait for it to finish, then generate the Xcode project.
+
+`Shared.xcframework` built and staged successfully. Now let me generate the Xcode project and start the iOS build.
+
+Project generated, SpeedGearPanel registered (48 refs across app + test targets). Now the iOS build. Let me run it in the background and poll.
+
+While the iOS build runs, let me review my code against the real types once more for any compile risks, then poll the build.
+
+Let me check the iOS build status — the launcher returned but xcodebuild was backgrounded.
+
+Build is in the gradle pre-action stage. Let me wait for it to compile and check for completion.
+
+Compilation passed my files and the whole module is emitting (no errors). Let me continue polling for the final result.
+
+The whole-module emit succeeded (all files typecheck, including mine) — now per-file object compilation. Let me keep polling for the final result.
+
+🎉 **iOS BUILD SUCCEEDED** — the whole app including my surface compiles cleanly. Now let me run my surface's tests on the iOS simulator (scoped via `-only-testing` to get real execution evidence).
+
+Let me poll the iOS test run.
+
+The test action is rebuilding the module. Let me continue polling for test results.
+
+TEST FAILED but no test-execution summary — likely a test-bundle build or launch issue, not my assertions. Let me find the actual error.
+
+The `TEST FAILED` is a **pre-existing, unrelated** compile error in `SafetyFeaturesWidget.ModelTests.swift` (duplicate class declarations) — not my code, and the test files I'm allowed to touch are only `SpeedGearPanel.*`. The shared test bundle compiles as one unit, so this blocks scoped runs too. Let me confirm it's pre-existing and assess a standalone harness to actually execute my tests.
+
+Confirmed **pre-existing**: `SafetyModelTests` is declared in BOTH `SafetyFeaturesWidget.ModelTests.swift` and `SafetyHistoryWidget.ModelTests.swift` (two sibling surfaces) — untouched by me, and the shared test bundle won't compile because of it. To get real execution evidence for my surface, let me build a standalone SwiftPM harness. First, assess the dependency closure.
+
+Confirmed pre-existing and unrelated. Components/Design are `Shared`-free, so a standalone SwiftPM harness can compile my surface + the real design system + my tests. Let me build it.
+
+Now build the harness module in release (drops `#if DEBUG` inline previews from the components).
+
+The whole-Components copy pulls in `UnitFormatters` (needs the `Shared`-backed `Units` facade) which my surface doesn't use. Let me prune to only the component files my surface actually depends on.
+
+`States.swift` needs `TSInlineCallout`. Let me find and add the missing component files iteratively.
+
+Library builds clean. Now run my tests via the harness.
+
+**All 42 tests PASS** (0 failures) via real XCTest execution against the actual design system — including all 7 per-state view-render smoke tests. Combined with the iOS BUILD SUCCEEDED, the surface is verified. Now the macOS build (gate step 2).
+
+Let me update progress and run the full-tree lint gates (honest output) while macOS builds.
+
+swiftformat clean across the whole tree (0/2746). Let me run `swiftlint --strict` (whole tree) and check the macOS build.
+
+One swiftlint violation across the whole tree — my files were clean, so let me confirm it's not mine.
+
+The single swiftlint violation is pre-existing in an unrelated file (`LiveSignalSparklinesWidget.Builder.swift`), not mine — my files are clean. Let me check the macOS build.
+
+macOS failed at **code-signing** (no dev certificate on this runner) — an environment limitation, not a compile error in my code (it failed in ~30s at the signing-requirement check). Let me rebuild macOS with signing disabled to get genuine compile evidence.
+
+While macOS compiles, let me verify the shared `TSFadeIn` I reuse respects reduce-motion (a prompt requirement).
+
+`TSFadeIn` honors Reduce Motion. ✓ Let me poll the macOS build (signing disabled).
+
+macOS build still compiling. Let me continue waiting.
+
+🎉 **macOS BUILD SUCCEEDED** (signing-disabled) — my surface compiles into the macOS 15 app too. The only macOS gate failure was code-signing (no dev certificate = environment limit). 
+
+I now have complete evidence. Let me assemble the authentic gate log with real captured output. First, let me capture fresh outputs for the log.
+
+Perfect i18n parity (5/5 keys), 1666 lines across 8 files. Now let me assemble the authentic gate log with real captured output.
+
+Now the gate steps with real output. Let me append the build results and re-run the harness tests + lints fresh into the log.
+
+Now the full-test blocker evidence (step 4) and the lint/format/placeholder gates (steps 5-7) with fresh real output.
+
+Now the swiftformat and placeholder gates plus the final disposition.
+
+Log complete (145 lines, EXIT=0/STATUS=DONE). Now let me clean up temp artifacts and verify git state before committing.
+
+Git state is clean and scoped — exactly my 8 `SpeedGearPanel.*` files + the log, with `Shared.xcframework` git-ignored. Let me stage and commit.
+
+Committed as `d5f8d74d3` (8 files + log, 1811 insertions). Let me verify the final clean state.
+
+The "1" is a grep artifact from the stat summary line. Let me verify scope cleanly.
+
+All 9 committed files are within allowed scope; working tree clean. Let me finalize the tracking.
+
+All work is complete and verified. The task is done.
+
+## Summary
+
+Shipped a production-polished, native Apple SwiftUI parity of the web `SpeedGearPanel` driving-dynamics surface, following the established `LiveMotorStatus` (0157) 7-file pattern. **Committed `d5f8d74d3`** — 8 `SpeedGearPanel.*` files + gate log (1811 insertions), scope-clean.
+
+**Files** (`apps/apple/TeslaSync/feature-views/`): `.Model` (P1/S8 state-holder seam, P1/S11 telemetry, P1/S10 i18n facade, `@Observable` model, in-memory source) · `.Adapter` (pure projector: `convertSpeedFromSI` ported 1:1, `fmtNumber`, SI drive aggregation, shift colour/tone ladders, 4-cell projection, a11y) · `.Views` · `.swift` (header + state switch) · `.Previews` · `.Tests` + `.ModelTests` · `.strings`.
+
+**Parity reproduced:** gear-letter hero (shiftColor ladder) + Shift State badge (shiftBadgeVariant ladder), Motor Power (kW), Avg/Top Drive Speed — aggregated in SI and converted **once** (the documented double-conversion fix, pinned by `testMilesPerHourConvertsOnce`). All 5 source i18n keys (5/5), all 6 states (loading/empty/error/stale/offline/content), VoiceOver labels per cell, Dynamic Type, Reduce-Motion.
+
+**Gates — all in-scope GREEN (full Xcode 26.5 / iPhone 16 sim / macOS 15):**
+- iOS 18 simulator build **SUCCEEDED**; macOS 15 build **SUCCEEDED** (compile+link)
+- **42/42** surface tests pass via real XCTest (incl. all 7 per-state view-render smoke tests)
+- swiftlint `--strict` 0 violations · swiftformat `--lint apps/apple` 0/2746 · placeholder gate `COUNT=0`
+
+**Honestly documented in the log (pre-existing / environment, out of allowed scope, git-proven untouched by me):** the full shared-bundle `xcodebuild test` is blocked by duplicate `Safety*` XCTestCase classes in two sibling widget test files; one pre-existing swiftlint violation lives in `LiveSignalSparklinesWidget.Builder.swift`; the macOS *signed* build needs a dev certificate (env). The required Apple capability is present and exercised. Log ends **EXIT=0 / STATUS=DONE**.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0174-SpeedGearPanel.log | 145 +++++++++
+ .../feature-views/SpeedGearPanel.Adapter.swift     | 338 ++++++++++++++++++++
+ .../feature-views/SpeedGearPanel.Model.swift       | 354 +++++++++++++++++++++
+ .../feature-views/SpeedGearPanel.ModelTests.swift  | 264 +++++++++++++++
+ .../feature-views/SpeedGearPanel.Previews.swift    | 110 +++++++
+ .../feature-views/SpeedGearPanel.Tests.swift       | 224 +++++++++++++
+ .../feature-views/SpeedGearPanel.Views.swift       | 188 +++++++++++
+ .../TeslaSync/feature-views/SpeedGearPanel.strings |  31 ++
+ .../TeslaSync/feature-views/SpeedGearPanel.swift   | 157 +++++++++
+ 9 files changed, 1811 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0174-SpeedGearPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedGearPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedGearPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedGearPanel.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedGearPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedGearPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedGearPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedGearPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedGearPanel.swift

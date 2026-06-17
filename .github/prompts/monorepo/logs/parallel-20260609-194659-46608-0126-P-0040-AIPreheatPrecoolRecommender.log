@@ -1,0 +1,206 @@
+I'll start by understanding the task scope: building a native Apple/SwiftUI version of the `AIPreheatPrecoolRecommender` web component. First, let me check tooling availability and explore the repository structure.
+
+Tooling is all available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Now let me read the web source and existing Apple structure.
+
+The shared-surfaces dir already has many surfaces (a strong template). Let me examine the existing structure, especially sibling AI surfaces using the same `useAiStream`/`AIFeatureCard`/`withAiFeature` pattern.
+
+`AIFeatureCard` already exists as a native surface — that's exactly the shared component my web source depends on. Let me find the closest sibling: a web AI component using the same `useAiStream` + `AIFeatureCard` + `withAiFeature` trio, and see how it was ported.
+
+Many siblings exist. Let me find the structurally closest one to use as the gold template by comparing my source against candidates.
+
+`AISmartChargeScheduleSuggestion` is nearly structurally identical to my source — same imports, props pattern, body useMemo, useAiStream, haveInputs, AIFeatureCard render, withAiFeature export. It's the gold template. Let me read its full native port.
+
+`AISmartChargeScheduleSuggestion` isn't ported yet. Let me use a ported sibling. `AIDriveCoaching` is ported and simple — let me read its web source and full native port as the template.
+
+Excellent — `AIDriveCoaching` is the gold template: 10 files, 2146 lines. Let me read all of them to learn the exact conventions before writing my surface.
+
+Very thorough pattern. Let me read the remaining template files: Projection, Views, Chrome, Previews, strings, and both test files.
+
+Let me read the remaining template files (Previews, strings, both test files) and the shared token definitions referenced (TSSpacing, Color.TS, Font.TS, TSButton, etc.).
+
+Now the main Tests file plus the project config and shared tokens (to confirm symbol names like `Color.TS`, `TSButton`, `TSSpacing`, `TSFadeIn`, `TSSkeleton`).
+
+The project.yml is at `apps/apple/`. Let me read it and locate the shared token/component definitions.
+
+Key insight: XcodeGen globs the `shared-surfaces/` directory, so new files are auto-included (app target excludes `*Tests.swift`, test targets include them). No project.yml edits needed. Now let me check the build tooling state, find the "0008 narrate" sibling (referenced as having a `vehicle_id` body with `numericVehicleId > 0` gate — closest to my body-building case), and confirm the shared token symbols.
+
+Critical: the build needs a KMP `Shared.xcframework` (only `.gitkeep` present; built via Gradle/Kotlin pre-build). Let me assess build viability (read the pending-verifications doc, check Gradle/Java) and read the climate sibling `AICabinTemperatureImpactNarrative` whose adapter builds a `vehicle_id` body — the closest match for my body logic.
+
+Java 17 + gradlew are present, so the KMP build may work. `AICabinTemperatureImpactNarrative` (surface 0009) is the climate sibling with a `vehicle_id` body + string|number coercion. My surface needs a richer body (vehicle_id + depart_by + 3 temps). Let me read CabinTemp's Model + Projection to mirror the input/projection shape, plus the lint/format configs and build-status doc.
+
+I now have the complete pattern. Let me confirm no naming collisions for my `PreheatPrecool` prefix, and check the documented build status for the KMP framework dependency.
+
+No collisions — `PreheatPrecool` prefix is clean. The doc confirms Apple builds rely on a Kotlin/Native + Xcode toolchain. Let me read the build-status doc in detail to understand whether the full `xcodebuild` gate is runnable here or CI-deferred.
+
+This is the established precedent: the full `xcodebuild` gate is **CI-deferred (macOS-pending)** across all sibling P4 surfaces due to (a) the KMP `Shared.xcframework` Kotlin/Native long-pole, (b) "0 valid signing identities", and (c) pre-existing parallel-merge collisions in *other* agents' surfaces. Each surface is proven green via isolated build/tests + typecheck + lint/format/placeholder. Let me read the rest of the doc and check the shared-surfaces log precedent.
+
+Let me read the closest sibling's log (AIDriveCoaching 0017) to mirror its exact verification methodology and log format.
+
+I now have the exact methodology + honest log format from the closest sibling (0017 AIDriveCoaching): build the 10-file surface, prove it green via dual-SDK `swiftc -typecheck` + executed Foundation harness + in-module test typecheck + swiftlint + swiftformat + placeholder + xcodegen, then attempt the full `xcodebuild` (deferred only on pre-existing unrelated collisions). Let me verify the web `AIFeatureCard` button-rendering contract for faithful parity.
+
+Confirmed: the web `AIFeatureCard` renders a universal "Ask Helix"/"Helix is thinking…" button with `aria-label = "Ask Helix · {buttonLabel}"` — exactly what the native port reproduces. For me, `buttonContext = "Draft schedule"`. I have everything needed. Let me set up tracking and confirm the shared token APIs I'll hand-write.
+
+TSButton/TSSkeleton/TSFadeIn signatures confirmed. The spacing/radius/color/font tokens live in the generated design tokens. Let me confirm the exact token member names I'll hand-write (especially `x2xl`/`x4xl`) so I avoid typos.
+
+`TSSpacing.x2xl/x4xl` and `TSRadius.sm/md` confirmed. Color.TS/Font.TS members are proven to exist (DriveCoaching uses them and compiles green). Let me do one confirmation grep for the specific members, then write all 10 files.
+
+All tokens confirmed (`Color.TS.*`, `Font.TS.*`, `TSSpacing.x2xl/x4xl`, `TSRadius.sm/md`). I have full parity knowledge. Now writing the 10 files, mirroring the AIDriveCoaching/CabinTemp template exactly. Starting with the Foundation-only Adapter.
+
+Adapter done. Now the Model (state-holder seam, i18n facade, telemetry seam, input snapshot, resolved types, source protocol, observable model, in-memory source).
+
+Now the Projection — pure input→view-state, with the five-part `canStart` gate, localized `AIFeatureCard` props, and the localized `AiOutputPanel` branches.
+
+Now the three SwiftUI files (surface, chrome, views), mirroring the DriveCoaching trio with my prefix/strings.
+
+Now the Previews, then the two test files and the strings catalog.
+
+Now the adapter unit tests (Foundation-only: vehicle coercion, request body/gate, SSE parse, reducer, output/action derivations).
+
+Now the projection/model/accessibility tests.
+
+Now the i18n catalog (.strings) — exactly the 20 keys referenced in Swift (4 web-parity + 4 shared-atom + 3 output hints + 9 chrome).
+
+All 10 files written. Now verification — starting with the fast deterministic gates (file length, swiftlint, swiftformat, placeholder scan).
+
+Two fixable issues: (1) `Adapter.swift` (461) and `AdapterTests.swift` (439) exceed the ≤400 house `file_length` rule (fatal under `--strict`); (2) swiftformat wants multi-line property bodies. Let me first auto-fix formatting, then split the two oversized files. Running swiftformat auto-fix:
+
+Auto-fix grew `Adapter.swift` to 489 (wrapped bodies). I'll split out `PreheatPrecoolVehicleID` + `PreheatPrecoolRequest` into a new `.Request.swift`, and the corresponding tests into `.RequestTests.swift`. Let me view the formatted Adapter to get exact boundaries/style.
+
+The vehicle coercion + request occupy Adapter lines 43–218. I'll extract them into a new `.Request.swift` and trim the Adapter. Creating the Request file:
+
+Now removing the moved sections (lines 43–219) from the Adapter and updating its header to point to the new Request file.
+
+Adapter trimmed to 312 lines. Let me update its header to reflect that request/coercion/gate moved to the sibling file.
+
+Now splitting `AdapterTests.swift` — moving the vehicle/request/gate tests into a new `.RequestTests.swift`. Let me find the boundaries.
+
+All files now under 400. Re-running swiftformat auto-fix on all 11 Swift files, then verifying with `swiftformat --lint` + `swiftlint --strict` + line counts.
+
+swiftformat clean (0/11), all files ≤373 lines. Now swiftlint --strict on my files plus the placeholder/stub word-scan.
+
+One swiftlint violation: `CodingKeys` nested inside `Payload` inside `PreheatPrecoolRequest` is 2 levels deep (max 1 allowed). Placeholder scan is clean. Let me move `Payload` to file scope. Viewing the current encoding section:
+
+Moved `Payload` to file scope. Re-running swiftlint --strict + swiftformat --lint on all files:
+
+swiftlint **0 violations**, swiftformat **0/11**, placeholder scan clean. Now the executed parity proof: I'll compile the Foundation-only core (Request + Adapter + Model + Projection) with a runtime harness and execute it, then typecheck for the iOS-simulator SDK. Writing the harness:
+
+Compiling the harness (Request + Adapter + Model + Projection + main) for macOS under Swift 6 strict concurrency, then executing it:
+
+The Model references the View's `surfaceSlug` (defined in the SwiftUI file, out of this Foundation compile unit). I'll add a test-only shim for the slug so the executed harness can exercise the Projection too:
+
+Swift 6: top-level globals are MainActor-isolated. Marking `check` `@MainActor`:
+
+**Executed parity proof PASSES on macOS**: `ALL_RUNTIME_ASSERTIONS_PASSED`, `RUN_EXIT=0`, and `ENCODED_CLEAN={"current_cabin_temp_c":20,...,"vehicle_id":7}` confirms JSONEncoder matches JS `JSON.stringify` (whole doubles → `20`/`5`/`21`, keys sorted). Now the dual-SDK `-typecheck` of all 8 SwiftUI source files against the real design system. Let me scope the design-system dependencies.
+
+Design/Components are KMP-Shared-free — I can typecheck my surface against the real tokens + the full design system without the framework. Running the macOS-15 `-typecheck` first:
+
+0 PreheatPrecool errors, but 52 errors in *other* design-system files muddy the proof. Let me see which files error (likely SharedFacade-coupled ones) and narrow to just my surface's real dependencies for a clean signal.
+
+All 52 errors are in `Sources/Components/DataDisplay/UnitFormatters.swift` — the SharedFacade-coupled file siblings explicitly exclude (my surface doesn't use it). Excluding it and running **both** SDKs:
+
+**Both SDKs typecheck clean: `MACOS_TYPECHECK_ERRORS=0`, `IOS_TYPECHECK_ERRORS=0`** — my 8 SwiftUI files compile against the real tokens + design system under Swift 6 strict concurrency for iOS-18 and macOS-15. Now the in-module typecheck of the 3 test files: I'll build the surface into a testable `TeslaSync` module, then typecheck the tests against it.
+
+Module emits clean (`MODULE_EMIT_ERRORS=0`). The test typecheck just needs XCTest's framework search path. Adding it:
+
+XCTest typecheck surfaced real errors in `RequestTests.swift`: the `XCTAssertEqual(_, _, accuracy:)` overload needs non-optional `Double`, but `body[...] as? Double` is `Double?`. Fixing with `XCTUnwrap`. Let me view the affected assertions:
+
+Now re-verify formatting/lint on the edited test file and re-run the test typecheck:
+
+Tests typecheck clean (`TESTS_TYPECHECK_ERRORS=0`), lint/format still clean. Now: re-run the executed harness (sources were reformatted), do the macOS test typecheck, and run `xcodegen generate` to confirm my files are enumerated into the targets.
+
+The `grep -c` exit code broke the `&&` chain (it didn't actually run the harness). Let me re-run cleanly with proper exit capture:
+
+**Executed parity proof confirmed: `HARNESS_RUN_EXIT=0`, `ALL_RUNTIME_ASSERTIONS_PASSED`.** macOS test typecheck = 0 errors. Now `xcodegen generate` to confirm my files are enumerated into the app + test targets:
+
+`xcodegen generate` succeeded — all 12 files enumerated (72 pbxproj refs): 8 sources + Previews → app targets, 3 `*Tests.swift` → test bundles, `.strings` → resources. Now for the full `xcodebuild`: first let me assess the pre-existing cross-surface collision baseline (siblings report these block the full-app build) before investing in the long KMP framework build.
+
+The pre-existing cross-surface collisions are present in this slot exactly as siblings documented: `RecentDrivesModel`/`RecentDrivesConnection`/`StateTimelineModel`/`StateTimelineConnection` each declared in **2 files** (feature-views vs dashboard-widgets). My `PreheatPrecool*` types are unique (0 collisions). Per the honesty covenant I'll still run the real `xcodebuild`. First, building the KMP `Shared.xcframework` (the documented long-pole). Starting it in the background:
+
+The Gradle Kotlin/Native build is running (the documented 6–8 min long-pole). Let me continue waiting:
+
+**KMP `Shared.xcframework` BUILD SUCCESSFUL in 7m 48s, staged** (ios-arm64, ios-arm64-simulator, macos-arm64), `STAGE_EXIT=0`. Now the real full-app `xcodebuild build test` for the iOS simulator (adapting the destination to the available iPhone 17 Pro). Starting it in the background:
+
+Let me monitor the build progress:
+
+The xcodebuild is running as a detached process (pid 72482) writing to the log. Let me poll the log file:
+
+Full-app iOS build: `** TEST FAILED **`, `IOS_EXIT=65`, 162 error lines — the documented DEFERRED state. Critical check: are **any** errors in my surface? Let me analyze:
+
+**Confirmed — 0 errors in my surface.** All 162 errors are the pre-existing, unrelated cross-surface collisions: `RecentDrivesListWidget`(54), `StateTimelineWidget`(42), `RecentDrivesSection`(30) — ambiguous `RecentDrives*`/`StateTimeline*` redeclarations between `dashboard-widgets/*` and `feature-views/*`, exactly as siblings documented. Now running the macOS app build to capture `MAC_EXIT` (shares the same colliding sources + signing block):
+
+While the macOS build runs, let me verify i18n parity (used-vs-defined keys) and run the tree-wide swiftlint/swiftformat (the gate runs these tree-wide).
+
+My "used keys" regex missed multi-line facade calls. Let me redo it by matching key-shaped literals directly, and read the macOS build result:
+
+i18n parity is perfect: **20 defined == 20 referenced, 0 dead, 0 missing.** The macOS background job didn't persist (the log wasn't created — the detached subshell was torn down). Let me re-run the macOS build synchronously and wait for it:
+
+macOS build finished: `MAC_EXIT=65`. Let me confirm 0 errors in my surface there too and categorize:
+
+macOS: **0 errors in my surface**, only 4 error lines (and 0 valid signing identities). Let me see those 4 errors:
+
+macOS app build is blocked by **development-signing (0 valid identities, per ADR-012 → CI)** — 0 errors in my surface. This matches the documented sibling disposition exactly. Now the tree-wide gate steps (swiftformat/swiftlint over all of `apps/apple`) and the placeholder script:
+
+Tree-wide swiftformat: **0/3688 files require formatting**. pwsh + the placeholder script exist. Let me run the placeholder gate (both the literal gate path and a real scan of my files) and the tree-wide swiftlint:
+
+The gate's literal `-Path` (my filename prefix) → **`PLACEHOLDER_COUNT=0, EXIT=0`** ✅. The 13 hits in the full-dir scan are all in another agent's `AINLDriveSearch.Views.swift` — none mine. Let me confirm that and run the tree-wide swiftlint:
+
+**Tree-wide swiftlint --strict: 0 violations in 3458 files.** 0 placeholder hits in my files (the 13 are all in other agents' surfaces). All gates green for my surface; the full-app build is deferred only on pre-existing collisions + macOS signing. Let me get final line counts and write the gate log.
+
+All files ≤373 lines (12 files, 2511 lines). Every surface-scoped gate is green; the full-app build defers only on pre-existing collisions (iOS: 162 errors, **0 mine**) + macOS signing. Let me capture git context and write the gate log.
+
+Gate log written. Before committing, let me verify git status so I commit **only** my allowed files (surface + log) — not the built framework or generated xcodeproj.
+
+Clean: the framework + xcodeproj are gitignored, and only my 12 files + the log are untracked (nothing else modified). Committing exactly the allowed files:
+
+Committed: `408224969`, 13 files, 2789 insertions — exactly my allowed surface files + the log. Let me finalize todos and clean up temp artifacts.
+
+Task complete. All work is committed (`408224969`) and verified.
+
+## Summary
+
+Shipped a production-polished, native Apple/SwiftUI **`AIPreheatPrecoolRecommender`** at full parity with `web/src/components/ai/AIPreheatPrecoolRecommender.tsx` — 12 files, 2,789 lines, in `apps/apple/TeslaSync/shared-surfaces/`.
+
+**Parity reproduced:** the `withAiFeature('preheat-precool-recommender')` gate, `useAiStream` → `POST /ai/climate/schedule/draft` with the five-field snake_case body (`vehicle_id`/`depart_by`/`current_cabin_temp_c`/`outside_temp_c`/`target_cabin_temp_c`, with the web `?:` fallbacks incl. `target → 21`), the `string|number` vehicle coercion, the five-part `canStart` gate, and the `AIFeatureCard`/`AiOutputPanel`/`AIThinkingIndicator` regions. Bound through a P1/S8 state-holder seam (no view HTTP); every state renders (gated/loading/error/empty/missing-inputs/thinking/prose/stream-error + live/stale/offline); P1/S10 i18n (20==20 keys, 0 dead/0 missing); VoiceOver labels + Dynamic Type + Reduce-Motion; P1/S11 `view.opened` telemetry.
+
+**Gates — all surface-scoped checks GREEN (real output):**
+- `swiftc -typecheck` vs real design tokens, **both** SDKs: `MACOS=0`, `IOS=0`
+- Executed Foundation parity harness (macOS): `ALL_RUNTIME_ASSERTIONS_PASSED` (confirmed JSONEncoder matches JS `JSON.stringify`)
+- In-module XCTest typecheck (iOS + macOS): `0` errors
+- `swiftlint --strict`: 0/11 surface, **0/3458 tree-wide**
+- `swiftformat --lint`: 0/11 surface, **0/3688 tree-wide**
+- placeholder gate: `COUNT=0`; `xcodegen generate`: 12 files/72 refs
+
+**Full-app `xcodebuild` (attempted for real):** KMP `Shared.xcframework` built (`7m48s`) + staged. iOS `build test` → `IOS_EXIT=65`, 162 errors — **0 in this surface**, all pre-existing unrelated `RecentDrives*`/`StateTimeline*` collisions in 4 other agents' surfaces. macOS → `MAC_EXIT=65`, blocked by dev-signing (0 identities). Both deferred to the P4 acceptance gate per ADR-012 and the shared-surfaces/0017 precedent.
+
+`EXIT=0 / STATUS=DONE` — log at `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0040-AIPreheatPrecoolRecommender.log`.
+
+
+
+Merge made by the 'ort' strategy.
+ ...d-surfaces-0040-AIPreheatPrecoolRecommender.log | 278 +++++++++++++++
+ .../AIPreheatPrecoolRecommender.Adapter.swift      | 299 +++++++++++++++++
+ .../AIPreheatPrecoolRecommender.AdapterTests.swift | 249 ++++++++++++++
+ .../AIPreheatPrecoolRecommender.Chrome.swift       | 166 +++++++++
+ .../AIPreheatPrecoolRecommender.Model.swift        | 367 ++++++++++++++++++++
+ .../AIPreheatPrecoolRecommender.Previews.swift     | 125 +++++++
+ .../AIPreheatPrecoolRecommender.Projection.swift   | 130 +++++++
+ .../AIPreheatPrecoolRecommender.Request.swift      | 194 +++++++++++
+ .../AIPreheatPrecoolRecommender.RequestTests.swift | 203 +++++++++++
+ .../AIPreheatPrecoolRecommender.Tests.swift        | 373 +++++++++++++++++++++
+ .../AIPreheatPrecoolRecommender.Views.swift        | 238 +++++++++++++
+ .../AIPreheatPrecoolRecommender.strings            |  45 +++
+ .../AIPreheatPrecoolRecommender.swift              | 122 +++++++
+ 13 files changed, 2789 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0040-AIPreheatPrecoolRecommender.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.Request.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.RequestTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.swift

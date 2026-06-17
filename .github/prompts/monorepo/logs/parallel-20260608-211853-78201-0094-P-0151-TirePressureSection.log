@@ -1,0 +1,148 @@
+I'll start by understanding the task, checking platform capability, and exploring both the web source and existing Apple app structure.
+
+Platform is capable (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the Apple app structure.
+
+Let me explore the existing Apple feature-views and the supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+The feature-views directory has many entries. Let me check for existing TirePressureSection files and find sibling drive-detail chart-based examples to follow.
+
+No existing TirePressureSection. There's a close sibling `DriveOverviewChart` (line chart over drive timeline). Let me read the web drive-detail shared types/helpers and study the native `DriveOverviewChart` set as the pattern to follow.
+
+Let me deeply study the `DriveOverviewChart` native set (the closest line-chart sibling using the same drive types).
+
+Now let me read the rest of the DriveOverviewChart set — the chart view, projection, views, previews, tests, and strings.
+
+Let me read the Projection, Previews, Tests, and strings files to complete my understanding of the pattern.
+
+Let me read the Previews/Tests and the supporting design system (Theme, motion, spacing tokens).
+
+Now let me examine the design tokens, motion components, and the `MeasurementSystem` (I need a pressure unit label since this section uses `unitPrefs.pressure`).
+
+Let me find the generated token definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) and the motion/skeleton components.
+
+Now let me check the generated design tokens and the motion/skeleton components I'll use.
+
+Now let me look at the motion (TSFadeIn) and skeleton (TSSkeleton) components, plus the web `helpers`/`numberFormat` and confirm `fmtNumber` semantics.
+
+Let me check the `TemperatureSection` (structurally closest: same `chartData`/`stats` props, per-wheel/zone tiles + multi-line) — both web and any native version.
+
+`TemperatureSection` is the exact structural twin of `TirePressureSection` (same props, tiles + multi-line + empty). It's fully built natively — my ideal template. Let me read the complete set.
+
+Let me read the remaining TemperatureSection files (Model, Projector, Chart, Views, Previews, Tests, strings) to complete the blueprint.
+
+Let me read the final TemperatureSection files: Chart, Views, Previews, Tests, and strings.
+
+Let me read the TemperatureSection Tests, Previews, and strings to finalize the test/preview conventions.
+
+I have a complete blueprint. Now let me check lint configs, the placeholder checker, xcodegen availability, and the log/parity layout before building.
+
+`pwsh` and `xcodegen` are both available. Let me verify the placeholder-word convention and assess the Shared.xcframework build feasibility, then set up my plan.
+
+`pwsh`, `xcodegen`, `java`, and `gradlew` are present, but no `Shared.xcframework` is staged (the full `xcodebuild` gate needs the KMP toolchain). The Shared framework build is the long pole, so I'll kick it off in the background now while I write the Swift code and run the lightweight gates.
+
+Network is available. Let me launch the Shared.xcframework build in the background (long pole), then write the plan and start building the Swift files.
+
+Now let me set up my plan and todos while the framework builds.
+
+Let me check the exact pressure conversion and how the web derives tire pressure values (SI unit + conversion formula).
+
+Let me read the exact `convertPressureFromSI` formula and the unit-conversion instructions (required reading for unit work).
+
+I have the conversion math (psi = kPa/6.894757, bar = kPa/100). Let me confirm `fmtNumber` semantics and read the unit-conversion + frontend-si instructions (required reading), then I'll build.
+
+I now have the exact conversion (psi = kPa/6.894757, bar = kPa/100) and `fmtNumber` semantics. The web content gate is just `stats.hasTirePressure` (no length>1), all 4 tiles always render showing `min–max` (values >0) or `—`, and chart lines render per wheel with any non-null sample. Let me build the 9 files, starting with the pure value types and projector.
+
+Now let me check which SF Symbol the existing tire-pressure widgets use (to pick a proven glyph) before writing the Views file.
+
+`gauge.medium` is proven (8 uses). Now the Views file (palette, header, chip, banner, 4-tile grid, legend, loading/empty/error).
+
+Now the Swift Charts chart + tooltip:
+
+Now the Previews and strings files:
+
+Now the Tests file (projector, conversion, format, model, accessibility):
+
+All 9 files written. Let me update tracking, check line counts, then run swiftformat (in-place, scoped to my files) and swiftlint.
+
+All under 400 lines. Let me normalize formatting on my files, then run the lint/format/placeholder gates.
+
+Files are untracked (new). Let me run the actual format + lint gates as the gate specifies.
+
+My files pass swiftformat and swiftlint cleanly. Now the full-project gates (as the gate script runs them) and the placeholder check.
+
+One project-wide violation. Let me locate it — my files passed individually, so let me confirm it's pre-existing.
+
+The single violation is in `LiveSignalSparklinesWidget.Builder.swift` — a different prompt's widget file, not in my allowed scope. Let me confirm it's pre-existing (committed, untouched by me).
+
+Confirmed: my 9 files are the only additions; the lone lint violation is in a **committed, out-of-scope** file from a different prompt (`LiveSignalSparklinesWidget`). Now let me run the placeholder gate, the project-wide swiftformat gate, and check the framework build progress.
+
+Placeholder gate clean, project-wide swiftformat clean, and the **Shared.xcframework build completed**. Let me confirm it staged, then generate the Xcode project and build/test.
+
+The **Shared.xcframework built successfully** (release). Let me stage it, generate the Xcode project, and confirm the iPhone 16 simulator exists.
+
+Everything is staged: framework, xcodeproj, and iPhone 16 simulator. Now the iOS `build test` (the heavy gate step). I'll run it in the background and monitor.
+
+While the iOS build runs, let me verify the pure logic independently by compiling the dependency-free Adapter + Projector with a standalone harness that asserts the exact expected values.
+
+All 41 standalone logic assertions pass — the projection, conversion, formatting, and accessibility logic is verified correct. Let me check the iOS build/test progress.
+
+Build is compiling the app target (EmitSwiftModule). Let me check specifically for compile **errors** (vs. pre-existing warnings) and any mention of my files.
+
+Important finding: my generic `TirePressure*` type names **collide** with the existing `TirePressureHistoryWidget` (another prompt's widget in the same module), which already defines `TirePressureUnit`, `TirePressureConnection`, `TirePressureLoadStatus`. I must namespace my types. Let me see exactly which names the existing widgets define.
+
+A large collision surface: the existing `TirePressure*` widgets (from other prompts) already define `TirePressureUnit`, `TirePressureProjection`, `TirePressureConnection`, `TirePressureLoadStatus`, `TirePressureStrings`, `TirePressureTelemetry`, `TirePressureUpdate`, `TirePressureAccessibility`, etc. in the same module. Let me compute the **exact** intersection of my type names vs. all other module type names so I rename precisely.
+
+The iOS build finished — let me read its result. But first, my collision check was buggy (it included my own files in the "other" set). Let me redo it correctly (exclude my files by path) and read the build outcome.
+
+Let me read the iOS build outcome and determine whether these collisions/errors are pre-existing (widget-vs-widget) or introduced by me.
+
+The build failed (IOS_EXIT=65). Key insight: I see pre-existing `ChargeSessionDTO`/`ChargeDistanceUnit` ambiguity errors in Charge widgets I never touched — so the app target was **already broken** by parallel-merge collisions. But my generic `TirePressure*` names ALSO collide with the existing `TirePressureHistoryWidget`. Let me verify the causation precisely.
+
+Causation confirmed: my generic `TirePressure*` names each added a **2nd** definition (the 1st being `TirePressureHistoryWidget`), so I introduced that ambiguity — fixable by namespacing. Meanwhile `ChargeSessionDTO`/`ChargeDistanceUnit` have **2 declarers each in committed files I never touched** — pre-existing breakage that blocks the whole app target. Let me namespace ALL my types with a unique `TirePressureSection` prefix.
+
+Only `TirePressurePreviewData` (a private preview enum) remains. Let me namespace it and the private preview telemetry sink too, then re-verify formatting, lint, and the collision intersection.
+
+No leftovers. Let me re-normalize formatting (longer names may shift wrapping), re-lint, and re-check the collision intersection.
+
+Format and lint clean after rename. Now let me re-check the collision intersection (must be empty now) and re-run the standalone harness with the renamed pure sources.
+
+Only `Descriptor` remains — a **private nested** struct (same pattern as TemperatureSection's `Descriptor`), which is file-scoped and doesn't collide at module level. Let me confirm that and re-run the harness with renamed sources.
+
+Surface is now collision-free and the pure-logic harness passes. To prove my View/Model/Chart compile against the **real** design system (isolated from the pre-broken Charge widgets), let me do a focused `swiftc -typecheck` of my surface plus the real token/motion dependencies. First, let me find what `TSCard`/`TSSkeleton` need.
+
+`TSCard` pulls in a deep dependency chain, so I'll isolate my surface with the real tokens/motion + a minimal `TSSkeleton` shim and `swiftc -typecheck` it against the macOS 15 SDK. Let me set that up.
+
+Isolated typecheck **passed (0 errors)** — my full surface compiles against the real tokens, `TSFadeIn`, Swift Charts, and the macOS 15 SDK. Now let me run the authoritative full `xcodebuild build test` to capture evidence that my surface produces **zero** errors (and the remaining failures are the pre-existing Charge* collisions).
+
+While the build runs, let me analyze the pre-existing errors from the first build log to document the blocker precisely.
+
+Clear picture: pre-rename, the build had errors across **many** independent widget families — `SafetyFeaturesWidget`, `SafetyHistoryWidget`, `ChargeStatusWidget`, `ChargeStatusLiveWidget`, `ChargeSessionChartWidget` (all out-of-scope, pre-existing) — plus the Tire ambiguities I introduced. My rename should clear the Tire ones. Let me confirm the pre-existing collisions have ≥2 declarers in committed files, and check the post-rename build progress.
+
+Confirmed: the blocking collisions (`ChargeStatusProjection`, `ChargeSessionDTO`, `ChargeDistanceUnit`, `ChargeStatusUpdate`) each have **2 declarers in committed widget files I never touched**. Let me check the post-rename build progress.
+
+**Zero TirePressureSection errors** in the post-rename build. Let me confirm the build finished and that the remaining errors are exclusively the pre-existing out-of-scope collisions.
+
+Build still running. Let me categorize the errors accumulated so far in the post-rename log to confirm the Tire widgets are now clean and only pre-existing families remain.
+
+**Definitive evidence:** post-rename, **zero TirePressure errors** — my surface AND the two pre-existing Tire widgets all compile. The only remaining errors are in committed `ChargeStatus*`/`Safety*`/`ChargeSessionChart`/`FleetStatsBar` widgets (other prompts' files with ≥2-declarer collisions) that I'm forbidden to touch. Let me wait for the iOS exit code and kick off the macOS build (shares the same app sources) in parallel.
+
+iOS post-rename: `IOS2_EXIT=65`, with **zero** TirePressure errors — blocked solely by pre-existing out-of-scope widget collisions. The macOS build (same app sources) is running. Let me confirm the log directory and gather final evidence while it builds.
+
+The macOS build finished. Let me read its result and gather a clean sample of the pre-existing blocker errors for the log.
+
+macOS failed too (`MAC_EXIT=65`) — partly **code-signing** (no `DEVELOPMENT_TEAM` configured — an environment issue) with **zero TirePressure errors**. Let me confirm whether the macOS app target also hit the same pre-existing compile collisions.
+
+Let me inspect the raw macOS log directly to get ground truth on its failure composition.
+
+Now I have the complete, honest picture. macOS failed only on **code-signing** (no `DEVELOPMENT_TEAM` in this environment) with zero TirePressure errors; iOS is blocked by pre-existing out-of-scope widget collisions. Let me write the comprehensive gate log with genuine evidence.
+
+Now let me verify the generated project/framework are git-ignored (so they won't be committed), do a final lint/format confirmation on my files, and stage exactly my 9 files + the log.
+
+All clean and ignores confirmed. Let me stage exactly my 9 surface files + the log and verify the staged set before committing.
+
+Exactly my 9 surface files + the log are staged. Let me commit with a transparent message (honest about the externally-blocked gate) plus the required trailer.
+
+Commit `9fd8c48bb` created (10 files, 2024 insertions). Let me finalize: update tracking, clean temp artifacts, and confirm the working tree state.
+
+Task finalized. All work is committed (`9fd8c48bb`); the only remaining working-tree changes are two **pre-existing** web file modifications that predate my session (not mine, not staged). Temp scratch cleaned.
+

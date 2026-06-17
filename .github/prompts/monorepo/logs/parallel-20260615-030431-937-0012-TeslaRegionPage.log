@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure to understand the task and the existing Apple app setup.
+
+Xcode tools are available. Let me look at the actual UI component (`RegionSettings`), the Apple app structure, and the parity files.
+
+Xcode, swiftlint, and swift are all available. Now let me understand the actual Apple app structure and existing patterns. The real UI is in `RegionSettings`. Let me explore deeply.
+
+The app uses a flat structure (not `Features/`). Let me examine the project config, parity files, and find existing similar pages to learn the conventions.
+
+Large codebase (5601 Swift files). The project.yml sources don't include a `Features/` path. Let me examine the parity manifest/ledger, navigation, localization, and an existing similar page pattern.
+
+The localization catalog already has `translation.region.*` keys. Let me read the manifest record, the string-group, ledger structure, and the existing region string entries.
+
+All region strings already exist in the catalog as `translation.region.*`. Now I need to understand build feasibility (the KMP `Shared.xcframework` dependency) and the navigation/page patterns. Let me check the build toolchain and gate contract.
+
+`xcodegen` is present but **`Shared.xcframework` is missing** (only `.gitkeep`), and there are already many completed `apple-page-admin-*.log` files. Let me examine an existing completed admin page (Swift source + its log) to learn the exact pattern, and read the p4-apple gate contract.
+
+Key discovery: existing admin pages live in `apps/apple/Sources/Features/Admin/`, and there's already a `RegionSettings.Model.swift` + `RegionSettings.Adapter.swift` in `feature-views/`. Let me examine these and the established page pattern (FleetAPIPage) plus navigation files.
+
+Major find: `RegionSettingsModel` (@Observable) + adapter already exist in `feature-views/`. The page just needs to wrap it. The established convention is `Sources/Features/Admin/` (not the prompt's `TeslaSync/Features/Admin/`). Let me confirm by examining the predecessor FleetAPIPage (prompt + source + registration) and all RegionSettings files.
+
+The `RegionSettings` SwiftUI View already fully exists. The page just needs to host it. Let me read the FleetAPIPage prompt's metadata (to confirm path convention), my own prompt file, the existing RegionSettings view, and the navigation/registration files.
+
+Confirmed: the FleetAPIPage prompt also said `TeslaSync/Features/Admin/` but the predecessor actually shipped to `Sources/Features/Admin/`. I'll follow the established convention. Let me examine the FleetAPI page files, registration pattern, navigation, and the RegionSettings subviews/previews.
+
+Now I'll read the key pattern files to mirror the established page/registration/navigation structure exactly.
+
+Now I understand the architecture. Let me read the remaining critical files: the central registration composition, the FleetAPI model/sample pattern, the RegionSettings subviews/previews/strings, and the predecessor log's gate approach.
+
+Let me read the central app composition, route parser, placeholder checker, typography components, and check for route-coverage tests.
+
+Now let me check the placeholder checker, typography/components API, RegionSettings subviews, and whether any tests enumerate routes (which my new case could break).
+
+Let me read the typography API, route tests, a model/registration test to mirror, and the predecessor log's gate approach.
+
+`TeslaOrdersPage` is the exact analog — a thin chrome page hosting a shared feature-view section at `.account`. Let me read all the TeslaOrders files to mirror precisely, plus confirm the web sidebar grouping.
+
+Both `tesla-region` and `tesla-orders` are in the web "Integrations" group; Apple maps `teslaOrders` → `.account`, so I'll do the same for `teslaRegion`. Let me read the TeslaOrders page + registration to mirror exactly.
+
+This is the exact template. `TeslaOrdersPage` uses `TSPageTitle("translation.orders.title")` from the main catalog. I'll mirror it 1:1 for region. Let me confirm the catalog has the needed keys (`translation.region.*`, `route.teslaRegion`/`route.teslaOrders`), check the gas-price test for group assumptions, and read the predecessor gate log.
+
+I have the full picture. The predecessor documents that the KMP `Shared.xcframework` is unstaged, so the full `xcodebuild` is deferred (out-of-scope) while placeholder/swiftformat/swiftlint/xcodegen/type-check/test gates run green → STATUS=DONE. Let me verify build feasibility and read the exact gate commands used.
+
+I now understand the full methodology. Let me check the apple-ledger structure and the shared KMP core state, then set up my plan and start writing code.
+
+The shared KMP core is real Kotlin (slow to build). Let me kick off a bounded XCFramework build in the background to enable a real `xcodebuild`, while I write code in parallel. Let me also set up my plan and read the exact TeslaOrders ledger rows.
+
+Plan confirmed. Let me set up todos and the plan file, then read the exact `route.teslaOrders` catalog entry and the web nav label for tesla-region.
+
+Confirmed: web nav label is "Region & API" with globe icon, mapping to `.account` like `teslaOrders`. Let me create the plan file and write the three new Swift files.
+
+Now the page view, mirroring `TeslaOrdersPage` 1:1:
+
+Now the route registration, mirroring `TeslaOrdersRouteRegistration`:
+
+Now the tests, mirroring `TeslaOrdersRouteRegistrationTests`:
+
+Now the edits to `AppRoute.swift` (add the case, pathSegment, icon, group) and `TeslaSyncApp.swift` (wire registration):
+
+Now add the `route.teslaRegion` nav label to the catalog (inserted in alphabetical order between `route.teslaOrders` and `route.users`):
+
+Let me validate the catalog JSON, add the ledger rows, update todos, and check the gradle build progress.
+
+Catalog valid, ledger updated. Gradle still building. Let me validate the ledger, check tool versions, and run swiftformat/swiftlint/placeholder on my new files while gradle continues.
+
+swiftformat clean. Now swiftlint --strict on the new/edited files, plus the placeholder scan (checking pwsh availability):
+
+swiftlint --strict: **0 violations**. pwsh is available — let me run the actual placeholder gate script (on the real `Sources/Features/Admin` path, as the predecessor did) and check gradle progress.
+
+Placeholder gate: **COUNT=0, EXIT=0**. Now let me run `xcodegen generate` to confirm the project includes the new files and is valid.
+
+xcodegen succeeded; new files are referenced across targets. Let me check the gradle framework build — it's the gate to a real `xcodebuild`.
+
+Gradle is still building the Kotlin/Native framework (the long pole). Let me run meaningful focused type-checks now (independent of gradle): the route files I edited are self-contained SwiftUI/Foundation. Let me also map which sources import the KMP `Shared` framework.
+
+The route files I edited type-check cleanly under Swift 6. Neither RegionSettings nor the design system imports `Shared`, so I can do a broad isolated type-check of the page without the KMP framework. Let me check gradle and run that broader type-check.
+
+The design system lives in `Sources/Components/**` + `Tokens.swift`, none importing `Shared`. Let me run a broad isolated type-check of the shipping page code paths (excluding the `#if DEBUG` previews by not defining DEBUG):
+
+Only errors are missing `TSChartPalette` in an unrelated **Maps** component — my page's files have zero errors. Let me locate `TSChartPalette` and include it for a fully clean type-check.
+
+Same as the predecessor noted: only `UnitFormatters.swift` fails in isolation because the SI `Units` facade is KMP-backed. My page doesn't use it. Let me confirm where `Units` lives and re-run excluding that one unrelated file.
+
+The macOS isolated type-check now passes (**EXIT=0**), with the only excluded file being the KMP-backed `UnitFormatters.swift` my page doesn't use. And **gradle completed successfully** — let me check if the Shared.xcframework built, which would unlock the real `xcodebuild`.
+
+Gradle built the **debug** XCFramework successfully and was mid-**release** assembly when the 600s bound hit (compiles are now cached). Let me finish the release framework (fast now), then do the iOS isolated type-check and a DEBUG-previews type-check in parallel.
+
+Both macOS and iOS isolated type-checks pass (**EXIT=0**). The release framework is still linking. Let me wait for it and meanwhile locate `.teslaSyncTheme()` for a DEBUG-previews type-check pass.
+
+`teslaSyncTheme` is in `Sources/Theme.swift` (no Shared). Let me run a DEBUG pass to verify the preview block compiles too, while gradle finishes.
+
+DEBUG previews type-check passes (**EXIT=0**), and gradle finished. Let me verify the release framework and stage it for a real build.
+
+Release `Shared.xcframework` built successfully. Let me stage it and launch the real `xcodebuild` for the macOS scheme (async, monitored):
+
+Framework staged. Launching the macOS `xcodebuild` (async, monitored):
+
+Build running in background. Let me monitor it while I prepare the evidence log.
+
+Build progressing — at the whole-module Swift compile phase, **0 errors** so far. Let me continue monitoring.
+
+The whole-module type-check phase (where cross-file integration errors surface) is running with **0 errors** — this is the long pole for 5601 files. Let me wait longer.
+
+The environment is shared across many parallel slots (61 `swift-frontend` processes from sibling builds), causing heavy CPU contention — my build is progressing with **0 errors** but slowly. The whole-module `EmitSwiftModule` phase type-checks all 5601 files together (where any integration error in my code would surface). Let me keep waiting for it.
+
+The build failed — but in `DriveScorePage.Panels.swift` and DriveScore/DriveStatCards files, **none of which are mine**. Let me extract the actual errors to confirm this is a pre-existing failure unrelated to my change.
+
+The **only** build error is a pre-existing, unrelated type error in `DriveScorePage.Panels.swift` (Driving feature — explicitly out of my scope). No errors in any of my files, and the whole-module type-check integrated my code. Let me confirm it's pre-existing (not in my diff) and inspect the offending line.
+
+Confirmed: `DriveScorePage.Panels.swift` is **not in my diff** — it's a pre-existing type error (`String(localized:)` fed a `LocalizedStringKey`) in the out-of-scope Driving feature. My artifact has zero errors. Per scope rules ("Other pages" out of scope; don't fix unrelated pre-existing bugs), I won't touch it.
+
+Let me add a runnable harness (compile + RUN of my new routing logic), mirroring the predecessor's gate, and verify git ignores the generated artifacts.
+
+Generated artifacts are git-ignored. Now compile + run the routing harness:
+
+**Harness RAN green**: `HARNESS_OK routes=50 teslaRegion=ok`. My routing logic is verified end-to-end. 
+
+Summary of gates: placeholder=0, swiftformat clean, swiftlint --strict=0, xcodegen ✓, macOS+iOS+DEBUG isolated type-checks=EXIT 0, routing harness RUN=0. The full `xcodebuild` is red **only** from the pre-existing unrelated `DriveScorePage.Panels.swift` error. Let me write the evidence log.
+
+Now let me do a final verification of the edits and re-run the lint/format gates before committing.
+
+All edits verified, format clean. Let me commit the scoped files (mirroring the predecessor's commit set, reconciled to `Sources/Features/Admin/`):
+
+Exactly the 8 intended files staged. Committing:
+
+Committed. Let me finalize todos and clean up temp files.
+
+All todos done, temp files cleaned, working tree clean, commit landed. Task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

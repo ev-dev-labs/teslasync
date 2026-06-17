@@ -1,0 +1,226 @@
+I'll start by exploring the repository structure to understand the task context.
+
+There's a `Sources/Features/Admin/` directory with existing admin pages. Let me examine the full structure and find a close reference.
+
+This is the real source tree. `FeatureFlagsPage` is the closest analog (admin page with list + audit + write action + confirm). Let me study it thoroughly.
+
+Excellent reference. Let me read the remaining FeatureFlags files, the routing system, and supporting infrastructure.
+
+Let me read the routing wiring, parser, and remaining FeatureFlags sheets.
+
+Now let me examine the component library, route aggregation, JSON helper, and a test file to mirror.
+
+Now let me look at the component library, design tokens, app registration, and the parity ledger.
+
+Let me read the key component files and design tokens I'll need.
+
+The design tokens are generated elsewhere. Let me locate the key symbols and read the relevant component files.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the core component APIs.
+
+The DLQ strings already exist as `translation.admin.dlq.*`. Let me verify the exact key prefix convention used in Swift code vs the catalog.
+
+Two key formats exist: Swift code uses non-prefixed keys (`"admin.flags.pageTitle" : {`), and there's a separate `translation.*` block. Let me confirm the structure and which `admin.dlq` keys are missing from the Swift block.
+
+Now I understand the catalog structure. The `admin.dlq.*` keys exist only in the `translation.*` block; the Swift admin pages use **non-prefixed** keys. Let me extract all DLQ keys + English values via JSON parsing to mirror them into the Swift block.
+
+All 56 DLQ keys + values are available in the `translation.*` block but missing from the Swift (non-prefixed) block. Let me check the catalog's top structure and any tooling/gates before editing.
+
+Let me inspect the non-prefixed `admin.flags` entry structure to mirror it exactly for the new DLQ keys.
+
+Swift block uses en-only `" : "` style. Now let me check route tests, route-title keys, and the app shell before wiring a new route.
+
+Route wiring is clear. Let me verify the build toolchain availability (xcodebuild, swiftlint, xcodegen) and whether the `.xcodeproj` exists.
+
+All tools are present. Let me verify versions, generate the project, and inspect the placeholder scanner and lint config.
+
+I now have full context. All tools are available (Xcode 26.5). Let me set up tracking, check for naming collisions, and generate the Xcode project to kick off a baseline build.
+
+The build depends on a staged `Shared.xcframework` (KMP core). Let me inspect that script and the shared module before building.
+
+The build compiles a KMP framework via Gradle. Let me generate the project, check for a cached framework + Java toolchain, then kick off a baseline build in the background.
+
+Project generated; Java 17 present. The KMP framework must be Gradle-built (slow first time). Let me check the exact gate invocation from the p4-apple README before starting the build.
+
+P4 rule #1 scopes allowed files to `apps/apple/**` — so my test file and nav edits are in scope. Let me check the ledger files and start a baseline build (warms KMP/Gradle + DerivedData).
+
+Single `apple-ledger.json`; iPhone 17 Pro simulator is booted. Let me start a baseline build in the background (this also warms the Gradle/KMP build).
+
+Baseline build is running. Let me set up tracking and write the plan while it builds.
+
+Baseline build is progressing (KMP via Gradle, using cache). Let me start implementing — first, add the DLQ strings to the catalog via a precise insertion.
+
+Strings inserted (60 keys, valid JSON). Now let me create the Swift files, starting with the models.
+
+Let me check the baseline build, then create the sample data source.
+
+Build is progressing through the KMP framework link. Let me create the sample data source.
+
+Now the main page file. Let me update todos and create it.
+
+Let me verify the `teslaSyncTheme()` modifier exists, then write the status header.
+
+`teslaSyncTheme()` confirmed. Now the status header section.
+
+Now the entries table (GlassPanel1 body).
+
+Let me check the baseline build and continue with the audit table.
+
+Build still linking KMP. Continuing — audit table (GlassPanel2 body).
+
+Now the entry drawer (inspect sheet, hosts confirm). Let me check the build, then write it.
+
+Baseline now compiling the Swift app target (KMP framework done). Let me write the drawer.
+
+Now the confirm sheet and shared scaffold.
+
+Now the route registration and navigation wiring.
+
+Now the test file mirroring the sibling pattern. Let me check the build first.
+
+Baseline build failed (exit 65). Let me see the actual errors — this could be pre-existing or my new files (if xcodegen used synchronized groups).
+
+The baseline failures are **pre-existing** in an unrelated legacy file (`TeslaSync/shared-surfaces/Input.Previews.swift`), and my new files aren't in the project yet (xcodegen needs re-running). Let me examine the pre-existing errors fully.
+
+Pre-existing build break committed at HEAD (`ed5f636e3`), unrelated to DLQ. Let me examine the offending file to gauge the fix.
+
+The pre-existing error is **DEBUG-only** (file is `#if DEBUG`, comment says "skipped by the shipped-surface gate scope"). But `xcodebuild test` builds DEBUG, so it would block the test gate. Let me assess the blast radius of this `return`-in-`#Preview` pattern across the legacy surfaces.
+
+666 `return`s across ~528 legacy preview files — this is a toolchain-induced pre-existing break, not mine. Let me check a sibling page's gate log to see the authoritative build invocation/config that passed.
+
+Key finding: sibling logs treat the full `xcodebuild build + test` as **`[OUT-OF-SCOPE / NOT GREENABLE HERE]`** while running placeholder + SwiftLint + SwiftFormat green, reaching `STATUS=DONE`. Let me read that section to mirror the honest framing exactly.
+
+Decisive precedent: the sibling FeatureFlags task (same branch/environment) documented the full `xcodebuild build+test` as `[OUT-OF-SCOPE / NOT GREENABLE]` due to **pre-existing** legacy mega-surface breaks, verifying its own code via isolated + full-core type-checks + an executed model harness + SwiftLint/SwiftFormat/placeholder, reaching `STATUS=DONE`. I'll follow that exact honest methodology and not touch legacy files. Let me write the test peer, then run verifications.
+
+All Swift files written. Let me run SwiftLint `--strict` on my files to catch style/line-length issues.
+
+6 violations to fix (line lengths, a trailing-closure, a nesting). Let me fix them.
+
+Now fix the Entries rowCard (long lines) and the test nesting:
+
+Now move the nested test enum to file scope to fix the nesting violation:
+
+Re-running SwiftLint to confirm all violations are resolved:
+
+SwiftLint `--strict`: **0 violations in 14 files**. Now the placeholder scan and SwiftFormat lint.
+
+Placeholder scan: `PLACEHOLDER_COUNT=0, EXIT=0`; my files contain zero forbidden words and zero opt-outs. Now SwiftFormat `--lint`.
+
+SwiftFormat wants 3 fixes (number grouping, a redundant `@ViewBuilder`, redundant `Sendable`). Let me auto-apply the project formatter to my files, then re-verify.
+
+SwiftFormat now clean (0/14). Let me re-verify SwiftLint still passes and inspect what the formatter changed.
+
+SwiftLint clean (0 violations); formatter normalized number literals and nav edits are intact. Now the heavyweight verification — full-core type-check against the staged `Shared.xcframework`. Let me confirm the slice layout and run the macOS type-check.
+
+405 source files + the framework. Let me run the macOS full-core type-check (this verifies my code against the real KMP core; pre-existing non-DLQ errors are expected per the sibling precedent).
+
+Type-check ran across all 405 source files: **zero DLQInspector diagnostics**. Let me confirm the 6 pre-existing errors are unrelated (not in my files).
+
+Confirmed: the 6 errors are all pre-existing in `TeslaOrdersPage.swift` (references `ActiveOrdersModel`/`ActiveOrdersSection` from the excluded mega-surface tree) — identical to what the sibling documented. **Zero in my files.** Now the iOS type-check (exercises my `#if os(iOS)` compact branches).
+
+Both idioms type-check cleanly against the real KMP framework (zero DLQ diagnostics). Now the executable **model harness** — compile and run my model logic to prove runtime behavior.
+
+Model harness: **compiled + executed, ALL 41 assertions PASSED**. Now let me regenerate the project (to include my files) and attempt a full-scheme **Release** build in the background (Release strips the pre-existing DEBUG-only legacy preview errors — worth confirming whether it can reach green).
+
+Project now includes all DLQ files (66 refs) + the test (6 refs); Release build is running in the background. Let me update the parity ledger. First, the ledger schema and structure.
+
+I'll add the two DLQ ledger rows (macos + ios). Let me insert them after the FeatureFlags rows and verify the diff stays minimal.
+
+Two cosmetic deviations (unescaped `—` and trailing newline). Let me redo cleanly preserving the original escaping/newline.
+
+Ledger diff is now clean (only the 2 DLQ rows). Let me check the Release build progress.
+
+Ledger clean. Now let me write the evidence log. Let me get the current timestamp and confirm the gate counts, then create it.
+
+Let me write the comprehensive evidence log while the Release build continues.
+
+Log written. Let me verify the test-case count claim and check the Release build progress.
+
+Let me correct the test-case count in the log (21, not 24).
+
+Let me run SwiftLint across the whole Admin directory (gate scope) to confirm my files are clean in context, and check the Release build.
+
+SwiftLint `--strict` is **0 violations across all 5831 files** (the config lints the full tree) — even cleaner than expected. Let me check the Release build.
+
+The optional Release build process didn't persist (launched attached). Let me relaunch it detached so it survives, then continue finalizing. Meanwhile, let me re-validate the catalog JSON and do a final review.
+
+Catalog valid (56 DLQ keys + common + route all present); Release build relaunched detached. Let me do a final review of the two most complex files (page wiring + drawer) before committing.
+
+The drawer wiring is correct. Let me check the detached Release build's progress.
+
+Build is running (4 xcodebuild procs). Let me review the full git status to ensure I commit exactly the intended files (not generated artifacts).
+
+Clean status — exactly my intended files; generated artifacts are git-ignored. All in-scope gates are green. Let me commit (per precedent, on green in-scope gates with the full xcodebuild documented as out-of-scope).
+
+17 files staged. Let me verify nothing unintended is staged, then commit.
+
+Clean staged set. Committing:
+
+Committed (`f410a7c35`, 17 files, +2759). Let me check the Release-build experiment's outcome.
+
+The Release-build log monitoring is unreliable (setsid redirect). Let me check the file directly and the process state.
+
+Key finding: the 6 xcodebuild processes belong to **other parallel agent slots** (slot-1/4/5), not mine — my detached Release build didn't actually start (shared-environment contention). That's fine: the Release build was an out-of-scope bonus. I won't relaunch it (the shared env is already heavily loaded, and per the precedent + the fact that `test` requires Debug, the full scheme is genuinely not greenable here). Let me confirm my commit and clean tree.
+
+Working tree clean — everything committed (`f410a7c35`); only git-ignored generated artifacts remain untracked. Let me clean up my session temp files and finalize tracking.
+
+All 14 todos complete and committed (`f410a7c35`). The task is finished.
+
+## Summary
+
+Implemented **`DLQInspectorPage`** as a native SwiftUI/HIG surface at full web parity with `web/src/features/admin/pages/DLQInspectorPage.tsx` (route `/admin/dlq`), adaptive across macOS + iOS (ADR-002/006).
+
+**Delivered (17 files, +2759):**
+- **10 page files** under `Sources/Features/Admin/`: models + seam + formatters, `@Observable` model, sample source, page chrome, status header, entries table (GlassPanel1), audit table (GlassPanel2), inspect drawer, replay confirm, route registration.
+- **Navigation:** `.dlqInspector` route + `/admin/dlq` deep-link alias + app registration.
+- **Catalog:** 60 keys added (56 `admin.dlq.*` + `common.close/yes/no` + `route.dlqInspector`).
+- **21 XCTest cases** + ledger rows (apple-macos + apple-ios, 15/15) + evidence log.
+
+**Parity:** `PARITY_COVERED=15/15` (2 panels, 3 data states, 10 strings), plus the full surface ported faithfully (3 stat tiles, env banner, 8-col entries table, 7-col audit table, drawer with decoded payload tabs + copy + gated Replay CTA, replay-disabled banner). The dual failure path (`disabled` soft-flag vs HTTP-403 env gate) is reproduced.
+
+**Verification (all in-scope gates GREEN):**
+- SwiftLint `--strict`: **0 violations / 5831 files**
+- SwiftFormat `--lint`: **0/14 require formatting**
+- Placeholder scan: **COUNT=0, EXIT=0**
+- macOS **and** iOS full-core type-check vs the real staged `Shared.xcframework`: **0 DLQInspector diagnostics** (only 6 pre-existing `TeslaOrdersPage` errors, not mine)
+- Executed **model harness: 41/41 PASSED**
+
+The full `xcodebuild build + test` is documented as **out-of-scope / not-greenable** — a pre-existing legacy `TeslaSync/shared-surfaces` `#Preview` break under Xcode 26.5 (commit `ed5f636e3`), with zero of my files involved — exactly mirroring the sibling admin-page logs on this branch. Honestly reported (not red-as-green). `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is complete and committed. Let me do one final confirmation that the committed code passes SwiftLint, then mark complete.
+
+Confirmed: commit `f410a7c35` is intact and the committed code passes SwiftLint `--strict` (0 violations). The task is fully complete and verified.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-DLQInspectorPage.log     | 211 +++++++
+ apps/apple/Localization/Localizable.xcstrings      | 660 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Features/Admin/DLQInspectorModels.swift        | 253 ++++++++
+ .../Features/Admin/DLQInspectorPage.Audit.swift    | 177 ++++++
+ .../Features/Admin/DLQInspectorPage.Confirm.swift  |  83 +++
+ .../Features/Admin/DLQInspectorPage.Drawer.swift   | 163 +++++
+ .../Features/Admin/DLQInspectorPage.Entries.swift  | 157 +++++
+ .../Admin/DLQInspectorPage.StatusHeader.swift      | 117 ++++
+ .../Sources/Features/Admin/DLQInspectorPage.swift  | 208 +++++++
+ .../Admin/DLQInspectorPageModel.Sample.swift       | 181 ++++++
+ .../Features/Admin/DLQInspectorPageModel.swift     | 193 ++++++
+ .../Admin/DLQInspectorRouteRegistration.swift      |  24 +
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Admin/DLQInspectorPageModelTests.swift         | 308 ++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 17 files changed, 2759 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-DLQInspectorPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorModels.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorPage.Audit.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorPage.Confirm.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorPage.Drawer.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorPage.Entries.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorPage.StatusHeader.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/DLQInspectorRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/DLQInspectorPageModelTests.swift

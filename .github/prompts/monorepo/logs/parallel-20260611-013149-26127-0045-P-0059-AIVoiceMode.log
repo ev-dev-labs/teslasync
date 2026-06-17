@@ -1,0 +1,222 @@
+I'll start by exploring the environment and understanding what's available, then read the web source that serves as the specification.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, pwsh). Let me read the web source spec and examine existing shared surfaces to learn the established patterns.
+
+Now I understand the web spec. Let me study the most recently completed surface (`AISoftwareUpdateChangelogSummarizer`) as a template, plus the `AIFeatureCard` shared component that this surface composes with.
+
+`AISoftwareUpdateChangelogSummarizer` is the ideal template — same prompt format, uses `AIFeatureCard`. Let me read all its files to learn the established 10-file pattern.
+
+Excellent pattern. Let me read the remaining template files plus the shared `AIFeatureCard` component that this surface composes with.
+
+Let me read the test files, previews, and strings to complete my understanding of the template.
+
+Let me read the previews and strings, then locate the shared core tokens and project structure.
+
+Let me locate the Xcode project/scheme and the shared core token definitions.
+
+Now I understand the build wiring (XcodeGen, path-glob sources — no manual project edits needed). Let me check the toolchain specifics, the design tokens, and how the previous surface was verified.
+
+There's a prior log for this exact surface (`P-0059-AIVoiceMode`). Let me read it plus the design tokens and shared UI components.
+
+My runner has **full Xcode 26.5** — unlike the prior attempt (which was BLOCKED on CommandLineTools-only). I can and must run the real build+test gate. The design tokens are at `apps/design/generated/apple`. Let me read the real tokens and shared UI component APIs.
+
+Let me read the shared UI component APIs (TSButton, TSFadeIn, TSSkeleton) and the AIFeatureCard composition it builds on.
+
+I now have the full token/component API. Let me check the lint config, the placeholder checker, and confirm the `AIFeatureCard` composition/labels before writing.
+
+Let me confirm the `AIFeatureCard` composition, the KMP framework build dependency, and Localization setup before writing.
+
+Key finding: `Shared.xcframework` isn't built yet (only `.gitkeep`) — the app/test targets link it, and it's produced by a KMP/Gradle pre-action. This determines whether the headline `xcodebuild build test` gate can run. Let me check the KMP toolchain and kick off the framework build in the background while I write the artifact.
+
+Java 17 + gradlew present. Let me kick off the KMP `Shared.xcframework` assembly in the background (the long pole for the headline gate) while I write the artifact.
+
+Java 17 + gradlew are present and the KMP framework build is running. I have everything I need to write the artifact. Let me set up a plan and todos, then write the files.
+
+Now let me write the artifact, starting with the pure Adapter (no dependencies, fully testable).
+
+Adapter written. Let me check the KMP build progress, then continue with the Speech seam and Model.
+
+The system speech controller's strict-concurrency behavior depends on whether the Speech/AVFoundation callback handlers are `@Sendable` in this SDK. Rather than guess, let me probe the compiler directly.
+
+The probe compiled clean (`PROBE_EXIT=0`) — so capturing `self` in the tap/recognition/authorization handlers and hopping via `Task { @MainActor in }` is valid under Swift 6 strict concurrency in this SDK. I can write a real system speech controller. Let me write the Speech seam.
+
+The KMP build finished. Let me confirm the framework was staged successfully — this unblocks the full `xcodebuild` gate.
+
+Excellent — KMP build succeeded (9m44s). Let me stage the framework to where the app target links it, then continue writing the source files.
+
+Framework staged with iOS + simulator + macOS slices. Now let me add a pure, testable TTS-feed coordinator to the Adapter (keeps the model thin), then write the Model.
+
+Now the Model file — facade, enums, telemetry seam, Input/UIState, Resolved/Ready structs, the `@Observable` model, and the in-memory source.
+
+Let me check the line counts of the files written so far to manage the swiftlint `file_length` (400-line) limit before continuing.
+
+The Adapter is 506 lines — over swiftlint's 400-line `file_length` limit. I'll split it: keep voice-specific pure logic (request, session, chunker, TTS, a11y) in `.Adapter.swift`, and move the `useAiStream` port (SSE/reducer/output/action) into a new `.Stream.swift`. Let me view the exact boundaries.
+
+I'll move the `useAiStream` port (lines 163–410) into a new `.Stream.swift` and delete that block from the Adapter using `sed`, preserving exact content.
+
+Clean split — Adapter 257, Stream 262. Let me verify Stream.swift's head and continue.
+
+Now the `@Observable` model in `.Coordinator.swift` (kept separate to respect the 400-line file limit).
+
+Now the pure Projection that localizes `(Input, UIState) → Resolved`.
+
+Now the in-memory test/preview doubles for the speech + draft seams.
+
+Now the main surface View, then the subviews.
+
+Now the presentational subviews — badge, action button, thinking indicator, output panel, and the ready-card body.
+
+Now the voice input-slot controls (transcript box + mic/mute/stop buttons).
+
+Now the P4 leaf chrome — freshness chip, refresh, banner, loading, gate-error.
+
+Now the i18n catalog (`.strings`).
+
+Now the SwiftUI previews for each state.
+
+Now the pure adapter tests.
+
+Now the projection + accessibility tests.
+
+Now the coordinator (model) tests — wiring, telemetry, freshness, and speech/draft/TTS delegation.
+
+All 13 files written. Let me verify line counts (all must be < 400 for swiftlint), then run a fast typecheck against the real tokens/components before the heavy gate.
+
+`AdapterTests.swift` is 408 lines — over the limit. Let me split out the stream-port tests (SSE/reducer/output/action) into `StreamTests.swift`, mirroring the source split.
+
+Both test files now under 400. Let me do a fast standalone typecheck of the non-UI logic files (these import only Foundation/Observation/AVFoundation/Speech — no SwiftUI/token deps), to catch logic errors quickly before the heavy build.
+
+Only error is the expected cross-file reference to `AIVoiceMode.surfaceSlug` (defined in the SwiftUI view file, not in this subset). Let me confirm the rest is clean by compiling with a throwaway slug shim.
+
+Logic files clean on macOS. Let me also typecheck for the iOS target to validate the `#if os(iOS)` `AVAudioSession` branch that macOS skipped.
+
+Both targets typecheck clean. Now let me run swiftformat and swiftlint on my files to fix style before the heavy build.
+
+swiftformat found mechanical issues plus a force-unwrap-in-tests. Let me fix the force-unwrap manually, then run swiftformat in write mode to auto-fix the rest.
+
+Now run swiftformat in write mode to auto-fix the remaining mechanical issues.
+
+Let me re-lint and re-check line counts (wrapping may have grown files).
+
+swiftformat clean, all files < 400 lines. Now swiftlint --strict on my files.
+
+Two swiftlint violations to fix: a void-function ternary in the coordinator and a 4-member tuple in the test helper. Let me fix both.
+
+Now rewrite `ModelTests.swift` to use a harness struct (avoids the 4-tuple) instead of the multi-value return.
+
+The file exists; let me remove and recreate it with the harness version.
+
+Let me re-run swiftlint --strict and swiftformat --lint on all AIVoiceMode files after the fixes.
+
+swiftlint **0 violations** and swiftformat **0** on all 16 files. Now the placeholder gate — I'll run the checker on the shared-surfaces dir (filtering to my files) and also grep my files directly for forbidden patterns.
+
+Placeholder gate clean (COUNT=0). Now the headline gate. Let me generate the Xcode project and check available simulators.
+
+Project generated, iPhone 16 simulator available. Now the headline gate. Given the app's size, I'll first run an iOS **build** (compile) to catch any view-file errors fast, then run the full `build test`. Starting the build in the background.
+
+Naming collision: other surfaces define `symbolEffectIfAvailable` too. The established pattern (used by the summarizer) is a **`private`** (file-scoped) extension. swiftformat/my edit dropped the `private`. Let me fix it, and confirm the `String` extension is also file-scoped.
+
+Confirmed — siblings use `private extension View`; mine is internal. Let me fix it.
+
+Re-running the iOS build (incremental now).
+
+Build failed but my filter caught no `error:` lines. Let me inspect the actual errors.
+
+There's a **compiler crash** (stack dump), not a normal error. I need to find which expression triggers it. Let me examine the crash backtrace for a source location.
+
+The crash backtrace references existing feature-view files in a batch. Let me determine whether my code triggers it or it's pre-existing — first by extracting the "While..." source locations from the crash dump.
+
+Let me isolate the exact frontend invocation that crashed and its primary files.
+
+The crash is an **IRGen (compiler back-end) segfault** in `AppearanceSettings.Controls.swift` — a pre-existing feature-view file I didn't touch and am not allowed to touch (`@$sSbScA_pSgIeAghyg...` is a `Bool`/`Actor?` closure reabstraction thunk). My `AIVoiceMode.*` files are in an earlier alphabetical batch, not the crashed one. Let me prove this is pre-existing and independent of my work by building with my files temporarily removed.
+
+Confirmed: 0 AIVoiceMode files in the failed batch. Now building **without** my files to prove the crash is pre-existing.
+
+Decisive result: **without my files, the build still fails** — now on a *different* pre-existing error in another sibling surface (`AISignalExplorerNlFilter.swift:142` "escaping closure captures non-escaping parameter"). So the app module has pre-existing breakage in sibling surfaces (outside my allowed-files scope) that blocks the whole-app build regardless of my work. Let me restore my files and regenerate.
+
+Both broken files are committed sibling surfaces from **other** P4 prompts (`AISignalExplorerNlFilter`, `AppearanceSettings`) — pre-existing breakage outside my allowed-files scope. Let me check how the committed sibling (`AISoftwareUpdateChangelogSummarizer`, prompt 0048) handled its gate/verification to match the accepted standard.
+
+The committed sibling (accepted as **DONE**) used an **isolated build + isolated XCTest** against the real design system, with the full-app gate **DEFERRED** on pre-existing unrelated blockers. I'll match that standard. Let me locate the component dependencies to build an isolated verification.
+
+The design system lives in `Sources/Components` + `Sources/Design` + the tokens. Let me do an isolated compile of my full surface (incl. Views) against the real design-system dependencies it uses.
+
+Cards.swift needs Typography symbols — transitive deps. Let me compile against the **whole** component library (it's the self-contained design system) instead of chasing files.
+
+The full library pulls in `Sources/Platform` types (unbounded). Let me use the precise curated dependency set my surface actually needs (closing the `Skeletons → Cards → Typography/TSMaterial` chain).
+
+Isolated build (Views included) against the real design system **passes** for iOS. Let me confirm macOS too, then validate the Previews and run the tests.
+
+Both targets build clean in isolation. Now let me run the tests via an isolated SwiftPM package (matching the precedent's "isolated XCTest" standard) — library = surface + curated real deps, test target = my 4 test files.
+
+Cards.swift's `#if DEBUG` preview block needs `TSBadge` (debug-only dep chain). Running the suite in **release** config avoids all preview-block deps (and excludes my DEBUG-only Previews too).
+
+All **104 isolated XCTest tests pass** under Swift 6 against the real design system. My `Previews.swift` compiled in the debug attempt (the error was in dependency `Cards.swift`'s own preview block). Let me confirm a clean DEBUG build of my Previews by adding the few design-system files whose DEBUG preview blocks are referenced.
+
+My `Previews.swift` compiled in both attempts — remaining errors are in dependency files' own `#if DEBUG` preview blocks (their chain, not mine). To get an unambiguous clean DEBUG compile of my Previews, I'll strip the throwaway dep copies' DEBUG preview blocks (keeping their runtime code) and rebuild.
+
+`States.swift` was an unneeded speculative dep. Let me remove the three extra files my surface doesn't use and rebuild — leaving only my surface + the curated deps (DEBUG blocks stripped).
+
+**Build complete** — the DEBUG build including my `Previews.swift` (`#Preview` macro) compiles cleanly. My surface is fully verified in isolation: typecheck (iOS+macOS), 104/104 XCTest, Previews, lint, format, placeholder all green.
+
+Now let me run the actual gate commands to capture authoritative evidence for the log. Starting the macOS build (will hit the same pre-existing sibling blockers) in the background, while I capture the full-tree lint/format.
+
+While the macOS build runs, let me capture the full-tree swiftlint and swiftformat results (the gate's lint/format steps), confirming my files are clean and isolating any pre-existing violations.
+
+Full-tree swiftlint --strict: **0 violations in 4064 files** (EXIT 0). The macOS build finished — let me read its result.
+
+macOS build is blocked by **code-signing** (entitlements need a dev certificate — not available on this runner), plus the same sibling-code issues. Both are environment/pre-existing, not my code. Let me capture swiftformat full-tree and the exact placeholder gate command for the log.
+
+swiftformat full-tree: **0/4362 require formatting** (EXIT 0). Let me run the exact placeholder gate command, plus a real scan of my files.
+
+Placeholder gate EXIT=0. I now have complete evidence. Let me gather the verbatim blocker lines for the log, then write it.
+
+Git shows only my 17 files untracked (generated project/build/framework are gitignored). Let me get final line counts and write the comprehensive gate log.
+
+Now let me write the comprehensive gate log with all verbatim evidence.
+
+Log written. Now let me clean up temporary build artifacts, verify only my files + log are untracked, then commit exactly those.
+
+Exactly my 17 files + the log are untracked; project/framework confirmed gitignored. Committing now.
+
+Committed (`b0addc245`) with exactly the 17 surface files + the log. Let me do a final clean-state check and update the plan.
+
+Working tree clean; 18 files committed (3850 insertions). Let me update the session plan to reflect completion.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0059-AIVoiceMode.log  | 188 ++++++++++
+ .../shared-surfaces/AIVoiceMode.Adapter.swift      | 257 ++++++++++++++
+ .../shared-surfaces/AIVoiceMode.AdapterTests.swift | 199 +++++++++++
+ .../shared-surfaces/AIVoiceMode.Chrome.swift       | 151 ++++++++
+ .../shared-surfaces/AIVoiceMode.Controls.swift     | 165 +++++++++
+ .../shared-surfaces/AIVoiceMode.Coordinator.swift  | 280 +++++++++++++++
+ .../shared-surfaces/AIVoiceMode.Fakes.swift        | 114 +++++++
+ .../shared-surfaces/AIVoiceMode.Model.swift        | 378 +++++++++++++++++++++
+ .../shared-surfaces/AIVoiceMode.ModelTests.swift   | 306 +++++++++++++++++
+ .../shared-surfaces/AIVoiceMode.Previews.swift     | 143 ++++++++
+ .../shared-surfaces/AIVoiceMode.Projection.swift   | 188 ++++++++++
+ .../shared-surfaces/AIVoiceMode.Speech.swift       | 306 +++++++++++++++++
+ .../shared-surfaces/AIVoiceMode.Stream.swift       | 262 ++++++++++++++
+ .../shared-surfaces/AIVoiceMode.StreamTests.swift  | 224 ++++++++++++
+ .../shared-surfaces/AIVoiceMode.Tests.swift        | 251 ++++++++++++++
+ .../shared-surfaces/AIVoiceMode.Views.swift        | 255 ++++++++++++++
+ .../TeslaSync/shared-surfaces/AIVoiceMode.strings  |  67 ++++
+ .../TeslaSync/shared-surfaces/AIVoiceMode.swift    | 116 +++++++
+ 18 files changed, 3850 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0059-AIVoiceMode.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Coordinator.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Fakes.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Speech.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Stream.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.StreamTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.swift

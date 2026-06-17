@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure and understanding the task context.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 sim booted). Not blocked on capability. Let me explore the Apple app structure and read the web source.
+
+Now I understand the web source. Let me study the Apple project structure, conventions, and the P1/S8/S9/S10 layers.
+
+The `AddAnnotationPopover` is the canonical sibling template in `modals-dialogs/`. Let me read all its files plus the shared infrastructure to learn the exact conventions.
+
+Excellent template detail. Let me read the rest of the sibling files: Seams, States, Views, Previews, strings, and the two test files.
+
+Let me read the Views, Previews, strings, and both test files for the sibling.
+
+Now the previews and both test files, plus I need to find the design tokens and shared components.
+
+I now fully understand the sibling template. Let me read the design tokens and shared components I'll use (Buttons, Cards, Tabs, Fields, Typography, Motion, Feedback States).
+
+Let me read the design tokens, Cards (glass panel), Motion, Tabs, Fields, and Typography in parallel.
+
+Let me read the remaining shared pieces (Cards/GlassPanel, Motion, Typography, Feedback States) and the lint config.
+
+I notice `TeslaSync/modals-dialogs` is **not** in `project.yml` sources or `.swiftlint.yml` includes — yet the sibling `AddAnnotationPopover` lives there. Let me investigate how the build is wired and how the sibling passes its gate.
+
+The precedent is informative: `selectedVehicle` wired itself into `project.yml` + `.swiftlint.yml`, but `AddAnnotationPopover` (my sibling in `modals-dialogs/`) did **not**. Let me check how AddAnnotationPopover's gate resolved, and see selectedVehicle's project.yml diff.
+
+Clear now. Two precedents: `selectedVehicle` wired its dir into `project.yml`/`.swiftlint.yml` (first-time setup), while my direct sibling `AddAnnotationPopover` did **not** edit those (respecting "allowed files") and instead verified in isolation (swiftc typecheck on both SDKs + isolated SwiftPM tests), deferring the full-app build. I'll follow the sibling's proven approach. Let me check the remaining dependencies and tooling.
+
+Let me read the placeholder checker, the Feedback states, and extract the exact isolation-verification commands the sibling used from its log.
+
+Let me check the forbidden placeholder patterns and extract the sibling's exact isolation-verification commands from its log.
+
+Let me read the rest of the sibling's gate-execution section to replicate the exact isolation method.
+
+I have the complete proven methodology from the sibling. Let me verify there are no symbol collisions for my `Reauth*` types before authoring.
+
+No collisions (`ReauthDialog` and all `Reauth*`-prefixed types are free; existing `ReauthView`/`ReauthenticatingOverlay` are different names). Let me check the swiftformat/swiftlint baseline is clean, then start authoring.
+
+Baseline is clean. Let me set up a plan and todos, then author the surface.
+
+Now I'll author the surface. Starting with the pure projection core.
+
+Now the state envelopes (loading/empty/error/inline/chip/banner).
+
+Now the content views (header, form, tabs, fields, footer) with autofocus and the `.text` helper.
+
+Now the main view.
+
+Now the previews (per-state + both modes).
+
+Now the strings catalog, plus I'll wire the `sudo.tabs.label` ("Reauth method") key into the tabs container accessibility label.
+
+Now wire the `sudo.tabs.label` key into the tabs container accessibility label:
+
+Now the two test files — pure projection/a11y tests and model state-holder tests.
+
+All 10 files authored. Let me format them in place, then verify with swiftformat `--lint` and swiftlint `--strict`.
+
+swiftformat (0/3257) and swiftlint (0 violations) both green. Now the placeholder gate. The prompt's literal `-Path …/ReauthDialog` (no extension) isn't a real path, so I'll run it both as-written and against the real directory.
+
+The placeholder scan flagged my comment containing the word "placeholder" at Adapter.swift:330. Let me view and reword it (the cleaner fix than an opt-out).
+
+Reworded. Let me re-run the placeholder scan on the directory (AddAnnotation's 2 `ALLOWED` are its pre-existing legit opt-outs; my contribution must be COUNT=0).
+
+My files are placeholder-clean (COUNT=0). Now the critical verification: an isolated SwiftPM package (module `TeslaSync` = Adapter+Seams+Model, tests = Tests+ModelTests) to actually run the logic tests under Swift 6 strict concurrency.
+
+`NSLock.lock()`/`unlock()` are `noasync`. I'll switch the async stub to the scoped `withLock` API (which isn't `noasync`).
+
+All 43 isolated tests pass under Swift 6 strict concurrency. Now the SDK typecheck of the full SwiftUI view layer against the real design system. Let me confirm the component dependency set has no `Shared`/heavy imports.
+
+All SwiftUI-only, self-contained. Running the iOS-18 + macOS-15 SDK typecheck of the full view layer + design system.
+
+iOS-18 typecheck clean. Now macOS-15:
+
+macOS lacks `.textInputAutocapitalization` (iOS-only); the `.submitLabel` error is a cascade. Let me guard it with a platform helper like I did for the keyboard.
+
+Re-running both SDK typechecks after the platform-guard fix:
+
+Both SDKs typecheck clean. Let me re-format/lint after the edits and re-run the isolated tests to confirm everything stays green.
+
+Format/lint clean. Re-running isolated tests with the latest files to confirm:
+
+43/43 isolated tests pass. Now the full-app `xcodebuild` gate. First let me check prerequisites: whether `modals-dialogs` lands in the generated project, whether the KMP `Shared.xcframework` is staged, and whether the known cross-surface collisions exist in this slot.
+
+Slot-62 matches the sibling's documented environment exactly: `Shared.xcframework` unstaged (→ ~8min KMP build), the cross-surface collision files (`RecentDrives*`/`StateTimeline*`) are present, and 0 signing identities. Let me generate the project (cheap) and prove my files aren't even in the build graph, then run the real xcodebuild gate.
+
+Confirmed: 0 `ReauthDialog` references in the project graph (the `&&` chain stopped because `grep -c` exits 1 on count 0). Let me confirm the rest separately.
+
+My surface contributes **0 references** to the build graph (modals-dialogs tier is unwired, same as the sibling). The collision surfaces (48+54 refs) are present and will drive the known pre-existing failure. Now I'll run the real xcodebuild gate verbatim to capture honest evidence. Starting the iOS build (it triggers the ~8min KMP framework build first).
+
+The iOS build is running (KMP framework build first, ~8 min). Let me verify it started cleanly, then prepare the log while it builds.
+
+The KMP framework is building (just wrote the xcframework). The app compile will follow. Let me wait for it to progress.
+
+Still in the KMP release-framework link phase. Let me continue waiting for the app-compile phase.
+
+iOS build finished: **IOS_EXIT=65**, 162 error lines — all in pre-existing sibling surfaces. Let me confirm **zero** errors are in my files and identify the real failure cause.
+
+Confirmed: all 162 errors are pre-existing **parallel-merge duplicate-type collisions** in unrelated sibling surfaces (`RecentDrivesListWidget` 54, `StateTimelineWidget` 42, `StateTimeline` 36, `RecentDrivesSection` 30) — **0** in my files (modals-dialogs isn't in the project graph). Now the macOS gate (xcframework is staged, so it's quick; expected to fail-fast on signing):
+
+macOS: **MAC_EXIT=65**, 4 errors, 0 in my files. Let me capture the exact signing-error text for the log evidence.
+
+Both full-app steps are RED (65/65) purely on pre-existing/unrelated conditions (iOS: sibling duplicate-type collisions; macOS: dev code-signing with 0 identities) — **0** errors in my files. This is the sibling's exact "code-complete + deferred full-app gate" disposition. Let me verify the working tree only contains my intended changes.
+
+Working tree contains only my 10 surface files; the generated `.xcodeproj` and staged framework are git-ignored. Let me gather final metrics and write the comprehensive gate log.
+
+Let me verify the i18n bijection (every key referenced in code exists in the catalog, and no orphans).
+
+All 30 non-a11y keys form a perfect bijection. The 2 a11y keys (`sudo.a11y.*`, containing digits) were excluded by my regex — let me confirm those two are also bijective, then write the log.
+
+Perfect 32=32 i18n bijection. Now writing the comprehensive gate log with all real exits.
+
+Log written. Let me do a final consolidated verification of my files, then commit.
+
+All green. Staging my files + the log and committing.
+
+Exactly 11 files staged (10 surface + log), nothing else dirty. Committing:
+
+Committed as `9ccb2d9e3`. Let me clean up temp artifacts and confirm the final tree state.
+
+Clean tree — only git-ignored build artifacts remain untracked. Let me do a final confirmation of the committed contents.
+
+The task is complete. All work is committed (`9ccb2d9e3`, 11 files, 2528 insertions) with a clean working tree.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`ReauthDialog`** SwiftUI surface at parity with `web/src/components/feedback/ReauthDialog.tsx`, following the proven sibling pattern (`AddAnnotationPopover`, prompt 0002) in the same `modals-dialogs/` tier.
+
+**10 files** (`apps/apple/TeslaSync/modals-dialogs/ReauthDialog.*`, 2239 lines): pure `Adapter` projection, `Seams` (telemetry / credential-exchange service / completion controller / challenge source / i18n facade / a11y), `@Observable Model` (P1/S8), `States`, `Views`, main view, `Previews`, `.strings`, and two XCTest suites.
+
+**Parity reproduced (no scope narrowing):** both modes (credential + confirm), Password/Authenticator tabs, secure/numeric/typed-confirmation fields, the verbatim `sanitizeTOTP` (`replace(/\D/g,'').slice(0,8)`), the CONFIRM-token guard, empty-field guards, async submit routing with the three catch branches (`REAUTH_NOT_CONFIGURED` / `INVALID_CREDENTIAL` / unknown), form reset-on-open + TOTP-tab fallback, and all six states (loading/empty/error/stale/offline/content).
+
+**Verification — every host-runnable gate GREEN (real output):**
+- swiftformat `--lint`: `0/3257` · swiftlint `--strict`: `0 violations in 9 files`
+- check-placeholders: `COUNT=0` (my files)
+- isolated SwiftPM `swift test`: **43/43** under Swift 6 strict concurrency
+- iOS-18 **and** macOS-15 SDK typecheck of the full view layer + real design system: **0 errors**
+- i18n: **32/32** key bijection (catalog ↔ code)
+
+**Full-app `xcodebuild` gate — DEFERRED, reported honestly (no red-as-green):** `IOS_EXIT=65` (162 errors, all in pre-existing unrelated `RecentDrives*`/`StateTimeline*` duplicate-type collisions) and `MAC_EXIT=65` (dev code-signing, 0 identities). **Zero** errors in any `ReauthDialog` file — my surface contributes 0 references to the build graph (the `modals-dialogs` tier isn't yet globbed in `project.yml`; that registration is the P99 acceptance gate's, exactly as the sibling). Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and committed. Marking it done.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-modals-dialogs-0007-ReauthDialog.log  | 289 ++++++++++++++++
+ .../modals-dialogs/ReauthDialog.Adapter.swift      | 343 ++++++++++++++++++
+ .../modals-dialogs/ReauthDialog.Model.swift        | 314 +++++++++++++++++
+ .../modals-dialogs/ReauthDialog.ModelTests.swift   | 325 ++++++++++++++++++
+ .../modals-dialogs/ReauthDialog.Previews.swift     | 102 ++++++
+ .../modals-dialogs/ReauthDialog.Seams.swift        | 212 ++++++++++++
+ .../modals-dialogs/ReauthDialog.States.swift       | 183 ++++++++++
+ .../modals-dialogs/ReauthDialog.Tests.swift        | 221 ++++++++++++
+ .../modals-dialogs/ReauthDialog.Views.swift        | 382 +++++++++++++++++++++
+ .../TeslaSync/modals-dialogs/ReauthDialog.strings  |  65 ++++
+ .../TeslaSync/modals-dialogs/ReauthDialog.swift    |  92 +++++
+ 11 files changed, 2528 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0007-ReauthDialog.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/ReauthDialog.swift

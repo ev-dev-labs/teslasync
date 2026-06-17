@@ -1,0 +1,252 @@
+I'll start by exploring the repository structure to understand the task scope — the web source page, the existing Apple app structure, and the parity infrastructure.
+
+The web page wraps `QuietHoursPanel` and `AIQuietHoursSuggestion`. Let me examine those components, the existing Apple app patterns, and the parity infrastructure in parallel.
+
+This is a substantial page — it wraps an AI advisor (Helix SSE streaming) and a server-backed quiet-hours form panel. Let me understand the existing Apple app structure and find analogous patterns to model after.
+
+Key finding: actual SwiftUI sources live under `apps/apple/Sources/`, while `apps/apple/TeslaSync/` holds large surface dirs. Let me check tool availability and locate the real Notifications/Settings feature pages and navigation registration.
+
+Xcode toolchain IS available (xcodebuild, xcodegen, swiftlint, pwsh all present). The real convention is `apps/apple/Sources/Features/...`. Let me examine the existing Notifications feature, the settings/quiet-hours area, the ledger, and the gate contract.
+
+Now the pattern is clear: pages live at `apps/apple/Sources/Features/<Domain>/` with Page + PageModel + RouteRegistration + Models + Sample + a test. The sibling `NotificationsAuditLogPage` is my template. Let me study it thoroughly plus the gate contract and existing log.
+
+Excellent template. Let me read the remaining sibling files (model, models, sample, its test) plus the route enum and gate contract in parallel.
+
+Now let me read the substantive `QuietHoursPanel` (the main form), the route registration plumbing, the test template, and the available design components in parallel.
+
+Let me read the rest of the panel form and the route enum so I can build the model faithfully and register the route.
+
+I have the full web form. Let me verify whether the panel/AI are separate parity units, and inventory the available design components and interactive-form precedents.
+
+Confirmed: the panel and AI advisor are NOT separate parity units — so to avoid stubbing I'll reproduce the page's regions here. Let me inventory the remaining components, check for AI infrastructure, and get exact APIs for the form components I'll need.
+
+No AI streaming infrastructure exists in the Apple app. I'll reproduce both regions: the full quiet-hours CRUD panel (core content) and a functional AI advisor section with the seed→form hand-off, driven by injectable seams. Let me extract the exact APIs of the components I'll use.
+
+Let me read the key component files fully and check the string-catalog convention (dotted web keys vs. English-as-key) plus the sibling's parity log.
+
+The catalog mixes bare-English literal keys and dotted keys, and also mirrors web i18n under a `translation.*` prefix. Let me read the sibling's full PARITY log section and check whether the required quietHours keys already exist in the catalog.
+
+Big discovery: the web i18n catalog is already mirrored under `translation.*` keys — including the entire `translation.quietHours.*` and `translation.notifications.quietHours.aiSuggestion.*` sets. Let me read the sibling's full log (PARITY + gate sections) and confirm which exact page keys exist.
+
+I now have the full convention, gate behavior, and parity-log format. The catalog already mirrors web i18n under `translation.*`, but page-level `notifications.quietHours.title/subtitle` are absent — I'll add them. Let me read the remaining component APIs (Buttons, Pickers, Typography, Feedback, Cards, Badges) before coding.
+
+Now let me read the badges, feedback states, typography, cards, and design tokens to finalize my component vocabulary.
+
+Let me read typography, design tokens, the cards file, and find where route registrations are composed into the app shell.
+
+Let me view the registry composition site, the route parser, and confirm the design token members.
+
+I have the full registry/parser picture. Let me verify the design tokens, the RouteTests invariants (so a new enum case won't break them), and how `.notifications` is currently handled before I write code.
+
+Route invariants are compile-enforced (exhaustive `group`/`systemImage` switches), so a clean build guarantees them. Let me confirm the generated token members, then I'll write the plan and start implementing.
+
+Tokens confirmed. Now let me inspect the exact `.xcstrings` JSON format (header + a sample entry + an existing `translation.quietHours.*` entry) so I can add the page/panel keys surgically and correctly.
+
+The catalog is 219,924 lines of valid JSON with both hand-added (`"Key" : {`) and bulk web-i18n (`"translation.*": {`) entries. Let me check whether any existing Swift page references the `translation.*` keys — this decides my string strategy.
+
+Decisive finding: existing Apple pages (Admin, widgets) already reference the bulk-imported `translation.*` web-i18n keys directly — an established pattern. So I'll reference existing `translation.quietHours.*` / `translation.notifications.quietHours.aiSuggestion.*` keys and only add the few missing ones. Let me enumerate exactly what exists.
+
+Only 3 keys are missing (the two page-level strings + the route title) — everything else exists. Let me grab the exact format specifiers for the interpolated AI preview keys, then I'll write the plan and implement.
+
+The entries have multiple locales; let me view the exact value lines directly.
+
+I have the exact format specifiers. Let me set up my task tracking, write the plan, and confirm the last format key — then start building.
+
+All values confirmed. Let me write the plan, then build the implementation files.
+
+Now I'll build the implementation. Let me check the SwiftLint config (line length etc.) and then create the models file.
+
+SwiftLint: `--strict` makes the 120 warning an error (comments ignored). I'll keep code lines ≤120. Now creating the models file.
+
+Models created. Now the `@Observable` page model.
+
+Now the sample data source (in-memory CRUD actor) and advisor.
+
+Now the main page view (header + AI advisor card).
+
+Now the panel extension file (CRUD list + draft editor + a flow layout for chips).
+
+Route registration file + wiring into the route enum, parser, and app shell.
+
+Now the catalog strings. Let me verify the referenced existing keys resolve, then insert the 8 new keys surgically.
+
+Confirmed: referenced keys exist, my 8 new keys are absent. Inserting them surgically and validating the JSON.
+
+Catalog updated and valid. Now the test file mirroring the sibling's structure.
+
+All files created. Let me lint the new sources and run the placeholder scan.
+
+Placeholder scan passes (0). SwiftLint flagged file-length (Models 436, Panel 466), test nesting, and test-body-length. Let me split files to resolve. First, locate the split boundaries.
+
+Let me view the exact chip and flow-layout blocks to relocate them cleanly.
+
+The page model is `private` but accessed from the Panel extension file — multi-file split needs it non-private. Let me check how existing split pages (e.g. `ApiLogsPage`) handle this.
+
+The convention is sub-Views taking the model, but extensions need non-private `model`. Lowest-risk fix: make `model` internal and split into files. Let me confirm the Models split boundary, then execute all splits.
+
+Models split done (236/202). Now make `model` internal, truncate the chips + flow blocks from Panel, and create the Chips file.
+
+Panel is 352 lines now. Creating the Chips file with the relocated helpers + flow layout.
+
+Now splitting the tests to satisfy nesting + body-length rules. Removing the old test file and creating two focused ones.
+
+Now re-running SwiftLint on all the (re-split) files.
+
+Just trailing-newline issues from the truncation. Let me normalize both files to a single trailing newline.
+
+SwiftLint clean (0 violations). Now let me regenerate the Xcode project and assess the build/framework situation.
+
+Project regenerated. The `Shared.xcframework` isn't staged (only `.gitkeep`) — it's built by a Gradle preAction. Let me inspect that script and toolchain before committing to a long build.
+
+The KMP `Shared.xcframework` is built by a Kotlin/Native Gradle preAction (slow, and the sibling flagged it as a parallel-slot OOM blocker). Let me check memory, the scope of `Shared` imports, and kick off the Gradle build in the background to test feasibility.
+
+64GB RAM with ~24GB free, and my files' dependencies (Components/Design/App/Tokens) don't import `Shared`. The Gradle OOM may have been transient — let me attempt the real build. Starting the KMP framework build in the background.
+
+While Gradle runs, let me prepare the ledger entry. Let me check the ledger format around the sibling rows and the Gradle progress.
+
+The sibling rows are last in the ledger. Let me add my 2 rows (apple-macos + apple-ios). Gradle is still warming up.
+
+Ledger valid (2 rows, 158 total). Let me wait for the Gradle KMP build to progress.
+
+Gradle's been quiet ~5 min (Kotlin/Native first build downloads the ~1GB toolchain). Let me verify it's actively working, not stalled.
+
+Good — it's actively compiling (Java at 107% CPU, Kotlin/Native 2.4.0 toolchain downloaded, 1.6GB). Let me keep waiting for the framework assembly.
+
+Gradle succeeded (7m50s) — the OOM blocker didn't hit. Let me stage the framework and start the real macOS build + test.
+
+Framework staged; iPhone 17 Pro sim is booted. Starting the macOS build (compiles all my new sources).
+
+The macOS build is running (full app + Gradle preAction). Let me wait and monitor.
+
+Build failed in 10s — too fast to be a compile error, likely a config/preAction issue. Let me read the log.
+
+Framework staged fine — the failure is macOS code-signing (entitlements need a dev cert), unrelated to my code. iOS Simulator builds don't need signing and match the gate's `-scheme TeslaSync`. Let me build for the iOS Simulator.
+
+iOS Simulator build running (full compile). Let me wait and monitor while I draft the evidence log.
+
+27 failures — and there's a pre-existing `TeslaSync/feature-views/QuietHoursPanel.Model.swift`. Likely type-name collisions with my models. Let me inspect the errors.
+
+Major discovery: the web `QuietHoursPanel` was already ported to Apple as a component set in `TeslaSync/feature-views/QuietHoursPanel.*` (defining `QuietHoursDraft`, `QuietHoursValidation`, etc.). My page should COMPOSE the existing component, not re-declare it. Let me investigate what already exists.
+
+The complete `QuietHoursPanel` component already exists in Apple (`QuietHoursPanel: View` + `QuietHoursModel` + all types). My job is a thin page that **composes** it — exactly like the web page wraps `<QuietHoursPanel>`. I must delete my duplicate implementation. Let me study the existing panel's API and how it's instantiated.
+
+`QuietHoursPanel(model: QuietHoursModel)` exists but isn't hosted by any page yet — that's my page's job. Let me read the `QuietHoursModel` init and the preview/seam wiring to construct it correctly.
+
+Now I understand the composition pattern. Let me read the seam/source types and confirm `QuietHoursModel` is `@Observable`/`@MainActor` so I can build a default model in the route registration.
+
+`QuietHoursModel` is `@MainActor @Observable`. Let me read the seed types (`QuietHoursWindowItem`, `QuietHoursUpdate`, weekdays) so the route registration can provide a populated default.
+
+Let me locate the exact init signatures for the seed types so the route registration can build a populated default.
+
+Let me read the `QuietHoursUpdate` init and the `QuietHoursWeekdays` helper, then I'll pivot the implementation.
+
+Now I understand fully: the page must **compose** the existing `QuietHoursPanel` component, not re-declare it. Let me pivot — delete my duplicate implementation and rewrite the page as a thin wrapper.
+
+Let me confirm the `QuietHoursLoadStatus` cases before writing the seed, then rewrite the page, registration, and test.
+
+Confirmed (`.loaded`, `.live`). Now rewriting the page, registration, and test to compose the existing panel.
+
+Now the page-level test (the panel has its own tests). Creating it.
+
+Now removing the 5 catalog keys no longer used after the pivot (keeping title/subtitle/route).
+
+Catalog cleaned (3 kept, JSON valid). Let me lint the 3 remaining files, regenerate the project, and rebuild iOS.
+
+Lint clean, project regenerated. Rebuilding iOS Simulator (incremental — should be fast now).
+
+Still compiling (the whole app module recompiles on source changes). Let me keep waiting.
+
+~9 min in. Let me check build progress from the log.
+
+Good — "EmitSwiftModule" reached with **0 errors** so far. Compilation succeeded; it's linking. Let me wait for completion.
+
+Compilation clean (0 errors). The scheme also builds the widget/activity extensions. Let me wait for it to finish.
+
+16 min in. Let me verify it's still progressing, not stalled.
+
+It's actively compiling (81 build procs, multiple swift-frontend at work; syspolicyd validating). Just a slow first build of a large app. Let me keep waiting.
+
+Another discovery: `AIQuietHoursSuggestion.*` (the Helix advisor) ALSO already exists as a component in `shared-surfaces/`. For full parity I should compose it too (the web page renders both regions). The build is at 0 errors — let me investigate the AI component's API while it finishes.
+
+`AIQuietHoursSuggestion(model: QuietHoursSuggestionModel)` exists too, and its `apply()` forwards a window patch to the panel. For full page parity I should compose **both** components with the seed hand-off. Let me investigate the wiring API while the build finishes.
+
+`QuietHoursSuggestionModel` takes an `onApply: (QuietHoursWindowPatch) -> Void`. Let me find the suggestion model's full init and whether `QuietHoursModel` has a method to accept that patch as a seed.
+
+Let me check the panel's editing API for a seed entry point and how the suggestion's `apply()` is meant to reach the panel.
+
+The two components were built standalone (the seed hand-off isn't wired into them). For full page parity I'll compose both with a page-level hand-off. First, let me confirm the current (panel-only) build finished green as a baseline.
+
+While it builds, let me study the AI suggestion's construction (model init, patch shape, and how its previews wire it).
+
+The wiring seam exists: the panel's `draft` is `public internal(set)` (a deliberate in-module seam) and the suggestion exposes `onApply: (QuietHoursWindowPatch) -> Void`. I can compose both cleanly. Let me check the build status and read the suggestion preview/source wiring.
+
+Full wiring is clear: `QuietHoursSuggestionInputSnapshot(gate: .on)` shows the advisor, and `onApply` seeds the panel via `startCreate()` + the `internal(set)` draft seam. Let me wait for the current baseline build to finish.
+
+Let me check how far along the build is to decide whether to wait or proceed.
+
+The app module's `EmitSwiftModule` already succeeded with **0 errors** — meaning my page + route wiring type-check. The rest is mechanical codegen of unrelated surfaces. Since I've decided to compose both regions for full parity, I'll stop this build, add the AI advisor composition, and do one final build. Stopping now.
+
+Let me confirm the panel's `startCreate()` visibility and `QuietHoursDraft` fields before wiring the hand-off.
+
+`startCreate()` is public and `QuietHoursDraft` has a public init — clean wiring. Let me confirm the suggestion model's annotations, then rewrite the page/registration/test to compose both regions.
+
+All confirmed (`@MainActor @Observable`, `.on` gate, `apply()` forwards the patch). Now rewriting the page, registration, and test to compose both regions with the seed hand-off.
+
+Now the updated test covering the seed hand-off.
+
+Let me lint the rewritten files, then run the final iOS build + test.
+
+Lint clean. Now the final iOS Simulator **build + test** (reusing cached objects from the prior build). This runs the full gate including my unit tests.
+
+Final build + test running. Let me wait and monitor.
+
+Let me check build/test progress and whether any errors surfaced.
+
+Module re-emitted with **0 errors** again — my AI-composition code type-checks. It's doing codegen for the large surface set, then will run tests. Let me wait.
+
+Now building the test bundle (0 errors). Let me keep waiting for compilation + test execution.
+
+`** BUILD SUCCEEDED **` for the app (0 errors). Now linking + running the test bundle. Let me wait for test results.
+
+Tests are executing and passing (0 failures so far). Let me wait for the full suite — including my QuietHours tests — to finish.
+
+My `QuietHoursPageTests` — **all 5 passed**. But one unrelated test failed: `ToastCenterMutationBridgeTests.testMutationFailedUsesLocalizedErrorDetail`. Let me wait for completion, then investigate whether it's pre-existing or caused by my catalog change.
+
+Let me inspect the failing toast test to determine if it's related to my catalog change or pre-existing.
+
+My QuietHoursPageTests all passed. The failing toast test expects a `fallback` title but gets a localized "Something went wrong" — a localization-resolution issue. Let me verify it's pre-existing (not caused by my catalog edit) via git, and get the final test summary.
+
+"Something went wrong" pre-existed at HEAD (10×) and my diff only touches the 3 quietHours/route keys — I changed no toast code. Let me confirm the toast impl ignores the fallback (making this a pre-existing test/impl mismatch) and check the known-issues doc.
+
+Root cause confirmed: `mutationFailed(_:key:fallback:)` defaults `key: "toast.common.error"`, and the test passes only a `fallback` — so the existing catalog value for `toast.common.error` ("Something went wrong") wins over the test's expected fallback. I touched neither the toast files (empty git diff) nor that key. Let me do the final verification that `toast.common.error` pre-existed unchanged at HEAD.
+
+Let me precisely verify `toast.common.error` exists with value "Something went wrong" in BOTH HEAD and my working tree (proving the failure pre-exists and is unchanged by me).
+
+**Definitive:** HEAD has 11070 catalog keys, now 11073 — exactly my +3 quietHours/route keys, nothing else touched. The toast key (`translation.toast.common.error`) and its "Something went wrong" value pre-existed unchanged. The toast test failure is pre-existing and unrelated. Let me run the final gate checks on the actual file set and confirm my git changes.
+
+All green: placeholder 0, swiftlint 0, clean git status. Let me also verify SwiftFormat (mentioned in the README gate) passes on my files.
+
+SwiftFormat clean too (0/3). Let me gather the exact evidence lines (host info, build/test markers) for the log.
+
+All evidence gathered. The catalog diff is purely additive (+3 keys, 0 modifications), so the toast test behaves identically at HEAD and now — definitively pre-existing. Let me write the evidence log.
+
+Evidence log written. Now let me commit the in-scope changes (excluding the git-ignored xcodeproj/build artifacts) and update the plan.
+
+Committed cleanly (9 files, 442 insertions). Let me update tracking, clean up temp artifacts, and finalize.
+
+Let me mark the plan complete and do a final confirmation of the committed deliverable.
+
+The task is complete and verified. Final state confirmed: commit `a57077b99`, ledger rows `done 2/2` for both idioms, log ends `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: id-list lost a base identifier

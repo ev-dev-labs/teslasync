@@ -1,0 +1,260 @@
+I'll start by exploring the repository structure to understand what exists and what's required for this task.
+
+Found the multi-file pattern. Let me check the Swift toolchain availability (the capability gate) and read a representative example surface in parallel.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen, simulators). Not blocked. `AICostForecastNarration` is the closest structural twin. Let me read its full family and web twin.
+
+Excellent template. Let me read the remaining template files and the project build config in parallel.
+
+Now let me check the build config and shared design tokens to confirm the API surface.
+
+Build uses directory globs, so new files auto-include. Schemes match. Let me verify the shared-core framework prerequisite and design-token APIs.
+
+KMP `Shared.xcframework` is missing and requires Gradle/Kotlin. Let me read the exact token/component APIs I'll use and assess the shared-core build prerequisite.
+
+All tokens confirmed. The shared-core (`apps/shared`) has Gradle. Let me read the exact component APIs and kick off the shared-core build early (it's the long pole for the gate), while I write code.
+
+All component APIs confirmed. Let me kick off the shared-core Gradle build (the long pole for the gate) in the background while I write the surface code.
+
+Let me confirm the `useAiStream` SSE contract and the AI feature registry slug before writing the adapter.
+
+Let me check how the parent page wires the trip planner props (origin/destination/SoC), then I'll have everything to write the surface.
+
+I now have the full picture. Let me check for symbol collisions and read the lint configs before writing.
+
+Collision found: a `TripPlannerMap` surface already uses the `TripPlanner` prefix. I'll use the collision-free `TripAgent` prefix for all types. Let me verify it's clear.
+
+`TripAgent` prefix is clear. Let me set up tracking and write the plan, then create all surface files.
+
+Now I'll write all the surface files, mirroring the `AICostForecastNarration` template with the `TripAgent` prefix. Starting with the pure-core Adapter.
+
+Gradle still warming. Continuing with the Model file.
+
+Gradle build completed. Let me confirm the framework was staged, then continue writing.
+
+The Gradle daemon got interrupted (debug XCFramework built + cached, release incomplete). Compile tasks are now cached, so a re-run is fast. Let me re-run the staging script in the background and continue writing files.
+
+Staging still linking. Writing the strings catalog meanwhile.
+
+All 10 files written. Let me check the framework staging and run fast lint/format checks on my files.
+
+swiftformat reformatted 1 file. Let me see what changed and run swiftlint + format-lint verification.
+
+Format clean (0/9 require formatting). Now swiftlint on my files, and checking the framework stage.
+
+Two `file_length` violations (>400 lines under `--strict`): Adapter (466) and Tests (405). I'll trim verbose comments to get under 400. Let me see the line counts.
+
+Siblings stay under 400. I'll trim the Adapter (466→<400) and Tests (405→<400). Let me view the current Adapter to make precise edits.
+
+I'll check the placeholder gate script to decide between trimming vs. a clean file split (both are allowed by the `AITripPlannerLLMAgent.*` glob).
+
+The placeholder gate is path-based (and the spec's exact path resolves clean); I'll also scan my files directly for honesty. For the `file_length` violations, I'll cleanly split the request types into `AITripPlannerLLMAgent.Request.swift` (allowed by the glob) rather than mangling comments. Let me restructure.
+
+Now let me trim `Tests.swift` (405→<400) by compressing its header comment, and check the framework staging.
+
+Let me verify line counts and re-run swiftlint on all files (now including Request.swift).
+
+All files ≤400 now. Let me format the new/changed files and re-run swiftlint strict on the full set.
+
+swiftlint clean (0 violations, 10 files) and swiftformat clean. Let me check the framework staging completion.
+
+The release-framework link (Kotlin/Native) is CPU-intensive and output is buffered until completion. Let me continue waiting.
+
+Let me check build progress via the output directory while staging continues.
+
+The Kotlin/Native release link is progressing (clang++ active) but the machine is extremely loaded (load avg ~80–94, shared with other slots). That's why it's slow. Let me keep waiting for the framework to finish staging.
+
+Framework staged successfully (18m46s — slow due to the loaded machine). Now let me generate the Xcode project and confirm the simulator to target.
+
+Project generated with the framework (all 3 slices). Let me confirm my files are wired into the app + test targets, then start the iOS build.
+
+All 11 files are wired into the project, and `iPhone 16` is now booted (matches the gate destination exactly). Let me set up the log and start the iOS build+test. Given the machine load, this will take a while — I'll monitor it.
+
+Now I'll run the iOS build+test (the gate's main step). This compiles the full app + test bundle and runs tests on the booted iPhone 16. Given the heavy machine load, I'll run it in the background and monitor.
+
+Build started. Let me monitor progress.
+
+The xcodebuild must run from `apps/apple` (where the project lives). Let me re-run from there with an absolute log path.
+
+Schemes confirmed. Now running the iOS build+test from `apps/apple` (full app + tests on iPhone 16). This is the long pole under heavy load — I'll monitor.
+
+Build running. Let me check progress by tailing the log (looking for my files compiling and any errors).
+
+Framework re-staged fast (incremental), now into the build graph. (The `error:` match is the old historical line.) Compilation of the full app under load will take a while — continuing to monitor.
+
+Compiling dependent targets now (no errors). The main app target with my files comes next. Let me keep monitoring.
+
+Main `TeslaSync` app module now compiling as a Swift 6 whole-module (strict concurrency) — this is the big one, no errors yet. Let me keep monitoring.
+
+I can see a competing `xcodebuild` from another slot (`slot-1`) running simultaneously — confirming the heavy contention. Let me verify my build process is still alive and progressing.
+
+My build is alive (4 processes) but competing with slot-1 and slot-13 (load ~71-87). Let me confirm `swift-frontend` is actively consuming CPU for my module (progressing vs. stalled).
+
+Confirmed progressing: 21 `swift-frontend` jobs actively compiling the `TeslaSync` whole-module (heavily time-sliced under load). It's slow but working. Let me wait in a larger increment.
+
+The build is now in the resource-copy phase (`copyStrings`) — compilation appears to have completed without errors. My monitor commands return instantly, so let me actually sleep to let wall-clock time pass, then check for the test phase.
+
+`** BUILD FAILED **` — let me find the actual error.
+
+No readable compiler diagnostic — possibly a `swift-frontend` crash under the memory/CPU pressure. Let me look at the raw context around the failure.
+
+It's a `swift-frontend` **crash during IRGen** (`report_at_maximum_capacity` → `abort`), not a source error in my code — there are zero `file:line: error:` diagnostics, meaning type-checking/SILGen succeeded. This is an environmental OOM/capacity crash from the heavily-contended machine (multiple slots building, load ~80). Let me check load, confirm the prior run exited, then retry incrementally with reduced parallelism.
+
+My prior run is lingering (the `test` action re-triggers a build). Let me stop it cleanly and retry incrementally with reduced parallelism to avoid the contention-induced compiler crash. Memory globally is OK (~21GB reclaimable), so this is peak-pressure/thrash during IRGen.
+
+Cleaned up. Now retrying incrementally with reduced parallelism (`-jobs 4`) to avoid the contention-induced IRGen crash. The prior run compiled most of the module, so the incremental rebuild reuses cached objects. I'll note the accommodation in the log.
+
+Retry running. Let me monitor for the recompile + test phase (sleeping to let wall-time pass).
+
+Load is dropping (47–71, other slots finishing). Retry still building, no errors. Let me check the current phase and continue waiting.
+
+It's recompiling the full `TeslaSync` module (the crash invalidated the batch) — now with `-jobs 4` and lower load, progressing without crashing. This is the slow stretch. Let me wait a longer interval.
+
+Load dropped sharply to ~14 (other slots finished) — compilation should accelerate now. Still compiling feature-views, no errors. Let me continue waiting.
+
+Still compiling the large `TeslaSync` module (now OptimizerSection), no errors. Load fluctuating as other slots cycle. Let me wait a larger interval.
+
+Progressing through later files (VinDecoder, VisuallyHidden — near end of alphabet), still no errors. Load back up to ~90 from other slots. Continuing to wait.
+
+The build process exited. Let me read the result and check the final status.
+
+Both failures are **memory exhaustion** from the contended shared machine: first an LLVM allocation failure during IRGen, then a `Killed: 9` (SIGKILL, exit 137 = OOM-killer). Neither is a source error in my code — no `file:line: error:` ever appeared, and compilation reached deep into the module. Let me check system memory and prove my code compiles via a small, memory-safe standalone `swiftc` slice before retrying the full gate at `-jobs 1`.
+
+64GB RAM, 68% free now, but peak concurrent compiles across 3–4 slots trigger the OOM-killer. Critically: **DerivedData persists**, so each incremental retry resumes — the killed run already compiled my `shared-surfaces` files and much of the module with no source errors. I'll retry incrementally at lower parallelism (`-jobs 2`) and drop to `-jobs 1` if killed again.
+
+Retry running at `-jobs 2`. Let me monitor (sleeping to advance wall-time).
+
+Reached the **link phase** (`Ld`) — compilation of the full module succeeded. Process exited; let me read the result.
+
+Diagnosis refined: the `build` action **compiled and linked the app successfully**, then the `test` action triggered a *second* full module compile (`build-for-testing`), which OOM'd. `build test` does a redundant double-compile. The canonical fix: split into `build-for-testing` (one compile pass, resumable) then `test-without-building` (runs tests, low memory). Let me do that.
+
+build-for-testing running (resumable, single compile pass). Monitoring.
+
+Compiling the module for testing (single pass), load lower (~28), no errors. Let me wait.
+
+Still compiling steadily (NotificationFilterBar), no errors. The module is large. Let me continue waiting.
+
+OOM again (`137`) — the monolithic module compile is too memory-hungry to survive slot-peak spikes even at `-jobs 2`. I'll switch to the most memory-frugal mode: `-jobs 1` with **batch mode disabled** (one file per frontend process ≈ a few hundred MB peak — the OOM-killer won't target it), which also gives monotonic incremental progress via per-file `.o` caching.
+
+build-for-testing running in memory-frugal mode (one file at a time). This survives OOM but is slower. Let me monitor progress and confirm it's not getting killed.
+
+Only ~18 compile lines in 6 min with scattered files (Previews) suggests it may be an incremental subset rather than the full 1600. Let me inspect the raw log to understand what's actually compiling and estimate remaining work.
+
+Critically: in the earlier `-jobs 2` run, the **app fully compiled and linked** (`Ld …TeslaSync.app/TeslaSync` succeeded) before the redundant second compile OOM'd — that already proves my entire module (including all my files) compiles with **zero errors**. The remaining work is the `-enable-testing` recompile + test bundle + running tests, which `bft2` (`-jobs 1`) is now doing monotonically. Let me let it run a longer stretch.
+
+Compile count plateaued at ~106 (the invalidated subset; the rest cached) and it's now into auxiliary/setup steps — likely transitioning to the **TeslaSyncTests** bundle. Let me check which target it's compiling now.
+
+The app module is still compiling a large scattered incremental subset at `-jobs 1` (no kills, steady) before the test bundles finalize. It's slow but monotonic. Let me wait a longer stretch and check for test-bundle compile + completion.
+
+Still safely compiling at `-jobs 1` (no OOM), monotonic but slow — switching modes now would risk wasting this progress and re-triggering OOM, so patience is the lowest-risk path. Let me wait another long stretch for the app module to finish and the test bundle to build.
+
+ios-bft2 completed. Let me read its exit status.
+
+Even `-jobs 1` single-file mode got OOM-killed (137) — the shared machine's memory pressure is extreme (likely the linker/dsymutil phase or a peak spike). Let me stop the stale monitor and see exactly where it died.
+
+bft2 died mid-compile (still in the app module, never reached my test files) — a single small process killed by a **system-wide** OOM spike from other slots, again with **zero source errors**. But load is now LOW (~17, other slots winding down). I'll strike this window: `build-for-testing` with fast batch mode at `-jobs 4` to finish the compile quickly before the next spike.
+
+Building fast (batch mode, low load). Monitoring closely.
+
+Batch mode is much faster — app module compiling rapidly, test bundle dirs appearing, no errors/kills (load ~24). Let me continue monitoring this window.
+
+Still compiling the app module (batch groups), load rising to ~52 but holding. No errors/kills. Let me keep watching for the test-bundle phase.
+
+Still compiling the large app module in batch mode (no kills, load eased to ~35). The module is genuinely huge so this stretch is long. Let me continue waiting for it to reach the test bundle.
+
+bft3 failed with exit 65 — another `report_at_maximum_capacity` compiler crash (memory allocation failure under pressure), not a source error. This is now the 4th environmental memory failure; **zero source errors** in any run, and the app fully **linked** in an earlier run (proving my code compiles). But bft3 produced 500+ cached `.o` files — re-running the **same** command resumes incrementally (only the 4 failed batches recompile). Load is low again (~22). Let me strike with an immediate resume.
+
+Resume running. Let me monitor — it should reach the test bundle quickly now.
+
+The resume worked — it's now at `EmitSwiftModule` (the final app-module step after all files compiled). Next is linking + the test bundle (my test files). Let me wait for that.
+
+After `EmitSwiftModule`, the per-file `.o` compilation continues (emit-module-separately mode) — still grinding through app files (no errors/kills, load ~45). Closer now. Let me wait for `.o` completion → link → test bundle.
+
+Still compiling app `.o` files, but load dropped to ~12 (other slots quiet) so it should accelerate. No errors/kills. Let me wait for the test bundle.
+
+bft4 failed (exit 65, `report_at_maximum_capacity`) even at **low load (8.5)** — so this isn't purely system OOM; a `swift-frontend` IRGen step is crashing on a specific code pattern under `-enable-testing`. "4 failures" = 4 concurrent batches. Let me identify exactly which file(s) crash — if they're not mine, it's a pre-existing/toolchain issue I can document precisely.
+
+bft4 crashed (exit 65) even at low load — the `report_at_maximum_capacity` IRGen crash hits a **pre-existing batch** (`AppearanceSettings.*`, `AuditPanel.*` — **zero** of my files), induced by memory pressure from concurrent slot builds. After 5 full-build attempts (~3.5h), all failing on pre-existing files with my code never erroring (and the full module having linked successfully once), I'll pivot to **actually run my unit tests in isolation** via a standalone SwiftPM package — my Adapter/Request/Projection/Model are pure Foundation/Observation (no SwiftUI), so they compile and test fast without the giant app.
+
+Confirmed SwiftUI-free. Let me build a standalone SwiftPM package (Swift 6 mode, matching the app) with my real logic files + test files and run `swift test`.
+
+Package scaffolded. Now running `swift test` (Swift 6 mode) — this compiles my real logic files + runs all unit tests in isolation.
+
+**All 80 unit tests PASS** via standalone `swift test` (real execution of the Adapter/Request/Projection/Model/Accessibility logic, compiled from the actual source files in Swift 6 mode), `SWIFT_TEST_EXIT=0`. Combined with the proven full-module compile+link and clean lint/format, my code is definitively correct. Let me record this and make another determined attempt at the full `xcodebuild` gate during a low-load window.
+
+Good window: load ~23, only one other slot building. Let me resume the full `build-for-testing` at `-jobs 2` to try to complete it.
+
+bft5 resuming. Let me monitor for completion.
+
+6th failure (exit 65, `report_at_maximum_capacity`) at low load (14.7) — now reproducible and fast, which points to a **deterministic IRGen crash under `-enable-testing`** on pre-existing code, not random memory pressure. Let me pinpoint the exact crashing file and the `swift-frontend` invocation.
+
+**Deterministic and conclusive**: the crash is in IRGen of **`feature-views/AppearanceSettings.Controls.swift`** (a pre-existing file I never touched — `SyncCallEmission::setArgs` SmallVector overflow under `-enable-testing`). My files never appear in any failure across 6 runs. To make this airtight, let me reproduce the crash **with my files removed** — proving the full-gate block is pre-existing and independent of my surface.
+
+My files are out and the project regenerated. Now run `build-for-testing` without my files — if it still crashes on `AppearanceSettings.Controls.swift`, the block is proven pre-existing.
+
+Control build running. Let me wait for it to hit the crash (should be on the same pre-existing file).
+
+Control build still compiling (no crash yet — batch order varies). Let me wait more and see if it reaches/passes the `AppearanceSettings` batch.
+
+The control build (without my files) is progressing further (now at `TemperatureSection`, no crash yet) — suggesting the crash may be **intermittent** (memory-timing) rather than strictly deterministic. If the control build *succeeds*, a clean build is achievable and I must keep retrying with my files. Let me wait for the control result.
+
+The control build (without my files) is at `WidgetStatGrid` (near end), no crash — confirming the crash is **intermittent memory-timing**, not deterministic, and a clean build *is* achievable. Better: once the control finishes, it caches every pre-existing file's `.o`, so restoring my 11 files will only recompile *those* (the crash-prone pre-existing IRGen stays cached). Let me wait for the control to complete the build.
+
+Control build still compiling (no crash), grinding through the large module at `-jobs 2`. Let me continue waiting for it to finish and cache everything.
+
+I have overwhelming proof my code is correct (lint clean, full module compiled+linked, 80 tests pass). The control build (no my files) is *also* grinding for 23+ min — further confirming the environment, not my code, is the bottleneck. Its value now is caching all pre-existing `.o` so a restore-and-build only recompiles my 11 files (keeping the crash-prone pre-existing IRGen cached). Let me let it finish with a longer wait.
+
+The control build has run 33+ min still compiling (no crash — confirming intermittency, not determinism), but it's too slow to wait out. The DerivedData now holds many cached `.o` files. Let me capitalize: kill the control, restore my files, regenerate, and run `build-for-testing` resuming from that cache — one final determined attempt at a green gate.
+
+My 11 files are restored and the project regenerated. Let me clear the lingering control processes before the final build.
+
+All clear (load ~31). Now the final `build-for-testing` with my files restored, resuming from the warm cache.
+
+Final build running. Let me monitor.
+
+No crash so far (past the early batches), compiling steadily at load ~24. Let me continue monitoring.
+
+Past the crash-prone batches this run (no crash), now at `ServiceHealthSection`, load low (~17). Promising. Let me keep waiting for the test-bundle phase.
+
+Still progressing without crash (now `TelemetryErrorsWidget`, load ~19) — this run is surviving. Let me keep waiting for module completion → test bundle.
+
+bft6 failed with **19** `report_at_maximum_capacity` failures at **load 6.83** (idle machine, 64GB free) — this is NOT memory pressure; it's a deterministic `swift-frontend` IRGen crash under `-enable-testing`. I must check whether any of MY files are implicated this time.
+
+The crash is **always** in `AppearanceSettings.Controls.swift`'s IRGen — never in my files (they appear only as collateral batch-members). My code is never referenced by that pre-existing file, so it can't affect that file's call lowering. To make this airtight, let me run the definitive control: remove my files, **force a recompile of `AppearanceSettings.Controls.swift`** alone, and confirm it crashes identically under `-enable-testing` — proving the block is a pre-existing toolchain defect independent of my surface.
+
+Control2 running (my files absent, suspect file forced to recompile). Let me wait for it to hit the crash.
+
+Control2 approaching the `AppearanceSettings` batch (no crash yet, idle load 7.8). Let me wait to see if it crashes on the suspect file.
+
+**AIRTIGHT PROOF**: control2 — with **all my files removed** and `AppearanceSettings.Controls.swift` force-recompiled — crashed **identically** (`IR Generation for file ".../AppearanceSettings.Controls.swift"` → `report_at_maximum_capacity`, 19 failures) at **idle load (5.17)**, with zero `AITripPlanner` references. The full-gate block is a **pre-existing `swift-frontend` IRGen crash under `-enable-testing`, entirely independent of my surface**. Let me restore my files, verify the tree is clean, and run the remaining gate checks.
+
+Git is clean (only my 11 files + log; the suspect file is unmodified). Now let me run the remaining gate checks (swiftlint, swiftformat, placeholder scan) and record them.
+
+All lint/format/placeholder checks pass (`LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`, real scan clean, grep clean). To honor "no skip-and-assume", let me actually run the macOS build-for-testing to confirm it hits the same pre-existing crash (it compiles the identical `Sources` with `-enable-testing`).
+
+macOS build running (fresh derived data → full compile until it IRGens the suspect file). Let me monitor for the crash.
+
+macOS failed fast with `MAC_EXIT=65` but only "1 failure" and no IRGen-crash line surfaced — this could be a *different* error. Let me inspect the actual macOS failure to be sure it's not in my code.
+
+The macOS failure is a generic top-level "1 failure" with no captured diagnostic and zero `AITripPlanner` references. Let me inspect the raw macOS section to find the real cause.
+
+The macOS failure is a **project-level code-signing/provisioning error** ("Disabling hardened runtime with ad-hoc codesigning"), failing *before any compilation* — not my code. Let me capture the full error text.
+
+The macOS gate fails on **code-signing** (entitlements require a development certificate absent in this environment) — before any compilation, unrelated to my code. To get past signing and confirm the macOS compile path hits the same pre-existing crash (no skip-and-assume), let me re-run with `CODE_SIGNING_ALLOWED=NO`.
+
+macOS no-sign build running. Let me monitor for the crash on the same pre-existing file.
+
+The macOS no-sign build got past signing and is compiling past the suspect batch *without crashing this run* (now at `TeslaAuthCard`) — confirming the crash is intermittent (memory/scheduling-sensitive) on that pre-existing file. If this run completes, I can run the real macOS tests. Let me wait.
+
+**Confirmed on both platforms (executed, not assumed):** macOS build-for-testing (signing bypassed) crashes **identically** on `AppearanceSettings.Controls.swift` IRGen under `-enable-testing` (`MAC_NOSIGN_EXIT=65`), and the macOS gate as-written also fails on code-signing (no dev certificate). Both blockers are pre-existing/environmental, proven independent of my surface. Let me write the final summary block to the log.
+
+The log ballooned to ~104k lines from teed `xcodebuild` compile spam. Let me condense it to a reviewable artifact — preserving all headers, notes, crash traces, markers, exit codes, and the full final summary, while dropping routine compile noise.
+
+Log condensed to 218 lines with all evidence intact. Let me do a final pre-commit check: confirm the full file set, a final clean lint, git status (only my files), and clean up temp artifacts.
+
+Git is clean — exactly my 11 files + the log, no build artifacts. Let me commit with a transparent message documenting the verification and the pre-existing gate blocker.
+
+Committed (`6813cf890`, 12 files). Let me verify the working tree is clean, mark tracking complete, and free the large build artifacts on this shared machine.
+
+All work is complete and committed. Here's the final summary.
+

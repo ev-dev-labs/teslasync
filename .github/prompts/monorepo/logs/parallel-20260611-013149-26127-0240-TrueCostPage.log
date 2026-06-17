@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and existing patterns.
+
+The project structure differs from the prompt's stated output path. Let me investigate where feature pages actually live and find existing analytics pages.
+
+There's an existing `Sources/Features/Analytics/` with `FleetComparePage` — the best reference. Let me study it and check the parity ledger/manifest.
+
+Let me study the full FleetCompare implementation pattern and the ledger.
+
+Excellent reference. Let me read the rest of the FleetCompare files to understand the full pattern.
+
+Let me explore the shared components, design tokens, units facade, and route system.
+
+Let me verify the web routing for TCO and check the manifest record, plus look at the remaining components (StatCard, Banners, UnitFormatters/tsUnits, DataFreshness).
+
+Now let me examine the web hook and types for the cost breakdown data shape.
+
+Let me check the build script, gate contract, swiftlint config, and any freshness/select components before writing code.
+
+Toolchain is available but the build needs a Gradle-built Shared.xcframework. Let me kick that off in the background while I write code, and gather the last component details.
+
+All tokens I need exist. Let me check the Gradle build progress and confirm the `TSBadge`/`TSTone` and radius tokens.
+
+I have all the patterns. Let me set up tracking and verify a couple of integration points (existing `common.unit.*` strings, exhaustive `AppRoute` switches).
+
+Let me read the rest of the swiftlint config and confirm the `route.fleetCompare` string pattern, then start writing.
+
+Now I have a complete understanding. Let me set up tracking and write the plan.
+
+Now I'll write the foundation files. Starting with models, formatters, page model, and sample data sources.
+
+Now the page model:
+
+Now the sample data sources:
+
+Now the main page view:
+
+Now update the gas unit to expose a resolved label, then write the sections file (hero cards + savings breakdown):
+
+Let me check the chart palette colors to pick EV-cyan / gas-red indices faithfully.
+
+Now the charts file (cumulative area, cost-per-km bar, monthly bar):
+
+Now the route registration and navigation wiring:
+
+Now wire the `.trueCost` route into `AppRoute`, the parser, and the app:
+
+Now I'll add the localization strings. Let me write a script that inserts the keys precisely without reformatting the large catalog:
+
+All 35 strings added and JSON validates. Let me check the web `formatCurrency` default precision to match the hero-card values faithfully.
+
+Let me check the Gradle build progress and write the test file.
+
+Gradle build succeeded. Let me stage the framework and write the test file while I proceed.
+
+Framework staged. Now the test file:
+
+Let me update tracking and run swiftlint on the new files to catch issues early.
+
+Minor lint fixes needed. Let me fix the large tuple and long lines.
+
+SwiftLint clean. Now generate the Xcode project and build.
+
+Project generated. Let me build (macOS target first for fast compile feedback, no simulator needed):
+
+Build failure is environment code-signing (no dev cert), not my code. Let me rebuild with signing disabled to get a true compile result.
+
+A pre-existing compile error surfaced in an unrelated file (`AIAutoNameUnnamedLocations.swift`), not my code. Let me confirm it's baseline and inspect it.
+
+My changes don't touch that file. Let me inspect the pre-existing error and confirm it's in the baseline.
+
+Key finding: the local toolchain is **Swift 6.3.2 / Xcode 26.5**, newer than the repo's pinned Swift 6.0. A non-escaping-closure pattern in **73 pre-existing `shared-surfaces` files** is now rejected. Let me confirm my code itself produced zero errors in that build.
+
+My files produced **zero** compiler errors — the only failure is the pre-existing `shared-surfaces` file under the newer Xcode 26.5 toolchain. To definitively verify my code compiles and tests pass, I'll temporarily apply the mechanical `@escaping` fix to the baseline (reversible), build, then revert it so my committed diff stays scoped. First, let me scope the pattern.
+
+This is a systemic baseline/toolchain incompatibility (~80 helper funcs across unrelated files), not my code. I'll temporarily apply the safe, mechanical `@escaping` fix to verify my code compiles and tests pass, then revert the baseline so my diff stays scoped.
+
+Now rebuild to verify (verification-only; I'll revert the baseline after):
+
+Another **different** pre-existing error category (type-check timeout in another unrelated file). This confirms a systemic baseline/toolchain incompatibility. Let me check whether my code's home (`Sources/`) is self-contained enough to verify in isolation.
+
+`Sources/` (where my code lives) doesn't depend on the broken co-located surfaces — only comment mentions and the distinct `TSVehicleSelect`. Let me definitively verify my code compiles by building a `Sources`-only variant. First revert the temporary baseline edits, then set up the isolated build.
+
+The revert also undid my intentional edits to the 3 tracked App files (they live under `Sources/`). Let me re-apply those navigation edits.
+
+Confirmed reverted. Re-applying the three navigation edits:
+
+All three navigation edits re-applied. Now set up the isolated `Sources`-only build to prove my code compiles (temporary project.yml, restored after).
+
+The isolated build still compiled `shared-surfaces` — likely stale DerivedData or the regen didn't take. Let me verify the on-disk spec and clean DerivedData.
+
+The regenerated project correctly excludes `shared-surfaces` (only 3 group refs in pbxproj). The prior build reused stale DerivedData. Let me rebuild with a fresh DerivedData path.
+
+Even isolated, it compiles `feature-views` — xcodegen isn't honoring the reduced spec as expected. Let me quickly diagnose rather than burn another build.
+
+Root cause found: removing the test targets left the scheme referencing them, so `xcodegen` failed and kept the **full** project — my "isolation" never took effect. Let me rebuild the reduced spec properly (fix the scheme too) from the backup.
+
+Now properly isolated (231 build files vs 10,988; `RecentActivity` excluded, `TrueCostPage` included). Building this proves my code compiles:
+
+Isolated build now compiles only `Sources` (including pre-existing Admin/FleetCompare files). Let me extract the actual errors and check whether any are in my code.
+
+**Definitive evidence**: across every build attempt — full and isolated — **zero errors originate in my code**. The isolated build's errors are all pre-existing Admin files needing types from the co-located dirs I excluded. My TrueCost files produced no errors anywhere. The blocker is purely the newer Xcode 26.5/Swift 6.3.2 toolchain vs. the repo's pinned Swift 6.0 baseline.
+
+Let me restore the real project config and run the remaining real gate steps.
+
+Now run the real placeholder gate and a final lint on the analytics dir:
+
+Placeholder scan: **0 placeholders, EXIT=0**. Now the lint gate on the analytics dir:
+
+The 3 lint violations are pre-existing (`widget-primitives/WidgetChartSummary.Tests.swift`, vars `a/b/c`) — outside the Analytics gate scope and not mine. My files lint clean. Let me confirm the scoped lint, check the ledger schema, and locate the logs dir.
+
+Under the repo's `.swiftlint.yml` (min length 2) my files pass, but the 2-char `ev` fails default swiftlint. I'll rename it to be robust under both. Let me also check the ledger — `blocked` is a valid status.
+
+The BSD `sed \b` didn't replace the usages — let me fix the 3 references with perl:
+
+All consistent now. Let me re-lint under both the repo config and default config to confirm clean:
+
+Repo config (gate context): **0 violations**. Default config flags `wh`. Let me find and rename all sub-3-char identifiers for full robustness.
+
+Only my `wh:` param is a real declaration to rename (`in:`/`at:`/`lg:` are Apple call-site labels, not flagged). Renaming `wh` → `wattHours`:
+
+Update the test call site too:
+
+Both configs clean (0 violations). Let me verify the renames left no stale references and do a syntax parse check of my files.
+
+Syntax valid, no stale refs, lint clean. Let me now verify all 32 parity strings are genuinely referenced in my Swift code (honesty check before writing the evidence log):
+
+All 32 strings verified in both code and catalog. Now let me write the comprehensive evidence log with the full `=== PARITY ===` section and honest gate results.
+
+Now add the ledger rows with the honest `blocked` status (51/51 implemented, gate environmentally blocked):
+
+Ledger updated (schema-valid `blocked`). Let me clean up temp artifacts and review the full working-tree state before finalizing.
+
+The working tree is clean and scoped. Let me strengthen verification by actually *running* my pure model/format logic standalone (linking the built `Shared` framework), since the full XCTest target can't build. First, locate the framework slice.
+
+The framework slice exists. Let me build a standalone harness to actually *run* my model/format logic (the part the blocked XCTest target would cover). First check the framework's module layout.
+
+KMP framework uses a Clang module (version-stable). Let me build a standalone harness that runs my model/format logic — effectively executing the blocked XCTest's assertions.
+
+The **type-check passed** (zero swiftc errors) — only the linker hit the SwiftUICore CLI restriction (SwiftUI can't link into a plain CLI tool). To actually *run* the logic, I'll use a SwiftUI-free copy of the one file that imports it, with a `LocalizedStringKey` shim:
+
+Shim needs to be `public`. Fixing:
+
+Sema passed again; a linker error remains. Let me see the full linker diagnostic:
+
+The KMP framework needs `libsqlite3` (the app links `libsqlite3.tbd`). Adding `-lsqlite3`:
+
+**All 21 logic checks PASS** — this actually *executes* my model state machine and formatters against the real `Shared`/KMP SI engine (`distance SI metric` → "42,000 km" through the shared converter). My deliverable's logic is verified correct under the live Swift 6.3.2 toolchain. Let me record this in the log and clean up.
+
+Everything is verified and documented. Per the binding honesty covenant (#8 "No commit on red", and the gate is `STATUS=BLOCKED`/`EXIT≠0` due to the environment), I will **not** auto-commit a non-green gate. Let me finalize tracking and do a last review.
+
+The deliverable is complete, verified, and documented. Per the binding honesty covenant (#8 "No commit on red") and the gate's `STATUS=BLOCKED`, I'm not auto-committing a non-green gate — all work is staged in the working tree, ready to commit. Let me give my final report.
+

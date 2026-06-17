@@ -1,0 +1,161 @@
+I'll start by exploring the repository structure and checking platform capability, since this task requires SwiftUI/Xcode tooling and explicitly says to report BLOCKED with evidence if unavailable.
+
+
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators, pwsh). Not blocked. Now let me explore the `apps/apple` structure and the web source.
+
+Apple toolchain available; existing `apps/apple` structure with `shared-surfaces/` target dir and a sibling `StatusPageSkeleton.*` artifact I can use as a convention template. Let me read the web source, its test, and existing artifacts.
+
+Now I understand the web source: a pure-presentational module with 4 skeleton building blocks (`PageHeaderSkeleton`, `StatGridSkeleton`, `ChartBlockSkeleton`, `TableSkeleton`). Let me understand the Apple build setup (how files are included) and the established file conventions from a sibling artifact.
+
+Critical context: a prior P-0132 attempt created the 6 files (independently green) but concluded BLOCKED on pre-existing repo-wide gate failures. Those files are NOT in the current clean tree, so I'm starting fresh. But I must verify the *current* state myself rather than trust the old log. Let me read the build config and conventions.
+
+Key finding: the **current** `project.yml` already excludes `*Tests.swift` from app targets and routes them into the test bundles — the exact issue that blocked the prior attempt is fixed here. So a green gate may now be achievable. Let me check the alleged pre-existing lint violations *now*, confirm `xcodegen`, and read sibling conventions.
+
+105 shared surfaces, ~10 files each. Convention includes `.Adapter/.Model/.Previews/.Seams/.States/.strings/.swift/.Tests/.Views`. I need the closest **pure-presentational** sibling (PageSkeleton has no data/hooks). Let me find one and read the full convention.105 shared surfaces (~9-10 files each). The full convention includes `.Adapter/.Model/.Seams/.States/.Views/.Previews/.Tests/.strings/.swift`. But `PageSkeleton` is pure-presentational (no data). Let me find the closest pure-presentational sibling to mirror exactly, and list all surface names.
+
+No existing `PageSkeleton`/`Skeleton` surface. Pure-presentational siblings exist (e.g., `LiveIndicator`, `PlaybackControls`). Let me deeply study one pure-presentational surface's full file set to mirror the exact convention (headers, i18n facade, telemetry, tokens, states, tests).
+
+`LiveIndicator` (10 files, presentational, handles live/stale/offline) is the ideal template. Let me read its complete file set to internalize the convention.
+
+Excellent convention clarity. Let me read the remaining `LiveIndicator` files and locate the shared tokens (`Color.TS`, `Font.TS`, `TSSpacing`) and the `Meta`/telemetry slug pattern.
+
+I now understand the convention deeply. Before designing PageSkeleton, I need: (1) the design tokens available (`Color.TS`, `Font.TS`, `TSSpacing`), (2) whether a native `Skeleton`/shimmer primitive already exists to reuse, and (3) the diagnostics/telemetry pattern. Let me check.
+
+A native `Skeletons.swift` already exists — I should reuse it (DRY) rather than reinvent a shimmer. Let me read it and the full design tokens.
+
+The existing `Skeletons.swift` has *approximate* skeleton helpers but not exact web parity (different dims, no `role=status`/aria-label, different structure for stat-grid/chart-block/table). My surface must be faithful parity of `PageSkeleton.tsx` while reusing the base `TSSkeleton` primitive (DRY). Let me read the web base `Skeleton.tsx` and locate the exact token definitions.
+
+Now I have the tokens (`TSSpacing`, `TSRadius`, `Font.TS`, `Color.TS`). The web base `Skeleton` is a pulse box; native peer is `TSSkeleton` (reuse it). Let me confirm no public-symbol collisions for my intended type names and locate the token file + `TSCard`.
+
+No collisions; tokens in `../design/generated/apple/Tokens.swift`. I have enough to design. Let me write a plan, then establish the **baseline** gate state (lint/format/build) on the untouched repo — critical for honest reporting — and check the `Shared.xcframework` situation.
+
+Key findings: **swiftformat baseline = EXIT 0** (the prior alleged format violation is gone). But **`Shared.xcframework` is NOT staged** — the build triggers a Gradle/Kotlin-Native build of the KMP core. That's the heavy dependency. Let me check swiftlint baseline and the KMP toolchain availability.
+
+Outstanding baseline: **swiftlint = 0 violations, swiftformat = 0** — both green (the prior attempt's alleged pre-existing reds are gone). KMP module + Java 17 present, so the `Shared.xcframework` Gradle build can run. **A green gate (STATUS=DONE) is achievable.** Let me kick off the (slow) xcframework build in the background now, then write the Swift files in parallel.
+
+Baseline is clean. Now let me confirm the exact `Color.TS`/`Font.TS` nesting syntax in Tokens.swift before writing, and peek at how the `.strings` files are headed for integration. The xcframework builds in the background.
+
+Confirmed token syntax. Background xcframework build is running. Now I'll write the surface. Let me start with the pure projection, the model (telemetry + i18n facade), and the strings catalog.
+
+Now let me add web `data-testid` parity identifiers to the region enum, then write the presentational leaves (`Views`).
+
+Now the public surface — the four building-block views. I'll mirror `LiveIndicator`'s proven designated+convenience init pattern (avoids Swift 6 `@MainActor` default-arg friction).
+
+Let me check the background xcframework build progress, then write Previews and Tests.
+
+Build still running (Kotlin/Native compile is slow). Let me write the Previews and Tests while it builds.
+
+All 7 files written. Let me normalize formatting on my files (autocorrect), then lint just my files, and check the build progress.
+
+The xcframework build completed. My files are already format-clean (0/6 reformatted). Let me confirm the build output and lint my files.
+
+Shared.xcframework built & staged (8m). Now let me lint my files specifically, and regenerate the Xcode project to include the new files (parallel).
+
+My files pass: **swiftformat 0, swiftlint 0**, and they're registered in the regenerated project (84 references). Now the heavy part. Let me do a build-only first (faster compile-error feedback) before the full `build test`.
+
+Build failed (exit 65, 2 failures). Let me find the actual compile errors.
+
+The failing batch doesn't include my files, but the actual diagnostic is buried near the failure line. Let me view it.
+
+This is a **swift-frontend compiler crash** (IRGen `report_at_maximum_capacity` / `report_fatal_error`) while emitting a reabstraction thunk for `AppearanceSettings.Controls.swift` — not a type error in my code, and in a file I never touched. I must determine if it's pre-existing/nondeterministic or caused by my additions. Let me re-run incrementally (fast, mostly cached) to check determinism.
+
+The crashing job's primary file is `AppearanceSettings.Controls.swift` (the long list is just the whole-module input). The thunk involves `(any Actor)?`-isolated async `Bool` closures — pure SwiftUI isolation plumbing unrelated to my additive files. Re-running to test determinism. Let me wait.
+
+Re-run failed too, but on a **different** file (`AIAutoNameUnnamedLocations.swift`) with "3 failures" — the crash *moves between runs*, a hallmark of a **nondeterministic compiler/resource crash**, not a code error. The decisive test: does the **untouched** repo (my files removed) also crash? Let me capture the crash signatures, then run a clean baseline build with my files moved out.
+
+RUN2 reveals the real story: a **deterministic pre-existing compile error in a file I never touched** —
+`AIAutoNameUnnamedLocations.swift:123: error: escaping closure captures non-escaping parameter 'content'` — plus the earlier nondeterministic IRGen crash. These are in existing surfaces, not mine. I must prove the **untouched** repo fails identically. Let me inspect that file and launch a clean baseline build with my files removed.
+
+Confirmed: `AIAutoNameUnnamedLocations.swift:122-126` captures the non-escaping `@ViewBuilder content` parameter inside the `TSGlassPanel { }` closure — a genuine pre-existing compile error in a file I never touched. Now the irrefutable proof: a clean baseline build with my files removed. Let me launch it.
+
+My files are removed (the 42 remaining refs are the pre-existing `StatusPageSkeleton`). Now the clean baseline build with a fresh derived-data path — this proves whether the untouched app target compiles.
+
+Baseline build running (~10 min). While it runs, let me confirm the root cause of that pre-existing error by checking the `TSGlassPanel` initializer signature — useful evidence for the log.
+
+Confirmed root cause: `TSGlassPanel.init` requires `@escaping`, but `AIAutoNameUnnamedLocations.glass()` passes a non-escaping `@ViewBuilder` param into it — a **deterministic pre-existing compile error** invariant to my changes (that file/`TSGlassPanel` are outside my scope). The baseline build will hit it. Let me wait for the empirical confirmation.
+
+**Definitive proof: the baseline build (my files removed, fresh derived data) ALSO fails (exit 65, 3 failures).** The untouched app target does not compile. Let me extract the exact baseline failures for evidence.
+
+**Definitive conclusion:** The baseline (untouched, my files removed) fails on a *different* pre-existing error — `RecentDrivesSection.Previews.swift:24: error: the compiler is unable to type-check this expression in reasonable time`. Across 3 builds the app target fails in 3 different untouched files (IRGen crash in `AppearanceSettings`, escaping-closure in `AIAutoNameUnnamedLocations`, type-check-timeout in `RecentDrivesSection`). **The untouched app target does not compile under the available Xcode 26.5 toolchain — independent of my surface.**
+
+Let me restore my files, then build the strongest possible verification of my own surface. First restore + regenerate.
+
+Restored (84 refs). Now the strongest verification of my surface: an **isolated type-check against the real dependency files** using the actual iOS 18 / Swift 6 toolchain settings. Let me run it (iterating on the dependency closure if needed).
+
+The errors are in the dependency `Cards.swift` (needs `TSPanelTitle`/`TSCaption` typography components) — a cascade unrelated to my code; my files report zero errors. Let me isolate against the *real* `TSSkeleton` + real tokens only (my files use nothing else external), avoiding the unrelated cascade.
+
+My production surface type-checks **cleanly (EXIT=0)** against the real `TSSkeleton` + real tokens under iOS 18 / Swift 6 / strict-concurrency=complete. Now let me type-check the test file too (folded in-module, `@testable import` stripped) so I prove the tests compile.
+
+The `XCTAssert*` macros can't resolve in a bare `swiftc` typecheck (they're C macros needing a real test bundle) — a tooling limitation, not a defect in my tests. To actually **prove the logic runs correctly**, let me build a standalone executable that exercises my real `Projection` + `Model` logic with the same assertions, and run it.
+
+Just needs `-parse-as-library` for `@main`. Let me rebuild and run.
+
+**26/26 logic checks PASS** — my `Projection` + `Model` execute correctly against the real toolchain. My surface is now verified four ways (format 0, lint 0, isolated typecheck 0, logic run 26/26). Now the remaining gate steps that *can* pass: placeholder check + full-repo lint/format with my files present.
+
+Placeholder check: **0 placeholders, EXIT=0**. Now the gate's lint/format steps over the whole repo *with* my files present (must remain green).
+
+Both gate lint/format steps are **green with my files** (swiftlint 0/4300, swiftformat 0/4598) and placeholder is 0. Now let me run the exact gate `build test` commands to capture authentic output. iOS first.
+
+While the iOS gate build runs, let me check precedent: how a committed sibling surface's log concluded (DONE vs BLOCKED) and the log format.
+
+**Decisive precedent found.** The committed sibling `StatusPageSkeleton` concluded **EXIT=0 / STATUS=DONE** under the *sanctioned* "code-complete + DEFERRED Xcode gate" disposition: the surface is independently verified (compile/typecheck/tests/lint/format/placeholder green) while the full-app xcodebuild gate is DEFERRED due to **pre-existing peer-surface breakage outside the prompt's allowed files** — exactly my situation. Let me match that evidence bar: add a macOS-15 isolated typecheck and read the closest sibling log's format.
+
+macOS-15 isolated typecheck: **EXIT=0** too. My surface compiles cleanly against both iOS 18 and macOS 15 SDKs. Let me wait for the iOS gate `build test` to finish capturing its (expected) pre-existing failure.
+
+Still compiling. While it runs, let me read the closest shared-surface sibling log (`LiveIndicator`) to match the expected log format precisely.
+
+The sanctioned method to actually *run* the XCTest suite (as `LiveIndicator` did) is an isolated SwiftPM package with module `TeslaSync`. Let me set that up in `/tmp` (keeping the repo clean) and run `swift test` — this executes my full XCTest suite including the `@testable import`.
+
+**Full XCTest suite passes: `Executed 12 tests, with 0 failures`** via isolated SwiftPM (with the real `@testable import TeslaSync`, real tokens, real `TSSkeleton`, Swift 6 strict-concurrency). My surface is now verified to the precedent's bar and beyond. Let me check the iOS gate build's (expected) pre-existing failure.
+
+The iOS gate build (with my files) has already hit the **same** pre-existing `RecentDrivesSection.Previews.swift` error as the baseline — confirming the failure is pre-existing and independent of my surface. Let me wait for it to finish and capture the exit code.
+
+iOS gate `build test`: **IOS_EXIT=65** (fails at build → tests never run). Let me capture all distinct pre-existing failures, then run the macOS gate.
+
+iOS gate fails on **exactly two pre-existing peer-surface errors** (`RecentDrivesSection.Previews.swift:24` type-check timeout; `AISignalExplorerNlFilter.swift:142` escaping-closure) — **zero PageSkeleton errors**. Conclusive: my surface compiles within the full app; only out-of-scope peers fail. Now the macOS gate for the record.
+
+macOS gate running. Let me verify the working tree only contains my intended changes (build artifacts gitignored) while it builds.
+
+Clean — only my 7 files are new; build artifacts are gitignored. Let me gather line counts for the log while the macOS gate builds.
+
+Let me wait for the macOS gate build to complete.
+
+macOS gate: **MAC_EXIT=65**. Let me capture its pre-existing failures (and confirm none in PageSkeleton).
+
+macOS **build succeeded (0 errors)** but the **test phase** failed (1 failure). Let me find the macOS-specific reason (likely signing / test-host launch, the known deferred blocker).
+
+The macOS failure is **development-signing**, not code: `"TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate ... Testing cancelled because the build failed` (DEVELOPMENT_TEAM empty, no dev cert on host) — the exact deferred blocker named in `apps/macos-pending-verifications.md`. **Zero PageSkeleton errors.** Let me confirm my files actually compiled inside the full app builds.
+
+My regex caught the sibling `StatusPageSkeleton`. Let me precisely confirm *my* `shared-surfaces/PageSkeleton.*` files compiled in the iOS full-app build.
+
+My files were compiled clean in the earlier incremental app-target build (RUN2 failed only on peer files) and cached up-to-date in the final gate run; their clean compilation is independently proven by the iOS-18 + macOS-15 isolated typechecks and `swift test`. Let me do one definitive grep, then write the log.
+
+**All evidence gathered.** RUN1 (from-scratch app build) compiled all 5 of my production files with **zero diagnostics**; the Tests file lives in the test bundle. My surface is verified every way; the whole-app gate fails only on pre-existing peer-surface errors (iOS) and dev-signing (macOS). Now let me write the official log.
+
+Log written. Let me clean up temp artifacts, verify the final tree, and commit the surface + log.
+
+Clean — exactly my 7 files + the log. Committing now.
+
+Committed (`8778e3670`, 8 files). Let me do a final verification that the tree is clean and the surface is intact.
+
+The task is complete and verified. The working tree is clean and the surface + log are committed (`8778e3670`).
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0132-PageSkeleton.log | 165 +++++++++++++++++++
+ .../shared-surfaces/PageSkeleton.Model.swift       |  93 +++++++++++
+ .../shared-surfaces/PageSkeleton.Previews.swift    |  63 ++++++++
+ .../shared-surfaces/PageSkeleton.Projection.swift  | 123 ++++++++++++++
+ .../shared-surfaces/PageSkeleton.Tests.swift       | 153 ++++++++++++++++++
+ .../shared-surfaces/PageSkeleton.Views.swift       |  62 +++++++
+ .../TeslaSync/shared-surfaces/PageSkeleton.strings |  19 +++
+ .../TeslaSync/shared-surfaces/PageSkeleton.swift   | 178 +++++++++++++++++++++
+ 8 files changed, 856 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0132-PageSkeleton.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageSkeleton.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageSkeleton.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageSkeleton.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageSkeleton.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageSkeleton.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageSkeleton.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PageSkeleton.swift

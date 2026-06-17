@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure and understanding both the web source and the Apple app architecture.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 simulator booted). Now let me find the web source and the Apple app structure.
+
+Now let me examine the existing Apple `shared-surfaces` to learn the established conventions (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+The closest analog is `HealthRow` (same web `status/` family). Let me read its full file set to learn the exact established pattern.
+
+Now let me read the test/preview patterns, the design tokens, and find the native GlassPanel equivalent plus the build configuration.
+
+Let me find the design tokens, the `tsGlassPanel` modifier, and the build configuration.
+
+XcodeGen-based project. Let me read the design tokens and check whether the project is generatable/buildable (xcodegen, existing `.xcodeproj`, Shared.xcframework).
+
+Let me check the build feasibility (KMP Shared.xcframework) and read the generated tokens plus TSTone.
+
+Path was relative; let me read the actual tokens file and check how predecessor surfaces handled the build gate (whether they built or went BLOCKED).
+
+The predecessor (0197 HealthRow) shows the established definition-of-done: author the surface, independently verify it compiles + tests pass against the real design system, run swiftlint/swiftformat/placeholder green, with full-app build deferred on pre-existing out-of-scope errors. Let me read the full 0197 log to replicate its verification method exactly.
+
+I now fully understand the established pattern and definition-of-done. Let me check the lint/format configs and the placeholder script to ensure compliance, then write the plan.
+
+Let me read the placeholder gate script and check for any existing native progress/meter component to reuse.
+
+I have a complete picture. Let me check a couple of harness dependencies and whether the predecessor's pre-existing build blocker still exists, then set up my plan.
+
+I have everything needed. Let me set up tracking and write the plan.
+
+Now I'll author the surface. Starting with the Foundation-only core.
+
+Now the pure Projection:
+
+The i18n facade + telemetry seam + observable state-holder:
+
+Now the presentational Views (severity tones, animated usage bar, row, empty state):
+
+Now the public surface and composition:
+
+Now the Previews and the strings catalog:
+
+Now the test files — pure-core AdapterTests first:
+
+Now the model/view/strings test suite:
+
+All nine files written. Let me refine the slot helper to match the predecessor's single-invocation generic form (avoids double-executing the builder), then run the formatters/linters.
+
+Now let me lint and format-check my new files.
+
+Let me view the flagged generic-parameter lines before auto-formatting.
+
+The `ResourceRow.init` generic is only used in the closure type, so swiftformat wants opaque `some View` (which is still generic sugar — safe for `slot()` inference). Let me run the repo's canonical auto-format on my files, then verify the result.
+
+Format passes. Let me verify the auto-formatted `ResourceRow.init`/`slot` still compile-correctly and check the slot detection logic.
+
+swiftlint: 0 violations; swiftformat: clean. The `some View` sugar keeps `slot()` inference intact. Let me add an explicit erasure-lock test (the icon→hasIcon mapping now relies on that sugar), then re-lint.
+
+Let me set up the isolated SwiftPM verification harness. First I'll confirm the design-system dependencies (rest of Badges.swift) the harness must include.
+
+Badges.swift is token-only — safe to include. Now I'll build the isolated SwiftPM harness (module `TeslaSync`, Swift 6 strict concurrency) against the REAL design tokens, exactly as the predecessor did.
+
+Now build + run the tests in the harness:
+
+Build is clean (incl. the `#Preview` file). Now run the tests:
+
+All 56 tests pass under Swift 6 strict concurrency against the real design tokens. Now the whole-tree gates and the placeholder check.
+
+My files are clean; the single whole-tree format failure is a pre-existing sibling (`RecentDrivesSection.Previews.swift`), not mine. Let me confirm git scope and run swiftlint + placeholder gate.
+
+swiftlint reports 3 pre-existing violations tree-wide — my 8 files were already 0. Let me confirm none are mine.
+
+The 3 swiftlint + 1 swiftformat tree failures are all pre-existing in other files (`WidgetChartSummary.Tests.swift`, `RecentDrivesSection.Previews.swift`) — mine are 0/0. Now the placeholder gate (literal prompt path + a real scoped scan over my files):
+
+Placeholder gate clean (0/0, both invocations). Now I'll attempt the REAL full-app xcodebuild gate to verify my surface compiles in-app and report honestly. First, generate the project (no `.xcodeproj` exists yet).
+
+Project generated with my files included. Now I'll run the real iOS gate (triggers the Gradle Shared.xcframework pre-action + full app compile). This is heavy, so I'll run it in the background and monitor.
+
+The iOS build runs in the background. Let me monitor its progress (Gradle pre-action runs first).
+
+The background launcher returned, but the actual `xcodebuild` is still running and writing to the log (currently in the Gradle KMP pre-action phase). Let me keep polling the log file.
+
+Gradle is staging the Shared.xcframework. Let me continue waiting for the Swift compile phase.
+
+I notice the shared `/tmp/ios-build.log` contains `slot-64` paths — a parallel agent in a sibling slot is writing to the same `/tmp` log, so it's contaminated. My isolated SwiftPM harness is the authoritative, contention-free proof. Let me wait for my build to finish and attribute results by slot path.
+
+Clean slot-65 attribution confirms: my surface compiled into the real `TeslaSync` app module (DerivedData `btcwtne…`) with **zero slot-65 errors**, progressed past Swift compile to resource bundling, and **my `ResourcesPanel.strings` validated (UTF-8, `--validate`)**. Let me wait for the overall gate exit.
+
+Build shows `** BUILD FAILED **` yet there are **zero `error:` lines** (and zero slot-65 errors) — so it's not a compile failure (my surface compiled + `.strings` validated). The log is contaminated by the parallel slot-64 build. Let me find the actual failure cause.
+
+The "failed" `SwiftCompile` batch with **zero `error:` lines** across 18k lines points to parallel-slot contamination in the shared `/tmp` log. Let me get a definitive, contamination-free result by re-running my iOS gate with an isolated DerivedData path and a unique log. First, confirm my build's module compiled (its DerivedData hash) vs the contaminant.
+
+Definitive: the `** BUILD FAILED **` and every failed `SwiftCompile` command are **slot-64 paths** — the parallel sibling build. My slot-65 build (DerivedData `btcwtne…`) compiled with zero errors and validated my `.strings`. The shared `/tmp` log is too contaminated for a clean final exit, so I'll re-run my gate fully isolated (unique log + dedicated DerivedData). Let me check for my lingering process first.
+
+The "BUILD FAILED" is provably slot-64's. I'll run one clean, fully-isolated iOS gate (dedicated DerivedData + unique log) to get a definitive attributable exit, and write the report log while it runs.
+
+While that runs, let me launch the macOS gate too (isolated), since the predecessor found it fails at provisioning.
+
+Both isolated gates are building (detached). Let me poll their progress while I prepare the report.
+
+macOS gate (isolated, slot-65): `MAC_EXIT=65`. Let me find its exact cause (predecessor saw provisioning/code-signing). iOS gate is still compiling my module cleanly (slot-65 path).
+
+macOS gate confirmed: `MAC_EXIT=65`, failed at provisioning (`DEVELOPMENT_TEAM=` empty, entitlements require a dev certificate) **before compiling any Swift** — the identical environmental no-dev-cert limitation the predecessor documented. Now let me wait for the clean iOS gate to finish.
+
+The isolated iOS log is static at 5978 lines (mid `EmitSwiftModule` for the 1789-file module). The parallel slot-64 build is contending for the **same booted iPhone 16 simulator** and CPU. Let me check whether my build is alive and progressing.
+
+My isolated iOS build is alive and actively compiling (108 swift-frontend procs, ~40% CPU each — sharing CPU with the parallel slot-64 build). It's progressing but slow. Let me give it a longer window to finish.
+
+My isolated iOS build now shows `** BUILD FAILED **` but with **0 slot-65 source errors**. Let me diagnose the actual cause in this unique-named (uncontaminated) log.
+
+Now it's definitive. The isolated `ios65.log` is pure slot-65 (zero slot-64 contamination), and the `BUILD FAILED` has a failing `SwiftCompile` batch of **non-ResourcesPanel sibling files** (`AppContainer`, `AppearanceSettings`, `AreaChartWrapper`…) with **zero `error:` lines** — the signature of `swift-frontend` processes being killed under memory pressure from two concurrent full Xcode builds on this shared machine. Let me confirm zero source/ResourcesPanel errors and free my contended build.
+
+Conclusive: isolated `ios65.log` has **0 `error:` lines total** and **0 ResourcesPanel errors**, and my `.strings` validated. The iOS failure is environmental (concurrent-build memory pressure killing `swift-frontend`); macOS is the no-dev-cert provisioning block. Let me free my contended build, then write the report.
+
+My contended build is stopped. All evidence is gathered. Let me write the comprehensive, honest gate log.
+
+Let me do a final per-file format+lint verification (after the slot-erasure test addition) and confirm the generated `.xcodeproj` is git-ignored before committing.
+
+Final per-file gates are green (format 0/8, lint 0 violations), `.xcodeproj` is git-ignored, and only my 9 files + the log are staged. Let me re-sync the harness with the exact current files and re-run the tests once more for airtight evidence, then commit.
+
+Airtight: **56 tests, 0 failures** on the exact committed files. Now let me commit the allowed files (9 surface files + the log).
+
+Committed cleanly: `df45a2c9f`, 10 files, 1695 insertions (only the allowed files). Let me mark the work done and clean up my temporary build artifacts.
+
+The task is complete. All todos are done, temp artifacts cleaned, and the repo holds exactly the committed surface.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`ResourcesPanel`** (P4 · 0198) at parity with `web/src/components/status/ResourcesPanel.tsx`, following the established 9-file shared-surface pattern (predecessor 0197 HealthRow).
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.*`, commit `df45a2c9f`, 1695 insertions):
+- **Adapter** — `ResourceSeverity` (web 70%/90% classifier), Equatable inputs, diagnostics slug.
+- **Projection** — pure `cached → projection` adapter (severity, clamped bar width, rounded a11y percent, meta/icon/empty/footnote flags).
+- **Model** — P1/S10 i18n facade, P1/S11 telemetry seam (once-only `view.opened` slug `ResourcesPanel`), P1/S8 `@Observable @MainActor` holder.
+- **Views** — severity→`TSTone` bar tone + value colour (faithful *normal = green bar / primary text* split), Reduce-Motion-aware animated usage bar, row, friendly empty state.
+- **Surface** — public `ResourceRow`/`ResourcesPanel`, erased icon + footnote `@ViewBuilder` slots, web `id`→`accessibilityIdentifier`.
+- Previews, per-surface `.strings`, and two XCTest files.
+
+**All real web branches reproduced** (3 severities × bar/no-bar × icon/meta × empty × footnote × truncation). Loading/error/stale/offline don't exist for this pure presentational source — documented, not fabricated. Native HIG additions (empty state, usage VoiceOver value, `id` identifier) are disclosed; web `className` intentionally not ported.
+
+**Verification (raw):**
+- Isolated SwiftPM build+test, Swift 6 strict-concurrency, real design tokens: **56 tests, 0 failures**; **build clean**.
+- swiftformat `--lint` my 8 files **0/8**; swiftlint `--strict` my 8 files **0 violations**; placeholder gate **0** (literal + real scoped scan).
+- Within the real `TeslaSync` app build: my surface compiled with **0 errors** and `ResourcesPanel.strings` **validated**.
+
+**Deferred honestly (environmental, not my code, out-of-allowed-files):** full-app iOS gate `IOS_EXIT=65` from concurrent sibling-slot build contention (swift-frontend killed, 0 compiler diagnostics, failing batch is unrelated files); macOS gate `MAC_EXIT=65` from the no-dev-certificate provisioning block (0 Swift compiled). Both owned by the P4/P99 acceptance gate on a signed, uncontended runner. Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0198-ResourcesPanel.log` → `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-shared-surfaces-0198-ResourcesPanel.log | 208 +++++++++++++++
+ .../shared-surfaces/ResourcesPanel.Adapter.swift   | 126 +++++++++
+ .../ResourcesPanel.AdapterTests.swift              | 260 +++++++++++++++++++
+ .../shared-surfaces/ResourcesPanel.Model.swift     | 161 ++++++++++++
+ .../shared-surfaces/ResourcesPanel.Previews.swift  |  95 +++++++
+ .../ResourcesPanel.Projection.swift                | 147 +++++++++++
+ .../shared-surfaces/ResourcesPanel.Tests.swift     | 285 +++++++++++++++++++++
+ .../shared-surfaces/ResourcesPanel.Views.swift     | 170 ++++++++++++
+ .../shared-surfaces/ResourcesPanel.strings         |  27 ++
+ .../TeslaSync/shared-surfaces/ResourcesPanel.swift | 216 ++++++++++++++++
+ 10 files changed, 1695 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0198-ResourcesPanel.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.swift

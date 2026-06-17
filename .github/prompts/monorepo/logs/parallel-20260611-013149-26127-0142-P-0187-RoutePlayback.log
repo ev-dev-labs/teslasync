@@ -1,0 +1,176 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Found the web source. Let me read it and explore the Apple app structure.
+
+Let me examine the Apple app conventions by looking at existing surfaces and the project structure.
+
+No MapKit surfaces exist yet. Let me read a complete reference surface and find the core infrastructure (state-holders, tokens, i18n, diagnostics).
+
+There's a `Sources` directory with core infrastructure. Let me explore it and read a complete reference surface.
+
+Now let me check tooling availability (critical capability gate) and explore the native component equivalents.
+
+All tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh, iPhone 16 sim booted). **Not blocked.** Native equivalents exist: `Maps/MapView.swift`, `DataDisplay/Playback.swift`, `Feedback/States.swift`. Let me read them.
+
+The web source is a presentational component (takes `points` as a prop; `useMap` is Leaflet's instance accessor for bounds-fitting). There's already a generic `TSRoutePlayback` helper. I need to build the full **shared surface** with the state-holder pattern. Let me study the infrastructure and a complete reference surface.
+
+Let me read a complete reference surface (`BulkActionsToolbar`) end-to-end and find the diagnostics/telemetry contract.
+
+Let me read the full BulkActionsToolbar reference surface (all files) to learn the conventions.
+
+Let me read the Model, Projection, Views, Previews, strings, and Tests of the reference surface, plus find how `view.opened` diagnostics are emitted.
+
+Let me read the remaining reference files and the key component/token APIs I'll use.
+
+Let me read the test files, previews, and the core token/component APIs.
+
+I now understand the surface conventions thoroughly. Let me read the token and component APIs I'll need to compose the native surface correctly.
+
+Let me read the generated design tokens and the spacing/radius/motion/tone tokens, plus confirm `tsGlassPanel` and check `TSTone`.
+
+Let me locate `TSTone`, check an existing timer/playback surface pattern, and read the lint config.
+
+`TimelineScrubber` is the closest analog. Let me read it and `TSTone`.
+
+`TimelineScrubber` puts its `@Observable` store in `.Store.swift`. Let me read it plus its Views, `TSTone`, and confirm no `RoutePlayback.*` files exist yet.
+
+Let me read the web `PlaybackControls` (a shared component RoutePlayback uses) and supporting web pieces to reproduce composition faithfully.
+
+I now have a complete understanding of the architecture, conventions, tokens, and the web spec. Let me set up a plan and todos, then build the surface. First, the plan and task tracking:
+
+Now let me create the pure core files. Starting with the Adapter:
+
+Now the Projection file:
+
+Now the Model file (state-holder, telemetry, i18n facade, value types):
+
+Now the Seams file (source protocol + live + in-memory):
+
+Core logic is in place. Let me update todos and write the UI files (States, Views, main entry):
+
+Now the Views file (MapKit map, markers, metric chip, controls bar, active view, freshness):
+
+Now the main surface entry point:
+
+Now the i18n strings file:
+
+Now the previews:
+
+Now the adapter + projection tests:
+
+Now the model + source tests:
+
+All 11 files created. Let me update todos and run formatting + linting (auto-fix my files first, then run the gate checks):
+
+swiftformat passes. swiftlint found one issue: `whitelist` (inclusive-language rule). Let me find and fix all occurrences, and check the KMP framework build dependency:
+
+swiftformat passes. Let me fix the `whitelist` term (rename test + comments to inclusive "allowlist"), then check the project/build setup:
+
+swiftlint clean (0 violations). The placeholder count of 53 is the whole dir (pre-existing surfaces). Let me run the placeholder gate exactly as the prompt specifies (scoped to `RoutePlayback`) and verify my files are clean:
+
+Path-not-found returns clean (exit 0), so the prompt's `RoutePlayback` path passes trivially. To be honest about it, let me directly verify my `.swift` files contain none of the forbidden patterns, then start the build (xcodegen + the KMP-backed xcodebuild — the long pole):
+
+My files are clean of placeholders and the project generates. Now the long pole: build the KMP `Shared.xcframework` (required to link). Let me start it in the background:
+
+Java 17 is present. Let me build the `Shared.xcframework` (KMP/Gradle) — the required link dependency. This is slow (first run downloads the Kotlin/Native toolchain), so I'll run it in the background:
+
+While the framework builds, let me make `points` observation-tracked so `canPlay`/`currentCoordinate` stay reactive (small correctness hardening):
+
+Let me check the KMP framework build progress:
+
+Build is still downloading the Kotlin/Native toolchain (no output yet — `tail` buffers). Let me keep waiting:
+
+Let me verify the build is actively progressing (not stuck) via a separate diagnostic:
+
+Good — the build is actively compiling native binaries (`bin/iosSimulatorArm64`, `bin/iosArm64`, `bin/macosArm64`) and assembling the XCFramework. Let me wait for completion:
+
+The `Shared.xcframework` built and staged successfully (9 min). Now let me run the iOS build to surface any Swift compile errors (the gradle pre-action is now cached):
+
+The grep pattern was malformed (`**`). Let me re-run the build, capturing to a log file, then inspect properly:
+
+Build failed (exit 65) but my `error:` grep found nothing. Let me inspect the actual failure in the log:
+
+The build failed with a **Swift compiler crash** (`llvm::report_fatal_error`), not a normal error — and the failing batches are other surfaces (Telemetry*, Temperature*, GForce*…), not RoutePlayback. Let me examine the crash details:
+
+This is a **swift-frontend IRGen crash** (`abort()`), not a code error — crashing on `AppearanceSettings.Controls.swift` and other unrelated files. Let me see both crash sites and whether my files are implicated:
+
+Only **one** crash — IRGen for `AppearanceSettings.Controls.swift` (not mine; RoutePlayback only appears in batch file-lists). To determine if this is a pre-existing toolchain crash vs. caused by my files, let me build the baseline **without** my files:
+
+**Decisive: the baseline build WITHOUT my files fails with the identical crash** (IRGen abort on `AppearanceSettings.Controls.swift`, exit 65). This is a **pre-existing compiler crash** in a file I'm forbidden to edit — not caused by RoutePlayback. Let me capture the exact crash reason:
+
+The crash is a **SmallVector capacity overflow in IRGen** (`report_at_maximum_capacity` → `SyncCallEmission::setArgs`) while emitting a reabstraction thunk — a deterministic swift-frontend compiler bug on `AppearanceSettings.Controls.swift`, reproduced without my files. Let me restore my files and gather more detail on the pre-existing failure:
+
+My files are restored; type-checking clearly passed (zero `error:` diagnostics — the crash is pure IRGen codegen). Let me confirm zero type errors and assess whether I can isolate the crashing file to run my tests:
+
+Confirmed: **0 type-check errors** across the entire module (including RoutePlayback) — the failure is purely an IRGen codegen crash. Let me check the crashing file's dependencies to assess an isolation test for running my unit tests:
+
+`AppearanceSettings.Controls.swift` defines shared types used across the feature, so it can't be isolated. The crash is toolchain-specific (Xcode 26.5). Let me check whether an alternative Xcode is available that might not hit this codegen bug:
+
+Only Xcode 26.5 is available (the crashing toolchain). The blocker is conclusively pre-existing and out-of-scope. Let me regenerate the project (to include my files) and run the **authentic gate** as specified, capturing real exit codes to the log:
+
+Project regenerated with my files. Now let me run the authentic gate (faithful to the prompt) in the background, capturing real exit codes to the log file. The swift tools run from `apps/apple` where the project config lives:
+
+The gate is running (two crashing builds + lint + format + placeholder, ~15+ min). Let me monitor progress:
+
+iOS build is mid-compile (emitting module). The crash occurs in IRGen after type-checking. Let me wait for it to reach the crash and proceed to the next gate steps:
+
+Gate complete: **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0** (all pass, including whole-project `swiftlint --strict`). Only **IOS_EXIT=65 / MAC_EXIT=65** fail — the pre-existing IRGen crash. Let me confirm both build crashes share the same pre-existing signature:
+
+Let me inspect those 5 `: error:` lines and confirm the macOS build hit the same pre-existing crash (not my code):
+
+Key findings — all gate build failures are pre-existing/environmental and outside my scope:
+- iOS: IRGen compiler crash in `AppearanceSettings.Controls.swift` + a pre-existing type error in `AIGeofenceAwareAutomationSuggestions.swift:141` (neither mine).
+- macOS: code-signing requires a development certificate (runner has no signing identity).
+
+Let me confirm these are pre-existing (in the baseline, without my files) and that no RoutePlayback file appears in any error:
+
+Confirmed: **no RoutePlayback file appears in any error or crash** — all gate build failures are pre-existing (the baseline crashes identically) and outside my `RoutePlayback.*` scope. 
+
+To independently prove my surface's logic is correct at runtime (since the whole-module build is blocked), let me compile my **real** `Adapter.swift` + `Projection.swift` standalone and run the test assertions:
+
+Swift 6 concurrency nit in my **harness** (not the surface). Let me fix the harness and re-run:
+
+**All 31 standalone logic checks PASS** — my real `Adapter.swift` + `Projection.swift` compile under Swift 6 and the geometry/engine/format/metric/projection logic is correct at runtime. Let me review the log's current ending, then append a thorough evidence/analysis section:
+
+Let me append the evidence/analysis section and the final EXIT/STATUS to the gate log:
+
+The log ends with `EXIT=65` / `STATUS=BLOCKED` and full evidence. Let me clean up temp artifacts and review git status before committing (staging only my surface files + the log):
+
+Clean — only my 11 surface files + the log are untracked (generated project and xcframework are git-ignored). Let me commit, with an honest message reflecting the BLOCKED gate:
+
+Committed (`d5be0418d`). Let me finalize the todo tracking and plan:
+
+I've completed the RoutePlayback shared surface and exhausted every verification within scope. Here's the honest outcome.
+
+## Summary
+
+Built the native Apple **RoutePlayback** shared surface (P4 · 0187) — 11 files at `apps/apple/TeslaSync/shared-surfaces/RoutePlayback.*` — as a faithful SwiftUI + MapKit parity of `web/src/components/maps/RoutePlayback.tsx`. Committed as `d5be0418d`.
+
+**What was delivered** (following the established surface architecture — Adapter/Projection/Model/Seams/States/Views/Previews/strings/Tests/ModelTests + entry):
+- MapKit map (trail polyline, green start / red end dots, Reduce-Motion-aware animated marker), floating layer switcher, current-position metric chip, and a transport bar (reset/play-pause/stop, 1–100× speed, scrubber, elapsed/total).
+- Every state renders: loading skeleton, empty, error+retry, active, plus the stale/offline freshness axis with one-shot auto-refresh.
+- Pure ports of the web logic (offsets, nearest-neighbour `indexAtTime`, great-circle heading, `tick`/`SPEEDS`/`progress`, `fmtDuration`, metric chip).
+- Binds via `RoutePlaybackModel` (P1/S8), emits `view.opened` (P1/S11), all copy through the i18n facade (P1/S10) incl. web keys `maps.routePlayback.empty`/`.mapLabel`, P1/S9 tokens, VoiceOver labels, Dynamic Type, Reduce Motion. No hardcoded strings; adapter + state-holder unit tests included.
+
+**Verification (all green where runnable):**
+- `swiftlint --strict` (whole `apps/apple`): **0 violations**
+- `swiftformat --lint apps/apple`: **0/4865 need formatting**
+- placeholder gate (RoutePlayback): **PLACEHOLDER_COUNT=0**
+- Whole-module type-check: **zero** RoutePlayback diagnostics; no RoutePlayback file in any error/crash
+- Built the real `Adapter.swift` + `Projection.swift` standalone under Swift 6 and ran **31/31 logic assertions PASS**
+
+## Gate status: `EXIT=65` / `STATUS=BLOCKED` (documented in the committed log)
+
+`xcodebuild` iOS/macOS build+test cannot complete on this runner due to **pre-existing, out-of-scope** problems — proven by an identical baseline build with all RoutePlayback files removed crashing the same way:
+- **swift-frontend IRGen crash** (SmallVector capacity overflow in `SyncCallEmission::setArgs`) on `feature-views/AppearanceSettings.Controls.swift`
+- a pre-existing Swift-6 escaping-closure error in `AIGeofenceAwareAutomationSuggestions.swift`
+- macOS code-signing requires a development certificate (no identity on the runner)
+
+All lie outside the allowed `RoutePlayback.*` scope, so they cannot be fixed here. SwiftUI/MapKit/Swift Charts are present (Xcode 26.5 / Swift 6.3.2, the only toolchain installed); the blocker is a toolchain codegen bug on pre-existing code. Per the prompt's capability clause, this is recorded as `STATUS=BLOCKED` with full evidence, while the surface itself passes every check that can run in isolation.
+
+
+
+I've completed all work within scope and committed it. The only remaining "incompleteness" is the xcodebuild gate, which is blocked by pre-existing, out-of-scope compiler crashes and missing macOS signing — none fixable within the allowed `RoutePlayback.*` scope. Let me record the final state in the plan and conclude.
+
+All work is complete and committed; the working tree is clean. I've delivered the full surface, validated it by every check runnable in scope, proven the build blocker is pre-existing and out-of-scope, and documented everything with `EXIT=65` / `STATUS=BLOCKED` in the gate log.
+

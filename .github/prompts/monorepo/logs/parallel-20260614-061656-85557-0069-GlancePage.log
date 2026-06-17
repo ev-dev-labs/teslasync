@@ -1,0 +1,168 @@
+I'll start by exploring the codebase to understand the web source, the Apple app structure, and the supporting infrastructure.
+
+Let me examine an existing page implementation, navigation, design tokens, and supporting infra in parallel.
+
+The actual pages live under `Sources/Features/`. Let me study an existing page end-to-end plus the shared infrastructure.
+
+Path approach is confirmed by the Powershare log. Let me read the rest of the Powershare log, the gate contract, tests, and the data/facade layer in parallel.
+
+Let me examine the design tokens, chart wrapper, shared components, SI converters, and the test/registration pattern.
+
+Full toolchain is available (Xcode 26.5, swift 6.3.2, swiftlint, xcodegen, pwsh). Let me read the remaining building blocks: buttons, SI converters, freshness indicator, app registration, tests, and the string catalog.
+
+Let me check how sibling pages thread unit preferences into their views, and confirm the metric defaults.
+
+Let me check the swiftlint config, whether the Shared framework is staged, and the parity manifest record.
+
+Confirmed: 30 parity items match exactly. The Shared.xcframework isn't staged yet (needed for build). Let me check the build script and toolchain, then kick off the framework build early since it's the long pole.
+
+JDK 17 + Gradle wrapper are available. Let me kick off the Shared.xcframework build (the ~7-min long pole) in the background now, and set up my plan and todos.
+
+KMP build running. Now creating the Dashboard feature files. Starting with the models and formatters.
+
+Now the sections (battery gauge, metric cards, quick actions, status badge, freshness, skeleton).
+
+Let me adjust `GlanceMetricCard` to accept a `Text` value (security/location values are localized, range/temp are verbatim), then write the main page.
+
+Now the main page view.
+
+Now wiring the `.glance` route into `AppRoute` and registering it in the app.
+
+Now I'll add the string catalog keys. Let me inspect the xcstrings formatting first to match it exactly and minimize the diff.
+
+The string entries use ` : ` separators and append in insertion order (not sorted). I'll insert the 21 keys right before the `strings` object closes, via a precise Python script.
+
+All 21 keys inserted and validated. Let me check the KMP build progress, then write the tests.
+
+KMP build still compiling. Writing the tests meanwhile.
+
+All source files written. Let me check the KMP build and run swiftlint + placeholder scan on the new code in parallel (these don't need the framework).
+
+One violation: the test class body is too long (279 > 250). I'll split the pure-derivation/formatter tests into a separate class.
+
+Now the second test class for pure derivations and formatters.
+
+Now re-run swiftlint on all new files and the placeholder scan, and check the KMP build.
+
+Placeholder scan clean (0 violations, 1 documented allow). Waiting for swiftlint.
+
+Swiftlint passes: **0 violations across 11608 files** (`--strict`), and placeholder scan is clean. Let me check the KMP framework build.
+
+KMP build still compiling (Kotlin/Native multi-arch, ~7min). Let me prepare the ledger update while it builds.
+
+Ledger updated. Let me verify the ledger diff is minimal and check the KMP build.
+
+KMP framework built (15m31s) and staged. Ledger diff is clean. Now generating the Xcode project and building.
+
+Project generated. Let me first establish ground truth: build the macOS app **without** exclusions to see exactly which files (if any) fail on this tree, and confirm my new files compile.
+
+Ground truth confirmed: the **only** build errors are in the pre-existing, out-of-scope `Input.Previews.swift` (lines 88/101). Let me verify no Glance/AppRoute errors exist anywhere, then build with that file isolated.
+
+Confirmed: the **only** error file is the pre-existing `Input.Previews.swift`; zero errors from my change. Now building with that one file isolated (expected to succeed).
+
+Let me peek at the build log progress directly.
+
+Build progressing through compilation, 0 errors so far. Let me keep waiting for completion.
+
+Still compiling (0 errors, 3894 log lines, no link phase yet). The app target is large. Continuing to wait.
+
+Mid-compile on a large batch (no new log lines, 0 errors). Let me wait longer.
+
+Build is doing a full cold compile of the very large app target (0 errors). This is legitimately slow. Continuing to wait.
+
+Progressing now (13924 lines, 85 active compiler processes, 0 errors). Let me keep waiting.
+
+All 7 Glance files compiled into the macOS target, 0 errors. Waiting for the final link + result.
+
+Still compiling (20190 lines, 0 errors). Large target, cold build. Continuing to wait.
+
+**macOS BUILD SUCCEEDED** — 0 errors, all 7 Glance files compiled. Now running the model tests (isolating the two pre-existing breaker files, matching the documented approach).
+
+**27 tests passed, 0 failures, TEST SUCCEEDED.** Let me verify the 7 "error:" log lines aren't from my code.
+
+The 7 "error:" lines are harmless macOS XPC runtime log noise — none in my code. **macOS: build + 27 tests pass.** Now the iOS Simulator build (exercises the `#if os(iOS)` adaptive branch). Let me find an available simulator.
+
+iPhone 17 Pro is available. Starting the iOS Simulator build (it recompiles for the simulator arch — slow). I'll write the evidence log while it builds.
+
+iOS build running in background. While it builds, let me verify the overall change set and string-catalog diff are clean.
+
+Change set is exactly as intended (231 insertions to xcstrings, additions only; 9 new files; 3 surgical edits + ledger). Let me confirm adding `.glance` doesn't break any existing route-count test.
+
+`.glance` has a unique segment and resolves to `.overview`, so `RouteTests` stays green; no test hardcodes the route total. Let me check the iOS build progress.
+
+iOS build progressing (0 errors). Let me wait for it to advance.
+
+iOS build in the large batch-compile phase (output stalls, 0 errors). Waiting.
+
+Build actively compiling (35 processes, ~34% CPU each). Not stuck. Waiting more.
+
+iOS build advanced to 17798 lines, 0 errors, nearing completion. Let me wait for the result.
+
+All 7 Glance files compiled for iOS (0 errors); linking in progress. Let me wait for the final result.
+
+Final link phase (0 errors). Let me wait for completion.
+
+**iOS BUILD SUCCEEDED** — 0 errors, all 7 Glance files compiled (including the `#if os(iOS)` adaptive branch). Now a final regression check: since I edited `AppRoute`, let me run `RouteTests` alongside my tests.
+
+**All 35 tests pass** (Glance 27 + RouteTests 8 regression), TEST SUCCEEDED. Every gate is green. Now writing the evidence log.
+
+Evidence log written (EXIT=0 / STATUS=DONE). Let me verify the generated project is git-ignored, clean up temp logs, and review the full change set before committing.
+
+Everything is clean: the generated `.xcodeproj` is git-ignored, and the change set is exactly the intended files. Committing now with the correct paths (the prompt's template path is corrected to the real `Sources/` convention).
+
+All 14 files staged (~1948 insertions). Committing.
+
+Committed (`887fd479a`). Let me finalize todos and confirm the working tree is clean.
+
+All todos complete, working tree clean, ledger green (30/30 both targets). The task is fully done and verified.
+
+All 8 todos done. The P7 GlancePage parity artifact is complete and independently verified green.
+
+## Summary
+
+Implemented **`GlancePage`** — a native SwiftUI/HIG parity of `web/src/features/dashboard/pages/GlancePage.tsx` (route `/glance`), adaptive across macOS + iOS.
+
+**Files** (under the real compiled convention `apps/apple/Sources/Features/Dashboard/` — the prompt's `TeslaSync/Features/` path is not a `project.yml` source root, same resolution as the Powershare P7):
+- `GlanceModels.swift`, `GlanceFormat.swift`, `GlancePageModel.swift` (+`.Sample`), `GlancePage.swift` (+`.Sections`), `GlanceRouteRegistration.swift`, plus 2 XCTest files.
+- Edited `AppRoute.swift` (+`.glance`), `TeslaSyncApp.swift` (registration), `Localizable.xcstrings` (+21 keys, additions only), `apple-ledger.json` (+2 rows), and the evidence log.
+
+**Parity: 30/30** — 5 panels (no-vehicle GlassPanel, Range, Interior, Security, Location), 1 RadialGauge (native ring, `batteryColor` band, no WKWebView), 4 states (loading/empty/error/success), 20 `glance.*` strings — plus every anonymous region (status badge, 3 quick actions with per-command in-flight gating, freshness chip with >2-min staleness, Open-full-app link). Bound through an `@Observable` model + `GlanceDataSource` seam (no networking in the view); SI range (m) and temp (°C) convert only at the render boundary via the shared `Units` facade.
+
+**Gate — all green:**
+- swiftlint `--strict`: **0 violations / 11608 files**
+- placeholder scan: **0** (1 documented allow)
+- Shared.xcframework built + staged
+- macOS build **SUCCEEDED**, iOS-Simulator build **SUCCEEDED** (all 7 Glance files compiled, 0 errors attributable)
+- **35 tests pass** (Glance 27 + RouteTests 8 regression)
+- Committed as `887fd479a`; `EXIT=0` / `STATUS=DONE`
+
+The only blocker to a literal all-green `xcodebuild build test` is two pre-existing, out-of-scope, Xcode-26.5-incompatible files (`Input.Previews.swift`, `GDPRExportPageModelTests.swift`) — verified as the *sole* failures in a clean no-exclusion build, isolated via `EXCLUDED_SOURCE_FILE_NAMES`, and fully disclosed (not red-as-green).
+
+The task is fully complete and verified — all 8 todos done, committed as `887fd479a`. Marking complete.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-dashboard-GlancePage.log       | 230 ++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 231 ++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   5 +-
+ .../Sources/Features/Dashboard/GlanceFormat.swift  |  62 +++++
+ .../Sources/Features/Dashboard/GlanceModels.swift  | 245 +++++++++++++++++++
+ .../Features/Dashboard/GlancePage.Sections.swift   | 243 +++++++++++++++++++
+ .../Sources/Features/Dashboard/GlancePage.swift    | 268 +++++++++++++++++++++
+ .../Dashboard/GlancePageModel.Sample.swift         |  85 +++++++
+ .../Features/Dashboard/GlancePageModel.swift       | 159 ++++++++++++
+ .../Dashboard/GlanceRouteRegistration.swift        |  24 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Dashboard/GlanceDerivationsTests.swift         | 168 +++++++++++++
+ .../Features/Dashboard/GlancePageModelTests.swift  | 210 ++++++++++++++++
+ apps/parity/apple-ledger.json                      |  20 +-
+ 14 files changed, 1948 insertions(+), 3 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-dashboard-GlancePage.log
+ create mode 100644 apps/apple/Sources/Features/Dashboard/GlanceFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/GlanceModels.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/GlancePage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/GlancePage.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/GlancePageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/GlancePageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/GlanceRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Dashboard/GlanceDerivationsTests.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Dashboard/GlancePageModelTests.swift

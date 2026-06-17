@@ -1,0 +1,40 @@
+I'll start by exploring the repository structure and the key files for this task.
+
+The web page wraps `<GasPriceSettings />`. I need to look at that component for the actual UI, plus the Apple app structure. Let me explore in parallel.
+
+`GasPriceSettings` is a separate component (likely its own parity unit). This page unit only declares 2 strings. Let me examine the Apple app structure, the parity ledger, and search the manifest for these units.
+
+Let me get a clearer picture of the Apple project structure and find existing page implementations to follow the established pattern.
+
+There's an existing Admin pages pattern (tests reference RbacMatrixPage, GDPRExportPage, LiveSignalInspectorPage). Let me find those implementations and the project config to follow the established convention.
+
+Now I understand: the real app source is under `apps/apple/Sources/Features/Admin/`, and `GasPriceSettings` already exists as a component unit. Let me examine the project config, the full Admin file list, and the GasPriceSettings component.
+
+Now I understand the established pattern clearly. Each Admin page has `Page.swift`, `PageModel.swift`, `RouteRegistration.swift`, sample data, and tests. Let me study a representative page (GDPRExport — similar simple structure) and the existing GasPriceSettings Apple component, plus the routing system.
+
+Excellent — the patterns are very clear now. The Apple `GasPriceSettings` component already exists in `feature-views/`. The page should render a title/subtitle header and embed it. Let me examine the routing system, the GasPriceSettings model, the string catalog, the ledger, and a test example.
+
+Now let me examine the localization catalog, the route registry/parser, how registrations are wired into the app, the ledger, and the TSPageTitle component.
+
+`gas.title`/`gas.subtitle` are not yet in the main catalog. Registration is composed in `TeslaSyncApp.swift`. Let me examine the route parser, the GasPriceSettings adapter/support files (to find a default source), the ledger, the placeholder-scan gate, and the web App.tsx grouping.
+
+Let me check Xcode/swiftlint availability (determines if gate runs or is BLOCKED), examine the GasPriceSettings previews/states for how to construct the embedded model, the typography components, and the web routing group.
+
+Xcode 26.5, xcodegen, swiftlint, swift 6.3, and pwsh are all available — so the gate can run for real (STATUS=DONE achievable). Now let me confirm the web routing group, the typography components, the placeholder gate rules, and a route-registration test pattern.
+
+Let me check the web nav group context, the routing test (to ensure new routes must be registered), an existing RouteRegistration test, and the xcstrings entry format.
+
+Now I have the full picture. Web `/gas-price` is in the **Integrations** group (next to API Keys, which maps to apple's `.system`). Let me read the GasPriceSettings projection/input types and find all exhaustive `AppRoute` switches that need the new case.
+
+Only `AppRoute.swift` has exhaustive `AppRoute` switches (`systemImage`, `group`). Views come from the registry, so I'm safe. Let me verify the `route.*` sidebar-title key pattern and the xcstrings entry format.
+
+I have the exact xcstrings format. Let me look at the app shell (ContentView) to confirm how pages are hosted, then I'll write a plan and start implementing.
+
+The shell hosts the page and sets `.navigationTitle(route.titleKey)`. Now let me read the swiftlint config (strict gate) and an existing completed log to match format.
+
+Let me view the PARITY section format in the sibling log, check git status/branch, and whether the pre-existing broken files mentioned still exist.
+
+I now have a complete understanding of the architecture and conventions. Let me set up tracking and check build feasibility (Shared.xcframework, baseline lint).
+
+`Shared.xcframework` isn't built (only `.gitkeep`), and no `.xcodeproj` is generated — a full `xcodebuild` needs the KMP/Gradle toolchain. Let me check whether that toolchain is available and how feasible a real build is.
+

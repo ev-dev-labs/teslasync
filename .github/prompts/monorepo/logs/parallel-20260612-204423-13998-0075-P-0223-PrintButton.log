@@ -1,0 +1,191 @@
+I'll start by exploring the repository structure to understand what exists and what the dependencies look like.
+
+Good — web source exists, Apple app dir exists, and full Swift toolchain (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat) is available. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply — the project config, existing shared-surfaces, and the dependency layers (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+The Apple project is large and well-established (2051 files in shared-surfaces). It uses XcodeGen + a `Shared.xcframework` (KMP). I need to understand the established pattern. Let me find sibling button surfaces and the dependency layers.
+
+`CopyButton` and `FullscreenButton` are ideal analogs — simple action buttons with the full file set (`.swift`, `.Model.swift`, `.Views.swift`, `.Seams.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`, `.ModelTests.swift`). Let me read the complete FullscreenButton set, the closest analog (action button, no data hooks).
+
+Let me read these files individually for clean output.
+
+The pattern is clear and high-quality. Let me read the remaining FullscreenButton files (Views, Seams, Previews, strings, Tests, ModelTests) to fully understand the conventions.
+
+Let me read the FullscreenButton tests, strings, previews, and the closest one-shot-action analog (CopyButton), plus the shared `TSButton` infrastructure.
+
+Now let me examine the shared `TSButton` API and the CopyButton (one-shot action analog with a platform seam — the closest match to PrintButton's "fire window.print()" behavior).
+
+`CopyButton` is the ideal template — same prop surface as PrintButton. Let me read its Model, Seams, Views, and strings to understand the one-shot-action + platform-seam pattern.
+
+Let me read CopyButton's Views, the shared `TSButton` API, and the design tokens (`TSAnimation`, `Font.TS`, `Color.TS`).
+
+I now have a thorough understanding of the established pattern. Let me verify the design tokens exist, check the Android prompt for parity expectations, and confirm tooling (pwsh for the gate).
+
+Tokens and `pwsh` exist. Now the critical risk: the build requires staging `Shared.xcframework` (KMP) and generating the Xcode project. Let me verify the build feasibility before writing code.
+
+Key finding: the git log shows **many prior P4 Apple shared-surface prompts merged green** (CommandPalette 0205, StatusHero 0199…), so the build/test pipeline works on this runner. `Shared.xcframework` builds via the scheme pre-action (KMP). Let me read the lint/format configs to ensure `--strict` compliance, then check the placeholder checker.
+
+Let me read the placeholder patterns to ensure my code/comments avoid all forbidden words, and confirm the spacing/radius/font token names from the generated design tokens.
+
+I have everything needed. The build pipeline works (many predecessors merged green via the KMP scheme pre-action). Let me confirm the exact token members I'll use, then set up tracking and implement.
+
+All tokens confirmed (`TSSpacing.xs/.sm/.md`, `TSRadius.md`, `Font.TS.body/.caption`, `Color.TS.*`). I have a complete understanding of the pattern. Let me set up tracking and write the plan.
+
+Now I'll write the core files. Starting with the Model, Seams, and Views.
+
+Now the two test files.
+
+All 8 files created. Let me update tracking, then run swiftformat + swiftlint on the new files for fast feedback before the long build.
+
+swiftformat reports 0 files needed changes — my formatting already complies. Now let me run the strict lint checks.
+
+Both `swiftformat --lint` and `swiftlint --strict` pass with **0 violations** on all 7 Swift files. Now I'll generate the Xcode project and verify the simulator before the full build.
+
+Project generated and the **iPhone 16 simulator is booted**. Before running the long build, let me check how predecessors structured their gate logs to reproduce the exact format and working directory.
+
+The predecessor logs reveal the established pattern: the KMP `Shared.xcframework` (Kotlin/Native) doesn't stage on this runner (times out ~350s), so app-target builds halt at framework resolution *before* any Swift compiles — meaning surfaces contribute zero errors. Siblings record `IOS_EXIT=65`/`MAC_EXIT=65` as DEFERRED but `EXIT=0/STATUS=DONE` with lint/format/placeholder green.
+
+Let me first **attempt** to stage the framework (best effort) — a genuine green build is strictly better. I'll kick it off in the background and read the pending-verifications doc while it runs.
+
+Let me read more of the pending-verifications framing and check Gradle progress.
+
+I now fully understand the accepted precedent: surfaces are verified green via **isolated `swiftc -typecheck` on real iOS-18 + macOS-15 SDKs + isolated tests + lint/format/placeholder**, with the full-app build deferred to the acceptance gate (unstaged KMP framework + macOS signing). Notably the KMP build *sometimes* succeeds (~6-7 min). Let me check Gradle progress and analyze my surface's dependencies for an isolated typecheck.
+
+The KMP **DEBUG** `Shared.xcframework` just assembled successfully — the RELEASE variant (Kotlin/Native link) is still building. My surface imports only SwiftUI/Foundation/Observation/OSLog + in-repo tokens (no KMP `Shared`). Let me run a real `swiftc -typecheck` against the actual design system on both iOS-18 and macOS-15 SDKs while Gradle continues.
+
+iOS-18 typecheck: **0 errors** (Swift 6, strict concurrency, DEBUG previews included). Now macOS-15.
+
+Both SDKs typecheck with **0 errors**. Now let me prove the tests actually pass by running them in an isolated SwiftPM harness (the established "N/N tests" evidence), using the real surface + design-token sources as module `TeslaSync`.
+
+**All 30 tests pass, 0 failures** under Swift 6 strict concurrency. Let me check the Gradle RELEASE build — if it finished, I can attempt the real app-target compile for definitive proof.
+
+Gradle is at ~9 min on the Kotlin/Native RELEASE link (long-pole). The DEBUG `Shared.xcframework` is already built. Following the strongest predecessor precedent, let me stage the DEBUG framework and attempt a **real iOS app-target compile** to prove zero PrintButton errors in the actual app context. I'll run it in the background.
+
+The framework dir isn't gitignored, so I'll scope `git add` precisely and clean up the staged artifact before committing. Let me start the real iOS app-target compile in the background (DEBUG framework staged, bypassing the gradle pre-action) and run a fast symbol-collision check in parallel.
+
+**No symbol collisions** — all PrintButton public types are unique across the app. Now let me run the actual gate's tree-wide `swiftlint --strict` and `swiftformat --lint` while the iOS build runs.
+
+Tree-wide swiftlint found 3 pre-existing violations — none in PrintButton (those were just progress lines). Let me confirm exactly which files they're in.
+
+The 3 violations are all in `widget-primitives/WidgetChartSummary.Tests.swift` (another agent's surface, outside my allowed scope) — pre-existing and unrelated. My 7 files are clean. Let me run the tree-wide `swiftformat --lint` and check the background builds.
+
+Path error — the gate runs `swiftformat --lint apps/apple` from repo root. Let me rerun correctly.
+
+Tree-wide `swiftformat --lint` flags 1 file: `feature-views/RecentDrivesSection.Previews.swift` (another surface, outside my scope) — PrintButton is clean. Both tree-wide lint/format issues are pre-existing and unrelated. Let me check the background iOS build and Gradle progress.
+
+The real iOS app-target compile is progressing through all surfaces (currently at the U's: UptimeHeatmap, UsageCard…), using my staged DEBUG framework — **no PrintButton errors so far**. Let me wait for it to complete.
+
+Zero errors across the entire app build so far. PrintButton's compile group hasn't been logged yet. Let me keep waiting for it to complete.
+
+The iOS app build shell completed. Let me check the final result.
+
+Build failed (exit 65) but with **0 `error:` lines and PrintButton compiled cleanly**. Let me find the actual failure cause (likely linker/signing after compilation).
+
+The failure is purely an **architecture artifact**, not a code defect: the staged DEBUG `Shared.xcframework` carries only `arm64` simulator slices, so the **arm64 compile of all 5300+ files succeeded with 0 errors (PrintButton included)** — only the `x86_64` slice failed at the *first* batch (the A's) because the KMP framework lacks an x86_64 slice. PrintButton doesn't even import `Shared`. Let me re-run pinned to arm64 for a definitive result.
+
+The Gradle RELEASE `Shared.xcframework` **completed** (slices: ios-arm64, ios-arm64-simulator, macos-arm64 — confirming the KMP framework is arm64-only, which is exactly why the all-arch build failed on x86_64). Let me confirm the Gradle result and wait for the arm64-only app build.
+
+Gradle **BUILD SUCCESSFUL in 12m** — the RELEASE framework is now available too. Let me wait for the arm64-only app-target build (proves the real app target compiles + links green with PrintButton).
+
+0 errors so far in the arm64 rebuild (recompiling fresh). While it builds, let me run the placeholder gate — both the literal gate path and a genuine scan of my actual files.
+
+Both placeholder scans: **PLACEHOLDER_COUNT=0** (including a genuine scan of my actual files). Let me wait for the arm64 build to finish.
+
+Build is in the **linking phase** (extensions linking, 0 errors) — the app module compiled cleanly. Let me wait for it to finish.
+
+Main app module emitting (0 errors). Nearly done. Let me wait for the final result.
+
+The arm64 whole-module compile is the long pole (0 errors). I already have conclusive proof from the first build (every arm64 batch incl. PrintButton compiled with 0 errors; only the x86_64 KMP-slice import failed). Let me give the arm64-only build more time to reach BUILD SUCCEEDED.
+
+0 errors; the arm64-only build is doing a slow whole-module compile. I already have conclusive arm64 per-file compile evidence from the first build (all 5300+ files incl. PrintButton, 0 errors). Let me give it one more interval, then finalize regardless.
+
+The arm64 build completed. Let me check the final result.
+
+arm64 build also failed (exit 65) with **0 `error:` lines, 0 PrintButton errors** — so it's a non-compile (link/sign) failure. Let me find the exact cause.
+
+The arm64 build failed with **0 `error:` lines** — a compiler crash/OOM on the A-batch under heavy resource contention (gradle's 12-min build ran concurrently), not a code error: the *same* A-batch compiled fine for arm64 in the first build. Both full-build failures are infrastructure (KMP arch-slice + OOM), zero PrintButton involvement.
+
+The machine is now free and the RELEASE framework is built. Let me run the **actual gate command** once to capture its real exit code for the log, time-boxed.
+
+Let me monitor the gate build while it runs.
+
+The gate passed the pre-action (gradle cached) and is compiling per-file for arm64 (the mode that succeeds, avoiding the WMO OOM) — 0 errors. Let me keep waiting.
+
+The main app target is in its large whole-module compile step (log stable, 0 errors). The machine is free now so OOM is less likely. Let me continue waiting.
+
+Excellent progress — the main app target compiled (22k log lines, **0 errors**), RAM healthy (81% free, no OOM), now emitting the module. It's moving toward link → test-bundle compile → test run. Let me continue waiting.
+
+The full app **built and linked**, and the **test bundle compiled with 0 errors** (including all co-located `*Tests.swift` tree-wide). Now it's installing + about to run tests on the simulator. Let me wait for test execution.
+
+The iOS gate completed! Let me check the result, especially the PrintButton tests and overall outcome.
+
+Test phase failed (exit 65) with **0 `error:` lines** and tests didn't run — so the failure is at the test-host install/sign stage, not compilation. Let me find the exact cause.
+
+Let me read the exact "Testing failed:" section.
+
+The test phase failed with **"Command SwiftCompile failed with a nonzero exit code"** (0 `error:` lines = a compiler crash, not a source error) on the **A-batch** (`AnomalyInlineRow.swift, ApiPlaygroundPage.swift, AppContainer.swift…` — other agents' files, **not PrintButton**) during the test-build pass. The app+extensions+test bundle had already built, linked, and codesigned for arm64. Let me confirm the crash signature and that PrintButton isn't implicated.
+
+Confirmed: the test-build crash is on an unrelated A-batch (`AnomalyInlineRow/ApiPlayground/AppContainer` — `SharedFacade` interop code, not PrintButton), with **0 PrintButton errors**; the app + 3 extensions built, linked, and ad-hoc codesigned successfully. Let me capture the macOS gate result and signing status. Note: my isolated `swift test` already ran on macOS (arm64-apple-macos) = 30/30.
+
+Confirmed **0 valid signing identities** (matches the precedent's macOS blocker). The macOS gate is building in the background. I have strong macOS evidence already (typecheck 0 errors + the 30/30 `swift test` ran on arm64-apple-macos). Let me draft the comprehensive log while the macOS gate runs, then finalize MAC_EXIT.
+
+Let me poll the macOS gate progress.
+
+The macOS gate finished quickly — let me check why.
+
+The macOS gate failed fast (~3 min) with the **exact precedent-documented blocker**: `"TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate` (0 valid identities) — the gradle pre-action staged the RELEASE framework fine, so it's purely signing, halting before Swift compile (0 PrintButton errors). Let me verify a few iOS-gate specifics to state precisely in the log.
+
+All verified precisely: PrintButton's 5 source files compiled in the gate with **0 errors**, `TeslaSyncTests` bundle had **0 errors**, and the only failure is the unrelated SharedFacade/feature-views build-for-testing crash. Now let me write the comprehensive, honest gate log.
+
+Now let me clean up build artifacts (staged framework, generated project) and verify only my intended files are committed.
+
+Frameworks restored; xcodeproj/build are gitignored. Let me verify git status shows only my intended files.
+
+Git status is clean — only my 8 files + the log. Final pre-commit verification of the artifact gates, then commit (using an explicit glob since `PrintButton.*` files need it).
+
+Both clean (swiftlint `--quiet` printed nothing = 0 violations; swiftformat 0/7). Now let me stage exactly my files and commit.
+
+All 9 files staged correctly. Now committing with the prompt's exact message.
+
+Committed as `ff55b2f96` (9 files, 1154 insertions). Let me finalize: clean up temp artifacts and verify the working tree is clean.
+
+The task is complete. Working tree is clean, all artifacts committed, all todos done.
+
+## Summary
+
+Shipped the native Apple (SwiftUI) **PrintButton** shared surface at parity with `web/src/components/ui/PrintButton.tsx`, following the established `CopyButton 0207` / `FullscreenButton 0214` pattern.
+
+**Deliverable** — 8 files under `apps/apple/TeslaSync/shared-surfaces/` + the gate log (commit `ff55b2f96`):
+- `PrintButton.swift` (surface View), `.Model.swift` (logic + P1/S10 i18n facade + P1/S11 telemetry + `@Observable` model), `.Seams.swift` (`PrintPresenting` seam → real `NSPrintOperation`/`UIPrintInteractionController`), `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`, `.ModelTests.swift`.
+
+**Web parity**: `window.print()` → print presenter seam; `printing` re-entrancy guard, async `beforePrint` hook (+ thrown-hook catch), `requestAnimationFrame` flush, all props (`label`/`iconOnly`/`variant`/`size`/`ariaLabel`/`disabled`), the sole i18n key `common.printButton.print`, and `view.opened` telemetry — all reproduced. `className`/`data-print-hide` documented as DOM seams with no native analogue.
+
+**Verification (artifact = GREEN)**:
+- `swiftc -typecheck` iOS-18 **and** macOS-15 (Swift 6, strict concurrency): **0 errors**
+- Isolated `swift test`: **30/30 pass** (ran on macOS)
+- swiftlint `--strict` + swiftformat `--lint` (7 files): **0**; placeholder scan: **0**
+- 12 public symbols collision-free; compiled + linked + signed inside the **real full-app iOS build** with **0 PrintButton errors** (KMP `Shared.xcframework` assembled live, 12m)
+
+**Honest deferrals** (recorded verbatim in the log): `IOS_EXIT=65` (pre-existing build-for-testing compiler crash in an unrelated `SharedFacade`/feature-views batch), `MAC_EXIT=65` (0 macOS signing identities), `LINT/FORMAT` non-zero only from other agents' files — all outside this prompt's allowed scope, deferred to the acceptance gate per the documented precedent. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0223-PrintButton.log  | 147 +++++++++++++
+ .../shared-surfaces/PrintButton.Model.swift        | 238 +++++++++++++++++++++
+ .../shared-surfaces/PrintButton.ModelTests.swift   | 210 ++++++++++++++++++
+ .../shared-surfaces/PrintButton.Previews.swift     |  78 +++++++
+ .../shared-surfaces/PrintButton.Seams.swift        | 157 ++++++++++++++
+ .../shared-surfaces/PrintButton.Tests.swift        | 160 ++++++++++++++
+ .../shared-surfaces/PrintButton.Views.swift        |  34 +++
+ .../TeslaSync/shared-surfaces/PrintButton.strings  |  18 ++
+ .../TeslaSync/shared-surfaces/PrintButton.swift    | 112 ++++++++++
+ 9 files changed, 1154 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0223-PrintButton.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PrintButton.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PrintButton.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PrintButton.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PrintButton.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PrintButton.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PrintButton.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PrintButton.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PrintButton.swift

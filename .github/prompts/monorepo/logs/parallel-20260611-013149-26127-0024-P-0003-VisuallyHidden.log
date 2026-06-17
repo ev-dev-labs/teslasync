@@ -1,0 +1,130 @@
+I'll start by understanding the task and exploring the repository structure to determine what exists and what's possible.
+
+Good — toolchain (xcodebuild, swift, swiftlint, swiftformat) and both web source + Apple app exist. Let me read the web source and explore the Apple project structure.
+
+The web source is an accessibility utility (`sr-only` + live-region announcer). Data source is `useAnnouncer`. Let me read the announcer hook, the `AnnouncerRegion` companion, and explore the existing Apple `shared-surfaces` patterns.
+
+Naming convention is `<Surface>.<Part>.swift`. Let me read the `AnnouncerRegion` companion, the a11y barrel, and examine a complete existing surface to learn the exact file/structure conventions.
+
+There's an existing `AnnouncerRegion` Apple surface — the direct sibling that also binds `useAnnouncer` and uses visually-hidden live regions. This is my canonical template. Let me read all its files.
+
+This is an excellent template. Let me read the remaining AnnouncerRegion files (Views, States, Seams, Previews, strings, Tests, ModelTests) to fully internalize the conventions.
+
+Now the Seams (source seam), Previews, strings catalog, and tests. These complete my understanding of the conventions.
+
+Now the tests, plus the shared tokens/components and project.yml to confirm how files get compiled.
+
+I now fully understand the conventions. Key insight: `VisuallyHidden` is the lower-level a11y utility that `AnnouncerRegion` (surface 0001) builds on, and its data source `useAnnouncer` maps to the existing `Announcer` port. Let me verify the build setup, shared tokens/components, and the placeholder gate before designing.
+
+Only `AnnouncerRegion.*` references the announcer types — confirming each surface is **self-contained** (no cross-surface type reuse). I'll make `VisuallyHidden` fully self-contained with uniquely-named types, reusing only the shared P1/S9 tokens + UI components. Let me confirm the exact token/component APIs, the placeholder gate, and lint config.
+
+Let me read the shared token + component APIs and the placeholder patterns, and check `pwsh`/simulator availability.
+
+`pwsh` and the iPhone 16 simulator are available — the full gate can run. Banned words include "Placeholder", "TODO", "FIXME" (case-insensitive) — I'll avoid these in code/comments. The `Color.TS`/`Font.TS`/`TSSpacing` tokens are in generated design files. Let me locate their exact definitions plus the component APIs.
+
+Now the remaining shared components: Buttons, Badges, Skeletons, States, Motion, Utility (typography helpers like `TSText`, `TSCaption`, `TSPanelTitle`).
+
+Now the States (`TSEmptyState`), Motion (`TSFadeIn`), and Utility (typography roles) components.
+
+I have all the shared APIs. I noticed `TSSkipToContent` exists (web `SkipToContent`) — directly relevant to the `focusable` skip-link mode. Now let me confirm the test target setup in `project.yml` so my `*Tests.swift` files get compiled into the XCTest bundle.
+
+Test bundles pick up `*Tests.swift` from `shared-surfaces` via `includes`. Now I need to understand the build prerequisites: is the `.xcodeproj` pre-generated or built via XcodeGen, and is the KMP `Shared.xcframework` present? This determines whether the baseline even builds.
+
+`Shared.xcframework` (KMP) is **not present** — only a `.gitkeep`. This is the critical build prerequisite. Let me check whether the main app target links it and how it's meant to be built.
+
+The app links a KMP `Shared.xcframework` built by a Gradle/Kotlin-Native pre-build script. This is the key build dependency. Let me check whether the KMP toolchain (`apps/shared`, gradlew, JDK) is available, and read the pending-verifications doc for documented constraints.
+
+Java 17 + gradlew exist, so the KMP framework is buildable in principle (though Kotlin/Native first builds are slow/network-bound). The pending-verifications doc says this code's xcodebuild step is a documented **deferred CI verification** while host-runnable gates stay green. Let me read how prior surfaces handled this and check for AnnouncerRegion precedent.
+
+This reveals the established methodology: when the full-app `xcodebuild` is blocked by KMP/parallel-merge issues, surfaces are verified via an **isolated SwiftPM build + tests** (Swift 6 strict concurrency) plus swiftlint/swiftformat/placeholder. Let me read the full doc.
+
+I now fully understand the proven definition-of-done. The established methodology (across 14+ precedent surfaces, incl. the most-similar `shared-surfaces/0062-withAiFeature`): the surface is verified **green in isolation** (real iOS-18 + macOS-15 `swiftc -typecheck` under Swift 6 strict concurrency + executed test harness + swiftlint/swiftformat/placeholder clean + `xcodegen generate` enumeration), while the full-app `xcodebuild` is deferred to the macOS CI gate (blocked by pre-existing, unrelated KMP framework + cross-surface collisions + signing). Let me verify no symbol collisions and the available SDKs.
+
+I have everything I need. The proven methodology is clear: deliver the surface **green in isolation** (real iOS-18 + macOS-15 `swiftc -typecheck` + executed logic harness + swiftlint/swiftformat/placeholder clean + `xcodegen generate`), with the full-app `xcodebuild` deferred (pre-existing KMP/collision/signing blockers). Let me set up my plan and start building.
+
+Now I'll create the pure-core Adapter file:
+
+Now the Model (state-holder, seams, projection):
+
+Now the Seams (the `useAnnouncer` port, sources, and the accessibility presenter):
+
+The specimen's produced web ARIA attributes are pure, testable data — let me add an `ariaTokens` accessor to the Adapter, then build the Views.
+
+Now the Views file — the shipped `.visuallyHidden()` utility plus the inspector cards and demos:
+
+Now the States, the main surface View, and the Previews:
+
+Now the i18n strings catalog (all keys referenced):
+
+Now the test files. First the adapter/projection/accessibility tests:
+
+Now the model + seams + voicing tests:
+
+All 10 files created. Let me start verification — format, then lint my files:
+
+swiftformat clean (0/9 require formatting). Now swiftlint --strict on my files:
+
+Two fixable swiftlint issues: file too long (439>400) and a trailing-closure on `Button(action:{})`. I'll split the reusable utility + layout helpers into a new `VisuallyHidden.Primitive.swift` and fix the button. Let me view the exact current sections first.
+
+Let me view the skip-link button section to fix the trailing-closure issue precisely:
+
+Now I'll split out the reusable utility + layout into `VisuallyHidden.Primitive.swift`, trim `Views.swift`, and fix the button. Creating the Primitive file:
+
+Now trim those moved sections from `Views.swift`, update its header, and fix the button:
+
+Now fix the `Button(action: {})` trailing-closure violation:
+
+Now re-run swiftformat (apply) and swiftlint --strict across all 10 `.swift` files:
+
+swiftformat clean (0/10) and **swiftlint --strict: 0 violations in 10 files**. Now the placeholder gate:
+
+Placeholder gate clean (`PLACEHOLDER_COUNT=0`). Now the real platform compile. Let me identify which design-system files are SharedFacade-coupled (to exclude, since the KMP module isn't built) before running `swiftc -typecheck`.
+
+None import the KMP module directly. Let me check what external (non-design-system) symbols the Components reference, so I know what to exclude from an isolated typecheck:
+
+Only `UnitFormatters.swift` is SharedFacade-coupled (matches precedent). I'll typecheck my 8 non-test files + `Tokens.swift` + the full design system minus that file. Running the **iOS-18 simulator** compile under Swift 6:
+
+iOS-18 typecheck: **0 errors/0 warnings** across 49 files. Now macOS-15:
+
+Both platforms typecheck **0 errors**. Now an executed runtime harness over the real pure-logic files (Adapter + Model + Seams) to prove the adapter/projection/model/announcer behavior at runtime. Let me build and run it:
+
+The harness needs `VisuallyHidden.surfaceSlug` (defined in the View file). Let me include all non-test/non-preview files (they compile fine as a CLI binary with SwiftUI on macOS) and rerun:
+
+The runtime harness pulled in the View files (which need the design tokens). I'll compile the full surface **plus** the real design system (same set that typechecked) into the harness binary — no shims, fully honest:
+
+Let me do the full harness in one command — stage files, write `main.swift`, compile with the design system, run, clean up:
+
+Swift 6 top-level globals are MainActor-isolated. I just need `check` to be `@MainActor`. Re-running with that fix:
+
+Top-level vars can't carry a global actor. I'll move the counters + `check` inside `run()` as locals. Re-running:
+
+Compiling the full surface + design system to a binary takes a bit. Let me wait:
+
+**Runtime harness: 53/53 passed, 0 failed** under Swift 6 on macOS 15. Logic verified. Let me update todos and run `xcodegen generate` to confirm my files are enumerated in the project:
+
+`xcodegen generate` succeeded — all **11 files enumerated** (66 pbxproj refs). Now let me attempt the full-app gate to capture honest evidence of any blockers. First the logs dir, then start the iOS scheme build (it triggers the KMP pre-build script):
+
+0 signing identities (matches precedent). Let me start the iOS scheme build in the background — it triggers the KMP pre-build script — and capture evidence:
+
+The KMP pre-build script is **actively assembling** the `Shared.xcframework` via Gradle (downloading Kotlin/Native distribution, compiling KMP tasks). Per precedent this takes ~6–8 min. Let me let it run and check back:
+
+The DEBUG `Shared.xcframework` assembled successfully; now linking the RELEASE variant (the Kotlin/Native long-pole that the staging script needs). Let me keep monitoring:
+
+RELEASE iOS frameworks linked; macOS RELEASE link + final assembly remain. Close to staging. Continuing to monitor:
+
+Strong evidence captured. The KMP `Shared.xcframework` **assembled live (BUILD SUCCESSFUL in 9m 14s) and staged**, my `VisuallyHidden.strings` was copied into the app bundle (surface integrated), and the build failed only on a **pre-existing, unrelated** `RecentDrivesSection.Previews.swift` type-check timeout. Let me confirm zero `VisuallyHidden` errors and catalog the failures:
+
+Decisive evidence: **exactly 1 build error, in a pre-existing unrelated surface** (`RecentDrivesSection.Previews.swift`), **zero `VisuallyHidden` errors**, with the KMP framework assembled live + my strings bundled. Let me confirm process cleanup, the staged framework, and git status before writing the log:
+
+Clean git status — only my 11 files (framework + xcodeproj are git-ignored). Let me gather final metrics and write the comprehensive gate log:
+
+All metrics gathered. Now I'll write the comprehensive, honest gate log:
+
+Now commit the surface + log (framework and xcodeproj are git-ignored):
+
+All 12 intended files staged, no build-artifact leakage. Committing:
+
+Committed (`ea9131c7f`, 12 files, 2215 insertions). Let me finalize the todos and plan:
+
+The task is complete. Let me provide the final summary.
+

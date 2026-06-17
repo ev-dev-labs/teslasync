@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and verifying what exists, since this task has strict capability and dependency requirements.
+
+Good — the Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh) and the `apps/apple/` Xcode project exists. Let me read the web source and understand the existing Apple project structure.
+
+The web source is a status-bar segment showing in-flight background jobs. There's an established file-splitting convention. Let me check what already exists for this surface and find a close reference pattern (other status-bar segments).
+
+Clear data model. Now I need to understand the established Apple conventions. There are ~1289 files in shared-surfaces using a multi-file split convention. Let me study a reference surface end-to-end and the foundational layers (state-holders, tokens, i18n, diagnostics).
+
+Let me study the complete reference surface (AchievementUnlockedToast) and the foundational layers in parallel.
+
+This is a sophisticated, well-established 9-file pattern. Let me read the remaining reference files, the project config (critical for build inclusion), and design tokens.
+
+Now I understand the build system (XcodeGen, glob-based file inclusion). The critical feasibility question is whether the full app build works in this environment — there's a KMP `Shared.xcframework` pre-build step. Let me check environment feasibility and the design tokens I'll need.
+
+Critical finding: `Frameworks/Shared.xcframework` doesn't exist (only `.gitkeep`) — the build pre-action builds a KMP shared framework via Gradle/Kotlin-Native. That's the key feasibility risk for the full gate. Let me check the KMP toolchain and read the design tokens + remaining reference files in parallel.
+
+Java 17 + gradlew exist, so the KMP build is theoretically possible but heavy. Before deciding on the build strategy, I must finish learning the pattern. Let me read the reference view/test/preview files and discover the shared UI components available (the web uses Tooltip + popover + spinner + icons).
+
+Excellent — there's a rich component library including `TSJobProgress`, `TSJobProgressDrawer`, `TSSpinner`, `TSHelpTooltip`, `TSFreshnessIndicator`, `TSEmptyState`. Let me read the test/preview conventions and the relevant component APIs.
+
+I have the full pattern now. Let me read the specific shared component APIs I'll compose with (spinner, tooltip, button, empty state, badge, job progress, overlays).
+
+Let me read the remaining component APIs I'll compose with: tooltip/overlays, badges, buttons, and the job-progress overlay (highly relevant to background work).
+
+Let me read the tooltip/overlay and button APIs, plus confirm the placeholder-check script and how `.strings` are folded (to ensure I match conventions exactly).
+
+Let me check the forbidden placeholder patterns and the existing web i18n keys to mirror them exactly.
+
+I now have the complete picture: web keys, component APIs, patterns, and forbidden placeholder words. Before writing, let me verify there are no symbol collisions in this single-module app and write my plan.
+
+No collision on my `BackgroundWork*` names, but `ExportJobStatus` already exists — so I'll namespace everything with a `BackgroundWork` prefix. The full-app build needs the KMP `Shared.xcframework` (the long pole), so I'll kick that off in the background now while I write the surface.
+
+Now let me create the plan and start writing the surface. I'll write the pure Adapter first.
+
+Before writing, let me read the exact swiftlint/swiftformat configs so my code passes `--strict` on the first try.
+
+Configs are clear (120 width, strict opt-in rules, `@testable` at bottom). I'll write already-formatted code and auto-format my files before the lint check. Now writing the surface, starting with the pure Adapter.
+
+Now the Model (state holder + projection + telemetry + i18n facade).
+
+Now the Seams (P1/S8 source protocol + production + in-memory sources).
+
+Let me check on the KMP build progress while continuing, and write the main view.
+
+KMP build is downloading the Kotlin/Native toolchain (long pole, running). Continuing with the subviews.
+
+Now the States chrome. Let me verify the `TSSkeleton` API first, then write the loading/empty/error chips.
+
+Now the Previews covering every state.
+
+Now the test suite (adapter + projection + model + a11y), mirroring the reference conventions.
+
+Now the i18n `.strings` catalog contribution.
+
+All 9 files written. Let me update todos and run the fast in-control gates: swiftformat, swiftlint --strict, and the placeholder check on my files. Let me also peek at the KMP build.
+
+swiftformat adjusted 2 files. Now let me verify all three fast gates pass: swiftformat `--lint`, swiftlint `--strict`, and the placeholder check on my files.
+
+Both formatting and lint gates pass (0 violations). Let me check how the placeholder script resolves `-Path`, run it the way the gate does, and check the KMP build.
+
+Let me read the script's main body to understand how `-Path` resolves, then reproduce the gate exactly and also verify my files directly.
+
+The gate uses `-LiteralPath` semantics. To verify honestly (not just trivially), I'll grep my files for all forbidden patterns AND run the script against a temp copy of my files, plus reproduce the gate's literal invocation.
+
+Placeholder gates pass — my files are genuinely clean (grep + honest temp-dir scan + gate invocation all show 0). The KMP build finished — let me check its result, then generate the Xcode project.
+
+KMP `Shared.xcframework` built and staged successfully (10m45s). Now let me generate the Xcode project and check the iOS simulator availability.
+
+Project generated; iPhone 16 simulator is booted. Now the heavy step — the full app build. I'll run the iOS scheme **build** first (faster feedback on compile errors than build+test), with `JAVA_HOME` exported so the scheme's gradle pre-action works.
+
+Build running (gradle pre-action then full compile). While it runs, let me monitor. I'll wait and read the build log.
+
+Build failed (exit 65) — but the failing files are **other surfaces** (AIFeedbackQueueTriage, AIGeofenceAwareAutomationSuggestions, etc.), not mine. This is the parallel-slot baseline. Let me extract the actual `error:` diagnostics and confirm whether my surface is implicated.
+
+The build fails on exactly **one** pre-existing error in a sibling surface (`AIGeofenceAwareAutomationSuggestions.swift:141`), not my code. Let me confirm it's pre-existing and unrelated, and assess how coupled `Sources/` is (to build a clean scoped verification of my surface).
+
+Confirmed: only my 9 files are new; the sibling `AIGeofenceAwareAutomationSuggestions.swift` is committed baseline (commit `40e1e5da0`) with a genuine pre-existing `@escaping` bug — outside my allowed files. I'll build a bounded verification harness that never touches siblings. Let me check how self-contained `Sources/` is.
+
+`Sources/` is self-contained (no references to surfaces; Components import only system frameworks). I'll build a bounded verification target — the real `Sources/` foundation + only my surface — via a throwaway spec that never touches sibling files. Let me create it.
+
+Now generate the verification project and build+test it (iOS simulator) — this proves my surface compiles against the real foundation and my tests pass.
+
+Verification build+test running. Let me wait and monitor.
+
+**TEST SUCCEEDED** on iOS — my surface compiles against the real foundation and my tests pass. Let me extract the test counts and run a macOS verification too (the gate covers both platforms).
+
+iOS: **27 tests, 0 failures** across all 7 suites. Now regenerate with macOS targets and run the macOS leg.
+
+macOS: **TEST SUCCEEDED** too. Let me capture the macOS test count, then clean up the temporary verification artifacts.
+
+Both platforms verified for my surface: **27 tests, 0 failures each**, build+test SUCCEEDED on iOS and macOS. Temp artifacts cleaned; git shows only my 9 files. 
+
+Now I'll run the **real gate** to produce an authentic log (it will fail on the sibling), regenerating the real project first. Let me create the logs dir and run the full gate.
+
+Now run the full official gate, capturing authentic results to the prescribed log path.
+
+A **different** sibling (`AISignalExplorerNlFilter.swift:142`) hit the *same* class of pre-existing `@escaping` bug — confirming the baseline has multiple sibling defects of this pattern, all outside my files. IOS_EXIT=65. Let me run the remaining gate steps (macOS, swiftlint, swiftformat, placeholder) and append to the log.
+
+Gate captured: **IOS=65, MAC=65** (both fail on pre-existing sibling `@escaping` bugs), **LINT=0, FORMAT=0, PLACEHOLDER=0** (pass, whole-tree — confirming my files also pass whole-tree lint/format). Let me document the exact sibling errors, then append my scoped-verification evidence and finalize the log.
+
+The macOS gate failure is actually **code-signing** ("entitlements require signing with a development certificate") on the `-macOS` app/widget targets — a runner capability gap, plus the same sibling compile errors — both outside my surface. Let me check the documented pending-verifications context to cite, then finalize the log.
+
+This is the established, documented pattern — `apps/macos-pending-verifications.md` shows ~12 prior P4 surfaces in the exact same situation: surface verified green in isolation, full-app `xcodebuild build test` blocked by **pre-existing unrelated** sibling collisions + macOS development-signing (no identity on runner) → status `macOS-pending`. I'll stay within my allowed files (surface + log) and record complete evidence in my log. Let me capture the signing-identity evidence and finalize.
+
+All confirmed: **0 valid signing identities** (macOS capability gap), sibling `@escaping` bug in `AISignalExplorerNlFilter.swift:142`, and **zero `BackgroundWorkSegment` errors** in both gate logs. Let me append the complete scoped-verification evidence and finalize the log.
+
+Let me review the complete log for accuracy and honesty.
+
+The log is complete and honest — full gate RED shown verbatim (IOS=65, MAC=65), blocker classified as external (sibling `@escaping` bugs + macOS signing), my surface verified green (27 tests × 2 platforms), lint/format/placeholder clean, `EXIT=65 / STATUS=BLOCKED`. Let me verify the working tree is clean (only my files + ignored build artifacts) before committing.
+
+Clean — only my 9 surface files + the log are untracked; temp artifacts gone; `.xcodeproj`/`build`/framework are git-ignored. Committing now with the prescribed message plus an honest body.
+
+Committed cleanly (`0d7fbf10f`, 10 files, working tree clean). Let me finalize todos and tidy throwaway derived-data.
+
+Done. The `BackgroundWorkSegment` Apple surface is implemented, verified, and committed.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI, iOS 18 / macOS 15) parity of `components/layout/status-bar/BackgroundWorkSegment.tsx` as **9 files** following the established surface architecture, committed at `0d7fbf10f`.
+
+**What it does:** a footer status-bar segment surfacing in-flight background work (exports, saves, ad-hoc jobs) — a compact spinner + "{n} tasks" button (with a `.help` tooltip) that opens a "Running" popover listing each job (kind icon + label + status line + spinner), with the `iconOnly` mode and all P4 leaf states.
+
+**Files:** `.Adapter` (pure aggregation reducer — the `useBackgroundJobs` port: export projection + composite mutation row + custom registry, oldest-first stable sort, summary/tooltip/aria builders), `.Model` (P1/S8 `@Observable` state-holder + pure projection + P1/S11 `view.opened` telemetry + P1/S10 facade), `.Seams` (source protocol + prod/in-memory), `.swift`/`.Views`/`.States` (token-driven chrome, VoiceOver-labelled), `.Previews` (every state), `.Tests` (27 tests), `.strings` (full i18n parity with `statusBar.background.*` + data + chrome keys).
+
+**Verification:**
+- swiftformat `--lint`, swiftlint `--strict`, placeholder gate — **clean** (on my files *and* tree-wide).
+- Scoped build+test over the real `Sources/` foundation: **iOS ✅ 27/27, macOS ✅ 27/27**, Swift 6 strict concurrency. KMP `Shared.xcframework` assembled via Gradle.
+
+**Status: `EXIT=65 / STATUS=BLOCKED`** — the full-app `xcodebuild build test` gate is red **only** due to factors outside this prompt's allowed files: (1) pre-existing compile errors in *sibling* surfaces (a shared `glass()`/`TSGlassPanel` `@escaping` bug in committed AI* surfaces, e.g. `AISignalExplorerNlFilter.swift:142`), and (2) macOS development-signing (`0 valid identities` on this runner). **Zero `BackgroundWorkSegment` errors** appear in either full-build log. This matches the documented `macOS-pending` precedent (`apps/macos-pending-verifications.md`) — it re-verifies green on `p4-apple/P99-0001-apple-acceptance-gate` (macos-latest + signing) once siblings compile. All evidence is in the committed log.
+
+
+

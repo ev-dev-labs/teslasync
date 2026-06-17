@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure to understand what exists — the web source, any Apple app scaffolding, and the supporting infrastructure referenced by the prompt.
+
+Let me read the web source and explore the Apple app structure in detail.
+
+Now let me explore the Apple app structure deeply — the TeslaSync target, existing shared-surfaces, and supporting infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+This is a large, mature Apple app. Let me check toolchain availability (critical for the gate) and examine existing shared-surface patterns to use as templates.
+
+Full Apple toolchain is available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh, booted iPhone 16 sim). Not a BLOCKED scenario. Let me study the established surface conventions via `ActiveFilterChips` (closest forms analog) and the shared infrastructure.
+
+Excellent, very sophisticated multi-file pattern. Let me read the remaining `ActiveFilterChips` files (Views, Previews, strings, Tests, AdapterTests) and the web `datePresets` lib that `RangePicker` depends on.
+
+Let me examine the test conventions, the design tokens (P1/S9), and the popover-based `SavedViewMenu` surface for native popover patterns.
+
+Now let me examine the design tokens (P1/S9), the popover-trigger pattern in `SavedViewMenu`, the SwiftLint config, and check for any existing date-preset types to avoid collisions.
+
+Let me read the design tokens API, the `SavedViewMenu` top-level trigger+popover pattern, the shared-framework build script, and check the known build state.
+
+Let me check the build feasibility: the shared-framework script, whether a prebuilt framework/xcodeproj exists, and prior gate logs to see what a passing run looks like.
+
+Let me read a recent successful shared-surface gate log (ActiveFilterChips 0147) and the existing RangePicker artifact log to confirm builds pass here and model the expected gate output.
+
+This is the key precedent. The full `xcodebuild` reds (IOS_EXIT=65, MAC_EXIT=65) are DEFERRED as foreign/environmental, proven via baseline + isolation builds. Let me read the full methodology section of the 0147 log and the prior RangePicker logs.
+
+This is the blueprint — a prior run of this exact prompt (0157) in another slot built an 11-file `RangePicker.*` with a phase model (loading/empty/error/stale/offline + content) bound via a `RangePickerSource` seam, 49 tests, all green in isolation; full-app build DEFERRED to P99. This slot has no `RangePicker.*` yet, and the shared-surfaces tier is already wired (no project.yml/.swiftlint.yml edits needed). Let me study `SavedViewMenu`'s phase/source/freshness machinery to match house style precisely.
+
+Now I understand the house patterns. Let me confirm the shared component APIs I'll use — `TSButton` (variants/sizes), `TSSkeleton`, `TSEmptyState`, and any motion/fade helper — to get exact signatures.
+
+I have all the building blocks. Let me read the full SwiftLint and SwiftFormat configs — critical because `--strict` makes warnings fatal (file_length, type_body_length, function_body_length thresholds).
+
+I now have everything needed. Let me set up tracking and a plan, and confirm the shared components' dependencies (for the isolation harness later).
+
+Components cross-reference each other (TSCard, TSCaption, TSInlineCallout). The robust isolation harness must include the whole `Sources/Components` tree + Tokens. Let me verify `Sources/Components` is self-contained (no KMP `Shared`/networking imports).
+
+`Sources/Components` is fully self-contained (only system frameworks). The isolation harness will be Tokens + all of `Sources/Components` + my `RangePicker.*`. Now I'll write the code. Starting with the plan and the three Foundation-only files (Adapter, Presets, Projector).
+
+Now the three Foundation-only files.
+
+Let me typecheck the three Foundation-only files immediately (they import only Foundation) to catch errors early.
+
+The Foundation core typechecks clean under Swift 6 strict concurrency. Now the calendar (pure month-grid builder + SwiftUI range grid).
+
+Now the Model (i18n facade, telemetry + source seams, `@Observable` state-holder).
+
+Model written (~340 lines). Now the Views (trigger, day cell, preset list, footer, popover content, freshness chip, loading/error/empty states).
+
+Now the public surface file.
+
+Let me typecheck all RangePicker source files together against the real Tokens + Components before writing previews/tests.
+
+`TSChartPalette` lives in `Sources/Design/`. The prior harness included Design too. Let me add it and re-typecheck.
+
+Components/DataDisplay pulls in `Units`/`UnitPreferences` from another layer. Let me locate them and check whether including that layer closes the graph without pulling in KMP `Shared`.
+
+`UnitPreferences` comes from `Sources/SharedFacade` (likely a KMP bridge). I don't use unit formatters — I'll use a curated REAL subset of Components (the files I transitively need) + Design + Tokens, avoiding the SharedFacade dependency.
+
+Down to one missing symbol: `TSTone`. Let me locate it and add its file.
+
+All RangePicker source files typecheck clean (EXIT=0) against the real curated Components + Design + Tokens under Swift 6 strict concurrency. Now the strings catalog and previews.
+
+Now previews (DEBUG-only, one per state).
+
+Now the two test files — pure tests first.
+
+Now the model/calendar/view tests.
+
+All 11 files written. Now the critical verification — build the isolation SwiftPM harness (real curated Components + Design + Tokens) and run the tests under Swift 6.
+
+Compiled clean; 43/44 passed. The one failure is a **test-expectation miscalculation**, not a code bug: `90d` = 2026-03-15 minus 89 days = **2025-12-16** (the code is correct and matches web `setDate(getDate()-89)`); I wrote `2025-12-15`. Fixing the assertion.
+
+All 44 tests pass in isolation under Swift 6. Now the lint/format gates. First auto-format my files with the project config, then verify.
+
+Re-verify after formatting: confirm format is clean, run swiftlint --strict on my files, and re-run the harness with the formatted files.
+
+swiftformat clean. swiftlint flagged 2 real issues: `months(...)` has 6 params (max 5), and Model.swift is 421 lines (max 400). I'll bundle calendar params into a config struct, and split the seams into `RangePicker.Seams.swift`. Let me view the current Model.swift section boundaries first.
+
+Now I'll split the seams out and refactor the calendar config. Let me view the current (post-format) Calendar.swift sections I need to edit.
+
+Now applying all fixes. Calendar config struct + `months` refactor + view call:
+
+Now create the Seams file and trim Model.swift:
+
+Now remove the moved block from Model.swift and drop the now-unused `import OSLog`:
+
+Now drop the unused `import OSLog` from Model.swift and update the `months` call in the tests:
+
+Re-format all files (I edited several), then re-verify format + lint and file lengths.
+
+All 11 files ≤360 lines, swiftformat clean, swiftlint --strict 0 violations. Re-running the harness with the new `Seams.swift` and refactored files:
+
+44/44 pass after refactor. Now the placeholder check and xcodegen. Let me verify the placeholder script exists and run it.
+
+Placeholder check clean (COUNT=0). Now generate the Xcode project and confirm my files are wired into the app + test targets.
+
+Placeholder, xcodegen, lint, format, and isolation tests all green. Now the literal full-app gate. Per the established precedent these may fail on foreign sibling code / unsigned macOS — I must run them for real and capture true exit codes plus a baseline. Let me kick off the iOS `build test` (it triggers the KMP xcframework pre-build, ~9 min) in the background.
+
+iPhone 16 sim booted, gradlew present. Starting the literal iOS gate build (KMP pre-build + app build+test) in the background, logging to a file.
+
+The iOS build runs in the background. Meanwhile, let me capture the repo-wide linter evidence (to show RangePicker contributes 0 violations and surface any pre-existing ones).
+
+Repo-wide swiftlint --strict: **0 violations in 4407 files**. Let me check the iOS build progress and run the repo-wide swiftformat check.
+
+My iOS build (`build test`) is compiling Swift now (KMP was cached). I also see a second `xcodebuild ... -derivedDataPath /tmp/pfb_dd` process — a concurrent parallel-slot runner sharing this machine (consistent with the "foreign sibling" precedent). Let me capture repo-wide swiftformat evidence and keep monitoring.
+
+Path error — I was already in `apps/apple`. Running from repo root as the gate does:
+
+Both repo-wide linters clean (swiftlint 0/4407, swiftformat 0/4705). Let me check the iOS build progress.
+
+KMP xcframework built successfully; the app Swift compile is now underway (no RangePicker errors so far). Let me wait and poll.
+
+Build log barely grew in 150s (heavy CPU contention with the concurrent `pfb_dd` build). Let me check whether swift compilation is actively progressing.
+
+The KMP xcframework pre-action is still building (debug + release variants for multiple archs under CPU contention). It must finish before the app compiles. Let me wait longer.
+
+Now actively compiling the TeslaSync app target (40 parallel swift-frontend processes, log grew to 5357 lines, no errors yet). Let me continue waiting.
+
+**iOS build: `** BUILD FAILED **`, IOS_EXIT=65** — exactly the precedent. Root cause is FOREIGN sibling files (`AISignalExplorerNlFilter.swift:142`, `AIGeofenceAwareAutomationSuggestions.swift:141` — the same systematic "escaping closure captures non-escaping parameter 'content'" defect the 0147 log documented). RangePicker shows zero errors. Let me confirm rigorously and check git cleanliness.
+
+Conclusive: the iOS whole-module compile emits errors for **only 2 foreign files** (`AISignalExplorerNlFilter`, `AIGeofenceAwareAutomationSuggestions`) — both committed at HEAD and **unmodified by me** — while RangePicker has **0 errors**. My changes are purely additive (`git diff HEAD` empty; only RangePicker.* untracked). Now the macOS gate step:
+
+macOS build running in the background. Let me wait and poll (it compiles the same shared Sources, so likely hits the same foreign errors or the signing gate).
+
+The macOS log is missing and the `macbuild` session ended. Let me read that session's output and check what happened.
+
+The `&` child was killed when that session ended (no log created). I'll rerun the macOS gate in **sync mode** (more reliable; it backgrounds + notifies if it exceeds the wait), teeing output to a log.
+
+macOS: **MAC_EXIT=65**, root cause = ENVIRONMENTAL signing (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` "entitlements that require signing with a development certificate" — no dev cert on this runner). Matches precedent exactly. Now the definitive baseline: rebuild iOS with RangePicker removed to prove the foreign red persists without it.
+
+Baseline (RangePicker fully removed, 0 pbxproj refs) **also fails: BASELINE_IOS_EXIT=65**. Let me confirm it's the same foreign files, then restore RangePicker.
+
+The baseline grep returned no `.swift error:` matches yet shows 10 "RangePicker" mentions despite removal — I need to inspect the actual baseline failure rather than assume. Let me look.
+
+The 10 mentions are just "Removed stale file …RangePicker.o" cleanup notes — not errors. But the baseline shows exit 65 with **no `error:` lines** — I need to understand the actual failure before drawing conclusions. Let me inspect the tail.
+
+The baseline failure is now fully explained — and it's **decisive proof**: with RangePicker entirely removed, the iOS build still fails (BASELINE_IOS_EXIT=65) via a **swift-frontend IRGen crash** in a batch containing `AppearanceSettings.Controls.swift` (the exact foreign compiler-crash the 0147 precedent documented). RangePicker is absent, so the red pre-exists. Let me collect the precise evidence lines for the gate log.
+
+All evidence is in hand and the tree is restored (12 RangePicker files, 0 modified tracked files, project regenerated). Let me get final line counts, then write the gate log.
+
+All evidence gathered. Now writing the comprehensive gate log with real exit codes and proofs.
+
+Gate log written. Let me do a final post-restore sanity check (scoped lint/format/placeholder), clean up temp artifacts, then commit.
+
+The "0" is just a `cd`-induced relative-path artifact (the placeholder step changed cwd). Let me confirm the files with an absolute path before committing.
+
+12 files present. The 13th git entry is the gate log. Let me confirm and commit per the prompt.
+
+All 13 files staged (12 `RangePicker.*` + the gate log), nothing foreign. Committing per the prompt.
+
+Committed as `f8ecd762a`. The task is complete. Let me finalize tracking.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0157-RangePicker.log  | 196 +++++++++++
+ .../shared-surfaces/RangePicker.Adapter.swift      | 122 +++++++
+ .../shared-surfaces/RangePicker.Calendar.swift     | 313 ++++++++++++++++++
+ .../shared-surfaces/RangePicker.Model.swift        | 301 +++++++++++++++++
+ .../shared-surfaces/RangePicker.ModelTests.swift   | 354 ++++++++++++++++++++
+ .../shared-surfaces/RangePicker.Presets.swift      | 159 +++++++++
+ .../shared-surfaces/RangePicker.Previews.swift     | 114 +++++++
+ .../shared-surfaces/RangePicker.Projector.swift    | 204 ++++++++++++
+ .../shared-surfaces/RangePicker.Seams.swift        | 132 ++++++++
+ .../shared-surfaces/RangePicker.Tests.swift        | 234 ++++++++++++++
+ .../shared-surfaces/RangePicker.Views.swift        | 360 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/RangePicker.strings  |  84 +++++
+ .../TeslaSync/shared-surfaces/RangePicker.swift    |  90 ++++++
+ 13 files changed, 2663 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0157-RangePicker.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.Calendar.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.Presets.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangePicker.swift

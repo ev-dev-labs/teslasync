@@ -22,7 +22,7 @@ private let enUS = Locale(identifier: "en_US")
         inUse: Int = 0, maxOpen: Int = 0, goroutines: Int? = nil, memoryMB: Double? = nil
     ) -> SystemHealthSnapshot {
         SystemHealthSnapshot(
-            health: SystemHealthData(
+            health: SystemHealthWidgetData(
                 status: status,
                 components: components.mapValues { SystemHealthComponentData(status: $0) },
                 databaseSize: databaseSize
@@ -114,7 +114,7 @@ private let enUS = Locale(identifier: "en_US")
 
     func testRuntimeCountersDefaultWhenAbsent() {
         let vitals = SystemHealthProjection.vitals(
-            from: SystemHealthSnapshot(health: SystemHealthData(status: "healthy"))
+            from: SystemHealthSnapshot(health: SystemHealthWidgetData(status: "healthy"))
         )
         XCTAssertEqual(vitals.activeConns, 0)
         XCTAssertEqual(vitals.maxConns, 0)
@@ -229,7 +229,7 @@ private let enUS = Locale(identifier: "en_US")
 
     private func dataSnapshot() -> SystemHealthSnapshot {
         SystemHealthSnapshot(
-            health: SystemHealthData(
+            health: SystemHealthWidgetData(
                 status: "healthy",
                 components: ["database": SystemHealthComponentData(status: "ok")],
                 databaseSize: "2.4 GB"
@@ -354,7 +354,7 @@ private let enUS = Locale(identifier: "en_US")
 @MainActor final class SystemHealthAccessibilityTests: XCTestCase {
     func testSummaryIncludesOverallServicesAndStats() {
         let vitals = SystemHealthProjection.vitals(from: SystemHealthSnapshot(
-            health: SystemHealthData(
+            health: SystemHealthWidgetData(
                 status: "degraded",
                 components: [
                     "database": SystemHealthComponentData(status: "ok"),
@@ -378,7 +378,7 @@ private let enUS = Locale(identifier: "en_US")
 
     func testSummaryHandlesMissingRuntime() {
         let vitals = SystemHealthProjection.vitals(from: SystemHealthSnapshot(
-            health: SystemHealthData(status: "healthy")
+            health: SystemHealthWidgetData(status: "healthy")
         ))
         let summary = SystemHealthAccessibility.summary(from: vitals)
         XCTAssertTrue(summary.contains("Healthy"))

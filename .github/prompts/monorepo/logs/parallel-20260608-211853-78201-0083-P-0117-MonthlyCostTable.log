@@ -1,0 +1,118 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the runner capabilities and the existing structure.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me read the web source and explore the existing Apple structure.
+
+Now I understand the web source. Let me read the `MonthlyBucket` type and study a complete existing example (`AcDcStatsPanel`) to learn the established patterns.
+
+Let me study the complete `AcDcStatsPanel` example (same charging domain) and find the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+Excellent, this is a well-established pattern. Let me read the remaining reference files and the shared design tokens.
+
+This pattern maps almost perfectly to my task (sortable DataTable + Currency + empty state). Let me examine the shared `TSDataTable`/`TSColumn`/`TSCurrency` components and the test structure.
+
+Now let me examine the shared `TSDataTable`/`TSColumn` API, `TSCurrency`, and the web `Currency` + numberFormat helpers to ensure exact parity.
+
+Let me read the web `Currency` component and the exact `fmtInt`/`fmtWithUnit` implementations for precise parity.
+
+Now let me examine the design tokens (colors, fonts, spacing) and the `TSGlassPanel`/`TSFadeIn`/`TSSkeleton`/`TSButton` APIs to know exactly what's available.
+
+Now I have the tokens. Let me verify the remaining chrome component signatures (`TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, `TSButton`) and check a couple of recently-added feature-view siblings to confirm current conventions.
+
+I have everything I need to understand the patterns. Let me check the build feasibility (xcodegen, xcodeproj, Shared.xcframework) since that determines the gate outcome.
+
+The build needs `xcodegen generate` plus a KMP Gradle-built `Shared.xcframework`. Let me check the KMP toolchain availability and the pending-verifications notes, then start writing code.
+
+Key finding: `macos-pending-verifications.md` documents the established precedent — the full-app build is blocked by **pre-existing, unrelated** parallel-merge collisions (e.g. `DashboardWidgetSize` redefined many times, co-located test files importing XCTest into the app target). Prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) were verified via **isolated SwiftPM build + `swiftc -typecheck` for both SDKs + lint/format/placeholder**, with the full build deferred to CI. Let me confirm these collisions exist in this slot and check the tooling.
+
+This slot is cleaner than the pending-verifications notes suggested — `DashboardWidgetSize` is defined only once here. pwsh, xcodegen, Java 17 are all available. Let me check for naming collisions in the shared app module and set up my plan.
+
+No collisions — all my planned type names are free. Let me look for any existing isolated-build harness used by prior surfaces, and confirm the log directory exists.
+
+Let me read existing sibling logs to match the exact verification approach and log format used by prior surfaces.
+
+This is exactly the established disposition. ToolCard used an **isolated SwiftPM harness** (compiling the exact shipped sources against the real design-system files) for build+test, plus lint/format/placeholder, and deferred the full-app Xcode gate. I'll follow this precedent. Note: feature-views is already wired into project.yml here, and the newer convention uses co-located `*.Tests.swift` + per-surface `.strings` (both within my allowed files). Let me map the shared-component dependency footprint for the harness.
+
+`Sources/Components` is self-contained (only system imports). The harness can compile `Tokens.swift` + `Sources/Design` + `Sources/Components` + my files. Let me verify `Sources/Design` is also self-contained, then I'll start writing the surface files.
+
+`Sources/Design` and `Sources/Components` are both self-contained (system imports only). My harness will be `Tokens.swift` + `Sources/Design` + `Sources/Components` + my files. Let me read the lint/format configs so my files pass `--strict` on the first try, then write the surface.
+
+Now I understand all constraints (line length 120, `--self remove`, `--importgrouping testable-bottom`, before-first wrapping). I'll write the files then auto-format with swiftformat to normalize. Let me create the surface, starting with the pure adapter core.
+
+All 7 files created. Let me set up tracking, then format and lint my files.
+
+`swiftformat --lint`: 0/6 require formatting (GREEN). `swiftlint --strict`: 0 violations in 6 files (GREEN). Now let me build the isolated SwiftPM harness (the exact shipped sources compiled against the real design-system) and run the XCTest suite.
+
+The build compiled all sources but exited 1 — let me see the actual error (it scrolled off).
+
+The errors are **not in my files** — they're in `Components/DataDisplay/UnitFormatters.swift`, which depends on the KMP units facade (`UnitPreferences`, `Units`, `TSUnitsKey`) that lives outside the design-system layer. My surface doesn't use those (it uses `TypedFormatters.swift`'s `TSCurrency`, explicitly the "no KMP facade" formatters). That file isn't in my dependency closure, so I'll exclude it from the harness and rebuild.
+
+Only that one KMP-dependent file needed excluding (my surface doesn't use it). Build is clean now. Let me run the full test suite.
+
+Isolated harness: **BUILD_EXIT=0, 27 tests / 0 failures** under Swift 6 strict-concurrency. Now the real iOS-18 + macOS-15 `swiftc -typecheck` (compiling the surface + design-system against each SDK).
+
+iOS 18 typecheck: **clean (exit 0)**. Now macOS 15.
+
+Both SDKs typecheck clean. Let me run the placeholder scanner and the whole-tree lint/format (for the real gate evidence).
+
+Placeholder scanner: **COUNT=0, EXIT=0** (GREEN). Now the whole-tree lint/format the gate actually runs (to capture real baseline).
+
+Whole-app swiftlint has **1 pre-existing violation in a sibling** (`LiveSignalSparklinesWidget.Builder.swift:158` — also documented in macos-pending-verifications.md, owned by another prompt, not my file). My 6 files are clean. Now whole-tree swiftformat.
+
+Whole-tree swiftformat: **0/2205 require formatting, EXIT=0** (GREEN). Now let me generate the Xcode project (prove my files enumerate) and scan for the pre-existing collisions noted in the pending-verifications doc, then attempt the real full build.
+
+xcodegen: **EXIT=0, my 6 files enumerated** (42 pbxproj refs). Confirmed a pre-existing sibling collision: `ChargingProjection` is defined **2×** (the redeclaration noted in the pending-verifications doc) — this will fail the full-app compile regardless of my surface, and those files are outside my allowed scope. Let me pin down the exact collisions, then launch the real iOS build (with the KMP pre-build) for honest evidence.
+
+Collision confirmed: `ChargingProjection` is declared as a `struct` in `ChargeStatusWidget.Adapter.swift:118` **and** as an `enum` in `ChargingDetailSection.Adapter.swift:240` — both in the `TeslaSync` module = invalid redeclaration. Pre-existing, sibling files, outside my scope. My surface isn't implicated anywhere. Let me verify the background build is actually still running (the wrapper shell returned).
+
+The real iOS build is genuinely running — Gradle is building the KMP `Shared.xcframework` (Kotlin compiling). It'll take several minutes then hit the pre-existing `ChargingProjection` collision. Let me update tracking and draft the log while it runs.
+
+Let me monitor the iOS build progress.
+
+The `/tmp` log vanished (the async session teardown/shared-env cleanup removed it) and the build was killed. I'll re-run cleanly as a sync command writing to the persistent session dir. First, let me check whether the prior Gradle run already staged the framework (the cache was warm — "FROM-CACHE").
+
+Multiple xcodebuild/java processes from **other parallel slots** are sharing this machine — that explains the warm Gradle cache and the `/tmp` cleanup. My slot's framework isn't staged (my earlier build was killed). The full-app build is statically guaranteed to fail on the pre-existing `ChargingProjection` ×2 redeclaration regardless of my surface. To honor the covenant (real exits, not assumed), I'll run it properly this time — writing to the persistent session dir so the log survives.
+
+IOS_EXIT=143 (SIGTERM) — the build was killed externally again (heavy parallel-slot load on this shared machine), not a clean compile failure. Let me see how far it got.
+
+The build was externally **SIGTERM'd during the KMP Gradle XCFramework assembly** (`** BUILD INTERRUPTED **` at `linkReleaseFrameworkIosArm64`) — it never reached the Swift compile phase. This shared runner is killing long builds under parallel-slot load. The Gradle cache is now warm (mostly `UP-TO-DATE`/`FROM-CACHE`), so the link task was nearly done. Let me retry once — it may now get past Gradle into the Swift compile and surface the real pre-existing `ChargingProjection` error.
+
+The build completed this time: **IOS_EXIT=65**, Shared.xcframework assembled+staged (BUILD SUCCESSFUL in 3m49s), then the Swift compile failed. Let me prove the failures are the pre-existing collisions and that there are **zero** MonthlyCost errors.
+
+**MONTHLYCOST_ERROR_COUNT=0** — my surface compiles clean inside the real app target. The build (IOS_EXIT=65) fails entirely on pre-existing parallel-merge duplicate-type collisions in unrelated sibling widgets (`ChargeSessionDTO`, `ChargeStateDTO`, `ChargeStatusProjection`, `ChargeUnitPrefs`, … all "ambiguous for type lookup" = defined multiple times). Now let me capture the macOS build (framework is staged now, so it's faster) and gather error stats.
+
+macOS: **MAC_EXIT=65, 0 MonthlyCost errors** — fails on the same pre-existing collisions **plus** the documented macOS dev-signing requirement (entitlements need a development certificate). Both pre-existing/environmental. I now have complete real evidence. Let me gather final stats and confirm my sources were actually compiled in the app target.
+
+Complete real evidence gathered: 226 pre-existing collision errors (`SafetyModel`, `ChargeStateDTO`, `ChargeStatusProjection`, etc. — each defined many times across sibling files), **0 MonthlyCost errors** in either build. This is the sanctioned "code-complete + DEFERRED full-app gate" disposition. Let me write the honest gate log.
+
+
+
+Log written. Now let me verify git status shows only my allowed files (the generated `.xcodeproj` and staged framework should be gitignored), then commit.
+
+Clean scope: my 7 surface files + the log are the only new files. The generated `.xcodeproj` and staged `Shared.xcframework` are gitignored (confirmed). The 2 modified `web/*` files are **pre-existing working-tree changes, not mine** — I'll leave them unstaged (no silent drift). Let me stage only my files and commit.
+
+Exactly 8 files staged (7 surface + log); the unrelated `web/*` changes are excluded. Let me commit.
+
+Commit **84a2b5254** — 8 files, 1405 insertions, only my surface + log (the unrelated `web/*` changes correctly excluded). Let me clean up the temp harness and do a final scope check.
+
+All clean: HEAD is my commit, working tree only retains the 2 pre-existing unrelated `web/*` changes (untouched), harness removed. Let me finalize tracking.
+
+Task complete. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0117-MonthlyCostTable.log | 145 ++++++++++
+ .../feature-views/MonthlyCostTable.Adapter.swift   | 200 ++++++++++++++
+ .../feature-views/MonthlyCostTable.Model.swift     | 240 ++++++++++++++++
+ .../feature-views/MonthlyCostTable.Previews.swift  |  95 +++++++
+ .../feature-views/MonthlyCostTable.Tests.swift     | 305 +++++++++++++++++++++
+ .../feature-views/MonthlyCostTable.Views.swift     | 229 ++++++++++++++++
+ .../feature-views/MonthlyCostTable.strings         |  39 +++
+ .../TeslaSync/feature-views/MonthlyCostTable.swift | 152 ++++++++++
+ 8 files changed, 1405 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0117-MonthlyCostTable.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostTable.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostTable.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostTable.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostTable.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostTable.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostTable.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/MonthlyCostTable.swift

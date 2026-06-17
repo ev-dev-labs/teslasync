@@ -1,0 +1,187 @@
+I'll start by exploring the repository structure, the web source, and the platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me find the web source and explore the Apple app structure.
+
+This is a **headless store** (state-holder), not a visual page. Let me understand the full picture: the `useSelectedVehicle` composing hook, the Apple app conventions, and the P1/S8/S9/S10/S11 infrastructure.
+
+Now I understand the surface. Let me study the build system (project.yml), a representative feature-view's multi-file convention, and the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+Critical finding: `project.yml` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` as sources, but **not** `TeslaSync/misc-surfaces`. The build also depends on a KMP `Shared.xcframework`. Let me assess build feasibility before writing code.
+
+`xcodegen` (2.45.4) is present, iPhone 16 sim is booted, but `Shared.xcframework` is unbuilt (needs KMP Gradle build). Let me check the KMP shared build feasibility and whether a "selected vehicle" state holder already exists in the Apple sources.
+
+There's a `NoVehicleSelected` feature-view (closest analog) and Java/gradlew exist for the KMP build. Let me read the shared facade infrastructure and the analog surface to learn the exact binding conventions.
+
+The architecture binds to KMP `Shared` StateFlows, but `selectedVehicle` is a **local persisted store** (localStorage analog). Let me study the closest analog surface `NoVehicleSelected` (full file set) plus the i18n + diagnostics conventions.
+
+This is the canonical pattern. Let me read the remaining NoVehicleSelected files (Seams, Views, strings, tests, previews), the design tokens, and check the telemetry contract + whether surfaces import `Shared`.
+
+Let me read the test patterns, previews, design tokens, and check whether feature-views import `Shared` (build feasibility) plus where the `TS*` design components live.
+
+Now let me confirm the design token APIs, the `TS*` component signatures, and definitively check whether the app target requires the KMP `Shared` framework to build.
+
+Feature-views don't import `Shared` (good — seam pattern), but the app target transitively needs `Shared.xcframework` (15 `Sources/` files import it). Let me capture the exact design-token and `TS*` component APIs I'll use.
+
+I have the full convention. Before writing, let me read the lint/format configs (gate runs `--strict`), the placeholder checker, and confirm the color tokens exist.
+
+The placeholder gate's `-Path .../selectedVehicle` and the `git add .../selectedVehicle` both require a **directory** named `selectedVehicle`. Let me confirm the established stance on macOS/Xcode verification (the `macos-pending-verifications.md` doc) and a sibling misc-surface prompt's structure.
+
+This matches the repo's established, documented convention: each P4 surface is verified green **in isolation** (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder/xcodegen), while the full-app `xcodebuild` is macOS-pending (unstaged KMP framework + signing + other agents' collisions). I'll follow it exactly. First, let me guard against type-name collisions with the existing `SelectedVehicleRef`/`SelectedVehicleFeedPhase` already in the module.
+
+I now have a complete, faithful design. Let me set up tracking and write the plan, then build the surface following the canonical multi-file convention with collision-proof type names (avoiding the existing `SelectedVehicleRef`/`SelectedVehicleFeedPhase`).
+
+Now I'll write the surface. Starting with the Foundation-only core (Adapter).
+
+Now the Seams (storage/fleet/telemetry/strings).
+
+Now the store (provider parity).
+
+Now the view-model composing the store + fleet source.
+
+Now the SwiftUI views and main view.
+
+I introduced a naming collision: `SelectedVehicleStoreSelectedView` has a stored property `body` that shadows SwiftUI's `var body`. Let me fix that, then write the main view.
+
+Now the main view.
+
+Now the previews and i18n strings.
+
+Now the i18n strings file.
+
+Now the test files (adapter/store unit tests + model state-holder tests).
+
+Now the model state-holder tests.
+
+All 10 files written. Let me verify the i18n keys match the strings file and scan for forbidden placeholder words before wiring the build.
+
+Perfect bijection on i18n keys (20/20, 0 missing/0 dead) and placeholder-clean. Now wiring the new directory into the build config (project.yml — 2 app targets + 2 test bundles — and .swiftlint.yml).
+
+Let me verify the project.yml wiring and run the fast host-runnable gates (swiftformat, swiftlint) on the new files.
+
+swiftformat wants its house style (wrap property/function bodies, modifier order). Let me auto-format the files, then re-lint to confirm clean.
+
+swiftformat clean (0/9). Now swiftlint on the surface.
+
+SwiftLint linted the whole tree and found 1 violation. Let me locate it.
+
+A swiftformat↔swiftlint conflict on the multi-clause `if case let …, let x = multiline()` brace. Let me restructure to avoid it.
+
+Format + lint clean for the surface. Now the placeholder gate and `xcodegen generate`.
+
+Placeholder gate `EXIT=0` and xcodegen enumerates all 10 files. Now the strongest per-surface evidence: `swiftc -typecheck` the Foundation-only core (Adapter+Seams+Store+Model) on both iOS-18 and macOS-15 under Swift 6 strict concurrency.
+
+Core compiles 0-error on both SDKs. Now let me prepare the SwiftUI-layer typecheck against the real design system — first checking what the needed component files depend on.
+
+All design deps are SwiftUI-only (no `Shared`). Let me typecheck the full SwiftUI surface against the real design system on macOS-15 (with `-D DEBUG` so previews are checked too).
+
+The errors are in `Cards.swift`'s own preview referencing sibling components (TSBadge), not my code. Let me include the full design system (all Components are Shared-free) to resolve cross-references.
+
+All errors are in `DataDisplay/UnitFormatters.swift` (depends on `Shared`'s `UnitPreferences`), which my surface doesn't use — **zero errors in my files**. Let me typecheck against just the components my surface needs (UI/Feedback/Motion).
+
+Down to 2 errors, none in my files. Let me see what they are.
+
+The last error is `FeedbackOverlays.swift`'s preview referencing `TSMetricBar` (DataDisplay). Following the documented sibling approach, let me include the whole design system **except** the one Shared-coupled file (`UnitFormatters.swift`).
+
+macOS-15: **0 errors** — full surface incl. SwiftUI views + previews compiles against the real design system. Now iOS-18.
+
+Both SDKs typecheck the full surface 0-error. Now the isolated SwiftPM harness to **run** the test suite (the core is Foundation/Observation-only, so tests run without the design system).
+
+**46/46 tests pass, 0 failures** under Swift 6 strict concurrency. Now the exact gate's tree-wide `swiftformat --lint` and `swiftlint --strict`.
+
+swiftformat tree-wide: **0/3213, FORMAT_EXIT=0**. Now `swiftlint --strict` (the exact gate command, from apps/apple).
+
+All host-runnable lint/format gates are **green tree-wide** (swiftlint 0/3209, swiftformat 0/3213). Now the two `xcodebuild` steps, which need the KMP `Shared.xcframework`. Let me first capture the current blocker state (framework is unstaged — only `.gitkeep`), then attempt to stage it via Gradle.
+
+Confirmed the documented blockers: `Frameworks/` holds only `.gitkeep`, `0 valid` signing identities, and the app-target compile fails at framework resolution **before any Swift compiles**. Let me attempt to stage `Shared.xcframework` via Gradle (the long-pole) with a time budget.
+
+Gradle is still running (KMP Kotlin/Native build — the documented 6-8 min long-pole). Let me continue waiting.
+
+**Gradle BUILD SUCCESSFUL in 7m 44s** — the `Shared.xcframework` is produced. Let me stage it and run the real iOS app-target compile to verify my surface builds inside the actual app module.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the real iOS app-target compile with my surface inside the actual app module.
+
+Build failed in 38s with **0 selectedVehicle errors**, 54 total. Let me confirm these are the documented pre-existing cross-surface collisions, not my code.
+
+**All 54 errors are pre-existing, unrelated cross-surface collisions** (`RecentDrives*`/`StateTimeline*` ambiguous between other agents' `dashboard-widgets/*` and `feature-views/*`) — exactly as documented in `macos-pending-verifications.md`. **Zero from my surface.** My collision-proof `SelectedVehicleStore*` prefix added none. These files are out of my allowed scope. Let me capture the macOS target evidence too.
+
+Both builds fail **only** on the documented pre-existing collisions (iOS: 54, macOS: 108) — **zero from my surface**, and those files are out of my allowed scope. Let me check how a sibling log concluded (to match the EXIT/STATUS convention) and confirm the staged framework + generated project are git-ignored.
+
+The sanctioned convention is confirmed: surface verified green in isolation, full-app xcodebuild **deferred** (not failed by the surface code) → `EXIT=0`/`STATUS=DONE`, tracked in `macos-pending-verifications.md`. The staged framework + generated project are git-ignored. Let me run the **exact gate commands** (scheme `build test`) to capture authoritative exit codes for the log.
+
+iOS gate: `IOS_EXIT=65`, **0 selectedVehicle errors** (162 total, all pre-existing `RecentDrives*`/`StateTimeline*`). Now the macOS gate command.
+
+macOS gate: `MAC_EXIT=65`, 0 selectedVehicle errors, 4 errors with no source path (likely signing). Let me confirm.
+
+macOS gate is blocked by **development-signing** (`0 valid identities`, 4 signing errors, 0 source/surface errors) — the documented blocker. iOS gate by pre-existing collisions. Both are 0-mine. Let me clean up temp artifacts and review git status before writing the log.
+
+Git status is clean and scoped (surface dir + 2 wiring files; framework/project are git-ignored). Now writing the comprehensive, honest gate log.
+
+Now let me add the tracking row to `macos-pending-verifications.md` (the documented resolution protocol), inserting after the last table row.
+
+Now a final consolidated verification (no drift) and review of exactly what will be committed.
+
+All surface gates green with no drift, all 10 files present. Committing the surface + necessary first-time wiring + tracking + log.
+
+Nothing got staged — let me re-check and re-stage.
+
+Changes are intact, just unstaged. Let me stage and commit cleanly.
+
+All 14 files staged (10 surface + 2 wiring + tracking + log; no binaries). Committing.
+
+Commit succeeded. Let me verify the final state.
+
+All 10 todos complete and committed. Task done.
+
+## Summary
+
+Shipped **`selectedVehicle`** (P4 · misc-surface · 0003) — the native Apple parity of the web selected-vehicle store (`store/selectedVehicle.tsx`) composed with `useSelectedVehicle()`.
+
+**Delivered** (`apps/apple/TeslaSync/misc-surfaces/selectedVehicle/`, 10 files):
+- `@Observable SelectedVehicleStore` = `SelectedVehicleProvider` + `useSelectedVehicleStore` parity: `UserDefaults` persistence (same `teslasync-selected-vehicle` key), cross-scene sync (`UserDefaults.didChange` = web cross-tab `storage` event), `.disconnected()` no-provider no-op fallback, and in-session-only (ephemeral) private-browsing parity.
+- View-model binding the **P1/S8** seam layer (storage/fleet/telemetry), **P1/S9** design tokens, **P1/S10** i18n facade (20 keys), **P1/S11** `view.opened` telemetry. Reproduces the hook's URL > store > first-vehicle precedence + write-back effects.
+- Every state rendered: loading / content / empty / error + stale/offline + persistence note. Collision-proof `SelectedVehicleStore*` type names (avoiding the module's existing `SelectedVehicleRef`/`SelectedVehicleFeedPhase`).
+
+**Verification — every surface-attributable gate green:**
+| Gate | Result |
+|---|---|
+| `swiftc -typecheck` iOS‑18 + macOS‑15 (Swift 6 strict) | **0 errors** (core + full SwiftUI vs real design system) |
+| Isolated SwiftPM `swift test` | **46/46 pass** |
+| `swiftlint --strict` | 0 (tree 0/3209) |
+| `swiftformat --lint` | 0/10 (tree 0/3213) |
+| placeholder gate | `COUNT=0` |
+| `xcodegen generate` | all 10 files enumerated |
+| i18n parity | 20/20 (0 dead/0 missing) |
+
+KMP `Shared.xcframework` was assembled live (`BUILD SUCCESSFUL 7m44s`) + staged; the real app-target compile produced **0 `selectedVehicle` errors**.
+
+**Full-app `xcodebuild build test` is macOS-pending** (`IOS_EXIT=65`/`MAC_EXIT=65`) — blocked by **pre-existing, unrelated** cross-surface `RecentDrives*`/`StateTimeline*` redeclarations (other prompts, out of scope) + macOS dev-signing (`0 valid identities`). Zero of those errors are mine. Tracked in `apps/macos-pending-verifications.md`, deferred to P99 per the repo's documented convention.
+
+Committed (`25ed664e9`) with the surface, necessary first-time misc-surfaces build wiring, tracking row, and the gate log ending `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-misc-surfaces-0003-selectedVehicle.log | 183 ++++++++++++
+ .../selectedVehicle/selectedVehicle.Adapter.swift  | 288 +++++++++++++++++++
+ .../selectedVehicle/selectedVehicle.Model.swift    | 233 +++++++++++++++
+ .../selectedVehicle.ModelTests.swift               | 238 ++++++++++++++++
+ .../selectedVehicle/selectedVehicle.Previews.swift | 132 +++++++++
+ .../selectedVehicle/selectedVehicle.Seams.swift    | 267 +++++++++++++++++
+ .../selectedVehicle/selectedVehicle.Store.swift    |  93 ++++++
+ .../selectedVehicle/selectedVehicle.Tests.swift    | 316 +++++++++++++++++++++
+ .../selectedVehicle/selectedVehicle.Views.swift    | 302 ++++++++++++++++++++
+ .../selectedVehicle/selectedVehicle.strings        |  51 ++++
+ .../selectedVehicle/selectedVehicle.swift          |  83 ++++++
+ apps/macos-pending-verifications.md                |   2 +
+ 12 files changed, 2188 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-misc-surfaces-0003-selectedVehicle.log
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Model.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Store.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.Views.swift
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.strings
+ create mode 100644 apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.swift

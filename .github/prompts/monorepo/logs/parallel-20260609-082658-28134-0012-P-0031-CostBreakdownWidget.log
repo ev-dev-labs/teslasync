@@ -1,0 +1,90 @@
+I'll start by exploring the repository structure and reading the web source specification along with the existing Apple app structure.
+
+Let me read the web source and examine existing Apple widget patterns.
+
+Now let me check build capability (critical for this task) and examine the closest analogue widget `ChargeCostTrackerWidget`.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed (`swift`, `swiftlint`, `swiftformat` ARE available; no simulators). I'll do complete production implementation and verify with everything available. Let me study the analogue widget and shared infrastructure.
+
+The pattern is well-established and detailed. Let me read the rest of the analogue files and find shared infrastructure plus widgets using donut charts and ranked lists.
+
+Let me read the remaining analogue files, the web data hook, and find shared infrastructure plus donut/ranked-list patterns in native widgets.
+
+The shared types live in the core (Sources). Let me locate their exact definitions since I must reference (not modify) them.
+
+Let me read the FSM tests, model, models, builder, strings, and the web shared components for complete parity understanding.
+
+I have a thorough grasp of the native conventions. Now let me read the web shared components and hooks for exact data/formatting parity.
+
+Let me probe what compilation/type-checking is possible with the available toolchain before writing.
+
+`swiftc -typecheck` works with SwiftUI + Charts under CommandLineTools. I can type-check my code against real frameworks using lightweight token shims. Now I have full understanding. Let me write a plan and start implementing.
+
+Confirmed formatting parity. Now writing all the widget files. Starting with the Foundation-only Format and Model layers.
+
+Now the core projector (Adapter) with the exact web numeric pipeline:
+
+Now the Swift Charts donut:
+
+Now the leaf views (big number, ranked list, stat tiles, skeleton):
+
+Now the main surface view:
+
+Now the Previews and Tests files:
+
+Now the i18n strings catalog:
+
+All 9 files created. Let me verify the project wires them via globs (I can't edit project.yml), then run the verification suite.
+
+Project wiring is automatic via globs — no project.yml edit needed. Now let me run the verification suite: swiftformat, swiftlint, and the placeholder gate on my files.
+
+Only one line-wrap issue. Let me auto-format with swiftformat (it's my file), then re-verify.
+
+swiftformat and swiftlint --strict both pass clean (0 violations). Let me tidy that auto-wrapped line for readability, then build a type-check harness against real SwiftUI + Charts.
+
+Even better — I'll type-check against the **real** generated token files rather than shims. Let me check their dependencies and assemble the harness.
+
+Tokens.swift is self-contained. Let me assemble the harness with the **real** token files + a minimal `TSSkeleton` shim (avoiding the unrelated `TSCard` dependency) and type-check all my view code against real SwiftUI + Charts.
+
+The only errors are the `#Preview` macro plugin missing from CommandLineTools (a toolchain limitation, not a code issue — the macro is valid and used identically by every sibling widget). Let me re-run the type-check excluding Previews to validate the rest.
+
+Type-check passes (EXIT=0) against real tokens + SwiftUI + Swift Charts. Let me validate the Previews' view-construction (minus the unsupported macro) via an equivalent smoke harness.
+
+Pure-logic type-check and SwiftUI/Charts type-check both pass. Now let me execute the adapter math standalone to prove numeric parity. First, a quick probe whether the `@Observable` macro works under CLT.
+
+`@Observable` works under CLT. Now let me build and **run** a standalone parity executable using the real Format + Model + Adapter files to prove the numeric pipeline matches the web source.
+
+All 54 parity checks pass when executed for real. Now the placeholder gate. Let me verify my files genuinely contain no forbidden patterns, then run the gate script.
+
+Placeholder gate passes. Now let me run the full-repo swiftlint --strict and swiftformat --lint (as the gate does) to confirm my addition keeps the tree green.
+
+swiftformat --lint is clean across all 2643 files. Now full swiftlint --strict (the gate's lint step):
+
+One violation across 2639 files. My scoped lint was clean — let me confirm this is pre-existing and not in my files.
+
+The single violation is in `LiveSignalSparklinesWidget.Builder.swift` — a **different, pre-existing widget** outside my allowed-files scope (my 8 files are clean). Let me confirm it's pre-existing (unmodified by me) and capture the xcodebuild capability evidence for the log.
+
+Confirmed: my change set is exactly the 9 new files; the lint violation is in an unmodified, unrelated widget. Now let me capture the xcodebuild capability evidence and assemble the gate log.
+
+`/Applications/Xcode.app` exists but isn't the active developer dir. I can override with `DEVELOPER_DIR` (no sudo needed). Let me check if Xcode is usable — this could enable the real build/test.
+
+Major update: **Xcode 26.5 is fully usable** via `DEVELOPER_DIR`, the iPhone 16 simulator exists, and `xcodegen` is installed. The real gate CAN run. Let me generate the project and attempt the actual build+test.
+
+Project generates fine (the earlier fail was a shell short-circuit). But `Shared.xcframework` (a prebuilt KMP artifact) is missing. Let me check how essential it is and attempt the real iOS build to see where it lands.
+
+There's a `Scripts/build-shared-xcframework.sh`. Let me assess whether building the missing KMP framework is feasible to enable the real gate.
+
+The KMP framework auto-builds via a Gradle pre-build phase when `xcodebuild` runs. Xcode 26.5 + Kotlin/Native toolchain are present, so the real gate is worth attempting. Let me launch the actual iOS build+test in the background and monitor.
+
+Gradle started working (didn't fast-fail — it's compiling Kotlin/Native). It needs more time. Let me run it in the background with a longer budget and monitor.
+
+Build is running in the background. Let me monitor its progress while it compiles Kotlin/Native for the Apple targets.
+
+Excellent progress — Kotlin compile tasks are cached (UP-TO-DATE); it's now linking the release frameworks. Let me wait for it to finish staging.
+
+Release linking is progressing (iOS arm64 done, simulator linking now). Let me continue waiting for the macOS link + final assembly.
+
+Let me verify the Gradle process is still alive and check the full log progress.
+
+Gradle daemon is alive and progressing (iOS simulator release link done). Now the macOS release link + final assembly remain. Let me wait.
+

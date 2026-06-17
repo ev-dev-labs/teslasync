@@ -1,0 +1,243 @@
+I'll start by exploring the repository structure to understand the task fully.
+
+The web source is large. Let me read it in sections and explore the apple app structure in parallel.
+
+The actual directory structure differs from the prompt. Let me find how existing "done" pages were implemented to follow the established pattern.
+
+There are two structures. The ledger's "done" pages live in `apps/apple/Sources/Features/`. Let me study the canonical ApiPlayground page pattern and project config.
+
+The established pattern for done pages is `apps/apple/Sources/Features/{Domain}/`. Let me read the project config and the canonical ApiPlayground implementation in full.
+
+Now I understand the structure. The actual pattern is `apps/apple/Sources/Features/{Domain}/`. Let me read the model, route registration, and test patterns.
+
+Let me explore the routing system, design tokens, shared components, and continue reading the web source.
+
+Let me continue reading the web source render section and the design tokens.
+
+Let me read the final render section of the web source and the routing/shared component infrastructure.
+
+Let me read the route infrastructure, the rest of the web source, and discover shared UI components.
+
+Let me read the remaining web source and explore the shared component library thoroughly.
+
+The component library is rich. Let me read the key UI component files to learn their APIs.
+
+Let me read the rest of the web source and the form/button/field/state components.
+
+Now the form fields, pickers, states, banners, and form section components.
+
+Now the states, skeletons, banners, and form section components.
+
+Let me examine banners, skeletons, a data-driven page model (FleetCompare), and how route registries are composed into the shell.
+
+Let me read the app wiring, the TSTone enum, and check whether `automations` already has a registration.
+
+Let me look at how data-driven pages bind to the KMP core (FleetCompare) and the skeleton/tone primitives.
+
+I have a thorough grasp of the components. Now let me understand the string catalog format, the data-driven model pattern, and check for a page scaffold.
+
+Let me check tooling availability, existing string keys, and the log/placeholder gate format.
+
+Tooling is available (Xcode 26.5, swiftlint, xcodegen, pwsh) — the gate can run. Let me check exactly which of the 41 required keys already exist.
+
+The keys exist only under a `translation.*` mirror namespace; native pages use unprefixed keys (e.g., `playground.title`). I need to add 41 unprefixed keys. Let me verify reference values and check the manifest/ledger for automations routing context.
+
+Let me extract the exact manifest record for this unit to confirm the parity breakdown, and confirm the done-page route registration wiring.
+
+Confirmed: 3 panels + 4 states + 41 strings = 48. Let me create a plan, then examine the gate scripts, an existing log, and the build feasibility.
+
+The Shared.xcframework isn't staged (needs Kotlin/Native + Gradle). Let me check the existing done-page log to see what verification was actually achieved, and assess build feasibility.
+
+This log is the key precedent — it documents the exact accepted methodology (path reconciliation + isolated type-check + model harness, since full `xcodebuild` is blocked by pre-existing out-of-scope sibling breakage). Let me set up my plan and verify the isolated-compile dependency surface.
+
+I have enough context. Let me set up tracking and read the last few reference files (theme helpers, sample data source, page scaffold, route parser).
+
+All references gathered. `route.automations` exists and `AppRouteParser` already resolves `/automations/:id/edit` → `.automations`, so registering the builder at `.automations` gives the deep link for free. Let me write the plan and begin implementation.
+
+`ActionBuilder` exists as a separate Swift unit but lives in the build-broken feature-views tree — I'll keep my page self-contained for clean isolation. Let me check the web trigger-type labels and existing supporting keys before writing the model.
+
+The trigger-type labels live under `automations.builder.triggerSchedule/Event/Geofence/Signal` (page-used, via imported constant). I'll add needed supporting keys reusing existing translation-namespace values for consistency. Let me extract those values.
+
+I have everything needed. Let me write the model (self-contained, SwiftUI-free for harness testability), mirroring the FleetCompare/ApiPlayground seam pattern.
+
+Now the sample data source.
+
+Let me type-check the model early before building the view, to catch errors.
+
+Model type-checks clean. Now the main page view.
+
+Now the sections file — but first I must verify cross-file extension access to the model (since `private` is file-scoped). Let me check how FleetCompare splits files.
+
+The established pattern uses standalone child View structs (not cross-file private extensions). Let me update the main page's `formBody` to instantiate child structs, then write the Sections file.
+
+Now the sections file with the form editors, binding helpers, and validation banner.
+
+Now the route registration and app wiring.
+
+Let me type-check the full view against the real tokens + components for macOS to catch API mismatches early.
+
+Only error is in `FeedbackOverlays.swift` (references `TSMetricBar` from DataDisplay — the file ApiPlayground also excluded; not used by my page). Let me exclude it and also add DataDisplay to be safe.
+
+macOS type-check passes. Now the iOS target (exercises the compact-layout `#if os(iOS)` branch).
+
+Both type-checks pass (macOS + iOS, 0 errors). Now the unit tests.
+
+Now let me run a model-logic harness (executes the real model, since the full XCTest build is blocked by out-of-scope siblings — the precedent methodology).
+
+The top-level-code file must be named `main.swift`. Let me rename and rerun.
+
+Model harness passes (28/28). Now let me extract every string key my Swift code references, so I add exactly those to the catalog.
+
+`descriptionPlaceholder` (a required key) isn't yet referenced because `TSTextArea` has no placeholder. Let me add a faithful multi-line description field with a placeholder overlay in my own code.
+
+That edit accidentally removed the struct declaration. Let me view and fix, inserting the new description field component.
+
+I'll restore the `AutomationWhenSection` declaration and insert the new `AutomationDescriptionField` component.
+
+Let me re-type-check after the edits and re-extract the key list.
+
+Type-check clean; 82 keys referenced (41 required + 41 supporting). Let me add all 82 to the string catalog via a safe textual insertion (preserving the rest of the 189k-line file), with a guard against duplicates.
+
+All 82 keys inserted (no collisions), JSON validated. Let me verify the diff is additive-only and update tracking.
+
+Diff is purely additive (902 insertions, 0 deletions). Now the gate commands. Let me run swiftformat and check the lint config.
+
+Now run swiftformat and swiftlint on my files.
+
+swiftformat found issues — I'll auto-apply it (the ecosystem tool) to my files, then re-lint.
+
+swiftformat applied (0 remaining). Let me format-check the edited app file, then re-verify the type-check and harness still pass after formatting.
+
+Type-check still passes. The app file has an indent issue from my added nesting. Let me view and fix it precisely.
+
+I'll let swiftformat correctly reindent the registry chain (the region I'm already editing).
+
+App file formatted and clean. Let me re-run the harness (model was reformatted) and swiftlint on my files.
+
+swiftlint scanned all 9800 files (config `included:` wins). Let me isolate whether any of the 12 violations are in my files.
+
+6 total violations: 3 are pre-existing (WidgetChartSummary.Tests, same as ApiPlayground noted), 3 are MINE: two `file_length` (>400) and one `multiple_closures_with_trailing_closure`. I'll fix all three. Let me view the closure issue and plan splits.
+
+Let me fix the trailing-closure violation, then split the two oversized files.
+
+Now split the model file — move the domain value types into a new `AutomationBuilderModels.swift`. Let me find the boundary.
+
+Model split done (256/257 lines). Now split the Sections file (576 lines) — move the conditions/actions editors into a Builders file.
+
+All files now under 400 lines (Sections 367, Builders 213). Let me re-verify type-check (both platforms), swiftlint, and the harness after the splits.
+
+Both platforms clean; no lint violations in my files. Let me re-run the harness (now with the split Models file) and the placeholder gate.
+
+All in-scope gates pass. Let me re-run the placeholder gate from the repo root (correct relative path) to be certain it actually scanned my files.
+
+Run from repo root, the gate flags 7 matches of the word "Placeholder" (false positives — my legit UI-placeholder wording + `descriptionPlaceholder`/`cronPlaceholder` key names). Let me inspect the pattern and offending lines.
+
+These are false positives: the gate's `Placeholder` pattern hits legit UI-placeholder wording and required web key names (`namePlaceholder`, `descriptionPlaceholder`). I'll rephrase the comments and use the documented `// parity:allow` opt-out (with honest reasons) on the unavoidable web-key lines.
+
+Let me check for any remaining "placeholder" occurrences across all my files, then re-run the gate and format-lint.
+
+Placeholder gate now clean (COUNT=0, ALLOWED=4, EXIT=0). Let me re-verify format, lint, and type-check after these edits.
+
+The opt-out marker on a `///` doc line is malformed and triggers a wrap rule. Let me rephrase that doc comment to not contain the key name (removing the need for an opt-out there).
+
+Let me re-verify format-lint and the placeholder gate after the rephrase.
+
+All in-scope static gates green. Let me run a consolidated verification pass (keys, both type-checks, lint, harness) before attempting the full build.
+
+All in-scope gates green (both platforms type-check, 28/28 harness, all 41 required keys + supporting referenced). Now let me generate the Xcode project to prove integration, then attempt the full build.
+
+xcodegen integrates all 6 source files + the test. Critical check: the existing `AINLAutomationBuilder`/`ActionBuilder`/`ConditionBuilder` units may already define types named `AutomationTrigger`/`AutomationAction`/`AutomationCondition` — a module-level collision my isolated type-check wouldn't catch. Let me verify.
+
+My grep hid filenames so the path-exclude silently failed. Several types (`AutomationTrigger`, `AutomationAction`, `AutomationActionKind`, etc.) appear with **different signatures** — meaning the existing units already declare them. This is a real module-level collision. Let me identify the external declarations precisely.
+
+Confirmed: 5 of my public types collide with existing feature-views DTOs (`AutomationAction`, `AutomationActionKind`, `AutomationConditionKind`, `AutomationTriggerKind`, `AutomationTrigger`). Let me see the full external `Automation*` type surface to choose a collision-free namespace.
+
+Real collision found: 5 of my public types clash with existing feature-views DTOs. My types are page-local, so I'll namespace the whole DTO family with the `AutomationBuilder` prefix (collision-free per the external scan). Applying a whole-word rename across my files.
+
+Rename clean. Let me verify the new names don't collide externally, then re-format and re-run all checks.
+
+New names are collision-free. Let me re-run the full verification suite after the rename.
+
+All green after rename (both type-checks, 28/28 harness, no lint violations). The new names are verified disjoint from all external `Automation*` types. Let me attempt the full build in the background (per precedent it's RED due to out-of-scope siblings) while I write the evidence log.
+
+Gradle works — the Shared.xcframework build is feasible. Let me kick off the framework build + full `xcodebuild` in the background, then write the evidence log while it runs.
+
+The build runs in the background. Let me gather data for the evidence log (file line counts, git status) while it runs.
+
+The background build completed. Let me read its result.
+
+The async subshell was orphaned when its parent exited. Let me check state and re-run the build synchronously (it's feasible; ~10–15 min). First, check whether the framework staged.
+
+Let me run the framework build + full `xcodebuild` synchronously (Gradle ~10 min), capturing exit codes.
+
+It's compiling (Kotlin/Native, 3 targets). While it runs, let me update the ledger. Let me view its structure.
+
+Let me add the two ledger rows.
+
+Ledger updated. Let me check on the framework build progress.
+
+Shared.xcframework staged (8m 45s, EXIT=0). Now the full `xcodebuild` — let me capture where it fails (to confirm out-of-scope vs my files).
+
+BUILD_EXIT=65 as the precedent predicted. Critical check: I must confirm the errors are out-of-scope, not in my files.
+
+Zero errors in my files; only 1 error total. Let me see what that out-of-scope blocker is.
+
+The build failed only because the DerivedData DB was locked (a stale lock from the earlier orphaned async build) — not a code error. Let me find and clear it, then re-run.
+
+There's an orphaned build actively compiling (holding the DB lock) from the earlier async attempt. Let me wait for it to finish and capture its result.
+
+The full build completed: **BUILD FAILED (EXIT=65)** with failures **only** in out-of-scope `RecentDrivesSection.*` (feature-views) — the exact pre-existing breakage the precedent documented. Let me confirm zero errors in my files and capture the specific out-of-scope error.
+
+The orphan log was tail-truncated. Let me re-run one clean full build (framework now cached, lock released) capturing the complete log to definitively show my files compile and isolate the out-of-scope error.
+
+Three stuck processes (the out-of-scope `RecentDrivesSection.Previews` type-check timeout) hold the lock. Let me kill those specific PIDs and re-run one clean full build with complete logging.
+
+All processes cleared. Let me run one clean full build with complete logging (10-min cap) to capture my files compiling and isolate the out-of-scope failure.
+
+Definitive result: all 7 of my files compiled, **ZERO errors in my files**, BUILD_EXIT=65. Let me capture the exact out-of-scope error for the log.
+
+No `: error:` lines for my files. The failure is the known SwiftUI "unable to type-check in reasonable time" compiler timeout hitting whichever alphabetical batch (feature-views siblings). Let me confirm that's the mechanism.
+
+Confirmed: **zero errors/failures in my files**; the build fails only on out-of-scope feature-views siblings (`AnomalyInlineRow`/`AppearanceSettings`/`RecentDrivesSection` — the pre-existing SwiftUI type-check-timeout defect the precedent documented). Let me gather host versions and write the evidence log.
+
+Now let me write the comprehensive evidence log.
+
+Log written. Let me clean up temp files, validate JSON, and run a final pre-commit verification.
+
+Only my intended in-scope files changed (`.xcodeproj`/`Shared.xcframework` correctly gitignored). Let me do a final lint sanity check, then commit.
+
+All green. Let me commit the in-scope changes.
+
+Let me verify the commit landed and update tracking.
+
+Commit `db4b41d61` landed with all 12 files; working tree clean. Let me finalize tracking.
+
+The task is complete and committed (`db4b41d61`).
+
+## Summary
+
+Delivered a native **SwiftUI / HIG** `AutomationBuilderPage` at full web parity for the **p4-apple P7** parity unit `page:automations/AutomationBuilder` — **48/48 parity items** (3 panels + 4 states + 41 strings).
+
+**Shipped** (`apps/apple/Sources/Features/Automations/`, the real compiled page home — reconciled from the prompt's non-compiling `TeslaSync/Features` path exactly as the ApiPlayground precedent did):
+- `@Observable AutomationBuilderPageModel` + injectable `AutomationBuilderDataSource` seam, `loading/empty/error/ready` states, web `validate()` order, save/test-run flows, dirty tracking.
+- Adaptive view: header (title-by-mode + breadcrumb + subtitle), General/When/Only If/Then form sections, **GlassPanel1** trigger configurator, **GlassPanel2** empty state, **GlassPanel3** preset hint, edit-conflict/draft banners, Save/TestRun/Cancel.
+- 24 XCTest cases, route registration at `.automations`, **82 keys** added to `Localizable.xcstrings` (41 required + 41 supporting editor labels), 2 `apple-ledger.json` rows, evidence log.
+
+**Key fix:** page-local DTOs collided with existing feature-views automation enums — namespaced them `AutomationBuilder*` (verified disjoint from all external `Automation*` types).
+
+**Verification (all real, all green in-scope):**
+- swiftformat `0/9` · swiftlint `0` violations in my files · placeholder gate `COUNT=0`
+- Model harness: **28/28** assertions · isolated `swiftc -typecheck` macOS **AND** iOS: **0/0**
+- Full `xcodebuild` (real staged `Shared.xcframework`): my **7 files compile with zero errors**; build is RED **only** on pre-existing out-of-scope feature-views breakage (`RecentDrivesSection`/`AnomalyInlineRow`/`AppearanceSettings` SwiftUI type-check timeout — forbidden to commit-fix), matching the documented precedent.
+
+`EXIT=0 / STATUS=DONE`.
+
+
+
+All work is complete, verified, and committed. All 9 todos are done. Calling task_complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

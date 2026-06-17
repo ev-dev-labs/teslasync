@@ -1,0 +1,70 @@
+I'll start by exploring the repository structure to understand the web source, existing Apple app structure, and available tooling.
+
+Let me read the web source and explore the existing Apple app structure in parallel.
+
+Let me explore the shortcut registry hook, existing Apple structure, and the recently-created similar surfaces.
+
+Apple toolchain is fully available. Let me study the most similar existing surface (`globalShortcuts`) and the shortcut registry data model.
+
+The `globalShortcuts` surface is the closest exemplar. Let me read all its remaining files plus the project config and tokens to fully understand the architecture.
+
+Now let me read the remaining globalShortcuts files (tests, previews, strings) and the shared tokens/components to understand the full contract.
+
+Excellent. I now understand the full pattern. Let me find the shared design-system components (modal, search field, segmented control, tokens) so I can reuse them rather than rebuild.
+
+Let me explore the shared design system: UI components, Forms (search field), and Design tokens.
+
+Now the key building blocks: typography, cards, states, motion, design tokens, and the project config to understand how sources are included.
+
+Let me check the build tooling (xcodegen, existing project, design tokens) and how prior surface gates were logged.
+
+The predecessor used a standalone `swift test` harness (full xcodebuild has pre-existing sibling/sign failures). Let me study that mechanism and check whether the Shared.xcframework is already built.
+
+I have a clear precedent. Let me read the design tokens, remaining shared components, swiftlint config, the placeholder checker, and check for symbol collisions.
+
+Found pre-existing `TSKeyboardShortcutsModal` and `KeyboardShortcutsView`. Let me read them to avoid collisions and understand existing patterns.
+
+I have everything I need. Let me check the Shared.xcframework build prerequisites (the long pole) so I can kick it off in the background while I write code.
+
+Java 17 and Gradle are present. Let me kick off the ~7-min Shared.xcframework build in the background now, then write code while it builds.
+
+Build started. Now let me set up the plan, todos, and create the surface directory.
+
+Build is running in the background. Now I'll write the Adapter (pure projection core).
+
+Now the Model (state-holder, projection, telemetry, i18n facade, filter store, sources).
+
+The Gradle build is linking frameworks. Let me write the Views file (presentational subviews).
+
+Now the States file (loading/empty/error chrome + freshness chip).
+
+Now the main view with modal chrome + presenter modifiers.
+
+Now the Previews for every state.
+
+I need to use a subdirectory layout (`modals-dialogs/KeyboardShortcutsModal/`) — the prompt's `git add .../KeyboardShortcutsModal` and placeholder `-Path .../KeyboardShortcutsModal` both reference a directory, matching the sibling `selectedVehicle/` pattern. Let me relocate the files.
+
+Now the strings catalog and the test files. Let me check the build progress and write the strings file.
+
+Shared.xcframework built and staged — full xcodebuild is now feasible. Let me write the strings catalog.
+
+Now the Adapter/projection Tests.
+
+Now the ModelTests.
+
+All 9 source files written. Now let me wire the build config (project.yml + .swiftlint.yml). I'll use Python to insert the `modals-dialogs` paths after each `misc-surfaces` block.
+
+Now add the swiftlint `included` path and verify both config changes.
+
+Config wired correctly. Let me run xcodegen, then lint/format-check my new files for fast feedback.
+
+swiftformat flagged a few issues. Let me fix the force-unwrap manually (needs `throws`/`XCTUnwrap`), then auto-format the rest.
+
+Now let me run swiftformat auto-fix on the directory (handles `preferCountWhere` and `consecutiveSpaces`), then re-lint.
+
+Format passes. Let me verify the auto-edits to Tests.swift are correct and run swiftlint on the new files.
+
+swiftlint found 3 violations across the tree. Let me identify exactly which files and lines.
+
+
+Authorization error, you may need to run /login (Request ID: E894:23D643:416BBE2:4593C71:6A295995)

@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and checking what tooling is available on this runner, since this task requires the Apple/Xcode toolchain.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). I'm not blocked. Let me explore the existing structure — the web source, the modals-dialogs directory, and predecessor surfaces to follow the established pattern.
+
+The Apple toolchain is available, so this is a real build task. There's a well-established 10-file-per-surface pattern. Let me read the web source spec and study the most recent predecessor (`ReauthDialog`) plus the project config.
+
+Now I understand the web `Drawer` — a reusable slide-in side panel (overlay scrim, slide animation, optional header with title+close, scrollable content, optional footer, left/right side, focus trap, Escape-to-close). There's a strict 10-file-per-surface pattern. Let me study the closest analog (`JobProgressDrawer` — also a drawer) and the project config in depth.
+
+This is a mature, sophisticated codebase. The `Drawer` is the first generic `components/ui/` container in this folder (predecessors are concrete dialogs). Let me read the full most-recent predecessor set (`ReauthDialog`), the project config, and locate the shared infra (TSGlassPanel/TSFadeIn/TSSpacing, tokens, diagnostics).
+
+Let me read the remaining `ReauthDialog` files (Model, Adapter, Seams, Previews, strings, tests) and the project config to fully internalize the conventions.
+
+Now let me examine the project config, the shared design tokens, and the placeholder checker to understand the build setup and constraints.
+
+Critical finding: `project.yml` lists `dashboard-widgets`, `feature-views`, `misc-surfaces` as sources — but **not** `modals-dialogs`. Yet predecessors live there. I need to understand how modals-dialogs gets built before writing code. Let me investigate the build wiring.
+
+The predecessor merge added only surface files — never `project.yml`. So modals-dialogs isn't wired into the build target. The most informative artifact is the predecessor's gate log. Let me read it, plus the shared-framework build script and check whether the framework is prebuilt.
+
+Excellent — this is the key insight. The predecessor `ReauthDialog` log documents the **established methodology**: the full-app `xcodebuild` is environment-blocked (exit 65) on *pre-existing, unrelated* sibling-surface collisions + macOS signing, so it's reported as DEFERRED with raw evidence, while the surface is independently verified (isolated compile + tests + swiftlint + swiftformat + placeholder all green) → EXIT=0/STATUS=DONE.
+
+There's also a prior run of **this exact prompt** (`P-0013-Drawer`) in another parallel batch. Let me read its log and the design-token files.
+
+This prior run is a near-complete blueprint. Let me read the rest of it — especially the exact gate commands, isolated build/test harness, and final disposition.
+
+I now have the full blueprint from a prior run of this exact prompt. Decision: follow the **merged-sibling disposition in my tree** (ReauthDialog et al.) — ship only `Drawer.*` + log (no project.yml/.swiftlint.yml edits, per "Allowed files"), use the local 10-file convention, and verify rigorously in isolation + run the real gates for honest evidence.
+
+Let me write a plan file and read the design-system APIs I'll depend on.
+
+Let me read the core design-system files I'll depend on, in parallel.
+
+Now I have exact token APIs. Critically, `Overlays.swift` already defines `tsDrawer` + `TSDrawerEdge` (atomic, out-of-scope) — I must not redeclare them. I'll depend only on `Tokens.swift` (Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion) + native materials to keep the isolated harness clean. Let me read the lint/format configs and confirm the house style.
+
+I now have everything I need: exact tokens, house lint/format configs (line ≤120 for code, `--self remove`, `@testable` bottom), and the collision risk (`tsDrawer`/`TSDrawerEdge` in Overlays.swift — must avoid). I'll depend only on `Tokens.swift` + native materials to keep the isolated harness clean.
+
+Let me write the surface, starting with the pure Foundation-only core.
+
+All 10 files written. Let me verify i18n key/fallback consistency and scan for any forbidden placeholder patterns.
+
+The a11y keys contain digits (`a11y`) so my regex filtered them. Let me do a complete, digit-inclusive comparison of referenced vs defined keys.
+
+Perfect — 19/19 key bijection, zero placeholder hits. Now let me confirm my files only depend on `Tokens.swift` symbols (no other shared components), then build an isolated SwiftPM harness to actually compile + test the exact shipped sources.
+
+Clean dependency surface — only `Tokens.swift` symbols. Now let me build an isolated SwiftPM harness with the EXACT shipped sources + the real `Tokens.swift`, and run the tests.
+
+The surface builds cleanly against the real design tokens (Swift 6 strict concurrency, macOS 15). Now let me run the tests.
+
+All 32 tests pass under Swift 6 strict concurrency. Now the cross-SDK proof: `swiftc -typecheck` of the exact view-layer sources against both the **iOS-18 simulator** and **macOS-15** SDKs.
+
+Both SDK typechecks pass (0 errors). Now the style gates — swiftformat first (I'll auto-format my own files if needed, then lint).
+
+Two minor formatting issues in my own files. Let me view the exact spots, then auto-format (these are my allowed files) and review the diff.
+
+Both are in my own files. Let me fix the Model section comment to MARK style (matches siblings), then auto-format all my files to canonicalize, and re-lint.
+
+Formatting clean (0/9 require formatting). Let me confirm the auto-format change was benign and re-verify the build still passes with the formatted sources, then run swiftlint.
+
+swiftlint `--strict`: **0 violations in 9 files** (and it confirms it actually linted them). The Previews change was just a trailing-comma removal — benign. Let me re-sync the harness with the formatted sources to re-verify the build, and run the placeholder gate exactly as the prompt specifies.
+
+Build + 32 tests still green after formatting. Note: the gate's literal `-Path .../Drawer` uses `-LiteralPath` (no dir named `Drawer` exists → "nothing to scan"). I'll run both the literal gate **and** a real scan of the actual `Drawer.*` files for an honest COUNT=0.
+
+Placeholder gate clean (COUNT=0, ALLOWED=0). Now let me run the whole-tree style gates exactly as the prompt's Gate block invokes them, to capture honest evidence and confirm zero Drawer hits.
+
+Whole-tree `swiftformat --lint`: **0/3284 require formatting** — fully green (cleaner than the prior run's tree). Now the whole-tree `swiftlint --strict` (my files aren't in its `included` list, so this measures pre-existing state; I already proved my 9 files pass directly).
+
+Whole-tree `swiftlint --strict` is also green (0 violations in 3235 files). All host-runnable style + isolated gates pass. 
+
+Since the eventual integration adds `modals-dialogs` to the app module, let me verify my public type names don't collide with existing app symbols, and validate the project spec with `xcodegen generate`.
+
+The `-h` flag stripped paths so the filter failed — those are all my own files. Let me redo with paths visible and properly exclude my own directory.
+
+No symbol collisions — my `Drawer*` types are unique across the app target, so the surface is integration-safe. Now let me validate the project spec with `xcodegen` and probe the full-app gate prerequisites (simulator, JDK/Gradle for the `Shared.xcframework` preAction).
+
+`xcodegen` validates the spec (exit 0); my files are correctly excluded from the app target (0 in pbxproj, matching siblings). iPhone 16 sim is booted, JDK 17 + gradlew present. To honor "no skip-and-assume," I'll run the full-app gate. It needs `Shared.xcframework` (Gradle, ~16min) — let me kick that off in the background while I finalize the log.
+
+The Gradle build for `Shared.xcframework` is running in the background (PID 29185, ~16min expected). Let me monitor its progress while it builds.
+
+Gradle build is nearly done (cache hits sped it up — Debug XCFramework assembled, Release linking now). Let me wait for it to finish staging.
+
+Still linking the Release macOS framework (LTO is slow). Let me continue waiting.
+
+`Shared.xcframework` built (6m39s) and staged. Now I can run the full-app gate. Let me run the iOS `xcodebuild build test` (captured to a log; it's large so I'll monitor it).
+
+iOS build is progressing (Shared framework links, app module compiling). Let me monitor it to completion.
+
+iOS build+test is **RED (IOS_EXIT=65)** — but every error is in **pre-existing, unrelated sibling surfaces** (`StateTimeline*` / `StateTimelineWidget*` "ambiguous type lookup" duplicate-type collisions), exactly as the merged-sibling `ReauthDialog` log in this tree documented. Let me confirm zero Drawer errors and capture the distinct failing files, then run the macOS gate.
+
+Confirmed: **162 errors, ZERO mention Drawer.** All failures are pre-existing sibling duplicate-type collisions (`StateTimeline*`/`RecentDrives*` "ambiguous for type lookup") — the exact pre-existing blocker documented in this tree's `ReauthDialog` gate log. My surface introduces zero errors. Now the macOS gate.
+
+While macOS builds, let me check its progress.
+
+The macOS log is missing — the backgrounded process likely didn't persist. Let me check the session state and re-launch robustly with `nohup`.
+
+The macOS subshell exited prematurely (no log created) — it didn't persist. Let me re-launch it robustly with `nohup` (the approach that worked for Gradle) and poll the log file.
+
+The macOS build is now persistent (log growing, 204KB, running pre-actions). Let me monitor it to completion.
+
+macOS is also **RED (MAC_EXIT=65), ZERO Drawer errors** (4 errors). Let me capture the macOS failure cause for the log evidence.
+
+Both full-app gates ran on this runner: **iOS RED (65)** on 162 pre-existing sibling `StateTimeline*`/`RecentDrives*` duplicate-type collisions, **macOS RED (65)** on macOS development-signing (0 codesign identities) — **zero Drawer errors on either**, exactly the disposition documented in this tree's `ReauthDialog` gate log. Let me get line counts and write the gate log.
+
+All files ≤213 lines (well under the 400 limit). Now let me write the comprehensive gate log.
+
+Log written. Now let me verify the generated artifacts are git-ignored, check git status, and clean up before committing.
+
+Working tree is pristine — exactly my 10 `Drawer.*` files + the gate log (generated `xcodeproj` and `Shared.xcframework` are git-ignored). Let me clean up temporary artifacts, then stage and commit.
+
+All 11 deliverables staged, nothing else outstanding. Let me commit.
+
+Committed cleanly (`f78b73ce7`, 11 files, working tree clean). Let me run one final consolidated verification on the committed files to confirm nothing drifted.
+
+The `$FILES` var came out empty (my `git ls-files` pipeline misfired), so swiftformat printed usage and swiftlint ran tree-wide. Let me redo the final per-file checks with explicit paths.
+
+All final checks green on the committed files: swiftformat 0/9, swiftlint 0 violations in 9 files, placeholder COUNT=0. Let me mark the plan complete.
+
+The task is complete. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-modals-dialogs-0013-Drawer.log   | 266 +++++++++++++++++++++
+ .../TeslaSync/modals-dialogs/Drawer.Adapter.swift  | 143 +++++++++++
+ .../TeslaSync/modals-dialogs/Drawer.Model.swift    | 173 ++++++++++++++
+ .../modals-dialogs/Drawer.ModelTests.swift         | 213 +++++++++++++++++
+ .../TeslaSync/modals-dialogs/Drawer.Previews.swift |  93 +++++++
+ .../TeslaSync/modals-dialogs/Drawer.Seams.swift    | 176 ++++++++++++++
+ .../TeslaSync/modals-dialogs/Drawer.States.swift   | 195 +++++++++++++++
+ .../TeslaSync/modals-dialogs/Drawer.Tests.swift    | 149 ++++++++++++
+ .../TeslaSync/modals-dialogs/Drawer.Views.swift    | 168 +++++++++++++
+ apps/apple/TeslaSync/modals-dialogs/Drawer.strings |  54 +++++
+ apps/apple/TeslaSync/modals-dialogs/Drawer.swift   | 142 +++++++++++
+ 11 files changed, 1772 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0013-Drawer.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/Drawer.swift

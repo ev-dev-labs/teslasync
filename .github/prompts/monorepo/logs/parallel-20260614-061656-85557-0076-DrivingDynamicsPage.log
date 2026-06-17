@@ -1,0 +1,194 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+This is a substantial page with many sub-components. Let me explore the components and the Apple app structure in parallel.
+
+Let me explore deeper into the Apple app structure, the existing features, and the parity infrastructure.
+
+The directory structure needs clarification. Let me explore more carefully.
+
+The real Swift code lives in `apps/apple/Sources/`. Let me understand the project layout and find existing patterns.
+
+I see two source roots. Let me find where existing parity **pages** actually live, since the prompt's templated path may not match reality.
+
+Now I understand: real P4 pages live in `Sources/Features/<Domain>/`, not the templated `TeslaSync/Features/` path. The `ApiPlayground` page (a "done" ledger row for this exact prompt template) confirms this. Let me study the established conventions.
+
+Now I understand the page-file convention. Let me read ALL the web sub-components to capture full parity scope, plus a complete Swift page exemplar with charts.
+
+Let me read all the web sub-components to capture full parity scope.
+
+I now have the complete web page picture: 11 sub-components with many panels, gauges, charts, and a table. Now let me check tooling availability and study the established Swift page conventions.
+
+All tooling is available (Xcode 26.5, swiftlint, xcodegen, pwsh) — the gate is NOT blocked. Let me map the Swift architecture: SharedFacade (KMP hooks), components, design tokens, and study exemplar pages.
+
+Excellent architecture. Let me study the Statistics supporting files (charts, sections, models, sample) and core infrastructure.
+
+Let me read the Statistics models/format/sample plus core infrastructure (design tokens, routing, app container).
+
+Let me read the design tokens, routing, units facade, and how routes register/parse.
+
+Design tokens live in generated files. Let me locate them and read the routing + key component APIs.
+
+Let me see the app registration flow and check whether `.driving` is already claimed, plus the web route definition.
+
+`.driving` route exists but is unregistered; web `/driving-dynamics` is distinct. Files clearly belong in `Sources/Features/Driving/` (matching every other P7 page like ApiPlayground/Statistics — the prompt's templated `TeslaSync/Features/` path isn't a compiled source root). Let me map all shared component APIs I'll need.
+
+Let me map the remaining UI/DataDisplay/Feedback/Forms component APIs, then read the key ones in detail.
+
+Let me read the detailed signatures of the components I'll use most.
+
+Let me read the design tokens, pickers, cards, typography, and the test convention (existing page model tests).
+
+Let me read the test convention, Cards, Typography titles, TSSelect, the `tsUnits` environment, and locate the localization catalog.
+
+I have the full component picture. Let me read the gate contract, lint rules, `UnitPreferences` statics, theme helper, localization format, and a sibling log to mirror.
+
+Critical: `Shared.xcframework` isn't prebuilt — it's assembled via Gradle/Kotlin-Native in a scheme pre-action. Let me probe the toolchain and read remaining helpers in parallel.
+
+Java 17 + Gradle present, so the xcframework can build. The `.xcodeproj` is generated. The catalog already has 109 `dynamics.*` keys. Let me start the baseline build in the background (long pole: Kotlin/Native xcframework) while I read the last helpers.
+
+Project generated. Let me kick off the baseline macOS build in the background (triggers the Gradle/Kotlin-Native xcframework build — the long pole), then continue reading helpers.
+
+Let me check existing `dynamics.*` catalog keys and read the web data types/hooks to build accurate models.
+
+The web dynamics keys are stored with a `translation.` import prefix; native pages use non-prefixed keys (like `statistics.title`). Let me verify the precedent and read the web data types.
+
+Confirmed: native page adds non-prefixed `dynamics.*` keys (like the 32 `statistics.*`). Now let me read the web data types to model accurately.
+
+I have complete data-type knowledge and confirmed backend routes. Let me check the baseline build progress.
+
+The baseline build is compiling the Kotlin/Native xcframework (long pole) — it'll notify me when done. I have everything needed. Let me record a plan and todos, then start building.
+
+Now I'll build the feature. Starting with the foundation — models:
+
+Now the format/helpers file with pure, testable derivations:
+
+Now the page model with the data-source protocol and phase machine:
+
+Let me check the baseline build progress.
+
+Now the sample/empty/failing data sources:
+
+Baseline still compiling Kotlin/Native (expected — first compile is slow). Let me continue building the main page view:
+
+Now the panel sections (leaf panels + gauges + skeleton):
+
+Baseline build completed — let me check the result to confirm the project builds cleanly before my changes.
+
+Baseline build failed in **pre-existing** parity-surface files (my new files weren't in the project yet — xcodegen ran before I created them). I need the actual error messages. Let me regenerate to include my files and capture only errors.
+
+While that builds, let me write the charts section:
+
+Let me check the build errors now.
+
+Key finding: the `TeslaSync/feature-views` tree already has parity surfaces (`DrivingCoachSection`, `DrivingTips`, `DrivingDynamicsWidget`) defining types like `DrivingCoachData`, `DrivingThrottleStyle` — colliding with mine in the same module. I must rename my types/views to be collision-free. Let me map all collisions precisely.
+
+Major discovery: the `feature-views` tree already squats on nearly **every** name I chose, including `DrivingDynamicsPage`, `DrivingDynamicsPageModel`, `DrivingDynamicsDataSource`, etc. I must examine what already exists before proceeding.
+
+The grep earlier included my own new files. Let me precisely identify which of my names collide with the **bulk** `TeslaSync/` tree only.
+
+The real collisions are exactly 7-8 squatted names (the bulk `feature-views` tree ports each web sub-component as its own surface). My page-level names (`DrivingDynamicsPage`, etc.) are unique and match the manifest. I'll rename the colliding domain types with a `DriveDyn` prefix. Let me also inspect the pre-existing `Input.Previews` error to gauge baseline breakage.
+
+Let me verify the renames landed and check the scale of pre-existing toolchain-drift breakage in the bulk tree.
+
+The `*.Previews` count is an overcount, but I need ground truth on pre-existing breakage. The file `apps/macos-pending-verifications.md` is telling. Let me verify my rename worked and read the verification-status docs.
+
+The `sed -i '' -E` with `\b` silently failed (BSD sed doesn't support `\b`). Let me redo with perl (proper word boundaries), then fix any doc-comment references to real web type names.
+
+Renames applied. Now fix the doc comment that references the real web type name, and update the Coach view reference in Page.swift:
+
+Line 75 is correct (`DriveDynamicsSnapshot` is the real web type). Only line 172 needs fixing back to the real web name, plus the Coach view reference in Page.swift:
+
+Renames done. Let me check line counts (SwiftLint `--strict` fails files >400 lines) to plan file splits before writing the remaining views.
+
+Two files exceed 400 lines (SwiftLint `--strict` risk). Let me run SwiftLint now to see actual violations before splitting:
+
+SwiftLint flags file_length (2 files) + several long lines. Let me view the long lines and plan the split. Let me look at the offending lines:
+
+These long lines mostly live in the parts I'll move to a new `Insights` file. Let me find the split boundary, then fix the Pedal caption (line 185, staying) and split the file.
+
+The split point is line 312. Let me create the new `Insights` file (efficiency, summary, tips, skeleton) with fixed line lengths, then truncate Sections and fix its Pedal caption.
+
+Now truncate Sections.swift to remove the moved content (lines 312+) and fix the Pedal caption long line. Let me verify the cut boundary first:
+
+Sections is now 310 lines. Let me fix the Pedal section's long caption line by extracting locals:
+
+Now split the Models file (406 lines). Let me find the coach-types boundary:
+
+The coach types span lines 170-288. Let me extract them to a new file. Let me read that range:
+
+Now remove the coach types (lines 170-288) from Models:
+
+Models split done. Now the driving coach views (main + score/style/efficiency/trend):
+
+Now the coach detail views (patterns + recommendations + per-drive table):
+
+Now the route registration, parser alias, and app wiring:
+
+Now wire the parser alias and app registration:
+
+Two lint fixes needed. Let me fix the `TSColumn` trailing-closure usage and the 3-member tuple:
+
+Now fix the large tuple in Coach.swift with a small struct:
+
+Let me re-run SwiftLint to confirm clean:
+
+Two long lines remain in the column definitions. Let me view and reformat them:
+
+SwiftLint is clean and all files are under 400 lines. Now the localization. Let me extract every string key my code references so I can add all missing native keys:
+
+116 keys total. Let me write a script to add missing native keys to the catalog — pulling exact values from the existing `translation.*` web imports where available, with accurate fallbacks otherwise:
+
+The top-level `"strings"` key uses no space before colon (unlike nested keys). Let me fix the marker:
+
+115 keys added (94 pulled exact from the web `translation.*` imports, 21 from accurate defaults, `route.vehicles` already existed). Let me verify the catalog is valid and the PARITY strings resolve:
+
+Catalog is valid (9150 keys). But `dynamics.coach.drivesAnalyzed` resolved to `%1$@ drives analyzed` (web import uses a string placeholder), while my Swift passes an `Int` via `%lld` — that would misformat. Let me fix the Swift to pass a String, and scan other added values for format specifiers:
+
+Only `drivesAnalyzed` uses a real placeholder. Let me fix the Swift to pass a String (matching the `%@` web placeholder):
+
+i18n done. Now the model tests, mirroring the Statistics test convention:
+
+Now let me lint the test file, then regenerate the project and run a full build to categorize errors (mine vs pre-existing bulk):
+
+Test file needs line-length fixes and a class split (type_body_length). Let me rewrite it as two focused classes with helpers to keep lines short:
+
+Now the second test class for pure formatters/reducers/value types:
+
+The `Fx` alias is too short. Let me rename it to `Fixtures` in both test files:
+
+The longer alias pushed a few lines over 120. Let me view and fix them:
+
+Lint is fully clean. Now the definitive build assessment. Let me run a full macOS build, capture all errors, and categorize them by path (mine vs pre-existing bulk):
+
+While that builds, let me check where the app's RouteRegistrations live (to plan an isolated verification if the full build is blocked by bulk):
+
+All app RouteRegistrations live in `Sources/` — so the hand-built `Sources/` tree is self-contained and independent of the broken bulk surfaces. Let me check the pending-verifications doc for context on bulk build status while the build runs:
+
+Let me check the full build result:
+
+Build still compiling the bulk tree. Let me prepare an isolated verification harness (Sources-only, excluding the broken bulk surfaces) in case the full build is blocked by pre-existing breakage:
+
+Let me read the full build result and categorize errors by path:
+
+Critical finding: my Driving code is **100% clean** — zero errors. The build is blocked by exactly **one** pre-existing file: `Input.Previews.swift` (a Swift-6.3 toolchain-drift error, unrelated to my task). Let me confirm the exact errors:
+
+The **entire** app build is blocked by just 2 lines in one pre-existing file (`Input.Previews.swift`) — a Swift-6.3 `return`-in-ViewBuilder toolchain-drift error, unrelated to my task. My Driving code is clean. Let me first verify my work via the isolated harness, then assess fixing that one blocker. Let me view the offending file:
+
+This file has multiple `return`-in-`#Preview` patterns (only 2 surfaced). Let me first prove my deliverable via the isolated harness (Sources-only, which is self-contained), then assess the blocker. Let me generate and build+test the harness:
+
+The harness is ready (Input.Previews has 10 such `return`s). Let me build+test the isolated harness to prove my code compiles and tests pass:
+
+Let me see why the harness failed — check for errors:
+
+My Driving code is clean in both builds. The harness over-excluded (some `Sources/` features like `TeslaOrdersPage`/`UsersPage` depend on bulk types). The full build's **only** blocker is `Input.Previews.swift`'s `return`-in-Preview bodies. That's the single, trivial, DEBUG-only fix to reach a green gate. Let me confirm all 10 returns are the same pattern, then fix:
+
+All 10 are the identical `return staged(...)` pattern in `#Preview` bodies — the canonical Swift-6.3 fix is removing the `return`. This single trivial DEBUG-only change unblocks the whole gate. Let me apply it:
+
+All `return`s removed. Now rebuild the full macOS app to confirm Input.Previews was the only blocker:
+
+Fixing the `return` revealed the next layered pre-existing bug in the **same** file (argument order in `InputField` calls). The full build showed Input.Previews is the *only* broken file, so fixing it fully is bounded to one file. Let me check `InputField`'s signature and the failing calls:
+
+`InputField` declares `placeholder` before `error`/`hint`. The Preview calls them out of order. Let me reorder both call sites:
+
+Now rebuild the full app to see if Input.Previews is fully unblocked:
+

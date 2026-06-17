@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is available. Let me read the web source and explore the Apple app structure.
+
+There's an existing `shared-surfaces` directory with established patterns. Let me examine the conventions used by sibling surfaces and check if HealthRow already exists.
+
+`HealthRow` doesn't exist yet. There's a clear multi-file convention per surface. `HistoryListRow` is the closest analog (a "Row" surface). Let me study it and `ActiveFilterChips` fully.
+
+This is a high-quality, well-established pattern. `HistoryListRow` is the ideal analog (presentational, no data source). Let me read its remaining files.
+
+Now let me read the remaining HistoryListRow files and find where the shared types (Surface, Inputs, Glow) are defined.
+
+Now let me read the test/preview files, the StatusHero web source (for `HeroStatus`), and find the design tokens.
+
+I now understand the pattern fully. Let me find the design tokens (P1/S9) for status colors, the project build config, and the placeholder checker.
+
+Found status tokens (statusSuccess/Warning/Danger/Info). Let me read the full design token definitions and the Badges component for status mapping patterns.
+
+`TSTone` maps perfectly to the 5 statuses (success/warning/danger/neutral/info). Let me locate the generated token definitions for colors, fonts, spacing, and radius.
+
+Critical: build uses XcodeGen (`.xcodeproj` is git-ignored), design tokens live in `apps/design/generated/apple`, and there's a `Shared.xcframework` preAction. Let me verify the toolchain and token names.
+
+`xcodegen` is present, tokens confirmed. The key risk is `Shared.xcframework` (KMP) which is absent. Let me inspect the build script and confirm remaining tokens (Font.TS, TSSpacing, TSRadius).
+
+I have all tokens needed. Now let me assess the build feasibility: check simulators, and whether the KMP `Shared.xcframework` (the build pre-action) can actually be built — this is the key gate risk.
+
+iPhone 16 booted, Xcode 26.5. Let me check sibling surface gate logs to understand the expected outcome (DONE vs BLOCKED) in this environment.
+
+The repo has an established methodology. Sibling logs show: surface files must be GREEN on swiftlint/swiftformat/placeholder + independently compile-verified, while the full xcodebuild is often DEFERRED on environmental blockers (KMP framework staging, code-signing). Let me study the most rigorous sibling log to replicate its exact verification method.
+
+This is the key: siblings use an **isolated SwiftPM harness** to compile the exact surface sources + tests against the real design system (SWIFT_TEST_EXIT=0), while the full xcodebuild is deferred on the KMP/contention blocker. Let me find any existing harness and the verification tooling.
+
+I now fully understand the accepted methodology: build the surface files, verify GREEN via an isolated SwiftPM harness (compiling the exact sources + tests against the real design system), run swiftlint/swiftformat/placeholder, and honestly report the full xcodebuild (deferred on the KMP/contention blocker). Let me check for symbol collisions, the hover material, and confirm `.swiftlint.yml` already includes shared-surfaces (so I stay within allowed files).
+
+No collisions, configs already include shared-surfaces. I have everything I need. Let me set up tracking and write the plan.
+
+Now I'll write the surface files. Starting with the Foundation-only core.
+
+Let me fix the `Text` initializers in Views to be explicitly verbatim (the strings are already localized via the facade), then write the public API file.
+
+Now the test files — pure core first.
+
+All 9 files written. Now let me normalize formatting and run the linters on the surface files.
+
+Both linters pass (FORMAT_EXIT=0, LINT_EXIT=0). Now the critical step: build an isolated SwiftPM harness compiling the exact sources + tests against the real design system, to independently verify compilation and tests under Swift 6 strict concurrency.
+
+SwiftPM harness: **39 tests passed, 0 failures** — the exact shipped sources (incl. `#Preview`) compile and pass under Swift 6 strict concurrency against the real design system. Now the placeholder check, then the full xcodebuild gate. Let me inspect the placeholder script's interface and run it.
+
+The literal gate path is a file-prefix (won't match), so I'll also do a real scoped scan of my files to prove they're genuinely clean. Let me run both honestly.
+
+Placeholder gate clean (COUNT=0) on both the literal command and a real scoped scan of my files. Now the full xcodebuild gate. First, generate the Xcode project (it's git-ignored).
+
+Project generated (my files are picked up via the glob). Now the full iOS xcodebuild gate — this triggers the KMP `Shared.xcframework` Gradle pre-action and a full app build. Let me run it async and capture everything.
+
+The KMP `Shared.xcframework` built successfully (warm Gradle cache + Kotlin/Native toolchain present) — this environment is more capable than the sibling-log runners. Let me check the actual build result.
+
+The launcher returned but the actual `xcodebuild` was forked with `&`. Let me verify it's still running and monitor progress.
+
+Multiple concurrent `xcodebuild` processes confirm the multi-slot contention the sibling logs described. The Gradle release-framework link is in progress. Let me wait for it to proceed.
+
+My iOS gate is still in the Gradle pre-action (Kotlin/Native **release** framework linking) at 100% CPU under multi-slot contention. This is the documented environmental bottleneck. Let me wait for it to progress into the app compile phase.
+
+The framework staged and the Xcode app build is now compiling Swift (widgets/activities targets first). Let me continue monitoring for the main app target (which compiles my HealthRow files) and the test phase.
+
+BUILD FAILED. I must determine honestly whether my HealthRow code caused it or whether it's the documented environmental crash. Let me investigate the errors and the HealthRow mentions precisely.
+
+Clear, honest finding: the **only** source error in the 13,442-line log is in `AISuggestNewGeofences.swift:129` — a **different, pre-existing sibling surface** outside my allowed-files scope (a Swift 6 non-escaping closure capture bug). Zero HealthRow errors; my `HealthRow.strings` copied & validated fine. Let me confirm this is pre-existing/unmodified by me and that there are no other errors.
+
+Definitively confirmed and honest: the **single** build error is the pre-existing, unmodified, out-of-scope sibling `AISuggestNewGeofences.swift:129` (a Swift 6 escaping-closure bug). My 9 `HealthRow.*` files are the only new files; zero HealthRow errors. Let me capture the iOS exit code and run the macOS gate (which shares the same Sources, so it will hit the identical unrelated blocker — I'll confirm rather than assume).
+
+iOS shows `** BUILD FAILED **` (xcodebuild returns 65) with the sole error at the unrelated pre-existing `AISuggestNewGeofences.swift:129`. macOS shares the same `Sources/`, so it will hit the identical blocker. Let me wait and confirm rather than assume.
+
+macOS also failed (MAC_EXIT=65) but with 0 compile markers — it failed earlier than the Swift compile. Let me find the actual macOS failure reason to report it honestly.
+
+macOS failed for a **different environmental** reason — code-signing (`no development certificate`, empty `DEVELOPMENT_TEAM`), failing at provisioning *before any Swift compiled* (0 compile markers). This is the exact "macOS code-signing on runner" blocker sibling 0001 documented — unrelated to source. 
+
+Now let me run the whole-tree linters (the literal gate scope) to capture honest `LINT_EXIT`/`FORMAT_EXIT` numbers.
+
+Whole-tree swiftformat: **0/4898** → FORMAT_EXIT=0. Now whole-tree swiftlint --strict.
+
+All verification complete. Final honest tally:
+- **Surface (GREEN):** swiftformat 0/8 & 0/4898 whole-tree; swiftlint 0 violations (8 files & 4600 whole-tree); placeholder COUNT=0; isolated SwiftPM **39 tests, 0 failures** under Swift 6 strict concurrency against the real design system + real `#Preview`; xcodegen EXIT=0.
+- **Full-app (DEFERRED, reported RED):** iOS IOS_EXIT=65 — sole error is pre-existing, unmodified, out-of-scope `AISuggestNewGeofences.swift:129` (zero HealthRow errors); macOS MAC_EXIT=65 — code-signing (no dev cert), failed before any Swift compiled.
+
+Let me write the official gate log.
+
+Now let me verify git state and commit exactly the allowed files (HealthRow.* + the log), ensuring the generated project/framework artifacts aren't included.
+
+Clean — only my 9 `HealthRow.*` files and the log are untracked; generated artifacts are git-ignored. Committing exactly the allowed files.
+
+Committed as `d2ec7b95e`. Let me mark todos complete and do a final verification that the working tree is clean and the log terminates correctly.
+
+Everything is committed and the tree is clean. Let me tidy the heavy SPM build artifacts from the session workspace (keeping the harness sources + build logs as evidence).
+
+All work is complete and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0197-HealthRow.log    | 165 +++++++++++++
+ .../shared-surfaces/HealthRow.Adapter.swift        | 116 +++++++++
+ .../shared-surfaces/HealthRow.AdapterTests.swift   | 208 +++++++++++++++++
+ .../shared-surfaces/HealthRow.Model.swift          | 150 ++++++++++++
+ .../shared-surfaces/HealthRow.Previews.swift       | 110 +++++++++
+ .../shared-surfaces/HealthRow.Projection.swift     | 116 +++++++++
+ .../shared-surfaces/HealthRow.Tests.swift          | 258 +++++++++++++++++++++
+ .../shared-surfaces/HealthRow.Views.swift          | 141 +++++++++++
+ .../TeslaSync/shared-surfaces/HealthRow.strings    |  23 ++
+ .../TeslaSync/shared-surfaces/HealthRow.swift      | 150 ++++++++++++
+ 10 files changed, 1437 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0197-HealthRow.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HealthRow.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HealthRow.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HealthRow.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HealthRow.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HealthRow.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HealthRow.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HealthRow.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HealthRow.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HealthRow.swift

@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the Apple toolchain availability.
+
+Swift toolchain is present. Let me verify xcodebuild more carefully and read the web source plus existing Apple app structure.
+
+Key finding: **xcodebuild is unavailable** (only CommandLineTools, not full Xcode). Let me check for a full Xcode install and study the established native widget pattern (BackupHistoryWidget) thoroughly.
+
+Full Xcode exists at `/Applications/Xcode.app` — just not selected. Let me test if I can use it via `DEVELOPER_DIR`, and study the existing widget pattern.
+
+Xcode 26.5 works via `DEVELOPER_DIR`. The gate is runnable. There's a `DriveScoreGaugeWidget` — likely the closest gauge-based template. Let me study both it and `BackupHistoryWidget` to learn the conventions.
+
+`DriveScoreGaugeWidget` is the ideal gauge template. Let me read all its files to learn the full convention set.
+
+The pattern is clear and well-established. Let me read the remaining template files and the shared infrastructure (tokens, registration types, web shared components).
+
+Let me read the test file and locate the shared token/registration definitions (P1/S9 core).
+
+Let me read the shared infra, design tokens, web shared components, and the registry to ensure exact parity.
+
+Registry metadata confirmed. Now let me locate the main-app design token definitions (TSSpacing, Color.TS, Font.TS, TSMotion, TSSkeleton, TSRadius) and the web shared components for gauge parity.
+
+The tokens must live in a shared design-system file compiled into the main target. Let me inspect the project structure and find the canonical token definitions.
+
+Now I understand the project layout (XcodeGen, folder-globbed sources). Let me read the design tokens, check xcodegen/project state, and the web shared components for gauge parity.
+
+xcodegen 2.45.4 is available; no `.xcodeproj` committed (generated on demand). Let me read the gauge hero web component, confirm the VehicleState type fields, and check project generation.
+
+Let me confirm the exact RadialGauge rendering (label/unit/value positions) and the VehicleState type for faithful parity.
+
+I have full parity understanding. Before writing, let me confirm exact token names, lint/format rules, and the placeholder checker so my code passes the gate first time.
+
+All tokens confirmed. Let me read the placeholder patterns JSON (the gate scans for these) so my code is clean, and check how `-Path` resolves.
+
+Let me see how the scanner behaves when the path doesn't exactly exist (the gate passes a filename prefix), then I'll start building.
+
+The placeholder gate scans nothing when the path prefix doesn't resolve (explaining how prior widgets passed), but I'll keep my code genuinely free of forbidden markers and verify honestly. I have everything needed. Let me set up the toolchain shell, generate the Xcode project, and list simulators while I begin writing.
+
+Project generates cleanly. Schemes `TeslaSync` + `TeslaSync-macOS` exist, iPhone 16 / iOS 26.5 simulator present — the gate is fully runnable. Let me kick off a **baseline** macOS build (long pole) in the background to confirm the existing project is healthy, while I write the widget files.
+
+Baseline build is running (large project). I'll write the 7 widget files now, modeled precisely on the proven `DriveScoreGaugeWidget` pattern but simplified for battery. Starting with the Model (state-holder + telemetry + registry + i18n facade).
+
+Now the Adapter (pure projector — battery color bands + number formatting, host-testable):
+
+Let me verify the `TSSkeleton` initializer signature and check on the baseline build before writing the views.
+
+`TSSkeleton` signature confirmed. Baseline build still compiling. Writing the presentational subviews:
+
+Now the main SwiftUI surface view:
+
+Now the previews (one per state):
+
+Now the comprehensive test suite (adapter parity, phases, model wiring, registry, a11y):
+
+Baseline build finished. Let me check its result and write the strings file.
+
+Baseline macOS build fails on **code-signing** (no dev certificate on this runner) — a pre-existing environment limitation, not a code issue. iOS Simulator needs no signing, and macOS can build with `CODE_SIGNING_ALLOWED=NO`. Let me write the strings file, then run format/lint, then the builds with appropriate flags.
+
+All 7 files written. Let me run swiftformat and swiftlint on my files (fast, pre-build) to catch style issues.
+
+SwiftLint clean (0 violations). SwiftFormat flags one blank line between imports in the test file. Fixing:
+
+swiftformat + swiftlint both clean. Now I must ensure the test files are wired to the right target. Let me inspect how `*.Tests.swift` files in `dashboard-widgets/` map to targets in project.yml, then regenerate.
+
+Test files map correctly to the `TeslaSyncTests` bundle; my 6 source files compile into the app. I must regenerate the project to include the new files, then run the iOS Simulator build+test (no signing needed). Starting the long-pole build now:
+
+The build failed — but the errors are in **other** widgets (`SafetyModel`, `FleetStatsBarModel`, `SafetyUpdate` "ambiguous for type lookup"), not mine. This signals pre-existing duplicate-type collisions from parallel widget generation. Let me verify these are pre-existing and that my types are collision-free.
+
+Critical findings:
+1. **Pre-existing collisions (NOT mine, outside my allowed scope):** `SafetyModel`, `SafetyLoadStatus`, `SafetyConnection` are each defined in **two** sibling widgets; `FleetStatsBarModel` in three files. These break the whole-app compile regardless of my work — and I'm only allowed to edit `BatteryGaugeWidget.*`.
+2. **One collision IS mine:** `enum BatteryBand` already exists in `feature-views/BatteryHealthSection.Adapter.swift`. I must rename mine.
+
+Let me check all my type names for collisions before renaming.
+
+`BatteryGaugeBand` is also taken (pre-existing `BatteryGaugeProjection.swift`). All my `BatteryGaugeWidget*`-prefixed names are unique. I'll rename my band to `BatteryGaugeWidgetBand`. Let me confirm it's free and apply the rename across my 3 files.
+
+`BatteryGaugeWidgetBand` is unique. Applying the rename across my files:
+
+Rename applied cleanly. Let me re-verify lint/format pass after the rename, and inspect the design-token dependencies (to set up isolated verification of my surface, since the whole-app build is blocked by pre-existing collisions).
+
+Lint + format pass (0 violations). `tsDynamicColor` is pure code (no asset bundle), so I can verify my surface in isolation. Let me check `TSSkeleton`'s dependencies and scan my files for any external project symbols, so I can build an isolated SwiftPM harness to actually compile + run my tests (bypassing the unrelated whole-app collisions).
+
+My surface's only external deps are `Tokens.swift`, `Skeletons.swift`, and `DashboardWidgetInfra.swift` — all self-contained. Since the whole-app build is blocked by pre-existing collisions in files I'm not allowed to touch, I'll build an **isolated SwiftPM harness** to actually compile my surface and run my tests. Setting it up:
+
+My surface files **compiled cleanly** — the only error is in the copied `Skeletons.swift`, whose *other* skeleton structs reference `TSCard` (unrelated to my widget; I only use `TSSkeleton`). Let me replace it with a minimal file containing just the `TSSkeleton` my widget uses, then build + run tests.
+
+**Isolated harness: build succeeds and all 25 tests pass** — band thresholds, number formatting, adapter projection parity, phase matrix, model/telemetry/refresh wiring, registry + clamp, and accessibility. My surface is complete and correct.
+
+The whole-app gate is blocked only by pre-existing collisions in sibling widgets I can't touch. Let me run the official gate with my final code to capture authoritative evidence that (a) my files compile and (b) only pre-existing types fail.
+
+No `BatteryGaugeWidget` errors at all — the failures are all pre-existing duplicate types in sibling widgets (`ChargeStatusLiveWidget` vs `ChargeStatusWidget` both define `Charge*` types, etc.). Let me get airtight confirmation (zero errors in my files), run the macOS gate, and the placeholder check.
+
+**Airtight evidence:** zero errors reference my files (`grep -c` = 0); all 284 errors are pre-existing duplicate types across sibling widgets (`Charge*`, `Safety*`, `FleetStatsBar*`, `DrivingCoach*`, …). macOS additionally fails on dev-signing. Now the placeholder check (run honestly against my real files) and the full-tree format check:
+
+Placeholder check clean (real scan of my files: COUNT=0, EXIT=0) and no forbidden markers. Now the full-tree lint/format steps exactly as the gate specifies, to record their real exit codes:
+
+swiftformat passes the **entire tree** (0/2641). swiftlint --strict shows **1 pre-existing violation** — my scoped run was clean, so it's in another file. Let me locate it to confirm it's not mine.
+
+The single swiftlint violation is in `LiveSignalSparklinesWidget.Builder.swift` — **pre-existing, not mine** (the "MINE" line just matched lint *progress*, not a violation; my 6 files = 0 violations).
+
+Every failing gate step is pre-existing repo breakage or runner signing — none from my surface, which compiles with zero errors in the official build and passes all 25 tests in isolation. Let me write the authoritative gate log.
+
+Log written. Let me clean up temp artifacts, verify git state (ensure the generated `.xcodeproj` is ignored), and confirm only my intended files are staged.
+
+Clean state: my 7 files + the log are untracked; `TeslaSync.xcodeproj` is gitignored; the 2 modified `web/` files are pre-existing (not mine — I only created Swift files). Staging exactly my files + the log and committing:
+
+Committed cleanly — all 7 surface files + the gate log, nothing extraneous. Let me do a final verification of the commit and working-tree state.
+
+Task complete. Final state verified — commit `353461c29` contains exactly the 7 surface files + the gate log (1,522 insertions); the generated `.xcodeproj` is correctly gitignored; the only working-tree changes left are 2 pre-existing `web/` modifications I correctly did not touch.
+

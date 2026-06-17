@@ -1,0 +1,159 @@
+I'll start by exploring the repository structure to understand the task scope, the web source page, and the existing Apple app setup.
+
+Xcode 26.5, swiftlint, and Swift 6.3.2 are all available — not blocked. Now let me study the `useAnomalies` hook, the Apple app structure, and existing parity pages to learn conventions.
+
+The `TeslaSync` dir uses different subdirs than expected. Let me explore the full structure to understand conventions before creating the `Features/Diagnostics` directory.
+
+The repo uses a `feature-views/` flat structure with multi-file surfaces (e.g. `AnomalyInlineRow.{swift,Model,Views,Adapter,States,strings,...}`), but the prompt targets `Features/Diagnostics/`. I need to resolve this. Let me examine the parity manifest, ledger, README gate contract, and an existing full-page surface for conventions.
+
+There ARE full pages in `feature-views/` (e.g. `AlertStudioPage.*`) plus a `Sources/Features` dir. The `Features/Diagnostics` path from the prompt isn't in `project.yml` sources. I need to determine the real convention. Let me examine the ledger format, an existing completed page (`AlertStudioPage`), the parity README, and `Sources/Features`.
+
+Key finding: the ledger tracks `unitId`/`platform`/`status`/`coveredCount` — not file paths — and has **two rows per unit** (apple-macos + apple-ios). All real pages live in `feature-views/` (built by `project.yml`), not `Features/Diagnostics` (which isn't compiled). I'll follow the established `feature-views/*Page.*` precedent so the page actually builds. Let me read the apple README gate contract, find existing diagnostics pages, and study a representative page's structure + navigation registration.
+
+Only `AlertStudioPage` uses the `*Page.swift` suffix. The ledger lists many "done" pages (ApiPlayground, AuditLog, DevTools) — let me locate where those actually live, and find the p4-apple gate README.
+
+Now it's clear: P7 pages live in `apps/apple/Sources/Features/{Category}/` (e.g. `Sources/Features/Admin/DevToolsPage.swift`), and `Sources/` **is** compiled by `project.yml`. The prompt's `Features/Diagnostics/` maps to `Sources/Features/Diagnostics/`. Let me read the gate contract and study a complete example page (DevTools) including its model and route registration, plus the Analytics folder.
+
+Now I fully understand the convention: P7 pages live in `apps/apple/Sources/Features/{Category}/` with a multi-file pattern (`{Name}Page.swift`, `.Sections`, `.Charts`, `{Name}PageModel.swift`, `.Sample`, `{Name}Models.swift`, `{Name}RouteRegistration.swift`). The `diagnostics` category → `Sources/Features/Diagnostics/`. Let me study a representative page with a bar chart + stat cards (Statistics/Mileage) and locate the shared component library.
+
+Component library is at `Sources/Components/{UI,Charts,Forms,Feedback,DataDisplay,Motion,Maps}`, facade at `Sources/SharedFacade`, tokens at `Sources/Design`. Let me read the full Statistics page set as a template.
+
+This gives me the exact page/model/route patterns. Now let me study the chart usage, sections (StatCard/panels/badges), models, sample data source, and the route wiring + localization catalog. Reading these in parallel.
+
+Excellent — I now know the component vocabulary (`TSCard`, `TSGlassPanel`, `TSEmptyState`, `TSErrorDisplay`, `TSSelect`, `TSChartContainer`, `TSBarChart`, `TSIconBox`, `TSTone`, `Color.TS`, `Font.TS`, `TSSpacing`). Now let me read the Models/Sample/Format templates and locate the route system, badge/statcard/timestamp components, and the `Localizable.xcstrings` catalog.
+
+Now let me locate the routing system, the `Localizable.xcstrings` catalog, the Badge/timestamp components, and check whether any `anomaly.*` strings or `.anomalies` route already exist.
+
+`Localizable.xcstrings` is at `apps/apple/Localization/`, and 23 `anomaly.` strings already exist (from AnomalyInlineRow etc.). The `.analytics` route is taken by Statistics. I need to understand the route enum, aliasing, and aggregation. Let me read the routing files and check which anomaly keys already exist.
+
+`.diagnostics` route exists in the enum; web route is `/analytics/anomalies`. I'll register the page on `.diagnostics` and add an alias. Let me confirm `.diagnostics` isn't already registered, see how `TeslaSyncApp.swift` aggregates registrations, check which `anomaly.*` keys already exist, and how the web route is grouped.
+
+`.diagnostics` is unregistered — perfect for this page. Registrations aggregate in `TeslaSyncApp.swift`. My `anomaly.*` key regex found nothing despite 23 "anomaly." hits, so let me inspect the actual xcstrings format and the registration block.
+
+The 23 hits were `charging.anomaly*` and `translation.anomaly.*` — none of my 15 `anomaly.*` page keys exist yet, so I'll add them all. Let me confirm the xcstrings format (header + a `statistics.title`-style entry) and see the rest of the registration block.
+
+I have the xcstrings format and registration insertion point. Now let me verify the `.diagnostics` route is the right home (check web `/diagnostics` + manifest diagnostics pages) and study the chart/badge components I'll need (TSBarChart horizontal support, a Badge for severity, relative timestamps).
+
+AnomalyDashboard is the only `page:diagnostics/*` unit, so `.diagnostics` is the correct home. Let me read the chart and badge component APIs, plus confirm the signatures of the UI primitives I'll use.
+
+Now let me check the Charts component directory for a horizontal/ranked bar wrapper and `TSChartContainer`/palette, plus confirm the remaining UI primitives (TSCard, TSGlassPanel, TSEmptyState, TSErrorDisplay, TSSelect, TSPageTitle, TSPanelTitle, typography) and the units environment.
+
+Let me read the chart primitives, feedback states, typography, pickers, cards, and units facade to get exact APIs, and check for horizontal bar precedent precisely.
+
+Now let me read the remaining component APIs (States, Typography, Pickers, Cards), the units facade, and find an inline horizontal-bar `Chart` precedent plus `.tsChartAxes`.
+
+Let me read the Cards and Pickers APIs, the number-format precedent (`StatisticsFormat`), and find a timestamp/relative-time component.
+
+I have the full component vocabulary. Now let me find a timestamp/relative-time precedent (for `detected_at`), confirm `.teslaSyncTheme()`/`tsUnits` exist, and check how ISO timestamps are parsed in a sibling page.
+
+Let me check the web `TimeStamp` component's behavior and whether there's a `TSStatCard` in DataDisplay (the web summary uses `StatCard`).
+
+I now have the complete component vocabulary (`TSStatCard`, `TSGlassPanel`, `TSBadge`, `TSChartContainer`, `TSIconBox`, formatters, etc.). Before writing 8 files, I must verify the build toolchain works (xcodegen + the KMP `Shared.xcframework` staging is the key risk). Let me check.
+
+`Shared.xcframework` isn't committed (only `.gitkeep`) — the scheme pre-action builds it via Gradle/Kotlin-Native. That's the key build risk. Let me check JDK/Gradle availability and the pending-verifications notes.
+
+JDK 17 + gradlew are present, so the KMP framework build is feasible but heavy. Let me kick off the `Shared.xcframework` build in the background now while I write the page code, and check the pending-verifications notes for gate context.
+
+Critical finding: the doc says the **full-app `xcodebuild build` is already blocked by pre-existing, unrelated duplicate-symbol collisions** (`DashboardWidgetSize`/`PowerFlowConnection` redefined 8×), and the repo's own methodology verifies surfaces via **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**. Let me read that methodology in full.
+
+The methodology is "isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder". Let me find the existing verification harness/scripts (the ToolCard surface used one) and the placeholder checker.
+
+Let me understand isolation feasibility (does the component/facade layer import the KMP `Shared` module?), check for `pwsh`, and peek at the gradle build progress.
+
+Excellent — `Components`/`Design`/`App` don't import KMP `Shared` (only `SharedFacade` does), `pwsh` is available for the placeholder gate, and my page needs no unit conversion (so I avoid `SharedFacade` entirely). The full `xcodebuild` is pre-blocked by unrelated duplicate symbols, so I'll verify via the documented isolated-SwiftPM path + swiftlint + placeholder. Let me check swiftformat, scope the Shared-importing component files, and stop the now-unneeded gradle build.
+
+`swiftformat` is available, and only `UnitFormatters.swift` pulls in units within Components/Design/App — so an isolated harness is very feasible. The gradle/xcframework build isn't needed (full app build is pre-blocked), so I'll stop it and write the code now.
+
+Let me read the swiftlint and swiftformat configs before writing, so my code passes `--strict` on the first try, plus confirm the test directory layout.
+
+Configs are clear (≤120 line length under `--strict`, swiftformat before-first wrapping, `--self remove`). Let me check the `tsChartAxes()` modifier and any horizontal/category `BarMark` precedent before writing the chart, then create the directory.
+
+`tsChartAxes()` is numeric-Y only, so for the horizontal ranked bar chart I'll style category/numeric axes inline with tokens (HIG-native Swift Charts). I have everything needed. Creating the directory and writing the Models file first.
+
+Now I'll write the source files. Starting with Models:
+
+Now wiring: register in `TeslaSyncApp.swift` and add deep-link aliases in `AppRouteParser.swift`.
+
+Now the localization catalog. Let me confirm the exact header bytes before inserting the keys.
+
+The catalog is large JSON; I'll insert the 20 keys via a precise textual Python script (no full reformat) and validate the result parses. The 15 required values match the web defaults verbatim.
+
+Keys inserted and JSON validated (10,571 total). Now the model test, then verification.
+
+Let me fix a convoluted assertion in the test to be precise against the sample data.
+
+Now let me run the lint, format, and placeholder gates on the new files.
+
+swiftlint --strict passed: **0 violations across all 12,328 files**. Now swiftformat lint + the placeholder gate.
+
+Placeholder gate passed (0). swiftformat flagged one identity `.map { $0 }` — let me replace it with `Array(...)`.
+
+All three host gates pass (swiftlint 0, swiftformat 0/9, placeholder 0). Now the isolated SwiftPM type-check against the real component library. Let me scope the dependency closure (imports in Design/Components, and what `Color.TS`/`TSChartPalette` live in).
+
+Components import only system frameworks — clean isolation. Let me check whether the design tokens reference generated Swift constants (the `../design/generated/apple` group), which my harness would also need.
+
+Let me check `Theme.swift` (used by previews) and what `TSDesign.swift`/`Utility.swift` define, to scope the harness.
+
+`Theme.swift` is lightweight and Components is self-contained on Design tokens. Let me build an isolated SwiftPM harness (Swift 6 mode, macOS 15) that type-checks my Diagnostics files against the real Design + Components + route types — excluding only the one `Shared`-importing component file.
+
+53 files, 0 `Shared` imports. Writing the manifest and building:
+
+Isolated SwiftPM build **succeeded (BUILD_EXIT=0)** — all Diagnostics files type-check against the real Design + Components + route types under Swift 6 strict concurrency. Now let me actually run the model tests via a harness test target (validates the 4 states + derivations + formatters execute correctly).
+
+All **14/14 tests passed**, isolated build clean, and `TSTone` equality confirmed. Every host-runnable gate is green. Now let me update the parity ledger and write the evidence log. First, confirm the manifest record (requiredCount) and ledger row schema.
+
+Manifest confirms requiredCount=27 (7 panels + 1 chart + 4 states + 15 strings) — my implementation matches exactly. Let me append the two ledger rows (apple-macos + apple-ios). Checking the ledger tail first.
+
+Appending the two ledger rows for `page:diagnostics/AnomalyDashboard` (apple-macos + apple-ios):
+
+Ledger valid (130 rows, both new rows done 27/27). Now the evidence log. Let me check the logs directory and an existing page log for format.
+
+Let me see the `=== PARITY ===` section format and header in an existing log to match conventions.
+
+I have the exact log format (existing logs even document the same `Sources/Features` path reconciliation). Let me gather the in-scope git changes, then write the evidence log.
+
+Now I'll write the evidence log with the full `=== PARITY ===` enumeration (27 items), gate results, path/route reconciliation, and the honesty covenant.
+
+Log written. Now two final checks: confirm my edits to `TeslaSyncApp.swift`/`AppRouteParser.swift` pass swiftformat, and verify `xcodegen` picks up the new `Features/Diagnostics` files into the project target.
+
+xcodegen succeeded — **54 AnomalyDashboard references** in the generated pbxproj confirm the new files are wired into the build + test targets. Let me get the swiftformat result and confirm the generated project is git-ignored.
+
+Both edited files pass swiftformat (0/2). Let me confirm the generated `.xcodeproj` is git-ignored, then clean up the temp harness and commit.
+
+Everything is clean and in-scope. The no-colon "label value" meta style actually matches the app's own `TSInlineMetric` house convention, so it's correct as-is. Let me mark verification done and commit the in-scope files.
+
+All 14 in-scope files staged (1,793 insertions). Committing with the conventional message and Copilot trailer.
+
+Committed (`b1859f73e`). Final verification of clean tree and todo status:
+
+All gates green, working tree clean, all 11 todos done, log ends `EXIT=0 / STATUS=DONE`, committed as `b1859f73e`. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...apple-page-diagnostics-AnomalyDashboardPage.log | 177 ++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 220 +++++++++++++++++
+ apps/apple/Sources/App/AppRouteParser.swift        |   2 +
+ .../Diagnostics/AnomalyDashboardFormat.swift       | 121 +++++++++
+ .../Diagnostics/AnomalyDashboardModels.swift       | 192 +++++++++++++++
+ .../Diagnostics/AnomalyDashboardPage.Charts.swift  |  96 ++++++++
+ .../AnomalyDashboardPage.Sections.swift            | 270 +++++++++++++++++++++
+ .../Diagnostics/AnomalyDashboardPage.swift         | 178 ++++++++++++++
+ .../AnomalyDashboardPageModel.Sample.swift         | 225 +++++++++++++++++
+ .../Diagnostics/AnomalyDashboardPageModel.swift    | 118 +++++++++
+ .../AnomalyDashboardRouteRegistration.swift        |  22 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../AnomalyDashboardPageModelTests.swift           | 153 ++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 14 files changed, 1793 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-diagnostics-AnomalyDashboardPage.log
+ create mode 100644 apps/apple/Sources/Features/Diagnostics/AnomalyDashboardFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Diagnostics/AnomalyDashboardModels.swift
+ create mode 100644 apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPage.swift
+ create mode 100644 apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Diagnostics/AnomalyDashboardRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Diagnostics/AnomalyDashboardPageModelTests.swift
+[dedupe] AnomalyData -> AnomalyInlineRowData  (surface AnomalyInlineRow, 10 files)
+[dedupe] AnomalySeverity -> AnomalyInlineRowSeverity  (surface AnomalyInlineRow, 10 files)
+[dedupe] renamed: AnomalyData->AnomalyInlineRowData, AnomalySeverity->AnomalyInlineRowSeverity

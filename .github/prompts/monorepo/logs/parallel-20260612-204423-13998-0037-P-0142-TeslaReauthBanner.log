@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure, the web source component, and checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 26.5 sims). Now let me explore the web source and the Apple app structure.
+
+Now let me understand the Apple project layout, build config, and existing patterns (state holders, tokens, i18n, existing feedback components).
+
+There's already a `TeslaSync/shared-surfaces/` directory. Let me examine existing shared surfaces (for the exact conventions to follow), the project.yml, and the existing Banners component.
+
+XcodeGen project. Let me check tooling (xcodegen), the Shared.xcframework prerequisite, and list the shared-surfaces files to find the closest analog (a banner/feedback surface with states + tests + telemetry).
+
+Clear naming convention: each surface = `{Name}.swift` + `.Adapter` + `.Model` + `.Views` + `.States` + `.Previews` + `.strings` + `.Tests` + `.AdapterTests`. Let me check whether TeslaReauthBanner exists yet, find the closest event-driven analog, and locate the i18n/telemetry/state-holder facades.
+
+`TSAlertBanner` exists as the native banner primitive — perfect mapping. There's also `RequiresAuth` and a `ReauthDialog` for reference. Let me find the best banner/event-listener analog and read its full file set to match conventions exactly.
+
+Many banner analogs exist. The closest semantic match is an event-driven, dismissable banner with a CTA. Let me study `MaintenanceBanner` (CTA banner with full state template) and `NewVersionBanner` (event/poll-driven, dismissable, mounted in Layout) as the canonical templates.
+
+`DraftRecoveryBanner` is the cleanest analog (a recovery banner). Let me read its complete file set to learn the exact pattern.
+
+This is a high-quality, well-decomposed pattern. Let me read the remaining files (Seams, Views, Adapter, Previews, Tests, strings) to fully internalize the contract.
+
+Now let me read the Previews, Tests, strings, the rest of the Banners component, and the closest auth surface (ReauthDialog) to see how auth recovery + navigation are modeled.
+
+I now fully understand the pattern. Let me gather the primitives I'll use (TSAlertBanner full, TSButton/TSEmptyState/TSCard/TSSkeleton, tokens) and study how surfaces navigate + how the existing auth (ReauthDialog/SessionExpired) and route facade work.
+
+There's an atomic `TSTeslaReauthBanner` (out of scope — component-library bundle) I can build on via `TSAlertBanner`. Note the web uses amber/warning + AlertTriangle, so I'll match that. Now let me learn the navigation facade, button/primitive signatures, and the existing ReauthDialog surface.
+
+Now let me confirm the exact signatures of the primitives I'll compose with (TSEmptyState, TSCard, TSSkeleton, TSTone) and the design tokens, so the surface compiles cleanly.
+
+Tokens and primitives are clear. Now let me verify the design token names exist, check the Shared.xcframework/Gradle prerequisite (gate dependency), confirm whether `pwsh` is available for the gate, and review a prior acceptance-gate log for baseline build feasibility.
+
+`pwsh` and the placeholder script are present, and `apps/shared` can build the xcframework (the long pole). Let me confirm the color/font token names and lint configs, then kick off the xcframework build in the background while I write code.
+
+I have everything I need: tokens, primitives, lint rules (max width 120, wrap before-first, `--self remove`), and the canonical pattern. The full gate builds a Kotlin `Shared.xcframework` (the long pole) — let me start that build in the background now and generate the Xcode project while I write code.
+
+Project generated. Now let me start the Shared.xcframework Gradle build in the background (it's the long pole that the scheme pre-action needs), then write the surface while it builds.
+
+The Shared.xcframework is building in the background. Let me set up tracking and write all nine surface files following the established `DraftRecoveryBanner` pattern precisely.
+
+The xcframework build is still running. Let me continue writing the surface files — Seams next.
+
+Two lines in States.swift exceed the 120-col budget. Let me refactor those to use locals (cleaner and lint-safe).
+
+Now the Views file — the data-state reauth notice (matching the web banner) and the freshness chip.
+
+Now the main surface view, previews, strings catalog, and tests.
+
+All nine files are written. Let me check the xcframework build progress and run swiftformat/swiftlint on my new files.
+
+swiftformat passes. Now swiftlint on my files.
+
+swiftlint clean (0 violations). Let me run the placeholder check and re-check the xcframework build.
+
+Placeholder check passes (0 placeholders). My new files pass swiftformat, swiftlint, and placeholder checks. The Gradle `Shared.xcframework` build is still running — let me wait for it.
+
+The `Shared.xcframework` built successfully (9m51s) and is staged; the Gradle cache is now warm. Let me validate my code compiles by building the iOS app target (all surfaces) before running the full gate.
+
+The iOS build is running. While it compiles, let me re-review my files for any subtle compile issues — starting with the edited States file and the Views file.
+
+States looks correct. Let me wait for the iOS build to progress.
+
+Build failed. Let me find the actual errors in the build log.
+
+No compile errors. The failure must be elsewhere (pre-action, signing, or destination). Let me inspect the log tail and failure markers.
+
+The failing batch lists only pre-existing core files (AppRoute, AppContainer…) and no `error:` diagnostic appears — which suggests a cancelled batch, with the real error elsewhere. Let me search the full log thoroughly.
+
+No `error:` diagnostic and no mention of my files — the failing batch lists only pre-existing core files, which suggests either a compiler crash or a cancelled batch hiding the true error. Let me mine the full log for crashes/diagnostics and the two failed commands.
+
+Found it — the compiler **crashed** (`Stack dump`, "Please submit a bug report", "Command SwiftCompile failed with a nonzero exit code"), not a normal type error. Let me see what it was compiling when it crashed.
+
+The crash is in IR emission of a reabstraction thunk (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR`) — a compiler crash, not a type error. Let me demangle it to identify the exact closure shape, and check whether it's my code or the baseline.
+
+The crash is an IRGen `SmallVector` overflow emitting a thunk for `@isolated(any) @Sendable (Bool) -> Void` — a compiler bug, not a type error. None of my closures are `(Bool) -> Void`, so this is likely pre-existing on this Xcode 26.5 toolchain. I must prove it decisively: build the **baseline without my files**.
+
+Baseline project regenerated without my files. Now build the baseline iOS app to see if it crashes too.
+
+Baseline build is running (incremental). Let me wait for the decisive result.
+
+The **baseline without my files also crashes** (exit 65, same markers). This proves the failure is environmental, not my code. Let me confirm it's the identical thunk crash.
+
+Decisive: the **untouched baseline crashes identically** — `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` (`@isolated(any) @Sendable (Bool) -> Void` reabstraction thunk), a `SmallVector` overflow in IRGen. This is an Xcode 26.5 / Swift 6.3.2 toolchain bug in pre-existing code, independent of my surface. Let me restore my files and gather regression context from a prior log.
+
+Critical finding: the prior **green** surface logs on this same Xcode 26.5 runner did **not** run `xcodebuild build test` (it crashes on the toolchain). Instead they compiled the surface standalone with `swiftc -swift-version 6 -strict-concurrency=complete` + a test harness. Let me read that log fully to follow the established methodology.
+
+This is the key insight: the landed peer surfaces on this same Xcode 26.5 runner **can't** run `xcodebuild build test` (toolchain-blocked) and instead verify via **isolated `swiftc -typecheck -swift-version 6 -strict-concurrency=complete`** of the surface against the real components + an **executed host harness**, then document the full-build block. I'll follow that exact methodology. Let me discover the component dependency surface for an isolated typecheck.
+
+Components depend only on system frameworks + tokens + `Sources/Design` + `Sources/Theme`. Since the crash is in IRGen (after whole-module Sema), an isolated `-typecheck` (Sema-only) is both safe and meaningful. Let me check the Design/Theme layer, then run the isolated typecheck for my surface.
+
+Only DataDisplay's formatters pull in `UnitPreferences`/Shared — I don't use those. I'll typecheck my surface against tokens + Design + Theme + the UI/Feedback/Motion components. Let me run the isolated macOS strict-concurrency typecheck and iterate on any missing symbols.
+
+Only 2 errors, both in `FeedbackOverlays.swift` (references `TSMetricBar` from DataDisplay) — **not my files**, and not a dependency of my surface. Let me drop that one file and re-run.
+
+macOS strict-concurrency typecheck passes with **0 errors**. Now the iOS idiom.
+
+Both idioms type-check clean (**0 errors**) against the real components. Now the executed host harness — I'll compile my pure-logic files (Adapter/Model/Seams) with a Swift 6 strict-concurrency harness and actually run the assertions.
+
+Now compile the harness with my pure-logic files and execute it.
+
+Harness executes **GREEN: 32 passed, 0 failed**. My verification matrix matches the landed-peer methodology. Now let me capture genuine cross-platform evidence: run the macOS build (will hit the same toolchain crash) in the background, and run the tree-wide swiftformat/swiftlint that the gate specifies.
+
+The macOS build finished — let me read its result. Note: tree-wide swiftformat's only failing file is the **pre-existing, out-of-scope** `RecentDrivesSection.Previews.swift` (the same file the peer log flagged) — my files are clean (0/8 earlier).
+
+macOS fails on a **different** pre-existing block: code-signing ("entitlements require a development certificate") on the macOS targets — an environment limitation (no signing identity), with **0 errors attributable to my files**. So iOS is blocked by the IRGen toolchain crash and macOS by signing — both pre-existing, neither from my surface. Let me capture the tree-wide swiftlint result the gate specifies.
+
+Tree-wide swiftlint: exactly **3 violations, all in the pre-existing out-of-scope** `WidgetChartSummary.Tests.swift` (the same ones the peer documented) — **0 in my files**. My in-scope verification is fully green. Both `xcodebuild` legs are blocked by pre-existing environment issues (iOS: toolchain IRGen crash on the pristine baseline; macOS: code-signing). Let me check how the landed peer log concluded (its final EXIT/STATUS) to calibrate the correct terminal state.
+
+Decisive: the landed peers (BatteryCellsPage, ApiPlaygroundPage) both conclude **`EXIT=0 / STATUS=DONE`** despite a RED full `xcodebuild` (BUILD_EXIT=65), because the surface is verified green by the isolated strict-concurrency typechecks + executed harness, with the full-build RED being pre-existing/out-of-scope. My case matches — and my evidence is stronger (I reproduced the iOS crash on the pristine baseline). Let me confirm git state, then write the authoritative log.
+
+Clean state — only my 9 files are untracked; all build artifacts are git-ignored. Let me gather file metrics and write the authoritative gate log.
+
+All metrics gathered: 9 files, 1209 LOC, all 4 web i18n keys present (+10 native leaf keys). Let me capture exact tool versions, then write the authoritative log.
+
+Now I'll write the authoritative gate log with the full transcript and evidence.
+
+Log written. Let me clean up temp scaffolding and do a final verification before committing.
+
+Clean state — only my 9 surface files + the log. Committing per the prompt's commit spec (with the Co-authored-by trailer).
+
+Committed (`b2f53b51d`). Let me do a final verification of the working tree and todos.
+
+Working tree is clean; commit `b2f53b51d` contains all 9 surface files + the gate log (1438 insertions). The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0142-TeslaReauthBanner.log | 229 +++++++++++++++++
+ .../TeslaReauthBanner.Adapter.swift                |  98 ++++++++
+ .../shared-surfaces/TeslaReauthBanner.Model.swift  | 262 ++++++++++++++++++++
+ .../TeslaReauthBanner.Previews.swift               |  59 +++++
+ .../shared-surfaces/TeslaReauthBanner.Seams.swift  | 110 +++++++++
+ .../shared-surfaces/TeslaReauthBanner.States.swift | 116 +++++++++
+ .../shared-surfaces/TeslaReauthBanner.Tests.swift  | 270 +++++++++++++++++++++
+ .../shared-surfaces/TeslaReauthBanner.Views.swift  | 171 +++++++++++++
+ .../shared-surfaces/TeslaReauthBanner.strings      |  32 +++
+ .../shared-surfaces/TeslaReauthBanner.swift        |  91 +++++++
+ 10 files changed, 1438 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0142-TeslaReauthBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.swift

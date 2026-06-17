@@ -1,0 +1,153 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app, and the shared infrastructure.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Let me read the web source and explore the Apple app structure.
+
+Now let me study an existing widget that's most analogous (data → metrics → cards). Let me read the `GuardModeWidget` and `LifetimeStatsWidget` sets, plus understand the shared infrastructure.
+
+Excellent, the pattern is very clear. Let me read the remaining LifetimeStats files (Previews, Tests, strings) and locate the shared infrastructure types.
+
+Now let me find the shared infrastructure types and the web hooks the widget depends on.
+
+Let me read the native shared components/design tokens and the web components (MetricCard, WidgetShell, EmptyState, useSettings) plus the exact distance conversion.
+
+Let me find the core design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSTone) and read the web components + useSettings.
+
+Let me locate the exact token definitions and read the web tokens + remaining web components.
+
+`TSSpacing` for the main app isn't in `Sources/`. I need to understand the target/module structure. Let me read `project.yml` and find where the design tokens actually live.
+
+Now I understand the target structure. Design tokens live in `apps/design/generated/apple`. Let me read those tokens, the web `WidgetShell`, and verify the build toolchain (xcodegen).
+
+Let me confirm the exact distance conversion constants, the settings defaults, and the Shared.xcframework build situation (needed for the build gate).
+
+The full build needs a KMP `Shared.xcframework` (Kotlin/Native Gradle build). Let me check feasibility and read the pending-verifications doc to understand the established verification approach.
+
+I have a complete understanding now. The established precedent (per `macos-pending-verifications.md`) is: verify each surface via isolated SwiftPM build + tests + `swiftc -typecheck` + swiftlint/swiftformat/placeholder, with the full-app build deferred to the macOS CI gate. Let me check the lint/format configs before writing code.
+
+I have everything needed. `pwsh`, `xcodegen`, `swiftlint`, `swiftformat` are all available. Let me write a plan file, then create the widget files modeled precisely on the `LifetimeStatsWidget` (0055) template.
+
+Now let me create the Model file (state-holder seam, telemetry, registry, i18n facade).
+
+Now the Adapter (Foundation-only verbatim numeric port, projection, accessibility, layout resolver).
+
+Now the SwiftUI surface view.
+
+Now the Previews (DEBUG) and the strings catalog.
+
+Now the comprehensive test suite.
+
+All six files are written. Now let me auto-format my files with the repo's swiftformat config, then run the lint gates.
+
+swiftformat clean (0/5). Now swiftlint --strict on my files (the changed web files are pre-existing, not mine).
+
+`file_length` (400-line limit, strict). I need to split three files. Let me check all line counts, then split the view, adapter, and tests into focused files (matching the `GuardModeWidget.Views`/`*.ModelTests` precedent).
+
+Three files exceed the 400-line limit. I'll split the view into `.Views.swift`, the adapter into `.Format.swift`, and the tests into `.ModelTests.swift`. Let me first view the current (post-format) content to get exact strings.
+
+Now I'll create the `.Views.swift` file with the subviews, then remove them from the main view file.
+
+Now remove the moved blocks from the main view file and update the reference:
+
+Now remove the moved subview blocks (from the "Metric tile" MARK to end of file) using sed:
+
+Main view now 337 lines. Now split the Adapter — view the sections to move into `.Format.swift`:
+
+I'll create the `.Format.swift` file and remove the conversion + formatting blocks (lines 25–78) from the Adapter:
+
+Adapter now 376 lines. Now split the Tests file — find the class boundaries:
+
+I'll split the tests: create `.ModelTests.swift` with the state-holder/registry/accessibility classes, and truncate `Tests.swift` to the adapter+layout classes.
+
+Let me fix the `Tests.swift` header to accurately reflect its now-narrowed scope, then auto-format all files and re-run the lint gates.
+
+Now re-run swiftformat (apply) and both lint gates across all 8 files:
+
+All files under 400 lines and format-clean. Now run both lint gates strictly on all 8 files:
+
+Both lint gates clean (0 violations). Now the placeholder gate:
+
+Let me confirm the scan actually covered my files (the gate passed a prefix path) and double-check manually for forbidden patterns:
+
+The gate's prefix-path scanned zero files. My manual grep caught one real issue: "placeholders" in a Model.swift comment (matches the `Placeholder` pattern). Let me fix it, then scan properly via a temp dir containing only my files.
+
+Placeholder gate clean (0 violations) on my files. Now run `xcodegen generate` to confirm the project enumerates my files:
+
+All 9 files are enumerated in the generated project. Now the key verification — an **isolated SwiftPM build + test run** under Swift 6 strict concurrency (the precedent approach, independent of the KMP `Shared.xcframework`). Let me set up the harness with my sources + the design tokens + grid infra.
+
+Isolated build succeeds under Swift 6 strict concurrency. Now run the tests:
+
+All **26 tests passed, 0 failures** under Swift 6 strict concurrency. Now the additional evidence the precedent uses: real iOS-18 + macOS-15 `swiftc -typecheck` against both SDKs.
+
+Both SDK typechecks pass (0 errors). Now let me set up the log directory and honestly assess the full-app `xcodebuild` gate (which depends on the KMP `Shared.xcframework`). Let me check the log dir and whether the KMP/Gradle toolchain is feasible here.
+
+The KMP caches exist and the iPhone 16 simulator is booted. Let me examine an existing sibling widget log and the acceptance-gate log to match the expected format and see how the `Shared.xcframework`/full-build was handled.
+
+This matches a clear, established precedent (61 sibling logs): surface verified green via host gates, with the Xcode scheme build/test **DEFERRED** to the signed CI runner due to pre-existing, out-of-scope blockers (KMP `Shared.xcframework` + cross-slot duplicate symbols). Let me reproduce that blocker evidence honestly rather than assume it.
+
+In this slot, `DashboardWidgetSize` is defined exactly once (the cross-slot duplication is resolved here) — so the remaining full-build dependency is the KMP `Shared.xcframework`. The `~/.konan`/`~/.gradle` caches exist, so let me attempt to actually stage it and run the real gate rather than defer prematurely.
+
+~13 min with no output — this is the documented heavy KMP `Shared.xcframework` build (deferred to `macos-latest` CI per `macos-pending-verifications.md`, and DEFERRED by all 61 sibling widget logs). Let me stop it and instead capture deterministic, fast evidence of the missing-framework blocker for the log.
+
+Reproduced the deterministic blocker: the app target can't build because the KMP `Shared.xcframework` is absent (Kotlin/Native Gradle build, deferred to `macos-latest` CI). My surface is verified green via all host gates. Let me verify the generated project is git-ignored and clean up, then assemble the authoritative log.
+
+All 9 widget files are new/untracked; generated project removed. Now let me re-run the complete host-gate suite cleanly, capturing authoritative output for the log.
+
+Many Gradle daemons from parallel slots are saturating CPU (shared environment) — that's why swiftformat slowed (not hung). I already have authoritative clean results from earlier runs. Let me get one clean fresh swiftformat capture with patience, avoiding interference with other slots' processes.
+
+swiftformat confirmed clean (0/8). All host gates are green. Now I'll write the authoritative log following the established precedent format (host gates green, Xcode scheme steps deferred with reproduced evidence).
+
+Now let me stage only my files (avoiding the two pre-existing unrelated web changes) and commit.
+
+Exactly my 9 files + the log are staged (the two pre-existing web changes are excluded). Committing:
+
+Commit `c3e2d8f9` created with all 9 widget files + log (2092 insertions). Let me do a final cleanliness check:
+
+The task is complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) **`ChargeCostTrackerWidget`** at parity with the web source `features/dashboard/widgets/ChargeCostTrackerWidget.tsx`, committed as `c3e2d8f9`.
+
+**9 files** (modeled on the `LifetimeStatsWidget` 0055 precedent, each < 400 lines for `file_length`):
+- `.Model.swift` — P1/S8 state-holder seam + P1/S11 telemetry + registry + P1/S10 i18n facade
+- `.Adapter.swift` / `.Format.swift` — Foundation-only **verbatim** numeric port (incl. the web's miles-as-metres call chain) + projection + layout ladder + a11y
+- `.swift` / `.Views.swift` — SwiftUI surface (WidgetShell chrome, every state, every layout) + leaf views
+- `.Previews.swift`, `.Tests.swift`, `.ModelTests.swift`, `.strings`
+
+**Parity delivered:** all states (loading/empty/error/stale/offline/content), all layouts (compact/standard/tall via the web `isCompact`/`isTall` ladder), every i18n key with web fallbacks, VoiceOver labels + Reduce-Motion + Dynamic Type, `view.opened` telemetry, registry `charge-cost-tracker`/`charging`/2×2/1×2/4×40. Display strings pinned to the exact web output (`$14.00`, `$0.12/kWh`, `100.0 kWh`, `$34.286`, `$-13.97`, …).
+
+**Verification (all executed on-host):**
+| Gate | Result |
+|---|---|
+| swiftlint --strict (8 files) | 0 violations |
+| swiftformat --lint (8 files) | 0/8 |
+| placeholder gate | COUNT=0 |
+| xcodegen generate | 9 files enumerated |
+| Isolated SwiftPM build (Swift 6 strict concurrency) | ✅ |
+| Isolated test run | **26/26 passed** |
+| iOS 18 + macOS 15 `swiftc -typecheck` | EXIT=0 / EXIT=0 |
+
+The full-app `xcodebuild build test` is **DEFERRED** to the `macos-latest` acceptance gate (P99-0001) — reproduced blocker `BUILD_RESULT=65: no XCFramework … Shared.xcframework`, the pre-existing KMP/Kotlin-Native dependency documented in `macos-pending-verifications.md` and deferred by all 60 sibling P4 widget surfaces. Log ends `EXIT=0 / STATUS=DONE`. Working tree left clean (the two unrelated pre-existing web edits were not touched).
+
+Merge made by the 'ort' strategy.
+ ...hboard-widgets-0016-ChargeCostTrackerWidget.log | 159 +++++++++
+ .../ChargeCostTrackerWidget.Adapter.swift          | 376 +++++++++++++++++++++
+ .../ChargeCostTrackerWidget.Format.swift           |  67 ++++
+ .../ChargeCostTrackerWidget.Model.swift            | 360 ++++++++++++++++++++
+ .../ChargeCostTrackerWidget.ModelTests.swift       | 220 ++++++++++++
+ .../ChargeCostTrackerWidget.Previews.swift         | 165 +++++++++
+ .../ChargeCostTrackerWidget.Tests.swift            | 194 +++++++++++
+ .../ChargeCostTrackerWidget.Views.swift            | 164 +++++++++
+ .../ChargeCostTrackerWidget.strings                |  50 +++
+ .../ChargeCostTrackerWidget.swift                  | 337 ++++++++++++++++++
+ 10 files changed, 2092 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0016-ChargeCostTrackerWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.Format.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.swift

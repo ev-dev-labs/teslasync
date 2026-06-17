@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and reading the web source that I need to reproduce.
+
+Let me read the web source and examine the conventions used by existing surfaces.
+
+Now let me read the `useVehiclePaint` hook and the `vehicleColors` palette library — these define the data model and behavior I must reproduce.
+
+Now let me understand the native conventions. I'll examine the most similar recently-completed surface (ThemePicker) and check the toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Let me study the ThemePicker surface convention in depth.
+
+This confirms VehiclePaintPicker is a presentational surface like ThemePicker (local store, no fetch). Let me read the rest of the ThemePicker convention files to fully internalize the structure.
+
+Project uses XcodeGen. Let me read project.yml and locate the design-token system (Color.TS, Font.TS, TSSpacing, TSRadius, TSAnimation).
+
+Let me read the design-token system and lint configs to ensure I follow conventions precisely.
+
+Let me locate the generated design tokens (Color.TS, Font.TS, TSSpacing, TSRadius) and read the placeholder-check patterns.
+
+I now have the full token API and conventions. Let me verify the telemetry pattern is per-surface (not a shared facade) and confirm the baseline lint/format is clean before I start.
+
+Per-surface telemetry confirmed (321 surfaces follow it); shared-surfaces lint baseline is clean. Let me check a prior surface's gate log to see expected build/test behavior, and inspect the xcframework staging script.
+
+Critical finding: the prompt's literal `xcodebuild build test` returns 65 in this environment for pre-existing/external reasons (sibling compile error + KMP/signing limits). Prior passing surfaces used an extended, honest sub-step methodology. Let me read the full ThemePicker log to mirror it exactly.
+
+I now have the complete, proven methodology from the predecessor (ThemePicker): the literal `xcodebuild build test` returns 65 in this headless runner due to a pre-existing sibling compile error + KMP/code-signing limits, so prior surfaces verified green via `swiftc -typecheck` (iOS+macOS) and a standalone SwiftPM `swift test`, plus lint/format/placeholder. I'll reproduce that exactly and honestly.
+
+Let me set up tracking and write the surface.
+
+Now writing the surface. Starting with the Foundation-only core files.
+
+Let me simplify — the typealias shim is unnecessary. Fixing that.
+
+Now the Catalog (palette list + Tesla-code inference, the native peer of `vehicleColors.ts`):
+
+Now the Projection value types and the Projector (state → projection):
+
+Now the Seams — the store seam (native `useVehiclePaint`) plus the in-memory double that reproduces the override-normalization logic:
+
+Now the Model — the P1/S10 i18n facade, the P1/S11 telemetry seam, and the `@Observable` state holder:
+
+Now the Color hex bridge, then the public View and subviews:
+
+Now the subviews:
+
+Now the DEBUG previews and the i18n `.strings`:
+
+Now the pure adapter tests:
+
+Now the model/seams/strings/views tests:
+
+All 13 files written. Let me auto-format them, then run swiftlint and swiftformat lint to validate.
+
+3 files reformatted. Let me verify formatting is now clean and run swiftlint --strict on the new files.
+
+Both clean on my files (format 0/12, lint 0 violations). Now the decisive check — `swiftc -typecheck` for iOS-sim and macOS (surface sources + design tokens), mirroring the predecessor's methodology.
+
+iOS typecheck clean. Now macOS:
+
+Both typechecks clean (0 diagnostics). Now the standalone SwiftPM `swift test` harness (module named `TeslaSync` so the real test files run via `@testable import`), mirroring the predecessor.
+
+All 32 tests pass (0 failures). Now the full-tree gate checks: `swiftlint --strict` and `swiftformat --lint apps/apple` (exact gate invocations), plus placeholder-scan tooling availability.
+
+All green: `swiftlint --strict`=0, `swiftformat --lint`=0 (0/5077 files). pwsh is available. Let me inspect the placeholder checker's parameters, then run it both the literal gate way and a genuine per-file scan (avoiding a false-clean).
+
+The literal gate `-Path` basename scans nothing (false-clean), so I'll run both the literal gate invocation and a genuine scan over exactly my files (copied to an isolated dir), as the predecessor did.
+
+Both placeholder scans clean (COUNT=0). Now `xcodegen generate`, and let me verify the current pre-existing sibling-build state and confirm the `.strings` is pattern-free.
+
+`xcodegen` succeeded; `.strings` is pattern-free. The predecessor's sibling break (`AISuggestNewGeofences.swift` `glass(_:)` passing non-escaping `content` into `TSGlassPanel`) is still present. Let me confirm my files are wired into the generated project, then launch the real iOS `xcodebuild` gate in the background (it runs the ~10-min Gradle xcframework pre-action).
+
+My files are wired in (78 pbxproj refs); iPhone 16 Simulator (26.5) IS available, so I can use the literal gate destination. Let me launch the real iOS `xcodebuild ... build test` in the background (it runs the Gradle xcframework pre-action first).
+
+While that runs, let me monitor its early output to see whether the Gradle pre-action is progressing or failing fast.
+
+The Gradle xcframework pre-action is genuinely building (downloading Kotlin/Native, compiling iOS targets). This takes ~10 min. Let me wait and poll.
+
+Gradle has produced the debug XCFramework and is linking the release framework. Let me continue waiting for staging to finish and the app compile/test phase to begin.
+
+Still assembling the release XCFramework. Let me keep waiting for staging completion and the app SwiftCompile phase.
+
+Shared.xcframework staged; now compiling the TeslaSync app target (my surface is in the compile batch). Let me wait for the compile result.
+
+The iOS build finished. Let me capture the real exit code and analyze whether my surface compiled and what (if anything) failed.
+
+IOS_EXIT=65, but the **2 compiler errors are both pre-existing sibling files, not mine** — `AISuggestNewGeofences.swift:129` (the same break the ThemePicker log disclosed) and `RecentDrivesSection.Previews.swift:24`. Let me confirm zero VehiclePaintPicker errors, that my files *were* compiled, and that git shows only my files changed.
+
+**Decisive evidence:** zero `VehiclePaintPicker` errors in the full iOS app build; all 10 non-test sources *were* compiled cleanly; `git status` shows only my 13 files. The 2 errors are pre-existing siblings outside my scope. Now the macOS gate (Gradle is cached now):
+
+While macOS builds (Gradle cached now), let me attribute the two pre-existing failures to prior commits (not my task) for the log.
+
+Both failures are committed by prior P4 tasks (d30ee02f9, afff462c1) — outside my allowed scope. Let me check macOS build progress.
+
+MAC_EXIT=65 — all 4 errors are **code-signing only** (entitlements need a dev certificate on this headless runner), zero source errors, zero `VehiclePaintPicker` errors. This matches the documented ROOT-CAUSE B exactly. Let me confirm the xcframework staged successfully, then write the gate log.
+
+XCFW staged successfully (slices: ios-arm64, ios-arm64-simulator, macos-arm64); iOS "TEST FAILED" is purely "Testing cancelled because the build failed" on the pre-existing sibling SwiftCompile batch. Let me capture the exact swiftlint summary line for an accurate log, then write it.
+
+All evidence gathered. Writing the comprehensive, honest gate log.
+
+Now cleaning up temp artifacts and committing. Let me first verify git scope is exactly my files (the generated `.xcodeproj`/xcframework must be git-ignored).
+
+Git scope is clean — exactly my 13 files + the log (generated `.xcodeproj`/xcframework are git-ignored). Committing.
+
+Committed as `834f899f7`; working tree clean. Marking todos done.
+
+Merge made by the 'ort' strategy.
+ ...ple-shared-surfaces-0234-VehiclePaintPicker.log | 198 +++++++++++++++++++
+ .../VehiclePaintPicker.Adapter.swift               | 116 +++++++++++
+ .../VehiclePaintPicker.AdapterTests.swift          | 202 +++++++++++++++++++
+ .../VehiclePaintPicker.Catalog.swift               |  77 ++++++++
+ .../shared-surfaces/VehiclePaintPicker.Color.swift |  32 ++++
+ .../shared-surfaces/VehiclePaintPicker.Model.swift | 160 ++++++++++++++++
+ .../VehiclePaintPicker.Previews.swift              |  66 +++++++
+ .../VehiclePaintPicker.Projection.swift            |  91 +++++++++
+ .../VehiclePaintPicker.Projector.swift             | 115 +++++++++++
+ .../shared-surfaces/VehiclePaintPicker.Seams.swift |  81 ++++++++
+ .../shared-surfaces/VehiclePaintPicker.Tests.swift | 213 +++++++++++++++++++++
+ .../shared-surfaces/VehiclePaintPicker.Views.swift | 194 +++++++++++++++++++
+ .../shared-surfaces/VehiclePaintPicker.strings     |  52 +++++
+ .../shared-surfaces/VehiclePaintPicker.swift       |  74 +++++++
+ 14 files changed, 1671 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0234-VehiclePaintPicker.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Color.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.swift

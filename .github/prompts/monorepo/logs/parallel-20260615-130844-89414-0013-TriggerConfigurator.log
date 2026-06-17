@@ -1,0 +1,177 @@
+I'll start by exploring the repository structure to understand the task, the web source, and the existing Apple app patterns.
+
+Now let me explore the Apple app structure, existing patterns, and the parity infrastructure.
+
+The actual structure differs from the prompt. Let me investigate the real layout — there are thousands of files in these directories.
+
+There's already a `TriggerConfigurator` in `feature-views/`. Let me examine the existing files to understand current state and the established multi-file pattern.
+
+The files exist and are committed. Let me check whether this task was already completed — checking git history, the parity ledger, and the log file.
+
+There's a prior P4 "surface" commit but no P7 parity log yet — this task is pending. Let me read the existing TriggerConfigurator files to assess whether they're scaffolds or complete.
+
+This is a substantial existing implementation, not a stub. Let me read the remaining files to assess completeness against the parity requirements.
+
+The implementation looks complete and high quality. Let me read the remaining files (Adapter, Catalog, strings, Tests) to verify parity coverage.
+
+Complete, high-quality implementation already exists with all 21 web strings. Now let me understand the P7 deliverable pattern by examining a recent completed P7 commit and the ledger state.
+
+Key finding: P7 pages go in `apps/apple/Sources/Features/<Domain>/`, while the existing TriggerConfigurator is a P4 "surface" in `TeslaSync/feature-views/`. Let me examine the ledger, the Sources/Features structure, and a reference P7 log to understand the exact deliverable.
+
+Now it's clear: `ActionBuilder` is the exact sibling of `TriggerConfigurator` (both are configurator components in `web/.../automations/pages/`). The `ActionBuilderPage` P7 was already built in `Sources/Features/Automations/`. That's my template. Let me study it thoroughly.
+
+This is the exact template I need. Let me read the remaining ActionBuilder P7 files (Model, Views, Fields, Tests), the rest of its log, and its ledger entry to fully internalize the pattern.
+
+I have the full pattern now. Let me gather the final reference pieces: the Fields/editors template, the test template, the ledger entry to mirror, the rest of the log, and check the existing string catalog and build tooling.
+
+Let me check the test template, the rest of the ActionBuilder log, the exact manifest requirement for this unit, existing strings, and critically — whether Xcode/Swift build tooling is available (determines DONE vs BLOCKED).
+
+All tools available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, xcodegen) — so the gate can run and STATUS can be DONE. Let me get the manifest entry for my unit, the rest of the ActionBuilder log, existing strings, and the design-system primitives.
+
+Now I fully understand the deliverable and gate reality (two known pre-existing out-of-scope build blockers I must isolate around). Let me extract the exact manifest requirement, inspect the design-system primitives, check existing strings, and read project.yml.
+
+Manifest confirms: requiredCount=23 (states: empty+success, plus 21 strings; no panels/charts/maps). Now let me inspect the design-system primitives available in `Sources/`, the project structure, and existing strings.
+
+Let me read the exact component signatures I'll use, the project config, and check which required strings already exist in the catalog.
+
+Let me read the design tokens, theme helpers, and project config, and check existing catalog keys.
+
+`TSSpacing`/`Color.TS`/`Font.TS` come from generated P2 tokens. Let me locate their definitions, the glass-panel helper, `TSTone`, read project.yml, and check existing catalog keys.
+
+Let me confirm token APIs, the glass-panel helper, `TSTone`, potential `Geofence` collisions, the project/test config, and which required strings already exist.
+
+Token APIs confirmed. Let me read the Badges/Pickers components, project config, and check existing catalog keys to avoid duplicates.
+
+`TSTone`/`TSBadge` are module-public; I'll use a native `Picker`/`Toggle` with verbatim runtime-localized labels (the ActionBuilder pattern). Let me confirm the project globs sources/tests and check which required strings already exist in the catalog.
+
+Project globs `Sources` and `Tests/Unit`, so new files auto-include on `xcodegen generate`. Now let me check which of my required + supporting strings already exist in the catalog (to avoid duplicate JSON keys), and whether the sibling AutomationBuilder already ported trigger strings.
+
+Let me inspect the exact JSON shape of existing entries (including ActionBuilder-added keys) so I add new keys in the correct format.
+
+The entry shape is clear. Let me check the raw file formatting (indentation, key ordering, colon spacing) so my programmatic additions match Xcode's serialization and keep the diff clean.
+
+Keys are append-ordered (not sorted), and entries use Xcode's `" : "` colon style. Let me inspect the file tail to find the safest insertion point and confirm the exact style of recently-appended keys.
+
+Append-ordered catalog, entries in Xcode `" : "` style, last entry has no trailing comma before `strings` closes. I'll textually append new keys to avoid reformatting 206k lines. Let me verify which extra (chrome/title/a11y) keys already exist, then set up my plan and todos.
+
+I now have complete understanding. Let me set up a plan and todos, then build. The deliverable mirrors the sibling `ActionBuilder` P7: a fresh page/model/views/route/tests under `Sources/Features/Automations/`, reusing the pure core from the P4 feature-view, with strings in `Localizable.xcstrings`, plus ledger + log.
+
+Now I'll build the deliverable. Starting with the model — reusing the pure core (`TriggerAdapter`, `CronExpression`, catalogs, `AutomationTrigger`, `Geofence`) from the P4 feature-view, with an async geofence provider seam and platform-catalog localizer.
+
+Model done. Now the presentational primitives — reusing the feature-view's injected-localizer accessibility helpers and the design tokens.
+
+Now the page View with the type selector, editor dispatch, load/refresh, adaptive layout, and previews.
+
+Now the navigation registration seam (unrouted unit), mirroring ActionBuilder's pattern.
+
+Now the model tests, covering all data states and every web mutation rule.
+
+All Swift files created. Now I'll append the 72 missing catalog keys textually (preserving Xcode's formatting), then validate the JSON.
+
+72 keys added (9829→9901), JSON valid. Let me verify the diff is purely additive and the appended formatting matches Xcode's style.
+
+Purely additive and JSON-valid. Let me confirm the junction (the previously-last entry now has its trailing comma) looks correct.
+
+Junction is correct. Now let me update the parity ledger. Let me inspect its structure and the automations section to place the two new rows correctly.
+
+Ledger is standard `json.dumps(indent=2)` style. Let me confirm a round-trip reproduces it byte-for-byte before doing a programmatic insert (keeps the diff to exactly the 2 new rows).
+
+Round-trip is byte-identical (modulo trailing newline), so a programmatic insert yields a minimal diff. Let me add the two ledger rows after the ActionBuilder rows.
+
+Clean 18-line ledger insert. Now the gate. Starting with the fast in-scope checks: swiftformat (apply, then lint) and swiftlint --strict on my files.
+
+swiftformat can't write files in this sandbox (cache write also failed), but its lint read fine and flagged 4 issues. I'll fix them manually. Let me check the config width and the offending lines.
+
+Files are writable (swiftformat's own write step is sandbox-blocked). I'll fix the 4 lint issues directly. Let me view the exact lines.
+
+Let me measure exactly which lines exceed 120 chars so I wrap precisely.
+
+Only 2 test lines exceed 120, plus the model's redundant type annotation (the feature-view omits it too). Let me fix all three.
+
+Now re-run swiftformat --lint and swiftlint --strict to confirm clean.
+
+`wrapFunctionBodies` wants the stub's single-line `load()` body expanded (the ActionBuilder test did this too). Let me view and fix.
+
+Both clean. Let me capture the explicit swiftlint summary and run the placeholder gate.
+
+swiftlint clean (0 violations). Now the placeholder scan on my source + test dirs.
+
+Placeholder scan: COUNT=0 (9 sanctioned `parity:allow` opt-outs across the dir). Let me scan the tests dir too, then regenerate the Xcode project.
+
+Placeholder gates clean. Now regenerate the Xcode project and confirm my files are wired in.
+
+xcodegen clean — my files referenced (30 page refs, 6 test refs). Before the heavy full build, let me check whether the two pre-existing out-of-scope build blockers (from the ActionBuilder log) still exist at this HEAD, and whether the Shared.xcframework is staged.
+
+Both pre-existing out-of-scope blockers (Input.Previews explicit-return, LayoutSwitcher) still exist at this HEAD, and the Shared.xcframework isn't staged — same situation the DONE ActionBuilder sibling documented. Let me first prove my logic with an isolated Swift 6 strict-concurrency harness (compiling the reused core + my model), then do a dual-platform typecheck of the views.
+
+Harness compiled clean under Swift 6 strict concurrency. Let me run it.
+
+The harness caught a real spec detail: toggling "fire on any change" ON drops the value (web sets `{signal, op:'changed'}` with no `value_num`), so toggling OFF re-derives the **default** (`?? 20`), not the prior value — exactly matching the web. My test/harness expectation was wrong; the model is correct. Let me fix the test to assert the faithful value.
+
+Now fix the harness expectation to match and re-run.
+
+All 26 harness assertions pass — model logic verified. Now the dual-platform typecheck of the SwiftUI views against the real tokens/components. Let me first check which component files pull external modules (to exclude), then run the typecheck.
+
+Components only import system frameworks (Charts/MapKit/CoreLocation/SwiftUI). Let me check why ActionBuilder excluded `UnitFormatters.swift`, then run the dual-platform typecheck.
+
+Excluding `UnitFormatters.swift` (references out-of-set unit symbols), like ActionBuilder. Let me run the macOS typecheck of my views against the real tokens + full component tree + reused core.
+
+macOS typecheck: 0 errors against the real tokens + full component tree + reused core. Now the iOS-simulator typecheck (exercises the `#if os(iOS)` size-class + keyboard branches).
+
+Both platform typechecks pass. For the authoritative full-app build, let me check whether I can stage the required `Shared.xcframework` (Gradle/JDK) — otherwise I'll document it as the same out-of-scope environment dependency the ActionBuilder sibling recorded.
+
+JDK 17 + gradlew are available. Let me attempt to stage the `Shared.xcframework` (required for a full app build) in the background, then run the full build. I'll start it now.
+
+Gradle is staging the framework (cold Kotlin/Native toolchain can be slow). Let me continue waiting.
+
+Still building (cold KMP toolchain). Let me keep waiting.
+
+Framework built (8m13s). Let me run the staging script to copy it into `apps/apple/Frameworks/` (Gradle is now cached so it's fast).
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the full macOS app build. The two pre-existing out-of-scope reds (DEBUG-only `Input.Previews`, Release `-O` `LayoutSwitcher` crash) are dodged exactly as the ActionBuilder sibling documented: Debug config + empty compilation conditions. This proves my files compile+link in the whole app. Starting it (slow — whole app).
+
+Build compiling the whole app. Let me continue waiting.
+
+**BUILD SUCCEEDED** — the entire macOS app target, including all five of my files, compiles and links cleanly (pre-existing out-of-scope DEBUG/Release‑O blockers excluded via documented overrides). Now let me run my test bundle with the same override.
+
+As the ActionBuilder sibling documented, the full test **bundle** fails to compile — but on a **pre-existing, out-of-scope** sibling test (`TimelinePageModelTests.swift`: a Swift‑6 `utcDayKey` actor-isolation error), not my code. My test compiled fine; my model logic is independently proven by the 26/26 harness. Let me confirm this is pre-existing and not mine.
+
+Confirmed: the broken `TimelinePageModelTests.swift` is unmodified by me (pre-existing, out-of-scope), and my changes are exactly my 6 new files (+ catalog/ledger). For full honesty, let me record the **standard-config** build result to document the pre-existing `Input.Previews` DEBUG red (matching the ActionBuilder log's transparency).
+
+Still recompiling the full module (the conditions change invalidated the cache). Let me keep waiting.
+
+Still recompiling the whole module. Let me wait a bit longer.
+
+The standard build finished. Let me extract the key result (the pre-existing error + exit) from the saved output.
+
+Even better — the **standard-config** Debug build now `** BUILD SUCCEEDED **` (exit 0) with my files included; the pre-existing `Input.Previews` red was apparently fixed upstream. Let me re-run the test under standard config (host already built) to confirm the only remaining failure is the pre-existing out-of-scope `TimelinePageModelTests`.
+
+Let me extract the key results from the saved test output.
+
+Under standard config the test bundle also fails to compile — on **multiple** pre-existing out-of-scope sibling tests (`VehicleCostPageModelTests`, `TimelinePageModelTests`). Let me enumerate all pre-existing test-compile errors and confirm none are mine.
+
+No errors in any of my files; the broken sibling tests are pre-existing and unmodified by me. My GREEN build claim is solid (standard-config app build exit 0 with my files linked in). Now let me write the evidence log. First, gather final facts (LOC, key counts).
+
+All facts gathered. Now I'll write the comprehensive evidence log (mirroring the accepted ActionBuilder format), then commit.
+
+Let me correct two key-count figures in the log (the 4 trigger-type keys were already present/reused, not added — total added is 72).
+
+Let me verify the log's PARITY section has exactly 23 covered items and the markers are consistent.
+
+The log is consistent (23/23, EXIT=0, STATUS=DONE). Since I edited the model + tests after the last lint pass, let me re-verify swiftformat/swiftlint are still clean on the final files and re-validate the JSON artifacts before committing.
+
+All final checks green: swiftformat 0/6, swiftlint 0 violations, no long lines, both JSON artifacts valid. Let me review the full git status before committing to ensure I stage exactly the right files (and nothing git-ignored like the regenerated project).
+
+Git status is exactly right — my 6 new files, the catalog, the ledger, and the log; the regenerated `.xcodeproj` and staged framework are git-ignored. Let me stage and commit.
+
+Committed as `e037e4480`. Let me finalize todos, clean up temp files, and confirm a clean working tree.
+
+All todos complete, working tree clean, deliverable committed. Let me do a final todo check.
+
+All 10 todos done. The task is complete and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

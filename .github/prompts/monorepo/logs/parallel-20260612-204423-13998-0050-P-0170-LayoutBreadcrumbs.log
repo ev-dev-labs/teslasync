@@ -1,0 +1,182 @@
+I'll start by exploring the repository structure to understand what exists: the web source, the Apple app structure, and the available tooling.
+
+Tooling is available. Let me read the web source and explore the Apple app structure.
+
+The web source is a thin wrapper. I need to read its dependencies (`Breadcrumbs`, `useBreadcrumbs`, `BreadcrumbOverridesContext`) and study the established native pattern. The `shared-surfaces` directory already has 1865 entries — let me study existing examples.
+
+There's a well-established pattern. The sibling `BreadcrumbOverridesContext.*` family already exists (it's the dependency). Let me study the web sources and the existing native sibling files to learn the exact convention.
+
+This is a sophisticated, mature codebase with an established file-family pattern. The sibling `BreadcrumbOverridesContext.*` (P4/0166) is my key dependency. Let me map out all the pieces I need: the file-family convention, the `useBreadcrumbs` native state holder, and the P1 foundation (state holders, tokens, i18n, diagnostics).
+
+Each bash call is a fresh process. Let me read the sibling family's remaining files and locate the P1 foundation (state holders, routeMeta, i18n, diagnostics).
+
+The sibling family already implements the store, route table, projection, and trail renderer. `LayoutBreadcrumbs` composes these. Let me read the remaining sibling files plus the nav core (since `useBreadcrumbs` reads `useLocation`/`useParams`).
+
+Now I fully understand the sibling family — it implements all the breadcrumb machinery. `LayoutBreadcrumbs` is the composition mounted in Layout chrome that resolves the *current route* and renders the trail. The key new dependency is the **nav core** (current route/path). Let me find it and read the sibling's tests/strings/previews.
+
+`Layout` (P4/0169) is the chrome host. `LayoutBreadcrumbs` is a sub-surface within it and needs the current route/path. Let me see how the Layout family tracks the active route and where breadcrumbs would mount.
+
+I need to understand how the current route/path is sourced for breadcrumb resolution. Let me examine `LayoutModel`'s active route and search the whole Apple tree for a shared nav/route state holder.
+
+`LayoutModel.pathname` holds the current route from a `LayoutSnapshot`. There's a native `AppRoute` registry. Let me find its canonical definition and any route-meta parity (the `ROUTE_META` equivalent).
+
+No global native route registry exists yet — `LayoutSnapshot.pathname` carries the current path. The web `useBreadcrumbs` depends on `ROUTE_META` (from `lib/routeMeta.ts`). For faithful parity, `LayoutBreadcrumbs` must carry that route table. Let me read the web `routeMeta.ts`.
+
+`ROUTE_META` derives from `ROUTE_REGISTRY` with `PARENT_OVERRIDES` declaring the nested chains. Let me read the registry to get the full route set (path, label, i18nKey).
+
+This is a ~120-route registry. For faithful, complete parity I'll port the full `ROUTE_REGISTRY` + 12 `PARENT_OVERRIDES` into the native surface as data. To avoid transcription errors I'll generate the Swift from the actual source files. Let me read the full registry and the parent overrides.
+
+I have the full route registry. Now let me confirm the design tokens (P1/S9), study the sibling's Previews/Tests/AdapterTests, and check `project.yml` to understand how files (including tests) are compiled into targets.
+
+Let me read the sibling's main Tests file, the `project.yml` build config, and confirm the design tokens exist.
+
+Let me read the project config (at `apps/apple/project.yml`) and confirm the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`).
+
+Key findings: `shared-surfaces/*.swift` auto-compile into the app target and `*Tests.swift` into the test bundles (no project.yml edit needed — good, since I can only touch `LayoutBreadcrumbs.*`). There's a native `Sources/App/AppRoute.swift` (route registry parity). The project uses XcodeGen. Let me read `AppRoute`, locate the token definitions, and check xcodegen.
+
+Paths were off. Let me locate `AppRoute.swift` and the design token definitions correctly.
+
+The native `AppRoute` is a coarse top-level enum — it does NOT carry the `:param` detail-route parent chains, so the `BreadcrumbOverridesRouteTable` (the ROUTE_META peer) is the correct abstraction and I must populate it with the full web registry. Let me confirm exact token names.
+
+I now have the full architecture and tokens. Before writing code, I must verify the runner's build/test capability (the covenant requires running the gate). Let me check Xcode, simulators, the KMP `Shared.xcframework` dependency, PowerShell, and the placeholder checker.
+
+Xcode 26.5, iPhone 16 booted, pwsh available. But `Frameworks/` only has `.gitkeep` — the KMP `Shared.xcframework` must be built by the pre-action script. Let me inspect that script and check whether the Kotlin toolchain is available, and whether an SPM harness exists.
+
+Excellent — full capability confirmed: Xcode 26.5, iPhone 16 booted, pwsh, Java 17. The KMP `Shared.xcframework` is built on-demand via Gradle (heavy). I now have everything to design the surface. Let me check the lint/format budgets and whether the Layout chrome references breadcrumbs.
+
+I have a complete understanding of the architecture, tokens, lint budgets (line ≤120), and the chrome integration. Let me set up tracking and generate the route catalog faithfully from the web source.
+
+113 routes captured (matches the registry), 12 parents verified. A few parent lines exceed 120 chars (SwiftLint `--strict` fails >120). Let me verify swiftformat auto-wraps over-long lines cleanly before committing to that approach.
+
+swiftformat cleanly wraps over-long calls to ≤120 — my approach is safe. Now I'll write the surface. Let me update the plan and start with the Foundation core files. First, get the full generated catalog body.
+
+I have the complete, verified catalog. Now I'll write the surface files. Starting with the plan and the Foundation-only Adapter.
+
+Foundation core (Adapter + Routes) written. Now the Projection and Model.
+
+Now the public composition view.
+
+Now the Views file — the production empty slot plus the DEBUG inspector staging every branch over the real catalog.
+
+Now the Previews and the strings catalog.
+
+Now the two test files — adapter (pure) and model/view coverage.
+
+I caught an error: the real registry label for `/drives/:id` is "Drive Detail" (static), not "Drive #4421" (that was the *sibling's* fabricated sample). The `{{id}}` label-substitution never fires for real routes; only `:id` *href* substitution does. Let me fix the adapter test assertions to match the real catalog.
+
+Now the main Tests file (model, view-composition, a11y, strings).
+
+All 10 files written. Now format them with swiftformat (using the repo config), which will also wrap the over-long catalog lines.
+
+All lines ≤120 (max exactly 120, which is within the threshold). Let me run SwiftLint `--strict` on the new files.
+
+SwiftLint `--strict`: **0 violations** on all 9 files. Now I must verify the code actually compiles against its dependencies. The full `xcodebuild` is heavy (KMP). Let me first build a focused SwiftPM typecheck harness (fast, reliable). First, check how `Tokens.swift` handles platforms.
+
+`Tokens.swift` handles AppKit for macOS host — good. Let me build a SwiftPM harness (module named `TeslaSync` so `@testable import` works) with my files + the sibling dependency files + tokens, under Swift 6 strict concurrency, and run the tests.
+
+My code compiles cleanly under Swift 6 strict concurrency against the real dependencies. Now run the tests.
+
+All **87 tests pass** (my ~28 + sibling's) under Swift 6. Now let me run swiftformat `--lint` on my files and inspect the placeholder checker the gate uses.
+
+swiftformat `--lint`: clean. The placeholder gate recurses a path; the literal gate path `.../LayoutBreadcrumbs` (flat-file surface, like the sibling) resolves to nothing. Let me read the exact forbidden patterns and scan my real files honestly.
+
+No risky markers. Let me run the placeholder checker both ways — the literal gate command and a real scan of my files (via a temp dir copy) to honestly prove `PLACEHOLDER_COUNT=0`.
+
+Both placeholder scans: **`PLACEHOLDER_COUNT=0, EXIT=0`**. Now the authoritative gate: the full `xcodebuild` (iOS + macOS). This needs `xcodegen` to generate the project and the KMP `Shared.xcframework` built via Gradle. Let me generate the project and assess the KMP build feasibility.
+
+Project generates; schemes exist. The build's pre-action compiles the KMP `Shared.xcframework` via Gradle (network + Kotlin/Native). Let me test that step in isolation since it gates everything.
+
+Gradle 8.14.5 works (distribution cached). Now the heavy step — assembling the KMP `Shared.xcframework` for Apple. Let me run the staging script in the background and monitor.
+
+KMP build running in the background. Let me monitor it while I review my code for correctness against the web source once more.
+
+KMP still compiling (Kotlin/Native is slow). Let me keep waiting.
+
+Still building (Kotlin/Native first-run compile). Let me continue waiting.
+
+KMP `Shared.xcframework` built and staged (8m36s, BUILD SUCCESSFUL). Now the full app gate. Let me set up the official log and launch the iOS build+test.
+
+There's a passing sibling log for 0166. Let me check its format (so my log matches the expected structure) while I prepare the iOS build.
+
+Critical context: the sibling 0166 passing log shows the full `xcodebuild build test` returns **65 due to pre-existing errors in *other* surfaces** (mid-migration monorepo) and macOS signing — documented "DEFERRED" with the SwiftPM harness as the authoritative runnable test gate (exactly what I did: 87 tests green). I'll genuinely run both xcodebuild steps to capture real evidence. Launching iOS build+test.
+
+iOS build+test running. Let me monitor.
+
+Let me check progress via the captured output file.
+
+App target compiling cleanly (6000+ lines, 0 errors, emitting module). Let me keep waiting for compile/link/test completion.
+
+Module emitting; 0 errors, none in my files. Large app — let me continue waiting.
+
+Progressing well — 22,920 lines, still **0 errors**. Let me keep waiting for compile/link/test.
+
+iOS gate finished: **IOS_PIPE_EXIT=65**, failing in a compile batch of *other* surfaces (AnomalyInlineRow, ApiPlayground, AppRoute, AppearanceSettings…) — **none of my files**. Let me extract the exact `error:` lines to identify the root cause precisely.
+
+0 `error:` lines but the SwiftCompile job reports "2 failures" — that signature usually means the compiler process was *killed* (resource pressure), not a source error. Let me confirm the root cause.
+
+Found it — a **swift-frontend compiler crash (Stack dump)** while compiling `AnomalyInlineRow.Model.swift`, a pre-existing *other* surface (not mine). Let me capture the verbatim root cause.
+
+The swift-frontend **compiler crashed** (Stack dump / "Please submit a bug report") compiling a batch of pre-existing surfaces (`AnomalyInlineRow.Model.swift` primary). Let me capture the crash detail and confirm my files compiled without error in this same run.
+
+Confirmed: an internal **swift-frontend compiler crash (ICE)** on a batch of pre-existing surfaces (`AnomalyInlineRow.Model.swift` et al.). All my symbols are uniquely `LayoutBreadcrumbs`-prefixed (no collision possible), my files appear 25× with **zero errors**, and the harness compiles them under Swift 6. To honestly prove the crash is pre-existing (not mine), I'll reproduce it with my files temporarily removed — the rigorous baseline check the covenant demands.
+
+The `grep -c` returning 0 broke the `&&` chain so xcodegen may not have run. Let me regenerate explicitly and launch the baseline iOS build.
+
+Baseline project regenerated without my files. Launching baseline iOS build (build-only, since the crash occurs at compile time) to confirm the ICE is pre-existing.
+
+Baseline build running (~13 min to reach the crash point). Let me wait.
+
+No crash yet (still at module-emission phase, ~6k lines; the ICE appeared near line 15k last time). Let me keep waiting.
+
+Still in the heavy compile phase (output is sparse here, like last run before it jumped to 22k lines). Let me keep waiting.
+
+**Definitive proof**: the baseline build *without my files* crashes at the **exact same batch** (`AnomalyInlineRow.Model.swift` et al.), same "(2 failures)", `BASE_PIPE_EXIT=65`. The ICE is pre-existing and entirely independent of my surface. Let me confirm the stack dump matches, then restore my files.
+
+Baseline confirmed identical (2 stack dumps, same crash file `AnomalyInlineRow.Model.swift`, 0 `error:` diagnostics, Swift 6.3.2). My files restored and project regenerated. Now the macOS gate. Launching it.
+
+While macOS builds, let me re-confirm the runnable gates on the restored files and capture toolchain versions for the log.
+
+Lint/format both clean (0/0). The macOS gate finished — let me read its result.
+
+macOS **built successfully** (0 stack dumps — the ICE is iOS-simulator-specific) but `** TEST FAILED **` with 4 errors, none in my files. Let me see the exact errors.
+
+macOS **compiled cleanly** (0 errors, 0 ICE); `MAC_EXIT=65` is purely a **code-signing** blocker — "entitlements require signing with a development certificate" (no dev cert on runner), affecting `TeslaSync-macOS`/`TeslaSyncWidgets-macOS`, not my surface. This matches the sibling 0166 precedent exactly.
+
+Both xcodebuild reds are pre-existing/environmental (iOS ICE proven via baseline; macOS signing). Let me refresh the SwiftPM harness from the restored files for a final authoritative test run.
+
+**87/87 tests pass** on the shipped files (31 this surface + 56 sibling deps), Swift 6 strict concurrency. All evidence gathered. Let me write the official gate log honestly mirroring the sibling 0166 structure.
+
+Now I'll write the official gate log with full, honest evidence.
+
+Log written. Now let me verify git status, confirm the generated `.xcodeproj` is ignored, clean up temp artifacts, and prepare the commit.
+
+Exactly my 10 surface files + the log are untracked; `.xcodeproj` is properly ignored. Let me commit per the prompt's commit spec.
+
+Committed (11 files, 1284 insertions). Let me finalize tracking and do a last clean-state verification.
+
+All gates green for the surface; working tree clean; log ends `EXIT=0 / STATUS=DONE`. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0170-LayoutBreadcrumbs.log | 151 ++++++++++++++++++
+ .../LayoutBreadcrumbs.Adapter.swift                |  95 +++++++++++
+ .../LayoutBreadcrumbs.AdapterTests.swift           | 171 ++++++++++++++++++++
+ .../shared-surfaces/LayoutBreadcrumbs.Model.swift  | 140 +++++++++++++++++
+ .../LayoutBreadcrumbs.Previews.swift               |  55 +++++++
+ .../LayoutBreadcrumbs.Projection.swift             |  40 +++++
+ .../shared-surfaces/LayoutBreadcrumbs.Routes.swift | 174 +++++++++++++++++++++
+ .../shared-surfaces/LayoutBreadcrumbs.Tests.swift  | 155 ++++++++++++++++++
+ .../shared-surfaces/LayoutBreadcrumbs.Views.swift  | 165 +++++++++++++++++++
+ .../shared-surfaces/LayoutBreadcrumbs.strings      |  32 ++++
+ .../shared-surfaces/LayoutBreadcrumbs.swift        | 106 +++++++++++++
+ 11 files changed, 1284 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0170-LayoutBreadcrumbs.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.Routes.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.swift

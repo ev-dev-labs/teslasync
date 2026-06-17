@@ -1,0 +1,88 @@
+I'll start by exploring the repository structure to understand the task scope, then examine the web source and existing Apple app patterns.
+
+Xcode tooling is available (xcodebuild, swiftlint, xcrun). The web page wraps `RegionSettings`. Let me explore the parity manifest, the RegionSettings component, existing Apple pages, and the gate contract.
+
+The web page wraps `RegionSettings` (GlassPanel with header, refresh button, region/Fleet API grid, empty state). The `Features/` dir doesn't exist yet. Let me examine an existing "done" page log, the project structure, and verify what actually exists.
+
+Excellent — the SystemPage log is the complete blueprint. Key insight: pages ship at `apps/apple/Sources/Features/Admin/` (not the literal prompt path), strings in `apps/apple/Localization/Localizable.xcstrings`. The web page wraps `RegionSettings` which has real data (region code, Fleet API URL, refresh, empty state). Let me check if `RegionSettings` is already shipped natively, and study the existing admin page pattern.
+
+`RegionSettings` IS already shipped natively in `feature-views/`. So like SystemPage, my page should compose the already-shipped `RegionSettings`. Let me read the SystemPage pattern, the native RegionSettings, and the web hook/types.
+
+The pattern is clear: compose the already-shipped `RegionSettings` native component. Let me read its Model/Adapter, the route system (AppRoute, AppRouteParser), how SystemPage was wired into the app, and the existing string catalog.
+
+No region route exists yet — I'll need to add one. Let me read the route system files, the app wiring, and check the ledger/manifest for this unit.
+
+Now I understand the structure. Web route is `/tesla-region`, I need to add a new `AppRoute` case. Let me read the manifest entry, the app wiring (TeslaSyncApp/RouteHostRegistry), RegionSettings previews/sample, existing string catalog, and project.yml.
+
+Let me read the remaining app wiring, the registry type, a peer integration-page registration, and check the string catalog for existing region keys.
+
+Let me read the test pattern, sample seam, typography components, and verify route title keys + web grouping.
+
+The web `/tesla-region` lives in the **Account** sidebar group (with tesla-orders, fleet-api, tesla-features), label "Region & API". Let me check the closest peer (TeslaOrders), pwsh/placeholder script, and project.yml inclusion.
+
+I have the full pattern. Let me verify the xcstrings entry format and the Tests target config before writing files.
+
+All confirmed. Let me set up tracking, check the swiftlint config, then write all source files.
+
+Now I'll check the exact xcstrings raw formatting to make a minimal-diff edit, then write all files.
+
+xcstrings uses Xcode's ` : ` separator and unsorted insertion order — a full re-dump would corrupt the diff. I'll do surgical insertion later. Now writing the 5 Swift source files.
+
+Now editing the route system and app wiring.
+
+Now the surgical xcstrings insertion (preserving Xcode's ` : ` format and insertion order).
+
+Strings inserted cleanly. Let me verify the diff is minimal and update the ledger.
+
+xcstrings diff is clean (additions-only). Now appending the two ledger rows.
+
+swiftformat clean. Now swiftlint --strict and the placeholder scan.
+
+swiftlint **0 violations**, placeholder **count=0**. Now checking build prerequisites (xcodegen, staged xcframework, the known pre-existing sibling breakage).
+
+The Shared.xcframework isn't staged (only `.gitkeep`), and the known sibling breakage (`Input.Previews.swift` line 87 `return` in ViewBuilder) is present. Let me check whether I can stage the KMP framework and find any build helper scripts.
+
+JDK 17, gradlew, and a staging script all present. Let me read the staging script and kick it off in the background (KMP builds are slow).
+
+KMP first build is downloading the Kotlin/Native toolchain. Let me keep waiting.
+
+Still building. Let me check progress in a separate shell while it continues.
+
+Kotlin/Native is actively compiling (LLVM codegen in progress; debug xcframework already built). Let me keep waiting for the release framework.
+
+Shared.xcframework staged (BUILD SUCCESSFUL). Now generating the Xcode project and building.
+
+Project generated (TeslaRegion referenced 30× in pbxproj). Building the macOS scheme, capturing full output to grep for in-scope vs. the known pre-existing sibling error.
+
+BUILD_EXIT=65 but the errors are **code-signing/entitlements** (no dev certificate in this environment), not compilation. Let me verify my code compiled cleanly and check for any Swift errors.
+
+Zero non-signing errors. The signing failure is environmental. Let me rebuild with code-signing disabled to get an authoritative compile-clean result.
+
+Build running. Let me wait for completion.
+
+Full recompile in progress (40 swift-frontend processes, emitting TeslaSync module). Let me wait.
+
+Still compiling the full app target, no errors so far. Let me continue waiting.
+
+Still compiling cleanly (no errors). Let me wait further for the full target to finish.
+
+**BUILD SUCCEEDED** (EXIT=0, zero non-signing errors) — my code compiles cleanly in the full macOS app target. Now running the unit tests (my test class).
+
+The test bundle is blocked by a **pre-existing, unrelated sibling** compile error (`VehicleCostPageModelTests.swift` — Swift 6 concurrency, not my code). The app target itself BUILD SUCCEEDED. Let me enumerate all sibling test errors and confirm my files are clean.
+
+Confirmed: the **only** non-signing error is the pre-existing `VehicleCostPageModelTests.swift` (not modified by me); zero errors in my files. Mirroring the precedent, I'll build an executed swiftc harness to prove my model assertions run correctly.
+
+Harness's own `check()` needs `@MainActor` (top-level vars are main-actor isolated under Swift 6). Fixing the harness.
+
+Model harness **10/10 passed** on Swift 6 strict concurrency. macOS app build already SUCCEEDED. For iOS parity (ADR-002/006), let me build the iOS simulator target too. First checking available simulators.
+
+iPhone 17 Pro simulator is booted. Building the iOS target (full clean build ~10+ min) in the background.
+
+While iOS builds, let me gather metadata and confirm my full file inventory for the evidence log.
+
+Let me check the iOS build progress.
+
+iOS build compiling cleanly (60 swiftc procs, no errors). Let me wait for completion.
+
+Still compiling cleanly. Let me continue waiting for the iOS build.
+

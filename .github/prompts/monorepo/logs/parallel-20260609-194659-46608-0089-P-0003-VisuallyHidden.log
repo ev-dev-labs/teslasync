@@ -1,0 +1,129 @@
+I'll start by exploring the task requirements: reading the web source, checking the Apple app structure, and verifying tool availability on this runner.
+
+Toolchain is available (xcodebuild, swift, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+Now let me read the `useAnnouncer` hook (the data source) and explore the Apple app structure to understand conventions.
+
+Key finding: `shared-surfaces/` doesn't exist yet and isn't in `project.yml`. Let me check toolchain capabilities, the useAnnouncer source, and existing conventions in parallel.
+
+Capability confirmed: Xcode 26.5, iOS 26.5 SDK (builds for iOS 18 deployment target), iPhone 16 simulator booted, xcodegen present. Now let me study a complete existing surface to learn conventions, plus the shared primitives (state holders, design, i18n, telemetry).
+
+Now let me read the remaining globalShortcuts files (Adapter, tests, previews, strings) and the shared design/state primitives to fully internalize conventions.
+
+Excellent — I now understand the surface conventions deeply. Let me read the design tokens, shared components, state primitives, and the previews/strings format.
+
+Let me read the design token definitions and the shared UI components I'll use.
+
+Now let me read the state-holder primitives, remaining components, and critically — the Shared.xcframework staging script (which the build scheme requires).
+
+Critical finding: the `TeslaSync` app target depends on `Shared.xcframework` (KMP), which is absent and must be built via Gradle/Kotlin-Native. Let me check whether that toolchain is available — this determines whether the full gate build is feasible.
+
+KMP toolchain (Java 17 + Gradle wrapper) is present, so the full build is theoretically possible but heavy. My surface itself will be KMP-free (like `globalShortcuts`). Let me read the lint config and remaining component APIs, then start writing.
+
+I have a complete understanding of the conventions. This is a multi-file surface, so let me set up a plan and track it, then write the files following the proven `globalShortcuts` pattern.
+
+Now creating the surface files. Starting with the pure adapter core and the state-holder model.
+
+Adapter and Model done. Now the states chrome, then views.
+
+Now the views layer — the visually-hidden primitive, live regions, announcement rows, modes reference, focusable skip-link, freshness chip, and the production poster.
+
+Now the main surface view that composes everything.
+
+I need to fix the hydration logic in the model so the first real announcement posts correctly. Let me update `apply`.
+
+Now the two test files.
+
+All 9 surface files are written. Now I'll wire `shared-surfaces` into `project.yml` (both app targets + both test bundles) and `.swiftlint.yml` — this infrastructure is required for the gate to actually compile, test, and lint the new files.
+
+Now let me run the fast verifications — format, lint, and placeholder check on the new files — before the heavy full build.
+
+swiftformat passes. swiftlint linted the whole tree (3243 files) and found 2 violations — let me isolate whether they're in my files.
+
+Both violations are in my files: an `empty_count` rule and a `file_length` (>400 lines). Let me check all file line counts and fix both.
+
+Only Model.swift (462) exceeds the 400-line limit. I'll split the announcer bus + sources into a new `VisuallyHidden.Announcer.swift` (auto-included by the directory glob) and fix the `empty_count`. Let me view the sections to move.
+
+I'll extract the announcer bus + sources into a new `VisuallyHidden.Announcer.swift` (auto-included by the directory glob).
+
+Now remove those moved sections from Model.swift and fix the `empty_count` violation in the surface.
+
+Now re-format, re-lint, verify line counts, and run the placeholder check.
+
+Format clean, swiftlint clean, all files <400 lines. Now the placeholder check — let me verify the gate's checker script exists and run it.
+
+The placeholder checker flagged the word "placeholder" in a comment. Let me find and reword all forbidden words across my files.
+
+Placeholder check passes. Now, before the heavy full build (which needs the KMP framework), let me do a fast isolated type-check of my files against the real design system to catch compile errors quickly. First, confirm the design components are KMP-free.
+
+Design system is KMP-free. Let me type-check my surface files against the real design system in isolation — fast feedback before the heavy full build.
+
+Those errors are in an unrelated design file (`UnitFormatters` needs `UnitPreferences` from outside the design set). Let me narrow the isolated check to only the component categories my surface actually uses (UI, Feedback, Motion, Design, Tokens).
+
+Still only errors in unrelated design files (not mine). Let me exclude `FeedbackOverlays.swift` (needs `TSMetricBar` from DataDisplay) and retry.
+
+My surface files type-check cleanly against the real design system — no errors in my code. Now the full gate. Let me generate the Xcode project and assess the KMP framework build (the heavy prerequisite).
+
+Project generated and `TeslaSync` scheme exists. The app build requires the KMP `Shared.xcframework`. Let me build it via Gradle (the heavy prerequisite — first run downloads the Kotlin/Native toolchain). I'll run it in the background and monitor.
+
+The Gradle/Kotlin-Native build is running (downloading toolchain + compiling). Let me keep waiting.
+
+The KMP `Shared.xcframework` built and staged successfully (6m43s, BUILD SUCCESSFUL). Now the full iOS build + test — the largest step. Let me start it in the background and monitor.
+
+iOS build+test is running in the background. Let me monitor progress.
+
+The build surfaced errors — but the preview shows they're in `dashboard-widgets` (not my files). Let me analyze the full log to separate my errors from pre-existing ones.
+
+All 162 errors are in pre-existing sibling surfaces (`RecentDrivesListWidget`, `StateTimelineWidget`, `StateTimeline`, `RecentDrivesSection`) — **zero** in my files. Let me characterize these pre-existing errors and confirm they're not triggered by my changes.
+
+The pre-existing errors are **name collisions** — `RecentDrives*`/`StateTimeline*` types are defined in BOTH `feature-views` and `dashboard-widgets` (ambiguous lookups). This is unrelated to my surface (I namespaced all my types with `VisuallyHidden`). I modified only `project.yml` + `.swiftlint.yml`. Let me confirm these collisions exist in the pristine tree and check how the duplicated surfaces are referenced.
+
+Confirmed: `StateTimelineModel`, `RecentDrivesModel` etc. are duplicate-defined across `dashboard-widgets` and `feature-views` — a pre-existing baseline collision in this slot, unmodified by me. The app module can't compile regardless of my surface.
+
+My surface is namespaced (`VisuallyHidden*`) and produced **0 errors** in the full build. To get real test-execution evidence for my code without depending on the broken module, I'll compile my real source + test files in a standalone SwiftPM package (verification only, not committed).
+
+All my tests are passing. Let me capture the final tally to confirm zero failures across all my test classes.
+
+**All 56 tests pass, 0 failures** in the standalone real-toolchain run. Combined with the 0-error compile in the full iOS build, my surface is verified. 
+
+Let me make one attempt to also run my tests through the actual `xcodebuild`/simulator by temporarily neutralizing the pre-existing collisions (verification only). First, check whether the colliding sibling surfaces are referenced by any registry (to gauge if exclusion cascades).
+
+The 4 colliding surfaces are self-contained (no external refs). I'll temporarily move them aside (verification only), regenerate, and run my tests through the real `xcodebuild` + simulator, then restore them.
+
+Surfaces moved aside, project regenerated. Now build + run my test classes through `xcodebuild` + the iPhone 16 simulator.
+
+Build+test running in the background. Let me wait and monitor.
+
+Still failing — there may be more broken surfaces. Let me check the remaining errors.
+
+0 compile errors now, but the build still failed — likely a linker/packaging/runtime issue. Let me find the actual failure cause.
+
+The failing batch is `AppearanceSettings.*` etc., but grep found 0 `error:` — possibly a different diagnostic format or a compiler issue. Let me inspect that batch's diagnostics directly.
+
+Errors are in `-use-frontend-parseable-output` (JSON) format, so plain `error:` grep missed them. Let me view the diagnostic region right before the failure.
+
+The failure is now clear: a **swift-frontend compiler crash** (`report_at_maximum_capacity` during whole-module IRGen) — a toolchain scale limit on the oversized generated module (3000+ files), plus the pre-existing sibling type-collisions. Neither involves my surface. My code passed SEMA (0 errors) and all 56 tests pass standalone.
+
+Let me restore the moved surfaces to leave the repo pristine, then run the official gate to capture authentic results.
+
+Repo restored to pristine (only my additions remain). Now let me regenerate and run the official gate steps, capturing to the gate log. Starting with the fast checks (format, lint, placeholder) across the whole tree.
+
+All fast checks pass across the whole tree: **FORMAT_EXIT=0** (0/3463 files), **LINT_EXIT=0** (0 violations/3244 files), **PLACEHOLDER_EXIT=0**. Now let me capture the authentic iOS + macOS `build test` results (which fail on pre-existing issues). Running iOS first.
+
+IOS_EXIT=65 — failed on the pre-existing `RecentDrives*`/`StateTimeline*` ambiguous-type collisions (108 errors), **zero in my files**. Let me confirm my files are clean in this authentic run and capture the macOS result.
+
+I now have all authentic gate results. Summary:
+- **IOS_EXIT=65** — pre-existing `RecentDrives*`/`StateTimeline*` ambiguous-type collisions in sibling surfaces; **0 errors in my files**
+- **MAC_EXIT=65** — same collisions + macOS dev-certificate signing requirement; **0 errors in my files**
+- **LINT_EXIT=0**, **FORMAT_EXIT=0**, **PLACEHOLDER_EXIT=0**
+
+Let me write the honest, comprehensive gate log.
+
+The gate log is written. Let me verify git state and ensure I don't commit generated artifacts (the `.xcodeproj`, the KMP framework, generated schemas).
+
+Git state is exactly right — only my surface, the log, and the two wiring files are tracked changes; the `.xcodeproj`, KMP framework, and generated schemas are all gitignored. Let me clean up temp artifacts, update todos, and commit.
+
+Committed. Let me do a final verification that the working tree is clean and the committed wiring is correct.
+
+The work is complete and committed. Let me provide the final summary.
+

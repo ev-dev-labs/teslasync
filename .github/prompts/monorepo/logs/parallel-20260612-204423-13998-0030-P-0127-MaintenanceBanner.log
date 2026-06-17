@@ -1,0 +1,216 @@
+I'll start by exploring the repository structure and reading the web source component that I need to port.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me explore the existing Apple app structure to understand the patterns.
+
+There's an established multi-file pattern per surface. Let me study the most recent predecessor surfaces (ErrorDisplay, EditConflictBanner) since they're the freshest reference, plus the core infrastructure.
+
+Let me read the most relevant predecessor (EditConflictBanner — a banner, like mine) and core infrastructure files.
+
+Now let me read the remaining reference files and the design token system.
+
+Let me locate the design token definitions and shared UI components I need to use.
+
+Key finding: design tokens live in `apps/design/generated/apple`, and the build needs `Shared.xcframework`. Let me inspect both.
+
+The build requires a KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me check how predecessor surfaces handled the gate by reading their logs.
+
+I now understand the sanctioned disposition: surfaces are verified by isolated Swift compile + lint + format + placeholder checks, with the full-app Xcode gate DEFERRED (blocked on the unstaged KMP `Shared.xcframework`). Let me read the full ErrorDisplay log (the methodology to replicate), the tokens, and component signatures.
+
+Now I have the full token reference and methodology. Let me read the shared components I'll use and the SharedFacade infrastructure.
+
+Found an existing `TSTone` enum and `TSMaintenanceBanner` preset. Let me read the remaining component signatures and the SharedFacade infrastructure.
+
+There's a `ServiceStatus` surface that also reads system health — the closest analog. Let me study its adapter/model and the web `useSystemHealth` hook shape.
+
+Now I understand the full data shape and architecture. Let me verify the Components/Design are `Shared`-free (so I can isolate-build), and check the lint config + placeholder checker.
+
+I have everything needed. Let me verify the final two component signatures (TSFadeIn, TSCard), then set up my plan and start building.
+
+I have full context now. Let me set up tracking and write the plan, then build the surface.
+
+Now I'll build the surface. Starting with the pure Foundation core (Adapter).
+
+Now the Seams file (source, dismissal store, clock):
+
+Now the Model file (telemetry, connection, input, projection, state-holder, strings facade):
+
+Now the States chrome (loading/empty/error):
+
+Now the Views (banner notice + freshness chip):
+
+Now the surface view:
+
+Now the i18n strings table and Previews:
+
+Now let me check the test framework used by siblings before writing tests.
+
+Tests use XCTest + `@testable import`. Let me see how siblings build a recording telemetry (Sendable constraint) and drive the model.
+
+Now I'll write the two test files. First the pure adapter/projection tests:
+
+Let me clean up the awkward double-optional unwrap in the projection test:
+
+Now the state-holder (model) tests:
+
+All 10 files written. Let me update todos and run the format + lint + placeholder gates on my files.
+
+Minor format issues. Let me let swiftformat auto-fix them, then re-verify.
+
+Files are untracked so no diff. Let me re-run both format and lint checks on all 9 Swift files.
+
+Format and lint are clean (0 violations). Now the placeholder gate — I'll scan an isolated copy of my files (meaningful scan):
+
+Format, lint, and placeholder gates pass. Now the substantive verification — an isolated Swift 6 build+test compiling my exact files against the real design system. Let me set it up.
+
+No collisions. Let me build the isolated verification package (symlinking the exact shipped files against the real design system).
+
+`UnitFormatters.swift` (a Component) depends on the Shared/SharedFacade `Units` type. My surface doesn't use it. Let me curate the isolated package to the minimal real-component closure my surface actually needs.
+
+Real Swift 6 strict-concurrency caught a genuine bug — static `ISO8601DateFormatter` (non-Sendable) as shared global state. This would also fail the app's `SWIFT_STRICT_CONCURRENCY: complete`. Let me fix it properly (construct formatters locally).
+
+Build clean. Now run the full test suite in the isolated package:
+
+Test compile errors — I passed `MaintenanceInput` args out of declaration order (`hasData` before `updatedAt`). Let me find and fix all occurrences.
+
+Let me verify the remaining multi-line `MaintenanceInput` calls are correctly ordered, then re-run tests.
+
+Correct order. Re-running the isolated test suite (symlinks point to the edited files):
+
+All 61 tests pass under Swift 6 strict concurrency against the real design system. Let me re-verify format/lint after my edits, and also confirm the iOS-simulator target typechecks.
+
+Trailing comma in the array literal. Let me fix it and re-check.
+
+Clean. Let me re-run the isolated build+test to confirm the final Adapter still compiles and passes, plus an iOS-simulator typecheck of the surface.
+
+Now an iOS 18 simulator typecheck to prove the surface compiles on iOS too (parity with the sibling disposition):
+
+iOS 18 typecheck passes (including DEBUG previews). Now let me attempt the actual full-app gate to capture the real blocker evidence. First, check xcodegen.
+
+Project generated. Let me capture the concrete blocker evidence (the unstaged `Shared.xcframework`), then attempt the real xcodebuild gate.
+
+Blocker confirmed (14 unconditional `import Shared` sources, empty `Frameworks/`, observed "no such module 'Shared'"). Now let me attempt the real xcodebuild gate and capture its output.
+
+The KMP Gradle build is actually running in this environment (downloading Kotlin/Native, compiling) — the framework may build and the full gate may complete. Let me wait and monitor.
+
+The Shared.xcframework is being assembled (debug done, release linking). This environment can build the full gate. Let me continue waiting for the framework staging and app compile.
+
+Release framework linking is still in progress (Kotlin/Native release builds are slow). Let me keep monitoring.
+
+The framework staged successfully and the **full app is now compiling** (no module error). This is the real gate executing. Let me continue waiting for the app compile to complete.
+
+The **real full-app gate ran** and caught a genuine integration collision: a pre-existing sibling `MaintenanceTrackerWidget` already defines `MaintenanceConnection` in the same `TeslaSync` module, so my types clash. I must rename my types to be surface-unique. Let me find all collisions.
+
+Severe collision: the sibling defines `MaintenanceProjection`, `MaintenanceSource`, `InMemoryMaintenanceSource`, `MaintenanceStrings`, `MaintenanceAccessibility`, `MaintenanceConnection`, etc. — all in the same module. I must rename ALL my types to the surface-unique `MaintenanceBanner*` prefix. Let me enumerate my declared types and check `ServiceMode` too.
+
+Let me check every one of my type names against the rest of the compiled module (excluding my own files) to find all collisions.
+
+Complete collision set found — two sibling surfaces (`MaintenanceTrackerWidget`, `ScheduledMaintenanceCard`) already own `Maintenance*` types in the same module. I'll rename ALL my types to the surface-unique `MaintenanceBanner*` prefix (matching the sibling convention of surface-name-prefixed types). Applying a word-boundary rename across my 9 files:
+
+Clean rename, no leftovers. Let me verify no accidental double-prefix and that the i18n table string is intact, then rebuild the isolated package.
+
+Longer names pushed some lines over 120 chars. Let me auto-format then inspect remaining lint violations.
+
+Format auto-wrapped the long lines; lint is clean. Let me confirm format-lint passes and rebuild the isolated package with the renamed types.
+
+All green after rename (format 0/9, 61 tests pass). The framework is now staged, so let me re-run the full iOS xcodebuild gate to confirm the collision is resolved and the app compiles with my surface.
+
+Build is in the pre-action/setup phase. Let me wait for compilation to progress and complete.
+
+Let me check the actual log tail to see what phase it's in.
+
+It's now in the whole-module emit phase (where the collision error previously surfaced). Let me wait for it to clear that and complete.
+
+Progressed much further (2364 compile tasks vs the earlier module-emit failure), but 2 failures remain. Let me find them.
+
+A `swift-frontend` fatal error (compiler crash), not a normal type error. Let me see which file/batch triggered it and the failed-commands list.
+
+My collision fix worked — the build now clears whole-module emit and compiles 2300+ tasks with **zero MaintenanceBanner errors**. The remaining failure is a `swift-frontend` IRGen compiler crash (`report_fatal_error`/SmallVector capacity) in an **unrelated batch** (`AnomalyInlineRow`/`selectedVehicle`/`withAiFeature` — none of mine). Let me confirm my files compiled clean and retry (cached, so fast) to assess whether the crash is flaky.
+
+Confirmed: my surface compiled clean; the crash is in the unrelated `AnomalyInlineRow` batch. Retry is running (incremental/cached). Let me re-run the placeholder check on the renamed files while waiting.
+
+Placeholder clean (0). Retry still compiling. Let me wait for it to reach the previously-crashing batch.
+
+Still compiling. Let me check progress and continue waiting.
+
+The retry cleared whole-module emit (collision confirmed fixed) and is now in IRGen. Let me wait for it to reach completion or the crash point.
+
+The retry **deterministically** crashed at the identical unrelated batch (`AnomalyInlineRow.Model.swift`) with the same `report_at_maximum_capacity` compiler crash — zero MaintenanceBanner involvement. To rigorously prove this is pre-existing (not caused by adding my files to the module), let me build the baseline with my files temporarily removed.
+
+Baseline build (without my files) is running. Let me wait for it to reach the same batch.
+
+Baseline is in whole-module emit. Let me wait for it to reach the IRGen batch.
+
+Baseline is still in the slow whole-module emit phase (single-threaded, huge module). Let me continue waiting for it to reach IRGen.
+
+**Decisive proof:** the baseline build *without* my files fails with the **identical** `report_at_maximum_capacity` compiler crash in the **identical** unrelated `AnomalyInlineRow` batch. This is a pre-existing swift-frontend IRGen crash, fully independent of my surface. Let me restore my files and regenerate.
+
+All gates clean on the restored files. Let me do a final isolated build+test confirmation, then write the log.
+
+All 61 tests pass. Let me launch the macOS gate (to execute it for real) while I write the log.
+
+Let me capture the precise evidence lines for the log while the macOS build runs.
+
+I have all the evidence. Let me verify git state (the generated `.xcodeproj` must be gitignored) while the macOS build runs.
+
+Clean state — only my 10 files untracked, `.xcodeproj` gitignored. Let me check the macOS build progress.
+
+The macOS build failed earlier (different phase). Let me see why.
+
+Both full-app gates are blocked by **pre-existing, out-of-scope** conditions: iOS by the proven-pre-existing `AnomalyInlineRow` IRGen compiler crash, and macOS by a pre-existing dev-signing/hardened-runtime entitlements condition (fails before any compilation). Let me capture the exact macOS error text, then write the log.
+
+I have complete evidence. Let me gather file line counts and write the comprehensive log.
+
+Now let me write the comprehensive, honest gate log.
+
+Now the final consolidated verification right before commit, then clean up temp artifacts and commit.
+
+All gates green (format 0/9, lint 0 violations, placeholder 0). Let me clean up temp artifacts and commit.
+
+All 11 artifacts staged (10 surface files + log), nothing extraneous. Committing:
+
+Committed cleanly (`a9d44e0cf`), working tree clean. Let me finalize the task tracking.
+
+All todos complete. The task is finished and verified.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`MaintenanceBanner`** shared surface (P4/0127) at full parity with `web/src/components/feedback/MaintenanceBanner.tsx`, implemented directly (no delegation) across 10 files in `apps/apple/TeslaSync/shared-surfaces/` + the gate log. Committed as `a9d44e0cf`.
+
+**Parity reproduced:** every web branch — `mode` ok/degraded/maintenance, `message.trim() || default` copy, the 1 Hz live countdown to `maintenance_until` (`Ends in {{time}}` / `Ending now` / ended ladder + `formatRemaining`), the per-snapshot dismissal fingerprint (`u:`/`s:` keying) with sessionStorage-parity persistence + reset-on-change, and the dismiss control — bound through P1/S8 source/clock/dismissal seams, P1/S9 tokens (amber maintenance / sky degraded), P1/S10 i18n facade, and P1/S11 `view.opened` telemetry. All states render (loading/empty/error/banner/stale/offline).
+
+**Verification (raw exits pasted in the log):**
+- swiftformat `--lint` → 0/9 · swiftlint `--strict` → 0 violations · placeholder scan → 0 · xcodegen → 0
+- **Isolated Swift 6 build + 61 tests pass** against the real design-system; iOS 18 simulator typecheck → 0
+
+**Two real bugs caught by actually running the gates and fixed:** a Swift 6 strict-concurrency violation (static non-Sendable `ISO8601DateFormatter`), and a same-module type-name collision with pre-existing sibling `Maintenance*` surfaces (resolved by renaming all types to the surface-unique `MaintenanceBanner*` prefix — the full-app build now clears whole-module emit with my surface present).
+
+**Full-app xcodebuild gates honestly reported BLOCKED (IOS_EXIT=65 / MAC_EXIT=65), not green:**
+- iOS: a pre-existing `swift-frontend` IRGen crash in the unrelated `AnomalyInlineRow` batch — **proven pre-existing** by a baseline build with my files removed producing the identical crash.
+- macOS: a pre-existing dev-signing/hardened-runtime entitlements condition that fails before any compilation.
+
+Both are out of this prompt's allowed-files scope. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0127-MaintenanceBanner.log | 239 +++++++++++++
+ .../MaintenanceBanner.Adapter.swift                | 288 +++++++++++++++
+ .../shared-surfaces/MaintenanceBanner.Model.swift  | 362 +++++++++++++++++++
+ .../MaintenanceBanner.ModelTests.swift             | 264 ++++++++++++++
+ .../MaintenanceBanner.Previews.swift               | 113 ++++++
+ .../shared-surfaces/MaintenanceBanner.Seams.swift  | 226 ++++++++++++
+ .../shared-surfaces/MaintenanceBanner.States.swift | 113 ++++++
+ .../shared-surfaces/MaintenanceBanner.Tests.swift  | 385 +++++++++++++++++++++
+ .../shared-surfaces/MaintenanceBanner.Views.swift  | 166 +++++++++
+ .../shared-surfaces/MaintenanceBanner.strings      |  38 ++
+ .../shared-surfaces/MaintenanceBanner.swift        |  92 +++++
+ 11 files changed, 2286 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0127-MaintenanceBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.swift

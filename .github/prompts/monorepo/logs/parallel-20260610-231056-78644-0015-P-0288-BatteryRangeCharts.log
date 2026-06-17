@@ -1,0 +1,114 @@
+I'll start by exploring the environment: the web source, any existing Apple app structure, and the toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Now let me read the web source and study the existing Apple feature-view patterns.
+
+This is a large, well-established monorepo (2528 files in feature-views). Each surface follows a multi-file pattern. Let me check if BatteryRangeCharts already exists and study the most recent similar chart-based surfaces as reference templates.
+
+BatteryRangeCharts doesn't exist yet. BatteryComparison is the ideal reference — battery-related and chart-based. Let me read all its files to learn the established pattern.
+
+Now let me read the remaining BatteryComparison files and find reference surfaces that use Swift Charts (since BatteryRangeCharts has bar/area charts and a radial gauge).
+
+48 surfaces use Swift Charts. Let me study the most relevant chart references — BatteryLevelChart (battery chart) and DriveOverviewChart (drive distance area chart) — plus find RadialGauge/gauge patterns and the shared chart-color tokens.
+
+Now let me study the radial gauge pattern, the main view + model structure, the design tokens, and how the project includes files.
+
+Let me check the project.yml (file inclusion mechanism) and locate the shared design tokens and chart color definitions.
+
+XcodeGen with glob-based inclusion — new files are auto-picked up; I'll need `xcodegen generate`. Tokens come from `../design/generated/apple`. Let me inspect the design tokens (chart series colors), check xcodegen availability, and read the DriveOverviewChart Model/Views/Previews/Tests for area-chart + legend + test patterns.
+
+Let me read the full design tokens, the test + preview patterns, and the web helpers (batteryColor, CHART_COLORS) to nail the parity details.
+
+Let me get the exact CHART_COLORS values and the conversion/format helpers for precise parity.
+
+Now I have the chart color mapping (`chartCategorical[0]`=#0072B2, `[1]`=#E69F00). Let me read the test pattern, the test-target config, and the web API types for `VehicleState`/`Drive`.
+
+Let me verify the web `Drive`/`VehicleState` types, the PowerShell tooling for the gate, and the macOS test scheme name.
+
+All tooling present (pwsh, placeholder gate). Let me check the placeholder patterns and how `-Path` resolves a filename-prefix, so my code won't trip the gate.
+
+The gate treats a non-existent path as clean (exit 0) — consistent across all sibling surfaces. I'll match it verbatim but also scan my real files honestly. Now let me check the build setup: existing `.xcodeproj`, xcodegen wrapper scripts, and any known-issue docs.
+
+The `Shared.xcframework` (a KMP dependency) is absent. This is critical for `xcodebuild`. Let me check how sibling surfaces handled their gates — examining their logs sets the precedent.
+
+This is the key precedent. The sibling BatteryComparison surface (same tier) documented that the full-app `xcodebuild` is blocked by pre-existing, out-of-scope issues (unbuilt KMP `Shared.xcframework` + a `DashboardWidgetSize` redeclaration), and instead independently verified the surface compiles + tests pass against the REAL shared deps. Let me read its full methodology log to replicate the verification approach precisely.
+
+This is the sanctioned methodology. The precedent (merged BatteryComparison) proves: the full-app `xcodebuild` is DEFERRED (RED=65) due to **pre-existing** cross-surface duplicate-type collisions + macOS signing — not the surface. Real verification = isolated SwiftPM harness + SDK typechecks against the REAL shared sources, plus swiftlint/swiftformat/placeholder green.
+
+Let me locate the shared components/tokens I'll depend on and any AnimatedNumber equivalent, then set up my plan.
+
+I now have all the APIs I need. Let me determine which shared `Sources/Components`/`Design` files have KMP (`Shared`/`SharedFacade`) dependencies — these must be excluded from an isolated harness (as the sibling did).
+
+None of the 41 shared `Components`/`Design` files import the KMP runtime — they only use system frameworks. So I can compile my surface against the REAL shared library cleanly. Let me confirm a few web parity details (AnimatedNumber decimals, RadialGauge display, DistanceUnitPref), then implement.
+
+I have complete understanding of the web source, the established native pattern, the shared APIs, the parity details, and the sanctioned verification methodology. Let me set up my plan and todos.
+
+Now I'll implement the surface. Starting with the pure projection core (Adapter).
+
+Now the Model (state-holder + seams):
+
+Now the Swift Charts file (battery bar chart + drive trend area chart + tooltips):
+
+Let me check the swiftlint/swiftformat configs to match their rules before writing the remaining view files.
+
+Configs are clear (120 col, type names ≤50, no trailing commas, before-first wrapping). Now the Views file:
+
+Now the composed main view:
+
+Now the Previews, strings catalog, and Tests:
+
+Now the test suite (adapter + model + accessibility):
+
+All 8 files written. Now verification — first format + lint my files. Let me run swiftformat (autocorrect) then swiftlint on the new files.
+
+swiftformat clean (0/7 need formatting). Now swiftlint --strict on my files:
+
+Two `file_length` violations (>400 lines, strict). The codebase convention is to split (e.g., DriveOverviewChart has `.Projection.swift`). Let me check exact section boundaries to split cleanly.
+
+Two `file_length` violations (>400, strict). I'll split per the established convention (like DriveOverviewChart's `.Projection`/`.Views`/`.Chart`). Let me view exact boundaries.
+
+I'll split both files at clean section boundaries (matching the repo's `.Projection`/`.States` convention). Using `sed`/`head` to extract precisely:
+
+Both now under 400. Now re-run format + lint on all 9 files:
+
+swiftformat (0/9) and swiftlint --strict (0 violations) both green. Now the placeholder gate — both the verbatim prompt form and a meaningful per-file scan of my actual sources:
+
+Placeholder gate green (verbatim EXIT=0 + meaningful per-file scan TOTAL=0). Now the strongest proof: an **isolated SwiftPM harness** compiling my surface against the REAL shared library (Components + Design + generated Tokens) under Swift 6 strict concurrency, then running my XCTests.
+
+The main-view symlink got a doubled `.swift` (broken). Let me fix it, then build:
+
+Now build the harness library (my surface + real shared sources) under Swift 6 strict concurrency:
+
+Build reached all my files but exited 1. Let me capture the actual error:
+
+All errors are confined to `Components/DataDisplay/UnitFormatters.swift` (references KMP `UnitPreferences`/`TSUnitsKey`) — the exact file the sibling harness excluded; my surface doesn't use it. Let me confirm zero errors elsewhere, then exclude just that file:
+
+Confirmed: all 44 errors are in the pre-existing KMP-dependent `UnitFormatters.swift`; **zero** in any BatteryRangeCharts file. My surface compiles clean against the real shared library. Excluding that one unused file (as the sibling did) and running the build + tests:
+
+Library builds clean (BUILD_EXIT=0) under Swift 6 strict concurrency. Now run the XCTests:
+
+All **34 XCTests passed** (0 failures) under Swift 6 strict concurrency against the real shared library. Now the SDK typechecks for iOS 18 + macOS 15 (matching the sibling methodology):
+
+iOS 18 typecheck clean (EXIT=0). Now macOS 15:
+
+Both SDK typechecks pass (iOS 18 + macOS 15, 0 errors). Now the full-app gate. First, regenerate the Xcode project (xcodegen) to confirm my files integrate, and check whether the KMP toolchain caches are warm enough to build the required `Shared.xcframework`.
+
+xcodegen succeeded — **60 BatteryRangeCharts references** in the generated project (all 9 files across app + test targets). KMP caches are warm (gradle 3.4G, konan 1.6G), so I can build the real `Shared.xcframework` and run the actual full-app gate for genuine evidence. Let me inspect the build script and start it.
+
+The script runs Gradle `:core:assembleSharedXCFramework` (~7min with warm caches). Let me start it in the background and monitor.
+
+Framework build running in the background. Let me monitor its progress.
+
+Gradle is linking (compilation FROM-CACHE) — nearly done. Let me wait for completion.
+
+Now building the release variant. Let me continue waiting for the staging step.
+
+Still linking release frameworks. Let me wait for the build to complete.
+
+Linking the final (macOS) release framework. Let me wait for the build to finish.
+
+Framework built successfully (EXIT=0, ~9.5 min). Let me verify it's staged, then run the real full-app xcodebuild gate.
+
+Framework staged (iOS device/sim + macOS slices), iPhone 16 sim booted. Now the real full-app iOS gate (compiles the entire app — slow). Running async with logging:
+
+iOS gate running. Let me monitor for early progress/errors.
+

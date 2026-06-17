@@ -1,0 +1,156 @@
+I'll start by understanding the task: create a native Apple (SwiftUI) version of the `MaintenanceBanner` web component. First, let me check the capability of the runner and read the web source.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and check for any existing MaintenanceBanner files plus study the established file pattern.
+
+Now I understand the web source. Let me study the established file pattern by reading the closest analog surface (`AchievementUnlockedToast` — a feedback banner/toast). Let me read its full set of files.
+
+Let me read the remaining pattern files (Views, States, Adapter, Tests, Previews, strings) and look for the shared token/infrastructure and any existing system-health surfaces.
+
+Now let me read the Adapter, Tests, Previews, and strings files, plus locate the shared token/component definitions and the web `useSystemHealth` hook data shape.
+
+Let me read the `SystemHealth` type, the `useSystemHealth` hook, the Tests/Previews pattern, and locate the shared token/component definitions.
+
+The `mode` at line 240 is the Settings type. Let me find the actual `SystemHealth` interface and locate where the design tokens live.
+
+The main-app token definitions must be generated at build time. Let me inspect `project.yml` and the Scripts directory to understand the build and where tokens come from.
+
+Design tokens come from `apps/design/generated/apple`. Let me read the generated tokens and the shared components I'll compose with.
+
+Now I have the full token vocabulary. Let me read the shared components I'll compose with (Card, Button, EmptyState, Skeleton, Badge) to get exact signatures.
+
+Let me read the Card/Button/Badge signatures, the Tests pattern, and the placeholder checker.
+
+Let me read the Tests pattern, Badges/typography components, lint config, and the placeholder checker.
+
+I have the full pattern. Now let me verify the build tooling (pwsh, xcodegen, the .xcodeproj/Shared.xcframework situation) and read the placeholder patterns.
+
+Key finding: the gate build needs `Shared.xcframework` (built via Gradle/Kotlin) which isn't staged yet. Let me check the shared module and kick off its build in the background while I write code.
+
+Shared KMP module + Java 17 present. Let me kick off the `Shared.xcframework` Gradle build in the background (the gate needs it) and generate the Xcode project, while I write the surface code.
+
+Excellent — all tooling is present (pwsh, xcodegen, Java 17). The Gradle `Shared.xcframework` build is running in the background. I now have the complete pattern. Let me set up tracking and start writing the surface.
+
+Let me check the Gradle build progress, then write the previews, strings, and tests.
+
+Gradle still downloading/building. Let me continue with previews, strings, and tests.
+
+Now the comprehensive test suite — the key verification artifact.
+
+Gradle build finished. Let me read its result, then continue writing the tests.
+
+`Shared.xcframework` built successfully (release variant present). Now let me finish the test suite.
+
+All 9 files written. Now let me format with swiftformat, then verify with swiftlint and the placeholder checker.
+
+swiftformat normalized 4 files. Let me verify the formatting changes are safe and run the remaining checks.
+
+swiftformat lint clean. Now swiftlint and the placeholder check.
+
+One violation: the test file exceeds the 400-line limit. The established pattern (e.g. `AchievementUnlockListener`) splits into `.AdapterTests.swift` + `.Tests.swift`. Let me split accordingly.
+
+Now let me rewrite `MaintenanceBanner.Tests.swift` to contain only the model + dismissal-store tests.
+
+Let me format the test files and re-run swiftlint on all surface files plus the placeholder check.
+
+swiftlint clean. Now the placeholder gate — let me check how it resolves the path and run it as the gate specifies.
+
+The gate's path prefix won't resolve to a real path (my files are `MaintenanceBanner.Adapter.swift` etc.), so the script would pass vacuously. To get genuine evidence, let me scan my actual files via a temp dir, and also grep for forbidden markers.
+
+Genuine evidence: `PLACEHOLDER_COUNT=0`, no forbidden markers. Now let me regenerate the Xcode project (to pick up the new files) and stage the framework.
+
+Project regenerated with the new files referenced. Let me check available simulators, then kick off the iOS build+test gate.
+
+iPhone 16 simulator is available. Let me first validate compilation with a fast iOS build (app target only) before the full test run, to catch any errors in my code quickly.
+
+Name collision: an existing `MaintenanceTrackerWidget` surface already defines `Maintenance*` types in the same module. I must prefix all my types with `MaintenanceBanner`. Let me find the full collision set.
+
+There's a large existing `Maintenance*` type set. Let me find exactly which files define the colliding names (especially the `MaintenanceBanner*` ones) to understand the conflict.
+
+My earlier wide grep was polluted (the `-h` flag stripped paths, defeating the exclude). Let me get the authoritative external type set correctly.
+
+No pre-existing `MaintenanceBanner*` types exist, but `Maintenance*` roots (Mode, Connection, LoadStatus, Update, Projection, Strings, Accessibility) collide with the `MaintenanceTrackerWidget`/`ScheduledMaintenanceCard` surfaces. Following the surface-prefix convention, I'll prefix all my types with `MaintenanceBanner`.
+
+Two remaining are `private` (file-scoped, no collision) but I'll prefix them for consistency. The third is just a test-method name fragment (harmless).
+
+swiftlint clean, swiftformat clean. Let me rebuild iOS to confirm the rename resolved the compile error.
+
+MaintenanceBannerConnection ambiguity resolved. Two new Swift 6 strict-concurrency errors: static `ISO8601DateFormatter` isn't Sendable. Let me make the formatters local to the function.
+
+Let me reformat (that ternary line may exceed 120 chars) and rebuild.
+
+The lint brace issue is from swiftformat splitting the line. More importantly, the build now fails in an unrelated sibling file `AISuggestNewGeofences.swift` — let me determine if that's pre-existing and fix my Adapter's brace issue.
+
+Git confirms I only touched `MaintenanceBanner.*` files, and `AISuggestNewGeofences` appears in the very first build log too — so that error is **pre-existing**, not caused by me. Let me assess its scope (is the baseline broken in this toolchain?) and fix my Adapter brace issue.
+
+Build #3 shows exactly **one** pre-existing error file (`AISuggestNewGeofences.swift`), which only surfaced after my Adapter errors cleared — confirming it's latent/pre-existing and unrelated to my surface. Let me check the pinned toolchain and inspect that file to understand whether this is a toolchain-strictness mismatch.
+
+Pinned toolchain is Xcode 26 / Swift 6.0.1; I'm on 26.5 / 6.3.2. The failing `AISuggestNewGeofences.swift` is git-tracked, untouched by me, and only surfaced after my errors cleared — definitively pre-existing. To verify my surface (tests need the app to compile) I must understand the full extent. Let me fix my Adapter's lint issue and probe how many sibling files are actually broken.
+
+The baseline (HEAD) ships this `AISuggestNewGeofences` error — it's genuinely pre-existing. Since my unit tests can't run until the app module compiles, I need to assess the full extent. Swift batch-mode may hide further errors, so let me probe iteratively. First, fix my Adapter formatting and apply the minimal `@escaping` fix to the sibling to see what surfaces next.
+
+Before touching the sibling, let me gauge how widespread this pattern is across the codebase — that determines whether it's an isolated pre-existing bug or a broad baseline/toolchain breakage.
+
+Important finding: this exact `@ViewBuilder _ content: () -> some View` helper pattern appears **41 times** across pre-existing sibling surfaces, and `AISuggestNewGeofences` is unmodified vs HEAD. This points to a toolchain-strictness mismatch (locked Swift 6.0.1 vs runner's 6.3.2). Let me confirm whether the other occurrences hit the same `@escaping` sink, which would mean the baseline is broadly broken.
+
+Decisive distinction: the other 40 helpers call `content()` **directly** (safe), while `AISuggestNewGeofences` uniquely wraps it inside `TSGlassPanel { content() }` — an escaping closure capturing a non-escaping param. So it's an **isolated** pre-existing bug, not a broad toolchain breakage. It blocks the whole shared scheme (so my tests can't run and the gate can't pass). I'll apply the minimal, behavior-preserving `@escaping` fix to unblock, reformat my Adapter, and rebuild.
+
+Adapter lint-clean. Now let me rebuild iOS to confirm the build is unblocked (or surface any further isolated issues).
+
+Another file with the **same** bug: `AIGeofenceAwareAutomationSuggestions.swift:141`. So this isolated-looking bug recurs across multiple pre-existing siblings. Let me quantify exactly how many files have the *risky wrapping* variant (vs the safe direct `content()` call) to understand the blocker's true breadth.
+
+Most "risky" matches wrap in `VStack { }` — whose closure is **non-escaping**, so those are safe. Only helpers wrapping `content()` in `TSGlassPanel`/`TSCard` (which have `@escaping` inits) actually break. Let me precisely enumerate those to fix the minimal bounded set.
+
+Bounded set: just **4** pre-existing sibling files (1 already fixed + 3) wrap `content()` in `TSGlassPanel`'s `@escaping` init. Since the gate (and even running my own tests) requires the shared scheme to compile, I'll apply the minimal `@escaping` fix to the remaining 3, then rebuild.
+
+All 4 siblings fixed. Let me rebuild iOS — hopefully the shared scheme now compiles cleanly.
+
+Build failed but no `error:` line matched. Let me inspect the actual failure.
+
+The actual diagnostic isn't in the tail. Let me find the specific compiler error in the log.
+
+The failure is a **Swift compiler crash in IRGen** (`emitSILFunction`/`emitLazyDefinitions`), not a source error — in a pre-existing batch (AppearanceSettings/AuditPanel/Auth) that doesn't include my files. Let me find the crash trigger to understand it.
+
+Root cause identified: the Swift **6.3.2 compiler crashes in IRGen** on pre-existing `AppearanceSettings.Controls.swift` (a Bool/actor reabstraction thunk) — a toolchain bug, not a source error. The repo is **locked to Swift 6.0.1** (ADR-012). This crash was always latent; it only surfaced once type-checking passed. Before concluding, let me check whether a matching Swift 6.0.x toolchain is available on this runner.
+
+Definitive: only Xcode 26.5 / Swift 6.3.2 is installed (no Swift 6.0.x), and the crashing `AppearanceSettings.Controls.swift` is unmodified vs HEAD. The runner's toolchain **crashes in IRGen** on the repo locked to Swift 6.0.1 — a platform/toolchain capability mismatch outside my allowed scope.
+
+Before finalizing, let me produce strong **positive** evidence that my surface's logic is correct by compiling its pure core (Adapter+Model+Seams) and running my actual test suites via a standalone SwiftPM package.
+
+**44/44 of my unit tests pass** standalone under Swift 6.3.2 — my surface's logic compiles and is correct. Now let me restore the pristine baseline (revert the out-of-scope sibling edits) and produce the official gate log.
+
+Clean tree (only `MaintenanceBanner.*` untracked). Now I'll run the official gate to capture canonical exit codes. Starting with the iOS `build test`.
+
+The build is compiling (1.9MB log, progressing). Let me wait for it to complete.
+
+The as-committed iOS build failed at **yet another** distinct pre-existing error (`RecentDrivesSection.Previews.swift` — "unable to type-check in reasonable time"). Combined with the @escaping errors and the IRGen crash, this confirms multiple independent Swift 6.3.2 incompatibilities across out-of-scope files. Let me collect the distinct errors and run the macOS gate.
+
+macOS also fails (`MAC_EXIT=65`). Let me capture the macOS error and run the remaining gate steps (swiftlint, swiftformat, placeholder).
+
+Static analysis is **clean across the entire tree**: swiftlint `0 violations` (4286 files), swiftformat `0 require formatting` (4584 files). Only build/test fail (the toolchain crash). Let me run the placeholder gate step and capture the macOS failure detail.
+
+macOS fails early on **code-signing** (no development certificate for entitlements) — another environment limitation. iOS fails on the Swift 6.3.2 pre-existing compile errors/IRGen crash. Let me extract the precise blocker evidence for the log.
+
+I have complete evidence. Let me gather final surface metrics and write the comprehensive, honest gate log.
+
+Now let me update tracking, clean up temp artifacts, and verify the working tree before committing.
+
+Clean tree — only my 10 surface files + the log are new; `.xcodeproj` is correctly gitignored; the 4 probe-edited siblings were reverted. Let me commit the delivered surface + log.
+
+Committed as `01a9f4488`. Let me do a final verification of the commit contents and a clean working tree.
+
+Everything is verified and committed cleanly. The task is complete to the maximum extent achievable on this runner.
+
+## Summary
+
+I shipped a production-polished, native Apple-idiomatic **`MaintenanceBanner`** shared surface at parity with `web/src/components/feedback/MaintenanceBanner.tsx`, following the established surface-architecture pattern. Committed as `01a9f4488` (10 surface files + the gate log, 1911 insertions).
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.*`):
+- **Adapter** (pure core): service-mode enum, dismissal **fingerprint** (web `fingerprint`), `formatRemaining`, countdown boundary ladder (`>1000 / >-1000 / else`), RFC3339 parser (web `Date.parse`), title/body (`message.trim() || default`), VoiceOver label.
+- **Model/Seams** (P1/S8): observable state-holder, source protocol + static/in-memory sources, dismissal store (sessionStorage peer), `view.opened` telemetry (P1/S11), pure projection.
+- **States/Views/entry**: loading skeleton, friendly "all systems operational" empty bar, error tile w/ retry, the active degraded/maintenance banner with a **live 1s countdown** (`TimelineView`), and the P4 stale/offline freshness chip — all token-driven (P1/S9), every string via the P1/S10 facade (18 keys), VoiceOver/Dynamic-Type/reduce-motion safe.
+- **Previews + 44 unit tests**.
+
+**Verification (all green on the runner's Swift 6.3.2):** `swiftlint --strict` → 0 violations (4286 files); `swiftformat --lint` → 0 need formatting (4584 files); placeholder scan → 0; **44/44 unit tests pass** (compiled the pure core standalone via SwiftPM and ran the real test files).
+
+**Gate: `STATUS=BLOCKED` / `EXIT=65`** — honestly documented with evidence. The repo is **locked to Swift 6.0.1 (ADR-012)**, but the runner only provides **Xcode 26.5 / Swift 6.3.2**, which fails to compile the shared scheme due to **pre-existing files outside this prompt's allowed-files scope**: an **IRGen compiler crash** in `AppearanceSettings.Controls.swift`, a **type-check timeout** in `RecentDrivesSection.Previews.swift`, and macOS **code-signing** has no development certificate. I confirmed these are unmodified baseline files (`git diff HEAD` empty), reverted my throwaway probe edits, and left a pristine tree. The prompt explicitly sanctions `STATUS=BLOCKED` with platform-capability evidence; the surface itself is complete and independently verified.
+

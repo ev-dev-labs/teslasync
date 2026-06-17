@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure, the web source specification, and the existing Apple app scaffolding to understand what I'm working with.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Not blocked. Let me read the web source and explore the Apple app structure.
+
+The web source is a command center with many sub-components. The feature-views dir has 1853 files — a rich existing pattern to follow. Let me examine the existing conventions and the `commands` module the web source depends on.
+
+The sibling sub-components (CommandTile, CommandSearch, etc.) already exist natively — I have strong reference patterns. Let me study the most complete sibling (CommandSearch) and the project build config in depth.
+
+Let me read these key sibling files individually for the full content.
+
+Excellent architecture. Let me read the remaining CommandSearch parts, the shared tokens/types, and the build config to understand how files are included.
+
+Now let me understand the build config, shared design tokens (P1/S9), and the data model from `commands.ts`.
+
+Build uses XcodeGen with directory globbing — new `feature-views/VehicleCommandCenter.*` files are auto-included; tests route to the test bundle. Let me check the design tokens, xcodegen availability, and the KMP Shared.xcframework dependency.
+
+Critical: the KMP `Shared.xcframework` isn't prebuilt and the scheme's pre-action builds it via Gradle/Kotlin-Native. Let me assess that dependency and read the design tokens.
+
+Java 17 + gradlew present, so the KMP build is feasible but may be slow. Let me read the build-status notes and check whether feature views import the KMP `Shared` module, then kick off the shared-framework build early in the background.
+
+Key insight: feature-views import **no** KMP `Shared` — only Foundation/SwiftUI/Observation/OSLog. And `macos-pending-verifications.md` establishes the precedent: prior P4 surfaces verify **green in isolation** (SwiftPM build + tests + swiftc typecheck on both SDKs + lint/format/placeholder), with the full-app gate deferred due to pre-existing unrelated collisions. I'll follow that precedent but still attempt the full gate. Let me kick off the long-pole Gradle build now and continue investigating in parallel.
+
+`DashboardWidgetSize` is now 1× (collision resolved); test files are excluded from the app target via globbing. The definitive blocker evidence will come from the real compile. Let me read the remaining sibling pattern (Adapter/Views/strings/Tests/Previews) and the `commands.ts` data model.
+
+Let me read the strings, Previews, Tests format, and the placeholder checker, plus begin the `commands.ts` data model.
+
+I now fully understand the sibling pattern. Tests use XCTest with `@testable import TeslaSync`; the placeholder gate is case-sensitive and scans only `.swift`. Now the critical data model — let me read `commands.ts`.
+
+I have the full data model and pattern. Let me gather all existing top-level type names in the command-family siblings to avoid module-level collisions, and check the Gradle build progress.
+
+DEBUG xcframework built successfully — the KMP toolchain works. I have the full collision list (I'll prefix everything with `VCC`). I noticed shared command seams (`CommandDispatching`, `CommandFavoriteToggling`, `CommandParameters`, `CommandExecutionEvent`) that may be the P1/S8 binding seams I should reuse. Let me inspect them and confirm the Gradle release framework.
+
+The Gradle launcher died with the session (not fully detached) before the release link finished. Let me restart it properly detached, and inspect the shared command seams to decide on reuse.
+
+I'll make the surface **self-contained** (matching the established per-surface convention — each sibling defines its own model/telemetry/strings/slug). Let me verify the unit-preference approach used by native feature views and confirm Gradle is progressing.
+
+`setsid` isn't on macOS — I'll relaunch Gradle via the tool's proper detached async mode. `MeasurementSystem` is a clean Foundation-only app enum. Let me see how a feature-view adapter converts SI→display to stay consistent.
+
+No shared SI converter exists — each surface defines its own pure conversion (self-contained convention confirmed). Let me port the web `convertDistanceFromSI`/`convertTempFromSI` faithfully.
+
+No shared converter — I'll port `convertDistanceFromSI`/`convertTempFromSI` natively and reuse the app's Foundation-only `MeasurementSystem`. Let me peek at the collapsible group + tile chrome for visual parity, then start building. Let me also confirm Gradle is progressing.
+
+Let me locate the shared chrome helpers (TSFadeIn, TSMaterial, TSAnimation) so I stay consistent, and check Gradle.
+
+Found the shared chrome (TSMaterial, TSAnimation, TSFadeIn, Cards). Let me check their imports and whether there's a shared GlassPanel/Card I should use for the outer container.
+
+I have all the shared chrome (`TSGlassPanel`, `TSFadeIn`, `TSMaterial`, `TSAnimation`). Let me read the three web dialogs to reproduce them faithfully, then start building.
+
+I have the full dialog spec. Let me read the three web tile components to faithfully reproduce their composition in one native tile view, then build.
+
+I now have complete parity understanding of every sub-component. Let me set up the plan and todo tracking, then build the self-contained surface.
+
+Gradle is into the release links — progressing. Now I'll write the surface. Starting with the Foundation-only value types.
+
+Now the faithful representative catalog spanning all 14 categories and every tile/dialog type.
+
+Gradle **BUILD SUCCESSFUL** — release xcframework produced and Gradle is now cached, de-risking the full-app gate's long pole. Now the projection types and the pure adapter.
+
+Let me fix the small typo and write the pure adapter (the core testable projection).
+
+Now the core state holder — the P1/S8 source seam, P1/S10 strings facade, P1/S11 telemetry, the observable model, favorites store, and in-memory source.
+
+Now the SwiftUI layers. Let me update todos and write the state chrome + the presentational views.
+
+Now the main presentational views — header, banners, search, favorites bar, collapsible category group, and the command tile.
+
+Now the three command dialogs (input/select/confirm) as native sheets.
+
+Now the composed root view that ties the phases, banners, search, content, and dialogs together.
+
+Now the i18n strings catalog covering every key the surface resolves.
+
+Now the previews (every state) and the comprehensive XCTest suite.
+
+Now the comprehensive XCTest suite covering the adapter, model, and accessibility.
+
+All 12 files written. Now verification. Let me update todos and start with formatting/linting my files.
+
+Config notes: line-length error at 160, type_name min length applies (my `typealias P` in tests would fail). Let me fix that and format my files.
+
+swiftformat clean. swiftlint flags file_length (400 cap), type_body_length, one cyclomatic complexity, and a 3-tuple. Let me check how siblings handle the 400-line cap before splitting.
+
+Clear convention: files ≤400 except data catalogs (only `WidgetPicker.Catalog.swift` uses a disable). I'll split the oversized files and mirror the catalog disable. Let me check the exact disable directive and get current section boundaries.
+
+Catalog uses `// swiftlint:disable file_length line_length`. Let me gather precise boundaries for the remaining files, then split with a Python script.
+
+I have all boundaries. Let me first refactor the complex `validate` function and add the catalog disable, then split files with Python.
+
+Catalog disabled like the widget catalog. Now let me split the oversized files with a precise Python script.
+
+All split files under 400. Now split Tests and fix the large-tuple via a `Harness` struct.
+
+Let me verify the Tests refactor and re-run format + lint on all files.
+
+Harness refactor clean. Let me format all the new/split files and run the full lint check.
+
+One violation: `type_body_length` can't be blanket-disabled. Let me re-enable it after the enum closes.
+
+swiftlint --strict: **0 violations**. swiftformat --lint: clean. Now the placeholder gate.
+
+Placeholder gate: **EXIT=0, COUNT=0**. Now a fast isolated typecheck. To keep the harness minimal and reduce coupling, I'll use the sanctioned `.tsGlassPanel()` modifier instead of the `TSGlassPanel` wrapper in the root, then typecheck against both SDKs.
+
+Now the isolated typecheck against both SDKs (Swift 6, strict concurrency) with minimal deps.
+
+The file split made two shared dialog helpers `private` but they're now used cross-file. Let me make them internal and re-check.
+
+macOS typecheck **clean**. Now the iOS 18 SDK typecheck (covers the `#if os(iOS)` branches).
+
+Both SDKs typecheck **clean** under Swift 6 strict concurrency. Now an isolated SwiftPM package to build + run the tests (matching the precedent).
+
+Two test-only fixes: the `localize` closure needs `@Sendable`, and one destructuring line with a trailing comment escaped my transform. Let me find and fix.
+
+40/41 pass. The one failure is actually correct behavior: like the web (`if (loading) return`), a second activation is blocked while a send is in-flight. The test must complete the first send before toggling off. Let me fix the test.
+
+All **41/41 tests pass** under Swift 6 strict concurrency. Let me update progress, re-verify lint on the files I edited post-split, then run the real full-app gate.
+
+All clean. Now the real full-app gate. Let me stage the (now-cached) Shared.xcframework, generate the Xcode project, and confirm the logs directory.
+
+Shared.xcframework staged (gradle cached, 9s). Let me generate the Xcode project and attempt the iOS-simulator app build to see whether it compiles (and isolate any pre-existing collisions).
+
+Project generated; my files are enumerated. Now the iOS-simulator app build (the heart of the gate). This compiles all app sources including the surface.
+
+Build failed (28 failures). Let me extract the actual errors and check whether any are in my VehicleCommandCenter files.
+
+**Zero errors in my VehicleCommandCenter files** — all 333 errors are in pre-existing, unrelated files. Let me characterize them to confirm they're the documented pre-existing collisions.
+
+Confirmed: the 333 errors are **pre-existing parallel-merge collisions** in other surfaces (`DrivingCoachConnection`, `ChargeStatusProjection`, `SafetyModel`, etc. — redeclared across sibling files) — exactly the documented blockers. **Zero** involve my code. Let me run the macOS build for evidence, then run the remaining host-runnable gate steps.
+
+Both full-app builds fail identically (exit 65) with **zero VehicleCommandCenter errors** — pre-existing collisions in shared sibling sources. Let me run the remaining tree-wide gate steps for the record.
+
+swiftformat --lint tree-wide: **EXIT=0**. Now tree-wide swiftlint --strict.
+
+Tree-wide swiftlint: the **only** violation is the pre-existing `opening_brace` in `LiveSignalSparklinesWidget.Builder.swift` (documented blocker) — **0** VCC. The picture is complete and unambiguous. Let me write the gate log with full, honest evidence, re-running the surface-scoped checks so the log contains genuine output.
+

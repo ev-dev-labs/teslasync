@@ -1,0 +1,177 @@
+I'll start by exploring the environment and repository structure to understand the task scope and capability requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators, pwsh). Now let me explore the existing Apple app structure and the web source.
+
+Now I understand the web source. It's a banner that appears after the live connection has been `disconnected` for ≥2 minutes. Let me deeply explore the Apple app structure to understand the patterns I must follow.
+
+Large, well-structured project. Let me examine the key infrastructure: the LiveConnection state holder (P1/S8), the design tokens (P1/S9), the Feedback components (AlertBanner native equivalent), and check if LiveStaleDataBanner already exists.
+
+Now I understand the file naming convention. Let me find the live-connection state holder, the native AlertBanner (`Banners.swift`), and the closest existing surface that binds to live connection to use as a template.
+
+There's already a `TSAlertBanner` component and a dumb `TSLiveStaleDataBanner` preset (component-library, out of scope). My surface must bind to the live-connection state holder with the 2-minute threshold logic. Let me examine the state holder infrastructure and find an existing surface that consumes live connection as a template.
+
+I need to understand how existing shared surfaces bind to live connection and how they're included in the build. Let me read the project.yml and find surfaces that consume live-connection state.
+
+Critical insight: the scheme has a preAction that builds `Shared.xcframework` from KMP, and the `.xcodeproj` is generated via XcodeGen. Let me check build feasibility (baseline) and study the live-connection infrastructure plus a template surface.
+
+Let me assess the baseline build feasibility — the KMP xcframework script, whether a shared KMP module exists, and whether prior surface logs show passing gates.
+
+Many prior surface commits exist — same pattern. The key question is whether the KMP `Shared.xcframework` build works on this runner. Let me read a recent banner surface's log and its files (EditConflictBanner, DataFreshness) to learn the expected structure and gate behavior.
+
+A log for this exact surface (0126-LiveStaleDataBanner) already exists, but the files don't. Let me read that prior log and the passing EditConflictBanner gate log to understand what happened and what a passing gate looks like.
+
+This is the key. The merged EditConflictBanner log establishes the **canonical disposition** for this phase: platform capability is AVAILABLE; the full-app `xcodebuild build test` is known to fail for pre-existing infra reasons (iOS swift-frontend compiler crash on unrelated sibling batches; macOS dev-signing with 0 identities), deferred to the P99 acceptance gate. Per-surface verification is done via isolated SwiftPM build+tests, dual-SDK `swiftc -typecheck` against the real design system, swiftlint, swiftformat, placeholder gate, and xcodegen.
+
+Let me read the full EditConflictBanner file set (my canonical template) and the DataFreshness live-binding analog.
+
+Excellent template. The per-surface architecture is clear. Let me read the remaining EditConflictBanner files (States, Views, Previews, Tests, strings) plus DataFreshness (the live-freshness analog) to learn the chrome/token patterns, test patterns, and how a surface binds to live-connection.
+
+Now I have the full structural and token vocabulary. Let me read the test pattern and the DataFreshness surface (the closest live-connection/freshness analog) to learn how a surface binds to live status.
+
+I have the full pattern. Now I need the exact `useLiveConnection` status taxonomy from the web hook, and to check whether a sibling connection-status surface (e.g., LiveIndicator) already exists to align my status vocabulary. Let me look.
+
+The `LiveIndicator` surface is the companion that consumes the same `useLiveConnection` hook — this is the perfect alignment reference. The web hook's status taxonomy is `connected | reconnecting | disconnected | unknown`. Let me read LiveIndicator's full implementation to align my status modeling and source seam.
+
+The key discovery: `LiveConnectionStatus` (connected/reconnecting/disconnected/unknown) and `LiveConnectionSnapshot` are **already public types** in the module (from `LiveIndicator`), the companion consumer of the same `useLiveConnection` hook. I'll reuse them (DRY). Now let me read the `OfflineBanner` surface — the closest connectivity-banner peer — to align how a connectivity banner maps the leaf states.
+
+I now have the complete picture. `OfflineBanner` is the ideal peer (a connectivity banner), and I'll reuse `LiveConnectionStatus`/`LiveConnectionSnapshot` from `LiveIndicator` (same `useLiveConnection` hook). Let me read the remaining chrome/test/token references to finalize exact API signatures before writing.
+
+I have all conventions. Let me verify the exact public signatures of the design-system primitives I'll use (`TSButton`, `TSCard`, `TSEmptyState`, `TSSkeleton`, `TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`) to avoid compile errors.
+
+All API signatures confirmed. The clean, faithful design: a self-contained surface (own `LiveStaleStatus` enum mirroring the web `LiveConnectionStatus` union — avoiding a module collision with LiveIndicator's `LiveConnectionStatus`), with the input carrying `statusSince` (the web hook's `stateEnteredAt`) so staleness is a pure function. Let me read the DataFreshness clock-injection test idiom and confirm no `LiveStale*` symbol collisions + token availability.
+
+No blocking collisions — I'll use the unambiguous `LiveStaleDataBanner*` prefix for surface types and `LiveStale*` for pure core (avoiding the existing bare `LiveStaleBanner` and `LiveStalenessPolicy`). Let me read the DataFreshness model-test clock idiom to get strict-concurrency clock injection right.
+
+`MutableClock` is a `private final class` (file-scoped) duplicated across 4 test files — so I'll define my own privately too. Let me grab its exact body.
+
+I have the complete blueprint. Let me check the lint/format configs (line length, rules) so my code passes `swiftlint --strict` and `swiftformat --lint`, then write all files.
+
+All constraints clear (120-col lines, type names <50, swiftformat before-first wrapping, no explicit `self`). Let me set up tracking and write all 9 surface files. Starting with the pure core (Adapter), Model, and Seams.
+
+Core layer done. Now the SwiftUI surface, States, and Views.
+
+Now the Previews, Tests, and strings.
+
+All 9 files written. Now running the per-surface verification gates. Starting with swiftformat and swiftlint on the new files.
+
+Only Tests.swift has 4 over-width lines. Let me auto-format the new files and re-verify.
+
+swiftformat passes. Let me verify what it changed in Tests.swift and run swiftlint --strict on all new files.
+
+swiftlint --strict: **0 violations**, swiftformat: **0/8**. Now the critical verification — an isolated Swift 6 strict-concurrency build + the 30 tests via a temporary SwiftPM package (the established per-surface method).
+
+**27/27 tests pass** under Swift 6 strict concurrency (language mode 6) in the isolated package. Now the dual-SDK `swiftc -typecheck` against the **real** design system. Let me assemble the design-system file set (excluding any KMP `Shared`-coupled files).
+
+All system-framework imports only — no `Shared` coupling. Now the dual-SDK typecheck against the real design system (Tokens + Components + Design + my 7 surface files), per SDK, with and without `-D DEBUG`.
+
+As the predecessor log noted, `UnitFormatters.swift` is Shared-core-coupled (references `Units`). Let me exclude it (and check for any other coupled files) and re-run.
+
+Only `UnitFormatters.swift` is coupled (my surface doesn't use it). Excluding it and running all 4 typecheck variants (iOS/macOS × with/without `-D DEBUG`).
+
+All 4 typecheck variants returned swiftc exit 0 with no diagnostics. Let me rigorously confirm the raw exit code without the pipe masking (honesty: no red-as-green).
+
+Raw swiftc exit **0**, clean. Now the placeholder gate. Let me inspect the script's interface, then run it on the new files.
+
+The placeholder gate scans for stub markers. Let me run it exactly as the gate specifies and independently grep my files for forbidden patterns.
+
+Placeholder gate: **COUNT=0, EXIT=0**. Now `xcodegen generate` to confirm the files enumerate into the app + test targets.
+
+All 6 per-surface gates are green. Now I'll honor the covenant's "actually attempt the full-app gate" rather than assume. First, fast confirmations: code-signing identities (macOS gate dependency), Java/Gradle availability (xcframework prerequisite), and the documented disposition.
+
+Confirmed instantly on this runner: **0 valid code-signing identities** (the macOS gate's documented blocker) and Java 17 + gradlew present (xcframework can stage). To honor the covenant's "actually attempt," I'll stage `Shared.xcframework` via Gradle, then run the full-app builds. Starting the Gradle stage (the predecessor reported ~8–9 min).
+
+While Gradle stages, let me record the plan and prepare the gate log. Let me check Gradle progress shortly.
+
+Gradle is building (no output yet — likely resolving/compiling Kotlin/Native). Let me continue waiting.
+
+Still building (~5 min in). Continuing to wait for the Kotlin/Native xcframework assembly.
+
+`Shared.xcframework` staged successfully (BUILD SUCCESSFUL 7m43s). Now attempting the full-app gate. Starting the macOS build+test (the bounded, most-informative one — proves my surface compiles in the real full module; the predecessor reached signing).
+
+The macOS build compiles the entire module (large). Let me monitor progress.
+
+macOS build finished (exit 65) with **zero LiveStaleDataBanner errors**. Let me determine the exact failure cause (signing vs compile) and confirm my surface compiled.
+
+The macOS failure is **exactly** the documented blocker: the only 4 `error:` lines are dev-signing/entitlement failures (0 identities) for `TeslaSync-macOS` / `TeslaSyncWidgets-macOS` — **zero source errors, zero LiveStaleDataBanner errors**. Let me confirm the module actually compiled (no compiler crash) before signing.
+
+Let me examine the build log structure to determine whether compilation ran before the signing failure.
+
+Let me precisely determine whether the macOS build compiled or bailed at signing-planning, so I report accurately.
+
+Precise finding: the macOS gate bails at **provisioning/signing validation (0 dev certificates) BEFORE the compile phase** — a pre-existing infra blocker outside my code. To get real full-module compile evidence on this runner, let me retry with signing disabled (bypasses the entitlement validation and actually compiles the whole module).
+
+The full macOS module is compiling (signing disabled). Let me monitor progress.
+
+Still compiling (quiet mode shows only diagnostics — none yet). Let me check the log file directly and keep waiting.
+
+The macOS no-sign build completed. Let me read its result and clean up the stray probe.
+
+With signing disabled, the macOS module **actually compiled** (real compile-phase warnings from sibling files appear) with **0 errors, 0 compiler crashes, 0 LiveStaleDataBanner errors**. Let me find what the residual failure was (likely final packaging/signing).
+
+There's a `SwiftEmitModule failed` / `Failed frontend command` with no `error:` — the predecessor's exact swift-frontend crash signature. Let me identify which module/files triggered it (mine or siblings).
+
+Definitive finding: the macOS no-sign build **compiled the module** (real compile warnings from sibling files) then hit `SwiftEmitModule failed` — a **whole-module swift-frontend crash with 0 `error:` diagnostics** (the predecessor's exact documented signature), listing thousands of module sources, not my surface. To fully honor "attempt both," let me run the iOS gate to confirm the same toolchain crash there.
+
+The iOS build is running. Let me monitor its progress.
+
+iOS build in progress (4145 lines, the same swift-frontend crash signature emerging, no LiveStaleDataBanner errors). Let me wait for completion.
+
+iOS build completed. Let me analyze the result precisely.
+
+Both full-app gates confirmed: **iOS exit 65, 0 source errors, 11 swift-frontend crash markers, 0 LiveStaleDataBanner errors, 23 compile warnings** (compilation happened on siblings). Identical pre-existing toolchain crash on both platforms, unrelated to my surface. Let me capture which sibling batch the crash implicates for the honest log.
+
+Definitive: the crash hits the **exact same unrelated sibling batches** the predecessor documented (`AnomalyInlineRow.*`, `AppContainer.*`, `AppearanceSettings.*`) — my `LiveStaleDataBanner` is **not** among the crashing primary-files, and produces **zero errors** in both real full builds. Now writing the comprehensive, honest gate log.
+
+Log written. Now final verification and a clean commit (adding only my surface files + the log). Let me confirm git state and re-confirm lint/format are still green.
+
+git shows exactly my 9 files + the log (xcframework/xcodeproj correctly gitignored). Final swiftlint confirmation, then commit.
+
+All gates green. Committing the surface (9 files + log) with the conventional message.
+
+Committed as `8a504f13e` (exactly 9 files + log). Let me verify a clean tree and clean up temp artifacts.
+
+All work complete and committed. Working tree is clean; temp artifacts removed.
+
+## Summary
+
+Shipped the production Apple-idiomatic **`LiveStaleDataBanner`** shared surface (P4 · 0126) at parity with `web/src/components/feedback/LiveStaleDataBanner.tsx` — the banner that appears once the live pipe (`useLiveConnection`) has been `disconnected` for ≥ 2 minutes.
+
+**9 files** in `apps/apple/TeslaSync/shared-surfaces/` (Adapter, Model, Seams, View, States, Views, Previews, Tests, strings), following the established sibling architecture (P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 `view.opened` telemetry). Reproduces both web i18n keys (`live.staleBanner.title`/`.message`), the `STALE_BANNER_THRESHOLD_MS = 2·60_000` window, and every leaf state (loading / healthy / stale-banner / error + Offline-Stale chip).
+
+**Per-surface gates — all green (raw results in the log):**
+- Isolated Swift 6 strict-concurrency build + **27/27 tests pass**
+- Dual-SDK `swiftc -typecheck` vs the **real** design system (iOS 18 + macOS 15, ±DEBUG): **0/0**
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **0/8** · placeholder: **COUNT=0** · `xcodegen`: 9 files enumerated
+
+**Full-app gate honestly attempted on this runner** (not assumed): staged `Shared.xcframework` via Gradle (7m43s ✓), then ran `xcodebuild` for macOS (signed + signing-free) and iOS. All produced **zero source errors and zero LiveStaleDataBanner errors**; the failures are pre-existing infra — a swift-frontend whole-module crash on **unrelated sibling batches** (`AnomalyInlineRow.*`, `AppContainer.*`, `AppearanceSettings.*`…) and macOS dev-signing (0 identities) — outside the allowed files, deferred to the P99 acceptance gate.
+
+Log ends with `EXIT=0` / `STATUS=DONE`. Committed as `8a504f13e` (9 files + log only; generated `.xcodeproj` and staged xcframework correctly gitignored).
+
+
+
+The task is fully complete and verified. Let me do a final confirmation of the committed state before marking complete.
+
+The task is fully complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...le-shared-surfaces-0126-LiveStaleDataBanner.log | 181 +++++++++++
+ .../LiveStaleDataBanner.Adapter.swift              | 159 +++++++++
+ .../LiveStaleDataBanner.Model.swift                | 284 +++++++++++++++++
+ .../LiveStaleDataBanner.Previews.swift             |  83 +++++
+ .../LiveStaleDataBanner.Seams.swift                | 129 ++++++++
+ .../LiveStaleDataBanner.States.swift               | 112 +++++++
+ .../LiveStaleDataBanner.Tests.swift                | 354 +++++++++++++++++++++
+ .../LiveStaleDataBanner.Views.swift                | 116 +++++++
+ .../shared-surfaces/LiveStaleDataBanner.strings    |  30 ++
+ .../shared-surfaces/LiveStaleDataBanner.swift      | 106 ++++++
+ 10 files changed, 1554 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0126-LiveStaleDataBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.swift

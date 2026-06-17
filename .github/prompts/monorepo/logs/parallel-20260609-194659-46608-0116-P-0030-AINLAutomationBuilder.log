@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure and checking tool availability, since this task requires Apple/Xcode tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple project structure.
+
+The web component is small but composes several shared pieces. Let me read the web dependencies and examine the existing Apple shared-surfaces patterns to follow conventions.
+
+A rich pattern exists. Let me read the three web dependencies to fully understand composition and states.
+
+I now fully understand the web composition. Let me find the closest native reference — an existing AI streaming surface that uses an input prompt — and read the canonical `AIFeatureCard` native files.
+
+Several web "NL prompt + stream" AI features exist. Let me see which have native counterparts (best analogs) and read the geofence one (closest: stream + input).
+
+`AIGeofenceAwareAutomationSuggestions` is the gold-standard analog — a sibling AI automation builder using the same hooks. Let me read its complete native file set plus the `AIFeatureCard` native files to mirror conventions exactly.
+
+Comprehensive architecture. My target is simpler (no draft/apply/children — `onEvent` is a no-op). Let me read the remaining geofence reference files to fully internalize the pattern.
+
+Let me read the remaining geofence files (Chrome, Views, Adapter, Previews, tests, strings) to complete my understanding.
+
+Let me read the geofence Previews + tests and locate the shared theme primitives to confirm correct token usage.
+
+Let me read the geofence UI tests, the project.yml, and locate the shared theme primitives.
+
+Let me locate the project config, theme primitives, and build tooling.
+
+XcodeGen is available with glob-based sources. Let me read the rest of project.yml (test targets, macOS scheme) and the key theme primitive signatures.
+
+Now let me check the heavyweight build dependencies (Shared.xcframework, build script, simulators) and read the design tokens.
+
+Key finding: `Shared.xcframework` is absent (needs a KMP/Gradle build). Let me check prior surface gate logs and the pending-verifications doc to understand the expected build status.
+
+The prior surface log reveals the proven verification methodology on this runner. Let me extract the exact verification commands used for the geofence surface.
+
+I now have the complete, sanctioned verification methodology. Let me examine the design-system files my surface depends on, to build the isolated SwiftPM harness exactly as the prior surface did.
+
+`Color.TS` and `Font.TS` both live in `TSMaterial.swift`. Let me read the design-system core files to map the harness dependency closure.
+
+Tokens.swift is self-contained (Color.TS, Font.TS, TSSpacing, TSRadius). Let me confirm the component files' dependency closure before building the harness.
+
+Let me locate the remaining symbols referenced by these component files (`tsGlassPanel`, `TSText`, `TSBadge`, `TSPanelTitle`, `TSCaption`) to close the harness dependency set.
+
+I have the full dependency closure. Let me read the lint/format configs and locate the placeholder checker before writing code.
+
+All tooling confirmed present. Let me read the placeholder checker to know exactly which stub-words to avoid (the geofence surface had to rename the `placeholder` i18n key).
+
+The checker only scans `.swift` files (not `.strings`), but Swift code referencing a key containing "placeholder" could match. Let me read the patterns file to confirm.
+
+I have everything needed. The sanctioned methodology is clear: ship the 11-file surface, verify via host-runnable gates (swiftformat, swiftlint, placeholders, xcodegen, isolated SwiftPM harness with tests, i18n cross-check), and run the full xcodebuild gate (expected DEFERRED on KMP/cross-surface grounds). Let me set up tracking and write the plan.
+
+Now I'll write the surface files. Starting with the Foundation-only core (Adapter: surface identity, stream event, projection).
+
+Now the Logic core (pure enums, decision logic, render-state, accessibility summary).
+
+Now the Model (telemetry seam, input snapshot, source protocol, observable model, strings facade). Faithful to the web source's lack of a vehicle-change cleanup effect.
+
+Now the in-memory source for previews and tests.
+
+Now the presentational subviews (Views: header, Helix badge, prompt field, action button).
+
+Now the Chrome (output panel, error row, thinking indicator, gate loading/error, pulse helper).
+
+Now the main surface View (gate switch + ready card + freshness chrome).
+
+Now the previews (one per state).
+
+Now the unit tests (adapter/projection/logic/accessibility/i18n).
+
+Now the model wiring tests (telemetry, actions, freshness, web-faithful no-cancel-on-vehicle-change).
+
+Now the i18n catalog.
+
+All 11 files created. Let me set up tracking and run the host-runnable verification gates, starting with swiftformat (auto-format my files), then lint.
+
+swiftformat auto-fixed 2 files. Let me verify format-lint clean, run swiftlint --strict on my files, and the placeholder gate.
+
+Format ✓, placeholders ✓. One swiftlint violation: `make` has 7 params (max 5). I'll bundle the cached inputs into the existing `InputSnapshot` (moving it to the Foundation-only Adapter layer) — reducing `make` to 4 params and improving layering. Let me update Adapter, Model, and the projection tests.
+
+Now remove the duplicate InputSnapshot from Model.swift and update the model's `projection` to use the snapshot form.
+
+Now update the projection tests to the new snapshot-based signature, using a 4-param test helper.
+
+Now re-run swiftformat and swiftlint on all my files to confirm both are clean after the refactor.
+
+All three cheap gates pass: **swiftformat 0, swiftlint --strict 0, placeholders 0**. Now the key verification — the isolated SwiftPM harness compiling my exact sources against the real design system + running the tests. Let me build it.
+
+The design files cross-reference more primitives (TSTone, TSStatusPill, TSIconBox, TSText, etc.) — all within Typography/Badges. The geofence harness used a closed 8-area set including "Motion". Let me locate the exact files and check for any out-of-set imports.
+
+Closed 8-file design set confirmed (all import only SwiftUI). Let me build the isolated SwiftPM harness — exact shipped sources as module `TeslaSync` against the real design system, then run the tests.
+
+Real compile error: my `glass(_:)` helper passes a non-escaping closure into `TSGlassPanel`'s `@escaping` init. The fix is to mark the parameter `@escaping`. Let me fix and rebuild.
+
+Harness builds clean. Now run the tests.
+
+**Harness: 45/45 tests pass, TEST_EXIT=0** — exact shipped sources (incl. #Preview) compiled against the real design system under Swift 6. Let me re-verify format/lint on the edited View, run `xcodegen generate`, and do the i18n cross-check.
+
+The line-based grep missed multi-line calls. Let me extract all i18n key literals robustly and verify every referenced key resolves, plus confirm all web keys are present.
+
+i18n is fully closed: all 23 referenced keys defined, no orphans, all 5 web keys covered (placeholder→promptHint disclosed). Now `xcodegen generate` to confirm the project enumerates the files.
+
+`xcodegen generate` succeeded (EXIT=0); the pbxproj enumerates all 11 files. Now I must actually drive the full xcodebuild gate (not assume). Let me first confirm the pre-existing cross-surface blockers exist in this slot, then launch the iOS build+test.
+
+Confirmed: this slot has only 1 `DashboardWidgetSize` (the 15× collision was cross-slot), and test files are correctly excluded from the app target. The dominant gate dependency is the KMP `Shared.xcframework` Gradle build (scheme pre-action). Per the honesty covenant I must actually drive the gate, not assume. Let me launch the iOS build+test and capture output.
+
+Let me monitor the gate's progress (the KMP framework build dominates early).
+
+The KMP `Shared.xcframework` built successfully (debug written; release linking now) — Gradle cache made it fast. Let me confirm the xcodebuild process is still alive and the log is still growing.
+
+The KMP release framework link is underway (the long pole, ~7 min per precedent). Note a second concurrent `xcodebuild` (PID 92320, started 1:14PM) from a sibling slot confirms the shared-runner contention. Let me wait for the release link to progress.
+
+Release links progressing (iosArm64 done → simulator now). App compile hasn't started yet. Let me continue waiting for the framework assembly to finish and the app compile to begin.
+
+The iOS gate finished: **IOS_EXIT=65** — the KMP framework built fine and app compile started, but failed. The failing SwiftCompile batch is all sibling surfaces (VehicleSpecsWidget, VehicleStatePanel, VinDecoder…) — none are mine. Let me extract every `error:` line and confirm zero are attributable to AINLAutomationBuilder (MY_ERROR_HITS).
+
+**Definitive evidence: MY_ERROR_HITS=0.** All 108 errors are in pre-existing sibling surfaces (`StateTimelineWidget`, `RecentDrivesListWidget`, `RecentDrivesSection`, `StateTimeline`) — duplicate-type collisions (`StateTimelineUpdate`/`RecentDrivesUpdate` "ambiguous for type lookup") across sibling parallel surfaces, exactly as the 0020 precedent documented. Zero attributable to AINLAutomationBuilder. The KMP framework built fine (no SIGTERM this run). Now let me drive the macOS gate to capture its real exit.
+
+While the macOS gate runs (KMP framework now cached), let me poll its progress.
+
+The macOS log wasn't created — the backgrounded child was torn down with its launcher session. Let me relaunch it as a properly detached process so it persists.
+
+The macOS gate finished: **BUILD FAILED / TEST FAILED**. Let me extract its exit code, root-cause errors, and confirm MY_ERROR_HITS=0.
+
+Both full-app gates fail **solely on the documented pre-existing blockers** with **MY_ERROR_HITS=0**: iOS on cross-surface duplicate-type collisions (StateTimeline*/RecentDrives*), macOS on the missing development signing certificate (ADR-012). Let me confirm my symbols don't collide with anything in this worktree, then write the gate log.
+
+Let me confirm there's exactly one declaration of the model class (the count of 2 needs verification — a real duplicate would be a problem).
+
+Confirmed: only one real `NLAutomationBuilderModel` declaration (the other match is the `…ModelTests` substring). No collisions. All evidence gathered. Let me grab tool versions and a representative iOS error line, then write the gate log.
+
+Let me verify the "ambiguous" types are genuinely multiply-defined across sibling surfaces (backing the attribution honestly), then write the log.
+
+All confirmed: `RecentDrivesUpdate` and `StateTimelineUpdate` are each defined twice across sibling dashboard-widgets/feature-views surfaces — the pre-existing cross-surface collision owned by the acceptance de-dup pass. Now let me write the gate log.
+
+Gate log written. Now let me verify git status (ensure only my 11 files + the log are committed, and the regenerated `.xcodeproj` is git-ignored), then commit per the prompt's allowed-files constraint.
+
+Exactly the 11 surface files + the log, nothing else; `.xcodeproj` is git-ignored. Let me commit.
+
+Committed (8e81cbd7c). Let me run a final confirmation of the cheap gates against the committed files and update tracking.
+
+All final gates green on the committed files. Let me clean up the temporary harness.
+
+All work complete and verified. The repo working tree is clean (commit `8e81cbd7c` captured the 11 surface files + gate log; the regenerated `.xcodeproj` is git-ignored).
+
+Merge made by the 'ort' strategy.
+ ...-shared-surfaces-0030-AINLAutomationBuilder.log | 152 +++++++++++
+ .../AINLAutomationBuilder.Adapter.swift            | 150 +++++++++++
+ .../AINLAutomationBuilder.Chrome.swift             | 197 ++++++++++++++
+ .../AINLAutomationBuilder.Logic.swift              | 196 ++++++++++++++
+ .../AINLAutomationBuilder.Model.swift              | 244 +++++++++++++++++
+ .../AINLAutomationBuilder.ModelTests.swift         | 233 ++++++++++++++++
+ .../AINLAutomationBuilder.Previews.swift           | 115 ++++++++
+ .../AINLAutomationBuilder.Source.swift             |  86 ++++++
+ .../AINLAutomationBuilder.Tests.swift              | 296 +++++++++++++++++++++
+ .../AINLAutomationBuilder.Views.swift              | 219 +++++++++++++++
+ .../shared-surfaces/AINLAutomationBuilder.strings  |  49 ++++
+ .../shared-surfaces/AINLAutomationBuilder.swift    | 203 ++++++++++++++
+ 12 files changed, 2140 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0030-AINLAutomationBuilder.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLAutomationBuilder.swift

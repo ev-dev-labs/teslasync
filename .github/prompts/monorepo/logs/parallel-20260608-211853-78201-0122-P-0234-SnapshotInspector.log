@@ -1,0 +1,164 @@
+I'll start by understanding the task: create a native Apple SwiftUI version of `SnapshotInspector` at parity with the web source. First, let me verify platform capability and explore the codebase structure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source spec and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply — feature-views, state holders, tokens, i18n, and shared components.
+
+1737 files exist with a multi-file-per-component pattern. Let me check if SnapshotInspector files already exist and find a good reference example (FSM/state-machine related, using telemetry).
+
+`FSMSubFSMPanel` is the closest analog (same state-machine feature, uses telemetry). Let me study it thoroughly as my primary reference pattern.
+
+Excellent pattern. Let me read the remaining FSMSubFSMPanel files (Adapter, Views, Previews, Tests, strings) to understand the complete contract.
+
+Now let me read the remaining reference files (Previews, Tests, strings) and the web components SnapshotInspector composes (SourceLayerBadge, StateBadge, CopyButton, Toggle).
+
+I have a thorough understanding of the pattern. Now let me study the shared tokens/components (P4 core) and the web components SnapshotInspector composes.
+
+There's already an `FSMRegistry.color(for:state:)` port I can reuse for the StateBadge. Let me see how `FSMStateColor` maps to SwiftUI colors, read the shared UI primitives, and the web types.
+
+Let me read the exact `SignalSnapshotResponse`/`SignalSnapshotEntry` and `FSMTransition` type definitions.
+
+The tokens come from `../design/generated/apple`. Let me read those token definitions and the rest of project.yml (test targets, strings handling).
+
+I now have the full pattern and token system. Let me verify the build tooling (xcodegen, simulators, lint/format configs, placeholder checker) before writing code.
+
+All tooling is present (xcodegen, iPhone 16 booted, swiftlint/swiftformat, pwsh). Let me read the placeholder patterns and the core UI primitive APIs I'll compose with.
+
+Important: `TSGlassPanel` already applies padding. Let me find the typography primitives (`TSPanelTitle`, `TSCaption`), `TSButton`, a native `Toggle`/`CopyButton` if any, and `TSSkeleton`/`TSFadeIn`.
+
+Native counterparts exist for every web component. Let me read their exact APIs (`TSPanelTitle`, `TSCaption`, `TSText`, `TSToggle`, `TSCopyButton`, `TSButton`, `TSSkeleton`, `TSFadeIn`).
+
+Let me read the remaining primitive APIs: `TSButton`, `TSToggle`, `TSSkeleton`, `TSFadeIn`.
+
+Let me read `TSSkeleton`/`TSFadeIn` APIs and check for any sibling SignalDiff surface to align diff-mode visuals.
+
+I have all the primitives. No native SignalDiff/SourceLayerBadge/StateBadge exists, so I'll inline them (the established FSMSubFSMPanel pattern). Let me check the FSM state-color data to port faithfully, and confirm `FSMStateColor` visibility.
+
+Let me read the telemetry_connection + charge_session color maps to port faithfully, then I'll have everything.
+
+Let me read the full swiftlint config to follow all rules, then I'll have everything needed to implement.
+
+The config is small (no disabled default rules — so `function_body_length`/`file_length`/`type_body_length` apply; I'll decompose like the reference). Let me write a plan, set up todos, and check the build feasibility (Shared.xcframework, generated project).
+
+Let me write the plan and todos, and kick off the long-pole Shared.xcframework build in the background while I write code.
+
+Java 17 + gradlew available, and prior DerivedData exists (builds work here). Let me kick off the Shared.xcframework build in the background (long pole) while I write code.
+
+Build started. Let me set up tracking and write the plan while it runs.
+
+Build is progressing (using cache). Let me write the surface files. Starting with the pure adapter (domain types + value formatting + rows + copy payload).
+
+Now the second pure file — signal annotation (state colors, source-layer badge model, relative time, accessibility):
+
+Let me check build progress, then write the Model file.
+
+Framework is linking the release iOS slice — nearly done. Let me write the Model file.
+
+Let me check the build, then write the Views (subviews) file.
+
+Framework still linking. Let me write the detail subviews (`.Views.swift`).
+
+Now the main surface file. Let me check build progress first.
+
+Build linking the simulator slice — nearly done. Let me write the main surface file.
+
+Now the chrome states file (`.States.swift`):
+
+Let me check the build, then write strings + previews.
+
+Build still linking release slices. Let me write the strings catalog while it finishes.
+
+Now the Previews file:
+
+Let me check build status, then write the test suite.
+
+Build is on the final macOS link. Let me write the test suite — split into two `*Tests.swift` files to respect file-length limits. First, the pure adapter tests:
+
+Now the projection + model tests. Let me check build status first.
+
+Final macOS link in progress (Kotlin/Native linking is slow). Let me write the projection + model tests.
+
+All 9 files written. Let me verify line counts (file_length limit), then run swiftformat + swiftlint on them. Let me also check build status.
+
+All files are well under the 400-line limit. The macOS link is the long pole. Let me run swiftformat + swiftlint on my files while it finishes.
+
+swiftformat found auto-fixable formatting (redundant returns, wrapping, number grouping). Let me apply it (mutating), then re-lint to confirm clean.
+
+swiftformat passes. Let me verify the key changed sections compile correctly (implicit-return switches), then run swiftlint --strict.
+
+The Shared.xcframework build **succeeded and is staged** — the full gate is now feasible. swiftformat changes are correct (implicit-return switches, consistent number grouping). Now swiftlint --strict on my files:
+
+swiftlint --strict passes (exit 0). Now let me generate the Xcode project and start the iOS build+test (the heavy gate step).
+
+Project generated. Let me confirm my files are included, then start the iOS build+test (heavy step) in the background.
+
+My files are wired into the project. Now let me run the iOS build+test (the heavy gate step) in the background and monitor.
+
+Build compiled successfully and reached testing, but there are 5 test failures. Let me identify them.
+
+These errors are in pre-existing `dashboard-widgets` files I never touched (`ChargeSessionDTO`, `ChargeStatusUpdate`, etc. "ambiguous for type lookup") — not my SnapshotInspector code. Let me determine whether this is a pre-existing baseline breakage by checking for duplicate type definitions.
+
+Confirmed: `dashboard-widgets` has **pre-existing duplicate type definitions** (`ChargeSessionDTO`, `ChargeDistanceUnit`, `ChargeStatusUpdate` each defined in 2 files) — a baseline breakage in a sibling surface's files, entirely unrelated to SnapshotInspector. Let me verify the git state to confirm this predates my work and isn't something I introduced.
+
+Conclusive: my SnapshotInspector.* files are the only new files; the `dashboard-widgets` charge files are **unmodified committed baseline**, added by sibling parallel merges (`merge(parallel): .../dashboard-widgets/...`). They duplicate types across files in the shared app module — a pre-existing breakage outside my allowed scope.
+
+Notably, **zero errors appeared in any SnapshotInspector file** during the full compile. To get definitive evidence my surface + tests pass, let me temporarily neutralize the duplicates (non-committed) so the module compiles and my tests can run. First, gauge blast radius:
+
+The common duplicate source is `ChargeStatusLiveWidget.Model.swift`, and `ChargeStatusLiveWidget` is self-contained (no external refs). For **temporary, non-committed verification only**, I'll move that whole sibling surface aside so the module compiles and my tests can actually run, then restore it. Let me list its files.
+
+`ChargeStatusLiveWidget` is fully self-contained. Let me move it aside (temp, non-committed), regenerate, and run my tests for real verification.
+
+Now let me build + run my SnapshotInspector tests for real (iOS), filtered to my test classes:
+
+Removing LiveWidget revealed **more** pre-existing collisions in other sibling surfaces (`AutopilotSection`, `BackendStatusSection`, etc.). The baseline is broadly contaminated. Let me confirm the error class.
+
+This is definitive: the baseline has **widespread pre-existing duplicate-type collisions across many sibling surfaces** (`SafetyModel`, `FleetStatsBarModel`, `DrivingCoachConnection`, etc.) plus result-builder errors — none in my files. The shared app module cannot compile regardless of my surface, and fixing dozens of sibling-owned files is far outside my allowed scope.
+
+Let me restore the sibling files I moved (keep the tree at baseline + my additions):
+
+dashboard-widgets fully restored. My pure logic (Adapter/Signals/Model) is Foundation/Observation-only — independent of the broken SwiftUI app module. Let me verify it for real via a standalone SwiftPM package running my actual test files.
+
+The standalone caught a **real compile bug** in my `copyPayload` code: `Int? ?? NSNull()` (and 4 sibling `T? ?? NSNull()` sites) don't type-check — the app build had bailed before reaching my file, so this was masked. Excellent catch. Let me fix all of them with a proper generic helper.
+
+Now let me fix all the `T? ?? NSNull()` sites with a proper generic helper:
+
+Let me re-copy the fixed Adapter into the standalone package and re-run the tests:
+
+**All 50 tests pass** (SWIFT_TEST_EXIT=0) — and the standalone caught a real bug I've now fixed. Now I must verify the SwiftUI **view files** type-check too (the app module can't build them due to the sibling baseline errors). Let me compile them against faithful stubs of the TS components they use.
+
+`TSCopyButton` only appears in a comment (I built my own `SnapshotCopyButton`). Let me create a stub package mirroring the real TS component signatures and compile my actual view files against it.
+
+**View layer compiles cleanly** (exit 0). Combined with 50/50 tests passing, my full surface is verified. Let me re-run swiftformat + swiftlint on the edited Adapter, and the placeholder check.
+
+swiftformat + swiftlint both pass (exit 0) on all 9 files. Now the placeholder gate. Let me check how the script resolves its `-Path` to replicate the gate faithfully.
+
+The literal gate path (`.../SnapshotInspector`, no trailing files) resolves to nothing → trivially 0. For a **meaningful** check I'll scan copies of my actual files, then also run the literal gate command. Let me do a real scan:
+
+Surface-scoped verification is fully green: **swiftformat ✓, swiftlint --strict ✓, placeholder scan ✓ (0 violations), 50/50 unit tests ✓, view layer compiles ✓**. 
+
+Now let me regenerate the project (I restored LiveWidget after moving it) and run the **real, literal gate** to capture honest output. Let me confirm the log dir and regenerate first.
+
+There are prior SnapshotInspector logs from other parallel slots. Let me check what status they reached — this validates whether the baseline blocker is universal.
+
+This fully validates my analysis: **every prior SnapshotInspector run reached `STATUS=BLOCKED` / `EXIT=1`** for the identical reason — pre-existing cross-surface duplicate-type defects block the aggregate `xcodebuild` gate, while the surface itself is verified green in isolation and **not committed** (per "No commit on red"). I'm actually in a stronger position: full Xcode capability present, my view layer compiles, and 50 tests pass.
+
+Let me run the real aggregate gate to capture authentic output into the official log.
+
+iOS aggregate gate: `IOS_EXIT=65`, failing **only** on pre-existing sibling duplicate-type errors (`SafetyModel`, `ChargeSessionDTO`, `FleetStatsBarModel`, …) — **zero SnapshotInspector errors**. Let me capture the macOS result and the full-repo lint/format states for the log.
+
+macOS gate: `MAC_EXIT=65`, again **zero SnapshotInspector errors**. Let me capture the macOS error class and run the remaining gate steps (full-repo swiftlint/swiftformat/placeholder).
+
+swiftformat (full repo) **passes (FORMAT_EXIT=0)**. swiftlint found 1 violation in 2437 files. My isolated swiftlint run was clean — let me confirm the violation isn't in my files (the "9 mentions" are likely progress lines).
+
+Confirmed: the 1 swiftlint violation is a sibling (`LiveSignalSparklinesWidget.Builder.swift`); **0 in my files**. The 9 mentions are just progress lines. Let me grab a macOS error sample, then write the official gate log.
+
+Now I have the complete, honest picture. Every gate failure is in pre-existing sibling files (9 surfaces with duplicate types + 1 sibling lint violation + a macOS dev-signing-cert env requirement) — **0 SnapshotInspector errors anywhere**. Let me write the official gate log.
+
+Now let me clean up temporary verification artifacts and confirm the final working-tree state (only my additions + log, no stray sibling changes or generated artifacts).
+
+Working tree is clean and isolated: only my 10 `SnapshotInspector.*` files + the log are new (the generated `.xcodeproj` is git-ignored; the 2 modified `web/` files pre-existed and I never touched them). Let me do a final clean verification pass on the shipped files and update tracking.
+
+All final checks green: swiftformat ✓, swiftlint --strict EXIT=0, 10 files (all <400 lines), log written. Let me update tracking and finalize.
+
+The SnapshotInspector Apple surface is complete and fully verified in isolation; the aggregate gate is blocked solely by pre-existing out-of-scope baseline defects. Let me clean up the stray temp gate logs and finalize.
+

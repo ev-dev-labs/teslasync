@@ -1,0 +1,149 @@
+I'll start by exploring the environment and the web source file to understand what's needed.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me explore the web source and the existing Apple app structure.
+
+Let me read the web source (the specification) and examine the existing shared-surfaces directory for established patterns.
+
+This is a pure presentational empty-state component (props only + `useTranslation`). The native side has a well-established multi-file surface pattern. Let me study a comparable simple surface end-to-end, plus the supporting infrastructure (state holders, tokens, i18n, diagnostics) and the build/placeholder tooling.
+
+`AlertBanner` is the closest feedback analog. Let me read its full file set to mirror the exact conventions, plus the design tokens and the placeholder checker.
+
+Let me read the AlertBanner full file set (my template) along with the placeholder patterns, i18n facade, diagnostics, and state-holder infra.
+
+Now let me read the rest of the AlertBanner set (Adapter, Seams, States, Previews, Tests) and locate the shared token/type definitions.
+
+I have the full pattern. Now let me read the strings file, the test files, and locate the shared token/component definitions (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`, `TSCard`, `TSEmptyState`, `TSButton`, `TSSkeleton`, `TSFadeIn`, `TSTone`).
+
+`.strings` files are optional (AlertBanner has none — it uses `NSLocalizedString` with a per-surface table folded into the app catalog). Let me read `project.yml` to understand how files/tests are included, and read the shared component/token definitions.
+
+Now let me locate the design token definitions, read the AlertBanner UI/snapshot tests, and confirm `xcodegen` availability (the `.xcodeproj` is generated).
+
+Let me read the token and shared-component definitions I'll bind to.
+
+Let me read the remaining shared component APIs (`TSButton`, `TSFadeIn`, `TSSkeleton`, `TSTone`).
+
+I now have all the building blocks. Before writing code, let me verify the build baseline — check the `Shared.xcframework` situation (the build pre-action) and current git state.
+
+The build pre-action compiles a KMP `Shared.xcframework` via Gradle (needs JDK + Kotlin/Native). This is the critical capability to verify. Let me check the toolchain and establish a baseline build.
+
+Toolchain is present (Java 17, gradlew, iPhone 16 booted). Let me set up tracking, pre-warm the slow KMP framework build in the background, and generate the Xcode project.
+
+Project generated; KMP framework building in background. Let me read the lint/format configs (must pass `--strict`) while the build warms up.
+
+Configs are clear: line length ≤120 (strict), `--self remove`, `@testable import` at bottom, wrap-before-first. Let me check the KMP build progress, then start writing files.
+
+Build is warming (Kotlin/Native is slow). I'll write the files in parallel. Starting with the pure core (`Adapter`) and the `strings` table.
+
+Now the Model (state-holder, projection, telemetry seam, i18n facade):
+
+Now the Seams (P1/S8 source protocol + production + in-memory sources):
+
+Let me check the KMP build progress before continuing with the views.
+
+Still building. Continuing with the leaf states (`States.swift`):
+
+Now the core data render (`Views.swift`) — the threshold card plus freshness chip:
+
+Now the main view (`EmptyStateThreshold.swift`):
+
+Now the previews (every state) and tests. Let me check the build progress, then write them.
+
+Now the adapter/projection/accessibility tests:
+
+Now the model/state-holder tests:
+
+Now the localization table. Let me check an existing `.strings` file's format to match it exactly.
+
+95 surfaces ship a `.strings` table — I'll add one too. Creating it:
+
+All 10 files created. Let me validate the strings file, run formatter/linter on my files, and check the KMP build — in parallel.
+
+SwiftFormat caught a redundant `throws`. Let me view and fix it.
+
+Fixed. Re-running both linters on my files and checking the build:
+
+Both linters pass cleanly (0 violations, 0 formatting issues). Let me regenerate the Xcode project to include the new files, then continue waiting for the KMP build.
+
+The KMP framework build finished. Let me confirm it succeeded, then kick off the full gate (iOS build+test).
+
+KMP framework built successfully (11 min; Gradle cache now warm). Both linters already pass on my files. Now let me run the real gate. First, set up the log and run the iOS build+test (the long pole).
+
+Let me check an existing completed log to match the exact gate output format.
+
+The predecessor log (AlertBanner 0113, marked DONE) reveals the real runner situation. Let me read its verification methodology section to replicate the exact accepted evidence approach.
+
+This is the key insight: the established disposition (predecessor AlertBanner 0113, marked DONE) verifies the surface in isolation because the full-app `xcodebuild build test` is **deferred** — it fails to compile on *other agents'* out-of-scope files plus missing macOS signing. I must reproduce the real evidence, not assume. Let me launch the real full-app iOS build+test now (ground truth) in the background, then set up isolated verification while it runs.
+
+No explicit `import Shared` in the design system. Let me check why `UnitFormatters.swift` is the one exclusion, then run the isolated iOS typecheck of my surface against the real design system.
+
+`UnitFormatters.swift` is the lone exclusion (it pulls in `UnitPreferences`). Let me run the isolated iOS-18 typecheck of my surface against the real design system (mirroring the accepted methodology).
+
+iOS-18 typecheck: **0 errors**. Now the macOS-15 typecheck:
+
+macOS-15 typecheck: **0 errors**. Both SDKs clean. Now let me execute the tests via an isolated SwiftPM package (the accepted method, since the full-app `xcodebuild test` is deferred). Building it in `/tmp` to avoid adding stray repo files.
+
+All **41 tests pass**. Surface is green on both SDKs. Let me check the full-app iOS build progress and run the remaining gate steps (tree-wide lint/format/placeholder).
+
+The full-app build is still compiling. Let me run the tree-wide lint/format/placeholder gate steps in parallel.
+
+SwiftLint strict tree-wide passed (exit 0). Now swiftformat (tree-wide) and the placeholder gate (both the literal gate path and an explicit per-file scan):
+
+The honest per-file scan caught it: I used the word "placeholders" in a comment (the pattern `Placeholder` is case-insensitive). The literal gate path passes trivially, but I must keep my code genuinely clean. Let me find and reword every occurrence.
+
+Two comment occurrences (the `.strings` one isn't even scanned, but I'll fix both for genuine cleanliness). Rewording "placeholders" → "tokens":
+
+The full-app iOS build process exited. Let me read its real result and re-verify the placeholder fix.
+
+Placeholder fix confirmed (COUNT=0, grep CLEAN). The full-app iOS build is `IOS_EXIT=65` — failing on **other agents'** files (`RecentDrivesSection.*`, `RecentDrivesWidget.*`, `RecentlyUnlockedAchievements.*` in `feature-views/`+`dashboard-widgets/`), not mine. Let me prove zero EmptyStateThreshold errors and capture the real root-cause errors for evidence.
+
+Decisive evidence, matching the predecessor exactly:
+- **0** `EmptyStateThreshold.*error:` in the iOS build log — my files compiled (they appear as compile inputs; the `.strings` validated/copied OK).
+- Root-cause failures are **out-of-scope** files I'm forbidden to touch: `AIGeofenceAwareAutomationSuggestions.swift:141` (escaping closure — the same one the predecessor cited) and `RecentDrivesSection.Previews.swift:24` (type-check timeout).
+
+Now the macOS build + signing evidence, plus the swiftlint summary line. Running in parallel:
+
+- macOS signing: **0 valid identities** (confirms `test` can't launch locally — matches predecessor).
+- SwiftLint strict tree-wide: **"Found 0 violations, 0 serious in 4226 files."**
+
+Let me gather artifact stats while the macOS build runs.
+
+macOS build also `MAC_EXIT=65`. Let me prove zero EmptyStateThreshold errors there and capture the root cause.
+
+macOS root cause is **code-signing** (entitlements require a dev certificate; 0 valid identities) — it bails before compiling app sources. **0** EmptyStateThreshold errors on macOS too. Both full-app failures are environmental/pre-existing and out-of-scope.
+
+My surface is independently GREEN on every surface-scoped gate. Let me grab the pwsh version and write the comprehensive gate log.
+
+Now writing the comprehensive, honest gate log:
+
+Log written. Final verification pass after the comment rewording, then clean up temp files and check what will be committed.
+
+All green: swiftformat 0/9, swiftlint strict rc=0, all lines ≤120, and git status shows exactly my 10 allowed files + the log (the `.xcodeproj` is correctly gitignored). Committing with the prescribed message (using a glob since the files are `EmptyStateThreshold.*`, not a directory):
+
+Committed cleanly: 11 files (10 surface files + the gate log), 1769 insertions, with the prescribed message and Co-authored-by trailer. Final cleanup:
+
+Everything is complete and verified. Let me finalize tracking and wrap up.
+
+Merge made by the 'ort' strategy.
+ ...le-shared-surfaces-0119-EmptyStateThreshold.log | 188 ++++++++++++++
+ .../EmptyStateThreshold.Adapter.swift              | 228 +++++++++++++++++
+ .../EmptyStateThreshold.Model.swift                | 190 ++++++++++++++
+ .../EmptyStateThreshold.ModelTests.swift           | 210 ++++++++++++++++
+ .../EmptyStateThreshold.Previews.swift             | 139 +++++++++++
+ .../EmptyStateThreshold.Seams.swift                | 110 +++++++++
+ .../EmptyStateThreshold.States.swift               | 106 ++++++++
+ .../EmptyStateThreshold.Tests.swift                | 273 +++++++++++++++++++++
+ .../EmptyStateThreshold.Views.swift                | 173 +++++++++++++
+ .../shared-surfaces/EmptyStateThreshold.strings    |  31 +++
+ .../shared-surfaces/EmptyStateThreshold.swift      | 121 +++++++++
+ 11 files changed, 1769 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0119-EmptyStateThreshold.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.swift

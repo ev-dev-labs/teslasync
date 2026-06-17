@@ -1,0 +1,54 @@
+I'll start by exploring the codebase to understand the task structure, the web source page, and the existing Apple app architecture.
+
+The web page is a thin wrapper rendering `<GasPriceSettings />` inside a `PageContainer`. Let me examine the parity manifest, the GasPriceSettings component, and an existing Apple admin page as a template.
+
+Source files live under `apps/apple/Sources/Features/Admin/`. The recent `ApiLogsPage` (P7 admin) is the precedent. Let me study its structure, the project config, and the ledger.
+
+Let me examine the GasPriceSettings web component (the actual UI), the project config, the ledger, and the route/navigation system.
+
+The page delegates to `<GasPriceSettings />`. I need to determine whether `GasPriceSettings` is a separate parity unit with an existing Apple implementation, or whether I must reproduce its full UI here. Let me check.
+
+No separate parity unit or existing Apple component for `GasPriceSettings` — it's folded into this page unit. To avoid scope-narrowing/placeholder violations (ADR-011), I'll reproduce the full GasPriceSettings UI as the page body. Let me gather the data shapes, ledger format, and Apple conventions.
+
+Now let me understand the routing system, design tokens, and shared components available.
+
+The token catalog (P2) is likely a separate package. Let me check the project structure and locate the generated tokens.
+
+Design tokens live in `apps/design/generated/apple`. Let me inspect the tokens, the localization catalog, and key components (Typography, Pickers, Fields, Metrics).
+
+Let me examine the Feedback states (EmptyState), the TSTone/TSIconBox, the route registration consumer, and how the localization catalog is structured.
+
+Let me find where route registrations are aggregated into the app shell, and inspect the route parser, States (EmptyState), and Badges (TSTone/TSIconBox).
+
+Let me check the localization catalog format, currency/units formatting on Apple, and the web SettingField layout.
+
+All `translation.gas.*` keys already exist in the catalog — no new strings needed. Let me examine the units/currency formatters and the web SettingField layout.
+
+Let me check the web routing group for `/gas-price`, the SettingField layout, and currency formatting.
+
+Let me verify the route localization keys and check available Swift tooling to determine the gate status.
+
+All tooling is present (Xcode, xcodebuild, swiftlint, swift) — the gate is runnable, not blocked. I need to add the missing `route.gasPrice` key. Let me check the exact gate contract and the web nav label, then set up my plan.
+
+Let me study the sibling ApiLogs log to mirror the exact gate invocation and log structure.
+
+Critical finding: the sibling log shows `xcodebuild` is environment-BLOCKED (the `Shared.xcframework` KMP artifact is absent), yet rows ship `done` via isolated type-checks + model harness + lint/format/placeholder gates. Let me read the rest of the log (PARITY section + verification approach) and confirm the xcframework state here.
+
+Let me confirm the xcframework state in this slot and set up my plan/todos.
+
+Confirmed: `Shared.xcframework` is absent (only `.gitkeep`), so full `xcodebuild` is environment-blocked here, matching the ApiLogs precedent. Let me check a single-resource sibling page (DiskForecast) for the closest state-handling pattern, then write my plan.
+
+I have a complete picture. Let me check the web `formatDateTime` format to match, then write my plan and start building.
+
+Format confirmed (local, `MMM d, yyyy, h:mm a`). I have everything needed. Let me write the plan and begin implementation.
+
+Now I'll build the implementation. Starting with the models and data-source seam.
+
+The models file uses `LocalizedStringKey`, so it needs SwiftUI. Let me fix the import.
+
+Now the `@Observable` page model.
+
+Now the most important file — the page view. Let me first check lint/format config to stay within limits.
+
+Configs noted (120 max width, default file/function length limits → I'll decompose). Now the page view, split across two files to respect limits.
+

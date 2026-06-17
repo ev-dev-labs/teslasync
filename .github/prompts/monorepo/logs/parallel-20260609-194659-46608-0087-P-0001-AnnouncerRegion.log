@@ -1,0 +1,192 @@
+I'll start by exploring the repository structure and reading the web source component that I need to reproduce natively.
+
+The web source is a global screen-reader announcer with two live regions (polite/assertive). Now let me study the existing Apple app conventions and shared infrastructure.
+
+Excellent—this is a rich, well-established multi-file pattern. Let me read the remaining `globalShortcuts` files and the shared token/infrastructure to fully understand conventions.
+
+Let me read the test files, previews, strings, and locate the shared P1/S9 tokens and shared components.
+
+Now let me locate the shared P1/S9 tokens, shared components (TSCard, TSButton, etc.), the Seams pattern, and the project.yml build config.
+
+Now let me check available tooling and look at the shared token/component definitions plus the P4 methodology context.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, xcodegen). Let me investigate the build prerequisites (KMP framework, the shared-surfaces wiring) and read the shared components/tokens I'll build against.
+
+Key findings: **iPhone 16 simulator exists and is booted**, but **Shared.xcframework is missing** (built via a preAction script) and **`shared-surfaces/` isn't yet wired into project.yml**. Let me read the build script, lint config, design tokens, and the shared components I'll use.
+
+Let me examine the design tokens, the remaining shared components, the P4 prompt structure (to understand shared-surfaces wiring expectations), and kick off the KMP framework build in the background since it's required for any app build.
+
+Let me read the Motion/Button APIs, check the KMP `apps/shared` setup, look at the P4 prompt structure for wiring expectations, and start the (required, slow) KMP framework build in the background.
+
+The KMP shared core is a Gradle project — let me pre-warm the (slow, required) framework build in the background, then continue reading the P4 methodology and acceptance gate.
+
+The prompt lives under `shared-meaningful/` but outputs to `shared-surfaces/` — a new directory not yet wired into `project.yml` or `.swiftlint.yml`. Let me read the canonical prompt, the acceptance gate, and the placeholder checker.
+
+Let me read the placeholder checker (must not trip it), check `pwsh` availability, look at the apple parity ledger, and check the KMP build progress.
+
+pwsh is available and KMP build is running. Let me read the exact forbidden placeholder patterns so my code/comments don't trip the scanner.
+
+I have a thorough understanding now. Let me read the `.swiftformat` config (must pass `swiftformat --lint`) and check the KMP build progress, then start implementing.
+
+KMP build is progressing in the background. The toolchain config is clear. Before writing, let me check for any existing symbol collisions (`Announcer`, `AnnouncerRegion`, etc.) and confirm `shared-surfaces` isn't referenced anywhere yet.
+
+No collisions, and `AccessibilityNotification.Announcement` is already used here. Let me check the existing usage in `AppShell.swift` to align my approach and confirm the priority API.
+
+Existing code confirms the `String` API. Let me quickly de-risk the `AttributedString` + priority API (my enhancement for assertive vs polite) with a tiny compile test before building it into the surface.
+
+The priority API typechecks for macOS 15 (and iOS 18). Let me set up the plan, todos, and create the directory, then write all surface files.
+
+The KMP build finished — let me confirm it staged the framework, then set up todos and start writing the surface.
+
+KMP framework built and staged (iOS + simulator + macOS slices). Build is de-risked. Let me set up todos and write all the surface files.
+
+Now I'll write the surface files. Starting with the pure Adapter core.
+
+Now the States chrome (loading/empty/error), then the Views.
+
+Now the presentational Views (region cards, history, priority badge, freshness chip).
+
+Now the main view, then previews.
+
+Let me fix a likely >120-char line in the previews helper (wrap before-first per swiftformat), then write the tests.
+
+Now the adapter unit tests.
+
+Now the state-holder/model tests (model + presenter posting + announcer + live source).
+
+Now the i18n strings catalog (all keys are native chrome since the web surface is anonymous).
+
+All 10 surface files are written. Now let me wire `shared-surfaces` into the build config (required for the new directory to compile). Editing `project.yml` (4 targets) and `.swiftlint.yml`.
+
+Now the two test bundles — disambiguating by their trailing context.
+
+All wired. Now let me auto-format my files to the repo's exact rules, then lint them before the heavy build.
+
+0/9 files needed reformatting — already conformant. Now lint with strict mode and verify format-lint.
+
+Format-lint is clean (0/9 need formatting) and SwiftLint strict passes (**0 violations in 3244 files**, my dir now included). Let me confirm my files were actually linted, regenerate the Xcode project, and start the iOS build+test.
+
+All 9 files linted, project regenerated. Now the heavy step — iOS build + test. Starting it in the background.
+
+While the build runs, let me proactively harden the Swift 6 strict-concurrency typing on the announcer's stored closures (matching the existing `@MainActor` `onUpdate` pattern) to avoid isolation-conversion errors.
+
+Let me check the in-flight build's status and the file line counts (must stay <400 for SwiftLint strict).
+
+The build failed — but I need the actual `error:` lines, not the batch summary. Let me extract them (this was the pre-concurrency-fix run).
+
+The compile errors are **not in my files** — they're pre-existing "ambiguous for type lookup" duplicate-type errors in `feature-views`/`dashboard-widgets` (e.g. `RecentDrivesModel`, `StateTimelineUpdate`). Let me determine whether this is a pre-existing baseline breakage independent of my changes.
+
+Confirmed: this is **pre-existing baseline breakage** — `RecentDrivesModel`/`RecentDrivesUpdate` (and others) are each defined in **two committed files** across `feature-views` + `dashboard-widgets`, causing module-wide "ambiguous for type lookup". 108 errors, **zero** in my surface. This is outside my allowed files and explicitly out of scope.
+
+Let me quantify the pre-existing breakage and verify it's independent of my changes, then isolate-verify my own surface compiles against the real shared components.
+
+Crystal clear now: exactly **two pre-existing collision pairs** (`RecentDrives*` and `StateTimeline*`), each defined twice across committed `feature-views` + `dashboard-widgets` files I never touched. My change set is only `.swiftlint.yml`, `project.yml`, and my new `shared-surfaces/`. The baseline app target already cannot compile.
+
+Let me verify MY surface compiles against the real shared components in isolation. First, checking what `Sources/Components` depends on.
+
+`Sources/Components` only imports system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation). Let me check those 4 "Shared" references and then isolate-compile my surface against the real shared components via `swiftc`.
+
+Both "Shared" refs are just comments, and **Sources never references the generated surfaces** — so the breakage is confined to sibling surface dirs, and I can isolate-compile my surface against the real `Components` + tokens with strict concurrency. Let me do that.
+
+Only error is `TSChartPalette` missing — in `Components/Maps/MapView.swift`, a file **I don't use**. My surface has zero errors. Let me find `TSChartPalette` and include it (or narrow to the components I actually use) for a fully clean isolated compile.
+
+Another internal design-system helper (`tsGlassPanel`). Let me locate it and include the full design-system layer (`Sources/Design`, `Theme.swift`) for a complete isolated compile.
+
+Every remaining error is in Component files I don't use (`Maps`, `DataDisplay/UnitFormatters` needing Platform's unit system) — **my surface has zero errors**. Let me compile against exactly the component categories my surface uses (UI, Feedback, Motion + Design + tokens) for a definitively clean proof.
+
+One more unused Feedback file (`FeedbackOverlays` → `TSMetricBar`). Excluding it — I only need `States`, `Skeletons`, `Banners` from Feedback.
+
+**My surface compiles clean** (rc=0, strict concurrency, Swift 6, macOS 15) against the real shared components. Now let me verify the two test files type-check too (compiling them in-module with XCTest, stripping the `@testable import` since it's one module here).
+
+The test errors are only "XCTest not found" — a toolchain search-path gap in my ad-hoc `swiftc` call, not my code (my types all resolved). Let me add the XCTest swiftmodule path and re-verify the tests typecheck.
+
+All 9 files typecheck clean. Now let me actually **run** my tests in isolation (self-contained SwiftPM package, no dependency on the broken sibling surfaces) to prove they pass — using the exact component set that compiled clean.
+
+**All 39 tests pass** (0 failures, strict concurrency, real shared components). My surface is fully verified: compiles clean, tests green, lint clean, format clean.
+
+The official `xcodebuild` gate is blocked solely by **pre-existing** duplicate types in unrelated sibling surfaces. Let me run the placeholder scanner, then assess whether excluding those 2 pre-existing collision pairs lets the real Xcode target build+test my surface (supplementary evidence).
+
+Placeholder scanner: **0 violations, EXIT=0**. And the 2 colliding widget surfaces have **zero external references** — safe to temporarily move them aside to confirm the real Xcode target builds+tests my surface once the pre-existing collisions are gone. Let me do that (reversible: restored afterward).
+
+Moved the 2 pre-existing collision surfaces aside (17 files) and regenerated. Now running the real iOS build+test to confirm my surface compiles/tests green in the actual target.
+
+Build still compiling (no errors surfaced). Let me keep waiting.
+
+More pre-existing collisions surfaced (`RecentDrivesConnectivityBanner` duplicated again in *yet another* sibling surface `RecentDrivesWidget.*`, plus a `RecentDrivesWidgetConnection` vs `RecentDrivesConnection` type mismatch). This confirms the baseline breakage is **broad and unbounded** across parallel-generated sibling surfaces — categorically outside my allowed files and scope.
+
+My surface is fully verified independently. Let me restore the moved files and regenerate to leave the tree correct.
+
+Tree restored correctly — only my intended changes remain (`.swiftlint.yml`, `project.yml`, `shared-surfaces/`). Now let me run the **official gate** to capture the true state. First, confirming the logs dir and conventions.
+
+**Critical finding** — the already-committed sibling `globalShortcuts` log reveals the *established, accepted convention* for these per-surface prompts in this exact workflow:
+
+```
+IOS_EXIT=65   (DEFERRED — pre-existing sibling-slot RecentDrives*/StateTimeline* collisions; this surface 0 errors)
+MAC_EXIT=65   (DEFERRED — ...; this surface 0 errors)
+LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0  (33/33 executed green; ... Swift 6 strict concurrency)
+EXIT=0  STATUS=DONE
+```
+
+The whole-app build collisions (the *exact* `RecentDrives*`/`StateTimeline*` ones I found) are **DEFERRED** as pre-existing/out-of-scope, the surface is proven via isolated `swift test`, and it's committed `STATUS=DONE`. My independent approach matches exactly. Let me confirm this is consistent across siblings and read the full reference log to replicate its format.
+
+This is the **definitive, accepted convention** — 379 p4-apple surface logs use the identical "DEFERRED" disposition: the whole-app `xcodebuild` is blocked by the *exact same* pre-existing `RecentDrives*`/`StateTimeline*` sibling collisions (+ macOS signing), surfaces are proven via isolated `swift test` + lint/format/placeholder, and committed `STATUS=DONE`. My independent approach matches precisely.
+
+Let me capture the canonical exit codes rigorously. First the fast checks + an iOS-SDK isolated typecheck (to prove both SDKs, matching the precedent), then the full `xcodebuild` runs for real exit evidence.
+
+iOS SDK typecheck clean too (both SDKs ✅). The swiftformat path was doubled (I was already in `apps/apple`). Let me run the gate checks from the correct directories with exact exit codes.
+
+All fast gates green: **FORMAT_EXIT=0** (0/3453), **LINT_EXIT=0** (0 violations/3244 files), **PLACEHOLDER_EXIT=0**. Now capturing the real `xcodebuild` iOS + macOS exit codes (expected 65/DEFERRED, pre-existing) in the background for honest evidence.
+
+The gate is building. While it runs, let me gather accurate line counts and the test breakdown for the log.
+
+I have all the data. Let me check the gate's progress (the iOS build typically fails fast at the pre-existing collisions).
+
+iOS build still running — already 54 errors, **0 in my surface**. Let me wait for the full gate (iOS + macOS) to complete to capture exact exit codes.
+
+Gate completed (fast — warm DerivedData, fails quickly at the pre-existing collisions). Let me read the exact exit codes and root-cause evidence for both.
+
+Exact evidence captured — **identical to the accepted precedent**:
+- **IOS_EXIT=65**: 162 errors, all pre-existing `RecentDrives*`/`StateTimeline*` sibling collisions; **0 in my surface**.
+- **MAC_EXIT=65**: macOS dev-signing (no certificate on runner); **0 in my surface**.
+
+Now let me write the comprehensive evidence log following the established template.
+
+Log written. Now let me clean up temp artifacts and verify the final git state before committing (confirming the generated `.xcodeproj` and `Shared.xcframework` are git-ignored).
+
+Git state is exactly right — only my surface, build wiring, and log; the generated `.xcodeproj`/`Shared.xcframework` are ignored. Let me do a final airtight lint/format check on the surface dir, then commit.
+
+All green. Committing the surface, build wiring, and log.
+
+Let me verify the commit landed and the working tree is clean.
+
+Committed cleanly (`d8f0cdc7b`, 13 files, 1971 insertions, working tree clean). Let me mark todos complete.
+
+I've completed the task. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ ...-apple-shared-surfaces-0001-AnnouncerRegion.log | 252 ++++++++++++++++
+ apps/apple/.swiftlint.yml                          |   1 +
+ .../shared-surfaces/AnnouncerRegion.Adapter.swift  | 125 ++++++++
+ .../shared-surfaces/AnnouncerRegion.Model.swift    | 270 +++++++++++++++++
+ .../AnnouncerRegion.ModelTests.swift               | 320 +++++++++++++++++++++
+ .../shared-surfaces/AnnouncerRegion.Previews.swift |  92 ++++++
+ .../shared-surfaces/AnnouncerRegion.Seams.swift    | 215 ++++++++++++++
+ .../shared-surfaces/AnnouncerRegion.States.swift   | 109 +++++++
+ .../shared-surfaces/AnnouncerRegion.Tests.swift    | 175 +++++++++++
+ .../shared-surfaces/AnnouncerRegion.Views.swift    | 261 +++++++++++++++++
+ .../shared-surfaces/AnnouncerRegion.strings        |  42 +++
+ .../shared-surfaces/AnnouncerRegion.swift          |  93 ++++++
+ apps/apple/project.yml                             |  16 ++
+ 13 files changed, 1971 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0001-AnnouncerRegion.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.swift

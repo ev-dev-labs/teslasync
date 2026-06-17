@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the Apple app structure, web components, and existing patterns in parallel.
+
+The directory structure differs from the prompt's stated path. Let me examine an existing admin page log and the actual source layout to understand the real conventions.
+
+The real structure is `apps/apple/Sources/Features/Admin/`. Let me explore the existing admin pages and reference implementations.
+
+Now let me read the web DLQ components, types, hooks, and the sibling Swift reference implementations in parallel.
+
+Now let me read the types, hooks, and the closest sibling Swift implementations (DiskForecast — Page/Model/Table/Route) plus the routing files.
+
+Let me read the full DLQ types, the table/route sibling files, routing infrastructure, and a mutation-bearing page (FeatureFlags).
+
+Let me examine the routing composition, the registration patterns, and a confirm-dialog/mutation page.
+
+Let me read the app composition, the FeatureFlags confirm-dialog/mutation pattern, and the table sibling.
+
+Now let me inventory the shared component library and design tokens, plus the FeatureFlags table/editor/model and DiskForecast table.
+
+Let me read the component primitives, design tokens, and the FeatureFlags supporting files.
+
+Let me read the design tokens, key UI components (cards, metrics, typography, buttons, badges, tabs, lists), and the FeatureFlags models/sample/route.
+
+Let me read typography, buttons, badges, tabs, status indicators, the FeatureFlags models/route, and locate the design token definitions.
+
+Let me locate the generated design tokens and read the remaining components (badges, buttons, tabs, fields, status indicators, sample data source).
+
+Design tokens are generated under `apps/design/generated/apple`, and the `Sources` glob auto-includes new files. Let me read the tokens, badges, buttons, tabs, fields, status indicators, and the sample data source.
+
+Let me read the remaining UI components (buttons, tabs, fields, status indicators), the tokens file, and the DataTable.
+
+Let me read the parity manifest entry, ledger, placeholder script, README gate, and a sibling test.
+
+Let me read the ledger structure, placeholder patterns, the FeatureFlags test, and the gate README.
+
+Let me locate the gate README, check the Swift/Xcode toolchain availability, and inspect the string catalog.
+
+Full toolchain available (Xcode 26.5, swift 6.3.2, swiftlint, pwsh). The catalog already has 56 `admin.dlq` matches. Let me see exactly which keys exist and read the gate README.
+
+`common.cancel` exists; `admin.dlq.*`, `route.dlq`, `common.yes/no/close` appear absent as keys. Let me investigate the 56 matches and the catalog format.
+
+The catalog stores web keys as `translation.admin.dlq.*` (for web-clone surfaces) and native keys without prefix (e.g. `common.cancel`). Let me confirm the native pattern used by sibling pages.
+
+Confirmed: native keys have no `translation.` prefix. Let me inspect the exact JSON entry format to replicate precisely.
+
+Let me verify the missing keys, check for a copy-button component, and read the lint config and swiftformat availability.
+
+Let me read the copy-button utility and check the project/scheme setup.
+
+Let me read the schemes config, then establish a build baseline in the background while I start implementing.
+
+xcodegen works. Let me check available schemes, the shared framework prerequisite, then set up my plan and todos.
+
+Let me check the rest of the shared-framework build script for any fallback, and the Frameworks directory.
+
+The full build needs a Kotlin/Native `Shared.xcframework` (Gradle). Let me kick that off in the background while I implement, then create my plan and todos.
+
+Models todo in progress. Let me verify how the web `PageContainer` handles the `query` prop (gates body vs. freshness badge) before modeling page-level states.
+
+PageContainer's `query` only drives a freshness chip (body never gates) — matches the sibling precedent. Let me confirm `fmtInt` and `TimeStamp` absolute formatting, then write the models.
+
+Confirmed. Now writing the models file.
+
+Now the page model.
+
+Now the sample data source.
+
+Page model files done. Let me update todos and write the main page view.
+
+Let me fix a comment typo and write the Status, Entries, and Audit sub-view files.
+
+Now the drawer sheet and the confirm alert modifier.
+
+The KMP build finished — I'll check it shortly. Let me write the Confirm modifier first.
+
+Now let me add the `reloadEntry()` method I referenced, then write the route registration.
+
+Now wiring navigation. Let me check the KMP build result and make the AppRoute/Parser/App edits in parallel.
+
+KMP build exited 0. Let me verify the framework was produced and finish the AppRoute edits (icon + group), the parser alias, and the app registration.
+
+Shared.xcframework built (ios + simulator + macOS slices). For the app registration, let me check the Settings registration signature to find the least-churn insertion point.
+
+`SettingsRouteRegistration.registry` accepts a `base:`. I'll insert the DLQ registration there — a localized edit with no re-indentation of the big chain.
+
+Now the strings. Let me add all native `admin.dlq.*` keys plus `route.dlq` and `common.yes/no/close` via a precise insertion script that preserves the catalog format.
+
+59 keys inserted, JSON valid. Let me verify the shared-component keys I reuse exist, then write the model tests.
+
+Let me refactor the entry-loading to a directly-awaitable async method (cleaner + testable) instead of a `didSet` Task, and update the drawer accordingly.
+
+Now let me write the model tests.
+
+Now the pure formatter/badge/sample tests in an extension.
+
+Now let me run the fast gates: swiftformat --lint and swiftlint --strict on my new/edited files.
+
+Only the preview seams in `DLQInspectorPage.swift` need multi-line wrapping. Let me auto-format the new files, then re-lint.
+
+swiftformat clean. Now swiftlint --strict on the new/edited files.
+
+One swiftlint issue: an unneeded explicit `init()` on the internal `DLQSampleNotFound` struct. Let me fix it.
+
+swiftlint --strict clean. Now the placeholder gate.
+
+Placeholder gate clean (0 violations). Now the full build. The Shared.xcframework is ready. Let me attempt the macOS app build, capturing output to grep for any diagnostics in my files.
+
+The build compiled fully and only failed at the final code-signing step (environment issue). Let me confirm no compile errors and rebuild with signing disabled.
+
+Zero compile errors — only the signing step failed (environment). Let me rebuild with signing disabled to get a clean success, then run tests.
+
+The build completed. Let me check the result and scan for any errors in my files.
+
+The new files weren't in the `.xcodeproj` (xcodegen ran before I created them). Let me regenerate the project and rebuild.
+
+Now the DLQ files are in the project. Let me rebuild the macOS target.
+
+Errors are in out-of-scope `TeslaSync/feature-views/AuditPanel.Previews.swift` (a web-clone surface, not my DLQ code). Let me confirm whether these are pre-existing and whether any error touches my files.
+
+All 48 errors are in two out-of-scope generated files under `TeslaSync/feature-views/` (a different page's web-clone surface) — zero in my code. Let me confirm my change scope and that this breakage pre-exists.
+
+My change scope is clean (DLQ files + nav + strings only; feature-views untouched), and the feature-views/AuditPanel breakage is documented in `macos-pending-verifications.md`. Let me get positive proof my code type-checks by compiling my files against the real Components/Design/App deps in isolation.
+
+Clean separation confirmed. Let me run the isolated macOS type-check of my DLQ code against the real Components/Design/App dependencies.
+
+The isolated dep set is just missing the unit-preference types that `UnitFormatters.swift` needs (unrelated to my code). Let me locate and include them so the check resolves.
+
+`UnitPreferences` lives in `SharedFacade` (which imports the KMP framework). Rather than chase facade deps, let me type-check the entire clean `Sources/**` module against the built `Shared.xcframework` — this includes all my real deps and excludes the broken legacy `TeslaSync/*` surfaces. Let me inspect the framework slice first.
+
+The slice has a Swift module. Let me type-check the entire clean `Sources/**` module (all my real deps, excluding the broken legacy surfaces) against the framework.
+
+Excellent — the entire `Sources/**` module type-checks with only 6 errors, all in the sibling `TeslaOrdersPage.swift` (referencing `ActiveOrders*` types defined in the excluded legacy tree — a compile-set artifact, not a defect). Let me confirm zero errors touch my DLQ code.
+
+Zero DLQ errors confirmed — my code type-checks cleanly against the real module. Now the iOS-target type-check to exercise the `#if os(iOS)` compact-layout branches.
+
+Both idioms type-check with zero DLQ errors. The XCTest target can't link (blocked by the pre-existing legacy `AuditPanel` breakage), so — like the sibling pages — let me verify the model/formatter logic via a standalone executable harness. First confirm the model files are SwiftUI-free.
+
+Model files are SwiftUI-free. Let me build and run a standalone harness exercising the model state machine, replay flow, formatters, and sample seed.
+
+The harness needs to be named `main.swift` for top-level code. Let me fix and rerun.
+
+One harness assertion caught a real edge-case bug: `loadEntry` sets `.loading` before guarding, so a load invoked after the drawer closed leaves stale `.loading`. Let me add a start guard (also makes it correct: never load for a non-selected entry).
+
+Let me rerun the harness to confirm the fix, then re-validate format/lint/type-check on the changed model.
+
+All 25 harness assertions pass. Let me re-lint the changed model file.
+
+Harness 25/25 and all in-scope gates green. Let me check how the sibling logs concluded (build disposition + EXIT/STATUS convention) to match precisely.
+
+The convention is clear and consistent across all sibling admin pages: in-scope gates green + isolated type-check + harness, with the pre-existing out-of-scope `feature-views` RED deferred to P99 → `EXIT=0 / STATUS=DONE`. My evidence is even stronger. Let me update the ledger.
+
+Ledger diff is clean (18 insertions only). Now let me gather precise file:line evidence for each of the 15 parity items to build an honest `=== PARITY ===` section.
+
+All 15 items have concrete evidence. Let me verify the 10 required keys landed in the catalog, then write the evidence log.
+
+All required keys verified. Now let me write the comprehensive evidence log.
+
+Now the final consolidated gate pass on all new/edited files before committing.
+
+All final gates green (format 0/14, lint 0, placeholder 0). Let me confirm git status excludes generated artifacts and validate the JSON files before committing.
+
+Git status is exactly as expected (generated project + build dir are ignored), JSON valid. Let me stage the intended files and commit.
+
+Committed (`b3c0436da`). Let me finalize todos, clean up temp artifacts, and confirm the working tree is clean.
+
+All 10 todos complete, working tree clean, committed as `b3c0436da`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

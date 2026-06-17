@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the Apple app structure and the web source.
+
+Now let me read the `CommandDef` type and explore the existing Apple project structure to understand conventions.
+
+Let me examine the existing modals-dialogs siblings and the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+There's a rich set of existing sibling dialogs. Let me examine the file set for a representative sibling and check whether CommandConfirmDialog already exists.
+
+CommandConfirmDialog doesn't exist yet. `AcknowledgeAlertDialog` is the closest sibling template (10 files). Let me read all of them to learn the exact conventions.
+
+Excellent, very thorough pattern. Let me read the remaining sibling files: States, Seams, Views, Previews, the two test files, and the strings.
+
+Let me read the Views, Previews, both test files, the .strings, and the design tokens to fully understand the conventions.
+
+Now the two test files and the design tokens.
+
+I have the full pattern. Now let me read the design tokens, shared components I'll need, the project build config, and the `CommandDef` type.
+
+Let me read the full `CommandDef` interface, find the design token definitions, and check the build config.
+
+Let me locate the token definitions and inspect the build config and key shared components.
+
+Key finding: the build uses XcodeGen, and `modals-dialogs` isn't currently listed in `project.yml` sources, yet ~250 sibling files exist there. I'm only allowed to touch `CommandConfirmDialog.*`. Let me investigate the toolchain and how siblings are integrated before writing code.
+
+Now I understand the integration model: each surface prompt adds only its own files; `project.yml` wiring for the `modals-dialogs` tier is handled separately (siblings didn't touch it). Let me verify the build infra (Shared.xcframework script), read the real design tokens, and the shared components I'll use.
+
+Now let me read the full design tokens and the shared components I'll use (Button, Field/Input, GlassPanel, FadeIn).
+
+Now the shared components: Button, Fields (input), Cards (GlassPanel), Motion (FadeIn).
+
+Now the input field component and GlassPanel.
+
+I have all the conventions. Before finalizing my verification strategy, let me check how sibling modals-dialogs surfaces (which also aren't wired into `project.yml`) recorded their gate outcome — that's the precedent. Let me also check the KMP dependency and the placeholder checker.
+
+This is the key precedent. The accepted methodology: author at full parity, then verify via standalone typecheck against the real SDK + run the pure-logic/model tests + swiftlint/swiftformat/placeholder, and honestly report the full xcodebuild (the modals-dialogs tier is unwired, failures are pre-existing/infra). Let me read the full sibling log to extract the exact verification commands.
+
+I have the full sanctioned methodology. Let me confirm a few specifics: the Typography helpers (for the typecheck closure), whether any design-system file imports the KMP `Shared` framework, and peek at the closest semantic sibling `ConfirmDialog` (0012).
+
+Let me study the closest semantic sibling `ConfirmDialog` (0012) — it models confirm/cancel + loading, which maps directly to my surface.
+
+`ConfirmDialog` is an near-perfect architectural match. Let me read its remaining files (Seams, View, Views, States, Previews, strings, both tests) to mirror conventions precisely.
+
+Let me read the final ConfirmDialog files: Views, States, Previews, strings, and both test files.
+
+Let me read ConfirmDialog's Previews, strings, and both test files to finalize my mental model of the test/preview conventions.
+
+Let me read the two ConfirmDialog test files to finalize test conventions, then I'll begin implementation.
+
+I now have a complete understanding of the established patterns. `ConfirmDialog` is the near-perfect architectural template; `CommandConfirmDialog` adds a countdown timer and a case-insensitive type-to-confirm gate. Let me check for symbol collisions and set up my plan.
+
+Let me see the rest of the lint config and the swiftformat config to match all rules precisely.
+
+I have everything needed. Key constraints confirmed: `swiftlint` uses an `included:` list (no modals-dialogs → I lint my files explicitly), `swiftformat --lint apps/apple` DOES scan my files (must be format-clean), maxwidth 120, `t` is an allowed identifier. Let me set up the plan and todos.
+
+Now I'll author the surface. Starting with the pure projection core.
+
+Now the Seams (telemetry, controller, countdown ticker, source, strings facade, accessibility).
+
+Now the Model — the `@Observable` state holder with the countdown.
+
+Now the top-level view, the Views, and States files.
+
+Now the States file (loading/empty/error/inline/freshness chip/banner).
+
+Now the Previews and the i18n strings catalog.
+
+Now the two test files — the pure projection/accessibility tests and the state-holder tests (including the countdown via the manual ticker).
+
+Now the state-holder tests, including countdown behavior via the manual ticker.
+
+All 10 files authored. Let me verify the i18n key bijection and scan for any placeholder/trigger words before running the formal gates.
+
+Bijection is complete (the 2 "orphans" are the `a11y` keys my digit-free regex skipped — they're referenced in Seams). One 123-char code line in Tests will be auto-wrapped. Let me confirm the a11y references and run swiftformat on my files.
+
+a11y keys confirmed (18/18 bijection). swiftformat normalized 1 file. Now the three static gates: `swiftformat --lint`, `swiftlint --strict` (explicit files), and the placeholder checker.
+
+`[1] FORMAT_EXIT=0` (0/4178 need formatting) and `[2] LINT_EXIT=0` (0 violations in 9 files). Now the placeholder checker — the literal prompt path, an isolated copy of just my files, and the whole tier.
+
+All three static gates are green: **FORMAT_EXIT=0**, **LINT_EXIT=0**, **PLACEHOLDER_COUNT=0** (verified against an isolated copy of the real files). Now the isolated SwiftPM build+test of the pure core.
+
+**[4] SWIFT_TEST_EXIT=0 — Executed 43 tests, 0 failures** under Swift 6 strict concurrency. Now [5]: SDK typecheck of the full view layer against the real design system. Let me first confirm the design-system closure is self-contained (Shared-free).
+
+Design-system closure is self-contained (only SDK frameworks, no `Shared`). Now the iOS-18 SDK typecheck of the full view layer + real design system + my 7 surface files.
+
+The only errors are in `Sources/Components/DataDisplay/UnitFormatters.swift` (depends on the units facade outside the design-system closure) — **0 errors in my files**. I'll use the minimal, sibling-proven self-contained closure (Tokens + Design + Motion + Buttons/Cards/Typography/Badges) that my views actually reference, on both SDKs.
+
+**[5] Both SDKs typecheck with 0 errors** (IOS_TYPECHECK=0, MAC_TYPECHECK=0). The full SwiftUI layer is verified against the real design system. Now [6]: generate the Xcode project and prove the modals-dialogs tier is unwired (project.yml is outside my allowed files).
+
+Tier is provably unwired: **0 pbxproj refs** to `CommandConfirmDialog`/`modals-dialogs` (wired tiers like feature-views show 3). Let me check the full-app build's infra dependencies (KMP framework, macOS signing) before attempting it.
+
+KMP `gradlew` is present but `Shared.xcframework` isn't staged (the scheme pre-action builds it via Gradle/Kotlin-Native), and macOS has **0 codesigning identities**. I'll attempt the full iOS build anyway (honesty covenant — run every runnable gate) and capture the raw result. Starting it in the background.
+
+Build launched. While the KMP Gradle pre-action runs (the slow part), let me monitor progress.
+
+KMP `Shared.xcframework` built successfully and staged. The app/test compile is now running. Let me continue waiting for it to complete.
+
+Gradle is still linking the Kotlin-Native frameworks (debug + release). Continuing to wait for the Swift app compile + test phase.
+
+Past the Gradle phase — now compiling the Swift app module. Let me wait for the build+test to finish and capture the exit.
+
+The full iOS build completed: **XCODEBUILD_IOS_EXIT=65 (RED)** — failing on a large batch of pre-existing wired-tier files (AnnouncerRegion, AnomalyInlineRow, AppContainer, …), none of which are mine. Let me extract the actual errors and confirm zero are in my files.
+
+Zero `": error:"` lines — the failure is `SwiftCompile failed with a nonzero exit code` without standard diagnostics, which suggests a compiler crash/kill in a wired-tier batch. Let me dig into the actual failure reason.
+
+Line 8427 reveals the cause: a **Swift compiler crash** ("Please submit a bug report … crash backtrace") in a wired-tier batch (Auth/AppearanceSettings/AuditPanel) — not a code error, and **0 in my files** (which aren't even in the project). Let me capture the crash context for the log.
+
+Definitive evidence: the full-app build failed via a **swift-frontend compiler crash** on a pre-existing wired-tier batch (Auth/AppearanceSettings/…), and **`CommandConfirm` appears 0 times in the entire build log** (tier unwired). macOS is signing-deferred (0 identities). This matches the sanctioned sibling disposition. Let me confirm git cleanliness before writing the log.
+
+Clean: only my 10 files are new; the generated `.xcodeproj` and staged framework are git-ignored. Let me gather line counts and write the gate log.
+
+All files are within budget (≤384 lines, all code lines ≤119 cols). Now I'll write the comprehensive, honest gate log.
+
+Now let me stage exactly the 10 surface files plus the log, verify the staged set, and commit.
+
+All 11 files staged cleanly (10 surface + log); generated artifacts remain ignored. Committing.
+
+Committed as `b19604934` (11 files, 2411 insertions). Let me finalize todos and clean up temporary verification artifacts.
+
+All todos complete and the working tree is clean. The task is fully done and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`CommandConfirmDialog`** SwiftUI surface at parity with `web/src/features/system/components/CommandConfirmDialog.tsx`, following the established `modals-dialogs` sibling architecture (closest template: `ConfirmDialog` 0012).
+
+**10 files** (`apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.*`, 2,091 lines):
+- **Adapter** (pure projection: countdown arithmetic, case-insensitive trimmed type-to-confirm match, `canConfirm`/`confirmDisabled`, phase/visibility, copy), **Seams** (telemetry, confirm/cancel controller, **countdown ticker seam**, P1/S8 source, i18n facade, a11y), **Model** (`@MainActor @Observable` with the live countdown lifecycle), **swift/Views/States** (glass panel, red-warning header, danger message block, type-to-confirm field, ghost Cancel + destructive Confirm with the live `(Ns)` countdown), **Previews**, **strings** (18-key catalog), **Tests + ModelTests**.
+
+**Parity**: every web branch reproduced — countdown gate, `(Ns)` label + opacity-50, type-to-confirm, "Are you sure?" default, loading-disabled Confirm, ungated Cancel/Escape (faithful to web `onClose`), Enter→Confirm/Escape→Cancel via keyboard shortcuts — plus all six states (loading/empty/error/stale/offline/content) so no surface is ever blank.
+
+**Verification (all run on this runner)**:
+| Gate | Result |
+|---|---|
+| `swiftformat --lint apps/apple` | **0** (0/4178 need formatting) |
+| `swiftlint --strict` (9 files) | **0 violations** |
+| placeholder scan (isolated copy) | **COUNT=0** |
+| isolated SwiftPM test (Swift 6 strict) | **43/43 pass** |
+| iOS‑18 + macOS‑15 SDK typecheck of full view layer + real design system | **0 errors** |
+
+The full-app `xcodebuild` was **run and reported honestly RED (IOS_EXIT=65)**: the KMP `Shared.xcframework` built, then `swift-frontend` crashed on a **pre-existing, unrelated wired-tier batch** (Auth/AppearanceSettings/AuditPanel) — **0 references to `CommandConfirm` in the entire build** (the `modals-dialogs` tier is unwired: 0 pbxproj refs, and `project.yml` is outside the prompt's allowed files). macOS is signing-deferred (0 identities). Both are the P4/P99 acceptance gate's, matching the sanctioned sibling disposition.
+
+Log written ending `EXIT=0` / `STATUS=DONE`; committed as `b19604934`.
+
+Merge made by the 'ort' strategy.
+ ...le-modals-dialogs-0029-CommandConfirmDialog.log | 320 +++++++++++++++++
+ .../CommandConfirmDialog.Adapter.swift             | 237 +++++++++++++
+ .../CommandConfirmDialog.Model.swift               | 288 ++++++++++++++++
+ .../CommandConfirmDialog.ModelTests.swift          | 384 +++++++++++++++++++++
+ .../CommandConfirmDialog.Previews.swift            | 127 +++++++
+ .../CommandConfirmDialog.Seams.swift               | 273 +++++++++++++++
+ .../CommandConfirmDialog.States.swift              | 188 ++++++++++
+ .../CommandConfirmDialog.Tests.swift               | 211 +++++++++++
+ .../CommandConfirmDialog.Views.swift               | 284 +++++++++++++++
+ .../modals-dialogs/CommandConfirmDialog.strings    |  49 +++
+ .../modals-dialogs/CommandConfirmDialog.swift      |  50 +++
+ 11 files changed, 2411 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0029-CommandConfirmDialog.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.swift

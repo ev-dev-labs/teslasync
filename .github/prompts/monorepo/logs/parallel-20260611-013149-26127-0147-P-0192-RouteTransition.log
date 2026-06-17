@@ -1,0 +1,142 @@
+I'll start by reading the prompt's requirements carefully and checking both the web source and platform capabilities. Let me explore in parallel.
+
+Platform is capable (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 simulator). Now let me read the web source and examine the predecessor surface (PullToRefresh) to follow conventions exactly.
+
+The web source is a **motion/transition wrapper** — no data fetching, no charts, no maps, no i18n keys. It cross-fades route content on pathname change, respects reduced-motion, uses 120ms ease-out + 4pt y-translate, and skips list↔detail navigations. The predecessor `PullToRefresh` established a 9-file structure I must follow. Let me read all of it.
+
+Let me read the remaining predecessor files to fully understand the conventions (Adapter, Projection, Views, Previews, strings, tests, Meta).
+
+Excellent — comprehensive predecessor. Now the Views, Previews, strings, tests, and the design tokens (`TSMotion`).
+
+Now the tests and the design token system (P1/S9).
+
+I now fully understand the predecessor's 9-file pattern. Let me examine the design tokens (P1/S9 — `TSMotion`, `Color.TS`, `Font.TS`, etc.), the Xcode project structure, and the placeholder checker.
+
+There are many sibling surfaces (TimelineScrubber, SortControl, etc.). Let me read the `project.yml`, the design token definitions, the placeholder patterns, and the web `useMotionPreference` hook.
+
+Now let me find the design tokens, check xcodegen availability, and critically — examine how the predecessor's gate actually ran (its log) and whether the Shared.xcframework build is feasible.
+
+Key finding: `Shared.xcframework` doesn't exist (only `.gitkeep`), and the build scheme has a preAction to build it via Kotlin/Native. Let me check the predecessor's actual gate log to understand how it was verified, plus the build script and TSMotion.
+
+I now understand the established precedent: "code-complete + DEFERRED whole-tree xcodebuild" — the predecessor verified via isolated SDK compiles (iOS+macOS), isolated XCTest runs, and green lint/format/placeholder gates, deferring only the whole-tree build (blocked by pre-existing sibling breakage + signing, not its own code). Let me read the precedent doc, design tokens, and the native route state holder.
+
+I have the full token system. `TSMotion` has no 120ms value, so (like the predecessor's verbatim web constants) the surface will define 120ms itself for parity. Let me confirm no existing RouteTransition native file, read the lint/format configs to match exactly, and check how siblings reference navigation.
+
+Let me check how the cited precedents (`AnimatedNumber` 0075, near-anonymous surfaces) handle the `.strings` file and a11y, since RouteTransition similarly has no visible copy. Also need the rest of the swiftlint rules and the placeholder patterns to avoid forbidden words.
+
+Critical: the placeholder checker is **case-insensitive** — I must avoid "TODO/FIXME/XXX/Placeholder/Lorem ipsum/not implemented" in all shipped files. And `AnimatedNumber.strings` confirms the precedent: a header-only strings file with **no copy keys** when the web source renders no translatable text. Let me confirm AnimatedNumber's Model/Views/a11y pattern for a copy-free surface.
+
+Analysis complete. I have a thorough understanding of the predecessor's 9-file pattern, the design tokens, lint/format configs, and the verification precedent. Let me set up tracking and write the files.
+
+Now the Model (P1/S8 state holder + P1/S11 telemetry seam):
+
+Now the public surface and the Views (transition layer):
+
+Now the Previews and the strings catalog:
+
+Now the test files — pure adapter/projection tests, then model/view tests:
+
+All 9 files written. Now let me verify — first format and lint my files specifically.
+
+swiftformat flags two things: `redundantMemberwiseInit` on my internal content-layer init (the codebase idiom is synthesized inits for internal subviews) and some trailing commas. Let me restructure the content layer to use a value-based synthesized init (matching the sibling pattern), update call sites, then auto-format the rest.
+
+Now update the Previews and Tests call sites to pass `content:` as a value:
+
+Now run swiftformat in-place to fix trailing commas/wrapping, then re-lint:
+
+swiftformat clean. Now swiftlint --strict on my files:
+
+Clean. Now verify no forbidden placeholder tokens in my files, and check how swiftformat reformatted the arrays:
+
+Files are clean of forbidden tokens. Let me confirm the formatted arrays are valid and view the final Adapter/Views:
+
+swiftlint + swiftformat clean, no forbidden tokens. Now the core verification: an isolated SwiftPM harness to compile + **run** the tests on macOS, plus an iOS-18 simulator SDK typecheck. Let me set this up.
+
+Compile succeeded, 37 tests ran, but **1 failure** in the model tests. Let me find it:
+
+The failure reveals my **test expectation was wrong**, not the code. Per the web logic (`skipForList = matchesSkip(prevPath) || matchesSkip(newPath)`), leaving a detail page (`/drives/9` → `/energy`) is suppressed because the *previous* path matches a skip pattern. My code correctly reproduces this; the test comment was incorrect. Let me fix the test to assert the faithful behavior:
+
+All 37 tests pass on macOS. Now the iOS-18 simulator SDK typecheck (Swift 6, strict concurrency):
+
+Core surface typechecks on iOS 18 SDK. Now let me verify the Previews file (with `#Preview` macro + DEBUG) typechecks on iOS too:
+
+Full surface (incl. `#Preview`) typechecks on iOS 18 SDK. Now the explicit macOS 15 SDK full-surface typecheck for symmetry:
+
+All compile/test checks pass: macOS `swift test` 37/37, iOS-18 SDK full-surface typecheck, macOS-15 SDK full-surface typecheck. Now let me assess the **official gate** (xcodebuild). First, generate the project (Gradle-free) to confirm my files are enumerated:
+
+All 9 files are enumerated correctly. Now let me assess whether the official `xcodebuild` gate can actually run here — checking the Gradle/JDK dependency for `Shared.xcframework` and any pre-existing sibling breakage (the predecessor deferred the whole-tree build due to both):
+
+JDK 17 present, gradlew exists, but `Shared.xcframework` isn't built and the documented pre-existing blocker file (`AIAutoNameUnnamedLocations.swift`) is present. Let me attempt the Gradle xcframework build (the gating dependency for `xcodebuild`), timeboxed, to get real evidence:
+
+The offline Gradle build hung (timeout) — it needs network to fetch the Gradle distribution/Kotlin-Native toolchain. Let me capture concrete evidence of this environment blocker:
+
+Gradle 8.14.5 and Kotlin/Native 2.4.0 are **cached**, and `gradlew` runs. The xcframework build may be feasible (just slow). Let me kick it off in the background and investigate the sibling-breakage state meanwhile.
+
+The Gradle tasks are all UP-TO-DATE (xcframework was pre-built/cached), but `Frameworks/` is still empty — the staging step may have failed. Let me check the full log + exit code:
+
+The Gradle build produced a **debug** xcframework, but the build script hardcodes the **release** path — a pre-existing wiring mismatch I can't fix (out of allowed files). For verification evidence, I'll manually stage the debug artifact (git-ignored) and attempt a bounded real `xcodebuild`. First confirm the artifact is git-ignored:
+
+Only my 9 files are untracked (clean tree). Let me check the Frameworks gitignore rule, then stage the debug artifact and attempt a bounded real `xcodebuild`:
+
+`Shared.xcframework` is git-ignored (line 381) and staged. Now let me attempt the real iOS `xcodebuild` (bounded), capturing output to monitor my files' compilation and any pre-existing sibling errors:
+
+Build launched. Let me wait and monitor progress:
+
+The build is still running (the Gradle pre-action is now linking the *release* framework, which is slow and wasn't cached). Let me check process state and keep monitoring:
+
+Good — `xcodebuild` is now actively compiling Swift (multiple `swift-frontend -c` processes running), past the Gradle pre-action. Let me wait for compilation to progress:
+
+Still actively compiling (46 frontend processes), no errors yet. The app target is large. Let me continue waiting:
+
+Compilation winding down (4 frontend processes), still no errors. iOS simulator builds skip code-signing, so this may complete. Let me wait for the final result:
+
+Module emission for the `TeslaSync` target succeeded (whole target type-checks) and RouteTransition files now appear. Now per-file object compilation. Let me confirm RouteTransition compile lines and keep waiting:
+
+**Definitive evidence captured.** My `RouteTransition.strings` was copied & validated into the app bundle, the `TeslaSync` module emitted successfully (whole-target type-check passed including all my files), and the build failed (exit 65) **solely** on the pre-existing sibling `AIAutoNameUnnamedLocations.swift:123` — the exact "escaping closure captures non-escaping parameter 'content'" blocker the predecessor documented, which I'm forbidden to touch. Let me confirm all errors are in that sibling (none in mine):
+
+Confirmed: exactly **one** pre-existing error (`AIAutoNameUnnamedLocations.swift:123`), **zero** in any RouteTransition file, and my `.strings` resource was copied into the app bundle. This matches the documented precedent precisely. Since `project.yml` compiles `shared-surfaces/` into the macOS target too, the macOS build will hit the same sibling error — let me launch it in the background to capture real evidence while I write the gate log:
+
+The macOS build is running. Meanwhile, let me run the remaining whole-tree gate steps (swiftformat, swiftlint, placeholder) to capture their real results:
+
+`FORMAT_EXIT=0` (0/4881 files need formatting — whole tree clean). Now swiftlint --strict (whole tree) and the placeholder gate:
+
+`LINT_EXIT=0` (0 violations in 4583 files). Now the placeholder gate — both as-written and an honest scan of my actual files:
+
+Both placeholder checks: `PLACEHOLDER_EXIT=0` and an honest scan of my files shows `PLACEHOLDER_COUNT=0`. Let me check the macOS build result:
+
+macOS build: `MAC_BUILD_EXIT=65` — blocked at the **signing/entitlements check** (environment lacks a development certificate), before compilation, with **zero** RouteTransition errors. This matches both documented precedent blockers exactly. Let me gather the precise evidence lines for the log:
+
+All evidence confirmed: the iOS `TeslaSync` app-target module emitted (my files type-check in the full app module), my `.strings` copied into the bundle, and all 5 test suites pass (37 tests). Now let me write the gate log, then commit.
+
+Log written. Let me verify the working tree is clean (only my files + log), then commit:
+
+Clean — exactly my 9 files + the log, nothing else. Committing with the prompt's specified message:
+
+Committed. Let me do a final verification — confirm the commit contents and a clean post-commit tree:
+
+Commit is exactly the 10 files (1234 insertions), working tree clean. Let me clean up the temporary verification artifacts:
+
+All todos complete. The RouteTransition Apple surface is shipped and committed.
+
+Merge made by the 'ort' strategy.
+ ...-apple-shared-surfaces-0192-RouteTransition.log | 149 +++++++++++++
+ .../shared-surfaces/RouteTransition.Adapter.swift  | 153 ++++++++++++++
+ .../RouteTransition.AdapterTests.swift             | 232 +++++++++++++++++++++
+ .../shared-surfaces/RouteTransition.Model.swift    | 130 ++++++++++++
+ .../shared-surfaces/RouteTransition.Previews.swift |  92 ++++++++
+ .../RouteTransition.Projection.swift               | 104 +++++++++
+ .../shared-surfaces/RouteTransition.Tests.swift    | 195 +++++++++++++++++
+ .../shared-surfaces/RouteTransition.Views.swift    |  58 ++++++
+ .../shared-surfaces/RouteTransition.strings        |  20 ++
+ .../shared-surfaces/RouteTransition.swift          | 101 +++++++++
+ 10 files changed, 1234 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0192-RouteTransition.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteTransition.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteTransition.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteTransition.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteTransition.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteTransition.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteTransition.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteTransition.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteTransition.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RouteTransition.swift

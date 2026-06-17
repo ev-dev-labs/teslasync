@@ -1,0 +1,114 @@
+I'll start by exploring the codebase structure and understanding the web source page I need to port.
+
+Now let me explore the Apple app structure and understand existing patterns.
+
+The `Features` directory doesn't exist yet under `TeslaSync`. Let me look at the actual structure of the TeslaSync directory and existing similar pages.
+
+There are two locations. Let me understand the project structure, the gate expectation, and look at an existing similar analytics page with charts.
+
+There's a path discrepancy: the prompt says `TeslaSync/Features/Driving/` but real pages live in `Sources/Features/`. Let me investigate the parity ledger, logs, and an existing analytics page to understand the real convention.
+
+The real convention is `apps/apple/Sources/Features/<Category>/`. Let me study the closest existing analytics pages (charts + model) and the existing RegenEfficiencyWidget which likely shares the data model.
+
+Now I understand the decomposed file pattern. Let me study the StatisticsPage set (closest analytics analog) and the existing RegenEfficiencyWidget model in detail.
+
+Excellent, the pattern is clear. Let me study the charts, models, format helpers, the existing regen widget model, the route system, and a page that uses date-range + gauge (BatteryDegradation).
+
+Let me examine the routing system, shared components, the sections/format patterns, and check for any existing date-range picker usage.
+
+Key finding: `/regen-efficiency` has no AppRoute case. Let me check the web routes, the parity manifest siblings, and the route tests to decide the navigation approach.
+
+Now let me understand how route registrations are composed into the shell, and study the key shared components I'll need.
+
+Let me check tool availability and look for fixed-count route tests, plus read the key shared components in parallel.
+
+All tools are available (xcodebuild, xcodegen, swiftlint, pwsh, swift). Let me study the chart wrappers, units facade, formatting, and remaining components.
+
+Let me examine the Units facade and the web formatting/units source to replicate `formatEnergy`, `formatPower`, `fmtPercent`, `convertDistanceFromSI` exactly.
+
+Let me read the `Drive` type, the web unitConversion formatters, and the BatteryDegradation analog (sample + route registration) which has a gauge.
+
+I have the data contracts. Now let me study the remaining UI components (Typography, Cards, States, Metrics, date-range Filters) and locate the string catalog.
+
+Let me check the date-range filter, icon/tone defs, the help tooltip, the units environment, and the string catalog format.
+
+Let me check how existing pages handle interpolated/formatted strings and the tone enum values.
+
+Let me check the chart palette/colors, the web RangePicker presets, and an interpolated xcstrings entry format.
+
+The 4 web `regenColor` thresholds map exactly to the semantic tokens (success/accent/warning/danger). Let me see how BatteryDegradation renders a value-colored gauge to follow precedent.
+
+Let me check the web range-state presets and how the shell builds its sidebar (to confirm adding a route case is safe).
+
+I have enough context. Let me set up a plan and todos, then read the BatteryDegradation model + one test for final patterns.
+
+I now have a complete understanding. Let me verify the unit preference defaults, then write the plan and build.
+
+I have everything needed. The key insight: web always displays energy in kWh and power in kW (via `useUnits` hardcoded prefs), only distance respects the metric/imperial setting. Let me set up tracking and write the plan.
+
+Let me check the SwiftLint config to avoid lint failures, then start writing files.
+
+Let me check for existing date-range/preset string keys I can reuse for the RangePicker.
+
+`SleepEfficiencyPage` already has a `rangePicker` — the perfect template. Let me study it.
+
+This is the exact template I need — `SleepRange` + `selectRange` + `TSSelect` range picker. Now I'll build all the files. Starting with the foundational value types.
+
+Now the derivations. Let me check the web `formatDateShort` to match the date display.
+
+I have the ISO parse pattern. Now writing the derivations (pure functions mirroring the web `useMemo` blocks).
+
+Now the `@Observable` page model with the data-source seam, phase machine, and range state.
+
+Now the sample/preview/test data sources, with drives spanning several months so the trend renders.
+
+Now the main page view scaffold. Let me update todos and write it.
+
+Now the charts file (gauge wrapper + monthly trend chart).
+
+Let me check the help-tooltip component API before writing the metrics + table sections.
+
+Now the sections file (hero, stat cards, metrics strip, drives table, skeleton).
+
+I added a `units` param to the table section. Let me fix the page call and write the route registration.
+
+Now wiring navigation: add the `.regenEfficiency` route case (pathSegment, icon, group).
+
+Now wire the registration into the app shell.
+
+Now the string catalog. Let me check which keys already exist to avoid duplicates.
+
+`common.noData`, `route.vehicles`, `action.refresh`, `action.retry` already exist — I'll reference, not re-add. Let me splice the 37 new keys into the catalog via a safe script that preserves the rest of the file.
+
+37 keys inserted and JSON validated. Let me verify, then update the ledger and write tests.
+
+Now update the parity ledger with the macOS + iOS rows.
+
+Now the model tests, mirroring the sibling test pattern.
+
+Now let me run the gate. Starting with SwiftLint on the new files for fast feedback.
+
+SwiftLint scanned the whole project (config `included` paths) and found 6 serious violations. Let me identify exactly which files — I need to confirm whether any are mine.
+
+All 6 are in my files (3 unique). Let me view and fix: a 3-tuple and two 122-char lines.
+
+Now let me fix all three violations — replace the 3-tuple with a struct, and wrap the two long test lines.
+
+Now fix the two long test lines.
+
+Re-running SwiftLint to confirm my files are now clean.
+
+SwiftLint is clean (0 violations project-wide). Now let me generate the Xcode project and build.
+
+Project generated. Let me verify the Shared framework exists and list schemes before building.
+
+The `Frameworks/` dir appears empty — `Shared.xcframework` (the KMP artifact) may be missing. Let me investigate thoroughly.
+
+There's a KMP build script. Let me check what's needed to produce the `Shared.xcframework`.
+
+The build requires a KMP-built `Shared.xcframework` (not in the repo — it's a Gradle artifact). Java 17 + gradlew are available. Let me attempt to build it. This may take a while.
+
+Gradle works (toolchain cached). Now let me build and stage the `Shared.xcframework` via the official script. This is heavy Kotlin/Native compilation — running in background.
+
+Kotlin/Native compilation is slow. Let me continue waiting.
+

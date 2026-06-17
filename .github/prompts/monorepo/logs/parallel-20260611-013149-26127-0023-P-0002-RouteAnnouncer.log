@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source spec and explore the Apple app structure in parallel.
+
+Now let me explore the Apple app structure to understand existing patterns, state holders, tokens, i18n, and diagnostics.
+
+Let me examine existing shared surfaces and the supporting infrastructure (state holders, theme, i18n, diagnostics).
+
+There's an existing `AnnouncerRegion` surface — the direct sibling of `RouteAnnouncer` in the web a11y barrel. This is my best parity template. Let me read all of its files.
+
+I now fully understand the parity pattern from the `AnnouncerRegion` sibling surface. Let me check the build toolchain availability and the project configuration.
+
+Toolchain is fully available (Xcode 26.5, xcodegen, swiftlint, swiftformat). Let me verify the theme tokens I'll use, confirm no RouteAnnouncer files exist yet in Apple, and check the build's shared-framework dependency.
+
+Let me read the exact signatures of the shared components/tokens I'll use, locate the `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` definitions, and review the prior RouteAnnouncer attempt log for context.
+
+Let me read the design tokens to confirm exact names, and view the TSCard signature and the prior RouteAnnouncer log for context.
+
+Let me review the prior RouteAnnouncer attempt log and the app's navigation types for the production source binding.
+
+This prior log is gold — it confirms the surface-scoped verification protocol and that the full-app gate is blocked by pre-existing repo issues (not the surface). Key parity decision: the committed sibling `AnnouncerRegion` (also an anonymous a11y surface) renders all P4 leaf states as a visible inspector. I'll follow that committed convention. Let me check a few remaining environment details, then write the code.
+
+`DashboardWidgetSize` is now down to 1 declaration (prior blocker fixed), `shared-surfaces` is in the swiftlint `included` list, and pwsh + check-placeholders are available. Let me read the full lint/format configs so my code passes `--strict` cleanly, then write the plan and code.
+
+Let me read the rest of the swiftlint config to ensure I respect all configured thresholds.
+
+I have everything I need. The toolchain is fully present, the committed sibling `AnnouncerRegion` defines the exact pattern, and pre-existing blockers are mostly resolved. Let me write a plan and set up tracking.
+
+Now I'll create the surface files, starting with the pure core (Adapter). Let me set up todo tracking and create the first files.
+
+Now the model + seams tests — the behavioral core that mirrors the web test cases (first-render skip, deferred read, cancel-pending, empty-clear, dedup, connection axis).
+
+All 10 files created. Let me update tracking and run the fast, high-value checks first: swiftlint and swiftformat on the new files.
+
+swiftformat flagged single-line property bodies in Views.swift. Let me view the exact lines and fix.
+
+`large_tuple` (3-tuple from `makeModel`) trips `--strict`. Let me refactor the test helper to return a small struct instead. I'll recreate the file cleanly.
+
+Let me re-run both linters on all files including the recreated ModelTests.
+
+Both linters are clean (0 violations). Now the placeholder gate — let me check how the script handles file paths, then run the real compile verification.
+
+Placeholder script works per-file. Let me run it across all surface files, then set up compile verification.
+
+Placeholder gate clean (0). Now I'll verify the surface actually compiles and the tests pass under Swift 6 strict concurrency via an isolated SwiftPM harness (module named `TeslaSync` so `@testable import` works), with API-faithful shims for the P1/S9 token/component layer.
+
+I'll build the isolated SwiftPM harness with API-faithful shims for the token/component layer.
+
+¡The surface compiles cleanly under Swift 6 strict concurrency (including Previews). Now let me run the tests.
+
+All 35 tests pass under Swift 6 strict concurrency. Now let me typecheck the non-test files against the real iOS 18 and macOS 15 SDKs (matching the project's `-strict-concurrency=complete`).
+
+Surface-scoped verification is fully green (build, 35 tests, iOS+macOS typecheck, lint, format, placeholder). Now let me confirm the files wire into the Xcode targets and attempt the full gate. First, `xcodegen generate`.
+
+Files are enumerated in the generated project. Now let me attempt the full gate. I'll start the iOS Simulator `build test` (it triggers the KMP framework pre-action, so it's slow) in the background and monitor.
+
+The iPhone 16 simulator is booted. Let me start the full iOS gate (`build test`) in the background — this stages the KMP framework first, so it's slow.
+
+While the iOS gate runs, let me verify the critical wiring: that `*Tests.swift` files compile only into the test bundles (not the app target — the prior run's blocker), by inspecting the build-file references.
+
+The wiring is byte-identical in shape to the committed `AnnouncerRegion` sibling (same 4 "in Sources" references per file), confirming correct target membership by construction. Let me check the iOS gate build progress.
+
+KMP framework is assembling (the slow pre-action). Let me continue monitoring while it progresses toward the actual app compile.
+
+The KMP framework build is slow and xcodebuild buffers output without a TTY. Let me review the pending-verifications ledger format while the build continues.
+
+I now understand the established convention: the full-app gate is deferred to the P99 acceptance gate across 15+ sibling surfaces, blocked by pre-existing/unrelated conditions. Let me capture the concrete current blockers and check my build's progress.
+
+Confirmed: `StateTimelineConnection` is declared across 6 files (other agents' parallel surfaces) and macOS has 0 signing identities — the same pre-existing blockers documented for 15+ sibling surfaces. Let me check my build's progress.
+
+The KMP link is the long pole. Let me get stronger evidence in parallel: typecheck my surface against the **real** design-system components (Tokens + Components + Design), not just shims — proving real-API integration without needing the KMP framework.
+
+Components/Design are Shared-free. Let me typecheck my surface against the real minimal component closure (the actual `TSCard`/`TSButton`/`TSEmptyState`/`TSSkeleton`/`TSFadeIn` + design tokens/materials).
+
+The errors are in `TSCardHeader` (a component I don't use) needing typography types. Let me find and add the typography file to complete the real closure.
+
+The component files bundle many types. Let me compile the **entire** Components + Design tree together (so all intra-library types resolve) plus my surface — the cleanest real-API proof.
+
+Only `UnitFormatters.swift` has external (SharedFacade) coupling — and my surface doesn't use it (the RecentDrivesSection ledger excluded it too). Let me exclude it and re-run.
+
+Clean — my surface typechecks against the **real** component library (40 files + tokens) on macOS 15 with 0 errors. Let me confirm the same on the iOS 18 SDK.
+
+Both SDKs pass against the real component library (0 errors). Let me check the full iOS gate build status.
+
+The KMP framework built successfully (8m1s), extensions compiled, then the app target build failed. Let me extract the actual errors to confirm zero are RouteAnnouncer-attributed.
+
+Let me look at the actual failure context around the BUILD FAILED line.
+
+The failed compile jobs list batches (not RouteAnnouncer). Let me find the actual error diagnostics in the full log.
+
+The build log confirms whole-module batched compilation failed, but xcodebuild buffered the individual `error:` diagnostics out of stdout (the documented no-TTY behavior). My files are independently proven clean (real-library typecheck + tests). Let me capture concrete evidence of the pre-existing collision that fails the whole-module compile.
+
+`StateTimelineConnection` is actually declared once — let me find the real root cause. Let me check if the gate process finished and search the full buffered log more thoroughly for diagnostics.
+
+**Root cause found.** The full-app build fails on a single pre-existing, unrelated error in **another agent's** surface:
+```
+TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures non-escaping parameter 'content'
+```
+This fails the whole-module app compile (so `test` is cancelled). **Zero RouteAnnouncer-attributed errors** — my surface independently typechecks clean against the real component library on both SDKs. The KMP framework built successfully (8m1s). This matches the established pattern for 15+ sibling surfaces. Let me confirm and write the gate log.
+
+Airtight: the sole error is in a pre-existing surface (committed in `ffc2bd905`), 0 RouteAnnouncer errors, KMP framework built successfully. Let me write the gate log.
+
+Now let me append the ledger row following the established format. Let me view the end of the ledger.
+
+The ledger format is clear. Let me append my row before the Resolution protocol section.
+
+Ledger row appended. Let me clean up temp artifacts and review git status before committing.
+
+Git status is exactly as intended (10 surface files + log + ledger; generated xcodeproj ignored). Let me commit.
+
+Committed as `e9fcc4223`. Let me verify the working tree is clean and finalize tracking.
+
+All work is committed and the tree is clean. Let me do a final confirmation of the deliverables.
+
+All deliverables are complete and committed. Here's the final summary.
+

@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The Apple app structure exists. Let me explore it and read the web source.
+
+Now let me examine the existing feature-views directory and related test directory to understand the established patterns.
+
+There are many existing feature views following a 4-file pattern. Let me find a close sibling to model after and check what already exists for MotorSection.
+
+`ClimateSection` is the ideal template — it's the closest sibling (same web folder, same MetricCard+GlassPanel+EmptyState pattern, same useTranslation+useUnits hooks). Let me study it and its web source in full.
+
+Excellent template. Let me read the remaining ClimateSection files (Adapter, Views, Previews, strings, Tests) to understand the full pattern.
+
+Now let me read the ClimateSection Previews, strings, and Tests files to complete my understanding of the pattern.
+
+I now fully understand the 7-file pattern. Let me read the web types/formatters that MotorSection depends on, and check the existing Motor* Swift files for any type-name collisions, plus understand the build setup.
+
+Let me read the unit conversion code and useUnits, and properly check for type-name collisions in the existing Motor* Swift files.
+
+Now let me read the `formatTemperature` implementation and `DEFAULT_PRECISION` in unitConversion.ts to nail the temperature precision and rounding semantics.
+
+I have all the web semantics. Now let me understand the Xcode project structure — how files get into the app vs. test targets, and the build tooling.
+
+It's an XcodeGen project. Let me read project.yml, the lint/format configs, and the placeholder checker to understand build inclusion rules and constraints.
+
+Now I understand the full build setup (XcodeGen, co-located tests, strict lint). Let me check the toolchain (xcodegen, pwsh), the Shared.xcframework dependency, and the placeholder checker logic.
+
+Key findings: placeholder check is case-insensitive (I must avoid "placeholder", "TODO", etc. even in comments), and `Shared.xcframework` must be built via Gradle/KMP as a build pre-action. Let me check the KMP shared project and confirm the sibling avoids forbidden words, then assess baseline build feasibility.
+
+Java 17 + gradlew are present. Let me kick off the KMP Shared.xcframework build now (the long pole, independent of my Swift code) and re-verify the sibling is clean in the correct directory.
+
+The KMP build is running in the background. Findings confirmed: placeholder check is case-insensitive (must avoid "placeholder"/"TODO"/etc. even in comments), sibling is clean, and all needed tokens exist. Let me write a plan file and start creating the 7 files, beginning with the Adapter (pure projection core).
+
+Now creating the Adapter (pure, testable projection core):
+
+Now the Model file (state-holder seam, telemetry, projector, i18n facade):
+
+Let me check the KMP build progress, then continue with the view files.
+
+Gradle is still resolving/building (first run downloads toolchains). Continuing with the main view file:
+
+Now the Views file (presentational subviews):
+
+Now the Previews and strings files:
+
+Now the Tests file (adapter formatting, projection, projector phases, model wiring, a11y, per-state render):
+
+All 7 files created. The KMP build completed — let me confirm the framework was staged, then verify with swiftlint/swiftformat on my files.
+
+The KMP framework is built and staged. Now let me run swiftformat and swiftlint on my new files for fast feedback before the full build.
+
+swiftformat passes (0/6 require formatting). Now swiftlint --strict on my files:
+
+One swiftlint violation: the Adapter is 409 lines, over the 400-line `file_length` limit (the sibling ClimateSection.Adapter was kept at 399). I'll condense comments to get under 400 without touching code.
+
+Now I'll condense three doc comments to get safely under 400 lines:
+
+That added a line — wrong direction. Let me revert and instead trim a comment elsewhere:
+
+Now let me re-run swiftlint and swiftformat on all 6 files to confirm both pass:
+
+Both swiftlint --strict (0 violations) and swiftformat --lint (0/6) pass. Now let me regenerate the Xcode project and check available simulators.
+
+Project generated; iPhone 16 simulator exists and is booted. Let me set up the log directory and kick off the iOS build+test (the long pole) in the background.
+
+Now kicking off the iOS build+test (long-running). I'll tee output to a temp log for analysis.
+
+The iOS build+test is running. Let me monitor progress (this compiles thousands of files, so it'll take several minutes).
+
+Build/test returned exit 65 with "5 failures". Let me examine the log to find the specific errors.
+
+The build errors are **not** in my MotorSection files — they're "ambiguous type lookup" errors in pre-existing `RecentDrives*` and `StateTimeline*` surfaces (duplicate type declarations across `feature-views/` and `dashboard-widgets/`). Let me confirm these are pre-existing duplicates unrelated to my work.
+
+Confirmed: these are **pre-existing duplicate type declarations** in committed sibling surfaces (`RecentDrivesModel`/`RecentDrivesConnection`/`StateTimelineConnection` each declared in BOTH `feature-views/` and `dashboard-widgets/`, all compiled into the one `TeslaSync` module). None involve MotorSection. Let me check the git history to characterize the baseline accurately.
+
+This is a parallel-merge pipeline: prior prompts merged `RecentDrivesSection`/`RecentDrivesListWidget` and `StateTimeline`/`StateTimelineWidget`, which collide because each pair declares the same public types in the one app module. This is a pre-existing, out-of-scope baseline breakage. Let me find the FULL set of duplicate-type collisions to understand the blast radius and verify MotorSection adds none.
+
+The full collision set is exactly two surface pairs — `RecentDrives*` and `StateTimeline*` — each declared in both `feature-views/` and `dashboard-widgets/`. Zero MotorSection collisions. To verify MY surface compiles and its tests pass, I'll temporarily relocate the conflicting **dashboard-widgets** copies (a throwaway harness I'll fully restore — committing nothing out of scope). First, let me find every file involved and any references.
+
+There's also a third dashboard-widget (`RecentDrivesWidget.*`) that consumes the `RecentDrives*` types. Let me check what references the colliding *views* from elsewhere in the app, to choose the least-invasive isolation direction for verifying MotorSection.
+
+Neither the section views nor widget views are referenced externally. To verify MotorSection compiles and its tests pass, I'll temporarily remove the three colliding **dashboard-widget** surface sets (they're committed, so `git restore` brings them back cleanly afterward). Let me first do a thorough reference check so removal leaves no dangling symbols.
+
+Let me precisely check whether `RecentDrivesWidget` depends on the unprefixed shared types or only its own prefixed ones — this determines the safe isolation direction.
+
+`RecentDrivesWidget` is self-contained (own prefix). The duplicates come only from the `RecentDrivesListWidget`↔`RecentDrivesSection` and `StateTimelineWidget`↔`StateTimeline` pairs. I'll temporarily remove the **feature-views** copies (no external refs, keeps dashboard-widgets self-consistent) to verify MotorSection. Final safety check, then execute:
+
+No external references anywhere — the colliding types are used only within their own surface families. Safe to isolate. Let me move the feature-views copies to a stash dir, regenerate, and run the iOS build+test to verify MotorSection.
+
+21 files stashed; feature-views is now collision-free. Let me regenerate and re-run the iOS build+test.
+
+The isolated iOS build+test is running. Let me wait and monitor (compiling the full module + running tests takes several minutes).
+
+Still compiling. Let me check the log file for progress and any errors so far.
+
+Zero errors so far (the `&&` chain stopped because grep found 0 matches). Let me continue waiting for completion.
+

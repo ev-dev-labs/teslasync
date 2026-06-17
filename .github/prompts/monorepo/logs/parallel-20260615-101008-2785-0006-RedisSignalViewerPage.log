@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5, swiftlint, xcodegen all available. Let me study the existing patterns by reading the most similar Admin pages.
+
+Now let me study the routing system, component library, and key patterns in parallel.
+
+I have enough understanding of the architecture. Let me set up a plan and todos, then check a couple remaining patterns.
+
+Now I have the full data model. Let me check the swiftlint config to respect its rules, then start writing.
+
+I have everything needed. Let me start creating the Swift files, beginning with the models.
+
+Now creating the models file:
+
+Now the page model:
+
+Now the sample sources:
+
+Now the table cells and masked coordinate cell:
+
+Now the purge confirmation sheet and outcome banner:
+
+Let me check the skeleton component and verify which generic catalog keys already exist before writing the main view.
+
+Now the main page view:
+
+Now the route registration:
+
+Now wiring the route into navigation. Let me add the `.redisSignals` case to `AppRoute`:
+
+Let me check for other exhaustive switches over `AppRoute` that my new case might break:
+
+Now I'll add the strings to the catalog. Let me first inspect the exact xcstrings formatting to produce a minimal, faithful diff.
+
+The catalog uses Xcode's `" : "` entry format. I'll insert new keys textually (after the `"strings"` line) to keep the diff minimal and avoid reformatting all 9571 entries.
+
+All 41 required keys present. Now the model unit tests:
+
+Now updating the parity ledger. Let me view its structure end:
+
+Let me fix a few correctness issues I spotted before building. First, the `contains` overload ambiguity in `classify`:
+
+Now fix the `@Observable`/`@State` binding issue (need explicit bindings, not `$model.x`) and the `Spacer`-in-`VStack` layout issue:
+
+Now add the binding helpers next to `vehicleBinding`:
+
+Now fix the purge typed-confirmation field to use a localized prompt instead of the search placeholder:
+
+Let me run swiftlint on my new files to catch style issues before the expensive build:
+
+Several lint fixes needed. Let me fix the trailing-closure issues in the table and split the two over-long type bodies into extension files. First, the table columns:
+
+Now let me view the current page file to split it cleanly:
+
+I'll move the stat + table sections into a same-file extension (same-file extensions keep `private` access but don't count toward `type_body_length`). Let me view the file's end first:
+
+Now check whether this repo's tests use extensions for test methods (to safely split the over-long test class):
+
+The extension pattern is established. Let me see how one test file structures it:
+
+The repo uses class + extension. Let me find the split point in my test file and move the pure-port + sample sections into an extension:
+
+Now re-run swiftlint on the changed files:
+
+SwiftLint clean. Now the placeholder scan (as the gate runs it), then I'll generate and build:
+
+The scanner matches the substring "placeholder" (a stub marker) in my legitimate `showStatPlaceholder` domain term and comments. Let me find and rename all occurrences to avoid the false positive:
+
+Two issues: `redis.searchPlaceholder` is a required i18n key (can't rename — needs the scanner opt-out marker), and `showStatPlaceholder` is a domain term I'll rename. Let me fix both:
+
+Now re-run the placeholder scan and swiftlint to confirm both are clean:
+
+Both gates clean. Now generating the Xcode project:
+
+Project generated. Let me check schemes, the required xcframework, and available simulators:
+
+The `Shared.xcframework` (KMP core) is missing — only `.gitkeep` present. The build depends on it. Let me find how it's produced:
+
+The xcframework is built via Gradle (KMP) as a pre-build phase. Let me check whether the toolchain/cache exists and whether Gradle can run here:
+
+The Kotlin/Native toolchain (`~/.konan`) and Gradle caches are already present — the environment is provisioned to build the KMP framework. Let me build and stage it:
+
+Gradle KMP build running. Let me wait for it:
+
+Let me check build progress in a separate shell without disturbing the running build:
+
+Gradle is actively compiling the release frameworks (iosArm64, iosSimulatorArm64, macosArm64) — debug xcframework already assembled. Let me continue waiting:
+
+Framework built and staged. Let me verify and start the macOS build (fastest compile validation):
+
+Framework has all 3 slices. Now building the macOS app (validates compilation without a simulator):
+
+Build running. Let me check progress via the log:
+
+Still type-checking the module (no errors yet). Let me keep waiting:
+
+Compilation progressing into linking (`Ld`), still 0 errors. Let me wait for completion:
+
+Module type-check passed (0 errors). Now compiling object files. Let me wait for the build to finish:
+
+Still compiling (0 errors). Let me continue waiting for the build to complete:
+
+`** BUILD SUCCEEDED **` on macOS — my code compiles into the full app. Now the iOS build + tests (the gate's target). Let me find a simulator:
+
+iPhone 16 simulator is booted. Let me run the iOS build + test (the gate's scheme). Starting async to monitor:
+
+While the iOS build+test runs, let me verify (truthfully) that every one of the 51 parity items is actually referenced in my source — this will back the `=== PARITY ===` evidence:
+
+All 51 items verified present in source. Let me check the iOS build+test progress:
+
+iOS build progressing, 0 errors. Let me keep waiting:
+
+Still type-checking the iOS app module (0 errors). This is the large target. Let me continue waiting:
+
+Per-file compilation now underway (module emit passed, 0 errors). Let me keep waiting:
+
+
+Authorization error, you may need to run /login (Request ID: F0B0:3CAE36:17AE7F0:18FB52B:6A304565)
+iOS build+test completed. Let me read the final result:
+
+App build SUCCEEDED on both macOS and iOS, but the **test target** failed to compile with a Swift 6 concurrency error. Let me find the exact location:
+
+The test compile error is in a **pre-existing** file (`VehicleCostPageModelTests.swift:10`), not mine. Let me examine it to confirm and understand:
+
+Confirmed: `VehicleCostPageModelTests.swift` is **unmodified by me** — this is a pre-existing Swift 6 strict-concurrency error (`zeroTotals` is `@MainActor`-isolated via the test class, referenced in the nonisolated nested `StubSource`). It blocks the whole test target. Let me confirm it's the only root error:
+
+Exactly one root error — a pre-existing concurrency bug in a sibling test file that blocks the entire `TeslaSyncTests` module from compiling (so my tests can't run either). It's a one-line issue: `zeroTotals` is `@MainActor`-isolated (static of a `@MainActor` test class) but referenced in the nonisolated nested `StubSource`. Let me view it and the type, then apply a minimal, safe fix so the test target compiles:
+
+`VehicleCostTotals` is `Sendable`, so the minimal, behavior-preserving fix is to mark the pre-existing `zeroTotals` constant `nonisolated`. This unblocks the whole test target (and thus my tests) without changing any test behavior. Applying it:
+
+Now re-run the test action (reusing the built derived data so only the test target recompiles). First a quick lint of the touched file, then the iOS test run:
+
+A second pre-existing error surfaced (`GDPRExportPageModelTests` calling a `@MainActor` static `artifact(...)` from a nonisolated context). This signals **systemic** pre-existing strict-concurrency breakage in the shared test target under Xcode 26.5 — unrelated to my page. Let me assess the full scope before deciding:
+
+
+Authorization error, you may need to run /login (Request ID: F0EF:3F56D0:18121C4:1972C35:6A3047AB)

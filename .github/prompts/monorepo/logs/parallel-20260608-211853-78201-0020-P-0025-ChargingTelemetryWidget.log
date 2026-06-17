@@ -1,0 +1,192 @@
+I'll start by exploring the repository structure and understanding what exists, plus checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source and understand the existing Apple app structure.
+
+Now I understand the project structure. There's an existing `dashboard-widgets` directory with 419 entries. Let me examine the naming conventions and find reference widgets to follow the established pattern.
+
+Each widget is composed of multiple files (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me find the best reference widget and the shared infrastructure (state holders, WidgetShell, StatGrid, Sparkline equivalents).
+
+The native side has widgets D–Y ported (A–C not yet — this is a parallel migration). No shared `WidgetShell` struct exists natively; widgets compose their own. Let me study a complete reference widget (a live-data one) and locate the shared layers (state holders, tokens, i18n, diagnostics).
+
+Let me explore the shared layers: `DashboardWidgets` (widget chrome/registry), `SharedFacade` (state holders, i18n, diagnostics), `Live`, and `Design` (tokens).
+
+`DashboardWidgetInfra.swift` is the shared widget chrome. Let me read the critical shared files: the infra, state-holder model, loadable state, and the domains layer.
+
+Let me read the facade layer and a complete live-data reference widget end-to-end to understand data binding, state rendering, i18n, and diagnostics.
+
+This is a KMP-backed facade. Now let me read a complete live-data reference widget end-to-end to see the exact pattern co-located widgets use for data binding, state rendering, i18n, diagnostics, and registry.
+
+The pattern is crystal-clear now. Let me read the remaining web-source dependencies (WidgetShell, shared StatGrid, types, the hook, numberFormat) plus the Builder/Previews/Tests/strings of the reference widget to nail the exact conventions.
+
+Let me read the data type, hook, StatGrid, numberFormat, and the reference widget's remaining files (Previews, Tests, strings, Palette, Diagram) plus the design tokens.
+
+Now let me read the reference Tests/Previews/strings, the design tokens, shared Components, and how a native sparkline is rendered (the web uses `Sparkline`).
+
+Excellent — I now have the full pattern. Let me read the design tokens, the web registry entry, the native sparkline approach, and the StatCard component.
+
+Let me locate the design token definitions, read the full registry entry, a native Swift Charts sparkline example, and the Skeleton component.
+
+The registry confirms: charging-telemetry, category 'charging', default 2×2, min 1×2, max 4×40. Now let me read the full design tokens and the Skeleton component to get exact token names.
+
+I have the complete pattern and all tokens. Now let me verify the build harness (xcodegen, pwsh, Shared.xcframework, placeholder script) before writing code, since the gate runs real xcodebuild.
+
+The app links a KMP `Shared.xcframework` that isn't prebuilt (only `.gitkeep`). This is the crux of whether a full `xcodebuild` is feasible. Let me check how prior widget prompts handled this — reading a prior co-located widget's log and the pending-verifications doc.
+
+Now I understand the established, user-approved disposition (code-complete + host gates green + DEFERRED full Xcode gate, used by prior co-located widgets 0036/0056). I'm on a real Mac with full toolchain though, so I'll attempt maximal real verification. Let me check a few final things before writing: the web `StatCard` (for stat-cell parity), confirm the `DashboardWidgetSize` collision is resolved, read the placeholder script, and check Gradle feasibility.
+
+All clear: the `DashboardWidgetSize`/`Registration` collisions are resolved (defined once in `DashboardWidgetInfra.swift`), gradle is present, `TSCard` exists. I'll kick off the heavy KMP `Shared.xcframework` Gradle build in the background now (so it has max time while I write code), then write the surface.
+
+I have the full design. Let me read the lint/format configs (to match style exactly), the `TSCard` API, and check the Gradle build progress.
+
+The Gradle KMP build is succeeding (Kotlin/Native downloaded, core compiled, debug XCFramework already written, now linking release) — so a **real** `xcodebuild` gate is feasible here. I'll let it finish while I write the surface. Now writing the files, starting with the value types and pure adapter.
+
+Now the leaf components (stat cell, power sparkline via Swift Charts, charger badge, compact charging indicator, connectivity banner).
+
+Now the main surface view with header, all states, and responsive layouts. Let me also check Gradle progress.
+
+Gradle is still linking release frameworks. Let me write the main surface view.
+
+Now the Previews and strings files.
+
+Now the comprehensive test suite (adapter, projection, model phases, telemetry, registry, accessibility).
+
+All 8 surface files written. Let me check the Gradle build status and run the lightweight gates (swiftformat, swiftlint, placeholder) on the new files.
+
+swiftformat found style issues — let me auto-fix with the ecosystem tool (write mode), then re-lint.
+
+swiftformat passes (0/7 require formatting). Now swiftlint --strict on the new files, and check Gradle completion.
+
+swiftlint clean (0 violations), swiftformat clean. Now the placeholder gate via pwsh, and let me verify the auto-formatted Models.swift is still correct.
+
+The placeholder gate flagged one line in my code: `Model.swift:285` contains the word "Placeholder" in a doc comment (the other 24 are pre-existing in other widgets). Let me find and reword all forbidden words in my files.
+
+Only "Placeholder" is flagged (patterns: TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented). Let me reword that one comment.
+
+Now let me verify the placeholder gate is clean for my surface specifically (copy my files to a temp dir and scan, for an honest per-surface count).
+
+Placeholder gate clean for my surface (COUNT=0, 0 opt-outs). Let me check the Gradle framework build.
+
+The `Shared.xcframework` built successfully (9m36s) and is staged. Now I can attempt the real Xcode gate. Let me generate the project and verify my files are enumerated.
+
+All 8 files are enumerated in the generated project. The `Shared.xcframework` is staged. Now I'll run the **real** Xcode gate. Let me start the iOS Simulator `build test` in the background (it's slow — compiles the whole app), and meanwhile run a fast isolated SwiftPM build+test of my code for high-signal confirmation.
+
+The iOS build is running in the background. Now let me set up a fast isolated SwiftPM build+test of my code (with real infra + tokens, a minimal Skeleton shim) for high-signal confirmation while the full build runs.
+
+My code compiles cleanly under Swift 6 (strict concurrency). Now let me run the isolated tests to execute the adapter/model/registry/a11y suite.
+
+All 31 isolated tests pass. Now let me check the real iOS xcodebuild progress.
+
+The real app build caught a genuine collision: `ChargingLoadStatus` and `ChargingConnection` are already defined elsewhere in the app module. Let me find the source and rename my types to surface-unique names.
+
+Found the collisions: `ChargerType`, `ChargingStatKind`, `ChargingLoadStatus`, `ChargingConnection` all clash with existing `ChargingSection`/`ChargerTypeChart` feature-views. Let me confirm my other (prefixed) types are unique, then rename the 4 colliding ones to surface-prefixed names.
+
+All my prefixed types are unique. Now let me rename the 4 colliding types (`ChargerType`, `ChargingStatKind`, `ChargingLoadStatus`, `ChargingConnection`) to surface-prefixed names across all my files using precise word boundaries.
+
+Renames applied cleanly. Let me re-format, re-lint, and re-run the isolated build to confirm my code still compiles, then restart the real app build.
+
+Format and lint clean after rename. Let me check my internal component view structs for collisions too (they're in the same app module), before rebuilding.
+
+`ChargingConnectivityBanner` collides with an existing struct. Let me find it and rename mine to be surface-unique.
+
+Let me rename all 5 internal component structs to surface-prefixed names (for robustness), then verify uniqueness.
+
+All component structs now unique. Let me re-format/lint, verify test-class-name uniqueness, then restart the real app build.
+
+All clean and unique. Now restarting the real iOS `build test` gate (authoritative). This compiles the full app + runs the test bundle.
+
+Build running. Let me wait and monitor progress (full app compile + test takes several minutes).
+
+The app module is now emitting (whole-module typecheck passed, 0 errors, no ChargingTelemetry errors). Let me keep monitoring through compile → link → test.
+
+Still compiling (0 errors). The full app target is large. Let me wait longer for compile → link → test execution.
+
+Still compiling the large module (0 errors). Let me verify it's progressing (not hung) by checking log growth and unique compile activity.
+
+Multiple `swift-frontend` processes are active (CPU 7-23%) — compilation is progressing, just buffered. Let me wait longer.
+
+Now in the per-file compile phase (compiling feature-views, 0 errors, log growing). Let me continue waiting for compile → link → test.
+
+`** BUILD SUCCEEDED **` — the full app (with my widget) compiled and linked against `Shared.xcframework`. Now it's building + running the test bundle. Let me wait for test execution.
+
+Test bundle is compiling (0 errors). Let me continue waiting for test execution to complete.
+
+Still in test-bundle build phase. Let me verify it's progressing and keep waiting.
+
+10+ parallel `swift-frontend` processes compiling the large test bundle — progressing, just buffered. Let me wait a longer stretch for completion.
+
+Still compiling the 150+ test bundle (0 errors; app BUILD already succeeded). Let me confirm active progress and check the newest raw output.
+
+110 parallel `swift-frontend` processes are saturating the machine compiling the large pre-existing test bundle; the simulator is booted. The app **BUILD already SUCCEEDED** and my 31 tests pass in isolation. Let me wait for the full test run to complete.
+
+Test-bundle compile is still buffered. Let me check whether it's moved to linking/running vs still compiling (process state + products produced).
+
+The test bundle (`TeslaSyncTests.xctest`) is **already built** — my tests compiled into the real bundle. The `test` action's preAction is re-linking the KMP framework (konan clang++ active). Let me wait for the simulator test run to produce results.
+
+The log is buffered on a giant recompile — the test action's preAction re-stages `Shared.xcframework`, changing its mtime and forcing a second full app+test recompile (a project-level inefficiency, not my code). Let me confirm this theory, then decide.
+
+Confirmed: all my `ChargingTelemetryWidget*.o` files compiled into the real app target (1562 `.o` files), and the framework re-stage (22:03:50) after the app dylib (22:01) is forcing the `test` action to recompile — a project preAction inefficiency, not my code. The recompile will succeed (it already did once) then run. Let me wait for completion.
+
+The full `build test` is thrashing the machine (164 `swift-frontend`, frozen log, no `.o` progress) due to the project's preAction re-staging the framework each action — forcing a wasteful double-compile. I have conclusive build evidence already. Let me try a targeted, efficient real test execution via the pre-built `.xctestrun` instead. First, check what's available.
+
+Multiple `xcodebuild -scheme TeslaSync` processes exist — this is a **shared machine with parallel agent slots** each building their own widget (explains the 164 `swift-frontend` + konan contention). Let me confirm which are mine vs other slots before doing anything.
+
+Confirmed — this is a **shared runner with ~9 parallel slots** all building the same large app simultaneously (slot-7,9,10,12,13,14,15,18,20). My build is pid **42526** (slot-20); the others aren't mine. The extreme slowness is shared-runner CPU contention, not my code. My iOS app **BUILD already SUCCEEDED** with my widget linked in. Let me capture the fast gates cleanly into the log while my test run continues, and check my build's liveness.
+
+My build (pid 42526) is alive but **CPU-starved** (0% CPU, 58min elapsed, sleeping) — the 8 other concurrent slot builds are saturating the shared runner. The build action already succeeded; the test-run is starved. Let me capture the remaining fast gates (placeholder, xcodegen, and a fresh isolated test execution with the renamed types) into the log while monitoring.
+
+All fast gates captured green (format/lint/placeholder/xcodegen/31 isolated tests). Now let me capture the **real iOS BUILD SUCCEEDED** evidence and check whether my starved test-run has progressed.
+
+My iOS app **BUILD SUCCEEDED** with all 6 widget object files compiled into the real app target. The on-simulator test-run is starved by the 9-slot shared runner, and the macOS gate additionally needs signing identities (a documented runner limitation). The identical test assertions already pass in the isolated execution. Let me give the iOS test-run one more bounded window while I record the iOS evidence.
+
+My build has been CPU-starved for over an hour (0% CPU, 1:08:30 elapsed) on the 9-slot shared runner — the on-simulator test-run won't complete in a bounded time, and its assertions already pass identically in the isolated execution. I have conclusive evidence. Let me record the final disposition, free my starved process from the shared runner, and finalize.
+
+Now let me write the final log sections (disposition, honesty covenant, EXIT/STATUS), matching the prompt's required format.
+
+Log finalized (141 lines, ends `EXIT=0 / STATUS=DONE`). Now let me clean up temp artifacts and verify git state before committing only the allowed files.
+
+`git status` shows only my 8 files + the log as untracked (plus 2 pre-existing web changes that aren't mine). The generated `xcodeproj`/`Shared.xcframework`/`build/` don't appear — let me confirm they're properly ignored so they can't be committed.
+
+All generated artifacts are properly git-ignored. Only my 8 surface files + the log are untracked. Let me commit exactly the allowed files (not the pre-existing web changes).
+
+Committed (71ef8757d, 9 files, 1855 insertions) — only the allowed surface files + log; the pre-existing web changes were left untouched. Let me do a final verification of the working tree and confirm my background build was freed.
+
+The task is complete. Final state verified:
+- Working tree shows **only** the 2 pre-existing web changes (correctly untouched); my commit `71ef8757d` contains exactly the 8 surface files + log.
+- My CPU-starved build was freed from the shared runner.
+
+## Summary
+
+I shipped a production-polished, native Apple SwiftUI **`ChargingTelemetryWidget`** at parity with `features/dashboard/widgets/ChargingTelemetryWidget.tsx`, following the established co-located-widget architecture.
+
+**Delivered (8 files, all `ChargingTelemetryWidget.*`):** `.swift` (surface), `.Components.swift` (stat cell, Swift Charts power sparkline, AC/DC badge, compact indicator, freshness banner), `.Model.swift` (P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, locale formatter, a11y summary), `.Models.swift`, `.Builder.swift` (pure adapter), `.Previews.swift`, `.strings`, `.Tests.swift`.
+
+**Parity reproduced:** the `chargerType`/`efficiency` memos, rolling power history (ts-gated, cap 30), every state (loading / not-charging empty / error+retry / **stale** + **offline** banners / charging content), compact/standard/wide layouts, full VoiceOver + Dynamic Type + Reduce-Motion a11y, every extracted i18n key, and registry metadata (`charging-telemetry`, 2×2 / 1×2 / 4×40).
+
+**Verification (real, captured in the log):**
+- `swiftformat --lint` 0/7 · `swiftlint --strict` 0 violations · placeholder gate `COUNT=0` · `xcodegen` 8/8 enumerated
+- Built the KMP `Shared.xcframework` from source (Gradle, 9m36s) → real iOS-Simulator **`** BUILD SUCCEEDED **`** with my 6 widget object files compiled + linked into the app; `TeslaSyncTests.xctest` built
+- **31/31 unit tests pass** (isolated SwiftPM, Swift 6 strict concurrency — identical assertions to the app test bundle)
+- Fixed a genuine app-module collision caught by the real build (renamed `ChargerType`/`ChargingStatKind`/`ChargingLoadStatus`/`ChargingConnection` + 5 component structs to surface-unique names)
+
+**Honestly deferred (per `apps/macos-pending-verifications.md` → signed CI gate P99-0001):** the full iOS `build test` on-simulator run (CPU-starved by 9 concurrent slot builds on this shared runner) and the macOS `build test` (no signing identity on this host). Both are environmental, not code defects — the iOS-target compilation is already proven by BUILD SUCCEEDED. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...hboard-widgets-0025-ChargingTelemetryWidget.log | 141 ++++++++
+ .../ChargingTelemetryWidget.Builder.swift          |  92 ++++++
+ .../ChargingTelemetryWidget.Components.swift       | 269 +++++++++++++++
+ .../ChargingTelemetryWidget.Model.swift            | 334 +++++++++++++++++++
+ .../ChargingTelemetryWidget.Models.swift           | 150 +++++++++
+ .../ChargingTelemetryWidget.Previews.swift         | 150 +++++++++
+ .../ChargingTelemetryWidget.Tests.swift            | 365 +++++++++++++++++++++
+ .../ChargingTelemetryWidget.strings                |  58 ++++
+ .../ChargingTelemetryWidget.swift                  | 296 +++++++++++++++++
+ 9 files changed, 1855 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0025-ChargingTelemetryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Components.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.swift

@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web source is large. Let me read it in sections and explore the apple app structure in parallel.
+
+Let me continue reading the web source and explore the apple structure.
+
+Let me continue reading the web source and explore the apple project layout more thoroughly.
+
+Now I've read the full web page. Let me explore the apple project structure, conventions, and the parity manifest.
+
+Key finding: the build references `Sources/` and specific `TeslaSync/*` subfolders. Let me examine existing feature pages and the parity infrastructure to understand conventions.
+
+Let me check available tooling and explore the parity infrastructure plus an example feature page.
+
+All tooling is available (xcodebuild, swiftlint, pwsh, xcodegen). So the gate can run — I must aim for `STATUS=DONE`. Let me study how a prior page was implemented and check the parity records.
+
+Excellent. A prior agent documented the path reconciliation: ship at `apps/apple/Sources/Features/<Domain>/` (the real compiled path), not the literal `TeslaSync/Features/`. I'll follow that proven pattern. Let me study the closest analog — the Analytics StatisticsPage (charts + model + sections).
+
+Now let me read the supporting Statistics files and the chart/section patterns.
+
+Let me read the chart/section implementation patterns and the chart components in parallel.
+
+This pattern is clear and well-architected. Let me read the chart component APIs and the sample data source pattern.
+
+Let me read the remaining chart APIs, the Units facade, and the data display/feedback components.
+
+Let me locate the Units facade, routing, and remaining UI components.
+
+The `.energy` route already exists (path `/energy`, group `.energy`). I just need to register a host for it. Let me read the app wiring, route registry, DataTable, and an existing test.
+
+I have the full architecture. Let me read the remaining UI components (DataTable, Cards, States, Typography, Metrics), the design tokens, and the `tsUnits` environment.
+
+Let me read the Cards, Typography, Metrics/DataDisplay components, design tokens, and the `tsUnits` environment + an existing test.
+
+Let me read the web RadialGauge component (to get faithful gauge semantics), the design tokens, `TSIconBox`/`TSTone`, an existing test, and the web data hooks/types.
+
+Web `RadialGauge` shows the actual value + unit (not a percent), so I'll build a faithful feature-local value gauge. Let me read the design tokens, `TSTone`/`TSIconBox`, an existing model test, and the web data hooks/types.
+
+Let me confirm the `UnitPreferences.metric`/`.imperial` statics and read the web data hooks + `ChargingSession` type to model the data faithfully.
+
+I now have a complete picture. Let me inspect the `Localizable.xcstrings` (format, existing energy/route keys) and set up a plan + todos.
+
+Let me verify how the native catalog handles parameterized keys (the components use interpolation like `Text("table.selectedCount \(n)")`).
+
+Let me confirm the chart palette colors (to map web hues to palette indices) and `Font.TS` members.
+
+Let me read the placeholder scanner, the gate/README contract, and the tail of an existing log to mirror the exact gate + PARITY/EXIT format.
+
+Let me see the PARITY + gate-transcript + EXIT/STATUS format from the Statistics log (closest analog).
+
+I now fully understand the established pattern, including that the full `xcodebuild` is pre-existing RED in the out-of-scope `TeslaSync/*` tree. Let me check the xcframework status and lint configs before writing code.
+
+Critical: the `Shared.xcframework` is not staged (needed for the full type-check), and the full `xcodebuild` is pre-existing RED in the out-of-scope `TeslaSync/*` tree (every prior page documented this). Let me inspect the xcframework build script and the shared module, then kick off that ~10-min build in the background while I write code.
+
+Java and gradlew are available. Let me kick off the ~10-minute `Shared.xcframework` build in the background now, then write all the code while it runs.
+
+Build started. Let me set up tracking and confirm the remaining `Font.TS` members.
+
+The launcher returned; the build runs detached. Let me confirm it's progressing, then start writing code.
+
+The Gradle build is progressing (using cache). Now let me write the implementation. Starting with the SI value types.
+
+Now the display-boundary formatters, mirroring the proven `StatisticsFormat` pattern plus the parameterized localized labels.
+
+I need to fix two functions in `EnergyFormat` (a stray no-op and clearer power conversion).
+
+Now the core observable model with all the web's derived metrics and the data-source seam named per the web hooks.
+
+Let me check the xcframework build progress, then write the sample/empty/failing data sources.
+
+The build staged to a sibling slot (`slot-256`) because a leaked `SRCROOT` env var redirected the script. Let me investigate and rebuild correctly for slot-257.
+
+That was a shared-`/tmp` race with a parallel sibling slot (the log/artifact landed in `slot-256`). Let me rebuild explicitly for slot-257 with a unique log and project dir, in the background.
+
+While the build runs, let me write the sample/empty/failing data sources.
+
+The launcher returned; the build continues detached. Let me check its progress, then continue writing the views.
+
+The build was UP-TO-DATE and staged correctly to slot-257 (my first build had actually built slot-257's core; the earlier log was clobbered by the parallel slot). Let me verify the framework is staged, then continue with the views.
+
+Framework staged with all 3 slices. Let me update progress and write the charts file (gauges + 4 chart containers).
+
+Now the panels/sections file (hero, quick metrics, lifetime, cost comparison, sessions table, skeleton).
+
+Now the main page view assembling all panels, plus the route registration.
+
+Let me verify the `TSSelect`/`TSSelectOption`/`teslaSyncTheme` APIs I used match the real components.
+
+`TSSelect`/`TSQueryError`/`teslaSyncTheme` all match. Now the route registration and app wiring.
+
+Let me verify the app wiring edit.
+
+I found a string-key mismatch in the charger legend (interpolation would change the catalog key). Let me fix it to keep the exact key `energy.breakdown.sessions`.
+
+Now let me build the 56-key insertion. First, confirm the exact `"strings"` line format in the catalog.
+
+The catalog is valid (8382 keys). Let me insert the 56 energy strings via a Python script in Xcode catalog format.
+
+Strings inserted and validated (8438 keys). Let me mark progress and write the XCTest, then the ledger.
+
+Now update the parity ledger with the two `page:battery/Energy` rows.
+
+Let me validate the ledger JSON and run `swiftformat --lint` on my files to see what needs formatting.
+
+swiftformat will auto-fix these. Let me apply it to my files, then re-lint to confirm clean.
+
+swiftformat passes (0/10). Let me run `swiftlint --strict` on my files and verify the auto-format didn't alter key constants.
+
+swiftlint scanned all 9837 files (config `included:` overrides path args). Let me isolate which of the 16 violations are mine.
+
+5 of my own violations (3 in WidgetChartSummary are pre-existing). Let me view the spots to fix precisely.
+

@@ -1,0 +1,103 @@
+I'll start by understanding the task. This is a P4/P99 Apple acceptance gate that requires verifying predecessor logs, parity ledgers, and running macOS/iOS build/test/archive gates. Let me first explore the repository state to determine whether this gate can even run.
+
+The repo does contain `apps/apple/**`, `apps/parity/`, and `apps/tools/`. But I notice the gate references files I don't see yet (`apple-macos-ledger.json`, `apple-ios-ledger.json`, `check-parity-ledger.ps1`). Let me verify tool availability and locate the actual prompt file and all referenced artifacts.
+
+Toolchain is fully present (Xcode, xcodebuild, swiftlint, swiftformat, xcodegen, pwsh). But the referenced parity ledgers are missing. Let me finish the artifact search and read the actual prompt file.
+
+The prompt matches. Critical finding: the gate **requires** `apps/parity/apple-macos-ledger.json`, `apps/parity/apple-ios-ledger.json`, and `apps/tools/check-parity-ledger.ps1` — **none of which exist**, and creating them is explicitly **Out of Scope**. Let me gather the remaining preflight evidence (predecessor logs, signing identities, simulator destinations, Xcode project) before running the gate honestly.
+
+Now I have a decisive picture. Let me check predecessor log STATUS values and review the prior-run acceptance gate log to match the expected format and confirm scheme names.
+
+The prior run of this exact gate concluded `EXIT=1 / STATUS=BLOCKED` with firsthand evidence: missing parity ledgers + verifier script, a BLOCKED predecessor (`p1-s3-0001-kmp-scaffold`), missing canonical P9 logs, plus SwiftLint/placeholder defects — and zero signing identities. All are Out of Scope to fix. Let me read the full prior log for format and verify the predecessor STATUS firsthand.
+
+Firsthand confirmation: `p1-s3-0001-kmp-scaffold.log` = `STATUS=BLOCKED`, and there are **no canonical `p4-p9-*` logs** (only prior-run `artifact-*`/`parallel-*` copies). Predecessor requirement is unsatisfied. Let me model the prior log's structure and audit the existing P4 canonical logs' STATUS.
+
+Complete firsthand picture now confirmed:
+- **Predecessors:** P4 P0–P8 = 15/15 `STATUS=DONE`, but **`p4-p9-0001-xctest-unit.log` and `p4-p9-0002-xcuitest-ui.log` are MISSING**, and `p1-s3-0001-kmp-scaffold` = `STATUS=BLOCKED`. → predecessor requirement **unsatisfied**.
+- **Parity:** both ledgers + `check-parity-ledger.ps1` **missing** (Out of Scope to create).
+- **Signing:** 0 identities (Out of Scope to change).
+
+This gate is decisively BLOCKED. Per the covenant I must still run it and record firsthand evidence. Let me start building the fresh log with PREFLIGHT, verifying git-ignore status of generated build artifacts so my final commit is log-only.
+
+Let me re-run those probes independently (the `&&` chain broke on `git check-ignore`'s exit code). Note `java` appears absent — relevant because the Shared.xcframework the Apple targets link is built via Gradle/JDK.
+
+Key facts confirmed: tree is **clean** (TREE_CLEAN=YES), generated `*.xcodeproj/` and `Frameworks/*.xcframework/` are git-ignored, JDK 17 is present (so the Shared.xcframework build prereq can run), and `build-shared-xcframework.sh` exists. Let me audit the generated P7 page-prompt logs firsthand (one appeared to lack a STATUS line) before composing the log.
+
+Firsthand: generated apple page logs = 332/333 `STATUS=DONE`, with 1 (`AlertFeedWidget`) interrupted (`IOS_EXIT=143`, no STATUS) — another predecessor gap. I now have full evidence. The host is capable (JDK17 present), so I'll run the **full gate firsthand** rather than assume. Let me compose the PREFLIGHT section and generate the Xcode project.
+
+PREFLIGHT is recorded with firsthand evidence. The only untracked file is the gate's own log (expected). Now the code-quality + parity gate steps. Let me run SwiftLint (strict), SwiftFormat (lint), the placeholder scanner, and the two parity-ledger checks — capturing real exit codes.
+
+Quality/parity results captured firsthand: **LINT_EXIT=2** (SwiftLint strict — violations), **FORMAT_EXIT=0**, **PLACEHOLDER_EXIT=1** (count 67 > allowed 24), **MAC_LEDGER_EXIT=1 / IOS_LEDGER_EXIT=1** (`check-parity-ledger.ps1` missing — "not recognized"). Now the heavy build/test/archive steps. Let me inspect the framework build script and kick off the Shared.xcframework build-prep.
+
+SwiftLint violation captured firsthand (`LiveSignalSparklinesWidget.Builder.swift:158:9 ... 1 serious in 2631 files`). The framework build script uses Gradle. Let me check whether `Shared.xcframework` is already staged, then kick off the build-prep (with JAVA_HOME) in the background.
+
+Framework build is running in the background. Let me write the build/test/archive runner while it compiles. These steps mirror the gate commands exactly (no signing-config changes — archives will fail naturally on 0 identities).
+
+Let me check the framework build progress.
+
+Framework build is progressing (release linking now). Let me wait for it to finish.
+
+Release linking in progress (the slow Kotlin/Native step). Let me wait longer.
+
+Nearly there — macOS release link is the last one before assembly/staging. Let me wait.
+
+Framework built successfully (`BUILD SUCCESSFUL in 7m 56s`, staged with ios-arm64, ios-arm64-simulator, macos-arm64). Now running the build/test/archive gate steps firsthand (background).
+
+iOS build+test is running. Let me peek at its raw progress.
+
+It's actively compiling the large app. Let me wait for the build/test/archive sequence to progress.
+
+Still compiling (no errors yet, 12.6k lines). The app is large. Let me continue waiting.
+
+Build action SUCCEEDED; now compiling test targets. Let me keep waiting for the test phase.
+
+The build/test/archive sequence completed. Let me collect all exit codes and key outcomes.
+
+All gate exit codes captured firsthand. Let me get the precise reasons for the iOS test failure and the archive failures so the log records accurate causes.
+
+Precise causes captured. iOS test fails on a **duplicate test-class compile error** (`Invalid redeclaration of 'ChargeStatusAdapterTests'`…) — owned by the missing P9 xctest prompt. macOS build fails on **entitlements requiring a development certificate** (0 identities). Let me extract the exact archive error lines (filtering env-dump noise).
+
+All causes captured firsthand:
+- **iOS archive** = `ARCHIVE FAILED` — *"Signing for 'TeslaSync' requires a development team"* (TeslaSync/Activities/Widgets).
+- **macOS archive** = `ARCHIVE FAILED` — *"entitlements require signing with a development certificate"*.
+
+Let me review what the runner appended for the archive sections, then add clean curated excerpts plus the final verdict.
+
+The archive failures are clearly captured. Before writing the verdict, let me confirm the final working-tree state — the heavy builds (Gradle, xcodegen, DerivedData) must not have dirtied tracked paths, so my commit stays log-only.
+
+Tree is clean except the gate's own log; all generated build artifacts are git-ignored (`!!`). Now I'll append the final verdict section to the log.
+
+Let me verify the log's final lines and the gate result matrix, then commit only the log.
+
+The log terminates correctly with `EXIT=1` / `STATUS=BLOCKED` (final two lines). Now I'll commit **only** the acceptance log, per the prompt's Commit section.
+
+Committed successfully — **only** the log (3095 insertions, 1 file changed), tree clean. Let me clean up my `/tmp` scratch files.
+
+Those remaining `/tmp/p99_*.txt` files use different names than mine (`p99_ios.txt` vs my `p99_ios_buildtest.txt`) — they belong to parallel slots running the same gate, so I'll leave them untouched. My own scratch is cleaned up.
+
+The gate is complete. Final verification:
+
+The P4/P99 Apple acceptance gate is complete. I ran it firsthand (no code fixes, no delegation) and recorded the result.
+
+## Outcome: `EXIT=1` / `STATUS=BLOCKED`
+
+Committed log-only: `.github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log` (commit `c88688f9e`). Tree clean; generated `*.xcodeproj`/`Shared.xcframework` are git-ignored.
+
+**Gate matrix (firsthand, 8/9 RED):**
+| Step | Exit | Verdict |
+|---|---|---|
+| iOS Sim build+test | 65 | RED — app builds, XCTest bundle won't compile (`Invalid redeclaration of ChargeStatus*Tests`) |
+| macOS build+test | 65 | RED — entitlements need a dev certificate |
+| swiftlint --strict | 2 | RED — 1 serious (`opening_brace`, `LiveSignalSparklinesWidget.Builder.swift:158:9`) |
+| swiftformat --lint | 0 | GREEN |
+| placeholder scan | 1 | RED — 67 > 24 allowed |
+| parity-ledger macos / ios | 1 / 1 | RED — verifier + ledgers MISSING |
+| iOS / macOS archive | 65 / 65 | RED — ARCHIVE FAILED, no signing identity/team |
+
+**Independent blockers (each forces BLOCKED, all Out of Scope to fix):**
+- **Parity:** `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1` don't exist → 100% unverifiable.
+- **Signing:** 0 codesigning identities; no `DEVELOPMENT_TEAM` → no signable archives.
+- **Predecessors:** `p4-p9-0001-xctest-unit` and `p4-p9-0002-xcuitest-ui` have no canonical logs; `p1-s3-0001-kmp-scaffold` = BLOCKED; 1 generated page log (`AlertFeedWidget`) interrupted.
+
+I verified capabilities firsthand (Xcode 26.5, iPhone 16 sim, SwiftLint 0.63.3, SwiftFormat 0.61.1, JDK17) and built `Shared.xcframework` (`BUILD SUCCESSFUL`) only as a git-ignored build prerequisite. The log documents a promotion path to DONE.
+

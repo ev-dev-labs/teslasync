@@ -89,7 +89,7 @@ private enum ScheduledExportsPanelSampleSchedules {
             exportType: .drives,
             format: .csv,
             scheduleCron: "0 9 * * 0",
-            delivery: ScheduledExportDelivery(kind: .download),
+            delivery: ScheduledExportDeliveryView(kind: .download),
             rangeWindow: "7d",
             enabled: enabled,
             nextRunAt: Date(timeIntervalSince1970: 1_717_000_000)
@@ -103,7 +103,7 @@ private enum ScheduledExportsPanelSampleSchedules {
             exportType: .charging,
             format: .json,
             scheduleCron: "0 0 * * *",
-            delivery: ScheduledExportDelivery(kind: .email, target: "you@example.com"),
+            delivery: ScheduledExportDeliveryView(kind: .email, target: "you@example.com"),
             rangeWindow: "24h",
             enabled: false,
             lastRunAt: Date(timeIntervalSince1970: 1_716_000_000),

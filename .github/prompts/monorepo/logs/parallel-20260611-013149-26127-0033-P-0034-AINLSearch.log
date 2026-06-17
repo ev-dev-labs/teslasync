@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me explore the web source and the existing Apple app structure.
+
+Now let me understand the web building blocks and find the closest sibling Apple surface that mirrors this exact web pattern (`AIFeatureCard` + `withAiFeature` + `useAiStream` + `Textarea`).
+
+Now I understand the web source. It's a natural-language search card: prompt textarea + streaming output via `useAiStream` on `/ai/search/query`, wrapped in `AIFeatureCard` + `withAiFeature('nl-search', ...)`. Let me check whether AINLSearch already exists in Apple, and find the closest sibling surfaces (the other prompt-input streaming features) to use as templates.
+
+`AINLDriveSearch` is the ideal template — same prompt→stream→output pattern. Let me read both the web source for it and all its Apple files to learn the exact conventions.
+
+The web `AINLDriveSearch` is structurally identical to `AINLSearch` (only URL, feature ID, and i18n keys differ). It's the perfect template. Let me read all its Apple files.
+
+Excellent template. Let me read the remaining AINLDriveSearch files: Logic, Source, Chrome, Views, Previews, strings, and both test files.
+
+I now fully understand the template (11 files). Before writing, I must verify how the build discovers these files (globbing vs explicit lists), since the prompt restricts me to `AINLSearch.*` files only. Let me check `project.yml`, the shared tokens, and the feature-id registry.
+
+Key finding: the project uses **XcodeGen** with directory globbing, so `AINLSearch.*` files will be auto-discovered (no project.yml edit needed). But I must verify the toolchain can actually build/test: `xcodegen`, the `Shared.xcframework` dependency, `pwsh` for the placeholder check, and the design tokens.
+
+`Shared.xcframework` is absent (only `.gitkeep`), and the scheme has a preAction to build it. This is the critical path. Let me read that build script and check how prior surfaces documented their verification status.
+
+The xcframework build requires the Kotlin/Native toolchain via Gradle. Let me check whether `apps/shared` exists and is buildable, and read the pending-verifications doc that's referenced as the known-status record.
+
+This documents the established pattern clearly: the full-app `xcodebuild build test` is blocked by pre-existing parallel-merge collisions, the unstaged KMP `Shared.xcframework` (Kotlin/Native long-pole), and missing signing identities — so each surface is verified **green in isolation** (SwiftPM build + tests + real iOS/macOS `swiftc -typecheck` + swiftlint/swiftformat/placeholder + i18n parity + xcodegen enumeration). Let me read the rest and find the closest AI-surface precedent.
+
+The 0032-AINLDriveSearch log is my direct precedent (identical surface pattern). Let me read it to match the exact verification methodology, evidence format, and final status.
+
+I now have the canonical precedent and methodology. Let me set up my plan, kick off the long-pole KMP framework build in the background, and verify the backend route + feature-id parity for `nl-search` / `/ai/search/query`.
+
+`nl-search` is a registered feature. Let me confirm the exact route `/ai/search/query` and the web feature's `uiTestId`, then kick off the KMP framework build in the background while I write files.
+
+Parity confirmed: `nl-search` is registered (web `features.ts` + `internal/ai/strategies/nl-search/strategy.go`), and the route is `POST /api/v1/ai/search/query` (`ai_routes.go:226`), with web uiTestId `ai-feature-nl-search-root`. Now I'll start the long-pole KMP framework build in the background and verify the exact web i18n default strings.
+
+Let me read the exact web i18n catalog text for `search.aiSearch` and confirm the background Gradle build is actually running.
+
+The Gradle KMP build is actively progressing (compiling Kotlin iosArm64, using build cache). Let me read the `search` namespace block at line 1788 for the canonical text.
+
+I have the canonical web strings. The Gradle build runs in the background. Now I'll write all 11 `AINLSearch.*` files, adapting the proven `AINLDriveSearch` template (renaming `NLDriveSearch`→`NLSearch`, slug→`AINLSearch`, featureID→`nl-search`, route→`/ai/search/query`, keys→`search.aiSearch.*`, and the copy). Starting with the Foundation-only files.
+
+Now the main view, Views, and Chrome files.
+
+Now the Previews and strings files.
+
+Now the two test files.
+
+All 11 files created. Now let me run the formatting and lint gates on the shipped files, and check the Gradle build progress.
+
+swiftformat clean (0/10). Now swiftlint --strict on the shipped files.
+
+swiftlint --strict clean (0 violations). Now the placeholder/stub gate. Let me inspect the checker and run it.
+
+Now I understand the checker. Let me run the prescribed placeholder command verbatim, then a meaningful scan (copying my swift files to a temp dir), plus a real stub-marker grep — exactly mirroring the accepted sibling disposition. I'll also check Gradle progress.
+
+Meaningful scan shows 7 hits, all the literal word "Placeholder" — the legitimate web-parity input-hint term (the prompt field's placeholder + the `search.aiSearch.placeholder` i18n key), identical in structure to the accepted sibling. Let me confirm zero real stub markers and document the exact lines.
+
+Placeholder gate verified: prescribed command `EXIT=0`; meaningful scan's 7 hits are all the legitimate "placeholder" input-hint term (web `search.aiSearch.placeholder` + the SwiftUI field placeholder); zero real stub markers. Now the dual-SDK typecheck. Let me gather the real design-system closure and check Gradle progress.
+
+UnitFormatters references `UnitPreferences` (a KMP `Shared` type) so it's correctly excluded; nothing else depends on it. DS closure = Tokens + Design + Components − UnitFormatters = 41 files. Let me run the dual-SDK typecheck of my 8 source files against the real design system.
+
+iOS 18 typecheck: 0 errors. Now macOS 15.
+
+Both typechecks pass (0 errors on iOS 18 + macOS 15), and the **Gradle KMP build succeeded (7m 26s)**. Let me stage the `Shared.xcframework` and set up the SwiftPM harness to build the real module + run all tests.
+
+Staged. Now the SwiftPM harness — build the real module (design system + surface) and run all test suites.
+
+Harness assembled (49 lib + 2 test files). Now build + run the tests.
+
+**SwiftPM harness: 39/39 tests pass** (NLSearchAccessibilityTests 6, NLSearchLogicTests 7, NLSearchModelTests 19, NLSearchRequestTests 6, NLSearchStringsTests 1), build clean in 19s. Now the i18n bidirectional parity check.
+
+My orphan check had a false positive — multi-line `string(\n "key",\n ...)` calls weren't captured by the single-line regex. Let me verify properly with a Python parser that handles multi-line calls.
+
+**i18n parity perfect**: 23 keys in `.strings` ↔ 23 referenced in code, 0 missing / 0 orphan, all 5 web keys present, no raw `Text("…")` literals. Now `xcodegen generate` to prove the files are wired into the targets.
+
+`xcodegen generate` succeeded — all 11 files wired (66 refs), test files routed to the test target. Now the full-app build attempt. With the framework staged, I'll build the iOS app target directly (skipping the long Gradle scheme preAction since it's already staged) to isolate whether any AINLSearch error exists.
+
+iOS app-target build failed with **only 1 error, and ZERO AINLSearch errors**. Let me identify that 1 pre-existing error to document it precisely.
+
+The single error is in **`AIGeofenceAwareAutomationSuggestions.swift:141`** — another agent's surface (outside my allowed files) that uses `TSGlassPanel` without marking its closure `@escaping`. My `AINLSearch.swift` `glass` helper correctly marks it `@escaping`, so my surface compiles clean. Let me confirm AINLSearch was actually compiled in this build and that there's genuinely only this one pre-existing error.
+
+Confirmed: AINLSearch was compiled (appears 12× in the log), exactly **1 error total** (in another agent's `AIGeofenceAwareAutomationSuggestions.swift`), `** BUILD FAILED **`. My `glass` helper correctly marks `content` `@escaping` (line 122) — that's the exact bug the other surface has. Let me attempt the macOS target build for the same evidence.
+
+Both platforms: **ZERO AINLSearch errors**; each blocked by a different pre-existing unrelated surface. Let me capture the exact macOS error text for the log.
+
+macOS error is in **`RecentDrivesSection.Previews.swift:24`** ("compiler unable to type-check in reasonable time") — another agent's feature-views surface. Both platforms: zero AINLSearch errors, blocked by distinct pre-existing surfaces. I have all evidence. Let me verify git cleanliness and clean up generated artifacts.
+
+Git is clean — only the 11 `AINLSearch.*` files untracked; generated artifacts (gitignored) removed. Now let me gather line counts and runner facts for the log.
+
+I have all evidence. Now I'll write the comprehensive gate log following the accepted sibling format, with raw exits and the honesty covenant.
+
+Log written. Let me do a final cleanliness check, stage the exact files, and commit.
+
+Clean — exactly the 11 `AINLSearch.*` files + the log. Staging and committing.
+
+Committed (`bf90db1a7`, 12 files, 2043 insertions). Final verification of clean tree and todo completion.
+
+All 11 todos done, working tree clean, commit in place. Let me stop the background Gradle shell and clean up temp logs.
+
+The task is complete. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0034-AINLSearch.log   | 262 ++++++++++++++++++++
+ .../shared-surfaces/AINLSearch.Adapter.swift       |  67 +++++
+ .../shared-surfaces/AINLSearch.Chrome.swift        | 195 +++++++++++++++
+ .../shared-surfaces/AINLSearch.Logic.swift         | 167 +++++++++++++
+ .../shared-surfaces/AINLSearch.Model.swift         | 272 +++++++++++++++++++++
+ .../shared-surfaces/AINLSearch.ModelTests.swift    | 232 ++++++++++++++++++
+ .../shared-surfaces/AINLSearch.Previews.swift      | 111 +++++++++
+ .../shared-surfaces/AINLSearch.Source.swift        |  84 +++++++
+ .../shared-surfaces/AINLSearch.Tests.swift         | 193 +++++++++++++++
+ .../shared-surfaces/AINLSearch.Views.swift         | 210 ++++++++++++++++
+ .../TeslaSync/shared-surfaces/AINLSearch.strings   |  46 ++++
+ .../TeslaSync/shared-surfaces/AINLSearch.swift     | 204 ++++++++++++++++
+ 12 files changed, 2043 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0034-AINLSearch.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AINLSearch.swift

@@ -1,0 +1,144 @@
+I'll start by assessing the environment capabilities and reading the web source spec, since this task has a strict capability gate (SwiftUI + Swift Charts + MapKit, Xcode tooling).
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source spec and explore the Apple app structure.
+
+This is a large, established Apple codebase (2572 files in feature-views) with a clear multi-file pattern per surface. Let me check if BatteryRangeCharts already exists, understand the conventions, and find a chart-based reference.
+
+There's an ideal template: `BatteryRangePanel` (closest semantic match — battery + range, full file set including `.Projection`, `.States`) and `BatteryLevelChart` (Swift Charts usage). Let me study the full BatteryRangePanel set and the chart pattern.
+
+Excellent template. Let me read the rest of the BatteryRangePanel file set, the chart pattern from BatteryLevelChart, and shared infrastructure.
+
+Now let me read the tests/previews/strings conventions, the Swift Charts pattern, and the project/build configuration.
+
+Now the tests, the chart adapter, and the build configuration. Let me also locate the shared design tokens and find an AreaMark (area chart) example.
+
+I have the full pattern. Now let me locate the shared tokens, chart color mapping, an AreaMark multi-series example, and the build config.
+
+Tokens aren't under Sources/. Let me find them across the tree, read the web chart colors, and view the full project.yml structure.
+
+Key finding: design tokens come from `apps/design/generated/apple` (the `Color.TS`, `Font.TS`, `TSSpacing` namespace). Let me inspect those generated tokens, the test target config, and locate the shared TS components.
+
+Now let me read the full Tokens.swift, the native AnimatedNumber, and a multi-series AreaMark example for the area chart.
+
+I now understand the token system. Critically, `Color.TS.chartCategorical[0]` = (0.0, 0.447, 0.698) = #0072B2 and `[1]` = (0.902, 0.624, 0.0) = #E69F00 — these **exactly match** the web `CHART_COLORS_CB_SAFE[0]`/`[1]`. So web `CHART_COLORS[i]` → native `Color.TS.chartCategorical[i]`.
+
+Let me read a multi-series AreaMark example, the native AnimatedNumber API, helpers/types, and verify the xcodegen/project setup.
+
+All tooling present (xcodegen, pwsh, check-placeholders.ps1). No `.xcodeproj` yet — I'll generate it with xcodegen. The native `AnimatedNumber` shared surface has a web-parity convenience init I'll reuse. This surface has **no map** (no Leaflet in source), so no MapKit needed.
+
+Let me verify exact web semantics (batteryColor, formatDate, types) and check the placeholder gate.
+
+Let me read the forbidden-pattern list (to keep comments clean), confirm `AnimatedNumber` defaults, and check whether a shared `RadialGauge` exists to reuse.
+
+Forbidden patterns include "Placeholder" (case-insensitive) — I'll avoid that word entirely in code/comments. No shared `RadialGauge` (hand-roll like the sibling). `AnimatedNumber` defaults: duration=1s, decimals=0. Let me read the lint/format configs to match style, then start building.
+
+`ChartsRow` is the closest structural sibling — two glass panels in a responsive `LazyVGrid` (web `grid-cols-1 lg:grid-cols-2`), props-fed via a Source, per-panel empty states. Let me read its grid setup and panel composition.
+
+I have all the idioms. Let me confirm the exact signatures of the shared `tsGlassPanel()` modifier, `TSFadeIn`, `TSButton`, and `TSSkeleton`.
+
+I now have the complete picture. Let me set up a plan and todos, then build the surface. The mapping is clear: web `CHART_COLORS[i]` → `Color.TS.chartCategorical[i]`, web two-panel `grid-cols-1 lg:grid-cols-2` → adaptive `LazyVGrid`, `tsGlassPanel()` modifier, hand-rolled gauge (no shared one), reuse shared `AnimatedNumber`. No map (no Leaflet in source).
+
+Now I'll build the surface. Starting with the pure Adapter (types + math, no SwiftUI).
+
+Let me fix two lines in the Projection that exceed the 120-col limit by adding a short formatting helper.
+
+Now add the `formatted` helper alongside `distanceSeriesName`:
+
+Now the Model (state-holder seam, telemetry, source, @Observable model, in-memory source, strings facade):
+
+The stat tiles use `AnimatedNumber`, which needs the locale to match the projected text. Let me thread `localeIdentifier` through the content model.
+
+Now the Views (panels, section title, gauge, stat tile, tone→color):
+
+Now the Charts file (Swift Charts: battery bar chart + drive trend area chart, with tooltips and legend):
+
+Now the States chrome (loading skeleton, empty, error, freshness chip, connectivity banner, drive-empty):
+
+Now the strings catalog and Previews:
+
+Now the two test files (model/phase wiring + projection/math/a11y):
+
+All 11 files created. Let me run fast format/lint checks on the new files and scan for forbidden patterns before the full build.
+
+swiftformat wants auto-fixes (long lines, redundant `@ViewBuilder`, redundant parens). Let me apply swiftformat (ecosystem tool) to the new files, then re-verify.
+
+swiftformat passes. Now swiftlint --strict on the new files:
+
+swiftlint --strict passes (EXIT=0). Now generate the Xcode project and check available simulators.
+
+Project generated; `iPhone 16` simulator exists. Let me verify the `Shared.xcframework` dependency is present before attempting the (heavy) full build.
+
+The `Shared.xcframework` dependency is missing (only `.gitkeep`). This is a KMP-produced artifact (ADR-004). Let me investigate how it's built — this is critical for the build/test gate.
+
+There's a build script and KMP module with `gradlew`. Let me read the script to produce the framework.
+
+The framework is built via Gradle (`:core:assembleSharedXCFramework`), wired as a pre-build script. Let me check the project.yml wiring and whether Gradle caches/outputs already exist.
+
+The script is wired as a pre-build phase. The KMP output doesn't exist yet. Let me check the Gradle cache state and kick off the framework build (it's the gate's prerequisite).
+
+Gradle caches (2.2G), Kotlin/Native 2.4.0 prebuilt, and Java 17 are all present — the framework build is feasible. Let me build it (this is the gate prerequisite).
+
+Gradle build is running (KMP native compilation takes a few minutes). Let me wait for it.
+
+Output is buffered by `tail` until completion. Let me peek at build progress in a separate shell while it continues.
+
+Good progress — native frameworks compiled for all targets, XCFrameworks assembling. Let me continue waiting for completion.
+
+Framework built and staged. Now let me confirm the scheme names and start the iOS build (validating my code compiles within the full app).
+
+Schemes confirmed. Let me start the iOS build (build-only first to fail fast on any compile error), capturing to a log file with a slot-local derived data path.
+
+Build failed, but the failing batches are unrelated `AI*` files — I need the actual `error:` diagnostics. Let me extract them.
+
+One pre-existing compile error in an unrelated, out-of-scope file (`AISignalExplorerNlFilter.swift:142`) — zero errors in my BatteryRangeCharts files. Let me confirm git state (that I only added my files) and inspect that pre-existing error.
+
+Confirmed: my files are the **only** uncommitted changes; the broken `AISignalExplorerNlFilter.swift` is a **committed predecessor** surface (commit `441cd2538`) with a genuine Swift 6 error (`content` needs `@escaping`). Let me assess blast radius and check the documented build status before deciding.
+
+Let me read the count and the pending-verifications doc — this likely documents the baseline build status and reframes the decision.
+
+The pending-verifications doc reveals the baseline Apple surfaces were authored/committed on non-Mac hosts with **deferred** Mac compilation — so committed predecessors may not compile here. Let me precisely measure how many distinct compile errors exist in the full build (filtered earlier showed only one).
+
+Decisive finding: the **entire** iOS build has exactly **one** compile error, in a single pre-existing, committed, out-of-scope predecessor file (`AISignalExplorerNlFilter.swift:142`). My BatteryRangeCharts surface and all 2280+ other files compiled cleanly.
+
+Respecting my allowed-files scope, I won't ship a change to that predecessor. But to **verify** my surface compiles against the real shared deps and my tests pass, I'll temporarily patch that one predecessor error (verification scaffolding), run the full build+test, then revert it so my commit stays in-scope. Let me apply the temporary patch and do an incremental build.
+
+Temporary patch applied. Now incremental iOS build (only the changed file recompiles):
+
+Build failed (rc=65) but with 0 compile errors — a non-compile failure (likely signing or a script phase). Let me find the actual cause.
+
+A different failure now (no `error:` text — likely a compiler crash) in another predecessor batch. Let me pinpoint the cause at line ~7192 and confirm whether my files compiled.
+
+A **compiler crash** (Stack dump at lines 4002 & 7162), not a diagnostic — no reference to any BatteryRangeCharts file. Let me identify which file triggered the crash.
+
+Definitive: build2 crashes the Swift compiler on a **predecessor** batch (`AnnouncerRegion`/`AnomalyInlineRow`/`App*`/`AppearanceSettings`) — a second, separate pre-existing baseline defect. No BatteryRangeCharts file is referenced by any error or crash. The committed baseline genuinely doesn't build on this Mac toolchain (multiple out-of-scope defects), consistent with `pending-verifications.md`.
+
+I'll revert my temporary predecessor patch (keeping my commit in-scope) and verify my surface compiled + check object files.
+
+No per-file object files (the build aborted before reaching my files). So I'll verify my surface independently. The highest-fidelity approach: a local SwiftPM package (module `TeslaSync`) with faithful stubs of the shared design-system symbols + my 8 source files + both test files, compiled against real Swift Charts. Let me confirm the exact `TSButton` init signature first.
+
+I have all signatures. Let me build a local SwiftPM verification package (module `TeslaSync`) with faithful design-system stubs + my 8 source files + both test files, compiled under Swift 6 strict concurrency against real Swift Charts. This verifies the whole surface type-checks and both test suites pass, independent of the broken baseline.
+
+Now run the isolated package's tests (compiles all 8 surface files + both test suites under Swift 6 strict concurrency):
+
+Excellent — the harness caught a **real bug in my test file**: `XCTAssertEqual(points.first?.distance, 42, accuracy:)` passes an optional `Double?` to the accuracy overload (which needs non-optional). All 8 source files + Tests.swift compiled cleanly; only these test assertions fail. Let me fix them by unwrapping.
+
+Fixed. Let me re-copy the test file and re-run the isolated tests:
+
+**All 38 tests pass** and the **entire surface compiled cleanly** under Swift 6 strict concurrency against real Swift Charts. This verifies both the SwiftUI layer and the logic. The harness also caught a real test bug (now fixed).
+
+Let me re-verify lint/format on my files (the test file changed) and run the placeholder gate on my surface.
+
+All host-runnable surface gates pass: **swiftformat 0/10**, **swiftlint --strict clean**, **placeholders 0**, **38/38 isolated tests pass**. Now let me capture the macOS build result for the log (expected to hit the same predecessor blocker), then write the gate log.
+
+The macOS build also fails — on yet **another** out-of-scope predecessor (`RecentDrivesSection.Previews.swift:24`). Let me enumerate all distinct baseline errors and confirm none are mine.
+
+Comprehensive, honest evidence gathered. **Zero** errors reference any BatteryRangeCharts file in any build; the committed baseline has ≥3 distinct out-of-scope predecessor defects (iOS: `AISignalExplorerNlFilter` + a compiler crash; macOS: `RecentDrivesSection.Previews`) — it doesn't compile on this Mac toolchain, independent of my surface. Let me write the gate log.
+
+Now let me clean up verification scaffolding, confirm the predecessor patch is reverted, and verify only my surface files + log are staged for commit.
+
+Working tree is clean — only my 11 surface files + the log are new; the predecessor patch is fully reverted; the `.xcodeproj` is git-ignored. Let me commit my in-scope surface + the honest log.
+
+Committed (`3c15df2ed`) — all 11 surface files + the log, predecessor untouched. Let me finalize todos and confirm a clean tree.
+
+The task is complete to the maximum extent possible within scope. The working tree is clean; the commit contains exactly my 11 surface files + the gate log (2,665 insertions), with no predecessor files modified.
+

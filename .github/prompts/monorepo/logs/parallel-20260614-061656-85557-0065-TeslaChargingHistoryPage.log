@@ -1,0 +1,172 @@
+I'll start by exploring the repository structure to understand the task fully, including the web source page and the existing Apple app architecture.
+
+Now let me explore the Apple app structure, parity manifest, and related infrastructure.
+
+This is a heavily decomposed architecture (page split into Page/Model/Sections/Charts/Format/RouteRegistration files). Let me examine the project build config, parity manifest, and a representative cost/billing page as reference.
+
+Key finding: the build compiles `Sources/` (not `TeslaSync/Features/`). All existing parity pages live in `Sources/Features/<Domain>/`. Let me check tooling availability and the parity manifest/ledger.
+
+Xcode 26.5, swiftlint, xcodegen all present — gate is not blocked. Let me read the parity manifest page record, the ledger format, an existing log for format reference, and the README gate contract.
+
+Let me read the p4-apple README gate contract and study the closest reference pages (TrueCost = cost/billing with charts, FleetCompare = has a table).
+
+Now let me map the shared component library APIs I'll need. Let me list the Components directory and find the key shared components.
+
+There's a shared `DataTable.swift`. Let me read the key component files I'll need.
+
+Let me read the web charging hook types and find the Apple Units facade, AppRoute, and remaining UI components.
+
+Let me locate the Units facade, AppRoute enum, and the SharedFacade charging domain to understand the data binding layer.
+
+Let me understand the route registry and parser, plus how an existing page without a dedicated enum case registers.
+
+Now let me read the remaining UI building blocks, check the web nav for this route, and inspect the test + localization conventions.
+
+There are co-located model tests. Let me read the remaining shared components and the design tokens so I use exact APIs.
+
+Critical: `Shared.xcframework` must be built from KMP via Gradle, and the `.xcodeproj` is generated. Let me read the gate contract, design tokens, and assess the KMP build.
+
+Now let me read the design tokens and start assessing the KMP build (the long pole). Let me kick off the Gradle xcframework build in the background while I continue.
+
+Let me kick off the KMP framework build in the background (long pole) and read the design tokens in parallel.
+
+Key finding: `tesla_charging.*` keys may already exist. Let me check exactly which strings exist and read the route tests to mirror.
+
+The catalog has a giant `translation.*` mirror plus bare keys (like `route.charging`) that the Swift code actually uses. Let me confirm the bare-key convention used by existing pages.
+
+The bare-key convention is clear (`"key" : { ... }`). Let me read the route tests and the existing route-registration test to mirror, and check the KMP build progress.
+
+Let me check the SwiftLint config, the placeholder-scan patterns, and the KMP build progress.
+
+pwsh is available, and the placeholder scan is case-insensitive (so `.placeholder` needs a `// parity:allow` marker). KMP build still running. Let me read the chart axes modifier to handle month labels correctly.
+
+I have enough context. Let me check the KMP build progress and find the `tsChartAxes` helper, then start implementing.
+
+Let me verify a few generic string keys and check KMP build progress, then I'll start implementing.
+
+The bare catalog isn't exhaustive (shared keys like `filter.from`, `route.charging` are already used without entries) — so missing keys render as fallbacks, and the build won't fail. I'll add the 31 parity strings + `route.teslaChargingHistory`. Decision: implement exactly the manifest scope (vehicle select + refresh, no range picker — matching the web button which only passes vin). Let me set up the plan and todos.
+
+Now I'll implement. First, let me verify no type-name collisions, then write the Models file.
+
+Now the Format file (display-boundary formatters). Let me also verify the `tsUnits` environment key used by TrueCost.
+
+Now the `@Observable` page model.
+
+The KMP build finished. Let me check its result and verify the xcframework exists.
+
+KMP build succeeded (11m). Now let me stage the framework into `apps/apple/Frameworks/` (fast, Gradle cached) and continue writing the view files in parallel.
+
+The framework is staging in the background. Let me write the main Page view, Sections, Charts, Table, Sample, and RouteRegistration files.
+
+Framework staged. Let me write the Sections file (summary cards, sessions panel, last-sync line, skeleton).
+
+Now the Charts file (Monthly-Spending: ChartContainer + BarChart).
+
+Now the Table file (DataTable with all columns + CSV export), then I'll revise the Charts file to reference `col.month`/`col.total` via the chart's copy-data CSV.
+
+Now let me revise the Charts file to reference `col.month`/`col.total` via the chart's copy-data CSV (matching web `dataColumns`).
+
+Now the Sample/Empty/Failing data sources.
+
+Now the RouteRegistration file and the navigation wiring (AppRoute case + app composition).
+
+Now let me add the 31 parity strings + `route.teslaChargingHistory` to the xcstrings catalog. I'll use a targeted text insertion (preserving existing formatting, no full re-serialization) via Python.
+
+32 keys inserted, JSON valid. Now let me read the existing model test to mirror conventions, then write the two test files.
+
+Now the two test files (model state-machine + route registration), mirroring existing conventions.
+
+Now let me run fast feedback: SwiftLint on the new code and the placeholder scan, and verify the framework staged.
+
+SwiftLint flagged trailing-closure and line-length issues. Let me view the exact lines and fix them.
+
+Let me fix the SwiftLint violations: trailing-closure usage and the two long lines.
+
+Now fix the three TSColumn trailing-closure violations in the Table file:
+
+Let me re-run SwiftLint and also run SwiftFormat --lint on the new files.
+
+SwiftLint is clean. SwiftFormat wants auto-formatting (number grouping, wrapping). Let me run SwiftFormat to auto-fix, then re-verify both.
+
+Both linters are clean. Let me verify the auto-formatted Sample file preserved correct values, then run the placeholder scan and proceed to the build.
+
+SwiftFormat normalized the numbers (values preserved). The placeholder scan has one false positive: the i18n key `tesla_charging.searchPlaceholder` contains "Placeholder". Let me view that line and add a sanctioned `// parity:allow` marker.
+
+The placeholder scanner flags the i18n key `searchPlaceholder` (contains "Placeholder"). Let me see how sibling pages handle this `parity:allow` pattern.
+
+The established pattern puts the key on its own line with a `// parity:allow i18n key name, not a stub` marker. Let me restructure the search input that way.
+
+All gates clean (placeholder EXIT=0, SwiftFormat 0, SwiftLint 0). Now let me generate the Xcode project and build.
+
+Project generated. Now the macOS build (large project — first build is slow). Let me start it.
+
+The macOS build is running (large project). Let me wait for it.
+
+Build failed — but the listed batches are unrelated widget files, suggesting a root error elsewhere. Let me extract the actual compiler errors.
+
+The errors are in `Input.Previews.swift` (not my files) — `return` in a ViewBuilder. Let me check whether this is pre-existing (unmodified by me) and view the offending code.
+
+Confirmed: `Input.Previews.swift` is **unmodified by me** and pre-existing-broken under this toolchain — `@Previewable @State` combined with an explicit `return` in a `#Preview` is illegal. My files compiled fine (no `@Previewable`). Let me assess the blast radius across the repo before deciding how to unblock.
+
+Let me find the scope differently — files containing `@Previewable` that also contain a `return` in a preview.
+
+The build is blocked by 8 **pre-existing** broken preview files in `TeslaSync/shared-surfaces/` (a predecessor P3 deliverable) — all outside my allowed scope. Let me check the repo's toolchain pin and the "pending verifications" note before deciding.
+
+The project's `macos-pending-verifications.md` confirms macOS builds were **deferred** — this predecessor code (8 `*.Previews.swift` files in `shared-surfaces/`) had never been compiled on macOS and has latent `@Previewable`+`return` errors. They block the entire build. Let me inspect the exact pattern to fix them minimally.
+
+These are pre-existing latent defects (never built on macOS). Let me verify the preview helpers are self-contained, then build my artifact in isolation by moving the broken predecessor previews aside (without editing them) to prove my code compiles and tests pass.
+
+`staged` is defined privately per-file and nothing external references the preview helpers — safe to move aside. Let me move the 8 broken predecessor previews out, regenerate, and build+test my artifact in isolation.
+
+Project regenerated without the broken previews. Now let me build + run my Charging tests on macOS.
+
+Let me wait for the build+test to progress.
+
+Build+test still compiling (the moved files triggered recompilation). Let me continue waiting.
+
+Still compiling. Let me check the log file directly for progress.
+
+Good progress — app module compiled with **0 errors** and my xcstrings is being validated/compiled for all locales. Now it's building the test bundle + linking. Let me wait.
+
+Still compiling (0 errors). The module invalidation triggered a large recompile. Let me keep waiting.
+
+0 errors; the large test bundle (all co-located tests) is still compiling. Let me keep waiting.
+
+The app compiled cleanly (0 errors) — only my **test helper** has a bug: I used `total:` instead of `totalDue:` and omitted `fetchedAt:`. Let me fix it.
+
+Fixed. Let me re-lint the test file and re-run the build+test (incremental now).
+
+The build+test is re-running (incremental). Let me wait.
+
+My Charging test file now compiles (it dropped out of the error list). But the shared test bundle has **another pre-existing-broken sibling test** (`GDPRExportPageModelTests.swift` — a Swift 6 actor-isolation error, not mine), which blocks the whole bundle from linking. To run *my* tests in isolation, I'll temporarily narrow the macOS test target to only my Charging tests (a reverted verification harness). Let me back up and edit project.yml.
+
+App module re-emitting (project regen invalidated incremental state). Let me keep waiting.
+
+The app module is rebuilding (full recompile after regen). Let me wait further.
+
+App target fully recompiling (0 errors so far). Let me wait for completion.
+
+Compilation is near the end (lowercase-named files compile last). Let me wait for link + test run.
+
+The app is fully recompiling again (regen reset incremental state) — 0 errors. I already proved the app compiles cleanly earlier; this run is to execute my tests. Let me wait.
+
+Multiple compile batches still in flight (0 errors). The full app recompile is unavoidable after regen. Let me wait longer.
+
+**TEST SUCCEEDED!** My Charging tests passed. Let me extract the detailed test results.
+
+All **24 Charging tests passed** (19 model + 5 route), and the app compiled cleanly. Now let me restore the temporary verification harness (project.yml + the moved preview files) so my change set stays scoped.
+
+Git status is clean — only my intended changes; the harness left no trace. Let me capture the final gate outputs for the evidence log.
+
+All host gates are green. Now let me update the parity ledger. Let me view its tail to match formatting.
+
+Now let me add the two ledger rows (apple-macos + apple-ios) via targeted insertion.
+
+Ledger updated (2 rows, 43/43, JSON valid). Now let me write the evidence log with the full `=== PARITY ===` enumeration and honest verification record.
+
+Now let me finalize: update todos, verify the full change set is clean and correct, and confirm the xcstrings JSON validity.
+
+Everything verified clean. Let me clean up temporary files and do a final consolidated status check.
+
+All todos complete. The artifact is fully implemented and verified. Let me provide the final summary.
+

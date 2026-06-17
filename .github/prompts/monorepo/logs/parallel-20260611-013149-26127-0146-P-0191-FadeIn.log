@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and checking for the required tooling and source files.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 16 simulator, pwsh). This is NOT blocked. Let me read the web source and explore the Apple app structure.
+
+The web `FadeIn` is a simple animation wrapper: fades + slides children up, honoring reduce-motion via `useMotionPreference(400)`. No data/i18n/charts. Now let me explore the Apple app structure to follow existing conventions.
+
+Surfaces follow a strict multi-file convention. Let me read `project.yml`, find existing motion-related surfaces (siblings: StaggerContainer/StaggerItem/RouteTransition), and locate the motion-preference state holder.
+
+XcodeGen project with a KMP `Shared.xcframework` preAction. Let me check build feasibility (xcodegen, existing .xcodeproj, xcframework) and locate the P1 state-holder/i18n/tokens/diagnostics infrastructure.
+
+Key finding: `Sources/Components/Motion/Motion.swift` exists (the atomic motion primitive, out of scope). My job is the `shared-surfaces/FadeIn.*` surface. Let me study the exact conventions by reading the existing Motion primitive, the web hook, and a representative simple shared-surface in full.
+
+The Motion path is under `apps/apple/Sources`, not `apps/apple/TeslaSync/Sources`. Let me read the native Motion primitive and study a representative simple shared-surface's full file set to learn conventions.
+
+The atomic `TSFadeIn` exists (out of scope). I need the shared-surface wrapper. Let me deeply study conventions: read the `Avatar` surface (simple, uses motion) end-to-end, the state-holder core files, and how surfaces emit `view.opened` telemetry + reference `.strings`.
+
+Let me see exactly how surfaces emit `view.opened` telemetry and reference strings, plus read the state-holder core and the simplest reference surface fully.
+
+Clear pattern: surfaces have a `{Name}Diagnostics.openIfNeeded(alreadyEmitted:telemetry:)` helper. Let me read a complete reference surface set and the core infrastructure. I'll read the `Avatar` surface fully plus the state-holder/telemetry cores.
+
+`ChartHiddenSeriesContext` is the ideal template — a wrapper/context surface like FadeIn. Let me read its entire fileset to learn the exact convention.
+
+Excellent — I now understand the full convention. Let me read the remaining reference files (Projection, Views, Previews, strings, both test files) and locate the design tokens (TSMotion, TSSpacing).
+
+Let me read the Views/Tests reference files and locate the design tokens (TSMotion, TSSpacing, Color.TS, Font.TS) plus the Avatar surface which uses motion preference.
+
+Now let me read the design tokens and the TSDesign motion helpers, plus check the StateHolderModel/LoadableState seams and how `view.opened` slug naming works for an anonymous surface.
+
+Now let me confirm naming conventions (avoid colliding with the atomic `TSFadeIn`) by reading the `Avatar` surface, and check the state-holder base seams.
+
+Key insight: shared-surfaces are independent parity artifacts; the atomic `TSFadeIn` is the reusable primitive. My `FadeIn` surface must faithfully match the web spec (y:12, 400ms, easeOut, delay). Let me check name collisions and read the remaining convention files (Projection, Views, Avatar.Model).
+
+No collisions. Let me read the lint config (file-length/line-length budgets), the Views convention, and the remaining token definitions (TSSpacing, Color.TS, Font.TS) so my code passes swiftlint/swiftformat cleanly.
+
+I have a thorough grasp of the conventions now. Let me verify the build dependency (KMP `Shared.xcframework`) and remaining token members before implementing.
+
+`TSSpacing.md == 12`, exactly matching web `y: 12`. All tokens confirmed. The full `xcodebuild` gate has a KMP `Shared.xcframework` gradle preAction (needs JDK/Kotlin). Let me set up my plan/todos and check the Java toolchain for the build attempt.
+
+Java 17 present; log dir exists. The full `xcodebuild` gate requires building the KMP `Shared.xcframework` (not yet populated) and compiles 1300+ sibling surfaces. Let me record a plan, then implement the surface (my code is the deliverable I fully control), then verify with deterministic checks + a standalone type-check, then attempt the full gate.
+
+Now implementing the surface. Starting with the Foundation-only core (Adapter + Projection).
+
+Now the DEBUG sample views, previews, and the strings catalog.
+
+Now the test files — pure-core adapter tests and model/view-composition tests.
+
+All 9 files created. Now running the deterministic verifications — swiftformat, swiftlint, and the placeholder check on my surface files.
+
+swiftformat clean. Now swiftlint --strict and the placeholder check.
+
+swiftlint --strict: 0 violations. swiftformat clean. Let me check the placeholder script's `-Path` semantics and run it as the gate does.
+
+The gate's placeholder `-Path .../FadeIn` resolves per-file via recursion. Let me read the patterns and run the checker against my actual files to get real coverage.
+
+All placeholder checks pass (0). Now the standalone `swiftc -typecheck` to prove my non-test files compile against the real design tokens. Let me check the tokens file's dependencies first.
+
+Tokens.swift is self-contained. Let me run a standalone `swiftc -typecheck` of my non-test files + the tokens to prove they compile (macOS SDK, DEBUG for previews).
+
+Found a real issue: `accessibilityReduceMotion` is a read-only environment key, so previews/tests can't inject it via `.environment`. I'll add a DEBUG-only test/preview seam (consistent with the reference surfaces' model-injecting inits) while keeping the public API faithful to the web source.
+
+Now update `FadeInSample` to support the reduced-motion seam, and fix the preview to use it instead of the read-only environment override.
+
+Add a test that builds the reduced-motion branch via the seam (per-state composition coverage).
+
+Now re-run the standalone typecheck in both default and Swift 6 strict-concurrency modes (matching project settings).
+
+Non-test files compile cleanly under Swift 6 strict concurrency. Now let me verify the test files compile too, by type-checking them in a temp single-module harness (stripping `@testable import`, since everything lives in one module) against the XCTest framework.
+
+Those errors are a harness artifact — the standalone invocation picks up XCTest's C macros instead of the Swift overlay (note: "function like macros not supported"). My assertion usage is identical to the passing reference tests. To still compile-check my test files' actual API calls, let me typecheck them against lightweight XCTest shims.
+
+Both non-test and test files compile cleanly under Swift 6 strict concurrency. Let me re-run swiftformat + swiftlint on the edited files to confirm they're still clean.
+
+All deterministic checks for my surface pass. Now attempting the real gate. First, generate the Xcode project (confirms my files are wired in) and probe the KMP `Shared.xcframework` build dependency.
+
+Project generated; my 9 FadeIn files are wired into the targets (54 refs). Now attempting the KMP `Shared.xcframework` build (the gate's build dependency). Starting it async to monitor.
+
+The Kotlin/Native prebuilt toolchain (2.4.0) and gradle caches are already present — the xcframework build should be feasible. Building it now (async, monitored).
+
+Gradle/Kotlin-Native compile is in progress (it's slow even with cached toolchain). Continuing to wait.
+
+I'll let the Kotlin/Native build continue and check back. Meanwhile, let me verify the full-repo swiftformat/swiftlint baseline isn't broken by my additions (the gate runs these repo-wide).
+
+Full-repo swiftformat is clean (0/4873). Let me check the xcframework build progress.
+
+`Shared.xcframework` built successfully (6m55s) and staged. Now the app can build. Let me first validate the whole app **compiles** with my surface on the iOS simulator (the critical integration check) before running the full test suite.
+
+Build failed — but the failures are in **pre-existing sibling surfaces** (`AIFeedbackQueueTriage`, `AIGeofenceAwareAutomationSuggestions`, `AIInboxAutoCategorization`, `AIIncidentTimelineSummarizer`), not my FadeIn surface. Let me confirm the exact errors and verify FadeIn is not implicated.
+
+The build failed on a **single pre-existing error** in an out-of-scope sibling (`AIGeofenceAwareAutomationSuggestions.swift:141` — "escaping closure captures non-escaping parameter 'content'"), with **zero errors in any FadeIn file**. My allowed files are `FadeIn.*` only, so I cannot touch that sibling. Let me gather definitive evidence: confirm I only added FadeIn files, confirm FadeIn compiled in-module, and inspect the pre-existing error.
+
+Definitive evidence gathered:
+- `git status` shows **only my 9 FadeIn files** added — I modified no sibling.
+- `AIGeofenceAwareAutomationSuggestions.swift` is **committed, pre-existing** (not mine); its line 141 has a genuine Swift 6 escaping-closure error in `glass(@ViewBuilder _ content:)`.
+- My FadeIn files **compiled in-module with zero errors**.
+
+I'm explicitly forbidden from touching that sibling (allowed files = `FadeIn.*`). Now let me run the full gate to capture authentic results into the official log.
+
+iOS build test running (will fail at the sibling). Let me wait for it to progress to macOS.
+
+Let me peek at the in-progress iOS build log to see what stage it's at.
+
+The machine is heavily contended — other parallel slots (slot-147) are running their own xcodebuild + gradle daemons concurrently. My gate is progressing but slow. The outcome is already predetermined (the sibling error is platform-agnostic). Let me wait for it to advance.
+
+The gate completed: **ios=65, mac=65, lint=0, format=0, placeholder=0**. Both builds fail only on the sibling; swiftlint --strict (full repo), swiftformat, and placeholder all pass. Let me verify the macOS failure is the same sibling (no FadeIn errors) and review the official log.
+
+Now the full picture is authentic and clear:
+- **iOS (65):** two **pre-existing sibling** compile errors — `AISuggestNewGeofences.swift:129` and `AIGeofenceAwareAutomationSuggestions.swift:141` (both "escaping closure captures non-escaping parameter 'content'"). **Zero FadeIn errors.**
+- **macOS (65):** **runner code-signing** limitation (`DEVELOPMENT_TEAM` empty; entitlements require a dev certificate) — environmental, not a compile error. **Zero FadeIn errors.**
+- **swiftlint --strict: 0 violations / 4575 files**, swiftformat & placeholder clean.
+
+Let me confirm the macOS signing block is a documented pre-existing condition and review the official log.
+
+Decisive finding: `apps/macos-pending-verifications.md` documents this **exact pattern** for 6+ sibling P4 surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart, …): surface verified green-in-isolation, full-app `xcodebuild build test` blocked by **pre-existing unrelated parallel-merge collisions + macOS dev-signing**, tracked as "macOS-pending" → deferred to the `P99` acceptance gate on a signing-capable runner.
+
+My situation is identical: iOS fails only on two pre-existing sibling compile errors; macOS fails only on dev-signing; **zero FadeIn errors**; swiftlint/swiftformat/placeholder all green. Let me finalize the official log with full evidence.
+
+The official log is finalized (EXIT=1, STATUS=BLOCKED) with exhaustive, honest evidence. 
+
+Now the commit decision. The per-surface gate I own (swiftlint, swiftformat, placeholder, Swift 6 strict-concurrency typecheck, in-module compile) is fully **green**; the full-app `build test` is the shared downstream gate that is "macOS-pending" for **every** P4 Apple surface (per the documented precedent with commit hashes). The prompt's Commit section + repo precedent commit green-in-isolation surfaces in exactly this state. Let me commit precisely my 9 files + the log (nothing else).
+
+Exactly 10 files staged (9 FadeIn + log), nothing else. Committing with the prompt's message.
+
+Committed cleanly: **10 files, 971 insertions** (9 FadeIn files + the log), nothing else. Now cleaning up build artifacts (gitignored, slot-local) and temp files.
+
+All work committed; working tree clean; todos closed. Task complete.
+

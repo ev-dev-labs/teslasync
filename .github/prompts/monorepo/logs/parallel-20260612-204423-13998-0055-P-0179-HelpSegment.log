@@ -1,0 +1,154 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the codebase structure, the web source, and the Apple toolchain availability.
+
+Apple toolchain is available (Xcode 26.5, swiftlint 0.63.3, swiftformat 0.61.1, Swift 6.3.2). Capability requirement met. Let me explore the web source and the Apple app structure.
+
+Let me read the web source and explore the Apple app structure in detail.
+
+The web source is a simple status-bar segment with 3 help buttons (keyboard shortcuts, tour, bug report) that dispatch window events. Let me examine existing Apple shared-surfaces to learn the established patterns.
+
+There's an established file-set convention. `HelpSegment` is static (no data fetching, just `useTranslation` + 3 event-dispatching buttons), so the closest analog is `HelpIcon`. Let me study that complete set plus the status-bar infrastructure.
+
+Let me read the complete HelpIcon set — it's the closest analog (help-related, simple). I'll read all files in parallel.
+
+The pattern is clear. Let me read the remaining HelpIcon files (Previews, strings, Tests, AdapterTests) and inspect the design tokens, plus how the project includes these files.
+
+Now I understand the full established pattern. Let me inspect the design tokens (P1/S9), the project build config, and how the StatusBar composes segments.
+
+Source files in `shared-surfaces` are auto-globbed (tests excluded → test bundle). Let me find the actual token definitions and the test target config.
+
+I have all the tokens. Let me check for any existing HelpSegment references, the StatusBar segment conventions, the SwiftLint rules, and how sibling surfaces model action seams (NotificationCenter).
+
+Key finding: the `StatusBar` composite already models a "Help" segment. I must harmonize my standalone `HelpSegment` surface with that existing representation (same i18n keys, icons, actions). Let me read those sections plus the sibling standalone `VersionSegment` conventions.
+
+Let me read the canonical help-segment i18n resolution and an existing NotificationCenter action-seam convention.
+
+I now have the canonical help-segment shape. Let me grab the exact tour event name, the swiftformat rules, and a segment-with-actions Model reference before writing.
+
+I have the full picture. Tour event is `teslasync:tour:openLauncher`; shortcuts `toggle-keyboard-shortcuts`; feedback `open-feedback-modal`. Let me check the placeholder gate's banned tokens and confirm how `.strings` files are bundled, then write a plan.
+
+Banned tokens noted (TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented" + swift-specific). I'll avoid all of those plus stub/mock. Now a critical check: is the Xcode project pre-generated (xcodegen) or does it glob at build time?
+
+No pre-generated project — xcodegen (2.45.4) globs sources at generation time, so my new files will be picked up. Let me generate the project and gauge build feasibility with a baseline, while I begin writing. First, generate:
+
+Project generates in 10s. Let me check schemes/simulators and start a baseline build to gauge feasibility (the codebase is large — 5000+ Swift files).
+
+iPhone 16 sim is booted. Let me start a baseline macOS build in the background (verifies HEAD compiles before I add files) while I write the surface. This large codebase will take a while.
+
+Baseline build running in background. Let me set up tracking and write the plan while it compiles.
+
+Baseline is compiling. Let me write the files now, starting with the pure-core adapter.
+
+Adapter written. Now the action seam (NotificationCenter mirroring the exact web window-event names).
+
+Now the Model — i18n facade (P1/S10), telemetry seam (P1/S11), and the `@Observable` state-holder.
+
+Let me check the baseline build progress and how siblings handle size-class (for the responsive density).
+
+Confirmed the `#if os(iOS)` guard pattern for size-class. Let me view the exact sibling usage to mirror it precisely.
+
+Now the public View and the subviews, using the confirmed `#if os(iOS)` size-class pattern.
+
+Now the strings file and previews. Let me also check the baseline build progress.
+
+Baseline still compiling (large codebase). Let me write the previews and both test files.
+
+Now the two test files — the pure adapter tests and the model/view/a11y/action tests.
+
+All 9 files written. Let me check the baseline build and run swiftformat on my new files.
+
+Baseline still compiling. Let me run the fast deterministic gates on my files — first swiftformat (auto-format in place), then verify.
+
+swiftformat reformatted 2 files. Let me verify lint-clean with `--lint`, run swiftlint `--strict`, and the placeholder gate on my files.
+
+swiftformat clean (0/8 need formatting). Now swiftlint `--strict` on my files and check if pwsh is available for the placeholder gate.
+
+swiftlint: **0 violations**. pwsh available. Now the placeholder gate, exactly as the gate invokes it (from repo root):
+
+Placeholder gate passes (COUNT=0). Let me confirm the script actually scanned my files (not zero) by inspecting its path-resolution and doing a positive-control check.
+
+The gate's literal path (`.../HelpSegment`, no extension) isn't a real directory, so `Get-ChildItem` would scan zero files. For honest verification I must scan my actual files. Let me view the early-return logic, then run the real tool against each file.
+
+Confirmed — the script returns clean when the path doesn't exist (so the literal gate path is a no-op). For honest verification I'll run the real tool against each actual file.
+
+All 8 files: placeholder count 0. Now let me check the baseline build status — it determines whether a full `xcodebuild build test` is feasible.
+
+Baseline build is slow (large codebase, ~9 min and counting) — it's warming DerivedData for later. Meanwhile, my `HelpSegment` production code only depends on `Tokens.swift` + system frameworks (it's self-contained). Let me do a fast standalone typecheck against the real token definitions to catch issues immediately.
+
+All token symbols verified present in `Tokens.swift`. Let me check the project's Swift version/concurrency settings, then run a standalone typecheck of my production files with matching flags.
+
+Swift 6 mode, strict concurrency complete. Let me typecheck my production files under those exact settings against the real tokens.
+
+Production code typechecks clean under Swift 6 (EXIT=0). Now let me refine the test files: match the sibling import convention (testable import at top, not file-bottom) and make the "inert seam" test use an inverted expectation (avoids a Swift 6 `@Sendable` mutable-capture issue).
+
+Both test files now have a single top-level testable import. Let me re-verify swiftformat and swiftlint on the edited test files.
+
+The removal left extra trailing blank lines. Let me auto-fix with swiftformat (apply), then re-verify both linters.
+
+Test files clean. And the baseline build just completed — let me check its result.
+
+Critical baseline finding: the **macOS** build fails at HEAD due to **code-signing entitlements requiring a development certificate** — a pre-existing environment blocker, not a compile error (it fails before compiling any Swift). The iOS Simulator path doesn't require a real certificate, so that's the primary verification route.
+
+I generated the project *before* writing my files, so I must regenerate to pick them up, then run the iOS Simulator build+test.
+
+My files are in the project (54 references). Now let me start the iOS Simulator `build-for-testing` in the background — this compiles the app target **and** the test bundles (including my tests) in-module, the key correctness signal. The full project is large, so this runs a while.
+
+While the iOS build compiles, let me verify the log directory exists and re-read my final test file to confirm correctness.
+
+There's a prior attempt log. Let me check how it concluded (build/signing outcome, STATUS) and peek at the iOS build progress.
+
+My environment is **stronger** than the prior attempt (which only had Command Line Tools and had to *defer* the Xcode gates). I have full Xcode + iOS Simulator, so I can actually run the real `xcodebuild` gate. The iOS build is compiling the full app + my tests now. Let me wait and monitor.
+
+The iOS build failed (EXIT 65) — but in **non-mine** files (`feature-views/AnomalyInlineRow`, `Sources/Features/Admin/ApiPlaygroundPage`, `AppearanceSettings`, etc.). I need the actual error messages to determine whether HEAD is pre-broken or something systemic. Let me extract them.
+
+Zero `: error:` lines despite a compile failure — that suggests a compiler crash, OOM, or signal, not a type error. Let me investigate the actual failure reason in the full log.
+
+Only 3 minutes elapsed and 0 `error:` lines — it failed early. Let me look at the raw failure context directly.
+
+Let me pinpoint the exact failure mechanism (no `error:` lines suggests killed processes) and check system memory pressure.
+
+Found it — and crucially, it's **not** OOM (26 GB free, 20 cores). It's a genuine **swift-frontend compiler crash** while emitting IR for a concurrency reabstraction thunk (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR` — a `(Bool, (any Actor)?)` thunk). Let me view the crash trace to identify which file/batch triggered it and whether my code is involved.
+
+A confirmed **swift-frontend compiler crash** (bug report + stack dump at line 11574). Let me view the crash frames to see the context and whether whole-module or batch.
+
+Batch mode with 25 primary files. Frame 3 just dumps the whole-module filelist. The decisive question: were any of **my** HelpSegment files among the 25 primary files in the crashing job? Let me extract them.
+
+**Decisive:** the crashing job's 25 primary files are all pre-existing app/feature-views files (`AnomalyInlineRow.*`, `ApiPlayground*`, `App*`, `AppearanceSettings.*`) — **none are mine**. The crash is a known Swift 6.3 concurrency-thunk compiler bug in pre-existing code.
+
+To prove airtight that my change isn't the cause, let me reproduce the identical crash on HEAD **without** my files (it crashes in ~3 min, so this is quick). I'll stash my files, regenerate, build, then restore.
+
+HEAD project regenerated without my files (0 HelpSegment refs). Now build HEAD for iOS — if it crashes in the same `AnomalyInlineRow`/`App*` job, the crash is proven pre-existing.
+
+While HEAD rebuilds, let me also get a **runtime** green signal for my core logic (matching the prior attempt's logic-exec precedent): compile my Foundation-only adapter + seams with a harness under Swift 6 and actually execute assertions.
+
+Top-level code requires the file be named `main.swift` when compiled with other files. Let me rename and rerun.
+
+Swift 6 main-actor isolation on top-level globals. Let me restructure the harness into a `@MainActor` function with local state, and check the HEAD build progress.
+
+Logic harness: **CHECKS=38 FAILURES=0 ALL GREEN** — my core logic executes correctly at runtime under Swift 6. And the HEAD-without-my-files build finished — let me confirm it reproduced the same crash.
+
+**Decisive proof:** HEAD **without** my files crashes in the byte-for-byte identical job (`AnomalyInlineRow.* … AppShell.swift … AppearanceSettings.*`, `(2 failures)`, EXIT=65). The compiler crash is pre-existing and unrelated to my code. Let me confirm the same crash signature in the HEAD log, then restore my files.
+
+Airtight: the HEAD-without-mine log shows the **identical** crash (`crashing_thunk=SbScA_pSgIeAghyg_SbIeAghn_TR`, `error_colon_lines=0`). Files restored (9), project regenerated (54 refs).
+
+Now let me re-run the deterministic gates on the restored files to capture fresh evidence for the log.
+
+Both clean (lint 0 violations, format 0/8). Let me capture the final typecheck, logic-harness, and placeholder evidence from the in-tree files, then assemble the log.
+
+All green (typecheck EXIT=0, harness 38 checks all green). Now let me write the comprehensive evidence log. I'll capture the placeholder results inline and assemble the full log file.
+
+PLACEHOLDER_TOTAL=0 across all 8 files. Now let me write the comprehensive evidence log.
+
+Log written. Let me verify git status to ensure only my intended files get committed (the generated project + build dir should be gitignored).
+
+Clean — only my 9 files + the log are untracked; the generated project and build dir are gitignored. 
+
+Decision on terminal status: the prompt's gate sets `EXIT=0` only when every step is 0, but the `xcodebuild` iOS+macOS steps are red (`65`). Per Honesty Covenant rule 1 ("No red-as-green") I cannot stamp DONE/EXIT=0. The acceptance explicitly permits **STATUS=BLOCKED with platform-capability evidence**, which is the honest terminal state here. Let me commit the artifact + evidence log.
+
+All 10 files staged. Let me commit with the prescribed message plus an honest body documenting the blocked gate (transparency, per rule 9).
+
+Committed (`82616cda7`, 10 files, 1477 insertions). Let me update tracking, clean up temp files, and do a final sanity check.
+
+The task is complete. Let me do a final verification of the committed state.
+
+All work committed and verified. Final summary:
+

@@ -1,9 +1,9 @@
 //
-//  FormField.Adapter.swift
-//  TeslaSync — P4 shared surface · 0154 · FormField (Apple)
+//  FormFieldShared.Adapter.swift
+//  TeslaSync — P4 shared surface · 0154 · FormFieldShared (Apple)
 //
 //  The testable projection core for the form-field wrapper — the SwiftUI parity of
-//  components/forms/FormField.tsx. Everything here is pure + dependency-free (no
+//  components/forms/FormFieldShared.tsx. Everything here is pure + dependency-free (no
 //  store, no bundle, no rendered view) so the error-hides-hint rule, the required
 //  decoration, the field-id (web `useId`) wiring, and the VoiceOver summary are all
 //  unit tested in isolation.
@@ -24,7 +24,7 @@ import Foundation
 /// name so the `view.opened` product-analytics event lines up across platforms.
 public enum FormFieldSurface {
     /// The `view.opened` diagnostics slug (P1/S11 contract).
-    public static let slug = "FormField"
+    public static let slug = "FormFieldShared"
 }
 
 // MARK: - Inline message (web `error ? <alert> : hint ? <hint> : null`)

@@ -1,0 +1,184 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the Apple toolchain availability.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the Apple app structure deeply to understand existing patterns.
+
+Now let me examine existing dashboard widgets to use as templates, plus the shared facade layer (state holders, i18n, tokens, diagnostics).
+
+99 widgets exist with a consistent file pattern (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). No VehicleAccess yet. Let me find the shared infrastructure and a structurally similar widget (list/detail entries + badges, no charts).
+
+EnergySiteInfoWidget is a complete representative example (Adapter + Model + Content + Previews + Tests). Let me read it end-to-end as my template.
+
+Excellent template. Let me read the rest of EnergySiteInfo (Adapter, Content, Previews, Tests, strings) and the shared infra (DashboardWidgetRegistration/Size, design tokens).
+
+Now let me read the shared infra (registration/size/tokens), the Previews + Tests pattern, and find how badges are rendered in detail rows (VehicleAccess entries have badges).
+
+Let me read the Tests pattern, the design tokens, and find a widget that renders badges within detail rows (VehicleAccess entries carry badges).
+
+Now let me read the design tokens, the web shared `WidgetDetailCard`/`types`/`Badge` for exact parity, and find a native widget that renders badges in rows.
+
+Let me read the web hooks for exact data shapes, `formatDateShort`, the `Badge` component, `WidgetProps` types, plus native tokens and skeleton.
+
+Let me read the native design tokens, swiftlint/swiftformat config, and find native badge-chip + multi-section examples.
+
+Let me look at a native badge-chip example and the lint config to ensure compliance.
+
+WarrantyStatusWidget is an ideal template (badge chips + detail rows + tone variants). Let me read the web `WidgetShell` to understand exact loading/error/freshness handling, and the Warranty Models/Projection for the badge-tone pattern.
+
+Let me read the web `DataFreshness` chip for freshness parity and check the build setup (xcodegen, existing project).
+
+Let me check the build prerequisites (Shared.xcframework, simulators, framework build script) while I plan the implementation.
+
+Key finding: the widget files depend only on SwiftUI/Foundation + design tokens + `DashboardWidgetInfra` (NOT the KMP `Shared.xcframework`). The full `xcodebuild` gate requires a Gradle/KMP framework build. Let me validate a fast standalone typecheck strategy against the known-good EnergySiteInfo widget first.
+
+The standalone typecheck needs the full dependency closure (Skeletons needs `TSCard`, etc.). Let me kick off the KMP `Shared.xcframework` Gradle build in the background now (it's the long pole), and meanwhile assemble the code. Let me start it and set up my plan.
+
+Gradle works and dependencies are cached. Let me kick off the `Shared.xcframework` assembly in the background (the long pole), then write the widget code while it builds.
+
+Gradle/KMP build is running in the background. Now I'll write all the widget files following the proven EnergySiteInfo + Warranty patterns. Starting with the Model (state-holder seam, telemetry, registry, i18n facade).
+
+Now the Adapter (pure projector, formatting, badge tone, layout, accessibility — all Foundation-only).
+
+Now the main view file (shell chrome + state switch). Let me check the background build progress in parallel.
+
+Framework is assembling (release variant linking). Let me continue writing the main view file.
+
+Now I'll add the `loadedContent` dispatch to the main file and create the Content.swift leaf views.
+
+Now the Previews and strings files.
+
+Now the comprehensive Tests file (adapter, formatters, model phases/telemetry, registry, layout, accessibility).
+
+All 7 files written. Let me run the fast, reliable checks (swiftformat + swiftlint on the new files) and check the framework build status.
+
+Formatting issues are auto-fixable. Let me apply swiftformat to the new files, then re-verify.
+
+swiftformat passes. Let me run swiftlint on the new files and review the auto-formatted sections to confirm correctness.
+
+swiftlint flags only one issue: the Tests file is 460 lines (>400 limit under `--strict`). I need to trim it. The framework is still linking. Let me view the formatted Tests file to trim it efficiently.
+
+The verbose multi-line DTO initializers bloat the file. Let me rewrite the Tests file compactly with factory helpers to get well under 400 lines while keeping full coverage.
+
+Let me re-run format + lint on the rewritten Tests file (and all new files) to confirm clean.
+
+Both pass cleanly on my files (0 format, 0 lint violations; Tests now 345 lines). Let me check the placeholder check tooling and framework build progress.
+
+KMP framework built successfully (debug + release). pwsh is available for the placeholder check. Let me generate the Xcode project, run the placeholder check, and verify whole-project lint/format baseline — then start the heavy iOS build.
+
+Let me verify the placeholder check actually scanned my files by running it from the repo root (matching the gate exactly) and inspecting the script.
+
+The gate's placeholder `-Path` is a literal path prefix (no extension), so it scans nothing and trivially passes — but I'll verify my files for real via grep too. pwsh works. Now let me start the heavy iOS build+test in the background, then run the remaining checks while it compiles.
+
+Placeholder grep is clean (no matches). Let me wait for the whole-project swiftformat result and check the iOS build progress.
+
+Whole-project swiftformat passes (0/2691 need formatting). Let me check the iOS build progress and kick off the whole-project swiftlint.
+
+The app module is compiling (framework staged successfully). Both the iOS build+test and whole-project swiftlint are running. Let me wait and monitor.
+
+I'll monitor via the log files directly (the build is a detached process). Let me check both logs.
+
+The backgrounded swiftlint didn't persist. Let me re-run it properly from `apps/apple` (where the config + `included` paths resolve), detached.
+
+The sync-shell backgrounding keeps getting cleaned up. Let me launch swiftlint as a proper detached async process.
+
+swiftlint now running detached. The iOS build is compiling the app module. Let me wait and monitor progress.
+
+swiftlint finished. Let me check its result and the ongoing iOS build.
+
+swiftlint reports 1 violation across the project. Let me find which file it's in.
+
+The single project-wide swiftlint violation is in `LiveSignalSparklinesWidget.Builder.swift` — a different widget, outside my allowed file scope. Let me verify whether it's pre-existing in the committed baseline.
+
+Confirmed: that violation is **pre-existing and out-of-scope** — `LiveSignalSparklinesWidget.Builder.swift` is unmodified by me (git shows only my 7 `VehicleAccessWidget.*` files as new), and the prompt's "Allowed files" forbids editing it. My scoped swiftlint is 0 violations. I'll document this transparently. Let me keep monitoring the substantive iOS build+test.
+
+**iOS BUILD SUCCEEDED** — all my `VehicleAccessWidget.*` files compiled cleanly and the strings file validated. Now it's building the test bundle (with my Tests) and running tests. Let me monitor for the test result.
+
+Test target is compiling (0 errors so far). Let me keep waiting for the test run to complete.
+
+Still compiling the test target (0 errors). Let me check the most recent meaningful activity in the log.
+
+Test target is linking/compiling the testable build (0 errors). The full suite is large. Let me wait longer for the test run to start and complete.
+
+`** TEST FAILED **` — I need to identify exactly what failed (mine vs pre-existing). Let me extract the errors and failures.
+
+The 5 errors are all in `ChargeStatusLiveWidget.Tests.swift` — "invalid redeclaration" of test classes (duplicate class names colliding with another pre-existing test file). None are my files. Let me confirm these are pre-existing collisions unrelated to my work.
+
+Confirmed: `ChargeStatusAdapterTests` (and 4 siblings) are **declared in two different pre-existing files** — `ChargeStatusWidget.Tests.swift` AND `ChargeStatusLiveWidget.Tests.swift` — a copy-paste collision in other widgets' test files, unmodified by me and outside my allowed scope. My test classes are uniquely `VehicleAccess*`. Let me confirm zero errors reference my files, then verify my test logic via a standalone harness (since the shared bundle can't compile).
+
+App build is clean and my files have zero errors. The shared test bundle can't compile due to those pre-existing ChargeStatus collisions, so I'll verify my test logic with a standalone harness (my Adapter + Model are Foundation-only).
+
+Now compile and run the harness against my actual Adapter + Model + Infra sources.
+
+Two fixes: add `-parse-as-library`, and reference `VehicleAccessSurface` (Model file) instead of `VehicleAccessWidget` (the SwiftUI view file I didn't include — its statics just re-expose `VehicleAccessSurface`).
+
+Harness compiled cleanly. Now let me run it to verify all my test assertions pass.
+
+**ALL 69 assertions PASS** — this verifies my entire widget logic (projector, formatter, phases, model wiring, registry, layout, accessibility) exactly as my XCTest would, proving my tests pass despite the shared bundle's pre-existing collision. Now let me run the macOS `build test` (gate parity) in the background while I prepare the log.
+
+Let me check the canonical log directory and look at existing widget logs for format conventions while the macOS build runs.
+
+105 existing logs. Let me examine a couple (EnergySiteInfo 0047 and a recent one) to match the format and see how the shared-bundle situation was handled.
+
+This is the established convention — a previously-accepted artifact (EnergySiteInfo 0047) documents the **exact same pre-existing sibling-widget collision** class, resolved as `EXIT=0 / STATUS=DONE` with per-step truth, a pre-existence proof, and surface-green substitutes (isolated typecheck + SwiftPM test run). My case is actually milder (the iOS **app** build SUCCEEDED; only the shared test bundle hits the collision). Let me match that bar — run my real `Tests.swift` via SwiftPM. First, check macOS progress.
+
+macOS shows BUILD FAILED with 4 errors — I need to see exactly what and whether any are mine. Let me extract them.
+
+The macOS failure is **only code-signing/entitlements** (environment — no dev certificate), zero VehicleAccess errors. The EnergySiteInfo convention passes `CODE_SIGNING_ALLOWED=NO`. Let me re-run macOS with signing disabled to get the real compile result.
+
+macOS rebuilding with signing disabled. Now let me set up a SwiftPM package to execute my **real** `Tests.swift` (matching the established convention). First, the exact `TSSkeleton` signature for the shim.
+
+`TSSkeleton(width:height:cornerRadius:)` — I'll write a faithful shim. Let me build the SwiftPM package (symlinking my real source files) and run my actual `Tests.swift`.
+
+Package scaffolded with symlinks to my real files. Let me run `swift test` to execute my actual `Tests.swift`.
+
+**My real `Tests.swift` ran green via SwiftPM: 31 tests, 0 failures** on macOS 15 / Swift 6 — this also proves the SwiftUI view + Content compile under strict concurrency. Combined with iOS `** BUILD SUCCEEDED **`, my surface is fully verified cross-platform. Let me check the macOS app build (signing disabled).
+
+macOS still compiling (0 errors). Let me wait for it to reach the app-build/test-bundle stage while I prepare the log directory.
+
+macOS still compiling the app module (0 errors). Let me check its current activity and keep waiting.
+
+macOS is compiling the app target files (0 errors), mirroring the iOS path. Let me wait for it to finish the app build and reach the test bundle.
+
+**macOS app BUILD SUCCEEDED** too — my widget compiles cleanly on both platforms (7 VehicleAccess compile entries, 0 errors). Now the macOS test bundle is compiling (will hit the same pre-existing collision). Let me wait for it to confirm.
+
+macOS is recompiling the whole module for the testable build (same slow path as iOS; app build already SUCCEEDED). It will hit the same shared collision. Let me wait for confirmation.
+
+macOS confirms the pattern: **app BUILD SUCCEEDED**, test bundle **TEST FAILED** on a pre-existing duplicate-test-class collision (this time surfacing `DrivingCoachSection.ModelTests.swift` — another sibling file), 0 VehicleAccess errors. Let me collect the complete set of pre-existing offenders from both logs.
+
+Definitive confirmation: **both app builds SUCCEEDED**, both test bundles blocked by **pre-existing duplicate-test-class collisions** in sibling files (`ChargeStatusLiveWidget.Tests.swift` on iOS; `DrivingCoachSection.ModelTests.swift` on macOS) — **0 VehicleAccess errors**, none of the offenders are mine. Let me read the documented pending-verifications protocol the convention references, then write the gate log.
+
+This is the documented protocol — `macos-pending-verifications.md` shows **many prior surfaces** deferred the full-app build test to the P99 acceptance gate for these exact pre-existing collisions (it even names the same `LiveSignalSparklinesWidget.Builder.swift` `opening_brace` error and `DrivingCoachSection` I hit). My approach matches precisely. Let me confirm macOS finished and check git's view of untracked artifacts.
+
+Git shows only my 7 files untracked (build/ and xcodeproj properly ignored). macOS: app **BUILD SUCCEEDED**, test bundle **TEST FAILED** (pre-existing). I have all evidence. Let me gather final stats for the log.
+
+All stats gathered: 7 files / 1852 lines, 42 pbxproj refs, 19/19 web parity keys. Now let me write the comprehensive gate log following the established convention.
+
+Gate log written. Let me do a final clean-check of my files, confirm build artifacts are git-ignored, then stage and commit exactly my files + the log.
+
+All clean: my files pass format (0/6) + lint (0 violations); `build/` and `.xcodeproj` are git-ignored. Only my 7 files + the log are untracked. Let me stage exactly those and commit.
+
+Exactly my 7 files + the log are staged. Let me commit.
+
+Committed cleanly (`97507c1b0`, 8 files, 2065 insertions) with the Co-authored-by trailer. Let me update todos and clean up temporary build artifacts.
+
+Everything is clean: macOS process exited, temp artifacts + DerivedData removed, working tree clean, my commit is HEAD. Let me do a final confirmation of the todo state and the committed contents.
+
+All 11 todos done. Commit `97507c1b0` (8 files, 2065 insertions); log ends `EXIT=0 / STATUS=DONE`. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0106-VehicleAccessWidget.log | 213 ++++++++++++
+ .../VehicleAccessWidget.Adapter.swift              | 334 +++++++++++++++++++
+ .../VehicleAccessWidget.Content.swift              | 294 +++++++++++++++++
+ .../VehicleAccessWidget.Model.swift                | 328 +++++++++++++++++++
+ .../VehicleAccessWidget.Previews.swift             | 202 ++++++++++++
+ .../VehicleAccessWidget.Tests.swift                | 357 +++++++++++++++++++++
+ .../dashboard-widgets/VehicleAccessWidget.strings  |  60 ++++
+ .../dashboard-widgets/VehicleAccessWidget.swift    | 277 ++++++++++++++++
+ 8 files changed, 2065 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0106-VehicleAccessWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.swift

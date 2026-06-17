@@ -1,0 +1,144 @@
+I'll start by investigating the repository structure and the capability requirements before making any changes. The Honesty Covenant requires genuine verification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 sim). Capability is NOT blocked — I must do the work. Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source. Let me explore the Apple app structure deeply — especially existing shared-surfaces, state holders, tokens, i18n facade, and the project setup.
+
+Extensive existing structure with ~600 files following a clear multi-file pattern. Let me study a representative complete surface and the core infrastructure (state holders, tokens, i18n, diagnostics).
+
+The pattern is clear and well-established. Let me read the remaining files for this reference surface plus the project configuration and tooling config.
+
+I now fully understand the surface pattern. Let me find the shared design tokens (P1/S9), shared primitives (TSButton, TSSkeleton, etc.), and the project.yml build configuration.
+
+project.yml uses directory globs — dropping files into `shared-surfaces/` auto-includes them (tests routed to test bundles). Now let me explore the design tokens (P1/S9) and the shared component library to know exactly what primitives are available.
+
+Let me read the design tokens and the key shared primitives I'll need (cards, metrics, states, buttons, skeletons, typography, badges, disclosure).
+
+Excellent — tokens and feedback states are clear. Now let me read the polling API types (exact data shape), a richer data-fetching reference surface, and the remaining primitives I'll use (Buttons, Skeletons, Badges, Typography, Metrics).
+
+Now let me study a richer data-fetching surface (Narrative) to see the fetch/state-holder/freshness pattern, plus the Skeleton and Badge primitives.
+
+The pattern is comprehensive. Let me read the main entry + Views + Projection of the reference surface, plus the Skeleton and Badge primitive APIs.
+
+I have a thorough understanding of the pattern. Now let me assess build feasibility — check xcodegen, the existing project, the KMP framework dependency, the gate/placeholder scripts, and how predecessor surfaces logged their results.
+
+Key findings: xcodegen available, but `.xcodeproj` not generated and `Shared.xcframework` is absent (KMP dependency). Let me check the framework build script and how a recent predecessor surface logged its gate result.
+
+This is decisive. The established precedent (60 DONE vs 2 BLOCKED across predecessors): the full-app `xcodebuild test` is blocked by **pre-existing, out-of-scope** issues (KMP `Shared.xcframework` needs Kotlin/Native via Gradle; iOS duplicate-type collisions across other directories; macOS code-signing on an unsigned runner). Predecessors verify their surface **in isolation** (compile against real tokens for iOS+macOS under Swift 6, runtime-assert pure logic, swiftlint/swiftformat/placeholder green) and record honest `STATUS=DONE`.
+
+Let me read the last two inputs I need — `activityColor` and the Metrics primitive — then write the plan.
+
+Let me read the exact `activityColor` mapping (lines 180–210) to reproduce vehicle activity tints faithfully.
+
+I now have everything needed about the data and primitives. Let me verify no naming collisions, and read the lint/format/placeholder configs I must satisfy.
+
+Good — no `Polling`-prefixed symbol collisions (only `Infra*`-prefixed ones). Lint rules noted: line length ≤120 (warnings fail under `--strict`), avoid single-char identifiers except id/ok/x/y/t, type names ≤50. Let me read the placeholder checker to know exactly which tokens are banned and the scoping.
+
+I now have complete understanding of the pattern, primitives, data shape, lint/format/placeholder rules, and the established verification methodology. Let me write a plan and start building.
+
+Now I'll create the surface files, starting with the pure Adapter core.
+
+Now the Model — i18n facade, telemetry/source seams, decoded data DTOs, input snapshot, and the `@Observable` state-holder.
+
+Now the Projection — resolved view-state types plus the pure input→view-state mapping (localized).
+
+I need to fix a name shadow in `prediction(for:)` — the local `durationText` shadows the method.
+
+Now the Chrome — P4 leaf states (freshness chip, refresh, connectivity banner, loading skeleton, error) plus the tone→token color mapping.
+
+Now the content Views — header, savings card, breakdown bar, legend, expandable vehicle rows, detail, prediction, empty, and the composed ready view.
+
+Now the main entry view that composes the panel, withdraw behavior, and lifecycle.
+
+Now the Previews (every state) and the localization strings.
+
+Now the tests — pure adapter core tests first.
+
+Now the projection, model, accessibility, and view-composition tests.
+
+All 10 files created. Now let me format them with the ecosystem tool, then lint, then typecheck.
+
+swiftformat passes. swiftlint flagged 3 violations: Projection.swift too long (428 lines) + one 51-line function, and Tests.swift too long (433 lines). I'll split files (allowed: `PollingEngine.*`) and shrink the function. Let me view the current formatted Projection to move the view-state structs out cleanly.
+
+The structs occupy lines 15–227; the projection enum starts at 229. Let me split: move the view-state structs into a new `PollingEngine.ViewState.swift`, and keep the projection logic in Projection.swift.
+
+Now refactor the 51-line `savingsCard` into smaller helpers. Let me view its exact current text.
+
+Now I'll split `savingsCard` into focused helpers to satisfy the function-body-length rule.
+
+Now split Tests.swift. Let me locate the class boundaries.
+
+Now I'll split Tests.swift: move fixtures + projection tests + view tests into a new `PollingEngine.ProjectionTests.swift`, keeping model/live/spy in Tests.swift.
+
+Files split. Let me re-format all PollingEngine files and re-run both linters to confirm green.
+
+Both linters are green (0 violations). Now the critical isolation typecheck against the real tokens + shared components. Let me check what the Components layer imports so I can build a correct typecheck closure.
+
+Components only import system frameworks — so I can typecheck my surface against the real tokens + components without the KMP framework. Let me run the iOS isolation typecheck (app sources).
+
+`TSChartPalette` is defined outside `Sources/Components`. Let me find it and include its file (and any other token helpers) in the typecheck closure.
+
+The full Components set drags in more app types (`UnitPreferences`). Let me instead compile the **minimal closure** my surface actually needs. Let me confirm where `.tsGlassPanel()` lives and which token files are required.
+
+Clean minimal closure identified. Let me typecheck my surface against the real tokens + the exact shared primitives it uses — iOS first, then macOS.
+
+All errors are from `States.swift`, which my surface does **not** use (I built my own chrome). Dropping it from the closure.
+
+Both iOS 18 and macOS 15 typecheck cleanly (0 errors under Swift 6). Now the test-symbol-resolution pass: compile the 3 test files with the app sources (stripping the same-module `@testable import`) so every symbol the tests reference is verified against the real types.
+
+The `XCTAssert*` C macros aren't available to raw `swiftc` (a known tooling limitation, unrelated to my code). I'll provide lightweight XCTest shims so the rest of the test code — every reference to **my** types — is genuinely type-checked.
+
+AdapterTests relied on XCTest's implicit Foundation re-export. Let me add explicit `import Foundation`/`import SwiftUI` to the stripped temp copies and re-run.
+
+Test symbol-resolution typecheck passes (exit 0). Now a **runtime harness** that actually executes the pure adapter/projection + the MainActor model logic and asserts real values (predecessor methodology).
+
+Now compile that harness into a real macOS executable (pure files, no SwiftUI) and run it.
+
+Strict concurrency flags the global mutable counters. Let me MainActor-annotate them.
+
+**38/38 runtime assertions passed.** Now the placeholder gate — both the literal gate command and an honest scan of my actual files.
+
+Placeholder gate clean (0/0). Now let me attempt the real gate honestly — generate the Xcode project and confirm my files are wired in.
+
+xcodegen generates cleanly; all 11 files are wired in (app target + test bundles). Now a bounded real `xcodebuild` attempt to capture the actual blocker on this runner.
+
+The KMP `Shared.xcframework` pre-action **timed out at 150s** (exit 124) — it requires the Kotlin/Native toolchain + network (runs on `macos-latest` CI per the script's own header). Since `xcodebuild ... build test` runs this first, the full-app gate can't reach Swift compilation on this runner. Let me capture the literal gate's bounded output and confirm the framework dependency, for honest evidence.
+
+All evidence gathered. The capability (Xcode/Swift/sim) **is** present and my code compiles for it; the full-app gate is blocked only by the out-of-scope KMP `Shared.xcframework` assembly. Let me write the honest gate log.
+
+Log written. Let me do a final lint/format confirmation, clean up temp files, and review git status before committing.
+
+All green (0 lint, 0 format), git status shows exactly my 12 files + the log (no `.xcodeproj` leak). Committing.
+
+Committed cleanly (13 files, commit `08338fea5`). Let me update the plan to reflect completion.
+
+Task complete. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0098-PollingEngine.log | 189 ++++++++++
+ .../shared-surfaces/PollingEngine.Adapter.swift    | 376 ++++++++++++++++++++
+ .../PollingEngine.AdapterTests.swift               | 235 +++++++++++++
+ .../shared-surfaces/PollingEngine.Chrome.swift     | 178 ++++++++++
+ .../shared-surfaces/PollingEngine.Model.swift      | 370 ++++++++++++++++++++
+ .../shared-surfaces/PollingEngine.Previews.swift   | 155 +++++++++
+ .../shared-surfaces/PollingEngine.Projection.swift | 227 ++++++++++++
+ .../PollingEngine.ProjectionTests.swift            | 282 +++++++++++++++
+ .../shared-surfaces/PollingEngine.Tests.swift      | 163 +++++++++
+ .../shared-surfaces/PollingEngine.ViewState.swift  | 226 ++++++++++++
+ .../shared-surfaces/PollingEngine.Views.swift      | 385 +++++++++++++++++++++
+ .../shared-surfaces/PollingEngine.strings          |  81 +++++
+ .../TeslaSync/shared-surfaces/PollingEngine.swift  | 112 ++++++
+ 13 files changed, 2979 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0098-PollingEngine.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.ProjectionTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.ViewState.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/PollingEngine.swift

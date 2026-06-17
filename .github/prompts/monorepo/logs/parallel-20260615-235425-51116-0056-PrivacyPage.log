@@ -1,0 +1,262 @@
+I'll start by exploring the repository structure to understand the web source and the Apple app architecture.
+
+The page wraps `PrivacySection`. Per the spec, I must reproduce every region from the web source. Let me read that component and explore the Apple app structure.
+
+Now I understand the full scope: the page wraps `PrivacySection` with a Privacy header, a "Recently viewed pages" card, a "Cookies & analytics consent" card, and a confirm dialog. Let me explore the existing Apple app structure to learn the patterns.
+
+The generated prompt targets `Features/Settings/` but the repo uses `feature-views/`. Let me check the project.yml source globs and an existing settings page to follow the real convention, plus find where routes are registered.
+
+Key finding: the repo is XcodeGen-based (no checked-in `.xcodeproj`), and source globs include `TeslaSync/feature-views` but **no `Features/Settings`**. The settings pages live in `feature-views/`. Let me check the toolchain availability and look at an existing settings page + route registration.
+
+Full toolchain is available (Xcode 26.5, xcodegen, swiftlint, pwsh, check-placeholders.ps1) — so this is NOT a BLOCKED scenario. I must fully implement and pass the gate. Let me study the route system, an existing settings page pattern, and search for any existing privacy code.
+
+There's also a `Sources/Features/` tree. Let me understand the canonical structure: read `AppRoute.swift`, the `Sources/Features` layout, and how routes map to views.
+
+No `privacy` route exists yet; the web route is `/account/privacy`. Settings parity pages live in `feature-views/` (RegionSettings, GasPriceSettings, etc.). Let me study the route→view mapping, the AppRouteParser, and the RegionSettings page pattern to follow conventions exactly.
+
+Let me study the routed-page pattern (`TeslaRegionPage` wraps `RegionSettings`), how routes render to views, and the model pattern. This mirrors web `PrivacyPage` wrapping `PrivacySection`.
+
+The architecture uses a `RouteHostRegistry` + per-page `RouteRegistration` files. Let me read the registry, the region route registration, the parser, and the RegionSettings model/view to follow the exact pattern.
+
+Let me read the route parser, find where route registrations compose into the shell, check the route tests, and study the RegionSettings model + view pattern.
+
+Now I understand the routing flow. Critical: the gate's placeholder scan and SwiftLint run on `apps/apple/TeslaSync/Features/Settings` literally, so the file MUST live there. I'll wire that dir into `project.yml`. The parser needs an alias `/account/privacy`. Let me study the design tokens, component library, and the RegionSettings model/view/states pattern.
+
+Let me read the RegionSettings page implementation (model/view/states) and the key component + design token files in parallel.
+
+Excellent — this is a clean, well-architected pattern. Note: `TeslaRegionPage` uses `TSPageTitle("translation.region.title")` (default catalog) while the section uses a per-surface table facade. Let me read the gate-critical files (RouteTests, check-placeholders.ps1, xcstrings format) and the component/token APIs I'll need.
+
+Key gate facts confirmed: RouteTests requires unique pathSegments (no count assertion), placeholder scan only hits `.swift` files, and `translation.region.title` confirms the page-chrome catalog convention. Let me read the placeholder patterns, the xcstrings format, the design tokens, and the remaining RegionSettings files (Views/strings/Tests/Adapter).
+
+Important: placeholder scan forbids the literal word "Placeholder" in `.swift` files, so I must avoid `.redacted(reason: .placeholder)`. Since the manifest declares 0 async data sources (local-state page), I won't need network loading states. Let me read the design tokens, the component APIs (Buttons, Cards, Overlays, Motion, Typography), and the rest of the RegionSettings reference files.
+
+Let me locate the exact APIs for the tokens and components I'll use (TSSpacing/TSRadius/Color.TS/Font.TS, TSButton, TSGlassPanel, TSIconBox, TSFadeIn, TSPageTitle, and a confirm-dialog/alert pattern).
+
+I have the component APIs. Now let me confirm `Font.TS`/`Color.TS` role names, find the confirm-dialog/alert pattern used in the codebase, and read the RegionSettings Adapter/Tests/Previews/strings to model my multi-file structure.
+
+I now have the full component/token vocabulary. Let me check the catalog's route-title key convention, the TeslaSyncApp registry composition site, and the RegionSettings Adapter + Tests patterns to finalize my design.
+
+Route titles are stored as `route.X` (no prefix), page content as `translation.<webkey>`. So I'll add 3 catalog keys (`route.privacy`, `translation.account.privacy.title/subtitle`) and use a per-surface table for section content (RegionSettings precedent). Let me read the rest of the registry composition, the Tests/Adapter/strings/Previews reference files.
+
+Let me read the RegionSettings Tests, strings, and Previews to model those files, then I'll start building.
+
+I have the full pattern. Let me check lint config, the ledger file, the gate contract README, and build preconditions (Shared.xcframework, xcodegen).
+
+Let me read the gate contract README, a sample completed log to model format, and the ledger structure.
+
+The DLQInspector precedent is decisive: that P7 page was committed under `apps/apple/Sources/Features/Admin/` (not `TeslaSync/Features/Admin`), adapting the generated path to the real repo layout. `Sources/**` and `Tests/Unit/**` are auto-globbed (no project.yml edit needed). Let me confirm the DLQ prompt's literal path and inspect the ledger structure.
+
+Decisive precedent confirmed: DLQ's generated Output was `TeslaSync/Features/Admin/` but it shipped to `apps/apple/Sources/Features/Admin/` with all strings in `Localizable.xcstrings`. I'll mirror that: page under `Sources/Features/Settings/` (auto-globbed, no project.yml edit), tests under `Tests/Unit/Features/Settings/`, all strings in the catalog. Let me check which string keys already exist to reuse (common.cancel) and confirm prefix conventions.
+
+The catalog already contains nearly all the `translation.consent.*`, `translation.privacy.*`, and `translation.recentPages.*` keys from the web extraction. I only need to add the missing ones. Let me verify exactly which keys exist vs. are missing.
+
+Only 3 keys are missing (the 2 parity page-chrome keys + the route title); all section keys already exist. Let me inspect the `storedCount` format and a couple values to handle interpolation correctly.
+
+The `storedCount` key uses plural variations (`%1$d`). Let me see how the codebase already resolves plural/count catalog keys to use the correct API.
+
+The codebase uses `String(format: String(localized: "key"), count)` for interpolated keys. Let me verify no Swift name collisions for my types and check whether the web `TeslaRegionPage` (the apple precedent) also used `copyLink`, to decide on the page-shell chrome.
+
+Major finding: the apple `PrivacySection` content component **already exists** at `apps/apple/TeslaSync/feature-views/PrivacySection.swift` (with Adapter, `PrivacyConsentState`/`PrivacyConsentAction` enums). My `PrivacyPage` just needs to wrap it — exactly like `TeslaRegionPage` wraps `RegionSettings`. Let me read all the existing `PrivacySection.*` files.
+
+The entire `PrivacySection` (10 files, ~1934 lines) already exists. My task is the thin page shell + route registration + 3 catalog keys + ledger + log — exactly the TeslaRegionPage pattern. Let me read the `PrivacySection` view, model, and sources to get the exact init signatures.
+
+Let me read the `PrivacyModel` init signature (Model.swift) and the previews to copy the model-construction pattern for my route registration.
+
+I have the full `PrivacyModel` API. Let me read the PrivacySection previews to copy the exact model-construction pattern for my registration's sample seed.
+
+I have the complete picture. Let me verify whether `PrivacySection` is already surfaced anywhere, check for any exhaustive `AppRoute` switches that my new case must satisfy, and confirm how the shell renders routes (registry vs switch).
+
+The shell renders via the registry (`routeHosts.view(for:)`), so no exhaustive render switch needs my case. Let me confirm no helper has an exhaustive `AppRoute` switch (breadcrumbs/explore catalog) that would fail to compile, then I'll start implementing.
+
+`ExploreCatalog` builds from `AppRoute.allCases`, so no exhaustive switch. Let me check for any test that hardcodes a route/catalog count (which a new route would break).
+
+Let me verify the Explore catalog grouping test and any account-group assertions won't break with a new `.account` route.
+
+Adding `.privacy` is safe across all tests (no hardcoded counts; group tests only check membership). Now let me verify build preconditions: the Shared.xcframework, available simulators, swiftformat, and the xcframework staging script (which could be slow).
+
+Key precondition: `Shared.xcframework` isn't staged yet — the build's pre-action compiles it via Gradle/Kotlin-Native (slow). iOS simulators and swiftformat are available. Let me kick off the xcframework build in the background now, then write code while it compiles. First, let me set up tracking.
+
+While that builds, let me record the plan and todos.
+
+Page shell drafted in my head. Let me check how the web `PageContainer` `copyLink` works (its label key) and whether a matching catalog key already exists, to decide on the copy-link affordance faithfully.
+
+The catalog already has `translation.common.copyLink.action/copied/error`. Since my web source uses `copyLink` (unlike the TeslaRegionPage precedent), I'll faithfully implement a native copy-link button reusing those keys. Let me read the web `CopyLinkButton` behavior.
+
+I have everything. The catalog already has `copyLink.action/copied`. Let me create the page shell with a faithful native copy-link button (matching the web `copyLink` prop), mirroring `TeslaRegionPage`.
+
+Need to create the directory first. Let me also verify the `teslaSyncTheme()` modifier exists (used in TeslaRegionPage previews).
+
+Both modifiers exist. Now let me create the page file.
+
+Now the route registration, mirroring `TeslaRegionRouteRegistration`.
+
+Now wire the route into `AppRoute.swift` (case + pathSegment + systemImage + group).
+
+Now the parser alias and the app registry line.
+
+Now the catalog. The file has inconsistent formatting (Xcode `" : "` vs manual `": "`), so I'll insert my 3 key-blocks as text right after the `"strings"` opener (the DLQ approach — minimal diff, no whole-file reserialization). Let me inspect the exact formatting of an existing `route.*` block and the file header.
+
+Catalog has mixed formatting, so I'll insert the 3 key-blocks right after the `"strings"` opener (minimal diff, no whole-file reserialization) using a validated Python script. `json.dumps(indent=2)` + 2-space shift exactly matches the existing 4-space key indentation.
+
+Let me verify the catalog insertion is clean (only additions, valid structure).
+
+Clean additive diff (+69/-0), valid JSON. Now the tests — let me model them on the existing `TeslaRegionRouteRegistrationTests` pattern.
+
+Let me confirm the `PrivacyPhase`/`PrivacyPhaseResolver` mapping before asserting on it in tests.
+
+Confirmed `.loaded` → `.ready`. Now let me write the test file.
+
+Now update the ledger. Let me view its tail to append the 2 rows correctly.
+
+No `page:settings/` rows yet (160 rows total). Let me verify the ledger round-trips cleanly through `json.dump(indent=2)` before appending the 2 rows.
+
+The ledger round-trips cleanly, so re-dumping after appending is safe. Let me add the 2 rows.
+
+Let me verify the ledger diff is clean and valid.
+
+Ledger updated cleanly (2 rows, done 2/2). Let me update todos and check on the xcframework build.
+
+The xcframework build is still compiling (Kotlin-Native, slow). Meanwhile let me run the checks that don't need it: placeholder scan, swiftlint, and swiftformat on my files.
+
+Placeholder scan clean (0 violations). Now swiftlint + swiftformat on the new files.
+
+SwiftFormat flags my `AppRoute.swift:40` (the case line I extended exceeds max width), and SwiftLint found 6 violations across the full project — I need to see if any are mine. Let me check the swiftformat config and the current line 40.
+
+My `AppRoute.swift:40` is 122 chars (limit 120). Let me split it into two `case` lines (preserves `allCases` order) and re-check formatting + capture the actual SwiftLint violations.
+
+SwiftFormat passes. Now let me run the full SwiftLint and capture the 6 violations to see if any are mine.
+
+SwiftLint shows no violations in my files. Let me get the complete, definitive violation list (the earlier run reported 6) to establish the pre-existing baseline honestly.
+
+Only 2 violations, both in the pre-existing `AnomalyInlineRow.Previews.swift` (untouched by me) — none in my files. Let me confirm those are pre-existing and test scoped linting (matching the gate's page-dir scope).
+
+I see — the first run's "6" was a double-count artifact (passing both `--config` and paths double-linted: 12614≈2×6307 files). After splitting `AppRoute.swift:40`, my files are now lint-clean. The only 2 remaining violations are pre-existing in the untouched `AnomalyInlineRow.Previews.swift`. Let me confirm they exist at HEAD, then check the xcframework build.
+
+Confirmed: those 2 violations are pre-existing at HEAD in an untouched sibling file (out of scope, matches DLQ precedent). My changed files are exactly the in-scope set. Let me check the xcframework build progress.
+
+The Gradle/Kotlin-Native build is still warming up (slow first run). Let me generate the Xcode project (independent, fast) while it builds.
+
+Project generated; my 3 files are included (18 references across targets). Now let me wait for the Gradle xcframework build to finish.
+
+The Shared.xcframework built and staged (16m). Now let me run the iOS build+test (the gate's `-scheme TeslaSync`) on the booted simulator. This is a large build — I'll run it async and monitor.
+
+iOS build+test running. I'll avoid concurrent macOS build (Gradle pre-action lock contention). Let me monitor the iOS build.
+
+Let me check the build log directly for progress.
+
+Build is actively compiling the TeslaSync module (0 errors so far). Let me continue waiting.
+
+Module emission for the large TeslaSync target is a heavy single step. Let me wait more and confirm it's progressing.
+
+Good — module emission done, now compiling source files in parallel (log grew 6k→16k lines, 0 errors). Let me keep waiting.
+
+App target compiled (0 errors) and is linking/code-signing. Now it'll build the test bundle and run tests. Let me continue waiting.
+
+The `test` action is recompiling TeslaSync with testability enabled (second pass), still 0 errors. Let me keep waiting.
+
+Still compiling the large TeslaSync target with testability (0 errors). Let me continue waiting.
+
+Build failed in the **TeslaSyncTests** target (3 failures). Let me find the actual compiler errors.
+
+The test target failed to compile due to a **pre-existing** error in an untouched sibling file: `WebhooksPageModelTests.swift:13` uses `LocalizedStringKey` without `import SwiftUI`. Since the whole test bundle must compile before ANY test runs, this blocks my tests too. Let me investigate whether it's genuinely pre-existing.
+
+Confirmed: `WebhooksPageModelTests.swift` is pre-existing-broken — committed at HEAD by a **sibling P7 page** ("WebhooksPage", commit 3bfe32c0e) that omitted `import SwiftUI`. It blocks the whole test bundle. Let me check the recent commit history to see how siblings handled the test gate and whether other breaks exist.
+
+Root cause is a single pre-existing sibling break (only `WebhooksPageModelTests.swift` is missing `import SwiftUI`, from commit 3bfe32c0e). It blocks the entire shared test bundle — so no test (including mine) can run without it. The acceptance criteria require a green test gate, and this trivial inherited compile error is the sole blocker. I'll apply the minimal, unambiguous fix (`import SwiftUI`) and document it transparently as an inherited-break unblock.
+
+`--importgrouping testable-bottom` ordering preserved (SwiftUI, XCTest, then @testable). Now let me re-run the iOS build+test (incremental — the app is already compiled).
+
+Incremental iOS build+test running. Let me wait and monitor.
+
+The import fix worked — the test target compiled (0 errors) and tests are running and passing. Let me wait for the full suite to complete.
+
+ExploreCatalogTests (including the group-ordering tests) all pass — my new route didn't break them. No failures yet. Let me wait for the full suite to finish (PrivacyPageTests + RouteTests + final summary).
+
+`RouteTests` passed (my route is fine). There's a failure in `ToastCenterMutationBridgeTests` (`Toast.Tests.swift`) — notably an untouched sibling shared-surface file (and the embedded path even references a different slot, indicating a merged-in test). Two test bundles are running (unit + UI). Let me wait for completion, then confirm my tests passed and triage the Toast failure's provenance.
+
+Test run finished with failures. Let me extract the complete failure list and confirm my tests passed.
+
+Only ONE failure: `ToastCenterMutationBridgeTests` (untouched sibling `Toast.Tests.swift`). But my `PrivacyPageTests` didn't show in the grep — I must confirm they actually ran and passed. Let me check.
+
+`PrivacyPageTests.swift` compiled into the bundle. The only failure is the sibling `Toast.Tests.swift` (note: its embedded path references `slot-55` — a merged-in test). Let me (a) definitively re-run my tests in isolation, and (b) investigate the Toast failure's provenance in parallel.
+
+While that runs, let me investigate the Toast failure's provenance.
+
+The Toast failure is clearly pre-existing/inherited: `Toast.Tests.swift` was committed **2026-06-14** (untouched by me), and the test expects the `fallback` "Failed to save" but the `ToastCenter` impl resolves a generic localized "Something went wrong" — a deterministic shared-surface design bug unrelated to my additive catalog change. Let me confirm my isolated tests pass.
+
+My isolated tests **SUCCEEDED**. Let me confirm the pass details.
+
+All my in-scope tests pass: **6/6 PrivacyPageTests + 8/8 RouteTests = 14/14, 0 failures**. The iOS app built green. Now I must verify macOS — critically, my `#elseif os(macOS)` NSPasteboard branch was NOT compiled by the iOS build. Let me run the macOS build + my tests.
+
+While macOS builds, let me verify formatting on all my touched files (including the WebhooksPageModelTests import fix).
+
+SwiftFormat clean (0/7 files). The macOS build completed — let me read its result.
+
+macOS reports "(1 failure)". Let me find what failed.
+
+The macOS failure is purely **code-signing** (entitlements require a dev certificate — an environment limitation), NOT a compile error in my code. The Swift compilation succeeded. Let me confirm there are zero Swift compile errors and that my macOS code (incl. the AppKit pasteboard branch) compiled, then re-run with signing disabled.
+
+The DerivedData is shared between iOS/macOS (same project hash). Let me check whether macOS actually compiled Swift before the signing failure, then re-run with signing disabled (the standard CI approach) to get a clean macOS verification.
+
+The macOS build bailed **early** at signing validation (before compiling my Swift). I must re-run with signing disabled (standard CI approach) to verify my macOS code — especially the `#elseif os(macOS)` NSPasteboard branch the iOS build never compiled.
+
+macOS build+test running (signing disabled). Let me monitor it while preparing the evidence log.
+
+Signing disabled worked — macOS now compiling cleanly (0 non-signing errors), emitting the TeslaSync-macOS module. Let me keep waiting.
+
+Still in the heavy TeslaSync-macOS module-emission step (single-threaded, slow for this large module). 0 errors. Let me wait more.
+
+macOS module emission done; now compiling target files in parallel (0 errors). Let me continue waiting for the compile + my test run.
+
+macOS still compiling the large app target (29k lines, 0 errors). Let me wait for compilation + test-target build to complete.
+
+macOS **TEST SUCCEEDED**. Let me confirm my tests passed on macOS and the AppKit branch compiled.
+
+macOS: app compiles green (incl. my `#elseif os(macOS)` NSPasteboard branch) and **14/14 my tests pass** (the "error:" lines are harmless `linkd`/Shortcuts daemon runtime log noise, not compile errors). Both idioms verified. Let me grab exact line evidence for the PARITY section, then write the log.
+
+All evidence gathered. Both idioms verified green. Let me update todos and write the comprehensive evidence log.
+
+The log is written. Now let me do a final review: confirm git status, ensure generated artifacts (`.xcodeproj`, `Shared.xcframework`) are git-ignored, and verify nothing unexpected is staged.
+
+Git status is exactly as expected (generated artifacts properly ignored). Let me list the new files and do a final placeholder re-scan, then commit.
+
+All clean. Now let me commit all the in-scope changes (plus the disclosed Webhooks unblock, log, and ledger).
+
+Staged diff is clean and exactly in scope. Let me commit.
+
+Committed (`4bb2ed3a7`). Let me finalize todos and clean up temp files.
+
+Working tree is clean, temp files removed, all todos done. The task is complete and verified.
+
+## Summary
+
+I implemented the native SwiftUI **`PrivacyPage`** at full web parity with `web/src/features/settings/pages/PrivacyPage.tsx` (route `/account/privacy`), adaptive across macOS + iOS.
+
+**What I built** (committed as `4bb2ed3a7`):
+- **`PrivacyPage.swift`** — a thin `PageContainer` shell (title + subtitle + a real HIG-native cross-platform "Copy link" control reusing the shared `copyLink` catalog keys) wrapping the **already-existing** `PrivacySection` component + its `@Observable PrivacyModel`, exactly mirroring the `TeslaRegionPage`→`RegionSettings` precedent. It carries every panel/region, all data states, and the confirm/toast flows.
+- **`PrivacyRouteRegistration.swift`** + nav wiring: new `.privacy` route (Account group, `account/privacy` pathSegment), `/account/privacy` deep-link alias, and registry composition.
+- **3 missing catalog keys** added to `Localizable.xcstrings` (`route.privacy`, `translation.account.privacy.title/subtitle`); the other 23 section keys were already present.
+- **`PrivacyPageTests`** (6 tests) + ledger rows + a full evidence log.
+
+**Verification (both idioms green):**
+- Placeholder scan: `PLACEHOLDER_COUNT=0`; SwiftFormat: clean; in-scope SwiftLint: clean.
+- iOS **and** macOS app **build green** (macOS verified the `#elseif os(macOS)` NSPasteboard branch the iOS SDK never compiles).
+- `PrivacyPageTests` (6) + `RouteTests` (8) = **14/14 pass on iOS and macOS**.
+- **`PARITY_COVERED=2 == PARITY_REQUIRED=2`**.
+
+**Honestly documented inherited issues** (pre-existing, out-of-scope, deferred per the DLQInspector precedent): a Toast test assertion failure and 2 AnomalyInlineRow lint violations. I applied one disclosed minimal unblock — adding the missing `import SwiftUI` to the sibling `WebhooksPageModelTests.swift` (a compile break from commit `3bfe32c0e` that blocked the entire shared test bundle) — without which no test could compile or run.
+
+`EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

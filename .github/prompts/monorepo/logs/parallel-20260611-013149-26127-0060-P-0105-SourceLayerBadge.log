@@ -1,0 +1,178 @@
+I'll start by understanding the task: building a native Apple (SwiftUI) version of the `SourceLayerBadge` web component. First, let me explore the environment, the web source, and tooling availability.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and understand the Apple app structure.
+
+Now I understand the web source — a tiny debugger badge showing signal source layer (L1/L2/log/stale/unknown) with a tooltip. Let me study the existing Apple shared-surface conventions and check if SourceLayerBadge already exists.
+
+Shared surfaces are **files** (not dirs) following the pattern `SurfaceName.{Component}.swift`. SourceLayerBadge doesn't exist yet. Let me study the canonical structure and find the closest analog (a badge-type surface).
+
+`FreshnessIndicator` is the closest analog — a small diagnostic badge with the standard file set. Let me read it in full as my template, since SourceLayerBadge is conceptually similar (signal freshness/source diagnostics).
+
+This is a rich, well-established pattern. Let me read the remaining FreshnessIndicator files to fully internalize the conventions before writing SourceLayerBadge.
+
+Let me read the remaining FreshnessIndicator files (Adapter, strings, Previews, Tests, AdapterTests) to see the supporting types and test conventions.
+
+Let me read the test files and locate the shared P1/S9 design tokens and primitives (Color.TS, TSButton, TSSkeleton, badge/tooltip equivalents) plus the project.yml build config.
+
+Excellent — I now understand the full pattern. Let me investigate the "offline" state convention, the shared design tokens (P1/S9), available primitives (badge/tooltip/chip), and the build config before designing SourceLayerBadge.
+
+There's a `connection` axis (live/stale/offline) convention and a `Sources/Components/UI/Badges.swift` primitive. Let me examine the badge primitive, tokens, and a small indicator surface (AIChatbotIndicator) to choose the right level of structure.
+
+The `connection` axis (live/stale/offline) is the established orthogonal P4 leaf convention, used even by small indicators like `AIChatbotIndicator`. Let me read its Views + Model for the connection/auto-refresh pattern, and locate the token definitions.
+
+Let me read the AIChatbotIndicator Adapter (connection enum, meta, accessibility) and Previews, locate the actual token definitions, and confirm the build globs shared-surfaces automatically.
+
+Let me locate the precise token definitions (Color.TS palette, Font.TS, TSSpacing, TSRadius, TSMotion) and confirm the build globs the shared-surfaces directory.
+
+Build globs the whole `shared-surfaces` dir (excluding `*Tests.swift`), so new files are auto-included. Let me read the design token definitions and the test target config + lint rules.
+
+I now have all design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion). Before writing code, let me verify the build feasibility — xcodegen, the Shared.xcframework, test-target config, and whether the gate can actually run on this machine.
+
+Important finding: `Shared.xcframework` is a stub (only `.gitkeep`). The app targets depend on it. Let me examine the xcframework build script, whether the KMP shared module exists, and the exact test-target source config.
+
+Key findings: test bundles include `shared-surfaces/**/*Tests.swift` (so my tests compile into them), but the app targets depend on `Shared.xcframework` which is a **stub** built from KMP via Gradle. Let me check the KMP module and the pending-verifications doc to gauge full-build feasibility.
+
+The `macos-pending-verifications.md` reveals the **established, accepted methodology**: the full-app `xcodebuild build test` is universally macOS-pending (blocked by the unstaged KMP `Shared.xcframework` needing Kotlin/Native, missing macOS signing identities, and pre-existing unrelated parallel-merge collisions). Prior surfaces are verified **in isolation** (swiftc -typecheck against real Tokens.swift, isolated SwiftPM tests, swiftlint/swiftformat/placeholder clean, i18n parity, xcodegen enumeration). I'll follow exactly that rigorous standard.
+
+Let me check the logs dir, an existing shared-surface log for format, the lint configs, and the placeholder patterns.
+
+Let me read the placeholder-check script (to understand scan scope + the `// parity:allow` opt-out), and kick off the KMP xcframework Gradle build in the background now (it's the long pole — 6-7 min when it works) so a real app-target compile may be possible later.
+
+The placeholder scanner is **case-insensitive over `.swift` file contents (including comments)** — so I must avoid the literal words "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" everywhere, even in comments. Gradle xcframework build is running in the background. Let me confirm the primitive APIs (TSButton, TSSkeleton) and check for symbol collisions before writing.
+
+Critical: **`SignalSourceLayer` already exists** in `SnapshotInspector.Adapter.swift` — single app module means I must use unique names. I'll prefix every type with `SourceLayerBadge`. Also good news: the **DEBUG `Shared.xcframework` built successfully** (release still building), which enables a real app-target compile later. Let me confirm my prefixed names are collision-free and read the TSButton init.
+
+All clear: my `SourceLayerBadge`-prefixed names are collision-free, TSButton/TSSkeleton APIs confirmed, and the DEBUG xcframework built. Let me set up a quick plan and write the surface files. Starting with the pure core (Adapter, Projection) and Model.
+
+Now the pure core — Adapter:
+
+Now the Projection (pure):
+
+Now the Model (state-holder, seams, telemetry, i18n facade):
+
+Now the Views, main view, Previews, and strings:
+
+Now the two test files — AdapterTests (pure core) and Tests (projection/model/views/a11y):
+
+Now the main Tests file (projection, model, live source, views, a11y):
+
+All 9 files written. Let me check the gradle build progress and run swiftformat (auto-fix on my files), swiftlint --strict, and the placeholder gate.
+
+SwiftFormat cleaned 3 files; release xcframework still linking (Kotlin/Native long-pole). Let me confirm format-lint clean, run swiftlint --strict on my files, and run the placeholder gate on my actual files.
+
+Format-lint clean (0/8) and swiftlint --strict clean (0 violations). Now the placeholder gate on my actual files (via a temp dir for a real scan):
+
+Placeholder gate clean (COUNT=0, 0 opt-outs). Now let me prove the pure-core logic at runtime with an isolated executable harness (Foundation-only) compiling my real Adapter + Projection against web-parity assertions.
+
+Gradle RELEASE build **succeeded in 8m 35s** — the xcframework is now available. Let me create the harness dir, compile the pure core (real Adapter + Projection) with the assertion harness, and run it.
+
+**All 45 pure-core assertions pass** — logic matches the web source exactly. Now let me set up a real SwiftUI typecheck against the design system for both iOS-18 and macOS-15. Let me identify the primitives' dependencies first.
+
+Both primitives depend only on `Tokens.swift` + SwiftUI. Let me typecheck my full surface against the **real** generated `Tokens.swift` + real `TSButton`/`TSSkeleton` for both iOS-18 and macOS-15 under Swift 6 strict concurrency.
+
+Errors are only in the real `Skeletons.swift` (it references `TSCard` from another file) — **not my code**. Let me pull in `TSCard` too so the real primitives compile, isolating only the unrelated UI graph.
+
+Rather than chase shims, I'll follow the prior-agent standard: typecheck against the **whole real design system** (`Sources/Components` + `Sources/Design` + real `Tokens.swift`), excluding any `Shared`-coupled files. Let me find which design-system files import the KMP `Shared` module.
+
+No `Shared`-coupled files and no test files in the design system (41 files). Let me typecheck my surface against the **entire real `Sources/Components` + `Sources/Design` + generated `Tokens.swift`** for macOS-15.
+
+All errors are in `UnitFormatters.swift` — the SharedFacade-coupled file prior agents explicitly exclude ("minus the SharedFacade-coupled `UnitFormatters.swift`"). **Zero errors in my files.** Let me find all Shared-facade-coupled design files and exclude them, then re-run both SDKs.
+
+Only `UnitFormatters.swift` is coupled. Excluding it and re-running both **macOS-15 and iOS-18** typechecks:
+
+macOS-15 typecheck: **0 errors**. iOS-18 still running (I run it twice for grep+count). Let me wait.
+
+Both typechecks pass: **macOS-15 = 0 errors, iOS-18 = 0 errors** against the full real design system under Swift 6 strict concurrency. Now let me stage the xcframework, run `xcodegen generate` to confirm my files are enumerated, and verify i18n parity.
+
+i18n parity confirmed: all 6 web `t()` keys present; native additions are the lifted glyphs/units/chrome. `xcodegen generate` succeeded. Let me verify my files are enumerated in the project and cross-check that every key used in code exists in `.strings` (no missing/dead keys).
+
+Enumeration confirmed: all 9 files in pbxproj (54 refs across targets). Key cross-check: **0 missing keys**; the 8 "dead" hits are false positives (built via interpolation `sourceLayer.{rawValue}.{desc|label}` — all reachable). i18n is complete.
+
+Now the authoritative check: a real full-app compile. Let me verify the simulator exists and kick off the iOS `xcodebuild` (the gate command) in the background.
+
+iPhone 16 sim is booted; **0 valid signing identities** (the documented macOS blocker). Let me run the iOS gate command (`build test`) in the background, capturing output to grep for any SourceLayerBadge errors.
+
+iOS build running in background (PID 16260). Let me wait for it to compile and check progress.
+
+The build is compiling the app module (reached `EmitSwiftModule`) and my `SourceLayerBadge.strings` is processed cleanly. There's 1 "error:" match — let me inspect it and keep monitoring the background build.
+
+The 1 error is **pre-existing and unrelated** — `AISignalExplorerNlFilter.swift:142` (another agent's surface), the classic parallel-merge issue documented in pending-verifications. Not my code. The build is still running. Let me wait for it to complete and capture the full picture.
+
+Build finished: **2 total errors, both in pre-existing unrelated surfaces** (`AISignalExplorerNlFilter.swift`, `RecentDrivesSection.Previews.swift` — another agent's code, the latter literally listed in pending-verifications). **Zero SourceLayerBadge errors.** Let me confirm the exact errors, any SourceLayerBadge warnings, and the build result.
+
+**Confirmed**: the 2 build errors are pre-existing/unrelated (`AISignalExplorerNlFilter.swift:142`, `RecentDrivesSection.Previews.swift:24` — other agents' surfaces, the latter in pending-verifications). **Zero SourceLayerBadge errors or warnings**; my 9 files compiled in the real whole-module app-target build. `BUILD FAILED` is due solely to the pre-existing errors.
+
+Let me capture the literal gate's tree-wide lint/format step results (honesty) and confirm zero SourceLayerBadge hits.
+
+Tree-wide swiftformat --lint: **FORMAT_EXIT=0** (0/4440). Now the tree-wide swiftlint --strict (gate step):
+
+Tree-wide swiftlint --strict: **LINT_EXIT=0** (0 violations in 4142 files). Both lint/format gate steps pass tree-wide. Let me check a prior shared-surface log to match the exact format/STATUS convention before writing mine.
+
+This is the **predecessor-accepted DEFERRED disposition**: prior surfaces (FreshnessIndicator, AIChatbotIndicator) record `IOS_EXIT=65`/`MAC_EXIT=65` as DEFERRED (pre-existing sibling collisions + macOS signing), keep all surface-scoped gates green, and conclude `EXIT=0`/`STATUS=DONE`. My situation is identical. Let me capture the exact xcodebuild exit codes by re-running the gate commands. iOS first (incremental), macOS in background.
+
+Both builds are competing for CPU. Let me wait for the iOS run to finish capturing its exit code.
+
+Both builds are running and competing. iOS2 found the same pre-existing error during module emission. Let me wait for the iOS run to finish and capture its exit code.
+
+iOS gate: **IOS_EXIT=65, 0 SourceLayerBadge errors** — matches precedent. Let me confirm the iOS errors are the same pre-existing pair and wait for the macOS build to finish.
+
+iOS errors are all pre-existing (`RecentDrivesSection.Previews.swift`, `AISignalExplorerNlFilter.swift`). macOS build still compiling (0 SourceLayerBadge errors so far). Let me wait for it to finish.
+
+macOS gate: **BUILD FAILED, 0 SourceLayerBadge errors**, same pre-existing `RecentDrivesSection.Previews.swift` cause (MAC_EXIT=65, also blocked by 0 signing identities). Both xcodebuild reds are external. Let me capture the literal placeholder-gate command's exit and the verbatim pre-existing errors for the log.
+
+All evidence gathered. Now I'll write the comprehensive gate log (following the predecessor DEFERRED-disposition format), then commit.
+
+Log written. Let me verify git status (ensure only my files are staged, generated artifacts are ignored) and then commit.
+
+Clean — only my 9 files + the log are untracked; the generated `.xcodeproj` and staged `Shared.xcframework` are git-ignored. Committing exactly the allowed files:
+
+Committed as `5e5300d77` with exactly the 10 allowed paths. Let me verify the working tree is clean and clean up the `/tmp` scratch artifacts.
+
+One gap to close: my two test files (`*Tests.swift`) weren't compiled by the isolated typecheck (they use `@testable import TeslaSync`) nor by xcodebuild (the app build failed on pre-existing errors before the test bundle). Let me verify they compile by typechecking them together with the surface + design system + XCTest (stripping the module import since they're in one unit).
+
+The errors are purely `cannot find 'XCTAssertEqual'` — the CLI `import XCTest` didn't resolve (a swiftc/CLI limitation, not my test code). The definitive approach prior agents used is an **isolated SwiftPM package that actually RUNS the tests**. Let me build one (library module named `TeslaSync` so `@testable import TeslaSync` works as-is) and run `swift test`.
+
+**41/41 tests RUN and PASSED** in the isolated SwiftPM package (Swift 6 mode, macOS 15) — including all `@MainActor` model tests (stale auto-refresh arm/re-arm, telemetry-once, offline-no-refresh), projection, view-composition, and adapter tests. This closes the test-verification gap and proves the test files themselves compile + pass. Let me update the log with this evidence and amend the commit.
+
+Now let me amend the commit to include the updated log and clean up the SwiftPM scratch package.
+
+The task is complete. Final commit `0d722674d` contains exactly the 10 allowed paths (9 surface files + log), working tree clean, scratch cleaned.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`SourceLayerBadge`** SwiftUI surface at parity with `web/src/components/data-display/SourceLayerBadge.tsx`, following the established `FreshnessIndicator`/`AIChatbotIndicator` conventions (P1/S8 state-holder, S9 tokens, S10 i18n, S11 telemetry).
+
+**9 files** (`apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.*`): `.swift` (main view), `.Adapter`, `.Projection`, `.Model`, `.Views`, `.Previews`, `.strings`, `.AdapterTests`, `.Tests`. All types prefixed `SourceLayerBadge*` to avoid colliding with SnapshotInspector's existing `SignalSourceLayer`.
+
+**Parity reproduced verbatim**: the `STYLE` layer map (l1/l2/log/stale/unknown → glyph + tint + description), `formatAge` (all branches), the `desc (age: …)` tooltip, `showLabel` width. Every state renders — loading skeleton, unavailable retry, ready (l1/l2/log/stale, unknown "—" = empty), offline (cached + marker). Stale-layer one-shot auto-refresh (P4 leaf), `view.opened` telemetry once, full VoiceOver/Reduce-Motion accessibility, zero hardcoded literals.
+
+**Verification (all green on this runner)**:
+- Pure-core RUN harness **45/45**; isolated SwiftPM XCTest **41/41** (Swift 6, macOS 15) — proving the model auto-refresh/telemetry/offline logic and the test files themselves.
+- `swiftc -typecheck` vs the **real** design system: **0 errors** on both macOS-15 and iOS-18 (Swift 6 strict concurrency).
+- Real whole-module app-target compile: **0 SourceLayerBadge errors/warnings**.
+- swiftlint --strict **0** (4142 files), swiftformat --lint **0** (4440), placeholder **COUNT=0**, i18n parity **6/6**, xcodegen enumerates all 9 files.
+
+**Full-app `xcodebuild build test`**: `IOS_EXIT=65`/`MAC_EXIT=65` — **DEFERRED** to the P99 acceptance gate, blocked solely by pre-existing, unrelated sibling-surface defects (`AISignalExplorerNlFilter.swift:142`, `RecentDrivesSection.Previews.swift:24`) and the runner's missing macOS signing certificate — both outside this prompt's scope. The surface contributes zero errors. This is the predecessor-accepted disposition. Log ends `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...apple-shared-surfaces-0105-SourceLayerBadge.log | 150 ++++++++++
+ .../shared-surfaces/SourceLayerBadge.Adapter.swift | 182 ++++++++++++
+ .../SourceLayerBadge.AdapterTests.swift            | 179 ++++++++++++
+ .../shared-surfaces/SourceLayerBadge.Model.swift   | 223 ++++++++++++++
+ .../SourceLayerBadge.Previews.swift                |  67 +++++
+ .../SourceLayerBadge.Projection.swift              | 151 ++++++++++
+ .../shared-surfaces/SourceLayerBadge.Tests.swift   | 325 +++++++++++++++++++++
+ .../shared-surfaces/SourceLayerBadge.Views.swift   | 170 +++++++++++
+ .../shared-surfaces/SourceLayerBadge.strings       |  48 +++
+ .../shared-surfaces/SourceLayerBadge.swift         |  61 ++++
+ 10 files changed, 1556 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0105-SourceLayerBadge.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SourceLayerBadge.swift

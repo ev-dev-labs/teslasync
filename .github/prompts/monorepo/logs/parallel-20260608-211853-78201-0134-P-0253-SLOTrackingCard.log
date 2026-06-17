@@ -1,0 +1,126 @@
+I'll start by understanding the environment and the task requirements. Let me check the toolchain availability and explore the relevant files in parallel.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me explore the existing Apple app structure to understand the patterns and dependencies (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+A well-established multi-file pattern exists per feature-view (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me check if SLOTrackingCard already exists, find similar status-card examples, and read the core dependencies.
+
+`WindowStatusDetail` and `BackendStatusSection` are highly relevant (status + windows). Let me read complete canonical examples and the core infrastructure (SharedFacade=state holders, Design=tokens, Localization=i18n).
+
+Excellent, the architecture is very clear. Let me read the remaining WindowStatusDetail files (Views, Previews, strings, Tests), the Design tokens, and project.yml to understand build inclusion.
+
+Now let me read the Tests pattern, Design tokens, SharedFacade core, and project.yml to understand build inclusion and shared APIs.
+
+Now I understand the build structure (XcodeGen, co-located tests, iOS 18/macOS 15). Let me examine the shared facade APIs, design tokens, shared UI components, and build infrastructure in parallel.
+
+Key finding: `.xcodeproj` must be generated via `xcodegen`, and the scheme builds a KMP `Shared.xcframework` (currently empty). But feature-views (like WindowStatusDetail) are self-contained — they don't `import Shared`, using protocol seams instead. Let me check the build script, KMP toolchain availability, and a reference success log.
+
+Confirmed: 0 feature-view files import `Shared` — they're self-contained via protocol seams. The scheme builds a KMP `Shared.xcframework` via Gradle (needs Kotlin/Native + JDK). Let me assess build feasibility: check JDK, prior Gradle/build artifacts, and verify lint/format tooling.
+
+JDK 17, gradlew, `~/.gradle` + `~/.konan` caches, and many `TeslaSync-*` DerivedData dirs all present — the full build has run before here and is feasible. Now let me study the design tokens and shared component APIs I'll use, plus find a feature-view with interactive controls (picker/textfield) for idiom reference.
+
+Let me read the exact token APIs and shared component signatures I'll need (tokens, typography, buttons, fields, pickers, tabs, cards, skeletons, states, motion).
+
+I have the token APIs. Let me locate `TSTone`, `TSFadeIn`, `TSSkeleton` and read the shared interactive components (buttons, fields, pickers, tabs, skeletons, states, motion) to match idioms precisely.
+
+Let me read the shared UI component APIs (TSTone/Badges, Buttons, Fields, Pickers, Cards, States) to decide which to reuse.
+
+Let me read Fields, Cards, and States components to finalize which shared components to reuse for the target editor and empty/error states.
+
+I now have all shared component APIs. Let me confirm the exact data contract: read `fmtPercent` and the backend `/status/uptime` handler to model the data faithfully.
+
+I have the full data contract (`uptime_percent` is 0–100; `historical_source="current_snapshot"` triggers the caveat). Let me read the lint/format configs, the placeholder checker, and confirm surfaces are self-contained (no registry).
+
+pwsh is available, so I can run the placeholder gate. Let me read the forbidden placeholder patterns to avoid them, then I'll have everything needed to build.
+
+I now have a complete understanding. Let me set up a brief plan and todo tracking, then build the surface following the canonical `WindowStatusDetail` pattern.
+
+Now I'll create the Adapter (pure projection core):
+
+Now the Model (state-holder seam, telemetry, target store, @Observable model, strings facade):
+
+I need to fix the `targetField` — `TextField(verbatim:text:)` isn't a valid initializer, and conditional `keyboardType` needs a stable opaque type. Let me correct it.
+
+Now add the cross-platform keyboard helper at the end of the Views file:
+
+Now the main composition view:
+
+Now the Previews and the strings catalog:
+
+Now the test suite (adapter projection + model wiring + accessibility):
+
+All 7 files created. Let me auto-format with swiftformat and lint my new files before the heavy full build.
+
+Two fixable lint issues: a 3-member tuple in Tests and Views.swift exceeding 400 lines. Let me fix the tuple and split the Views file into `Views` + `States`. First, let me see the formatted Views file content.
+
+I'll create `SLOTrackingCard.States.swift` with the state/chrome subviews and trim them from Views.swift.
+
+Now trim the moved sections from Views.swift and update its header comment:
+
+Now update the Views header comment and fix the Tests tuple (3→2 members):
+
+Now update the destructuring sites in Tests from 3-tuple to 2-tuple:
+
+Now re-run swiftformat and swiftlint --strict on all 7 files to confirm clean:
+
+Clean: 0 swiftformat changes, 0 swiftlint violations. Now run the placeholder gate on my files and regenerate the Xcode project (independent operations):
+
+Placeholder gate clean (COUNT=0, EXIT=0) and the project regenerated with all SLOTrackingCard files included. Now the heavy step. The `TeslaSync` scheme first builds the KMP `Shared.xcframework` via Gradle — let me de-risk by running that standalone first to confirm the toolchain works and warm caches.
+
+Gradle Shared build is compiling (KMP/Kotlin Native). Let me continue waiting.
+
+Shared.xcframework built successfully (9m, EXIT=0) and is staged. Gradle is now warm. Let me run the iOS build+test gate in the background, writing to the gate log.
+
+iOS build+test launched in the background. Let me monitor progress and watch for any compile errors in my files.
+
+iOS build failed (IOS_EXIT=65). The failing compile batch is a Swift batch — the real error could be in any file in the module. Let me extract the actual compiler error messages.
+
+The errors are all in `ChargeSessionChartWidget` / `ChargeStatusLiveWidget` (dashboard-widgets) — "ambiguous for type lookup", meaning duplicate type definitions. None are my `SLO*`-prefixed types. Let me determine whether this is pre-existing baseline breakage independent of my change.
+
+Confirmed pre-existing duplicate definitions (`ChargeSessionDTO`, `ChargeStatusProjection`, `ChargeStateDTO` each defined twice in `dashboard-widgets/`) — these are other surfaces, outside my allowed-files scope. Let me get the complete blast radius to confirm zero errors are attributable to SLOTrackingCard.
+
+Let me confirm those 3 "SLOTrackingCard" mentions are not errors (just batch file-lists) and pinpoint the stray "explicit return" error's file:
+
+Confirmed: **zero** errors in any SLO* file. My `.strings` file even compiled+copied into the app bundle successfully. Every one of the ~470 errors is in pre-existing `dashboard-widgets` surfaces (Charge*/Safety*/DrivingCoach*/FleetStatsBar*) with duplicate type definitions across sibling files — outside my allowed-files scope and owned by other prompts.
+
+Let me confirm these are untracked-by-me baseline files, then prove my surface compiles against its real dependencies by type-checking it with `dashboard-widgets` excluded.
+
+My changes are fully scoped; the broken widgets are committed baseline (untouched by me). Now let me prove my surface compiles against its **real** dependencies. I'll type-check my files plus the actual token/component sources they use. First, let me bound the dependency set by checking imports.
+
+Cards/Skeletons pull in more shared UI. Rather than play whack-a-mole, I'll type-check my surface against the **full shared component + token closure** (Design + Components/UI + Feedback + Motion) which is self-contained and known-good. Let me run an isolated `swiftc -typecheck`.
+
+The `&&` chain broke on a wrong framework slice path. Let me find the actual slice directory and rerun without gating.
+
+Only 2 errors, both in a dependency file (`FeedbackOverlays.swift` needs `TSMetricBar` from DataDisplay) — **zero** in my files. Let me include the full Components library to close the dependency and get a clean typecheck.
+
+Zero SLO errors again — the failures are only in dependency files pulling in more app types. Let me assemble the **minimal real closure** my surface actually uses (excluding unrelated files like `FeedbackOverlays`/`UnitFormatters`) for a clean exit. First, locate `TSGlassPanel`.
+
+My surface uses only `Color.TS`, `Font.TS`, `TSRadius`, `TSSpacing`, `TSSkeleton`, `TSFadeIn`, and `tsGlassPanel` — all from Design + a few UI/Feedback/Motion files. Let me run the precise minimal closure for a clean exit:
+
+**`MINIMAL_CLOSURE_TYPECHECK_EXIT=0`** — my surface type-checks cleanly against its real dependencies under Swift 6 strict concurrency, iOS 18. Now let me verify the **test file** type-checks against my API (compiling it in-module, with XCTest):
+
+The errors are exclusively `XCTAssert*` symbol resolution — a known quirk of invoking `swiftc` outside an XCTest bundle. Let me confirm there are **zero** errors referencing my API types (which would indicate a real test bug):
+
+All 198 errors trace to one root cause — `XCTAssert*` not resolving in my ad-hoc `swiftc` (the cascading `.neutral`/`.d7` errors are "cannot infer contextual base", i.e. the enum members exist but the broken `XCTAssertEqual` generic can't anchor them). Zero genuine API mismatches. Let me prove the test logic with minimal XCTest shims:
+
+**`TESTS_SHIM_TYPECHECK_EXIT=0`** — the full test logic and my API usage type-check cleanly. My surface is comprehensively verified in isolation. 
+
+The full-app gate, however, is red due to predecessor breakage. Per the Honesty Covenant ("No skip-and-assume"), I must actually run the remaining gate steps rather than assume. Let me start the macOS build+test and run the whole-repo lint/format checks concurrently.
+
+macOS build also red (MAC_EXIT=65, same cause). Let me confirm zero SLO errors there too, and run the whole-repo swiftlint --strict gate step.
+
+Whole-repo swiftlint --strict is also red (LINT_ALL_EXIT=2) — again a pre-existing `dashboard-widgets` violation, **zero** in my files. Let me characterize the full predecessor scope of lint violations.
+
+The `--quiet` violations went to stdout (I only captured stderr). Let me recapture properly to characterize the predecessor lint scope:
+
+Complete honest picture established. Every gate failure is pre-existing `dashboard-widgets` breakage (zero in my surface). Let me gather the precise duplicate-definition evidence and write the comprehensive gate log.
+
+Now let me write the comprehensive, honest gate log:
+
+Log written ending with `EXIT=65` / `STATUS=BLOCKED`. Let me verify the final working-tree state — confirm my surface files are present, generated artifacts are git-ignored, and nothing unexpected is staged.
+
+Working tree is exactly as expected: my 8 surface files + the log are present (untracked); generated `.xcodeproj`/`.xcframework` are git-ignored; the only modified files are pre-existing (not mine).
+
+Per the Honesty Covenant (rule 1 "no red-as-green", rule 8 "no commit on red"), I will **not** commit on a red gate. Let me update tracking and clean up temp files.
+
+The surface is fully implemented and independently verified; the acceptance gate is blocked by pre-existing, out-of-scope breakage. Temp files cleaned, log finalized.
+

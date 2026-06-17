@@ -1,0 +1,16 @@
+I'll start by exploring the repository structure to understand what exists for both the web source and the Apple app.
+
+Both web source and Apple app exist. Let me read the web source and explore the Apple app structure.
+
+The web source is a self-contained regex tester. Now let me explore the Apple app structure to understand conventions, especially existing feature-views.
+
+There are 1964 files (many feature views). Let me find sibling devtools tools and a similar interactive tool already ported to use as a reference template.
+
+`RegexTester` isn't ported yet. Let me study the closest analog — `Base64Tool` (a transform tool with input/output) — both its web source and full Apple file set.
+
+Now let me read the full Base64Tool Apple file set to learn the exact conventions.
+
+Let me read the remaining Base64Tool files (Adapter, Views, Previews, strings, Tests) to fully internalize the conventions.
+
+Now the Previews, strings, and Tests files, plus the shared design tokens (TSSpacing, Color.TS, Font.TS, TSButton).
+

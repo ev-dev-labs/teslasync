@@ -1,0 +1,66 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the web analytics components and the Apple app structure in parallel.
+
+Let me read all the analytics components and the FleetAnalytics type definition.
+
+Now let me read the remaining tab components and the FleetAnalytics type.
+
+Let me look at the FleetAnalytics type, the Apple project structure, and check available tooling.
+
+The build (project.yml) doesn't reference `TeslaSync/Features/` yet. Let me understand the actual existing structure, navigation, and check the ledger for this page.
+
+This is a mature, well-structured app. Pages live in `Sources/Features/{Domain}/`. The `analytics` route exists but `AnalyticsPage` itself isn't built yet (siblings FleetCompare/Statistics/Mileage/etc. are). Let me study the sibling page pattern thoroughly.
+
+StatisticsPage currently registers to `.analytics` via a `/statistics` alias. I need to understand the full routing composition before deciding how AnalyticsPage registers. Let me trace it.
+
+I need to understand the routing conflict (Statistics currently owns `.analytics`). Let me read the app composition and ledger entries.
+
+Let me check for tests asserting route registration and the ledger structure, to resolve the `.analytics` ownership cleanly.
+
+The route tests pin `/statistics` and `/analytics` both to `.analytics`. Let me check the pending-verifications doc and how FleetCompare's `onNavigate` works, to resolve ownership without regressing Statistics.
+
+No explicit guidance. **Decision:** AnalyticsPage will own its canonical `.analytics` route (path `/analytics`, the primary "Fleet Analytics" tab) — its rightful home per the manifest. Now let me study the shared infrastructure I must reuse: chart wrappers, tokens, UI components, and the test pattern.
+
+I now understand the component conventions. Let me locate the full P3 chart library, the Units/SI facade, the strings catalog, and the test pattern.
+
+The catalog stores web i18n keys under a `translation.` prefix, but native pages use short keys (e.g. `statistics.title`). Let me verify exactly which keys exist and the localization convention.
+
+Native pages use short keys (added to the catalog); the web keys exist only under a `translation.` prefix. I'll add short `analytics.*` keys. Let me extract all needed English values from the web i18n source and the catalog.
+
+Let me read the Units facade, a sibling test, the placeholder scanner, swiftlint config, and the xcstrings entry structure.
+
+I have the full pattern. Now I must verify the build toolchain (the gate hinges on it — it needs the KMP `Shared.xcframework`). Let me check what's available.
+
+`Shared.xcframework` isn't staged — it requires a Gradle/Kotlin-Native build. `pwsh` and `swiftlint` are available. Let me kick off the framework build in the background while I write code, after confirming the Gradle setup.
+
+Java 17 and gradlew are present. Let me start the framework build in the background while I write the page code.
+
+Let me check the build progress and swiftlint rules before writing code.
+
+The Gradle/KMP build works here and is compiling (mostly cached). It'll produce the framework shortly. Let me set up my task tracking and start writing the page code while it finishes.
+
+The KMP build works and is nearly done (mostly cached). Now I'll build the page. Starting with the data models that mirror the web `FleetAnalytics`, stored SI-canonical.
+
+Framework build is finishing (linking release). Let me write the models file now.
+
+Now the display-boundary formatters that convert SI via the shared `Units` facade.
+
+Let me check the build status and look at the forms/range components to reproduce the header's range picker faithfully.
+
+`TSDatePresetChips` (web `DatePresetChips`) and `TSFreshnessIndicator` exist for the header. Let me check the freshness API and build status.
+
+Framework is assembling all platform slices (slow but progressing). I have all the APIs I need. Writing the page model now.
+
+Let me verify the feedback/card/typography component signatures and design tokens before writing the views.
+
+I have all component/token APIs confirmed. Let me check the framework build, then write the page scaffold and views.
+
+The framework is wrapping up. Now writing the page scaffold (header, tabs, phase switch).
+
+Now the hero section, shared metric card, and loading skeleton.
+
+Now I'll create shared chart building blocks to keep the tabs DRY, then build each tab. Let me check the framework finished first.
+
+The KMP framework is built and staged — the full build/test gate is now runnable. Let me create the shared chart building blocks, then the four tabs.
+

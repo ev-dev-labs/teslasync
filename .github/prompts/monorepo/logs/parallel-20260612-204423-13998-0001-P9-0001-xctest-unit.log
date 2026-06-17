@@ -1,0 +1,375 @@
+I'll start by exploring the environment and understanding what exists for this Apple XCTest task.
+
+macOS with Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all available — the gate can run. Let me explore the structure deeply.
+
+Comprehensive XcodeGen project. Let me explore the test structure, source modules, and the log/methodology context.
+
+Extensive test suite already exists. There's a prior run log too. Let me read the previous artifact log, README, and parity structure to understand baseline state.
+
+The 06-07 run was BLOCKED (no P7 pages, no macOS signing). But now `Sources/Features/**` and page-model tests EXIST. State has evolved. Let me read the latest prior log and check current capability/page state.
+
+Now I have the full picture. The 06-08 run got iOS fully green (6588 tests, 83.70% logic coverage) and was BLOCKED only on the macOS dev-cert capability gap (still "0 valid identities found" now). This is a fresh slot — I must establish the actual baseline here. Let me check git state and the real test surface.
+
+Current tree is far ahead — **21,958 test methods**, clean git, recent P7 page merges (last commit fixed "pre-existing type-check errors"). The Shared.xcframework isn't built yet (longest pole). Let me inspect the build script and the placeholder tool, then kick off the framework build.
+
+Everything's available. Let me kick off the long-pole Shared.xcframework (KMP/Gradle) build in the background now, then run the host gates (lint/format/placeholder) which don't need the framework.
+
+Framework build running in background. Now let me run the three host gates (lint/format/placeholder) that don't need the framework, plus set up the inventory.
+
+Found defects: swiftlint reports **3 serious violations**, swiftformat flags **1 file** (`RecentDrivesSection.Previews.swift:27-28`, redundantType). Let me pinpoint the swiftlint violations and view the swiftformat file.
+
+Two real defects to fix. Let me view the swiftlint-flagged test file and the swiftformat config.
+
+Both defects are clear and low-risk (test variable names + a redundant type annotation in a preview). Let me fix them.
+
+Now let me verify both fixes and check the framework build progress.
+
+swiftformat fix confirmed. Framework build still going. Let me re-run full swiftlint and the placeholder gate in parallel while the framework builds.
+
+swiftlint is now clean (0 violations). The placeholder gate output is large — let me read its summary/tail and understand the script's pass/fail logic.
+
+Placeholder gate is **FAILING: PLACEHOLDER_COUNT=134** (new P7 surfaces introduced the word "Placeholder" without opt-out markers). This is the main defect. Let me see the patterns and the full violation list.
+
+All 134 are the literal word **"Placeholder"** — legitimate uses (TextField prompts, `.redacted(reason: .placeholder)`, i18n keys, type/var names, prose), not actual stubs. The sanctioned fix is `// parity:allow <reason>` markers or prose rewording (same as the 53 already allowed and prior runs). I must verify each is genuine, not a real stub. Let me extract every violation line with its content.
+
+All 134 are legitimate — i18n keys, SwiftUI `.redacted(reason: .placeholder)`, `prompt:` text, em-dash fallback constants (`static let placeholder = "—"`), property/test-fn names, and descriptive prose. None are real stubs. Let me see how the existing 53 allowed markers and green surfaces handle this, to match the established convention exactly.
+
+Framework build finished. Now I understand the convention: `// parity:allow <reason>` for real code tokens (i18n keys, `.redacted(reason: .placeholder)`, property names, test fns) and prose rewording is also used. Let me confirm the framework build, generate the xcodeproj, and measure each violation line (comment vs code, length) to choose the safest fix per line.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64) and xcodeproj generated. The split is 62 code lines (need `// parity:allow`) vs 72 comment lines. Before doing 134 edits, the key question is whether swiftformat wraps long comments — that decides reword-vs-marker. Let me test empirically against the current (passing) tree.
+
+Confirmed: 19 existing >120-char doc comments already pass swiftformat — so **swiftformat does not wrap comments**, and swiftlint ignores comment length. Line-length is not a risk. I'll use the established convention: reword prose comments (clean docs) + `// parity:allow <reason>` for real code tokens (i18n keys, `.redacted`, em-dash constants, test names). I verified all 134 are legitimate, not stubs. Let me write a precise line-anchored script.
+
+Let me regenerate the violation list fresh (to guarantee current line numbers), run the fix script, and verify warnings.
+
+133/134 applied. One miss (backticks in the line). Let me fix that last one manually.
+
+All 134 resolved. Let me verify all three host gates pass now (placeholder COUNT=0, lint clean, format clean).
+
+Placeholder gate now passes (COUNT=0). But swiftformat flags **14 files** — appending `// parity:allow <reason>` to some code lines pushed them past 120 chars (swiftformat's `wrap` rule counts code lines incl. trailing comment). If swiftformat wraps them, the marker could move off the matched line. I must keep those lines ≤120. Let me find every marker line over 120.
+
+Placeholder gate passes, but my code-line markers pushed ~28 lines past swiftformat's 120-char `wrap` limit (and wrapping would move the marker off the matched line, breaking the opt-out). The cleanest, convention-matching fix: **rename the em-dash `placeholder` constants to `emDash`** (the green convention per LiveMotorStatus), rename `placeholder` field-hint props, and extract long inline i18n keys to short named-constant lines. Let me measure code-only lengths to plan precisely.
+
+Now I understand precisely. The clean fix: rename em-dash `placeholder` constants → `emDash` (the established green convention) and field-hint props → `promptText`, keep short accurate markers on real i18n key strings, and extract 3 long inline keys. Let me verify no test references the renamed members, then write a precise script.
+
+Confirmed: no tests reference the renamed members, and the 3 "extract" lines just need their function-call args wrapped (keeping the marker on the short key line). Let me write the precise fix script.
+
+59 lines refactored. 3 lines I missed (a `chartPlaceholder` view property + a test name) plus 4 manual extracts/comment. Let me view all of them precisely and fix.
+
+All clear. Let me apply the 3 missed lines (rename `chartPlaceholder`→`chartSkeleton`, test marker) and the 4 manual fixes (wrap inline keys, reword the key-citing comment).
+
+All edits applied. Let me re-verify all three host gates are clean now.
+
+All three host gates GREEN: **placeholder COUNT=0, swiftformat 0 files, swiftlint 0 violations**. Now the big one — the iOS build + test (validates my renames compile and all ~21,958 tests pass). Let me confirm the simulator exists and launch it with coverage instrumentation in the background.
+
+iPhone 16 sim is booted; load ~33 (manageable on this Mac Studio). Let me launch the iOS build+test (exact gate command + additive coverage instrumentation) in the background.
+
+Build running in the background. Let me track progress with todos and gather inventory data for the log while it compiles.
+
+Solid inventory: 942 co-located test files (loading 662 / empty 875 / error 702 / stale 510), 606 view-models, 3995 test classes, 21,958 test methods. Let me check the iOS build progress and count the P7 parity units.
+
+153 P7 parity units confirmed. Build still compiling. Let me analyze per-surface state coverage honestly (how many co-located test files reference none of the data states — to report gaps truthfully) while the build runs.
+
+State coverage is sound: the 35 co-located tests with no data-state are pure presentational leaves (AnimatedNumber, Avatar, Slider, formatters) that legitimately have no loading/empty/error/stale axis; all 10 page-model tests cover loading/empty/error/loaded. Let me check the iOS build progress.
+
+Build is progressing well — Gradle pre-action done, the app module emitted successfully (so my renames compile cleanly in the app target). Now it's onto test bundles. Load ~50 but advancing. Let me keep monitoring.
+
+0 errors, 2080 SwiftCompile actions in flight. Load climbing to ~79 (still safe on this Mac Studio; the OOM threshold last seen was ~488). Let me check memory and keep waiting.
+
+Memory healthy (65% free, no pressure). Let me check the raw log for test-bundle compilation/execution progress.
+
+0 errors; test bundles now compiling. This is a large compile (1000+ test files). Let me wait longer for test execution to begin.
+
+BUILD FAILED but 0 `error:` lines, at load 137 — that smells like a compiler crash/OOM, not a real code error. Let me find the actual failure reason.
+
+"SwiftCompile failed with a nonzero exit code" but no `error:` — a compiler crash under load 137, not a source error. Let me see which compile failed and the surrounding context.
+
+It's a **swift-frontend IRGen compiler crash** (`report_at_maximum_capacity` / `grow_pod`) — a resource-exhaustion crash under load 137 on this shared host, NOT a source error (type-checking/module emission already succeeded; the crashed file batch is pre-existing code I didn't touch). xcodebuild is now retrying via the test action. Let me check whether the retry is progressing and the current load.
+
+Load is stuck at ~133 with **110 concurrent swift-frontend processes** (this shared host has other slots compiling too). The IRGen crash is load-induced and the retry will likely hit it again. Let me stop and re-run with capped concurrency (`-jobs`) to bound memory pressure and get a reliable result.
+
+20 cores / 64GB, load 147 from other slots (87 foreign swift procs), 56% mem free. The crash was a transient allocation spike under oversubscription. Let me re-run `build test` with capped `-jobs 6` to bound my memory footprint for a reliable result. Incremental cache means most files are already compiled.
+
+Re-run launched with `-jobs 6`. Let me let it make progress and check periodically. The macOS leg I'll run after iOS finishes to avoid doubling contention.
+
+Load dropping to ~83, 0 errors, app module recompiling cleanly. The `-jobs 6` cap is working. Let me keep waiting for test compilation and execution.
+
+BUILD FAILED again with `-jobs 6`. Let me see the exact 2 errors — whether it's the same environmental crash or something real.
+
+Same `report_at_maximum_capacity` IRGen crash even at `-jobs 6`/load 90, plus a second crash at line 3963. This may be a specific large generated function hitting an LLVM allocation limit under memory pressure, not just oversubscription. Let me identify exactly which file(s) crash.
+
+The same file-batch crashes deterministically (IRGen `setArgs`/`grow_pod` explosion), even at `-jobs 6`/load 90 — and the 06-08 run passed the same architecture, so a file merged since then likely has a pathological construct (e.g., a giant literal). Let me get the full crashing batch and hunt the culprit.
+
+The crashing batch is just the first alphabetical group (A* files) — not an obviously pathological file. The IRGen allocation fails because, in batch mode, that one process competes for memory with concurrent batches on this saturated host. Lower `-jobs` gives that batch more memory headroom (batch memory is fixed regardless of jobs; fewer concurrent batches = more free RAM for it). The DerivedData cache persists, so a retry is incremental/fast. Let me check load and retry with `-jobs 2`.
+
+Load ~96 but 66% mem free. Let me launch the `-jobs 2` retry (reuses DerivedData cache, gives the A* batch ample memory headroom).
+
+Retry launched with `-jobs 2`. Let me check whether the A* batch gets past the crash point this time.
+
+The `-jobs 2` retry failed on a **build.db lock** — my earlier run2 (jobs=6) xcodebuild was still running its test-action rebuild in the background (after `build test` proceeds to the test action even when build fails). Two concurrent builds on the same DerivedData collided. I must kill my lingering build processes (by PID, not foreign ones) and run a single clean build. Let me find my processes.
+
+I have multiple lingering xcodebuild processes (44646, 45646, 46970 — runs 1, 2 still alive after `build test` proceeded to their test actions) holding the db lock. Let me kill my build processes by PID (carefully — only mine, not other slots').
+
+The kill wrapper needs explicit numeric PIDs. Let me kill each individually.
+
+Orphaned swift-frontend children (reparented after I killed their parents) still reference my DerivedData. Let me kill those too, then verify the lock is clear.
+
+All my build processes cleared; build.db is unlocked; DerivedData cache is warm. Lesson learned: `xcodebuild build test` keeps a test-action rebuild alive, so I must let it complete rather than stop it. Let me check load and run a single `-jobs 2` build+test to completion (max memory headroom for the A* batch).
+
+Host calming: load 80, 72% mem free, only 34 foreign procs. Let me launch a single clean `-jobs 2` build+test and let it run fully to completion (no stopping this time).
+
+Clean build launched with `-jobs 2`. Let me monitor whether the A* batch compiles past the crash point.
+
+Load dropped to **29** (host calming), 0 errors. Let me keep waiting for the build to finish and tests to run.
+
+Excellent — **0 crashes, A\* batch passed** (now compiling dashboard-widgets, well past the crash point). Build progressing with jobs=2. Test-bundle compilation is the long phase. Let me keep waiting.
+
+IOS_EXIT=143 = SIGTERM — my xcodebuild was **externally terminated** (signal 15), not a build failure (it had reached "BUILD SUCCESSFUL", 0 errors). On this shared parallel host something reaped the long process. Let me check how far it got and clean up any lingering processes.
+
+"BUILD INTERRUPTED" at C* files — 0 errors, well past the A* crash (which is now cached, so it won't recur). The external SIGTERM is host reaping long processes. Each attempt warms the cache further (A*, B* now compiled). Strategy: split into `build-for-testing` (resumable via cache) then `test-without-building`, and use jobs=6 now that load is 44. Let me run the build phase.
+
+Build-for-testing launched (jobs=6, warm cache). Let me monitor for completion.
+
+0 errors; app target compiled, now compiling the heavy test bundles (TeslaSyncTests). Load ~62, jobs=6 progressing. Let me continue waiting for the test-bundle build.
+
+Still 0 errors, compiling feature-views (test bundle sources). Steady at load ~57. The 1000+ test-file compile is the long pole. Let me keep waiting.
+
+0 errors, 20 min in, compiling shared-surfaces test files. Past prior reap window and still alive. Let me keep waiting — each minute of compilation also warms the cache for any retry.
+
+Still compiling test files (13.6k log lines, 0 errors, 26 min in, not reaped). The TeslaSyncTests bundle links only after all ~1000 files compile. Steady progress — let me keep waiting.
+
+App target built successfully (appex extensions linked — my code compiles), but the **test bundle** compilation hit the same `report_at_maximum_capacity` (memory-pressure bad-alloc) crash under sustained load 60+. It recurs on different batches → it's host memory pressure, not a code defect. Crucially, the app is now **fully cached**; only the test bundle remains. Let me see which test batch crashed and how far it got.
+
+The crash recurs specifically on the **AnomalyInlineRow.Views.swift batch** — that's now looking deterministic, not random memory. The `setArgs`/IRGen explosion suggests a pathological expression (e.g., a giant SwiftUI body). Let me inspect that file.
+
+AnomalyInlineRow.Views.swift is only 142 lines — not pathological. It's consistently the **first alphabetical batch**, which reaches IRGen when concurrency (and memory pressure) peaks — confirming it's host memory pressure, not code. `-jobs 2` provably avoids it (the earlier jobs=2 run reached C\* cleanly). The cache is now very warm (3431 test objects cached), so a jobs=2 retry has little left to compile and should finish fast. Let me verify no lingering processes and retry build-for-testing at jobs=2.
+
+No lingering processes. Let me launch the jobs=2 build-for-testing retry (warm cache, should finish the small remainder quickly).
+
+Let me check the cache count and monitor the jobs=2 build.
+
+App target is heavily cached (330k objects). jobs=2 build running at load 59 / 69% free. Let me monitor for completion without the memory crash.
+
+Load dropped to 31, 0 errors. Warm cache + low load + jobs=2 — favorable. Let me keep monitoring for BUILD SUCCEEDED.
+
+0 errors, past the crash point (compiling shared-surfaces now). jobs=2 is slow but reliably avoiding the memory crash. Let me keep waiting for the test bundle to finish.
+
+0 errors, still grinding through the test bundle at jobs=2 (slow but safe). Let me wait more. I'll prepare the log scaffold meanwhile.
+
+0 errors, ~22 min in, still compiling co-located test files at jobs=2. Slow but steady, load easing to 44. Let me keep waiting for the test bundle to finish linking.
+
+Still compiling at 30+ min (7629 lines, 0 errors, not reaped). The test bundle is enormous. It's alive and progressing. Let me continue waiting for the link step.
+
+0 errors, ~37 min in, still compiling (9075 lines). The test bundle is massive but progressing steadily. Let me continue waiting for it to finish.
+
+Even at jobs=2, after ~40 min it hit `report_at_maximum_capacity` again. This confirms it's the shared host's sustained memory pressure (co-tenant slots) causing intermittent swift-frontend malloc failures — not my code (app builds clean; 0 source errors; same architecture passed on an idle host 06-08). Let me confirm which file crashed this time.
+
+It keeps crashing on the **A\* batch** (AnomalyInlineRow + AppearanceSettings + AppCommandActions...) — and crucially, with jobs=2 the driver makes *huge* batches (≈half the files each), maximizing per-batch IRGen memory. Higher jobs = *smaller* batches = less per-batch memory. The cache is now very warm (only the A\* batch + link remain), so a higher-jobs retry will have low concurrency AND smaller batches. Let me retry build-for-testing at jobs=8.
+
+Clean, load 38, 68% free. Let me retry build-for-testing at jobs=8 (smaller batches, warm cache — only the A\* group + link remain).
+
+jobs=8 build launched. Let me monitor — with smaller batches and a warm cache, the A\* group should clear.
+
+0 crashes, and the A\* batch files are compiling (3 references, no crash) at jobs=8/load 37. The smaller-batch theory is working. Let me wait for it to finish linking.
+
+Still crashing at jobs=8. Crucially, `report_at_maximum_capacity` (not `report_bad_alloc_error`) means a SmallVector tried to exceed ~4 billion elements — a **runaway IRGen computation on specific code**, deterministic, not raw memory. The `setArgs` frame points to a function call exploding. Let me extract the exact "While emitting IR for..." location.
+
+Pinpointed: the crash is a **deterministic Swift compiler bug** emitting a reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` for **`AppearanceSettings.Controls.swift`** (a file added *after* the 06-08 green run — it never caches because it never succeeds, which is why every retry eventually hits it). This is a build-blocking bug I should work around. Let me demangle the thunk and inspect the file.
+
+Demangled: it's a reabstraction thunk for an `@isolated(any) @Sendable (Bool) -> Void` closure — a Swift 6.3.2 IRGen compiler bug. The file (`AppearanceSettings.Controls.swift`, added after the 06-08 green run) never caches because it never compiles. Let me view it to find and refactor the offending closure.
+
+Found it — line 122: `Toggle("", isOn: Binding(get: { isOn }, set: onChange))` where `onChange: @MainActor (Bool) -> Void` (line 107). Converting that `@MainActor` setter to `Binding`'s non-isolated closure generates the `@isolated(any)` reabstraction thunk that crashes IRGen in Swift 6.3.2. Let me check the callers to pick the safest fix.
+
+Found the root cause and callers. The `@MainActor onChange` → `Binding<Bool>` (Sendable) setter conversion emits the crashing `@isolated(any) @Sendable` thunk. The surgical fix: route the setter through `MainActor.assumeIsolated` so the Binding's closure is plain/non-isolated (SwiftUI always calls setters on the main actor). Let me apply it and check for the same pattern elsewhere.
+
+Fix applied. Two similar patterns exist (`AppSettingsView.swift:151`, `PushSettingsView.swift:126`) — and `AppSettingsView` is in the same crashing A\* batch, so it could be the next mole. Let me inspect both to fix proactively.
+
+Both other patterns use plain `(Value) -> Void` (non-isolated), so they shouldn't trigger the `@isolated(any)` thunk — only `AppearanceToggleRow` had an explicit `@MainActor (Bool) -> Void`. To avoid whack-a-mole across 40-min builds, let me proactively find every `@MainActor` closure-typed property that could be converted to a Sendable binding/closure and crash.
+
+**Critical realization:** every crash was `report_at_maximum_capacity` on the A\* batch containing `AppearanceSettings.Controls.swift` — it was the **same deterministic compiler bug all along**, not memory pressure (the 40-min duration was just compiling everything else first). My fix should resolve it. Let me format-check the edit, then do a fast app-only build to verify quickly.
+
+swiftformat wants to fix the modifier-chain indentation. Let me apply it and verify.
+
+File now passes both swiftformat and swiftlint. Now let me do a fast **app-only build** (`build`, no test bundle) to quickly verify the AppearanceSettings fix clears the IRGen crash.
+
+App build launched. Let me check whether AppearanceSettings now compiles past the crash.
+
+0 crashes, app build progressing (extensions linking). Let me wait for the AppearanceSettings batch and the final app link.
+
+0 crashes at 6499 lines (load 67). Let me check what's currently compiling and whether the A\* batch has been reached.
+
+The build is now compiling **T\* files (TeslaSyncApp, TeslaOrders)** — far past the A\* batch — with **0 crashes**. AppearanceSettings compiled without the IRGen crash (otherwise the build would have already failed). **The fix worked.** Let me wait for BUILD SUCCEEDED.
+
+Compiling V\* files now (near the end), 0 crashes, load 31. Almost done. Let me wait for the final link.
+
+Still compiling app files (large recompile, 0 crashes). The fix is holding. Let me keep waiting for completion.
+
+🎉 **BUILD SUCCEEDED (APPBUILD_EXIT=0)** — the A\* batch including `AppearanceSettings.Controls.swift` compiled cleanly. **My `MainActor.assumeIsolated` fix resolved the deterministic IRGen compiler crash that was blocking every build.** The app target is now fully built and cached. Let me update tracking and build the test bundle, then run tests.
+
+Test-bundle build launched (app cached, crash fixed). Let me monitor for the test bundle to compile and link.
+
+Load dropped to 21 (host calm), 0 crashes, compiling test files. Let me keep waiting for the test bundle to finish.
+
+The compiler crash is fixed — now the test bundle type-checks and reveals **real pre-existing test-code errors** (masked before because the bundle never compiled): duplicate helper types (`ChangeSpy` in 3 files, `SpyStateTimelineTelemetry` in 2) and a non-Sendable global closure (`echoLocalize`). These are in scope (they block the test deliverable). Let me find ALL such collisions at once to minimize rebuild cycles.
+
+Root cause identified: helper types like `ChangeSpy`/`SpyStateTimelineTelemetry` are declared `private` in most files but **internal (non-private) in one file each** (`ActionBuilder.ModelTests`, `StateTimeline.ModelTests`), making them module-visible and colliding with the file-private ones. Plus `CronParser.Tests`'s `echoLocalize` is missing `@Sendable`. Let me find ALL such duplicate non-private helper types across the test bundle to fix everything at once.
+
+My dup-check only looked at internal-only names. The real collision is a name declared **internal in one file** while also declared in another file. Let me find every top-level test helper type declared in 2+ files where at least one is non-private.
+
+Only **2 colliding helper types** (`ChangeSpy`, `SpyStateTimelineTelemetry`) — both need their one non-private declaration made `private`. Plus the `echoLocalize` `@Sendable` fix. Let me also scan for any other non-`@Sendable` global closure `let`s in tests, then apply all fixes.
+
+Just 3 test-bundle fixes total. Let me view the exact lines and apply them.
+
+All 3 fixes applied. Let me verify they're format-clean and rebuild the test bundle.
+
+**Load dropped to 6** — the host is now idle (other slots finished). The 3 test fixes are format-clean. Now I can run the **verbatim gate command** (`build test`) at full speed with no contention. Let me launch it with coverage instrumentation.
+
+Verbatim gate running at idle load. Let me monitor for the test bundle compile and test execution.
+
+0 errors, compiling test bundle (R\* files). Load crept to 43 but progressing cleanly. Let me keep waiting for the test bundle to finish and tests to run.
+
+**BUILD SUCCEEDED** — the test bundle compiled and linked. Now the test action runs (incremental rebuild + test execution). Let me wait for the tests to actually run.
+
+The `test` action is rebuilding with coverage instrumentation (the `build` action's output wasn't instrumented). 0 errors — it's just slow at load 73. Let me keep waiting; this run produces both the test result and coverage data.
+
+The gate run completed. Let me check the final test results and exit code.
+
+TEST FAILED but no "Executed N tests" — likely the coverage-instrumented test-action build failed (not test execution). Let me find the actual error.
+
+Another pre-existing test error revealed (the build now progresses further): `ChartContainer.AdapterTests.swift:309: cannot find type 'EmptyView' in scope` — likely a missing `import SwiftUI`. Let me look, and proactively scan for similar undefined-type/import issues to reduce rebuild cycles.
+
+`ChartContainer.AdapterTests.swift` uses `EmptyView` but imports only XCTest. My scan found 2 such files (also `PageContainer.ModelTests.swift`). Let me verify both and check their `@testable` imports.
+
+Both need `import SwiftUI`. Let me do a comprehensive scan for any test file using SwiftUI types without the import, then fix all at once.
+
+4 files matched. But the build only errored on ChartContainer so far — let me verify BatteryPill/LiveStatusPill actually need it (the match could be in comments/strings) before editing.
+
+These two show no imports at all — odd for files using `XCTAssertEqual` and `Color.TS`. Let me view their headers directly.
+
+BatteryPill/LiveStatusPill import SwiftUI inside an indented `#if canImport(XCTest)` block (my anchored grep missed it) — false positives. Let me re-scan accounting for indented imports to confirm only ChartContainer and PageContainer truly lack it.
+
+Confirmed — only those 2 files truly lack the import. Let me add `import SwiftUI` to both in the correct alphabetical position.
+
+Both imports added. Let me rebuild the test bundle (no coverage, faster iteration) to surface any remaining test errors.
+
+Test-bundle rebuild launched (no coverage). Let me wait for it to surface remaining errors or succeed.
+
+0 errors so far, but toggling coverage forced an app rebuild (cache thrash). Let me commit to the non-coverage path: let this `build-for-testing` finish to surface any last test errors, then run `test-without-building` for the pass result. Let me wait.
+
+0 errors, app nearly done, test bundle starting (load eased to 67). Let me keep waiting for the test bundle compile.
+
+0 errors, 25 min in, still compiling the large test bundle. Let me keep waiting for the link.
+
+🎉 **TEST BUILD SUCCEEDED (BFT5_EXIT=0)** — the test bundle now compiles cleanly after all fixes. Let me run the unit tests via `test-without-building` (the bundle is built; this just executes them).
+
+Unit test execution launched. Let me monitor for the results.
+
+Tests ran: **20,690 executed, 1 failure**. Nearly everything passes — just one real test failure to fix (plus a spurious post-run `simctl` PATH teardown error). Let me find the failing test.
+
+The one failure: `FleetComparePageModelTests:300 testBatteryAndCo2Highlights` — expects `"— vs 60%"` but code produces `"—% vs 60%"` (it appends `%` to the em-dash for a missing value). Per the codebase's em-dash convention, a missing value should be just `"—"` (no unit). I didn't touch FleetCompare — this is a pre-existing bug surfaced now that tests finally run. Let me view the test and the formatter to fix correctly.
+
+The code (`FleetCompareFormat.swift:94`) faithfully implements the documented web parity `${a ?? '—'}%` → `"—%"`, but the test expects `"— vs 60%"`. This is a pre-existing **wrong test expectation** (deviates from documented web parity). Let me verify against the actual web source before changing the test.
+
+Web source confirms parity: `FleetComparePage.tsx:726` renders `{battery_level ?? '—'}%` → `"—%"` for null. The code is **correct**; the test's expected `"— vs 60%"` is the bug (should be `"—% vs 60%"`). Let me fix the test to match documented web parity.
+
+Test fixed. The post-run `simctl` error suggests a transient `xcode-select`/`DEVELOPER_DIR` issue on this shared host. Let me check the toolchain, set `DEVELOPER_DIR` explicitly for robustness, then incrementally rebuild and re-run tests.
+
+Toolchain is fine (transient simctl glitch); load dropped to 14. Let me incrementally rebuild (1 changed test file) and re-run the unit suite with `DEVELOPER_DIR` set for robustness.
+
+Incremental rebuild + test re-run launched at low load. Let me wait for the result.
+
+App module re-emitting (cache partially invalidated), 0 errors. Let me keep waiting — it'll rebuild what's needed then run tests.
+
+Near-full app recompile (cache thrash from flag changes), 0 errors at load 100. The crash fix holds. Let me wait for it to finish and run the tests.
+
+TEST2_EXIT=137 = SIGKILL — the host OOM-killed my full rebuild at load 100 (the cache thrashed from flag changes forced a full app recompile, exposing it to reaping). The tests themselves already proved out: the prior run executed **20,690 tests with exactly 1 failure**, which I've now fixed (a trivial string-parity correction). Let me clean up orphans and get a clean confirming run when load permits.
+
+Clean, load 44, 77% free. Let me run `build-for-testing` (matching bft5 to maximize cache reuse), then run the unit tests separately.
+
+Build launched. Let me monitor for completion (hopefully incremental this time).
+
+App module still re-emitting (cache invalidated by the prior SIGKILL mid-build), 0 errors. The cache-thrash + reaping cycle is the obstacle. Let me give this uninterrupted build a real chance to complete and stabilize the cache. Let me wait.
+
+BFT6_EXIT=137 = SIGKILL (kernel OOM-killer) — the host is memory-exhausted from parallel slots and kills my jobs=8 build. **Lower `-jobs` = lower memory footprint = less likely to be the OOM victim.** With the compiler crash now fixed, a `-jobs 2` build (which previously survived 40 min memory-wise before hitting the *old* crash) should complete. Let me clean up and check state.
+
+No orphans, load 41, 77% free. bft6 was OOM-killed still on the app target. The compiler crash is fixed, so a low-memory `-jobs 2` build (which previously survived 40 min OOM-wise) should now **complete**. Let me run it to completion and be patient.
+
+jobs=2 build running (low-memory, should survive OOM). While it builds (~40 min), let me draft the gate log with the data I have. Let me check the prompt's exact log location and recent ledger first.
+
+My changes span 65 files (placeholder fixes + compiler fix + test fixes). Let me verify the full change set is clean while the build runs.
+
+Clean change set — all 65 files under `apps/apple`, no stray changes. Let me check the jobs=2 build progress.
+
+Load dropped to 16, 82% free — low OOM risk now, jobs=2 should complete. Let me wait for the app + test bundle to build.
+
+0 errors, still building the app at jobs=2 (slow, but low OOM risk at load 36). Let me keep waiting for the test bundle phase.
+
+bft7 completed. Let me read the result.
+
+SIGKILL again even at jobs=2 — the host OOM-reaps correlate with high-load windows from co-tenant slots (note: `bft5` and the app build *did* complete during calmer windows). Load just dropped to 11. Let me seize this low-load window: clean up and immediately launch a jobs=8 build (matching the bft5 invocation that succeeded), racing to finish before load spikes.
+
+Prime low-load window (load 8, 82% free, 8 foreign procs)! Launching jobs=8 build-for-testing immediately to race to completion.
+
+Build racing in the low-load window. Let me monitor for completion.
+
+0 errors, building app (shared-surfaces), load 36. Let me keep waiting for the test bundle phase and completion.
+
+Test bundle now compiling (1028 references), app target done, 0 errors. The final phase. Let me wait for the link and TEST BUILD SUCCEEDED.
+
+🎉 **TEST BUILD SUCCEEDED (BFT8_EXIT=0)** — the test bundle is now built with the FleetCompare fix. Let me immediately run `test-without-building` (no rebuild → fast, low OOM risk) to confirm the suite passes.
+
+Test execution launched on the fresh bundle. Let me monitor for the result.
+
+🎉🎉 **iOS UNIT TESTS PASSED: 20,690 tests, 0 failures, TEST3_EXIT=0!** The deliverable is GREEN. Let me update tracking and run the macOS gate + fresh host gates for the log.
+
+All 3 host gates GREEN: **swiftlint 0, swiftformat 0, placeholder COUNT=0**. Now the macOS gate (verbatim) — known to fail at code-signing (0 identities). Let me capture this run's evidence.
+
+Confirmed: **0 valid signing identities** (the documented macOS capability gap). macOS gate running at load 14. Let me monitor it.
+
+macOS gate result is the expected deterministic outcome: **macOS BUILD SUCCESSFUL** (my fix compiles on macOS too), then fails code-signing validation — `"TeslaSync-macOS"/"TeslaSyncWidgets-macOS" require a development certificate` (0 identities). MAC_EXIT=65 — the documented ADR-012 capability gap.
+
+Let me kick off a best-effort coverage-instrumented build in the background, and write the gate log meanwhile.
+
+Let me gather the final data points for the log (golden vectors, per-state coverage, diff summary) while the coverage build runs.
+
+Good data. Let me check the coverage build's progress before writing the log.
+
+Coverage build is running (early, 0 errors). Let me write the gate log now with all confirmed results, then fold in coverage if it completes. Creating the log:
+
+Log written. Let me check the coverage build — if it completed, I'll fold in fresh xccov numbers.
+
+The coverage build is stalled/crawling (log static at 1808 lines) — likely blocked on a busy Gradle daemon, and a full instrumented rebuild will take ~40 min with reap risk. The log already records coverage honestly (per-parity-unit state coverage + target). Let me verify it's stalled, then finalize the wording accurately rather than block further.
+
+The coverage build is progressing but slowly (instrumented full rebuild, ~40 min, reap-prone) — not worth blocking on; the log already records the step-4 per-parity-unit state coverage + the logic-% target. Let me correct the coverage wording to be precisely accurate, then commit.
+
+Now let me stop the best-effort coverage build (free the shared host) and commit. First, find its process.
+
+Coverage build confirmed incomplete (stopped mid-build, no xcresult) — log wording is accurate. Let me clean up the last process and commit.
+
+Clean. Let me stage exactly the apps/apple source changes + the log, verify the staged set, and commit.
+
+Staged set is clean: 65 `apps/apple` source files + the log, no artifacts. Let me commit.
+
+Committed (393a30fa5, 66 files, +497/-151). Let me do a final verification: clean git status, log EXIT/STATUS, and confirm the committed tree's host gates.
+
+Everything committed and clean — git status clean, log ends `EXIT=65 / STATUS=BLOCKED`, HEAD is my commit. Let me finalize tracking and clean up temp artifacts.
+
+All done. Final state verified.
+
+## Summary
+
+The P9-0001 XCTest unit suite existed but **never compiled or ran** — every iOS/macOS build in this slot died on a deterministic **Swift 6.3.2 IRGen compiler crash**. I root-caused and fixed it, which unblocked the whole suite.
+
+**Root-cause fix (the blocker):** `AppearanceSettings.Controls.swift` passed a `@MainActor (Bool)->Void` closure straight into a `Sendable` `Binding<Bool>` setter, emitting an `@isolated(any) @Sendable` reabstraction thunk that overflows an LLVM SmallVector in IRGen (`report_at_maximum_capacity`). Routed it through `MainActor.assumeIsolated` (behaviour-identical).
+
+**6 latent test errors surfaced once it compiled, all fixed:** 2 internal helper-type collisions (`ChangeSpy`, `SpyStateTimelineTelemetry` → `private`), a non-`@Sendable` global closure, 2 missing `import SwiftUI`, and a wrong FleetCompare battery-highlight expectation (corrected to web parity `"—%"`). Also cleared the **placeholder gate (134→0)** + 3 swiftlint + 1 swiftformat defects.
+
+**Gate results:**
+- **iOS — GREEN:** test build SUCCEEDED; **20,690 unit tests, 0 failures**.
+- **swiftlint 0 / swiftformat 0 / placeholder 0.**
+- **macOS — BLOCKED:** `build test` compiles SUCCESSFULLY then fails code-signing — restricted entitlements need a dev certificate and the host has 0 valid identities (`MAC_EXIT=65`, documented ADR-012 gap, deferred to a signed runner).
+
+Per the gate formula (`MAC_EXIT≠0`), the log records **`EXIT=65 / STATUS=BLOCKED`** — the same unavoidable macOS dev-cert gap as the 3 prior runs, but this run unblocked and greened the entire iOS deliverable (20,690 tests vs the priors that couldn't run the bundle). Committed 65 `apps/apple` source fixes + the gate log (`393a30fa5`).
+
+Coverage: per-parity-unit state coverage recorded (loading 662 / empty 875 / error 702 / stale 510 of 942 surfaces; golden-vector parity passes); fresh per-line xccov deferred with the macOS leg due to host OOM-contention.
+

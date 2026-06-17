@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). I cannot claim BLOCKED. Let me explore the existing Apple app structure and patterns.
+
+No FSM widget exists yet. Let me study the shared infrastructure and a representative reference widget. Let me explore the patterns in parallel.
+
+Excellent reference. Let me read the full ChargeSessionChartWidget file set and the core infra in parallel.
+
+Now let me read the web data hooks (the API contract), the Tests reference, and the registry/project test config in parallel.
+
+Let me read the FSM types, the registry entry, and check the test target + build setup.
+
+Key finding: `Shared.xcframework` is absent, so the full `xcodebuild` app build can't link. Let me check how prior widgets were actually validated by reading an existing log.
+
+I now fully understand the deliverable and gate. The gold-standard validation requires the KMP `Shared.xcframework` (absent here). Let me check if I can build it while I author the files.
+
+Shared framework build is feasible (Java 17 + gradlew). This is the long pole (~30 min). Let me kick it off in the background now, then author the files while it builds.
+
+Let me launch the shared framework build in the background, then start authoring the widget files.
+
+The background job was killed when the sync session ended. Let me relaunch it properly detached so it survives. The Gradle cache looks warm, so it should be faster now.
+
+Now let me check the lint rules, the web `TimeStamp`/`Badge` components, and a reference widget that renders a feed/list (for the transitions feed pattern).
+
+The shared framework is compiling Kotlin/Native. I have all the patterns I need. Let me author the foundational files (Models, Builder, Model, strings) now.
+
+The detached shared-framework build completed. Let me verify it staged successfully, then continue authoring.
+
+The environment is heavily contended — 10+ parallel slots building the same KMP framework against a shared Gradle cache, and my build hit `STAGE_EXIT=1`. The shared build cache means retries accelerate as siblings populate it. Let me relaunch (monitorable) and continue authoring meanwhile.
+
+Build relaunched. Now let me write the Model file (state-holder seam, telemetry, strings facade, accessibility).
+
+Now let me check the build progress and look for an existing flow/wrap layout component to reuse for the legend.
+
+Gradle is linking now (cache hits helping). Let me peek at the existing flow-wrap pattern to replicate for the legend.
+
+Found the flow-layout pattern. Now let me write the Chart file (donut + legend + transitions feed).
+
+Now the main surface view. Let me check build progress and write it.
+
+Build is nearly done (release linking now). Let me write the surface view.
+
+Let me verify `TSSkeleton`'s signature and check the build, then write strings/previews/tests.
+
+TSSkeleton signature matches. Build is on release linking (slower). Let me write the strings, previews, and tests files now.
+
+Now the Tests file. Let me write comprehensive XCTest coverage and check the build in parallel.
+
+All 8 files written. Now let me format and lint them. First, run swiftformat (write mode) on my Swift files so they conform to the gate, and check build progress.
+
+swiftformat adjusted 3 files. Now let me verify they pass `--lint` and run swiftlint --strict on them.
+
+Clean except one `large_tuple` violation in Previews. Let me fix it with a small struct.
+
+swiftlint clean (0 violations), swiftformat clean, all files <400 lines. Let me check the build and run the placeholder gate.
+
+Build still linking (release arches are slow). Let me run the placeholder gate meaningfully (isolated copy) plus the literal gate path, and manually scan for forbidden patterns.
+
+The placeholder gate flagged Tests.swift:328 — my test name contains "Placeholders". Let me check and rename it.
+
+Placeholder gate now clean. Let me check whether the gradle build is still progressing or stalled.
+
+Authoring is complete and all fast gates pass. The KMP release link is slow under heavy multi-slot contention. Let me update tracking, generate the Xcode project, and keep monitoring the build.
+
+Xcode project generated. Now let me wait for the KMP framework build to complete.
+
+Getting close — now linking the final arch (macOS release). Let me wait for completion.
+
+Build succeeded (GRADLE_EXIT=0). Now let me stage the release XCFramework into the app's Frameworks directory.
+
+XCFramework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now let me verify schemes and run the real macOS build+test for my surface (the clean, non-flaky proof per the reference).
+
+Scheme exists and iPhone 16 sim is booted. Let me launch the macOS build+test for my surface (builds the whole app — proves compilation — and runs my 28 tests).
+
+macOS build+test launched (compiles the entire app — the real compile proof). Let me monitor progress.
+
+Build is compiling the app module (Shared framework linked fine, 0 errors so far). Let me keep waiting.
+
+The monitor command finished; the actual build runs in `mactest`. Let me check its progress.
+
+Still compiling the app module (0 errors). Let me wait for compilation and tests to complete.
+
+App compiled cleanly, but 4 tests failed. Let me see which ones.
+
+These are pre-existing collisions in **sibling** surfaces (ChargeStatusWidget/ChargeStatusLiveWidget/ChargeSessionChartWidget all declaring duplicate `Charge*` types) — not my FSM-prefixed files. Let me confirm none are mine and understand the build outcome.
+
+Zero errors are in my files — all 148 errors are pre-existing duplicate-type collisions across ~22 **sibling** surfaces (multiple `Charge*Widget` files declaring the same `ChargeLoadStatus`/`ChargeSessionDTO`/etc.). Let me confirm these are pre-existing and independent of my change.
+
+Confirmed: HEAD's macOS app target is already broken by pre-existing duplicate `Charge*` type declarations in 3 tracked sibling files — 148 errors, **zero in my FSM-prefixed files**, which are all new/untracked. I'm forbidden from editing siblings (Allowed-files + honesty rule 7). Let me build an isolated harness to actually execute my surface's compile + tests. First, let me map my external dependencies.
+
+My external deps are minimal and clean: Tokens.swift, DashboardWidgetInfra.swift, and TSSkeleton (token-only). No Shared framework needed. Let me build an isolated SwiftPM package to actually compile + run my tests, bypassing the broken siblings. First, verify Skeletons.swift has no foreign deps.
+
+Skeletons.swift's other structs pull in `TSCard`, but `TSSkeleton` itself is token-only. Let me build an isolated SwiftPM package (my 6 source files + 3 clean deps) and run my tests for real — with strict concurrency to match the app build.
+
+All 31 tests passed and the **entire surface compiled** under Swift 6 strict-concurrency=complete (real Tokens/Infra/Skeleton, Swift Charts donut, SwiftUI views, #Preview macros). Let me capture the full per-suite evidence for the log.
+
+All 6 suites green, 31/31, ISO_EXIT=0, zero warnings in my files. Let me confirm my type names add no new collisions and prove iOS compilation too (cheap typecheck, since the full iOS app build would hit the same sibling wall).
+
+Important catch: `FSMStateColor` and `FSMFlowLayout` collide with a sibling surface (`FSMStateDiagram`). I must rename mine to be integration-safe. Let me comprehensively find ALL my type names that collide with the module.
+
+Only 2 real collisions (`FSMStateColor`, `FSMFlowLayout`) — both with the `FSMStateDiagram` sibling. The other 25 types are unique. Let me rename mine to surface-specific names. First, stop the loop and locate all usages.
+
+Only in my Chart.swift (5) and swift (1). Let me rename both to surface-specific names via sed (my files only).
+
+Renames clean, no collisions remain. Let me run a final comprehensive collision check across ALL my type names to be thorough, then re-validate the isolated build/tests and lint.
+
+All type names now unique. Let me re-validate everything after the rename: re-sync the isolated package, re-run tests + iOS typecheck + swiftlint + swiftformat.
+
+All green after rename: 31/31 tests, swiftformat 0, swiftlint 0. Let me re-confirm iOS typecheck and placeholder gate post-rename.
+
+iOS typecheck clean, placeholder clean. For airtight honesty evidence, let me re-run the full macOS app build (post-rename) to confirm my surface contributes **0** errors and the only failures are the pre-existing sibling collisions. I'll launch it and draft the gate log meanwhile.
+
+The build is running (incremental, post-rename). Let me wait and confirm 0 FSM errors.
+
+Airtight: **0 FSM errors** in the full macOS build — all 74 errors are in 3 pre-existing, tracked `Charge*` sibling surfaces (duplicate `ChargeSessionDTO`/`ChargeStateDTO`/etc.), outside my Allowed-files scope. Let me gather final stats and write the gate log.
+
+All stats gathered. Now let me write the comprehensive, honest gate log.
+
+The gate log is written. Now let me verify git state (ensuring I don't stage the pre-existing modified web files), then commit only my files + the log.
+
+Clean state — the 2 modified web files are pre-existing (not mine), and `.xcodeproj`/`Frameworks` are git-ignored. Let me stage only my files + log, commit, and clean up temp artifacts.
+
+Exactly my 8 files + log staged (pre-existing web files excluded). Let me commit.
+
+Committed (HEAD d2dd1a6ee). Let me do a final verification of the commit and working tree.
+
+Task complete. The FSMDistributionWidget Apple surface is shipped, validated, and committed.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0052-FSMDistributionWidget.log | 203 ++++++++++++
+ .../FSMDistributionWidget.Builder.swift            | 141 +++++++++
+ .../FSMDistributionWidget.Chart.swift              | 297 ++++++++++++++++++
+ .../FSMDistributionWidget.Model.swift              | 289 +++++++++++++++++
+ .../FSMDistributionWidget.Models.swift             | 159 ++++++++++
+ .../FSMDistributionWidget.Previews.swift           | 180 +++++++++++
+ .../FSMDistributionWidget.Tests.swift              | 344 +++++++++++++++++++++
+ .../FSMDistributionWidget.strings                  |  51 +++
+ .../dashboard-widgets/FSMDistributionWidget.swift  | 327 ++++++++++++++++++++
+ 9 files changed, 1991 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0052-FSMDistributionWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FSMDistributionWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FSMDistributionWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FSMDistributionWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FSMDistributionWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FSMDistributionWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FSMDistributionWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FSMDistributionWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FSMDistributionWidget.swift

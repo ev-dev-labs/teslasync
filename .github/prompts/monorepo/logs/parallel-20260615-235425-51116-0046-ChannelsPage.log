@@ -1,0 +1,218 @@
+I'll start by exploring the repository structure to understand the task — the web source, existing Apple app structure, and reference patterns.
+
+Now let me explore the Apple app structure, parity manifest, ledger, and existing reference pages.
+
+Let me explore the actual TeslaSync source structure to understand the existing organization.
+
+The structure differs from the prompt's stated path. Let me examine the project config, parity manifest/ledger, and existing Notifications sources to understand the real layout.
+
+The existing precedent is `Sources/Features/Notifications/NotificationsAuditLogPage.swift`, not the prompt's stated `TeslaSync/Features/...` path (which XcodeGen doesn't include). Let me study the precedent files and parity manifest in detail.
+
+Excellent precedent found. Now let me examine the parity manifest record, the ledger, the web `NotificationChannelsView` + `PageContainer`, and check for any existing native channels view and a shared page-scaffold component.
+
+A native `NotificationChannelsView.swift` already exists (separate parity unit). My `ChannelsPage` wraps it. Let me examine the web `PageContainer` (to understand title/subtitle/copyLink), the native channels view's public API, the route enum, and look for a shared page-scaffold component.
+
+Now I understand the architecture. There's a native `PageContainer` shared component, a native `NotificationChannelsView` + model, and the route system. Let me examine the PageContainer API, the channels model init, the localization approach, and the route enum/parser.
+
+Let me find the main `PageContainer` struct, the string helpers/catalog, the route parser/registry composition, and the channels view builder.
+
+Let me read the `PageContainer` public API, its preview usage, the channels view builder/previews, and the string helper definition.
+
+Now let me examine the channels previews/adapter (to learn how to construct the model+source), the `NotifChannelsStrings` helper, the route parser, and where route registrations are composed.
+
+Now let me examine the localization catalog, the audit page's string companion (precedent for a Sources/Features page), the channels view's strings file, and the central route registry.
+
+Single platform catalog at `Localization/Localizable.xcstrings`; the channels-page keys aren't present yet. Let me verify the full project source paths, tool availability, the catalog format, and the gate contract.
+
+All gate tools are available (xcodebuild, swiftlint, pwsh, xcodegen) — so the gate is runnable, not blocked. The catalog uses `translation.`-prefixed keys. Let me confirm the exact key presence, how Swift code resolves these keys, and read the gate contract.
+
+The catalog uses `translation.`-prefixed keys resolved via `String(localized:)`/`LocalizedStringKey` — and my two keys are absent, so I'll add them. Let me read the central route registry and the channels adapter (to find the production/default source) before designing.
+
+Let me find where route registrations are composed into the app shell and how the audit registration is tested, to mirror the wiring correctly.
+
+Let me view the composition root in `TeslaSyncApp.swift` and the existing audit page test to mirror the wiring and test pattern.
+
+Let me see the end of the registration chain and check for AppRoute tests/exhaustiveness that adding a case would affect.
+
+Adding an `AppRoute` case has ripples: exhaustive `systemImage`/`group` switches, the Explore catalog (count-tested against `allCases`), and `RouteTests`. Let me read those to mirror the audit-route precedent exactly.
+
+The Explore catalog auto-derives from `AppRoute.allCases`, so adding a case won't break its count test. Now let me read the channels projection/input types so I can seed a representative source for the page.
+
+Let me check how the app shell renders/pads route views and whether any feature page already uses the shared `PageContainer`, to get the layout right (the channels view has its own ScrollView).
+
+No feature page uses the shared `PageContainer`; the shell renders pages unpadded and the sibling audit page self-builds its header. Now let me inspect the xcstrings formatting + a `route.*` entry, the swiftlint config, and any localization tests before writing.
+
+The xcstrings uses Xcode's exact format (space before colon, 2-space indent, alphabetically sorted). To avoid reformatting 11k keys, I'll insert surgically. Let me compute the alphabetical successors for my 3 new keys to anchor the inserts. Note `--strict` makes the 120-col line_length warning fail, so I'll keep code ≤120.
+
+Anchors found. Let me find every place `.notificationsAudit` is referenced (to mirror all exhaustive switches for the new case) and confirm the insertion anchors are unique in the catalog.
+
+The grep count likely mis-parsed the braces. Let me verify the anchors with the grep tool and inspect the breadcrumbs route file (another `.notificationsAudit` site to mirror).
+
+Breadcrumbs already cover `/notifications/channels` (line 99) — no change needed there. Let me directly inspect the raw catalog lines for my anchors with fixed-string matching.
+
+There are two formats in the file (tool-synced keys use `"key": {` with no space before colon). Let me check the exact style of my anchor keys and their surrounding blocks.
+
+Let me view the exact blocks at my insertion points to match formatting precisely (colon style, nested keys, locales).
+
+Now let me view the `testing`, `toggleFailed`, and `route.notificationsAudit`/`onboarding` blocks to capture exact anchor text.
+
+The catalog has mixed formatting (manual keys use `"key" : {`, synced keys use `"key": {`) and isn't globally sorted. Let me view the exact regions around `route.notificationsAudit` and the predecessor of `...channels.test` to craft precise anchors.
+
+I now have a complete understanding. Let me set up a plan and todos, then read the gate scripts and a couple of shared-component signatures I'll use (TSSpacing/Color.TS, and PageContainer copyLink/shareLink handling).
+
+Let me read the placeholder patterns (swift), the README gate contract, and a sibling log for the exact format/log path.
+
+Let me find the notifications audit page log to mirror the exact log structure (PARITY section + footer).
+
+The sibling AuditLog log confirms my path reconciliation and reveals the gate methodology (xcodebuild may be RED from a pre-existing KMP framework issue; they verified via isolated Swift type-checks + test harnesses). Let me read that log's gate/verification section and the ledger.
+
+I now have the complete methodology (isolated Swift type-checks + harnesses; full `xcodebuild` is blocked by a pre-existing out-of-scope KMP `Shared.xcframework` Gradle/OOM staging step). Let me inspect the ledger structure, then start writing code.
+
+Let me verify the `PageContainer` model's `copyLink()`/`shareLink` handling so the copy-link affordance isn't a no-op, then I'll start writing the implementation.
+
+I have everything needed. Let me verify there are no name collisions for my new public types before writing.
+
+All clear (the 1 match for `notificationsChannels` is the breadcrumb string key, not a type collision). Now let me write the implementation. Starting with the page model and seed source.
+
+Now the page view and route registration:
+
+Now the test file, mirroring the audit test's structure:
+
+Now let me wire the route: edit `AppRoute.swift` (case, pathSegment, systemImage, group), `AppRouteParser.swift` (alias), and `TeslaSyncApp.swift` (registration chain).
+
+Catalog edits — adding the 3 keys surgically with format matching each region (space-colon for the manual `route.*` key, no-space-colon + ar/en/he for the synced `translation.*` keys):
+
+Let me validate the catalog JSON is still well-formed and the 3 keys resolve correctly.
+
+Catalog valid (11073 keys, +3). Now add the 2 ledger rows for `page:notifications/Channels`:
+
+Let me validate the ledger JSON, then start the gate by generating the Xcode project.
+
+Ledger valid (+2 rows). Now the gate. Let me run swiftlint `--strict` and swiftformat `--lint` on my new/edited files.
+
+swiftlint `--strict`: 0 violations; swiftformat: 0/8 need formatting. Now the placeholder scan on my actual source + test dirs:
+
+Placeholder scan clean (COUNT=0; the 1 ALLOWED is the pre-existing audit-page marker). Now let me regenerate the Xcode project and confirm my files are included.
+
+xcodegen succeeded; my files are referenced 30× in the project. Let me run an isolated route harness (verifies my AppRoute/Parser changes without the KMP framework), and in parallel kick off the full macOS build in the background.
+
+Route harness passes (75 routes, all invariants hold). Now let me check whether the KMP `Shared.xcframework` is prebuilt/cached before attempting the full build.
+
+The KMP `Shared.xcframework` isn't prebuilt — the full build would trigger the OOM-prone Gradle staging step the sibling logs documented as a pre-existing out-of-scope blocker. Let me check whether the channels/PageContainer stacks import the KMP `Shared` module (which would determine if an isolated type-check is feasible).
+
+The stacks are KMP-free (only SwiftUI/Foundation/Observation), so an isolated type-check is feasible. Let me locate the token/theme/component dirs to assemble a curated type-check set.
+
+Let me check the KMP staging script and system memory before deciding whether to attempt the full build.
+
+64GB RAM but load average ~40 (heavy parallel-slot contention) — attempting the Gradle+xcodebuild KMP staging would be slow and OOM-prone, exactly as the sibling logs documented. I'll verify via isolated type-check (KMP-free) instead. Let me locate the exact dependency-defining files for a curated compile.
+
+The dependency closure is broad but KMP-free. Let me assemble a curated file set with `find` and run an isolated `-typecheck` (macOS) of my files against the real channels + PageContainer + component stacks.
+
+All 26 errors are confined to one unrelated component (`UnitFormatters.swift`) that my broad glob pulled in — it needs the units layer (P1/S5), not my code. Let me locate and add those dependency files.
+
+Let me check whether the units facade (`Sources/SharedFacade`) is KMP-free so I can add it to satisfy the unit-formatter component.
+
+`UnitFormatters.swift` transitively needs the KMP `Shared` module (via the units facade) — but the channels stack doesn't use it. Let me find all KMP-dependent component files and confirm the channels stack doesn't need them, then exclude them from the isolated set.
+
+Only `UnitFormatters.swift` is KMP-dependent, and the channels stack doesn't use it. Let me re-run the isolated type-check excluding that one file, for both macOS and iOS idioms.
+
+One error left: `ModalSize` not in scope (from `modals-dialogs/Modal.swift`). But `tsModal` is also defined in `Components/UI/Overlays.swift`. Let me check which `tsModal` the channels view actually binds to, and locate `ModalSize`.
+
+`ModalSize` lives in `modals-dialogs/Modal.Adapter.swift`. Let me add the full `Modal*` stack and re-run both idioms.
+
+macOS isolated type-check passes: **0 errors across 101 files** (my 4 files + full channels stack + PageContainer + Modal + all shared components, Swift 6 strict concurrency). Now the iOS idiom:
+
+Both idioms pass (macOS 0/0, iOS 0/0). Let me add an executed model/seed harness (projection of the representative seed → `.data` + route path) to behaviorally verify the populated-render claim.
+
+Comprehensive isolated verification is green. Now let me attempt the actual full `xcodebuild` to capture honest first-hand evidence of the KMP staging behavior in this run. Let me list schemes first.
+
+Let me attempt the actual macOS build to capture first-hand evidence of the KMP staging step (bounded, monitored).
+
+Build running in the background. Let me write the parity log structure while it runs, then check the build. First let me peek at progress after a bit.
+
+The build reached the "Stage Shared.xcframework" Gradle phase (the documented blocker), though some tasks hit the cache. Let me continue monitoring to see if it completes or hits the OOM/link failure.
+
+The debug `Shared.xcframework` assembled successfully; now at `:core:linkReleaseFrameworkIosArm64` (the heavy step the sibling log saw OOM). Let me keep monitoring.
+
+Release linking is progressing (no OOM so far) — `IosArm64` done, `IosSimulatorArm64` in progress. Let me keep waiting; it may complete the staging and proceed to the app Swift compile.
+
+The KMP framework **built and staged successfully** this run, and it's now compiling the app Swift sources (including my Channels files). Let me wait for the full build result.
+
+Still compiling the whole module (no errors so far). Let me check the actual build shell for completion.
+
+Whole-module emit succeeded (the entire app module — including my Channels files — type-checked) and per-file codegen is underway with **0 errors**. Let me wait for the final link/result.
+
+**BUILD_EXIT=0** — the full macOS app built successfully (KMP framework staged + entire app compiled, including my Channels files). Let me confirm and then run the test action to execute my unit tests.
+
+**BUILD SUCCEEDED**, 0 errors, 0 warnings in my files, all 5 Channels files compiled into the real app target. Now let me run the test action (scoped to my new tests + the route/catalog invariants that my new case touches).
+
+Tests running. Let me capture tool versions for the log while they run.
+
+Let me check the test progress.
+
+The test shell completed. Let me read the result.
+
+TEST_EXIT=65 in only 23s — that's a fast configuration/build failure, not a test failure. Let me read the log.
+
+The test build failed on one real issue in my test: `EmptyView` needs `import SwiftUI`. Let me fix that.
+
+Let me re-lint the test file and re-run the scoped tests.
+
+swiftlint clean on the fix. Tests re-running. Let me monitor.
+
+TEST_EXIT=0. Let me confirm the actual pass counts in the log.
+
+**TEST SUCCEEDED** — all 8 ChannelsPageModelTests pass (catalog keys resolve, seed renders `.data`, deep-link resolves), plus RouteTests, ExploreCatalogTests, and the audit suite (no regressions). The full gate is green. Let me do a final combined lint and update todos.
+
+0 violations across all 8 files; git status shows exactly the in-scope changes. Let me capture file LOCs and write the parity log.
+
+Now let me write the parity evidence log:
+
+Log written. Let me verify the PARITY-section line citations match the actual files and correct them if needed.
+
+Let me correct the line numbers in the PARITY section to match the actual files (honesty — evidence must be precise).
+
+Let me check the full git status (the build may have generated out-of-scope KMP files I must not commit) before committing only my in-scope paths.
+
+Clean — only my in-scope changes are present (KMP-generated files, xcodeproj, and the staged framework are all git-ignored). Let me commit.
+
+Committed (`5382b8d0d`). Let me clean up temp files and do a final verification.
+
+All todos complete and verified. The task is done.
+
+## Summary
+
+Delivered a native SwiftUI/HIG parity implementation of the web `ChannelsPage` (`/notifications/channels`) for the Apple app, committed as `5382b8d0d`.
+
+**What shipped** (5 new files in the repo's real page home `Sources/Features/Notifications/` + `Tests/`, reconciling the prompt's non-existent `TeslaSync/Features/...` path — same deviation the sibling AuditLog page recorded):
+- `ChannelsPage.swift` — wraps the shared native `PageContainer` (title + subtitle + **copyLink**, the 1:1 parity of the web `<PageContainer copyLink>`) around the existing `NotificationChannelsView`.
+- `ChannelsPageModel.swift` — `@MainActor @Observable` holding the two localized strings + the embedded channels model.
+- `ChannelsPageModel.Sample.swift` — representative seed so the embedded surface renders populated (ADR-011).
+- `ChannelsRouteRegistration.swift` + wiring: new `.notificationsChannels` `AppRoute` case, parser alias, and registration chained in `TeslaSyncApp`.
+- `ChannelsPageModelTests.swift` — 8 tests.
+
+**Navigation/strings:** added the route + `AppRouteParser` alias; added 3 catalog keys to `Localizable.xcstrings` (`route.notificationsChannels` + `translation.notifications.channels.{title,subtitle}`, web key names preserved); +2 `apple-ledger.json` rows (2/2 covered).
+
+**Gate — fully green (first-hand, this run):**
+- `swiftlint --strict` **0 violations** (8 files); `swiftformat --lint` 0/8; placeholder scan **COUNT=0**.
+- Isolated Swift-6 strict-concurrency type-check vs real components: **macOS 0/0, iOS 0/0** (101 files).
+- Executed route + model/seed harnesses: **PASSED**.
+- **Full `xcodebuild` BUILD SUCCEEDED** (KMP `Shared.xcframework` staged + app compiled, 0 errors/warnings in my files) and **TEST SUCCEEDED** — all 8 `ChannelsPageModelTests` pass plus `RouteTests`/`ExploreCatalogTests`/audit suite (no regressions).
+- `=== PARITY === PARITY_COVERED=2 == PARITY_REQUIRED=2` → `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 9 todos done, full gate green, and changes committed. Calling task_complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: id-list lost a base identifier

@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Not a BLOCKED scenario. Let me study existing patterns — the recent `StatusHero` surface and the directory structure.
+
+Now let me check for any existing MaskedValue files and study the complete StatusHero reference implementation in detail.
+
+StatusHero is an excellent template — prop-driven, no fetcher, same shape as MaskedValue. Let me read the remaining StatusHero files and the shared infrastructure they depend on.
+
+Now let me read the remaining StatusHero files (tests, previews, strings) and locate the shared token/component definitions I'll need.
+
+A native `CopyButton` shared surface already exists, and there's a `TSCopyButton` utility. Let me read the key shared components, the design tokens, and the StatusHero tests to nail the exact APIs.
+
+Now let me read the design tokens, `TSButton`, the StatusHero tests, and check how the project builds these files.
+
+Now I understand the structure. Let me read project.yml details, the design tokens, TSButton, Typography, and the StatusHero view-test to finalize my understanding of the patterns and build config.
+
+Design tokens come from generated sources. Let me locate them and check the build tooling (xcodegen, .xcodeproj, placeholder checker).
+
+No `.xcodeproj` is committed — I'll need `xcodegen generate`. Let me read the full token set, `TSButton`, the placeholder checker, and the CopyButton model seam.
+
+Let me check the placeholder patterns (words to avoid), PowerShell availability, and read the CopyButton model + StatusHero view tests as final references.
+
+I have all the patterns I need. Now let me verify build feasibility: the xcframework dependency, simulators, and whether xcodegen generates cleanly at baseline.
+
+Important: `Shared.xcframework` is absent (git-ignored, built from KMP core). Let me check the precedent — how the StatusHero gate log handled the full build in this environment.
+
+The StatusHero log is the key precedent: the KMP `Shared.xcframework` is built from source (~11 min), the full iOS build hits a **pre-existing** toolchain IRGen crash in out-of-scope code, macOS hits a dev-signing gap, and DONE rests on the surface being 0-error + whole-module Sema passing + lint/format/placeholder green. Let me check the xcframework build script and toolchain so I can kick it off in the background while I write code.
+
+Toolchain is available (gradlew + Java 17). Per precedent the xcframework build takes ~11 min, so I'll kick it off in the background now and write code while it builds.
+
+Toolchain confirmed. Now let me read the lint/format configs to write compliant code, then start building. The xcframework is compiling in the background.
+
+Configs are clear (120 col, strict, file < 400 lines). I have everything I need. Let me set up tracking and write the surface. Starting with the pure Foundation core (Adapter).
+
+Let me check the xcframework build progress, then write the test files.
+
+The xcframework is still building. Let me write the comprehensive adapter (masking) tests — the core parity proof.
+
+Let me add a testable color helper to the code text view, then write the model/view tests.
+
+All 8 files written. Let me run the fast in-scope gates (swiftformat, swiftlint, placeholders) on my files and check the xcframework build.
+
+swiftformat wants canonical number grouping (strip underscores from sub-threshold numbers). Let me stop the lint run and apply swiftformat in write mode to canonicalize, then re-verify.
+
+swiftformat formatted 3 files (untracked, so git diff is empty). Let me verify the number canonicalization and re-run the lint to confirm clean.
+
+Numbers canonicalized. Waiting for the format-lint result.
+
+swiftformat is clean (0/7 need formatting). Now swiftlint --strict and placeholder scan on my files, plus a check on the xcframework build.
+
+Two fixable issues: a `void_function_in_ternary` in `toggle()`, and the identifier `placeholder`/`emptyPlaceholder` tripping the placeholder scanner. Let me rename to `emptyGlyph`/`glyph` and rewrite `toggle()` as if/else.
+
+Fixes applied. Let me re-run swiftlint + placeholder scan, broadly grep for any forbidden substrings, and check the xcframework build.
+
+All in-scope gates green (lint 0, placeholders 0). Let me re-confirm swiftformat after my edits and check the xcframework build progress.
+
+swiftformat is clean (0/7). All three fast in-scope gates pass. The xcframework is still building. Let me write a plan file and wait for it.
+
+The KMP build is still running (Gradle Kotlin/Native is slow on first run). Let me continue waiting.
+
+It's been ~16 min with no output (piped through `tail`). Let me verify the Gradle build is actively progressing rather than stuck.
+
+Gradle is actively progressing — debug XCFramework assembled, release in progress (then it stages to `Frameworks/`). Let me keep waiting.
+
+I'll keep waiting for the release XCFramework assembly and staging to complete.
+
+The KMP `Shared.xcframework` is built and staged (BUILD SUCCESSFUL, 24m48s). Now let me generate the Xcode project and run the iOS build.
+
+Project generated with my files referenced (48 refs). Now the iOS build — per precedent it hits a pre-existing IRGen crash; I'll capture full output to analyze MaskedValue diagnostics. This takes several minutes.
+
+The iOS build is running in the background. Let me wait for it to complete.
+
+Build is actively compiling surfaces (0 errors so far). Let me wait for it to finish.
+
+The build reached "Emitting module for TeslaSync" — whole-module Sema is essentially complete (0 errors). Let me confirm my files are in the compile inputs and keep waiting for the IRGen stage.
+
+Let me verify target membership and keep monitoring — the emit-module step (whole-module Sema) is the authoritative check.
+
+Target membership confirmed — my 5 source files are in the app target, tests in the test targets, strings as a resource. The build is mid-flight at module emission. Let me wait for it to finish.
+
+iOS build finished: `IOS_BUILD_EXIT=65` (21 failures) — matching the precedent. Let me analyze the log: any MaskedValue diagnostics, and confirm the failure is the pre-existing IRGen crash.
+
+No MaskedValue diagnostics, no source `error:` lines, and no IRGen crash signature this time. The 21 failures are something else. Let me see the actual failure lines and the build tail.
+
+The failed commands are `SwiftEmitModule` + a `SwiftCompile` batch, with **no** `error:` lines — the signature of a compiler crash. Let me find the crash details (stack dump / signal).
+
+No `error:` or stack dump captured — consistent with a swift-frontend crash. Let me check for crash reports and confirm via the definitive isolation test.
+
+The crash report is the smoking gun — identical pre-existing toolchain bug to the StatusHero precedent:
+
+```
+report_size_overflow → llvm::SmallVectorBase<unsigned int>::grow_pod
+→ SyncCallEmission::setArgs → IRGenSILFunction::visitFullApplySite
+→ performCompileStepsPostSILGen → performCompileStepsPostSema
+```
+
+This is a **post-Sema IRGen** crash (whole-module type-checking passes first — hence 0 MaskedValue diagnostics). Now let me run the definitive **isolation test**: remove my files, rebuild, and confirm the identical crash persists independent of my surface.
+
+Files removed, project regenerated (0 MaskedValue refs). Now the isolation build — if it crashes identically, my surface is exonerated.
+
+Isolation build running (~10 min). Let me wait for it.
+
+The isolation build (without my files) **also fails with exit 65** — proving the crash is independent of MaskedValue. Let me confirm the identical crash signature and zero source errors.
+
+**Conclusive.** The isolation build (without MaskedValue) fails identically: `ISO_IOS_EXIT=65`, 0 source errors, and the failed batch explicitly contains `AppearanceSettings.Controls.swift` — the exact pre-existing IRGen crash culprit (`report_size_overflow → SyncCallEmission::setArgs`). My surface is exonerated. Let me restore my files, regenerate, and run the macOS gate.
+
+Restored (48 refs). Now the macOS gate build (background; ~10 min).
+
+The macOS build is running. While it builds, let me strengthen the evidence by confirming `AppearanceSettings.Controls.swift` was also in the failed batch of the *with-files* build, and capture the crash frames for the log.
+
+Good — MaskedValue is absent from the with-files failed commands (my files aren't named failures). The crashing lazy IRGen thunk lands in different batches per build (batch boundaries shift with file count), but the crash signature is identical. Let me capture the failed-batch leaders for the log.
+
+The macOS build finished. Let me read its result and check for MaskedValue diagnostics.
+
+macOS build matches the precedent exactly: `MAC_BUILD_EXIT=65` due to the **environmental dev-signing gap** (`entitlements require signing with a development certificate`), failing before compilation — 0 MaskedValue diagnostics. All evidence is gathered. Let me capture the final surface-scoped gate transcript.
+
+All surface-scoped gates are green. Let me gather file line counts and write the honest gate log.
+
+Log written. Let me verify git status (only my files should be staged; xcodeproj/framework are git-ignored), clean up temp artifacts, and commit.
+
+Git shows exactly my 8 files + the log; xcodeproj and framework are properly git-ignored. Let me confirm the temp hold dir is actually empty (my check had a logic quirk), then commit.
+
+Everything restored cleanly (hold dir empty, 8 files in repo). Now let me commit the surface and log.
+
+Committed (commit `a86934e71`, 9 files). Let me update tracking, clean up temp artifacts, and do a final verification.
+
+The task is complete. Let me do a final confirmation of the deliverables.
+
+The task is complete and verified. Let me mark it done.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0220-MaskedValue.log  | 166 +++++++++++
+ .../shared-surfaces/MaskedValue.Adapter.swift      | 326 +++++++++++++++++++++
+ .../shared-surfaces/MaskedValue.AdapterTests.swift | 252 ++++++++++++++++
+ .../shared-surfaces/MaskedValue.Model.swift        | 243 +++++++++++++++
+ .../shared-surfaces/MaskedValue.Previews.swift     |  78 +++++
+ .../shared-surfaces/MaskedValue.Tests.swift        | 252 ++++++++++++++++
+ .../shared-surfaces/MaskedValue.Views.swift        | 135 +++++++++
+ .../TeslaSync/shared-surfaces/MaskedValue.strings  |  28 ++
+ .../TeslaSync/shared-surfaces/MaskedValue.swift    |  83 ++++++
+ 9 files changed, 1563 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0220-MaskedValue.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaskedValue.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaskedValue.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaskedValue.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaskedValue.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaskedValue.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaskedValue.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaskedValue.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MaskedValue.swift

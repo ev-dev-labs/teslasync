@@ -1,10 +1,10 @@
 //
-//  FormField.Model.swift
-//  TeslaSync — P4 shared surface · 0154 · FormField (Apple)
+//  FormFieldShared.Model.swift
+//  TeslaSync — P4 shared surface · 0154 · FormFieldShared (Apple)
 //
 //  The state-holder seam (P1/S8), the telemetry seam (P1/S11), and the i18n facade
 //  (P1/S10) for the form-field wrapper. The view binds through `FormFieldModel`; no
-//  networking lives in the view. The web source (FormField.tsx) is a presentational
+//  networking lives in the view. The web source (FormFieldShared.tsx) is a presentational
 //  leaf fed by its caller (and, in practice, a react-hook-form `Controller`), so the
 //  "source" here republishes the caller's prop snapshot (label / required / hint /
 //  error) — recomputing the resolved projection on every emission, exactly as the web
@@ -132,10 +132,10 @@ public final class InMemoryFormFieldSource: FormFieldSource {
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
 /// Resolves the surface's strings by key with the web English fallback, so the view
-/// holds no hardcoded literals. Keys live in the "FormField" table, folded into the
+/// holds no hardcoded literals. Keys live in the "FormFieldShared" table, folded into the
 /// app `Localizable.xcstrings` catalog at integration time.
 public enum FormFieldStrings {
-    public static let table = "FormField"
+    public static let table = "FormFieldShared"
 
     /// The accessibility word appended for a required field (web `aria-label="required"`).
     public static let requiredKey = "form.field.required"

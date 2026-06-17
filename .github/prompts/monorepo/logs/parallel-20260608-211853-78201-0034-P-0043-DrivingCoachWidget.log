@@ -1,0 +1,164 @@
+I'll start by exploring the repository structure and checking tool availability, since this task requires Apple/Xcode tooling.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, swift 6.3). Now let me read the web source and explore the existing Apple structure.
+
+The web source is clear. The Apple `dashboard-widgets` dir has 498 files (many existing widgets). Let me check for an existing DrivingCoachWidget and study the established widget pattern.
+
+65 widgets exist; DrivingCoach is new. Let me see remaining widget names and the shared infrastructure (state holders, tokens, i18n, WidgetShell equivalent).
+
+Let me examine the shared facade (state holders) for Driving and study a complete reference widget. RouteEfficiencyWidget and WeeklyDigestWidget look structurally similar.
+
+RouteEfficiencyWidget is the ideal reference (same 7-file structure). Let me read all of it to learn the exact conventions.
+
+Excellent reference. Now let me read the remaining RouteEfficiency files (Adapter, Views, Previews, Tests, strings) to complete my understanding of the conventions.
+
+Now let me read the Previews, Tests, strings files and locate the design tokens + registration types.
+
+Now let me find the design tokens, registration types, and the web data hook + shared components that DrivingCoach depends on.
+
+Now let me read the design token infrastructure (registration, tones, skeleton, colors, fonts, spacing).
+
+Let me confirm the color/font/spacing/radius token vocabularies available, and how the build target includes these files.
+
+The tokens aren't in `Sources/` — they're likely generated. Let me inspect the build setup (project.yml, Scripts, xcodegen) to understand how the project builds and where tokens come from.
+
+Now I understand the build: XcodeGen generates the project, tokens live in `apps/design/generated/apple`, and a scheme pre-action builds `Shared.xcframework` via Gradle/KMP. Let me check the token vocabulary and the known build constraints.
+
+This matches the established methodology: full-app `xcodebuild` is deferred to macOS CI (needs KMP `Shared.xcframework` + signing), while surfaces are verified via isolated build/typecheck + tests + lint + xcodegen. Let me read the token catalog and the dependency headers to write correct code.
+
+Now I have the full token vocabulary. Let me check the dependency footprint of `TSTone`/`TSSkeleton` (for an isolated compile) and the tooling referenced by the gate (`apps/tools`).
+
+`TSTone` and `TSSkeleton` are self-contained (SwiftUI + tokens only) — cheap to include in an isolated compile. `pwsh`, `xcodegen`, `swiftlint`, `swiftformat` all available. Let me check the lint configs and placeholder patterns before writing.
+
+All constraints clear. Let me check how a sibling widget documented its gate (logs dir) and confirm the logs path, to mirror the established honest methodology.
+
+I now have everything needed. The established, approved methodology (per `macos-pending-verifications.md` and sibling logs like RouteEfficiency/RecentDrives): ship the full 7-file surface, run all **host-runnable gates** green (swiftc typecheck iOS18+macOS15 strict concurrency, executed test harness, swiftformat, swiftlint, placeholder), and mark the `xcodebuild` scheme steps DEFERRED with capability evidence (KMP `Shared.xcframework` + signing) → `EXIT=0 STATUS=DONE`.
+
+Let me set up tracking and write the plan.
+
+The shared catalog already contains the 4 parity keys (`translation.widget.drivingCoach.*`) — confirming my key names are correct. Following predecessors, I ship a per-surface `.strings` table and won't edit the shared catalog. Git is clean.
+
+Now writing the surface. Starting with the Adapter (pure projection core):
+
+`fmtInt` = locale number, 0 fraction digits (rounds). My `.formatted(.number.precision(.fractionLength(0)))` matches. Now writing the Adapter:
+
+Now the Model (state-holder seam + telemetry + i18n facade):
+
+Now writing the Views (presentational subviews):
+
+Now the main view (`DrivingCoachWidget.swift`):
+
+Now the Previews and strings files:
+
+Now the Tests file:
+
+All 7 files written. Now let me set up an isolated SwiftPM harness (symlinking the real files + their real dependencies) to typecheck under Swift 6 strict concurrency and execute the tests — the established host-runnable verification.
+
+The only failure is in the symlinked dependency `Skeletons.swift` referencing `TSCard` (a card component from another file) — not my surface code (all DrivingCoachWidget files compiled). Let me add the `TSCard` definition to the harness closure.
+
+`TSSkeleton` lives in `Skeletons.swift` alongside other skeleton views that pull in `TSCard` → a deep UI closure. My surface only needs `TSSkeleton`. Let me measure the full closure quickly and add the leaf files.
+
+Bounded closure: adding the real `Cards.swift`, `Typography.swift`, `Buttons.swift`, `TSMaterial.swift` (all leaf files: SwiftUI + tokens) completes it. Symlinking them in:
+
+Harness builds clean under Swift 6 strict concurrency. Now running the tests:
+
+All 28 tests pass under Swift 6 strict concurrency. Now the per-SDK typecheck (real iOS 18 + macOS 15 SDKs) and the forbidden-pattern scan:
+
+Both per-SDK typechecks pass (iOS 18 + macOS 15, strict concurrency, DEBUG). Now lint/format/placeholder. Let me check how the placeholder script resolves `-Path`, then run all checks.
+
+Confirmed: a non-existent `-Path` trivially returns COUNT=0. To check honestly, I'll scan a temp dir holding only my 7 files. Running format, lint, placeholder, and a forbidden-word grep:
+
+Three formatting fixes needed. Let me view and fix them:
+
+Re-running format + lint, plus placeholder gate (temp dir of my files) and a rebuild to confirm edits compile:
+
+Format clean (0/6), lint clean (0 violations), no forbidden words. Now the placeholder gate on my files + harness rebuild/retest to confirm edits compile:
+
+All host gates green: format 0, lint 0, placeholder COUNT=0/EXIT=0, 28/28 tests pass, iOS18+macOS15 typecheck 0. Now `xcodegen generate` to confirm the project enumerates my files, then attempt the real `xcodebuild` to capture deferral evidence:
+
+`xcodegen generate` succeeded and enumerated all 7 files. Now attempting the real `xcodebuild` gate to capture honest deferral evidence (the scheme's KMP `Shared.xcframework` pre-action + signing):
+
+All confirmed: `Shared.xcframework` absent (only `.gitkeep`), iPhone 16 sim booted, KMP needs a full Gradle/Kotlin-Native build. Let me attempt the real `xcodebuild` (bounded) to capture honest blocker evidence:
+
+The KMP `Shared.xcframework` Gradle build is actually running here (downloading Kotlin/Native dist, linking frameworks) — better than the documented deferred state. Let me keep waiting for it to complete and proceed to the app build + tests.
+
+The KMP build is succeeding — debug `Shared.xcframework` written, now building release. The toolchain works here, so a real green gate is achievable. Continuing to wait:
+
+The KMP framework is now cached (release built in pass 1; pre-action repeats fast for the test action). The app compile should proceed now. Continuing to wait:
+
+A `** BUILD FAILED **` occurred at line 1715 in the first `build` action. Let me extract the actual error — this is the critical evidence:
+
+Root cause is clear and is **not** my code: the scheme's `Stage Shared.xcframework` pre-action failed because the **Gradle daemon was stopped externally** ("Gradle build daemon has been stopped: stop command received") mid-release-link — an environmental flake in this shared parallel runner (the debug `Shared.xcframework` had already built successfully). The app target never even compiled. The `test` action is re-running the pre-action now. Let me wait to see if it completes this pass:
+
+Good — this pass is progressing past the earlier interruption point (now linking release macOS framework, daemon stayed up). Once staged, the app build + tests run. Continuing to wait:
+
+Real progress now: `Shared.xcframework` staged, extensions code-signed (ad-hoc works for simulator), my `DrivingCoachWidget.strings` validated/bundled (UTF-8 OK), and the main `TeslaSync` app target is compiling — heading toward a genuine green gate. Continuing:
+
+The full-app build got far (KMP framework built, extensions signed, my `DrivingCoachWidget.strings` bundled) then failed — but **not on my code**. The errors are all pre-existing collisions in *other* charging widgets (`ChargingProjection` redeclared/ambiguous, `miles` ambiguous, `ChargeStatusProjection` not `Equatable`). Let me verify zero `DrivingCoachWidget` errors and capture the exact signatures:
+
+**Definitive: 0 `DrivingCoachWidget` errors** in the entire full-app build. The toolchain works here (KMP `Shared.xcframework` built, all extensions signed, my `.strings` bundled). The `** TEST FAILED **` is caused purely by pre-existing, unrelated collisions in sibling *charging* widgets (`ChargingProjection` ambiguous/redeclared, `ChargeStatusProjection` not `Equatable`, `miles` ambiguous) — outside my allowed scope. Let me confirm these are pre-existing (my change is purely additive):
+
+Airtight: my change is **purely additive** (7 new files), and `ChargingProjection` is redeclared across two pre-existing sibling files (`ChargeStatusWidget.Adapter.swift` + `ChargingDetailSection.Adapter.swift`) — I never reference it. The full-app failure is pre-existing and unrelated.
+
+Now let me produce a consolidated, real host-gate capture for the log:
+
+All host gates green in the log. Now appending the `xcodebuild` scheme-step disposition with evidence, plus the structured footer:
+
+Let me review the complete log for coherence before committing:
+
+Log is coherent and accurate. Let me verify git status (ensure only my 7 files + the log are staged; generated `.xcodeproj`/`Shared.xcframework` are git-ignored):
+
+Clean and purely additive — only my 7 files + the log are untracked; generated `.xcodeproj`/`Shared.xcframework` are git-ignored. Committing with the prescribed message:
+
+Committed: 8 files, 1591 insertions, purely additive. Let me finalize todo state and confirm a clean tree:
+
+All todos done, tree clean, log ends `EXIT=0 STATUS=DONE`. To make the `MAC_EXIT` line evidence-backed rather than inferred (covenant: no skip-and-assume), let me actually run the macOS scheme too and confirm it fails on the same pre-existing sibling collision (not my code):
+
+The macOS scheme fails first on the documented **macOS development-signing** blocker (entitlements require a development certificate) — purely environmental, again zero DrivingCoach errors. This is direct evidence for `MAC_EXIT`. Let me verify and refine the log's macOS evidence, then amend the commit:
+
+Confirmed: macOS fails on the documented development-signing entitlements blocker, 0 DrivingCoach errors. Let me update the log's macOS evidence to reflect the actual observed reason, then amend the commit:
+
+Now amending the commit to include the refined macOS evidence in the log:
+
+The task is complete. Final state verified: amended commit `f08a7665c`, 8 files (1599 insertions), purely additive, clean tree.
+
+## Summary
+
+Shipped a production-polished native Apple **`DrivingCoachWidget`** at parity with `features/dashboard/widgets/DrivingCoachWidget.tsx`, mirroring the established 7-file widget architecture (RouteEfficiency/RecentDrives precedent):
+
+| File | Role |
+|---|---|
+| `DrivingCoachWidget.swift` | Main SwiftUI surface — registration (`driving-coach`, 2×4 / 1×2 / 4×40), header (compact+standard), state switch, compact score-only vs standard layouts |
+| `.Model.swift` | P1/S8 state-holder seam (`DrivingCoachSource`→`@Observable DrivingCoachModel`, phase resolution), P1/S11 telemetry, P1/S10 i18n facade |
+| `.Adapter.swift` | Pure projection — `savingsPct`, `impactBadgeMap` tone, tip mapping, `{{pct}}` interpolation, `fmtInt`, a11y summaries |
+| `.Views.swift` | Impact chip, savings chip, score header, tip card/list, stale/offline banner, empty states |
+| `.Previews.swift` | 8 state previews | `.strings` | per-surface i18n table (all web keys + chrome + a11y) | `.Tests.swift` | 28 tests |
+
+**Every host-runnable gate GREEN (real executed output in the log):**
+- `swiftc -typecheck` iOS 18 **and** macOS 15, Swift 6 strict concurrency → `0`
+- Isolated SwiftPM harness build + **28/28 tests** → `0`
+- `swiftformat --lint` `0`, `swiftlint --strict` 0 violations, placeholder `COUNT=0`
+- `xcodegen generate` enumerates all 7 files
+
+**`xcodebuild` scheme steps DEFERRED with evidence (not claimed green):** the toolchain works here (KMP `Shared.xcframework` built, extensions signed, my `.strings` bundled), but the full-app build is blocked by **pre-existing, unrelated** issues outside my allowed scope — iOS: duplicate `enum ChargingProjection` in two sibling charging widgets; macOS: development-signing entitlements. **Zero `DrivingCoachWidget` errors** in either transcript; my change is purely additive. This matches the documented `apps/macos-pending-verifications.md` CI-deferral.
+
+Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0043-DrivingCoachWidget.log | 174 ++++++++++++
+ .../DrivingCoachWidget.Adapter.swift               | 218 +++++++++++++++
+ .../DrivingCoachWidget.Model.swift                 | 219 +++++++++++++++
+ .../DrivingCoachWidget.Previews.swift              | 146 ++++++++++
+ .../DrivingCoachWidget.Tests.swift                 | 294 +++++++++++++++++++++
+ .../DrivingCoachWidget.Views.swift                 | 232 ++++++++++++++++
+ .../dashboard-widgets/DrivingCoachWidget.strings   |  50 ++++
+ .../dashboard-widgets/DrivingCoachWidget.swift     | 266 +++++++++++++++++++
+ 8 files changed, 1599 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0043-DrivingCoachWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DrivingCoachWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DrivingCoachWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DrivingCoachWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DrivingCoachWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DrivingCoachWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DrivingCoachWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DrivingCoachWidget.swift

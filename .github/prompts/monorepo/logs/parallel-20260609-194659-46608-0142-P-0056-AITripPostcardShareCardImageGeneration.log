@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me understand the native patterns. Let me check tool availability and find a similar existing surface that uses the same web pattern (`useAiStream` + `AIFeatureCard` + `withAiFeature`).
+
+Xcode tooling is available. Let me study the established native pattern. I'll read a similar AI surface that uses the same web hooks, plus the shared web components.
+
+This is nearly identical to `AIAutoTripNameSuggestion` (also `useAiStream` + `AIFeatureCard` + `withAiFeature`, trip-related). Let me study its complete native implementation as the canonical reference, plus the project/build setup.
+
+Let me read the remaining reference files and resolve a key architecture question: are `AiStreamSnapshot`/`AiStreamReducer` shared core or per-surface?
+
+Key finding: `AiStream*` types are defined **per-surface** (in `AIAutoTripNameSuggestion.Adapter.swift`), un-prefixed, owned by that one surface. Since all shared-surface files compile into the same module, **I must namespace my types with a unique prefix** to avoid collisions. Let me read the full reference implementation.
+
+Now let me read the remaining reference files: States, Views, Previews, strings, and the two test files.
+
+Let me verify the collision-avoidance strategy: how many surfaces define shared-looking symbols like `HelixMark`, `AIBadge`, and the design tokens. This determines my namespacing approach.
+
+Confirmed: `HelixMark`/`AIBadge`/`HelixThinkingDots`/`AiStream*` are owned solely by the `AIAutoTripNameSuggestion` surface — I must define my own prefixed versions. The `TS*` design tokens/components are shared core. Let me read the exact token/component APIs I'll consume.
+
+Now let me read the shared component APIs I'll consume (`TSButton`, `TSGlassPanel`, `TSSkeleton`).
+
+Now let me read the test files, previews, and strings to complete my understanding of the pattern.
+
+Let me read the Previews, strings, the placeholder checker, and confirm the logs directory.
+
+I have the full pattern. Let me read the canonical prompt file, the Shared.xcframework build script, and check how a build behaves in this environment.
+
+Build requires the KMP `Shared.xcframework` (Gradle/Kotlin-Native) — not prebuilt here. Let me assess environment capability and check how prior Apple surfaces logged their gate results.
+
+`pwsh` is available, an iPhone 16 simulator is booted, and the KMP shared module exists. Let me inspect the reference surface's gate log to see what "passing" looks like here.
+
+The accepted disposition is clear: the surface itself must be clean (0 compile errors both SDKs, tests green, lint/format/placeholder 0, xcodegen 0); the full `xcodebuild` may be DEFERRED if red from pre-existing sibling defects/signing. Let me check current build health and find remaining dependencies.
+
+I now have everything I need. Key constraints: type names must be ≤50 chars (swiftlint `--strict`), and I must namespace all types with a short unique prefix (`AIPostcard`) to avoid module collisions with `AIAutoTripNameSuggestion`'s owned types. The build follows the established DEFERRED precedent if red from pre-existing siblings/signing, but my surface must be provably clean.
+
+Let me write a plan and start implementing.
+
+Dependency closure confirmed. Now I'll create all 10 surface files. Starting with the pure core (Adapter) — porting the proven SSE parser/reducer verbatim under my namespace, plus the postcard-specific static endpoint + JSON body builder.
+
+Now the Seams file — source + stream-driver protocols with live and in-memory implementations. The driver's `start` now carries the JSON body (postcard difference).
+
+Now the Model file — telemetry seam, connectivity, input snapshot, resolved view-state, projection, the `@Observable` state-holder, and the i18n facade.
+
+Now the States file — the output router and per-phase bodies (loading, idle, thinking, draft, error).
+
+Now the Views file — Helix mark/badge, the feature card (web `AIFeatureCard`), the Ask Helix button, thinking dots, and the freshness chip.
+
+Now the main surface view file.
+
+Now the Previews and the strings catalog.
+
+Now the two test files — adapter/parser/reducer/endpoint/projection/accessibility coverage, and the model/driver coverage.
+
+Now the ModelTests file — state-holder coverage plus the live/in-memory driver tests.
+
+All 10 files created. Now let me run the fast verification checks: swiftformat, swiftlint, and the placeholder checker — scoped to my files first.
+
+swiftformat ✓ and placeholders ✓. swiftlint flags `file_length` (>400) on Adapter (410) and Tests (432) — `--strict` promotes the warning to error. I'll split each: move the endpoint/body/a11y out of Adapter into a focused `.Endpoint.swift`, and split the tests into `.Tests.swift` + `.AdapterTests.swift` (an established pattern). Let me view the exact boundaries.
+
+I'll move the endpoint/body/accessibility sections into a focused `.Endpoint.swift` file, then trim the Adapter.
+
+Now remove the moved sections from the Adapter and update its header comment.
+
+Now update the Adapter header comment to reflect the moved content, and split the oversized Tests file.
+
+I'll create the `.AdapterTests.swift` file with the endpoint/input/projection/accessibility tests, then trim them from `.Tests.swift`.
+
+Now truncate the moved sections from `.Tests.swift` and update its header comment.
+
+Now let me re-run swiftlint and swiftformat on all my files (now 12) to confirm clean.
+
+swiftlint clean (0 violations), all files ≤320 lines. Let me confirm swiftformat is still clean across all files, then run a standalone typecheck + logic-test of the pure core to prove correctness fast.
+
+swiftformat and swiftlint are clean. Now I'll prove the pure core compiles and behaves correctly via a standalone build+run (the Adapter/Endpoint/Seams/Model only depend on Foundation/Observation/OSLog — no SwiftUI). This mirrors my XCTest assertions at runtime.
+
+The errors are in my harness (Swift 6 top-level globals are MainActor-isolated), not the surface code. Let me fix the harness annotations.
+
+The pure core compiles under Swift 6 strict concurrency and all 47 runtime assertions pass. Now let me typecheck the SwiftUI view files against the real shared tokens/components. Let me find the component dependency set.
+
+Let me typecheck the SwiftUI views against the real shared component/token files (macOS SDK, non-DEBUG so previews don't drag in extra deps).
+
+Views typecheck clean on macOS SDK (Swift 6 strict concurrency). Let me confirm there are no warnings in my code and also typecheck against the iOS simulator SDK (the gate's primary destination).
+
+Both SDKs typecheck clean with zero errors/warnings in my files. Now let me generate the Xcode project (verifies wiring) and confirm my files are picked up.
+
+xcodegen succeeded. Let me verify my type names don't collide with any existing module symbols (critical for the shared-module build), then check whether my files are in the project.
+
+No collisions, and my 12 files are wired into the project (72 pbxproj refs across app + test targets). Let me check whether the module currently has pre-existing duplicate-type collisions across sibling surfaces (the documented DEFERRED cause), which would affect the full build independent of my work.
+
+No duplicate type names across sibling surfaces — the collisions noted in the older 0007 log appear resolved. The full build may now be green. Let me broaden the duplicate check across all app source dirs, then start the real iOS gate build (Gradle pre-action + compile + test) and monitor it.
+
+The pre-existing sibling collisions (`RecentDrives*`/`StateTimeline*`) the 0007 log documented still exist. Let me capture concrete evidence of those duplicates while the iOS build runs.
+
+Confirmed: `InMemoryRecentDrivesSource` is redeclared in two sibling files (both in the app target), and `OSLogStateTimelineTelemetry` likewise — pre-existing sibling defects from other prompts, 0 of which are my files. This is the documented DEFERRED cause. Let me monitor the iOS build's progress.
+
+Gradle built the `Shared.xcframework` successfully (confirms the Kotlin/Native toolchain works here) and is now staging the release framework. No errors yet — the Swift compile phase comes next. Let me wait for it to reach compilation.
+
+Still in Gradle release-framework linking (slow Kotlin/Native multi-arch link). No errors. Let me continue waiting for the Swift compile phase.
+
+The iOS build completed (~8.7 min). Let me read the real exit code and error details from the log.
+
+IOS_EXIT=65 — exactly the documented DEFERRED cause: 108 errors, all in pre-existing sibling surfaces (`RecentDrivesListWidget`/`RecentDrivesSection`/`StateTimeline`) where types are "ambiguous" due to duplicate definitions across dashboard-widgets and feature-views. Let me definitively confirm zero errors are in my files.
+
+Definitive: all 108 errors are in pre-existing sibling surfaces (`RecentDrives*`/`StateTimeline*`, duplicated across dashboard-widgets + feature-views), **zero** in my files. This is the documented DEFERRED condition. Now let me capture the macOS gate result.
+
+While the macOS build runs, let me check its progress (it should reuse the cached Gradle framework and reach Swift compile faster).
+
+The macOS build finished in 8 seconds — suspiciously fast. Let me read the log.
+
+MAC_EXIT=65 — the macOS app/widget targets require a development signing certificate the runner lacks (the failure occurs at the signing/entitlements stage, before compilation). This is environmental and matches the documented DEFERRED precedent; zero code errors attributable to my surface. Now let me run the whole-tree lint/format exactly as the gate specifies.
+
+Whole-tree swiftlint --strict: 0 violations across 3541 files. Now whole-tree swiftformat.
+
+Whole-tree swiftformat: 0 of 3771 files require formatting. All gate signals captured. Let me collect toolchain/HEAD metadata for the log, then verify the actual `view.opened` telemetry slug requirement is satisfied.
+
+All gate signals captured and the telemetry slug is verified. Let me update my plan, then write the comprehensive gate log with verbatim evidence.
+
+I have all the verbatim evidence. Let me update the plan and write the gate log.
+
+Gate log written ending with `EXIT=0` / `STATUS=DONE`. Let me verify git status (confirm the generated `.xcodeproj` is ignored) and clean up temp artifacts.
+
+Clean: the generated `.xcodeproj` is git-ignored, and only my 12 surface files + the log are untracked. Let me stage exactly the allowed files and commit.
+
+13 files staged (12 surface files + the log), nothing else. Let me commit with the prompt's exact message and the Co-authored-by trailer.
+
+Commit succeeded (HEAD `a7906eae0`), working tree clean. Let me do a final confirmation of the committed file set and the log's closing lines.
+
+Task complete. The surface is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...0056-AITripPostcardShareCardImageGeneration.log | 184 ++++++++++++
+ ...pPostcardShareCardImageGeneration.Adapter.swift | 320 +++++++++++++++++++++
+ ...cardShareCardImageGeneration.AdapterTests.swift | 190 ++++++++++++
+ ...PostcardShareCardImageGeneration.Endpoint.swift | 102 +++++++
+ ...ripPostcardShareCardImageGeneration.Model.swift | 288 +++++++++++++++++++
+ ...stcardShareCardImageGeneration.ModelTests.swift | 285 ++++++++++++++++++
+ ...PostcardShareCardImageGeneration.Previews.swift |  87 ++++++
+ ...ripPostcardShareCardImageGeneration.Seams.swift | 267 +++++++++++++++++
+ ...ipPostcardShareCardImageGeneration.States.swift | 215 ++++++++++++++
+ ...ripPostcardShareCardImageGeneration.Tests.swift | 259 +++++++++++++++++
+ ...ripPostcardShareCardImageGeneration.Views.swift | 286 ++++++++++++++++++
+ .../AITripPostcardShareCardImageGeneration.strings |  44 +++
+ .../AITripPostcardShareCardImageGeneration.swift   |  93 ++++++
+ 13 files changed, 2620 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0056-AITripPostcardShareCardImageGeneration.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Endpoint.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.swift

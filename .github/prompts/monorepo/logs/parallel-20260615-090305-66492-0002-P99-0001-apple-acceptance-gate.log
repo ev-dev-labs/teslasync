@@ -1,0 +1,89 @@
+I'll start by exploring the repository structure to understand what exists for this Apple acceptance gate.
+
+There's a real `apps/apple` directory. Let me explore the structure, parity ledgers, tools, and check capabilities.
+
+Apple toolchain is fully present (Xcode 26.5, SwiftLint, SwiftFormat, pwsh). Now let me check predecessor logs, ledger structure, gate scripts, and signing/simulator capabilities.
+
+Key findings: `check-parity-ledger.ps1`, `apple-macos-ledger.json`, and `apple-ios-ledger.json` do NOT exist. Let me read the prior acceptance gate log (to mirror format), the methodology, predecessor trackers, and check signing/simulator/xcodegen capabilities.
+
+A prior run of this exact gate (2026-06-07) recorded `STATUS=BLOCKED, EXIT=70`. This is a new run on a new branch — I must verify the **current** state honestly, not copy the old log. Let me gather current evidence: the real prompt file, methodology, predecessor logs, page generation state, and the done trackers.
+
+Let me read the actual P99 prompt, the methodology, the done tracker, and verify current predecessor/page state.
+
+I have the real prompt. The decisive facts so far: **0 valid signing identities**, and both `apple-macos-ledger.json`/`apple-ios-ledger.json` plus `check-parity-ledger.ps1` are **absent** — all explicitly Out-of-Scope to fix. Let me gather the remaining current evidence: toolchain dirs, predecessor P9 status, P7 page generation state, and run the cheap host gates for real.
+
+Sources now include `Features/`, `Dashboard/`, `DashboardWidgets/` (unlike the 2026-06-07 run). Signing is still 0 identities; parity ledgers + checker still absent. Let me read the methodology + latest prior-run footer, and run the cheap host gates for real now.
+
+Methodology confirms: rule 3 "can't run the gate (missing capability) → BLOCKED"; rule 7 predecessor must show STATUS=DONE. Canonical `p4-p9-0002-xcuitest-ui.log` is **absent** (predecessor incomplete), and the latest prior run found lint+placeholder RED too. I'll now gather firsthand THIS-run evidence: generate the project and run all host gates for real.
+
+Firsthand: SwiftLint `--strict` = **0 violations (LINT_EXIT=0)** — the lint defect from the prior run is fixed. Project generated OK. Now let me start the long-pole iOS build in the background and run the remaining host gates (format, placeholder, parity-checker) for real.
+
+Firsthand: **SwiftFormat lint FAILS (FORMAT_EXIT=1)** — 9 files need formatting (SleepEfficiencyModels, GDPRExportPageModelTests, GlancePageModelTests). That's a decisive RED gate, and fixing it is Out-of-Scope. Now running the placeholder scan and the two parity-ledger checks.
+
+Firsthand gate results so far: LINT=0 ✅, **FORMAT=1 ❌, PLACEHOLDER=1 ❌**, and both **parity-ledger checks FAIL** (script `check-parity-ledger.ps1` absent, ledger files absent). Let me confirm the placeholder script's pass/fail semantics for honest reporting, and check the iOS build progress.
+
+Placeholder semantics confirmed: `PLACEHOLDER_COUNT=66` = un-opted-out TODO/Placeholder violations → EXIT=1 (RED). The iOS build is in the Gradle "Stage Shared.xcframework" pre-action (~22 min). While it runs, let me gather predecessor-log and clean-tree evidence.
+
+Predecessor picture is now firsthand and decisive:
+- All canonical P0–P8 + P9-0001 logs = `STATUS=DONE`, but **`p4-p9-0002-xcuitest-ui.log` is ABSENT** (rule-7 violation).
+- **P7 pages: only 39/861 logs exist** (822 missing) → P7 incomplete.
+- Tracked tree clean ✅; signing **0 identities** ❌.
+
+Let me record gate-step results in the session DB and keep polling the iOS build.
+
+The iOS build is staging the Shared.xcframework via Gradle (the ~22-min bottleneck). Let me verify it's actively progressing, then do a longer wait.
+
+Confirmed progressing — xcodebuild running (5+ min) and `apps/shared/core/build/XCFrameworks` is being populated. The Kotlin/Native xcframework build takes ~22 min. Waiting.
+
+Still staging the xcframework (~10 min in; the script output is buffered until the pre-action completes). Continuing to wait.
+
+iOS build/test finished (4 MB output). Let me extract the decisive markers: exit code, BUILD/TEST status, test summary, and any errors.
+
+iOS: xcframework built (7m17s), app **BUILD SUCCEEDED**, but **TEST FAILED (IOS_EXIT=65)**. No standard test-suite summary lines appeared, suggesting a launch/bootstrap failure rather than assertions. Let me find the exact cause.
+
+Root cause found — the iOS **test target failed to compile** (real code defects, not a runner flake):
+- `Main actor-isolated static property 'zeroTotals' cannot be accessed from outside of the actor`
+- `Cannot convert value of type 'Double' to expected argument type 'Date'` / `XCTAssertEqual ... requires 'Date' conform to 'FloatingPoint'`
+
+Let me capture the exact file:line citations.
+
+Precise: `apps/apple/Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift` has 4 compile errors (actor-isolation + Double/Date mismatch) → **IOS_EXIT=65** (app built, test target failed to compile). Now running the remaining xcodebuild gate steps (macOS build/test, then both archives) for real — the xcframework is now staged so these are faster.
+
+macOS build/test is running. Let me poll it.
+
+macOS build/test finished. Let me extract its outcome.
+
+macOS: **MAC_EXIT=65**, BUILD FAILED — `TeslaSync-macOS` and `TeslaSyncWidgets-macOS` have entitlements requiring a development certificate (the 0-identity signing gap). Now running both archive steps for real.
+
+iOS archive: **IOS_ARCHIVE_EXIT=65**, ARCHIVE FAILED — `TeslaSync`, `TeslaSyncActivities`, `TeslaSyncWidgets` all require a development team. Now the final step: macOS archive.
+
+macOS archive: **MAC_ARCHIVE_EXIT=65**, ARCHIVE FAILED — dev-cert entitlements. All 9 gate steps now have firsthand results (**8 RED, 1 GREEN**). Let me capture final preflight facts (versions, simulator UDID, HEAD, clean-tree re-check) and confirm the canonical log path is free.
+
+All facts confirmed: tracked tree **clean**, **no xcarchive produced**, canonical P99 log absent (will create). Let me grab exact iOS runtime + pwsh versions, then write the acceptance log.
+
+All firsthand evidence collected. Writing the canonical acceptance log with the mandatory sections and honest BLOCKED disposition.
+
+Log written. Now committing ONLY the log (rule 8: BLOCKED → never commit code). Let me verify git sees only the new log as a change, then commit it.
+
+Exactly one file staged (the log); all generated build artifacts are git-ignored. Committing the BLOCKED record.
+
+Committed. Let me do a final verification of the log footer and the complete gate-step summary.
+
+The Apple acceptance gate is complete. I ran it firsthand (not assumed) and recorded an honest **BLOCKED** verdict.
+
+**Gate result — 8 of 9 commands RED (only SwiftLint green):**
+
+| Step | Exit | Cause |
+|---|---|---|
+| iOS build/test | 65 | app **BUILD SUCCEEDED**, but `TeslaSyncTests` fails to compile (4 errors in `VehicleCostPageModelTests.swift`: actor-isolation + Double/Date) |
+| macOS build/test | 65 | dev-cert entitlements (0 signing identities) |
+| SwiftLint --strict | 0 | ✅ 0 violations / 5895 files |
+| SwiftFormat --lint | 1 | 9 files need formatting |
+| Placeholder scan | 1 | COUNT=66 un-opted-out TODO/Placeholder |
+| Parity ledger ×2 | FAIL | `check-parity-ledger.ps1` + both per-idiom ledgers **absent** |
+| iOS / macOS archive | 65/65 | no development team / dev-cert → **0 archives produced** |
+
+**Plus decisive non-gate blockers:** predecessors incomplete (`p4-p9-0002` never run; P7 pages 39/861), parity coverage 0% (ledgers absent), and **0 signing identities** — all explicitly **Out of Scope** to fix.
+
+Per the Honesty Covenant I did **not** fix code, narrow scope, or delegate. The xcframework was built from source so the builds ran for real. Committed **only** the log (`d41c37af8`); tracked tree clean; footer is `EXIT=65` / `STATUS=BLOCKED` on their own lines.
+

@@ -1,0 +1,156 @@
+I'll start by exploring the environment capabilities and the codebase structure to understand what I'm working with.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source and explore the existing Apple app structure.
+
+The `shared-surfaces` directory already exists with many entries. Let me read the web source Toast files and examine existing shared-surface examples to learn the established native pattern.
+
+Now let me look at the supporting web hooks and examine existing native shared-surface examples to learn the established conventions (state holders, tokens, i18n, telemetry).
+
+The established pattern uses multiple files per surface (`.swift`, `.Adapter`, `.Model`, `.Views`, `.States`, `.Previews`, `.Seams`, `.Tests`, `.AdapterTests`, `.strings`). There's a very relevant analog: `AchievementUnlockedToast`. Let me check if `Toast.*` already exists and study the closest reference surfaces.
+
+`Toast.*` doesn't exist yet — I need to create it. Let me study the `AchievementUnlockedToast` reference set in full to learn the exact conventions for state holders, tokens, i18n, and telemetry.
+
+Excellent reference. Let me read the rest of the `AchievementUnlockedToast` set and the token definitions (P1/S9) to learn all conventions.
+
+Now let me read the remaining reference files (Seams, States, Previews, Tests, strings) and locate the P1/S9 token definitions.
+
+Let me locate the actual P1/S9 token and shared-component definitions to know the exact available APIs.
+
+Let me read the project.yml to understand the target/source structure, and the design token + shared component definitions.
+
+Now I understand the build structure — `shared-surfaces` is glob-included, so `Toast.*` will be auto-picked up. Let me verify build prerequisites and read the design token + shared component definitions.
+
+Key finding: `.xcodeproj` and `Shared.xcframework` don't exist yet — they're generated. Let me inspect the build script (potential KMP dependency) and read the design tokens.
+
+I now have the full token API. The build needs `xcodegen generate` + a KMP-built `Shared.xcframework` (via Gradle). Let me assess build feasibility and check existing gate logs and the shared/Gradle toolchain.
+
+There are prior logs for a `0144-Toast` attempt and the `0111-AchievementUnlockedToast` gate. Let me check their outcomes to understand build feasibility and whether this surface was already attempted.
+
+The predecessor pattern is clear: verify the surface in isolation (dual-SDK typecheck + isolated XCTest + lint + format + placeholder + xcodegen), since the full `xcodebuild` gate has pre-existing unrelated blockers (sibling surface compile errors + macOS signing). Let me read the prior `0144-Toast` logs to see what was attempted.
+
+Now I have full context. A prior run created `Toast/Toast.*` (subdirectory) and reached STATUS=BLOCKED due to pre-existing full-app blockers, while the sibling `AchievementUnlockedToast` reached STATUS=DONE via isolated verification. The established repo convention is **flat** files. Let me gather the remaining specifics: shared component signatures, the placeholder script, and pwsh availability.
+
+Confirmed: strictly **flat** convention (0 subdirectories), pwsh + placeholder script present. Let me read the placeholder script and the remaining shared-component signatures (TSEmptyState, TSSkeleton), plus confirm the `@Environment`/`@Observable` injection pattern used by siblings.
+
+I have what I need on components. Let me read the lint/format configs (to respect file-length and rules) and find a sibling that uses the `@Environment(Model.self)` injection + overlay/host-modifier pattern, so my provider-style surface matches conventions.
+
+Critical lint constraints: line length ≤120 (strict), **file length ≤400 (strict default)**, type_body ≤250, function_body ≤50. I'll keep each file small. No sibling uses `@Environment(X.self)`, but it's the idiomatic Observation parity of React Context. Let me study the host-modifier and test conventions from siblings.
+
+The `ContextMenu` surface is the ideal template — it's a React-context-equivalent provider (host + `@Observable` controller + `.shared` + `view.opened` once + trigger modifier). Let me read its Model to nail the controller/telemetry/once-only pattern, then I'll start building.
+
+I now have a complete, precise template (`ContextMenu` = React-context provider parity). I have everything needed. Let me set up the plan and todos, then build the surface.
+
+Let me quickly view the `ContextMenuSurface` enum and the ContextMenu host/modifier tail to mirror the exact structure, then write the files.
+
+I have all conventions confirmed. Now I'll build the surface. Starting with the pure Foundation-only adapter.
+
+Let me check the forbidden placeholder patterns before continuing (to avoid banned identifiers), then write the Seams file.
+
+Forbidden (case-insensitive): TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented". I'll avoid the word "placeholder" entirely in comments. Now the Seams file (telemetry + scheduler + i18n facade).
+
+Now the Model file (`ToastAction`, `ToastItem`, `ToastCenter` state holder).
+
+Now the Views file (the single toast card + action button).
+
+Now the host file — `ToastHost` (the `ToastProvider` parity), `ToastOverlay`, and the `.toastHost` modifier.
+
+Now the strings catalog and the previews. Let me first check the sibling preview pattern to get Swift 6 concurrency-safe model seeding right (Previews.swift compiles into the app target).
+
+The pattern is clear: `#if DEBUG`, a `@MainActor` helper to build/seed the model, `#Preview` blocks. Now the strings catalog and previews.
+
+Now the two test files. First the pure adapter tests.
+
+Now the state-holder / view-composition tests.
+
+All 9 files written. Let me update todos and begin verification — first swiftformat (apply), then lint and placeholder checks.
+
+swiftformat reports 0/8 need formatting — already clean. Now confirm with `--lint`, run swiftlint `--strict` on the Toast files, and the placeholder check.
+
+SwiftLint `--strict`: **0 violations in 8 files**. Let me get the swiftformat --lint result and run the placeholder check.
+
+All three lint gates are green (format 0/8, lint 0 violations, placeholder COUNT=0). Now the dual-SDK typecheck of the shipped surface against the real design tokens. Let me confirm the Xcode toolchain path and run iOS 18 + macOS 15 typechecks.
+
+Toolchain confirmed. Now the dual-SDK typecheck of the shipped surface (6 files + real Tokens) on the iOS 18 and macOS 15 floors under Swift 6 strict concurrency.
+
+iOS 18 typecheck clean (EXIT=0). Now macOS 15.
+
+Both dual-SDK typechecks pass (0/0). Now an isolated SwiftPM harness (module named `TeslaSync` so `@testable import` resolves) to actually **run** the ~40 tests against the real tokens.
+
+Harness laid out. Now build + run the tests under Swift 6 mode.
+
+Surface library builds clean under Swift 6 mode. Now run the tests.
+
+**All 42 tests pass, 0 failures.** Surface logic fully verified in isolation. Now xcodegen generate and confirm the Toast files are enumerated.
+
+xcodegen succeeded (EXIT=0); all 9 Toast files enumerated (the `Toast.States.swift` line is a substring false-match on `AchievementUnlockedToast.States.swift`). Now I'll attempt the full gate. First, build the KMP `Shared.xcframework` (the scheme pre-action) — the known long pole.
+
+The KMP/Gradle build is running (downloading Kotlin/Native toolchain on first run). Let me continue waiting.
+
+Still building (Kotlin/Native first-run download + compile). Let me keep waiting.
+
+Kotlin/Native is already cached; it's compiling. Let me wait more for the Gradle build to finish.
+
+KMP `Shared.xcframework` built + staged (KMP_EXIT=0, 15m). Now the full app-target build on the iOS 16 simulator. I'll tee to a log so I can grep for any Toast-related errors versus pre-existing ones.
+
+Build progressing through the app target (no Toast errors yet, whole-module emit in progress). Let me wait for completion.
+
+The full build failed (EXIT=65), and a batch including my Toast files plus `Toast.Previews.swift` is flagged. My isolated typecheck passed, so this is likely a symbol collision in the unified app module. Let me find the actual `error:` lines.
+
+Found it: exactly one error, in my own `Toast.Previews.swift:24` — a Swift 6 region-isolation "sending 'item' risks data races" (the non-`Sendable` `ToastItem` crosses into the non-isolated `card` helper from the `@MainActor` `#Preview`). The full-module build surfaces it where the isolated typecheck didn't. Let me view and fix.
+
+Confirmed. The fix: mark `card` `@MainActor` (matching `previewCenter`), so the non-`Sendable` `ToastItem` stays on the main actor.
+
+Fix applied. The full-module build is needed to confirm (the isolated typecheck didn't reproduce the app target's isolation inference). Let me do an incremental rebuild reusing the derived data — only `Toast.Previews.swift` changed, so it should be fast.
+
+Gradle done, 0 errors so far, re-emitting module. Let me wait for completion.
+
+Incremental rebuild is recompiling many downstream batches (module re-emit invalidation), 0 errors so far, past the module-emit step (meaning my Toast files compiled into the module). Let me wait for completion.
+
+**BUILD SUCCEEDED — the full iOS app target compiles green with the Toast surface, 0 errors.** (The shell's exit-1 is just the final no-match grep.) This already beats the predecessor's BLOCKED state. Now let me compile the test bundle and run my Toast tests inside the real Xcode target via `build-for-testing`.
+
+Test bundle build failed (EXIT=65) with 1 error — but **not** in Toast. Let me identify the pre-existing sibling error.
+
+The single test-bundle error is **pre-existing and unrelated**: a duplicate `RecentActivityFeedProjectionTests` class in `feature-views/RecentActivity.Tests.swift` (outside my allowed `Toast.*` scope). Let me confirm it's a genuine pre-existing duplicate and that my changes are confined to Toast files.
+
+Confirmed pre-existing and unrelated: `RecentActivityFeedProjectionTests` is declared in **two sibling files** (`shared-surfaces/RecentActivityFeed.Tests.swift` and `feature-views/RecentActivity.Tests.swift`) — both outside my `Toast.*` scope, neither modified by me. My working tree contains only Toast.* files. Let me run the canonical gate commands to capture exact exit codes for the log — iOS first.
+
+Canonical iOS `build test`: **IOS_EXIT=65** — the single error is the pre-existing sibling `RecentActivity.Tests.swift` redeclaration; **zero Toast errors**. The app builds; only the shared test bundle is blocked by an unrelated duplicate. Now let me characterize the macOS app build (the gate's second command) — capturing compile + the known signing posture.
+
+macOS app build failed (EXIT=65, 2 errors, none in Toast). Let me identify them.
+
+Complete, honest picture established. The macOS build's 2 errors are **pre-existing dev-signing** (TeslaSync-macOS / TeslaSyncWidgets-macOS entitlements require a certificate; none on this runner) — zero Toast errors, identical to the documented predecessor. 
+
+Let me update todos and write the comprehensive gate log.
+
+Log written. Now let me verify the git state (ensure generated artifacts are ignored) before committing only the Toast files + log.
+
+Clean state — only my 9 Toast files + the log are untracked; generated artifacts are gitignored. Let me commit (flat-file equivalent of the prompt's commit step).
+
+Committed (7b05d81f5). I edited `Toast.Previews.swift` after the initial lint, so let me re-verify format + lint on it, then clean up temp artifacts.
+
+All clean post-edit. Let me clean up temporary scratch files and confirm the final state.
+
+Done. Working tree clean, temp scratch removed, commit `7b05d81f5` contains all 9 Toast files (1,767 lines) + the gate log.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0144-Toast.log   | 177 ++++++++++++++
+ .../TeslaSync/shared-surfaces/Toast.Adapter.swift  | 239 ++++++++++++++++++
+ .../shared-surfaces/Toast.AdapterTests.swift       | 206 ++++++++++++++++
+ .../TeslaSync/shared-surfaces/Toast.Model.swift    | 271 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Toast.Previews.swift | 101 ++++++++
+ .../TeslaSync/shared-surfaces/Toast.Seams.swift    | 176 +++++++++++++
+ .../TeslaSync/shared-surfaces/Toast.Tests.swift    | 261 ++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Toast.Views.swift    | 175 +++++++++++++
+ apps/apple/TeslaSync/shared-surfaces/Toast.strings |  28 +++
+ apps/apple/TeslaSync/shared-surfaces/Toast.swift   | 133 ++++++++++
+ 10 files changed, 1767 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0144-Toast.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toast.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toast.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toast.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toast.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toast.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toast.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toast.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toast.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Toast.swift

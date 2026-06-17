@@ -1,9 +1,9 @@
 //
-//  ActionItem.Tests.swift
-//  TeslaSync — P4 shared surface · 0196 · ActionItem (Apple)
+//  ActionItemShared.Tests.swift
+//  TeslaSync — P4 shared surface · 0196 · ActionItemShared (Apple)
 //
 //  The state-holder + view-composition + facade half of the coverage (the pure projection + value types
-//  live in ActionItem.AdapterTests.swift; split to keep each file within the SwiftLint file-length
+//  live in ActionItemShared.AdapterTests.swift; split to keep each file within the SwiftLint file-length
 //  budget):
 //    • ActionItemModel — the once-only `view.opened`, the props update + identical-update guard, the
 //      derived projection, and the CTA navigation hint (in-app / external / none).
@@ -165,27 +165,27 @@ final class ActionSeverityToneTests: XCTestCase {
 @MainActor
 final class ActionItemViewCompositionTests: XCTestCase {
     func testSurfaceComposesForFullRow() {
-        _ = ActionItem(
+        _ = ActionItemShared(
             severity: .warn,
             title: "Token expires in 3 days",
             description: "Re-authenticate to keep telemetry flowing.",
             cta: .route(label: "Re-auth", to: "/settings/tesla", perform: {})
         )
-        XCTAssertEqual(ActionItem.surfaceSlug, "ActionItem")
+        XCTAssertEqual(ActionItemShared.surfaceSlug, "ActionItemShared")
     }
 
     func testSurfaceComposesForMinimalRow() {
-        _ = ActionItem(severity: .info, title: "All caught up")
+        _ = ActionItemShared(severity: .info, title: "All caught up")
     }
 
     func testSurfaceComposesForEachCTAKind() {
-        _ = ActionItem(severity: .info, title: "Open", cta: .route(label: "Open", to: "/x", perform: {}))
-        _ = ActionItem(
+        _ = ActionItemShared(severity: .info, title: "Open", cta: .route(label: "Open", to: "/x", perform: {}))
+        _ = ActionItemShared(
             severity: .warn,
             title: "Status",
             cta: .externalLink(label: "Status", to: "https://x.test", perform: {})
         )
-        _ = ActionItem(severity: .error, title: "Retry", cta: .action(label: "Retry", perform: {}))
+        _ = ActionItemShared(severity: .error, title: "Retry", cta: .action(label: "Retry", perform: {}))
     }
 
     func testSurfaceComposesFromInjectedModel() {
@@ -193,7 +193,7 @@ final class ActionItemViewCompositionTests: XCTestCase {
             input: ActionItemInput(severity: .error, title: "Backup failed"),
             telemetry: SpyActionItemTelemetry()
         )
-        _ = ActionItem(model: injected, cta: .action(label: "Run", perform: {}))
+        _ = ActionItemShared(model: injected, cta: .action(label: "Run", perform: {}))
     }
 
     func testContainerAndCTAButtonComposeForEveryBranch() {
@@ -258,7 +258,7 @@ final class ActionItemStringsTests: XCTestCase {
     }
 
     func testTableName() {
-        XCTAssertEqual(ActionItemStrings.table, "ActionItem")
+        XCTAssertEqual(ActionItemStrings.table, "ActionItemShared")
     }
 }
 

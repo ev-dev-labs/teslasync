@@ -101,7 +101,7 @@ public extension NotificationStatsProjection {
 
     // MARK: Core stats (web `coreStats`)
 
-    private static func statItems(for stats: NotificationStats, locale: Locale) -> [NotificationStatItem] {
+    private static func statItems(for stats: NotificationStatsWidgetStats, locale: Locale) -> [NotificationStatItem] {
         let totalSent = stats.totalSent
         let failed = stats.failed
         let rate = stats.deliveryRate

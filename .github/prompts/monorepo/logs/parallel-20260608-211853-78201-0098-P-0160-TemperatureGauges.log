@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source dependencies and explore the existing Apple app structure.
+
+Now let me explore the existing Apple feature-views to understand established patterns, plus the project structure.
+
+Large existing structure (1570 files, ~9 files per feature view). Let me find feature views that use gauges/units to use as the canonical pattern reference, and check for a native RadialGauge counterpart.
+
+There's a `TSRadialGauge` but it only shows a percent (0–1 fraction), not value+unit+custom color like the web `RadialGauge`. Let me study two closely-related existing feature views — `DrivingTemperatureStats` (temperature+units) and `HealthGaugeGrid` (gauge grid from the same web parent) — to learn the exact conventions.
+
+This is a thorough, well-established pattern. Let me read the rest of the `HealthGaugeGrid` files (the closest sibling) to fully internalize the conventions.
+
+Excellent pattern clarity. Let me read the remaining reference files (States, Previews, strings, Tests, ViewTests) and the project.yml to understand build inclusion.
+
+Now let me read the test files, project.yml, and the web temperature conversion logic to complete my understanding.
+
+I have a complete picture of the pattern. Let me check the build config (project.yml), the web temperature conversion, and the `useUnits` hook.
+
+Let me read the exact `convertTempFromSI` math and check the project generation setup (xcodegen / existing .xcodeproj).
+
+Key findings: temp conversion is simple (°C passthrough, °F = c×9/5+32); no `.xcodeproj` (needs `xcodegen generate`, which is available); iPhone 16 simulator booted. Let me verify the design tokens/components I'll use exist, and check the build feasibility (Shared.xcframework + build script).
+
+`TSTone` has `.neutral` (for the null/gray case). The build needs `Shared.xcframework` (KMP/Gradle — not present, only `.gitkeep`). Let me check prior sibling logs to understand the expected gate outcome in this environment, and check the placeholder checker + pwsh availability.
+
+`pwsh` is available, so I can run the gate verbatim. Let me check the sibling `HealthGaugeGrid` log tail to learn the expected gate outcome in this environment.
+
+This is the key insight: the sanctioned disposition is **"code-complete + DEFERRED Xcode gate"** (full-app gate is RED only due to pre-existing unrelated issues; shipped files independently verified via isolated Swift build+test + green swiftlint/swiftformat/placeholder). Let me read how the sibling did the isolated verification and the pending-verifications doc.
+
+I now fully understand the sanctioned disposition. Let me find where the web builds the `TempSensor[]` array (to get real sensor keys/labels/maxTemps for parity), then check the design tokens I'll rely on.
+
+I have the real sensor fixtures (frontMotor/rearMotor max 150, inverter max 120, battery max 60). Let me read the lint/format/placeholder configs and the Design tokens to ensure my code passes, then write the plan.
+
+Forbidden words include "TODO", "FIXME", "XXX", "Coming soon", "Placeholder", "Lorem ipsum", "not implemented" (case-insensitive) — I'll avoid all in code/comments/strings. Let me verify the exact APIs of the shared components/tokens I'll use (TSTone.color, TSEmptyState, TSSkeleton, TSFadeIn, glass panel, fonts).
+
+Let me confirm the `Color.TS`, `TSSpacing`, `TSRadius`, `TSMotion` token names from the generated Tokens file.
+
+All APIs confirmed. Let me set up tracking and write the plan, then create the files.
+
+Now creating the files. Starting with the Model (state-holder seam, enums, telemetry, facade).
+
+Now the Adapter (pure web-parity projector: formatting, temp conversion, severity, gauge projection, accessibility).
+
+Model + Adapter done. Now the Views (grid, radial gauge, cell, severity tint).
+
+Now the States file (freshness chip, connectivity banner, loading skeleton grid, empty, error).
+
+Now the main view file (surface composition + the SwiftUI `text(_:_:)` facade helper).
+
+Now the Previews (using the real sensor fixtures).
+
+Now the strings (i18n catalog).
+
+Now the logic Tests file (format/converter/severity/projector parity + model + accessibility).
+
+Now the per-state view render tests.
+
+All 9 files created. Let me run the fast quality gates (swiftformat, swiftlint, placeholders) on the shipped files.
+
+swiftformat clean (0/8). Now swiftlint --strict and placeholders on the shipped files.
+
+Placeholders clean (0). swiftlint found 1 issue: `Tests.swift` is 420 lines (>400 `file_length` limit). I'll split the model tests into a `ModelTests.swift` (an existing sibling convention). Let me view the boundaries.
+
+Creating `TemperatureGauges.ModelTests.swift` and trimming `Tests.swift`.
+
+Now I'll recreate the trimmed `Tests.swift` (adapter + accessibility only; model tests moved out).
+
+Now re-run swiftformat + swiftlint on all 9 Swift files to confirm clean.
+
+Excellent — **swiftformat 0/9**, **swiftlint 0 violations**, **placeholders 0**, all files <400 lines. Now the critical step: an isolated SwiftPM harness (Swift 6 mode) compiling the exact shipped sources against the real design system, then running the tests. Let me set it up.
+
+Safe to exclude only `UnitFormatters.swift` (matches the sibling). Let me build the isolated harness and compile.
+
+Isolated library **build complete** (Swift 6 strict mode, real design system). Now running the full test suite.
+
+**All 35 tests pass, 0 failures** (Swift 6 strict mode, real design system): 4 format + 2 converter + 4 severity + 5 projector + 2 a11y + 10 model + 8 per-state render. Now the full xcodebuild gate. Let me generate the Xcode project first.
+
+Project generated (TemperatureGauges referenced 60×). Now the iOS gate (this triggers the KMP Gradle pre-build + full app compile — heavy). Capturing to a log.
+
+iOS gate still running (KMP + full-app compile is heavy). Let me check progress.
+
+KMP Gradle build is progressing (debug xcframework written, release linking now). The toolchain works. Let me keep waiting for the app compile phase.
+
+Gradle still linking release frameworks. Let me wait longer for the app-compile phase.
+
+App compile phase underway (0 errors so far). Let me continue waiting.
+
+iOS gate finished: **IOS_EXIT=65** (pre-existing failure). The errors cite `SafetyUpdate`/`SafetyModel` **ambiguous for type lookup** — the parallel-merge duplicate-type collision the sibling documented. I must rigorously confirm (a) zero TemperatureGauges errors, and (b) I didn't introduce any duplicate type name myself.
+
+**Zero TemperatureGauges errors.** Every error-bearing file is a pre-existing `dashboard-widgets/*` duplicate-type collision (`Safety*Widget`, `Charge*Widget`) — none are feature-views, none are mine. My distinctive type names don't collide. Let me gather precise evidence and confirm I introduced no new duplicate type.
+
+Two things to resolve: confirmed the pre-existing `SafetyModel`/`SafetyUpdate`/`Charge*` duplicates (defined 2× across dashboard-widgets — not mine). But there's a **`convertTemperatureFromSI` collision (1 hit outside my files)** I must investigate — let me locate it.
+
+Four of my names appear once elsewhere — I must investigate. These could be genuine collisions I'd be introducing (likely from a sibling temperature surface). Let me locate each.
+
+Found the real issue: a pre-existing sibling surface **`TemperatureMetricCards`** defines internal structs `TemperatureFreshnessChip`, `TemperatureConnectivityBanner`, `TemperatureErrorState` — my bare-`Temperature*` names would introduce a NEW duplicate-type collision. (The `convertTemperatureFromSI` hit is a *static method* on a type — no collision with my free function.) I'll namespace ALL my internal helper structs with the full `TemperatureGauges` surface prefix (as HealthGaugeGrid does), eliminating any collision I'd contribute.
+
+Now a comprehensive collision audit over **every** top-level declaration in my 9 files against the rest of the app, plus re-run swiftformat/swiftlint.
+
+Let me verify the `convertTemperatureFromSI` context in the sibling and—out of an abundance of caution (members can interact with module-globals)—rename my free function to a surface-unique name too, matching the `convertHealthDistanceFromSI` convention.
+
+The sibling's `convertTemperatureFromSI` is a static method on `enum TemperatureMetricsMath` (called qualified or with a different param type), so mine is technically safe — but I'll rename it to `convertTemperatureGaugeFromSI` (matching the `convertHealthDistanceFromSI` convention) for zero ambiguity. Then re-verify everything.
+
+Now re-verify: swiftformat, swiftlint, and confirm the renamed symbols are unique.
+
+All clean: swiftformat 0/9, swiftlint 0 violations, all renamed symbols unique (0 external defs). Now rebuild the isolated harness with the updated files and re-run tests.
+
+All 35 tests pass after renames. Now let me run the macOS gate (fails fast on signing per the sibling), then re-run the iOS gate with the final code for accurate evidence. Starting macOS:
+
+macOS gate: **MAC_EXIT=65** — fails at the entitlements/signing check (`"TeslaSync-macOS" has entitlements that require signing with a development certificate`) *before any compilation*. Pure runner-provisioning limitation, zero TemperatureGauges involvement — exactly the sibling's documented condition. Now re-running the iOS gate with the final renamed code (KMP framework is cached).
+
+iOS re-run (final code, cached KMP): **IOS_EXIT=65, 0 TemperatureGauges errors**. Let me confirm all errors remain pre-existing dashboard-widget collisions and no feature-view file errors.
+
+**Definitive evidence:** final iOS run shows **0 feature-views errors** (all 339 errors are pre-existing `dashboard-widgets/*` duplicate-type collisions: `SafetyModel`, `Charge*DTO`, `FleetStatsBarModel`, etc.). My surface compiles clean in the full app. Let me re-run placeholders on final files, then check git/ignore status before writing the log.
+
+Empty output — let me re-run the checks individually.
+
+Everything green on shipped files (placeholders 0). My 10 files are the only untracked changes; the generated `.xcodeproj`/DerivedData/KMP artifacts are git-ignored. Let me gather tool versions/line counts for an honest log, then write it.
+
+I have all evidence. Now writing the comprehensive, honest gate log.
+
+Log written. Now cleanup (remove the git-ignored generated project + harness) and stage only my files.
+
+Clean — only my 10 files + log are new (the 2 pre-existing `web/` modifications aren't mine and stay unstaged). Staging my files explicitly and committing.
+
+Exactly my 11 files staged (pre-existing `web/` changes excluded). Committing.
+
+Commit `e0ea75d01` created with all 11 files (1895 insertions). Let me finalize tracking and update the plan.
+
+Let me do a final working-tree sanity check before concluding.
+
+Task complete. The working tree is clean — only my commit `e0ea75d01` plus 2 pre-existing unrelated `web/` modifications (correctly left untouched).
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0160-TemperatureGauges.log | 150 ++++++++++
+ .../feature-views/TemperatureGauges.Adapter.swift  | 229 ++++++++++++++
+ .../feature-views/TemperatureGauges.Model.swift    | 333 +++++++++++++++++++++
+ .../TemperatureGauges.ModelTests.swift             | 159 ++++++++++
+ .../feature-views/TemperatureGauges.Previews.swift | 112 +++++++
+ .../feature-views/TemperatureGauges.States.swift   | 182 +++++++++++
+ .../feature-views/TemperatureGauges.Tests.swift    | 273 +++++++++++++++++
+ .../TemperatureGauges.ViewTests.swift              | 102 +++++++
+ .../feature-views/TemperatureGauges.Views.swift    | 217 ++++++++++++++
+ .../feature-views/TemperatureGauges.strings        |  43 +++
+ .../feature-views/TemperatureGauges.swift          |  95 ++++++
+ 11 files changed, 1895 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0160-TemperatureGauges.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.ViewTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureGauges.swift

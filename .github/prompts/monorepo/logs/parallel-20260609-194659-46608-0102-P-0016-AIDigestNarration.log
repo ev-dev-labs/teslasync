@@ -1,0 +1,151 @@
+I'll start by exploring the task requirements: the web source, the existing Apple app structure, and whether the Apple toolchain is available on this runner.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me understand the web dependencies and the existing Apple app structure.
+
+There's a rich existing pattern. The closest analog to `AIDigestNarration` is `AIBatteryHealthForecastNarrative` / `AICabinTemperatureImpactNarrative` (both AI-narrative surfaces using the same web trio: `AIFeatureCard` + `withAiFeature` + `useAiStream`). Let me study that full file set as my template, and compare its web source.
+
+This template is an exact structural analog. Let me read the remaining template files and the analog web source to confirm full parity mapping.
+
+Let me read the remaining template files (Chrome, Views, Previews, strings, Tests, AdapterTests) plus the project config and the page that uses AIDigestNarration.
+
+Now I fully understand the architecture. Key parity differences for `AIDigestNarration` vs the battery template: `canStart = vehicleId != null` (true even for 0), body has `week_offset_weeks: 0`, different URL/strings/feature-id. Let me read the strings/previews format, build config, the page usage, and confirm design tokens exist.
+
+Now let me understand the build tooling (XcodeGen vs pre-generated project), how `.strings` resources are wired, and confirm the design tokens exist.
+
+Build uses XcodeGen (no checked-in `.xcodeproj`). Let me check the placeholder-checker patterns (critical — my code/comments must avoid forbidden words), lint configs, pwsh availability, and confirm the design tokens.
+
+All tooling present (pwsh, xcodegen, design tokens). Let me read the placeholder checker to understand exactly what it scans, and verify the existing battery template is clean of forbidden words (so I mirror its conventions safely).
+
+I now have complete understanding. Let me confirm the AI-off test (feature id + behavior), check no existing files, and view the remaining test-target config, then write a plan.
+
+Everything is confirmed. Feature id `digest-narration` exists; no files yet; pwsh/xcodegen/tokens all present. Let me set up a tracking table and plan, then write the surface files mirroring the `AIBatteryHealthForecastNarrative` template with digest-specific parity (`canStart = vehicleId != null`, body adds `week_offset_weeks: 0`, digest URL/strings/feature-id).
+
+Now I'll create the three core logic files (Adapter, Model, Projection), mirroring the battery template with digest-specific parity.
+
+Core logic done. Now the SwiftUI view layer: the main surface, Chrome, and Views.
+
+Now the Previews, strings catalog, and the two test files.
+
+All 10 files created. Now running local fast checks (swiftformat lint, swiftlint, forbidden-word scan) on just my files before the expensive full build.
+
+Forbidden-word scan clean, swiftformat passes (0/9 need formatting). Now swiftlint on my files.
+
+swiftlint clean (0 violations). Now generating the Xcode project and confirming the design tokens/components I reference exist (mirrored from battery, but verifying).
+
+All tokens and components confirmed; xcodegen generated both schemes. Let me verify the `Shared.xcframework` dependency exists, then start the iOS build (the expensive step).
+
+`Shared.xcframework` is missing — the app targets depend on it. Let me investigate what's in `Frameworks/` and how it's built.
+
+The `Shared.xcframework` is built from the KMP core via Gradle, wired as a pre-build script. Let me check how it's wired in `project.yml` and whether the Gradle toolchain works here.
+
+Let me confirm the pre-build script wiring, then build the shared KMP framework directly first (to de-risk the Gradle step before the full xcodebuild).
+
+Pre-actions run the Gradle staging script. Let me build the shared KMP framework directly to de-risk the Gradle step (first Kotlin/Native build can be slow). Running in background with monitoring.
+
+Gradle is building (first Kotlin/Native build downloads the compiler + dependencies — can take several minutes). Let me continue waiting.
+
+The `tail` buffers until completion, so no incremental output. Let me check build progress in a separate shell.
+
+Good — Kotlin/Native toolchain is already cached (~/.konan), build is active (736M built, debug xcframework already present, compiling release). Let me keep waiting.
+
+`Shared.xcframework` built and staged (6m47s). Now running the full iOS gate (`build test`) in the background, logging to a file I can monitor.
+
+The launcher returned; let me verify the background xcodebuild survived and is progressing.
+
+iOS build is now compiling the main `TeslaSync` Swift module (Swift 6) — the `Shared.xcframework` linked fine. This is the critical compile step for my files. Let me wait and monitor for errors.
+
+The iOS build failed — but the errors are in `RecentDrivesListWidget.*` and `RecentDrivesSection.Seams.swift` (ambiguous type lookups), **not** my files. This looks like a pre-existing duplicate-type collision outside my scope. Let me gather decisive evidence: confirm my files are error-free, that I didn't touch those files, and locate the duplicate definitions.
+
+Decisive evidence gathered:
+- **My files are clean**: 0 compile errors reference `AIDigestNarration`. swiftlint/swiftformat/placeholder all pass on my files.
+- **git status**: only my 10 new files are added; I modified nothing else.
+- **Root cause is pre-existing & out-of-scope**: `RecentDrivesModel`, `RecentDrivesConnection`, `RecentDrivesLoadStatus`, `RecentDrivesUpdate` are each defined **twice** (in `dashboard-widgets/RecentDrivesListWidget.*` *and* `feature-views/RecentDrivesSection.*`) → "ambiguous for type lookup". Same for `StateTimeline*`. All 216 errors are in those sibling surfaces.
+
+Let me confirm these collisions exist at committed HEAD (not introduced by me) and scope whether the colliding types are referenced elsewhere, so I can prove my slice compiles via a temporary quarantine.
+
+Confirmed: at committed HEAD `b1da95840`, both collision groups (`RecentDrives*` and `StateTimeline*`) have duplicate public type definitions across `dashboard-widgets/` and `feature-views/` — a pre-existing baseline breakage from prior parallel merges, entirely outside my allowed scope. My surface is disjoint.
+
+To prove my slice compiles + tests pass in the real module, I'll do a temporary, fully-restored quarantine of one side of each collision. First let me scope external references so the quarantine is clean.
+
+No external references — the colliding surfaces are self-contained and not yet wired into the app router. I can safely quarantine one side of each collision to prove my slice compiles. Let me set up a reversible quarantine and rebuild + run my tests.
+
+Quarantined the feature-view side (21 files → /tmp/quar); now only the dashboard-widget side defines those types. Regenerating the project and building + running **my** test classes to prove the slice compiles and passes.
+
+Quarantine build+test launched (nohup, survives). Let me wait for compilation + my tests.
+
+Another collision surfaced (`AnomalyInlineRow.*`) — the baseline has **multiple** pre-existing cross-surface type collisions, not just two. Let me restore my quarantine and detect the *full* set of duplicate type definitions to understand the extent and decide the cleanest proof strategy.
+
+Only **two** collision groups exist (`RecentDrives*`, `StateTimeline*` — 25 duplicate names). `AnomalyInlineRow` isn't duplicated, so its failure was likely a *cascade* — it probably references the feature-view side I removed. Let me check the actual `AnomalyInlineRow` errors and which side it depends on.
+
+The `AnomalyInlineRow` mention was just the in-flight batch when the build cancelled — it had no errors itself. Let me find the *actual* errors in the quarantine build.
+
+Zero `error:` lines yet "BUILD FAILED" with a `SwiftCompile` failure — that suggests a compiler crash or kill, not a code error. Let me inspect the failure context.
+
+It's a **Swift compiler crash** (`llvm::report_fatal_error`, "Please submit a bug report"), not a code error. Let me identify which file triggered the crash — critical to know if it's my code or a sibling.
+
+Root cause fully diagnosed. Two distinct **pre-existing, out-of-scope** baseline problems block the full-app gate:
+1. **Deterministic**: 216 "ambiguous type lookup" errors from duplicate public types (`RecentDrives*`, `StateTimeline*`) defined in *both* `dashboard-widgets/` and `feature-views/` sibling surfaces (committed at HEAD `b1da95840`).
+2. After quarantining those, a **Swift 6.3.2 compiler crash** (`report_at_maximum_capacity` during IRGen) on the oversized module.
+
+Neither is caused by — nor fixable within — my allowed scope (`AIDigestNarration.*`). My files produced **zero** errors. Files are restored (git clean except mine).
+
+Let me regenerate the project, kick off the macOS gate (for an honest log), and build a standalone harness to prove my slice's parity logic at runtime.
+
+Let me verify the macOS build launched, then create the standalone parity harness.
+
+The previous compound command didn't execute cleanly (stale logs, no regen). Let me run steps individually and verify each.
+
+Project regenerated with all siblings included (true baseline). Now starting the macOS gate detached (will hit the same pre-existing errors — captured for an honest log), then building the standalone parity harness.
+
+macOS gate running detached. Now creating the standalone parity harness (compiles my real `Adapter`/`Model`/`Projection` + a tiny shim, and asserts the parity logic at runtime).
+
+The macOS build already completed (failed fast at type-check). The `create` tool can't see `/tmp` — I'll write harness files via bash. Let me check the macOS result and write the harness.
+
+macOS fails at **code-signing** (entitlements need a development certificate; `DEVELOPMENT_TEAM` is empty in this environment) — another pre-existing/environmental blocker outside my scope. iOS fails on the sibling type collisions. Both confirmed.
+
+Now writing the standalone parity harness via bash (the create tool can't see `/tmp`).
+
+Now compiling the harness against my real `Adapter`/`Model`/`Projection` and running it.
+
+**Standalone parity harness: 84/84 assertions pass** against the real production `Adapter`/`Model`/`Projection` — concrete runtime proof of the entire logic layer (request body/encoding, SSE parsing, reducer, projection's `canStart=0` digest boundary, every output branch, model wiring/telemetry/freshness/delegation).
+
+Now running the remaining whole-repo gate steps (swiftlint, swiftformat, placeholder) for the official log.
+
+swiftlint --strict: **0 violations in 3304 files**. Now swiftformat (whole `apps/apple`, as the gate runs it) and the placeholder check.
+
+swiftformat: **0/3534 files require formatting**. Now the placeholder gate.
+
+All quality gates on my code pass: swiftlint 0/3304, swiftformat 0/3534, placeholder 0, and **84/84 runtime parity assertions**. The two build steps are blocked by pre-existing, out-of-scope issues (sibling type collisions on iOS; missing dev certificate on macOS).
+
+Let me capture a couple of literal error excerpts for the log, then write the official gate log.
+
+Now writing the official gate log with all real outputs and the BLOCKED analysis.
+
+Log written. Now cleaning up temp artifacts and verifying the working tree contains only my allowed changes before committing.
+
+Working tree is clean — exactly my 10 surface files + the log; `.xcodeproj` and `Shared.xcframework` are gitignored. Committing now with an honest message reflecting the verified-but-BLOCKED status.
+
+Committed (11 files, 2317 insertions). Let me update tracking and do a final clean-tree verification.
+
+The work is complete within the allowed scope and the tree is clean. Here is the honest outcome.
+
+## Summary
+
+I shipped a complete, production‑polished native Apple (SwiftUI) `AIDigestNarration` surface at parity with `web/src/components/ai/AIDigestNarration.tsx`, then verified it rigorously. **The acceptance gate is reported as `STATUS=BLOCKED` (not DONE)** because the full‑app build fails for pre‑existing reasons entirely outside this prompt's allowed scope.
+
+### Delivered (10 files, all within `apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.*`)
+`.swift` (surface), `.Model`, `.Projection`, `.Adapter`, `.Chrome`, `.Views`, `.Previews`, `.strings`, `.Tests`, `.AdapterTests` — mirroring the committed `AIBatteryHealthForecastNarrative` (0008) template, with the digest‑specific parity deltas faithfully reproduced: two‑key body `{ vehicle_id: vehicleId ?? 0, week_offset_weeks: 0 }`, the looser `canStart = vehicleId != null` (id 0 enables), the `analytics.weeklyDigest.aiNarration.*` i18n keys, and surface slug `AIDigestNarration`. Every state renders (gated/loading/error/ready·empty|thinking|prose|stream‑error|no‑vehicle/stale/offline).
+
+### Verification (my slice is GREEN)
+- `swiftlint --strict`: **0 violations / 3304 files**
+- `swiftformat --lint apps/apple`: **0 / 3534 need formatting**
+- placeholder gate: **PLACEHOLDER_COUNT=0**
+- **Standalone runtime parity harness = 84/84 assertions pass**, compiled against the *real* `Adapter`/`Model`/`Projection` (request encoding, SSE parsing, reducer, projection's `canStart=0` digest boundary, every output branch, full model wiring/telemetry/freshness/delegation).
+- Full‑module compile errors attributable to my files: **0**.
+
+### Why BLOCKED (out of my scope to fix)
+- **iOS** `xcodebuild … build test` → `IOS_EXIT=65`: **216 pre‑existing "ambiguous type lookup" errors** — the sibling surfaces `RecentDrivesListWidget.*`/`RecentDrivesSection.*` and `StateTimelineWidget.*`/`StateTimeline.*` each declare the **same 25 `public` type names twice** in one module. These are committed at HEAD `b1da95840`; `git status` confirms I touched only my 10 files. (A secondary `swift‑frontend` IRGen capacity crash also surfaces on the oversized module after the duplicates are removed.)
+- **macOS** → `MAC_EXIT=65`: entitlements **require a development signing certificate** absent in this environment (`DEVELOPMENT_TEAM=""`).
+
+Per the Honesty Covenant (no red‑as‑green, no predecessor bypass), I documented all of this in the gate log (`…/logs/p4-apple-shared-surfaces-0016-AIDigestNarration.log`, ending `EXIT=65 / STATUS=BLOCKED`) and committed the surface + log (`15c40bc50`). Reaching `STATUS=DONE` would require editing out‑of‑scope sibling surfaces and the environment's signing config, both disallowed.
+

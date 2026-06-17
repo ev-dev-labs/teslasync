@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and reading the key files to understand what I'm building.
+
+Now let me study the established Apple widget patterns. Let me look at a complete reference widget and the shared infrastructure.
+
+Let me read a complete reference widget (ChargeCostTracker) and an interactive one (GuardMode) to learn the established patterns.
+
+Excellent reference. Let me read the rest of this widget's files to fully understand the shared infrastructure.
+
+Now let me find the shared infrastructure types and study an interactive widget (GuardMode) plus the command modeling.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the rest of project.yml to understand test target wiring and check xcodegen + Shared framework.
+
+`Shared.xcframework` is only a `.gitkeep` placeholder — a full app build may not link. Let me check how predecessor widgets handled verification and read the remaining test-target wiring.
+
+The predecessor disposition is clear: full-app `xcodebuild` is DEFERRED (blocked on missing KMP `Shared.xcframework`, BUILD_RESULT=65, out of scope), while the surface is verified via Swift 6 typecheck + standalone model/adapter test execution + swiftlint/swiftformat/placeholder gates. Let me study the interactive GuardMode widget and the standalone verification approach.
+
+CommandQuickActions is interactive (dispatches commands). Let me study how command/mutation dispatch is modeled natively and find the closest button-grid widget (QuickNav).
+
+`useVehicleCommand` is a `POST /vehicles/{id}/command` mutation returning `{success, message}`. QuickNav is the closest button-grid widget. Let me study it fully plus the action-seam pattern in OnboardingChecklist.
+
+QuickNav is the ideal structural template (button grid + host-delegated action). Let me read its Adapter/Views/Previews/Tests/strings and the OnboardingChecklist action-seam.
+
+Let me read the remaining conventions (Previews/Tests/strings), the shared `TSSkeleton`, the ChargeCost Views, and the OnboardingChecklist action-seam.
+
+Let me locate the shared `TSSkeleton`, check for any async-command precedent, read the WidgetShell source, and the OnboardingChecklist action-seam.
+
+Let me confirm the shared `TSSkeleton` signature and its dependencies (needed to plan standalone verification).
+
+I have the full pattern. Let me get the exact web command-icon colors (to mirror QuickNav's hex-parity precedent) and write the plan.
+
+I now have a complete understanding of the established architecture. Let me set up a plan and todos, then implement.
+
+Now I'll write the implementation. Starting with the SwiftUI-free Model (state-holder + telemetry + dispatch seam + registry + i18n facade).
+
+Now the Foundation-only Adapter (catalog, tones with web hex, layout, item builder, feedback, a11y).
+
+Now the SwiftUI surface view (header chrome, phase switch, dispatch wiring, tone→Color, i18n helper).
+
+Now the presentational subviews (grid, command button, skeleton, empty, error).
+
+Now the Previews and strings catalog.
+
+Let me make the in-memory source's send hook settable post-construction (needed for deterministic dispatch tests), then write the tests.
+
+All 7 files written. Let me verify — starting with formatting/lint config discovery and running swiftformat/swiftlint on the new files.
+
+Let me auto-fix with swiftformat (write mode) on the new files, then re-lint.
+
+swiftformat clean. Let me review what it changed and run swiftlint --strict on the new files.
+
+Two swiftlint issues: a 3-member tuple (`large_tuple`) and Tests file > 400 lines (`file_length`). Let me fix the tuple with a small struct and split the tests file (matching the ChargeCost Tests+ModelTests precedent).
+
+Now split out the model/dispatch tests into a `ModelTests.swift` file (ChargeCost precedent), keeping each file under 400 lines.
+
+Now remove the moved sections from Tests.swift. Let me view current boundaries.
+
+Both test files now under 400 lines. Let me re-run swiftformat and swiftlint on all new Swift files.
+
+swiftformat and swiftlint are clean (0 violations). Now the key step: type-check the surface against the real iOS 18 + macOS 15 SDKs. Let me map the minimal real dependency set.
+
+All token deps are Shared-free. Let me type-check the surface against the real iOS 18 SDK under Swift 6 mode.
+
+The errors are all in `Cards.swift` (a transitive dep with a deep component chain), not my code. My surface only needs the tokens + infra + a faithful `TSSkeleton`. Let me isolate with a minimal stand-in for the shared skeleton and re-check.
+
+iOS 18 type-check is GREEN under Swift 6. Now macOS 15.
+
+Both iOS 18 and macOS 15 type-checks are GREEN under Swift 6. Now let me build an executable harness to actually *run* the SwiftUI-free Model + Adapter logic and assert web parity.
+
+The harness's telemetry double needs the same nonisolated pattern as the XCTest spy. Let me fix it.
+
+Harness executed GREEN: **49/49 checks passed**. Now the placeholder gate and project generation. Let me check for forbidden tokens in shipped files.
+
+Placeholder gate: COUNT=0. Now let me generate the Xcode project (confirms my files are picked up by the globbing) and attempt the full build to capture the documented `Shared.xcframework` blocker.
+
+Project generates cleanly; my files appear 48× across targets. Now attempt the full scheme build to capture the documented blocker. I'll run it bounded since the pre-action invokes Gradle/KMP.
+
+Confirmed: `Frameworks/Shared.xcframework` is absent (only `.gitkeep`), no prebuilt XCFramework exists, and it must be Gradle/KMP-built. iPhone 16 sim is available. Let me run the actual gate build to capture the real blocker, bounded.
+
+Build still running (likely the Gradle/KMP pre-action). Let me check what it's doing and wait longer.
+
+The environment is shared — I can see sibling slots' `xcodebuild`/Gradle/Kotlin-Native processes, and the KMP toolchain (`~/.konan`, `openjdk@17`) is actually present here. My background log vanished (likely killed when the async session closed). Let me relaunch the gate build **detached** with a robust log and confirm my PID.
+
+Build relaunched detached. Let me monitor while I prepare the gate log. Checking progress:
+
+The Gradle pre-action is actively assembling `Shared.xcframework` (Kotlin/Native compiling) — the KMP toolchain IS available on this runner, so the build may actually complete. Let me keep monitoring.
+
+Genuine progress — Kotlin/Native frameworks are linking (`linkDebugFrameworkIosArm64/IosSimulatorArm64`). The build is not blocked, just slow (and contended). Continuing to monitor.
+
+The DEBUG `Shared.xcframework` was written; now RELEASE frameworks are linking (the script stages the release variant). The build is genuinely advancing. Let me continue monitoring with a longer window.
+
+Release frameworks still linking (contended, shared runner). The build is genuinely progressing — the predecessor's blocker (no KMP toolchain) doesn't apply here. Let me continue monitoring while it advances toward staging + app compile.
+
+macOS release framework is the last target linking — staging is near. Let me keep monitoring toward the app-compile phase.
+
+The Gradle XCFramework completed and staged — a second `xcodebuild` (pid 79844) is now compiling the app. Let me monitor for the app/surface compile and test results.
+
+Critical finding: `Shared.xcframework` staged successfully and the app compiled, but `** BUILD FAILED **` — with errors **exclusively in pre-existing sibling widgets** (`ChargeStatusWidget`, `ChargeCostTrackerWidget`), not my files. Let me confirm none of the errors are mine and capture the full picture.
+
+**Zero errors in my files.** All build failures are in pre-existing sibling widgets (`ChargeStatusWidget`, `ChargeCostTrackerWidget`) — parallel-generated surfaces that collide in the single app module. Let me confirm I never touched those files and capture the exact errors.
+
+Definitively confirmed: git shows only my 8 files are new; the 7 compile errors are all in 2 **pre-existing, unmodified sibling surfaces** I'm forbidden to touch (Covenant #7). `Shared.xcframework` built+staged fine (the predecessor's blocker is gone). Let me check final build state and re-scan for any of my errors.
+
+Build exited. **0 errors in CommandQuickActions**; all 11 errors are in pre-existing sibling "Charging"-domain surfaces (colliding `ChargingProjection` type) I never touched. Let me confirm my files were compiled in the target and check for any sibling-collision with my symbols.
+
+My surface is collision-free and compiled as part of the target; all failures are pre-existing siblings. Let me clean up temp artifacts and write the honest gate log.
+
+All evidence captured and temp cleaned. Now writing the comprehensive, honest gate log.
+
+Now let me verify the working tree only exposes my intended files (build artifacts must be git-ignored) before committing.
+
+Working tree is clean — exactly my 8 files + the log, with all build artifacts git-ignored. Committing.
+
+Committed (b0fe768e7, 9 files, 2140 insertions). Let me do a final clean-tree verification.
+
+The task is complete. Working tree is clean, all work committed.
+
+## Summary
+
+I shipped a production-polished native Apple (SwiftUI) **`CommandQuickActionsWidget`** at parity with `web/src/features/dashboard/widgets/CommandQuickActionsWidget.tsx` — a vehicle command-button grid (Lock / Unlock / Climate On/Off / Frunk / Horn / Flash / Trunk), following the established per-widget architecture (ChargeCost/QuickNav precedent).
+
+**8 files** (`apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.*`): SwiftUI-free Model (P1/S8 state-holder + async command-dispatch seam = web `useVehicleCommand` + P1/S11 telemetry + registry + P1/S10 i18n facade), Foundation-only Adapter (web `COMMANDS` catalog with exact hex tones, `isCompact`/`isWide` layout ladder, feedback resolver), the SwiftUI surface + Views, Previews, Tests + ModelTests, and the strings catalog.
+
+**Parity covered:** all states (loading/empty/error/content/stale/offline), all layouts (compact 4·2col / standard 6·3col / wide 8·4col), per-command running spinner + disable-all-while-running + settle (web `activeCommand`/`onSettled`), success/failure feedback (web toast), full VoiceOver/Dynamic Type/Reduce-Motion a11y, and every web i18n key.
+
+**Verification (all executed, real output):**
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **clean**
+- Swift 6 strict-concurrency type-check **GREEN on both real SDKs** (iOS 18 + macOS 15)
+- Executed Model+Adapter logic harness: **49/49 GREEN** (web-parity values)
+- Placeholder gate: **0** · `xcodegen` wiring confirmed (48 refs across targets)
+
+**Full-app `xcodebuild` gate = DEFERRED (honestly documented):** the KMP `Shared.xcframework` built+staged fine here, but the whole-app target fails (`** BUILD FAILED **`, exit 65) on **11 pre-existing compile errors in 4 sibling "Charging"-domain surfaces** (duplicate `ChargingProjection`) — **0 errors in my files**, `git status` confirms I touched nothing else, and fixing siblings is out of allowed scope (Honesty Covenant #7). Committed as `b0fe768e7` with the gate log at `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0030-CommandQuickActionsWidget.log`. **EXIT=0 / STATUS=DONE.**
+
+Merge made by the 'ort' strategy.
+ ...oard-widgets-0030-CommandQuickActionsWidget.log | 217 ++++++++++++
+ .../CommandQuickActionsWidget.Adapter.swift        | 325 ++++++++++++++++++
+ .../CommandQuickActionsWidget.Model.swift          | 381 +++++++++++++++++++++
+ .../CommandQuickActionsWidget.ModelTests.swift     | 243 +++++++++++++
+ .../CommandQuickActionsWidget.Previews.swift       |  97 ++++++
+ .../CommandQuickActionsWidget.Tests.swift          | 337 ++++++++++++++++++
+ .../CommandQuickActionsWidget.Views.swift          | 233 +++++++++++++
+ .../CommandQuickActionsWidget.strings              |  55 +++
+ .../CommandQuickActionsWidget.swift                | 252 ++++++++++++++
+ 9 files changed, 2140 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0030-CommandQuickActionsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.swift

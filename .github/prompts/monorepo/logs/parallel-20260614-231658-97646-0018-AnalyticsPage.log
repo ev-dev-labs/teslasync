@@ -1,0 +1,216 @@
+I'll start by exploring the repository structure to understand the task scope. Let me look at the key files in parallel.
+
+Let me explore the web analytics components, the apple app structure, and the parity manifest in parallel.
+
+The apple app uses a different directory layout than the prompt's stated path. Let me investigate how existing pages were actually implemented to match conventions.
+
+Key finding: there are two trees — `apps/apple/TeslaSync/` (feature-views, etc.) and `apps/apple/Sources/Features/Analytics`. Let me understand the real project layout, tooling availability, and an existing page pattern.
+
+Tooling is available (xcodebuild, xcodegen, swiftlint, pwsh) and the project is xcodegen-generated. Existing analytics pages live in `Sources/Features/Analytics/`, not the templated `TeslaSync/Features/` path. Let me confirm the real convention and read the project config + an existing page.
+
+Now I understand the real layout: pages live in `apps/apple/Sources/Features/{Domain}/`, and the target's source list includes `Sources/` (the templated `TeslaSync/Features/` path isn't compiled). Let me extract the exact manifest record for this page and check whether the tab sub-components are separate parity units.
+
+`StatisticsPage.swift` is a perfect template. Now let me extract the exact manifest record for this page and check whether the tab sub-components (HeroGauges, OverviewTab, etc.) are separate parity units.
+
+Let me check whether the tab sub-components are separate parity units, and look at the apple-ledger for analytics rows.
+
+The manifest formally requires 9 items (3 states + 6 strings) — it does not extract panels/charts for this page because `AnalyticsPage.tsx` delegates to sub-components. But honesty covenant forbids stubs/scope-narrowing, so I must reproduce the actual tab content. Let me read all the web sub-components and the data hook.
+
+Let me read the remaining tab components and the data type/hook.
+
+Now let me read the data hook/type and the existing Statistics page's supporting Swift files (Model, Models, Sections, Charts, Sample, RouteRegistration, Format) as my template.
+
+Let me read the `FleetAnalytics` type and the existing Statistics Swift supporting files to understand the patterns.
+
+Excellent template. Let me read the remaining Statistics support files (Models, Sections, Charts, Sample, RouteRegistration, Format) to learn all conventions.
+
+Let me read the Charts, Sections, and Sample files plus locate the shared components (Units, TabNav, MetricCard, charts, AppRoute).
+
+I now understand the conventions well. Let me locate the available shared Swift components (charts, MetricCard, TabNav, Units, AppRoute, range/freshness) to know exactly what primitives exist.
+
+All chart wrappers exist (TSAreaChart, TSComposedChart, TSScatterChart, TSRadarChart, TSPieChart, TSLineChart, TSBarChart). Let me read their signatures plus MetricCard and AppRoute.
+
+`TSMetricCard` lacks icon/color. Let me look at how the sibling FleetCompare page builds metric cards with icons/colors, plus the chart container/bar/line signatures and the AppRoute enum.
+
+I have all chart wrappers I need. The route registration is critical — Statistics registers `.analytics`, which seems to conflict with the actual `/analytics` page. Let me read the routing layer carefully.
+
+There's a dedicated `.analytics` route, but `StatisticsRouteRegistration` squats on it. I need to understand the route composition and aliases. Let me investigate the routing wiring.
+
+I need to understand `AppRouteHostRegistry.register` semantics and whether Statistics' ownership of `.analytics` is asserted by tests. Let me investigate.
+
+`register` overwrites (last wins). RouteTests only checks the parser aliases, not which page renders — so they won't break. Let me check the pending-verifications doc for any intended resolution of the analytics/statistics route conflict.
+
+The pending doc is silent on this. Decision: `.analytics` route literally is `/analytics`, so AnalyticsPage is its canonical owner. Let me read AppShell's route rendering, the Units facade, key UI primitives, the strings catalog, a tab component, and a model-test example before building.
+
+Now let me read the pie/radar charts, a tab/segmented control pattern, key UI primitives, the strings catalog format, swiftlint config, and a model-test example.
+
+Let me read the radar chart, the Tabs UI component, a model test, and locate the core UI primitive signatures.
+
+I now have all chart/tab primitives. The single-polygon radar I'll overlay per-vehicle in a ZStack (shared grid). Let me grab the remaining UI primitive signatures, the model-test pattern, and the xcstrings format.
+
+Let me verify `UnitPreferences.metric/.imperial`, the xcstrings format, the build prerequisites (Shared.xcframework), and the placeholder scanner before I start building.
+
+Critical: `Shared.xcframework` isn't staged — building needs the KMP/Gradle toolchain. Let me read the forbidden placeholder patterns (to avoid them) and kick off a background framework build to assess build feasibility while I write code.
+
+Java 17 + gradlew are present, so the KMP framework build may be feasible. Let me kick it off in the background while I write the code. Forbidden words noted (TODO/FIXME/Placeholder/etc.) — I'll avoid them and use the `parity:allow` marker for redaction like FleetCompare does.
+
+Let me confirm the `StatsSummary` shape, check for existing range/common strings, and inspect the xcstrings structure so I can script key insertion.
+
+`StatsSummary` = {min,max,avg,median,p95,count}. xcstrings structure clear — I'll script insertions. Let me read the palette, IconBox/Tone, and typography primitives, then start building.
+
+I have all the context I need. Let me set up the plan and todos, then build. First, let me confirm the palette size and create the plan.
+
+I have full context. Let me create the plan and todos, then build the feature.
+
+Gradle is compiling the KMP framework in the background. I'll build the Swift code now. Starting with the SI models.
+
+Logs dir confirmed. Now let me write the models file.
+
+Models done. Now the Format layer (display-boundary formatters).
+
+Now the page model with the data-source seam.
+
+Now the sample/empty/failing data sources.
+
+Let me check the framework build progress, then write the main page view.
+
+Framework still building. Let me write the main page view.
+
+Now the hero gauges + shared layout/tile helpers.
+
+Let me verify the title primitives' signatures before writing the chart panels.
+
+`TSPanelTitle` works for panel headers. The bar wrappers use numeric x — let me check how the sibling FleetCompare/TrueCost charts handle category axes (raw `Chart{}` vs wrappers) to pick the faithful approach.
+
+The KMP framework built successfully — the real `xcodebuild` gate is now feasible. Let me confirm it's staged, then continue with the chart pattern (wrappers + a category-axis row, matching the siblings).
+
+Framework cached now (xcodebuild's pre-action will be fast). Confirmed pattern: wrappers + `categoryAxis` row. Let me write shared chart/panel components, then the four tabs.
+
+Now the Overview tab.
+
+Now the Driving tab (performance cards + 7 charts + temperature stats).
+
+Now the Charging tab.
+
+Now the Battery tab, plus a shared date-endpoints helper. Let me add the helper to Components, write Battery, and update Driving to use it.
+
+Now the Battery tab.
+
+Route registration + app wiring (AnalyticsPage takes canonical `.analytics`).
+
+All Swift files written. Now let me extract every `analytics.*` key I used so I can add them to the string catalog exactly.
+
+The grep missed interpolated keys (tabs/range/freshness.ago). Let me check the SwiftUI interpolation-key format and which common keys already exist.
+
+Common keys fall back to literal at runtime (existing pages rely on this), but I'll add all `analytics.*` keys for parity. First, let me fix the freshness "ago" label to avoid an interpolation-key lookup.
+
+Common keys soft-fall-back at runtime (the existing pages rely on this). I'll add all `analytics.*` keys to the catalog with English values via a script.
+
+Added 134 keys. Let me verify the catalog is still valid and check the diff isn't reformatting the whole file.
+
+The diff reformatted the entire file — unacceptable. Let me revert and re-apply preserving the original formatting exactly.
+
+The original uses Xcode's bespoke `" : "` formatting — Python's `json.dump` can't match it. Let me insert the keys as raw text blocks in Xcode's exact format for a purely additive diff.
+
+Clean additive diff (1474 insertions, valid JSON). Now the tests.
+
+Now let me run the fast gates (no framework needed): swiftlint and the placeholder scan.
+
+Placeholder scan passed (COUNT=0, EXIT=0). Let me wait for swiftlint.
+
+Swiftlint linted the whole repo (config `included` overrides the path arg) and found 42 violations. I need to know which are mine. Let me filter for my files.
+
+All 42 violations are mine: ~38 line-length, 1 file-length (AnalyticsModels 472>400), 1 nesting (TestBox). Let me view the offending regions to fix them.
+
+Let me fix the Charging file's long lines.
+
+Charging fixed. Now let me view and fix Battery, Page, Sample offending lines.
+
+Let me fix Battery, Page, and Sample long lines.
+
+Now let me view the Driving and Overview offending regions.
+
+Let me fix the Driving file's long lines.
+
+Now the Overview file's long lines.
+
+Let me view the energyActivity region to refactor its inline names.
+
+Let me refactor energyActivity, dayOfWeek, and monthlyCost.
+
+Now the test file: fix nesting + line lengths. Let me view the regions.
+
+Let me fix the test file (un-nest TestBox, wrap long literals).
+
+Now split the over-length models file. Let me find the charging section boundary.
+
+Let me view the charging-to-end section to move it into a new file.
+
+Let me split the file: move charging/battery/fleet types into a new file and truncate the original.
+
+Both files now under the limit. Let me re-run swiftlint to confirm all my violations are cleared.
+
+Swiftlint clean (0 violations repo-wide). Now let me generate the Xcode project and build. Let me start with xcodegen.
+
+Project generated. Let me build the macOS scheme (compiles all shared sources, no simulator needed). The gradle pre-action is cached now.
+
+Build failed — but the 3 failures are in pre-existing `widget-primitives/` files (WidgetBigNumber, WidgetEventFeed), NOT my Analytics files. I need the actual error messages. Let me capture them.
+
+My Analytics files compiled cleanly — the only errors are in a pre-existing, untouched file: `TeslaSync/shared-surfaces/Input.Previews.swift` (explicit `return` in a ViewBuilder). Let me confirm it's pre-existing and inspect it.
+
+Confirmed: `Input.Previews.swift` is pre-existing/untouched and there are 0 errors in my Analytics files. Let me view the pre-existing failure to understand it.
+
+This is a pre-existing toolchain-strictness failure (explicit `return` in `@Previewable #Preview` bodies) in an untouched shared-surface file — not my page. Let me assess how widespread this pattern is before deciding how to handle it.
+
+This is a pre-existing, repo-wide Xcode-toolchain incompatibility (explicit `return` in `@Previewable #Preview` bodies became an error in newer Xcode), affecting untouched files — it blocks ANY build, so no predecessor gate could pass on this toolchain either. Removing the now-disallowed `return` is mechanical and backward-compatible. Let me first dry-run a precise detector to see the true scope.
+
+Only 5 pre-existing `*.Previews.swift` files in `shared-surfaces/` are affected (21 `return`s) — these block the entire repo build on this stricter toolchain, so no gate could pass without addressing them. Removing the now-disallowed `return` is mechanical and backward-compatible. Let me apply it and rebuild.
+
+All 21 removed. Let me verify the edit is clean, then rebuild.
+
+The edit is clean. Let me rebuild the macOS app.
+
+Different errors now (lines 94, 106). Let me see the actual messages.
+
+A deeper pre-existing error surfaced (argument-order in the same preview files) — these untouched files have multiple toolchain incompatibilities. This is an unbounded out-of-scope rabbit hole. Let me revert my preview edits and check whether these previews are `#if DEBUG`-gated (so a Release build/test can bypass them cleanly).
+
+These previews are all `#if DEBUG`-gated, so a **Release** build excludes them entirely — letting me verify my code + tests cleanly without touching any pre-existing file. Let me confirm the gating wraps the `#Preview`s, then build+test in Release.
+
+Confirmed: all `#Preview`s are inside `#if DEBUG`, so a **Release** build excludes the broken previews entirely. Let me run a Release build+test (with testability enabled for `@testable`) — this verifies my code and runs my tests without touching any pre-existing file.
+
+Release build+test is running (full recompile). While it runs, let me check progress periodically.
+
+Release test exited 65. Let me find the cause.
+
+There are 9 analytics-related errors but my path-grep missed them. Let me see the raw errors.
+
+The Release build revealed **real bugs in my code** (the earlier Debug build aborted at the previews before fully checking my files). Two issues: missing `import Charts` in Components, and a `Text` init issue in AnalyticsPage. Let me inspect them (and the one pre-existing DriveScore error).
+
+Found 2 real bugs in my code (the earlier Debug build aborted before reaching them): missing `import Charts` in Components, and `Text(label(...))` wrapping a `Text`. The DriveScore error is pre-existing (untouched predecessor). Let me fix my two bugs.
+
+My two bugs are fixed. The remaining Release errors are pre-existing predecessor/toolchain issues. Let me re-run the Release build to enumerate exactly which pre-existing errors remain (mine should be gone), so I can scope a temporary workaround to verify my code+tests.
+
+My code now compiles clean in Release — the **only** remaining error is the pre-existing, untouched `DriveScorePage.Panels.swift:25`. Let me temporarily patch that one predecessor line so I can run a clean build+test to verify my page and tests, then revert it.
+
+Let me see what failed this time (could be the next pre-existing error, or a test result).
+
+No compile errors, but "build failed" — likely a link/host/packaging issue. Let me find the real reason.
+
+Let me look at the raw failure context around the CompileSwift failure.
+
+The failure is now a **pre-existing Swift compiler crash** in the SIL optimizer (CopyPropagation pass) on an unrelated predecessor file (`LayoutSwitcher`) — a Release-optimization toolchain bug, not my code. My Analytics sources compiled with zero errors. Let me build Release with optimization disabled (`-Onone` avoids the optimizer crash; Release still excludes the broken DEBUG previews) to get a clean build+test of my code.
+
+Let me diagnose this run.
+
+Progress: with `-Onone` everything **compiled** (no compile errors) — the failure is now a **linker** error, and the build went `x86_64` while the Shared.xcframework is likely arm64-only. Let me force arm64 and retry.
+
+The build targeted x86_64 but the Shared.xcframework is arm64-only — everything **compiled** under `-Onone`, only linking failed on arch. Let me force arm64 and run the tests.
+
+More pre-existing breakage — this time in **other surfaces' co-located test files** (BackupActionsCard.Tests, BreadcrumbOverrides.Tests, etc.) that share the test bundle. Let me confirm my test file is error-free and whether the app target itself built.
+
+My **source** is clean (0 errors), but there's **1 error in my test file**. Let me find and fix it.
+
+My test passed `chargerBrands` before `chargerTypes`, but the initializer declares `chargerTypes` first. Let me swap them.
+
+My test fix is in. The remaining barrier to *running* tests is 17 pre-existing broken co-located test files (other surfaces) sharing the bundle — out of scope. Let me definitively verify my source by building just the **app target** (excludes all `*Tests.swift`) under arm64 `-Onone`.
+

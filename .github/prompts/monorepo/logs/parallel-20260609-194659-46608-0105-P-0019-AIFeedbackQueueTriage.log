@@ -1,0 +1,152 @@
+I'll start by exploring the codebase structure and verifying the platform capabilities required for this task.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the Apple app structure.
+
+The web source is clear: it's an AI advisor card using `withAiFeature` HOC + `AIFeatureCard` + `useAiStream`. There are ~90 existing AI surfaces. Let me find ones using the same pattern (`useAiStream` + `AIFeatureCard` + `withAiFeature`) to follow established conventions.
+
+Let me read the shared component contracts (`AIFeatureCard`, `withAiFeature`, `useAiStream`) and identify the closest already-ported native surface to follow conventions.
+
+Now let me read `useAiStream` and check which already-ported native surface uses the exact same pattern (FeatureCard + useAiStream + withAiFeature, no charts/maps), so I follow the established file structure precisely.
+
+`AIAnomalyExplanations` and `AIAutoTripNameSuggestion` are the closest matches (same 3/3/3 pattern). Let me compare their web sources to mine, then study the full native file set of the best match.
+
+`AIAutoTripNameSuggestion` is structurally identical to my target (same `useMemo` + `useAiStream` + `AIFeatureCard` + `withAiFeature` shape). It's the ideal template. Let me read its complete native file set.
+
+Excellent — this is a thorough, high-quality template. Let me read the remaining native files of the template to capture the full structure.
+
+Now the seams (live source/stream drivers), previews, strings, and tests of the template.
+
+Now the previews and test files to complete my understanding of the template.
+
+Let me read the template's main Tests file, verify shared tokens/components exist, and confirm the project build config and feature registry.
+
+The `feedback-queue-triage` feature id and the `POST /api/v1/ai/feedback/triage/draft` route both exist. Key difference vs the template: my surface POSTs a non-empty body `{feedback_id}` to a *fixed* URL, and `feedbackId` is an Int. Let me check the project config, shared tokens, and the placeholder checker.
+
+Let me verify the exact token/component APIs and the placeholder patterns I must avoid.
+
+Let me locate the shared components `TSGlassPanel`, `TSButton`, `TSSkeleton` and confirm their exact APIs.
+
+I have the full template and all APIs. One critical thing to verify: the template's Adapter defines **non-prefixed public types** (`AiStreamSnapshot`, `AiStreamReducer`, `AiSseFrameParser`, etc.). If every AI surface redefines those in the same module, they'd collide. Let me check how this is handled across surfaces.
+
+Critical finding: `AiStream*` types are **not shared** — every other surface uses surface-prefixed names (`AnomalyStream*`). The template `AIAutoTripNameSuggestion` happens to own the generic `AiStream*` names. Since all files compile into one module, I must prefix my types. Let me check which view symbols (`HelixMark`, `AIBadge`, `HelixThinkingDots`) are uniquely owned vs shared.
+
+Confirmed — all those view structs are uniquely owned by the template surface. I'll prefix every top-level symbol with `FeedbackTriage`. Let me verify that prefix is collision-free and the surface doesn't already exist.
+
+The `FeedbackTriage` token only appears inside a `.strings` value (a backend name), not as a Swift symbol — so my prefix is safe. Now let me assess the build feasibility (Shared.xcframework, simulators, pwsh) before writing, so I know how I'll verify.
+
+Build needs the KMP `Shared.xcframework` (Gradle/Kotlin) — heavy, not prebuilt. `pwsh`, swiftlint, swiftformat, and an iPhone 16 simulator are all available. I'll build the surface following the dominant self-contained convention (own `FeedbackTriage`-prefixed types, like `AnomalyStream*`). Let me read the lint/format configs to match style, then write a plan.
+
+Style is clear (120 col, type names <50 chars, testable-import-bottom). My prefixed names all fit. Let me create a short plan and then write the 10 files.
+
+Now I'll create the 10 surface files. Starting with the pure-logic Adapter.
+
+Now the Model file (telemetry, connection, input, resolved, projection, model, strings facade).
+
+Now the Seams file (context source + stream driver with body support).
+
+Now the Views file (Helix mark/badge, feature card, Ask Helix button, thinking dots, freshness chip).
+
+Now the States file (output router + per-phase bodies).
+
+Now the main public View file.
+
+Now the Previews and strings files.
+
+Now the two test files (adapter/projection/a11y, then model + seams).
+
+Now the ModelTests file (state-holder + seams).
+
+All 10 files created. Let me verify them — starting with swiftformat and swiftlint on my files, plus the placeholder check.
+
+swiftformat passes. Now swiftlint --strict and the placeholder check.
+
+Lint, format, and placeholder gates all pass clean (0 violations). Now I must verify the code actually compiles. Let me do a focused type-check against the real tokens/components. First, check what those component files depend on.
+
+The logic core (Adapter + Model + Seams) imports only Foundation/Observation/OSLog — a closed set I can type-check directly under Swift 6 strict concurrency. Let me do that first.
+
+Core logic type-checks clean under Swift 6. Now for the view layer — let me locate the `tsGlassPanel()` modifier and check whether `Sources/Components` is self-contained so I can type-check the views against it.
+
+`tsGlassPanel()` lives in `Sources/Design`. Components only import system frameworks. Let me type-check the view files against `Tokens.swift` + `Sources/Design` + the 3 needed component files (checking Design doesn't pull in the KMP `Shared` framework).
+
+`Sources/Design` and `Sources/Components` are self-contained on system frameworks (no `Shared`). Let me type-check the **entire surface** (all 7 non-test files) against the real tokens + Design + Components in one module compile, targeting the iOS simulator with DEBUG (to include previews).
+
+Those errors are in an unrelated component (`UnitFormatters.swift` needs `UnitPreferences` from another subtree) — not my code. Let me narrow to exactly the components my views use, and add `-default-isolation MainActor` (the template's identical Preview pattern requires it).
+
+The `-default-isolation MainActor` flag is wrong (the project doesn't use it — it broke the `@Sendable` strings closure that the template also uses). The real errors earlier were only in the unrelated `UnitFormatters.swift`. Let me type-check with the project's actual settings (strict concurrency, no isolation override) against only the components my views use.
+
+Zero errors in my files — the only failures are transitive deps of `Cards.swift` (`TSBadge`, `TSText`). Let me add those component files to reach a fully clean compile and confirm.
+
+The full surface type-checks with **0 errors** against the real tokens and components. Now let me verify the **test files** compile — by emitting my surface as a testable `TeslaSync` module, then type-checking the tests against it with XCTest.
+
+Module emitted cleanly. Now type-check both test files against it with XCTest.
+
+All errors are downstream of XCTest not resolving (not my test logic). Let me fix the XCTest framework search path and retry.
+
+`XCTest.swiftmodule` is in `Developer/usr/lib`. With that `-I`, the minimal test compiles. Now re-running the test type-check against my module.
+
+All 9 Swift files compile cleanly (surface emits as a module; tests type-check against it + XCTest) — **0 errors**, plus format/lint/placeholder all green. Now let me attempt the authoritative gate. First, generate the Xcode project and probe the KMP shared-module build dependency.
+
+Project generates cleanly; KMP shared module + gradlew + Java 17 are present. Let me attempt the `Shared.xcframework` build (the gate's prerequisite) in the background to see if the full build is viable here.
+
+The KMP build pulls the full Kotlin/Native + Android toolchain (android.library, sqldelight, etc.) — heavy CI infra. Let me make a bounded attempt to confirm viability, capturing real output.
+
+The Gradle build timed out after 5 minutes with **zero output** (`EXIT=124`), with `ANDROID_HOME` unset and `Frameworks/` empty. Let me confirm whether this is a hard infra blocker (network/toolchain) before deciding how to record the gate.
+
+Infra is actually present: Gradle dist **and** Kotlin/Native 2.4.0 are cached, and network works. The `--offline` flag likely caused the hang. Let me check the Android SDK situation (the `android.library` plugin needs it) and any stuck daemon, then retry properly.
+
+Definitive blocker found: **no Android SDK** (`ANDROID_HOME`/`ANDROID_SDK_ROOT` unset, no `local.properties`, no SDK dir), yet the shared `:core` module applies the `com.android.library` plugin — which fails Gradle configuration before the Apple XCFramework can build. Let me clean up the stuck daemons and capture the exact error as evidence.
+
+`:core:help` succeeded (`EXIT=0`) — so the Android SDK is **not** a config blocker; the earlier hang was the `--offline` flag. The XCFramework build may be viable. Let me build it now (no `--offline`) in the background with a generous window.
+
+**`Shared.xcframework` built successfully** (2m53s)! The full gate IS achievable. Let me stage the framework and kick off the real `xcodebuild build test` for the iOS scheme, writing to the gate log.
+
+Framework staged, log started. Now the real build. Given the app's size, let me run the full iOS app **build** first (compiles my surface in-module alongside everything) in the background, capturing to the log.
+
+The full app build failed — but **every error is in unrelated sibling surfaces** (`RecentDrivesListWidget`, `StateTimeline*`) with pre-existing "ambiguous for type lookup" duplicate-type collisions. **Zero errors reference my files.** Let me confirm this rigorously: no errors in my files, and those broken files are untouched by me.
+
+Definitive: **0 errors in my files**; all 54 errors are in 10 sibling files I never touched (git confirms I only *added* `AIFeedbackQueueTriage.*`). The "ambiguous for type lookup" errors mean those sibling surfaces define duplicate type names across files — a pre-existing collision. Let me confirm those duplicate definitions exist independently of my work.
+
+**Conclusive proof of pre-existing, out-of-scope breakage:** `RecentDrivesModel`, `StateTimelineModel`, and `RecentDrivesConnection` are each defined as `public` types in **two** sibling files (a dashboard-widget AND a feature-view), both compiled into the same module → "ambiguous for type lookup". These files are tracked at HEAD and untouched by me. This is exactly the module-wide collision I avoided by prefixing every type with `FeedbackTriage`.
+
+Let me capture the macOS build (same root cause) and the remaining gate steps for an honest log.
+
+macOS build is blocked even earlier — by code-signing (no development certificate, an environment limitation) — and again **0 errors in my files**. Both `xcodebuild` steps are blocked by environment/pre-existing repo state, not my surface. Let me run the remaining gate steps (whole-tree format/lint + placeholder) for real exit codes.
+
+Whole-tree `swiftformat --lint`: **0/3554 files require formatting, EXIT=0** (green, including mine). Let me get the rest.
+
+`swiftformat` (whole-tree) **EXIT=0**; placeholder **COUNT=0**. Now the whole-tree `swiftlint --strict`.
+
+`swiftlint --strict` (whole-tree, 3324 files): **0 violations, EXIT=0** (the "9" was just my files' progress lines). So **all 3 non-xcodebuild gate steps are green**. 
+
+Now, to actually *run* my tests at runtime (the app target is blocked by sibling collisions), let me build a throwaway SwiftPM package in `/tmp` with my surface + its real deps and execute the tests.
+
+Package scaffolded (15 source + 2 test files). Now executing the tests at runtime with `swift test`.
+
+**65 tests executed, 0 failures** at runtime (`swift test`, EXIT=0). My surface is fully verified.
+
+Let me record the complete, honest gate log.
+
+Log written honestly (STATUS=BLOCKED, with full evidence the block is external/pre-existing). Now let me verify exactly what would be committed (only my surface + log — not the generated project or staged framework) before committing.
+
+Only my 11 files are untracked; the generated `.xcodeproj` and staged framework are git-ignored. The surface is fully verified (65 tests pass, clean compile, lint/format/placeholder green); the whole-app gate block is provably external/pre-existing and out of my allowed scope. I'll commit the verified surface + the transparent BLOCKED log.
+
+Committed (`769e5ce57`) — 11 files. Now let me clean up temporary artifacts and the generated build outputs to restore the workspace, and stop the Gradle daemon.
+
+Working tree is clean; everything is committed (`769e5ce57`) and temp artifacts removed. The task is complete to the maximum extent the environment allows.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) **`AIFeedbackQueueTriage`** surface at parity with `web/src/components/ai/AIFeedbackQueueTriage.tsx`, following the structure of the closest existing surface (`AIAutoTripNameSuggestion`).
+
+**Delivered** (10 files, `apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.*`):
+- Web `AIFeatureCard` + `useAiStream` + `withAiFeature('feedback-queue-triage')` ported to a `FeedbackTriageModel` state-holder (P1/S8), pure SSE parser/reducer/projection (Adapter), live + in-memory seams, Helix-branded views, and per-phase bodies.
+- **Propose-only parity**: "Suggest triage" POSTs `{feedback_id}` to the fixed `/ai/feedback/triage/draft`; it never calls `useUpdateFeedback` (documented — the operator's manual controls stay the sole write path).
+- All states render (gated-off, loading, idle, thinking, advisory, error, stale, offline); i18n via the P1/S10 facade; VoiceOver labels on every interactive element; `view.opened` telemetry. Every symbol is `FeedbackTriage`-prefixed to stay module-collision-free.
+
+**Verification — surface is fully green:**
+- `swiftc -emit-module` (Swift 6, strict concurrency, iOS 18 SDK) → **0 errors**
+- **65 unit tests pass at runtime** (`swift test`, 0 failures)
+- whole-tree `swiftlint --strict` → **0 violations**; `swiftformat --lint` → **0/3554**; placeholder gate → **0**
+
+**Honest blocker (logged, `STATUS=BLOCKED`):** The whole-app `xcodebuild build test` can't reach `EXIT=0` here for reasons **external to and out of scope for this surface**: pre-existing duplicate `public` types in *untouched* sibling surfaces (`RecentDrivesModel`/`StateTimelineModel`/`RecentDrivesConnection` defined in both a dashboard-widget and a feature-view → "ambiguous for type lookup"; **0 errors in my files**), plus macOS dev-signing. Those files are outside my allowed-files scope. I built the `Shared.xcframework` (Gradle) successfully to even get this far. The gate log records real exit codes with no red-as-green.
+

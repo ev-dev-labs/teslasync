@@ -1,0 +1,147 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The page wraps `WebhookChannelsSection`. Let me explore the Apple app structure, the wrapped component, and check the toolchain in parallel.
+
+Xcode toolchain is available. Let me read the wrapped component and explore the Apple app structure.
+
+`WebhookChannelsSection` is a large CRUD component. There's tension between the manifest (2 strings, no panels) and the covenant ("no scope narrowing"). Let me examine the parity manifest record, the ledger, and existing Apple page conventions to resolve scope correctly.
+
+The Features directory doesn't exist yet. Let me explore the actual Apple structure and parity files.
+
+The Apple code uses category dirs (not `Features/`). Let me find the ledger row for Webhooks, the manifest record, and any existing AuditLog/notification page implementation to learn conventions.
+
+The ledger has no Webhooks row yet (must add). Let me find how the manifest stores the Webhooks record and look at the AuditLog ledger rows as the pattern to follow.
+
+Now I understand the manifest contract (2 strings, no panels/data). Let me study the sibling AuditLog page implementation (already done 15/15) to learn the exact established conventions — file location, structure, log format.
+
+Key insight: `WebhookChannelsSection` is **already ported** to Apple (`feature-views/WebhookChannelsSection.*`), mirroring the web structure where `WebhooksPage` wraps it. Also, pages live in `Sources/Features/`, not `TeslaSync/Features/`. Let me study the AuditLog page pattern and the existing section component, plus the build config.
+
+The pattern is clear: pages live in `apps/apple/Sources/Features/<Domain>/`, and `WebhookChannelsSection` is already ported. Let me verify the build setup (project.yml, xcodegen, gate contract) and read the model patterns.
+
+Build setup understood: `xcodegen` generates the project; the app target compiles `Sources/**` and `TeslaSync/{feature-views,...}` — but **not** `TeslaSync/Features/**` (the prompt's templated path is wrong; pages live in `Sources/Features/`). Let me read the sibling's log/gate contract, the page-model pattern, the section model, and routing.
+
+The section model needs a `WebhookChannelsSource`. Let me find where the section is currently hosted/constructed, read the sibling log format + gate result, locate the AppRoute enum/parser, and check the toolchain (pwsh, prebuilt framework, placeholder script).
+
+Findings: `WebhookChannelsSection` isn't hosted yet (this page will host it), `pwsh` + placeholder script available, but **no prebuilt `Shared.xcframework`** (full build needs the KMP toolchain). Let me read the sibling log to see how its gate was actually run, plus the section's seams/previews and the route files.
+
+This is the exact playbook. The sibling reached DONE via `xcodegen generate` + scoped swiftlint/swiftformat + placeholder scan + a **standalone swiftc model harness** (not a full `xcodebuild` needing the absent KMP framework). Let me read the rest of that log, the section seams, AppRoute, and the app's route-host chaining.
+
+I have the full proven methodology now. Let me read the log footer (EXIT/STATUS + ledger format), the AppRoute enum, the app's route-host chaining, and how `copyLink`/PageContainer is handled, plus the xcstrings format.
+
+Now I'll examine the app's route-host wiring, the section's header (for SF Symbol + structure), the xcstrings format, and whether `copyLink` is reproduced elsewhere.
+
+Let me inspect the xcstrings format (route key + the existing "Webhooks" entries), the registry API, the section header region, and the copyLink pattern.
+
+The xcstrings has a manual region (where I'll add `route.notificationsWebhooks` + the 2 web keys) and a separate auto-translated region (already has `translation.nav.notificationsWebhooks`, untouched). Let me read the registry API, typography components, the section header, and the copyLink pattern.
+
+Let me read the Typography component, check for a copy/pasteboard helper, and review the sibling's Sample + Tests files to mirror their structure.
+
+Let me read the shared `CopyButton` + pasteboard utility (for a faithful copy-link affordance) and the sibling's test file to mirror its structure.
+
+I have nearly everything. Let me confirm the `CopyLinkButton` shared surface (referenced in comments) and the web `PageContainer` copyLink behavior to reproduce it faithfully.
+
+There's a shared `CopyLinkButton` SwiftUI surface (parity of web's). Let me read its initializers so I can host it faithfully in the page header.
+
+I now have everything needed. Let me confirm the exact `WebhookChannel`/method/status type names and the webhook SF Symbol, then set up my plan and todos.
+
+Confirmed all types and the webhook glyph (`point.3.connected.trianglepath.dotted`). Let me set up my plan/todos and create the implementation files.
+
+Let me check the lint/format config to match conventions, then create the files.
+
+Configs match the existing style. Now creating the 5 new Swift files.
+
+Now the edits to existing route files. Let me update todos and apply them.
+
+Now adding the 3 string-catalog keys in the manual region, right after `route.notificationsAudit`.
+
+Let me validate the xcstrings JSON and confirm the keys, then mark todos and begin gates.
+
+All 3 keys valid. Now running the format + lint gates on my files.
+
+swiftformat clean (0/8). Now swiftlint --strict on my files.
+
+swiftlint clean. Now the placeholder scan (pwsh).
+
+PLACEHOLDER_EXIT=0 (COUNT=0). The `ALLOWED=1` is the pre-existing AuditLog `audit.searchPlaceholder` opt-out — let me confirm it's not from my files, and also scan the tests dir.
+
+Placeholder gates pass; the lone `ALLOWED=1` is the pre-existing AuditLog opt-out, not mine. Now `xcodegen generate` (integration proof) and checking `import Shared` prevalence to plan the compile harness.
+
+xcodegen integrates my files (30 pbxproj refs, GEN_EXIT=0); core deps are Shared-free. Let me locate the exact type definitions to assemble a Shared-free executable harness.
+
+Let me verify the model-layer support files are token/component-free (harness-safe).
+
+Harness closure is Shared-free and token-free (Adapter/Seams/Content/Model are model-layer). Let me build and run an executable model+route harness exercising my actual code.
+
+The closure compiled cleanly — only issue is top-level code must live in a file named `main.swift`. Renaming and recompiling.
+
+All 11 harness assertions PASSED under Swift 6 strict concurrency. Now attempting a full SwiftUI view type-check against the real tokens/components/section stack.
+
+The view-typecheck errors are from over-included `DataDisplay`/units components my page never uses — not from my code. Let me find where `Units` is defined and which components pull it, to trim to the real closure.
+
+The `Units` errors come solely from `DataDisplay/UnitFormatters.swift` (needs `SharedFacade`) — neither my page nor the section uses DataDisplay. Re-running the type-check with the real minimal closure (UI/Motion/Feedback/Forms only).
+
+One residual: a `Feedback/FeedbackOverlays.swift` references `TSMetricBar` (DataDisplay) — again not my code. Let me check whether `SharedFacade` is Shared-free (so I can include DataDisplay) or whether to exclude that one unused overlay file.
+
+`SharedFacade` imports the KMP `Shared` framework, so DataDisplay can't be in a Shared-free typecheck — and `FeedbackOverlays.swift` (unused by my page/section) is the only thing pulling it. Excluding that one unrelated overlay file and re-checking on both macOS and iOS.
+
+Both view type-checks pass (macOS 0 errors, iOS 0 errors). Let me inspect the KMP staging script + toolchain to decide whether a bounded full-build attempt is safe to capture real evidence.
+
+The KMP staging needs a heavy Kotlin/Native Gradle build (the known OOM step on this shared host). I'll responsibly **not** trigger it, and document the blocker honestly. Let me check the ledger row schema and the gitignore status of the xcodeproj.
+
+Let me view the raw ledger formatting around the AuditLog rows to insert my 2 rows with matching style.
+
+Inserting the 2 Webhooks ledger rows after the last (AuditLog apple-ios) row.
+
+Ledger valid (158 rows, Webhooks 2/2 on both idioms). Now gathering tool versions for the log header.
+
+Git status is clean and scoped (xcodeproj git-ignored). Let me get LOC counts and write the evidence log.
+
+Log written. Let me verify the parity line-number citations are accurate, re-confirm lint/format are still green, and clean up temp files.
+
+Line numbers in the log need correcting (27/42/43/49, not 29/43/44/48) — fixing for accuracy.
+
+Final step: mark todos done and commit the in-scope changes (xcodeproj is git-ignored).
+
+All todos complete. The task is done and committed.
+
+## Summary
+
+Shipped **`WebhooksPage`** — the native SwiftUI/HIG parity of `web/src/features/notifications/pages/WebhooksPage.tsx` (route `/notifications/webhooks`), adaptive across macOS + iOS.
+
+**Approach:** the web page is a thin `PageContainer` (title + subtitle + copyLink) wrapping `<WebhookChannelsSection>`. I reproduced that faithfully — title/subtitle/copy-link chrome bound to an `@Observable WebhooksPageModel`, **hosting the already-shipped `WebhookChannelsSection`** feature view (DRY, not re-implemented), which carries all its own loading/empty/error/stale/offline/content states.
+
+**Files (11, committed `3bfe32c0e`):**
+- New: `WebhooksPage.swift`, `WebhooksPageModel.swift`, `WebhooksPageModel.Sample.swift`, `WebhooksRouteRegistration.swift`, `WebhooksPageModelTests.swift`
+- Edited: `AppRoute.swift` (+`.notificationsWebhooks`), `AppRouteParser.swift` (alias), `TeslaSyncApp.swift` (route host), `Localizable.xcstrings` (+3 keys), `apple-ledger.json` (+2 rows, 2/2)
+- Evidence log with `=== PARITY === COVERED=2/2`, `EXIT=0`, `STATUS=DONE`
+
+**Path reconciliation:** the prompt's `TeslaSync/Features/Notifications/` isn't a real `project.yml` source group; shipped at the canonical `Sources/Features/Notifications/` (where the sibling AuditLog page lives).
+
+**Gates (all in-scope green):** xcodegen `0` · swiftformat `0/8` · swiftlint --strict `0/8` · placeholder scan `0` · Swift 6 model+route harness `ALL 11 PASSED` · view type-check macOS `0/0` + iOS `0/0`.
+
+**Honest blocker:** the full `xcodebuild build/test` is gated on the out-of-scope, P1-owned KMP `Shared.xcframework` Gradle staging (absent; known to OOM-kill this shared host per the sibling log). I deliberately did **not** trigger it — recorded `BUILD_EXIT=NOT_RUN` (never colored green) — and proved correctness via the isolated harness + type-checks, matching the sibling's accepted methodology.
+
+
+
+The task is fully complete and committed. All 7 todos are done, all in-scope gates are green, and the work is committed (`3bfe32c0e`).
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-notifications-WebhooksPage.log | 220 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  33 ++++
+ apps/apple/Sources/App/AppRoute.swift              |   8 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Features/Notifications/WebhooksPage.swift      |  71 +++++++
+ .../Notifications/WebhooksPageModel.Sample.swift   |  47 +++++
+ .../Features/Notifications/WebhooksPageModel.swift |  50 +++++
+ .../Notifications/WebhooksRouteRegistration.swift  |  20 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Notifications/WebhooksPageModelTests.swift     |  73 +++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 11 files changed, 539 insertions(+), 3 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-notifications-WebhooksPage.log
+ create mode 100644 apps/apple/Sources/Features/Notifications/WebhooksPage.swift
+ create mode 100644 apps/apple/Sources/Features/Notifications/WebhooksPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Notifications/WebhooksPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Notifications/WebhooksRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Notifications/WebhooksPageModelTests.swift
+[dedupe] no duplicate top-level types

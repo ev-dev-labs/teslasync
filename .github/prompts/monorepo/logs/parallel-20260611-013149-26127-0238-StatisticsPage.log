@@ -1,0 +1,196 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure to understand existing patterns and the component library.
+
+The `FleetComparePage` is the closest existing analytics page. Let me study it as a reference pattern, along with the parity manifest and ledger.
+
+Excellent reference. Let me study the supporting files to understand the full conventions for sections, charts, models, and route registration.
+
+Let me explore the component library, design tokens, and Units facade to understand what's available.
+
+Now let me examine the UI components (GlassPanel, MetricCard, EmptyState, Typography), the Units facade, and design tokens.
+
+Now let me examine the Units facade, AppRoute, and the SharedFacade domain models. Let me also check the parity manifest and ledger.
+
+Let me look at the parity manifest record, the apple ledger, and the route host registry to understand navigation registration.
+
+Let me check the project.yml build config, how route registrations are wired into the app shell, and the FleetCompare log/sample data source.
+
+Let me check the route parser, how registrations are composed into the shell, and the FleetCompare log format.
+
+`/statistics` maps to `.analytics` route. Let me examine the parser and app wiring fully.
+
+Now I understand the wiring. Let me examine the remaining components (Select, Button), design tokens, the xcstrings catalog, and the FleetCompare log format.
+
+Let me read the FleetCompare log format, the Button component, the `tsUnits` env key, and check the xcstrings catalog.
+
+Let me check the build toolchain availability and read the Button component, the `tsUnits` env key, and the xcstrings location.
+
+Let me read the web hooks and number formatting to get exact data shapes, plus the test pattern.
+
+Let me check the `UnitPreferences.metric` default, the xcstrings structure, and reusable common keys.
+
+Let me read the placeholder scanner, swiftlint config, and the FleetCompare Table file (highlights pattern).
+
+Let me verify a few remaining helpers exist (`tsGlassPanel` modifier, `TSIconBox`, `TSAlertBanner`), then set up my todo list and plan.
+
+I have a thorough understanding now. Let me check `TSIconBox`'s signature and set up my plan and todos.
+
+I have everything I need. Let me set up my plan and todos, then build.
+
+Now I'll build the implementation. Starting with the models file.
+
+Now the page model with the data-source seam.
+
+Now the sample data sources for previews and tests.
+
+Let me confirm whether the sibling tests exercise `Units` (KMP) so I match the test approach, and check `convertDistanceFromSI` semantics.
+
+Now the format file with display-boundary helpers.
+
+Now the main page view.
+
+Now the sections file (metric cards, period/averages/battery/mileage sections, skeleton).
+
+Now the charts file (battery gauge, state-distribution pie, vehicle-comparison bars).
+
+Now the route registration and wiring it into the app.
+
+Now I'll add the 32 `statistics.*` strings to the catalog via a script (preserving existing formatting).
+
+Now the model tests.
+
+Now let me lint my new files and check the build prerequisites (Shared framework, any pre-existing defects).
+
+swiftformat flagged formatting. Let me auto-format my files with the ecosystem tool, then re-verify.
+
+swiftformat + swiftlint pass on my files. Now the placeholder scan and build prerequisites.
+
+The build needs `Shared.xcframework` (KMP/Gradle). Let me inspect the build script and the pre-existing defect noted by the sibling.
+
+The build requires a Gradle-built `Shared.xcframework`. Let me check the toolchain and start that build in the background (it's slow).
+
+Java 17 and gradlew are present. Let me start the Shared.xcframework Gradle build in the background (this is the slow prerequisite).
+
+The Gradle build is progressing (using build cache). Let me monitor the nohup log until the framework is staged.
+
+Release-framework linking is the slow phase. Let me wait for it to finish staging.
+
+Shared.xcframework staged. Now xcodegen + the build. Let me generate the project.
+
+Project generated with my files (48 refs). Now let me run the build for macOS. Starting it in the background as it compiles the whole app.
+
+Let me build the macOS app (verifies my code compiles). Running in background with a long wait.
+
+The build is compiling. Let me monitor for progress and any errors in my files.
+
+The build failed on code-signing (environment lacks a dev cert), not on my code — it stopped before compiling Swift. Let me rebuild with signing disabled so compilation actually runs.
+
+Compilation ran. The error is in a pre-existing out-of-scope file (`TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift`), not mine. Let me confirm my changeset and survey all distinct compile errors.
+
+Confirmed: the only compile error is a pre-existing, out-of-scope file I never touched; zero errors reference my code. To positively verify my files compile, I'll temporarily neutralize the pre-existing defect (reverted before commit). Let me inspect it.
+
+The pre-existing defect is a non-`@escaping` `content` param in a `glass` helper — likely repeated across the out-of-scope AI* files. Let me find all occurrences (for a temporary verification-only patch).
+
+This is a pre-existing, systemic out-of-scope defect (73 non-`@escaping` `glass` helpers in the `TeslaSync/` tree) — the same class the sibling FleetCompare documented. To positively verify my code compiles, I'll temporarily add `@escaping` to these (verification-only, reverted before commit via `git restore`).
+
+Patched (verification harness). Rebuilding macOS to confirm my code compiles and surface any further pre-existing issues.
+
+No errors and it reached `EmitSwiftModule` (whole module type-checked). Let me wait for the build to finish.
+
+The build failed at a different (A\*) batch, but my error grep found nothing — let me find the actual failure text.
+
+The Swift compiler crashed. Let me examine the crash context to identify the trigger.
+
+This is a pre-existing swift-frontend **codegen crash** (not a type error) in an out-of-scope A\* batch — none of my files are in it. Let me confirm the whole-module type-check (EmitSwiftModule) passed and check whether my harness touched any crash-batch file.
+
+Whole-module type-check (EmitSwiftModule) passed — my code type-checks. The crash is a pre-existing codegen crash in out-of-scope files (none touched by me). Let me inspect the crash stack to understand if it's batch-mode-specific.
+
+Whole-module type-check passed (my code is correct); the crash is a pre-existing codegen crash in out-of-scope AI* files. The sibling's "harness" approach ran model logic separately. Let me try a whole-module compile (may dodge the batch-mode crash) to run my real tests. Starting in background.
+
+While that builds, let me prepare a standalone logic harness as a fallback. First, let me check the whole-module build's progress.
+
+Whole-module compile is progressing with no crash yet. Let me continue waiting.
+
+Whole-module dodged the crash but surfaced yet another **pre-existing** out-of-scope error (`RecentDrivesSection.Previews.swift:24` "expression too complex"). The `TeslaSync/` tree has multiple pre-existing defects unrelated to my work — confirming the full build is RED for reasons outside my scope (matching the sibling). My code type-checks cleanly (EmitSwiftModule passed, zero errors on my files).
+
+To positively verify my logic (like the sibling's standalone harness), let me build one with my real source files.
+
+Harness compiled cleanly. Now let me run it.
+
+Harness: **53/53 checks pass**. My model + formatter logic is verified correct. Now let me revert the temporary verification patch so my commit contains only my work.
+
+Changeset is clean. Now let me update the parity ledger with the two `done` rows (61/61).
+
+Ledger updated. Let me re-run the in-scope gates fresh to capture final numbers for the evidence log.
+
+All in-scope gates green. Let me verify the log directory and write the comprehensive evidence log.
+
+Now let me clean up temp artifacts and confirm the git working tree only contains my intended changes (not the generated project or framework).
+
+Only my intended changes are staged; generated artifacts are git-ignored. To fully back a macOS+iOS type-check claim (the iOS-only `#if os(iOS)` branches weren't exercised by the macOS build), let me re-apply the verification harness and run an iOS type-check.
+
+The iOS build process died before creating its log (the manual nohup chain misfired; unrelated logs in /tmp belong to other slots sharing this environment). Let me verify harness state and relaunch the iOS type-check cleanly.
+
+Harness is re-applied (0 unpatched). Let me launch the iOS type-check using the tool's async mode for reliable capture.
+
+The iOS app target reached `EmitSwiftModule` (whole-module type-check) with **zero errors** — my code type-checks on iOS too. Let me confirm no late error, then stop the build (the later codegen crash is the documented pre-existing issue).
+
+iOS whole-module type-check passed (3 EmitSwiftModule tasks, **0 errors**, 0 Statistics errors). My code type-checks on macOS **and** iOS. Let me stop the build and revert the harness.
+
+The running xcodebuild belongs to a different slot (slot-241) sharing this environment — not mine. Mine was stopped. Let me revert my harness and confirm the clean changeset.
+
+Let me update the evidence log to reflect the confirmed macOS **and** iOS type-checks.
+
+Let me do a final check for any stray hardcoded user-facing strings in my files (all UI text must be catalog keys or data).
+
+All UI text resolves from the catalog or is data. Let me commit.
+
+Committed (`8f2eda6f0`). Let me do a final verification that the working tree is clean and all todos are complete.
+
+All verified: clean tree, 13 files committed, ledger has both rows, log ends `EXIT=0 / STATUS=DONE`. Let me finalize the todos.
+
+The task is complete. All 12 todos are done and verified.
+
+## Summary
+
+Implemented the native **SwiftUI/HIG `StatisticsPage`** at full web parity (`page:analytics/Statistics`, route `/statistics`), in `apps/apple/Sources/Features/Analytics/`:
+
+**Files (9 new + 3 edits):** `StatisticsModels`, `StatisticsPageModel`, `StatisticsPageModel.Sample`, `StatisticsFormat`, `StatisticsPage`, `StatisticsPage.Sections`, `StatisticsPage.Charts`, `StatisticsRouteRegistration`, `StatisticsPageModelTests` + edits to `TeslaSyncApp.swift`, `Localizable.xcstrings` (+32 keys), `apple-ledger.json` (+2 rows).
+
+**Parity = 61/61:** 20 panels (period/averages/battery/mileage metric cards + two GlassPanels), 5 charts (TSRadialGauge, two TSChartContainers, TSPieChart, TSBarChart), 4 states (loading skeleton/empty/error/success), 32 i18n strings. `@Observable` model via a KMP-backed data-source seam (ADR-004), SI conversion only at the render boundary (ADR-005), adaptive macOS+iOS.
+
+**Verification (real commands):**
+- swiftformat `--lint` **0/10**, swiftlint `--strict` **0**, placeholder scan **0**, xcodegen **48 refs**, Shared.xcframework **built+staged**.
+- Whole-module type-check (`EmitSwiftModule`) **0 errors on macOS *and* iOS** — my code compiles against the real tokens/components/Shared framework.
+- Standalone logic harness **53/53 checks pass** (state machine, derivations, formatters).
+
+**Routing:** `/statistics` already aliases to the (previously unregistered) `.analytics` route — `StatisticsRouteRegistration` now hosts it; no `AppRoute` case added/displaced.
+
+**Honest caveat:** the *full* `xcodebuild build/test` is RED, caused solely by **pre-existing out-of-scope defects in the `TeslaSync/*` AI-surface tree** (73 non-`@escaping` `glass` helpers, a swift-frontend codegen crash, an "expression too complex" preview) — none in my changeset. This is the same condition the already-DONE sibling `FleetCompare` documented. Reported as RED, not masked; in-scope gates are all green. Evidence log ends `EXIT=0 / STATUS=DONE`. Committed as `8f2eda6f0`.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-analytics-StatisticsPage.log   | 200 ++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 352 +++++++++++++++++++++
+ .../Features/Analytics/StatisticsFormat.swift      | 116 +++++++
+ .../Features/Analytics/StatisticsModels.swift      | 194 ++++++++++++
+ .../Features/Analytics/StatisticsPage.Charts.swift | 161 ++++++++++
+ .../Analytics/StatisticsPage.Sections.swift        | 301 ++++++++++++++++++
+ .../Features/Analytics/StatisticsPage.swift        | 184 +++++++++++
+ .../Analytics/StatisticsPageModel.Sample.swift     | 190 +++++++++++
+ .../Features/Analytics/StatisticsPageModel.swift   | 161 ++++++++++
+ .../Analytics/StatisticsRouteRegistration.swift    |  22 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |  28 +-
+ .../Analytics/StatisticsPageModelTests.swift       | 276 ++++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 13 files changed, 2190 insertions(+), 13 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-analytics-StatisticsPage.log
+ create mode 100644 apps/apple/Sources/Features/Analytics/StatisticsFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/StatisticsModels.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/StatisticsPage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/StatisticsPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/StatisticsPage.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/StatisticsPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/StatisticsPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Analytics/StatisticsRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Analytics/StatisticsPageModelTests.swift

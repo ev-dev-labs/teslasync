@@ -1,0 +1,206 @@
+I'll start by exploring the environment to understand what exists and what tooling is available.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat). Let me read the web source spec and explore the native app structure.
+
+Now let me examine existing shared-surfaces to learn the established patterns I must follow, plus the supporting infrastructure (tokens, i18n, telemetry, date formatting).
+
+This is a large established codebase. Let me check if TimeStamp already exists and find the closest analog surface (the web source mentions a sibling `<DateTime>` component).
+
+`DateTime` is the ideal analog — the web `TimeStamp` explicitly mirrors `<DateTime>`. Let me read the full DateTime native surface and the web dependencies.
+
+Now let me read the complete DateTime native surface — this is my template. Reading all files in parallel.
+
+Excellent — this is a high-quality, well-structured reference. Let me read the remaining DateTime files to fully internalize the pattern.
+
+Let me read the remaining DateTime files (Previews, tests, strings) and the web sources for the components TimeStamp uses (Tooltip, dateFormat).
+
+Now let me read the web dateFormat library (for `formatRelative` vs `formatDateTime` parity), the web Tooltip component, and the DateTime test files to mirror the test structure.
+
+Let me read the web Tooltip, the DateTime tests (to mirror structure), verify the shared design tokens exist, and check the gate tooling.
+
+Let me verify the design tokens exist, read the model tests, find any native tooltip pattern, and check the gate tooling availability.
+
+All gate tooling is present (pwsh, check-placeholders.ps1, tokens, TSQueryError, TSSkeleton). Let me read the tokens and shared components, and check for a native tooltip component.
+
+There's a native tooltip in `Sources/Components/UI/Overlays.swift`. Let me read it — this is the parity for the web `Tooltip` that TimeStamp wraps.
+
+I have everything I need to understand the pattern. Let me quickly assess build feasibility (xcodegen, the KMP framework staging, simulators) before writing, so I know if the gate is runnable.
+
+Let me check how the sibling DateTime surface (0084) and a couple of simple surfaces reported their gate results — this tells me the expected build behavior in this environment.
+
+This reveals the established, accepted methodology for this environment. Let me read the full VisuallyHidden log to learn the exact playbook (especially how they handle the KMP framework and full-build reds).
+
+Let me read the middle section of the log (the verification harness details) to fully replicate the methodology.
+
+I now have the complete predecessor-accepted methodology. Let me set up tracking and check the KMP framework build feasibility (needed for an honest full-gate run), kicking it off early in the background.
+
+JDK 17 + gradlew present. Let me kick off the KMP framework build in the background (~14 min) so the full gate is runnable later, then start writing the surface.
+
+The framework build shell returned quickly — let me check its status (it may have just spawned, or failed fast).
+
+The gradle build is progressing in the background. Let me check the lint/format configs so my code matches the rules exactly, then write the files.
+
+Configs match the DateTime style I'm mirroring. Now writing the surface. Starting with the pure Adapter core.
+
+I referenced the shared `TimeZoneMode`, but to keep the surface fully self-contained (so it type-checks and unit-tests in isolation like the predecessor's harness requires), I'll define a surface-local mode enum instead.
+
+Now the Model (state-holder, telemetry seam, connection, input snapshot, i18n facade).
+
+Now the Projection (input → resolved view-state, with the primary/secondary pair).
+
+Now the Seams (source protocol + live + in-memory sources).
+
+Now the States chrome (loading skeleton + error).
+
+Now the Views (value label with primary body + secondary hover tooltip + a11y, freshness chip).
+
+Now the main `TimeStamp` view.
+
+Now the Previews (every state).
+
+Now the i18n strings catalog.
+
+Now the adapter + projection tests.
+
+Let me verify my epoch-millis test constant with a quick computation rather than trusting manual arithmetic, and make the test robust.
+
+Confirmed — my hardcoded constant was wrong. Let me fix the epoch tests to be robust and correct.
+
+Now the model + source + telemetry tests.
+
+All 11 files written. Let me update tracking and start surface-scoped verification (format, lint, placeholder).
+
+swiftformat flagged 2 long lines in Tests. Let me view and fix them.
+
+Now re-run swiftformat and run swiftlint on the surface files together.
+
+Surface format + lint both clean (0/0). Now the placeholder check and xcodegen generation.
+
+All surface-scoped static checks pass: swiftformat 0/10, swiftlint 0 violations, placeholder 0, xcodegen OK (66 refs). Now the SwiftPM test harness to execute the real logic + tests.
+
+All 55 tests pass under Swift 6 strict concurrency. Let me check the framework build progress and assess the isolated-typecheck dependency surface.
+
+The KMP framework built successfully (8m56s) and is staged — the full gate is now runnable. `Sources/Components` and `Sources/Design` don't import the KMP framework, so isolated typecheck is feasible. Let me kick off the full iOS xcodebuild in the background, then run the isolated typecheck while it builds.
+
+Let me run the isolated macOS typecheck of the full surface against the real design system.
+
+The iOS build finished — let me read its result, and locate the missing `UnitPreferences` type for the isolated typecheck.
+
+The iOS build log shows my `TimeStamp.strings` being compiled into the app bundle (a late phase). Let me determine the actual build/test outcome.
+
+The iOS `xcodebuild` is still running (the notification was just the launcher shell exiting; nohup keeps xcodebuild alive). Positive signals: `TimeStamp.strings` validated into the bundle and `SwiftEmitModule` (whole-module compile incl. my files) is underway. Let me poll it and meanwhile fix the isolated typecheck to use a minimal real-design subset.
+
+xcodebuild still running. Let me run the isolated typecheck with a curated minimal real-design subset (excluding DataDisplay, which pulls in the KMP facade).
+
+One unused peripheral file (`FeedbackOverlays.swift`, needs `TSMetricBar` from DataDisplay) — my surface doesn't use it. Let me exclude it and re-run both SDKs.
+
+Both produced zero error lines, but I captured `sort`'s exit, not `swiftc`'s. Let me re-run capturing the real `swiftc` exit codes rigorously.
+
+Isolated typecheck clean on both SDKs (0 errors, 0 warnings). Let me check on the full iOS xcodebuild.
+
+iOS build still compiling (`EmitSwiftModule`). Let me start the macOS gate build in parallel and run the whole-tree lint/format gates (independent of xcodebuild) now.
+
+Whole-tree lint shows 3 pre-existing violations (matching the predecessor). Let me identify them precisely to confirm none are mine, and run the whole-tree format gate.
+
+Confirmed: all 3 lint violations are pre-existing in `widget-primitives/WidgetChartSummary.Tests.swift` (the predecessor's documented nits) — zero in TimeStamp. Now the whole-tree format gate and build status.
+
+Whole-tree format: 1 pre-existing diff in `feature-views/RecentDrivesSection.Previews.swift` (matches predecessor), zero TimeStamp. Now let me check the two xcodebuild verdicts.
+
+macOS verdict captured: **BUILD FAILED**/**TEST FAILED** solely on code-signing (no dev certificate) — matching the predecessor (MAC_EXIT=65). The build reached linking/signing, meaning all Swift compilation (incl. my files) succeeded on macOS. Let me confirm zero compile errors there, and wait for the iOS verdict (the long pole).
+
+Let me characterize the macOS build precisely (what compiled before the signing failure) for an honest log.
+
+macOS fails at the entitlements/signing validation stage (before compilation) — the environmental no-dev-certificate case (MAC_EXIT=65), matching the predecessor; macOS compile-correctness is covered by the isolated macOS typecheck. Now waiting on the iOS whole-module build. Let me poll it.
+
+iOS now compiling per-file (whole-module typecheck already passed). Let me wait longer for the verdict and confirm my files compiled cleanly.
+
+iOS verdict captured: **BUILD FAILED** — root cause is a swift-frontend IRGen **crash** on the pre-existing file `feature-views/AppearanceSettings.Controls.swift` (the predecessor's documented crash). Zero errors in any TimeStamp file, and the whole-module typecheck (SwiftEmitModule) passed. Let me capture the exact crash signature, then do the rigorous baseline proof (covenant #3: rebuild with my surface removed).
+
+The crash signature exactly matches the predecessor's documented pre-existing issue: IRGen of `AppearanceSettings.Controls.swift`, SIL function `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` (a `Bool`/`(any Actor)?` reabstraction thunk). Zero source-level errors anywhere, zero in TimeStamp. Now the rigorous baseline proof (covenant #3): rebuild with my surface entirely removed.
+
+Baseline build running (re-staging framework via gradle, then compiling without my surface). All 11 files stashed, 0 refs in the regenerated project. Let me wait for it to reach the crash and confirm independence.
+
+Baseline still in early build phases. Let me wait for it to compile to the crash point.
+
+**Definitive baseline proof:** with all 11 TimeStamp files removed and project regenerated (0 refs), the iOS build crashes **identically** — same `AppearanceSettings.Controls.swift` IRGen crash, same SIL function `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, same **BUILD FAILED**. The crash is pre-existing/environmental, independent of my surface. Now let me restore the surface and regenerate.
+
+Files restored (11, all untracked). Let me verify the project references them (the grep pattern differs from before).
+
+Project correctly references all 66 TimeStamp refs. Let me do a final consolidated surface-scoped re-verify on the restored files before writing the log.
+
+All final surface checks green (swiftformat 0/10, swiftlint 0 violations, placeholder 0, 1663 surface lines). Let me gather environment metadata, then write the gate log.
+
+Let me update tracking and write the comprehensive gate log.
+
+Let me verify the per-file line counts I cited in the log are accurate, and correct any drift.
+
+The counts match my estimates closely. Let me update the log's CHANGES block to exact line counts for full precision (no drift).
+
+Let me clean up temp files, verify the working tree shows only my surface + log, then commit.
+
+Working tree is clean — exactly the 11 surface files + the log, with `project.yml`/`.swiftlint.yml` unmodified. Now committing with the prompt's message + trailer.
+
+Committed (`abc265c86`), working tree clean. Let me finalize tracking.
+
+All todos complete and committed. Let me do a final verification that no stray build processes remain and the commit is intact.
+
+Let me check what the lingering xcodebuild processes are — they may be stuck post-failure and should be cleaned up on this shared runner.
+
+The 6 running xcodebuild processes belong to **other parallel slots** (slot-16, slot-21 — different sessions), not my work — correctly leaving those alone. My three builds all finished. Let me verify my log's claim about per-file TimeStamp compilation in the iOS build is precisely accurate.
+
+The 200-count needs investigation — let me check whether any are *real* compile diagnostics in TimeStamp files (precise `file:line:col: error:` form) vs. incidental matches in huge command lines.
+
+The 200 matches are `<unknown>:0: error: error opening input file` — driver-level cascade artifacts from the frontend crash abort, **not** source diagnostics (0 precise `file:line:col: error:` in any TimeStamp file). Let me confirm this cascade is generic (appears in the baseline for non-TimeStamp files too), to keep the log precise.
+
+Key finding: those 200 `error opening input file` entries were appended to `ts-ios-build.log` **after** I moved the TimeStamp files out for the baseline proof while a build/test phase was still finishing — a file-move artifact, not a compile error (0 precise source diagnostics in either build). My log's "per-file SwiftCompile completed" phrasing is imprecise. Let me verify what genuinely completed and correct the log to be exact.
+
+Now it's fully clear: the `build` action failed at the IRGen crash (line 26091); the TimeStamp `error opening input file` entries (lines 30570+) came later, during the `test` action's build-for-testing, **after** my baseline file-move — a move artifact, not a compile error. The real failure preceded any TimeStamp log entry. To back my log with pristine evidence, I'll re-run the iOS gate cleanly (no interference) and correct the log wording. Starting the clean run:
+
+While the clean build runs, let me correct the iOS section of the log to be precise about the evidence.
+
+Let me also align the final summary line, then wait for the pristine run.
+
+Now waiting on the pristine iOS run (re-stages framework via gradle, then builds). Let me poll it.
+
+Pristine run reached **BUILD FAILED** at the same IRGen crash (framework staged, files present). Let me wait for it to fully drain (test action) and confirm zero TimeStamp diagnostics.
+
+Pristine run **confirms** the disposition definitively: with all 11 files present, the crash signature appears in both the build and test actions (same pre-existing file + SIL function), **0** TimeStamp source diagnostics, and **0** `error opening input file` (the artifact is gone). Let me wait for full exit, then add a PRISTINE RERUN section and amend the commit.
+
+Pristine run fully confirms it: **BUILD FAILED + TEST FAILED** from the same pre-existing IRGen crash, **0** source diagnostics anywhere, **0** TimeStamp diagnostics, **0** `error opening input file`. Let me add the PRISTINE RERUN section to the log and amend the commit.
+
+Let me verify the log ends correctly, confirm only the log changed, clean temp logs, and amend the commit.
+
+Log ends correctly (EXIT=0/STATUS=DONE), only the log changed. Amending the commit to include the corrected log.
+
+Committed clean (`1cf96eca6`), working tree clean. Let me do a final verification of the commit contents.
+
+The task is complete and fully verified. Final state:
+
+**Commit `1cf96eca6`** — `feat(apps/apple/shared-surfaces): add TimeStamp surface (P4)` — 11 surface files + gate log (2002 insertions), Co-authored-by trailer present, working tree clean.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0108-TimeStamp.log    | 339 +++++++++++++++++++
+ .../shared-surfaces/TimeStamp.Adapter.swift        | 294 +++++++++++++++++
+ .../shared-surfaces/TimeStamp.Model.swift          | 196 +++++++++++
+ .../shared-surfaces/TimeStamp.ModelTests.swift     | 197 +++++++++++
+ .../shared-surfaces/TimeStamp.Previews.swift       | 107 ++++++
+ .../shared-surfaces/TimeStamp.Projection.swift     | 128 ++++++++
+ .../shared-surfaces/TimeStamp.Seams.swift          | 107 ++++++
+ .../shared-surfaces/TimeStamp.States.swift         |  44 +++
+ .../shared-surfaces/TimeStamp.Tests.swift          | 361 +++++++++++++++++++++
+ .../shared-surfaces/TimeStamp.Views.swift          | 113 +++++++
+ .../TeslaSync/shared-surfaces/TimeStamp.strings    |  34 ++
+ .../TeslaSync/shared-surfaces/TimeStamp.swift      |  82 +++++
+ 12 files changed, 2002 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0108-TimeStamp.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/TimeStamp.swift

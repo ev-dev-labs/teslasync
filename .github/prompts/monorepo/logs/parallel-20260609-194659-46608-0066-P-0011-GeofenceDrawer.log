@@ -1,0 +1,172 @@
+I'll start by exploring the environment and the codebase to understand the task. Let me check tool availability and find the relevant files.
+
+Good — Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all available, with iPhone 17 simulators. Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source — it's a Leaflet-draw geofence editor (circle/polygon/rectangle) emitting create/edit/delete callbacks. Let me study the existing Apple app patterns: existing modals, state holders, tokens, i18n, and project config.
+
+Two complete modal examples exist: `JobProgressDrawer` (closest analog — a "Drawer") and `AddAnnotationPopover` (map-related). Let me study both templates plus the shared infrastructure thoroughly.
+
+`AddAnnotationPopover` is the map analog, `JobProgressDrawer` the drawer analog. Let me read both templates and the shared infra in full.
+
+This pattern is very well-structured. Let me read the rest of the template files plus shared infrastructure.
+
+I have a strong grasp of the pattern. Let me read the remaining template files (previews, strings, tests), the design tokens, infra, project config, and the placeholder checker.
+
+Now let me examine the design tokens, shared components, project config, and the placeholder checker.
+
+A `Sources/Components/Maps/` directory exists — directly relevant. Let me read the map components, find the token definitions, and the shared components (TSButton/TSGlassPanel/TSFadeIn).
+
+Key finding: `TSGeofenceDrawer`, `TSMapView`, `TSGeofence`, and map-content helpers already exist as **shared components** (out of scope to recreate — I compose them). My surface `GeofenceDrawer` will orchestrate them. Let me read the geo helpers, tokens, shared components, project config, and placeholder script.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read the tokens, shared components (TSButton, TSGlassPanel, TSFadeIn, typography), project config, and the placeholder checker.
+
+Important finding: `project.yml` lists `dashboard-widgets`, `feature-views`, `misc-surfaces` as app sources — but **not** `modals-dialogs`. The sibling modal surfaces (AddAnnotationPopover, JobProgressDrawer) exist but aren't wired into the build. Let me investigate how siblings handled this, check tooling, and git history.
+
+Both `xcodegen` and `pwsh` are installed. The sibling modal surfaces are committed but `modals-dialogs` isn't in `project.yml`. Let me read the sibling gate logs and the prior GeofenceDrawer attempt log to understand how this was resolved.
+
+This is the sanctioned disposition: `project.yml` is **not** edited (tier registration is owned by the P4 acceptance gate); the surface is verified independently via isolated SwiftPM build+test + SDK typecheck on both platforms, plus swiftformat/swiftlint/placeholder gates. Let me read the prior GeofenceDrawer attempt log (same surface, earlier parallel run) and confirm current state.
+
+I now have a complete blueprint from the prior GeofenceDrawer attempt (13-file decomposed bundle) plus the in-repo AddAnnotationPopover gold-standard pattern. Let me read the lint configs, placeholder script, list/row patterns, and remaining component signatures.
+
+Let me read the placeholder patterns, remaining component signatures (Typography/Cards/Badges/TSTone), and the JobProgressDrawer list/states pattern.
+
+Let me read `TSTone` and the JobProgressDrawer states/rows pattern (list-based drawer), then I'll have everything to implement.
+
+I have everything needed. Let me check for symbol collisions before naming my types, set up a plan, and confirm the toolchain harness.
+
+No collisions; SDKs ready; `xcode-select` already points at Xcode.app. I have a complete blueprint. Let me set up a plan and todos, then implement the 13-file decomposed surface.
+
+`Sources/Components`/`Design` are Shared-free (SDK-only imports) — a minimal typecheck harness will work. Now implementing. Starting with the pure logic files.
+
+Now writing the pure Adapter (geometry + draw reducer).
+
+Now the Projection (phase resolution, describe rows, renderables, modes fallback).
+
+Now the Seams (telemetry, controller, source seam, strings facade, accessibility).
+
+Let me check for any lines exceeding 120 chars in the files written so far.
+
+Now the Model — the `@Observable @MainActor` state holder with the draw commands.
+
+Pure-logic + model files written. Let me verify they compile in an isolated SwiftPM package before writing tests.
+
+Pure logic + model compile cleanly under Swift 6. Now writing the three test files.
+
+Now the ModelTests (state holder, telemetry, create/edit/delete, freshness).
+
+Now let me run the isolated test suite (pure logic + model + 3 test files).
+
+All 65 isolated tests pass under Swift 6. Now the SwiftUI view layer. Let me update todos and write the States, Map, Views, scaffold, and Previews.
+
+Now the MapKit canvas (fence overlays, live draft preview, tap-to-place, camera fitting).
+
+Now the Views (header, draw toolbar, fence list, helpers).
+
+Now the main modal scaffold.
+
+Now the Previews gallery (one per state).
+
+Now the strings catalog (P1/S10).
+
+All 13 files written. Let me verify i18n key parity between Swift code and the strings catalog.
+
+Some keys are referenced via variables. Let me do a robust check: extract all `geofence.*` literals from Swift and compare both directions with the catalog.
+
+All keys parity-check out (the 3 "orphans" are built dynamically via `mode.labelKey`). Now the dual-SDK typecheck of the full view layer against the real shared design system. Let me set up the file set and run the iOS SDK typecheck.
+
+`.annotationTitles(.hidden)` belongs on `MapContent`, not the `Map` view. Let me fix that.
+
+iOS SDK typecheck passes. Now the macOS SDK typecheck.
+
+Both SDK typechecks pass under Swift 6 strict concurrency. Now the format/lint/placeholder gates on my files.
+
+swiftformat wants canonical formatting. Let me auto-format my files with the tool (the ecosystem approach), then re-verify. First checking the version.
+
+Existing files are clean but use single-line bodies — so the flag isn't generic. Let me inspect the exact flagged lines before auto-formatting.
+
+Let me auto-format my files with the tool, then re-verify everything (lint, typecheck, tests).
+
+swiftformat passes (0/12), all files ≤336 lines. Now re-verify swiftlint, both SDK typechecks, and the test suite on the formatted files.
+
+4 swiftlint issues: 3 multiple-trailing-closure in TSButton calls and 1 opening-brace from a wrapped multiline signature. Let me inspect the exact formatted code to fix precisely.
+
+Two fixes: add a `GeofenceCorners` typealias to keep the signature one-line, and use explicit `label:` args on the TSButtons.
+
+Now re-verify all gates after the fixes.
+
+swiftformat 0/12 and swiftlint 0 violations. Now re-run both SDK typechecks and the isolated test suite on the final files.
+
+All 65 tests pass on the final formatted files. Now the placeholder gate — a real directory scan of my files plus a positive control to prove the scanner works.
+
+Placeholder scan is genuinely clean (0 count, 0 opt-outs). Positive control to prove the scanner actually reads the files:
+
+Positive control confirms the scanner reads my files; self-test passes. Now I'll run the full-app xcodebuild gate honestly. First, generate the project and inspect the baseline (KMP framework presence, whether modals-dialogs is wired in).
+
+Confirmed: `Shared.xcframework` is absent (only `.gitkeep`; built by a Gradle pre-action), and `modals-dialogs`/`GeofenceDrawer` have 0 references in the generated project (the gate doesn't compile my files — tier wiring is the acceptance gate's). Let me inspect the pre-action script, then run the actual xcodebuild gate to capture real evidence.
+
+The pre-action builds the KMP `Shared.xcframework` via Gradle Kotlin/Native (the documented multi-minute, network-dependent blocker). Let me run the actual iOS xcodebuild gate, time-boxed, to capture real evidence.
+
+The iOS full-app build is running in the background (KMP Gradle pre-action first). Let me wait and monitor its progress.
+
+The build process finished. Let me read the full log to see the outcome.
+
+The background process was discarded when the sync session ended. Let me launch it as a persistent async detached process and check whether the Kotlin/Native toolchain is cached (affects build time).
+
+Kotlin/Native 2.4.0 is cached and Java 17 is present, so the KMP build shouldn't need network downloads. Let me launch the iOS gate as a persistent async process.
+
+The KMP `Shared.xcframework` built from cache and staged successfully — the build is now into the release framework and will then compile the Swift app. Let me wait for the final outcome.
+
+The iOS full-app build exited 65. Let me determine the cause and confirm zero errors are in my (non-included) files.
+
+Confirmed: 108 errors, **0 in GeofenceDrawer**. All are pre-existing duplicate-type collisions between sibling surfaces. Let me verify these are pre-existing and untouched by me.
+
+Conclusive: the iOS failure is entirely pre-existing duplicate-type collisions between sibling surfaces (`StateTimeline*` declared in both `dashboard-widgets` and `feature-views`) — untouched by me, 0 errors in GeofenceDrawer. Now the macOS gate step (shares the same sources + adds signing).
+
+macOS also exits 65. Let me confirm the cause (same pre-existing collisions / signing) and zero GeofenceDrawer errors.
+
+Both gate steps are RED for pre-existing, out-of-scope reasons (iOS: sibling `StateTimeline*` duplicate-type collisions; macOS: development code-signing with no team), with **0 GeofenceDrawer errors** in either. This matches the sanctioned disposition. Let me clean up build artifacts and verify the working tree.
+
+Clean tree — only my 13 files, no tracked modifications, no leaked artifacts. Let me gather exact versions and final stats for the gate log.
+
+All files within limits (≤337 lines, max line 118 chars). Now writing the gate log with all raw evidence.
+
+Now a final verification sanity pass, then commit.
+
+Final gates green. Updating todos and committing.
+
+All 14 files staged (13 surface files + gate log). Committing.
+
+Committed cleanly (f17646e86), working tree empty. Let me do a final confirmation of the commit contents and the log's terminal status.
+
+The task is complete and verified. The commit contains the 13 surface files + the gate log, the log terminates with `EXIT=0 / STATUS=DONE`, and the working tree is clean.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-modals-dialogs-0011-GeofenceDrawer.log | 287 ++++++++++++++++++
+ .../modals-dialogs/GeofenceDrawer.Adapter.swift    | 337 +++++++++++++++++++++
+ .../modals-dialogs/GeofenceDrawer.Map.swift        | 186 ++++++++++++
+ .../modals-dialogs/GeofenceDrawer.Model.swift      | 242 +++++++++++++++
+ .../modals-dialogs/GeofenceDrawer.ModelTests.swift | 235 ++++++++++++++
+ .../modals-dialogs/GeofenceDrawer.Previews.swift   |  87 ++++++
+ .../modals-dialogs/GeofenceDrawer.Projection.swift | 145 +++++++++
+ .../GeofenceDrawer.ProjectionTests.swift           | 203 +++++++++++++
+ .../modals-dialogs/GeofenceDrawer.Seams.swift      | 223 ++++++++++++++
+ .../modals-dialogs/GeofenceDrawer.States.swift     | 185 +++++++++++
+ .../modals-dialogs/GeofenceDrawer.Tests.swift      | 239 +++++++++++++++
+ .../modals-dialogs/GeofenceDrawer.Views.swift      | 272 +++++++++++++++++
+ .../modals-dialogs/GeofenceDrawer.strings          |  78 +++++
+ .../TeslaSync/modals-dialogs/GeofenceDrawer.swift  |  83 +++++
+ 14 files changed, 2802 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0011-GeofenceDrawer.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.Map.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.ProjectionTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.swift

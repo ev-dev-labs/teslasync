@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and reading the web source that I need to reproduce natively.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source and explore the existing Apple structure.
+
+The web source is a simple horizontal row of 5 status badges. The `feature-views/` directory already has 2391 entries with an established file pattern. Let me check if `LiveStateIndicators` already exists and study the established conventions.
+
+271 surfaces exist, each following a consistent multi-file pattern. `AchievementBadge` is the closest analog (a Badge surface with the full file set). Let me study it completely to learn the conventions.
+
+Excellent — this is a thorough, well-architected pattern. Let me read the remaining files of this exemplar and find the shared tokens/components.
+
+Now let me read the remaining exemplar files and locate the shared P1/S9 tokens and the shared Badge component.
+
+There's a shared `Badge` at `Sources/Components/UI/Badges.swift`. Let me read it and locate the design tokens.
+
+The shared `TSBadge` lacks `dot`/`size`; `TSStatusPill` has a dot. I need the exact web `Badge` semantics plus `formatSpeed` and the `VehicleState` shape for parity. Let me read those.
+
+Now I understand the web `Badge` (tinted pill, `dot` = leading `bg-current` dot, `lg` = larger). Let me see how existing surfaces handle a `useUnits`/`formatSpeed` binding and whether a richer native badge exists, plus read the tokens.
+
+`VehicleStatePanel` and `SpeedGearPanel` are the closest analogs (they bind `formatSpeed` and handle speed). Let me read the native units facade pattern and the web `formatSpeed` implementation.
+
+`SpeedGearPanel` ports `convertSpeedFromSI` 1:1 into the surface (each surface owns its pure converter). Let me read the exact web speed conversion/formatting primitives, the SpeedGearPanel format helper, the tokens, and how `project.yml` includes files.
+
+Let me locate the generated tokens (Color.TS, TSSpacing, TSRadius, Font.TS) and read the exact web speed primitives plus SpeedGearPanel's format helper.
+
+Now let me read the tokens, the web speed constants, SpeedGearPanel's format helper, and how `project.yml` includes sources.
+
+I now have the tokens, conversion math, format helper, and the XcodeGen glob-based inclusion (new non-Tests `.swift` files auto-compile). Let me check the test target wiring, whether the xcodeproj/xcodegen exists, and read the `SpeedGearPanel`/`VehicleStatePanel` units+state patterns.
+
+Key facts: project is generated via `xcodegen`, the app build stages a KMP `Shared.xcframework` via a script, and co-located `*Tests.swift` compile into the test bundles. Let me read the test/preview patterns and the xcframework staging script to gauge build feasibility.
+
+Let me read the Previews pattern, the xcframework staging script, the placeholder checker, and confirm the iPhone 16 simulator exists.
+
+The iPhone 16 simulator is booted and full Xcode is present. The app build needs a KMP `Shared.xcframework` (Gradle). Let me check whether it's pre-staged, whether gradle works, and read the placeholder patterns.
+
+Let me confirm the placeholder matcher's case sensitivity so I word comments safely.
+
+The matcher is case-insensitive, so I'll avoid every forbidden word (TODO, FIXME, XXX, "Coming soon", Placeholder, "Lorem ipsum", "not implemented", plus stub/mock) in code and comments. Let me see how `-Path` enumerates files so I can run the gate correctly.
+
+Now I understand the harness. Let me read the lint/format configs and check whether a native `VehicleState` type already exists to reuse, then I'll write the surface.
+
+No shared `VehicleState` struct to reuse — surfaces own their input shape. Let me read `VehicleStatePanel`'s Units + speed-format helper to mirror that convention exactly.
+
+Let me read `SpeedGearPanel`'s units enum and facade (the canonical speed surface) to mirror exactly.
+
+I have the full pattern. Let me confirm reusable primitives: a FlowLayout for `flex-wrap`, plus `TSFadeIn`/`TSButton`/`TSSkeleton` signatures.
+
+`SuggestedPrompts` is a feature-view rendering wrapping chips — the ideal analog. Let me see its flow-layout approach and locate `TSSkeleton`.
+
+Each surface defines its own local `Layout` for `flex-wrap`. Let me read `SuggestedPrompts`'s flow-layout implementation and `TSSkeleton` to mirror them.
+
+I have everything needed. Let me set up a plan and todos, then write the surface. The web component is a flex-wrap row of 5 status badges fed a `VehicleState`; I'll reproduce it as a native leaf with the established P4 multi-file pattern (Adapter/Model/Views/States/View/Previews/strings + two test files).
+
+Now I'll write the surface files, starting with the pure adapter core.
+
+Now the Model file (telemetry, projection, source seam, observable model, strings facade).
+
+Now the Views file (flow layout, dotted `lg` toned chip, badge row).
+
+Now the States file (loading skeleton chips, empty, error chrome).
+
+Now the main surface View, plus Previews and the strings catalog.
+
+Now the two XCTest files (adapter/projection/format/a11y + model/state-holder).
+
+All 9 files written. Now verification — starting with formatting and linting my files. Let me run swiftformat (normalize), then swiftformat --lint and swiftlint --strict scoped to my files.
+
+swiftformat normalized 4 files. Let me verify lint-clean (swiftformat --lint + swiftlint --strict) on my files and review what changed.
+
+Format and lint are clean (0 issues). Now let me scan my files for forbidden placeholder/stub patterns (the matcher is case-insensitive) to satisfy the ADR-011 gate honestly.
+
+Two comment-only hits. The checker's patterns don't include "stub", but the prompt's acceptance list forbids "stub"/"placeholder", so I'll reword both comments to be unambiguous.
+
+Placeholder gate passes for real (COUNT=0). Format and lint are clean. Now the heavy gate: generate the Xcode project and build. Let me generate first.
+
+Project generates cleanly with both schemes. The build's pre-action stages a KMP `Shared.xcframework` via Gradle. Let me assess whether that toolchain is available before committing to the full build.
+
+Environment is fully provisioned for the KMP build (Java 17, `~/.konan`, gradle cache, network up). This is the intended gate. Let me stage the `Shared.xcframework` first (warms the cache, isolates Gradle from xcodebuild), running it in the background.
+
+The Gradle/Kotlin-Native framework build is running (first-run compile). Let me continue waiting for it.
+
+Still compiling (Kotlin/Native builds multiple slices: device arm64, sim arm64/x86_64, macOS). Continuing to wait.
+
+`Shared.xcframework` built and staged successfully (6m51s). Let me confirm my working tree only adds the new files, then launch the full iOS build+test gate (the long pole) in the background.
+
+Clean tree — only my 9 files. Let me check existing log conventions (size/verbosity) before launching, so my committed gate log matches house style.
+
+Existing P4 logs are ~6–18KB (curated, not raw multi-MB dumps). Let me read one to match the exact expected format.
+
+These logs are full `xcodebuild` dumps (the reference one was even interrupted mid-UI-test, `IOS_EXIT=143`). I'll run the real build+test, streaming full output to a raw file and building an honest curated gate log from it. Let me launch the iOS build first (the critical global-compile check) in the background.
+
+The iOS build failed — but the errors are in **pre-existing** files (`StateTimeline.*`, `StateTimelineWidget.*`): `'StateTimelineModel' is ambiguous for type lookup`. My files define nothing named `StateTimeline*`. Let me confirm this is a pre-existing duplicate-symbol collision in committed code, not caused by my change.
+
+Confirmed: this is a **pre-existing, committed duplicate-symbol collision** entirely outside my change — `StateTimelineModel` (and `StateTimelineUpdate`/`Connection`/`LoadStatus`) are each declared twice: once in the `StateTimeline` feature-view and once in the `StateTimelineWidget` dashboard-widget (two different surfaces, each with its own prompt). My files reference none of these. Let me quantify how broken the baseline is and confirm my surface isn't implicated.
+
+The baseline is broken independently of me: the `StateTimeline` feature-view and `StateTimelineWidget` dashboard-widget (two other surfaces, each with its own prompt) duplicate ~10 public symbols (`StateTimelineModel`, `StateTimelineUpdate`, etc.), which is a hard compile error in the shared module. Every one of my `LiveState*` names is unique (0 external declarations). Fixing those sibling surfaces is explicitly out of my allowed-files scope.
+
+To prove my surface itself compiles and its tests pass in the real app, I'll do a transient isolation build (move one colliding set aside, build, then restore). Let me first confirm those surfaces aren't referenced elsewhere.
+
+Both colliding surfaces are fully self-contained (no external references). I'll transiently move one colliding set aside to clear the pre-existing collision, then build the real app + run my surface's tests to prove correctness, then restore. Moving + regenerating first.
+
+Moved aside and regenerated. Now building the real app + running my surface's tests (background, monitored).
+
+Build running in background. Let me wait and monitor progress.
+
+The backgrounded job was killed when the sync shell ended (empty log). I need a persistent async session for the long build. Relaunching properly.
+
+Build is running in a persistent async session. Let me wait for it to compile the app and run the tests.
+
+A `swift-frontend` **compiler crash** during IR generation caused BUILD FAILED (the "BUILD SUCCESSFUL in 1s" lines are just the cached Gradle pre-action). I need the crash context — which file/module triggered it. Let me inspect the raw log while the session continues.
+
+The whole-module build hits a **pre-existing `swift-frontend` IRGen crash** while *Emitting module for TeslaSync* (a separate, deeper baseline defect — it only surfaced after the duplicate-symbol type errors were cleared, meaning the 2400-file module never emitted cleanly on this snapshot). This is unattributable to my 9 small files. Let me stop this build and instead do a focused type-check of my surface against the *real* shared APIs, which cleanly isolates my code's correctness.
+
+`Sources/Components/**` only imports system frameworks — so my surface + the real design-system + tokens form a self-contained unit I can type-check directly against the simulator SDK (Swift 6, strict concurrency, like the real target). This cleanly isolates my code from the broken 2400-file module.
+
+Good — the only errors are in `Sources/Components/Maps/MapView.swift` referencing `TSChartPalette` (defined elsewhere), a component my surface doesn't use. **Zero errors in my files.** Let me locate `TSChartPalette` and include it (or scope deps to the categories my surface actually uses) for a clean pass.
+
+`TSChartPalette` lives in `Sources/Design/TSDesign.swift`. Adding it should resolve the only missing symbol. Re-running the type-check with it included.
+
+2 remaining errors, **none in my files**. Let me confirm what those 2 are (dependency-side) to verify my surface is fully clean.
+
+The last error is in `Cards.swift` (`tsGlassPanel` modifier defined elsewhere) — again not my code. Let me find and include that definition to fully close the dependency set.
+
+Including both `Sources/Design` files should close it. Final type-check run:
+
+Every error across all runs is in a *peripheral* dependency file I over-included (`Maps`→`TSChartPalette`, `Cards`→`tsGlassPanel`, now `DataDisplay/UnitFormatters`→app-level `UnitPreferences`) — **never in my files**. Let me do one clean run with exactly my surface's transitive dependency set. First, verify `Buttons`/`Cards` deps.
+
+`Cards` pulls in `Typography` + `TSMaterial` (all within `UI`/`Design`). Let me scope to exactly `UI` + `Feedback` + `Motion` + `Design` + `Tokens` (excluding the peripheral `DataDisplay`/`Maps`/`Charts`/`Forms` that have app-level deps) — that covers my full transitive set.
+
+Only `FeedbackOverlays` (which I don't use, but it cross-refs `DataDisplay`'s `TSMetricBar`) errors. Let me use an explicit minimal file list of exactly what my surface transitively needs.
+
+**My surface type-checks cleanly (0 errors)** against the real shared APIs under Swift 6 strict concurrency on the iOS 18 simulator SDK. Now let me validate my test *expectations* against real runtime behavior by running the pure adapter logic standalone (the only non-trivial assertions — speed conversion, locale number formatting, em-dash).
+
+Top-level code needs to be in `main.swift` when compiling multiple files. Let me rename and rerun.
+
+All 21 runtime checks pass — validating my test expectations exactly. Now I must **restore** the transiently-moved sibling files and regenerate the project so the repo is back to its original state plus only my additions.
+
+Tree restored — only my 9 files added. Now let me run the remaining non-compilation gate steps (lint/format/placeholder) on the full tree to capture honest results for the log.
+
+Full-tree `swiftlint --strict` passes (exit 0). Now `swiftformat --lint` on the full tree.
+
+Both lint and format pass on the full tree (3127 files, exit 0). Per the covenant ("no skip-and-assume"), let me capture real macOS evidence too — it shares the same sources, so it should hit the identical pre-existing collision. Launching macOS build + the placeholder gate.
+
+Placeholder gate passes (literal + real, COUNT=0). Let me wait for the macOS build to capture its failure evidence.
+
+macOS build fails at **code-signing** (entitlements require a development certificate; `DEVELOPMENT_TEAM` is empty) — an environment limitation, before compilation. Let me grab the precise evidence snippets to embed honestly in the log.
+
+I have complete, honest evidence. The literal full-build gate is **blocked by pre-existing, out-of-scope defects** (two *other* surfaces collide on ~10 symbols; a whole-module IRGen compiler crash in the 2400-file baseline; macOS signing unconfigured), while my surface is proven green by every isolating check. Let me write the gate log.
+
+Log written. Let me mark the todo done, confirm build artifacts are git-ignored, and commit only my 9 files + the log.
+
+Exactly the 9 deliverable files + log are staged (artifacts git-ignored). Committing with an honest message that discloses the blocked repo-wide gate.
+
+Committed (10 files, 1690 insertions). Let me clean up temp artifacts and confirm the final state.
+
+The task is complete to the maximum honest extent. Here's my final summary.
+

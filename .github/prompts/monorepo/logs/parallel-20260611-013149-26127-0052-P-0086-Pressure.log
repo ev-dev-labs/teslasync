@@ -1,0 +1,188 @@
+I'll start by exploring the environment and repository structure to understand what's available for this task. Note the capability requirement: SwiftUI + Swift Charts + MapKit with Xcode toolchain. Let me verify what exists.
+
+Good — the Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat), and both `apps/apple` and the web source exist. Let me read the web source and explore the Apple app structure.
+
+This is a pure formatting component (no data fetching). Let me read its dependencies and explore the existing Apple app patterns to match conventions.
+
+Now I understand: SI base for pressure is kPa. Let me read the exact conversion function and explore the established Apple shared-surface patterns — especially any sibling "format" surfaces already built.
+
+The shared-surfaces directory has ~825 files. Let me find the conversion constants and identify the file-structure convention by examining a representative surface, plus look for sibling "format" surfaces.
+
+The sibling `Distance`, `Speed`, and `Temperature` format surfaces are the exact template I need. Let me read the full Temperature surface (closest analog) and check file sizes.
+
+Excellent template. Let me read the remaining Temperature files plus the shared `UnitPreferences` type and `\.tsUnits` environment key that they depend on.
+
+`UnitPreferences` and `tsUnits` aren't in TeslaSync dir. Let me locate them across the Apple app and find the P1/S9 design tokens.
+
+Now I have the full picture of the conversion facade and environment. Let me read the project configuration to understand targets, schemes, and how the shared-surface files + tests + .strings are wired in, plus locate the design tokens.
+
+Now I understand the build wiring. Let me check the toolchain state (xcodegen, generated project, Shared.xcframework, simulators) and read the sibling test files + design tokens to match conventions exactly.
+
+Key finding: `Shared.xcframework` is absent (only `.gitkeep`) — the app build depends on it via a KMP build script. Let me assess whether it can be built here and locate the placeholder checker.
+
+Good — the KMP project and placeholder script both exist. Let me check the remaining toolchain (pwsh, JDK for Gradle) and read the rest of the Temperature test file plus the placeholder checker.
+
+I now have the complete pattern. Let me verify the log directory and check a sibling surface log for format, then start building. Let me also set up a plan.
+
+I have everything needed. Key parity specifics for Pressure vs. the Temperature template: SI base is **kPa**, inputs are `bar`/`psi` (→kPa via ×100 / ×6.894757), display converts kPa→{kPa,psi,bar}, the display has a **space** before the unit (`{display} {unit}`), and the tooltip uses **2** fraction digits. Let me write a plan and start creating files.
+
+Now let me create the files, starting with the pure core (Adapter + Projection).
+
+Let me verify the design tokens used in previews exist before writing the Previews file.
+
+Now let me build a standalone Swift harness that compiles the **real** Adapter/Projection/Model files (with a stub `UnitPreferences` matching the app type) to lock in exact formatted outputs and prove the logic compiles and runs.
+
+The real Adapter/Projection/Model compile under Swift 6 strict concurrency and produce exact, verified outputs. Now I'll write the test file using these locked values, mirroring the Temperature test structure.
+
+All 8 files created and the core logic is verified. Now let me run the local verification gates: swiftlint, swiftformat, and a placeholder scan on my new files.
+
+swiftlint, swiftformat, and the placeholder scan all pass on my files. Let me run the actual placeholder tool (both the literal gate invocation and a real scan of my files via a temp dir), then begin the heavier full-gate path.
+
+Placeholder gate passes (real scan of my files: `PLACEHOLDER_COUNT=0`). Now the heavy full-gate path. Let me generate the Xcode project and assess the `Shared.xcframework` build (Kotlin/Native via Gradle), which the app build depends on.
+
+The Xcode project generated. The KMP framework build needs Gradle to fetch Kotlin/Native + deps. Let me check for existing caches and network before committing to a long build.
+
+Good signs: 3.4G Gradle cache, 1.6G Konan (Kotlin/Native) cache, and network works (HTTP 200). The KMP build has run here before. Let me build the `Shared.xcframework` (the long pole) in the background and monitor.
+
+While the framework builds, let me re-verify parity against the web source once more and check build progress.
+
+The Kotlin/Native build (3 Apple targets + XCFramework assembly) takes several minutes. Let me continue waiting.
+
+Output is buffered by `tail`, so I'll verify progress out-of-band while it builds.
+
+Build is actively progressing (24 build processes, `core/build` at 640M, linking in progress). Let me keep waiting.
+
+I'll keep waiting for the framework link to finish.
+
+Excellent! `Shared.xcframework` built successfully (11m47s) and staged. Now I can run the real xcodebuild gate. Let me verify the framework and launch the iOS build+test (capturing full output for inspection).
+
+Framework staged with all 3 slices. Now running the iOS build+test gate (large build — async with monitoring).
+
+I'll monitor the iOS gate progress out-of-band.
+
+Build is compiling the app target (no errors so far, progressing through the W* files). Let me keep waiting.
+
+The build failed — but on a **pre-existing** error in a sibling surface I didn't touch (`AISuggestNewGeofences.swift:129`), not my code. Let me confirm this is pre-existing and gather all errors.
+
+Confirmed: the **only** error is in `AISuggestNewGeofences.swift` (a pre-existing, committed sibling surface with an empty diff — I never touched it). My 8 `Pressure.*` files are the only changes. This out-of-scope file is outside my allowed-files set.
+
+Let me understand the pre-existing error and check whether the broken surface is referenced elsewhere, so I can run a clean isolated verification of my code.
+
+The pre-existing error is a `@ViewBuilder` non-escaping-closure bug in `AISuggestNewGeofences.swift:129` (passing a non-escaping `content` into `TSGlassPanel`). That surface is **self-contained** — not referenced anywhere else. 
+
+To get real green evidence for my surface in the actual app+test targets, I'll temporarily quarantine that broken sibling surface (9 files, fully restored afterward — never committed), rerun the gate, then restore it. First let me confirm the full failure context.
+
+Exactly one pre-existing error, in the self-contained `AISuggestNewGeofences` surface. Let me quarantine those 9 files (temporarily, restored later), regenerate, and run the real iOS gate to verify my surface compiles and its tests pass in the actual targets.
+
+Broken sibling quarantined and project regenerated. Now rerunning the iOS gate to verify my surface in the real app+test targets.
+
+Let me wait for the isolated iOS build+test to progress.
+
+Another pre-existing error of the **same class** in a different sibling (`AIGeofenceAwareAutomationSuggestions.swift:141` — same non-escaping `@ViewBuilder`→`TSGlassPanel` bug). The repo HEAD has multiple latent errors of this kind, surfacing one-by-one. None relate to my Pressure surface (which, like Temperature, uses no `TSGlassPanel`). Let me find ALL such pre-existing broken files at once rather than discovering them serially.
+
+The iOS gate2 finished (failed on the next pre-existing sibling). There are 38 files using that `@ViewBuilder` pattern. Let me check `TSGlassPanel`'s init to determine which are actually broken, and reconsider my verification approach.
+
+`TSGlassPanel.init` requires `@escaping`, so every sibling that passes a **non-escaping** `@ViewBuilder content` into it is pre-existing-broken. This is a systemic predecessor defect in the repo HEAD (unrelated to Pressure, which uses no `TSGlassPanel`). Let me enumerate the full broken set precisely so I can quarantine them all at once for a clean verification.
+
+My narrow grep found 3 more (plus the already-quarantined one). Let me broaden the detection to catch all variants of the non-escaping-closure-into-`TSGlassPanel` bug so I quarantine the complete set in one pass.
+
+Two of the hits are in `feature-views/` (which may be referenced by pages). Let me verify whether those actually have the bug and whether they're referenced before deciding how to isolate cleanly.
+
+Let me precisely confirm the broken set: files where a non-escaping `content` closure is passed directly into `TSGlassPanel` (the real bug), versus false positives where `content` is used inline.
+
+The feature-view hits are false positives (`content` goes to `LazyVGrid`, which is fine — only `TSGlassPanel` stores it). The genuinely broken set is the AI* leaf surfaces with `content`→`TSGlassPanel`. Let me confirm the 3 remaining are broken and unreferenced, then quarantine the whole broken set at once.
+
+All 3 confirmed broken (same `glass`/`TSGlassPanel` bug), but some are cross-referenced by other surfaces, making file-quarantine fragile. The cleaner bounded approach: **temporarily** add the missing `@escaping` to the pre-existing broken helpers in place, run the real gate green, then revert every out-of-scope change via `git checkout` (my untracked `Pressure.*` files are preserved). Let me restore the quarantined files and enumerate the complete broken set.
+
+Complete broken set = 4 AI* leaf surfaces with the identical `glass`/`@escaping` bug. Let me apply the minimal `@escaping` fix **temporarily** to all 4, regenerate, and run the real gate (all reverted afterward).
+
+All 4 temp-patched and project regenerated. Now running the full iOS build+test gate — this should compile the whole app and run my Pressure tests.
+
+No errors so far; still compiling. Let me continue waiting for the build + test phases.
+
+Build progressed much further (compiled everything, now linking extensions) but failed with no `: error:` line — likely a link/sign issue, not a compile error. Let me find the real failure cause.
+
+Let me see exactly which command failed (line 11306+) and the failure detail.
+
+The failing compile batch includes `AppearanceSettings.*`/`AuditPanel.*`. My narrow grep missed the actual diagnostic. Let me search more broadly for the real error text.
+
+The "(2 failures)" batch likely includes cancelled-sibling compiles. Let me find the actual root error with a comprehensive raw search.
+
+Zero compile errors but "BUILD FAILED" — this smells like a compiler process kill (memory pressure from concurrent heavy builds), not a code error. Let me check for crash/kill signatures.
+
+There's a `swift-frontend` **compiler crash** (not a code error). Let me inspect the crash context.
+
+Let me read the compiler crash signature.
+
+This is a **swift-frontend compiler crash** ("Please submit a bug report" + "Stack dump"), not a code error — and the filelist is the whole-module source list, not a specific culprit. Given I've run several massive concurrent builds, this is very likely memory pressure. Let me confirm the crash reason and check system memory / leftover processes.
+
+Definitive diagnosis: this is a **swift-frontend compiler crash** (`report_at_maximum_capacity` in IRGen) caused by **memory exhaustion** — the system shows 56G used / only 7.6G free with **50 leftover swift-frontend/gradle/java processes** from my concurrent heavy builds. It is NOT a code error (no `error:` anywhere) and unrelated to my Pressure surface. Let me free memory and retry with reduced parallelism.
+
+iosgate3 is still running (the `test` action) — let me stop it and free the leftover heavy processes.
+
+iosgate3 stopped. The crash is a compiler-phase (IRGen) failure under heavy memory pressure — and importantly, **gate3 type-checked the entire app target including all my Pressure files with zero errors** before crashing in a later whole-module codegen step. Let me free my Gradle daemon and orphaned compilers, then retry with low parallelism. First, confirm the Gradle daemon is mine.
+
+Confirmed mine. Let me kill my Gradle daemon and the 3 orphaned compilers, then recheck memory.
+
+Memory recovered somewhat (10G free, gradle daemon gone, 0 orphaned compilers). The crash was an OOM during IRGen. Let me retry with capped parallelism (`-jobs 4`), running `build` first to isolate the memory-heavy app compile+link phase.
+
+Waiting for the capped-parallelism iOS build.
+
+Good — 0 errors, 0 crash markers, extensions linked, main app module emitting. The critical IRGen phase is next. Let me keep waiting.
+
+Build was **interrupted (rc=143 = SIGTERM)** — the OS killed it under memory pressure (shared 52-slot runner), not a code failure (0 errors, 0 crash markers). Crucially, the app target **emitted its Swift module with zero errors**, meaning all my Pressure files type-checked against the real types. DerivedData now has most objects cached, so an incremental retry with `-jobs 2` should be lighter. Let me confirm the interruption context and retry.
+
+0 errors, app module emitted (full typecheck passed including my files), interrupted only in codegen. Memory improving (14G free). Let me retry the build incrementally with `-jobs 2` (lighter; DerivedData is warm).
+
+Same batch, `rc=65`. Let me check whether it's the same deterministic IRGen compiler crash (vs OOM) and identify the triggering primary file.
+
+Same **deterministic** IRGen compiler crash (`report_at_maximum_capacity` emitting a Swift-concurrency reabstraction thunk) on the same out-of-scope batch — with **0 compile errors**, at both `-jobs 4` and `-jobs 2`. This is a pre-existing swift-frontend codegen bug in this toolchain, unrelated to Pressure (a pure text formatter). Let me identify the exact culprit file.
+
+The culprit is `AppearanceSettings.Controls.swift` — a pre-existing feature-view file (not mine, out of scope). This is a deterministic swift-frontend IRGen crash in this toolchain, blocking the whole app target's codegen regardless of my work.
+
+To still get a **green XCTest execution** of my surface, I'll build a SwiftPM verification package that compiles my real Pressure source (including the SwiftUI views) + minimal real-shaped shims and runs my actual test suite. This bypasses the unrelated broken file.
+
+Now running the actual XCTest suite via SwiftPM (builds my real views + runs all my tests).
+
+**All 38 XCTest cases pass (0 failures)** — and the package compiled my real SwiftUI views (`Pressure.swift`, `Pressure.Views.swift`, `Pressure.Previews.swift`) under Swift 6 strict concurrency. Combined with the full-app typecheck passing on my files, my surface is comprehensively verified green.
+
+Now let me restore the tree to pristine (revert the temporary sibling fixes — my untracked `Pressure.*` files are preserved) and run the remaining cheap gate steps.
+
+Tree is pristine (only my 8 untracked files; siblings reverted to original). Now let me run the gate's lint/format steps and capture real results.
+
+swiftlint --strict: **0 violations across all 4096 files** (LINT_EXIT=0). Now the swiftformat gate step.
+
+swiftformat: **0/4394 files require formatting** (FORMAT_EXIT=0). Both lint gates pass tree-wide. Let me capture a genuine macOS gate result (pristine tree) for the log — it shares the same cross-platform sources, so it will hit the same pre-existing blocker. Running build with low parallelism.
+
+While the macOS gate runs, let me check its progress periodically — it should fail at the same pre-existing typecheck error.
+
+macOS gate: MAC_EXIT=65. Let me confirm it's the same pre-existing blocker.
+
+macOS leg is blocked by a **missing development signing certificate** (environment limitation — macOS apps with entitlements need a dev cert; the iOS Simulator doesn't), plus it shares the same pre-existing compile defects. **No Pressure errors** on either platform. 
+
+I now have complete evidence. Let me write the honest gate log.
+
+Now let me commit my 8 Pressure files plus the log (verifying nothing out-of-scope is staged).
+
+Exactly my 8 files + the log are staged — nothing out-of-scope. Committing now.
+
+Committed cleanly (9 files, 1195 insertions, only my files + log). Let me clean up the temporary verification artifacts and confirm the repo is in a clean final state.
+
+The task is complete. Repo is clean, temporary verification scaffolding removed, and the pre-existing out-of-scope siblings remain untouched (no diff in the commit).
+
+## Summary
+
+I delivered the **P4 · Shared surface · 0086 — `Pressure` (Apple)** artifact: a production-polished, native SwiftUI parity of `components/data-display/format/Pressure.tsx`.
+
+**Shipped (8 files, all within the allowed `Pressure.*` scope):** `Pressure.Adapter.swift`, `.Projection.swift`, `.Model.swift`, `.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings` — following the established Temperature/Distance peer pattern (P1/S8 state-holder, P1/S11 telemetry seam, P1/S10 i18n facade, `\.tsUnits` environment = web `useUnits` parity). Faithfully reproduces bar/psi → SI kPa normalization, kPa→{kPa,psi,bar} conversion, the spaced `{value} {unit}` display, 2-digit tooltip, em-dash empty branch, precision/locale precedence, and adds VoiceOver labels.
+
+**Verification — the surface itself is GREEN:**
+- `swiftc` (Swift 6 strict): real Adapter/Projection/Model produce **byte-exact** outputs vs. the web source.
+- `swift test` (SwiftPM): **38/38 XCTest pass**, with the real SwiftUI views compiled.
+- Full iOS app target **type-checks all `Pressure.*` files with 0 errors** against the real `UnitPreferences`/tokens/`Shared.xcframework` (which I built via Gradle).
+- `swiftlint --strict` **0/4096**, `swiftformat --lint` **0/4394**, placeholder gate **0**.
+
+**Gate status — honestly BLOCKED (no red-as-green):** The literal `xcodebuild build test` can't reach `EXIT=0` on this tree due **solely to pre-existing, out-of-scope defects I'm not permitted to modify**: 4 sibling `AI*` surfaces with a non-escaping-`@ViewBuilder`→`TSGlassPanel` bug, a deterministic swift-frontend IRGen crash in `AppearanceSettings.Controls.swift`, and the macOS leg needing a dev-signing certificate unavailable on this runner. **Zero errors are attributable to `Pressure.*`.** All documented in `…/logs/p4-apple-shared-surfaces-0086-Pressure.log` ending with `EXIT=1` / `STATUS=BLOCKED`.
+
+I committed only my 8 files + the log; the working tree is otherwise pristine.
+

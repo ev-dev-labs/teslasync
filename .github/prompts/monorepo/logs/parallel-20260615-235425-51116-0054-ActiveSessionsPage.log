@@ -1,0 +1,193 @@
+I'll start by exploring the repository structure to understand the existing patterns before implementing the SwiftUI page.
+
+Now let me examine the `ActiveSessionsSection` component (the actual content) and the existing Apple app structure to understand patterns.
+
+Let me check the Apple app structure deeply, the API hooks/types, and whether an Xcode runner is available (critical gate).
+
+Xcode 26.5, swiftlint, swift 6.3, xcodegen all available — the gate is NOT blocked. Let me understand the project configuration and existing patterns.
+
+The prompt's templated output path (`TeslaSync/Features/Settings/`) doesn't match the actual structure. Let me find how already-"done" parity pages (e.g. ApiPlayground, AuditLog) were actually implemented to learn the real convention.
+
+The real convention is `apps/apple/Sources/Features/{Category}/`. Let me study the canonical pattern (ApiPlayground = page + model + route registration + tests) and the navigation/route system.
+
+Now let me study the model pattern, route registration, the shared components available, and check whether sessions data exists in the KMP core / shared facade.
+
+Let me examine the routing system, available shared components, the string catalog, and check for an existing sessions API in the shared core.
+
+`AppRoute` has no `sessions` case yet, but has an `.account` group. Let me check the route parser, how settings sub-pages map, and what settings pages already exist in the ledger.
+
+Let me understand the AppShell sidebar generation and find the referenced `SettingsRouteRegistration` to follow conventions for hidden/sub-page routes.
+
+Let me check whether `ActiveSessionsSection` is a separate parity unit, and examine the sessions API contract (hook, type, backend route) to model the data correctly.
+
+I now have the data contract. Per the honesty covenant (no stubs/scope-narrowing) and ADR-011 (no placeholders), I'll implement the **full** functional page reproducing `ActiveSessionsSection`. Let me gather the type definitions, available shared components, the string catalog, and the placeholder checker.
+
+Let me locate the shared component library (TSGlassPanel, TSButton, etc.) and design tokens.
+
+Let me read the remaining components (Buttons, DataTable, Typography), find the string catalog, the placeholder checker, and how confirm dialogs are done.
+
+Let me read the Typography component and study how an existing page handles destructive row actions + confirmation dialogs (e.g., Users/SecretRotation), plus locate the string catalog and placeholder checker.
+
+Let me check the confirm-dialog pattern, the placeholder checker, the gate contract, and the xcstrings format.
+
+pwsh available — gate is runnable. Let me examine the string catalog structure, the test patterns, and confirm the ledger format. Let me set up a plan first.
+
+Let me verify which keys already exist in the catalog (avoid duplicates) and read the exact web default strings for the sessions section.
+
+The web component provides inline English defaults, so I have all string values. Let me verify the data-binding precedent: how does a page WITH a data source (AuditLog) structure its model, and is there any sessions/auth API in the shared facade?
+
+This is the blessed pattern (seam + `Sample*DataSource` default, mirroring AuditLog). Now let me find the route-registration composition root and check for tests that assert `AppRoute` counts/exhaustiveness before I add a case.
+
+Adding a route case triggers codebase invariants (menu + explore catalogs must contain every `AppRoute`). Let me inspect the composition root and those catalogs to scope the change correctly.
+
+Let me locate the menu catalog, explore catalog, settings route registration, and the route tests to scope the ripple effects of adding a route.
+
+I have enough to design the solution. Let me confirm the test style, swiftlint rules, and `TSInlineCallout` before writing.
+
+I have all the context needed. Let me view `TSInlineCallout`'s signature, then set up the plan and todos.
+
+I have a complete understanding. Let me record the plan and todos, then implement.
+
+Now implementing. Starting with the model.
+
+Model created. Now the View.
+
+Now the route registration.
+
+Now wiring navigation: add the `accountSessions` case to `AppRoute`, its path/icon/group, and the parser alias.
+
+Now wire the registration into the composition root.
+
+Now the strings. First verify no key collisions in the catalog.
+
+`error.title` isn't in the catalog. Let me check how existing error panels resolve their keys (ApiPlayground used explicit keys) and whether `action.retry`/`playground.errorTitle` exist.
+
+I'll pass an explicit title to `TSErrorDisplay` (since `error.title` isn't in the catalog), then insert all strings via a validated script.
+
+Strings inserted and JSON-validated. Let me verify the head of the file looks correct.
+
+Now the model tests.
+
+Now let me run fast checks (swiftlint + placeholder scan) before the slow build.
+
+Placeholder scan clean (0). SwiftLint linted the whole tree (10 violations total) — let me see whether any are in my new files vs pre-existing.
+
+Three violations in my view file. Let me locate the exact lines and fix the trailing-closure and body-length issues.
+
+The two `TSButton` calls use trailing-closure-with-action (flagged), and the struct body exceeds 250 lines. Let me rewrite the view: split helpers into an extension and use labeled `label:` args.
+
+Let me re-run swiftlint to confirm my files are now clean.
+
+My files are clean — the 2 remaining violations are in `AnomalyInlineRow.Previews.swift` (not mine). Let me confirm they're pre-existing baseline noise and check how to scope the lint gate.
+
+Confirmed pre-existing and unrelated. Let me determine how to scope swiftlint to my unit reliably.
+
+Explicit file paths scope swiftlint correctly. Let me confirm all my touched files are clean, and check whether the `Shared.xcframework` (build dependency) already exists.
+
+All 7 touched files are swiftlint-clean. The `Shared.xcframework` (KMP dependency) isn't built yet. Let me understand the build feasibility on this runner.
+
+Java 17 + gradlew present, and I'm on macOS with Xcode — so a real build is feasible. The KMP `Shared.xcframework` must be built first (it's a build dependency). Let me start that in the background and refresh the Xcode project meanwhile.
+
+The KMP build is running (expected — first build downloads the Kotlin/Native toolchain). Let me regenerate the Xcode project and prepare the ledger meanwhile.
+
+Project regenerated and includes my files. Let me check on the KMP build progress.
+
+While the KMP build runs, let me prepare the ledger update. Let me inspect the ledger schema and structure.
+
+Ledger structure is clear (append 2 rows to `rows`). Let me check the KMP build again.
+
+The `| tail` buffers output until completion, so I can't see live progress. Let me check build activity directly.
+
+The KMP build is actively compiling native code (clang++ emitting objects, XCFramework dir being assembled). Let me wait for it to finish.
+
+KMP framework built successfully (11m47s). Let me view the rest of the staging script and stage the framework into `Frameworks/`.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now let me build. I'll start with the macOS scheme, logging to a file so I can track progress.
+
+macOS build failed (exit 65). Let me find the errors.
+
+macOS build failed on **code signing** (no dev certificate) — an environment limitation, not a code error; it failed before compiling Swift. The iOS simulator build (the gate's actual target) needs no signing. Let me find an available simulator and run the iOS build+test.
+
+Booted simulators available (iPhone 16, iOS 26.5). Let me run the iOS build+test. I'll compile the full app and run my tests plus the route-invariant tests (which my `AppRoute` change could affect), logging to a file.
+
+iOS build compiling. Let me check progress via the log file.
+
+Build progressing well into the app module, 0 errors so far. Let me continue waiting.
+
+Still compiling the app module (0 errors). Let me keep waiting.
+
+Main app compiled with **0 errors** — now linking extensions. My code compiles for iOS. Let me wait for the test phase.
+
+Build compiling cleanly (0 errors). Note: there's a pre-existing `ActiveSessionsSection` surface in the co-located tree — I'll verify no type collision after. Let me keep waiting for tests.
+
+**iOS BUILD SUCCEEDED** (0 errors). Now the test action is running. Let me wait for test results.
+
+Test action exited 65. Let me diagnose — test failure vs. test-bundle/sign/launch issue.
+
+The `test` action failed because the **test bundle won't compile** due to a pre-existing error in `WebhooksPageModelTests.swift` (`cannot find 'LocalizedStringKey'` — missing `import SwiftUI`), unrelated to my work. The **build itself SUCCEEDED**. Let me confirm it's pre-existing.
+
+Confirmed pre-existing: `WebhooksPageModelTests.swift` uses `LocalizedStringKey` without `import SwiftUI` — a latent break that only surfaces on macOS (per the repo's own "macos-pending-verifications" doc). It blocks the whole test bundle. Let me check if it's the *only* test-compile blocker.
+
+`WebhooksPageModelTests.swift` is the **sole** pre-existing blocker (needs `import SwiftUI`). Since running my XCTest requires the bundle to compile, I'll apply that trivial, obviously-correct one-line fix (documented as a pre-existing-break unblock) and re-run. Let me view and fix it.
+
+Re-running the scoped tests (app already compiled, so this is incremental).
+
+Tests passed (exit 0). Let me confirm the results and counts.
+
+**iOS gate green:** BUILD SUCCEEDED + TEST SUCCEEDED — 44 tests, 0 failures (16 mine: states/revoke/device-label; plus RouteTests 13, MenuCommandCatalog 8, ExploreCatalog 7 confirming my `AppRoute` addition didn't break invariants). Now let me verify the macOS idiom compiles (earlier failure was code-signing only). I'll build macOS with signing disabled.
+
+macOS build compiling. Let me check for errors while it runs, and meanwhile verify the pre-existing `ActiveSessionsSection` doesn't collide with my types.
+
+macOS build clean so far (0 errors), and the iOS build already proved no type collision. Let me confirm the existing `ActiveSessionsSection` relationship while macOS compiles.
+
+No type collision — the pre-existing `ActiveSessionsSection` (in the experimental `feature-views` tree) uses distinct types (`ActiveSessionItem`, etc.); it's the separate P3 component port. My self-contained P7 page correctly follows the canonical pattern. Let me wait for the macOS build.
+
+macOS build at 0 errors, main module emitting. Let me wait for it to complete.
+
+macOS linking the app bundle (0 errors). Let me wait for final confirmation.
+
+Still compiling (0 errors). Let me wait for completion.
+
+macOS still building (0 errors, 17.5k log lines). Let me wait for it to finish.
+
+Build actively progressing (0 errors, log growing). Let me wait longer for completion.
+
+macOS compiling the main app target (0 errors, 6.5k+ actions). Let me continue waiting.
+
+**macOS BUILD SUCCEEDED** (exit 0, 0 errors). Let me confirm and then finalize: ledger, log, and the gate record.
+
+Both idioms confirmed green. Let me update the ledger (2 rows) and capture the final gate outputs for the log.
+
+Ledger updated (162 rows, valid). Now let me capture clean gate outputs for the evidence log.
+
+All gate components green (placeholder 0, lint 0, builds + tests pass). Let me confirm the PARITY evidence and check the log directory/format.
+
+The DevTools sibling log reveals the convention: this pre-existing `WebhooksPageModelTests` breakage is **"forbidden to commit-fix"** (out-of-scope). I obtained the real green test run (44/44) by temporarily unblocking it, but I should **not commit** that out-of-scope fix. Let me revert it and add a committed-tree-independent isolated harness as backup evidence.
+
+Now let me build a committed-tree-independent harness that compiles my actual model source and exercises its pure logic + state machine (matching the convention in sibling logs).
+
+The harness needs `-parse-as-library` for `@main`. Let me recompile.
+
+The isolated harness (compiled against my **real** model source) passes 19/19 — committed-tree-independent proof. Now let me write the evidence log.
+
+Now let me write the evidence log with the binding `=== PARITY ===` section.
+
+Let me clean up temp artifacts and review the final change set before committing.
+
+Change set is clean and in-scope (xcodeproj is gitignored; reverted Webhooks file excluded). Let me commit.
+
+Commit landed (10 files, 1458 insertions). Let me finalize the todos and verify the full task state.
+
+All todos done. Let me do a final consistency check and update the plan.
+
+Everything is consistent and committed. Let me update the plan to reflect completion.
+
+The task is complete and fully verified. Let me provide the final summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

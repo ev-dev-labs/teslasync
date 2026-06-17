@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+The web source is clear. Now let me explore the Apple app structure to understand established patterns. Let me look at the directory tree and recent sibling surfaces.
+
+The pattern is clear: each surface has 8 files. Let me read the most recent sibling (DataTableColumnMenu) completely to learn the exact conventions.
+
+Let me read the remaining DataTableColumnMenu files and find the shared infrastructure (tokens, surface slug, telemetry). Let me also check whether a native `Tooltip` surface already exists since the web `HelpTooltip` composes `Tooltip`.
+
+The Adapter file contains a crucial precedent note: presentational primitives (no fetch/cache/promise) reproduce only the source's REAL branches, not fabricated loading/error/stale/offline chrome — like sibling `ContextMenu (0206)`. `HelpTooltip` is exactly this kind of primitive. Let me read the remaining DataTableColumnMenu files plus the ContextMenu precedent and the shared tokens.
+
+Now let me find the shared design tokens (P1/S9) and read the test/preview patterns. Let me locate where `Color.TS`, `Font.TS`, `TSRadius`, `TSMaterial` are defined.
+
+No Xcode project exists, so `xcodebuild` cannot run. Let me check how predecessor surfaces handled this in their logs, and whether PowerShell/swift tooling is available.
+
+`pwsh` and the placeholder script are available. Let me read the predecessor's gate log to see the established convention for the (missing) Xcode project, plus the remaining DataTableColumnMenu test/preview files.
+
+This is exactly the established convention. The predecessor uses `xcodegen` + `project.yml` (which globs shared-surfaces), a design-token closure (`Tokens.swift`, `TSDesign.swift`, `TSMaterial.swift`), surface-scoped SDK typechecks, and an executed harness — with full-app `xcodebuild` DEFERRED for foreign reasons. Let me gather the remaining infra and test patterns.
+
+Found the generated design tokens at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the project.yml structure and the remaining DataTableColumnMenu test/preview files.
+
+Now I have the full token API and project wiring. New `shared-surfaces/*.swift` files are auto-globbed by `project.yml` (no wiring edit needed). Let me read the remaining sibling files (Previews, Tests) to mirror conventions, plus the placeholder script and swiftlint config.
+
+Let me read the lint/format/placeholder configs to ensure compliance before writing.
+
+I now have everything needed: the 8-file convention, design tokens, project wiring (auto-globbed), lint/format/placeholder rules, and the honest gate precedent (full `xcodebuild` DEFERRED for foreign reasons; surface-scoped SDK typecheck + executed harness + scoped lint/format/placeholder = green). Forbidden words in code: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented". Let me set up tracking and write the plan.
+
+Now I'll write all 8 files. Starting with the Foundation-only pure core (Adapter), the Model (facade + telemetry + controller), then the views.
+
+Now the public view and subviews:
+
+Now the strings catalog, previews, and the two test files:
+
+Let me add a content-gate to `start()` in the Model (makes the "no telemetry when empty" contract unit-testable and doubly-safe), then write the two test files.
+
+All 8 files created. Now the verification gate. Let me start with the fast scoped lint + format checks.
+
+SwiftLint clean (0 violations). Now swiftformat lint + placeholder scan.
+
+SwiftFormat wants two idiomatic fixes (`redundantEmptyView`, `conditionalAssignment`). Both are correct Swift idioms — let me apply swiftformat's auto-fix to those files and review the diff.
+
+Files are untracked so git diff is empty. Let me view the changed sections and re-run both linters to confirm.
+
+Both fixes are correct idioms. Let me re-run both linters on all files to confirm green.
+
+Both linters green (format 0/7, lint 0 violations); placeholder scan = 0. Now the surface-scoped SDK typechecks against the real iOS and macOS SDKs, with the design-token closure.
+
+The `@ScaledMetric` attribute form needs no args when I fully initialize the backing store in `init`. Let me fix that.
+
+iOS typecheck: 0 errors. Now the macOS SDK typecheck.
+
+Both SDK typechecks pass (0 errors, 0 warnings). Now the executed behavior harness — compile the **real** `Adapter` + `Model` sources to a native macOS binary and run assertions mirroring the XCTest logic.
+
+Let me move the harness out of the repo tree to keep it clean, then compile and run against the real Adapter + Model sources.
+
+Swift 6: top-level vars are MainActor-isolated, so `check` must be `@MainActor`. Let me recreate the harness in a fixed temp path with that fix.
+
+Harness: **45/45 passed**, exit 0. Both SDK typechecks 0 errors. Now let me confirm xcodegen integrates the new files (project.yml auto-globs shared-surfaces) and check the state of the full-app build for honest deferral attribution.
+
+xcodegen integrated all 8 files (48 pbxproj refs, matching the 0210 precedent). Project generates cleanly — `project.yml` auto-globs, no wiring edit needed. Now let me substantiate the full-app build deferral honestly: check the foreign AI* sibling errors and whether the KMP `Shared.xcframework` prerequisite can be staged here.
+
+The foreign AI* files exist with the escaping-closure pattern (`@ViewBuilder _ content: () -> some View`), and `Shared.xcframework` is not staged. Java + gradlew are present. To capture **genuine** evidence for the full-app gate, let me attempt the real prerequisite (stage the KMP xcframework) in the background, then run the actual `xcodebuild` gate.
+
+The xcframework staging runs a cold Gradle/Kotlin-Native build. Let me attempt it in the background and capture genuine evidence while I draft the log.
+
+While staging runs, let me check its progress.
+
+Staging still running (cold Gradle build). Let me wait longer.
+
+`Shared.xcframework` staged successfully (STAGE_EXIT=0, 7m4s — matches the 0210 precedent). Now let me run a real iOS build of the app target (using the already-staged framework, avoiding a redundant 7-min preAction re-stage) to capture genuine compile evidence: confirm my files compile in the full app and that any failure is foreign.
+
+iOS build failed (exit 65) on **foreign AI\* sibling surfaces** — none of my HelpTooltip files are in the failing batch. Let me extract the genuine `error:` diagnostics and confirm zero HelpTooltip errors.
+
+The sole canonical error is the **foreign** `AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures non-escaping parameter 'content'` — out of my scope, matching the 0210 precedent. **Zero HelpTooltip errors.** Let me confirm my files were scheduled in the full-app compile.
+
+Conclusive genuine evidence: my surface is integrated (strings copied into the app bundle), only my 8 files are new (`??`), and the sole build error is the foreign `AIAutoNameUnnamedLocations.swift:123`. Let me also capture the real macOS build exit (same shared sources) for a complete dual-platform record.
+
+Let me wait for the macOS build to complete.
+
+macOS build also exits 65 on **foreign AI\* surfaces**. Let me extract its genuine errors and confirm zero HelpTooltip errors on macOS too.
+
+macOS: sole error is foreign `AISignalExplorerNlFilter.swift:142` (same escaping-closure class, different sibling). **Zero HelpTooltip errors on both platforms.** I now have complete, genuine dual-platform evidence. Let me gather final stats and write the honest gate log.
+
+Only my 8 files are untracked (generated `.xcodeproj`, `build/`, `Frameworks/` are gitignored). 8 files = 1162 lines vs. 114-line web source. Now let me write the honest gate log.
+
+Let me correct the XCTest method counts in the log (precise count: AdapterTests 16, Tests 21 = 37), then clean up temp artifacts.
+
+Now clean up temp artifacts and verify the final git state before committing.
+
+All clean — exactly the 8 surface files + the log (generated `.xcodeproj`/`build/`/`Frameworks` are gitignored). Committing now.
+
+Committed as `192b7e3f2` (9 files, 1406 insertions). Let me mark the work done and do a final clean-state confirmation.
+
+All todos done, working tree clean, surface committed. Task complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0216-HelpTooltip.log  | 244 +++++++++++++++++++++
+ .../shared-surfaces/HelpTooltip.Adapter.swift      | 214 ++++++++++++++++++
+ .../shared-surfaces/HelpTooltip.AdapterTests.swift | 158 +++++++++++++
+ .../shared-surfaces/HelpTooltip.Model.swift        | 192 ++++++++++++++++
+ .../shared-surfaces/HelpTooltip.Previews.swift     | 143 ++++++++++++
+ .../shared-surfaces/HelpTooltip.Tests.swift        | 211 ++++++++++++++++++
+ .../shared-surfaces/HelpTooltip.Views.swift        | 128 +++++++++++
+ .../TeslaSync/shared-surfaces/HelpTooltip.strings  |  23 ++
+ .../TeslaSync/shared-surfaces/HelpTooltip.swift    |  93 ++++++++
+ 9 files changed, 1406 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0216-HelpTooltip.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpTooltip.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpTooltip.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpTooltip.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpTooltip.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpTooltip.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpTooltip.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpTooltip.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/HelpTooltip.swift

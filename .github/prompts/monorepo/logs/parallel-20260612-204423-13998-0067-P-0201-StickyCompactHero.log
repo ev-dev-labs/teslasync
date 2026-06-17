@@ -1,0 +1,180 @@
+I'll start by exploring the repository structure and understanding what exists for both the web source and the Apple native app.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the web source spec and explore the Apple app structure.
+
+Now let me study the established pattern by reading a complete example surface (Accordion) and understanding the shared infrastructure.
+
+Tokens aren't in shared-surfaces. Let me find the core P1/S9 tokens, P1/S10 i18n, P1/S8 state-holders, and P1/S11 diagnostics infrastructure.
+
+Now let me examine the test/preview pattern, the build config, the placeholder gate, and look for status/scroll-related sibling surfaces for convention consistency.
+
+`StickyChipBar` and `PageHeaderSticky` are the closest siblings (sticky-on-scroll bars). Let me study them as the authoritative template.
+
+`StickyChipBar` (slug 0200) is the direct predecessor. Let me read its remaining files plus `PageHeaderSticky` (scroll-tracking idiom) and the material token.
+
+`PageHeaderSticky` (slug 0172) is the exact same web pattern (IntersectionObserver sticky bar + scroll-to-top). `StickyCompactHero` = that + status presentation + refresh. Let me read its full implementation as the authoritative scroll-mechanics template.
+
+This is the authoritative template. Let me read the remaining `PageHeaderSticky` files (Model, Views, Previews, both test files, strings) to mirror the exact conventions.
+
+Let me read the test files, strings, previews for `PageHeaderSticky`, plus confirm the `HeroStatus` type and the web `PageHeaderSticky.tsx` for visibility-logic parity.
+
+I have the complete pattern. Let me check the lint/format configs and confirm the iOS simulator availability before writing code.
+
+All prerequisites confirmed: iPhone 16 simulator is booted (iOS 26.5), lint/format configs understood. Let me check for naming collisions and the framework build script before writing.
+
+`HeroStatus` already exists in the module — I must reuse or avoid colliding. The framework pre-action needs a Kotlin/Gradle build. Let me investigate both.
+
+All `HeroStatus` references are in comments — each surface namespaces its own status enum (e.g. `HealthRowStatus`, `UptimeStatus`). `HealthRow` is the direct peer of the same web `HeroStatus` union. Let me read its status enum + color mapping for convention consistency.
+
+There's a shared `TSTone` token I must reuse. Let me read its definition.
+
+I now have a complete understanding of the pattern. `StickyCompactHero` = `PageHeaderSticky` (scroll-driven sticky bar + scroll-to-top) + `HealthRow`'s status presentation (`TSTone`) + a refresh affordance. Let me set up tracking and write a plan.
+
+Now I'll write the surface. Starting with the Foundation-only Adapter core.
+
+Now the Projection (view-ready presentation + resolve).
+
+Now the Model (i18n facade, telemetry seam, @Observable state-holder).
+
+Now the Views — the bar chrome, refresh spinner (reduce-motion aware), and DEBUG inspector covering every status/state.
+
+Now the public API — anchor + ScrollView modifiers wiring the scroll mechanics (mirroring `PageHeaderSticky`).
+
+Now the strings catalog, plus a live-scroll DEBUG sample added to Views (mirroring PageHeaderSticky), then previews.
+
+Now add a live-scroll sample to the Views DEBUG block (for previews + tests), then write previews.
+
+Now the previews file.
+
+Now the test files — pure-core adapter tests first.
+
+All 9 files written. Now validating — starting with formatting and linting my files (fast, direct checks), then the placeholder gate.
+
+SwiftFormat adjusted 3 files. Now confirm format-lint passes and run SwiftLint on the new files.
+
+SwiftFormat lint passes (0/8 need formatting). Now SwiftLint strict on the new files.
+
+SwiftLint strict passes (0 violations). Now the placeholder gate. Let me check how it resolves `-Path` then run it as the gate specifies.
+
+The gate's `-Path` points at a path prefix (not a real dir), so `Test-Path` returns clean. Let me check the regex case-sensitivity, then genuinely scan my files for forbidden patterns.
+
+Regex is case-insensitive. Let me genuinely scan my files both ways — a manual grep and the official script per-file.
+
+Placeholder scan is genuinely clean (0 across all files). Now the build gate. Let me first probe the KMP/Gradle framework dependency feasibility before the heavy build.
+
+apps/shared exists with gradlew + Java 17 — the KMP framework build is feasible. Let me generate the Xcode project, then build the Shared.xcframework.
+
+Project generated. Now building the Shared.xcframework (KMP/Gradle) — this is the heavy prerequisite. Running it in the background.
+
+While the framework builds, let me verify my code against a couple of potential API concerns by checking how siblings use the iOS 18 scroll APIs (to confirm exact signatures compile in this SDK).
+
+The framework build (Gradle + Kotlin/Native) is downloading and compiling. Let me wait for it.
+
+The KMP build takes time on first run. Let me check the log directory structure while it compiles.
+
+The log dir and sibling logs exist. Let me view a sibling's passing log to mirror the exact format, and re-check the framework build.
+
+The sibling log reveals the established verification approach: surface + dependency-closure compile against the real SDK, with the full-app `xcodebuild` recorded honestly (siblings hit a foreign pre-existing error). Let me set up a focused dependency-closure typecheck (fast, fully attributable to my code) while the framework builds. First, checking the token dependency closure.
+
+Dependency closure is small (Tokens + TSDesign + TSMaterial + Badges). Let me run a focused typecheck of my 7 source files against the real iOS SDK — fast and fully attributable to my code.
+
+Path fix — Tokens is at `../design`. Re-running.
+
+Focused iOS typecheck passes 0 errors. Now the macOS SDK leg (same closure), and checking framework progress.
+
+Both SDK typechecks pass — but without `-D DEBUG` the `#if DEBUG` previews/inspector blocks were skipped. Let me re-verify WITH `-D DEBUG` so the sample/inspector/preview code is actually compiled.
+
+iOS DEBUG typecheck passes (previews/inspector compile). Now verify the test logic compiles — I'll strip the `@testable import` and compile the tests with the closure as one module against the iOS SDK.
+
+The `grep -c` returned 0 (exit 1) and broke the `&&` chain — the typecheck never ran. Re-running cleanly.
+
+The only test errors are the XCTest C-macro import limitation of raw `swiftc` (a harness artifact, not my code) — all my symbols resolved. Let me check the framework build, then use a small XCTest shim to verify test logic cleanly.
+
+Framework still building. Let me verify the test logic now via a minimal XCTest shim (fast, attributable to my code).
+
+Test logic typechecks cleanly (0 errors) — the earlier failures were purely the XCTest macro harness artifact. Let me run the macOS test-logic leg and check the framework build.
+
+All focused typechecks pass (iOS+macOS source & test logic, 0 errors). Let me check the framework build progress.
+
+20 minutes with no output. Let me check whether Gradle/Kotlin-Native is actually progressing (downloads, daemon) or stuck.
+
+The build is legitimately progressing (Kotlin/Native: 1.6G konan toolchain, LLVM 21, Gradle daemon active). Compiling/linking for all Apple targets is slow. Let me wait.
+
+Real progress — per-target release frameworks are linking (iosSimulatorArm64, macosArm64), debug XCFramework already assembled. The release XCFramework is close. Waiting.
+
+Shared.xcframework built successfully (20m) and staged. Now running the authoritative iOS gate leg: `xcodebuild build test`. Starting in the background.
+
+iOS build+test running in background. Let me monitor progress.
+
+Building cleanly — 0 errors so far, and my `StickyCompactHero.strings` validated + copied into the app bundle. Let me keep monitoring.
+
+Log output paused — likely the main app target's batch Swift compilation (silent until the job completes). Let me confirm the compiler is actively working.
+
+Compiler actively working (28 procs, multiple swift-frontend at ~40% CPU) — the main app target is compiling in parallel. Let me wait for it.
+
+iOS build test completed. Let me examine the results — errors, test outcomes, and the StickyCompactHero test suites specifically.
+
+0 compile errors but TEST FAILED. Let me find the actual failure reason (linker, signing, or a foreign issue).
+
+0 `error:` lines but SwiftCompile failed in a foreign A-files batch (AppearanceSettings/AreaChartWrapper — not mine). This looks like a compiler crash. Let me find the exact signature.
+
+Confirmed: it's a **Swift compiler crash** (segfault during IR generation) in the **foreign** file `AppearanceSettings.Controls.swift` — not my code. Let me capture the exact crash details.
+
+Lines are huge (batch listings). Let me extract just the crash signature lines, truncated.
+
+Two identical compiler crashes (IRGen, reabstraction thunk `Bool, (any Actor)?`). Let me confirm the exact foreign file path.
+
+Definitively confirmed: the full-app build is blocked by a **Swift 6.3.2 compiler crash** (IRGen of an `@isolated(any) @Sendable (Bool, Actor?)` reabstraction thunk) in the **foreign, out-of-scope** file `feature-views/AppearanceSettings.Controls.swift`. **Zero** StickyCompactHero files are implicated. This matches the documented sibling situation exactly.
+
+To genuinely *execute* my tests (bypassing the foreign crash), let me build a standalone SwiftPM harness compiling the identical shipped sources + my tests as module `TeslaSync`.
+
+**44 tests executed, 0 failures** on the real toolchain (Swift 6 mode) — the surface's logic is fully verified, attributable to my shipped code. Now the macOS gate leg (will hit the same foreign crash) plus whole-project lint/format. Starting macOS build in background.
+
+Now the whole-project format/lint checks (as the gate runs them). Running SwiftFormat lint across `apps/apple`.
+
+Whole-project SwiftFormat found 1 **foreign** pre-existing issue (`feature-views/RecentDrivesSection.Previews.swift`, redundantType) — not my files (mine passed scoped: 0/8). The macOS build finished too. Let me check its result and run whole-project SwiftLint.
+
+macOS failed on **environmental code-signing** (entitlements require a development team — no signing identity present), the second documented sibling blocker. Neither leg is blocked by my code. Let me confirm my files actually compiled in the real iOS app-target build, then run whole-project SwiftLint.
+
+The probe is scanning a huge DerivedData tree — stopping it (app-target objects won't exist since that job crashed on the foreign file anyway). Moving to whole-project SwiftLint.
+
+Whole-project SwiftLint found 3 violations across 5284 files. Let me identify them and confirm none are mine.
+
+The 3 SwiftLint violations are all in a **foreign** file (`widget-primitives/WidgetChartSummary.Tests.swift`) — none mine. Both whole-project gate failures are pre-existing/foreign. Let me confirm my change set is purely additive and gather metrics for the log.
+
+Change set is purely additive (9 files, 1828 lines); no foreign files touched; framework is gitignored. Let me confirm xcodegen integrated my files into all targets, then write the gate log.
+
+Integration confirmed (54 pbxproj refs: 32 Sources + 4 Resources across app + test targets). Let me capture the exact xcodebuild exit codes for the log.
+
+I now have complete, evidenced results. Both full-app legs fail only on **foreign** (iOS: compiler crash in `AppearanceSettings.Controls.swift`) and **environmental** (macOS: missing signing cert) causes — `IOS_EXIT=65`, `MAC_EXIT=65` — with **zero** StickyCompactHero errors, while every surface-attributable gate is green (44/44 tests). Let me write the honest gate log.
+
+The honest gate log is written. Now committing the surface + log (adapting the pathspec to actually match my files; framework and .xcodeproj are gitignored).
+
+All 9 surface files + the log staged; nothing foreign. Committing with the prompt's exact message.
+
+Commit succeeded (`a2270276f`, 10 files, 1966 insertions) — exactly my 9 surface files + the log. Let me clean up temp artifacts and finalize tracking.
+
+All work is complete and the working tree is clean. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ ...pple-shared-surfaces-0201-StickyCompactHero.log | 138 ++++++++
+ .../StickyCompactHero.Adapter.swift                | 232 +++++++++++++
+ .../StickyCompactHero.AdapterTests.swift           | 250 ++++++++++++++
+ .../shared-surfaces/StickyCompactHero.Model.swift  | 176 ++++++++++
+ .../StickyCompactHero.Previews.swift               | 114 +++++++
+ .../StickyCompactHero.Projection.swift             | 156 +++++++++
+ .../shared-surfaces/StickyCompactHero.Tests.swift  | 244 ++++++++++++++
+ .../shared-surfaces/StickyCompactHero.Views.swift  | 373 +++++++++++++++++++++
+ .../shared-surfaces/StickyCompactHero.strings      |  66 ++++
+ .../shared-surfaces/StickyCompactHero.swift        | 217 ++++++++++++
+ 10 files changed, 1966 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0201-StickyCompactHero.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.swift

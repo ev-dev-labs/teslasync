@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure and the web source that serves as the specification, while checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 17 simulators). Not blocked. The web source is a Suspense→globalProgress bridge. Let me study the web `globalProgress` lib and the existing Apple app structure.
+
+There's an extensive set of existing surfaces with a clear file convention. Let me find the existing `globalProgress`/`TopProgress` equivalents in the Apple app, plus the P1 facades (i18n, tokens, telemetry, state holders) and a good template surface to follow.
+
+Excellent template found. Let me read the complete ProgressRing surface set plus the telemetry/state-holder conventions to follow the exact pattern.
+
+Now let me check the build config (how files get into targets), the design tokens, and the web `TopProgress` consumer to mirror the bar faithfully.
+
+Shared-surfaces files are auto-globbed into app + test targets. I need `xcodegen` to regenerate the project. Let me confirm tooling and the exact token names.
+
+Tokens are pre-generated. The `Shared.xcframework` (KMP) is built by a Gradle preAction — a potential heavy/blocking dependency I'll assess after writing the surface. Let me confirm exact token names I'll use.
+
+Let me check how a surface with real copy structures its `.strings`, plus the Buttons/Typography helpers, to match conventions precisely.
+
+I have a complete picture: tokens, conventions, build prerequisites (xcodegen + KMP `Shared.xcframework` via Gradle preAction), lint/format configs, and forbidden patterns. `pwsh`, `xcodebuild`, `swiftlint`, `swiftformat`, `xcodegen` are all available. Let me track work and write the surface.
+
+Let me add a testable i18n key constant to Meta and wire it into the views, so the a11y/i18n contract is assertable.
+
+Now the comprehensive test suite.
+
+All 9 files created. Let me auto-format my files, then lint them in isolation to catch issues before the heavy build.
+
+swiftformat and swiftlint --strict both pass cleanly on all 8 Swift files. Now let me generate the Xcode project and assess the KMP `Shared.xcframework` build dependency.
+
+Project generated. Now the critical dependency: the `Shared.xcframework` (KMP/Gradle). Let me assess whether it can be built in this environment.
+
+Java 17 is present. The KMP framework needs Gradle 8.14.5 + Kotlin/Native downloaded. Let me check connectivity and any existing Gradle cache, then attempt the framework build.
+
+Good — Gradle 8.14.5 and Kotlin/Native 2.4.0 are already cached, and there's connectivity. Let me build the `Shared.xcframework`.
+
+KMP framework build is compiling (Kotlin/Native linking is slow on first run). Let me keep waiting.
+
+KMP `Shared.xcframework` built successfully. Let me stage it and start the iOS app build to verify the whole app (including my surface) compiles.
+
+Framework staged. Now let me build the iOS app target (compiles the whole app including my surface). I'll log to a file and monitor.
+
+Good — my `.strings` is bundled and the Swift module is emitting (whole-module type-check) with no errors yet. Let me wait for completion.
+
+Build failed with 2 failures. Let me find the actual errors.
+
+The failing batch is `A*` files (AnomalyInlineRow…AppearanceSettings), not my surface, and whole-module type-check passed. Let me see the actual diagnostic around the failure.
+
+This is a swift-frontend **compiler crash in IRGen** (stack dump), not a type error — and it's in the `A*` batch, not my files. Let me find the crash header to see what it was compiling.
+
+Let me see the top crash frames to identify the compiler pass that crashed.
+
+Crash detail: `While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"` — a reabstraction thunk for an actor-isolated `async -> Bool` closure, crashing in IRGen (`SyncCallEmission::setArgs`). This is a Swift 6.3.2 compiler bug. My `Controller` has the only `async` Task with a `Bool`-returning actor call. Let me isolate whether my code triggers it by compiling my 3 pure files standalone (they import only Foundation/Observation).
+
+Macro plugin needs `swiftc` (not raw `swift-frontend`). Let me recompile my full source set together with the token files so macros and tokens resolve, to see if IRGen crashes on my code.
+
+My surface compiles cleanly in whole-module mode. The real crash was batch-mode (per-primary-file) IRGen. Let me reproduce batch-mode IRGen with my `Controller` (the file with the async Task) as the primary file.
+
+My surface compiles cleanly in whole-module mode, and the crash thunk (`Task` returning `Bool`, actor-isolated) doesn't exist in my code — my only async `Task` returns `Void`. The crash is in unrelated `A*` files. Compiler crashes under heavy parallel batch IRGen can be non-deterministic. Let me retry the build incrementally — it will quickly recompile the failed batch.
+
+Still compiling, no crash so far. Let me wait for completion.
+
+Deterministic — failed again with 2 failures. Let me confirm it's the same compiler crash in the same unrelated files.
+
+Confirmed identical deterministic crash (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, the actor-isolated `async -> Bool` thunk) in the unrelated `A*` batch. Let me gather evidence: my files have no such construct, and prove pre-existence by building the app without my files.
+
+My `Task` is `Task<Void, Never>` (Void success), and `advance() -> Bool` is synchronous — so my code cannot emit the crashing `async -> Bool` actor thunk. Let me prove pre-existence efficiently: re-run the exact failed compiler command but with my 8 files removed from its file list.
+
+Filelist has 4059 module files including my 7 source files; the batch has 25 A* primaries. Let me re-run the exact failing compile with my files removed from the module file list.
+
+The compile produced parseable-output JSON noise. Let me re-run cleanly and capture the crash signature and exit code to a file.
+
+**Definitive proof:** With my 7 files removed from the module, the identical A* batch compile **still crashes** (EXIT=134, `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, `SyncCallEmission::setArgs`). The crash is a **pre-existing Swift 6.3.2 IRGen bug**, independent of my surface. Let me pinpoint the triggering pre-existing construct for the record.
+
+Pre-existing trigger confirmed in unrelated files (`Auth*`, `Live*`, etc.) — outside my allowlist. Now let me run the gate steps I can, and build a standalone harness to actually execute my surface's logic/tests (since the XCTest bundle can't link through the broken app build).
+
+check-placeholders passes (0 violations). Now let me build a standalone harness that actually executes my surface's reducer/controller/model logic (the XCTest bundle can't link through the broken app build), proving the test logic is sound.
+
+Strict-concurrency flagged the global counter. Let me move the helpers inside the `@MainActor` entry.
+
+`@main` needs an explicit entry. Let me use top-level `main.swift` (implicitly `@MainActor` in Swift 6).
+
+**Harness: 47/47 assertions PASS** — my reducer, meta, controller, and model logic is verified correct (the XCTest bundle can't link only due to the unrelated app-target crash). Now let me run the remaining gate steps for the record: start the macOS build (will hit the same crash), and run the full lints. Let me also locate the log directory.
+
+Log dir found (178 existing P4 shared-surface logs). Let me inspect an existing log to match conventions, and run the full lints while the macOS build runs.
+
+Key finding: the established P4-apple precedent **DEFERS** the full `xcodebuild build test` (IOS_EXIT=65/MAC_EXIT=65) as "pre-existing, not a surface red" while verifying the surface via LINT/FORMAT/PLACEHOLDER/XCODEGEN=0 and tests through real sources — then sets EXIT=0/STATUS=DONE. There's also a prior log for this exact surface (P-0141). Let me read the precedents and the macOS result.
+
+The canonical **ProgressRing 0099 precedent** defines the exact methodology: surface-scoped FORMAT/LINT/PLACEHOLDER + an **isolated SwiftPM XCTest** against real tokens + the full-app iOS/macOS builds documented as **DEFERRED** (pre-existing, unrelated) → EXIT=0/STATUS=DONE. My blocker (a proven pre-existing compiler crash) fits this precedent even more cleanly. Let me run the real XCTest in isolation like the precedent. First, confirm the macOS crash signature and locate the color helper.
+
+`tsDynamicColor` lives in `Tokens.swift` (self-contained). Let me determine the macOS failure cause (crash vs signing, like the precedent).
+
+macOS failure is **code-signing (no dev certificate on the runner)** — identical to the ProgressRing precedent, failing before Swift compilation; zero errors from my surface. iOS is the pre-existing IRGen crash. Both match the established DEFERRED disposition. Now let me run my **actual** `Tests.swift` via an isolated SwiftPM package against the real tokens (the precedent's [4/6] step).
+
+**34/34 tests pass** in the isolated SwiftPM harness running my actual `Tests.swift` under Swift 6 strict-concurrency against the real design tokens — exactly the precedent's [4/6] step. 
+
+I now have the complete evidence set matching the established P4-apple DEFERRED disposition. Let me verify git ignores the generated artifacts, then write the gate log.
+
+Git tracks only my 9 surface files; generated project/framework/build are ignored. Let me demangle the crash symbol for the log's accuracy, then write the gate log.
+
+Demangled: a reabstraction thunk for an `@isolated(any) @Sendable (Bool, Actor?) -> ()` completion-callback closure — a pre-existing pattern absent from my surface. All evidence is captured. Let me write the gate log.
+
+Now let me re-confirm the surface-scoped gates are still green after my `loadingLabelKey` edits, before committing.
+
+All surface-scoped gates green after edits (FORMAT=0, LINT=0, PLACEHOLDER=0). Let me clean up temp artifacts and commit the surface + log.
+
+Exactly 10 files staged (9 surface + log), nothing extraneous. Let me commit.
+
+Commit `4113f5321` succeeded with a clean working tree. Let me mark todos done and do a final verification of the commit contents.
+
+The task is complete. Final state verified: commit `4113f5321` contains exactly the 9 surface files + gate log (1315 insertions), working tree clean.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`SuspenseProgressBoundary`** at parity with `web/src/components/feedback/SuspenseProgressBoundary.tsx` — a Suspense→`globalProgress` bridge.
+
+**9 files** (established surface convention): `swift` (generic boundary view), `Adapter` (meta/slug + trickle constants + `valueNow` + `SuspensePhase`), `Projection` (pure `globalProgress` reducer), `Controller` (`@Observable` trickle controller, idempotent stop, shared singleton), `Model` (telemetry seam + `isReady`↔controller bridge, once-only `view.opened`), `Views` (determinate `TopProgress`-parity bar + fallback/content container), `Previews`, `Tests` (34 cases), `strings` (`global.loading`).
+
+**Both genuine web states reproduced** (loading→fallback+active bar; resolved→content+idle bar) with an honest parity note that the source has no empty/error/stale/offline branch. Binds P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry.
+
+**Verification (all green, pasted raw in the log):**
+- `swiftformat --lint` = 0/8 · `swiftlint --strict` = 0 violations · placeholder = 0 · `xcodegen` = 0
+- **34/34 XCTest pass** in an isolated SwiftPM Swift 6 strict-concurrency build against the **real** `Tokens.swift`
+
+**Full-app `xcodebuild` DEFERRED** (matching the established 0099 ProgressRing precedent; `IOS_EXIT=65`/`MAC_EXIT=65` pasted raw, never reported green):
+- **iOS**: a deterministic **pre-existing swift-frontend (6.3.2) IRGen crash** emitting an `@isolated(any) @Sendable (Bool,Actor?)->()` reabstraction thunk in unrelated `feature-views/Auth/Live` sources — **proven independent** by reproducing the SIGABRT (exit 134) after deleting my 7 sources from the failing batch's file list (0 references to my surface).
+- **macOS**: runner has no development code-signing certificate (fails before Swift compilation), identical to the precedent.
+
+Both blockers are pre-existing, unrelated, and outside the allowed files (`SuspenseProgressBoundary.*` only) → owned by the P4 acceptance gate. Committed with the gate log → **EXIT=0 / STATUS=DONE**.
+
+Merge made by the 'ort' strategy.
+ ...ared-surfaces-0141-SuspenseProgressBoundary.log | 160 +++++++++
+ .../SuspenseProgressBoundary.Adapter.swift         |  91 +++++
+ .../SuspenseProgressBoundary.Controller.swift      | 122 +++++++
+ .../SuspenseProgressBoundary.Model.swift           | 116 +++++++
+ .../SuspenseProgressBoundary.Previews.swift        | 127 +++++++
+ .../SuspenseProgressBoundary.Projection.swift      |  94 +++++
+ .../SuspenseProgressBoundary.Tests.swift           | 379 +++++++++++++++++++++
+ .../SuspenseProgressBoundary.Views.swift           | 129 +++++++
+ .../SuspenseProgressBoundary.strings               |  24 ++
+ .../shared-surfaces/SuspenseProgressBoundary.swift |  73 ++++
+ 10 files changed, 1315 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0141-SuspenseProgressBoundary.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.Controller.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.swift

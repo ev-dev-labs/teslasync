@@ -1,0 +1,143 @@
+I'll start by exploring the environment and understanding what's available, then read the web source and any existing Apple app structure.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me explore the repo structure and find the web source plus the Apple app.
+
+Let me read the web source, its test, and explore the Apple app structure in parallel.
+
+Now let me examine the existing `shared-surfaces` directory and study an established pattern to follow precisely.
+
+The directory is huge (1174 files). Let me find a simple, comparable control surface to use as a template and check the supporting infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+`DensityToggle` and `ActiveFilterChips` are the closest analogs (simple form controls). Let me read `DensityToggle` fully as a structural template, since it's the simplest control.
+
+Excellent — `DensityToggle` is a near-perfect structural twin (pure controlled form component, documents the "no loading/error/stale/offline" parity reasoning). Let me read its remaining files plus the project config and an existing log.
+
+Let me find where the top-level `DensityToggle` view struct is defined, read the test files, and check the token definitions and project config.
+
+There's a main `DensityToggle.swift` view file. Let me read it, the AdapterTests, the design tokens, and the project config.
+
+Now I fully understand the 7-file pattern. Let me examine the design tokens, the project.yml (to understand file inclusion), and check whether a `Select`-based surface exists to align the dropdown idiom.
+
+The main-app tokens are generated (P1/S9). Let me read the project.yml and Scripts to understand the build/generation flow and how files are included.
+
+Now let me check the design tokens location, xcodegen availability, existing xcodeproj, the Shared.xcframework, and the log directory/format used by prior surfaces.
+
+Let me read the actual prompt file, the Tokens.swift, the passing DensityToggle log, and the prior SortControl artifact log.
+
+Let me check the Shared.xcframework build script (critical feasibility gate), the passing DensityToggle log, and confirm no SortControl files exist yet.
+
+The predecessor (DensityToggle 0153) reveals the established, user-approved verification methodology: the repo-wide `xcodebuild` is deferred (KMP `Shared.xcframework` needs Kotlin/Native+Gradle, plus a pre-existing sibling defect), while each surface is verified firsthand via an **isolated Swift harness** + swiftlint + swiftformat + check-placeholders. Let me read the full DensityToggle log to reproduce that harness exactly.
+
+I now have the complete, user-approved methodology. Let me read the `.strings` format, the `check-placeholders` script (forbidden token set), the web `Select` component (native idiom mapping), and verify the pre-existing sibling defect + KMP toolchain state.
+
+Let me read the forbidden-pattern set and verify the pre-existing sibling defect + KMP toolchain state (for an honest disposition).
+
+Key findings: forbidden tokens include "Placeholder"/"TODO"/"not implemented" (case-insensitive, `.swift` only); iPhone 16 sim is booted; the pre-existing `RecentDrivesSection.Previews.swift` defect is present; KMP uses gradlew (Kotlin/Native, likely offline-blocked). Now let me check the dropdown/menu idiom used by siblings and — critically — scan for symbol collisions (`SortControl`, `SortDirection`, `SortOption`, `SortField`).
+
+No bare `SortDirection`/`SortOption`/`SortControl` collisions (only prefixed siblings like `XRaySortDirection`). Let me do a thorough collision check for every symbol I plan to declare, and confirm the Picker/Menu idiom siblings use.
+
+No collisions. Let me study the `Menu`-based dropdown idiom from a sibling (`PlaybackSpeedMenu`) so my field dropdown matches the established native pattern.
+
+I have everything needed. No symbol collisions; the `Menu { ForEach } label:` idiom with checkmarks is the established native peer of web `Select`. Let me record a plan and todos, then build the 8-file surface.
+
+Now I'll create the surface. Starting with the Foundation-only core (`Adapter`).
+
+Now the Views (subviews) and the public View. Let me create both.
+
+Now the Previews, the `.strings` table, and both test files.
+
+Now the two test files — the pure-core `AdapterTests` and the `Tests` (model + view + strings).
+
+All 8 files created. Now verification. Let me run swiftformat and swiftlint on the new files first for fast iteration.
+
+Three multi-line array literals need trailing-comma fixes. Let me check the config rule and auto-fix with swiftformat (the ecosystem tool).
+
+`--commas inline` means no trailing comma on the last element. Let me auto-fix with swiftformat write mode, then re-lint all 7 files.
+
+Format clean (0/7). Now swiftlint. Let me check the config and run `--strict` on the new files.
+
+swiftlint `--strict` clean (0 violations). Now the placeholder gate. The gate's `-Path .../SortControl` isn't a literal dir, so (like the predecessor) I'll scan a temp dir holding the actual shipped files, and also grep directly for forbidden tokens.
+
+All three host gates green: swiftformat 0/7, swiftlint --strict 0 violations, check-placeholders COUNT=0. Now the critical isolated build+test harness (module `TeslaSync`, Swift 6 mode, real Tokens.swift + exact shipped files).
+
+macOS host build clean under Swift 6 strict concurrency. Now run the test suite.
+
+All 35 tests passed (0 failures). Now the iOS cross-compile to prove the SwiftUI surface type-checks for the simulator target.
+
+iOS cross-compile clean. All host surface gates are green. Now let me run the **whole-tree** swiftformat + swiftlint (the actual gate scope) to confirm I introduced zero regressions and the tree is clean.
+
+Full-tree swiftformat clean (0/4708). Now the full swiftlint `--strict` (the gate scope).
+
+Full swiftlint `--strict` clean (0 violations in 4410 files). Now I'll attempt the repo-wide `xcodebuild` to honestly capture its disposition. First regenerate the project and probe the KMP framework dependency.
+
+Project generates cleanly; the working tree contains **only** my 8 new files, and the sibling defect `RecentDrivesSection.Previews.swift` was committed earlier at `afff462c1` (not mine). Now let me probe the KMP `Shared.xcframework` dependency (the gate's build pre-action) to capture its real disposition.
+
+No output after 210s — the gradle wrapper is blocked (downloading the Gradle distribution / Kotlin-Native toolchain, which needs network). Let me stop it and capture evidence of why the KMP framework can't be staged here.
+
+The Gradle distribution **is** cached, so the 210s was the actual Kotlin/Native compile (slow, dependency-heavy). The `Frameworks/` dir is still empty — no `Shared.xcframework` staged, which the app target links. Let me check the Kotlin/Native toolchain cache and make one bounded background attempt to build the framework so I can try a real xcodebuild.
+
+The Kotlin/Native toolchain **is** fully provisioned (`provisioned.ok`, llvm, libffi cached) — so a real xcodebuild is feasible, just slow. Per the honesty covenant I'll make a genuine attempt. Let me stage the `Shared.xcframework` in the background.
+
+The framework build is running in the background. Let me wait for it, checking progress periodically.
+
+Framework built successfully (BUILD SUCCESSFUL in 4m 6s). Now let me stage it into `apps/apple/Frameworks/` (xcodebuild doesn't run scheme pre-actions) and launch the iOS `build-for-testing`.
+
+Framework staged. Now launch the full iOS `build-for-testing` (compiles all ~1000 surfaces + test bundle, including my surface). Running in background with monitoring.
+
+While that compiles, let me monitor periodically.
+
+iOS `build-for-testing` failed (EXIT=65). The reported batches are large compiler groups (not my files), but I must find the actual `error:` lines to identify the true root cause and confirm none reference SortControl.
+
+The **single** root-cause error in the entire iOS build is in a sibling surface, not mine:
+`AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures non-escaping parameter 'content'`. Let me confirm it's pre-existing (committed, not modified by me), that zero errors reference SortControl, and that my files compiled.
+
+Confirmed: the **only** error is a pre-existing sibling defect (`AIAutoNameUnnamedLocations.swift:123`, committed at `ffc2bd905`, unmodified by me — an escaping/non-escaping `@ViewBuilder` closure bug). Zero errors reference SortControl, and all 5 of my source files compiled successfully in the same app target. Per "no skip-and-assume", let me also run the macOS build-for-testing to capture its real result rather than assume.
+
+While macOS compiles, let me wait for it.
+
+macOS failed in 5s — too fast to have compiled the surfaces, so it's a different (likely earlier) failure. Let me inspect the actual error.
+
+The macOS failure is the known dev-cert **signing gap** (entitlements need a development certificate absent on this headless runner) — it fails before compiling any source, unrelated to my surface. To get a real macOS *compile* signal, let me bypass signing (`CODE_SIGNING_ALLOWED=NO`) so the sources actually compile.
+
+Let me wait for the macOS compile (bypassing signing) to complete.
+
+macOS now actually compiled the surfaces and failed (EXIT=65). Let me extract the real error lines to confirm it's the same pre-existing sibling defect and zero SortControl errors.
+
+macOS also RED on a single pre-existing sibling defect of the **same kind** (`AISignalExplorerNlFilter.swift:142` — escaping closure captures non-escaping `@ViewBuilder` param), zero SortControl errors. The parallel build cancelled remaining batches after the first failure. Let me confirm that sibling is pre-existing/unmodified, then write the gate log.
+
+Both repo-wide targets are RED **only** on pre-existing, out-of-scope sibling defects of the identical kind (committed at `ffc2bd905` / `441cd2538`, unmodified by me); zero SortControl errors; working tree holds only my 8 files. My surface is verified firsthand on every host-runnable gate. Let me gather line counts and write the gate log.
+
+Log written ending `EXIT=0 / STATUS=DONE`. Before committing, let me verify the generated artifacts (xcodeproj, staged framework) are git-ignored so only my 8 files + the log are committed.
+
+Only my 8 files + the log are new; generated artifacts are git-ignored. Committing now with the prompt's message + required trailer.
+
+Committed `68fcb3e43` (8 surface files + log, 1545 insertions). Let me verify the trailer, confirm a clean tree, and clean up temp artifacts.
+
+Let me stop and run the verification/cleanup as simpler separate commands.
+
+Trailer present; working tree clean (generated artifacts git-ignored). Now clean up the large temp build dirs.
+
+All gates verified and committed. Let me finalize tracking.
+
+All todos complete. The task is done and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0159-SortControl.log  | 193 +++++++++++++++
+ .../shared-surfaces/SortControl.Adapter.swift      | 268 +++++++++++++++++++++
+ .../shared-surfaces/SortControl.AdapterTests.swift | 221 +++++++++++++++++
+ .../shared-surfaces/SortControl.Model.swift        | 161 +++++++++++++
+ .../shared-surfaces/SortControl.Previews.swift     | 112 +++++++++
+ .../shared-surfaces/SortControl.Tests.swift        | 255 ++++++++++++++++++++
+ .../shared-surfaces/SortControl.Views.swift        | 209 ++++++++++++++++
+ .../TeslaSync/shared-surfaces/SortControl.strings  |  33 +++
+ .../TeslaSync/shared-surfaces/SortControl.swift    |  93 +++++++
+ 9 files changed, 1545 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0159-SortControl.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SortControl.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SortControl.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SortControl.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SortControl.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SortControl.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SortControl.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SortControl.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/SortControl.swift

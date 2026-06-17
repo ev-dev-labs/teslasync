@@ -1,0 +1,154 @@
+I'll start by exploring the environment to understand what's available and what the task requires. Let me check the repository structure, the web source, and the Apple tooling availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The web source is a presentational banner with 4 variants (info/success/warning/danger), optional title, content, icon, and dismiss button. Now let me explore the existing Apple project structure to match conventions.
+
+The `shared-surfaces` directory exists and is wired into iOS/macOS targets. There's a critical concern: schemes have a pre-action `build-shared-xcframework.sh` (KMP toolchain) and the `.xcodeproj` is git-ignored (XcodeGen). Let me investigate the build prerequisites and existing conventions.
+
+The `shared-surfaces` dir is large (925 entries) — many existing surfaces to model after. Critical: `Shared.xcframework` is NOT present (only `.gitkeep`), and the build script likely needs the KMP/Kotlin toolchain. Let me examine the build script and existing surface conventions.
+
+Now I understand the convention: 833 files, each surface split into `<Name>.swift`, `.Model`, `.Views`, `.Adapter`, `.Projection`, `.Chrome`, `.Previews`, `.Tests`, etc. The `Shared.xcframework` (KMP) must be built via Gradle. Let me study a representative surface and the facade/token/i18n/telemetry infrastructure. Let me find banner/feedback-like surfaces to model after.
+
+`AiLimitBanner` is the ideal model — a banner surface with the full file set. Let me read all of its files to learn the exact conventions.
+
+This is an exceptionally well-structured codebase. The `AiLimitBanner` surface (itself a parity of the web `AiLimitBanner.tsx` which *wraps* the web `AlertBanner`) shows the exact 9-file convention. Critically, it uses an existing atomic `TSAlertBanner` component. Let me examine the design system primitives I'll need and the i18n/build infrastructure.
+
+Now I understand the full architecture. Let me read the exact APIs of the design-system primitives I'll use (`TSAlertBanner`, `TSTone`, `TSEmptyState`, `TSSkeleton`, `TSButton`, `TSCard`, `TSFadeIn`) and the design tokens.
+
+Now I have the `TSAlertBanner` API (tone, systemImage, title, message, onDismiss, action) and `TSTone` (info/success/warning/danger map directly). Let me read the design tokens, remaining components (`TSButton`, `TSCard`, `TSFadeIn`), and verify no naming collisions for my surface.
+
+No naming collisions. Let me read the generated design tokens to use exact token names.
+
+I now have all design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`). Let me check the lint config, the placeholder-check script, `pwsh` availability, and the build-verification status doc before kicking off the (slow) KMP framework build in the background.
+
+`pwsh` 7.6.2 is available — I can run the gate verbatim. Let me read the forbidden placeholder patterns, then kick off the slow `xcodegen` + KMP framework build in the background while I write code.
+
+Critical context from `macos-pending-verifications.md`: the full-app `xcodebuild build test` is consistently **blocked by pre-existing, unrelated parallel-merge collisions** (e.g., `StateTimeline*`, `DashboardWidgetSize`, `ChargingProjection` redeclared across other agents' files I'm not allowed to touch), the KMP `Shared.xcframework` Kotlin/Native build timing out, and missing macOS signing identities. The established honest pattern: verify the surface green by strongest local means (isolated typecheck on both SDKs + tests + lint + format + placeholder + xcodegen enumeration), and defer the full-app gate to CI.
+
+Let me kick off the KMP framework build in the background now (long pole), and study a predecessor's log format for consistency.
+
+There's an artifact log for this exact prompt (`0342-P-0113-AlertBanner`). Let me read it plus a representative shared-surface log to learn the exact log format and STATUS convention.
+
+This is decisive — there's a complete, **rubber-duck-reviewed predecessor artifact log for this exact prompt** (P-0113-AlertBanner). It establishes the scope decision and design:
+
+- The atomic `TSAlertBanner` is **out of scope**; this 0113 surface is the higher-level **data-bound, multi-state AlertBanner host** that binds the mutation-toast bus (`useMutationToast`) + live-connection (P1/S8), renders every state, emits `view.opened` telemetry.
+- It reproduces the web banner as **scoped subviews** (not `TSAlertBanner`) because the web tints *both* title and message with the variant color, and the P1/S10 facade returns `String` (incompatible with `TSAlertBanner`'s `LocalizedStringKey`).
+
+The current slot is a newer repo state where `shared-surfaces` is already wired into `project.yml`/`.swiftlint.yml` (833 files exist). Let me verify the current collision/signing/KMP status and peek at the facade base before writing.
+
+Confirmed in this slot: **0 macOS signing identities**, pre-existing cross-surface symbols (`StateTimelineConnection`, `ChargingProjection`) exist outside my allowed files, and `SharedFacade` imports the KMP `Shared` framework (so the full app target requires `Shared.xcframework`). The KMP build is progressing (linking debug frameworks). My surface will be `Shared`-free and independently verifiable.
+
+Before writing, let me read the actual web data sources (`useMutationToast`, `LiveStaleDataBanner`, `OfflineBanner`) for faithful copy/behavior parity.
+
+I now have exact web parity details:
+- **`useMutationToast`**: `success(key, fallback)` → single message; `error(err, key, fallback)` → translated title + `err.message` as a secondary detail line.
+- **`LiveStaleDataBanner`**: `variant="warning"`, keys `live.staleBanner.title` / `live.staleBanner.message`.
+- **`OfflineBanner`**: `variant="warning"`, keys `pwa.offline.title` / `pwa.offline.banner`.
+
+These are the documented data sources the prompt's `useMutationToast` + required states map onto. I have everything needed. Let me write the plan and the surface files following the `AiLimitBanner` 9-file convention.
+
+Now let me write the surface files. Starting with the pure core (`Adapter`), the state-holder (`Model`), and the seams.
+
+The view needs to resolve `AlertBannerText` through the facade. Let me add a pure, testable `resolve(_:)` method to `AlertBannerText` in the Adapter (so it can be unit-tested with an identity resolver), then write the view files.
+
+Now the state views (loading/empty/error) and the main `AlertBanner` view.
+
+I realize a cleaner, more faithful design: the web `AlertBanner` primitive supports all 4 variants (info/success/warning/danger) with optional title + icon + onClose. To reproduce the *full* API (not just the 3 variants the mutation/connectivity producers happen to emit), I'll model the input as a general controlled `AlertBannerNotice` (the web props), with documented factories bridging `useMutationToast` and the connectivity consumers. This mirrors AiLimitBanner's `Info`→`Data` split and makes all 4 variants reachable. Let me rewrite the Adapter and Model accordingly.
+
+Excellent — the KMP `Shared.xcframework` **built successfully in 8m38s** (now cached). The scheme's pre-action will stage it during `xcodebuild`, so the full-app build now has a real chance. Let me finish the rewrite of the Adapter (Design B with `AlertBannerNotice`).
+
+Now I'll update `Seams.swift` and `AlertBanner.swift` to use the new `notice`-based input (plus a `mutation:` convenience that bridges via `AlertBannerNotice.from(mutation:)`).
+
+Now the previews (all states + 4 variants) and the two test files.
+
+Now the adapter/projection/accessibility tests.
+
+Now the model/state-holder + source tests.
+
+All 9 files written. Let me validate formatting and linting on my files first (these are fast), running from `apps/apple` so the configs are picked up.
+
+swiftformat flags long lines in two test files. Let me auto-format my files with swiftformat (the canonical formatter), then re-verify.
+
+swiftformat passes now. Let me verify it only re-wrapped lines (didn't alter my exact web-parity string assertions) in the two changed test files.
+
+swiftformat only re-wrapped argument layout; the exact web-parity strings are intact. Now swiftlint --strict on my files.
+
+swiftlint: **0 violations in 9 files**. Now let me verify my surface compiles against the *real* design system. First, check whether the components I use are `Shared`-free (so I can do a fast isolated typecheck), and run the placeholder gate.
+
+The placeholder gate scanned all 833 shared-surface files (33 are from other agents). Let me see how the script's `-Path` resolves the `AlertBanner` prefix (as the gate specifies) and directly confirm my files are clean.
+
+My 9 files are **clean (0 forbidden patterns)**. The gate passes `-Path .../AlertBanner` (a filename prefix, not a directory). Let me check the script's missing-path handling, then run the gate's exact invocation to capture real behavior.
+
+The script treats a non-existent path as "clean" (Count=0), so the gate's literal `-Path .../AlertBanner` scans nothing. I'll honor the gate literally *and* scan my 9 files in isolation for honest evidence. First, the key correctness check: does my surface compile against the **real** design system under Swift 6 strict concurrency? Components/Design are `Shared`-free, so I can typecheck on both SDKs. Let me run the macOS-15 typecheck.
+
+The errors are entirely in `Sources/Components/DataDisplay/UnitFormatters.swift` — it depends on `UnitPreferences` (a `SharedFacade`/KMP-coupled type), which my surface doesn't use. The precedent excludes exactly this file. Let me exclude it and re-run on both SDKs.
+
+My surface typechecks **cleanly on both macOS-15 and iOS-18 under Swift 6 strict concurrency** (0 errors, DEBUG so previews compile too). Now let me run the actual tests. I'll build an isolated SwiftPM harness (TeslaSync module = real design system minus the Shared-coupled `UnitFormatters` + my surface; test target = my 2 test files) and run them — the precedent's test-execution method.
+
+The main `AlertBanner.swift` wasn't copied (my loop formed `AlertBanner.swift.swift`). Let me fix that and run the tests.
+
+**All 43 tests pass** under Swift 6 mode against the real design system (27 adapter/projection/a11y + 16 model/source). Combined with clean lint/format/typecheck on both SDKs, my surface is verified green. 
+
+Now let me attempt the real full-app gate. The KMP framework is built — let me stage it, generate the Xcode project, and confirm my files are enumerated.
+
+Project generated and framework staged (149M). Let me verify my 9 files are enumerated in the project, then check the simulator and kick off the full build+test.
+
+All 9 files enumerated (54 pbxproj refs); iPhone 16 simulator is booted. Now the real gate. Given the precedent (full-app build historically blocked by pre-existing cross-surface collisions), let me first run a plain `xcodebuild build` of the iOS app to see if the whole app compiles with my surface — capturing real output. I'll run it in the background and monitor.
+
+The background job was killed when the sync session ended (my `&` mistake). Let me run the build properly in sync mode with a long wait so the tool manages it and notifies me on completion.
+
+Build failed (exit 65). The critical question per the honesty covenant: are any errors in *my* files? Let me analyze the build log.
+
+Zero errors in my files — the only compile error is in another agent's `AIGeofenceAwareAutomationSuggestions.swift`. Let me get the full failure picture to document it precisely.
+
+**Decisive evidence**: the entire iOS app build failed on exactly **one pre-existing, unrelated error** in another agent's file (`AIGeofenceAwareAutomationSuggestions.swift:141` — "escaping closure captures non-escaping parameter") — a file outside my allowed scope. **Zero errors in any AlertBanner file.** This is the exact deferral condition documented in `macos-pending-verifications.md`.
+
+Let me capture the macOS build's real status (same shared-sources error, plus 0 signing identities) and run the remaining gate commands for honest evidence.
+
+Both full-app builds (iOS exit 65, macOS exit 65) are blocked by **different pre-existing errors in other agents' surfaces** (`AIGeofenceAwareAutomationSuggestions`, `AIAutoNameUnnamedLocations`) — **0 AlertBanner errors in either**. Now the tree-wide lint/format gates (as the gate specifies), confirming my files contribute nothing.
+
+Both lint gates pass **tree-wide**: `swiftlint --strict` → **0 violations in 4190 files** (EXIT=0), `swiftformat --lint` → **0/4488 require formatting** (EXIT=0). The "AlertBanner violations: 9" is just my grep matching the 9 progress lines, not violations. Let me confirm that and run the placeholder gate.
+
+My files are confirmed clean: 0 swiftlint violations, **PLACEHOLDER_COUNT=0** in the isolated scan. But the *literal* gate invocation returned exit 1 unexpectedly — let me see why.
+
+The literal failure was a bash-vs-PowerShell artifact: `*>` is PowerShell redirection, but under bash the `*` glob-expanded repo-root dirs (`api`, …) into extra args. The gate block is PowerShell — it must run in `pwsh`. Let me run the placeholder step correctly in pwsh.
+
+All gate results captured. Summary:
+- `swiftlint --strict` (4190 files): **EXIT=0** ✓
+- `swiftformat --lint` (4488 files): **EXIT=0** ✓
+- placeholder (isolated 9 files): **PLACEHOLDER_COUNT=0, EXIT=0** ✓
+- iOS/macOS `xcodebuild build`: **EXIT=65** — blocked solely by pre-existing errors in *other* agents' surfaces (0 AlertBanner errors), macOS also has 0 signing identities.
+
+Let me gather line counts and write the evidence log.
+
+Git sees only my 9 files; the 149M xcframework and xcodeproj are git-ignored. 9 files / 1533 lines / 43 tests. Now let me write the comprehensive, honest evidence log.
+
+Log written. Let me clean up temp scratch, then stage exactly my 9 files + the log (verifying the git-ignored 149M xcframework and xcodeproj are excluded).
+
+Exactly 10 files staged (9 Swift + log), no stray artifacts. Now the commit.
+
+Commit `d625d8e98` created; working tree clean. Let me do a final post-commit verification of the committed contents and re-confirm lint/format on the committed files.
+
+Task complete and verified. Final confirmation: commit `d625d8e98` contains exactly the 9 surface files + log (1708 insertions); swiftformat `0/9` and swiftlint `0 violations in 9 files`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0113-AlertBanner.log  | 175 ++++++++++++++
+ .../shared-surfaces/AlertBanner.Adapter.swift      | 257 ++++++++++++++++++++
+ .../shared-surfaces/AlertBanner.Model.swift        | 197 ++++++++++++++++
+ .../shared-surfaces/AlertBanner.ModelTests.swift   | 212 +++++++++++++++++
+ .../shared-surfaces/AlertBanner.Previews.swift     | 122 ++++++++++
+ .../shared-surfaces/AlertBanner.Seams.swift        | 110 +++++++++
+ .../shared-surfaces/AlertBanner.States.swift       | 105 +++++++++
+ .../shared-surfaces/AlertBanner.Tests.swift        | 262 +++++++++++++++++++++
+ .../shared-surfaces/AlertBanner.Views.swift        | 174 ++++++++++++++
+ .../TeslaSync/shared-surfaces/AlertBanner.swift    |  94 ++++++++
+ 10 files changed, 1708 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0113-AlertBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AlertBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AlertBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AlertBanner.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AlertBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AlertBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AlertBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AlertBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AlertBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AlertBanner.swift

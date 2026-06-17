@@ -1,0 +1,222 @@
+I'll start by exploring the environment and the web source to understand the task scope.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me read the web source and explore the existing Apple structure.
+
+Let me continue reading the web source and explore existing shared-surfaces patterns in parallel.
+
+The shared-surfaces dir is large. Let me look at recently completed surfaces (UptimeHeatmap, Accordion) as patterns, and continue reading the web source.
+
+I now understand the 8-9 file pattern per surface. Let me study the complete Accordion example and key UptimeHeatmap files to learn the conventions (state holders, tokens, i18n, telemetry).
+
+Let me get the full picture: remaining DataTable.tsx sections, and the rest of the Accordion files plus UptimeHeatmap to understand data-state patterns.
+
+Let me read the rest of the DataTable source and find the shared token/infrastructure definitions.
+
+Let me read the rest of DataTable.tsx and find the design token definitions and project structure.
+
+I have the full web source. Now let me read the design tokens, project config, and remaining reference files (Accordion strings/tests/previews + UptimeHeatmap for data-state patterns).
+
+Tokens for the main app must be generated. Let me read the project.yml fully to understand targets, sources, and any code-generation steps.
+
+Now I understand the build structure. Tokens come from `../design/generated/apple`. Let me inspect tokens, check xcodegen/xcodeproj state, and read the remaining Accordion reference files.
+
+Tokens live in `Tokens.swift`. Shared.xcframework isn't staged — built via script. Let me read the tokens, the framework script, and the remaining Accordion test/preview files.
+
+I now have the full token vocabulary. The build needs a KMP `Shared.xcframework` via Gradle — that's the main risk. Let me read the remaining Accordion reference files and check the gradle/shared setup, then kick off a baseline build.
+
+Let me read the lint config, the Previews pattern, and the richer UptimeHeatmap surface (data-state handling) to finalize my approach.
+
+I have the full pattern. Let me review the more complex UptimeHeatmap surface (entry view, model, views) to calibrate idioms for a complex surface before building.
+
+Both reference surfaces are presentational — confirming my approach for DataTable. Let me locate the shared `TSTone` helper and check the gradle/KMP setup, then kick off a baseline build to verify the toolchain.
+
+`TSTone` is in `Badges.swift`, Java 17 + gradle present. Let me view TSTone and kick off a baseline build (xcodegen + xcodebuild) in the background while I write code.
+
+TSTone confirmed. Project generated. Let me kick off a baseline iOS build in the background (this triggers the KMP gradle framework build) while I write the DataTable files.
+
+I have everything I need. Let me write a plan and start creating the DataTable surface files. First the plan:
+
+Now let me create the Foundation-only core (Adapter), Projection, and CSV files.
+
+Let me check the baseline build progress, then continue with the Model.
+
+Build is compiling the KMP framework. Let me write the Model (Strings + Telemetry + Persistence + @Observable state-holder).
+
+Model support is in place. Let me put the `@Observable` state-holder in its own file to keep files small.
+
+Core layers done. Let me check the baseline build status.
+
+Build is still compiling the KMP framework (first-run gradle is slow). Let me continue with the public view API and column type.
+
+Let me refine the subview wiring to pass the model explicitly (avoiding `@State`-copy pitfalls), then build the view subcomponents.
+
+Now the public initializers in a dedicated file:
+
+Let me check the baseline build progress before writing the view files.
+
+Build is still compiling the KMP framework. Let me write the view subcomponents (header, rows, cells, states).
+
+Now the body rows, cells, states, and resize handle in a separate file:
+
+Let me check the baseline build — it's been running several minutes (KMP first build).
+
+Build still compiling the KMP toolchain. Let me write the chrome (states, toolbar, export, pagination) and the column menu.
+
+Now the column visibility/reorder menu:
+
+Now I'll add the additional string accessors (sort, pagination, bulk, menu) in a dedicated strings extension file:
+
+The baseline build succeeded — toolchain works. Let me confirm the output.
+
+The notification was misleading — the pipe masked the real exit. The build **FAILED** on pre-existing sibling surfaces (`AIFeedbackQueueTriage`, `AIGeofenceAwareAutomationSuggestions`, etc.), not my files (mine weren't in the project yet). I need the actual compile errors. Let me capture them.
+
+While the build runs, let me understand the parallel-build context (known-broken state?).
+
+This is a large accumulated monorepo (1449 sibling files). The baseline build is red on pre-existing AI* surfaces — before my changes. I must see the exact errors to understand whether it's a genuine sibling break or something systemic. Let me wait for the capture.
+
+Exit 65 (failure) but no standard ` error: ` lines — the failure format differs. Let me dig into the log.
+
+Line 7717 shows a **Swift compiler crash** (`llvm::report_fatal_error`), not a normal compile error. Let me see the crash context.
+
+This is a **pre-existing Swift compiler crash** during IR generation (`report_at_maximum_capacity` — an LLVM SmallVector overflow) while compiling sibling file `AppearanceSettings.Controls.swift`. It's triggered by the accumulated ~1449-surface monolith module — **not** my code (my files weren't in this build). Let me see the crash trigger and confirm scope.
+
+Critical discovery: there's already a `DataTable` type at `Sources/Components/UI/DataTable.swift` (the atomic component, out of scope per the prompt). A second `public struct DataTable` in the same module would collide. Let me inspect the existing component and how sibling surfaces avoid name clashes.
+
+Key relief: the atomic component is named `TSDataTable`/`TSColumn` — **no name collision** with my `DataTable`/`DataTableColumn`. The build failure is a **pre-existing Swift compiler IRGen crash** (`report_at_maximum_capacity`) on sibling `AppearanceSettings.Controls.swift`, triggered by the accumulated ~1449-surface monolith — entirely outside my scope and unfixable from my allowed files.
+
+Since the full-target build is broken at baseline, let me set up **isolated verification** of my slice. First, confirm my files only depend on the design tokens.
+
+My files depend only on `Tokens.swift` — I can verify them in isolation. Let me finish the Previews and Tests, then run an isolated typecheck. First, Previews:
+
+Now the two test files — first the pure-core adapter tests:
+
+Let me fix the enum case shorthand I mistyped in the value-type test:
+
+Now the main test file (model, views, strings, a11y):
+
+All 13 files written. Now the critical step: an **isolated type-check** of my production files against the real design tokens (my code depends only on `Tokens.swift`). Let me run it.
+
+One Sendable error: `UserDefaults` isn't `Sendable`. `UserDefaults` is thread-safe in practice, so I'll mark that persistence struct `@unchecked Sendable`. Let me fix and re-check.
+
+Name shadowing — need `self.content`. Let me fix:
+
+The property-wrapper backing `_model` is private, so inits in a separate file can't assign it. I'll move the column types to their own file and bring the inits into `DataTable.swift`. Let me view the current file first.
+
+I'll move the column types to their own file and bring the inits into the struct. Creating `DataTable.Column.swift`:
+
+Now remove those types from `DataTable.swift` and add the inits into the struct body:
+
+Now insert the two inits into the struct body. Let me view the current struct region:
+
+Now delete the obsolete `DataTable.Init.swift` and re-run the type-check with the new file layout:
+
+My production code type-checks cleanly in isolation under Swift 6 strict concurrency. Now let me verify the **test files** compile too (stripping the self-import and compiling them together with the production sources as one module + XCTest).
+
+XCTest needs its framework search path. Let me add it:
+
+The only errors are `XCTAssert*` macros (C macros unavailable to raw `swiftc` — they need the full Xcode test harness, not a code issue). Let me confirm there are **no** errors about my own APIs by filtering out the XCTest-macro noise.
+
+All 6 non-XCTest errors are downstream of the unavailable `XCTAssert*` macros (they're the `.ascending`/`.descending`/`.empty` args *inside* those calls). My own API references all resolve. Let me prove the test logic itself is sound with a minimal XCTest shim.
+
+Those errors are just missing `Foundation` (real `import XCTest` re-exports it; I stripped it). Adding `Foundation` to the shimmed copies:
+
+**Both production and test code type-check cleanly** under Swift 6 strict concurrency. Now let me run the other gate tools on my files: swiftformat, swiftlint, and check-placeholders. First, auto-format and verify formatting:
+
+pwsh is available, formatting is clean (0/15 need changes). swiftformat modified 12 files, so let me re-verify the type-check still passes and run swiftlint on my files.
+
+Production type-check still clean post-format. swiftlint found 8 fixable violations in my files. Let me view the relevant spots and fix them.
+
+Clear fixes. Let me apply all 8: refactor `toggleRow` to 5 params via a `shiftAnchor`/helper (fixes param-count + brace), fix the CSV string conversion, and switch trailing closures to labeled `content:` in Previews and Tests.
+
+Now update the model's `toggleRow` to compute `shiftAnchor`, and fix the CSV string conversion:
+
+Now fix the trailing-closure violations in `previewColumns()` and `sampleColumns()` by using labeled `content:`:
+
+swiftformat changed the spacing. Let me view the current `sampleColumns` in Tests:
+
+Now update the `toggleRow` call sites in `AdapterTests` (the `anchorKey:`/`shift:` → `shiftAnchor:` change):
+
+Now re-run swiftformat, swiftlint, and the production type-check together:
+
+swiftlint and swiftformat are clean (0 violations). Let me re-verify both type-checks after all edits:
+
+Something rewrote the date unwrap to `try XCTUnwrap`. Let me inspect the actual current file:
+
+The test now uses `try XCTUnwrap` with a `throws` function (correct, idiomatic XCTest style). My shim just lacks `XCTUnwrap`. Let me add it and re-verify:
+
+Both production and test code type-check cleanly. Now the placeholder gate (scoped to my files as the gate specifies):
+
+My slice passes every isolatable gate: **isolated type-check (prod + tests) = 0, swiftlint --strict = 0 violations, swiftformat --lint = clean, placeholder check = 0**. 
+
+Now I must run the actual gate's `xcodebuild build test` to honestly record its result. Let me regenerate the project (to include my files) and start the iOS gate build, then run the full-repo lint/format gates meanwhile.
+
+Files are in the project. Let me start the iOS gate `build test` in the background and run the full-repo lint/format/placeholder gates meanwhile.
+
+Full-repo `swiftlint --strict` over **4657 files = 0 violations** (whole repo clean, including mine). The iOS gate finished — let me read its result.
+
+iOS gate: `IOS_EXIT=65`. Let me confirm it's the **same pre-existing crash** on the sibling file and that **no DataTable file** is implicated.
+
+No crash signature and no `error:` lines this time — a different failure mode. Let me examine the actual failure.
+
+The log seems to end early (mostly env dumps). Let me view the tail to see where it actually stopped.
+
+**Critical, fixable finding (my bug):** the build now fails early with `Filename "DataTable.swift" used twice` — the module already has `Sources/Components/UI/DataTable.swift` (the atomic `TSDataTable`), and Swift requires unique filenames per module. This short-circuited before reaching the pre-existing sibling crash. Let me rename my entry file (still matches `DataTable.*`).
+
+Only `DataTable.swift` collided; all other files are unique. Let me update the file's header comment and regenerate the project, then re-run the iOS gate.
+
+iOS gate re-running (filename fixed). This will take several minutes (gradle + compile). Let me wait and check.
+
+Good — the filename fix worked (it's now compiling past the previous early-failure point). Let me keep waiting for it to either hit the pre-existing crash or complete.
+
+iOS gate exited 65 again. Let me determine the cause — pre-existing crash vs. a DataTable issue.
+
+Major clarification: this run has **no `report_at_maximum_capacity` crash** (the earlier crash was batch-sensitive/flaky) and only **2 compile errors — both in pre-existing sibling files** (`RecentDrivesSection.Previews.swift`, `AISignalExplorerNlFilter.swift`), **zero in any DataTable file**. Let me confirm rigorously.
+
+**Definitive:** the iOS gate's only 2 errors are both in **pre-existing sibling files** (`RecentDrivesSection.Previews.swift:24`, `AISignalExplorerNlFilter.swift:142`) — **zero errors in any DataTable file**, and my files all compiled. Let me run the macOS gate (for honest recording) and confirm the sibling errors are genuinely sibling-owned.
+
+The sibling error is a genuine pre-existing bug (`AISignalExplorerNlFilter.glass` passes a non-escaping `content` into `TSGlassPanel`'s escaping builder) — unrelated to my code and unfixable from my allowed files. Let me wait for the macOS gate to record its result.
+
+macOS gate: `MAC_EXIT=65`. Let me confirm it's also sibling-only (no DataTable errors):
+
+macOS fails on a **pre-existing code-signing/entitlements environment limitation** (no development certificate; `DEVELOPMENT_TEAM` is empty) for the `TeslaSync-macOS`/`TeslaSyncWidgets-macOS` targets — again not my code, and my files weren't even reached. Let me check the documented macOS verification status to corroborate.
+
+Confirmed by the project's own `macos-pending-verifications.md`: build/test artifacts are routinely deferred to a macOS CI host while "all host-runnable gates are green." Let me run the remaining gate steps exactly as specified (full-tree swiftformat) to record honest results, then assemble the log.
+
+All host-runnable gates are green (swiftlint 0, swiftformat 0/4955, placeholder 0, isolated type-check 0). The `xcodebuild build test` steps are blocked by pre-existing, out-of-scope issues. Let me write the honest gate log.
+
+Now let me review git status, verify the generated project is ignored, and confirm exactly what to commit.
+
+I caught a gap: the actual `DataTable.strings` i18n **catalog** file (the P1/S10 contribution, like `Accordion.strings`) is missing — I only made the Swift accessor file. Let me create it now with all keys.
+
+Let me validate the `.strings` file syntax and re-run the placeholder gate (now covering the new file):
+
+Everything is consistent: valid `.strings`, placeholder 0, and **all 27 i18n keys referenced in Swift exist in the catalog**. Let me update the plan, verify the working tree contains only my files, and commit.
+
+Clean — only my 16 files + the log, all staged. Committing with an honest, self-documenting message:
+
+The surface is committed. But I should harden one portability risk: I declared `@Environment(\.horizontalSizeClass)` (iOS-only; unused) which could break the **macOS** target — and the macOS gate failed at signing before reaching my file, so it was never compiled there. Let me remove it and verify my code type-checks on **both** iOS and macOS targets in isolation.
+
+Both iOS and macOS isolated type-checks pass (0). Let me re-lint/format the changed file and update the log to reflect the macOS verification, then amend the commit.
+
+Surface file clean. Let me update the log with the macOS isolated verification and precise counts:
+
+Let me amend the commit to include the macOS-portability fix and updated log:
+
+Commit amended (167f4f821), tree clean. Let me do a final consolidated verification summary and clean up temp artifacts.
+
+All verification is complete and consistent. Here's the final state.
+
+## Summary
+
+I built the complete native SwiftUI **DataTable** shared surface (P4 · 0208) at parity with `components/ui/DataTable.tsx`, committed as `167f4f821` (16 files + gate log).
+
+**Delivered (16 files in `apps/apple/TeslaSync/shared-surfaces/`):** `DataTable.Adapter` (identity, enums, ColumnSpec/Layout/SortState), `.Projection` (pure projectors: visible-columns, reorder, sort-toggle, pagination, shift-range selection, colspan, width-clamp), `.CSV` (RFC-4180 serializer), `.Model` (i18n + telemetry + persistence seams), `.State` (`@Observable` holder, P1/S8), `.Column`, `.Surface` (public `DataTable<Row,Key>` + inits), `.Views`, `.Rows`, `.Chrome`, `.Menu`, `.Strings`, `.Previews`, `.Tests`, `.AdapterTests`, and the `DataTable.strings` P1/S10 catalog. All real web branches reproduced (populated · empty · row-render error) plus the full feature matrix (sort, single/multi selection + select-all + shift-range, expansion, pagination, sticky header, resize, column visibility/reorder, CSV export, virtualization, context menu, density), token-driven, i18n via the facade, once-only `view.opened` telemetry, full VoiceOver labels.
+
+**My-slice verification — all GREEN:** swiftlint `--strict` 0 violations (4657 files); swiftformat `--lint` 0/4955; check-placeholders 0; isolated `swiftc -typecheck` = 0 on **both iOS and macOS** targets for production **and** tests under Swift 6 strict concurrency; all 15 DataTable sources compile with **zero errors** inside the full iOS module. I fixed the one issue that was mine (filename collision with the module's existing `Sources/Components/UI/DataTable.swift` → renamed entry to `DataTable.Surface.swift`) and removed an iOS-only `@Environment` for macOS portability.
+
+**STATUS = BLOCKED** on `xcodebuild build test` (IOS_EXIT=65, MAC_EXIT=65) — the prompt-sanctioned outcome with evidence. The failures are **pre-existing and out-of-scope**, none in any DataTable file:
+- **iOS:** sibling compile errors in `feature-views/RecentDrivesSection.Previews.swift` and `shared-surfaces/AISignalExplorerNlFilter.swift:142` (escaping-closure bug).
+- **macOS:** code-signing/entitlements (no dev certificate; `DEVELOPMENT_TEAM=""`) — the deferred-verification class documented in `apps/macos-pending-verifications.md`.
+
+Allowed files are `DataTable.* + log`, so I cannot fix the sibling/env blockers. Full evidence is in the committed log.
+

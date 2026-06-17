@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+The web page is a thin tabbed shell with 5 sections. Let me explore the Apple app structure, the sub-components, and the parity infrastructure in parallel.
+
+There are two structures: `apps/apple/Sources/...` (existing) and `apps/apple/TeslaSync/...` (the prompt target). Let me investigate both, plus check for the Xcode project and existing Admin feature.
+
+Two parallel trees exist. I need to understand which is the real Xcode project. Let me read `project.yml`, check tooling availability, and examine the parity manifest/ledger.
+
+All Apple tooling is available, so the gate can actually run. Important: `project.yml` compiles `Sources/` and `TeslaSync/{feature-views,shared-surfaces,...}` but **not** `TeslaSync/Features/`. The real admin pages live in `Sources/Features/Admin/`. Let me examine the parity manifest, ledger, gate README, and a representative existing admin page to learn conventions.
+
+The ledger has rows for sibling admin pages but none for DevTools yet. Let me read the manifest record, the parity README (gate contract), and a representative existing admin page with its route registration to learn conventions.
+
+The page unit requires exactly 2 string items (`devtools.title`, `devtools.subtitle`) — the sub-sections are likely tracked as separate units. Let me verify that, read the gate README, and examine the web sub-sections plus a representative existing Apple admin page to learn conventions.
+
+The sections aren't separate parity units — this page unit (requiredCount=2) is the only record. But to avoid scope-narrowing/stubs, I'll faithfully port the full tabbed page. Let me read all the web sub-sections and supporting files to understand the complete UX.
+
+This is a substantial multi-section page. Let me read the remaining web sections, supporting components, and—critically—the existing Apple conventions (a simple admin page, its route registration, shared components, and navigation) to ground my port.
+
+The full web page is large (15 client-side tools + API-backed sections), but the manifest deliberately scopes this unit to 2 strings / 0 data sources / 0 panels — it's a thin shell. I'll port the tabbed shell faithfully with native local/static content. Now let me study existing Apple conventions to build something idiomatic that actually compiles.
+
+The `TeslaOrdersPage` is the ideal template — a thin title+subtitle shell. Note keys are prefixed `translation.` in the catalog. Let me examine the route enum, route registry aggregation, the localization catalog, shared components (including any tab/segmented control), and the model pattern.
+
+Now let me read the route registry aggregation, the parser, the model pattern, the localization catalog format, and search for an existing tab/segmented control component.
+
+Key findings: there's a shared `Tabs.swift` UI component, the parser has a `/devtools` alias, and the registry is aggregated in `TeslaSyncApp.swift`. Let me read the Tabs/Typography/Cards components, the web route definition, the model pattern, and the localization catalog format.
+
+`TSTabs` is exactly what I need. The web route is `dev-tools`. Now let me inspect the localization catalog format, the typography/card/motion components, and the design tokens.
+
+Now I understand the design system. Keys are prefixed `translation.` in the catalog. Let me confirm whether `devtools.title`/`devtools.subtitle`/`route.devTools` exist, see the exact xcstrings entry format, and read the design tokens, cards, and motion components.
+
+`translation.devtools.title` and `translation.devtools.subtitle` already exist — the 2 parity strings are in the catalog. There's no `route.devTools` key yet. Let me view those entries, the design tokens, the motion component, and check tests that enumerate routes (so I don't break the suite).
+
+Got all design tokens. Now let me read the route tests (to avoid breaking the suite when adding `.devTools`), the route-registration test pattern, and the motion component.
+
+The route tests are safe to extend. But adding a `.devTools` enum case will break every exhaustive `switch` over `AppRoute` (e.g., `systemImage`, `group`). Let me find all such switches/usages and the motion component.
+
+`TSRouteTransition(id:)` is perfect for the tab crossfade. There's a second exhaustive switch in `WatchDeepLink.swift`. Let me check it, the menu catalog test (for hardcoded counts), and how the sidebar enumerates routes.
+
+`WatchDeepLink` switches over its own enum (unaffected). The only AppRoute exhaustive switches are in `AppRoute.swift`. But `MenuCommandCatalogTests` asserts navigate commands cover all `AppRoute.allCases`. Let me verify the catalog auto-derives from `allCases`.
+
+The catalog auto-derives from `allCases`, so menu tests stay green. I now understand the full system. Let me check the gate tooling: the placeholder scanner, pwsh availability, the gate README contract, and a sibling log format to mirror.
+
+pwsh is available. Let me read the placeholder scanner, the gate README contract, and the sibling TeslaOrders log to mirror its format.
+
+This sibling log is the methodology blueprint. Critically, it notes sections often already ship as native `feature-views` surfaces (like `ActiveOrdersSection`), and there are logs for `FleetApiSection`. Let me check whether the 5 DevTools sections are already ported as native surfaces I should compose.
+
+All 5 DevTools sections already ship as native `feature-views` surfaces. So—exactly like `TeslaOrdersPage`—`DevToolsPage` is a thin tabbed shell composing them. Let me read each section's main view + model to learn their public init signatures.
+
+Each section view takes a `model:`. Let me read the two remaining main section views and all five `.Previews.swift` files to learn exactly how to construct each model with a default source.
+
+Important: the native `InfrastructureSection.swift` is parity of the **system-status** infra section (SSE/polling), NOT the DevTools infra tools (Db Stats/Migrations/MQTT/Env/Runtime) — a name collision. Let me locate the DevTools infra surface and learn model construction from the previews.
+
+`BackendStatusSection` references the devtools infra endpoints — likely the renamed native parity of the devtools `InfrastructureSection` (avoiding the system-status collision). Let me confirm and read the remaining previews for model construction.
+
+`BackendStatusSection` is also system-status, not the DevTools infra tools. Let me resolve the Infrastructure-tab question via the manifest, and verify the in-memory sample sources are usable in non-DEBUG code (not `#if DEBUG`-gated).
+
+The in-memory sources live in each `.Model.swift` (usable in non-DEBUG). The manifest has no devtools-section units — confirming the page is the only unit and sections are pre-shipped feature-views. Let me definitively resolve whether a native DevTools-infra surface exists.
+
+`BackendTool` ships natively, but the composed DevTools `InfrastructureSection` does not (the same-named native one is system-status). Let me learn the exact non-DEBUG constructors/sample data for each section model and assess `BackendTool`, so my composition type-checks cleanly.
+
+All sources are public/non-DEBUG. Let me read `BackendTool` (to assess assembling the Infrastructure tab) and the exact init signatures + default catalogs for the simpler sections.
+
+All sources are public. I can construct the section models like the previews do. The remaining risk is the Infrastructure tab (assembling `BackendTool`s) and exact init signatures. Let me read `BackendTool.Model.swift` and the precise constructors, then I'll write code and compile-iterate to green.
+
+`BackendTool` is composable via `InMemoryBackendToolRunner` (public). I can assemble the Infrastructure tab faithfully. Let me grab the last init signatures and confirm `ReferenceLinkCatalog.defaultLinks`, then I'll write code and compile-iterate to green.
+
+I now have every constructor I need. Let me set up tracking, then kick off the long-pole `Shared.xcframework` build in the background while I write code.
+
+Let me start the `Shared.xcframework` build in the background, set up tracking, and write the plan.
+
+The xcframework build is running. Let me read the lint/format configs and the remaining FleetApi constructors before writing code.
+
+I have all constructors and lint rules (≤120 width, min identifier length 2). Note `FleetApiSection` brings its own `ScrollView`, so I'll pin header+tabs and scroll content per-tab. Let me write the plan, then create the files.
+
+Now I'll create the files. Starting with the model (child section models + sample sources + tab enum):
+
+Now the Infrastructure tab view and the main page view:
+
+Now the route registration, plus wiring `.devTools` into `AppRoute` and the app registry:
+
+Now wire `.devTools` into `AppRoute.swift` (enum case, pathSegment, systemImage, group):
+
+Now wire the registration into the app's route host registry:
+
+Now the route registration test (mirroring the sibling) that also binds the 2 parity string keys:
+
+Now add the catalog strings. Let me inspect the xcstrings top structure to pick a safe insertion anchor.
+
+The "strings" object opens at line 3. I'll insert all 16 new keys as a clean additive block right after it (no existing keys reordered):
+
+Let me validate the xcstrings JSON and check the xcframework build progress.
+
+xcstrings valid (9166 keys, all new keys present). The xcframework build continues. Meanwhile let me run the checks that don't need it — formatting, lint, placeholders.
+
+The xcframework build finished. Let me confirm it succeeded and auto-format my new files to fix the `wrapPropertyBodies` style issues.
+
+xcframework built successfully (EXIT=0). Let me re-verify formatting and run swiftlint + placeholder gate.
+
+Placeholders clean (0). One swiftlint issue: `sampleInfrastructureTools()` exceeds 50-line function body. Let me view the formatted region and refactor with a helper.
+
+I'll refactor with a compact `infraTool(...)` helper to shrink the function body:
+
+7 params exceeds the limit. Let me view the current state and refactor to a 5-param descriptor builder + a descriptor-only tool init.
+
+Refactoring to a 5-param descriptor builder + descriptor-only tool init:
+
+Lint and format are both clean (0 violations). Now the build: regenerate the Xcode project (picks up my new files automatically) and build the macOS scheme.
+
+My 5 files are in the project (30 refs). Now build the macOS scheme (capturing to a log). This may take several minutes and could show pre-existing breakage:
+
+While the build runs, let me prepare a standalone routing harness (the sibling's proven approach) to independently verify the `.devTools` route logic. Let me check the build progress first.
+
+Build EXIT=65 (RED) — as the sibling documented for pre-existing breakage. Critical question: are any errors in MY files? Let me analyze the log.
+
+Build is RED only at a pre-existing file (`shared-surfaces/Input.Previews.swift` — explicit `return` in a ViewBuilder), with zero errors in my files. But `body`/`#Preview` are `@ViewBuilder` contexts, so my explicit `return`s are likely unsafe and my files may simply not have been reached in batch compilation. Let me fix those and force a whole-module type-check. First, view the current page file.
+

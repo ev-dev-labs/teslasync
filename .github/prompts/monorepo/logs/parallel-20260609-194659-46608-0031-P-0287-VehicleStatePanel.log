@@ -1,0 +1,153 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me read the web source and explore the existing Apple app structure.
+
+Now let me explore the existing Apple app structure to understand conventions (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics, existing feature-views).
+
+This is a real Apple monorepo app. Let me explore the existing feature-views and dashboard-widgets for conventions, plus the Sources core (state holders, tokens, i18n, diagnostics).
+
+The feature-views directory has 2358 files. Each surface has `.swift`, `.Model.swift`, `.Previews.swift`, `.strings`, and `Tests.swift`. Let me find an existing telemetry-panel sibling to use as the exact conventions template.
+
+The sibling panels (Climate, Security, etc.) are the best template since they share the same `live`/`sseConnected` props. Let me check which siblings are already ported natively.
+
+`PowertrainPanel` and `MediaNavigationPanel` are direct siblings with identical props — perfect templates. Let me read the entire PowertrainPanel set (it's the closest match).
+
+Excellent template. Now let me read the Views, Previews, strings, and Tests files.
+
+I now have the complete pattern. Let me examine the web `useUnits.formatSpeed` and the native shared tokens/components (`Color.TS`, `Font.TS`, `TSGlassPanel`, etc.) so my port maps correctly.
+
+`formatSpeed` delegates to `unitConversion.ts`. Tokens (`TSSpacing`, `Color.TS`, `Font.TS`) are likely in design-generated. Let me locate them and read `formatSpeed`.
+
+Now let me look at the parent `LiveTelemetryPanels.tsx` to understand the `live` data shape, and the remaining `unitConversion.ts` helpers needed for `formatSpeed` parity.
+
+Let me verify the exact signatures of the shared components I'll use (`TSGlassPanel`, `TSButton`, `TSSkeleton`, `TSFadeIn`) to avoid compile errors.
+
+I have all component signatures. Now let me check the build prerequisites: xcodegen, the generated project, and the Shared.xcframework (the main app depends on a KMP framework).
+
+Building the full app requires the KMP Kotlin/Native toolchain via Gradle. Let me check prior sibling logs to establish the environment precedent (DONE vs BLOCKED), and whether the shared Gradle build is viable here.
+
+All 274 prior P4 logs are `EXIT=0 STATUS=DONE` using a sanctioned "code-complete + DEFERRED Xcode gate" disposition (full-app build needs the KMP toolchain). Let me read the closest sibling logs (PowertrainPanel 0283, plus a detailed one) to match the exact validation methodology.
+
+This is the exact sanctioned methodology: code-complete + host-runnable gates GREEN (swiftformat, swiftlint, placeholder, isolated SwiftPM build+test, cross-SDK typecheck, xcodegen), with the full-app Xcode scheme build/test DEFERRED (KMP Gradle long-pole + signing). Let me read the lint config and tooling so my code is compliant from the start.
+
+All tooling present (pwsh, check-placeholders.ps1). Lint limits: file ≤400 lines, code lines ≤120. Let me read the placeholder checker to know what tokens to avoid, then start building.
+
+Let me check the forbidden placeholder patterns (they scan comments too) so my code and comments avoid them.
+
+I have everything needed. Let me set up tracking and write the plan, then build the 7 surface files following the sanctioned PowertrainPanel pattern.
+
+Now I'll write the surface files. Starting with the pure projection core (`Adapter.swift`).
+
+Now the Model file (state-holder seam, telemetry, projector, i18n facade).
+
+The Adapter is 472 lines — over the swiftlint `file_length` 400 limit (which fails under `--strict`). I'll split out the formatting types into a `VehicleStatePanel.Format.swift` file (matches the allowed `VehicleStatePanel.*` glob), mirroring how `MediaNavigationPanel.Format.swift` does it.
+
+Now I'll recreate the Adapter without the moved sections (cleaner than a fragile large edit).
+
+Now the Model file (state-holder seam, telemetry, projector, observable model, i18n facade).
+
+Now the surface file (`VehicleStatePanel.swift`) with header, freshness chip, banner, and content switch.
+
+Now the Views file (data body with 3 sections, freshness chip with pulse, row view, loading/empty/error chrome).
+
+Now the Previews and strings files.
+
+Now the Tests file (adapter formatters, speed conversion, per-field projection, projector states, model wiring, a11y).
+
+All files created. Let me verify line counts (must be ≤400 for swiftlint `--strict`) and then run the host gates.
+
+All files under 400 lines. Now the host gates. First, auto-format my files with swiftformat (using the repo config), then lint.
+
+Clean: swiftformat 0/7, swiftlint 0 violations. Now the placeholder gate (pwsh). I'll run the literal gate path and a meaningful per-file scan (temp copy) to get a real count over my files.
+
+Placeholder gate clean (0 violations, real per-file scan). Now the highest-value gate: the isolated SwiftPM build+test. Let me map the shared-component dependency closure my surface needs.
+
+The 4 component files only need SwiftUI + design tokens + a `.tsGlassPanel()` modifier. Let me locate that modifier and check the component files' preview dependencies.
+
+Cards.swift drags in typography/badge components. Let me map which shared dirs are self-contained (no KMP `Shared` or external imports) so I can assemble a compilable closure.
+
+Components/Design import only system frameworks (SwiftUI/Charts/MapKit/Foundation) — **no KMP `Shared`** — so they compile standalone. Let me assemble the isolated SwiftPM package (module `TeslaSync`) with the minimal shared-component closure + my surface, and build it.
+
+Isolated build succeeded (Swift 6 mode, strict concurrency). Now run the tests.
+
+All 24 tests pass, 0 failures. Now the cross-SDK typecheck (iOS 18 + macOS 15, Swift 6, strict concurrency).
+
+Both cross-SDK typechecks pass (0 errors). Now `xcodegen generate` to prove the project enumerates my files. First verify the generated project is git-ignored.
+
+`xcodegen generate` succeeded. Let me confirm my files are enumerated in the project, check git status, and verify the generated project won't be accidentally committed.
+
+All 8 files enumerated in the project (Tests wired into both test bundles); the generated `.xcodeproj` is git-ignored (not in status). Now let me capture the deferral evidence for the full-app scheme gate (the sanctioned DEFERRED step) and confirm the KMP long-pole.
+
+Deferral evidence captured (0 signing identities; `Shared.xcframework` unstaged → KMP Gradle long-pole). Let me verify my public type names don't collide with any existing symbol in the app (which would be a real in-scope defect).
+
+A real collision: `VehicleStateInput` already exists in `VehicleHeroWidget.Model.swift` (same module). I must rename mine. Let me inspect the existing one.
+
+Only `VehicleStateInput` collides. Let me confirm there are no other shared declarations in that widget file, then rename my type to the unique `VehicleStatePanelInput`.
+
+Confirmed — only `VehicleStateInput` collides. Let me rename mine to `VehicleStatePanelInput` everywhere it appears.
+
+Renamed cleanly. The longer name may push some lines past 120 chars — let me re-format and re-lint, then re-run the isolated build/test/typecheck and the collision scan.
+
+Clean after rename (format 0/7, lint 0 violations, no collision). Let me re-sync the isolated package and re-run build + test + cross-SDK typecheck.
+
+All gates green after rename (build, 24 tests, both typechecks). Let me clean up the generated project, confirm the working tree shows only my files, and count the i18n keys for the log.
+
+Let me verify every i18n key referenced in code is defined in the strings catalog (no untranslated literal leakage).
+
+All code-referenced keys are defined (no untranslated literal). Let me do a final scan for any hardcoded English string literals rendered directly (bypassing the facade).
+
+No English literal leaks. Let me get final line counts, then write the gate log.
+
+All files ≤400 lines, 24 tests, 7 previews, 27 i18n keys. Now I'll write the gate log with all the real EXIT codes.
+
+Log written. Let me clean up the temp harness and commit exactly the allowed files (the 8 surface files + the log).
+
+Exactly 9 files staged. Now commit.
+
+Committed cleanly, tree is clean. Let me run a final confirmation of the host gates against the committed state and verify the commit contents.
+
+All final gates green and the commit contains exactly the 9 allowed files (8 surface + log). Let me close out the todos.
+
+All todos complete. The P4 VehicleStatePanel surface is shipped and committed.
+
+## Summary
+
+Shipped a production-polished native SwiftUI **VehicleStatePanel** at parity with `telemetry-panels/VehicleStatePanel.tsx`, committed as `8ca3adc3e` (9 files, allowed scope only).
+
+**Files** (8 surface + log): `Adapter` (projection core), `Format` (SI m/s→km/h·mph + `Intl.NumberFormat` ports), `Model` (P1/S8 source seam, P1/S11 `view.opened`, P1/S10 facade), `.swift` (surface), `Views` (3 row sections + Live-pulse chip + chrome), `Previews` (7 states), `.strings` (27 keys), `Tests` (24).
+
+**Parity**: all 10 web rows with their value/colour branches (`(x)||'Off'`, `x && x!=='Off'`, `(count)||'—'` falsy-zero, `formatSpeed` gated on `speed_limit_mode`); the `sseConnected` Live pill generalised to the P4 live/stale/offline freshness axis; loading/empty/error chrome. 18 web strings routed through the i18n facade (web hardcodes all but `common.off`) — zero English literals in Swift.
+
+**Host gates — all real, all green**:
+- `swiftformat --lint` 0/7 · `swiftlint --strict` 0 violations/7 files · placeholder COUNT=0
+- Isolated SwiftPM build + **24/24 tests** against the real Shared-free component closure
+- `swiftc -typecheck` iOS-18 **and** macOS-15, Swift 6 strict concurrency → 0 errors
+- `xcodegen generate` enumerates all 8 files (Tests wired into both XCTest bundles)
+- Symbol-collision scan caught `VehicleStateInput` clashing with a sibling widget → renamed to `VehicleStatePanelInput`, re-verified → 0 collisions
+
+**Deferred** (covenant-honest, not claimed green): the full-app `xcodebuild -scheme` build/test — reproduced blockers: 0 codesigning identities + `Shared.xcframework` unstaged (KMP Gradle long-pole). Capability (SwiftUI/Charts/MapKit, iOS 18/macOS 15) is **present** (proven by the cross-SDK typecheck), so this is the established `STATUS=DONE` + deferred-Xcode-gate disposition, not BLOCKED.
+
+
+
+The task is fully complete and verified — all gates green, committed cleanly. Marking complete.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0287-VehicleStatePanel.log | 167 ++++++++++
+ .../feature-views/VehicleStatePanel.Adapter.swift  | 337 +++++++++++++++++++++
+ .../feature-views/VehicleStatePanel.Format.swift   | 154 ++++++++++
+ .../feature-views/VehicleStatePanel.Model.swift    | 258 ++++++++++++++++
+ .../feature-views/VehicleStatePanel.Previews.swift | 108 +++++++
+ .../feature-views/VehicleStatePanel.Tests.swift    | 278 +++++++++++++++++
+ .../feature-views/VehicleStatePanel.Views.swift    | 229 ++++++++++++++
+ .../feature-views/VehicleStatePanel.strings        |  48 +++
+ .../feature-views/VehicleStatePanel.swift          | 125 ++++++++
+ 9 files changed, 1704 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0287-VehicleStatePanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleStatePanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleStatePanel.Format.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleStatePanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleStatePanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleStatePanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleStatePanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleStatePanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/VehicleStatePanel.swift

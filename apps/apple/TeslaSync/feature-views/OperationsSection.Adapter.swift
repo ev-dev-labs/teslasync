@@ -18,9 +18,9 @@
 
 import Foundation
 
-// MARK: - Notification-stats model (web `NotificationStats` — the fields rendered here)
+// MARK: - Notification-stats model (web `NotificationStatsWidgetStats` — the fields rendered here)
 
-/// One notification-delivery snapshot — the native mirror of the web `NotificationStats`,
+/// One notification-delivery snapshot — the native mirror of the web `NotificationStatsWidgetStats`,
 /// narrowed to the values the panel renders (totals sent / failed and the channel
 /// enablement). Counts are carried as the raw upstream integers.
 public struct NotificationStatsSnapshot: Equatable, Sendable {

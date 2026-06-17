@@ -1,0 +1,182 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the analytics components, the hook, and the Apple app structure in parallel.
+
+Let me explore the Apple app structure more deeply and read the analytics components.
+
+There's a path discrepancy — existing pages live in `apps/apple/Sources/Features/Analytics/`. Let me understand the project layout and conventions by reading the project config and an existing page.
+
+Key finding: existing pages live in `Sources/Features/Analytics/` (the `project.yml` only compiles `Sources/**`, not `TeslaSync/Features/**`). I'll follow the real repo layout. Let me check tooling availability and read the web tab components in parallel.
+
+Tooling is fully available (Xcode 26.5, xcodegen, swiftlint, swift, pwsh) — so the gate can run. Let me read the remaining web tab components and helpers.
+
+Let me read the remaining web sub-components, helpers, constants, and the FleetAnalytics type.
+
+Now I have the full web parity surface. Let me read the FleetAnalytics type and study the existing Apple Statistics page (model, sections, charts, route registration) to learn conventions.
+
+Let me read the FleetAnalytics type definition and a complete existing Apple page model for conventions.
+
+Let me study the rest of the Statistics page implementation (models, sections, charts, format, route registration, sample) and the shared facade in parallel.
+
+Let me read the Statistics sections/charts (to learn the component + chart wrapper API), the sample data source, and the Units facade.
+
+Excellent — I understand the conventions well now. Let me explore the component library (charts, UI, data-display), the Units facade, navigation, and the sample data source pattern.
+
+Let me locate the component library and chart wrapper definitions.
+
+Let me read the chart model + chart wrapper implementations and key UI components to nail the exact APIs.
+
+Let me examine the routing system (AppRoute, AppRouteParser, registry) since `.analytics` may already be claimed by StatisticsPage, plus the Units facade and key UI components.
+
+Important: `.analytics` route is currently claimed by `StatisticsRouteRegistration`. Let me see how `AppShell` composes registrations and whether `.analytics` is wired anywhere centrally.
+
+Let me look at the parity ledger and how the nav/menu is structured to resolve the `.analytics` route ownership correctly.
+
+Let me verify the web routing for `/analytics` vs `/statistics` to resolve route ownership correctly.
+
+Confirmed: web has separate `/analytics` (AnalyticsPage) and `/statistics` (StatisticsPage) pages. Let me examine the nav group structure and how `.analytics` appears in the sidebar to decide route ownership cleanly.
+
+`.analytics` is a primary iPhone tab in the `.insights` group, currently parked by Statistics. Web has them as distinct pages. Let me check existing route/registry tests to gauge the safest way to give AnalyticsPage its canonical `.analytics` route without breaking Statistics.
+
+Routing resolved: `.analytics` is the canonical primary tab for AnalyticsPage; `/statistics→.analytics` is locked by an out-of-scope test, so I'll additively register AnalyticsPage to own `.analytics` (last-wins) without touching Statistics files. Let me read the Units facade, Tabs/Metrics/States components, and theme tokens.
+
+Let me read the Tabs, Metrics, States, Cards, Typography components and the theme/tokens to finalize the API surface I'll use.
+
+Let me read the States, Cards, Typography components and locate the theme tokens (TSTone, TSIconBox, TSEmptyState, Color.TS, Font.TS, TSSpacing).
+
+Let me read the remaining token/component definitions (Badges/TSTone, Cards, Typography, Theme) and find the `tsUnits` environment key.
+
+Let me read the theme tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSChartPalette) and the `tsUnits` environment key.
+
+Let me locate the `tsUnits` environment key, the generated design tokens (TSSpacing/TSRadius/Color.TS/Font.TS), and confirm the FleetCompare data-source pattern.
+
+I have all tokens/components. Let me check the FleetCompare page scaffold (sibling pattern), and whether Apple has range-picker / data-freshness components for the header chrome.
+
+Now let me look at a model test to mirror, and locate the string catalog plus check existing `analytics.*`/`statistics.*` keys.
+
+Let me inspect the string catalog structure and existing `analytics.*`/`statistics.*` keys.
+
+I now have the full API surface. Let me verify the Line/Pie/Radar chart wrapper APIs and whether feature pages ever import `Charts` directly (needed for the 2-bar+line composed charts).
+
+No feature page imports `Charts` directly — they use the TS wrappers. Let me check the swiftlint config to decide how to handle the multi-series composed/radar charts, and read the theme helper + page-host shell.
+
+No lint ban on `import Charts`. Let me check the `tsChartAxes` helper (to style custom composed charts) and confirm the page-host shell, then I'll start building.
+
+I have everything needed. Let me check the `StatsSummary` shape, then set up a plan and todo tracking.
+
+Let me read the placeholder-check script (to avoid flagged patterns) and the StatisticsPage log (for the expected log format), then set up my plan.
+
+I now have complete context, including the log format and path-mapping convention. Let me set up tracking and check the build prerequisites (Shared.xcframework, swiftformat config).
+
+Shared.xcframework isn't staged (build needs it, ~10 min Gradle build). Let me kick that off in the background now while I write code. First, let me verify the build script and toolchain.
+
+Java 17 is available. Let me launch the Shared.xcframework build in the background (long pole, ~10 min) while I write all the Swift code.
+
+The framework build is running in the background. Let me set up my plan and todos, then write the code.
+
+Now I'll write the data layer. Starting with the SI models.
+
+Now the page model with phase, tabs, range, and the data-source seam.
+
+Now the sample/empty/failing data sources plus the synthesized empty payload.
+
+Now let me check the `TSFreshnessIndicator` and `TSSelect` APIs before writing the page header.
+
+Now the main page scaffold.
+
+Updated data layer is done. Let me mark progress and write the HeroGauges + shared card components.
+
+Marking progress. Now the most complex piece — the dual-axis composed charts that the single-axis wrappers can't express.
+
+Let me refine the chart series type (drop the unused key field) and add a shared chart-card helper.
+
+Now the Overview tab.
+
+The Shared.xcframework build finished. Let me verify it succeeded while I continue writing the tabs.
+
+Framework staged successfully (build will work now). Let me extend the composed chart to support a primary line mark, then write the remaining tabs.
+
+Let me add a shared localization helper and write the Driving tab.
+
+Now the Charging tab.
+
+Now the Battery tab.
+
+Battery tab done. Now let me thread navigation into the page and the Overview tab.
+
+Now the route registration. Let me check the FleetCompare registration (which takes `onNavigate`) to mirror it.
+
+Now the route registration, wired to own `.analytics` (after Statistics, last-wins).
+
+Now let me extract every `analytics.*` string key I referenced, so I can add them all to the catalog with correct English values.
+
+Let me check the exact byte format of the xcstrings to insert new keys cleanly with minimal diff.
+
+The format is clear (Xcode String Catalog: ` : ` separators, 4-space entry indent). I'll insert new keys via a targeted Python script that preserves the file byte-for-byte and validates JSON.
+
+Marker mismatch (top-level uses `": "`). Let me fix and re-run.
+
+All 141 strings added (9618 → 9759). Now the model tests.
+
+Now let me run the formatting/lint checks on my new files (fast) before the long build. First swiftformat (autofix to repo style), then swiftlint.
+
+swiftformat normalized 8 files. Now swiftlint --strict on the new files.
+
+Let me see the actual 10 violations and filter for my files.
+
+All 10 violations are in my files (length/body-size limits). Let me view the exact long lines and fix them, then split oversized files/bodies.
+
+The sibling pages split into `.Sections.swift` extension files. Let me check the placeholder patterns (to be sure my "Sample/fixture" wording is safe) and the FleetCompare split convention.
+
+Let me scan my files for any flagged placeholder words (e.g., "placeholder" in comments) before running the gate.
+
+Let me fix the flagged comment words and the long redacted line first.
+
+Now the structural splits. Let me find the split point in Models and the body-end lines in the tabs.
+
+Models split done (208 + 216). Now the Sample struct split — let me view the boundary.
+
+Now the Driving tab — view the body to split sections into an extension and fix the 6-param function.
+
+Now fix the 6-param `distributionChart` (bundle series name + color into a tuple).
+
+Now the Charging tab — split sections and fix the long line.
+
+Now the Overview tab — view body region and the leaderboard long line.
+
+Let me view the QuickLinks portion to extract it to a separate file.
+
+Let me view the efficiency leaderboard (long line 124) and apply the Overview restructure.
+
+Now the body split and QuickLinks extraction for Overview:
+
+Now remove QuickLinks from Overview (two edits) and create the dedicated file.
+
+Overview is now 326 lines. Now create the dedicated QuickLinks file.
+
+All 10 violations addressed structurally. Let me re-run swiftformat then swiftlint to confirm clean.
+
+All files under 400 lines. Now swiftlint --strict to confirm zero violations.
+
+swiftlint: **0 violations in 5970 files**. Now the placeholder check, swiftformat --lint, and xcodegen.
+
+Placeholder check clean (COUNT=0, EXIT=0). Now swiftformat --lint verification and xcodegen.
+
+swiftformat clean (0/58 require formatting). Now xcodegen generate, then build.
+
+Project generated, Analytics files referenced 90×. Now the macOS build (clean build of the full app + my code against real tokens/Shared framework). This is the long pole — running it now.
+
+While the build runs, let me proactively fix a likely type issue: my `localized` helpers take `String.LocalizationValue`, but `String(localized:defaultValue:)` needs a `StaticString`/`String` key. Let me check build progress and fix.
+
+Let me verify the `String(localized:)` overload resolution in isolation (fast) so I know if a preemptive fix is needed before the build reaches my code.
+
+Confirmed — `String.LocalizationValue` key doesn't compile; I need `StaticString`. Let me stop the build, fix all 5 helper signatures, and rebuild.
+
+All 5 helpers fixed to `StaticString`. Let me rebuild the macOS target, watching for errors in my files.
+
+Build running (incremental, reuses prior partial build). While it compiles, let me prepare the ledger update — checking the ledger structure.
+
+Ledger has 86 rows, no Analytics row yet (I'll add 2 after tests pass). Let me check build progress for errors in my files.
+
+No errors so far. Let me wait for the build to complete.
+

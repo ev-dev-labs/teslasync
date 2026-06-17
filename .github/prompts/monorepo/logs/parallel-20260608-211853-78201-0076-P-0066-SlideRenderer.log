@@ -1,0 +1,208 @@
+I'll start by exploring the repository structure and reading the web source that defines this task.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). This is a DONE scenario, not BLOCKED. I notice sibling slide components already exist as feature-views. Let me study the conventions and the web source ecosystem.
+
+All sibling slide views exist except `DriveHighlightSlide`, `ChargingBreakdownSlide`, `ComparisonsSlide` (separate prompts, out of scope). My allowed files are only `SlideRenderer.*`. Let me study the existing Swift slide conventions deeply.
+
+Toolchain confirmed. Now let me study the sibling slide constructors, shared tokens, chrome components, and test/preview conventions in parallel.
+
+Two slide patterns exist (Surface.slug + Model, vs DashboardWidgetTelemetrySink + data init). Let me read the design tokens, motion, feedback components, and the full TitleSlide group (Views/Previews/Tests/strings) as my template.
+
+Let me locate the exact token definitions and the shared Motion/Skeleton components I'll use.
+
+Found it — tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read the tokens, Motion components, project.yml build config, and the TitleSlide tests.
+
+Now I understand the token system and motion primitives. The web SlideRenderer is a dispatcher (animated gradient wrapper + switch). Let me study the dispatcher pattern already used in this codebase and the YearReview data shape so my projection is faithful.
+
+DashboardGrid is the established dispatcher pattern — `DashboardGrid<WidgetBody: View>`, generic over a child-body renderer injected by the parent. SlideRenderer should follow this exactly. Let me read it fully plus all web slide sources for dispatch fidelity.
+
+The generic-over-child-body pattern is clear. Let me read all the web slide sources to capture dispatch fidelity and the drive-highlight details SlideRenderer owns.
+
+I have strong understanding now. Let me verify the build wiring (project.yml, schemes), the placeholder checker, and DashboardGrid's preview/test conventions before designing.
+
+Key findings: feature-views auto-compile into both app targets; `.xcodeproj` is generated via `xcodegen`. Let me read the placeholder patterns, test-target wiring, and DashboardGrid's test/preview conventions.
+
+Now let me read DashboardGrid's Model/Adapter (localizer, state, connection, telemetry, render-context patterns) plus the shared feedback components I'll reuse, and the test conventions.
+
+Let me read the test conventions and the DashboardGrid adapter (localizer `.echo`/`.bundle`, freshness chip) to finalize my design.
+
+I have all conventions. Let me verify a few shared component signatures I'll use, then write the plan and build.
+
+I have everything needed. Let me set up tracking and write the plan.
+
+Now I'll build the surface. Starting with the SwiftUI-free Model (state-holder, telemetry, kinds, recap DTO).
+
+Now the Adapter — the pure projection (gradient parsing, per-kind projector, accessibility, number formatting).
+
+Let me check the lint/format configs before finalizing, and fix two issues I spotted in the adapter (the `statHero` switch redundancy and the SOC localization seam).
+
+Important lint constraints: `identifier_name` min length 2 (so my `l`/`n` helpers violate), line length 120, and cyclomatic complexity defaults. Let me fix the adapter accordingly.
+
+I consolidated several kinds through `statHero`. Let me rewrite `statHero` to handle all the single-stat fields, keeping each function's branch count low.
+
+Now let me fix the `chargingBreakdown` SOC caption to use the injected localize seam, and verify the drive-highlight/charging helper signatures.
+
+The adapter is solid. Now let me add the `SlideRenderContext` seam type to the Model, then build the Views file.
+
+Now let me add a `currentContext` helper to the model that the view uses to build the seam value.
+
+Now the Views file — chrome, gradient, transition container, and the data-bound dispatch host with per-kind hero views.
+
+Now the main generic surface view that ties it together.
+
+Let me finalize the i18n key strategy: keep the **two required source keys** as exact web keys (`yearReview.longestDrive/mostEfficient`), and namespace everything the built-in default host adds under `slideRenderer.*` to avoid cross-surface key collisions. Updating the adapter accordingly.
+
+Now the strings catalog:
+
+Now the previews and tests. Let me create both.
+
+Now the comprehensive tests:
+
+All 7 files written. Let me update tracking and verify key consistency before building.
+
+All i18n keys are consistent. Let me auto-format my files with the repo's swiftformat config, then lint them.
+
+swiftformat is clean. Now swiftlint --strict on my files:
+
+SwiftLint --strict flags several issues (file length ≤400 under strict, cyclomatic complexity, 3-member tuples, single-char identifiers, statement position). I'll split into more `SlideRenderer.*` files (the established pattern) and fix each. Let me check current line counts to plan splits.
+
+Let me view the exact section boundaries in Model.swift to split cleanly.
+
+I'll split into more `SlideRenderer.*` files (matching the allowed glob, same pattern as siblings) using byte-exact extraction, then apply the targeted lint fixes. Let me find precise split boundaries.
+
+Boundaries confirmed. Let me perform byte-exact splits into additional `SlideRenderer.*` files, then truncate the originals.
+
+Now I'll execute the byte-exact split into additional `SlideRenderer.*` files:
+
+Model wasn't truncated and Tests is still 423. Let me find the fixture block end and fix both.
+
+All files ≤400 lines now. Let me verify Model.swift ends cleanly and apply the remaining lint fixes (SlideKind complexity, gradient identifiers/statement-position, tuples, function length).
+
+Model is clean. Now let me rewrite `SlideKind` init/rawType to dictionary-based (fixes cyclomatic complexity) and apply the other fixes.
+
+Now fix the Gradient.swift identifier names and statement-position issues:
+
+Now fix the Projector — the 3-member tuple and the projectHero body length. Let me view it.
+
+Now fix the Tests `stat` helper 3-tuple:
+
+Now re-format all files and re-run swiftlint --strict on the full set:
+
+One violation left — `statHero` is 53 lines after formatting wrapped each case. Let me view and compact it.
+
+SwiftLint --strict is clean (0 violations) and all files ≤400 lines. Now the real test — generate the Xcode project and build. Let me check prerequisites first.
+
+`Shared.xcframework` isn't staged — the build's preAction builds it via Gradle/KMP. Let me check how sibling prompts' logs handled the gate to follow precedent.
+
+This reveals the established precedent: the full `xcodebuild` gate fails with EXIT=65 (missing KMP `Shared.xcframework` — a pre-existing infra blocker), and siblings prove correctness via direct SDK typecheck + host test execution, marking xcodebuild DEFERRED. Let me read the ByteSizeConverter log for the exact gate commands.
+
+This is the established precedent: the full `xcodebuild` gate fails EXIT=65 on missing KMP `Shared.xcframework`, and siblings prove correctness via (1) `swiftc -typecheck` against the real design system for both SDKs, (2) a host harness executing the test logic, plus lint/format/placeholder gates. Let me kick off the KMP framework build in the background and meanwhile confirm my exact design-system dependencies.
+
+Project generated. My surface depends only on `Tokens.swift`, `Motion.swift`, `Skeletons.swift`. Let me start the KMP framework build in the background and meanwhile run the iOS+macOS typecheck.
+
+Background KMP build running. Now the critical compile proof — iOS Simulator SDK typecheck of the shipped surface against the real design system:
+
+Errors are in the design file `Skeletons.swift` (needs `TSCard`), not my code. Let me include the full design system (as the precedent did), excluding KMP-dependent files.
+
+iOS typecheck **passes (EXIT=0)** against the full real design system. Now macOS:
+
+Both SDK typechecks pass with **0 errors**. Now the host harness — compile the pure logic + a driver executing the test assertions and run it:
+
+Host harness: **CHECKS=102 FAILURES=0** — all logic executes green. Let me run the placeholder gate and check the background KMP build status.
+
+Placeholder gate clean (COUNT=0, EXIT=0). KMP build is progressing (debug XCFramework written, linking release now). Let me run the whole-tree lint/format gates while it finishes.
+
+Whole-tree swiftformat clean (0/2185). Now whole-tree swiftlint --strict:
+
+1 whole-tree violation. Let me confirm it's pre-existing and not in my files:
+
+Confirmed: the 1 whole-tree violation is in a pre-existing predecessor file (`LiveSignalSparklinesWidget.Builder.swift`, same one the precedent documented), 0 in my files. Let me check if the KMP framework build finished so I can attempt the full xcodebuild gate.
+
+This is a parallel multi-slot environment (slots 83, 91, etc. all building the shared KMP framework concurrently), so the framework build is resource-contended but progressing. The substantive verification is already green (both SDK typechecks, 102-check harness, lint, format, placeholder). Let me attempt the full `xcodebuild` gate in the background — its preAction will stage the framework.
+
+The iOS build is in pre-actions (staging the framework). Let me write the gate log with the green evidence gathered while the build runs, then poll it.
+
+My background build did most of the work (debug XCFramework UP-TO-DATE, release ios-arm64 UP-TO-DATE); now linking the simulator arch. Let me keep polling while it stages and compiles.
+
+The build is slow on the Kotlin/Native release framework link (heavily contended by parallel slots). Let me give it more time to stage and reach app compilation — that's the real integration proof.
+
+Found a real issue: `SlideRenderer.Fixtures.swift` doesn't match the `*Tests.swift` glob, so it was wrongly compiled into the **app** target (where `import XCTest`/`@testable` is invalid) instead of the test bundle. I must rename it to end in `Tests.swift`. Let me stop the build and fix this.
+
+PID 89815/89816 uses `iPhone 16` + `timeout 900` — that's not mine (I used iPhone 17); likely another slot or an orchestrator. Let me check cwds before touching anything, and find my own (iPhone 17) build.
+
+Good — the iPhone-16 build (89816) belongs to **slot-85**, not mine; I'll leave it alone. My own processes are gone. Now the real fix: rename the fixtures file to end in `Tests.swift` so it lands in the test bundle, not the app target.
+
+Now regenerate the project and verify the renamed file is routed to the test bundle (not the app target) via the pbxproj:
+
+Target membership is now correct (FixturesTests → test bundles only; app files → app targets). Let me re-lint the renamed file, then restart the build (framework is now staged, so it should reach app compile + tests).
+
+All 12 files clean (0 violations, 0 format issues). Now restart the full iOS build+test (framework is staged, so it should reach app compilation and the test run):
+
+My iOS build failed at SwiftDriver compile. Let me see the actual errors — whether they're in my files or pre-existing:
+
+The error references the **old** `Fixtures.swift` name — that's stale DerivedData from the first (killed) build. My rename is correct in the project, but incremental build state is cached. Let me verify the rename and rebuild with a clean, slot-isolated DerivedData path.
+
+Rename verified (pbxproj: 0 old refs, 6 new refs). `setsid` isn't available — let me launch the clean build via the async/detached mode instead.
+
+The iOS build+test is running detached. Let me start the macOS build+test in parallel (isolated DerivedData), then poll both.
+
+Both builds running. Let me wait and poll their progress.
+
+Both builds completed with failures, but **0 SlideRenderer errors** in both. Let me extract the actual errors to confirm they're pre-existing and not from my surface.
+
+All iOS errors are pre-existing "ambiguous type lookup" collisions in unrelated **dashboard-widget** files (other agents' work in this parallel env) — **0 in my surface**. macOS shows 0 compile errors. Let me confirm the macOS failure reason and that no feature-views file errors exist.
+
+Now I have full clarity on the failures:
+- **iOS**: 0 errors in my surface; all failures are pre-existing duplicate-type ambiguities in unrelated **dashboard-widget** files (concurrent agents' work, outside my scope).
+- **macOS**: **0 compile errors** — my surface compiles cleanly in the full app; the build fails only on **code-signing entitlements** (no dev cert in this env).
+
+macOS had zero compile errors, so I can run the real test suite by disabling signing. Let me try that to get an actual executed XCTest run.
+
+The macOS test run (signing disabled) is going with cached compilation. Let me write the gate log with all the green evidence while it runs, then poll for the test result.
+
+The first macOS build failed *fast* on signing before compiling; with signing disabled it now reveals the **same pre-existing dashboard-widget type collisions** (339 errors). Let me confirm none are in my surface/feature-views.
+
+Definitive: **0 SlideRenderer/feature-views errors** on both platforms. The full `xcodebuild` gate is blocked solely by **pre-existing predecessor `dashboard-widgets` type-name collisions** (452 ambiguous-type errors across Charge*/Safety*/Fleet* widgets, built by earlier prompts) plus macOS dev-cert signing — both outside my allowed scope. This matches the established deferral precedent. Let me gather final counts and write the gate log.
+
+All evidence gathered. Now let me write the comprehensive, honest gate log following the established precedent structure.
+
+Log written. Let me clean up temp artifacts and check git status before committing.
+
+Exactly the 13 surface files + the log are new; the generated `.xcodeproj` is gitignored. Let me stage and commit (the prompt's `git add` prefix needs a glob to match the files).
+
+All 14 in-scope files staged, nothing extraneous. Committing:
+
+Committed cleanly (14 files, 3050 insertions). Let me run a final integrity check on the committed state.
+
+Working tree is clean and the committed surface passes swiftlint --strict (0 violations in 12 files). The task is complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0066-SlideRenderer.log  | 229 ++++++++++++++
+ .../feature-views/SlideRenderer.Adapter.swift      | 148 +++++++++
+ .../SlideRenderer.FixturesTests.swift              |  88 ++++++
+ .../feature-views/SlideRenderer.Gradient.swift     | 137 ++++++++
+ .../feature-views/SlideRenderer.Heroes.swift       | 345 ++++++++++++++++++++
+ .../feature-views/SlideRenderer.Model.swift        | 331 +++++++++++++++++++
+ .../feature-views/SlideRenderer.ModelTests.swift   | 161 ++++++++++
+ .../feature-views/SlideRenderer.Previews.swift     | 183 +++++++++++
+ .../feature-views/SlideRenderer.Projector.swift    | 276 ++++++++++++++++
+ .../feature-views/SlideRenderer.State.swift        | 320 +++++++++++++++++++
+ .../feature-views/SlideRenderer.Tests.swift        | 350 +++++++++++++++++++++
+ .../feature-views/SlideRenderer.Views.swift        | 266 ++++++++++++++++
+ .../TeslaSync/feature-views/SlideRenderer.strings  |  59 ++++
+ .../TeslaSync/feature-views/SlideRenderer.swift    | 157 +++++++++
+ 14 files changed, 3050 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0066-SlideRenderer.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.FixturesTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.Gradient.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.Heroes.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.State.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SlideRenderer.swift

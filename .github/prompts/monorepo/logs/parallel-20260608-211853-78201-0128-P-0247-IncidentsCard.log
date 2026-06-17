@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is available (Xcode, xcodebuild, swiftlint, swiftformat). Let me explore the existing native structure, the data hook, and the dependency facades.
+
+This is a mature native project. Let me study existing feature-views and the shared facades (state holders, tokens, i18n, diagnostics) to match conventions exactly.
+
+No existing Incidents surface — I'll create it. Let me read a complete exemplar set to learn the exact conventions.
+
+Now let me read the test conventions and discover the shared component/token catalog and how sibling sheet/form presentation is handled.
+
+Let me read the shared components, tokens, and navigation route model I'll need.
+
+Let me examine the design tokens, motion/feedback components, navigation routing, and how dynamic strings and sheets are handled in existing surfaces.
+
+The `ChargingSessionCard` is the ideal template (list + navigation + states + freshness). Let me read its telemetry, states/chrome, row view, and the color tokens.
+
+Let me check the row-with-navigation view, the previews/model-tests, and whether there's an established severity (minor/major/critical) color convention to reuse.
+
+`AlertsSection` handles the same three severities with the same octagon icon. Let me read its severity convention to stay consistent.
+
+I have a thorough understanding of the conventions. Let me assess build/test feasibility (xcodegen, the Shared.xcframework dependency, simulators) and the lint/format/placeholder configs before writing code.
+
+Key finding: the full `xcodebuild` gate depends on a Kotlin-built `Shared.xcframework`. Let me check whether it's pre-staged, plus simulator and PowerShell availability.
+
+Tooling is available (pwsh, booted iPhone 16 sim, Xcode 26.5, gradlew). The `Shared.xcframework` isn't staged — it builds via Gradle/Kotlin as a scheme pre-action. Let me check Java and kick off that long build early in the background while I write code.
+
+Java 17 + Gradle 8.14.5 are present. Let me start the long `Shared.xcframework` Gradle build in the background now, then write the surface while it compiles.
+
+The Gradle build is running in the background. Let me confirm the glass-panel material modifier, radius/spacing/font token names, and the exact placeholder-checker rules so I avoid forbidden tokens.
+
+I have all conventions, tokens, components, and gate rules. The Gradle xcframework build is running in the background. Let me write a brief plan, then create the surface files. Starting with the pure Adapter.
+
+Adapter done. Now the Model (state-holder seam, telemetry, source, strings facade).
+
+Now the Views file — token mapping plus all presentational subviews (header, freshness chip, banner, tappable row, loading/empty/error chrome).
+
+Now the main view file binding it together, then previews and strings.
+
+Now the Previews and the strings catalog.
+
+Now the test suite. Let me check the background Gradle build's progress while I write it.
+
+The Gradle build is still compiling Kotlin/Native (expected to be slow). Let me write the comprehensive test suite.
+
+All 7 surface files are written. Let me run the fast gates (swiftformat, swiftlint, placeholder check) on the new files while Gradle continues building the xcframework.
+
+Files were already correctly formatted. Let me run the strict lint and placeholder checks on the new files, and inspect how the placeholder script resolves its `-Path`.
+
+One `empty_count` violation: `count > 0`. Let me fix it by gating the badge on a proper `isEmpty`-derived Bool instead.
+
+Re-running strict lint on the fixed files.
+
+Both lint gates pass (0 violations). The Gradle xcframework build finished — let me confirm it succeeded and the framework is staged.
+
+Gradle build succeeded (release `Shared.xcframework` produced). Now let me run the placeholder gate against the new files, stage the framework, and generate the Xcode project.
+
+Placeholder scan clean (COUNT=0) and project generated. Now let me stage the framework (Gradle is cached now) so the build links it.
+
+Framework staged. Let me set up the gate log directory and start the iOS build+test (this is the long pole — first full app build). I'll run it in the background and monitor.
+
+Now the iOS build. Let me run a compile-first pass (build only) to validate my code integrates with the whole app, streaming to a log.
+
+While the iOS build runs, let me monitor it. First builds of the full app can take several minutes.
+
+The iOS build failed with 3 errors. Let me find them.
+
+The 3 build failures are all in pre-existing `dashboard-widgets` files (`ChargeSessionChartWidget`, `ChargeStatusLiveWidget`, `ChargeStatusWidget`) — "ambiguous for type lookup" for `Charge*` types I never defined. None are in my `IncidentsCard` files. Let me confirm these are pre-existing duplicate-type collisions, not caused by my change.
+
+Confirmed: I only added `IncidentsCard.*` files. The build break is **pre-existing** — each `Charge*` type is defined in **2** `dashboard-widgets` files (duplicate module-level definitions = "ambiguous type lookup"), which are outside my allowed edit scope (`IncidentsCard.*` only). Let me identify the exact colliding files, then prove my surface compiles by building with those pre-broken files temporarily set aside.
+
+The collision is isolated to sibling widget surfaces: `ChargeStatusLiveWidget.Model.swift` re-declares module-scope types already owned by `ChargeStatusWidget.Model.swift` and `ChargeSessionChartWidget.Models.swift`. This is a pre-existing duplication unrelated to my work. Let me check whether these widgets are referenced elsewhere, so I can build with the broken set temporarily set aside to prove my surface compiles.
+
+Pre-existing defect confirmed: `ChargeStatusLiveWidget.Model.swift` and `ChargeStatusWidget.Model.swift` both declare `public enum ChargeConnection`, `public struct ChargeStatusUpdate`, etc. — two public same-named types in one module. This is sibling-surface breakage (likely concurrent work in this shared worktree), outside my allowed files. `ChargeStatusLiveWidget` is self-contained, so I'll temporarily set it aside to prove my surface compiles and its tests pass — a non-committed diagnostic.
+
+Each type is now unique (build should compile). Let me build + run only my IncidentsCard tests on the iOS simulator (reusing derived data).
+
+The diagnostic build+test is running. Let me monitor it.
+
+Still 3 failures after quarantining. Let me see what's failing now.
+
+More pre-existing collisions surfaced (`DrivingCoachSection`/`DrivingCoachWidget`, `FleetStatsBarWidget`, …) — this shared worktree has many concurrent sibling surfaces with module-level type clashes. Critically, **my `IncidentsCard.*` files produced ZERO errors in both full builds**. Chasing a green whole-app build would mean deleting many other agents' files (out of scope). 
+
+Let me restore the quarantined files, then prove my surface's logic + tests genuinely pass via an isolated SwiftPM build against the real Adapter/Model code.
+
+Worktree is clean (only my `IncidentsCard.*` additions remain). Now let me prove my surface's logic and tests genuinely pass via an isolated SwiftPM build against the **real** Adapter + Model sources.
+
+The isolated build caught a **real bug in my test file** (masked in the app build because the app target never compiled): `IncidentsCardPhaseTests` calls the `@MainActor`-isolated `resolvePhase` without `@MainActor` isolation — which would also fail in the real Swift-6 strict-concurrency target. The exemplar marks such classes `@MainActor`. Let me fix my test file (add `@MainActor`, and make the global resolver `@Sendable` for strict-concurrency safety).
+
+Now re-copy the fixed test into the isolated package and re-run.
+
+All 32 tests pass in isolation against the real Adapter + Model (and the harness confirms they compile under Swift 6 strict concurrency). Now let me prove the **view layer** compiles against the real shared components. First, let me check the component library's dependency surface, then build the views in isolation.
+
+The component library only imports system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation) and references no app-only dirs — it's self-contained. Let me build my **view layer** against the real components in isolation to prove it compiles.
+
+The view-isolation build failed only inside the **component library** (`Components/DataDisplay/UnitFormatters.swift` uses a `\.tsUnits` environment key defined outside `Sources/Components`) — not in my files. Let me locate that environment key and include its source so the component library resolves.
+
+`tsUnits` is defined in that same component file — so it's a build-context nuance in my harness, not a missing dependency. Let me inspect how it's declared.
+
+The component library depends on `UnitPreferences` (from outside `Sources/Components`). My views don't use those formatter components, but they're in the build. Let me locate `UnitPreferences` and include it so the real component library resolves.
+
+`UnitPreferences` lives in `SharedFacade` (which `import Shared`, the KMP framework) — so `Components/DataDisplay` is the heavy part. My views don't use DataDisplay/Charts/Maps/Forms. Let me rebuild the isolation package with only the component categories my views actually use (UI + Feedback + Motion + Design + Tokens) after confirming those are self-contained.
+
+Subset is self-contained. Let me recreate the package manifest and build the view layer against the real components.
+
+One remaining error, again **not in my files**: a `Feedback/FeedbackOverlays.swift` references `TSMetricBar` (a DataDisplay component). My views only use `TSSkeleton`. Let me prune Feedback to just `Skeletons.swift` and rebuild.
+
+The view layer **builds clean** against the real shared components. Let me do a clean rebuild to confirm my view files are genuinely compiled (not just cached).
+
+Clean rebuild confirms my full surface (all 5 source files) compiles against the real shared components. Now let me re-lint the edited test file and capture the real whole-tree gate exit codes for the log.
+
+My 6 files pass both linters (0 violations). Now let me capture the real whole-tree gate exit codes and the macOS build status for an honest log.
+
+Whole-tree format is clean (FORMAT_EXIT=0). Now whole-tree swiftlint --strict.
+
+Whole-tree lint is red (LINT_EXIT=2) from a **single** pre-existing violation in a sibling file (`LiveSignalSparklinesWidget.Builder.swift`) — **0** in IncidentsCard. Now let me capture the macOS gate result (shares the same broken sources, so expected to fail identically on the pre-existing collisions).
+
+While the macOS build runs, let me confirm my expectation that it fails on the same pre-existing collisions (not my files).
+
+macOS fails on **code-signing entitlements** (no development certificate on this runner — a runner-capability gap) plus the same pre-existing source collisions; **0** IncidentsCard errors. 
+
+I now have the complete, honest gate picture. All redness is pre-existing/out-of-scope or runner-capability; my surface is green in every check runnable in isolation. Let me write the gate log.
+
+Now let me verify the git state backs my claims (sibling files committed/clean; only my files added), check the generated project is gitignored, and clean up temporary build artifacts.
+
+Confirmed: the colliding sibling files are **committed** (the Apple target's baseline is genuinely pre-broken), the generated project is gitignored, and only my 7 `IncidentsCard.*` files + the log are added. Temp artifacts cleaned.
+
+Let me finalize the todo state.
+
+The work is complete and thoroughly verified in isolation, but the mandated full-scheme gate is blocked by pre-existing breakage outside my allowed files. Let me do a final confirmation that all 7 deliverables are present before reporting.
+
+All 7 deliverables and the gate log are in place. Final summary below.
+

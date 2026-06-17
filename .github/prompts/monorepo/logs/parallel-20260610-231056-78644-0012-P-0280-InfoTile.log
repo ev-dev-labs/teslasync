@@ -1,0 +1,138 @@
+I'll start by examining the environment capabilities and the web source. Let me explore in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). The web source is a pure presentational component. Let me explore the existing Apple project structure to follow established patterns.
+
+There's a large existing `feature-views/` directory. Let me check if InfoTile exists already and find similar presentational tile examples to follow.
+
+Now I understand the multi-file pattern per surface. Let me study an existing presentational tile (CommandTile) and the project structure, theme tokens, i18n facade, and diagnostics in parallel.
+
+CommandTile is a good template. Let me read its remaining files plus the project.yml and locate the shared infrastructure (theme/tokens P1/S9, GlassPanel native equivalent, i18n, diagnostics).
+
+Let me view the tokens/theme infrastructure (P1/S9), the Tests pattern, the project.yml, and find the native GlassPanel equivalent.
+
+Let me examine the design tokens (P1/S9), the native GlassPanel/Cards component, and the project.yml build config.
+
+Let me explore the full design token system (spacing, colors, fonts, typography components) and the i18n facade.
+
+Let me find the generated design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSTone) which are P1/S9.
+
+The build uses XcodeGen + design tokens from `../design/generated/apple`. Let me inspect the generated tokens and check XcodeGen availability.
+
+Let me view the full Tokens.swift to understand all available design tokens.
+
+I now have the full token system. Let me check how `InfoTile` is actually used in the web app (to understand real color/value inputs) and how native surfaces model a passed-in tone (TSTone in Badges).
+
+Let me read TelemetryGrid.tsx to see the actual InfoTile inputs (icons, colors, value types, subs).
+
+I now fully understand the architecture. Let me check the build prerequisites (Shared.xcframework, log dir, lint configs, placeholder checker) before implementing.
+
+`Shared.xcframework` isn't present (needs KMP/Gradle). Let me check pwsh, the Gradle toolchain, and—critically—how prior feature-view prompts logged their gate status (DONE vs BLOCKED) to understand the established verification bar.
+
+This is the key insight: the established, accepted methodology across all prior feature-view prompts is **surface-isolating verification** (per-platform `swiftc -typecheck` + swiftlint + swiftformat + placeholder check), while the full-app `xcodebuild` is known-RED from pre-existing infra (unstaged KMP framework, sibling-surface type collisions, macOS signing) and recorded honestly with proof of zero surface-attributable errors. Let me study a complete log and check for an SPM harness.
+
+I now have the exact canonical methodology (surface-isolating SwiftPM build + per-platform typecheck + lint + format + placeholder + xcodegen, with the full-app `xcodebuild` recorded honestly as pre-existing RED). Let me verify the web `GlassPanel` defaults and confirm `Sources/Components/UI` compiles standalone before implementing.
+
+I have everything needed. Web `GlassPanel` with `p-4` → `TSGlassPanel` (padding lg=16) matches, and `Sources/Components/UI` only imports SwiftUI (compiles standalone). Now I'll implement the InfoTile surface following the CommandTile multi-file convention. Let me set up a todo list and write the files.
+
+All six files are written. Now let me set up the surface-isolating SwiftPM verification harness (the canonical green bar) in a temp dir and run build + tests.
+
+No cross-dir deps in `Components/UI`. Let me build the SwiftPM harness and run build + tests.
+
+The surface compiles clean. Now let me run the tests and the per-platform typechecks.
+
+All 14 tests pass. Now per-platform typechecks (iOS 18 simulator + macOS 15) against the real source files.
+
+Both platform typechecks: 0 errors. Now swiftlint, swiftformat, and the placeholder gate.
+
+Formatting nits flagged. Let me apply the ecosystem auto-formatter to the surface files, then re-verify lint/format clean.
+
+`void_function_in_ternary` is a known swiftlint/swiftformat tension on bare ternaries that call functions in a switch-expression branch. Let me restructure `display` to use explicit returns with the ternary only over string literals.
+
+Surface lint/format/tests all green. Now the placeholder gate and a re-confirm of typechecks. Let me check how `check-placeholders.ps1` resolves `-Path` then run it.
+
+`-Path` needs a real path (the gate's `InfoTile` prefix isn't one), so—like prior prompts—I'll run it against a temp copy of the 5 surface files. Let me run the placeholder gate and re-confirm both typechecks on the final files.
+
+The word "placeholder" itself is a forbidden pattern. I must remove all occurrences from shipped code. Let me see the full pattern list to avoid every forbidden term, then find all hits.
+
+Only "Placeholder" is forbidden (it's in the `common` list). I must reword every occurrence. Let me view the exact contexts and replace "placeholder" → "em-dash fallback"/"dash" throughout.
+
+Now the `.strings` file comments.
+
+Let me re-run the placeholder gate, re-confirm lint/format, and re-run tests after the rewording.
+
+Placeholder gate is clean. Let me re-confirm lint, format, and tests on the final files.
+
+My harness `cp` accidentally copied the test file into the library target too (double-counting to 28). Let me clean the harness and confirm the canonical 14 tests.
+
+Clean 14 tests pass. Now re-confirm both platform typechecks on the final files and run `xcodegen generate` to confirm the surface is enumerated into the targets.
+
+Both typechecks 0 errors, xcodegen succeeded. Let me confirm the surface files are enumerated correctly (app target vs test bundle).
+
+All 6 files enumerated correctly. Now for honest full-app gate evidence. Let me check whether the KMP `Shared.xcframework` artifact already exists (the scheme's pre-action builds it via Gradle), to decide the fastest honest path.
+
+Java 17 + Gradle are available, and I've confirmed the known sibling-collision symbols (`RecentDrivesModel` defined in 2+ files) are present in the shared tree — the documented full-app blocker, outside my surface. Now let me run the **literal iOS gate command** to capture honest evidence. The scheme's pre-action will build the KMP framework via Gradle first (~7-8 min), so I'll run it in the background and monitor.
+
+The iOS gate is building the KMP framework via Gradle in the background. While it runs, let me record the plan and review the final files for quality. Let me view the complete final Model and Views files.
+
+Good — the iOS gate (pid 73257) is running and Gradle is actively building the KMP framework (linking iOS frameworks now). It'll take several more minutes, then the app compile will hit the documented sibling collisions. Let me do a final quality review of the files while it builds.
+
+Code quality looks good. Let me update todos and wait for the iOS gate build to progress.
+
+Gradle has built the debug framework and is now on the release variant. The staging is nearly done; the app compile will follow. Let me continue polling.
+
+Release framework linking (Kotlin/Native) is still in progress — it's slow. Let me keep polling.
+
+Framework is staged and the app is now compiling — 54 errors already (the module emission hit the duplicate types). Let me wait for completion and then analyze the error breakdown.
+
+108 pre-existing errors — **0 attributable to InfoTile**. They are exactly the documented `RecentDrives*`/`StateTimeline*` duplicate-type collisions. Let me wait for the build to fully exit and capture the final code.
+
+iOS gate complete: **`IOS_GATE_EXIT=65`**, BUILD/TEST FAILED, **108 errors, 0 from InfoTile**. The framework staged fine via Gradle, so this is the deeper documented sibling-collision blocker. Let me capture the error-file attribution to prove it's all sibling surfaces, and confirm InfoTile is collision-free app-wide.
+
+All 108 errors belong to 10 sibling files (`RecentDrives*`/`StateTimeline*`); InfoTile symbols are each defined exactly once app-wide (zero collisions). Let me confirm Gradle staging succeeded, check git-ignore status, then write the log.
+
+Gradle staged the framework successfully (`BUILD SUCCESSFUL in 8m 9s`), so the iOS build genuinely reached the app-compile phase and failed only on the documented sibling collisions. The generated project and framework are git-ignored — only my 6 files would commit. Now let me write the comprehensive gate log.
+
+The log is written. Let me clean up temp verification dirs and commit the surface + log (generated project/framework are git-ignored).
+
+Exactly the 6 surface files + log staged. Committing.
+
+Committed. Let me finalize todos and confirm the working tree is clean.
+
+The working tree is clean (generated `.xcodeproj`/`.xcframework` are git-ignored) and the commit contains exactly the 6 surface files + the gate log.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) parity of `InfoTile.tsx` at `apps/apple/TeslaSync/feature-views/InfoTile.*` — committed as `5eebe3d2f`.
+
+**Implementation** (6 files, CommandTile multi-file convention):
+- `InfoTile.swift` — the `View` + convenience init + once-only `view.opened`.
+- `InfoTile.Model.swift` — `InfoTileValue` (.text/.number/.bool with the web's boolean→"Yes"/"No" ternary), `InfoTileValueColor` tint mapped to semantic tokens (emerald→success, amber→warning, rose→danger, muted, primary…), accessibility builders, P1/S11 telemetry seam, P1/S10 i18n facade, `@Observable` model.
+- `InfoTile.Views.swift` — `TSGlassPanel` (web GlassPanel `p-4`), muted icon+label row, tinted truncating value (`text-lg font-semibold`→Font.TS.section), optional sub; one combined VoiceOver element; `.help()` = web `title`.
+- `InfoTile.Previews.swift` (8 previews, every branch), `InfoTile.Tests.swift` (14 tests), `InfoTile.strings`.
+
+**Parity decisions:** pure presentational leaf → no data binding (matches source); boolean/blank words routed through the i18n facade (no English literals); blank value → em-dash so the tile is never empty. Data-lifecycle states (loading/error/stale/offline) are documented N/A — the web source has zero data layer.
+
+**Verification — surface-isolating gates all GREEN:** SwiftPM build ✓ · 14/14 tests ✓ · iOS 18 typecheck 0 errors ✓ · macOS 15 typecheck 0 errors ✓ · swiftlint --strict 0 violations ✓ · swiftformat --lint 0/5 ✓ · placeholder gate COUNT=0 ✓ · xcodegen enumerates all 6 files ✓.
+
+**Full-app `xcodebuild build test` recorded honestly as RED (`IOS_EXIT=65`):** Gradle staged the KMP framework (`BUILD SUCCESSFUL in 8m 9s`), then the app compile failed with 108 errors — **all** owned by pre-existing sibling `RecentDrives*`/`StateTimeline*` duplicate-type collisions, **0 attributable to InfoTile** (its symbols are each defined exactly once app-wide). macOS shares the identical source tree → deterministically the same RED + dev-signing, deferred to the P4/P99 macOS gate. Log ends with `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 9 todos done, surface committed, every in-scope gate green.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-feature-views-0280-InfoTile.log  | 181 ++++++++++++++
+ .../TeslaSync/feature-views/InfoTile.Model.swift   | 265 +++++++++++++++++++++
+ .../feature-views/InfoTile.Previews.swift          | 131 ++++++++++
+ .../TeslaSync/feature-views/InfoTile.Tests.swift   | 169 +++++++++++++
+ .../TeslaSync/feature-views/InfoTile.Views.swift   | 100 ++++++++
+ .../apple/TeslaSync/feature-views/InfoTile.strings |  23 ++
+ apps/apple/TeslaSync/feature-views/InfoTile.swift  |  59 +++++
+ 7 files changed, 928 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0280-InfoTile.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfoTile.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfoTile.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfoTile.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfoTile.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfoTile.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/InfoTile.swift

@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure and understanding what exists, then check platform capabilities.
+
+Platform IS available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple project structure.
+
+There's an existing `dashboard-widgets` directory with established patterns. Let me examine the existing widget structure and check whether EnergyStatsWidget already exists.
+
+`EnergyStatsWidget` doesn't exist yet, but similar complete widgets do. Let me study a clean reference widget (`EnergySiteInfoWidget`) end-to-end to learn the established pattern.
+
+Now I understand the file pattern. Let me read the remaining reference files (Content, Previews, strings, Tests), find the shared token/registry definitions, and study a chart-based widget for Swift Charts patterns.
+
+Let me read the shared infrastructure, tokens, and a chart-based widget (DriveEfficiencyChartWidget) for the Swift Charts area pattern.
+
+Now I understand the architecture. Let me kick off a build-environment capability check in the background, and read the Theme tokens plus a chart-based widget reference and the web data hooks.
+
+Build needs `Shared.xcframework` (KMP) which is only a `.gitkeep` — that's a likely gate blocker I'll investigate later. Let me read the Theme tokens, the chart widget's model/adapter/tests, and the web data contracts.
+
+Let me read the chart widget's data layer (Model, Models, Builder) and its tests to complete my understanding of the pattern.
+
+Let me read the chart builder (adapter logic) and the key web data contracts (useEnergy, useUnits, numberFormat, shared widget components, registry).
+
+Let me read the critical web data contracts (useEnergy, useUnits, numberFormat), the shared StatGrid, registry, WidgetProps, and the TSSkeleton API.
+
+I need the exact `EnergyStats` type, `useUnits` (formatEnergy), `numberFormat`, and `WidgetProps`. Let me read those.
+
+Let me read the `DailyEnergy` type and the `useUnits` hook (formatEnergy, unitPrefs) — the display-conversion boundary.
+
+Let me read the `formatEnergy` implementation in `unitConversion.ts` — the exact Wh→kWh display conversion I must reproduce.
+
+Let me check the chart `fmt` helper and `AnimatedNumber` default formatting for exact parity, then I'll have everything needed.
+
+I now have the full data/formatting picture. Let me read the test files to mirror the exact testing approach (framework, snapshot/a11y patterns).
+
+Let me read the adapter-focused test file and the Shared.xcframework build script (to assess whether the gate's xcodebuild can run here).
+
+Let me probe the KMP/Gradle build feasibility (the gate's heavy dependency) and check the documented build status, while I prepare to write code.
+
+I have a complete understanding plus the documented precedent (this exact scenario — the full-app `xcodebuild` is blocked by the unstaged KMP `Shared.xcframework` + parallel-merge collisions; surfaces are verified green in isolation). Let me kick off the Gradle framework build for evidence and check for reusable native components (StatCard, AnimatedNumber, TSSkeleton API).
+
+Gradle works (8.14.5/Kotlin 2.0.21). The Kotlin/Native `Shared.xcframework` link is the documented long-pole. Let me start it in the background for real evidence, then build the surface while it runs.
+
+Gradle assembly started. There's a native `TSAnimatedNumber` I can reuse for the compact big-number. Let me see its full implementation and check for a reusable stat card.
+
+There are reusable `TSStatCard`, `TSMetricCard`, and `TSAnimatedNumber` (the exact native parities of the web `StatCard`/`AnimatedNumber` that this widget uses). Let me read `TSStatCard` to map it cleanly.
+
+I have everything needed. Let me check the lint/format configs to match conventions, then create a plan and start writing the surface.
+
+Now I'll set up tracking and start building. Let me record the plan and todos, and check placeholder tooling.
+
+pwsh is available — I can run the real gate scripts. Let me write a brief plan, then build the surface. Starting with the pure Adapter.
+
+Now the pure Adapter (formatters + efficiency converter + projector + layout + accessibility):
+
+Now the Model (state-holder seam, DTOs, telemetry, registry, i18n facade):
+
+Let me add the `localeIdentifier` to the model (the chart tooltip/axis need it), then write the surface view.
+
+Now the surface view with header chrome and all state branches:
+
+Now the Swift Charts area chart:
+
+Now the stat grid, stat cell, and compact big-number content:
+
+Now the previews for every state and layout:
+
+Now the i18n strings catalog:
+
+Now the test suites. First the pure adapter tests (parity-pinned values):
+
+Now the model/registry test suite:
+
+The Gradle assembly completed — let me check whether it actually staged the framework (this could unblock the real gate).
+
+Excellent — the `Shared.xcframework` built successfully (the documented "long-pole" blocker is resolved in this environment). It wrote to the gradle output dir but isn't staged yet. Let me stage it, check for the documented pre-existing collisions in *other* widgets, and lint my files.
+
+Framework staged; `DashboardWidgetSize` is defined once in my slot. Now let me run the surface's own gates: swiftlint, swiftformat, placeholder check on my files, and generate the project.
+
+The tools caught real issues (number grouping, trailing commas, a >50-line function, one long line). Best practice: refactor the long function, then let `swiftformat` auto-fix the rest. Let me view the projector region to extract a helper.
+
+Let me extract a `buildStats` helper to keep `project()` under the body-length limit:
+
+Now let me auto-fix formatting with `swiftformat` (write mode), then re-verify lint and format:
+
+swiftformat clean and values intact. One swiftlint issue: `buildStats` has 7 params (max 5). Let me pass the `data` struct instead and coalesce inside. Let me view the current region and rewrite it cleanly.
+
+Let me re-format and re-verify both linters are clean:
+
+`buildStats` is 54 lines (limit 50). Let me split it into focused `coreStats` + `extendedStats` builders (also respecting the 5-param limit). Let me view the full current function.
+
+Adapter is 416 lines (limit 400). Let me split the projection value types into a `Models.swift` file (mirroring the DriveEfficiency `.Models.swift` pattern). Let me find the section boundaries.
+
+Let me create `EnergyStatsWidget.Models.swift` with the projection value types and remove them from the Adapter:
+
+Now remove that block from the Adapter (lines 100–217, now in Models.swift):
+
+Adapter is now 298 lines. Let me re-run both linters across all 9 files:
+
+Both linters are 100% clean on all 9 files. Now the placeholder check, project generation, and a scan for the documented pre-existing breakers in *other* widgets that could block the full build.
+
+Placeholder check clean (`PLACEHOLDER_COUNT=0`). The documented breakers (`ChargingProjection` redeclaration, `miles` ambiguity) are NOT present in my slot — so the full build may actually work now that the framework is staged. Let me generate the project (also verifies file enumeration).
+
+Project generated; EnergyStatsWidget is enumerated (60 pbxproj refs across app + test targets). Now let me kick off the real gate — the full iOS `xcodebuild build test` — in the background, and prepare an independent isolated proof while it runs.
+
+The iOS gate is building in the background. The documented breakers are absent, so it may pass. Meanwhile, let me build an independent isolated SwiftPM harness to prove the pure logic + tests pass (robust regardless of the full-app outcome).
+
+Now run the isolated test suite under Swift 6 (this proves the pure logic + all unit tests independently of the full app):
+
+All **36 isolated tests pass** under Swift 6 strict concurrency — the parity-pinned values are correct. Let me check the full iOS build progress.
+
+The iOS build is compiling (xcodebuild output is buffered). While it runs, let me independently typecheck my view layer (SwiftUI + Charts) against both SDKs. Let me see the shared Components dependency tree to assemble a tractable typecheck.
+
+Components (39 files) only imports SDK frameworks — self-contained. Let me typecheck my full view layer (with `-D DEBUG` to include previews) against the macOS 15 and iOS 18 SDKs, alongside the real shared components.
+
+No errors reference my files — the 6 errors are in the dependency set. Let me see what they are (likely a harness setup gap, not my code):
+
+The 6 errors are all `TSChartPalette` (defined outside `Components/`, which my harness didn't include) — not my code. Let me find and include it for a fully clean typecheck on both SDKs.
+
+Found it (`Sources/Design/TSDesign.swift`). Let me re-run the typecheck for **both** macOS 15 and iOS 18 SDKs with the complete dependency set:
+
+Down to 2 errors, both `tsGlassPanel` in `Cards.swift` (again a missing dep file, 0 in my code on both SDKs). Let me locate and include it to close the dependency set.
+
+My files show **0 errors on both SDKs** in every run — the residual errors are always unclosed transitive deps (whole-app closure). Let me do one surgical typecheck with just the components my views actually use, and check the build progress.
+
+Confirmed: **every** typecheck shows 0 errors in my files — residuals are always unclosed shared-component deps (full closure = whole app, which is what xcodebuild does). Let me stop the manual chase and check the authoritative full build.
+
+Still building (output buffered by `tail`). Let me gauge progress via DerivedData while it continues, and prepare the gate log content.
+
+Good progress — 2196 objects compiled, and my `EnergyStatsWidget.*.o` units are built (Model, Content, Adapter, etc.), confirming they compile in the real module. Let me keep waiting for the full build+test to finish.
+
+The app bundle **and** both test bundles built successfully — the full iOS app compiles cleanly with EnergyStatsWidget integrated. It's now in the test phase. Let me wait for the run to finish.
+
+Decisive result: the **iOS app + test bundles built successfully** (my surface compiles & links in the real app). The `test` action failed **only** on a pre-existing collision — `Invalid redeclaration of 'SafetyModelTests'/'SafetyRegistryTests'/'SafetyAccessibilityTests'` in `SafetyFeaturesWidget`/`SafetyHistoryWidget` test files (outside my allowed scope). Let me confirm that's pre-existing and not mine, and start the macOS build.
+
+Confirmed: the `Safety*` duplicate test classes are pre-existing (declared in **both** `SafetyFeaturesWidget.ModelTests.swift` and `SafetyHistoryWidget.ModelTests.swift`) — outside my allowed scope. All 8 of **my** test classes are uniquely named (1 file each). The iOS **app** built fine; only the shared test bundle won't compile due to that unrelated collision.
+
+Let me start the macOS app build (signing disabled) to round out platform evidence, then write the gate log.
+
+`TeslaSync-macOS` scheme exists. Let me build the macOS app (signing disabled) to prove my surface compiles on the macOS 15 target too, while I write the gate log.
+
+The macOS build is running. Let me capture exact exit codes from the surface-scoped gates for the log while it builds.
+
+All surface gates clean (LINT/FORMAT/PLACEHOLDER = 0). Let me check the macOS build progress.
+
+macOS build is in its gradle-staging/early phase. Let me write the comprehensive gate log now (I'll finalize the macOS line once that build completes).
+
+Now let me wait for the macOS build to complete so I can fill in its real result.
+
+macOS build progressing (495 objects, actively compiling). Let me wait for it to finish.
+
+All 7 of my `EnergyStatsWidget.*.o` files compiled on the macOS 15 target too. Let me wait for the full macOS build to finish linking.
+
+macOS app build **SUCCEEDED** (`MAC_BUILD_EXIT=0`) — my surface compiles & links on both iOS 18 and macOS 15. Let me finalize the log with the macOS result.
+
+macOS build succeeded. Now let me verify the final log, confirm the git state (ensuring the generated `.xcodeproj` and staged framework are git-ignored), and that only my intended files are committed.
+
+Git state is exactly right: only my 10 surface files + the log are untracked; the framework and generated `.xcodeproj` are git-ignored. Let me review the finalized log, then run one final full lint/format/placeholder confirmation.
+
+The log is honest and coherent; final lint/format clean. Now let me commit exactly the prescribed files (surface + log), then clean up scratch dirs.
+
+Exactly 11 files staged (10 surface + log). Let me commit with the prescribed message:
+
+Committed as `f0a1348a9`. Let me clean up scratch dirs and confirm the final state.
+
+The task is complete. Let me do a final confirmation of the committed surface contents and the todo state.
+
+The native **EnergyStatsWidget** Apple surface is complete, verified, and committed (`f0a1348a9`).
+
+## What shipped (10 files, ~2,050 lines under `apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.*`)
+A production-polished SwiftUI/Swift Charts parity of `features/dashboard/widgets/EnergyStatsWidget.tsx`:
+- **Adapter/Models/Model** — pure `fmtNumber`/`formatEnergy` ports (SI Wh→kWh, Wh/m→Wh/km|Wh/mi), the 6 stat tiles, daily-usage projection, `@Observable` state-holder (P1/S8 seam), `view.opened` telemetry (P1/S11), registry `energy-stats` (2×4, min 1×2, max 4×40), i18n facade (P1/S10).
+- **View/Chart/Content** — header chrome, every state (loading/empty/error/stale/offline/content), compact big-number vs chart+stat-grid, `isCompact`/`isWide` layouts, Swift Charts `AreaMark`, VoiceOver labels, reduce-motion.
+- **Previews** (9 states×layouts) + **2 XCTest suites** + **strings** (all 10 source i18n keys + chrome).
+
+## Verification — surface is GREEN on both platforms
+- `swiftlint --strict` **0 violations** · `swiftformat --lint` **0** · `check-placeholders.ps1` **PLACEHOLDER_COUNT=0**
+- Isolated SwiftPM `swift test`: **36/36 pass** (Swift 6 strict concurrency)
+- `swiftc -typecheck` on **iOS 18 + macOS 15** SDKs: **0 errors** in my files
+- Built the KMP `Shared.xcframework` via Gradle (10m, the historical blocker) and staged it
+- **iOS app build: SUCCEEDED** · **macOS app build: SUCCEEDED** — my surface compiles & links in both real apps
+
+## Gate status: BLOCKED (honest) — pre-existing, out-of-scope defect
+The full `xcodebuild build test` returns `IOS_EXIT=65`, but **not** because of this surface: the shared test bundle fails to compile on a pre-existing `Invalid redeclaration of 'SafetyModelTests'/'SafetyRegistryTests'/'SafetyAccessibilityTests'` collision between `SafetyFeaturesWidget.ModelTests.swift` and `SafetyHistoryWidget.ModelTests.swift` — files outside this prompt's allowed set (`EnergyStatsWidget.*`). All 8 of my test classes are uniquely named and pass in isolation. Per the honesty covenant (no red-as-green) the log ends `EXIT=65 / STATUS=BLOCKED`, deferring the composite gate to the acceptance gate exactly like every prior P4 surface — full evidence captured in the committed log.
+
+
+
+The work is fully complete and verified. Let me record final status in plan.md and mark the task complete.
+

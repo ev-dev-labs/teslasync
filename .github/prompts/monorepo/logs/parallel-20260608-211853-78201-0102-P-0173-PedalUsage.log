@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure to understand both the web source and the existing Apple app architecture.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Let me explore the Apple app structure and the web source's dependencies.
+
+Each feature view follows a multi-file pattern (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.States.swift`, `.strings`, `.Tests.swift`). Let me check for existing PedalUsage files, sibling driving-dynamics views, and the build configuration.
+
+Project uses XcodeGen (`project.yml`). Let me study the build config, the shared infrastructure (state holders, tokens, i18n, diagnostics), and the most relevant sibling — `LiveMotorStatus` (a live driving-dynamics view).
+
+No existing DriveDynamics state holder. Let me study the SharedFacade infrastructure and the closest reference — `LiveMotorStatus` (a live driving-dynamics panel). Let me read its complete file set.
+
+Excellent reference. Let me read the rest of the LiveMotorStatus file set (Adapter, Views, Previews, strings, Tests) and look for a shared RadialGauge component.
+
+Now let me read the Previews, strings, Tests, and the web RadialGauge + DriveDynamicsSnapshot type to nail the exact data contract and formatting.
+
+Let me read the DriveDynamicsSnapshot type, the LiveMotorStatus tests, and verify the design tokens (Color.TS) for cyan/red and shared components exist.
+
+Now I fully understand the pattern. Let me examine the design tokens (Color.TS, Font.TS, TSSpacing, TSMotion) and shared components (TSGlassPanel, TSEmptyState, TSSkeleton, TSTone) to find the right tokens for cyan (#06b6d4) and red (#ef4444), plus confirm web's global precision default.
+
+Found exact token matches: cyan `#06b6d4` → `chartSeriesRegen`, red `#ef4444` → `chartSeriesTemperature`. Web global precision = 2. Let me read the shared components (Badges/TSTone, Cards/TSGlassPanel, States/TSEmptyState, Skeletons/TSSkeleton) and the token definitions.
+
+Let me read the design tokens (Tokens.swift), TSGlassPanel (Cards.swift), TSSkeleton (Skeletons.swift), and the typography/spacing/motion token definitions.
+
+I have all the design context. Found exact token matches and the full component library. Let me verify the build tooling (xcodegen, the Shared.xcframework dependency) and check the parity manifest before writing code.
+
+Building the full gate requires the KMP `Shared.xcframework` (via Gradle/Kotlin). Let me check the Java/Gradle toolchain and kick off the framework build in the background while I write code.
+
+Java 17 + Gradle 8.14.5 available. Let me start the KMP framework build in the background (it downloads Gradle + Kotlin/Native, so it's slow) while I write the surface code.
+
+Framework build running in background. Let me check the native motion components (web uses `FadeIn`) and set up a todo tracker.
+
+`TSFadeIn(delay:)` matches web `FadeIn delay={0.1}`. Let me check the background framework build progress, then start writing files.
+
+Gradle is compiling the Kotlin/Native framework (shared across parallel slots, so slow). I'll write the surface while it builds. Starting with the SwiftUI-free Model (state-holder + telemetry + i18n seams).
+
+Now the Adapter — the SwiftUI-free projection core that reproduces the web RadialGauge numeric pipeline verbatim.
+
+Let me quick-compile the two SwiftUI-free files together to catch errors early while the framework builds.
+
+Model + Adapter typecheck clean under Swift 6. Now the SwiftUI Views file (gauges, brake badge, freshness chip, loading skeleton).
+
+Now the main view file with the header, state switching, and lifecycle.
+
+Now the i18n strings catalog and the previews.
+
+Now the comprehensive tests (adapter projection parity, model phases, a11y, per-state render smoke).
+
+All 7 files created. One fix: `42.555` isn't exactly representable as a Double (it's ~42.5549999), so half-up rounding would yield `42.55`, not `42.56`. Let me use exactly-representable values in that test.
+
+Let me update tracking and run swiftformat + swiftlint on the new files (these don't need the framework), and check the framework build.
+
+Two fixable issues in the Adapter: a trailing-comma conflict and the gauge helper has 8 params (max 5). Let me check the swiftformat config, then refactor with a spec struct (like LiveMotorStatus's `GaugeSpec`).
+
+`--commas inline` + swiftlint agree: no trailing comma on wrapped collections. And the `gauge` helper (8 params) exceeds the limit of 5 — initializers are exempt (which is why the 10-param tile init passed), but plain functions aren't. Let me check existing wrapped-array conventions, then refactor with a spec struct.
+
+`--commas inline` wants the trailing comma removed (matches swiftlint). Both fixes go together — let me refactor `PedalProjector` to use a spec struct (memberwise init is exempt from the param-count rule) and drop the trailing comma.
+
+Let me apply swiftformat in write mode (the authoritative repo formatter), then re-run swiftlint strict — since CI runs both, swiftformat's output is guaranteed swiftlint-clean.
+
+swiftformat removed the trailing comma; all 6 pass formatting. Now re-run swiftlint strict and re-typecheck the Foundation-only files.
+
+swiftlint strict: 0 violations. Typecheck clean. Let me check the framework build progress.
+
+Framework is linking (still running). Let me check the gate's log directory and an existing completed log for format reference while the build finishes.
+
+The predecessor (LiveMotorStatus 0170) log shows the pattern: they deferred the xcframework build/signing as environment-blocked but verified lint/format/placeholder/typecheck and committed green. In my environment the framework IS building, so I can attempt the fuller gate. Let me read the full predecessor log to match format and disposition.
+
+The predecessor established the accepted disposition: run host gates green (typecheck both SDKs + execute XCTest via a SwiftPM harness that compiles the real component closure, which doesn't import the KMP `Shared` framework), and defer/capture the full `xcodebuild`. In my environment the framework is actually building, so I'll aim higher. Let me check framework status and which component files import `Shared`.
+
+The framework's almost staged, and crucially the entire Components/Design closure is `Shared`-free. Let me verify that closure is self-contained (the predecessor flagged one `Shared`-dependent component file, `UnitFormatters.swift`) so I can build a reliable SwiftPM harness that compiles my SwiftUI files against the real tokens and executes the tests.
+
+`UnitFormatters.swift` is the one flagged file. My surface doesn't use it, and the rest of the closure has no `Shared` references. Let me check framework staging and build the SwiftPM harness (excluding the flagged file) to compile my SwiftUI files against the real tokens and execute the tests.
+
+The framework is still linking. Let me inspect `UnitFormatters.swift` and who references it, to decide the harness closure cleanly.
+
+Let me build the SwiftPM harness (predecessor's proven approach) — copy the real Components/Design closure + my surface files, then `swift build` + `swift test`. I'll let the compiler guide any missing deps.
+
+`UnitFormatters` needs `UnitPreferences` (the Shared-bridged type the predecessor flagged). Let me locate it and decide whether to include it or exclude the two files that use it (my surface uses neither).
+
+`UnitPreferences` comes from `SharedFacade` (which imports the KMP `Shared`), confirming `UnitFormatters.swift` is the lone Shared-tainted component. Since dropping it cascades (Inputs→Fields/Pickers/Interaction), the cleanest harness fix is a tiny host-only shim for `UnitPreferences`. Let me read `UnitFormatters.swift` to write a faithful shim.
+
+`UnitFormatters` also needs the Shared-bridged `Units` formatter enum. Rather than shimming deeper, let me check if the framework has staged (enabling the real `xcodebuild`, which sidesteps harness-closure work) and how widely `Units.`/`UnitPreferences` are referenced.
+
+The framework built successfully (14m33s) and is now **staged**. No other component file needs `Units.`/`UnitPreferences` — only `UnitFormatters.swift`. Let me add a tiny host-harness shim for those Shared-bridged symbols, finish the harness build+test, then attempt the real `xcodebuild`.
+
+Harness library builds clean — my surface (incl. SwiftUI files + Previews) compiles against the real Components/Design closure. Now run the test suite.
+
+All 32 tests pass (incl. per-state SwiftUI render smoke). Now let me complete the remaining host gates (placeholder check, iOS-simulator typecheck of the full closure) and generate the Xcode project to attempt the real build.
+
+Placeholder gate clean (COUNT=0), iOS-18 simulator typecheck of the full closure clean. Now generate the Xcode project and attempt the real `xcodebuild` (framework is staged).
+
+Project generated (framework staged, iPhone 17 sim available). Let me attempt the real iOS build in the background — first `build` alone (faster failure signal across the whole app), monitoring progress.
+
+Build started. While it compiles the whole app, let me monitor progress and check for early errors.
+
+Build is type-checking the whole TeslaSync module (0 errors so far). Let me wait for this heavy phase.
+
+Build failed — but the failing compile batch is `VehicleHeroWidget.*` / `VehicleSpecsWidget.*`, not my files. This is the whole-app/unrelated-surface risk. Let me confirm the actual errors and verify none are in PedalUsage.
+
+Confirmed: **zero PedalUsage errors**. The build is blocked solely by pre-existing type collisions in unrelated `Safety*` dashboard-widgets (e.g. `'SafetyModel' is ambiguous` — duplicate types from other parallel-authored surfaces), which are outside my allowed-files scope (`PedalUsage.*` only). Let me confirm the full set of failing files is entirely unrelated to my surface.
+
+**Definitive:** all 113 build errors are in `dashboard-widgets/` (unrelated `Charge*`/`Fleet*`/`Safety*` widgets from other parallel prompts — duplicate-type "ambiguous" collisions); **zero in `feature-views/`**. My additions only create `PedalUsage.*` files, so these pre-existing collisions are independent of my work and outside my allowed scope. Let me verify git cleanliness, gitignore status, and run an i18n referenced-vs-declared audit.
+
+All clean: only 7 `PedalUsage.*` files are new, the generated `.xcodeproj` + framework are gitignored, and i18n is 17 referenced == 17 declared (zero orphans). Let me gather line counts and do a final scan for stray English literals before writing the gate log.
+
+The "placeholder" hits are all doc-comments describing the web's `'—'` em-dash marker (the official `check-placeholders.ps1` gate already returned COUNT=0). Still, I'll reword them to "sentinel" to keep the shipped code unambiguous.
+
+Let me re-verify after the edits: re-run placeholder gate, swiftformat/swiftlint, and re-run the harness tests with the updated file.
+
+All green after edits (swiftformat 0/1, swiftlint 0 violations, placeholder COUNT=0, 32 tests pass). Now let me write the comprehensive, honest gate log.
+
+Let me verify the exact per-suite test counts to make the log accurate.
+
+Two counts in the log need fixing (Projector 9 not 10; ViewState 7 not 6). Let me correct them.
+
+Log corrected. Let me run a final consolidated green check of all host gates, then stage and commit per the prompt's commit block.
+
+Final gates green (swiftformat 0/6, swiftlint 0 violations). Let me stage and commit.
+
+All 8 files staged correctly. Let me commit.
+
+Committed cleanly; working tree clean. Let me clean up the temporary build artifacts in `/tmp`.
+
+Let me mark the tracker done.
+
+Task complete. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0173-PedalUsage.log     | 225 +++++++++++++
+ .../feature-views/PedalUsage.Adapter.swift         | 242 ++++++++++++++
+ .../TeslaSync/feature-views/PedalUsage.Model.swift | 320 +++++++++++++++++++
+ .../feature-views/PedalUsage.Previews.swift        |  94 ++++++
+ .../TeslaSync/feature-views/PedalUsage.Tests.swift | 353 +++++++++++++++++++++
+ .../TeslaSync/feature-views/PedalUsage.Views.swift | 256 +++++++++++++++
+ .../TeslaSync/feature-views/PedalUsage.strings     |  39 +++
+ .../apple/TeslaSync/feature-views/PedalUsage.swift | 162 ++++++++++
+ 8 files changed, 1691 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0173-PedalUsage.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/PedalUsage.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PedalUsage.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PedalUsage.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PedalUsage.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PedalUsage.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PedalUsage.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/PedalUsage.swift

@@ -1,0 +1,206 @@
+I'll start by exploring the repository structure to understand the task and existing patterns.
+
+Let me explore the Apple app structure and the DLQ web components.
+
+Tools are available. Now let me understand the existing patterns — feature-views pages, navigation, KMP core, and the gate scripts.
+
+The predecessor (ApiPlaygroundPage) used `apps/apple/Sources/Features/Admin/`. Let me verify the actual layout in this slot and read that reference implementation.
+
+The real convention is `apps/apple/Sources/Features/Admin/`. Let me study the sibling admin pages as reference templates.
+
+Now let me study a table-based page, the route system, and shared components.
+
+Key finding: `Shared.xcframework` is absent (only `.gitkeep`), so a full `xcodebuild` will likely be blocked. Let me locate all shared components and tokens I'll need.
+
+I have enough understanding. Let me verify a few remaining strings/components, then set up todos and build.
+
+I now have the full methodology. Let me verify toolchain feasibility (the known out-of-scope sibling bug, framework build, SDKs) before building.
+
+Key finding: the sibling `glass()` bug the predecessors cited is already `@escaping` here (fixed). SDKs are present; `java` exists but framework build needs Kotlin/Native. Let me kick off the framework build in the background early, then write code while it runs.
+
+Let me set up tracking and start building while the framework compiles.
+
+The framework build is running. Let me write the model file now.
+
+Framework build is progressing (release variant linking). Let me continue writing code — the sample data source next.
+
+Let me write the tables file (entries + audit, adaptive).
+
+Let me check the framework build and write the drawer.
+
+Framework still linking. Let me refine the confirm-dialog placement (attach to the drawer sheet so it presents over it), then write the drawer.
+
+I referenced `model.inspectRetry()` and should simplify the binary-marker resolution. Let me fix the drawer and add the model method.
+
+Now add the `inspectRetry()` method to the model:
+
+Now wire up navigation: route registration file, AppRoute case, parser alias, and app composition.
+
+Now the parser alias and app composition:
+
+Now let me check the framework build and write the model tests.
+
+Framework staged — a full build is feasible. Let me make the entry loader testable, then write the model tests.
+
+Now let me enumerate every string key my files reference, to build a complete catalog patch.
+
+The catalog uses Xcode's `" : "` nested style. I'll do a precise textual insertion of only the missing keys to keep the diff clean. Let me build and apply it.
+
+All 67 keys inserted (8530 total). Let me verify the diff is clean and run the formatting/lint gates.
+
+Clean: 737 additions, 0 deletions; all changed files in scope. Let me run the fast in-scope gates (format, lint, placeholder).
+
+swiftformat found issues. Let me auto-fix with the ecosystem tool, then re-verify.
+
+swiftformat clean. Now swiftlint --strict:
+
+Two length violations. Let me split the model types into a separate file and split the test class. First, check current sizes and the model's structure.
+
+Both are length-rule violations. Let me split the model types into a separate file (via script to avoid transcription errors) and split the test class.
+
+Model split done (258 + 237 lines). Now split the test class:
+
+Now re-run swiftformat and swiftlint on all files including the new split ones:
+
+Format + lint clean. Now the placeholder gate:
+
+Placeholder gate passes (COUNT=0, EXIT=0). The ALLOWED=1 is a pre-existing sibling marker. Let me confirm my own files are clean, then run the model harness and view type-check.
+
+My files are clean. Now a fast isolated type-check of my feature files against the real components/tokens before the full build. Let me gather the dependency set.
+
+The build is feasible now. Let me regenerate the Xcode project (to include my new files) and build macOS.
+
+Project generated with my files (48 refs). Let me build the macOS app target. This compiles the whole app, so I'll run it in the background and monitor.
+
+While the build runs, let me verify swiftformat didn't break the async/await hoisting in the model's load path.
+
+The hoisted forms are valid Swift. Let me monitor the build.
+
+Build is compiling (no errors in my files yet). Let me wait for it to complete.
+
+Build failed with 16 errors, none in my files. Let me see exactly which files failed.
+
+I introduced a name collision — a sibling `AuditPanel.swift` already defines `DLQReplayAuditRecord`. Let me find all colliding type names.
+
+Only 2 collisions, both in the existing `AuditPanel.Models.swift`. Let me inspect those existing types to decide whether to reuse or rename.
+
+Found it: a canonical `DLQReplayResult` enum and `DLQReplayAuditRecord` struct already exist in the module's `AuditPanel.Models.swift`, and they match the web AuditPanel columns exactly. The right fix (DRY + better parity) is to **reuse** them and drop my duplicates. Let me view my Types file to remove the colliding definitions.
+
+The existing types match the web AuditPanel better (no `srcTopic`/`reason`). Let me remove my duplicates and reuse the canonical ones.
+
+Now update the model's `confirmReplay` to use the enum cases:
+
+Now the Sample data source's audit rows and replay outcome (rename fields, drop srcTopic/reason, enum cases):
+
+Now fix the Sample's `auditRows` to match the canonical struct's fields:
+
+Now fix the Tables file — the audit table field names, optional date, and result badge tone mapping:
+
+Now fix `rowAccessibility` and `DLQResultBadge` (token→rawTag, tone mapping):
+
+Now add the `Date?` overload to `DLQFormat.absolute` in the Types file:
+
+Now update the tests to use the canonical enum/struct. Let me view the relevant test sections:
+
+Now update the result-token/flags/tone tests for the canonical enum:
+
+Let me remove the TSTone-equality test (TSTone may not conform to `Equatable`, which would break compilation):
+
+Let me grep for any remaining stale references to the old type API across my files:
+
+Those are false positives except a stale doc comment. Let me fix it:
+
+Let me re-format and re-lint the changed files, then rebuild.
+
+Both lint gates pass. The split created a new file after the last project generation — let me regenerate and rebuild macOS.
+
+Build running. Let me wait and check for errors.
+
+Build still compiling the app module (0 errors so far). Let me wait for completion.
+
+Build failed with 1 error. Let me see what and where:
+
+My TeslaSyncApp edit mis-nested `onNavigate`. Let me view and fix it:
+
+I mis-nested `onNavigate` (it belongs to `FleetCompare`, not the outer wrapper). Let me rewrite the block correctly:
+
+Let me format/lint the app file and rebuild:
+
+Lint clean. The rebuild is incremental now. Let me wait for it.
+
+0 errors, still building. Let me wait for completion.
+
+Still linking. Let me check what phase it's in and wait more.
+
+Build failed but no `error:` lines — likely a compiler crash or command failure. Let me investigate.
+
+The failure is a **swift-frontend compiler crash** (LLVM `report_fatal_error`), not a code error. Let me identify which compilation unit crashed.
+
+This is a **swift-frontend IRGen compiler crash** (`report_at_maximum_capacity` — an LLVM SmallVector hard limit), which occurs *after* type-checking succeeds for the whole module (including my files). The predecessors documented this same toolchain IR crash. To honestly determine whether it's pre-existing or triggered by my changes, let me build the clean HEAD in a worktree (background) while I run isolated verification of my code.
+
+Worktree ready (clean HEAD, 0 DLQ files). Let me start the clean-HEAD macOS build in the background (using `-target` to skip the gradle pre-action).
+
+Clean-HEAD build is running. Now let me run an executable model harness (Foundation-only — proves the model logic independently of the toolchain crash). Let me write and run it.
+
+Now let me compile and run the harness against the real model + reused module types:
+
+Harness passes 25/25 under Swift 6 strict concurrency. Now the iOS type-check (to cover the `#if os(iOS)` compact branches the macOS build skipped). Let me find remaining deps and run it.
+
+iOS type-check clean (0 errors — covers the compact branches). Let me run the macOS type-check for explicit parity, then check the clean-HEAD build.
+
+Both type-checks pass (0 errors, macOS + iOS). The clean-HEAD build is still running (no crash yet — it crashes near the end in IRGen). Let me record evidence and wait for the definitive clean-build result.
+
+Clean build still compiling from scratch (no cache). Let me keep waiting and prepare the log/ledger meanwhile.
+
+The clean build is progressing slowly from scratch (at "C" files). The evidence is already strong that the IRGen crash is post-type-check and module-scale (my full build passed SEMA for all files; 2 isolated type-checks + harness all green). Let me keep waiting for the definitive clean-build confirmation.
+
+The clean-HEAD build (**without my changes**) also FAILED. Let me confirm it's the identical IRGen crash:
+
+**DEFINITIVE: the IRGen crash is pre-existing and out-of-scope.** The clean-HEAD build with **zero** of my files (`DLQInspector` refs = 0) fails with the *identical* swift-frontend crash (`report_at_maximum_capacity` → `SyncCallEmission::setArgs` → `visitFullApplySite`), 0 type errors. This is a Swift 6.3.2 module-scale compiler backend bug, exactly as predecessors documented.
+
+Let me clean up the worktree and run a final consolidated in-scope gate pass.
+
+Worktree removed; only my in-scope files changed. Let me run the final consolidated in-scope gate pass before writing the log.
+
+All in-scope gates GREEN. Now let me update the parity ledger and write the evidence log.
+
+Ledger valid (+18/0, clean). Let me gather file metrics and write the evidence log.
+
+All data gathered. Let me write the comprehensive evidence log.
+
+Log written. Let me update todos and stage the exact in-scope files for commit.
+
+All staged files are exactly in-scope; `.xcodeproj` is correctly git-ignored. Let me commit.
+
+Committed (f86606f2e). Let me verify the working tree is clean and the commit contains exactly the intended files.
+
+All 9 todos done, commit clean, working tree clean. The task is complete.
+
+## Summary
+
+Shipped a native **SwiftUI / Apple HIG** port of the web `DLQInspectorPage` (`/admin/dlq`) at full parity, committed as `f86606f2e`.
+
+**What was built** (8 new files in `apps/apple/Sources/Features/Admin/` + tests):
+- `@MainActor @Observable DLQInspectorPageModel` driving list/audit/entry loading·empty·error·success and the full replay flow (inspect → confirm → publish, with soft-`disabled` + hard-403 banner branches) over an injectable `DLQInspectorDataSource` seam (the KMP `/system/dlq*` binding point).
+- **GlassPanel1** (dead-letter entries) + **GlassPanel2** (replay audit) as adaptive tables (macOS/iPad columnar Grid, iPhone compact cards), a status header (3 stat cards + replay-disabled banner), a sheet-hosted entry drawer (KV details, Inner/Raw payload viewer, Replay CTA), and the replay `confirmationDialog`.
+- Reused the module's canonical `DLQReplayResult`/`DLQReplayAuditRecord` (DRY); 67 `admin.dlq.*`/`route.dlqInspector`/`common.*` keys added to `Localizable.xcstrings`; dedicated `.dlqInspector` route + `/admin/dlq` alias wired into `TeslaSyncApp`.
+
+**Verification — all in-scope gates GREEN:** swiftformat `0/11`, swiftlint --strict `0`, check-placeholders `0`, executed model harness `25/25` (Swift 6 strict concurrency), isolated view type-check `0 errors` on **both** macOS and iOS. **`PARITY_COVERED=15/15`**; ledger + evidence log updated.
+
+**Honest caveat:** the full `xcodebuild` macOS build is RED — but only because of a **pre-existing swift-frontend IRGen crash** (`report_at_maximum_capacity`) in the ~5000-file app module. I confirmed this by building **clean HEAD in a throwaway worktree with zero of my files**, which fails with the *byte-identical* crash and 0 type errors. It's post-type-check, reproduces without my changes, and is forbidden to commit-fix — exactly the toolchain blocker sibling P7 logs document. `STATUS=DONE`.
+
+
+
+Let me quickly check the new `inbox_entries` table before finalizing, in case it contains anything actionable.
+
+Empty — nothing actionable. The task is fully complete and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

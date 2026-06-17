@@ -1,0 +1,265 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure to understand existing patterns and conventions.
+
+The actual source tree uses `Sources/Features/Charging/`. Let me study the existing sibling page (Powershare) and other patterns in depth.
+
+Excellent reference pattern. Let me study the remaining Powershare files and the supporting components/tokens in parallel.
+
+Let me study the format helper and explore the shared components, design tokens, and a page with charts/tables/maps.
+
+Let me read the key UI, chart, map, data-display, and feedback components in parallel.
+
+Now let me read the charts, maps, data-display, feedback, buttons, pickers, and DataTable components.
+
+Let me read maps, data-display metrics, feedback states, forms, buttons, pickers, and DataTable.
+
+Let me read DataTable, Buttons, Pickers, Forms/Filters, geo helpers, and the web charging hook to understand data shapes.
+
+Let me examine the routing system, SI/unit formatters, buttons/pickers/filters, and find a sibling page using charts+table+map.
+
+Let me read the routing, find the Units/currency helpers, and locate a sibling page combining chart+table+map.
+
+No existing route for tesla-charging-sessions. Let me study the route parser, registry, how Powershare is composed, and the Powershare tests.
+
+Let me check the AppShell composition, the web route definition, and existing references to this route.
+
+Found an existing `TeslaChargingSessionsMap` feature-view. Let me examine it and the feature-views directory.
+
+There's a complete `TeslaChargingSessionsMap` P4 surface. Let me read it to reuse it, plus the web map component.
+
+The existing map surface is reusable but the manifest says maps=0 and to use the P3 wrapper. Let me read Buttons, Pickers, the Units/currency helpers, and date formatting.
+
+Let me read the existing charging formatting precedents, the map's supporting files, and the Pickers component.
+
+Let me find where route registrations are composed into the app and check the Pickers and existing route registration wiring.
+
+Let me read TeslaSyncApp.swift, Pickers, the Localization setup, and check toolchain availability.
+
+Toolchain is fully available (Xcode, swiftlint, xcodegen). Let me check which strings already exist in the catalog and get the exact web defaults.
+
+None exist yet — I must add all 32 + the route title. Let me confirm exact web defaults from the canonical i18n file and inspect the xcstrings entry format.
+
+Now I have all exact strings. Let me inspect the xcstrings format to add entries correctly.
+
+I have all strings. Let me check for any other exhaustive AppRoute switches, read the Powershare tests pattern, and the parity ledger.
+
+I have a full picture. Let me verify the design token names and the theme/glass modifiers before writing.
+
+Let me check `.tsChartAxes()` and how a sibling feature page wires a categorical bar chart inside ChartContainer.
+
+Let me study a sibling charts file with a categorical bar chart to match the established pattern.
+
+Let me quickly check `tsChartAxes` behavior and the theme/material modifiers, then I'll start building.
+
+I now have a complete understanding of the architecture. Let me set up my plan and todos, then verify remaining infra.
+
+Constraints noted (line ≤120, no 1-char idents). Let me check for an existing CSV/file-export utility and TSClipboard before finalizing the table export approach.
+
+Deployment targets are iOS 18/macOS 15 (modern SF Symbols OK). Let me read the Pickers API and the Utility/Skeleton components before writing.
+
+Let me read the Utility (TSClipboard) and Skeletons components, then begin writing.
+
+I have a complete understanding. Let me start writing the implementation files. First, the domain models.
+
+Now the `@Observable` page model and data source protocol.
+
+Now the sample/empty/failing data sources.
+
+Let me refine the model: add a pull-to-refresh method and sensible default range in init.
+
+Now the main page view.
+
+Now the large Sections file with all 10 panels, chart, map, table, and skeleton.
+
+Let me wire `isCompact` into the controls bar in the page, then create the route registration.
+
+Now let me wire the new route into `AppRoute.swift`.
+
+Now register it in the app composition.
+
+Now let me add the 32 parity strings plus the route title to the xcstrings catalog.
+
+Strings done. Now update the parity ledger. Let me inspect the Powershare rows format first.
+
+Now let me write the model tests.
+
+Let me fix the awkward `chargeStartRaw` expression in the test helper.
+
+Let me run swiftlint on the new code to catch style issues early.
+
+SwiftLint flagged: trailing commas in array literals, Sections file too long (535>400), and test file too long. Let me find all trailing-comma array literals.
+
+Let me remove the trailing commas from those array literals.
+
+Now split the Sections file (535 lines) under the 400-line limit. Let me find the map/table boundary.
+
+Both section files are now under 400. Now split the test file (type body too long) and fix the long line. Let me view the test boundaries.
+
+Let me rewrite the tests as two balanced files. First remove the oversized file.
+
+Now create shared test fixtures and the derivations/formatters test file.
+
+Let me re-run swiftlint on all the new/changed files.
+
+Just a trailing-newline issue from the split. Let me fix it.
+
+SwiftLint clean. Now run the placeholder scan against the new files.
+
+The scanner flags the `.placeholder` redaction API. Like the Powershare skeleton, I'll add a `parity:allow` marker.
+
+Placeholder scan passes. Now the heavy step: the xcodebuild gate. Let me check the KMP framework prerequisite first.
+
+The build needs `xcodegen generate` + a Gradle-built KMP framework. Let me check the toolchain and generate the project.
+
+Java 17 + gradlew present, xcodeproj generated. Let me build the KMP `Shared.xcframework` (the heavy prerequisite) in the background.
+
+The KMP build is progressing (downloading Kotlin/Native, compiling, some cache hits). Let me wait for it to finish.
+
+The debug XCFramework assembled; release is linking now. Let me wait for completion and staging.
+
+The shared `/tmp` log is interleaving with a parallel slot (slot-68). Let me check my slot-67 build status directly.
+
+My slot-67 Gradle build (pid 75278) is still running `assembleSharedXCFramework`. Let me wait and poll the real slot-67 paths.
+
+Still building (contended with the parallel slot). Let me continue waiting.
+
+Build is heavily contended with parallel slots. Let me gauge release-link progress from the log.
+
+My slot's Gradle build is queued (0% CPU, blocked) behind parallel slots sharing the Gradle daemon. It will run when the daemon frees up. Let me wait longer.
+
+My pid 75278 is just the small gradlew client; the real work is in a daemon JVM. Let me check daemon activity and slot-67 build artifacts directly.
+
+The build is CPU-contended across parallel slots but progressing system-wide (active konan linkers). My Swift code passes lint + placeholder; I've also reviewed it for compile correctness. Let me keep waiting for the framework.
+
+The `Shared.xcframework` is built and staged. Now let me compile. I'll build the macOS target first (validates the shared Sources, no simulator needed) using a slot-local DerivedData.
+
+`-derivedDataPath` needs `-scheme`. Let me use the macOS scheme (preAction Gradle is now up-to-date).
+
+No errors yet — it's emitting the Swift module. Let me wait for completion.
+
+Still compiling the full module (CPU-contended, no errors). Let me wait more.
+
+Compile is slow under heavy CPU contention but error-free. Let me verify it's actively progressing, then wait.
+
+Confirmed actively compiling (10 parallel swift-frontends, 24 objects done) — just slow under shared CPU. No errors. Let me wait.
+
+Build failed — but the errors are in `TeslaSync/shared-surfaces/Input.Previews.swift` (NOT my files). Let me check whether this is pre-existing and macOS-specific.
+
+This is a **pre-existing** error in `Input.Previews.swift` (committed in `ed5f636e3`, unmodified by me, present in base HEAD) — outside my allowed scope. Let me check how the sibling Powershare gate handled the build, and the macOS-pending notes.
+
+The Powershare log documents this EXACT pre-existing `Input.Previews.swift` error as an out-of-scope blocker (macOS PENDING). Let me read the full Powershare log to mirror its accepted gate/PARITY/EXIT structure.
+
+This matches the accepted Powershare precedent exactly: the two pre-existing out-of-scope files are isolated via the `EXCLUDED_SOURCE_FILE_NAMES` build setting (no source edits). Let me re-run the macOS build with that exclusion to verify my files compile clean.
+
+Recompiling (exclusion invalidated the module), no errors yet. Let me wait for completion.
+
+Still compiling under heavy contention, no errors. Let me wait longer for the link/success.
+
+This is extremely slow due to severe multi-slot CPU contention. Let me verify it's genuinely progressing (not deadlocked).
+
+Confirmed progressing: 1900 objects compiled, 257% CPU, but system load is 101 (extreme multi-slot contention). Notably, the earlier non-excluded build's ONLY `error:` lines were `Input.Previews.swift` — proving my files compile clean. Let me wait for the definitive SUCCEEDED stamp.
+
+My `TeslaChargingSessions*.o` objects are built with zero errors — the code compiles cleanly. Build is in the final link phase. Let me wait for the SUCCEEDED stamp.
+
+Let me see the current build phase in detail.
+
+The full-module type-check (`EmitSwiftModule`) has already PASSED — definitive proof my code is type-correct; it's now grinding through per-file codegen for ~2000 files under load 110. Let me wait for the SUCCEEDED stamp.
+
+**macOS BUILD SUCCEEDED** with the pre-existing file excluded — my code compiles and links cleanly. Now let me run my page's tests.
+
+The test is building/running. Let me wait and check while preparing the log.
+
+**TEST SUCCEEDED — 25/25 passed** (12 derivation + 13 model tests, 0 failures). The `linkd` connection messages are benign system warnings, not failures.
+
+Now let me build the iOS scheme (validates the `#if os(iOS)` adaptive branches), matching the precedent.
+
+**Parity gap found:** `tesla_sessions.col.month` is in the catalog but not yet referenced in code (the web uses it as the chart's `dataColumns` label). Let me bind it via the chart's data export (faithful to the web `dataColumns`), which also uses `col.total`. Let me check the current CostChart and update it.
+
+The iOS build launcher returned (build runs in background). Let me bind `col.month` via the chart's data-export columns (faithful to web `dataColumns`).
+
+Let me verify all 32 strings are now referenced, re-lint, and check the iOS build status.
+
+All 32 strings referenced. Let me re-lint the edited file and check the iOS build result.
+
+Lint clean; iOS build still churning (stale code, no errors). Let me re-run the macOS build+test on the **final** code (incremental — only the edited file recompiles).
+
+Both builds running. Let me wait and check the incremental macOS test (final code).
+
+Let me inspect the actual macOS test (final code) log output directly.
+
+The incremental build re-emits the whole module (slow under load). Let me verify the process is still alive and monitor.
+
+Both builds still running under heavy load. Let me wait.
+
+Both still compiling under extreme load. Let me check the current phase and system load.
+
+Load is dropping (66, was 110) as parallel slots finish. iOS build is in the link phase (near done); macOS final-code re-typecheck still going. Let me wait.
+
+Let me directly check both logs' tails and process liveness.
+
+Both alive but slow under fluctuating load (now 98). Let me keep waiting for the critical final-code macOS build+test.
+
+Both builds remain CPU-starved by ~30 parallel slots. The first macOS build+test already passed on this code; the only change since is a trivial lint-clean `col.month` CSV string. Let me give the final-code build a long uninterrupted window.
+
+**macOS final-code TEST SUCCEEDED — 25/25 pass** (with the `col.month` edit). Load is finally dropping (53). The iOS build is finishing. Let me wait for it.
+
+Load dropping fast (35). Let me check the iOS build's current phase.
+
+The iOS build compiles both arm64 + x86_64 simulator slices (double work) — now at "S" in the second arch, no errors, load dropping. Let me wait for it to finish.
+
+iOS build hit a **linker** error — likely because `generic/platform=iOS Simulator` builds an x86_64 slice but the KMP `Shared.xcframework` only ships the arm64 simulator slice. Let me confirm.
+
+Confirmed: `generic/platform=iOS Simulator` forced an x86_64 slice, but the KMP `Shared.xcframework` only ships `ios-arm64-simulator` (no x86_64) — an arch/packaging constraint, not my code (the arm64 compile succeeded). Like the Powershare precedent, let me build arm64-only on the **final** code (reuses cached objects → fast relink).
+
+The iOS arm64-only build (final code, cached arm64 objects) should be faster. Let me monitor it while I prepare the evidence log.
+
+iOS arm64 build is linking (re-emitted module for the final-code change), no errors. Let me wait for the SUCCEEDED stamp.
+
+Still linking, no errors. Let me wait a bit more for the iOS build to finish linking.
+
+iOS build is in the final Copy/bundle phase (post-link, no errors) — almost done. Let me wait for the stamp.
+
+Let me check exactly what the iOS build is doing now.
+
+The main iOS app target already compiled + linked cleanly (no errors); it's now building the widget/activity extensions. My code is validated on iOS. Let me wait for the final all-targets stamp.
+
+🎉 **iOS BUILD SUCCEEDED** (arm64, final code, all targets). The full gate is green on final code. Let me run the authoritative full-project swiftlint for the log, then write the evidence log.
+
+Full gate green: lint 0/5806, placeholder 0, macOS build+test SUCCEEDED (25/25), iOS build SUCCEEDED. Let me write the evidence log.
+
+The log is written. Let me clean up build artifacts and review git status before committing.
+
+Clean — only my intended changes, no build artifacts. Let me verify the xcstrings diff is purely additive, then commit.
+
+All diffs are clean and minimal (xcstrings +363/0 purely additive, ledger +19/-1 = just the 2 rows). Let me commit.
+
+Commit landed (`b058e79ce`, 16 files, +2517). Let me finalize the todos and do a last clean-state check.
+
+Everything is verified and committed. The task is complete.
+
+## Summary
+
+Delivered a native **SwiftUI / Apple HIG** implementation of the web `TeslaChargingSessionsPage` (route `/tesla-charging-sessions`) at full parity, adaptive across macOS + iOS, committed as `b058e79ce`.
+
+**Parity: 48/48 covered** (10 panels · 2 charts · 4 states · 32 strings)
+- **Panels:** business-account info banner, vehicle-select + Tesla-refresh controls bar, 5 summary stat cards (Sessions/Energy/Cost/Avg-Cost·kWh/Peak-Power), Monthly-Charging-Cost chart, session-locations map, sessions table.
+- **Charts:** `TSChartContainer` + `TSBarChart` (Swift Charts, no WKWebView).
+- **States:** loading skeleton · per-section empty · retryable error · populated success — for every data source.
+- **Strings:** all 32 ported verbatim from web `en.json` into `Localizable.xcstrings` (+ `route.teslaChargingSessions`).
+
+**Architecture** mirrors the sibling Powershare P7: a `View` + `@Observable TeslaChargingSessionsPageModel` over a KMP-core data-source seam (one method per web hook — `useVehicles`/`useTeslaChargingSessions`/`useRefreshTeslaChargingSessions`); pure unit-tested derivations (monthly-cost, range filter, map points, CSV export); SI energy converted at the render boundary, peak power shown as the verbatim kW API field.
+
+**Files:** 8 sources in `Sources/Features/Charging/`, 3 test files (25 tests), `AppRoute`/`TeslaSyncApp` nav registration, the string catalog, ledger rows, and the evidence log.
+
+**Gate (all green):** `swiftlint --strict` 0/5806 · placeholder scan 0 · macOS app **BUILD SUCCEEDED** · **25/25 tests pass** · iOS-Simulator (arm64) app **BUILD SUCCEEDED**. Two pre-existing, out-of-scope, Xcode-26.5-incompatible files (`Input.Previews.swift`, `GDPRExportPageModelTests.swift`) were isolated via `EXCLUDED_SOURCE_FILE_NAMES` (build override, no source edits) and fully disclosed in the log — identical to the accepted Powershare precedent. Log ends `EXIT=0 / STATUS=DONE`.
+
+Note on the environment: the host was under extreme multi-slot CPU contention (load peaked ~110), so the KMP framework + Xcode builds were slow, but all completed cleanly.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

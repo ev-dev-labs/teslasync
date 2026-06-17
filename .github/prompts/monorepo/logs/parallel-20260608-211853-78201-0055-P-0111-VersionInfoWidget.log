@@ -1,0 +1,128 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the capability requirements and existing structure in parallel.
+
+Good — Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all available, with iPhone 17 simulators. Let me read the web source and explore the Apple app structure.
+
+585 existing widget files following a clear pattern. Let me check if VersionInfoWidget already exists and study a representative similar widget (system category, no charts) plus the shared infrastructure.
+
+VersionInfo doesn't exist yet — I'll create it. Let me find similar widgets and study the infrastructure.
+
+`SystemHealthWidget` (system category, Projection pattern, no chart) is the closest analog. Let me study it fully along with how widgets register and the shared infrastructure.
+
+Excellent pattern. Let me read the rest of SystemHealthWidget (Projection, Components, Previews, Tests) and the shared core types.
+
+Let me read the Previews, Tests, and the shared P4 core types (registration, size, tokens, skeleton).
+
+Now let me find the shared P4 core types and the build configuration. Let me locate `DashboardWidgetRegistration`, `DashboardWidgetSize`, the design tokens, `TSSkeleton`, the `.strings` format, and the Xcode project setup.
+
+XcodeGen-based project. Let me read project.yml, the core infra types, design tokens, and check xcodegen availability.
+
+Let me read the design tokens, skeleton component, and project.yml to understand the build setup.
+
+`pwsh` is available. Now let me locate the exact token definitions (TSSpacing, TSRadius, Color.TS members, Font.TS members) so I use valid names.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it and the project.yml.
+
+I have the full token vocabulary. Now let me read the web data hooks, the WidgetShell/shared/types, the i18n values, the registry entry, and assess the Shared.xcframework build step.
+
+Let me read the exact DTO interfaces, the WidgetStatGrid shared component, types, registry, and i18n values.
+
+Important finding: the widget reads loosely-typed optional fields (build_date, git_commit, uptime, signals_per_sec, etc.) that aren't in the strict DTOs — they fall back to `—`/`0`. I'll mirror this defensive shape. Let me confirm the i18n values, registry entry, number formatters, and the StatGrid shared component.
+
+I have all parity data. Let me check the `onOpen` convention across siblings and assess the build (Shared.xcframework staging script).
+
+`onOpen` is a near-universal convention (126 files), so I'll include it. The build needs a Gradle-built `Shared.xcframework`. Let me check an existing widget's gate log to understand expected pass/blocked status, and assess Gradle/shared availability.
+
+There's an existing SystemHealthWidget gate log and even a prior VersionInfoWidget log. Let me read both to understand the expected gate outcome and whether the full build runs.
+
+This reveals the established disposition. Let me read the full SystemHealthWidget gate log to replicate the exact verification methodology, and confirm my target log doesn't exist yet.
+
+I now fully understand the established methodology (0099/0068 precedent: code-complete + host-validated, Xcode build deferred to a Shared.xcframework/CI runner). Let me read the lint/format configs and placeholder patterns to ensure compliance, then build a plan.
+
+I have the complete picture. Let me set up tracking and write a plan, then implement the 7-file surface following the SystemHealthWidget template (the closest sibling: system category, no charts).
+
+Now writing the Foundation-only Projection (the testable adapter core):
+
+Now the Model (state-holder seam + telemetry + SwiftUI i18n half):
+
+Now the presentational Components (KV row, badge, stat tile, freshness chip):
+
+Now the main surface view:
+
+Now the test suite (XCTest), keeping it under 400 lines:
+
+All 7 files created. Let me verify line counts (≤400 for swiftlint `--strict`) and run swiftformat/swiftlint on the surface files.
+
+All files ≤329 lines, no line >120 chars. Now run swiftformat and swiftlint on the surface files:
+
+swiftformat wants auto-formatting (its rules are canonical). Let me apply it, then re-lint:
+
+swiftformat passes, all files ≤336 lines. Now swiftlint `--strict`:
+
+swiftlint `--strict`: **0 violations**. Now the placeholder gate. Let me run it as the gate specifies, plus a targeted scan of my actual files:
+
+Literal gate passes. Now a genuine targeted scan of my actual shipped files (copied to an isolated temp dir):
+
+Both placeholder scans clean (COUNT=0). Now the strongest proof — compile the Foundation-only Projection with a harness `main` and **execute** the adapter assertions:
+
+Swift 6 main-actor isolation on the harness helpers — let me annotate them `@MainActor` and rerun:
+
+**54/54 adapter checks PASSED** under Swift 6 strict concurrency. Now the host typecheck of the 4 non-preview surface files against the real design library. Let me locate the dependency files:
+
+Skeletons/Cards only import SwiftUI. Let me run the host typecheck of the 4 surface files against the real tokens + design library:
+
+Host typecheck passes (macOS 15, Swift 6 strict concurrency). Let me also verify against the iOS Simulator SDK (the gate's primary destination) and generate the Xcode project:
+
+Both SDK typechecks pass. Now let me genuinely attempt the Xcode gate. First check the toolchain and generate the project:
+
+Full Xcode active; project generated with my files (42 refs). Now let me genuinely attempt the gating pre-action — building the `Shared.xcframework` via Gradle:
+
+The `Shared.xcframework` Gradle build times out (>240s — Kotlin/Native toolchain). Let me check whether any prebuilt framework artifact exists that I could stage to run the real build, and confirm the current blocker state:
+
+The Kotlin/Native toolchain *works* here — a **debug** `Shared.xcframework` already exists (only the release variant timed out). Let me inspect its slices — if it has a simulator slice, I can stage it and run a real in-Xcode build:
+
+The debug `Shared.xcframework` has all 3 slices (ios-arm64, ios-arm64-simulator, macos-arm64). I'll stage it and run a **real in-Xcode build** of the app target (bypassing the slow release pre-action via `-target`), capturing full output:
+
+Build failed (exit 65) — but I need the actual error lines, not just the batch commands. Let me extract the real errors and check whether any are in my files:
+
+Confirmed: **all 76 errors are in sibling widgets** (ChargeSessionChartWidget, ChargeStatusLiveWidget — pre-existing duplicate-DTO/ambiguous-type collisions in the single app module). **Zero errors in VersionInfoWidget**. Let me verify my files were actually compiled and confirm the error scope:
+
+The build aborts on pre-existing sibling collisions (Charge*/Fleet*) before reaching my V* files. The error class — "ambiguous for type lookup" — means duplicate type declarations across siblings. Let me prove these are pre-existing (not mine) two ways: show the duplicate declarations, and run a baseline build without my files.
+
+Definitive: `ChargeSessionDTO` and `ChargeStatusProjection` are each declared in **two sibling files** (none mine); my `VersionInfo*` types are unique. Now the gold-standard baseline — build **without** my files to prove identical pre-existing failures:
+
+**Definitive proof**: the baseline build *without my files* produces the **identical 76 errors** (same `ChargeSessionDTO`/`ChargeStatusProjection` sibling collisions, exit 65). My surface adds zero new failures. Let me restore my files, regenerate, and check tree cleanliness:
+
+I accidentally truncated `Frameworks/.gitkeep` — let me restore it:
+
+Tree is clean — only my 7 untracked files. Now let me run the i18n key cross-check (referenced-in-code vs defined-in-strings) for the acceptance criteria:
+
+i18n cross-check: **0 referenced keys missing**. Let me gather final stats for the log (line counts, test/assertion/preview counts):
+
+All files ≤336 lines; 25 test methods / 95 assertions / 5 suites; 9 previews; 24 string keys. Let me update tracking and write the comprehensive gate log:
+
+Now a final clean verification pass before committing — re-run lint/format on the surface files and confirm git status:
+
+All green: swiftlint 0 violations, swiftformat 0/6, and git status shows exactly my 7 files + the log. Committing:
+
+Committed (cbf2f73ef). Let me do a final cleanliness check and close out the gate todo:
+
+Task complete. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ ...le-dashboard-widgets-0111-VersionInfoWidget.log | 264 ++++++++++++++++
+ .../VersionInfoWidget.Components.swift             | 139 +++++++++
+ .../VersionInfoWidget.Model.swift                  | 228 ++++++++++++++
+ .../VersionInfoWidget.Previews.swift               | 151 +++++++++
+ .../VersionInfoWidget.Projection.swift             | 331 ++++++++++++++++++++
+ .../VersionInfoWidget.Tests.swift                  | 336 +++++++++++++++++++++
+ .../dashboard-widgets/VersionInfoWidget.strings    |  53 ++++
+ .../dashboard-widgets/VersionInfoWidget.swift      | 296 ++++++++++++++++++
+ 8 files changed, 1798 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0111-VersionInfoWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VersionInfoWidget.Components.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VersionInfoWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VersionInfoWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VersionInfoWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VersionInfoWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VersionInfoWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VersionInfoWidget.swift

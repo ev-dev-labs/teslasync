@@ -1,0 +1,33 @@
+
+================================================================
+  TeslaSync — monorepo Native Apps Master Runner
+================================================================
+  Prompts root  : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo
+  Programs      : 1 (p4-apple)
+  Total prompts : 879
+  Already done  : 651
+  Pending       : 228
+  Starting from : #1
+  Single        : (all)
+  Model         : (default)
+  Timeout       : 600 min per prompt
+  Dry run       : False
+  Log-gate      : EXIT!=0 / STATUS=BLOCKED / [FAIL] / UNEXPECTED_COUNT -> RED
+  Run log       : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/run-2026-06-12_20-04-46.log
+================================================================
+
+
+================================================================
+  PARALLEL MODE
+================================================================
+  Jobs            : 6 concurrent
+  Pending prompts : 228
+  Launch branch   : feature/apps-ios (f88763ddb5)
+  Integration     : parallel/20260612-200449-94162
+  Worktrees       : /Users/atulgupta/Documents/repos/.teslasync-parallel/20260612-200449-94162
+  State           : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/parallel/20260612-200449-94162
+  Agent binary    : copilot
+  Note: parallel mode does not enforce strict prompt ordering.
+================================================================
+
+Interrupted — stopping workers and cleaning up...

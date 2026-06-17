@@ -5,7 +5,7 @@
 //  Foundation-only value types for the Signal Diff table — the SwiftUI parity of
 //  features/telemetry/components/SignalDiffTable.tsx.
 //
-//  These mirror the web data contract `SignalDiffRow` (api/hooks/useTelemetry):
+//  These mirror the web data contract `SignalDiffRowView` (api/hooks/useTelemetry):
 //  each diff entry carries the signal name, the two opaque window values
 //  (`value_a` / `value_b`), the per-window source layer + age, and the
 //  backend `changed` flag. `SignalDiffCellValue` models the decoded JSON value
@@ -69,10 +69,10 @@ public enum SignalDiffSourceLayer: String, Sendable, CaseIterable {
     }
 }
 
-// MARK: - Raw diff entry (web `SignalDiffRow` from the source)
+// MARK: - Raw diff entry (web `SignalDiffRowView` from the source)
 
 /// A single diff entry as handed to the adapter — the Swift port of the web
-/// `SignalDiffRow` response item before display normalization.
+/// `SignalDiffRowView` response item before display normalization.
 public struct SignalDiffEntry: Equatable, Sendable {
     public let name: String
     public let valueA: SignalDiffCellValue
@@ -121,7 +121,7 @@ public enum SignalDiffDeltaKind: Equatable, Sendable {
 /// classification, the per-window source layers + ages, and whether the row is
 /// pinned. `id` is the signal name (the web `keyExtractor`), unique within a
 /// snapshot.
-public struct SignalDiffRow: Identifiable, Equatable, Sendable {
+public struct SignalDiffRowView: Identifiable, Equatable, Sendable {
     public let name: String
     public let valueAText: String
     public let valueBText: String
@@ -186,9 +186,9 @@ public enum SignalDiffSortDirection: String, Sendable {
 /// rebuilds this whenever the rows, the pin set, or the active sort changes,
 /// mirroring the web `sortedRows` `useMemo`.
 public struct SignalDiffTableProjection: Equatable, Sendable {
-    public let rows: [SignalDiffRow]
+    public let rows: [SignalDiffRowView]
 
-    public init(rows: [SignalDiffRow]) {
+    public init(rows: [SignalDiffRowView]) {
         self.rows = rows
     }
 

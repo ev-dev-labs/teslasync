@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The ledger shows the actual convention is `Sources/Features/{Domain}/`. Let me study the completed ApiPlayground page as the gold-standard reference.
+
+This is the gold-standard pattern. Let me study the model, route registration, test, and project config.
+
+Let me study a data-driven page (Analytics/Dashboard) and the component/token libraries.
+
+StatisticsPage is the ideal analog. Let me read its sections, charts, models, format, sample, and route registration.
+
+Now let me locate the Units facade, chart wrappers, route enum, and component library.
+
+Let me find the chart wrappers, components, and the Sample data source pattern.
+
+Design tokens come from `apps/design/generated/apple`. Let me read the remaining components, the string catalog, a test example, and the web energy hook.
+
+Let me verify the backend `/energy/flow` and `/energy` handlers to confirm the exact units/fields.
+
+Now let me check the UnitPreferences presets, the string catalog format, and how strings are registered.
+
+Full toolchain available. Let me read the placeholder scanner, the gate README, and the manifest record for this unit.
+
+The Statistics log is my gold-standard template. Let me verify web routing for `/energy` vs `/energy-flow` and confirm `.energy` is unregistered.
+
+Web has distinct `/energy` and `/energy-flow` pages. Precedent (apiPlayground etc.) shows page prompts add their own `AppRoute` case. Let me check route tests before deciding.
+
+Adding `AppRoute.energyFlow` is the correct, precedent-following choice. Critical check: find any non-exhaustive `switch` over `AppRoute` that a new case would break compilation.
+
+Let me examine FleetComparePage (sibling with likely range/period controls) and check for reusable range preset string keys.
+
+Let me read the lint/format configs and the FleetCompare charts pattern, then set up my plan.
+
+The xcframework isn't staged (10-min Gradle build). Let me check the build toolchain and kick it off in the background while I implement.
+
+Java 17 + Gradle wrapper available. Let me kick off the xcframework build in the background while I implement.
+
+Now let me set up my plan and todos while that builds.
+
+Implementation time. Let me create the Battery feature directory and the models file.
+
+Let me check the web `useUnits` to know exactly what `formatDistance`/`formatEnergy` return (number vs number+unit).
+
+Models created. Now the formatters.
+
+Now the page model.
+
+Now the sample/preview data sources.
+
+Now the charts (RadialGauge, AreaChart, two BarCharts).
+
+Now the largest file — the sections (flow diagram, metric cards, efficiency metrics, history table, skeleton).
+
+The xcframework build finished. Let me verify it staged correctly, then continue writing sections.
+
+Shared.xcframework staged — I can type-check for real later. Now the sections file.
+
+I need to add the rating→tone mapping (SwiftUI-side) and fix the charge-state badge localization. Let me edit the sections file.
+
+Now the main page view.
+
+Now wire navigation. First the `AppRoute` enum (case + 3 switches).
+
+Now the route registration file and compose it into the app.
+
+Now let me inspect the xcstrings raw format to add strings cleanly.
+
+Now I'll add all strings to the catalog via a targeted text insertion that preserves the file's exact ` : ` formatting.
+
+51 keys added, JSON valid. Now the parity ledger and tests.
+
+Now the model tests, mirroring the Statistics test conventions.
+
+All files created. Now the gate. Let me auto-format my files first, then verify.
+
+Formatting clean (0/11). Now swiftlint --strict on my files.
+
+swiftlint scanned all 9838 files (config `included` overrides args). 20 violations found — I must check if any are in MY files vs pre-existing. Let me filter.
+
+7 violations in my files (3 others are pre-existing in WidgetChartSummary.Tests). Let me fix mine: rename `n`, fix trailing closures, split the 673-line file, and trim the test class. Let me see the section boundaries.
+
+Let me check exact cut boundaries before splitting.
+
+Now let me split the oversized file. First slice the clean diagram + summary parts, then rebuild.
+
+I need to include the struct-closing braces (lines 294 and 541). Let me re-slice correctly and build the new files.
+
+Now create the History file with the corrected (non-trailing) closure syntax.
+
+Now fix the `n` identifier in Sample and trim the test class via an extension.
+
+Now move the formatter tests into an extension to shrink the class body.
+
+That edit was malformed. Let me view and fix the test file structure properly.
+
+Now re-format the rebuilt files and re-run swiftlint to confirm my files are clean.
+
+Formatting clean. Now re-run swiftlint and confirm my files have zero violations.
+
+Zero violations in my files. Let me confirm the 3 remaining are pre-existing (not mine).
+
+My files are lint-clean; the 3 remaining are pre-existing in an untouched file. Now the placeholder gate.
+
+Placeholder gate green. Let me verify a few token symbols I used, then generate the Xcode project.
+
+Tokens confirmed. Let me generate the Xcode project.
+
+All 11 files are in the project. Now the in-scope type-check build (macOS). Starting it in the background.
+

@@ -1,0 +1,150 @@
+I'll start by exploring the environment and understanding what's available, then read the web source.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply — project config, shared-surfaces, state holders, tokens, i18n, and existing examples.
+
+Let me look at existing shared-surfaces for reference patterns and check the build tooling.
+
+There are many surfaces. Let me examine the file convention and find a similar form-control surface (Toggle/Switch/Checkbox) as a reference.
+
+A `Range` surface exists — likely the closest analog to a slider. Let me read its full fileset to learn the exact conventions.
+
+`Range` maps to a formatter, not a slider, but it shows the seam conventions and the "no-fetch synchronous surface" precedent. Let me read the full Range fileset and find an interactive primitive (with onChange/binding) for interaction patterns.
+
+`CurrencyInput` and `EditableText` are interactive value+onChange primitives. Let me read the full Range fileset (structural template) plus CurrencyInput (interaction/binding pattern).
+
+Excellent template. Let me read the rest of the Range fileset plus the interactive CurrencyInput surface to learn the binding/onChange pattern.
+
+Let me read the Range tests, the interactive CurrencyInput pattern, and locate the design tokens (Font.TS / Color.TS).
+
+Now let me read the CurrencyInput Model/Adapter (interactive source/commit seam), the design tokens, and the lint/format/placeholder configs.
+
+Now let me find the design tokens, the interactive `Source` seam, lint/format configs, and the placeholder checker.
+
+Let me check the build prerequisites (xcodegen, KMP framework, pwsh) and prior surface logs to understand the established gate outcome.
+
+All tools present (xcodegen, pwsh, swiftlint, swiftformat). The KMP `Shared.xcframework` is NOT staged and needs Gradle/Kotlin. Let me check the KMP toolchain and read a recent shared-surface log to learn the established gate outcome.
+
+There's a prior Slider run in a different series. Let me read a recent `p4-apple-shared-surfaces` log and the Range log to learn whether the full xcodebuild gate actually runs (KMP builds) or reports BLOCKED.
+
+This reveals the established gate disposition: full-app `xcodebuild` is DEFERRED (pre-existing sibling collisions + no signing identity), and STATUS=DONE requires the surface itself compiles clean + tests/lint/format/placeholder green. Let me read the full AnnouncerRegion log to learn the exact verification methodology.
+
+I now have the complete, predecessor-accepted methodology. Let me create a plan file, then check for symbol collisions and inspect the sibling `RangeSlider` surface and the placeholder script.
+
+No collisions. Let me confirm no existing `Slider`/`RangeSlider` files, check the placeholder script flags, and create my plan file.
+
+There's an existing `Sources/Components/UI/Sliders.swift`. Let me inspect it (style + naming reference) and the forbidden placeholder patterns.
+
+Now I have the full picture. There's an atomic `TSSlider` (out of scope — component-library tier); my deliverable is the instrumented **shared surface** `SliderField` wrapping `SwiftUI.Slider`. The data source is `useId` (ID generation, not a fetch), so — like the committed Range/Distance/AnimatedNumber precedent — there are no network states. Let me read the rest of the swiftlint config, then write the plan.
+
+I have everything I need. Let me set up the plan and todos, then implement.
+
+Now writing the pure core. Starting with the Adapter and Projection.
+
+Adapter + Projection done. Now the Model (state-holder + telemetry + i18n facade).
+
+Now the presentational subviews.
+
+Now the main `SliderField` view.
+
+Now Previews, strings, and the two test files.
+
+Now the two test files. First the pure-core AdapterTests.
+
+Now the projection/model/view tests.
+
+All 9 files created. Now let me format and verify. First, run swiftformat on my files, then lint the tree.
+
+The format-lint path is relative to repo root. Let me run from there.
+
+FORMAT_EXIT=0. Now swiftlint --strict.
+
+LINT_EXIT=0 (0 violations across 4729 files). Now the critical compile + test verification via an isolated SwiftPM harness (Swift 6 strict concurrency) and a dual-SDK typecheck.
+
+The harness caught a real Swift 6 strict-concurrency issue (which would also fail the gate): the test global `percent` closure must be `@Sendable`. Fixing it.
+
+All 36 tests pass under Swift 6 strict concurrency. Now the dual-SDK isolated typecheck (iOS 18 + macOS 15).
+
+iOS library typecheck: 0 errors. Now the combined typecheck (sources + tests, both SDKs, with XCTest).
+
+The XCTest errors are a raw-`swiftc` limitation (Objective-C function-like macros like `XCTAssertEqual` aren't importable by a bare file-list invocation) — not a surface defect; the SwiftPM harness already compiled the identical test files and ran 36/36 green. Let me complete the **surface** (no-XCTest) typecheck on both SDKs.
+
+Both SDK surface typechecks: 0 errors. Now xcodegen + the placeholder gate. Let me check the placeholder script's path handling first.
+
+The placeholder script recurses a real directory, so the gate's `-Path .../Slider` (no such subdir) would scan nothing — a vacuous pass. I'll scan my actual files. First, let me fix one inaccurate doc comment in the Adapter (the `snap` always snaps via `effectiveStep`) and grep my files for forbidden patterns.
+
+Now: re-verify the harness after the edit, grep my files for forbidden patterns, run xcodegen, and run the placeholder scan against my actual surface files.
+
+Harness green (36/36), no forbidden patterns. Now xcodegen + the placeholder gate against my actual surface files.
+
+XCODEGEN_EXIT=0, PLACEHOLDER 0/0. Now the full xcodebuild (the DEFERRED step per precedent). Let me check the KMP toolchain and start building the required `Shared.xcframework`, and meanwhile assess pre-existing sibling collisions.
+
+JDK 17 present. Let me start the KMP framework build (needed for xcodebuild) in the background, and meanwhile assess pre-existing sibling collisions and the Frameworks ignore status.
+
+`Frameworks/*.xcframework/` is git-ignored (safe). KMP build running in background. Meanwhile, let me detect any pre-existing duplicate-symbol collisions in the current merged tree (the precedent's iOS failure cause).
+
+No duplicate top-level type declarations detected — this tree may be cleaner than the precedent's. The real xcodebuild will confirm. Let me verify the iPhone 16 simulator exists while the KMP build runs.
+
+iPhone 16 simulator is booted and the KMP build is compiling Kotlin. Let me wait for it to finish.
+
+Build is in the release-link phase. Let me wait for completion.
+
+Linking the release simulator slice now — nearly done. Let me wait for completion.
+
+Now linking the macOS slice. Let me wait for the final assembly + staging.
+
+KMP framework built (9m53s) and staged. Now the full xcodebuild. Let me update todos and run the iOS build+test (exact gate command), capturing output for analysis.
+
+iOS xcodebuild running. Let me monitor progress.
+
+Compiling the app module, 0 errors so far. Let me continue monitoring.
+
+The iOS build **FAILED with exactly 1 error — in a pre-existing sibling surface** (`AISignalExplorerNlFilter.swift`, owned by another prompt), NOT my Slider surface (0 errors). This is the documented DEFERRED disposition. Let me wait for the command to finish and confirm the full picture.
+
+Confirmed: the **only** error is in `AISignalExplorerNlFilter.swift` — a committed sibling surface I never touched (out of scope). My Slider surface contributes **0 errors**. This is the documented DEFERRED disposition. Let me wait for the command to finish, then run the macOS build.
+
+IOS_EXIT=65 (DEFERRED — pre-existing sibling error, my surface 0 errors). Now the macOS build+test (gate command).
+
+macOS build running. Let me monitor it.
+
+macOS also DEFERRED — but on **code-signing** (no dev certificate), the precedent's exact macOS disposition; my surface 0 errors. Let me capture the exit code and re-run the lint/format gates (I edited two files after the earlier lint run).
+
+MAC_EXIT=65 (DEFERRED — signing). Format + lint clean after edits. Let me run the exact full gate lint command once more and gather verbatim evidence for the log.
+
+Final lint clean (0 violations, 4729 files). The iOS errors are in **two** pre-existing sibling surfaces (both owned by other prompts); macOS fails only on signing. Let me confirm both siblings are committed and untouched by me.
+
+Both sibling errors are in committed files I never touched (`my-modification: none`); my tree changes are **only** `Slider.*`. Everything verified. Let me get final line counts and write the comprehensive gate log.
+
+All data gathered. Now writing the comprehensive gate log.
+
+Log written. Now commit exactly the surface files + the log.
+
+Exactly 10 files staged, nothing else (build artifacts git-ignored). Committing.
+
+Commit succeeded (`bccca6c07`), working tree clean. Let me finalize todos and tidy the large harness build directory (keeping the evidence logs).
+
+All todos done, tree clean, commit landed. Task complete.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0226-Slider.log  | 276 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Slider.Adapter.swift | 259 +++++++++++++++++++
+ .../shared-surfaces/Slider.AdapterTests.swift      | 168 +++++++++++++
+ .../TeslaSync/shared-surfaces/Slider.Model.swift   | 157 ++++++++++++
+ .../shared-surfaces/Slider.Previews.swift          |  92 +++++++
+ .../shared-surfaces/Slider.Projection.swift        | 127 ++++++++++
+ .../TeslaSync/shared-surfaces/Slider.Tests.swift   | 268 ++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Slider.Views.swift   |  90 +++++++
+ .../apple/TeslaSync/shared-surfaces/Slider.strings |  20 ++
+ apps/apple/TeslaSync/shared-surfaces/Slider.swift  | 127 ++++++++++
+ 10 files changed, 1584 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0226-Slider.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Slider.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Slider.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Slider.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Slider.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Slider.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Slider.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Slider.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Slider.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Slider.swift

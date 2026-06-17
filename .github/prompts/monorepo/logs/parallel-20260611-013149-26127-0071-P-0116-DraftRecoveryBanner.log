@@ -1,0 +1,138 @@
+I'll start by exploring the repository structure and checking toolchain availability, then read the web source spec.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple project structure.
+
+The web source is a simple banner component. Let me study the predecessor surface (AchievementUnlockedToast) as a template and understand the project conventions.
+
+Let me study the predecessor `AchievementUnlockedToast` files in detail — they establish the exact convention to follow.
+
+Excellent, very thorough convention. Let me read the remaining predecessor files and the sibling `AiLimitBanner` (a banner, closest shape to mine).
+
+Now let me read the Previews, Tests, strings, and locate the shared token/primitive definitions (TSSpacing, Color.TS, TSButton, etc.).
+
+Let me locate the shared token and primitive definitions across the whole Apple/shared tree.
+
+The tokens live in `Sources/Design` and primitives in `Sources/Components`. Let me read the token definitions and the key primitives I'll reuse, plus the native Banners (the web source uses `AlertBanner`).
+
+There's already an atomic `TSDraftRecoveryBanner` in the component library (out of scope to modify). My job is the full **shared-surface** version under `shared-surfaces/DraftRecoveryBanner.*` following the predecessor's 9-file pattern. Let me read the web `formatRelativeTime`, the design tokens, and the primitive APIs.
+
+Core tokens aren't in those files — they're likely generated. Let me locate the actual definitions of `Color.TS`, `TSSpacing`, `TSRadius`, `Font.TS`, `TSTone`, and read `formatRelativeTime`.
+
+`formatRelativeTime` is clear. The main-app tokens aren't under `apple/` directly — let me find where they're generated/defined and review the project.yml structure.
+
+Found it — tokens are generated in `design/generated/apple/Tokens.swift`. Let me read the token API, the project.yml, and the primitive component APIs (TSButton, TSCard, TSEmptyState, TSSkeleton, TSTone).
+
+Now let me read the primitive APIs (TSCard, TSEmptyState, TSSkeleton) and the project.yml to confirm how `shared-surfaces` files and tests get wired into targets.
+
+I now understand the full convention and build wiring. Let me check the build prerequisites (xcodegen, existing `.xcodeproj`, the Shared.xcframework script) and how previous surface prompts logged their gate results.
+
+Key findings: xcodegen is installed, no `.xcodeproj` yet, Shared.xcframework not staged, iPhone 16 simulator booted. The predecessor (0111) reached EXIT=0/STATUS=DONE by independently verifying its own files compile on both SDKs + tests pass + lint/format/placeholder green, deferring the full-app gate on pre-existing unrelated blockers. Let me read the framework script and the full predecessor log to mirror that methodology.
+
+I now have the full proven methodology from predecessor 0111. Let me read the lint/format configs, the placeholder gate, and check for any existing native relative-time helper before I design the port.
+
+Now let me check for any existing native relative-time helper to reuse, confirm no `DraftRecoveryBanner.*` files exist yet in shared-surfaces, and peek at the sibling `AiLimitBanner` banner pattern.
+
+`AiLimitBanner` is an even closer template (controlled-prop banner with `onDismiss`). Let me read its Model/Views/Seams and the existing `LiveIndicator.RelativeTime` for the relative-time port reference.
+
+I have everything needed. `AiLimitBanner` is the ideal template (controlled-prop banner with dismiss + freshness), and `LiveIndicatorRelativeTime` shows the i18n-safe `formatRelativeTime` port. Let me do a final collision check, set up the plan/todos, then write the 9 files.
+
+No symbol collisions. Let me set up the plan and todos, then write the 9 surface files.
+
+Now I'll write the 9 files. Starting with the pure core (Adapter), Model, and Seams.
+
+Now the Views (the notice card + freshness chip) and the leaf-state chrome.
+
+Let me confirm the `TSCard` API before writing the States chrome.
+
+Now the main bound surface file.
+
+Now the DEBUG previews covering every state.
+
+Now the comprehensive test suite (adapter + projection + model + a11y).
+
+Now the i18n `.strings` catalog.
+
+All 9 files written. Let me update todos and run the fast local gates (swiftformat, swiftlint, placeholder) on my files.
+
+Three formatting issues in Tests.swift. Let me view and fix them.
+
+Re-running all three fast gates after fixes.
+
+Real hit: the word "placeholders" in an Adapter comment triggers the `Placeholder` pattern. Let me find all forbidden substrings across my files and fix them.
+
+Re-running the placeholder gate. Since my files share a prefix (not a dedicated dir), I'll scan them via a temp dir to honestly prove count=0.
+
+All three fast gates are green (format 0/8, lint 0 violations, placeholder count 0). Now the isolated Swift 6 build + test (gate [1]) — I'll compile Adapter+Model+Seams as a `TeslaSync` lib with Tests.swift and run `swift test`.
+
+Isolated suite: **30/30 tests passed under Swift 6**. Now gate [2] — typecheck my SwiftUI surface against the **real** design system (Tokens + Sources/Components + Sources/Design) on both the iOS 18 simulator and macOS 15 SDKs.
+
+Expected — `UnitFormatters.swift` is Shared-core-coupled (the predecessor excluded it too; my surface doesn't use it). Excluding it and re-running both SDKs.
+
+Both SDKs: **0 errors, 0 warnings**. Now let me also typecheck the `#Preview` blocks (compiled out without `-D DEBUG`) by enabling DEBUG on both SDKs.
+
+Both SDKs clean **including `#Preview` blocks**. Now gate [6]: `xcodegen generate` and confirm my files are enumerated into the targets.
+
+All 9 files enumerated into the targets. `xcodegen` succeeded. Now let me assess the full-app gate prerequisites (the predecessor hit pre-existing sibling errors + macOS signing): check current signing identities and whether the known blocker files still fail.
+
+macOS has **0 signing identities** (same pre-existing environment blocker as 0111), and the two predecessor-cited sibling blocker files still exist. Java 17 + gradlew are present, so the Shared.xcframework build is feasible. Per the honesty covenant I'll actually attempt the full gate rather than assume. Let me first verify whether the two sibling blockers still fail to compile, then kick off the iOS build.
+
+The two sibling blockers persist (line numbers shifted from edits, same files). Per the covenant I'll actually attempt the full gate rather than assume. Let me stage the Shared.xcframework (the long-pole gradle build) in the background and monitor.
+
+The gradle build is running in the background (predecessor took ~9m40s). Let me check progress.
+
+Gradle is building (output buffered by `tail`). Let me continue waiting.
+
+Still building. Let me keep waiting for the gradle framework assembly.
+
+**Shared.xcframework built (7m35s) and staged.** Now running the full iOS `xcodebuild build test` gate, capturing output to a file for analysis.
+
+iOS build running. Let me wait and monitor progress.
+
+Let me peek at the build log progress while it continues.
+
+The app is compiling in batches; there's already 1 error logged. Let me check whether it's mine or pre-existing while the build continues.
+
+First error is pre-existing/unrelated (`AISuggestNewGeofences.swift` — same `glass(content:)` escaping-closure class as the predecessor's blockers). **No DraftRecoveryBanner errors.** Let me wait for the build to finish.
+
+iOS build exited 65 (failure). Let me analyze the log — confirm zero DraftRecoveryBanner errors and enumerate the (pre-existing) failures.
+
+**iOS build FAILED (exit 65) on exactly 2 pre-existing, unrelated sibling-surface errors** (`AIAutoNameUnnamedLocations.swift` — cited verbatim by predecessor 0111 — and `AISuggestNewGeofences.swift`, same `glass(content:)` escaping-closure bug). **Zero errors reference DraftRecoveryBanner.** Let me kick off the macOS attempt and confirm the DraftRecoveryBanner log references are benign.
+
+The 3 references are Xcode successfully **copying/validating `DraftRecoveryBanner.strings`** into the app bundle — my strings are recognized by the real build. The macOS build is running (same shared source group → same pre-existing errors, plus 0 signing identities). Let me wait for it.
+
+macOS build also exited 65. Let me analyze its failures.
+
+Let me see the actual macOS failure reason (the compile-path grep was too narrow).
+
+**macOS BUILD FAILED at the signing/entitlements phase** (`TeslaSync-macOS` + `TeslaSyncWidgets-macOS` require a development certificate; 0 valid identities) — before any Swift compiled, so zero DraftRecoveryBanner errors. This matches the predecessor 0111 disposition exactly. I have all evidence; let me write the gate log.
+
+Log written. Let me verify git status — confirm only my 9 files + the log are new, and the generated project/framework are git-ignored.
+
+Clean — exactly my 9 files + the log are new; the generated project, staged framework, and gradle output are all git-ignored. Committing now.
+
+Committed (10 files, 1627 insertions). Let me update todos and clean up temporary build artifacts.
+
+All work is complete and verified. Final summary below.
+
+Merge made by the 'ort' strategy.
+ ...le-shared-surfaces-0116-DraftRecoveryBanner.log | 160 +++++++++
+ .../DraftRecoveryBanner.Adapter.swift              | 192 +++++++++++
+ .../DraftRecoveryBanner.Model.swift                | 293 ++++++++++++++++
+ .../DraftRecoveryBanner.Previews.swift             |  90 +++++
+ .../DraftRecoveryBanner.Seams.swift                | 128 +++++++
+ .../DraftRecoveryBanner.States.swift               | 102 ++++++
+ .../DraftRecoveryBanner.Tests.swift                | 377 +++++++++++++++++++++
+ .../DraftRecoveryBanner.Views.swift                | 149 ++++++++
+ .../shared-surfaces/DraftRecoveryBanner.strings    |  39 +++
+ .../shared-surfaces/DraftRecoveryBanner.swift      |  97 ++++++
+ 10 files changed, 1627 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0116-DraftRecoveryBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRecoveryBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRecoveryBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRecoveryBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRecoveryBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRecoveryBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRecoveryBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRecoveryBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRecoveryBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DraftRecoveryBanner.swift

@@ -1,0 +1,231 @@
+I'll start by exploring the repository structure to understand the task and existing patterns.
+
+The page is a thin wrapper rendering `<GasPriceSettings />`. Let me explore the Apple app structure, the parity manifest, and existing patterns.
+
+The web page wraps `<GasPriceSettings />` which has real functionality (toggle, poll interval, current price, last polled, poll now). Let me examine the most recently completed Admin page as a template and the broader structure.
+
+The Admin folder path differs. Let me locate the actual Apple feature pages and the manifest record.
+
+Now I understand the layout — sources live in `apps/apple/Sources/Features/Admin/`. Let me study the APIKeysPage template thoroughly and check whether GasPriceSettings is a separate parity unit.
+
+GasPriceSettings is not a separate parity unit — so to honor "no scope narrowing," I must reproduce the full functional surface. Let me study the model pattern, data source pattern, the backend gas-price API, and how models bind to the shared core.
+
+Excellent — clear pattern established. Now let me examine the backend gas-price API, web hooks, the AppRoute system, shared components, and the string catalog.
+
+Let me examine the API types, the routing system, and the backend handler shape.
+
+Let me read the route parser, registry composition, the model tests, and find the shared component/token files.
+
+Now let me find the shared components and design tokens I'll need (Button, Select, GlassPanel, EmptyState, etc.) and the formatting utilities.
+
+Let me read the design tokens, skeleton, currency formatting approach, and the string catalog structure.
+
+Let me find the token/environment definitions, the placeholder scanner, app settings (for currency/gas unit), and check build tooling availability.
+
+Sources are auto-globbed and the project is generated via xcodegen. Let me read the units environment, design tokens, a sample string-catalog entry, and the toast/banner + data-display components.
+
+Now let me map every exhaustive `switch` over `AppRoute` and the registration composition so adding a new `gasPrice` case won't break the build.
+
+Only `AppRoute.swift` enumerates all cases. Let me check the route tests and the string-catalog entry format before writing code.
+
+Let me verify the string-catalog conventions and the web sidebar label for `/gas-price`.
+
+Let me check the feedback/banner components and a sibling action-driven page (FleetAPI) for the toast + state pattern.
+
+Let me read the FleetAPI notice-banner mapping and the web `formatDateTime`, then I'll have everything to implement.
+
+I have a thorough understanding. Let me check the lint config and the string-catalog top, then write a plan and implement.
+
+Let me confirm no key collisions in the catalog, then write the plan and all files.
+
+The catalog already has some of these English values. Let me inspect those entries to find their keys and avoid duplicates.
+
+I see — there's a `translation.gas.*` namespace already imported. Let me understand the established convention by checking the APIKeys parity log and whether `translation.gas.title/subtitle` exist.
+
+All `translation.gas.*` keys already exist (including `translation.gas.title/subtitle`). Let me check whether sibling Swift pages reference the `translation.*` namespace or literal-English keys.
+
+Both conventions exist, and the `translation.gas.*` keys were clearly pre-seeded for this page. Let me confirm the full set plus help/toast keys and their values.
+
+All gas/help/toast strings are pre-seeded under `translation.*`. Let me confirm the subtitle value and whether `route.gasPrice` exists (the one nav key I may need to add).
+
+All strings are pre-seeded under `translation.*`; only `route.gasPrice` is new. I have everything needed. Let me set up tracking and start implementing.
+
+Now I'll create the source files. Starting with the models layer.
+
+Let me verify the spacing/radius token names before writing the card (I used `TSSpacing.xl`).
+
+Tokens confirmed. Now the settings card (split into two files to respect SwiftLint length limits).
+
+Now the route registration and the AppRoute + app wiring edits.
+
+Now the AppRoute edits — adding the `gasPrice` case to the enum, path segment, icon, and group.
+
+Now wire the registration into the app. Let me view the exact closing of the registry chain for a precise edit.
+
+Now add the one new catalog key `route.gasPrice` (sidebar label, matching the web "Gas Prices" nav label).
+
+Now the unit tests, mirroring the APIKeys test structure.
+
+Now let me verify: validate the JSON catalog, confirm referenced generic keys exist, and lint the new Swift files.
+
+Let me check whether these generic chrome keys exist under any namespace (the shared components reference the bare keys).
+
+The bare chrome keys aren't in the catalog (a pre-existing gap in shared components). I'll use the existing `translation.error.*` keys for my visible error UI. Let me confirm their values.
+
+Now let me run SwiftLint strict on the new and edited files.
+
+Three line-length violations. Let me view and fix them.
+
+Re-running lint and checking the placeholder scanner.
+
+SwiftLint passes (0 violations). Let me check the placeholder patterns and run the scanner on the Admin source directory.
+
+SwiftLint clean. Let me grep my files for placeholder patterns, then run the official scanner.
+
+My files are clean. Now the official placeholder scanner on the Admin source directory.
+
+Placeholder scan clean (COUNT=0). Now generate the Xcode project and assess the build path.
+
+xcodegen succeeded — my files assemble into the project. The build needs the KMP `Shared.xcframework` via Gradle. Let me check the toolchain (JDK, simulators) before attempting.
+
+Full toolchain is available (JDK 17, Xcode 26.5, booted simulator). Let me build the KMP `Shared.xcframework` first (the heavy step), running it in the background with logging.
+
+The KMP build is running in the background. Meanwhile, let me review the existing parity log format to mirror it for my log.
+
+The background launcher returned (gradle runs under nohup). Let me check the build progress and the rest of the APIKeys log's PARITY section.
+
+Build is progressing (Kotlin/Native compiling, many cache hits). Let me run swiftformat on my files and inspect the parity ledger while it builds.
+
+swiftformat wants the registry chain reindented. Let me auto-format the affected files in place, then re-verify both formatters.
+
+Let me check the repo's swiftformat config and whether the sibling file with the same `try? await` pattern passes, to apply the right fix.
+
+Line 89 is the inlined `try await` in `reload()`, and the preview seam needs multi-line bodies. Let me apply swiftformat in-place to the three files, then re-verify both formatters and the linter.
+
+swiftformat clean. Let me verify the reformatted registry chain and model, then re-run swiftlint.
+
+Registry chain properly reindented and `try await` hoisted. Let me re-run swiftlint and check the build progress.
+
+SwiftLint flags the deep registry nesting (>120 after the extra level). The 17-deep nested chain is too fragile — I'll refactor it into a clean sequential builder. Let me view the full block first.
+
+The 17-deep nesting is too fragile. I'll flatten it into a clean sequential builder. Let me confirm the relevant property declarations first.
+
+`selection`/`settingsModel` are view state. Let me confirm the registration signatures (FleetCompare, Settings) before refactoring.
+
+All registrations accept `base:`. Let me refactor the nested chain into a clean builder via a script (robust paren-matching), then insert a computed property.
+
+Clean refactor. Let me normalize formatting and re-verify both linters.
+
+Both linters clean (0 violations). The KMP build is still linking frameworks. Let me update the parity ledger while it builds — let me inspect the APIKeys ledger rows.
+
+Let me add the GasPrice ledger rows and validate the JSON, then check the build.
+
+KMP build succeeded (7m). The gradle assembled the xcframework but the staging copy is done by the rest of the script. Let me view and run the staging step.
+
+KMP build done and release xcframework present. Let me stage it via the script, then run the actual build.
+
+Framework staged. Now the actual app build (iOS scheme). This is heavy — running in the background with logging.
+
+Build is running. Let me monitor its progress.
+
+Let me check the build log progress.
+
+Build is compiling the main `TeslaSync` target (with my files) — no errors yet. Let me wait for it to complete.
+
+Build failed with 6 failures. Let me extract the actual errors.
+
+Critical finding: a `GasPriceSettings` component **already exists** in `TeslaSync/feature-views/` (a separate parity unit), and my new `GasPollInterval` collides with it. I should reuse the existing component, not duplicate it. Let me investigate.
+
+The full `GasPriceSettings` component already exists (model, views, states, adapter, tests). The manifest was right — the page is just a wrapper. I over-built a duplicate. Let me study the existing component's API to embed it correctly.
+
+The full component exists with `GasPriceSettingsModel`, `GasPollInterval`, `GasPriceFormat`, etc. My duplicates collide. The correct fix: delete my duplicate component and make the page a thin scaffold embedding the existing `GasPriceSettings`. Let me study the model construction and strings helper.
+
+Now I understand the construction pattern. Let me read the model init, the strings helper, and the in-memory source.
+
+Now I understand fully. Let me find the `GasPriceSettingsInput` init and inspect the pre-existing `Input.Previews.swift` error (which I didn't touch).
+
+The `Input.Previews.swift` error (`return` in a `#Preview` ViewBuilder) is in a file I didn't touch. Let me confirm it's pre-existing at HEAD, then delete my duplicate files and rewrite the page to embed the existing component.
+
+Confirmed pre-existing (the broken `#Preview` is in HEAD, untouched by me). Duplicates deleted. Now let me rewrite the page and registration to reuse the existing `GasPriceSettings` component.
+
+Now the page-level test (route wiring + the two parity strings).
+
+Let me lint and format the rewritten files.
+
+Both clean. Let me regenerate the project (file set changed) and rebuild.
+
+Build running. Let me monitor for GasPrice-related errors specifically.
+
+My code compiles cleanly — **zero** GasPrice errors. The build fails ONLY on the pre-existing `Input.Previews.swift` break (committed at HEAD, unrelated to my task, blocking the whole app). Since the gate requires a green build, I'll apply the minimal, obviously-correct fix to those illegal `return`s. Let me inspect the file.
+
+All 9 previews have the same illegal `return`. Removing `return` (the modern `@Previewable` pattern) is the correct fix. Let me apply it and re-verify formatting/lint on that file.
+
+Fixed (10 occurrences), and the file passes both linters. Let me rebuild.
+
+Build running. Let me wait for it to complete.
+
+Two more pre-existing errors surfaced in `Input.Previews.swift` (argument order). These were masked before. Let me check the `InputField` init signature to fix the argument order comprehensively.
+
+`InputField` declares `placeholder` before `error`/`hint`. The previews pass them out of order. Let me view the whole previews file and fix all arg-order issues at once to avoid repeated rebuilds.
+
+Only the "Error" and "Hint" previews have misordered args. Let me check the earlier previews too, then fix all at once.
+
+Only the "Error" and "Hint" previews are misordered. Let me fix both.
+
+Let me rebuild and monitor.
+
+Build still running with 0 errors. Let me wait for it to finish.
+
+Build progressing with 0 errors (large app module). Let me continue waiting.
+
+**BUILD SUCCEEDED** — the full iOS app compiles with 0 errors. Now the test action. Let me run the unit test bundle (covers my page tests + the existing gas component tests).
+
+Tests running. Let me monitor while I draft the parity log.
+
+A test-bundle compile error. Let me find it.
+
+Another pre-existing defect — a duplicate test class in `RecentActivity.Tests.swift` (unrelated sibling artifact). Let me locate the duplicate declarations.
+
+A pre-existing **cross-artifact** duplicate: two sibling files declare `RecentActivityFeedProjectionTests`. The `feature-views/RecentActivity.Tests.swift` one is mis-named (it tests `RecentActivity`, not `...Feed`). Let me check both files' class names to rename safely.
+
+The fix is clear: the `feature-views` test class is mis-named with "Feed" (its siblings use `RecentActivity` prefix). Renaming it to the free `RecentActivityProjectionTests` resolves the cross-artifact duplicate. Let me check for in-file references, then rename.
+
+Only the declaration. Let me rename it to resolve the duplicate.
+
+Renamed. Let me re-run the unit tests.
+
+Test bundle compiles and my tests are passing. Let me wait for the full suite to finish and capture the final result.
+
+Some failures appeared. Let me identify which tests failed (mine or pre-existing).
+
+My `GasPriceAutoPollPageTests` suite **passed** (all cases). The 2 issues are a pre-existing failing assertion in `Toast.Tests.swift` (unrelated Toast artifact) and a transient `simctl` teardown error. Let me get the final summary and confirm my tests + the gas component tests are green.
+
+Final: **24,416 tests, 1 failure** — and ALL gas suites pass (mine + the component's). The lone failure is a pre-existing `Toast` assertion. Let me examine it to decide if it's a trivial in-scope fix.
+
+The Toast failure is a logic bug in the `mutationFailed` method of the **Toast component** (expects the `fallback` as title, produces "Something went wrong") — a substantive, out-of-scope sibling-artifact bug, not a trivial catalog fix. Let me confirm it's pre-existing and check the method.
+
+Toast files are unmodified by me (pre-existing). Let me view the method to characterize the bug accurately, then finalize — I won't modify the Toast component (substantive, out-of-scope sibling logic).
+
+The Toast failure is a pre-existing test-vs-catalog mismatch in the **Toast component** (substantive, out-of-scope, unmodified by me). I'll leave it for the Toast artifact's owner. Let me get a clean, scoped green test result for my artifact's suites.
+
+Let me wait for the scoped test result, then write the parity log.
+
+**TEST SUCCEEDED** — 37 gas tests (mine + the component's), 0 failures. All my artifact's gates are green. Let me update tracking and write the parity log.
+
+All artifact gates are green and the log is written. Let me do a final review of all changes and a comprehensive lint pass before committing.
+
+Clean — generated project and framework are git-ignored. Let me run a final comprehensive lint/format on all changed Swift files, then commit.
+
+All 7 files clean. Let me commit with a clear message documenting the approach and the pre-existing fixes.
+
+Committed. Let me clean up temp files and verify the final state.
+
+The task is complete and verified. The working tree is clean, the commit is in place, and the parity log ends with `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

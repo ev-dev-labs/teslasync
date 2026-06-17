@@ -1,0 +1,135 @@
+I'll start by investigating the environment capability and the relevant source files in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS 26.5 simulators incl. iPhone 16). Not blocked. Let me read the web source and study an existing presentational surface as a template.
+
+Now I understand the web component. It's a presentational rolling N-day status grid (one square per day, tooltip on tap, uptime % caption). Let me study the canonical full file-set of an existing surface to match conventions exactly.
+
+Excellent pattern reference. Now let me read the remaining canonical files (Views, Adapter, Seams, Previews, Tests, strings) and locate the P1/S9 design tokens + shared components.
+
+Now let me read the remaining canonical files and locate the design tokens + shared components I'll need (GlassPanel, Tooltip, EmptyState equivalents).
+
+Let me locate the design tokens (Color.TS, TSSpacing, etc.) and read the key shared components.
+
+Now I understand: tokens are generated at `apps/design/generated/apple`, and the project uses XcodeGen (new files in `shared-surfaces/` are auto-included on regen). Let me read the generated tokens and the components I'll need.
+
+Now I have the full token reference. Let me read the shared components I'll compose with (Cards/GlassPanel, States/EmptyState, Skeletons, StatusIndicators, Overlays for tooltip/popover).
+
+Let me read Typography, Buttons, Overlays (for tap/popover), and an existing native heatmap grid for layout reference.
+
+Now let me read Buttons, the material modifier, an existing native heatmap grid for layout reference, the web `StatusHero` (HeroStatus source), and a presentational surface's Tests/Previews to match conventions.
+
+I have the full token/component picture. Let me confirm `fmtPercent` formatting, study the presentational `ActiveFilterChips` surface (props-driven, like UptimeHeatmap), and check the test target config.
+
+Now let me check the build/test infra: test targets & schemes in project.yml, tooling availability (xcodegen, pwsh, xcframework), the placeholder checker, and the ActiveFilterChips flow-layout/tests/previews conventions.
+
+Tooling is present (xcodegen, pwsh), but `Frameworks/Shared.xcframework` is missing — the app targets depend on it. Let me investigate the build dependency situation and repo state.
+
+The workflow is well-established — recent commits show other P4 shared surfaces (StickyChipBar, HealthRow, etc.) built & merged in this slot, and the missing xcframework is auto-built by a pre-build Gradle script. Let me read the remaining conventions (flow layout, adapter value types, test framework, lint config) before writing.
+
+This is a faithful-parity pattern. The `ActiveFilterChips` adapter note reveals a key convention: pure-presentational surfaces reproduce only the web source's **real** branches and do NOT fabricate loading/error/stale/offline chrome. Since `UptimeHeatmap` is also pure-presentational, I must check how the most recent sibling surfaces resolved this tension. Let me inspect them.
+
+`HealthRow` (0197) is the closest analog — a status row. Let me read it fully to see exactly how a recent status-themed presentational surface handled the states question and structured its files.
+
+Decisive: `HealthRow` (0197), the closest analog (same `components/status/` source, same `HeroStatus` union), explicitly establishes the convention — pure-presentational surfaces reproduce **only real branches**, never fabricated loading/error/stale/offline. I'll follow this exactly and document it. Let me read HealthRow's remaining files to nail the 9-file template (esp. test framework + projection + previews + strings).
+
+Let me read HealthRow's Views, Tests, AdapterTests, Previews, and strings to complete my template understanding.
+
+Let me read HealthRow's Tests, Previews, strings, plus the lint/format configs.
+
+I now have the complete template. Before writing, let me check the exact placeholder patterns the gate flags (to avoid trip-words like "placeholder/stub/mock/sample") and confirm the test target globs include my files.
+
+I have the complete picture. Key constraints noted: avoid capitalized "Placeholder"/"TODO"/"FIXME"/"XXX"/"not implemented", keep files ≤400 lines and lines ≤120, XCTest framework, `@testable import` at bottom. Let me set up a plan and todos, then write the 9 files.
+
+Now I'll write the files. Starting with the pure core (Adapter + Projection).
+
+Now the Model (i18n facade, telemetry seam, observable state-holder).
+
+Now the Views (status/tier tone extensions, wrapping flow layout, day square + popover, empty state, content view).
+
+Now the public surface entry point.
+
+Now the i18n strings catalog and the previews.
+
+Now the test files — the pure-core `AdapterTests` first.
+
+Now the model/views/strings tests with the telemetry spy.
+
+All 9 files written. Let me check line counts and run swiftformat (format mode) on the new Swift files, then verify with lint.
+
+All files are well under the 400-line budget. swiftformat adjusted 4 files. Let me see what changed and verify both linters pass on the new files.
+
+New files are untracked so git diff is empty. Let me run both linters (lint mode) on the new files to confirm they're clean.
+
+Both linters pass cleanly (0 violations). Now let me verify the placeholder gate. Let me read how it handles the `-Path` argument since the gate passes a file-prefix, not a directory.
+
+Critical insight: the patterns match **case-insensitively**, but the gate's `-Path .../UptimeHeatmap` (a file-prefix, not a directory) makes `Test-Path` false → the scan is vacuously clean (matching how sibling surfaces passed). For genuine honesty I'll still grep my files directly for any forbidden pattern, then run the gate as specified.
+
+My files are genuinely clean and the placeholder gate passes. Before the heavy build, let me check a recent sibling's gate log to understand whether the full xcodebuild actually runs here or is environment-blocked — this tells me what a correct outcome looks like.
+
+This is the key context. The established precedent: the surface-scoped gates (swiftlint/swiftformat/placeholder/dual-SDK compile/executed logic harness/xcodegen) are run green, while the whole-tree `xcodebuild build test` is **DEFERRED** (real exit recorded) — blocked solely by foreign/environmental causes (unstaged `Shared.xcframework`, pre-existing sibling errors, macOS signing), never by the surface. Let me follow this exactly: regenerate the project, attempt the real build, and independently verify my surface.
+
+First, `xcodegen generate` and confirm my files integrate.
+
+All 9 files integrated by xcodegen (app targets + both XCTest bundles). Now let me start the real iOS `xcodebuild build test` in the background (it triggers the KMP xcframework pre-build), and meanwhile build+run an executed logic harness over the real pure core.
+
+Build started. Now let me write an executed logic harness over the **real** Adapter/Projection/Model files and run it (matching the precedent's executed-harness verification).
+
+51/51 assertions pass, and the real Adapter/Projection/Model compiled cleanly under **Swift 6 strict concurrency**. Let me check the background iOS build's progress (especially whether the KMP xcframework pre-build step is proceeding).
+
+The KMP Gradle build is running and **succeeding** — the `Shared.xcframework` is being assembled (this environment is fully capable, unlike the precedent's "unstaged xcframework" blocker). So I may get a real full build+test result. Let me wait for it to progress.
+
+Still in the KMP Gradle phase (now linking the release xcframework variant) — no Swift compile errors yet because Swift compilation hasn't started. The build is progressing. Let me confirm the build shell is alive and keep waiting.
+
+Build still running (KMP phase, 315s). Let me wait further for the transition to Swift compilation and the test run.
+
+Past the KMP phase — now compiling the app's Swift sources (no errors yet, xcframework staged successfully). Let me keep waiting for the compile + test run to finish.
+
+The iOS build failed (exit 65) — but the error is a **foreign, pre-existing sibling file**, not mine:
+`AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures non-escaping parameter 'content'`. The UptimeHeatmap-specific grep found **zero** errors. This is exactly the documented precedent. Let me enumerate ALL build errors, confirm none are mine, and verify the sibling is pre-existing.
+
+**Confirmed**: the *only* build error is in `AIAutoNameUnnamedLocations.swift` — a foreign sibling committed earlier in `ffc2bd905` that I never touched. **Zero** errors in any UptimeHeatmap file, and `git status` shows only my 9 untracked files (no drift). This is precisely the documented precedent: the whole-app build is blocked solely by a pre-existing, out-of-allowed-files sibling.
+
+Since the whole-module build aborts on that foreign file, let me independently prove my SwiftUI layer compiles against the **real** design system on **both** SDKs (iOS-sim + macOS).
+
+Both dual-SDK typechecks pass (exit 0) — my entire SwiftUI surface compiles against the **real** component library on iOS-sim **and** macOS under Swift 6. Now let me (a) start the macOS whole-app build to honestly record its exit, and (b) typecheck my XCTest bundle files against a built TeslaSync module.
+
+The module built cleanly; the test typecheck just needs the XCTest framework search path (it lives in the simulator *platform*, not the SDK). Let me add it and retry.
+
+Test bundle files typecheck cleanly against the real module under Swift 6. The macOS build also finished — let me capture its real exit and confirm the same foreign-only cause.
+
+macOS build also failed (MAC_EXIT=65) with zero UptimeHeatmap errors. Let me confirm the macOS failure cause (the error-file grep was empty — likely a different format or signing).
+
+Both whole-app legs are blocked by **foreign/environmental** causes only: iOS `IOS_EXIT=65` (pre-existing sibling `AIAutoNameUnnamedLocations.swift:123`), macOS `MAC_EXIT=65` (no development signing certificate). **Zero** UptimeHeatmap errors in either. This matches the documented precedent exactly. Every surface-attributable gate is green and executed. Let me write the gate log.
+
+Gate log written. Let me verify the working tree contains only my intended changes, then commit exactly my 9 surface files + the log.
+
+Clean tree — only my 9 files + the log are untracked, and the regenerated `.xcodeproj` is correctly git-ignored. Committing now.
+
+Committed as `d80d3e7a0` — exactly my 9 surface files + the gate log (1709 insertions), no drift. Let me clean up temp artifacts and do a final verification.
+
+All gates green, tree clean, temp artifacts removed. Let me confirm all todos are complete.
+
+All 13 todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0202-UptimeHeatmap.log | 167 ++++++++++++
+ .../shared-surfaces/UptimeHeatmap.Adapter.swift    | 138 ++++++++++
+ .../UptimeHeatmap.AdapterTests.swift               | 220 +++++++++++++++
+ .../shared-surfaces/UptimeHeatmap.Model.swift      | 262 ++++++++++++++++++
+ .../shared-surfaces/UptimeHeatmap.Previews.swift   |  92 +++++++
+ .../shared-surfaces/UptimeHeatmap.Projection.swift | 167 ++++++++++++
+ .../shared-surfaces/UptimeHeatmap.Tests.swift      | 247 +++++++++++++++++
+ .../shared-surfaces/UptimeHeatmap.Views.swift      | 299 +++++++++++++++++++++
+ .../shared-surfaces/UptimeHeatmap.strings          |  40 +++
+ .../TeslaSync/shared-surfaces/UptimeHeatmap.swift  |  77 ++++++
+ 10 files changed, 1709 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0202-UptimeHeatmap.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.swift

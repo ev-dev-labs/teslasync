@@ -1,0 +1,6 @@
+I'll start by exploring the repository structure to understand the existing Apple app architecture, the web source page, and the tooling.
+
+The actual structure uses `apps/apple/Sources/` but the prompt references `apps/apple/TeslaSync/`. Let me investigate both, plus read the web source in chunks.
+
+There's a directory discrepancy I need to reconcile. Let me read the project config, existing feature pages, Maps components, and the ledger.
+

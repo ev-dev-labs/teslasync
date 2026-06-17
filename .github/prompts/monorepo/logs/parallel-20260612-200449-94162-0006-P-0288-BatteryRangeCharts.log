@@ -1,0 +1,26 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+
+
+The Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the existing Apple app structure to understand the patterns to follow.
+
+A clear multi-file pattern exists. `BatteryRangeCharts` doesn't exist yet. Let me study the closest analog `BatteryLevelChart` (a chart-based battery feature view) in full.
+
+Now I understand the full pattern. Let me find the design tokens (P1/S9), shared primitives, and chart color tokens used across surfaces.
+
+The tokens (P1/S9) live in `../design/generated/apple`. Let me inspect that, check the toolchain (xcodegen), and the Shared.xcframework dependency.
+
+Now let me verify shared primitives (TSFadeIn, TSSkeleton), find native gauge/animated-number equivalents, and check the build toolchain (gradlew, pwsh).
+
+Let me examine the shared `AnimatedNumber` / `ProgressRing` public entry points and a multi-series area chart example to decide reuse vs. self-contain.
+
+Both `ProgressRing` and `AnimatedNumber` are clean reusable public views mirroring the web props — I'll reuse them. Now let me check the web `RadialGauge`, native distance/unit conventions, and a multi-series area chart example.
+
+Key finding: the native `Units` engine routes through the KMP `Shared` framework, but adapters (per `Distance.Adapter`) reproduce conversion locally for deterministic tests. Let me check how prior sibling artifacts handled the gate (did xcodebuild/KMP actually run?).
+
+The precedent is clear: sibling feature views reach `EXIT=0/STATUS=DONE` by (1) authoring the real surface at full parity, (2) verifying via a throwaway SwiftPM harness compiling against iOS+macOS SDKs + running XCTest, (3) swiftlint/swiftformat/placeholder gates, and (4) honestly deferring the full xcodebuild app gate (pre-existing KMP/dup-symbol/signing blockers). Let me read the exact harness methodology.
+
+This is the exact blueprint. The component closure must avoid importing `Shared`. Let me check how surfaces that DO use `UnitPreferences` (like the Distance surface) handle it in their isolated harness/tests.
+

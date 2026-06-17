@@ -1,0 +1,138 @@
+I'll start by understanding the task, the environment capabilities, and the web source that serves as the specification.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat, swift 6.3.2). Let me read the web source spec and explore the Apple app structure.
+
+The web source is clear. Now let me study the existing Apple `shared-surfaces` patterns and the AI infrastructure (AIFeatureCard, withAiFeature, useAiStream counterparts).
+
+There's a rich established pattern with many AI narrator surfaces. Let me find the web components that use the exact same trio (`AIFeatureCard` + `withAiFeature` + `useAiStream`) to identify the closest reference implementation.
+
+This is a large, well-established pattern (50+ ported AI surfaces). Let me find the web source structurally closest to mine — same `(vehicle_id, from_unix, to_unix)` body shape and scope gating — to use as the porting template.
+
+`AILogTraceSummarization` is the structural twin (same `from_unix`/`to_unix` body) with a complete 10-file Apple port. Let me read its web source and full Apple port to use as the template.
+
+Excellent template. The key difference from my target: `AILogTraceSummarization` has no `emptyHint`, but my target passes `emptyHint` (the "Select a vehicle and a valid time window first." string) and requires a strict scope triple. Let me read the rest of the template files and check how ported surfaces handle `emptyHint`.
+
+Now let me read the remaining template files (Views, Chrome, strings, Previews, Tests, AdapterTests) to fully understand the rendering and test conventions.
+
+Let me read the strings catalog, Previews, and both test files to complete my understanding of the conventions.
+
+Now the two test files to understand test conventions.
+
+I now understand the full 10-file pattern. Before porting, I need to resolve the key difference: my target passes `emptyHint` (which `AILogTraceSummarization` doesn't). Let me read the rest of `AIFeatureCard.tsx` to see how `emptyHint`/`canStart` render, find ported surfaces that use `emptyHint`, check the build config, and verify the design tokens exist.
+
+`emptyHint` renders as a muted paragraph below the description only when `!canStart`. Now `AIMqttSseInspectorExplanations` is the *closest* twin — it uses BOTH `from_unix`/`to_unix` AND `emptyHint`. Let me read its web source and native port to see how `emptyHint` is handled, plus the correct `project.yml`.
+
+`AIMqttSseInspectorExplanations` is the near-perfect twin — it already handles `emptyHint`. My target only adds the `vehicleId` requirement to the scope. Let me read its full Apple port to see how `emptyHint` is rendered natively.
+
+I now understand `windowHint` (the native `emptyHint`). Let me read the remaining `AIMqttSseInspectorExplanations` files to see how `windowHint` flows through the Model, Views, strings, and tests.
+
+I have the full rendering picture. Let me read the twin's Model (for the `Input`/`Ready` struct shapes incl. `windowHint`), strings, and both test files to finalize my understanding before porting.
+
+Let me read the twin's tests, Chrome, and Previews to capture the `windowHint` test conventions and confirm the remaining structure.
+
+I now fully understand the 10-file pattern. Before writing code, I must verify the build system works on this runner (xcodegen, schemes, test ability) and locate the gate tooling. Let me investigate.
+
+All tooling is present: xcodegen, pwsh, check-placeholders.ps1, design tokens, shared components, and schemes `TeslaSync`/`TeslaSync-macOS`. Let me confirm the iPhone 16 simulator availability and the exact token/component signatures I'll rely on.
+
+Everything is in place: iPhone 16 sim (booted), iOS 18/macOS 15 targets, all tokens and components confirmed. Let me verify my chosen type prefix is unused and confirm how test targets pick up the co-located `*Tests.swift`, then I'll write the files.
+
+All confirmed: `FSMNarrator` prefix is unused, test targets pick up co-located `*Tests.swift` in `shared-surfaces`, and all spacing tokens exist. I have everything needed. Let me set up tracking and write the plan.
+
+Now I'll write all 10 files. Starting with the Adapter (core scope/SSE/reducer logic) and Model.
+
+Now the main view, Views, and Chrome files.
+
+Now the two test files, reflecting the scope-triple.
+
+All 10 files written. Let me update tracking and run fast lint/format checks on the new files before the heavy build.
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+One swiftlint violation: `Tests.swift` is 407 lines (limit 400). Let me check the config and trim it.
+
+`file_length` default (400) becomes an error under `--strict`. I'll trim the verbose header comment in Tests.swift without touching coverage.
+
+401, need ≤400. Let me trim 2 more header lines for margin.
+
+Tests.swift now 399 lines, lints clean. Let me verify format on it, then generate the Xcode project.
+
+Project generated. Now the heavy step — iOS build + test on the iPhone 16 simulator. I'll run it and monitor.
+
+Build still running (expected for a large clean build). Let me continue waiting.
+
+The iOS build failed (EXIT=65), but the errors are about `StateTimeline*` types being **ambiguous for type lookup** in `WidgetPicker.*`, `WindowStatusDetail.*`, `XRayBucketChart.*` — **none of these are my files**, and I never defined any `StateTimeline*` types. This looks like a pre-existing duplicate-definition issue. Let me investigate whether this is a baseline failure unrelated to my additive change.
+
+Confirmed: `StateTimelineModel`, `StateTimelineConnection`, `StateTimelineUpdate`, and `StateTimelineLoadStatus` are each defined **twice** — once in `dashboard-widgets/StateTimelineWidget.Model.swift` and once in `feature-views/StateTimeline.*` — both compiled into the same `TeslaSync` target. That's a pre-existing duplicate-symbol collision in files outside my allowed scope. Let me confirm it's pre-existing (only my 10 files changed) and see how predecessor surface gates handled it.
+
+This is the key precedent: the **predecessor surface 0028** (my own template) hit the *identical* situation — the full `xcodebuild` fails only on a **pre-existing cross-surface `StateTimelineModel`/`RecentDrivesModel` redeclaration in other surfaces (0 errors in their own code)** — and resolved STATUS=DONE, noting "the P4 acceptance gate resolves [it] post-integration." Only my 10 files changed; the colliding files are unmodified at HEAD.
+
+I must now rigorously prove **my** surface has 0 errors. Let me (1) confirm zero references to my surface in the build errors, and (2) compile + execute my core logic standalone on the real toolchain.
+
+**Decisive evidence**: the iOS build shows **0 errors/warnings referencing my surface**. Every single error is the pre-existing cross-surface redeclaration of `StateTimeline*` and `RecentDrives*` between `dashboard-widgets/` and `feature-views/` — exactly the condition my template predecessor (0028) documented and resolved STATUS=DONE ("0 errors in this code... resolved post-integration").
+
+To exceed that bar, I'll now **execute my surface's core logic on the real toolchain** in isolation. Let me build a standalone harness from my actual Adapter/Model/Projection sources.
+
+Now compile and run the isolation harness on the real toolchain.
+
+Compile errors are only in my harness's global counters (Swift 6 strict concurrency) — **not** in my surface sources. Let me move the counters into the `@MainActor` scope and rerun.
+
+**My surface is proven green**: all 3 core source files (Adapter + Model + Projection, unmodified) compile under Swift 6 strict concurrency on the real toolchain, and **all 52 logic checks pass** (scope-triple gate, body/encoding, SSE parse, reducer, output/action derivation, projection branches, model wiring/telemetry/stale-refresh/delegation).
+
+Now let me run the remaining gate legs. I'll start the macOS build+test in the background and run the fast checks (swiftlint, swiftformat, placeholders) meanwhile.
+
+`swiftlint --strict` on the whole tree (3510 files): **0 violations, LINT_EXIT=0**. Now swiftformat (whole) and the placeholder check.
+
+swiftformat (whole tree): **0/3740 require formatting, FORMAT_EXIT=0**. The macOS build finished — let me read its result and run the placeholder check.
+
+macOS also fails (EXIT=65) with **0 references to my surface**. Let me confirm the macOS failure is the same pre-existing collision, then run the placeholder check.
+
+The placeholder check passes (**PLACEHOLDER_COUNT=0, EXIT=0**). The macOS failure is code-signing/entitlements (no dev certificate on this runner) plus the same pre-existing collision — again **0 references to my surface**. Let me fully characterize the macOS log to write an accurate gate log.
+
+Let me verify those 3 mentions of my surface in the iOS log are not errors (likely the compile-command file listing).
+
+Both `error:` mentions of my surface are just the successful `CopyStringsFile` build step and an encoding `note:` — **zero compile errors in my code**. The macOS leg failed at code-signing (no dev certificate — an environment limit) before even compiling. Let me re-run macOS with signing disabled to characterize whether macOS compiles my surface cleanly (apples-to-apples with iOS).
+
+While that runs, let me update tracking. I'll wait for the macOS diagnostic to complete before writing the final log.
+
+The macOS diagnostic build is running. Let me wait for it to complete.
+
+The signing-disabled macOS build got past signing into SwiftCompile and failed (EXIT=65) — let me confirm it's the same pre-existing collision with zero references to my surface.
+
+**Definitive, apples-to-apples confirmation**: with signing disabled, macOS reaches SwiftCompile and fails with the **identical pre-existing collision** (163 errors, all `StateTimeline*`/`RecentDrives*` ambiguity + cascade in other surfaces; **0 in my surface**; 0 signing errors). 
+
+The picture is now complete and matches my template predecessor (0028) exactly. Let me write the gate log with full, honest evidence.
+
+Now let me commit — staging only my 10 surface files + the log (not the generated `.xcodeproj`). Let me verify the staged set is correct.
+
+Exactly 11 files staged (10 surface + log); the generated `.xcodeproj` is gitignored. Committing now.
+
+Commit created (`88d68f788`). Let me clean up temp artifacts and do a final verification.
+
+All complete. Let me give a final summary.
+
+The task is done and committed. Summary of what I delivered and verified:
+
+Merge made by the 'ort' strategy.
+ ...urfaces-0050-AIStateMachineDebuggerNarrator.log | 133 +++++++
+ .../AIStateMachineDebuggerNarrator.Adapter.swift   | 362 +++++++++++++++++++
+ ...StateMachineDebuggerNarrator.AdapterTests.swift | 326 +++++++++++++++++
+ .../AIStateMachineDebuggerNarrator.Chrome.swift    | 166 +++++++++
+ .../AIStateMachineDebuggerNarrator.Model.swift     | 380 ++++++++++++++++++++
+ .../AIStateMachineDebuggerNarrator.Previews.swift  | 136 +++++++
+ ...AIStateMachineDebuggerNarrator.Projection.swift | 150 ++++++++
+ .../AIStateMachineDebuggerNarrator.Tests.swift     | 399 +++++++++++++++++++++
+ .../AIStateMachineDebuggerNarrator.Views.swift     | 247 +++++++++++++
+ .../AIStateMachineDebuggerNarrator.strings         |  46 +++
+ .../AIStateMachineDebuggerNarrator.swift           | 126 +++++++
+ 11 files changed, 2471 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0050-AIStateMachineDebuggerNarrator.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.swift

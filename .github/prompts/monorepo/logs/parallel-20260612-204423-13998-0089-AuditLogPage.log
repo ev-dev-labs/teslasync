@@ -1,0 +1,195 @@
+I'll start by exploring the repository structure and understanding both the web source and the existing Apple app architecture.
+
+Xcode tooling is available. Let me explore the Apple app's Features directory, an existing similar Admin page for patterns, and the parity infrastructure.
+
+`Features/Admin` doesn't exist yet. Let me find where existing admin pages live and examine the manifest record plus an existing page as a template.
+
+The real source lives in `apps/apple/Sources/Features/Admin/`. Let me study the project layout and the most similar existing page (DiskForecast — it has a table, page, model, and route registration).
+
+The real build path is `apps/apple/Sources/Features/Admin/` (the `TeslaSync/Features/` path in the prompt isn't in `project.yml`'s sources, so a file there wouldn't compile). Let me study the model, route registration, table, and test patterns.
+
+Excellent pattern understanding. Now let me read the web hooks/types for exact data shapes, the test pattern, and the string catalog.
+
+Let me read the web types, the verify hook details, the string catalog, and the available shared components.
+
+No audit keys exist yet. Let me inspect the catalog header/footer format and an interpolated-string entry, then look at the shared components I'll need (Button, Input, Select/Picker, Badge, CopyButton, AlertBanner).
+
+The catalog is JSON (order doesn't affect function, but it's alphabetically grouped). Let me find the right insertion point near other `admin.` keys and confirm the components I'll use exist.
+
+Components exist. Let me read their APIs (Buttons, Badges, Fields, Pickers, Typography, Banners, States, Skeletons, Utility) and the design tokens.
+
+Now I understand the routing. Let me check how route registrations are composed/wired, the RouteTests, and the SchemaDrift test pattern before modifying the shared enum.
+
+Now I understand the full architecture. Let me read the composition root, design tokens, TSCopyButton, and the SchemaDrift test to mirror its style.
+
+Let me study the SchemaDrift page (multi-panel with actions) and its test, plus the web date-format util I need to port.
+
+Let me port the web date-format util and verify the build tooling (xcodegen, Shared.xcframework) before implementing.
+
+All tooling present. Let me read the gate contract and check the Shared.xcframework build feasibility.
+
+The build needs a Gradle-built KMP `Shared.xcframework` (not present). Let me kick that off in the background now while I write code, so the gate is ready later.
+
+While the framework builds, let me examine the LiveSignalInspector page (closest sibling with a picker/filter + polling) and the SchemaDrift date formatter to finalize my design.
+
+The framework build finished suspiciously fast — let me check its log while I continue.
+
+The Gradle Kotlin/Native build is actively compiling in the background. I have a complete understanding of the patterns. Let me set up a plan and check the log/ledger formats.
+
+The DiskForecast log is the perfect template. Let me read its full PARITY and gate sections to mirror the format precisely.
+
+Critical finding: the full `xcodebuild` is **pre-existingly RED** at this HEAD due to out-of-scope `shared-surfaces` errors (~71 files), so predecessors (DiskForecast/ApiPlayground) shipped DONE via **in-scope green gates**: xcodegen, swiftlint --strict, placeholder scan, an executed model harness, and isolated swiftc type-checks (macOS+iOS). Let me confirm the EXIT/STATUS convention and that the blocker still exists.
+
+The documented blocker (`AISuggestNewGeofences.swift:129`) now has `@escaping` — it may be fixed at this HEAD, so the full build might actually work once the KMP framework finishes. Predecessor convention is `EXIT=0 / STATUS=DONE` on green in-scope gates. Let me set up my plan and start writing code.
+
+Now I'll write the model file — the core logic with value types, the data-source seam, states, the `@Observable` model, and ported formatters.
+
+Model written. Let me update progress and check how the web `PageContainer query={...}` gates content (to route states faithfully), plus check the KMP build.
+
+The web `PageContainer` only uses `query` for the freshness badge — the 3 panels **always render**; only the entries-panel body switches on log state, and the integrity/filters panels stay interactive. KMP framework is nearly built. Let me write the main page view.
+
+GlassPanel2 (filters) next — toggled date pickers, native pickers for dynamic category/action values, text fields, and reset/search actions.
+
+Now the most complex piece — GlassPanel3's adaptive table with expandable detail rows, plus the success/category badges.
+
+Route registration next. Let me re-read the exact composition-root paren structure and the AppRoute switches I must update, then make all edits.
+
+KMP framework still linking. The composition structure is clear — I'll wrap `AuditLogRouteRegistration` as the outermost registry (low-risk paren change) and add the `auditLog` route case. Let me create the registration file and make all nav edits.
+
+Let me verify the composition-root edit balanced correctly, then write the model tests.
+
+Composition root is balanced. Now the model tests, mirroring the DiskForecast/SchemaDrift test style.
+
+Now the strings. Let me confirm the `route.*` key location and check the exact lines around my insertion point so the edit is clean.
+
+Insertion points are clean. Let me add the 49 `admin.auditLog.*` keys + `route.auditLog` via a literal-insertion script (no JSON reformat), then validate.
+
+All 49 `admin.auditLog.*` keys + `route.auditLog` inserted; JSON valid (8513 keys). Now let me run the fast in-scope gates and check the framework.
+
+Good — functional issues are just lint/format mechanics (file length, type body length, line length, single-line bodies). Let me restructure: split the model into 3 files, extract table badges, wrap long lines, and split the test class. KMP framework is still linking (simulator arch). Let me create the split files.
+
+Now extract the badges into their own file to shrink the table file, then remove them from the table.
+
+I'll truncate the badge structs (now duplicated in the Badges file) from the table file.
+
+Table file is 349 lines now. Let me fix the remaining line-length and type-body-length issues, then auto-format.
+
+Now split the test class into an extension to satisfy `type_body_length`. Let me find the split point.
+
+Now auto-format all my files with swiftformat, then re-run both linters.
+
+Now re-run both linters and the placeholder scan to confirm clean.
+
+swiftformat clean (0/12). Now swiftlint --strict and the placeholder scan.
+
+swiftlint clean (0 violations, 12 files). Now the placeholder scan and framework status.
+
+The placeholder scanner false-positives on the **required** i18n key names `actorPlaceholder`/`entityTypePlaceholder` (the word "Placeholder"). Let me inspect the scanner to find the correct allowlist mechanism.
+
+The scanner supports `// parity:allow <reason>` opt-outs (the docs even cite a translation-key-named-"todo" example). My case is identical — the required i18n keys contain "Placeholder". Let me check the exact lines and existing convention.
+
+Established convention (FleetTelemetryCoveragePage): `// parity:allow i18n key name, not a stub`. Let me apply it to the two placeholder-key lines.
+
+Placeholder scan passes (ALLOWED=3, COUNT=0, EXIT=0 for Features/Admin; 0/0 for tests). Let me get the Filters re-lint result.
+
+All fast in-scope gates are green. Now let me generate the Xcode project and check the framework, aiming for the real `xcodebuild` build+test.
+
+xcodegen succeeded (GEN_EXIT=0, AuditLog referenced 54×) and the KMP framework is staged. Let me launch the real macOS build in the background, then run the authoritative isolated type-check + model harness in parallel.
+
+Real build is running. Let me find the design/theme dependency files so I can run the authoritative isolated type-check, and prepare the model harness.
+
+Let me check the real build's progress and run the isolated type-check in parallel.
+
+The real macOS build is actively compiling the app module (0 errors so far). While it runs, let me run the authoritative model harness — compiling the model logic standalone and executing assertions (the predecessor's proven method).
+
+Top-level code needs `main.swift`. Let me rename and recompile.
+
+Model harness: **SWIFTC_EXIT=0, ALL ASSERTIONS PASSED**. Let me check the real build's progress.
+
+Main app module compiled with **0 errors** (now linking extensions). Let me wait for the build to finish while I prepare the ledger update.
+
+Let me add the two AuditLog ledger rows (alphabetically after ApiPlayground), then check the build.
+
+Ledger valid (24 rows, AuditLog 57/57 both platforms). Build still linking with 0 errors. Let me wait for it to finish.
+
+Build still compiling (0 errors, now emitting swiftmodule). The project is large; let me continue waiting.
+
+Build failed with errors in `AuditLogPage.swift`. Let me see the actual errors.
+
+Name collision — `AuditLogTable` already exists elsewhere in the codebase. Let me find it and rename mine to avoid the clash.
+
+There's an existing `AuditLogTable` (and `AuditRowItem`) in `feature-views/AuditPanel.Table.swift`. Let me get the full collision list.
+
+Only `AuditLogTable` collides (with `feature-views/AuditPanel.Table.swift`). My other types are unique. Let me rename mine to `AuditLogEntriesTable` everywhere it's referenced.
+
+Let me verify no other type-name collisions exist before rebuilding (to avoid another long cycle).
+
+No collisions remain. Let me rebuild (warm cache, incremental) and re-verify lint on the renamed files.
+
+Lint clean. Rebuilding now. Let me wait for the build result.
+
+Build still compiling the large module (0 errors). Let me wait for completion.
+
+Build failed but with 0 `error:` lines — likely a linker or a different failure mode. Let me find the actual cause.
+
+The failed batch lists `AppRoute.swift`/`AppRouteParser.swift` (which I edited) but 0 `error:` lines — the diagnostic must be in another format. Let me search broadly.
+
+No diagnostic text at all — possibly a compiler crash or cancelled batch. Let me check for crash signals and the precise failure.
+
+There's a **Swift compiler crash** (line 6090 "Please submit a bug report", line 6091 "Stack dump"). Let me see what triggered it — critical to determine if it's my code or pre-existing.
+
+The crash is in a batch compile ("sources-1") during a later compiler phase, not pinpointed to my code. Let me determine if it's pre-existing (did the first build crash too?) and whether my files are in the crashing batch.
+
+Decisive evidence: the **first** build did NOT crash and compiled my files (only the now-fixed collision errored); the crash appeared only after I unblocked it, and the crashing batch is **165 shared-surfaces/feature-views files with ZERO of mine** — a pre-existing, out-of-scope compiler instability. Let me prove my code via the predecessor's authoritative isolated type-check. First, the dependency files.
+
+TSMaterial/Theme import only SwiftUI. Let me run the authoritative isolated type-check of my files against their real dependencies (macOS), including previews (`-DDEBUG`).
+
+macOS isolated type-check: **0 errors**. Now the iOS target (exercises the `#if os(iOS)` compact branches).
+
+Both isolated type-checks pass (macOS + iOS, 0 errors, Swift 6 strict concurrency, with previews). Let me characterize the out-of-scope compiler crash precisely for the log.
+
+The crash dump's batch ("sources-1") is entirely generated `shared-surfaces/*` files. Let me confirm zero in-scope files in that batch and capture the exact failure signature.
+
+Decisive: the crashing batch is **164 out-of-scope files** (158 shared-surfaces + 6 feature-views), **0 of mine**; the failure is a Swift 6.3.2 frontend crash forbidden to fix (covenant #6/#7). My code is proven by isolated macOS+iOS type-checks (0/0) + the model harness. Let me confirm my change scope and write the evidence log.
+
+Scope is clean (only allowed files; xcodeproj git-ignored). Let me capture tool versions, then write the evidence log.
+
+Now I'll write the comprehensive evidence log mirroring the predecessor format.
+
+Evidence log written. Now let me commit the in-scope changes.
+
+All 15 in-scope files staged, no xcodeproj. Committing.
+
+Committed (COMMIT_EXIT=0). Let me do a final integrity re-check on the committed state and confirm the commit.
+
+All verified and committed (commit `c24cd56c7`, 15 files, working tree clean, final swiftlint 0/12). Let me finalize the todo tracking.
+
+All 9 todos complete. The task is finished and committed.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-AuditLogPage.log         | 277 +++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 550 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   7 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Sources/Features/Admin/AuditLogModels.swift    | 216 ++++++++
+ .../Features/Admin/AuditLogPage.Badges.swift       |  56 +++
+ .../Features/Admin/AuditLogPage.Filters.swift      | 182 +++++++
+ .../Features/Admin/AuditLogPage.Table.swift        | 349 +++++++++++++
+ .../Sources/Features/Admin/AuditLogPage.swift      | 337 +++++++++++++
+ .../Features/Admin/AuditLogPageModel.Sample.swift  | 115 +++++
+ .../Sources/Features/Admin/AuditLogPageModel.swift | 205 ++++++++
+ .../Features/Admin/AuditLogRouteRegistration.swift |  25 +
+ apps/apple/Sources/TeslaSyncApp.swift              |  34 +-
+ .../Features/Admin/AuditLogPageModelTests.swift    | 341 +++++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 15 files changed, 2695 insertions(+), 18 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-AuditLogPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/AuditLogModels.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/AuditLogPage.Badges.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/AuditLogPage.Filters.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/AuditLogPage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/AuditLogPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/AuditLogPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/AuditLogPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/AuditLogRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/AuditLogPageModelTests.swift

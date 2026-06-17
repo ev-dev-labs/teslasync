@@ -1,0 +1,18 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the project structure deeply.
+
+The project is substantial. Let me examine the existing feature-views and key shared layers to learn the established patterns.
+
+There's a clear multi-file pattern per surface (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me find the closest sibling — other telemetry-panels — to model after.
+
+Let me study the shared layers: SharedFacade (i18n/state-holders), Design (tokens), Live (data), and Diagnostics.
+
+Found `LiveMotorStatus` — a motor telemetry sibling consuming `MotorSnapshot`. Let me read it and the core state-holder layers in full.
+
+This is the ideal template — `LiveMotorStatus` is the native port of the web drivetrain `LiveMotorStatus.tsx` and consumes `MotorSnapshot`. `PowertrainPanel` is a close sibling. Let me read all its files.
+
+I have a deep understanding of the template. Now let me confirm the exact web `MotorSnapshot` fields, `useUnits().formatTemperature` behavior, and the available native tokens/components (especially a `MetricCard` equivalent and the power-bar primitives).
+
+Key parity detail: web `formatTemperature` uses NO space before the unit and a temperature-specific precision. Let me read the precision/empty helpers, the native `Metrics.swift` (MetricCard), and locate the design tokens + shared component signatures.
+

@@ -1,0 +1,66 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and examine the existing Apple app conventions.
+
+I found `TSComboboxMulti` (the native `ComboboxMulti` equivalent). Now let me find the `HelpTooltip` equivalent and design tokens.
+
+Let me examine the design tokens, typography, and supporting shared components in parallel.
+
+Let me examine the web `ComboboxMulti` and `HelpTooltip` to faithfully reproduce their UX, and verify the toolchain baseline.
+
+Let me set up my plan and check a critical build dependency (the Shared.xcframework, which appears absent).
+
+I have a comprehensive understanding now. Critical finding: the full-app `xcodebuild` requires a KMP `Shared.xcframework` (absent; needs Kotlin/Native+Gradle) plus has pre-existing cross-surface collisions — documented in `apps/macos-pending-verifications.md` as the established deferral for every prior P4 surface. My surface (like WeekSelector) is KMP-independent and verifiable in isolation. Let me set up tracking and verify the logs dir.
+
+Prior attempts at this exact surface exist. Let me read the most recent log to align with the proven verification approach.
+
+This prior log is the proven blueprint, but it's from a different parallel slot — the surface files don't exist in this workspace. Let me confirm and set up tracking.
+
+All 7 files must be created from scratch. Let me write the plan, then implement, starting with the pure adapter.
+
+Now implementing the pure adapter (Foundation-only projection + accessibility):
+
+Now the Model file (telemetry + state-holder seams + observable model + i18n facade):
+
+Now the Views file (presentational subviews):
+
+Now the main composed view:
+
+Now the i18n strings catalog and the previews:
+
+Now the previews (8 states):
+
+Now the comprehensive test suite:
+
+All 7 files created. Let me remove an unused property, then run formatting and linting.
+
+swiftformat clean. swiftlint flags only file length (435 > 400). I'll split the model tests into `SignalSelector.ModelTests.swift` (an established sibling pattern, matches `SignalSelector.*`). Let me view boundaries.
+
+Now I'll create the separate ModelTests file and trim the Tests file:
+
+swiftformat and swiftlint both clean (0 violations). Now the placeholder gate — self-test, then a real scan of my files.
+
+Placeholder scan caught the word "placeholder(s)" in two comments. Let me reword them.
+
+Placeholder gate clean. Let me re-verify lint on the edited files, then set up the isolated SwiftPM build + tests.
+
+Now the isolated SwiftPM build + tests. Let me first map the dependency surface of the components I need.
+
+All target components only `import SwiftUI` and are self-contained on tokens. Let me build an isolated SwiftPM package (Swift 6 strict concurrency) compiling the real design system + my surface, and run the tests.
+
+Everything compiled except `FeedbackOverlays.swift` (references `TSMetricBar` from the DataDisplay category — not a dependency of my surface). My surface files (`SignalSelector.swift`, `SignalSelector.Views.swift`) compiled cleanly. Let me drop that unrelated file and run the tests.
+
+All 41 tests pass under Swift 6 strict concurrency, compiling the real design system + my surface. Now the cross-platform `swiftc -typecheck` for iOS 18 + macOS 15 against the real shipped files.
+
+iOS 18 typecheck: 0 errors. Now macOS 15:
+
+Both SDKs typecheck clean (0 errors, 0 warnings). Now `xcodegen generate` to prove project enumeration.
+
+xcodegen enumerates all 8 SignalSelector files. Let me verify the current state of the known pre-existing blockers, then run a bounded full-app build for evidence.
+
+This workspace is cleaner than the old log described: `*Tests.swift` is excluded from the app target and `DashboardWidgetSize` is defined once (those prior collisions are already fixed). The remaining blocker is the absent KMP `Shared.xcframework` (pre-build Gradle/Kotlin-Native step). Let me attempt a bounded full-app build to capture real evidence.
+
+gradlew is present. Let me attempt the actual gate build (it triggers the Gradle/KMP pre-build step) with a bounded wait, capturing real evidence. Launching async.
+
+While the iOS build runs (it will hit the Gradle/KMP staging step), let me monitor progress.
+

@@ -1,0 +1,260 @@
+I'll start by exploring the codebase to understand the web source page, the Apple app structure, and the supporting infrastructure.
+
+Let me read the web source page in sections and explore the Apple app structure.
+
+Let me continue reading the web source and explore the Apple app's existing structure (especially the TeslaSync app and existing feature pages).
+
+I need to understand the project layout — there are two candidate locations. Let me read the project.yml (source of truth for the build) and existing feature pages in both directories.
+
+The output path in the prompt (`TeslaSync/Features/Battery`) isn't in `project.yml` sources, but `Sources/Features/` is. Let me investigate where pages actually live and whether a Battery feature already exists.
+
+A `BatteryCellsPage` already exists in `Sources/Features/Battery/` — that's the real, compiled location and my template. The prompt's `TeslaSync/Features/Battery` path is a generator artifact. Let me confirm the established convention via the ledger and study the BatteryCells page pattern.
+
+This is a substantial parity task. Let me create a plan and read the supporting files in parallel — the rest of the web page, the BatteryCells model/sections/charts/route pattern, and the web data hooks.
+
+Xcode 26.5, swiftlint, and xcodegen are all available — so the build gate can actually run. Let me read the rest of the web page and the BatteryCells supporting files.
+
+Let me read the remaining web page lines and the rest of the BatteryCells supporting files (Models, Sample, Sections, Charts, Format, Route).
+
+Now let me read the BatteryCells Models, Sections, Charts, and Format files to learn the full component/chart vocabulary.
+
+Let me read the BatteryCells Sections and Charts files, and locate the shared component library + AppRoute enum.
+
+Let me read the BatteryCells Charts file, AppRoute, and the key shared chart components (ChartContainer, PieGauge for RadialGauge, LineCharts).
+
+Let me read AppRoute, chart models/PieGauge/LineCharts, and the units facade in parallel.
+
+Let me read the units facade, line/bar charts, and key UI components (Cards, Metrics, Badges) in parallel.
+
+Let me check the units facade and whether feature pages import `Charts` directly or only use wrappers (to know the allowed chart idiom), plus how routes get registered into the host.
+
+Key constraint confirmed: feature files use only chart wrappers (no direct `Charts` import). Let me read the route host registry, the Units facade, and an Analytics page's chart usage for reference idioms.
+
+Let me locate the `tsUnits` environment, where route registrations are aggregated into the shell, and the existing analytics chart idioms + DataTable usage.
+
+Now let me examine the web data hooks/types (to model the Swift data shapes accurately) and the localization setup + existing tests.
+
+I now have the data shapes. Let me check the build feasibility (Shared.xcframework staging), look at the BatteryCells table/insights idioms, and how an Analytics page composes charts with wrappers.
+
+Frameworks aren't staged (KMP build needed). Let me read the exact shared-component APIs I'll call (Cards, Metrics, Badges, Banners, States, Typography, DataTable) before writing code.
+
+Let me read Badges, Banners, States, Typography, DataTable, plus the BatteryCells test and an Analytics charts file for composed/area idioms.
+
+Let me read the States/Typography/DataTable component APIs, the BatteryCells test, and a full Analytics page (StatisticsPage) + its charts for the composite-string and chart idioms.
+
+Let me read the DataTable API, the BatteryCells model test, and locate the Analytics charts files for composed/area/projection idioms.
+
+Let me read the Statistics charts + page and the BatteryCells TrendCharts and model test to finalize the chart/string idioms.
+
+I have the idioms. Before finalizing the projection ("ComposedChart") approach, let me see the remaining chart wrappers and the swiftlint config (to confirm no direct `Charts` import in features).
+
+Important: `--strict` makes the 120-char limit a hard error. Let me check whether any non-Components surface imports `Charts` directly (to decide the composed-projection approach), and read the BatteryCells model test.
+
+Found it — there's a `BatteryDegradationTrendWidget.Chart.swift` rendering this exact projection. Let me read it (plus its model) to see the team's established visual approach, and check the chart palette tokens.
+
+I've confirmed the convention (Features use wrappers; widgets use raw Charts). Let me read the design tokens (palette/colors/spacing) and check which of my 60 strings already exist in the catalog.
+
+Let me read the design token definitions I'll use, and programmatically check which of the 60 required strings already exist in the catalog.
+
+All 60 strings need adding. Let me inspect the exact entry format used in the catalog (e.g., a `battery.cells.*` entry) so I match it.
+
+Catalog format is clear. Let me verify the file's exact formatting (sorting, indentation, escaping) so my edit produces a minimal, Xcode-compatible diff.
+
+I have everything needed. Let me set up tracking, verify the logs dir + tooling, and check the ledger row format for BatteryCells before writing code.
+
+pwsh and gradlew are available. Let me read the BatteryCells ledger rows and an existing page log to mirror their exact format.
+
+The DiskForecast log confirms my path reconciliation reasoning precisely. Let me read the BatteryCells log fully — it's my closest template (same directory, same page family).
+
+Excellent — this is the proven template and methodology. Let me read the PARITY section format and the disposition/commit tail.
+
+I have the full template and methodology. Let me set up todos and check the generated chart palette colors (to map SOH gauge green/amber/red to palette indices).
+
+I have the palette. Let me grab the spacing/radius/motion token names, then start writing code.
+
+Let me confirm the route parser auto-handles the new path and whether a spotlight/title key is needed, then I'll start writing.
+
+I have everything needed. Let me set up tracking and write the plan, then build all files.
+
+Now I'll write the code. First let me confirm the web number-format precision so my Swift formatters match.
+
+I have all the patterns and tokens. Now I'll write the code, starting with the models and formatters.
+
+Now the page model with the two-source loading (health primary, degradation secondary).
+
+Now the sample/preview/test data sources.
+
+Now the main page view with header, phase switch, and adaptive ready layout.
+
+Let me verify `TSSelect`/`TSSelectOption`/`teslaSyncTheme` signatures and whether `BatterySeverity.tone` already exists (to avoid a duplicate).
+
+`BatterySeverity.tone` already exists — I'll reuse it. Let me confirm the `TSSelect` init signature.
+
+Let me check the web `MetricCard` component to faithfully replicate icon/color behavior.
+
+Let me check the placeholder scanner to ensure my code (and the skeleton's redaction) passes it.
+
+The scanner is case-insensitive, so I'll annotate the redaction line. Now I'll write the Sections file (summary cards, prediction, health factors, recommendations, charging impact, history table, skeleton).
+
+Now the Charts file (gauge, projection, range-loss, risk factors). Let me also fix the Page to pass `units` to the sections that need it.
+
+Now update the page to pass `units` to the sections that format numbers.
+
+Now the route registration and navigation wiring.
+
+Now I'll add all the strings to the catalog, matching Xcode's exact format. Let me update todos and run the insertion.
+
+Strings added. Let me verify the formatting matches the existing style and all 60 required keys plus extras are present.
+
+Now the model unit tests. Let me check `UnitPreferences.metric` so my format assertions are exact.
+
+Now the model unit tests, mirroring the BatteryCells test structure.
+
+Now let me verify. I'll start the (slow) KMP framework build in the background and run swiftlint on my files in parallel.
+
+swiftlint found real issues (file length, line length, trailing closures, shorthand operator). Let me view the specific long lines to fix them precisely.
+
+Let me fix the line-length issues in Charts and Sample first.
+
+Now split the over-long Models file — move the derived chart rows + derivations into a new file.
+
+Now I'll split the Sections file. Let me view its current structure to find the cut points.
+
+Let me fix the prediction-sentence (shorthand operator) and the charge-habits line lengths in Sections.
+
+Now let me move the Recommendations/ChargingImpact/History/Skeleton blocks to a new file. Let me find the current cut point.
+
+I'll delete the moved blocks from Sections and create a clean Panels file with the trailing-closure fixes.
+
+Let me re-run swiftlint on all my files to confirm the fixes and catch anything remaining.
+
+Two long lines remain in the history columns. Let me restructure them to multi-line form.
+
+Let me re-run swiftlint and swiftformat-lint on all files, and check the framework build progress.
+
+swiftlint passes. swiftformat wants number grouping + rewrapping. Let me auto-format my files then re-verify both linters.
+
+Both linters pass. Let me check the framework build progress.
+
+The KMP build is nearly done (linking release frameworks). Let me run the placeholder scan (framework-independent) while it finishes.
+
+The scanner flagged Format.swift:60 for "Placeholder". Let me see and fix it.
+
+Placeholder scan clean. Let me wait for the KMP framework build to finish.
+
+Framework staged. Now let me generate the Xcode project and run the build.
+
+The project generates with all Battery files referenced. Now let me run the macOS build (async, since it's slow). I'll skip the scheme's gradle pre-action by building the target directly against the already-staged framework.
+
+Build running. Let me monitor its progress.
+
+Build returned 65 (as the sibling logs predicted). Let me analyze the errors — are any in my files, or only pre-existing out-of-scope ones?
+
+The only errors are **code-signing** errors (no dev certificate in this environment) — zero compile errors, and zero in my files. That means compilation + linking succeeded. Let me confirm rigorously.
+
+The build aborted at macOS code-signing validation (no dev cert) *before* compiling. Let me rebuild with signing disabled so compilation actually runs — first macOS (exercises the non-iOS branch).
+
+While macOS compiles, let me wait and monitor.
+
+`-derivedDataPath` needs `-scheme`. Let me rerun with the scheme and signing disabled.
+
+Zero errors in my files — the only compile errors are in a **pre-existing, out-of-scope** file `TeslaSync/shared-surfaces/Input.Previews.swift` (a `return`-in-ViewBuilder bug I never touched). Let me confirm it's pre-existing and that the app module actually compiled my Battery files.
+
+git status confirms only my files changed. Let me verify the compiler actually ingested my Battery files (whole-module input list) and view the pre-existing bug.
+
+Confirmed: the pre-existing `Input.Previews.swift` bug (a `return` inside a `#Preview` ViewBuilder) — not mine, and I'm forbidden to fix another owner's surface. The whole-module build compiled my files with **zero** Battery errors. Let me (a) run the iOS build to verify the `#if os(iOS)` branch too, and (b) run an executed model harness as positive proof.
+
+Now let me write and run the executed model harness (positive proof of the pure logic).
+
+The harness caught a real Swift 6 concurrency issue: my `static let` `DateFormatter`s are non-`Sendable` globals. Let me check whether the actual app build flagged it too.
+
+The harness caught a genuine Swift 6 issue (the app build aborted on `Input.Previews.swift` before reaching it). The sibling pattern creates formatters per-call. Let me fix Format.swift accordingly.
+
+The formatter fix compiles — the remaining error is in my harness scaffold (top-level `var` is MainActor-isolated in Swift 6). Let me fix the harness and rerun.
+
+Harness passes all 42 assertions under Swift 6. Let me check the iOS build result, then do an isolated type-check of all my SwiftUI files (since the app build aborted early on the pre-existing file).
+
+Both builds: **0 Battery errors**, only the pre-existing `Input.Previews.swift`. Since the app build aborts early, let me do an authoritative isolated Swift 6 type-check of ALL my Battery files against the real components + staged framework. First, gather paths.
+
+Components are self-contained (only system frameworks). Let me write the `UnitPreferences.metric` shim and run the isolated Swift 6 strict-concurrency type-check of all my files against the real components + framework.
+
+Just a missing dependency in my isolated set (not my code). Let me find where `tsGlassPanel` is defined and add it.
+
+Missing `Sources/Design/TSMaterial.swift`. Let me include all of `Sources/Design/` and re-run.
+
+macOS isolated type-check is **clean (0 errors)** against the real module + framework. Now the iOS idiom (exercises the `#if os(iOS)` compact branches).
+
+Both idioms type-check clean (0 errors) under Swift 6. Let me re-verify lint/format after the Format.swift edit, then finalize the ledger and log.
+
+All gates green for my files. Let me finalize the ledger — view the BatteryCells rows to anchor my insertion.
+
+Let me validate the ledger JSON and confirm against its schema.
+
+Ledger valid (48 rows, my 2 at 89/89). Now let me gather file LOC and write the evidence log.
+
+All gates pass. Now I'll write the comprehensive evidence log.
+
+Let me update todos, clean up temp/build artifacts, and verify git ignore status before committing.
+
+All build artifacts are gitignored; git status shows exactly the deliverable. Let me do final JSON validity checks and commit.
+
+All deliverables staged. Let me commit.
+
+Task complete. Let me verify the final state is clean and summarize.
+
+All work is committed and the tree is clean. Here's the summary.
+
+## BatteryDegradationPage — SwiftUI/HIG parity (P4-APPLE · P7 · battery)
+
+Implemented the native SwiftUI port of `BatteryDegradationPage.tsx` at full parity (`PARITY_COVERED=89/89`), adaptive across macOS + iOS, committed as `c7aebd9e9`.
+
+**Delivered** (`apps/apple/Sources/Features/Battery/`, the real compiled home — the prompt's `TeslaSync/Features/Battery` path doesn't exist in `project.yml`; reconciled per covenant #9, same as landed siblings):
+- 10 source files + 1 XCTest, wired via `BatteryDegradationRouteRegistration` → `.batteryDegradation` route (added to `AppRoute` + chained in `TeslaSyncApp`).
+- `@Observable` model with a dual-source seam (health analytics drives the phase; degradation detail is independent), all 4 data states.
+- **21 panels** (4 summary cards, gauge, prediction + 4 sub-metrics, projection, range-loss, risk factors + cards, recommendations, charging-impact, 3 health-factor cards, history table), **4 charts** (`TSRadialGauge`/`TSChartContainer`/native `TSLineChart` ComposedChart port/`TSAreaChart`), **60 strings** (+4 nav/empty keys) added to `Localizable.xcstrings`.
+- SI→display conversion only at the render boundary via the shared `Units` facade.
+
+**Verification (actual outputs):**
+- swiftlint `--strict`: **0 violations** · swiftformat `--lint`: **0/23** · placeholder gate: **COUNT=0**
+- Isolated Swift 6 strict-concurrency type-check vs real P2 tokens + P3 components + staged `Shared.xcframework`: **macOS 0 / iOS 0 errors** in any Battery file (the harness even caught a `static`-formatter concurrency smell, since fixed).
+- Executed model+derivation+format harness: **42/42 pass**.
+- KMP `Shared.xcframework`: built. Full `xcodebuild`: **RED (65) only** due to one pre-existing, out-of-scope `TeslaSync/shared-surfaces/Input.Previews.swift` ViewBuilder-`return` error (forbidden to fix) — **zero** diagnostics in my files.
+
+Ledger updated (2 rows, 89/89, done); evidence log written. `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 10 todos done, all gates green, committed cleanly. Marking complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../apple-page-battery-BatteryDegradationPage.log  | 268 ++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 704 +++++++++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ .../Battery/BatteryDegradationDerivations.swift    | 101 +++
+ .../Battery/BatteryDegradationFormat.swift         |  94 +++
+ .../Battery/BatteryDegradationModels.swift         | 337 ++++++++++
+ .../Battery/BatteryDegradationPage.Charts.swift    | 298 +++++++++
+ .../Battery/BatteryDegradationPage.Panels.swift    | 234 +++++++
+ .../Battery/BatteryDegradationPage.Sections.swift  | 307 +++++++++
+ .../Features/Battery/BatteryDegradationPage.swift  | 207 ++++++
+ .../BatteryDegradationPageModel.Sample.swift       | 217 +++++++
+ .../Battery/BatteryDegradationPageModel.swift      | 131 ++++
+ .../BatteryDegradationRouteRegistration.swift      |  23 +
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Battery/BatteryDegradationPageModelTests.swift | 302 +++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 16 files changed, 3246 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-battery-BatteryDegradationPage.log
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationDerivations.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationModels.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationPage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationPage.Panels.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationPage.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Battery/BatteryDegradationRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Battery/BatteryDegradationPageModelTests.swift

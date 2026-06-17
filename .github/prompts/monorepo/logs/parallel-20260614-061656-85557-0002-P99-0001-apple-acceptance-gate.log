@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure to understand what exists for this Apple acceptance gate.
+
+Capability is present (Xcode 26.5, swiftlint, swiftformat, pwsh, swift). Now let me check the parity ledgers, tools, schemes, and predecessor logs referenced by the gate.
+
+Key findings emerging. Let me verify predecessors and the build setup. Let me look at the p4-apple prompt structure, the logs, and the xcodegen/signing capability.
+
+Critical capability gap found: **0 valid signing identities**. Also the gate references `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1` — none of which exist (only a combined `apple-ledger.json`). Let me confirm the exact prompt/log paths and check predecessor logs and simulators.
+
+I now have the full picture. Let me confirm the prompt requirements and run a comprehensive predecessor verification. Let me set up the log and begin the preflight, including verifying all predecessor prompt logs for `STATUS=DONE`.
+
+879 predecessor prompts with 726 distinct log refs — this needs programmatic verification. Let me check every predecessor log for `STATUS=DONE`.
+
+Predecessor gaps found (17 missing logs, 4 not-DONE). But 153 page prompts showed "no log field" — likely a different format. Let me check the pages prompt format and re-verify those.
+
+The pages prompts use `../../logs/`. Let me fix the regex to handle any relative depth and re-verify all 878 predecessors accurately.
+
+Predecessor verification is now accurate: **155 missing logs + 4 not-DONE = 159 predecessors not `STATUS=DONE`**. Combined with 0 signing identities, missing ledger files, and a missing `check-parity-ledger.ps1` tool, this gate has multiple hard blockers — all in the "Out of Scope" (cannot fix) category. 
+
+Per the Honesty Covenant ("No skip-and-assume"), I'll still run the actual runnable gate commands to record real evidence. Let me gather remaining preflight facts and initialize the log.
+
+All three blocker categories confirmed and they're all "Out of Scope" to fix. Let me save the predecessor gap lists, then run the actual runnable gate commands to capture real evidence. First, initialize the log with the PREFLIGHT section.
+
+Now I'll initialize the log with the PREFLIGHT, predecessor verification, and ledger verification sections (all real evidence).
+
+Now running the actual quality gates (SwiftLint, SwiftFormat, placeholder scan) and capturing real exit codes.
+
+SwiftLint passed (0 violations, 5613 files). Now SwiftFormat lint and the placeholder scanner.
+
+SwiftFormat lint **failed** (FORMAT_EXIT=1 — 1 file needs formatting). Now the placeholder scanner via pwsh.
+
+Placeholder scan **failed** (13 TODO/Placeholder hits). Now generating the Xcode project (no `.xcodeproj` exists yet) so the build/test gates can run.
+
+Project generated; `TeslaSync` and `TeslaSync-macOS` schemes present. Now running the iOS Simulator build/test gate (this may take several minutes).
+
+iOS build is still compiling (large project). Let me continue waiting.
+
+Let me peek at the build progress via the log file while it continues.
+
+Build is actively compiling (real progress through the TeslaSync target). Let me keep waiting for completion.
+
+The build emitted 2 errors so far. Let me inspect them while the build continues.
+
+Those 2 "errors" are from the earlier SwiftFormat section, not the compile — the build itself has 0 compile errors so far. xcodebuild buffers output. Let me continue waiting.
+
+iOS build/test gate **failed** (IOS_EXIT=75 — a "Stage Shared.xcframework" script phase failed, corroborating the missing P1-shared predecessor). Now the macOS build/test gate.
+
+macOS gate **failed** (MAC_EXIT=65) — confirming the signing blocker concretely (entitlements require a development certificate) **and** surfacing an environmental "No space left on device" condition. Let me check disk state before attempting the archive gates.
+
+44Gi is now free — the earlier out-of-space was a transient spike (shared machine, parallel slots). The signing blocker is already concretely proven by the macOS entitlement errors. Let me stop the du probe, record disk findings, and reclaim DerivedData space before attempting the archive gates.
+
+58Gi free now. Running the iOS archive gate.
+
+iOS archive **failed** (IOS_ARCHIVE_EXIT=65) with the clean deterministic error: "Signing requires a development team." Now the macOS archive.
+
+macOS archive **failed** (MAC_ARCHIVE_EXIT=65) on the same signing blocker (plus a note that `Shared.xcframework` is missing the x86_64 slice — predecessor incompleteness). Now running the exact gate ledger-check commands via pwsh to capture their real result.
+
+All gate commands executed with real exit codes captured. Both ledger checks failed (tool missing). Now writing the SUMMARY and verdict section with the final `EXIT`/`STATUS`.
+
+Log is complete and ends with `EXIT=1` / `STATUS=BLOCKED` (Covenant #10 satisfied). Now I must resolve the commit policy: Covenant #8 says "No commit on red," while the prompt's commit step describes the DONE path. Let me check how this prompt system handles BLOCKED logs (are existing not-DONE logs committed?) and what artifacts the build generated.
+
+Resolved: in this system, **BLOCKED logs ARE committed** (two not-DONE predecessor logs are tracked, one explicitly citing "the prompt's sanctioned BLOCKED path"). Covenant #8 "No commit on red" means don't commit code/green-claims on red — committing the honest `STATUS=BLOCKED` evidence log matches the established pattern. The generated `.xcodeproj`/`build/` are gitignored, so only the log is staged. Let me verify the log's gate markers, then commit.
+
+All markers present and consistent; log ends with `EXIT=1` / `STATUS=BLOCKED`. Committing only the acceptance log (matching the established BLOCKED-log pattern).
+
+Committed (only the log, 32751 insertions). Now cleaning up regenerable temporaries (generated `.xcodeproj`, `build/`, DerivedData) for shared-machine hygiene, and verifying the working tree is clean.
+
+Cleanup complete — working tree is clean, disk freed to 116Gi. Let me do a final verification of the committed log and remove temp scripts.
+
+Apple acceptance gate executed and recorded. The honest outcome is **`STATUS=BLOCKED`** — committed as `6de783295`.
+
+## What I did
+Ran the gate **without fixing code, narrowing scope, or delegating** (Honesty Covenant honored), capturing real exit codes into `.github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log` (ends with `EXIT=1` / `STATUS=BLOCKED`).
+
+## Capability (runner is macOS-capable)
+Xcode 26.5, Swift 6.3.2, SwiftLint 0.63.3, SwiftFormat 0.61.1, XcodeGen 2.45.4, pwsh 7.6.2, iPhone 16 sim / iOS 26.5 — all present.
+
+## Gate results (real evidence)
+| Gate | Exit | Verdict |
+|---|---|---|
+| SwiftLint --strict | 0 | ✅ 0 violations / 5613 files |
+| SwiftFormat --lint | 1 | ❌ 1 file unformatted |
+| Placeholder scan | 1 | ❌ 13 TODO/Placeholder hits |
+| iOS Sim build test | 75 | ❌ Stage Shared.xcframework + dep-graph |
+| macOS build test | 65 | ❌ dev-cert required for entitlements |
+| iOS archive | 65 | ❌ "Signing requires a development team" |
+| macOS archive | 65 | ❌ entitlements need dev signing cert |
+| macOS/iOS ledger check | 1 / 1 | ❌ tool + ledger files absent |
+
+## Blockers (all "Out of Scope" to fix)
+- **B1 Predecessors:** 159 of 878 P4 prompts not `STATUS=DONE` (155 logs missing + 4 not-DONE), incl. `p4-p9-0002-xcuitest-ui` and most P7 page logs.
+- **B2 Parity:** required `apple-macos-ledger.json` / `apple-ios-ledger.json` and `check-parity-ledger.ps1` **don't exist**; the lone `apple-ledger.json` covers only 15 admin units.
+- **B3 Signing:** `security find-identity` = **0 valid identities** → archives can't sign.
+- **B4/B5:** SwiftFormat + placeholder red; builds red (`Shared.xcframework` missing x86_64).
+
+Per the prompt, no code/parity/signing changes were made; only the evidence log was committed (matching the repo's sanctioned BLOCKED-log convention). Generated `.xcodeproj`/`build`/DerivedData cleaned up; tree clean.
+

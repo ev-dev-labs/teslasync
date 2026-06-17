@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+The monorepo is real. Let me read the web source page and explore the Apple app structure in parallel.
+
+Let me explore the Apple app's structure, existing Features, and the parity manifest in parallel.
+
+The `Features/` dir doesn't exist yet, but the ledger says some admin pages are "done". Let me find where existing admin Swift pages actually live and understand the real structure.
+
+Now I understand—the real code lives in `apps/apple/Sources/Features/Admin/`, not `TeslaSync/Features/Admin/`. The prompt path is a generated template that doesn't match reality. Let me study the existing "done" admin pages (ApiPlayground, DiskForecast) as my templates.
+
+Excellent—clear conventions. Let me study the ApiPlayground page (the other "done" admin page), its tests, and the web API hook + types for feedback.
+
+Let me read the full Feedback types and explore the component library + navigation system.
+
+Rich component library. Let me read the theme tokens and the key UI components I'll need.
+
+Let me read the remaining UI components, feedback states, people cell, forms, and the design tokens in parallel.
+
+Let me read the Pickers, DataTable, feedback States/Skeletons, People cell, and search for MaskedValue + the route system.
+
+Let me read People, Banners, Skeletons, find MaskedValue, and the route/navigation system.
+
+Let me read the MaskedValue (Utility.swift), the route system, app wiring, and locate the string catalog.
+
+Let me read TSMaskedValue, the app wiring, project.yml structure, and inspect the string catalog.
+
+project.yml globs `Sources/`, so new files are auto-included. Let me check exactly which required string keys already exist in the catalog, read the AppRouteParser, and check the test target config.
+
+None of the 38 keys exist yet — I must add them all. Let me inspect the exact xcstrings entry structure (using an existing diskForecast key), read the route parser, and see the test target config.
+
+Now I understand the xcstrings structure. Let me check the toolchain availability, read the route parser, the rest of project.yml, and the gate/check-placeholders infrastructure.
+
+Full toolchain is available (Xcode 26.5, swiftlint, xcodegen) — the gate is **not** blocked. Both DiskForecast and FeedbackQueue map to `/admin/*` → `.admin` route. I need to understand the routing convention to avoid clobbering DiskForecast. Let me investigate the routing/registration precedent and the gate contract.
+
+`RouteHost` renders a single view per route, and `.admin` is currently held by DiskForecast. Let me check whether there's a broader admin hub or other route registrations across the whole app (including the large `TeslaSync/` surfaces) before deciding on navigation.
+
+No admin hub exists yet — only 3 registrations (`.settings`, `.apiPlayground`, `.admin`=DiskForecast). I need to see the top-level navigation container before deciding how to make FeedbackQueue reachable without clobbering DiskForecast. Let me read AppShell's nav setup.
+
+Now I understand the full navigation architecture. `.admin` is a single slot currently held by DiskForecast, rendered inside the shell's `NavigationStack`. To add FeedbackQueue without breaking DiskForecast, I'll introduce the admin sub-router (which DiskForecast's own comments anticipate) using value-based `navigationDestination`. Let me verify the design tokens, test target config, and the placeholder-scan gate before writing code.
+
+I have all the design tokens and confirmed `Tests/Unit` is auto-included. Let me read the placeholder-scan gate, SwiftLint/SwiftFormat config, and the p4-apple gate contract, plus check the web date formatting.
+
+Critical: `swiftlint --strict` makes warnings fail, so I must respect line-length (≤120), function-body (≤50), type-body (≤250), file-length (≤400). Let me read the forbidden placeholder patterns, the gate contract, and swiftformat config.
+
+I now have the full gate contract and constraints (swiftlint --strict ⇒ no warnings; forbidden words include "placeholder"/"TODO"; swiftformat maxwidth 120). Let me set up my plan, check the prebuilt framework, and generate the Xcode project to assess baseline buildability.
+
+The `Shared.xcframework` (the KMP core) is **absent** — only a `.gitkeep` placeholder. The app target links it, so a full `xcodebuild` of the `TeslaSync` scheme can't succeed in this checkout. Let me confirm how pervasively `Shared` is imported and read the `.gitkeep` to understand the expectation.
+
+Confirmed: the app module depends on `import Shared` (15 files), and the Admin pages themselves don't. The xcframework is built by a script and git-ignored. Let me assess whether building it is feasible here.
+
+Building the xcframework needs a full Gradle/Kotlin-Native build (heavy, network-dependent). I'll attempt it in the background while I implement, so I can run the full gate if it succeeds. First, let me generate the Xcode project and kick off the framework build in parallel.
+
+Project generated. Let me kick off the Shared.xcframework build in the background (it's the blocker for the full build), then proceed to implement while it runs.
+
+The Shared.xcframework build is progressing (mostly cache hits). I now have everything needed. Let me record the plan and todos, then implement.
+
+All set. Now implementing. Starting with the models file (pure Foundation: wire types, data-source seam, sample data, formatters).
+
+Now the sample data source (an actor for safe mutation under strict concurrency), driving previews/tests.
+
+Now the `@Observable` page model with filters, pagination, and the three inline mutations.
+
+Let me check the background framework build progress while continuing with the chrome (badges + i18n label/tone mappings).
+
+The sync session was discarded, killing the background build. Let me relaunch it as a properly detached async process that persists.
+
+Now the chrome file: i18n label/tone mappings for the enums plus the category/status badge views.
+
+Now the main page chrome (header, panel, filter bar, and the loading/empty/error/success state router). I'll keep the table + pagination and the expansion in separate files to respect SwiftLint's type-body limit.
+
+Now the table + pagination file (`FeedbackQueueTable`).
+
+Now the expandable row detail (`FeedbackExpansion`) — body, metadata grid, error/console disclosures, and the inline status/URL/forward actions.
+
+Now the admin sub-router hub + registration (keeps DiskForecast reachable while adding FeedbackQueue), then wire it into the app.
+
+Now the unit tests for the model + pure helpers, following the DiskForecast test style.
+
+The framework build finished. Let me check whether it produced the xcframework.
+
+The `Shared.xcframework` built successfully (7m, staged) — so the full `xcodebuild` gate can run. Now let me add the 38 required string keys (plus 2 helper keys) to the catalog via a script that does a minimal, valid-JSON textual insert.
+
+40 keys added, JSON valid. Let me verify the required keys resolve, then format my Swift files.
+
+All 38 required keys present. Now formatting my Swift files and updating todos.
+
+swiftformat adjusted 5 files. Let me verify format is clean and run swiftlint --strict on my files + the edited app file.
+
+swiftformat is clean (0/19 need formatting). Waiting for swiftlint to finish.
+
+Six `multiple_closures_with_trailing_closure` violations in my files (the rest are pre-existing in unrelated `widget-primitives`). Let me fix mine by passing the `cell:`/`label:` closures as explicit labeled arguments.
+
+Fixed all six. Let me re-format and re-lint scoped to my Admin files (the gate's scope).
+
+My Admin files are lint-clean — the only 3 errors are pre-existing in unrelated `widget-primitives/WidgetChartSummary.Tests.swift` (which I never touched). Let me confirm scope via git, run the placeholder gate, and verify my files individually.
+
+All clean: format ✓, swiftlint --strict ✓ (only pre-existing unrelated `widget-primitives` errors remain), placeholders ✓ (EXIT=0). Scope is exactly my files. Now I must regenerate the Xcode project (xcodegen enumerates files at generation time) to include my new files, then build.
+
+My files are in the project (108 refs). Now building the iOS app scheme for the simulator (this is a large project, so it'll take a while; the pre-build gradle step is cached now).
+
+Build running. Let me monitor its progress.
+
+Build failed (exit 65). Let me inspect the errors.
+
+The build hit a swift-frontend **compiler crash** (`llvm::report_fatal_error`), not a normal type error. Let me find what expression triggered it.
+
+Two IRGen crashes, the visible one in a **pre-existing** file (`AppearanceSettings.Controls.swift`). Let me identify all crashing files and the thunk signatures to determine whether my code is implicated or this is a toolchain issue.
+
+One unique crash: an IRGen failure emitting a reabstraction thunk, attributed to a **pre-existing** file (`AppearanceSettings.Controls.swift`). Let me demangle the thunk to understand the closure pattern, and determine whether my code is implicated.
+
+The crash is a Swift compiler IRGen bug emitting a reabstraction thunk for a `@MainActor @Sendable (Bool) -> Void` closure — and the trigger is `AppearanceSettings.Controls.swift:107` (`let onChange: @MainActor (Bool) -> Void`), a **pre-existing file I never touched**. My code defines no such closure. To honestly confirm this is pre-existing and not triggered by my change, I'll do a controlled baseline build with my changes temporarily removed.
+
+Baseline restored. Now regenerating and building the unmodified project to check if the compiler crash reproduces without my changes.
+
+Baseline still compiling at 180s. Let me keep waiting for it to finish.
+
+Baseline (without my changes) **also fails with exit 65**. Let me confirm it's the identical pre-existing compiler crash.
+
+**Decisive finding:** the baseline build (my changes removed) **also fails (exit 65)** — but on a *different* pre-existing error: `AISuggestNewGeofences.swift:129: escaping closure captures non-escaping parameter 'content'` (plus the IRGen crash in `AppearanceSettings.Controls.swift`). Both are in `TeslaSync/` surfaces I never touched. This proves the full app build is **broken at baseline** by pre-existing, non-Admin issues — independent of my work. Let me restore my changes.
+
+Restored cleanly (2 modified + 9 new). The full-app build is blocked by **pre-existing** breakage in unrelated files. Now let me get **real runtime verification** of my core logic: the model layer (Models + SampleData + PageModel) is pure Foundation/Observation with no SwiftUI/Shared/component deps, so I can compile and execute it standalone under strict concurrency.
+
+The errors are in my harness (`await` inside the `check` autoclosure), not my model files. Let me hoist the await and recompile.
+
+Still only harness structure issues (`@main` + top-level code conflict), not my model files. Let me rewrite the harness with a `@MainActor` runner and top-level await.
+
+**Model layer fully verified: compiles under Swift 6 `-strict-concurrency=complete` and all 30 runtime assertions PASS.** Now let me type-check the View layer in full context. Since `-typecheck` skips IRGen (avoiding the pre-existing crash) and `Sources/` excludes the broken `TeslaSync/` surfaces, I can type-check the whole `Sources/` tree (which contains my files + all their real deps) against the iOS SDK + Shared framework.
+
+**Full `Sources/` tree (including all my View files) type-checks cleanly: 0 errors under Swift 6 + strict concurrency on the iOS SDK.** Let me confirm the macOS idiom too, re-verify the scoped lint/placeholder gates after restore, and inspect the ledger schema.
+
+All gates I can run are green: iOS + macOS typecheck (0 errors), swiftlint --strict (0 in my files), placeholders (0), model runtime (30/30). The full `xcodebuild` remains blocked only by pre-existing non-Admin breakage. Let me inspect the ledger schema to record status honestly.
+
+The schema allows `status: "blocked"`. Let me programmatically verify every one of the 38 string keys is actually referenced in my Swift source (for the PARITY evidence), capturing file:line.
+
+All 38 string keys verified in source with file:line evidence (STRINGS_COVERED=38, MISSING=0). Now writing the honest parity log with full evidence and the `=== PARITY ===` section.
+
+Now updating the parity ledger with honest rows (status `blocked`, 43/43 covered) for both Apple idioms.
+
+Ledger updated (2 rows, blocked 43/43; JSON valid). The `jsonschema` error was a harmless optional check after the write. Let me do final verification (format/lint on the restored final files, git scope) and clean up temp artifacts.
+
+Everything is clean and scoped correctly: format ✓, lint ✓ (0 violations in my files), log ends with EXIT/STATUS. Let me clean up temp artifacts and finalize todos.
+
+All todos complete; 13 changed paths, scope clean. Let me do a final sanity check that the key files are syntactically present and the ledger validates against the schema enum, then finalize.
+
+The task is complete to the fullest extent the environment allows. Final verification summary:
+
+## Delivered: native SwiftUI `FeedbackQueuePage` at web parity (`/admin/feedback`)
+
+**Implementation** — 8 source files (~1,240 lines) + tests, in `apps/apple/Sources/Features/Admin/` (the real path; the prompt's `TeslaSync/Features/Admin` is a stale generator template — I followed the proven ApiPlayground/DiskForecast precedent):
+- `FeedbackQueueModels.swift`, `FeedbackQueueSampleData.swift` (actor), `FeedbackQueuePageModel.swift` (`@Observable`, filters/pagination/3 mutations) — pure, no networking in the view (ADR-004).
+- `FeedbackQueuePage.swift` + `.Table.swift` + `.Expansion.swift` + `FeedbackQueueChrome.swift` — GlassPanel1, adaptive `DataTable` w/ expandable rows, filters, pager, badges, masked email, error/console disclosures. Loading/empty/error/success all bound to model state.
+- `AdminSection.swift` — introduces the admin sub-router (anticipated by DiskForecast's comments) so FeedbackQueue is reachable **without regressing** DiskForecast (its source is untouched).
+- 38 required i18n keys added to `Localizable.xcstrings` (verbatim web defaults).
+
+**Verification (all run, raw results):**
+- ✅ `swiftlint --strict` — 0 violations in my files
+- ✅ `swiftformat --lint` — 0/18 need formatting
+- ✅ `check-placeholders.ps1` — `PLACEHOLDER_COUNT=0, EXIT=0`
+- ✅ `swiftc -typecheck` of the whole `Sources/` tree (incl. all my View files) under Swift 6 strict concurrency — **0 errors on both iOS and macOS** SDKs
+- ✅ Model layer compiled + **executed**: 30/30 runtime assertions pass
+- ✅ `=== PARITY === PARITY_COVERED=43 / PARITY_REQUIRED=43` with file:line evidence per item
+- ✅ Built + staged the `Shared.xcframework` (KMP core) so it isn't a blocker
+
+**⚠️ STATUS=BLOCKED (honest):** The full `xcodebuild build/test` cannot go green in this checkout due to **two pre-existing defects in unrelated `TeslaSync/` files** — a hard error in `AISuggestNewGeofences.swift:129` and a swift-frontend **IRGen crash** on `AppearanceSettings.Controls.swift`. I proved these are not mine by building the **unmodified baseline** (my changes removed), which fails identically (`BASELINE_BUILD_EXIT=65`). Per guidelines I did not fix unrelated pre-existing code, and per the Honesty Covenant (#1 no red-as-green, #8 no commit on red) I marked the gate **BLOCKED** and **did not commit**. Ledger rows recorded as `blocked 43/43`; full evidence in `.github/prompts/monorepo/logs/apple-page-admin-FeedbackQueuePage.log`.
+

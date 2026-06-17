@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure to understand what exists and what's required for this task.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Web source exists. Let me explore the Apple app structure and read the web source.
+
+This is a pure presentational component (no data hooks). I understand its structure: 6 sections (budget, bands, details, topLists, banner, footer) + empty state, with 3 intents (normal/warn/danger). Now let me understand the Apple app architecture — project setup, tokens, i18n, telemetry, and existing patterns.
+
+The `shared-surfaces` directory exists and is wired into both iOS and macOS targets. Let me examine existing shared-surface examples to follow established patterns, plus check the build tooling (XcodeGen, the Shared.xcframework script).
+
+890 files with rich patterns. Naming convention is `{Surface}.{Aspect}.swift`. Let me examine the build script, the i18n/telemetry/token infrastructure, and check for any existing UsageCard references.
+
+Key finding: the two web consumers (`TeslaApiUsageCard`, `AiUsageCard`) already exist in `feature-views/`, but the shared `UsageCard` primitive does NOT exist in `shared-surfaces/` yet — that's my task. My scope is strictly `shared-surfaces/UsageCard.*`. Let me study the closest analogs and the shared infrastructure (i18n facade, telemetry, tokens).
+
+Now I understand the architecture clearly. `AiUsageCard` even notes that the shared `UsageCard` native primitive is "not yet present" — that's exactly my task. Let me study the i18n facade, telemetry emission, tokens, and accessibility helper patterns.
+
+Now let me find the underlying i18n facade (P1/S10), the telemetry contract (P1/S11), and the shared component helpers (`TSFadeIn`, `TSButton`, accessibility helper). Let me look at where `AiUsageStrings` is defined and trace the facade.
+
+I now understand the facade pattern (`NSLocalizedString` with per-surface table) and telemetry seam (`view.opened` via protocol + OSLog default). Let me read the full facade/telemetry definitions, the shared components, the accessibility helper, and the existing test approach.
+
+Let me read the shared components, the `.strings` format, and the existing preview/test structure to follow conventions precisely.
+
+Let me examine the test harness (XCTest vs Swift Testing) and how view/state tests are structured, so my tests match the established approach.
+
+I have the full pattern. Let me check lint/format configs (the gate runs `--strict`), the placeholder checker, test libraries available, and whether `pwsh` exists for the gate.
+
+`pwsh` is available. Let me check the forbidden placeholder patterns and confirm how existing tests handle view rendering (no snapshot lib, so I'll follow their logic+a11y approach).
+
+I now have everything needed. The web `UsageCard` is a pure presentational primitive (props in, no data hooks) — the native `AiUsageCard`/`TeslaApiUsageCard` consumers already exist and even note this shared primitive is "not yet present." Let me record a brief plan and create the files following the established `{Surface}.{Aspect}.swift` convention, P1/S9 tokens, P1/S10 facade, and P1/S11 telemetry seam.
+
+Now let me create the Model file (value types + i18n facade + telemetry seam):
+
+Now the Projection file — the pure, testable logic (empty detection, budget clamp, intent palette, accessibility labels):
+
+Now the main `UsageCard.swift` view (composition + empty state + telemetry):
+
+Now the Views file — the six private section subviews plus the empty state:
+
+I referenced `FlowLayout` for footer wrapping — let me verify it exists in the codebase, otherwise I'll define a scoped one.
+
+No shared `FlowLayout` exists — each surface defines its own prefixed `Layout` (e.g. `ChartLegendFlowLayout`). I must define `UsageCardFlowLayout`. Let me read the established implementation to mirror it correctly.
+
+I'll define a surface-scoped `UsageCardFlowLayout` (matching the established `ChartLegendFlowLayout` pattern) and use it in the footer:
+
+Now append the `UsageCardFlowLayout` definition to the Views file:
+
+Now the `.strings` i18n table (the only owned literal is the empty message):
+
+Now the DEBUG previews covering each section and state:
+
+I'll refactor the one-shot telemetry emit into a testable value type so it has real unit coverage. Let me add it to the Model and wire it into the view.
+
+Now the two test files — first the pure-logic ("adapter"-equivalent) projection tests:
+
+Now the view/state + telemetry + model-default tests:
+
+Accessing `.body` in tests would read `@State` outside SwiftUI's install context (a known runtime warning, and not a repo convention). Cleaner: expose the view's own `hasContent` branch decision as internal so tests assert it directly. Let me adjust.
+
+All files created. Now let me run the fast gates (swiftformat, swiftlint, placeholder checker) on my files and fix any issues before attempting the full build.
+
+Let me view the exact lines flagged in the test file so I can fix the force-unwraps and trailing commas precisely, rather than blindly auto-formatting (which might convert force-unwraps without adding `throws`).
+
+swiftformat's `noForceUnwrapInTests` only flags force-unwraps inside test-method bodies (the sample enum's wasn't flagged). I'll move the URL into the sample enum and reference it, then auto-format the mechanical issues (trailing commas, wrap, redundant `@ViewBuilder`).
+
+Now auto-format my files to fix the mechanical issues (trailing commas, line wrap, redundant `@ViewBuilder`), then re-verify:
+
+swiftformat is clean (0/7 require formatting). Now swiftlint `--strict` on my files:
+
+Three swiftlint issues: (1) `hasContent` has 6 params (max 5) → I'll model sections as an idiomatic `OptionSet`; (2) a large tuple in tests → rewrite; (3) Views file >400 lines → extract the FlowLayout to its own `UsageCard.*` file. Let me fix all three.
+
+Now rewrite the projection's `hasContent` tests for the OptionSet API:
+
+swiftformat reformatted it. Let me view the current state and rewrite precisely:
+
+Now extract `UsageCardFlowLayout` from Views.swift into its own file. Let me view its current form:
+
+I'll move the FlowLayout into its own file and remove it from Views.swift:
+
+Now re-run swiftformat and swiftlint on all UsageCard files to confirm clean:
+
+swiftlint is clean (0 violations). Let me confirm swiftformat lint is fully clean and run the placeholder checker:
+
+All three fast gates pass: **swiftformat 0/8**, **swiftlint 0 violations**, **placeholder count 0**. Now the build/test gate. This requires generating the Xcode project and — via the scheme's pre-action — building the KMP `Shared.xcframework` with Gradle/Kotlin-Native. Let me assess viability: generate the project and inspect the shared-core build.
+
+Project generated. My UsageCard source files depend only on SwiftUI/Foundation/OSLog + the generated `Tokens.swift` — not on the KMP `Shared` framework. I can type-check them directly against the real SDKs (fast, high-value) while separately assessing the full build. Let me type-check for both iOS and macOS:
+
+A real strict-concurrency error: `UsageCardFooterLink` holds a closure (`.route(() -> Void)`), making it non-`Sendable`, which breaks `static let` sample data. Better design: model the internal route as the web `to` **string** (fully faithful — web `UsageCardFooterLink.to` is a string) and delegate navigation via a handler on the card. This makes all value types `Sendable`/`Equatable`. Let me refactor.
+
+Now let me refactor the footer types in Model.swift to be `Sendable`/`Equatable` (route as string):
+
+Now thread an `onFooterRoute` handler through `UsageCard`:
+
+Now update the footer views to take the route handler and render the route as a Button:
+
+Now update the previews and tests to use `.route("path")` strings:
+
+Now re-format, re-lint, and type-check both platforms to confirm the refactor is clean:
+
+Clean. Now type-check the source files against both iOS and macOS SDKs:
+
+Both platforms type-check clean with Swift 6 + strict concurrency. Now let me verify the **test files** compile against the real API. They use `@testable import TeslaSync`, so I'll merge copies into one module (stripping that import) and type-check against XCTest — a faithful check without mutating the repo:
+
+The only errors are `XCTAssert*` macros being unavailable to standalone `swiftc` (a known type-check limitation — those are C function-like macros needing the Clang importer). Crucially, **all my own symbols resolved**. Let me confirm there are zero non-XCTAssert errors:
+
+Confirmed: the **only** unresolved symbols are XCTest macros (46 total: `XCTAssertEqual`/`XCTAssertTrue`/`XCTAssertFalse`) — a standalone-`swiftc` artifact (they need the Clang importer that `xcodebuild` provides). **Zero** errors reference my own API. Source + test code is verified correct on both platforms.
+
+Now let me attempt the real build gate. First, assess the KMP `Shared.xcframework` pre-action viability (network + Gradle/Kotlin-Native):
+
+Excellent — the toolchain is cached: **Gradle 8.14.5** and **Kotlin/Native prebuilt 2.4.0** are present, and network is up. The KMP framework build is viable. Let me build the `Shared.xcframework` (the scheme's pre-action):
+
+The Gradle/Kotlin-Native build is compiling (expected to take several minutes for multi-target native linking). Let me continue waiting:
+
+The `Shared.xcframework` built successfully (8m40s) and is staged. Now I can run the full build/test gate. Let me verify the target simulator exists, then run the iOS build+test:
+
+iPhone 16 simulator is available and booted; framework staged. Let me set up the gate log and run the iOS build+test (heavy — 890+ files). I'll tee to the prompt's log path:
+
+Now run the iOS build+test (output streamed to the log to keep things clean; I'll print only the exit code):
+
+iOS gate returned 65 (failure). Let me inspect the log for the cause — checking whether it's my code or pre-existing:
+
+The build failed on a **single pre-existing error in a sibling file I didn't touch** (`AISuggestNewGeofences.swift:129` — "escaping closure captures non-escaping parameter") — zero errors in any `UsageCard` file. Since shared-surfaces compile into one target, this sibling breaks the whole build. Let me confirm my changes are isolated and the error is independent:
+
+Confirmed: my changes are isolated to `UsageCard.*` (10 files) + log; the failure is a **pre-existing, independent** Swift-6 escaping-closure error in sibling `AISuggestNewGeofences.swift` (a different surface, outside my allowed scope). It breaks the shared target build for everyone.
+
+To get genuine **test-execution** evidence for my surface despite the broken sibling, I'll build an isolated SwiftPM package (`TeslaSync` module = tokens + my source files; test target = my tests) and run `swift test`:
+
+**All 28 UsageCard tests pass** (0 failures) in isolation on macOS 15 / Swift 6. My surface is fully verified. The full `xcodebuild` gate is blocked solely by the pre-existing sibling error. To honor "no skip-and-assume," let me record a real macOS exit code (same shared target/file → same compile error) and confirm build artifacts are git-ignored:
+
+Both build artifacts are git-ignored — my commit will be clean. Now run the macOS gate to record its real exit (same shared target → same sibling compile error):
+
+Now the picture is complete. **macOS has an additional environment/platform-capability blocker**: code signing requires a development certificate (`DEVELOPMENT_TEAM` is empty, no signing identity available) — it fails before even reaching the same sibling compile error. Neither blocker is in my code or scope.
+
+Let me build a comprehensive, evidence-backed gate log by re-running the surface-scoped checks teed into it:
+
+Now re-run the isolated test suite and append its results to the log:
+
+28/28 tests pass. Now append the full-gate results, blocker analysis, and the final status line:
+
+The gate log is complete and ends with `EXIT=65` / `STATUS=BLOCKED` (honoring covenant rule #10). 
+
+Now, a critical decision on committing: covenant rule **#8 "No commit on red"** is binding, and the full `xcodebuild` gate is red (EXIT=65) — due entirely to (1) a pre-existing out-of-scope sibling compile error and (2) macOS dev-signing unavailability, neither in my code/scope. Per rule #8, I must **not** commit on a red gate. Let me do a final verification of the deliverable files and working-tree state:
+
+All deliverables are in place (9 `UsageCard.*` files, 1442 lines source+tests) and the log terminates with `EXIT=65` / `STATUS=BLOCKED`. Per binding covenant rule **#8 "No commit on red"**, I am not committing while the whole-target gate is red from external causes.
+
+Let me clean up the session plan artifact:
+
+The working tree contains only my deliverables (`UsageCard.*` + the log) plus git-ignored build artifacts — no out-of-scope changes. The task is at its honest terminal state.
+

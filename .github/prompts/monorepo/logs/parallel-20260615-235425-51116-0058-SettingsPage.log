@@ -1,0 +1,172 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source page, existing Apple app structure, and relevant files.
+
+Now let me explore the Apple app structure, the parity manifest, and related instruction files.
+
+Let me examine the existing Apple app structure in detail — looking at the Features directory, an example existing page, and the project setup.
+
+Tooling (xcodebuild, swiftlint, swift) is available. But the expected `TeslaSync.xcodeproj` and `Features/` directory don't exist at the documented paths. Let me investigate the actual project structure.
+
+The project uses XcodeGen (`project.yml`), not a checked-in `.xcodeproj`. Let me read the project config and understand both source structures.
+
+Now I understand — XcodeGen generates the project, and surfaces live in `TeslaSync/feature-views`, `shared-surfaces`, etc. The prompt's `Features/Settings` path isn't in `project.yml` sources. Let me find how existing pages are structured and check the parity manifest/ledger.
+
+Let me examine the parity manifest, the ledger, and a representative existing Page surface to learn the file conventions.
+
+Let me find where an already-completed page (e.g. AuditLogPage) actually lives on disk to learn the real layout and file conventions.
+
+The real convention is `apps/apple/Sources/Features/<Domain>/`. Let me reconcile the prompt's stated path against where completed pages actually live by reading a completed page's prompt and its log.
+
+There's a prior SettingsPage attempt log. Let me read it plus a completed page's prompt metadata to nail down the correct output path.
+
+The established convention is `apps/apple/Sources/Features/<Domain>/` (compiled via project.yml), even though prompts template the path as `TeslaSync/Features/`. The prior attempt was in a different slot and didn't merge here. Let me study a representative simple page, its model, the component library, and navigation.
+
+Let me study the Exports page end-to-end (page, model, route registration) plus the UI card components, since it's the closest simple template.
+
+Excellent template. Now let me read the Exports model, the AppRoute system, how registrations aggregate, and the web `useSettings` hook.
+
+A `.settings` route already exists. Let me read the routing system, how registrations compose in AppShell, and the web `useSettings` hook data shape.
+
+Now let me read the routing/shell infrastructure and locate the shared components I'll need (GlassPanel, IconBox, Button, EmptyState, edit-conflict banner).
+
+There's already a `SettingsRouteRegistration` referenced in `TeslaSyncApp.swift`. Let me find it and check what currently handles the `.settings` route.
+
+The `.settings` route is currently owned by `SettingsScene.swift` in Platform/Settings. Let me read it to understand what it renders and how to reconcile with the web-parity SettingsPage.
+
+The `.settings` route renders `AppSettingsView` (the native settings sections — likely General/Appearance/Advanced/Reset). Let me read it and its model to understand how my 3 parity cards integrate.
+
+A `.settings` route already renders the native `AppSettingsView` (platform settings sections). I need to understand how the web sections map to parity units before deciding composition. Let me check the manifest for settings components and read the settings model.
+
+Confirmed: there are no separate `component:settings/*` units — the web sections aren't tracked Apple units. The native `AppSettingsView` already provides settings sections and owns `.settings`. Faithful parity = compose chrome + sections + 3 cards. Let me inventory the components, tokens, app-event names, the string catalog, and gate tooling.
+
+Good — pwsh and the placeholder script exist. Let me read the key component files (Cards, Buttons, Typography), the platform notification names, and find a banner component.
+
+Let me find the IconBox component, the edit-conflict banner pattern, button/typography APIs, and the string catalog location.
+
+`TSEditConflictBanner` and `TSIconBox` already exist. Let me read the banner, badge, button, typography, and feedback component APIs.
+
+I need the edit-conflict banner to surface `editConflict.resource.settings`. Let me read `TSAlertBanner`, the button/typography/feedback APIs, and the web EditConflictBanner + useEditLease contract.
+
+Now let me read the Button, Typography, Feedback (EmptyState/Error/Skeleton), and Motion component APIs to know exact signatures.
+
+Let me read the Feedback components, Motion, the placeholder script, an existing page-model test, and the string catalog structure.
+
+Let me check the placeholder patterns, the string-key convention used by a completed page (AuditLog) vs its manifest, plus TSTone/tokens and a test pattern.
+
+Let me check which of the 12 string keys already exist in the catalog, and read TSTone/tokens plus an existing page-model test.
+
+Now let me verify the `settings.title` value, check the SharedFacade for a settings domain, read TSTone/tokens, and an existing page-model test to mirror.
+
+`settings.title`="Settings" (reuse confirmed). TSTone has `.success`/`.accent` for the green/cyan icons. Let me read an existing page-model test and the SharedFacade settings model to finalize my model/test design.
+
+I have enough understanding of components. Let me confirm the app wiring (settingsModel flow, macOS Settings scene, end of registry chain) before finalizing my composition approach.
+
+I have a clear picture. Let me do final checks: the `/data-export` route mapping, toast/overlay components, and how pages handle macOS/iOS adaptivity.
+
+Let me check the Apple tour/onboarding-checklist systems so the Tour and Checklist cards hook into real mechanisms (not stubs).
+
+Let me check the persisted keys the dashboard checklist widget and tour overlay use, so my reset intents target real state.
+
+I now have a complete design. Let me check the lint config and whether a baseline build is feasible (Shared.xcframework presence), then set up my plan.
+
+Critical: `Shared.xcframework` is absent (only `.gitkeep`) and requires the Kotlin/Native + Gradle toolchain to build. Let me assess whether a full build is feasible or must be deferred (the sanctioned P4 disposition).
+
+Java 17 + gradlew exist, so a full build *might* be feasible but is the long pole (Kotlin/Native toolchain download + compile). Let me kick off the `Shared.xcframework` build in the background now and generate the Xcode project while I implement.
+
+Project generated; the xcframework build is running in the background (using Gradle cache — promising). Let me set up my plan and todos, then implement.
+
+Let me confirm the `AppSettings` wire shape (to model a faithful `SettingsSnapshot`) and the design-token/theme helpers before writing files.
+
+Toolchain and APIs confirmed. Now implementing. Starting with the models/seams and the page model.
+
+Reuse keys confirmed (`action.retry`, `loading`). Now writing the models/seams file.
+
+The model layer is done. Now the minimal, non-breaking refactor to `AppSettingsView` so its sections compose into my page without a nested scroll.
+
+Now the 3 action cards (web GlassPanel1/2/3) as a focused sub-view file.
+
+Now the main page view, composing header, banners, source states, native sections, and cards.
+
+Now the route registration and wiring it into the app shell.
+
+The wiring is in place. Now let me add the string keys to the catalog. Let me view the exact opening of the xcstrings file to insert cleanly.
+
+Now inserting all 18 string keys (11 parity + 7 supporting native-UI strings) into the catalog.
+
+Let me validate the JSON catalog parses and my keys are present.
+
+Now the tests. Let me first check the background xcframework build progress.
+
+The xcframework build is nearly done (release variant linking). Let me write the tests while it finishes.
+
+Let me update progress and run the first verifications (swiftlint + placeholder scan) while checking the xcframework build.
+
+Let me run swiftlint (strict) and the placeholder scan on my new/modified files.
+
+Placeholder scan: 0 violations. Let me wait for swiftlint to finish.
+
+SwiftLint scanned the whole project (4 violations total). Let me capture full output and check whether any violations are in my files.
+
+All swiftlint violations are pre-existing (in `AnomalyInlineRow.Previews.swift`), none in my scope. Let me run swiftlint scoped to just the Settings dir to mirror the gate command precisely.
+
+SwiftLint's config `included:` forces a full-project scan. Let me scope to exact files via a temp config (rules only, no `included`) to get a clean gate result for my files.
+
+All 8 of my files pass SwiftLint `--strict` with **0 violations**. Let me check the xcframework build and attempt the real build.
+
+My files are clean. Let me verify a couple of component signatures I used (TSSpinner) while the release xcframework finishes linking.
+
+TSSpinner signature confirmed. Let me wait for the release xcframework to finish linking, then run the build.
+
+Gradle is still linking the release frameworks (the long pole). Let me wait for it to finish and copy the xcframework.
+
+Down to the last link target (`linkReleaseFrameworkMacosArm64`). Let me wait for assembly + copy to complete.
+
+The `Shared.xcframework` is staged. Now let me attempt a real compile. I'll build the macOS target (fastest full in-module compile, skips scheme's Gradle pre-action) to verify my code against the real module + xcframework.
+
+The macOS build is compiling the main TeslaSync module (Swift 6) which includes my files. Let me wait and monitor for errors.
+
+No errors so far and the build is still compiling. Let me continue waiting for completion.
+
+Zero compile errors so far. Let me check the build's current state and tail.
+
+The arm64 module emitted with **0 errors** (strong signal my code compiles in-module). It's now finishing x86_64. Let me wait for the final build result.
+
+Build is healthy — arm64 module already emitted, x86_64 compiling, **0 errors**. (Note: there's an existing `TourLauncher.swift` surface my decoupled signal complements.) Let me wait for the final result.
+
+The universal build is slow (both arches) but **0 errors** and the arm64 module already emitted successfully. Let me check how close it is to linking.
+
+Conclusive: **both x86_64 and arm64 emitted the TeslaSync module with 0 errors** — the whole app module (my files + refactor + wiring) type-checks under Swift 6 strict concurrency. It's now in final codegen/link. Let me prepare the ledger while it finishes. Let me view the ledger structure.
+
+The macOS build's module emission succeeded for both arches (0 errors). Let me add the 2 ledger rows while the final codegen/link completes.
+
+Build finished with 1 error (appeared late in codegen/link). Let me identify it — is it mine or pre-existing?
+
+Found it: the `.xcodeproj` was generated **before** I created my Settings files (XcodeGen snapshots the file list), so my new files weren't compiled — hence `cannot find 'SettingsPageRouteRegistration' in scope`. I must regenerate the project. Let me do that and confirm my files are now included.
+
+My files are now in the project. Let me rebuild (macOS, arm64-only for speed) and watch for errors.
+
+Zero errors so far. Let me check if the build completed.
+
+The TeslaSync module emitted successfully for arm64 **including my Settings files**, with 0 errors. Now in final codegen/link. Let me wait for `BUILD SUCCEEDED`.
+
+Two real Swift 6 errors in my code: the default restart structs conform to `Sendable` but store non-Sendable `UserDefaults`. Since `UserDefaults` is thread-safe and the structs are immutable, the idiomatic fix is `@unchecked Sendable`. Let me apply it.
+
+Let me re-lint the changed file and restart the build, watching specifically for the module-emission (type-check) result.
+
+Lint clean. Build restarted (incremental, should be faster). Let me wait for the module type-check result.
+
+Zero errors. Let me check the module-emission status and whether it's linking.
+
+The TeslaSync module emitted cleanly (0 errors) with my fixed files — the authoritative Swift 6 type-check passes. It's now in final codegen/link. Let me wait for `BUILD SUCCEEDED`.
+
+Another incremental error: `cardRow`'s `trailing` closure is captured by `TSGlassPanel`'s `@escaping` content. Fix: mark `trailing` `@escaping`. Let me also scan for any similar pattern.
+
+Let me proactively fix a related Swift 6 issue I spotted in the tests (`addTeardownBlock` capturing non-Sendable `UserDefaults`) and scan for any other closure-capture patterns.
+
+Good — the remaining patterns are stored properties (implicitly escaping, fine). The test-target fix is preemptive (separate target). Let me rebuild the app target (incremental, should be faster) and watch for the type-check result.
+
+Module emitted with **0 errors** after the cardRow fix. Let me wait for the final `BUILD SUCCEEDED`.
+
+
+Execution failed: CAPIError: 400 {"error":{"message":"The requested model is not supported.","code":"model_not_supported","param":"model","type":"invalid_request_error"}} (Request ID: E8D3:194B48:1E6BC7:217F15:6A3214BB)
+
+Execution failed: CAPIError: 400 {"error":{"message":"The requested model is not supported.","code":"model_not_supported","param":"model","type":"invalid_request_error"}} (Request ID: E8F2:3F4FA0:1128D05:13018C0:6A32154F)

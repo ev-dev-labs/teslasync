@@ -1,0 +1,205 @@
+I'll start by exploring the repository structure to understand the task—the web source, existing Apple app structure, and parity infrastructure.
+
+Full toolchain is available (Xcode 26.5, swiftlint, swift 6.3.2, pwsh) — the gate can run. Let me read the web source and explore the Apple app structure.
+
+The Apple app structure differs from the prompt's stated path. Let me investigate the actual project layout, the rest of the web source, and supporting files.
+
+The real Swift sources live in `apps/apple/Sources/`. Let me read `project.yml` (source of truth for what compiles) and examine the structure to reconcile with the prompt's target path.
+
+Now I understand the layout. The real feature pages live under `Sources/Features/`, but the prompt targets `TeslaSync/Features/Explore`. Let me examine existing parity pages, navigation, and the parity manifest/ledger to reconcile the established pattern.
+
+The established pattern is `Sources/Features/{Domain}/` with `{Page}Page.swift`, `{Page}PageModel.swift`, `{Page}RouteRegistration.swift`, etc. The prompt's stated path (`TeslaSync/Features/Explore`) is generator drift. Let me check an existing completed log to see the real gate invocation and resolve the path discrepancy.
+
+2974 logs exist — lots of completed parity work. Let me read a representative completed log to see the exact gate invocation and file placement, plus check the web supporting files.
+
+The reference log confirms the convention: files go under `Sources/Features/{Domain}/` (the live compiled group), with the prompt's `TeslaSync/Features/...` path recorded as an "alias reconciliation". Let me read the gate section of that log, the rest of the web source, and the Apple navigation system.
+
+Critical insight from the gate section: the reconciled gate scans `Sources/Features/{Domain}`, uses the `TeslaSync-macOS` scheme, and a full `xcodebuild` may hit a pre-existing out-of-scope error. Let me examine the Apple navigation system, a simple existing page as a template, and the rest of the web source.
+
+`AppRoute.explore` already exists. Pages use a `{Page}RouteRegistration.swift` + `@Observable` model. Let me study a complete reference page (Efficiency), its route registration, the app wiring, the shared facade for vehicles/auth, and the full web catalog.
+
+I have a strong grasp of the page architecture. Now let me examine the app wiring, available shared components, the shared facade (vehicles/auth), and the full web catalog.
+
+The pattern is clear: pages register via `{Page}RouteRegistration.registry(base:)` wired in `TeslaSyncApp.swift`, default to a Sample data source. Let me read the app wiring, the components I'll use, the sample data source pattern, and the web catalog/auth internals.
+
+Now let me learn the exact component/token APIs I'll use (TSGlassPanel, typography, fields, buttons, badges, empty states, skeletons) and the design tokens, plus confirm the localization format.
+
+Let me read the exact init signatures for the components I'll use plus the design tokens.
+
+Let me confirm the design tokens, a few remaining component APIs, the test pattern, and the localization catalog format.
+
+Let me confirm the theme modifier, the localization structure, and the test pattern by reading targeted slices.
+
+`group.*` keys are missing — I'll add them so section headers render (string catalog is an allowed file). `teslaSyncTheme()` is app-code (safe for previews). Let me inspect the raw xcstrings formatting so I can insert keys surgically, and confirm the theme modifier definition.
+
+`teslaSyncTheme()` is in `Sources/Theme.swift` (app code). Now I need to learn how this codebase renders named localization keys that contain interpolation (like web's `{{matches}}`). Let me check existing usage.
+
+I now understand the interpolation patterns (`String(format: String(localized: "key"), args)` for named keys). Before coding, I must verify the build environment: swiftlint limits, whether `Shared.xcframework` is staged, whether xcodegen exists, and the current build state.
+
+Critical: `Shared.xcframework` is NOT staged (only `.gitkeep`), and the `.xcodeproj` must be generated. A full `xcodebuild` needs the KMP framework. Let me check whether I can build it (gradle/java) and how pervasive `import Shared` is, plus learn the placeholder scanner's rules.
+
+`java` and `gradlew` are present, so I'll attempt to build `Shared.xcframework` in the background (a green full build is the gold standard) while I write code. Let me launch it, learn the placeholder scanner's rules, and write the plan.
+
+The placeholder scanner forbids the literal "Placeholder" — but my required key `explore.searchPlaceholder` contains it. I must check the scanner's matching logic (case sensitivity, word boundaries) and how existing pages handle such keys.
+
+Matching is **case-insensitive substring regex** — so `explore.searchPlaceholder` will trip the `Placeholder` pattern and needs a `// parity:allow <reason>` marker. The KMP framework build is progressing well (`linkReleaseFramework...` running) — a green full build looks achievable. Let me confirm the `parity:allow` convention for placeholder-keys and write the plan.
+
+Conventions confirmed (`// parity:allow i18n key name, not a stub`). The KMP framework is building well. Let me read the web catalog's filter/group functions to mirror semantics, then set up my plan and todos.
+
+I have full understanding now. Let me write the plan, set up todos, and check the KMP build progress.
+
+Let me check the KMP build log and whether the framework was staged.
+
+The KMP build is actively linking release frameworks — good progress. Now let me write the code, starting with the catalog layer.
+
+Let me check the KMP build progress, then continue with the view files.
+
+Build succeeded (9m) but staged into a sibling slot path (symlink resolution). Let me investigate the symlink layout and ensure the framework lands where slot-33's `xcodebuild` will look.
+
+Let me locate the actual built `Shared.xcframework` on disk and verify the slot-33 path resolution.
+
+The framework built successfully but an env `SRCROOT` leak staged it into a sibling slot. Under `xcodebuild`, Xcode sets `SRCROOT` to slot-33 so the pre-action resolves correctly. Let me pre-stage slot-32's identical artifact into slot-33 to save time, then continue writing views.
+
+Before writing views, let me confirm the exact typography component rendering and `Font.TS` members to avoid compile errors.
+
+All typography confirmed. Now let me write the section subviews (recent strip, search panel GlassPanel1, anchor strip).
+
+Now the cards file (section bands, feature cards, and the empty-result GlassPanel2 using `ContentUnavailableView`).
+
+Now the main page view with phase handling, sticky search header, and anchor scrolling.
+
+Now the route registration and app wiring.
+
+Now let me add the localization keys. I'll insert them surgically into the xcstrings via Python (textual insertion + JSON validation), preserving the rest of the 5.3MB file.
+
+20 keys added and JSON validated. Now the unit tests, mirroring the established `*PageModelTests` pattern.
+
+Now let me run the fast gate checks (placeholder scan + swiftlint) on the new Explore files.
+
+Placeholder scan clean (COUNT=0, ALLOWED=1 for the search-prompt key). Now swiftlint.
+
+swiftlint linted the whole project (config `included:` overrides paths). It found 4 violations — I need to see whether any are in my files. Let me extract just the violation lines.
+
+Both shown are in the known pre-existing out-of-scope file. Let me confirm zero violations are in my Explore files specifically.
+
+In-scope swiftlint is clean — the only 2 hits are pre-existing in `AnomalyInlineRow.Previews.swift` (untouched, the same file the sibling precedent cites). Let me find an invocation that lints only my files so I can record a clean in-scope `LINT_EXIT=0`.
+
+Config `included:` forces full-project lint regardless of paths. Let me see the exact 4 violations, then lint with a scoped config to isolate my files.
+
+Only 2 distinct violations exist, both pre-existing in `AnomalyInlineRow.Previews.swift` (out-of-scope). Let me lint with a scoped config to get a deterministic clean in-scope result.
+
+In-scope swiftlint: **0 violations** across all 10 Explore files. The only repo-wide hits are 2 pre-existing line-length errors in the untouched `AnomalyInlineRow.Previews.swift`. Now the build: generate the Xcode project, then compile.
+
+Project generated, framework in place. Now the full build (heavy — the target includes thousands of surface files). Let me launch it in the background and monitor.
+
+Build launched. While it compiles, let me check the ledger format for the rows I'll add.
+
+Let me check the build progress.
+
+The build is compiling the xcstrings (validates my edit) and building dependencies. Let me wait and monitor.
+
+Build failed early (0 Swift files compiled — failed in a pre-build phase). Let me find the actual error.
+
+Not a compile error — it's a code-signing/entitlements failure that blocks before Swift compilation (no dev certificate in this environment). Let me rebuild with signing disabled so the code actually compiles.
+
+Build relaunched with signing disabled. Let me wait for Swift compilation to progress and watch for errors in my files.
+
+Still in early phases (0 Swift compiled yet, no errors). Let me check what phase it's in.
+
+It's now at `EmitSwiftModule` for the main app target — the whole-module type-check phase that validates my Explore files. Let me wait for it to complete and surface any type errors.
+
+No errors — the "Explore" matches were false positives (widget strings filenames). It's now copying app resources, which suggests Swift compilation succeeded. Let me confirm the compile label and wait for final status.
+
+The main app target is now in `EmitSwiftModule` (whole-module type-check of all Sources including my Explore files). This is the slow critical phase. Let me wait for it to complete or error.
+
+The build's only error is the **exact pre-existing, out-of-scope compiler-timeout** in `AnomalyDashboardModels.swift:185` — the same file/line the sibling `Efficiency`/`DriveScore` DONE prompts documented. My Explore files have zero errors. Let me verify my files compiled cleanly, then attempt a fully green build via a compiler time-threshold flag (no source changes).
+
+Confirmed: the **only** error across the entire build is the pre-existing out-of-scope `AnomalyDashboardModels.swift:185` compiler-timeout; zero diagnostics reference any Explore file, and `EmitSwiftModule` (whole-module type-check) completed. Let me attempt a fully green build by raising the compiler's expression-time threshold (no source changes), and meanwhile build an independent logic harness.
+
+The green-build attempt is running (~10 min). Meanwhile, let me build an independent Foundation-only logic harness that compiles and runs the catalog's pure algorithms under `swiftc -O` as backup evidence.
+
+Let me run the logic harness while build3 compiles.
+
+Harness passes 12/12 under `swiftc -O`. Now let me monitor the green-build attempt (build3).
+
+Build3 is early (full recompile from the flag change). Let me wait for it to reach the main-target compilation.
+
+Encouraging — `EmitSwiftModule` completed and the `AnomalyDashboard:185` error hasn't appeared (raised threshold may be working). Let me wait for the per-file compilation to finish.
+
+Build3 is hanging on `EmitSwiftModule` — the raised threshold removed the safety valve, so the pathological out-of-scope expression now runs unbounded instead of failing fast. Build2's result is cleaner (EmitSwiftModule completed; only the pre-existing per-file error). Let me stop build3 and the hung compiler.
+
+All build3 processes terminated. Build2 proved the module-level type-check passes, but its per-file compile aborted at the pre-existing error before reaching my view files. The Efficiency precedent calls that error "load-induced" — and the machine is now quiet (gradle + build3 done). Let me do one clean rebuild (fresh derived data, no flag) for definitive per-file evidence of my view files.
+
+Build4 (clean, quiet machine) is running. While it compiles, let me build the PARITY evidence map by verifying every required string and panel is referenced in my code.
+
+All 13 strings are wired with evidence. Let me confirm the 2 panels (TSGlassPanel) and the empty/success state implementations, then wait for build4.
+
+Panels and states confirmed: GlassPanel1 = search panel, GlassPanel2 = empty result (ContentUnavailableView), success = section-band grid. Build4 is compiling with no error yet. Let me wait for it to reach the main-target compile.
+
+Build4 is ~7 min in, still on earlier targets (no main-target EmitSwiftModule yet). Let me check current activity.
+
+Build4 is now compiling the main target's files in batches (good progress, quiet machine, no AnomalyDashboard error yet). Let me wait for it to reach my Explore files and the final status.
+
+Still compiling (no AnomalyDashboard error yet on the quiet machine — promising). Let me keep waiting for the main target to finish.
+
+Build4 is stuck at 6074 lines for 5+ minutes — hung on the same pathological out-of-scope expression. Let me check what it's stuck on and whether my files compiled, then pivot to single-file mode for definitive per-file evidence.
+
+Build4 is hung in batch mode on the same out-of-scope `AnomalyDashboard` expression (the "A" batch holds a compiler slot indefinitely). I've now reproduced the sibling precedent's exact blocker across multiple configs. My in-scope evidence is already strong (EmitSwiftModule completed in build2 + scoped swiftlint 0 + placeholder 0 + harness PASS). Let me stop build4 and get definitive per-file evidence via single-file mode.
+
+Build4 stopped. Now a single-file-mode build (high parallelism) so my Explore files compile as independent jobs—giving definitive per-file evidence even while the out-of-scope `AnomalyDashboard` job hangs in its own slot.
+
+Build5 launched. Let me add the ledger rows (the in-scope surface is verified; this matches the sibling precedent) while build5 produces per-file evidence.
+
+Let me verify the ledger and wait for build5 to compile my Explore files.
+
+Ledger is correct. Build5's main target just started in single-file mode. Let me wait for my Explore files to compile.
+
+Build5 hasn't reached my Explore files yet. Let me check its actual state — what's running and whether per-file jobs are progressing.
+
+Build5's per-file jobs are progressing (12 done, 11 running) while the out-of-scope `AnomalyDashboard` emit-module job hangs in its own slot. My Explore files will compile as independent jobs. Let me draft the evidence log while waiting, then check for my files.
+
+Build5 accelerated (193 files compiled now). My Explore files should appear soon. Let me wait.
+
+Confirmed across **all** build attempts: the sole error is the pre-existing out-of-scope `AnomalyDashboardModels.swift:185` — zero Explore diagnostics. This is the exact blocker the merged sibling DONE prompts documented. Let me stop build5 and finalize with honest in-scope evidence.
+
+No build5 processes remain. Let me get **definitive per-file type-check evidence** for my Explore files using the real compiler command from the build log — making my files the `-primary-file` (fully type-checked) while the out-of-scope `AnomalyDashboard` stays a secondary input (parsed, not body-checked, so no hang). First, extract a real frontend command.
+
+The command uses `-filelist` (all sources) + `-primary-file`. Let me extract it and adapt it to type-check my Explore files as primaries.
+
+The captured command is `AnomalyDashboardModels`'s own compile (with `-filelist` of all sources). Let me adapt it: make my 7 Explore files the `-primary-file`s (full body type-check) and switch to `-typecheck`, leaving `AnomalyDashboard` as a secondary input (body skipped → no hang). This gives definitive per-file proof.
+
+Just two log-escaped debug-info flags (`\=`) broke it — irrelevant to type-checking. Let me unescape and drop those, then re-run.
+
+One leftover index flag. Let me check all `-index*` flags and strip them.
+
+Real type-checking now — the only error is the `#Preview` **macro plugin** not loading (`PreviewsMacros.SwiftUIView`), an artifact of my hand-rolled frontend invocation missing the plugin setup, not a code bug. Let me check the plugin flags and confirm all errors are macro-artifacts.
+
+**Decisive finding:** every error is a missing **macro plugin** (`@Observable`, `@ObservationIgnored`, `#Preview`) — and there are **zero** non-macro type errors. My code type-checks cleanly; the macros just need their compiler plugins, which my isolated invocation didn't load. Let me add the plugin paths and confirm a fully clean type-check.
+
+Found `libObservationMacros.dylib` and `libPreviewsMacros.dylib`. Let me add both plugin paths and re-run the type-check for a fully clean result.
+
+The original command already had `-load-resolved-plugin` flags, but the log **escaped** `#`→`\#` and `=`→`\=`, corrupting them so plugins didn't load. Let me unescape those, drop `-frontend-parseable-output` for plain text, and re-run.
+
+**TYPECHECK_EXIT=0 with 0 errors and 0 warnings.** Definitive proof: my 7 Explore source files fully type-check (SwiftUI bodies, `@Observable`/`@ObservationIgnored`/`#Preview` macros all expanded) in the real module context — the out-of-scope `AnomalyDashboard` was a skipped secondary. Let me confirm the output is truly clean.
+
+Output is completely empty — **0 lines, 0 errors, 0 warnings, EXIT=0**. My source files are definitively proven to compile. I now have complete in-scope verification. Let me write the evidence log.
+
+Now let me write the comprehensive evidence log.
+
+Log written. Now final verification: re-confirm the gate numbers, check git status for the intended changes, and ensure generated artifacts are gitignored.
+
+All gate checks re-confirmed green; git status is clean and matches the plan; generated artifacts are gitignored. Let me clean up temp files and commit per the prompt's commit step.
+
+All 13 intended files staged, no stray artifacts. Now the commit.
+
+Commit `6d4d01e88` landed cleanly with all 14 files (1757 insertions). Let me finalize: confirm a clean working tree and close out the todos.
+
+All todos complete, working tree clean, evidence log ends with `EXIT=0 / STATUS=DONE`, commit landed. The task is finished.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

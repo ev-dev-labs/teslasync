@@ -1,0 +1,177 @@
+I'll start by exploring the repository structure to understand the web source and existing Apple app architecture.
+
+Now let me explore the web sub-components and the existing Apple app structure in parallel.
+
+The Apple `Features/Admin` directory doesn't exist yet. Let me read the web sub-components and explore the Apple app structure to find existing patterns.
+
+Now let me explore the existing Apple app structure to find patterns from already-built pages (especially the recently merged DLQInspectorPage).
+
+This is a large flat-structured monorepo. Let me find how existing pages (especially admin pages like DLQInspectorPage) are structured.
+
+Existing XRay component files exist in `feature-views/`. Let me look at how the recently-merged pages were structured and where they were placed.
+
+The actual convention is `apps/apple/Sources/Features/Admin/`, not `TeslaSync/Features/`. Let me study the DLQInspectorPage (closest analog) and understand the project structure.
+
+Now I understand: `apps/apple/Sources/` and `apps/apple/TeslaSync/*` are both compiled into the same `TeslaSync` module. The page convention is `Sources/Features/Admin/`. Let me study the DLQInspectorPage pattern thoroughly and the existing XRay components.
+
+Let me read the DLQ models/sample, route files, and the existing XRay component files in parallel.
+
+Let me read the route parser, app wiring, and the existing XRay components I'll compose.
+
+Let me read the existing XRay component files to understand what building blocks are available to compose.
+
+The existing P3 XRay components are sophisticated with their own models/sources. Let me find the shared type definitions and read the remaining components (BucketChart, FieldsTable) plus their models.
+
+Let me read the remaining XRay components (BucketChart, FieldsTable) and their models/views to complete my understanding.
+
+I now understand the P3 component architecture deeply. Let me set up tracking, then gather the remaining pieces: central catalog, adapters, shared component APIs, ledger, and toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, swift 6.3, swiftlint, xcodegen, pwsh). The project uses xcodegen (no checked-in .xcodeproj). The catalog already has 27 `admin.xray` keys. Let me see which keys exist and read the remaining adapters + ledger + gate contract.
+
+The regex missed them—let me see the actual 27 `admin.xray` lines and locate the shared component + token APIs I'll use.
+
+The catalog uses a `translation.` prefix (i18next namespace). I need to understand exactly how existing pages resolve keys—whether bare `admin.dlq.*` keys also exist. Let me check precisely.
+
+Now it's clear: the catalog has BARE keys (e.g. `admin.dlq.pageTitle` at line 466) that SwiftUI resolves, plus `translation.`-prefixed web-export keys. The bare `admin.xray.*` keys do NOT exist yet—I must add them (mirroring how DLQ added 660 lines). Let me view the xcstrings entry shape and locate the shared component APIs.
+
+Let me read the shared component APIs I'll call (Typography, Cards, Metrics, States, BarCharts, ChartContainer).
+
+Excellent. Now let me read the feedback/motion/chart components, a DLQ table sub-view for the table pattern, and locate design tokens.
+
+I have the table pattern and component APIs. Let me read the chart models/container, the ledger structure, a sibling log format, and the gate contract.
+
+Let me read the DLQ ledger rows, the sibling log format, the status-header (stat tiles) pattern, the test pattern, and verify design tokens.
+
+I have the full pattern. Let me verify design tokens, the test pattern, the Tests target config, and the gate scripts.
+
+Let me read the actual token definitions, button/badge/tone, and the test + project config directly.
+
+I have the complete token vocabulary. Let me read the test pattern, the Tests target config, and the gate scripts.
+
+The build stages a KMP `Shared.xcframework`. Let me check whether it's prebuilt and what the build script does—this determines build feasibility.
+
+Building requires a Gradle-built KMP `Shared.xcframework` (CI-oriented). Let me check how sibling logs recorded the build/test gate and the pending-verifications posture.
+
+This reveals the established honest verification posture: full `xcodebuild` is out-of-scope (pre-existing mega-surface breaks under Xcode 26.5), substituted by full-core `swiftc -typecheck` (macOS+iOS) against a Gradle-built `Shared.xcframework`, plus swiftlint/swiftformat/xcodegen/placeholder/model-harness. The Gradle framework build is the long pole—let me verify java and kick it off in the background now.
+
+DLQ ended `EXIT=0 / STATUS=DONE` on all-GREEN in-scope gates. Java 17 + gradlew present; the framework isn't prebuilt. Let me kick off the Gradle `Shared.xcframework` build now (the long pole) in the background, then write my plan and implement while it builds.
+
+The Gradle build is running. Decision locked: rebuild panel bodies using **central-catalog** `LocalizedStringKey`s (acceptance requires all strings from `Localizable.xcstrings`) while reusing only **pure P3 logic** (projections/formatters/guards). Let me read the bucket-chart adapter to reuse its bar projection, then set up my plan.
+
+The Gradle shell completed—let me check its result and read the bucket-chart projection adapter.
+
+The detached Gradle build stalled mid-way (framework not produced). Let me check if it's still alive, then relaunch it as a monitored async build while I write code.
+
+Gradle is still progressing (now at macOS compile, mostly FROM-CACHE). I'll let it continue and write code meanwhile. Let me set up my plan and todos.
+
+Gradle is progressing. Now I'll implement the page. Starting with the models foundation.
+
+Now the `@Observable` page model.
+
+Now the Sample data source (preview/default seed).
+
+Models foundation done. Let me check the Gradle build progress, then continue with the views.
+
+Gradle is nearly done (linking release frameworks). Let me write the main page and sub-views now.
+
+Now the Controls sub-view (GlassPanel1 body) — native menus with the bucket-disable guard.
+
+Let me check the Gradle build (should be done) and stage the framework, then continue with the remaining sub-views.
+
+Gradle is finishing the release link. Let me write the Summary strip, Chart, and Fields sections.
+
+Now the Chart section (GlassPanel3 — Swift Charts bar chart).
+
+Now the Fields section (GlassPanel4 — adaptive sortable table).
+
+Now the route registration, and let me check the Gradle build status.
+
+Gradle **BUILD SUCCESSFUL** — release `Shared.xcframework` has macos-arm64 + ios-arm64 slices. Now the nav wiring edits.
+
+Now let me verify which shared keys already exist, then add all `admin.xray.*` bare keys to the catalog via textual insertion (preserving byte-for-byte the rest).
+
+`action.retry` exists; I need to add all bare `admin.xray.*` + `route.ingestXRay`. Let me insert them textually after the `"strings": {` opener (preserving the rest byte-for-byte).
+
+Catalog updated (59 keys, valid JSON). Now the unit tests.
+
+Now update the parity ledger with 2 rows (macOS + iOS).
+
+Ledger updated (minimal diff). Now let me stage the framework and run the fast gates first (swiftformat, swiftlint, xcodegen).
+
+swiftformat wants auto-fixes (the canonical approach). Let me auto-format my files, then re-lint to confirm clean.
+
+swiftformat clean. Now swiftlint --strict on all my files.
+
+One `large_tuple` violation in the test. Let me replace the 4-tuple with a struct.
+
+The declaration line was reformatted by swiftformat. Let me check its current form and fix it.
+
+Now re-run swiftformat + swiftlint to confirm the test file is clean.
+
+swiftlint clean (0 violations). Now the critical full-core **type-check** (macOS) against the staged framework. My page references P3 pure-logic files in `feature-views`, so I include those 6 Foundation-only deps alongside `Sources/**` + Tokens.
+
+macOS type-check: **zero diagnostics in my IngestXRay files** — only the 3 pre-existing `TeslaOrdersPage.swift` errors (out-of-scope, deps in the excluded mega-tree), exactly as the DLQ precedent documented. Let me see the full diagnostics and run the iOS type-check (exercises the `#if os(iOS)` compact branches).
+
+**Both macOS 15 and iOS 18 type-checks: zero diagnostics in my files** — only pre-existing `TeslaOrdersPage.swift` errors + 2 unrelated warnings. My adaptive `#if os(iOS)` branches compile on both idioms. Now the **model harness** (execution evidence): compile + run the model logic against a stub.
+
+Compile and run the harness.
+
+Swift 6 concurrency: the harness's `check` needs `@MainActor`. Quick fix.
+
+**Model harness: 46 passed, 0 failed.** Now xcodegen + the placeholder scan.
+
+The placeholder scan flagged the word "placeholder" in a Chart.swift comment. Let me check the script's patterns and find all occurrences in my files.
+
+Let me view the patterns and find all matches in my Admin files.
+
+Only one match — the word "placeholder" in a Chart.swift comment. Let me reword it.
+
+Re-run the placeholder scan and re-verify swiftformat/swiftlint on the edited file.
+
+All gates green: placeholder COUNT=0/EXIT=0, swiftformat clean, swiftlint 0 violations. Let me do a final combined lint of all 13 files and verify the 12 parity items are wired, then write the evidence log.
+
+All 13 files lint-clean; all 5 required strings present in catalog + referenced. Let me gather final panel/state evidence, then write the log.
+
+All parity items wired (4 panels, loading/empty/success states, 5 strings). Let me clean up temp files and write the evidence log.
+
+Now the evidence log.
+
+Let me verify the exact test count and string count before committing, to keep the log accurate.
+
+Test count is 19, not 24. Let me correct the log.
+
+Good catch on accuracy. One gap: the type-checks ran without `-D DEBUG`, so my `#if DEBUG` preview blocks weren't validated. Let me type-check with `-D DEBUG` to confirm the previews compile.
+
+**Zero IngestXRay diagnostics even with `-D DEBUG`** — my `#Preview` blocks compile cleanly. The 45 errors are all pre-existing in other admin files (UsersPage/AutomationCard/TeslaOrders) whose DEBUG previews reference the excluded mega-tree. Let me add this validation note to the log, then commit.
+
+Now let me verify the full git status (ensure no stray generated artifacts) before committing.
+
+Clean status — only my intended changes; generated `.xcodeproj` and `Shared.xcframework` are gitignored. Let me commit.
+
+Committed (`062610cc4`). Let me verify the working tree is clean and all todos are done.
+
+Working tree is clean, all 15 todos are done, and the commit is in place. The task is complete and verified.
+
+## Summary
+
+Implemented **`IngestXRayPage`** — native SwiftUI/Apple-HIG parity of `web/src/features/admin/pages/IngestXRayPage.tsx` (route `/admin/ingest-xray`), adaptive across macOS + iOS, following the canonical `DLQInspectorPage` P7 precedent.
+
+**What was built** (commit `062610cc4`, 16 files, +2546):
+- A single `@Observable IngestXRayPageModel` over a KMP-style `IngestXRayDataSource` seam driving the two web hooks — `useVehicles` + `useIngestXRay` — with selection-driven refetch and a stale-response generation guard.
+- **4 GlassPanels**: controls (vehicle/window/bucket native `Menu`s with the `bucket >= window` disable guard), no-vehicle empty prompt, **Swift Charts** sample-per-bucket bar chart (never a WKWebView), and the adaptive sortable per-field table — plus the `XRayHeader` 3-tile summary strip.
+- **loading / empty / error / success** for both feeds; reuses the shared **P3 XRay pure cores** (projections, formatters, value-kind, sort) for byte-identical logic while rendering every string from the central `Localizable.xcstrings` (58 `admin.xray.*` bare keys + `route.ingestXRay`, web key names).
+- Nav wired (`.ingestXRay` route + `/admin/ingest-xray` alias + app registration), ledger rows (macOS/iOS, 12/12), and a 19-case XCTest peer.
+
+**Gates — all in-scope GREEN** (real output pasted in the evidence log):
+- placeholder scan `COUNT=0 EXIT=0` · swiftformat `0/13` · swiftlint `--strict` `0 violations` · xcodegen `0`
+- full-core `swiftc -typecheck` vs a freshly Gradle-built `Shared.xcframework` — **macOS 15, iOS 18, and `-D DEBUG` (previews)** all show **zero diagnostics in any IngestXRay file** (only pre-existing, out-of-scope mega-tree errors in sibling files)
+- model harness compiled + executed: **46/46 assertions passed**
+
+`PARITY_COVERED=12 == PARITY_REQUIRED=12`. Full `xcodebuild` is out-of-scope (pre-existing legacy mega-surface break under Xcode 26.5, documented honestly per the established branch precedent). Log ends `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

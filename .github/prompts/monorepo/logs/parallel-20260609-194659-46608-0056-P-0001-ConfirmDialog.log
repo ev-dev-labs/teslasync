@@ -1,0 +1,130 @@
+I'll start by exploring the environment and understanding what's available, since this task has a clear BLOCKED path if the Apple platform capability is unavailable on the runner.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The `apps/apple` directory exists. Now let me find the web source and understand the existing native structure.
+
+Toolchain confirmed. Now let me read the web source and understand the existing Apple project structure and conventions.
+
+Now let me understand the build setup (XcodeGen, project structure), the shared components, i18n facade, and existing surface patterns. The `modals-dialogs` path isn't yet in `project.yml` sources — I need to understand how surfaces get wired in.
+
+There's a `p4-apple/modals-dialogs` prompt series. The `project.yml` doesn't yet include `TeslaSync/modals-dialogs`. Let me understand the prompt series structure, what's already done, and how surfaces get wired into the build.
+
+31 modals-dialogs prompts exist; `done.txt` is empty and `project.yml` excludes `modals-dialogs`. I need to understand the methodology, the canonical prompt file, and a complete existing surface to model the structure. Let me read these.
+
+Critical findings: `Shared.xcframework` doesn't exist (needs Kotlin/Native Gradle build), and `project.yml` doesn't wire in `modals-dialogs`. I need to deeply understand conventions before deciding the build approach. Let me read a complete example surface and the shared infrastructure.
+
+The convention is clear: each surface has `.swift` (View), `.Model.swift` (state-holder/telemetry/i18n), `.Adapter.swift` (pure projection), `.Views.swift`, `.States.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`, `.ModelTests.swift`. Now let me examine the native UI components (Modal/Button), design tokens, and the rest of the example.
+
+`apps/shared` (KMP/Gradle) exists — the heavyweight dependency. Native components exist (`Buttons.swift`, `Overlays.swift`, etc.). Let me read the exact APIs I'll consume (Modal/Overlays, Buttons, design tokens, feedback states, state-holder facade) and check the gate tooling availability.
+
+Now I understand the component APIs. Let me read the design tokens, typography, feedback components, the state-holder facade, and the remaining companion files of the example surface — plus probe the gate tooling. Batching these reads.
+
+I have the component and feedback APIs. Now let me read the remaining example companion files (Views/Previews/Tests/ModelTests) to match test/preview conventions, confirm the exact design token names, and probe the gate tooling.
+
+I now fully understand the conventions. Let me verify the exact design-token names I'll use, read the motion component (`TSFadeIn`), and probe the gate tooling (pwsh, placeholder script, generated tokens).
+
+All APIs and tokens confirmed. `pwsh` and the placeholder checker are available. Let me set up my plan/todos and verify the isolated-compile feasibility (whether the design system depends on the heavy KMP `Shared` module).
+
+The design system has no `Shared`/KMP dependency — so an isolated compile of my surface + design system against the iOS SDK is feasible as strong verification. Let me set up my plan and read the lint configs + the P4 core prompt (for project.yml wiring) before writing code.
+
+Key lint constraint found: `.swiftlint.yml` `included:` also excludes `modals-dialogs`, and `maxwidth 120`. Let me set up todos, check how the P4 core prompt handles project/lint wiring, and confirm the AppKit import is platform-guarded (for isolated compile).
+
+Confirmed: AppKit/UIKit are platform-guarded; design system is self-contained. Category wiring (project.yml + swiftlint) isn't owned by the P4 core prompt, so shipping the first modals-dialogs surface requires that integration. Now I'll write the surface. Starting with the pure adapter core.
+
+Now the presentational subviews (`Views.swift`) — the dialog card, sections, args block, footer, and freshness chip, all using the real design-system components and tokens.
+
+Now the state chrome (`States.swift`) — loading skeleton, empty placeholder, and error within the dialog card shape.
+
+Now the main surface view (`ConfirmDialog.swift`) that binds the model and switches across all states.
+
+Now the Previews (`Previews.swift`) covering every state and web branch.
+
+Now the i18n strings catalog with all keys (web parity + native chrome).
+
+Now the adapter/projection tests (`Tests.swift`) — JSON serialization parity, intro selection, projection, and accessibility.
+
+Now the model state-holder tests (`ModelTests.swift`).
+
+All 9 source/test files + strings are created. Let me mark progress and run SwiftFormat on the new files, then lint them.
+
+SwiftFormat is clean (0/8 require formatting). Now let me run SwiftLint strict on the new files and review what SwiftFormat adjusted.
+
+SwiftLint reports 0 violations — but it linted 3209 files using the config's `included:` set, which excludes `modals-dialogs`. So my files (and the gate's lint step) aren't actually covering the new surface. I must wire `modals-dialogs` into both `.swiftlint.yml` and `project.yml` so the gate genuinely builds/lints/tests it. Let me do that now.
+
+`.swiftlint.yml` wired. Now I'll wire `modals-dialogs` into `project.yml` for both app targets (source, excluding tests) and both test bundles (including only tests), mirroring how `feature-views` is wired.
+
+The macOS test target is followed by `settings:` (not `dependencies:`). Let me correct that edit.
+
+Let me verify the `project.yml` wiring (expect 4 `modals-dialogs` entries), generate the Xcode project to confirm the spec parses, and re-run SwiftLint to confirm my files are now covered.
+
+Project generates cleanly with all 4 wiring points. Let me confirm my files are in the generated project and that SwiftLint now covers them.
+
+SwiftLint now covers my 8 files (3217 total) with **0 violations**. Let me update todos and run the placeholder check exactly as the gate does.
+
+Placeholder check passes (count=0, EXIT=0). Now the strongest feasible code-correctness check: an isolated type-check of my surface against the **real** design system (Components + Design + Tokens) on the iOS 18 simulator SDK — no KMP framework needed.
+
+The isolated compile fails only on unrelated files (`UnitFormatters.swift` needs `Units` from SharedFacade) — not my code. Let me narrow to the exact design-system files my surface needs. Let me check their dependencies.
+
+Only `UnitFormatters.swift` has an external (`Units`) dependency. Let me re-run the isolated type-check excluding it.
+
+My surface (all non-test files, incl. DEBUG previews) type-checks cleanly against the real design system on iOS 18. Now let me verify the **test files** compile against my real APIs (stripping `@testable import` for a single-module check, adding the XCTest search path).
+
+The test-file errors are isolated-compile artifacts (XCTest's Swift overlay/`XCTAssertEqual` macro isn't available to raw `swiftc -F`), not bugs — the real XCTest target provides them. To validate the riskiest part (my hand-computed expected JSON strings), let me actually **run** the pure adapter on the host and compare outputs against my test expectations.
+
+Excellent — every adapter output matches my expectations **except** one real find: `dialogLabel` produces a double period (`inputs.. set_charge_limit`) when a part already ends with `.`. That's both a test-expectation bug and a genuine VoiceOver wart. Let me fix the helper to strip trailing periods (cleaner spoken label) and align the test.
+
+Let me re-verify the corrected `dialogLabel` behavior and re-run format/lint/typecheck after the edits.
+
+All clean: `dialogLabel` outputs are correct, SwiftFormat 0/8, SwiftLint 0 violations. Let me re-confirm the source type-check after the Adapter edit, then mark verification progress.
+
+Source type-check still clean. Now the heavy step: the full `xcodebuild build test` gate needs the KMP `Shared.xcframework`. Let me probe whether the Kotlin/Native + Gradle toolchain is cached and can build offline before committing to a long run.
+
+The KMP toolchain is fully cached (`~/.gradle` 3.3G, `~/.konan` 1.6G with kotlin-native 2.4.0) and network is up — so the full gate is feasible. Let me build the `Shared.xcframework` (the gating dependency) first.
+
+The KMP framework build is compiling (Kotlin/Native is slow). Let me continue waiting.
+
+`Shared.xcframework` built (6m48s) and staged. Now I can run the real gate. Let me verify the iPhone 16 simulator exists, then start the iOS build+test (the long pole), writing to the gate log.
+
+iPhone 16 simulator is booted and the framework is staged. Now I'll run the real iOS gate (`build test`) — the long pole. Starting it and streaming to the gate log.
+
+iOS build+test is running in the background. Let me monitor its progress.
+
+The iOS build failed (`IOS_EXIT=65`) — but the errors are in **pre-existing** files (`Stepper.*`, `SubscribeCard.*`), not my ConfirmDialog. This is critical to verify honestly. Let me extract the actual errors and confirm none are in my files.
+
+Confirmed: **zero errors in my ConfirmDialog files**. Every failure is a pre-existing "ambiguous for type lookup" collision in other surfaces (`RecentDrivesModel`, `StateTimelineConnection`, etc.). Let me prove these are pre-existing duplicate declarations independent of my change.
+
+Decisive proof: the colliding types (`RecentDrivesModel`, etc.) are each declared in **two pre-existing files** (`feature-views` + `dashboard-widgets`, both already in the target before my change), and `git status` shows I touched none of them. Let me fully characterize the pre-existing breakage and confirm it's all in the committed baseline (not my work).
+
+The error output is large. Let me extract just the actual error *locations* (file:line:col: error:) for a clean picture, and confirm the baseline files are unmodified.
+
+Now the picture is definitive: exactly **10 pre-existing files** across two unrelated surface families (`RecentDrives*`, `StateTimeline*`) have duplicate-type collisions — all in the committed baseline, none mine, all outside my allowed-files scope. My ConfirmDialog has zero errors.
+
+Let me (1) kick off the macOS gate in the background to capture its real exit code, and (2) meanwhile execute my model-test behaviors on the host to prove the state-holder logic — the one test layer the blocked app build can't run.
+
+While the macOS gate builds, let me execute my **model-test behaviors** on the host using the real Adapter+Model code — proving the state-holder logic the blocked app build can't run.
+
+All 22 model behaviors pass on the host with the real code. The macOS gate finished — let me capture its result.
+
+Let me see exactly what the macOS build failed on (it reported 1 failure, my grep found nothing — different format).
+
+Both gates are red for **pre-existing, out-of-scope** reasons, neither touching my code:
+- **iOS** (`IOS_EXIT=65`): duplicate-type collisions in `RecentDrives*` / `StateTimeline*` (10 baseline files I didn't touch).
+- **macOS** (`MAC_EXIT=65`): pre-existing code-signing/entitlements (no dev certificate; `DEVELOPMENT_TEAM: ""`).
+
+My surface has **zero** errors and passes every surface-scoped check. Per the Honesty Covenant (no red-as-green, no commit on red), this is STATUS=BLOCKED. Let me assemble a faithful gate log from the real outputs.
+
+Now appending the green surface-scoped checks (SwiftLint, SwiftFormat, placeholder) run fresh into the log.
+
+Now appending the supplementary surface verification (fresh isolated iOS type-check + host-run of the model tests) and the BLOCKED analysis with baseline proof.
+
+Now the final analysis and verdict. Let me append the baseline proof and the EXIT/STATUS conclusion.
+
+Let me confirm the host model-run output was captured in the log (Step 6b).
+
+The log is complete and authentic (22/22 host assertions captured). Let me verify one hardcoded value for honesty — the real exit code of `swiftformat --lint apps/apple` across the whole tree (not just my files).
+
+`FORMAT_EXIT=0` is genuinely accurate (0/3221 files require formatting). The entire log is verified-real. Let me finalize: update tracking, confirm the file inventory, and clean up temp files.
+
+All 9 files present (1569 lines), temp logs cleaned. Let me update the plan to reflect the final state.
+
+The ConfirmDialog surface is complete and fully verified at the surface scope; the only remaining blocker is pre-existing, out-of-scope repo breakage. This is a genuine BLOCKED outcome under the Honesty Covenant.
+

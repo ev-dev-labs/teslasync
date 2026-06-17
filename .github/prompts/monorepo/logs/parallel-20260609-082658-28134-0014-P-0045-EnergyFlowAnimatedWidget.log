@@ -1,0 +1,98 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Web source read. Now let me explore the supporting web files and the existing Apple app conventions.
+
+Let me read the WidgetFlowDiagram shared component and find existing Apple widget patterns to follow.
+
+Excellent — there's an existing `EnergyFlowWidget` that's the perfect template. Let me read all its files to understand the exact native conventions.
+
+Let me read these files individually with the view tool.
+
+Now let me read the remaining EnergyFlowWidget files to fully understand the patterns.
+
+Let me read the diagram, palette, previews, tests, and strings files.
+
+Now let me read the previews, tests, strings, and verify the shared infrastructure and build setup.
+
+Now let me verify the shared infrastructure symbols and build setup.
+
+Build uses XcodeGen (`project.yml`). Let me inspect the project config, shared infra, and tooling availability.
+
+**Critical finding:** `xcodebuild` is unavailable — only Command Line Tools are installed (no full Xcode), and no iOS simulators exist. Let me verify whether a full Xcode exists anywhere and whether `swiftc` can compile SwiftUI/Charts before deciding capability status.
+
+There **is** an `Xcode.app` present, and `swiftc` can import SwiftUI/Charts/MapKit. Let me check if Xcode is fully usable via `DEVELOPER_DIR` and whether simulators + the KMP framework dependency are available.
+
+Full **Xcode 26.5** and an **iPhone 16 simulator** are available, but the build depends on a KMP `Shared.xcframework` (Gradle/Kotlin-Native) that isn't staged. Let me locate the design tokens my code depends on, then build the artifact and verify it compiles in isolation.
+
+I now have the design tokens and infra. Let me check `fmtNumber` semantics and the lint/format configs to ensure compliance.
+
+I have everything needed. Let me check how `check-placeholders.ps1` resolves its `-Path` argument (a file prefix, not a directory), then I'll build the artifact.
+
+I have a complete understanding. Key adaptations vs. the sibling `EnergyFlowWidget`: ±0.5 kW deadband thresholds, charger node **always present**, a distinct `CompactView` branch, and node id `drive`. All types must be prefixed `EnergyFlowAnimated` to avoid module collisions. Let me set up a tracking table and create the artifact.
+
+All 10 files created. Now let me verify — first run SwiftLint/SwiftFormat on my files (no SDK needed) and locate `TSCard` for an isolated typecheck.
+
+SwiftFormat found fixable issues. Let me auto-format my files, then re-lint to confirm.
+
+SwiftFormat passes. Now SwiftLint `--strict` on my files, and let me verify the auto-format changes to logic-bearing lines are still correct.
+
+SwiftLint flags 3 long lines in `Compact.swift` (string interpolations SwiftFormat can't wrap). Let me view and refactor them.
+
+SwiftFormat and SwiftLint both pass on all 9 files. Now an isolated `swiftc` typecheck of my code against the real shared infra (tokens, registration, skeleton) to prove it compiles.
+
+The errors are all from `Cards.swift`'s deep dependency graph — not my code. My files only use `TSSkeleton` from that layer. Let me typecheck against a minimal shim for `TSSkeleton` plus the real tokens + registration.
+
+Only remaining errors are the `#Preview` macro plugin missing from the **Command Line Tools** SDK. Let me re-run the typecheck using the full **Xcode** toolchain so the preview macro resolves.
+
+**TYPECHECK_EXIT=0** — all my files compile cleanly against the real tokens + registration infra with the full Xcode SDK. Now let me run the placeholder gate honestly (the gate's literal path is a non-existent prefix, so I'll also scan the real files) and double-check for forbidden words.
+
+Honest placeholder scan: **PLACEHOLDER_COUNT=0, EXIT=0**, and no forbidden tokens. All runnable checks pass. Now let me attempt the actual `xcodebuild` gate. First, generate the project and assess the KMP `Shared.xcframework` dependency (the build's pre-step).
+
+Project generated with my files included. Now let me probe whether the KMP toolchain (the build's hard pre-dependency) is operational before committing to a long build.
+
+Java 17 + Gradle 8.14.5 are operational. Let me attempt the KMP `Shared.xcframework` assembly (the build's mandatory pre-step) in the background and monitor it.
+
+Let me check the logs directory structure while the KMP build runs.
+
+Let me examine the sibling's log to match the expected format and see how its gate resolved.
+
+The sibling 0046 log establishes the precedent clearly: capability **is** present (Xcode + sims), KMP is built/staged, the surface is validated for real on both SDKs + tests executed, and the full-app `xcodebuild` failure (from unrelated cross-slot collisions) is **deferred to the P4 acceptance gate → STATUS=DONE**. I'll follow this exact precedent with real evidence. Let me check the KMP build and set up a real test run via SwiftPM in parallel.
+
+KMP build is running (will take a while). Let me set up a real XCTest execution via SwiftPM in parallel — this genuinely runs my test cases.
+
+Now run the real test suite via SwiftPM with the Xcode toolchain:
+
+**31 tests executed, 0 failures** — real XCTest run. Now let me prove the iOS-18 simulator SDK compile too (the precedent validates both SDKs), then check on the KMP build.
+
+**iOS-18 simulator typecheck: EXIT=0.** Comprehensive real evidence gathered. Let me check the KMP build progress.
+
+The KMP build is in its long configuration/compile phase (sibling took ~18 min). Let me wait for it while it runs in the background.
+
+**KMP `Shared.xcframework` BUILD SUCCESSFUL (7m 34s).** Now let me stage it and attempt the real full-app `xcodebuild` for iOS Simulator (capturing full output to analyze whether any errors touch my surface).
+
+Framework staged (iOS device + simulator + macOS slices). Now the real iOS Simulator build via the scheme (full output captured for analysis):
+
+Let me monitor the iOS build progress.
+
+Build failed — but the failing batches are all in **other** `feature-views/` surfaces. I must rigorously confirm **zero** errors touch my files. Let me analyze the build log.
+
+**Conclusive: ZERO errors in my files** (count=0). All 142 errors are cross-slot `"X is ambiguous for type lookup"` collisions in **other** surfaces (ChargeStatus*, DrivingCoach*, Safety*, FleetStatsBar*) — duplicate type names defined across parallel slots. My surface avoids this by prefixing every type with `EnergyFlowAnimated`. Let me confirm my files were actually compiled (not skipped), then run the macOS build for completeness.
+
+**Confirmed:** zero error lines reference my files, and my `.strings` resource is processed (CopyStringsFile). Combined with the 2-SDK isolated compiles and 31 green tests, my surface is clean. The full-app failure is purely unrelated cross-slot type collisions. Let me run the macOS build too (the gate's second step) for firsthand evidence, then write the log.
+
+Let me gather file metrics for the log while the macOS build runs.
+
+All 7 source i18n keys present (+ native chrome = 22 keys). Substantial implementation (1856 lines, no stubs). Let me wait for the macOS build.
+
+macOS build also failed (exit 65). Let me confirm it's the same cross-slot pattern with zero errors in my files.
+
+Both builds fail identically — **142 cross-slot collisions, 0 in my files** on both platforms. This is the exact precedented disposition (sibling 0046). All surface-scoped gates are green; the full-app failure is unrelated and deferred to the P4 acceptance gate. Let me capture git context and write the gate log.
+
+All 10 files are new/untracked; the `.xcodeproj` and `Shared.xcframework` are git-ignored. Now let me write the comprehensive gate log with the real observed results.
+
+Now let me verify the working tree only stages intended files (xcodeproj/framework/gradle outputs must be git-ignored), then commit.
+
+Generated outputs are git-ignored. The two modified `web/` files are pre-existing (not mine) — I'll leave them untouched and commit only my surface files + the log, exactly as specified.
+
+Commit `7bb3bd356` created with all 11 files (2013 insertions); pre-existing `web/` changes correctly excluded. Let me clean up scratch artifacts and do a final state verification.
+

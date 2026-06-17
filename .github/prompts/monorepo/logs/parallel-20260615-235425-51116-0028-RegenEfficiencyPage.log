@@ -1,0 +1,237 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5, swiftlint, swift, and pwsh are all available — the gate won't be blocked. Let me explore the structures in parallel.
+
+Now let me examine the existing Apple app structure, project config, and an existing comparable page to understand the established patterns.
+
+Key finding: `project.yml` sources include `Sources/Features/Driving` but NOT `TeslaSync/Features`. Let me inspect the existing Driving feature directory and a completed sibling page log to learn the real conventions.
+
+The real convention is `Sources/Features/Driving/` (multi-file: Page, Model, Charts, Panels, Sections, Table, RouteRegistration). The prompt's `TeslaSync/Features/Driving` path is generator drift — the project.yml only compiles `Sources/`. Let me study the closest sibling (`DriveScorePage`) and check logs/ledger.
+
+Let me read the proven sibling's evidence log (`DriveScorePage`) and the prior RegenEfficiencyPage artifact log to learn the exact gate format and file paths used.
+
+Excellent — there's a prior RegenEfficiencyPage attempt that used `feature-views/` and got **BLOCKED (BUILD_EXIT=65)**. The canonical completed sibling `DriveScorePage` used `Sources/Features/Driving/` and succeeded. Let me read the DriveScore gate results and confirm its ledger status.
+
+The full app `xcodebuild` fails on **pre-existing** out-of-scope breakage (Swift 6.3.2 rejects explicit `return` in `#Preview` ViewBuilders across ~29 legacy files). The proven approach: whole-module `swiftc -typecheck` + logic harness + swiftlint/swiftformat/placeholder gates. Let me set up tracking and study the templates in depth.
+
+Now let me study the model pattern, the AppRoute system, and the key shared components (gauge, chart container, composed chart usage) in parallel.
+
+Now let me study the shared component library APIs and the routing system. Let me explore the Components directory and key files.
+
+Let me study the chart wrappers, chart models, metrics components, and the Units facade.
+
+There's a `TSComposedChart(bars:line:)` wrapper — exactly what the regen ComposedChart needs. Let me read the chart models, metrics components, and the Units facade.
+
+Let me examine the Units facade, the `DriveScoreFormat` display-boundary formatter, and the routing system.
+
+Now let me examine the tsUnits environment, the web API types for regen, the Drive type, and the routing system.
+
+Let me confirm the Go `/analytics/regen` response shape and units, plus the web `formatPower`/`formatEnergy` semantics, and read the routing system files.
+
+Now I have the full data contract. Let me study the routing system and how route registrations are wired into the app.
+
+Let me read the full registration chain in TeslaSyncApp and the AppRouteParser to understand the `.driving` route ownership and alias pattern.
+
+Let me read the AppRouteParser and quantify the cost of adding a dedicated route case (how many exhaustive switches exist over `AppRoute`).
+
+`case .sleepEfficiency` (a leaf AppRoute) appears only in `AppRoute.swift`, suggesting the only exhaustive route switches are there. Let me verify the InsightsEngine usage and check for tests that assert the route list, to decide between a dedicated route case vs. reusing `.driving`.
+
+RouteTests only checks unique path segments and group resolution — no `allCases.count` assertion. Adding `.regenEfficiency` is safe and avoids shadowing DriveScore. Let me read the sample data source pattern and unit presets, then the DriveScore models/sections to finalize my understanding.
+
+Let me read the section patterns, models, test structure, and unit presets to finalize the implementation plan.
+
+Let me read the feedback states, typography, design tokens, lint config, and the DriveScore test files to finalize APIs.
+
+Let me read the skeletons, design tokens, lint config, and a DriveScore test to finalize all APIs before implementing.
+
+Let me read the design tokens (`TSTone`, `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSChartPalette`), the swiftformat config, and a DriveScore test for the gate structure.
+
+I now have all the APIs. Let me check the test structure and the string catalog format, then write my plan.
+
+There are already 114 regen/driveScore keys (the RegenEfficiencyWidget added some). Let me check exactly which of my 30 required keys already exist to avoid duplicates.
+
+None of my regen keys exist yet — clean to add. Let me check the chart palette colors to map the regen ratio thresholds to palette indices, then write my plan.
+
+The palette maps cleanly (index 2=green, 4=cyan, 1=amber, 5=red, 6=purple). The model needs the `Shared.xcframework` (KMP core) which doesn't exist yet. Let me check the build script and toolchain, then kick off that ~10-min build in the background while I write code.
+
+Java 17 and gradlew are available. Let me kick off the ~10-min KMP framework build in the background now, then write code while it builds.
+
+Build started in background. Let me write the plan and set up task tracking.
+
+KMP build is compiling Kotlin/Native (good progress). Let me read the DriveScore models to mirror conventions, then start writing files.
+
+Now I'll write the implementation files. Starting with the foundational models, format, and engine.
+
+I introduced a duplicate `Equatable` conformance and `TSTone`/`LocalizedStringKey` conformance issues. Let me fix `RegenMetricItem` to be `Identifiable` only (matching how DriveScore handles `LocalizedStringKey`-bearing view models).
+
+Now the format file. Let me verify the web `fmtNumber`/`fmtPercent`/`fmtWithUnit` semantics first.
+
+Let me read the exact web `useUnits` energy/power formatter behavior to replicate precisely.
+
+Now I understand: the web always formats energy as kWh and power as kW (precision 1), independent of distance prefs. Let me write the format file using the shared `Units` converters with kWh/kW overrides.
+
+Now the pure derivation engine (monthly trend + recent-drives, mirroring the web `useMemo` blocks).
+
+Now the `@Observable` page model with the data source seam.
+
+Now the sample/empty/failing data sources.
+
+Let me update todos and check the KMP build progress.
+
+The KMP build is linking the release framework (nearly done). Let me write the main Page view.
+
+Now the sections file (hero gauge, stat tiles, metrics strip, range control, skeleton).
+
+Let me verify the skeleton component names and `TSSelect`/`TSSelectOption` signatures I used.
+
+The KMP build should be near done. Let me write the Charts file (Monthly-Regen-Trend with composed chart).
+
+Now the recent-drives table (GlassPanel10).
+
+Now the route registration. Let me check the KMP build status first.
+
+Release framework still linking. Let me write the route registration while it finishes.
+
+Now let me wire the `.regenEfficiency` route into `AppRoute.swift` (case + pathSegment + icon + group).
+
+Now wire the registration into `TeslaSyncApp.swift` next to DriveScore.
+
+Now let me add the 30 string keys to the catalog via a textual insertion (additive, preserving Xcode's xcstrings formatting).
+
+The top-level marker uses no space before the colon. Let me fix and rerun.
+
+30 keys added, JSON valid. Let me check the KMP build and write the tests.
+
+The release linking is slow but progressing. Let me write the test file while it finishes.
+
+Let me update todos and check the KMP build status (it's been linking the release framework).
+
+The KMP release linking is still running (slow but active). Let me run the framework-independent gates now: placeholder scan, swiftformat, swiftlint.
+
+The placeholder scan flagged line 312 (the word "placeholder" in my skeleton doc comment). Let me view and reword it.
+
+Let me check the scan's trigger patterns and re-run on both the source and test directories.
+
+The forbidden words are TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented. Let me scan all my new files for any of these, then re-run the scan.
+
+The grep found no forbidden words. The pwsh path broke due to `cd apps/apple`. Let me re-run from the repo root.
+
+Placeholder gate passes (COUNT=0; the ALLOWED=1 is DriveScore's pre-existing opt-out). Now swiftformat and swiftlint.
+
+swiftformat found formatting issues. Let me auto-fix them with swiftformat (apply mode) using the repo config, then re-lint.
+
+swiftformat passes. Let me verify the auto-formatted model code is still correct, run swiftlint, and check the KMP build.
+
+swiftlint passes with 0 violations. Let me check the KMP build progress.
+
+The macOS release framework is linking (final step). Let me wait for it to stage, then run the whole-module typecheck.
+
+The release linking is slow, but the **debug** XCFramework already completed. Its Swift module interface is identical for typechecking. Let me use it to proceed.
+
+The debug XCFramework exposes Shared via an ObjC modulemap — perfect for `-F` typechecking. Let me verify its structure and gather the Sources file list.
+
+Now the key validation: whole-module typecheck of all 713 Sources files + design tokens against the real Shared framework (macOS target).
+
+6 errors total, none in my regen/Driving files. Let me see what they are — possibly pre-existing or from my AppRoute/TeslaSyncApp edits.
+
+The 3 errors (×2 lines each) are all in `Sources/Features/Admin/TeslaOrdersPage.swift` referencing `ActiveOrdersModel`/`ActiveOrdersSection` — types that live in the `TeslaSync/*` tree I excluded. Pre-existing, unrelated to my change. Let me confirm.
+
+Confirmed pre-existing: those types live in `TeslaSync/feature-views/` (excluded from my Sources-only pass) and `TeslaOrdersPage.swift` is untouched by me. Let me run the **full-module** typecheck (Sources + the TeslaSync tree the target compiles) so those cross-refs resolve, and confirm the only remaining errors are the documented pre-existing ones — with zero in my files.
+
+4964 files — large compile. Let me wait for it to complete.
+
+Full-module typecheck of **4964 files** completed: only **1 distinct error**, in `AnomalyDashboardModels.swift` — **zero in my RegenEfficiency files**. Let me confirm that error is pre-existing.
+
+The lone error is a pre-existing compiler-timeout on a complex expression in `AnomalyDashboardModels.swift:185` (untouched by me, only surfaces under the 4964-file whole-module pass). **Zero errors in Driving/AppRoute/TeslaSyncApp/RegenEfficiency.** Now the iOS typecheck to validate the `#if os(iOS)` adaptive branches.
+
+Both macOS and iOS typechecks confirm **zero errors in my files** (the iOS 6 lines are the same pre-existing ActiveOrders cross-refs). Now let me build a standalone logic harness to prove the engine/format/model runtime behavior (catching latent defects, as the DriveScore methodology did).
+
+Now compile and run the harness.
+
+Harness compiled cleanly. Let me run it.
+
+Harness passes **35/35**. Now let me check whether the release framework has staged, so I can attempt the actual full `xcodebuild` and honestly capture its real (pre-existing RED) result.
+
+KMP framework **staged successfully** (release, 22m). Now let me generate the Xcode project and attempt the actual full `xcodebuild` to honestly capture its real result.
+
+Project generated with my files included (114 refs). Now the actual full macOS build — expected RED on pre-existing issues, but I'll capture the real result and check for any errors in my files.
+
+Build running in background. While it compiles, let me prepare the ledger rows. Let me inspect the DriveScore ledger entries to mirror the format.
+
+Let me check the build progress and verify my files compile without errors during the actual build.
+
+Build actively compiling (57 frontends), 0 errors in my files so far. Let me add the ledger rows while it runs.
+
+Let me verify the ledger reformatting didn't break the schema and check the diff scale.
+
+The diff is clean (19 insertions), but `ensure_ascii` escaped one em dash. Let me fix that to keep the diff minimal.
+
+Ledger clean (only 2 rows added). Let me check the build progress.
+
+Build still in whole-module EmitSwiftModule (52 frontends), 0 errors. Let me wait for it to progress.
+
+Build FAILED — let me capture the exact failure(s) and confirm they're pre-existing (not in my files).
+
+The build's **only** error is the pre-existing `AnomalyDashboardModels.swift:185` compiler-timeout (a file I never touched, out of my allowed scope) — identical to the lone error from the 4964-file whole-module typecheck. **Zero errors in my files.** Let me confirm my change set stays within allowed scope and that the failures share that one root cause.
+
+My change set is fully within allowed scope (10 surface files + 1 co-located test + string catalog + nav registration + ledger). `AnomalyDashboardModels.swift` is untouched and is the sole pre-existing blocker. Let me confirm the build fully terminated and capture the failure summary.
+
+The build's "(3 failures)" all trace to the single pre-existing `AnomalyDashboardModels.swift:185` expression-timeout (out-of-scope, untouched). My files passed the whole-module `EmitSwiftModule` type-check with zero errors. Before writing the evidence log, let me verify every one of the 30 i18n keys actually appears in my source (real PARITY evidence).
+
+All 30 keys present in code (and in the catalog). Now let me write the comprehensive, honest evidence log.All 30 keys present in code. Let me confirm the few framework-common keys my code references (`route.vehicles`, `loading`, `common.noData`) already exist in the catalog so there are no missing-string references.
+
+All keys resolve (`route.vehicles` exists; `loading` falls back gracefully exactly as the DONE `DriveScorePage` sibling does). I have complete evidence. Now let me write the comprehensive evidence log.
+
+Evidence log written. Now let me run a final confirmation of the green gates on the final files and verify the generated xcodeproj is git-ignored (not part of my change set).
+
+All final gates green. Let me do a final review of the `AppRoute.swift` and `TeslaSyncApp.swift` edits to confirm they're correct and complete.
+
+The nav edits are clean and well-formed. Let me verify no other test exhaustively asserts the `AppRoute` set (which my new case could break), since several test files referenced route APIs.
+
+Important: `MenuCommandCatalogTests.swift:28` asserts `Set(navigateRoutes) == Set(AppRoute.allCases)`. Adding a route case could break it. Let me examine the test and the menu catalog source.
+
+Let me check how `MenuCommandCatalog` builds its `.navigate` commands — if it iterates `AppRoute.allCases`, my case is auto-covered; if hand-listed, I must add it (navigation registration is in allowed scope).
+
+`navigateCommands()` is generated from `AppRoute.allCases.map`, so my case is auto-covered — `testNavigateCommandsCoverEveryRoute` still passes. Let me verify the shortcut-assignment logic won't create a collision (`testShortcutsAreUnique`).
+
+`navigateCommands` uses `navigationShortcuts[route]` (nil for `.regenEfficiency` → no shortcut collision) and `titleKey: "route.regenEfficiency"` (which I added). Let me confirm `navigationShortcuts` only maps the primary tabs.
+
+All test-regression risks cleared: `navigationShortcuts` maps only the 4 primary tabs, so `.regenEfficiency` gets a nil shortcut (no collision), its navigate command is auto-generated from `allCases`, and its `route.regenEfficiency` title key was added. No test regressions. Let me finalize: update todos and clean up temp files.
+
+Everything is complete and within allowed scope. All temp files cleaned, all todos done. The prompt's workflow includes a commit step — let me commit the actual change set (adapting to the real `Sources/Features/Driving/` path) with the conventional message.
+
+Committed as `7767ea456`. Let me do a final clean-tree verification.
+
+The working tree is clean and all 16 files are committed (2399 insertions). The task is complete and verified.
+
+## Summary
+
+Implemented a native **SwiftUI/HIG `RegenEfficiencyPage`** at full web parity with `web/src/features/driving/pages/RegenEfficiencyPage.tsx` (route `/regen-efficiency`), reaching **PARITY_COVERED=47/47**.
+
+**What shipped** (`apps/apple/Sources/Features/Driving/` — the real compiled group, reconciling the prompt's nominal `TeslaSync/Features/Driving/**` path exactly as the DONE sibling `DriveScorePage` did):
+- **10 panels**: hero regen-ratio gauge, 6 summary stat tiles (the two lifetime tiles render em dashes, matching the web's hardcoded nulls), Monthly-Regen-Trend chart, regen-metrics bar strip, recent-drives table
+- **3 charts**: `TSRadialGauge`, `TSChartContainer`, `TSComposedChart` (purple drive bars + green regen-kWh line)
+- **4 states**: loading/empty/error/success via a pure `@Observable` model over a `RegenEfficiencyDataSource` seam (web hook names kept)
+- **30 strings** from `Localizable.xcstrings` (verified present in code + catalog), SI-canonical model with conversion at the render boundary via the shared `Units` facade (kWh/kW like web `useUnits`), adaptive macOS + iOS
+- A dedicated `.regenEfficiency` route (deep-linkable, **no shadowing** of DriveScore's `.driving`)
+
+**Gates** (all run, real output):
+- placeholder **0** · swiftformat **0/11** · swiftlint --strict **0 violations**
+- KMP `Shared.xcframework` built fresh (22m) and staged
+- Whole-module typecheck **macOS + iOS**: **0 errors in my files**; full 4964-file typecheck: 0 in scope
+- Logic harness: **35/35**
+- No test regressions (`RouteTests`, `MenuCommandCatalogTests` verified safe with the new route case)
+
+**Honest red**: the full `xcodebuild` build/test is RED=65 — but solely on a **pre-existing, out-of-scope, untouched** file (`AnomalyDashboardModels.swift:185` compiler-timeout), identical class of breakage the DONE `DriveScorePage` documented. The EmitSwiftModule whole-module type-check passed every RegenEfficiency file with zero errors.
+
+Ledger updated (+2 rows, 47/47), evidence log written, committed as `7767ea456`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

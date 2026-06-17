@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure and reading the web source component that serves as the specification.
+
+The web source is clear. Now let me examine the existing Apple app structure, the most recent predecessor (ClimateSection), and verify tooling capability.
+
+The feature-views directory is large (2406 entries). Let me check tooling availability and examine the most recent predecessor (ClimateSection) to follow its established pattern.
+
+Tools are available (Xcode 26.5, swiftlint, swiftformat, swift). ClimateSection is my template pattern. Let me read all its files to understand the established architecture.
+
+Excellent pattern. Let me read the remaining ClimateSection files to complete my understanding.
+
+Now let me read the remaining template files and explore the shared components and tokens available.
+
+I now understand the 7-file pattern. Let me read the web helpers/types it depends on, and locate the shared native tokens and any sibling table-rendering section.
+
+Let me read the remaining web formatters and locate the native tokens + any native table component.
+
+There's a native `DataTable.swift`. Let me read it and locate the shared design tokens (TSSpacing, Color.TS, Font.TS, TSGlassPanel) plus understand the project structure.
+
+`TSDataTable` is the native `DataTable` parity. Now let me locate the design tokens and shared components (TSGlassPanel, TSButton, TSSkeleton, TSFadeIn, EmptyState).
+
+Let me locate the generated design tokens and read the shared component signatures I'll use.
+
+The tokens are generated. Let me check project.yml and the token generation to confirm available token names.
+
+Tokens live in `apps/design/generated/apple`. Let me read them and verify build tooling (xcodegen, the Shared framework script) since the gate depends on it.
+
+Critical finding: `Shared.xcframework` isn't staged (requires Gradle/KMP toolchain). Let me read the tokens, check how predecessors handled the gate, and verify simulator availability.
+
+The predecessor deferred the full `xcodebuild` to the signed CI runner (KMP Shared.xcframework + signing), and verified the surface in isolation. Let me read the full ClimateSection log and the pending-verifications doc to follow that exact precedent.
+
+Let me read the rest of the log and look for any reusable verification harness.
+
+I have the full methodology. Let me gather the last details: `fmtInt`, how siblings handle "View all" navigation, `TSButton` API, naming-collision scan, and lint configs.
+
+Let me examine a sibling with navigation (RecentActivity) to follow the native "View all" callback pattern.
+
+I have everything needed. Let me set up tracking and verify no type-name collisions with siblings before authoring.
+
+No collisions. Let me check how sibling surfaces feed i18n titles into `TSDataTable` (the LocalizedStringKey decision).
+
+No collisions, and the sibling pattern is confirmed: `columnTitle(key, fallback) -> LocalizedStringKey(FacadeStrings.string(...))` with `TSDataTable(..., density: .compact)`. I have everything. Let me write the plan and author all 7 files.
+
+Now authoring the Adapter (pure projection core).
+
+Adapter done. Now the Model (seams: telemetry, connection, input, projector, model, source, strings).
+
+Now the Views file (content table, loading, empty, error).
+
+Now the main surface View (panel, header, banner, content switch, View all callback).
+
+Now the Previews and strings catalog.
+
+Now the comprehensive Tests file.
+
+All 7 files written. Let me run swiftformat and swiftlint on them to catch style issues early.
+
+swiftlint passes clean. swiftformat wants auto-fixable changes (numeric grouping + redundant self). Let me apply them.
+
+Format and lint both clean. Let me verify the auto-fixed `makeComparator` still reads correctly.
+
+Format + lint clean. Now I'll build the isolated SwiftPM harness (predecessor's gate steps [1]/[2]). First, let me map the component/token dependency closure and find any KMP-`Shared`-dependent files to exclude.
+
+Design + Components only import system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation) — no KMP `Shared`. I'll build an isolated SwiftPM harness with the real token + component closure. Let me set it up.
+
+47 files, no basename collisions. Now the Package.swift manifest.
+
+As the predecessor documented, `UnitFormatters.swift` depends on the KMP `Units` type (unavailable in isolation). My surface doesn't use it. Excluding it from the harness and rebuilding.
+
+Isolated build complete (Swift 6 + strict concurrency, real token/component closure). Now running the full test suite.
+
+All 31 tests pass (incl. per-state render smoke). Now the iOS 18 + macOS 15 SDK type-checks (gate steps [3]/[4]).
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDK type-checks clean. Now the placeholder gate and i18n coverage. Let me check pwsh and the placeholder script.
+
+pwsh is available. Let me run the placeholder gate on the surface files (temp scan dir, matching predecessor approach) and check the i18n key coverage.
+
+Placeholder gate clean (COUNT=0). Now i18n key coverage — extract referenced `common.*`/`recentCharges.*` keys from Swift vs declared keys in the catalog.
+
+i18n coverage perfect: referenced=17 == declared=17, 0 missing/orphan, plutil OK. Now the full-app integration: generate the Xcode project and confirm my files are wired in.
+
+Project generates cleanly — 42 refs across app + test targets (iOS + macOS), matching the predecessor. Now let me verify the gate prerequisites (iPhone 16 simulator, Gradle/KMP toolchain for `Shared.xcframework`) before attempting the full `xcodebuild`.
+
+All prereqs present: iPhone 16 booted, Java 17 + gradlew (KMP feasible), 0 signing identities (macOS dev-signing will fail as expected). Let me build the `Shared.xcframework` (Gradle KMP), then run the full iOS gate. Starting the framework build in the background.
+
+While the KMP framework builds (~6 min), let me wait and monitor.
+
+I'll continue waiting for the Gradle KMP build to finish.
+
+The first Gradle run also downloads the Kotlin/Native toolchain, so it can exceed the predecessor's warm 6.5 min. Continuing to wait.
+
+KMP `Shared.xcframework` built + staged (BUILD SUCCESSFUL, 10m). Now the full iOS gate. Running it (Gradle daemon is warm now) and capturing all output.
+
+iOS build exited 65 (matching predecessor). Let me analyze the errors — categorize RecentCharges vs pre-existing/sibling.
+
+0 RecentCharges errors out of 680. Let me see what the pre-existing errors are and which sibling files they're in.
+
+Confirmed — all 680 errors are in pre-existing sibling `StateTimeline*`/`StateTimelineWidget*` files (a duplicate-declaration collision across `feature-views/StateTimeline.*` and `dashboard-widgets/StateTimelineWidget.*`); **0 in any RecentCharges file**. Let me prove it's pre-existing with a static check, then an isolation rebuild.
+
+Static proof confirmed: `StateTimelineModel` and `StateTimelineUpdate` are each declared in two sibling surfaces — pre-existing, outside my allowed files. Now the dynamic isolation proof: remove my surface, rebuild, show identical failure.
+
+Isolation rebuild also fails (exit 65) with my surface entirely absent. Let me confirm the identical StateTimeline cause, then restore my files.
+
+Isolation rebuild: 26 errors, all 26 StateTimeline (0 from my surface, which was absent). Let me check that single "RecentCharges" string match to be precise.
+
+The lone "RecentCharges" mention is just a `note:` about a stale DerivedData artifact (0 error lines), and all full-build errors are StateTimeline. Pre-existing collision proven. For completeness, let me capture the macOS gate too (0 signing identities → expected dev-signing failure).
+
+macOS build also exit 65. Let me categorize its failure (signing vs StateTimeline vs RecentCharges).
+
+macOS: 4 errors, all dev-signing (entitlements need a dev cert; 0 valid identities), **0 RecentCharges errors** — fast-fails at signing. This exactly matches the predecessor disposition. Let me verify git status (generated artifacts should be gitignored) before writing the log.
+
+Only my 7 surface files are untracked; generated artifacts are gitignored. All files ≤378 lines (well-decomposed). Now I'll write the comprehensive gate log. Let me grab the branch/base for the header.
+
+Now writing the comprehensive gate log following the predecessor's structure with my real captured results.
+
+Log written. Let me re-confirm the host gates on the final restored files (lint/format) and re-run the isolated test suite once more before committing.
+
+All final gates green and repo files are byte-identical to the tested copies. Committing per the prompt's spec.
+
+Committed (`aca0a98d7`). Let me clean up temp artifacts and confirm a clean working tree.
+
+The task is complete. All host-runnable and surface-scoped gates are green, the work is committed, and the working tree is clean.
+
+## Summary
+
+Shipped **`RecentChargesSection`** — the native SwiftUI parity of `web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.tsx` — as 7 files in `apps/apple/TeslaSync/feature-views/`, following the committed ClimateSection 0291 architecture.
+
+**Parity reproduced (read web source end-to-end):**
+- All **5 `useChargeColumns` cells** with faithful helper ports: `formatDateTime` (year·month·day·time, `—` on nil/invalid), `convertEnergyFromSI`+`fmtNumber` (Wh→kWh ÷1000 @ global precision 2 + " kWh", **sortable** on the raw SI Wh), `durationStr` (`{h}h {m}m`), `formatCurrency` (symbol + user precision, `—` when null), and JS-style SOC interpolation (`{start}% → {end}%`).
+- Web `DataTable compact` → shared **`TSDataTable(density: .compact)`**; web `EmptyState`/`<Link to="/charging">` → `ContentUnavailableView` + injected `onViewAll` callback.
+- All **6 states** (loading/data/empty/error/stale/offline), P1/S8 `Source`→`@Observable Model` seam (no view I/O), P1/S11 `view.opened` telemetry, P1/S10 i18n facade.
+
+**Verification (real output captured):**
+| Gate | Result |
+|---|---|
+| Isolated SwiftPM build (Swift 6, strict concurrency, real token/component closure) | ✅ exit 0 |
+| `swift test` (full XCTest on host) | ✅ **31/31**, exit 0 |
+| iOS 18 + macOS 15 SDK type-checks | ✅ exit 0 / 0 |
+| swiftlint --strict / swiftformat --lint | ✅ 0 violations / 0 |
+| check-placeholders / i18n coverage | ✅ COUNT=0 / 17==17, 0 missing |
+
+**Full xcodebuild RAN, DEFERRED to signed runner** (identical to ClimateSection precedent): KMP `Shared.xcframework` built (BUILD SUCCESSFUL 10m). iOS exit 65 — **680 errors, ALL pre-existing sibling `StateTimeline*` collision, 0 RecentCharges** (proven pre-existing by an isolation rebuild: removing the surface still fails identically). macOS exit 65 — 4 dev-signing errors (0 valid identities), 0 RecentCharges. Both are out-of-allowed-files, owned by the P99 signed acceptance gate.
+
+Committed as `aca0a98d7` with the full gate log ending `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0296-RecentChargesSection.log | 279 +++++++++++++++
+ .../RecentChargesSection.Adapter.swift             | 378 +++++++++++++++++++++
+ .../feature-views/RecentChargesSection.Model.swift | 245 +++++++++++++
+ .../RecentChargesSection.Previews.swift            | 107 ++++++
+ .../feature-views/RecentChargesSection.Tests.swift | 345 +++++++++++++++++++
+ .../feature-views/RecentChargesSection.Views.swift | 134 ++++++++
+ .../feature-views/RecentChargesSection.strings     |  40 +++
+ .../feature-views/RecentChargesSection.swift       | 172 ++++++++++
+ 8 files changed, 1700 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0296-RecentChargesSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentChargesSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentChargesSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentChargesSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentChargesSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentChargesSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentChargesSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentChargesSection.swift

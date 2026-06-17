@@ -1,0 +1,272 @@
+I'll start by exploring the repository structure to understand what exists for this task.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, pwsh). Let me explore the Apple app structure, the web source, and existing parity patterns.
+
+The `Features/` dir doesn't exist — the actual structure differs from the prompt's templated path. Let me find where recently-completed pages like ConflictWarnings actually live.
+
+Now I understand — actual source lives in `apps/apple/TeslaSync/Sources/Features/Battery/`. There's already `BatteryDegradationPage` and `BatteryCellsPage` but no `BatteryHealthPage`. Let me study the build config and the closest reference pages.
+
+Path is `apps/apple/Sources/Features/Battery/` (not `TeslaSync/Features/`). The prompt's templated path is stale — I'll follow the real repo convention where sibling battery pages live. Let me study them.
+
+Clear decomposition pattern. `BatteryDegradationPage` is the closest analogue. Let me read the web source and the reference Swift files in depth.
+
+Excellent template. Let me read the rest of the web source and the full Degradation reference (models, derivations, format, sections, charts).
+
+I now have the full web source mapped. Let me study the remaining Degradation reference files and key shared infrastructure (charts, route enum, sample data, derivations).
+
+Strong grasp of the patterns now. Let me locate the shared chart components, the route enum, the Units facade, and the localization catalog.
+
+Key finding: `/battery` currently redirects to `.energy` — no dedicated route exists. I'll need to add a `.batteryHealth` route. Let me examine the route enum, chart APIs, Units facade, and the web RadialGauge to get center-label parity right.
+
+Critical: the web `RadialGauge` shows the **actual value + unit** centered (not a bare percentage), so I'll build a faithful local gauge. Let me read the chart model/container/bar/line APIs and the Units facade.
+
+Now the Units facade, the format/sample/derivation patterns, and how the data source binds in production.
+
+I have the full pattern. Let me confirm the remaining shared types (BatterySeverity, TSTone, component signatures, palette), the xcstrings format, and whether a test enforces route registration.
+
+Now I have the palette. Let me read the exact component signatures I'll use (cards, typography, feedback states, metrics, banners, pickers).
+
+Let me read the AlertBanner signature, how routes wire into the app shell, the xcstrings entry format, and the `tsUnits` environment.
+
+Now the route tests, the parser, the app composition point, and the xcstrings entry format.
+
+Let me verify the web routing for `/battery` and `/battery/health` to map the Apple route correctly, and check the app composition point and xcstrings format.
+
+Web routes both `/battery` and `/battery/health` to BatteryHealthPage. I'll add a `.batteryHealth` route. Let me find all exhaustive switches over `AppRoute`, view the xcstrings format, and the app composition point.
+
+No external exhaustive switches and `route.batteryHealth` doesn't exist yet. Let me confirm the xcstrings raw format precisely and set up my plan/todos.
+
+Let me understand the app's in-page navigation mechanism (for Quick Links) and how the route host renders, then I'll write the plan.
+
+I have a complete mental model. Let me set up the plan and todos, and concurrently check build prerequisites (xcframework, xcodegen, project generation).
+
+Shared.xcframework must be built via Gradle (KMP) before xcodebuild can link. Let me check the toolchain and kick off that long build in the background while I implement.
+
+JDK 17 + gradlew available. Let me kick off the long Shared.xcframework build in the background now, then implement while it runs.
+
+Let me write the plan and set up todos while the KMP build runs.
+
+The launcher returned (gradle continues via nohup). Let me set up todos and check the KMP build progress.
+
+KMP build is progressing (using cache). Now—critical: existing `BatteryHealthData`/`BatteryHealthSnapshot`/`BatteryChargingHabits` types already exist (Degradation page), and the web BatteryHealth page needs `original_capacity` they lack. I'll use distinct type names to avoid collisions. Let me verify name uniqueness first.
+
+All names are unique. The web BatteryHealth page needs richer data (e.g. `original_capacity`) than the existing Degradation types, so I'll use distinct names. Let me create the models file.
+
+Models created. Let me check the exact web number formatting (`fmtNumber`/`fmtPercent`/`fmtInt`) so my Swift formatters match displayed values, while monitoring the KMP build.
+
+Formatting matches the Degradation pattern. Let me create the Format helpers.
+
+Now the core pure derivations (mirroring every `useMemo` + `buildInsights`/`buildRecommendations`). Let me also refine the `BatteryHealthInsight` doc to clarify title=key, detail=interpolated.
+
+Now the `@Observable` page model. Let me check the KMP build and write the model.
+
+KMP build nearly done (debug xcframework written, building release). Let me create the page model.
+
+Now the sample/empty/failing data sources for previews and tests.
+
+KMP build status check, then the main page view.
+
+Now the hero (4 gauges + metric bars) with a faithful value-displaying gauge. Let me add a gauge-center formatter and create the Hero file.
+
+Let me fix the degradation-bar caption (Text interpolation of Text won't compile) using an HStack with proper i18n.
+
+Let me check the KMP build and then create the Sections file (summary cards, thermal, insights, new-vs-now, stats, quick links, recommendations).
+
+KMP build SUCCESSFUL — both xcframeworks exist. Let me check the metric-value typography so my cards match, then build the Sections file.
+
+Build script stages the release xcframework. Let me check how the app handles deep links (for Quick Links navigation) and view the composition root.
+
+Deep links are handled via `onOpenURL`→`AppRouteParser`. I'll wire Quick Links through `openURL` with web-faithful paths. Now the Sections file.
+
+Let me make the `Text` concatenations explicit (`+`) in two spots to avoid LocalizedStringKey-interpolation ambiguity.
+
+Now the Charts file. Let me first confirm the shared chart-chrome helpers' signatures and whether feature files use `import Charts` directly (for the categorical bar chart).
+
+No feature uses `import Charts` directly — I'll stick to the TS wrappers. Let me read the shared chart-chrome helper signatures to reuse them.
+
+I have the chart-chrome helpers. Now the Charts file (capacity trend, range, charge distribution, AC/DC pie) + loading skeleton, all on the P3 wrappers.
+
+Now the route registration file and the navigation wiring (AppRoute, parser, app composition, RouteTests).
+
+Now wire the navigation: add `.batteryHealth` to `AppRoute`, update the parser, register in the app, and fix the route test.
+
+Now I need to wire the 10 `battery.section.*Failed` keys faithfully. The web wraps each section in a `SectionErrorBoundary` with a titled fallback. Let me add a matching boundary view and wrap the sections.
+
+Let me fix the double blank line and update `readyView` to wrap sections in the boundary (wiring all 10 `section.*Failed` keys).
+
+Now let me add all the i18n keys to the string catalog via a script that inserts entries (skipping any that already exist).
+
+108 keys added, JSON valid (10116 total). Let me review the existing model test conventions, then write the BatteryHealth tests.
+
+I have the test conventions. Let me write comprehensive model + derivation + format tests.
+
+Let me check the swiftlint config (force-unwrap rules etc.) and fix a force-unwrap before linting.
+
+`--strict` (warnings = errors), code lines ≤120. Let me refactor the force-unwrap and run swiftlint on my files.
+
+Several `--strict` violations (length/structure). Let me refactor: split `insights` into helpers, shorten long lines, split the oversized Sections + Tests files, and fix whitespace. Starting with Derivations.
+
+Now shorten the long Charts lines (the bar-chart point maps).
+
+Now split the oversized Sections file. Let me find the split boundary and move the lower panels into a new file.
+
+Splitting at line 290. Let me extract the lower panels into a new `Panels.swift` and truncate `Sections.swift`.
+
+Sections split cleanly. Now split the test file (type_body_length). Let me find the cut point and split into model-tests + derivation-tests.
+
+Splitting tests at line 170. Let me build the derivations-test file and truncate the model-test file.
+
+Now build the derivations-test file from the extracted tests plus the shared helpers.
+
+Now let me re-run swiftlint on all affected files to catch remaining issues.
+
+Two left: Derivations is 1 line over (401), and Panels has a double blank line. Let me fix both.
+
+Let me verify the line count and re-lint my files specifically.
+
+All my files pass swiftlint (400 lines exactly, no violations). Now let me stage the xcframework, generate the Xcode project, and start the build.
+
+Project generated. Let me build the macOS app (exercises the `#else` paths; no simulator needed).
+
+The build is compiling the full app (thousands of files) plus the KMP pre-action. Let me keep waiting.
+
+Build output is buffered by `tail` until completion. A full clean build of this large app takes a while — let me continue waiting.
+
+Build failed at module emission (compile error in my code). The `tail` hid the error details. Let me re-run incrementally and capture the actual errors.
+
+Let me keep waiting for the filtered build errors.
+
+Found it: `BatteryHealthRadialGauge` collides with an existing widget type. Let me check ALL my new type names against the whole codebase to catch every collision at once.
+
+Only one collision. Let me rename `BatteryHealthRadialGauge` → `BatteryHealthHeroGauge` (confirmed unique) in the Hero file.
+
+Renamed. Let me rebuild and capture any errors plus the final result.
+
+The full module re-emit plus dependent widget targets take time. Let me keep waiting.
+
+Fixed the gauge collision. Now: `LazyVGrid` alignment is `HorizontalAlignment` (`.top` is invalid). Let me fix the energy-breakdown grid.
+
+Let me proactively verify a couple of token accesses before the next long build, to catch issues in one cycle.
+
+`chartSeriesPower` is accessible (used by other features). Let me rebuild, logging full output and capturing errors + result.
+
+Let me peek at the in-progress log to gauge progress and catch early errors.
+
+No errors yet; it's at the module-emit step where prior errors surfaced. Let me wait for completion.
+
+Module emitted without errors this time — now building dependent targets. Let me wait for the final result.
+
+macOS build **SUCCEEDED** (EXIT=0, no errors). Now let me build the iOS target (exercises the `#if os(iOS)` paths) and check available simulators for testing.
+
+Let me run the iOS build + my tests on the simulator (this verifies the iOS-specific `#if os(iOS)` paths compile and my tests + the modified RouteTests pass).
+
+No errors; iOS still compiling. Let me run the placeholder scan in parallel (it's build-independent).
+
+Placeholder scan clean (COUNT=0, EXIT=0). Let me check the iOS build/test progress.
+
+Let me update todos and locate the parity log directory while the iOS build continues.
+
+I have the log-format reference. Let me read more of it (header + PARITY + gate sections) to match the format, and check iOS test progress.
+
+I understand the log format. Let me check the iOS test result.
+
+Still building (cold iOS, no errors). Let me inspect the parity ledger while waiting.
+
+I understand the ledger. Let me check the iOS test progress (it's the last gate).
+
+Still building (cold iOS). Let me verify every required string is actually referenced in my source AND present in the catalog (a key honesty check).
+
+All 105 strings verified — referenced in source AND in catalog. Let me check the iOS test status.
+
+Still linking (no errors). Let me wait for the test run to complete.
+
+The iOS build is still compiling (cold, large app + test bundle). No errors. Let me continue waiting.
+
+iOS **test-bundle** build failed — but the error is in a **pre-existing, unrelated** file (`VehicleCostPageModelTests.swift`, not mine). The iOS app target itself compiled. Let me confirm this is pre-existing and not caused by my changes.
+
+Confirmed: `VehicleCostPageModelTests.swift` is **untouched by me** — a pre-existing Swift 6 concurrency error in a sibling's test file blocks the shared test bundle. Let me confirm the iOS **app** target built, enumerate all test-bundle errors, and check whether this is a known pre-existing break.
+
+The only test-bundle error is the pre-existing, unrelated `VehicleCostPageModelTests` (zero errors in my files — the iOS app target compiled them all). To actually **execute** my tests as proof, I'll temporarily unblock that file locally (not committed), run my tests on the already-built macOS target, then revert. Let me inspect the offending line.
+
+The error is a pre-existing Swift 6 concurrency strictness issue (`@MainActor` static used as a `nonisolated` default) in a sibling's test — unrelated to my page. To **execute** my tests as proof, I'll temporarily exclude that one file (move it aside, not edit it), run my tests on the warm macOS target, then restore it.
+
+Excluded (temporarily). Now run my tests on the warm macOS test target.
+
+My test files have 3 compile errors (test files aren't compiled in the app build, so these surfaced only now). Let me view and fix them.
+
+Three test-only compile errors (test files aren't built in the app target, so they surfaced now). Let me fix the argument order and the optional-with-accuracy assert.
+
+Let me scan the rest of the test file for similar issues before re-running.
+
+The rest looks fine. Let me re-lint the changed test file and re-run the macOS tests (sibling file still excluded).
+
+A second pre-existing broken sibling test (`GDPRExportPageModelTests`) — the test bundle has multiple unrelated Swift 6 concurrency breaks. My own test files now compile clean. To execute my tests as real proof, let me automate excluding the broken sibling files (temporarily, restored after), then run my tests.
+
+Excluding 3 pre-existing broken sibling tests (VehicleCost, Timeline, GDPRExport — all unrelated to Battery) makes the bundle build. Now let me **run** my tests.
+
+**All 38 tests pass** (23 derivation + 7 model + 8 route, 0 failures). Now let me restore the temporarily-excluded sibling files so the repo is pristine.
+
+All restored, git-clean. Let me verify the final git status, run a comprehensive swiftlint over the whole Battery dir + modified files (matching the gate), and confirm the project artifact is gitignored.
+
+Git is clean (only my files; artifacts ignored). Let me run the full-directory swiftlint (matching the gate) and a swiftformat check on my files.
+
+swiftlint --strict on the whole Battery dir is clean (EXIT=0). swiftformat flags formatting in my files — let me auto-format them with the ecosystem tool, then re-verify swiftlint.
+
+swiftformat's body-wrapping pushed Derivations to 407 (>400 file_length). Let me move the 5 chart-row structs into a separate file to resolve it.
+
+Derivations now 301 lines, ChartRows 111. Let me verify the join is clean and re-run both swiftlint and swiftformat on all my files.
+
+Clean. Let me run both formatters/linters to confirm all my files are clean now.
+
+Both formatters clean (0/14 need formatting, swiftlint EXIT=0). I split out a new file and reformatted, so let me regenerate the project and do an incremental macOS build to confirm it all still compiles.
+
+macOS build **SUCCEEDED** post-format. Let me re-run my tests (files were reformatted) by re-excluding the 3 broken siblings, then restore.
+
+**38 tests pass** (TEST SUCCEEDED). Let me restore the sibling files and verify the repo is pristine.
+
+Restored and clean (19 files: 14 Battery + 5 nav/string). Now let me add the 2 ledger rows.
+
+Ledger updated. Now let me generate the comprehensive parity log with file+line evidence for all 147 items (auto-grepping string evidence for accuracy).
+
+147 items with evidence generated. Now let me assemble the full parity log.
+
+Log written (474 lines, all markers present). Let me validate the JSON files and do a final git status check before committing.
+
+Both JSONs valid; git status is exactly my intended change set. Let me stage and commit.
+
+Committed (d04cefeda, 21 files). Let me verify a clean working tree and mark the task todos done.
+
+Working tree is clean; commit contains all 21 files. Let me mark the final todo done and confirm.
+
+All 13 todos done. Let me clean up temp files and confirm the final macOS build artifact is intact.
+
+The task is complete and verified. Here's the summary:
+
+## BatteryHealthPage — SwiftUI/HIG parity (P7 battery) ✅
+
+Native SwiftUI implementation of the web `BatteryHealthPage` (`/battery`), adaptive across macOS + iOS, at **147/147 parity** (27 panels + 11 charts + 4 states + 105 strings).
+
+**Architecture** (mirrors the sibling `BatteryDegradation`/`BatteryCells` pages under `Sources/Features/Battery/` — the real compiled path, not the prompt's stale templated path):
+- `@Observable BatteryHealthPageModel` over an injectable `BatteryHealthDataSource` seam binding the 4 web hooks (battery-health, battery-degradation, charging-sessions, charging-telemetry); primary health source drives the phase, the other three are independent.
+- Pure, unit-tested `BatteryHealthDerivations` (every web `useMemo` + `buildInsights`/`buildRecommendations`); SI stays SI, converted only at the render boundary via the `Units` facade.
+- Hero 4-gauge panel (a faithful `BatteryHealthHeroGauge` showing actual value+unit, since shared `TSRadialGauge` only renders a bare %), metric bars, 7 summary + 4 thermal cards, dynamic Smart Insights, capacity-trend (ComposedChart→native line), range area, charge-distribution bar, AC/DC pie + stats, new-vs-now, quick links, recommendations — all on P3 Swift Charts wrappers, never WKWebView. Each section has its own loading/empty/error/success.
+- New `.batteryHealth` route (`/battery` + `/battery/health`), registered + deep-linkable; +108 xcstrings keys (web key names verbatim).
+
+**Gates (all green, executed):**
+- `xcodebuild build -scheme TeslaSync-macOS` → **BUILD SUCCEEDED**; iOS app target compiled all my files clean.
+- `swiftlint --strict` Features/Battery → **0 violations**; `swiftformat --lint` → **0/14 need formatting**.
+- `check-placeholders.ps1` → **COUNT=0**.
+- `xcodebuild test` (macOS) → **38 tests, 0 failures**.
+
+**Honest caveat:** the iOS XCTest *bundle* fails to compile on three pre-existing, unrelated Swift-6 concurrency breaks in sibling test files (`VehicleCost`/`GDPRExport`/`Timeline` — untouched by me, git-clean), the documented out-of-scope break sibling pages also deferred. I temporarily excluded them to execute my suite green, then restored them.
+
+Committed as `d04cefeda` (21 files); working tree clean. Log: `.github/prompts/monorepo/logs/apple-page-battery-BatteryHealthPage.log` (EXIT=0 / STATUS=DONE); ledger +2 rows.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: conflict region is not insert/replace-only

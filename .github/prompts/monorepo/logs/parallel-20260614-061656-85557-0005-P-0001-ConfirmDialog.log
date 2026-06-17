@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure and understanding what exists, then check tooling availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Existing `ConfirmDialog.*` files are present. Let me read the web source spec and the existing native files.
+
+There's already a substantial committed implementation (2293 lines). I need to verify whether it actually builds/tests/lints or is broken. Let me explore the Apple project structure and the existing files.
+
+This is an XcodeGen monorepo (`project.yml`, no checked-in `.xcodeproj`). The existing commit message exactly matches this prompt's target — work may already be done, but I must verify, not assume. Let me read the existing native files and check the build tooling.
+
+Important finding: the existing `ConfirmDialog.*` native files are parity for `components/ui/ConfirmDialog.tsx` (header says "0012", destructive-action dialog with typed confirmation). But THIS prompt (0001) targets a different web source: `components/ai/ConfirmDialog.tsx` (the "Approve Helix action" AI tool-use dialog). Let me investigate the naming convention and the logs to resolve this collision.
+
+Now I understand: there are two colliding prompts. `P-0001` (this task) = `components/ai/ConfirmDialog.tsx`; `P-0012` = `components/ui/ConfirmDialog.tsx` (already built as the existing `ConfirmDialog.*`). The current `p4-apple` log series has 0012 done but NOT 0001. Let me read both prompt files and the older 0001 artifact log to see how the AI-variant was disambiguated.
+
+The old 0001 log reveals the AI-variant was previously implemented (`AiToolPreview`, JSON args, "Approve Helix action") but the current on-disk `ConfirmDialog.*` is the **0012 ui-variant** (destructive dialog) — 0012 overwrote the shared path. This is a generation-time collision: both `components/ai/ConfirmDialog.tsx` and `components/ui/ConfirmDialog.tsx` map to the same native path. Let me confirm by reading the 0012 prompt/log and checking build feasibility (Shared.xcframework, pwsh, project.yml).
+
+Now the full picture is clear:
+- **0012 (ui ConfirmDialog)** is committed at `ConfirmDialog.*`, marked DONE. Its log notes the full-app `xcodebuild` is environment-blocked (missing `Shared.xcframework`/KMP, sibling-surface duplicate-type collisions), so it verified via standalone `swiftc` typecheck + tests.
+- **0001 (ai ConfirmDialog)** = this task, a *different* component (`AiConfirmDialog`, "Approve Helix action"/Tool/Arguments). Its files were overwritten by 0012 at the shared path.
+
+This is a generation-time path collision. I must deliver the AI variant **without destroying** the committed 0012 surface. The web disambiguates by export name (`AiConfirmDialog`), so the correct resolution is native `AiConfirmDialog.*`. Let me study the existing 0012 files (the primitives/conventions I must reuse) and the project.yml source globbing.
+
+`States.swift` calls `ConfirmDialogStrings.text(...)` but `Seams.swift` only defines `string(...)` — there's a `text(...)` helper elsewhere. Let me read the remaining 0012 files plus locate the shared design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSFadeIn`) and the project.yml source globbing.
+
+I now understand the architecture deeply. Critically: even keeping the filename `ConfirmDialog.*` is impossible because the **types** (`ConfirmDialog`, `ConfirmDialogModel`, `ConfirmDialogProjection`…) would collide with 0012's in the same module. The web source is literally exported as `AiConfirmDialog`, so the correct native artifact is `AiConfirmDialog.*` with distinct type names. Let me read the remaining 0012 files (strings/tests/previews) and locate the design tokens + project globbing.
+
+Let me read the ModelTests, the project config (globbing, schemes), lint config, and locate the design-token definitions.
+
+Key finding: `.swiftlint.yml` `included:` does **not** list `TeslaSync/modals-dialogs`, so `swiftlint --strict` won't lint these files (I'll scope-lint explicitly, as 0012 did). `swiftformat --lint apps/apple` **does** cover them. `.swiftlint.yml` is out of scope to edit. Let me read project.yml (source globbing/schemes) and locate the design tokens.
+
+Major discovery from `project.yml`: **`TeslaSync/modals-dialogs` is NOT in any target's `sources`** — so neither 0012's nor my surface is compiled by `xcodebuild -scheme TeslaSync`. Wiring it in is out of scope (allowed files = `ConfirmDialog.*` + log only; 0012 deliberately left project.yml unchanged). So rigorous verification must be standalone `swiftc` typecheck (both SDKs) + `swift test` on the pure core, exactly as predecessor 0012 did. Let me check the Shared.xcframework build script + toolchains, and read the design-token sources for exact APIs.
+
+`gradle`/`kotlin` absent (only `java`) → KMP `Shared.xcframework` can't be produced → full-app `xcodebuild` is environment-blocked (confirming 0012/old-0001). But `xctest`+`swift` ARE available → I can run real `swift test` on the pure core. Tokens confirmed. Let me read the Font tokens and the `TSButton`/`TSGlassPanel`/`TSFadeIn`/`Typography` signatures to lock the exact APIs.
+
+I have all the API signatures I need (`Color.TS.*`, `Font.TS.*`, `TSSpacing/TSRadius`, `TSButton(variant:size:isLoading:action:label:)`, `TSGlassPanel`, `TSFadeIn(delay:)`, `TSCode`). Let me read the placeholder-check script (to run it correctly) and confirm `apps/shared` for build evidence, then start writing.
+
+Everything's confirmed: `Font.TS.{display,title,section,panel,body,bodySm,caption,label}`, `apps/shared` exists but needs Kotlin/Gradle (absent). The gate's placeholder path `.../ConfirmDialog` is a non-existent literal (no-op); I'll scan my actual files. 
+
+I now have a complete picture. Let me set up tracking and write a brief plan.
+
+Writing the plan, then building the surface. Starting with the pure, dependency-free core.
+
+Now the seams (telemetry, controller, source, strings, accessibility).
+
+Now the `@Observable` model.
+
+Core written. Let me update tracking and write the SwiftUI states layer.
+
+Now the content views (intro, tool, arguments JSON block, footer, approve button).
+
+Now the main view + a presenter overlay modifier.
+
+Now the previews and the i18n strings catalog.
+
+Now the two XCTest files. First the adapter/projection/accessibility tests.
+
+Let me keep the test files SwiftUI-free so they run under a lean `swift test` harness — removing the one reference to the SwiftUI `AiConfirmDialog` view.
+
+Now the model tests.
+
+All 10 files written. Let me verify. First, format-fix my files with the repo's swiftformat config, then confirm `--lint` passes.
+
+swiftformat adjusted 3 files. Let me see the diff and confirm `--lint` is clean.
+
+Files are untracked so `git diff` is empty. Let me confirm `--lint` is clean on my files and spot-check formatting.
+
+swiftformat clean. Now swiftlint `--strict`, scoped to the new files.
+
+swiftlint clean (0 violations, 9 files). Now the highest-value check: compile + **run** the pure core tests via a standalone SwiftPM harness (`swift test`).
+
+**42/42 tests pass** — full parity logic verified. Now the View-layer typecheck against the real design system. Let me locate the remaining design-system symbols (`tsGlassPanel()`, `TSMotion`, `TSBadge`) to assemble a closed compile set.
+
+`tsGlassPanel()`/`TSMotion` live in `Sources/Design/TSMaterial.swift`; `TSBadge` in `Badges.swift`. Let me typecheck the **full surface** (incl. SwiftUI views + previews) against the real design system on the macOS 15 SDK.
+
+Path fix — tokens are at `../design/generated/apple/`.
+
+macOS 15 full-surface typecheck passes (including previews via `-D DEBUG`). Now the iOS 18 simulator SDK.
+
+Both SDKs typecheck clean. Now the placeholder gate. The templated gate path `.../ConfirmDialog` is a non-existent literal (no-op), so I'll scan my actual files for an honest, file-scoped result.
+
+Placeholder gate clean (COUNT=0). Now let me attempt the full `xcodebuild` gate to capture honest evidence. First confirm the generated project is gitignored, then generate + attempt the build.
+
+`.xcodeproj`/`Frameworks` are gitignored (commit stays clean), and **iPhone 16 simulator is available**. xcodegen succeeded. Now let me probe the known blocker (KMP `Shared.xcframework` build) with a bounded timeout to capture honest evidence.
+
+The KMP framework build is actually progressing (mostly `FROM-CACHE`; it timed out mid-link). Let me give it more time to complete, then attempt the real `xcodebuild`.
+
+The KMP framework link failed with `libtool ... errno=28` — **ENOSPC (no space left on device)** while writing the 88MB `Shared.framework`. That's an environmental resource blocker, not my code. Let me capture disk evidence and reclaim the space the partial build consumed.
+
+Disk is the blocker: the Data volume is **100% full** (only ~300Mi free), so the KMP `Shared.xcframework` link aborts with ENOSPC — a shared-environment resource limit. I won't delete shared caches (`~/.gradle` 3.6G, `~/.konan` 1.6G) that other slots may use. Let me capture the literal `xcodebuild` failure (tight-bounded), then clean up.
+
+I have definitive evidence: xcodebuild enters the `Stage Shared.xcframework` pre-action (the gradle/KMP build), which fails with ENOSPC. The disk is critically full. Let me reclaim the space this attempt consumed (my own DerivedData) — not touching shared caches.
+
+The `rm` is hanging far too long — likely racing a lingering background build/gradle daemon still writing to disk. Let me stop it and check for stray processes.
+
+Disk recovered to **77Gi free** — the earlier ENOSPC was transient saturation from *concurrent sibling slots* (I can see slot-3's `swift-frontend` builds running; not mine — I won't touch them). With space now available, let me make one more honest, bounded `xcodebuild` attempt and capture the real landing point.
+
+The KMP framework **built successfully** this run (`xcframework successfully written out`) — confirming the earlier failure was transient disk saturation from concurrent slots. The full app compile (thousands of unrelated sibling files) then exceeded the time bound, and crucially `modals-dialogs` isn't in the target anyway. I have thorough honest evidence. Let me clean up **only my slot's** artifacts surgically (not sibling slots' active builds).
+
+All 10 files intact and untracked; disk healthy (193Gi free). Let me confirm a couple of references for the log, then write it.
+
+All references confirmed (`grep -c "modals-dialogs" project.yml` = **0** → definitively not in any target). Now writing the honest, comprehensive gate log.
+
+Log written. Final verification pass on the actual files (concurrent slots churn the tree, so re-confirm), then commit.
+
+
+Authorization error, you may need to run /login (Request ID: F572:29E92A:28B2DC4:2FF8450:6A2EB2F9)

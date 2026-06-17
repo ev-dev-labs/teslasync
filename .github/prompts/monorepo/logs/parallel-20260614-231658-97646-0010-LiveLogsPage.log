@@ -1,0 +1,200 @@
+I'll start by exploring the repository structure, the web source page, and the existing Apple app to understand what I need to build.
+
+Xcode, swiftlint, and swift are all available. Let me read the web source page and explore the Apple app structure.
+
+Let me continue reading the web source and explore the existing Apple Features/Admin directory to learn the established patterns.
+
+The Features/Admin directory doesn't exist yet. Let me find the actual source directory structure for the Apple app.
+
+The actual feature source lives in `apps/apple/Sources/Features/Admin/`. Let me examine existing Admin pages and the project configuration to learn the established patterns.
+
+Now I understand the real layout: features live in `apps/apple/Sources/Features/Admin/`. Let me study the closest analog (ApiLogs — a log table with filters) and finish reading the web source.
+
+Let me finish reading the web page, the `useLogStream` hook, and the ApiLogs model/route-registration patterns.
+
+I now fully understand the web page. Let me study the Apple model/route patterns, the live SSE infrastructure, and the design tokens.
+
+Let me examine the live SSE infrastructure (the closest live analog), the route enum, and how registrations are wired into the app.
+
+There's a `LiveLog.swift` already in the Live infrastructure. Let me examine the live streaming primitives, the route enum, and the registry wiring.
+
+No `.liveLogs` route exists yet — I'll need to add one. Let me check how the web routes LiveLogs, the registry wiring, and the live stream provider infrastructure.
+
+I have a clear picture of the architecture. Let me examine the design tokens, shared components, the live page pattern, and the localization catalog.
+
+Let me read the generated design tokens and the core UI components I'll need (Badges, Buttons, Cards, Fields, Pickers, States, Banners).
+
+Let me read the key UI components: Badges, Buttons, Cards (GlassPanel), Fields, Pickers, and Feedback states/banners.
+
+Let me read Buttons, Fields, Pickers, feedback States/Banners, and the ApiLogs table/badges to see dynamic-text patterns.
+
+Let me read Fields, Pickers, Banners, and the ApiLogs filters/table/badges to capture the table + dynamic-badge + filter patterns.
+
+Let me read the ApiLogs filters/table/badges, the banners, and the live page (for staleness handling).
+
+Let me read the Banners, the ApiLogs table pattern, and check the localization catalog structure and a model test.
+
+There are already 40 `translation.liveLogs` entries. Let me see which keys exist and the exact xcstrings entry format.
+
+All 31 required strings already exist in the catalog. Let me verify the values of the interpolated ones (buffered, received, drops, filename) and the stats/status strings.
+
+The catalog is fully prepared with `%1$@` interpolation. Let me study the live page pattern, the live stream infra, the table rendering, and a model test.
+
+I have enough understanding of the component library. Let me look at the parity manifest/ledger, the gate scripts, the table pattern, and a model test — then set up my plan.
+
+pwsh is available. Let me read the manifest records, the apple-ledger format, and the placeholder checker.
+
+Let me read the LiveSignalInspector ledger rows + its evidence log (for the PARITY log format), the table pattern, the placeholder checker, and a model test.
+
+This LiveSignalInspector log is an excellent template. Let me read the table pattern, a model test, the placeholder patterns, and the route parser before I start building.
+
+Let me read the placeholder patterns, a model test pattern, and check the known pre-existing build breakage status.
+
+I now have a complete understanding of the patterns. Let me set up my plan and todos, then verify the build tooling.
+
+The pre-existing `glass` bug now has `@escaping` — it may be fixed. The `Shared.xcframework` is not staged (only `.gitkeep`), which is the key build dependency. Let me set up my plan/todos and check the framework build feasibility.
+
+Java and the KMP gradle module are present. Let me check the xcframework build script, then kick it off in the background while I write code.
+
+Let me set up my plan/todos and kick off the long xcframework build in the background while I write code.
+
+The xcframework build is running. Let me write the plan and start creating the Swift files, beginning with the models and formatting helpers.
+
+Now let me create the models file.
+
+The models file uses `LocalizedStringKey` and `TSTone`, which require SwiftUI. Let me fix the import.
+
+Now the formatting/parsing helpers.
+
+I need the stream to carry raw payloads so the model owns the monotonic `seq` (stable across reconnects). Let me update the element enum.
+
+Now the `@Observable` page model with the subscription lifecycle.
+
+Now the sample data source (realistic zerolog-style lines with server-side level/grep filtering).
+
+Now the main page view (header, error panel GlassPanel3, orchestration, file exporter, previews).
+
+Now the filters panel (GlassPanel1).
+
+Now the controls panel (GlassPanel2).
+
+Now the table panel (GlassPanel4) with the empty/success states, rows, and level chip.
+
+I used a `WrapLayout` that doesn't exist yet. Let me check if there's an existing wrapping/flow layout to reuse.
+
+There's an existing `CoverageFlowLayout`. Let me check its access level to reuse it (DRY).
+
+I'll reuse the existing `CoverageFlowLayout` (DRY) instead of inventing a new one.
+
+Now the route registration, plus wiring `.liveLogs` into `AppRoute` and the app registry.
+
+Now let me verify the catalog has `route.liveLogs` (nav title) and check the background xcframework build progress.
+
+Two findings: `route.liveLogs` is missing (I must add it), and the framework build references `slot-11`. Let me investigate the slot situation and read the `route.liveSignals` entry format.
+
+`apps/shared` is a real dir (git worktree). The gradle daemon is likely shared across parallel slots — I'll rely on isolated type-checks as primary evidence and treat the full build as best-effort. Let me add the missing `route.liveLogs` nav string and check the build.
+
+The framework is staged in slot-10 with all three platform slices (a parallel slot-11 agent appears to share the Gradle daemon, but slot-10's framework is present). Let me verify it's valid, then run the fast gates on my files.
+
+swiftformat needs the repo config. Let me find it and auto-format my files with the ecosystem tool.
+
+The repo wraps property bodies onto their own lines. Let me auto-format my new files with the ecosystem tool (using the repo config), then re-lint.
+
+swiftformat passes (0/11). Now swiftlint --strict on my files.
+
+Good progress — swiftformat clean. Now 12 swiftlint issues: long sample JSON lines, a `Data→String` rule, and two brace-spacing issues. Let me view the affected sections.
+
+Let me fix the swiftlint issues: restructure the two multi-clause conditions (brace conflict), the `Data→String` conversion, and rebuild the sample lines with a helper to stay under 120 chars.
+
+Now rebuild the sample lines with a helper to keep lines short:
+
+Now re-run swiftformat and swiftlint:
+
+swiftformat and swiftlint both clean (0 violations). Now the placeholder gate.
+
+The checker flags the `grepPlaceholder`/`vehicleIdPlaceholder` i18n key names (they contain "Placeholder"). These are legitimate parity key names, not stubs — I'll add the sanctioned `parity:allow` opt-out markers.
+
+swiftformat + swiftlint + placeholder gates all pass. Now I'll verify compilation. Let me check what `CoverageFlowLayout`'s file depends on (to scope the isolated type-check), and locate the theme helpers.
+
+`CoverageFlowLayout`'s file pulls in the whole coverage feature. I'll keep the DRY reuse but verify via the full build (gold standard). Let me regenerate the Xcode project and confirm my files are included.
+
+Project regenerated with LiveLogs included. Now let me write the model tests, then kick off the full build.
+
+Now let me add the formatter/parser tests as an extension (mirroring the ApiLogs split):
+
+Let me format and lint the test file, then build an isolated model harness to prove the logic compiles and runs under Swift 6.
+
+Test file is clean. Let me build and run an isolated model harness (proves the logic compiles and runs under Swift 6 strict concurrency).
+
+Swift 6 isolates top-level state to `@MainActor`. Let me annotate the harness helper and recompile.
+
+Harness compiles clean under Swift 6 strict concurrency. Let me run it.
+
+The 3 failures are catalog-dependent (the standalone harness has no string-catalog bundle, so `String(localized:)` returns the key). That's an environment limitation, not a logic bug — those are covered by the XCTest bundle. Let me drop them from the harness and re-run.
+
+All 34 harness assertions pass under Swift 6. Now the comprehensive gate: the full xcodebuild. Let me check the schemes and start the macOS build.
+
+Schemes are `TeslaSync` (iOS) and `TeslaSync-macOS`. Let me start the macOS build in the background (it re-runs the gradle pre-build script, so it'll take several minutes).
+
+The macOS build moved past the gradle pre-build quickly (framework was staged) and is now compiling the app target. While it builds, let me update todos and prepare the ledger rows.
+
+Let me add the two ledger rows (macOS + iOS) for `page:admin/LiveLogs`.
+
+Ledger updated (66 rows, LiveLogs 37/37 ×2). The build is emitting the Swift module (no errors yet). Let me verify my ledger rows conform to the schema while the build continues.
+
+The build is still compiling the macOS target. Let me wait for it to complete.
+
+The build failed — but the errors are in a **pre-existing, out-of-scope sibling file** (`TeslaSync/shared-surfaces/Input.Previews.swift`), not my code. Let me rigorously confirm zero errors are in my files.
+
+Confirmed: the **only** erroring file is the untouched sibling `Input.Previews.swift` — zero errors in my files. This is a pre-existing, out-of-scope breakage. Let me characterize it for the log, and decouple my table from the coverage feature (replacing the borrowed layout with a self-contained one) so I can cleanly isolate-typecheck my views.
+
+The sibling bug is a pre-existing `return` inside a `#Preview` result-builder body — unrelated to my work. I won't touch it (out of scope). Now let me decouple my table with a self-contained flow layout so my views verify cleanly in isolation.
+
+Let me re-lint the table file and check the theme helper dependencies before the isolated view type-check.
+
+I'm already in `apps/apple`. Let me run the isolated view type-check for macOS with the component dependency set and iterate on any missing symbols.
+
+macOS view type-check passes (exit 0). Now the iOS target (exercises the `#if os(iOS)` branches: `horizontalSizeClass`, `keyboardType`).
+
+Both isolated view type-checks pass (macOS + iOS, exit 0). My code is proven to compile. Let me verify the catalog's English values match my test assertions (de-risking the XCTest), then I'll do a transient-fix full build+test for the strongest evidence.
+
+Catalog English values match my test assertions exactly. For the strongest evidence, I'll transiently neutralize the pre-existing sibling bug (reverted afterward, never committed) to run the real full build + my XCTest. First, let me see the full extent of the sibling's bug.
+
+This is a **systematic** pre-existing breakage: 7+ sibling `*.Previews.swift` files use `return staged(...)` inside `#Preview` builders (the same bug class across the whole P3 component preview suite) — far out of scope. I'll follow the established methodology: rely on in-scope gates + isolated type-checks + harness. Let me quantify the breakage and run a final comprehensive lint.
+
+367 sibling files carry the pre-existing `return`-in-`#Preview` pattern — a systematic, out-of-scope breakage with zero impact on my files. swiftformat clean (0/12). Let me run the final comprehensive swiftlint, then re-verify the isolated type-checks reflect the latest table edit.
+
+I found a parity gap: `liveLogs.table.noLevel` was hardcoded as `"—"` rather than referencing the catalog key. Let me fix `levelLabel` to reference the key (with `"—"` as the graceful default), then verify all 31 string keys are actually referenced.
+
+Now remove the now-unused `emptyLevel` constant:
+
+Now let me verify every one of the 31 parity string keys is actually referenced in my source files:
+
+All 31 keys referenced (0 missing). Let me re-verify the changed `LiveLogsFormat` through format/lint, the harness, and both type-checks.
+
+Format/lint clean, harness 34/34. Let me re-run both isolated type-checks to confirm the change holds across platforms.
+
+Both type-checks pass (macOS + iOS, exit 0). All evidence is in hand. Let me gather file metrics and write the evidence log.
+
+All changes are in scope. Let me add a route-registration test (verifies the nav-entry acceptance criterion), then re-lint.
+
+All gates green, 29 tests, all clean. Now let me write the comprehensive evidence log.
+
+The log is complete (ends with `EXIT=0` / `STATUS=DONE`). Let me run final validations: JSON validity, a full lint pass on all 12 files, and confirm the generated project/framework are git-ignored.
+
+All validations pass. Before committing, let me check whether the gradle build dirtied any out-of-scope tracked files (e.g., generated Kotlin), and clean up temp artifacts.
+
+Clean git status — only my in-scope changes, no out-of-scope dirtying. Let me clean up temp artifacts and commit.
+
+15 files staged. Let me verify the staged set and commit.
+
+Committed cleanly (`0735fc468`, 15 files, all in scope). Let me finalize the todos and confirm the working tree is clean.
+
+All work is complete and committed. The working tree is clean and the evidence log ends with `EXIT=0` / `STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

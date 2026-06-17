@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure and understanding the web source page I need to port.
+
+Now let me explore the apple app structure and existing conventions.
+
+Let me explore the existing implemented features and conventions in depth.
+
+The `feature-views` directory has 2614 files. Let me look for existing automations and parity-page implementations to understand conventions.
+
+There's already an `ActionBuilder` implementation in `feature-views/`. Let me read all its files to understand the current state.
+
+This is a comprehensive existing implementation. Let me read the remaining ActionBuilder files.
+
+Let me read the remaining ActionBuilder support files.
+
+The implementation looks complete. Let me check git status, the log directory, navigation registration, and whether Xcode is available.
+
+Implementation exists and is committed, but the gate was never run, the ledger row is missing, and the log doesn't exist. Xcode 26.5, swiftlint, and pwsh are all available. Let me look at the gate contract and an existing log to follow the established format.
+
+The `.xcodeproj` is generated via xcodegen. Let me check the gate contract (p4-apple README), an existing log format, and whether xcodegen + the shared framework are available.
+
+The Shared.xcframework isn't present (only `.gitkeep`); the build stages it via a script. Let me examine the build script and an existing feature-view log to understand how the gate was handled previously.
+
+I now fully understand the established methodology. The full-app `xcodebuild` is environment-blocked by the unstaged KMP `Shared.xcframework`; predecessors ran host-runnable gates (dual-SDK typecheck + SwiftPM test harness + lint + format + placeholder) as the real evidence and DEFERRED the full-app build with captured exit-65 proof. Let me verify the design-system symbols the implementation depends on, and confirm the deferral is sanctioned.
+
+There's a `Sources/Features/` tree with done pages (Admin, Analytics). Let me examine how the done P7 pages are structured and locate the design tokens.
+
+The done P7 pages follow a `Sources/Features/{Domain}/{Name}Page.swift` + `PageModel` + `RouteRegistration` pattern. Let me locate the design tokens used by the committed `feature-views/ActionBuilder` and examine the structure of a done page model.
+
+`TSSpacing`/`TSRadius`/`Color.TS` resolve only in `TeslaSyncWatchShared`, not the main `Sources/`. This is a critical concern — the committed `feature-views/ActionBuilder` may reference tokens absent from the app target. Let me inspect the actual design token files.
+
+`TSSpacing` is used by many feature-views but isn't in `Sources/`. The P2 phase generates tokens from `apps/design`. Let me find the generated token files.
+
+Tokens live in `apps/design/generated/apple/Tokens.swift` (wired into the app target). The committed `feature-views/ActionBuilder` IS the SwiftUI `View` + `@Observable ActionBuilderModel` the prompt asks for — shipped by an earlier feature-views prompt. The P7 page prompt additionally wants navigation/route registration. Let me study the done pages' route registration pattern and the navigation shell.
+
+Now I understand the done-page pattern. Let me examine the routing infrastructure (`AppRouteHostRegistry`, `AppRoute`), the `Localizable.xcstrings` catalog, and confirm the deferral precedent.
+
+There's an existing `.automations` route but no dedicated `.actionBuilder` route — the web source is `(unrouted)`, an embedded form component. Let me check the parity manifest record for this unit, the xcstrings format, and a page model with states, to decide the precise deliverable.
+
+The manifest confirms: 1 panel + 2 states + 27 strings = 30. The existing `feature-views/ActionBuilder` covers all of these. To fully satisfy the P7 page prompt (no scope narrowing), I'll add a routed page layer in `Sources/Features/Automations/` that reuses the committed builder, plus xcstrings + ledger + log. Let me gather the final implementation details.
+
+The registry composition chains in `TeslaSyncApp.swift`, but there's no `.actionBuilder` AppRoute (the surface is unrouted) — so navigation registration must be a `NavigationDestination` value mapping. Let me check `teslaSyncTheme`, typography signatures, the xcstrings format, and the deferral precedent, then write my plan.
+
+I have a clear picture. Let me verify the exact component APIs I'll use (states, buttons, typography) and confirm the deferral precedent, then write my plan.
+
+I have the full picture and a clear precedent (the `macos-pending-verifications.md` deferral pattern + the AutomationCard log). Let me confirm `Color.TS.bg` and the lint configs, then write my plan.
+
+I now have a complete understanding. The implementation strategy is clear. Let me write my plan and set up tracking, then implement the P7 page layer.
+
+Now I'll create the page model, view, navigation, and tests. Let me create all four Swift files.
+
+Now let me add the strings to `Localizable.xcstrings`. First let me check the exact format and which keys already exist.
+
+None of the 33 keys exist. Let me insert them in the exact Xcode xcstrings style right after the `"strings": {` line.
+
+All 33 keys inserted correctly. Let me update tracking and start the gate with lint/format/placeholder checks.
+
+swiftformat --lint clean (0/4). Now swiftlint --strict and the placeholder gate.
+
+swiftlint scanned the whole tree (4889 files) and found 4 violations — I need to know if any are in my files. Let me capture the actual violation lines.
+
+One nesting violation in my preview code (the other 3 are pre-existing in `WidgetChartSummary.Tests.swift`). Let me fix it by hoisting the nested preview provider structs to top level.
+
+Now re-run swiftlint and swiftformat on my files to confirm clean.
+
+Both clean. Now the placeholder gate (ADR-011) on the Automations directory.
+
+Placeholder gate clean (COUNT=0). Now let me build a self-contained SwiftPM harness to **execute** the tests (page model + builder logic) on the macOS host — the established host-runnable proof.
+
+All 31 tests pass (5 new page-model + 26 builder) under Swift 6 strict concurrency. Now the dual-SDK typecheck of the view layer against the real tokens + components. Let me assemble the closure and typecheck for macOS 15 first.
+
+Let me typecheck the full view closure (real tokens + UI/Feedback components + builder + new page) against the macOS 15 SDK under Swift 6 strict concurrency.
+
+`FeedbackOverlays.swift` (not needed by my views) references a DataDisplay symbol. Let me narrow to the minimal real component closure my views actually use.
+
+The component files are interdependent. Let me include the full real component + design library (self-contained per the import check) so it typechecks as the genuine unit it is.
+
+The full Components dir pulls `DataDisplay → SharedFacade`. My views don't use those. Let me target only the component files my views transitively need (adding `Banners.swift` for `TSInlineCallout`).
+
+macOS 15 typecheck clean (0 errors, 21 files incl. previews). Now the same closure against the iOS 18 simulator SDK.
+
+Both SDKs typecheck clean (0 errors). Now let me run `xcodegen generate` to confirm the new files are enumerated into the project, then capture the deferred full-app build evidence.
+
+xcodegen succeeded; my 3 app-target files are enumerated (18 refs). The test file isn't picked up — let me check the test-target source config to report accurately.
+
+The test bundles glob co-located tests only from `TeslaSync/*` surface dirs, not `Sources/Features/**`. The done P7 pages put tests in `Tests/Unit/`. Let me verify that convention.
+
+The convention is `Tests/Unit/Features/{Domain}/{Name}PageModelTests.swift`. Let me move my test there to match and be included in the test bundles.
+
+Test moved to the correct convention location. Let me regenerate the project and verify both production files and the test are enumerated.
+
+All files enumerated (production in app targets, test in test bundles). Let me check how the Shared.xcframework staging is wired and whether a timeout tool is available, then attempt a bounded full-app build to capture the deferral evidence.
+
+The staging is a **scheme pre-action** — building with `-target` skips it and fails fast on the missing xcframework (the AutomationCard precedent). Let me capture that deterministic deferral evidence for iOS and macOS, and confirm zero errors in my files.
+
+Confirmed: `IOS_TARGET_EXIT=65`, blocked solely by the missing `Shared.xcframework` — zero errors in my files. Let me capture the macOS target symmetrically.
+
+All gate evidence captured. Both targets defer at exit 65 (missing `Shared.xcframework`), zero surface errors. Let me check git status, confirm the generated project is ignored, and clean up the harness.
+
+Exactly the expected changes; the `.xcodeproj` is git-ignored. Now let me append the two ledger rows.
+
+Ledger updated. Let me verify it conforms to the schema, then write the evidence log.
+
+Rows conform to schema. Let me mechanically verify each of the 27 parity strings is referenced in the builder source AND present in the catalog, so the log's PARITY evidence is truthful.
+
+All 27 strings verified (referenced + catalogued). Now let me write the evidence log with the full `=== PARITY ===` enumeration.
+
+Log written. Let me update tracking and do a final consolidated verification of lint/format on both the page dir and the moved test, plus confirm the log tail.
+
+All final gates green and the log ends with `EXIT=0 / STATUS=DONE`. Let me stage the exact artifact set (adapting to real paths) and commit.
+
+Commit landed cleanly. Let me do a final sanity check on the commit contents and mark complete.
+
+The "TRACKED!" was a flawed shell conditional (empty `git ls-files` output still exits 0). Let me verify properly.
+
+All verified: `.xcodeproj` untracked, working tree clean. The task is complete.
+
+All todos complete. Task finished.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

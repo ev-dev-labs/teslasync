@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure to understand what exists and whether the required Apple tooling is available.
+
+Good — tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The web source exists. Let me read it and explore the existing Apple structure.
+
+Now let me check if AITCONarration already exists in shared-surfaces and study existing surface patterns, especially AI-related ones.
+
+The structure is clear: each surface = a set of dot-prefixed Swift files. There's an existing `AIAlertTuningSuggestions.*` AI surface. Let me find the closest AI-narration analog that uses the same web hooks (`useAiStream`/`AIFeatureCard`/`withAiFeature`) and is already ported, to use as my template.
+
+`AICostForecastNarration` is the closest sibling (cost narration via `AIFeatureCard`). Let me read its full native file set plus the web sources for the shared dependencies to understand the exact contract and porting conventions.
+
+`AICostForecastNarration` is an almost-perfect template (same hooks, same `vehicleId` prop, same narrate POST). Let me read its complete native file set to learn the exact porting conventions.
+
+Excellent, very thorough port. Let me read the remaining template files to capture every convention.
+
+The pattern is very clear. Let me read the remaining template files (Views, Chrome, Previews, Tests, AdapterTests, strings) to match all conventions.
+
+Now let me verify the shared design tokens/primitives exist, and inspect the build setup (project.yml, schemes, whether an `.xcodeproj` exists).
+
+The project uses xcodegen with schemes `TeslaSync` (iOS) and `TeslaSync-macOS`, and `shared-surfaces` is auto-included by directory. Let me read the full project.yml, find the shared primitives, and inspect the gate tooling.
+
+pwsh is available. Tokens/primitives live in `Sources/Components/*` and `../design/generated/apple`. Let me confirm the exact token/primitive APIs and check the Frameworks/build-shared setup (a potential build blocker).
+
+All tokens/primitives exist. Critical finding: `Shared.xcframework` is absent (only `.gitkeep`), and the build scheme's pre-action requires the **Kotlin/Native toolchain + Gradle** to assemble it. Let me check whether that path is viable here, and how the sibling surface (0013) satisfied this same gate.
+
+There are prior gate logs. Critically, let me read the template's gate log (`p4-apple-shared-surfaces-0013-AICostForecastNarration`) to see exactly how this same gate was satisfied, and check whether my target log already exists.
+
+This is the key reference. The template (0013) established the accepted disposition: the surface is shipped + **independently verified** (swiftformat/swiftlint/placeholder green on its files + isolated Swift build & XCTest green), while the full-app `xcodebuild` RED is pre-existing/unrelated (owned by P99). The KMP `Shared.xcframework` can be staged via gradle. Let me read the prior AITCONarration artifact log and check for type-name collisions before writing.
+
+A prior run (different slot) already shipped this exact surface with EXIT=0/STATUS=DONE — confirming my approach. Those files aren't in this branch, so I implement fresh. The `TCONarration*` prefix is collision-free. Let me read the lint/format configs, then write the 10 files modeled on the 0013 template.
+
+All tokens confirmed; lint requires code lines ≤120 (comments/URLs ignored), type names ≤50. Now I'll write the 10 files, modeled precisely on the 0013 template but adapted to AITCONarration's contract (no `months`, route `/ai/analytics/tco/narrate`, TCO strings, the web `emptyHint` element). Starting with the Foundation-only Adapter core.
+
+Now the Model (P1/S8 state-holder seam, P1/S10 facade, P1/S11 telemetry) — dropping `months`, adding the web `emptyHint` element to the Ready projection.
+
+Now the Projection — adding the web `emptyHint` element and the verbatim TCO description.
+
+Now the Chrome (P4 leaf freshness/connectivity/loading/error), with `tco.*` keys.
+
+Now the Views — reproducing the `AIFeatureCard`/`AiOutputPanel` regions, including the web `emptyHint` element under the description.
+
+Now the main surface file, then Previews and the strings catalog.
+
+Now the i18n strings catalog (P1/S10) — the full key set including the verbatim TCO description.
+
+Now the two test files — `Tests.swift` (projection/model/a11y, incl. the new `emptyHint` assertions) and `AdapterTests.swift` (request/SSE/reducer/output/action, no `months`).
+
+All 10 files written. Let me set up tracking and run the fast gates (swiftformat, swiftlint, placeholder check) scoped to the new files.
+
+swiftformat clean (0/9). Now swiftlint and the placeholder scanner.
+
+All three fast gates pass: **swiftformat 0/9**, **swiftlint --strict 0 violations**, **placeholder COUNT=0**. Now the strongest honest check — an **isolated Swift 6 strict-concurrency build + XCTest** of the parity-critical logic (Adapter + Model + Projection + both test files), mirroring how the 0013 template was independently verified.
+
+Isolated build is **GREEN: 74 tests, 0 failures** under Swift 6 language mode (complete strict concurrency) — strong honest verification of the parity logic. Now let me attempt the real full-app gate. First, `xcodegen generate` (cheap, proves integration), and check the toolchain for the KMP staging step.
+
+Full gate is attemptable: `xcodegen generate` GEN_EXIT=0 (my 10 files are in the project graph, 60 pbxproj refs), git tree clean except my files, Java 17 present for the KMP stage, iPhone 16 booted. Before committing to a ~30‑min gradle+full-app build, let me try a faster but real signal: type-check my SwiftUI files against the **real** design tokens + primitives. Let me check their dependency footprint.
+
+The primitives are self-contained (only `import SwiftUI` + the TS tokens). I can type-check my **entire production surface against the real design system** without the full app. Let me confirm the few remaining token members, then run a targeted `swiftc -typecheck`.
+
+All tokens confirmed. Now the targeted type-check of the full production surface (7 Swift files) against the **real** Tokens + TSButton + TSSkeleton + TSFadeIn, for macOS 15.
+
+Those two errors are inside `Skeletons.swift` itself (it uses `TSCard`, from a Card file I didn't include) — not my surface. Let me add the `TSCard` source and re-check.
+
+`Cards.swift` defines `TSCard`. Let me add it plus `TSMaterial` and re-run the surface type-check.
+
+Those errors are now in `Cards.swift`'s own `#Preview` (TSBadge/TSText) — triggered by my `-D DEBUG` flag compiling the *library's* previews, not my surface. Let me type-check the production surface **without** DEBUG (skips all `#Preview` scaffolding) for a clean signal.
+
+Cards.swift cascades into typography components (`TSPanelTitle`, `TSCaption`, `TSText`, `TSBadge`). My surface doesn't use `TSCard` — only `TSButton`/`TSSkeleton`/`TSFadeIn`. `Buttons.swift` and `Motion.swift` are self-contained; only `Skeletons.swift` drags in `TSCard`. Let me locate the typography file and add the real deps so the production type-check resolves cleanly.
+
+**Production surface type-checks clean against the REAL design system (TYPECHECK_PROD_EXIT=0)** under Swift 6. Evidence is now strong: format/lint/placeholder green, 74 isolated strict-concurrency tests green, real-token type-check green, xcodegen integration green.
+
+Now I'll attempt the definitive full-app gate. The long pole is staging the KMP `Shared.xcframework` via gradle — let me start that in the background.
+
+While the framework stages, let me record progress in the plan file and update todos.
+
+The shell that launched gradle returned (it backgrounded the process). Let me check whether the gradle staging actually finished and the framework was written.
+
+The background gradle was killed when its launching session ended (framework not staged; log stopped mid-link). Let me re-run it **detached** so it persists, then poll.
+
+Staging is running detached. Let me wait and monitor.
+
+The detached process was still terminated mid-build (now at release frameworks; debug already UP-TO-DATE, so cache is warm). Let me run staging **synchronously in the foreground** and wait for it to finish this time.
+
+Release-framework linking is slow. Let me keep waiting.
+
+Still linking (~11 min). KMP release-framework assembly for 3 targets is slow. Continuing to wait.
+
+~15 min elapsed (the prior log noted 15m14s for this step). Let me wait a bit more for it to finish.
+
+`Shared.xcframework` STAGED (BUILD SUCCESSFUL, STAGE_EXIT=0). Now the definitive iOS gate. Running `xcodebuild build test` (framework pre-action will be cache-warm), capturing to a log.
+
+Let me peek at the in-progress build log to track my surface and any errors.
+
+Build is progressing (7,361 log lines; my surface is in the compile set with **zero AITCONarration errors so far**; currently building widget/activity extensions). Let me continue waiting for the app + test targets.
+
+iOS gate is **RED (IOS_EXIT=65, 2 failures)** — as both reference logs predicted. The failing Swift batch lists OTHER surfaces (AnnouncerRegion, AnomalyInlineRow, ApiPlayground…) — **AITCONarration is not in it**. Let me extract the actual `error:` lines and confirm zero are mine.
+
+Zero `error:` diagnostics, yet the build reports "2 failures" — the failure isn't a standard compile error. Let me find the real cause (crash / module-resolution / signing) and its location.
+
+A **Swift compiler crash** ("Please submit a bug report… Stack dump") — that's the "2 failures", not a code error. Let me see what it crashed on (and confirm it's not my surface).
+
+The crash is in an app-target Swift batch (AnnouncerRegion / AnomalyInlineRow / ApiPlayground / AppShell / AppearanceSettings…) — **not AITCONarration**. Let me read the stack dump to identify the triggering file/expression.
+
+It's a **swift-frontend internal crash (segfault) on the whole app-target module** (filelist spans all ~thousands of files), under Apple Swift 6.3.2 — zero `error:` diagnostics, zero AITCONarration mentions. This is a toolchain scaling crash, not a source error. To make the "pre-existing, not mine" claim bulletproof, I'll run the **baseline**: temporarily remove my 10 files, regenerate, and rebuild — proving the crash reproduces without my surface. Let me read the backtrace phase first, then start the baseline.
+
+Decisive detail: the crash is **`IRGenRequest` → emitting IR for a compiler-generated `@MainActor` reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`** — a known Swift 6.3.2 IRGen toolchain crash on the whole-module thunk set, independent of any source file. I've stashed my 10 files (0 refs now). Running the baseline build to confirm the crash reproduces **without** my surface.
+
+**Decisive proof:** the baseline build with my 10 files **removed** fails **identically** — `BASE_IOS_EXIT=65`, same "2 failures", same app-target Swift batch (AnomalyInlineRow / ApiPlayground / AppShell / AppearanceSettings…). The crash is pre-existing and independent of AITCONarration. Let me confirm the baseline crash signature matches, then restore my files and run the macOS gate.
+
+Baseline confirmed: **identical** IRGen crash on the exact same thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, 0 `error:` lines, 0 AITCONarration diagnostics — pre-existing and independent of my surface. Files restored (60 refs). Now the macOS gate.
+
+macOS gate: **MAC_EXIT=65, "1 failure"** during the Testing phase. Let me determine the cause and confirm it's not AITCONarration.
+
+macOS failure is **development-signing entitlements** on `TeslaSync-macOS` / `TeslaSyncWidgets-macOS` (no dev cert in this environment) — fails before test execution, zero compile errors, **zero AITCONarration diagnostics**, no IRGen crash. This matches the prior 0052 disposition exactly and is self-evidently pre-existing (it's about app/widget targets I never touched).
+
+Both gates are RED for pre-existing toolchain/environment reasons, with **zero errors attributable to my surface**. Let me gather exact tool versions + file stats and write the gate log.
+
+All evidence gathered. Now writing the comprehensive, honest gate log (covenant-compliant, ending in EXIT/STATUS).
+
+Now a final re-verification of the owned gates (files were moved out and back during the baseline test), then commit.
+
+git status is clean (only my 10 files + the log; xcodeproj correctly ignored). Let me get the re-verification results.
+
+All owned gates re-confirmed green post-restore (FORMAT_EXIT=0, LINT_EXIT=0, PLACEHOLDER_EXIT=0). Committing the surface + log with the prompt's message.
+
+Committed (`589a707f0`). Let me clean up temp artifacts and do a final tree check.
+
+The task is complete and committed. Final state verified: clean working tree, commit `589a707f0`, all todos done.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-shared-surfaces-0052-AITCONarration.log | 254 ++++++++++++++
+ .../shared-surfaces/AITCONarration.Adapter.swift   | 326 ++++++++++++++++++
+ .../AITCONarration.AdapterTests.swift              | 285 +++++++++++++++
+ .../shared-surfaces/AITCONarration.Chrome.swift    | 149 ++++++++
+ .../shared-surfaces/AITCONarration.Model.swift     | 378 ++++++++++++++++++++
+ .../shared-surfaces/AITCONarration.Previews.swift  | 121 +++++++
+ .../AITCONarration.Projection.swift                | 145 ++++++++
+ .../shared-surfaces/AITCONarration.Tests.swift     | 383 +++++++++++++++++++++
+ .../shared-surfaces/AITCONarration.Views.swift     | 246 +++++++++++++
+ .../shared-surfaces/AITCONarration.strings         |  46 +++
+ .../TeslaSync/shared-surfaces/AITCONarration.swift | 119 +++++++
+ 11 files changed, 2452 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0052-AITCONarration.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AITCONarration.swift

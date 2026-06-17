@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Found the web source. Let me read it and explore the Apple app structure.
+
+The web component is a presentational component. Let me read its dependencies (constants, helpers) and explore the Apple app directory structure.
+
+Let me explore the Apple TeslaSync structure in depth, especially existing feature-views as templates.
+
+There are many existing feature-views. Let me examine the file pattern for one example and check whether HealthOverview already exists.
+
+`HealthGaugeGrid` is a sibling from the same web feature directory — the ideal template. Let me read all its files to learn the exact conventions.
+
+Let me read these files individually using the view tool for clarity.
+
+Excellent template. Let me read the remaining HealthGaugeGrid files (Adapter, Views, States, Previews, strings, Tests, ViewTests).
+
+Now the States, Previews, strings, and test files to complete my understanding of the pattern.
+
+Now the test files and the shared infrastructure (tokens, components, project config).
+
+I have the full pattern. Now let me locate the shared P1/S9 tokens and P1/S8 components, and check how Badge/AlertBanner/AnimatedNumber equivalents are handled. Let me also check the build config.
+
+The build uses directory globbing — any `.swift` in `feature-views/` is auto-included (tests excluded). Let me read the shared UI building blocks I'll need (Badge/TSTone, material, feedback) and find AlertBanner/AnimatedNumber equivalents.
+
+Let me read the shared AlertBanner (Banners.swift), AnimatedNumber (Metrics.swift), the glass material, and the precise test-target config.
+
+Now let me check tool availability on this runner (critical for the gate) and read the remaining shared components I'll use (AnimatedNumber, Motion, EmptyState, glass material, tokens).
+
+Toolchain is present (Xcode 26.5, Swift 6.3, xcodegen, swiftlint, swiftformat, pwsh), though only the iOS/macOS 26.5 SDKs are installed (deployment targets 18/15 are still supported). Now let me read the web Badge/AlertBanner/GlassPanel for fidelity, plus the native tokens/material/motion/empty-state APIs.
+
+Let me confirm the exact design-token API (Font.TS roles, Color.TS names, TSSpacing/Radius/Motion) and the glass material modifier.
+
+Let me confirm the exact Color.TS, TSSpacing, TSRadius, and TSMotion token names.
+
+I have nearly everything. Two more critical checks: the web `AnimatedNumber` formatting (for score parity) and the `check-placeholders.ps1` gate script (so my code passes it).
+
+Let me read the placeholder patterns JSON so I avoid all forbidden tokens in shipped code.
+
+Let me check whether the build prerequisites exist (the `Shared.xcframework` KMP core and ability to generate the Xcode project), since the gate needs a full `xcodebuild test`.
+
+The `Shared.xcframework` (KMP core) is absent — a hard dependency for the app targets. Let me check whether it can be built locally.
+
+Building the KMP `Shared.xcframework` needs the Kotlin/Native toolchain + Gradle (likely network). Let me kick that off in the background while I write the surface, and generate the Xcode project in parallel.
+
+The gradle build is running in the background. Let me read the lint/format configs to ensure my code passes `--strict`, then write all files.
+
+The gradle build finished. Let me check whether the Shared.xcframework was produced.
+
+Gradle timed out at 240s (still downloading the Kotlin/Native toolchain). Let me restart it in the background with a longer window and log to a file, then write the surface code in parallel.
+
+Now I'll write the surface files, mirroring the HealthGaugeGrid pattern with `HealthOverview`-prefixed names. Starting with the Foundation-only Model and Adapter.
+
+Background launcher returned (nohup running). Let me continue writing the Adapter, then check gradle progress.
+
+Now the main view file, and let me check gradle progress.
+
+Gradle is actually progressing well (Kotlin/Native toolchain was cached; now linking release frameworks). Let me continue with the Views file.
+
+Now the States file (freshness chip, connectivity banner, loading, empty, error).
+
+Now the strings catalog and the Previews file.
+
+Now the unit Tests and ViewTests files.
+
+All 9 files created. Let me check gradle progress and run swiftformat/swiftlint on my new files to catch style issues early.
+
+Gradle built the xcframework (cached toolchain). Two things to handle: stage the framework into `Frameworks/`, and fix swiftformat line-wrap issues in my test files. Let me investigate the framework location and auto-format my files.
+
+Framework debug variant is now staged in slot-95's build dir (parallel slots share a Gradle daemon/cache). Let me run swiftlint and the placeholder gate on my files while the release build finishes, and re-verify swiftformat.
+
+swiftformat and swiftlint are both clean on my files. Now the placeholder gate and gradle status.
+
+All three static gates pass on my files (swiftformat ✓, swiftlint ✓, placeholders ✓). Let me verify the auto-formatted test sections are still correct, and wait for the gradle release build.
+
+Auto-formatting preserved the logic correctly. Let me do a fast standalone type-check of the Foundation-only core (Model + Adapter) and poll the gradle release build.
+
+Core logic type-checks cleanly under Swift 6. Let me wait for the gradle release build to finish so I can stage the framework and attempt the full xcodebuild.
+
+The shared Gradle daemon is being contended across parallel slots. Let me check actual state — whether the release framework finished and whether gradle is still alive.
+
+Key findings: the **release xcframework is now in slot-95**, and the **iPhone 16 simulator exists and is booted**. The environment is capable. Let me stage the framework and generate the Xcode project.
+
+Project generated. Now let me run the macOS build to validate the whole module (including my files) compiles. This is a large project, so I'll log and monitor.
+
+The build failed — but all errors are in **other** surfaces (`dashboard-widgets/ChargeSessionChartWidget`, `ChargeStatusLiveWidget`, `ChargeStatusWidget`) with "ambiguous type lookup" errors (duplicate type names across surfaces). Let me confirm **zero** errors reference my HealthOverview files.
+
+Confirmed: **0 errors reference HealthOverview** (113 total errors, all in other surfaces). Let me get the full breakdown of which pre-existing files are failing.
+
+All 113 errors are in unrelated `dashboard-widgets/*` surfaces (duplicate-type declarations from other prompts) — **none in feature-views**. My defensive `HealthOverview`-prefixing avoided this collision class. Let me confirm the repo state: are these pre-existing/committed, and is my change purely additive?
+
+Confirmed: my change is **purely additive** (only 9 new untracked `HealthOverview.*` files), and the failing dashboard-widget files are **committed at HEAD** with genuine duplicate type definitions (`ChargeUnitPrefs` defined in two files). So the app target was already red at HEAD, independent of my work.
+
+Let me check whether I can isolate my surface for a real build+test (does the shared `Sources/` layer depend on the broken surfaces?).
+
+`Sources/` is a self-contained shared layer (188 files, zero references to any surface types). I can isolate my surface into a scratch framework + test bundle to get a **real build+test run** for HealthOverview, excluding the pre-broken dashboard-widgets. Let me set that up.
+
+xcodegen is stuck scanning the 1546-entry feature-views dir twice. Let me stop it and point the spec at a small temp dir containing only my files.
+
+xcodegen is being defeated by heavy machine contention from parallel slots (not my code). Rather than fight it, let me run my **core logic at runtime** via a standalone executable (the Model+Adapter are dependency-free) — this actually executes the projector/model/accessibility assertions.
+
+Now let me compile the real Model + Adapter with this harness as an executable and run the core logic at runtime.
+
+Two harness-only issues (not in shipped code): `iconSystemName` lives in the SwiftUI Views file (not the core), and Swift 6 main-actor isolation on my test globals. Let me fix the harness.
+
+Top-level vars can't carry a global actor. Let me encapsulate the counter in a class.
+
+All 44 runtime assertions PASS — the real Model+Adapter execute correctly. Now let me run the gate's static steps exactly as specified (whole-tree) to capture honest results, and verify my files aren't implicated in any pre-existing whole-tree issues.
+
+Whole-tree swiftformat passes (0/2267). Now whole-tree swiftlint --strict and the placeholder gate.
+
+Whole-tree swiftlint found 1 pre-existing violation. Let me identify it (confirm it's not mine).
+
+The lone swiftlint violation is pre-existing in `dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift` — not mine. Let me kick off the iOS build in the background (to capture a real exit code) and run the placeholder gate now.
+
+Placeholder gate passes (count 0). Let me check the iOS build progress and confirm the log directory exists.
+
+The log dir exists with sibling logs. Let me read the closest sibling's log (HealthGaugeGrid 0154) to match the expected format.
+
+This is the key insight: the sibling **HealthGaugeGrid (0154)** log shows the **sanctioned disposition** — `EXIT=0 / STATUS=DONE` via an **isolated SwiftPM harness** that compiles the exact shipped sources against the real design system and runs the tests, while the full-app xcodebuild gate is **DEFERRED** (pre-existing, unrelated breakage: co-located XCTest-in-app-target + duplicate-type collisions + macOS signing). Let me replicate that proven method. First, inspect the design-system deps and the pending-verifications doc.
+
+The design system imports only Apple frameworks (self-contained). Let me replicate the sibling's sanctioned SwiftPM harness: real design-system sources + my exact shipped files + my tests, in Swift 6 language mode.
+
+Two fixes: the base `swift` file symlink got a doubled name, and I should confirm the UIKit import is guarded. Let me correct.
+
+UIKit/AppKit are properly guarded. Now the Package.swift and `swift test`.
+
+**All 28 tests pass** in the isolated SwiftPM harness (real design system + exact shipped sources, Swift 6 mode) — including all 8 per-state ImageRenderer render tests. This matches the sibling's sanctioned verification. Let me check the iOS full-app build result (for the honest DEFERRED line).
+
+iOS shows the same pre-existing dashboard-widgets errors, **zero HealthOverview errors** (still running → will end at exit 65 like macOS). Let me read the referenced `macos-pending-verifications.md` to align disposition language while iOS finishes.
+
+This confirms the sanctioned disposition: every P4 Apple surface ships **code-complete + host gates green (isolated SwiftPM build+tests)**, with the full-app xcodebuild **DEFERRED** to the `P99` acceptance gate on a signed `macos-latest` runner. My surface meets this bar. Let me wait for the iOS build to finish (to record its real exit honestly), then write the log.
+
+iOS confirmed: `IOS_EXIT=65`, 113 errors, **all** pre-existing dashboard-widgets collisions, **zero** HealthOverview errors — identical to macOS. I now have complete, honest evidence. Let me write the gate log following the sanctioned sibling format.
+
+Now let me clean up the git-ignored verification artifacts and confirm the working tree contains only my intended additions.
+
+Working tree is clean: only my 9 surface files + the log are new (the 2 modified web files are pre-existing, not mine). Let me verify the exact i18n key count to keep the log accurate, then correct it if needed.
+
+21 keys total (11 web + 10 chrome). Let me correct the count in the log.
+
+Now let me stage exactly my 9 surface files plus the log (leaving the unrelated pre-existing web changes untouched) and commit.
+
+Nothing staged — let me diagnose (check ignore status and add verbosely).
+
+Good — they're not ignored; the earlier multi-add had a transient issue. Let me stage all 10 files and verify.
+
+All 10 files staged (9 surface + log); the unrelated web changes are excluded. Let me commit with the prescribed message.
+
+Committed (`06e28c1cc`, 10 files, 1695 insertions). Let me do a final verification of the tree state and confirm no stray processes remain.
+
+The task is complete and verified. Final state confirmed: my commit `06e28c1cc` contains exactly the 9 surface files + the gate log; the only remaining working-tree changes are 2 pre-existing web files I never touched; and every `HealthOverview` type is uniquely prefixed (so it sidesteps the duplicate-type collisions breaking sibling surfaces).
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0155-HealthOverview.log | 169 ++++++++++
+ .../feature-views/HealthOverview.Adapter.swift     | 200 ++++++++++++
+ .../feature-views/HealthOverview.Model.swift       | 353 +++++++++++++++++++++
+ .../feature-views/HealthOverview.Previews.swift    |  84 +++++
+ .../feature-views/HealthOverview.States.swift      | 180 +++++++++++
+ .../feature-views/HealthOverview.Tests.swift       | 271 ++++++++++++++++
+ .../feature-views/HealthOverview.ViewTests.swift   |  92 ++++++
+ .../feature-views/HealthOverview.Views.swift       | 191 +++++++++++
+ .../TeslaSync/feature-views/HealthOverview.strings |  47 +++
+ .../TeslaSync/feature-views/HealthOverview.swift   | 108 +++++++
+ 10 files changed, 1695 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0155-HealthOverview.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthOverview.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthOverview.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthOverview.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthOverview.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthOverview.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthOverview.ViewTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthOverview.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthOverview.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthOverview.swift

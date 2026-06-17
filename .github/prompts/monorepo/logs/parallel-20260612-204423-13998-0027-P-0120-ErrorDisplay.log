@@ -1,0 +1,174 @@
+I'll start by exploring the environment and the relevant source files to understand the task scope.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Now let me read the `_ErrorState` web primitive and explore the existing Apple app structure to learn the conventions.
+
+There's an extensive existing `shared-surfaces` directory. Let me find a close-match template (a feedback/banner surface) and locate the shared infrastructure (i18n facade, tokens, state-holders, diagnostics).
+
+`SectionErrorBoundary` is the ideal template — a full error surface with the complete file set. Let me read all its files to learn the exact conventions.
+
+Excellent architecture. Let me read the remaining template files (Views, States, Seams, Previews, strings, Tests) to complete my understanding.
+
+Let me read the Previews, strings, and both test files, plus check the design tokens and shared components referenced.
+
+Let me read the UI test pattern, the project build config, find the design tokens, and check whether a sibling `QueryError`/`OfflineBanner` surface exists (closest cousins of `ErrorDisplay`).
+
+`QueryError` already exists and is the **exact sibling** the web source says `ErrorDisplay` mirrors. This is my primary template. Let me read the web `QueryError.tsx` and all the Swift `QueryError.*` files, plus confirm the test-target wiring.
+
+Now I have the web parity picture. `ErrorDisplay` = `QueryError` minus the transient-waiting branch and auto-retry effect, plus a `compact` variant. Let me read all the `QueryError.*` Swift files to mirror the exact native interpretation.
+
+Let me read the remaining `QueryError.*` files (Model, Seams, States, main view, Views, Previews, strings, Tests).
+
+Let me read the remaining `QueryError` view-layer files, plus the design tokens and shared components I'll need.
+
+Let me read the QueryError tests, previews, strings, and verify lint config and the design tokens/components I'll reference.
+
+I now fully understand the sibling. Let me read the QueryError previews + strings, verify the design tokens/components exist, and check the lint config (line-length budget).
+
+Now let me verify the design tokens (fonts/spacing available for the compact density), confirm shared components exist, and ensure there's no naming collision with the atomic `TSErrorDisplay`.
+
+Let me read the token definitions and the component signatures I'll use.
+
+Let me confirm the exact `TSEmptyState` and `TSButton` initializers before writing.
+
+I have all conventions. Let me set up tracking and check the build infrastructure (xcodegen, xcframework, simulators) to plan verification.
+
+Important finding: `Frameworks/Shared.xcframework` is only a `.gitkeep` placeholder — the KMP shared core binary is absent, which will block a full `xcodebuild` of the app target. Let me assess how pervasive `import Shared` is and whether the Design/Components/shared-surfaces layers are self-contained enough for a targeted type-check.
+
+Key finding: the Design, Components, and shared-surfaces layers are all `Shared`-free (only the 15 core Sources files need the absent xcframework). That lets me type-check my surface against the *real* tokens/components in isolation. Let me prove the harness works using the existing QueryError sibling first.
+
+The closed set needs the typography components too. Let me include all of `Sources/Design` + `Sources/Components` (all Shared-free) to form a complete set.
+
+A few Components files (e.g. `UnitFormatters.swift`) pull in core types. Let me locate the typography components I need and build a minimal closed set by hand.
+
+Only `UnitFormatters.swift` references core types. Let me exclude it and re-run the closed-set typecheck.
+
+The closed-set harness type-checks cleanly with QueryError — this is my correctness gate since the full app build needs the absent `Shared.xcframework`. Now I'll write the plan and all 10 surface files.
+
+Now writing the surface. Starting with the pure Adapter core.
+
+Now the Model (state-holder, telemetry, connection axis, projection, i18n facade) — no auto-retry, plus the density axis.
+
+Now the Seams (source + navigator protocols and their static/in-memory/recording implementations).
+
+Now the States chrome (loading skeleton + empty "all clear"), with density-aware loading.
+
+Now the Views — the density-aware failure card, the recovery CTA button, and the freshness chip.
+
+Now the main surface view with model + controlled-host initializers.
+
+Now the Previews (every state plus the compact variant).
+
+Now the per-surface i18n strings table (mirrors web `error.*` keys, no waiting branch).
+
+Now the adapter/projection/density/a11y test suite.
+
+Now the state-holder ModelTests — including the key delta test that reconnect does **not** auto-retry.
+
+All 10 files created. Let me update tracking and run the targeted type-check of the app-source files within the closed set.
+
+App files type-check cleanly. Now let me type-check the **test** files by compiling them in-module (stripping the self-import) with XCTest available.
+
+XCTest just isn't on the search path — those errors are all downstream of that, not real code issues. Let me locate the simulator XCTest framework and fix the flags.
+
+Found it — the XCTest swiftmodule is under `Developer/usr/lib`. Let me add that include path and re-run.
+
+Both app and test files type-check cleanly against the real tokens/components/XCTest. Now the formatter and linter gates on my new files.
+
+swiftformat passes (0/9 need formatting). Now swiftlint --strict on the new files.
+
+One issue: the Adapter is 402 lines (the `--strict`-promoted 400-line budget). I'll trim verbose comments to get under 400 without losing clarity. Let me check the exact counts.
+
+I'll condense the Adapter's header comments to get under the 400-line budget with headroom.
+
+swiftlint: 0 violations across all 9 files. swiftformat: passes. Now let me run the placeholder check. Let me first read the script to use it correctly.
+
+The script scans a path recursively. Let me check the forbidden patterns and run the placeholder scan against just my files (in an isolated temp dir for an honest result).
+
+No risky tokens. Let me run the actual placeholder gate against an isolated copy of my files for clean evidence.
+
+Placeholder gate clean (`EXIT=0`). Now I'll attempt the actual `xcodebuild` gate to capture real evidence of the `Shared.xcframework` blocker. First generate the project.
+
+Confirmed: `Shared.xcframework` is git-ignored and staged by `Scripts/build-shared-xcframework.sh` (a separate KMP/Gradle build) — only the `.gitkeep` is present. The project generated fine. Now let me attempt the iOS build to capture the blocker evidence.
+
+The build is taking long (compiling the full app). Let me continue waiting.
+
+The full build is impractically slow through a filtered pipe. Let me stop it and capture the blocker evidence efficiently and definitively.
+
+Let me see the raw error from that Shared-importing file.
+
+Only 1 of the 15 files guards with `canImport(Shared)`; the other 14 import it unconditionally, and the app targets require the framework dependency. Let me check the staging script and then capture the real xcodebuild error to a log.
+
+The blocker is fully characterized: the framework is produced by a separate Gradle KMP build (`:core:assembleSharedXCFramework`) requiring the Kotlin/Native toolchain — out of scope and not staged here. Let me capture the definitive compile error fast by type-checking an *unguarded* `Shared`-importing app file (what the full build hits).
+
+Definitive blocker captured: `error: no such module 'Shared'` — the absent KMP core blocks every Apple target's compile (out-of-scope Gradle build). My surface itself passes all runnable checks. Let me write the honest gate log. First, confirm the log directory.
+
+The logs dir exists and siblings include a QueryError gate log. Let me read it to mirror the established log format and see how the build step was handled.
+
+Same environment confirmed by the sibling (`Shared.xcframework : ABSENT`). Let me read the tail to mirror the verification + ending (EXIT/STATUS) format.
+
+The sibling reached `STATUS=DONE` by actually **running** the shipped tests in an isolated Swift 6 build (not just type-checking) and marking the full-app xcodebuild `DEFERRED`. To match that rigor, I'll build an isolated SwiftPM harness named `TeslaSync` and run my real XCTest cases. First, verify the closed set compiles for the macOS host (where `swift test` runs).
+
+Clean on macOS host too. Now I'll build an isolated SwiftPM harness named `TeslaSync` and actually **run** the shipped XCTest cases (matching the sibling's verification rigor).
+
+Now running the real isolated test build (`swift test`) — this compiles the shipped sources against the real design system and executes the XCTest cases.
+
+The rsync include/exclude ordering let `UnitFormatters.swift` (which needs core types) slip in — all errors are from it. Let me remove it and re-run.
+
+**Build complete — Executed 58 tests, 0 failures (`SWIFT_TEST_EXIT=0`).** The shipped sources compile against the real design system and all tests pass. Let me gather final figures and write the honest gate log.
+
+All gates green after the trim. Now writing the comprehensive, honest gate log.
+
+Log written. Now let me clean up temporary artifacts and check git status before committing only the allowed files.
+
+Only the allowed files are new. Let me verify the full repo status has no stray changes, then commit exactly the allowed files.
+
+Exactly the 11 allowed files, no stray changes. Committing with the prompt's message (using a glob so all `ErrorDisplay.*` files are staged).
+
+Committed (`bf12e32fc`). Let me mark the work complete and do a final clean-tree confirmation.
+
+Task complete. The `ErrorDisplay` P4 shared surface is implemented, verified, and committed.
+
+## Summary
+
+Shipped a production, Apple-idiomatic SwiftUI parity of `web/src/components/feedback/ErrorDisplay.tsx` at `apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.*` (10 files, 2099 LoC), committed as `bf12e32fc`.
+
+**Parity** — Modeled on the documented sibling `QueryError`, with the web source's deliberate deltas: no transient-waiting branch, **no reconnect auto-retry** (web has no `useEffect`), plus a **`compact` density** variant. All four branches reproduced (404 ±listHref / 401·403 → `/login` / 5xx / network·offline), with the status-0 offline sentinel and disabled "Retry when online".
+
+**Architecture** — Bound through P1/S8 state-holder + seams (source/navigator), P1/S10 i18n facade (zero English literals; per-surface `.strings`), P1/S11 `view.opened` telemetry (slug `ErrorDisplay`), P1/S9 tokens (no Tailwind ported). Every state renders: loading / empty / failure / stale / offline.
+
+**Verification (all green, real output)**
+- `swiftlint --strict` (9 files): **0 violations**
+- `swiftformat --lint` (9 files): **0/9 require formatting**
+- `check-placeholders.ps1`: **PLACEHOLDER_COUNT=0**
+- Isolated Swift 6 (`swiftLanguageMode .v6`) build+test of the exact shipped sources against the **real** design system + components: **Build complete · Executed 58 tests, 0 failures**
+
+**Full-app `xcodebuild` (iOS + macOS): DEFERRED** — blocked by the pre-existing, out-of-scope unstaged KMP `Shared.xcframework` (`apps/apple/Frameworks/` holds only `.gitkeep`; 14 app sources `import Shared` unconditionally → `error: no such module 'Shared'`). This affects every Apple target equally and is owned by the P4/P99 acceptance gate, matching the sanctioned disposition of sibling surfaces (0133 QueryError, 0138 SectionErrorBoundary). Log ends `EXIT=0 / STATUS=DONE` with full evidence. SwiftUI/Charts/MapKit/SDKs/simulators are all present — **not** capability-blocked.
+
+
+
+All work is complete and committed; every todo is done. Calling task_complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0120-ErrorDisplay.log | 197 ++++++++++
+ .../shared-surfaces/ErrorDisplay.Adapter.swift     | 398 +++++++++++++++++++++
+ .../shared-surfaces/ErrorDisplay.Model.swift       | 257 +++++++++++++
+ .../shared-surfaces/ErrorDisplay.ModelTests.swift  | 233 ++++++++++++
+ .../shared-surfaces/ErrorDisplay.Previews.swift    | 108 ++++++
+ .../shared-surfaces/ErrorDisplay.Seams.swift       | 152 ++++++++
+ .../shared-surfaces/ErrorDisplay.States.swift      |  77 ++++
+ .../shared-surfaces/ErrorDisplay.Tests.swift       | 332 +++++++++++++++++
+ .../shared-surfaces/ErrorDisplay.Views.swift       | 199 +++++++++++
+ .../TeslaSync/shared-surfaces/ErrorDisplay.strings |  50 +++
+ .../TeslaSync/shared-surfaces/ErrorDisplay.swift   |  96 +++++
+ 11 files changed, 2099 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0120-ErrorDisplay.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.swift

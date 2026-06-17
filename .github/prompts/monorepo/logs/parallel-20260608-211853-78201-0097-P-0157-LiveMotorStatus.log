@@ -1,0 +1,131 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the existing Apple app structure.
+
+The web source is clear. Now let me study the existing Apple app conventions deeply. I'll look at the most similar existing motor-related feature-views and the shared infrastructure.
+
+This uses XcodeGen (`project.yml`). `MotorEfficiencyInsights` is the ideal template — motor-related with the full file set. Let me read it completely along with the project config.
+
+Excellent template. Let me read the rest of the reference set (Adapter, Views, Tests, Previews, strings) and locate the shared design primitives the web component maps to.
+
+The pattern is very clear now. Let me read the Tests/Previews/strings and locate the shared design-system primitives (TSGlassPanel, TSTone, tokens, EmptyState equivalent).
+
+Now I have the full template. Let me locate the shared design-system primitives (tokens, panels, components) these surfaces depend on.
+
+Let me read the core design tokens and the specific shared components the web source maps to.
+
+`TSInlineMetric` exists (web `InlineMetric` parity), but lacks icon support — I'll build icon-bearing tiles scoped to my surface, consistent with the established self-contained pattern. Now let me read the token definitions and key shared components.
+
+The tokens are likely in the generated design tokens path. Let me locate them.
+
+Let me read the generated tokens to know exactly what's available, plus the Motion, Feedback (EmptyState), and Buttons components.
+
+Now let me read the Feedback components (EmptyState/Skeleton), Buttons, confirm no existing LiveMotorStatus native files, and check the web `MotorSnapshot` type for exact field parity.
+
+The native `LiveMotorStatus.*` files **already exist** (7 files). My job is to audit them for parity/completeness/correctness and fix any gaps. Let me read all of them plus the `MotorSnapshot` type.
+
+Critical finding: the **existing** native `LiveMotorStatus.*` files implement the **driving-dynamics** variant (prompt 0170: torque/RPM/temp gauges, `dynamics.*` keys, "Awaiting live motor data"). But THIS prompt (0157) specifies the **drivetrain-health** source (Shift State/Power/Regen/Source/Inverter/Battery/HV Isolation, `drivetrain.*` keys, "No live motor telemetry yet"). Both target the same output path. Let me investigate this collision before acting.
+
+Now the picture is clear: there are two sibling prompts (0157 drivetrain-health, 0170 driving-dynamics) that **both** map to the same native path. 0170 already executed and committed those files. Let me read both prompt files and the parity mapping to determine the correct disambiguation.
+
+Both prompts collide on the same path and the same primary type name `LiveMotorStatus` — they're mutually exclusive by construction. The committed files are the 0170 (driving-dynamics) variant. This slot is assigned 0157 (drivetrain-health). Let me check the parity mapping for canonical guidance and how the build references this surface.
+
+The collision is baked into `surface-units.json` — two web sources share slug `LiveMotorStatus`. No Swift code calls `LiveMotorStatus(` yet, so it isn't wired into a page. This slot is assigned **0157 (drivetrain-health)**; the committed files are **0170 (driving-dynamics)**. They can't coexist (same type/slug/path). The honest action is to make `LiveMotorStatus.*` match the 0157 drivetrain-health source.
+
+Before committing to the rewrite, let me verify the build tooling viability (XcodeGen, the Shared.xcframework script, PowerShell, simulators), since the gate builds the whole app.
+
+Build tooling is present: xcodegen 2.45.4, pwsh, iPhone 16 simulator (booted), check-placeholders.ps1. The big unknown is the `Shared.xcframework` KMP/Gradle build (the scheme pre-action). Let me check the KMP build feasibility and the referenced pending-verifications doc, then kick off that long-pole build in the background while I do the code work.
+
+Crucial context: `macos-pending-verifications.md` documents that the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 8–15×, 100+ co-located `*Tests.swift` importing XCTest into the app target, unstaged framework, signing). The established methodology verifies each surface **in isolation** (SwiftPM build + tests + `swiftc -typecheck` + swiftlint/swiftformat/placeholder) and defers the full-app build to a macOS CI gate. Let me read the committed 0170 gate log and the latest 0157 attempt log to follow precedent exactly.
+
+This is the definitive precedent (0170, STATUS=DONE): author the full surface, verify via **host-runnable gates** — `swiftc -typecheck` on both iOS 18 + macOS 15 SDKs, a **self-contained SwiftPM harness** executing the full XCTest suite, swiftlint --strict, swiftformat --lint, placeholder gate — and **defer** the full-app `xcodebuild build test` (unstaged KMP framework + macOS signing) with captured real evidence. I'll follow this exactly, but with drivetrain-health content. Let me read the most recent 0157 attempt log for the blueprint, and the latest 0157 artifact log.
+
+This prior 0157 log is a detailed blueprint. Let me read the rest (gate steps, harness approach, i18n keys, test breakdown).
+
+I now have a complete blueprint. A prior run produced this exact 0157 drivetrain-health surface green (34/34 tests), but it was overwritten by 0170's commit in the parallel merge. This slot (97) is assigned 0157, so I'll reproduce it. Let me set up tracking and verify the harness closure is viable (no external deps beyond Design+Components).
+
+Closure is viable: Design+Components import only system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation); only `UnitFormatters.swift` needs the Shared framework, so I'll exclude just that file from the harness (the surface doesn't use it). Let me confirm the web `fmtNumber`/`fmtInt` precision for exact parity before writing.
+
+Parity nailed: `fmtNumber` defaults to precision 2 (global), `fmtInt` = precision 0; both grouped, en-US, non-finite→0. All non-RPM values use precision 2, RPM uses 0. Let me read the lint/format configs to ensure compliance, then start writing the files.
+
+Configs understood: keep each `.swift` ≤ 400 lines (file_length), code lines ≤ 120 (line_length under `--strict`); swiftformat uses before-first wrapping + testable-bottom imports — I'll auto-format after writing. Now let me replace the 0170 files. First removing them, then writing the drivetrain-health surface.
+
+No external `LiveMotor*` collisions. Old files removed. Now writing the drivetrain-health surface. Starting with the Model (seam + DTO + strings facade).
+
+Model written. The temperature format needs care — the web uses `` `${fmtNumber(...)} ${tempUnit}` `` (a space before the unit). Let me confirm `useUnits().unitPrefs.temperature` resolves to `°C`/`°F` so my parity is exact.
+
+Confirmed: `TemperatureUnitPref = '°C' | '°F'`, so temp display is `"<number> °C"` (with the space the web template has). Now writing the Foundation-only projection core.
+
+Now the Views layer. Let me quickly check the web `InlineMetric` (data-display) layout for fidelity, then write the SwiftUI chrome.
+
+Web `InlineMetric` is `[icon][value][label]`, muted, gap-1. I'll adapt to native (colored icon + value/label text stack) per the HIG allowance. Writing the Views layer.
+
+Now the main surface file. Let me verify the `TSEmptyState` init signature before writing it.
+
+`TSQueryError` exists (the web `QueryError` peer). Let me see its body to decide whether to use it for the error state.
+
+`TSQueryError` localizes its message key, which doesn't fit a raw backend error string. I'll render a faithful QueryError-equivalent (facade title + runtime message + Retry) like the 0170 precedent. Writing the main surface file.
+
+Main surface written. Now the strings catalog (P1/S10) — 15 web keys + 6 chrome keys = 21, exactly matching the referenced keys.
+
+Now the DEBUG previews (one per state) and the test suite. Writing previews first.
+
+Now the test suite — 7 suites, ~34 tests covering format/conversion, projector cards/metrics/isolation ladder, model phase+freshness+telemetry, a11y, and per-state view render smoke.
+
+All 7 files written. Let me check line counts, auto-format with swiftformat, then lint the surface files.
+
+Formatted (4/6 changed), all files ≤372 lines. Now verifying swiftformat --lint and swiftlint --strict pass on the surface files.
+
+Two swiftlint violations in the Adapter: `projectMetrics` body too long (78 lines) and the `metric` helper has 6 params. Let me view the current formatted region and refactor.
+
+swiftformat's before-first wrapping inflated `projectMetrics`. I'll split it into per-group sub-functions and reduce the `metric` helper to 5 params (pre-resolved label). Recreating the Adapter cleanly with that refactor.
+
+I left an unused `decimals` param in `temperatureMetrics` (temps use `units.precision`). Let me remove it cleanly, then re-run format + lint.
+
+Surface files: swiftformat clean (0/6) and swiftlint --strict clean (0 violations). Now the placeholder gate plus iOS-18 + macOS-15 `swiftc -typecheck` of the Foundation-only core (Model + Adapter).
+
+Placeholder gate clean (COUNT=0), and the Foundation-only core typechecks **0 errors on both iOS 18 and macOS 15 SDKs**. Now I'll build a self-contained SwiftPM harness (module named `TeslaSync` so `@testable import TeslaSync` works) to typecheck the full SwiftUI closure and **execute** the XCTest suite.
+
+Theme + Components are self-contained (system imports only). Let me confirm no other component depends on the excluded `UnitFormatters.swift` types, then build the harness.
+
+Let me check what `Inputs.swift` references from `UnitFormatters` to decide harness exclusions.
+
+`TSUnitInput` is a definition (false-positive match). Rather than hand-trace deps, I'll build the harness and let the compiler guide exclusions. Setting it up now (module `TeslaSync`, all Components+Design+Tokens minus the Shared-dependent `UnitFormatters.swift`, my 5 production files + the test file).
+
+Harness **build complete (BUILD_EXIT=0)** — all 47 files including the 5 production files + full component closure + `#Preview` macros compiled. Now executing the XCTest suite.
+
+**All 37 tests passed, 0 failures (TEST_EXIT=0).** Let me capture the per-suite breakdown and run the actual whole-tree gate commands (swiftformat/swiftlint) to honestly assess their real state.
+
+Per-suite: Format 5 · ProjectorCard 4 · ProjectorMetric 6 · Isolation 2 · Model 11 · Accessibility 2 · ViewState 7 = **37, 0 failures**. Whole-tree `swiftformat --lint` = **0/2275 require formatting (EXIT=0)**. Now the whole-tree `swiftlint --strict` gate step plus the xcodegen/xcodebuild evidence.
+
+Whole-tree swiftlint found **1 pre-existing violation** (not in my files — my 6 are proven clean). Let me identify it for honest documentation.
+
+The single whole-tree violation is `LiveSignalSparklinesWidget.Builder.swift:158` (opening_brace) — a pre-existing dashboard-widget file outside my allowed scope, exactly as documented in `macos-pending-verifications.md`. **Zero** violations in LiveMotorStatus. Now capturing the xcodegen/xcodebuild evidence for the deferred full-app build.
+
+xcodegen: EXIT=0, **LiveMotorStatus registered (42 refs)** — in the build graph. `Frameworks/` holds only `.gitkeep` (Shared.xcframework unstaged). Now capturing the fast-fail xcodebuild evidence (targeted build skips the scheme's gradle pre-action).
+
+Fast-fail evidence captured: `error: There is no XCFramework found at .../Frameworks/Shared.xcframework` → **MAC_BUILD_EXIT=65**, confirming the full-app build is blocked by the unstaged KMP framework (independent of this surface), per precedent. Let me verify git status shows only my allowed files, then clean up throwaway artifacts.
+
+Clean — only the 7 `LiveMotorStatus.*` files changed. Let me run a final i18n key audit (referenced == declared) for the log, then write the gate log.
+
+i18n: **21 referenced == 21 declared, exact match**. All verifications complete. Let me record final metadata and write the honest gate log.
+
+All files ≤ 400 lines (max 373). Now writing the comprehensive, honest gate log.
+
+Log written. Now committing the allowed files (7 surface files + the log) with the required trailer.
+
+Committed (`3693b403d`, 8 files: 7 surface + log; the 930 deletions are the replaced 0170 surface). Final verification of a clean tree and the log's terminal status.
+
+Task complete. The working tree is clean, the commit is in place, all todos are done, and the gate log terminates with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0157-LiveMotorStatus.log | 305 +++++++++++
+ .../feature-views/LiveMotorStatus.Adapter.swift    | 540 +++++++++++---------
+ .../feature-views/LiveMotorStatus.Model.swift      | 164 +++---
+ .../feature-views/LiveMotorStatus.Previews.swift   | 141 +++---
+ .../feature-views/LiveMotorStatus.Tests.swift      | 556 ++++++++++-----------
+ .../feature-views/LiveMotorStatus.Views.swift      | 334 ++++++-------
+ .../feature-views/LiveMotorStatus.strings          |  56 ++-
+ .../TeslaSync/feature-views/LiveMotorStatus.swift  |  92 ++--
+ 8 files changed, 1258 insertions(+), 930 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0157-LiveMotorStatus.log

@@ -1,0 +1,176 @@
+I'll start by exploring the repository structure and checking the environment capabilities, since this task requires Apple/SwiftUI tooling.
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Let me read the web source and explore the existing Apple project structure.
+
+This is the reusable `AIFeatureCard` scaffold. Let me study its web dependencies and the existing native conventions. Let me read the web dependencies and a complete existing native surface example in parallel.
+
+Let me find the `AiStreamState` type and explore the native core infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics) and check whether native counterparts already exist.
+
+Let me study a complete existing surface end-to-end (the simplest one, AIChatbotIndicator) and the core native infrastructure to learn all conventions.
+
+Now let me read the complete AIChatbotIndicator surface and the core infrastructure files to learn all conventions.
+
+Excellent, the conventions are clear. Let me read the remaining files of this example (Adapter, Projection, Previews, strings, Tests) and the key infrastructure (design tokens, Cards, Feedback components).
+
+Now let me read the core infrastructure: design tokens, Cards (GlassPanel), Buttons, Feedback components, and the example's Tests file.
+
+The core tokens (Color.TS, TSSpacing, etc.) are generated elsewhere. Let me locate them and read the key component primitives.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read that plus the key UI primitives I'll use.
+
+Let me read the Button/Skeleton primitives, Feedback states, Typography, and the example's test file to learn the test harness conventions.
+
+Let me read the Skeletons, Typography, the example Tests file, and project.yml to understand the test harness and build wiring.
+
+Let me read project.yml (build wiring) and Typography to confirm how surfaces/strings are included and what typography primitives exist.
+
+I have a thorough understanding of conventions. Let me check xcodegen availability and study how an existing streaming surface models the AI stream lifecycle (the closest analog, since AIFeatureCard is stream-driven).
+
+The CrossRule surface is the canonical consumer of AIFeatureCard. Let me read its Logic, Views, main, and Model to learn the exact native scaffold patterns (button, badge, output panel, thinking indicator).
+
+Let me read the CrossRule main composition, Chrome (output panel/thinking states), and Model to complete my understanding of the native stream-card rendering.
+
+I now have a thorough understanding. Let me confirm the `view.opened` telemetry timing for non-gated surfaces and the stream-phase enum, then I'll build.
+
+Let me read the lint/format configs to ensure my code conforms to the strict gate, plus confirm the stream-phase `isError` shape.
+
+I have a complete understanding of the conventions. Let me set up tracking and write the plan, then build the surface.
+
+Now I'll write the surface files. Starting with the pure core (Adapter).
+
+Now the Chrome file (output panel, thinking indicator, error row, connectivity, freshness helper, pulse modifier) referenced by Views.
+
+Now the main reusable composing View.
+
+Now the i18n strings catalog.
+
+Now the Previews covering every state.
+
+Now the test files. First the pure adapter/logic/projection/a11y tests.
+
+Now the main test file (model, source, geometry, view composition).
+
+I spotted a Swift overload-ambiguity risk: two single-trailing-closure convenience inits (`inputSlot` vs `children`) would be ambiguous. Let me fix the main view to keep only the unambiguous set, and update previews/tests to use the designated init for the input-slot case.
+
+Now update the previews and tests to use the designated init for the input-slot case (single trailing closure now maps to `children`).
+
+All files written. Let me check line counts (SwiftLint file_length ≤400), then auto-format and lint my files before the full build.
+
+Files are well under limits. Let me verify swiftformat lint is clean and run swiftlint --strict on my files.
+
+swiftformat and swiftlint are both clean on my files. Now let me generate the Xcode project and inspect the Shared.xcframework staging requirement before building.
+
+The full build needs a KMP `Shared.xcframework` via Gradle. Let me check whether that toolchain is available and review the pending-verifications note.
+
+Java 17 + gradlew are present. Let me check the pending-verifications doc for guidance on the build path, then generate the project.
+
+We're on macOS with the full toolchain, so the gate should run. Let me generate the Xcode project and start building the KMP `Shared.xcframework` (the slow prerequisite) in the background.
+
+Project generated. Now let me build the KMP `Shared.xcframework` via Gradle (the slow prerequisite). I'll run it in the background.
+
+First-run Kotlin/Native build is downloading the toolchain and compiling. Let me continue waiting.
+
+The `Shared.xcframework` built and staged successfully. Now let me set up the log file and run the iOS build to validate compilation first.
+
+Now the iOS build (validating compilation across the app + my surface). This is a large app, so I'll let it run in the background.
+
+Build failed with 6 errors. Let me extract the actual error messages.
+
+The 6 build failures are all pre-existing ambiguous-type conflicts in **other** surfaces (`RecentDrives*`, `StateTimeline*`) — none in my `AIFeatureCard` files. Let me confirm these are baseline (not caused by my change) and check git status.
+
+Git confirms only my `AIFeatureCard.*` files are new, and the conflicts are pre-existing duplicate type definitions (e.g., `RecentDrivesModel` defined in both `RecentDrivesListWidget.Model.swift` and `RecentDrivesSection.Model.swift`). Let me get the full picture of the baseline breakage and confirm zero AIFeatureCard involvement.
+
+My `AIFeatureCard` files have zero errors; the 6 failures are exclusively pre-existing duplicate-type collisions between `dashboard-widgets` and `feature-views` surfaces (`RecentDrives*`, `StateTimeline*`) — outside my allowed files. Let me verify my surface itself compiles + tests pass via a temporary, reverted isolation. First, let me check how widely those conflicting surfaces are referenced.
+
+None of the conflicting surfaces are referenced externally — they're self-contained. Let me check existing logs/conventions for how this repo handles the aggregate-build verification, since the conflicts are pre-existing and out-of-scope.
+
+This is the key precedent. The repo already has a committed, predecessor-accepted **DEFERRED** disposition for this *exact* pre-existing `RecentDrives*/StateTimeline*` sibling-slot collision. Let me read the full AnnouncerRegion log to replicate the exact verification method (how they proved 0 surface errors + green tests).
+
+This precedent is decisive — and note `shared-surfaces` is already wired into `project.yml`/`.swiftlint.yml` (AnnouncerRegion added it as 0001), so my commit stays minimal. Let me see exactly how they verified per-surface (0 errors + green tests) despite the aggregate breakage.
+
+I have the exact predecessor methodology. Let me follow it. First, enumerate every file defining the colliding types so I can do the isolation build (temporarily move the pre-existing siblings aside, verify my surface compiles + tests pass in the real target, then restore).
+
+Let me verify the dashboard-widget siblings aren't referenced by a registry before the isolation build, and check for a widget registry.
+
+None are referenced externally. I'll do the isolation build: temporarily move the 3 pre-existing dashboard-widget definers aside (leaving the feature-views versions as sole definers), build+test in the real target to prove my surface compiles and its tests pass, then restore. Let me set this up reversibly.
+
+24 self-contained files. Let me move them aside (preserving paths for restoration), regenerate, and run the real iOS build+test.
+
+Now each type has a single definition. Let me regenerate and run the real iOS build+test (this compiles my surface + runs my tests in the real target).
+
+Two additional pre-existing errors surfaced in other siblings (`AIAutoNameUnnamedLocations` escaping-closure bug; `RecentDrivesSection.Previews` type-check timeout) — again none in my files. Let me move those broken siblings aside too and retry the real build+test.
+
+The isolation build compiled past all pre-existing siblings and surfaced one genuine issue in **my** code: `AdapterTests.swift` references `EmptyView` (SwiftUI) without importing SwiftUI. Let me fix that, and also upgrade the decorative pulse to a real animating modifier. Then rebuild.
+
+Let me re-format and re-lint my changed files, then rebuild.
+
+swiftformat clean, swiftlint 0 violations. Now rebuild the isolation target and run my tests.
+
+The batch failed but no `error:` lines appeared in my grep — let me inspect the actual diagnostics in the full log (the failing batch includes core files like `AppShell`, which may reference a surface I moved).
+
+The remaining failures are in other pre-existing files (`AnomalyInlineRow`, `AppShell` batch), not mine — my surface compiled (the only AIFeatureCard error, the `EmptyView` import, is now fixed). Chasing the broken aggregate is diminishing returns. Let me pivot to the predecessor's deterministic verification (isolated `swiftc` typecheck + SwiftPM test harness). First, restore all moved siblings to a clean tree.
+
+Clean tree restored (only `AIFeatureCard.*` untracked). Now the predecessor's deterministic verification — **isolated `swiftc` typecheck** of my source files against the real design system. Let me run it for the iOS SDK first.
+
+0 AIFeatureCard errors — the only failure is a design-system file (`FeedbackOverlays.swift`) referencing `TSMetricBar` from another Components subdir. Let me widen the dependency set to all of `Sources/Components` and retry.
+
+Still **0 AIFeatureCard errors** — the remaining errors are downstream in Components files that themselves pull in `Units`/`TSMetricBar` (deps my surface doesn't use). Let me scope to exactly the design-system files my surface transitively needs (excluding the unrelated `FeedbackOverlays`/Units-coupled files) for a clean isolated typecheck.
+
+**iOS typecheck: 0 errors.** My surface compiles clean against the real design system. Now the macOS SDK typecheck.
+
+**Both SDKs typecheck clean (0 errors).** Now the runtime proof — a standalone SwiftPM harness running my pure logic + model tests green (matching the predecessor's method). Let me set it up.
+
+Now let me transform the harness test files (strip SwiftUI/view-only tests, retarget the import) with a precise Python script.
+
+Transformations clean. Now run the harness tests.
+
+**SwiftPM harness: 38 tests passed, 0 failures.** Now let me run the remaining gate steps: placeholder check, and the whole-tree lint/format (as the literal gate runs them).
+
+PLACEHOLDER: 0, EXIT=0. Now the whole-tree lint/format (literal gate commands).
+
+Whole-tree swiftlint: **0 violations in 3315 files.** Now whole-tree swiftformat lint.
+
+All host gates green (lint 0, format 0, placeholder 0, both-SDK typecheck 0, 38 harness tests pass). Now let me run the **literal gate xcodebuild commands** to capture the current DEFERRED evidence (exit 65, all errors in pre-existing siblings, 0 in my surface).
+
+iOS gate: **EXIT=65, 270 errors — all pre-existing `RecentDrives*`/`StateTimeline*` sibling collisions, 0 in AIFeatureCard.** Now the macOS gate command.
+
+macOS gate: **EXIT=65 — environmental code-signing (no dev certificate on runner), 0 compile errors, 0 in AIFeatureCard** — matching the documented predecessor DEFERRED reason. 
+
+All verification complete. Let me confirm the working tree is clean (generated artifacts ignored) before writing the gate log.
+
+Clean tree — only my 10 `AIFeatureCard.*` files are new. Let me clean up temp artifacts and gather final stats for the gate log.
+
+All files under 400 lines, temp cleaned. Now let me write the comprehensive gate log following the established precedent structure.
+
+Now let me commit the surface files and the log.
+
+Exactly 11 files staged (10 surface + log). Let me commit.
+
+Committed cleanly at `ff0ff8685` with only the 10 surface files + log; working tree clean. Let me do a final verification of the commit and mark tracking complete.
+
+Task complete. The native Apple `AIFeatureCard` shared surface is implemented, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0018-AIFeatureCard.log | 272 +++++++++++++++++++++
+ .../shared-surfaces/AIFeatureCard.Adapter.swift    | 234 ++++++++++++++++++
+ .../AIFeatureCard.AdapterTests.swift               | 229 +++++++++++++++++
+ .../shared-surfaces/AIFeatureCard.Chrome.swift     | 253 +++++++++++++++++++
+ .../shared-surfaces/AIFeatureCard.Model.swift      | 250 +++++++++++++++++++
+ .../shared-surfaces/AIFeatureCard.Previews.swift   | 115 +++++++++
+ .../shared-surfaces/AIFeatureCard.Projection.swift |  98 ++++++++
+ .../shared-surfaces/AIFeatureCard.Tests.swift      | 272 +++++++++++++++++++++
+ .../shared-surfaces/AIFeatureCard.Views.swift      | 197 +++++++++++++++
+ .../shared-surfaces/AIFeatureCard.strings          |  39 +++
+ .../TeslaSync/shared-surfaces/AIFeatureCard.swift  | 169 +++++++++++++
+ 11 files changed, 2128 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0018-AIFeatureCard.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIFeatureCard.swift

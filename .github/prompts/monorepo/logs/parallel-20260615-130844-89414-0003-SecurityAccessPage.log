@@ -1,0 +1,1162 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the existing Apple app structure.
+
+The web page is much richer than the manifest's 2-panel summary. Let me explore the Apple app structure, the sub-components, the parity manifest, and check tooling availability.
+
+Tooling is available (xcodebuild, swiftlint, swift, pwsh) — so the gate must actually build. Let me examine the existing Apple Admin feature, an existing page for patterns, the SecurityEvent type, and the project layout.
+
+There's a path mismatch: the prompt references `apps/apple/TeslaSync/...` and `TeslaSync.xcodeproj`, but the real Swift sources live in `apps/apple/Sources/Features/Admin/` with an XcodeGen `project.yml` (no checked-in `.xcodeproj`). Let me study the project setup, the gate contract, and existing page patterns.
+
+Now I understand the layout: real pages live in `apps/apple/Sources/Features/Admin/` (the prompt's `TeslaSync/Features/Admin` path is a generator artifact). Let me study a complete existing page (View + Model + RouteRegistration), the shared facade, and check for existing security/vehicles data access in Swift.
+
+The pattern is clear: View + `@Observable` model + a `Source` protocol with a sample source + RouteRegistration. No existing `SecurityEvent` in Swift. Let me study a data-driven page (DiskForecast), the routing system, the facade/KMP data access, and how vehicles + selected vehicle are accessed.
+
+Excellent — the pattern is crystal clear (typed state enum + `Source` protocol + sample source + `@Observable` model + RouteRegistration). Let me read the web sub-components/helpers I must port, and in parallel launch an explore agent to map the native API surface (tokens, components, routing, vehicles, xcstrings).
+
+I'll systematically explore the repo to map the native API surface. Let me start by finding key files and understanding the structure.Now let me explore the directory structure and read key files in parallel:Let me read the design tokens files:Based on my exploration of the repo, here's the precise native API surface map for your web React page port to SwiftUI:
+
+---
+
+## 1. DESIGN TOKENS
+
+### Color Tokens (`Color.TS.*`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/design/generated/apple/Tokens.swift:57-138`
+
+```swift
+Color.TS.bg                          // Background surface
+Color.TS.surface                     // Panel/card background
+Color.TS.surfaceGlass                // Translucent glass surface
+Color.TS.textPrimary                 // Primary text
+Color.TS.textSecondary               // Secondary text
+Color.TS.textMuted                   // Muted/tertiary text
+Color.TS.accent                      // Brand accent (teal)
+Color.TS.border                      // Subtle borders
+Color.TS.statusSuccess               // Green success state
+Color.TS.statusWarning               // Orange warning state
+Color.TS.statusDanger                // Red danger/error state
+Color.TS.statusInfo                  // Info state (accent color)
+Color.TS.chartCategorical            // [Color] chart palette (8 colors, indexed-stable)
+Color.TS.chartSeriesBattery          // Green battery series
+Color.TS.chartSeriesEnergy           // Orange energy series
+Color.TS.chartSeriesSpeed            // Blue speed series
+Color.TS.chartSeriesRegen            // Cyan regen series
+Color.TS.chartSeriesTemperature      // Red temperature series
+Color.TS.chartSeriesPower            // Purple power series
+```
+
+### Font Tokens (`Font.TS.*`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/design/generated/apple/Tokens.swift:140-154`
+
+```swift
+Font.TS.display              // 30pt, .bold
+Font.TS.title                // 24pt, .semibold (h1)
+Font.TS.section              // 18pt, .semibold (h2/h3)
+Font.TS.panel                // 16pt, .semibold (card titles)
+Font.TS.body                 // 14pt, .regular (body copy)
+Font.TS.bodySm               // 12pt, .regular (small body)
+Font.TS.caption              // 12pt, .regular (captions)
+Font.TS.label                // 12pt, .medium (field labels, tracking)
+Font.TS.fontFamilySans       // "Inter" (default)
+Font.TS.fontFamilyMono       // "JetBrains Mono"
+```
+
+### Spacing Tokens (`TSSpacing.*`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/design/generated/apple/Tokens.swift:175-185`
+
+```swift
+TSSpacing.none               // 0
+TSSpacing.xs                 // 4
+TSSpacing.sm                 // 8
+TSSpacing.md                 // 12
+TSSpacing.lg                 // 16
+TSSpacing.xl                 // 20
+TSSpacing.x2xl               // 24
+TSSpacing.x3xl               // 32
+TSSpacing.x4xl               // 48
+```
+
+### Radius Tokens (`TSRadius.*`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/design/generated/apple/Tokens.swift:187-192`
+
+```swift
+TSRadius.sm                  // 8
+TSRadius.md                  // 12
+TSRadius.lg                  // 16
+TSRadius.pill                // 9999 (full capsule)
+```
+
+### Motion Tokens (`TSMotion.*` / `TSAnimation.*`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/design/generated/apple/Tokens.swift:194-201` + `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Design/TSDesign.swift:25-37`
+
+```swift
+TSMotion.fastDuration              // 0.150s
+TSMotion.normalDuration            // 0.250s
+TSMotion.slowDuration              // 0.400s
+
+TSAnimation.fast(reduceMotion: Bool) -> Animation?
+TSAnimation.standard(reduceMotion: Bool) -> Animation?
+TSAnimation.slow(reduceMotion: Bool) -> Animation?
+// Returns nil when Reduce Motion is enabled
+```
+
+### Material Tokens (`TSMaterial.*`)
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Design/TSMaterial.swift:8-14`
+
+```swift
+TSMaterial.panel               // .regularMaterial (GlassPanel equivalent)
+TSMaterial.overlay             // .thinMaterial (popovers, chips)
+TSMaterial.chrome              // .bar (toolbar backing)
+
+// Extension modifier:
+.tsGlassPanel(cornerRadius: CGFloat = TSRadius.lg) -> View
+```
+
+---
+
+## 2. TYPOGRAPHY COMPONENTS
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/UI/Typography.swift:1-232`
+
+All take `LocalizedStringKey` (not String keys — use localization directly):
+
+```swift
+// Headers
+TSPageTitle(_ text: LocalizedStringKey)                    // h1, display font (line 37-49)
+TSSectionTitle(_ text: LocalizedStringKey)                 // h2, section font (line 52-64)
+TSHeading(_ text: LocalizedStringKey, level: Level = .h1) // Flexible header: .h1/.h2/.h3 (line 9-34)
+
+// Panel-level titles
+TSPanelTitle(_ text: LocalizedStringKey)                   // h3, panel font (line 67-79)
+
+// Body text
+TSText(_ text: LocalizedStringKey, variant: Variant = .body) // body | small (line 97-113)
+                                                            // Variant: .body, .small
+TSSubhead(_ text: LocalizedStringKey)                      // Secondary heading (line 82-94)
+TSCaption(_ text: LocalizedStringKey)                      // Muted caption (line 116-127)
+
+// Form fields
+TSLabel(_ text: LocalizedStringKey)                        // Field label (line 159-170)
+TSHelperText(_ text: LocalizedStringKey)                   // Helper text under controls (line 130-141)
+TSErrorText(_ text: LocalizedStringKey)                    // Error/validation text (line 144-156)
+
+// Metrics (verbatim, pre-formatted)
+TSMetricValue(_ value: String)                             // Large numeric (monodigit) (line 173-186)
+TSMetricLabel(_ text: LocalizedStringKey)                  // Metric label (line 189-200)
+TSCode(_ value: String)                                    // Monospaced code chip (verbatim) (line 203-217)
+```
+
+---
+
+## 3. COMPONENT LIBRARY
+
+### UI Components
+
+**Cards** - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/UI/Cards.swift:1-116`
+
+```swift
+// GlassPanel equivalent (web glass surface)
+TSGlassPanel<Content: View>(@ViewBuilder content: @escaping () -> Content)  // Line 4-15
+  // Internal: applies TSMaterial.panel + glass border
+
+// Solid card
+TSCard<Content: View>(@ViewBuilder content: @escaping () -> Content)       // Line 19-37
+  // Initializer: TSCard { content() }
+
+// Card headers/footers
+TSCardHeader(                                                               // Line 41-75
+  _ title: LocalizedStringKey,
+  subtitle: LocalizedStringKey? = nil,
+  @ViewBuilder trailing: @escaping () -> Trailing
+)
+TSCardHeader(_ title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil)  // No trailing
+
+TSCardFooter<Content: View>(@ViewBuilder content: @escaping () -> Content) // Line 78-94
+```
+
+**Badges** - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/UI/Badges.swift:1-100`
+
+```swift
+// Tone enum (for all badge/status variants)
+enum TSTone {                                                               // Line 4-16
+  case neutral, accent, success, warning, danger, info
+  var color: Color { ... }
+}
+
+// Badge
+TSBadge(_ text: LocalizedStringKey, tone: TSTone = .neutral)              // Line 20-38
+
+// Status pill (dot + text)
+TSStatusPill(_ text: LocalizedStringKey, tone: TSTone = .neutral)         // Line 42-64
+
+// Icon box
+TSIconBox(systemName: String, tone: TSTone = .accent)                    // Line 68-87
+```
+
+**Buttons** - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/UI/Buttons.swift:1-100+`
+
+```swift
+enum TSButtonVariant { case primary, secondary, ghost, destructive }      // Line 4
+enum TSButtonSize { case small, medium, large }                           // Line 6
+
+// Generic button with custom label
+TSButton<Label: View>(
+  variant: TSButtonVariant = .primary,
+  size: TSButtonSize = .medium,
+  isLoading: Bool = false,
+  action: @escaping () -> Void,
+  @ViewBuilder label: @escaping () -> Label
+)                                                                          // Line 11-43
+
+// Convenience: LocalizedStringKey label
+TSButton(
+  _ title: LocalizedStringKey,
+  variant: TSButtonVariant = .primary,
+  size: TSButtonSize = .medium,
+  isLoading: Bool = false,
+  action: @escaping () -> Void
+)                                                                          // Line 46-58
+```
+
+**Toggle** - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/UI/Fields.swift:128-144`
+
+```swift
+TSToggle(_ label: LocalizedStringKey, isOn: Binding<Bool>)               // Line 129-143
+```
+
+**Checkbox** - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/UI/Fields.swift:101-126`
+
+```swift
+TSCheckbox(_ label: LocalizedStringKey, isOn: Binding<Bool>)             // Line 101-125
+```
+
+**Tooltip** - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/UI/Overlays.swift:7-52`
+
+```swift
+// View modifier (no named component, use extension)
+.tsTooltip(_ text: LocalizedStringKey) -> View                           // Line 31-32
+// Maps to native help() on macOS, hint on other platforms
+```
+
+### Feedback Components - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/Feedback/`
+
+```swift
+// Loading
+TSSpinner(label: LocalizedStringKey? = nil)                              // States.swift:4-19
+TSPageLoader(label: LocalizedStringKey = "loading")                      // States.swift:23-36
+
+// Empty state
+TSEmptyState<Actions: View>(
+  title: LocalizedStringKey,
+  message: LocalizedStringKey? = nil,
+  systemImage: String = "tray",
+  @ViewBuilder actions: @escaping () -> Actions
+)                                                                          // States.swift:40-56
+
+// Error display
+TSErrorDisplay(
+  title: LocalizedStringKey = "error.title",
+  message: LocalizedStringKey? = nil,
+  onRetry: (() -> Void)? = nil
+)                                                                          // States.swift:76-108
+
+// Query error (alias)
+TSQueryError(
+  message: LocalizedStringKey? = nil,
+  onRetry: @escaping () -> Void
+)                                                                          // States.swift:112-123
+
+// Error boundary (wraps content)
+TSErrorBoundary<Content: View>(
+  hasError: Bool,
+  onRetry: (() -> Void)? = nil,
+  @ViewBuilder content: @escaping () -> Content
+)                                                                          // States.swift:134-146
+
+TSSectionErrorBoundary<Content: View>(hasError: Bool, ...)               // States.swift:150-172
+TSPageErrorBoundary<Content: View>(hasError: Bool, ...)                 // States.swift:176-194
+
+// Banners (AlertBanner + specific presets)
+TSAlertBanner<Action: View>(
+  tone: TSTone,
+  systemImage: String,
+  title: LocalizedStringKey,
+  message: LocalizedStringKey? = nil,
+  onDismiss: (() -> Void)? = nil,
+  @ViewBuilder action: @escaping () -> Action
+)                                                                          // Banners.swift:4-57
+
+TSOfflineBanner()                                                          // Banners.swift:104-108
+TSLiveStaleDataBanner()                                                   // Banners.swift:112-121
+TSTeslaReauthBanner(onReconnect: @escaping () -> Void)                  // Banners.swift:125-135
+TSRateLimitBanner()                                                       // Banners.swift:139-143
+TSMaintenanceBanner()                                                     // Banners.swift:146-156
+TSImpersonationBanner(onExit: @escaping () -> Void)                     // Banners.swift:160-175
+
+// Inline callout
+TSInlineCallout(tone: TSTone = .info, message: LocalizedStringKey)      // Banners.swift:80-97
+
+// Skeletons (for loading states)
+TSSkeleton(width: CGFloat? = nil, height: CGFloat = 14, cornerRadius: CGFloat = TSRadius.sm)  // Skeletons.swift:4-41
+TSStatSkeleton()                                                          // Skeletons.swift:45-54
+TSChartSkeleton(height: CGFloat = 180)                                   // Skeletons.swift:58-66
+TSPageHeaderSkeleton()                                                    // Skeletons.swift:70-77
+TSStatGridSkeleton(count: Int = 4)                                       // Skeletons.swift:81-94
+TSChartBlockSkeleton()                                                    // Skeletons.swift:98-107
+TSTableSkeleton(rows: Int = 6)                                           // Skeletons.swift:111-127
+TSPageLoadSkeleton()                                                      // Skeletons.swift:131-139
+```
+
+### DataDisplay Components - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/DataDisplay/Metrics.swift:1-250+`
+
+```swift
+// Deltas
+TSDelta(value: Double, formatted: String, invertColors: Bool = false)    // Line 4-32
+TSBatteryDelta(deltaPercent: Double)                                     // Line 36-48
+
+// Metrics
+TSAnimatedNumber(formatted: String)                                       // Line 52-67
+TSProgressRing(progress: Double, lineWidth: CGFloat = 8, colorIndex: Int = 0)  // Line 71-99
+
+// Bars
+TSMetricBar(fraction: Double, tone: TSTone = .accent)                    // Line 103-121
+
+// Key-value lists
+TSKVRow(id: String, key: LocalizedStringKey, value: String)              // Line 125-134
+TSKVList(rows: [TSKVRow])                                                // Line 138-155
+
+// Cards
+TSStatCard(
+  title: LocalizedStringKey,
+  value: String,
+  systemImage: String? = nil,
+  delta: Double? = nil,
+  deltaFormatted: String? = nil
+)                                                                          // Line 159-196
+
+TSMetricCard(title: LocalizedStringKey, value: String, caption: LocalizedStringKey? = nil)  // Line 200-219
+
+TSUsageCard(title: LocalizedStringKey, used: Double, total: Double, valueText: String)  // Line 223-250
+```
+
+### Charts - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/Charts/`
+
+```swift
+// Chart container wrapper
+TSChartContainer(
+  _ title: LocalizedStringKey,
+  summary: LocalizedStringKey? = nil,
+  isEmpty: Bool = false,
+  csv: String? = nil,
+  @ViewBuilder content: @escaping () -> Content
+)                                                                          // ChartContainer.swift:5-24
+
+// Chart legend
+TSChartLegend(series: [TSChartSeries], hidden: Binding<Set<String>>)    // ChartContainer.swift:76-110
+
+// Data model for series
+struct TSChartSeries {
+  let id: String
+  let name: LocalizedStringKey
+  let color: Color
+  let points: [TSChartPoint]
+}
+
+// Bar chart
+TSBarChart(series: [TSChartSeries], hidden: Set<String> = [], stacked: Bool = false)  // BarCharts.swift:5-46
+
+// Composed (bars + line)
+TSComposedChart(bars: TSChartSeries, line: TSChartSeries)                 // BarCharts.swift:49-72
+
+// Scatter
+TSScatterChart(series: [TSChartSeries], hidden: Set<String> = [])        // BarCharts.swift:76-100
+```
+
+### Motion - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/Motion/Motion.swift:1-102`
+
+```swift
+TSFadeIn<Content: View>(
+  delay: Double = 0,
+  @ViewBuilder content: @escaping () -> Content
+)                                                                          // Line 4-26
+// Fades + lifts on appear, honors Reduce Motion
+
+TSStaggerContainer<Content: View>(
+  spacing: CGFloat = TSSpacing.md,
+  @ViewBuilder content: @escaping () -> Content
+)                                                                          // Line 31-45
+
+TSStaggerItem<Content: View>(
+  index: Int,
+  @ViewBuilder content: @escaping () -> Content
+)                                                                          // Line 48-59
+
+TSRouteTransition<Content: View>(
+  id: AnyHashable,
+  @ViewBuilder content: @escaping () -> Content
+)                                                                          // Line 63-78
+
+TSCarAnimation()                                                           // Line 82-101
+```
+
+---
+
+## 4. ROUTING
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/App/AppRoute.swift:1-172`
+
+### Full AppRoute Enum Cases (lines 27-35):
+```swift
+public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
+  case dashboard, glance, vehicles, charging, powershare, trips, energy, driving, analytics, maps
+  case fleetCompare, lifetimeStats, mileage, batteryCells, batteryDegradation, sleepEfficiency, tco
+  case vehicleSystems, automations, notifications, telemetry, diagnostics
+  case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
+  case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
+  case liveSignals, redisSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
+  case backupRestore
+  case settings, onboarding, teslaOrders, gasPrice, teslaFeatures, explore, search, sharing, watch
+}
+```
+
+**NO `.securityAccess` or `.security` route exists yet.** You'll need to add it.
+
+### AppRouteParser - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/App/AppRouteParser.swift:1-72`
+
+```swift
+public enum AppRouteParser {
+  /// Static aliases dict mapping web paths → AppRoute cases
+  static let aliases: [String: AppRoute] = [
+    "/": .dashboard,
+    "/battery": .energy,
+    "/admin/system": .system,
+    ...
+  ]
+  
+  /// Parse URL path to route
+  public static func parse(path rawPath: String) -> AppRoute? {
+    let normalized = normalize(rawPath)
+    if let alias = aliases[normalized] { return alias }
+    let segment = firstSegment(of: normalized)
+    return AppRoute.allCases.first { $0.pathSegment == segment }
+  }
+  
+  /// Parse custom scheme or universal link
+  public static func parse(url: URL) -> AppRoute? { ... }
+}
+```
+
+### RouteHostRegistry - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/App/RouteHostRegistry.swift:1-37`
+
+```swift
+public struct AppRouteHostRegistry {
+  private var providers: [AppRoute: () -> AnyView] = [:]
+
+  public mutating func register(
+    _ route: AppRoute,
+    @ViewBuilder _ provider: @escaping () -> some View
+  ) {
+    providers[route] = { AnyView(provider()) }
+  }
+
+  public func view(for route: AppRoute) -> AnyView? {
+    providers[route]?()
+  }
+}
+```
+
+### How to Add a New Route (`/security-access`)
+
+**Step 1: Add enum case** to `AppRoute` (line 27-35):
+```swift
+case securityAccess  // Add here
+```
+
+**Step 2: Map pathSegment** (line 42-77):
+```swift
+public var pathSegment: String {
+  switch self {
+  ...
+  case .securityAccess: "security-access"
+  ...
+  }
+}
+```
+
+**Step 3: Add to parser aliases** (AppRouteParser.swift:7-41):
+```swift
+static let aliases: [String: AppRoute] = [
+  ...
+  "/admin/security-access": .securityAccess,
+  ...
+]
+```
+
+**Step 4: Create registration file** `SecurityAccessRouteRegistration.swift`:
+```swift
+// /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Features/Admin/SecurityAccessRouteRegistration.swift
+import SwiftUI
+
+public enum SecurityAccessRouteRegistration {
+  @MainActor
+  public static func registry(base: AppRouteHostRegistry = AppRouteHostRegistry()) -> AppRouteHostRegistry {
+    var registry = base
+    let model = SecurityAccessPageModel()
+    registry.register(.securityAccess) {
+      SecurityAccessPage(model: model)
+    }
+    return registry
+  }
+}
+```
+
+**Step 5: Thread into app registry** - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/TeslaSyncApp.swift:99-150`:
+```swift
+@MainActor private var routeHostRegistry: AppRouteHostRegistry {
+  var registry = SettingsRouteRegistration.registry(/* ... */)
+  // ... other registrations ...
+  registry = SystemRouteRegistration.registry(base: registry)
+  registry = SecurityAccessRouteRegistration.registry(base: registry)  // Add here
+  return registry
+}
+```
+
+---
+
+## 5. VEHICLES + SELECTED VEHICLE
+
+**Model:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/TeslaSync/shared-surfaces/VehicleSelect.Model.swift:84-211`
+
+```swift
+@MainActor
+@Observable
+public final class VehicleSelectModel {
+  public private(set) var vehicles: [VehicleSelectVehicle] = []
+  public private(set) var selectedId: Int?
+  public private(set) var phase: VehicleSelectPhase = .loading
+  public private(set) var connection: VehicleSelectConnection = .live
+  
+  public init(
+    source: any VehicleSelectSource,
+    onSelect: @escaping @MainActor (Int?) -> Void = { _ in },
+    telemetry: any VehicleSelectTelemetry = OSLogVehicleSelectTelemetry(),
+    localize: @escaping VehicleSelectResolve = VehicleSelectStrings.string
+  )
+  
+  public func start()
+  public func stop()
+  public func refresh()
+  public func select(value: String)
+  public func select(id: Int?)
+}
+
+struct VehicleSelectVehicle { id: Int; name: String?; vin: String? }
+enum VehicleSelectPhase { case loading, content, empty, error(String) }
+enum VehicleSelectConnection { case live, stale, offline }
+```
+
+**Strings/Localization:**
+```swift
+public enum VehicleSelectStrings {
+  public static var aria: String              // "Select vehicle"
+  public static func fallbackName(_ id: Int) -> String  // "Vehicle {id}"
+  public static var loadingA11y: String       // "Loading vehicles"
+  public static var emptyTitle: String        // "No vehicles"
+  public static var errorTitle: String        // "Couldn't load vehicles"
+  // etc.
+}
+```
+
+---
+
+## 6. DATA ACCESS / FACADE
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/SharedFacade/AppContainer.swift:1-87`
+
+### AppContainer (Dependency Injection)
+```swift
+@MainActor
+@Observable
+public final class AppContainer {
+  public var unitPreferences: UnitPreferences
+  
+  public func connectAuth(_ provider: any AuthTokenProviding & AuthChallengeHandling)
+  
+  /// Wraps a Kotlin StateFlow into @Observable
+  public func model<State>(
+    from flow: Shared.Kotlinx_coroutines_coreStateFlow,
+    transform: @escaping (Any) -> State?
+  ) -> StateHolderModel<State>
+  
+  /// Convenience: project Resource<T> into LoadableState
+  public func loadable<Value>(
+    from flow: Shared.Kotlinx_coroutines_coreStateFlow,
+    as _: Value.Type = Value.self,
+    map: @escaping (Any) -> Value?
+  ) -> StateHolderModel<LoadableState<Value>>
+}
+```
+
+### StateHolderModel - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/SharedFacade/StateHolderModel.swift:1-58`
+
+```swift
+@MainActor
+@Observable
+public final class StateHolderModel<State> {
+  public private(set) var state: State?
+  
+  public init(
+    flow: Shared.Kotlinx_coroutines_coreStateFlow,
+    transform: @escaping (Any) -> State?
+  )
+  
+  public func start()   // Begin collecting from KMP flow
+  public func stop()    // Stop collecting
+}
+```
+
+### LoadableState - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/SharedFacade/LoadableState.swift:1-91`
+
+```swift
+public enum LoadableState<Value> {
+  case idle
+  case loading(cached: Value?, stale: Bool)
+  case loaded(Value, stale: Bool)
+  case empty(stale: Bool)
+  case failed(FacadeError, cached: Value?, stale: Bool)
+  
+  public var value: Value?
+  public var isLoading: Bool
+  public var isStale: Bool
+  public var error: FacadeError?
+  
+  static func from(
+    _ resource: Shared.Resource,
+    transform: (Any) -> Value?
+  ) -> LoadableState
+}
+```
+
+### FlowBridge - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/SharedFacade/FlowBridge.swift:1-88`
+
+```swift
+public enum FlowBridge {
+  /// Stream raw (type-erased) elements from a Kotlin Flow
+  public static func stream(
+    from flow: Shared.Kotlinx_coroutines_coreFlow
+  ) -> AsyncThrowingStream<Any, Swift.Error>
+  
+  /// Stream elements cast to Element, dropping non-matching values
+  public static func stream<Element>(
+    from flow: Shared.Kotlinx_coroutines_coreFlow,
+    as _: Element.Type = Element.self
+  ) -> AsyncThrowingStream<Element, Swift.Error>
+}
+```
+
+### Data Source Pattern (Real Example)
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Features/Admin/AuditLogPageModel.swift:1-80`
+
+```swift
+// SEAM: Protocol for dependency injection
+public protocol AuditLogDataSource: Sendable {
+  func loadLog(_ query: AuditLogQuery) async throws -> [AuditLogRow]
+  func loadCategories() async throws -> [String]
+  func loadActions() async throws -> [String]
+  func verifyChain(limit: Int) async throws -> AuditChainVerify
+}
+
+@MainActor
+@Observable
+public final class AuditLogPageModel {
+  @ObservationIgnored private let dataSource: any AuditLogDataSource
+  
+  // DEFAULT: Sample-backed (renders immediately without network)
+  public init(dataSource: any AuditLogDataSource = SampleAuditLogDataSource()) {
+    self.dataSource = dataSource
+  }
+  
+  // PRODUCTION: Inject real KMP-backed source
+  // (built from shared-core KMP `OperatorConfidenceStore` endpoints)
+}
+```
+
+**Current State:** Pages default to **Sample sources** (in-memory fixtures). Production pages receive real KMP-backed sources through constructor injection. **No auto-wired API client exists yet** — each page defines its own seam protocol and test doubles. Pages later get production sources via `AppContainer` bootstrap (future work linked to Shared.xcframework compile).
+
+---
+
+## 7. LOCALIZATION
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Localization/Localizable.xcstrings`
+
+### JSON Structure
+```json
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "system.page.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System budgets"
+          }
+        }
+      }
+    },
+    "translation.system.page.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ميزانيات النظام"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System budgets"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Key Format & Examples
+
+**Keys are dot-separated paths.** The system supports two naming patterns:
+- Web-style unprefixed: `system.page.title`, `error.loadFailed`
+- Translation-prefixed: `translation.system.page.title`, `translation.error.loadFailed`
+
+**Both variants exist** in the xcstrings file (web keys used by native components, translation.* variants auto-generated during i18n sync).
+
+### Existing Keys Checked
+
+✅ **EXISTS:**
+- `system.page.title` → "System budgets"
+- `system.page.subtitle` → (confirmed in grep output)
+- `error.loadFailed` → (found in grep, in both forms)
+- `translation.admin.security.active` ✅
+- `translation.admin.security.alert` ✅
+- `translation.admin.security.away` ✅
+- `translation.admin.security.card.doors` ✅
+- `translation.admin.security.card.doorsDesc` ✅
+- `translation.admin.security.card.guestMode` ✅
+- `translation.admin.security.card.homelink` ✅
+
+❌ **NO `admin.security.*` keys found** (only `translation.admin.security.*` prefixed variants).
+
+### How TSPageTitle Resolves Localization
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/UI/Typography.swift:37-49`
+
+```swift
+public struct TSPageTitle: View {
+  private let text: LocalizedStringKey  // Takes LocalizedStringKey, not String
+  
+  public init(_ text: LocalizedStringKey) {
+    self.text = text
+  }
+  
+  public var body: some View {
+    Text(text)  // SwiftUI's Text(LocalizedStringKey) automatically resolves from bundle
+      .font(Font.TS.display)
+      .foregroundStyle(Color.TS.textPrimary)
+      .accessibilityAddTraits(.isHeader)
+  }
+}
+```
+
+**Resolution chain:**
+1. `TSPageTitle("system.page.title")` — caller passes the key as a `LocalizedStringKey`
+2. SwiftUI's `Text()` init with `LocalizedStringKey` automatically:
+   - Searches `Localizable.xcstrings` for the key
+   - Respects device language + region settings
+   - Falls back to the key itself if not found
+3. **Key MUST exist in xcstrings** or it renders verbatim (e.g., "system.page.title" shows as text)
+
+**Example usage from SystemPage:**
+```swift
+// /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Features/Admin/SystemPage.swift:45
+TSPageTitle("system.page.title")
+// Resolves to "System budgets" from xcstrings entry
+```
+
+---
+
+## 8. SSE / LIVE POLLING & STALENESS (ADR-013)
+
+### LiveConnection API - `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/SharedFacade/LiveConnection.swift:1-77`
+
+```swift
+// Connection state (ADR-013: stale flag when no event/heartbeat in freshness window)
+public enum LiveConnectionState: Equatable, Sendable {
+  case connecting
+  case open                // Live, fresh data
+  case reconnecting
+  case stale               // Open BUT >2min since last event/heartbeat
+  case closed
+  
+  public var hasUsableData: Bool {
+    switch self {
+    case .open, .stale, .reconnecting: true
+    case .connecting, .closed: false
+    }
+  }
+}
+
+// Event kind discriminator
+public enum LiveEventKind: Equatable, Sendable {
+  case connected, heartbeat, vehicleUpdate, alert, exportStatus, achievementUnlocked, signal, unknown
+}
+
+// Live event projection
+public struct LiveEvent {
+  public let id: String?
+  public let kind: LiveEventKind
+  public let raw: Shared.LiveEvent  // Retains original KMP event for payload access
+  
+  public init(_ event: Shared.LiveEvent)
+  private static func classify(_ event: Shared.LiveEvent) -> LiveEventKind
+}
+```
+
+### Polling Pattern (Concrete Example)
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Features/Admin/RedisSignalViewerPage.swift` (polling loop for 5s refresh):
+
+```swift
+/// Drives the web `refetchInterval: INTERVALS.REALTIME` (5s) while auto-refresh is armed
+/// and a vehicle is selected. Tied to the view lifecycle via `.task(id:)`, so it cancels
+/// when the toggle flips, the vehicle changes, or the page disappears.
+private func runAutoRefresh() async {
+  guard model.autoRefresh, model.hasSelection else { return }
+  while !Task.isCancelled {
+    try? await Task.sleep(nanoseconds: 5 * 1_000_000_000)  // 5s
+    if Task.isCancelled { break }
+    await model.refreshSignals()
+  }
+}
+```
+
+**Usage in view:**
+```swift
+.task { 
+  if case .loaded = model.vehiclesState { return }
+  await model.load()
+}
+.task(id: model.selectedVehicleID) {
+  await model.loadSignals()
+}
+.task(id: RedisAutoRefreshKey(vehicleID: model.selectedVehicleID, enabled: model.autoRefresh)) {
+  await runAutoRefresh()  // 5s polling loop
+}
+```
+
+### Staleness Display
+
+**LoadableState carries stale flag:**
+```swift
+public enum LoadableState<Value> {
+  case loading(cached: Value?, stale: Bool)
+  case loaded(Value, stale: Bool)
+  case empty(stale: Bool)
+  case failed(FacadeError, cached: Value?, stale: Bool)
+  
+  public var isStale: Bool {
+    switch self {
+    case .idle: false
+    case let .loading(_, stale), let .loaded(_, stale),
+         let .empty(stale), let .failed(_, _, stale):
+      stale
+    }
+  }
+}
+```
+
+**Stale banner component:**
+```swift
+// /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-3/apps/apple/Sources/Components/Feedback/Banners.swift:112-121
+public struct TSLiveStaleDataBanner: View {
+  public init() {}
+  public var body: some View {
+    TSAlertBanner(
+      tone: .warning,
+      systemImage: "clock.badge.exclamationmark",
+      title: "stale.title",
+      message: "stale.message"
+    )
+  }
+}
+```
+
+**Usage in page:**
+```swift
+if model.state.isStale {
+  TSLiveStaleDataBanner()
+}
+```
+
+The `stale` boolean flows from the shared-core `Resource<T>.stale` field (set when SSE heartbeat/event >2min old, ADR-013) and propagates through `LoadableState.from(resource)` transformer.
+
+---
+
+## Summary Table: Key Native Symbols
+
+| Web Concept | Native Swift Symbol | File | Initializer |
+|---|---|---|---|
+| `Color` tokens | `Color.TS.*` | Tokens.swift:57–138 | Static properties |
+| `Font` ramp | `Font.TS.*` | Tokens.swift:140–154 | Static properties |
+| Spacing | `TSSpacing.*` | Tokens.swift:175–185 | Static CGFloat |
+| `GlassPanel` | `TSGlassPanel<C>` | Cards.swift:4–15 | `@ViewBuilder content` |
+| `Card` | `TSCard<C>` | Cards.swift:19–37 | `@ViewBuilder content` |
+| `PageTitle` | `TSPageTitle(_:)` | Typography.swift:37–49 | `LocalizedStringKey` |
+| `Badge` | `TSBadge(_:tone:)` | Badges.swift:20–38 | `LocalizedStringKey, TSTone` |
+| `StatusBadge` | `TSStatusPill(_:tone:)` | Badges.swift:42–64 | `LocalizedStringKey, TSTone` |
+| `Button` | `TSButton(_:variant:size:action:)` | Buttons.swift:46–58 | `LocalizedStringKey, TSButtonVariant, TSButtonSize, () -> Void` |
+| `Toggle` | `TSToggle(_:isOn:)` | Fields.swift:129–143 | `LocalizedStringKey, Binding<Bool>` |
+| `Tooltip` | `.tsTooltip(_:)` | Overlays.swift:31–32 | View modifier; `LocalizedStringKey` |
+| `EmptyState` | `TSEmptyState<A>` | States.swift:40–56 | `title, message?, systemImage?, @ViewBuilder actions` |
+| `ErrorDisplay` | `TSErrorDisplay(title:message:onRetry:)` | States.swift:76–108 | All `LocalizedStringKey?`, `(() -> Void)?` |
+| `AlertBanner` | `TSAlertBanner<A>` | Banners.swift:4–57 | `tone, systemImage, title, message?, onDismiss?, @ViewBuilder action` |
+| `Spinner` | `TSSpinner(label:)` | States.swift:4–19 | `LocalizedStringKey?` |
+| `Skeleton` | `TSSkeleton(width:height:cornerRadius:)` | Skeletons.swift:4–41 | `CGFloat?, CGFloat, CGFloat` |
+| `StatCard` | `TSStatCard(title:value:systemImage:delta:)` | Metrics.swift:159–196 | `LocalizedStringKey, String, String?, Double?, String?` |
+| `MetricCard` | `TSMetricCard(title:value:caption:)` | Metrics.swift:200–219 | `LocalizedStringKey, String, LocalizedStringKey?` |
+| `MetricBar` | `TSMetricBar(fraction:tone:)` | Metrics.swift:103–121 | `Double, TSTone` |
+| `KVList` | `TSKVList(rows:)` | Metrics.swift:138–155 | `[TSKVRow]` |
+| `BarChart` | `TSBarChart(series:hidden:stacked:)` | BarCharts.swift:5–46 | `[TSChartSeries], Set<String>, Bool` |
+| `ChartContainer` | `TSChartContainer(_:summary:isEmpty:csv:content:)` | ChartContainer.swift:5–24 | `LocalizedStringKey, LocalizedStringKey?, Bool, String?, @ViewBuilder` |
+| `FadeIn` | `TSFadeIn(delay:content:)` | Motion.swift:4–26 | `Double, @ViewBuilder` |
+| Route enum | `AppRoute` (52 cases) | AppRoute.swift:27–35 | N/A |
+| Route parser | `AppRouteParser.parse(path:)` | AppRouteParser.swift:44–49 | `String -> AppRoute?` |
+| Route registry | `AppRouteHostRegistry.register(_:_:)` | RouteHostRegistry.swift:11–12 | `AppRoute, @ViewBuilder () -> View` |
+| Vehicle picker model | `VehicleSelectModel` | VehicleSelect.Model.swift:92–211 | `source, onSelect, telemetry, localize` |
+| Container/DI | `AppContainer` | AppContainer.swift:14–61 | `init(unitPreferences:)` |
+| State from KMP flow | `StateHolderModel<S>` | StateHolderModel.swift:14–58 | `flow, transform` |
+| Resource projection | `LoadableState<V>` | LoadableState.swift:10–91 | Enum cases; `.from(resource, transform)` factory |
+| Flow-to-Stream bridge | `FlowBridge.stream(from:)` | FlowBridge.swift:16–62 | `Shared.Kotlinx_coroutines_coreFlow -> AsyncThrowingStream` |
+| Live connection state | `LiveConnectionState` | LiveConnection.swift:7–34 | Enum: `.connecting, .open, .stale, .reconnecting, .closed` |
+
+---
+
+**All symbols are in the public API surface.** Quote file:line references as shown for each component. Keys in `Localizable.xcstrings` must exist before calling — the system renders the key verbatim if missing.The explore agent gave me a solid symbol map (its head was truncated but the summary table is gold). The closest analog to my page is `RedisSignalViewerPage` (vehicle picker + 5s poll + history). Let me read it end-to-end plus the routing system and design tokens.
+
+Now I have the routing model clear. Key facts: no `securityAccess` route exists yet; `AppRoute.group`/`systemImage` switches are exhaustive (I must add cases). Let me gather the remaining facts: the placeholder scanner, the parity manifest entry, the registry composition root, the web sub-components, and the ledger.
+
+Page is substantial. Let me read the composition root, the placeholder patterns, the ledger, and the remaining web sub-components in parallel.
+
+Let me read the remaining web sub-components, the web i18n keys for `admin.security.*`, the existing xcstrings entries, and the apple ledger format.
+
+I now have the complete web page picture. Let me read the precise native component signatures and the vehicle-selection model from the analog page. Batch 1: the analog model, design tokens, and core UI components.
+
+Let me read the precise signatures of all the native components I'll compose with. These parallel reads are cheap and essential for compiling Swift.
+
+Let me read the remaining component signatures (badges, banners, typography, charts, motion) and the analog page's vehicle-source models + controls.
+
+Let me read the vehicle picker controls, sample data, charts, motion, theme modifiers, and DataTable — plus inspect the xcstrings and web i18n for the keys I'll need.
+
+Key insight: the manifest declares **0 charts, 0 maps, 2 panels** for this page — the rich sub-sections are separate parity units (like SystemPage composing shipped panels). But those sub-components aren't shipped natively yet. Following the `RedisSignalViewerPage` precedent (which implemented all its sections as multiple files in `Features/Admin`), I'll build the full page at fidelity. Let me check build feasibility, the ledger, remaining primitives, and a native VehicleTwin.
+
+`xcodegen` is available but `Shared.xcframework` requires a heavy Kotlin/Native Gradle build (the long pole, and possibly infeasible here). No native `VehicleTwin` exists. Let me probe the KMP build feasibility in the background while I read the last primitives (Button/Toggle/Field/DataTable/theme/ChartContainer/sample) and inspect existing i18n keys.
+
+Critical findings: **no `admin.security.*` keys exist** in the xcstrings (I must add ~80), while `error.loadFailed`/`common.noData`/`action.retry` exist. The KMP `Shared.xcframework` isn't staged — building it is the long pole for `xcodebuild`. Let me kick off the xcframework build in the background and inspect the xcstrings structure.
+
+79 `translation.admin.security.*` keys exist but 0 unprefixed — native uses unprefixed keys, so I'll add ~90 `admin.security.*` keys (reusing existing translations where present, web defaults otherwise). Let me read the last primitives (Button/Toggle/Field/DataTable/theme) and verify xcstrings ordering + stale keys.
+
+xcstrings is unsorted (safe to append). `translation.admin.security.*` entries have full localizations I can reuse by stripping the prefix. Let me read the `TSDataTable`/`TSToggle` signatures and check the background build progress.
+
+I now have every signature I need. Let me verify the xcframework build result and the web nav grouping for this route, then write the plan.
+
+Gradle is actively building the xcframework in the background (java processes alive). Let me quickly confirm the web nav group, then write the plan and start implementing.
+
+Gradle is building the xcframework in the background. The route is a flat `/security-access`. I have everything needed. Let me write the plan and task list, then implement.
+
+Before writing Swift, let me read the lint config (the gate is `swiftlint --strict`) to avoid violations.
+
+Lint rules noted (≤120 cols, no 1-char names, `.isEmpty`, `.first(where:)`). Let me check for symbol-name collisions before writing the models file.
+
+No collisions. Now I'll write the foundational UI-free models file (value types, seams, states, ported helpers, formatters).
+
+Now the pure logic (port of `helpers.ts`) in a separate focused file.
+
+Let me fix the `count(where:)` calls (avoid collision with the `count` property) and remove the stray extension.
+
+Now the `@Observable` page model.
+
+The KMP build shell completed — let me check whether the xcframework was actually produced, and meanwhile continue with the Sample sources.
+
+The xcframework built successfully — so a real `xcodebuild` is feasible. Let me write the Sample sources.
+
+Now the main page view (scaffold, header, actions, error banner, GlassPanel1 alert, GlassPanel2 twin, section composition, loaders).
+
+A few lines exceed 120 cols — I'll fix those in a cleanup pass. First, let me build the shared view-layer helpers and toned tiles, then the four section files. Let me update todos and create the components helper file.
+
+Now the shared view-layer helpers and toned tiles used across sections.
+
+Now the status-cards section (summary row, 6 status cards, window detail).
+
+Now the live-state section (digital twin panel = GlassPanel2, and the live vehicle-state grid).
+
+Now the analytics section (sentry chart + statistics).
+
+Now the history section (event table + timeline) — the largest section.
+
+Now the route registration and navigation wiring.
+
+Now I'll add all the i18n keys to the String Catalog via a script (reusing existing `translation.admin.security.*` localizations where present, web defaults otherwise).
+
+All 108 i18n keys added (79 reused real translations + 29 new). Let me verify a few keys, then check line lengths and run swiftlint on the new files.
+
+Let me fix the 5 over-length lines.
+
+Now run swiftlint --strict on the new + edited files.
+
+swiftlint is clean except one `large_tuple` in the sample data. Let me replace the 7-tuple with a small struct.
+
+Let me re-run swiftlint and the placeholder scan.
+
+Two fixes needed: (1) shorten the sample function body, (2) the placeholder scanner flags SwiftUI's `.placeholder` redaction reason and the word in a comment. Let me find all occurrences.
+
+Let me view the current Sample file region to refactor the long function, then fix all placeholder hits.
+
+Now fix the placeholder-scanner hits: add `parity:allow` opt-outs to the SwiftUI `.placeholder` redaction lines and reword the one comment.
+
+Let me re-run swiftlint and the placeholder scan to confirm both pass.
+
+The `parity:allow` comments pushed lines over 120. Let me shorten the opt-out reason.
+
+Both gate sub-checks pass (swiftlint 0, placeholder 0). Now the real build. Let me pre-stage the xcframework and generate the Xcode project.
+
+Project generated with the `Shared.xcframework`. Let me build the macOS target (no simulator needed) to validate my code compiles in the real project. I'll run it in the background and monitor.
+
+Build is running in the background. Let me prepare the parity log content (evidence mapping) and check build progress while it compiles.
+
+Build is compiling the macOS target (where my files live) with 0 errors so far. Let me wait for it to complete.
+
+0 errors — the macOS target is emitting its module (my files compiled). Let me wait for the build to finish.
+
+Build exited 65 (not a Swift compile error since 0 `error:` lines). Let me find the actual failure.
+
+Found it: an existing `SentryDayBucket` type lives in `apps/apple/TeslaSync/feature-views/SentryModeChart.Model.swift` (a parallel artifact surface in the same module) — my new `SentryDayBucket` collides. My earlier collision check only scanned `Sources/`. Let me check ALL my type names against the full module.
+
+Major discovery: the security sub-components (SentryModeChart, EventHistoryTable, etc.) **already exist** as native artifacts under `apps/apple/TeslaSync/feature-views/`, with their own `SentryDayBucket`, `SecuritySignal`, `SecurityEvent` types. My redeclarations collide. Let me get the full collision list and inventory the existing artifacts.
+
+Let me stop the slow grep and inventory the existing security artifacts in `feature-views` directly.
+
+These are fully-built component parity units (each with View/Model/Adapter/Previews/Tests). The correct architecture is to **compose** them (like `SystemPage` composes shipped panels), not reimplement. Let me find where the canonical shared types are defined and inspect the component composition APIs.
+
+There's no shared `SecurityEvent` — each component is self-contained with its own model/adapter (like `SystemPage`'s independent panels). I'll **compose** the existing component views and slim my page down, removing the colliding duplicates. Let me inspect each component's View + Model init signatures.
+
+This is the `SystemPage` pattern exactly — each component is `Component(model: ComponentModel)` with a sample-seeded `init()`. I'll compose them and slim my page to just the chrome + 2 GlassPanels. Let me confirm the default models seed populated data.
+
+These are sophisticated self-contained surfaces (own localization tables, lifecycle, source seams). Composing them needs each model's canonical constructor. Let me extract how each component's Previews builds its model.
+
+Each model has a convenience init with all-defaulted params (e.g., `init(initial: nil)`). Let me confirm these no-arg constructors wire a default source so composition is clean and renders correctly.
+
+Now I understand the architecture fully: each component is `Component(model: ComponentModel(source: InMemoryXSource(initial: populatedUpdate)))`. The page must own the data and feed each component. The Previews show the exact populated payloads using public APIs. Let me delete my colliding files and read the Previews to replicate populated data. First, remove the duplicates.
+
+Now let me read the component Previews to learn the populated-data construction (public APIs I'll replicate). Batch 1.
+
+Excellent — clean public APIs. `SecurityCardsLatest` is the canonical "latest" type I can reuse for the page-level alert/twin too. Let me read the remaining 6 component Previews + the `SummaryStatsModel` init.
+
+5 of 8 mapped. Let me read the final 3 Previews and the `SummaryStatsModel` init to confirm defaults.
+
+I now have all 8 components' public construction APIs (all mirror their Previews). Let me confirm the `SecurityStatisticsModel` init defaults, then write the composition.
+
+All 8 component APIs confirmed. Now I'll write the composition. First, the sample-data factory that builds the 8 populated component models (mirroring the verified Previews).
+
+Now the page model that composes the 8 shipped sub-components.
+
+Now the page view composing the 8 shipped sub-components plus the page chrome and 2 GlassPanels.
+
+Now update the route registration to match the new model API.
+
+Now let me lint the new composition files, then rebuild.
+
+swiftlint clean. Now the real validation — rebuild macOS (the composed APIs must match exactly). This should be incremental/faster.
+
+Build running. Let me wait and check for any API-mismatch errors in my files.
+
+Those are stale project references to the deleted files — not code errors. I need to regenerate the Xcode project. Let me regenerate and rebuild.
+
+Rebuild running with the regenerated project. Let me wait for it to complete.
+
+0 errors, still compiling. Let me wait for the build to finish.
+
+Still 0 errors, emitting the macOS module. Let me wait for the final build result.
+
+Still emitting the module (large target). Let me wait for completion.
+
+It's actively recompiling the full target (75 compiler processes, 0 errors) — regeneration invalidated the incremental cache. Let me wait.
+
+Log growing (13.9k lines), 0 errors, linking phase. Let me wait for the final result.
+
+Full target recompile in progress (0 errors). Let me wait for completion.
+
+Still building (20k lines, 0 errors). This is a large full recompile. Let me wait for it to finish.
+
+**`BUILD_EXIT=0`** — the macOS build succeeded with the composed shipped sub-components. Let me confirm, re-run the fast gates, and kick off the iOS build.
+
+All three gates pass (macOS build SUCCEEDED, swiftlint 0, placeholder 0). Let me kick off the iOS-simulator build (the gate's primary scheme) in the background while I write the ledger and parity log.
+
+While iOS builds, let me update the parity ledger (macOS + iOS rows) and write the evidence log.
+
+Ledger updated (90 rows). Let me check the iOS build progress, then write the evidence log.
+
+iOS build compiling (0 errors). Let me wait for it to complete before finalizing the evidence log (honesty: no green claim before it's green).
+
+iOS still compiling (0 errors). Let me wait for it to finish.
+
+iOS build still running (0 errors). Let me wait for completion.
+
+Still compiling (0 errors, 117 processes). Let me continue waiting for the iOS build to finish.
+
+iOS building both simulator arch slices (arm64 + x86_64), 0 errors, now on x86_64 module emit. Let me wait for it to finish.
+
+iOS compiling the x86_64 slice (0 errors). Let me wait for it to finish.
+
+iOS now building the widget/extension targets (0 errors). Let me wait for the full build to complete.
+
+Still building (0 errors, dual-arch sim build is heavy). Let me write the evidence-log body now (productively), and append the final iOS result + EXIT/STATUS once it completes.
+
+Log body written. Let me check the iOS build status.
+
+
+Execution failed: Error: Failed to get response from the AI model; retried 5 times (total retry wait time: 6.00 seconds) Last error: CAPIError: Failed native model HTTP request: error sending request for url (https://api.enterprise.githubcopilot.com/v1/messages): client error (Connect): operation timed out [ETIMEDOUT]
+iOS build completed — let me read the result.
+
+iOS exited 65 but had 0 compile errors — let me find the actual cause.
+
+The iOS failure is purely a **linker** issue: the KMP `Shared.xcframework` only has an `ios-arm64-simulator` slice (no x86_64), and the `generic` destination tried to link x86_64. My code compiled cleanly for iOS arm64 (0 errors). The correct config (matching the arm64-only framework) is an arm64 simulator build. Let me rebuild excluding x86_64.
+
+This rebuild should be fast (arm64 already compiled, just re-linking). Let me wait for it.
+
+**iOS arm64 build `EXIT=0`.** Both platforms build green. Let me confirm and finalize the evidence log with all gate results.
+
+Both builds confirmed green; the evidence log ends with `EXIT=0 / STATUS=DONE`. Let me update tracking, verify the git status (ensuring no generated artifacts are staged), and commit.
+
+Git status is clean (only my intended files; generated xcodeproj + xcframework are gitignored). Let me update the plan, clean temp logs, and commit.
+
+The xcstrings diff is enormous (23k lines) — my `json.dump` reformatted the whole 5MB catalog. That's noisy and risks silent drift. Let me inspect the nature of the diff and fix it to a minimal, additive change.
+
+The diff is purely a formatting difference — Xcode uses `"key" : value` (space before colon) but Python's `json.dump` used `"key": value`, rewriting all 12,800 lines. I'll restore the original byte-for-byte and insert only my new keys textually in Xcode's exact style for a minimal diff.
+
+108 keys inserted in Xcode's exact style. Let me verify the diff is now minimal (additive only).
+
+Clean: 1188 insertions, 0 deletions. Since I changed the xcstrings format, let me do a final incremental macOS build to confirm the committed tree still compiles (the String Catalog is recompiled at build time).
+
+Let me wait for the final confirmation build (incremental — only the xcstrings changed).
+
+Final build `EXIT=0`. Let me confirm, re-stage, run the gates one final time for clean evidence, and commit.
+
+All gates green and the diff is clean (2092 insertions, 3 deletions across 9 files). Let me commit.
+
+The work is committed and the tree is clean. Let me do a final confirmation of the committed state.
+
+The task is complete and verified. Final state confirmed: commit `76ce8a420`, 9 files, parity log ends `EXIT=0 / STATUS=DONE`, both ledger rows present.
+

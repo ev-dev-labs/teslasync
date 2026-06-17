@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and explore the existing Apple app structure.
+
+Now let me explore the existing `modals-dialogs` directory and the shared infrastructure to understand the established patterns.
+
+The pattern is a multi-file architecture per surface. `ConfirmDialog` is the closest analog (dialog with a reason input). Let me read its complete file set to learn the conventions.
+
+The architecture is sophisticated. Let me read the rest of the ConfirmDialog set to fully internalize the pattern before writing.
+
+Let me read the remaining ConfirmDialog files and locate the shared token/helper definitions.
+
+Let me read the test files, previews, and locate shared design-system components + project config.
+
+Let me read the UI tests, project config, and locate the design-system tokens.
+
+Key finding: the build uses XcodeGen, and `TeslaSync/modals-dialogs` is **not** currently listed in `project.yml` sources. Let me check the toolchain, the shared-framework script, simulators, and how existing modals-dialogs surfaces were integrated.
+
+The ConfirmDialog commit touched **only** its own surface files + log (no `project.yml`). Let me read its gate log to see exactly how the gate resolved — this is the template for my own gate outcome.
+
+This is the crucial precedent. The full-app `xcodebuild build test` is **DEFERRED** (pre-existing unrelated collisions + macOS signing + modals-dialogs tier not yet registered), while **surface-scoped gates must be GREEN**: xcodegen, iOS typecheck, isolated macOS `swift test`, swiftformat, swiftlint, placeholders. STATUS=DONE is achieved exactly that way. Let me read the design system + lint config to write faithful code.
+
+Found it: a sibling `FlagValue` JSON enum already exists in `feature-views` (collision risk — I'll use a unique `FlagEdit`-prefixed type). Let me inspect that enum for style, the `tsGlassPanel()` modifier, Typography helpers, and confirm `Sources/Components` only imports SwiftUI/Foundation (so I can build an isolated test package).
+
+Components only import OS frameworks (SwiftUI/Charts/MapKit/CoreLocation) — safe for an isolated package. The glass modifier lives in `Sources/Design/TSMaterial.swift`. Let me read the sibling `FlagValue` enum to mirror its style with a unique name.
+
+I now have a complete picture. Let me set up tracking and check name collisions are clear, then write the surface following the ConfirmDialog reference architecture exactly.
+
+Now writing the core files. Starting with the pure projection core (Adapter), the dependency seams, and the @Observable model.
+
+The `copy` KeyPath helper won't compile (Swift can't key-path static members). Let me fix the Model to use a file-scope typealias and direct key references.
+
+Adapter, Seams, Model written. Now the States (chrome envelopes), Views (drawer shell + form fields), and the entry view.
+
+Surface code complete. Now the previews (per-state), pure adapter tests, model tests, and i18n strings catalog.
+
+All 10 files created. Now the verification phase — running surface-scoped gates. Starting with auto-formatting my files and linting (fast feedback).
+
+swiftformat clean (0/9 require formatting). Now swiftlint scoped to my files with the repo config.
+
+swiftlint clean (0 violations). Now the placeholder check — let me inspect the script then run it.
+
+The placeholder checker matches the literal substring "placeholder" (case-insensitive) — and the established convention (per the ConfirmDialog log) is to avoid that word entirely in Swift code. Let me find every occurrence in my files.
+
+No stub markers, but "placeholder" appears in identifiers/comments/parity-keys. Following the established convention (avoid the word; `parity:allow` only the unavoidable web i18n key strings), I'll rename to "prompt". Let me view the exact post-format regions.
+
+The reason-field edit was a typo (identical strings). Let me fix the actual `reasonPlaceholderText` reference and the Seams comment.
+
+Now let me re-verify no stray "placeholder" remains (except the 2 `parity:allow` web-key lines), re-format, and run the placeholder checker honestly against my files.
+
+Only the 2 unavoidable `parity:allow` web-key lines remain. Let me run the placeholder checker (both honestly per-file and the exact gate path), plus re-confirm format + lint.
+
+Honest scan confirms zero violations in my files. Let me confirm the `parity:allow` count and re-verify format + lint after the renames.
+
+Core gates green. Now the critical compile+run verification. Let me map the design-system dependency surface so I can build an isolated package that actually compiles and runs the tests.
+
+Design system is fully self-contained (only OS imports). Let me build an isolated SwiftPM package with the transitively-needed real design files + my surface, and run `swift test` on macOS.
+
+Now run `swift test` on the macOS host — this compiles the surface against the real design system AND executes the suites.
+
+All 38 tests pass on macOS against the real design system. Now the iOS-18 SDK typecheck (proves the `#if os(iOS)` branch + previews compile on iOS).
+
+iOS shipping typecheck clean. Now the previews pass (`-D DEBUG`).
+
+Two harness bugs (not code issues): duplicate Previews arg, and XCTest framework search paths missing for the iOS sim. The macOS run already compiled+ran the tests, but let me get the iOS tests-typecheck green too for completeness.
+
+All iOS typechecks pass (shipping, previews, tests) and macOS ran 38/38. Now let me verify `xcodegen generate` and probe the full-app build to honestly document its status.
+
+xcodegen regenerates cleanly. Confirmed the deferred-build causes are pre-existing. Let me capture concrete evidence of the sibling collisions, then make a bounded attempt at the full-app build.
+
+Concrete collision evidence captured (both `RecentDrives*` and `StateTimeline*` types are doubly-declared, pre-existing). Let me make a bounded attempt at the real full-app iOS build to capture its actual current failure for the log.
+
+Build running in background. While it progresses through the KMP pre-action, let me update tracking and check the final post-format Model file for correctness.
+
+Let me check the full-app build progress.
+
+Good — the KMP framework built from cache (not a blocker). It's now into Xcode compilation. Let me wait for it to reach the Swift compile where the pre-existing collisions surface.
+
+The KMP release-framework linking is slow (not cached). Let me wait for it to finish and reach the app Swift compile.
+
+Build finished with failures. Let me extract the actual errors and final status from the captured log.
+
+Definitive evidence: the full-app iOS build **FAILED on pre-existing unrelated collisions** (`RecentDrivesModel`/`RecentDrivesLoadStatus`/`StateTimeline*` — each doubly-declared by sibling surfaces), and **`FlagEditDrawer` appears 0 times** (my files aren't compiled, since modals-dialogs isn't in `project.yml`). Let me capture the macOS build evidence too while I draft the log.
+
+Let me confirm the logs directory and grab the precise iOS failure tail to quote in the log.
+
+The macOS build finished. Let me capture its failure mode.
+
+Complete, honest evidence for both full-app builds: **iOS** fails on pre-existing sibling collisions, **macOS** on dev-signing — both with `FlagEditDrawer` compiled 0 times (not in `project.yml` yet). Now writing the gate log.
+
+Let me fix the timestamp in the log, then clean up temp artifacts and verify the working tree before committing.
+
+Working tree is clean — only my 10 `FlagEditDrawer.*` files + the log. Let me do a final airtight re-confirmation of format/lint on the committed files, then commit.
+
+All gates green, all files well-sized. Committing now.
+
+Committed cleanly (commit `49b326e81`, 11 files, only the intended surface + log). Let me finalize tracking.
+
+All todos complete. The task is done and verified.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-modals-dialogs-0019-FlagEditDrawer.log | 180 +++++++++++
+ .../modals-dialogs/FlagEditDrawer.Adapter.swift    | 344 +++++++++++++++++++++
+ .../modals-dialogs/FlagEditDrawer.Model.swift      | 287 +++++++++++++++++
+ .../modals-dialogs/FlagEditDrawer.ModelTests.swift | 289 +++++++++++++++++
+ .../modals-dialogs/FlagEditDrawer.Previews.swift   | 130 ++++++++
+ .../modals-dialogs/FlagEditDrawer.Seams.swift      | 189 +++++++++++
+ .../modals-dialogs/FlagEditDrawer.States.swift     | 188 +++++++++++
+ .../modals-dialogs/FlagEditDrawer.Tests.swift      | 222 +++++++++++++
+ .../modals-dialogs/FlagEditDrawer.Views.swift      | 317 +++++++++++++++++++
+ .../modals-dialogs/FlagEditDrawer.strings          |  53 ++++
+ .../TeslaSync/modals-dialogs/FlagEditDrawer.swift  |  48 +++
+ 11 files changed, 2247 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0019-FlagEditDrawer.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.swift

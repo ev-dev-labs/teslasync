@@ -1,0 +1,239 @@
+I'll start by exploring the repository structure and checking the Apple toolchain availability, since this task requires SwiftUI + Swift Charts + MapKit.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple structure.
+
+The dashboard-widgets directory already has 419 files. Let me examine the existing conventions and check whether a similar chart widget already exists as a template.
+
+No existing ChargeHistoryWidget. Let me examine a similar chart-based widget (SuperchargerHistoryWidget is charging-related) to learn the full file pattern and conventions.
+
+MotorHistoryWidget is the best template (chart + history + projection). Let me read all its files to learn the full pattern.
+
+Excellent pattern. Let me read the remaining MotorHistoryWidget files and locate the shared infrastructure (registration, tokens, charts).
+
+Let me read the previews, strings, and tests, plus locate the shared infrastructure (registration, tokens, MeasurementSystem).
+
+Now let me find the shared P4 infrastructure (registration, tokens, MeasurementSystem) and read the relevant web sources the widget depends on.
+
+Let me read the design tokens, the web dependencies (charts/shell/types/unitConversion), and the charging-analog SuperchargerHistoryWidget adapter.
+
+`convertEnergyFromSI(wh, 'kWh')` = `wh / 1000`. The widget always shows kWh. Let me find where `Color.TS`, `Font.TS`, `TSSpacing` etc. are defined (likely generated tokens).
+
+The main-app tokens are likely generated at build time. Let me confirm the token namespace via the design tokens test and the project/build config, and verify the energy chart color.
+
+Tokens are generated at `apps/design/generated/apple`. Let me inspect those and the project.yml target/source config.
+
+`#10b981` (web green) maps exactly to `chartSeriesBattery`. Let me read the full Tokens.swift to confirm available color/font/spacing tokens.
+
+Now I have the full token picture. Let me read the web shared components (WidgetShell, WidgetChartSummary, AreaChartWrapper), the ChargingSession type, and the registry entry to reproduce composition faithfully.
+
+Let me read WidgetChartSummary, AreaChartWrapper, the ChargingSession type, and the charging registry entry.
+
+Let me read the chartUtils `fmtNumber`, the `ChargingSession` type, and the charging registry entry to confirm exact metadata and formatting.
+
+Let me read `fmtNumber`, the project.yml target/scheme config, and check for xcodegen.
+
+Let me view the project.yml target source config and schemes to confirm how `dashboard-widgets` and `.strings` are included and which test action runs.
+
+Let me check the test target config and schemes to confirm `*Tests.swift` is wired into the XCTest bundles.
+
+I now fully understand the pattern. Let me assess full-build feasibility (Shared.xcframework, simulators, xcodegen) before writing code, since the gate runs a full `xcodebuild`.
+
+`pwsh` available, iPhone 16 simulator booted, but `Shared.xcframework` must be built from KMP via Gradle (scheme pre-action). Let me verify the KMP/Gradle toolchain.
+
+Java 17 + Gradle wrapper present — the full build is feasible. The KMP `Shared.xcframework` Gradle build is the long pole. Let me kick it off in the background now while I write the widget code, and set up my plan/todos.
+
+Gradle is building in the background. Let me verify the `TSSkeleton` API and check for any naming collisions before writing my new types (single-module app).
+
+No collisions, `TSSkeleton` API confirmed. Let me write the plan and start creating the widget files following the established MotorHistoryWidget pattern.
+
+Now let me write the Projection (pure adapter) file.
+
+Now the Model file (seams, phases, strings facade, accessibility).
+
+Let me update todos and check the Gradle build progress while I continue.
+
+Gradle is downloading its distribution (expected — long pole). Continuing with the Chart file.
+
+Now the main view file (header, freshness, all states, compact mode).
+
+Now the Previews and strings files.
+
+Now the Tests file (adapter, model, registry, accessibility).
+
+All 7 files written. Let me update todos, check the Gradle build, and run swiftformat/swiftlint on my new files early to catch style issues.
+
+swiftformat wants consistent numeric-literal grouping. Let me auto-fix my files with swiftformat (the repo's formatter) and re-lint.
+
+swiftformat passes. Now let me run swiftlint on my files and check Gradle progress.
+
+swiftlint --strict passes (0 violations). Let me verify no placeholder/stub/mock/TODO patterns in my files and check the placeholder checker logic.
+
+Clean — no banned patterns. Let me quickly verify how `check-placeholders.ps1` resolves the extension-less path, then check Gradle progress.
+
+The placeholder gate command uses `-LiteralPath` (extension-less path scans nothing → passes); my files are independently grep-clean regardless. Now let me check the Gradle build progress — it gates the full xcodebuild.
+
+Gradle is downloading its distribution + Kotlin/Native toolchain (no output yet — expected). Let me generate the Xcode project in parallel (independent of the framework binary).
+
+Project generated. Let me confirm my new files are wired into the app + test targets, and continue monitoring Gradle.
+
+All 7 files are wired into the generated project. Let me continue waiting for the Gradle build (the long pole before xcodebuild).
+
+The `Shared.xcframework` is built and staged (8m52s, BUILD SUCCESSFUL). Now I can run the full gate. Let me set up the log directory and kick off the iOS build+test (the heaviest step) in the background.
+
+Framework staged, logs dir ready. Let me kick off the iOS build+test (heaviest step) in the background, capturing full output for the log.
+
+iOS build running in the background. Let me monitor its progress.
+
+The app module is compiling (no errors so far — it just emitted the TeslaSync module). Let me keep monitoring and scan for any errors.
+
+App module compiled cleanly, ChargeHistoryWidget included. Now it's linking + building the test bundle. Let me continue monitoring for the test result.
+
+Build succeeded; now the test bundle is compiling/running. Let me check the actual `ios-build` shell status and wait for the test result.
+
+iOS build still running (test phase). Let me wait for it to finish the test bundle compile + test run.
+
+Tests are running and passing. Let me check my ChargeHistory tests specifically and wait for the overall result.
+
+All 29 ChargeHistory tests pass, no failures. The full suite is still running. Let me wait for the overall iOS result.
+
+The full test suite is large. Let me continue waiting and check the latest progress.
+
+court
+<invoke name="read_bash">
+<parameter name="delay">100</parameter>
+<parameter name="shellId">35</parameter>
+</invoke>
+
+Unit tests passed (0 failures); UI tests now running and passing. Let me wait for the final iOS result.
+
+iOS exited with 65 (failure). Unit tests passed, so the failure is likely in UI tests. Let me investigate the exact cause.
+
+The log has very long lines (compiler invocations). Let me view the failure context directly via grep.
+
+The iOS step exited 65, but the evidence shows this is environmental, not my code:
+- All 29 ChargeHistory tests passed; the app + test bundle compiled with zero errors.
+- The log shows `Restarting after unexpected exit, crash, or test timeout` and `xcrun: error: unable to find utility "simctl"` — a simulator/tooling glitch.
+- "Failing" tests are other widgets' + UI tests (push/biometrics), several of which also *passed* earlier in the same run (crash-restart double-counting).
+
+Let me verify the toolchain path (the simctl error suggests a developer-dir issue) and check whether these UI tests are environmental.
+
+Confirmed environmental: `xcode-select` is correct, `simctl` works now, and `AuthOnboardingUITests`/`LiveDataUITests` both **passed** earlier yet appear in the failing list — classic crash-restart double-counting during the flaky PushNotifications UI tests. Let me clear the simulator state and re-run the iOS gate.
+
+Simulator rebooted clean. Let me re-run the iOS build+test (incremental — should reach tests faster).
+
+While the iOS re-run proceeds, let me run the lint/format gate steps (whole tree) to establish they're clean.
+
+swiftlint found 1 serious violation across 1917 files. My 6 files were clean in isolation, so let me locate exactly where it is.
+
+The lint violation is in `LiveSignalSparklinesWidget.Builder.swift:158` — a file I did **not** touch. Let me confirm it's pre-existing (not caused by my work) via git, and inspect the line.
+
+Confirmed pre-existing: `LiveSignalSparklinesWidget.Builder.swift` is unmodified by me (committed as-is); my changes are only the 7 ChargeHistoryWidget files. The violation is a multi-line `if {` brace. This may be a swiftlint version mismatch. Let me check the repo's pinned tool versions.
+
+My surface is lint-clean; the lone violation is a pre-existing multi-line-`if` brace in a predecessor file. Let me check whether the repo pins an older swiftlint (CI/tooling) that wouldn't flag it — that determines the right action.
+
+Let me run the full-tree `swiftformat --lint` (as CI does) to see if that file is swiftformat-correct — which would confirm a swiftlint-version conflict — and check the iOS re-run progress.
+
+swiftformat is slow due to CPU contention with the concurrent iOS build. Let me check the iOS re-run status.
+
+Both the iOS re-run and swiftformat are competing for CPU. Let me wait for swiftformat to finish.
+
+Decisive finding: `swiftformat --lint .` passes cleanly (0/1921 files), and `LiveSignalSparklinesWidget.Builder.swift` is swiftformat-**correct**. So the lone swiftlint flag is a **tool-version conflict**: swiftformat *requires* the brace on its own line for wrapped conditions, while swiftlint 0.63.3's `opening_brace` wants it attached — editing the file would just flip which tool fails. This is a swiftlint-version artifact, not a code defect. Let me check how CI installs swiftlint to match the intended version.
+
+CI uses the `macos-latest` runner's pre-installed swiftlint (no pin) — an older/less-strict version than my local 0.63.3. This is a toolchain-version artifact on swiftformat-correct predecessor code. Let me check the iOS re-run result, then resolve the swiftlint version to get a legitimate green.
+
+The iOS re-run is still compiling (was CPU-starved by swiftformat). Let me let it continue and, in parallel, confirm the swiftlint-version hypothesis by testing the predecessor file with a pre-0.60 swiftlint (the `opening_brace` rule was rewritten stricter in 0.60.0).
+
+Got swiftlint 0.59.1. Let me test it against the predecessor file and my files.
+
+Both 0.59.1 and 0.63.3 flag the predecessor file (so not a version artifact), while my 6 files pass cleanly. swiftformat *requires* the current brace placement. Let me examine the exact construct to understand the conflict precisely.
+
+Only 1 violation in 1917 files — a rare multi-line-condition brace where swiftlint and swiftformat classically disagree. Let me test whether attaching the brace satisfies **both** tools (a clean fix) by testing on a temp copy.
+
+Now let me test whether the attached-brace form satisfies both swiftlint (0.63.3 + 0.59.1) and swiftformat.
+
+swiftlint (both versions) now passes with the brace attached. Waiting on swiftformat to confirm no conflict.
+
+swiftformat is CPU-starved by the concurrent iOS build. Let me wait for it to complete.
+
+Definitive: with the brace attached, swiftformat **fails** (wants it on its own line) — an irreconcilable swiftlint↔swiftformat conflict on this multi-line condition. The predecessor file `LiveSignalSparklinesWidget.Builder.swift` **cannot** satisfy both tools as committed. This is a pre-existing baseline defect in another surface's file, outside my allowed-files scope. My surface passes both tools. Let me check the iOS re-run result.
+
+The iOS re-run did a fuller rebuild and is now linking; tests follow. Let me wait for it to finish.
+
+The iOS re-run is still going (slow full rebuild). Let me check its live status.
+
+iOS re-run still building (slower full rebuild). Let me wait for it to reach the test phase.
+
+The re-run is doing a full rebuild and is slow. Let me verify it's progressing (not stuck) and see the current phase.
+
+The re-run did a full clean rebuild (1624 files) and just linked the app; it's now building the test bundle. Let me wait for the unit-test phase (where my tests run).
+
+I have strong first-run iOS evidence (my 29 tests passed; only environmental UI-test flakiness). The re-run is slowly rebuilding. Let me start the macOS build+test (the authoritative CI test target) in parallel — the iOS re-run is entering its light test phase.
+
+macOS build started. Let me monitor both builds' progress.
+
+The macOS build+test completed. Let me check its result.
+
+macOS build **failed on code-signing** — `"TeslaSync-macOS" has entitlements that require signing with a development certificate` — a runner capability limitation (no dev signing identity), **not** my code. Let me check whether my surface actually *compiled* on macOS before the signing step (which would prove macOS-correctness), and stop the CPU-starved iOS re-run.
+
+Let me examine the macOS build log structure to see how far it got before the signing failure.
+
+The macOS build failed at the up-front **signing-validation phase** (only `CodeSign` markers, zero Swift compilation) — the targets demand a development certificate the runner lacks, so it never compiled. This is a pure code-signing capability limitation. Let me verify my surface actually compiles for macOS by building with signing disabled (the standard CI workaround).
+
+While the macOS signing-disabled build runs, let me update my plan/todos to reflect the findings, then check progress.
+
+My surface is compiling for macOS (0 Swift errors, ChargeHistoryWidget compiling). Let me wait for the macOS build to complete.
+
+Let me check the macOS no-sign build status directly.
+
+The macOS build is linking (compile done, 0 Swift errors). Let me wait for it to finish.
+
+macOS app target is compiling cleanly (0 errors), now emitting its module. Let me wait for the final result.
+
+Still emitting the macOS app module (slow final phase). Let me wait for it to link and finish.
+
+`MAC_NOSIGN_EXIT=0` — the macOS build with signing disabled **succeeded**. This confirms my surface compiles cleanly for macOS 15; the gate's macOS failure is purely the code-signing capability (no dev certificate). Let me confirm and capture the evidence.
+
+Confirmed: macOS **BUILD SUCCEEDED** with signing disabled, **0 Swift errors** — my surface is fully macOS-correct. The gate's macOS failure is purely the dev-signing certificate capability. 
+
+Now I have a complete, honest picture. Let me re-run the fast gate steps (swiftlint/swiftformat/placeholder) cleanly to capture authentic current output for the log.
+
+The exact gate placeholder command passes (PLACEHOLDER_EXIT=0); my files contribute 0 of the 24 pre-existing placeholder hits elsewhere. Let me read the fresh swiftlint result and run swiftformat.
+
+swiftlint fresh: `LINT_EXIT=2`, 1 violation (the pre-existing predecessor one). Let me gather the authentic salient lines from all captured runs while swiftformat finishes.
+
+Let me read the swiftformat result and carefully extract the authentic iOS test lines (my earlier regex was too strict).
+
+swiftformat fresh: `FORMAT_EXIT=0` (0/1921). But `/tmp/ios_build.log` now shows 0 "BUILD SUCCEEDED" — let me check whether that file got truncated/overwritten (using `;` not `&&`).
+
+The log file may have binary-ish long lines confusing grep. Let me force text mode (`grep -a`) to re-extract the authentic markers.
+
+The captured iOS file has encoding quirks making re-grep unreliable, though I observed the authentic results live (29 tests passed; UI-test flakiness caused the failure). For bulletproof, authentic evidence, let me run a focused iOS test of just my ChargeHistory suites (skips the flaky UI tests).
+
+While the focused iOS test runs, let me extract authentic evidence from the reliable logs (macOS gate signing error, iOS flakiness markers).
+
+Strong authentic evidence captured: the iOS gate suffered **6 simulator crash-restarts** plus the `simctl` tooling error — deeply unstable simulator environment, not my code. macOS gate authentically failed on dev-signing. Let me check the focused iOS test (clean ChargeHistory evidence) progress.
+
+The focused test is still in its build phase. Let me wait for it to build and run my tests.
+
+The focused test is doing another slow full rebuild. Let me verify it's progressing (not stuck).
+
+The focused test is emitting the app module (0 errors), nearly to the test phase. Let me wait for it to run my tests.
+
+The focused iOS test passed cleanly: **`** TEST SUCCEEDED **`, `IOS_MINE_EXIT=0`, "Executed 24 tests, with 0 failures"** — bulletproof evidence my surface's tests pass on the iOS Simulator. 
+
+I now have a complete, honest picture. Let me grab the exact macOS signing error text, then write the canonical gate log.
+
+I have all authentic evidence. Let me write the canonical, honest gate log.
+
+Now let me verify git status to ensure I stage only my intended files (the regenerated `.xcodeproj` and staged framework should be git-ignored), then commit.
+
+Git is clean for staging — the regenerated `.xcodeproj` and framework are git-ignored. Let me stage exactly my 7 surface files + the log and commit with an honest message.
+
+All 8 intended files staged (the pre-existing modified web files excluded). Let me commit.
+
+Committed: 8 files, 1404 insertions on branch `auto/20260608-211853-78201/12`. Let me update todos and clean up temporary files.
+
+Working tree clean (only the 2 pre-existing web edits remain, untouched by me). Let me do a final verification of the committed log's terminal lines and the surface file list.
+
+The task is complete and committed. Let me provide the final summary.
+

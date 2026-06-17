@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure to understand what exists for both the web source and the Apple app infrastructure.
+
+Both web source and Apple app exist. Let me read the web source widget and explore the Apple infrastructure in parallel.
+
+The dashboard-widgets directory already exists with many widgets. Let me examine the existing patterns and find similar widgets to use as templates.
+
+`VehicleAccessWidget` doesn't exist yet. There's a clear per-widget file pattern. Let me read the web shared infrastructure and the registry, plus find the best reference widget.
+
+Now let me explore the Apple shared infrastructure (state holders, WidgetShell equivalent, tokens, i18n, telemetry) and find the best reference widget.
+
+The shared infra lives in `apps/apple/Sources/`. Let me explore the key infrastructure directories.
+
+This is a KMP-backed architecture. Let me read a complete reference widget from the target directory to learn the exact pattern I must follow. `CommandHistoryWidget` has a clean file split.
+
+Let me view this reference file properly:
+
+Now let me read the rest of the CommandHistoryWidget files to understand the full pattern (Model, Adapter, Views, Previews, strings, Tests).
+
+Excellent, very thorough pattern. Let me read the remaining reference files (Views, Previews, strings, Tests) and the shared design/component primitives.
+
+Let me read the Previews and Tests for the reference, and locate the shared infrastructure types.
+
+Let me read the shared infrastructure types and the CommandHistoryWidget Tests for the full picture.
+
+Let me read the design tokens, skeleton, and the Tests reference file.
+
+The tokens (TSSpacing, TSRadius, Color.TS, Font.TS) must be in generated token files. Let me locate them and read the Tests reference.
+
+Design tokens come from `apps/design/generated/apple`. Let me read them to know the available tokens.
+
+Now let me read the Tests reference and find how widgets register into the catalog.
+
+I now understand the full pattern. Let me check the central catalog registration and the available build tooling (critical for the gate).
+
+All tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh). Let me examine the catalog entry for vehicle-access and how the picker catalog works.
+
+The catalog entry for `vehicle-access` already exists (data-only). Per the prompt, allowed files are only `VehicleAccessWidget.*` + the log — and project.yml already globs the directory. Let me check the build setup and shared list/people components.
+
+Let me read the placeholder patterns, check for the Shared framework, and look at shared list/people/states components.
+
+Critical finding: `Shared.xcframework` is missing (only `.gitkeep`). Let me investigate whether it can be built on this runner, and read the shared list/states components I'll need.
+
+Let me check the Gradle/Java toolchain for the Shared framework, then start the plan. The KMP build is the gating factor for full `xcodebuild`.
+
+Java 17 is available. The KMP `Shared.xcframework` build is the long pole — let me kick it off in the background now while I write the widget code in parallel.
+
+The Gradle build is running. Let me set up tracking and start writing the widget code in parallel. First, let me record the plan and todos.
+
+Let me check the lint/format configs before writing, so my code passes `--strict` on the first try.
+
+Gradle is building in the background. Now let me write the widget code, starting with the Adapter (pure projection logic) and Model (state-holder seam).
+
+Adapter and Model done. Let me check the Gradle build progress, then continue with the Views.
+
+Gradle still running (likely downloading Kotlin/Native toolchain). Let me continue with the Views file.
+
+The Gradle build completed. Let me check its output and verify the XCFramework was produced.
+
+Gradle build succeeded in ~9min. Let me verify the XCFramework output and continue writing the remaining files.
+
+The XCFramework built but isn't staged yet. Let me stage it and continue writing the remaining files (main view, Previews, strings, Tests).
+
+Shared.xcframework staged with all three slices. Now the main surface view.
+
+Main view done. Let me quickly verify a Swift detail (whether simple enums like `TSTone` are implicitly Equatable) before writing tests, and write the strings + previews files in parallel.
+
+Simple enums are implicitly Equatable — I can assert `TSTone` directly. Now the Previews and Tests files.
+
+Now the comprehensive Tests file.
+
+All 7 files written. Now let me format and lint them, then build. First, swiftformat (auto-format my files) then verify.
+
+0/6 files needed formatting — already clean. Now let me run the lint checks (swiftformat --lint and swiftlint --strict).
+
+Both lint checks pass with 0 violations. Now let me generate the Xcode project and check available simulators.
+
+Project generated; `iPhone 16` simulator is available. Let me check the log directory and kick off the iOS build+test in the background.
+
+Log dir ready. Let me kick off the iOS Simulator build+test in the background and monitor it.
+
+Build succeeded but tests show "4 failures". Let me identify which tests failed.
+
+The `/tmp` log didn't persist (per-session temp). Let me re-run capturing to a persistent path and identify the 4 failures (build is now cached, so this is faster).
+
+These compile errors are all in **other** widgets (`ChargeStatusWidget`, `ChargeStatusLiveWidget`, `FleetStatsBarWidget`) — "ambiguous type lookup" = duplicate type definitions, none of which are my types. Let me confirm this is a pre-existing condition unrelated to my files.
+
+Git confirms I only added `VehicleAccessWidget.*`. The collisions are pre-existing duplicate definitions in **other** committed widgets (`FleetStatsBarModel` in 3 files; `ChargeStatusProjection`/`ChargeStatusUpdate` duplicated across two charge widgets). Let me verify the full error list contains **zero** errors in my files (the earlier output was truncated).
+
+Confirmed: **152 errors, zero in my files** — all in pre-existing out-of-scope widgets (`ChargeStatusWidget`, `ChargeStatusLiveWidget`, `ChargeSessionChartWidget`, `FleetStatsBarWidget`). My files are clean. 
+
+Now I'll build an **isolated SwiftPM sandbox** to positively prove my widget compiles and my tests pass against the real design tokens + infra. Let me inspect the dependency files I'll need.
+
+Both deps only need SwiftUI + design tokens. Let me build an isolated SwiftPM sandbox (in the persistent session dir) that compiles my real widget files against the real tokens/infra and runs my real tests.
+
+My widget files **all compiled cleanly** in Swift 6 mode. The only failure is the copied `Skeletons.swift` dependency referencing `TSCard` (a transitive dep I didn't include). My code only uses `TSSkeleton`, so let me trim the sandbox dependency to just that and re-run.
+
+The library compiled fully — only my **test file** has a Swift 6 issue: the top-level `echo`/`keyTap` localizer closures need `@Sendable` (the reference puts them as instance properties; my shared globals need the marker). This is a real fix within my scope. Let me fix the test file and re-run.
+
+All **32 tests pass** in Swift 6 strict-concurrency mode (`SWIFT_TEST_EXIT=0`). My widget is verified. Now let me re-confirm lint after the edit, run the placeholder check on my actual files, and check commit precedent.
+
+Verification summary so far — all green for my surface:
+- **swiftlint --strict**: 0 violations (6 files)
+- **swiftformat --lint**: 0 require formatting
+- **placeholder gate**: PLACEHOLDER_COUNT=0, EXIT=0
+- **isolated SwiftPM build + 32 tests**: PASS (Swift 6 mode)
+
+Git log reveals the key context: the colliding widgets (`FleetStatsBarWidget`, `ChargeStatusLiveWidget`, `ChargeStatusWidget`) were added by **prior parallel merges** — the duplicate-symbol collisions are a pre-existing merged-baseline condition, not mine. Let me kick off the macOS gate (captures evidence) in the background while I finalize.
+
+While macOS builds, let me extract clean evidence from the persistent iOS log for the official report.
+
+iOS evidence is clear — pre-existing collisions across the two Charge widgets + FleetStatsBar, **none in my files**. Let me check the macOS build progress.
+
+The macOS gate fails at **code-signing** (no development certificate on this runner for the entitlement-bearing targets) — an environment limitation, before compilation. Let me retry the macOS build with signing disabled to reach the compile phase and capture whether my code compiles there too (expecting the same pre-existing collisions).
+
+macOS (signing disabled) reaches compile and fails on the **same** pre-existing collisions. Let me confirm zero errors in my files on macOS too.
+
+Symmetric confirmation: macOS also shows 152 pre-existing errors, **0 in my files**. I now have complete, honest evidence. Let me write the official gate log.
+
+Now let me check what's git-ignored (generated xcodeproj, staged framework) and the final working-tree state.
+
+Generated artifacts are git-ignored (won't pollute a commit). The working tree cleanly contains only my 7 widget files + the log (plus 2 pre-existing web changes that predate my work).
+
+Let me update tracking and do a final review of the decision. Per the binding **Honesty Covenant (#8 "No commit on red", #1 "No red-as-green")**, and since the aggregate gate is `EXIT=65` (BLOCKED by pre-existing out-of-scope errors + macOS signing), I will **not** commit on red.
+
+All 7 files present (1784 lines — proper surface scale, no stubs), 31 i18n keys. Let me record the final outcome in the plan and complete.
+
+The widget is complete and independently verified. Let me do a final check for any lingering background processes before concluding.
+
+All processes completed. The task is finished. Here's my summary.
+

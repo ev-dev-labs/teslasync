@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure to understand what exists for this Apple acceptance gate.
+
+macOS toolchain is present (Xcode 26.5, SwiftLint, SwiftFormat). But I notice the parity ledger filenames in the spec (`apple-macos-ledger.json`, `apple-ios-ledger.json`) and the gate tool (`check-parity-ledger.ps1`) don't appear in the directory listings. Let me investigate thoroughly.
+
+A prior run of this exact gate exists and concluded `STATUS=BLOCKED / EXIT=70`. This confirms my findings: the required ledgers and checker tool are absent. But I must run the gate myself and record honest, fresh evidence — not copy the prior log. Let me read the actual prompt and verify capabilities.
+
+Capabilities confirmed: Xcode 26.5, simulators (incl. iPhone 16), SwiftLint/SwiftFormat/pwsh present — but **0 signing identities** and the **two required ledgers + checker tool are absent**. I must still run the full gate and record real evidence. Let me check predecessor logs and the ledger content.
+
+The existing `apple-ledger.json` combines both platforms in a `rows` array — but the spec requires two separate files (`apple-macos-ledger.json`, `apple-ios-ledger.json`) that don't exist. Let me check predecessor P-logs and compute actual ledger coverage.
+
+Let me fix the jq query and locate the specific P0–P9 phase logs (not the page/widget logs).
+
+The existing `apple-ledger.json` reports 41 pages × 2 platforms, all "done" (100% of what it contains). Now let me verify predecessor log STATUS values, count P7 page prompts, and inspect the Xcode project setup (schemes, xcodeproj).
+
+Key findings so far:
+- **`p4-p9-0002-xcuitest-ui` canonical predecessor log is MISSING** (all others STATUS=DONE)
+- **No `.xcodeproj`** exists — needs `xcodegen generate` (available) before any build
+- **0 signing identities** → archives cannot sign
+
+Let me check the pages-prompt structure, project dependencies (KMP xcframework), and the macos-pending doc.
+
+Now the full picture is clear. Critical blockers confirmed:
+- **KMP `Shared.xcframework` is absent** (only `.gitkeep`) — must be built from source; both apple targets depend on it
+- **0 signing identities** → archives can't sign
+- **Required ledgers `apple-macos-ledger.json` / `apple-ios-ledger.json` + checker `check-parity-ledger.ps1` all absent**
+- **`p4-p9-0002` predecessor log missing**
+- Only 41 of 879 page/view prompts have evidence logs/ledger rows
+
+I'm forbidden (Out of Scope) from creating ledgers, pages, or signing config. The verdict will be BLOCKED — but I must run the gate for real and capture honest evidence. Let me inspect the build script and set up a todo plan.
+
+Working tree is clean (no drift), HEAD `53ed65af0`. The xcframework needs a Gradle/Kotlin-Native build (long pole, both targets depend on it). Let me kick that off in the background while I run preflight and the fast, deterministic gate steps. Let me set up a todo plan and start.
+
+Java 17 + Kotlin/Native toolchain already cached in `~/.konan` — the xcframework build is feasible offline. Let me kick it off in the background, then proceed with preflight and fast gates in parallel.
+
+Now let me generate the Xcode project (needed for `xcodebuild`) and start assembling the log with the PREFLIGHT section capturing real evidence.
+
+Project generated — schemes `TeslaSync` and `TeslaSync-macOS` exist. The background notification was just the launcher; the real build is detached. Let me check its progress and run the fast deterministic gates in parallel.
+
+swiftlint (exact gate command from root) returned **EXIT=2** — one `blanket_disable_command` violation in `apps/design/generated/apple/Tokens.swift`. The xcframework build is progressing (compiling Kotlin/Native from cache). Let me wait for swiftformat and investigate the swiftlint config scope (prior run showed lint green).
+
+Both **LINT (EXIT=2)** and **FORMAT (EXIT=1)** gates are RED in the current tree (real violations in `Tokens.swift` and `GlancePageModelTests.swift`). I cannot fix code per spec. Let me run the placeholder check, the two ledger checks (missing tool/files → expected failure), and a scoped-lint diagnostic.
+
+All fast gates are RED: **LINT=2, FORMAT=1, PLACEHOLDER=1, MAC_LEDGER=1, IOS_LEDGER=1** (checker tool + both ledger files absent). Note: apps/apple-scoped swiftlint is clean (0 violations) — the exact root gate command catches a sibling generated file. Let me verify the placeholder script's exit logic so I describe it accurately.
+
+Placeholder logic confirmed: `EXIT=1` because `COUNT=66 > 0` (66 disallowed TODO/Placeholder markers; the 244 are opt-out-with-reason). The xcframework build is nearly done (debug XCFramework written, now linking release). Let me mark fast-gates complete and wait for the build to finish so I can run the build/test + archive gates.
+
+The detached build runs independently — let me check its log file for completion.
+
+Release frameworks still linking. Let me wait for the xcframework to finish staging before running the build/test gates.
+
+Release macOS linking (the slow optimized step) is the last task before staging. Let me wait for it to complete.
+
+Xcframework built successfully (7m7s) and staged. Now the Apple targets can compile. Let me run the iOS build/test gate (the pre-build script will be fast now since Gradle is up-to-date).
+
+iOS build/test started. Let me wait and monitor its progress.
+
+iOS app is compiling against the staged Shared framework (good — the KMP link works). Build/test still running. Let me continue waiting for it to complete.
+
+Still compiling (large app). Let me check progress depth and keep waiting.
+
+The iOS app is genuinely compiling (3,530+ compile actions, linking the KMP framework correctly). It's a very large target. Let me keep waiting for build+test completion to capture the real exit code.
+
+iOS result: **`** BUILD SUCCEEDED **`** (app compiles against KMP framework) but **`** TEST FAILED **`** — a Swift compile error in the test target (`VehicleCostPageModelTests.swift:10` main-actor isolation). So IOS gate is RED. I can't fix code per spec. Let me capture the exact failure context, then run the macOS build/test gate.
+
+iOS confirmed RED: app builds, but `TeslaSyncTests` fails to compile (`main actor-isolated default value` in `VehicleCostPageModelTests.swift:10`) → **IOS_EXIT=65 (TEST FAILED)**. macOS build/test is now running. Let me monitor it.
+
+macOS is RED: **`** BUILD FAILED **`** because `TeslaSync-macOS` and `TeslaSyncWidgets-macOS` "have entitlements that require signing with a development certificate" — the **0-signing-identity capability blocker**. It failed fast (~20s at entitlement validation). Let me re-run macOS build/test to capture the exact exit code, then run both archives (also expected to fail fast on signing).
+
+**MAC_EXIT=65** confirmed (root cause: entitlements require a development certificate — no signing identity). Now the two archive gates. Let me run the macOS archive (expected fast signing failure) and start the iOS archive.
+
+**MAC_ARCHIVE_EXIT=65** — `** ARCHIVE FAILED **` (signing). Now the iOS archive (Release/device build — may compile before failing at signing). Let me run it with an exit-code capture wrapper and monitor.
+
+iOS archive running. Let me check whether it fails fast on entitlements or compiles first.
+
+**IOS_ARCHIVE_EXIT=65** — `** ARCHIVE FAILED **` (signing requires a development team). All 9 gate steps are now RED. Let me gather the remaining preflight details (tool versions, P7 page-log STATUS counts, manifest-vs-ledger coverage) before writing the log.
+
+All evidence gathered. Apple ledger covers only **41 of 1754 manifest units** (and the two *required* ledger files + checker are absent). Let me confirm the checker absence cleanly and capture final metadata, then write the acceptance log.
+
+All confirmed: required ledgers + checker **ABSENT**, **0 signing identities**, working tree clean (generated `xcodeproj`/`xcframework` are gitignored). Now I'll write the acceptance gate log with the complete honest evidence.
+
+Log written. Let me verify its footer (covenant rule 10) and confirm the working tree has nothing but this new log to commit.
+
+Log footer is correct (`EXIT=65` / `STATUS=BLOCKED` on their own lines). Only the new log is untracked; generated `xcodeproj`/`xcframework` are git-ignored (`!!`), confirming no drift. Committing **only** the log per covenant rule 8.
+
+Committed as `6ad8810d0` (exactly 1 file — the log), tree clean. Let me update tracking and clean up scratch files.
+
+The Apple acceptance gate (P4/P99) has been executed faithfully and the result is committed.
+
+## Outcome: `EXIT=65 / STATUS=BLOCKED`
+
+I ran the exact 9-command gate (no scope narrowing, no code fixes, no delegation) and recorded honest evidence in `.github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log` (commit `6ad8810d0`, log-only).
+
+**Gate matrix (all RED):**
+| Step | Exit | Cause |
+|---|---|---|
+| iOS build/test | 65 | App `** BUILD SUCCEEDED **`, but `TeslaSyncTests` fails to compile (`VehicleCostPageModelTests.swift:10`) |
+| macOS build/test | 65 | Entitlements require a development certificate |
+| swiftlint --strict | 2 | `blanket_disable_command` in `apps/design/generated/apple/Tokens.swift` |
+| swiftformat --lint | 1 | 9 files need formatting |
+| placeholder scan | 1 | 66 disallowed TODO/Placeholder markers |
+| macOS / iOS ledger | 1 / 1 | Checker + both required ledgers absent |
+| iOS / macOS archive | 65 / 65 | Signing requires a development team/certificate |
+
+**Decisive, out-of-scope blockers:**
+- **0 signing identities** → macOS build + both archives unproducible.
+- **`apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1` all absent** → 100% parity unverifiable (existing combined `apple-ledger.json` covers only 41/1754 manifest units).
+- **Predecessor gap**: canonical `p4-p9-0002` log missing; generated P7 page coverage 41/153.
+
+**Forward progress (recorded, does not flip verdict):** built the KMP `Shared.xcframework` from source (7m7s) and generated the Xcode project, so the iOS app target genuinely compiles; Apple-scoped SwiftLint is clean. Working tree is clean (generated artifacts git-ignored); only the log was committed.
+
+Per the prompt, `STATUS=BLOCKED` is the correct terminal state for this run-only gate given the missing capabilities, predecessors, and parity ledgers — none of which I'm permitted to create or fix.
+

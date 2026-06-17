@@ -1,0 +1,86 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+The web source is clear. Now let me explore the existing Apple app structure to understand established patterns, especially `feature-views`, Maps components, state holders, tokens, i18n, and diagnostics.
+
+The feature-views directory is large. Let me find existing map-related feature views to understand the established pattern, and check for any existing TripReplayMap files.
+
+`RouteMapSection` is the closest analog (a route polyline map). Let me study it end-to-end to learn the established multi-file pattern, plus check the Maps components it builds on.
+
+This is an excellent, comprehensive analog. Let me read the remaining RouteMapSection files to fully understand the pattern.
+
+Now the SwiftUI view files, tests, and strings to complete my understanding of the pattern.
+
+Let me read the test files, previews, strings, and the shared infrastructure (TSMapStyle, TSMapCamera, tokens, etc.).
+
+Let me read the ModelTests and locate the shared infrastructure (TSMapStyle/TSMapCamera, tokens, components) plus check the build system.
+
+`xcodebuild`, `swiftlint`, `swiftformat` are all available. The project uses XcodeGen (`project.yml`). Now let me examine the web types/libs and shared Maps infrastructure to port `TripReplayMap` faithfully.
+
+Now let me check the build/target structure, shared tokens/components, and whether `TripPlannerMap` re-ports or shares geo helpers (to confirm the self-containment convention).
+
+`pwsh` and the placeholder script are available. Let me confirm the test target config, the TripPlannerMap convention, and verify the shared tokens/components I'll depend on exist.
+
+The feature-views path is `TeslaSync/feature-views`. Let me correct my searches and locate the design token definitions.
+
+Confirmed: each surface defines its own uniquely-prefixed types (`TripPlannerCoordinate`). I'll use a `TripReplay*` prefix. Now let me read the design tokens and component init signatures I'll depend on.
+
+Let me read the generated design tokens (Color.TS, Font.TS, TSSpacing, TSRadius) and TSTone to confirm exact member names.
+
+I now have a complete understanding of the architecture. Let me read the ProjectorTests to mirror that structure, then check the build toolchain (xcodegen + simulator).
+
+Environment is fully equipped (xcodegen, booted iPhone 16 sim, xcodebuild/swiftlint/swiftformat/pwsh). Let me set up my plan/todos and verify the baseline builds before adding code.
+
+`Shared.xcframework` is missing — that's a required dependency for the app targets. Let me investigate how it's produced and whether the baseline can build at all.
+
+The Apple build runs a Gradle pre-build phase to produce `Shared.xcframework`. Let me check whether that toolchain (JDK/Gradle/Kotlin-Native) can run here, and read the pending-verifications doc and the project.yml run-script wiring.
+
+Java 17 is available and the scheme wires the Gradle xcframework build as a pre-action. The Gradle KMP build is the critical long pole and a prerequisite for any Apple build. Let me start it in the background now while I write code.
+
+The Gradle build has a warm cache (FROM-CACHE hits) — good, it'll be fast. But the nohup process was torn down with its parent sync session. Let me check state and restart it properly using detached async mode.
+
+The build was killed at session teardown. Let me restart it properly in detached async mode so it survives, then write code while it completes.
+
+The Gradle build is running detached. Now I'll write all the TripReplayMap surface files while it builds. Let me set up todos and start with the pure helper layer.
+
+Model layer next — DTO, state-holder seam, telemetry, surface slug, strings facade.
+
+Let me check the Gradle build progress, then continue with the view files.
+
+Build is nearly through the release frameworks. Continuing with the main view file.
+
+Now the non-map chrome (States): stationary banner, no-positions empty, skeleton, error, freshness chip.
+
+The critical MapKit canvas file — speed-colored trail, markers, heading-aware playhead, tap-to-seek, and VoiceOver scrub.
+
+Let me fix the accessibility direction type name (`AccessibilityAdjustmentDirection`).
+
+Let me check the Gradle build status, then write Previews and the test files.
+
+Build is on the final macOS link. Let me write the Previews and test files.
+
+Now the test files. Tests.swift with shared fixtures and pure-helper coverage:
+
+ProjectorTests for projection coverage:
+
+ModelTests — phase/refresh/seek/telemetry plus per-state view render:
+
+The Gradle build completed. Let me verify the xcframework staged successfully and update my todos.
+
+All 11 files created and the xcframework has all three slices. Let me update todos, then run swiftformat/swiftlint on my files before the slow build.
+
+Configs exist. Let me auto-format my new files, then lint them.
+
+Both swiftformat and swiftlint pass cleanly on my files. Now let me generate the Xcode project and run the full build+test gate. First, regenerate the project to pick up the new files.
+
+Project generated with TripReplayMap referenced. Now the heavy step — let me start the iOS build in the background to catch any compile errors, with the Java environment for the pre-build Gradle phase.
+
+Let me check the build progress and proactively verify the `annotationTitles` API I used exists in the codebase.
+
+No existing usage of these MapKit APIs in the codebase — I'm in novel territory. Let me check the build log progress and do a fast standalone typecheck of my MapKit API usage rather than waiting for the full build.
+
+The build is still early (Gradle pre-action). Let me do a fast standalone typecheck of my MapKit API usages against the iOS 18 simulator SDK to catch issues now.
+
+MapKit APIs typecheck clean. And the iOS build just completed — let me read the result.
+
+Build exit 65 (failure). Let me find the errors in the log.
+

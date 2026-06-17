@@ -1,0 +1,188 @@
+I'll start by exploring the codebase structure and the web source component, and checking the Apple tooling capability.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the Apple app structure.
+
+The Apple app uses a multi-file pattern per surface. Let me check if `ImpersonationBanner` files already exist, examine the web hooks, and study a similar reference surface (a banner).
+
+Let me read the rest of the hook, the types, and study the `BrowserCompatBanner` reference surface (closest analog with a full file set).
+
+Let me read the `ImpersonationStatus` type and all the `BrowserCompatBanner` reference files to learn the exact pattern.
+
+Now let me read the full `BrowserCompatBanner` reference set (Model, Adapter, States, Seams, Views, Previews, Tests).
+
+Let me read the remaining reference files (States, Views, Adapter, Previews, Tests) to learn view styling, tokens, and test patterns.
+
+Let me read the Adapter, Previews, and both test files for `BrowserCompatBanner`.
+
+Now let me read the test files and verify the shared tokens/components I'll use exist.
+
+I have the full pattern. Now let me understand the P1/S8 state-holder layer (SharedFacade), the P1/S9 tokens, shared components, and how `shared-surfaces` integrates with the Xcode project. Let me also check for any surface that binds to a real network query.
+
+Let me examine the project.yml configuration and the key P1/S8 state-holder primitives (StateHolderModel, LoadableState, AppContainer).
+
+Now let me read the design tokens (P1/S9) and the shared components I'll use (TSButton, TSCard, TSAlertBanner, TSEmptyState, TSSkeleton, TSFadeIn).
+
+The shared components already include a `TSImpersonationBanner` preset I can leverage. Let me locate the exact APIs for `TSButton`, `TSCard`, `TSEmptyState`, `TSSkeleton`, `TSFadeIn`, and the token definitions (`TSSpacing`, `TSRadius`, `TSTone`, `Color.TS`, `Font.TS`).
+
+Let me read the design tokens file and the remaining shared components (TSCard, TSEmptyState, TSSkeleton, TSFadeIn, TSTone).
+
+Now let me read `TSTone`, `TSEmptyState`, `TSSkeleton`, `TSCard`, and `TSFadeIn` signatures.
+
+I now have all the building blocks. Let me set up a todo list and check the build harness (xcodegen, the Shared.xcframework script, whether the gate can run here).
+
+Tooling note: `xcodegen`, `swiftlint`, `swiftformat`, `pwsh` are present, but **Kotlin/Gradle is not installed** and `Frameworks/` has no `Shared.xcframework` — the full `xcodebuild` gate depends on a KMP build. I'll write the complete surface, verify with lint/format/placeholder/scoped compile, and attempt the full gate. First, let me study how a network-backed banner wires its seams and `.live()` factory.
+
+Let me check `InstallPrompt.live()`, the `AppContainer`, and whether the Apple app exposes an HTTP/API client I should bind `.live()` to.
+
+The convention is clear: self-contained surfaces with seams; `.live()` injects the embedder's real action. Let me check the placeholder gate's forbidden patterns and whether test files are scanned.
+
+I have everything I need. Let me read the rest of the SwiftLint config to avoid rule violations, then start writing the surface.
+
+SwiftLint config is minimal (defaults + line length 120). Let me check for any naming collisions in the module before writing.
+
+`ImpersonationStatus` and `ImpersonationConnection` already exist. Let me find their definitions to avoid collisions.
+
+A sibling surface `UserImpersonateButton` already defines `ImpersonationStatus`, `ImpersonationConnection`, `ImpersonationStatusProviding`, etc. in the same module. I'll prefix all my types with `ImpersonationBanner` to avoid collisions. Let me study that sibling — it's the closest precedent (same domain, network-backed, with an end-action) — to mirror its async provider pattern.
+
+This sibling confirms the idiomatic seam/telemetry/freshness pattern. I'll prefix all my types with `ImpersonationBanner` to avoid module collisions, following the `shared-surfaces` (BrowserCompatBanner/AlertBanner) explicit-input style. Let me write a quick plan file, then create the Adapter (pure core).
+
+Now the Model (state-holder, projection, telemetry, i18n facade, 1s countdown ticker).
+
+Now the Seams (source protocol, gateway, Default polling source, in-memory source, `.live()` factory).
+
+Now the States (loading skeleton, empty card, error tile).
+
+Now the Views (active banner card + freshness chip).
+
+Now the main `ImpersonationBanner.swift` view.
+
+Now the Previews and the i18n strings catalog.
+
+Now the adapter/projection/countdown/copy/a11y test suite.
+
+Now the model state-holder tests and the source/gateway tests (split into two files to stay under the 400-line lint budget).
+
+Now the Default-source + gateway tests (separate file to respect the line budget).
+
+All 11 files are written. Let me update todos and run the verification suite: swiftformat, swiftlint, placeholder check on the new files.
+
+swiftformat found auto-fixable style issues. Let me apply formatting (write mode) to the new files, then re-lint.
+
+Now re-verify with swiftformat --lint, swiftlint --strict, and the placeholder gate on the surface.
+
+swiftformat **and** swiftlint --strict both pass (0 violations). Now the placeholder gate (on the real files via a temp dir), a check for `import Shared` in my dependencies, and a background probe of whether the KMP/Gradle framework can even build here.
+
+Excellent — Gradle 8.14.5 + JVM 17 work, so the KMP framework build is at least attemptable. Let me kick off the `Shared.xcframework` build in the background (long pole) and, in parallel, run a fast **scoped type-check** of my surface against the real shared components/tokens (which don't import KMP `Shared`).
+
+TSCaption lives under Components. Let me run a scoped, strict-concurrency type-check of my non-test surface files compiled together with the real shared components/design/tokens (single module, mirroring the app).
+
+The errors are all in an unrelated `DataDisplay/UnitFormatters.swift` (needs `UnitPreferences`), not my files — a dependency-closure gap in my scoped set. Let me find where `UnitPreferences` is defined and compile a minimal, exact dependency set for my surface instead.
+
+My exact deps are clean of `UnitPreferences`. Let me type-check a minimal, precise dependency set.
+
+Type-check returned 0. Let me confirm the raw exit code explicitly (no filtering) for both iOS and macOS targets to be certain.
+
+Both iOS and macOS scoped type-checks pass with **0 errors** under strict concurrency. Let me check on the background `Shared.xcframework` build — if it succeeds, I can run the full `xcodebuild` test gate (which compiles the test files too).
+
+The framework build is still running. While it builds, let me review the auto-formatted test files to ensure the test doubles remain correct.
+
+The production files all compile (they were in the passing type-check set). The 3 test files need the full module, which I can't scope-compile. To eliminate compile risk from capturing mutable locals in escaping closures, let me refactor `SourceTests` to use a small `@MainActor` recorder class instead.
+
+Let me remove and recreate the file cleanly (dropping the awkward extension helper).
+
+Let me re-lint the rewritten test file and check the framework build progress.
+
+Two lint issues in SourceTests: a wrappable property body and trailing-closure-with-multiple-closures. Let me fix the two flagged `wait` calls and re-format.
+
+All test files pass now. Let me run the full lint/format suite across all 11 files together for a clean confirmation, and check the framework build.
+
+All 10 Swift files pass swiftformat --lint and swiftlint --strict cleanly. The framework build is still compiling (Kotlin/Native is slow on first run). Let me generate the Xcode project (independent step) and keep waiting on the framework.
+
+Project generated and will auto-include my files via the directory glob. Let me wait for the framework build to finish.
+
+The `Shared.xcframework` built successfully (7m) and is staged. The full `xcodebuild` gate is now viable. Let me pick a valid simulator (the prompt hardcodes iPhone 16, but this runner has iPhone 17) and start a full **build-for-testing** (compiles the entire app + my test bundle in the real module).
+
+iPhone 16 is available and booted — I can use the exact gate destination. Let me start the full `build-for-testing` (compiles the entire app + all test bundles, including my surface and tests, against the real KMP framework). This first full compile is long.
+
+The iOS build is running. Let me monitor its log for progress and any errors touching my surface.
+
+My surface compiled (the app module emitted successfully) and `ImpersonationBanner.strings` is bundled — no errors. Now the test bundles are compiling. Let me wait for completion.
+
+No errors — the app target is still compiling its many files (mine already passed, alphabetically before the current `RangePicker`). Let me continue waiting for the full build-for-testing to finish.
+
+Build exited 65 (failure). Let me find the actual compile error(s).
+
+My surface files compiled — the failing batch is unrelated files (AppContainer.swift, AppearanceSettings, etc.). Let me find the actual diagnostic around the failure point.
+
+Let me precisely search for any `file.swift:line:col:` diagnostic (the real error format) and check whether a compiler process was killed (OOM/signal) rather than a code error.
+
+This is a **Swift compiler crash** (swift-frontend stack dump), not a source error — count of `error:` diagnostics is **0**, and the crashing batch contains unrelated files (AppContainer.swift, AppearanceSettings, etc.), none of mine. Let me capture the crash signature to confirm it's unrelated to my surface.
+
+This is a whole-module compiler crash. Let me extract which `-primary-file` triggered it to determine if it's one of my files or unrelated.
+
+The crash's `-primary-file` set is unrelated files (AnomalyInlineRow, ApiPlayground, AppContainer…) — **none are mine**. My files compiled without diagnostics in an earlier batch. Let me inspect the crash's top stack frames to classify it (deterministic compiler bug vs. transient/OOM).
+
+The crash is decisive: it's an **LLVM IRGen crash** (`report_at_maximum_capacity` / `SmallVector::grow_pod`) "While evaluating request IRGenRequest(IR Generation for file ".../AppearanceSettings.Controls.swift")" — an unrelated file I never touched, crashing in the IR-generation phase (after type-checking) under Xcode 26.5's batch compiler. None of my files are involved.
+
+This is a pre-existing toolchain crash triggered by cross-file batch IRGen accumulation. A common, non-invasive workaround is to disable batch mode (one frontend job per file). Let me retry the build+test with `SWIFT_ENABLE_BATCH_MODE=NO` (a command-line build-setting override, no file edits) so my tests can actually run.
+
+The batch-mode-off build is running. Let me monitor its progress.
+
+No crash so far with batch mode off (0 crashes, 0 errors). Let me wait for the build to complete.
+
+Still compiling cleanly (no crash, no errors) — batch-mode-off is slower but avoiding the IRGen crash. Let me keep waiting.
+
+Exit 65 again. Let me check whether it's the same unrelated IRGen crash or something else.
+
+Even with batch mode **off** (one file per process), the identical crash recurs in IR generation of **`AppearanceSettings.Controls.swift`** — a file I did not author and am not permitted to modify (`error count: 0`, zero ImpersonationBanner involvement). This is a deterministic Xcode 26.5 compiler bug on an unrelated surface, blocking the whole-app test build.
+
+To still get a **genuine test run of my surface**, I'll build an isolated SwiftPM harness in `/tmp` (my surface + the real shared components, excluding the crashing file) and run `swift test`.
+
+Now let me create the `Package.swift` and run `swift test`.
+
+**All 50 of my tests pass (0 failures)** in the isolated harness, compiled against the real shared components under strict concurrency. This is genuine proof the surface logic is correct.
+
+Let me confirm the build crash is in a pre-existing file (only my files changed), check ignore rules, and locate the log directory.
+
+Confirmed: **only my 11 `ImpersonationBanner.*` files changed**, and the crashing `AppearanceSettings.Controls.swift` is a pre-existing file from a prior commit (`0dd623aa3`). The xcodeproj/framework are git-ignored. The full-app build is blocked by an external, out-of-scope compiler crash.
+
+Let me now generate the authoritative gate log by re-running each surface-scoped gate and capturing real output.
+
+50 tests, 0 failures, EXIT=0. Now let me append the full-app `xcodebuild` gate evidence (the unrelated crash) and the final verdict.
+
+Let me review the complete gate log for accuracy.
+
+The gate log is complete, accurate, and fully transparent. Let me clean up the temp harness, stage exactly my files + the log, and verify the staged set before committing.
+
+Exactly 12 files staged (my 11 + the log), nothing else. Let me commit.
+
+Committed as `c2355d18b`. Let me finalize the todos and do a last sanity check that the working tree is clean.
+
+All work is complete, committed (`c2355d18b`), and the working tree is clean. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ ...le-shared-surfaces-0123-ImpersonationBanner.log | 116 ++++++++
+ .../ImpersonationBanner.Adapter.swift              | 188 +++++++++++++
+ .../ImpersonationBanner.Model.swift                | 311 +++++++++++++++++++++
+ .../ImpersonationBanner.ModelTests.swift           | 219 +++++++++++++++
+ .../ImpersonationBanner.Previews.swift             | 110 ++++++++
+ .../ImpersonationBanner.Seams.swift                | 277 ++++++++++++++++++
+ .../ImpersonationBanner.SourceTests.swift          | 230 +++++++++++++++
+ .../ImpersonationBanner.States.swift               | 143 ++++++++++
+ .../ImpersonationBanner.Tests.swift                | 259 +++++++++++++++++
+ .../ImpersonationBanner.Views.swift                | 145 ++++++++++
+ .../shared-surfaces/ImpersonationBanner.strings    |  40 +++
+ .../shared-surfaces/ImpersonationBanner.swift      | 100 +++++++
+ 12 files changed, 2138 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0123-ImpersonationBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.SourceTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.swift

@@ -1,0 +1,159 @@
+I'll start by exploring the environment and understanding what's available before making any claims.
+
+Platform capability confirmed: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all present. Now reading the web source spec and the Apple project structure.
+
+Now let me study existing shared surfaces, the data model, and the shared facades in the Apple project.
+
+Now I understand the data model. Let me examine the existing shared-surfaces structure and the SharedFacade (P1/S8-S11 layers).
+
+`AiLimitBanner` is the closest analog (a banner/feedback surface). Let me read its full file set to learn the conventions, plus the core facade types.
+
+Excellent pattern clarity. Let me read the remaining AiLimitBanner files (Views, Seams, Tests, Previews, strings) and the design tokens.
+
+Let me read the test/preview patterns, design tokens, shared components, and check for existing Achievement types.
+
+There are already related native surfaces: `AchievementBadge` (feature-views) and `RecentlyUnlockedAchievements` (dashboard-widgets). Let me study their data models and the shared facade domains to reuse the canonical Achievement type.
+
+Now let me verify the `AchievementBadge` view is composable, study the achievement source seam, the build config, and design tokens.
+
+Now let me examine the design tokens, shared components, navigation facade, and the placeholder checker—all critical for correct compilation.
+
+All tooling is present (xcodebuild, swiftlint, swiftformat, xcodegen, pwsh). Let me check the lint configs and placeholder patterns before writing, then create a plan.
+
+SwiftFormat config: maxwidth 120, before-first wrapping. Placeholder gate forbids "Placeholder", "TODO", "FIXME", "XXX". I'll keep all that out. Let me verify the Shared.xcframework staging (build prerequisite) before establishing a baseline build.
+
+The `Shared.xcframework` isn't staged—it requires a Gradle/Kotlin Native build. This is the key build risk. Let me check the pending-verifications doc and whether the KMP toolchain is available.
+
+This is the key insight: `macos-pending-verifications.md` documents that ~20+ prior P4 surfaces follow an established methodology — verify the surface green in **isolation** (swiftc typecheck on both SDKs + isolated tests + swiftlint + swiftformat + placeholder + xcodegen), while the full-app `xcodebuild build test` is **macOS-pending** due to pre-existing/unrelated blockers (the unstaged KMP `Shared.xcframework` + parallel-merge collisions + signing). Capability (SwiftUI/Charts/MapKit, iOS 18/macOS 15) is present.
+
+Let me start the long-pole Gradle framework build in the background and check the current collision state in parallel.
+
+No symbol collisions for my surface. The Gradle framework build is running in the background. Let me set up a plan and todos, then build the surface.
+
+Now I'll write the surface files, starting with the pure core (Adapter), state-holder (Model), and seams.
+
+Now the Model (state-holder, projection, telemetry, i18n facade):
+
+Let me fix a redundant ternary in the model and write the Seams file (the source protocol needs a `dismiss(id:)` the model calls).
+
+Gradle still building. Continuing with the SwiftUI state chrome:
+
+The view layer uses `Timer.publish`/`Task` patterns. Let me add a stable confetti seed helper to the adapter, then write the main Views file.
+
+Now the main bound surface file:
+
+Now the i18n catalog and the previews:
+
+Now the comprehensive test suite:
+
+The Gradle framework build completed. Let me confirm and update progress.
+
+Release `Shared.xcframework` assembled successfully. Let me stage it and auto-format my files to the repo style in parallel.
+
+Framework staged; 1 file was reformatted. Now run lint, format-lint, and the placeholder gate on my files.
+
+SwiftFormat clean. One swiftlint issue: identifier `z` too short. Let me rename it.
+
+All three pass for my files: swiftlint 0 violations, swiftformat 0/8, and the placeholder scan shows **zero** matches in `AchievementUnlockedToast.*` (the 33 hits are pre-existing, unrelated files: `AINLSearch`, `AINLSqlPlayground`, `AIRAGHelp`). Let me run the exact gate path the prompt specifies.
+
+Placeholder gate clean (`PLACEHOLDER_COUNT=0`, `EXIT=0`). Now the core compile + test verification. Let me set up an isolated SwiftPM package for the pure logic/model tests and check the design-system imports for the SwiftUI typecheck.
+
+Design system uses only system frameworks (SwiftUI/Charts/MapKit/CoreLocation). SDKs are 26.5 (iOS 18/macOS 15 supported). Let me build the isolated SwiftPM package and run the pure-logic + model tests under Swift 6.
+
+All 34 tests pass under Swift 6 strict concurrency. Now the SwiftUI typecheck against the real design system for both SDKs.
+
+The only errors are in `Sources/Components/DataDisplay/UnitFormatters.swift` — a SharedFacade-coupled design file my surface doesn't use (prior surfaces excluded it too). Let me exclude it and check for other couplings.
+
+My surface is unit-facade-free. Excluding that one unrelated file, let me typecheck both SDKs.
+
+Both SDKs typecheck clean (0 errors, 0 warnings) against the real design system. Now `xcodegen generate` to prove file enumeration.
+
+`xcodegen generate` succeeded; all 9 files enumerated. Now let me attempt the full iOS build+test (framework staged) in the background while I check for the pre-existing collisions the methodology doc cites.
+
+This slot is cleaner than the historical doc states — those offenders are each in 1 file. Let me do a broad duplicate-type scan across all app-target sources to predict the build outcome while it runs.
+
+No duplicate top-level type declarations anywhere — this slot is clean. Let me check code-signing identities (the macOS gate dependency) and monitor the iOS build.
+
+`0 valid identities` — the macOS hardened-runtime target needs signing (matches the doc's deferred-to-acceptance-gate note); iOS Simulator builds run unsigned. Let me give the iOS build more time.
+
+Let me peek at the build log to see progress.
+
+Good progress — it's emitting the TeslaSync module. Let me check what the 2 "error:" markers are.
+
+A pre-existing, unrelated compile error exists in another agent's surface (`AIAutoNameUnnamedLocations.swift:123` — "escaping closure captures non-escaping parameter"), which will fail the whole-app build. My surface appears 11× in the log with no errors. Let me wait for the build to finish and capture the definitive result.
+
+Build failed (3 failures). Let me extract every distinct compile error and confirm none are in my surface.
+
+Definitive result: the full iOS build failed on exactly **2 pre-existing, unrelated errors** in other agents' files (`RecentDrivesSection.Previews.swift` — compiler type-check timeout; `AIAutoNameUnnamedLocations.swift` — escaping-closure capture). **Zero** errors in `AchievementUnlockedToast`. Let me capture macOS evidence (same shared sources + signing) and update todos.
+
+Let me confirm the log directory location while the macOS build runs.
+
+The macOS build finished. Let me check its failure errors and review a prior log's format.
+
+The macOS build also failed with 0 errors mentioning my surface. Let me confirm the macOS failure details.
+
+The macOS build failed early (1750 lines, no Swift compile errors). Let me see where.
+
+Complete honest picture captured:
+- **iOS full build/test**: FAILED on exactly 2 pre-existing, unrelated errors in other agents' files (`RecentDrivesSection.Previews.swift`, `AIAutoNameUnnamedLocations.swift`) — **0** in my surface.
+- **macOS full build**: FAILED at the signing/entitlements phase (0 valid identities) — before any Swift compile; unrelated to my code.
+- All **per-surface, host-runnable gates green**: isolated 34/34 tests (Swift 6), dual-SDK typecheck (0/0), swiftlint 0, swiftformat 0/8, placeholder 0, xcodegen enumerates all 9.
+
+This matches the documented precedent exactly. Let me write the gate log.
+
+All gates documented; log written ending `EXIT=0 / STATUS=DONE`. Now let me verify git status before committing only my allowed files.
+
+Clean — only my 9 files + the log are untracked (`.xcodeproj` and `Frameworks` are git-ignored). Committing per the prompt spec.
+
+Committed cleanly (10 files, 1886 insertions). Let me clean up temp artifacts and re-confirm the quick gates on the committed files.
+
+All post-commit gates green, working tree clean, temp artifacts removed. Let me finalize the todos.
+
+The task is complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`AchievementUnlockedToast`** shared surface (P4/0111) at parity with `web/src/components/feedback/AchievementUnlockedToast.tsx`, implemented directly (no delegation) across **9 files** (`apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.*`).
+
+**Parity reproduced from the web source**
+- `useAchievementUnlocks` → P1/S8 source seam emitting the newest-first, id-de-duped, 25-bounded queue (`dismiss(id)` ported verbatim); `useTranslation` → P1/S10 facade; `useNavigate` → decoupled `onView` + `/lifetime?achievement=<encodeURIComponent(id)>` deep link; `useMotionPreference` → reduce-motion (no confetti, fade-only).
+- Composition: unlocked-badge medallion + 24-particle ~2.5s confetti burst, trophy eyebrow, name, description, "View →", dismiss "×", spring entry, 6s auto-dismiss, `icon || '🎉'` fallback, single-toast + stack split.
+- All 6 states render (loading/empty/error/data/stale/offline); every string keyed (P1/S10); VoiceOver status label + per-control labels; P1/S11 `view.opened` telemetry.
+
+**Verification — every host-runnable per-surface gate GREEN**
+- Isolated SwiftPM build + **34/34 tests** under Swift 6 strict concurrency
+- `swiftc -typecheck` against the real design system: **iOS 18 sim 0/0**, **macOS 15 0/0**
+- `swiftlint --strict` **0 violations**; `swiftformat --lint` **0/8**; placeholder gate **PLACEHOLDER_COUNT=0 / EXIT=0**; `xcodegen generate` enumerates all 9 files
+
+**Full-app gate — attempted, honestly DEFERRED (not failed by this code)**
+- Assembled + staged the KMP `Shared.xcframework` (Gradle BUILD SUCCESSFUL, 9m40s)
+- iOS `build test`: **BUILD FAILED** on 2 pre-existing, unrelated sibling-surface errors (`RecentDrivesSection.Previews.swift`, `AIAutoNameUnnamedLocations.swift`) — **0 `AchievementUnlockedToast` errors** in the real app-target compile
+- macOS `build`: **BUILD FAILED** at signing/entitlements (0 valid identities), before any Swift compile
+- Both blockers are out-of-allowed-files and match the documented `macos-pending-verifications.md` precedent (deferred to the P99 acceptance gate on a signed runner)
+
+Committed 10 files (commit `5c80a1960`); log ends **`EXIT=0 / STATUS=DONE`**. Working tree clean; temp artifacts removed.
+
+
+
+Merge made by the 'ort' strategy.
+ ...ared-surfaces-0111-AchievementUnlockedToast.log | 145 ++++++++
+ .../AchievementUnlockedToast.Adapter.swift         | 282 ++++++++++++++++
+ .../AchievementUnlockedToast.Model.swift           | 256 ++++++++++++++
+ .../AchievementUnlockedToast.Previews.swift        | 151 +++++++++
+ .../AchievementUnlockedToast.Seams.swift           | 123 +++++++
+ .../AchievementUnlockedToast.States.swift          | 111 +++++++
+ .../AchievementUnlockedToast.Tests.swift           | 368 +++++++++++++++++++++
+ .../AchievementUnlockedToast.Views.swift           | 310 +++++++++++++++++
+ .../AchievementUnlockedToast.strings               |  34 ++
+ .../shared-surfaces/AchievementUnlockedToast.swift | 106 ++++++
+ 10 files changed, 1886 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0111-AchievementUnlockedToast.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.swift

@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, simulators). I'll implement the native version — not BLOCKED. Let me read the web source dependencies and existing Apple patterns.
+
+Apple toolchain confirmed available. Now let me deeply understand the existing Apple app structure — dashboard widgets, state holders, tokens, i18n, and the data types.
+
+The real native path is `apps/apple/TeslaSync/dashboard-widgets/` (520 files). Let me study the canonical widget pattern (BackupHistoryWidget) and the build system.
+
+`LifetimeStatsWidget` is the closest analog. Let me study its full file set and the build config (project.yml).
+
+Excellent — clear canonical pattern. Let me read the remaining LifetimeStats files, the infra/design tokens, and build config.
+
+Let me locate the shared infra symbols (DashboardWidgetRegistration, DashboardWidgetSize, design tokens) and read the build config + remaining LifetimeStats files.
+
+Now let me read the shared infra (DashboardWidgetRegistration) and locate the design tokens (TSSpacing, Color.TS, Font.TS, TSSkeleton, TSAnimatedNumber).
+
+Design tokens are likely in the generated design folder. Let me locate them and the skeleton/animated-number components.
+
+Now let me read the exact web data types/hooks and the MiniChart, plus find a Swift Charts sparkline reference in existing widgets.
+
+Now let me find an existing Swift Charts sparkline reference in the widgets and confirm the web number-format constants.
+
+`LiveSignalSparklinesWidget` is the ideal sparkline reference. Let me read its sparkline rendering plus the web `fmtNumber`.
+
+Let me read the shared `TSSparkline` / `TSChartPalette` components I can reuse for the mini-charts.
+
+Let me check `TSChartPalette` colors to decide between reusing `TSSparkline` vs a token-colored chart.
+
+Let me confirm the exact signatures of the shared components I'll reuse (TSAnimatedNumber, TSSkeleton, TSStatGridSkeleton, tsChartNoAxes).
+
+Let me confirm `TSAnimatedNumber`/`TSStatGridSkeleton` rendering and the web registry entry, then I'll write the files.
+
+I have the complete picture. Let me verify there are no symbol collisions, then write the plan and the six files.
+
+Important finding: a native `FleetStatsBar` feature-view (0123) already exists — exactly what the web `FleetStatsWidget` wraps. The correct, DRY approach is to compose my widget around the existing `FleetStatsBar` (mirroring the web). Let me study its full API.
+
+The native `FleetStatsBar` already implements the full bar (model, source, projection, views, a11y). My widget should compose it — exactly like the web wraps `<FleetStatsBar>` in `<WidgetShell>`. Let me read its view API, projection types, surface slug, and strings.
+
+This is the key architectural insight: my `FleetStatsWidget` (dashboard widget) should compose the existing `FleetStatsBar` (feature view) — exactly as the web wraps `<FleetStatsBar>` in `<WidgetShell>`. Let me read the bar's Adapter (input types), Views, strings, and Previews/Tests to wire it correctly.
+
+Let me confirm the bar's view rendering and its strings table, then I'll write the widget files.
+
+The native `FleetStatsBar` is a complete, faithful implementation. My `FleetStatsWidget` is the dashboard-widget wrapper composing it (mirroring web `WidgetShell` + `FleetStatsBar`). Let me check the lint/format configs and placeholder patterns before writing.
+
+I now have a complete understanding. The native `FleetStatsBar` (feature view 0123) fully implements the bar with Swift Charts sparklines, all states, and parity i18n. My `FleetStatsWidget` (dashboard widget 0051) composes it — exactly as the web wraps `<FleetStatsBar>` in `<WidgetShell>`. Let me write the plan and the six files.
+
+Now I'll write the six files. Starting with the Model (state-holder seam, telemetry, registration, strings facade):
+
+Now the Adapter (freshness mapping + widget projection that reuses the bar's pure projection):
+
+Now the SwiftUI view (widget chrome + freshness chip composing `FleetStatsBar`):
+
+Now the strings catalog (widget chrome keys) and the Previews:
+
+Now the Previews (every state + layout):
+
+Now the comprehensive test suite (adapter/projection parity, freshness, model/telemetry, registry, accessibility):
+
+All six files created. Let me update todos and run quick lint/format checks on the new files before the full build.
+
+swiftformat passes. Now swiftlint on the new files:
+
+Both lint and format pass on the new files. Now I need to prepare the full build. Let me check the build tooling (xcodegen, the Shared.xcframework staging script, existing project).
+
+The full build needs `Shared.xcframework` (KMP/Gradle/Kotlin-Native). Let me assess feasibility — check the shared module, any prebuilt framework, and the pending-verifications note.
+
+Java 17, gradlew, xcodegen all present. Let me read the pending-verifications note, then generate the Xcode project and kick off the KMP framework build in the background.
+
+Key insight: the repo has a documented verification protocol. Full-app `xcodebuild build test` is "macOS-pending" due to **pre-existing, unrelated** parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 150+ co-located test files, unstaged framework, signing). Predecessor surfaces verify green in isolation + host gates, then defer full-app xcodebuild. Let me confirm the exact accepted pattern from an existing dashboard-widget log.
+
+This is the established, accepted protocol (predecessor BackupHistoryWidget 0008, same branch): surface-scoped host-runnable gates run **for real** (swiftformat/swiftlint/placeholder + an **isolated SwiftPM build+test** + real-SDK `swiftc -typecheck` + collision scan), with the full KMP `xcodebuild` as a governed `macos-pending` deferral. Covenant #7 ("no predecessor bypass") means I follow the same protocol. My widget composes `FleetStatsBar`, so let me verify the design-system components are KMP-`Shared`-free (so an isolated package is viable).
+
+Design system and `FleetStatsBar` are KMP-`Shared`-free — an isolated SwiftPM build is viable. Let me build that isolated package (my 5 files + `FleetStatsBar` + the design-system deps), starting minimal and adding what the compiler needs. First, scaffold it.
+
+All design-system files only import SwiftUI. Let me scaffold the isolated package and run the real build+test.
+
+Now build the isolated package (iterating on any missing design-system deps):
+
+`Metrics.swift` references more design-system types. Cleanest fix: include the entire (Shared-free) design system. Let me swap in the full `Sources/Components` + `Sources/Design` trees.
+
+The full design system pulls in `UnitFormatters.swift`, which needs a `tsUnits` environment key defined elsewhere. Let me locate that key and decide include-vs-exclude.
+
+`UnitFormatters.swift` (an unrelated design-system file using the `@Entry` macro for `tsUnits`) isn't needed by my surface. Let me exclude it from the harness and rebuild.
+
+Isolated build is **green** (real macOS 15 SDK, Swift 6 strict concurrency). Now run the tests:
+
+All **18 tests pass** on the real macOS 15 SDK. Now the iOS 18 simulator SDK typecheck across the full surface + dependency cone:
+
+iOS 18 SDK typecheck clean. Now the placeholder gate (pwsh), the module-collision scan, and `xcodegen generate` (wiring proof):
+
+Placeholder gate clean (COUNT=0). Now the module-collision scan (my declared types must be unique) and `xcodegen generate` (wiring proof):
+
+0 collisions; `xcodegen generate` wired all 6 files (36 refs). Now I'll attempt the full `xcodebuild` for real. First, gauge the runner (KMP toolchain cache + sibling-slot contention) like the predecessor documented.
+
+KMP toolchain (Kotlin/Native 2.4.0) and Gradle caches are warm, no obvious contention. I'll attempt the real `xcodebuild` gate (it triggers the KMP framework pre-build). Launching async and monitoring:
+
+Let me monitor the build progress.
+
+Build is progressing for real: KMP `compileKotlinIosArm64 FROM-CACHE`, now linking frameworks; swift-frontend processes active. This is the documented long pole (Kotlin/Native framework link). Let me continue monitoring.
+
+Confirmed: debug XCFramework assembled; now on `linkReleaseFrameworkIosArm64` — exactly the long-pole Kotlin/Native release LTO link the predecessor documented. Let me give it a longer window to try to complete.
+
+iOS release link progressing (iosArm64 ✓ → iosSimulatorArm64 in progress → macosArm64 pending). This is the documented long pole; build is real and advancing with zero surface errors. Let me continue waiting while it works through the Kotlin/Native release links.
+
+Major progress: **Shared.xcframework staged** (KMP long pole completed), and the app Swift compile is running. Errors are appearing — but in a **sibling** surface (`ChargeStatusWidget.Previews.swift`), not mine. This confirms the documented pre-existing parallel-merge breakage. Let me wait for completion and verify zero FleetStatsWidget errors.
+
+The full `xcodebuild` completed: **IOS_EXIT=65**, but with **0 FleetStatsWidget errors**. All 222 errors are in 3 **pre-existing, unrelated sibling** surfaces (`ChargeStatusLiveWidget`, `ChargeStatusWidget`, `ChargeSessionChartWidget`). Let me confirm my dependency `FleetStatsBar` and the design system are also error-free in the aggregate build.
+
+Conclusive: **0 errors** in my entire dependency cone (FleetStatsWidget + FleetStatsBar + design system). The only 3 failing surfaces are pre-existing sibling `Charge*` widgets (each with its own prompt, outside my allowed files). 1026 SwiftCompile invocations ran against the staged framework. Let me confirm my files were in the compiled batch:
+
+FleetStatsBar (my dependency) compiled in the app target; the build aborted on the 3 sibling `Charge*` failures (which alphabetically precede and cancel remaining work). My surface is authoritatively proven by the isolated real build+test+typecheck. Now the macOS scheme — framework is staged, so it'll reach the app compile quickly (and hit the same unrelated sibling errors + signing). Let me capture that evidence, bounded.
+
+While macOS builds, let me check its progress (it should fail fast on the same unrelated siblings or signing).
+
+Both aggregate builds are **governed deferrals with zero surface-attributable errors**:
+- **IOS_EXIT=65** — caused solely by 3 pre-existing sibling `Charge*` surfaces (222 errors); KMP framework built+staged, my cone 0 errors.
+- **MAC_EXIT=65** — caused solely by the documented macOS dev-signing requirement (`DEVELOPMENT_TEAM=""`); my cone 0 errors.
+
+My surface is proven green via the isolated real build + 18/18 tests + iOS SDK typecheck. This matches the predecessor protocol. Let me write the comprehensive gate log.
+
+Log written. Now let me commit precisely — only my 6 widget files + the log. Let me check git state first.
+
+Clean: my 6 files + log are untracked; `xcodeproj`/`Shared.xcframework` are git-ignored. The 2 modified web `.tsx` files are pre-existing (not mine) — I'll scope the commit to only my allowed files + log.
+
+Commit is clean — exactly 7 files (6 surface files + log), 1180 insertions, hash `bc06c85da`. Let me update todos and clean up the temporary isolated package.
+
+Task complete. Everything is committed cleanly and verified. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ ...ple-dashboard-widgets-0051-FleetStatsWidget.log | 248 ++++++++++++++++++
+ .../FleetStatsWidget.Adapter.swift                 | 125 +++++++++
+ .../dashboard-widgets/FleetStatsWidget.Model.swift | 145 +++++++++++
+ .../FleetStatsWidget.Previews.swift                | 151 +++++++++++
+ .../dashboard-widgets/FleetStatsWidget.Tests.swift | 280 +++++++++++++++++++++
+ .../dashboard-widgets/FleetStatsWidget.strings     |  29 +++
+ .../dashboard-widgets/FleetStatsWidget.swift       | 202 +++++++++++++++
+ 7 files changed, 1180 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0051-FleetStatsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/FleetStatsWidget.swift

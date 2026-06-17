@@ -1,0 +1,113 @@
+I'll start by exploring the environment and repository structure to understand what's available and what's required.
+
+Environment is capable: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simctl all present, and `apps/apple` exists. Let me read the web source and understand the existing Apple project structure.
+
+Now let me examine the existing shared-surfaces and related infrastructure (state holders, tokens, i18n, telemetry) to follow established patterns precisely.
+
+No shared-surface uses Swift Charts yet. Let me check app-wide for Swift Charts usage and understand the canonical surface file pattern. Let me look at a representative complete surface and find any chart examples elsewhere in the app.
+
+Rich chart infrastructure already exists. Let me find the closest analog — presentational chart-primitive surfaces — and check the parity tracking to understand exactly what surface 0064 needs.
+
+Key finding: this surface was previously BLOCKED (RED), and area charts are already implemented in dashboard widgets + RecentActivity. Let me study the surface metadata, an existing Swift area-chart implementation, and a complete representative surface to nail the conventions.
+
+Excellent reference. Now let me understand the shared i18n facade, telemetry contract, design tokens, and state-chrome components by reading RecentActivity (a chart consumer with full states) and locating the shared infra.
+
+Now let me understand the i18n facade, telemetry (`view.opened`) contract, the surface entry/strings/previews structure, and shared skeleton components.
+
+Let me read the model/telemetry wiring, swiftlint budgets, and design tokens to finalize my file plan.
+
+Let me confirm the telemetry-on-start pattern and the per-state render-test helper, then I'll have all conventions nailed.
+
+I now have all conventions. Let me record the plan and read the formatter config before writing.
+
+I have all conventions. Let me set up tracking and verify the Swift Charts API I'll rely on (the `series:` mark parameter, `stacking: .unstacked`) by compiling a probe against the macOS SDK.
+
+Probe typechecks — the `series:` separation param, `stacking: .unstacked`, gradient `foregroundStyle`, and `chartXSelection` all compile against the SDK. Let me write the plan, then create the surface files.
+
+Now I'll create the surface files. Starting with the model (types, telemetry seam, i18n facade, hex parser).
+
+Now the projection adapter (the core unit-tested transform):
+
+Now the source seams and the observable model that emits `view.opened`:
+
+Now the Swift Charts area chart — the visual heart of the parity:
+
+Now the state chrome (loading / empty / error / freshness / banner):
+
+Now the public View that ties it together:
+
+Now the i18n catalog. Let me first extract every key I referenced to guarantee completeness:
+
+All keys accounted for (freshness/banner keys are passed via descriptors). Creating the catalog:
+
+Now the previews (one per state):
+
+Let me refactor the accessibility summary into a pure, testable helper (shared by the chart view and tests), then write the tests.
+
+Now the test files — projection/adapter, hex parser, accessibility, and per-state render smoke:
+
+All 10 files written. Let me auto-format them, lint them, and check the project generation tooling.
+
+swiftformat fixed 3 files. xcodegen is present but there's no `.xcodeproj` and `Frameworks/Shared.xcframework` is just a `.gitkeep`. Let me investigate the Shared framework build dependency and the documented macOS verification status.
+
+JDK 17 and gradlew are present. Let me read the documented verification stance, then attempt the real build. First, the doc head:
+
+This doc establishes the accepted methodology: the full-app `xcodebuild` is **macOS-pending** (blocked by the unstaged KMP `Shared.xcframework`, pre-existing cross-surface merge collisions, and dev-signing), while each surface is verified green in isolation. Let me read a comparable chart-surface log to replicate the exact accepted verification harness.
+
+This is the gold-standard methodology (FSMTimelineChart is the near-identical Swift Charts analog): full-app `xcodebuild` is documented macOS-pending (unstaged KMP `Shared.xcframework` + cross-surface collisions + no signing), while the surface is proven via real dual-SDK `swiftc -typecheck` + an isolated SwiftPM test run + lint/format/placeholder/xcodegen. I'll replicate it exactly. First, enumerate the external symbols my files use.
+
+All design-system symbols resolve from the real `Tokens.swift` except two out-of-scope atoms (`TSChartSkeleton`, `TSFadeIn`). Let me set up the isolated verification harness (real Tokens + exact-signature atom shims + my real sources) and run the dual-SDK typecheck.
+
+Now the dual-SDK typecheck against the real iOS-18 and macOS-15 SDKs under Swift 6 strict concurrency:
+
+iOS 18 typecheck: **0 errors**. Now macOS 15:
+
+Both SDKs typecheck clean. Let me make the render-smoke helper headless-safe (forces layout via `ImageRenderer.render` closure — robust in both SwiftPM and hosted XCTest), then run the isolated test suite.
+
+Now create the SwiftPM package manifest and run the isolated test suite:
+
+Good catch by the full compile — the `#if DEBUG` previews (skipped by plain `-typecheck`) have a real MainActor-isolation issue. Let me fix the preview helper and re-verify with `-D DEBUG` too.
+
+Both SDKs clean with DEBUG. Now run the isolated test suite:
+
+**42/42 tests pass** (projection, hex, a11y, model lifecycle, sources, and all 7 per-state render-smoke). Now the remaining host gates on the real files — format, lint, placeholders:
+
+Format and lint both clean (0/9, 0 violations). Now the placeholder gate and a forbidden-token grep:
+
+All host gates green: format 0/9, lint 0 violations, placeholders 0, no forbidden tokens. Now generate the Xcode project and confirm it enumerates the new files:
+
+xcodegen enumerates all 10 files (60 refs across the app + test targets). Now let me capture honest evidence for the documented macOS-pending blocker (missing KMP `Shared.xcframework` + no signing identity):
+
+Evidence captured: 0 signing identities, `Shared.xcframework` unstaged, and the build fails at framework resolution **before any Swift compiles** (zero AreaChartWrapper errors) — the documented, pre-existing, surface-independent macOS-pending blocker. Let me attempt staging the KMP framework via Gradle in the background (to strengthen evidence) while I write the log.
+
+Gradle is running (the Kotlin/Native long-pole). Let me gather line counts and write the evidence log while it runs.
+
+Let me check the Gradle progress, then write the log:
+
+Gradle has run ~5.5 min with no output — the documented Kotlin/Native long-pole. Let me give it a final window:
+
+Gradle succeeded (6m33s) — the `Shared.xcframework` is now buildable. Let me stage it and run the **real full-app macOS compile** to get first-hand evidence of how my surface fares in the actual app target.
+
+The macOS app target now compiles **past framework resolution** and fails only on **pre-existing, unrelated** cross-surface collisions (`RecentDrives*` and `StateTimeline*` redeclared across parallel-merged widget/feature files) — exactly as documented. Let me confirm definitively that **zero** errors originate in AreaChartWrapper:
+
+**Definitive evidence: 108 build errors, ZERO in AreaChartWrapper.** All errors are pre-existing `RecentDrives*`/`StateTimeline*` redeclarations across other agents' parallel-merged surfaces. With the KMP framework staged, my surface compiles cleanly in the real macOS app target. Let me verify git state (artifacts are ignored) before writing the log and committing.
+
+Git is clean — only my 10 files are untracked; all build artifacts are git-ignored. Let me grab tool versions and write the evidence log.
+
+All tools present, iPhone 16 simulator booted. Writing the evidence log:
+
+Now let me add the macOS-pending row to the tracking doc, consistent with the established entries:
+
+Rows 32 & 34 corroborate my exact finding (framework assembled, 0 surface errors, same 108 pre-existing `RecentDrives*`/`StateTimeline*` collisions). Adding my row in the same format:
+
+Let me clean up scratch files and commit the surface, log, and tracking-doc update.
+
+All 12 files staged (10 surface + log + tracking doc); no stray artifacts. Committing:
+
+Committed (`c37890688`, 12 files). Final verification — confirm clean tree and the log's terminal status:
+
+Done. Working tree is clean, the log ends `EXIT=0 / STATUS=DONE`, and the commit (`c37890688`) is in place.
+
+Auto-merging apps/macos-pending-verifications.md
+CONFLICT (content): Merge conflict in apps/macos-pending-verifications.md
+Automatic merge failed; fix conflicts and then commit the result.

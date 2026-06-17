@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app structure, and the shared infrastructure I need to integrate with.
+
+Now let me explore the Apple app structure deeply to understand existing patterns, state holders, tokens, and i18n.
+
+There's an existing `feature-views` directory and a related `ChargingSection`. Let me examine the existing feature-views pattern closely.
+
+Let me read the canonical `ChargingSection` feature-view files to understand the established pattern in detail.
+
+Let me read the rest of the ChargingSection files to fully understand the established pattern (adapter, views, strings, previews, tests).
+
+Excellent, a rich established pattern. Let me read the strings, previews, and tests for ChargingSection, plus find the native `useUnits` equivalent and design tokens.
+
+Now let me read the Units facade/formatters (critical for `formatDistance`/`formatSpeed` parity), the ChargingSection tests, and the design tokens.
+
+Let me read the web hooks/types/components for exact parity, plus the ChargingSection tests and design tokens.
+
+Let me see how existing widgets that use `formatDistance`/`formatSpeed` structure their adapter/model layers, to handle the unit-conversion seam in a testable way.
+
+The pattern is clear: pure Foundation adapters reimplement unit conversion locally for testability. Let me read the project.yml build config, the ChargingSection tests, design tokens, and the web MetricCard/GlassPanel/EmptyState components.
+
+Now let me check tool availability on this runner — this determines whether I can run the build/test gate or must report BLOCKED with evidence.
+
+All tools present (Xcode 26.5, xcodegen, swiftlint, swiftformat, iPhone 16 booted), but `Shared.xcframework` is missing (only `.gitkeep`). The app target depends on it. Let me investigate the KMP build situation and how prior surfaces handled their gate.
+
+Let me check the prior ChargingTelemetrySection run logs and a representative recent gate log to see how the build gate resolved (pass vs blocked).
+
+A prior parallel run shipped this surface, but this fresh slot doesn't have it yet (confirmed: no native files exist). The prior run referenced sibling patterns `EnergySummaryPanel`/`AcDcStatsPanel` from the same web `vehicle-detail` directory. Let me find those siblings to use as the closest template.
+
+`AcDcStatsPanel` and `EnergySummaryPanel` are the confirmed sibling templates. Let me read the `AcDcStatsPanel` set fully — it's the closest analog (a charging metric grid).
+
+Let me read the full AcDcStatsPanel set — it's the closest analog (charging metric grid with the same states pattern).
+
+Let me read the remaining AcDcStatsPanel files plus the design tokens and native data-display components to complete my understanding.
+
+Let me read the AcDcStatsPanel views, EnergySummaryPanel views (metric tiles), the design tokens, and the web MetricCard component.
+
+Let me examine the design tokens (Color.TS, Font.TS, spacing/radius) and the web neon color map for precise color parity, plus the shared chrome components.
+
+Now let me locate the shared chrome component signatures (TSGlassPanel, TSFadeIn, TSSkeleton, TSButton) so I use correct APIs.
+
+Let me read the EnergySummaryPanel main view + model (it handles unit conversion like mine), the TSButton init, check `pwsh`/placeholder script, and the AcDcStatsPanel tests for test patterns.
+
+Let me read the placeholder patterns to avoid them, and EnergySummaryPanel's Adapter + Model (closest precedent for SI unit conversion in a pure adapter).
+
+Let me read `MeasurementSystem` and EnergySummaryPanel.Model to see how unit prefs (distance/locale/precision) thread from the shared state holder into the pure adapter.
+
+I now have a complete understanding of the established pattern. Let me check the swiftlint/swiftformat configs to match style exactly, then set up my plan.
+
+Critical check before writing: there's an existing `ChargingTelemetryWidget` in the same module. Let me verify no type-name collisions with my planned `ChargingTelemetry*` types.
+
+Collision confirmed — the existing `ChargingTelemetryWidget` already owns all `ChargingTelemetry*` type names in this module. I must prefix my types with `ChargingTelemetrySection*`. Let me verify that prefix is collision-free and check for any existing references expecting my surface's API.
+
+No collisions, and sibling surfaces are standalone (no parent wiring needed). I have everything I need. Let me set up tracking and start building.
+
+Now I'll write the files. Starting with the pure-Foundation Adapter (projection + formatting), the testable core.
+
+Now the Model (state-holder seam, diagnostics, i18n facade). I name the diagnostics protocol `ChargingTelemetrySectionDiagnostics` to avoid both the stutter and the existing `ChargingTelemetryTelemetry` collision.
+
+Now the main View and the Views chrome (metric grid + tiles + states).
+
+Now the strings catalog, previews, and tests.
+
+Now the comprehensive test suite (adapter projection/formatting, model lifecycle, accessibility).
+
+All 7 files written. Now let me verify formatting/linting on the new files and auto-normalize with swiftformat.
+
+Minor numeric-literal grouping issues only. Let me auto-fix with swiftformat, then re-lint.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+File length: 466 > 400. I'll split the Adapter into two files (`.Adapter` + `.Projection`), consistent with the sibling `.Projection.swift` convention and the allowed `ChargingTelemetrySection.*` glob. Let me find the clean split point.
+
+I'll split: extract lines 261–466 into a new `.Projection.swift` with a header, and truncate the Adapter.
+
+Split done. Let me re-run swiftformat + swiftlint on all 7 Swift files plus the placeholder gate.
+
+All three quick gates green (format 0, lint 0, placeholder 0). Let me run the placeholder gate across all new files, then build an isolated Swift 6 harness to compile + run the test suite (the pure logic doesn't depend on SwiftUI/KMP).
+
+All placeholder checks pass. Now the isolated Swift 6 harness to compile + run the test suite (the Adapter/Projection/Model/Tests don't import SwiftUI or KMP).
+
+The only harness error is `ChargingTelemetrySection.surfaceSlug` — that lives on the SwiftUI View struct I intentionally excluded (it imports SwiftUI). I'll add a harness-only shim mirroring the View's trivial static accessor so the shipped test compiles unchanged.
+
+All 28 tests pass under Swift 6 strict concurrency. Now let me attempt the real xcodebuild gate. First, check the KMP/gradle prerequisites (the app target needs `Shared.xcframework`) and regenerate the Xcode project.
+
+xcodegen succeeded and JDK 17 is present. Let me confirm my files are enumerated in the project, then build the KMP `Shared.xcframework` (needed by the app target).
+
+All 8 files enumerated in the project (app + test targets). Now building the KMP `Shared.xcframework` via gradle (the long pole — first Kotlin/Native build downloads the toolchain).
+
+KMP build is downloading the Kotlin/Native toolchain (first build is slow). Let me keep waiting.
+
+`Shared.xcframework` built and staged (6m41s, BUILD SUCCESSFUL). Now the real xcodebuild. First, the iOS app-target **build** (the cleanest signal that my SwiftUI files compile against the real tokens/components/KMP), capturing full output for analysis.
+
+Build failed (EXIT=65), but the failing batch lists sibling files (SignalSelector, SignalStatsPanel, etc.) — Swift batches files per compile job. Let me extract the actual `error:` lines and check whether any reference my surface.
+
+Zero errors reference my surface — all 26 errors are in pre-existing sibling files (`StateTimelineWidget.*`, `StateTimeline.*`), outside my allowed scope. Let me characterize those errors (to document they're pre-existing/unrelated), confirm via git they're unmodified, and assess a focused SwiftUI compile harness.
+
+Decisive evidence: the only build errors are a **pre-existing `StateTimelineUpdate`/`StateTimelineConnection` type-ambiguity collision** between two sibling surfaces — untouched by me (git confirms only my 8 files are new). This is exactly the kind of collision I avoided by prefixing. Now let me definitively prove my SwiftUI view layer compiles by building a focused harness with the real tokens + chrome components.
+
+All chrome components are KMP-free (only `import SwiftUI`). Let me build a focused SwiftUI harness (tokens + Design + the 4 chrome components + my 6 Swift files) to prove the view layer compiles.
+
+The harness errors are in `Cards.swift`'s own `#Preview` (referencing other components), not my code. I only need the component *types* defined. Let me strip the preview blocks from the copied shared-component files and rebuild.
+
+My files all compiled — the remaining error is in `TSCardHeader` (an unused-by-me component in `Cards.swift`). I only use `TSGlassPanel`. Let me trim Cards.swift to just that and rebuild.
+
+The SwiftUI harness **builds clean** — my view layer compiles against the real tokens + chrome components under Swift 6. Now let me run the actual gate commands (`build test`) to capture real exit codes honestly. iOS first.
+
+iOS gate: `IOS_EXIT=65`, **0** ChargingTelemetrySection errors — all failures in pre-existing `StateTimeline*` siblings. Now the macOS gate.
+
+macOS gate: `MAC_EXIT=65`, 0 surface errors — but no `error:` lines found. Let me characterize the macOS failure precisely (could be the same collision or signing).
+
+macOS failure is **development code-signing** (no signing identity on this runner) for the `TeslaSync-macOS`/`TeslaSyncWidgets-macOS` targets — an environment/signing limitation, not a compile error. Notably macOS reached the signing stage, meaning Swift compilation (my surface included) succeeded. Let me confirm my files compiled on macOS with zero compile errors.
+
+Let me precisely determine what each full-app gate actually compiled, for an accurate claim (iOS vs macOS).
+
+Let me confirm the iOS failure is a genuinely pre-existing duplicate-type collision (two sibling surfaces both defining `StateTimelineUpdate`), independent of my work — which also validates why I prefixed my own types.
+
+Definitively confirmed: `StateTimelineUpdate`/`StateTimelineConnection` are **each defined twice** in pre-existing tracked sibling files (`StateTimelineWidget.Model.swift` + `StateTimeline.Adapter.swift`/`.Source.swift`) — the exact collision class I avoided by prefixing. My working tree has exactly 8 new files. Let me clean up build artifacts and verify the tree is commit-ready.
+
+Clean tree — exactly my 8 files (the `.xcodeproj` and `Shared.xcframework` are git-ignored). Let me capture a few exact evidence lines, then write the gate log.
+
+I have all evidence. Now writing the comprehensive, honest gate log.
+
+Now clean up temp harnesses and commit exactly my 8 files + the log.
+
+Exactly 9 files staged (8 surface + log), nothing else. Committing.
+
+Committed cleanly as `d56e5bb5b` (9 files, 1728 insertions, working tree clean). Let me confirm all todos are complete.
+
+All 8 todos done. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...feature-views-0290-ChargingTelemetrySection.log | 154 +++++++++
+ .../ChargingTelemetrySection.Adapter.swift         | 259 +++++++++++++++
+ .../ChargingTelemetrySection.Model.swift           | 227 +++++++++++++
+ .../ChargingTelemetrySection.Previews.swift        |  88 +++++
+ .../ChargingTelemetrySection.Projection.swift      | 221 +++++++++++++
+ .../ChargingTelemetrySection.Tests.swift           | 359 +++++++++++++++++++++
+ .../ChargingTelemetrySection.Views.swift           | 221 +++++++++++++
+ .../feature-views/ChargingTelemetrySection.strings |  39 +++
+ .../feature-views/ChargingTelemetrySection.swift   | 160 +++++++++
+ 9 files changed, 1728 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0290-ChargingTelemetrySection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingTelemetrySection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingTelemetrySection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingTelemetrySection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingTelemetrySection.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingTelemetrySection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingTelemetrySection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingTelemetrySection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingTelemetrySection.swift

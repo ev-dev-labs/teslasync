@@ -1,0 +1,80 @@
+I'll start by understanding the repository structure and verifying preflight conditions for this Apple acceptance gate. This is a verification-only gate — I must not fix code, narrow scope, or delegate.
+
+Repo structure exists. Now the critical capability check — Apple acceptance requires Xcode, simulators, SwiftLint, SwiftFormat, signing identities, and PowerShell (the gate scripts are `.ps1`). Let me probe the toolchain.
+
+Toolchain is strong (Xcode 26.5, SwiftLint, SwiftFormat, xcodegen, pwsh, simulators) — but **0 valid code signing identities**, which the gate explicitly requires for archive/sign. Let me gather the rest of the evidence before concluding. Let me locate the exact prompt, the ledgers, and the tools.
+
+Found important discrepancies: the gate references `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1` — but only `apple-ledger.json` exists, and `apps/tools/` has no `check-parity-ledger.ps1`. Let me read the actual prompt file and methodology to confirm the exact spec.
+
+The prompt is confirmed. Critical preconditions are already failing: `check-parity-ledger.ps1`, `apple-macos-ledger.json`, and `apple-ios-ledger.json` don't exist, and there are 0 signing identities. Per the Honesty Covenant I must still *run* the gate (no skip-and-assume) and record real evidence. Let me understand conventions first — methodology, predecessor log format, and prior BLOCKED/DONE handling.
+
+The prior canonical run recorded BLOCKED with multiple hard blockers. The methodology confirms commit discipline: **on BLOCKED, commit ONLY the log file** with a `chore(monorepo): BLOCKED ...` message. I must produce firsthand evidence myself, not copy prior conclusions. Let me verify predecessors and the canonical log naming, and inspect the project schemes.
+
+Schemes `TeslaSync` and `TeslaSync-macOS` exist (both stage `Shared.xcframework`). The canonical target log doesn't exist yet. Now let me rigorously verify predecessors — find the P4 phase logs (P0..P9), the P7 page logs, and their STATUS values.
+
+Now I understand the naming: `p4-p<phase>-NNNN-<slug>.log` for phases, and `p4-apple-<category>-*` for the generated P7 page/component prompts. Let me enumerate all P4 phase logs and check their STATUS, plus verify the P9 pair is complete.
+
+P4 phase logs P0–P9-0001 are all DONE, but **`p4-p9-0002-xcuitest-ui.log` is missing** (the P9-0002 prompt exists but has no canonical log) — that alone fails the "P4/P0..P9 all STATUS=DONE" predecessor. Let me confirm that, check the P7 page logs for any non-DONE, and verify the KMP shared-scaffold dependency that produces `Shared.xcframework`.
+
+Multiple predecessor blocks confirmed: `p4-p9-0002-xcuitest-ui.log` is missing, and 4 P7 page logs are non-DONE (3 BLOCKED, 1 with no STATUS line). Let me verify the KMP shared-scaffold dependency, inspect the AlertFeedWidget log, and check whether `Shared.xcframework` exists (needed for any build). Meanwhile I'll start the runnable quality gates to capture firsthand evidence.
+
+Key findings: `p1-s3-0001-kmp-scaffold` (the `Shared.xcframework` producer) is **BLOCKED**, and `Frameworks/Shared.xcframework` is absent — so no Apple target can build. SwiftLint is now clean (**LINT_EXIT=0**, 0/5878). Let me capture the remaining runnable gate steps: swiftformat, placeholder scan, and the two ledger checks (which invoke the missing `check-parity-ledger.ps1`).
+
+Captured firsthand RED on four steps: **FORMAT_EXIT=1** (9 files need formatting), **PLACEHOLDER_EXIT=1** (script fails on TODO/placeholder markers), and both **MAC_LEDGER_EXIT=1 / IOS_LEDGER_EXIT=1** (the `check-parity-ledger.ps1` verifier doesn't exist; the ledger files don't exist either). Now I'll attempt the build/test/archive steps for real evidence. First generate the Xcode project (git-ignored build prerequisite) and confirm schemes.
+
+Project generated (`XCODEGEN_EXIT=0`). Now let me confirm schemes and attempt the real iOS Simulator build/test gate — expected to fail because `Shared.xcframework` is absent.
+
+Both `TeslaSync` and `TeslaSync-macOS` schemes resolve. Now I'll run the exact iOS Simulator build/test gate command and capture the real exit code.
+
+The iOS build is genuinely compiling (2183 lines in, building extension targets) — the Shared.xcframework staging apparently produced something. Let me let it run to completion to capture the real `IOS_EXIT`. I'll check the staging side-effect while waiting.
+
+The Stage phase ran Gradle and assembled `Shared.xcframework` on-host (though the recorded p1-s3 predecessor status is still BLOCKED, which governs per Rule 7). The iOS build/test continues. Let me keep waiting for the real exit code.
+
+Main `TeslaSync` target still compiling (~20k log lines, 0 errors so far). It's a large project. Let me continue waiting for completion.
+
+The iOS build/test completed. Let me extract the real result and exit code.
+
+iOS gate is **RED: IOS_EXIT=65** (BUILD FAILED + TEST FAILED). Let me capture the exact errors for the log.
+
+Firsthand iOS gate result captured: **IOS_EXIT=65**, BUILD+TEST FAILED with 2 real compile errors (`DriveScorePage.Panels.swift:25` LocalizedStringKey conversion; `VehicleCostPageModelTests.swift:10` main-actor isolation). To honor Rule 2 (run the full gate, not a subset), I'll now run the macOS build/test and both archive commands. Starting macOS build/test.
+
+macOS gate is also **RED: MAC_EXIT=65**. Let me capture its errors, then run both archive commands.
+
+macOS gate RED (signing-certificate-required errors — the 0-identity capability gap). Now the two archive commands.
+
+Both archives RED (**IOS_ARCHIVE_EXIT=65** "requires a development team"; **MAC_ARCHIVE_EXIT=65**). All 9 gate markers captured firsthand — only LINT is green. Let me grab the macOS archive error and verify the working tree is clean (generated `.xcodeproj`/`xcframework` must be git-ignored so only the log gets committed).
+
+Working tree is clean — generated `.xcodeproj` and `Shared.xcframework` are git-ignored (Rule 9 satisfied). All evidence gathered. Let me collect exact version strings and predecessor counts to embed accurately in the log.
+
+All evidence collected. Summary of predecessor state: P4 phase logs 16/17 DONE (missing `p4-p9-0002-xcuitest-ui`), P7 page logs 698/702 DONE (4 non-DONE), `p1-s3` KMP scaffold BLOCKED, PowerShell 7.6.2. Now I'll write the canonical acceptance-gate log with all firsthand evidence.
+
+Log written. Let me verify the footer markers and that only the log file is staged, then commit per BLOCKED discipline (log only).
+
+Log footer is correct (`EXIT=1` / `STATUS=BLOCKED`, rule 10), and the only change is the log file itself — no code drift. Committing the log only, per BLOCKED discipline.
+
+Committed (COMMIT_EXIT=0) — 1 file, the log only. Final verification of tree cleanliness and commit.
+
+All verified: commit `eed49db68` changed only the log (257 insertions), working tree clean, no source touched. Cleaning up temp build logs.
+
+The P4/P99 Apple acceptance gate is complete. I ran it as a **run-only gate** (no code fixed, no scope narrowed, no delegation) and recorded firsthand evidence, concluding **STATUS=BLOCKED**.
+
+**Gate markers (8 of 9 RED):**
+| Step | Exit | Result |
+|---|---|---|
+| iOS build+test | `65` | 2 Swift compile errors (`DriveScorePage.Panels.swift:25`, `VehicleCostPageModelTests.swift:10`) |
+| macOS build+test | `65` | entitlements need a signing cert |
+| SwiftLint strict | `0` | ✅ 0/5878 |
+| SwiftFormat lint | `1` | 9 files unformatted |
+| Placeholder scan | `1` | disallowed TODO/Placeholder markers |
+| macOS ledger | `1` | `check-parity-ledger.ps1` + `apple-macos-ledger.json` missing |
+| iOS ledger | `1` | verifier + `apple-ios-ledger.json` missing |
+| iOS archive | `65` | requires development team |
+| macOS archive | `65` | requires signing cert |
+
+**Independent BLOCK grounds (none remediated — all Out of Scope):**
+- **Capability:** 0 valid code-signing identities / no `DEVELOPMENT_TEAM` → signed archives not producible.
+- **Missing artifacts:** both Apple ledgers + `check-parity-ledger.ps1` absent.
+- **Predecessors:** `p4-p9-0002-xcuitest-ui` log missing (16/17 phase logs DONE); 4 P7 page logs non-DONE (698/702); `p1-s3-0001-kmp-scaffold` BLOCKED.
+
+I executed the exact gate commands (generating the git-ignored `.xcodeproj`/`Shared.xcframework` only as build prerequisites) so every exit code is real, not assumed. Committed **only** the log (`eed49db68`, 1 file) per BLOCKED discipline; working tree clean, no source touched.
+

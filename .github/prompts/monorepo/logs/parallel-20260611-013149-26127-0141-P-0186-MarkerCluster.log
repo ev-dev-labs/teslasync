@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Found the web source. Let me read it and explore the Apple app structure.
+
+This is a large, established codebase with 1342 files in shared-surfaces following a multi-file convention. Let me understand the build capability and find a maps-related template to mirror.
+
+The toolchain is available (Xcode 26.5, swiftlint, swiftformat). The project uses XcodeGen (`project.yml`, no `.xcodeproj`). Let me study the build setup, find a maps-related template, and locate the shared infrastructure.
+
+XcodeGen is also available. Now let me find a MapKit-based template surface and the shared infrastructure (state holders, tokens, i18n, diagnostics), plus check the KMP framework dependency that the build needs.
+
+No shared surface uses MapKit — there's an established convention I must follow. The build needs a KMP `Shared.xcframework` (currently absent, built via Gradle). Let me examine the Sources infrastructure and read a complete representative surface to learn the exact conventions.
+
+Now I understand the multi-file pattern. Let me read the rest of the template's files and search the entire Apple tree for any MapKit usage and the shared infrastructure.
+
+There's a shared Maps component library (`Sources/Components/Maps/`) and a SharedFacade. Let me read these and the template's supporting files to learn the state-holder, i18n, tokens, and diagnostics conventions.
+
+Key discovery: a shared map component library already exists, including `TSMarkerCluster`, `TSMapView`, `TSCircleMarker`, and `TSMapAnnotation`. My surface must **compose** these (the atomic components are out of scope). Let me read the geo helpers, find any surface that already uses these map primitives, and study the state-holder/i18n/diagnostics conventions from the template.
+
+There's a `TripReplayMap` feature view using the map primitives. Now let me study the state-holder, seam, states, i18n, and test conventions from the template, plus the map composition reference.
+
+I now understand the architecture deeply. Let me read the remaining template files (States, Views, Adapter, strings, Previews, Tests), the design tokens, and the map composition reference to lock down exact conventions.
+
+Let me read the tokens, adapter, tests, previews, and the map composition reference, plus locate the shared component signatures I'll use.
+
+Excellent — I now have the full pattern. Let me read the design tokens, adapter, previews, the placeholder checker, and locate exact signatures of the shared components/tokens I'll use.
+
+Let me locate `TSTone` and the exact initializers for the shared components I'll compose, plus the placeholder checker.
+
+I have the component/token vocabulary. Let me read the placeholder checker, lint configs, typography components, the template's Adapter/Previews, and confirm no `MarkerCluster.*` files exist yet.
+
+Now let me read the placeholder patterns (to avoid forbidden words), the template's Adapter and Previews, and the typography components.
+
+I now have the full convention vocabulary. Critical gate insight: the build's scheme pre-action compiles a KMP `Shared.xcframework` via Gradle, and the framework dir is empty. Let me probe build feasibility while reading the last two reference files (Typography + Adapter).
+
+Let me read the template's Adapter and determine the dependency closure — specifically whether surfaces/components depend on the KMP `Shared` framework (this decides whether a standalone type-check is feasible).
+
+Crucial: shared-surfaces and Components do **not** import the KMP `Shared` framework — only system frameworks. This means I can do a real standalone `swiftc -typecheck` island (Design + Components + my files) without the KMP/Gradle dependency. Let me confirm the Components/Design import closure, then write a plan.
+
+I have everything I need. Key finding: surfaces depend only on system frameworks + the in-repo `Components`/`Design` (no KMP `Shared`), so I can do a real standalone `swiftc` type-check island as strong evidence even though the full app build needs the KMP framework. Let me set up tracking and start building.
+
+SDKs present and iPhone 16 simulator is booted. Let me write a brief plan, then build the surface. Starting with the pure adapter core.
+
+Now the pure adapter core — value types, sanitization, the clustering engine, density buckets, and accessibility label builders.
+
+State holder, telemetry seam, projection, and i18n facade.
+
+Now the source seams (production controlled + in-memory for tests/previews).
+
+Now the main Views file — the MapKit canvas with clustering recompute, cluster/dot markers, callout, density legend, capped notice, and freshness chip.
+
+Now the public surface file that switches across all states and wires the model.
+
+Now the i18n strings table.
+
+Now the previews (DEBUG-only) for every state.
+
+Now the comprehensive test suite — engine, sanitizer, density, geo, accessibility, projection branches, and model lifecycle.
+
+All nine files are written. Let me update tracking and run the highest-value check first: a standalone `swiftc` type-check island (real design tokens + shared Components + my surface) — this catches genuine compile errors without the KMP framework.
+
+The errors are entirely in a pre-existing shared component (`UnitFormatters.swift`) that references `UnitPreferences` from another `Sources/` subdir — not my code. I need to widen the island's dependency closure. Let me locate those types and check they don't drag in the KMP framework.
+
+`UnitPreferences` lives in `SharedFacade` (which imports the KMP framework). My surface doesn't use the unit formatters that need it. Let me check whether that one definition file is self-contained, else I'll exclude only the unused Components files from the island.
+
+Only `UnitFormatters.swift` (which I don't use) needs the framework-backed `UnitPreferences`. Excluding that single unused file keeps the island faithful. Re-running:
+
+Island A passes — my shipped surface type-checks cleanly against the real tokens + all shared Components under Swift 6 strict concurrency for iOS 18. Now verifying macOS, the previews, and the test file.
+
+macOS and previews both clean. Now the test file (stripping `@testable import` so it compiles inside the island, with the XCTest framework path):
+
+All four type-check islands pass (iOS + macOS surface, DEBUG previews, XCTest tests). Now format and lint compliance on my files:
+
+These are all auto-fixable style rules (the codebase wraps property bodies multi-line, etc.). Let me apply swiftformat, then re-verify lint and re-run the type-check to confirm formatting didn't break anything.
+
+swiftformat passes (0/8 need formatting). Now swiftlint `--strict` on my files:
+
+One swiftlint issue: the formatter expanded the test file to 410 lines, over the 400-line limit. The sibling surfaces split tests into `.Tests`/`.ModelTests` — I'll do the same (a sanctioned, cleaner pattern). Let me view the formatted test file to split it precisely.
+
+I'll split at the Projection MARK (line 244): adapter/engine tests stay in `.Tests.swift`, projection+model tests move to a new `.ModelTests.swift`. Let me check the cut boundary first.
+
+Both test files are now under 400 lines. Let me fix the `.Tests.swift` header (the projection/model bullets moved out) and re-verify format + lint + type-check on both.
+
+Now re-verify format and lint across all nine files, then re-run the test-island type-check with both test files.
+
+Format and lint are both clean (0 violations). Now the test-island type-check with both test files, a placeholder scan, and a check for `pwsh` (the gate is PowerShell).
+
+The XCTest macro resolution just needs the XCTest Swift-overlay include path I used earlier — not a real code error. Placeholder scan is clean and `pwsh` is available. Re-running the test island with the overlay path:
+
+All type-check islands pass (iOS + macOS surface, DEBUG previews, both test files), format and lint are clean, placeholders clean. Now I'll attempt the real build gate. First, generate the Xcode project and confirm my files are picked up.
+
+Project generated and all MarkerCluster files are wired in (60 references across app + test targets). The full build's scheme pre-action requires building the KMP `Shared.xcframework` via Gradle (Kotlin/Native). Let me attempt that — it's the gating dependency — time-boxed.
+
+The KMP/Kotlin-Native framework build is running with no output yet (first-time Kotlin/Native builds download a large toolchain and compile slowly). Let me give it more time since a successful build unlocks the real gate.
+
+**The KMP `Shared.xcframework` built successfully** (8m, now cached). This unlocks the real gate. Let me stage the framework and start the iOS build+test, writing results to the gate log. First, set up the log and stage the framework.
+
+Framework staged. Now the iOS build of the full app (including my surface). Given 3000+ files this is long — I'll run it in the background and monitor, capturing full output to a file.
+
+The iOS build is running in the background. Let me monitor its progress.
+
+Build is progressing through Swift module emission with no errors. Let me continue monitoring.
+
+BUILD FAILED — but the errors are in **other surfaces** (`AISuggestNewGeofences.swift`, etc.), not mine. These are pre-existing compile errors outside my allowed scope (`MarkerCluster.*`). Let me confirm none of my files appear in any error and catalogue the failing files as evidence.
+
+Confirmed: the iOS build has exactly **one** error, in the sibling surface `AISuggestNewGeofences.swift:129` — **zero** errors in MarkerCluster. This is a pre-existing failure outside my allowed scope (`MarkerCluster.*`). Let me check whether the real build compiled my MarkerCluster batch before stopping, for xcodebuild-level proof.
+
+The real iOS build halts at the first failing batch — a pre-existing escaping-closure bug in the sibling `AISuggestNewGeofences.swift` (its `glass(_:)` helper passes a non-`@escaping` closure to `TSGlassPanel`). That's outside my allowed scope. To honor "no skip-and-assume," I'll run the macOS gate step too (it compiles the same shared sources) rather than assume. Starting it in the background:
+
+While the macOS gate build runs, let me re-confirm the shipped surface still type-checks after the formatter's changes (iOS + macOS, shipped files only) — the prior post-format type-check included them via the test island on iOS, but I'll make macOS airtight too.
+
+Both post-format type-checks pass. Let me spot-check the formatted engine logic and check the macOS build progress.
+
+The formatted engine reads cleanly. Let me wait for the macOS build to finish.
+
+Both full builds fail on **different** pre-existing out-of-scope sibling surfaces (iOS: `AISuggestNewGeofences`, macOS: `AISignalExplorerNlFilter`) — confirming systemic sibling breakage unrelated to MarkerCluster. Let me capture the macOS error text precisely, then write the complete honest gate log.
+
+Both full builds are blocked solely by out-of-scope siblings; MarkerCluster has zero errors on both platforms. Now I'll write the complete, self-contained gate log — running the in-scope verifications fresh into it, plus the full-app build evidence. Starting with the in-scope block and the macOS evidence:
+
+All in-scope checks are green (4 type-checks EXIT=0, swiftformat 0/9, swiftlint 0 violations, 0 placeholders) — the `tee` path just broke after the `cd` (the log lives at repo root). Let me grab the exact iOS build exit code, then write the complete log with an absolute path.
+
+`IOS_BUILD_EXIT=65`, `MAC_BUILD_EXIT=65` — both full builds fail solely on out-of-scope siblings; MarkerCluster has zero errors on both platforms. The build log also shows many sibling batches compiling fine in parallel. Now I'll write the complete, self-contained gate log (absolute path) with all real results.
+
+The gate log is complete (ends `EXIT=1` / `STATUS=BLOCKED`). Now let me commit only the allowed files (MarkerCluster.* + the log), being careful not to stage generated/ignored artifacts. First, inspect git state.
+
+All generated artifacts (`.xcodeproj`, `Shared.xcframework`, gradle `build/`) are git-ignored — only my 10 `MarkerCluster.*` files and the log are untracked. Committing them with a transparent message that records the BLOCKED status and its out-of-scope cause:
+
+Committed cleanly as `88cdd2541` (11 files, working tree clean). Let me mark the work done and clean up temporary build artifacts outside the repo.
+
+The MarkerCluster surface is complete, verified within its allowed scope, and committed. Cleanup done and the working tree is clean.
+

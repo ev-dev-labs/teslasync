@@ -1,0 +1,36 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the existing Apple app structure to understand the established patterns I must follow.
+
+Tooling is available (xcodebuild, swiftlint, swiftformat, Xcode). There's already a `RecentActivity.*` file set. Let me examine its current state and check for the log file.
+
+I've found something important: there are already `RecentActivity.*` files in `feature-views/`, but their headers say they're prompt **0130** porting `features/dashboard/components/RecentActivity.tsx` (three panels: activity feed + battery chart + fleet performance). My prompt is **0277** porting `features/vehicles/components/RecentActivity.tsx` (two panels: drives + charges). This is a potential naming collision. Let me investigate carefully.
+
+Confirmed: two distinct web `RecentActivity.tsx` exist (dashboard + vehicles), and the existing Apple `RecentActivity.*` files are the **dashboard** variant (prompt 0130, commit 681c0bcf8). Mine is the **vehicles** variant (0277). Let me understand the build system and check whether the vehicles variant was already ported under another name, plus how collisions are handled.
+
+The build compiles the entire `feature-views/` directory, so two `RecentActivity` types would collide. The existing files are the dashboard variant (0130). Critically, I see a recent commit `f88763ddb fix(apps/apple): dedupe BatteryCellStatus + BatteryLegendItem collisions` — there's precedent for resolving collisions. Let me study how dedup was done.
+
+The dedup convention is now clear: **keep one canonical type, rename the colliding one with a context qualifier** (e.g., `BatteryCellStatus` → `BatteryCellsWidgetStatus`). The dashboard `RecentActivity` (0130) is already committed/canonical. My vehicles variant must be disambiguated to avoid a duplicate-symbol build failure.
+
+Critically, there are already `RecentDrivesSection.*` and `RecentChargesSection.*` surfaces — exactly the drives+charges building blocks my web source combines. Let me study those as templates and check tooling.
+
+`RecentDrivesSection` (0297) ports a *different* web component but establishes the exact infrastructure pattern. My vehicles source is simpler (two list panels). Let me read how the placeholder gate resolves `-Path` (to settle naming), plus the full reference file-set for one surface and the shared primitives.
+
+The placeholder gate is effectively a no-op as written (the literal path `.../RecentActivity` doesn't exist as a file/dir, so it scans nothing and returns clean) — but I'll run it against my real files to genuinely verify. 
+
+**Decision locked:** Keep the committed dashboard `RecentActivity` (0130) canonical; deliver my vehicles variant as `RecentActivityVehicles.*` (keeps the `RecentActivity` filename prefix, unique type → no duplicate-symbol collision, follows the repo's documented dedup convention). I'll document this prominently.
+
+Let me read the reference adapters/views/tests and locate shared primitives.
+
+Now let me find the unit-math helper, the web sub-components I must reproduce (`TimeStamp`, `InlineMetric`, `AnimatedNumber`, `IconBox`), and the native shared primitives.
+
+I now have the exact formatting requirements. Let me read the native shared primitives (TSGlassPanel, TSFadeIn, IconBox/InlineMetric/AnimatedNumber equivalents) and design tokens, plus the dashboard RecentActivity Views/States and a charges Views/Tests reference.
+
+Token symbols aren't in `Sources/Design` by that grep. Let me locate the token definitions and check for any native IconBox/AnimatedNumber, plus read the dashboard RecentActivity Views/States (closest row reference) and a test file.
+
+I have the row/panel patterns. Let me locate the design tokens and read the TSGlassPanel/TSFadeIn signatures, the charges Model (simple list, no pagination), and the test/preview patterns.
+
+I have the full token vocabulary. Let me read the charges Model (simple list scaffolding) plus the test and preview patterns to mirror precisely.
+
+Let me confirm a few token names (`Color.TS.bg`, `TSButton`) and read the test patterns (charges Tests + drives ModelTests).
+

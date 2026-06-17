@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and understanding both the web source and the existing Apple app architecture.
+
+Xcode, SwiftLint, and Swift are all available. Let me explore the existing Apple app architecture, focusing on the Analytics feature and established patterns.
+
+The actual sources live under `apps/apple/Sources/Features/Analytics/`. Let me study the closest analog (StatisticsPage) as a template and understand the project configuration.
+
+Now let me explore the component library (charts, data table), the Units facade, and route registration infrastructure.
+
+Let me examine the routing system, remaining UI components, and the string catalog before designing the Mileage implementation.
+
+No `.mileage` route exists yet. Let me find where route registrations are composed, check existing references, and look at the web route grouping plus the string catalog.
+
+The `FleetCompareModels.swift` already references monthly mileage. Let me check that, the web nav grouping, RouteTests, and the app composition before deciding the routing approach.
+
+Mileage is a real sidebar entry in web ("Mileage Log"). I'll add a dedicated `.mileage` route. Let me find all exhaustive switches over `AppRoute` to update them safely, and check the web nav group.
+
+Web places "Mileage Log" under the **Driving** group → maps to Apple's `.vehicle` group. Let me verify the other AppRoute switch sites won't break and check for sidebar/count test expectations.
+
+`MenuCommandCatalogTests` asserts navigate routes == all `AppRoute` cases. Let me inspect the menu catalog to see if it auto-derives from `allCases` or needs a manual entry.
+
+`navigateCommands()` auto-derives from `allCases`, so the menu test stays green. Adding `.mileage` only needs enum + `systemImage` + `group` updates plus a registration. Let me confirm the project.yml source globbing and which required strings already exist in the catalog.
+
+`Sources` is globbed in, so new files auto-include. 11 strings (plus `route.mileage`) are missing. Let me inspect the xcstrings JSON format to add entries correctly.
+
+My earlier check was unreliable (matched values, not keys). Let me verify presence against actual JSON keys and inspect the exact `strings` opening marker for safe text insertion.
+
+All target keys absent (except "Odometer"). The `strings` marker is `  "strings": {`. Now let me read the remaining UI primitives and design tokens I'll use, to get exact signatures.
+
+Now let me read the typography/cards components, design tokens, the select control, and the units environment to finalize exact APIs.
+
+`TSTone` lives in Badges.swift; spacing/radius/colors are generated tokens (already validated by compiling sibling code). Let me confirm the last few exact signatures and the test target globbing.
+
+Let me confirm `TSIconBox`, the unit-test target path, and whether a freshness component exists.
+
+The test target globs `Tests/Unit`, so a new test file auto-includes. Let me confirm the freshness indicator and typography signatures, then I'll have everything to write the implementation.
+
+I now have all component APIs. Let me check which supporting strings already exist (to reuse vs. add) before writing.
+
+Before writing, I must understand the placeholder scanner (the gate runs it) and whether `pwsh` is available. Let me inspect it and check the `teslaSyncTheme` modifier.
+
+pwsh is available. Let me read the forbidden patterns JSON so my code avoids them (the sibling used `// parity:allow` for `.placeholder`).
+
+pwsh works; only the literal word "Placeholder" needs an opt-out (for `.placeholder` redaction). Now the critical build question: does `TeslaSync.xcodeproj` exist, or must I run XcodeGen to pick up new files?
+
+`.xcodeproj` is gitignored and built via `xcodegen` (available). New files in globbed `Sources` will be picked up on regen. Let me set up tracking, verify the build environment, and establish a baseline build before making changes.
+
+The KMP `Shared.xcframework` isn't built (only `.gitkeep`). There's a build script and the `apps/shared` KMP module. Let me check if I can build it.
+
+The framework builds from `apps/shared` via Gradle (wired as an Xcode pre-build phase), but `java` isn't on PATH. Let me check for a JDK — this determines build feasibility.
+
+A JDK 17 is available via `/usr/libexec/java_home`. The KMP framework build is the long pole (first run downloads the Kotlin/Native toolchain). Let me kick it off in the background while I write the Swift code, after a quick gradle sanity check.
+
+Gradle works (8.14.5, Kotlin 2.0.21, JDK 17). Let me kick off the framework assembly in the background and write the Swift code while it builds.
+
+The framework build is running in the background. Now let me write the Swift implementation. Starting with the models and formatters.
+
+Framework build is progressing (downloading Kotlin/Native, compiling iOS targets). Let me continue writing the formatters and model.
+
+Now the main page view with header and phase switch.
+
+Now the sections file (metric cards, monthly table, skeleton).
+
+Now the charts file (odometer area chart + daily distance bar chart).
+
+Let me check the framework build progress, then write the route registration and wire navigation.
+
+Framework build is nearly done (linking release frameworks; KMP toolchain works). Let me write the route registration and wire navigation.
+
+Now wire `.mileage` into `AppRoute` (enum case, icon, group).
+
+Now compose the registration in `TeslaSyncApp.swift`. Let me view the exact context.
+
+Now add the strings to the catalog via a precise text insertion (preserving the rest of the file).
+
+All 20 strings added (9409 total). Let me verify the catalog and write the model tests.
+
+All strings present, JSON valid. Now the model tests, then I'll check the framework build.
+
+Framework still linking the release target. Let me write the model tests while it builds.
+
+All source files written. Let me check the framework build and run SwiftLint on the new files for fast feedback.
+
+SwiftLint flagged trailing-closure usage in `TSColumn` (it takes two closures). Let me fix by labeling the `cell:` argument explicitly.
+
+Let me re-run SwiftLint on the new files and check the framework build.
+
+SwiftLint is clean (exit 0) on all new files. The framework is still doing the slow Kotlin/Native release link. Let me check the scheme config while waiting, then wait for the build.
+
+The `TeslaSync` scheme is iOS and stages the framework via a pre-action. Let me find the exact gate invocation from the p4-apple README and list simulators while the framework finishes.
+
+The gate contract uses `-destination 'platform=iOS Simulator,name=iPhone 16'`. Let me verify that simulator exists and wait for the framework to finish.
+
+"iPhone 16" simulator exists. The release framework link is still running. Let me wait for it, and meanwhile double-check no other exhaustive `AppRoute` switch exists in the wider codebase.
+
+The framework is now linking macOS targets (nearly done). Let me verify those `AppRoute` switch sites have a `default` (won't break on the new case).
+
+Those are switches over each file's own local enum (`switch self`), not `AppRoute`. Let me quickly confirm, then wait for the framework.
+
+Confirmed — all local enums, not `AppRoute`. My enum addition is safe. Let me wait for the framework build to finish.
+
+Framework built successfully (`BUILD SUCCESSFUL`). Now let me stage it, generate the Xcode project, and run the placeholder scan.
+
+Framework staged and project generated. Let me verify my files are included, then run the placeholder scan.
+
+All my files are included; placeholder scan passed (COUNT=0, EXIT=0). But there are pre-existing `MileageWidget`/`MileageStatsWidget` files — I must check for type-name collisions before building.
+
+Collisions found: `MileageVehicle` and `MileageMonthRow` already exist in `MonthlyMileageWidget.Models.swift`. Let me see the full collision list.
+
+Two collisions: `MileageVehicle` and `MileageMonthRow` already exist in the widget layer (same app target). Let me inspect them and confirm safe replacement names.
+
+The widget owns different `MileageVehicle`/`MileageMonthRow` types in the same target. I'll rename my two page types to `MileagePageVehicle` and `MileagePageMonthRow` (both confirmed free).
+
+Renames applied cleanly. Let me run a comprehensive collision check across the whole app for all my remaining type names before building.
+
+Let me wait for the collision check to complete.
+
+No further collisions. Let me re-run SwiftLint on the renamed files (longer type names may affect line length), then start the build.
+
+SwiftLint clean. Now the build — I'll run it in the background (it's the long pole) with the gate's iOS simulator destination.
+
+Build started in the background. Let me monitor its progress.
+
+Build failed (exit 65, 4 failures) in widget-primitives files — including `WidgetDeepLink.swift` which references `AppRoute`. Let me see the actual error messages.
+
+The errors are in `Input.Previews.swift` (a pre-existing shared-surface file I never touched) — "explicit return in ViewBuilder". Let me confirm this is pre-existing and not caused by my changes.
+
+`Input.Previews.swift` is unmodified (committed baseline) — this is a pre-existing compile error, not from my changes. Let me examine it to understand scope.
+
+This is a pre-existing toolchain incompatibility: `#Preview` + `@Previewable @State` + explicit `return` is rejected by the current Swift compiler. Let me measure how widespread this is across the seeded surfaces.
+
+Good — only **8** of 686 preview files have this pre-existing pattern (mechanical `#Preview` + `@Previewable` + explicit `return`, rejected by the current toolchain). They block the whole-app build gate. Let me identify them precisely.
+
+All 8 are pre-existing/unmodified baseline breakage in `shared-surfaces` — they block the whole-app build gate. Since the fix is mechanical and behavior-preserving (a `#Preview` ViewBuilder can't use explicit `return`), I'll unblock the build. Let me inspect the exact `return` lines.
+
+The fix must be surgical (only remove `return` inside `#Preview` ViewBuilders, not helper functions). The `staged(...)`/`PreviewBar`/`PreviewRow` returns are clearly preview bodies, but `SearchInput`'s `return model` needs inspection. Let me view the ambiguous regions.
+
+The `return model` (line 42) is a helper function — must not touch it. But some preview bodies (e.g. CopyLinkButton's `model.copyLink()`) have side-effect statements that could newly error once `return` is removed. Let me check the lines preceding each preview-body return.
+
+This is pre-existing baseline breakage (8 files) under the strict toolchain, blocking the whole-app gate. The minimal behavior-preserving fix is removing the invalid explicit `return` in these DEBUG-only `#Preview` ViewBuilders. Let me apply it (leaving the helper-function `return model` untouched) and rebuild to verify.
+
+There's a 9th file (`HelpSegment`) with `return staged(` that lacks `@Previewable` — my pattern undercounted. The real issue is any explicit `return` inside a `#Preview`. Let me get an accurate, comprehensive count.
+
+This is widespread pre-existing breakage (~28 seeded files), not 8 — clearly out of scope to fix. But `#Preview` is DEBUG-only; a **Release** build may sidestep it entirely and verify my code. Let me first revert my out-of-scope edits, check DEBUG gating, then try a Release build.
+
+The preview files are entirely `#if DEBUG`-gated (the header even says "DEBUG-only... skipped by the shipped-surface gate scope"). A **Release** build excludes them. Let me build Release to verify my full code compiles in the app context.
+
+Release build running. Let me wait and check its result.
+
+Release build failed with 1 error — not in my files. Let me find it.
+
+Another pre-existing error, this time in `Sources/Features/Driving/DriveScorePage.Panels.swift` (a `String(localized:)` API mismatch under the newer toolchain). Let me confirm it's pre-existing and unrelated to my code.
+
+Both errors are pre-existing/unmodified, and my `String(localized:)` uses safe string literals. The baseline has toolchain-incompatibility errors in both DEBUG previews AND real Sources. Let me gauge the breadth of the `String(localized: <key>)` class in Sources to decide between a bounded temp-fix verification vs. BLOCKED.
+
+Only `DriveScorePage.Panels.swift` has the broken `String(localized: <key>)` pattern in Sources (the rest correctly wrap in `String.LocalizationValue`). In Release config (previews excluded), this may be the sole Sources blocker. Let me do a **bounded temporary** patch of these pre-existing errors purely to verify my code type-checks, then revert. Let me inspect the file.
+
+Line 25 is the lone broken spot (`labelKey` is `LocalizedStringKey`). I'll temporarily neutralize it purely to verify my code type-checks, then revert. Let me apply and rebuild Release.
+
+Release build #2 running with the temp patch. Let me wait for the result.
+
+The build is still running (0 errors so far — past the patched file). Let me wait for it to complete.
+
+Build failed with **0 compile errors** — meaning all Swift (including my code) compiled cleanly; the failure is a downstream linker issue. The notes point to x86_64 (the KMP framework only has arm64 simulator slices). Let me confirm and re-run arm64-only.
+
+The x86_64 simulator slice is missing from the KMP framework (Release builds all archs by default). The **arm64 compilation already passed with 0 errors** — my code compiles. Let me force arm64-only Release to get a clean green build+link.
+
+Verification build running (arm64-only Release). Let me wait for it.
+

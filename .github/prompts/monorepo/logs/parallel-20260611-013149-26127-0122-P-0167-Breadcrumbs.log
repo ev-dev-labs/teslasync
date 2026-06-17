@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure, the web source component, and checking what Apple/Swift tooling is available on this runner.
+
+Good — full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and understand the existing Apple project structure.
+
+There's a well-established pattern. Each surface has ~10 files (`.swift`, `.Adapter`, `.Model`, `.Views`, `.States`, `.Previews`, `.Seams`, `.strings`, `.Tests`, etc.). Let me study a comparable existing surface (`ActiveFilterChips` — also layout chrome) in full to learn the exact conventions, plus the shared infrastructure (state-holders, tokens, i18n, diagnostics).
+
+`ActiveFilterChips` is the ideal template — also purely presentational, prop-driven, no fetcher. Let me read its complete file set to internalize the conventions.
+
+Now let me examine the shared P1/S9 tokens, the project.yml build config, and the placeholder checker to understand build integration and constraints.
+
+Now let me check the critical build prerequisites: xcodegen availability, whether the `.xcodeproj` exists, and whether `Shared.xcframework` is present (these determine whether the gate can actually run).
+
+Let me check the Shared.xcframework build script and whether a KMP/Kotlin toolchain exists — this determines whether the full `xcodebuild` gate can run.
+
+KMP build needs Gradle + Kotlin/Native. Let me check pwsh availability, the placeholder script, lint configs, the exact design tokens, and how sibling surfaces handle navigation links and SF Symbol icon mapping.
+
+Now let me understand the navigation seam pattern (web uses `PrefetchLink to=href`), the app's route model, the i18n catalog integration, and the web i18n keys for breadcrumbs.
+
+`HistoryListRow` gives the exact precedent for link/navigation: an activation enum carrying `href` + a `perform` closure. Let me read the web breadcrumb construction (to model the real data faithfully) and confirm no existing Breadcrumbs files, plus how HistoryListRow splits closures from Equatable value types.
+
+I now have a thorough grasp. Let me confirm a few rendering/precedent details: how `HistoryListRow` renders its link button and holds the `perform` closure in its Model, and whether `horizontalSizeClass` is used elsewhere (for the responsive middle-crumb collapse).
+
+I have a complete understanding of the architecture. Let me verify the KMP shared module reality (affects whether the full `xcodebuild` gate can run) and confirm the log directory path.
+
+The KMP core is real (needs Gradle + Kotlin/Native). Let me check a recent per-surface gate log to see whether full `xcodebuild`+Gradle builds succeed in this environment or are typically capability-blocked.
+
+A prior parallel run of this exact surface confirms the approach (presentational, host-delegated navigation, same i18n keys) and that platform capability is present. Crucially, **my current repo already wires `shared-surfaces` into `project.yml`** (the old blocker b1 is resolved) — so only the KMP `Shared.xcframework` Gradle staging (b2) might block the full build. I'll attempt the real gate too.
+
+Let me verify there are no type-name collisions, then write the plan and create the files.
+
+No collisions; `.xcodeproj`/`DerivedData` are gitignored. Let me record the plan and todos, then build the surface.
+
+Now creating the surface. First the Foundation-only pure core (Adapter):
+
+Now the Model (i18n facade, telemetry seam, observable state-holder):
+
+Now the presentational subviews (token-driven, VoiceOver labels):
+
+Now the public API surface file (`BreadcrumbItem` + `Breadcrumbs` view with responsive trail):
+
+Now the `.strings` catalog, previews, and tests:
+
+Now the test files — pure adapter tests first:
+
+Now the state-holder / view / strings / a11y tests:
+
+All 8 files created. Now let me verify — first format my files with swiftformat (config-aligned), then review changes.
+
+swiftformat passes; one swiftlint opening-brace violation. Let me view it:
+
+A swiftformat/swiftlint conflict on the wrapped multi-line `if let` (brace lands on its own line). I'll refactor to a clean single-line condition backed by a testable `compactSegments` projection helper.
+
+Now refactor the view's `crumbSequence` to use the clean single-line condition:
+
+Add a test for `compactSegments`, then re-run format + lint:
+
+swiftlint `--strict` and swiftformat `--lint` both pass (0 violations). Now the placeholder check, a standalone `swiftc` type-check of the shipped files (proves compilation independent of KMP), and project generation — in parallel.
+
+Placeholder check **EXIT=0** and standalone shipped-sources type-check **EXIT=0** (Swift 6 strict, macOS 15 SDK). Now let me type-check the test files too (stripping `@testable import` for a single-module compile, linking XCTest):
+
+Those errors are an artifact of my ad-hoc standalone compile — `XCTAssert*` are function-like C macros that only resolve through Xcode's XCTest Swift module setup, not a raw `swiftc` invocation. That's an environment limitation of the hack, not a defect in the tests. The authoritative test verification is the real `xcodebuild` gate. Let me attempt it: generate the project, then probe whether the KMP `Shared.xcframework` Gradle staging can run here.
+
+Project generated; the `TeslaSync` scheme exists. Now the decisive step — can the KMP `Shared.xcframework` be staged via Gradle/Kotlin-Native here? Let me attempt it (this is the scheme's pre-build action).
+
+Gradle works. Now the heavy step — assembling the KMP `Shared.xcframework` (needs Kotlin/Native). Let me run the exact staging script the scheme uses, in the background:
+
+The KMP build is actively progressing (Kotlin/Native distribution downloading, iOS frameworks compiling from cache). Let me wait for it to finish:
+
+KMP build is working (debug XCFramework written; now linking release). Let me wait for completion and staging:
+
+Release linking in progress. Let me continue waiting:
+
+Nearly done (release macOS linking, last target). Waiting for assembly + staging:
+
+`KMP_STAGE_EXIT=0` — the `Shared.xcframework` built and staged successfully! Blocker (b2) is resolved in this environment. Let me confirm staging, list simulators, then run the full iOS gate.
+
+`Shared.xcframework` staged (ios-arm64, ios-arm64-simulator, macos-arm64); iPhone 16 simulator is booted. All blockers are resolved in this environment. Let me run the full iOS build (whole app + my surface) — backgrounded with logging:
+
+The build failed — but in **other** surfaces (`AIFeedbackQueueTriage`, `AIGeofenceAwareAutomationSuggestions`, `AIInboxAutoCategorization`, `AIIncidentTimelineSummarizer`), not Breadcrumbs. I must determine whether these are pre-existing failures or caused by my change. Let me extract the actual errors:
+
+Exactly **one** root error — `AIGeofenceAwareAutomationSuggestions.swift:141` — and **zero** Breadcrumbs errors. This is a sibling surface, not mine. Let me confirm it's pre-existing/out-of-scope and characterize it:
+
+Confirmed: only my 8 Breadcrumbs files are new; `AIGeofenceAwareAutomationSuggestions.swift` is a **pre-existing, baseline, unmodified-by-me** sibling surface with a genuine `@escaping` bug at line 141 (`TSGlassPanel` stores the `content` closure but the param isn't `@escaping`). It's outside my allowed files (`Breadcrumbs.*`).
+
+To gather honest in-project evidence for my surface, let me check whether that broken sibling can be excluded from the build via a command-line build setting (no source edits), and whether it's referenced elsewhere:
+
+The broken sibling is referenced by `AINLAutomationBuilder` (3 files), so excluding it cascades — build-hacking would deviate from the gate and chase further baseline breakage. I won't go outside my allowed files. 
+
+Let me instead add a standalone **runtime** proof of my projector logic (Foundation-only, uses only my Adapter), mirroring the test assertions:
+
+Top-level code needs the file literally named `main.swift`. Let me fix:
+
+Standalone runtime assertions **PASS** (`ALL_PROJECTOR_ASSERTIONS_PASSED`), confirming projector correctness on the real Swift 6 toolchain. 
+
+Let me kick off the macOS build in the background (it compiles the same shared-surfaces source, so I expect the identical pre-existing blocker) while I write the gate log:
+
+The macOS build finished. Let me check its result and confirm the root cause matches:
+
+macOS failed even earlier — at **code-signing** (no development certificate in this environment), before compiling. That's a separate environment/capability gap. Let me confirm the macOS compile-phase blocker matches iOS by retrying with signing disabled (backgrounded), and meanwhile run the actual whole-tree gate lint/format steps:
+
+`swiftformat --lint apps/apple` must run from the repo root. Let me correct that and run the whole-tree gate lint/format steps from their proper directories:
+
+`FORMAT_EXIT=0` across all 4758 files. Now the whole-tree `swiftlint --strict` gate step (from `apps/apple`):
+
+`LINT_EXIT=0` (0 violations across 4460 files) and `FORMAT_EXIT=0`. Three of five gate steps are green; placeholder is green too. Let me check the signing-disabled macOS build:
+
+Signing-disabled macOS build is now past signing and compiling sources (will hit the same shared blocker). Let me wait for it:
+
+A real issue surfaced in **my** `Breadcrumbs.Previews.swift:28` — but only under DEBUG compilation. My earlier standalone typecheck missed it because `#if DEBUG` wasn't defined (the block was skipped). This is my bug to fix. Let me reproduce it standalone with `-D DEBUG`:
+
+Reproduced — and it's a genuine in-scope bug: the `.map { index, label in ... }` closure returning `BreadcrumbItem` with a ternary-closure (`isLast ? nil : {}`) blows up Swift's type inference (only under DEBUG, which my first standalone typecheck skipped). 
+
+Important finding: the macOS build batched differently and surfaced **my** Previews error first; the iOS build surfaced the pre-existing AIGeofence error first. Both exist independently. I must fix mine. Let me rewrite the two affected helpers with an explicit closure type + a plain loop (also fixing the identical construct in the test helper):
+
+Now re-verify the DEBUG typecheck of shipped + previews, and re-lint the two changed files:
+
+The ternary with a bare closure literal (`isLast ? nil : {}`) trips a Swift type-inference compiler bug even with an explicit type. Let me use a direct conditional assignment instead (no closure-in-ternary) in both helpers:
+
+DEBUG typecheck now **EXIT=0** — my surface (incl. previews) compiles cleanly. My bug is fixed; the remaining build blocker is the pre-existing out-of-scope `AIGeofence` error.
+
+To actually *run* my XCTest suite (best evidence for the "tests pass" criterion), I'd need a building app target. Let me assess whether the broken siblings can be excluded via a command-line build setting (no source edits) without deep cascade:
+
+The cascade is deep (`AIGeofence ← AINLAutomationBuilder ← AIPiiRedactionSharedExports ← …`) — a tangled chain of pre-existing interdependent AI surfaces. Excluding them deviates too far from the gate and risks masking my surface's true status. I'll stop the build-hack and rely on my strong in-scope evidence.
+
+Let me re-format my edited files and re-run the whole-tree gate lint/format + placeholder to reflect the final state:
+
+My 7 files: format clean, 0 lint violations, 0 placeholders. Let me capture the final whole-tree gate values (the literal gate commands):
+
+`FORMAT_EXIT=0` (whole tree). Now the whole-tree `swiftlint --strict` (final):
+
+`LINT_EXIT=0` (whole tree). Let me run one final in-project build (macOS, signing disabled — it previously compiled my surface files) to lock in proof that my surface now compiles cleanly in-project and only the pre-existing sibling chain remains. Backgrounded while I write the log:
+
+Let me wait for the final in-project build to confirm my surface compiles cleanly:
+
+The build3 log is empty (1 line) with EXIT=65 — a transient DerivedData/lock anomaly (no compiler output at all), not informative. I already have authoritative evidence: build #1 (iOS) gave the exact AIGeofence error with zero Breadcrumbs errors, and build #2 (macOS, signing-disabled) compiled my surface and surfaced the now-fixed Previews bug. Let me run one clean iOS incremental build for a final authoritative capture (backgrounded) while I write the log:
+
+Decisive finding: the post-fix iOS build surfaced **yet another** pre-existing sibling with the **same** bug pattern — `AISignalExplorerNlFilter.swift:142: escaping closure captures non-escaping parameter 'content'` — and again **zero Breadcrumbs errors**. This is a *systemic* pre-existing baseline defect across multiple AI* sibling surfaces, all outside my allowed files. Let me quantify how widespread it is:
+
+**Airtight conclusion:** the whole-app build is broken at *baseline* by a **systemic** pre-existing defect — the same `escaping closure captures non-escaping parameter 'content'` bug in **4+ sibling AI surfaces** (`AIAutoNameUnnamedLocations`, `AIGeofenceAwareAutomationSuggestions`, `AISignalExplorerNlFilter`, `AISuggestNewGeofences`), none in my allowed files. My Breadcrumbs surface uses none of that anti-pattern and produces **zero** build errors. No surface in this repo can pass `build test` until the baseline is repaired.
+
+I have everything for an honest, evidence-rich log. Writing it now:
+
+Now let me verify the working tree contains only my intended changes (surface + log) and that build artifacts are gitignored, then clean up the large/generated artifacts:
+
+The working tree is clean — exactly my 8 surface files + the log (all untracked); every build artifact is gitignored.
+
+Now the commit decision. The Honesty Covenant rule **"8 No commit on red"** is binding and verbatim, and the literal `build test` gate is red (EXIT≠0) due to pre-existing out-of-scope baseline breakage + a macOS signing gap. The clean reconciliation with the prompt's Commit section is: **commit on DONE (green); on BLOCKED, log only — do not commit.** So I will not create a commit. The deliverables persist in the working tree (ready for `git add`), and the log records the honest status.
+
+Let me update tracking and confirm the log ends correctly:
+
+Let me record the outcome in the plan file:
+
+I've completed all work achievable within the prompt's allowed scope. Here is the honest, evidence-backed summary.
+

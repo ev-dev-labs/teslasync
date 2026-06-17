@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure to understand the task context, the web source page, and the existing Apple app.
+
+Xcode 26.5, swiftlint, and Swift 6.3.2 are all available. The web `SystemPage` renders two panels (`RateLimitStatusPanel`, `QueueStatusPanel`). Let me explore the Apple app structure, the parity manifest, and the child panels.
+
+Let me examine the manifest records and the Apple app's existing structure (Features dir, navigation, component library).
+
+The manifest scopes `page:admin/System` to just the page scaffold + 2 strings (child panels are separate units). The Apple app uses unusual directory names — no `Features/Admin` yet. Let me understand the project structure, navigation pattern, and existing ported pages.
+
+Key finding: the app uses `feature-views/`, `shared-surfaces/`, etc. — NOT `Features/`. The `project.yml` source paths don't include `TeslaSync/Features`. 5601 swift files exist with a multi-file surface pattern (`.Views.swift`, `.Model.swift`, etc.). Let me find an already-completed sibling page to mirror exactly, check the ledger structure, and look for existing admin/RateLimit surfaces.
+
+The child panels `RateLimitStatusPanel` and `QueueStatusPanel` already exist in `feature-views/`. The page just needs to compose them. `admin/System` is NOT yet in the ledger (64 rows = 32 pages × 2 platforms). Let me find a sibling done page (e.g., DevTools, requiredCount=2) to use as the exact template, and examine the existing panels + navigation.
+
+The panels exist and use a rich token/component system (`TSSpacing`, `Color.TS`, `TSButton`, `QSStrings`). Now I need the page scaffold pattern. Let me find where already-done pages (ApiPlayground, AuditLog, DevTools) actually live, who composes these panels, and the page-container equivalent.
+
+The done pages live in `apps/apple/Sources/Features/Admin/` (compiled via `- path: Sources`), NOT `TeslaSync/Features/`. The prior DevTools agent reconciled the same output-path discrepancy. Let me study the exact page + route-registration pattern and the panel entry views.
+
+Excellent — clear pattern now. DevToolsPage is the ideal template (requiredCount=2, composes content with a `TSPageTitle` + subtitle header). Let me read the route registration chain, the model, the panel entry view, and the gate methodology.
+
+Both panels are `public struct ... : View` taking a model. `SystemPage` composes them. Let me read the panel models' initializers, the route enum/parser, the app registration wiring, and the gate methodology.
+
+`AppRoute` already has a `.system` case (path `/system`, group `.system`, icon `server.rack`). I'll wire `SystemPage` to it. Let me check the parser, the app-level registration aggregation, whether `.system` is already registered, and the gate contract.
+
+`.system` exists in the enum but is NOT registered to any page — it's an orphan awaiting this page. Registrations aggregate in `TeslaSyncApp.swift`. I'll add a `SystemRouteRegistration` and a `/admin/system` alias. Let me read the app registration block, the registry, the panel models (to learn live-source wiring), and check tooling/localization.
+
+`RateLimitModel` needs a `source`. Let me find whether a live (non-in-memory) source exists for these panels, and read the gate methodology + check the placeholder tooling and whether `pwsh` is available.
+
+`pwsh` is available, and only in-memory sources exist (no live API source yet — these panels have never been hosted). I need the canonical live-data wiring convention. Let me read the repo's own SystemPage prompt, the p4-apple README gate contract, and how a data-backed admin page (DiskForecast) constructs its model.
+
+The convention is clear: `DiskForecastRouteRegistration` ships a `SampleDiskForecastDataSource()` default (pending live KMP wiring) — and it's a "done" ledger row. So composing the panels with sample-seeded sources is the accepted, honest pattern (web shows populated panels). I'll place files in `Sources/Features/Admin/` (the real, compiled location every prior page used) and reconcile the output path like the DevTools agent did. Let me read the panel model types, a sample/test example, and the gate README.
+
+I now understand the panel data seams. Let me look at how `SampleDiskForecastDataSource` emits data (the shipping convention), find the response types I'll seed, read the QueueStatus preview for realistic values, the gate README, and check existing localization keys.
+
+`route.system` exists; `system.page.*` keys need adding. Sample sources are co-located in the page model file (e.g. `SampleDiskForecastDataSource`). Let me read the panel adapter types (to seed sample data), the disk-forecast sample-source pattern, the catalog key format, and the README gate contract.
+
+I have all the panel types. Let me read the disk-forecast sample-source pattern, the catalog key format (the `translation.` prefix is notable), the DevTools test structure, and the README gate contract.
+
+Let me read the disk-forecast sample-source/model pattern, the catalog entries' exact format, and the README gate contract.
+
+I have the full pattern. `SampleDiskForecastDataSource` ships representative data "so the surface renders its populated state out of the box" — exactly the precedent I'll follow. Now let me check the build toolchain reality (xcodegen, prebuilt KMP framework), the README gate contract, and the severity enum.
+
+All tooling is present except the KMP `Shared.xcframework` is not prebuilt (full app build needs the Kotlin toolchain). `RateLimitSeverity` = ok/warn/critical. The DevTools "done" precedent verified via isolated type-checks + harnesses since the full build is RED on pre-existing sibling breakage. Let me read the full DevTools log (my verification + log-format blueprint) and check KMP build feasibility.
+
+I now have the complete blueprint (the DevTools log is my template for implementation, verification, and log format). Let me write a plan file, then do final pre-coding checks: symbol collisions, the `SystemStatusPage` route claim (to avoid stealing `.system`), native `FadeIn`/`TSPageTitle`, and the TeslaSyncApp top.
+
+No collisions. `SystemStatusPage` uses a different route (`/system-status`), so `.system` is free for `SystemPage`. `TSFadeIn` (native FadeIn equivalent) and `TSPageTitle` both exist. Let me read their exact signatures, then write a plan and start coding.
+
+All component signatures confirmed. Let me verify the `QueueStatusModel`/`InMemoryQueueStatusSource` init signatures, then write the plan and code.
+
+`QueueStatusModel(source:)` and `InMemoryQueueStatusSource(initial:)` confirmed. All tokens valid. Let me read the lint/format config so I write compliant code first time, then write the plan and all files.
+
+I have all conventions (line width 120, before-first wrapping, no trailing commas, `self` removed). Let me write the plan, then create the source files.
+
+Plan written. Now creating the 5 new Swift files.
+
+Now wiring: route alias + app registration.
+
+Now adding the two required strings to the catalog (matching the peer `devtools.*` format).
+
+Validating catalog JSON and inspecting the ledger structure for the new rows.
+
+Catalog valid (9368 keys, both new strings present, no dups). Now adding the two ledger rows.
+
+Now running the in-scope gates. First, JSON validation and SwiftFormat lint.
+
+Ledger is 66 rows (admin/System 2/2 done both platforms). SwiftFormat wants numeric grouping (`1280`→`1_280`). Auto-fixing my new files only (not the edited siblings, to avoid drift), then re-linting.
+
+SwiftFormat clean (0/7). Now SwiftLint --strict and the placeholder scan.
+
+All three fast gates pass: **SwiftFormat 0/7, SwiftLint 0 violations, Placeholder COUNT=0**. SwiftFormat normalized the numeric literals per repo config. Now the stronger verification (type-check + executed harness, like the DevTools precedent). Let me map the panels' dependency imports to assemble a clean compile set.
+
+Model/Adapter layers import only Foundation/Observation/OSLog — so an executed model harness is feasible. Let me confirm the adapters don't reference SwiftUI tokens, and locate the design-token sources (for the type-check).
+
+Model/Adapter layers are pure (Foundation only) — an executed harness is feasible. Tokens live at `apps/design/generated/apple/Tokens.swift`. Let me build and run an executable model harness (mirrors the XCTest, like the DevTools precedent) in a temp dir outside the repo.
+
+No `Bundle.module` issues. Compiling and running the harness (Swift 6, strict concurrency, macOS SDK).
+
+Swift 6 top-level is MainActor-isolated; `check` needs `@MainActor`. Fixing and recompiling.
+
+Harness compiles under Swift 6 strict concurrency. Running it.
+
+Model harness passes 16/16 (the harness compiling IS a Swift 6 type-check of my model layer + panel projections). Now: generate the Xcode project (prove integration) and assess feasibility of a SwiftUI-layer type-check (do the components/panels import the KMP `Shared` framework?).
+
+Project generates cleanly (GEN_EXIT=0; SystemPage referenced 24× across iOS/macOS app + test bundles). Components/panels/Theme don't import the KMP `Shared` framework — so a curated SwiftUI type-check (no Gradle) is feasible. Let me locate `Sources/Design`, `TSMetricBar`, then run the type-check.
+
+Running the curated SwiftUI type-check for macOS (real tokens + components + panels + my files, no Gradle/KMP needed).
+
+The only errors come from `Components/DataDisplay/UnitFormatters.swift` (it references the P1/S5 units layer outside my set — not used by my page). Narrowing DataDisplay to just `Metrics.swift` (TSMetricBar) and re-running.
+
+macOS type-check: **0 errors across 39 files** — my SystemPage surface compiles against the real tokens, components, and both panels under Swift 6 strict concurrency. Now the iOS idiom (ADR-002/006).
+
+Both idioms pass with **0 errors**. Let me validate the DEBUG `#Preview` block too (it uses `.teslaSyncTheme()` + `SystemPageModel()`), checking specifically for errors in my files.
+
+DEBUG type-check (incl. my `#Preview`) is also 0 errors. My in-scope verification is comprehensive and green. Now let me confirm the full `xcodebuild` is pre-existingly RED for out-of-scope reasons (so I document it honestly, per the DevTools precedent) by checking a peer log and the cited sibling breakage.
+
+Confirmed: peer admin pages recorded `BUILD_EXIT=65` from pre-existing out-of-scope sibling breakage (the cited broken files still exist) and shipped DONE via type-check+harness. My in-scope proof is comprehensive. Let me still attempt a real bounded build to get first-hand evidence. First checking the Java/Gradle toolchain, then launching async.
+
+Java 17 is present, so the KMP framework build may work. `xcodebuild` doesn't run scheme pre-actions, so I'll stage the framework manually first. Launching the Gradle framework build async (it's the ~10‑min step) and preparing the log meanwhile.
+
+Framework build launched in background. Let me check its progress and start writing the evidence log.
+
+The launcher shell returned, but the Gradle process (pid 53279) continues writing to the log. It's downloading the Kotlin/Native distribution and compiling iOS slices. Let me monitor it while writing the evidence log.
+
+Framework built successfully ("xcframework successfully written out"). Let me confirm it's staged, then launch the real `xcodebuild` build to capture first-hand evidence.
+
+Gradle is now building the release slices (the script stages the release xcframework). Let me wait for it to finish staging.
+
+Release slices still building (the slow multi-minute step). Continuing to wait for staging.
+
+Framework staged (XCFRAMEWORK_EXIT=0). Now launching the real macOS `xcodebuild` build to capture first-hand evidence (my files clean vs. pre-existing sibling failures).
+
+The macOS app module is now compiling (widgets already built). Let me monitor for completion, my-file status, and the final BUILD_EXIT.
+
+Build finished `BUILD_EXIT=65` with 3 failures — matching the peer evidence. The decisive check: are any failures in MY files? Extracting the actual errors.
+
+**Decisive result:** Build `BUILD_EXIT=65` fails ONLY in the pre-existing sibling `shared-surfaces/Input.Previews.swift` (a SwiftUI ViewBuilder `return` bug) — **zero errors in any of my files**. This is the same out-of-scope breakage the peer logs cite. Let me confirm git cleanliness (that sibling is untouched, and build artifacts are ignored).
+
+Git is clean — exactly my 5 new files + 4 surgical edits; build artifacts are git-ignored; the failing sibling is untouched. Now writing the comprehensive evidence log.
+
+Writing the binding evidence log.
+
+Log written. Cleaning up temp artifacts, then committing the exact in-scope fileset.
+
+Now staging the exact fileset and committing.
+
+All 10 in-scope files staged cleanly (505 insertions, nothing extraneous). Committing.
+
+Committed (HEAD `b88d4cf0c`). Final verification of a clean tree and the ledger state.
+
+The task is complete and fully verified. Working tree is clean, the ledger shows `page:admin/System` covered 2/2 on both apple-macos and apple-ios, and the evidence log ends `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../monorepo/logs/apple-page-admin-SystemPage.log  | 173 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  22 +++
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ apps/apple/Sources/Features/Admin/SystemPage.swift |  61 ++++++++
+ .../Features/Admin/SystemPageModel.Sample.swift    | 118 ++++++++++++++
+ .../Sources/Features/Admin/SystemPageModel.swift   |  30 ++++
+ .../Features/Admin/SystemRouteRegistration.swift   |  19 +++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Unit/Features/Admin/SystemPageModelTests.swift |  62 ++++++++
+ apps/parity/apple-ledger.json                      |  18 +++
+ 10 files changed, 505 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-SystemPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/SystemPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SystemPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SystemPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/SystemRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/SystemPageModelTests.swift

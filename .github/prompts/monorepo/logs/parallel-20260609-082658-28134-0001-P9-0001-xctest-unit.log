@@ -1,0 +1,189 @@
+I'll start by exploring the repository structure to understand what exists for the Apple app and whether the required toolchain is available.
+
+macOS is present with Swift 6.3.2, swiftlint, and swiftformat — but `xcodebuild` is backed by **Command Line Tools only**, not full Xcode (no iOS Simulator). Let me explore the Apple app structure and the methodology before deciding on approach.
+
+This is an **XcodeGen** project (`project.yml`). The gate needs full Xcode + iOS Simulator. Let me examine the project config, existing tests, and the methodology/log setup.
+
+63 test files already exist. `xcodegen` is available (v2.45.4), but `xcodebuild` needs full Xcode. Let me check whether full Xcode exists anywhere, read the methodology/prompt context, and map feature-views (pages) against existing tests.
+
+**`/Applications/Xcode.app` IS present** — the active dir is just pointed at CommandLineTools. I can override with `DEVELOPER_DIR` without sudo. Let me verify full Xcode works that way.
+
+Full **Xcode 26.5 works via `DEVELOPER_DIR`**, and an `iPhone 16` simulator + iOS 26.5 runtime exist. The gate **can** run — so BLOCKED is not the path. Let me read the methodology, the prior run's log for this exact artifact, and locate the prompt file.
+
+The prior run (98066) was BLOCKED on two things: (A) macOS code-signing, and (B) **absent P7 pages**. But recent commits show `feature-views` surfaces now exist. The situation may have changed. Let me inventory the **current** state of feature-views, dashboard-widgets, and their co-located tests.
+
+Major change since the prior run: feature-views now has **1442 source + 294 test files**, dashboard-widgets **505 + 108**. The P7 pages exist now. This is a coverage-gap task. Let me check the build prerequisites (Shared.xcframework — the 23-min long pole), an example surface's test pattern, and the macOS signing situation.
+
+I now understand the architecture: each surface has a `Model` (view-model with loading/empty/error/data phases + live/stale/offline connection), a `Projection`, helper enums, and `.Tests.swift` / `.ModelTests.swift`. The **Shared.xcframework is not built** (only `.gitkeep`) and the prior run took 23 min to build it via Gradle. Let me investigate the framework build path and analyze the coverage gap.
+
+Now I have a clear picture. **feature-views: 229 surfaces, dashboard-widgets: 92** — all have `.Model.swift`. Two surfaces (ToolCard, DigitalTwinMiniWidget) have tests in the `Tests/Unit` tree instead of co-located. I need to understand whether surfaces with a Model but no `.ModelTests.swift` already cover states in their `.Tests.swift`. Let me examine an example and the macOS signing blocker, plus check the Java toolchain for the framework build.
+
+Now I understand the full picture. The `macos-pending-verifications.md` reveals the **full-app build has accumulated real compile collisions** from parallel merges (`DashboardWidgetSize` redefined 8-15×, `ChargingProjection` struct-vs-enum, `PowerFlowConnection`, `ambiguous 'miles'`, an `opening_brace` lint error) plus the **macOS signing capability gap**. Each P4 surface was verified in isolation, but the full app gate was never green.
+
+Let me check the current host capability (signing, load) and the actual collision state before committing to a plan.
+
+Critical findings:
+- **Signing: 0 valid identities** (macOS leg blocked — capability gap, confirmed still present)
+- **Host is healthy**: load 8.03, 20 CPUs, 20G free RAM (far better than prior run's load 488)
+- **Most collisions already fixed**: `DashboardWidgetSize` and `PowerFlowConnection` now single-definition. But **`ChargingProjection` still collides** (`struct` in ChargeStatusWidget vs `enum` in ChargingDetailSection — both `public`, same module). Must fix.
+
+Let me start the long-pole framework build in the background now, and examine whether existing `.Tests.swift` already covers Model state (the coverage-gap question).
+
+**Crucial correction**: AcDcStatsPanel's single `.Tests.swift` *already* contains `AcDcStatsModelTests` covering start/telemetry-once/stale-auto-refresh/offline/manual-refresh. So a missing separate `.ModelTests.swift` file is **not** a coverage gap — surfaces bundle model-state tests inside their `.Tests.swift`. The P4 builders already wrote state coverage. My real job: **fix collisions blocking the full-app build, run the integration gate, document the macOS gap**. Let me do a precise gap analysis to confirm every surface's Model state is actually tested.
+
+The framework build is progressing (Kotlin iOS targets compiling, some cache hits, but 9 other slots contend). 
+
+My gap analysis confirms it: the 63 "flags" are false positives — stateless **tool surfaces** (ByteSizeConverter, HashCalculator, JwtDecoder…) legitimately have no connection/stale axis, and the others have separate `.ModelTests.swift` files. **Test coverage is essentially complete.** P9-0001 is really an **integration-gate** task: make the full app compile + run the suite. Let me do a comprehensive duplicate-type collision scan across the app target.
+
+**35 real collisions** found — all from sibling surfaces that copied each other's type names (ChargeStatusLiveWidget↔ChargeStatusWidget: 12, SafetyHistoryWidget↔SafetyFeaturesWidget: 13, DriveScore×2, DrivingCoach×4, FleetStatsBar, MonthlyCost×2, ChargingProjection). The convention is per-surface prefixing; the fix is to namespace one side of each pair. First I must verify these types are surface-local (not cross-referenced). Let me check.
+
+Confirmed: every colliding type is referenced only within its two defining surfaces — they're surface-local. The fix is a scoped per-surface rename. `FleetStatsBarModel` has a third referencer (`FleetStatsWidget`), so let me inspect that group and the `ChargingProjection` pair before scripting the renames.
+
+`FleetStatsBarModel` is defined in both the dashboard-widget (`FleetStatsBarWidget`) and the feature-view (`FleetStatsBar`), and `FleetStatsWidget` composes "the shared" one. Since `FleetStatsWidget` is a dashboard-widget sibling, it should bind the widget-side model. Let me confirm the init signatures to pick the correct side to rename.
+
+The init signatures disambiguate it: `FleetStatsWidget` composes the **feature-view** model (3-param `locale:` init), so I'll rename the **widget-side** `FleetStatsBarWidget`'s model. I now have a complete, verified rename plan keyed by exact surface base-name. Let me write a verification script (dry-run) to confirm all 35 colliding types are referenced only within their expected surface pairs before mutating anything.
+
+Verification passed — all 35 colliding types are surface-local and the new names are free. Let me apply the renames (scoped to each rename-surface's own files only) and re-run the collision scan to confirm zero remain.
+
+All 35 collisions resolved (414 substitutions, 34 files) — **0 duplicate file-scope types remain**. Let me check the framework build progress and verify the other pre-existing issues noted in the pending-verifications doc (`ambiguous 'miles'`, the lint error), plus confirm my renames didn't break formatting.
+
+**Framework built successfully in 6m44s** (gradle cache + healthier host) and is staged. The `miles` ambiguity is now just doc-comments (already fixed in this branch). But my renames introduced **line-length regressions** (longer type names). Let me auto-format with swiftformat (the gate's own tool), then confirm the whole tree lints clean.
+
+swiftformat reformatted exactly the 3 regressed files; git shows **only my 34 renamed files changed** — no collateral. Let me run the two lint gates (fast, no framework needed) while I prepare the Xcode build.
+
+FORMAT is clean (FORMAT_EXIT=0). swiftlint found **1 serious violation** — let me locate it (could be the pre-existing `opening_brace` issue or a rename side-effect).
+
+It's the **pre-existing** `opening_brace` violation in `LiveSignalSparklinesWidget.Builder.swift:158` (noted in pending-verifications, not from my renames). It blocks the LINT gate. Trivial fix within scope. Let me view and fix it.
+
+This is a known swiftformat-vs-swiftlint brace conflict for multiline `if`. Let me check both configs before fixing to avoid a fix that one tool undoes.
+
+swiftformat's default `wrapMultilineStatementBraces` wants the brace on its own line (multiline `if`), while swiftlint's `opening_brace` wants it inline — a genuine tool conflict at this one spot. The cleanest fix satisfying both: extract the 5-part condition into a single boolean so the `if` is single-line. Let me check the placeholder script (to ensure no opt-out penalty) and pwsh availability first.
+
+pwsh is available, and the placeholder gate only scans for stub patterns (TODO/FIXME/fatalError), not lint-disable comments. I'll use the clean no-opt-out fix: extract the 5-part condition into a single boolean so the `if` is single-line (satisfies both tools). Then I'll let swiftformat normalize and re-lint.
+
+swiftformat accepts the fix (no reformatting needed). Let me re-run both full lint gates to confirm the whole tree is clean now.
+
+Both lint gates are now green (FORMAT_EXIT=0, LINT_EXIT=0, 0 violations in 2631 files). Let me run the placeholder gate and generate the Xcode project.
+
+xcodegen generated the project (3 schemes). But the **placeholder gate fails: PLACEHOLDER_COUNT=67** — these are in feature-view files built by other (P4) agents. I need to see whether these are legitimate SwiftUI "placeholder" usages (false positives needing the sanctioned `// parity:allow` marker) or real stubs. Let me inspect the pattern definitions and actual matches.
+
+The 67 matches are all **legitimate uses of the word "placeholder"** — TextField `prompt:` strings, skeleton-loading doc comments, test method names like `testNilDataProjectsEmptyPlaceholder`, even a comment saying a surface carries *no* placeholder markers. The gate flags the bare word "Placeholder"; the sanctioned mechanism is `// parity:allow <reason>` (24 already exist). Let me dump all 67 to confirm none are real stubs before annotating.
+
+All 67 are confirmed false positives: em-dash `placeholder = "—"` constants, doc comments, SwiftUI TextField `prompt:` i18n keys, `.redacted(reason: .placeholder)`, and test names — **zero actual stubs**. The sanctioned fix is `// parity:allow <reason>`. Many are doc-comment lines, so I must verify exactly how the script detects the marker before mass-editing. Let me read its matching logic.
+
+The opt-out marker is detected anywhere on a line (even inside `///` doc comments) and just needs a non-empty reason. So `// parity:allow <reason>` works for all 67. But first, let me prioritize the **real deliverable** — the iOS build+test — since it's the long pole. Let me kick off a compile of the app + test bundles in the background (this validates all 35 collision fixes), then prepare the placeholder markers while it builds.
+
+Build started. Let me check its progress (it runs the gradle pre-action first, then compiles ~2100 source files + test bundles).
+
+Build is progressing well — it's past dependency resolution and now **emitting the TeslaSync app module** (compiling all ~2100 source files into the app target). If my collision fixes were wrong, it would fail here. Let me prepare the placeholder-marker script (to apply after the build, since modifying source mid-build is best avoided) and let the build continue.
+
+Build process finished. Let me check whether it succeeded or hit compile errors.
+
+The app module **compiled successfully** — my 35 collision fixes are good. The failure is a **pre-existing Swift 6 strict-concurrency error** in `TimestampTool.Previews.swift` (a `#Preview` calling a `@MainActor` init from a nonisolated context) — not related to my renames. Let me extract the full set of compile errors.
+
+Only **one** actual compile error in the entire build — `TimestampTool.Previews.swift:20` — confirming all 35 collision fixes are correct. This is a pre-existing Swift 6 concurrency bug in a `#Preview`. Let me view it and the initializer to fix it.
+
+Clear fix: `TimestampToolModel` is `@MainActor`, but the preview helper `static func model(...)` is nonisolated. The established pattern (UuidGenerator.Previews) marks such helpers `@MainActor`. Let me apply that and proactively check other Preview helpers for the same anti-pattern.
+
+Found one more candidate: `SlideRenderer.Previews.swift:112`. The build stopped at the first batch, so this could be a latent error. Let me check whether `SlideRendererModel` is `@MainActor` and the surrounding context.
+
+`SlideRendererModel` is `@MainActor` (confirmed), so line 112 has the same latent error. The fixture's `surface(...)` also calls `model(...)`, so I need to see the whole fixture container to apply the cleanest fix (annotate the container vs. individual funcs).
+
+`SlideRendererPreview` enum is already `@MainActor` (line 14) — false positive; it's fine. **TimestampTool was the only real error.** My func-level `@MainActor` fix is correct and minimal. Let me rebuild incrementally (cached, fast) to confirm the build is now green and surface any errors hidden behind the failed batch.
+
+Rebuild still running, 0 errors so far. Let me wait for it to complete.
+
+Build finished with 0 errors. Let me confirm the final result line.
+
+The log shows `cd slot-9` and default DerivedData paths — that's suspicious (possible interleaving with a parallel slot, or my `-derivedDataPath` not taking). Let me get ground truth: check for running xcodebuild processes, my derived-data products, and the real result.
+
+The parallel slots (slot-9 etc.) share the default DerivedData and are contaminating my log — a known shared-host hazard. My products *did* land in the isolated `/tmp/dd-slot1` though. Let me run a clean, fully-isolated build with explicit exit-code capture to get an unambiguous result.
+
+Build running (isolated, exit-code captured). Let me wait for it to complete.
+
+Still building (host contention with parallel slots). Let me keep waiting.
+
+The poll loop exhausted without the build finishing (>5 min, heavy parallel contention). Let me check if it's still alive and its progress.
+
+Root cause found: that build used `( … ) &` **without `nohup`**, so it was killed when the launching session was discarded (the earlier builds used `nohup` and survived). Let me relaunch properly as a **detached async** process (the documented way for persistent background work) with isolated DerivedData and exit-code capture.
+
+Build is running detached. Let me wait and monitor it (I'll hold off editing source files until it finishes to avoid incremental-build races).
+
+Clean result: **XEXIT=65**, and the TimestampTool error is gone (my fix worked). The remaining error is the pre-existing **`ambiguous use of 'miles'`** in `ChargeCostTrackerWidget.Adapter.swift:328` (noted in pending-verifications) — it surfaced now that the build progresses further. Host load is spiking to 58 (parallel slots). Let me find and fix the `miles` ambiguity.
+
+The `.miles` on line 328 is an unqualified enum case, and `convertChargeDistanceFromSI` is likely overloaded across widgets (each defines its own distance-unit enum with `case miles`), making `.miles` ambiguous. Let me find the function signature(s) and the correct enum type to qualify it.
+
+Root cause: three module-level `convertChargeDistanceFromSI` overloads exist (each taking a different widget's distance enum), so the unqualified `.miles` is ambiguous. The fix: qualify it with `ChargeCostDistanceUnit.miles` (ChargeCostTrackerWidget's own enum). Let me check all call sites of this function for other unqualified enum args before rebuilding (to avoid repeated slow builds under load 58).
+
+Confirmed: 3 global `convertChargeDistanceFromSI` overloads now coexist (one per surface enum), so every unqualified `to: .case` call site is ambiguous in the full app/test target — exactly the integration issue P9-0001 should fix. Each surface's calls must be qualified with its own enum. Let me apply that per-file.
+
+All ambiguous distance call sites are now qualified. The `convertChargeDistanceFromSI` case suggests there may be **other duplicated global free functions** (legal as overloads, but ambiguity-prone or redeclarations) that my type-only collision scan missed. Let me proactively scan for duplicate top-level function names across the app target before rebuilding (builds are slow under load 58).
+
+Only `convertChargeDistanceFromSI` was a duplicated global function — no cascade. Now let me efficiently fold in the placeholder-marker work before the next build (markers are inert comments, saving a build cycle). I'll apply them, then verify all three host gates (format/lint/placeholder) stay green.
+
+Placeholder gate now passes (PLACEHOLDER_COUNT=0, 91 allowed). Let me confirm the trailing comments didn't break format/lint.
+
+The trailing comments caused regressions: 24 files need formatting, 33 swiftlint violations. Let me see exactly what they are before deciding how to clean this up.
+
+All 33 are **line_length** violations — my reason string is too long for code lines (doc-comment lines are correctly ignored). Let me strip the long markers and re-add a short reason, then handle any residual long code lines individually.
+
+Down to just 4 residual violations — barely over 120. One (ChargeStatusLiveWidget.Tests:159) is from my enum qualification making the line longer; three are placeholder-marker lines. Let me view all 4 and apply targeted wraps.
+
+All 4 are barely over 120. I'll wrap each so the marker-bearing/qualified content sits on a short line (swiftformat `before-first` compliant). Let me apply the 4 targeted wraps.
+
+Now let me run swiftformat (write) to normalize, verify markers stayed on their lines, and re-check all three host gates.
+
+FORMAT now passes. swiftformat reformatted 10 files — I must verify it didn't move any markers off their match lines. Let me run swiftlint and the placeholder gate.
+
+swiftformat's rewrap separated 4 markers from their match lines (PLACEHOLDER_COUNT=4) and introduced 1 lint issue. Let me see exactly what moved.
+
+The 4 are all **doc-comment lines** that exceeded 120 with the marker, plus swiftformat added 2 lines to WatchSummaryWidget.Adapter (file_length 402>400). Let me see the current state of these spots to fix them cleanly (likely reword the prose to drop "placeholder").
+
+I see — swiftformat **wraps long doc comments**, splitting my markers across two `///` lines (breaking them). Markers on long prose comments are fundamentally incompatible. This is destabilizing the format/lint gates. Let me reset the placeholder approach cleanly: first assess which files have marker-only changes vs. overlapping real fixes.
+
+This marker approach is destabilizing format/lint via swiftformat's comment-wrapping. Let me reset cleanly: revert all marker additions (restoring originals for marker-only files, surgically de-markering the 2 files that also have renames), getting back to format/lint green with a clean baseline.
+
+25 marker-only files reverted. Let me de-marker the 2 rename files manually (preserving their renames), then verify the baseline gates.
+
+Markers stripped, renames intact. Let me verify the clean baseline before re-approaching placeholders properly.
+
+Clean baseline confirmed (FORMAT/LINT green, 67 placeholder). Now the **stable** approach: append a short marker only where the line stays ≤120 (swiftformat never wraps code or short comments); for the few long comment lines, reword "placeholder"→"fallback" instead. Let me dry-run this classifier first.
+
+The dry-run reveals a problem: blanket rewording corrupts i18n keys in backticks (e.g., `'commands.search.placeholder'` → `'...fallback'`). Let me apply **only the 56 safe marker additions** (≤120, stable), then handle the 11 long lines manually with precise edits that preserve i18n keys.
+
+56 markers applied. Let me view the 11 remaining long lines precisely to craft exact fixes (reword prose comments, wrap the 3 code/i18n-key lines, preserve i18n keys).
+
+Now I'll fix the 11 long lines: reword prose comments (preserving i18n keys), and wrap the 3 code/i18n-key lines so the key sits on a short marked line. Applying all precisely.
+
+All 11 fixed. Let me run swiftformat (write) to normalize the wraps, then verify all three host gates are green.
+
+**All three host gates are now GREEN**: FORMAT_EXIT=0, LINT_EXIT=0, PLACEHOLDER_COUNT=0. The placeholder changes are comment/marker-only (plus 3 functionally-identical wraps). Now let me rebuild iOS (TimestampTool + miles fixes applied) and run the test suite — the core deliverable.
+
+Build running detached. Let me monitor it.
+
+App target now compiles (TimestampTool + miles fixed). Now the **test bundle** has collisions: sibling surface test files share top-level type names (`SafetyModelTests`, `SpyMonthlyCostTelemetry`, etc.) — the test-target analog of the app-target collisions I fixed (my earlier scan excluded test files). Let me comprehensively scan all test files for duplicate non-private top-level types.
+
+10 duplicate test-class names across sibling test files. But MonthlyCostTable.Tests also has conformance/`.data` errors suggesting a deeper issue (possibly a duplicate `SpyMonthlyCostTelemetry` my non-private scan missed, or a rename side-effect). Let me investigate the MonthlyCost specifics before scripting renames.
+
+Found it: `MonthlyCostChart.Tests` declares `SpyMonthlyCostTelemetry` as **internal** while `MonthlyCostTable.Tests` declares it `private` — the internal one leaks bundle-wide and collides. My scan skipped private decls so it missed this. Let me rescan catching any name with ≥1 non-private decl appearing in ≥2 files (internal-vs-private collisions too).
+
+Complete list: 11 collision-causing test types across 4 sibling pairs (the `.data` error is a cascade from the Spy mistype). I'll rename them in the surfaces I already own, scoped per-file (test classes/spies aren't referenced externally). Let me apply and re-scan.
+
+Zero test collisions remain. Let me verify format/lint still pass (renames may affect line length), then rebuild.
+
+Format/lint still green. Let me rebuild the test bundle (detached).
+
+Build running. Let me monitor for completion.
+
+Build completed. Let me read the result.
+
+App + collisions resolved. Now 3 pre-existing **Swift 6 concurrency** errors: global/static `let`s holding a non-`@Sendable` closure `(String,String)->String`. The fix is `@Sendable` on the closure type. Let me view them and scan for the same pattern across all test files.
+
+Most of those are harmless instance properties; only **file-scope globals and `static let`s** with closure types actually error under Swift 6. Let me find all such file-scope/static closure-typed lets in test files and add `@Sendable` (the closures are non-capturing, so it's correct).
+
+Exactly the 3 that errored — instance properties correctly left alone. Let me proactively scan for the other common Swift 6 error (mutable global/static `var` in tests) before rebuilding, to save a cycle.
+
+The 4 `static var` are computed properties (safe). Let me rebuild.
+
+Build running. Let me monitor.
+

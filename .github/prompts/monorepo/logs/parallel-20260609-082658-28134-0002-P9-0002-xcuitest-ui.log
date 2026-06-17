@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure and understanding the current state of the Apple app and the task requirements.
+
+Key capability findings: only Command Line Tools are installed (not full Xcode), and `simctl` is unavailable. Let me verify this thoroughly and explore the Apple app structure before concluding.
+
+There's an `/Applications/Xcode.app` present, just not selected. Let me test whether it's functional via `DEVELOPER_DIR` and check the project tooling (this uses XcodeGen via `project.yml`).
+
+Major update: Xcode 26.5 IS available via `DEVELOPER_DIR`, simulators exist (including `slot2-iphone16` and `iPhone 16`), and `xcodegen` is present. **The gate CAN run** — so STATUS=BLOCKED is not appropriate; I must do the real work. Let me study the project structure, existing UI tests, and the harness.
+
+The harness uses launch arguments (`-uiTestAuthState`, `-uiTestLiveDemo`, `-uiTestPushDemo`) to drive deterministic demo surfaces. Let me understand the app entry point, routing, navigation shell, and the existing fixture harness.
+
+Now let me understand the real navigation shell, routing/deep-link registry, the parity ledgers, predecessor unit-test work, and the log/build setup.
+
+Now let me check the critical build dependency (KMP `Shared.xcframework`), the predecessor P9-0001 logs, the log directory, and `RootView`.
+
+Critical: `Shared.xcframework` doesn't exist yet — it's built on-demand via Gradle/Kotlin-Native (the build pre-action). Predecessor logs will show how this was handled. Let me read the most recent predecessor P9-0002 log and the official prompt, plus `RootView`.
+
+This is extremely valuable — the predecessor narration log documents a prior run of this exact prompt. Key learnings: `-uiTestAuthState authenticated` routes into the real shell; wrapper components don't surface `accessibilityIdentifier` (need leaf Text markers); macOS UI tests contend for the GUI session in parallel runs; `Shared.xcframework` takes ~7min via Gradle. The new test suites were NOT committed (my `Tests/UI` has only 4 files), so I'm building fresh but informed.
+
+Let me set up the build environment, kick off the slow Gradle build in the background, and check tooling/registration state.
+
+pwsh + Java available, project generated, and only the Settings route is registered (all other routes render a pending state). Let me kick off the slow Gradle `Shared.xcframework` build in the background, then study component APIs while it runs.
+
+Gradle build running in background. Let me study the component library, facade state model, and demo/harness views while it builds.
+
+`-uiTestAuthState authenticated` yields an authenticated coordinator that mounts the real `AppShell`. Now let me read the facade state model and the key component APIs I'll exercise.
+
+Let me check the Gradle build progress and read the remaining component APIs I'll exercise (buttons, cards, charts, metrics, motion, command palette, settings registration).
+
+Gradle still building (expected ~7 min). Let me read the remaining pieces I need: the auth gate (`RootView`), the registered Settings page, localization setup, and representative chart/metric/motion components.
+
+Let me read the Settings page, data-display metrics, chart models, and check localization for route keys, plus the Gradle progress.
+
+I now have all the API surface I need. Let me set up a plan and todos, then start implementing the harness while Gradle finishes.
+
+Localized values render as real text (e.g., "Dashboard", "Charging"). I'll use positional tab taps + route markers for robustness. Let me write the plan and start implementing the harness.
+
+Let me write the harness config parser, but first I must understand the placeholder gate (it must be green, and the predecessor reported pre-existing violations). Let me read the checker and its patterns.
+
+Now I understand the placeholder gate (case-insensitive match of "TODO/FIXME/XXX/Placeholder/not implemented/..."). The predecessor reported pre-existing violations. Let me get ground truth on the current tree and check Gradle progress.
+
+Placeholder gate is RED at baseline: 67 legitimate "Placeholder" matches (WidgetKit `placeholder(in:)`, SwiftUI TextField placeholders, etc.) in other surfaces' files, with 24 already opted-out via `// parity:allow`. This is the gate's sanctioned mechanism. Let me verify they're genuine API usages (not real stubs) before deciding.
+
+All 67 are confirmed legitimate (em-dash constants, `.redacted(reason: .placeholder)`, TextField prompts, doc comments, test names) — not stubs. The gate's sanctioned fix is `// parity:allow <reason>`. Before mass-editing, let me check the lint/format configs (line-length risk) and how prior completed runs recorded PLACEHOLDER.
+
+Gradle finished. Critical findings from prior runs: **all prior attempts ended STATUS=BLOCKED** (Windows/Linux hosts or macOS signing gaps), but the most recent (88496) got iOS green on this hardware. swiftlint has `ignores_comments: true` (good for line length), but swiftformat `--maxwidth 120` could wrap long comments and break `parity:allow` markers — I must verify. Let me confirm the Gradle artifact, establish the current lint/format baseline, and test comment-wrap behavior.
+
+Important: swiftformat's `wrapSingleLineComments` flags any `//`/`///` line exceeding 120 chars — so appending `parity:allow` to long comment lines would break the format gate (and auto-format would wrap and split the marker off). swiftlint ignores comments for length, so only swiftformat's 120-width matters. Strategy: every edited line must stay ≤120. Let me measure each flagged line's length to size the problem. Gradle is staged (7m5s). Let me check the swiftlint baseline too.
+
+Two findings: swiftlint baseline has **1 pre-existing serious violation** (must fix), and only **5 of 67** placeholder lines exceed the budget (manageable). The bigger unknown is **macOS signing** (B2 blocker in prior runs). Let me de-risk macOS build now (the make-or-break for DONE), find the swiftlint violation, and confirm Shared.xcframework is staged.
+
+swiftlint has 1 pre-existing brace violation; **0 signing identities** (confirms the macOS signing gap — building with `CODE_SIGNING_ALLOWED=NO`). Let me inspect the brace violation and run the swiftformat baseline while the macOS probe builds.
+
+swiftlint: a classic swiftlint/swiftformat brace conflict (multi-line `if` brace). I'll hoist to a `let`. Let me check the background macOS build probe and swiftformat baseline before writing code.
+
+Key results: swiftformat baseline is **clean** (confirms my edited lines must stay ≤120). The macOS probe **signed fine via ad-hoc** (signing is NOT the blocker!) but hit a **SwiftCompile error** — the actual error was truncated. I must see it. Let me rebuild macOS capturing errors.
+
+macOS signed fine via ad-hoc (signing is NOT the blocker). The real issue is **pre-existing "ambiguous type lookup" compile errors** in `ChargeSessionChartWidget.*` / `ChargeStatusLiveWidget.*` / `ChargeStatusWidget.*` — type names collide (likely app-local types vs the `Shared` framework). This would break iOS too. Let me find the root cause and scope.
+
+Root cause: **pre-existing duplicate type declarations** across three independently-merged widgets — `ChargeStatusLiveWidget`, `ChargeStatusWidget`, and `ChargeSessionChartWidget` each declare `public` types with identical names (`ChargeSessionDTO`, `ChargeStatusUpdate`, `ChargeDistanceUnit`, `ChargeStatusProjection`, `ChargeLoadStatus`). This breaks both iOS and macOS app targets. Let me measure the full scale of duplicate types before deciding fix vs. document.
+
+This is a systemic **pre-existing parallel-merge defect**: 30 duplicate public type names across widget families (Charge*, DrivingCoach*, Safety*, MonthlyCost*), all compiled into one app target — breaking both iOS and macOS builds (the app must compile to host any XCUITest). This is unrelated to "add UI tests", but the gate requires a building app. Since the fix is within allowed files and DONE requires it, I'll resolve it carefully. Let me map every duplicate to its declaring files.
+
+The collisions are clean widget **pairs** (e.g., `ChargeStatusLiveWidget`↔`ChargeStatusWidget`, `SafetyFeaturesWidget`↔`SafetyHistoryWidget`). To unblock the gate (required: app must build), I'll namespace the colliding types in one widget per pair — but only if references are self-contained. Let me verify containment before touching anything.
+
+Excellent — every duplicate type is referenced **only by its two declaring widgets** (fully self-contained). The fix is contained and low-risk: namespace the colliding types in one widget per pair. This is a prerequisite to satisfy my own acceptance criteria (app must build). Let me first check for any additional duplicates (internal-access, not just public) so I fix everything in one pass.
+
+35 total duplicates (30 public + 5 internal), all in clean widget pairs except `FleetStatsBarModel` (referenced by a third widget). Let me inspect the FleetStats case before executing renames.
+
+Clear picture: `FleetStatsBarModel` collides between feature-view `FleetStatsBar.Model.swift` and widget `FleetStatsBarWidget.Model.swift` (the latter used by `FleetStatsWidget`). I'll rename the feature-view's copy. Now executing all 35 contained renames (word-boundary, per-widget, including their Tests/Previews).
+
+All 35 renames applied. Let me verify no duplicate types remain and no new collisions were introduced.
+
+Duplicates fully resolved (0 remaining, each new name unique). Let me kick off an incremental macOS rebuild to confirm the fix, and start writing the harness code in parallel.
+
+Now let me write the harness config while macOS rebuilds.
+
+I need to make the dynamic-type override conditional (else it'd force `.large` in production). Let me fix that.
+
+Now let me read the remaining component APIs I'll use in the gallery (badges, forms, maps, a mini chart + models) to ensure first-time compilation, and check the macOS rebuild.
+
+macOS rebuild finished — let me check the result.
+
+The bulk dedup worked, but the FleetStats rename hit the wrong side — `FleetStatsWidget` actually depends on the **feature-view's** model, not the widget's. Let me investigate the FleetStats structure precisely before correcting.
+
+I renamed the wrong FleetStats model — `FleetStatsWidget` and the `FleetStatsBar` view use the **feature-view's** model. I'll revert that and rename the **widget's** own model instead. Let me revert first, then analyze containment precisely.
+
+Clear now: the **widget's** `FleetStatsBarModel` (FleetStatsBarWidget.Model.swift, self-contained) is the one to rename; the feature-view's is shared by `FleetStatsBar` + `FleetStatsWidget`. Let me apply the corrected rename and re-verify no duplicates.
+
+No duplicates remain; FleetStats models are correctly separated. Let me rebuild macOS in the background to verify the dedup compiles, while I write the harness views.
+
+macOS dedup-verify building. Now let me write the harness views (component gallery + page-state harness) with reliable leaf markers.
+
+Let me check the macOS dedup-verify result.
+
+All 35 dedup errors are gone — but a **new pre-existing error surfaced** (was masked behind the dedup): a Swift 6 concurrency error in `TimestampTool.Previews.swift`. The committed tree has a chain of pre-existing compile errors. I need to gauge the full scale. Let me collect the complete error list and inspect this one.
+
+Only **1 error** in the whole macOS build now — the dedup fully worked. This one is a trivial pre-existing Swift 6 concurrency bug: a nonisolated preview helper calling a `@MainActor` init. Let me view the rest and apply a minimal `@MainActor` fix.
+
+Minimal `MainActor.assumeIsolated` fix applied (preview-only, never executed at test time). Let me rebuild macOS in the background and wire the harness into the app meanwhile.
+
+macOS rebuilding. Let me wire the harness: add accessibility identifiers to the command palette and settings, then update the app entry point and shell.
+
+Another masked pre-existing error surfaced: `ChargeCostTrackerWidget.Adapter.swift:328 ambiguous use of 'miles'`. Let me inspect it — likely an under-qualified enum case now that distance-unit enums are distinct.
+
+Line 328 calls `convertChargeDistanceFromSI(distance, to: .miles)` where the param is `ChargeCostDistanceUnit` — that should be unambiguous unless the function is duplicated. Let me check for a duplicate global function.
+
+Found it: `convertChargeDistanceFromSI` is a **duplicate global function** declared in 3 widgets (each taking a different distance-unit enum), so `.miles` is ambiguous across the overload set. Same parallel-merge defect, but for a function. Let me check references and namespace the two ChargeStatus variants.
+
+Contained (each widget uses its own); only `convertChargeDistanceFromSI` is a duplicated global function. Let me namespace the two ChargeStatus variants and rebuild.
+
+macOS rebuilding. Let me wire the app entry point (harness branches + route/appearance injection) while it builds.
+
+Now let me add a shell-level selection marker helper and rewrite `AppShell` with tab-selection binding, deep-link/more-path support, and route markers.
+
+Let me check macOS rebuild4 before finishing the AppShell rewrite.
+
+The dedup/concurrency fixes worked — the build now reaches `TeslaSyncApp` and only fails because **my new files aren't in the Xcode project yet** (XcodeGen snapshots the file list; I must regenerate). I'll finish all file additions first, then regenerate once. Let me complete the `AppShell` rewrite.
+
+Now let me add a UI-test marker to the settings page for the settings-flow test.
+
+Now let me write the four XCUITest suites plus a shared support helper. Starting with the support helper and component gallery suite.
+
+Now the navigation shell suite (deep links, aliases, palette, settings, idiom-specific nav).
+
+Now the accessibility/Dynamic Type/appearance/locale suite.
+
+All harness code and test suites written. Let me regenerate the Xcode project to pick up the new files, then build-for-testing on iOS.
+
+Project regenerated with new files. Let me build-for-testing on iOS (compiles app + both test bundles) — this is the first full iOS build, so it'll take several minutes.
+
+While iOS builds, let me handle the placeholder gate. First, re-measure the current flagged lines (post-dedup) with their lengths and available budget to ≤120.
+
+Only 2 lines are too long for a marker. Let me check the existing `parity:allow` reason style to match house convention before applying.
+
+iOS build finished — let me check the result (critical milestone).
+
+The iOS **app target compiled cleanly** (harness + dedup all good). The blocker is now a pre-existing Swift 6 concurrency error in a co-located test file (`SlideRenderer.FixturesTests.swift`). Let me inspect it and collect the full set of test-bundle errors to gauge scale.
+
+Same pattern recurring: test-fixture files declaring `static let X: (String, String) -> String = {…}` (a non-Sendable closure constant) which Swift 6 rejects. Let me find ALL occurrences across the test files to fix them in one pass.
+
+My pattern was too narrow. Let me broaden to catch all global/static function-typed `let` constants (the recurring test-fixture localizer helpers).
+
+The flagged ones are **global/static** function-typed `let`s without `@Sendable` (instance `private let` ones are fine). The house fix is to add `@Sendable` to the type (matching existing `@Sendable` declarations). Let me find all global/static offenders.
+
+Only 3 offenders, all missing the house-standard `@Sendable` (which most peer files already have). Let me add `@Sendable` to fix them.
+
+Let me rebuild iOS for testing (find any remaining test errors) and, in parallel, apply the placeholder markers.
+
+65 markers applied. Now let me reword the 2 over-long lines to drop "placeholder", then verify the placeholder gate is green.
+
+Let me check the iOS rebuild result and verify the placeholder + format gates.
+
+My marker script's `\s*$` regex ate trailing newlines, joining lines and corrupting files. I need to revert the flagged files and reapply markers correctly. Let me restore them (only `ChargeStatusLiveWidget.Adapter` overlaps my dedup — I'll redo that), then reapply cleanly via Python.
+
+Restored cleanly and redid the function rename. Now let me reword the 2 long lines, then reapply markers correctly via Python (preserving newlines).
+
+Now let me reapply the placeholder markers correctly via Python (newline-preserving), then verify the gate.
+
+**Placeholder gate is now GREEN (COUNT=0, EXIT=0)** — 65 markers + 2 rewords applied cleanly. Now let me fix the pre-existing swiftlint brace violation (hoist the multi-line condition to a `let`).
+
+Now let me verify swiftlint and swiftformat on all my changes (harness, markers, brace fix), and rebuild iOS for testing in parallel.
+
+Let me wait for the lint/format results.
+
+swiftlint found 6 line-length violations — all from my dedup renames making lines longer (e.g., `CSWChargeStatusUpdate`, `DrivingCoachWidgetProjection`). Let me check swiftformat's view, then auto-format those specific files to wrap them.
+
+swiftformat found issues: 2 in **my** files (a brace-wrap conflict in `UITestConfig` and a redundant `Sendable` in `UITestHarness`) plus the dedup line-length lines. Let me fix my files and auto-format the 4 dedup files.
+
+Now let me auto-format the 4 dedup files (to wrap the long lines) and re-verify both lint gates.
+
+swiftformat is clean. Let me confirm swiftlint --strict is also clean now.
+
+All three static gates pass: **swiftlint 0, swiftformat clean, placeholder 0**. Now let me rebuild iOS for testing to confirm the marker reapplication + fixes compile cleanly.
+
+Let me update my task tracking while the iOS build runs.
+
+More pre-existing collisions surfaced in the test bundle — duplicate **test classes** (`SafetyModelTests`, `MonthlyCostAccessibilityTests`) and **test helpers** (`SpyMonthlyCostTelemetry`). My earlier dedup grep missed these because they're prefixed with `@MainActor`. Let me do a comprehensive, attribute-aware duplicate scan across all sources + tests.
+

@@ -1,0 +1,157 @@
+I'll start by understanding the task: create a native Apple SwiftUI version of `SignalCatalogPanel`. First, let me check the environment capability and the web source.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the existing Apple app structure to understand patterns, state holders, tokens, i18n, and diagnostics.
+
+The project structure is clear. The `feature-views` directory has many entries already. Let me find similar existing feature-views (especially telemetry/signal ones) to mirror the exact conventions, plus the shared facade state holders.
+
+`LiveSignalsTable` is the closest analog (signals + staleness + table). I'll study it as my template, plus the shared facade core. Let me read all relevant files in parallel.
+
+Excellent template. Let me read the remaining `LiveSignalsTable` files (Table, Localization, strings, Previews, Tests) and the shared facade core (LoadableState, StateHolderModel, LiveConnection).
+
+Let me read the Tests file, the shared facade core, and locate the design tokens.
+
+Now let me locate the design tokens and understand the web `useSignalGaps` hook + `SignalRow` type that the panel binds to.
+
+Let me read the design tokens, the `useSignalGaps` hook detail, and the `SignalRow` type.
+
+I have the full picture of conventions. Now let me check the build tooling and how other surfaces verified (xcodegen, prebuilt Shared.xcframework, pwsh, host harness, existing logs).
+
+Let me examine the existing LiveSignalsTable gate log (closest analog) to learn the actual verification method, plus the placeholder checker.
+
+This confirms the established disposition: full `xcodebuild` is **deferred** (Shared.xcframework unstaged—needs Kotlin/Native toolchain; no codesign identities; ADR-012). Verification is via host `swiftc -typecheck` + executed harness + lint/format/placeholder. Let me read the rest of the log and the pending-verifications doc.
+
+Now I fully understand the established disposition (host `swiftc -typecheck` for iOS+macOS, executed adapter harness, lint/format/placeholder; Xcode app build/test deferred per ADR-012). Let me port the exact web helpers (`fmtInt`, `formatDateTime`) and check for in-module type-name collisions.
+
+Key finding: a `SignalCatalogWidget` already declares many `SignalCatalog*` types in the same module. I must prefix all my types with **`SignalCatalogPanel`** to avoid collisions. Let me confirm that prefix is free and port `fmtNumber`.
+
+`SignalCatalogPanel` prefix is free. `fmtInt` = locale integer formatting. Let me check the swiftlint/swiftformat configs to follow house rules (file length, line length), then look at one richer multi-view example (`SignalChartPanel.Views.swift`) for sub-view conventions.
+
+I have everything I need. Let me set up tracking and write a brief plan, then build the 11-file surface. Let me record the design facts.
+
+Now I'll create the surface files. Starting with the Foundation value types.
+
+Now the pure adapter (the most parity-critical file).
+
+Let me check the placeholder checker's opt-out mechanism so I annotate the `filterPlaceholder` web-key correctly.
+
+`.strings` files aren't scanned; only `.swift`. So just the `"signalGap.filterPlaceholder"` literal in Swift needs a `// parity:allow` opt-out. Now the localization facade + accessibility helpers.
+
+Now the state-holder seam + `@Observable` model.
+
+Let me typecheck the three Foundation-only files early to catch adapter bugs before building the SwiftUI layer.
+
+The pure layer compiles. Now the main SwiftUI surface with all state branches.
+
+Now the summary StatCards.
+
+Now the search + filter/sort bar.
+
+Now the table file (adaptive grid/cards + status badge + banner + selection toggle).
+
+Let me typecheck the full SwiftUI surface (all non-test files + real tokens) on macOS before writing previews/tests.
+
+Clean on macOS. Now the iOS-simulator target.
+
+Both targets clean. Let me update tracking and write the previews, tests, and strings files.
+
+Now the comprehensive test suite.
+
+Now the i18n catalog contribution.
+
+All 11 files created. Now the verification gauntlet. First, full typecheck including DEBUG previews on both SDKs.
+
+Both clean including previews. Now the coexistence check — proving no in-module redeclaration against the same-stem sibling `SignalCatalogWidget.*` and `LiveSignalsTable.*`. Let me inspect their imports first.
+
+`SignalCatalogWidget.Models` is Foundation-only and shares no symbol with my `SignalCatalogPanel*` types. Now the coexistence compile — full surface + the two same-domain sibling type decls, proving no in-module redeclaration.
+
+Coexistence proven — no redeclaration. Now the executed adapter harness (actually runs the pure logic against expected web values).
+
+Swift 6 makes top-level code `@MainActor`; the helper funcs need it too. Let me fix and rerun.
+
+Top-level vars can't carry an actor. The harness is a throwaway proof driver — I'll build it with `-strict-concurrency=minimal` (the shipped files already passed `=complete` in steps 1–3). Reverting helpers to plain.
+
+Swift 6 top-level actor isolation is fighting the test driver. The 3 shipped files already proved Swift-6 strict=complete in steps 1–3; I'll build the *driver* in Swift 5 mode (clean, legitimate for a proof binary).
+
+Harness: **55/55 passed**. Now swiftlint --strict and swiftformat --lint on my files.
+
+swiftformat config and swiftlint both forbid trailing commas (and want ≤120 cols). Let me auto-format my files, then split the over-length test file.
+
+Tests grew to 448 lines after wrapping — over the 400 limit. Let me view it and split into two `*Tests.swift` files.
+
+I'll split the tests cleanly. Let me view the Format+Builder sections (post-format) to reconstruct accurately.
+
+I have exact content. Let me split precisely with Python (reliable, no transcription risk): keep Format+Builder+Accessibility in `Tests.swift`, move the Model class + Spy into a new `ModelTests.swift`.
+
+Both files now under 400 lines. Let me re-run swiftformat --lint and swiftlint --strict on all files.
+
+swiftformat: **0/11 require formatting**; swiftlint --strict: **0 violations in 11 files**. Now re-verify typecheck + harness still pass after formatting.
+
+All typechecks green post-format. Now the placeholder gate + i18n parity. First, scan my code for forbidden substrings, then run the placeholder script on an isolated copy.
+
+The placeholder scanner matches per-line, so the `// parity:allow` must be on the *same* line as the match. Let me fix: the body line needs the inline marker, and reword the Filters doc comment. Let me view both spots.
+
+Let me fix both: move the opt-out onto the matching line, and reword the Filters doc comment to drop the word.
+
+Now re-verify format/lint and run the placeholder scanner on an isolated copy of my files.
+
+The placeholder script exited 64 with filtered output hiding the reason. Let me run it unfiltered and inspect its parameters.
+
+Exit 64 suggests a runtime error. Let me run the scanner directly with full output.
+
+Placeholder gate clean: **PLACEHOLDER_COUNT=0, ALLOWED=1, EXIT=0** (the earlier 64 was a shell pipeline quirk). Now i18n parity: cross-check every key referenced in code against the `.strings` catalog.
+
+**i18n parity perfect**: 38/38 keys matched, 0 dead, 0 missing, all 23 web-source keys present. Now let me gather the deferral evidence (Shared.xcframework, signing) and confirm `xcodegen` enumerates my files via the existing globs.
+
+xcodegen enumerates all my files via existing globs (no self-registration needed). Deferral evidence confirmed: `Frameworks/` holds only `.gitkeep`, **0 valid signing identities**. Let me verify git status and clean up the transient generated project.
+
+Clean — exactly my 12 files, no stray changes. Let me capture final line counts for the log.
+
+All files ≤318 lines (well under the 400 limit); max line width 120. Now let me write the gate log.
+
+Now append the macos-pending row, following the established format.
+
+Let me run the complete gate suite once more in a single pass to confirm every number in the log is real and current after the final edits.
+
+Now the final harness re-run plus lint/format/placeholder/i18n confirmation in one pass.
+
+Harness 13/13, swiftlint 0, swiftformat 0. The placeholder line didn't capture cleanly in that combined run — let me confirm it standalone.
+
+All gates green. Let me commit the surface, log, and the macos-pending row.
+
+All 14 files staged (12 surface + log + pending row). Now commit.
+
+Commit succeeded. Let me verify it landed cleanly (pre-commit hooks, final tree state).
+
+Commit `0a5d556b` landed cleanly, working tree clean, pre-commit hooks passed. Let me finalize tracking and confirm the log ends per the covenant.
+
+All todos done, no open items, and the log terminates with `EXIT=0` / `STATUS=DONE` per the Honesty Covenant.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0264-SignalCatalogPanel.log | 192 +++++++++++++
+ .../feature-views/SignalCatalogPanel.Adapter.swift | 275 ++++++++++++++++++
+ .../feature-views/SignalCatalogPanel.Filters.swift | 151 ++++++++++
+ .../SignalCatalogPanel.Localization.swift          | 273 ++++++++++++++++++
+ .../feature-views/SignalCatalogPanel.Model.swift   | 298 +++++++++++++++++++
+ .../SignalCatalogPanel.ModelTests.swift            | 178 ++++++++++++
+ .../feature-views/SignalCatalogPanel.Models.swift  | 196 +++++++++++++
+ .../SignalCatalogPanel.Previews.swift              | 117 ++++++++
+ .../feature-views/SignalCatalogPanel.Summary.swift | 131 +++++++++
+ .../feature-views/SignalCatalogPanel.Table.swift   | 318 +++++++++++++++++++++
+ .../feature-views/SignalCatalogPanel.Tests.swift   | 294 +++++++++++++++++++
+ .../feature-views/SignalCatalogPanel.strings       |  69 +++++
+ .../feature-views/SignalCatalogPanel.swift         | 266 +++++++++++++++++
+ apps/macos-pending-verifications.md                |   2 +
+ 14 files changed, 2760 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0264-SignalCatalogPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.Filters.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.Localization.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.Summary.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.Table.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalCatalogPanel.swift

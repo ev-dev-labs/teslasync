@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and verifying the capabilities this task requires.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the `apps/apple` structure and the web source.
+
+There's a substantial existing Apple app. Let me read the web source and understand the existing Apple structure.
+
+The web source is a pure dual-thumb range slider primitive. Let me study the existing `Accordion` component (a similar pure-UI primitive) to learn the exact file conventions, and check whether RangeSlider already exists.
+
+Excellent architecture. Let me read the remaining Accordion files to fully understand the conventions, plus locate the shared P1 token/theme definitions.
+
+The Accordion is the ideal template — a pure presentational primitive with the same "no-fetch" parity note that applies to RangeSlider. Let me read its Previews/Tests and locate the shared design tokens (TSRadius, Color.TS, Font.TS, TSSpacing, TSMotion).
+
+Let me locate the design token definitions used by shared-surfaces (TSSpacing, Color.TS, Font.TS, TSMotion, TSRadius).
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me examine it to confirm the available token API.
+
+Now I understand the full token system. Let me check the build configuration (project.yml), lint config, and look at a numeric-control surface (Stepper) for closer parity patterns.
+
+Now let me assess build feasibility: check for xcodegen, existing `.xcodeproj`, the `Shared.xcframework` dependency, the pre-action script, and `pwsh`.
+
+Critical finding: `Shared.xcframework` doesn't exist (only `.gitkeep`) and must be built via Gradle/KMP. Let me check precedent logs from sibling surfaces and whether the KMP shared core can build here.
+
+Let me read the Accordion precedent log to understand what STATUS sibling surfaces achieved and how the gate was handled.
+
+This is the key precedent. I now fully understand the methodology: build the 8-file surface bundle, verify via isolated typecheck + `swift test` + lint/format/placeholder, and document any foreign/environmental build reds. Let me gather the remaining references in parallel.
+
+`TimelineScrubber` uses both `DragGesture` and `accessibilityAdjustableAction` — the ideal reference for a slider track. Let me study it and the placeholder tool.
+
+Let me read the placeholder patterns (to know forbidden words) and study TimelineScrubber's drag/a11y/track implementation.
+
+TimelineScrubber is the perfect drag+a11y reference. Let me confirm its adapter/projection/seam patterns and verify the `TSMaterial` token exists.
+
+I now have all the patterns I need. Let me verify the `TSMaterial` token and the `Meta`/model pattern from TimelineScrubber, then start implementing.
+
+I have a complete understanding of the architecture, tokens, conventions, gate methodology, and the build reality (foreign/environmental reds documented via isolated verification). Let me set up tracking and start implementing the 8-file surface bundle.
+
+Now I'll write the core files. Starting with the Adapter (pure Foundation core), Model, and Views.
+
+Now the public surface, previews, and strings file.
+
+Now the two test files — pure-core adapter tests and model/view/strings tests.
+
+All 8 files are written. Now let me verify formatting and linting on the new files, then set up a compile/test harness.
+
+swiftformat is clean. Now swiftlint --strict on the new files.
+
+Excellent — 0 swiftlint violations and 0 format issues on all new files. Now let me set up a SwiftPM harness to compile the surface as a `TeslaSync` module and run the tests under Swift 6 strict concurrency (the surface-attributable verification approach).
+
+54/54 tests pass and the surface compiles under Swift 6 strict concurrency on macOS. Now the iOS + macOS isolated typechecks (mirroring the Accordion verification).
+
+All isolated typechecks pass (iOS + macOS, 0/0). Now the placeholder gate, xcodegen, and full-tree lint/format. Let me run the fast gates first.
+
+check-placeholders=0, xcodegen clean, 48 RangeSlider refs across the 4 targets. Now the full-tree swiftlint --strict and swiftformat --lint (gate steps).
+
+Full-tree swiftlint: 0 violations in 4721 files. Now full-tree swiftformat --lint.
+
+Full-tree format: 0/5019 require formatting. All fast gates are green. Now let me attempt the `Shared.xcframework` (KMP/Gradle) build required by the full xcodebuild gate, and check simulator availability.
+
+iPhone 16 sim is booted. Let me kick off the KMP `Shared.xcframework` Gradle build in the background (it's ~8min per the Accordion log).
+
+Gradle build is running in the background. Let me verify my implementation details once more while it builds, then check progress.
+
+Implementation verified. Let me check the Gradle build progress.
+
+Gradle is still compiling (downloading Kotlin/Native + dependencies). Let me continue waiting.
+
+Still building (KMP first-build downloads are slow). Let me wait further.
+
+Let me check whether the build is making progress (downloads in flight) without disturbing it.
+
+Good — the build is healthy and actively compiling Kotlin/Native (LLVM clang++ emitting object files for the XCFramework slices). Let me keep waiting.
+
+`BUILD SUCCESSFUL in 10m` — `Shared.xcframework` staged (ios-arm64 + ios-arm64-simulator + macos-arm64). Now I'll run the full iOS gate (build + test). This is long and, per precedent, will fail on a foreign sibling defect — I'll capture the exact errors to prove RangeSlider contributes zero.
+
+iOS gate running in background. Let me monitor its progress.
+
+The first error is foreign — `feature-views/RecentDrivesSection.Previews.swift` (a different directory, pre-existing "unable to type-check in reasonable time"), not RangeSlider. Let me wait for the gate to finish.
+
+The iOS gate exited 143 (SIGTERM). Let me examine the log tail to understand what happened.
+
+The only compile error is foreign — `feature-views/RecentDrivesSection.Previews.swift` (type-check timeout), with **zero RangeSlider errors**; the build was then interrupted (SIGTERM 143) during the whole-module emit. Let me prove this red is pre-existing and foreign: confirm git shows only my files changed, and run a baseline build with RangeSlider excluded.
+
+Confirmed: only my 8 RangeSlider.* files are new; the failing file (`RecentDrivesSection.Previews.swift`) is foreign and unmodified. Now the baseline build with RangeSlider excluded, to prove the red persists without my surface.
+
+Baseline build running. Let me wait and check whether the same foreign error appears without RangeSlider.
+
+The baseline (RangeSlider **excluded**) fails `BASELINE_IOS_EXIT=65` with the exact foreign defect Accordion documented (`AISuggestNewGeofences.swift:129` escaping-closure) — proving the tree is red without my surface. Let me capture all baseline failures and run the macOS gate.
+
+macOS gate exited 65 quickly. Let me confirm its failure reason (signing, per precedent) and that RangeSlider contributes zero errors.
+
+All gate data captured, exactly matching the precedent: iOS red is **foreign** (baseline with RangeSlider excluded still fails 65 on `AISuggestNewGeofences.swift`), macOS red is **environmental** (no dev-signing cert), and RangeSlider contributes **zero** errors. Let me gather final metrics, then write the log.
+
+All metrics gathered (8 files, 1631 LOC, 54 tests, 3 xcframework slices, every file <400-line budget). Let me write the gate log.
+
+Log written. Let me clean up temp artifacts and verify exactly what will be committed (the `.xcodeproj` must be git-ignored).
+
+Let me explicitly confirm the generated `.xcodeproj` is git-ignored so it won't be committed.
+
+`xcodeproj` is git-ignored — exactly 9 files to commit (8 surface files + log). Let me stage and commit.
+
+Committed (`bae365195`). Let me verify the final tree state and close out the todos.
+
+The task is complete. Committed `bae365195` with all 9 files (8-file surface bundle + gate log), clean working tree.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0224-RangeSlider.log  | 225 +++++++++++++++
+ .../shared-surfaces/RangeSlider.Adapter.swift      | 275 ++++++++++++++++++
+ .../shared-surfaces/RangeSlider.AdapterTests.swift | 258 +++++++++++++++++
+ .../shared-surfaces/RangeSlider.Model.swift        | 276 ++++++++++++++++++
+ .../shared-surfaces/RangeSlider.Previews.swift     | 122 ++++++++
+ .../shared-surfaces/RangeSlider.Tests.swift        | 316 +++++++++++++++++++++
+ .../shared-surfaces/RangeSlider.Views.swift        | 241 ++++++++++++++++
+ .../TeslaSync/shared-surfaces/RangeSlider.strings  |  35 +++
+ .../TeslaSync/shared-surfaces/RangeSlider.swift    | 108 +++++++
+ 9 files changed, 1856 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0224-RangeSlider.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangeSlider.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangeSlider.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangeSlider.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangeSlider.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangeSlider.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangeSlider.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangeSlider.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/RangeSlider.swift

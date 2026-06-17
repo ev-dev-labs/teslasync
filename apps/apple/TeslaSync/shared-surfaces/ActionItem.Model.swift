@@ -1,9 +1,9 @@
 //
-//  ActionItem.Model.swift
-//  TeslaSync — P4 shared surface · 0196 · ActionItem (Apple)
+//  ActionItemShared.Model.swift
+//  TeslaSync — P4 shared surface · 0196 · ActionItemShared (Apple)
 //
 //  The i18n facade (P1/S10), the telemetry seam (P1/S11), and the observable state-holder (P1/S8) for
-//  the single operator-task row. The web `<ActionItem>` is purely presentational: it takes its data as
+//  the single operator-task row. The web `<ActionItemShared>` is purely presentational: it takes its data as
 //  plain props and renders, with no fetcher — so the native peer needs no data state-holder. What the
 //  holder DOES own is the surface lifecycle: it carries the current ``ActionItemInput`` (the props),
 //  derives the pure ``ActionItemProjection`` as an observed read (SwiftUI observation replaces the React
@@ -26,16 +26,16 @@ import OSLog
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
 /// A `(key, fallback) -> String` resolver — the native shape of the web `t(key, default)`. The web
-/// `<ActionItem>` is anonymous (its copy is caller-supplied props), so the only strings this surface
+/// `<ActionItemShared>` is anonymous (its copy is caller-supplied props), so the only strings this surface
 /// owns are the native a11y additions resolved through ``ActionItemStrings``.
 public typealias ActionItemResolve = @Sendable (_ key: String, _ fallback: String) -> String
 
 /// Resolves the surface's strings by key with the English fallback, so the Swift sources hold no
-/// hardcoded prose. Keys live in the "ActionItem" table, folded into the app `Localizable.xcstrings`
+/// hardcoded prose. Keys live in the "ActionItemShared" table, folded into the app `Localizable.xcstrings`
 /// catalog at integration time; in test / preview bundles `NSLocalizedString` returns the `value:`
 /// fallback, keeping the derivation deterministic.
 public enum ActionItemStrings {
-    public static let table = "ActionItem"
+    public static let table = "ActionItemShared"
 
     public static let string: ActionItemResolve = { key, fallback in
         NSLocalizedString(key, tableName: table, bundle: .main, value: fallback, comment: "")

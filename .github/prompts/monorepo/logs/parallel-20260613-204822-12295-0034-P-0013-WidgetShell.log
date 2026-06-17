@@ -1,0 +1,235 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). Now let me explore the repo structure and the web source.
+
+An existing `widget-primitives` directory with many sibling primitives exists, but `WidgetShell` is not yet present. Let me read the web source and study existing primitive conventions in parallel.
+
+Now let me study the existing Swift conventions and supporting types. Let me read the web types, a representative existing primitive set, and the project structure.
+
+Let me read the freshness component (key to the states), the rest of the reference Swift set, and discover the Xcode project structure.
+
+The project uses XcodeGen. Let me read the project config, design tokens, and the web freshness component to fully understand the states.
+
+Let me examine the generated design tokens and find existing shared skeleton/error/freshness building blocks used by sibling primitives.
+
+Shared native components exist. Let me read the feedback states, skeletons, status indicators, overlays (tooltip), and the generated tokens to map web → native correctly.
+
+Excellent — shared native primitives (`TSSkeleton`, `TSQueryError`, `TSEmptyState`, `TSStatusDot`) exist. The web `DataFreshness` (4-state chip) has no exact native twin yet. Let me check for native HelpTooltip/PinButton, the full token set, and TSButton/TSTone/TSCard signatures.
+
+Let me read the native help tooltip, TSTone, typography helpers, and confirm the token surface.
+
+I now understand the design system and shared components. Let me write a plan, then check the build harness (xcodegen project, Shared.xcframework script, logs dir, sibling logs) — this is the critical path for the gate.
+
+The harness needs a KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me check whether a sibling primitive's log shows a real pass, and whether the framework/Gradle are available here.
+
+The sibling log reveals the sanctioned methodology: build the surface, pass swiftlint/swiftformat/placeholder gates, and prove the surface compiles + tests pass in isolation (full scheme is RED only due to pre-existing external siblings + signing). Let me read how they ran the isolated verification.
+
+I now fully understand the sanctioned P4 methodology. Let me verify the baseline (external sibling errors, placeholder checker, pwsh availability) and confirm `widget-primitives` is already wired in project.yml.
+
+`pwsh` and the placeholder checker are available, and `widget-primitives` is already wired in project.yml (6 refs) — so my footprint is just the `WidgetShell.*` files. Let me read the web `HelpTooltip` and `PinButton` to extract exact i18n keys/labels for faithful parity.
+
+I have the exact keys from the composed web components. Let me read the web `QueryError` to map the error branch faithfully, then write the plan and start implementing.
+
+I have everything needed. The sanctioned P4 methodology: build the surface fully, pass swiftlint/swiftformat/placeholder gates, prove it compiles + tests pass in isolation (full scheme RED is external-only), and log honestly. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the SwiftUI-free Model and the i18n strings table.
+
+Tokens confirmed. Now writing the Model and strings files.
+
+Model and strings done. Now the subviews (freshness chip, help, pin).
+
+Now the main generic surface file.
+
+Now the Previews and Tests files.
+
+All 6 files written. Now verification. Let me check the shared-component dependency closure (for an isolated build) and run focused lint/format on my files in parallel.
+
+swiftformat wants formatting fixes. Let me auto-format my files, then handle the force-unwrap-in-tests rule manually.
+
+Auto-formatted. Now re-lint to find remaining issues (the force-unwrap-in-tests rule needs a manual fix).
+
+swiftformat lint passes (0/5). Let me verify the exit code explicitly and check how the URL force-unwrap was handled.
+
+swiftformat auto-rewrote the force-unwrap to `XCTUnwrap(...)` but without `try`/`throws` — that would break compilation. Let me fix both Tests and Previews to use a safe URL constant (no force-unwrap, no XCTUnwrap).
+
+swiftformat's auto-rewrite is fragile. Let me replace it with a clean file-scope safe URL constant (no force-unwrap, no `throws`/`XCTUnwrap`) in both files.
+
+Now add the preview URL constant near the other Previews helpers.
+
+Now re-verify formatting and run swiftlint on my files.
+
+Format clean and no force-unwraps. Now swiftlint on my files.
+
+swiftlint passes (0 violations). Now I'll build an isolated SwiftPM package (real shared Components + Design + my surface + tests, excluding the broken external siblings) to prove compilation + tests under Swift 6 strict concurrency. First, check Components is self-contained.
+
+Components/Design are fully self-contained (system frameworks only). I'll build an isolated SwiftPM package with the real shared library + my surface + tests, excluding the broken external siblings. Setting it up now.
+
+Components depends on an external `\.tsUnits` environment key. Let me find where it's defined and include it (rather than trim).
+
+`tsUnits` is actually defined inside Components (`UnitFormatters.swift`). The error is at its definition/use. Let me inspect that file.
+
+My surface doesn't use the unit formatters. `UnitPreferences` (needed by `UnitFormatters.swift`) lives outside Components. Let me find it and decide: add it, or trim. Let me locate it.
+
+My surface doesn't need units. Let me identify exactly which Components files pull in the external `UnitPreferences` so I can exclude just those from the isolated package.
+
+Only `UnitFormatters.swift` couples to the external `UnitPreferences`, and nothing else in Components uses it. I'll exclude just that file from the isolated package and rebuild.
+
+Isolated package builds clean — my surface compiles against the real shared component library under Swift 6 strict concurrency. Now run the tests.
+
+All 42 isolated tests pass under Swift 6 strict concurrency, including the 8 per-state render tests. Now the remaining authoritative gates: placeholder check + whole-tree lint/format. Let me run the placeholder check and kick off the whole-tree lints.
+
+Placeholder gate passes (0). swiftlint running. Let me kick off the whole-tree swiftformat lint and start the Shared.xcframework Gradle build (needed for the real xcodebuild gate) in parallel.
+
+Three jobs running (swiftlint, swiftformat, Gradle shared framework). Let me check the swiftlint result first.
+
+swiftlint --strict (whole tree) = 0 violations. Let me check the whole-tree swiftformat result.
+
+swiftformat finished. Let me read its result.
+
+All in-scope gates GREEN: swiftlint=0, swiftformat=0 (5842 files), placeholder=0, isolated tests 42/42. The Gradle Shared.xcframework build (needed for real xcodebuild) is still running. Let me wait for it.
+
+Gradle/Kotlin-Native build still compiling (expected ~7-10 min). Continuing to wait.
+
+Shared.xcframework built (10m 8s) and staged. Now generate the Xcode project and run the real iOS xcodebuild gate.
+
+Project generated; WidgetShell is a member of all targets. Now the real iOS xcodebuild gate (the long pole).
+
+iOS build running (output to /tmp/ios-build.log). Let me wait and monitor progress.
+
+Build progressing (Swift module emission). No WidgetShell errors so far. Let me continue waiting for completion.
+
+Let me check the build log directly for completion and any errors in my files.
+
+Still compiling the app target (now on shared-surfaces) with no WidgetShell errors. Let me keep waiting.
+
+The real iOS build caught a genuine bug: `FreshnessStatus` and `FreshnessLabel` collide with existing module-level types. The isolated package missed this (those definitions live in app surfaces I excluded). Let me find ALL collisions for my public type names.
+
+Two collisions found (`FreshnessStatus`, `FreshnessLabel` from a sibling `FreshnessIndicator.*`). Let me wait for the full collision scan to finish.
+
+Only `FreshnessStatus` and `FreshnessLabel` collide (from sibling `FreshnessIndicator.*`). Let me confirm those are the only error sources in my files, then rename with word-boundary safety.
+
+`FreshnessDot` also collides. The sibling `FreshnessIndicator.*` clearly overlaps. Let me enumerate ALL types it declares to catch every collision preemptively.
+
+The sibling `FreshnessIndicator.*` declares overlapping `FreshnessStatus`/`FreshnessLabel`/`FreshnessDot`. I'll namespace all my generic freshness/time helper types with a `WidgetShell` prefix (word-boundary-safe).
+
+Renames clean (and `dataFreshnessLabel` preserved). Now re-format (longer names may exceed line width) and re-lint my files.
+
+swiftformat clean. Now swiftlint on my files, and re-verify the isolated package with the renamed types.
+
+Isolated tests still 42/42. But swiftlint flags `WidgetShell.Tests.swift` at 409 lines (limit 400) after wrapping. Let me trim the verbose header to get under the limit.
+
+Trimmed the header (~11 lines). Let me verify line count and re-run swiftlint on all my files.
+
+Tests at 399 lines, swiftlint clean. Let me re-sync the isolated test and re-run the real iOS xcodebuild (incremental) to confirm the collision is resolved in the full app.
+
+Isolated 42/42. Now re-run the real iOS xcodebuild to confirm my files compile in the full app target after the rename.
+
+iOS build relaunched. Let me wait and monitor for my-file errors and the final result.
+
+My files now compile with 0 errors, but the build/test still fails (IOS_EXIT=65). Let me find the actual root cause(s) — they should be external.
+
+The failure is NOT a compile error (0 WidgetShell errors, 0 source errors) — it's "build.db is locked: two concurrent builds." My first iOS build's process was still holding the DerivedData lock. Let me find and clear lingering builds, then re-run cleanly.
+
+Two issues: another agent (slot-33) is building on this shared machine, and my **first** iOS build wrapper is still alive holding the default DerivedData lock — which caused the "database locked" failure. Let me find slot-34 build PIDs and stop the stale first build.
+
+Orphaned `swift-frontend` processes from my first build are still alive on the shared default DerivedData (causing the lock). Let me kill only my-DerivedData orphans (by PID) and then rebuild with a dedicated derivedDataPath to fully isolate from other agents.
+
+The safety wrapper needs literal PIDs. Let me list them explicitly first.
+
+These are 20 orphaned compiler processes from the first build still holding my DerivedData. Killing them by literal PID.
+
+All orphans cleared. Now re-run the iOS build with a **dedicated** derivedDataPath to fully isolate from the shared default DerivedData and the other agent (slot-33).
+
+Clean iOS build running (dedicated DerivedData). Let me wait and monitor progress.
+
+Clean build progressing, 0 my-file errors, no lock contention. Let me keep waiting for completion.
+
+Still emitting the module. Let me look deeper at actual progress (not just tail) to confirm it's advancing.
+
+The app target compiled — it's now linking and code-signing the app + extensions (clean build, no my-file errors). It's heading into the test phase. Let me wait for the final result.
+
+Now building the test bundle (all co-located tests). Let me wait for completion.
+
+A `SwiftCompile failed` appeared while compiling external `feature-views/DriveTimeline.*` (NOT my files — still 0 my-file errors). Let me find the actual error location.
+
+The SwiftCompile failed with **no** `error:` diagnostic — that signals a killed/crashed compiler (likely resource pressure from the concurrent slot-33 build), not a source error. Let me confirm the failure nature and final exit.
+
+IOS_EXIT=65 with 0 source diagnostics anywhere and 0 my-file errors — a terminated/crashed compiler batch (external `DriveTimeline.*`), not a source error. Let me inspect the raw context around the failure.
+
+The failed batch is entirely **external** files (`DriveStatCards.*`, `DriveTelemetryWidget.*`, `DriveTimeline.*`) with **no diagnostic** — a compiler process terminated under load (concurrent slot-33 agent), not a source error. My files compiled (0 errors). Let me check if the other agent is still contending, then re-run incrementally.
+
+Contention cleared (other agent done, 82% memory free). The failure was transient resource pressure. Re-running the iOS build incrementally (cached DerivedData).
+
+Incremental iOS build running. Let me wait and monitor.
+
+Recompiling the app target (0 my-file errors). Let me continue waiting for the build/test result.
+
+App target compiled (emitting module), 0 my-file errors. Proceeding to test bundle. Let me wait for the test phase.
+
+Linking app + extensions, 0 my-file errors. Test bundle compile + run still ahead. Let me wait.
+
+Build4 completed. Let me read the final result.
+
+**BUILD SUCCEEDED** — my surface compiles and links in the real iOS app target (0 my-file errors). The TEST action failed with 1 source error somewhere. Let me locate it.
+
+The TEST failure is an **external pre-existing** defect: `RecentActivity.Tests.swift` has an `invalid redeclaration of 'RecentActivityFeedProjectionTests'` (a sibling's duplicate test class), which fails the shared test-bundle compile. Not my file. Let me confirm it's pre-existing/untouched and the BUILD truly succeeded.
+
+Confirmed: I added only the 6 `WidgetShell.*` files; `RecentActivity.Tests.swift` is pre-existing baseline (commit `1b2fbf00d`). Let me find the colliding second declaration to document the external defect precisely.
+
+Conclusively external: two pre-existing sibling test files (`shared-surfaces/RecentActivityFeed.Tests.swift:106` + `feature-views/RecentActivity.Tests.swift:103`) both declare `RecentActivityFeedProjectionTests` → duplicate class fails the shared test-bundle compile. **iOS BUILD SUCCEEDED** with my files; only the external `test` action is RED. Now the macOS scheme.
+
+macOS build running. Let me check its result (signing issues surface early).
+
+macOS BUILD/TEST FAILED (MAC_EXIT=65), 0 my-file errors. Let me identify the exact root cause (signing vs the same external test collision).
+
+macOS failure is the **environmental code-signing gap** (no dev certificate) — identical to the sibling's documented disposition, 0 my-file errors. Let me capture exact verbatim gate lines, then write the honest log.
+
+I have all verbatim evidence. Now writing the honest gate log.
+
+Log written. Let me do a final consistency check (no leftover old type names, clean git status) before committing.
+
+All clean — only my 6 files + the log are new; `.xcodeproj`/`Shared.xcframework` are git-ignored. Committing.
+
+Committed (`27f0f4303`, 7 files, +1835). Let me update tracking, clean up temp artifacts, and verify no lingering processes.
+
+All clean — no lingering processes, temp artifacts removed, working tree clean. Let me confirm all todos are done.
+
+All 8 todos complete. Task delivered.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) **`WidgetShell`** widget-chrome primitive at parity with `web/src/features/dashboard/widgets/WidgetShell.tsx`. Committed as `27f0f4303` (6 surface files + honest gate log, +1835 lines, **zero out-of-surface edits**).
+
+**Files** (`apps/apple/TeslaSync/widget-primitives/WidgetShell.*`): `Model` (SwiftUI-free decisions + P1/S11 telemetry seam + P1/S10 i18n facade), `Views` (4-state freshness chip, help, pin subviews), main generic `WidgetShell<Content,Actions,Icon>` surface, `Previews`, `strings`, `Tests`.
+
+**Parity**: every web render branch reproduced — loading skeleton, query-error, titled/title-less headers, `DataFreshness` 4-state chip (fresh/fetching/stale/error + relative time + manual refresh), `HelpTooltip`+learn-more, `PinButton`, pulse-on-update, `noPadding` — token-driven (no Tailwind ports), full i18n, VoiceOver labels, Reduce-Motion safe.
+
+**Verification (all run, reported honestly):**
+- `swiftlint --strict` = **0** · `swiftformat --lint apps/apple` = **0/5842** · placeholder check = **0**
+- Real **iOS app `** BUILD SUCCEEDED **`** — my files compile + link clean (0 errors)
+- Isolated SwiftPM vs. the **real** shared component library (Swift 6, strict concurrency): **42/42 tests pass**
+
+**Bug caught & fixed by the real build** (disclosed in log): `FreshnessStatus`/`FreshnessLabel`/`FreshnessDot` collided with sibling `FreshnessIndicator.*` → namespaced all generic helpers with a `WidgetShell` prefix.
+
+**Full-scheme RED is external/environmental only** (not my files): iOS `test` action blocked by a pre-existing duplicate `RecentActivityFeedProjectionTests` class in two sibling test files; macOS by the runner's code-signing gap. Both outside allowed files → deferred per the sanctioned P4 disposition. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified. Let me update the plan to reflect final status and mark complete.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-widget-primitives-0013-WidgetShell.log | 260 ++++++++++++++
+ .../widget-primitives/WidgetShell.Model.swift      | 252 +++++++++++++
+ .../widget-primitives/WidgetShell.Previews.swift   | 183 ++++++++++
+ .../widget-primitives/WidgetShell.Tests.swift      | 399 +++++++++++++++++++++
+ .../widget-primitives/WidgetShell.Views.swift      | 295 +++++++++++++++
+ .../widget-primitives/WidgetShell.strings          |  54 +++
+ .../TeslaSync/widget-primitives/WidgetShell.swift  | 392 ++++++++++++++++++++
+ 7 files changed, 1835 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-widget-primitives-0013-WidgetShell.log
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetShell.Model.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetShell.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetShell.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetShell.Views.swift
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetShell.strings
+ create mode 100644 apps/apple/TeslaSync/widget-primitives/WidgetShell.swift

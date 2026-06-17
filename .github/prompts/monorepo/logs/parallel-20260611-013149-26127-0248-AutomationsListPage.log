@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now I have a thorough understanding. Let me set up my plan and todos.
+
+Let me generate the Xcode project and kick off a baseline build in the background while I write code.
+
+Let me check the swiftlint config before writing code, then start the models file.
+
+Config understood. Now writing the models file.
+
+Let me add a copy helper to the list item, then write the page model.
+
+Baseline build still compiling. Let me write the page model.
+
+Baseline still building. Let me write the sample data sources.
+
+Let me check if PresetGallery is a separate parity unit and check the build.
+
+PresetGallery and AutomationCard are separate units — this page composes them. Let me check the baseline build status.
+
+The baseline (pre-existing) already crashes on a sibling file. Let me check the documented known-issue disposition.
+
+The disposition is well-established by precedent. Let me write the remaining view files. First, the card view.
+
+Let me add pin helpers to the model and verify a couple of shared strings exist.
+
+Now the sections file with the stat grid, filters, warning, presets, list, and activity feed sections.
+
+Let me create the presets panel (GlassPanel6) as its own file.
+
+Now the main page view.
+
+Now wire the registration into the app composition root.
+
+Now let me add all the localization strings to the catalog.
+
+The re-sort caused a massive diff. Let me revert and re-add without reordering.
+
+Let me inspect the exact text format to do a minimal text insertion instead.
+
+The format is Xcode's `" : "` style. Let me do a minimal text insertion preserving exact formatting.
+
+Let me refine the import parse semantics to match the web validation, then write tests.
+
+Now the test file.
+
+swiftformat found style issues. Let me auto-format my files in place.
+
+Real violations in my files. Let me fix them. First, view the formatted Sample file.
+
+Now fix the TSButton multi-closure violation in the page:
+
+Let me restructure the tests into two files with the stub at file scope to satisfy length rules.
+
+Now re-run swiftformat and swiftlint scoped to my files.
+
+Let me get a clean swiftlint signal on exactly my files.
+
+swiftlint clean on all my files. Now the placeholder gate.
+
+Placeholder gate passes. Now the key proof — isolated `swiftc -typecheck`. Let me check dependency scope first.
+
+Now the gold-standard isolated `swiftc -typecheck` (macOS, Swift 6 strict concurrency).
+
+Only `UnitFormatters.swift` needs the KMP module. Excluding it (my surface doesn't use it) and re-running.
+
+Zero errors. Let me confirm no warnings in my surface files specifically, and run the iOS SDK check.
+
+Both SDKs type-check clean (0 surface diagnostics). Now the executable model harness to prove the runtime logic.
+
+Harness: 26/26 passed. Now regenerate the project to enumerate my files.
+
+All 10 files enumerated. Now let me run the full `xcodebuild` to honestly record its disposition, starting in the background.
+
+While the build runs, let me update the parity ledger. First, inspect its exact format.
+
+Ledger updated cleanly. Let me check the build progress.
+
+Build returned 65 (same as predecessor). Let me confirm it's the pre-existing crash and my files have zero errors.
+
+**Confirmed**: `BUILD_EXIT=65` is caused solely by a pre-existing compiler IRGen crash on the out-of-scope `TeslaSync/feature-views/AppearanceSettings.Controls.swift` (same as baseline + predecessor). **Zero errors in my files.** Let me write the evidence log.
+
+My surface is 1845 lines across 8 files — a complete implementation. Now writing the evidence log.
+
+Let me run a clean final verification pass on the committed state (both SDKs + lint + format + placeholder) and confirm the app-registration file compiled in the full build.
+
+All final checks green. Let me run the placeholder gate on tests too and review the full git status.
+
+All gates green, git status clean. Let me verify the generated project is gitignored, then commit.
+
+Everything verified. Let me update todos and commit.
+
+Committed. Let me verify the final state and clean up temp artifacts.
+
+All work is complete and committed. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ .../apple-page-automations-AutomationsListPage.log | 242 +++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 594 +++++++++++++++++++++
+ .../Automations/AutomationsListModels.swift        | 311 +++++++++++
+ .../Automations/AutomationsListPage.Card.swift     | 266 +++++++++
+ .../Automations/AutomationsListPage.Presets.swift  | 160 ++++++
+ .../Automations/AutomationsListPage.Sections.swift | 298 +++++++++++
+ .../Features/Automations/AutomationsListPage.swift | 210 ++++++++
+ .../AutomationsListPageModel.Sample.swift          | 197 +++++++
+ .../Automations/AutomationsListPageModel.swift     | 378 +++++++++++++
+ .../AutomationsListRouteRegistration.swift         |  25 +
+ apps/apple/Sources/TeslaSyncApp.swift              |   5 +-
+ .../Automations/AutomationsListModelsTests.swift   |  92 ++++
+ .../AutomationsListPageModelTests.swift            | 360 +++++++++++++
+ apps/parity/apple-ledger.json                      |  20 +-
+ 14 files changed, 3155 insertions(+), 3 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-automations-AutomationsListPage.log
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationsListModels.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationsListPage.Card.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationsListPage.Presets.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationsListPage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationsListPage.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationsListPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationsListPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationsListRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Automations/AutomationsListModelsTests.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Automations/AutomationsListPageModelTests.swift

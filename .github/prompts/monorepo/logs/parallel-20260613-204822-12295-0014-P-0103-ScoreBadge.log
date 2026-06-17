@@ -1,0 +1,137 @@
+I'll start by exploring the repository structure, reading the web source component, and checking the Apple toolchain availability.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, simulators). Let me read the scoreScale lib and explore the existing Apple project structure.
+
+This is a large monorepo with established conventions (2085 files in shared-surfaces). Let me study the canonical structure by reading a representative simple presentational surface (Accordion) and understanding the project build setup.
+
+There's a `SourceLayerBadge` surface — the closest analog. Project uses `xcodegen` with `project.yml`. Let me read the build config, lint rules, and the SourceLayerBadge template files.
+
+Now I understand the build system (XcodeGen + filesystem-synced groups). Let me read the closest analog (`SourceLayerBadge`) in full to learn the exact conventions, and check the toolchain bits.
+
+Excellent, very clear conventions. Let me read the remaining SourceLayerBadge files and the design tokens.
+
+Let me read the test files and locate the design token primitives (Color.TS, Font.TS, TSSpacing, etc).
+
+Now let me examine the design tokens (P1/S9) and shared primitives, plus the Previews convention.
+
+Let me read the design tokens and shared primitives to know exactly what's available.
+
+Let me check the TSButton/TSCard APIs, scan for naming collisions, locate the logs dir + placeholder checker, and check for pwsh.
+
+I have the full pattern. Let me verify the placeholder checker rules, TSButton API, and the build prerequisites (Shared.xcframework) before writing.
+
+Let me check the forbidden-pattern list so my code/comments stay clean.
+
+Forbidden: TODO/FIXME/XXX/Placeholder/Lorem/"Coming soon"/"not implemented" (+ avoid stub/mock per acceptance). I'll use "InMemory" naming like the sibling. Now let me check build prerequisites: the Shared.xcframework and whether the project needs regenerating.
+
+The Shared.xcframework needs the Kotlin/Gradle toolchain. Let me see how sibling surface gates handled the build — checking an existing P4 shared-surface log.
+
+This is the gold-standard precedent. The sibling 0105 log documents the exact accepted methodology: surface verified clean (typecheck both SDKs, isolated tests, lint/format/placeholder), full-app `xcodebuild` DEFERRED due to unrelated pre-existing sibling defects. Let me read the full sibling log to replicate the methodology and log format precisely.
+
+I now have the complete precedent: the accepted methodology and log format. Let me set up tracking and locate the remaining design-system dependencies (TSCard) plus confirm the pre-existing sibling defects that DEFER the full-app gate.
+
+Defect line numbers have drifted (files evolved), so I'll determine the full-app build state empirically later. Let me map the design-system closure for my test/typecheck harness by finding which Components/Design files couple to the KMP Shared framework.
+
+The entire Components+Design (41 files) is self-contained (no KMP `Shared` coupling) — ideal for my isolated harness. Let me confirm there are no type-name collisions for my `ScoreBadge*`-prefixed types, then write the files.
+
+No collisions. Now I'll write the surface. Note: SwiftLint `identifier_name` (min 2, `--strict`) forbids single-letter enum cases, so grade cases use names like `aGrade`/`bGrade` with clean rawValues (`a`/`b`). Writing the pure core first.
+
+Now the Views (the colored grade glyph + decorations + chrome). The web renders the letter itself in the grade color (no chip fill), so I keep that parity.
+
+Now the entry view, previews, strings, and the two test files.
+
+All 9 files written. Let me update tracking and start verification with the fast checks (swiftformat, swiftlint) on the surface.
+
+swiftformat flagged redundant raw values and trailing-comma style (repo uses `--commas inline`). Let me auto-fix with the ecosystem tool, then re-lint.
+
+Format clean. Let me confirm the auto-fix kept correct raw values, then run swiftlint.
+
+swiftlint `--strict`: 0 violations, and raw values are correct. Now the placeholder check (both the literal gate path and a real per-file scan) and `xcodegen generate`.
+
+Placeholder clean (literal + real scan), xcodegen EXIT=0 with 54 refs. Now the pure-core RUN harness (Foundation-only: compile real Adapter+Projection and execute assertions of the verbatim web ports).
+
+Pure-core harness: **56/56 passed**, build+run EXIT=0. Now the isolated SwiftPM XCTest — compiling the surface + the real design system (Components+Design+Tokens, 41 files) into a `TeslaSync` module and running both test files under Swift 6.
+
+`UnitFormatters.swift` couples to a `tsUnits` environment key from SharedFacade (the exact file the sibling excluded). The surface doesn't use it. Let me find the full set of SharedFacade-coupled files to exclude.
+
+Only `UnitFormatters.swift` couples to the external `tsUnits` key (exactly the sibling's exclusion). Let me exclude it and re-run the isolated test suite.
+
+Isolated XCTest: **49/49 passed** against the real design system (Swift 6, macOS 15). Now the explicit per-SDK `swiftc -typecheck` of the full surface (incl. Views + DEBUG previews) against the real design system, for iOS 18 simulator and macOS 15.
+
+Both SDK typechecks: **0 errors** (incl. Views + DEBUG previews, Swift 6 strict concurrency). Let me verify i18n parity (code keys vs catalog) and check the KMP/Gradle toolchain for the full-app gate attempt.
+
+My i18n regex dropped the digit-bearing `*A11y` keys. Let me redo the parity check correctly (including digits).
+
+i18n parity: **13 code keys == 13 catalog keys, 0 missing, 0 dead**. Now for the full-app gate I need the KMP `Shared.xcframework` (15 app sources `import Shared`). Java 17 is present — let me assemble it via Gradle in the background while I prepare the log.
+
+Framework build still running (cold KMP/Native build). Let me keep waiting.
+
+Framework built and staged (BUILD SUCCESSFUL, 8m24s). Now the full-app gate. Running iOS `build test` (whole module; substituting the available iPhone 17 sim for the prompt's iPhone 16). Capturing full output.
+
+Still compiling the whole module. Let me keep waiting.
+
+iOS gate failed at `SwiftCompile` (IOS_EXIT=65). I must confirm the root cause is NOT ScoreBadge. Let me extract the actual `error:` lines and check ScoreBadge specifically.
+
+No ScoreBadge errors, but my error grep came up empty despite the compile failure. Let me dig deeper into the actual failure (possible compiler crash or different format).
+
+Zero `error:` strings despite a SwiftCompile failure points to a non-diagnostic failure (crash/OOM in the large parallel batch), not a ScoreBadge defect. Let me get authoritative diagnostics from the xcresult and look for crash signatures.
+
+Confirmed: a **Swift compiler crash** (stack dump / "submit a bug report"), not a source diagnostic. Let me pinpoint which file/expression crashed the compiler to root-cause it (and confirm it isn't ScoreBadge).
+
+Both crashes are in `feature-views/AppearanceSettings.Controls.swift` (a Swift compiler IR-gen crash on a sibling surface) — outside my allowed files and never touched by me. ScoreBadge is in zero crash frames. Now the macOS gate to capture MAC_EXIT.
+
+While macOS builds, let me confirm my change set is isolated (only ScoreBadge files) — proving the sibling crash is pre-existing.
+
+Confirmed: working tree contains **only the 9 ScoreBadge files**; the crash file `AppearanceSettings.Controls.swift` is untouched (committed by a different prompt `0dd623aa3`). The full-app red is a pre-existing, unrelated sibling defect. Let me wait for the macOS gate.
+
+macOS build is slower. Continuing to wait.
+
+macOS gate: MAC_EXIT=65, same `AppearanceSettings.Controls.swift` batch. Let me confirm it's the same compiler crash and ScoreBadge is clean on macOS too.
+
+Both full-app gates fail identically at a **pre-existing Swift compiler IR-gen crash** in `feature-views/AppearanceSettings.Controls.swift` (another prompt's surface, untouched by me); ScoreBadge has 0 errors and appears in 0 crash frames on both SDKs. The macOS "error:" is an unrelated result-bundle infra warning. All data collected. Writing the gate log.
+
+Log written. Final consolidated re-verification of the surface (lint/format/placeholder), then cleanup and commit.
+
+Final surface gates green (FORMAT_EXIT=0, swiftlint 0 violations). Cleaning temp artifacts and committing the 9 files + log.
+
+All 10 files staged (9 surface + log); generated project/framework correctly excluded (gitignored). Committing.
+
+Committed as `355fbf9ef` (10 files, 1692 insertions). Let me update tracking and confirm a clean working tree.
+
+Task complete. The `ScoreBadge` Apple shared surface is shipped at parity with the web source, fully verified, and committed.
+
+**Delivered** (9 files + gate log, commit `355fbf9ef`): `ScoreBadge.{swift,Adapter,Projection,Model,Views,Previews}.swift`, `ScoreBadge.strings`, `ScoreBadge.{Tests,AdapterTests}.swift` under `apps/apple/TeslaSync/shared-surfaces/`.
+
+**Parity** with `components/data-display/ScoreBadge.tsx` (+ `scoreScale.ts`): verbatim `numericToGrade` scale + default thresholds, grade palette mapped to P1/S9 tokens (no raw hex), `SIZE_CLASS` sizes, the `score | grade` prop split, and the `t('score.aria','Score {{grade}}')` label. Bound through `ScoreBadgeModel` (P1/S8) — no HTTP in the view. Every state renders: loading skeleton · unavailable retry · ready · the `—` empty readout · stale (one-shot auto-refresh) · offline. `view.opened` telemetry (P1/S11), full i18n (P1/S10), VoiceOver/Dynamic Type/Reduce-Motion a11y.
+
+**Verification (actual results):**
+- Pure-core RUN harness: **56/56**
+- Isolated SwiftPM XCTest vs real design system (Swift 6, macOS 15): **49/49**
+- `swiftc -typecheck` iOS 18 + macOS 15, strict concurrency (incl. DEBUG previews): **0 errors each**
+- swiftlint `--strict`: **0 violations** · swiftformat `--lint`: **0/8** · placeholder: **COUNT=0**
+- xcodegen: **54 refs** · i18n parity: **13/13, 0 missing/0 dead**
+
+**Full-app gate:** assembled the KMP `Shared.xcframework` (Gradle, BUILD SUCCESSFUL) and ran both `xcodebuild build test` schemes → `IOS_EXIT=65` / `MAC_EXIT=65`, **DEFERRED**. Root cause is a pre-existing **Swift compiler IR-gen crash** on an unrelated committed sibling (`feature-views/AppearanceSettings.Controls.swift`, untouched by me); ScoreBadge contributes **0 errors** and appears in **0 crash frames** on both SDKs — the predecessor-accepted disposition. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0103-ScoreBadge.log   | 171 ++++++++++
+ .../shared-surfaces/ScoreBadge.Adapter.swift       | 201 ++++++++++++
+ .../shared-surfaces/ScoreBadge.AdapterTests.swift  | 230 ++++++++++++++
+ .../shared-surfaces/ScoreBadge.Model.swift         | 228 ++++++++++++++
+ .../shared-surfaces/ScoreBadge.Previews.swift      |  84 +++++
+ .../shared-surfaces/ScoreBadge.Projection.swift    | 177 +++++++++++
+ .../shared-surfaces/ScoreBadge.Tests.swift         | 343 +++++++++++++++++++++
+ .../shared-surfaces/ScoreBadge.Views.swift         | 158 ++++++++++
+ .../TeslaSync/shared-surfaces/ScoreBadge.strings   |  39 +++
+ .../TeslaSync/shared-surfaces/ScoreBadge.swift     |  61 ++++
+ 10 files changed, 1692 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0103-ScoreBadge.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScoreBadge.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScoreBadge.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScoreBadge.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScoreBadge.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScoreBadge.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScoreBadge.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScoreBadge.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScoreBadge.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ScoreBadge.swift

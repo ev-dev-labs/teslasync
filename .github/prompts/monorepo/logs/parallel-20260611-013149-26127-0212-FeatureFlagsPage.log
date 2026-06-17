@@ -1,0 +1,189 @@
+I'll start by exploring the repository structure and the key files I need to understand for this task.
+
+Now let me explore the web components, the Apple app structure, and key supporting files.
+
+The Features directory doesn't exist yet. Let me explore the actual Apple app structure to understand the existing patterns.
+
+Let me check the parity files, the existing admin page pattern, and tool availability.
+
+The existing `ApiPlaygroundPage` lives in `Sources/Features/Admin/`, not `TeslaSync/Features/Admin/`. Let me read its completed log, the ledger, and the README to resolve the path convention and gate process.
+
+Excellent — this gives me a clear precedent. The `ApiPlaygroundPage` is the same artifact type, already completed. Now let me read the web types, the existing model/route-registration patterns, and the data states.
+
+Let me examine the app entry, the route registry, available components, and design tokens.
+
+Now let me inspect the key component signatures I'll use: EmptyState/ErrorDisplay, DataTable, Buttons, Inputs/Fields, Badges, Overlays, and the design tokens.
+
+`common.cancel` and `admin.flags.*` don't exist yet — I'll add them. Let me read the route parser, DataTable/Fields/Overlays APIs, and design tokens.
+
+Let me read the Fields/Inputs/Overlays components, design tokens, route registry, and check the shared facade pattern.
+
+Let me read the design tokens to confirm the exact token names available.
+
+I now have enough context. Let me check the build script feasibility and swiftlint config, then start implementing.
+
+Let me check Theme location and which sources depend on the KMP `Shared` framework (to scope an isolated type-check), then I'll start writing.
+
+I have a complete picture now. Let me set up a plan and todos, then implement. The precedent (`ApiPlaygroundPage`) maps the prompt's `TeslaSync/Features/Admin/` to the real compiled path `Sources/Features/Admin/` — I'll follow that exactly.
+
+Now let me create the model file with types, the repository seam, the FlagJSON helper, and the `@Observable` model.
+
+Model is in place. Now let me create the two panel views (GlassPanel1 + GlassPanel2).
+
+
+
+Now the editor drawer view:
+
+Now the main page view with the header, panel orchestration, delete dialog, drawer wiring, and previews:
+
+Now the route registration and the test file:
+
+Now let me wire the route: add the `.featureFlags` case, the `/admin/flags` alias, and chain the registration.
+
+Let me enumerate every string key referenced in my code and check which already exist in the catalog.
+
+Let me inspect the exact raw formatting of the xcstrings file before inserting keys.
+
+The format is clean 2-space JSON. Let me add all string keys via a safe Python script that validates JSON before and after.
+
+All 45 keys added cleanly (8182 total, JSON valid). Let me update todos and start verification — formatting and lint first.
+
+Strings look good. Now let me run swiftformat and swiftlint on my files.
+
+swiftformat wants my 3 files auto-formatted. Let me apply auto-fix to my new files (the 3 edited shared files are already clean), then re-lint.
+
+swiftformat passes (0/9). Now swiftlint `--strict` on my files using an isolated config that mirrors the repo rules.
+
+5 `multiple_closures_with_trailing_closure` violations — calls with both a closure arg and a trailing closure. Let me view the current (post-format) call sites and fix them to use explicit labels.
+
+Let me view the changes column and the page's add button to get exact text.
+
+Now re-run both formatters/linters to confirm clean:
+
+Both green: swiftformat 0/9, swiftlint 0 violations. Now the placeholder gate — but let me first check the patterns to ensure my `*.reasonPlaceholder` key names won't false-positive.
+
+"Placeholder" is a forbidden pattern. My required key `admin.flags.delete.reasonPlaceholder` contains the substring "Placeholder". Let me check the script's matching logic to see if it's substring or word-boundary.
+
+"Placeholder" is matched case-insensitively as a substring, so my required keys like `reasonPlaceholder` would false-positive. The script supports `// parity:allow <reason>`. Let me see how the existing codebase handles this.
+
+There's an existing `FlagEditDrawer.Adapter.swift` in the component tree — let me see how it annotates the same `Placeholder` keys (the established `parity:allow` convention), so I match it exactly.
+
+The convention is `// parity:allow web i18n key (...)`. Let me find every `placeholder` occurrence in my Admin source files and annotate them.
+
+Three lines to annotate. Let me add the `parity:allow` markers matching the established convention:
+
+Now re-run format/lint and the placeholder gate:
+
+All three green: format 0/9, lint 0, placeholder ALLOWED=3/COUNT=0. Now the executed model harness under Swift 6 strict concurrency:
+
+Harness concurrency fix — `check` must be `@MainActor`. Let me patch and recompile:
+
+Harness passes (25/25, Swift 6 strict concurrency). Now the view type-check against the real P2 tokens + P3 components. Let me set up SDK paths and compile for macOS first.
+
+macOS type-check passes (0 errors, with previews + strict concurrency). Now the iOS target — this exercises the `#if os(iOS)` compact-width branch:
+
+Both type-checks pass (macOS + iOS, 0 errors). Now `xcodegen generate` to confirm project wiring, and I'll start the Shared.xcframework build in the background for a real xcodebuild attempt.
+
+`xcodegen` succeeded and references my files. Let me confirm the editor view is included too, then kick off the Shared.xcframework build in the background for a real xcodebuild attempt.
+
+All 6 files referenced (9× each across targets). The background build via `&` won't persist in a sync session — let me launch it properly in detached async mode, then write the evidence log meanwhile.
+
+Good — it was progressing (Kotlin/Native downloaded, compiling). Let me relaunch it in detached async mode so it survives, then write the evidence log while it builds.
+
+Build is running detached. While it builds (~10 min), let me update the ledger and write the evidence log. First, the ledger schema:
+
+Let me re-dump preserving the literal em dash (avoid cosmetic drift on the existing description):
+
+Ledger is clean. Let me check the framework build progress:
+
+Build is progressing (linking macOS/iOS frameworks). Let me wait for it to stage, then attempt the real xcodebuild.
+
+Release frameworks linking now. Let me wait for completion and staging:
+
+Shared.xcframework built and staged (BUILD SUCCESSFUL, all 3 slices). Now let me attempt the real `xcodebuild` to get honest current evidence of the full-build state.
+
+Build running. Let me monitor it — first checking the pre-action and early compile:
+
+Build failed (exit 65) — as the precedent predicted. Let me analyze the errors to confirm they're in out-of-scope sibling files, not mine.
+
+The build reveals a real collision **I introduced**: `FeatureFlagEntry`/`FeatureFlagChange` already exist in the module (`TeslaSync/feature-views/`). This is my bug to fix, not out-of-scope. Let me find the existing definitions and components.
+
+There are pre-existing public types AND components (`FlagsTable`, `ChangesPanel`, `FlagEditDrawer`). The correct fix is to **reuse** them (DRY, matches "depends on P3 component library"), not duplicate. Let me study the existing types and component APIs.
+
+This confirms the page should **compose** the existing P3 components. The existing `FeatureFlagEntry` carries a rich `FlagValue` enum. Let me study the component APIs and the changes model.
+
+The existing `FlagsTable` binds to a `FlagsTableModel` with lifecycle/phases. Let me examine the component models and the `FlagEditDrawer`/`ChangesPanel` APIs to decide the cleanest composition.
+
+The existing components are self-driving (model + source seam). Let me get the precise composition APIs for all three components and their models.
+
+The native components carry their own panel chrome/headers — composing them wouldn't reproduce the web page's "Registry"/"Recent changes" titled GlassPanels. The faithful + precedent-consistent fix is to **reuse the existing domain types** (and `FlagValue`/`FlagsValuePreview`) while keeping my self-contained page. Let me read the `FeatureFlagChange`/`FeatureFlagOperation` definitions.
+
+The existing `FeatureFlagChange` uses `ChangeJSONValue` for old/new values, and `FeatureFlagOperation` has `.set/.delete/.unknown`. Let me check `ChangeJSONValue`'s preview API and `FlagValue` JSON round-trip helpers, plus confirm my other type names don't collide.
+
+Only `FeatureFlagEntry`/`FeatureFlagChange` collide; all my other names are free. I'll **reuse the canonical types** (with `FlagValue`/`ChangeJSONValue`) while keeping my self-contained page. Let me inspect `ChangeJSONValue`'s preview API.
+
+Let me see the compact-preview API for `ChangeJSONValue` (for the old/new audit cells).
+
+Now I understand the full canonical domain. I'll reuse `FeatureFlagEntry`/`FeatureFlagChange`/`FeatureFlagOperation`/`FlagValue`/`ChangeJSONValue`/`ChangesValuePreview`, keeping the repository protocol signatures stable (so the page needs no changes). Let me rewrite the model, panels, editor, and tests.
+
+Now update the panels to use the canonical types (`valuePreview`, `ChangesValuePreview`, `FeatureFlagOperation`). Let me view the current panels file.
+
+Now apply the canonical-type edits to the panels:
+
+Now the editor — seed/validate via the canonical `FlagValue` + `FlagValueJSON`:
+
+Now recreate the test file with the canonical types:
+
+Now re-run format and lint on the updated files:
+
+Format and lint clean (0/6, 0 violations). Now the decisive test — the full `xcodebuild` with the collision fixed:
+
+Build running. Meanwhile, let me re-run the placeholder gate and refresh the model harness for the canonical types (independent logic check).
+
+Placeholder gate green. Let me refresh the harness for canonical types and run it as an independent logic check while the build continues.
+
+Harness passes (22/22) against the canonical types. Let me check the full build:
+
+Still exit 65. Let me analyze whether the collision is resolved and what's now failing.
+
+Collision **fully resolved** (26 errors → 2, zero ambiguity errors, none in my files). The 2 remaining are in out-of-scope `shared-surfaces/AI*` files. Let me confirm they're the pre-existing breakage the precedent documented.
+
+Confirmed: the 2 errors are the **pre-existing** escaping-closure bug class (documented by the precedent) in `shared-surfaces/AI*` files I never touched. To prove my code compiles within the full module (precedent methodology), let me temporarily patch those 2 out-of-scope files, rebuild, then revert them. First, inspect the bug.
+
+This is precisely the documented bug (`content` non-escaping but `TSGlassPanel` needs `@escaping`). Let me count how many files carry it, then temporarily patch them to advance the build (precedent methodology).
+
+73 pre-existing files carry this bug (none mine). I'll apply a temporary mechanical `@escaping` fix to advance the build and prove my files compile in the full module, then revert all of them (precedent methodology).
+
+73 out-of-scope files temporarily patched (my files untouched). Now rebuild to prove my files compile in the full module:
+
+Build running with the temporary fix. Let me wait for it:
+
+Let me analyze what remains after the temporary fix:
+
+With the 73 out-of-scope bugs temporarily worked around: **0 compiler errors, 0 in my files** — but the build then hits the **identical toolchain IR crash** the precedent documented (`While emitting IR SIL function @$sSbScA_...TR`). This is the same pre-existing, out-of-scope condition. Now let me revert all 73 temp-patched files verbatim (covenant #7).
+
+All 73 reverted verbatim; tree shows only my intended changes. The temp-fix build proved the **whole module type-checks with 0 errors** (the crash is a post-type-check IR phase). Let me re-confirm with a fresh isolated type-check using the canonical types (+ the two Models files), on both platforms.
+
+Both type-checks pass (0/0, macOS + iOS, strict concurrency). Let me gather the final file inventory for the evidence log.
+
+All deliverables present (1212 LOC across 6 files). Let me capture tool versions and confirm the 11 required strings before writing the evidence log.
+
+All 11 required strings + the nav route are present. Versions captured. Now let me write the comprehensive evidence log.
+
+Now let me update todos, do a final consolidated gate re-confirmation, and clean up temp files.
+
+All final gates green (format 0/9, lint 0, placeholder COUNT=0, JSON valid). Now let me commit per the prompt's instructions.
+
+Staging is clean (12 in-scope files, no generated/out-of-scope). Committing:
+
+Committed (HEAD `8617213ff`). Let me confirm the tree is clean and finalize the plan.
+
+Working tree is clean; the commit contains exactly my 12 in-scope files (1966 insertions). Let me finalize the plan and complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

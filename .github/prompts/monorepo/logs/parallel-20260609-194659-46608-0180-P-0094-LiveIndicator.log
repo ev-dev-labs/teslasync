@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app architecture, and existing patterns.
+
+Tools are available (xcodebuild, swiftlint, swiftformat, swift). I have the web source. Now let me examine the existing shared-surfaces pattern (recently added Speed/Temperature) and the supporting infrastructure.
+
+`LiveConnection.swift` exists in SharedFacade (the `useLiveConnection` equivalent). Let me look at the shared-surfaces file list and the most recently-built simple surfaces (Speed/DateTime) to follow their exact pattern.
+
+Let me read the key infrastructure: the `LiveConnection` facade (the `useLiveConnection` equivalent) and the complete Speed surface as a pattern template.
+
+The Speed pattern is clear. Now I need to understand the live-connection state holder (the `useLiveConnection` equivalent that provides `status` + `lastMessageAt`). Let me read the LiveDataStore and remaining Speed files in parallel.
+
+Let me examine the web `useLiveConnection` hook (source semantics), the native `LiveStatus`, and how surfaces bind to live connection state.
+
+Now I understand the web semantics. Let me examine the i18n facade (P1/S10), design tokens (P1/S9), and how the app exposes a shared/global live connection status that surfaces bind to.
+
+The i18n facade pattern is per-surface `NSLocalizedString` + `.strings` table. DateTime is the richest template with live/stale/offline states. Let me read all DateTime surface files to follow its exact structure.
+
+Let me read the DateTime seams/states/projection/tests and the design tokens to complete my understanding of the established conventions.
+
+Let me read the design tokens (P1/S9) and the DateTime projection + tests to finalize my model of conventions.
+
+The color tokens are generated elsewhere. Let me locate the `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius` definitions and the shared `TSSkeleton`/`TSQueryError` components.
+
+Tokens are referenced widely and existing surfaces build green, so they exist (likely generated). Let me locate their definitions and the shared component signatures (TSSkeleton, TSQueryError) plus check project.yml.
+
+Found the generated tokens file and feedback components. Let me read them to get the exact token palette and component signatures.
+
+Now I have the full token palette. Let me read the projection/tests/previews patterns plus the web `formatRelativeTime` to faithfully port the "Xs ago" stamp, and check project.yml for how surfaces/tests are wired into the build.
+
+Let me read project.yml to understand how shared-surface sources, tests, and `.strings` are wired into the build targets (glob vs explicit).
+
+project.yml globs the `shared-surfaces` dir (sources auto-included; `*Tests.swift` → test bundles). Now let me check toolchain availability (xcodegen, pwsh, prebuilt Shared.xcframework, simulator) and read the projection + placeholder checker.
+
+Full toolchain present: Xcode 26.5, xcodegen, pwsh, swiftlint, swiftformat, iPhone 16 simulator (booted). Shared.xcframework isn't prebuilt. Let me read the framework build script (feasibility) and the placeholder checker (to avoid flagged words).
+
+Let me read the exact forbidden patterns and verify the KMP shared module exists (needed for the framework build).
+
+Forbidden (case-insensitive): TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented". I'll avoid all of these in code+comments. Let me confirm a sibling gate passed on this runner (feasibility) and check the log location/format.
+
+The sibling Speed log is very informative: the full-app `xcodebuild` was *deferred* on pre-existing, unrelated blockers (sibling duplicate symbols on iOS, code-signing on macOS) outside the surface's allowed files, while the surface itself was independently verified (compiles, tests pass, swiftlint/swiftformat/placeholder green). Let me read the lint configs so I write compliant code the first time.
+
+Lint budget: line error 160 (comments ignored), type names ≤50, `--self remove`, `@testable` at bottom, `before-first` wrapping. I'll auto-format my files after writing. Let me confirm the exact `Resolve` typealias convention and how siblings handle the strings seam under strict concurrency.
+
+The convention is `@Sendable (_ key:_ fallback:) -> String`. Let me read the Temperature surface (closest analog: value + chip + states + strings + clock) to lock the model/clock/locale conventions, then I'll write all files.
+
+I have the full pattern. Let me make two final checks: the `Meta` enum convention (surfaceSlug) and how Views map a tone enum → `Color.TS`.
+
+I have a complete picture of the conventions. Let me record a plan and create the SQL todos, then write all the surface files.
+
+Now I'll write the surface files. Starting with the pure projection layer (taxonomy, derivation, snapshot, resolved view-state).
+
+Now the test files. Let me update todos and write the pure-logic projection tests and the model/view/telemetry tests.
+
+All 10 files written. Now let me auto-format them with swiftformat (matching the repo config), then run swiftlint --strict and the placeholder gate.
+
+Two files were reformatted. Let me verify the reformatting was cosmetic and run the three local gates (swiftformat --lint, swiftlint --strict, placeholder check).
+
+New files are untracked (no diff). Let me run the three local gates exactly as the prompt specifies.
+
+swiftformat --lint is clean (0/3987 require formatting). Now swiftlint --strict.
+
+swiftlint --strict: **0 violations in 3757 files**. Now the placeholder gate. I'll run it on the real shared-surfaces directory (rigorous) and confirm none of my files are flagged.
+
+My LiveIndicator files are **clean** (zero forbidden tokens). The 13 violations are in a pre-existing sibling (`AINLDriveSearch.Views.swift`), outside my allowed files. Let me run the exact gate command and, for rigor, scan an isolated copy of only my files.
+
+Both placeholder checks pass (COUNT=0, EXIT=0). My files are clean; the 13 violations are pre-existing in a sibling. Now the build/test gate. First let me confirm my surface is self-contained (no Shared-framework or sibling deps) so I can verify compilation cleanly.
+
+My surface is fully self-contained (only SwiftUI/Foundation/Observation/OSLog + design tokens — no Shared framework, no sibling deps). That means I can compile-verify it in isolation, which isn't blocked by the pre-existing framework/sibling issues the Speed sibling hit. Let me update todos and run a Swift 6 strict-concurrency typecheck for both iOS and macOS.
+
+iOS typecheck clean. Now macOS, the Previews (DEBUG), and the test files (as an ad-hoc module with `@testable` stripped).
+
+macOS typecheck passes. The Previews has one real error: `accessibilityReduceMotion` is a read-only environment key and can't be set via `.environment(_:_:)`. I'll demonstrate reduce-motion by previewing the icon leaf directly with its explicit `reduceMotion` parameter (cleaner and correct).
+
+Let me re-verify the Previews typecheck and also typecheck the test files (as an ad-hoc module with `@testable` stripped, since standalone they'd be the same module).
+
+Previews typecheck cleanly now. The test typecheck only failed because `XCTest` isn't on the default search path for raw `swiftc` — it lives in the platform's Developer frameworks. Let me add that search path and retry.
+
+The test files' surface symbols **all resolve** — the only errors are XCTest's `XCTAssert*` C-macros, which raw `swiftc -typecheck` can't expand (a known standalone-tooling limitation, not a code defect). The real test target resolves them. 
+
+Surface verified: compiles for iOS 18 + macOS 15 under Swift 6 strict concurrency, and previews compile. Now let me attempt the full xcodebuild gate. First, generate the project and kick off the KMP framework build (the long pole).
+
+Project generated. Now build the KMP `Shared.xcframework` (the long pole) via the repo's script.
+
+The Kotlin/Native framework build is still going (expected for a first build). Let me wait for it.
+
+Still compiling (Kotlin/Native first builds are slow — downloads the konan toolchain + compiles). Continuing to wait.
+
+Framework built successfully (7m 8s) and staged. Now the iOS xcodebuild. Let me run `build` first (faster signal on compile+link), capturing to a log.
+
+The iOS build failed (exit 65), but the 3 failures are all in **sibling feature-views** files (SentryModeChart, ServiceHealthSection, SessionCurveChart, etc.) — not mine. Let me extract the actual `error:` lines and confirm my surface compiled cleanly.
+
+This is exactly the pre-existing blocker the Speed sibling documented. All 54 errors are in `dashboard-widgets/` and `feature-views/` (RecentDrives*/StateTimeline* **ambiguous type lookup** — duplicate type declarations across those two dirs) — **zero in my files**, and both dirs are outside my allowed scope. Let me rigorously confirm: (1) I only added my files, (2) my type names don't collide with anything, (3) the duplicates are pre-existing, (4) my files were in the compile set.
+
+Confirmed: only my 10 files added (no sibling modifications), and all my type names are unique (no collisions). Let me confirm the RecentDrives/StateTimeline duplicates are pre-existing (declared in both dirs) and that my files were in the compile set.
+
+Definitively confirmed — this is the exact pre-existing blocker the Speed sibling documented:
+- `RecentDrivesModel`/`RecentDrivesLoadStatus`/`StateTimelineModel` are **declared in two dirs** (`dashboard-widgets/` + `feature-views/`) → ambiguous-type errors. Both files are **tracked at HEAD** (pre-existing, not mine), and both dirs are **outside my allowed scope**.
+- My 10 files are the only additions, my type names are all unique, and my files are in the compile set with **zero errors**.
+
+To add genuine *runtime* evidence for the pure logic (not just typecheck), let me build and run a standalone harness exercising the projection/derivation/relative-time against my real source files on macOS.
+
+Just a Swift 6 top-level-isolation nit in my harness (not the surface). Let me annotate the helper `@MainActor` and re-run.
+
+Swift 6 won't allow a global-actor on a top-level var. Let me wrap the logic in a `@MainActor` function with a local counter (nested funcs can mutate enclosing locals).
+
+**22/22 runtime assertions PASS** — the pure logic executes correctly at runtime (macOS, Swift 6, against the real tokens + my source). 
+
+For an honest, complete log, let me also capture the macOS build outcome (it shares the same source module, so I expect the identical pre-existing blocker).
+
+The macOS build failed for the *other* pre-existing reason the Speed sibling documented: **code-signing/entitlements on an unsigned runner** (no dev certificate) — an environment limitation, with **zero compile errors** in my surface. Both full-app builds are blocked by pre-existing, out-of-scope issues; my surface is clean on both platforms.
+
+Let me confirm the working tree only contains my files (generated project/framework are git-ignored), then clean temp artifacts.
+
+Clean tree confirmed: only my 10 files are new; generated project/framework are git-ignored. Now let me write the comprehensive, honest gate log.
+
+I edited Previews.swift after the initial format pass — let me re-format and re-verify the lint gates are still green on my files before committing.
+
+All green on my files (the `.strings` "error" is just swiftformat rejecting a non-source file passed explicitly — the directory lint correctly skips it). Let me run the exact full-tree `swiftformat --lint` once more (post-edit) to be certain, then commit.
+
+All gates green (FORMAT_EXIT=0). Let me update todos and commit exactly the allowed files (my 10 surface files + the log).
+
+Exactly the 10 surface files + the log are staged. Committing.
+
+Committed as `b43141ad1`, tree clean. Let me do a final confirmation of the commit contents.
+
+All work is committed (`b43141ad1`): 11 files, 1530 insertions, log ending `EXIT=0 / STATUS=DONE`. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0094-LiveIndicator.log | 138 ++++++++++
+ .../shared-surfaces/LiveIndicator.Model.swift      | 128 ++++++++++
+ .../shared-surfaces/LiveIndicator.Previews.swift   |  99 ++++++++
+ .../shared-surfaces/LiveIndicator.Projection.swift | 282 +++++++++++++++++++++
+ .../LiveIndicator.ProjectionTests.swift            | 241 ++++++++++++++++++
+ .../LiveIndicator.RelativeTime.swift               |  75 ++++++
+ .../shared-surfaces/LiveIndicator.Seams.swift      | 115 +++++++++
+ .../shared-surfaces/LiveIndicator.Tests.swift      | 211 +++++++++++++++
+ .../shared-surfaces/LiveIndicator.Views.swift      | 143 +++++++++++
+ .../shared-surfaces/LiveIndicator.strings          |  25 ++
+ .../TeslaSync/shared-surfaces/LiveIndicator.swift  |  73 ++++++
+ 11 files changed, 1530 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0094-LiveIndicator.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.ProjectionTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.RelativeTime.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/LiveIndicator.swift

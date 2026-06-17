@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and existing patterns.
+
+Let me explore the Apple app structure in detail and find the manifest record for AutomationCard.
+
+The Apple app structure differs from what the prompt expects. Let me explore it more deeply to understand existing patterns.
+
+The Apple app uses a multi-file component pattern. Let me find existing automation-related implementations and similar card patterns.
+
+There's already an `AutomationCard` implementation in `feature-views/`. Let me read all existing files to understand the current state, and check the parity log.
+
+Let me read all the existing AutomationCard Swift files and examine the parity log format from a completed example.
+
+The existing implementation is substantial and well-built. Let me read the remaining files.
+
+Let me read the Adapter, check for an Xcode runner, and look at a completed parity log for format reference.
+
+The existing implementation is complete and high-quality. Let me examine a completed log for format, check the parity ledger, and verify there's no existing AutomationCard log.
+
+Let me examine the sibling page log format and the prior AutomationCard artifact log.
+
+The sibling log reveals key context: there's a path-convention discrepancy and a precedent for out-of-scope build failures. Let me read the prior AutomationCard artifact log, the ledger, and check the xcstrings catalog.
+
+Now I understand the full picture. Let me check the xcstrings catalog, the ledger state, and how the sibling AutomationActivityFeed handled navigation registration.
+
+All required automation keys are already in the xcstrings catalog. Let me verify all 19 strings exhaustively and examine the sibling ledger rows and navigation seam.
+
+All 19 strings present in the catalog. Now let me look at the AutomationCard Previews/Tests and how the sibling registered navigation. Let me also check the project structure for navigation.
+
+Let me verify the placeholder-check script exists, confirm the shared P2/P3 symbols the card depends on, and review the Tests file.
+
+There's a `Sources/Features/Automations` directory where page-level features live. Let me examine it.
+
+Now I understand: there are two layers — `feature-views/` (the card component, already complete) and `Sources/Features/Automations/` (page-level with RouteRegistration). Let me examine the sibling page registration pattern and how the list renders cards.
+
+The card is already implemented in both layers. Now let me understand the build targets via project.yml to plan the page host + route registration, following the sibling pattern.
+
+I now have a clear picture. `Sources/` and `feature-views/` share the same `TeslaSync` module, so a page can reuse the existing `AutomationCard` component. Let me study the sibling page + model idioms to match them precisely.
+
+Let me read the rest of the sibling model and a sibling test to match conventions exactly.
+
+I have the full sibling pattern. Now let me check the lint config, the route/registry types, available title strings, and the shared view helpers before writing the page.
+
+Let me check the Tests directory convention, whether Shared.xcframework exists, and the sibling test file.
+
+`Shared.xcframework` is absent — so the full `xcodebuild` will fail (EXIT=65), matching the accepted DEFERRED disposition of every sibling. I'll verify via isolated type-check + test harness. Let me read the sibling test, then write the plan.
+
+I have everything needed. Let me check whether the view-layer dependency closure imports the (absent) `Shared` framework, which determines my type-check strategy.
+
+The view-layer closure is free of the `Shared` framework, so I can run an isolated type-check. Let me set up tracking and check the formatter config, then write the page.
+
+Now I understand the full architecture. Let me set up my plan and todos, then implement.
+
+Now let me write the page model, reusing the feature-view's public types.
+
+Now the page view with a catalog-backed localizer so the 19 strings resolve from `Localizable.xcstrings`.
+
+Now the route registration seam, mirroring the sibling exactly.
+
+Now the model unit tests.
+
+Now let me run the cheap, high-signal gates first: swiftlint --strict and the placeholder scan.
+
+Both pass. Now the format check and then the type-check. Let me run swiftformat lint.
+
+swiftformat flagged `hoistAwait` — let me fix it to match the sibling's pattern.
+
+Format passes. Now let me assemble the dependency closure for an isolated type-check (the view layer is `Shared`-free). Let me inspect the closure size.
+
+The view closure only pulls system frameworks (Charts/MapKit/CoreLocation) — no `Shared`. Let me run an isolated Swift 6 strict-concurrency type-check against the iOS SDK.
+
+The closure needs `UnitPreferences` (a transitive dep). Let me find it and check the `Shared`-importing files to decide the cleanest closure.
+
+`UnitPreferences` lives in a `Shared`-coupled facade, so I must exclude the SI-formatter component (which the card doesn't use). Let me find all Shared-coupled component files to exclude.
+
+Only `UnitFormatters.swift` is `Shared`-coupled. Let me re-run the iOS type-check excluding it.
+
+iOS type-check passes (Swift 6, strict concurrency complete). Now the macOS SDK type-check.
+
+Both type-checks pass. Now let me build a SwiftPM harness to actually **execute** the model tests against the real closure. Let me set it up.
+
+All 16 tests execute green against the real component closure. Now let me capture the full `xcodebuild` gate result honestly (expected DEFERRED on missing `Shared.xcframework`). Let me check the project generation state.
+
+`xcodegen` is available. Let me generate the project and attempt the full build to capture the real (expected-DEFERRED) result.
+
+The full build is blocked on the KMP `Shared.xcframework` preaction (Gradle). Let me inspect the script and the documented pending-verification disposition while it runs.
+
+The build is running the KMP Gradle assembly (the documented out-of-scope, macOS-deferred step). Let me wait a bit more for a definitive result.
+
+The full build reached `BUILD_EXIT=65` — failing on the vendored `Shared.xcframework` missing the x86_64 simulator slice (the documented KMP/ADR-012 deferral), in unrelated files (WhyEndedPanel/Widget*), not mine. Let me re-run capturing to a file to prove zero diagnostics in my code.
+
+Zero diagnostics in my files. The build fails only on (1) the vendored `Shared.xcframework` missing the x86_64 simulator slice and (2) a pre-existing unrelated `Input.Previews.swift` error — both out-of-scope (the documented DEFERRED condition). Let me verify my working tree is clean-scoped.
+
+All changes are scoped to my 4 new files. Now let me update the ledger and write the evidence log.
+
+Ledger valid. Now the evidence log.
+
+Log written. Now let me clean up temp/generated artifacts and verify the final scoped diff.
+
+Working tree is exactly scoped. Let me re-run the in-scope gates one final time pre-commit (covenant: no commit on red) and re-confirm the 19 keys.
+
+All gates green, 19/19 keys present. Let me commit the scoped changes.
+
+Committed cleanly (6 files, scoped). Let me finalize tracking.
+
+All todos complete. Let me verify the final commit state is clean.
+
+Task complete. The working tree is clean and the commit is in place.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-automations-AutomationCard.log | 331 +++++++++++++++++++++
+ .../Features/Automations/AutomationCardPage.swift  | 153 ++++++++++
+ .../Automations/AutomationCardPageModel.swift      | 214 +++++++++++++
+ .../AutomationCardRouteRegistration.swift          |  38 +++
+ .../Automations/AutomationCardPageModelTests.swift | 158 ++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 6 files changed, 912 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-automations-AutomationCard.log
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationCardPage.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationCardPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Automations/AutomationCardRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Automations/AutomationCardPageModelTests.swift

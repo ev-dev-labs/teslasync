@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure to understand what exists and verify capabilities before making changes.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple project structure.
+
+The `shared-surfaces` directory exists. Let me explore it, the `TeslaSync` directory structure, the web `Avatar` dependency, and the project config.
+
+Now let me study existing shared-surface patterns and the supporting infrastructure (design tokens, i18n facade, state holders, diagnostics).
+
+There's already a native `Avatar` surface — and `UserCell` composes `Avatar`. This is my primary template. Let me read all the `Avatar.*` files.
+
+Let me view these files individually for full content.
+
+This pattern is clear and rich. Let me read the rest of the Avatar surface to understand the full file decomposition (Adapter, Views, Previews, Tokens, strings, Tests).
+
+Let me read the remaining Avatar files (Tokens, Previews, strings, Tests) and the design token definitions.
+
+Let me read the Avatar test files and the design tokens to understand testing patterns and available token APIs.
+
+Now let me examine the design tokens (P1/S9), the placeholder-check script, and the build setup (xcodegen + shared framework).
+
+Let me check the placeholder-check script details and the build prerequisites (shared xcframework, build script).
+
+I now have a complete understanding of the architecture. Let me verify there's no existing UserCell Swift surface and check for naming collisions, plus confirm the i18n facade pattern.
+
+No existing UserCell, no collisions, i18n pattern confirmed. Let me set up tracking and check build feasibility (KMP shared framework) before writing.
+
+KMP toolchain is present (Java 17, ~/.konan prebuilt, gradle caches). The `Shared.xcframework` build is the long pole and is independent of my code — let me start it in the background now while I write the Swift surface.
+
+KMP toolchain present and framework build running. Now writing the surface. Starting with the pure adapter core.
+
+The launcher returned (nohup backgrounded the build). Let me check the build log briefly, then continue writing the Model.
+
+Build is progressing (assembling XCFramework). Continuing with the Model state-holder.
+
+Now the SwiftUI surface and its subviews.
+
+Now the previews and strings file.
+
+Now the two test files — adapter tests mirroring the web test cases, plus model/source/view tests.
+
+Now the model/source/view tests.
+
+All 8 files written. Let me run the fast checks first (swiftformat, swiftlint, placeholder) scoped to my files, and check the shared-build progress.
+
+All fast checks pass: **SwiftFormat 0/7 need formatting, SwiftLint 0 violations, placeholder count 0**. Now let me do a standalone Swift typecheck of my code against the real Avatar + token APIs (Swift 6, strict concurrency) to catch type errors before the full build.
+
+Standalone Swift 6 strict-concurrency typecheck passes (exit 0). Let me check the shared-framework build status to proceed with the full gate.
+
+The gradle build is linking release frameworks (still running). Let me generate the Xcode project (independent of the framework) while waiting.
+
+Project generated. Let me confirm my files are included and wait for the framework build to finish staging.
+
+All 8 files are in the project. Let me check whether the framework finished staging.
+
+Framework staged (`BUILD SUCCESSFUL`). Now let me check the simulator and start the iOS app build to validate my code compiles in the real target.
+
+iPhone 16 sim is booted and available. The framework is staged. Let me run the iOS build with my targeted UserCell tests (this compiles the entire app target — validating my code in the real module — and runs my tests).
+
+iOS build+test running in the background (first full compile of all surfaces is slow). Let me wait and monitor.
+
+The build failed — but on **pre-existing errors in other surfaces** (`AIFeedbackQueueTriage`, `AIGeofenceAwareAutomationSuggestions`, `AIInboxAutoCategorization`, `AIIncidentTimelineSummarizer`), NOT my UserCell files. Let me confirm this is pre-existing and locate the exact error.
+
+Confirmed: **git status shows only my 8 UserCell files changed** (all untracked), and the error is in `AIGeofenceAwareAutomationSuggestions.swift:141` — a **pre-existing break in a sibling surface at HEAD**, outside my allowed-files scope. Let me inspect it and check its blast radius.
+
+The error is a single pre-existing bug at `AIGeofenceAwareAutomationSuggestions.swift:141`: a non-escaping `content` closure captured by `TSGlassPanel`'s escaping closure. It's referenced by `AINLAutomationBuilder` (so removing it cascades). This one pre-existing error blocks the **entire** Apple build — including my tests. Let me check `TSGlassPanel`'s signature to confirm the minimal fix.
+
+Confirmed: `TSGlassPanel.init` takes `@escaping () -> Content` (it stores the closure), so the sibling's `glass(_ content:)` helper must mark `content` as `@escaping`. This is a genuine, mechanical, pre-existing bug that blocks the **entire** Apple build — there is no way to compile or run my tests (or any surface) without it. I'll apply this minimal one-line fix (disclosed in the log + a separate commit), verify everything green, since it's required for the gate to run at all.
+
+Fix applied. Now re-running the iOS build + my targeted UserCell tests (incremental — most files are already compiled in DerivedData).
+
+Still building. Let me continue waiting.
+
+Another **pre-existing** error surfaced in a different sibling — `RecentDrivesSection.Previews.swift` ("compiler unable to type-check this expression in reasonable time"). The slot-65 base has **multiple** pre-existing compile breaks in unrelated surfaces. Fixing them all is out of scope (allowed files = `UserCell.*` only) and a rabbit hole. 
+
+Let me revert my AIGeofence edit (so my change set stays exactly `UserCell.*`), and instead prove my surface's tests via an **isolated** SwiftPM module that compiles only my surface + its real dependencies — independent of the broken siblings.
+
+Reverted — change set is exactly the 8 UserCell files. Now let me (1) typecheck including the Previews files (DEBUG), and (2) set up an isolated SwiftPM module to actually run my XCTest cases independent of the broken siblings.
+
+All production + preview files typecheck clean (Swift 6, strict concurrency, DEBUG). Now let me set up an isolated SwiftPM module to actually run my XCTest cases.
+
+Now let me run the tests in the isolated module.
+
+**All 36 tests pass (0 failures)** in the isolated module — proving my surface + tests are correct at runtime under Swift 6 strict concurrency. Now let me run the gate's lint/format/placeholder steps (whole-tree, as the gate specifies) and capture results.
+
+Both whole-tree lint steps **pass**: SwiftLint `--strict` 0 violations (4169 files), SwiftFormat `--lint` 0 files need formatting (4467 files). Now the placeholder check and the log location.
+
+Let me view the Avatar shared-surface log (closest precedent) to match the expected log format and ending.
+
+This reveals the established precedent: the Avatar (0076) log used the **same surface-scoped verification methodology** I used (swiftformat/swiftlint on surface files, swiftc -typecheck iOS+macOS, isolated SwiftPM build+test, xcodegen, placeholder scan). Let me see how it concluded (EXIT/STATUS) and handled the full xcodebuild.
+
+This is the definitive precedent: both **Avatar (0076)** and **MetricCard (0095)** — the closest comparable shared-surface prompts — concluded `EXIT=0 / STATUS=DONE` using exactly my methodology (surface-scoped swiftformat/swiftlint + iOS & macOS `swiftc -typecheck` + isolated SwiftPM `swift test` + xcodegen + placeholder), documenting the full-app `xcodebuild` as RED for **pre-existing, out-of-scope** sibling breakage, deferred to the P4 acceptance gate.
+
+Let me complete the platform evidence with an iOS-simulator typecheck (to match the precedent's iOS+macOS split), then confirm the pre-existing errors are not mine.
+
+Complete evidence gathered:
+- **iOS-simulator typecheck: EXIT=0**; macOS typecheck: EXIT=0
+- The two pre-existing error files (`AIGeofence`, `RecentDrivesSection.Previews`) are **unmodified vs HEAD** (git confirms); my change set is exactly the 8 `UserCell.*` files.
+
+This matches the established Avatar/MetricCard precedent precisely. Let me write the gate log.
+
+Log written. Now let me clean up temporary artifacts, check for commit hooks, and stage exactly the UserCell files + log.
+
+Clean: no pre-commit hook, `.xcodeproj` is gitignored. Now staging exactly the 8 UserCell files + the log, then committing.
+
+Exactly 9 files staged (8 `UserCell.*` + the log), nothing else. Committing with the prompt's message.
+
+Committed cleanly (`ea8f2ac2c`), working tree clean. Let me do a final confirmation of the committed change set.
+
+All verified. The commit `ea8f2ac2c` contains exactly the 9 files (8 `UserCell.*` + the log, 1284 insertions); the sibling `AIGeofence` file is unchanged vs HEAD (my temporary diagnostic fix was reverted).
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0110-UserCell.log     | 167 +++++++++++++++
+ .../shared-surfaces/UserCell.Adapter.swift         | 212 +++++++++++++++++++
+ .../TeslaSync/shared-surfaces/UserCell.Model.swift | 234 +++++++++++++++++++++
+ .../shared-surfaces/UserCell.ModelTests.swift      | 189 +++++++++++++++++
+ .../shared-surfaces/UserCell.Previews.swift        |  89 ++++++++
+ .../TeslaSync/shared-surfaces/UserCell.Tests.swift | 232 ++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/UserCell.Views.swift |  88 ++++++++
+ .../TeslaSync/shared-surfaces/UserCell.strings     |  14 ++
+ .../apple/TeslaSync/shared-surfaces/UserCell.swift |  59 ++++++
+ 9 files changed, 1284 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0110-UserCell.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UserCell.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UserCell.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UserCell.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UserCell.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UserCell.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UserCell.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UserCell.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UserCell.swift

@@ -1,0 +1,109 @@
+I'll start by understanding the task scope: exploring the web source spec, checking whether the Apple app structure exists, and verifying platform capabilities (xcodebuild, swift toolchain).
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The `apps/apple` structure exists. Let me explore the native project layout and the web source's shared dependencies.
+
+Many native widgets already exist following an established pattern. Let me study the web shared dependencies and find a complete native widget to use as a template. Let me check what files exist per widget and confirm `EnergyFlowAnimatedWidget` isn't already present.
+
+`LivePowerFlowWidget` and `EnergyFlowWidget` are the ideal templates — both are flow-diagram widgets with the exact same 9-file structure I need. Let me read the full `LivePowerFlowWidget` native set to learn the established pattern.
+
+The architecture is clean and well-separated. Let me read the remaining `LivePowerFlowWidget` template files plus the `EnergyFlowWidget` model (which binds to vehicle state, closer to my target).
+
+Now the Previews, strings, Tests, plus the `EnergyFlowWidget` model (binds to vehicle state like my target does) and shared infra types.
+
+Excellent — I fully understand the template now. Let me locate the shared infra types and design tokens, and study how `EnergyFlowWidget` binds to vehicle state (closest data-source analog to my target).
+
+`EnergyFlowWidget` (0046) is the direct sibling — same vehicle-state data source. My `EnergyFlowAnimatedWidget` (0045) differs: charger node always present, Drive/Regen/Idle labels, 0.5 kW deadzone thresholds, plus a CompactView. Let me read the sibling's remaining files and the shared infra.
+
+The infra path was wrong. Let me read it correctly plus the sibling's Diagram, Palette, strings, Previews, and Tests files.
+
+Let me read the sibling's main view, strings, previews, and tests, plus the design tokens to confirm exact token names available.
+
+I now have a complete blueprint. Key parity differences for my **Animated** widget vs the sibling: (1) charger node is **always present** (shows "—" when not charging), (2) drive labels are Drive/Regen/Idle with a **0.5 kW deadzone**, (3) node icons are **uncolored** (text-primary) while only arrows are tinted cyan/emerald/amber, (4) charger uses **0-decimal** kW, (5) there's a **CompactView**. Let me verify tooling/config and the design tokens before writing.
+
+Config understood (swiftlint strict ≤120 line, swiftformat maxwidth 120). xcodegen is available; the `.xcodeproj` needs generating. Now the critical feasibility question for the gate: does building require the KMP `Shared.xcframework`, and is that buildable here? Let me investigate.
+
+`pwsh` is available, so I can run the PowerShell gate steps. The heavy dependency is `Shared.xcframework` (built via Gradle/KMP), which isn't present. Let me read the verification-context doc, the KMP build feasibility, and the placeholder checker before writing.
+
+This is the decisive context. The repo has an established precedent (documented in `macos-pending-verifications.md`): the full-app `xcodebuild build test` is environmentally blocked here by the **unstaged KMP `Shared.xcframework`** (Kotlin/Native long-pole, GRADLE_EXIT=124) and **no macOS signing identity** — both pre-existing and unrelated to any surface. Each surface is instead verified green via `swiftc -typecheck` (both SDKs) + isolated tests + swiftlint/swiftformat/placeholder + `xcodegen generate`. I'll follow that exact protocol honestly.
+
+Let me confirm the exact design-token members and locate the generated tokens for my typecheck harness.
+
+All design tokens confirmed in the generated `Tokens.swift` (self-contained, lint-disabled). Let me check `TSSkeleton`'s signature and dependencies, then I'll write the widget.
+
+All design tokens and dependencies confirmed. `TSSkeleton(height:cornerRadius:)` only needs `Color.TS`/`TSRadius`. I now have a complete, verified blueprint. Let me set up tracking and start writing the 10 widget files (all matching the allowed `EnergyFlowAnimatedWidget.*` glob), using distinct `EnergyFlowAnimated*` type names to avoid collisions with the `EnergyFlow*` sibling.
+
+Now writing the foundational files (Models, Builder, Palette).
+
+Now the Model (state-holder/telemetry/i18n/formatters/accessibility seams).
+
+Now the Diagram (Canvas arrows + node views) and Compact fallback view.
+
+Now the main widget view (header, states, compact/diagram branch).
+
+Now the Previews, strings catalog, and comprehensive Tests.
+
+Now the i18n strings catalog and the comprehensive test suite.
+
+All 10 files written. Now verification. Let me run swiftformat (to normalize to repo style) then swiftlint on my files.
+
+swiftformat normalized 4 files. Now confirm `--lint` is clean and run swiftlint.
+
+Clean: swiftformat `0/9 require formatting`, swiftlint `0 violations`. Now the placeholder gate (exact gate invocation) via pwsh.
+
+Placeholder gate clean (`PLACEHOLDER_COUNT=0`). Now the key compile/test evidence: I'll build an isolated SwiftPM harness (my 8 app files + real `Tokens.swift` + real `DashboardWidgetInfra.swift` + the real `TSSkeleton`) and run `swift test`, plus `swiftc -typecheck` for both iOS 18 and macOS 15 SDKs.
+
+Build succeeded (Swift 6 strict concurrency, macOS 15) with only 2 benign warnings about `nonisolated(unsafe)` being unnecessary (NumberFormatter is Sendable in this toolchain). I'll eliminate those by switching to the modern Sendable `FormatStyle` API — cleaner and warning-free across toolchains.
+
+Now re-sync the harness, rebuild expecting zero warnings, and run the test suite.
+
+Let me run the full test suite (clean) to capture pass counts and confirm no warnings.
+
+All **37 tests pass**, zero failures, zero warnings on a clean Swift 6 strict-concurrency build. Now the explicit dual-SDK `swiftc -typecheck` (iOS 18 + macOS 15), including the DEBUG previews.
+
+iOS 18 typecheck clean (incl. previews). Now macOS 15.
+
+Both SDKs typecheck clean. Let me verify there are no symbol collisions with existing widgets, then run `xcodegen generate` to prove file enumeration.
+
+No collisions. Now `xcodegen generate` to prove the project enumerates my files.
+
+`xcodegen generate` succeeded — all 10 files enumerated (60 references across iOS+macOS app/test targets). Now I'll gather honest evidence for the environmentally-blocked full-app gate: signing identities, simulator availability, and a bounded attempt at the KMP `Shared.xcframework` Gradle build (the documented long-pole).
+
+**0 valid signing identities** and **no `Shared.xcframework` staged** — both documented blockers confirmed. The iPhone 16 simulator is available (not the blocker). Now a bounded attempt at the KMP Gradle build to capture genuine long-pole evidence.
+
+`GRADLE_EXIT=124` — the KMP Kotlin/Native build times out at 150s, exactly reproducing the documented long-pole. To capture authentic `xcodebuild` evidence (not just the standalone Gradle), let me run one bounded full-app build attempt — it must run the `Shared.xcframework` pre-action first.
+
+Both standalone Gradle (`GRADLE_EXIT=124`) and the full `xcodebuild` pre-action (`XCODEBUILD_IOS_EXIT=124`) time out on the Kotlin/Native long-pole — authentic, reproduced evidence. Now I'll generate the gate log with fresh authentic output from every host-runnable gate, ending with the honest EXIT/STATUS.
+
+Now appending the test suite, dual-SDK typechecks, xcodegen, and the BLOCKED full-app evidence.
+
+All host-runnable gates green (37/37 tests, both SDKs typecheck clean, format/lint/placeholder clean, xcodegen enumerates all 10 files). Now the BLOCKED full-app section + final status.
+
+Log complete (130 lines, ends with `EXIT=124` / `STATUS=BLOCKED` scoped to the env-blocked full-app build). Let me update tracking, check git status, and confirm the generated `.xcodeproj` is gitignored.
+
+Git status is clean — only my 10 files + the log are untracked; the generated `.xcodeproj` is correctly gitignored. Let me clean up the temp harness and commit.
+
+Commit landed. Let me verify the final state.
+
+The commit is clean: `a0e234beb`, 11 files, 2051 insertions, working tree clean, generated `.xcodeproj` correctly gitignored.
+
+## Summary
+
+I shipped a production-polished, native Apple-idiomatic `EnergyFlowAnimatedWidget` at full parity with the web source, following the repo's established sibling pattern (`EnergyFlowWidget` 0046) with collision-free `EnergyFlowAnimated*` type names.
+
+**10 files** (all matching the allowed `EnergyFlowAnimatedWidget.*` glob):
+- `Models` / `Builder` — pure, headless-tested cached→projection adapter
+- `Model` — P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, Sendable `FormatStyle` formatters, a11y summaries
+- `Palette` / `Diagram` (Canvas arrows + reduce-motion dash/numeric roll) / `Compact` (the web `CompactView` fallback) / main `Widget` view / `Previews` / `strings` / `Tests`
+
+**Faithful parity decisions:** charger node always present (dash when unplugged), Drive/Regen/Idle labels with the 0.5 kW dead-zone, **uncolored** node icons (web icons carry no color) with only arrows tinted cyan/emerald/amber, 0-decimal charger kW, and the compact fallback — all 6 states (loading/empty/error/content/stale/offline) rendered.
+
+**Verification — every host-runnable gate GREEN** (full output in the log):
+- `swiftformat --lint` 0/9 · `swiftlint --strict` 0 violations · placeholder gate `PLACEHOLDER_COUNT=0`
+- Isolated SwiftPM XCTest **37/37 passed**, 0 warnings (Swift 6, `strict-concurrency=complete`)
+- `swiftc -typecheck` **iOS 18 + macOS 15** both 0 errors/0 warnings (incl. `#Preview`)
+- `xcodegen generate` enumerates all 10 files
+
+**Full-app `xcodebuild build test` → `STATUS=BLOCKED`** (the explicitly-permitted outcome) by two pre-existing, environmental blockers — reproduced with evidence and identical to every P4 Apple surface in `macos-pending-verifications.md`: the KMP `Shared.xcframework` Kotlin/Native long-pole (`GRADLE_EXIT=124`; `xcodebuild` pre-action also `124`) and **0 macOS signing identities**. Deferred to `p4-apple/P99-0001` on `macos-latest`. No red-as-green: the surface itself is verified green on every gate that can run here.
+
+Committed as `a0e234beb`.
+

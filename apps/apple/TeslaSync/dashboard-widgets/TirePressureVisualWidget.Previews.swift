@@ -20,8 +20,8 @@ import SwiftUI
     }
 
     /// Four healthy tires (~2.4 bar → all green).
-    private func normalReading(now: Date = Date()) -> TirePressureReading {
-        TirePressureReading(
+    private func normalReading(now: Date = Date()) -> TirePressureWidgetReading {
+        TirePressureWidgetReading(
             frontLeftKilopascals: 241,
             frontRightKilopascals: 238,
             rearLeftKilopascals: 245,
@@ -34,8 +34,8 @@ import SwiftUI
     }
 
     /// Mixed fleet: FR soft (2.2 bar → amber), RL hard-low (2.0 bar → red).
-    private func warningReading(now: Date = Date()) -> TirePressureReading {
-        TirePressureReading(
+    private func warningReading(now: Date = Date()) -> TirePressureWidgetReading {
+        TirePressureWidgetReading(
             frontLeftKilopascals: 240,
             frontRightKilopascals: 220,
             rearLeftKilopascals: 200,

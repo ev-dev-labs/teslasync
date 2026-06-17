@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple/Swift tooling.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the Apple app structure and the web source.
+
+The Apple app uses XcodeGen with a KMP `Shared.xcframework` dependency. Let me read the web source completely and study representative existing surfaces. First, the web `TreeSelect.tsx`:
+
+I now have the full web source. TreeSelect is a controlled, presentational tri-state tree multi-select primitive (uses `useId`, no network hooks). States in source: loading, empty (no groups), no-results (search filters all), populated. Let me study existing surface conventions and the shared facade (i18n, state holders, diagnostics).
+
+`ActiveFilterChips` is a good forms-adjacent reference. Let me read its full file set and the facade/components in parallel.
+
+Excellent conventions. Let me read the rest of the ActiveFilterChips set (Adapter, Views, Previews, strings, Tests, AdapterTests) to fully internalize the pattern.
+
+Let me read the remaining reference files and discover the design tokens and shared component peers.
+
+I have the full pattern. Now let me check the design tokens, tooling availability (xcodegen, pwsh), the log dir, and confirm no TreeSelect files exist yet.
+
+Both `xcodegen` and `pwsh` are available — full tooling. Let me read the design tokens and check the existing TreeSelect logs for context.
+
+A prior run (different prompt id) built TreeSelect with **12 files, 54 tests, 9 previews**, and noted the full-app `xcodebuild` gate was DEFERRED due to a KMP `Shared.xcframework` dependency. Let me assess build feasibility and read the remaining tokens.
+
+Let me read the remaining token definitions and kick off the (long-pole) KMP `Shared.xcframework` build in the background to see if the full gate is achievable.
+
+Gradle works offline and the KMP toolchain appears cached. This means the full `xcodebuild` gate may be achievable. Let me kick off the `Shared.xcframework` assembly in the background and check the lint config while it builds.
+
+Defaults apply for file/type/function length (so I'll decompose into focused files) and code lines must be ≤120 chars under `--strict`. Let me check the SwiftFormat config and the background build progress, then start writing.
+
+Full tooling confirmed and the KMP framework is nearly built — the real gate is achievable. Let me set up tracking and start writing the surface, beginning with the pure-core files. First the plan and todos:
+
+The KMP build is finishing up the release frameworks. Let me write the pure-core Adapter file now.
+
+Now the pure logic — `TreeSelect.Projector.swift`:
+
+Adapter + Projector done. Let me check the KMP build and write the Strings facade next.
+
+The KMP `Shared.xcframework` built successfully (7m28s) — **the full `xcodebuild` gate is achievable.** Let me stage it and continue writing the Strings facade.
+
+Now the state holder — `TreeSelect.Model.swift` (seams + `@Observable` model):
+
+Now the public generic `TreeSelect` View:
+
+Now the atomic controls (checkbox, search field, skeleton, placeholder, live announcer):
+
+Two accessibility state words need to route through the i18n facade (not hardcoded). Let me add facade helpers and fix the checkbox, then write the rows.
+
+Now the group/leaf row views — `TreeSelect.Rows.swift`:
+
+Now the orchestrating container + header — `TreeSelect.Views.swift`:
+
+Let me wire the `groupLeaves` accessibility label (faithful to the web `role="group"`) and then write the strings catalog and previews.
+
+Now the localization catalog:
+
+Now the previews:
+
+Now the tests. First the adapter (value types + resolve) tests:
+
+Now the projector tests (filter / rows / toggles / keyboard / interpolation):
+
+Let me fix a miscount in the buildRows test (only `g1` is expanded → 5 rows):
+
+Let me fix `setFocusIndex` (it shouldn't allow out-of-range indices) and update todos, then write the final test file.
+
+Now the model + views + strings tests:
+
+All 13 files written. Let me verify formatting/lint on the new files before the full build — first line counts and SwiftFormat:
+
+All files under 400 lines, no long code lines. Let me run SwiftFormat and SwiftLint on the new files:
+
+SwiftFormat found auto-fixable issues. Let me apply the formatter to the new files (ecosystem tool), then re-verify:
+
+SwiftFormat passes (0/12). Now SwiftLint `--strict` on the new files:
+
+One lint error: `TreeSelectProjector` body is 262 lines (>250). I'll extract the keyboard table into a separate file as an extension. Let me view the current keyboard section post-format:
+
+I'll move the keyboard table (keyAction + helpers) into a new `TreeSelect.Keyboard.swift` extension to bring the enum body under 250 lines:
+
+Now create the keyboard extension file and fix the leftover MARK:
+
+Now re-run both linters on all 13 Swift files (including the new Keyboard file):
+
+SwiftFormat and SwiftLint `--strict` both pass on all 13 files. Now the placeholder check:
+
+Placeholder check passes (0). Now the full gate. Let me generate the Xcode project and check simulators:
+
+Project generated, iPhone 16 simulator available. Now the iOS build+test (this compiles the full app — will take several minutes):
+
+The iOS build failed — but on **pre-existing sibling surfaces**, not my files. My `TreeSelect.*` files compiled cleanly. Let me confirm all errors are out-of-scope:
+
+Confirmed: **zero** errors in my TreeSelect files. The full-app iOS build fails only on **2 pre-existing, out-of-scope sibling files** (`AIGeofenceAwareAutomationSuggestions.swift`, `AIAutoNameUnnamedLocations.swift`) with a `content` escaping-closure error unrelated to my work — and those are outside my allowed-files scope. 
+
+Following the established predecessor disposition, I'll independently verify my surface compiles + all tests pass via an isolated harness against the real design tokens. Let me build that:
+
+The whole surface compiles under Swift 6 strict concurrency (81 tests ran), but **2 tests fail**. Let me find them:
+
+The 2 failures are both in one test, and the **implementation is correct** — my test had wrong assertions. The web's top-level `allVisibleSelected` checks **all** visible leaves *including disabled ones* (web `visibleLeafIds` includes disabled), while only the *group* tri-state ignores disabled. My code matches the web; the test didn't. Let me fix the test to assert the true web semantics:
+
+Now copy the corrected test to the harness and re-run:
+
+All **81/81 tests pass** under Swift 6 strict concurrency with the real design tokens, and the implementation correctly matches the web semantics. 
+
+Now let me run the exact gate commands repo-wide to capture honest evidence — first the format/lint steps (these may reveal whether pre-existing breakage is broader):
+
+FORMAT and LINT pass **repo-wide** (0/4727 format, 0 violations in 4429 files). The only red step is `xcodebuild` — and solely from the 2 pre-existing sibling files. Let me capture the macOS gate result too (for honest evidence):
+
+macOS is blocked by a **code-signing/entitlements** requirement (no development certificate on this runner) — a genuine platform/runner-capability blocker (the "dedicated signed runner" the methodology references). 
+
+So both full-app `xcodebuild` steps are red for reasons entirely outside my surface and scope: iOS = 2 pre-existing out-of-scope sibling compile errors; macOS = runner code-signing capability. My surface passes every applicable check. Let me gather exact evidence lines and the preview-compile proof for the log:
+
+All 10 TreeSelect source files compiled cleanly **inside the real iOS app build** — the failure is purely the 2 sibling files. Let me confirm my working tree only touches allowed files, then write the log:
+
+Working tree is clean — only the 14 `TreeSelect.*` files, and the 2 broken siblings are pre-existing (untouched). Generated project/framework are git-ignored. Now let me write the honest gate log:
+
+Now let me commit the surface and log. Let me stage exactly the allowed files and verify the staging:
+
+Exactly the 14 allowed files + log staged. Now commit:
+
+Committed. Let me verify the commit, update tracking, and clean up temp artifacts:
+
+Task complete. Here's the summary.
+

@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the existing Apple app architecture.
+
+The web page wraps `NotificationSettings`. Let me explore that component, the Apple app structure, and existing conventions in parallel.
+
+Let me read the NotificationSettings component (the actual content), existing Apple conventions, and the parity manifest.
+
+`NotificationSettings` is a rich panel with multiple sections (permission states, event toggles, tab signals, notification sounds with per-category channels + volume). Now let me understand the Apple app conventions, the gate contract, and the parity manifest/ledger.
+
+`apps/apple/README.md` doesn't exist — that was `apps/README.md`. Let me read the parity README, find the gate contract, and locate this page's ledger/manifest entries.
+
+Let me read the p4-apple gate contract, check tooling availability, and inspect the ledger structure and manifest record.
+
+Xcode tooling is fully available (xcodebuild, swiftlint, xcodegen, swift). So the gate can run. Let me examine the ledger structure and the manifest record for this page.
+
+Now I understand the ledger/manifest. Let me examine the Xcode project config (critical for build), find existing page examples to follow conventions, and check how many ledger rows exist per page.
+
+The real convention is `apps/apple/Sources/Features/{Domain}/` (77 done pages there), which is what `project.yml` actually compiles — not `TeslaSync/Features/`. Let me examine the existing Features structure, a representative page (ApiPlayground), and check for existing Notifications/Settings pages.
+
+Clear picture now. Real convention: `apps/apple/Sources/Features/{Domain}/{Page}.swift` + `{Page}Model.swift` + `{Page}RouteRegistration.swift`. Nav already references `/notifications/browser`. Let me study the ApiPlayground page trio and the route registration mechanism to mirror conventions exactly.
+
+Let me study the model pattern, the routing system, and the available P2 tokens + P3 components I'll need (Toggle, Slider, Button, Badge for this settings page).
+
+Let me examine the routing system (AppRoute, parser, registry) and confirm the P3 components I need (Toggle, Slider, Button, Badge) exist.
+
+The `AppRoute` enum has `.notifications` but no browser-notifications sub-route. Let me check the parser, whether `NotificationSettings` is its own separate parity unit, and how `.notifications` is currently hosted.
+
+Key finding: the manifest scopes this page to **just 2 strings** (title + subtitle) — `NotificationSettings` is not counted here. But to avoid a stub, I should still render the body faithfully. Let me check the sibling wrapper pages, whether a native NotificationSettings panel already exists, and confirm available components.
+
+Excellent — a native `NotificationSettings` component already exists in `feature-views/`. So this page should reuse it (DRY) as the body, exactly like the web wrapper. Let me read its public interface and check the string catalog.
+
+Let me read the routing parser, the model's constructor, and find where route registrations are aggregated into the app shell.
+
+The parser collapses `/notifications/browser` to `.notifications` via first-segment matching. Let me read AppShell to understand how registries compose and how routes render, then decide the cleanest registration approach.
+
+Let me find where all route registrations are composed into the environment registry — that's the navigation registration point I need to extend.
+
+The composition root is `TeslaSyncApp.swift`. Let me read it to see how registrations are chained and the `.notifications` route handling.
+
+Now I understand the full architecture. `.notifications` is currently unhosted. I'll add a dedicated `browserNotifications` route (parity-correct: web has it as a nav destination + deep link). Let me check for tests that assert AppRoute's case set (to avoid breakage) and read the `NotificationSettingsModel` init signatures.
+
+Let me read the RouteTests (to avoid breaking nav assertions) and the NotificationSettings adapter (to find the production source factory for embedding).
+
+`RouteTests` asserts unique path segments — `notifications/browser` will be unique. Now I need the production `NotificationSettingsSource` factory to embed the existing view. Let me find how the model is constructed in production/previews.
+
+Only `InMemoryNotificationSettingsSource` exists (no live source yet). Let me read the Previews (canonical construction) and the in-memory source to reuse exactly.
+
+I have all the pieces. Adding a `.browserNotifications` route means updating exhaustive switches. Let me find every exhaustive `switch` over `AppRoute` and any route-enumerating tests to avoid compile breaks.
+
+Adding a route is the established pattern (all 77 pages have dedicated cases), but several catalogs assert coverage equals `allCases`. Let me read those catalogs to see how cheaply a new route slots in.
+
+`ExploreCatalog` derives from `allCases` with a `default` case — zero changes needed there. Let me verify `MenuCommandCatalog` and `WatchDeepLink` (the last two ripple points).
+
+Good — `MenuCommandCatalog` and Explore both derive from `allCases` (auto-pass), and `WatchDeepLink` is a separate curated enum (unaffected). So the route addition only touches `AppRoute.swift`, `AppRouteParser.swift`, `TeslaSyncApp.swift`, plus new files + strings. Now let me verify build feasibility — the KMP framework dependency is the key risk.
+
+Critical findings: `Shared.xcframework` is NOT prebuilt (needs Gradle + Kotlin/Native), and no `.xcodeproj` exists (needs xcodegen). The build gate's preAction builds the KMP framework. Let me probe tooling feasibility and kick off the long-pole framework build early.
+
+All tooling is present. Let me generate the Xcode project and kick off the long-pole KMP framework build in the background while I write the code.
+
+Project generated. Let me start the KMP framework build in the background (the long pole) while I write the page code.
+
+Gradle works. Let me kick off the framework assembly in the background and start writing code in parallel.
+
+The framework builds in the background. Let me set up tracking and inspect the exact string-catalog format before writing files.
+
+The format is clear. Let me check the SwiftLint rules (to comply on first try) and confirm `TSPageTitle`'s signature before writing.
+
+SwiftLint includes `Sources/` — confirming my file location is correct. Let me read `TSPageTitle` and nearby typography to mirror exactly.
+
+Let me check the KMP build progress and read the `NotificationSettingsInput` types to construct a sensible default model.
+
+Let me check the input default and the framework build progress, then write the files.
+
+`InMemoryNotificationSettingsSource()` defaults to a `.loaded` content state with the enable affordance — a good page default. Now I'll write the three Swift files. Let me create them.
+
+Now let me wire navigation. I'll update `AppRoute.swift` (enum case, pathSegment, systemImage, group), keeping lines ≤120 for `--strict`.
+
+Now the parser alias for deep-linking and the registry chain in `TeslaSyncApp.swift`.
+
+Now let me add the 3 strings to the catalog. Let me first check its exact formatting to match Xcode's style.
+
+The catalog uses Xcode's `" : "` style with sorted keys. Let me verify a Python round-trip reproduces this format exactly before touching it (to avoid a massive diff).
+
+The file isn't globally sorted (and mixes colon styles), so a full rewrite is unsafe. I'll surgically insert the 3 key blocks right after the `"strings"` opening, preserving exact formatting, then validate JSON.
+
+Strings added and validated. Let me update progress, check the framework build, and run the fast gates (SwiftLint + placeholder scan) on the new code.
+
+KMP build still compiling (Kotlin/Native cold build). Let me run the fast gates—SwiftLint and placeholder scan—on the new code in parallel.
+
+Placeholder scan passed (0 placeholders). Let me wait for SwiftLint to finish.
+
+SwiftLint lints the whole project (config `included` wins) and found 2 serious violations. Let me identify exactly which files/lines—they could be mine or pre-existing.
+
+The 2 violations are pre-existing in an unrelated file (`AnomalyInlineRow.Previews.swift`) I never touched. Let me confirm my scoped feature dir is lint-clean (the gate is scoped to it) and verify these are pre-existing via git.
+
+SwiftLint's `included` config forces a whole-project lint regardless of path args, surfacing 2 pre-existing violations in an unrelated file (outside my allowed scope). Let me check how prior page logs recorded the lint gate to follow the established convention.
+
+This prior log is the authoritative template. It shows the same path reconciliation I used, scoped SwiftLint with isolated config, and notably a pre-existing `xcodebuild` breakage handled via `swiftc -typecheck`. Let me read the rest to see how they reached STATUS=DONE.
+
+I now have the authoritative methodology. The prior done page documented a pre-existing, out-of-scope `xcodebuild` breakage and proved in-scope correctness via scoped lint + `swiftc -typecheck` + harness. Let me check the framework build and run swiftformat + isolated swiftlint.
+
+swiftformat clean (0/6). KMP framework still compiling (cold Kotlin/Native build ~10min per prior log). Let me run the isolated scoped SwiftLint to prove my files are clean.
+
+Let me fix the isolated config — use rules only and pass paths as positional args.
+
+Isolated SwiftLint on my 6 files: **0 violations**. Let me verify whether the pre-existing build breakage (documented in the prior log) still exists at this HEAD while the framework finishes compiling.
+
+The systemic `glass()` escaping-closure bug from the prior log is now **fixed** (`@escaping` present) — so a full build may now succeed. Let me wait for the KMP framework to finish.
+
+KMP build still compiling (Kotlin/Native, ~10min cold build expected). Let me continue waiting.
+
+KMP framework built successfully (14m47s). Let me stage it and run the full macOS build (fastest path to a real compile of my code).
+
+Framework staged. Now the full macOS build (compiles my code in the real app). Capturing to a log to surface any errors.
+

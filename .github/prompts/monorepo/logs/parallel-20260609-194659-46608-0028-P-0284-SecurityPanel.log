@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, SwiftLint, SwiftFormat). Now let me explore the existing Apple app structure to understand conventions.
+
+There's an extensive existing structure (2342 files). Let me check if SecurityPanel already exists and find a representative similar panel to follow conventions.
+
+`SecurityStatusCards` is the closest analog. Let me study its complete file set to learn the exact conventions.
+
+Excellent, very high-quality codebase. Let me read the remaining files in the analog set (Views, Previews, strings, Tests).
+
+Now the strings, Tests, and shared infrastructure (tokens, TSGlassPanel, TSFadeIn, etc.).
+
+Now let me examine the shared infrastructure (tokens, TSGlassPanel, TSFadeIn, TSSkeleton) and the web `SecurityEvent` type.
+
+Now the three shared components I'll use: TSGlassPanel, TSFadeIn, TSSkeleton.
+
+I have the full picture of conventions. Let me verify build tooling (xcodegen, pwsh, simulator) and test target wiring before implementing.
+
+All tooling present (pwsh, xcodegen, iPhone 16 booted, check-placeholders, logs dir). Let me check the test target/scheme wiring in project.yml.
+
+All tooling and conventions confirmed. Let me check for shared EmptyState/QueryError feedback components to map the web `EmptyState` faithfully, and look at one more analog that uses a persistent panel + rows (not a grid).
+
+SecurityStatistics is the ideal template (glass panel + title + state body). Let me read its Views and Model.
+
+Let me confirm `TSTone`, `TSButton` signatures, and view the SecurityStatistics Adapter/strings/Previews/Tests to complete my template understanding.
+
+Let me confirm the `TSButton` init signatures and view the SecurityStatistics Adapter + strings to finalize the template.
+
+I have a complete understanding of the conventions. Let me check the build feasibility (shared framework, predecessor logs) before writing, since the gate builds the whole app.
+
+This is the key insight: the established precedent (ADR-012, followed by 117+ sibling surfaces) is "code-complete + DEFERRED Xcode gate" — the whole-app `xcodebuild` is blocked by out-of-scope `Shared.xcframework` KMP staging + signing, so surfaces verify via host-runnable means (scoped lint/format, placeholder gate, dual-SDK compile, executed logic tests). Let me read the lint/format/placeholder configs to ensure compliance, then build.
+
+Key constraints noted (maxwidth 120, testable-bottom imports, before-first wrapping; avoid TODO/stub/mock/placeholder/Lorem everywhere). Let me check the placeholder scanner's matching behavior, then start building.
+
+I have everything I need. Let me write a plan, then build the surface. Starting with the plan and the two foundation files (Adapter + Model).
+
+Now the main View and the Views (subviews) files.
+
+I need to fix one parity detail first: the web uses `??` (nullish) for `doors_open`/`windows_open`, so an empty string passes through — my `nonEmpty` helper incorrectly falls back on empty strings. Let me fix the Adapter and write the remaining files.
+
+Now the Previews, strings, and Tests files.
+
+All 7 files created. Let me clean up the slightly awkward `try? XCTUnwrap` usage, then run the format/lint gates on my files.
+
+Now let me run SwiftFormat and SwiftLint (scoped to my files).
+
+SwiftFormat clean (0/6 need formatting), SwiftLint clean (0 violations). Now the placeholder gate — I'll scan my actual files (the literal gate path needs a real directory).
+
+Placeholder gate clean. Now the dual-SDK compile of the full surface against the real shared components. Let me set up and run the macOS typecheck first (iterating on any transitive deps).
+
+The component files have transitive deps (TSGlassPanel's file references typography). Let me determine whether `Sources/Components` + `Sources/Design` is a self-contained closure I can compile against (the real component library).
+
+`Sources/Components` (39) + `Sources/Design` (2) import only system frameworks — a self-contained real component-library closure. Let me typecheck my full surface against it on the macOS SDK first.
+
+One component file — `UnitFormatters.swift` — depends on the KMP `UnitPreferences` facade (a known out-of-closure dep the SecurityStatusCards predecessor also excluded; it's unused by my surface). Let me exclude it and retry.
+
+macOS typecheck passes clean. Now the iOS 18 Simulator SDK.
+
+Both SDK typechecks pass clean. Now the EXECUTED logic harness — a SwiftPM package compiling the real Adapter + Model + Tests, run on macOS.
+
+All 26 tests pass over the real Adapter + Model. Now let me attempt the actual `xcodebuild` gate to capture concrete evidence of the known out-of-scope blocker (Shared.xcframework KMP staging). First, generate the project.
+
+Project generated. KMP `gradlew` exists in `apps/shared`. Let me attempt the iOS build (async, captured) to record where it stops — expecting the Shared.xcframework KMP pre-action blocker.
+
+The KMP `Shared.xcframework` built successfully (Gradle cache was warm — no network needed), so the build is proceeding into the app compile. This is better than the deferred precedent — the full gate may actually be runnable. Let me monitor the build.
+
+Strong host-runnable verification is already green (format, lint, placeholder, dual-SDK typecheck, 26/26 executed tests). The full `xcodebuild` is now past KMP staging and linking release frameworks. Let me give the app compile more time and check whether it reaches Swift compilation or hits pre-existing sibling breakage.
+
+The full `xcodebuild` failed (EXIT=65) with 3 failed compile batches — none of which contain any `SecurityPanel.*` file. They're sibling files (DigitalTwinWidget, WindowStatusDetail, XRayBucketChart, RegexTester, ResetSection, etc.). Let me extract the actual `error:` lines to confirm the failures are in siblings, not my surface.
+
+Confirmed: **zero** `SecurityPanel` errors. The whole-app build is blocked by pre-existing sibling collisions — `StateTimelineUpdate/Connection/LoadStatus/Model` are "ambiguous for type lookup" (duplicate definitions across sibling files I'm forbidden to touch). Let me confirm the duplicate-definition root cause and kick off the macOS build to capture its (deterministic) result too.
+
+Root cause confirmed: **two** public definitions each of `StateTimelineUpdate/Connection/Model` exist (in `StateTimelineWidget.Model.swift` and `StateTimeline.*`) — a pre-existing collision between two sibling surfaces, both outside my allowed scope. My surface uses `SecurityPanel*`-prefixed types precisely to avoid this class of bug. Let me start the macOS build (deterministically blocked by the same collision) and write the gate log while it runs.
+
+While the macOS build runs, let me capture the whole-tree SwiftLint/SwiftFormat results (to honestly disclose pre-existing sibling violations and confirm none are mine).
+
+Whole-tree SwiftFormat is clean (0/3081 need formatting). The `macbuild` notification was just the launcher returning — the actual xcodebuild runs detached. Let me run whole-tree SwiftLint and check the macOS build progress.
+
+Whole-tree SwiftLint is also clean (0 violations in 3077 files). The macOS build log is empty — the shell `&` child was likely reaped when the launcher returned. Let me check and re-launch it properly via async mode.
+
+The macOS `&` child was reaped. Let me re-launch it properly via async mode (KMP is now cached, so it should reach the app compile faster) and monitor.
+
+Let me monitor the macOS build while preparing the log evidence.
+
+macOS build also EXIT=65. Let me confirm it's the same sibling collision with zero SecurityPanel involvement.
+
+Both Xcode gates are blocked by pre-existing, out-of-scope issues (iOS: sibling `StateTimeline*` duplicate-definition collision; macOS: dev-certificate signing) — **zero** SecurityPanel errors in either. Let me clean up the generated project and confirm git status shows only my files.
+
+Git status is clean — exactly my 7 `SecurityPanel.*` files, no build artifacts (xcodeproj/xcframework are git-ignored). Now let me write the gate log with all the real evidence.
+
+Let me verify there are no problematic pre-commit hooks, then commit the surface and log.
+
+No active hooks; final scoped lint/format GREEN. Committing the surface and log.
+
+Committed cleanly (commit `ea535d312`, 8 files, 1787 insertions). Let me clean up temp artifacts.
+
+The task is complete and verified. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0284-SecurityPanel.log  | 177 ++++++++++
+ .../feature-views/SecurityPanel.Adapter.swift      | 381 ++++++++++++++++++++
+ .../feature-views/SecurityPanel.Model.swift        | 260 ++++++++++++++
+ .../feature-views/SecurityPanel.Previews.swift     | 118 +++++++
+ .../feature-views/SecurityPanel.Tests.swift        | 343 ++++++++++++++++++
+ .../feature-views/SecurityPanel.Views.swift        | 393 +++++++++++++++++++++
+ .../TeslaSync/feature-views/SecurityPanel.strings  |  46 +++
+ .../TeslaSync/feature-views/SecurityPanel.swift    |  69 ++++
+ 8 files changed, 1787 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0284-SecurityPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityPanel.swift

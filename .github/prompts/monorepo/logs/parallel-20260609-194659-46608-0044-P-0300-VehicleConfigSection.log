@@ -1,0 +1,126 @@
+I'll start by exploring the environment to understand what's available and reading the task dependencies.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, iPhone 16 simulator booted). Let me read the web source and understand the existing native structure.
+
+Now let me examine the existing feature-views directory (output location) for sibling examples, the project structure, and shared facades.
+
+The feature-views directory has ~2400 files (one set per surface). Let me find sibling examples — especially any vehicle-detail KVList-based section — and check whether VehicleConfigSection already exists.
+
+VehicleConfigSection doesn't exist yet. Let me study the established pattern by reading a simple example (AccordionSection) and a fuller stateful example (ActiveOrdersSection) completely.
+
+Let me read the full AccordionSection output and the diagnostics/shared facade structure.
+
+AccordionSection is a presentational container — not the best match. Let me explore the shared infrastructure (state holders, design tokens, components, diagnostics) to find the right patterns.
+
+Let me find the native KVList equivalent, the state-holder pattern, skeletons, banners (stale/offline chips), and the diagnostics contract.
+
+`TSKVList`/`TSKVRow` is the native KVList. Now let me study how a presentational (props-in) sibling like AccordionSection is structured natively, since the web source is also presentational.
+
+AccordionSection establishes the pattern (surface slug, telemetry seam, i18n facade, host-free `@Observable` model). Now let me read the KVList/Skeleton/Banner components, design tokens, and find a data-rendering sibling that uses `TSKVList`.
+
+Now let me find a data-rendering sibling that uses `TSKVList` with full state handling, and read the design tokens + typography.
+
+Let me read the design tokens and examine a complete data-section sibling (SecurityPanel) to match file conventions for state rendering.
+
+SecurityPanel is the ideal analog (vehicle-systems detail panel with full state handling). Let me read its complete file set.
+
+SecurityPanel is the exact template. Let me read its Adapter, Views, and Tests to complete my understanding of the projection mapping, state rendering, and test structure.
+
+Now let me read the test conventions and verify the exact data shape and tokens. Let me read SecurityPanel.Tests.swift, the web `VehicleConfigSnapshot` type, the web KVList, and confirm design tokens exist.
+
+I have the full template. Let me confirm a few APIs (TSFadeIn, TSButton, web KVList columns, adaptive grid usage) and the log/gate paths before writing.
+
+Let me confirm the TSButton init signature and adaptive-grid idiom, and critically assess whether the full `xcodebuild` gate can run in this environment (xcodegen, .xcodeproj, KMP framework).
+
+xcodegen is available but `.xcodeproj` and `Shared.xcframework` must be generated/built. The KMP framework is the critical dependency. Let me inspect the build script, the KMP toolchain availability, and the documented macOS verification status.
+
+All host tooling is present (Xcode 26.5, xcodegen, JDK 17, gradlew, swiftlint, swiftformat). The KMP `Shared.xcframework` (Kotlin/Native) is the long pole for the full `xcodebuild` gate. Let me kick that build off in the background while I write the surface files.
+
+Build started. Let me set up tracking and write the surface files. I'll create the plan and todos, then author the 7 files following the SecurityPanel template precisely.
+
+Let me check the KMP build progress, then continue with the Views file.
+
+KMP build is progressing well (konan cached, frameworks linking — release in progress). The full gate is feasible. Let me write the Views file.
+
+All 7 files written. Let me check the KMP build status and run swiftformat/swiftlint on my new files for fast feedback.
+
+swiftformat flagged formatting. Let me auto-fix my files with swiftformat (the ecosystem tool), then re-verify.
+
+swiftformat passes. Now let me run swiftlint on my files and check the KMP build progress.
+
+One swiftlint violation: the `rows(...)` function body exceeds 50 lines. Let me view the formatted version and refactor it to a compact tuple-map.
+
+Let me refactor `rows(...)` into a compact tuple-map to satisfy the function-body-length rule, and remove the now-redundant `row` helper.
+
+KMP build **SUCCEEDED** — the full gate is now runnable. The `large_tuple` rule rejects my 4-member tuple; let me replace it with a small struct. Let me view the current state first.
+
+Let me finalize formatting/lint on the Adapter and all my files, then generate the Xcode project.
+
+swiftlint --strict and swiftformat --lint both clean (0 violations). Now let me generate the Xcode project and stage the framework.
+
+Project generated and framework staged. Now let me validate compilation with an iOS build (build-only first, faster than full test).
+
+Build failed, but the failing files are pre-existing siblings (TripLegList, WebhookChannelsSection), not mine. The actual `error:` lines were truncated. Let me capture full output and extract the real errors.
+
+The errors are all pre-existing cross-surface type collisions (`RecentDrivesModel`, `StateTimelineUpdate`, etc.) in OTHER surfaces — none reference my files. Let me confirm my surface is collision-free and that I introduced zero errors, and check the total error scope.
+
+Let me prove definitively that these collisions are pre-existing (committed, not mine) and quantify the scope.
+
+Definitive: the 54 errors are all pre-existing, committed cross-surface type collisions in two sibling pairs (`RecentDrivesListWidget`↔`RecentDrivesSection`, `StateTimeline`↔`StateTimelineWidget`) — **zero** involve my surface, and my files are purely additive. These are out-of-scope (forbidden to edit).
+
+Let me run the host-runnable gate steps and check whether the colliding surfaces are referenced elsewhere (to enable an isolated build+test proof of my surface).
+
+Placeholder check passes (EXIT=0), and the colliding surfaces have zero external references — so I can produce an isolated build+test proof. First, let me run the tree-wide swiftformat/swiftlint gate steps to see their real state.
+
+Tree-wide **swiftformat --lint (EXIT=0)** and **swiftlint --strict (EXIT=0)** both pass — my files are clean. The only red is the two `xcodebuild build test` steps, solely due to pre-existing sibling collisions.
+
+Now let me get positive proof my surface compiles and its tests pass — an isolated build+test excluding only the two colliding sibling widget halves (zero external refs, nothing else changed).
+
+The isolated build hit a *different* pre-existing collision (`Invalid redeclaration of 'RecentDrivesConnectivityBanner'`), confirming the duplicate-declaration problem is broader than two pairs. Let me enumerate the full set of pre-existing duplicate declarations to understand scope and confirm none are mine.
+
+My surface has **zero** duplicates (confirmed clean); all 49 duplicate names are nested types (28 scoped, fine) plus the pre-existing `RecentDrives` (11) and `StateTimeline` (10) families split across widget+section variants. Let me verify those families aren't referenced elsewhere, then do a final isolated build+test excluding both families entirely.
+
+The exclusion cascades into the app container (`AppContainer.swift`, `DashboardStatsWidget`) which wire up the `RecentDrives`/`StateTimeline` state holders — confirming those pre-existing colliding families are integrated app-wide and cannot be cleanly isolated without editing out-of-scope files. My surface remains clean (0 errors in every attempt).
+
+For an honest, complete gate log, let me run the macOS `build test` step too (it shares the same Sources, so it will hit the identical pre-existing failure).
+
+Now I have the complete, honest gate picture. Both `build test` steps are blocked by factors outside my surface and outside my allowed files:
+- **iOS**: pre-existing committed sibling type collisions (`RecentDrives*`/`StateTimeline*` families, integrated into `AppContainer`).
+- **macOS**: code-signing/entitlements require a development certificate not provisioned in this environment.
+
+My surface is clean in every check. Let me update tracking and write the honest gate log.
+
+Let me capture a few exact evidence excerpts to embed, then write the log.
+
+I have all evidence. Let me write the comprehensive, honest gate log.
+
+The BLOCKED log is written. Let me verify my files were actually fed to the compiler (so "0 errors from my surface" is meaningful, not "not reached"), and confirm final working-tree state.
+
+`grep -c` shows my files don't appear in the iOS/macOS build logs at all — the builds aborted on the pre-existing collisions *before* compiling my "V"-ordered files. So I must not claim my files compiled in those runs. Let me prove my surface type-checks via a focused compile. First, determine my surface's dependency closure.
+
+My surface's closure is clean (only SwiftUI/Foundation/Observation/OSLog + the design system, which itself doesn't import the KMP framework). I can type-check it in isolation. Let me compile my surface + the design-system sources against the iOS simulator SDK.
+
+0 errors in my surface — the failures are in `UnitFormatters.swift`, which depends on a units facade outside the design system (my surface never uses it). Let me locate those unit types and add them to the closure for a clean type-check.
+
+My surface doesn't use the units facade (the only Shared-dependent piece). Let me exclude the Shared-importing design files and re-run a clean type-check.
+
+Only `UnitFormatters.swift` remains (it uses the excluded Shared-backed units facade; my surface never touches it). Let me exclude it too for a clean result.
+
+Clean type-check (**EXIT=0, 0 errors**) — my surface compiles correctly against the real 41-file design system. Now let me validate the test file's logic compiles against my real types (XCTest, with the module import adapted for ad-hoc compilation).
+
+The 168 errors are all `XCTAssert… not in scope` — an ad-hoc XCTest-linkage issue, not my test logic. Let me confirm there are zero errors about *my* types/logic in the test.
+
+All remaining errors are XCTest-framework linkage in my ad-hoc compile (XCTAssert not in scope) and their direct cascades — **0 reference my types**. Let me add the XCTest swiftmodule search path to get an airtight test compile.
+
+**Airtight proof: TYPECHECK_TESTS2_EXIT=0** — my test file type-checks cleanly against my real types + XCTest, and my 5 source files type-check cleanly (EXIT=0) against the real 41-file design system. Let me update the gate log to reflect this accurate, stronger verification.
+
+I now have airtight verification of my surface. Let me verify the final working-tree state (ensure generated build artifacts are git-ignored, only my surface + log are untracked) and clean up temp build dirs.
+
+Working tree is clean — only my 7 surface files + the log are untracked; the generated `.xcodeproj`, staged framework, and gradle build output are all git-ignored. Let me update tracking and do a final review of the log.
+
+The gate log is complete and accurate, ending with `EXIT=65 / STATUS=BLOCKED`. Everything for my surface is verified green; the only red is out-of-scope/pre-existing.
+
+Let me do a final consolidated verification of my surface's clean checks to confirm current on-disk state.
+
+All checks green for my surface: swiftformat 0/6, swiftlint 0 violations, i18n 24/24 keys resolve, 7 files present. The task is at its honest terminal state.
+

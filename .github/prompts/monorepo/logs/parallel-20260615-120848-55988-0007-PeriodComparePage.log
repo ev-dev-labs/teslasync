@@ -1,0 +1,70 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure to understand existing patterns and conventions.
+
+The output path in the prompt (`apps/apple/TeslaSync/Features/...`) differs from the actual structure (`apps/apple/Sources/Features/...`). Let me examine the existing Analytics pages, especially the similar FleetCompare page.
+
+FleetCompare is the ideal template — a near-identical comparison page. Let me read all its files to learn the exact pattern.
+
+Let me read the rest of the FleetCompare files in parallel.
+
+Let me read the remaining FleetCompare files and the test to understand models, formatting, sample data, and route registration.
+
+Now let me examine the test file, the route/nav system, and the shared components I'll need.
+
+Let me examine the key shared components and the Units facade, charts, and metrics.
+
+Let me read the Units facade, more components, the routing system, and check how routes are wired into the app shell.
+
+Let me read the route registration wiring, the unit preference constants/environment, and remaining UI components.
+
+Let me check the web routing to understand which AppRoute maps to the period-compare page, and read the app registration site plus remaining UI primitives.
+
+`/period-compare` is its own web route. Let me check what the Apple app currently maps to `.analytics` and whether a `periodCompare` route exists, plus inspect the app registration site and parity manifest.
+
+Now I understand the structure. `/period-compare` is a distinct route with no existing AppRoute case. Let me examine the route parser and route tests to understand the impact of adding a `periodCompare` case.
+
+The parser auto-derives from `pathSegment`, and web has `/compare` + `/analytics/compare` aliases. Adding a `.periodCompare` case is safe and consistent with `.fleetCompare`. Let me check for route-count tests and read the remaining UI primitives.
+
+Let me read the remaining components: banners, states, buttons, typography, cards, and design tokens.
+
+Let me read typography, cards, buttons, design tokens, and the string catalog format.
+
+Let me read buttons, badges, design tokens, and the string catalog format.
+
+Let me locate the string catalog and design token definitions.
+
+All tokens confirmed. Let me check how the codebase handles interpolated localized strings, the placeholder-scan script, and what build tooling is available.
+
+All tooling is available (Xcode 26.5, swiftlint, xcodegen, pwsh). Let me read the gate contract, placeholder script, an existing log, and the ledger.
+
+Let me read the manifest record for PeriodCompare and the FleetCompare ledger rows plus the build/test log portion.
+
+I have a thorough understanding now. Let me read the chart axes helper and the line chart file to finalize the chart approach, then write a plan.
+
+Let me verify the chart axes helper exists and check the project/build baseline state.
+
+There's an `apps/apple/TeslaSync/` directory. Let me examine the project.yml sources config to confirm which directories compile, and inspect the `TeslaSync/` tree.
+
+The build compiles `Sources/` + several `TeslaSync/*` subdirs, but NOT `TeslaSync/Features/`. So the correct, compiled location is `Sources/Features/Analytics/` (where FleetCompare lives). Let me check the framework staging and build scripts, then establish a baseline build.
+
+The `Shared.xcframework` isn't staged — it's built by a Gradle script as a pre-build action. Let me check that script and whether the KMP toolchain is available, then I'll begin writing code regardless (the bulk of work is independent of the build).
+
+Java is available and there's a gradle wrapper. Let me kick off the `Shared.xcframework` build in the background (it's the long pole) while I write all the code. First, verify Java and generate the project.
+
+JDK 17 and Gradle 8.14.5 are available. Let me start the `Shared.xcframework` build in the background and generate the Xcode project.
+
+Let me set up a todo list, generate the Xcode project, and check the framework build progress.
+
+Gradle is progressing (many tasks FROM-CACHE). Let me generate the Xcode project while it continues, then start writing code.
+
+Let me check the web MetricCard component and the TSIconBox primitive to finalize the metric card design.
+
+I have everything needed. Let me check the SwiftLint config to match conventions before writing code.
+
+SwiftLint: max 120 cols (strict), and single-char identifiers (`a`,`b`) are forbidden except `x/y/t/id/ok`. I'll use `valueA/valueB` etc. Now writing the code, starting with models and format.
+
+Let me check the gradle build progress, then write the main page view.
+
+Gradle is nearly done (linking release frameworks). Let me write the main page view.
+

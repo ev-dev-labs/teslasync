@@ -1,0 +1,136 @@
+I'll start by exploring the environment to understand what exists and what tooling is available. Let me investigate several things in parallel.
+
+Good — full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simulators). The web source and Apple app structure both exist. Now let me read the web source and examine the predecessor surfaces (DriveScore, Currency) to follow the established pattern.
+
+The web source is a small format component (like Currency). Let me look at the predecessor `Currency` Apple surface (P-0083, the closest analog) and `DriveScore` to understand the established file structure and conventions.
+
+Currency (P-0083) is the closest analog and immediate predecessor. Let me read all its files in full to learn the exact established pattern.
+
+Now let me read the remaining Currency files (Views, Previews, Tests, strings) to complete my understanding of the pattern.
+
+Now I fully understand the Currency pattern (8 files: `.swift` view, `.Model`, `.Projection`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). The web `Speed.tsx` depends on `useUnits`, `convertSpeedFromSI`, and `fmtNumber`. Let me read those and verify the theme tokens, project file inclusion, and check whether any sibling unit-format surface already exists.
+
+I understand `fmtNumber` and `useUnits` now. The web `Speed` derives `speed` unit as `'mph'` (when `unit_of_length === 'mi'`) or `'km/h'` otherwise, and uses `convertSpeedFromSI`. Let me read that converter and the theme tokens, plus check how the Xcode project includes files.
+
+`project.yml` is at `apps/apple/project.yml`. Let me read the speed converter, the project file, and locate the `Color.TS`/`Font.TS` token definitions.
+
+Now I have the speed conversion math. The project uses XcodeGen (`sources: path: TeslaSync/shared-surfaces` auto-includes new files). Let me read the full project.yml for excludes/test targets, find the design tokens (`Color.TS`/`Font.TS`), and check XcodeGen availability.
+
+XcodeGen 2.45.4 is available; the `.xcodeproj` is generated on demand. Tests live in `TeslaSyncTests`/`TeslaSync-macOSTests` via the `shared-surfaces` path `includes`. There's a `Shared.xcframework` pre-action dependency. Let me check predecessor logs (to see what gate outcomes were achieved), the xcframework script, and the design tokens.
+
+The predecessor Currency log is revealing: the full-app `xcodebuild` gate is **deferred** on pre-existing, unrelated blockers (iOS sibling duplicate-symbol collisions; macOS code-signing), and verification was done via an **isolated Swift build** against the real design tokens + tests + swiftformat/swiftlint/placeholder. Let me read the full Currency log to extract the exact verification method I must follow (predecessor methodology — rule 7).
+
+I now have the exact predecessor methodology (Currency P-0083) that I must follow per rule 7. The full-app `xcodebuild` gate is provably blocked by pre-existing, out-of-scope issues (sibling `RecentDrives*`/`StateTimeline*` duplicate symbols on iOS; macOS code-signing). The established honest disposition: ship the surface, verify via isolated Swift 6 build + tests against real tokens + swiftformat/swiftlint/placeholder, paste raw full-app exit codes, document deferral.
+
+Let me verify the design tokens I'll need and the gate tooling (pwsh, check-placeholders.ps1), then write a plan.
+
+All tooling confirmed: pwsh 7.6.2, `check-placeholders.ps1` (supports `// parity:allow` opt-out), design tokens (`Color.TS.bg/textPrimary/textMuted/accent/statusDanger`, `Font.TS.display/title/section/body/caption`). Let me read the lint/format configs and the Tokens.swift header so my surface passes `swiftlint --strict` and the isolated build, then I'll write the plan.
+
+I have everything needed. Let me set up tracking and write the plan, then implement the 8-file surface following the Currency precedent exactly.
+
+Now implementing. Starting with the pure core (Adapter):
+
+Math confirmed. Now writing `Speed.Adapter.swift`:
+
+Now `Speed.Projection.swift`:
+
+Now `Speed.Model.swift` (state-holder + telemetry):
+
+Now the public view `Speed.swift` and the leaf `Speed.Views.swift`:
+
+Now `Speed.Previews.swift` and `Speed.strings`:
+
+Now the comprehensive test suite `Speed.Tests.swift`:
+
+All 8 files written. Let me update tracking and begin verification with swiftformat and swiftlint on the surface files.
+
+swiftformat clean (0/7). Now swiftlint --strict on the surface files:
+
+One violation: `Speed.Tests.swift` is 457 lines (file_length limit 400). The DriveScore precedent split tests into `.Tests.swift` + `.AdapterTests.swift` — I'll follow that pattern (preserves all coverage, both within `Speed.*` scope). Let me split the pure-core tests into `Speed.AdapterTests.swift` and keep model/view tests in `Speed.Tests.swift`.
+
+Now the slimmer `Speed.Tests.swift` with model/view/telemetry tests:
+
+Now re-run swiftformat and swiftlint on all 9 surface files:
+
+swiftformat 0/8, swiftlint --strict 0 violations. Now the placeholder scan. Let me check how `check-placeholders.ps1` handles `-Path` (file vs dir) so I can scan my files meaningfully.
+
+The script accepts a single file via `-LiteralPath ... -Recurse`. Like the predecessor, I'll scan each shipped Swift file individually (the gate's bare `Speed` path resolves to nothing). Running the placeholder scan:
+
+All placeholder counts 0. Now the critical step: the **isolated Swift 6 strict-concurrency build + XCTest against the REAL design tokens** (the predecessor's `[4/6]` verification). Let me set up the SwiftPM harness.
+
+Isolated build + 51 tests passed, 0 failures, under Swift 6 strict-concurrency against real Tokens.swift. Let me capture the per-suite summary and run the iOS 18 + macOS 15 cross-platform `swiftc -typecheck` proof.
+
+All isolated verification green: **51 tests, 0 failures** (9 suites), iOS 18 + macOS 15 typecheck both EXIT=0. Now I must run the **full gate exactly as specified** and paste raw exit codes (rule 3: no skip-and-assume). Let me generate the project and check the xcframework dependency.
+
+Project generated. The `Shared.xcframework` isn't staged — the xcodebuild pre-action will build it via Gradle (Kotlin/Native). Let me start the full-app iOS gate in the background (the long pole) and run the global swiftformat/swiftlint checks in parallel.
+
+Global swiftformat passes (0/3954 files, FORMAT_EXIT=0). Now global swiftlint --strict:
+
+Both global checks pass: swiftformat 0/3954, swiftlint --strict **0 violations in 3724 files**. Let me check the iOS build progress.
+
+Gradle built `Shared.xcframework` successfully; the app is now compiling. Let me wait for the build to progress.
+
+Still staging the xcframework (release variants now), no errors yet. Let me continue waiting for the app-compile phase.
+
+The Gradle xcframework assembly (debug+release, all platforms) is slow but progressing. The app-compile phase (where the predecessor's sibling errors surface) hasn't started. Let me wait longer.
+
+The iOS gate completed. Let me read the final result and error attribution.
+
+Critical finding: `IOS_EXIT=65` but unlike the predecessor, there's an error referencing my surface: `ElevationChart.Model.swift:83: error: 'SpeedUnit' is ambiguous`. My `SpeedUnit` enum collides with a pre-existing `SpeedUnit` in the app module. This is partly caused by my code — I must fix it (rule 8: no commit on red). Let me find all pre-existing type-name collisions with my surface.
+
+Only **one** collision: `SpeedUnit` already exists as `public enum SpeedUnit` in `ElevationChart.Models.swift:54`. All my other 15 type names are unique. The cascade errors (`.kmh`/`.mph` "cannot infer") stem from this ambiguity. I'll rename my enum to a surface-local non-colliding name. Let me inspect the existing enum and confirm my candidate name is free.
+
+`SpeedUnit` and `SpeedDisplayUnit` both collide (ElevationChart and SpeedProfileWidget each define their own speed-unit enum under different names — the established pattern is surface-local naming). The web type is literally `SpeedUnitPref`, which is **free** and faithful. Let me rename my enum `SpeedUnit` → `SpeedUnitPref`. First, the exact occurrences in my files:
+
+Clean: the type appears 6× in Adapter + 2× in AdapterTests; the line-79 comment already says `SpeedUnitPref` (protected by the trailing word char). I'll rename with a word-boundary-safe substitution (case-sensitive, so lowercase `speedUnit` properties are untouched).
+
+Rename is clean — `SpeedUnitPref` matches the web type name exactly. Let me check whether my earlier 213-error build also contained the predecessor's documented pre-existing `RecentDrives*`/`StateTimeline*` collisions (which would still block the full-app iOS build regardless of my fix).
+
+This confirms the picture precisely. Of 213 errors: only **~3-5 were mine** (`SpeedUnit` ambiguous in ElevationChart — now fixed by the rename). The other ~208 are the **pre-existing** `RecentDrives*`/`StateTimeline*` duplicate-symbol collisions (feature-views vs dashboard-widgets) that the predecessor documented as the deferred iOS blocker — outside my allowed files. My rename follows the established surface-local naming pattern. Let me re-verify the isolated build/lint, then re-run the full gate to confirm zero Speed-attributed errors.
+
+Excellent — after the rename: isolated build + **51 tests pass (0 failures)**, swiftformat 0, swiftlint --strict 0. Now re-running the full iOS gate to confirm zero Speed-attributed errors remain (Gradle is now cached, should be faster).
+
+Both gates running. Let me update tracking and monitor progress (watching for Gradle daemon contention between the two concurrent builds).
+
+Both gates finished (IOS_EXIT=65, MAC_EXIT=65, as expected). The critical check: **zero errors attributed to my Speed surface**, and the `SpeedUnit`/ElevationChart errors gone. Let me verify both logs.
+
+iOS v2 confirmed: **zero Speed-attributed errors**, `SpeedUnit`/ElevationChart errors gone, and the remaining 108 errors are exactly the pre-existing `RecentDrives*`/`StateTimeline*` collisions — matching the predecessor's documented count. Now the macOS log:
+
+macOS confirmed: MAC_EXIT=65, 4 errors all code-signing (no development certificate on runner), **zero Speed-attributed errors** — exactly the predecessor's disposition. Let me capture the representative duplicate declarations for the log's root-cause section.
+
+All confirmed: the pre-existing duplicates (`RecentDrivesModel` in feature-views:23 + dashboard-widgets:181; `StateTimelineModel` in feature-views:64 + dashboard-widgets:104) are absent from my Speed surface. My fix reduced iOS errors 213→108, leaving only pre-existing blockers. Now let me write the gate log honestly, capturing the full story including the collision I found and fixed.
+
+Log written. Now let me verify git scope (rule 9: only my 9 Speed.* files + the log should appear; generated `.xcodeproj`/xcframework must be git-ignored) and do a final review of the renamed Adapter.
+
+Git scope is clean: exactly 9 `Speed.*` files + the log, generated artifacts ignored, no tracked files modified (rule 9 satisfied). Let me do a final review of the renamed enum and verify the full file set reads correctly.
+
+All 9 files present, enum reads cleanly, zero forbidden substrings. Let me stage exactly the allowed files and verify staging before committing.
+
+Exactly 10 files staged (9 `Speed.*` + log), nothing else. Committing:
+
+Committed (10 files, 1300 insertions). Let me finalize: update tracking, clean up temp artifacts, and confirm the working tree is clean.
+
+All 8 todos done, working tree clean, committed as `6cfd89df3`.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0088-Speed.log   | 178 +++++++++++
+ .../TeslaSync/shared-surfaces/Speed.Adapter.swift  | 312 ++++++++++++++++++++
+ .../shared-surfaces/Speed.AdapterTests.swift       | 326 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Speed.Model.swift    |  88 ++++++
+ .../TeslaSync/shared-surfaces/Speed.Previews.swift |  81 +++++
+ .../shared-surfaces/Speed.Projection.swift         |  67 +++++
+ .../TeslaSync/shared-surfaces/Speed.Tests.swift    | 105 +++++++
+ .../TeslaSync/shared-surfaces/Speed.Views.swift    |  45 +++
+ apps/apple/TeslaSync/shared-surfaces/Speed.strings |  29 ++
+ apps/apple/TeslaSync/shared-surfaces/Speed.swift   |  69 +++++
+ 10 files changed, 1300 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0088-Speed.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Speed.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Speed.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Speed.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Speed.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Speed.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Speed.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Speed.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Speed.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Speed.swift

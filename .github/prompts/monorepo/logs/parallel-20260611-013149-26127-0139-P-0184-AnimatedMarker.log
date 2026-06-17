@@ -1,0 +1,172 @@
+I'll start by exploring the repository structure and the web source component, while checking what build tools are available.
+
+Apple toolchain is available (Xcode 26.5, swiftlint, swiftformat). Let me read the web source and understand the existing Apple project structure.
+
+Now let me examine the existing `shared-surfaces` directory pattern, the existing Maps components, and the project configuration.
+
+There's already a `TSAnimatedMarker` atomic component (out of scope). The prompt wants a **shared surface** at `apps/apple/TeslaSync/shared-surfaces/AnimatedMarker.*`. There are 1310 files there following an established pattern. Let me study a complete existing surface and find ones that use `useMap`.
+
+132 distinct surfaces with a consistent file pattern. Let me find map-based surfaces that use `useMap` to mirror the established conventions precisely.
+
+No map surfaces exist yet. Let me study a complete representative surface end-to-end to learn the architecture, then examine the SharedFacade (state holders), tokens, and i18n.
+
+Excellent—this is a sophisticated, well-established architecture. Let me read the remaining files of this reference surface plus the project configuration and token system.
+
+Now let me read the Adapter, Previews, Tests, strings, and the project/token system to understand the full pattern.
+
+Let me read the project configuration, the Adapter, the Tests, and locate the token/component definitions.
+
+I now understand the full architecture. Let me check the build tooling (xcodegen, Shared.xcframework, .xcodeproj), read the Adapter pattern, the token/component library, and the map primitives.
+
+Critical build facts: `xcodegen` is available, `.xcodeproj` must be generated, and `Shared.xcframework` doesn't exist yet (built via a script preAction). Let me check the build script (potential Kotlin dependency), the design tokens, and the map primitives.
+
+Building `Shared.xcframework` requires a Kotlin/Gradle toolchain. Let me assess feasibility and read the design tokens, map annotation types, and shared component definitions I'll need.
+
+`pwsh` and `java` are available. Let me kick off the `Shared.xcframework` build in the background (the long pole for the gate) while I read the remaining map types and shared components.
+
+This is a real KMP build needing network + Kotlin/Native. Let me kick it off in the background now, then continue reading the map types and components I need.
+
+Now let me locate the shared component and `TSTone`/`TSChartPalette` definitions I'll compose with.
+
+The gradle launcher returned (build runs via nohup). Let me read the component signatures I'll use and check the gradle build progress.
+
+Let me read the remaining components (Typography, Buttons, Badges, TSChartPalette) and check the gradle build progress.
+
+I have all the components I need. Let me check the gradle build log, the lint/format configs, and the placeholder checker rules.
+
+Gradle is linking Kotlin/Native frameworks (good progress). Let me check whether it finished producing the xcframework and review the placeholder checker.
+
+Gradle is still linking (daemon active). Let me read the forbidden placeholder patterns, check the Localization setup, and confirm no `AnimatedMarker.*` collision exists.
+
+Now I understand all conventions and forbidden patterns (note: "Placeholder" is forbidden case-insensitively—I'll avoid it). Let me check the existing Maps test style and gradle progress, then write a plan.
+
+Gradle built the debug XCFramework and is linking release — on track. Let me study the established `onMapCameraChange`/recenter pattern in an existing feature map view.
+
+I have a complete understanding. There's even a precedent: `TripReplayPlayheadMarker` is documented as the web `AnimatedMarker` idiom. Let me write a plan, then build the surface files. First, let me confirm the release XCFramework finished.
+
+Release framework still linking. Let me write the plan and start building the surface files in parallel with the gradle build.
+
+Now I'll build the surface. Starting with the pure, testable core (Adapter), the state-holder/projection (Model), and the data seams.
+
+Now the Views layer: the MapKit data canvas with camera-follow (the `panTo` parity), the heading-aware pulsing pin, and the recenter/freshness chips.
+
+Now the leaf-state chrome (loading/empty/error):
+
+Now the public surface entry point:
+
+Now the i18n strings catalog contribution:
+
+Now the previews for every state:
+
+Now the test suite — adapter, projection, model, and accessibility coverage:
+
+All 9 files created. Let me check the gradle build, then format/lint my new Swift files.
+
+Gradle build **succeeded** — `Shared.xcframework` is staged. No over-length code lines. Now let me format and lint my new files.
+
+Two auto-fixable issues. Let me run swiftformat in-place to fix them, then review the changes.
+
+Files are untracked so no diff. Let me view the auto-formatted sections to verify correctness, then re-run lint.
+
+Both issues fixed cleanly. Let me confirm swiftformat passes and run swiftlint.
+
+SwiftLint flags 6-parameter functions (max 5). Let me refactor `AnimatedMarkerCamera` to take a `viewport` value, which is cleaner. I'll update the Adapter, Views, and Tests.
+
+Now update the Views.swift helper to build the viewport:
+
+Now update the camera tests to use the viewport:
+
+Now re-verify both linters pass:
+
+Both linters pass. Let me run the placeholder gate, then regenerate the Xcode project and build.
+
+Let me genuinely verify my files are placeholder-free (the prefix path scans nothing, so I'll check the actual files directly).
+
+All 9 files clean. Now let me stage the framework, regenerate the Xcode project, and check available simulators.
+
+Framework staged; iPhone 16 simulator available. Let me regenerate the Xcode project and confirm my files were picked up.
+
+My files are integrated (54 references). Now let me run the iOS build+test gate. This is the long pole, so I'll run it in the background.
+
+Build failed (exit 65). Let me inspect the errors.
+
+The errors are in two **unrelated** pre-existing files, not mine. Let me confirm they're pre-existing and check the full error set.
+
+Exactly 2 compile errors, both in pre-existing files **I'm not allowed to modify** (my allowed scope is `AnimatedMarker.*` only); zero errors in my files. Let me confirm these are genuinely independent, then verify my surface in isolation.
+
+Confirmed: line 128's `glass(@ViewBuilder _ content:)` is missing `@escaping`, an independent pre-existing bug in a sibling surface — outside my allowed scope. My surface is clean. To honestly verify my code compiles and my tests pass, I'll temporarily quarantine the unrelated broken files, build+test, then restore them exactly.
+
+Other files of those surfaces remain (the error was only in the two main `.swift` files). Let me rebuild+test to verify my surface compiles and tests pass.
+
+The Previews files reference the removed parent types — I need to quarantine the *entire* two surfaces. Let me move all their files and rebuild.
+
+Both broken surfaces fully quarantined. Let me rebuild+test.
+
+Another pre-existing broken surface (`AIAutoNameUnnamedLocations`). The repo baseline has several broken siblings. Let me identify the error and scan for the shared bug pattern to quarantine them all in one pass.
+
+The baseline has many pre-existing broken siblings — chasing each is impractical. Since my surface only depends on `Sources/` (tokens/components) and MapKit, I'll isolate it: move **all** other `shared-surfaces` files aside (they're git-tracked, so restorable via `git checkout`), keep only mine, and build+test. This definitively verifies my surface against its real dependencies.
+
+Only my 9 files remain in shared-surfaces. Let me build+test.
+
+0 compile errors — the build itself is clean. The exit 65 must be in the test phase. Let me investigate.
+
+Build failed with "3 failures" but no `: error:` lines — likely the test target references types from quarantined siblings. Let me view the failure section.
+
+The failing compile batch lists `AnimatedMarker.swift` but my `: error:` grep found nothing — the diagnostic may be formatted differently or escalated. Let me search precisely for any diagnostic referencing my files.
+
+Zero `error:` lines but build failed — this is the signature of a Swift compiler **crash**. Let me find the crash trace.
+
+Confirmed — the **Swift compiler crashed** (not a code error). I need to find which construct triggered it. Let me view the crash context.
+
+The crash is in **IRGen** emitting a reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`. Let me identify the exact file and demangle the symbol to pinpoint the trigger.
+
+Key finding: the crash is a **Swift 6.3.2 compiler IRGen bug** emitting an `@isolated(any) @Sendable (Bool) -> ()` reabstraction thunk while compiling `feature-views/AppearanceSettings.Controls.swift` — a **pre-existing file I didn't write and can't modify**. My files type-checked fine (the build reached IRGen, which is post-type-check). Let me confirm this reproduces *without* my files (attribution), and inspect the trigger.
+
+**Definitive proof of attribution:** With `shared-surfaces` **completely empty** (none of my files), the build still crashes (`NOANIM_BUILD_EXIT=65`). The crash is 100% pre-existing and independent of my surface. The trigger is visible at `AppearanceSettings.Controls.swift:122`: a `@MainActor (Bool) -> Void` closure passed to `Binding(set:)`, which makes Swift 6.3.2's IRGen crash emitting an `@isolated(any) @Sendable` thunk. Let me confirm the crash site matches and assess the blast radius.
+
+The no-anim build hit a *different* pre-existing error (1 compile error, no IRGen crash — batch ordering differs). Both confirm the baseline can't build without my files. Let me identify that error to complete the picture.
+
+The baseline has **multiple independent pre-existing failures** outside my scope: 3 AI surfaces (type errors), an IRGen compiler crash (AppearanceSettings), and a type-check timeout (RecentDrivesSection). Let me assess how tractable it is to quarantine the crash-triggering pattern so I can still run my tests.
+
+The crash-triggering pattern spans many out-of-scope files (whack-a-mole isn't viable). My surface only depends on `Sources/` (the shared component library), not on feature-views. Let me check whether `Sources/` references the broken feature-views (which determines if I can isolate cleanly), and restore my files.
+
+My files are restored (9 present), and `Sources/` doesn't reference those feature-views. Let me verify `Sources/` is fully decoupled from the consumer layers, which determines whether I can cleanly isolate my surface for a real build+test.
+
+The app target is pervasively broken at baseline (IRGen compiler crash + type errors + a type-check timeout across many out-of-scope files), and `Sources/` couples to the feature layer via a route registry — so I can't cleanly isolate via the Xcode app target. My surface already type-checked with **0 errors** inside the real module (the build reached IRGen). 
+
+To genuinely **run my tests** (all pure logic), I'll build a throwaway SPM package with my logic files and execute them. Let me set that up.
+
+Now the slug shim and Package manifest:
+
+**All 33 of my tests PASS** (0 failures) — adapter, heading, camera, accessibility, projection, and model lifecycle all verified via a faithful standalone harness. Now let me restore all quarantined sibling files (git-tracked) and verify my files remain intact.
+
+Repo fully restored — only my 9 untracked files differ. Now let me regenerate the full project and run the **exact prescribed gate** into the official log, capturing honest results. First, set up the log location.
+
+Log dir ready, full project regenerated. Now let me run the **exact prescribed gate** (adapted to this shell) into the official log. I'll run it in the background since the two xcodebuild steps are long.
+
+Gate is running in the background (~15-20 min for two full build+test cycles plus lint). Let me check progress periodically.
+
+My gate script had a bug — a relative log path after `cd apps/apple` caused the redirections to fail, so xcodebuild never actually ran. Let me fix it to use an absolute log path and relaunch.
+
+Gate relaunched with the fix. The two `build test` runs take a while. Let me wait and poll the official log for progress.
+
+iOS build+test is running (9443 lines logged, no exit yet). Let me continue waiting.
+
+The prescribed gate completed: `IOS_EXIT=65`, `MAC_EXIT=65`, `LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`. swiftlint/swiftformat/placeholder are **green**; only the two `build test` steps fail. Let me confirm those failures are the same pre-existing, non-AnimatedMarker causes.
+
+Conclusive: the two `build test` failures come only from pre-existing files (`RecentDrivesSection.Previews.swift`, `AISignalExplorerNlFilter.swift`) — **zero** AnimatedMarker errors. swiftlint/swiftformat/placeholder are green. Let me capture fresh per-surface evidence and append Section B (verification + analysis) to the official log.
+
+Now the standalone test run and the final analysis/status:
+
+Now the analysis and final status block:
+
+The official log is complete and honest. Let me verify git state (ensure only my files + log will be committed, not the generated project), clean up throwaway artifacts.
+
+Git state is perfectly scoped: exactly my 9 files + the log (the generated `.xcodeproj` is git-ignored; no sibling files modified). Let me clean up throwaway artifacts and commit my verified surface with a fully transparent message.
+
+Committed (10 files, scoped exactly to the allowed paths). Let me do a final sanity check that the working tree is clean with no stray changes to sibling files.
+
+Working tree is clean; exactly my 10 files are committed and no sibling files were touched (the "11" is the diffstat header line also matching the log name). Let me update the session plan to reflect completion.
+
+The AnimatedMarker shared surface is complete, verified, and committed. Final summary:
+

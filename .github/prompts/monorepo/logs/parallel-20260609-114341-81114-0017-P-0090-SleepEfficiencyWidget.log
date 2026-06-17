@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure to understand the codebase and the task requirements.
+
+First, let me read the web source and explore existing native dashboard widgets to understand the patterns.
+
+There are multiple widget directories. Let me understand the build structure and read the web dependencies plus existing native widget patterns.
+
+Now I understand the build structure. My output goes to `apps/apple/TeslaSync/dashboard-widgets/`. Let me examine what already exists there and the related infrastructure.
+
+The widget directory has 754 files (many widgets each split into multiple files). Let me find the data type, check if SleepEfficiency native files exist, and find a similar gauge-based widget to use as a template.
+
+`RegenEfficiencyWidget` is the closest analog (energy gauge hero). Let me read its entire file group to learn the canonical pattern.
+
+Excellent template. Let me read the remaining RegenEfficiency files to fully understand the pattern: Support (projection), Components, Previews, Tests, FormatTests, and strings.
+
+Now let me read the Previews, Tests, strings, and the shared infra (registration types, design tokens) to complete my understanding.
+
+Let me read the strings file format, the registration infra, and verify the design tokens used.
+
+Let me read the registration infra and design tokens to confirm exact names.
+
+Let me confirm the exact design token members exist (spacing, radius, colors, fonts) since I'll reuse them.
+
+All tokens confirmed. Let me verify the web registry entry, the `fmtNumber` helper, and the `TSSkeleton` signature.
+
+Let me check the web `RadialGauge` component to reproduce its exact center readout, and look at how a compact gauge widget without a separate computed label works.
+
+Now let me check the color token values (to pick an indigo-like accent for the Moon icon) and the `Font.TS` members.
+
+All tokens confirmed. Let me check toolchain availability (xcodebuild/swiftlint/swiftformat/xcodegen) and read the lint configs plus the placeholder checker.
+
+Full toolchain appears present. Let me verify `xcodebuild` works properly (Xcode vs CLT-only) and check simulators, since the Gate depends on it.
+
+Xcode 26.5 with an iPhone 16 simulator is available — the full Gate can run. Let me check for symbol collisions, the project generation setup, the Shared.xcframework staging, and the placeholder checker.
+
+Key findings: no `.xcodeproj` (need `xcodegen generate`), and no `Shared.xcframework` (scheme builds it via Gradle/KMP). Let me check the KMP build feasibility and look at a prior widget's gate log for the expected outcome pattern.
+
+The prior RegenEfficiency P4 log reveals the established methodology: verify the surface green (compiles + surface tests pass + swiftlint/swiftformat/placeholder clean), while full-tree reds from pre-existing sibling issues are captured honestly as out-of-scope. The KMP `Shared.xcframework` is the heavy dependency. Let me kick off its build in the background while I write the code.
+
+Java 17 + Kotlin 2.4.0 available. Let me kick off the `Shared.xcframework` build in the background (the heavy gating step), then write code while it runs.
+
+The KMP build is compiling from cache — good progress. Let me set up the plan and todos, then write the 8 files.
+
+KMP build is linking release frameworks now — nearly done. Let me write the files while it finishes. Starting with the Model.
+
+Let me verify whether `.foregroundColor` on `Text` (deprecated) is used elsewhere and whether warnings-as-errors is set — this affects the gauge readout approach.
+
+`BatteryGaugeWidget.Views.swift` uses the same gauge readout concatenation. Let me match its exact idiom.
+
+`BatteryGaugeWidget` uses `.foregroundStyle` (not the deprecated `.foregroundColor`) in `Text` concatenation and compiles. Let me update my Components to match that convention.
+
+Now the main view file. Let me write it and check the KMP build progress in parallel.
+
+KMP build is finishing its release links. Let me write the test files, previews, and strings.
+
+I need to fix one test expectation: my `gaugeValue` coerces non-finite to 0 up front (well-defined behavior), so `.infinity` → "0", not "100". Let me correct that.
+
+Now the strings catalog file. Let me write it and check the KMP build status.
+
+The gradle build looks nearly complete (linking macOS framework). Let me verify it finished and check the output location — note I ran gradle directly, so staging to `Frameworks/` still needs to happen (the xcodebuild scheme preAction does that).
+
+The gradle build is still finishing the macOS release link. Let me run the fast deterministic gates on my files while it completes — starting with swiftformat and swiftlint.
+
+swiftformat passes (0/7 need formatting). Now swiftlint on my files, and let me inspect how the placeholder checker resolves its `-Path`.
+
+swiftlint `--strict`: **0 violations in 7 files**. The placeholder script uses `-LiteralPath`, so the prompt's prefix path scans trivially — let me run both the exact gate command and an explicit per-file scan to genuinely verify my files.
+
+The placeholder scan flagged a "TODO" substring on line 47 of FormatTests. Let me inspect it.
+
+The function name `testGaugeValueClampsToDomain` contains the substring "ToDo**main**" → "ToDo" matches the case-insensitive TODO pattern. Good catch by the scan. Let me rename it.
+
+Let me read the full pattern list and re-scan all my files to be thorough.
+
+All fast gates green on my files: swiftformat (0/7), swiftlint --strict (0 violations), placeholder (COUNT=0). Let me check the gradle build and proceed to generate the project + build.
+
+KMP build **SUCCEEDED** (12m45s). Let me stage the framework, generate the Xcode project, and verify the project generation.
+
+Project generated and framework staged. Let me build the app target for the iOS simulator to verify my code compiles in-module. I'll run it in the background.
+
+The async wrapper returned but xcodebuild runs in the background. Let me monitor the build log.
+
+Other agents are sharing this environment (parallel slots) — my background build was killed when its async session ended and its log was clobbered. Let me re-run robustly with isolated paths, building the full app (to compile my code) but running only my surface's tests for efficiency.
+
+Build+test still compiling the full app (700+ files). Let me peek at the log progress from another shell.
+
+Good progress — gradle staged (cached, 7s), 1619 Swift compiles underway, no errors yet. Let me continue waiting for completion.
+
+**BUILD SUCCEEDED** for iOS — my code compiled and linked into the full app with no errors (no duplicate-symbol issues). Now it's building the test bundle and running my surface tests. Let me wait for results.
+
+The test bundle is compiling (it builds all test sources even with `-only-testing`). Still no errors. Let me keep waiting.
+
+Test bundle still compiling (large — all test sources across the app). Let me wait further.
+
+The app target **BUILD SUCCEEDED** (my code compiled & linked cleanly). The *test bundle* failed to compile due to a **pre-existing duplicate declaration in sibling files** (`ChargeStatus*Tests` — the "C1" issue noted in the prior Regen log), entirely outside my allowed files. Let me confirm it's pre-existing and sibling-owned.
+
+Confirmed: the duplicate `ChargeStatus*Tests` classes live in two **pre-existing, committed sibling files** (`ChargeStatusWidget.Tests.swift` + `ChargeStatusLiveWidget.Tests.swift`); my 8 files are the only ones I touched. This is the known out-of-scope "C1" blocker. Let me check how widespread these pre-existing test-class duplicates are before deciding how to verify my tests.
+
+There are 10 pre-existing duplicate test-class names across ~5 sibling file pairs (ChargeStatus, DrivingCoach, MonthlyCost, Safety) — all introduced by other parallel widget work, none mine. To genuinely run my tests, I'll temporarily move the duplicate *partner* sibling files aside (local-only, fully restored, never committed), then verify. Let me locate them.
+
+The 4 duplicate *partner* files to temporarily relocate (all pre-existing sibling files): `ChargeStatusLiveWidget.Tests.swift`, `DrivingCoachSection.ModelTests.swift`, `MonthlyCostChart.Tests.swift`, `SafetyHistoryWidget.ModelTests.swift`. Let me relocate them (local-only), confirm no duplicates remain, regenerate, and run my tests.
+
+No duplicates remain. Let me regenerate the project and run my surface tests (app target is already cached).
+
+Test bundle still compiling (2262 files, no errors yet). Let me wait for completion.
+
+Another **pre-existing** sibling compile error surfaced (`SlideRenderer.FixturesTests.swift` — a Swift 6 concurrency error, not mine). The shared test bundle has accumulated multiple out-of-scope breakages from parallel work. Rather than chase each, I'll isolate cleanly: temporarily narrow the test target to **only my two test files** (local scaffold, reverted, never committed) so my tests compile against the already-built app module. First, let me restore the 4 sibling files and back up project.yml.
+
+The 4 sibling files are restored and project.yml is backed up. Now let me narrow the test targets to only my two test files via a Python edit, then regenerate and run the iOS tests.
+
+The `grep -v` returned exit 1 (clean tree — good), which broke the `&&` chain so the edit didn't run. Let me redo the narrowing directly.
+
+Both test targets now contain only my 2 test files. Let me regenerate and run the iOS tests (app target is cached, so this should be quick).
+
+It's re-running gradle staging and rebuilding (regeneration invalidated some incremental state). Let me wait for it to reach the test phase.
+
+App rebuilt and **BUILD SUCCEEDED**; now in the test phase. Let me wait for the test results.
+
+My SleepEfficiencyWidget files are compiling cleanly in the app target (no errors); it's finishing the build-for-testing phase. Let me wait for the test execution.
+
+Let me check the tail of the log to see the current phase.
+
+It's now code-signing and packaging for the test run (Testing.framework copied in). The test bundle + simulator install + execution come next. Let me wait.
+
+**iOS TEST SUCCEEDED — all 31 surface unit tests passed (0 failures)**, plus 13 pre-existing UI tests passed. IOS_EXIT=0. Now let me verify macOS compiles + tests with the same narrowed target. The macOS app build is the long pole — let me start it.
+
+macOS **build failed at signing** — the pre-existing "C3" condition (macOS targets require a development certificate that isn't available on this runner). This fails before compiling my code, so it doesn't reflect my work. Let me verify macOS *compilation* + run my tests with signing disabled (the standard runner workaround).
+
+macOS compiling now (signing bypassed). Let me check progress.
+
+macOS app target **BUILD SUCCEEDED** — my files compiled cleanly on the macOS SDK and the `.strings` validated. Now the macOS test phase. Let me wait for results.
+
+macOS app **BUILD SUCCEEDED** (my files compiled on macOS SDK). The test action is now finalizing the test host. Let me wait for the macOS test results.
+
+macOS surface tests **all 31 passed (0 failures)** too. Let me wait for the macOS run to fully complete.
+
+All 31 macOS surface unit tests passed (2+9+3+6+10+1). The macOS UI tests are still running. Let me wait for the final macOS exit code.
+
+macOS surface tests **all 31 passed** (TeslaSync_macOSTests, 0 failures). MAC_EXIT=65 is from the separate macOS *UI test* target. Let me confirm that's the cause and not my surface.
+
+Confirmed: the macOS failure is the **pre-existing UI-test runner** ("The test runner hung before establishing connection") under the ad-hoc-signing workaround — an out-of-scope target. **No Sleep test failed; my 31 macOS surface tests all passed.** This matches the documented C3 condition. Now let me restore project.yml, regenerate, and verify the repo is clean (only my files changed).
+
+The tree is clean — only my 8 files, project.yml fully restored to HEAD. Now let me run the whole-tree `swiftlint --strict` and `swiftformat --lint` (as the gate does) to honestly capture their exit codes for the log.
+
+Whole-tree swiftlint found **1 serious violation — not in my files** (my 7 files all linted clean). Let me identify the pre-existing sibling violation, then run swiftformat.
+
+Whole-tree results captured honestly:
+- **swiftformat --lint apps/apple: FORMAT_EXIT=0** (entire tree clean, including my files)
+- **swiftlint --strict: LINT_EXIT=2** — one **pre-existing sibling** violation (`LiveSignalSparklinesWidget.Builder.swift:158` — the documented "C2"), my files clean.
+
+My surface is fully green on every applicable gate. Let me write the gate log.
+
+Now let me commit the surface + log (staging exactly my 8 files + the log; the `.xcodeproj`/`Frameworks` are git-ignored).
+
+All 9 files staged cleanly. Let me commit.
+
+Committed as `cd143375e`, tree clean. Let me clean up temporary build artifacts and do a final verification.
+
+The task is complete and verified end-to-end.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0090-SleepEfficiencyWidget.log | 178 +++++++++++
+ .../SleepEfficiencyWidget.Components.swift         | 215 +++++++++++++
+ .../SleepEfficiencyWidget.FormatTests.swift        |  62 ++++
+ .../SleepEfficiencyWidget.Model.swift              | 256 ++++++++++++++++
+ .../SleepEfficiencyWidget.Previews.swift           | 136 +++++++++
+ .../SleepEfficiencyWidget.Support.swift            | 270 +++++++++++++++++
+ .../SleepEfficiencyWidget.Tests.swift              | 319 +++++++++++++++++++
+ .../SleepEfficiencyWidget.strings                  |  45 +++
+ .../dashboard-widgets/SleepEfficiencyWidget.swift  | 337 +++++++++++++++++++++
+ 9 files changed, 1818 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0090-SleepEfficiencyWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SleepEfficiencyWidget.Components.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SleepEfficiencyWidget.FormatTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SleepEfficiencyWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SleepEfficiencyWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SleepEfficiencyWidget.Support.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SleepEfficiencyWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SleepEfficiencyWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SleepEfficiencyWidget.swift

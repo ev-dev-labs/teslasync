@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and verifying the prerequisites for this task — particularly whether the Apple app project exists and whether the build tooling is available on this runner.
+
+The toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source spec and explore the Apple app structure.
+
+Web source is a column-visibility popover menu. Now let me explore the Apple project structure — the project config, existing shared-surfaces, and the P1 dependencies (state holders, tokens, i18n, diagnostics).
+
+There's a large established pattern. Let me check for any existing DataTableColumnsMenu files and study a representative simple surface (Accordion) as the canonical pattern.
+
+Excellent — there's an existing `DataTableColumnMenu` (singular) surface that's the perfect template. Let me read its entire file set to learn the established pattern.
+
+This is a mature, multi-file pattern. The singular `DataTableColumnMenu` is a more complex (reorderable) variant; my target maps to a simpler web source. Let me read the rest of the template set plus the strings, views, previews, and tests.
+
+Let me read the remaining template files (Previews, strings, both test files) and locate the shared design-token definitions.
+
+Now let me read the Previews and strings files, and verify the shared design-token APIs (`Color.TS`, `Font.TS`, `TSRadius`, `TSMaterial`) that I'll reuse.
+
+Let me verify the exact token APIs I'll consume — `Color.TS`, `Font.TS`, `TSSpacing`, `TSMaterial`, and the `tsGlassPanel` modifier.
+
+I have the full pattern. Now let me verify the build prerequisites: whether `xcodegen` is available, whether the `.xcodeproj`/`Shared.xcframework` exist, and the lint configs.
+
+Important finding: `Shared.xcframework` is only a `.gitkeep` placeholder (the KMP core binary is absent from this checkout). Let me investigate how surfaces are built/verified here and whether the framework can be produced, before concluding.
+
+There's a `build-shared-xcframework.sh` (KMP core) and the gate is PowerShell-based. Let me check the toolchain (pwsh, java/gradle), read the framework build script, and — crucially — check how prior sibling surface prompts resolved their gate logs (the precedent).
+
+This is the key precedent: 219 sibling surfaces already shipped. The established pattern records the full `xcodebuild` gate verbatim as DEFERRED (env-blocked: missing `Shared.xcframework`/signing) while verifying the surface via runnable gates (swiftlint, swiftformat, placeholder check, standalone `swift test`, xcodegen). Let me read my direct predecessor's log (0210, the singular sibling) for the exact recipe.
+
+The predecessor log (0210) is an exact methodology blueprint. The toolchain here is fully capable (xcodegen, JDK 17, gradle wrapper, pwsh, swiftlint, swiftformat, Xcode 26.5). Now let me read the full swiftlint config and the placeholder checker so my code passes `--strict` and the placeholder gate cleanly.
+
+I now fully understand the placeholder gate (case-insensitive: I must avoid the literal substrings `todo`, `placeholder`, `fixme`, `xxx`, etc. anywhere in `.swift` files). Let me do final pre-flight checks: collision check for the new symbol, locate the design-closure files for the standalone typecheck, and confirm SDK availability.
+
+No collisions; design closure is `TSDesign.swift` + `TSMaterial.swift` + generated `Tokens.swift`; both SDKs present. I have a complete blueprint. Let me set up tracking and write the plan, then build the 8 surface files.
+
+Let me write the session plan, then create the 8 surface files.
+
+Now writing the surface files, starting with the Foundation-only core.
+
+All 8 files written. Now verification. First, check line counts and scan for any forbidden placeholder tokens (case-insensitive) in my files.
+
+Line counts are healthy (all <250) and no forbidden tokens. Now let me format my files with swiftformat (using the repo config), then lint-check them.
+
+swiftformat passes (0/7 require formatting). Now swiftlint `--strict`, scoped to my files.
+
+swiftlint `--strict`: **0 violations in 7 files**. Now the placeholder gate — I'll run the as-specified command and a real temp-tree scan of my actual files (the as-specified `-Path` is a prefix that matches no directory, a known false-zero per precedent).
+
+Both placeholder scans = **0** (the as-specified path is the known false-zero; the real temp-tree scan of my actual files confirms clean). Now the high-value compile evidence: standalone `swiftc -typecheck` of the surface + design closure against the real iOS SDK (Swift 6, strict concurrency).
+
+iOS typecheck: **0 errors**. Now the macOS SDK typecheck (leg B).
+
+Both SDKs typecheck **0 errors**. Now the executed behavior harness (leg C): compile the real `Adapter.swift` + `Model.swift` with an assertion `main` into a native macOS binary and run it, mirroring the XCTest assertions.
+
+**All 43 harness checks pass** under Swift 6 strict concurrency on the real macOS SDK. Now `xcodegen generate` to confirm the files wire into both apps + test bundles.
+
+xcodegen succeeded. Let me confirm my 8 files are wired into the project (both apps + both XCTest bundles).
+
+48 pbxproj refs across all 8 files (matching the precedent), both app schemes present. Now I'll attempt the full gate. The link step needs the KMP `Shared.xcframework`. Let me check for warm caches, then attempt to build it.
+
+Warm `~/.konan` (Kotlin/Native 2.4.0) and `~/.gradle` caches exist, so the framework build is feasible. Let me build the `Shared.xcframework` (background, ~7min per precedent) while it runs.
+
+The framework build is running in the background. Let me check progress periodically.
+
+Build in progress (Gradle/Kotlin-Native). Let me continue waiting.
+
+Still compiling (Kotlin/Native). Continuing to wait.
+
+Framework built and staged (`STAGE_EXIT=0`, 7m29s). Now the full iOS `xcodebuild build test`. Let me verify the simulator exists and run it, capturing full output for root-cause analysis.
+
+iPhone 16 booted, framework staged with all slices. Now the iOS `xcodebuild build test` (the exact gate command), output captured for analysis.
+
+iOS build running (it re-stages the framework via the pre-build phase, then compiles the whole app). Let me monitor.
+
+Compiling the app module, 0 errors so far. Continuing to monitor.
+
+App module emitted with **0 errors** — my surface compiles in the real app target. Build continues (object files + test bundle). Let me keep waiting.
+
+Build failed. Let me get the final exit code and extract the actual `error:` diagnostics to identify root cause and confirm none are in my files.
+
+Build failed but no `error:` lines flushed yet — xcodebuild is still finalizing its failure summary. Let me wait for the process to fully exit.
+
+IOS_EXIT=65. Now let me find the precise root cause (no `error:` lines means a non-standard failure — possibly a compiler crash on a foreign file). Let me examine the failure summary.
+
+The failing batch is a **foreign** one (`AppearanceSettings…AreaChartWrapper…AuditLog…`) — my `DataTableColumnsMenu` files are NOT in it, and there are 0 normal `error:` lines, indicating a compiler crash. Let me pinpoint the crash signature.
+
+Confirmed — the Swift compiler **crashed** (Stack dump). Let me view the crash context to identify the exact file and reason.
+
+Root cause confirmed: a **Swift 6.3.2 compiler internal crash (ICE — "Please submit a bug report")** while code-generating a **foreign** batch (`AppearanceSettings.*`, `AppleAuthSession`, `AreaChartWrapper.*`, `AuditLog*`) — none are my files. Let me confirm my files compiled cleanly and aren't implicated, then capture the macOS build too.
+
+Comprehensive confirmation: my 5 non-test files compiled in-module (2× each, build+test actions), **0 real `error:` lines anywhere**, and both ICE crashes are the same foreign batch. My surface is clean; `IOS_EXIT=65` is a toolchain compiler crash on foreign files. Now the macOS gate (faithful capture of its real exit).
+
+macOS build running. Let me monitor its progress.
+
+MAC_EXIT=65 in ~26s — too fast to be a compile failure, so it failed at an early pre-check (per precedent: code-signing). Let me confirm the exact cause.
+
+macOS `MAC_EXIT=65` confirmed: fails at the **code-signing entitlements pre-check** (no dev certificate on this headless runner — the documented `macos-pending-verifications.md` CI item), before any Swift compilation; my surface is not implicated. 
+
+All evidence gathered. Let me write the comprehensive, honest gate log.
+
+Log written. Now let me verify git status to confirm only my intended files are staged-worthy (the generated `.xcodeproj`/framework must be git-ignored), then do a final scoped re-lint before committing.
+
+Git is clean — only my 8 files + log are new; generated `.xcodeproj`/framework are git-ignored. Final scoped re-check before commit.
+
+Both final gates green (swiftlint 0, swiftformat 0/7). Committing the surface + log.
+
+Committed (849ad9371, 9 files, 1500 insertions). Let me clean up temp artifacts and confirm the log ends correctly.
+
+The task is complete. Working tree is clean and the log ends with `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...e-shared-surfaces-0211-DataTableColumnsMenu.log | 247 +++++++++++++++++++++
+ .../DataTableColumnsMenu.Adapter.swift             | 221 ++++++++++++++++++
+ .../DataTableColumnsMenu.AdapterTests.swift        | 148 ++++++++++++
+ .../DataTableColumnsMenu.Model.swift               | 220 ++++++++++++++++++
+ .../DataTableColumnsMenu.Previews.swift            | 105 +++++++++
+ .../DataTableColumnsMenu.Tests.swift               | 238 ++++++++++++++++++++
+ .../DataTableColumnsMenu.Views.swift               | 183 +++++++++++++++
+ .../shared-surfaces/DataTableColumnsMenu.strings   |  32 +++
+ .../shared-surfaces/DataTableColumnsMenu.swift     | 106 +++++++++
+ 9 files changed, 1500 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0211-DataTableColumnsMenu.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.swift

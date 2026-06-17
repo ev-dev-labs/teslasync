@@ -1,0 +1,127 @@
+I'll start by exploring the repository structure to understand what exists and what's needed for this task.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the Apple app structure.
+
+The web source is a thin wrapper around `AIFeatureCard` + `withAiFeature` + `useAiStream`. Now let me examine existing native shared-surfaces to match established patterns — especially any AI surfaces already built.
+
+A consistent 10-file structure exists per surface. Let me find the closest structural analog. `AISpeedProfileInsights` (1723B) and `AIRouteEfficiencySuggestions` (1945B) are closest in size to `AIChargingDiagnosis` (1778B). Let me read those web sources plus a couple others to pick the best template.
+
+`AIDriveCoaching` is the closest structural twin — per-entity ID, "2-4 paragraph plain-language" narrative, "Generate X" button, empty body. Let me read its complete native 10-file implementation as my template.
+
+Excellent — `AIDriveCoaching` is a near-perfect twin. Let me read the remaining 6 template files plus check the project.yml to understand file registration.
+
+Now let me read the two test files and the project.yml to understand test patterns and file registration.
+
+Now let me check the project config, build setup, and verify shared tokens (TSSpacing, Color.TS, TSButton, etc.) exist.
+
+Key finding: files in `shared-surfaces/` are glob-included (no project.yml edit needed). The `.xcodeproj` is generated via `xcodegen`. Let me verify the toolchain depth and read the lint configs and shared-framework script.
+
+All tooling is present (xcodegen, pwsh, swiftlint, swiftformat, booted iPhone 16 sim, Xcode 26.5). The critical risk is the `Shared.xcframework` build preAction requiring the Kotlin/Native + Gradle toolchain. Let me assess the KMP baseline and read the pending-verifications doc.
+
+Java 17 + gradlew are present, so the KMP framework build is feasible but is the long pole. The doc confirms these are macOS-deferred verifications. Let me pre-warm the `Shared.xcframework` Gradle build in the background while I write the surface files.
+
+Let me verify there are no symbol collisions for my planned type names, and check the KMP build progress.
+
+No collisions — all my type names are free. The KMP build is progressing with cache hits (`compileKotlinIosArm64 FROM-CACHE`). Now I'll write the 10 surface files, cloning the `AIDriveCoaching` structure with charging-diagnosis adaptations. Starting with the core logic files.
+
+Now the adapter tests. Let me also check the KMP build progress.
+
+All 10 files created. Let me verify formatting/linting on the new files and check the KMP build progress.
+
+swiftformat passes (0/9). All tokens confirmed. KMP build is nearly done (linking release frameworks). Now let me run swiftlint --strict on the new files and wait for the framework to finish staging.
+
+swiftlint passes (0 violations) on all 9 files. Let me verify the KMP framework finished staging.
+
+Other parallel slots (24, 26) are competing for the shared Gradle daemon. My slot-27 build is still linking release frameworks. Let me wait for it to finish staging.
+
+Framework staged (BUILD SUCCESSFUL in 10m). Now let me generate the Xcode project and confirm it picks up my new files.
+
+Project generated; my files are included (60 refs across app + test targets). Now the main event — the iOS build + test. I'll run it in the background and monitor, since compiling the full app is heavy.
+
+Launched. Let me monitor the build progress — first checking the Gradle preAction and early compilation.
+
+Build got past the Gradle preAction and is now emitting the TeslaSync Swift module (which includes my files). Let me check that 1 "error:" match and confirm the build is still running.
+
+I found a **pre-existing** compile error in an unrelated, out-of-scope file (`AISignalExplorerNlFilter.swift:142`), not in my files. Let me confirm it's pre-existing and characterize it while the build continues.
+
+Confirmed: `git status` shows **only my 10 new files**; `AISignalExplorerNlFilter.swift` is unmodified at HEAD — so that escaping error is pre-existing and unrelated to my work. It's in the same app module, so it blocks the full build. Let me wait for the build to finish and capture the **complete** error list to confirm my files are clean and see the full scope of pre-existing breakage.
+
+Exactly **two** pre-existing errors, both the identical escaping-closure pattern, in predecessor surfaces (`AIGeofenceAwareAutomationSuggestions.swift`, `AISignalExplorerNlFilter.swift`) — and **zero** in my files. My surface is compile-clean. These two block the whole module, preventing verification of my tests. Let me examine the bug and `TSGlassPanel` to craft a minimal fix so I can get a genuinely green gate.
+
+Now I fully understand: `TSGlassPanel.init` takes `@escaping () -> Content`, and **19+ sibling surfaces** correctly declare their `glass` helper as `@escaping () -> some View`. These two predecessor files simply **omit `@escaping`** — a clear deviation from the established pattern. The fix is the canonical 1-word addition. Without compiling the module I cannot verify my surface's tests, and committing a red tree violates the covenant's "No commit on red." I'll apply the minimal canonical fix to both, then verify green.
+
+Both blockers fixed with the canonical `@escaping`. Now re-running the iOS build + test.
+
+Launched. The full module compile + test run will take several minutes. Let me wait and check progress.
+
+Compiling past the previous failure point with zero errors. Let me continue waiting for the compile + test phases.
+
+The build reports "2 failures" in a SwiftCompile batch, but my `error:` grep found nothing — unusual. Let me dig into the actual failure details (could be a compiler crash from memory pressure across parallel slots, or a different diagnostic format).
+
+"Command SwiftCompile failed with a nonzero exit code" with **zero `error:` diagnostics** is the signature of a compiler crash/kill — typically memory pressure, not a source defect. Multiple parallel slots are competing for RAM. Let me confirm by inspecting the crash context and system memory.
+
+The failure is a **swift-frontend SIGSEGV crash during IRGen** of `AppearanceSettings.Controls.swift` (a feature-view, not my file) — a caught signal with a stack dump, which is a genuine compiler crash, not an OOM kill (those are uncatchable SIGKILLs). My `@escaping` fix unblocked the emit-module phase, which then reached this pre-existing IRGen crash. Let me check whether all failures point to the same file (deterministic compiler bug) vs. different files (resource flakiness), and whether my run has exited.
+
+Decisive findings: my slot's run has exited (`BUILD FAILED` / `TEST FAILED`), and **both** IRGen crashes are on the **same** file — `AppearanceSettings.Controls.swift` — confirming a **deterministic pre-existing swift-frontend compiler crash** (caught SIGSEGV + stack dump in IRGen), not resource flakiness and not my code. My `@escaping` fix unblocked emit-module (proving all my files type-check with 0 errors), which then exposed this deeper baseline crash.
+
+Let me (a) assess whether that crash is safely fixable, and (b) set up an isolated test run to actually execute my surface's unit tests independent of the broken app module.
+
+The crash is a known Swift-6 compiler bug: the `@MainActor (Bool) -> Void` closure (`onChange`, line 107) passed into `Binding(set:)` (line 122) generates an actor-isolation reabstraction thunk (`Sb ScA_p Sg` = `Bool, (any Actor)?`) that crashes swift-frontend IRGen. This is a feature-view (0204), firmly out of my scope, and "fixing" it means a risky compiler-bug-dodge on someone else's file — with potentially more crashes behind it. Let me estimate the blast radius before deciding.
+
+The crashing pattern (`@MainActor` closure → `Binding(set:)`) exists in **at least 3 feature-view files** (`AppearanceSettings.Controls`, `AddressInput.Model`, `CommandSearch.Model`) with 32 `@MainActor (T) -> Void` declarations total. Fixing all would be dozens of out-of-scope edits with more crashes likely behind each — an unbounded scope violation. The baseline app target genuinely does not compile under Xcode 26.5/Swift 6.3.2, independent of my surface.
+
+I'll verify my surface's logic + tests **run and pass in isolation** via a standalone SwiftPM package (my pure-Foundation Adapter/Model/Projection + both test files), proving correctness without the broken app module.
+
+Now let me run the isolated test suite — this actually executes my surface's unit tests.
+
+**72/72 isolated tests pass** (`SWIFT_TEST_EXIT=0`) — concrete runtime proof my surface's request/SSE/reducer/output/action/projection/model/accessibility logic is correct, independent of the broken app module.
+
+Now let me kick off the macOS build (background, to capture its real result) and run placeholders + repo-wide lint in parallel.
+
+Let me see how the script resolves `-Path` so I run the placeholder gate correctly.
+
+The script treats a non-existent path as a vacuous clean pass — so the literal gate path (`.../AIChargingDiagnosis`, which isn't a real file/dir here) would scan nothing. For a real check, I'll scan my actual files via a temp dir, and also record the literal gate command. macOS build is running in the background.
+
+Placeholder gate: **0 violations** on my files (`EXIT=0`). Now the repo-wide lint/format gates (as the gate specifies). Let me run both and capture real exit codes.
+
+Both lint gates **pass repo-wide**: `swiftformat --lint` → 0/4236 need formatting (FORMAT_EXIT=0); `swiftlint --strict` → 0 violations in 3948 files (LINT_EXIT=0); the "9" matches are just my files being linted, not violations. Placeholder gate = 0.
+
+So 4 gate steps pass; only the full iOS/macOS build+test are blocked by the pre-existing systemic crash. Let me check the macOS build progress (to capture its real result, not assume it) and confirm the `.github` log dir.
+
+macOS build failed on **code-signing** ("entitlements require signing with a development certificate") — an environment/platform-capability limitation (no dev cert; `DEVELOPMENT_TEAM` is empty), matching the documented "macOS verifications deferred to CI runners." It failed before compiling, so it'd also hit the same IRGen crash once signing were resolved.
+
+I now have the complete, honest picture. Both host gates are blocked by **pre-existing, out-of-scope** conditions; my surface itself is fully verified. Let me revert my 2 out-of-scope `@escaping` edits to keep the commit strictly scoped, then verify the working tree.
+
+Working tree is now strictly my 10 files; siblings restored to HEAD. Let me gather the precise evidence snippets (IRGen crash + signing error) to embed in a self-contained, honest log.
+
+All evidence confirmed: **0 errors in my files** during the iOS build; the failure is a swift-frontend IRGen SIGSEGV in the out-of-scope `feature-views/AppearanceSettings.Controls.swift`; macOS fails on dev-certificate signing. Now let me write the comprehensive, self-contained log.
+
+Now let me stage exactly the allowed files and commit. First verifying what will be staged (the generated `.xcodeproj` and staged framework must be gitignored).
+
+Exactly the 10 surface files + log are staged; nothing else (generated project/framework are gitignored). Committing now.
+
+Committed: **11 files, 2350 insertions** (commit `60e1ab349`). Let me clean up scratch artifacts and verify the final working-tree state.
+
+Everything is clean and committed. The task is complete to the fullest extent the environment allows.
+
+## Summary
+
+I shipped the **`AIChargingDiagnosis`** native Apple surface — the SwiftUI parity of `web/src/components/ai/AIChargingDiagnosis.tsx` — as 10 files in `apps/apple/TeslaSync/shared-surfaces/`, following the proven `AIDriveCoaching` architecture exactly.
+
+**What was built (full parity, no stubs):**
+- `withAiFeature('charging-diagnosis')` gate + `useAiStream` (POST `/ai/charging/{sessionID}/diagnose`, empty body) + `AIFeatureCard`/`AiOutputPanel` reproduced natively.
+- Binds through a **P1/S8 state-holder seam** (`ChargingDiagnosisSource`) — no HTTP in the view. Pure-Foundation Adapter (request/encodeURIComponent/SSE-parse/stream-reducer), Projection, and an `@Observable` Model.
+- **Every state**: gated, loading, error (gate + inline stream error), ready × idle/thinking/prose/failed/no-session, plus the P4 live/stale/offline freshness axis with one-shot auto-refresh.
+- **P1/S10 i18n** (all copy via facade, `.strings` catalog), **accessibility** (VoiceOver/Dynamic Type/reduce-motion), **P1/S11** `view.opened` telemetry.
+
+**Surface verification — all green:**
+- `swiftlint --strict`: **0 violations**; `swiftformat --lint`: **0**; placeholders: **0**.
+- In-app-module type-check: **0 errors** attributed to my files.
+- **72/72 unit tests pass** (isolated SwiftPM run of the logic layer).
+
+**Honest gate status — `STATUS=BLOCKED` (EXIT=1):** the whole-app iOS/macOS `build test` gates fail for **pre-existing, out-of-scope** reasons, *not* my surface:
+- **iOS**: a deterministic `swift-frontend` IRGen **crash** (SIGSEGV) compiling baseline `feature-views/AppearanceSettings.Controls.swift` (a `@MainActor` closure → `Binding(set:)` reabstraction-thunk compiler bug, shared by ≥2 more feature-views) — outside my allowed files.
+- **macOS**: requires a **development signing certificate** absent on this host (deferred to CI per `macos-pending-verifications.md`).
+
+I briefly confirmed (then reverted) a one-word `@escaping` fix to two sibling files to prove my surface type-checks in-module; the commit is strictly scoped to my 10 files + the log. Full evidence is in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0011-AIChargingDiagnosis.log`. Committed as `60e1ab349`.
+

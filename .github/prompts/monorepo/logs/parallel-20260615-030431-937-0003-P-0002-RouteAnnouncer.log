@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and verifying both the web source and the Apple native toolchain capability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure thoroughly to understand the existing patterns, schemes, state holders, tokens, i18n facade, and diagnostics contract.
+
+No `.xcodeproj` — the project uses XcodeGen (`project.yml`). Let me examine the project config, the existing shared-surfaces, and the directory layout in detail.
+
+The shared-surfaces dir is large (2339 entries). Let me find the complete file-set pattern for one surface and look for any existing announcer-like surfaces to use as a template.
+
+Found the ideal templates: `AnnouncerRegion` and `VisuallyHidden` are sibling a11y surfaces (same `web/src/components/a11y/` origin). Let me read the complete `AnnouncerRegion` file set — it's the closest analog to `RouteAnnouncer`.
+
+Excellent template. Let me read the remaining `AnnouncerRegion` files (Views, States, Seams, Previews, strings, tests) to complete my understanding of the full pattern.
+
+Let me read the test files, previews, and strings to complete the template understanding.
+
+I now have the complete pattern. Let me verify the design tokens (P1/S9) and shared components exist with these exact names before writing, and check how strings/localization wire up.
+
+Let me confirm the generated design token names (`Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`) so I use exact identifiers.
+
+All tokens confirmed. Now let me check the build tooling (xcodegen) and current git state, and peek at how other recent surfaces verified their builds.
+
+xcodegen and a booted iPhone 16 sim are available. Before committing to a multi-thousand-file build, let me understand the realistic build situation: the Shared.xcframework pre-action, the pending-verifications doc, and how the sibling 0001 surface's gate was actually run/logged.
+
+There's already a prior-run artifact log for RouteAnnouncer (0231). Let me read it plus the sibling AnnouncerRegion log and the correct pending-verifications doc to learn how the gate realistically runs on this runner.
+
+A prior parallel run already mapped the realistic gate. Key facts: full-app `xcodebuild build test` is blocked by **pre-existing repo-wide** issues (XCTest-in-app-target, `DashboardWidgetSize` 15× redeclaration, macOS signing), all with 0 RouteAnnouncer-attributed errors. The surface-scoped verification (isolated SwiftPM build+test, dual-SDK typecheck, lint, format, placeholders) is the real per-surface gate. Note: the prior run laid the surface out as a **directory** `shared-surfaces/RouteAnnouncer/`.
+
+Let me verify the current baseline myself rather than trust a stale log, and inspect the tooling.
+
+Major finding: `DashboardWidgetSize` is now declared **only once** — that prior blocker is fixed in this slot. pwsh is available, Components/Design only import system frameworks (isolated build feasible), and the namespace is clean. Let me confirm placeholder match case-sensitivity and the shared-surfaces layout convention.
+
+Placeholder matching is **case-insensitive** — I must avoid TODO/FIXME/XXX/"Coming soon"/"Placeholder"/"Lorem ipsum"/"not implemented" in all files including comments. The directory layout is required (so `-Path .../RouteAnnouncer` and `git add` are non-vacuous). Let me read the lint/format configs to match their rules, and confirm TSCard/TSFadeIn signatures.
+
+All rules captured: `shared-surfaces` IS swiftlint-`included` (so my files must pass `--strict`: ≤120 cols, ≤50-line bodies, `.isEmpty`, `.first(where:)`, etc.), swiftformat maxwidth 120 with specific wrap rules, placeholder words forbidden case-insensitively. The directory layout is required. Let me set up the todo tracker, create the surface directory, and write a plan.
+
+Now let me add a delay-recording affordance to the manual scheduler (for the custom-delay parity test), then write the two test files.
+
+All 10 files written. Let me run the placeholder gate, check for forbidden words, and verify no symbol collisions with the rest of the module.
+
+Placeholder gate clean (EXIT=0), no forbidden words, no symbol collisions. Let me get the last collision-check line.
+
+Surface is clean and collision-free. Now the critical step — genuinely compiling and testing the surface. Let me set up an isolated SwiftPM package (module named `TeslaSync`) pulling in the real design tokens + shared components, then `swift build` + `swift test`. First, inspect the component dependency surface.
+
+Including all of Components risks pulling Charts/Maps. Let me identify the exact transitive deps of the 5 components my surface uses (TSCard, TSButton, TSSkeleton, TSEmptyState, TSFadeIn) so the isolated package stays minimal.
+
+The components form a large cross-referencing web, but my surface uses a known, verified-API subset (TSCard/TSButton/TSSkeleton/TSEmptyState/TSFadeIn + tokens). I'll build an isolated SwiftPM package (module `TeslaSync`, Swift 6 mode, macOS 15) with API-faithful shims for exactly those symbols, then **run** the full unit suite. Let me set it up.
+
+Token namespaces confirmed (`Color.TS` / `Font.TS` enums). Let me build the isolated package with API-faithful shims and run the full test suite.
+
+The whole surface compiles cleanly in Swift 6 strict-concurrency mode. Now let me run the full test suite.
+
+All **39 tests pass** and the surface compiles under Swift 6 strict concurrency. Now the dual-SDK typecheck (iOS 18 + macOS 15) to satisfy the cross-platform requirement, plus swiftlint/swiftformat.
+
+Both SDKs typecheck cleanly. Now swiftlint --strict and swiftformat --lint on the surface.
+
+swiftformat passes (0/9). swiftlint scanned the whole repo (5887 files) and found 1 serious violation — I need to confirm it's not mine. Let me isolate violations and check whether any are in RouteAnnouncer.
+
+The lone violation is **mine**: `large_tuple` — `makeModel` returns a 3-member tuple. Let me refactor it to use XCTest instance properties instead, then re-verify.
+
+Now fix the call sites (the destructuring) with sed, then re-sync to the package and re-verify build/test/lint.
+
+2-tuples remain (allowed); the 3-tuple is gone. Let me re-sync to the package, re-run tests, and re-lint to confirm zero violations.
+
+39 tests pass. Re-running swiftlint to confirm the surface is now clean.
+
+Surface passes swiftlint (0 violations) and swiftformat (0/9). Now let me generate the Xcode project (A1) and verify my files wire into the targets.
+
+Project generated. Let me verify target membership of my files and check the toolchain for the build pre-action.
+
+The "4 refs" needs decoding — I must confirm test files are excluded from app targets (else the pre-existing XCTest-in-app blocker). Let me parse the pbxproj to map each RouteAnnouncer file to its actual targets.
+
+Membership is correct: app targets get the 7 non-test files + strings; test bundles get only the 2 test files. Let me verify whether the prior "XCTest-in-app-target" blocker still exists repo-wide (it may be fixed now), which determines if the full iOS build can actually pass.
+
+**Both prior blockers are resolved in this slot**: 0 `*Tests.swift` leak into the app targets (4698 sources, clean) and `DashboardWidgetSize` is single. The full iOS gate may now actually pass. Let me run the prompt's real Gate. Starting the iOS build+test (KMP framework pre-action + 4698 sources — this is heavy) in the background.
+
+The iOS gate build is running (KMP framework first, then 4698 sources). Let me monitor its progress.
+
+KMP `Shared.xcframework` built (cached, fast). Now compiling the 4698-source app target — this is the long phase. Let me continue monitoring for errors.
+
+Still in the Gradle framework phase (now the release variant). Let me give it more time to reach the app-source compilation.
+
+Now compiling the full `TeslaSync` module (Swift 6, `-enable-testing`), 0 errors so far. This large compile takes time. Continuing to monitor.
+
+Strong progress: 0 errors, my `RouteAnnouncer.strings` is bundled (validated UTF-8), and the full app module is at `EmitSwiftModule` — the entire 4698-source target compiled clean. Now linking + test bundle + simulator test run. Continuing.
+
+The iOS build **FAILED on a pre-existing, unrelated error** — `Sources/Features/Driving/DriveScorePage.Panels.swift:25` (a `LocalizedStringKey` vs `String.LocalizationValue` mismatch), nothing to do with RouteAnnouncer. Let me collect the complete error set and confirm zero RouteAnnouncer-attributed errors.
+
+The only blocker is one pre-existing, unrelated error; git confirms I touched nothing but `RouteAnnouncer/`. To obtain the strongest evidence (my tests actually running in the real in-app XCTest bundle), let me inspect that pre-existing error — if it's a trivial fix I'll patch it **temporarily** (uncommitted, then revert) purely to unblock the gate run.
+
+This is a genuine pre-existing bug in an unrelated Driving page. To get the strongest evidence (my tests running in the real in-app XCTest bundle) I'll apply a minimal **temporary, uncommitted** fix to just this one line, re-run the gate, then revert it. Let me find the correct fix by checking the types.
+
+`labelKey` is `LocalizedStringKey` but `deltaFormatted` wants `String?` — a real pre-existing bug. I'll apply a minimal temporary fix (reverted via `git checkout` before commit) to unblock the gate run and get real in-app test evidence.
+
+Let me verify `overallTrend`'s type has a String property — otherwise I'll use a guaranteed-compiling literal.
+
+`DriveScoreTrend` is a `String` enum with no `deltaText`. Let me use `.rawValue` (guaranteed `String`) for the temporary patch.
+
+Temp fix applied. Re-running the iOS gate build+test to get real in-app test evidence.
+
+Re-launched. Let me monitor — first checkpoint for errors and progress past the previously-failing file.
+
+A concurrent-build DB lock — the first `xcodebuild` was still holding DerivedData. Let me check for lingering processes and the first run's final state.
+
+This is a **shared machine** — slot-1 and other builds are running concurrently, and my two builds collided on the same DerivedData (DB lock). Let me check whether my first build is still active and avoid contention by using a dedicated DerivedData path.
+
+The first build hung after BUILD FAILED, holding my DerivedData and contending with other slots on this shared machine. Let me clean up my own stuck processes (cqvdbzb DerivedData, by explicit PID) and then make one clean attempt with a dedicated DerivedData path.
+
+All my stuck processes cleaned up (0 remaining), slot-1 untouched. Now one clean iOS gate attempt with a dedicated DerivedData path (temp fix still in place).
+
+Monitoring the clean build. Let me check progress after a few minutes.
+
+Temp fix worked — the DriveScorePage error is gone and the app module is compiling clean (0 errors). Waiting for build completion + the in-app test run.
+
+The log is static at `EmitSwiftModule`, but xcodebuild buffers output without a TTY — it may be compiling silently. Let me check whether the process is alive and burning CPU (compiling) or hung.
+
+The build is alive and compiling (DerivedData 1.8G and growing, 0 errors) but the **machine is at load average 115** — multiple slots are compiling TeslaSync concurrently on this shared host, so my build is crawling. It's correctness-clean, just contended. Let me give it a longer window to reach the test run.
+
+The build is healthy and progressing — now in the per-file `SwiftCompile` phase (compiling individual surfaces), DerivedData 3.6G, **0 errors across all 4698 sources**. Still contended (load 112). Continuing to wait for build completion + test run.
+
+Major result: **`** BUILD SUCCEEDED **`** — the full 4698-source app target built with my surface compiled in (RouteAnnouncer.Views.swift, RouteAnnouncer.swift, etc.), and my test files compiled into the test bundle. The test **run** was then blocked by a **pre-existing, unrelated** Swift 6 concurrency error in `Tests/Unit/.../GDPRExportPageModelTests.swift`. Let me capture the full unrelated-error set and confirm zero RouteAnnouncer-attributed errors.
+
+Confirmed: **app BUILD SUCCEEDED** with my surface compiled in; the only test-bundle error is the pre-existing unrelated `GDPRExportPageModelTests.swift` concurrency bug; **0 RouteAnnouncer-attributed errors**. Further chasing other slots' pre-existing test errors won't change the committed reality or honest status. Let me revert the temporary fix, check the macOS signing situation, and clean up.
+
+Temp fix reverted (only `RouteAnnouncer/` remains as my change). macOS has **0 valid signing identities** → the macOS gate is environment-blocked (entitlements require a dev certificate). Now let me capture the current repo-wide swiftlint/swiftformat state for the log.
+
+swiftlint --strict is **EXIT=0 repo-wide** (my fix cleared the only violation). swiftformat flags 9/6194 files — but my scoped run showed 0/9 of mine need formatting. Let me confirm none of the 9 are RouteAnnouncer.
+
+All 9 swiftformat offenders are **pre-existing unrelated files** — 0 RouteAnnouncer. I now have the complete honest gate picture. Let me check how the prior accepted runs concluded their final STATUS marker (to match the established convention) before writing my log.
+
+Convention confirmed: prior accepted runs end `EXIT=<gate exit> / STATUS=BLOCKED` with surface-scoped verification documented GREEN. My result is stronger (app BUILD SUCCEEDED, 39 tests, swiftlint now repo-clean). Let me write the comprehensive gate log.
+
+Log written. Now let me clean up build artifacts, verify the working tree contains only my surface + the log, then commit.
+
+Working tree is clean — only my surface dir + the log, and the temp fix is fully reverted. Let me confirm the 10 files are present and do a final placeholder check on the exact files to be committed, then commit.
+
+All 10 files present, placeholder scan clean. Committing per the prompt's Commit block.
+
+Let me verify the commit landed and the tree is clean.
+
+Committed cleanly (commit `c099a2c`, 11 files, 2156 insertions, working tree clean). Let me finalize tracking and confirm no stray build processes remain on the shared host.
+
+All todos done, no lingering slot-3 processes (slot-1 correctly untouched). Let me mark the plan complete.
+
+Task complete. Here's the summary.
+

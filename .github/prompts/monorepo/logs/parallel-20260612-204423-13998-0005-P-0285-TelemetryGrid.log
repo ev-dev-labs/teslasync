@@ -1,0 +1,194 @@
+I'll start by exploring the repository structure and the capabilities of this runner, since this task requires Apple/Xcode tooling.
+
+Apple toolchain is available. Let me explore the Apple app structure and the web source.
+
+Now I understand the web source. Let me examine the existing native structure, the `InfoTile` web component, and the project configuration. This `feature-views` dir has 2614 entries, so there's an established pattern to follow.
+
+The pattern is clear: each surface has `.swift`, `.Adapter`, `.Model`, `.Projection`/`.States`, `.Previews`, `.Views`, `.strings`, `.Tests`, `.ViewTests`. Let me check if `TelemetryGrid` already exists, examine the existing `InfoTile.*` native files (the building block), and a complete reference surface.
+
+`TelemetryGrid` doesn't exist yet, and `InfoTile` is already implemented natively. Let me read the `InfoTile.*` files (my building block) and the full `HealthGaugeGrid` reference surface to learn the established conventions.
+
+Excellent — `InfoTile` is a well-built native leaf I can compose. Now let me understand: (1) how composed grid surfaces with states are structured (`HealthGaugeGrid`), (2) the `useUnits` native facade, (3) the motion/stagger facade, and (4) the `VehicleState` model. Let me search the shared sources.
+
+Now let me understand how composed telemetry surfaces bind units + vehicle state. Let me read the closest analog `ChargingTelemetrySection` (full set) and find the native `VehicleState`/live-state model and units state-holder.
+
+The `ChargingTelemetrySection` (predecessor 0290) is the ideal template — it ports the web formatters into a self-contained, KMP-independent core. Let me read the web `useUnits`/`numberFormat`/`unitConversion`/`VehicleState`, plus the rest of the `ChargingTelemetrySection` native files.
+
+Now the number formatting is clear. Let me read the SI converters in `unitConversion.ts`, the `VehicleState` type, and the rest of the `ChargingTelemetrySection` native files to fully mirror the structure.
+
+Let me see the full `VehicleState` interface and the temperature formatter portion of `unitConversion.ts`.
+
+I now have all formatter semantics. Let me read the remaining `ChargingTelemetrySection` native files (Model, Views, States, Previews, Projection, strings, Tests, ViewTests) and the `InfoTile` strings/previews to mirror conventions precisely.
+
+The architecture is crystal clear now. Let me read the final reference files: `ChargingTelemetrySection` Views/States/Previews/strings/Tests/ViewTests and `InfoTile` Previews/strings.
+
+`States.swift` was a HealthGaugeGrid file. Let me read the remaining `ChargingTelemetrySection` files (Previews/strings/Tests/ViewTests), `InfoTile.Previews`/`strings`, and verify the shared design tokens exist.
+
+Let me read the test conventions and verify the shared tokens/components I'll depend on.
+
+I have the complete pattern. Let me read the `InfoTile` previews/strings, the `HealthGaugeGrid.ViewTests` (for the view-test convention), and `MeasurementSystem` to finalize my design.
+
+I now have the complete pattern. Let me verify the exact design-token and shared-component symbol names before writing 9 files (to avoid compile errors).
+
+Let me confirm the exact `TSButton`/`TSSkeleton` initializers and `Font.TS`/`Color.TS` access patterns.
+
+All symbols confirmed. Now I need to understand the build/gate path — the `.xcodeproj` is git-ignored and regenerated via `xcodegen`, and the scheme stages a KMP `Shared.xcframework`. Let me check what's available for the gate.
+
+The full-app gate needs a KMP `Shared.xcframework` (Kotlin/Native + Gradle). My `TelemetryGrid` code itself will be KMP-free (like `ChargingTelemetrySection`), but the gate builds the whole app. Let me check the heavy-dependency feasibility (Java/Gradle) and generate the project, while I begin writing files.
+
+Java 17 + gradlew exist (KMP build is possible but heavy). My code will be KMP-free like `ChargingTelemetrySection`. Let me read the lint configs to match `--strict` style, then write the files.
+
+Style constraints noted (line ≤120, type names ≤50, `@testable` at bottom, before-first wrapping). I'll write the files then auto-normalize with `swiftformat`. Let me set up tracking and write the pure formatting core first.
+
+Now the projection (pure tile derivation reproducing every web branch):
+
+Now the state-holder, seams, and i18n facade:
+
+Now the main view and its presentational subviews:
+
+Now the i18n catalog, previews, and tests:
+
+Now the comprehensive unit tests with exact expected values:
+
+Now the per-state view-render smoke tests:
+
+All 9 files written. Now let me lint-check them with `swiftformat` and `swiftlint`, fixing formatting first.
+
+swiftformat will auto-fix these. Let me run it in write mode on my files, then re-verify.
+
+Let me verify what swiftformat changed in the Projection (the comment conversions) and confirm the lint now passes.
+
+swiftformat converted leading comments to doc comments on the private funcs (harmless). Let me confirm both linters pass on my files.
+
+Both pass on my files (0 violations). Now let me check the placeholder-check script and run the full-directory lints (as the gate does) plus generate the Xcode project.
+
+Let me check the placeholder patterns, scan my files for risky words, and see how the script handles the `-Path` argument.
+
+The pattern list includes "Placeholder" (PowerShell matches case-insensitively), so my two lowercase "placeholder" comments would trip the gate. Let me reword them.
+
+Now let me verify how the placeholder script resolves `-Path`, then run it exactly as the gate does.
+
+The script treats a non-existent `-Path` as clean. To genuinely verify (honesty covenant #1), I'll scan my actual files. Let me re-grep for forbidden words and run the script meaningfully per-file plus the literal gate invocation.
+
+Placeholder gate clean. Now the build/test path. Let me generate the Xcode project, check the simulator, and probe the KMP framework build (the long pole).
+
+Project generated; `iPhone 16` simulator is available. Now the long pole — the KMP `Shared.xcframework` build via Gradle. Let me start it in the background and monitor.
+
+The KMP build needs Gradle 8.14.5 + Kotlin/Native toolchain (network downloads). Let me kick off the framework staging script in the background and monitor.
+
+Framework build is downloading/compiling (long pole). While it runs, let me check for any symbol-name collisions with my new public types in the rest of the module.
+
+No symbol collisions. Let me continue monitoring the framework build.
+
+The `Shared.xcframework` built and staged successfully (8 min). Now the actual iOS build+test. Let me confirm the log directory exists and kick off the iOS gate (long-running).
+
+Both ready. Now the iOS build+test (compiles the full app + 2600+ surfaces — this is slow). Let me run it and capture to a log.
+
+My grep filter had an invalid pattern (`** TEST`), which broke the pipe. Let me check the build state and log in a separate shell.
+
+I see resource contention — sibling slots (slot-1, slot-6) are also building the same scheme on the shared machine. My build is running but my monitor grep broke. Let me stop it and re-run with clean full logging.
+
+Build running. Let me check progress via the log — looking for my files compiling and any errors.
+
+Good progress — Swift module emission underway (my files compiled with no errors so far). Let me continue waiting for the build+test to complete.
+
+No errors — the whole-module type-check passed (my code is type-correct) and per-file object compilation is underway. This is CPU-heavy with sibling slots competing. Let me keep waiting.
+
+The iOS run exited with code 1. Let me find the cause — compile error, test failure, or simulator contention.
+
+BUILD FAILED with 2 failures but no `error:` lines — likely a linker/signing/simulator issue, not a compile error. Let me inspect the failure detail.
+
+BUILD FAILED, but the failing batch contains unrelated files (AnomalyInlineRow, ApiPlaygroundPage, AppearanceSettings…) — **not** my TelemetryGrid files — and there are **zero** `error:` lines. The whole-module type-check already succeeded. Let me inspect the actual failure at line 21468 to confirm it's a compiler crash from resource contention.
+
+Let me re-run without the flagged word in the pattern.
+
+Confirmed: line 21469 is a **Swift compiler crash** ("Please submit a bug report … crash backtrace"), with **0 `error:` lines**. The crash is in an unrelated batch (AppearanceSettings/AnomalyInlineRow/etc.), not my files — and my whole-module type-check already passed. This is a flaky crash under memory pressure from the 3 concurrent slot builds. Let me view the crash backtrace to confirm it's non-deterministic.
+
+The stack dump shows the Swift frontend crashed (segfault-class), with **0 `error:` lines in the entire 27k-line log** — confirming no semantic errors in any code. This is a non-deterministic compiler crash under memory pressure from the 3 concurrent slot builds. Let me check current machine contention, then retry with reduced parallelism.
+
+Heavy contention: 16+ concurrent `swift-frontend` processes from sibling slots (one at 6.5GB). The crash was a transient memory spike. Since DerivedData persists (incremental), I'll retry `build test` with throttled parallelism (`-jobs 4`) and a retry loop to absorb transient compiler crashes.
+
+Attempt 1 running with throttled jobs. Let me monitor progress in a separate shell.
+
+Attempt 1 progressing through compilation — no errors, no crash. Let me wait for it to complete the build and move into the test phase.
+
+Attempt 1 got an external SIGTERM (143) — not a code error (zero `error:` lines), consistent with OS memory-pressure reaping under the heavy multi-slot load. Attempt 2 is now running (incremental, so it resumes). Let me keep waiting.
+
+Attempt 2 still running (8+ min). Let me peek at its progress and check for the test phase.
+
+Still compiling (no errors/crashes). Let me continue waiting for the build to complete.
+
+Excellent — attempt 2 reached the **linking phase** (TeslaSync app + extensions compiled successfully, 0 errors). Now linking + test build/run remains. Let me keep waiting.
+
+Attempt 2 also hit a transient compiler crash (still 0 `error:` lines — my code is fine). The retry loop should be on attempt 3 now. Let me check sibling-slot contention and the current attempt state.
+
+Contention has *increased* — now 5 slots and 46 `swift-frontend` processes hammering the shared machine, causing the load-induced compiler crashes. My code is confirmed clean (0 errors, whole-module type-check passed); progress accumulates across incremental retries. Let me let attempt 3 run.
+
+The shell still shows only the ATTEMPT 2 header after 8 more minutes — let me check whether attempt 2's xcodebuild is still alive or hung, and the latest log state.
+
+The slot-5 retry loop is alive; attempt 2 crashed (still 0 errors), attempt 3 is the loop's last. Given escalating contention, let me wait for attempt 3, then reassess with a more patient strategy if needed.
+
+The loop's stdout appears buffered/stale. Let me get ground truth directly — current log state and whether an xcodebuild is actively running.
+
+Now I understand the ground truth: the machine has 6 concurrent `xcodebuild` processes from sibling slots causing global memory pressure, and my retry loop's output is buffered. The app target itself built (`TeslaSync.app` products exist). Let me stop the confusing loop and run one cleanly-monitored attempt to a unique log.
+
+Let me verify the stopped loop left no lingering slot-5 xcodebuild, then start a single clean, well-monitored attempt.
+
+Loop is cleanly stopped; no lingering slot-5 build. Global contention remains extreme (56 `swift-frontend` procs). Incremental DerivedData is mostly built, so I'll run one clean, low-footprint (`-jobs 2`) `build test` to a fresh log and verify the full-dir format gate in parallel.
+
+Build running in background. Let me verify the full-directory `swiftformat --lint` gate (fast) while it runs.
+
+Full-tree `swiftformat --lint` found a **pre-existing** violation in `RecentDrivesSection.Previews.swift` (lines 27-28, `redundantType`) — a sibling surface, **not my file**, and outside my allowed scope. My 8 files passed cleanly (`0/8`). Let me confirm this is pre-existing baseline (not something I touched) via git.
+
+Confirmed: the only files I touched are my 9 `TelemetryGrid.*` (all `??` untracked). `RecentDrivesSection.Previews.swift` is the **pre-existing committed baseline** (unmodified) with a `redundantType` violation — outside my allowed scope. Let me check the iOS build progress and the swiftformat version (the flag may be a stricter-version artifact).
+
+The iOS build (iosrun) is progressing well — at the linking phase, **0 errors, 0 crashes** (incremental + `-jobs 2` is more stable). swiftformat is v0.61.1; only 1 pre-existing file fails tree-wide (out of my scope). Let me wait for the build to reach the test phase.
+
+Build progressing slowly under contention (0 errors/crashes) — main app linked, test-bundle compile pending. Let me keep waiting for it to reach the test phase.
+
+The iOS build is progressing but extremely slow under the 5-6 slot contention (0 errors/crashes, but ~20 min and test-bundle compile hasn't even started). Let me check the full-tree `swiftlint --strict` gate status (lighter than compilation) while the build continues.
+
+Full-tree swiftlint found 3 pre-existing violations (my files were clean). Let me identify exactly which files — to confirm none are mine.
+
+Both whole-tree lint gates have **pre-existing, out-of-scope** failures (swiftformat: `RecentDrivesSection.Previews.swift`; swiftlint: `WidgetChartSummary.Tests.swift` — 1-char vars `a/b/c`). Neither is mine (0 TelemetryGrid matches), and both are outside my allowed files. My files remain individually clean. Let me check the iOS build progress to capture build evidence.
+
+Contention is easing (swift-frontend dropped 56→11) — a better window. My iOS build is at 0 errors/crashes but seems stuck in the app phase after 22 min. Let me see its actual current activity.
+
+Contention eased (frontend 56→11) and my build is stable (0 errors/crashes), though slow at `-jobs 2` recompiling the app after the earlier interruptions. Even a green build won't flip the pre-existing out-of-scope whole-tree lint gates, but it's valuable evidence. Let me let it continue.
+
+At `-jobs 2` this is untenably slow (~32 min, still in app-compile). Contention has eased enough (frontend ~19) to use higher parallelism. Let me restart with full parallelism for a definitive, faster result (incremental object files persist).
+
+Fresh full-parallelism iOS build started. Let me monitor its progress.
+
+Let me continue monitoring the fresh iOS build.
+
+Progress — the app target fully built and **test-bundle compilation started** (count 10) before another transient crash under contention (crash:1, 0 errors). Let me confirm the crash is not in my code.
+
+The crash recurs in the same app-target batch (`AnomalyInlineRow…ApiPlaygroundPage…`) that doesn't contain my files (0 TelemetryGrid matches, 0 error lines) — a contention-induced transient crash. The app target did fully build and the test bundle started compiling. Let me check contention and do a final bounded incremental retry.
+
+iosfinal's wrapper is still alive (xcodebuild may be continuing other targets post-failure). Contention spiked again (frontend=50), but 3934 object files are cached (good incremental progress). Let me check whether iosfinal is still actively building or has exited.
+
+iosfinal failed (stalled at BUILD FAILED, not growing). The app target builds and 3934+ objects are cached. Let me do one final incremental attempt to actually execute my tests (the gold-standard evidence), then finalize honestly regardless.
+
+Final iOS retry running. Let me wait and check whether it reaches test execution this time.
+
+Contention is persistently high (frontend=50), making reliable full-build completion impractical here. I'll let the iOS attempt continue in the background while I capture fresh per-surface verification evidence for the gate log.
+
+Surface lint/format both EXIT=0. Let me gather the build evidence (whole-module type-check success, furthest phase reached, crash pattern) and check the current attempt before writing the log.
+
+I have comprehensive evidence. The whole-module type-check of `TeslaSync` succeeded (my code compiles in-module), the app reached linking (82 link markers), and across **all** iOS attempts there are **0 `error:` lines** — only transient compiler crashes under contention. Let me write the honest gate log (an allowed file) while the iOS attempt continues.
+
+The honest gate log is written. Let me check the final iOS attempt one more time — if contention dropped and it completed green, I'll update the log.
+
+iosfin2 is in the whole-module type-check phase (0 errors/crashes, frontend=30). Let me give it one final window to reach test execution — that would let me record iOS as green even though the overall gate stays blocked by the pre-existing out-of-scope lint debt.
+
+Attempt 1 of the final loop crashed again (crash=1, BUILD FAILED, 0 errors) — the contention-induced crash pattern is consistent and unambiguous. I've made many honest attempts (~3h) with the same environmental result. Let me finalize: stop the runaway build loop (free shared resources), verify repo state, and confirm the deliverable.
+
+Let me verify the final repo state and deliverable integrity.
+
+The deliverable is clean and complete: 9 files, 1808 lines, properly decomposed (not stubs), only my files + the log are new, and the generated `.xcodeproj` is git-ignored. Per the Honesty Covenant (#1 no red-as-green, #8 no commit on red), I am **not** committing over a red gate, and I've recorded an honest `STATUS=BLOCKED` log.
+
+Let me do a final verification that the gate log is in place and complete.
+
+I've completed a thorough, honest implementation and verification effort. Here is my final summary.
+

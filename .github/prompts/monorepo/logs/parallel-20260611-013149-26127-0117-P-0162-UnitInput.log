@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure to understand the web source and the Apple app infrastructure this task depends on.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, iOS 26.5 sims). Not a BLOCKED scenario. Now let me read the web source spec and existing Apple surface conventions.
+
+I now understand the web source. Let me study the existing Apple surface conventions, focusing on the most recent completed surfaces and the build/lint config.
+
+The CurrencyInput surface is the closest analog (form number input with formatting/parsing). Let me study it in full plus the placeholder patterns.
+
+Excellent analog. Let me read the remaining CurrencyInput files to fully internalize the multi-file convention before writing UnitInput.
+
+Now let me read the View/States/Previews/strings/Tests files plus the web `lib/unitInput.ts` and `useSettings` sources that UnitInput binds to.
+
+Now the critical web sources that define the formatting/parsing logic I must port.
+
+I have the full logic. Let me read the remaining reference files (strings, Previews, both test files), the web `locale.ts`, and confirm how `project.yml` includes sources.
+
+The `project.yml` is at `apps/apple/`. Let me read it plus the two test files and find the shared token definitions.
+
+Let me read the CurrencyInput UI/snapshot tests and confirm no `UnitInput.*` files exist yet, plus verify the available design tokens.
+
+I have all reference material. Let me verify the exact shared-component signatures I'll reuse (Button, Skeleton, Card, Motion, and the token names).
+
+All tokens/components confirmed. Let me check for naming collisions (`UnitInput`, `UnitKind`, `Unit*`) and read the lint/format configs to respect the budget.
+
+No collisions. I'll namespace everything `UnitInputField*` (mirroring `CurrencyInputField*`). Lint budget: 120-col lines. Now let me check the build feasibility (xcodegen, prebuilt framework, the shared-framework script) and look at a prior surface's gate log to understand the real verification path.
+
+The full build links a Gradle-built `Shared.xcframework` (not prebuilt here). Let me check how prior shared-surface prompts logged their gate outcome — that reveals the real verification path in this environment.
+
+A prior log exists for this exact prompt family. Let me read the CurrencyInput and PillFilterBar gate logs to learn the established verification pattern and outcome.
+
+This reveals the established, sanctioned verification pattern. Let me read the CurrencyInput log (my direct analog) to confirm the same disposition and capture the exact verification commands.
+
+Let me view the exact verification methodology section of the CurrencyInput log (lines 120–215) to replicate the SwiftPM harness and typecheck approach precisely.
+
+I now fully understand the sanctioned methodology: surface-scoped verification (swiftc typecheck for both SDKs + a SwiftPM XCTest harness + lint/format/placeholder/xcodegen) with the full-app `xcodebuild` reported verbatim but DEFERRED on pre-existing foreign-sibling/signing failures. Let me set up my plan/todos and inspect the component closure for the harness.
+
+I have everything I need. Let me set up the plan and todo tracking, then write the surface.
+
+Now I'll write the surface. Starting with the pure core (`Adapter`), which the tests depend on.
+
+Now the Model (state-holder, projection, telemetry, strings facade).
+
+Now the Seams (P1/S8 source protocol + live + in-memory).
+
+Now the main view and its presentational subviews + states.
+
+Now the previews (every state + unit kind), the strings catalog, and both test files.
+
+Now the two test files — adapter/converter/projection/sources first.
+
+Now the model/state-holder tests.
+
+All 10 files written. Let me update tracking and begin verification. First, I'll determine the component closure for the SwiftPM/typecheck harness.
+
+Components are fully self-contained (only system imports). I'll build a SwiftPM harness (module `TeslaSync`) with the tokens + components + my surface, and run the real XCTest suite. Setting it up now.
+
+The whole-Components closure pulls in Maps/Charts which depend on `TSChartPalette` (defined outside Components). My surface doesn't use those. Let me use a curated minimal closure (tokens + the 4 components I actually use) and resolve their transitive deps.
+
+The proven closure (from the CurrencyInput log) is tokens + Design/TSDesign+TSMaterial + a curated set of UI/Feedback/Motion components. Let me verify `Sources/Design` and rebuild the harness with that exact closure.
+
+All 62 tests pass under Swift 6 strict concurrency. Let me capture the per-suite breakdown and run the iOS 18 simulator SDK typecheck in parallel.
+
+iOS typecheck passes; 62/62 tests green. Now macOS 15 typecheck + swiftlint + swiftformat on the surface files, in parallel.
+
+Both SDK typechecks pass and all 62 tests are green. SwiftLint/SwiftFormat flag formatting issues (long lines, single-line bodies, redundant returns). I'll let swiftformat auto-fix them (the ecosystem tool is the style source of truth), then re-verify lint + re-run the harness.
+
+Lint and format both clean now. Let me verify swiftformat's auto-fixes (especially `redundantReturn` in the switch helpers) preserved correctness, then re-sync the harness and re-run all tests.
+
+swiftformat converted the switch helpers to valid single-expression switches (semantics-preserving). Let me re-sync the harness with the formatted files and re-run the full suite to be rigorous.
+
+62/62 green post-format. Now the placeholder gate (self-test + real scan + the literal prompt command) and xcodegen membership.
+
+Placeholder gate fully clean. Now xcodegen membership + checking the build prerequisites (Gradle/JDK for the Shared.xcframework) and the known foreign-sibling state.
+
+xcodegen confirms all 10 files are members (60 refs). Git shows my surface is the only change; the foreign siblings cited by prior logs are present and unmodified. JDK 17 + gradlew are available, so I'll attempt the full iOS xcodebuild (it auto-builds the Shared.xcframework) to capture real evidence. Starting it in the background.
+
+Build started (will take ~6–7 min for the Gradle framework + app compile). Let me monitor progress.
+
+Build is compiling the TeslaSync module (the Shared.xcframework staged quickly — likely a warm cross-slot Gradle cache; the runner is shared across slots as prior logs noted). Let me continue monitoring.
+
+Build **FAILED** — but notably every compile path is `slot-115` (a sibling slot's worktree), confirming the documented shared/contended multi-slot runner with a pinned DerivedData. The 3 failures are all FOREIGN slot-115 AI* surfaces; **zero UnitInput errors**. Let me extract the exact error line and exit code.
+
+Clear, honest evidence: the full iOS build **FAILED** on a FOREIGN sibling (`AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure captures non-escaping parameter 'content'`) with **0 UnitInput errors**. Notably it compiled the **slot-115** worktree (5348 refs vs 1 for slot-117) — a shared DerivedData/concurrent-slot collision. Let me confirm the exit code and the DerivedData pinning.
+
+Definitive diagnosis: **504 concurrent `xcodebuild`/`swift-frontend` processes from slot-115** are running on this shared runner, and a shared `/tmp/dd-ios` DerivedData caused my build to compile slot-115's tree — failing on slot-115's foreign `AIGeofenceAwareAutomationSuggestions.swift` (escaping-closure), with 0 UnitInput errors. This is the documented contended-runner condition. Let me stop the colliding build and statically confirm the slot-117 foreign-sibling + macOS-signing DEFERRED reasons.
+
+Static evidence confirms the slot-117 DEFERRED reasons: its own foreign siblings `AISuggestNewGeofences.swift`/`AISignalExplorerNlFilter.swift` carry the identical `@ViewBuilder _ content` → `TSGlassPanel` escaping-capture defect (unmodified/foreign), and macOS targets require a dev-signing cert (`DEVELOPMENT_TEAM` empty + entitlements + hardened runtime). `git status` confirms my only changes are the 10 `UnitInput.*` files. Let me gather final line counts for the log.
+
+All verification complete. Now I'll write the comprehensive, honest gate log.
+
+The gate log is written. Now let me clean up temp artifacts and stage exactly my 10 surface files + the log, then verify staging before committing.
+
+Exactly the 10 surface files + the log are staged, nothing else. Committing now.
+
+Committed cleanly as `a6e29ab99`; working tree is clean. Let me do a final verification of the commit contents and update the plan.
+
+The task is complete and verified. The commit `a6e29ab99` contains exactly the 10 `UnitInput.*` surface files + the gate log (2137 insertions), and the log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0162-UnitInput.log    | 260 ++++++++++++++++
+ .../shared-surfaces/UnitInput.Adapter.swift        | 309 ++++++++++++++++++
+ .../shared-surfaces/UnitInput.Model.swift          | 289 +++++++++++++++++
+ .../shared-surfaces/UnitInput.ModelTests.swift     | 246 +++++++++++++++
+ .../shared-surfaces/UnitInput.Previews.swift       | 167 ++++++++++
+ .../shared-surfaces/UnitInput.Seams.swift          | 127 ++++++++
+ .../shared-surfaces/UnitInput.States.swift         |  70 +++++
+ .../shared-surfaces/UnitInput.Tests.swift          | 346 +++++++++++++++++++++
+ .../shared-surfaces/UnitInput.Views.swift          | 193 ++++++++++++
+ .../TeslaSync/shared-surfaces/UnitInput.strings    |  33 ++
+ .../TeslaSync/shared-surfaces/UnitInput.swift      |  97 ++++++
+ 11 files changed, 2137 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0162-UnitInput.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/UnitInput.swift

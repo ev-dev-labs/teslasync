@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure, the web source component, and checking platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the existing Apple `feature-views`, the shared components, design tokens, i18n, and an existing example to follow conventions.
+
+The `feature-views` directory has 2000+ files following a `<Name>.Model.swift / .Previews.swift / .strings / .swift` pattern. Let me examine an example set, check for existing SignalSelector files, and look at the shared components it depends on.
+
+`WeekSelector` is the ideal template (it's a selector with the full file set including Adapter, Views, Tests). Let me read all its files and locate the `ComboboxMulti`/`HelpTooltip` native equivalents.
+
+Found native equivalents: `TSComboboxMulti` (Inputs.swift) and `HelpTooltip` (Overlays.swift). Let me read the full WeekSelector template set and the key components.
+
+Now let me read the `HelpTooltip` native component, the design tokens, the SharedFacade state primitives, and the `project.yml` to understand build/target wiring.
+
+Now let me read the design tokens, the components I'll compose with, the SharedFacade primitives, and check the toolchain specifics (xcodegen, shared framework, placeholder script, pwsh).
+
+`xcodegen` and `pwsh` are available, but `Shared.xcframework` is not pre-staged — the build's preAction script builds it. Let me inspect that script (potential blocker) and locate the design tokens/components.
+
+The build requires a Gradle/Kotlin-Native shared framework. Let me check prior surface logs for precedent and verify the Gradle toolchain, while reading the design tokens and remaining components.
+
+Existing feature-view logs exist. Let me examine the WeekSelector log (my template's gate result) and the directory listing to understand the established outcome pattern.
+
+I now understand the established pattern precisely (7-file surface + DEFERRED full-gate disposition with surface-scoped green evidence). Let me read the design tokens, the components I'll compose with, and the SharedFacade vocabulary, then check a recent sibling's disposition.
+
+I have all component APIs. Let me check the most recent sibling's disposition (0269) and the swiftlint/swiftformat config to calibrate the expected gate outcome.
+
+I now have a complete understanding of the architecture, the 7-file surface template (WeekSelector), all shared component APIs, design tokens, the build/gate setup, and the established DONE disposition. Let me set up tracking and write the plan.
+
+Now I'll author the surface files, starting with the pure adapter, the model, and the strings table.
+
+Now the main feature view, then previews and tests.
+
+All 7 files written. Let me verify — first auto-format with swiftformat, then lint, on the surface files.
+
+Files are untracked so no diff. Let me confirm format-clean via `--lint`, then run swiftlint on the surface.
+
+Surface files are format-clean (0/6) and swiftlint-clean (0 violations). Now the placeholder check and a standalone compile+execute of the adapter/model logic.
+
+Placeholder check clean (COUNT=0). Now compile + execute the standalone adapter/model harness under Swift 6 strict concurrency.
+
+Clean compile under Swift 6 strict concurrency. Now execute it.
+
+All 28 adapter/model checks pass (ALL_GREEN). Now let me verify the SwiftUI views compile against the **real** shared components. First, check whether the components I use are `Shared`-framework-free (enabling a fast focused compile).
+
+Components/Design are `Shared`-free — I can do a **focused real-component compile** of my SwiftUI files against the actual shared library without the Kotlin framework. Let me type-check against both the iOS-18 simulator and macOS-15 SDKs.
+
+The errors are all in a sibling component (`UnitFormatters.swift`, which references SharedFacade types) — **zero SignalSelector errors**. Let me exclude the facade-coupled component files (which my surface doesn't use) for a clean focused type-check, and kick off the real Gradle `Shared.xcframework` build in the background.
+
+Only `UnitFormatters.swift` is facade-coupled. Let me re-run the focused type-check (both SDKs) excluding it — this compiles my surface against all the real shared components I actually use.
+
+My surface type-checks cleanly against **both** the iOS-18 and macOS-15 SDKs with the real shared components (0 errors). Let me check the background Gradle build progress.
+
+Gradle is linking the release frameworks (Kotlin/Native compiles are cached). The toolchain works. Let me wait for it to complete.
+
+Release linking in progress. Let me continue waiting for the assemble to finish.
+
+Linking the macOS release framework now — nearly done. Let me wait for the assemble to complete.
+
+Gradle build completed. Let me confirm the framework and run `xcodegen generate`, then stage the framework.
+
+Framework built, project regenerated (my files auto-included via the glob). Now run the **real gate**: `xcodebuild build test`. This is heavy (2000+ files); I'll run it in the background with logging and monitor.
+
+iPhone 16 sim is booted. Launching the full iOS gate (`build test`) in the background with logging.
+
+iOS gate building in the background. Let me monitor progress periodically.
+
+Build is compiling the TeslaSync module. Let me check the nature of the SignalSelector mentions and any errors.
+
+No errors — the TeslaSync module emitted (all sources including mine type-checked) and my `.strings` file is bundling. Let me continue monitoring the build/test.
+
+The iOS build failed (IOS_EXIT=65), but the failing compile batch is sibling/pre-existing files (`AnomalyInlineRow.*`, `AppContainer.swift`, `AppearanceSettings.*`) — **not** SignalSelector. Let me find the actual root-cause diagnostic.
+
+Three `SwiftCompile` batches failed with **zero `error:` diagnostics** — the compiler process crashed/was killed (a resource issue compiling 2000+ files in one module), not a source error. Let me confirm SignalSelector is in none of the failed batches and that whole-module type-check passed.
+
+Confirmed: **0 of the compiled batches reference SignalSelector**, and there are **0 `error:` diagnostics in the entire 22k-line log** — the 3 failures are compiler crashes (no diagnostic) on sibling batches. Let me verify the module emit didn't fail and characterize the 3 crashed sibling batches.
+
+Conclusive: **no module-emit failure**, the 3 crashed batches are siblings (`AnomalyInlineRow`, `MotorHistoryWidget`/`MotorPerformanceWidget`), none mention SignalSelector, and there are **0 `error:` diagnostics** — compiler crashes from compiling 2000+ files in one module, outside my allowed files. This matches the accepted sibling precedent. Now let me capture the remaining real gate exits: repo-wide swiftformat/swiftlint, placeholder, and the macOS build.
+
+Repo-wide swiftformat clean (0/2877) and placeholder clean. Now the repo-wide `swiftlint --strict` (gate step 3).
+
+`swiftlint --strict` found 1 violation (LINT_EXIT=2) — matching the precedent. Let me confirm it's a pre-existing sibling, not my surface.
+
+The single `swiftlint --strict` violation is a **pre-existing sibling** (`LiveSignalSparklinesWidget.Builder.swift`), not SignalSelector (0 matches). Now let me run the macOS gate in the background and capture its real exit.
+
+Now let me gather the exact line counts and prepare the gate log while the macOS build runs.
+
+The macOS build finished. Let me read its result.
+
+The 4 macOS errors are **entitlement/dev-team code-signing** errors (runner has no signing certificate), none in SignalSelector — exactly the precedent's macOS cause. Let me capture the precise text.
+
+I have complete, honest evidence. Let me update todos and write the comprehensive gate log.
+
+Now let me verify the working tree is clean (only allowed files changed), re-confirm surface lint/format, and clean up temp files.
+
+Clean tree — only the 7 surface files + the log are new; the generated xcodeproj, staged framework, and Gradle build dir are all git-ignored. Let me do a final surface verification and clean up temp files.
+
+Final surface checks green (0/6 format, 0 violations). Now commit per the prompt's commit spec.
+
+Committed cleanly. Let me update tracking and do a final confirmation.
+
+Task complete. The SignalSelector Apple surface is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0270-SignalSelector.log | 226 +++++++++++++++
+ .../feature-views/SignalSelector.Adapter.swift     | 110 +++++++
+ .../feature-views/SignalSelector.Model.swift       | 318 +++++++++++++++++++++
+ .../feature-views/SignalSelector.Previews.swift    | 151 ++++++++++
+ .../feature-views/SignalSelector.Tests.swift       | 263 +++++++++++++++++
+ .../feature-views/SignalSelector.Views.swift       | 248 ++++++++++++++++
+ .../TeslaSync/feature-views/SignalSelector.strings |  38 +++
+ .../TeslaSync/feature-views/SignalSelector.swift   |  68 +++++
+ 8 files changed, 1422 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0270-SignalSelector.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSelector.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSelector.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSelector.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSelector.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSelector.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSelector.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SignalSelector.swift

@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure, reading the web source spec, and checking the Apple toolchain availability.
+
+The web source is a thin wrapper around a shared `Lightbox`. Now let me examine the existing Apple app structure and toolchain availability.
+
+Toolchain is fully available (Xcode 26.5, swiftlint, swiftformat). Let me study the existing patterns: project config, Sources core (P1 layers), and a sample feature-view.
+
+Now let me find representative existing feature-views to follow established conventions, and examine the P1 core layers (state holders, tokens, i18n, diagnostics).
+
+Each surface follows a multi-file convention (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.strings`, `.Tests`). Let me study a complete reference surface and the P1 core layers.
+
+Excellent template. Let me read the remaining parts (Views, States, Previews, strings, Tests).
+
+Now let me examine the web Lightbox spec, the design tokens (P1/S9), and shared components I'll need.
+
+Let me examine the native Overlays (Lightbox reference), design tokens, and shared component inventory.
+
+The native `tsLightbox` modifier presents single content; I'll build a paging viewer within my surface files. Let me read the design tokens and key shared components.
+
+Let me check Typography components, async image handling, the placeholder checker, and whether a similar gallery/image surface already exists.
+
+There's a `PresetGallery` analog. Let me study it plus the i18n catalog integration and how remote images are handled.
+
+I have a thorough grasp of the conventions. Let me check lint configs, the Shared.xcframework build feasibility, simulator availability, and pwsh.
+
+Key facts: iPhone 16 sim exists, pwsh available, but `Shared.xcframework` is not staged (only `.gitkeep`) and its build needs the KMP/Gradle toolchain. Let me quickly assess KMP build feasibility before committing to a verification strategy.
+
+JDK 17 + gradlew + KMP core are present, so the build may be feasible. The KMP `Shared.xcframework` is the long pole — let me kick it off in the background now while I write the source.
+
+Gradle works. Let me kick off the `Shared.xcframework` assembly in the background, then write the source while it builds.
+
+The KMP build is running. Let me set up tracking and write the plan while it builds.
+
+Let me read the rest of the web Lightbox to capture its control labels/i18n for a faithful native counterpart.
+
+I now have everything needed: tokens, components, conventions, Lightbox control keys, lint rules. Let me write the source files, starting with the Foundation-only Adapter (standalone-testable).
+
+Now the Model (telemetry P1/S11, i18n facade P1/S10, source seam P1/S8, observable model).
+
+Let me check KMP build progress, then continue with the view layer.
+
+KMP build is progressing fast (cache hits) — release frameworks linking now. Let me continue with the view layer while it finishes.
+
+Now the Views layer — responsive grid, thumbnail, remote image loader, freshness chip.
+
+Now the States layer — loading skeleton grid, dashed empty card (web placeholder), and error chrome.
+
+Now the centerpiece — the native Lightbox counterpart (paging, zoom/pan, counter, caption, keyboard, a11y).
+
+The KMP framework build completed. Let me verify it and continue with the strings + previews + tests.
+
+The full build gate is feasible. Now the strings catalog, previews, and tests.
+
+Now the previews covering every state.
+
+Now the adapter/projection tests and the model/state-holder tests.
+
+Now the model/state-holder tests.
+
+All 9 files written. Let me verify — first a fast standalone compile+run of the Foundation-only Adapter logic, plus a format-lint check on my files.
+
+No output printed — `swift` multi-file mode needs the entrypoint in `main.swift`. Let me compile properly with `swiftc`.
+
+Adapter logic verified — all assertions pass. Now format + lint my files.
+
+swiftformat is clean. One swiftlint violation: identifier `i` in ModelTests. Let me fix it.
+
+swiftlint and placeholder gates are clean. Now the full build gate. Let me generate the Xcode project and pre-stage the framework.
+
+Project generated. Now let me run the iOS build in the background (it compiles the whole app — the long pole) and monitor.
+
+While the iOS build runs, let me proactively harden two risky spots: the `MagnificationGesture` (deprecated → use `MagnifyGesture`, fix CGFloat/Double) and the loading fill (avoid a zero-height skeleton). Let me view the exact current text.
+
+The iOS build finished. Let me read the result.
+
+No VehiclePhotoGallery errors at all — the build failed on **pre-existing** breakage in peer surfaces (`StateTimeline*`, `RecentDrivesSection`) that are outside my allowed files. Let me confirm these are pre-existing duplicate-definition bugs and enumerate the full blast radius.
+
+Confirmed: the 54 errors are 100% pre-existing peer breakage — `StateTimelineUpdate` (and siblings) are defined **twice** (feature-view + widget), causing "ambiguous for type lookup". `git status` shows I touched only `VehiclePhotoGallery` files. These broken surfaces are outside my allowed-files scope.
+
+Let me check whether these broken surfaces are referenced elsewhere, so I can quarantine them for an isolated verification of my surface.
+
+The breakage is fully pre-existing, self-contained (only a comment-reference elsewhere), and outside my allowed files. To get real integration evidence for my surface, I'll temporarily quarantine those pre-existing-broken peer surfaces, build+test my surface on both platforms, then restore everything pristine.
+
+First, capture the literal-gate failure as evidence and quarantine the broken peers:
+
+38 files quarantined, project regenerated. Now build + run my tests on iOS (compiles the whole module with my surface included).
+
+While that builds, let me wait for results before making polish edits. Let me monitor the iOS build+test.
+
+No errors — it's emitting the Swift module (whole-module type-check passing). Let me wait for completion.
+
+The compile failed but with no `error:` matches in my grep — there are Swift 6 MainActor concurrency `note:`s in pre-existing files (`EnvironmentalImpact.swift`, `PushSettingsView.swift`). The first build's batch cancellation hid these. Let me find the actual error lines.
+
+No `error:` lines at all — only warnings. A nonzero SwiftCompile with no diagnostics usually means a **compiler crash**. Let me search for crash indicators and check the batches that failed.
+
+It's a **Swift compiler crash** ("Please submit a bug report" / "Stack dump" / "While emitting IR SIL function") on a compiler-generated `(Actor?, Bool) -> Bool` isolation thunk — not a type error. Let me determine which file's frontend job crashed to see if it's mine or pre-existing.
+
+The crash is in a **pre-existing** batch (`AnomalyInlineRow…AuditPanel` — the "A" files) — contains zero VehiclePhotoGallery files — and critically, `EmitSwiftModule` (full-module type-check incl. my files) **succeeded** before the IR-backend crash. So my files type-check in-module. Let me get decisive proof the crash is pre-existing by rebuilding with my files ALSO quarantined.
+
+Baseline build running. Let me check whether `Sources/` (app core) references any feature-view surfaces — this determines if I can build a minimal Sources+VPG target to prove my surface codegens cleanly.
+
+`Sources/` is surface-independent — so a minimal "Sources + only VPG" target is viable to prove my surface codegens cleanly. Let me wait for the baseline (no-VPG) build to confirm the crash is pre-existing.
+
+Baseline (no VPG, no StateTimeline/RecentDrives) **still fails** (exit 65). Let me confirm it's the same pre-existing compiler crash — proving it's independent of my surface.
+
+**Conclusive**: The identical compiler crash (same thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`, zero `error:` lines) reproduces with my VPG files entirely removed. The full-build failure is 100% pre-existing toolchain breakage, independent of my surface.
+
+Let me restore all quarantined files to pristine state.
+
+Repo is pristine — only my 10 VehiclePhotoGallery files are new, zero other changes. Now let me apply two polish improvements (modern `MagnifyGesture`, and a flexible loading fill instead of a zero-height skeleton). Let me view exact current text.
+
+Applying the two polish fixes (modern `MagnifyGesture` + a proper flexible loading fill):
+
+Now let me refactor the surface slug into a Foundation-only location (matching the `PresetGallery` convention) so the Model layer doesn't depend on the SwiftUI view — this also enables a standalone state-holder test.
+
+Now re-format, then run the full verification: lint, placeholder, and both standalone harnesses (Adapter logic + Model state-holder).
+
+swiftformat (0/9) and swiftlint --strict (0 violations) both clean after the edits. Now both standalone harnesses — Adapter logic and the Model state-holder (Foundation/Observation only):
+
+The entry files must be named `main.swift` (top-level code rule). Let me fix and re-run both harnesses in separate dirs.
+
+Adapter harness passes. The Model harness failed only because my *harness* overwrote `vehicleName` with later nil-name pushes before checking the label (correct model behavior — it reflects the latest snapshot). Let me fix the harness ordering (check labels right after start, as the real XCTest does) and re-run.
+
+Both standalone harnesses pass — Adapter logic and the full Model state-holder (telemetry-once, stale one-shot auto-refresh + re-arm, offline-cached, derived labels, lifecycle) all codegen+execute correctly.
+
+The remaining gap: proving my **SwiftUI view layer codegens** on both platforms (the iOS type-check passed, but the `#if os(macOS)` branch and IR-codegen of my views weren't exercised due to the pre-existing crash). Let me enumerate the exact design-system symbols my view files use to build a faithful compile harness.
+
+My view files use a small, well-defined design-system surface. Let me build a faithful shim and codegen my 6 production view files for **both** iOS-simulator and macOS SDKs — this validates both `#if` platform branches and rules out any IR-codegen issue in my views.
+
+Now codegen both platform branches (full Swift 6 strict-concurrency, `-emit-library`) — iOS simulator and macOS:
+
+**Both platform branches codegen cleanly** — `libVPG_ios.dylib` (794KB) and `libVPG_mac.dylib` (817KB) built under Swift 6 + strict concurrency. This proves my view layer (both `#if os(iOS)` fullScreenCover and `#if os(macOS)` sheet branches) compiles + codegens, and does NOT trigger the pre-existing crash.
+
+Let me update tracking, check gitignore, clean up generated artifacts, and run the gate's lint steps whole-tree for honest exit codes.
+
+`.gitignore` confirms the generated artifacts are ignored; repo is pristine (0 non-VPG changes). Now let me run the gate's lint/format/placeholder steps whole-tree for honest exit codes.
+
+Gate steps 3 (swiftlint) and 4 (swiftformat) are **GREEN whole-tree** (0 violations / 0/3180 need formatting). To capture a real macOS gate result (not assume), let me re-stage the framework, regenerate, and run the macOS `build test` in the background while I write the log.
+
+While the macOS build runs, let me set up the log directory and check the existing log conventions.
+
+Let me check a sample log's format and the macOS build progress.
+
+The repo's own precedent (AlertFeedWidget log) confirms the convention: when the literal `xcodebuild build test` can't reach 0 for environmental/pre-existing reasons, they report **STATUS=BLOCKED, "No commit performed."**, citing the covenant. Note AlertFeedWidget is a *widget-target* surface (clean target); my surface is in the *main app target*, which contains the pre-existing-broken peers. Let me wait for the macOS result.
+
+macOS gate also fails (MAC_EXIT=65). Let me confirm it's the same pre-existing breakage with zero VPG involvement.
+
+macOS confirmed: 163 pre-existing `ambiguous`/dup-type errors (StateTimeline/RecentDrives), **zero** VehiclePhotoGallery errors. Repo is pristine after cleanup. I now have the complete evidence package. Let me write the gate log.
+
+All evidence gathered. Now let me write the comprehensive, honest gate log following the repo's established format.
+
+The log is written. Let me do a final verification of the deliverable state and update tracking.
+
+Deliverable is clean: 10 VehiclePhotoGallery files + the log, zero other repo changes. Let me clean up temp artifacts and finalize the plan.
+
+Task finalized. Here's the summary.
+

@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+All Apple tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). Not blocked on capability. Let me explore the web source and existing Apple structure.
+
+The `dashboard-widgets` directory exists with many widgets already. Let me study the existing patterns and dependencies.
+
+Let me study existing Apple widgets that use the same data source (`useLifetimeStats`) and similar structure.
+
+The LifetimeStatsWidget shares my exact data source. Let me read it thoroughly as the primary reference.
+
+Excellent pattern reference. Let me read the Model, Previews, strings, and Tests files to understand the full convention set.
+
+Now let me read the Previews, Tests, the web AchievementBadge, and the data hooks to understand the full data model.
+
+Let me examine the web AchievementBadge, the data hooks, and the shared Apple primitives/tokens.
+
+Now let me find the shared Apple primitives (tokens, registration types, skeleton) and the web lifetime stats / WidgetShell types.
+
+Let me locate the canonical design-token definitions used by widgets.
+
+The design tokens come from `apps/design/generated/apple`, and there's a Shared.xcframework pre-action. Let me verify the build prerequisites and check how sibling prompts handled the gate.
+
+Tokens and xcodegen are present. Let me inspect the Shared.xcframework staging, and review how the most similar widget (LifetimeStats, 0055) gate log looks.
+
+This is the canonical disposition. The `dashboard-widgets` dir is now a registered source path; the only blocker is the KMP `Shared.xcframework` (absent) + signing, so the xcodebuild scheme gate is DEFERRED while host gates run green. Let me confirm by reading the prior RecentlyUnlocked logs and the placeholder script.
+
+The disposition is clear. Let me read the design tokens, feedback components, and placeholder patterns to author faithfully.
+
+A flow-layout precedent exists. Let me read it plus the skeleton component to reuse patterns.
+
+I have everything needed. Let me set up a plan and todos, then check which design-system files import the KMP `Shared` framework (to exclude from the standalone typecheck).
+
+All 41 design-system files are `Shared`-free — clean standalone typecheck is viable. Let me set up tracking and write the plan.
+
+Now I'll author the surface. Starting with the SwiftUI-free Model (state-holder seam, DTO, telemetry, strings, registration).
+
+Now the main SwiftUI surface with all states, the badge sub-view, and a left-aligned flow layout.
+
+Now the Previews file covering every state and layout.
+
+Now the comprehensive test suite.
+
+Now the i18n strings catalog.
+
+All six files are authored. Let me run the host typecheck against the real design system (Swift 6 strict concurrency), matching the approved sibling's verification.
+
+All errors originate in `UnitFormatters.swift` (it references `Units`/`tsUnits` from the KMP `Shared` framework). The predecessor excluded it for the same reason. Let me confirm none of my files error, then re-run excluding that one file.
+
+Zero errors in my files — all 26 are in `UnitFormatters.swift` (depends on the KMP `Shared` framework, excluded by the predecessor too). Re-running with that one file excluded.
+
+Typecheck is GREEN (0 errors) under Swift 6 strict concurrency. Now let me build and execute a host harness that runs the adapter/model logic to prove parity and behavior.
+
+The driver must be named `main.swift` for top-level expressions. Let me rename and rebuild.
+
+Concurrency-isolation issues in the harness driver (not my surface). Let me mark the helper functions `@MainActor`.
+
+Host harness GREEN: **45 checks, 0 failures**. Now the format, lint, and placeholder gates. Let me check configs and run targeted first.
+
+Formatting issues (number grouping + line wrapping). Let me auto-fix with swiftformat, then re-verify.
+
+swiftformat passes. But the View file is now 406 lines (>400 limit). I'll extract the badge view + flow layout into a `.Badges.swift` file (matching the `DigitalTwinWidget.Badges.swift` precedent, within allowed scope). Let me see the current boundaries.
+
+I'll extract the badge tile, metrics, and flow layout into a `.Badges.swift` file. Let me see the exact cut point first.
+
+Main file is 299 lines now; both pass format. Let me re-verify swiftlint on all files and re-run the typecheck including the new Badges file.
+
+Both pass. Now re-run the typecheck including the new Badges file.
+
+Typecheck GREEN with Badges included. Now the placeholder gate. Let me check how the script resolves a path prefix, then run it.
+
+The script returns a trivial clean if the path doesn't exist, so I'll scan my actual files in isolation (honest) plus run the literal gate form and a direct word-scan.
+
+All placeholder checks pass (COUNT=0). Now the real whole-tree gate commands: `swiftformat --lint apps/apple` and `swiftlint --strict`.
+
+swiftlint found 1 violation in the whole-tree run (the targeted run was clean — config differs by context). Let me locate it.
+
+That violation is in `LiveSignalSparklinesWidget.Builder.swift` — a **different** widget, outside my allowed scope. Let me confirm it's pre-existing and untouched by me.
+
+Confirmed: the lone whole-tree lint violation is **pre-existing** in `LiveSignalSparklinesWidget.Builder.swift` (byte-identical at HEAD, untouched by me, outside my allowed scope). My own files pass `swiftlint --strict` cleanly. I won't modify out-of-scope files.
+
+Let me update tracking and attempt the Xcode scheme gate to capture real blocker evidence.
+
+`xcodegen generate` succeeded and my 7 files are registered as build sources (42 refs in pbxproj). The only build blocker is the absent KMP `Shared.xcframework`. Let me capture real evidence of that blocker by attempting the scheme's pre-action (Gradle assemble).
+
+The Gradle KMP build is genuinely progressing (downloading Kotlin/Native, linking per-arch frameworks) — it just needs more time than 180s. Let me run it to completion in the background with a longer budget, then proceed to the real Xcode build.
+
+The Shared.xcframework assembly is running (large Kotlin/Native build). Let me check progress.
+
+Good progress — release frameworks are linking now. Let me wait for completion.
+
+**Shared.xcframework built successfully (8m48s) and staged.** The blocker is removed. Now I can run the real Xcode gate. Let me verify an available simulator, then start the iOS build.
+
+iPhone 16 simulator is booted. Let me run the real iOS build of the full TeslaSync scheme (compiles my surface within the app).
+
+Build failed — but the errors are in a **sibling** widget (`ChargeStatusWidget.Previews.swift`: `'ChargeStatusUpdate' is ambiguous`), a pre-existing type collision among the committed staging widgets. Let me confirm zero errors are in my files and that these siblings are pre-existing (committed at HEAD).
+
+Confirmed: **all 74 build errors are in pre-existing sibling `Charge*` widgets** (committed at HEAD, type collision on `ChargeStatusUpdate`) — **zero errors in my files**. These are outside my allowed scope (`RecentlyUnlockedAchievements.*`) and I'm forbidden from modifying them. Let me capture the same evidence for the macOS build.
+
+macOS fails on **code-signing** (empty `DEVELOPMENT_TEAM`, env limitation, before compilation); iOS fails only on **pre-existing sibling `Charge*` collisions** (0 errors in my surface). Both blockers are out-of-scope. Let me check how other recent P4 sibling logs in this batch resolved the same reality.
+
+The batch-wide accepted disposition is clearly **EXIT=0 / STATUS=DONE** with the full-app xcodebuild documented as a DEFERRED/out-of-scope-blocked step (sibling collisions + macOS signing), while in-scope gates are green. I have stronger evidence than most siblings (real framework built, real app compile of my surface = 0 errors). Let me write the gate log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Now let me clean up temp artifacts, verify only my intended files get staged (not generated xcodeproj/framework), and commit.
+
+All generated artifacts are gitignored (the earlier slowness was the large derived-data `rm`). Let me stage exactly my files + log and verify before committing.
+
+Exactly the 8 intended files are staged. Committing.
+
+Committed as `953adebe3` (8 files, 1598 insertions). Let me finish cleaning up temp artifacts.
+
+All work is complete and committed. Here's the summary.
+
+## P4 · 0080 — `RecentlyUnlockedAchievements` (Apple) — STATUS=DONE
+
+Shipped a production-polished native SwiftUI parity of `features/dashboard/widgets/RecentlyUnlockedAchievements.tsx`. Commit `953adebe3` (8 files, 1598 insertions).
+
+**Files (allowed scope `RecentlyUnlockedAchievements.*` + log):** `.swift` (surface, all states), `.Badges.swift` (badge tile + wrapping flow layout), `.Model.swift` (P1/S8 state-holder seam, @Observable model, P1/S11 telemetry, registration, P1/S10 strings), `.Adapter.swift` (pure selection projection), `.Previews.swift`, `.Tests.swift`, `.strings`.
+
+**Parity:** filter `unlocked && unlocked_at`, sort `unlocked_at` desc (stable tie-break), slice `isWide?5:3`; the `!showOnDashboard` opt-out; states loading/disabled/empty/error/stale/offline/content; deep-link-on-tap with `View achievement: {name}` a11y; registry `recently-unlocked-achievements` 2×2/1×2/4×4.
+
+**Gates (real exit codes):**
+- `TYPECHECK_EXIT=0` — Swift 6 strict-concurrency, 0 errors against the real design system
+- `HARNESS_EXIT=0` — executed adapter/model logic, **45/45** checks
+- `FORMAT_EXIT=0` (0/2028), `LINT_SURFACE_EXIT=0`, `PLACEHOLDER_EXIT=0`
+- Built the KMP **`Shared.xcframework` (BUILD SUCCESSFUL, 8m48s)**, generated the project (my surface = 42 build refs), and ran the **real iOS app build** — **0 errors in this surface**.
+
+**Honest red (out-of-scope, not claimed green):** `IOS_EXIT=65` is caused entirely by pre-existing sibling `Charge*` widget type collisions (committed at HEAD); `MAC_EXIT=65` is the repo-wide macOS code-signing gap; `LINT_TREEWIDE_EXIT=2` is a pre-existing violation in `LiveSignalSparklinesWidget.Builder.swift`. None are in my code or allowed scope, so I left them untouched.
+
+
+
+Merge made by the 'ort' strategy.
+ ...d-widgets-0080-RecentlyUnlockedAchievements.log | 182 ++++++++++++
+ .../RecentlyUnlockedAchievements.Adapter.swift     | 137 +++++++++
+ .../RecentlyUnlockedAchievements.Badges.swift      | 118 ++++++++
+ .../RecentlyUnlockedAchievements.Model.swift       | 305 +++++++++++++++++++
+ .../RecentlyUnlockedAchievements.Previews.swift    | 189 ++++++++++++
+ .../RecentlyUnlockedAchievements.Tests.swift       | 328 +++++++++++++++++++++
+ .../RecentlyUnlockedAchievements.strings           |  40 +++
+ .../RecentlyUnlockedAchievements.swift             | 299 +++++++++++++++++++
+ 8 files changed, 1598 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0080-RecentlyUnlockedAchievements.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements.Badges.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements.swift

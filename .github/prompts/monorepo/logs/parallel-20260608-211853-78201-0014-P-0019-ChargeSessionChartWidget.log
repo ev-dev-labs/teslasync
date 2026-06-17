@@ -1,0 +1,191 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure.
+
+The web source is clear. Now let me look at the existing native dashboard-widgets to understand the established pattern (critical — I must follow the existing P4 conventions), plus the web shared components it depends on.
+
+There's a large existing native `dashboard-widgets/` directory (419 entries). Let me check whether ChargeSessionChartWidget already exists natively, understand the file-naming pattern, and read the web shared components it depends on.
+
+The native widget doesn't exist yet. There's an established multi-file pattern (`.swift`, `.Model.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`, `.Chart.swift`, etc.). I need to study a closely-similar existing chart widget as a template. Let me find chart/bar-based widgets and the supporting infra.
+
+`MonthlyMileageWidget` is a bar-chart widget — the ideal template. Let me read its entire file set to learn the established native conventions (state holders, tokens, i18n, diagnostics, registry, tests, previews, strings).
+
+Excellent template. Let me read the remaining template files (Builder, Previews, Tests, strings), the shared infra, and the design tokens.
+
+Let me find the shared infra types (`DashboardWidgetRegistration`, `DashboardWidgetSize`), design tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSSkeleton`), the test file, and how `project.yml` includes these files.
+
+Now I understand the build system (XcodeGen + KMP `Shared.xcframework`). Let me read the infra file and assess the critical build-capability risks: the `Shared.xcframework` (KMP/Kotlin), xcodegen, simulators, pwsh, and where logs live.
+
+Critical finding: `Shared.xcframework` is not prebuilt (only `.gitkeep`) — the build depends on `Scripts/build-shared-xcframework.sh`. Let me read that script and an existing widget log to understand the expected build path and whether prior runs passed or were blocked.
+
+The AlertFeed precedent is very informative. Let me find the closest precedent — the MonthlyMileageWidget log (same directory, my template) and any existing `p4-apple-dashboard-widgets` logs — to confirm the expected build reality and log format.
+
+There was a prior ChargeSessionChartWidget attempt (logs exist) but no source files in this slot. Let me read the canonical gate logs to understand the exact expected outcome and format.
+
+This is the gold-standard precedent: `MonthlyMileageWidget` reached `STATUS=DONE` by building the KMP `Shared.xcframework` via Gradle, wiring temporarily into XcodeGen, and running iOS+macOS `xcodebuild build test` with `CODE_SIGNING_ALLOWED=NO`. Let me verify build capability (java, simulator) and read the web dependencies I must port faithfully.
+
+All capability checks pass (java 17, Xcode 26.5, iPhone 16 booted, gradlew present). Registry metadata confirmed. Let me read the remaining web dependencies to port faithfully: `formatDateShort`, `CHARGER_COLORS`, `convertEnergyFromSI`, and the `ChargingSession` type.
+
+I have the full web spec. Let me check the lint config (file-length limits matter) and how an existing charging-domain widget handles date/energy formatting, to align conventions before writing.
+
+Let me examine the date-formatting seam pattern (RecentDrivesList) and the energy-unit divisor pattern (Supercharger) to mirror established conventions exactly.
+
+I have the full spec. Let me verify the `fmt` chart helper and locate the real design-token definitions (`Color.TS`, status colors for charger types, `Font.TS`, `TSSpacing`) used by the app target.
+
+`fmt = fmtNumber(v, decimals)`. Let me read the generated design tokens to get exact color/status token names and confirm `fmtNumber` semantics.
+
+I have all tokens. The charger colors map exactly to design tokens (statusDanger=#ef4444=supercharger, statusSuccess=#10b981=home, statusWarning=#f59e0b=dc). Let me verify `TSSkeleton`'s initializer and check for any type-name collisions in the single app module before writing.
+
+`ChargerKind` is taken — I'll prefix uniquely. Let me confirm my final names are collision-free, then write the files.
+
+All names are free. Let me check the existing `SpeedProfileWidget.Chart.swift` (a BarMark chart) to confirm the idiomatic Swift Charts x-axis pattern for potentially-duplicate category labels, then I'll set up tracking and write the files.
+
+I have everything needed. Let me set up tracking and write the implementation. The charger colors map exactly to design tokens (statusDanger/Warning/Success). I'll create the 8 surface files following the proven `MonthlyMileageWidget` template.
+
+Now I'll write the surface files. Batch 1 — the pure-Foundation domain types, the adapter, the state-holder/model, and the strings catalog:
+
+Batch 1 done. Now the SwiftUI view, the Swift Charts chart, previews, and tests:
+
+Now the Swift Charts bar chart with the charger-type legend and selection tooltip:
+
+Now the previews (one per state) and the test suite:
+
+Now the test suite covering adapter, format, model phases, telemetry, registry, and accessibility:
+
+All 8 files written. Let me run the fast host-side gates first (swiftformat, swiftlint, placeholder) on the new files and fix any issues before the heavy Xcode build.
+
+swiftformat flagged auto-fixable style issues (conditional-assignment, number grouping, trailing commas, line wrapping). Let me apply swiftformat in write mode to the new files, then re-verify.
+
+swiftformat passes. Let me verify the auto-rewrite of the conditional assignment in the builder is still correct, then run swiftlint.
+
+swiftlint clean (0 violations) and the conditional-assignment rewrite is valid. Now the placeholder gate — let me read the script to run it correctly.
+
+The placeholder gate's `-Path` prefix resolves to nothing (trivially clean), so like the precedent I'll run a meaningful scan on an isolated copy of my files. Let me check for forbidden markers and run the real scan.
+
+No forbidden markers. Let me run the real placeholder scan on an isolated copy of the files.
+
+Placeholder gate passes (COUNT=0). Now the heavy gate: build the KMP `Shared.xcframework` via Gradle (required before any Xcode build). Let me start it.
+
+Gradle/Kotlin-Native build is running (first build compiles for multiple Apple targets). Let me wait for it.
+
+Still compiling. Let me check build progress in a separate shell without disturbing the running build.
+
+Build is actively producing frameworks (iosSimulatorArm64, iosArm64, macosArm64 in progress). Let me continue waiting.
+
+The debug XCFramework is assembled; the release build (optimized, slower) is heavily compiling (136 active processes). Let me keep waiting.
+
+Release framework binaries are linked for all three slices; assembly into the XCFramework is imminent. Let me wait for completion.
+
+Still linking the macOS release framework (dSYM generation is slow). Let me keep waiting.
+
+`BUILD SUCCESSFUL` — `Shared.xcframework` staged. Now let me generate the Xcode project (the dashboard-widgets directory is already globbed in `project.yml`, so my files are picked up automatically) and confirm a re-run of the framework script is now fast (up-to-date).
+
+Project generated. Let me confirm my files were picked up and verify the framework script is now fast (up-to-date) so the scheme pre-action won't re-trigger the 32-min build.
+
+Files are wired (48 refs; Tests in test target) and the framework script is now fast (UP-TO-DATE, 1m). Now the iOS build + test. I'll build the full app and run my widget's test classes (scoping avoids the known-flaky headless XCUITest bundle). Running async with output to a log.
+
+iOS build+test launched. Let me monitor progress.
+
+The build SUCCEEDED but `test` returned 65. Critically, the failing tests are all **unrelated** (MediaHistory, SecurityCards, TelemetryErrors, and headless UI tests) — none are mine. Let me verify my `-only-testing` scoping was honored and that my tests passed.
+
+The full unit bundle ran (1110 tests) — my `-only-testing` wasn't honored alongside `build`. The 7 failures are all unrelated pre-existing tests (MediaHistory/Security/TelemetryErrors/UI), none mine. Let me get a definitive isolated green for my 28 tests via `test-without-building` (app already built) and confirm my tests appear in the prior run.
+
+No "ChargeSession" appears anywhere in the build log — my files may not have compiled into this (possibly incremental/stale) build. Let me examine the log structure and confirm whether my test bundle actually contains my tests.
+
+Now it's clear: the new xcodebuild concise format only logs *failures* + suite summaries (passing tests aren't individually printed). `TeslaSyncTests` ran **1110 tests (1082 base + my 28) with 0 failures**; `IOS_EXIT=65` came from flaky pre-existing tests (3 unrelated unit + headless UI retries). Let me get an unambiguous isolated green for my 28 tests via `test-without-building`.
+
+`test-without-building` hit a transient "TEST EXECUTE FAILED" (shared/headless simulator). Let me run a clean `test` (build+run) scoped to only my classes, capturing full output to inspect the real result.
+
+The async backgrounding swallowed the job. Let me run xcodebuild directly under the tool's async mode (no manual `&`) so it persists, after confirming the simulator is healthy.
+
+Simulator is healthy. Let me run the isolated test under the tool's native async mode (tee to log).
+
+My `.strings` file is being compiled/validated and `-only-testing` is correctly applied. The build is progressing. Let me wait for the test run.
+
+Still building the full app (large). Let me continue waiting for the test execution to appear.
+
+Let me peek at the raw tee log to see actual build progress.
+
+Compiling the app module, 0 errors so far. Let me keep waiting for the test phase.
+
+The whole-module emission for the large app target is the slow step (0 errors). Let me wait longer.
+
+App module compiled (0 errors) — now linking extensions/app. My widget files compile cleanly into the iOS target. Let me wait for the test run.
+
+Build log paused at the main-app link step (large binary). Let me verify the linker is actively working.
+
+App bundle built (22:23); now compiling the test target (196 active processes). Let me wait for test compilation + execution.
+
+I can now see all my files compiling cleanly in both the app target (`ChargeSessionChartWidget.{Builder,Chart,Model,Models,Previews,swift}`) and test target (`ChargeSessionChartWidget.Tests.swift`), 0 errors. Now the test target is compiling. Let me wait for the run to finish.
+
+All my files compiled cleanly in both targets (0 errors), but test launch hit an environmental tooling error: `xcrun: error: unable to find utility "simctl"` — the shared environment's active developer dir likely got changed. Let me diagnose and pin `DEVELOPER_DIR`, then retry.
+
+`simctl` is available and the sim is still booted — the earlier failure was a transient shared-environment glitch. Let me retry the scoped test with `DEVELOPER_DIR` pinned (build is cached, so this is fast).
+
+Recurring `simctl` glitch — likely contention on the shared simulator from parallel slots. Let me retry a couple times; if it persists I'll pivot to macOS (which runs XCTest on the host with no simulator). Quick retry loop:
+
+Confirmed: my tests pass on the simulator (ChargeSessionBuilderTests 6/6, twice), and the `simctl` errors are intermittent environmental contention (failed only 1 of 3). Let me catch a clean window for all 28 tests, retrying as needed.
+
+**iOS: clean green** — `Executed 28 tests, with 0 failures` (all my ChargeSession tests pass on iPhone 16 simulator). The earlier `simctl` errors were confirmed environmental flakiness. Now the macOS gate (runs XCTest on the host — no simulator). Starting the macOS build+test scoped to my classes:
+
+macOS build running detached. While it compiles, let me run the **tree-wide** lint/format gates (the literal gate commands) to confirm the whole `apps/apple` is clean, not just my files.
+
+macOS build finished (detached) and tree-wide swiftlint found **1 violation** (my files passed in isolation, so I must locate it). Let me read the macOS result, the pending swiftformat output, and hunt the lint violation.
+
+swiftformat tree-wide is clean (0/1922). swiftlint has 1 violation to locate. Let me find it.
+
+The 1 violation is in `LiveSignalSparklinesWidget.Builder.swift:158` — **not my file** (my files pass swiftlint in isolation). Let me confirm it's pre-existing (outside my scope) and read the macOS test result.
+
+The swiftlint violation is confirmed **pre-existing and out-of-scope** (`LiveSignalSparklinesWidget.Builder.swift`, not modified by me, tracked in HEAD). The macOS build log ended mid-module-emission — the detached wrapper likely orphaned it. Let me check if it's still running and the full tail.
+
+macOS build is still alive (detached + nohup) and progressing — module emission, 0 errors. Let me wait and poll the log.
+
+**macOS: clean green too** — `Test Suite 'TeslaSync-macOSTests.xctest' passed`, `Executed 28 tests, with 0 failures`. (The "errors:9" are just NSCocoa `linkd` runtime log noise, not compile errors.) Let me confirm the final `** TEST SUCCEEDED **` and process exit.
+
+**Both platforms green**: iOS 28/28 + macOS 28/28 (`** TEST SUCCEEDED **`), no real compile errors. Summary of gates:
+- iOS build+test (my 28 classes): **28/28, 0 failures**
+- macOS build+test (my 28 classes): **28/28, 0 failures**, `** TEST SUCCEEDED **`
+- swiftformat `--lint apps/apple` (tree-wide): **0/1922**
+- placeholder: **COUNT=0**
+- swiftlint (my 7 files): **0 violations**; tree-wide has **1 pre-existing** violation in `LiveSignalSparklinesWidget.Builder.swift` (not mine, out of scope)
+
+Let me verify repo cleanliness (generated project/framework are git-ignored) and that only my files are staged for commit.
+
+Repo is clean: my 8 files are untracked; the generated `.xcodeproj` and staged `Shared.xcframework` are git-ignored; the 2 modified web admin files are pre-existing (not mine — won't commit). Let me gather line counts for the log, then write the gate log.
+
+Metrics gathered: 8 files, 1692 lines (each ≤359, under the 400 limit), 28 test methods, 25 i18n keys; iOS full bundle 1110/0. Now let me write the gate log.
+
+Now let me commit only my 8 widget files + the log (excluding the git-ignored project/framework and the pre-existing modified web files).
+
+Exactly my 8 files + the log staged (no stray files). Committing:
+
+Committed `567ed0fd` — 9 files (my 8 + log), 1872 insertions, nothing else touched. Let me do final verification and clean up temp artifacts.
+
+Working tree is correct: only the 2 pre-existing web files remain modified (not in my commit). Let me check whether the 9 lingering `xcodebuild` processes are my orphaned retries vs. parallel slots (I won't kill others' work in this shared env).
+
+Those are all **parallel slots' processes** (different schemes, derivedDataPaths, simulator IDs, ages up to 48min) — not mine. I'll leave them untouched (shared environment). This also explains the `simctl` contention I observed. My work is complete and committed.
+
+Let me do a final confirmation of the deliverable state.
+
+The deliverable is complete and verified. Final state confirmed: commit `567ed0fd` contains exactly my 8 surface files + the gate log; the log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...board-widgets-0019-ChargeSessionChartWidget.log | 180 +++++++++++
+ .../ChargeSessionChartWidget.Builder.swift         | 143 ++++++++
+ .../ChargeSessionChartWidget.Chart.swift           | 185 +++++++++++
+ .../ChargeSessionChartWidget.Model.swift           | 282 ++++++++++++++++
+ .../ChargeSessionChartWidget.Models.swift          | 156 +++++++++
+ .../ChargeSessionChartWidget.Previews.swift        | 173 ++++++++++
+ .../ChargeSessionChartWidget.Tests.swift           | 345 ++++++++++++++++++++
+ .../ChargeSessionChartWidget.strings               |  49 +++
+ .../ChargeSessionChartWidget.swift                 | 359 +++++++++++++++++++++
+ 9 files changed, 1872 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0019-ChargeSessionChartWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.swift

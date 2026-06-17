@@ -1,0 +1,194 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the supporting web components and the Apple app structure.
+
+Let me explore the Apple app's feature structure, an existing page for reference, and the parity manifest.
+
+The Apple structure differs from the prompt's path. Let me explore the actual structure to understand conventions.
+
+There are two structures. Let me examine the project configuration and an existing feature page to understand conventions.
+
+Let me find the project config, parity manifest/ledger, and look for any existing onboarding references.
+
+Now I understand the build layout. The compiled feature pages live in `apps/apple/Sources/Features/`. Let me study an existing feature page end-to-end to replicate conventions exactly.
+
+Let me examine the data source pattern, AppRoute, design tokens, and SharedFacade integration.
+
+Let me examine AppRoute, route registration wiring, design tokens, and the string catalog.
+
+Let me study the design tokens and shared components (GlassPanel, Button, EmptyState, error/loading) used across pages.
+
+Let me look at the Motion components, Badges, and a similar simple account-group page (TeslaRegion) with its test for the exact pattern.
+
+Let me check which onboarding strings already exist in the catalog, and review the test pattern + lint config.
+
+All 25 keys are missing. Let me inspect the xcstrings format to add them correctly.
+
+The format is clear. Let me check whether keys are sorted and look for any catalog-drift validator before I choose an insertion strategy.
+
+File isn't sorted and there's no catalog validator. I'll do a targeted text insertion after the existing `onboarding.*` block to keep a minimal, clean diff in Xcode's exact format. Let me view that region.
+
+Strings are clear. Now let me resolve navigation specifics: how `/tesla-account` maps, how pages open external doc links, and the skip-persistence convention.
+
+Let me check available tooling (xcodebuild/swiftlint/xcodegen) and review the test pattern + lint/placeholder rules.
+
+All tools are available. Let me inspect the registry API, lint config, placeholder patterns, and pwsh availability.
+
+Now let me read the swiftlint config and confirm the stale-banner/theme helpers before writing code.
+
+I have what I need. Let me set up a plan/todos and check the Skeleton component to avoid the `.placeholder` literal (placeholder scanner is case-insensitive).
+
+I have a complete understanding now. Let me set up a plan, todos, and insert the 25 catalog strings. First the planning + catalog edit.
+
+Now the catalog insertion — 25 keys in alphabetical order, after the existing `onboarding.tracking` block:
+
+Let me validate the catalog JSON and confirm all 25 keys are present.
+
+Catalog validated — all 25 keys present, em-dash/ellipsis correct. Now creating the Swift source files.
+
+Now the DataSource seam + samples, then the page model.
+
+Now the stepper view (list + rows + indicator + loading skeleton) with a localization helper.
+
+The web marks step indicators `aria-hidden="true"`, so they should be decorative. Let me fix the indicator to match (avoids extra non-parity catalog keys).
+
+Now the main page view with scaffold, intro, footer actions, help links, and previews.
+
+Now the route registration and wiring into the app shell.
+
+Now the model/derivation tests.
+
+All source files written. Let me run the fast gates first: placeholder scan and swiftlint.
+
+Placeholder scan passes (COUNT=0). Let me wait for swiftlint.
+
+swiftlint used the config's `included` and scanned the whole repo (16 pre-existing violations). Let me check whether any are in my new files.
+
+6 violations are mine — `multiple_closures_with_trailing_closure` (TSButton has both `action:` and `label:` closures). I must pass `label:` as a labeled argument. Let me view and fix all 6 sites.
+
+Now the three CTA buttons in the stepper file:
+
+Let me re-run swiftlint filtered to my files and run swiftformat lint.
+
+swiftlint is clean. swiftformat (the repo formatter) wants fixes. Let me auto-apply swiftformat, then manually address the test force-unwraps it flags.
+
+swiftformat auto-fixed all (including force-unwraps). Let me verify the test changes compile-sensibly and re-confirm swiftlint.
+
+swiftlint clean, swiftformat clean, force-unwraps fixed via `XCTUnwrap`. Now the build. Let me check whether the Shared.xcframework is prebuilt and inspect the build script.
+
+The Shared.xcframework isn't prebuilt — it requires a KMP/Gradle build. Let me validate my files' syntax, generate the Xcode project, and assess the KMP toolchain feasibility in parallel.
+
+All 7 files parse cleanly; Java 17 + gradlew present. Let me generate the Xcode project and start the KMP framework build (required before xcodebuild) in the background.
+
+Project generates and includes my files. Now starting the KMP Shared.xcframework build (required for xcodebuild) in the background.
+
+KMP build is running. Let me check its progress.
+
+KMP build is progressing well (cached compilation, linking release frameworks now). Let me wait for completion.
+
+KMP framework built and staged (KMP_EXIT=0). Let me verify staging and launch the full Xcode build (iOS Simulator, compile validation).
+
+Build failed (exit 65). Let me find the errors — focusing on my files first.
+
+There's a pre-existing `OnboardingStatus` type in `TeslaSync/feature-views/OnboardingGate.*`. My types collide. Let me inspect all type names the existing gate defines so I can disambiguate mine.
+
+Only `OnboardingStatus` collides with the existing `OnboardingGate` surface. Let me inspect their `OnboardingStatus` to decide whether to reuse or rename mine.
+
+More collisions appeared than expected. Let me stop and pinpoint exactly where these duplicate type names are defined.
+
+Only two real collisions: `OnboardingStatus` (in OnboardingGate) and `OnboardingStep` (in FleetApiSection). Let me wait for the loop to finish, then do a comprehensive collision check across all my type names.
+
+Confirmed: only `OnboardingStatus` and `OnboardingStep` collide. Let me verify the remaining type names I introduced are collision-free.
+
+Another collision: `OnboardingStepper` already exists in `feature-views/Stepper.swift` (likely the web `Stepper` parity component). Let me examine it.
+
+There are 3 collisions: `OnboardingStatus`, `OnboardingStep`, `OnboardingStepper` all exist elsewhere. The existing `OnboardingStepper` is a separate parity unit with its own `StepperModel`. I'll rename my 3 colliding types to a distinct `OnboardingChecklist*` namespace (word-boundary-safe so helper types like `OnboardingStepKey` are untouched).
+
+Renames applied cleanly. Let me verify the helper types (`OnboardingStepKey`, `OnboardingStepState`, etc.) were NOT accidentally renamed.
+
+Helper types intact. Let me re-verify formatting/lint after the renames, then rebuild.
+
+One line exceeded 120 chars after rename. Let me auto-format and re-verify.
+
+swiftformat clean (0/7), swiftlint clean. Now rebuilding.
+
+Build still running (8 min). Let me check progress and scan for any errors so far.
+
+Zero errors so far, and it's at module emission for the main target. Let me wait for completion.
+
+Still compiling the large main target (0 errors). Let me continue waiting.
+
+Build failed again (exit 65). Let me find the errors now that the log is complete.
+
+One error: `UserDefaults` is non-Sendable. I'll mark the store `@unchecked Sendable` (canonical escape hatch; UserDefaults is thread-safe), matching the repo's pattern.
+
+Fixed. Rebuilding (incremental should be faster).
+
+Whole-module type-check passed (0 errors) — it's now generating object files per source. My code type-checks. Let me wait for the build to finish.
+
+Still 0 errors, build progressing. Let me wait for it to finish.
+
+Build continues, still 0 errors. Let me wait longer for completion.
+
+Now building the x86_64 slice (dual-arch simulator build), still 0 errors. Let me wait for completion.
+
+Both arch module emits passed (0 type errors) — object generation underway. Let me wait for the final link.
+
+Exit 65 again despite 0 compile errors mid-build. Let me check what failed (possibly a late file or link error).
+
+The failure is **"No space left on device"** — an environment/disk issue, not a code problem (both arch module emits type-checked with 0 errors before disk filled). Let me check disk and free space.
+
+Disk is 100% full (only 119MB free, shared machine). The build's type-check passed for both arches — failure is purely disk space during object writing. Let me reclaim space from this build's DerivedData and retry single-arch.
+
+The cleanup is slow on the full disk. Let me wait for it to complete.
+
+While cleanup runs, note: my code already passed both-architecture whole-module type-checks with 0 errors — the failure was purely disk-full during object writing. Let me keep waiting for space to free up.
+
+Cleanup freed **558GB** (now 558Gi free). Plenty of space. Let me find an available simulator and run a single-arch build + tests on the iOS scheme.
+
+A booted `iPhone 17 Pro` is available. Let me run the single-arch build against it (captures BUILD_EXIT), then tests.
+
+Single-arch build progressing, 0 errors, disk healthy (555Gi free). Let me wait for it to finish.
+
+Still in the whole-module emit phase (the slow type-check step), 0 errors. Let me keep waiting.
+
+Whole-module type-check passed; now generating arm64 objects (0 errors). Let me wait for the link to finish.
+
+Object generation continues (0 errors). Let me wait for the build to finish and link.
+
+Now in the link phase (TeslaSync.app, widgets), 0 errors. Let me wait for build completion.
+
+**BUILD_EXIT=0** — build succeeded! My code compiles and links into the full app. Let me confirm and run the test gate.
+
+BUILD SUCCEEDED, disk healthy. Now the test gate. The scheme's full suite includes thousands of unit + UI tests (slow/flaky on this shared box). Let me run my test class specifically to validate my code, building the test bundle on the same simulator.
+
+TEST_EXIT=0. Let me confirm the test results.
+
+All **16 tests passed** — TEST SUCCEEDED. Every gate is green: placeholder (0), swiftlint (clean), BUILD (exit 0), TEST (exit 0). Let me update todos, then check the ledger structure and logs directory to write the evidence log and ledger rows.
+
+Let me gather exact symbol references for the evidence log, then verify the string keys are wired.
+
+I have all evidence references. Let me run a scoped swiftlint (clean LINT_EXIT for my files) via a temp config to confirm, then write the evidence log.
+
+The temp-config path resolution failed (swiftlint quirk). The authoritative full-repo run already showed my files clean. Let me get definitive counts: total repo violations vs. Onboarding violations.
+
+Definitive: **0 swiftlint violations in my files** (the 2 repo-wide are pre-existing in an unrelated file). All gates green. Now writing the evidence log with the `=== PARITY ===` section (28/28).
+
+Now appending the two ledger rows (apple-macos + apple-ios) for the onboarding page.
+
+Let me validate the ledger JSON and review git status before committing.
+
+Ledger valid (2 rows), git status clean and scoped (.xcodeproj correctly gitignored). Let me stage the actual files and commit.
+
+Committed. Let me finalize todos and do a last clean-status + placeholder re-confirm on the committed tree.
+
+All gates green and the working tree is clean. Let me confirm all todos are complete.
+
+All 10 todos complete and every gate verified green. The task is done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] no duplicate top-level types

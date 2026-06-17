@@ -1,0 +1,6 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the existing Apple app structure to understand the conventions used by already-implemented pages.
+
+The actual path uses `apps/apple/Sources/Features/Analytics/`. Let me explore the existing analytics pages and recently completed pages to understand conventions.
+

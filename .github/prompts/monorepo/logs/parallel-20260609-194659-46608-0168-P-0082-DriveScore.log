@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and understanding what's available, including the web source and the Apple toolchain.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Let me read the web source spec and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply — especially the shared-surfaces directory, the P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, and existing surfaces to follow conventions.
+
+This is a large established project with clear conventions. Let me study a few complete reference surfaces and locate the P1 foundation layers (state holders, tokens, i18n, diagnostics).
+
+`BatteryDelta` is the ideal reference — a simple data-display surface ported from web with the full file set. Let me read all of it to learn the exact conventions.
+
+Excellent reference. Let me read the remaining BatteryDelta files (Views, Previews, strings, Tests) to learn token usage and test patterns.
+
+Now the test patterns and the design token definitions (P1/S9). Let me read both BatteryDelta test files and locate the token sources.
+
+Let me read the design token definitions (P1/S9), find the native GlassPanel equivalent, and check how category/accent colors are handled in chart-like surfaces.
+
+I now understand the token system and the surface conventions. The breakdown colors map cleanly: cyan→accent, purple→chartSeriesPower, green→chartSeriesBattery/statusSuccess, amber→chartSeriesEnergy/statusWarning. Let me check the web color lib, the gate tooling, swiftlint budget, and how the build is generated.
+
+I have the full picture of tokens, COLOR semantics (GOOD=#10b981, WARN=#f59e0b, BAD=#ef4444), and gate tooling (pwsh + xcodegen available). Let me check the build scale and look for existing native gauge/progress/reduce-motion patterns to reuse.
+
+There's a related `DriveScoreGaugeWidget` and a shared `Metrics.swift`/`BatteryRadialGaugeContent` gauge. Let me study these for reuse (DRY) and consistency, plus a reduce-motion example.
+
+A related `DriveScoreGaugeWidget` already exists in the same module — I must avoid symbol collisions. Let me inspect its public symbols and grep the whole app for my candidate type names.
+
+Critical: `DriveScoreModel`, `DriveScoreProjection`, `DriveScoreBand`, `DriveScoreStrings`, `DriveScoreTelemetry`, `OSLogDriveScoreTelemetry` are **already taken** by sibling `DriveScoreWidget`/`DriveScoreGaugeWidget` in the same module. I must uniquely prefix my supporting types. Let me confirm the bare `DriveScore` view name is free, check for a surface registry, and read the test-target wiring.
+
+The bare `DriveScore` view name is free; surfaces aren't centrally registered. Now let me verify the test-target source wiring and whether the `Shared.xcframework` prebuild dependency is satisfiable (it's a KMP framework — could block the build).
+
+The full build depends on a KMP `Shared.xcframework` (built via Gradle) that isn't present — only a `.gitkeep`. Whether the gate can go green hinges on this. Let me check predecessor surface logs (especially BatteryDelta 0077) to see the established precedent and whether the build succeeds in this environment.
+
+A gate log for the predecessor `BatteryDelta` (0077) exists. Let me read its head and tail to learn the established precedent — whether xcodebuild+xcframework actually go green here.
+
+Decisive precedent. The BatteryDelta (0077) gate log establishes the exact accepted methodology: capability is available, the KMP xcframework builds, but the **full-app** `xcodebuild build test` is RED (IOS_EXIT=65 / MAC_EXIT=65) for **pre-existing, out-of-scope** reasons (sibling `StateTimeline*`/`RecentDrives*` duplicate-type collisions + missing macOS signing cert). They verified the surface **independently** against the real SDK, ran swiftlint/swiftformat/placeholder green, proved the RED is pre-existing, and marked EXIT=0/STATUS=DONE. Let me read the middle of the log to replicate the exact independent-verification method.
+
+I now have the complete, proven methodology from the BatteryDelta precedent. Let me set up tracking and lock down the exact `computeDriveScore` parity values with a Node cross-check before writing Swift.
+
+Parity values locked (cross-checked against the web JS). Critically, `total` uses the **unrounded** component sum (e.g., longSmooth → total=94, not 38+19+18+20=95) — my Swift must replicate that. Now writing the Foundation core, projection, model, and strings.
+
+Confirmed: the widgets occupy a huge `DriveScore*` namespace (`DriveScoreBand`, `DriveScoreProjection`, `DriveScoreModel`, `DriveScoreStrings`, `DriveScoreGauge`, `DriveScoreRadialGauge`, even test classes like `DriveScoreModelTests`). My `DriveScoreSurface*` prefix is fully clear, and the bare `DriveScore` view name is free. Writing the four core files now.
+
+Let me simplify the breakdown construction — the overloaded initializer is unnecessarily clever. I'll use an explicit map and remove the private extension.
+
+Let me verify the compute function reads coherently after the edits.
+
+Now the Model file — i18n facade (P1/S10), telemetry seam (P1/S11), and the observable state-holder (P1/S8).
+
+Now the strings catalog contribution.
+
+Before building the view layer, let me validate the pure core compiles and matches the web values exactly by compiling Adapter+Projection standalone and running my cross-check cases.
+
+Pure-core output matches the web JS **exactly** across all 8 cases — including the critical `longSmooth` (total=94, proving the unrounded-sum). Marking core done; now the view layer (gauge + breakdown bars, reduce-motion + accessibility aware). First I'll add the row view-data and gauge a11y to the model.
+
+Now the Views file — gauge, breakdown bars, and token color extensions.
+
+Now the public `DriveScore` SwiftUI surface.
+
+Now the previews.
+
+Now the two test files. First the pure-core adapter tests with the exact cross-checked parity values.
+
+Now the model + view-composition + color + strings + a11y tests.
+
+All 9 files written. Now the in-scope verification (matching the BatteryDelta precedent). Let me run swiftformat + swiftlint on my files and locate the iOS/macOS SDK paths.
+
+swiftformat flags fixable style issues (line wrapping, property bodies, number grouping). I'll let the ecosystem tool auto-fix in place, then re-verify.
+
+swiftformat is clean (0/8). swiftlint has one `function_parameter_count` violation in the `assertScore` helper. Let me view the current (post-format) section and refactor it to a concise array comparison.
+
+The `assertScore` helper has too many parameters. I'll refactor it to take the expected scores as an array (4 params) and update all call sites.
+
+Re-verifying both linters after the refactor.
+
+swiftformat and swiftlint agree the trailing comma must go (my post-format edit reintroduced one). Re-running the formatter to auto-fix, then re-linting.
+
+Both linters are GREEN (swiftformat 0/8, swiftlint 0 violations). Now the key in-scope check: type-check the production surface against the real iOS 18 SDK (with design tokens + DEBUG previews).
+
+iOS production type-check is **0 errors**. Now macOS production, plus the test files against both SDKs (via temp copies that drop the in-module `@testable import`, compiled alongside production + tokens + XCTest).
+
+macOS production type-check is also **0 errors**. Now type-checking the test files (alongside production + tokens + XCTest) against the iOS sim SDK.
+
+iOS test type-check is **0 errors**. Completing with the macOS test type-check.
+
+All four SDK type-checks are **0 errors** (iOS+macOS, production+tests). Now check-placeholders (real scan of my files) and xcodegen enumeration.
+
+Placeholder gate is clean (COUNT=0). Now regenerating the Xcode project to confirm my files are enumerated into the app + test targets.
+
+Placeholder gate clean, all 9 files enumerated (9× each across targets). Now the full gate — running the iOS `xcodebuild build test` (this triggers the KMP `Shared.xcframework` Gradle prebuild and compiles ~3,900 Swift files, so it's slow). I'll capture everything to a log.
+
+Build still running (expected for ~3,900 files + Gradle xcframework). Let me check progress.
+
+Gradle is building the `Shared.xcframework` (debug done, release linking) — 0 errors so far. The heavy Swift compilation comes next. Continuing to wait on the build.
+
+IOS_EXIT=65 — matching the BatteryDelta precedent. Now I must prove this is pre-existing and out-of-scope. Analyzing the errors.
+
+162 total errors, **0 mention DriveScore**. Let me get the full breakdown (using `;` so the zero-match grep doesn't short-circuit) to identify the actual failing files.
+
+**Conclusive: 0 of 162 errors mention DriveScore.** All errors are pre-existing duplicate-type collisions in sibling files (`StateTimelineWidget`/`StateTimeline` and `RecentDrivesListWidget`/`RecentDrivesSection` — "ambiguous for type lookup") — exactly what the BatteryDelta precedent documented. Let me launch the macOS gate in the background and prove the root cause (duplicate sibling definitions) meanwhile.
+
+Root cause proven: each ambiguous type (`StateTimelineModel`, `RecentDrivesModel`, etc.) is **defined twice** — once in `dashboard-widgets/` and once in `feature-views/` — sibling files I never touched. This duplicate-definition collision is structurally independent of my uniquely-prefixed `DriveScoreSurface*` types. Waiting for the macOS gate to finish.
+
+macOS gate returned MAC_EXIT=65 in ~20s — failed early (before the heavy compile). Let me see why.
+
+macOS failure is **4 code-signing errors only** (no dev cert on this runner), 0 compile errors, 0 DriveScore — identical to the BatteryDelta precedent. My macOS SDK type-check already proved the surface compiles for macOS.
+
+Now the airtight empirical proof: a baseline iOS build with my 9 files **removed**. Moving them out and regenerating.
+
+Baseline confirmed: 0 DriveScore refs in the project. Running the baseline iOS build+test (slow) to prove the error set is identical without my surface.
+
+Baseline running in background (~8–9 min based on the first build). I'll wait for it before restoring files and writing the gate log.
+
+Baseline (my files absent) = **BASELINE_IOS_EXIT=65**, fast-failing at the same early compile point. Let me confirm the error set is identical to the build *with* my surface.
+
+Both fail at IOS_EXIT=65 with an **identical unique error-signature set** (diff empty) in the **same** sibling files. The raw count differs (108 vs 162) because the "ambiguous type lookup" → "cannot infer contextual base" cascade is non-deterministic across parallel compile jobs. Let me confirm the failing-file *set* is identical and contains zero DriveScore/other files.
+
+**Airtight proof complete.** Identical failing-file set (10 files, every one a `StateTimeline*`/`RecentDrives*` sibling), identical signature set, zero DriveScore errors in either build. The 108↔162 count delta is just the non-deterministic ambiguous-type cascade. My surface contributes **zero** errors. Restoring my files and regenerating the project.
+
+The `&&` chain stopped at the zero-match grep. Restoring files with `;` separators.
+
+All files restored and re-enumerated. Let me verify git status (the generated `.xcodeproj` should be ignored) and do a final combined lint before writing the gate log.
+
+`.xcodeproj` is git-ignored; only my 9 files are untracked; final lint green. Now writing the honest gate log with all gathered evidence.
+
+Gate log written. Now staging exactly my 9 surface files + the log and committing (the generated `.xcodeproj` is git-ignored, so it won't be included).
+
+Exactly 10 files staged. Committing.
+
+Committed cleanly (commit `4149516fc`, 10 files, 1758 insertions). Finalizing todos and cleaning up temp artifacts.
+
+Task complete. Working tree is clean and the commit is in place.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0082-DriveScore.log   | 175 +++++++++++++
+ .../shared-surfaces/DriveScore.Adapter.swift       | 192 +++++++++++++++
+ .../shared-surfaces/DriveScore.AdapterTests.swift  | 270 +++++++++++++++++++++
+ .../shared-surfaces/DriveScore.Model.swift         | 233 ++++++++++++++++++
+ .../shared-surfaces/DriveScore.Previews.swift      |  71 ++++++
+ .../shared-surfaces/DriveScore.Projection.swift    | 216 +++++++++++++++++
+ .../shared-surfaces/DriveScore.Tests.swift         | 253 +++++++++++++++++++
+ .../shared-surfaces/DriveScore.Views.swift         | 233 ++++++++++++++++++
+ .../TeslaSync/shared-surfaces/DriveScore.strings   |  37 +++
+ .../TeslaSync/shared-surfaces/DriveScore.swift     |  78 ++++++
+ 10 files changed, 1758 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0082-DriveScore.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DriveScore.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DriveScore.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DriveScore.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DriveScore.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DriveScore.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DriveScore.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DriveScore.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DriveScore.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DriveScore.swift

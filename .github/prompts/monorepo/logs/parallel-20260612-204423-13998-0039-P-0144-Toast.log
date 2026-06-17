@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, iOS simulators). Now let me explore the web source and the apps/apple structure.
+
+Now let me read the web source and examine the existing shared-surfaces directory for patterns.
+
+I see the file structure convention now. There's already an `AchievementUnlockedToast` surface (closest analog). Let me check whether a `Toast` surface already exists and study the conventions.
+
+No `Toast` surface exists yet. `AchievementUnlockedToast` (P4 0111) is a complete 9-file reference — and it's also a toast. Let me study it fully plus the prior run logs.
+
+Let me read the remaining reference files and the prior run logs.
+
+This is very informative. A prior run (different slot, not merged here) created Toast in a subdirectory and hit a documented full-app build blocker. In THIS slot there are no Toast files. The repo convention is FLAT `Toast.*` files (matching `AchievementUnlockedToast.*`). Let me understand the build methodology and tooling.
+
+Now I understand the methodology: full-app `xcodebuild build test` is blocked by documented pre-existing parallel-merge collisions; surfaces are verified in isolation (SwiftPM build+tests, swiftc -typecheck iOS18/macOS15, swiftlint, swiftformat, placeholder gate, i18n parity, xcodegen). Let me examine the web helpers, design tokens, project.yml, and remaining methodology.
+
+Now let me read the web helpers, the test-target config in project.yml, and locate the design tokens.
+
+Let me read the placeholder check script and scan for any existing `Toast` Swift symbols to avoid collisions (the #1 cause of cross-surface build failures).
+
+Many `*Toast*` symbols exist but all are surface-prefixed (PlaybackControlsToast, QuietHoursToastKind, etc.). Let me verify none of my planned canonical type names collide exactly.
+
+No collisions — all canonical `Toast*` names are free. I now have full understanding. Let me set up tracking and write the plan.
+
+Let me check the lint/format configs so my code passes `--strict` on the first try.
+
+No collisions, and I have the full design system + lint rules. Let me write the pure core first.
+
+All 9 files written. Now the isolation gate. First, format + lint my files.
+
+Format 0/8, swiftlint 0 violations. Now the placeholder gate. Let me check how the script resolves `-Path` (my files are flat `Toast.*`, no `Toast/` dir).
+
+The script returns a vacuous pass for a non-existent path, so I must scan my actual flat files (not a non-existent `Toast/` dir). Let me run the placeholder gate against each Toast file.
+
+The gate flags the literal word "placeholder" (a mechanical match on i18n-token wording). I'll reword to avoid it — cleaner than an opt-out. Let me see the exact lines.
+
+Placeholder gate clean (0). Now the SwiftPM isolation harness to compile the pure core (Adapter+Seams+Model) and run all tests under Swift 6 strict concurrency.
+
+The harness caught a real bug: the `catch`'s implicit `error` shadows my `error(_:_:)` method. Fix with a named catch binding.
+
+All 37 tests pass under Swift 6 strict concurrency. Now the cross-SDK typecheck (iOS 18 + macOS 15) of the full SwiftUI surface against the real design system. Let me identify the design dependencies and any Shared-coupled files to exclude.
+
+Only `UnitFormatters.swift` is Shared-coupled (my surface doesn't use it). Let me typecheck the 7 non-test Toast files + the real design system against the iOS 18 SDK.
+
+iOS typecheck passes (exit 0) but emits one strict-concurrency warning in Previews. Let me fix it to reach 0 warnings (matching precedent).
+
+Now verify both iOS 18 and macOS 15 typecheck cleanly (0 errors, 0 warnings).
+
+Both SDKs: **0 errors, 0 warnings**. Now let me kick off the KMP `Shared.xcframework` build in the background (needed for a real in-module compile), and meanwhile run the deterministic checks.
+
+Confirmed pre-existing blockers: `Frameworks/` has only `.gitkeep` (no `Shared.xcframework`), and 0 codesigning identities. Let me start the KMP framework build in the background and proceed with deterministic checks.
+
+While the KMP framework builds, let me re-confirm format/lint after edits and run xcodegen to prove enumeration.
+
+Format/lint still clean. Let me check the KMP build status (it signaled completion quickly — possibly a daemon issue).
+
+KMP build is genuinely progressing in the background (downloading Kotlin/Native, compiling). Let me run `xcodegen generate` to prove file enumeration while it builds.
+
+All 9 files enumerated (18 refs each, 108 lines). Now the i18n parity check — every code key must have a catalog entry, no dead keys.
+
+Perfect i18n parity (25↔25, 0 missing, 0 dead). Let me check the KMP build progress.
+
+The DEBUG `Shared.xcframework` is assembled (release still linking). Let me stage the debug framework and run a real in-module compile of my surface for the strongest evidence. First, confirm it's gitignored so it won't pollute my commit.
+
+Framework staged (I'll commit only my explicit files). Let me wait for the background gradle to finish to avoid contention, then do the in-module compile.
+
+Let me check the pre-build script behavior (does it skip when the framework is already staged?) before running xcodebuild.
+
+The pre-build script always runs gradle (release framework). Let me wait for my background gradle to finish assembling so the xcodebuild pre-action is cache-fast, then run the in-module compile.
+
+KMP `BUILD SUCCESSFUL` (9m 27s) — both frameworks built. Let me stage the release framework and run the real in-module app-target compile to prove zero Toast errors inside the app module.
+
+In-module compile: **zero Toast errors**, exit 64 with 1 error. Let me characterize that pre-existing error.
+
+That was a `xcodebuild` usage error (`-target` + `-derivedDataPath` needs `-scheme`) — no compilation ran. Let me re-run correctly with `-scheme`.
+
+Swift compiled extensively (2538 compile actions), **zero Toast errors**, but exit 65. Let me find the actual failure reason.
+
+Build failed in **other surfaces'** batches (AnomalyInlineRow, AppearanceSettings, etc.) — zero Toast. But I must pinpoint the actual error. Let me search broadly.
+
+Zero source-level diagnostics anywhere, yet 2 batched jobs failed — pointing to compiler resource/timeout failures in other surfaces. Let me confirm whether my Toast files compiled and find the failure nature.
+
+All 7 Toast files compiled in-module with **zero errors**. The failure is a batched `SwiftCompile failed with a nonzero exit code` (no source diagnostic = compiler crash/kill). Let me capture the exact context for the log.
+
+The failure is a **swift-frontend compiler crash** (stack dump: `abort` → `llvm::report_fatal_error`) while batch-compiling the full ~1798-surface module — a pre-existing toolchain failure, not a source error, and not in Toast. Let me capture the crash signature precisely.
+
+**Root cause confirmed**: the full-app build is RED due to a pre-existing **swift-frontend compiler crash** (`abort`/`llvm::report_fatal_error`) batch-compiling OTHER surfaces (`AnomalyInlineRow`/`ApiPlayground`/`App*`/`AppearanceSettings`) in the ~1798-surface merged module — **zero Toast involvement**; all 7 Toast files compiled cleanly in-module. Plus macOS signing (0 identities). Let me clean up artifacts and check git status.
+
+Clean — only my 9 Toast files are untracked (artifacts are gitignored anyway). Now let me generate the gate log with fresh raw evidence from each step. I'll re-run the deterministic gates teeing into the log, plus extract the in-module compile evidence.
+
+Now the in-module compile evidence, the macOS signing blocker, and the footer. Let me extract the raw evidence and finalize.
+
+Log complete (161 lines) ending `EXIT=65` / `STATUS=BLOCKED`. Let me clean the harness, verify git status, and run a final code-review pass before committing.
+
+All 10 todos done; git status clean (only my 9 files + log). Let me stage the files and run a focused code-review pass before committing.
+
+I'll start by examining the staged changes and the web source files that serve as the spec.Let me read the web source spec files first, then the Swift implementation files.Now let me read all the Swift implementation files.Now let me read the Views, States, strings, and Tests files.Now let me read the Tests, States, and Previews files.I've read all the staged Swift sources, the web spec (`Toast.tsx`), `_toastHelpers.ts`, and `useMotionPreference.ts`. Let me verify a couple of the queue-consistency edges by tracing the reducer against the tests before finalizing.I traced every one of the 7 invariants against the web source and the queue reducer math (native `ToastQueue.appending` / `droppedIDs` match web `[...prev.slice(-4), next]` exactly across all queue lengths, and are mutually consistent so cancelled timers correspond precisely to evicted toasts).
+
+All 7 invariants hold:
+
+1. **Queue cap** — `ToastQueue.appending` keeps `suffix(4)` + new (max 5, oldest dropped, newest at tail); `droppedIDs` returns `prefix(count-4)`; `ToastCenter.post` (Toast.Model.swift:84-87) computes drops on the pre-append queue, cancels those timers, then appends. Consistent. ✓
+2. **Auto-dismiss** — default `durationMs = 4000` (Toast.Adapter.swift:34), schedules only when `ms > 0` (`isAutoDismiss`), `dismiss` cancels then removes (Toast.Model.swift:135-138), cap-evicted timers cancelled in `post`. `TaskToastScheduler` cancels in-flight `Task`s correctly. ✓
+3. **id scheme** — `"toast-" + (++counter)`, first id `toast-1` (Toast.Model.swift:74-75). ✓ (per-instance vs web's module-global counter is a harmless, arguably-better difference, not a bug.)
+4. **Action / nav-wins** — `ToastAction.from` returns `.navigate` when `to` is non-nil/non-empty before `.callback` (Toast.Adapter.swift:107-113); enum makes "both" unrepresentable; `ToastOverlay.handleAction` routes nav via `onNavigate` then dismisses, callback via `performAction` (handler→dismiss). Matches web precedence and ordering. ✓
+5. **a11y** — `isAssertive == (kind == .error)` (Toast.Adapter.swift:183-185); `announce()` maps error→`.high`, else→`.default` (Toast.Views.swift:163-168); dismiss button label "Dismiss notification". ✓
+6. **Hooks** — `UseToast` reads non-optional `@Environment(ToastCenter.self)` (traps without provider — the idiomatic native equivalent of the web throw); `UseOptionalToast` reads optional → nil. ✓
+7. **useMutationToast** — `runMutation` interpolates success title via `ToastStrings.interpolate(resolve(key,fallback), vars)` and posts title-only success; on throw posts error with title `resolve(errorKey,errorFallback)` and `detail(of:)` as the secondary line; defaults `toast.common.error` / "Something went wrong". `interpolate` replaces `{{name}}`. ✓
+
+No significant issues found in the reviewed changes.Code review: all 7 parity invariants hold, no issues. Committing.
+
+Committed `7cfcce9d0` (10 files, 1798 insertions). Final verification of a clean working tree.
+
+Done. The P4 · 0144 · **Toast** Apple shared surface is delivered, verified, and committed (`7cfcce9d0`).
+
+## What shipped
+9 flat `Toast.*` files (1,798 LOC) under `apps/apple/TeslaSync/shared-surfaces/`, a faithful SwiftUI parity of `web/src/components/feedback/Toast.tsx` + `_toastHelpers.ts` + `useMotionPreference.ts`, following the repo's `AchievementUnlockedToast` convention:
+
+- **`ToastCenter`** — `@MainActor @Observable` state holder (P1/S8): `post`/`success`/`error`/`info`/`warning`/`dismiss`/`dismissAll`, web's 5‑toast cap (`[...prev.slice(-4), new]`), `toast-<n>` ids, 4s auto‑dismiss via an injectable scheduler seam, and `runMutation` (= `useMutationToast`).
+- **`ToastProvider` / `.toastLayer` / `ToastOverlay`** — bottom‑trailing stack, emits `view.opened` (P1/S11), routes navigate actions to the embedder, fires callback actions.
+- **`@UseToast` / `@UseOptionalToast`** — native parity of the throwing/nil‑safe web hooks via `@Environment(ToastCenter.self)`.
+- Pure, unit‑tested core (icons, tones, assertive/polite roles, queue, duration, a11y, interpolation); all copy through the P1/S10 facade; SF‑Symbol + P1/S9 tokens; Reduce‑Motion aware; VoiceOver announcements.
+
+## Verification — per‑surface gates ALL GREEN
+`swiftformat --lint` 0/8 · `swiftlint --strict` 0 · placeholder 0 · **swiftc ‑typecheck iOS 18 + macOS 15 = 0 errors/0 warnings** · **SwiftPM `swift test` 37/37** (Swift 6 strict concurrency) · xcodegen enumerates 9 files (108 refs) · i18n 25↔25 (0 dead/0 missing) · 0 symbol collisions · independent code review: 7/7 parity invariants hold. I assembled the KMP `Shared.xcframework` live (`BUILD SUCCESSFUL`) and the **real in‑module app compile shows all 7 Toast files compile with ZERO Toast errors**.
+
+## Honest status: BLOCKED
+The prompt's full‑app `xcodebuild build test` is **RED for pre‑existing, unrelated reasons outside this prompt's allowed files**: a swift‑frontend **compiler crash** batch‑compiling *other agents'* surfaces (`AnomalyInlineRow`/`ApiPlayground`/`App*`/`AppearanceSettings`) in the ~1,798‑surface merged module, plus macOS signing (0 identities). Zero Toast involvement. Per the honesty covenant the log ends `EXIT=65` / `STATUS=BLOCKED`, deferred to the P99 acceptance gate — matching every prior P4 Apple surface precedent. Working tree clean.
+
+
+

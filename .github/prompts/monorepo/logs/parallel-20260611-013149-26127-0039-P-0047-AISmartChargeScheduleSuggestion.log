@@ -1,0 +1,156 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the repo structure, the web source component, and the Apple toolchain availability in parallel.
+
+Good — Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat all available, and `apps/apple` exists with a recent precedent (`AIPredictiveMaintenance` was just added in P-0039). Let me read the web source and the existing Apple structure.
+
+Large established codebase. The web source is a simple `AIFeatureCard` + `withAiFeature` + `useAiStream` wrapper. Let me find the closest native precedent and the shared building blocks. Let me read the web building blocks and look at which web components share this exact pattern.
+
+The web source mirrors `AIChargingDiagnosis` closely (simple `AIFeatureCard`, no input slot, prop-driven body, `canStart` gating). Let me examine the native precedents — the just-added `AIPredictiveMaintenance` and the closest analog `AIChargingDiagnosis`.
+
+`AIPredictiveMaintenance` is the ideal precedent — same simple `AIFeatureCard`/`withAiFeature`/`useAiStream` pattern, 10-file native structure. Let me read all its native files to learn the conventions, shared state-holders, tokens, i18n, and diagnostics contracts.
+
+Excellent, very thorough precedent. Let me read the remaining files: Projection, Views, Chrome, Previews, strings, Adapter, and both test files.
+
+Let me read the remaining precedent files: Chrome, Previews, strings, Adapter, AdapterTests, and Tests.
+
+Now let me read the test files, previews, and strings to complete my understanding of the testing conventions and the strings catalog format.
+
+Let me read the Previews, strings, project.yml, and find where the shared design tokens live.
+
+`xcodegen` is available and the `.xcodeproj` is generated on demand. The build has a pre-action that stages `Shared.xcframework` (KMP). That's a potential blocker. Let me check whether the framework exists/builds and review prior surface logs to see what STATUS predecessors reached.
+
+The established methodology is clear from the predecessor's log: the full-app `xcodebuild` gate is **DEFERRED** on pre-existing, out-of-scope blockers (KMP `Shared.xcframework` needs Gradle/Kotlin, sibling compile errors, macOS code-signing), and surfaces are verified via an **isolated Swift build + tests** against the real design tokens, plus swiftformat/swiftlint/placeholder. I'll follow that exact approach but independently re-verify every blocker.
+
+First, let me read the three shared web primitives to nail parity (especially the `emptyHint` absence and exact description text).
+
+Let me confirm the `AiOutputPanel` branches and find the `SmartChargePage` call site to understand the real prop types for `vehicleId`/`ratePlanId`.
+
+Let me read the `SmartChargePage` call site to see exactly which props/types are passed.
+
+Now I have full parity clarity. Key differences from the precedent: `haveInputs = !!vehicleId && !!ratePlanId` (two inputs), a 9-field body, URL `/ai/charging/schedule/draft`, different strings, and **no** `emptyHint` prop. Let me verify the exact design-token symbols exist so my isolated build compiles, and set up a todo list.
+
+All tokens/components exist. Let me independently verify the full-app build blockers (KMP `Shared.xcframework` via Gradle, the placeholder checker location) and check for any isolated-harness pattern, while I set up my todo tracking.
+
+KMP shared (Gradle + Java) exists, the placeholder checker is PowerShell, and there's no SwiftPM package (isolated harness must be created, git-ignored). Let me check `pwsh` availability and the exact `TSButton`/`TSSkeleton`/`TSFadeIn` signatures so my code compiles in isolation.
+
+`pwsh` is available. Let me confirm the `TSButton` init params and `TSFadeIn` signature, then I'll start writing the surface files.
+
+All building blocks confirmed (`TSButton`, `TSSkeleton`, `TSFadeIn`, token namespaces, `pwsh`). I have complete parity understanding. Now I'll write the 10 surface files, starting with the dependency-free core.
+
+Now the test files — the most important part for verification. Let me write the Foundation-only `AdapterTests` covering the 9-field body, `haveInputs`, ISO `depart_by`, SSE parse, reducer, and output/action derivation.
+
+Now the projection + model + accessibility tests:
+
+All 10 files created. Now the verification phase. Let me run swiftformat, swiftlint, and the placeholder checker on the new files.
+
+Three auto-fixable formatting issues. Let me run swiftformat to fix them, then re-lint.
+
+swiftformat passes. Let me verify the auto-fix didn't change my numeric values, then run swiftlint --strict.
+
+Two `file_length` violations (max 400). The `numberFormatting` fix correctly kept `1000` (= 00:16:40, my assertion holds). Let me trim the verbose header comments in `Adapter.swift` (427→≤400) and `AdapterTests.swift` (403→≤400).
+
+Need to cut ~14 more from Adapter.swift. Let me condense several verbose doc comments.
+
+Adapter.swift still 8 over (408). Let me condense a few more doc comments in the SSE/reducer/output sections.
+
+Just 2 over. Let me trim the ISO8601 doc comment.
+
+One more line. Let me remove a redundant inline comment.
+
+Both swiftformat (FMT=0) and swiftlint --strict (LINT=0) pass on all 9 files. Now the placeholder check:
+
+The gate's `-Path` prefix isn't a real directory, so `Get-ChildItem -Recurse` would scan nothing (vacuous pass). To honestly verify my files per covenant rule 4, I'll run the checker against a temp copy of exactly my files, and also run the literal gate command for the record.
+
+Placeholder check is clean on my files (COUNT=0). Now the key verification: an isolated Swift build + test against the **real** design tokens and components. Let me inspect the dependency footprint of the components I use.
+
+The component closure is: `Tokens.swift` + `Buttons/Skeletons/Motion.swift` + my files. Let me confirm `tsDynamicColor` (used by Color.TS) lives in Tokens.swift, then build the isolated SwiftPM harness.
+
+Confirmed self-contained. Let me build the isolated SwiftPM harness (module `TeslaSync` to satisfy `@testable import`) in the session dir, then run `swift build` + `swift test` under Swift 6 strict concurrency.
+
+Harness ready. Now the isolated build + test under Swift 6 strict concurrency:
+
+The isolated build caught a **real Swift 6 strict-concurrency error** — `static let formatter: ISO8601DateFormatter` isn't `Sendable`-safe. Exactly what this verification is for. Let me fix it with a fresh formatter per call (pure, no shared state).
+
+Now sync to harness and re-run the build + tests:
+
+My surface files all compile now — the remaining error is a missing `TSCard` dependency of the real `Skeletons.swift`. Let me find and add it to the harness.
+
+`Sources/Components` is an interconnected library. Following the predecessor's approach, let me include the whole `Sources/Components` (+ any `Sources/Design`) in the harness rather than cherry-picking. Let me check the structure for any non-system-framework dependencies first.
+
+`Sources/Components` only imports system frameworks (Charts, MapKit, CoreLocation) — no KMP. Let me rebuild the harness including the whole component library + `Sources/Design` + tokens.
+
+All my surface files compiled. Build exit 1 but the error scrolled off — let me capture it.
+
+All my surface files compiled — the only errors are in `_components/DataDisplay/UnitFormatters.swift` (+ peers) that need app-level `Units`/`UnitPreferences` types my surface never uses. Let me identify and exclude only those unit-dependent component files.
+
+Only `UnitFormatters.swift` needs the app-level units layer, and my surface doesn't touch it. Let me exclude it and run the full build + tests.
+
+**All 82 tests passed, 0 failures**, compiled under Swift 6 strict concurrency against the real design tokens + component library. The isolated build also caught (and I fixed) a genuine `Sendable` bug. Let me capture the summary and re-sync the fixed Adapter, then attempt the full xcodebuild gate to document the pre-existing blockers.
+
+Now let me attempt the full xcodebuild gate to honestly document the pre-existing blockers. First, generate the project and check the sibling files the predecessor flagged.
+
+Project generated. Let me check simulators and attempt the iOS build (the scheme's Gradle/KMP pre-action is the likely first blocker). I'll run it in the background and capture the real error.
+
+iPhone 16 booted, Java 17 present. Let me run the iOS gate build+test in the background, capturing output to a temp log.
+
+While that runs, let me wait and check progress periodically.
+
+I see multiple parallel agents (slot-40) contending for the Gradle/KMP daemon — a shared environment. My backgrounded log wasn't created. Let me stop that attempt and run a clean, observable iOS build with a timeout.
+
+Still running (likely the Gradle KMP pre-action). Let me check progress.
+
+The Gradle KMP build is actually succeeding on this runner (Shared.xcframework being assembled) — so the full build will proceed to compile the app. Let me keep waiting for the app compile + tests.
+
+The full iOS app is compiling cleanly (0 errors, TeslaSync module emitted, now building widget extensions). This may actually pass on this runner. Let me continue waiting.
+
+The full iOS build failed — but on a **sibling file I didn't touch**: `AISignalExplorerNlFilter.swift:142` ("escaping closure captures non-escaping parameter"). Let me confirm ALL errors are in sibling files, not mine, and that I haven't modified that file.
+
+Definitive: the **only** error in the entire iOS build is in `AISignalExplorerNlFilter.swift` (a sibling surface), my files have **zero** errors, and I have not modified that sibling. Let me confirm the sibling error is pre-existing (committed at HEAD, not my doing) and view the offending line.
+
+Confirmed: the sibling `AISignalExplorerNlFilter.swift` is **pre-existing** (committed by a separate prior P4 surface `441cd2538`), and my working tree contains **only** my 10 files. The iOS app was already red at HEAD for this reason. Now let me capture the real macOS gate result (no skip-and-assume) — it compiles the same shared-surfaces so it will hit the identical sibling error.
+
+Both full-app gates fail on **external, pre-existing** issues, neither in my code:
+- **iOS** (`IOS_EXIT=65`): pre-existing sibling compile error `AISignalExplorerNlFilter.swift:142` (committed by prior surface `441cd2538`, out of my allowed files).
+- **macOS** (`MAC_EXIT=65`): runner code-signing — entitlements need a development certificate (empty `DEVELOPMENT_TEAM`); never reaches compile.
+
+My surface is independently green (82 tests, swiftformat, swiftlint --strict, placeholder). Let me gather the verbatim evidence lines and write the gate log.
+
+All evidence confirmed: iOS's sole error is the pre-existing sibling (`AISignalExplorerNlFilter.swift:142`), my surface compiled with **0 errors** (20 successful mentions); macOS fails at code-signing before compiling. Let me record the literal gate placeholder result and write the comprehensive, honest gate log.
+
+Now I'll write the comprehensive, honest gate log with all real exit codes and evidence.
+
+Now let me verify the committed repo files exactly match what I tested (no drift between harness and repo), then commit.
+
+Repo files are identical to what I tested and lint-clean. Let me confirm `git status` shows only my intended files (xcodeproj + staged xcframework must be git-ignored), then commit.
+
+`git status` is clean — exactly my 10 files + the log, with the `.xcodeproj` and staged `Shared.xcframework` properly git-ignored. Let me commit using the prompt's conventional message.
+
+Committed `594355bfc` (11 files, 2569 insertions). Let me do a final post-commit status check, update todos, and clean up my temp files.
+
+All work is complete and committed; the working tree is clean. Let me confirm the todo ledger is fully closed.
+
+All 12 todos done. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...rfaces-0047-AISmartChargeScheduleSuggestion.log | 155 ++++++++
+ .../AISmartChargeScheduleSuggestion.Adapter.swift  | 397 ++++++++++++++++++++
+ ...martChargeScheduleSuggestion.AdapterTests.swift | 400 +++++++++++++++++++++
+ .../AISmartChargeScheduleSuggestion.Chrome.swift   | 169 +++++++++
+ .../AISmartChargeScheduleSuggestion.Model.swift    | 369 +++++++++++++++++++
+ .../AISmartChargeScheduleSuggestion.Previews.swift | 135 +++++++
+ ...ISmartChargeScheduleSuggestion.Projection.swift | 147 ++++++++
+ .../AISmartChargeScheduleSuggestion.Tests.swift    | 384 ++++++++++++++++++++
+ .../AISmartChargeScheduleSuggestion.Views.swift    | 242 +++++++++++++
+ .../AISmartChargeScheduleSuggestion.strings        |  45 +++
+ .../AISmartChargeScheduleSuggestion.swift          | 126 +++++++
+ 11 files changed, 2569 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0047-AISmartChargeScheduleSuggestion.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.swift

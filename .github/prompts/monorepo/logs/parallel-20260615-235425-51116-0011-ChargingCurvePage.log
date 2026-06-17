@@ -1,0 +1,301 @@
+I'll start by exploring the repository structure to understand the task scope and what already exists.
+
+Let me explore the apps directory, the web source page, and check for Xcode availability in parallel.
+
+Xcode 26.5, SwiftLint, and Swift 6.3.2 are all available — so the gate won't be blocked. The web page is more complex than the manifest record (which reduced it to 2 panels / 6 strings / 3 states = 11 parity items based on direct page-file analysis). Let me explore the existing Apple app structure to follow established patterns.
+
+The `TeslaSync/Features/` dir doesn't exist yet — the current structure uses different folders. Let me read the manifest records, the project config, and existing page patterns.
+
+There's an existing `Sources/Features/Charging` dir, but the prompt targets `TeslaSync/Features/Charging`. Let me read the project config and existing charging feature files to resolve the layout and find established page patterns.
+
+Now I understand: `Sources/` is the build root (project.yml line 37), and charging pages live in `Sources/Features/Charging/` (e.g., PowersharePage). The prompt's `TeslaSync/Features/Charging` path is a generator artifact — the real charging feature dir is `Sources/Features/Charging/`. Let me study the PowersharePage pattern thoroughly as the closest analog.
+
+Excellent template. Let me read the remaining Powershare files (models, sections, format, sample) and the routing system to fully understand the pattern.
+
+The pattern is rich and well-established. Let me examine the format/sample files, the routing system, the shared data facade, the strings catalog, and an existing test.
+
+Let me read the full routing system to understand how to register `/charging-curve`.
+
+No dedicated `.chargingCurve` route exists yet; `/charging-curve` currently parses to nil. Let me understand how routes are composed into the app, how the registry is wired, and the test surface before deciding on route registration scope.
+
+Route registrations compose in `TeslaSyncApp.swift`. Since `/charging/curves` currently aliases to `.charging` (the main charging page), ChargingCurve needs its own destination. Let me read the app composition root, the shell, and routing tests to size the change.
+
+Now I understand the full navigation architecture. Adding a `.chargingCurve` route case (matching the Powershare precedent) auto-wires the sidebar, command palette, and deep-link parser. Let me check the routing/registry tests to size the blast radius before committing to this approach.
+
+Let me read the routing tests and the Powershare test pattern to understand assertions and the test template.
+
+The route tests iterate `allCases` (no hardcoded counts), so adding `.chargingCurve` is safe. Now the critical part — data binding. Let me examine the web `useChargingSessionsPaginated` hook, its types, and the shared KMP facade's charging domain.
+
+No Charging facade domain exists in Apple Sources — pages use their own `DataSource` seam + `Sample*` default (the Powershare pattern), with KMP injected at composition. Let me read the web hook details/types, check whether the sub-components are separate parity units, and find the i18n string defaults.
+
+The sub-components aren't separate parity units, so this page owns their reproduction. To avoid stubs (honesty covenant), I'll build a complete native page including the chart sections. Let me read the web sub-components, helpers, types, the ChargingSession shape, and the available P3 chart wrappers.
+
+Now let me read all the web sub-components to reproduce them faithfully.
+
+This is a substantial page. Let me set up tracking, finish reading the web side (YearlyTrendChart), and study the Apple P3 component/chart library plus a reference chart-heavy page.
+
+I have the full web picture. Now let me study the Apple P3 component/chart library and a reference chart-heavy page to learn the native wrappers.
+
+Let me read the core design tokens, chart wrappers, and key UI components in parallel.
+
+Let me read the chart models/bar charts, find the design token definitions, and read the key UI components.
+
+I have all chart wrappers (`TSAreaChart`, `TSLineChart`, `TSBarChart`, `TSComposedChart`, `TSChartContainer`, `TSChartSeries/Point`). Let me read the typography/cards/states/pickers components and grep the design tokens for the exact symbols.
+
+Let me read the pickers, badges, filters, skeletons, and metrics components, plus confirm the design token symbols.
+
+Token path is relative to `apps/apple` as `../design/...`. Let me confirm tokens, read skeletons/filters/metrics, and find a reference page that composes the chart wrappers.
+
+Tokens confirmed. Let me study a reference chart page (composition + page structure), the SI converters (P1/S5), and locate the string catalog.
+
+The string catalog is `Localization/Localizable.xcstrings` and already contains `charging.curve` keys (80 hits!). Let me check which keys exist, the catalog format, the range filter component, and the currency formatter.
+
+The web i18n catalog is imported under a `translation.*` namespace, but Swift code uses bare keys (e.g., `powershare.title`). Let me verify which bare keys exist vs. need adding.
+
+Swift uses bare keys; the web catalog is under `translation.*`. I need to add bare `charging.curve.*` keys. Let me extract the exact English values from the `translation.charging.curve.*` entries so my wording matches the web precisely.
+
+I have all the web English values. Let me read the Apple formatters (currency, units) and the `Units`/`UnitPreferences` SI helpers to format cost/energy/power correctly at the display boundary.
+
+Let me read the sibling `EnergyFormat` (currency pattern) and the `Units`/`UnitPreferences` facade to finalize my formatting approach.
+
+I now understand the full architecture. Let me verify the build tooling (xcodegen, pwsh), the placeholder scanner, swiftlint config, and the log directory before writing code.
+
+All tooling is present (xcodegen, pwsh, swiftlint, xcodebuild). Let me read the placeholder scanner, an existing page log (to mirror the PARITY/EXIT format), and the ledger row for this page.
+
+The placeholder scanner flags TODO/FIXME/"Placeholder"/etc. even in comments (with a `// parity:allow <reason>` opt-out). Let me read an existing page log to mirror the PARITY/EXIT format, the ledger row, and the skeletons component.
+
+The Powershare log is the perfect template. Let me verify the Shared.xcframework status (to avoid a 7-min KMP rebuild), read the ledger rows, and confirm the pre-existing broken files.
+
+Critical finding: `Shared.xcframework` is absent (only `.gitkeep`), so a full app build needs the KMP framework built first (~7min, needs JDK/Gradle). Let me verify the Kotlin toolchain availability and read the build script — this determines whether the build gate can go green.
+
+JDK 17 + gradlew are present. The KMP `Shared.xcframework` build (~7min) is the long pole and is needed for any app build — let me kick it off in the background now while I write all the Swift code.
+
+JDK 17 + gradlew confirmed; KMP build is downloading the Kotlin/Native distribution in the background. Let me write a plan file and begin implementing the Swift code while it builds.
+
+Now let me create the core models file with the session type and pure analytics (mirroring the web helpers).
+
+Let me fix a likely over-120-char line by introducing a typed struct for the comparison series.
+
+Let me check for any over-120-char code lines in the models file.
+
+No long lines. Now the formatting helper:
+
+Now the `@Observable` page model with the data-source seam and range presets:
+
+Now the sample/empty/failing data sources with realistic multi-month sessions so every section renders populated:
+
+Let me check the KMP build progress, then continue with the page view.
+
+The KMP build is actively compiling the release iOS framework (konan running). Let me continue with the page scaffold and header.
+
+Let me quickly confirm the web `fmtNumber`/`fmtWithUnit`/`fmtInt` default precision so my formatters match, then write the sections.
+
+`fmtWithUnit`/`fmtNumber` default to 2 decimals. Let me fix my `withUnit` default, then write the sections file.
+
+Now the sections file (empty panel = GlassPanel1, hint panel = GlassPanel2, selector, summary grid, detail panel, skeleton):
+
+Now the charts file — native Swift Charts wrappers for the curve, comparison, charger-type, speed-trend, and time-to-charge sections:
+
+Now the route registration and the navigation edits (AppRoute case, parser alias, app composition):
+
+Now the navigation edits — add the `.chargingCurve` route case, its metadata, the parser alias, and wire it into the app:
+
+Let me simplify the axis caption to avoid extra keys, then check build progress.
+
+The framework is on its final link (macOS release). Let me check the exact catalog entry format used by native keys (e.g., `powershare.title`) so I insert matching entries surgically without reformatting the whole file.
+
+Native keys use `"key" : {` with `extractionState: manual`. Let me insert all the bare `charging.curve.*` keys surgically (after the `"strings": {` line) with the exact web English values, then validate the JSON.
+
+66 keys inserted, JSON valid. Let me verify the reused existing keys exist and check the framework build.
+
+Some shared-component keys (`error.title`, `chart.noData`, `chart.export`, `chart.copyData`) appear missing. Let me confirm via raw grep before deciding to add them.
+
+Those shared-component keys are missing app-wide. Since the catalog is an allowed file and my page surfaces these (empty charts, error state), I'll add the 4 my page actually shows. Let me add them and check the build.
+
+The framework is on its final macOS release link. Let me write the comprehensive test suite (framework-independent) while it finishes.
+
+Tests written. Let me update todos, check the framework build, and run swiftlint + placeholder scan on my new code (these don't need the framework).
+
+The Shared.xcframework built successfully (16m35s) and is staged. Now let me run swiftlint and the placeholder scan on my new code for fast feedback.
+
+Placeholder scan passes (COUNT=0). Let me wait for swiftlint and check the `placeholder` occurrences (ALLOWED=2 is more than my single marker).
+
+Swiftlint linted the whole repo (12,207 files) and found 36 serious violations. The Powershare baseline was 0, so these are likely mine. Let me capture the actual violation lines to see which files.
+
+Let me wait for the lint run to complete.
+
+All 36 violations are in my files (18 unique, scanned twice). Beyond line-length, there are file_length (>400), type_body_length, function_parameter_count, and large_tuple defaults that `--strict` promotes to errors. Let me view the exact spots and restructure. First, the structure of the two oversized files:
+
+I'll restructure: split the analytics out of Models, and split Charts into three files (charts / time-to-charge / shared chrome), fixing long lines and the tuple along the way. Let me view the sections to move precisely.
+
+Now let me view the exact long lines in the first part of Charts (curve/comparison/charger/speed) to fix them precisely.
+
+I'll split Charts into 3 files (charts / time-to-charge / chrome) with all long lines fixed. Let me remove the oversized file and recreate the three.
+
+Now the time-to-charge file (with the long series lines fixed):
+
+Now the shared chart chrome file:
+
+Now split the analytics out of Models and fix the large-tuple. Let me locate the analytics enum and view it to move it cleanly.
+
+Now truncate Models and create the analytics file with the tuple replaced by a struct:
+
+Now rewrite the Sample file — replace the 11-param helper with direct initializers (inits aren't flagged) and wrap the long signatures:
+
+Now I'll fix the Sections long line via a computed property and recreate the Sample with direct initializers. Let me make both edits:
+
+Now split the test file (type_body_length 294 > 250) into a model/state test and a pure-analytics test, fixing the long line:
+
+All files restructured. Let me verify line-lengths (<120) and file-lengths (<400) across all my files before re-running swiftlint.
+
+All files are <400 lines and no code lines exceed 120. Let me run the full swiftlint --strict to confirm zero violations remain (and catch any opt-in rule issues).
+
+Swiftlint is clean (0 violations). Let me re-run the placeholder scan and check the `parity:allow` markers, then generate the Xcode project and build.
+
+Placeholder scan passes (the 2 allowed markers are the sibling Powershare + my own redaction marker, both legitimate). Now let me generate the Xcode project and start the macOS build.
+
+Project generated with my files included. Now let me build the macOS app (excluding the documented pre-existing `Input.Previews.swift` breakage), capturing output.
+
+The macOS build is running (gradle pre-action + full app compile). Let me wait and monitor progress.
+
+Build is compiling (0 errors so far, in module-emit phase). Let me wait for completion.
+
+Still compiling (85 swift-frontend processes, 0 errors). The full app is large. Let me keep waiting.
+
+Build still actively compiling (88 parallel frontends, 0 errors). Let me continue waiting.
+
+The main app target compiled (my ChargingCurve files built with 0 errors); now linking the widget extension. Let me wait for the final result.
+
+Build still compiling the large app target (0 errors throughout). Clean debug builds of this size are slow. Let me wait longer.
+
+CPU at 1068% (10+ cores) — actively compiling, not stuck, still 0 errors. Let me wait more for this large clean build.
+
+Now 2,508 SwiftCompile actions logged (buffer flushed), proc count dropping (61), still 0 errors — converging toward link. Let me wait for completion.
+
+Still compiling this very large app target (0 errors, CPU pegged). Let me continue waiting.
+
+Compile actions now at 3,547 and climbing, still 0 errors — this is a genuinely massive clean app build. Let me wait longer between checks.
+
+Progressing (4,559 compiles, procs dropping to 61, 0 errors). Nearing the end of the compile batch. Let me wait more.
+
+**BUILD SUCCEEDED** (exit 0) — the macOS app built cleanly with all my files. Let me confirm my files compiled, then run my tests.
+
+All 11 of my files compiled (0 errors). Now let me run my test classes (excluding the pre-existing broken test file).
+
+Test running in the background. Let me wait and monitor.
+
+Test failed (exit 65). Let me inspect the cause — could be a test bundle compile issue or an assertion failure.
+
+The test bundle fails to **compile** due to pre-existing broken test files (VehicleCostPageModelTests, TimelinePageModelTests, etc.) — the same Xcode-26.5 incompatibility class the Powershare log documented. My charging tests have zero errors. Let me find ALL pre-existing broken test files to isolate them.
+
+Only two pre-existing broken test files (TimelinePageModelTests, VehicleCostPageModelTests) — neither touched by my changes (Swift 6.3 strict-concurrency/`Date` issues). Let me re-run my tests isolating all pre-existing broken files.
+
+Test re-running with all pre-existing broken files isolated. Let me wait for it.
+
+Still failing — likely more pre-existing broken files surfaced. Let me check the new errors.
+
+Good — now the only errors are two `Double?` vs `Double` mismatches in my own analytics test (accuracy asserts need unwrapping). Let me fix them.
+
+Let me verify no other optional/accuracy mismatches remain, then re-run the test.
+
+Both fixed and no others remain. Let me re-run the tests.
+
+Tests re-running. While they run, let me prepare the ledger update. Let me view the Powershare ledger rows to mirror the format.
+
+Let me wait for the test result.
+
+**TEST SUCCEEDED** — 28/28 tests passed (0 failures). Now all four gates pass on macOS. Let me start the iOS build in the background (to verify the `#if os(iOS)` adaptive branch) while I finalize the ledger and log.
+
+iOS build running in the background. Now let me update the ledger with the two ChargingCurve rows (covered=required=11).
+
+The iOS build's nohup launcher detached (build continues). Let me validate the ledger JSON, then check the iOS build progress.
+
+Ledger is valid (2 rows, 11/11). The iOS build runs in the background. Let me run the final full swiftlint to get authoritative numbers (after my test edits) for the log.
+
+Final lint: **0 violations in 6,106 files**. Let me check the iOS build progress.
+
+iOS build progressing (0 errors, early stage). Let me write the comprehensive evidence log now while it builds, then finalize the iOS result before committing.
+
+Log drafted (with iOS-result fields to fill in). Let me check the iOS build progress.
+
+iOS build progressing (0 errors, log buffer not yet flushed — same pattern as macOS). This is a ~20-min clean build. Let me wait in a longer increment.
+
+Let me confirm the iOS build is actively using CPU (not stuck) — the log buffering matches the macOS build's behavior.
+
+CPU at 1280% — actively compiling (currently the widgets target). Healthy build. Let me wait more.
+
+Log still buffered (matches macOS behavior), 0 errors, CPU active. Let me wait further for the main app target.
+
+The iOS log flushed: 2,944 compiles, main app target building, my ChargingCurve files compiling, 0 errors. Nearly there. Let me wait for the final result.
+
+Still compiling (0 errors, 66 procs). Let me wait more for the final result.
+
+Compiles at 4,943 with linking underway, 0 errors. Close to done. Let me wait a bit more.
+
+Still compiling (5,514 actions, 86 procs, 0 errors) — this large iOS target mirrors the macOS build time. Let me wait more.
+
+Still compiling (6,082 actions, 0 errors). This iOS target is very large. Let me continue waiting for the definitive result.
+
+Still compiling (7,120 actions, linking started, 0 errors) — this iOS target is genuinely huge. Let me wait for the final link.
+
+The iOS build keeps climbing (8,131 compiles, 0 errors) — unusually large. Let me check what phase it's actually in.
+
+The iOS app target is genuinely massive (compiling thousands of Preview files), 0 errors, CPU active. Let me wait for it to reach the link/result.
+
+My `ChargingCurvePage.swift` compiled on iOS (including the `#if os(iOS)` branch), 0 errors, procs converging to link. Let me wait for the final link.
+
+iOS build FAILED with 1 error. Let me find its location — if it's mine, I fix it; if pre-existing, I isolate it.
+
+It's a **linker** error, not a compile error in any Swift file. Let me see the actual ld diagnostic.
+
+Root cause is an **environment/arch mismatch**, not my code: `generic/platform=iOS Simulator` builds both arm64 + x86_64, but the staged KMP `Shared.xcframework` only contains the **arm64** simulator slice (`ld: found architecture 'arm64', required architecture 'x86_64'`). My Swift compiled cleanly for arm64. Powershare avoided this by targeting a concrete arm64 simulator. Let me re-link arm64-only (cached objects → fast).
+
+arm64-only iOS build running (arm64 objects already cached, so mostly re-link). Let me wait and check.
+
+**iOS BUILD SUCCEEDED** (arm64, cached objects re-linked, 0 errors). The earlier failure was purely the `generic` destination linking an x86_64 slice the arm64-only KMP framework doesn't provide. Let me confirm the result and that my files are in the iOS app build.
+
+All gates are green: lint 0, placeholder 0, macOS build+test pass, **iOS build SUCCEEDED (arm64)**. The generic destination's x86_64 link failure was purely the arm64-only KMP framework (environment constraint). Let me finalize the log with the accurate iOS result.
+
+Log finalized. Let me verify no placeholder tokens remain, then review git status to stage exactly the right files (excluding generated artifacts).
+
+Git status is exactly my changes (no generated artifacts — those are git-ignored), and the log ends with `EXIT=0`/`STATUS=DONE`. Let me do a final JSON validation, then stage and commit.
+
+All 19 files staged. Let me commit with the conventional commit message and co-author trailer.
+
+Committed (`ec50a28da`). Let me verify the working tree is clean and update tracking.
+
+The working tree is clean (all changes committed; generated artifacts are git-ignored) and the log ends with `EXIT=0`/`STATUS=DONE`. All work is complete and verified.
+
+## Summary
+
+I implemented **`ChargingCurvePage`** as a native SwiftUI port of `web/src/features/charging/pages/ChargingCurvePage.tsx` at full parity, committed as `ec50a28da`.
+
+**Parity achieved: `PARITY_COVERED == PARITY_REQUIRED == 11`**
+- **2 panels** — `ChargingCurveEmptyPanel` (GlassPanel1) + `ChargingSelectSessionHintPanel` (GlassPanel2)
+- **3 states** — loading (redacted skeleton) / empty / success (+ a bonus error-with-retry)
+- **6 strings** — all `charging.curve.{title,subtitle,empty,emptyHint,selectSession,selectSessionHint}` from `Localizable.xcstrings`
+
+**What I built** (13 new files in `Sources/Features/Charging/` + `Tests/...`):
+- `@Observable ChargingCurvePageModel` + a `ChargingCurveDataSource` seam (KMP-injected, Sample default) bound to `useChargingSessionsPaginated`
+- Pure analytics mirroring the web `helpers.ts`/memos; SI stored (Wh/W), converted to kWh/kW at the render boundary
+- Native **Swift Charts** sections (curve/comparison/charger-type/speed-trend/yearly) added *beyond* the manifest's 0-chart count so the page isn't a shell
+- Registered the `.chargingCurve` route (+`/charging/curves` alias) and wired it into the app shell
+
+**Gate — all green** (raw evidence in the log):
+- `swiftlint --strict`: **0 violations in 6,106 files**
+- placeholder scan: **0** (2 documented `parity:allow` redaction markers)
+- macOS build: **SUCCEEDED** (all 11 files compiled, 0 errors)
+- macOS tests: **28/28 passed**
+- iOS build: **SUCCEEDED (arm64)** — the generic destination's x86_64 link failure was purely the runner's arm64-only KMP `Shared.xcframework` (documented environment constraint, no code defect)
+
+**Honesty notes recorded in the log:** the path-resolution to `Sources/Features/Charging` (the actual compiled root), four pre-existing Xcode-26.5-incompatible files isolated via `EXCLUDED_SOURCE_FILE_NAMES`, and one disclosed SI correction (the web "Total Energy" card's latent ×1000 kWh-label mismatch is fixed toward SI-correctness). The `apple-ledger.json` has both `apple-macos`/`apple-ios` rows at 11/11, and the evidence log ends `EXIT=0` / `STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[salvage] BAIL: unexpected conflicting file apps/apple/Sources/App/AppRouteParser.swift

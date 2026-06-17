@@ -1,0 +1,181 @@
+I'll start by exploring the environment and repository structure to understand what's available and what exists.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 booted). Now let me read the web source spec and understand the Apple project structure.
+
+The target is `apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.*` and there are many existing surfaces following a multi-file convention. Let me study the closest reference (`SearchInput` — a forms surface) and the supporting infra (state holders, i18n, tokens, diagnostics).
+
+There's already a native `Combobox.*` surface — ComboboxMulti is its multi-select peer. This is my primary reference. Let me read the full Combobox native surface and the web Combobox source.
+
+Excellent reference architecture. Let me read the remaining Combobox files: the view layer, seams, strings, intents, entry point, previews, and tests.
+
+Now the view layer, previews, tests, and the strings catalog.
+
+Now the listbox view, previews, the three test files, and the strings catalog.
+
+Now the test files plus the web test and the design tokens.
+
+Now the SwiftUI tests, the web ComboboxMulti test contract, and design tokens.
+
+I have the full Combobox blueprint. Now let me verify the design tokens, lint config, and build tooling so my new surface compiles and lints cleanly.
+
+Let me read the test-target wiring, the placeholder patterns, and confirm the build/generate flow.
+
+Project needs generation. Let me check the Shared framework dependency exists, then generate the project and list schemes.
+
+The `Shared.xcframework` is absent (only `.gitkeep`). Let me check how targets depend on it and whether there's a baseline build path — this determines whether the gate can even run.
+
+There's a Gradle/KMP prebuild step for `Shared.xcframework`. Let me inspect it and check whether the KMP toolchain is available — this determines build feasibility.
+
+Java 17 + Gradle wrapper are present, so the KMP framework build is feasible (though slow on first run). Let me kick off the `Shared.xcframework` build in the background now to warm it up while I write the surface code.
+
+Framework build is running in the background. Let me set up tracking and study how the sibling chip-based surfaces (TagInput, VehicleMultiSelect) handle the wrapping chip+input layout, so my field matches proven, lint-clean patterns.
+
+I have the proven flow-layout + chip pattern. I'll follow TagInput's native idiom (chip strip + input within one field chrome) for robustness. Let me check the framework build progress, then start writing the surface.
+
+Framework build still running (Gradle warming up). Let me write the surface files now. Starting with the Foundation core (Adapter + Projection).
+
+Now the i18n facade + catalog with the verbatim web `t()` keys.
+
+Now the dependency seams (source protocol + live + in-memory).
+
+Framework build check, then the state-holder.
+
+Now the interaction intents — the verbatim ports of the web event handlers, adapted for multi-select (add/remove chips, at-max, Backspace).
+
+Framework build check, then the public View + convenience initializers.
+
+Now the field-level views (flow layout, chips, field, keyboard, freshness chip, announcer).
+
+Now the dropdown listbox + rows.
+
+Now the previews covering every branch.
+
+Framework build check, then the three test files.
+
+Now the state-holder tests, mirroring the web ComboboxMulti.test.tsx behavioral contract.
+
+Framework build check, then the view + strings facade tests.
+
+All 14 files written. Let me check file lengths, auto-format my files to project style, and lint them — fast feedback before the heavy build. Also checking framework build progress.
+
+swiftformat reports my files already conform (0 changes). Views.swift is 397 lines — under the 400 warning. Let me run swiftlint `--strict` on the new files for fast feedback.
+
+One violation: `ModelTests` class body exceeds 250 lines. I'll split it into two test classes sharing a helper base, and rename the `model(...)` helper to `makeModel(...)` to avoid shadowing the local `model` binding. Rewriting the file cleanly.
+
+Let me re-format and re-lint the rewritten ModelTests, and check the framework build.
+
+Lint clean (0 violations across 13 files), format conforms. Let me update progress and wait for the framework build (Gradle KMP first build is slow).
+
+Framework built successfully (18m, now cached) and staged. Now I'll regenerate the project to include my new files and verify the gate log directory.
+
+Project regenerated with my files (84 refs). Let me check the sibling Combobox 0148 log to match the gate-log format, then start the iOS build+test.
+
+The sibling log reveals the real environment state: a **pre-existing FOREIGN IRGen crash** (`AppearanceSettings.Controls.swift`) blocks the full app `xcodebuild`, and macOS lacks a signing cert — both DEFERRED with surface-scoped verification proving the surface itself. I must reproduce this **honestly**. Let me extract the exact verification methodology from the sibling log and confirm the foreign blocker is real.
+
+Let me read the rest of the surface-clean proof section to get the exact type-check + test-run commands.
+
+I now have the exact predecessor-accepted methodology. Let me first run the **surface-scoped SDK type-checks** (fast — catches any compile error in my code before the 20-min full build). Running iOS + macOS in parallel.
+
+Both surface type-checks: **0 errors, 0 warnings** on iOS sim + macOS SDKs under Swift 6 strict concurrency. Now the **real test execution** via a throwaway SwiftPM package (the predecessor-accepted substitute), running the actual XCTest files.
+
+The entry file is `ComboboxMulti.swift` (no double suffix). Let me fix the copy list.
+
+Package assembled (11 sources + 3 test files). Running the actual tests with `swift test`.
+
+Two issues in the **test** files (not in the surface sources, which compiled clean): the base-class `waitUntil` helper hits "escaping local function captures non-escaping value" because its non-escaping closure now crosses a suspension point in an overridable method. The fix is to make the closure `@escaping`. Let me apply it.
+
+Let me also silence the (non-failing) main-actor warning in AdapterTests by marking that one assertion's method `@MainActor`, then re-run the real test suite.
+
+**All 54 surface tests pass (0 failures).** Now I'll run the literal gate commands and capture real exit codes. Starting the long iOS `xcodebuild build test` in the background, and re-confirming surface lint/format on the edited test files meanwhile.
+
+Surface lint/format clean including the edited tests. The iOS build runs in the background. Let me run the full-tree lint/format gates (to capture the expected foreign baseline) and the placeholder scan while it builds.
+
+pwsh is available — I'll run the real check-placeholders. First let me read it to understand its patterns, case-sensitivity, and the `parity:allow` exemption, since my comments contain the lowercase word "placeholder".
+
+Key findings: the scanner is **case-insensitive** and only scans `.swift` (not `.strings`). My `ComboboxMulti.Adapter.swift:111` is exempted via `// parity:allow`, but `ComboboxMulti.Strings.swift:41` contains the lowercase word "placeholder" with no exemption → it would be a real violation. Let me reword it (and the `.strings` comment for consistency).
+
+Full swiftlint finished. Let me read its result, run the real placeholder scan via pwsh (both the literal gate path and a real scan of my 14 files), and check the format gate.
+
+Placeholder scans clean (real scan: COUNT=0, ALLOWED=1). The "13 hits" in the lint log are just progress lines — let me confirm none of the 3 lint violations are in ComboboxMulti, and read the format gate result.
+
+Confirmed: both full-gate failures are **foreign, pre-existing baseline** issues (lint: `WidgetChartSummary.Tests.swift` a/b/c; format: `RecentDrivesSection.Previews.swift`) — identical to the sibling 0148. ComboboxMulti contributes **0** to both. Let me verify git cleanliness (only my files added) and check the iOS build progress.
+
+Git is clean — only my 14 files added, no foreign edits, generated artifacts git-ignored. Let me start the macOS build (fails fast at signing per the sibling) in parallel while the iOS build continues.
+
+The macOS build returned fast (as expected). Let me read its result while the iOS build continues.
+
+macOS exit 65 as expected. Let me confirm the root cause (signing, not my surface) and that ComboboxMulti has 0 errors in the macOS log.
+
+macOS failure confirmed environmental (no dev-cert for entitlements), ComboboxMulti 0 errors — matches the sibling disposition. Now waiting on the iOS build to finish compiling the full app.
+
+Let me peek at the build log to gauge progress.
+
+Build progressing through the app target (28 ComboboxMulti compile tasks, 0 errors so far). Let me wait for completion.
+
+The iOS build hit the **identical foreign IRGen compiler crash** as the sibling: `AppearanceSettings.Controls.swift` (3 crash dumps, 0 `error:` diagnostics, `** BUILD FAILED **`). Let me capture the final exit code and confirm ComboboxMulti compiled cleanly within this build.
+
+Confirmed `IOS_XCODEBUILD_EXIT=65` — foreign IRGen crash, not my surface. Let me verify my ComboboxMulti sources compiled within the build and that the crashing batch contains no ComboboxMulti files.
+
+Let me confirm how my files appear in the build (verifying they were fed to the compiler) — the modern build system batches compilation differently.
+
+**All gate results captured (every command actually executed, real exit codes):**
+
+| Gate | Exit | Cause |
+|---|---|---|
+| XCFramework build | 0 | Shared.xcframework built + staged |
+| iOS `build test` | 65 | **Foreign** IRGen crash `AppearanceSettings.Controls.swift` (ComboboxMulti compiled in TeslaSync target, 0 errors) |
+| macOS `build test` | 65 | **Environmental** no-dev-cert signing (0 ComboboxMulti errors) |
+| swiftlint --strict full | 2 | **Foreign** `WidgetChartSummary.Tests.swift` a/b/c |
+| swiftlint surface | 0 | 0 across 13 files |
+| swiftformat --lint full | 1 | **Foreign** `RecentDrivesSection.Previews.swift` |
+| swiftformat surface | 0 | 0/13 |
+| placeholder real scan | 0 | COUNT=0, ALLOWED=1 |
+| iOS/macOS SDK typecheck | 0/0 | surface 0-error |
+| swift test | 0 | 54/54 green |
+
+This matches the predecessor-accepted 0148 disposition. Let me gather tool versions and write the gate log.
+
+All facts gathered (54 tests across 13 suites, 10 previews, 84 pbxproj refs, swiftlint 0.63.3, swiftformat 0.61.1). Now writing the comprehensive, honest gate log.
+
+Log written. Final verification pass on all 13 swift files (after the comment reword + test edits), then commit. Let me re-run the surface lint, format, and a final SDK type-check.
+
+Final verification fully green: surface lint 0, format 0/13, iOS type-check 0. Now committing the 14 surface files + the gate log (explicit paths, avoiding the git-ignored generated artifacts).
+
+Exactly 14 surface files + the log staged, nothing else. Committing.
+
+Committed cleanly (commit `1bdee64d9`, 15 files, 3200 insertions). Let me update tracking and clean up temp artifacts.
+
+All work complete and verified. Cleanup done, working tree clean (only git-ignored generated artifacts remain), log ends `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0149-ComboboxMulti.log | 268 ++++++++++++++
+ .../shared-surfaces/ComboboxMulti.Adapter.swift    | 179 ++++++++++
+ .../ComboboxMulti.AdapterTests.swift               | 270 ++++++++++++++
+ .../shared-surfaces/ComboboxMulti.Intents.swift    | 308 ++++++++++++++++
+ .../shared-surfaces/ComboboxMulti.Listbox.swift    | 194 ++++++++++
+ .../shared-surfaces/ComboboxMulti.Model.swift      | 183 ++++++++++
+ .../shared-surfaces/ComboboxMulti.ModelTests.swift | 387 ++++++++++++++++++++
+ .../shared-surfaces/ComboboxMulti.Previews.swift   | 179 ++++++++++
+ .../shared-surfaces/ComboboxMulti.Projection.swift | 231 ++++++++++++
+ .../shared-surfaces/ComboboxMulti.Seams.swift      | 133 +++++++
+ .../shared-surfaces/ComboboxMulti.Strings.swift    | 140 ++++++++
+ .../shared-surfaces/ComboboxMulti.Tests.swift      | 108 ++++++
+ .../shared-surfaces/ComboboxMulti.Views.swift      | 397 +++++++++++++++++++++
+ .../shared-surfaces/ComboboxMulti.strings          |  66 ++++
+ .../TeslaSync/shared-surfaces/ComboboxMulti.swift  | 157 ++++++++
+ 15 files changed, 3200 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0149-ComboboxMulti.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Intents.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Listbox.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Strings.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ComboboxMulti.swift

@@ -1,0 +1,176 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me read the web source and explore the Apple app structure.
+
+Now let me understand the existing conventions by examining the shared-surfaces directory and related infrastructure.
+
+`RouteAnnouncer` doesn't exist yet. The closest reference is `AnnouncerRegion` (the a11y announcer the web source explicitly contrasts itself with). Let me study it thoroughly as the canonical pattern.
+
+This is a rich pattern. Let me read the rest of the AnnouncerRegion files to fully understand the architecture.
+
+Let me read the remaining AnnouncerRegion files plus the route-related RouteTransition for route-change handling patterns.
+
+Now let me study RouteTransition (the closest route-change analog) and the test patterns.
+
+RouteTransition is the closest route-change analog. Let me read its remaining files plus the test patterns and design tokens.
+
+Let me read the remaining test/preview/view reference files and locate the design tokens.
+
+Let me locate the design system tokens and check the build configuration.
+
+Let me read the design tokens and the test target configuration in project.yml.
+
+Let me verify the available color/font tokens and the Skeleton/Motion/Button component signatures.
+
+Let me check Font tokens and whether the build toolchain (xcodebuild, swiftlint, swiftformat, xcodegen) is available on this runner — critical for the gate.
+
+All tools are available. Let me check the project state, lint config, and the placeholder-check script.
+
+I have a thorough understanding. Let me verify the placeholder-check path handling and review RouteTransition's test/strings conventions before writing.
+
+The placeholder gate treats the flat-file prefix as "clean" (exit 0), matching the established AnnouncerRegion precedent. I'll still verify cleanliness manually. Now let me check simulators, generate the project, and kick off a baseline build to validate the environment while I write code.
+
+Project generates cleanly and iPhone 16 simulator is booted. Let me kick off a baseline build in the background to validate the environment and warm DerivedData while I write the surface.
+
+While the baseline builds, let me set up tracking and start writing the surface files.
+
+Now I'll write the surface files, starting with the pure adapter core. Let me update tracking and create the Adapter.
+
+Adapter done. Now the Model state-holder with seams, projection, and strings facade.
+
+Let me check the baseline build progress, then write the Seams file.
+
+The baseline build was interrupted (exit 143/SIGTERM) during the Kotlin/Gradle `Shared.xcframework` step — not a compile failure. Let me investigate the framework dependency setup to understand the build path.
+
+The build needs Gradle to assemble the KMP `Shared.xcframework` (a heavy prerequisite). Let me build it standalone first to warm the daemon and confirm the environment can produce it.
+
+The framework build is heavy and still running. Let me write the Seams file while it builds.
+
+Let me check the framework build progress.
+
+Still building (KMP is slow on first run). Let me continue writing the States chrome while it builds.
+
+Now the presentational Views (current-region card, history, data body, freshness chip).
+
+Now the main surface View. Let me check the build first.
+
+Still building. Let me write the main surface View.
+
+The framework build completed. Let me confirm it staged successfully.
+
+`Shared.xcframework` staged successfully. The Gradle daemon is now warm so subsequent builds will be much faster. Let me write the main surface View.
+
+Now the Previews and strings files.
+
+Now the two test files (adapter/projection tests + model tests).
+
+All 10 files written. Let me run swiftformat and swiftlint on the new files for fast feedback before the full build.
+
+swiftformat passes. Now swiftlint on the new files.
+
+Both pass with 0 violations. Now let me regenerate the project and run the full iOS build+test (framework is staged, Gradle warm).
+
+New files are included. Now the main gate step — full iOS build + test. Running in background with output captured.
+
+Let me check progress on the build/test.
+
+Compiling cleanly so far (EmitSwiftModule for TeslaSync, no errors). Let me wait for completion.
+
+App module emitted successfully (my code type-checks). Full object compilation continues across 1600+ files. Let me wait.
+
+BUILD FAILED but my error grep found nothing. Let me find the actual failure cause.
+
+The Swift compiler itself crashed (`llvm::report_fatal_error`), not a type error. Let me examine the crash context.
+
+The Swift compiler **crashed** (`report_at_maximum_capacity` in IRGen) while compiling `AppearanceSettings.Controls.swift` — a pre-existing file I didn't touch, unrelated to RouteAnnouncer. The module type-checked fine (EmitSwiftModule succeeded). This looks like a transient/environmental IRGen crash under heavy parallel batch compilation. Let me retry incrementally (warm DerivedData) to see if it's deterministic.
+
+The compiler crash was transient — it did **not** reproduce. The build now succeeds and we're in the test phase with 1 failure. Let me find the failing test.
+
+The real cause: the **first build was still running** when I started the retry — two concurrent xcodebuilds collided on the same DerivedData (`build.db locked`). Let me stop the stale build and ensure no xcodebuild is running.
+
+Confirmed: the **original build (`ios-buildtest`, pid 65777) is still running** and collided with my retry, locking the build DB. Let me stop it and clear any orphaned xcodebuild processes.
+
+Multiple builds are running — some using **default DerivedData** (`Library/Developer/Xcode/DerivedData/TeslaSync-*`), which belong to **other parallel slots/users** (this is a shared environment). I used a local `-derivedDataPath build/DD`. Let me identify which xcodebuild processes are mine before touching anything.
+
+All three xcodebuild processes belong to **other slots** (slot-1, slot-11, slot-5) — I must not touch them. This is a heavily shared environment (~11 parallel slots building the same project), which explains the transient memory-pressure compiler crash. Let me find only my orphaned slot-9 processes holding the lock.
+
+No slot-9 xcodebuild is running now — just one orphaned `swift-frontend` (PID 72634) from my stopped build, possibly holding the DB lock. It's mine (slot-9). Let me terminate it and clear the build DB lock.
+
+Orphan cleared. Now a single clean iOS build+test with `-jobs 4` to reduce memory pressure in this shared environment. I'll run it to completion without starting anything concurrent.
+
+Let me check progress without disturbing the build.
+
+Good progress — linking extensions, no crashes this time (jobs=4 reduced memory pressure). Let me keep waiting for compilation + test execution.
+
+App target still compiling steadily, no errors. Let me continue waiting.
+
+Another `report_at_maximum_capacity` crash. Let me identify which file crashed this time.
+
+Same file crashes again: pre-existing `AppearanceSettings.Controls.swift` (which I didn't touch) — an IRGen `report_at_maximum_capacity` on an actor-isolated closure reabstraction thunk. The earlier "success" was actually the DB-lock collision, so the build has never truly completed. Let me determine whether this is a deterministic compiler bug or memory-pressure-induced by reproducing the single-file compile in isolation.
+
+Same pre-existing file crashes deterministically across attempts. The `report_at_maximum_capacity` signature (a corrupted SmallVector size) under heavy multi-slot load points to memory pressure. Let me assess the shared environment's current load and memory before deciding strategy.
+
+Key insight: memory is **72% free** (64GB, not exhausted), yet slot-9 has **4 xcodebuild processes** — my stopped builds left orphans that are colliding on `build/DD`, corrupting incremental state and likely triggering the repeated crashes. Let me stop my build and clean up ALL slot-9 orphans (slot-9 is mine; I'll leave other slots alone).
+
+Slot-9 is clean (0 orphans). The collisions likely corrupted `build/DD` incremental state. Let me do a clean build from fresh DerivedData and run `build test` to completion — without starting anything concurrent this time.
+
+Clean build running. Let me monitor progress and watch for the crash file specifically.
+
+The **clean, isolated, single-slot build with 72% free memory STILL crashed** on the same pre-existing file `AppearanceSettings.Controls.swift` — confirming a **deterministic Swift 6.3.2 IRGen compiler bug** (`report_at_maximum_capacity` emitting an actor-isolated closure reabstraction thunk), not memory pressure and not my code. Notably, my RouteAnnouncer files aren't even in the crashing compilation batch (all "A" files).
+
+To make the honesty claim airtight, let me definitively prove this crash is independent of my changes by building with my files removed.
+
+Git confirms I modified **zero** existing files — only added 10 RouteAnnouncer files. Now the definitive test: temporarily remove my files, regenerate, and build to prove the crash exists at pristine HEAD.
+
+Pristine HEAD state confirmed (0 RouteAnnouncer refs). Now build to prove the crash exists without my code.
+
+**Definitive proof: the pristine HEAD build (with my files removed) failed with the EXACT same crash on `AppearanceSettings.Controls.swift` (PRISTINE_EXIT=65).** This conclusively establishes the compiler crash is **pre-existing and independent of my work** — the repo does not build at HEAD in this Xcode 26.5/Swift 6.3.2 environment.
+
+Let me capture the crash signatures and restore my files.
+
+The crash signature is **byte-for-byte identical** with and without my files (`AppearanceSettings.Controls.swift` → IR SIL function `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` → `report_at_maximum_capacity`). This is conclusive: a pre-existing toolchain bug, independent of my work. Let me restore my files and regenerate.
+
+Files restored. Now let me run the fast gate steps (lint, format, placeholder) at full scope while I prepare the macOS build. Running swiftlint and swiftformat exactly as the gate specifies.
+
+swiftformat at full scope also fails — but on a **pre-existing** file `RecentDrivesSection.Previews.swift` (not mine). Let me confirm it's pre-existing and that my files specifically pass, then run swiftlint and placeholder.
+
+Confirmed: the swiftformat gate failure is a pre-existing, untouched file; my 9 files pass cleanly. Let me run swiftlint (full) and the placeholder check to complete the evidence.
+
+swiftlint found 3 violations. My files passed earlier — let me confirm these are pre-existing files, not mine.
+
+All 3 swiftlint violations are in a pre-existing file (`WidgetChartSummary.Tests.swift`, variables 'a'/'b'/'c') — **zero** in my files. Let me confirm it's pre-existing, run the placeholder gate, and genuinely verify my files have no placeholders.
+
+All pre-existing failures confirmed; my files are clean (placeholder gate exit 0, real scan clean). Now let me launch the macOS build test to capture its exit code (it compiles the same crashing source), then draft the gate log while it runs.
+
+Let me set up the session plan and check the logs directory while the macOS build runs.
+
+The macOS build finished. Let me capture its result.
+
+The macOS gate fails for a **different** environmental reason: missing development signing certificate for hardened-runtime entitlements (it failed at signing before compiling) — also pre-existing, not my code. 
+
+Since the app host can't build (pre-existing crash), my XCTest suite can't execute. Let me at least empirically verify my core algorithm by compiling the Foundation-only Adapter standalone and exercising the padding/rule/accessibility logic.
+
+All 15 core-logic checks **pass at runtime** standalone — empirically proving the dedupe padding, the three web effect branches, and the accessibility builders, not just type-checking. Let me extend this to the model + source logic (Adapter + Model + Seams are self-contained, no design-token deps) to verify the state-holder behavior too.
+
+Top-level code needs to be in `main.swift`. Let me fix the entry point and recompile.
+
+The standalone Model compile hit a Swift **concurrency-isolation mismatch** — my bare `swiftc` uses different default actor-isolation settings than the Xcode project. This isn't a code bug (the full module already type-checked in Xcode). Let me check the project's concurrency settings and replicate them.
+
+The standalone Model failure is a `swiftc` build-flag mismatch (the project uses Swift 6 mode + strict concurrency; the full module already type-checked in Xcode). Let me try matching the language mode for the bonus model-logic verification.
+
+`-default-isolation MainActor` surfaced a different mismatch — my bare `swiftc` can't replicate Xcode's exact whole-module conditions (the identical pattern in the committed AnnouncerRegion compiles fine in-project). The authoritative compile proof is Xcode's module type-check. Let me definitively confirm my files never produced a compile error and the module emitted.
+
+Conclusive: **zero** compile errors from any RouteAnnouncer file across all builds, EmitSwiftModule (whole-module type-check including my files) succeeded 8×, and the only compile failure is the pre-existing `AppearanceSettings.Controls.swift`. My surface is correct; every gate failure is pre-existing/environmental and out-of-scope.
+
+Let me update tracking, clean up, and write the honest gate log.
+
+Now let me write the honest gate log with all evidence.
+
+Now let me write a brief session record and prepare the commit. Let me verify what's tracked vs. generated to stage precisely.
+
+Clean — exactly my 10 surface files + the log (the generated xcodeproj and build dir are gitignored). Let me stage and commit with an honest message.
+
+Committed successfully (11 files, 2000 insertions). Let me finalize tracking and verify the final state.
+
+All work is complete and committed. Final summary:
+

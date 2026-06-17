@@ -1,0 +1,193 @@
+I'll start by exploring the repository structure and checking the runtime capabilities, since this task requires Apple-specific tooling (SwiftUI, Xcode).
+
+Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the `apps/apple` structure and the web source.
+
+Let me read the web source and related files, plus explore the Apple Sources structure.
+
+Now I have the web source fully understood. Let me explore the Apple app structure deeply — especially shared-surfaces, the state holders, tokens, i18n facade, and existing surface patterns.
+
+The shared-surfaces directory already exists with many files. Let me understand the test targets and find existing surface patterns plus the P1 infrastructure (i18n, tokens, state holders, diagnostics).
+
+There's a sibling `BreadcrumbOverridesContext` surface but no `Breadcrumbs` yet. Let me study the sibling surface as the closest reference and locate the shared P1 infrastructure (i18n, tokens, diagnostics).
+
+Excellent reference. Let me read the remaining sibling files and locate the shared token/i18n/telemetry infrastructure.
+
+Let me read the Adapter, Seams, States, Previews, and Tests of the sibling to complete my understanding of the file conventions.
+
+The sibling has no Seams file. Let me read its Previews, Tests, and AdapterTests, and locate the shared design tokens (`Color.TS`, `Font.TS`, `TSSpacing`).
+
+Now let me find the shared design tokens and lint/format configs to ensure compliance.
+
+Let me read the design token definitions and lint configs.
+
+Let me locate the exact token API surface (Color.TS, Font.TS, TSSpacing members) in the generated design tokens.
+
+Now I have the full token API. Let me read the sibling's Previews file, check the placeholder-check script, and verify xcodegen availability.
+
+Everything needed is available (xcodegen 2.45.4, pwsh, swiftlint, swiftformat). Let me check the swiftformat config and placeholder patterns before writing code.
+
+Let me verify the placeholder-matching logic (case sensitivity, regex vs literal) so my comments don't trip it.
+
+I have everything I need. Let me check for symbol collisions across the Apple target before writing (the whole app compiles together).
+
+No collisions. Let me validate my style assumptions by linting the existing sibling files (establishes baseline + confirms config behavior).
+
+Baseline confirmed: sibling files pass both `swiftformat --lint` and `swiftlint --strict`. My style assumptions hold. Let me set up tracking and write the surface.
+
+Now I'll write the surface. Starting with the Foundation-only Adapter and the Model (state holder + i18n + telemetry).
+
+Now the main renderer view.
+
+Now the DEBUG inspector/sample views, previews, and the strings catalog.
+
+Now the two test files. Updating tracking and writing them.
+
+All 8 files written. Let me run the fast local checks first (lint, format, placeholders) before the heavy Xcode build.
+
+swiftlint passes. swiftformat wants property bodies wrapped and `if`-expression assignment — these are auto-fixable. Let me run swiftformat in write mode (the ecosystem tool) on my files, then re-verify.
+
+Let me re-verify both linters pass and inspect the auto-formatted `if`-expression in the Adapter.
+
+Both pass. Let me confirm the `if`-expression rewrite is correct.
+
+Both linters clean. Let me check how the placeholder script resolves `-Path` (the gate passes a path prefix that isn't a real dir), then run it.
+
+Important: the script treats a non-existent `-Path` as a vacuous clean pass (lines 132-135). The gate's literal path `.../Breadcrumbs` isn't a real file, so I'll scan my actual files honestly via a temp dir (real scan, scoped to my surface).
+
+PLACEHOLDER_COUNT=0 on my real files. Now let me generate the Xcode project and do a fast standalone type-check of my ship files before the heavy full build.
+
+Ship files type-check clean. Let me verify the `#if DEBUG` blocks (Views, Previews) compile with the DEBUG flag too.
+
+Both configs type-check clean. Now generating the Xcode project, then I'll attempt the full build+test gate.
+
+Project generated. Let me verify schemes and available simulators before building.
+
+Schemes and the iPhone 16 simulator are present. The full app is large, so I'll run the iOS `build test` gate in the background and monitor it.
+
+Build launched. While it runs, let me review the final formatted main view to confirm formatting didn't alter logic.
+
+The launcher returned. Let me check whether the backgrounded xcodebuild is actually still progressing.
+
+Good — my xcodebuild (pid 63501) is genuinely progressing: it's compiling the KMP `Shared.xcframework` via Gradle first. This is a large build. Let me wait and monitor.
+
+The log shows `IOS_EXIT=65` (build failure) but appeared mid-Gradle-output, and there's a competing non-mine xcodebuild (pid 60420, `-jobs 4`) touching the same KMP Gradle build dir. Let me find the actual error.
+
+This is a shared environment: multiple other agents/slots are running identical gate commands, clobbering the shared `/tmp/ios-gate.log` and possibly the shared `/tmp/dd-ios` derived-data path. That `IOS_EXIT=65` came from a competitor's truncated run. I must isolate my build with slot-unique paths. Let me stop my run and relaunch cleanly.
+
+Relaunched with isolated paths (detached). The KMP framework is now Gradle-cached so this run skips that cost. Let me wait and monitor.
+
+Still running — Gradle phase now mostly cached, moving toward the Swift app compile. Let me continue waiting.
+
+The KMP `Shared.xcframework` assembly (debug+release native links for all platform slices) is dominating, worsened by cross-slot contention. It's genuinely progressing. Let me keep waiting.
+
+Swift compile started (1239 lines), but there's a `** BUILD FAILED **`. I need the actual compile errors — and whether they're in my files or pre-existing. Let me extract them.
+
+`BUILD FAILED` but with **zero `error:` diagnostics** — and the failing batches are unrelated files (`AnomalyInlineRow`, `ApiPlaygroundPage`, `AppearanceSettings`…), not mine. That signature (failure with no source error) means the compiler was killed mid-compile, likely OOM from concurrent cross-slot full-app builds. Let me confirm the crash/kill signature and rule out my code.
+
+Let me inspect the 8 `Breadcrumbs` mentions (to confirm they're only batch groupings, not errors) and gauge current contention.
+
+Confirmed: my `Breadcrumbs.*` files appear only in batch *Compiling* groupings, **never in the failed-command lists**, and there are **zero `error:` diagnostics** anywhere. The failure is a compiler termination on unrelated files while **7 concurrent full-app builds** (other slots) compete for memory. My surface is verified clean in isolation.
+
+The failure is transient/environmental. The derived data is cached, so an incremental retry only recompiles the killed batch. Let me retry the build phase (isolated, incremental).
+
+Incremental build launched (jobs=2 to lower memory footprint under contention). Let me wait and check.
+
+The diagnostic is now explicit: **"build database is locked — two concurrent builds in the same filesystem location."** My earlier `ios-gate2` (`build test`) run was still holding `/tmp/dd-ios-slot49` when I launched the second build on the same path. I need exactly one build on a clean path. Let me find and clean up all my builds on that path.
+
+The original `ios-gate2` (`build test`, PIDs 68591/68594/68596/80044) is still alive and now in the test-setup phase — but its log already logged a transient `BUILD FAILED`, so it's in a murky state, and my second build collided with it on the shared derived-data DB. Cross-slot competitors use per-slot default DerivedData (keyed by project path) so they don't collide with me — my collision was self-inflicted. Let me kill my murky run, keep the cache, and do one clean incremental `build test`.
+
+Let me kill each PID with literal numbers (the guard requires explicit numeric PIDs).
+
+Path is free and the compiled cache is intact. Let me launch a single clean incremental `build test` (jobs=2 to keep peak memory low under cross-slot contention).
+
+Launched. Let me wait and monitor — incremental compile should be faster now.
+
+Progressing cleanly — now at `EmitSwiftModule` (late build stage), no errors, no DB lock. Let me continue waiting for the build to finish and tests to run.
+
+Healthy progress — it's compiling the app target alphabetically (now at "R"), having already passed "A"–"Q" (including my "B" Breadcrumbs files) with **no errors, no DB lock, no compiler kills**. My files compiled fine in the full app this run. Let me keep waiting for link + test phases.
+
+App target compiled; now linking app-extensions and building the test bundle (feature-views compiling with testability — my `Breadcrumbs.Tests`/`AdapterTests` are in `TeslaSyncTests`). Still zero errors. Let me wait for the test run.
+
+Still compiling (shared-surfaces for the test target) with zero errors. The test target compile is heavy. Let me wait longer.
+
+Let me check the test-target scope in project.yml (to understand why it's recompiling shared-surfaces) and gauge progress.
+
+The test bundle only compiles `*Tests.swift` and links against the app target — so the long compile is the full app target (thousands of files) rebuilding after the earlier kill invalidated incremental state. It's healthy (no kills this run). Let me wait in longer increments for the app link + test run.
+
+Another `** BUILD FAILED **` at line 16211, yet the process still shows RUNNING. Let me see whether it has a real `error:` this time or is another compiler kill.
+
+Same signature: **0 `error:` lines**, and the killed batch is the identical large `AnomalyInlineRow…` batch-mode compile (unrelated to my files). That's a memory-kill of one big frontend process under cross-slot pressure. Let me rule out a deterministic compiler crash (stack dump) vs. an OOM kill.
+
+Decisive finding: this is a **deterministic `swift-frontend` compiler crash during IRGen** (`report_at_maximum_capacity` → `IRGenSILFunction::visitFullApplySite`), not an OOM — and it's reproducible on the same unrelated `AnomalyInlineRow…` batch in both runs. Let me identify the exact crashing source and confirm my files compiled cleanly.
+
+The crash is in IRGen emitting SIL reabstraction thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR` — a thunk for an actor-isolated `(Bool, (any Actor)?)` closure, which has **nothing to do with my surface** (my closures are `(BreadcrumbsCrumb)->Void`, `()->Void`). It's a deterministic Swift 6.3.2 compiler limit (`report_at_maximum_capacity`) hit on pre-existing code. Let me get the exact crashing file to document it precisely.
+
+The exact crash is pinned: Swift 6.3.2 `swift-frontend` crashes during **IRGen of pre-existing `feature-views/AppearanceSettings.Controls.swift`** (emitting SIL thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`), hitting `report_at_maximum_capacity`. This file is **not mine** and the thunk is unrelated to my closures. This is a toolchain/compiler defect blocking the whole-app build regardless of my surface.
+
+Let me (1) confirm I only touched `Breadcrumbs.*`, and (2) strengthen verification by building a standalone SwiftPM harness that actually **runs my tests** in isolation.
+
+Confirmed: I added **only** `Breadcrumbs.*` files; `AppearanceSettings.Controls.swift` is untouched — so the compiler crash is in pre-existing code. Now let me actually **run my tests** via a standalone SwiftPM harness (Swift 6 language mode, matching the app's strict concurrency).
+
+Harness assembled. Now running my tests in isolation under Swift 6 mode:
+
+**My surface tests pass: 23/23, 0 failures** under Swift 6 strict-concurrency mode. Combined with clean lint/format/placeholder/typecheck, the surface is fully verified.
+
+Now, to honor "no skip-and-assume," let me (a) launch the macOS gate to capture its real result, and (b) run the tree-wide swiftlint/swiftformat gate steps.
+
+Notable: the **tree-wide `swiftformat --lint apps/apple` also fails on a pre-existing file** (`RecentDrivesSection.Previews.swift`, redundantType) — not mine (my files passed earlier). My `FORMAT_TREE_EXIT` captured `tail`'s exit, not swiftformat's. Let me capture the real exit codes for both linters tree-wide (the gate steps), running them properly.
+
+Both tree-wide linters also fail on **pre-existing files** (swiftformat: `RecentDrivesSection.Previews.swift`; swiftlint: 3 violations). Let me confirm none of the swiftlint violations are mine.
+
+Confirmed: all 3 swiftlint violations are in pre-existing `WidgetChartSummary.Tests.swift` (a/b/c names); **0 in my files**. So every red gate step is pre-existing and unrelated to my surface. Let me check the macOS build progress and verify the log directory.
+
+macOS also failed (MAC_EXIT=65), but early (line 1758). Let me confirm its cause — same compiler crash, or a different early failure.
+
+Now the full picture is clear and **every failing gate step is pre-existing or environmental — none caused by my surface**:
+
+| Gate step | Exit | Cause (not my code) |
+|---|---|---|
+| iOS `build test` | 65 | Swift 6.3.2 **compiler IRGen crash** on pre-existing `AppearanceSettings.Controls.swift` |
+| macOS `build test` | 65 | **No macOS dev signing certificate** on runner (entitlements require it) |
+| `swiftlint --strict` (tree) | 2 | Pre-existing 3 violations in `WidgetChartSummary.Tests.swift` |
+| `swiftformat --lint` (tree) | 1 | Pre-existing `RecentDrivesSection.Previews.swift` |
+| check-placeholders (surface) | 0 | clean |
+
+My surface passes every scoped check (lint 0, format 0, placeholder 0, typecheck clean, **23/23 tests pass**). Let me write the honest BLOCKED log.
+
+I have the exact crash backtrace. Now writing the comprehensive, honest gate log.
+
+Now let me clean up temp artifacts and verify exactly what would be committed (ensuring the generated `.xcodeproj` is gitignored, not staged).
+
+Clean — exactly the 8 `Breadcrumbs.*` files plus the log; the generated `.xcodeproj` is gitignored. The surface itself is fully green; the gate is BLOCKED only by pre-existing/environmental issues outside my allowed scope. I'll commit the verified surface + the evidence log with a fully transparent message (no red-as-green).
+
+Commit succeeded. Let me verify the final state.
+
+The commit is in place and the working tree is clean (only the gitignored `.xcodeproj` remains). Let me finalize the todos.
+
+The Breadcrumbs Apple shared surface is complete, committed, and verified to the maximum extent possible on this runner. Here is the honest outcome.
+
+## Summary
+
+**Delivered** `apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.*` — a production native SwiftUI parity of `components/layout/Breadcrumbs.tsx` (8 files: renderer, Foundation-only adapter/projection, state-holder + i18n + telemetry, DEBUG inspector, previews, `.strings`, and two test files), plus the gate log.
+
+**Parity reproduced exactly:** home link, chevron-separated trail, link-less current leaf (web `isLast`), linked vs. link-less ancestors, `≤1`-item self-suppression, 200pt truncation, `view.opened` telemetry, full VoiceOver labels, P1/S10 i18n (`breadcrumbs.a11y.nav/home` ← web `a11y.breadcrumb/breadcrumbHome`), tokens only. Responsive middle-item collapse → idiomatic horizontal scroll (documented, matching predecessor 0166). The web source does no fetch, so there are no loading/error/stale/offline branches to invent — documented in the adapter header.
+
+**Surface verified GREEN (everything in scope):**
+- `swiftlint --strict` on my files → **0 violations**
+- `swiftformat --lint` on my files → **0**
+- check-placeholders → **0**
+- iOS-SDK `swiftc -typecheck` (release + DEBUG) → **clean**
+- **23/23 tests pass** (adapter, per-state view-composition, a11y, telemetry) under Swift 6 strict concurrency via an isolated SwiftPM harness
+
+## Gate status: `EXIT=65` / `STATUS=BLOCKED` (not red-as-green)
+
+The whole-app gate cannot go green **on this runner** — every red step is **pre-existing or environmental, none in my surface** (allowed files are `Breadcrumbs.*` only):
+- **iOS build/test:** `swift-frontend` (Swift 6.3.2) **IRGen crash** (`report_at_maximum_capacity`) on unmodified `feature-views/AppearanceSettings.Controls.swift`
+- **macOS build/test:** **no Apple development signing certificate** on the runner
+- **swiftlint (tree):** pre-existing violations in `WidgetChartSummary.Tests.swift`
+- **swiftformat (tree):** pre-existing drift in `RecentDrivesSection.Previews.swift`
+
+`git status` confirms only `Breadcrumbs.*` were added; the four offending files are untouched. Full evidence (crash backtrace, exit codes, verification) is in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0167-Breadcrumbs.log`, which ends with `EXIT=65` / `STATUS=BLOCKED` per the Honesty Covenant. Committed as `8818424`.
+
+**To unblock:** a Swift toolchain whose IRGen doesn't crash on `AppearanceSettings.Controls.swift` (or an owner fix to that file), a macOS signing identity, and clearing the two pre-existing lint/format drifts — after which the gate compiles this surface (already proven to type-check and pass its tests).
+

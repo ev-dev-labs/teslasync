@@ -1,8 +1,8 @@
 //
-//  FormField.swift
-//  TeslaSync — P4 shared surface · 0154 · FormField (Apple)
+//  FormFieldShared.swift
+//  TeslaSync — P4 shared surface · 0154 · FormFieldShared (Apple)
 //
-//  The form-field wrapper surface — the SwiftUI parity of components/forms/FormField.tsx.
+//  The form-field wrapper surface — the SwiftUI parity of components/forms/FormFieldShared.tsx.
 //  Composes the label row, the caller's control, and the single inline message
 //  (error / hint / none), binding through `FormFieldModel` (P1/S8). No networking
 //  lives in the view; the resolved state is recomputed by the pure projection.
@@ -20,7 +20,7 @@ import SwiftUI
 /// The form-field wrapper surface. Generic over the control it wraps so any native
 /// input (a `TextField`, a `Picker`, a custom composite) drops into the slot, the
 /// way the web `children` prop accepts any control.
-public struct FormField<Control: View>: View {
+public struct FormFieldShared<Control: View>: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
     public static var surfaceSlug: String {
         FormFieldSurface.slug

@@ -1,0 +1,103 @@
+I'll start by exploring the repository structure to understand what's present and whether this Apple acceptance gate can actually run.
+
+The repo has a substantial Apple app structure. Now let me check the actual toolchain capabilities and whether the required gate inputs (ledgers, scripts) exist. This determines whether the gate can run at all.
+
+Toolchain is largely present (Xcode 26.5, SwiftLint, SwiftFormat, pwsh, simulators), but I've already found hard blockers. Let me dig deeper into predecessors, ledgers, and the previous gate log to record honest evidence.
+
+The picture is now clear. A prior run already concluded `STATUS=BLOCKED` (EXIT=70) for the same reasons. Let me verify the current predecessor/ledger state precisely and model the log format from the prior run's preflight.
+
+Current state differs from the prior run: `p4-p9-0001` is now `STATUS=DONE`, but `p4-p9-0002` log is still absent and P7 pages are incomplete (52 logs). I must record fresh, honest evidence. Let me get exact P7 counts, git cleanliness, and the project/xcframework build setup, then start running the real gate commands.
+
+Complete picture confirmed. The current state is **definitively BLOCKED** by multiple independent blockers, though the git tree is now clean and `p4-p9-0001` improved to DONE. Let me record the exact honest state:
+
+- **Predecessors incomplete:** `p4-p9-0002-xcuitest-ui` log absent; P7 pages **52/861** DONE
+- **Ledgers absent:** `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1` all missing
+- **Signing absent:** 0 valid identities → archives cannot sign
+
+Per the Honesty Covenant ("No skip-and-assume"), I'll still run every runnable gate command for real. Let me start the fast gates and kick off the heavy xcframework build in parallel.
+
+The `&&` chain stopped at the missing-log `ls`. Let me rerun the probes with `;` separators so each runs independently.
+
+The xcframework builds automatically as a pre-build Run Script phase, so `xcodebuild` will trigger Gradle. I need to generate the project first via xcodegen. Let me kick off the heavy build/archive pipeline in the background (writing results to the session dir, not the repo) while I run the fast gates in the foreground.
+
+Heavy build pipeline launched. Now let me create the acceptance log with the PREFLIGHT section (real evidence gathered so far), then run the fast gates appending real output.
+
+The nohup launcher returned; the detached runner is now building. Let me append the predecessor, clean-tree, and ledger sections to PREFLIGHT with freshly captured real output.
+
+PREFLIGHT evidence is recorded. Now let me run the fast gate commands (lint, format, placeholder, ledger-checks) for real and capture exit codes into a GATE section.
+
+swiftlint returned exit 2. Let me check what it reported (strict-mode violations vs. config error).
+
+swiftlint found **1 serious violation** in 6034 files → `LINT_EXIT=2` (strict fail). But I captured 6000+ noisy progress lines. Let me extract the real violation, then trim the log back and re-append a concise result. First, find the violation.
+
+The violation is a single `line_length` error in `AppRoute.swift:29` (123 > 120 chars), strict-failing the lint. The log is now bloated to 6112 lines of progress noise. Let me verify the clean cut point and trim back.
+
+Cut point confirmed at line 70. Let me trim the noise and re-append a concise GATE section with the real swiftlint result.
+
+Now swiftformat and the placeholder scan. I'll capture to temp files and summarize concisely into the log.
+
+swiftformat also fails: `FORMAT_EXIT=1`, **10/6341 files require formatting**. The current tree has real lint+format failures (unlike the prior run). Let me get a concise rule/file tally and record it, then run the placeholder scan.
+
+Placeholder scan also fails: `PLACEHOLDER_COUNT=66` (EXIT=1). All three host-local static gates fail in the current tree. Let me tally the placeholder hits concisely and record, then run the ledger-checker step.
+
+Host-local static gates all recorded (lint=2, format=1, placeholder=1 — all FAIL). The heavy runner generated the project (`XCODEGEN_EXIT=0`) and is now on the iOS build/test (triggers the KMP Gradle xcframework build + 6k-file compile + tests). Let me let it run and monitor progress.
+
+The KMP Gradle build is genuinely progressing (debug Shared.xcframework written, now building release variants). After staging, the 6k-file app target compiles, then tests run on the simulator. Let me continue monitoring.
+
+The Shared.xcframework staged successfully; the app target is now compiling (SwiftEmitModule for TeslaSync, string-table copies). No errors yet. The 6k-file Swift compile takes time. Let me keep monitoring for the build/test result.
+
+The iOS app target is genuinely compiling the full source tree (ApiLogs, AppShell, FSMStateDiagram, FadeIn… well into the alphabet), no errors yet. This is the real 6k-file compile. Let me keep monitoring for the build/test outcome.
+
+The heavy runner completed all steps. Key results:
+- **iOS:** `** BUILD SUCCEEDED **` (app compiles) but `** TEST FAILED **` → `IOS_EXIT=65` (test-target actor-isolation compile error)
+- **macOS build/test:** `MAC_EXIT=65`
+- **iOS archive:** `IOS_ARCHIVE_EXIT=65`, **macOS archive:** `MAC_ARCHIVE_EXIT=65`
+
+Let me extract the decisive failure cause from each output file to record honestly.
+
+macOS build fails on the **signing blocker** (`entitlements require signing with a development certificate`, `SigningCert=` empty), while iOS app compiles but its **test target** has a real actor-isolation compile error. Now let me extract the archive failure causes.
+
+All heavy steps fail with decisive causes — **archives fail on missing development team/certificate**, 0 archives produced. Let me confirm the iOS test failure detail (3 failures), then record the build/archive gate section.
+
+Confirmed: iOS app **builds**, but the test target has 1 compile error (actor isolation) → `** TEST FAILED **` (xcodebuild "(3 failures)"). Both archives fail on missing dev team/certificate. Let me record the build/archive gate section.
+
+Now the verdict computation and closing sections. All nine gate components are non-zero, so EXIT≠0 / STATUS=BLOCKED. Let me append the formula, acceptance criteria, disposition, covenant, and footer.
+
+Log is complete (228 lines). Let me review it end-to-end to verify coherence and accuracy before committing.
+
+The log reads well. One refinement: the clean-tree section (lines 55-59) shows the gate's own log as the only porcelain entry but mislabels it "tracked". Let me verify the current git state (ensuring generated xcodeproj/xcframework are ignored) and fix that wording.
+
+Confirmed: the only untracked file is the gate log; the generated `TeslaSync.xcodeproj` and `Shared.xcframework` are git-ignored. Let me fix the clean-tree wording to be accurate.
+
+Now let me review the final sections (formula, acceptance, disposition, covenant, footer) to confirm correctness before committing.
+
+The log is complete, coherent, and honest — footer ends with `EXIT=65` / `STATUS=BLOCKED` on their own lines (covenant rule 10). Per rule 8 (BLOCKED → commit ONLY the log, never code), let me stage just the log and verify nothing else is staged before committing.
+
+Only the log is staged. Committing with the BLOCKED-qualified message and required trailer.
+
+Commit `0de14b688` landed cleanly — only the log (229 insertions), no code. Let me do a final tree-clean verification and tidy up the transient build scratch in the session dir.
+
+The Apple acceptance gate has been executed end-to-end, honestly, and the result committed.
+
+## Result: `STATUS=BLOCKED` (`EXIT=65`)
+
+This is a **run-only acceptance gate** (no code fixes, no scope narrowing, no delegation — per the Honesty Covenant). I ran every gate command for real and recorded the evidence in `.github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log` (committed as commit `0de14b688`, the **only** change — working tree otherwise clean).
+
+**Toolchain present:** Xcode 26.5, Swift 6.3.2, SwiftLint 0.63.3, SwiftFormat 0.61.1, pwsh 7.6.2, XcodeGen 2.45.4, iOS simulators, JDK 17. The KMP `Shared.xcframework` built from source and the **iOS app target `** BUILD SUCCEEDED **`** across all 6034 Swift sources.
+
+**Four independent blockers (any one decisive):**
+| # | Blocker | Evidence |
+|---|---------|----------|
+| A | Predecessors incomplete | `p4-p9-0002` log absent; P7 pages **52/861** DONE |
+| B | Parity ledgers + checker absent | `apple-macos-ledger.json`, `apple-ios-ledger.json`, `check-parity-ledger.ps1` all missing |
+| C | No code-signing capability | **0 valid identities** → macOS build + both archives fail to sign (0 archives produced) |
+| D | Host static + test gates red | swiftlint `--strict`=2, swiftformat=1 (10 files), placeholder=1 (66 hits), iOS test-target actor-isolation compile error |
+
+All 9 gate components (`IOS/MAC/LINT/FORMAT/PLACEHOLDER/MAC_LEDGER/IOS_LEDGER/IOS_ARCHIVE/MAC_ARCHIVE`) returned non-zero.
+
+**Honest delta vs. the prior gate run:** tree is now clean, `p4-p9-0001` improved to DONE, and the app compiles — but none flips the verdict. Remediation (signed runner, P9-0002 + remaining P7 pages, authoring the ledgers/checker, code fixes) is explicitly **out of scope** for this run-only gate.
+
+
+
+The gate has been fully executed, evidence recorded, verdict determined, and the log committed with a clean working tree. Calling task complete.
+

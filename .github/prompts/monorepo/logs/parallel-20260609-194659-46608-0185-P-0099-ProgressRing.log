@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and understanding the task context.
+
+Tooling is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple project structure.
+
+The web `ProgressRing` is a pure presentational component. Let me examine existing shared-surfaces to learn the established native pattern.
+
+Now I understand the file structure. Let me find the closest presentational analog. `AnimatedNumber`, `DriveScore`, `BatteryDelta` are pure presentational like `ProgressRing`. Let me examine them.
+
+`AnimatedNumber` is the closest analog (also a pure presentational `data-display` component). Let me read its complete file set to learn the exact pattern.
+
+Excellent pattern. Let me read the remaining `AnimatedNumber` files to complete my understanding.
+
+I now fully understand the established pattern. Let me examine the design tokens (P1/S9) and check how ring/gauge shapes are drawn natively (DriveScore likely has a gauge).
+
+`DriveScore.Views.swift` has the exact ring pattern I need. Let me read the design tokens and the DriveScore ring view in full.
+
+I have the full pattern. Let me check the verification tooling (xcodegen, pwsh, the placeholder script, lint configs) to know what I can run.
+
+Tooling is fully available (xcodegen, pwsh, booted iPhone 16 sim, swiftlint, swiftformat). Let me check the placeholder patterns and whether the KMP Shared.xcframework is prebuilt (the build preAction needs it).
+
+Key finding: `Shared.xcframework` is **not** prebuilt (only `.gitkeep`) — the scheme's build preAction generates it. Let me read that script to gauge build feasibility, and check how AnimatedNumber/0075 was committed for conventions.
+
+The framework is built via Gradle/KMP. Let me check a prior surface's log to see the real gate outcome on this runner, and whether `apps/shared` + a cached framework exist.
+
+Very informative. The established P4 disposition: full-app `xcodebuild` is **deferred** on pre-existing unrelated blockers (sibling duplicate symbols on iOS, code-signing on macOS), but the surface is **independently verified** via an isolated Swift 6 strict-concurrency build + XCTest against the real tokens, plus swiftlint/swiftformat/placeholder green. Let me read how AnimatedNumber's isolated harness was run.
+
+I now have the complete, proven methodology from the 0075 AnimatedNumber precedent (the closest analog — also a pure presentational `data-display` component). Let me set up tracking and write the plan.
+
+Now I'll write all 8 surface files. Starting with the pure-core trio (Adapter, Projection, Model).
+
+Now the Views, the public entry, Previews, strings, and Tests.
+
+All 8 files created. Let me update tracking and run the format/lint/placeholder gates.
+
+swiftformat clean (0/7). Now swiftlint --strict, scoped to the surface files.
+
+swiftlint clean (0 violations). Now the placeholder scan per shipped file.
+
+Placeholder scan clean (TOTAL=0). Now the key verification: isolated Swift 6 strict-concurrency build + XCTest against the **real** design tokens. Let me set up the SwiftPM harness (mirroring the 0075 methodology).
+
+Harness ready. Running the isolated Swift 6 strict-concurrency build + tests.
+
+The build caught a real issue: a **public** init's default argument can't reference the **internal** `Color.TS.accent` token (default args are inlined at call sites). The fix: take `color: Color? = nil` in the public signature and resolve to the token inside the init body (internal refs in bodies are fine). Let me fix `ProgressRing.swift`.
+
+Let me verify the full updated file, then re-sync the harness and rebuild.
+
+Isolated build + **34/34 tests pass** under Swift 6 strict concurrency against the real tokens. Now let me verify the pre-existing full-app blockers (documented in the 0075 precedent) still exist in this checkout — to honestly attribute the deferral, not assume it.
+
+Confirmed: `RecentDrivesModel`, `StateTimelineModel`, and `RecentDrivesUpdate` are each **declared twice** across `feature-views/` and `dashboard-widgets/` — both sources of the same app target. This is the pre-existing, unrelated iOS blocker from the 0075 precedent, present in this checkout and outside my allowed files. Let me now run the actual full-app gate to paste raw exits. First, generate the project.
+
+Project generated. Now the full iOS build+test (this triggers the Gradle KMP `Shared.xcframework` preAction — slow). Running async and monitoring.
+
+While that runs, let me monitor the gradle/build progress.
+
+Gradle KMP framework build is progressing (Kotlin native compile/link). Continuing to monitor.
+
+Framework built; app compilation underway. Continuing to wait for it to reach the (expected pre-existing) duplicate-symbol errors.
+
+Gradle framework built (7m5s). App is now compiling. Waiting for it to reach the expected pre-existing errors.
+
+iOS gate: **IOS_EXIT=65**, 162 errors, **0 attributable to ProgressRing** — all are the pre-existing sibling duplicate-symbol ambiguities (`RecentDrivesModel`/`RecentDrivesUpdate`/`StateTimeline*`). Exactly the documented blocker. Now the macOS gate (framework is cached now).
+
+While macOS builds, let me confirm the final `ProgressRing.swift` reads cleanly after the edits.
+
+Final source confirmed clean. Waiting for the macOS gate to finish.
+
+All gates captured. Final results:
+- swiftformat = 0, swiftlint --strict = 0, placeholder = 0
+- isolated Swift 6 build + **34/34 tests pass**
+- **IOS_EXIT=65** (162 pre-existing duplicate-symbol errors, **0 ProgressRing**)
+- **MAC_EXIT=65** (code-signing, **0 ProgressRing**)
+
+This matches the established P4 disposition. Let me update tracking and write the gate log.
+
+Only my 8 surface files are untracked; the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. Now writing the gate log.
+
+Now a final consolidated lint/format re-check across all 7 swift files (post-edit), then stage and commit.
+
+Both green. Staging the surface files + log and committing.
+
+Committed cleanly; working tree is clean (generated `.xcodeproj`/framework are git-ignored). Cleaning up temp artifacts and closing out tracking.
+
+Task complete. Here's the summary.
+
+## P4 · Shared surface · 0099 — `ProgressRing` (Apple) ✅
+
+Shipped a production-polished, Apple-idiomatic SwiftUI `ProgressRing` at parity with `web/src/components/data-display/ProgressRing.tsx`, following the established P4 pattern (mirroring the closest analog, 0075 `AnimatedNumber` — also a pure presentational `data-display` component).
+
+**8 files** in `apps/apple/TeslaSync/shared-surfaces/` (commit `48ede2b13`):
+- `ProgressRing.swift` — public View (binds model, `color` resolves to P1/S9 `Color.TS.accent`)
+- `.Adapter.swift` — Input (web props), Meta (slug + web defaults), Accessibility builder
+- `.Projection.swift` — pure geometry port (radius, circumference, clamp, fill fraction, dashoffset, font-scale floors)
+- `.Model.swift` — `@MainActor @Observable` state-holder (P1/S8) + `view.opened` telemetry seam (P1/S11)
+- `.Views.swift` — track ring + animated rounded-cap arc (rotated -90°, reduce-motion aware) + centered text + caption
+- `.Previews.swift`, `.strings` (P1/S10 note — presentational, no copy keys), `.Tests.swift`
+
+**Parity highlights:** verbatim port of the web math; always-present track ring (never a blank box); web `color #3b82f6` → token; `transition-all duration-slow` → animated `.trim`; ReactNode center labels → `String?`. The web has no data/loading/error/empty branches (pure presentational) — reproduced its genuine render branches only, per the documented precedent.
+
+**Verification (all raw exits pasted in the gate log):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | `0/7` ✅ |
+| swiftlint --strict | `0 violations` ✅ |
+| placeholder scan | `COUNT=0` ✅ |
+| isolated Swift 6 strict-concurrency build + XCTest (vs **real** Tokens.swift) | **34/34 pass** ✅ |
+| full-app iOS xcodebuild | `IOS_EXIT=65` — 162 pre-existing sibling duplicate-symbol errors, **0 ProgressRing** (DEFERRED) |
+| full-app macOS xcodebuild | `MAC_EXIT=65` — code-signing only, **0 ProgressRing** (DEFERRED) |
+
+The full-app failures are pre-existing, unrelated, out-of-allowed-files blockers (`RecentDrives*`/`StateTimeline*` declared twice across `feature-views`/`dashboard-widgets`; unsigned macOS runner) — verified by grep, not assumed. The surface itself is fully green. Log written; `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0099-ProgressRing.log | 119 +++++++
+ .../shared-surfaces/ProgressRing.Adapter.swift     | 129 +++++++
+ .../shared-surfaces/ProgressRing.Model.swift       |  88 +++++
+ .../shared-surfaces/ProgressRing.Previews.swift    |  92 +++++
+ .../shared-surfaces/ProgressRing.Projection.swift  | 156 +++++++++
+ .../shared-surfaces/ProgressRing.Tests.swift       | 370 +++++++++++++++++++++
+ .../shared-surfaces/ProgressRing.Views.swift       | 102 ++++++
+ .../TeslaSync/shared-surfaces/ProgressRing.strings |  16 +
+ .../TeslaSync/shared-surfaces/ProgressRing.swift   |  77 +++++
+ 9 files changed, 1149 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0099-ProgressRing.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ProgressRing.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ProgressRing.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ProgressRing.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ProgressRing.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ProgressRing.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ProgressRing.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ProgressRing.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ProgressRing.swift

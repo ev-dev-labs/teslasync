@@ -1,0 +1,196 @@
+I'll start by exploring the codebase to understand the web source, the Apple app structure, and the dependencies I need to build against.
+
+Now let me explore the existing Apple app Analytics features and the supporting infrastructure to understand the established patterns.
+
+The real pages live in `apps/apple/Sources/Features/Analytics/`. Let me examine the project config and an existing analogous page (StatisticsPage) to follow the established conventions precisely.
+
+Now I understand the structure: real pages live in `apps/apple/Sources/Features/Analytics/`. The prompt's `TeslaSync/Features/...` path is a generator artifact; the build-wired convention is `Sources/Features/`. Let me study the closest analog (StatisticsPage) in full.
+
+Let me look at the sample data source, the chart wrappers, and locate the shared component library and Units facade.
+
+Let me examine the routing system, how route registrations are assembled, the data freshness component, and the localization catalog.
+
+Toolchain is present (Xcode, xcodegen, swiftlint, pwsh), but `Shared.xcframework` is a stub. Let me check the build script and KMP toolchain availability.
+
+Toolchain present but `Shared.xcframework` must be built via Gradle (Kotlin/Native). Let me kick that off in the background (it's the long pole) while I continue studying the code.
+
+All 16 strings are missing from the catalog and must be added. Now let me study the design tokens, the shared components I'll use, and the route host registry.
+
+Let me read the app wiring, the route tests (blast radius for a new route), and confirm the design-token directory.
+
+I now have a thorough understanding. Let me check the parity ledger, the logs directory, and confirm the `UnitPreferences.metric` default before writing.
+
+The Shared.xcframework build finished. Let me verify it staged correctly and check an existing parity log format.
+
+The Statistics log is an excellent template. Now let me check for exhaustive `AppRoute` switches (blast radius of a new case) and read the `UnitPreferences.metric` default.
+
+I have everything I need. Let me set up tracking and write the plan.
+
+Now I'll create the source files. Starting with the models and formatters.
+
+Let me fix the `unitHeader` helper to use the correct `String(localized:)` form.
+
+Now the route registration and the navigation wiring.
+
+Now edit `AppRoute.swift` to add the `.mileage` case in the enum list, `systemImage`, and `group` switches.
+
+Now wire `MileageRouteRegistration` into `TeslaSyncApp.swift`:
+
+Now the localization catalog. To preserve Xcode's exact `.xcstrings` formatting, let me first verify a round-trip with Python reproduces the file byte-for-byte before adding keys.
+
+The file mixes separator styles and isn't codepoint-sorted, so a full re-serialize would cause massive drift. I'll do targeted insertion instead. First, let me check whether sibling `route.*` keys exist in the catalog.
+
+Good — `route.*` keys exist (my earlier grep used the wrong pattern). I'll add all 16 parity strings plus `route.mileage` via safe targeted text insertion that preserves the file's exact style.
+
+Now the model tests, mirroring the sibling analytics test structure.
+
+All source files written. Now let me run the fast gate checks (swiftlint, placeholder scan) and regenerate the Xcode project in parallel.
+
+swiftlint linted the whole project and found 6 violations. Let me see exactly which ones (and whether they're in my files).
+
+All 6 violations are in the table's `TSColumn` usage — trailing-closure syntax with two closures. Let me rewrite the columns to pass `cell:` explicitly.
+
+swiftlint is clean. Now let me run swiftformat --lint (the repo uses it) on my files.
+
+swiftformat wants number-grouping and brace fixes in 2 files. Let me auto-apply it (write mode) to those files.
+
+Both linters pass. Now the placeholder scan, a final swiftlint recheck on the reformatted files, and xcodegen.
+
+Placeholder scan passes (0 placeholders). But swiftformat's brace-wrap created a swiftlint conflict in the test. Let me view and fix it so both linters agree.
+
+swiftformat vs swiftlint disagree on the wrapped brace. I'll make the helper signature single-line (no defaults) and expand the call sites. Let me view the affected spots first.
+
+Both linters clean and placeholders pass. Now regenerate the Xcode project and start the macOS build (the long pole).
+
+Project regenerated (Mileage referenced 156×). Now starting the macOS build — this compiles the full app, so it'll take a while. Running async.
+
+The project builds in the background. Let me monitor progress while preparing the parity artifacts.
+
+Build failed (exit 65) after ~1 min — likely a compile error. Let me check the log.
+
+Name collision: my `MileageVehicle`/`MileageMonthRow` clash with existing dashboard-widget types in the same module. Let me find all existing `Mileage*` type names to rename mine uniquely.
+
+The `-h` flag hid filenames so my exclusion failed. Let me get a precise picture of which names exist in the widgets vs. my files.
+
+`comm` mis-sorted. Let me do a definitive collision check across the whole app target, excluding my new files.
+
+Only two collisions: `MileageVehicle` and `MileageMonthRow` (both in `MonthlyMileageWidget.Models.swift`). I'll rename my page types to `MileagePageVehicle` and `MileagePageMonthRow` across my files.
+
+Renames applied. Now let me check whether the `Input.Previews.swift` errors are pre-existing or a cascade from my collisions.
+
+That preview code is valid checked-in code; the errors were cascades from the type ambiguity destabilizing module type-checking. With the collisions renamed, let me rebuild (incremental, so fast).
+
+Still failing. Let me see the current errors.
+
+All my errors are resolved — only 2 remain, both in `Input.Previews.swift` (unrelated, unmodified by me): explicit `return` inside a `#Preview` `@Previewable` result builder, which the local (very new) Swift 6.3 toolchain rejects. Let me gauge how widespread this pattern is before deciding.
+
+Only 2 errors surfaced (incremental build), but this `return`-in-`#Preview` pattern exists in 24 places repo-wide — a pre-existing toolchain incompatibility. Let me prove the local Swift toolchain rejects this pattern in isolation (confirming it's environmental, not my code).
+
+Interesting — the isolated pattern compiles fine. So it's not a blanket toolchain rejection; it's specific to the real file/module context (possibly stale incremental state). Let me examine the real `staged` helper and the preview structure.
+
+The real `staged` matches my repro. The difference must be build flags. Let me reproduce with the project's actual settings (Swift 6 mode + complete concurrency).
+
+Still compiles in isolation under the project's exact flags — so the failure is a stale incremental-build artifact from build1's collision failure (Input.Previews recompiled against an inconsistent module state). Let me try one more incremental build (cheap) to see if it settles, before resorting to a clean build.
+
+Still the same. Let me confirm the errors are unchanged, then do a proper clean build to clear the stale state.
+
+Only 2 of many identical `return staged(...)` blocks in the *same file* error — a hallmark of a corrupted incremental state, not a real toolchain rule (which would fail uniformly). A clean build will clear it. Starting it now (full recompile, so it'll take several minutes).
+
+The clean build is running (full recompile). Let me monitor it while I prepare the parity artifacts.
+
+The clean build failed fast (~77s) — Swift's whole-module type-check phase caught errors before full codegen. Let me see the actual clean-build errors (they may differ from the incremental ones).
+
+My Mileage code produces **zero** errors on a clean build — the only failures are in the unrelated, unmodified `Input.Previews.swift`. The "return" error is actually masking a type-check failure in `InputField(...)` preview calls. Let me definitively prove this is pre-existing by building **pristine** code (my changes removed).
+
+Pristine state ready. Now regenerate and clean-build pristine code.
+
+Pristine code **also** fails (exit 65). This confirms the breakage is pre-existing and unrelated to my work. Let me confirm the errors match.
+
+The bash `/tmp` isn't persisting across calls reliably. Let me re-run the pristine build writing to the session folder and grep errors in the same command.
+
+**Definitively confirmed**: pristine code (all my changes removed) fails the macOS clean build with the *exact same* `Input.Previews.swift:88/:101` errors. This is a **pre-existing defect unrelated to my work** — my Mileage code produced zero errors. Let me restore my work, then investigate the root cause to decide whether it's safely fixable.
+
+No data lost — the test file just landed in `Sources/` (the glob caught it). Let me move it to the correct `Tests/` location and finish restoring the stashed edits.
+
+Work restored. Let me verify everything is back in place, then investigate the pre-existing `Input.Previews` root cause to decide whether it's safely fixable.
+
+The `&&` chain stopped because `case mileage` isn't the exact text (it's `, mileage` in a list). Let me verify properly.
+
+All edits intact, work fully restored. The build blocker is pre-existing. Let me find the *real* root cause — only the 2 previews using `hint:` fail, which means the `InputField(...)` call itself fails to type-check (the "return" error just masks it). Let me inspect `InputField`'s API.
+
+Let me see the full `InputField` initializers to understand why only the `hint:`-using previews fail (this determines if it's trivially fixable or a deeper predecessor defect).
+
+The `InputField` calls are actually valid (init #1 accepts `error:`/`hint:`). The failure is a pre-existing toolchain quirk in that specific preview file — and it's the **sole** blocker. To definitively verify my own work builds and my tests pass, I'll temporarily set aside the pre-existing broken preview file (DEBUG-only, no external refs), build+test, then restore it. Starting that now.
+
+The verification build+test is running (full app build, so several minutes). Let me check the ledger schema while waiting.
+
+Schema allows `blocked`. The verification build is running. Let me monitor it.
+
+It's past the fast-fail type-check phase (running >4 min now), which is a good sign — the broken builds failed at ~77s. It's doing full codegen. Let me keep waiting.
+
+Still compiling (~9 min). Let me peek at the build log to gauge progress.
+
+Excellent — actively compiling with **0 errors** (near the end alphabetically: UsageCard, VampireDrain...). Let me wait for it to finish the app build, test bundle, and run my tests.
+
+Build ran ~11 min (full compile) then failed. Let me find the actual error.
+
+Key finding: the **app target built fully with 0 errors** — my production code compiles and links into the macOS app. The only failure now is a **different pre-existing defect** in `GDPRExportPageModelTests.swift` (an unrelated Admin test, Swift 6 main-actor isolation), which blocks the shared test bundle. Let me confirm it's pre-existing and set it aside too so my tests can run.
+
+Let me wait for the targeted test run (app is cached, so mainly the test bundle compiles + runs).
+
+GDPR test confirmed pre-existing/unmodified. The test run continues. Let me wait more.
+
+0 errors so far — the test bundle is compiling. Let me wait for completion.
+
+**TEST2_EXIT=0** — my tests pass! Let me confirm the test results.
+
+**All 16 of my model tests passed — `** TEST SUCCEEDED **`.** 
+
+My work is now fully verified:
+- ✅ Full macOS **app builds** with my code (0 errors)
+- ✅ **16/16 model tests pass**
+- ✅ swiftlint + swiftformat clean; placeholder scan clean (0)
+
+The full gate is red **only** because of two pre-existing, unrelated, out-of-scope files that fail under this environment's stricter-than-target toolchain (proven via the pristine build). Let me restore those pre-existing files (I only set them aside for verification) and regenerate.
+
+Pre-existing files restored cleanly (not in my diff). My work is complete and verified. Let me do a final lint sanity check and capture exact gate numbers, then write the honest log and ledger.
+
+All checks for my artifact pass: swiftlint 0 violations, swiftformat 0/27, placeholder scan 0 (3 allowed opt-outs). Now let me add the ledger rows (honest `blocked` status, given the external gate failure) and write the comprehensive parity log.
+
+Let me verify the ledger re-serialization didn't reformat existing rows excessively.
+
+Ledger diff is clean (18 insertions only). Now let me write the comprehensive, honest parity log with the full gate transcript and `=== PARITY ===` section.
+
+The log is written. Now let me reconsider the commit decision: the literal full gate is red (EXIT=65) due to pre-existing external files, so per covenant #8 ("no commit on red") I will **not** commit. Let me do final state verification and clean up temp artifacts.
+
+Final change set is clean and correctly scoped — pre-existing files untouched. Let me verify the log's required tail (covenant #10) and update the plan.
+
+Let me record the final outcome in the plan and mark all todos done.
+
+All todos complete and verified. The implementation is finished and independently proven correct.
+
+## Summary
+
+I implemented **`page:analytics/Mileage`** as a native SwiftUI surface at full web parity (29/29 manifest items), following the established `Sources/Features/Analytics/` conventions of the sibling Statistics/FleetCompare pages.
+
+**Delivered (10 new files + 4 edits):**
+- `MileageModels` / `MileageFormat` / `MileagePageModel` (+ `.Sample`) — `@Observable` model with a `MileageDataSource` seam whose methods keep the web hook names (`useMileageStats`/`useDailyMileage`/`useMonthlyMileage`); SI‑canonical metres stored, converted at the render boundary via the shared `Units` facade.
+- `MileagePage` (+ `.Sections`/`.Charts`/`.Table`) — adaptive macOS+iOS view: 4 summary MetricCards, odometer **AreaChart** + daily‑distance **BarChart** (P3 Swift Charts wrappers), monthly‑summary `TSDataTable`; loading (redacted skeleton), empty (`ContentUnavailableView`/"No Entries"), error (`error.loadFailed` + Retry), success states.
+- First‑class `.mileage` `AppRoute` + `MileageRouteRegistration` wired into the app (deep‑linkable `/mileage`); 17 catalog strings added; 16 passing `MileagePageModelTests`.
+
+**Verification (all green for my artifact):** swiftlint `--strict` 0 violations · swiftformat 0/27 · placeholder scan 0 · the full macOS app **builds + links** with my code · **16/16 model tests pass** (`** TEST SUCCEEDED **`).
+
+**Status: `BLOCKED` (EXIT=65), honestly reported.** The literal full‑target `xcodebuild build`/`test` return 65 **solely** because of two **pre‑existing, unrelated, out‑of‑scope** files that fail under this environment's newer‑than‑target toolchain (Swift 6.3.2 / SDK MacOSX26.5):
+1. `TeslaSync/shared-surfaces/Input.Previews.swift` (`return`‑in‑`#Preview`) — app target
+2. `Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift` (main‑actor isolation) — test bundle
+
+I **proved** these are pre‑existing via a clean build of the repo with **every** Mileage change removed (identical failures, zero Mileage errors), then verified my own work by temporarily isolating just those two files. Both were **restored untouched** (covenant #7). Per covenant #1 (no red‑as‑green) the gate is reported red; per covenant #8 (no commit on red) the complete, verified change set is left **staged but uncommitted**. Evidence log: `.github/prompts/monorepo/logs/apple-page-analytics-MileagePage.log`; ledger rows recorded as `blocked` 29/29.
+
+
+
+I've completed all work within my control and verified it thoroughly. The task is finished to the maximum extent possible — the only remaining blocker is two pre-existing, out-of-scope files failing under this environment's beta toolchain, which I've proven are unrelated to my work and which I cannot fix without modifying predecessor surfaces outside my scope.
+
+Let me do a final integrity confirmation before marking complete.
+
+All integrity checks pass. The task is complete to the maximum extent within scope, with the gate honestly reported as blocked by pre-existing external defects. Marking complete.
+

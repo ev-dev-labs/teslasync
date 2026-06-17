@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple app setup and tooling availability.
+
+Now let me explore the Apple app structure and the dependencies (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+This is a large established codebase. The `shared-surfaces` directory uses a multi-file pattern per surface. Let me check tooling availability and study the established conventions in parallel.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen; iPhone 17 simulators). The gate references iPhone 16 and PowerShell — I'll adapt to available devices and bash. Let me study the conventions: facades (P1/S8), design tokens (P1/S9), i18n (P1/S10), and a complete reference surface.
+
+Let me study a complete presentational reference surface (`AIChatbotIndicator` — closest analog, uses Helix/bot) and the project/i18n setup.
+
+Excellent pattern clarity. Let me read the remaining reference files (Adapter, Projection, Previews, Tests) plus the design tokens and shared components to understand the available primitives.
+
+I now understand the full multi-file pattern. Let me locate the design tokens, shared components, the CB-safe palette (web + native), and the project/build setup.
+
+Now let me examine the native design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), shared components (TSButton, TSSkeleton), and the project build config.
+
+Let me examine the generated design tokens, the shared primitives I'll reuse, the KMP framework build script, and existing logs to calibrate the gate.
+
+Found a prior Avatar artifact log and confirmed the KMP `Shared.xcframework` isn't staged yet. Let me read the prior Avatar log, the generated tokens, the build script, and locate the spacing/radius/font token definitions.
+
+I have a thorough understanding now. Key confirmations:
+- `Color.TS.chartCategorical` exactly matches the web `CHART_COLORS_CB_SAFE` Okabe-Ito palette (verified hex→RGB).
+- A prior Avatar artifact log documents the intended design and the gate reality (full-app `xcodebuild` needs a Gradle KMP framework; surface-scoped gates are the host-runnable path).
+
+`AnnouncerRegion` looks like the closest "no-data-hook primitive" template. Let me study it, locate `TSCard`, verify the djb2 parity values, and probe the KMP/Java build environment.
+
+djb2 parity values confirmed (match the prior log exactly). `AnnouncerRegion` is an ideal template for the seam/model/telemetry pattern. Java 17 + gradlew are present (KMP build is theoretically possible but heavy). Let me read the lint/format configs to ensure `--strict` compliance before writing.
+
+I now have full clarity on conventions, lint rules (120/160 line length, 4-space indent, `--self remove`, `Text(verbatim:)` for facade strings), and the verification approach. The KMP `Shared.xcframework` build is the long pole — I'll start it in the background while I write the surface, then attempt the real gate if it succeeds.
+
+Let me set up tracking, start the KMP build, and create the log header.
+
+KMP build kicked off in the background. I have everything needed. Let me check the KMP build progress briefly, then write the surface files.
+
+KMP build is progressing well (debug xcframework already built, release linking now). It'll finish in a few minutes — meaning the real gate is feasible. Now let me write the surface files.
+
+Now writing the pure adapter core:
+
+Now the model layer (telemetry seam, source seam, observable model, i18n facade):
+
+Now the presentational views (SwiftUI primitives, Helix mark port, image/initials/glyph/status):
+
+Now the main view entry, previews, strings, and the test suite:
+
+Now the comprehensive test suite:
+
+All 7 files created. Let me verify: check KMP build status, run swiftformat/swiftlint on the new files, and set up an isolated SwiftPM probe (module `TeslaSync`) to compile + run the tests.
+
+KMP framework built and staged successfully — the real gate is now feasible. The lint/format surfaced fixable issues: trailing commas, a redundant variable, 3-member tuples (`large_tuple`), and two files exceeding 400 lines. I'll fix by introducing an `AvatarSwatch` struct, simplifying `wrappedIndex`, removing trailing commas, and splitting into `Avatar.Tokens.swift` + `Avatar.ModelTests.swift` (both match `Avatar.*`).
+
+Now re-run swiftformat and swiftlint on all Avatar files and check line counts:
+
+Just one trailing comma left in the palette array. Let me fix it:
+
+All lint issues fixed except that one comma (now removed). Let me build an isolated SwiftPM probe (module named `TeslaSync`) with the real generated tokens to compile and run the tests, plus run `swiftc -typecheck` for iOS and macOS.
+
+Compiles clean under Swift 6 (including the `#Preview` macro). Now run the tests:
+
+All 39 tests pass (including the djb2/colorIndex web-parity pins and the WCAG AA-large contrast invariant across all 8 swatches). Now the cross-platform compile proof — `swiftc -typecheck` for iOS 18 and macOS 15 against the real generated tokens:
+
+Both platforms typecheck clean under Swift 6 strict concurrency. Let me re-confirm lint/format are now clean, regenerate the Xcode project to enumerate the new files, and confirm they're wired into the targets.
+
+Lint/format clean (both EXIT=0) and the project regenerated. Let me confirm the Avatar files are enumerated into the correct targets, then check the placeholder gate and attempt the real `xcodebuild`.
+
+All 9 files enumerate into the targets; shipped sources are placeholder-free. Lint/format/typecheck/tests are all green. Now I'll attempt the real `xcodebuild` (the staged KMP framework makes it feasible). I'll build the whole app + test bundle and run the Avatar test classes on an available simulator (iPhone 16 isn't installed; using iPhone 17 Pro).
+
+The full-app `xcodebuild` failed — but the errors are in **other** surfaces (`WebhookChannelsSection`, `WidgetPicker`, `WindowStatusDetail`, `XRayBucketChart`) with `'StateTimelineModel' is ambiguous`/`StateTimelineConnection is ambiguous` — duplicate-symbol errors elsewhere in this parallel monorepo. I must rigorously confirm none of this is caused by my Avatar code, and that my type names don't collide with anything pre-existing.
+
+Confirmed: **zero** Avatar errors — all 108 errors are pre-existing `StateTimeline*`/`RecentDrives*` "ambiguous for type lookup" duplicate-symbol conflicts in other surfaces. Let me verify (a) my Avatar type names don't collide with anything pre-existing, and (b) those duplicate symbols are genuinely pre-existing and not from my work.
+
+Conclusively confirmed:
+- **No collision**: zero pre-existing definitions of any `Avatar*` type name outside my files.
+- **Pre-existing/unrelated RED**: `StateTimelineModel` is defined twice (`StateTimelineWidget.Model.swift` + `StateTimeline.Model.swift`) and `RecentDrivesModel` twice — duplicate public types in the same app module. Zero Avatar errors in the 108-error log.
+
+Let me prove my change set is only the Avatar files (those duplicates are in untouched tracked files), and capture consolidated exit codes for the gate log.
+
+My change set is exactly the 9 Avatar files; zero tracked files modified; the duplicate-symbol files are pre-existing and untouched. Now let me generate the authoritative gate log by re-running all surface-scoped gates fresh and classifying the full-app result honestly.
+
+All surface-scoped gates are GREEN (format/lint/iOS-typecheck/macOS-typecheck/build/39 tests/xcodegen/placeholder all EXIT=0). Let me append the parity summary, the honest full-app classification, and the final status to the log.
+
+The gate log is complete and honest (all surface gates EXIT=0; full-app RED openly classified as pre-existing/unrelated). Now let me commit. First, check for active hooks that might fail on the pre-existing repo breakage, then stage and commit.
+
+No active hooks; all 10 files staged. Committing:
+
+Committed cleanly (10 files, 1790 insertions). Let me clean up temp artifacts and confirm the working tree state.
+
+Working tree clean; commit `03ba01dfc` is in place. Let me finalize the task tracking.
+
+All work complete and verified. Final summary:
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-shared-surfaces-0076-Avatar.log  | 129 ++++++++
+ .../TeslaSync/shared-surfaces/Avatar.Adapter.swift | 327 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Avatar.Model.swift   | 230 +++++++++++++++
+ .../shared-surfaces/Avatar.ModelTests.swift        | 168 +++++++++++
+ .../shared-surfaces/Avatar.Previews.swift          |  81 +++++
+ .../TeslaSync/shared-surfaces/Avatar.Tests.swift   | 288 ++++++++++++++++++
+ .../TeslaSync/shared-surfaces/Avatar.Tokens.swift  | 146 +++++++++
+ .../TeslaSync/shared-surfaces/Avatar.Views.swift   | 325 ++++++++++++++++++++
+ .../apple/TeslaSync/shared-surfaces/Avatar.strings |  18 ++
+ apps/apple/TeslaSync/shared-surfaces/Avatar.swift  |  78 +++++
+ 10 files changed, 1790 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0076-Avatar.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Avatar.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Avatar.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Avatar.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Avatar.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Avatar.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Avatar.Tokens.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Avatar.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Avatar.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/Avatar.swift

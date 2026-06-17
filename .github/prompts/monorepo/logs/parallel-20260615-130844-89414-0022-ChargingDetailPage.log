@@ -1,0 +1,5 @@
+I'll start by exploring the repository structure to understand the task context, the web source page, and the existing Apple app architecture.
+
+Xcode tooling is available. Let me read the web source page, the existing Apple app structure, and the parity manifest in parallel.
+
+The web file is large; let me read it in sections and explore the existing Apple app layout, which differs from the `Features/` path

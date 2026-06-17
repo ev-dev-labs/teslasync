@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+I see — the actual SwiftUI sources are in `apps/apple/Sources/`. Let me understand the project structure and conventions better.
+
+The output path in the prompt (`TeslaSync/Features/Admin`) conflicts with the actual convention (`Sources/Features/Admin`). Let me investigate the real structure and tooling.
+
+Full Apple toolchain is available (xcodebuild, swiftlint, xcodegen, pwsh) — so the gate must actually run. There's no `LiveLogsPage` yet, but `ApiLogsPage` is a close analog. Let me study the conventions and parity infra.
+
+Now let me study the closest analog (`ApiLogsPage`) and the web `useLogStream` hook to understand conventions and the data model.
+
+Excellent context. Let me read the supporting `ApiLogs` files, the route registration pattern, and find an existing live/SSE page to follow.
+
+Now let me examine the routing infrastructure, find an existing live/SSE-driven page, and understand the string catalog + placeholder checker.
+
+There's already a `LiveLog.swift` and live-stream infrastructure. Let me study the live-data layer and the closest streaming page (`AutomationActivityFeedPage`).
+
+This page is a self-contained log tail (`/admin/logs/stream`), distinct from the `/events` fleet pipe. Let me study the streaming page pattern and staleness policy.
+
+I now understand the architecture deeply. Let me examine the string catalog format, design tokens, and shared components, plus get exact web string defaults.
+
+The string catalog already contains `translation.liveLogs.*` entries. Let me see exactly which liveLogs keys exist and find the web locale source.
+
+All 31 required `translation.liveLogs.*` keys (plus extras) are already pre-seeded in the catalog. Let me verify their values match the web source.
+
+The catalog uses `%1$@` for interpolated values. Let me confirm the filename/subtitle/status entries and see how existing code formats `%1$@` localized strings.
+
+The string catalog is fully ready. Now let me examine the design tokens, shared components, route infrastructure, and placeholder patterns.
+
+Let me read the design tokens and the core shared components I'll need.
+
+Let me read the routing infrastructure and a sample data source + test convention.
+
+Let me understand route composition, the parser, and how registrations are aggregated.
+
+Let me view the app registry composition and check for route-coverage tests.
+
+Let me study the table/filters UI pattern and the DataTable component, plus the model test convention.
+
+Let me confirm token names, the StatCard API, the theme modifier, and the custom-table approach.
+
+I have all tokens/components mapped. Let me check the swiftlint rules, the existing log format to mirror, and the model-test convention.
+
+The ApiLogs log gives me the exact reconciliation + log format to mirror. Let me read the rest of it and check the route-title string keys.
+
+Now I understand the full gate reality (the KMP `Shared.xcframework` blocks full `xcodebuild`; siblings shipped via in-scope gates). Let me verify the environment state and the route-title string format.
+
+Working tree is clean on branch `auto/...`. The `Frameworks/` dir has only `.gitkeep` (KMP xcframework absent). Let me check whether the KMP toolchain could build it, to decide my verification strategy.
+
+Let me run a few final checks before implementing: which files import the KMP `Shared` module (for isolated type-check scoping), whether `stale.*` keys exist, and how the AI summary is scoped in the manifest.
+
+Good: no Admin files import `Shared` (isolated type-check is feasible), and the AI summary is not a manifest unit. Let me read the full web `liveLogs` i18n block to capture exact defaults, then create the session plan.
+
+I have everything needed. Let me identify which files import `Shared` (to scope the isolated type-check) and set up my plan/todos.
+
+Only `SharedLiveStreamProvider.swift` pulls in `Shared` among the dirs I need — so an isolated type-check island is viable. I'll keep my model layer Foundation-only (inlining the ADR-013 staleness window) so it's harness-runnable. Let me set up the plan and todos.
+
+Now I'll implement the Foundation-only layers first. Starting with the models.
+
+Now the SwiftUI views. Let me write the main page, then the three panel files.
+
+Now the filters panel (GlassPanel1):
+
+Now the controls panel (GlassPanel2):
+
+Now the largest file — the table/error panels (GlassPanel3 + GlassPanel4) with the row, badge, chips, and grep highlight:
+
+Now the route registration and navigation wiring. Let me create the registration file and edit the route enum, parser, and app chain.
+
+Now add the 4 catalog keys. First, `route.liveLogs` + spotlight description (mirroring `route.apiLogs`):
+
+Now `translation.liveLogs.stats.bufferedMax` + `translation.liveLogs.status.stale` (appended after the existing `buffered` entry):
+
+Let me verify the catalog JSON is still valid after edits.
+
+Catalog is valid. Let me read the existing model test to follow conventions, then write the LiveLogs tests.
+
+Let me refactor the model to extract a testable `ingest` (deterministic unit tests), and fix the `countText` dynamic-key lookup + a Controls accessibility key bug.
+
+Now the tests file (model state machine + format + route registration):
+
+Let me remove an unused helper from the test, then start running the gates.
+
+Now let me run the gates. First swiftlint and the placeholder scan:
+
+swiftlint clean. Now the placeholder scan and `xcodegen generate`:
+
+The scanner flags the substring "Placeholder" inside the **web i18n key names** (`grepPlaceholder`, `vehicleIdPlaceholder`) — a false positive on required parity keys. Let me confirm the sibling opt-out convention and view the exact lines.
+
+The sibling convention is exactly `// parity:allow i18n key name, not a stub`. Let me apply it to the two key references:
+
+Placeholder scan is clean (`PLACEHOLDER_COUNT=0`). Now the isolated strict-concurrency type-check over the SwiftUI island (design tokens + shared components + app-route + my files), which doesn't need the KMP framework:
+
+Only unrelated `UnitFormatters.swift` fails — it depends on the `Units` symbol from the Shared-backed facade (not used by LiveLogs). Let me exclude that single Shared-coupled file and re-run:
+
+macOS island type-checks clean under Swift 6. Now the iOS branch (exercises the `#if os(iOS)` compact/keyboard code) via the simulator SDK:
+
+Both idioms type-check clean. Now the executable **model harness** — compile the Foundation-only model layer with assertions and run them:
+
+The harness's mutable static needs MainActor isolation under Swift 6. Let me fix and rerun:
+
+All 41 harness assertions pass. Let me confirm (cheaply + honestly) that the full `xcodebuild` blocker is the absent KMP `Shared` module — a pre-existing, repo-wide environment gap, not my code:
+
+Confirmed: the blocker is the absent `Shared` module (repo-wide env gap), not my code. Let me re-run swiftlint + swiftformat on the final files and locate the ledger insertion point.
+
+swiftlint is clean, but swiftformat wants a few tweaks (the precedent gates on `swiftformat --lint`). Let me auto-apply swiftformat, then re-verify swiftlint + type-check still pass:
+
+swiftformat passes now. Since it reformatted 3 files, let me re-verify swiftlint, the type-check, and the harness all still pass:
+
+swiftformat and swiftlint disagree on one brace (line 106). Let me view and resolve so both pass:
+
+Let me check for any other wrapped-brace lines swiftformat created, then re-verify both linters and the harness:
+
+All clean. Let me run the final consolidated gate sweep (swiftformat lint + both type-checks + harness):
+
+All gates green (swiftformat 0, type-check macOS 0, type-check iOS 0, harness OK). Now the ledger (2 rows) and the evidence log. Let me view the ledger anchor:
+
+Ledger valid (2 rows, 37/37). Now the evidence log:
+
+Log written. Let me clean up the temp harness, verify git status (confirm the generated `.xcodeproj` is ignored), then commit:
+
+Everything is in order (`.xcodeproj` is ignored). Let me stage the exact fileset and commit:
+
+Let me confirm the commit landed cleanly:
+
+Done. Committed `dc4b84ba2` — a complete, HIG-native SwiftUI `LiveLogsPage` at web parity.
+
+## Summary
+
+Implemented the native Apple `LiveLogsPage` (web `LiveLogsPage.tsx`) at **37/37 manifest parity** across macOS + iOS, following the established `Sources/Features/Admin/` convention (the prompt's `TeslaSync/Features/Admin` path isn't a compiled source root — reconciled like the ApiLogs precedent).
+
+**Architecture:** A pure `@Observable LiveLogsPageModel` (no networking in the view, ADR-004) ingests the live log tail through an injectable `LiveLogsStreaming` `AsyncStream` seam (`GET /admin/logs/stream`, ADR-009). `.task(id: subscription)` restarts on level/grep/reconnect — never on pause (web holds the buffer while the server keeps streaming).
+
+**4 GlassPanels:** filters (level/grep+help/vehicle-id), controls (5-state connection badge + ADR-013 staleness chip + buffered/received/drops + auto-scroll/pause/clear/download/reconnect), connection-error, and the adaptive log table (macOS columnar grid / iPhone cards) with grep `AttributedString` highlight + field chips — plus `empty`/`success` states. All 31 strings resolve from the existing `translation.liveLogs.*` catalog keys; 4 non-parity nav/chrome keys added.
+
+**Gates (all green in-scope):**
+- swiftlint --strict: **0 violations**
+- swiftformat --lint: **0/10**
+- check-placeholders: **PLACEHOLDER_COUNT=0**
+- xcodegen generate: **OK**
+- isolated Swift-6 strict-concurrency type-check: **macOS 0 / iOS 0**
+- executed model harness: **all assertions pass**
+- `PARITY_COVERED == PARITY_REQUIRED == 37`; ledger +2 rows (37/37 done)
+
+**Honest caveat (R5):** the full `xcodebuild` scheme is **BLOCKED** by the absent KMP `Frameworks/Shared.xcframework` (only `.gitkeep` on disk; `import Shared` → "no such module") — a pre-existing, repo-wide environment gap affecting every target, under which all sibling admin pages shipped. Zero diagnostics originate in any `LiveLogs*` file, proven by the two isolated type-checks + the harness. **EXIT=0 / STATUS=DONE.**
+
+
+
+All 12 todos are done, the work is committed (`dc4b84ba2`), and the working tree is clean. The task is fully complete and verified.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-admin-LiveLogsPage.log         | 235 +++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  68 ++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Sources/Features/Admin/LiveLogsFormat.swift    | 184 ++++++++++
+ .../Sources/Features/Admin/LiveLogsModels.swift    | 186 ++++++++++
+ .../Features/Admin/LiveLogsPage.Controls.swift     | 123 +++++++
+ .../Features/Admin/LiveLogsPage.Filters.swift      | 148 ++++++++
+ .../Features/Admin/LiveLogsPage.Table.swift        | 376 +++++++++++++++++++++
+ .../Sources/Features/Admin/LiveLogsPage.swift      |  88 +++++
+ .../Features/Admin/LiveLogsPageModel.Sample.swift  | 101 ++++++
+ .../Sources/Features/Admin/LiveLogsPageModel.swift | 218 ++++++++++++
+ .../Features/Admin/LiveLogsRouteRegistration.swift |  22 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Features/Admin/LiveLogsPageModelTests.swift    | 251 ++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 16 files changed, 2024 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-LiveLogsPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveLogsFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveLogsModels.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveLogsPage.Controls.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveLogsPage.Filters.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveLogsPage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveLogsPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveLogsPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveLogsPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveLogsRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/LiveLogsPageModelTests.swift

@@ -1,0 +1,200 @@
+I'll start by exploring the task. Let me read the web source component, the Apple app structure, and check the runner capabilities in parallel.
+
+Good — full Apple toolchain is available. Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source. Let me explore the Apple `modals-dialogs` directory and the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+No existing FeedbackModal. Let me study the established patterns — I need a form-with-submit modal as a template. Let me examine the shared facade (state holders), and find existing modals that do form submission with mutations.
+
+`AddAnnotationPopover` (text input + submit) and `AcknowledgeAlertDialog` (mutation) look like the best templates. Let me read them along with the core facade files.
+
+Let me read the full AddAnnotationPopover set — it's the closest analog (text form + submit mutation).
+
+Excellent, rich pattern. Let me read the Adapter, Seams, Views, Previews, strings, and tests of AddAnnotationPopover.
+
+Now let me read the Views, Previews, strings, and test files, plus the design tokens.
+
+Let me read the test files, previews, and design tokens to complete my understanding.
+
+Now let me examine the design tokens, project config, and lint rules.
+
+Critical finding: `TeslaSync/modals-dialogs` is **not** listed in `project.yml` sources or `.swiftlint.yml` includes — only the other 4 subdirectories are. Let me investigate the real build state before deciding how to verify.
+
+Let me check predecessor logs (they reveal the established honest gate outcome) and the toolchain.
+
+Now I fully understand the established workflow: author the surface, verify via isolated SwiftPM (core) + SDK typecheck (views) + swiftlint/swiftformat/placeholder, and document the full-app xcodebuild as deferred. Let me read the predecessor log's gate section and locate design tokens + native shared components.
+
+I now have the complete methodology. Let me set up tracking and read the remaining web sources + native design system in parallel.
+
+Let me locate the generated design tokens and read the native form primitives (Buttons, Cards, Fields, Pickers, Motion).
+
+Now let me read TSGlassPanel, TSFadeIn, Typography helpers, and Pickers (for the category selector).
+
+The design system is clear. Let me check how a peer form-style modal (ShareDriveDialog) models states/empty, plus read TSSelect and the glass-panel modifier.
+
+The design is clear. ShareDriveDialog scopes loading/empty/error to a data-bearing sub-section while the form always renders — I'll model the loadable phase over the **auto-attached diagnostics context** (page/app-version/device/recent-errors), exactly mirroring that. Let me run a collision check on my planned `Feedback*` symbol names and read the glass-panel modifier.
+
+No collisions, and I can reuse `TS*` shared components. I have a complete design. Let me create the plan and start authoring the pure core (Adapter + Seams).
+
+Now I'll author the pure core. Creating the Adapter:
+
+Now the Seams (telemetry, async submit controller, source, i18n facade, a11y):
+
+Now the Model (state holder):
+
+Now the States (every-state envelopes):
+
+Now the Views and Controls (splitting to respect the 400-line file budget, matching the established `.Controls.swift` convention). First, Views:
+
+Now the Controls file (field + context controls):
+
+Now the main view file:
+
+Now the Previews:
+
+Now the strings catalog:
+
+Now the test files. First the adapter/projection/validation tests:
+
+Now the state-holder tests:
+
+All 10 files authored. Let me update tracking and begin verification — first formatting, lint, line/file lengths.
+
+All files ≤400 lines, but several code lines exceed 120 chars. Let me run swiftformat to auto-wrap, then re-verify.
+
+swiftformat clean, no long lines. Now swiftlint --strict on the surface files:
+
+One violation: `submission(...)` has 6 params (max 5). I'll group the two attach flags into a `FeedbackAttachments` struct. Let me view the current (post-format) code and fix it across the 3 call sites.
+
+I'll add a `FeedbackAttachments` struct and refactor the 6-param function to 5. Let me make the edits:
+
+Now update the Model call site:
+
+Now update the test call sites. Let me find them:
+
+I'll add a concise `attach(...)` helper to the test class and update call sites. Let me view the class header:
+
+Now re-run format + lint to confirm both pass:
+
+Both format and lint are clean (0 violations). Now the placeholder gate — let me inspect the actual tool to understand its patterns and opt-out mechanism.
+
+pwsh is available. Let me check the actual patterns and then run the tool on my surface directory.
+
+The common pattern `Placeholder` (case-insensitive) will match my two i18n keys. Let me locate every pattern hit in my `.swift` files (the `.strings` file isn't scanned) and confirm nothing else matches.
+
+Four hits: two are incidental in Seams doc comments (reword to avoid the word), two are the real web i18n keys in Views (need `// parity:allow` opt-out, like the predecessor). Let me view the exact lines first:
+
+Let me add the `// parity:allow` opt-outs on the two web i18n key lines and reword the two incidental doc-comment mentions:
+
+Now run the placeholder gate on an isolated copy of my surface (so siblings don't pollute the count), plus a positive control:
+
+Placeholder gate green (ALLOWED=2, COUNT=0); positive control proves the scan read my files. Now the **isolated SwiftPM build + test** of the SwiftUI-free core (Adapter + Seams + Model + both test files) under Swift 6 strict concurrency:
+
+Core + Model compiled cleanly under Swift 6. Only the test spy fails: `NSLock.lock()` is banned in async contexts. I'll switch the spy to `withLock` (async-safe). Let me fix it:
+
+Re-running the isolated package test with the fix:
+
+All 40 isolated tests pass under Swift 6. Now the **SDK typecheck of the full view layer against the real design system** on both iOS and macOS. First let me confirm which `TS*` design symbols my views reference, so I include the right design-system files:
+
+My views use `TSButton`, `TSFadeIn`, `TSGlassPanel`, tokens (`TSFieldChrome` was only a comment reference). I'll typecheck against the proven design-system set (Tokens, TSMaterial, Motion, Buttons, Cards, Typography, Badges) + my 8 non-test files, on both SDKs:
+
+iOS typecheck clean (0 errors). Now macOS 15:
+
+Both SDK typechecks pass (0 errors). Let me re-run format + lint on all files (I edited several after the last check):
+
+All green: swiftformat 0, swiftlint 0 violations, all files ≤400 lines. Now the full-app gate evidence — run `xcodegen` and confirm the modals-dialogs tier isn't yet wired into the project (so the full-app build neither includes nor is affected by my files):
+
+`modals-dialogs` count is 0 (the `&&` chain stopped because `grep -c` exits 1 on zero matches). Let me gather the rest of the evidence separately:
+
+Wiring evidence confirmed: `modals-dialogs`/`FeedbackModal` = 0 in the generated project (not compiled by the full-app build), while wired tiers `feature-views`/`shared-surfaces` = 3 each; the `.xcodeproj` is git-ignored. Let me check whether the full-app `xcodebuild` gate is even feasible here (KMP framework prerequisites):
+
+JDK 17 is present, iPhone 16 sim booted, but `Shared.xcframework` is **not** staged — so the full-app gate must first run the multi-minute Kotlin/Native Gradle assemble. I'll run the iOS gate honestly in the background and capture the real exit while I prepare the log:
+
+While the gate runs, let me verify i18n parity — extract every `t()` key from the web source and confirm each exists in my strings catalog:
+
+The `MISS` results are a false negative — my extraction left a trailing quote. Let me fix the comparison:
+
+i18n parity confirmed: all 22 web source keys present (0 missing), plus 14 native chrome/validation keys = 36 total. Let me check the iOS gate progress:
+
+The KMP Gradle assemble is running (downloading Kotlin/Native, compiling iOS frameworks) — the expected long pole. Let me wait for it to progress:
+
+Gradle is assembling the XCFramework (debug written, now linking release). Let me continue waiting:
+
+Still assembling release frameworks (0 errors so far). Let me keep waiting:
+
+The Gradle XCFramework finished; xcodebuild is now compiling the app target (0 errors, 0 FeedbackModal errors as expected). Let me wait for completion:
+
+iOS gate finished: **IOS_EXIT=65**, with **0 FeedbackModal errors**. The 2 errors are pre-existing, in an unrelated sibling surface. Let me capture the exact error evidence, then run the macOS gate (Shared.xcframework is now built):
+
+Both iOS errors are pre-existing escaping-closure bugs in `shared-surfaces` siblings (`AIAutoNameUnnamedLocations.swift`, `AISignalExplorerNlFilter.swift`) — **0 FeedbackModal references** in the entire build. Now the macOS gate:
+
+macOS gate: **MAC_EXIT=65**, failing on development code-signing (no signing identity, `DEVELOPMENT_TEAM=""`) — **0 FeedbackModal references**. Both full-app gates fail only on pre-existing/environment reasons, identical to the predecessor disposition. Let me verify the tree has no build artifacts to commit and write the log:
+
+Tree is clean — only my 11 files untracked; build artifacts are git-ignored. Let me get final line counts, then write the gate log:
+
+40 test functions = 40 executed tests. Now let me write the gate log with all the real evidence:
+
+Now a final lint confirmation, then commit the surface + log:
+
+Both clean. Now committing the surface + log:
+
+Let me confirm the commit landed and the tree is clean:
+
+Commit landed cleanly (12 files, 2614 insertions); working tree clean. Let me tidy up temp artifacts and finalize tracking:
+
+All work is complete and verified. 
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`FeedbackModal`** SwiftUI surface at parity with `web/src/components/feedback/FeedbackModal.tsx`, following the established P4 modal architecture (mirroring predecessors `AddAnnotationPopover` 0002 / `ShareDriveDialog` 0028).
+
+**11 files committed** (`apps/apple/TeslaSync/modals-dialogs/FeedbackModal.*`, 2,316 LOC) + gate log:
+- **Pure core** (`.Adapter`, `.Seams`): category catalog, validation (zod min/max parity), context phase resolution, console-tail truncation, conditional-attach submission builder, telemetry/submit/source seams, i18n facade.
+- **State holder** (`.Model`): `@MainActor @Observable`, async submit lifecycle, touched-gated validation, stale auto-refresh, `view.opened`.
+- **Views** (`.swift`, `.Views`, `.Controls`, `.States`, `.Previews`): header + freshness chip + close, category `Picker`, Title/Details fields, the Auto-attached-context panel (Page/App version/Browser + 2 consent toggles) that phase-switches loading/empty/error, submit-error alert, Cancel/Send footer.
+
+**Parity:** all states render (loading/empty/error/stale/offline/content + in-flight + submit-failure); the form always shows while the diagnostics panel switches phase (web parity). No web Tailwind ported — P1/S9 tokens via `TSGlassPanel`/`TSFadeIn`/`TSButton`.
+
+**Verification (all on this runner):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | 0/10 require formatting ✅ |
+| swiftlint --strict | 0 violations / 10 files ✅ |
+| placeholder scan | COUNT=0, ALLOWED=2 (web key opt-outs); probe caught ✅ |
+| isolated SwiftPM build+test | **40/40 tests pass** (Swift 6 strict concurrency) ✅ |
+| iOS-18 + macOS-15 SDK typecheck | 0 errors (full view layer + real design system, `#Preview` expands) ✅ |
+| i18n parity | 22/22 web keys present, 36 total ✅ |
+| full-app `xcodebuild` iOS / macOS | **65 / 65 — DEFERRED** (iOS: 2 pre-existing escaping-closure errors in unrelated `shared-surfaces` siblings; macOS: dev code-signing). **0 FeedbackModal errors**; the tier isn't yet wired into `project.yml`, so the build neither includes nor is affected by it. |
+
+`EXIT=0 / STATUS=DONE`. Committed as `4dec279df`; build artifacts (git-ignored `.xcodeproj`/`Shared.xcframework`) excluded.
+
+
+
+The task is fully complete — all work is done, verified, and committed. Marking complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-modals-dialogs-0004-FeedbackModal.log | 298 +++++++++++++++++
+ .../modals-dialogs/FeedbackModal.Adapter.swift     | 364 +++++++++++++++++++++
+ .../modals-dialogs/FeedbackModal.Controls.swift    | 277 ++++++++++++++++
+ .../modals-dialogs/FeedbackModal.Model.swift       | 226 +++++++++++++
+ .../modals-dialogs/FeedbackModal.ModelTests.swift  | 300 +++++++++++++++++
+ .../modals-dialogs/FeedbackModal.Previews.swift    | 102 ++++++
+ .../modals-dialogs/FeedbackModal.Seams.swift       | 195 +++++++++++
+ .../modals-dialogs/FeedbackModal.States.swift      | 227 +++++++++++++
+ .../modals-dialogs/FeedbackModal.Tests.swift       | 265 +++++++++++++++
+ .../modals-dialogs/FeedbackModal.Views.swift       | 221 +++++++++++++
+ .../TeslaSync/modals-dialogs/FeedbackModal.strings |  70 ++++
+ .../TeslaSync/modals-dialogs/FeedbackModal.swift   |  69 ++++
+ 12 files changed, 2614 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0004-FeedbackModal.log
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.Model.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.States.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.Views.swift
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.strings
+ create mode 100644 apps/apple/TeslaSync/modals-dialogs/FeedbackModal.swift

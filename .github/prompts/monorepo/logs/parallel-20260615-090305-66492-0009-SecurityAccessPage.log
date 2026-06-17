@@ -1,0 +1,16 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page is more complex than the manifest record describes. Let me explore the Apple app structure, parity manifest, and tooling to understand the actual scope and constraints.
+
+Good — full Apple toolchain is available (xcodebuild, swift, swiftlint, pwsh). Let me explore the Apple app structure and parity files.
+
+Let me get a precise view of the Apple TeslaSync project structure and the manifest record for this page.
+
+The Apple project is a large monorepo (6286 files) with flat category directories. Let me examine the project config, find existing page patterns, check the ledger, and look for any existing SecurityAccess work.
+
+Critical finding: `project.yml` lists specific source dirs but **not** `TeslaSync/Features`. Let me check the ledger, the log location, existing page patterns, and the build tooling (xcodegen, shared framework).
+
+Existing admin page logs exist but no `Features/` dir. Let me read an existing admin page log to understand the established pattern and outcome, plus the ledger structure.
+
+This is the key reference. Sibling admin pages live under `apps/apple/Sources/Features/Admin/` (the `Sources/` group is the hand-written one in project.yml; `TeslaSync/Features/Admin/**` is the allowed-files alias). Let me study the existing Admin pages and the component library.
+

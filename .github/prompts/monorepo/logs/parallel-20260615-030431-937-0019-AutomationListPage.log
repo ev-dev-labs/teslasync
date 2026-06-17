@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and look at recently completed pages for reference patterns.
+
+The actual pages live in `apps/apple/Sources/Features/`. There's already an `AutomationsListPage` (card-based, plural) — I need to create `AutomationListPage` (list, singular). Let me study the existing Automations domain and the recent MileagePage for conventions.
+
+Excellent architecture. Let me read the web-side hooks, types, and the bulk components I need to port, plus the sample data source pattern.
+
+Now let me read the `Automation` model type, the web `BulkActionToolbar`, `useBulkSelection`, and the recent MileagePage route registration + test for conventions.
+
+Let me read the actual `BulkActionsToolbar` implementation, the base `Automation` model, and the recent MileagePage route registration + test.
+
+Now let me examine the MileagePage route registration + test, the `AppRoute` enum, and the README gate contract.
+
+No `/automations/list` route exists in `AppRoute`. Let me see how existing automation sub-routes register (Builder/Card/ActivityFeed) and read the route host registry + parser.
+
+Now I understand the sub-route navigation pattern. Let me read the key UI components I'll use (and the existing bulk/checkbox references found in Fields.swift and Lists.swift).
+
+There's a `TSBulkActionsToolbar` and `TSCheckbox` already. Let me read those plus the other components I'll use.
+
+Let me read the remaining UI components: Cards (GlassPanel), Badges, Buttons, Typography, Skeletons, and the design tokens.
+
+Let me read Buttons, Typography, Skeletons, and the design tokens.
+
+Now let me read the Typography components and the design tokens.
+
+Now let me read the most recent MileagePage + its test, and examine the localization catalog, README gate, and parity ledger.
+
+The xcstrings catalog is large. Let me check which of the 22 required keys already exist and understand the JSON format.
+
+All 22 keys need to be added. Let me examine the xcstrings JSON format using an existing automations key.
+
+I now understand the xcstrings format and all 22 keys are missing. Let me read the README gate contract, the parity ledger, the manifest record, and check tooling availability.
+
+Good — full Apple toolchain is available (xcodebuild, swiftlint, xcodegen, pwsh, swift). Let me locate the gate README, parity ledger, manifest record, and the placeholder-check script.
+
+Let me read the parity ledger entry, the manifest record, and a recent completed page's log for the format.
+
+The ledger has `AutomationsList` (plural) but not `AutomationList` (singular). Let me check the parity manifest for this unit.
+
+The manifest has the unit (requiredCount=27); the ledger lacks rows for it (I'll add them). The prompt's notional output path (`TeslaSync/Features/...`) differs from the real convention (`Sources/Features/...`). Let me confirm the project source roots.
+
+Now I have a clear picture. Code goes in `Sources/Features/Automations/`. Let me read the test conventions, the existing sections decomposition, the DataTable + Motion components, and how route registrations are wired into the shell.
+
+Let me read the AppShell wiring, the DataTable component, and the Motion component.
+
+Let me read the DataTable + Motion components and check for existing selectable-table patterns to mirror.
+
+The `TSDataTable` uses different strings than web parity needs, so I'll build a custom table to hit the exact parity strings (matching how sibling automations pages use custom sections). Let me check the swiftlint config and idioms for localized interpolation + verbatim usage.
+
+Let me look at the sibling `AutomationsListPage.Sections.swift` and how interpolation/verbatim is idiomatically handled across pages.
+
+I have enough context. Let me check a few supporting strings/symbols I'll reference, then write a plan and todos.
+
+Let me verify error strings exist and check whether the Shared.xcframework is prebuilt (critical for whether `xcodebuild` can run the gate here).
+
+Key finding: `Shared.xcframework` is not prebuilt — the Xcode build triggers a Kotlin/Native Gradle build. Let me assess what's actually runnable here (xcodegen, gradlew/JDK, existing .xcodeproj) and read the pending-verifications notes.
+
+The repo norm: host-runnable gates (swiftlint/swiftformat/placeholder) run green; the Kotlin-dependent `xcodebuild` is deferred to macOS CI. Let me read a recent sibling's log to match the exact STATUS/format convention.
+
+The established convention (per MileagePage log) builds the Shared.xcframework, runs swiftlint/swiftformat/placeholder green, and uses a standalone logic harness for model tests. Let me check whether Gradle/Kotlin-Native caches exist (so the xcframework build is feasible here) before kicking it off.
+
+Warm Gradle (3.7G) + Konan (1.6G) caches and network are available — the xcframework build is feasible. Let me kick it off in the background now (the long pole) while I write the code.
+
+While the framework builds, let me set up tracking and write the code. Let me create a plan and todos.
+
+The framework build is running in the background. Now let me write the code, starting with the models (kept Foundation-only so the logic harness compiles standalone).
+
+Let me simplify the bulk error handling (the format helper is unnecessary since the message has no specifier).
+
+Now the sample/empty/failing data sources.
+
+Now the main page view scaffold.
+
+Now the Sections file (bulk bar, adaptive table, row/checkbox views, and the loading/empty/error states). First let me fix the page's error case to not bind an unused message.
+
+Now the route registration (sub-route NavigationDestination, mirroring the sibling automations sub-routes).
+
+Code files written. Let me update todos, check the framework build progress, and add the strings.
+
+The framework build is running. Let me inspect the exact xcstrings byte formatting so I can splice in keys with a minimal, style-matching diff.
+
+Now I'll splice the 26 string keys into the catalog in Xcode's exact style (minimal diff, preserving the rest byte-for-byte).
+
+Strings inserted and JSON validated. Let me confirm the diff is purely additive (no reformatting of existing entries).
+
+Purely additive (286 insertions, 0 deletions). Let me check the framework build and write the tests.
+
+Build still warming up. Let me write the comprehensive model tests while it builds.
+
+Now let me add the two ledger rows. First, inspect the ledger's exact formatting.
+
+Framework build completed. Let me read its result and verify the ledger diff is clean.
+
+Framework built successfully (8m17s, exit 0). Now I need to stage it into `apps/apple/Frameworks/`. Let me read the staging part of the script, then run it and generate the Xcode project.
+
+Staging is a simple idempotent copy. Let me run the staging script and generate the Xcode project.
+
+Framework staged and project generated. Now let me run the host gates — swiftformat lint and swiftlint strict on my new files.
+
+swiftformat found auto-fixable issues. Let me apply formatting to the new files, then re-verify.
+
+swiftformat passes. Let me verify the auto-format change and run swiftlint --strict.
+
+swiftlint linted the whole repo (10 pre-existing violations somewhere). Let me see the actual violations and check whether any are in my files.
+
+5 violations are in my files (4 `inclusive_language` "master" + 1 trailing-closure). Let me fix them: rename `master`→`selectAll` and fix the closure syntax.
+
+Now the Sections file — fix the trailing-closure violation, the checkbox rename, and its two usages:
+
+Now the test file — rename the test method and the `masterSelection` references:
+
+Let me re-run swiftlint and confirm my files are clean (and see what the pre-existing violations are).
+
+swiftlint --strict now passes clean (0 violations, exit 0). Let me re-verify swiftformat after my edits and run the placeholder scan.
+
+All host gates green (swiftformat 0, swiftlint 0, placeholder 0). Now the full build. Let me kick off the macOS `xcodebuild build` in the background and monitor.
+
+While the build runs, let me check whether the pre-existing defect the Mileage log mentioned still exists in this checkout.
+
+The macOS build finished. Let me read the result.
+
+Build failed only on **code-signing** (no dev certificate in this headless env) — not on compilation. Let me confirm zero Swift compile errors, then rebuild with signing disabled.
+
+Zero Swift compile errors — only signing failed. Let me rebuild with code-signing disabled (standard for headless) to get a clean SUCCEEDED.
+
+Build is compiling the main app module (no errors so far). Let me wait for it to finish.
+
+Still compiling the app module (whole-module, large). No errors. Let me continue waiting.
+
+Build failed with 3 failures centered on `DriveScorePage.Panels.swift` — the **pre-existing out-of-scope defect** the Mileage log documented. Let me extract the exact error to confirm it's not my code.
+
+Confirmed: exactly **1** compile error in the whole build, in the pre-existing out-of-scope `DriveScorePage.Panels.swift` (the same defect the Mileage log documented). **Zero** errors in my files. Let me view that line to temporarily unblock a full test run (reverted afterward), and build the standalone logic harness.
+
+The pre-existing defect is a 1-line `LocalizedStringKey`→`String.LocalizationValue` mismatch in out-of-scope `DriveScorePage.Panels.swift`. I'll apply a temporary, reverted-after patch solely to run my real XCTest bundle, then restore it. First the patch:
+
+Now run the real macOS XCTest bundle (only my test class), which compiles + links the full app:
+
+While the test build compiles (~8 min), let me build a standalone logic harness as clean-tree evidence of model correctness.
+
+Harness compiled clean. Let me run it.
+
+Logic harness: **27/27 PASS**, exit 0. Let me check the macOS XCTest build progress.
+
+App module still compiling (no errors with the temp patch). Let me wait for completion.
+

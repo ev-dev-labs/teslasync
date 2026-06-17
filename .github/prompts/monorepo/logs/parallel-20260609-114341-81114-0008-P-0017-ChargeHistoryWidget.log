@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me explore the Apple app structure and the dashboard-widgets directory more carefully.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me examine existing widgets to understand the established patterns.
+
+No existing `ChargeHistoryWidget`. The closest analog is `ChargeSessionChartWidget` (charts charging sessions). Let me study it and the web shared components in parallel.
+
+Excellent architecture reference. Let me read the rest of the ChargeSessionChartWidget files and the web shared components in parallel.
+
+Now let me read the web shared components (the real spec for shell/summary states) and find existing area-chart widgets in the Apple codebase to use as the closest chart reference.
+
+Let me read the web shared spec components and a good area-chart Apple reference in parallel.
+
+Let me read the AreaChartWrapper, the ChargingSession type, and the Apple infrastructure (registration, tokens, previews, strings, tests) in parallel.
+
+Now the AreaChartWrapper, strings, tests, registration infra, tokens, and an area-chart reference.
+
+Let me locate the shared infrastructure (registration, tokens, skeleton) and study an area-chart reference.
+
+The `BatteryDegradationTrendWidget` is the closest chart analog (gradient area + `length > 1` gate). Let me locate the shared token/registration definitions.
+
+There's a `Sources/` SPM-style layout. Let me understand the build structure (Xcode project / Package.swift) and locate the design tokens used by the main app.
+
+This is an XcodeGen project. Let me read `project.yml`, the widget infra, and design tokens.
+
+Now I understand the build (XcodeGen, shared `Sources/` + `dashboard-widgets/`). Let me read the design tokens and feedback components (TSSkeleton, chart colors).
+
+Let me locate `TSSkeleton` and confirm the web registry metadata for `charge-history`.
+
+I have all infra knowledge. Now the critical build-feasibility check (xcodegen, Shared.xcframework) plus confirming the energy conversion.
+
+Build needs `Shared.xcframework` (KMP/Gradle). Let me assess feasibility: check `apps/shared`, Gradle, and prior widget gate logs.
+
+98 prior widget logs exist. Let me inspect the sibling's gate log to learn the expected outcome pattern in this environment.
+
+The sibling log confirms this environment CAN run the full gate (Shared.xcframework builds via Gradle in ~32 min, then iOS+macOS build/test go green). Since the framework build is the long pole and independent of my code, I'll start it in the background now, then write code while it builds.
+
+Let me verify the remaining tooling and kick off the framework build.
+
+All tooling present and the iPhone 16 simulator is booted. Let me start the ~32-min Shared.xcframework build in the background now, then write code while it runs.
+
+Gradle is compiling (with warm cache hits — good sign). Now I'll write the code while it builds. Let me set up the plan and create the foundational files.
+
+Now the Models file:
+
+Now the Builder (pure adapter):
+
+Now the Model file (state-holder seam, telemetry, i18n facade, accessibility, observable model):
+
+Now the Swift Charts area chart (web `AreaChartWrapper` → Swift Charts):
+
+Now the main surface view (header, all states, compact + full branches, registration):
+
+Let me create the Previews, strings, and Tests files, and check the Gradle build progress.
+
+Gradle is nearly done (linking release frameworks — warm cache made it fast). Let me create the strings and Tests files.
+
+Now the Tests file:
+
+All 8 files created. Let me update todos and check the framework build, then run the fast author-controlled gates.
+
+Framework built successfully (6m58s via warm cache) but not yet staged to `apps/apple/Frameworks/`. Let me check the staging step in the script and run it.
+
+Framework is built with all three slices. Let me stage it and generate the Xcode project.
+
+Project generated. Before the slow xcodebuild, let me run the fast author-controlled gates (swiftformat, swiftlint) on my files and fix any issues.
+
+swiftformat wants 4 long lines wrapped. Let me auto-format my files with the ecosystem tool, then re-verify.
+
+swiftformat clean. Now swiftlint on my files:
+
+swiftlint: 0 violations on my files. Now the placeholder gate (run from repo root as the gate specifies):
+
+All fast author-controlled gates are green on my files: **swiftformat 0, swiftlint --strict 0, placeholder 0**. Now the full iOS build+test (the long pole). Let me start it.
+
+iOS build is compiling. Let me monitor progress.
+
+Build is in the Gradle pre-action (re-staging framework), no errors yet. Let me wait and check for compilation progress.
+
+Build succeeded (0 errors) — my widget compiled into the app. Now the test target is building. Let me wait for test results.
+
+The iOS build/test completed. Let me read the final result.
+
+TEST FAILED with 5 errors. Let me find them.
+
+The 5 errors are pre-existing redeclaration collisions in **sibling** files (`ChargeStatusLiveWidget.Tests.swift` vs `ChargeStatusWidget.Tests.swift`) — `ChargeStatus*` test classes, nothing of mine (all my types are `ChargeHistory*`). Let me confirm these are pre-existing and not introduced by me.
+
+Confirmed: only my 8 files are added; the 5 errors are **pre-existing** redeclaration collisions between two untouched sibling files (`ChargeStatusWidget.Tests.swift` and `ChargeStatusLiveWidget.Tests.swift`), both unmodified vs HEAD. The app **build** succeeded — my widget compiles cleanly. The shared test bundle fails to compile due to these predecessor collisions, which I'm forbidden to edit.
+
+Let me check how recent sibling prompts handled this same pre-existing test-bundle state.
+
+Clear precedent: sibling logs isolate their surface tests via `-only-testing` and classify the full-bundle failure as environmental/predecessor. On my merged branch the predecessor collision blocks full-bundle compilation. Let me first map ALL duplicate test-class collisions so I can run a clean isolated verification of my tests without touching any committed sibling file.
+
+Two pre-existing predecessor collision pairs exist (`ChargeStatus*` and `Safety*`); my `ChargeHistory*` classes are all unique. Let me identify the Safety colliding files, then run a clean isolated verification of MY tests (temporarily setting aside predecessor files, non-committed, restored after).
+
+Both predecessor collision pairs confirmed pre-existing (unmodified vs HEAD). I'll run a **non-committed isolation verification** of my tests: temporarily set aside one file from each predecessor collision pair so the bundle compiles, run only my `ChargeHistory*` tests, then restore. The commit will contain only my files.
+
+Now run the isolated iOS test with only my `ChargeHistory*` classes (app already built in derivedData):
+
+Still compiling (project regen invalidated incremental state). Let me wait for completion.
+
+Full rebuild in progress (project regen invalidated incremental state). Let me wait for it to finish.
+
+Test bundle compiled and ran — but 3 failures in my tests. Let me see which assertions failed.
+
+"(3 failures)" = build command failures, not test failures. Let me find the actual build errors.
+
+More pre-existing breakage surfaced: the shared XCTest bundle also includes `feature-views/*Tests.swift`, which have numerous predecessor collisions AND Swift 6 concurrency errors — the bundle is pervasively broken at HEAD by predecessor files I can't touch. Let me check how the latest sibling prompts (which faced the same merged-branch reality) handled their test verification.
+
+The latest siblings (0113/0115/0118) faced this same merged-branch reality and DEFERRED the full xcodebuild test (predecessor bundle breakage + signing), verifying instead via SDK typecheck + a standalone logic harness + static gates, then declared `STATUS=DONE`. I've already gone further (real iOS app **BUILD SUCCEEDED**). Let me restore the repo to pristine, then build the strongest evidence set.
+
+First, restore the moved predecessor files:
+
+Repo is pristine (only my 8 files). Now let me build a standalone harness that compiles and **executes** my real adapter code (the explicit "adapter unit test" acceptance criterion), independent of the predecessor-broken bundle.
+
+25/25 adapter checks pass on my real code. Now let me extend the harness to also execute the model's phase resolution, compact/wide thresholds, lifecycle, and accessibility (including Model.swift + the real infra).
+
+Top-level code is only allowed in a file named `main.swift`. Let me relocate and recompile.
+
+49/49 real-code checks pass across both harnesses (adapter + model + accessibility), executed against the macOS SDK. Now let me verify the full surface (including the SwiftUI/Charts View + Chart files) type-checks against the macOS SDK too. Let me check the `TSSkeleton` dependency first.
+
+Only my widget uses `TSSkeleton` (and the View/Chart/Previews compiled cleanly in the real iOS app build). For definitive macOS evidence, I'll do the real macOS **app build** (symmetric with iOS). Let me regenerate the pristine project and start it.
+
+macOS build running. Let me monitor while drafting the gate log.
+
+macOS compiling, no errors. Let me wait for completion.
+
+Still in whole-module compilation (large app). Let me continue waiting.
+
+Good — my files are compiling for macOS now (11 references), no errors. Let me wait for the build to finish.
+
+macOS app **BUILD SUCCEEDED**. Both platforms compile my widget. Let me confirm zero errors and my files compiled, then run the SDK typecheck for iOS symmetry and assemble the gate log.
+
+Both platforms build green with 0 errors in my files. Now let me capture the **tree-wide** swiftformat/swiftlint numbers (as the gate runs them) for honest disclosure, and prove my files contribute zero violations.
+
+Tree-wide swiftformat: **0/2642 files** require formatting (exit 0) — fully clean. Now tree-wide swiftlint --strict (gate step 3):
+
+The 7 matches are just "Linting 'ChargeHistoryWidget...'" progress lines. Let me find the actual single violation.
+
+The single tree-wide lint violation is the **identical pre-existing** one in `LiveSignalSparklinesWidget.Builder.swift:158` that sibling 0019 already documented — a predecessor file outside my scope. My files: **zero** violations. Let me confirm it's unmodified vs HEAD and gather final facts for the log.
+
+All evidence confirmed. Let me write the comprehensive, honest gate log.
+
+Log written. Let me do final pre-commit verification: confirm only my 8 files + the log are in the working tree, and the generated project/framework are git-ignored.
+
+Clean: only my 8 files + the log; generated project/framework git-ignored; my files pass swiftformat (0/7) and swiftlint --strict (0). Let me commit.
+
+All 9 files staged (8 source + log), nothing else. Committing:
+
+Committed cleanly as `a665da68f`; working tree is clean. Let me clean up my temporary verification artifacts in /tmp.
+
+All 9 todos complete, working tree clean, commit `a665da68f` in place.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0017-ChargeHistoryWidget.log | 178 +++++++++++
+ .../ChargeHistoryWidget.Builder.swift              | 108 +++++++
+ .../ChargeHistoryWidget.Chart.swift                | 180 +++++++++++
+ .../ChargeHistoryWidget.Model.swift                | 271 ++++++++++++++++
+ .../ChargeHistoryWidget.Models.swift               | 116 +++++++
+ .../ChargeHistoryWidget.Previews.swift             | 146 +++++++++
+ .../ChargeHistoryWidget.Tests.swift                | 303 ++++++++++++++++++
+ .../dashboard-widgets/ChargeHistoryWidget.strings  |  44 +++
+ .../dashboard-widgets/ChargeHistoryWidget.swift    | 348 +++++++++++++++++++++
+ 9 files changed, 1694 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0017-ChargeHistoryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeHistoryWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeHistoryWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeHistoryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeHistoryWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeHistoryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeHistoryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeHistoryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/ChargeHistoryWidget.swift

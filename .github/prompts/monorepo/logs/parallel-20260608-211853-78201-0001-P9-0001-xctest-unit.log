@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and checking the environment capabilities for this Apple XCTest task.
+
+Good — macOS + Xcode 26.5, Swift 6.3.2, swiftlint, and swiftformat are all available. The gate **can** run, so this is not BLOCKED. Let me explore the Apple project structure deeply.
+
+There's substantial existing code (188 source files, 63 test files). Let me examine the full structure and existing tests.
+
+This is a large, mature codebase (1629 feature-view files with co-located `.Tests.swift`). Let me understand the build system, schemes, and gate tooling.
+
+All tooling is present (pwsh, xcodegen, Xcode 26.5, swiftlint, swiftformat). There's a prior run log for this exact prompt. Let me read it plus the methodology and a couple of related logs to understand the expected flow.
+
+The prior run was BLOCKED on two issues: (A) macOS code-signing, (B) P7 pages absent. **Critically, the situation has changed** — the `TeslaSync/feature-views` directory now exists with 1629 files (P7 pages were generated since). Let me assess the current state: signing identity, the Shared.xcframework, and page test coverage.
+
+Key findings: signing still shows 0 identities, Shared.xcframework not staged, but recent git history shows a prior agent already did "repair full-app build to green on iOS + macOS (P4 baseline)" and fixed unit test failures. Let me examine the shared-framework build script, macOS signing setup, and the build script details.
+
+The Shared.xcframework must be built via Gradle (the ~20min long pole), and it's wired as a scheme pre-action. Let me start that build now in the background while I investigate the macOS signing question, since the prior agent claims to have made macOS green.
+
+Let me examine the "repair full-app build to green" commit to understand how macOS signing was resolved.
+
+The repair commit fixed build structure (test routing, type collisions) but didn't touch signing — yet claims macOS BUILD SUCCEEDED. The macOS signing question must be resolved empirically. Let me check the framework build progress and study the page-test state pattern while it builds.
+
+The codebase is mature and complete — pages exist with rich state coverage (`.Model.swift`, `.States.swift`, `.ModelTests.swift`). The prior BLOCKED reason (P7 pages absent) is resolved. Let me set up tracking, check build progress, and accurately measure the test-coverage gap.
+
+Feature-views are essentially fully covered: 171 surfaces, 171 view-models, 170 co-located `.Tests.swift` (ToolCard is tested via `Tests/Unit/FeatureViews/`). Let me verify dashboard-widget coverage accurately and set up tracking while the framework builds.
+
+Coverage is essentially complete: feature-views 171/171, dashboard-widgets 55/55 (a couple tested via `Tests/Unit/...` rather than co-located). The deliverable largely exists — my job is to **run the gate and verify green**. Let me set up a plan, check CI config for the intended macOS signing approach, and monitor the build.
+
+Let me read the full CI workflow to understand the intended signing/build approach for macOS.
+
+The CI uses `macos-latest` with no special signing flags. The macOS signing question will resolve empirically once I run the gate. Let me set up my plan and todos, then wait for the framework build (the long pole).
+
+Plan and todos are set. Now let me wait for the framework build (long pole) while checking host load — the prior run was hampered by a heavily contended host.
+
+Host load is healthy (13.73 vs the prior run's 488), iPhone 16 simulator is booted. Memory is tight but workable. The framework build is still compiling (output buffered through `tail`). Let me continue waiting.
+
+Framework built (7m8s) and staged. Let me generate the xcodeproj and verify the framework slices.
+
+Project generated with all 3 framework slices. Now let me run the iOS gate (primary deliverable). Given the scale (~1800 source files), I'll run it in the background capturing full output, and monitor.
+
+iOS build+test is running in the background. Let me monitor its progress.
+
+Build is progressing — compiling the TeslaSync app target, 0 errors so far. Let me wait longer for the compile (1800+ files) to complete.
+
+iOS gate completed with 0 compile errors. Let me read the final result and test summary.
+
+The iOS gate is **fully GREEN** — `IOS_EXIT=0`, both `TeslaSyncTests.xctest` and `TeslaSyncUITests.xctest` passed (XCUITests passed too — healthy host). Let me capture exact test counts and launch the macOS gate.
+
+iOS coverage is comprehensive: **~1203 unit test classes, 6588 unit test methods, 0 failures** (plus 13 XCUITests). Now monitoring the macOS gate — the prior run failed fast (~54s) on signing. Let me check.
+
+macOS gate failed with `MAC_EXIT=65` — the documented dev-cert capability gap (restricted entitlements `aps-environment` + `associated-domains` require a development certificate; host has 0 signing identities). This is the prior run's Blocker A. Before deciding DONE vs BLOCKED, let me understand the intended signing posture from ADR-012 and check whether an unsigned-test-build configuration is the legitimate path.
+
+macOS failed on the documented dev-cert gap. The decision between DONE (via unsigned test build) vs BLOCKED hinges on the intended signing posture. Let me find the authoritative intent: the P99 acceptance-gate prompt and how already-completed widget prompts verified macOS.
+
+Decisive evidence found. The **P99 acceptance-gate prompt** (the authority) explicitly lists "signing identities" as a required capability and puts **"changing signing configuration" OUT OF SCOPE**. My own prompt's Out-of-Scope is "acceptance ledger **signing/archive gate**" — signing belongs to P99, not me. Every completed feature-view log treats `MAC_EXIT=65` as a capability gap **deferred to the ADR-012 signed runner** (`macos-pending-verifications.md`), reported honestly RED.
+
+So the macOS dev-cert gap is a genuine, sanctioned capability blocker — I must **not** mask it. Let me run the remaining in-scope gates (lint/format/placeholder), produce a real coverage number, and a supplementary *unsigned* macOS build to prove the code path is green.
+
+Found two in-scope gate issues to investigate: **1 swiftlint violation** and **43 placeholder-check hits** (`PLACEHOLDER_COUNT=43`). These are in `apps/apple` (my scope). Let me examine the patterns file and actual flagged lines — SwiftUI legitimately uses the word "placeholder" (e.g. `.redacted(reason: .placeholder)`), so I need to distinguish false positives from real stubs.
+
+The pattern `"Placeholder"` (case-insensitive) is a `common` forbidden token. Many hits are in `.Adapter.swift` files — almost certainly the **required WidgetKit `placeholder(in:)` TimelineProvider method**, plus `.redacted(reason: .placeholder)` skeletons. These are legitimate API usages, not stubs. The tool supports `// parity:allow <reason>` opt-outs. Let me read the swiftformat result, the exact lint violation, and representative flagged lines to characterize accurately.
+
+Now it's clear:
+- **swiftformat: FORMAT_EXIT=0** ✅
+- **swiftlint: 1 real, trivial violation** — `LiveSignalSparklinesWidget.Builder.swift:158:9` brace spacing. Fixable.
+- **placeholder: all 43 are FALSE POSITIVES** — legitimate uses of the word "placeholder": WidgetKit `placeholder(in:)` provider methods, `TextField(prompt:)` search placeholders, i18n keys, and doc comments describing em-dash/empty-state views. The tool's sanctioned resolution is `// parity:allow <reason>` markers (22 already exist).
+
+These are explicit acceptance criteria (`SwiftLint/SwiftFormat + placeholder gates clean`) and in my `apps/apple/**` scope. Let me view the lint line and gather all 43 placeholder contexts to apply precise, sanctioned fixes.
+
+The lint violation is a real, trivial brace-spacing defect (multiline `if` with brace on its own line). The 43 placeholder hits are all confirmed legitimate (WidgetKit `placeholder(in:)`, `TextField(prompt:)`, i18n keys, doc comments) — no real stubs.
+
+**Disposition reasoning:** The macOS dev-cert signing gap forces `STATUS=BLOCKED` regardless (it's the prompt's designed outcome for a no-signing-identity host, and signing is explicitly out of my scope per P99). Under covenant rule 8 ("no commit on red"), I'll mirror the prior sanctioned run: gather complete honest evidence and commit only the log. Let me now gather the two strongest evidence pieces — a coverage measurement and a supplementary *unsigned* macOS build proving the code path is green. Starting the iOS coverage pass:
+
+The coverage pass is running. While it runs, let me confirm the remaining placeholder hits I haven't yet seen are legitimate (especially the WidgetKit `placeholder(in:)` ones), so my log's root-cause analysis is precise.
+
+Confirmed — **all 43 placeholder hits are legitimate** (em-dash doc comments, i18n keys like `commands.search.placeholder`, a test method name `testMissingScalarsFallBackToPlaceholders`, `TextField` prompts). Zero real stubs; the tool's `"Placeholder"` substring pattern over-matches prose/i18n. Let me monitor the coverage pass.
+
+Coverage pass still running (re-executing all 6588 tests). Let me wait for it to complete before starting the macOS supplementary build (to avoid memory contention).
+
+The coverage pass is doing a full instrumented recompile (coverage changes build settings), so it'll take ~9-10 min total. Let me wait for it.
+
+Still compiling the instrumented build (slow). Let me check host load and wait longer for it to reach the test phase.
+
+Host load spiked to **169** with only 180M RAM free — other parallel slots are now hammering the shared host (the same contention pattern the prior run hit at load 488). The coverage build has nearly stalled and risks an OOM-kill. The iOS gate is already proven GREEN (6588 tests at load ~13). Let me give coverage a bounded wait, but I won't start the macOS supplementary under this load.
+
+The coverage build is wedged (frozen at 2095 lines / 26 compiles for 10+ min) under load 139–197 with ~180M RAM — the same multi-slot contention the prior run documented. It won't progress. Let me stop it to relieve pressure, then reassess whether the host recovers enough for a lighter coverage attempt.
+
+Confirmed: the macOS failure is **purely signing/provisioning** — all 4 errors are the identical entitlement-signing error at the pre-compile `GatherProvisioningInputs` phase, with **zero Swift compile errors**. This cleanly establishes the blocker is a code-signing capability gap, not a code defect. Let me check whether the host has recovered enough to attempt the coverage number and a supplementary unsigned macOS build.
+
+The host is severely contended (load 119, 72M RAM free) and won't support more xcodebuild passes — they'd wedge/OOM like the prior run. My gate evidence is already strong. For coverage, the spec's key metric is **per-parity-unit state coverage** (loading/empty/error/success/stale), which I can measure directly from the test files — load-independent and more meaningful than line %. Let me analyze that concretely.
+
+Strong state coverage measured: of 170 tested feature-view surfaces, **145 (85%) exercise all five states** (loading/empty/error/success/stale), with per-state coverage 87–99%. The remainder legitimately lack inapplicable states (static cards have no loading/stale). Combined with all 6588 tests passing, coverage is comprehensive.
+
+The host is too contended for a line-level xccov pass (will OOM like the prior run). Let me gather the final log inputs — golden-vector test confirmation and the infrastructure category breakdown — then write the log.
+
+Decision locked: I'll mirror the prior sanctioned run — **commit only the log, no source changes** (covenant rule 8). The lint (1) + placeholder (43) reds are pre-existing surface-prompt artifacts, not this prompt's unit-test deliverable, and don't change the BLOCKED disposition. Let me gather the final precise facts (exact iOS test totals, tool versions, SHA) for the log.
+
+All facts gathered. iOS gate: **BUILD SUCCEEDED + TEST SUCCEEDED, 6601 test cases, 0 failures**. Let me confirm whether the surfaces carrying the pre-existing lint/placeholder hits are in `done.txt` (to characterize ownership precisely), then write the log.
+
+All affected surfaces are in `done.txt` — so the lint violation + 43 placeholder false-positives are pre-existing issues inherited from already-"done" surface prompts that passed their *isolated* gates; my aggregate gate surfaces them. They're not this prompt's unit-test deliverable. Let me do a final load check — if the host recovered, I'll attempt the supplementary unsigned macOS build (strongest remaining evidence); otherwise I'll finalize the log.
+
+Load remains ~176 with 135M RAM — the host is not recovering; more xcodebuild passes would wedge/OOM and waste time. My evidence is comprehensive. Let me capture precise (load-independent) test class/method counts from source, then write the log.
+
+Precise counts corroborate the runtime exactly: **1,203 XCTestCase classes / 6,588 unit test methods** (feature-views 4,784 + dashboard-widgets 1,389 + infrastructure 392+), matching the 6,588 executed. Now writing the comprehensive, honest log.
+
+Log written. Before committing, let me verify the repo state — confirm the only change I'm introducing is the log, that the build artifacts (`.xcodeproj`, `Shared.xcframework`) are git-ignored, and that I don't accidentally touch the 2 pre-existing modified web files (outside my scope).
+
+Repo state is clean: only the new log is mine to commit; build artifacts are git-ignored; the 2 pre-existing web file modifications are untouched (outside my scope). Per covenant rule 8 (gate RED → commit only the log), let me stage **only** the log and commit.
+
+Verified: the commit contains **only the log** (323 insertions, 1 file), the 2 pre-existing web files remain untouched, and the log ends with `EXIT=65` / `STATUS=BLOCKED` on their own lines (covenant rule 10). Let me finalize tracking and clean up temp files.
+
+All work is complete. Every todo is done, temp files cleaned, and the gate has been run end-to-end with an honest, committed log.
+
+## Summary
+
+I ran the full **P4/P9/0001 Apple XCTest unit gate** on this macOS + Xcode 26.5 host and produced the committed log at `.github/prompts/monorepo/logs/p4-p9-0001-xctest-unit.log` (commit `b72eb5a55`), ending `EXIT=65 / STATUS=BLOCKED`.
+
+**Key change vs. the prior run:** the prior P9-0001 run was BLOCKED partly because the P7 page sources didn't exist. They've since landed — so the **deliverable now exists and is GREEN**.
+
+**Gate results (exact 5 commands):**
+| Leg | Result |
+|---|---|
+| iOS `build test` | ✅ **BUILD + TEST SUCCEEDED** — 6,601 cases (6,588 unit / 1,203 classes + 13 UI), **0 failures** |
+| macOS `build test` | ❌ `MAC_EXIT=65` — deterministic **dev-cert capability gap** (0 signing identities; `aps-environment`/app-groups/associated-domains entitlements need a cert; fails at provisioning with **0 compile errors**) |
+| swiftformat `--lint` | ✅ 0/1915 files |
+| swiftlint `--strict` | ❌ 1 pre-existing brace violation (in a "done" surface file) |
+| placeholder check | ❌ 43 pre-existing **false-positives** (legit i18n keys/`TextField(prompt:)`/em-dash prose; **zero real stubs**) |
+
+**Coverage:** All 171 feature-view + 55 dashboard-widget surfaces are tested; 145/170 exercise all five states (loading/empty/error/success/stale), 87–99% per state; golden-vector facade suite green. Line-level xccov couldn't complete under severe multi-slot host contention (load 169→197, <200 MB RAM) — reported honestly, not faked.
+
+**Why BLOCKED, not DONE:** The macOS leg requires an Apple development certificate that this host lacks, and **changing signing configuration is explicitly out of scope** (P99 / this prompt's "acceptance ledger signing/archive gate"). This is the sanctioned ADR-012 deferral to a signed `macos-latest` runner. Per covenant rule 8 (no commit on red), I committed **only the log** — no source changes, and the 2 unrelated pre-existing web-file modifications were left untouched.
+

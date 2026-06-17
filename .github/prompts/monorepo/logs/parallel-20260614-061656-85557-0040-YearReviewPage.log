@@ -1,0 +1,185 @@
+I'll start by exploring the codebase structure to understand the task, the web source, and the existing Apple app architecture.
+
+Xcode 26.5, Swift 6.3.2, and swiftlint are all available — no BLOCKED gate. Let me read the web source and explore the Apple app structure.
+
+The Apple `TeslaSync` directory has a different structure than the prompt's stated output path. Let me explore the review components, the hook, and the Apple app conventions in parallel.
+
+Now let me read all the slide components and the Apple app conventions in parallel.
+
+Now I have all 12 slides understood. Let me explore the Apple app conventions: project config, existing feature views, parity manifest, and tokens.
+
+The project.yml uses `feature-views/`, not `Features/`. Let me read the manifest record and find how existing pages are actually structured and registered for navigation.
+
+There's an established `apps/apple/Sources/Features/Analytics/` directory with existing pages. Let me study those pages and the navigation/routing system closely — they're my conventions reference.
+
+This is the canonical pattern: `Sources/Features/Analytics/` with `Page`, `PageModel`, `Models`, `Format`, `Sections`, `Charts`, `RouteRegistration` files. The prompt's `TeslaSync/Features` path isn't in project.yml — `Sources/Features/Analytics/` is the real, buildable convention used by both sibling analytics pages. Let me study the full Statistics page set and routing.
+
+Let me read the route parser, shell, FleetCompare registration, and locate the design tokens, shared components, and localization catalog.
+
+Now let me find the composition root (where registrations are wired), the design tokens, shared components, units facade, and the localization catalog.
+
+Excellent — 62 `yearReview.*` keys already exist in the catalog. Let me see the complete list, the composition root, and the xcstrings format.
+
+All 9 required strings already exist, plus many slide strings. Now let me read the complete Statistics page set (Format, Models, Sections, Charts, Sample) to learn the full conventions including units, charts, and sample data sources.
+
+Now let me read the units facade, the charts, sections, and sample data source patterns.
+
+Let me read the Units facade, design tokens, and the Statistics sections + an existing page test for conventions.
+
+Let me locate the design tokens, shared components, the `tsUnits` environment key, and a sibling page test.
+
+Let me read the typography, buttons, cards, charts components, the `.metric` default, and a sibling test.
+
+Let me read the chart component definitions, cards, buttons, and the sibling test.
+
+I have the full conventions. Now the critical risk: can this actually build? Let me check XcodeGen, the Shared.xcframework (KMP dependency), and the remaining token details.
+
+XcodeGen is available but `Shared.xcframework` (the KMP dependency) isn't staged. Let me examine the build script, check for the KMP/Gradle toolchain, and read the gate contract + pending-verifications notes.
+
+Gradle wrapper + Java 17 exist, so the KMP framework can be built (slow first run). Let me read the gate contract and pending-verifications doc, check for `pwsh`, then kick off the Shared framework build in the background while I write code.
+
+`pwsh`, Java 17, XcodeGen, Xcode 26.5 all present. The KMP framework build (Gradle) is the long pole. Let me start it in the background now, then read the README gate contract and the parity ledger while it runs.
+
+Now let me read the sibling `StatisticsPage.log` — it's my exact template for the log format, the `=== PARITY ===` section, and how the established work handled the gate/build.
+
+This is my exact template. Let me read the critical middle section showing how they handled the build and the PARITY section.
+
+I now have a complete template (the sibling `StatisticsPage.log`) showing exactly how the established work handled the path-mapping, the pre-existing out-of-scope full-build breakage, and the PARITY section. Let me set up my plan and extract the precise string keys + xcstrings format, and check the KMP build progress.
+
+Two things to investigate: the `yearReview.*` keys aren't top-level catalog keys (yet grep found them as substrings), and the KMP build exited suspiciously fast. Let me check both.
+
+Critical finding: catalog keys are prefixed `translation.` (e.g. `translation.yearReview.close`). But Swift code references bare keys like `"statistics.title"`. Let me verify how this resolves — whether bare keys also exist or there's a lookup mechanism.
+
+The catalog uses bare keys (`statistics.title`) added per-page alongside auto-extracted `translation.*` keys. I need to add bare `yearReview.*` keys. Let me get the existing English values to port, and find the interpolation convention used by sibling pages.
+
+I have all English values (with `%1$@` placeholders for interpolation). Let me record the plan, set up todos, and confirm the bare-key JSON structure + KMP progress.
+
+Confirmed all the details I need. Let me write the plan, set up todos, then check the color palette + `UnitPreferences` statics before coding.
+
+I have all building blocks. Let me start writing the implementation, beginning with the SI models and the formatters.
+
+The KMP build finished. Let me verify it succeeded, then continue with the charts.
+
+KMP framework built successfully (`GRADLE_EXIT=0`), so a real type-check build is possible. Continuing with the charts (bar for drives/month, pie for charging mix — part of the slide regions).
+
+Now the slides file — the 12 story slides plus shared slide kit and renderer. This is the core parity surface.
+
+I used `FlowLayout` for the tree grid — let me verify it exists in the codebase, then write the main page view.
+
+`FlowLayout` doesn't exist (only an admin-scoped `CoverageFlowLayout`). I'll use a self-contained `LazyVGrid` for the tree grid instead.
+
+Now the main adaptive page view with the story scaffold, navigation, and the four phase states.
+
+Now the navigation wiring: add the `.yearReview` route, registration, and app composition.
+
+Now the catalog strings. Let me first check the exact xcstrings formatting so my additions match and produce a clean diff.
+
+The xcstrings uses Xcode's `"key" : {` format (space before colon) — a full Python re-dump would reformat all 4.8MB. I'll surgically splice my new entries in. Let me write an insertion script.
+
+47 keys spliced in cleanly. Let me verify the generic keys I reference already exist, then write the test.
+
+The generic `error.*`/`action.retry` keys are missing from the catalog (even though shipped components reference them). Let me see what error/action keys actually exist so my error view uses real keys.
+
+The generic `error.*`/`action.retry` keys aren't in the catalog (a pre-existing app-wide gap). To avoid rendering raw keys, I'll add two yearReview-namespaced error strings and use them in my error view. Let me splice them in and fix the error view.
+
+Now the model + format tests.
+
+All source files written. Now let me run the host-runnable gates. Starting with SwiftFormat lint and the placeholder scan on my new files.
+
+SwiftFormat flagged auto-fixable issues. Let me apply formatting, then re-verify clean.
+
+Now re-verify all files (including the edited ones) pass SwiftFormat lint.
+
+SwiftFormat clean. Now SwiftLint --strict and the placeholder scan.
+
+4 violations under `--strict` (warnings become errors): a large tuple, cyclomatic complexity, file length >400, and a long line. Let me check line counts of all my files to plan the splits.
+
+Let me view the long line and the structure to plan the splits and fixes.
+
+I'll fix the 3 content issues (long line, cyclomatic complexity, large tuple) first, then split the 806-line file to satisfy the 400-line limit. Let me view the `accentPair` code to refactor it.
+
+Now fix the large tuple in the charts file.
+
+Now let me split the oversized Slides file. Let me get the current structure and line count.
+
+Now I'll split the 794-line slides file into 4 files (kit+dispatcher+hero, and three slide groups), each under the 400-line limit.
+
+All 4 files are under 400 lines. Let me re-run SwiftFormat and SwiftLint on the full set.
+
+Just whitespace artifacts from the split — auto-fixable. Let me apply SwiftFormat and re-verify.
+
+Both clean (0 violations). Now stage the framework, run xcodegen, and the placeholder scan.
+
+xcodegen, placeholder scan (COUNT=0), and framework staging all pass. Now the real type-check build. Let me run the macOS build, capturing output to check that my YearReview files compile cleanly.
+
+The build is running (first whole-app compile is slow). Let me wait and check progress.
+
+Build exited 65 (as the sibling pages documented). Let me check whether any failure is in my YearReview files or all pre-existing out-of-scope.
+
+I introduced a real name collision: a pre-existing `YearReviewSummary` type already exists in `TeslaSync/feature-views/`. Let me find all pre-existing `YearReview*` type declarations to understand the collision scope.
+
+This is a major discovery: a near-complete pre-existing `YearReview*` implementation already exists in the `TeslaSync/` tree (feature-views + dashboard-widgets). Almost every type name I chose collides. Let me get the authoritative list of pre-existing types and their files (excluding my new files).
+
+Good — the pre-existing slide *views* use unprefixed names (`SummarySlide`, etc.); only the *models* collide. Let me get the complete intersection between my type names and all pre-existing `YearReview*` types to find every collision.
+
+Exactly 3 collisions: `YearReviewFormat`, `YearReviewSummary`, `YearReviewVehicle`. Let me peek at the pre-existing definitions to decide whether to reuse or rename.
+
+Only 3 collisions, all model types. I'll rename mine (keeping the page self-contained per the Statistics pattern). Let me first confirm no hidden collision on my `Array` subscript helper and peek at the pre-existing summary shape.
+
+Confirmed: the pre-existing `YearReviewSummary` is a small *widget* projection lacking my page's fields (drives highlights, monthly stats, patterns, charging mix, comparisons) — so reuse isn't viable. `YearReviewStory*` is free. I'll rename my 3 colliding types with word-boundary safety and rename the format file to match.
+
+Renamed cleanly. The longer names (`YearReviewStorySummary` is +6 chars) could push lines over 120. Let me re-lint, regenerate the project, and rebuild.
+
+Two lines exceed 120 from the longer name. Let me auto-wrap with SwiftFormat and re-verify.
+
+Clean again. Now regenerate the project (file renamed) and rebuild macOS to confirm the collision is resolved.
+
+Build still exits 65 (expected pre-existing failures). Let me confirm there are now zero YearReview errors and the remaining failures are all pre-existing out-of-scope.
+
+Zero YearReview errors — the only failures are pre-existing `Input.Previews.swift` (out-of-scope). The Swift type-checker processes the whole module and reports all errors, so 0 diagnostics in my files means they type-check. Let me confirm my files were actually compiled, then build a standalone logic harness to prove the model/format logic runs (mirroring the sibling's evidence).
+
+All my files are in the pbxproj and the module type-check (525 Swift tasks) found zero errors in them. To definitively prove the model/format logic compiles and runs correctly (independent of the pre-existing broken tree), let me build a standalone logic harness like the sibling did.
+
+Now compile and run the harness.
+
+The harness caught a Swift-version-mode difference: `currentYear` as a default arg is fine under Swift 6 (the project's mode) but flagged under swiftc's default Swift 5 mode. The real Swift 6 build reported 0 errors here. Let me compile the harness with the matching `-swift-version 6`.
+
+Harness-only issue (top-level global-actor vars). Let me restructure the harness to keep state local inside the `run()` function.
+
+Harness-only inference issue (opaque params can't infer enum shorthand). Let me use a small class with a generic method.
+
+**Harness: CHECKS=48, FAILURES=0** in Swift 6 mode — the model/format/sample logic compiles and runs correctly. Now I need to type-check the iOS-only `#if os(iOS)` branches in my page (toolbar hiding, size class). Let me run the iOS build.
+
+While the iOS build runs, let me update progress tracking and verify the test file compiles cleanly within the type-check.
+
+iOS build exits 65 too. Let me confirm zero YearReview errors there (proving my iOS-only branches type-check).
+
+iOS also clean (0 YearReview errors). All in-scope gates green; the only build failures are pre-existing out-of-scope `Input.Previews.swift`. Let me confirm my exact changeset via git, then write the evidence log and update the ledger.
+
+My changeset is clean and isolated. Since I added a `.yearReview` enum case, let me verify no other exhaustive `switch` over `AppRoute` broke (the build showed none, but let me confirm explicitly).
+
+All gates verified. Let me gather precise line references for the parity evidence, then write the log.
+
+I have all evidence. Now let me write the comprehensive evidence log.
+
+Now update the parity ledger with 2 rows (macOS + iOS). Let me check the existing analytics rows format and insert.
+
+Clean round-trip confirmed. Let me insert the 2 YearReview rows after the Statistics rows.
+
+Ledger updated (12/12 × 2). Let me do a final verification pass: re-lint everything, confirm the catalog is valid, and check git state (ensuring generated artifacts are ignored).
+
+Everything is clean and isolated. Generated artifacts (`.xcodeproj`, `Frameworks/`) are gitignored. Let me stage my exact changeset and commit per the prompt's commit step.
+
+Committed (17 files, 3282 insertions). Let me clean up temp artifacts and finalize the todos.
+
+The task is complete and verified. Let me provide the final summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

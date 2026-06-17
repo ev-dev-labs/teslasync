@@ -1,0 +1,159 @@
+I'll start by understanding the task: creating a native Apple SwiftUI version of the `EditConflictBanner` web component. First, let me explore the environment and check platform capabilities.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me read the web source and study the established native surface conventions.
+
+Now I understand the web source. Let me study the established native surface conventions by examining a complete example and the shared facades (P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n).
+
+None of the surfaces import `Shared` — they use local DI seams. Let me study the most relevant templates: `AlertBanner` (web EditConflictBanner wraps it) and `DraftRecoveryBanner` (banner with actions + detection).
+
+`DraftRecoveryBanner` is the ideal template (banner + detection + actions). Let me read its complete file set plus AlertBanner's view layer.
+
+Excellent template. Let me read the remaining DraftRecoveryBanner files plus the design tokens and AlertBanner views.
+
+Now let me read the remaining DraftRecoveryBanner files (Previews, strings, Tests), the design tokens, and the shared UI components.
+
+I have a deep understanding of the pattern now. Let me read the design tokens and shared UI components (TSButton, TSCard, TSEmptyState, TSSkeleton, TSAlertBanner).
+
+There's an existing atomic `TSEditConflictBanner` (out of scope — that's the component-library bundle). My surface is the data-bound one wrapping `useEditLease`. Let me read the shared UI primitives and locate the token definitions.
+
+Let me locate the token/material definitions, TSCard, TSSkeleton, and TSTone, plus understand the project/test target setup.
+
+The tokens appear generated or vendored. Let me check the Frameworks directory and project.yml to understand the build setup and where tokens come from.
+
+Now I understand the build architecture. Let me check critical build prerequisites: xcodegen, the design tokens directory, the Shared.xcframework build script, and whether the project is already generated.
+
+Let me check whether prior surface logs recorded full builds or BLOCKED status, and whether the KMP shared core can build (Gradle/Java availability).
+
+Let me read the template surface's log to understand the established gate-result pattern.
+
+The DraftRecoveryBanner log establishes the exact honest disposition pattern: capability is AVAILABLE, per-surface gates run on this runner (isolated SwiftPM build/test, dual-SDK typecheck, swiftlint, swiftformat, placeholder, xcodegen), full-app gate attempted but deferred on pre-existing unrelated blockers. Let me confirm the exact token/component names I'll use.
+
+Let me confirm `TSCard` and `TSTone` signatures, then verify the placeholder tool and pwsh availability.
+
+I now have complete understanding of the architecture, conventions, tokens, and the established honest-disposition pattern. Let me set up tracking and write the plan.
+
+Now let me create the surface files, starting with the pure core (Adapter, Model, Seams).
+
+Now the strings catalog and the tests:
+
+All 9 files created. Now let me run the per-surface gates, starting with format/lint/placeholder checks on the new files.
+
+swiftlint clean. Now the placeholder gate:
+
+The scan hit the whole directory (60 pre-existing violations in sibling files). Let me check how the script resolves `-Path` and scope it to only my files.
+
+The script treats a non-existent prefix path as "clean" — to get a real result I'll scan a temp dir containing only my 8 files.
+
+My 8 files are placeholder-clean. Now the dual-SDK typecheck against the real design system. Let me find which design files import `Shared` (must be excluded since the framework isn't built).
+
+No design files import `Shared` — all 41 can be typechecked with my surface. Let me run the dual-SDK `swiftc -typecheck` against the real design system.
+
+`UnitFormatters.swift` is Shared-core-coupled (the established exclusion). Let me confirm it's the only one and re-run.
+
+iOS typecheck clean (0 errors). Now macOS + both DEBUG variants for the `#Preview` blocks:
+
+All 4 typecheck variants pass (0 errors, both SDKs, including `#Preview`). Now the isolated SwiftPM build + test of the pure core under Swift 6 strict concurrency.
+
+1 test failed out of 23. Let me find which one.
+
+The accessibility label test caught a real edge case: a trailing space in `title` left a stray space before the period. The fix is cleaner — collapse each part independently, then join. Let me fix `bannerLabel`.
+
+Now re-run the isolated tests with the fix:
+
+All 23 tests pass. Let me re-verify lint/format/typecheck after the Adapter edit, then run xcodegen.
+
+Now xcodegen generate to confirm the project enumerates the new files:
+
+xcodegen clean — 9 files × 6 refs = 54, all enumerated into the targets. Now let me assess the full-app gate prerequisites (signing, the known sibling-surface blockers, and KMP/Gradle availability) before attempting it.
+
+Confirmed the established blockers persist: 0 signing identities (macOS), and both sibling surfaces still carry the escaping-closure bug. Java 17 + gradlew are present but the framework isn't staged. Per the honesty covenant (no skip-and-assume), I'll actually attempt the full-app build — starting the KMP framework assembly in the background.
+
+While the framework assembles, let me check progress periodically.
+
+Let me write the session plan while the framework builds.
+
+The Gradle build is progressing (DraftRecovery's took 7m35s). Let me continue waiting.
+
+Framework staged successfully (8m39s). Now let me attempt the real full-app iOS build+test. First, confirm an available simulator destination.
+
+iPhone 16 simulator is available and the framework is staged. Now the real full-app iOS build+test (gate command), capturing full output for analysis:
+
+Build is compiling the TeslaSync module, no errors yet. Let me continue monitoring.
+
+Build progressing (19k lines, still 0 errors — the siblings may compile fine under this toolchain). Let me keep waiting.
+
+The main app target compiled with **0 errors** — the sibling-surface blockers did NOT occur under this toolchain. It's now code-signing extensions and building the test bundle. Let me wait for build+test completion.
+
+iOS finished with exit 65 despite 0 compile errors — likely a test-phase issue. Let me analyze the full log.
+
+Build failed with "SwiftCompile failed with a nonzero exit code" but **0 `error:` lines** — a compiler crash/resource failure on large sibling batches, none in my files. Let me characterize it precisely for an honest log.
+
+Confirmed: the **swift-frontend compiler itself crashed** (segfault, "Please submit a bug report... crash backtrace") — not a source error. Let me capture the crash context to document it honestly.
+
+Now I have a clear, honest picture: **swift-frontend crashed** (compiler bug, Swift 6.3.2) on large sibling batches — **0 source errors anywhere**, and my EditConflictBanner files were all included in the compile without issue. Let me also attempt the macOS build (known-blocked on 0 signing identities) for complete evidence, running it in the background.
+
+While macOS builds, let me confirm the iOS build processed my `.strings` table and that zero errors touch my files.
+
+My `.strings` table was validated (UTF-8) and bundled into `TeslaSync.app`; **0 errors**, none touching EditConflict. The iOS failure is purely a swift-frontend compiler crash on unrelated batches. Let me wait for the macOS build to complete.
+
+macOS also exited 65. Let me determine its failure reason (signing vs. compiler crash).
+
+Complete picture confirmed. **iOS** failed on a swift-frontend compiler crash (unrelated sibling batches, 0 source errors, my files + strings bundled fine). **macOS** compiled+linked cleanly (no crash) and failed only at code-signing (0 valid identities). Both are pre-existing/infra blockers outside my files. Let me write the honest gate log.
+
+Now let me write the comprehensive, honest gate log following the established format.
+
+Log written. Before committing, let me check git status to ensure I only stage my allowed files (not the generated xcodeproj, framework, or Gradle-generated Kotlin schemas).
+
+Clean status — only my 9 files + the log are untracked; xcodeproj and framework are git-ignored, and nothing else changed. Let me stage exactly my allowed files and commit.
+
+Exactly 10 files staged (9 surface + log). Now commit:
+
+Committed cleanly (commit `754eda80`, 10 files, 1534 insertions). Let me do a final verification and clean up temp artifacts.
+
+Everything is clean and committed. Let me finalize the todo tracking.
+
+The task is complete. Let me provide the final summary.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`EditConflictBanner`** SwiftUI surface at parity with the web source `components/feedback/EditConflictBanner.tsx` (which wraps `useEditLease` + `useTranslation`).
+
+**9 files** in `apps/apple/TeslaSync/shared-surfaces/` (committed as `754eda80`, +1534 lines):
+- `.swift` (bound surface), `.Adapter` (pure core: peer, `{{token}}` interp, copy builders, a11y), `.Model` (P1/S8 state holder + P1/S11 telemetry + projection + P1/S10 facade), `.Seams` (source protocol + static/in-memory sources), `.States` (loading/empty/error), `.Views` (warning notice + freshness chip), `.Previews`, `.strings`, `.Tests` (23 tests).
+
+**Parity:** `useEditLease` → `EditConflictSource`/`EditConflictInput` (no HTTP in view); web `!isOwner && otherTab` guard → `hasConflict`; web `null` → friendly empty leaf; `resourceLabel ? bodyWithLabel : body` branch with `{{resource}}` interpolation; `claim()` → optimistic-hide `takeOver()` that reappears if a new peer wins; all **5** web i18n keys reproduced; all 6 states render.
+
+**Gate results (this runner, capability AVAILABLE — not BLOCKED):**
+| Gate | Result |
+|---|---|
+| Isolated SwiftPM `swift test` (Swift 6 strict concurrency) | **23/23 pass** |
+| `swiftc -typecheck` vs real design system, iOS+macOS × release/DEBUG | **0/0** |
+| swiftlint --strict (8 files) | **0 violations** |
+| swiftformat --lint | **0/8 need formatting** |
+| placeholder gate | **COUNT=0** |
+| xcodegen generate | **54 refs** |
+
+**Full-app gate (actually attempted — Shared.xcframework assembled 8m39s):** iOS `build test` failed only on a **swift-frontend compiler crash** on unrelated sibling batches (0 source errors anywhere; my files compiled + `.strings` bundled into `TeslaSync.app`); macOS failed only on **dev-signing** (0 identities; compile reached signing cleanly). Both are pre-existing/infra blockers outside the allowed files, deferred to the P99 acceptance gate. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ple-shared-surfaces-0118-EditConflictBanner.log | 171 ++++++++++++
+ .../EditConflictBanner.Adapter.swift               | 133 +++++++++
+ .../shared-surfaces/EditConflictBanner.Model.swift | 303 ++++++++++++++++++++
+ .../EditConflictBanner.Previews.swift              |  98 +++++++
+ .../shared-surfaces/EditConflictBanner.Seams.swift | 135 +++++++++
+ .../EditConflictBanner.States.swift                | 110 ++++++++
+ .../shared-surfaces/EditConflictBanner.Tests.swift | 304 +++++++++++++++++++++
+ .../shared-surfaces/EditConflictBanner.Views.swift | 156 +++++++++++
+ .../shared-surfaces/EditConflictBanner.strings     |  33 +++
+ .../shared-surfaces/EditConflictBanner.swift       |  91 ++++++
+ 10 files changed, 1534 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0118-EditConflictBanner.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.swift

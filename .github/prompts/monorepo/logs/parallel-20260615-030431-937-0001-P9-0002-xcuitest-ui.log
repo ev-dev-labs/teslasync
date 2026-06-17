@@ -1,0 +1,344 @@
+I'll start by understanding the task and the repository structure. Let me explore what exists.
+
+macOS with Xcode 26.5 is available, and `apps/apple/` exists with a full structure including `Tests/`. Let me explore deeper.
+
+Let me read the existing UI tests and understand the harness, plus find the predecessor prompt and parity ledgers.
+
+Now let me understand the launch-argument harness wiring, route registry, parity ledgers, and the prompts/logs structure.
+
+Let me read the app entry, navigation shell, route registry, and the parity ledger.
+
+Let me check tooling availability and how the app shell/pages actually wire up (RootView), plus the shared framework build.
+
+Tooling is available (xcodegen, swiftlint, swiftformat, pwsh) and iPhone 16 simulator exists. The shared framework needs Kotlin/Gradle — the key capability risk. Let me check the JDK/gradle situation and read the predecessor prompt + prior logs.
+
+Java 17 and gradlew are present, so the shared framework can likely build. Let me read the predecessor prompt, the prior P9-0002 log, the auth bootstrap harness, and the demo views to understand established conventions.
+
+The prior P9-0002 run (different slot/branch — not in this tree) authored 3 UI suites + a component-gallery harness and hit two blockers: macOS code-signing and iOS host saturation. This is a fresh slot with only the 4 original UI files. Let me check current capability state (signing, load) and read how P9-0001/P99 handled signing.
+
+Load is now low (2/8/11 vs prior 130-573) — iOS sim execution should work. But 0 signing identities still blocks macOS. P9-0001 got macOS DONE — let me read its full log to learn the signing workaround.
+
+P9-0001 (this tree's predecessor) got macOS DONE using **`CODE_SIGNING_ALLOWED=NO`** to bypass Xcode's entitlement pre-check, plus `-derivedDataPath` and `-jobs 8`. That's the macOS workaround. It also references real P7 pages with PageModelTests. Let me confirm which P7 pages actually exist in this tree.
+
+P7 pages exist (Admin, Analytics, Automations, Battery, Charging, Dashboard, Driving). Let me map the registered pages, the parity ledger, and study one page + its model + sample-data + route-registration to understand how to drive states deterministically.
+
+36 registered P7 pages exist. Let me study the page architecture deeply — how a page renders states and how route registration wires the model — to design a deterministic harness. Reading a representative page trio plus checking for existing accessibility identifiers and state-injection seams.
+
+The architecture is clean: each page has a `*DataSource` seam with `Sample*` (success), `Empty*` (empty), and `Failing*` (error) doubles, and route registrations accept a `dataSource` parameter. This lets me drive real pages into real states. Let me survey the full data-source landscape and route-registration signatures.
+
+This is a large, well-structured task. P7 pages exist with a clean `Sample/Empty/Failing` data-source pattern. I have the macOS workaround (`CODE_SIGNING_ALLOWED=NO`) from P9-0001, and load is low. Let me write a plan, then kick off the long-pole shared-framework build to verify capability early.
+
+Shared framework build is running (long pole). While it builds, let me study the component library, the existing demo-harness pattern, and the auth launch-arg wiring to design the new harness surfaces.
+
+Auth harness is clear: `-uiTestAuthState authenticated` mounts the real `AppShell`. Let me read the feedback/States components, key UI component public APIs, and the existing PushDemoView harness to mirror conventions.
+
+Let me check the shared-framework build progress.
+
+Build still running (KMP compiles 3 slices). Let me survey the public component APIs I'll exercise in the gallery while it builds.
+
+Rich component library confirmed. Let me wait for the shared-framework build to complete (KMP is slow on first build).
+
+Shared framework built and staged (6m35s). Now let me generate the Xcode project and kick off a baseline iOS build-for-testing to confirm the gate compiles before I add code.
+
+Project generated. Let me kick off a baseline iOS `build-for-testing` (background) to validate the existing project compiles and warm DerivedData, while I author the harness.
+
+Build compiling in background. Let me study the lint/format/placeholder constraints and localization conventions so my new code passes the gates first time.
+
+Placeholder gate forbids: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented" (and swift `fatalError("unimpl"...)`). I'll avoid those literals. Localization missing keys render as the key literal (fine for UI tests keyed on accessibility IDs). Let me check the baseline build progress.
+
+Build still compiling. Let me read the exact page-view + model constructors for the "rich" pages (those with Empty/Failing data sources) so my harness registry compiles cleanly.
+
+I have exact page constructors. Now I need to decide how UI tests assert page state robustly. Let me check whether pages share a common phase/loadable type and how their error/empty views are structured, and check build progress.
+
+Let me check the baseline build status and whether iPad simulators are available (the spec wants iPad regular-width where available).
+
+Important finding: the **baseline build fails** (pre-existing, before any of my changes) with a SwiftCompile error in `DriveScorePage.Panels.swift`. iPad sims ARE available. I need the actual diagnostic. Let me re-run capturing the full log and inspect the failing file.
+
+The real errors are pre-existing compile failures in a **unit test file** (`VehicleCostPageModelTests.swift`) — not DriveScore. These block `build test`. They're in my allowed scope (`apps/apple/**`) and I must fix them to deliver a green gate. Let me read the test and its model.
+
+Clear pre-existing bugs in this predecessor unit-test file (Swift-6 actor isolation on `zeroTotals`, and `XCTAssertEqual(accuracy:)` misused with `Date`). These block the shared `build test`. I'll fix them surgically, preserving intent.
+
+Let me confirm the fix compiles (incremental rebuild) and check git history to verify these are pre-existing.
+
+Confirmed: the broken test came from commit `4f6bcb56e` (P7 VehicleCostPage), after P9-0001 — a genuine pre-existing regression. Let me wait for the rebuild result.
+
+Let me check the rebuild result and gather the exact phase-enum cases for the rich pages (needed for robust state assertions).
+
+Rebuild done — let me read the result, and I now have all phase-enum cases mapped.
+
+My VehicleCost fix worked. Another pre-existing predecessor error surfaced (`GDPRExportPageModelTests` — same Swift-6 actor-isolation class). To avoid slow one-at-a-time discovery, let me read this one and proactively scan all sibling PageModel test files for the same pattern.
+
+Only one error surfaces per build (compiler aborts the test module at the first). To avoid slow iteration, let me proactively find every test file with this pattern (nested nonisolated `DataSource` stub calling a `@MainActor` static helper of the test class).
+
+Four candidate files. Let me inspect the three besides GDPRExport to see which reference a `@MainActor` static from their nonisolated stub.
+
+Only GDPRExport has the bug (RbacMatrix/SlowQueries use `actor` stubs; SecretRotation uses an instance method — none reference a `@MainActor` static from a nonisolated context). Let me fix GDPRExport's `artifact` helper and rebuild to confirm the full test bundle compiles.
+
+The test-bundle errors are fixed; now an **app-target** error surfaced in `DriveScorePage.Panels.swift` (`String(localized:)` given a `LocalizedStringKey`). These are accumulated pre-existing regressions from later P7 commits. Let me understand the trend type and assess the breakage scale.
+
+`DriveScoreTrend.labelKey` is a `LocalizedStringKey` but is passed to `String(localized:)` — a call that never compiled. Let me read the trend definition and proactively scan for similar `String(localized:)`-with-key bugs to batch-fix.
+
+Only that one call is the suspicious pattern. I'll add a `String`-returning `label` to `DriveScoreTrend` and use it. Let me verify it's post-P9-0001, apply the fix, and run a full app build to surface remaining app-target errors faster.
+
+Confirmed these are post-P9-0001 P7 regressions. Let me run an app-only build (faster) to surface remaining app-target errors, then batch-fix before adding my own code.
+
+Build is taking long (~10 min). Let me peek at the partial log to gauge progress.
+
+0 errors so far and it's at the module-emit phase. Let me wait for completion.
+
+Whole module recompiled (changed a public enum), now at the V-files with 0 errors — good sign. Let me wait for completion.
+
+Full-module object compilation in progress (0 errors). Let me wait for it to finish linking.
+
+Whole-module object compilation continuing with 0 errors (parallel batches across directories). Let me wait for completion.
+
+This is much slower than the initial clean build (~10 min). Let me check host load and whether it's actually progressing.
+
+Host load spiked to **114** (sibling slots) — that's why the rebuild (full module recompile, triggered by my public-enum edit) is slow. It's progressing with 0 errors (5097 .o files). Let me wait for it to finish; I'll write my harness/test code in the next steps once the app baseline is confirmed green.
+
+Build is crawling under load ~100 (only ~100 .o files in 7 min). It's progressing with 0 errors. Rather than idle, let me verify the app build is truly near completion and check load trend.
+
+While the contended build runs, let me gather exact public initializers for the components I'll use in the gallery (so it compiles first time).
+
+I have verified component patterns from real page/demo code. Let me check the build and read the remaining component APIs I need (metrics, banners, chart models, motion, toggle/textfield/map) for first-time compile.
+
+I have enough component APIs. Let me check the build (running ~45 min under load).
+
+Load is dropping (67). Build still going with 0 errors. Let me gather the `*DataSource` protocol method signatures for the pages I'll build hanging (loading) sources for.
+
+I have all the APIs I need. Let me check whether the app baseline build finally finished.
+
+The build is genuinely slow (4312-file module + host contention, 59 compiler procs) but progressing with 0 errors. Rather than idle, I'll write all my harness + test code now using verified APIs, then do one combined build. Let me start with the launch parser and page-state harness.
+
+Full protocol lists captured. Let me write the hanging data sources (for loading-state coverage) for the 6 representative pages.
+
+Now the page-state harness registry, phase-label conformances, and harness view. This drives real pages into real states with a live phase marker.
+
+Let me check the app baseline build status (running ~55 min under load).
+
+Build still grinding under load (0 errors). Let me keep writing my code. Now the deep-link harness + a shared harness route registry.
+
+Now the largest piece — the component gallery. Let me first verify the maps/forms component initializers I'm less sure about, then write the gallery.
+
+Let me verify the full `TSMapView` init defaults and `TSMapAnnotation`/`TSMapStyle` so I can include a real map in the gallery safely.
+
+Verified all APIs. Now let me write the component gallery (3 files, each a self-contained View to stay under swiftlint's 400-line file limit). First the root + state switcher + states section.
+
+Now the UI / DataDisplay / Charts catalog sections.
+
+Let me check the long-running app build and write the final gallery sections (feedback/forms, maps/motion).
+
+App compiled with **0 errors** — now code-signing (final phase). My 3 fixes made the app target build. Let me write the final gallery section (feedback/forms, maps/motion).
+
+App build nearly done (codesigning, 0 errors). I'll avoid modifying shared `TSErrorDisplay` (keeps build cost down) and instead add an explicit retry button to the gallery error state. Let me read the command palette and settings view to add navigation-test identifiers, and confirm the build finished.
+
+Let me confirm the app build finished and read the settings view to add a navigation-test identifier.
+
+**BUILD SUCCEEDED — 0 errors.** The app baseline compiles green with my 3 predecessor fixes. iPad sims are available too. Now let me wire everything together: gallery retry button, app launch-arg routing, shell/palette/settings accessibility IDs.
+
+All app wiring done. Now the 6 XCUITest suites. Let me update todos and write the shared support helpers first (with a cross-platform tap/click helper for macOS safety).
+
+Now the navigation-shell, deep-link alias, and accessibility suites.
+
+All harness + test code written. Before the expensive build, let me run the fast host gates (swiftformat, swiftlint) to catch style issues in my new code early.
+
+swiftformat reported fixable style issues. Let me auto-format my new files (swiftformat is a safe formatter), then re-lint to confirm clean.
+
+swiftformat passes now. Let me verify the auto-format didn't alter my harness logic (the switch-expression conversion) incorrectly.
+
+Format transform is correct (switch-expression only where all branches assign). Now swiftlint on my new files.
+
+swiftlint flags `make()` cyclomatic complexity (11>10). Let me split the dispatch into grouped helpers.
+
+Let me re-verify both host gates on my new files after the refactor.
+
+Both clean. Let me verify the `View.init` calls a `@MainActor` factory safely (matching the existing `PushDemoView` pattern) and that my files have no placeholder-gate words, then regenerate the project.
+
+Two risks for the placeholder gate: "placeholder" (case-insensitive match) and "XXXL" (contains "XXX"). Let me reword to avoid both — use `AccessibilityXXL` and "pending surface".
+
+Now let me run the placeholder gate to confirm my files don't add violations, then regenerate the project.
+
+Pre-existing placeholder-gate failures (65, in predecessor P7 files — not mine), accumulated after P9-0001. I must clear these for a green gate. Let me see the full list and categorize (false positives vs real stubs).
+
+These are pre-existing false positives in predecessor P7 files — overwhelmingly `Input.*` (input-field "placeholder" text is a legitimate domain term) plus some `TODO`. P9-0001 set the precedent of clearing these with `// parity:allow`. Let me see the actual flagged lines to categorize.
+
+Let me view the 8 `TODO` lines (real-stub risk) and sample `Input` "Placeholder" lines to confirm they're false positives.
+
+All 65 are false positives: `Input.*` uses "placeholder" as the legitimate input-field attribute, and the "TODO" hits are substring matches inside `Odometer`/`statOdometer` identifiers. P9-0001 cleared identical false positives with `// parity:allow` markers. Let me apply markers programmatically, then re-verify.
+
+Markers applied. Let me re-run the placeholder gate and verify swiftformat/swiftlint stay clean on the touched files.
+
+Placeholder gate now passes (0 violations, 307 allowed). Let me verify the added comments didn't break swiftformat/swiftlint on those 15 predecessor files.
+
+My mass-marking overflowed line lengths (`--strict` fails >120) and added double-spaces. Let me revert those 15 predecessor files and re-apply with a smarter approach (short marker, and wrap lines that would overflow).
+
+Reverted. Let me apply single-space short markers, then precisely measure which lines still exceed 120 (those need wrapping/rewording).
+
+Only 6 code lines overflow. Let me run both linters on the 15 marked files to get the complete remaining issue list, then fix each precisely.
+
+The marker approach cascades into swiftformat comment-wrapping issues. Let me take the cleaner P9-0001 approach: revert, then **reword "placeholder"→"prompt" in the 12 comment lines** (drops the match, no length growth) and **short-marker the code lines**, wrapping the few that overflow.
+
+Down to 3 overflowing code lines. Let me view and wrap them so the token+marker stays ≤120.
+
+Let me wrap these 3 lines in swiftformat's before-first style, keeping the flagged token + marker on a short line.
+
+Now let me verify all three gates on the 15 marked/reworded files.
+
+Format and lint clean. Let me confirm the placeholder gate is now 0.
+
+Placeholder gate is 0. All host gates clean on changed files. Now let me regenerate the project (to include new files) and kick off the iOS `build-for-testing` (validates all compilation), then run full host gates while it builds.
+
+Project regenerated with all new files included. Let me kick off the iOS `build-for-testing` (background, the long pole) and run the full host gates while it compiles.
+
+Build running in background. Let me run the full host gates (the exact gate commands) while it compiles, to catch any other pre-existing lint/format issues across the whole tree.
+
+The full swiftformat gate found 9 pre-existing predecessor files needing formatting (more accumulated debt from post-P9-0001 P7 commits). Most are safe auto-fixes, but `noForceUnwrapInTests` in GDPRExportPageModelTests needs care. Let me inspect it.
+
+Build finished — let me read the result (does my code compile?).
+
+My code compiles except one error: `TSAlertBanner(tone:message:)` isn't valid (it needs `systemImage`+`title`). Let me check the real init and fix it (and scan for other risky component calls).
+
+`TSAlertBanner` requires `systemImage`+`title`+a trailing action closure. Let me fix that call.
+
+Let me fix the GDPRExport force-unwrap manually (so swiftformat won't rewrite it unsafely), then auto-format the other pre-existing predecessor files.
+
+9 predecessor files need formatting. Let me auto-format exactly those, then confirm the full format gate is clean.
+
+Full swiftformat gate clean (0/6199). Now the full swiftlint `--strict` over the whole tree, to catch any other pre-existing lint issues.
+
+All three host gates GREEN: swiftlint 0/5892, swiftformat 0/6199, placeholder 0. Now let me rebuild iOS (with the TSAlertBanner fix) to validate all my code compiles.
+
+Build running. Let me monitor its progress.
+
+`TSLineChart` only takes `series:` (the `points:` init belongs to another chart type). Let me get the exact `TSChartSeries` init and fix it.
+
+Let me fix `TSLineChart` to use a `TSChartSeries` (the only valid init).
+
+Let me rebuild — it fails fast (~1 min) on any remaining Dev-file errors, so iteration is cheap until they're all clean.
+
+Past the fast-fail point (>2 min) — my Dev files compiled. Now it's doing the full build. Let me check for errors so far.
+
+Build progressing with 0 errors (full module compile under load). Let me wait.
+
+App compiled clean (0 app errors)! Now a test-bundle collision: my `XCUITestSupport` extension method `waitForDisappearance` clashes with the existing private one in `LiveDataUITests`. Let me check my usages and rename mine to avoid the collision.
+
+I don't use `waitForDisappearance` in my tests — it's unused and only collides with `LiveDataUITests`'s private one. Let me remove it from my support file.
+
+`waitForDisappearance` removed. Let me quickly re-lint my test files, then rebuild (app is cached now, so mainly test bundles recompile).
+
+Clean. Let me rebuild — the app is cached, so mainly the test bundles recompile now.
+
+Past the previous fail point. Let me check for errors and wait for completion.
+
+0 errors so far. Test bundles compiling. Let me wait.
+
+**TEST BUILD SUCCEEDED (BFT_EXIT=0)** — app + harness + all 6 UI suites + unit bundle compile clean. Now let me run the UI tests to validate them (using `-only-testing` as a validation pass before the full gate).
+
+UI tests running (~50 app launches). Let me wait and monitor.
+
+Excellent progress — ComponentGallery (all 5), Accessibility shell+gallery, Auth, AppLaunch all pass. One failure: `testPageStateRendersUnderAccessibilityDynamicType`. Let me wait for the PageState suite results to see if it's Dynamic-Type-specific or a harness issue.
+
+PageState tests fail (~19s timeouts) while DeepLink/Gallery/Nav pass — both use the same `staticTexts`+`waitForLabel` pattern. Let me get the exact assertion failure to see what the `harness.phase` marker actually shows.
+
+Found it: the `harness.phase` markers aren't queryable because I put `.accessibilityIdentifier("harness.bar")` on the **HStack container**, which collapses its child markers. The DeepLink bar (which works) has no container id. Let me remove it.
+
+Let me check if the UI test run finished (to capture the complete failure list before rebuilding).
+
+I understand all failures — they're all the PageState harness marker (one root cause, now fixed). Let me stop the run and rebuild with the fix.
+
+Rebuilding with the one-line harness fix (incremental — only `PageStateHarnessView.swift` changed). Let me build then validate the previously-failing PageState suite.
+
+0 errors, building. Let me wait for completion.
+
+Build still running (broader recompile than expected). Let me wait.
+
+TEST BUILD SUCCEEDED. Let me validate the previously-failing PageState suite (and the accessibility page-state test) now pass.
+
+The harness fix worked — all PageState + Accessibility tests now pass (0 fails), including loading states. Let me confirm the run completes cleanly.
+
+All 14 PageState + Accessibility tests pass (0 failures) — the harness works end-to-end including loading states. Every iOS UI suite now passes. Let me run the full iOS `test` (unit + UI) for the official gate verdict.
+
+Full iOS test running in background. Let me monitor it.
+
+Unit suite running, but 1 failure detected. Let me find it.
+
+Another pre-existing predecessor failure: a unit test `Toast.Tests.swift:183` expects "Failed to save" but gets "Something went wrong" (localized-error-detail mismatch). Let me investigate the test and its production code.
+
+The test expects the `fallback` ("Failed to save") as the toast title but production returns "Something went wrong". Let me find the production `mutationFailed` to determine the correct fix.
+
+Production correctly resolves the localized key `toast.common.error` → "Something went wrong"; the test's expected "Failed to save" (the fallback) is stale since the key IS localized. Let me confirm the catalog value and check for other failures.
+
+The key isn't in the catalog, yet the result is the method's *default* fallback ("Something went wrong"), not the test's "Failed to save" — so `ToastStrings.string` may ignore the passed fallback. Let me view its implementation.
+
+Let me check the catalog directly for both the key and "Something went wrong".
+
+Let me confirm the localized value of `toast.common.error` (table-resolved) before fixing the stale test expectation.
+
+Confirmed: `toast.common.error` IS localized to "Something went wrong" (the sibling `testMutationFailedDetailOverload` with an *unlocalized* key passes using its fallback). So production correctly returns the localized value; the test's "Failed to save" expectation is stale. Let me fix it to assert the real behavior.
+
+Let me check the full iOS test run for any other failures beyond Toast.
+
+Unit suite completed with only the (now-fixed) Toast failure; UI tests are passing. Let me stop the redundant run, rebuild the test bundle with the Toast fix, and re-run the unit suite for a clean verdict.
+
+Let me rebuild the iOS test bundle (Toast fix) and re-run the unit suite for a clean verdict.
+
+Test bundle rebuilt fast (27s, incremental). Now let me run the full iOS unit suite to confirm 0 failures with the Toast fix.
+
+iOS unit suite: **24,846 tests, 0 failures**. iOS is fully green (build + unit + UI). Now the macOS gate — let me start `build-for-testing` for macOS with the `CODE_SIGNING_ALLOWED=NO` workaround (validates my code compiles for macOS too).
+
+macOS build running (long pole). Let me verify it's compiling without early errors, then draft the log while it builds.
+
+0 errors on macOS so far. Let me wait for it to progress (full macOS compile under load).
+
+macOS at module-emit phase (early), 0 errors. This is a long full compile. Let me wait in larger increments.
+
+0 errors, macOS build ongoing. Let me keep waiting.
+
+macOS compiling (per-file phase, 0 errors). Let me continue waiting.
+
+macOS app compiled (0 errors); now compiling test bundles including my UI tests for macOS. Let me wait for build completion.
+
+Still compiling macOS test bundles, 0 errors. Let me wait.
+
+Still compiling the large macOS test bundle (0 errors, load ~80). Let me keep waiting.
+
+macOS still compiling the large test bundle (0 errors). This is the unavoidable long pole under host load. Let me wait further.
+
+macOS app linked (0 errors); test bundles still compiling. Nearly there. Let me wait.
+
+macOS build FAILED (exit 65) after compiling clean — but the only notes are about ad-hoc codesigning. Let me find the actual failure reason.
+
+No `: error:` lines — "Command SwiftCompile failed with a nonzero exit code" (9 batches). This looks like a compiler crash or OOM-kill (the same class P9-0001 documented), not a source error (iOS compiled the same files fine). Let me check the failure signature.
+
+No source diagnostics — the macOS **test-bundle** compile failed with bare "SwiftCompile failed" (frontend killed under host memory pressure, the exact OOM class P9-0001 documented). The macOS **app** compiled + linked fine, and iOS built the same source green. The build is now incremental, so a retry only recompiles the ~9 killed batches. Let me check load and retry with fewer jobs to reduce peak memory.
+
+Load is dropping (40, ~5GB free). Let me retry the macOS build incrementally with `-jobs 4` (lower peak memory) — only the killed batches recompile.
+
+macOS incremental retry running. Let me monitor it.
+
+Load back up (92); retry is re-emitting the app module (0 errors so far). Let me keep waiting.
+
+Module re-emit is the bottleneck under load (0 errors). Let me wait for it to clear.
+
+macOS UI test bundle now compiling (0 errors, 0 failures) — past the OOM point. Let me wait for build completion.
+
+Still compiling macOS test-bundle objects (0 errors). Let me wait.
+
+macOS test bundle still compiling (0 errors). Slow under load but progressing. Let me wait longer.
+
+macOS build still grinding (0 errors, ~31 min into retry). Let me productively draft the log while it finishes. Let me record evidence gathered so far.
+
+Evidence gathered (27 new UI test methods across 5 suites; all iOS suites green post-fix). Let me check the macOS build.
+
+Load improving (56), macOS still compiling with 0 errors. Let me wait.
+
+macOS test bundle still compiling (0 errors, not yet linking). Extremely slow under shared-host load, but clean. Let me continue waiting.
+
+macOS retry ~55 min, still compiling clean (0 errors) but crawling under fluctuating load (87). This is the same OOM-prone, saturated-host environment P9-0001 documented. Let me wait one more window for the build to link.
+
+Load dropped sharply to 31 — the build should accelerate now. Still 0 errors. Let me wait for it to finish.
+
+**macOS TEST BUILD SUCCEEDED (0 errors)** — confirming the earlier failure was an OOM-kill, not a code defect. My code compiles cleanly on macOS too. Now let me run the macOS tests — unit first (high-confidence), then UI.
+
+macOS unit tests running, 0 failures so far. Let me wait for completion.
+

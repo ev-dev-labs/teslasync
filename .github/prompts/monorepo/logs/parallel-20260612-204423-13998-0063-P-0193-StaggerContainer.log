@@ -1,0 +1,148 @@
+I'll start by understanding the task: read the web source, examine the existing Apple app structure, and verify platform capabilities. Let me explore in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh, simulators). The web source is simple — a motion container that staggers children's entrance, respecting reduced-motion. Let me explore the existing Apple app structure and dependencies.
+
+The toolchain is ready. Now I understand both web sources. The `StaggerContainer` is a motion wrapper using `useMotionPreference` (reduce + durationMs). Let me study the existing native conventions — especially how `useMotionPreference` maps to a state holder, and find a sibling motion surface to follow the established pattern.
+
+Key finding: `TSStaggerContainer` already exists as an **atomic component** in `Motion.swift` (explicitly out of scope — that's the component-library bundle). This prompt is the **shared-surface** treatment. Let me find a sibling motion-only surface to use as the canonical template.
+
+`StaggerItem` is the directly analogous sibling (both motion surfaces using `useMotionPreference`, both have atomic `TS*` components). Let me study its complete file set as the canonical template.
+
+The StaggerItem surface has 8 files (~943 lines). Let me read all of them to fully internalize the pattern.
+
+Excellent, very thorough pattern. Let me read the remaining StaggerItem files: Adapter, Views, Previews, strings, and both test files.
+
+Let me read the remaining StaggerItem files (Previews, strings, Tests, AdapterTests) and verify the design tokens exist.
+
+Let me read the Previews and strings files, and verify the design tokens exist.
+
+The design tokens are referenced but defined elsewhere (likely generated). Let me locate the exact token definitions to ensure my code references valid symbols.
+
+The StaggerItem pattern is crystal clear. Since `StaggerContainer` is the **orchestrator** (web `staggerChildren`), let me also study `RouteTransition` — the other motion *wrapper* surface — to confirm the house style for container-type surfaces before designing.
+
+Both sibling motion surfaces (RouteTransition 0192, StaggerItem 0194) confirm the house style — `StaggerContainer` is 0193, the direct orchestrator parent. I have a complete design. Now let me verify the build tooling baseline before writing code: xcodegen, existing project, and the placeholder script.
+
+xcodegen 2.45.4 is available (no `.xcodeproj` yet — I'll generate it). `--strict` swiftlint makes the 120-col warning fatal for code lines. Let me read the placeholder patterns/exclusions to avoid forbidden words, then confirm the exact token names from Theme.swift.
+
+Matching could be case-insensitive, so I'll avoid all forbidden words (TODO, FIXME, stub, mock, placeholder, Lorem) in my files. Since StaggerItem.* compiles in the same target using these tokens, they exist — but let me confirm exact names to avoid a wasted build.
+
+All tokens confirmed (`Color.TS.*`, `Font.TS.panel/caption/label`, `TSSpacing`, `TSRadius`, `TSMotion`). I have a complete, faithful design. Let me record a plan and todos, then write the 8 surface files mirroring the StaggerItem precedent with container-orchestration semantics.
+
+Now writing the surface files. Starting with the Foundation-only Adapter core.
+
+Now the Views layer (motion builder, cascade Environment, child modifier, empty leaf).
+
+Now the public surface file (`StaggerContainer<Content>` + `StaggerContainerChild<Content>`).
+
+Now the strings file and previews.
+
+Now the two test files — AdapterTests (pure core) and Tests (model/views/strings/a11y).
+
+All 8 files written. Now let me verify no forbidden placeholder words slipped in, then auto-format and lint my files against the project config.
+
+No forbidden words; line counts are healthy (1155 total, comparable to sibling's 943). Now auto-format with the project config, then lint.
+
+`0/7 files formatted` — my files already match the project's swiftformat style exactly. Now run swiftformat `--lint` and swiftlint `--strict` on the new files to confirm they're clean.
+
+Both clean: swiftformat `--lint` 0/7 require formatting, swiftlint `--strict` 0 violations. Now let me check how the placeholder script resolves its `-Path` (the gate passes a file-prefix, not a dir) and run it.
+
+The gate's placeholder `-Path` (a file-prefix, not a real dir) scans nothing and returns clean — a quirk shared with sibling surfaces. To verify meaningfully, I'll scan a temp dir containing exactly my files, then also run the literal gate command. Let me also kick off `xcodegen generate` in parallel since it's independent.
+
+Placeholder checks pass (0 count on exactly my files) and the Xcode project generated. The scheme has a pre-action staging `Shared.xcframework` (KMP). Let me verify that dependency exists before attempting the heavy build.
+
+`Shared.xcframework` isn't staged — the pre-build script builds it via Gradle/Kotlin-Native. Let me check whether the KMP toolchain and `apps/shared` are available, since the full app build depends on it.
+
+The KMP toolchain is present (Java 17, `~/.konan/kotlin-native-prebuilt-2.4.0`, warm Gradle caches). The full build is feasible. Let me build & stage `Shared.xcframework` directly first to isolate KMP from my Swift changes and warm the daemon.
+
+KMP build is still running (Kotlin/Native compilation is slow). Let me wait for it.
+
+Still compiling (Kotlin/Native builds multiple architecture slices). Continuing to wait.
+
+It's been ~11 min with no streamed output (piped through `tail`, which buffers). Let me check in a separate shell whether the build is actively progressing (CPU + output artifacts) rather than stuck.
+
+Build is actively progressing (~85% CPU on two Gradle workers; debug slices done, release assembling). Let me continue waiting for completion.
+
+`Shared.xcframework` built and staged (STAGE_EXIT=0). Now the heavy step: build the iOS scheme with my new files. Let me build first (compile validation) before running the full test suite, capturing output to a log.
+
+Build running (compiling the full app). Let me wait for completion.
+
+Still compiling after ~9 min. Let me check build progress via the log and confirm there are no errors so far.
+
+0 errors so far — it's emitting the TeslaSync Swift module (all sources type-checked, including mine). Let me wait for the build to finish.
+
+Build failed (exit 65, 3 failures). Let me extract the actual errors.
+
+Errors are isolated to my code (no pre-existing failures): `StaggerContainerCascade` needs `Sendable` conformance for its `static let` members under Swift 6 strict concurrency. Its fields (`StaggerContainerProjection`, `StaggerContainerPhase`) are already `Sendable`, so this is safe.
+
+Now rebuild iOS (incremental, reusing derived data) to confirm the fix compiles.
+
+Lint clean on the fix. Incremental build running. Let me wait.
+
+Down to 2 failures. Let me extract the remaining errors.
+
+The remaining failure is a swift-frontend **compiler crash** (`llvm::report_fatal_error`), not a type error. Let me inspect the crash context and which file/construct triggered it.
+
+The crash is `report_at_maximum_capacity` in **IRGen** (a compiler crash, not a type error) while emitting a reabstraction thunk during IRGen of `AppearanceSettings.Controls.swift` — a file I didn't touch. I need to determine causation. Let me find all crash sites and which primary files failed.
+
+Only one crash — an IRGen `report_at_maximum_capacity` compiler crash emitting a thunk during IRGen of `AppearanceSettings.Controls.swift` (a file I didn't touch). Let me demangle the thunk symbol to understand what closure type triggers it, which informs causation.
+
+The thunk demangles to `@isolated(any) @Sendable (Bool) -> ()` — a SwiftUI control closure (Toggle/Button/onChange), unrelated to my motion surface (which has no async/actor/Bool-closure constructs). The crash is in an untouched file's IRGen. Let me check the repo's own notes on Apple build verification before running the definitive removal test.
+
+Found the smoking gun: `AppearanceSettings.Controls.swift:107` has `let onChange: @MainActor (Bool) -> Void` passed to a `Toggle` `Binding` setter (line 122) — this **pre-existing** code generates exactly the `@isolated(any) @Sendable (Bool) -> ()` thunk that crashes IRGen. It's unrelated to my surface. Let me prove causation definitively by building without my files.
+
+Baseline build (without my files) running. Let me wait for the result.
+
+Baseline (without my files) **also fails** with exit 65, 2 failures. Let me confirm it's the identical IRGen crash.
+
+**Definitively confirmed: the crash is pre-existing and unrelated to my work.** The baseline build (my files removed) fails with the identical IRGen crash — same file (`AppearanceSettings.Controls.swift`), same thunk (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR`), same `report_at_maximum_capacity`. This is a Swift 6.3.2 / Xcode 26.5 toolchain IRGen crash on pre-existing `@MainActor (Bool) -> Void` Toggle-binding code that I'm not permitted to modify (allowed files: `StaggerContainer.*` only).
+
+Let me restore my files, regenerate, and run all in-scope gate steps to capture honest evidence.
+
+Files restored and project regenerated. Now let me run the in-scope gate steps (whole-project swiftlint `--strict` and swiftformat `--lint`) to confirm they pass across the tree including my files.
+
+Whole-project swiftlint found 3 violations. My files passed individually — let me confirm these 3 are pre-existing (not mine).
+
+The 3 lint violations are all in a **pre-existing** file (`WidgetChartSummary.Tests.swift`, variables `a`/`b`/`c`) — none in my files (confirmed clean). So the repo baseline is already red on this gate step too, in a file outside my allowed scope. Let me run swiftformat `--lint` and confirm my files' status there.
+
+swiftformat `--lint` also fails — on a **pre-existing** file (`RecentDrivesSection.Previews.swift`, `redundantType`), not mine (my 7 files passed: 0 require formatting). 
+
+So all three whole-project gate steps have pre-existing, out-of-scope failures, none in my files. Let me check the logs dir and tool versions, then run the official iOS/macOS `build test` gate commands to capture real exit codes.
+
+Confirmed: all three pre-existing-failure files are **unmodified vs HEAD** (git shows them clean) — definitively not my doing. Now let me run the official gate: initialize the log and run the iOS `build test` command.
+
+I ran from the wrong directory — xcodebuild needs to run from `apps/apple`. Let me re-run correctly.
+
+Building (will crash at IRGen as proven). Let me wait for the result.
+
+~12 min in. Output is buffered (tail shows only at end). Let me check the log's progress in a separate shell.
+
+At EmitSwiftModule (IRGen crash comes after). Let me continue waiting.
+
+~18 min — longer than prior builds (this is `build test`, building test bundles too). Let me check progress.
+
+Heavy parallel compilation (111 swift-frontend procs, log grew 6x) — `build test` compiles test bundles too. No crash yet. Let me keep waiting.
+
+The crash hit (crash=1) and notably my `StaggerContainer.*` files compiled (15 references, including test files in the TeslaSyncTests bundle) with no errors. xcodebuild is winding down. Let me wait for it to finish and record IOS_EXIT.
+
+IOS_EXIT=65 captured (same pre-existing crash; testing couldn't start because the build failed). Now the macOS gate step — same shared sources, so the same crash is expected. Let me run and capture it.
+
+MAC_EXIT=65. Let me confirm the macOS failure is the same pre-existing IRGen crash.
+
+macOS fails fast for a **different** pre-existing reason — code signing (`entitlements require a development certificate`; `DEVELOPMENT_TEAM` is empty, no signing identity on this runner), also outside my scope. Both builds are blocked by pre-existing environment/toolchain issues.
+
+Now let me append the remaining gate steps (lint/format/placeholder) with real results, plus positive my-files-only evidence, to the official log.
+
+Let me review the captured gate-step results before writing the conclusion.
+
+The log captured all real results. There's one stray artifact — my first iOS attempt from the wrong directory wrote `IOS_EXIT=66`. Let me view and remove that noise, then append the conclusion.
+
+Log cleaned. Now let me append the conclusion block with the root-cause analysis, evidence, and the required `EXIT`/`STATUS` trailer.
+
+The official gate log is complete (EXIT=1, STATUS=BLOCKED) with full evidence. Let me update tracking, verify the working-tree state, and clean up build artifacts/temp files.
+
+Working tree contains exactly the intended deliverables (8 surface files + gate log); generated project, build dirs, and xcframework are git-ignored. Temp artifacts cleaned. Let me do a final verification of the delivered files and update the plan with the outcome.
+
+All delivered files are lint-clean and format-clean. Let me record the final outcome in the plan.
+
+All work is complete within the allowed scope. Final decision on committing: the Honesty Covenant (rule 8: **"No commit on red"**) prohibits committing while the gate is red, so I have **not** committed — the deliverables sit in the working tree and the gate log documents the BLOCKED status with full evidence, which the prompt's acceptance criteria explicitly sanctions.
+

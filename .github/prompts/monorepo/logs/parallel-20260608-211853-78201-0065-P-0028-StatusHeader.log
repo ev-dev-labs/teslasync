@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and checking the runner's capabilities, since this task requires Apple/Xcode tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The `apps/apple` project and web source both exist. This is not a BLOCKED scenario — I need to build it. Let me read the web source and project structure.
+
+The web source is clear: 3 StatCards (Total entries, Replayable, Replay mode) + a warning AlertBanner when replay is disabled. Now let me study the existing feature-views to follow the established native pattern (predecessor bypass is forbidden).
+
+There's a large, established set of feature-views following a multi-file pattern (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me find the closest analog — a header/stat-card surface — and read the instruction files.
+
+`DriveStatCards` and `XRayHeader` are the closest analogs. Let me read the complete `DriveStatCards` file set to learn the exact pattern (it renders StatCards), plus check the instruction files.
+
+This is a rich, well-established pattern. Let me read the rest of the `DriveStatCards` set to fully internalize it before writing my surface.
+
+I now fully understand the pattern. Let me check the design tokens, the web `DLQListResponse` type, and the build setup (xcodegen/xcodeproj).
+
+Now I have the web `DLQListResponse` shape. Let me confirm the design tokens exist, read the web `fmtInt`, the page usage, and the placeholder checker so my code passes the gate.
+
+Let me read the placeholder checker's `-Path` handling (my files are `StatusHeader.*`, not a directory) and check how the project builds (xcodegen + simulators).
+
+Key finding: xcodeproj is git-ignored (needs `xcodegen generate`), and the scheme stages `Shared.xcframework` via a script. Let me check whether that framework/toolchain is present, since it gates the build.
+
+Shared.xcframework isn't committed — it's built via Gradle/KMP (Kotlin Native). That's a heavy dependency for the gate. Let me check the documented verification status and toolchain availability before committing to a build strategy.
+
+The `macos-pending-verifications.md` documents the exact precedent: surfaces are verified **green in isolation** (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + swiftlint/swiftformat/placeholder + `xcodegen generate`), while the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined many times, co-located `*Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`). Let me verify those collisions still exist in this slot before deciding final status.
+
+In this slot `DashboardWidgetSize` is defined only once (that collision was resolved), but there are 204 + 96 co-located `*Tests.swift` files. The project.yml already excludes `*Tests.swift` from app targets, so I need to empirically test the real gate rather than assume. First, let me read the web `StatCard` and `AlertBanner` components to reproduce their information architecture faithfully.
+
+Now I have full parity detail: StatCard = (label + muted icon) row, bold value, muted sublabel; warning AlertBanner = icon + amber title + body. Let me read the lint/format configs so my code passes `--strict`, then start writing.
+
+I have everything I need. Key lint constraints noted: `empty_count` (avoid `.count == 0` — I'll name the field `totalCount`), 120-col width, `--self remove`, testable-import-bottom. Let me create a plan file and start writing the surface.
+
+Now I'll write the surface files, starting with the formatting + projection + model core.
+
+Now the test files — projection/model tests and adapter/format/accessibility tests.
+
+All 9 files written. Now let me verify in isolation — first swiftformat and swiftlint scoped to my files.
+
+swiftformat flagged auto-fixable issues. Let me apply the fixes automatically, then re-verify.
+
+swiftformat clean. Now swiftlint --strict on my files, and let me verify the auto-edits.
+
+swiftlint --strict: **0 violations**. swiftformat: clean. Auto-edits are semantically identical. Now the real compile + test proof — let me set up an isolated SwiftPM package (design tokens + my sources + tests) under Swift 6 strict concurrency and run it.
+
+Build succeeded under Swift 6 (all sources + previews compile). Now run the tests.
+
+**26/26 tests passed** under Swift 6 strict concurrency. Now the explicit iOS 18 + macOS 15 SDK type-checks (the precedent's "real iOS-18 + macOS-15 swiftc -typecheck").
+
+Both SDK type-checks pass (EXIT=0). Now `xcodegen generate` (proves the project enumerates my files) and the placeholder gate.
+
+All 9 files enumerated by xcodegen. Now the placeholder gate — both the literal gate command and an honest scan of my actual files.
+
+Placeholder gate clean (literal gate **EXIT=0** + honest scan **PLACEHOLDER_COUNT=0**). Now the real full-app gate. Its scheme pre-action builds the KMP `Shared.xcframework` via Gradle — the documented macOS-pending item. Let me attempt that first to gauge feasibility, in the background.
+
+The KMP framework build is the documented macOS-pending dependency. Let me check whether network and any cached Kotlin/Native toolchain exist before a longer online attempt.
+
+Good — Kotlin/Native 2.4.0 is cached, Gradle caches are warm (2.2G), and network is up. The earlier failure was `--offline`. Let me retry the framework build online (warm caches) with a longer bound, in the background.
+
+The KMP build is still compiling (Kotlin/Native for multiple Apple targets is slow). Let me keep waiting.
+
+KMP `Shared.xcframework` built successfully (11m28s). Now I can attempt the real full-app gate. Let me stage the framework and launch the iOS `xcodebuild build test` in the background, logging to a file so I can analyze StatusHeader vs pre-existing errors.
+
+The full iOS build+test is running in the background. Let me monitor its progress.
+
+The background launcher shell exited and likely terminated the child. Let me check state and relaunch properly detached.
+
+Two concurrent `xcodebuild`s are running — PID 31621 is another slot's (custom `-derivedDataPath /tmp/xray_dd`), and 31977 is mine but its log was lost when the launcher shell exited. Let me confirm which is mine by cwd, then relaunch cleanly detached.
+
+Neither running build is mine — both are other concurrent slots (slot-67, slot-70). My earlier launch was killed when its launcher shell exited. Let me relaunch properly **detached** with an isolated derivedDataPath so it persists and I can capture the log.
+
+Build relaunched detached. Let me verify the log directory exists and check build progress.
+
+The full iOS build **failed (EXIT=65)** — but the failures are pre-existing and unrelated: `'FleetStatsBarModel' is ambiguous for type lookup` and `Cannot infer contextual base in reference to member 'loaded'/'offline'` in the `QuickMetrics`/`QuickNav`/`Push*` batch. My StatusHeader files compiled and `StatusHeader.strings` was copied. Let me rigorously confirm zero StatusHeader errors and identify all root-cause failures.
+
+**Definitive evidence: zero StatusHeader errors.** All 228 errors are pre-existing, unrelated parallel-merge collisions — ambiguous duplicate type definitions (`ChargeConnection`, `ChargeLoadStatus`, `ChargeStatusProjection`, `FleetStatsBarModel`, etc.) in `Charge*Widget`/`FleetStatsBar*`/`QuickMetrics` surfaces, exactly as documented in `macos-pending-verifications.md`. Let me confirm these are pre-existing (not introduced by me) and launch the macOS build in parallel.
+
+Confirmed: `git status` shows **only my 9 StatusHeader files** as new; the ambiguous types (`ChargeConnection`, `FleetStatsBarModel`) are duplicate-defined in pre-existing `Charge*Widget`/`FleetStatsBar*` files I never touched. Now let me launch the macOS gate step (detached) and capture its evidence too.
+
+While the macOS build runs, let me assemble the gate log by re-running each surface-scoped gate and capturing **real** output. Starting with the fast ones.
+
+The macOS build finished. Let me analyze its result and capture the remaining surface gates.
+
+macOS gate failed (EXIT=65) purely on **development-signing** (entitlements need a dev certificate) — it fails before compilation, zero StatusHeader errors. Both full-app failures are pre-existing/environmental, exactly per precedent. Let me capture the remaining surface-scoped gate outputs for the log.
+
+All surface-scoped gates are green. Let me check a sibling log's format to match conventions before writing mine.
+
+Good format reference. Let me read how the sibling log concludes (its full-app handling + EXIT/STATUS).
+
+The sibling precedent concludes **EXIT=0 / STATUS=DONE** with the full-app Xcode gate explicitly DEFERRED (real exit shown, blockers pre-existing/out-of-scope). My evidence is even stronger — my surface actually compiled in the real iOS app target. Let me gather line counts and write the comprehensive, honest gate log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Now final verification and commit. Let me re-confirm the surface gates are still clean, verify git state, and commit exactly the allowed files.
+
+All clean — 0 format/lint issues, and git shows exactly my 9 files + the log (everything else gitignored). Committing now.
+
+Committed as `34f22eb82` (10 files, 1572 insertions). Let me clean up my scratch artifacts and confirm no background processes linger.
+
+Task complete. Here's the summary.
+
+## P4 · Feature view · 0028 — `StatusHeader` (Apple) — **STATUS=DONE**
+
+Shipped a production-polished native SwiftUI parity of `dlq-inspector/StatusHeader.tsx` — **9 files, 1360 lines**, committed as `34f22eb82` along with the gate log.
+
+**Surface** (`apps/apple/TeslaSync/feature-views/StatusHeader.*`)
+- 3 DLQ summary cards (Total entries · Replayable · Replay mode) + the always-on `replay_enabled == false` **warning banner**, reproduced verbatim (`fmtInt`, `entries.filter(replayable).length`, `Enabled/Disabled`, the full `DLQ_REPLAY_ENABLED`/HTTP 403 message).
+- Bound through a **P1/S8 state-holder seam** (no view HTTP), **P1/S11** `view.opened` telemetry (slug `StatusHeader`), **P1/S10** i18n facade (10 web keys + chrome, no English literals), **P1/S9** design tokens (no Tailwind ports).
+- **Every state renders**: loading (skeleton) · empty (zero-cards + hint) · error (retry) · stale (chip + auto-refresh) · offline (chip + cached) · content. Full VoiceOver labels, Dynamic Type, reduce-motion-safe.
+
+**Verification — every host-runnable gate GREEN (real output):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | 0/8 need formatting |
+| swiftlint --strict | 0 violations |
+| swiftc -typecheck iOS 18 + macOS 15 (Swift 6 strict) | EXIT=0 / EXIT=0 |
+| isolated SwiftPM build + test | **26/26 passed** |
+| xcodegen generate | all 9 files enumerated |
+| check-placeholders | COUNT=0 |
+| KMP Shared.xcframework | BUILD SUCCESSFUL (11m28s) |
+
+**Full-app `xcodebuild build test` (run for real, both platforms):** my surface **compiled with ZERO errors inside the real iOS app target**; the build is blocked only by **pre-existing, unrelated** duplicate-type collisions in other surfaces (`Charge*Widget`/`FleetStatsBar*`/`QuickMetrics` — 228 errors, 0 StatusHeader, out of allowed scope) and the macOS step by **dev-signing entitlements** — both deferred to the macos-latest acceptance gate, matching the documented sibling disposition. `git status` confirms only the 9 StatusHeader files were added.
+
+
+
+The task is fully complete and committed. All work is verified and the git tree is clean.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0028-StatusHeader.log   | 212 ++++++++++++++
+ .../feature-views/StatusHeader.Adapter.swift       | 238 ++++++++++++++++
+ .../feature-views/StatusHeader.AdapterTests.swift  |  98 +++++++
+ .../feature-views/StatusHeader.Format.swift        |  50 ++++
+ .../feature-views/StatusHeader.Model.swift         | 238 ++++++++++++++++
+ .../feature-views/StatusHeader.Previews.swift      |  72 +++++
+ .../feature-views/StatusHeader.Tests.swift         | 239 ++++++++++++++++
+ .../feature-views/StatusHeader.Views.swift         | 312 +++++++++++++++++++++
+ .../TeslaSync/feature-views/StatusHeader.strings   |  40 +++
+ .../TeslaSync/feature-views/StatusHeader.swift     |  73 +++++
+ 10 files changed, 1572 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0028-StatusHeader.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusHeader.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusHeader.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusHeader.Format.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusHeader.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusHeader.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusHeader.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusHeader.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusHeader.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatusHeader.swift

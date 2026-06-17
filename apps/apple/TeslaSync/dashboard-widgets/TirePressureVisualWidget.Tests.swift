@@ -113,7 +113,7 @@ import XCTest
 
 @MainActor final class TirePressureProjectionTests: XCTestCase {
     func testProjectionKeepsCornerOrderAndStatuses() {
-        let reading = TirePressureReading(
+        let reading = TirePressureWidgetReading(
             frontLeftKilopascals: 240,
             frontRightKilopascals: 220,
             rearLeftKilopascals: 200,
@@ -129,7 +129,7 @@ import XCTest
 
     func testAllNormalAndHasWarning() {
         let healthy = TirePressureVisualWidgetProjection.project(
-            from: TirePressureReading(
+            from: TirePressureWidgetReading(
                 frontLeftKilopascals: 240,
                 frontRightKilopascals: 241,
                 rearLeftKilopascals: 242,
@@ -140,7 +140,7 @@ import XCTest
         XCTAssertFalse(healthy.hasWarning)
 
         let degraded = TirePressureVisualWidgetProjection.project(
-            from: TirePressureReading(frontLeftKilopascals: 240, frontRightKilopascals: 200)
+            from: TirePressureWidgetReading(frontLeftKilopascals: 240, frontRightKilopascals: 200)
         )
         XCTAssertFalse(degraded.allNormal)
         XCTAssertTrue(degraded.hasWarning)
@@ -148,7 +148,7 @@ import XCTest
 
     func testLatestReadingPicksMostRecentTimestamp() {
         let base = Date(timeIntervalSince1970: 1_000_000)
-        let reading = TirePressureReading(
+        let reading = TirePressureWidgetReading(
             lastSeenFrontLeft: base,
             lastSeenFrontRight: base.addingTimeInterval(300),
             lastSeenRearLeft: nil,
@@ -160,7 +160,7 @@ import XCTest
 
     func testLatestReadingNilWhenNoTimestamps() {
         let projection = TirePressureVisualWidgetProjection
-            .project(from: TirePressureReading(frontLeftKilopascals: 240))
+            .project(from: TirePressureWidgetReading(frontLeftKilopascals: 240))
         XCTAssertNil(projection.latestReading)
     }
 }
@@ -196,7 +196,7 @@ import XCTest
     }
 
     func testReadingPresentShowsContentEvenWhileLoadingOrFailed() {
-        let reading = TirePressureReading(frontLeftKilopascals: 240)
+        let reading = TirePressureWidgetReading(frontLeftKilopascals: 240)
         let (loading, _) = makeModel(TirePressureUpdate(status: .loading, reading: reading))
         loading.start()
         XCTAssertEqual(loading.phase, .content)
@@ -207,7 +207,7 @@ import XCTest
     }
 
     func testAllNullReadingStillRendersContent() {
-        let (model, _) = makeModel(TirePressureUpdate(status: .loaded, reading: TirePressureReading()))
+        let (model, _) = makeModel(TirePressureUpdate(status: .loaded, reading: TirePressureWidgetReading()))
         model.start()
         XCTAssertEqual(model.phase, .content)
         XCTAssertEqual(model.projection?.allNormal, false)
@@ -237,7 +237,7 @@ import XCTest
             TirePressureUpdate(
                 status: .loaded,
                 connection: .offline,
-                reading: TirePressureReading(frontLeftKilopascals: 240, frontRightKilopascals: 200),
+                reading: TirePressureWidgetReading(frontLeftKilopascals: 240, frontRightKilopascals: 200),
                 unit: .psi,
                 localeIdentifier: "de_DE",
                 updatedAt: Date()
@@ -287,7 +287,7 @@ import XCTest
 
     func testSummaryIncludesEveryCornerAndAllNormal() {
         let projection = TirePressureVisualWidgetProjection.project(
-            from: TirePressureReading(
+            from: TirePressureWidgetReading(
                 frontLeftKilopascals: 240,
                 frontRightKilopascals: 241,
                 rearLeftKilopascals: 242,
@@ -308,7 +308,7 @@ import XCTest
 
     func testSummaryReportsCheckPressureWhenDegraded() {
         let projection = TirePressureVisualWidgetProjection.project(
-            from: TirePressureReading(frontLeftKilopascals: 240, frontRightKilopascals: 200)
+            from: TirePressureWidgetReading(frontLeftKilopascals: 240, frontRightKilopascals: 200)
         )
         let summary = TirePressureAccessibility.summary(
             for: projection,

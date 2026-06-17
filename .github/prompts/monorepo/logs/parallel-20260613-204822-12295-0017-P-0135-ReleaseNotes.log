@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure and verifying the platform capabilities required for this task.
+
+All platform capabilities are present (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). The web source exists. Let me read the spec and explore the Apple project structure.
+
+Now I understand the web spec. Let me examine the existing `shared-surfaces` directory and a representative example to learn the native conventions (adapter, model, view, states, i18n, telemetry, tests).
+
+There's a large existing surface library. Let me find the closest analogs (Accordion, any existing changelog/WhatsNew surface) and confirm ReleaseNotes doesn't yet exist.
+
+`Accordion` is the ideal structural template (collapsible, same 8-file layout). Let me read the entire Accordion surface to learn the conventions.
+
+Let me read the rest of the Accordion surface (Views, Previews, strings, tests) and the web changelog data source to understand the full pattern.
+
+Now let me understand the build infrastructure (critical for the gate) and the design tokens + test conventions.
+
+Critical infra check: the app depends on a KMP `Shared.xcframework` that isn't present (only `.gitkeep`). Let me examine the build script and KMP setup, plus read the test conventions and design tokens.
+
+The KMP `Shared.xcframework` requires Gradle + Kotlin/Native. Let me check how sibling surfaces resolved their gate — the logs directory is the key evidence for whether the full build is achievable here.
+
+Let me read the canonical Accordion (0203) gate log — it's the closest sibling and shows exactly how the gate resolves in this environment.
+
+The sibling Accordion log reveals the **accepted methodology** for this environment: whole-tree iOS/macOS `xcodebuild` is RED from *foreign pre-existing* defects (AI* `glass()` escaping-closure bug) + macOS signing, so surface correctness is proven via isolated `swiftc -typecheck` (iOS+macOS), `swift test`, swiftlint, swiftformat, placeholder, and xcodegen — all green → EXIT=0/STATUS=DONE.
+
+Let me read the test conventions, the glass chrome helper (to avoid the broken one), and the web changelog data shape.
+
+Now let me look at the web changelog data source (to model the native data faithfully) and confirm there's no shared glass helper I should depend on.
+
+I have the full picture. Let me confirm the foreign pre-existing defect still exists (for honest baseline disposition) and read the lint/format configs to stay within budget.
+
+Confirmed: the foreign `glass()` escaping-closure defect is present (pre-existing, foreign). Lint budget is line ≤120/160, type names ≤50, file_length ≤400 under `--strict`. Let me set up tracking, verify no symbol collisions, and write the plan.
+
+No symbol collisions. Let me write the plan, then build the surface files.
+
+No collisions. Now writing the pure-core adapter.
+
+Now the canonical changelog data. Let me pull the real badge/type distribution from the web changelog so the snapshot is faithful and exercises every branch.
+
+Now the canonical data snapshot — concise real changelog headlines kept within the 120/160 line budget (faithful to the generated module).
+
+Now the Model file — i18n facade, telemetry seam, and the `@Observable` state-holder.
+
+Now the presentational views (card chrome, badge chip, change rows, empty states, motion, palette).
+
+Now the public SwiftUI surface.
+
+Now the previews (every real branch, including beta + all change-type tints).
+
+Now the i18n catalog.
+
+Now the two test files — pure-core adapter tests and model/view/strings tests.
+
+All 9 files written. Now the verification pipeline. First, line counts (≤400 budget) and apply swiftformat to my files.
+
+All within budget. Now apply swiftformat to my files, then run lint and SwiftLint.
+
+Whole-tree format lint flags **one foreign file** (`RecentDrivesSection.Previews.swift` — not mine). Let me confirm it's pre-existing and that my files pass scoped lint, then run SwiftLint.
+
+Confirmed foreign + my files pass format. Now SwiftLint `--strict` on my files, then the full-tree gate run.
+
+Two 125-char lines in the data file (limit 120 under `--strict`). Let me view and shorten them.
+
+My files pass SwiftLint `--strict` (0 violations) and swiftformat. Now the compile proof: `swiftc -typecheck` for both iOS-simulator and macOS targets (surface + design tokens, Swift 6 strict concurrency).
+
+iOS typecheck clean. Now macOS.
+
+Both typechecks pass. Now I'll actually **run** the tests via an isolated SwiftPM package (module `TeslaSync` = surface + tokens, test target = my two test files).
+
+All **44 tests pass** (0 failures), Swift 6 strict concurrency. Now the placeholder gate and xcodegen.
+
+Placeholder gate clean. Now `xcodegen generate` to wire the new files into the project, and confirm they're referenced.
+
+Placeholder, xcodegen all green (54 refs across iOS+macOS app and both test bundles). Now the full-tree `xcodebuild` gate. It needs the KMP `Shared.xcframework` first. Let me verify Java and start that build (it took ~8 min for siblings).
+
+Java 17 present (matches sibling env). Starting the KMP `Shared.xcframework` build (long-running) in the background.
+
+While the KMP framework builds, let me confirm my working tree only adds the intended files (no foreign modifications).
+
+Clean tree: 0 foreign modifications, exactly my 9 files. Let me check on the KMP build.
+
+KMP build still running (~5 min in; first Kotlin/Native compile is slow). Continuing to wait.
+
+KMP first-build is downloading the Kotlin/Native toolchain (slow cold start). Let me keep waiting.
+
+KMP `Shared.xcframework` built and staged (`XCFRAMEWORK_EXIT=0`, BUILD SUCCESSFUL). Now the iOS `xcodebuild build test` gate — capturing full output for honest analysis.
+
+iOS gate running in background. Let me wait for it to complete.
+
+Let me peek at the in-progress build log to gauge progress.
+
+Build is in the final surfaces (X/Y) with **0 errors so far** — this tree may actually build green. Let me wait for completion.
+
+Build **FAILED but with 0 `error:` lines** — failure is at the link/extension phase, not compilation. All surfaces (incl. mine) compiled clean. Let me get the exit code and the actual failure reason.
+
+Build failed with **0 compile errors** (0 `error:` lines, 0 ReleaseNotes errors). Let me find the non-compile failure reason and check if the process is hung.
+
+`Command SwiftCompile failed with a nonzero exit code` — but **0 `error:` lines**, suggesting a compiler crash, not a type error. I must identify the failing file. Let me dig precisely.
+
+The crash is a **SwiftC IR-generation crash on a FOREIGN file** (`AppearanceSettings.Controls.swift` — feature-views, not mine). Let me capture the crash context precisely.
+
+Definitive: a **Swift compiler IRGen crash** (`report_at_maximum_capacity` → `abort`) while emitting a reabstraction thunk for the **foreign** file `AppearanceSettings.Controls.swift` — not my code (typecheck stops before IRGen, which is why my isolated checks passed). Let me stop the hung test phase and prove foreignness via a baseline build with `ReleaseNotes.*` excluded.
+
+Baseline running (ReleaseNotes excluded). Let me wait for it to reproduce the foreign crash.
+
+Baseline still compiling (the changed build setting forced a rebuild). Let me wait for it to reach the failing batch.
+
+Baseline is in the whole-module `EmitSwiftModule` phase (output buffered, still compiling). Let me keep waiting for it to reach the foreign crash.
+
+`BASELINE_IOS_EXIT=65` — the tree fails **without** my surface too. Let me confirm it's the same foreign crash.
+
+Confirmed: baseline (ReleaseNotes excluded) fails with the **identical foreign crash** in `AppearanceSettings.Controls.swift` — `BASELINE_IOS_EXIT=65`, 0 `error:` lines. Let me verify my files were truly excluded from compilation, then run the macOS gate.
+
+Proven: my surface was excluded yet the tree still fails — the iOS red is pre-existing and foreign. Now the macOS gate.
+
+While the macOS gate runs, let me capture the whole-tree SwiftLint number (gate-literal) honestly.
+
+Whole-tree SwiftLint found 3 violations (in 5441 files) — my 8 files passed clean, so these are foreign. Let me identify them and read the completed macOS gate.
+
+All 3 SwiftLint violations are in the **foreign** `WidgetChartSummary.Tests.swift` (the "8" are just my files' progress lines). macOS gate: `MAC_EXIT=65`. Let me determine the macOS failure reason.
+
+macOS gate is **environmental** (no dev-signing certificate — `TeslaSync-macOS`/`TeslaSyncWidgets-macOS` entitlements), pre-compile, 0 ReleaseNotes errors — exactly the sibling disposition. Let me confirm my surface compiled in the full iOS gate and that the foreign lint/format files are pre-existing.
+
+All 6 ship files compiled green in the iOS gate (0 errors); the 3 foreign reds (IRGen crash, lint, format files) are all pre-existing/unmodified. Let me grab tool versions and write the comprehensive gate log.
+
+Now writing the comprehensive, honest gate log.
+
+Log written. Now cleanup temp files and verify exactly what will be committed.
+
+Clean: exactly my 9 files + the log; `.xcodeproj`/xcframework are git-ignored. Committing.
+
+Committed (`d2700cd22`). Let me mark tracking complete and do a final clean-tree check.
+
+All work complete, tree clean. Final summary:
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0135-ReleaseNotes.log | 247 ++++++++++++++++
+ .../shared-surfaces/ReleaseNotes.Adapter.swift     | 311 +++++++++++++++++++++
+ .../ReleaseNotes.AdapterTests.swift                | 231 +++++++++++++++
+ .../shared-surfaces/ReleaseNotes.Data.swift        | 126 +++++++++
+ .../shared-surfaces/ReleaseNotes.Model.swift       | 201 +++++++++++++
+ .../shared-surfaces/ReleaseNotes.Previews.swift    |  80 ++++++
+ .../shared-surfaces/ReleaseNotes.Tests.swift       | 230 +++++++++++++++
+ .../shared-surfaces/ReleaseNotes.Views.swift       | 259 +++++++++++++++++
+ .../TeslaSync/shared-surfaces/ReleaseNotes.strings |  70 +++++
+ .../TeslaSync/shared-surfaces/ReleaseNotes.swift   |  74 +++++
+ 10 files changed, 1829 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0135-ReleaseNotes.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.Data.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.swift

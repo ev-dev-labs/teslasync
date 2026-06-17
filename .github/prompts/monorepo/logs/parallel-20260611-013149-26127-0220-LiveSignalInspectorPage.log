@@ -1,0 +1,153 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Let me examine the web source page, the Apple app structure, and the parity ledger.
+
+Let me look at the existing completed Apple pages and the web components/hooks they reference.
+
+The Apple app uses a different directory layout than the prompt expects. Let me investigate the actual structure and find the existing "done" pages.
+
+The real code lives in `apps/apple/Sources/Features/Admin/`. There's already a SwiftUI `LiveSignalsTable` port in feature-views. Let me study the existing done admin pages as the pattern template and the web component/hooks.
+
+Let me examine the SwiftUI `LiveSignalsTable` port, the FleetTelemetryCoverage page (which has vehicle/live data), the routing system, and the web hooks.
+
+Let me read the FleetTelemetryCoverage page pattern, the routing host, the table's model/content, and the web hooks/routes.
+
+The P3 `LiveSignalsTable` component and its model already exist. I need to build the page wrapper. Let me examine the routing system, composition root, design components, localization, and the existing test pattern.
+
+Let me read the route registry, composition root, the web hooks, and find the design components and localization catalog.
+
+Let me examine the vehicles hook, the Apple vehicle data source, status indicators, and key design components.
+
+Let me read the key design components and the Apple vehicle facade.
+
+Let me look at the vehicle model in the Apple app, the LiveSignalsTable content/previews, the xcstrings structure, and the FleetTelemetryCoverage tests.
+
+Let me inspect the xcstrings format and check which route/page keys exist.
+
+Localization model is clear. Now let me check the build tooling availability (xcodebuild/swiftlint), the gate script, and the FleetTelemetryCoverage test + Sample patterns.
+
+All tooling is present (Xcode 26.5, swiftlint, xcodegen, pwsh). Let me check the xcodeproj, the gate contract README, an existing log for format, and the placeholder script.
+
+Let me read the full ApiPlayground log to mirror the verification methodology and log format, and check the placeholder script.
+
+I now have the full methodology. Let me verify a few remaining specifics: the LiveSignalsTable content view, button/typography signatures, and the live indicator strings.
+
+I have a complete picture. Let me verify a couple of reusable string keys and the `TSButton` signature, then set up my plan and todos.
+
+All keys are absent — I'll add a clean set. I now have everything needed. Let me set up tracking and write the plan.
+
+Now let me create the model file.
+
+Now the main page view.
+
+Now the route registration.
+
+Now wire up the route in `AppRoute.swift`, `AppRouteParser.swift`, and the composition root.
+
+Now let me add the localization keys via a minimal textual insertion that matches the file's style, then validate.
+
+The file has mixed formatting styles. Let me detect the anchor line robustly.
+
+Localization done. Let me update tracking and write the model unit tests.
+
+Files created. Let me begin verification — check tooling and run lint/format/placeholder scans on my files.
+
+Let me run swiftformat --lint, swiftlint --strict, and the placeholder scan on my files.
+
+Minor long-line issues in the Sample file. Let me auto-format it with swiftformat, then re-verify.
+
+swiftformat and swiftlint both clean. Now the placeholder scan.
+
+Placeholder gate green. Let me check the most recent sibling log (FleetTelemetryCoverage) to learn the current build baseline expectation.
+
+Let me read the exact harness + type-check invocations the sibling used so I can mirror them.
+
+In-scope lint/format/placeholder gates are green. Now let me determine the build baseline — check if the xcframework is staged and whether the documented out-of-scope breakage still exists.
+
+Out-of-scope breakage persists (57 files) and the xcframework isn't staged — matching the documented baseline. I'll use the proven harness + type-check methodology. Let me locate the token/theme/dependency files.
+
+I have the dependency map. Let me set up the executed model harness and gather SDK/target info.
+
+Let me create the harness and a verification script in a temp dir (outside the repo tree).
+
+Now compile and run the harness for macOS, iterating on the file set as needed.
+
+Harness compiled cleanly. Let me run it.
+
+The semaphore blocks the main thread, deadlocking the @MainActor task. Let me stop it and switch to top-level await.
+
+Harness passes (27/27). Now the view type-check against real P2 tokens + P3 components — macOS first.
+
+Need to add the file defining `TSInlineCallout` (a dependency of States.swift). Let me locate it.
+
+macOS type-check clean (0/0). Now iOS simulator.
+
+Both idioms clean (0/0). Let me run xcodegen to confirm project integration and that my files are referenced.
+
+In-scope evidence is strong (harness 27/27, type-check 0/0 both idioms, xcodegen 30 refs). Let me confirm the out-of-scope breakage concretely and check whether a full build is feasible (xcframework dependency).
+
+Let me reproduce the exact sibling pattern to demonstrate the out-of-scope RED precisely.
+
+My isolated repro doesn't trigger the sibling error (context-dependent). Let me check whether building the real xcframework (needed for a true full build) is feasible here.
+
+I'll attempt the real full build for maximum rigor. Let me kick off the xcframework build (the out-of-scope P1 dependency) in the background while I prepare the ledger and log.
+
+Build running in background. Let me update the parity ledger while it builds.
+
+The build continues under nohup (PID 52304). Let me update the ledger while it builds.
+
+Let me verify the ledger and check the build progress.
+
+Ledger updated cleanly (+18 lines). The xcframework build is genuinely progressing (compiling KMP for iOS targets). Let me update tracking and poll the build.
+
+Build is linking release frameworks now. Let me wait for it to finish staging.
+
+Release compilation in progress (the slow Kotlin/Native step). Let me wait longer.
+
+Almost done — linking the final macOS release framework. Let me wait for staging to complete.
+
+xcframework built successfully (8m15s) and staged — **XCFRAMEWORK_EXIT=0**. Now let me run the real full xcodebuild for macOS and capture the result.
+
+Let me run the full macOS build (async, logged) — the Gradle pre-build step should be cached now.
+
+Build running (PID 55275). Let me poll it while it compiles the app.
+
+Build **FAILED** on the out-of-scope `shared-surfaces/AI*.swift` siblings — exactly the documented breakage. Let me confirm the exit code and verify zero diagnostics in my files.
+
+Definitive: **1 error total**, in out-of-scope `AIGeofenceAwareAutomationSuggestions.swift:141` (escaping-closure bug class), **zero diagnostics in my files**. Let me capture the exact exit code precisely.
+
+**BUILD_EXIT=65** confirmed — blocked solely by the pre-existing out-of-scope `shared-surfaces` sibling (zero diagnostics in my files), matching the sibling DONE pages exactly. All in-scope gates are green. Let me verify the git tree contains only my deliverables.
+
+Git tree is clean — only my deliverables (generated `.xcodeproj` and `Frameworks` are gitignored). Now let me write the comprehensive evidence log.
+
+Log written. Let me do final pre-commit verification: confirm the 7 required strings + route key are present, and parity coverage is complete.
+
+All checks pass. Let me run a final consolidated lint/format pass on the exact files, then commit.
+
+Final in-scope gates green. Let me update tracking and commit the deliverables.
+
+All 11 deliverable files staged (generated project/framework correctly excluded). Let me commit.
+
+Committed cleanly. Let me finalize tracking and clean up temp artifacts.
+
+All done. PARITY_COVERED=13/13, all gates green in-scope, committed cleanly with `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../apple-page-admin-LiveSignalInspectorPage.log   | 207 +++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 165 ++++++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Features/Admin/LiveSignalInspectorPage.swift   | 246 +++++++++++++++++++++
+ .../LiveSignalInspectorPageModel.Sample.swift      |  82 +++++++
+ .../Admin/LiveSignalInspectorPageModel.swift       | 132 +++++++++++
+ .../LiveSignalInspectorRouteRegistration.swift     |  30 +++
+ apps/apple/Sources/TeslaSyncApp.swift              |  14 +-
+ .../Admin/LiveSignalInspectorPageModelTests.swift  | 171 ++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 11 files changed, 1064 insertions(+), 8 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-admin-LiveSignalInspectorPage.log
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveSignalInspectorPage.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveSignalInspectorPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveSignalInspectorPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Admin/LiveSignalInspectorRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Admin/LiveSignalInspectorPageModelTests.swift

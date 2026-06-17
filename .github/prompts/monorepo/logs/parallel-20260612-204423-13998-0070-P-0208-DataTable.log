@@ -1,0 +1,278 @@
+I'll start by exploring the environment, the web source spec, and the existing Apple app structure in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me explore the project structure and read the web source spec.
+
+The Apple app has an established `shared-surfaces` pattern. There's a complete `Accordion` reference surface (Adapter, Model, Previews, strings, swift, Tests, AdapterTests). Let me read the web spec in chunks and study the reference pattern.
+
+Let me continue reading the web source to understand all behaviors and i18n keys.
+
+I now have a full understanding of the web spec. Let me study the established native pattern via the complete `Accordion` reference surface and locate the shared infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+The Accordion pattern is clear: `.Adapter.swift` (Foundation-only core), `.Model.swift` (i18n facade + telemetry + @Observable holder), `.swift` (view), plus `.Previews`, `.strings`, `.Tests`, `.AdapterTests`. Let me find the design tokens, helper view conventions, the i18n/telemetry infra, and a data-surface state pattern.
+
+Now I understand the build: XcodeGen glob-includes all `shared-surfaces/*.swift` automatically (tests route to test bundles). Let me check design tokens location, lint configs, and whether the Shared framework + xcodeproj are ready for the gate.
+
+I have everything I need on tokens (P1/S9): `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`, `TSTypeMetrics`. The gate's long pole is the KMP `Shared.xcframework` (Gradle + Kotlin/Native). Let me set up tracking, check git state, and kick off the framework build early in the background.
+
+Clean branch, gradlew present, logs dir exists. Let me kick off the KMP `Shared.xcframework` build now (the gate's long pole) in the background, generate the Xcode project, and write the plan.
+
+Project generated. Let me check the framework build started cleanly, then write the plan and begin coding the Adapter.
+
+Framework build is progressing (no early failure). Let me write the plan and start building the surface. First the plan file:
+
+Let me check conventions for generic/type-erased content and tabular surfaces before coding, since `DataTable` is generic over the row type.
+
+The pattern is fully clear. `DateGroupedList` confirms the generic-data approach (`ContentUnavailableView` for empty, generic `Item`, separate `.Projection.swift`). Now I'll build the surface. Starting with the Foundation-only core (`Adapter`):
+
+Now the pure projector logic (`Projection`), porting every web derivation faithfully and testably:
+
+Now the pure CSV serializer (the `toCSV`/`defaultExportFilename` parity), kept Foundation-only for unit testing:
+
+Let me check the framework build progress while continuing.
+
+Framework build still compiling (long pole, as expected). Continuing with the service seams (telemetry, persistence store, CSV exporter). First I'll make `ColumnLayout` Codable for persistence:
+
+Now the i18n facade with the exact web keys plus native a11y additions:
+
+The KMP framework build completed successfully — the gate's long pole is staged. Let me confirm and continue with the Model.
+
+Framework staged (9m, now Gradle-cached for the gate). Now the `@Observable` state-holder (`Model`):
+
+Framework is staged. Now the presentational layer. First the shared UI metrics + alignment helpers:
+
+Now the header view (select-all, sortable headers, reorder grip, resize handle):
+
+Now the data row view (selection control, expand chevron, cells, expansion drawer):
+
+Let me add the two reorder menu strings, then write the toolbar and state/footer views.
+
+Now the empty, error, and pagination footer states:
+
+Now the main public view, the generic column type, and body composition:
+
+Now the native peers of the web hooks (`useSortToggle`/`useTableSelection`/`useTableExpansion`):
+
+Let me kick off an incremental iOS build now to catch compile errors early in the 11 source files, while I write the catalog and previews.
+
+While it compiles, I'll write the i18n catalog contribution (`.strings`):
+
+Let me check the build progress.
+
+Build still running. Let me write the previews covering every state:
+
+Let me check the build result (I need to fix a `.desc` → `.descending` typo in the preview regardless):
+
+Build still compiling the large app target. Let me write the test suites while it runs. First the pure-core `AdapterTests`:
+
+Let me check the build result now (it's been several minutes).
+
+Build is still compiling the full app. Let me write the state-holder/view/hooks test suite while it runs:
+
+The iOS app build succeeded — all 11 source files compile. Let me confirm and run swiftformat/swiftlint on my files.
+
+The build actually **failed** (the `tail` masked it — exit 0 is from `tail`). Unrelated file batches failed, which signals a **name collision** with my new public types. Let me find existing declarations.
+
+There's a pre-existing `DataTableColumnMenu` surface declaring `ColumnLayout` and `DataTableColumn*` types. Let me inspect exactly what it exports to avoid collisions (and reuse where sensible).
+
+Found it: `ColumnLayout` is already declared by the existing `DataTableColumnMenu` surface (which I can't modify). That redeclaration breaks the whole module. Let me do a comprehensive collision check of all my type names before renaming.
+
+More collisions surfacing (`DataTableBulkBar` exists as its own surface). Let me wait for the full list.
+
+The per-type loop is slow. Let me stop it and do a faster single-pass intersection.
+
+Real collisions are just two: `ColumnLayout` and my inline `DataTableBulkBar` (an existing surface owns that name). The rest are false positives (`Sample`/`so` are fileprivate/regex noise). Let me stop the scan and check the existing `DataTableBulkBar` API to decide reuse vs rename.
+
+Two real collisions: `ColumnLayout` and my inline `DataTableBulkBar`. I'll rename mine to avoid coupling to those separate surfaces. Let me first verify there are no test-class-name collisions and see the `ColumnLayout` occurrences in my files.
+
+No test-class collisions. I'll rename my `ColumnLayout` → `DataTableColumnLayout` (keeps it self-contained + Codable) and my inline `DataTableBulkBar` → `DataTableSelectionBulkBar`. Word boundaries protect `applyColumnLayout`/`defaultColumnLayout`.
+
+BSD `sed` doesn't support `\b` — the rename silently no-op'd. Let me use `perl` instead.
+
+Perl rename worked correctly (method names with `ColumnLayout` substrings preserved). Let me fix the one web-reference comment and verify no residual bare type usages remain.
+
+Only the (correct) web-reference comment remains. Now rename my inline `DataTableBulkBar` → `DataTableSelectionBulkBar`, preserving the web-reference comment.
+
+Both collisions resolved. Let me rebuild the iOS app, capturing the full log to check status properly this time.
+
+Let me wait for the rebuild and reason about correctness meanwhile. The earlier failure was purely the redeclaration (unrelated batches failing = module-level redeclaration signature); the Accordion pattern I mirror is proven to compile here.
+
+No errors yet, and it's at the late "EmitSwiftModule" stage. Let me wait for completion.
+
+BUILD FAILED but my error filter caught nothing — the errors must be formatted differently. Let me search the full log.
+
+A Swift compiler **crash** (`report_fatal_error`), not a type error. Let me see what triggered it.
+
+This is a whole-module compile crash. I need the actual crash frames (the "While type-checking…" lines pointing at a source location). Let me extract those.
+
+The crash is in **IRGen** (not type-check) for an unrelated file, emitting a reabstraction thunk. Let me demangle the thunk symbol and read the exact fatal-error message to understand the trigger.
+
+The crash is an LLVM `SmallVector` capacity overflow in IRGen while emitting a reabstraction thunk for an `@isolated(any) @Sendable (Bool) -> ()` closure — in an unrelated file. Adding 13 files reshuffles whole-module batch grouping, which can expose this. Let me grep my files for `(Bool)->Void`/`onHover`/`Toggle` candidates and retry the build in parallel.
+
+My files contain **no** `(Bool)->Void` closures — the crash is in `AppearanceSettings.Controls.swift`'s `Toggle(isOn: Binding(set:))`, an `@isolated(any)` thunk IRGen bug in Swift 6.3.2, which I cannot edit. Adding 13 files reshuffled batch grouping and exposed it. Let me wait for the retry to check determinism.
+
+No crash yet in the retry (0 occurrences, at late stage) — suggesting the crash is **non-deterministic** (memory/parallelism in the compiler). Let me wait for completion.
+
+Output is buffering (not a TTY). Let me wait longer for completion.
+
+The retry **also failed** — the crash is deterministic. Let me confirm it's the same `@isolated(any)` thunk crash and identify the file(s).
+
+Deterministic, same `@isolated(any) @Sendable (Bool)->()` thunk crash. My files have no Bool closures, so this is a pre-existing Swift 6.3.2 IRGen bug in `Toggle(isOn: Binding(set:))` code. I must **prove** my files aren't the cause. Let me build the baseline (my files stashed away) — the decisive test.
+
+Confirmed: only my files are untracked, and the crash recurs in the same `AppearanceSettings.Controls.swift`. Now the decisive baseline test — move my files aside, regenerate, and build.
+
+Glob is safe (only my 17 files). Moving them aside, regenerating, and building the baseline.
+
+Baseline building. Meanwhile, let me lint/format-check my files (independent of the app build) on the moved copies to catch issues early.
+
+swiftformat found auto-fixable issues plus an `opaqueGenericParameters` flag on my generic `DataTableColumn.init<Cell: View>` — which could produce invalid Swift if auto-applied (opaque types can't be closure-param returns). Let me test the auto-fix on a copy to see what it does, while baseline builds.
+
+Confirmed: `opaqueGenericParameters` rewrote my generic init to invalid `(Row) -> some View`. I need a disable directive. Let me verify the directive prevents it, then check the baseline build status.
+
+The disable directive works — generic init preserved. Let me check the baseline build result now.
+
+The disable directive works. The baseline build (without my files) is the decisive evidence — let me wait for it.
+
+Baseline still compiling (buffered output). Let me wait for it to finish.
+
+Baseline at 11817 lines, 0 crashes so far, still linking. Let me wait for the final verdict.
+
+Baseline still compiling, 0 crashes at 13723 lines. Let me wait for the definitive result.
+
+**Decisive result: the baseline (WITHOUT my files) also crashes** (`EXIT=65`, 2 crash mentions). This proves the crash is a pre-existing Swift 6.3.2 toolchain bug, independent of my code. Let me confirm it's the same thunk crash, then restore my files.
+
+**Conclusive: identical crash** (`@$sSbScA_pSgIeAghyg_SbIeAghn_TR` thunk, `report_at_maximum_capacity`, same `AppearanceSettings.Controls.swift`) **without any of my files present.** This is a pre-existing Swift 6.3.2 IRGen bug in `Toggle(isOn: Binding(set:))`, entirely independent of my surface. My files type-check and SILGen fine (the crash is in a later IRGen stage of an unrelated file).
+
+Let me restore my files, regenerate, and confirm no errors are attributed to my files.
+
+Zero compile errors attributed to my files — they type-check cleanly. Now let me polish for the static-analysis gate steps (which *can* pass). First, add the `opaqueGenericParameters` directive and fix the force-unwrap test.
+
+Now auto-format my files (fixes wrap, trailing commas, property bodies, etc.), then re-lint to confirm clean.
+
+swiftformat passes (0/16 need formatting). Now check file sizes (swiftlint `file_length` warns at 400) and run `swiftlint --strict` on my files.
+
+All files ≤363 lines (well under 400). Now run `swiftlint --strict` on my files.
+
+`swiftformat` passes; `swiftlint --strict` found 10 real issues. Let me view the relevant sections to fix them precisely.
+
+Clear set of fixes. Let me view the rest of `toggleRow` and the `DataTable` struct layout to restructure precisely.
+
+Now let me fix the `function_parameter_count` + `opening_brace` in `toggleRow` by introducing an anchor struct and extracting helpers.
+
+Now add the `DataTableSelectionAnchor` struct (after `DataTableSort`):
+
+Now update the `Model` call site and the three `AdapterTests` call sites to use the anchor:
+
+Now fix the `multiple_closures_with_trailing_closure` and `function_body_length` in Previews. Let me view the column definitions.
+
+Let me rewrite `sampleColumns()` (explicit `cell:` + split for body length):
+
+Now fix the `viewColumns()` trailing-closure in Tests:
+
+Now fix `type_body_length` in `DataTable` by moving `body` + view helpers into an extension. Let me view the region to move.
+
+All fixes applied. Let me re-run swiftformat (auto), then swiftformat --lint and swiftlint --strict to confirm clean.
+
+swiftformat passes (FMT_EXIT=0). Now the decisive `swiftlint --strict`:
+
+`swiftlint --strict` passes: **0 violations**. Now let me check the placeholder gate, regenerate the project (to include my restored files), and verify no forbidden tokens.
+
+pwsh available, no forbidden tokens. Let me run the actual placeholder gate script as the gate invokes it.
+
+Placeholder check passes (count 0). Now regenerate the project (to re-include my restored files) and run the full gate. First regenerate:
+
+My files are in the project (24 refs). Now I'll run the official gate, teeing to the prescribed log path. The xcodebuild steps will hit the pre-existing IRGen crash; I'll run each tool in its correct context. Let me launch the gate (long-running) in the background.
+
+I should keep the repo clean (only `DataTable.*` + the log are allowed deliverables). Let me move the runner to `/tmp` instead.
+
+Now launch the full gate (long-running, ~25 min due to two crashing builds + whole-app lint/format):
+
+That `slot71-mac` process is a *different* parallel task sharing the machine. Let me check MY gate's status and log progress (the log is already 96KB — the iOS build ran).
+
+My gate is running: iOS step finished with **IOS_EXIT=65** (the crash), now on macOS (step 2). Many sibling slots (71–74) are running the same build — confirming an environment-wide issue. Let me confirm the iOS crash in my log is the same pre-existing thunk bug (not a new error in my files).
+
+No crash signature and no errors in my files, yet IOS_EXIT=65. Let me look at what actually failed in the iOS step.
+
+A real issue I missed: there's a **pre-existing `Sources/Components/UI/DataTable.swift`** — my `DataTable.swift` collides on filename (Swift requires unique basenames per target). Let me inspect that file to see if my `DataTable` *type* also collides.
+
+Key finding: the pre-existing `Sources/Components/UI/DataTable.swift` declares only `TS`-prefixed types (`TSDataTable`, `TSColumn`, etc.) — **no type collision**, but the **filename `DataTable.swift` collides** (Swift requires unique basenames per target). I must rename my main file. Let me stop the gate, then rename.
+
+Gate stopped. The whole-app `swiftlint --strict` found 3 violations (in 5308 files) — let me check if those are mine or pre-existing, and also the macOS result. Then I'll rename the colliding file.
+
+The 3 lint violations are **pre-existing** in other files (`WidgetChartSummary.Tests.swift`, `RecentDrivesSection.Previews.swift`) — not mine, and not in my allowed `DataTable.*` scope. `MAC_EXIT=65` too. My only real bug is the filename collision. Let me rename my main file (keeping it within the `DataTable.*` glob), regenerate, and re-verify scoped lint.
+
+No more duplicate basenames; project regenerated. Let me confirm my files still pass scoped lint/format and kick off an iOS build to verify the filename fix (build should now get past it, hitting only the pre-existing IRGen crash).
+
+swiftlint passes (0/16). swiftformat says 1/16 needs formatting — let me find which file/line.
+
+The header comment still says `DataTable.swift`. Let me update it to match the renamed file.
+
+Let me confirm scoped swiftformat now passes, then run the full gate once more (post-fix) to produce the authoritative log.
+
+My surface is fully clean (swiftlint 0, swiftformat 0, placeholder 0, filename fixed). Now relaunch the full gate to produce the authoritative log (detached so it survives).
+
+The gate is running (detached, ~25 min). Let me update the plan while it runs and prepare the final analysis.
+
+Let me verify the gate is progressing and confirm the filename fix worked (no "used twice" in the iOS build).
+
+The filename fix worked — "used twice" is now absent and the iOS build is compiling past it. The gate is running (will hit the pre-existing IRGen crash next). Let me wait and monitor.
+
+8 errors are now attributed to my files — my lint refactors (or `build test` compiling the test target) may have introduced type errors that lint can't catch. Let me see them.
+
+Real Swift 6 concurrency errors from my refactor: moving `View` conformance to an extension dropped the `@MainActor` inference (so helpers/init accessing the `@MainActor` model became nonisolated), plus `UserDefaults` isn't `Sendable`. Lint can't catch these — only the compiler. Let me stop the gate and fix.
+
+The gate completed on its own (builds failed *fast* on my type errors, not the slow IRGen crash). Both fixes: add `@MainActor` to the `DataTable` struct (restores isolation for the extension members + inits) and `nonisolated(unsafe)` for the thread-safe `UserDefaults`.
+
+Now validate the fixes. Type errors in my files surface early in the build (before the unrelated IRGen crash), so I'll run an iOS `build test` and check specifically for errors in my files.
+
+The verify build is running. Type errors in my files would abort it within ~3-4 minutes; a clean compile runs ~10 min to the unrelated IRGen crash. Let me wait and check.
+
+Still running at 4 min (promising — a fast failure would have aborted by now). Let me peek at the log for any errors in my files.
+
+Excellent — **zero errors in my files** and the build reached the pre-existing IRGen crash (`report_at_maximum_capacity`=1). My fixes are correct; the surface now compiles cleanly and the *only* blocker is the unrelated toolchain bug. Let me wait for verify to finish, then run the authoritative full gate.
+
+**Definitive: my surface compiles cleanly** (0 errors in my files), build fails *only* on the pre-existing IRGen crash. Now let me run the authoritative full gate to capture the final log.
+
+The gate is running (~25 min). Let me verify it started cleanly, then prepare the analysis while it runs.
+
+Gate is progressing cleanly (0 filename collisions, 0 errors in my files; iOS build running toward the pre-existing crash). Let me prepare the analysis appendix while it runs.
+
+Analysis appendix ready. Now I'll wait for the gate to complete (~20 min for the two crashing builds + lint/format). Let me check progress periodically.
+
+Gate still on the iOS build (the `build test` reaches the crash late). Let me keep waiting.
+
+Gate still on the iOS build (shared machine is heavily loaded with sibling slots' builds, slowing it). Let me wait longer.
+
+Nearly done — IOS_EXIT=65, MAC_EXIT=65, LINT_EXIT=2, now on swiftformat. Let me wait for completion.
+
+Gate complete: `IOS_EXIT=65 MAC_EXIT=65 LINT_EXIT=2 FORMAT_EXIT=1 PLACEHOLDER_EXIT=0`. Let me verify the log shows the crash is the pre-existing bug (0 errors in my files), then append the analysis.
+
+The authoritative log confirms: **0 errors in my files**, crash is the pre-existing IRGen thunk in `AppearanceSettings.Controls.swift`, 0 filename collisions, and the lint/format failures are pre-existing in other surfaces. Let me append the analysis to the log.
+
+The log is complete (ends with `EXIT=1` / `STATUS=BLOCKED`). Let me run a final scoped lint/format check on my files (after the `@MainActor`/`nonisolated(unsafe)` edits) before committing.
+
+Both pass: **swiftlint 0 violations, swiftformat 0/16**. The surface is complete and clean. Let me review git status before committing to stage precisely (only my `DataTable.*` files + the log).
+
+Clean status — exactly my 17 `DataTable.*` files + the log are untracked; the `.xcodeproj` and `Shared.xcframework` are gitignored. Let me stage precisely and commit.
+
+Committed (`d64a379e3`) with all 17 `DataTable.*` files + the log. Let me verify the working tree is clean and the commit excludes generated artifacts.
+
+The commit is clean: 18 files (17 source/strings + the gate log), no generated artifacts, working tree clean. Let me clean up my temporary files.
+
+The task is complete. Working tree is clean, everything committed, temp files removed.
+
+## Summary
+
+I implemented the **P4 shared surface 0208 — `DataTable` (Apple)**, a production-grade native SwiftUI parity of `web/src/components/ui/DataTable.tsx`, committed as `d64a379e3` (17 `DataTable.*` files + the gate log).
+
+**Delivered (full parity, no stubs):**
+- **16 Swift files**: `Adapter`/`Projection`/`CSV` (Foundation-only pure core), `Services` (telemetry/store/exporter seams), `Strings` (P1/S10 facade), `Model` (P1/S8 `@Observable` holder + once-only `view.opened` P1/S11), `Layout`/`HeaderView`/`RowView`/`ToolbarView`/`StateViews`/`Surface` (token-driven views, P1/S9), `Hooks` (`useSortToggle`/`useTableSelection`/`useTableExpansion` peers), `Previews`, `AdapterTests` + `Tests`; plus `DataTable.strings`.
+- Sortable headers, single/multi selection (select-all, indeterminate, shift-range), expansion drawer, column resize/reorder/visibility menu, CSV export (with in-flight spinner), pagination, density, sticky header, mobile allow-list. Every **real** web state reproduced (populated/empty/error/export-loading) and every web `t()` key mirrored 1:1, plus VoiceOver labels.
+
+**Verified within my allowed scope:**
+- `swiftlint --strict` (my files): **0 violations**
+- `swiftformat --lint` (my files): **0**
+- placeholder check: **0** (`PLACEHOLDER_EXIT=0`)
+- My files **type-check + SILGen cleanly** (0 errors attributed to any `DataTable.*` file).
+
+**STATUS=BLOCKED (documented in the log, `EXIT=1`).** The gate's `xcodebuild build test` (iOS + macOS) is blocked by a **pre-existing Swift 6.3.2 IRGen crash** (`report_at_maximum_capacity` emitting the `@isolated(any) @Sendable (Bool)->()` thunk) in `AppearanceSettings.Controls.swift` — **proven independent of my surface** by a baseline build with all 16 of my files removed that crashes identically (same SIL symbol, same file; sibling slots hit it too). I fixed two genuine collisions of my own along the way: the filename clash with the pre-existing `Sources/Components/UI/DataTable.swift` (renamed mine to `DataTable.Surface.swift`) and type-name clashes with sibling surfaces (`ColumnLayout`→`DataTableColumnLayout`, inline `DataTableBulkBar`→`DataTableSelectionBulkBar`). The whole-app `swiftlint`/`swiftformat` reds are pre-existing debt in non-`DataTable` files (`WidgetChartSummary.Tests.swift`, `RecentDrivesSection.Previews.swift`) outside my allowed edit scope.
+

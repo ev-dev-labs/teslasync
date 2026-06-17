@@ -1,0 +1,214 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me explore the web source and existing Apple app structure.
+
+Now let me explore the Apple app structure to understand conventions, dependencies (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n), and existing shared surfaces.
+
+This is a mature Apple project. Let me examine the existing shared-surfaces, the native Maps/Feedback/UI components, and the SharedFacade (state holders).
+
+The shared-surfaces dir is large (1935 files). Let me find map/playback-related surfaces and understand the file pattern conventions.
+
+RoutePlayback doesn't exist yet. Clear file pattern: `<Surface>.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.States`, `.strings`, `.Tests`. Let me find map-using surfaces and study a complete reference surface.
+
+There's a native `MapTileLayer` (MapKit) and map/route surfaces like `ElevationProfile`. Let me check the Xcode project structure (how 1933 files are included) and study the native map component plus a complete reference surface.
+
+Uses XcodeGen (`project.yml`). Let me read the project config, lint/format configs, and the localization setup.
+
+Now I understand the build system (XcodeGen, folder-based inclusion, Swift 6 strict concurrency). Let me study the shared facade (state holders), design tokens, i18n, telemetry, and the native counterparts of the components used (GlassPanel, EmptyState, PlaybackControls, MapTileLayer).
+
+Excellent — native `PlaybackControls.*` and `MapTileLayer.*` surfaces already exist (exactly the components web RoutePlayback composes). Let me read these references plus the facade/design primitives.
+
+This is a well-established pattern — `PlaybackControls` and `MapTileLayer` native surfaces already exist and I'll compose them. Let me locate the native `TSGlassPanel`/`EmptyState`, and read the map surface, design tokens, projection/states/seams patterns.
+
+Let me read the design tokens, GlassPanel, EmptyState, TSDesign, and the map surface + projection/states/seams references in parallel.
+
+Now let me read the map surface internals and the PlaybackControls seams/states/projection/views to understand composition, the Source (state-holder) protocol, and the resolved view-state pattern.
+
+Let me read the MapKit representable, the map model/projection, and the PlaybackControls projection/views/strings/tests to finalize my composition approach.
+
+Let me check tooling (xcodegen, pwsh, placeholder checker) and read the PlaybackControls Views/Tests and Map model to finalize patterns.
+
+All tooling available. Let me read the placeholder checker, the PlaybackControls views/tests, and the map model.
+
+Let me read the placeholder patterns, a representative test file, and confirm the log directory exists.
+
+I now have all patterns. Let me read a tests file and a previews file to mirror conventions exactly, then I'll build.
+
+I have a thorough understanding of every pattern. Let me set up tracking, generate the Xcode project, and start a baseline build to confirm the environment is green before I add files.
+
+Project generates cleanly with both schemes. Let me check the Shared.xcframework staging script (a build prerequisite) — this is a key risk.
+
+The build requires compiling the KMP `Shared.xcframework` via Gradle (Kotlin/Native) — no prebuilt exists. Let me verify Java/Gradle work and kick off a baseline iOS build in the background to confirm the environment is green before I add code.
+
+Java 17 is available. Gradle is initializing (likely downloading the distribution). Let me wait for the offline probe to complete.
+
+Gradle works (cached). Now let me start the baseline iOS build in the background — it builds the KMP framework + compiles the app, confirming the environment is green and warming caches. Meanwhile I'll write the surface files.
+
+Environment confirmed. Let me set up tracking and write the plan while the baseline build runs.
+
+Baseline build is running. Now let me write the surface files, starting with the Model (seams, value types, source) and Projection (pure adapter + view-state).
+
+Now I'll create the Model file with all the seams, value types, and source layer.
+
+Now the Projection file — the pure adapter (the heavily-tested logic) plus the resolved view-state and accessibility builders.
+
+Let me check on the baseline build progress, then continue with the Store.
+
+Build is compiling. Let me write the Store — the `@Observable` model with the 50 ms playback engine and the embedded `PlaybackControls` wiring.
+
+Let me check the baseline build status.
+
+Build is still compiling (first build includes Kotlin/Native). Let me verify how SwiftUI `Map`/`MapPolyline`/`Annotation` are used elsewhere in this codebase to match the exact API, before writing the map view.
+
+There's a native `MapView` + `MapContent` helpers + `GeoHelpers`. Let me read them — I can reuse these shared map primitives (the prompt encourages mapping to native counterparts).
+
+Reusable native map primitives exist (`TSCircleMarker`, `TSAnimatedMarker`, `TSGeo`, `MapPolyline`/`Annotation` proven). Let me check `TSTone`, `TSSkeleton`, and `TSMaterial` so I use correct symbols.
+
+Let me confirm the `TSSkeleton` API, then write the Views file.
+
+`TSSkeleton` confirmed. Now I'll write the Views file (MapKit map + chrome).
+
+Let me check the baseline build, then write the main entry view.
+
+Now the main entry view that assembles the phases:
+
+Now the strings catalog and the previews:
+
+Now the Previews:
+
+Let me check the baseline build status before writing tests.
+
+Now the test files. First the projection/adapter + accessibility tests:
+
+Let me replace the hacky custom `XCTUnwrap` with proper throwing `try XCTUnwrap`.
+
+Now the store/engine tests:
+
+All 9 surface files are written. Let me update tracking and check the baseline build.
+
+While the baseline build runs, let me lint/format-check my new files (fast, no build needed) to catch style issues early.
+
+swiftformat flagged number-grouping and line-wrap issues. Let me auto-fix my files with swiftformat (write mode), then re-verify.
+
+Let me review what swiftformat changed to ensure correctness.
+
+Changes look correct. Let me re-verify swiftformat passes and run swiftlint on my files.
+
+swiftformat passes. Baseline build finished — let me check its result (critical), then fix the 3 swiftlint issues.
+
+Baseline failed compiling **existing** files (AppShell, AppearanceSettings, AreaChartWrapper, AuditPanel) — but that build predated my files. I need the real error message. Let me regenerate the project (to include my files) and rebuild, capturing actual `error:` lines to a log.
+
+RoutePlayback files are in the project (54 refs). Now let me rebuild capturing the actual errors to a log file.
+
+The build is running. While it compiles, let me fix the 3 swiftlint issues. First let me view the current end of Projection.swift (post-format) to move `RoutePlaybackFormat` to its own file.
+
+Let me check the build while I prepare fixes.
+
+Build still running. Let me apply the swiftlint fixes now. First, fix the `resolve()` parameter count (6→4 via `RoutePlaybackInput`) and remove `RoutePlaybackFormat` from Projection (moving it to its own file).
+
+Now create the new Format file with the moved `RoutePlaybackFormat`:
+
+Now update the `resolve()` caller in Store and the two callers in Tests, plus fix the Previews tuple:
+
+Now fix the Previews large-tuple violation:
+
+Now let me check the build result (it includes my files and will reveal real compile errors).
+
+Let me peek at the build log to see progress and catch any errors so far.
+
+No errors so far — it's emitting the module (compilation succeeded). Let me wait for it to finish.
+
+One real error: two `stop()` methods (lifecycle + transport) collide. I'll rename the transport one to `stopPlayback()` (matching the `PlaybackControls` convention) and update the relay + test.
+
+Now let me re-format and lint all my files (including the new Format file), then regenerate the project.
+
+swiftformat and swiftlint both pass clean on all 9 files. Let me regenerate the project (new Format file) and run the full iOS build+test gate.
+
+Now running the full iOS build+test gate (longest step). Capturing to a log:
+
+The iOS build+test is running (the longest step — compiles app + all test bundles, runs the full suite). Let me wait and monitor.
+
+App target still compiling, no errors. Let me continue waiting for the test phase.
+
+Still compiling (no errors). This is a large project; build+test takes time. Let me wait in a larger increment.
+
+Compiling, 0 errors. Let me keep waiting for the test execution phase.
+
+iOS build+test finished. Let me check the result.
+
+Test failed (RC=65) but 0 compile errors — likely a test assertion or runtime failure. Let me examine the failure details.
+
+The compile failed but no `error:` matched — let me look at the exact failure context around both failure points.
+
+The Swift compiler **crashed during IRGen** (`report_fatal_error` in code generation) — a compiler crash, not a normal error. Let me find what construct triggered it.
+
+The compiler **crashed in IRGen** on `AppearanceSettings.Controls.swift` (an existing file I didn't touch) with `report_at_maximum_capacity` — and the **baseline build (before my files existed) failed on the same `AppearanceSettings` batch**. This is a pre-existing/environmental compiler crash. Let me check system memory and whether it's a parallelism-driven OOM.
+
+64GB RAM, 81% free — not an OOM. It's a **deterministic compiler crash** in `AppearanceSettings.Controls.swift` (IRGen of a compiler-generated thunk). The baseline build (before my files existed) failed on the same batch, but I never captured its actual crash stack. I must definitively confirm whether my code is implicated. Let me reproduce the build with my files temporarily removed.
+
+Files removed (0 refs). Now build the baseline app target to see if the crash persists without my code:
+
+While the baseline build runs, let me demangle the crashing thunk to understand what closure type triggers it.
+
+The thunk is a `@isolated(any) @Sendable (Bool) -> ()` reabstraction thunk — an `@isolated(any)` IRGen path (SE-0431). None of my files use `(Bool)`/`Actor`/isolation closures. This looks like a pre-existing toolchain (Swift 6.3.2) IRGen crash. Let me wait for the baseline build to confirm.
+
+No crash yet (still pre-IRGen at line 1964). Let me wait for it to reach the IRGen phase.
+
+Baseline build (without my files) finished. Let me check whether it crashed:
+
+**Definitive confirmation:** the baseline build **without my files** crashes identically — `BUILD FAILED`, IRGen crash in `AppearanceSettings.Controls.swift` (an `@isolated(any) @Sendable (Bool) -> ()` reabstraction thunk), 0 normal errors. This is a **pre-existing Swift 6.3.2 toolchain compiler crash**, completely independent of my surface, in a file outside my allowed edit scope.
+
+Let me restore my files and run the in-scope verifications that DO pass, then capture authentic gate evidence.
+
+Files restored. The toolchain crash is confirmed pre-existing and unfixable within my allowed scope (`RoutePlayback.*` only). To honor the covenant ("No skip-and-assume"), I'll run the actual gate commands. Let me start the macOS build+test (gate step 2) and run the fast in-scope checks in parallel.
+
+Placeholder check passes. Let me run the gate's swiftlint/swiftformat (repo-wide, no compilation needed) and a real placeholder scan of my actual files, while macOS builds.
+
+Real placeholder scan of my actual source files: **0 violations**. Let me wait for the repo-wide swiftformat lint.
+
+macOS build finished quickly — let me check its result and the swiftformat status.
+
+Repo-wide swiftformat flags a **pre-existing** issue in `RecentDrivesSection.Previews.swift` (not my file). Let me check the macOS build result, confirm that file is pristine (not mine), and run swiftlint.
+
+macOS also failed (RC=65) but with **0 crash markers** — a *different, faster* failure. Let me find the macOS failure cause, and confirm the swiftformat issue is pre-existing (RecentDrivesSection is not in my changeset — confirmed, only my files are untracked).
+
+The macOS failure is a **pre-existing code-signing/entitlements config error** (`TeslaSync-macOS` requires a development certificate; no signing identity in this environment) — it never even compiled sources. Another out-of-scope blocker. Let me run swiftlint (gate step 4) to complete the picture.
+
+**All four** build/lint gate steps fail on **pre-existing, out-of-scope** files:
+1. iOS build/test → Swift 6.3.2 IRGen compiler crash (`AppearanceSettings.Controls.swift`)
+2. macOS build/test → code-signing/entitlements config error (`TeslaSync-macOS`)
+3. swiftlint → identifier_name violations (`WidgetChartSummary.Tests.swift`)
+4. swiftformat → redundantType (`RecentDrivesSection.Previews.swift`)
+
+None are my files (only `RoutePlayback.*` are untracked in git). My surface passes swiftlint/swiftformat/placeholder in isolation. Let me gather precise evidence snippets to assemble an honest BLOCKED log.
+
+Airtight evidence captured. My surface passes in isolation (swiftlint 0, swiftformat 0/9). Since the app can't build (compiler crash), my XCTest can't execute — but my core adapter logic is pure Foundation. Let me prove it works via a standalone harness, then write the honest gate log.
+
+The standalone harness caught a **real latent bug in my tests**: `Date.addingTimeInterval(0.1)` relative to epoch introduces floating-point error, so `buildOffsets` yields `100.00002…` not `100.0` — my exact-equality assertions on offsets would FAIL if the suite could run. The production logic is functionally fine but the formula (`t*1000 - t0*1000`) is numerically fragile. Let me verify the fix (relative `timeIntervalSince` + integer-second test data).
+
+Confirmed: the imprecision comes purely from **fractional-second test timestamps** (both formulas agree; integer-second data is exact). Production logic is correct — the fix is in my **test data** (use integer-second timestamps → exact offsets). Let me view and fix the affected test data/assertions.
+
+Production logic is correct; only my test data needs integer-second timestamps. Let me fix both test files.
+
+Now fix the ModelTests (engine data + tick test + durationMs):
+
+Let me re-validate all my (now integer-second) test expectations via the standalone harness, including the engine tick sequence and seek logic.
+
+All corrected expectations validated by the harness (offsets, engine tick sequence `[1,1,2,2]`, seek). My adapter + engine logic is provably correct. Let me re-verify lint/format on the edited test files.
+
+All my files are clean (swiftformat 0/9, swiftlint clean). My non-test sources type-check (the app module emitted successfully before the unrelated IRGen crash), and my test logic is harness-validated. 
+
+Let me check the pinned tool versions vs installed (to characterize the environment mismatch) before writing the final gate log.
+
+The version lock confirms the root cause: repo is locked to **Swift 6.0.1 / Xcode 26**, but the runner has **Swift 6.3.2 / Xcode 26.5** — a major toolchain drift that introduces the IRGen crash and stricter lint rules on pre-existing code. Let me write the comprehensive, honest gate log.
+
+The log is written. Before finalizing as BLOCKED, let me check whether a toolchain matching the locked baseline (Swift 6.0.1 / Xcode 26) exists on this runner — if so, I could use it to pass the gate.
+
+Only one toolchain exists on the runner (Swift 6.3.2) — no locked-baseline (6.0.1) toolchain to fall back to. BLOCKED is unavoidable. Let me verify the git state, clean up temp files, and confirm only my intended files are present.
+
+Clean final state: exactly my 10 deliverable files + the gate log are present (all untracked); generated `xcodeproj`/`build` are git-ignored and removed; temp files cleaned. Per the binding Honesty Covenant ("No commit on red"), I will **not** commit on a BLOCKED gate. Let me finalize tracking.
+
+Let me do a final verification of the key acceptance criteria I can check without the (toolchain-broken) build.
+
+All verifiable acceptance criteria pass. Here's my final summary.
+

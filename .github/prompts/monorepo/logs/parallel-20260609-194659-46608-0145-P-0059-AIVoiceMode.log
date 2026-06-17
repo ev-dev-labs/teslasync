@@ -1,0 +1,180 @@
+I'll start by exploring the repository structure and checking the Apple toolchain availability, since this task requires SwiftUI/Xcode tooling.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Now let me explore the repo structure and the web source.
+
+Let me read the web source end-to-end and explore the Apple app structure in parallel.
+
+Now let me explore the existing Apple structure — shared-surfaces, the state-holders (S8), tokens (S9), i18n (S10), and diagnostics (S11). I'll look for existing AI surfaces to match patterns.
+
+A clear, established file pattern exists. `AIFeatureCard.*` is the native counterpart of the web `AIFeatureCard` this surface depends on. Let me study it plus the shared facade (S8 state-holders, S9 tokens, S10 i18n, S11 diagnostics) and find how `useAiStream` is represented natively.
+
+Two source trees: `apps/apple/Sources/` (core, incl. `SharedFacade`) and `apps/apple/TeslaSync/` (surfaces). `AICostForecastNarration` is a streaming AI surface using `useAiStream` — the ideal template. Let me study it, plus `AIFeatureCard` (the shared dependency) and the SharedFacade core.
+
+The `AIFeatureCard` native component is highly reusable and is exactly what the web `AIVoiceMode` composes. Let me study its model/views/chrome and the SharedFacade core to understand the S8 state-holder contract.
+
+Now let me study the view/chrome layers, design tokens (S9), strings format, test patterns, and crucially how `project.yml` includes surface files (glob vs explicit).
+
+Key finding: surface dirs are included wholesale (with excludes). Let me read the full `project.yml` to understand excludes and how `.Tests.swift`/`.strings` files are routed to the test target.
+
+Build routing is clear: non-test `.swift` → app targets; `*Tests.swift` → `TeslaSyncTests`; `.strings` bundled as resources. Now let me locate the S9 design tokens (`TSButton`, `TSGlassPanel`, `TSSpacing`, `Color.TS`, `Font.TS`) and understand the `withAiFeature` gating mechanism, plus read the CostNarration Model/Projection/Chrome to see the full gated-streaming state-holder.
+
+Let me read the design tokens (S9), the `TSButton`/`TSGlassPanel` APIs, and the CostNarration Chrome/Previews/Tests/AdapterTests to match patterns exactly.
+
+The `AICostForecastNarration` surface (also a web `AIFeatureCard` composer) reproduces card chrome as self-contained private subviews rather than depending on the `AIFeatureCard` View. Let me verify whether ANY surface reuses the `AIFeatureCard` View directly, and read the design tokens + a Previews/Tests/AdapterTests example to lock the patterns.
+
+Confirmed: every AI surface is fully self-contained (no cross-surface reuse). I'll follow that convention. Let me read the remaining tokens (`TSSpacing`/`TSRadius`/`TSGlassPanel`/`TSSkeleton`/`TSFadeIn`) and the CostNarration Previews/Tests/AdapterTests to match test+preview patterns.
+
+Now I have the tokens. Let me read the CostNarration Previews/Tests/AdapterTests and the `TSGlassPanel`/`TSFadeIn`/`TSSkeleton` APIs to lock the test+preview+chrome patterns.
+
+Let me read the CostNarration model/view/a11y tests and check whether `xcodegen` is available and how the project gets generated (since I'm adding files to a wholesale-included dir).
+
+I have a complete understanding of the conventions. Now let me verify critical build prerequisites: the `Shared.xcframework` binary, `pwsh` availability (the gate is PowerShell), lint configs, and whether Speech/AVFoundation are already used in the project.
+
+Critical: `Frameworks/Shared.xcframework` is empty (only `.gitkeep`) — yet both app targets depend on it. This is the prebuilt KMP core. Let me investigate how it's produced and whether the baseline can build at all.
+
+The `Shared.xcframework` is built from a Kotlin Multiplatform module via Gradle (a pre-build script phase). Let me check whether that toolchain and module are present, and how `project.yml` wires the pre-build phase.
+
+Java 17 + gradlew are present, and `project.yml` wires a pre-build phase that builds the KMP `Shared.xcframework` via Gradle. That's the long pole for the gate. Let me kick it off in the background now while I write the surface, and set up tracking.
+
+The KMP module is real with a Gradle wrapper. Let me kick off the `Shared.xcframework` build in the background (the long pole), then write the surface while it runs.
+
+Empty `Shared.xcframework` will block the app build until Gradle finishes — that's running now. Let me read the full lint/format configs (since `--strict` turns warnings into errors) and check Gradle progress, then start writing the surface.
+
+Config noted (maxwidth 120, before-first wrapping, no trailing commas, `self` removed, type names ≤50). I'll auto-format my files with `swiftformat` before linting. Let me check Gradle progress, then write the plan and start.
+
+Gradle is bootstrapping (downloading distribution). I'll write the surface in parallel. Let me set up the plan and todos.
+
+Now writing the pure Foundation core. Let me create the Adapter file.
+
+Adapter done. Let me check Gradle progress and then write the Model (state holder + seams).
+
+Gradle is still bootstrapping (downloading toolchain). I'll keep writing. Now the Model — the S8 state holder, seams, in-memory doubles, i18n facade, telemetry, and resolved view-state types.
+
+Gradle finished. Let me check the result and verify the xcframework was produced.
+
+Excellent — `Shared.xcframework` built successfully (release + debug). The gate build is now viable. Let me update tracking and continue with the Projection.
+
+Now the Projection — pure `VoiceModeInput` → `VoiceModeResolved`, localizing everything.
+
+Now the production device implementations (`SystemVoiceDictation`, `SystemVoiceSpeechOutput`, `UserDefaults` draft store) behind the seams — real Speech/AVFoundation, written to compile under Swift 6 strict concurrency.
+
+Now the Views — the voice input slot subviews plus the self-contained card chrome (badge, action, thinking, output panel).
+
+Now the P4 leaf chrome (freshness chip, refresh, banner, loading skeleton, gate-error).
+
+Now the entry View — gates, assembles the card shell, and wires the production device seams.
+
+Now the i18n strings file with all keys (web verbatim fallbacks + helix.* + P4 chrome).
+
+Now the Previews — one per state.
+
+Now the adapter unit tests — request, SSE, reducer, chunker, composer, session id, gate, action, output.
+
+Now the comprehensive projection + state-holder + a11y tests.
+
+All 11 files written. Now let me auto-format my files to satisfy `swiftformat --lint`, then run swiftlint on them.
+
+2 files were adjusted. Let me see the changes, then run swiftlint + swiftformat lint on my files.
+
+swiftformat lint passes. Now swiftlint --strict on my files.
+
+`--strict` enforces file_length ≤400 lines and forbids large tuples. I need to split Model (779), Adapter (428), Tests (520) and fix a 5-tuple. Let me check all line counts to plan splits.
+
+I'll split the oversized files. Let me view the exact section boundaries in Adapter and Model to extract cleanly.
+
+`--strict` treats the 400-line warning as an error. I'll split into focused files (the established convention): extract `States`, `Seams`, `Voice`, and `ModelTests`, and fix the 5-tuple. Let me recreate the oversized files cleanly.
+
+Now recreating split files. First the reduced Adapter (request/SSE/reducer/output/action/accessibility):
+
+Now the Voice helpers (chunker, composer, session id, gate):
+
+Now the States file (connectivity, availability, context, input, resolved view-state types):
+
+Now the Seams file (protocols + in-memory doubles):
+
+Now the trimmed Model file (facade + telemetry + the `VoiceModeModel` class):
+
+Now split the tests: Tests.swift (projection) + ModelTests.swift (state-holder, using an `Env` struct to fix the large-tuple).
+
+Now the ModelTests with an `Env` struct (fixes the large-tuple violation):
+
+Now re-format and re-lint all AIVoiceMode files, and check line counts.
+
+All files ≤400 lines now. Let me run swiftlint --strict on all 14 files.
+
+swiftlint --strict passes with 0 violations. Now let me generate the Xcode project and verify swiftformat lint on the whole tree (matching the gate).
+
+xcodegen succeeded; swiftformat lint passes on all 3790 files. Now the heavy gate: let me check simulators, then start the iOS build+test.
+
+iPhone 16 is booted; schemes exist. Let me start the iOS build+test (the long pole) in the background and monitor.
+
+Build is running. Let me monitor progress (this compiles the full app + tests, so it'll take a while).
+
+The build surfaced pre-existing errors in OTHER surfaces (e.g., `RecentDrivesListWidget`). Let me check whether ANY errors are in my AIVoiceMode files, and assess the pre-existing breakage.
+
+0 errors in my files; 216 pre-existing errors in unrelated sibling surfaces (`RecentDrives*`, `StateTimeline*`). Let me confirm the full scope of pre-existing breakage and the build result.
+
+My surface has **0 errors**. All 216 are pre-existing duplicate-type collisions in 4 unrelated sibling families (`RecentDrives*`, `StateTimeline*` in dashboard-widgets + feature-views) — outside my allowed scope. To prove my surface compiles and my tests pass, I'll run a verification build excluding only those broken files (no project changes), then report honestly.
+
+Let me check whether those excluded families are referenced elsewhere (which would cause new errors), while the verify build runs.
+
+Confirmed: broken families are self-contained, and `project.yml` is untouched (my exclusion is purely a command-line flag). Let me wait for the verification build+test.
+
+Build still compiling. Let me continue waiting.
+
+The app target **built successfully**, but the test bundle failed to build. Let me find the actual test-build errors.
+
+Found 4 real errors in my `AIVoiceMode.Speech.swift` (`makeResultHandler`'s `Task { @MainActor in }` needs explicit self under the test target's build settings). The app target built clean. Let me view and fix.
+
+Fixed by extracting a `handleRecognition` main-actor method. Let me re-format/lint Speech.swift, then re-run the verification build+test.
+
+Clean. Now re-running the verification build+test (excluding pre-existing broken families) to confirm my surface compiles and my unit tests pass.
+
+Let me wait for the verification build to confirm compilation, then I'll run a focused test pass on my classes.
+
+Another pre-existing error surfaced (`AISignalExplorerNlFilter` — not mine; my Speech fix worked). Let me confirm the app target itself built and understand the app-vs-test build boundary.
+
+My surface has **0 errors** and the **app target builds successfully** with it included. The test bundle is blocked by more pre-existing broken surfaces. Let me enumerate ALL broken files from the fuller verify2 log to exclude them in one shot.
+
+Swift's batch compiler reveals broken surfaces one at a time. Let me automate the exclusion loop to enumerate all pre-existing broken surfaces, then build the test bundle and run my tests in isolation.
+
+The exclusion loop is running (each iteration is an incremental build). Let me wait and monitor.
+
+The loop found another broken surface (`AIGeofenceAwareAutomationSuggestions`), then iteration 2 failed without standard `error:` lines. Let me inspect the actual failure.
+
+A pre-existing swift-frontend **compiler crash** now blocks the test bundle (in a batch with core `Sources/` + feature-views) — outside my scope and not fixable via my files. My surface itself is proven clean (app target builds, 0 errors). To still prove my tests pass, I'll run them in an isolated SwiftPM package (my pure Foundation/Observation logic — no SwiftUI/broken siblings).
+
+Pure-logic files only need Foundation/Observation/OSLog. Let me build an isolated SwiftPM package to run my adapter/projection/model tests (with a tiny slug shim for the SwiftUI `AIVoiceMode` struct I'm not including).
+
+**All 104 unit tests pass** (0 failures, Swift 6 mode) — adapter, projection, and state-holder tests. Now let me run the placeholder check on my files and verify the macOS code path compiles (my `Speech.swift` has a macOS-specific branch not yet exercised).
+
+Placeholder check passes (0 placeholders, EXIT=0). Now verifying my macOS code path compiles (the macOS app build, excluding the broken families that block it).
+
+Let me check the log directory while the macOS build runs.
+
+The macOS build finished. Let me check whether my macOS code path compiled.
+
+macOS failed on **code-signing** (no dev certificate — an environment limitation), not compilation; 0 AIVoiceMode errors. Let me confirm my macOS code path compiles with signing disabled.
+
+Let me wait for the macOS compile-only build.
+
+**Definitive evidence:** the macOS build compiled ALL my files (including the macOS-specific `Speech.swift` branch) with **0 AIVoiceMode errors** — failing only on yet another pre-existing sibling (`AIAutoNameUnnamedLocations`). My surface is complete and compiles on both platforms.
+
+Let me update tracking and write the verification log with real command output.
+
+Now appending the isolated test results and build evidence to the log.
+
+The log is complete and honest (ends `EXIT=1 / STATUS=BLOCKED`). Let me verify git status to ensure only my intended files get committed (the generated `.xcodeproj` is git-ignored), then stage and commit.
+
+Clean — only my 15 AIVoiceMode files + the log; the generated `.xcodeproj` is git-ignored. Let me commit (the surface is complete and green in isolation; the commit message + log transparently record the externally-BLOCKED gate).
+
+Committed (16 files). Let me clean up temporary verification artifacts and confirm the final repo state.
+
+Working tree clean; commit is HEAD. Let me update the plan to reflect the final state.
+
+Let me do a final confirmation of the todo state and the committed log.
+
+All todos complete. Let me view the final committed log to confirm it's coherent.
+
+The AIVoiceMode surface is complete, committed, and verified green in isolation; the official full-app gate is honestly recorded as BLOCKED by pre-existing breakage in unrelated sibling surfaces outside my allowed scope. Task is complete to the maximum extent the constraints allow.
+

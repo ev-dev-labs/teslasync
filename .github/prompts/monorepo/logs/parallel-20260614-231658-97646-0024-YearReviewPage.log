@@ -1,0 +1,66 @@
+I'll start by exploring the repository structure to understand the task. Let me look at the web source page, the Apple app structure, and existing patterns.
+
+The actual structure uses `apps/apple/Sources/Features/Analytics/`. Let me explore the existing Apple analytics pages, the web review components, and check for an Xcode runner.
+
+Xcode 26.5, swiftlint, and swift 6.3.2 are all available — so the build gate can run. Let me read the web review components, the data hook/model, and an existing Apple analytics page for patterns.
+
+Now let me read all the slide components and the YearReview data type to understand full parity requirements.
+
+Let me read the remaining slides and the YearReview data type.
+
+Let me read the final three slides and the YearReview data type.
+
+Now let me read the YearReview type, the hooks, and an existing Apple analytics page to understand the patterns.
+
+Let me read the full YearReview type definitions and an existing Apple analytics page (StatisticsPage) with its model to understand the patterns.
+
+Let me examine the StatisticsPageModel, its data source pattern, and the route registration to understand the full architecture.
+
+Let me examine the models, sample data source, format helpers, and the route parser to understand routing conventions.
+
+Let me examine the route parser, route host registry, format helpers, and how the Xcode project references files.
+
+Let me look at the route parser, AppRoute enum, Units facade, and how the Xcode project references files.
+
+Let me look at the AppRouteHostRegistry, how FleetCompare/LifetimeStats register, and the Units facade.
+
+Let me check the RouteHostRegistry, how registrations are aggregated in the app, and the Xcode project's file reference style.
+
+The project uses XcodeGen (`project.yml`). Let me read it to understand source references, the scheme, and targets, plus check the `TeslaSync/` directory.
+
+Now I understand: XcodeGen generates the `.xcodeproj`, and the build stages a KMP `Shared.xcframework`. Let me check the toolchain availability, existing framework, the design tokens, and shared chart components.
+
+There's a KMP shared module requiring Gradle + Kotlin/Native to build `Shared.xcframework` (the long pole). Let me kick that off in the background while I explore tokens/components and write code.
+
+Let me kick off the KMP framework assembly in the background (the long pole), then continue exploring while it runs.
+
+Build is running. Let me explore the design tokens, shared UI components, chart wrappers, and Units facade while it builds.
+
+Let me find the generated design tokens and read the key UI components I'll need.
+
+Let me read the key UI components and the Units facade while the build runs.
+
+Let me check the build progress and read more components (Feedback states, Cards, the `tsUnits` environment, and AnimatedNumber).
+
+The build is still running. Let me read the chart components (used for the drives bar chart and charging pie), plus Feedback states and Cards.
+
+Let me check the build progress and read the chart wrappers, Feedback states, Cards, Buttons, and Motion components.
+
+The build continues. Let me read ChartContainer, Feedback states, Cards, Buttons, and Motion.
+
+Let me check the build and read Buttons, Cards, Pickers, and Motion components.
+
+Let me read Cards and Pickers, and check the build progress.
+
+Let me check the build progress and look at the string catalog, an existing model test, and how the app composes registries.
+
+The string catalog is large. Let me check existing keys, the placeholder script, and a model test while the build runs.
+
+Keys exist only as `translation.yearReview.*` (web mirror) and `translation.widget.yearReview.*`; native code uses bare keys like `statistics.title`. I'll add bare `yearReview.*` keys. Let me check the build, the placeholder script, a model test, and registry composition.
+
+The KMP framework built successfully (7m53s) — the build gate is feasible. Let me read the placeholder patterns, a model test, the app registry composition, and how interpolation strings are localized.
+
+Let me read a model test, the app registry composition, and how interpolation strings are localized.
+
+The KMP framework is built. Now let me finalize the navigation approach. Let me read the full app shell and check whether tests assert on `AppRoute` cases (which would constrain adding a new case).
+

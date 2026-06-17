@@ -1,6 +1,6 @@
 //
-//  FormField.Previews.swift
-//  TeslaSync — P4 shared surface · 0154 · FormField (Apple)
+//  FormFieldShared.Previews.swift
+//  TeslaSync — P4 shared surface · 0154 · FormFieldShared (Apple)
 //
 //  Xcode previews for every render branch of the web source: the bare field, the
 //  required field, the field with a hint, the validation-error state (which hides the
@@ -41,7 +41,7 @@ import SwiftUI
     }
 
     #Preview("Default") {
-        FormField(label: previewLabel()) {
+        FormFieldShared(label: previewLabel()) {
             PreviewControl()
         }
         .padding()
@@ -49,7 +49,7 @@ import SwiftUI
     }
 
     #Preview("Required") {
-        FormField(label: previewLabel(), required: true) {
+        FormFieldShared(label: previewLabel(), required: true) {
             PreviewControl()
         }
         .padding()
@@ -57,7 +57,7 @@ import SwiftUI
     }
 
     #Preview("With hint") {
-        FormField(
+        FormFieldShared(
             label: previewLabel(),
             required: true,
             hint: "Pick the telemetry signal to alert on."
@@ -69,7 +69,7 @@ import SwiftUI
     }
 
     #Preview("Error hides hint") {
-        FormField(
+        FormFieldShared(
             label: previewLabel(),
             required: true,
             hint: "Pick the telemetry signal to alert on.",
@@ -82,7 +82,7 @@ import SwiftUI
     }
 
     #Preview("Large Dynamic Type") {
-        FormField(
+        FormFieldShared(
             label: previewLabel(),
             required: true,
             error: "Signal is required."
@@ -95,7 +95,7 @@ import SwiftUI
     }
 
     #Preview("Dark") {
-        FormField(
+        FormFieldShared(
             label: previewLabel(),
             required: true,
             hint: "Pick the telemetry signal to alert on."

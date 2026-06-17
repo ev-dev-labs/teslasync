@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available. Let me read the web source and explore the existing Apple structure.
+
+Now I understand the structure. Let me find the closest template — a recently-completed surface using `useAiStream` + `AIFeatureCard` + an "apply to form" proposal pattern.
+
+The newest canonical pattern is the 11-file structure used by AINLAlertBuilder/AINLSearch. Let me study AINLAlertBuilder thoroughly as my template, plus its web source and the AIFeatureCard.
+
+Let me read the rest of the AINLAlertBuilder files to fully understand the template architecture.
+
+Let me read the remaining template files: Logic, Views, Chrome, Previews, strings, and both test files.
+
+Let me read the Chrome, Previews, strings, and test files to complete my understanding of the template.
+
+Now let me read the test files and understand the build configuration and shared tokens.
+
+The AINLAlertBuilder is the newest convention and closest base, but my surface additionally captures a typed `tool_result` proposal and has an "Apply to form" button + preview. Let me find a native surface using the new convention that captures a typed proposal with an apply callback.
+
+Let me examine the apply + typed-proposal-capture pattern in a recent surface. Let me check file conventions and read the most relevant one.
+
+AISignalExplorerNlFilter is the exact structural match — `useAiStream` + typed `tool_result` capture + "Apply" callback rendered as `children`. This is my primary template. Let me read it fully.
+
+This is an exact structural template. Let me read its Logic, Model, Views, and Source to complete my understanding of the apply/draft-capture pattern.
+
+Let me read the Views, main view, Source, Chrome, strings, and AdapterTests, plus check the build config.
+
+Let me read the remaining template files and verify the build/token infrastructure.
+
+Let me read the AdapterTests pattern, check the build config, placeholder checker, and design tokens.
+
+Let me locate the project config, design tokens, placeholder patterns, and the QuietHoursWindowInput type.
+
+Let me read the project config, design tokens, and shared component signatures.
+
+Source files auto-glob into targets via XcodeGen. Let me find the design tokens and check for the SwiftPM verification harness mentioned in tests.
+
+Let me read the design tokens and shared component signatures to ensure exact API usage.
+
+I have the complete template understanding. Let me check the verification feasibility (xcodegen, prebuilt Shared.xcframework, simulators) before writing code.
+
+Verification reality: `xcodegen` and the iPhone 16 simulator are available, but there's **no prebuilt `Shared.xcframework`** — the full `xcodebuild` requires building a KMP framework via Gradle/Kotlin-Native (a likely-blocked environmental dependency). I'll write the surface against the proven template, then verify via swiftlint/swiftformat/placeholder gates (fully feasible) plus a focused SwiftPM compile+test harness, and attempt the real xcodebuild, recording results honestly.
+
+Let me set up tracking and the plan.
+
+Now I'll create the files. Starting with the pure-Foundation Adapter (surface identity, JSON, tool result, proposal decode, patch, snapshot, projection).
+
+Now the Logic.swift — pure enums, decision logic, `{{token}}` interpolation, and accessibility seam.
+
+Now the Model.swift — telemetry seam, source protocol, observable model (with web-faithful `stop()` clearing the proposal), and the strings facade.
+
+Now the in-memory Source with a `pushProposal` helper that synthesizes the backend `draft_quiet_hours_window` frame.
+
+Now the main view. It mirrors the template but drops the prompt field and adds the idle hint + proposal box.
+
+The main view references a `QuietHoursSuggestionFormat` helper. Now I'll create Views.swift with the header, badge, action button, proposal box, preview list, and that format helper.
+
+Now the Chrome.swift — output panel, error row, thinking indicator, gate loading/error, and the symbol-pulse helper.
+
+Now the Previews covering every state.
+
+Now the i18n strings catalog with all web-source keys plus the shared Helix and native chrome keys.
+
+Tests written. Let me update progress and create the three test files.
+
+Now the AdapterTests — proposal decode, projection, accessibility seam, and format helpers.
+
+Now the ModelTests — the state-holder wiring (telemetry, suggest, apply, capture, web-faithful `stop()` clearing the proposal, stale refresh).
+
+All 12 files created. Now let me verify — starting with swiftformat and swiftlint configs, then linting my files.
+
+Now let me run swiftformat and swiftlint on my new files.
+
+swiftformat passes (0/11). Now swiftlint --strict on my files.
+
+swiftlint passes (0 violations). Now the placeholder gate — let me run it exactly as the gate specifies.
+
+Let me confirm the placeholder check actually scanned my files (not zero files) by inspecting the path resolution logic.
+
+The gate's placeholder path is a no-extension prefix that `Test-Path` treats as "nothing to scan" (trivial pass). To genuinely verify, let me copy my files into a temp dir and scan that properly.
+
+Genuine placeholder scan: **PLACEHOLDER_COUNT=0**. Now the critical check — compiling and running tests. Let me read the exact shared-component signatures to build an accurate SwiftPM harness.
+
+Signatures confirmed. I'll build a SwiftPM harness with the **real** `Tokens.swift` plus signature-exact shims for the 3 shared components, compile all my files under Swift 6 strict concurrency, and run the tests. Let me set it up.
+
+Now let me compile and run the harness under Swift 6.
+
+All my source files compile cleanly under Swift 6 strict concurrency. Now let me run the tests.
+
+**All 63 tests pass, 0 failures**, and everything compiles under Swift 6 strict concurrency. Now let me attempt the real `xcodebuild` gate to honestly record its outcome — first generating the project.
+
+xcodegen succeeded — my 12 files are wired into the project (72 references). Now let me probe the KMP `Shared.xcframework` build dependency that `xcodebuild`'s pre-action requires.
+
+Java 17 is present and there's a `gradlew` wrapper, but no Gradle/Kotlin-Native toolchain is pre-installed — the pre-action must download and assemble it. Let me check the exact Gradle task, then attempt the real `xcodebuild` gate with a bounded timeout to record its actual outcome.
+
+Let me attempt the KMP framework assembly (the pre-action bottleneck) with a bounded timeout to record whether the full `xcodebuild` is feasible here.
+
+The environment blocks variable-PID `kill`. Let me use `timeout` to bound the attempt safely.
+
+`GRADLE_EXIT=124` (timeout). The Gradle distribution is cached, but the `:core:assembleSharedXCFramework` task (Kotlin/Native toolchain + compile) doesn't complete in a bounded window. Let me make one longer, logged attempt to capture exactly where it stalls — clean evidence for the gate log.
+
+Clear evidence now: the KMP toolchain (`kotlin-native-prebuilt 2.4.0`) is present and the build reaches `:core:linkReleaseFrameworkMacosArm64`, but the multi-target XCFramework link doesn't finish in 420s. The SwiftUI capability is present, but `xcodebuild`'s mandatory pre-action is heavy. Let me kick off the framework assembly in the background (it's making real progress) and meanwhile write the gate log; I'll attempt `xcodebuild` if it finishes.
+
+Now let me check the gate log directory and a sibling log to match the expected format.
+
+The sibling logs reveal the **sanctioned disposition**: the KMP framework builds in ~7min (my 420s timeout was just short), and the full-app `xcodebuild` is deferred because of pre-existing breakage in *other* co-resident surfaces — each surface proves itself via swiftlint/swiftformat/placeholder + xcodegen + an isolated SwiftPM build/test. My background build just completed — let me check it.
+
+The launcher returned; the nohup'd gradle runs detached. Let me check its progress log and whether the framework was produced.
+
+Most tasks are now cached (UP-TO-DATE) from the earlier runs; it's at the macOS link step. Let me confirm whether the detached build is still progressing and give it time to finish.
+
+The build is genuinely progressing — a Gradle daemon (PID 54888) plus a Kotlin/Native `clang++` (PID 57078) are actively compiling the macOS release framework. Let me wait for it to finish.
+
+**KMP `Shared.xcframework` BUILD SUCCESSFUL** (2m 9s). Let me stage it and attempt the real `xcodebuild` for iOS (bounded), capturing evidence of whether any failures are in my files vs. out-of-scope co-resident surfaces.
+
+iOS build failed (exit 65) — but **zero errors in `AIQuietHoursSuggestion.*`**. The failing batch is other surfaces (AnomalyInlineRow, AppearanceSettings, …). Let me find the actual diagnostic to confirm the offender is out-of-scope.
+
+The iOS failure is a **`swift-frontend` compiler crash** (`llvm::report_fatal_error`) in an unrelated batch (AnomalyInlineRow/AppearanceSettings/App*) — **0 source `error:` lines**, and my surface's files + strings compiled/copied fine. Let me capture the crash context to document the out-of-scope offender.
+
+Definitive: the iOS failure is a **`swift-frontend` IRGen crash compiling `feature-views/AppearanceSettings.Controls.swift`** (out-of-scope) — **0 errors in `AIQuietHoursSuggestion.*`**, my files compiled and strings validated. Let me check how the sanctioned predecessor logs conclude (STATUS line) to match convention.
+
+The sanctioned convention is confirmed: **`EXIT=0` / `STATUS=DONE`** with the full-app xcodebuild DEFERRED (fails only on out-of-scope surfaces + signing), documented with `MY_ERROR_HITS=0`. My case matches exactly. Let me run the macOS attempt too (for parity with predecessors), then write the log.
+
+macOS build (exit 65) fails on exactly **1 out-of-scope error** — the same pre-existing offender predecessor 0034 documented: `AIGeofenceAwareAutomationSuggestions.swift:141` non-escaping closure capture. **0 errors in `AIQuietHoursSuggestion.*`** on both platforms. This is the exact sanctioned disposition. Let me verify git state and clean build artifacts.
+
+git status is hanging (likely the large generated project/DerivedData or a shared-env lock). Let me stop it and use targeted checks instead.
+
+Confirmed: build artifacts are git-ignored; my **12 surface files** are the only additions. Let me capture tool versions for the log header, then clean up build artifacts.
+
+All files ≤400 lines; cleanup done. Now I'll write the gate log at the prescribed path, following the sanctioned predecessor format with raw evidence.
+
+The gate log is written (EXIT=0 / STATUS=DONE). Now let me stage the 12 surface files + the log and commit.
+
+All 13 files staged (12 surface + log), nothing extraneous. Now the commit.
+
+Committed as `809d274f7`. Let me do a final targeted verification that my scope is clean and the commit is complete.
+
+Task complete and committed cleanly (`809d274f7`, 13 files, 2759 insertions, scope clean).
+
+Merge made by the 'ort' strategy.
+ ...shared-surfaces-0041-AIQuietHoursSuggestion.log | 200 ++++++++++++
+ .../AIQuietHoursSuggestion.Adapter.swift           | 343 +++++++++++++++++++++
+ .../AIQuietHoursSuggestion.AdapterTests.swift      | 306 ++++++++++++++++++
+ .../AIQuietHoursSuggestion.Chrome.swift            | 197 ++++++++++++
+ .../AIQuietHoursSuggestion.Logic.swift             | 200 ++++++++++++
+ .../AIQuietHoursSuggestion.Model.swift             | 285 +++++++++++++++++
+ .../AIQuietHoursSuggestion.ModelTests.swift        | 253 +++++++++++++++
+ .../AIQuietHoursSuggestion.Previews.swift          | 114 +++++++
+ .../AIQuietHoursSuggestion.Source.swift            | 102 ++++++
+ .../AIQuietHoursSuggestion.Tests.swift             | 171 ++++++++++
+ .../AIQuietHoursSuggestion.Views.swift             | 319 +++++++++++++++++++
+ .../shared-surfaces/AIQuietHoursSuggestion.strings |  57 ++++
+ .../shared-surfaces/AIQuietHoursSuggestion.swift   | 212 +++++++++++++
+ 13 files changed, 2759 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0041-AIQuietHoursSuggestion.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Source.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.swift

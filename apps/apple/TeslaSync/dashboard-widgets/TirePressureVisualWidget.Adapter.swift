@@ -228,7 +228,7 @@ public struct TirePressureVisualWidgetProjection: Equatable, Sendable {
     }
 
     /// Projects the cached corner DTO into the view projection.
-    public static func project(from reading: TirePressureReading) -> TirePressureVisualWidgetProjection {
+    public static func project(from reading: TirePressureWidgetReading) -> TirePressureVisualWidgetProjection {
         let candidates = [
             reading.lastSeenFrontLeft,
             reading.lastSeenFrontRight,

@@ -4,7 +4,7 @@
 //
 //  The testable projection core for the scheduled-exports panel — the faithful port of
 //  features/system/pages/ScheduledExportsPanel.tsx and the `useExports` wire types it
-//  binds to (`ScheduledExport`, `ScheduledExportInput`, `ScheduledExportDelivery`).
+//  binds to (`ScheduledExport`, `ScheduledExportInput`, `ScheduledExportDeliveryView`).
 //  Everything here is pure and dependency-free (Foundation only) so the enums, the
 //  display-ready row, the editable form-state, the submit normalisation (drop the
 //  delivery target for `download`, trim it otherwise), the option catalogs, and the
@@ -78,7 +78,7 @@ public enum ScheduledExportFormat: String, ScheduledExportOption {
     }
 }
 
-/// How a finished export is delivered (web `ScheduledExportDelivery['kind']`). `download`
+/// How a finished export is delivered (web `ScheduledExportDeliveryView['kind']`). `download`
 /// keeps the artifact server-side; `email` / `webhook` require a `target`.
 public enum ScheduledExportDeliveryKind: String, ScheduledExportOption {
     case download
@@ -109,9 +109,9 @@ public enum ScheduledExportRunStatus: String, Sendable, Equatable, Hashable {
 // MARK: - Delivery (web typed JSONB `delivery`)
 
 /// The delivery dispatcher attached to a schedule — the native mirror of the web
-/// `ScheduledExportDelivery`. `target` is required for `email` / `webhook`; for
+/// `ScheduledExportDeliveryView`. `target` is required for `email` / `webhook`; for
 /// `download` it is silently ignored (and dropped on write).
-public struct ScheduledExportDelivery: Sendable, Equatable, Hashable {
+public struct ScheduledExportDeliveryView: Sendable, Equatable, Hashable {
     public var kind: ScheduledExportDeliveryKind
     public var target: String?
 
@@ -141,7 +141,7 @@ public struct ScheduledExportItem: Sendable, Equatable, Identifiable {
     public let vehicleID: Int?
     public let columns: [String]?
     public let scheduleCron: String
-    public let delivery: ScheduledExportDelivery
+    public let delivery: ScheduledExportDeliveryView
     public let rangeWindow: String
     public let enabled: Bool
     public let lastRunAt: Date?
@@ -157,7 +157,7 @@ public struct ScheduledExportItem: Sendable, Equatable, Identifiable {
         vehicleID: Int? = nil,
         columns: [String]? = nil,
         scheduleCron: String,
-        delivery: ScheduledExportDelivery,
+        delivery: ScheduledExportDeliveryView,
         rangeWindow: String,
         enabled: Bool,
         lastRunAt: Date? = nil,
@@ -289,11 +289,11 @@ public struct ScheduledExportFormState: Sendable, Equatable {
 
     /// The normalised delivery the web `submit` builds: drop the target for `download`
     /// (so an unused string never round-trips), trim it otherwise.
-    public func normalizedDelivery() -> ScheduledExportDelivery {
+    public func normalizedDelivery() -> ScheduledExportDeliveryView {
         if deliveryKind == .download {
-            return ScheduledExportDelivery(kind: .download, target: nil)
+            return ScheduledExportDeliveryView(kind: .download, target: nil)
         }
-        return ScheduledExportDelivery(kind: deliveryKind, target: deliveryTarget.trimmed)
+        return ScheduledExportDeliveryView(kind: deliveryKind, target: deliveryTarget.trimmed)
     }
 }
 

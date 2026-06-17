@@ -1,0 +1,233 @@
+I'll start by exploring the repository structure to understand the task scope, the web source page, and the Apple app setup.
+
+Xcode toolchain is available (xcodebuild, swift, swiftlint). I'm not blocked. Let me read the web source and explore the Apple app structure in parallel.
+
+This is a large parity task. Let me gather the full web spec and understand the Apple project infrastructure (project.yml, existing feature-views, parity manifest/ledger).
+
+Large established codebase (2653 feature-view files). I need to understand the project structure, build system, and parity infrastructure. Let me examine the project config, parity manifest/ledger, and existing patterns.
+
+There's an existing `apps/apple/Sources/Features/` with Page.swift files (e.g., `BatteryCellsPage.swift` — a sibling battery page already built to parity). The `Sources` path is what project.yml compiles. Let me study the established pattern and check the ledger + build tooling.
+
+Now I understand the structure. The real build-included location is `apps/apple/Sources/Features/Battery/` (sibling to `BatteryCellsPage`), and the ledger tracks per-platform rows. `xcodegen` is available. Let me study the gold-standard `BatteryCells` page template and the rest of the web source.
+
+Excellent template. Now let me study the supporting files (sections, charts, models, sample data source, format) and read the rest of the web page in parallel.
+
+The pattern is mature and well-documented. Let me locate the shared infrastructure (design tokens, components, charts, routing, units, xcstrings) and read the rest of the web source + the charts/sample template files.
+
+Key finding: there's no `.battery` route yet (only `.batteryCells`). I'll need to add it under "navigation registration" scope. Let me read the parser, charts template, sample data source, format helpers, and locate the P3 chart/component wrappers.
+
+Now let me understand the routing/host wiring and read the remaining template files (sample data source, format, derivations) plus locate where `AppRoute` is exhaustively switched (to avoid breaking the build when adding a case).
+
+Let me read the route host wiring, format/derivations helpers, and locate the P3 chart components (TSBarChart, gauges, area/pie wrappers).
+
+Charts live in `Sources/Components/Charts/`. Let me read the chart wrapper APIs (models, pie/gauge, line/area, bar, container) to know exactly what's available.
+
+Let me read the line/bar/container chart wrappers and a sibling page's chart usage (Statistics) to learn the established idioms.
+
+Now I have the chart toolkit. Let me read the ChartContainer wrapper, a sibling page's chart usage, the dashboard radial gauge (for a value+unit gauge), and the design tokens.
+
+I now understand the chart + gauge patterns. Let me locate and read the design tokens, core components (panels, typography, empty/error states, select, badge, button), and the Units facade.
+
+Let me read the Units facade, badges/buttons/pickers, the token definitions, and locate TSIconBox/TSTone/TSInlineCallout.
+
+I have the design system mapped. Let me read the remaining UI primitives (metrics/iconbox/tone, badges, buttons, pickers, banners) and locate the `tsUnits` environment + route-parser tests to assess routing changes.
+
+I need to assess routing carefully — there are tests asserting `/battery/health` → `.energy`. Let me read the route tests and check for any route-count/sidebar assertions that adding a case could break.
+
+No route-count test will break, and only `/battery/health` (not bare `/battery`) is asserted as `.energy`. I can safely add a `.battery` route. Let me read the theme/units environment, the xcstrings format, sibling test norms, and a data-rich sibling page (Statistics).
+
+The xcstrings format is clear (manual extraction, en stringUnit). 37 `battery.*` keys already exist. Let me see which keys exist (to avoid dupes), confirm `common.*` keys, and study the Statistics sibling page + model for the units-loading idiom.
+
+The idiom is confirmed (dotted keys as `LocalizedStringKey`, `@Environment(\.tsUnits)`). Let me read the `tsUnits` env definition, and the Statistics page's charts + model to mirror the radial-gauge-in-page and units-loading idioms precisely.
+
+I have a thorough understanding now. Let me read the Statistics model (multi-source binding pattern) and confirm `UnitPreferences.metric`, then I'll start building.
+
+Let me verify build feasibility (the KMP `Shared.xcframework`) and read the remaining primitives (badges, buttons, pickers, banners) plus the app container.
+
+The `Shared.xcframework` isn't prebuilt — a full build triggers a Gradle/Kotlin-Native compile. Let me read the remaining primitives (badges, pickers, banners), the placeholder-scan rules, and the verification posture doc, then kick off the KMP framework build in the background.
+
+I have all the building blocks and `pwsh` is available for the gate. Let me kick off the KMP `Shared.xcframework` Gradle build in the background (it's the long pole), set up tracking, and write the plan.
+
+All building blocks understood; KMP framework build is running in the background. Let me set up the plan and task tracking.
+
+Let me confirm the web number/date formatters I must mirror (`fmtPercent`, `fmtInt`, `formatDateShort`), then start writing the Swift files.
+
+Let me read how the sibling BatteryCells page renders insights with interpolation (e.g., `{count}`), so I mirror the i18n-interpolation idiom exactly.
+
+The interpolation idiom is `NSLocalizedString(key) + String(format:)`. I now have everything. Let me start writing the implementation, beginning with the models and derivations.
+
+Now the format helpers and the pure derivations:
+
+I need to check whether `count(where:)` is already provided (stdlib or a project extension) before keeping my own — a redeclaration would fail to compile.
+
+`count(where:)` is in the Swift 6 stdlib (BatteryCells uses it directly). My custom extension would conflict — removing it.
+
+Now the `@Observable` page model with its data-source seam and derived state:
+
+Now the sample/preview data sources (populated success + empty + failing doubles):
+
+The KMP framework build finished. Let me confirm it produced the framework, then continue with the charts file.
+
+The KMP `Shared.xcframework` built and staged successfully (7m30s) — a full local build is feasible. Now the charts file (radial gauge + the 4 chart sections):
+
+Let me remove a stray no-op line I left in the AC/DC pie:
+
+Now the sections file — hero gauges, metric bars, summary cards, thermal, insights, new-vs-now, charging stats, energy layout, quick links, recommendations, and the loading skeleton:
+
+Now the main page view that assembles all sections:
+
+Now the route registration. Let me check how `FleetCompare` threads `onNavigate` so I mirror it exactly.
+
+Now the route registration file and the three navigation edits. Let me read the app-wiring context first, then make all edits.
+
+Now the largest piece — adding all the i18n keys to the string catalog. Let me first confirm the exact JSON formatting (spacing around colons) before inserting.
+
+Let me verify the interpolation format convention used by existing entries (e.g., the cells `criticalCellsDesc` count) and re-confirm `common.*`/`route.battery` are absent before inserting.
+
+Conventions confirmed (`%lld` for counts). Now let me insert all the string-catalog keys via a Python script that preserves the exact Xcode formatting.
+
+112 keys added (105 parity + `route.battery` + 6 quick-links), JSON validated. Now let me run the fast checks — string-key verification, placeholder scan, and SwiftLint on the new files.
+
+Good progress — JSON valid, placeholder scan has one wording issue, and SwiftLint flagged length/style violations to fix. Let me read the lint config to know exact thresholds, then fix everything.
+
+SwiftLint config: `line_length` 120 (comments ignored), `file_length` ≤400, `function_body_length` ≤50, no 3-tuples. I need to split files, refactor `insights()`, remove tuples, fix long code lines, and reword the "placeholder" comment. Let me start by rewriting the derivations (split function + drop tuples) and trimming the models.
+
+The file exists — let me remove it and recreate with the refactored version.
+
+Now let me trim the models header, then view the charts top to extract the gauge into its own file.
+
+Now extract the gauge out of Charts (removing it here; I'll place it in a new Hero file):
+
+Charts gauge removed. Now let me delete the oversized Sections file and recreate it as four properly-sized files. First, delete it:
+
+Now recreate as four files. First the cards/grids file (tone, metric card, bar, metric bars, summary cards, thermal):
+
+Now the hero file (gauge + hero section):
+
+Now the insights + recommendations file:
+
+Now the panels file (new-vs-now, charging stats, energy layout, quick links with the trailing-closure fix, and the skeleton):
+
+Now let me re-run SwiftLint and the placeholder scan on all the battery files to catch remaining issues.
+
+Placeholder scan passes, all files ≤400 lines. Just 5 long lines to wrap. Let me view and fix them.
+
+Let me re-run SwiftLint on the battery files to confirm they're clean.
+
+SwiftLint clean on the battery feature. Let me lint the three navigation files I edited, then generate the Xcode project.
+
+SwiftLint clean across all changes. Now let me generate the Xcode project.
+
+Project generated. Now let me build. I'll start with the macOS scheme (no simulator needed, compiles the same shared sources) to validate compilation quickly, running in the background.
+
+Build is running. While it compiles, let me proactively verify the `/battery` parser change won't break the Handoff/Intent tests (which assert `.energy`).
+
+Good — no test asserts bare `/battery` → `.energy`. Let me check the build progress.
+
+Build failed, but the failing batches are pre-existing widget/drive files — I need the actual error messages. Let me re-run incrementally and capture only errors.
+
+Good news: the only errors are in a **pre-existing, unrelated file** (`shared-surfaces/Input.Previews.swift`) — none of my battery files errored, confirming my code compiles. This file has explicit `return` in a `ViewBuilder` that the local Xcode 6.3.2 rejects. Let me confirm it's untouched by me and inspect it.
+
+Confirmed pre-existing (untouched by me) — `return` inside a `@Previewable` `#Preview` ViewBuilder, which Swift 6.3.2 rejects. Let me gauge how widespread this pre-existing pattern is before deciding how to handle it.
+
+8 pre-existing preview files share this issue — it's a toolchain incompatibility, not my code. Let me check the pinned toolchain version and whether these previews are `#if DEBUG`-gated (so a Release build would skip them).
+
+Pinned toolchain is Xcode 26 / Swift 6.0.1; locally it's 6.3.2 (stricter), and these 8 `#if DEBUG` preview files use `return` in `@Previewable` bodies. Since the Debug test gate needs the app to build, I'll apply a minimal, safe incidental fix (remove the redundant `return`). Let me inspect the `return` usages to edit safely.
+
+This is a pre-existing toolchain-compat issue (local Swift 6.3.2 stricter than the pinned 6.0.1) in `#Preview` bodies — none of my code. To run the Debug build+test gate locally, I need these to compile. Let me scan precisely how many preview-body `return`s exist repo-wide before deciding on a minimal mechanical fix.
+
+24 pre-existing files (48 occurrences) repo-wide have this local-toolchain incompatibility. None are mine. To honestly run the Debug build+test gate locally, the app must compile, so I'll apply the minimal, safe mechanical fix (remove the redundant `return` in `#Preview` ViewBuilder bodies) and document it as incidental. Let me apply it with the validated targeting logic.
+
+Fix applied cleanly (24 files, 48 redundant `return`s removed). Now let me rebuild the Debug macOS scheme to confirm a green build including my battery page.
+
+More pre-existing issues surfaced — including Swift **compiler ICEs** ("failed to produce diagnostic… submit a bug report") and other pre-existing param-order bugs in unrelated preview files. These are toolchain-version problems (local Swift 6.3.2 vs pinned 6.0.1) I cannot fix and shouldn't touch. Let me revert my preview changes and instead validate my code cleanly via a **Release build** (which excludes all `#if DEBUG` previews).
+
+All erroring previews are `#if DEBUG`-gated, so a Release build excludes them. My working tree is now clean (only battery + nav + strings). Let me run a Release build to validate my code compiles and links in the full app.
+
+Release build is running in the background. While it compiles, let me check the logs directory and an existing sibling log to match the expected format.
+
+This is the key precedent: the **sibling `BatteryCellsPage` log** shows the accepted methodology for this exact program — the full `xcodebuild` is RED only due to **pre-existing, out-of-scope** compiler issues, and it was still `STATUS=DONE` based on green in-scope gates (swiftformat, swiftlint, placeholder, isolated type-checks, model harness). My situation is identical. Let me run the same in-scope gates. First, check the Release build progress and run swiftformat.
+
+SwiftFormat found auto-fixable style issues (redundant return, number grouping, doc-comment style). Let me auto-format my files (the standard workflow), then re-verify both formatters. The Release build continues in the background.
+
+SwiftFormat now clean (0/24). Let me get the SwiftLint result after the auto-format.
+
+SwiftLint `--strict` is clean (0) and SwiftFormat is clean (0/24) after auto-format. Let me check the Release build progress.
+
+Release build still compiling (full optimized build of the whole app). Let me re-verify the placeholder scan after auto-format and spot-check the reformatted files while it runs.
+
+The Release build completed. Let me read the result.
+
+The Release build also failed, but my error filter caught no `error:` lines — I need to see the actual failure. Let me re-run capturing the full error context and specifically check whether any of MY files are implicated.
+
+The Release failure is **not a code error** — it's an architecture/link issue: the prebuilt `Shared.xcframework` only has arm64 slices, but Release builds universal (x86_64 too). My code compiled fine (it reached the link stage). Let me re-run Release pinned to arm64 so it links against the available slice — a clean whole-app compile+link proof.
+
+The optimized Release build is slow. Let me continue waiting for the clean compile+link confirmation.
+
+Build finished (large output). Let me extract the result and any errors from the saved output.
+
+Still BUILD FAILED with **no `error:` lines** — confirming it's not a compile error in my code but the same arch/link infra issue. Let me read the failure summary at the end of the saved log.
+
+The huge per-line compile batches are blowing up output. Let me extract just the failure tail with truncated line widths into a small file.
+
+Decisive evidence: BUILD FAILED with **zero `error:` lines** and the failing command is a pre-existing `AIAlertTuningSuggestions` batch (a known compiler-timeout/ICE area) — `BatteryHealthPage.swift` appears in the compile log with no errors attributed to any battery file. Both Debug and Release compiled my files cleanly; the full build is red only on pre-existing, out-of-scope files — exactly the sibling `BatteryCells` situation. Let me add the sibling's other evidence: an executed model+format harness on my pure logic.
+
+The harness compile error is in **my test harness's argument order** (not the battery source) — which actually confirms the type-checker validated my `Models`/`Derivations`/`Format` files cleanly. Let me fix the harness arg order and re-run.
+
+The harness passed 42/42 and compiled clean — confirming the type-checker validated my `Models`/`Derivations`/`Format` (the compile error was only in my test harness's arg order). Let me also isolate-type-check the `@Observable` model layer (PageModel + Sample) with a minimal `BatteryVehicle` shim and `-D DEBUG` (to cover the preview doubles).
+
+Only a shim visibility mismatch — the real `BatteryVehicle` is `public`. Let me make the shim `public` and re-check.
+
+Model-layer isolated strict-concurrency type-check is clean (exit 0). Now, to get definitive whole-app evidence for the view files, let me try a Debug-config build with `DEBUG` undefined — this excludes the pre-existing `#if DEBUG` preview ICEs while keeping `Onone` (avoiding the Release optimization timeout). I'll run it in the background and draft the log/ledger meanwhile.
+
+While that builds, let me study the full sibling log structure (header, gate results, `=== PARITY ===` enumeration) to match the format precisely.
+
+Excellent template. Let me read the rest of the sibling log (gate transcript + `=== PARITY ===` format) and check the background build.
+
+I have the full template. Let me check the DEBUG-undefined build result.
+
+Let me update the parity ledger (add the two `page:battery/BatteryHealth` rows) while the build runs.
+
+Ledger validated. The full `Onone` rebuild is still running. Let me wait for it to finish so I can record the real result.
+
+**BUILD SUCCEEDED** — the full macOS app (Debug config, `Onone`, `DEBUG` cleared to skip the pre-existing preview ICEs) compiles **and links** with all my view files included. This is definitive whole-app evidence. Let me grab exact tool versions, then write the parity log.
+
+Let me get final line counts for the log's output section, then write the comprehensive parity log.
+
+Final counts captured (11 files, 2625 LOC; 112 string keys added). Now let me write the comprehensive parity log following the sibling format, with the full 147-item `=== PARITY ===` enumeration.
+
+The log is written. Now let me reconsider the 10 `battery.section.*Failed` strings — they're the web `SectionErrorBoundary` fallback titles. Let me check how landed sibling pages wire these so I render them faithfully (not just catalog-resident), and whether there's a title-capable boundary.
+
+The web wraps 10 sections in `SectionErrorBoundary` with these fallback-title keys. To render them faithfully (and genuinely use the strings, not just catalog-resident), I'll add a `BatteryHealthSectionBoundary` that binds each fallback title and wrap those 10 sections. Let me update `Page.swift`.
+
+Now let me update the log's 10 section-string evidence lines to reflect they're actively bound in `Page.swift`.
+
+Wrong path — the log is at the repo root. Let me redo the edit.
+
+I should use an explicit `@ViewBuilder`/`@escaping` init (matching the codebase convention) rather than rely on the synthesized one. Let me refine the struct.
+
+Let me re-verify formatting/lint after the `Page.swift` changes, then re-run the DEBUG-cleared build incrementally to confirm it still compiles.
+
+All in-scope gates still green. Let me re-run the DEBUG-cleared full build incrementally to confirm the updated `Page.swift` (boundary + wrapped sections) compiles and links.
+
+The compilation-conditions override invalidated the cache, so it's a full recompile. Let me keep waiting.
+
+**BUILD SUCCEEDED** with the final `Page.swift`. All in-scope gates are green. Let me verify the final git status is clean (only intended changes), confirm build artifacts are gitignored, and clean up temp files.
+
+Git status is clean and correctly scoped; build artifacts (`xcodeproj`, `Shared.xcframework`) are gitignored. Let me commit the in-scope deliverable per the prompt's commit contract.
+
+Committed cleanly (18 files). I noticed `Page.swift` grew to 243 LOC after adding the section boundaries — let me correct that stale figure in the log and amend the commit for accuracy.
+
+Let me mark the tracked todos complete and finalize.
+
+The task is complete and verified. Let me provide the final summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+CONFLICT (content): Merge conflict in apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.

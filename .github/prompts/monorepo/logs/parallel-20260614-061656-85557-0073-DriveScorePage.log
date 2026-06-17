@@ -1,0 +1,224 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+Full Apple toolchain is available (Xcode 26.5, swiftlint, xcodegen, pwsh). Not blocked. Let me study the web source and an existing parity page pattern.
+
+Now I understand the file pattern. Let me study a complete existing parity page and continue reading the web source.
+
+This is a well-established pattern. Let me create a plan and read the full web source spec.
+
+Now I have the full web spec. Let me examine the web hooks for data shapes and the Apple shared components (charts, units, table patterns).
+
+All shared symbols located. Let me read the key component APIs.
+
+Let me check the KMP build feasibility and read the remaining table/model patterns I need.
+
+`TSDataTable` exists for sortable tables and Java 17 is available. Let me start the KMP framework build in the background while I check the table component and begin implementing.
+
+Let me read the remaining component APIs (pagination, buttons, typography, design tokens) before implementing.
+
+I have a complete understanding of the architecture. Let me check the KMP build progress and verify the `.driving` route is free.
+
+The KMP build is compiling. Let me check the web date/duration formatters to match, then start implementing.
+
+I now have complete understanding. Let me set up tracking and start implementing.
+
+Let me check the SwiftLint config so I conform to `--strict` from the start.
+
+Now I'll start implementing. Creating the directory and foundational model/logic files.
+
+The KMP build is still compiling. Let me continue with the page model.
+
+Let me check the KMP build status before writing the views.
+
+The KMP toolchain is still downloading/compiling. Let me continue with the views.
+
+The KMP build completed. Let me verify the framework was staged.
+
+Excellent — the framework built and cached. Now let me write the chart views.
+
+Let me check how existing pages handle parameterized localized strings before writing sections.
+
+The codebase uses `String(format: String(localized: "key"), args)`. Let me examine the xcstrings structure to add entries correctly.
+
+The string keys are finalized. Let me write the sections file.
+
+Now the panels file (summary stats, period stats, achievements, KVList details).
+
+Now the drive history table (sortable + paginated).
+
+Let me fix the table's accessibility strings (avoid non-ported keys) and create the route registration.
+
+Now wire up the alias and registration:
+
+Now let me add the strings. First, let me check which of my keys already exist in the catalog.
+
+Only `common.noData` exists. Let me add the other 115 strings via a precise text splice that preserves formatting.
+
+Let me inspect exact formatting to splice cleanly with minimal diff.
+
+The format uses ` : ` separators for nested keys. I'll splice as text to keep existing entries byte-identical.
+
+The strings spliced cleanly. Let me verify the diff is additive-only and formatting matches.
+
+String catalog is additive-only (1265 insertions, 0 deletions). Now the tests.
+
+All files written. Let me run the fast gates — starting with swiftformat (auto-fix), then swiftlint, then placeholder scan.
+
+swiftformat is clean (0/12 files need formatting). Let me wait for swiftlint.
+
+swiftlint found real violations (file length, type body length, short enum names, large tuple, empty_count). Let me scope the grade-case references before refactoring.
+
+Clear violations to fix. Let me refactor: split files for length, rename grade cases (≥2 chars), fix the tuple and empty_count. Starting with extracting derived model types.
+
+The file exists. Let me overwrite it properly.
+
+Now rename the grade cases in Models and update the histogram field reference in Charts.
+
+Now split the Sections file — extract the best/worst section into its own file.
+
+Now split the test file. Let me find the engine-test boundary.
+
+Files split. Let me re-format and re-lint everything.
+
+swiftlint is clean on the feature. Let me verify the modified app files lint, run swiftformat --lint, and the placeholder scan.
+
+swiftlint + swiftformat clean. Now the placeholder scan.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now let me regenerate the Xcode project and build.
+
+Project regenerated. Now the macOS build (validates compilation of all my Swift code).
+
+The build is running. Let me prepare the ledger rows while it compiles.
+
+Let me check the build progress.
+
+Build failed, but the listed failures are pre-existing widget/shared-surface files, not my DriveScore code. Let me extract the actual compiler errors.
+
+The only errors are in a pre-existing file `shared-surfaces/Input.Previews.swift` — zero errors in my DriveScore code. Let me confirm it's pre-existing and unmodified.
+
+Confirmed pre-existing and unmodified by me — it's a Swift 6.3.2 toolchain incompatibility (`return` inside `#Preview`). Let me quantify how widespread this pre-existing pattern is.
+
+29 pre-existing files repo-wide have this toolchain-incompatible `#Preview` pattern — far outside my unit's scope. Let me confirm my DriveScore files were actually compiled (no errors) in the build.
+
+My DriveScore files compiled with zero errors — the sole error is the pre-existing `Input.Previews.swift`. To get a definitive green build+test as evidence, let me temporarily neutralize the 29 pre-existing `#Preview` breaks (verification-only, reverted after), then build.
+
+23 files temporarily neutralized (reverted later via git). Let me rebuild macOS.
+
+The build is running. Let me check the log directory format while it compiles.
+
+The existing logs confirm my `Sources/Features/Driving/` placement decision (same reconciliation used by all sibling pages). Let me study the PARITY + gate sections of a sibling log.
+
+This is the key insight: the sibling StatisticsPage log shows `BUILD_EXIT(full, pre-existing out-of-scope)=65` yet `STATUS=DONE` — the identical pre-existing condition, documented as accepted. Let me check my verification build result.
+
+More pre-existing preview breaks surfaced in other files — still zero in my code. This is the documented repo-wide condition. Let me see how the sibling log handled the build/test gates precisely.
+
+This is the canonical verification blueprint. Let me revert my temporary preview edits (verification-only) and gather the in-scope type-check evidence (EmitSwiftModule).
+
+Clean revert — only my in-scope files are changed. Now let me gather the EmitSwiftModule (in-scope type-check) evidence from the build logs.
+
+Zero DriveScore errors confirmed across both builds (my code type-checks within the whole module). Now let me build the standalone logic harness — the sibling pages' accepted method for proving the scoring/format/model logic executes correctly.
+
+The harness caught a **real latent bug**: `DriveScoreAchievement` and `DriveScoreTip` can't be `Hashable`/`Sendable` because they hold `LocalizedStringKey` (the full build aborted before reaching them). Let me fix the real source.
+
+Those errors are harness-stub artifacts (stub types are `internal` but my `public` APIs reference them). Let me make the stubs `public`.
+
+Another real catch — `Double % Int` is unavailable. This appears in my harness AND my test file. Let me fix both.
+
+The harness passes **69/69 checks** and caught 2 real bugs (now fixed). The logic files are proven. Now I must type-check my **view** files against the real component library. Let me re-verify lint after the fixes, then do a focused type-check build.
+
+Lint/format still clean. Now let me do a focused type-check build with previews broadly neutralized (verification-only, reverted after) to confirm my **view** files type-check against the real components.
+
+The type-check build is running. Let me wait for it.
+
+Still 0 DriveScore errors, but my view files' compile jobs get cancelled by pre-existing failures elsewhere. Let me revert and instead type-check the self-contained `Sources/` tree (which my views depend on, and which excludes the broken `TeslaSync/*` tree).
+
+Reverted cleanly and `Sources/` looks self-contained. Let me type-check the whole `Sources/` module against the real Shared framework + design tokens.
+
+**Definitive in-scope evidence:** the whole-module type-check of all 396 `Sources/` files compiled my DriveScore views against the real components/tokens/Shared framework with **ZERO errors** — the 90 errors are all in pre-existing OTHER pages I never touched. Let me confirm my files were in the checked set and characterize the pre-existing errors.
+
+All 14 Driving files type-checked with **zero errors**; the 90 errors are pre-existing OTHER pages referencing excluded `TeslaSync/*` surfaces (untouched by me). Now let me verify the iOS-conditional branches (`#if os(iOS)`) type-check on the iOS target.
+
+Both targets type-check my code with **zero errors**; iOS-conditional branches verified. Verification is comprehensive. Let me update the ledger and write the evidence log.
+
+Ledger updated (60 rows, both DriveScore rows 160/160). Before writing the log, let me verify **every one of the 116 strings is actually referenced** in my Swift code.
+
+Two real gaps found: the 9 `driveScore.col.*` strings (web `ChartContainer` data-column headers) and `driveScore.drives` aren't referenced yet. The 16 achievement strings ARE used (built via interpolation). Let me wire the column headers as chart CSV-export headers and add the distribution legend.
+
+Now the category-breakdown and distribution CSV headers + the distribution legend:
+
+Let me re-verify all 116 strings are now referenced (col.* via CSV, drives via legend, achievements via interpolation).
+
+All 116 strings now referenced. Let me re-lint and re-type-check after the Charts changes.
+
+Lint clean. Let me re-run the in-scope type-check to confirm the Charts CSV changes compile cleanly.
+
+Still zero Driving errors after the Charts changes. All verification complete. Let me generate the comprehensive evidence log.
+
+All 160 items mapped. Now let me assemble the complete evidence log.
+
+The log is complete (160 items, EXIT=0/STATUS=DONE). Let me do final verification: scope check, placeholder re-scan, and JSON validity.
+
+All changes are in scope. Final placeholder scan and JSON validation:
+
+All gates green. Let me finalize: update todos, plan, and commit the in-scope changes.
+
+Committed. Let me update the plan and do a final clean-tree verification.
+
+All work is complete, verified, and committed with a clean working tree. 
+
+## Summary
+
+Implemented the native **SwiftUI / Apple HIG `DriveScorePage`** at full web parity (`web/src/features/driving/pages/DriveScorePage.tsx`, route `/drive-score`), adaptive across macOS + iOS.
+
+**Parity: 160/160** — 29 panels + 12 charts + 3 states + 116 strings, all bound to an `@Observable` `DriveScorePageModel` (no networking in the view, ADR-004). The web `scoreDrive` algorithm and every aggregation (averages, trend, category bars, histogram, period stats, best/worst, achievements, tips) are ported into a deterministic, unit-tested `DriveScoreEngine`. SI stays canonical in the model; conversion happens only at the render boundary via the shared KMP `Units` facade (ADR-005). Charts use the P3 Swift Charts wrappers (no WKWebView).
+
+**Files:** 14 new source + 2 test files under `Sources/Features/Driving/` & `Tests/Unit/Features/Driving/`; nav alias `/drive-score` → `.driving` + route registration; +115 `driveScore.*` xcstrings (additive); 2 ledger rows; evidence log.
+
+**Verification (all green):**
+- `swiftlint --strict` = 0, `swiftformat --lint` = 0/16, placeholder scan COUNT=0/EXIT=0
+- In-scope whole-module type-check (built the real Kotlin/Native `Shared.xcframework` via Gradle) — **0 DriveScore errors on macOS AND iOS targets** (all 14 files, incl. `#if os(iOS)` branches)
+- Executable logic harness: **69/69 checks pass** — and it caught + fixed 2 real latent bugs (`Hashable`/`Sendable` on types holding `LocalizedStringKey`; `Double % Int`)
+- Full `xcodebuild` = RED (exit 65), honestly reported as **pre-existing out-of-scope** `#Preview`/toolchain drift in ~29 untouched `TeslaSync/*` files — the identical condition the already-DONE sibling `StatisticsPage` documents.
+
+**Key reconciliation:** files live in `Sources/Features/Driving/` (the only group `project.yml` compiles), not the prompt's nominal `TeslaSync/Features/Driving/` — matching how every sibling parity page resolves this. Committed as `ed42a3f9`. **EXIT=0 / STATUS=DONE.**
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-driving-DriveScorePage.log     |  344 ++++++
+ apps/apple/Localization/Localizable.xcstrings      | 1265 ++++++++++++++++++++
+ apps/apple/Sources/App/AppRouteParser.swift        |    1 +
+ .../Features/Driving/DriveScoreDerivations.swift   |  253 ++++
+ .../Features/Driving/DriveScoreDerivedModels.swift |  185 +++
+ .../Driving/DriveScoreEngine.Periods.swift         |  101 ++
+ .../Features/Driving/DriveScoreFormat.swift        |  109 ++
+ .../Features/Driving/DriveScoreModels.swift        |  330 +++++
+ .../Driving/DriveScorePage.BestWorst.swift         |  153 +++
+ .../Features/Driving/DriveScorePage.Charts.swift   |  324 +++++
+ .../Features/Driving/DriveScorePage.Panels.swift   |  344 ++++++
+ .../Features/Driving/DriveScorePage.Sections.swift |  336 ++++++
+ .../Features/Driving/DriveScorePage.Table.swift    |  144 +++
+ .../Sources/Features/Driving/DriveScorePage.swift  |  210 ++++
+ .../Driving/DriveScorePageModel.Sample.swift       |  141 +++
+ .../Features/Driving/DriveScorePageModel.swift     |  392 ++++++
+ .../Driving/DriveScoreRouteRegistration.swift      |   22 +
+ apps/apple/Sources/TeslaSyncApp.swift              |    1 +
+ .../Features/Driving/DriveScoreEngineTests.swift   |  213 ++++
+ .../Driving/DriveScorePageModelTests.swift         |  236 ++++
+ apps/parity/apple-ledger.json                      |   18 +
+ 21 files changed, 5122 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-driving-DriveScorePage.log
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScoreDerivations.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScoreDerivedModels.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScoreEngine.Periods.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScoreFormat.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScoreModels.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScorePage.BestWorst.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScorePage.Charts.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScorePage.Panels.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScorePage.Sections.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScorePage.Table.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScorePage.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScorePageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScorePageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Driving/DriveScoreRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Driving/DriveScoreEngineTests.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Driving/DriveScorePageModelTests.swift

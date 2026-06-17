@@ -1,0 +1,174 @@
+I'll start by understanding the environment, the web source component, and the existing Apple app structure.
+
+The Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the web source and existing Apple app structure.
+
+I now understand the web source. Let me explore the existing Apple app structure and conventions — particularly the shared-surfaces patterns, state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), and diagnostics (P1/S11).
+
+Clear multi-file pattern per surface. Let me find existing MapKit-based surfaces to use as the idiomatic template, and examine a complete example end-to-end.
+
+`MapTileLayer` is the closest sibling — same `components/maps/` origin, uses `useMap` and MapKit. Let me study it fully as my reference template.
+
+Now let me read the MapKit representable, previews, strings, and tests to understand the cross-platform MapKit wrapping and testing conventions.
+
+Now the tests, plus the design tokens (P1/S9) — `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`. Let me read the tests and locate the token definitions.
+
+Excellent. Now let me locate the design tokens (P1/S9), confirm how the build includes these files (project.yml), and check the i18n catalog integration.
+
+The tokens for the main target aren't where I expected. Let me check the project.yml to understand source roots and find the P1/S9 token definitions for the TeslaSync target.
+
+Now I understand the build structure. The critical question is build feasibility (KMP `Shared.xcframework`, xcodegen). Let me check the design tokens API and build tooling in parallel.
+
+Let me read the full Tokens.swift to know the exact token API, and check the build script and placeholder checker.
+
+I have everything I need to understand the pattern. Let me check remaining tooling (pwsh for the placeholder check, and whether the heavyweight build is feasible) before writing code.
+
+All tooling present (`pwsh`, `xcodegen`, gradle wrapper). The `Frameworks/` only has `.gitkeep` — the full build must produce the KMP `Shared.xcframework` via Gradle. Let me read the lint/format configs to match style exactly, then write the surface.
+
+I now have the full pattern, tokens, lint/format configs, and placeholder rules. Key constraint: the word "Placeholder"/"TODO"/"not implemented" are forbidden (case-insensitive) even in comments. Let me kick off the long-pole KMP `Shared.xcframework` build in the background to assess full-gate feasibility while I write the surface.
+
+Shared framework build is running in the background. Let me verify there are no existing `MarkerCluster` symbols (to avoid collisions in the single app module) and set up my plan.
+
+Some existing files reference "MarkerCluster". Let me check what symbols they define to avoid collisions.
+
+No collisions — only `TSMarkerCluster` exists, and my types use the `MarkerCluster` prefix. Let me set up tracking and write the plan.
+
+Background build running. Now I'll write the surface, starting with the pure-core files (Adapter, Logic, Projection) — no SwiftUI deps, fully unit-testable.
+
+Now the state-holder model (P1/S8), telemetry seam (P1/S11), and i18n facade (P1/S10):
+
+The model is done. The MapKit bridge is the most concurrency-sensitive part — let me check how an existing feature view handles `MKMapViewDelegate` under Swift 6 strict concurrency before writing it.
+
+Only `MapTileLayer` uses the delegate (the simple nonisolated path), and there's no existing clustering example. Let me probe whether the SDK annotates `MKMapViewDelegate` / `MKMapView` as `@MainActor` to pick the correct Swift 6 concurrency pattern.
+
+The MapKit delegate isn't SDK-annotated via swiftinterface (it's an ObjC framework). I'll use the robust `MainActor.assumeIsolated` pattern and verify via isolated typecheck. First, let me add two small helpers to Logic, then write the MapKit bridge.
+
+Now the MapKit bridge — the heart of native clustering:
+
+Now the SwiftUI chrome (chips, banners, state overlays, legend, color-mode switcher, marker callout):
+
+Now the main surface view composing everything:
+
+Now the i18n catalog and previews. Let me first enumerate every key used in code to keep the catalog in exact sync.
+
+The grep missed multi-line and computed keys. Let me enumerate all key literals (including split lines) plus the computed `labelKey` patterns.
+
+I have the complete key set. Let me write the strings catalog and previews.
+
+Now the test suites. First the pure-core adapter/logic/projection tests:
+
+Now the model/view/accessibility tests:
+
+All 11 files are written. Let me update tracking, check the background build, and start validation (format my files, then lint).
+
+KMP build is progressing well (Kotlin/Native linking — full gate is feasible). Let me wait for swiftformat to finish.
+
+swiftformat normalized 5 files. Now let me verify format-lint, swiftlint --strict, and the placeholder gate on my files — in parallel.
+
+Three findings: format-lint passes; swiftlint flags `Views.swift` at 411 lines (>400 under `--strict`); placeholder count 62 is from sibling surfaces (my scan was too broad — the gate scopes to MarkerCluster only). Let me confirm my files are placeholder-clean and check all my files' line counts.
+
+Only `Views.swift` (411) exceeds the 400-line limit; placeholder check confirms my files are clean. Let me split the state overlays out of `Views.swift` into a new `MarkerCluster.States.swift` file. Let me view the exact boundary.
+
+I'll extract the state overlays (lines 325–411) into a new `MarkerCluster.States.swift` and remove them from `Views.swift`.
+
+Now remove the state overlays section from `Views.swift`:
+
+Now let me re-lint the split files and run an isolated `swiftc -typecheck` of all shipping (non-test) files + the design tokens — the highest-value correctness check that doesn't need the KMP framework.
+
+The isolated typecheck caught real cross-platform (macOS/AppKit) issues — exactly its purpose. `isAccessibilityElement`/`accessibilityLabel` are methods on `NSView`, and `didDeselect` is macOS-unavailable. Let me check the MapKit apinotes to implement the right per-platform selection delegates.
+
+The cross-platform delegate API is clear: use the **view-based** `didSelectAnnotationView`/`didDeselectAnnotationView` (available on both macOS + iOS); the annotation-based ones are iOS-only. And `NSView` accessibility is method-based. Let me fix all four issues in `MapView.swift`.
+
+Let me view the current Coordinator section to get the exact text.
+
+Now re-run the isolated typecheck for both macOS and iOS-simulator targets to confirm the fixes and catch any remaining platform issues.
+
+macOS typecheck passes. Now the iOS-simulator target:
+
+Both targets typecheck clean for shipping files. Let me check on the KMP build (which would let me run the authoritative full gate including tests).
+
+The KMP `Shared.xcframework` is staged (18 min build, now cached). The full gate is feasible. Let me generate the Xcode project and, in parallel, two-step typecheck my test files against a module built from the shipping files.
+
+Project generated and module emitted. Now typecheck the test files against the module (with XCTest):
+
+All my files typecheck cleanly (shipping macOS+iOS, and tests). Now the authoritative full gate. Let me check simulator availability and start the iOS app build in the background.
+
+iPhone 16 simulator is booted; both schemes exist. Let me start the full iOS app build (compiles all surfaces incl. mine) in the background and monitor.
+
+The iOS build is compiling (2000+ files — will take a while). Let me verify the gate log directory exists while the build runs, then monitor.
+
+The sibling 0185 MapTileLayer log reveals the established precedent. Let me read it fully plus the referenced pending-verifications doc to follow the same honest approach.
+
+This is the established precedent: the whole-tree `xcodebuild build test` is DEFERRED (blocked by a pre-existing unrelated sibling error + macOS signing gap), with the surface validated by all in-scope host-runnable gates including an isolated `swift test` that actually executes the tests. Let me set up that isolated SwiftPM package to run my tests, while the iOS build continues.
+
+`swift test` executed all **47 tests, 0 failures** — full runtime validation of the surface. Let me check the iOS whole-tree build progress (to confirm zero errors originate in my files).
+
+iOS build is compiling the main target, no errors yet. Let me confirm the known pre-existing sibling blocker still exists (the deferral reason), while the build continues.
+
+Confirmed: `git status` shows only my 12 `MarkerCluster.*` files added — no sibling/config files touched. Let me wait for the iOS whole-tree build to progress and capture its outcome.
+
+0 errors so far — the main app target compiled all surfaces (including mine) and is emitting the module. Let me wait for the final build result.
+
+Build reached whole-module emit with 0 errors (0 in MarkerCluster). The main target emit for 2000+ files is the long pole. Let me continue waiting for the final result.
+
+The iOS whole-tree build **FAILED**, but the failing batch (`AppShell`, `AppearanceSettings.*`, `AreaChartWrapper.*`, `AuditPanel.*`) contains **no MarkerCluster file**, and 0 errors are attributed to my files. Let me find the actual root-cause diagnostic to characterize it honestly.
+
+Line 14885 shows a **Swift compiler crash** (not a source error) in the `AppShell/AreaChartWrapper/AuditPanel` batch — which excludes my files. Let me inspect the crash and locate my files' compile batch.
+
+The crash batch has **0 MarkerCluster primary-files**. Let me capture the crash header for the log evidence.
+
+Definitive: the iOS build failed due to a **swift-frontend compiler crash** while batch-compiling pre-existing sibling files (`AppShell`, `AppearanceSettings.*`, `AreaChartWrapper.*`, `AuditPanel.*`) — **zero** are mine, **zero** errors attributed to MarkerCluster. This matches the established sibling-blocked precedent. Let me start the macOS whole-tree build in the background (to mirror the gate) and write the gate log meanwhile.
+
+Now let me capture clean output from the in-scope gates (lint all 11 swift files, format-lint, and placeholder check on an isolated copy of only my files):
+
+All in-scope gates are GREEN (swiftlint 0, swiftformat 0/11, placeholder 0). Let me check macOS build progress, then compose the gate log.
+
+My macOS invocation mis-mixed `-target` with `-derivedDataPath`. Let me re-run it correctly with `-scheme` (matching the gate), signing disabled, build-only.
+
+The macOS build is compiling. Let me wait for it to reach the main target and capture its result for the log.
+
+Conclusive: the **macOS build fails with the identical swift-frontend compiler crash** on the same pre-existing sibling batch (`AppShell`/`AppearanceSettings.*`/`AreaChartWrapper.*`/`AuditPanel.*`) — 0 MarkerCluster errors on both platforms. This is the established sibling-blocked precedent exactly. Let me gather final figures and write the gate log.
+
+All evidence gathered. Now let me write the comprehensive, honest gate log following the established precedent structure.
+
+The gate log is written. Let me do final verification (line counts, git status) and clean up temp artifacts before committing.
+
+git status is clean — only my 12 files + the log (xcodeproj & framework are git-ignored). Let me confirm no individual file exceeds 400 lines, then clean temp dirs and commit.
+
+All files ≤400 lines (largest is MapView at 388). Temp cleaned. Now let me commit per the prompt.
+
+All 13 files staged. Now commit:
+
+Committed cleanly (HEAD `2117ebcc8`), working tree clean. Let me finalize tracking.
+
+All todos complete. Let me do a final confirmation of the committed state.
+
+The task is complete and committed.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0186-MarkerCluster.log | 185 ++++++++++
+ .../shared-surfaces/MarkerCluster.Adapter.swift    | 242 +++++++++++++
+ .../MarkerCluster.AdapterTests.swift               | 306 ++++++++++++++++
+ .../shared-surfaces/MarkerCluster.Logic.swift      | 101 ++++++
+ .../shared-surfaces/MarkerCluster.MapView.swift    | 388 +++++++++++++++++++++
+ .../shared-surfaces/MarkerCluster.Model.swift      | 272 +++++++++++++++
+ .../shared-surfaces/MarkerCluster.Previews.swift   | 140 ++++++++
+ .../shared-surfaces/MarkerCluster.Projection.swift | 211 +++++++++++
+ .../shared-surfaces/MarkerCluster.States.swift     | 100 ++++++
+ .../shared-surfaces/MarkerCluster.Surface.swift    | 218 ++++++++++++
+ .../shared-surfaces/MarkerCluster.Tests.swift      | 289 +++++++++++++++
+ .../shared-surfaces/MarkerCluster.Views.swift      | 323 +++++++++++++++++
+ .../shared-surfaces/MarkerCluster.strings          |  67 ++++
+ 13 files changed, 2842 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0186-MarkerCluster.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.MapView.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.States.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.Surface.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/MarkerCluster.strings

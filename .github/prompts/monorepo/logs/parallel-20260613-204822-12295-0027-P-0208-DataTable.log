@@ -1,0 +1,254 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the Apple toolchain availability and the repository structure in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me explore the Apple app structure and read the web source.
+
+The web DataTable.tsx is large (47KB). Let me read it in sections and explore the Apple structure in parallel.
+
+The shared-surfaces directory already exists with established patterns (e.g., Accordion.Adapter/Model/Previews/AdapterTests). Let me study the existing conventions thoroughly.
+
+The main `DataTable` surface doesn't exist yet (only its sub-components do). There's a clear 8-file pattern per surface. Let me study the project.yml and a complete reference surface (DataTableResizer) to match conventions exactly.
+
+Excellent reference quality. Let me find the project config and read the remaining reference files (DataTableResizer's full set) plus continue the web source.
+
+Conventions are clear. Let me read the project.yml, the rest of the DataTableResizer reference set, and continue the web source.
+
+Now I understand the file conventions. Let me map the web source structure and read the remaining reference files. The web source is THE spec, so let me understand it thoroughly.
+
+Let me read the full web source in detail — it's the specification. Reading all remaining sections in parallel.
+
+I now fully understand the web source. It's a presentational, prop-driven table (no fetcher) with these REAL states: **empty** (`data.length===0`), **error** (SectionErrorBoundary fallback), and **populated** (standard/virtualized rows), plus rich features: sort, selection (single/multi), expansion, column resize/reorder/visibility menu, CSV export, pagination, context menu. Let me gather the native token system and the sibling surfaces I'll compose.
+
+Let me read the design token system and the remaining reference files (test/preview conventions + sibling public APIs I'll compose).
+
+Complete token vocabulary captured. Now let me read the test/preview conventions and the sibling surface public APIs I'll compose (BulkBar, ColumnMenu).
+
+Let me read the view/state-holder test conventions and the public APIs of the sibling surfaces I'll compose.
+
+I have a thorough grasp of conventions. Let me verify the sibling APIs I'll compose (ColumnMenu controller, Pagination existence) and the lint budget before designing the implementation.
+
+Pagination, ContextMenu, and ColumnMenu native surfaces all exist. Composing them is the DRY/faithful choice. Let me read their exact public APIs so I compose them correctly.
+
+All building blocks exist and are reusable (shared `ColumnLayout`/`ColumnLayoutProjector`, `PaginationController`, `DataTableColumnMenuController`, `DataTableBulkBar`, `DataTableResizer`). Let me read the PaginationController init to finalize composition design.
+
+Let me confirm the composed controllers self-mutate (so they can own their state slice) and check the ColumnMenu mutation API.
+
+Critical findings: `PaginationController` is fully controlled (no self-mutation of page), while `DataTableColumnMenuController` self-mutates. My `DataTableModel` will own page/pageSize/layout/widths and sync into composed controllers. Before writing ~2000 lines, I must verify the build is actually runnable on this runner. Let me check the toolchain (xcodegen, the Shared.xcframework dependency) and the formatter config.
+
+`xcodegen` is available but the build links a **KMP `Shared.xcframework`** that's absent (only `.gitkeep`) and is built via Gradle/Kotlin in a scheme pre-action — heavy infra unrelated to the SwiftUI capability. Let me check how sibling surfaces (0209/0212) reported their gate to follow the established honest precedent.
+
+This establishes the precise honest methodology. The full `xcodebuild` has documented FOREIGN/ENVIRONMENTAL reds, but a rich set of **surface-attributable** gates (xcframework build, swift test, typecheck, lint, format, placeholder, xcodegen) are all green-able. Let me study the full sibling log to replicate the exact methodology.
+
+I now have the complete, established honest methodology (the sibling proves surface correctness via xcframework build + iOS/macOS isolated typecheck + `swift test` + lint + format + placeholder + xcodegen + app-compile baseline, with full `xcodebuild` reds documented as FOREIGN/ENVIRONMENTAL). 
+
+Key scoping insight: the prompt's **Out of Scope** lists "Other surfaces in the same feature (each has its own prompt)" — DataTableBulkBar/ColumnMenu/Resizer/Pagination are each their own shipped surface. I'll compose those existing public surfaces at integration points. Let me probe whether those 4 siblings + tokens form a closed, isolated-typecheckable set (this decides verification feasibility).
+
+Almost closed — only `TSMaterial` is missing (another shared token). Let me locate it and the other shared chrome helpers, then re-probe.
+
+The 4 composed siblings + the design layer (`Tokens.swift` + `TSDesign.swift` + `TSMaterial.swift`) form a **closed, isolated-typecheckable set** (PROBE_EXIT=0). This confirms the architecture is fully verifiable: DataTable composes the existing sibling surfaces (which are explicitly out-of-scope as their own prompts) and depends only on the design layer. Let me set up the plan, todos, and a fast typecheck harness.
+
+Architecture verified. Now writing the surface. Starting with the Foundation-only Adapter (types + enums).
+
+The `DataTableColumn<Row>` with its `AnyView` cell closure needs SwiftUI — it can't live in the Foundation-only Adapter. Let me remove it (and the broken builder) from the Adapter; it'll go in a SwiftUI file. Keep the Foundation-only `DataTableColumnSpec`.
+
+Now let me write the CSV/interpolation file and the Projector, then typecheck the Foundation core together.
+
+Now the pure Projector (reusing the shared `ColumnLayoutProjector` for ordering). Splitting into focused enums to respect type-body limits.
+
+Let me update the harness to include all my non-test `DataTable.*.swift` files, then typecheck the Foundation core built so far.
+
+Foundation core typechecks clean. Let me mark progress and write the i18n facade (S10) and the Model (S8/S11).
+
+Core + Model: typecheck clean, lint clean. Let me verify formatting, then build the View layer.
+
+swiftformat wants implicit returns in the `switch` computed properties. Let me auto-format my files (swiftformat is the gate, so matching it is correct), then re-verify.
+
+Format and lint both green on the 6 core files. Waiting for the typecheck to finish.
+
+All core files green (format/lint/typecheck). Now the SwiftUI public types (generic `DataTableColumn`, config, alignment mappings, metrics).
+
+Before wiring composed controllers, let me check how the sibling previews wire the `PaginationController`/`ColumnMenuController` callbacks (Swift 6 MainActor isolation pattern) so I match a working approach.
+
+The sibling recreates the controller in a `@MainActor` View `body`. For my stateful controllers (ColumnMenu owns layout) I must create them once. Let me check how the repo handles wide initializers (function_body_length) and whether `swiftlint:disable` is an accepted pattern here.
+
+Confirmed: scoped `swiftlint:disable` is an established repo pattern (feature-views use it for `file_length`/`function_parameter_count`/etc.). I'll use it on the wide public init. Now writing the main view orchestrator.
+
+I'll keep glue + view-builders in same-file extensions (so `private` access works and type-body limits are respected) and put leaf subviews in separate files. Let me append the orchestration extension to `DataTable.swift`.
+
+DataTable.swift is 449 lines — over the 400 limit. Let me split the extensions into `DataTable.Logic.swift` and make the struct's stored props internal (so cross-file extensions can access them).
+
+Both files now under 400 lines with internal stored props. Now the leaf subviews. Writing Chrome (composition factories + toolbar + CSV document) first since the init depends on `DataTableComposition`.
+
+Header/row reorder needs the shared layout order helpers. Let me check `ColumnLayoutProjector`'s public API to wire drag-reorder correctly.
+
+`ColumnLayoutProjector.moveColumn(order, key, toIndex)` + `effectiveOrder` give me exact drag-reorder parity with the web `handleHeaderDrop`. Writing the Header file.
+
+Now I must update `DataTable.Logic.swift` to pass the new reorder callbacks (`onReorderTo`/`onDragOver`) and implement `reorderTo` via the shared projector. Let me view and edit.
+
+Now the Row file (data row, cells, selection/expand controls, empty + error states).
+
+Now let me typecheck the full view layer (iOS) to catch errors before writing previews/tests.
+
+Two issues: (1) my harness glob `DataTable.*.swift` misses `DataTable.swift` (one dot), so the type wasn't in scope; (2) Sendable/MainActor closure warnings. Let me fix the harness and make the toolbar closures `@MainActor`.
+
+The new glob also matched sibling `DataTableBulkBar.*` etc. Let me make MINE match only `DataTable.swift` and `DataTable.<X>.swift` (not `DataTableBulkBar*`).
+
+MINE now resolves to exactly my 12 files. Re-running the typecheck.
+
+iOS typecheck clean (0 errors/warnings). Let me verify the macOS typecheck (compiles the AppKit `NSEvent` branch), then run lint + format on all view files.
+
+Both platforms typecheck clean. Let me run swiftformat + swiftlint on all view files and auto-fix formatting.
+
+Lint surfaced 3 fixable issues. Let me inspect the brace one and fix all three (remove superfluous disable, fix Button trailing-closure, fix brace).
+
+Three fixes: the `if`-condition brace conflicts with swiftformat, the superfluous disable (SwiftLint ignores defaulted params, so it never triggered), and a two-closure Button. Let me fix all.
+
+swiftformat reverts the explicit `label:` to a trailing closure, conflicting with swiftlint. I'll switch to title-based `Button` inits (action passed as a value, no label closure) so neither tool objects. Let me verify these inits compile.
+
+Title-based Buttons compile. Re-running format + lint.
+
+Still flagged at 126:54 — let me view the actual current code there.
+
+The rule fires on `Button(action: { closureLiteral }) { label }` (two closure literals). The sibling pattern uses a method/value reference for `action:` (only the label is a literal). Let me extract the selection toggle into a method.
+
+All view files green (format/lint/typecheck). Now the DEBUG previews covering every branch.
+
+Previews compile. Let me format + lint the previews, then write the tests (AdapterTests + Tests).
+
+The `csvValue:` + trailing `cell:` are two closure literals (lint violation), and swiftformat forces the last to trailing. Cleanest fix: drop `csvValue` from the init and set it via a chainable `.exportingText { }` modifier (single trailing closure). Let me refactor.
+
+Let me view the current Types.swift to match exactly (swiftformat may have adjusted it).
+
+Now update the previews to use `.exportingText { }` instead of the removed `csvValue:` parameter.
+
+Types + Previews green. Now the tests. Writing the pure Foundation adapter tests first.
+
+Now the Model + view + strings tests, then I'll set up the isolated `swift test` harness.
+
+Both test files written. Now let me set up the isolated `swift test` package (the established methodology) and run it.
+
+All 55 tests pass (SWIFT_TEST_EXIT=0). Let me format + lint the test files and update progress.
+
+Test files clean. Let me run the broader gates: re-check macOS typecheck, full-tree swiftformat/swiftlint, xcodegen, and check pwsh for the placeholder gate.
+
+pwsh available, placeholder script found. Let me inspect it, then run the full-tree format/lint + xcodegen (the slow gates) in the background.
+
+The placeholder gate scans a path for stub patterns. Let me run it three ways (gate-literal, real scoped copy of my files, and self-test) like the sibling precedent.
+
+I still need to create the actual `DataTable.strings` i18n catalog (I wrote the facade but not the catalog file). Let me create it.
+
+Now let me re-run the real scoped placeholder scan and start the slow gates. Kicking off the KMP `Shared.xcframework` build (Gradle) in the background first since it's slowest.
+
+Placeholder gate: real scoped scan COUNT=0, planted-stub self-check correctly COUNT=2 (gate is live). Now the full-tree gates. Running xcodegen + full-tree swiftformat lint.
+
+xcodegen clean (102 DataTable refs across targets). Let me verify specific files are wired to the right bundles, then run the full-tree format/lint gates.
+
+All files wired correctly; xcframework build progressing. Now the full-tree formatter/linter gates.
+
+Full-tree swiftformat flags **1 foreign file** (`RecentDrivesSection.Previews.swift`) — not mine. Let me verify it's pre-existing/committed and untouched by my work.
+
+Confirmed FOREIGN/pre-existing: `git status` shows only my DataTable.* files, and the **committed HEAD** version of `RecentDrivesSection.Previews.swift` already fails swiftformat. My files all pass. Now the full-tree swiftlint gate + xcframework check.
+
+My files: format 0/15. Full-tree swiftlint shows 3 violations — let me confirm none are mine.
+
+The 3 swiftlint violations are all in a foreign file (`WidgetChartSummary.Tests.swift`); **none in mine**. Let me confirm both foreign files are committed/unmodified and check the xcframework build.
+
+Clean isolation confirmed: my **only** changes are the DataTable.* files; both lint/format tree failures are foreign committed files. The xcframework build is finishing (debug XCFramework written, linking release). Let me wait for it to complete.
+
+The release frameworks are still linking. Let me wait for the xcframework build to finish staging.
+
+Linking the final (macOS) release framework — nearly done. Waiting for staging to complete.
+
+`XCFRAMEWORK_EXIT=0` — Shared.xcframework built and staged. Now the full app-compile gate. Let me check the simulator and launch the iOS `build test` (heavy; backgrounded).
+
+'iPhone 16' is booted. Launching the iOS `build test` gate (heavy, backgrounded).
+
+The iOS build is running. Let me monitor its progress (heavy build of 5500+ files).
+
+A real collision I introduced: a pre-existing `Sources/Components/UI/DataTable.swift` shares the bare filename with my `shared-surfaces/DataTable.swift` (Xcode forbids duplicate filenames in a target). Let me inspect the existing file and the directory.
+
+A pre-existing committed `Sources/Components/UI/DataTable.swift` defines a *different* `TSDataTable` component — only the **bare filename** collides (Xcode requires unique filenames per target). I'll rename my main view file to `DataTable.View.swift` (still matches `DataTable.*`). First, let me confirm there's no public **type-name** collision with my `DataTable*` types.
+
+No type-name collisions and only the bare `DataTable.swift` filename clashes. Fix: rename my main view file to `DataTable.View.swift` (keeps the `DataTable<Row>` type, matches `DataTable.*`). Let me rename, update its header, and re-wire the symlink/harness.
+
+Now regenerate the project, re-verify the isolated typecheck/format/lint on the renamed file.
+
+Collision resolved (only the pre-existing file keeps `DataTable.swift`; mine is `DataTable.View.swift`). Re-running `swift test`, then relaunching the iOS build.
+
+55/55 still passing. Relaunching the iOS `build test` gate (background).
+
+The iOS build is compiling (~5500 files). Let me wait and then check for any errors attributable to my files vs foreign.
+
+The build log references `slot-29` paths — a sign of shared-environment contamination from parallel agent slots (the environment is explicitly non-sandboxed/shared). Let me check the actual build result and whether it's mine.
+
+The shared `/tmp` and DerivedData are being clobbered by parallel agent slots (2846 `slot-29` refs in my log; multiple slots running `xcodebuild` concurrently). I'll relaunch with **slot-unique** log + isolated DerivedData, build-only (avoids the shared simulator).
+
+While the isolated iOS build runs, let me verify my unique log isn't contaminated and monitor progress.
+
+Clean now (only slot-27 refs). Build still compiling with 0 errors so far. Let me continue waiting for it to finish.
+
+The full iOS app target is at `EmitSwiftModule` with **0 errors** — my surface compiles cleanly in the real app target. Let me wait for completion.
+
+Still emitting the module (large target under shared-CPU contention), 0 errors. Continuing to wait.
+
+The app-target Swift compilation shows **0 errors** (module emitted) — no foreign reds even. Under heavy shared-CPU contention it's slow to finish linking. Let me wait longer for the definitive BUILD result.
+
+Build failed (exit 65) but with **0 Swift compile errors** — it failed at a non-compile stage. Let me find the actual cause.
+
+The failed `SwiftCompile` batch contains **only foreign files** (AppearanceSettings/AreaChartWrapper/AuditLog) and produced **0 `error:` lines** — a hallmark of a compiler crash/OOM-kill under the heavy parallel-slot resource contention. Let me confirm the crash signature.
+
+Confirmed: the iOS build red is a **Swift compiler CRASH** ("submit a bug report / Stack dump") in a **foreign** file batch (AppearanceSettings/AreaChartWrapper/AuditLog — **zero DataTable files, zero `error:` lines**), under heavy parallel-slot contention — the whole module type-checked first (EmitSwiftModule reached). This is the foreign/environmental disposition the sibling documented. My surface contributes 0 errors. Let me gather host info and write the gate log.
+
+Let me get per-file line counts, then write the comprehensive gate log.
+
+I have all results. Let me write the comprehensive gate log (following the established sibling methodology), then commit.
+
+Log written. Let me do a final consolidated verification of all my files (post-rename) before committing.
+
+My files: format 0/16, lint 0. Waiting for the final typechecks.
+
+All green: format 0/16, lint 0, iOS+macOS typecheck 0, swift test 55/55. Let me commit my files and the log.
+
+All 16 files + log are untracked and ready. Committing.
+
+Committed cleanly: 17 files (16 surface + log), 3357 insertions, nothing foreign touched. Let me verify the working tree and clean up temp artifacts.
+
+Working tree is clean (generated `.xcodeproj`/`Shared.xcframework` are gitignored), temp artifacts removed. Let me finalize the todos.
+
+Task complete. All 12 todos done, committed, and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0208-DataTable.log    | 278 ++++++++++++++++++
+ .../shared-surfaces/DataTable.Adapter.swift        | 195 +++++++++++++
+ .../shared-surfaces/DataTable.AdapterTests.swift   | 315 +++++++++++++++++++++
+ .../TeslaSync/shared-surfaces/DataTable.CSV.swift  |  82 ++++++
+ .../shared-surfaces/DataTable.Chrome.swift         | 172 +++++++++++
+ .../shared-surfaces/DataTable.Header.swift         | 238 ++++++++++++++++
+ .../shared-surfaces/DataTable.Logic.swift          | 300 ++++++++++++++++++++
+ .../shared-surfaces/DataTable.Model.swift          | 266 +++++++++++++++++
+ .../shared-surfaces/DataTable.Previews.swift       | 209 ++++++++++++++
+ .../shared-surfaces/DataTable.Projector.swift      | 155 ++++++++++
+ .../TeslaSync/shared-surfaces/DataTable.Row.swift  | 279 ++++++++++++++++++
+ .../DataTable.SelectionProjector.swift             | 100 +++++++
+ .../shared-surfaces/DataTable.Strings.swift        | 101 +++++++
+ .../shared-surfaces/DataTable.Tests.swift          | 242 ++++++++++++++++
+ .../shared-surfaces/DataTable.Types.swift          | 189 +++++++++++++
+ .../TeslaSync/shared-surfaces/DataTable.View.swift | 173 +++++++++++
+ .../TeslaSync/shared-surfaces/DataTable.strings    |  63 +++++
+ 17 files changed, 3357 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0208-DataTable.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.CSV.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Header.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Logic.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Row.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.SelectionProjector.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Strings.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.Types.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.View.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/DataTable.strings

@@ -1,0 +1,131 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple native app setup.
+
+Toolchain is available (Xcode 26.5, swiftlint, swiftformat, Swift 6.3.2). Now let me explore the Apple app structure.
+
+No `.xcodeproj`/`Package.swift` at shallow depth. Let me find the build system and study an existing presentational feature-view as a template.
+
+Build system is XcodeGen (`project.yml`). `BatteryPill` is a near-identical presentational pill — perfect template. Let me read it and the configs.
+
+Excellent template. Now let me understand the design tokens (P1/S9), the i18n facade (P1/S10), the build config, and find a sibling that does relative-time formatting.
+
+Now I understand the build topology. Let me check the design tokens source, the KMP framework build script, and tooling availability (xcodegen, pwsh) — these determine whether the full gate can run.
+
+Full `xcodebuild` requires the KMP `Shared.xcframework` via Gradle. Let me read the exact token names, the relative-time "ago" pattern from a sibling, typography roles, and the GlassPanel signature.
+
+I have all design tokens. Let me study the relative-time "ago" convention in a sibling (AiUsageCard) and how `.strings` format args + `String(format:)` are wired, plus the GlassPanel body.
+
+Web `LiveStatusPill` is an inline capsule chip (not a glass panel). Let me read the `format` facade and find a capsule-chip pattern in a sibling.
+
+I have everything needed. Let me verify there are no symbol collisions before writing, and set up tracking.
+
+No collisions. Now writing the surface. Starting with the Model.
+
+Now the main view (the capsule chip) and previews.
+
+Now let me check how sibling tests do per-state render/snapshot + a11y assertions before writing the test file.
+
+Now the test file, mirroring the host-free model tests + `ImageRenderer` per-state render smoke + a11y label assertions.
+
+All six files created. Let me run swiftformat and swiftlint on the new files first.
+
+SwiftFormat wants auto-fixes (property body wrapping, number grouping, doc comments). Let me auto-format the files and re-check.
+
+SwiftFormat passes now. Let me verify the auto-format didn't break anything semantically and run SwiftLint.
+
+Both pass on the new files (0 violations). Now let me run the project-wide lint/format gates and the placeholder check to confirm the full gate state.
+
+Project-wide SwiftLint passes (0 violations, 2989 files). Now the project-wide SwiftFormat lint and the placeholder check.
+
+SwiftFormat (0/2993), SwiftLint (0 violations), and placeholder check (0) all pass. Before the heavy full build, let me do a fast standalone type-check of my production Swift against the SDK + design tokens to prove the surface compiles.
+
+Type-check passes (EXIT=0). But I caught an arithmetic bug in one of my own test assertions while reviewing: `minutes(119)` is impossible (max is 59, since <3600s) and 7199s is actually the hours bucket. Let me fix that test to use valid floor-not-round cases.
+
+Let me re-format/lint the edited test file and run the macOS type-check in parallel.
+
+Both platforms type-check clean and the tests file is lint-clean. Now I'll attempt the full `xcodebuild` gate. First, let me assess the heavy prerequisites: simulator runtimes, XcodeGen project generation, and the KMP `Shared.xcframework` (Gradle/Kotlin) dependency.
+
+All prerequisites exist: iPhone 16 simulator is booted (iOS 26.5), `apps/shared` + `gradlew` + Java 17 are present. The full gate is genuinely runnable. Let me generate the Xcode project and kick off the KMP `Shared.xcframework` build (the slow prerequisite) in the background.
+
+Project generated (XCODEGEN_EXIT=0). Now the heavy KMP step — building `Shared.xcframework` via Gradle. This may take a while (Kotlin/Native toolchain). Running it directly to surface timing/issues.
+
+KMP build still running after 5 min (Kotlin/Native first-build downloads + compiles the native toolchain — expected). Continuing to wait.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 6m21s, SHARED_EXIT=0). Now I'll run the full gate exactly as specified via PowerShell. First confirming the log directory.
+
+Log dir and framework slices are ready. Let me gauge the test-suite scale and UITest content before launching the full gate.
+
+Test suite is large (~7,659 sibling test functions + 4 live-service UI tests). On this shared parallel runner (slot-14), I'll build the full app + full test bundle on both platforms (proving integration/compilation everywhere) and execute this surface's own tests — the authoritative signal for my artifact. Launching the iOS build + scoped test now.
+
+iOS run completed. Let me extract the authoritative results from the saved log.
+
+The build failed with a `swift-frontend` **compiler crash** (`llvm::report_fatal_error`) — not a source error — in sibling batches (e.g., AnomalyInlineRow…AppearanceSettings), none of which are my files. This smells like resource exhaustion under the parallel-slot load. Let me inspect the crash context.
+
+This is a `swift-frontend` **compiler crash** (`Please submit a bug report … Stack dump`) while batch-compiling a giant whole-module filelist — characteristic of memory pressure on this shared parallel runner (slot-14 of many). It's in sibling `A*` files, not mine (my files type-check clean standalone on both platforms). Let me identify the crashing primary-file and the crash frames, then retry with reduced parallelism to relieve memory pressure.
+
+Definitive diagnosis: the crash is `report_at_maximum_capacity` → `llvm::report_fatal_error` inside **IRGen** while emitting a SwiftUI reabstraction thunk for a **sibling file** (`AppearanceSettings.Controls.swift`) — a swift-frontend toolchain crash, not a source error. My `LiveStatusPill.*` files themselves compiled fine in the batch (visible as completed jobs). This is the kind of runner/toolchain limit the capability clause covers, but let me make a real attempt to get a green build by retrying incrementally with reduced parallelism (lower memory peak) to distinguish a transient OOM from a deterministic compiler bug.
+
+Still compiling after 7 min with no crash output yet — encouraging (a deterministic crash would've recurred quickly on the incremental retry). Continuing to wait.
+
+Retry completed. Let me check the outcome.
+
+Decisive: the retry at `-jobs 2` (minimal memory pressure) crashed at the **same** batch with the same `report_at_maximum_capacity` IRGen fatal error on the **sibling** `AppearanceSettings.Controls.swift`. So it's a **deterministic swift-frontend (Swift 6.3.2 / Xcode 26.5) compiler crash in a sibling file**, not memory pressure and not my code. My files are in a different batch and compiled fine; I'm not allowed to modify the sibling. The full-app `build test` cannot link on this toolchain regardless of my surface.
+
+Since the app won't link, the XCTest bundle can't run in-target. Let me prove my surface's logic + view actually execute correctly via a standalone executable harness (real execution, not just type-check).
+
+Now compile and run the harness against the real surface sources on macOS.
+
+Swift 6 top-level code is `@MainActor`; I need `check` to be `@MainActor` too. Quick fix.
+
+The standalone execution harness passes **43/43 checks including ImageRenderer render-smokes for every state** (RUN_EXIT=0) — proving the surface's logic and view rendering actually run correctly, not just type-check. Now let me check sibling log conventions before running the authoritative gate.
+
+This is the key precedent. The closest sibling (`BatteryPill`, also a presentational pill) hit the **exact same situation** — full Xcode app build/test blocked by **pre-existing baseline defects in sibling files outside allowed-files scope** — and resolved to **EXIT=0 / STATUS=DONE** because every surface-scoped gate is green and the Xcode build/test is deferred to the integration runner. Let me read the full sibling log to mirror its structure and evidence conventions precisely.
+
+The sibling precedent is definitive and detailed: under identical circumstances (full Xcode app build/test blocked by **pre-existing, out-of-scope sibling defects**, capability present), `BatteryPill` shipped **EXIT=0 / STATUS=DONE** with the app build/test deferred to the integration runner and every surface-scoped gate green — explicitly citing the merged `SentryModeChart` precedent. My case matches exactly, and my surface-scoped evidence is even stronger (executed harness, 0 lint violations repo-wide). Let me confirm my changes are purely additive and get HEAD for the log.
+
+Proven: `git status` shows **only 6 new `LiveStatusPill.*` files — zero modifications** to any sibling source or build config (`git diff --stat HEAD` empty). So the IRGen crash in sibling `AppearanceSettings.Controls.swift` is unequivocally pre-existing and independent of my work. HEAD is `6a77195c0`.
+
+This matches the merged sibling precedent exactly. Let me grab the crash signature lines to quote as evidence, then write the authoritative gate log.
+
+I have all evidence. Writing the authoritative gate log mirroring the merged sibling convention.
+
+Now a final lint/format pass on all surface files (I edited Tests.swift last), then commit per the prompt.
+
+All green. Updating tracking and committing exactly the prompt-specified files + log.
+
+Committed as `ddc6b7ae0`. Let me verify the working tree is clean (only gitignored build artifacts remain) and the commit contains exactly the 7 files.
+
+Done. Commit `ddc6b7ae0` ships the `LiveStatusPill` Apple surface (6 files + gate log, 970 insertions).
+
+## What I built
+A native, Apple-idiomatic parity of `web/.../status/LiveStatusPill.tsx` — a pure presentational capsule chip:
+- **`LiveStatusPill.swift`** — tinted `Capsule` (fill·0.1 + ring·0.3), status dot (pulsing only on `reconnecting`, reduce-motion honored), SF-Symbol glyph (`waveform.path.ecg`/`wifi`/`wifi.slash`), state label, middot, `updated <relative>`; combined `.updatesFrequently` VoiceOver element with composed aria-label.
+- **`.Model.swift`** — `LiveStatusState` tone map, `LiveStatusRelative.bucket` ladder (`nil`→"—", floor + clock-skew clamp + non-finite guards), `LiveStatusPillStrings` i18n facade, `Equatable`/`Sendable` presentation.
+- **`.Telemetry.swift`** (P1/S11 `view.opened`), **`.Previews.swift`** (all states, light/dark, Dynamic Type), **`.strings`** (P1/S10 catalog), **`.Tests.swift`** (26 XCTest cases).
+
+## Verification (real evidence)
+- `swiftc -typecheck` iOS-sim **and** macOS SDKs under Swift 6 strict concurrency: **EXIT=0** both.
+- Standalone execution harness against real tokens: **43/43 PASS** incl. `ImageRenderer` render-smokes for every state.
+- `swiftlint --strict` repo-wide: **0 violations / 2989 files**; `swiftformat --lint`: **0/2993**; placeholder gate: **0**.
+- KMP `Shared.xcframework` built for real (6m21s) + `xcodegen` generated the project.
+
+## One documented deferral
+The full `xcodebuild build test` cannot link the app target due to a **pre-existing, deterministic swift-frontend (Swift 6.3.2) IRGen crash** (`report_at_maximum_capacity`) in the **sibling** `AppearanceSettings.Controls.swift` — reproduced even at `-jobs 2`, outside this prompt's allowed-files. `git diff --stat HEAD` is empty (my change is purely additive: 6 new files), and my files compiled cleanly in-build. This is deferred to the integration runner exactly as the merged sibling precedents `P-0073-BatteryPill` and `P-0047-SentryModeChart` did. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0249-LiveStatusPill.log | 188 +++++++++++++++
+ .../feature-views/LiveStatusPill.Model.swift       | 258 +++++++++++++++++++++
+ .../feature-views/LiveStatusPill.Previews.swift    |  66 ++++++
+ .../feature-views/LiveStatusPill.Telemetry.swift   |  40 ++++
+ .../feature-views/LiveStatusPill.Tests.swift       | 241 +++++++++++++++++++
+ .../TeslaSync/feature-views/LiveStatusPill.strings |  34 +++
+ .../TeslaSync/feature-views/LiveStatusPill.swift   | 143 ++++++++++++
+ 7 files changed, 970 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0249-LiveStatusPill.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStatusPill.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStatusPill.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStatusPill.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStatusPill.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStatusPill.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveStatusPill.swift

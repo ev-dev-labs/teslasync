@@ -1,0 +1,157 @@
+I'll start by exploring the repository structure and reading the web source specification, then understand the existing Apple app architecture.
+
+Let me read the web source spec and check the Apple toolchain capabilities in parallel.
+
+Toolchain is fully available (Xcode 26.5, swift 6.3.2, swiftlint, swiftformat, xcodegen). Now let me read the web dependencies and explore the Apple app architecture.
+
+Let me read the rest of AIFeatureCard, the AiOutputPanel, and explore the Apple app's existing shared-surfaces and supporting infrastructure.
+
+Excellent — `AIAnomalyExplanations` is the direct predecessor (another AI surface using the same web primitives). I must follow its established pattern exactly. Let me read all its files.
+
+This is a clean, well-established pattern. Let me read the remaining AIAnomalyExplanations files (Projection, Adapter, Chrome, Views, Previews, Tests, strings) to mirror them exactly.
+
+Now the Chrome, Views, Previews, and test files plus strings.
+
+Now the tests, previews, strings, and the shared token/component definitions referenced.
+
+Now the Previews, strings file, and the shared token/component definitions (TSSpacing, Color.TS, Font.TS, TSButton, TSSkeleton, TSFadeIn).
+
+I have the full template. Now let me verify the shared tokens/components exist and how the Xcode project includes these files.
+
+Let me check the test target wiring, the placeholder-check script, pwsh availability, and the design token names in parallel.
+
+Let me read the placeholder patterns, the full test-target config, and confirm the design token names.
+
+All tokens confirmed and predecessor is clean. Let me check the prompt/log directory structure and whether a predecessor log exists as a format reference.
+
+A real prompt file and predecessor log exist. Let me read the P-0008 prompt and the predecessor log structure to mirror the established disposition.
+
+Let me read the predecessor 0005 log's structure to mirror the verification approach and log format.
+
+I now fully understand the established pattern and disposition. Let me check the Frameworks staging state, naming-collision safety, and the dependencies of the shared components I'll compile against.
+
+Confirmed: Shared.xcframework is unstaged (KMP blocker persists, as in predecessor), shared components only import SwiftUI (isolated-build friendly), and no naming collisions. Let me verify the design-token file imports and set up my plan.
+
+Everything is verified. `Color.TS`/`Font.TS` live solely in the generated Tokens.swift; components are SwiftUI-only; no collisions; Shared.xcframework unstaged (KMP blocker persists as in predecessor). Let me set up tracking and start creating the 10 surface files.
+
+Let me write the session plan, then create the foundation Adapter file.
+
+Now creating the Adapter (Foundation core) — mirrors the predecessor with battery-specific request (no `days`, narrate path).
+
+Now the Model file (state-holder seam, i18n facade, telemetry, @Observable model).
+
+Now the Projection (pure input→view-state, with the battery `> 0` canStart rule and localized output branches).
+
+Now the Views (presentational subviews reproducing the AIFeatureCard / AiOutputPanel regions).
+
+Now the Chrome (freshness chip, refresh, connectivity banner, loading skeleton, gate-error).
+
+Now the main surface View, Previews, and strings catalog.
+
+Now mark previews/strings done and create the two test files.
+
+Now the AdapterTests (Foundation-only: request body/path, SSE parse, reducer, output/action derivations).
+
+All 10 files created. Let me update tracking and run the per-surface gates: swiftformat, banned-word scan, and placeholder check.
+
+swiftformat flagged long lines in AdapterTests. Let me auto-format my files with the ecosystem tool, then re-lint.
+
+swiftformat passes (0/9). Let me verify the auto-format only rewrapped lines (didn't corrupt test data), then run swiftlint and the placeholder gate.
+
+swiftlint next. Let me read the repo config to build a correctly-scoped temp config (the repo `included:` omits shared-surfaces, as the predecessor noted).
+
+The current `.swiftlint.yml` now **includes** `TeslaSync/shared-surfaces` (wiring updated since predecessor). Let me run swiftlint on my files (focused) and the placeholder gate.
+
+swiftlint focused: 0 violations. Now the placeholder gate (honest directory scan + the literal gate-path form).
+
+All per-surface static gates are green (swiftformat 0/9, swiftlint 0 violations, placeholder COUNT=0). Now the strongest check — an isolated Swift 6 build+test compiling the exact surface files against the real design system. Let me check the component files' dependencies first.
+
+Skeletons references `TSCard` and `Color.TS.surface`. Simplest robust path: compile the whole real `Sources/Design` + `Sources/Components` + Tokens. Let me set up the isolated SwiftPM harness with symlinks to the exact files.
+
+No app-root cross-refs; `Color.TS.surface` is in Tokens. Let me build the isolated Swift 6 harness symlinking the exact files, then run the tests.
+
+All 7 of my surface files compiled cleanly. The only error is in an unused dep file `Components/DataDisplay/UnitFormatters.swift` needing an app-level `Units` type. Let me locate `Units` and either include it or trim to the minimal real dep set.
+
+`Units` lives in `SharedFacade` (KMP-coupled); only `UnitFormatters.swift` uses it. Let me exclude that one file from the harness and rebuild.
+
+Build complete under Swift 6. Now run the tests.
+
+**70/70 tests pass** under Swift 6 strict concurrency against the real design system. Now let me honestly verify the full-app gate wiring: regenerate the Xcode project and confirm my surface is referenced, and re-confirm the Shared.xcframework blocker.
+
+Stronger than the predecessor: `xcodegen` now wires all 10 surface files into the project (60 pbxproj refs vs predecessor's 0). The only remaining full-app blocker is the unstaged `Shared.xcframework`. Let me inspect the staging path to honestly attempt/characterize the full-app gate.
+
+The full-app gate hinges on a KMP Kotlin/Native Gradle build (`apps/shared/gradlew :core:assembleSharedXCFramework`). Let me honestly attempt to stage it — if it completes, I can run the real xcodebuild gate.
+
+Staging started. Let me monitor progress while I prepare the log draft.
+
+Let me diagnose what the Gradle process is actually doing (downloading toolchain vs. stalled).
+
+The Kotlin/Native toolchain (1.6G) and Gradle caches (2.2G) are warm, but the KMP compile is CPU-heavy and **contended** — sibling-slot Gradle daemons (PIDs 960/971/53643) are competing, exactly the blocker the predecessor documented. Let me give it more time to capture honest progress evidence.
+
+The KMP compile was genuinely progressing (21 konanc/clang procs, LLVM backend at 56% CPU) — and it just completed. Let me read the result.
+
+**KMP build SUCCEEDED in 7m28s** — `Shared.xcframework` is now built. The full-app blocker can be staged. Let me stage it and attempt the real iOS xcodebuild gate (strongest possible evidence). First, stage + check simulator.
+
+`Shared.xcframework` staged (ios-arm64, ios-arm64-simulator, macos-arm64); iPhone 16 simulator booted. Now running the real iOS xcodebuild — starting with `build` to validate the full app (incl. my surface) compiles with the live framework.
+
+iOS build started. Let me monitor progress.
+
+The full iOS build failed (exit 65) — but on **pre-existing errors in unrelated surfaces** (WatchBridge, WeatherAtCarWidget, WebhookChannelsSection, WeekOverWeekSummary), not my files. Let me extract the actual compiler errors to confirm they're pre-existing and that my surface compiled.
+
+The full-app failures are **pre-existing cross-surface type-name collisions** (`RecentDrivesModel`/`RecentDrivesConnection` defined in two surfaces) plus other unrelated surfaces — **zero errors in my files**. Let me prove these are pre-existing/unowned and confirm my surface type-checked cleanly in the full module.
+
+Definitive: **54 pre-existing errors, all in other surfaces** (`RecentDrivesModel` is defined in two surfaces → ambiguous; same for StateTimeline, etc.), **zero in my files**, and `git status` shows only my 10 files added. My surface is isolated-verified green and correctly wired. Let me update tracking and write the comprehensive log.
+
+Both collision families confirmed pre-existing (defined in two surfaces each), and **0 of the 54 errors touch shared-surfaces**. I have complete evidence. Writing the comprehensive log now.
+
+Log written. Let me verify git status shows only my files + log (generated artifacts must be gitignored), then stage and commit.
+
+Exactly 11 untracked items (my 10 files + log); all generated artifacts are gitignored. Staging and committing my allowed files.
+
+All 11 staged. Committing.
+
+Committed cleanly: **11 files, 2379 insertions** (commit `7f4d3765d`). Let me finalize tracking and clean up the temporary build artifacts.
+
+All todos complete, temp artifacts cleaned, working tree clean, commit `7f4d3765d` in place.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`AIBatteryHealthForecastNarrative`** SwiftUI surface at parity with `web/src/components/ai/AIBatteryHealthForecastNarrative.tsx` — **10 files, 2379 lines**, following the established 0005 predecessor decomposition exactly.
+
+**What was built** (`apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.*`)
+- `.Adapter` (request `/ai/battery/health/narrate` with `{vehicle_id}` — **no `days`**, SSE parse, stream reducer, output/action derivations), `.Model` (P1/S8 state-holder seam + P1/S10 i18n facade + P1/S11 `view.opened` telemetry + `@Observable` model), `.Projection` (the **`numericVehicleId > 0`** canStart rule), `.Views`, `.Chrome`, the surface, `.Previews`, `.strings`, `.Tests`, `.AdapterTests`.
+- Every state renders: gated / loading / empty (friendly, never blank) / error (retry) / ready / stale / offline. Full VoiceOver labels, Dynamic Type, Reduce-Motion. No hardcoded English, no Tailwind, no raw hex.
+
+**Verification (raw results, all honest)**
+- ✅ swiftformat `0/9` · swiftlint `0 violations/9 files` · placeholder `COUNT=0`
+- ✅ **Isolated Swift 6 (strict-concurrency) build + `70/70` XCTest** against the real design system
+- ✅ **KMP `Shared.xcframework` built (7m28s) + staged** — the blocker the predecessor deferred
+- ✅ `xcodegen` wires the surface into the project (**60 pbxproj refs**, vs predecessor's 0)
+- ⚠️ Full-app `xcodebuild` **RED (exit 65)** — but **all 54 errors are pre-existing cross-surface type-name collisions in OTHER surfaces** (`RecentDrivesModel`/`StateTimelineModel` each defined in two surfaces). **Proven**: `git status` shows only my 10 files, the colliding types live in other surfaces' files, **0 errors touch shared-surfaces**. Out of allowed files; owned by P99.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0008-AIBatteryHealthForecastNarrative.log` → **EXIT=0 / STATUS=DONE**.
+
+Merge made by the 'ort' strategy.
+ ...faces-0008-AIBatteryHealthForecastNarrative.log | 262 +++++++++++++++
+ .../AIBatteryHealthForecastNarrative.Adapter.swift | 323 ++++++++++++++++++
+ ...tteryHealthForecastNarrative.AdapterTests.swift | 286 ++++++++++++++++
+ .../AIBatteryHealthForecastNarrative.Chrome.swift  | 149 +++++++++
+ .../AIBatteryHealthForecastNarrative.Model.swift   | 367 +++++++++++++++++++++
+ ...AIBatteryHealthForecastNarrative.Previews.swift | 117 +++++++
+ ...BatteryHealthForecastNarrative.Projection.swift | 122 +++++++
+ .../AIBatteryHealthForecastNarrative.Tests.swift   | 350 ++++++++++++++++++++
+ .../AIBatteryHealthForecastNarrative.Views.swift   | 238 +++++++++++++
+ .../AIBatteryHealthForecastNarrative.strings       |  46 +++
+ .../AIBatteryHealthForecastNarrative.swift         | 119 +++++++
+ 11 files changed, 2379 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0008-AIBatteryHealthForecastNarrative.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.swift

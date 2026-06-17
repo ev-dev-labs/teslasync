@@ -1,0 +1,176 @@
+I'll start by investigating the environment capabilities and the repository structure, since this task requires Apple/Xcode tooling.
+
+
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me explore the Apple app structure and the web source.
+
+Now let me read the web hooks this component depends on, and understand the existing Apple surface conventions and build setup.
+
+XcodeGen-based build. Let me verify xcodegen and explore the Apple app's shared infrastructure (state holders, tokens, i18n, diagnostics) plus conventions docs.
+
+The infrastructure is clear: `Sources/SharedFacade/Domains` (state holders), `Sources/Components/UI` (Tooltip), `Sources/Components/DataDisplay`. Let me inspect these and check the parity manifest for TimeStamp.
+
+Let me read the core infrastructure files to understand the exact APIs I must use.
+
+Now let me read the settings platform, DI container, Tooltip, formatters, and find i18n + diagnostics infrastructure.
+
+The native `AppSettings` lacks time-format/timezone/locale fields — so the data must come from a different state holder. Let me find how existing surfaces consume date/time formatting + settings, and inspect the Tooltip + formatters.
+
+There's a sibling `DateTime` surface — the web `TimeStamp` explicitly mirrors `<DateTime>`. This is my canonical template. Let me read the entire `DateTime.*` file set.
+
+Excellent template. Let me read the remaining DateTime files: Projection, Views, States, strings, Previews, and both test files.
+
+The architecture is comprehensive. Now let me read the formatting core (Adapter), strings, previews, and tests to fully understand the conventions before building TimeStamp.
+
+Now let me read the test and preview conventions, then confirm the shared tokens and Tooltip primitive exist.
+
+I have the full pattern. Now I need the exact web formatting truth (`formatDateTime` vs `formatRelative`) plus confirm tokens/Tooltip/test wiring. Let me read these in parallel.
+
+Now I have the formatting truth. The key insight: web `TimeStamp` uses `formatDateTime` (comma style "Apr 4, 2026, 2:30 AM") and `formatRelative` (lowercase "just now", with a `d ago` tier and `formatDate` fallback) — which differ from DateTime's variant. Let me verify exact JS outputs and confirm tokens/Tooltip/test wiring.
+
+Confirmed: web absolute = "Apr 4, 2026, 09:30 AM" (zero-padded hour, comma separator) — distinct from DateTime's " at " variant. So TimeStamp needs its own formatting core. Let me probe Swift's exact output and confirm tokens/Tooltip/skeleton/queryerror signatures.
+
+`Date.FormatStyle.timeZone` is a property, not a chain method (the DateTime adapter sets `style.timeZone = zone`). Let me fix the probe and locate tokens + Tooltip + test wiring.
+
+Absolute format matches the web byte-for-byte. Now let me read the Tooltip mapping, lint config, and confirm token names.
+
+Let me read the design tokens to lock exact member names, then I'll build the surface.
+
+I now have everything: tokens, Tooltip mapping (`.help()`), test wiring (auto-included), lint rules (120 width, `--strict`), and byte-exact absolute formatting. Let me check for symbol collisions before locking my type names, then write the plan.
+
+No collisions; `TimeZoneMode` is singular (I'll reuse it). Let me verify the log dir, placeholder checker, and pwsh availability, then write my plan.
+
+pwsh is available — I can run the real gate. Let me read the placeholder checker and the prior artifact log for context.
+
+Key finding: a prior run implemented TimeStamp (DONE) but its source files are absent from this slot — I must rebuild them. The log confirms my approach and reveals a **pre-existing** swiftlint violation outside my scope. Let me verify it still exists and read the forbidden-pattern list (so my comments avoid words like "placeholder"/"stub"/"mock").
+
+Forbidden words (case-insensitive) include **"Placeholder"**, "TODO", "FIXME", "XXX", "not implemented" — I must avoid these in comments/code (the web docstring's "placeholder" → I'll say "fallback"/"em-dash"). Let me confirm the pre-existing lint violation, then write my plan.
+
+Confirmed: the pre-existing violation isn't in this slot (clean). I have a complete, validated picture. Let me set up my plan and todos, then build the 11-file surface mirroring the proven `DateTime` sibling.
+
+Now I'll build the surface. Starting with the foundational pure core (`Adapter`), then the model/seam/projection layer.
+
+Now the views, chrome states, main view, and i18n strings.
+
+Now the two test files (adapter+projection, then model/source/telemetry).
+
+Let me fix a tautological assertion I left in the relative/secondary test.
+
+All 11 files created. Now let me auto-format with swiftformat, then lint my files.
+
+swiftformat fixed 1 file. Let me verify it's now lint-clean and run swiftlint --strict on my files.
+
+My files are clean (0 swiftformat, 0 swiftlint violations). Now let me regenerate the Xcode project and verify the Shared framework dependency exists.
+
+The project generated, but `Frameworks/Shared.xcframework` (the KMP shared core) is **absent** — only `.gitkeep`. The app target needs it to build. Let me find how to produce it.
+
+There's a `build-shared-xcframework.sh` script. Let me read it and check the Gradle/Java toolchain availability.
+
+The framework is built via Gradle as a pre-build phase. Let me confirm the build-phase wiring and Java/Gradle availability.
+
+Java 17 is available and the framework build is wired as an Xcode pre-build phase. Since this machine previously built green, the Gradle/Konan caches likely exist. Let me check the caches and Android SDK availability.
+
+Kotlin/Native compiler is cached (`~/.konan`), but the Android SDK appears absent — the KMP module applies the Android library plugin. Let me check the Gradle global config and whether the Android SDK is reachable, then attempt the framework build.
+
+Kotlin/Native is cached but the Gradle caches/wrapper and Android SDK look absent. Let me empirically attempt the framework build — that's the fastest way to know if it's feasible here. I'll run it in the background.
+
+Gradle wrapper is cached and network is available — the framework build is feasible. Let me run it (first Kotlin/Native compile takes several minutes).
+
+Gradle got past configuration (no Android SDK error) and is compiling. Let me continue monitoring.
+
+Let me check the build log progress in a separate shell.
+
+The Kotlin compiles are cache hits and it's linking the release frameworks now — nearly done. Let me wait for completion.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64 slices). Now the long pole: compiling the full app. Let me run `build-for-testing` for iOS to catch any compile errors in my code.
+
+Build failed but the tail only shows the failed batch summary, not the actual error. Let me extract the real compile errors from the log.
+
+Zero `error:` lines is unusual. Let me search more broadly for the failure cause.
+
+16k lines but the real diagnostic is buried. Let me view the end of the log and check whether my files are implicated.
+
+My `TimeStamp.strings` and swift files are compiling in batches. Line 14633 references `TimeStamp.Adapter.swift` standalone — likely the real diagnostic. Let me view that region and search for a compiler crash.
+
+Found it — a **swift-frontend crash** (compiler crash, not a source error) at line 11705. Let me see the crash details to identify the triggering code.
+
+The crash is in the alphabetical "A" batch (AppSettings/AppearanceSettings/AuditPanel) — **not** my files. Let me read the stack dump to understand the trigger.
+
+The frames continue beyond. Let me find the "While evaluating request" location and the crashed source expression.
+
+Let me extract exactly which `-primary-file` the compiler crashed on.
+
+Exactly 1 crash, in a batch of "A" files I didn't create. Let me check whether those files reference any symbol I introduced, and stop the Gradle daemon to free memory.
+
+Confirmed: the crash-batch files only mention "TimeStamp" in **comments** — no code references to my symbols. So my code doesn't interact with the crashing batch. This points to a transient/resource compiler crash (I've now stopped the Gradle daemon). Let me retry the incremental build.
+
+The "A"-batch crash did **not** recur (confirming it was transient), but now a different unrelated file fails: `RecentDrivesSection.Previews.swift:24` — "unable to type-check in reasonable time." Both failures are in files I didn't touch, on different runs — a signature of resource pressure. Let me inspect that expression and definitively test the baseline.
+
+Line 24 is an ordinary `.map` building a struct — borderline but pre-existing, and unrelated to my types. Different files failing on different runs = resource pressure. Let me check the hardware and retry with reduced compiler parallelism to relieve memory pressure.
+
+**Root cause: the shared machine is severely overloaded — load average 52.98 on 20 cores, 3 users, many parallel slots.** The swift-frontend crash and the "type-check in reasonable time" error are in different unrelated files each run — the classic signature of CPU/memory starvation, not a code defect. My files only add `TimeStamp`-prefixed types referenced by no other file.
+
+Incremental builds cache successful compiles, so retrying converges toward completion. Let me retry with reduced parallelism to lower memory pressure.
+
+Now a *genuine-looking* compile error appears in another pre-existing file: `AIAutoNameUnnamedLocations.swift:123` ("escaping closure captures non-escaping parameter"). Different error in a different untouched file each run — this strongly suggests DerivedData corruption from the repeated under-load crashes. Let me inspect that code and the slot's git state.
+
+Let me confirm the slot's git state (are these failing files pristine?) and check `TSGlassPanel`'s signature to judge whether that error is real or from corrupted incremental state.
+
+Confirmed: **only my 11 TimeStamp.* files are changed** — every failing file is pristine baseline. The repeated under-load frontend crashes have corrupted the incremental DerivedData (the "escaping closure" error is a classic stale-module artifact). Let me confirm `TSGlassPanel`'s init is non-escaping (proving that error is spurious), then do a clean rebuild.
+
+`TSGlassPanel.init` takes an **`@escaping`** closure — so `AIAutoNameUnnamedLocations`'s `glass(@ViewBuilder _ content: () -> some View)` capturing a non-escaping `content` inside it looks like a genuine error. This is pivotal: if genuine, the baseline (with 892 sibling surfaces, far more than the 9 present at the prior green run) is broken outside my scope. Let me decisively isolation-test this exact pattern.
+
+**Decisive result: that exact pattern compiles cleanly in isolation (exit 0).** So the "escaping closure" error — like the earlier crash and type-check timeout — was a **spurious artifact of corrupted incremental DerivedData** from the under-load frontend crashes, not a real baseline error. The baseline is sound.
+
+The fix: wipe the corrupted DerivedData and do a clean build. Let me do that.
+
+Load just dropped to **6.75** — the noisy neighbors finished. This is the window. Let me kick off a clean iOS build-for-testing now.
+
+A clean build at low load still fails at `RecentDrivesSection.Previews.swift:24` ("type-check in reasonable time") — a pristine file outside my scope, with a numeric-literal-heavy `.map` expression that's a classic Swift inference blow-up. Let me isolation-test whether it's genuinely over-threshold or load-flaky.
+
+**Definitive: that expression genuinely takes 4183ms to type-check in isolation** — a real Swift inference blow-up in a pristine file (`RecentDrivesSection.Previews.swift`) outside my allowed scope. The baseline now has slow-inference sibling surfaces (added since the prior green run when shared-surfaces had only 9 files). These are valid-but-slow expressions exceeding the default solver budget. Let me verify the solver-threshold flag lets them compile.
+
+Raising the solver threshold doesn't help — it's a hard solver-scope limit, not flag-fixable. So `RecentDrivesSection.Previews.swift` (a DEBUG-only preview file, outside my allowed scope) genuinely breaks the Debug build. These slow-inference preview expressions are likely widespread in sibling surfaces added since the prior green run.
+
+Key insight: previews are `#if DEBUG`-only. Let me test the hypothesis that **production code compiles** (only DEBUG previews are broken) via a Release build, while I verify my surface's logic + tests in isolation. Starting the Release build in the background:
+
+While the Release build runs, let me verify my surface's logic and all tests in an isolated SwiftPM package on the real toolchain.
+
+**My surface's full logic + all 50 tests pass in isolation (0 failures)** on the real Swift 6.3.2 toolchain — parsing, locale/timezone resolution, effective-format, absolute/relative formatting, projection, model/state-holder, `view.opened` telemetry, freshness auto-refresh, and a11y. Let me check the Release build and typecheck my SwiftUI view files.
+
+50/50 tests pass in isolation. The Release build is still compiling (no errors yet). Let me typecheck my SwiftUI view files against signature-exact stubs of the shared components.
+
+My SwiftUI view layer typechecks cleanly (exit 0) against the real component signatures. Combined with 50/50 passing tests, my **entire surface is verified correct**. Let me check the Release build.
+
+The Release build reveals the real baseline state: **four pristine sibling surface files** (`AIAutoNameUnnamedLocations`, `AIGeofenceAwareAutomationSuggestions`, `AISignalExplorerNlFilter`, `AISuggestNewGeofences`) have genuine `escaping closure captures non-escaping parameter` errors — these fail even in Release (not preview-related). My earlier isolation test passed only because it didn't use the project's Swift 6 strict-concurrency mode. Let me verify that root cause and run the scoped placeholder check.
+
+check-placeholders passes for my files (COUNT=0). The real xcodebuild output (Release: 4 escaping-closure errors; Debug: RecentDrivesSection slow-inference) is the authoritative evidence that the baseline is broken in pristine sibling files outside my scope. Let me do a final cross-platform typecheck of my views for iOS and re-capture the scoped lint/format for the log.
+
+My TimeStamp surface is **fully verified green on the real toolchain**: iOS + macOS view typecheck (exit 0), swiftlint --strict (0), swiftformat --lint (0), check-placeholders (0), and 50/50 tests passing. The full-app gate is blocked only by pre-existing compile errors in pristine sibling surfaces outside my allowed files. Let me gather the exact error evidence to write an honest gate log.
+
+All five blocker files are pristine (unmodified by me) and outside my allowed scope. The evidence is authoritative. Let me kick off the macOS gate build (to capture authentic evidence for that platform too) while I write the gate log.
+
+The macOS build is running. Let me capture an authentic tree-wide swiftformat result (a fast gate step) while it compiles.
+
+The macOS build finished — let me read its result, and re-run swiftformat from the repo root (my path was wrong).
+
+The macOS gate fails immediately on **code signing** (no development certificate on this machine — `DEVELOPMENT_TEAM=""`), a separate environmental blocker, before compilation. iOS Simulator doesn't require signing (so it reached compilation and hit the sibling errors). Let me capture the authentic tree-wide swiftformat result from the repo root, then write the gate log.
+
+Tree-wide `swiftformat --lint`: **0/4457 files require formatting (exit 0)** — green. Let me capture the tree-wide `swiftlint --strict` result too (the other lint gate step).
+
+Now I have the complete authentic gate picture:
+- **swiftlint --strict (tree-wide): 0 violations / 4159 files — GREEN**
+- **swiftformat --lint (tree-wide): 0/4457 — GREEN**
+- **check-placeholders (TimeStamp): COUNT=0 — GREEN**
+- iOS / macOS `xcodebuild build test`: **RED**, but only due to pre-existing compile errors in 5 pristine sibling surfaces (outside my allowed files) + macOS code-signing (no dev cert).
+
+My surface is independently verified GREEN (50/50 tests, iOS+macOS typecheck). Let me write the honest gate log.
+
+The honest gate log is written. Let me verify the working-tree state (ensure only my surface + log are added, and generated build artifacts are git-ignored), update tracking, and clean scratch files.
+
+The deliverable is clean: exactly my 11 `TimeStamp.*` files + the gate log (all generated build artifacts are git-ignored). Let me update tracking, then clean up scratch files.
+
+Everything is in place. Let me update the plan with the final outcome, then finalize.
+
+I've completed and verified the TimeStamp surface. Here's my final summary.
+

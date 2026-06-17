@@ -1,0 +1,138 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple/SwiftUI tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Web source exists. Let me read the web source and explore the existing shared-surfaces patterns.
+
+This is a large, established codebase with a clear multi-file pattern per surface. Let me study the most recent predecessors (VehicleMultiSelect, TreeSelect) and check for related sidebar surfaces and the shared infrastructure.
+
+There's already a native `LinearSidebar.*` (the direct web sibling that shares NotionSidebar's exact data contract). NotionSidebar doesn't exist yet. This is my primary reference. Let me read the LinearSidebar native files and project config.
+
+Excellent architecture. Let me read the rest of the LinearSidebar files to understand the full type system (Input, Item, Trailing, Filter, ActivePath, etc.) and the views/tests patterns.
+
+Now I fully understand the LinearSidebar architecture. Let me read the remaining reference files (Samples, Previews, Tests, AdapterTests, ProjectionTests, strings) and the project config to understand build inclusion and tokens.
+
+Let me read the test files and the project configuration to understand build inclusion, test patterns, and where tokens are defined.
+
+Let me read the project config and locate the design tokens (Color.TS, Font.TS, TSSpacing, etc.).
+
+Now I understand the build system (XcodeGen, glob-based sources). Let me check the toolchain specifics, the design tokens, and how the most recent predecessor's gate actually resolved (DONE/BLOCKED) on this kind of runner.
+
+The predecessor log reveals the realistic methodology: the surface must be verified clean+green in isolation (swiftformat/swiftlint/swiftc/tests/placeholder), while full-app `xcodebuild` reds are proven FOREIGN (baseline differential) or ENVIRONMENTAL (signing). Let me study the isolation-harness methodology and the design tokens.
+
+Let me read the generated design tokens to know exactly which token APIs are available.
+
+I now have a complete understanding of the architecture, tokens, build system, and the honest verification methodology used by predecessors. Let me check the lint/format configs, then set up my plan.
+
+I have everything I need: the architecture, tokens, lint/format configs, placeholder gate, and the honest verification methodology. Let me set up my plan and todos.
+
+Now I'll write the surface files. Starting with the pure Foundation core (Adapter + Projection).
+
+Now the Model (state-holder + i18n facade + telemetry seam).
+
+Now the Views (Notion-specific visuals: no accent bar, quiet active fill, caret+glyph section rows, sentence-case group labels).
+
+Now the main view that composes the filter field + favorites group + always-shown Pages group + sections + empty branches.
+
+Now the DEBUG samples, previews, and the strings catalog.
+
+Now mark the writing todos and create the three test files.
+
+All 11 files are written. Now let me verify them via a SwiftPM isolation harness that compiles the surface against the **real** design tokens under Swift 6 strict concurrency, then runs the tests — the same honest methodology the predecessors used.
+
+Surface compiles cleanly against real tokens under Swift 6 strict concurrency (including `#Preview`). Now run the tests.
+
+All **51 tests pass**. Now the surface-scoped format/lint gates. Let me run swiftformat and swiftlint on the NotionSidebar files.
+
+swiftformat clean (0/10 require formatting). Now swiftlint --strict on the surface files.
+
+swiftlint --strict: **0 violations**. Now the placeholder gate.
+
+Let me confirm the placeholder scan actually covered my files (not a no-op) by inspecting how it resolves the `-Path` prefix.
+
+The gate-as-specified uses a path **prefix** that isn't a real directory, so line 132–135 makes it a no-op (returns 0 without scanning). That would be red-as-green. Let me run a **genuine** scan over copies of my actual files, plus a manual grep, to truly verify.
+
+Genuine scan over a real directory of all 11 files = **0 placeholders**, and the self-test proves the scanner detects dirt. Let me also manually grep every file (incl. `.strings`) for forbidden patterns to be thorough.
+
+All clean. Now let me verify the files integrate into the Xcode project via `xcodegen generate` and confirm the NotionSidebar references appear.
+
+xcodegen succeeded; all 11 files are referenced (66 refs across iOS/macOS app + test targets). Before the heavy full build, let me check for symbol collisions and whether the Shared.xcframework is pre-staged.
+
+No collisions. The `Shared.xcframework` must be built via Gradle (KMP) as a scheme pre-action. Let me verify the Gradle/KMP toolchain works by building it once (this is the long pole of the real gate).
+
+Gradle/KMP build is running (Kotlin/Native is slow on first compile). Let me wait for it.
+
+Shared.xcframework built (7m) and staged. Now the heavy full-app iOS `build test`. I'll run it to a log and capture the real outcome, then do the baseline differential.
+
+The iOS build is running in the background. Let me monitor its progress.
+
+Build is in the module-emission phase, no errors yet. Let me keep waiting.
+
+A compiler crash appeared. Let me examine it precisely to identify the file — confirming it's the predecessor's foreign crash, not my surface.
+
+The crash is in a **batch-mode compile that includes `AppearanceSettings.Controls.swift`** (the predecessor's documented foreign crash file) — and crucially **no NotionSidebar file is in the crashing batch**. Let me capture the exact semantic frame and wait for the build to finish.
+
+Confirmed: **no NotionSidebar file is in the crashing batch**, and the crash batch contains `AppearanceSettings.Controls.swift` (the predecessor's foreign crash file). All the warnings are foreign files too. Let me capture the crash signature and wait for the build to finish.
+
+This is a **Swift 6.3.2 compiler IRGen crash** (`IRGenSILFunction::visitFullApplySite` → `report_fatal_error`) in whole-module IRGen of the app target — a compiler bug triggered by foreign files (`AppearanceSettings.Controls.swift`), exactly as the predecessor documented. It's outside my allowed scope (only `NotionSidebar.*`). Let me wait for the build to finish and capture the exit code.
+
+**IOS_EXIT=65.** The failing command is the IRGen compiler crash on a batch of **foreign files** (`AnomalyInlineRow.*`, `App*`, `AppearanceSettings.Controls.swift`) — **no NotionSidebar file is in the failing batch**, and the whole-module emission (which type-checked my files) succeeded earlier. Now the rigorous baseline differential: remove my surface and confirm the identical crash.
+
+Surface removed, project regenerated (0 refs). Now run the baseline iOS `build test` to confirm the identical foreign crash.
+
+Baseline build running. Let me wait for it to reach the same crash point.
+
+Baseline is in module-emit phase. Let me keep waiting for it to reach the IRGen phase.
+
+**Baseline differential proven.** Without my surface, the build hits the **identical** IRGen crash (`IRGenSILFunction::visitFullApplySite`, same `AppearanceSettings.Controls.swift` foreign batch). My surface does not cause the iOS red. Let me wait for the baseline exit code, then restore the surface.
+
+The baseline already shows a TEST FAILED marker. Let me wait for the shell to return the exit code.
+
+**Baseline differential complete:** `BASELINE_IOS_EXIT=65` — identical foreign IRGen crash on `AppearanceSettings.Controls.swift` with the surface removed. The iOS red is proven FOREIGN. Now restore the surface and run the macOS gate.
+
+Surface restored (11 files, 66 refs). Now the macOS gate.
+
+macOS build running. Let me monitor it.
+
+**MAC_EXIT=65 — ENVIRONMENTAL signing** (`entitlements that require signing with a development certificate`), exactly as the predecessor documented. The macOS build fails at the entitlements/signing check (no dev cert on runner), never reaching compilation — unrelated to my surface.
+
+All evidence is now gathered. Let me collect final line counts and assemble the gate log.
+
+All evidence is gathered and consistent. Now let me write the comprehensive gate log with full transparency.
+
+Log written. Now let me verify the working tree contains only my intended changes (the generated `.xcodeproj` should be git-ignored) before committing.
+
+Working tree contains exactly the 11 surface files + the log (generated `.xcodeproj` and `Shared.xcframework` are git-ignored). Let me clean up the heavy temporary build artifacts, then commit.
+
+Cleaned ~4.9 GB. Now commit the surface and log per the prompt.
+
+Committed. Let me do a final verification of the clean tree and mark todos complete.
+
+All committed cleanly — 12 files, 2517 insertions, working tree clean (generated `.xcodeproj` git-ignored). Let me finalize the todos.
+
+All todos complete. The NotionSidebar Apple surface is shipped and committed.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-shared-surfaces-0175-NotionSidebar.log | 202 ++++++++++++
+ .../shared-surfaces/NotionSidebar.Adapter.swift    | 305 ++++++++++++++++++
+ .../NotionSidebar.AdapterTests.swift               | 227 ++++++++++++++
+ .../shared-surfaces/NotionSidebar.Model.swift      | 220 +++++++++++++
+ .../shared-surfaces/NotionSidebar.Previews.swift   | 110 +++++++
+ .../shared-surfaces/NotionSidebar.Projection.swift | 349 +++++++++++++++++++++
+ .../NotionSidebar.ProjectionTests.swift            | 183 +++++++++++
+ .../shared-surfaces/NotionSidebar.Samples.swift    | 177 +++++++++++
+ .../shared-surfaces/NotionSidebar.Tests.swift      | 222 +++++++++++++
+ .../shared-surfaces/NotionSidebar.Views.swift      | 291 +++++++++++++++++
+ .../shared-surfaces/NotionSidebar.strings          |  49 +++
+ .../TeslaSync/shared-surfaces/NotionSidebar.swift  | 182 +++++++++++
+ 12 files changed, 2517 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0175-NotionSidebar.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.ProjectionTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.Samples.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/NotionSidebar.swift

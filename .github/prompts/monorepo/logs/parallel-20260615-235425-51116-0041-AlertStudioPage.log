@@ -1,0 +1,92 @@
+I'll start by exploring the repository structure to understand what exists for this Apple parity task.
+
+Good — Xcode 26.5, Swift 6.3.2, swiftlint, and pwsh are all available, so the gate is not blocked on tooling. Let me explore the Apple app structure and the web source.
+
+Xcode is available. The web page is large (2342 lines). Many Apple pages already exist as a pattern to follow. Let me examine the actual TeslaSync directory structure and an existing implemented page for conventions.
+
+The actual repo uses a different layout (`feature-views`, `shared-surfaces`, etc.) — not `Features/Notifications`. This is a large established codebase. Let me investigate the existing AlertStudio state, ledger entry, and conventions.
+
+There's already a substantial multi-file `AlertStudioPage` implementation in `feature-views/` (the prompt's `Features/Notifications/` path is idealized — actual repo uses `feature-views/`). No log exists yet for this task. Let me assess the existing implementation's completeness and check the ledger row.
+
+A substantial implementation already exists (5895 lines across 22 Swift files), committed in the baseline. The ledger has 150 rows but no `AlertStudio` row yet. Let me understand the gate process by reading a completed page's log, check the project setup, and read the main page file.
+
+This reveals the established methodology. Critically, the `AlertStudioPage` implementation already exists in the baseline. Let me understand its history, the strings situation, and whether it's complete. Let me read the key files and check the strings catalog.
+
+Key findings: AlertStudioPage was added via commit `e5bd28357 ...add AlertStudioPage surface (P4)`. The strings catalog already has 156 `notifications.alertStudio` matches. The ledger uses 2 rows per page (macos + ios), all 150 done, no notifications row yet. Let me read the actual implementation and compare it against the existing P7-done pages' layout.
+
+This existing `feature-views/AlertStudioPage.swift` is a complete, high-quality implementation (the "P4 surface"). But the P7-done `ApiPlaygroundPage` shipped to a *different* location: `apps/apple/Sources/Features/Admin/`. Let me understand the relationship between these two page systems and find where the P7 deliverable belongs.
+
+Now it's clear: P7 pages ship to `apps/apple/Sources/Features/<Domain>/` (e.g. `ApiPlaygroundPage` committed there as "P7 admin"). The `feature-views/AlertStudioPage` is the separate P4 surface (a sibling I must not edit). My deliverable goes to `apps/apple/Sources/Features/Notifications/`. Let me study the largest done P7 page as a template, the route registration pattern, and the component library.
+
+There's a `Sources/Notifications/` dir and `Sources/Features/` domains. Let me study the largest done page (`DriveScore`, 160 items) as a complex template, plus the route registration pattern and the existing Notifications sources.
+
+Now I understand the routing. Let me study the biggest done page (`DriveScore`) as my structural template, the route parser for multi-segment paths, the app registration chain, and locate the 8 GlassPanels in the web source.
+
+8 GlassPanels confirmed (lines 1307, 1361, 1414, 1454, 1512, 1659, 1880, 2183) — matching GlassPanel1-8. Routes use an `aliases` map in `AppRouteParser`. Let me read the web page's structure (hooks + the 8 panels), the model pattern, and the route parser.
+
+Critical: both `Sources/` and `TeslaSync/feature-views/` compile into the same target, and feature-views already declares `public struct AlertStudioPage`. I must check for type-name collisions before designing my P7 page. Let me investigate the overlap between the two page systems.
+
+feature-views has exactly **one** `*Page.swift` (AlertStudioPage) — it's an anomaly; all other P7 pages live in `Sources/Features/`. Same-target type collision is the key constraint. Let me check whether the feature-views `AlertStudioPage` is actually wired/referenced anywhere, which determines my naming strategy.
+
+The feature-views `AlertStudioPage` is an orphaned predecessor (never instantiated/registered in `Sources/`) but occupies `AlertStudioPage`, `AS*`, `RuleTemplate`, `SignalDefinition`, etc. in the same target. So my P7 page needs collision-free names. `AlertStudioPageModel` is free. Let me write a plan, verify exactly which of the 125 strings are already in the catalog, and read the panel regions.
+
+Only 4 of 125 keys are actual catalog keys — the 156 grep hits must be substrings/comments. Let me verify the catalog structure and confirm what's really there before planning the string additions.
+
+The catalog namespaces web keys under `translation.` prefix. Let me re-check all 125 required keys with that prefix.
+
+Now precise: 120 present as `translation.<key>`, 4 as bare keys, 5 missing. The catalog uses `translation.` prefix for web-ported i18n keys. Let me check the 4 bare keys' translation variants, the bulk plural structure, and how existing P7 pages reference `translation.*` keys.
+
+Now I fully understand the strings: use `translation.<key>` literals (matching done pages). 122/125 covered (incl. `translation.bulk.noun.rule` plural); 3 to add. Let me set up a plan + todos, then read the panel regions, the 3 missing strings' web defaults, and the P7 component library.
+
+Let me read the 3 missing keys' web defaults and the core P7 component APIs (typography, buttons, cards, fields, pickers, feedback) plus the DriveScore model pattern.
+
+Got the 3 missing string defaults. Typography API is clear. Let me read the remaining component APIs (Buttons, Cards/GlassPanel, Fields, Pickers, Badges, Feedback) and the DriveScore model/page pattern.
+
+Let me read Fields, Pickers, Badges, the Feedback components, and the DriveScore model/page pattern.
+
+Rich form components available. Let me read Badges, the Feedback components (EmptyState/ErrorDisplay/Spinner/Skeleton), and the DriveScore model + page to finalize the model/state pattern.
+
+Let me read the exact signatures for the Feedback states/skeletons and the DriveScore model + page to finalize the model/state pattern.
+
+I have the model pattern and feedback APIs. Let me read the DriveScore page idiom, sample data source, skeleton API, design tokens, the app registration site, and an existing model test.
+
+I have the full page idiom and registration pattern. Now let me extract exact content: read the design tokens and the feature-views Copy/Editor files (which already map every string key to a SwiftUI element — the precise blueprint I'll re-express under non-colliding names).
+
+`ASCopy` is the exact blueprint. Let me read `Copy.More.swift` for the remaining keys and locate the design token definitions (Color.TS / Font.TS / TSSpacing / TSRadius).
+
+I have the full string blueprint. Let me confirm exact token member names and label the 8 web panels precisely for parity evidence.
+
+Tokens confirmed (Font.TS ramp, TSRadius). Let me verify Color.TS member style and label web panels 4/5/7/8, then start building.
+
+I now have the complete blueprint: 8 panels mapped, all 125 strings with defaults/grouping (from `ASCopy`), tokens confirmed, model/page/registration patterns understood. Naming decision: view = `AlertStudioScreen`, model = `AlertStudioPageModel`, domain types `Studio*`-prefixed (all collision-free vs the predecessor's `AS*`/`AlertStudioPage`). Let me set up todos and start building.
+
+Catalog uses iOS positional specifiers (`%1$@`, `%lld` plural). Let me see how done pages format these (ApiLogsPage) and whether any handle xcstrings plurals, so I match the exact pattern.
+
+Clear patterns now: alertStudio interpolated keys use `%1$@`/`%2$@` (→ `String(format:)`), plurals use separate `_one`/`_other` keys (ChargingList precedent). I'll add 6 catalog keys (3 hints + 2 bulk plural + route). Let me verify all interpolated keys' specifier counts, then write the Strings file.
+
+All specifiers confirmed. Let me check the swiftlint config constraints, then start writing files.
+
+Constraints clear: line length ≤120 (strict), swiftformat before-first wrapping. I'll write code then autoformat. Let me write the Strings file (named `LocalizedStringKey` constants + format helpers).
+
+Strings file done. Now the domain models with collision-free `Studio*` names.
+
+Now the core `@Observable` model.
+
+Now the sample/empty/failing data sources.
+
+Now the main view (`AlertStudioScreen`).
+
+Now the Rules panel (GlassPanel4) + rule row (GlassPanel5) + bulk toolbar.
+
+The editor is the largest piece. Let me first add optional min/max bound fields to the draft, then write the editor panel.
+
+Now the editor — split into small section structs to avoid SwiftUI type-check timeouts.
+
+Now the behavior/vehicles/footer editor sections.
+
+Now the templates panel (GlassPanel2/3), channels panel (GlassPanel8), and snooze sheet.
+
+Now route registration and nav. Let me read the registry API and the AppRoute switches I must update.
+
+Registry API confirmed. Let me write the route registration and make the navigation edits.
+Authorization error, you may need to run /login (Request ID: E25D:EEAA5:1CF546:1FC4A8:6A31CC25)

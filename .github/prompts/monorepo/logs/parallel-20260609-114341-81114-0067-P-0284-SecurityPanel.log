@@ -1,0 +1,38 @@
+I'll start by exploring the repository structure to understand what exists, then read the web source spec and check tooling availability.
+
+Toolchain confirmed: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators (iPhone 16 booted). Now let me read the web source and explore the existing Apple app structure.
+
+Web source is clear. Let me examine the Apple app structure systematically — the tree is large, so I'll target key areas.
+
+The `feature-views/` dir is flat with 2228 files using a multi-file convention per surface. Let me find sibling telemetry panels already ported and locate the Xcode project/scheme setup.
+
+XcodeGen project (`project.yml`). Telemetry panels aren't ported yet. Let me read the project config and find the most complete existing panel to use as the canonical pattern.
+
+Now I understand the multi-file convention. `SpeedGearPanel` and `LiveMotorStatus` are the closest live-telemetry-panel analogs. Let me read the complete `SpeedGearPanel` set as the canonical reference.
+
+This is a highly sophisticated, well-architected codebase. Let me read the remaining SpeedGearPanel files to learn the view composition, tokens, strings format, and test patterns.
+
+Let me read the test files and verify the shared design tokens/components exist (Color.TS, Font.TS, TSSpacing, TSGlassPanel, TSBadge, TSEmptyState, TSButton, TSSkeleton, TSFadeIn, TSTone).
+
+I now fully understand the established pattern. Let me check the web `SecurityEvent` type and verify the shared design tokens/components I'll use exist with their exact signatures.
+
+The `SecurityEvent` fields are clear (`doors_open`/`windows_open` are nullable strings). Let me verify the design tokens and remaining component signatures (TSButton, TSSkeleton, TSFadeIn, TSGlassPanel, Color.TS, Font.TS, TSSpacing, TSRadius).
+
+Let me verify `Font.TS` roles and the `TSGlassPanel` / `TSFadeIn` signatures, plus confirm how the `.strings` localization is wired into the bundle.
+
+I have all the patterns and signatures I need. Now let me assess build feasibility — check `xcodegen`, the Shared.xcframework staging script, and whether a project is already generated.
+
+The build depends on a KMP `Shared.xcframework` assembled via Gradle (heavy). Let me assess whether that toolchain works here and check the parity tooling. This determines build feasibility.
+
+`pwsh` is available for the parity tooling. The heavy part is the KMP `Shared.xcframework` (Gradle build, not yet built). Let me kick that off in the background now while I write the SecurityPanel files, since it's the long pole for the build gate.
+
+Build is running in the background. Let me set up the plan and todos, then write the SecurityPanel files following the SpeedGearPanel pattern.
+
+Now I'll write the files. Starting with the SwiftUI-free core (Model + Adapter).
+
+Now the pure projector (Adapter):
+
+Core done. Let me check the build progress and continue with the view files.
+
+Gradle still initializing. Continuing with the main view while it builds.
+

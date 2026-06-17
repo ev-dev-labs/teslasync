@@ -1,0 +1,132 @@
+I'll start by exploring the environment and understanding what's available, since this task requires Apple/SwiftUI tooling.
+
+Full Apple toolchain is present (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Now let me read the web source and understand the Apple app conventions.
+
+Now let me explore the Apple app structure deeply to understand conventions — state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and any existing shared-surfaces precedent.
+
+There's an established `shared-surfaces` pattern with multi-file conventions (`.Adapter`, `.Model`, `.Views`, `.Chrome`, `.Logic`, `.Projection`, `.Previews`, `.Tests`, `.strings`). Let me study a complete reference surface, the state-holder facade, design tokens, i18n, and diagnostics.
+
+The closest analog is `AnnotationList` (also a `components/charts/` source ported as a shared surface) with the full file set. Let me read it end-to-end plus the facade/state-holder layer.
+
+Let me read each AnnotationList file individually with the view tool.
+
+Excellent pattern. Now the Views, Previews, Tests, AdapterTests, and strings files.
+
+Now let me read the design tokens (P1/S9), the native chart components (to find any existing hidden-series state holder for `useChartHiddenSeries`), and check for shared primitives.
+
+There's an existing `TSChartLegend` component (in `ChartContainer.swift`) I must not modify — my job is the new `shared-surfaces/ChartLegend.*` surface. Let me read the existing legend for consistency, plus the chart models and confirm the design tokens.
+
+Now let me confirm the design tokens and shared primitives I'll use exist with the exact names.
+
+Let me confirm the shared primitives (`TSButton`, `TSSkeleton`, `TSFadeIn`) signatures, and verify the test target setup works by building the existing project first (baseline).
+
+Let me examine the sibling logs — especially my reference surface 0063 (AnnotationList) — to learn the exact gate behavior and expected log format on this runner.
+
+This log reveals the established precedent and verification methodology. Let me read the full 0063 log to learn exactly how isolated assertions were run, and check for type-name collisions for my `ChartLegend` types.
+
+Now I fully understand the established methodology. Let me check for type-name collisions in the app module, read the web `useHiddenSeries` contract (the `useChartHiddenSeries` data source), and confirm a clean baseline.
+
+Clean baseline, no collisions, and I have the full `useChartHiddenSeries` contract. Let me read the lint/format configs and the placeholder checker so my files pass the in-scope gates, and confirm `pwsh` availability.
+
+I have everything I need: the proven 9-file AnnotationList pattern, the design tokens, the `useChartHiddenSeries` contract, lint/format rules, placeholder patterns, and the exact gate methodology + precedent. Let me set up a plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure core.
+
+Now the SwiftUI views, including a proper wrapping flow layout for an idiomatic legend.
+
+Now the main surface view, previews, and strings.
+
+I need to fix argument order in the previews — `connection` is declared before `interactivity`.
+
+Now the strings file.
+
+Now the test suites — pure-core adapter tests and projection/model/view tests.
+
+All 9 files created. Now I'll run the verification gates, starting with format + lint on the surface files.
+
+Formatting nits. Let me let swiftformat auto-fix them (mechanical), then re-verify.
+
+I'll manually refactor the Views switch (it needs a mutable var afterward), then let swiftformat fix the rest.
+
+FORMAT_EXIT=0. Now swiftlint --strict on the surface files.
+
+LINT_EXIT=0, zero violations. Now the placeholder gate (literal path + a real scan of the files).
+
+Placeholder gate clean (literal + real scan = 0). Now the isolated logic harness — compile the Adapter + Projection + Model under Swift 6 strict concurrency and **run** assertions across every branch.
+
+Top-level code requires the file be named `main.swift`. Let me rename and recompile.
+
+Harness compiles under Swift 6 strict concurrency. Now run it.
+
+Harness RAN: **71 checks, 0 failures**. Now I'll typecheck the SwiftUI Views + full surface against the REAL design system. Let me identify the dependency closure.
+
+`TSButtonStyle`, `TSSkeleton`, `TSFadeIn`, `TSChartPalette` all depend only on the generated tokens. Let me typecheck my surface against the REAL design system (tokens + real components) — ship build, then DEBUG (with Previews).
+
+`TSSkeleton`'s sibling types reference `TSCard`. Let me find the full component closure rather than chase symbols one by one.
+
+Components/Design don't depend on app modules. Let me typecheck my surface against the **entire** real component + design library (the faithful "real design system").
+
+The full library pulls unrelated deps (`UnitPreferences`). Let me use the minimal closure my Views actually need. Let me check `Cards.swift` deps first.
+
+Closure resolves to 8 real dep files. Let me typecheck SHIP + DEBUG against this real design-system closure.
+
+`tsGlassPanel` is in `TSMaterial.swift` (Tokens-only deps). Adding it closes the chain.
+
+Both typechecks pass against the real design system (**SHIP=0, DEBUG=0**). Now the test-file API typecheck — confirm the tests reference the surface API correctly (only XCTest-module errors expected, zero surface-symbol errors).
+
+The only error is the absent XCTest module (filename coincidentally matched my grep). Let me make XCTest available so the test **bodies** actually typecheck against the surface API.
+
+All 92 errors are `cannot find 'XCTAssert*' in scope` — the XCTest assertion functions that resolve only inside an XCTest bundle (exactly the documented precedent). Let me confirm none are surface-API errors.
+
+Those 12 are cascades from the unresolved `XCTAssertEqual` (the compiler can't infer the enum base when the assertion function is missing). Let me prove the test bodies are API-correct by supplying minimal XCTest shims so everything resolves — any remaining error would be a real surface-API mismatch.
+
+Test bodies typecheck cleanly against the surface API (**0 surface-API errors**). Now `xcodegen generate` to enumerate the files, and I'll verify the documented pre-existing iOS duplicate-type baseline still holds.
+
+XCODEGEN_EXIT=0 — all 9 ChartLegend files enumerated (54 pbxproj refs). The documented pre-existing iOS duplicate-type baseline (`StateTimelineModel`, `StateTimelineConnection`, `RecentDrivesModel` declared in two sibling slots) is independently re-confirmed present — not mine. Let me assess the Shared.xcframework/Gradle setup before attempting the full build.
+
+Caches are warm (Gradle 3.3G, Konan 1.6G) from sibling builds, so the Kotlin/Native xcframework build is feasible. Let me build it (async, monitored).
+
+Gradle is near done (debug XCFramework written, release linking). Let me wait for completion.
+
+Release linking in progress. Let me continue waiting for the build to complete.
+
+**GRADLE_EXIT=0** — Shared.xcframework built (6m36s) and staged. Now the full iOS `xcodebuild build test` (the real gate), capturing output to grep for any ChartLegend errors.
+
+**IOS_EXIT=65** (real). Now I must prove the failure is the pre-existing duplicate types and that ChartLegend contributes **zero** errors.
+
+**Zero ChartLegend errors** (`ChartLegend_error_count=0`). The 162 errors are 120 `ambiguous for type lookup` on the pre-existing duplicate `RecentDrives*`/`StateTimeline*` types plus their cascades. Let me definitively confirm no ChartLegend file appears among the failing files.
+
+Definitive: the 10 failing files are **all** sibling `RecentDrives*`/`StateTimeline*` files — **no ChartLegend file appears**, and each ambiguous type is declared twice in sibling slots. IOS_EXIT=65 is the documented pre-existing baseline. Now the macOS gate.
+
+**MAC_EXIT=65** (real) — failure is the absent macOS development-signing certificate (entitlements require it; failed at signing in 15s before compilation), `ChartLegend` errors = 0. Both full-app gates match the documented pre-existing baseline exactly. Let me verify a clean git footprint and gather versions for the log.
+
+Clean footprint — only the 9 `ChartLegend.*` files are new; xcodeproj + Shared.xcframework are git-ignored. All gates captured. Let me write the gate log.
+
+Now clean up temp artifacts, do a final lint/format guard on the exact files to be committed, then commit.
+
+Final guards green. Now stage exactly the 9 files + log and commit.
+
+All todos complete and committed. Task done.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-shared-surfaces-0068-ChartLegend.log  | 170 ++++++++++
+ .../shared-surfaces/ChartLegend.Adapter.swift      | 254 ++++++++++++++
+ .../shared-surfaces/ChartLegend.AdapterTests.swift | 152 +++++++++
+ .../shared-surfaces/ChartLegend.Model.swift        | 240 ++++++++++++++
+ .../shared-surfaces/ChartLegend.Previews.swift     |  98 ++++++
+ .../shared-surfaces/ChartLegend.Projection.swift   | 283 ++++++++++++++++
+ .../shared-surfaces/ChartLegend.Tests.swift        | 369 +++++++++++++++++++++
+ .../shared-surfaces/ChartLegend.Views.swift        | 312 +++++++++++++++++
+ .../TeslaSync/shared-surfaces/ChartLegend.strings  |  39 +++
+ .../TeslaSync/shared-surfaces/ChartLegend.swift    |  90 +++++
+ 10 files changed, 2007 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0068-ChartLegend.log
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartLegend.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartLegend.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartLegend.Model.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartLegend.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartLegend.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartLegend.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartLegend.Views.swift
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartLegend.strings
+ create mode 100644 apps/apple/TeslaSync/shared-surfaces/ChartLegend.swift

@@ -1,0 +1,36 @@
+I'll start by understanding the task: porting a web component to native Apple SwiftUI. First, let me check the environment capabilities and read the web source spec.
+
+Full Apple toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh). There's an existing `apps/apple/` app. Let me read the web source spec and explore the Apple app structure.
+
+Now I understand the web spec. Let me explore the existing Apple `feature-views` directory and supporting infrastructure (state holders, tokens, i18n, diagnostics) to match conventions.
+
+This is a large established codebase with a multi-file convention per feature view. Let me find sibling telemetry panels already ported and the supporting infrastructure.
+
+`TelemetryGrid` doesn't exist yet, but `InfoTile` (its child) and sibling `VehicleStatePanel` (the closest analog — takes VehicleState, uses units, renders states) both exist. Let me study these as templates.
+
+`InfoTile` is already ported and my grid will compose it. Now let me study `VehicleStatePanel` — the closest analog that binds `VehicleState` via a state holder, uses the Units facade, and renders all states.
+
+Excellent, the architecture is clear and sophisticated. Now let me read the Format (units), Views (state views), Previews, Tests, and strings for VehicleStatePanel, plus the shared Units facade.
+
+The pattern is now very clear. Let me read the previews/tests conventions, the native motion components, design tokens, and the web unit formatters (formatDistance/formatTemperature) + VehicleState type.
+
+Let me read the native motion components, and the web unit formatters (formatDistance, formatTemperature, fmtInt, fmtNumber) plus the VehicleState type.
+
+Let me locate the motion components, key design symbols, and the web distance/temperature formatters and VehicleState type.
+
+The view tool has a transient path issue; let me use bash to read Motion.swift and find the token definitions.
+
+Motion components map: `TSStaggerContainer` + `TSStaggerItem(index:)`. Now let me read the design tokens and the web formatters/types.
+
+The design tokens are generated. Now let me read the web formatters (`formatDistance`, `formatTemperature`, `fmtInt`, `fmtNumber`) and the `VehicleState` type to port them precisely.
+
+I now have the exact formatter semantics. Let me read the `VehicleState` API type and check the project.yml build config + the placeholder checker script.
+
+Now let me read the test target/scheme config, the placeholder checker, and lint/format configs.
+
+I have the full architecture and constraints. Before writing code, I must verify the build is even feasible in this environment (Shared.xcframework, xcodegen). Let me check.
+
+Critical finding: the build needs a Kotlin `Shared.xcframework` (only `.gitkeep` present) built via Gradle, plus `xcodegen` to generate the project. Let me assess whether the Kotlin/Gradle toolchain works here.
+
+Java 17 + gradlew present. Let me kick off the Kotlin `Shared.xcframework` build in the background (it's the long pole) while I write the surface code.
+

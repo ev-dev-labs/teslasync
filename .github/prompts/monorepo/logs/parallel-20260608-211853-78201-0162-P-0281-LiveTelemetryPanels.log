@@ -1,0 +1,40 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking platform capabilities.
+
+Toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, simctl). Not blocked. This is a composite of 7 panels. Let me read all panel sources and explore the existing Apple project structure.
+
+Let me read the remaining panels and helper components in parallel.
+
+Now I understand the web composition fully. Let me explore the existing Apple project structure — state holders, tokens, i18n, diagnostics, and existing feature-views.
+
+The feature-views directory is large (1946 entries). Let me check for existing LiveTelemetryPanels files and find a representative sibling feature-view to use as a template.
+
+The convention is clear: `<Name>.swift`, `.Model.swift`, `.Views.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me read a complete representative example (`AcDcStatsPanel.*`) to learn all the patterns.
+
+Excellent template. Now let me understand the design tokens, the build system (project.yml, xcodeproj/xcodegen), and the remaining example files.
+
+Now let me assess the build system — this is the highest risk. Let me check project.yml, whether an xcodeproj exists, and the design tokens.
+
+Now I understand the build system: XcodeGen generates the git-ignored `.xcodeproj`, with a preAction staging `Shared.xcframework`. Let me examine the design tokens, the shared facade (state holders), the placeholder checker, and the xcframework script.
+
+Critical: the xcframework preAction requires the Kotlin/Gradle toolchain. Let me read the pending-verifications doc (which explains the gate strategy), the design tokens, and the shared facade seam files.
+
+Key insight: `macos-pending-verifications.md` documents that the full-app `xcodebuild` gate is blocked by **pre-existing unrelated** parallel-merge collisions, and the established methodology (6 prior prompts) is **isolated verification** (SwiftPM build + tests + swiftc typecheck + lint + placeholder + xcodegen), deferring full-app build to macOS CI. My template `AcDcStatsPanel` imports **no KMP `Shared`** — it defines its own protocol seam. I'll follow that exactly. Let me find the design tokens and TS component APIs, and a prior log to replicate the harness.
+
+Now let me look at a prior surface's verification log to replicate the exact isolated harness, and check the full Color.TS palette and a couple of shared components I'll reference.
+
+This is the complete blueprint. The methodology is sanctioned and clear. Let me verify my harness assumptions: pwsh availability, and whether `Sources/Components` + `Sources/Design` are self-contained (no `import Shared`).
+
+pwsh is available and Components/Design are self-contained (no `Shared` import). Let me confirm the exact APIs of the shared components I'll use (TSButton, TSSkeleton, and any MetricCard/Badge), so my code compiles first try.
+
+Rich shared library available. Let me get the exact web API types for the 7 snapshots, and see how existing native surfaces handle unit formatting (temperature/speed/pressure/distance) without importing `Shared`.
+
+Native `Units` formatter + `UnitPreferences` exist (the `useUnits()` parity). Let me read the full `Units` API and the web snapshot type definitions.
+
+`Units`/`UnitPreferences` live in `SharedFacade` which imports `Shared` (KMP) — so I must **not** depend on them in the isolated harness. Like `AcDcFormat` ported `numberFormat.ts`, I'll port the SI→display conversion as pure, testable helpers in my Adapter, parameterized by a measurement system carried in the Input snapshot. Let me read the canonical web conversion logic.
+
+I now have the complete conversion logic (factors, default precision distance=1/speed=0/temp=1/pressure=1, empty='—'). Let me verify there are no symbol collisions in the app target for the type names I'll introduce, then set up my plan.
+
+Existing `LiveTelemetry.*` and `LiveVehicleState.*` surfaces already exist in feature-views. I must avoid symbol collisions in the app target. Let me inspect their public declarations and the surface slugs they use.
+
+Many `LiveTelemetry*`/`LiveVehicleState*`/`Live*` symbols exist. I'll use a unique `LTP` prefix for all helper types and name the main view `LiveTelemetryPanels`. Let me confirm `LTP` is collision-free and check what web sources the existing `LiveTelemetry.swift`/`LiveVehicleState.swift` map to.
+

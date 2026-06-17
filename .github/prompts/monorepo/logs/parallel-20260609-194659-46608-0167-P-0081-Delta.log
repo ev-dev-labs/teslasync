@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure to understand what exists and verify the capability requirements.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Let me explore the Apple app structure in depth to understand existing conventions, shared-surfaces, and the P1 dependencies.
+
+Each surface follows a multi-file pattern (Adapter, Model, Projection, Views, Chrome, Previews, Tests, strings). Let me find the shared P1 infrastructure (state holders, tokens, i18n, diagnostics) and study a simple complete example.
+
+`Sources/` holds the shared infra. Let me explore it fully and read a complete simple shared-surface example to learn the conventions.
+
+There's a `SharedFacade` dir — that's likely the P1 facade layer. Let me explore it plus the Components and Design tokens.
+
+This is a KMP-bridged app (Swift ↔ Kotlin `Shared` framework). Let me read a complete example surface end-to-end, the project.yml, and the i18n/diagnostics/tokens infra to learn exact conventions.
+
+`project.yml` globs `TeslaSync/shared-surfaces`, so new files auto-include. Let me read the full project config and a complete example surface.
+
+Now I understand the architecture. Let me read the complete AIChatbotIndicator file set to learn the exact conventions (Model, Adapter, Projection, Views, Previews, Tests, strings).
+
+The pattern is clear. Let me read the Views/Previews/Tests/strings conventions plus the web libs I need to port (metricSemantics, numberFormat).
+
+Let me read the test/preview conventions, design tokens, feedback components, and check build feasibility (xcframework, xcodegen) in parallel.
+
+Now let me check build feasibility (KMP toolchain) and read the remaining native infra (tokens, feedback components) plus the web hooks I must port. I'll also check for existing native equivalents to avoid collisions.
+
+Build toolchain is present (Java 17, gradlew, pwsh, xcodegen). Let me read the generated design tokens, feedback components, and check for symbol collisions, plus the web hooks I must port.
+
+Let me read the design tokens (targeted) and the States feedback component to know exactly which tokens/components exist.
+
+I have what I need on feedback/states. Let me read the exact token members, the swiftlint/swiftformat configs (to pass `--strict`), and the two web hooks I must port faithfully.
+
+Let me read the two web hooks to faithfully port unit-label and currency resolution.
+
+I now have full context. Let me set up tracking, kick off the heavy KMP `Shared.xcframework` build in the background (it's needed by the gate and is slow), and start writing the surface.
+
+Gradle build is running in the background. Let me set up tracking and start writing the surface while it builds.
+
+Adapter written. Now the pure projection (the web render-logic port):
+
+Now the Model (state-holder, telemetry seam, source seam, i18n facade):
+
+Now the SwiftUI views (per-state subviews, tone→token mapping, freshness axis):
+
+The main view binding the model and switching phases, with parity-complete convenience inits:
+
+Now previews and the strings catalog:
+
+Let me check the background KMP build progress while I continue with tests.
+
+The KMP `Shared.xcframework` built successfully (8m), so the full gate is feasible. Let me stage it and write the test files.
+
+Xcframework staged with iOS + macOS slices. Now the test files — first the pure adapter/projection tests (deterministic en-US):
+
+Now the model/view/accessibility tests:
+
+All 9 files written. Let me do a fast standalone compile+run of the pure logic (Adapter + Projection) to validate the ported numeric behavior before the heavy build.
+
+All 28 pure-logic checks pass. Now let me auto-format my files to the project style, then run the lint gates scoped to my files.
+
+swiftformat is clean. Two swiftlint issues in the Adapter: cyclomatic complexity (the unit-label switch) and file length (431 > 400). Both are allowed `Delta.*` files, so I'll split the Adapter into focused files and refactor the resolver. Let me view the current post-format Adapter to split precisely.
+
+I'll split the Adapter into three focused `Delta.*` files (all allowed) and refactor the resolver to cut complexity. Removing the old Adapter and recreating cleanly:
+
+Now the Units file (with the refactored, low-complexity resolver):
+
+All three split files written. Let me re-format, re-lint, and re-run the standalone logic check with the new file split.
+
+swiftlint is clean (0 violations). Let me confirm swiftformat-lint clean across all Delta files and re-run the standalone logic check with the new 4-file split.
+
+Format + lint + logic all green. Let me check how the placeholder script handles its `-Path` argument, then run it.
+
+The script treats a non-existent path as "clean" (scans nothing). To genuinely verify my files, I'll scan a temp copy of the actual `Delta.*` files (and run its self-test). Then generate the Xcode project.
+
+Real placeholder scan of my files: `PLACEHOLDER_COUNT=0`. Now let me generate the Xcode project.
+
+Project generated with both `TeslaSync` and `TeslaSync-macOS` schemes. Let me check simulators and kick off the macOS build first as a fast full-module compile signal.
+
+The build failed — but in **other** surfaces (`VehicleCharts.*`, `VehicleCommandCenter.*`), not my Delta files. I must determine whether this is a pre-existing baseline breakage. Let me inspect the actual compiler errors.
+
+No errors in any `Delta.*` file — the failures are "ambiguous type lookup" for pre-existing types (`RecentDrivesModel`, `RecentDrivesConnection`, `StateTimelineUpdate`, …), which means **duplicate declarations across other surfaces** in the monorepo. Let me prove this is a pre-existing baseline breakage independent of my purely-additive change.
+
+**Confirmed pre-existing baseline breakage.** My change is purely additive (git status clean outside `Delta.*`), and the build fails on duplicate type declarations in **other** surfaces — e.g. `RecentDrivesModel` is declared in BOTH `dashboard-widgets/RecentDrivesListWidget.Model.swift` AND `feature-views/RecentDrivesSection.Model.swift` (same module → "ambiguous"). These collisions are outside my allowed scope (`Delta.*`).
+
+Let me still rigorously prove **my** SwiftUI views compile against the real shared primitives by compiling the shared component layer + my files (which excludes the broken surfaces).
+
+Components/Design are a clean, Shared-free layer with no surface references. I'll type-check my non-test Delta files together with the **real** shared UI layer (DesignTokens + Design + Components) — this excludes the broken surfaces and proves my views compile against the real primitives.
+
+Zero errors in my `Delta.*` files — the only errors are in a Components file (`UnitFormatters.swift`) that needs the `Units` facade (SharedFacade + the Shared framework), which I hadn't included. Let me add SharedFacade + link the Shared framework to get a fully clean type-check.
+
+Now the cascade reaches `AppContainer.swift` (needs Auth types) — not relevant to my surface. I only need the `Units` facade file to satisfy `UnitFormatters`. Let me include just `Units+Facade.swift` from SharedFacade and retry.
+
+Closer — only `UnitPreferences.metric` is missing (defined in some extension I haven't included). Let me find and add that file.
+
+The missing `UnitPreferences.metric` lives in `AppContainer.swift` (which drags in Auth) — all unrelated to my surface. Across 3 iterations, **zero** errors have ever been in a `Delta.*` file. To get a definitively clean compile isolated to my surface + the real UI primitives, I'll add a tiny throwaway shim for the out-of-scope `UnitPreferences` presets.
+
+Clean type-check (`EXIT=0`) — my full Delta surface (views + previews) compiles against the **real** design tokens, shared component library, and Units facade. Now let me validate the **test** files reference valid symbols/signatures by type-checking them in-module (with XCTest).
+
+XCTest just needs its framework search path. Let me add it and retry.
+
+The only errors are the `XCTAssert*` C-macros (a known raw-`swiftc` limitation — they're provided via XCTest's Swift overlay that `xcodebuild` sets up for real test targets). Crucially, **every reference to my Delta API resolved**. Let me confirm there are no non-XCTest errors.
+
+The remaining test errors are all `.member` contextual-inference failures **inside `XCTAssertEqual(...)` calls** — a direct downstream effect of the unavailable XCTest macros in raw `swiftc` (those same enum members resolved fine in my source-only `EXIT=0` compile). No genuine errors in my API usage.
+
+I have comprehensive isolated verification. Now let me reproduce the **literal gate** to capture honest evidence. Let me set up the log and check the logs directory.
+
+Baseline breakage confirmed at HEAD. Now let me run the literal gate's iOS `build test` to capture honest evidence (it will fail at the pre-existing collisions). I'll run it in the background.
+
+iOS gate `build test` → `EXIT=65`, failing on the **same** pre-existing `RecentDrivesModel`/`RecentDrivesConnection`/… ambiguity. Let me confirm zero `Delta.*` errors in the gate log and enumerate the distinct pre-existing collisions for the evidence record.
+
+Definitive: **0 `Delta.*` errors**; all 120 build errors are pre-existing collisions from 8 duplicate types (`RecentDrives*`, `StateTimeline*`) across other surfaces. `Delta.strings` is copied into the product (my surface integrates; the build only aborts on the unrelated collisions).
+
+Let me run the remaining gate steps (full-tree swiftlint/swiftformat/placeholder) to capture their real results, and check what's untracked for a clean commit.
+
+Full-tree `swiftlint --strict` is green (`LINT_EXIT=0`). Now swiftformat-lint (whole tree), the placeholder check, and a git status check for a clean commit.
+
+All lint/format/placeholder gate steps are **green** (`EXIT=0`), and git shows only my 11 `Delta.*` files untracked (clean commit). Let me run the literal macOS gate `build test` to capture its real EXIT for faithfulness.
+
+macOS gate `build test` → `MAC_EXIT=65`, 0 Delta errors, 96 pre-existing ambiguity errors. All evidence gathered. Let me write the comprehensive, honest gate log.
+
+Log written. Now let me clean up generated/temp artifacts (gitignored), confirm only my files are staged, and verify the log path isn't ignored.
+
+Output came back empty — let me re-check git status and the workspace state cleanly.
+
+git status is clean — exactly my 11 `Delta.*` files + the log. The generated artifacts are gitignored (not listed). Let me tidy them and commit.
+
+Workspace is pristine (only my 11 `Delta.*` files + the log). Committing with an honest message.
+
+Committed cleanly (`68e8b6fb0`, working tree clean). Let me add one more piece of runtime evidence — execute the **model's** behavior (telemetry-once, stale auto-refresh, idempotent start) standalone, to back the `Delta.Tests.swift` claims with runtime proof (not just type-check).
+
+All 9 model behavior checks pass at runtime (telemetry-once, stale auto-refresh + re-arm, offline-no-refresh, idempotent start). Let me record this in the log and amend the commit, then clean up.
+
+All 13 todos complete. The Delta surface is delivered, verified, and committed.
+

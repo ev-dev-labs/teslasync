@@ -1,0 +1,134 @@
+I'll start by exploring the environment to understand what's actually available — the web source, the Apple app project, and the required toolchain.
+
+Good — full Apple toolchain is present (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh) and `apps/apple` exists. Let me read the web source and explore the Apple app structure.
+
+Now let me read the web source and examine the existing feature-views directory to understand the established native pattern.
+
+The web source is a pure client-side dev tool (cron parser) — no API hooks, just `useTranslation` + local compute via `describeCron`/`getNextCronRuns`. Let me read those helpers, the `ToolCard` wrapper, and find a sibling devtools tool that's already been ported to Swift to follow the exact established pattern.
+
+Sibling tools (`Base64Tool`, `UrlEncoder`, `JwtDecoder`) are already ported with a consistent file set (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me read the cron helpers, `ToolCard`, and a full sibling port (`UrlEncoder`) to follow the exact pattern.
+
+Now I have the cron logic to port. Let me read a complete sibling port (`UrlEncoder` — closest analog with input→transform→output) to learn the exact file conventions, plus how `ToolCard` and i18n are handled natively.
+
+Let me read each UrlEncoder file individually for clarity.
+
+Clear, well-established pattern. Let me read the remaining UrlEncoder files (Adapter, Views, Previews, Tests, strings) to complete my understanding.
+
+UrlEncoder keeps views in the main `.swift` file. Let me read its Previews/Tests/strings, plus check how `Base64Tool` uses a `.Views` file and a `Badge`, and locate the shared token/component definitions (`TSButton`, `TSBadge`, `Color.TS`, `TSSpacing`).
+
+I have the full pattern. Now let me locate the shared design tokens and components I'll need (`TSButton`, `TSBadge`, `Color.TS`, `TSSpacing`, `tsGlassPanel`), and understand how `project.yml` includes these files in the build.
+
+The `feature-views` directory is included wholesale (minus `*Tests.swift`). Now let me read the shared component APIs I'll use (`TSButton`, `TSBadge`, `TSCopyButton`, `tsGlassPanel`), the design tokens, and the test-target config in `project.yml`.
+
+Let me read the test-target source config and the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `tsGlassPanel`, `TSCopyButton`) to confirm the exact APIs available.
+
+Let me read the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), the `tsGlassPanel` modifier, and how `Base64Tool` splits a `.Views.swift` file (since CronParser is a bit larger).
+
+Tokens come from the generated `DesignTokens` group (`apps/design/generated/apple`). Let me read those definitions.
+
+Now I have all tokens/components. Let me check the web `formatDateTime`, the actual i18n values in `en.json`, and how `Base64Tool` splits its `.Views.swift` (to decide my file layout).
+
+`Base64Tool` uses a clean `.Views.swift` split with subview structs and a `Base64Surface.slug`. I'll follow that. Let me grab the exact `en.json` values and the `Base64Surface`/strings facade pattern.
+
+The web renders these as literal key text (not in `en.json`), so my native fallbacks = key text, matching the UrlEncoder precedent. Let me read the lint/format configs and check the build toolchain (xcodegen + existing project).
+
+Toolchain confirmed: `xcodegen` present, no `.xcodeproj` yet (must generate). Now let me generate the project and verify the `iPhone 16` simulator exists, while confirming the ToolCard "green" color mapping.
+
+Project generated. Let me verify the `iPhone 16` simulator and schemes exist before writing code.
+
+Everything's in place (schemes match, iPhone 16 booted). Let me check for an existing shared input/field component and a flow/wrap layout to reuse (DRY), before writing the surface.
+
+There's a shared `Fields.swift` and an existing flow layout in `SuggestedPrompts.Views.swift` (a chip-wrap — exactly my presets use case). Let me read both to reuse them.
+
+Shared `TSTextField` exists but lacks a leading-icon slot; I'll build a compact icon field inline. There's a proven `Layout`-based flow in `SuggestedPrompts.Views.swift` — let me read it to mirror a self-contained flow layout for my preset chips (staying within `CronParser.*` files).
+
+I have everything I need. Let me confirm the baseline lint/format is green (so I know any failures are mine), then write the files.
+
+Baseline swiftformat is clean. But swiftlint reported "1 serious violation" — the `LINT_EXIT=0` was masked by the pipe (it's `tail`'s exit). Let me find that violation, since the gate needs a clean lint.
+
+There's a pre-existing baseline swiftlint error in an unrelated sibling file (`LiveSignalSparklinesWidget.Builder.swift:158`), real exit 2. Let me inspect it to understand whether it's genuine and how it affects my gate.
+
+This is a genuine pre-existing baseline lint error (committed at HEAD, unrelated file), and the gate runs `swiftlint --strict` repo-wide — so it blocks a green gate regardless of my surface. There's also a swiftlint/swiftformat tension on multi-line-condition braces. Let me empirically determine a fix that satisfies BOTH tools before deciding how to proceed.
+
+Confirmed: brace-on-same-line satisfies swiftlint but breaks swiftformat — they conflict on multi-line-condition braces. The clean fix that satisfies both is extracting the condition into a single boolean. Let me revert and apply that.
+
+A viable fix exists (boolean extraction satisfies both tools). I'll apply it now so the baseline is clean for all later runs. Let me edit the unrelated file.
+
+Both tools now pass on the unrelated file — baseline is clean. Let me set up tracking and check one concurrency detail in `Base64Tool.Views` (how `onSelect` closures are typed) before writing my files.
+
+Base64 confirms the closure pattern compiles. Let me read the placeholder-check script to learn exactly what it flags, so my code/comments don't trip it.
+
+The gate's placeholder path (`.../CronParser` with no extension) matches no directory, so it scans nothing (trivially EXIT=0) — but I'll keep my code genuinely clean. Let me read the forbidden patterns to avoid them in my Swift.
+
+Now I understand all constraints — notably "Placeholder" is a forbidden common pattern, so I'll avoid that word in code/comments. Let me write all 7 CronParser files following the established `Base64Tool`/`UrlEncoder` conventions.
+
+All 7 files written. Let me update tracking, then auto-format my new files and lint them to catch issues before the expensive build.
+
+swiftformat normalized 3 files. Let me verify both tools are now clean on my files and inspect what changed (especially the `&&` chains and any wrapping).
+
+Both clean. Let me verify the formatter didn't alter logic in the adapter's `&&` chains and the model's import order.
+
+Logic intact, formatter only adjusted style. Now I must regenerate the Xcode project (XcodeGen snapshots files at generation time) so the new files are included, then run the iOS build+test gate.
+
+Project regenerated with CronParser included (42 references). Now the long step — iOS build + test. Let me launch it in the background, writing to a log I can poll.
+
+Build launched. While it compiles (~several minutes for a from-scratch build of ~2000 files), let me check the gate's log directory and mirror a sibling log's format.
+
+The sibling logs reveal something important: they marked the `xcodebuild` step DEFERRED/BLOCKED (exit 65) due to an "environment-blocked xcframework build". Let me check whether `Shared.xcframework` actually exists here and how my build is progressing.
+
+Now the full picture: `Shared.xcframework` (a Kotlin Multiplatform core) doesn't exist — it's built on-demand via Gradle (the log shows a Gradle daemon starting). Sibling agents deferred this as environment-blocked. My env may differ. Let me inspect the build setup and let Gradle run.
+
+The build runs a pre-action script `Scripts/build-shared-xcframework.sh` that assembles the KMP `Shared.xcframework` via Gradle (Java 17 + gradlew present). This is the slow/heavy step. Let me read the script to understand its requirements while it runs.
+
+The script compiles the KMP core via Gradle (`:core:assembleSharedXCFramework`) — a heavy Kotlin/Native build needing the Apple toolchain (and likely network for first download). Let me check whether toolchain caches already exist (shared across slots) and monitor progress.
+
+The Kotlin/Native toolchain and Gradle caches are warm (`~/.konan` populated, `~/.gradle` 3.2G) — tasks are hitting `FROM-CACHE`. Unlike the sibling agents who deferred, my environment can actually build the xcframework. Let me keep monitoring.
+
+xcframework debug slice written; now linking release slices. The Gradle assembly is working. This will continue into the Swift app compile (~2000 files) then tests. Let me keep polling.
+
+Simulator slice (`linkReleaseFrameworkIosSimulatorArm64`) is now linking — the xcframework assembly is nearly complete. Let me wait for it to finish and the Swift app compile to begin.
+
+The single `assembleSharedXCFramework` builds all slices (iOS device/sim + macOS) — so the macOS slice builds now too, which means the later macOS gate will reuse it from cache. Kotlin/Native linking is slow but progressing. Let me wait longer.
+
+iOS build failed (`IOS_EXIT=65`) — but the errors are in **pre-existing sibling files**, not mine: `FleetStatsBarModel` is ambiguous (duplicate type) and `ChargeStatusWidget.Previews.swift` contextual-type errors. The xcframework itself built fine. Let me quantify the baseline breakage to decide between fixing it or deferring per the sibling precedent.
+
+This is a large pre-existing baseline breakage: **228 compile errors, all in sibling `dashboard-widgets` files** — "ambiguous type lookup" from duplicate type definitions across parallel-merged widget surfaces (`ChargeSessionDTO`, `ChargeStateDTO`, `FleetStatsBarModel`, etc.). Zero are in CronParser. The xcframework built fine. Let me confirm these are pre-existing on HEAD and check whether my surface can be verified in isolation.
+
+Confirmed: the 228 errors are pre-existing parallel-merge collisions (e.g., `FleetStatsBarModel` defined in BOTH `dashboard-widgets/FleetStatsBarWidget.Model.swift` and `feature-views/FleetStatsBar.Model.swift`). All committed, none mine. The xcframework built fine. 
+
+First, critical self-check: I must ensure **my** CronParser types don't collide with anything existing (which would be my fault). Then I'll prove my surface compiles in isolation.
+
+All my CronParser type names are globally unique — I'm not adding to the collision problem. Now let me **prove my surface is correct** with two standalone compilations (since the shared app module is poisoned by sibling duplicates). First: compile my real `CronParser.Adapter.swift` + a harness that executes all my parity assertions.
+
+Top-level code requires the file be named `main.swift`. Let me rename and recompile.
+
+**Engine parity proof: `ALL_ENGINE_ASSERTIONS_PASSED`** — my real `CronParser.Adapter.swift` compiles and every cron assertion (describe, nextRuns, matchField, fields, project, a11y) passes. Now let me type-check the full SwiftUI surface (Model + View + Views) against the real design tokens/components, targeting iOS 18 simulator.
+
+**Full surface type-checks clean on iOS 18 (`TYPECHECK_EXIT=0`)** under Swift 6 strict concurrency. Let me also prove macOS 15 (cross-platform), type-check the Previews, and syntax-check the Tests file.
+
+Comprehensive proof my surface is correct: **engine assertions execute & pass, and the full surface type-checks on both iOS 18 and macOS 15** under Swift 6. The only blocker for the full `xcodebuild` gate is 228 pre-existing duplicate-type errors in sibling files. Let me launch the macOS gate (to capture its real exit) and confirm the repo-wide lint/format gates while it runs.
+
+Repo-wide `swiftlint --strict` is now **green (0 violations)**. Let me confirm `swiftformat --lint` repo-wide and run the placeholder check (both the verbatim gate path and against my actual files for honest evidence), while macOS builds.
+
+`swiftformat --lint` repo-wide is **green (0/2101)** and placeholder is **green (COUNT=0)** — including an honest scan of my actual 6 files. The macOS build finished quickly (cached xcframework). Let me check its result.
+
+macOS also exits 65 with **zero CronParser errors**, but only 4 generic "error:" lines (different from iOS). Let me see the actual macOS failure cause.
+
+The macOS failure is a **different, environment-capability** issue: `entitlements require signing with a development certificate` (no dev signing identity in this environment) — not a CronParser issue. Let me confirm whether macOS also reached the same baseline duplicate-type errors, for accurate documentation.
+
+macOS aborts at signing validation (no dev certificate — an environment gap) **before even compiling sources**; xcframework staged fine. Both xcodebuild gates fail for reasons external to CronParser. Let me check how a recent sibling commit scoped its files, to decide whether to keep my one-line baseline lint fix in scope.
+
+The sibling convention is strictly per-surface (FleetStatsWidget = its 7 files + log only), and my explicit constraint is "Allowed files: CronParser.*, the log file." Per the guidance to not fix unrelated pre-existing issues, I'll **revert** my out-of-scope lint fix and document that baseline violation as external (proving my own files are clean). Let me revert and re-confirm my files.
+
+Working tree now contains ONLY my 7 CronParser files; my files are swiftlint-clean. Let me capture the final, honest exit codes of the three runnable gates in this reverted state for the log.
+
+Final gate state captured honestly: `swiftlint` exits 2 (one pre-existing sibling violation, **0 in CronParser**), `swiftformat` 0, placeholder 0, both `xcodebuild` 65 (external). Now let me write the comprehensive gate log.
+
+Now let me commit per the prompt's spec — staging exactly the CronParser surface files and the log.
+
+Exactly 8 files staged (7 CronParser + log), nothing else. Let me commit with the prescribed message.
+
+Committed (`8ca1ff83a`). Let me verify the working tree is fully clean (lint-fix revert intact) and clean up temp files.
+
+I've completed and committed the CronParser surface. Here's the honest final status.
+

@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator). Let me read the web source and explore the Apple app structure.
+
+The web source is a pure presentational component. Now let me examine the existing `widget-primitives` directory and look at sibling primitives that are already done to follow established patterns.
+
+Three primitives are already implemented (WidgetChartSummary, WidgetComparisonCard, WidgetEventFeed). Let me study the most complete patterns. WidgetComparisonCard is also presentational like RankedList, so it's the best template. Let me read its full set plus its web source.
+
+Excellent pattern. Let me read the remaining WidgetComparisonCard files (Adapter, Tests, Previews, strings) and find the shared infrastructure (tokens, surface slug, Badge, EmptyState peers).
+
+I now fully understand the established pattern. WidgetComparisonCard is the ideal template since both are pure presentational primitives. Now let me find the shared infrastructure: tokens (P1/S9), the native Badge peer, the native EmptyState peer, and the project build config.
+
+The `widget-primitives` directory is globbed by path in project.yml, so new files are auto-included. Now let me locate the core token definitions (P1/S9), the shared Badge peer, and EmptyState peer. Let me explore the `Sources/` shared library.
+
+The shared `TSBadge` (with `TSTone`) and `TSEmptyState` exist. Note the ComparisonCard precedent reproduces only the web source's *real* branches (empty + populated) for pure presentational primitives, documenting why fetch-states don't apply. Let me find the core token definitions, the `tsUnits` modifier, `DeltaDirection`, and check real web usages of WidgetRankedList for faithful data shapes.
+
+Let me find the core token definitions and read a couple of real web usages to capture faithful badge/barColor data shapes.
+
+Now I understand the real data shapes: hosts build `RankedItem[]` with badge variants (`success`/`warning`/`error`/`neutral`) and `barColor` as Tailwind classes (`bg-blue-400`, `bg-emerald-400`). The host's WidgetShell owns loading/error/stale — confirming RankedList is purely empty+populated. Let me locate the token definitions used by the main target and enumerate all barColor/badge values.
+
+Design tokens live in `apps/design/generated/apple` (linked as `DesignTokens`). Bar colors used: `blue-400` (default), `yellow-400`, `emerald-400`, and chart `palette.series[i]`. Let me read the token definitions to map these faithfully.
+
+I have all tokens. Bar colors map cleanly to a Foundation-safe semantic enum + chart palette. Let me read the web `EmptyState` and `Badge` components to faithfully reproduce their structure (default icon, sizing), plus confirm `DeltaDirection`'s file location for the build, and check the `tsUnits` modifier.
+
+Now let me check the lint configs, the placeholder checker, and how the Xcode project is generated (xcodegen), so my code passes the gate.
+
+xcodegen is available. Let me check the placeholder patterns and whether PowerShell is available for the gate.
+
+I now have everything needed. All tooling is available (xcodegen, xcodebuild, swiftlint, swiftformat, pwsh). The architecture is clear: mirror the proven `WidgetComparisonCard` 8-file pattern. Let me create a plan and set up tracking.
+
+Now let me create the Foundation-only Adapter (the pure core), mirroring the ComparisonCard structure.
+
+Now the Model file (i18n facade, telemetry seam, observable holder).
+
+Now the Views file (row, badge chip, empty leaf) with the token mappings.
+
+Now the main public view.
+
+Now the Previews, then the two test files and the strings catalog.
+
+Now the strings catalog.
+
+All 8 files created. Now let me run the fast gates. First, auto-format my files with swiftformat (then verify with `--lint`), since the gate checks formatting.
+
+Two files needed formatting. Let me see what changed and verify with `--lint`, then run swiftlint.
+
+New files are untracked so diff is empty. Let me verify with `--lint` and run swiftlint --strict on my files.
+
+swiftformat passes. swiftlint has 1 violation: opening brace spacing at the wrapped multi-protocol enum declaration. Let me view the current state.
+
+swiftformat and swiftlint disagree on the wrapped multi-protocol declaration. Cleanest fix: keep a short main declaration with core conformances inline and move the literal/description conformances to extensions (idiomatic Swift). Let me view the exact region and refactor.
+
+Let me re-run swiftformat (auto-fix) and swiftlint --strict on all my files to confirm both pass.
+
+Both swiftformat (`0/7 require formatting`) and swiftlint `--strict` (`0 violations`) pass. Now the placeholder gate.
+
+Let me run the placeholder check with the exact path the gate uses to confirm it resolves correctly.
+
+Placeholder gate passes (`PLACEHOLDER_COUNT=0`, `EXIT=0`). Three of five gate steps are green. Now the build+test. Let me generate the Xcode project with xcodegen and inspect the schemes.
+
+Project generated. Let me check the available schemes and simulator runtimes before building.
+
+Both schemes exist; iPhone 16 simulator (iOS 26.5) is available and booted. Now let me run the iOS build+test. This is a large app, so I'll start it, write to the gate log, and monitor. Let me initialize the log and kick off the iOS build+test.
+
+Now let me start the iOS compile. I'll run `build-for-testing` first (compiles the app + all test bundles, including my new test files) to get fast compile-error signal before running the full `build test`. Starting it async so I can monitor.
+
+Build started. Let me monitor progress.
+
+Still compiling (no errors matched yet). Let me check the raw log is growing and wait more.
+
+The build includes a pre-build phase compiling a shared KMP `:core` framework (xcframework). It's progressing (1704 log lines). Let me continue waiting.
+
+The build is in a long phase — likely the first-time Kotlin/Native `:core` xcframework compilation (slow but one-time). Let me wait longer.
+
+Good — KMP core finished, now actively compiling Swift targets including `TeslaSync` (5984 log lines, no errors). Let me continue waiting for the app + test targets to finish.
+
+No errors (0 total). The build is in the heavy whole-module compile of the large `TeslaSync` target. Let me keep waiting.
+
+Build failed (exit 65). I saw my files being compiled. Let me find the actual error(s) in the full log.
+
+No `error:` lines but build failed. Let me search for other failure indicators.
+
+Found the failure markers. Let me see which build command failed (around lines 19755 and 18818).
+
+The failing batches are app-level files (`AppContainer`, `AppRoute`, `AnomalyInlineRow`, etc.) — NOT my widget-primitives files. And there are zero `error:` lines, which suggests a compiler crash or resource exhaustion. Let me investigate the context around the failure and search for crash signatures.
+
+This is a **Swift compiler crash** (`swift-frontend` abort with `report_at_maximum_capacity` / `SmallVectorBase::grow_pod` during IRGen) on files unrelated to my change (`AppearanceSettings.Controls.swift`, `AnomalyInlineRow.Views.swift`, `App*.swift`). My files compiled without error. This looks like the compiler hitting an internal capacity limit on the enormous `TeslaSync` module. There's a telling file — `macos-pending-verifications.md`. Let me read it and the first crash context.
+
+Path is at `apps/` level. The crash is confirmed on a batch of pre-existing app files (`AppContainer`, `AppRoute`, etc.). Let me read the pending-verifications doc which likely documents this build limitation.
+
+This `macos-pending-verifications.md` is the decisive context: **every sibling P4 Apple surface** hits the same wall — the surface is verified green via isolated builds + host gates, but the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** issues (parallel-merge symbol collisions, the unstaged KMP `Shared.xcframework`, macOS signing) and deferred to the `P99` macOS acceptance gate. My run got further (KMP framework built, zero collision errors) and hit a **pre-existing Swift compiler IRGen capacity crash** on unrelated app files.
+
+I'll now prove my surface is green in isolation (the convention's standard: iOS-18 + macOS-15 `swiftc -typecheck` + executed adapter logic), since my files compiled with zero errors before the crash on unrelated files. Let me confirm no existing entry and get SDK paths.
+
+SDKs available (iOS 26.5, macOS 26.5 — both support the iOS 18 / macOS 15 deployment minimums). No existing entry. My files compiled with zero errors before the crash on unrelated files. Now let me prove the surface compiles cleanly in isolation on **both** SDKs under Swift 6 strict concurrency. First, the Foundation-only Adapter core (which is dependency-free).
+
+Adapter core: clean on both SDKs. Now the full SwiftUI set (real design tokens + `TSDesign` + `Badges` providing `TSChartPalette`/`TSTone`, plus my 5 source files) on both SDKs.
+
+The full SwiftUI surface typechecks clean on **both iOS-18 and macOS-15** under Swift 6 strict concurrency, against the real design tokens. Now let me *execute* the adapter logic (the "adapter unit test: cached → projection" acceptance item) by compiling the Foundation-only core with a harness and running it natively.
+
+The multi-file build requires top-level code to live in `main.swift`. Let me rename and rerun.
+
+The strict-concurrency flags (already proven via typecheck) trip the harness's global counters. Let me run the harness in default language mode — its only purpose is to *execute* the already-Swift-6-verified adapter logic.
+
+All **31/31** adapter logic checks pass. Per-surface verification is airtight: 3 host gates green + iOS-18/macOS-15 typecheck green + executed adapter logic. Now let me capture the macOS full-app blocker (the gate's second build step). First the instant codesigning check (a documented macOS blocker), then start the macOS build to capture its first failure.
+
+Confirmed macOS blockers: **0 codesigning identities** and the same enormous `TeslaSync` source set feeds the macOS target. Let me run the actual macOS build step (with signing bypassed, to reach the true compile signal) to capture real evidence, while I prepare the log. Starting it async.
+
+While the macOS build runs, let me append a structured evidence section to the gate log capturing all verification results.
+
+Let me check the macOS build progress.
+
+macOS is in the same whole-module compile of `TeslaSync-macOS` (same source set) — it will reach the same IRGen point. Let me wait for its definitive result.
+
+macOS build also failed (exit 65) — but with a **different pre-existing error**: `RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to type-check this expression in reasonable time` — another agent's feature-view (literally entry 0297 in the pending-verifications doc), unrelated to my surface. Let me confirm none of the macOS errors are mine.
+
+Definitive: the macOS build has exactly **1 error**, in the pre-existing unrelated `RecentDrivesSection.Previews.swift` (doc entry 0297), and **0 errors** in my surface. Both full-app builds are blocked solely by pre-existing, unrelated code. Let me append the precise macOS result and finalize the log with the gate-variable summary.
+
+The log is finalized honestly (`EXIT=65`, `STATUS=BLOCKED` — both full-app builds blocked solely by pre-existing, unrelated code with zero WidgetRankedList errors). Now let me clean up temporary artifacts and check git state before committing.
+
+Both `build/` and the generated `.xcodeproj` were gitignored. Now let me verify git state and confirm exactly which files I'll stage.
+
+Clean state: all 8 surface files + the log are untracked, with no other repo changes. Let me stage exactly those and commit (matching the documented convention for these surfaces — complete + green in isolation, full-app build deferred to the macOS acceptance gate).
+
+Exactly 9 files staged. Now commit with an honest message.
+
+Commit `2f3ab6556` created with all 9 files. Let me update the plan and confirm a clean working tree.
+
+Working tree is clean and the commit is in place. Let me confirm no background processes linger.
+
+Both builds completed (exit 65, pre-existing failures); no processes linger; working tree clean. The task is complete to the maximum extent possible on this host.
+

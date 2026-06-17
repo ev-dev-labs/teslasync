@@ -1,0 +1,135 @@
+I'll start by exploring the repository structure and understanding what exists, plus checking tool availability.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). The Apple app exists. Now let me understand the existing structure deeply.
+
+The `shared-surfaces` directory already exists with ~1374 files. There's a clear multi-file pattern per surface. Let me find motion-related analogs (FadeIn, StaggerItem) and study the exact file pattern.
+
+~135 surfaces, each with a consistent multi-file pattern (`.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.Adapter.swift`, often `.Projection/.States/.Chrome/.Seams`, plus `.strings`). I need to study a representative one and the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics). Let me find a motion/preference-related analog and the infra.
+
+Found key infra: `Sources/Components/Motion/Motion.swift` (native motion primitives), `Sources/Design/TSDesign.swift` (tokens), `Sources/Components/Feedback/States.swift`. The prompt file and prior logs exist. Let me read the motion infra, a full representative surface, and locate the P1 state-holder/i18n/diagnostics infra.
+
+Critical finding: the prior run (a different slot) DID build this surface and documented the verification approach. My env has **full Xcode 26.5** (the prior run only had Command Line Tools, so it was blocked on `xcodebuild`). Let me read the rest of that prior log (Section B = per-surface gate) and verify my toolchain specifics.
+
+Now I have the complete blueprint. The prior run reached **STATUS=BLOCKED** on the *official aggregate gate* (the app scheme can't link the absent `Shared.xcframework` and `shared-surfaces` isn't wired into `project.yml` — both out-of-scope), but proved the surface green via a faithful per-surface SwiftPM harness. My environment matches (Xcode 26.5, xcodegen). The files don't exist in this slot, so I create them fresh.
+
+Let me locate the i18n facade (S10), diagnostics (S11), and state-holder base (S8), and read a full reference surface + the Motion infra.
+
+`Sources` is at `apps/apple/Sources` (separate root from `apps/apple/TeslaSync/shared-surfaces`). Conventions: `t(...)` i18n facade (1640 uses), `Diagnostics.openIfNeeded` + `view.opened` telemetry, `@Observable` models. Let me read a full reference surface and the infra definitions.
+
+The pattern is clear. Native motion primitives (`TSStaggerContainer`, `TSStaggerItem`, `TSFadeIn`) already exist as out-of-scope atomic components; my shared-surface must be a self-contained parity reproduction (like `ActiveFilterChips` is). Let me read the rest of the reference surface (Adapter/Views/Previews/Tests/strings) and the design tokens.
+
+Let me read the design tokens, the Tests pattern, the Views chrome, and the lint/format/project configs.
+
+Now I need the exact token definitions (`TSSpacing`, `TSMotion`, `Color.TS`, `Font.TS`) and the lint/format/project configs. Let me locate and read them.
+
+`.swiftlint.yml` already includes `shared-surfaces` (good). Tokens (`TSSpacing`/`TSMotion`/`Color.TS`/`Font.TS`) are referenced everywhere but I haven't found their declaration — likely a generated file. Let me locate them and confirm `project.yml` wiring + the design-token source.
+
+Key findings: `project.yml` **now wires** `shared-surfaces` into both app targets and both test targets — but all of them depend on `Frameworks/Shared.xcframework` (the KMP core), which is **absent** (only `.gitkeep`). That's the structural blocker for the official scheme build. Also, the main-app design tokens (`TSSpacing`/`Color.TS`/`Font.TS`) aren't committed as Swift — likely generated. Let me find the token generator and the design-token source.
+
+Tokens live in the generated `apps/design/generated/apple/Tokens.swift` (wired into targets as `DesignTokens`). That's what the per-surface harness compiles. Let me read it to know the exact available token symbols.
+
+I now have the full token vocabulary and conventions. The decisive question for DONE vs BLOCKED is whether I can produce the missing `Frameworks/Shared.xcframework` (KMP core) that both app schemes link. Let me check that build script's feasibility and the shared project/toolchain, then start writing the surface.
+
+Gradle wrapper + Java 17 exist, iPhone 16 sim is booted, full Xcode is active. Building the real `Shared.xcframework` may be possible. Let me quickly assess the KMP `core` module's realness and kick off the gradle build in the background while I write the surface. Let me also confirm `pwsh` for the placeholder gate.
+
+The KMP `core` is a real multiplatform module. I'll kick off the xcframework build in the background (it needs network for Kotlin/Native — may or may not succeed) while I write the surface. `pwsh` is available for the placeholder gate. Let me start the build, set up tracking, and begin.
+
+The KMP build is running in the background. Now I'll write the surface, starting with the pure Foundation-only core (Adapter). Let me mark progress and create the file.
+
+The launcher returned (the gradle build runs detached writing to a log). Let me check its progress while I write the Model file.
+
+Gradle daemon is actively building (high CPU). I'll let it run and continue. Writing the Model file now.
+
+Writing the Views file: the `StaggerContext` environment value + the `StaggerContainerItem` reveal (native peer of web `StaggerItem`), self-revealing on appear with index-based delay and honoring Reduce Motion.
+
+Now the public surface — `StaggerContainer<Content>` with the env Reduce-Motion bridge, once-only telemetry, context propagation, optional grouped accessibility, and prop + injected-model inits.
+
+Now the strings file (one optional a11y key) and the previews (cascade, reduce-motion, grouped, empty branches).
+
+Now the Tests file: pure projector/adapter tests, model behavior (once-only telemetry, reduce sync, reveal), strings fallback, and view composition for every branch.
+
+All 6 Swift files + strings created. Now let me verify: swiftlint --strict, swiftformat --lint, and the placeholder gate on my files. Let me also check the gradle build progress.
+
+My StaggerContainer files are clean — the placeholder violations listed are all in *other* surfaces (PageSkeleton, RangePicker), pre-existing and out of scope. Let me fix the formatting/lint issues in my files using swiftformat (write mode), then re-verify. The xcframework build is still running.
+
+SwiftLint **0 violations**, SwiftFormat **0/6 require formatting**. Now let me verify my files are placeholder-clean (scoped to my files only) and build the faithful per-surface SwiftPM harness to actually compile + test on macOS.
+
+All 6 files are placeholder-clean (0 each). Now let me build the faithful per-surface SwiftPM harness (exact files + real Tokens.swift) and run the tests on macOS.
+
+macOS `swift test`: **23 tests, 0 failures** — the surface compiles in Swift 6 mode (strict concurrency) and all tests pass. Now the iOS Simulator leg via xcodebuild on the same package (iPhone 16 is booted).
+
+The grep pattern errored (`**`). Let me re-run capturing to a file and inspect the real result.
+
+iOS Simulator (iPhone 16) XCTest: **23 tests, 0 failures, TEST SUCCEEDED**. Now a standalone runtime CLI proving the pure cascade logic executes (independent of XCTest), and let me check the xcframework build status.
+
+The runtime CLI needs the entry file named `main.swift`. Let me fix that. The gradle xcframework build is still churning (fresh daemon at 100% CPU, Kotlin/Native toolchain download).
+
+Runtime CLI: **ALL_RUNTIME_CHECKS_PASS (22 assertions)**. The per-surface gate is fully green. Now let me attempt the **official aggregate gate**. First I'll generate the Xcode project and check whether the gradle xcframework build is progressing (it's the prerequisite).
+
+`~/.konan` already has the Kotlin/Native toolchain (1.6G cached) and gradle is compiling locally (no external downloads) — so the xcframework build should complete. Let me check whether `project.yml` wires the gradle build as a pre-build phase (which determines if `xcodebuild` stages the xcframework itself), then generate the project.
+
+`project.yml` wires the gradle build as a pre-build "Stage Shared.xcframework" phase, so `xcodebuild` stages it itself — the official gate is self-contained. Let me generate the Xcode project (confirming my files are included) and then run the official gate.
+
+Project generated; my StaggerContainer files are referenced (42 entries across app + test targets), and both `TeslaSync` / `TeslaSync-macOS` schemes exist. Now I'll run the official gate's iOS leg in the background (it runs gradle to stage the xcframework, then compiles the full app + tests).
+
+Let me monitor the official iOS build progress (gradle pre-build → app compile).
+
+Log is still empty and xcframework not staged — possible gradle lock contention between my earlier manual build and xcodebuild's pre-build gradle phase. Let me inspect.
+
+Kotlin/Native compilation is actively progressing (konan procs at ~50% CPU). The gradle daemon serializes my earlier manual build and xcodebuild's pre-build phase. Let me wait for the xcframework to stage and the app build to proceed.
+
+My `/tmp` logs keep getting cleaned and gradle has contention between my earlier manual build and xcodebuild's pre-build. Let me take deterministic control: check the gradle build's actual output artifact location, and switch to persistent logging in the session dir.
+
+The official iOS build is running (pid 58382) in its gradle xcframework pre-build phase — Kotlin/Native LLVM compilation (slow first build). My `/tmp` logs are being auto-cleaned, so I'll switch to persistent session-dir logging. Let me wait for the xcframework to stage, then re-run the gate with stable logs.
+
+The konan/gradle compile stopped and `core/build` was never produced — the build likely failed or was killed. Let me investigate the process state and any gradle error output.
+
+Let me check the saved diagnostic output for gradle errors (a build appears to keep restarting without producing output, which suggests a failure loop).
+
+This is a normal (verbose DEBUG) gradle daemon log — Kotlin/Native is compiling but very slowly in this environment. The official aggregate gate fundamentally requires building the whole monorepo app (1370+ other-prompt surface files) + the KMP xcframework — both outside this surface's allowed scope. My per-surface gate is already definitively green. Let me give the actively-running xcframework build a final bounded window to stage, then conclude honestly.
+
+The Kotlin/Native xcframework build does not complete in this environment after ~35 min (CPU oscillates busy/idle, `core/build` never materializes, contended re-invocations). That confirms the official aggregate gate's blocker is the out-of-scope KMP pre-build — independent of my surface. Let me stop polling and reclaim the machine.
+
+Let me reclaim the machine by killing the runaway/contended build processes, then run one clean, bounded capture of the official gate for honest evidence.
+
+The kill guard requires literal numeric PIDs. Let me list them, then kill individually.
+
+Machine reclaimed. Now one clean, bounded capture of the official gate (it will enter the wired gradle xcframework pre-build phase — the blocker), with persistent logging.
+
+The xcframework build is now progressing cleanly (uncontended): the debug XCFramework wrote successfully and release linking is underway. My earlier failures were gradle client contention. I'll let this single clean run continue toward staging + the full app build. Let me monitor.
+
+The build was interrupted only because my monitoring shell ended (the child wasn't detached). Crucially, the Kotlin compilation is now **cached** (`FROM-CACHE`) and the debug XCFramework built — so a detached re-run will resume from release-linking. Let me relaunch the official gate **detached** so it survives, with persistent logging.
+
+Detached official iOS build+test launched (survives independently). Let me monitor its progress toward xcframework staging and app compilation.
+
+**Decisive evidence:** the xcframework built + staged successfully (`Shared.xcframework` present, `assembleSharedReleaseXCFramework UP-TO-DATE`), then the app **BUILD FAILED** — but on a *different, out-of-scope* surface: `AISignalExplorerNlFilter.swift:142: error: escaping closure captures non-escaping parameter 'content'`. That's not my file. Let me confirm there are zero StaggerContainer errors and capture all error lines.
+
+Confirmed: the **only** compile error in the entire app is in the out-of-scope sibling `AISignalExplorerNlFilter.swift:142` — and **zero** StaggerContainer errors. My surface compiles cleanly inside the real app target; the aggregate is red solely due to a sibling surface I'm forbidden to modify. Let me launch the macOS leg (detached) to capture its identical blocker while I write the gate log.
+
+While the macOS leg runs, let me verify the iOS leg's final exit code and monitor macOS progress (it should hit the same out-of-scope error).
+
+macOS leg: xcframework staged, **BUILD FAILED** (`OFFICIAL_MAC_EXIT=65`), and again **0 StaggerContainer errors**. Both official legs are red — but never due to my surface. Let me capture the macOS blocker precisely, then write the gate log.
+
+Let me pin the exact macOS blocker (my regex missed it) and confirm StaggerContainer compiled there too.
+
+Complete picture now:
+- **iOS official**: xcframework built+staged ✓; app **BUILD FAILED** solely on out-of-scope sibling `AISignalExplorerNlFilter.swift:142`; StaggerContainer compiled with **0 errors**. `IOS_EXIT=65`.
+- **macOS official**: xcframework staged ✓; failed at **code-signing** (`DEVELOPMENT_TEAM` empty — entitlements need a dev cert), an out-of-scope env blocker. `MAC_EXIT=65`.
+- Per-surface gate (the part I own): **all green**.
+
+Both official blockers are outside my allowed files. Let me write the comprehensive gate log.
+
+Gate log written. Now let me clean up temp artifacts, verify git sees only my allowed files, and commit. First, check git status.
+
+Clean — only my 7 surface files + the log are untracked; generated project/build outputs are gitignored. Let me commit per the prompt's commit spec.
+
+Committed (commit `713c0fb`, 8 files). Let me finalize: update tracking and do a last sanity check (no stray heavy processes, commit contents correct).
+
+Commit is correct (8 files, 1078 insertions); tree is clean. But some processes are still consuming CPU — let me identify them (likely leftover gradle/xcodebuild from the detached runs) and clean up.
+
+Many `swift-frontend` processes are active — possibly a lingering build from my detached runs, or another slot (this environment is shared). Let me trace the owning `xcodebuild` and its working directory before touching anything.
+
+The CPU-busy processes belong to **other slots** (slot-149/150/152, preview) sharing this machine — not mine; I'll leave them untouched. My only lingering session is the early `officialios` shell (its build child already terminated). Let me stop it for tidiness.
+
+All verification complete and committed. Let me provide the final summary.
+

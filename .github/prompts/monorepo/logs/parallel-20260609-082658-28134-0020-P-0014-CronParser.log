@@ -1,0 +1,18 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Web source exists, `apps/apple` exists, and Swift tooling is present. But `xcode-select -p` points to `/Library/Developer/CommandLineTools` (CLT only, not full Xcode) — which means iOS Simulator builds may be impossible. Let me verify capability and read the web source + existing conventions in parallel.
+
+Critical finding: `xcodebuild -version` **fails** — only Command Line Tools are installed, not full Xcode. This means the iOS/macOS Simulator `build test` gate steps cannot run. Per the prompt this is a BLOCKED-capability condition, but the Honesty Covenant forbids scope-narrowing/skip-and-assume — so I must still do all implementable work (write the full native surface, run swiftlint/swiftformat/placeholder checks) and document the capability gap with evidence.
+
+Let me deeply understand existing conventions before writing any code.
+
+Good — there are several existing devtools tool surfaces. `TimestampTool` (date/time) and `HashCalculator`/`JsonFormatter` (engine/parser logic) are the closest analogs. Let me read the web helpers I must port, plus a complete reference surface end-to-end.
+
+Let me read the key reference files individually with the view tool.
+
+Excellent — `TimestampTool` is the perfect analog (same single `useTranslation` hook, no networking, client-side computation). Let me read its remaining files to learn the full surface structure.
+
+The TimestampTool template is crystal clear. Now let me read its Previews, Tests, strings, and locate the shared design tokens/components (TSButton, TSGlassPanel, TSBadge, Color.TS, Font.TS, TSSpacing).
+
+Now let me locate the shared design tokens and components (P1/S9) and confirm exact APIs for `TSButton`, `TSBadge`, `TSGlassPanel`, plus how files register in the project.
+

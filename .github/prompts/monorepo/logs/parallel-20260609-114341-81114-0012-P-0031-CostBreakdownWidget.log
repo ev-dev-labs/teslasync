@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure, the web source spec, and checking platform capabilities.
+
+Platform is capable: Xcode 26.5, Swift 6.3.2, swiftlint/swiftformat, iPhone simulators. Now let me read the web source spec and explore the existing Apple app structure.
+
+The `dashboard-widgets` directory already exists with 713 files following a multi-file pattern per widget. Let me check if CostBreakdownWidget already exists and find a good reference widget to follow the established pattern.
+
+No existing CostBreakdown. `ChargeCostTrackerWidget` is the closest analog. Let me examine its full file set as the reference pattern, and find widgets that use donut/pie charts.
+
+This is the established multi-file widget pattern. Let me read the full `ChargeCostTrackerWidget` set (closest analog) plus the donut chart reference to learn the conventions thoroughly.
+
+Excellent, very clear pattern. Now let me read the remaining reference files: Views, Format, strings, Previews, tests, plus the donut chart reference and shared token/registration definitions.
+
+Now let me understand the web data hook shape and the shared Swift infrastructure (tokens, registration, tests pattern).
+
+Let me read the CostBreakdown web type and locate the shared Swift token/registration definitions in the broader source tree.
+
+Found the shared infra. Let me read `DashboardWidgetInfra.swift` and locate the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, etc.).
+
+Let me find the design tokens in `Sources/Design`.
+
+Design tokens are generated at `apps/design/generated/apple`. Let me inspect those token files and the project.yml structure to confirm new files are auto-included.
+
+I now have the full token palette. Let me read the web shared widget components, the project.yml targets, and the test/preview patterns.
+
+I have a thorough understanding of the pattern. Let me verify the build toolchain (xcodegen, Shared.xcframework, the staging script) and the exact registry entry before writing code.
+
+`xcodegen` is available but `Shared.xcframework` must be built via Gradle/KMP. Let me check the exact registry entry, prior gate logs (to see if builds pass here), and the pending-verifications doc.
+
+Registry confirmed (default 2×4, min 1×2, max 4×40). Let me check a prior widget's gate log to see whether xcodebuild succeeds in this environment.
+
+The disposition pattern is clear: siblings ship "code-complete + DEFERRED Xcode gate" because the KMP `Shared.xcframework` pre-action is a pre-existing non-surface block. They verify via isolated swiftc type-check + standalone test execution + lint/format/placeholder. Let me read the full ChargeCostTracker log to replicate the exact verification commands.
+
+I have the complete verification methodology. Now let me read the remaining web composition details (WidgetBigNumber/AnimatedNumber, WidgetShell, StatCard, useFormatting, useUnits) to ensure exact parity, plus a sibling's donut Model to mirror chart segment patterns.
+
+Let me confirm `userPrecision`, the WidgetRankedList bar rendering, WidgetShell chrome, and the FSM donut segment model for mirroring.
+
+Let me read the FSM donut Model's segment/projection structures to mirror the chart-projection pattern, and confirm the web theme palette mapping.
+
+I have everything I need. Let me read the lint/format configs to ensure compliance, then start building.
+
+`pwsh` is available, and I know the forbidden patterns to avoid. I have a complete picture. Let me set up tracking and write the plan, then build the files.
+
+Now I'll write the files. Starting with the Model (seams, observable model, registry, strings facade, telemetry).
+
+Model done. Now the Format file (number/currency + the MI_TO_KM conversion).
+
+Let me verify the exact shape of the web theme palette `series` (hex vs class) since it affects ranked-bar coloring parity.
+
+Confirmed: web `series` is hex strings applied as classNames in the ranked list — a latent no-op, so web bars render colorless while the donut renders colored. I'll render native bars with the intended palette tint (documented). Now the Adapter/projection:
+
+Now the Swift Charts donut:
+
+Now the leaf views (ranked list, stat cards, compact big number, skeletons, badge):
+
+Now the main SwiftUI surface (chrome + states + layouts) including the i18n `text` helper:
+
+Now the i18n strings catalog:
+
+Let me check the Previews and test patterns from the reference widget before writing mine.
+
+Patterns are clear. Now the Previews, ModelTests, and adapter Tests. Let me write all three.
+
+Now the adapter/projection value-parity tests:
+
+All 10 files are written. Let me run swiftformat and swiftlint on just the new files to catch style issues early.
+
+SwiftFormat wants long lines wrapped per the project config. Let me auto-format the files (the ecosystem tool produces exactly what `--lint` expects), then re-check.
+
+SwiftFormat clean. Now swiftlint --strict on the new files:
+
+SwiftLint clean (0 violations). Now the placeholder gate exactly as the gate specifies:
+
+Placeholder gate clean. Now I'll verify compilation. Let me check the token file dependencies so I include the right support files in the SwiftPM harness.
+
+Tokens.swift is self-contained; TSChartPalette needs TSDesign.swift. Let me set up the sibling-proven SwiftPM harness (module `TeslaSync` = surface sources + token files + infra) and build + run the co-located tests.
+
+Build GREEN under Swift 6 strict concurrency. Now run the co-located tests:
+
+All 32 tests pass GREEN — value parity confirmed. Now the real-SDK typecheck for iOS 18 and macOS 15 (Swift 6 strict concurrency):
+
+iOS 18 typecheck GREEN. Now macOS 15:
+
+Both SDKs typecheck GREEN. Now verify xcodegen enumerates the new files and reproduce the documented KMP `Shared.xcframework` block (the deferred gate dependency).
+
+All 10 files enumerated. Now reproduce the documented KMP block (fast-failing build, no Gradle pre-action):
+
+Reproduced `BUILD_RESULT=65` (missing KMP `Shared.xcframework`) — the documented, deferred gate dependency. Let me confirm the generated project is git-ignored, then clean up temp artifacts.
+
+Clean — only my 10 new files are untracked. Let me confirm the deferral doc reference, then run the consolidated gate to capture real evidence for the log.
+
+Confirmed: the deferral is an established, documented pattern; `macos-pending-verifications.md` is outside my allowed file scope (siblings record the deferral in-log). iPhone 16 isn't present (iPhone 17 family only) — moot since the app build defers before destination matters. Now I'll write the gate log.
+
+Log written. Now let me do a final consolidated gate check and commit. First, stage and verify exactly what will be committed.
+
+Exactly the 10 widget files + log are staged. Now commit:
+
+Committed (11 files, 2319 insertions). Let me run a final consolidated confirmation of the host gates and verify a clean working tree.
+
+All host gates green, working tree clean, temp artifacts removed. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0031-CostBreakdownWidget.log | 190 +++++++++++
+ .../CostBreakdownWidget.Adapter.swift              | 361 +++++++++++++++++++++
+ .../CostBreakdownWidget.Chart.swift                |  97 ++++++
+ .../CostBreakdownWidget.Format.swift               |  69 ++++
+ .../CostBreakdownWidget.Model.swift                | 354 ++++++++++++++++++++
+ .../CostBreakdownWidget.ModelTests.swift           | 222 +++++++++++++
+ .../CostBreakdownWidget.Previews.swift             | 171 ++++++++++
+ .../CostBreakdownWidget.Tests.swift                | 247 ++++++++++++++
+ .../CostBreakdownWidget.Views.swift                | 266 +++++++++++++++
+ .../dashboard-widgets/CostBreakdownWidget.strings  |  50 +++
+ .../dashboard-widgets/CostBreakdownWidget.swift    | 292 +++++++++++++++++
+ 11 files changed, 2319 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0031-CostBreakdownWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.Format.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.swift

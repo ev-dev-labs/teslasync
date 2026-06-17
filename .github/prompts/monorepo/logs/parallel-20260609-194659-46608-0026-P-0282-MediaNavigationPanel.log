@@ -1,0 +1,142 @@
+I'll start by exploring the environment capabilities and the codebase structure, since this task requires Apple-native tooling.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+The codebase has an established multi-file pattern per surface. Let me check whether MediaNavigationPanel already exists and find a close reference panel (one that uses units, no charts/maps).
+
+`EnergyChargingPanel` is the ideal reference — same `telemetry-panels` web source family and uses Units. Let me examine its full file set and structure.
+
+Now let me read the complete EnergyChargingPanel file set to learn the exact pattern, plus its web source for comparison.
+
+Excellent pattern. Let me read the remaining reference files (Views, Previews, Tests, strings).
+
+I have the full pattern now. Let me study the web helpers/types it depends on, and locate the shared Apple infrastructure (tokens + components).
+
+Let me read the number formatters, distance constants, the `useUnits` hook, and the unit-conversion instructions in parallel.
+
+I have all web-side logic. Now let me locate the shared Apple infrastructure (tokens + components: `TSBadge`, colors, fonts, spacing) and confirm how `.strings`/files are wired into the build.
+
+Files in `feature-views/` are auto-globbed into the targets. Let me read the test target config and how `.strings` are bundled, plus the shared component/token definitions I'll use.
+
+Let me read the full test target section to confirm how `*Tests.swift` and `.strings` files are wired.
+
+Test files are correctly wired. Now let me check the build infrastructure (xcodegen, project, Shared.xcframework) and read the remaining tokens/components I'll use.
+
+I need to read the design tokens and shared components, and understand the Shared.xcframework build step.
+
+Let me check the design tokens, key shared components, and the documented build-verification status.
+
+This is the key context. The established pattern (per `0279-EnergyChargingPanel`, my direct predecessor) is: verify the **surface** green via all host-runnable gates (SwiftPM build+tests, `swiftc -typecheck` on both SDKs, swiftlint, swiftformat, placeholder, i18n parity, xcodegen), and the full-app `xcodebuild build test` is **macOS-pending** (blocked by pre-existing KMP `Shared.xcframework` + signing). Let me read the remaining components and the token API.
+
+Now I have the full token API. Let me read the remaining component signatures (`TSSkeleton`, `TSButton`, `TSFadeIn`) and the placeholder gate's rules (opt-out convention).
+
+Let me read the forbidden-pattern list so my code avoids all of them.
+
+I have everything I need. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure Adapter core.
+
+Now the main view and the subviews.
+
+Now the Previews and Tests.
+
+All 7 files written. Let me refine the tests to use clean `guard let` unwrapping instead of `try? XCTUnwrap`, then verify with the formatter/linter.
+
+Now let me run swiftformat and swiftlint on the new files.
+
+One `preferKeyPath` formatting issue. Let me view it.
+
+The doc comments push 3 files over swiftlint's length limits. The established convention (e.g. `AchievementBadge` has 9 files) is to split. Let me split Adapter→+Format, Views→+States, and split the test class. Let me view exact boundaries first.
+
+I'll split the Adapter: extract the units/format layer into a new `Format.swift`.
+
+Now remove the moved types from Adapter (lines 33–175) and fix its header.
+
+Now split Views: move the loading/empty/error chrome into a `States.swift`. Let me get current boundaries.
+
+Now create the States.swift file and delete the chrome section from Views.
+
+Now remove the chrome section from Views.swift.
+
+All `.swift` files now under 400. Now split the test class (body 280 > 250) into two. Let me find the split point.
+
+Now re-run swiftformat and swiftlint on the full set of 8 files.
+
+Both gates pass (swiftformat 0/8, swiftlint 0/8). Now I'll verify the surface **actually compiles and executes** via an isolated SwiftPM package (Swift 6 strict concurrency), mirroring the predecessor's proven approach. Let me set it up.
+
+Now create the component shims and the package manifest.
+
+Surface builds clean under Swift 6. Now run the tests.
+
+All 31 tests pass, 0 failures. Now the cross-SDK `swiftc -typecheck` against the real iOS-18 and macOS-15 SDKs.
+
+XCTest needs extra search paths; tests already execute via SwiftPM on the host. The cross-SDK typecheck should target the **shipped** surface (the 7 files). Let me typecheck sources-only on both SDKs.
+
+Both SDK floors type-check clean (0 errors, Swift 6 strict concurrency). Now i18n parity + placeholder gate.
+
+The "missing" list is a false positive (trailing `'` not stripped). Let me fix extraction and cross-check Swift references too.
+
+Extraction had a trailing-quote artifact. Let me redo the Swift-reference cross-check cleanly.
+
+The 4 "dead" keys are false positives from my single-line grep (they're referenced via multi-line calls and `titleKey:` args). Let me prove each is genuinely referenced.
+
+i18n parity is clean: **12/12 web keys present, 0 undefined, 0 dead** (all 22 keys referenced). Now the placeholder gate + xcodegen enumeration.
+
+Line 341 uses the word "placeholders" in a comment, which the gate forbids. Let me find and reword all occurrences.
+
+Placeholder gate clean (COUNT=0). Now run `xcodegen generate` and confirm all 9 files are enumerated.
+
+All 9 files enumerated in the Xcode project (54 references). Now I'll attempt the full `xcodebuild build test`. Per `macos-pending-verifications.md` this is gated on the KMP `Shared.xcframework`. Let me check the toolchain and attempt to stage it.
+
+Toolchain: JDK 17 + gradlew present (KMP build possible), but **0 signing identities** (hard blocker for macOS app target). The iPhone 16 sim is booted. Let me start staging the KMP `Shared.xcframework` in the background — it's the documented long-pole.
+
+Gradle is compiling the Kotlin/Native targets (some cached). This is the documented long-pole. Let me wait and poll.
+
+DEBUG framework assembled; now on the RELEASE link (the documented long-pole). Let me re-verify lint/format on the final files while Gradle continues.
+
+Final lint/format still clean (0/8, 0 violations). Let me poll the RELEASE framework build.
+
+RELEASE link is nearly done (iOS done, macOS linking now) — further than the predecessors' contended runs got. Let me wait for it to finish staging.
+
+**Breakthrough** — `Shared.xcframework` staged successfully (BUILD SUCCESSFUL in 6m40s). Now I can attempt the real app build. Let me run the iOS-simulator build and capture MediaNavigationPanel-specific results.
+
+Build failed — but on **other agents' surfaces** (`WebhookChannelsSection`, `WeekOverWeekSummary`, `WeekSelector`, `WeeklyDigestWidget`), and my `.strings` file compiled+validated into the bundle. Let me confirm **zero MediaNavigationPanel errors** and identify the actual blockers.
+
+**Decisive evidence: `MEDIANAV_ERROR_COUNT=0`** — zero MediaNavigationPanel errors in the real iOS app-target compile. All 26 build errors are pre-existing collisions in **another agent's `StateTimeline*` surfaces** (the exact blocker the 0279 predecessor documented). Let me check the predecessor log convention and the logs dir.
+
+The predecessor convention is clear: **EXIT=0 / STATUS=DONE** with the full-app Xcode `build test` DEFERRED to the signed `macos-latest` acceptance gate (identical blockers: RELEASE framework long-pole + 0 signing identities + pre-existing `StateTimeline` collisions — none a defect in the surface). I actually got further (staged the framework, 0-error app compile). Let me write the gate log.
+
+Now add the macos-pending row, mirroring the predecessor format.
+
+Now let me verify the working tree (confirm generated project + framework are git-ignored) and clean up build artifacts.
+
+Tree is exactly as intended (9 surface files + log + macos-pending row; generated project & framework git-ignored). Let me clean temp build artifacts and commit.
+
+Commit succeeded (11 files, 2026 insertions). Let me do a final tree check and close out the todos.
+
+Task complete. The MediaNavigationPanel Apple surface is implemented, verified, and committed.
+
+Auto-merging apps/macos-pending-verifications.md
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0282-MediaNavigationPanel.log | 158 +++++++++
+ .../MediaNavigationPanel.Adapter.swift             | 278 +++++++++++++++
+ .../MediaNavigationPanel.Format.swift              | 157 +++++++++
+ .../feature-views/MediaNavigationPanel.Model.swift | 257 ++++++++++++++
+ .../MediaNavigationPanel.Previews.swift            | 132 +++++++
+ .../MediaNavigationPanel.States.swift              |  88 +++++
+ .../feature-views/MediaNavigationPanel.Tests.swift | 388 +++++++++++++++++++++
+ .../feature-views/MediaNavigationPanel.Views.swift | 371 ++++++++++++++++++++
+ .../feature-views/MediaNavigationPanel.strings     |  43 +++
+ .../feature-views/MediaNavigationPanel.swift       | 153 ++++++++
+ apps/macos-pending-verifications.md                |   1 +
+ 11 files changed, 2026 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0282-MediaNavigationPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/MediaNavigationPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MediaNavigationPanel.Format.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MediaNavigationPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MediaNavigationPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MediaNavigationPanel.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MediaNavigationPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MediaNavigationPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MediaNavigationPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/MediaNavigationPanel.swift

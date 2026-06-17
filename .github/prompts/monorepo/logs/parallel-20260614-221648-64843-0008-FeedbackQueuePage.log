@@ -1,0 +1,80 @@
+I'll start by exploring the repository structure to understand the task and existing patterns.
+
+All Apple tooling is available (xcodebuild, swiftlint, swift, pwsh). Let me explore the Apple app structure and the web source page.
+
+Now let me explore the Apple app structure to understand existing patterns.
+
+6118 Swift files — large codebase. Let me focus on the Admin feature directory and find a similar existing page to use as a pattern.
+
+`AuditLogPage` is the closest pattern (filters + expandable table + pagination). Let me study its full structure including model, table, filters, and route registration.
+
+Let me study the table, filters, models, and sample data source, plus the routing infrastructure.
+
+Let me look at the sample data source, badges, routing system, web feedback hook/types, and parity files.
+
+Let me look at the web types, routing infrastructure, parity manifest, and a test pattern.
+
+Now let me examine the routing infrastructure, parity manifest, and ledger.
+
+Let me examine the parity manifest/ledger, log directory, and the Xcode project structure.
+
+The AuditLog log is the blueprint. Let me read it in full to understand the exact methodology, gate, and PARITY section format.
+
+I now have the full methodology. Let me set up tracking and read the remaining critical files: manifest page entry, TeslaSyncApp routing, component library, and the string catalog.
+
+Let me read the component library signatures and the TeslaSyncApp routing section.
+
+Let me check the alert banner signature, the string catalog structure, existing keys, and the ledger format.
+
+The string catalog is 4.9MB. Let me examine its structure around an existing key to understand the format I must follow.
+
+The format is an Xcode String Catalog. Let me test whether a Python round-trip reproduces the exact byte format, which determines my insertion strategy.
+
+The format is the Xcode quirk (string entries use `" : "`, wrapper keys use `": "`), so a full round-trip would reformat everything. Let me check how the predecessor's keys are positioned to match their insertion style.
+
+I have enough architectural understanding. The string catalog isn't globally sorted (predecessor inserted contiguous blocks with `" : "` format). Let me check the ledger format, lint config, project setup, and gate script, then start building.
+
+I now have complete understanding. Let me set up tracking and the plan, then build.
+
+Tools confirmed (swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4). Now let me create the model layer. Starting with `FeedbackModels.swift`.
+
+Now the page model.
+
+Now the sample data source.
+
+Now the badges, with DRY label/tone extensions on the enums.
+
+Now the main page view with the filters row.
+
+Now the table and expansion — the largest file.
+
+Now the expansion detail in its own file to keep things modular.
+
+Now the route registration and the route wiring edits.
+
+Now let me insert the 39 string-catalog keys with a script that matches the exact Xcode entry format.
+
+Keys inserted (9150→9189). Let me verify the inserted block format and JSON validity.
+
+String catalog done. Let me update progress and write the test file.
+
+All source files created. Now let me run the formatting and lint gates on my files.
+
+Format clean (0/12), lint clean (0 violations). Let me verify my route edits survived formatting and run the placeholder scan.
+
+Placeholder scan clean (COUNT=0, EXIT=0). Let me confirm my files contribute zero opt-outs and scan the test dir, then run xcodegen.
+
+All scan gates green. Now let me regenerate the Xcode project and confirm my files are included.
+
+Project generated (GEN_EXIT=0), Feedback files referenced 54x. Now let me set up the isolated Swift 6 type-check + model harness. First, discover dependency files.
+
+All deps located. Let me run the isolated Swift 6 strict-concurrency type-check (macOS) of my view files against the real tokens + components.
+
+macOS type-check clean (0 errors). Now the iOS type-check to exercise the compact (iPhone) branches.
+
+Both isolated type-checks pass (macOS 0/0, iOS 0/0). Now the executed model harness with the real model types.
+
+Model harness passed all assertions (HARNESS_EXIT=0). Now let me attempt the full build to see if it compiles or hits the documented out-of-scope crash. First, list schemes.
+
+Let me attempt the full macOS build (capturing to a log) to verify against the documented out-of-scope crash.
+
